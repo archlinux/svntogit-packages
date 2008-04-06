@@ -1,0 +1,73 @@
+# $Id: PKGBUILD,v 1.53 2007/10/28 13:13:10 andyrtr Exp $
+# Maintainer: Judd Vinet <jvinet@zeroflux.org>
+pkgname=openldap
+pkgver=2.3.39
+pkgrel=1
+pkgdesc="LDAP Server"
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://www.openldap.org/"
+backup=(etc/openldap/slapd.conf etc/default/slapd)
+depends=('db4.5' 'tcp_wrappers' "libldap>=${pkgver}")
+source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-${pkgver}.tgz slapd slapd.default)
+md5sums=('e3fec2953c948f6990ccdc3af7bf7f18'
+         'a9c9d906b2132ee3cb3d100ef1c068ae'
+         '95f50ebf185b1caf299fa4e3970d8ec2')
+options=('!makeflags' '!emptydirs')
+
+build() {
+  cd ${startdir}/src/openldap-${pkgver}
+  export CPPFLAGS="-I/usr/include/db4.5 $CPPFLAGS"
+  ./configure --prefix=/usr \
+              --libexecdir=/usr/sbin \
+              --sysconfdir=/etc \
+              --localstatedir=/var/lib/openldap \
+              --enable-crypt --enable-dynamic \
+              --with-threads --enable-wrappers \
+	      --enable-spasswd --with-cyrus-sasl
+  
+  find . -name 'Makefile' -exec \
+  	sed -e 's|$(LDAP_LIBDIR)/liblber/liblber.la|/usr/lib/liblber-2.3.so.0|g' \
+	    -e 's|$(LDAP_LIBDIR)/libldap/libldap.la|/usr/lib/libldap-2.3.so.0|g' \
+	    -e 's|$(LDAP_LIBDIR)/libldap_r/libldap_r.la|/usr/lib/libldap_r-2.3.so.0|g' \
+	    -i {} \;
+
+  cd include
+  make || return 1
+
+  cd ../libraries
+  for dir in liblutil librewrite liblunicode; do
+    pushd ${dir}
+    make depend || return 1
+    make || return 1
+    popd
+  done
+  cd ../servers
+  make depend || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+
+  cd ../doc/man
+  for dir in man5 man8; do
+    pushd ${dir}
+    rm -f ldap.conf.5
+    make || return 1
+    make DESTDIR=${startdir}/pkg install
+    popd
+  done
+
+  cd ../..
+
+  mkdir -p ${startdir}/pkg/etc/rc.d
+  mkdir -p ${startdir}/pkg/etc/default
+  install -m 755 ../slapd ${startdir}/pkg/etc/rc.d/slapd
+  install -m 644 ../slapd.default ${startdir}/pkg/etc/default/slapd
+  install -d -m 700 ${startdir}/pkg/var/lib/openldap
+  
+  # get rid of duplicate default conf files
+  rm ${startdir}/pkg/etc/openldap/*.default
+  # hack to fix screwed up dirs
+  sed -e 's|^pidfile[[:space:]].*$|pidfile   /var/run/slapd.pid|g' \
+      -e 's|^argsfile[[:space:]].*$|argsfile  /var/run/slapd.args|g' \
+      -i ${startdir}/pkg/etc/openldap/slapd.conf
+}
