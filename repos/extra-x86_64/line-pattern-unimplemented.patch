@@ -1,0 +1,193 @@
+diff -ur gnumeric-1.7.91/src/gnm-so-filled.c gnumeric-1.7.91-patched/src/gnm-so-filled.c
+--- gnumeric-1.7.91/src/gnm-so-filled.c	2007-11-16 06:26:07.000000000 -0600
++++ gnumeric-1.7.91-patched/src/gnm-so-filled.c	2008-01-12 15:54:36.000000000 -0600
+@@ -145,7 +145,6 @@
+ 	res->interesting_fields = GOG_STYLE_OUTLINE | GOG_STYLE_FILL;
+ 	res->outline.width = 0; /* hairline */
+ 	res->outline.color = RGBA_BLACK;
+-	res->outline.pattern = 1; /* anything but 0 */
+ 	res->fill.type = GOG_FILL_STYLE_PATTERN;
+ 	go_pattern_set_solid (&res->fill.pattern, RGBA_WHITE);
+ 	return res;
+@@ -180,8 +179,7 @@
+ 	GdkColor fill_buf, *fill_gdk = NULL;
+ 
+ 	if (style->outline.color != 0 &&
+-	    style->outline.width >= 0 &&
+-	    style->outline.pattern != 0)
++	    style->outline.width >= 0)
+ 		outline_gdk = go_color_to_gdk (style->outline.color, &outline_buf);
+ 
+ 	if (style->fill.type != GOG_FILL_STYLE_NONE)
+diff -ur gnumeric-1.7.91/src/gnm-so-line.c gnumeric-1.7.91-patched/src/gnm-so-line.c
+--- gnumeric-1.7.91/src/gnm-so-line.c	2007-11-16 06:26:07.000000000 -0600
++++ gnumeric-1.7.91-patched/src/gnm-so-line.c	2008-01-12 15:57:26.000000000 -0600
+@@ -98,7 +98,7 @@
+ 	sheet_object_direction_set (so, coords);
+ 
+ 	if (visible &&
+-	    style->color != 0 && style->width >= 0 && style->pattern != 0) {
++	    style->color != 0 && style->width >= 0) {
+ 		FooCanvasPoints *points = foo_canvas_points_new (2);
+ 		points->coords[0] = coords[0];
+ 		points->coords[1] = coords[1];
+@@ -139,7 +139,6 @@
+ 	res->interesting_fields = GOG_STYLE_LINE;
+ 	res->line.width   = 0; /* hairline */
+ 	res->line.color   = RGBA_BLACK;
+-	res->line.pattern = 1; /* anything but 0 */
+ 	return res;
+ }
+ 
+@@ -166,7 +165,7 @@
+ 	GogStyleLine const *style = &sol->style->line;
+ 	GdkColor buf, *gdk = NULL;
+ 
+-	if (style->color != 0 && style->width >= 0 && style->pattern != 0)
++	if (style->color != 0 && style->width >= 0)
+ 		gdk = go_color_to_gdk (style->color, &buf);
+ 
+ 	if (style->width > 0.)	/* in pts */
+@@ -212,7 +211,7 @@
+ 	GogStyleLine const *style = &sol->style->line;
+ 	double x1, y1, x2, y2;
+ 
+-	if (style->color == 0 || style->width < 0 || style->pattern == 0)
++	if (style->color == 0 || style->width < 0)
+ 		return;
+ 
+ 	switch (so->anchor.base.direction) {
+diff -ur gnumeric-1.7.91/src/gnm-so-polygon.c gnumeric-1.7.91-patched/src/gnm-so-polygon.c
+--- gnumeric-1.7.91/src/gnm-so-polygon.c	2007-11-16 06:26:07.000000000 -0600
++++ gnumeric-1.7.91-patched/src/gnm-so-polygon.c	2008-01-12 15:57:49.000000000 -0600
+@@ -128,7 +128,6 @@
+ 	res->interesting_fields = GOG_STYLE_OUTLINE | GOG_STYLE_FILL;
+ 	res->outline.width = 0; /* hairline */
+ 	res->outline.color = RGBA_BLACK;
+-	res->outline.pattern = 1; /* anything but 0 */
+ 	res->fill.type = GOG_FILL_STYLE_PATTERN;
+ 	go_pattern_set_solid (&res->fill.pattern, RGBA_WHITE);
+ 	return res;
+@@ -146,8 +145,7 @@
+ 	GdkColor fill_buf, *fill_gdk = NULL;
+ 
+ 	if (style->outline.color != 0 &&
+-	    style->outline.width >= 0 &&
+-	    style->outline.pattern != 0)
++	    style->outline.width >= 0)
+ 		outline_gdk = go_color_to_gdk (style->outline.color, &outline_buf);
+ 
+ 	if (style->fill.type != GOG_FILL_STYLE_NONE)
+diff -ur gnumeric-1.7.91/plugins/excel/ms-chart.c gnumeric-1.7.91-patched/plugins/excel/ms-chart.c
+--- gnumeric-1.7.91/plugins/excel/ms-chart.c	2007-11-29 20:03:56.000000000 -0600
++++ gnumeric-1.7.91-patched/plugins/excel/ms-chart.c	2008-01-13 15:33:59.000000000 -0600
+@@ -1302,17 +1302,11 @@
+ 	}
+ 	s->style->line.color      = BC_R(color) (q->data, "LineColor");
+ 	s->style->line.auto_color = s->style->line.auto_dash = (flags & 0x01) ? TRUE : FALSE;
+-	s->style->line.pattern    = GSF_LE_GET_GUINT16 (q->data+4);
+ 
+ 	d (0, g_printerr ("flags == %hd.\n", flags););
+ 	d (0, g_printerr ("Lines are %f pts wide.\n", s->style->line.width););
+-	d (0, g_printerr ("Lines have a %s pattern.\n",
+-		       ms_line_pattern [s->style->line.pattern]););
+ 
+-	if (s->style->line.pattern <= G_N_ELEMENTS (dash_map))
+-		s->style->line.dash_type = dash_map [s->style->line.pattern];
+-	else
+-		s->style->line.dash_type = GO_LINE_SOLID;
++    s->style->line.dash_type = GO_LINE_SOLID;
+ 
+ 	if (BC_R(ver)(s) >= MS_BIFF_V8 && s->currentSeries != NULL) {
+ 		guint16 const fore = GSF_LE_GET_GUINT16 (q->data+10);
+@@ -3693,10 +3687,8 @@
+ 
+ 	if (lstyle != NULL) {
+ 		color_index = chart_write_color (s, data, lstyle->color);
+-		pat = patterns[lstyle->pattern];
+ 		if (lstyle->width < 0.) {
+ 			w = 0xffff;
+-			pat = 5;	/* none */
+ 		} else if (lstyle->width <= .5)
+ 			w = 0xffff;	/* hairline */
+ 		else if (lstyle->width <= 1.5)
+@@ -3710,10 +3702,8 @@
+ 	} else {
+ 		color_index = chart_write_color (s, data, 0);
+ 		if (clear_lines_for_null) {
+-			pat = 5;
+ 			flags = 8;	/* docs only mention 1, but there is an 8 in there too */
+ 		} else {
+-			pat = 0;
+ 			flags = 9;	/* docs only mention 1, but there is an 8 in there too */
+ 		}
+ 		w = 0xffff;
+@@ -3721,7 +3711,6 @@
+ 	if (draw_ticks)
+ 		flags |= 4;
+ 
+-	GSF_LE_SET_GUINT16 (data+4, pat);
+ 	GSF_LE_SET_GUINT16 (data+6, w);
+ 	GSF_LE_SET_GUINT16 (data+8, flags);
+ 	if (s->bp->version >= MS_BIFF_V8)
+@@ -4664,7 +4653,6 @@
+ 		line_style.auto_dash = FALSE;
+ 		line_style.color = 0;
+ 		line_style.auto_color = FALSE;
+-		line_style.pattern = 5;
+ 		chart_write_LINEFORMAT (s, NULL,
+ 					FALSE, TRUE);
+ 	}
+@@ -5290,7 +5278,6 @@
+ 				/* FIXME: change this code when series lines are available ! */
+ 				style->line.auto_dash = FALSE;
+ 				style->line.auto_color = FALSE;
+-				style->line.pattern = 5;
+ 				style->marker.auto_shape = FALSE;
+ 				go_marker_set_shape (style->marker.mark, GO_MARKER_NONE);
+ 				style->marker.auto_fill_color = FALSE;
+@@ -5310,7 +5297,6 @@
+ 				/* FIXME: change this code when series lines are available ! */
+ 				style->line.auto_dash = FALSE;
+ 				style->line.auto_color = FALSE;
+-				style->line.pattern = 5;
+ 				style->marker.auto_shape = FALSE;
+ 				go_marker_set_shape (style->marker.mark, GO_MARKER_NONE);
+ 				style->marker.auto_fill_color = FALSE;
+@@ -5365,7 +5351,6 @@
+ 				/* FIXME: change this code when series lines are available ! */
+ 				style->line.auto_dash = FALSE;
+ 				style->line.auto_color = FALSE;
+-				style->line.pattern = 5;
+ 				style->marker.auto_shape = FALSE;
+ 				go_marker_set_shape (style->marker.mark, GO_MARKER_NONE);
+ 				style->marker.auto_fill_color = FALSE;
+@@ -5385,7 +5370,6 @@
+ 				/* FIXME: change this code when series lines are available ! */
+ 				style->line.auto_dash = FALSE;
+ 				style->line.auto_color = FALSE;
+-				style->line.pattern = 5;
+ 				style->marker.auto_shape = FALSE;
+ 				go_marker_set_shape (style->marker.mark, GO_MARKER_NONE);
+ 				style->marker.auto_fill_color = FALSE;
+diff -ur gnumeric-1.7.91/plugins/excel/ms-excel-read.c gnumeric-1.7.91-patched/plugins/excel/ms-excel-read.c
+--- gnumeric-1.7.91/plugins/excel/ms-excel-read.c	2007-11-16 06:26:07.000000000 -0600
++++ gnumeric-1.7.91-patched/plugins/excel/ms-excel-read.c	2008-01-12 15:54:36.000000000 -0600
+@@ -435,8 +435,6 @@
+ 			MS_OBJ_ATTR_OUTLINE_COLOR, RGBA_BLACK);
+ 		style->line.width = ms_obj_attr_get_uint (obj->attrs,
+ 			MS_OBJ_ATTR_OUTLINE_WIDTH, 0) / 256.;
+-		style->line.pattern = ms_obj_attr_bag_lookup (obj->attrs, MS_OBJ_ATTR_OUTLINE_HIDE)
+-			? 0 : ms_obj_attr_get_int (obj->attrs, MS_OBJ_ATTR_OUTLINE_STYLE, 1);
+ 		g_object_set (G_OBJECT (so), "style", style, NULL);
+ 		g_object_unref (style);
+ 		break;
+@@ -456,8 +454,6 @@
+ 			MS_OBJ_ATTR_OUTLINE_COLOR, RGBA_BLACK);
+ 		style->outline.width = ms_obj_attr_get_uint (obj->attrs,
+ 			MS_OBJ_ATTR_OUTLINE_WIDTH, 0) / 256.;
+-		style->outline.pattern = ms_obj_attr_bag_lookup (obj->attrs, MS_OBJ_ATTR_OUTLINE_HIDE)
+-			? 0 : ms_obj_attr_get_int (obj->attrs, MS_OBJ_ATTR_OUTLINE_STYLE, 1);
+ 		style->fill.pattern.back = ms_sheet_map_color (esheet, obj,
+ 			MS_OBJ_ATTR_FILL_COLOR, RGBA_WHITE);
+ 		style->fill.pattern.fore = ms_sheet_map_color (esheet, obj,
