@@ -1,0 +1,29 @@
+# $Id: PKGBUILD,v 1.2 2008/03/12 23:32:25 jgc Exp $
+# Maintainer: Jan de Groot  <jgc@archlinux.org>
+pkgname=libgweather
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="Provides access to weather information from the net"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('gnome-vfs>=2.22.0')
+makedepends=('pkgconfig' 'perlxml')
+options=('!libtool' '!emptydirs')
+conflicts=('gnome-applets<2.22.0')
+url="http://www.gnome.org/"
+install=libgweather.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('f25d3dada7416bf2d5edb5c7fd7ffce0')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-static || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+
+}
