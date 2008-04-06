@@ -1,0 +1,48 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/conf.d/alsa
+. /etc/rc.d/functions
+
+case "$1" in
+  start)
+    stat_busy "Restoring ALSA Levels"
+    /usr/sbin/alsactl restore
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      stat_done
+      add_daemon alsa
+    fi
+
+    POWERSAVE=${POWERSAVE:-0}
+    if [ -e /sys/module/snd_ac97_codec/parameters/power_save \
+	 -a $POWERSAVE -ne 0 ]; then
+        echo $POWERSAVE > /sys/module/snd_ac97_codec/parameters/power_save
+        echo 1 > /dev/dsp
+    fi
+
+    if [ -e /sys/module/snd_hda_intel/parameters/power_save \
+	 -a $POWERSAVE -ne 0 ]; then
+	echo $POWERSAVE > /sys/module/snd_hda_intel/parameters/power_save
+        echo 1 > /dev/dsp
+    fi
+    ;;
+  stop)
+    stat_busy "Saving ALSA Levels"
+    /usr/sbin/alsactl store
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      stat_done
+      rm_daemon alsa
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"  
+esac
