@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.8 2006/02/05 03:55:36 aaron Exp $
+# Maintainer : Aaron Griffin <aaron@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=ltrace
+pkgver=0.3.36
+pkgrel=1
+pkgdesc="ltrace is a debugging program which runs a specified command until it exits"
+depends=('glibc' 'libelf')
+url="http://packages.debian.org/unstable/utils/ltrace.html"
+source=(http://ftp.debian.org/debian/pool/main/l/ltrace/${pkgname}_${pkgver}.orig.tar.gz)
+md5sums=('674c9a7ddbe2a4ec10564dbb09b2261a')
+
+build()
+{
+	cd $startdir/src/$pkgname-$pkgver
+	./configure --prefix=/usr --sysconfdir=/etc
+	make || return 1
+	make DESTDIR=$startdir/pkg install
+}
