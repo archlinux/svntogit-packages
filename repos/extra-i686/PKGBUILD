@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.3 2007/10/20 13:17:58 tpowa Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=libkdcraw
+pkgver=0.1.2
+pkgrel=1
+pkgdesc="kde library for dcraw"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://kipi-plugins.sourceforge.net"
+depends=('kdelibs')
+source=(http://heanet.dl.sourceforge.net/sourceforge/kipi/$pkgname-$pkgver.tar.bz2)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+   ./configure --prefix=/opt/kde --disable-debug
+   make || return 1
+   make DESTDIR=$startdir/pkg/ install
+   # fix pkg-config that it is in main path
+   mkdir -p $startdir/pkg/usr/lib/
+   mv $startdir/pkg/opt/kde/lib/pkgconfig $startdir/pkg/usr/lib/
+ }
+md5sums=('38ed88e8b7387526113f150c349c8eb4')
