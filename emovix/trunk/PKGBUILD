@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.6 2005/07/26 07:12:26 tpowa Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=emovix
+pkgver=0.9.0
+pkgrel=2
+pkgdesc="Create Movix-CD's (also emovix plugin for k3b)"
+source=(http://heanet.dl.sourceforge.net/sourceforge/movix/$pkgname-$pkgver.tar.gz)
+url="http://movix.sourceforge.net/"
+depends=('perl' 'cdrtools')
+
+
+build()        {
+        cd $startdir/src/$pkgname-$pkgver
+        ./configure --prefix=/usr
+        make || return 1
+        make DESTDIR=$startdir/pkg install
+        find $startdir/pkg/usr/share/emovix -type d -exec chmod 755 {} \;
+}
+
+md5sums=('a96492f338824b24c5a9e714c57eddcf')

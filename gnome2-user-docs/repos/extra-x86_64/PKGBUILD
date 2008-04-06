@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.19 2008/03/16 14:19:03 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome2-user-docs
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="User documentation for GNOME2"
+arch=(i686 x86_64)
+license=('GFDL')
+depends=('yelp')
+url="http://www.gnome.org"
+groups=('gnome')
+options=(!makeflags)
+source=(http://ftp.gnome.org/pub/gnome/sources/gnome-user-docs/2.22/gnome-user-docs-${pkgver}.tar.bz2)
+md5sums=('f3af808e754701b83105eab2f5ca690c')
+
+build() {
+  cd ${startdir}/src/gnome-user-docs-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-scrollkeeper || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}

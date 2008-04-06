@@ -1,0 +1,70 @@
+--- branches/KDE/3.5/kdemultimedia/juk/configure.in.in	2006/08/19 21:15:57	574685
++++ branches/KDE/3.5/kdemultimedia/juk/configure.in.in	2006/08/29 18:46:18	578607
+@@ -18,9 +18,18 @@
+ fi
+ 
+ if test "x$have_musicbrainz" = xyes; then
++	v=1
+   	KDE_CHECK_LIB(tunepimp, tp_SetFileNameEncoding,
+-	AC_DEFINE(HAVE_MUSICBRAINZ, 5, [have MusicBrainz 0.5.x]), 
+-	AC_DEFINE(HAVE_MUSICBRAINZ, 1, [have MusicBrainz]))
++		[v=4])
++	case "$v" in
++	4) KDE_CHECK_LIB(tunepimp, tp_SetTRMCollisionThreshold,
++		AC_DEFINE(HAVE_MUSICBRAINZ, 4, [have MusicBrainz 0.4.x]),
++		[AC_MSG_WARN([Tunepimp 0.5 detected - disabled.])
++		AC_DEFINE(HAVE_MUSICBRAINZ, 0, [have MusicBrainz 0.5.x - disabled])
++		])
++		;;
++	*) AC_DEFINE(HAVE_MUSICBRAINZ, 1, [have MusicBrainz]) ;;
++	esac
+ else
+   	AC_DEFINE(HAVE_MUSICBRAINZ, 0, [have MusicBrainz])
+ fi
+--- branches/KDE/3.5/kdemultimedia/juk/ktrm.cpp	2006/08/21 20:04:03	575631
++++ branches/KDE/3.5/kdemultimedia/juk/ktrm.cpp	2006/08/29 18:46:18	578607
+@@ -125,9 +125,7 @@
+     {
+         m_pimp = tp_New("KTRM", "0.1");
+         //tp_SetDebug(m_pimp, true);
+-#if HAVE_MUSICBRAINZ < 5
+         tp_SetTRMCollisionThreshold(m_pimp, 100);
+-#endif
+         tp_SetAutoSaveThreshold(m_pimp, -1);
+         tp_SetMoveFiles(m_pimp, false);
+         tp_SetRenameFiles(m_pimp, false);
+@@ -325,9 +323,7 @@
+     case eUnrecognized:
+         KTRMEventHandler::send(fileId, KTRMEvent::Unrecognized);
+         break;
+-#if HAVE_MUSICBRAINZ < 5
+     case eTRMCollision:
+-#endif
+ #if HAVE_MUSICBRAINZ >= 4
+     case eUserSelection:
+ #endif
+@@ -492,7 +488,7 @@
+ void KTRMLookup::unrecognized()
+ {
+     kdDebug() << k_funcinfo << d->file << endl;
+-#if HAVE_MUSICBRAINZ == 4
++#if HAVE_MUSICBRAINZ >= 4
+     char trm[255];
+     bool finish = false;
+     trm[0] = 0;
+@@ -518,7 +514,6 @@
+ {
+     kdDebug() << k_funcinfo << d->file << endl;
+ 
+-#if HAVE_MUSICBRAINZ < 5
+     track_t track = tp_GetTrack(KTRMRequestHandler::instance()->tunePimp(), d->fileId);
+ 
+     if(track <= 0) {
+@@ -579,7 +574,6 @@
+     }
+ 
+     tr_Unlock(track);
+-#endif
+ 
+     finished();
+ }

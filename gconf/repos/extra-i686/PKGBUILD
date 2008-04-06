@@ -1,0 +1,40 @@
+# $Id: PKGBUILD,v 1.34 2008/03/23 16:07:13 jgc Exp $
+# Maintainer:  Jan de Groot <jan@archlinux.org>
+
+pkgname=gconf
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="A configuration database system"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('orbit2>=2.14.12' 'gtk2>=2.12.8-2' 'libxml2>=2.6.30')
+makedepends=('pkgconfig' 'intltool>=0.37.1' 'gtk-doc>=1.9' 'libtool')
+options=('!libtool')
+install=gconf.install
+url="http://www.gnome.org"
+source=(http://ftp.gnome.org/pub/gnome/sources/GConf/2.22/GConf-${pkgver}.tar.bz2
+	gconf-merge-schema
+	gconfpkg
+	gconf-reload.patch)
+md5sums=('a56c043afeb1052abaf45407409b0331'
+         '1412bafb06f7d8a9601c8f1c4d72cc06'
+         '0a43077786fe85ee10002b753752379a'
+         'cfcc8e15be7b8a48de4aa34336ff6090')
+
+build() {
+  cd ${startdir}/src/GConf-${pkgver}
+  patch -Np1 -i ${startdir}/src/gconf-reload.patch || return 1
+  libtoolize --force --copy || return 1
+  aclocal || return 1
+  autoconf || return 1
+  automake || return 1
+  sed -i -e 's/@LDAP_SUPPORT_TRUE@/#/' backends/Makefile.in
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --libexecdir=/usr/lib/GConf \
+	      --disable-static || return 1
+  make pkglibdir=/usr/lib/GConf || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+  install -m755 ${startdir}/src/gconf-merge-schema ${startdir}/pkg/usr/bin/ || return 1
+  install -d -m755 ${startdir}/pkg/usr/sbin
+  install -m755 ${startdir}/src/gconfpkg ${startdir}/pkg/usr/sbin/ || return 1
+}

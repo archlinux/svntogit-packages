@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.4 2007/07/14 02:33:56 eric Exp $
+# Maintainer: Mark Rosenstand <mark@archlinux.org
+# Contributor: Corrado Primier <cp663137@stud.polimi.it>
+pkgname=pymad
+pkgver=0.6
+pkgrel=1
+pkgdesc="Python interface to libmad."
+arch=(i686 x86_64)
+url="http://www.spacepants.org/src/pymad/"
+license=('LGPL')
+depends=('libmad' 'python>=2.5')
+source=(http://www.spacepants.org/src/pymad/download/$pkgname-$pkgver.tar.gz)
+md5sums=('a1405fb4b610348565c8d0e400c5ff18')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  python config_unix.py --prefix=/usr
+  python setup.py install --root=$startdir/pkg
+}

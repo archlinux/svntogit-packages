@@ -1,0 +1,17 @@
+# $Id: PKGBUILD,v 1.1 2006/05/09 01:48:12 simo Exp $
+# Maintainer: simo <simo@archlinux.org>
+pkgname=python-mpdclient
+_pkgnameorig=py-libmpdclient
+pkgver=0.10.0
+pkgrel=1
+pkgdesc="Python module for interfacing MPD"
+url="http://www.musicpd.org/py-libmpdclient.shtml"
+license="LGPL"
+depends=('python' 'mpd')
+source=("http://mercury.chem.pitt.edu/~shank/$_pkgnameorig-$pkgver.tar.gz")
+md5sums=('3a26540b7e057f23187b56e85dc82f95')
+
+build() {
+  cd $startdir/src/$_pkgnameorig-$pkgver
+  python setup.py install --root=$startdir/pkg
+}

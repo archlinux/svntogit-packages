@@ -1,0 +1,199 @@
+diff -Naur apmd-orig/Makefile apmd/Makefile
+--- apmd-orig/Makefile	2001-11-25 14:46:16.000000000 -0800
++++ apmd/Makefile	2004-10-27 22:09:11.000000000 -0700
+@@ -37,8 +37,7 @@
+ 
+ CC=gcc
+ CFLAGS=-O -g
+-XTRACFLAGS=-Wall -pipe -I. -I/usr/src/linux/include \
+-		-I/usr/src/linux-2.2/include -I /usr/src/linux-2.0/include \
++XTRACFLAGS=-Wall -pipe -I. -I/usr/linux/include \
+ 		-DVERSION=\"$(VERSION)\" \
+ 		-DAPMD_PROXY_NAME=\"$(APMD_PROXY_DIR)/apmd_proxy\"
+ LDFLAGS=
+diff -Naur apmd-orig/apmd.c apmd/apmd.c
+--- apmd-orig/apmd.c	2001-11-25 14:43:32.000000000 -0800
++++ apmd/apmd.c	2004-10-27 22:09:11.000000000 -0700
+@@ -67,15 +67,7 @@
+ #include <errno.h>
+ #include <fcntl.h>
+ 
+-#define APM_TRACE 1	/* enable to compile in debug tracing */
+-
+-
+-#ifdef APM_TRACE
+-#define ADEBUG(lev,args...) \
+-    if (APM_TRACE>=lev) syslog(LOG_DEBUG, __FUNCTION__ ": " args)
+-#else
+-#define ADEBUG(args...)
+-#endif
++#define APM_TRACE 0	/* enable to compile in debug tracing */
+ 
+ #define PID_FILE _PATH_VARRUN "apmd.pid"
+ 
+@@ -242,7 +234,6 @@
+     pid_t pid;
+     char line[256];
+ 
+-    ADEBUG(4, "0x%04x\n", event);
+     /* If the proxy flag is not set, then return 0 indicating that
+      * the event is acceptable
+      */
+@@ -325,11 +316,9 @@
+ 
+     if (pipe(fds))
+     {
+-	ADEBUG(0, "can't open fds for apmd_proxy: %s", strerror(errno));
+ 	return 2;
+     }
+     
+-    ADEBUG(1, "executing: '%s' '%s'", argv[0], argv[1]);
+ 
+     pid = fork();
+     if (pid == 0) /* child */
+@@ -354,7 +343,6 @@
+     }
+     else if (pid < 0) /* can't fork */
+     {
+-	ADEBUG(0, "can't fork for apmd_proxy: %s", strerror(errno));
+ 	return 1;
+     }
+     else if (pid > 0) /* parent */
+@@ -371,7 +359,6 @@
+ 	    while ((len = read(fds[0], line, sizeof(line)-1)) > 0)
+ 	    {
+ 		line[len] = 0;
+-		ADEBUG(1, "+ %s", line);
+ 	    }
+ 	    
+ 	    retval = waitpid(pid, &status, WNOHANG);
+@@ -379,7 +366,6 @@
+ 		break; // finished okay
+ 	    if (retval == -1 && errno != EINTR)
+ 	    {
+-		ADEBUG(0, "waitpid failed: %s", strerror(errno));
+ 		status = 143;
+ 		break;
+ 	    }
+@@ -391,7 +377,6 @@
+ 	while ((len = read(fds[0], line, sizeof(line)-1)) > 0)
+ 	{
+ 	    line[len] = 0;
+-	    ADEBUG(1, "+ %s", line);
+ 	}
+ 	
+ 	close(fds[0]);
+@@ -399,13 +384,10 @@
+ 	/* Collect the exit code */
+ 	if (WIFEXITED(status))
+ 	{
+-	    ADEBUG(3, "%s exited with status %d", apmd_proxy,
+-		   WEXITSTATUS(status));
++		   WEXITSTATUS(status);
+ 	    /* Return the exit status of the program */
+ 	    return WEXITSTATUS(status);
+ 	}
+-	else
+-	    ADEBUG(3, "%s exited on signal %d", apmd_proxy, WTERMSIG(status));
+     }
+     
+     return 0;
+@@ -423,7 +405,6 @@
+ {
+     char msg[512];
+ 
+-    ADEBUG(4, "0x%04x\n", event);
+     if (last_charging_status == apmi->battery_status)
+ 	return;
+ 
+@@ -460,11 +441,9 @@
+  */
+ static int apmd_suspend(apm_event_t event, apm_info * apmi)
+ {
+-    ADEBUG(4, "0x%04x\n", event);
+     if (apmd_call_proxy(event, apmi))
+     {
+ #ifdef APM_REJECT_ENABLED	/* If kernel rejection enabled */
+-	ADEBUG(5, "Suspend rejected\n");
+ 	return apm_reject(apmd_fd);
+ #endif
+     }
+@@ -494,11 +473,9 @@
+  */
+ static int apmd_standby(apm_event_t event, apm_info * apmi)
+ {
+-    ADEBUG(4, "0x%04x\n", event);
+     if (apmd_call_proxy(event, apmi))
+     {
+ #ifdef APM_REJECT_ENABLED
+-	ADEBUG(5, "Standby rejected\n");
+ 	return apm_reject(apmd_fd);
+ #endif
+     }
+@@ -529,7 +506,6 @@
+     char msg[512];
+     int len = 0;
+ 
+-    ADEBUG(4, "0x%04x\n", event);
+     apmd_call_proxy(event, apmi);
+ 
+     /* Logging */
+@@ -590,7 +566,6 @@
+ static void apmd_low_battery(apm_event_t event, apm_info * apmi)
+ {
+     char msg[512];
+-    ADEBUG(4, "0x%04x\n", event);
+     sprintf(msg, "Battery Low Notification from %s (%d%% %s)",
+ 	    (event == APM_LOW_BATTERY ? "APM BIOS" : "apmd"),
+ 	    apmi->battery_percentage, apm_time_nosec(apmd_time(apmi)));
+@@ -609,7 +584,6 @@
+     static int last_battery_status = 0;
+     static int last_ac_status = -1;
+ 
+-    ADEBUG(4, "0x%04x\n", event);
+ 
+     /* Call proxy and perform special logging as needed */
+     switch (event)
+@@ -956,7 +930,6 @@
+ 	    if (apm_read(&apminfo))
+ 		continue;
+ 	    apmi = &apminfo;
+-	    ADEBUG(4, " [event loop] 0x%04x\n", events[i]);
+ 	    if (verbose)
+ 		syslog(LOG_INFO, "Event 0x%04x: %s",
+ 		       events[i], apm_event_name(events[i]));
+diff -Naur apmd-orig/apmsleep.c apmd/apmsleep.c
+--- apmd-orig/apmsleep.c	2001-05-11 13:30:08.000000000 -0700
++++ apmd/apmsleep.c	2004-10-27 22:09:11.000000000 -0700
+@@ -42,14 +42,13 @@
+  *
+  */
+ 
++typedef unsigned char u8;
++typedef unsigned short u16;
++typedef unsigned int u32;
++
+ #include <stdio.h>
+ #include <linux/version.h>
+-
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,2,0)
+-#include <asm/spinlock.h>
+-#endif
+-
+-#include <linux/mc146818rtc.h>
++#include <linux/rtc.h>
+ #include <sys/ioctl.h>
+ #include <sys/time.h>
+ #include <sys/types.h>
+diff -Naur apmd-orig/on_ac_power apmd/on_ac_power
+--- apmd-orig/on_ac_power	1999-06-05 15:10:00.000000000 -0700
++++ apmd/on_ac_power	2004-10-27 22:09:24.000000000 -0700
+@@ -16,7 +16,7 @@
+ [ ! -f /proc/apm ] && exit 0;
+ 
+ exec awk </proc/apm '
+-	/^[0-9.]* [0-9.]* 0x.. 0x../ {
++	/^[0-9a-z.]* [0-9a-z.]* 0x.. 0x../ {
+ 		if ($4 == "0x01")
+ 			exit 0;
+ 		else {

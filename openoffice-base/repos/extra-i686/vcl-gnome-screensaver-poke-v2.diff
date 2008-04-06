@@ -1,0 +1,236 @@
+--- vcl/unx/gtk/a11y/makefile.mk	2006-05-09 20:42:47.000000000 +0300
++++ vcl/unx/gtk/a11y/makefile.mk	2007-01-26 10:08:11.000000000 +0200
+@@ -59,7 +59,11 @@
+ 
+ .IF "$(ENABLE_GTK)" != ""
+ 
+-PKGCONFIG_MODULES=gtk+-2.0
++.IF "$(ENABLE_DBUS)" == "YES"
++CDEFS+= -DENABLE_DBUS
++.ENDIF
++
++PKGCONFIG_MODULES=gtk+-2.0 $(DBUS_PACKAGE)
+ .INCLUDE : pkg_config.mk
+ 
+ CFLAGS+=-DVERSION=\"$(UPD)$(LAST_MINOR)\"
+--- vcl/unx/gtk/app/makefile.mk	2005-09-09 15:36:54.000000000 +0300
++++ vcl/unx/gtk/app/makefile.mk	2007-01-26 10:08:11.000000000 +0200
+@@ -58,7 +58,11 @@
+ 
+ .IF "$(ENABLE_GTK)" != ""
+ 
+-PKGCONFIG_MODULES=gtk+-2.0
++.IF "$(ENABLE_DBUS)" == "YES"
++CDEFS+= -DENABLE_DBUS
++.ENDIF
++
++PKGCONFIG_MODULES=gtk+-2.0 $(DBUS_PACKAGE)
+ .INCLUDE : pkg_config.mk
+ 
+ SLOFILES=\
+--- vcl/unx/gtk/gdi/makefile.mk	2006-06-19 22:44:56.000000000 +0300
++++ vcl/unx/gtk/gdi/makefile.mk	2007-01-26 10:08:11.000000000 +0200
+@@ -55,7 +55,11 @@
+ 
+ .IF "$(ENABLE_GTK)" != ""
+ 
+-PKGCONFIG_MODULES=gtk+-2.0
++.IF "$(ENABLE_DBUS)" == "YES"
++CDEFS+= -DENABLE_DBUS
++.ENDIF
++
++PKGCONFIG_MODULES=gtk+-2.0 $(DBUS_PACKAGE)
+ .INCLUDE : pkg_config.mk
+ 
+ SLOFILES=$(SLO)$/salnativewidgets-gtk.obj
+--- vcl/unx/gtk/window/gtkframe.cxx	2006-12-21 14:04:26.000000000 +0200
++++ vcl/unx/gtk/window/gtkframe.cxx	2007-01-26 10:11:11.000000000 +0200
+@@ -71,6 +71,10 @@
+ 
+ using namespace com::sun::star;
+ 
++#ifdef ENABLE_DBUS
++#include <dbus/dbus-glib-lowlevel.h>
++#endif
++
+ int GtkSalFrame::m_nFloats = 0;
+ 
+ static USHORT GetKeyModCode( guint state )
+@@ -512,6 +516,11 @@
+     m_nExtStyle         = 0;
+     m_pRegion           = NULL;
+ 
++ #ifdef ENABLE_DBUS
++ 	m_nGnomeScreenSaverPokeTimeoutId = 0;
++ 	m_pDBusConnection   = NULL;
++ #endif
++
+     gtk_widget_set_app_paintable( GTK_WIDGET(m_pWindow), TRUE );
+     gtk_widget_set_double_buffered( GTK_WIDGET(m_pWindow), FALSE );
+     gtk_widget_set_redraw_on_allocate( GTK_WIDGET(m_pWindow), FALSE );
+@@ -1679,6 +1688,44 @@
+ 					 sizeof( nMessage ) );
+ }
+ 
++#ifdef ENABLE_DBUS
++#define GS_SERVICE   "org.gnome.ScreenSaver"
++#define GS_PATH      "/org/gnome/ScreenSaver"
++#define GS_INTERFACE "org.gnome.ScreenSaver"
++
++static gboolean
++pokeGnomeScreenSaver( gpointer data )
++{
++	DBusConnection *pConnection = (DBusConnection*) data;
++	DBusMessage *pMessage;
++	DBusError    pError;
++
++	g_return_val_if_fail( pConnection != NULL, FALSE );
++
++	dbus_error_init( &pError );
++
++	pMessage = dbus_message_new_method_call (GS_SERVICE, GS_PATH, GS_INTERFACE, "Poke");
++	if( pMessage == NULL ) {
++		OSL_TRACE( "Couldn't allocate the dbus message" );
++		return FALSE;
++	}
++
++	if( !dbus_connection_send( pConnection, pMessage, NULL ) )
++		OSL_TRACE( "could not send dbus message" );
++
++	dbus_connection_flush( pConnection );
++
++	dbus_message_unref( pMessage );
++
++	if( dbus_error_is_set( &pError ) )
++	  dbus_error_free( &pError );
++
++	OSL_TRACE( "Poke message sent" );
++
++	return TRUE;
++}
++#endif
++
+ void GtkSalFrame::StartPresentation( BOOL bStart )
+ {
+ 	Display *pDisplay = GDK_DISPLAY_XDISPLAY( getGdkDisplay() );
+@@ -1691,6 +1738,7 @@
+ 					 &bPreferBlanking, &bAllowExposures );
+ 	if( bStart )
+ 	{
++		/* disable X server built-in screensaver */
+ 		if ( nTimeout )
+ 		{
+ 			m_nSavedScreenSaverTimeout = nTimeout;
+@@ -1698,14 +1746,55 @@
+ 			XSetScreenSaver( pDisplay, 0, nInterval,
+ 							 bPreferBlanking, bAllowExposures );
+ 		}
++
++#ifdef ENABLE_DBUS
++		/* setup 30 seconds timeout to poke gnome-screensaver thru DBus connection */
++		if( !m_pDBusConnection ) {
++			DBusError pDBusError;
++
++			OSL_TRACE( "trying to create dbus connection" );
++
++			dbus_error_init( &pDBusError );
++			m_pDBusConnection = dbus_bus_get( DBUS_BUS_SESSION, &pDBusError );
++			dbus_connection_set_exit_on_disconnect( m_pDBusConnection, FALSE );
++
++			if( dbus_error_is_set( &pDBusError ) )
++			  dbus_error_free( &pDBusError );
++
++			if( m_pDBusConnection ) {
++				dbus_connection_setup_with_g_main( m_pDBusConnection, NULL );
++				OSL_TRACE( "dbus connection created" );
++
++				/* poke the screensaver now so that it doesn't kick in in the first 30 seconds of slideshow */
++				pokeGnomeScreenSaver( m_pDBusConnection );
++			}
++		}
++
++		if( m_pDBusConnection )
++			m_nGnomeScreenSaverPokeTimeoutId = g_timeout_add( 30000, pokeGnomeScreenSaver, m_pDBusConnection );
++#endif
+ 	}
+ 	else
+ 	{
++		/* restore X server built-in screensaver settings */
+ 		if( m_nSavedScreenSaverTimeout )
+ 			XSetScreenSaver( pDisplay, m_nSavedScreenSaverTimeout,
+ 							 nInterval, bPreferBlanking,
+ 							 bAllowExposures );
+ 		m_nSavedScreenSaverTimeout = 0;
++
++#ifdef ENABLE_DBUS
++		/* remove timeout for poking gnome-screensaver */
++		if( m_nGnomeScreenSaverPokeTimeoutId ) {
++			g_source_remove( m_nGnomeScreenSaverPokeTimeoutId );
++			m_nGnomeScreenSaverPokeTimeoutId = 0;
++			OSL_TRACE( "screensaver poking timeout removed" );
++
++			/* dbus_connection_unref( m_pDBusConnection ); see https://bugs.freedesktop.org/show_bug.cgi?id=9309 */
++			m_pDBusConnection = NULL;
++			OSL_TRACE( "dbus connection disconnected and unrefed" );
++		}
++#endif
+ 	}
+ }
+ 
+--- vcl/unx/gtk/window/makefile.mk	2006-06-19 22:45:54.000000000 +0300
++++ vcl/unx/gtk/window/makefile.mk	2007-01-26 10:08:11.000000000 +0200
+@@ -58,7 +58,11 @@
+ 
+ .IF "$(ENABLE_GTK)" != ""
+ 
+-PKGCONFIG_MODULES=gtk+-2.0
++.IF "$(ENABLE_DBUS)" == "YES"
++CDEFS+= -DENABLE_DBUS
++.ENDIF
++
++PKGCONFIG_MODULES=gtk+-2.0 $(DBUS_PACKAGE)
+ .INCLUDE : pkg_config.mk
+ 
+ SLOFILES=\
+--- vcl/unx/inc/plugins/gtk/gtkframe.hxx	2006-11-01 17:30:08.000000000 +0200
++++ vcl/unx/inc/plugins/gtk/gtkframe.hxx	2007-01-26 10:08:11.000000000 +0200
+@@ -46,6 +46,12 @@
+ #include <com/sun/star/uno/Reference.hxx>
+ #include <com/sun/star/accessibility/XAccessible.hdl>
+ 
++#ifdef ENABLE_DBUS
++#define DBUS_API_SUBJECT_TO_CHANGE
++#include <dbus/dbus.h>
++#include <dbus/dbus-glib.h>
++#endif
++
+ #ifndef _SV_SALFRAME_HXX
+ #include <salframe.hxx>
+ #endif
+@@ -204,6 +210,11 @@
+     Size                            m_aMaxSize;
+     Size                            m_aMinSize;
+     Rectangle                       m_aRestorePosSize;    
++
++#ifdef ENABLE_DBUS
++	DBusConnection                 *m_pDBusConnection;
++	guint                           m_nGnomeScreenSaverPokeTimeoutId;
++#endif
+     
+     GdkRegion*			            m_pRegion;
+ 
+--- vcl/util/makefile.mk	2007-01-19 14:56:23.000000000 +0200
++++ vcl/util/makefile.mk	2007-01-26 10:08:11.000000000 +0200
+@@ -333,7 +333,11 @@
+ 
+ # gtk plugin
+ .IF "$(ENABLE_GTK)" != ""
+-PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0
++.IF "$(ENABLE_DBUS)" == "YES"
++CDEFS+= -DENABLE_DBUS
++.ENDIF
++
++PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0 $(DBUS_PACKAGE)
+ .INCLUDE: pkg_config.mk
+ 
+ LIB4TARGET=$(SLB)$/igtk_plug_

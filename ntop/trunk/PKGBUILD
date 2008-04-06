@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.12 2007/10/08 15:38:54 daniel Exp $
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=ntop
+pkgver=3.3
+pkgrel=3.1
+pkgdesc="A network traffic probe that shows the network usage, similar to what the popular top Unix command does"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.ntop.org"
+depends=('libpcap>=0.9.8' 'gd' 'glib' 'libxml2' 'openssl' 'gdbm' 'rrdtool' 'pcre')
+source=(http://downloads.sourceforge.net/sourceforge/ntop/ntop-$pkgver.tar.gz
+        ntop.confd ntop.rcd)
+options=(!libtool)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./autogen.sh --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --disable-snmp
+  make || return 1
+  make DESTDIR=$startdir/pkg install-recursive
+  install -d -m755 --owner=nobody --group=nobody $startdir/pkg/var/ntop
+
+  install -D -m755 $startdir/src/ntop.rcd $startdir/pkg/etc/rc.d/ntop 
+  install -D -m644 $startdir/src/ntop.confd $startdir/pkg/etc/conf.d/ntop 
+}

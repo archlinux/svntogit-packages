@@ -1,0 +1,24 @@
+# Maintainer : Aaron, phrakture, Griffin <aaron@archlinux.org>
+# Contributor: Gustav Munkby <grddev@gmx.net>
+
+pkgname=antiword
+pkgver=0.37
+pkgrel=1
+pkgdesc="Antiword is a free MS Word reader for Linux and RISC OS"
+url="http://www.winfield.demon.nl/"
+license="GPL"
+depends=('glibc')
+install=antiword.install
+source=(http://www.winfield.demon.nl/linux/$pkgname-$pkgver.tar.gz \
+        antiword-helper)
+md5sums=('f868e2a269edcbc06bf77e89a55898d1' '01a988376cfd4bb268120ab597c9abe3')
+
+build()
+{
+  cd $startdir/src/$pkgname-$pkgver
+  sed -i "s|CFLAGS	=.*|CFLAGS = $CFLAGS -DNDEBUG|g; \
+          s|GLOBAL_INSTALL_DIR =.*|GLOBAL_INSTALL_DIR = /usr/bin|g" \
+          Makefile.Linux
+  make DESTDIR=$startdir/pkg global_install
+  install -m755 $startdir/src/antiword-helper $startdir/pkg/usr/bin/
+}

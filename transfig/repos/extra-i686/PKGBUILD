@@ -1,0 +1,37 @@
+# $Id: PKGBUILD,v 1.3 2006/01/02 16:28:31 tpowa Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Contributor: J. Santiago Hirschfeld <jsantiagoh@yahoo.com.ar>
+pkgname=transfig
+pkgver=3.2.4
+pkgrel=2
+pkgdesc="Format conversion utitity to be used with xfig"
+url="http://www.xfig.org"
+depends=('libpng' 'libxpm')
+source=("http://xfig.org/software/xfig/$pkgver/$pkgname.$pkgver.tar.gz"\
+        'transfig-3.2.4-gcc-3.3.patch'\
+        'Imakefile.fig2dev'\
+        'Imakefile.transfig'\
+        )
+md5sums=('742de0f7a3cae74d247bbd0c70dd9dd7' \
+        '71a0fff063c73b598780da48ef56b943'\
+        'a31fa4aac9aeacc6b8f044becd789a33'\
+        'aa7fc14281a2bdcad3a62496778b1547'\
+        )
+
+build() {
+        cd $startdir/src/$pkgname.$pkgver
+
+        cp ../../Imakefile.fig2dev fig2dev/Imakefile
+        cp ../../Imakefile.transfig transfig/Imakefile
+
+        # Patch for gcc 3.3 taken from the Gentoo Linux ebuild ;)
+        patch -Np1 -i ../../$pkgname-$pkgver-gcc-3.3.patch
+
+        xmkmf || return 1
+        make Makefiles || return 1
+        make || return 1
+
+        mkdir -p $startdir/pkg/usr/lib/X11
+
+        make DESTDIR=$startdir/pkg install  || return 1
+}

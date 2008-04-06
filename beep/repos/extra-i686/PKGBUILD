@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.2 2004/04/19 06:24:58 dorphell Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Committer: Manolis Tzanidakis <manolis@archlinux.org>
+
+pkgname=beep
+pkgver=1.2.2
+pkgrel=1
+pkgdesc="Advanced PC speaker beeping program."
+url="http://www.johnath.com/beep"
+depends=('glibc')
+source=($url/$pkgname-$pkgver.tar.gz)
+md5sums=('d541419fd7e5642952d7b48cbb40c712')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  sed -i "s:-Wall:${CFLAGS}:" Makefile
+  make || return 1
+  install -D -m755 beep $startdir/pkg/usr/bin/beep
+  install -D -m644 beep.1.gz \
+    $startdir/pkg/usr/man/man1/beep.1.gz
+}

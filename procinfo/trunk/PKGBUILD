@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.14 2007/11/16 00:02:37 daniel Exp $
+# Maintainer: judd <jvinet@zeroflux.org>
+pkgname=procinfo
+pkgver=19
+pkgrel=2
+pkgdesc="Displays useful information from /proc"
+arch=(i686 x86_64) 
+license=('GPL')
+groups=('base')
+depends=('glibc' 'ncurses' 'perl')
+source=(ftp://ftp.cistron.nl/pub/people/00-OLD/svm/$pkgname-18.tar.gz
+	procinfo-19.2.patch)
+md5sums=('27658d0a69040aca05a65b9888599d50'
+         '6520e2f7d7884069d3ee41251d36a86c')
+
+build() {
+  cd $startdir/src/$pkgname-18
+  patch -Np1 -i ../procinfo-19.2.patch || return 1
+  make LDLIBS=-lncurses || return 1
+  make prefix=$startdir/pkg/usr install
+}
+

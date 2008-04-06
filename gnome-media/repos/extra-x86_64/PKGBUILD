@@ -1,0 +1,35 @@
+# $Id: PKGBUILD,v 1.33 2008/03/13 16:17:57 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-media
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="GNOME Media Tools"
+arch=(i686 x86_64)
+license=(GPL)
+depends=('libgnomeui>=2.22.01' 'gstreamer0.10-gconf' 'gstreamer0.10-base'
+	 'gstreamer0.10-flac' 'gstreamer0.10-ogg'
+	 'gstreamer0.10-vorbis' 'gstreamer0.10-good'
+	 'gstreamer0.10-cdparanoia')
+makedepends=('perlxml' 'pkgconfig' 'gnome-doc-utils>=0.12.2')
+url="http://www.gnome.org"
+groups=('gnome')
+options=('!libtool' '!emptydirs')
+install=gnome-media.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('e3fabb87abd2731d7f345d724b40333a')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --libexecdir=/usr/lib/gnome-media \
+              --localstatedir=/var --disable-static \
+	      --enable-gstreamer=0.10 --disable-gnomecd \
+	      --disable-scrollkeeper || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+  
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}

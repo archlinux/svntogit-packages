@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.17 2008/03/21 17:12:10 tpowa Exp $
+# Maintainer: Thomas Baechler <thomas@archlinux.org>
+# Contributor: basilburn <basilburn@yahoo.com>
+
+pkgname=kqemu
+_kernver=2.6.24-ARCH
+pkgver=1.3.0pre11
+pkgrel=18
+pkgdesc="QEMU Accelerator Module, which adds virtualization capabilities to qemu. For kernel26."
+arch=(i686 x86_64)
+license=('GPL' 'BSD')
+url="http://fabrice.bellard.free.fr/qemu/"
+depends=('kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0' 'qemu>=0.9.0')
+install=kqemu.install
+source=(http://fabrice.bellard.free.fr/qemu/kqemu-$pkgver.tar.gz)
+md5sums=('970521874ef8b1ba4598925ace5936c3')
+
+build()
+{
+  cd $startdir/src/kqemu-$pkgver
+  
+  ./configure --kernel-path=/lib/modules/${_kernver}/build
+  make || return 1
+  install -D -m644 kqemu.ko $startdir/pkg/lib/modules/${_kernver}/misc/kqemu.ko || return 1
+  sed -i -e "s/KERNEL_VERSION='.*'/KERNEL_VERSION='${_kernver}'/" $startdir/kqemu.install
+} 

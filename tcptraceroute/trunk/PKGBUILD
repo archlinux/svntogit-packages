@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.9 2007/10/08 15:37:08 daniel Exp $
+# Maintainer: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor: Dale Blount <dale@archlinux.org>
+
+pkgname=tcptraceroute
+pkgver=1.5beta7
+pkgrel=4.1
+pkgdesc="A traceroute implementation using TCP packets."
+arch=(i686 x86_64)
+url="http://michael.toren.net/code/tcptraceroute/"
+license=('GPL')
+depends=('libpcap>=0.9.8')
+makedepends=('libnet')
+source=(http://michael.toren.net/code/tcptraceroute/$pkgname-$pkgver.tar.gz)
+md5sums=('65d1001509f971ea986fcbc2dd009643')
+
+build() {
+   cd $startdir/src/$pkgname-$pkgver
+   ./configure --prefix=/usr --sysconfdir=/etc --with-libnet=/usr
+   make || return 1
+   make DESTDIR=$startdir/pkg/ install
+}

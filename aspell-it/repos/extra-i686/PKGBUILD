@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.4 2005/06/18 23:12:47 simo Exp $
+# Maintainer: Simo Leone <simo@archlinux.org>
+# Contributor: Eric Johnson <eric@coding-zone.com>
+
+pkgname=aspell-it
+pkgver=0.53.0
+pkgrel=2
+pkgdesc="Italian dictionary for aspell"
+depends=('aspell')
+url="http://aspell.net/"
+source=(ftp://ftp.gnu.org/gnu/aspell/dict/it/$pkgname-0.53-0.tar.bz2)
+md5sums=('ab3cce02bf8bfdf4116f9f7e602cf4b7')
+
+build() {
+  cd $startdir/src/$pkgname-0.53-0
+  ./configure
+  /usr/bin/make || return 1
+  /usr/bin/make DESTDIR=$startdir/pkg install
+}
+# vim: ts=2 sw=2 et ft=sh

@@ -1,0 +1,18 @@
+# $Id: PKGBUILD,v 1.1 2004/06/24 23:20:39 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+pkgname=gtk1-engines
+pkgver=0.12
+pkgrel=1
+pkgdesc="Theme-Engines and Themes for GTK+ 1 - including gtk-engines-pixmap"
+depends=('gtk')
+source=(ftp://ftp.gnome.org/pub/gnome/sources/$pkgname/0.12/gtk-engines-$pkgver.tar.gz)
+
+build() {
+  cd $startdir/src/gtk-engines-$pkgver
+  ./configure --prefix=/usr --libexecdir=/usr/lib/$pkgname
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  # removes files that are already provided by gtk-engines (for gtk2)
+  rm $startdir/pkg/usr/share/themes/Metal/README.html
+  rm $startdir/pkg/usr/share/themes/Redmond95/README.html
+}

@@ -1,0 +1,30 @@
+# $Id: PKGBUILD,v 1.3 2008/01/05 21:33:28 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=bcprov
+pkgver=1.38
+_pkgver=138
+pkgrel=1
+pkgdesc="Java cryptography APIs (Bouncy Castle)"
+arch=('i686' 'x86_64')
+url="http://www.bouncycastle.org/java.html"
+license=('custom')
+depends=('java-runtime')
+makedepends=('java-gcj-compat' 'unzip' 'junit')
+source=(http://www.bouncycastle.org/download/bcprov-jdk14-${_pkgver}.tar.gz)
+md5sums=('d8e4ce15cda7b081a4b18752770ca02f')
+
+build() {
+  cd ${startdir}/src/bcprov-jdk14-${_pkgver}
+  jar xf src.zip || return 1
+
+  mkdir classes
+  find . -name '*.java' > src.list
+  javac -cp /usr/share/java/junit.jar -d classes @src.list || return 1
+
+  cd classes
+  find . -path '*test/*.class' -delete
+  find . -depth -type d -empty -delete
+  jar cf ../bcprov.jar * || return 1
+  install -D -m644 ../bcprov.jar ${startdir}/pkg/usr/share/java/bcprov.jar || return 1
+  install -D -m644 ../LICENSE.html ${startdir}/pkg/usr/share/licenses/${pkgname}/LICENSE.html
+}

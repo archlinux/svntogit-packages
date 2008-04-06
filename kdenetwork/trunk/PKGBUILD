@@ -1,0 +1,39 @@
+# $Id: PKGBUILD,v 1.47 2008/03/03 19:03:13 tpowa Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kdenetwork
+pkgver=3.5.9
+kdever=3.5.9 # if minor 0, then without .0
+pkgrel=1
+pkgdesc="KDE Networking Programs."
+arch=(i686 x86_64)
+url="http://www.kde.org"
+license=('GPL')
+groups=('kde')
+makedepends=('pkgconfig')
+depends=('kdebase>=3.5.9' 'wireless_tools' 'ppp' 'openslp' 'rdesktop' 'kdelibs>=3.5.9' 'gnutls>=1.2.4' 'qca-tls' 'perl-io-socket-ssl' 'libxss')
+
+# for easier build, just uncomment the mirror you want to use
+  mirror="ftp.solnet.ch/mirror/KDE"         # updated every 2 hours, very fast for Europe
+# mirror="ftp.kde.org/pub/kde/"             # main server
+# mirror="ibiblio.org/pub/mirrors/kde/"     # ibiblio mirror
+
+source=(ftp://$mirror/stable/$kdever/src/$pkgname-$pkgver.tar.bz2 lisa)
+
+
+build() {
+  # Source the QT and KDE profile
+  [ "$QTDIR" = "" ] && source /etc/profile.d/qt3.sh 
+  [ "$KDEDIR" = "" ] && source /etc/profile.d/kde.sh
+  # start building
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/opt/kde --disable-debug --disable-dependency-tracking --enable-gcc-hidden-visibility \
+  --enable-final
+  #        --enable-final # remove this if you build with < 512mb ram.
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+  # Install lisa network daemon
+  install -D -m 755 $startdir/src/lisa $startdir/pkg/etc/rc.d/lisa
+}
+md5sums=('0ec1d4ccd550510821a622eb91b893e8'
+         'cb621ff9a11c2c5f5672d9c895cea1a9')

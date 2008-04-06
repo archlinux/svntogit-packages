@@ -1,0 +1,25 @@
+# $Id: PKGBUILD,v 1.10 2007/04/17 15:46:59 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: dorphell <dorphell@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+pkgname=minicom
+pkgver=2.2
+pkgrel=1
+pkgdesc="A serial communication program"
+arch=(i686 !x86_64)
+depends=('bash')
+source=(http://alioth.debian.org/frs/download.php/1806/$pkgname-$pkgver.tar.gz)
+	#http://www.gentoo.org/cgi-bin/viewcvs.cgi/*checkout*/net-dialup/minicom/files/minicom-2.1-gcc4.patch)
+url="http://alioth.debian.org/projects/minicom/"
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+
+  # arch64 fix / doesn't apply to 2.2, please check!
+  #[ "$CARCH" = "x86_64" ] && patch -Np1 -i ../minicom-2.1-gcc4.patch || return 1
+
+  ./configure --prefix=/usr --sysconfdir=/etc
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}
+md5sums=('13933c8777839f00e3730df23599dc93')

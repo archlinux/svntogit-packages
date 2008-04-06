@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.15 2007/04/22 13:16:17 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-python-extras
+pkgver=2.14.3
+pkgrel=1
+pkgdesc="Gnome Python interfaces for libraries not part of the core platform"
+arch=(i686 x86_64)
+license=('GPL' 'LGPL')
+depends=('gnome-python>=2.18.0')
+makedepends=('libgnomeprintui' 'gtksourceview' 'gnome-media' 'libgda'
+             'gnome-panel' 'libgtop' 'libgtkhtml' 'gtkspell' 'gdl'
+	     'xulrunner' 'totem-plparser' 'libgksu' 'pkgconfig')
+options=('nolibtool')
+source=(http://ftp.gnome.org/pub/gnome/sources/gnome-python-extras/2.14/gnome-python-extras-${pkgver}.tar.bz2)
+url="http://www.daa.com.au/~james/pygtk/"
+md5sums=('7d3414838ccb94cfcecc0a48f68c012d')
+
+build() {
+  [ -z "${MOZ_PLUGIN_DIR}" ] && . /etc/profile.d/mozilla-common.sh
+  
+  cd ${startdir}/src/gnome-python-extras-${pkgver}
+  ./configure --prefix=/usr --with-gtkmozembed=xulrunner
+  make LDFLAGS+=-R/opt/mozilla/lib/xulrunner || return 1 
+  make DESTDIR=${startdir}/pkg install
+}

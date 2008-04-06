@@ -1,0 +1,817 @@
+diff -urNad trunk~/pdns/common_startup.cc trunk/pdns/common_startup.cc
+--- trunk~/pdns/common_startup.cc	2006-10-29 23:51:06.539379275 +0100
++++ trunk/pdns/common_startup.cc	2006-10-29 23:51:10.591763219 +0100
+@@ -185,7 +185,7 @@
+   N->send(AD.A);
+   numanswered++;
+ 
+-  if(AD.A->d_socklen==sizeof(sockaddr_in))
++  if(AD.A->remote.getSocklen()==sizeof(sockaddr_in))
+     numanswered4++;
+   else
+     numanswered6++;
+@@ -230,7 +230,7 @@
+       continue;                    // packet was broken, try again
+     }
+ 
+-    if(P->d_socklen==sizeof(sockaddr_in))
++    if(P->remote.getSocklen()==sizeof(sockaddr_in))
+       numreceived4++;
+     else
+       numreceived6++;
+@@ -238,8 +238,8 @@
+     S.ringAccount("queries", P->qdomain+"/"+P->qtype.getName());
+     S.ringAccount("remotes",P->getRemote());
+ 
+-    if(PC.get(P,&cached)) { // short circuit - does the PacketCache recognize this question?
+-      cached.setRemote((struct sockaddr *)(P->remote),P->d_socklen);  // inlined
++    if((P->d.opcode != Opcode::Notify) && PC.get(P,&cached)) { // short circuit - does the PacketCache recognize this question?
++      cached.setRemote(&P->remote);  // inlined
+       cached.setSocket(P->getSocket());                               // inlined
+       cached.spoofID(P->d.id);                                        // inlined 
+       cached.d.rd=P->d.rd; // copy in recursion desired bit 
+@@ -250,7 +250,7 @@
+       avg_latency=(int)(0.999*avg_latency+0.001*diff); // 'EWMA'
+       
+       numanswered++;
+-      if(P->d_socklen==sizeof(sockaddr_in))
++      if(P->remote.sin4.sin_family == AF_INET)
+ 	numanswered4++;
+       else
+ 	numanswered6++;
+diff -urNad trunk~/pdns/communicator.cc trunk/pdns/communicator.cc
+--- trunk~/pdns/communicator.cc	2006-03-16 21:17:59.000000000 +0100
++++ trunk/pdns/communicator.cc	2006-10-29 23:51:10.609760483 +0100
+@@ -290,7 +290,7 @@
+ 
+ int CommunicatorClass::doNotifications()
+ {
+-  struct sockaddr_in from;
++  ComboAddress from;
+   Utility::socklen_t fromlen=sizeof(from);
+   char buffer[1500];
+   int size;
+@@ -300,7 +300,7 @@
+   while((size=recvfrom(d_nsock,buffer,sizeof(buffer),0,(struct sockaddr *)&from,&fromlen))>0) {
+     DNSPacket p;
+ 
+-    p.setRemote((struct sockaddr *)&from, fromlen);
++    p.setRemote(&from);
+ 
+     if(p.parse(buffer,size)<0) {
+       L<<Logger::Warning<<"Unable to parse SOA notification answer from "<<p.getRemote()<<endl;
+diff -urNad trunk~/pdns/dnsbackend.cc trunk/pdns/dnsbackend.cc
+--- trunk~/pdns/dnsbackend.cc	2006-03-16 21:18:00.000000000 +0100
++++ trunk/pdns/dnsbackend.cc	2006-10-29 23:51:10.669751363 +0100
+@@ -32,15 +32,13 @@
+ 
+ bool DNSBackend::getRemote(DNSPacket *p, struct sockaddr *sa, Utility::socklen_t *len)
+ {
+-  if(p->d_socklen<*len)
++  if(p->remote.getSocklen()<*len)
+     return false;
+-  *len=p->d_socklen;
++  *len=p->remote.getSocklen();
+   memcpy(sa,&p->remote,*len);
+   return true;
+ }
+ 
+-
+-
+ void DNSBackend::setArgPrefix(const string &prefix)
+ {
+   d_prefix=prefix;
+diff -urNad trunk~/pdns/dnspacket.cc trunk/pdns/dnspacket.cc
+--- trunk~/pdns/dnspacket.cc	2006-03-16 21:18:00.000000000 +0100
++++ trunk/pdns/dnspacket.cc	2006-10-29 23:51:10.678749995 +0100
+@@ -26,7 +26,7 @@
+ 
+ #include <string>
+ #include <errno.h>
+-
++#include <boost/tokenizer.hpp>
+ #include <algorithm>
+ 
+ #include "dns.hh"
+@@ -52,24 +52,22 @@
+ 
+ string DNSPacket::getLocal() const
+ {
+-  struct sockaddr_in sa;
+-  int addrlen=sizeof(struct sockaddr_in);
++  struct sockaddr_in6 sa;
++  int addrlen=sizeof(sa);
+ 
+   getsockname(d_socket, (struct sockaddr *)&sa, (socklen_t *)&addrlen);
+-  return sockAddrToString(&sa, (socklen_t)addrlen);
++  return sockAddrToString((struct sockaddr_in*)&sa);
+ }
+ 
+ 
+ string DNSPacket::getRemote() const
+ {
+-  return sockAddrToString((struct sockaddr_in *)remote, d_socklen);
++  return remote.toString();
+ }
+ 
+ uint16_t DNSPacket::getRemotePort() const
+ {
+-  if(d_socklen==sizeof(sockaddr_in))
+-    return ((struct sockaddr_in*)remote)->sin_port;
+-  return 0;
++  return remote.sin4.sin_port;
+ }
+ 
+ void DNSPacket::trim()
+@@ -83,11 +81,10 @@
+ {
+   DLOG(L<<"DNSPacket copy constructor called!"<<endl);
+   d_socket=orig.d_socket;
+-  memcpy(remote, orig.remote, sizeof(remote));
++  remote=orig.remote;
+   len=orig.len;
+   d_qlen=orig.d_qlen;
+   d_dt=orig.d_dt;
+-  d_socklen=orig.d_socklen;
+   d_compress=orig.d_compress;
+   d_tcp=orig.d_tcp;
+   qtype=orig.qtype;
+@@ -676,37 +673,37 @@
+   // content contains: 100  100  "s"   "http+I2R"   ""    _http._tcp.foo.com.
+   //                   100   50  "u"   "e2u+sip"    "" testuser@domain.com
+   
+-  vector<string> parts;
+-  stringtok(parts,content);
+-  if(parts.size() < 2) {
+-    throw AhuException("Missing data for type NAPTR '"+domain+"'");
+-  }
+-
+-  int order=atoi(parts[0].c_str());
+-  int pref=atoi(parts[1].c_str());
+-
+-  vector<string::const_iterator> poss;
+-  string::const_iterator i;
+-  for(i=content.begin();i!=content.end();++i)
+-    if(*i=='"')
+-      poss.push_back(i);
+-
+-  if(poss.size()!=6) {
+-    throw AhuException("Missing content for type NAPTR '"+domain+"'");
++  using namespace boost;
++  escaped_list_separator<char> els("\\", " ", "\"");
++  tokenizer<escaped_list_separator<char> > tok(content, els);
++  tokenizer<escaped_list_separator<char> >::iterator iter=tok.begin();
++  int order, pref;
++  string flags, services, regex, replacement;
++  unsigned int n;
++  for(n=0; iter != tok.end(); ++iter, ++n) {
++      switch(n) {
++          case 0:
++              order=atoi(iter->c_str());
++              break;
++          case 1:
++              pref=atoi(iter->c_str());
++              break;
++          case 2:
++              flags=*iter;
++              break;
++          case 3:
++              services=*iter;
++              break;
++          case 4:
++              regex=*iter;
++              break;
++          case 5:
++              replacement=*iter;
++              break;
++      }
+   }
+- 
+-  string flags, services, regex;
+-  insert_iterator<string> flagsi(flags, flags.begin());
+-  copy(poss[0]+1,poss[1],flagsi);
+-  insert_iterator<string> servicesi(services, services.begin());
+-  copy(poss[2]+1,poss[3],servicesi);
+-  insert_iterator<string> regexi(regex, regex.begin());
+-  copy(poss[4]+1,poss[5],regexi);
+-  
+-  for(i=poss[5]+1;i<content.end() && isspace(*i);++i); // skip spaces
+-  string replacement;
+-  insert_iterator<string> replacementi(replacement,replacement.begin());
+-  copy(i,content.end(),replacementi);
++  if(n!=6 || iter!=tok.end())
++      throw AhuException("Error parsing NAPTR content '"+content+"'");
+ 
+ /* 
+  The packet format for the NAPTR record is:
+@@ -1400,7 +1397,7 @@
+   DNSPacket *r=new DNSPacket;
+   r->setSocket(d_socket);
+ 
+-  r->setRemote((struct sockaddr *)remote, d_socklen);
++  r->setRemote(&remote);
+   r->setAnswer(true);  // this implies the allocation of the header
+   r->setA(true); // and we are authoritative
+   r->setRA(0); // no recursion available
+diff -urNad trunk~/pdns/dnspacket.hh trunk/pdns/dnspacket.hh
+--- trunk~/pdns/dnspacket.hh	2005-11-01 13:09:43.000000000 +0100
++++ trunk/pdns/dnspacket.hh	2006-10-29 23:51:10.679749843 +0100
+@@ -31,6 +31,7 @@
+ #include <cstring>
+ #include <cstdlib>
+ #include <sys/types.h>
++#include "iputils.hh"
+ 
+ #ifndef WIN32
+ #include <sys/socket.h>
+@@ -115,7 +116,7 @@
+     unsigned int arcount:16;  //!< number of additional resource records
+   };
+ 
+-  inline void setRemote(const struct sockaddr *a, Utility::socklen_t socklen);
++  inline void setRemote(const ComboAddress*);
+   string getLocal() const;
+   string getRemote() const;
+   uint16_t getRemotePort() const;
+@@ -238,8 +239,7 @@
+ 
+   //////// DATA !
+ 
+-  char remote[sizeof(sockaddr_in6)];
+-  Utility::socklen_t d_socklen; // 4
++  ComboAddress remote;
+   uint16_t len; //!< length of the raw binary packet 2
+   uint16_t qclass;  //!< class of the question - should always be INternet 2
+   struct dnsheader d; //!< dnsheader at the start of the databuffer 12
+@@ -333,13 +333,9 @@
+ }
+ 
+ //! Use this to set where this packet was received from or should be sent to
+-inline void DNSPacket::setRemote(const struct sockaddr *s, Utility::socklen_t socklen)
++inline void DNSPacket::setRemote(const ComboAddress *s)
+ {
+-  if(socklen>(Utility::socklen_t)sizeof(remote))
+-    throw AhuException("Address too long for storage: "+itoa(socklen));
+-
+-  memcpy((void *)remote,(void *)s,socklen);
+-  d_socklen=socklen;
++    remote=*s;
+ }
+ 
+ inline void DNSPacket::spoofID(uint16_t id)
+diff -urNad trunk~/pdns/dnsproxy.cc trunk/pdns/dnsproxy.cc
+--- trunk~/pdns/dnsproxy.cc	2005-11-01 13:10:16.000000000 +0100
++++ trunk/pdns/dnsproxy.cc	2006-10-29 23:53:40.995898315 +0100
+@@ -93,7 +93,7 @@
+ 
+ bool DNSProxy::recurseFor(DNSPacket* p)
+ {
+-  return d_ng.match((struct sockaddr_in *)&p->remote);
++  return d_ng.match((ComboAddress *)&p->remote);
+ }
+ 
+ /** returns false if p->remote is not allowed to recurse via us */
+@@ -109,8 +109,8 @@
+ 
+     ConntrackEntry ce;
+     ce.id       = p->d.id;
+-    memcpy((void *)&ce.remote,(void *)&p->remote, p->d_socklen);
+-    ce.addrlen  = p->d_socklen;
++    memcpy((void *)&ce.remote,(void *)&p->remote, p->remote.getSocklen());
++    ce.addrlen  = p->remote.getSocklen();
+     ce.outsock  = p->getSocket();
+     ce.created  = time( NULL );
+ 
+@@ -139,7 +139,7 @@
+     else if(i->second.created<time(0)-60) {
+       if(i->second.created)
+ 	L<<Logger::Warning<<"Recursive query for remote "<<
+-	  sockAddrToString((struct sockaddr_in *)&i->second.remote, i->second.addrlen)<<" with internal id "<<n<<
++	  sockAddrToString((struct sockaddr_in *)&i->second.remote)<<" with internal id "<<n<<
+ 	  " was not answered by backend within timeout, reusing id"<<endl;
+       
+       return n;
+diff -urNad trunk~/pdns/iputils.hh trunk/pdns/iputils.hh
+--- trunk~/pdns/iputils.hh	2006-10-29 18:30:08.000000000 +0100
++++ trunk/pdns/iputils.hh	2006-10-29 23:51:11.065691171 +0100
+@@ -31,9 +31,92 @@
+ #include <stdio.h>
+ #include <functional>
+ #include "ahuexception.hh"
++#include "misc.hh"
++#include <boost/tuple/tuple.hpp>
++#include <boost/tuple/tuple_comparison.hpp>
+ 
+ using namespace std;
+ 
++union ComboAddress {
++    struct sockaddr_in sin4;
++    struct sockaddr_in6 sin6;
++
++    bool operator==(const ComboAddress& rhs) const
++    {
++        if(boost::tie(sin4.sin_family, sin4.sin_port) != boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
++            return false;
++        if(sin4.sin_family == AF_INET)
++            return sin4.sin_addr.s_addr == rhs.sin4.sin_addr.s_addr;
++        else
++            return memcmp(&sin6.sin6_addr.s6_addr, &rhs.sin6.sin6_addr.s6_addr, 16)==0;
++    }
++
++    socklen_t getSocklen()
++    {
++        if(sin4.sin_family == AF_INET)
++            return sizeof(sin4);
++        else
++            return sizeof(sin6);
++    }
++
++    ComboAddress()
++    {
++        sin4.sin_family=AF_INET;
++        sin4.sin_addr.s_addr=0;
++        sin4.sin_port=0;
++    }
++
++    explicit ComboAddress(const string& str, uint16_t port=0)
++    {
++        memset(&sin6, 0, sizeof(sin6));
++        sin4.sin_family = AF_INET;
++        sin4.sin_port=htons(port);
++        if(!IpToU32(str, (uint32_t*)&sin4.sin_addr.s_addr)) {
++            sin6.sin6_family = AF_INET6;
++            if(Utility::inet_pton(AF_INET6, str.c_str(), &sin6.sin6_addr) <= 0)
++                throw AhuException("Unable to convert presentation address '"+ str +"'");
++        }
++    }
++
++    bool operator<(const ComboAddress& rhs) const
++    {
++        if(boost::tie(sin4.sin_family, sin4.sin_port) < boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
++            return true;
++        if(boost::tie(sin4.sin_family, sin4.sin_port) > boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
++            return false;
++
++        if(sin4.sin_family == AF_INET)
++            return sin4.sin_addr.s_addr < rhs.sin4.sin_addr.s_addr;
++        else
++            return memcmp(&sin6.sin6_addr.s6_addr, &rhs.sin6.sin6_addr.s6_addr, 16) < 0;
++    }
++
++    bool operator>(const ComboAddress& rhs) const
++    {
++        if(boost::tie(sin4.sin_family, sin4.sin_port) > boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
++            return true;
++        if(boost::tie(sin4.sin_family, sin4.sin_port) < boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
++            return false;
++
++        if(sin4.sin_family == AF_INET)
++            return sin4.sin_addr.s_addr > rhs.sin4.sin_addr.s_addr;
++        else
++            return memcmp(&sin6.sin6_addr.s6_addr, &rhs.sin6.sin6_addr.s6_addr, 16) > 0;
++    }
++
++    string toString() const
++    {
++        char tmp[128];
++        if(sin4.sin_family==AF_INET && !Utility::inet_ntop(AF_INET, ( const char * ) &sin4.sin_addr, tmp, sizeof(tmp)))
++            return tmp;
++
++        if(sin4.sin_family==AF_INET6 && !Utility::inet_ntop(AF_INET6, ( const char * ) &sin6.sin6_addr, tmp, sizeof(tmp)))
++            return tmp;
++
++        return tmp;
++    }
++};
++
+ /** This exception is thrown by the Netmask class and by extension by the NetmaskGroup class */
+ class NetmaskException: public AhuException 
+ {
+@@ -41,55 +124,87 @@
+   NetmaskException(const string &a) : AhuException(a) {}
+ };
+ 
++inline ComboAddress makeComboAddress(const string& str)
++{
++    ComboAddress address;
++    address.sin4.sin_family=AF_INET;
++    if(Utility::inet_pton(AF_INET, str.c_str(), &address.sin4.sin_addr) <= 0) {
++        address.sin4.sin_family=AF_INET6;
++        if(Utility::inet_pton(AF_INET6, str.c_str(), &address.sin6.sin6_addr) <= 0)
++            throw NetmaskException("Unable to convert '"+str+"' to a netmask");  
++    }
++    return address;
++}
++
+ /** This class represents a netmask and can be queried to see if a certain
+     IP address is matched by this mask */
+-
+ class Netmask
+ {
+ public:
+   //! Constructor supplies the mask, which cannot be changed 
+   Netmask(const string &mask) 
+   {
+-    char *p;
+-    uint8_t bits=32;
+-    d_mask=0xFFFFFFFF;
+-
+-    if((p=strchr(mask.c_str(),'/')))
+-      bits = (uint8_t) atoi(p+1);
+-
+-    if( bits < 32 )
+-    d_mask=~(0xFFFFFFFF>>bits);
++      pair<string,string> split=splitField(mask,'/');
++      d_network=makeComboAddress(split.first);
+ 
+-    struct in_addr a;
+-    if(!Utility::inet_aton(mask.substr(0,p-mask.c_str()).c_str(), &a))
+-      throw NetmaskException("Unable to convert '"+mask+"' to a netmask");
+-    d_network=htonl(a.s_addr);
++      if(!split.second.empty()) {
++          d_bits = (uint8_t) atoi(split.second.c_str());
++          if(d_bits<32)
++              d_mask=~(0xFFFFFFFF>>d_bits);
++      }
++      else if(d_network.sin4.sin_family==AF_INET) {
++          d_bits = 32;
++          d_mask = 0xFFFFFFFF;
++      }
++      else 
++          d_bits=128;
+   }
+ 
+   //! If this IP address in socket address matches
+-  bool match(const struct sockaddr_in *ip) const
++  bool match(const ComboAddress *ip) const
+   {
+-    return match(htonl((unsigned int)ip->sin_addr.s_addr));
++      if(d_network.sin4.sin_family != ip->sin4.sin_family) {
++          return false;
++      }
++      if(d_network.sin4.sin_family == AF_INET) {
++          return match4(htonl((unsigned int)ip->sin4.sin_addr.s_addr));
++      }
++      if(d_network.sin6.sin6_family == AF_INET6) {
++          uint8_t bytes=d_bits/8, n;
++          const uint8_t *us=(const uint8_t*) &d_network.sin6.sin6_addr.s6_addr;
++          const uint8_t *them=(const uint8_t*) &ip->sin6.sin6_addr.s6_addr;
++
++          for(n=0; n < bytes; ++n) {
++              if(us[n]!=them[n]) {
++                  return false;
++              }
++          }
++          // still here, now match remaining bits
++          uint8_t bits=bytes%8;
++          uint8_t mask= ~(0xFF>>bits);
++          return((us[n] & mask) == (them[n] & mask));
++      }
++      return false;
+   }
+ 
+   //! If this ASCII IP address matches
+   bool match(const string &ip) const
+   {
+-    struct in_addr a;
+-    Utility::inet_aton(ip.c_str(), &a);
+-    return match(htonl(a.s_addr));
++    ComboAddress address=makeComboAddress(ip);
++    return match(&address);
+   }
+ 
+   //! If this IP address in native format matches
+-  bool match(uint32_t ip) const
++  bool match4(uint32_t ip) const
+   {
+-    return (ip & d_mask) == (d_network & d_mask);
++      return (ip & d_mask) == (ntohl(d_network.sin4.sin_addr.s_addr) & d_mask);
+   }
+ 
+ 
+ private:
+-  uint32_t d_network;
++  ComboAddress d_network;
+   uint32_t d_mask;
++  uint8_t d_bits;
+ };
+ 
+ /** This class represents a group of supplemental Netmask classes. An IP address matchs
+@@ -99,7 +214,7 @@
+ {
+ public:
+   //! If this IP address is matched by any of the classes within
+-  bool match(struct sockaddr_in *ip)
++  bool match(ComboAddress *ip)
+   {
+     for(container_t::const_iterator i=d_masks.begin();i!=d_masks.end();++i)
+       if(i->match(ip))
+diff -urNad trunk~/pdns/misc.cc trunk/pdns/misc.cc
+--- trunk~/pdns/misc.cc	2006-03-16 21:17:59.000000000 +0100
++++ trunk/pdns/misc.cc	2006-10-29 23:51:11.282658187 +0100
+@@ -315,14 +315,13 @@
+   return false;
+ }
+ 
+-const string sockAddrToString(struct sockaddr_in *remote, Utility::socklen_t socklen) 
++const string sockAddrToString(struct sockaddr_in *remote) 
+ {    
+-  if(socklen==sizeof(struct sockaddr_in)) {
++  if(remote->sin_family == AF_INET) {
+     struct sockaddr_in sip;
+     memcpy(&sip,(struct sockaddr_in*)remote,sizeof(sip));
+     return inet_ntoa(sip.sin_addr);
+   }
+-#ifdef HAVE_IPV6
+   else {
+     char tmp[128];
+     
+@@ -331,9 +330,6 @@
+ 
+     return tmp;
+   }
+-#endif
+-
+-  return "untranslateable";
+ }
+ 
+ string makeHexDump(const string& str)
+@@ -378,3 +374,15 @@
+ 
+   // we don't shuffle the rest
+ }
++
++pair<string, string> splitField(const string& inp, char sepa) {
++    pair<string, string> ret;
++    string::size_type cpos = inp.find(sepa);
++    if(cpos == string::npos)
++        ret.first = inp;
++    else {
++        ret.first = inp.substr(0, cpos);
++        ret.second = inp.substr(cpos+1);
++    }
++    return ret;
++}
+diff -urNad trunk~/pdns/misc.hh trunk/pdns/misc.hh
+--- trunk~/pdns/misc.hh	2006-03-16 21:18:00.000000000 +0100
++++ trunk/pdns/misc.hh	2006-10-29 23:51:11.300655451 +0100
+@@ -140,7 +140,7 @@
+ private:
+   struct timeval d_set;
+ };
+-const string sockAddrToString(struct sockaddr_in *remote, Utility::socklen_t socklen);
++const string sockAddrToString(struct sockaddr_in *remote);
+ int sendData(const char *buffer, int replen, int outsock);
+ 
+ inline void DTime::set()
+@@ -231,4 +231,6 @@
+ 
+ string makeHexDump(const string& str);
+ void shuffle(vector<DNSResourceRecord>& rrs);
++
++pair<string, string> splitField(const string& inp, char sepa);
+ #endif
+diff -urNad trunk~/pdns/nameserver.cc trunk/pdns/nameserver.cc
+--- trunk~/pdns/nameserver.cc	2005-11-01 13:09:50.000000000 +0100
++++ trunk/pdns/nameserver.cc	2006-10-29 23:51:11.351647699 +0100
+@@ -196,12 +196,12 @@
+     p=new DNSPacket(*p);
+     p->truncate(512);
+     buffer=p->getData();
+-    if(sendto(p->getSocket(),buffer,p->len,0,(struct sockaddr *)(p->remote),p->d_socklen)<0) 
++    if(sendto(p->getSocket(),buffer,p->len,0,(struct sockaddr *)(&p->remote),p->remote.getSocklen())<0) 
+       L<<Logger::Error<<"Error sending reply with sendto (socket="<<p->getSocket()<<"): "<<strerror(errno)<<endl;
+     delete p;
+   }
+   else {
+-    if(sendto(p->getSocket(),buffer,p->len,0,(struct sockaddr *)(p->remote),p->d_socklen)<0)
++    if(sendto(p->getSocket(),buffer,p->len,0,(struct sockaddr *)(&p->remote),p->remote.getSocklen())<0)
+       L<<Logger::Error<<"Error sending reply with sendto (socket="<<p->getSocket()<<"): "<<strerror(errno)<<endl;
+   }
+ }
+diff -urNad trunk~/pdns/nameserver.hh trunk/pdns/nameserver.hh
+--- trunk~/pdns/nameserver.hh	2005-07-31 00:51:14.000000000 +0200
++++ trunk/pdns/nameserver.hh	2006-10-29 23:51:11.360646331 +0100
+@@ -85,7 +85,7 @@
+ 
+ inline DNSPacket *UDPNameserver::receive(DNSPacket *prefilled)
+ {
+-  char remote[ sizeof(sockaddr_in6) ];
++  ComboAddress remote;
+   extern StatBag S;
+ 
+   Utility::socklen_t addrlen;
+@@ -93,7 +93,7 @@
+   char mesg[513];
+   Utility::sock_t sock=-1;
+ 
+-  memset( remote, 0, sizeof( remote ));
++  memset( &remote, 0, sizeof( remote ));
+   addrlen=sizeof(remote);  
+   if(d_sockets.size()>1) {
+     fd_set rfds=d_rfds;
+@@ -109,7 +109,7 @@
+ 
+ 	// XXX FIXME this code could be using recvmsg + ip_pktinfo on platforms that support it
+ 	
+-	if((len=recvfrom(sock,mesg,sizeof(mesg)-1,0,(sockaddr*) remote, &addrlen))<0) {
++	if((len=recvfrom(sock,mesg,sizeof(mesg)-1,0,(sockaddr*) &remote, &addrlen))<0) {
+ 	  L<<Logger::Error<<"recvfrom gave error, ignoring: "<<strerror(errno)<<endl;
+ 	  return 0;
+ 	}
+@@ -123,13 +123,13 @@
+     sock=d_sockets[0];
+ 
+     len=0;
+-    if((len=recvfrom(sock,mesg,512,0,(sockaddr*) remote, &addrlen))<0) {
++    if((len=recvfrom(sock,mesg,512,0,(sockaddr*) &remote, &addrlen))<0) {
+       L<<Logger::Error<<"recvfrom gave error, ignoring: "<<strerror(errno)<<endl;
+       return 0;
+     }
+   }
+   
+-  DLOG(L<<"Received a packet " << len <<" bytes long from "<<inet_ntoa( reinterpret_cast< sockaddr_in * >( &remote )->sin_addr )<<endl);
++  DLOG(L<<"Received a packet " << len <<" bytes long from "<< remote.toString()<<endl);
+   
+   DNSPacket *packet;
+   if(prefilled)  // they gave us a preallocated packet
+@@ -138,7 +138,7 @@
+     packet=new DNSPacket; // don't forget to free it!
+   packet->d_dt.set(); // timing
+   packet->setSocket(sock);
+-  packet->setRemote((struct sockaddr *)remote, addrlen);
++  packet->setRemote(&remote);
+   if(packet->parse(mesg, len)<0) {
+     S.inc("corrupt-packets");
+     S.ringAccount("remotes-corrupt", packet->getRemote());
+diff -urNad trunk~/pdns/resolver.cc trunk/pdns/resolver.cc
+--- trunk~/pdns/resolver.cc	2006-03-16 21:17:59.000000000 +0100
++++ trunk/pdns/resolver.cc	2006-10-29 23:51:11.377643747 +0100
+@@ -232,10 +232,10 @@
+ 
+   struct in_addr inp;
+   Utility::inet_aton(ip.c_str(),&inp);
+-  d_toaddr.sin_addr.s_addr=inp.s_addr;
++  d_toaddr.sin4.sin_addr.s_addr=inp.s_addr;
+ 
+-  d_toaddr.sin_port=htons(port);
+-  d_toaddr.sin_family=AF_INET;
++  d_toaddr.sin4.sin_port=htons(port);
++  d_toaddr.sin4.sin_family=AF_INET;
+ 
+   d_sock=socket(AF_INET,SOCK_STREAM,0);
+   if(d_sock<0)
+@@ -417,7 +417,7 @@
+ {
+   try {
+     DNSPacket p;
+-    p.setRemote((const sockaddr*)&d_toaddr, sizeof(d_toaddr));
++    p.setRemote(&d_toaddr);
+     p.d_tcp = d_inaxfr; // fixes debian bug 330184
+     if(p.parse((char *)d_buf, d_len)<0)
+       throw ResolverException("resolver: unable to parse packet of "+itoa(d_len)+" bytes");
+diff -urNad trunk~/pdns/resolver.hh trunk/pdns/resolver.hh
+--- trunk~/pdns/resolver.hh	2005-11-01 13:09:52.000000000 +0100
++++ trunk/pdns/resolver.hh	2006-10-29 23:51:11.395641011 +0100
+@@ -20,6 +20,7 @@
+ #include <string>
+ #include <vector>
+ #include <sys/types.h>
++#include "iputils.hh"
+ 
+ #ifndef WIN32
+ 
+@@ -85,6 +86,6 @@
+   int d_timeout;
+   uint32_t d_ip;
+   bool d_inaxfr;
+-  struct sockaddr_in d_toaddr;
++  ComboAddress d_toaddr;
+ };
+ 
+diff -urNad trunk~/pdns/sdig.cc trunk/pdns/sdig.cc
+--- trunk~/pdns/sdig.cc	2005-11-01 13:10:15.000000000 +0100
++++ trunk/pdns/sdig.cc	2006-10-29 23:51:11.414638123 +0100
+@@ -45,12 +45,12 @@
+   sock.recvFrom(reply, dest);
+ 
+   MOADNSParser mdp(reply);
+-  cout<<"Reply to question for qname='"<<mdp.d_qname<<".', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
++  cout<<"Reply to question for qname='"<<mdp.d_qname<<"', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
+   cout<<"Rcode: "<<mdp.d_header.rcode<<", RD: "<<mdp.d_header.rd;
+   cout<<", TC: "<<mdp.d_header.tc<<", AA: "<<mdp.d_header.aa<<", opcode: "<<mdp.d_header.opcode<<endl;
+ 
+   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i!=mdp.d_answers.end(); ++i) {          
+-    cout<<i->first.d_place-1<<"\t"<<i->first.d_label<<".\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
++    cout<<i->first.d_place-1<<"\t"<<i->first.d_label<<"\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
+     cout<<"\t"<<i->first.d_ttl<<"\t"<< i->first.d_content->getZoneRepresentation()<<"\n";
+   }
+ 
+diff -urNad trunk~/pdns/tcpreceiver.cc trunk/pdns/tcpreceiver.cc
+--- trunk~/pdns/tcpreceiver.cc	2006-10-29 23:51:07.796188211 +0100
++++ trunk/pdns/tcpreceiver.cc	2006-10-29 23:51:11.448632955 +0100
+@@ -84,7 +84,7 @@
+ }
+ 
+ 
+-int TCPNameserver::readLength(int fd, struct sockaddr_in *remote)
++int TCPNameserver::readLength(int fd, ComboAddress *remote)
+ {
+   int bytesLeft=2;
+   unsigned char buf[2];
+@@ -95,13 +95,13 @@
+   while(bytesLeft) {
+     int ret=waitForData(fd, s_timeout);
+     if(ret<0)
+-      throw AhuException("Waiting on data from remote TCP client "+string(inet_ntoa(remote->sin_addr))+": "+stringerror());
++      throw AhuException("Waiting on data from remote TCP client "+remote->toString()+": "+stringerror());
+   
+     ret=recv(fd, reinterpret_cast< char * >( buf ) +2-bytesLeft, bytesLeft,0);
+     if(ret<0)
+-      throw AhuException("Trying to read data from remote TCP client "+string(inet_ntoa(remote->sin_addr))+": "+stringerror());
++      throw AhuException("Trying to read data from remote TCP client "+remote->toString()+": "+stringerror());
+     if(!ret) {
+-      DLOG(L<<"Remote TCP client "+string(inet_ntoa(remote->sin_addr))+" closed connection");
++      DLOG(L<<"Remote TCP client "+remote->toString()+" closed connection");
+       return -1;
+     }
+     bytesLeft-=ret;
+@@ -109,7 +109,7 @@
+   return buf[0]*256+buf[1];
+ }
+ 
+-void TCPNameserver::getQuestion(int fd, char *mesg, int pktlen, const struct sockaddr_in &remote)
++void TCPNameserver::getQuestion(int fd, char *mesg, int pktlen, const ComboAddress &remote)
+ {
+   int ret=0, bytesread=0;
+   while(bytesread<pktlen) {
+@@ -122,9 +122,9 @@
+ 
+  err:;
+   if(ret<0) 
+-    throw AhuException("Error reading DNS data from TCP client "+string(inet_ntoa(remote.sin_addr))+": "+stringerror());
++    throw AhuException("Error reading DNS data from TCP client "+remote.toString()+": "+stringerror());
+   else 
+-    throw AhuException("Remote TCP client "+string(inet_ntoa(remote.sin_addr))+" closed connection");
++    throw AhuException("Remote TCP client "+remote.toString()+" closed connection");
+ }
+ 
+ void *TCPNameserver::doConnection(void *data)
+@@ -146,14 +146,14 @@
+     DLOG(L<<"TCP Connection accepted on fd "<<fd<<endl);
+     
+     for(;;) {
+-      struct sockaddr_in remote;
++      ComboAddress remote;
+       
+       int pktlen=readLength(fd, &remote);
+       if(pktlen<0) // EOF
+ 	break;
+ 
+       if(pktlen>511) {
+-	L<<Logger::Error<<"Received an overly large question from "<<inet_ntoa(remote.sin_addr)<<", dropping"<<endl;
++	L<<Logger::Error<<"Received an overly large question from "<<remote.toString()<<", dropping"<<endl;
+ 	break;
+       }
+       
+@@ -161,7 +161,7 @@
+       S.inc("tcp-queries");      
+       DNSPacket *packet=new DNSPacket;
+ 
+-      packet->setRemote((struct sockaddr *)&remote,sizeof(remote));
++      packet->setRemote(&remote);
+       packet->d_tcp=true;
+       if(packet->parse(mesg, pktlen)<0)
+ 	break;
+@@ -200,7 +200,7 @@
+ 
+       DNSPacket* cached=new DNSPacket;
+       if(!packet->d.rd && (PC.get(packet, cached))) { // short circuit - does the PacketCache recognize this question?
+-	cached->setRemote((struct sockaddr *)(packet->remote), sizeof(struct sockaddr_in));
++	cached->setRemote(&packet->remote);
+ 	cached->spoofID(packet->d.id);
+ 	if(sendDelPacket(cached, fd)<0) 
+ 	  goto out;
+@@ -259,7 +259,7 @@
+   if(arg().mustDo("disable-axfr"))
+     return false;
+ 
+-  if( arg()["allow-axfr-ips"].empty() || d_ng.match( (struct sockaddr_in *) &q->remote ) )
++  if( arg()["allow-axfr-ips"].empty() || d_ng.match( (ComboAddress *) &q->remote ) )
+     return true;
+ 
+   extern CommunicatorClass Communicator;
+diff -urNad trunk~/pdns/tcpreceiver.hh trunk/pdns/tcpreceiver.hh
+--- trunk~/pdns/tcpreceiver.hh	2005-07-31 00:51:14.000000000 +0200
++++ trunk/pdns/tcpreceiver.hh	2006-10-29 23:51:11.465630371 +0100
+@@ -48,8 +48,8 @@
+ private:
+ 
+   static int sendDelPacket(DNSPacket *p, int outsock);
+-  static int readLength(int fd, struct sockaddr_in *remote);
+-  static void getQuestion(int fd, char *mesg, int pktlen, const struct sockaddr_in &remote);
++  static int readLength(int fd, ComboAddress *remote);
++  static void getQuestion(int fd, char *mesg, int pktlen, const ComboAddress &remote);
+   static int doAXFR(const string &target, DNSPacket *q, int outsock);
+   static bool canDoAXFR(DNSPacket *q);
+   static void *doConnection(void *data);

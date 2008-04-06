@@ -1,0 +1,35 @@
+# $Id: PKGBUILD,v 1.14 2008/01/12 13:57:58 tpowa Exp $
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+
+pkgname=expect
+pkgver=5.44.1.4
+pkgrel=1
+pkgdesc="A tool for automating interactive applications"
+arch=(i686 x86_64)
+depends=('tcl>=8.5.0')
+makedepends=('tk>=8.5.0')
+tcltkver=8.5.0
+source=(ftp://ftp.archlinux.org/other/expect/expect-$pkgver.tar.bz2
+#http://expect.nist.gov/src/expect-$pkgver.tar.bz2
+http://heanet.dl.sourceforge.net/sourceforge/tcl/tk$tcltkver-src.tar.gz
+http://heanet.dl.sourceforge.net/sourceforge/tcl/tcl$tcltkver-src.tar.gz)
+url="http://expect.nist.gov/"
+
+build() {
+  cd $startdir/src/expect-5.44.1.4
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --with-tcl=/usr/lib --with-tk=/usr/lib --without-x \
+      --with-tclinclude=$startdir/src/tcl$tcltkver/generic \
+      --with-tkinclude=$startdir/src/tk$tcltkver/generic
+  # Keep $startdir/pkg out of library search paths.
+  sed -e 's/-rpath,${LIB_RUNTIME_DIR}:/-rpath,/' -i Makefile
+  make || return 1
+  make prefix=$startdir/pkg/usr exec_prefix=$startdir/pkg/usr sysconfdir=$startdir/pkg/etc \
+      localstatedir=$startdir/pkg/var install
+  # Remove X related stuff.
+  rm -f $startdir/pkg/usr/bin/{multixterm,tknewsbiff,tkpasswd,xpstat}
+  rm -f $startdir/pkg/usr/man/man1/{multixterm.1,tknewsbiff.1}
+}
+md5sums=('bbfd5ef50f3c1df4fe79e5a20a947d41'
+         'bc217c45ed6b2f5b8d3120df63fa13bd'
+         'd890c505465411b25050b6cd95971d2c')

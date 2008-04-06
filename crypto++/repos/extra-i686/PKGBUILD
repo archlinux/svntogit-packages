@@ -1,0 +1,28 @@
+# $Id: PKGBUILD,v 1.5 2008/01/28 05:59:49 eric Exp $
+# Maintainer: Damir <damir@archlinux.org>
+# Contributor: Kritoke <kritoke@gamebox.net>
+# Contributor: jlvsimoes <jlvsimoes@oninet.pt>
+
+pkgname=crypto++
+pkgver=5.5.2
+_srcver=552
+pkgrel=1
+pkgdesc="Crypto++ Library is a free C++ class library of cryptographic schemes."
+arch=(i686 x86_64)
+license=('custom')
+makedepends=('unzip')
+url="http://www.cryptopp.com/"
+source=(http://www.cryptopp.com/cryptopp${_srcver}.zip)
+md5sums=('a889be9d9ad5c202c925fb105caa4857')
+
+build() {
+  cd ${startdir}/src/
+  sed -i -e 's/^CXXFLAGS/#CXXFLAGS/' GNUmakefile
+  make -f GNUmakefile || return 1
+  mkdir -p ${startdir}/pkg/usr/include/cryptopp
+  mkdir -p ${startdir}/pkg/usr/lib
+  install -m644 *.h ${startdir}/pkg/usr/include/cryptopp/
+  install -m644 libcryptopp.a ${startdir}/pkg/usr/lib/
+  install -D -m644 License.txt ${startdir}/pkg/usr/share/licenses/${pkgname}/License.txt
+}
+

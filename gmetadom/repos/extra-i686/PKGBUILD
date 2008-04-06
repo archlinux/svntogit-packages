@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.4 2007/09/19 21:29:48 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gmetadom
+pkgver=0.2.4
+pkgrel=2
+pkgdesc="C++ bindings for GDome2 DOM implementation"
+arch=(i686 x86_64)
+url="http://gmetadom.sourceforge.net/"
+license=('LGPL')
+depends=('gcc-libs' 'gdome2')
+options=('!libtool')
+source=(http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}b.tar.gz)
+md5sums=('bb0443a5ae4988e6b078431007fc6dcd')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

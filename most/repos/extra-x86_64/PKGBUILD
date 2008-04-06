@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.14 2007/09/29 08:36:05 juergen Exp $
+# Maintainer: juergen <juergen@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=most
+pkgver=5.0.0a
+pkgrel=1
+pkgdesc="A terminal pager similar to 'more' and 'less'"
+arch=(i686 x86_64)
+depends=('slang')
+license=(GPL)
+url="ftp://space.mit.edu/pub/davis/most/"
+source=(ftp://space.mit.edu/pub/davis/$pkgname/$pkgname-$pkgver.tar.gz)
+md5sums=('30f2131b67f61716f6fe1f65205da48b')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+}
+# vim: ts=2 sw=2 et ft=sh

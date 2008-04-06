@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.6 2004/06/14 01:57:11 jason Exp $
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+# Maintainer: Jason Chu <jason@archlinux.org>
+
+pkgname=enigma
+pkgver=1.04
+pkgrel=1
+pkgdesc=" Enigma is a puzzle game involving falling blocks"
+depends=('ncurses')
+source=(http://www.chiark.greenend.org.uk/~sgtatham/enigma/$pkgname-$pkgver.tar.gz)
+md5sums=('a54ee9ae40dae781560a3c2b1ce8f45d')
+url="http://www.chiark.greenend.org.uk/~sgtatham/enigma/"
+build() {
+cd $startdir/src/$pkgname-$pkgver
+./configure --prefix=/usr --localstatedir=/var
+sed -i "s/root\.games/root.root/" Makefile
+mkdir -p $startdir/pkg/usr/bin
+make || return 1
+make prefix=$startdir/pkg/usr localstatedir=$startdir/pkg/var install
+}

@@ -1,0 +1,18 @@
+# $Id: PKGBUILD,v 1.8 2004/08/17 22:35:50 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=gqmpeg
+pkgver=0.91.1
+pkgrel=1
+pkgdesc="GQmpeg is a frontend to mpg123 with extensive themeability and playlist support"
+depends=('bash' 'gtk2' 'imlib' 'mpg321')
+source=(http://unc.dl.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz)
+url="http://gqmpeg.sourceforge.net/"
+
+build() {
+cd $startdir/src/$pkgname-$pkgver
+./configure --prefix=/usr
+make || return 1
+make prefix=$startdir/pkg/usr install
+}

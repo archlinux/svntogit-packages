@@ -1,0 +1,42 @@
+
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+PID=`pidof -o %PPID /sbin/ipw3945d`
+case "$1" in
+  start)
+    stat_busy "Starting IPW3945d"
+    [ -z "$PID" ] && /sbin/ipw3945d --quiet
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      echo `pidof -o %PPID /sbin/ipw3945d` > /var/run/ipw3945d.pid
+      add_daemon ipw3945d
+      sleep 1 # not good, but daemon needs time to upload to card, otherwise network fails.
+      stat_done
+    fi
+      
+    sleep 0.5
+    ;;
+  stop)
+    stat_busy "Stopping IPW3945d"
+    [ ! -z "$PID" ]  && /sbin/ipw3945d --kill
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      rm_daemon ipw3945d
+      stat_done
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}" 
+esac
+exit 0
+

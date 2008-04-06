@@ -1,0 +1,55 @@
+# $Id: PKGBUILD,v 1.23 2008/03/27 19:46:24 tpowa Exp $
+# Maintainer: Thomas B�chler <thomas@archlinux.org>
+pkgname=qemu
+pkgver=0.9.1
+pkgrel=3
+_kvmver=64
+pkgdesc="QEMU is a generic and open source processor emulator which achieves a good emulation speed by using dynamic translation."
+arch=(i686 x86_64)
+license=('GPL')
+url="http://fabrice.bellard.free.fr/qemu/"
+depends=('sdl' 'alsa-lib' 'zlib' 'e2fsprogs' 'gnutls')
+makedepends=('gcc34')
+install=qemu.install
+source=(http://fabrice.bellard.free.fr/qemu/${pkgname}-${pkgver}.tar.gz \
+        70-kqemu.rules \
+        http://downloads.sourceforge.net/kvm/kvm-$_kvmver.tar.gz)
+
+build()
+{
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  unset CFLAGS
+
+  if [ "${CARCH}" = "x86_64" ]; then
+     # any "xxx-user" target seems to not build on x86_64
+         ./configure --prefix=/usr --enable-alsa \
+                     --target-list="i386-softmmu ppc-softmmu sparc-softmmu x86_64-softmmu arm-softmmu mips-softmmu"
+  else 
+         ./configure --prefix=/usr --enable-alsa
+  fi
+  # fix sdl compilation
+  sed -i -e 's#-rpath,/usr/lib#-rpath,/usr/lib,-rpath,/lib#g' config-host.mak
+
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+  install -D -m644 ${startdir}/src/70-kqemu.rules \
+                   ${startdir}/pkg/etc/udev/rules.d/70-kqemu.rules
+
+  # we add the kvm/qemu version
+    cd ${startdir}/src/kvm-$_kvmver
+    ./configure --prefix=/usr --enable-alsa
+  # fix sdl compilation
+    sed -i -e 's#-rpath,/usr/lib#-rpath,/usr/lib,-rpath,/lib#g' qemu/config-host.mak
+    for dir in libkvm user qemu; do
+      cd ${startdir}/src/kvm-$_kvmver/${dir}
+      make || return 1
+    done
+   # install kvm-qemu
+    install -m 755 ${startdir}/src/kvm-$_kvmver/qemu/x86_64-softmmu/qemu-system-x86_64 \
+        ${startdir}/pkg/usr/bin/qemu-kvm
+    install -D -m644 ${startdir}/src/kvm-$_kvmver/scripts/65-kvm.rules \
+    	${startdir}/pkg/etc/udev/rules.d/65-kvm.rules || return 1
+}
+md5sums=('6591df8e9270eb358c881de4ebea1262'
+         'ec06591830b8fcf53913f05f3d66f7e5'
+         '8c69ea06a106840488882d13ee00b80c')

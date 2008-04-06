@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.1 2004/09/30 10:48:44 damir Exp $
+# Contributor: lanrat
+# Maintainer: damir <damir@archlinux.org>
+
+pkgname=fortune-mod-smac
+pkgver=0.1
+pkgrel=1
+pkgdesc="Sid Meiers Alpha Centauri fortune cookie files"
+url="http://progsoc.org/~curious/"
+depends=('fortune-mod')
+groups=('fortune-mods')
+source=(http://progsoc.org/~curious/files/misc/$pkgname-$pkgver.tar.gz)
+md5sums=('23caeb835ded26a407c682bfc589cfed')
+
+build() {
+
+    install -D -m644 $startdir/src/$pkgname-$pkgver/smac \
+        $startdir/pkg/usr/share/fortune/smac
+
+    install -D -m644 $startdir/src/$pkgname-$pkgver/smac.dat \
+        $startdir/pkg/usr/share/fortune/smac.dat
+
+}

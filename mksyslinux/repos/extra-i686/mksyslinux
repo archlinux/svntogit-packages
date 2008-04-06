@@ -1,0 +1,83 @@
+#! /bin/sh
+# Created by Tobias Powalowski <tpowa@archlinux.org>
+# Settings
+APPNAME=$(basename "${0}")
+CONFIG="/etc/mksyslinux.conf"
+export TEMPDIR=$(mktemp /tmp/mksyslinux.XXX)
+
+usage ()
+{
+    echo "${APPNAME}: usage"
+    echo "PREPARATION: Your device must have a bootable first partition in FAT16 format!"
+    echo "ATTENTION: The MBR of your DEVICE will be overwritten! You have been warned!"
+    echo""
+    echo "  -d=DEVICE        Your DEVICE first partition from /dev/xxx tree to install"
+    echo "  -c=CONFIG        Use CONFIG file. default: /etc/mksyslinux.conf"
+    echo "  -h               This message."
+    exit 1
+}
+
+[ "$1" == "" ] && usage && exit 1
+
+
+while [ $# -gt 0 ]; do
+	case $1 in
+		-c=*|--c=*) CONFIG="$(echo $1 | awk -F= '{print $2;}')" ;;
+		-d=*|--d=*) DEVICE="$(echo $1 | awk -F= '{print $2;}')" ;;
+		-h|--h|?) usage ;; 
+		*) usage ;;
+		esac
+	shift
+done
+
+if [ ! -f "${CONFIG}" ]; then
+	echo "config file '${CONFIG}' cannot be found, aborting..."
+    exit 1
+fi
+
+if [ "${DEVICE}" = "" ]; then 
+	echo "ERROR: No DEVICE name specified, please use the -d option"
+	 exit 1
+fi
+
+if ! [ $UID -eq 0 ]; then 
+	echo "ERROR: only works when run as root!"
+	exit 1
+fi
+
+. "${CONFIG}"
+MBRDEVICE="$(echo ${DEVICE} | sed -e 's/[0-9]//g')"
+
+export RUNPROGRAM="$(echo $0 | awk -F/ '{print $4}')"
+[ "${BOOTMESSAGE}" = "" ] && export BOOTMESSAGE=$(mktemp /tmp/bootmessage.XXXX)
+export USEKERNEL=${VERSION}
+# begin script
+[ -e ${TEMPDIR} ] && rm -r ${TEMPDIR}
+mkdir -p ${TEMPDIR}
+echo ":: Mounting ${DEVICE} ..."
+mount ${DEVICE} ${TEMPDIR} || exit 1
+# create syslinux.cfg
+echo ":: Creating syslinux.cfg ..."
+	[ -e ${TEMPDIR}/syslinux.cfg ] && rm ${TEMPDIR}/syslinux.cfg
+	echo "prompt ${PROMPT}" >> ${TEMPDIR}/syslinux.cfg
+	echo "timeout ${TIMEOUT}" >> ${TEMPDIR}/syslinux.cfg
+	echo "display boot.msg" >> ${TEMPDIR}/syslinux.cfg
+	echo "default arch"  >> ${TEMPDIR}/syslinux.cfg
+	echo "label arch" >> ${TEMPDIR}/syslinux.cfg
+	echo "kernel vmlinuz" >> ${TEMPDIR}/syslinux.cfg
+	echo "append initrd=initrd.img ${KERNEL_BOOT_OPTIONS}" >> ${TEMPDIR}/syslinux.cfg
+	echo ":: Calling mkinitcpio CONFIG=${MKINITCPIO_CONFIG} KERNEL=${VERSION} ..." 
+# generate initramdisk
+echo ":: Creating initramdisk ..."
+	mkinitcpio -c ${MKINITCPIO_CONFIG} -k ${VERSION} -g ${TEMPDIR}/initrd.img
+echo ":: Using ${KERNEL} as image kernel ..."
+	install -m644 ${KERNEL} ${TEMPDIR}/vmlinuz
+install -m644 ${BOOTMESSAGE} ${TEMPDIR}/boot.msg
+echo ":: Unmounting ${DEVICE} ..."
+	umount ${TEMPDIR} || exit 1
+echo ":: Installing MBR on ${MBRDEVICE} ..."
+	cat ${MBR} > ${MBRDEVICE}
+echo ":: Installing SYSLINUX on ${DEVICE} ..."
+	/usr/bin/syslinux -o offset ${DEVICE} && echo "Installation completed."
+# clean /tmp
+rm -r ${TEMPDIR}

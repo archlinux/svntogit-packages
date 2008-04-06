@@ -1,0 +1,18 @@
+# $Id: PKGBUILD,v 1.4 2005/08/27 22:15:50 tobias Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+pkgname=dbh
+pkgver=1.0.24
+pkgrel=2
+pkgdesc="A library to create Disk Based Hashtables on POSIX systems"
+url="http://dbh.sourceforge.net/"
+depends=('glibc')
+source=(http://dl.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz)
+md5sums=('42e122a321089f2429986d0d161ed92a')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+PID=`pidof -o %PPID /usr/sbin/nessusd`
+case "$1" in
+  start)
+    stat_busy "Starting nessusd"
+    [ -z "$PID" ] && /usr/sbin/nessusd -D
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      echo $PID > /var/run/nessusd.pid
+      add_daemon nessusd
+      stat_done
+    fi
+    ;;
+  stop)
+    stat_busy "Stopping nessusd"
+    [ ! -z "$PID" ]  && kill $PID &> /dev/null
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      rm -f /var/run/nessusd.pid
+      rm_daemon nessusd
+      stat_done
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 5
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"  
+esac
+exit 0

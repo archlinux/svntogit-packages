@@ -1,0 +1,49 @@
+# $Id: PKGBUILD,v 1.1 2007/07/09 22:44:35 tpowa Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=gcc34
+pkgver=3.4.6
+pkgrel=1
+#_snapshot=4.1-20060519
+pkgdesc="The GNU Compiler Collection"
+arch=(i686 x86_64)
+url="http://gcc.gnu.org"
+depends=('libstdc++5' 'gcc')
+options=('!libtool')
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++}-${pkgver}.tar.bz2 \
+	gcc-localeversion.patch gcc-3.3-pure64.patch)
+
+build() {
+  export MAKEFLAGS="-j1"
+  # use "defaults" CFLAGS and CXXFLAGS
+  export CFLAGS="-march=i686 -O2 -pipe"
+  export CXXFLAGS="-march=i686 -O2 -pipe"
+
+  cd ${startdir}/src/gcc-${pkgver}
+
+  patch -Np0 -i ${startdir}/src/gcc-localeversion.patch || return 1
+
+  if [ "${CARCH}" = "x86_64" ]; then
+    patch -Np1 -i ../gcc-3.3-pure64.patch || return 1
+  fi
+
+  # Don't run fixincludes
+  sed -i -e 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+  # Don't install libiberty
+  sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
+
+  mkdir ../gcc-build
+  cd ../gcc-build
+  ../gcc-${pkgver}/configure --prefix=/usr --enable-shared \
+      --enable-languages=c,c++ --enable-threads=posix \
+      --enable-__cxa_atexit  --disable-multilib --libdir=/usr/lib \
+      --enable-clocale=gnu --program-suffix=-3.4
+
+  make bootstrap || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+
+  rm -f ${startdir}/pkg/usr/lib/lib{stdc++,supc++,gcc_s}.*
+  rm -f ${startdir}/pkg/usr/share/locale/*/LC_MESSAGES/libstdc++.mo
+  rm -rf ${startdir}/pkg/usr/man/man7
+  #mv ${startdir}/pkg/usr/man/man1/cpp.1 ${startdir}/pkg/usr/man/man1/cpp-3.4.1
+  #mv ${startdir}/pkg/usr/man/man1/gcov.1 ${startdir}/pkg/usr/man/man1/gcov-3.4.1
+}

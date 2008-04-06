@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.8 2006/12/03 02:10:10 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+
+pkgname=fbida
+pkgver=2.06
+pkgrel=1
+pkgdesc="Few applications to display and elementary edit images: fbi, fbgs, ida, exiftran"
+arch=(i686 x86_64)
+url="http://linux.bytesex.org/fbida/"
+depends=('libungif' 'libtiff' 'libexif' 'lesstif' 'libxpm' 'libpng' 'libx11' 'libxext')
+source=(http://dl.bytesex.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+replaces=('fbi')
+provides=('fbi')
+backup="etc/X11/app-defaults/Ida"
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  make Make.config || return 1
+  for config in HAVE_LIB{SANE,CURL,LIRC}; do
+     sed -i "s/$config.*/$config := no/" Make.config
+  done
+  make CC=gcc || return 1
+  make DESTDIR=$startdir/pkg prefix=/usr install
+}
+
+md5sums=('1f78e9a83fb546660a024a4bc0580ace')

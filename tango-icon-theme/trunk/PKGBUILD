@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.5 2007/10/26 17:14:38 andyrtr Exp $
+# Maintainer: James Rayner <james@archlinux.org>
+# Contributor: William Rea <sillywilly@gmail.com>
+pkgname=tango-icon-theme
+pkgver=0.8.1
+pkgrel=1
+pkgdesc="The Tango Desktop Project exists to create a consistent user experience"
+arch=('i686' 'x86_64')
+url="http://tango.freedesktop.org"
+license="CCPL-Attribution-ShareAlike-2.5"
+depends=('librsvg')
+makedepends=('imagemagick' 'icon-naming-utils')
+source=(http://tango.freedesktop.org/releases/$pkgname-$pkgver.tar.gz)
+md5sums=('32d5258f448b5982af9cfa4364f31d41')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --enable-png-creation
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+
+  install -D COPYING $startdir/pkg/usr/share/licenses/$pkgname/COPYING
+}

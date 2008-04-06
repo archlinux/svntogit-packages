@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.3 2003/11/06 08:27:08 dorphell Exp $
+# Contributor : Damir Perisa <damir.perisa@bluewin.ch>
+# Maintainer: dale <dale@archlinux.org>
+
+pkgname=fortune-mod-osfortune
+pkgver=0
+pkgrel=2
+pkgdesc="Fortune cookies from the Book OpenSources"
+depends=(fortune-mod)
+source=(http://www.dibona.com/opensources/osfortune.tar.gz)
+md5sums=('bb30546632cc6f9fcc0b48a453b15e1d')
+url="http://www.dibona.com/opensources/index.shtml"
+
+build() {
+  cd $startdir/src/
+  mkdir -p $startdir/pkg/usr/share/fortune
+  cp $startdir/src/osfortune* $startdir/pkg/usr/share/fortune
+  rm $startdir/pkg/usr/share/fortune/osfortune.tar.gz
+  chmod 644 $startdir/pkg/usr/share/fortune/*
+}

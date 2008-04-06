@@ -1,0 +1,65 @@
+# $Id: PKGBUILD,v 1.26 2008/04/02 19:26:53 juergen Exp $
+# Contributor: <kleptophobiac@gmail.com>
+# Contributor: dorphell <dorphell@archlinux.org>
+# Maintainer: Paul Mattal <paul@archlinux.org>
+
+pkgname=mythtv
+pkgver=0.21
+pkgrel=1
+pkgdesc="A Homebrew PVR project"
+arch=('i686' 'x86_64')
+depends=('bash' 'mysql-clients>=5.0' 'qt3' 'lame' 'lirc-utils' 'ffmpeg' \
+	'libxvmc')
+backup=(etc/mythtv/mythbackend.conf etc/mythtv/mysql.txt)
+source=("http://www.mythtv.org/modules.php?name=Downloads&d_op=getit&lid=135&foo=/${pkgname}-${pkgver}.tar.bz2"\
+	mythbackend\
+	QUICKSTART.archlinux)
+md5sums=('49fc135e1cde90cd935c1229467fa37e' '6544fb0045661bfb65876a83ca04a319'\
+         'a0ecb7f476cb71c0c1ac90d349fc7695')
+license=('GPL2')
+makedepends=(libgl)
+groups=('pvr')
+url="http://www.mythtv.org/"
+install=mythtv.install
+
+build() {
+   cd $startdir/src/${pkgname}-${pkgver} || return 1
+   . /etc/profile.d/qt3.sh
+
+   # use QT3 qmake
+   export PATH=$QTDIR/bin:$PATH
+  [ "$CARCH" = "i686"   ] && ARCH="i686"
+  [ "$CARCH" = "x86_64" ] && ARCH="x86-64"
+
+  ./configure --prefix=/usr --cpu=${ARCH} --enable-mmx --enable-audio-oss \
+   --enable-audio-alsa --enable-dvb --enable-lirc --enable-joystick-menu \
+   --disable-firewire --enable-v4l --enable-ivtv --enable-dvb \
+   --dvb-path=/usr/include/linux/dvb --enable-xvmc --disable-ffmpeg \
+   --enable-xvmc-pro --enable-xvmc-vld --enable-opengl-vsync \
+   --disable-audio-jack --disable-audio-arts || return 1
+
+   # build
+
+   qmake mythtv.pro  || return 1
+   make qmake || return 1
+   make || return 1
+
+   # basic install
+   make INSTALL_ROOT=$startdir/pkg install || return 1
+   
+   # install db schema
+   install -m0644 database/mc.sql $startdir/pkg/usr/share/mythtv/ \
+   	|| return 1
+   install -D -m0755 ../mythbackend $startdir/pkg/etc/rc.d/mythbackend \
+   	|| return 1
+   cp -r docs $startdir/pkg/usr/share/mythtv/ || return 1
+   cp ../QUICKSTART.archlinux $startdir/pkg/usr/share/mythtv/ \
+   	|| return 1
+
+   # install contrib
+   mkdir -p $startdir/pkg/usr/share/mythtv/contrib || return 1
+   install -m0755 contrib/* $startdir/pkg/usr/share/mythtv/contrib
+
+   # set suid on mythfrontend
+   chmod a+s $startdir/pkg/usr/bin/mythfrontend
+}

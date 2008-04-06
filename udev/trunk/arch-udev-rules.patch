@@ -1,0 +1,151 @@
+--- 50-udev-default.rules.old	2008-03-09 17:52:59.000000000 +0100
++++ 50-udev-default.rules	2008-03-09 17:09:50.000000000 +0100
+@@ -4,12 +4,17 @@
+ KERNEL=="tty[pqrstuvwxyzabcdef][0123456789abcdef]", GROUP="tty", MODE="0660", OPTIONS="last_rule"
+ KERNEL=="ptmx",			GROUP="tty", MODE="0666", OPTIONS="last_rule"
+ KERNEL=="tty",			GROUP="tty", MODE="0666", OPTIONS="last_rule"
+-KERNEL=="tty[0-9]*",		GROUP="tty", MODE="0620", OPTIONS="last_rule"
+-KERNEL=="vcs|vcs[0-9]*|vcsa|vcsa[0-9]*", GROUP="tty", OPTIONS="last_rule"
++KERNEL=="tty[0-9]*",		GROUP="tty", MODE="0620", NAME="vc/%n", SYMLINK+="%k" OPTIONS="last_rule"
++KERNEL=="vcs",        GROUP="tty", NAME="vcc/0", OPTIONS="last_rule"
++KERNEL=="vcs[0-9]*",  GROUP="tty", NAME="vcc/%n", OPTIONS="last_rule"
++KERNEL=="vcsa",       GROUP="tty", NAME="vcc/a0", OPTIONS="last_rule"
++KERNEL=="vcsa[0-9]*", GROUP="tty", NAME="vcc/a%n", OPTIONS="last_rule"
+ KERNEL=="console",		MODE="0600", OPTIONS="last_rule"
+ 
+ # serial
+ KERNEL=="tty[A-Z]*|pppox*|ircomm*|noz*", GROUP="uucp"
++KERNEL=="ttyS[0-9]*",   NAME="tts/%n", SYMLINK+="ttyS%n"
++KERNEL=="ttyUSB[0-9]*", NAME="tts/USB%n", SYMLINK+="%k"
+ KERNEL=="ppp",			MODE="0600", OPTIONS+="ignore_remove"
+ KERNEL=="mwave",		NAME="modems/mwave", GROUP="uucp"
+ KERNEL=="hvc*|hvsi*",		GROUP="uucp"
+@@ -20,8 +25,7 @@
+ KERNEL=="null|zero|full|random|urandom", MODE="0666"
+ KERNEL=="null",			SYMLINK+="XOR"
+ KERNEL=="mem|kmem|port",	GROUP="kmem", MODE="0640"
+-KERNEL=="ram0",			SYMLINK+="ramdisk"
+-KERNEL=="ram1",			SYMLINK+="ram"
++KERNEL=="ram[0-9]*", NAME="rd/%n", SYMLINK+="%k"
+ 
+ # input
+ KERNEL=="mouse*|mice|event*",	NAME="input/%k", MODE="0640"
+@@ -30,23 +34,30 @@
+ 
+ # video4linux
+ KERNEL=="vbi0",			SYMLINK+="vbi"
++KERNEL=="vbi[0-9]*",   NAME="v4l/vbi%n", SYMLINK+="%k", GROUP="video"
+ KERNEL=="radio0",		SYMLINK+="radio"
++KERNEL=="radio[0-9]*", NAME="v4l/radio%n", SYMLINK+="radio%n", GROUP="video"
+ KERNEL=="video0",		SYMLINK+="video"
++KERNEL=="video[0-9]*", NAME="v4l/video%n", SYMLINK+="%k", GROUP="video"
++KERNEL=="vtx0", SYMLINK+="vtx"
++KERNEL=="vtx[0-9]*",   NAME="v4l/vtx%n", SYMLINK+="%k", GROUP="video"
+ 
+ # graphics
+-KERNEL=="agpgart",		MODE="0600"
+-KERNEL=="card[0-9]*",		NAME="dri/%k", MODE="0666"
++### xorg resets those permissions, adjust your xorg.conf!
++KERNEL=="agpgart", NAME="misc/%k", SYMLINK+="%k", GROUP="video", MODE="0600"
++KERNEL=="card[0-9]*",		NAME="dri/%k", GROUP="video", MODE="0666"
++KERNEL=="fb[0-9]*", NAME="fb/%n", SYMLINK+="%k", GROUP="video"
+ KERNEL=="fb0",			SYMLINK+="fb"
+ 
+ # DVB video
+-SUBSYSTEM=="dvb", PROGRAM="/bin/sh -c 'K=%k; K=$${K#dvb}; printf dvb/adapter%%i/%%s $${K%%%%.*} $${K#*.}'", NAME="%c"
++SUBSYSTEM=="dvb", PROGRAM="/bin/sh -c 'K=%k; K=$${K#dvb}; printf dvb/adapter%%i/%%s $${K%%%%.*} $${K#*.}'", NAME="%c", GROUP="video"
+ 
+ # Firewire
+-KERNEL=="dv1394*",		SYMLINK+="dv1394/%n"
+-KERNEL=="video1394*",		NAME="video1394/%n"
++KERNEL=="dv1394*",		SYMLINK+="dv1394/%n", GROUP="video"
++KERNEL=="video1394*",		NAME="video1394/%n", GROUP="video"
+ 
+ # firmware class requests
+-SUBSYSTEM=="firmware", ACTION=="add", RUN+="firmware.sh"
++SUBSYSTEM=="firmware", ACTION=="add", ENV{FIRMWARE}=="?*", RUN+="firmware.sh"
+ 
+ # libusb device nodes
+ SUBSYSTEM=="usb", ACTION=="add", ENV{DEVTYPE}=="usb_device", NAME="bus/usb/$env{BUSNUM}/$env{DEVNUM}", MODE="0644"
+@@ -59,23 +70,20 @@
+ KERNEL=="irlpt[0-9]*",		GROUP="lp"
+ 
+ # block, tapes, block-releated
+-SUBSYSTEM=="block", GROUP="disk", MODE="0640"
+-SUBSYSTEM=="block", KERNEL=="sr[0-9]*", SYMLINK+="scd%n"
++SUBSYSTEM=="block", GROUP="disk"
+ SUBSYSTEM=="scsi", KERNEL=="[0-9]*:[0-9]*", ACTION=="add", ATTR{type}=="0|7|14", ATTR{timeout}="60"
+ SUBSYSTEM=="scsi", KERNEL=="[0-9]*:[0-9]*", ACTION=="add", ATTR{type}=="1", ATTR{timeout}="900"
+-KERNEL=="hd*", SUBSYSTEMS=="ide", ATTRS{media}=="floppy", OPTIONS+="all_partitions"
+-KERNEL=="fd[0-9]",		GROUP="floppy"
+-KERNEL=="fd[0-9]", ACTION=="add", ATTRS{cmos}=="?*", RUN+="create_floppy_devices -c -t $attr{cmos} -m %M -M 0640 -G floppy $root/%k"
++KERNEL=="hd*", SUBSYSTEMS=="ide", ATTRS{media}=="floppy", OPTIONS+="all_partitions", GROUP="floppy"
++KERNEL=="fd[0-9]*", NAME="fd%n", SYMLINK+="floppy/%n fd%nu1440 fd%nu720 fd%nh1200 fd%nu360", GROUP="floppy"
+ KERNEL=="sch[0-9]*",		GROUP="disk"
+-KERNEL=="sg[0-9]*",		ATTRS{type}!="3|6", GROUP="disk", MODE="0640"
+ KERNEL=="ht[0-9]*|nht[0-9]*",	GROUP="disk"
+ KERNEL=="pg[0-9]*",		GROUP="disk"
+ KERNEL=="pt[0-9]*|npt[0-9]*",	GROUP="disk"
+ KERNEL=="qft[0-9]*|nqft[0-9]*|zqft[0-9]*|nzqft[0-9]*|rawqft[0-9]*|nrawqft[0-9]*", GROUP="disk"
+ KERNEL=="rawctl",		NAME="raw/%k", GROUP="disk"
+ SUBSYSTEM=="raw", KERNEL=="raw[0-9]*", NAME="raw/%k", GROUP="disk"
+-KERNEL=="pktcdvd[0-9]*",	NAME="pktcdvd/%k"
+-KERNEL=="pktcdvd",		NAME="pktcdvd/control"
++KERNEL=="pktcdvd[0-9]*",	NAME="pktcdvd/%k",  GROUP="optical", MODE="0660"
++KERNEL=="pktcdvd",		NAME="pktcdvd/control", GROUP="optical", MODE="0660"
+ KERNEL=="qft0",			SYMLINK+="ftape"
+ SUBSYSTEM=="bsg",		NAME="bsg/%k"
+ SUBSYSTEM=="aoe",		NAME="etherd/%k", GROUP="disk"
+@@ -84,13 +92,13 @@
+ KERNEL=="tun",			NAME="net/%k", MODE="0666", OPTIONS+="ignore_remove"
+ 
+ # CPU
+-KERNEL=="cpu[0-9]*",		NAME="cpu/%n/cpuid"
+-KERNEL=="msr[0-9]*",		NAME="cpu/%n/msr"
++KERNEL=="cpu[0-9]*",		NAME="cpu/%n/cpuid", SYMLINK="%k"
++KERNEL=="msr[0-9]*",		NAME="cpu/%n/msr", SYMLINK="%k"
+ KERNEL=="microcode",		NAME="cpu/microcode", MODE="0600"
+ 
+ # miscellaneous
+ KERNEL=="fuse",			MODE="0666"
+-KERNEL=="rtc|rtc0",		MODE="0644"
++KERNEL=="rtc*",     NAME="misc/%k", SYMLINK+="%k", GROUP="audio", MODE="0664"
+ KERNEL=="rtc0",			SYMLINK+="rtc"
+ KERNEL=="auer[0-9]*",		NAME="usb/%k"
+ KERNEL=="hw_random",		NAME="hwrng", SYMLINK+="%k"
+--- 60-persistent-storage.rules.old	2008-03-09 17:52:59.000000000 +0100
++++ 60-persistent-storage.rules	2008-03-09 15:05:13.000000000 +0100
+@@ -3,11 +3,13 @@
+ # persistent storage links: /dev/disk/{by-id,by-uuid,by-label,by-path}
+ # scheme based on "Linux persistent device names", 2004, Hannes Reinecke <hare@suse.de>
+ 
+-ACTION!="add|change", GOTO="persistent_storage_end"
++# needed like this!!!
++ACTION!="add|change", GOTO="persistent_storage_end"
+ SUBSYSTEM!="block", GOTO="persistent_storage_end"
+ 
+ # skip rules for inappropriate block devices
+-KERNEL=="ram*|loop*|fd*|nbd*|gnbd*|dm-*|md*", GOTO="persistent_storage_end"
++# don't add dm-*!!!
++KERNEL=="ram*|loop*|fd*|nbd*|gnbd*|md*", GOTO="persistent_storage_end"
+ 
+ # never access non-cdrom removable ide devices, the drivers are causing event loops on open()
+ KERNEL=="hd*[!0-9]", ATTR{removable}=="1", DRIVERS=="ide-cs|ide-floppy", GOTO="persistent_storage_end"
+--- 80-drivers.rules~	2008-03-15 00:05:02.000000000 +0100
++++ 80-drivers.rules	2008-03-21 21:44:28.000000000 +0100
+@@ -3,10 +3,11 @@
+ ACTION!="add", GOTO="drivers_end"
+ 
+ DRIVER!="?*", ENV{MODALIAS}=="?*", RUN{ignore_error}+="/sbin/modprobe $env{MODALIAS}"
+-SUBSYSTEM=="pnp", DRIVER!="?*", ENV{MODALIAS}!="?*", \
+-  RUN{ignore_error}+="/bin/sh -c '/sbin/modprobe -a $$(while read id; do echo pnp:d$$id; done < /sys$devpath/id)'"
+-SUBSYSTEM=="tifm", RUN+="/sbin/modprobe --all tifm_sd tifm_ms"
+-SUBSYSTEM=="memstick", RUN+="/sbin/modprobe --all ms_block mspro_block"
++SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", DRIVER!="?*", RUN{ignore_error}+="/bin/sh -c 'while read id; do /lib/udev/load-modules.sh pnp:d$$id; /lib/udev/load-modules.sh pnp:c$$id ; done < /sys$devpath/id'"
++SUBSYSTEM=="tifm", RUN+="/sbin/modprobe tifm_sd"
++SUBSYSTEM=="tifm", RUN+="/sbin/modprobe tifm_ms"
++SUBSYSTEM=="memstick", RUN+="/sbin/modprobe ms_block"
++SUBSYSTEM=="memstick", RUN+="/sbin/modprobe mspro_block"
+ SUBSYSTEM=="mmc", RUN+="/sbin/modprobe mmc_block"
+ SUBSYSTEM=="i2o", RUN+="/sbin/modprobe i2o_block"
+ SUBSYSTEM=="ide", ATTR{media}=="tape", RUN+="/sbin/modprobe ide-scsi"

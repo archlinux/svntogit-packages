@@ -1,0 +1,115 @@
+#! /bin/sh
+#
+# start_udev
+# script to initialize /dev by using udev.
+#
+# Modified for Archlinux by Tobias Powalowski <tpowa@archlinux.org>
+#
+# Inspired by:
+# 
+# Copyright (C) 2004 Greg Kroah-Hartman <greg@kroah.com>
+#
+# Released under the GPL v2 only.
+#
+# This needs to be run at the earliest possible point in the boot 
+# process.
+#
+# Based on the udev init.d script
+#
+# Thanks go out to the Gentoo developers for proving 
+# that this is possible to do.
+#
+# Yes, it's very verbose, feel free to turn off all of the echo calls,
+# they were there to make me feel better that everything was working
+# properly during development...
+
+prog=udev
+sysfs_dir=/sys
+bin=/sbin/udev
+udevd=/sbin/udevd
+udev_root="/dev"
+
+trigger_device_events () 
+{
+	/sbin/udevtrigger
+}
+
+wait_for_queue () 
+{
+	# disabled because it hangs network boot
+	#loop=20
+        #while ! [ "$loop" -gt 0 -a -d /dev/.udev/queue ]; do
+        #           sleep 0.1;
+        #           loop=$(($loop - 1))
+        #done
+	/sbin/udevsettle
+}
+
+make_extra_nodes () 
+{
+	# there are a few things that sysfs does not export for us.
+	# these things go here (and remember to remove them in 
+	# remove_extra_nodes()
+	#
+	# Thanks to Gentoo for the initial list of these.
+	ln -sf /proc/self/fd $udev_root/fd
+	ln -sf /proc/self/fd/0 $udev_root/stdin
+	ln -sf /proc/self/fd/1 $udev_root/stdout
+	ln -sf /proc/self/fd/2 $udev_root/stderr
+	ln -sf /proc/kcore $udev_root/core
+}
+
+udev_init  () 
+{
+# don't use udev if sysfs is not mounted.
+if [ ! -d $sysfs_dir/block ]; then
+	exit 1
+fi
+
+# Do not mount ramfs, we are already in ramfs
+#mount -t ramfs none $udev_root
+
+# propogate /udev from /sys
+#echo "Creating initial udev device nodes:"
+
+#echo "making extra nodes"
+make_extra_nodes
+
+# check if udevd is already running
+#echo "start udev daemon"
+/sbin/udevd --daemon
+
+case "$(uname -r)" in
+       2.6.[0-9]|2.6.[0-9][!0-9]*) ;;
+       *) 	if [ -f "/sys/class/tty/console/uevent" ]; then
+			#echo "Kernel >= 2.6.15 and supports uevents"
+			# trigger the sorted events
+			echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
+			# catch events that are real fast
+			mkdir -p /dev/.udev/queue
+		else
+			# for older kernels without uevents will be removed when udevstart dies in udev
+			echo "Kernel does not support uevents, you need a kernel >= 2.6.15!"
+			exit 1
+		fi 
+	;;
+esac
+}
+
+udev_uevents () 
+{
+# configure all devices
+trigger_device_events
+# until we know how to do better, just wait for _all_ events to finish
+wait_for_queue
+}
+
+if [ $# -eq 0 ]; then
+udev_init
+udev_uevents
+fi
+
+[ "$1" = "init" ] && udev_init
+[ "$1" = "uevents" ] && udev_uevents
+
+exit 0

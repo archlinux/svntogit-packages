@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.7 2006/02/01 00:11:50 simo Exp $
+# Maintainer: arjan <arjan@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=giblib
+pkgver=1.2.4
+pkgrel=3
+pkgdesc="Giblib is a library that feh uses as a wrapper to imlib2"
+depends=('imlib2' 'libxext' 'freetype2')
+source=(http://linuxbrit.co.uk/downloads/$pkgname-$pkgver.tar.gz)
+url="http://linuxbrit.co.uk/giblib/"
+md5sums=('c810ef5389baf24882a1caca2954385e')
+
+build() {
+cd $startdir/src/$pkgname-$pkgver
+./configure --prefix=/usr
+make || return 1
+make prefix=$startdir/pkg/usr install
+find $startdir/pkg -name '*.la' -exec rm {} \;
+}

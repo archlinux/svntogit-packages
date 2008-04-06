@@ -1,0 +1,18 @@
+# $Id: PKGBUILD,v 1.5 2006/01/30 02:46:57 judd Exp $
+# Maintainer: Judd <jvinet@zeroflux.org>
+pkgname=sqlite2
+pkgver=2.8.17
+pkgrel=1
+pkgdesc="A C library that implements an SQL database engine"
+url="http://www.sqlite.org/"
+depends=('readline')
+source=(http://www.sqlite.org/sqlite-$pkgver.tar.gz)
+md5sums=('838dbac20b56d2c4292e98848505a05b')
+
+build() {
+  cd $startdir/src/sqlite-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}

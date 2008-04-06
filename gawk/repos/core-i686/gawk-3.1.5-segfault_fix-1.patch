@@ -1,0 +1,43 @@
+Submitted By: Matthew Burgess <matthew@linuxfromscratch.org>
+Date: 2005-09-24
+Initial Package Version: 3.1.5
+Upstream Status: From Upstream
+Origin: http://lists.gnu.org/archive/html/bug-gnu-utils/2005-08/msg00047.html
+Description: Fixes a bug which causes gawk to segfault when operating on a non-existent file.
+
+diff -Naur gawk-3.1.5.orig/io.c gawk-3.1.5/io.c
+--- gawk-3.1.5.orig/io.c	2005-07-26 18:07:43.000000000 +0000
++++ gawk-3.1.5/io.c	2005-09-24 14:43:13.771380264 +0000
+@@ -2480,9 +2480,12 @@
+ {
+ 	struct stat sbuf;
+ 	struct open_hook *oh;
++	int iop_malloced = FALSE;
+ 
+-	if (iop == NULL)
++	if (iop == NULL) {
+ 		emalloc(iop, IOBUF *, sizeof(IOBUF), "iop_alloc");
++		iop_malloced = TRUE;
++	}
+ 	memset(iop, '\0', sizeof(IOBUF));
+ 	iop->flag = 0;
+ 	iop->fd = fd;
+@@ -2495,7 +2498,8 @@
+ 	}
+ 
+ 	if (iop->fd == INVALID_HANDLE) {
+-		free(iop);
++		if (iop_malloced)
++			free(iop);
+ 		return NULL;
+ 	}
+ 	if (isatty(iop->fd))
+@@ -2503,7 +2507,7 @@
+ 	iop->readsize = iop->size = optimal_bufsize(iop->fd, & sbuf);
+ 	iop->sbuf = sbuf;
+ 	if (do_lint && S_ISREG(sbuf.st_mode) && sbuf.st_size == 0)
+-			lintwarn(_("data file `%s' is empty"), name);
++		lintwarn(_("data file `%s' is empty"), name);
+ 	errno = 0;
+ 	iop->count = iop->scanoff = 0;
+ 	emalloc(iop->buf, char *, iop->size += 2, "iop_alloc");

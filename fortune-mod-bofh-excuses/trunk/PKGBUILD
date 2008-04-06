@@ -1,0 +1,27 @@
+# $Id: PKGBUILD,v 1.1 2004/09/30 09:32:28 damir Exp $
+# Contributor : lanrat
+# Maintainer: damir <damir@archlinux.org>
+
+pkgname=fortune-mod-bofh-excuses
+pkgver=1.2
+pkgrel=1
+pkgdesc="BOFH excuses fortune cookie files"
+url="http://www.cs.wisc.edu/~ballard/bofh/"
+depends=('fortune-mod')
+groups=('fortune-mods')
+source=(http://ftp.debian.org/debian/pool/main/f/fortunes-bofh-excuses/fortunes-bofh-excuses_$pkgver.orig.tar.gz)
+md5sums=('54742a9f82d49721e3f64280e916c604')
+
+build() {
+
+    cd $startdir/src/fortunes-bofh-excuses-${pkgver}
+
+    strfile ./bofh-excuses ./bofh-excuses.dat
+
+    install -D -m644 $startdir/src/fortunes-bofh-excuses-${pkgver}/bofh-excuses \
+        $startdir/pkg/usr/share/fortune/bofh-excuses
+
+    install -D -m644 $startdir/src/fortunes-bofh-excuses-${pkgver}/bofh-excuses.dat \
+        $startdir/pkg/usr/share/fortune/bofh-excuses.dat
+
+}

@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.2 2007/05/11 16:56:34 dan Exp $
+# Maintainer: Dan McGee <dan@archlinux.org>
+# Contributor: Dale Blount <dale@archlinux.org>
+
+pkgname=pidgin-encryption
+pkgver=3.0
+pkgrel=1
+pkgdesc="A Pidgin plugin providing transparent RSA encryption using NSS"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://gaim-encryption.sourceforge.net"
+depends=('pidgin' 'nss')
+replaces=('gaim-encryption')
+options=(!libtool)
+source=(http://downloads.sourceforge.net/gaim-encryption/$pkgname-$pkgver.tar.gz)
+md5sums=('3f3f8e9a15d19e084d54bfbbd2db9d77')
+sha1sums=('bccad1c4ac0bec12e6837324f543ea60530d0761')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

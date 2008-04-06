@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.7 2008/01/01 17:14:27 andyrtr Exp $
+# Maintainer: judd <jvinet@zeroflux.org>
+
+pkgname=libgpg-error
+pkgver=1.6
+pkgrel=1
+pkgdesc="Support library for libgcrypt"
+arch=(i686 x86_64)
+url="http://www.gnupg.org"
+license=('LGPL')
+groups=('base')
+depends=('glibc')
+options=(!libtool)
+source=(#ftp://ftp.gnupg.org/gcrypt/libgpg-error/${pkgname}-${pkgver}.tar.bz2
+	ftp://ftp.franken.de/pub/crypt/mirror/ftp.gnupg.org/gcrypt/libgpg-error/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('f3e9870e213518b407a959f8d29cd554')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

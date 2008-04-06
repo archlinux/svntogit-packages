@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.10 2008/03/26 00:23:13 tobias Exp $
+# Contributor: David Keogh <davekeogh@shaw.ca>
+
+pkgname=squeeze
+pkgver=0.2.3
+pkgrel=1
+pkgdesc="Squeeze is a modern and advanced archive manager for the Xfce Desktop Environment."
+arch=('i686' 'x86_64')
+license=('GPL2')
+url="http://squeeze.xfce.org/"
+groups=('xfce4')
+depends=('thunar')
+makedepends=('pkgconfig' 'tar')
+options=('!libtool')
+conflicts=('squeeze-svn')
+install=${pkgname}.install
+source=(http://squeeze.xfce.org/downloads/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('bd3cb0648b49be1f146fc4f675606176')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/xfce4 \
+    --localstatedir=/var --disable-static
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

@@ -1,0 +1,30 @@
+# $Id: PKGBUILD,v 1.33 2008/03/21 23:13:58 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=epiphany-extensions
+pkgver=2.22.0
+pkgrel=1
+url="http://www.gnome.org/projects/epiphany/"
+pkgdesc="Various extentions for the Epiphany web browser"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('epiphany>=2.22.0' 'python>=2.5' 'opensp')
+makedepends=('pkgconfig' 'gnome-doc-utils>=0.12.2')
+options=('!libtool' '!emptydirs')
+install=epiphany-extensions.install
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('05b131995c532f2689150c731b2f37c1')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var \
+	      --with-extensions=really-all --disable-scrollkeeper || return 1
+  make LDFLAGS+="-R /usr/lib/xulrunner" || return 1
+
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  install -d -m755 ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}

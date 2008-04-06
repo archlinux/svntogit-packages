@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.11 2007/06/08 16:29:27 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Curtis Campbell <curtisjamescampbell@hotmail.com>
+# Contributor: dorphell <dorphell@archlinux.org>
+pkgname=came
+pkgver=1.9
+pkgrel=4
+pkgdesc="Replacement for xawtv webcam application"
+arch=(i686 x86_64)
+license=('GPL')
+url='http://linuxbrit.co.uk/camE/'
+depends=('giblib' 'curl>=7.16.2')
+source=(http://linuxbrit.co.uk/downloads/camE-${pkgver}.tar.gz
+        came-1.9-curl-friendly.patch)
+md5sums=('8bdc049b01cd32088eef8cccf3c096ab')
+
+build() {
+  cd ${startdir}/src/camE-${pkgver}
+  patch -Np1 -i ${startdir}/src/came-1.9-curl-friendly.patch || return 1
+  sed -i 's|#define VERSION "1.7"|#define VERSION "1.7"\n#define TRUE 1\n#define FALSE 0|' webcam.c
+  make || return 1
+  install -D -m 755 camE ${startdir}/pkg/usr/bin/camE
+  install -D -m 644 example.camErc ${startdir}/pkg/usr/share/came/camErc
+  install -D -m 644 example.camErc.ssh ${startdir}/pkg/usr/share/came/camErc.ssh
+}
+

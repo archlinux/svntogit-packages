@@ -1,0 +1,62 @@
+diff -u -r xpdf-3.01/fofi/FoFiType1.cc xpdf-3.01-resizefix/fofi/FoFiType1.cc
+--- xpdf-3.01/fofi/FoFiType1.cc	2005-08-17 08:34:30.000000000 +0300
++++ xpdf-3.01-resizefix/fofi/FoFiType1.cc	2006-10-15 14:04:13.000000000 +0300
+@@ -190,9 +190,14 @@
+ 	    }
+ 	  }
+ 	} else {
+-	  if (strtok(buf, " \t") &&
+-	      (p = strtok(NULL, " \t\n\r")) && !strcmp(p, "def")) {
+-	    break;
++	  p = strtok(buf, " \t\n\r");
++	  if (p)
++	  {
++	    if (!strcmp(p, "def")) break;
++	    if (!strcmp(p, "readonly")) break;
++	    // the spec does not says this but i'm mantaining old xpdf behaviour that accepts "foo def" as end of the encoding array
++	    p = strtok(buf, " \t\n\r");
++	    if (p && !strcmp(p, "def")) break;
+ 	  }
+ 	}
+       }
+diff -u -r xpdf-3.01/splash/Splash.cc xpdf-3.01-resizefix/splash/Splash.cc
+--- xpdf-3.01/splash/Splash.cc	2005-08-17 08:34:30.000000000 +0300
++++ xpdf-3.01-resizefix/splash/Splash.cc	2006-10-15 14:04:19.000000000 +0300
+@@ -822,6 +822,11 @@
+   }
+   xPath = new SplashXPath(path, state->flatness, gTrue);
+   xPath->sort();
++  if (!&xPath->segs[0])
++  {
++    delete xPath;
++    return splashErrEmptyPath;
++  }
+   scanner = new SplashXPathScanner(xPath, eo);
+ 
+   // get the min and max x and y values
+diff -u -r xpdf-3.01/xpdf/XPDFCore.cc xpdf-3.01-resizefix/xpdf/XPDFCore.cc
+--- xpdf-3.01/xpdf/XPDFCore.cc	2005-08-17 08:34:31.000000000 +0300
++++ xpdf-3.01-resizefix/xpdf/XPDFCore.cc	2006-10-15 14:03:47.000000000 +0300
+@@ -975,6 +975,9 @@
+   XPDFCore *core = (XPDFCore *)ptr;
+   XEvent event;
+   Widget top;
++  Window rootWin;
++  int x1, y1;
++  Guint w1, h1, bw1, depth1;
+   Arg args[2];
+   int n;
+   Dimension w, h;
+@@ -990,7 +993,11 @@
+   if (XCheckTypedWindowEvent(core->display, XtWindow(top),
+ 			     ConfigureNotify, &event)) {
+     XPutBackEvent(core->display, &event);
+-    return;
++    XGetGeometry(core->display, event.xconfigure.window,
++		                  &rootWin, &x1, &y1, &w1, &h1, &bw1, &depth1);
++   if ((Guint)event.xconfigure.width != w1 ||
++       (Guint)event.xconfigure.height != h1) 
++	   return;
+   }
+ 
+   n = 0;

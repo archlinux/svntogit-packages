@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.13 2007/02/14 00:35:19 simo Exp $
+# Maintainer: simo <simo@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=x2vnc
+pkgver=1.7.2
+pkgrel=1
+pkgdesc="Lets you use two monitors on two different computers one one computer"
+arch=(i686 x86_64)
+depends=('libsm' 'libxinerama' 'libxss' 'libxrandr' 'libxxf86dga')
+url="http://fredrik.hubbe.net/x2vnc.html"
+source=(http://fredrik.hubbe.net/x2vnc/$pkgname-$pkgver.tar.gz)
+md5sums=('f23f86bcfa12a80eaeb886ab9b3ee447')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  mkdir -p $startdir/pkg/usr/bin $startdir/pkg/usr/man/man1
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+}

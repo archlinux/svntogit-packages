@@ -1,0 +1,34 @@
+# $Id: PKGBUILD,v 1.26 2008/03/14 17:45:51 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=evolution-exchange
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="Ximian Connector Exchange plugin for Evolution"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.ximian.com"
+depends=('evolution-data-server>=2.22.0' 'libgnomeui>=2.22.01')
+makedepends=('perlxml' 'pkgconfig' 'evolution>=2.22.0')
+replaces=('ximian-connector')
+conflicts=('ximian-connector')
+options=('!libtool' '!emptydirs')
+install=evolution-exchange.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('fea02f97cc8fe62dca0d50ffdc19e416')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  # Look for correct DB, we want 4.1
+  sed -e 's|DB_CFLAGS="-I$withval/include"|DB_CFLAGS="-I$withval/include/db4.1"|' \
+      -e 's|DB_LIBS="-L$withval/lib -ldb"|DB_LIBS="-L$withval/lib -ldb-4.1"|' \
+      -i configure
+  ./configure --prefix=/usr --sysconfdir=/etc \
+  	--libexecdir=/var --disable-static --with-libdb=/usr  || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}

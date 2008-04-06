@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.1 2008/03/21 21:28:25 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Alessio 'mOLOk' Bolognino <themolok@gmail.com>
+# Contributor: Christophe Gueret <tolgam@homegnu.net>
+
+pkgname=python-gdata
+pkgver=1.0.11.1
+pkgrel=1
+arch=('i686' 'x86_64')
+pkgdesc="Python client library for Google data APIs"
+url="http://code.google.com/p/gdata-python-client/"
+license=('APACHE')
+depends=('python-elementtree')
+provides=('gdata_py')
+replaces=('gdata_py')
+conflicts=('gdata_py')
+source=(http://gdata-python-client.googlecode.com/files/gdata.py-${pkgver}.tar.gz)
+md5sums=('30bff93421b26dc38bba0795c7301bbb')
+
+build() {
+  cd ${startdir}/src/gdata.py-${pkgver}
+  python setup.py install --prefix=/usr --root ${startdir}/pkg
+}

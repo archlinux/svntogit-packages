@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.13 2007/08/03 00:37:24 eric Exp $
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=aterm
+pkgver=1.0.1
+pkgrel=1
+pkgdesc="An xterm replacement with transparency support"
+arch=('i686' 'x86_64')
+url="http://aterm.sourceforge.net/"
+license=('GPL')
+depends=('libxext' 'libsm')
+source=(http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.bz2)
+md5sums=('c2eede028e1011e0ec7035cf319c9b5a')
+sha1sums=('a975753b415306a0734efc3773de8a86129bb54b')
+    
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --enable-transparency=yes \
+    --enable-background-image --enable-fading --enable-menubar \
+    --enable-graphics
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+}

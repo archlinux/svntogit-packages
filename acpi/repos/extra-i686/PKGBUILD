@@ -1,0 +1,17 @@
+# $Id: PKGBUILD,v 1.2 2005/05/02 02:21:42 judd Exp $
+# Maintainer: Judd Vinet <jvinet@zeroflux.org>
+pkgname=acpi
+pkgver=0.09
+pkgrel=1
+pkgdesc="Linux ACPI Client"
+url="http://grahame.angrygoats.net/acpi.shtml"
+depends=('glibc')
+source=(http://grahame.angrygoats.net/source/$pkgname/$pkgname-$pkgver.tar.gz)
+md5sums=('a5a70595834b487c3a2f9278a3d60768')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

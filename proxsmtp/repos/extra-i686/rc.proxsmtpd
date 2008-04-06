@@ -1,0 +1,39 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+PIDFILE="/var/run/proxsmtpd/proxsmtpd.pid"
+PID=`cat $PIDFILE 2>/dev/null`
+case "$1" in
+  start)
+    stat_busy "Starting Proxsmtpd"
+    if [ "$PID" = "" ]; then 
+       /usr/sbin/proxsmtpd -p $PIDFILE
+    fi
+    if [ "$PID" != "" -o $? -gt 0 ]; then
+      stat_fail
+    else
+      add_daemon proxsmtpd
+      stat_done
+    fi
+    ;;
+  stop)
+    stat_busy "Stopping Proxsmtpd"
+    [ ! -z "$PID" ]  && kill $PID &> /dev/null
+		rm -f $PIDFILE
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      rm_daemon proxsmtpd
+      stat_done
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"  
+esac

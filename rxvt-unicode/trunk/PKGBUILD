@@ -1,0 +1,45 @@
+# $Id: PKGBUILD,v 1.34 2008/02/11 22:16:38 tobias Exp $
+# Maintainer: tobias <tobias@archlinux.org>
+# Contributor: dibblethewrecker dibblethewrecker.at.jiwe.dot.org
+
+pkgname=rxvt-unicode
+pkgver=9.02
+pkgrel=2
+pkgdesc="an unicode enabled rxvt-clone terminal emulator (urxvt)"
+arch=(i686 x86_64)
+depends=('gcc-libs' 'libxft' 'libxpm')
+makedepends=('ncurses' 'perl>=5.10.0' 'pkgconfig')
+url="http://software.schmorp.de/pkg/rxvt-unicode.html"
+license=("GPL2")
+source=(http://dist.schmorp.de/rxvt-unicode/${pkgname}-${pkgver}.tar.bz2 \
+        ${pkgname}.desktop ${pkgname}.png)
+md5sums=('f3c4fea3d544a340fa5a1d601ff5f204' '5bfefa1b41c2b81ca18f2ef847330543' \
+         '84328cada91751df07324d95f8be4d1b')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+    --with-terminfo=/usr/share/terminfo \
+    --enable-font-styles \
+    --enable-xim \
+    --enable-keepscrolling \
+    --enable-selectionscrolling \
+    --enable-smart-resize \
+    --enable-xpm-background \
+    --enable-transparency \
+    --enable-utmp \
+    --enable-wtmp \
+    --enable-lastlog
+  make || return 1
+  mkdir -p ${startdir}/pkg/usr/share/terminfo
+  export TERMINFO=${startdir}/pkg/usr/share/terminfo
+  make DESTDIR=${startdir}/pkg install
+ # install the tabbing wrapper ( requires gtk2-perl! )
+  sed -i 's/\"rxvt\"/"urxvt"/' doc/rxvt-tabbed
+  install -Dm 755 doc/rxvt-tabbed ${startdir}/pkg/usr/bin/urxvt-tabbed
+ # install freedesktop menu and icon ( icon from cvs checkout )
+  install -Dm644 ../${pkgname}.desktop \
+    ${startdir}/pkg/usr/share/applications/${pkgname}.desktop
+  install -Dm644 ../${pkgname}.png \
+    ${startdir}/pkg/usr/share/pixmaps/${pkgname}.png
+}

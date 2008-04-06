@@ -1,0 +1,459 @@
+--- config_office/configure.in	2005-08-30 15:45:40.000000000 +0100
++++ config_office/configure.in	2005-08-30 15:56:10.000000000 +0100
+@@ -233,6 +233,9 @@
+ AC_ARG_WITH(system-sablot,
+ [  --with-system-sablot    Use sablot already on system
+ ],,)
++AC_ARG_WITH(system-libxslt,
++[  --with-system-libxslt   Use libxslt already on system
++],,)
+ AC_ARG_WITH(system-odbc,
+ [  --with-system-odbc-headers     Use the odbc headers already on system
+ ],,)
+@@ -2613,6 +2616,22 @@
+ AC_SUBST(BSH_JAR)
+ 
+ dnl ===================================================================
++dnl Check for system libxslt
++dnl ===================================================================
++AC_MSG_CHECKING([which libxslt to use])
++if test -n "$with_system_libxslt" && test "$with_system_libxslt" != "no"; then
++   AC_MSG_RESULT([external])
++   SYSTEM_LIBXSLT=YES
++
++   PKG_CHECK_MODULES( LIBXSLT, libxslt )
++else
++   AC_MSG_RESULT([none])
++   SYSTEM_LIBXSLT=NO
++fi
++AC_SUBST(SYSTEM_LIBXSLT)
++
++if test "$SYSTEM_LIBXSLT" == "NO"; then
++dnl ===================================================================
+ dnl Check for system sablot
+ dnl ===================================================================
+ AC_MSG_CHECKING([which sablot to use])
+@@ -2634,6 +2653,7 @@
+ fi
+ AC_SUBST(SYSTEM_SABLOT)
+ AC_SUBST(SABLOT_LIBS)
++fi
+ 
+ dnl ===================================================================
+ dnl Check for system curl
+Index: set_soenv.in
+===================================================================
+RCS file: /cvs/tools/config_office/set_soenv.in,v
+retrieving revision 1.89.2.2
+diff -u -u -r1.89.2.2 set_soenv.in
+--- config_office/set_soenv.in	10 Feb 2006 15:00:26 -0000	1.89.2.2
++++ config_office/set_soenv.in	22 Feb 2006 23:09:28 -0000
+@@ -1777,6 +1777,7 @@
+ ToFile( "SYSTEM_LIBWPD",     "@SYSTEM_LIBWPD@",    "e" );
+ ToFile( "LIBWPD_CFLAGS",     "@LIBWPD_CFLAGS@",    "e" );
+ ToFile( "LIBWPD_LIBS",       "@LIBWPD_LIBS@",      "e" );
++ToFile( "SYSTEM_LIBXSLT",    "@SYSTEM_LIBXSLT@",   "e" );
+ ToFile( "SYSTEM_LIBXML",     "@SYSTEM_LIBXML@",    "e" );
+ ToFile( "LIBXML_CFLAGS",     "@LIBXML_CFLAGS@",    "e" );
+ ToFile( "LIBXML_LIBS",       "@LIBXML_LIBS@",      "e" );
+--- xmlhelp/source/cxxhelp/provider/makefile.mk	11 Apr 2005 09:32:12 -0000	1.16
++++ xmlhelp/source/cxxhelp/provider/makefile.mk	30 Aug 2005 15:09:58 -0000
+@@ -79,6 +79,12 @@ CFLAGS +=  -DHAVE_EXPAT_H
+ CFLAGS+=-DSYSTEM_DB -I$(DB_INCLUDES)
+ .ENDIF
+ 
++.IF "$(SYSTEM_LIBXSLT)" == "YES"
++PKGCONFIG_MODULES=libxslt
++.INCLUDE: pkg_config.mk
++CFLAGS+=-DSYSTEM_LIBXSLT
++.ENDIF
++
+ .IF "$(SYSTEM_SABLOT)" == "YES"
+ CFLAGS+=-DSYSTEM_SABLOT
+ .ENDIF
+--- xmlhelp/source/cxxhelp/provider/urlparameter.cxx	30 Mar 2005 08:38:37 -0000	1.36
++++ xmlhelp/source/cxxhelp/provider/urlparameter.cxx	30 Aug 2005 15:09:59 -0000
+@@ -87,6 +87,11 @@
+ #ifndef _RTL_URI_HXX_
+ #include <rtl/uri.hxx>
+ #endif
++#ifdef SYSTEM_LIBXSLT
++#include <libxslt/xslt.h>
++#include <libxslt/transform.h>
++#include <libxslt/xsltutils.h>
++#else
+ #ifdef SYSTEM_SABLOT
+ #include <sablot.h>
+ #include <shandler.h>
+@@ -98,6 +103,7 @@
+ #include <sablot/shandler.h>
+ #endif
+ #endif
++#endif
+ #ifndef BERKELEYDBPROXY_DB_HXX_
+ #include "db.hxx"
+ #endif
+@@ -749,8 +755,7 @@ bool URLParameter::query()
+ 	return ret;
+ }
+ 
+-
+-
++#ifndef SYSTEM_LIBXSLT
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ //                           InutStreamTransformerImpl                        //
+@@ -784,6 +789,7 @@ int schemehandlerclose( void *userData,
+ 						SablotHandle processor_,
+ 						int handle );
+ 
++#endif
+ 
+ struct UserData {
+ 	
+@@ -801,7 +807,124 @@ struct UserData {
+ 	URLParameter*                       m_pInitial;
+ };
+ 
++#ifdef SYSTEM_LIBXSLT
++UserData *ugblData = 0;
++
++static int
++pkgMatch(const char * URI) {
++    if ((URI != NULL) && !strncmp(URI, "vnd.sun.star.pkg", 16))
++        return 1;
++    return 0;
++}
++
++static int
++helpMatch(const char * URI) {
++    if ((URI != NULL) && !strncmp(URI, "vnd.sun.star.help", 17))
++        return 1;
++    return 0;
++}
++
++static void *
++pkgOpen(const char * URI) {
++	rtl::OUString language,jar,path;
++
++	if( ugblData->m_pInitial->get_eid().getLength() )
++		return (void*)(new Reference< XHierarchicalNameAccess >);
++	else
++	{
++		jar = ugblData->m_pInitial->get_jar();
++		language = ugblData->m_pInitial->get_language();
++		path = ugblData->m_pInitial->get_path();
++	}
++            
++	Reference< XHierarchicalNameAccess > xNA(ugblData->m_pDatabases->jarFile( jar,language ));
++
++    Reference< XInputStream > xInputStream;
++
++	if( xNA.is() )
++	{
++		try
++		{
++			Any aEntry = xNA->getByHierarchicalName( path );
++			Reference< XActiveDataSink > xSink;
++			if( ( aEntry >>= xSink ) && xSink.is() )
++				xInputStream = xSink->getInputStream();
++		}
++		catch ( NoSuchElementException & )
++		{
++		}
++	}
++	
++	if( xInputStream.is() )
++	{
++		return new Reference<XInputStream>(xInputStream);
++	}
++	return 0;
++}
++
++static void *
++helpOpen(const char * URI) {
++	rtl::OUString language,jar,path;
+ 
++	URLParameter urlpar( rtl::OUString::createFromAscii( URI ),
++						 ugblData->m_pDatabases );
++		
++	jar = urlpar.get_jar();
++	language = urlpar.get_language();
++	path = urlpar.get_path();
++
++	Reference< XHierarchicalNameAccess > xNA(ugblData->m_pDatabases->jarFile( jar,language ));
++
++    Reference< XInputStream > xInputStream;
++
++	if( xNA.is() )
++	{
++		try
++		{
++			Any aEntry = xNA->getByHierarchicalName( path );
++			Reference< XActiveDataSink > xSink;
++			if( ( aEntry >>= xSink ) && xSink.is() )
++				xInputStream = xSink->getInputStream();
++		}
++		catch ( NoSuchElementException & )
++		{
++		}
++	}
++	
++	if( xInputStream.is() )
++		return new Reference<XInputStream>(xInputStream);
++	return 0;
++}
++
++static int
++helpRead(void * context, char * buffer, int len) {
++	Reference< XInputStream > *pRef = (Reference< XInputStream >*)context;
++
++	Sequence< sal_Int8 > aSeq;
++	len = (*pRef)->readBytes( aSeq,len);
++	memcpy(buffer, aSeq.getConstArray(), len);
++
++	return len;
++}
++
++static int
++pkgRead(void * context, char * buffer, int len) {
++	if( ugblData->m_pInitial->get_eid().getLength() )
++	{
++		ugblData->m_pDatabases->popupDocument( ugblData->m_pInitial,&buffer,&len);
++		return len;
++	}
++	else
++		return helpRead(context, buffer, len);
++}
++
++static int
++uriClose(void * context) {
++	Reference< XInputStream > *pRef = (Reference< XInputStream >*)context;
++	delete pRef;
++    return 0;
++}
++#endif
+ 
+ InputStreamTransformer::InputStreamTransformer( URLParameter* urlParam,
+ 												Databases*    pDatabases,
+@@ -828,6 +951,7 @@ InputStreamTransformer::InputStreamTrans
+ 	}
+ 	else
+ 	{
++#ifndef SYSTEM_LIBXSLT
+ 		SchemeHandler schemeHandler;
+ 		schemeHandler.getAll = schemehandlergetall;
+ 		schemeHandler.freeMemory = schemehandlerfreememory;
+@@ -826,87 +950,91 @@
+ 		schemeHandler.get = schemehandlerget;
+ 		schemeHandler.put = schemehandlerput;
+ 		schemeHandler.close = schemehandlerclose;
++#endif
+ 	
+ 		UserData userData( this,urlParam,pDatabases );
+ 	
+ 		// Uses the implementation detail, that rtl::OString::getStr returns a zero terminated character-array
+         
+-		const char* parameter[42];
++		// parameter should have 1 more field than parString
++		// otherwise you can cause an array out of bounds sigsegv
++		const char* parameter[44];
+ 		rtl::OString parString[43];
+         int last = 0;
+         
+ 		parString[last++] = "Program";
+-		parString[last++] = urlParam->getByName( "Program" );
++		parString[last++] = rtl::OString('\'') + urlParam->getByName( "Program" ) + rtl::OString('\'');
+ 		parString[last++] = "Database";
+-		parString[last++] = urlParam->getByName( "DatabasePar" );
++		parString[last++] = rtl::OString('\'') + urlParam->getByName( "DatabasePar" ) + rtl::OString('\'');
+ 		parString[last++] = "Id";
+-		parString[last++] = urlParam->getByName( "Id" );
++		parString[last++] = rtl::OString('\'') + urlParam->getByName( "Id" ) + rtl::OString('\'');
+ 		parString[last++] = "Path";
+-		parString[last++] = urlParam->getByName( "Path" );
++		parString[last++] = rtl::OString('\'') + urlParam->getByName( "Path" ) + rtl::OString('\'');
+ 		parString[last++] = "Language";
+-		parString[last++] = urlParam->getByName( "Language" );
++		parString[last++] = rtl::OString('\'') + urlParam->getByName( "Language" ) + rtl::OString('\'');
+ 		parString[last++] = "System";
+-		parString[last++] = urlParam->getByName( "System" );
++		parString[last++] = rtl::OString('\'') + urlParam->getByName( "System" ) + rtl::OString('\'');
+ 		parString[last++] = "productname";
+-		parString[last++] = rtl::OString(
++		parString[last++] = rtl::OString('\'') + rtl::OString(
+             pDatabases->getProductName().getStr(),
+             pDatabases->getProductName().getLength(),
+-            RTL_TEXTENCODING_UTF8 );
++            RTL_TEXTENCODING_UTF8 ) + rtl::OString('\'');
+ 		parString[last++] = "productversion";
+-		parString[last++] = 
+-            rtl::OString( pDatabases->getProductVersion().getStr(),
++		parString[last++] = rtl::OString('\'') + 
++            rtl::OString(  pDatabases->getProductVersion().getStr(),
+                           pDatabases->getProductVersion().getLength(),
+-                          RTL_TEXTENCODING_UTF8 );
++                          RTL_TEXTENCODING_UTF8 ) + rtl::OString('\'');
+ 
+         parString[last++] = "imgrepos";
+-        parString[last++] = pDatabases->getImagesZipFileURL();
++        parString[last++] = rtl::OString('\'') + pDatabases->getImagesZipFileURL() + rtl::OString('\'');
+         parString[last++] = "hp";
+-        parString[last++] = urlParam->getByName( "HelpPrefix" );
++        parString[last++] = rtl::OString('\'') + urlParam->getByName( "HelpPrefix" ) + rtl::OString('\'');
+         
+         if( parString[last-1].getLength() )
+         {
+             parString[last++] = "sm";
+-            parString[last++] = "vnd.sun.star.help%3A%2F%2F";
++            parString[last++] = "'vnd.sun.star.help%3A%2F%2F'";
+             parString[last++] = "qm";
+-            parString[last++] = "%3F";
++            parString[last++] = "'%3F'";
+             parString[last++] = "es";
+-            parString[last++] = "%3D";
++            parString[last++] = "'%3D'";
+             parString[last++] = "am";
+-            parString[last++] = "%26";
++            parString[last++] = "'%26'";
+             parString[last++] = "cl";
+-            parString[last++] = "%3A";
++            parString[last++] = "'%3A'";
+             parString[last++] = "sl";
+-            parString[last++] = "%2F";
++            parString[last++] = "'%2F'";
+             parString[last++] = "hm";
+-            parString[last++] = "%23";
++            parString[last++] = "'%23'";
+             parString[last++] = "cs";
+-            parString[last++] = "css";
++            parString[last++] = "'css'";
+ 
+             parString[last++] = "vendorname";
+-            parString[last++] = 
++            parString[last++] = rtl::OString('\'') + 
+                 rtl::OString( pDatabases->getVendorName().getStr(),
+                               pDatabases->getVendorName().getLength(),
+-                              RTL_TEXTENCODING_UTF8 );
++                              RTL_TEXTENCODING_UTF8 ) + rtl::OString('\'');
+             parString[last++] = "vendorversion";
+-            parString[last++] = 
++            parString[last++] = rtl::OString('\'') + 
+                 rtl::OString( pDatabases->getVendorVersion().getStr(),
+                               pDatabases->getVendorVersion().getLength(),
+-                              RTL_TEXTENCODING_UTF8 );
++                              RTL_TEXTENCODING_UTF8 ) + rtl::OString('\'');
+             parString[last++] = "vendorshort";
+-            parString[last++] = 
++            parString[last++] = rtl::OString('\'') + 
+                 rtl::OString( pDatabases->getVendorShort().getStr(),
+                               pDatabases->getVendorShort().getLength(),
+-                              RTL_TEXTENCODING_UTF8 );
++                              RTL_TEXTENCODING_UTF8 ) + rtl::OString('\'');
+         }
+         
+ 		for( int i = 0; i < last; ++i )
+ 			parameter[i] = parString[i].getStr();
+ 		parameter[last] = 0;
+ 		
+-	
++#ifndef SYSTEM_LIBXSLT	
+ 		SablotHandle p;
+ 		SablotCreateProcessor(&p);
+ 		SablotRegHandler( p,HLR_SCHEME,&schemeHandler,(void*)(&userData) );
++#endif
+ 		rtl::OUString xslURL = pDatabases->getInstallPathAsURL/*WithOutEncoding*/();
+ 		
+ 		rtl::OString xslURLascii( 
+@@ -924,6 +1050,31 @@ InputStreamTransformer::InputStreamTrans
+ 		strcpy( aVndPkgStr, aVndPkgConstStr );
+ 		char aVndResStr[ sizeof( aVndResConstStr ) ];
+ 		strcpy( aVndResStr, aVndResConstStr );
++#ifdef SYSTEM_LIBXSLT
++		ugblData = &userData;
++
++		xmlRegisterInputCallbacks(pkgMatch, pkgOpen, pkgRead, uriClose);
++		xmlRegisterInputCallbacks(helpMatch, helpOpen, helpRead, uriClose);
++
++		xsltStylesheetPtr cur = 
++			xsltParseStylesheetFile((const xmlChar *)xslURLascii.getStr());
++
++		xmlDocPtr doc = xmlParseFile("vnd.sun.star.pkg:/");
++
++		xmlDocPtr res = xsltApplyStylesheet(cur, doc, parameter);
++	if (res) {
++		xmlChar *doc_txt_ptr=0;
++		int doc_txt_len;
++		int nResult = xsltSaveResultToString(&doc_txt_ptr, &doc_txt_len, res, cur);
++		addToBuffer((const char*)doc_txt_ptr, doc_txt_len);
++		xmlFree(doc_txt_ptr);
++	}
++		xmlPopInputCallbacks();
++		xmlPopInputCallbacks();
++		xmlFreeDoc(res);
++		xmlFreeDoc(doc);
++		xsltFreeStylesheet(cur);
++#else
+ #ifdef SYSTEM_SABLOT
+ 		SablotRunProcessor( p,
+ 							xslURLascii.getStr(),
+@@ -941,6 +1092,7 @@ InputStreamTransformer::InputStreamTrans
+ #endif
+ 		 
+ 		SablotDestroyProcessor( p );
++#endif
+ 	}
+ }
+ 	
+@@ -1086,8 +1238,7 @@ void InputStreamTransformer::addToBuffer
+ }
+ 
+ 
+-
+-
++#ifndef SYSTEM_LIBXSLT
+ 
+ /**
+  *    getAll: open the URI and return the whole string
+@@ -1260,7 +1411,4 @@ int schemehandlerclose( void *userData,
+ 	return 0;
+ }
+ 
+-
+-
+-
+-
++#endif
+--- xmlhelp/util/makefile.mk	30 Mar 2005 08:38:50 -0000	1.7
++++ xmlhelp/util/makefile.mk	30 Aug 2005 15:10:03 -0000
+@@ -89,6 +89,11 @@ SABLOT3RDLIB=sablot.lib
+ .ENDIF # wnt
+ .ENDIF # sablot3rdlib
+ 
++.IF "$(SYSTEM_LIBXSLT)" == "YES"
++PKGCONFIG_MODULES=libxslt
++.INCLUDE: pkg_config.mk
++.ENDIF
++
+ # --- Shared-Library ---------------------------------------------------
+ 
+ SHL1TARGET=$(TARGET)$(UCP_VERSION)
+@@ -102,12 +107,16 @@ SHL1STDLIBS=                     \
+ 	$(CPPULIB)               \
+ 	$(SALLIB)                \
+ 	$(VOSLIB)                \
+-	$(SABLOT3RDLIB)          \
+ 	$(EXPATASCII3RDLIB)      \
+ 	$(UCBHELPERLIB)          \
+ 	$(SVLLIB)             \
+ 	$(BERKELEYLIB)
+-#	$(BERKELEYCPPLIB)
++
++.IF "$(SYSTEM_LIBXSLT)" == "YES"
++	SHL1STDLIBS+=$(PKGCONFIG_LIBS)
++.ELSE
++	SHL1STDLIBS+=$(SABLOT3RDLIB)
++.ENDIF
+ 
+ SHL1LIBS =                       \
+ 	$(SLB)$/jaqe.lib          \

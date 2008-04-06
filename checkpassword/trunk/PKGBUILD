@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.4 2004/09/06 12:46:23 eric Exp $
+# Maintainer: eric <eric@archlinux.org>
+# Contributor: Manolis Tzanidakis
+#
+
+pkgname=checkpassword
+pkgver=0.90
+pkgrel=1
+pkgdesc="A simple, uniform password-checking interface to all root applications."
+url="http://cr.yp.to/checkpwd.html"
+depends=('glibc')
+source=(http://cr.yp.to/checkpwd/$pkgname-$pkgver.tar.gz)
+md5sums=('e75842e908f96571ae56c3da499ba1fc')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  
+  # fix errno.h in glibc-2.3.x
+  /bin/sed -i "s:extern int errno;:#include <errno.h>:" error.h 
+  /bin/echo "gcc ${CFLAGS}" > conf-cc
+  /usr/bin/make || return 1
+  /bin/install -D -m 755 checkpassword $startdir/pkg/usr/bin/checkpassword
+}
+# vim: ts=2: ft=sh

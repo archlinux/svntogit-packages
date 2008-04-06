@@ -1,0 +1,31 @@
+# $Id: PKGBUILD,v 1.6 2007/05/13 11:56:43 thomas Exp $
+# Contributor: Camille Moncelier <pix@devlife.org>, simo <simo@archlinux.org>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kexec-tools
+pkgver=1.101
+pkgrel=7
+pkgdesc="Load another kernel from the currently executing Linux kernel"
+arch=(686 x86_64)
+url="http://www.xmission.com/~ebiederm/files/kexec/"
+source=(http://www.xmission.com/~ebiederm/files/kexec/$pkgname-$pkgver.tar.gz \
+        kexec.conf.d kexec kexec-vesafb.diff)
+depends=('zlib' 'awk')
+backup=('etc/conf.d/kexec')
+arch=('i686')
+md5sums=('b4f7ffcc294d41a6a4c40d6e44b7734d' 'b9ddfb9fbcc7e4e7e7294fe94fa60aeb'\
+         '15599234f174ddc4d2611f32effec6ab' '3c61494a396110768a60ba341bab2058')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  patch -Np1 -i ../kexec-vesafb.diff || return 1
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+  
+  mv $startdir/pkg/usr/sbin $startdir/pkg/sbin
+
+  install -D -m644 kexec/kexec.8 $startdir/pkg/usr/man/man8/kexec.8
+  install -D -m644 $startdir/src/kexec.conf.d $startdir/pkg/etc/conf.d/kexec
+  install -D -m755 $startdir/src/kexec $startdir/pkg/etc/rc.d/kexec
+}

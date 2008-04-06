@@ -1,0 +1,64 @@
+# $Id: PKGBUILD,v 1.25 2007/12/05 07:20:51 eric Exp $
+# Contributor: Andrew Wright <andreww@photism.org>
+# Maintainer: Paul Mattal <paul@archlinux.org>
+
+pkgname=eclipse
+pkgver=3.3.1.1
+pkgrel=1
+pkgdesc="Eclipse IDE development platform"
+arch=('i686' 'x86_64')
+url="http://eclipse.org"
+depends=('jdk>=1.5' gtk2)
+license=('EPL')
+install=$pkgname.install
+makedepends=(zip libgnomeui apache-ant)
+source=(ftp://ftp.osuosl.org/pub/$pkgname/$pkgname/downloads/drops/R-$pkgver-200710231652/$pkgname-sourceBuild-srcIncluded-$pkgver.zip
+	eclipse.sh \
+	eclipse.desktop)
+md5sums=('593b56fce7d1f1f799e87365cafefbef' '78db5f9dfd844288afd49e0f357dd539'\
+         '5a908647b7a9c9bb4467a499ec68b2e2')
+
+build() {
+  cd $startdir/src || return 1
+  unset ANT_HOME
+
+  # Arch64 - i cannot reproduce why it most times freezes while "assembling";
+  #          got it only once build - happy with that
+  if [ "$CARCH" = "x86_64" ]; then
+     # export MAKEFLAGS="-j1"
+     # no warnings / java5 - http://gcc.gnu.org/ml/java/2007-02/msg00117.html
+#     find $startdir/src -type f -name '*.xml' -exec sed -r \
+#            -e "s/(\"compilerArg\" value=\")/\1-nowarn /g" \
+#            -e "s/(-encoding ISO-8859-1)/\1 -nowarn/g" \
+#            -e "s:(<property name=\"javacSource\" value=)\".*\":\1\"1.5\":" \
+#            -e "s:(<property name=\"javacTarget\" value=)\".*\":\1\"1.5\":" -i {} \; 
+         ./build -os linux -ws gtk -arch x86_64 || return 1
+    else ./build -os linux -ws gtk -arch x86 || return 1
+  fi
+
+  installdir=$startdir/pkg/usr/share
+  mkdir -p $installdir || return 1
+
+  if [ "$CARCH" = "x86_64" ]; then
+	  cp result/linux-gtk-x86_64-sdk.tar.gz $installdir || return 1
+  else
+	  cp result/linux-gtk-x86-sdk.tar.gz $installdir || return 1
+  fi
+
+  cd $installdir || return 1
+
+  if [ "$CARCH" = "x86_64" ]; then
+	  tar zxf linux-gtk-x86_64-sdk.tar.gz || return 1
+	  rm linux-gtk-x86_64-sdk.tar.gz || return 1
+  else
+	  tar zxf linux-gtk-x86-sdk.tar.gz || return 1
+	  rm linux-gtk-x86-sdk.tar.gz || return 1
+  fi
+
+  rm -r eclipse/readme || return 1
+
+  install -D -m755 $startdir/src/eclipse.sh \
+  	$startdir/pkg/etc/profile.d/eclipse.sh || return 1
+  install -D -m644 $startdir/src/eclipse.desktop \
+  	$startdir/pkg/usr/share/applications/eclipse.desktop || return 1
+}

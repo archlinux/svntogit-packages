@@ -1,0 +1,21 @@
+# Maintainer : Aaron, phrakture, Griffin <aaron@archlinux.org>
+# Contributor: Gilles CHAUVIN <gcnweb@gmail.com>
+
+pkgname=libdvbpsi4
+pkgver=0.1.5
+pkgrel=1
+pkgdesc="MPEG TS and DVB PSI tables library (needed by vlc for streaming)"
+depends=('glibc')
+url="http://developers.videolan.org/libdvbpsi/"
+source=(http://download.videolan.org/pub/libdvbpsi/$pkgver/$pkgname-$pkgver.tar.bz2)
+md5sums=('407cd074b7d6eaf31b20b693ed924655')
+
+build()
+{
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}

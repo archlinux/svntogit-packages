@@ -1,0 +1,135 @@
+#!/bin/bash
+# Startup/shutdown script for HPLIP 
+#
+# Note, this script file must start before cupsd.
+#
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+HPIODDIR=/usr/sbin
+HPSSDDIR=/usr/share/hplip/
+RUNDIR=/var/run
+
+daemon() {
+   $* >/dev/null 2>&1
+   if [ $? -eq 0 ]; then
+      stat_done
+   else
+      stat_fail
+   fi
+}
+
+killproc() {
+   pid=`pidof -s $1`
+   pidfile=$RUNDIR/${1}.pid
+   if [ -z $pid ]; then
+      if [ -f $pidfile ]; then
+         read pid < $pidfile
+         kill $pid
+      fi      
+   else
+      kill $pid
+   fi
+   retval=$?
+   if [ -f $pidfile ]; then
+      rm $pidfile
+   fi      
+   if [ $retval -eq 0 ]; then
+      stat_done
+   else
+      stat_fail
+   fi
+}
+
+mystatus() {
+   pid=`pidof -s $1`
+   if [ -z $pid ]; then
+      pidfile=$RUNDIR/${1}.pid
+      if [ -f $pidfile ]; then
+         read pid < $pidfile
+      fi      
+   fi
+
+   if [ -n "$pid" ]; then
+      echo $"$1 (pid $pid) is running..."
+      return 0
+   fi
+
+   echo $"$1 is stopped"
+   return 3
+}
+
+RETVAL=0
+
+start() {
+        stat_busy $"Starting hplip: hpiod ..."
+        cd $HPIODDIR
+        daemon ./hpiod
+        RETVAL=$?
+        [ $RETVAL = 0 ] && [ -d /var/lock/ ] && touch /var/lock/hpiod
+        stat_busy "Starting hplip: hpssd ... "
+        cd $HPSSDDIR
+        daemon ./hpssd.py
+        RETVAL=$?
+        [ $RETVAL = 0 ] && [ -d /var/lock/ ] && touch /var/lock/hpssd.py
+        killall -HUP cupsd > /dev/null 2>&1
+        if [ -f /var/lock/hpiod -a -f /var/lock/hpssd.py ]; then
+           touch /var/lock/hplip
+           return 0
+        else
+           return 1
+	fi
+}
+
+stop() {
+        stat_busy "Stopping hplip: hpiod ... "
+        killproc hpiod
+        RETVAL=$?
+        [ $RETVAL = 0 ] && rm -f /var/lock/hpiod
+        stat_busy "Stopping hplip: hpssd... "
+        killproc hpssd
+        RETVAL=$?
+        [ $RETVAL = 0 ] && rm -f /var/lock/hpssd.py
+        for pidfile in $RUNDIR/*; do
+	   case "$( basename $pidfile )" in 
+       		hpguid-*.pid)
+                   read pid < $pidfile
+                   kill $pid
+                   rm $pidfile
+	   esac
+        done
+        if [ ! -f /var/lock/hpiod -o ! -f /var/lock/hpssd.py ]; then
+        	rm -f /var/lock/hplip
+        fi
+        return $RETVAL
+}       
+
+restart() {
+        stop
+        start
+}       
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  status)
+        mystatus hpiod
+        mystatus hpssd
+        ;;
+  condrestart)
+        [ -f /var/lock/hpiod ] && [ -f /var/lock/hpssd.py ] && restart || :
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+        exit 1
+esac
+
+exit $?
+

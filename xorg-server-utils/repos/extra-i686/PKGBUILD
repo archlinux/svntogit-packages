@@ -1,0 +1,75 @@
+# $Id: PKGBUILD,v 1.16 2007/08/18 11:43:54 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xorg-server-utils
+pkgver=1.0.4
+pkgrel=2
+pkgdesc="X.Org utilities required by xorg-server"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org/"
+depends=('libxfontcache' 'libxi' 'liblbxutil' 'libxrandr>=1.2.1' 'libxxf86misc'
+         'libxaw' 'libxxf86vm' 'libxtrap' 'mcpp>=2.6' 'xtrans')
+makedepends=('pkgconfig' 'xbitmaps' 'xproxymngproto')
+source=(${url}/releases/individual/app/iceauth-1.0.2.tar.bz2
+        ${url}/releases/individual/app/lbxproxy-1.0.1.tar.bz2
+        ${url}/releases/individual/app/rgb-1.0.1.tar.bz2
+        ${url}/releases/individual/app/sessreg-1.0.3.tar.bz2
+        ${url}/releases/individual/app/xcmsdb-1.0.1.tar.bz2
+        ${url}/releases/individual/app/xbacklight-1.1.tar.bz2
+	${url}/releases/individual/app/xgamma-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xhost-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xmodmap-1.0.3.tar.bz2
+        ${url}/releases/individual/app/xrandr-1.2.2.tar.bz2
+        ${url}/releases/individual/app/xrdb-1.0.4.tar.bz2
+        ${url}/releases/individual/app/xrefresh-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xset-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xsetmode-1.0.0.tar.bz2
+        ${url}/releases/individual/app/xsetpointer-1.0.1.tar.bz2
+        ${url}/releases/individual/app/xsetroot-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xstdcmap-1.0.1.tar.bz2
+        ${url}/releases/individual/app/xtrap-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xvidtune-1.0.1.tar.bz2)
+
+build() {
+  cd ${startdir}/src
+  for i in *; do
+    if [ -d "${i}" ]; then
+      pushd "${i}"
+      case "${i}" in
+        xrdb*)
+	  ./configure --prefix=/usr --with-cpp=/usr/bin/mcpp\ -@old
+	;;
+	lbxproxy*)
+	  sed -e 's|$(libdir)/X11/lbxproxy|$(datadir)/X11/libxproxy|g' \
+	      -i Makefile.* || return 1
+	  ./configure --prefix=/usr
+	;;
+	*)
+	  ./configure --prefix=/usr
+	;;
+      esac
+      make || return 1
+      make DESTDIR=${startdir}/pkg install || return 1
+      popd
+    fi
+  done
+}
+md5sums=('7ab8b64edf0212a9d9a3c8129901a450'
+         '9d5045a5c76b1fe360221b967a5aa0e9'
+         '255222b3ab3af671289a6b4844e9f393'
+         '07665816f2623ec82e665fb7d31c6cef'
+         '8579d5f50ba7f0c4a5bf16b9670fea01'
+         '51b4a1c0ae2b3bd77417306fd78a3e94'
+         'f13ddedaa63a608d3b025d326f4f5b5d'
+         'f746aba36f075ae4cae313d849a94f4e'
+         '626731003ec22a74ecf9e44ed098bbdf'
+         'c6ec9dc42396e3b3a2da932f3feca6ec'
+         '34eb2311a0c5279e7b4f492e826f63d1'
+         '1228f890f86148e4e6ae22aa73118cbb'
+         '1b781a0802c7b8fb9619a6665607b3f0'
+         'd074e79d380b031d2f60e4cd56538c93'
+         '9e5bcbeda4aaf02bfa095e41d30baee4'
+         '9af7db9f3052aef0b11636720b3101dd'
+         '86ab558441edfb86f853639e4290a754'
+         '97a62a011a11f03b46d72851aa298fa8'
+         'e0744594f4e5969b20df28d897781318')

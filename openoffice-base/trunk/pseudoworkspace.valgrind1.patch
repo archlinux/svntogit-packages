@@ -1,0 +1,87 @@
+Index: source/dialog/numpages.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/dialog/numpages.cxx,v
+retrieving revision 1.52
+diff -u -r1.52 numpages.cxx
+--- openoffice.org.orig/svx/source/dialog/numpages.cxx	12 Oct 2006 12:19:44 -0000	1.52
++++ openoffice.org/svx/source/dialog/numpages.cxx	5 Jan 2007 14:34:15 -0000
+@@ -2954,6 +2954,7 @@
+ 	pActNum(0),
+ 	pSaveNum(0),
+ 	nActNumLvl( USHRT_MAX ),
++	bModified(false), bPreset(false),
+ 	nNumItemId(SID_ATTR_NUMBERING_RULE),
+ 	bInInintControl(FALSE)
+ {
+Index: bf_sfx2/source/explorer/sfx2_nochaos.cxx
+===================================================================
+RCS file: /cvs/framework/binfilter/bf_sfx2/source/explorer/sfx2_nochaos.cxx,v
+retrieving revision 1.4
+diff -u -r1.4 sfx2_nochaos.cxx
+--- openoffice.org.orig/binfilter/bf_sfx2/source/explorer/sfx2_nochaos.cxx	8 Sep 2005 03:19:32 -0000	1.4
++++ openoffice.org/binfilter/bf_sfx2/source/explorer/sfx2_nochaos.cxx	9 Jan 2007 14:56:16 -0000
+@@ -212,8 +212,8 @@
+ /*N*/   m_ppDefaults( new SfxPoolItem* [ m_nItems ] ),
+ /*N*/   m_pItemInfos( new SfxItemInfo  [ m_nItems ] )
+ /*N*/ {
+-/*N*/ 	rtl_zeroMemory( m_ppDefaults, sizeof( m_ppDefaults ) * m_nItems );
+-/*N*/ 	rtl_zeroMemory( m_pItemInfos, sizeof( m_pItemInfos ) * m_nItems );
++/*N*/ 	rtl_zeroMemory( m_ppDefaults, sizeof( SfxPoolItem* ) * m_nItems );
++/*N*/ 	rtl_zeroMemory( m_pItemInfos, sizeof( SfxItemInfo ) * m_nItems );
+ /*N*/ 
+ /*N*/ 	Insert(
+ /*N*/ 		new	SfxStringItem( WID_CHAOS_START, String() ),
+Index: source/core/txtnode/swfont.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/txtnode/swfont.cxx,v
+retrieving revision 1.54
+diff -u -r1.54 swfont.cxx
+--- openoffice.org.orig/sw/source/core/txtnode/swfont.cxx	16 Sep 2006 21:47:04 -0000	1.54
++++ openoffice.org/sw/source/core/txtnode/swfont.cxx	9 Jan 2007 15:52:55 -0000
+@@ -885,7 +885,7 @@
+ 	if( STRING_LEN == rInf.GetLen() )
+ 		rInf.SetLen( nLn );
+ 
+-	FontUnderline nOldUnder;
++	FontUnderline nOldUnder(UNDERLINE_NONE);
+     SwUnderlineFont* pUnderFnt = 0;
+ 
+     if( rInf.GetUnderFnt() )
+Index: inc/viewfrm.hxx
+===================================================================
+RCS file: /cvs/framework/sfx2/inc/viewfrm.hxx,v
+retrieving revision 1.24
+diff -u -r1.24 viewfrm.hxx
+--- openoffice.org.orig/sfx2/inc/viewfrm.hxx	12 Dec 2006 19:28:13 -0000	1.24
++++ openoffice.org/sfx2/inc/viewfrm.hxx	5 Apr 2007 10:42:26 -0000
+@@ -109,6 +109,14 @@
+ 			}
+ 	BOOL    operator != ( const SvBorder & rObj ) const
+ 			{ return !(*this == rObj); }
++	SvBorder & operator = ( const SvBorder & rBorder )
++			{
++				Left()   = rBorder.Left();
++				Top()    = rBorder.Top();
++				Right()  = rBorder.Right();
++				Bottom() = rBorder.Bottom();
++				return *this;
++			}
+ 	SvBorder & operator += ( const SvBorder & rBorder )
+ 			{
+ 				Left()   += rBorder.Left();
+Index: source/msfilter/msdffimp.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/msfilter/msdffimp.cxx,v
+retrieving revision 1.144.42.3
+diff -u -r1.144.42.3 msdffimp.cxx
+--- openoffice.org.orig/svx/source/msfilter/msdffimp.cxx	19 Jan 2007 16:46:49 -0000	1.144.42.3
++++ openoffice.org/svx/source/msfilter/msdffimp.cxx	5 Apr 2007 13:57:43 -0000
+@@ -6969,7 +6969,7 @@
+ 
+ 	// nachschauen, ob es sich auch wirklich um ein BLIP handelt
+ 	UINT32 nLength;
+-	USHORT nInst, nFbt;
++	USHORT nInst, nFbt(0);
+ 	BYTE   nVer;
+ 	if( ReadCommonRecordHeader( rBLIPStream, nVer, nInst, nFbt, nLength) && ( 0xF018 <= nFbt ) && ( 0xF117 >= nFbt ) )
+ 	{

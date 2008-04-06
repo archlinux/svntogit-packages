@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.9 2007/12/20 08:05:12 tpowa Exp $
+#Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=chemtool
+pkgver=1.6.11
+pkgrel=1
+pkgdesc="A small program for drawing chemical structures"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://ruby.chemie.uni-freiburg.de/~martin/chemtool/chemtool.html"
+depends=('gtk2')
+options=(!libtool)
+source=(http://ruby.chemie.uni-freiburg.de/~martin/$pkgname/$pkgname-$pkgver.tar.gz chemtool.desktop)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+ make || return 1
+ make DESTDIR=$startdir/pkg/ install
+ install -D -m644 gnome/chemtool.png $startdir/pkg/usr/share/pixmaps/chemtool.png
+ install -D -m644 $startdir/src/chemtool.desktop $startdir/pkg/usr/share/applications/chemtool.desktop
+}
+md5sums=('25c15b2ee73fc89b4e34cafd57daca31'
+         '8cbb6f7021bd5aaa6f6a31fc4d95a06e')

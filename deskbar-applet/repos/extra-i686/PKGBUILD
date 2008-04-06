@@ -1,0 +1,32 @@
+# $Id: PKGBUILD,v 1.24 2008/03/13 23:42:21 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=deskbar-applet
+pkgver=2.22.0.1
+pkgrel=1
+pkgdesc="An all-in-one search bar for the GNOME panel"
+arch=(i686 x86_64)
+url="http://raphael.slinckx.net/deskbar/"
+license=('GPL')
+depends=('gnome-desktop>=2.22.0' 'gnome-python-desktop>=2.22.0' 'gnome-panel>=2.22.0' 'libbonoboui>=2.22.0' 'dbus-python>=0.82.4')
+makedepends=('evolution-data-server>=2.22.0' 'xulrunner>=1.8.1.12' 'gettext' 'perlxml' 'pkgconfig' 'gnome-doc-utils>=0.12.2')
+options=('!libtool' '!emptydirs')
+install="deskbar-applet.install"
+source=(http://ftp.gnome.org/pub/GNOME/sources/deskbar-applet/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('ec335345998e5ca6c71b058904a264e4')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+    --localstatedir=/var \
+    --disable-scrollkeeper \
+    --enable-beagle \
+    --enable-evolution || return 1
+
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}

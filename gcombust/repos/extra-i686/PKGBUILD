@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.12 2007/04/22 18:00:06 jgc Exp $
+# Contributor: Bob Finch w9ya@arrl.net
+# Maintainer: Jason Chu <jason@archlinux.org>
+
+pkgname=gcombust
+pkgver=0.1.55
+pkgrel=3
+arch=(i686)
+license=('GPL')
+pkgdesc="gtk+ frontend for mkisofs, mkhybrid, cdrecord, and cdlabelgen"
+url="http://www.abo.fi/~jmunsin/gcombust/"
+depends=('gtk' 'cdrkit' 'cdlabelgen')
+source=(http://www.abo.fi/~jmunsin/gcombust/${pkgname}-${pkgver}.tar.gz
+        gcc4.1-compile.patch)
+md5sums=('25ddecef7f8556f0fac82d9d4927e8eb' 'ef324b9a8c97297ef41127e7053bb726')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  patch -Np0 -i ${startdir}/src/gcc4.1-compile.patch || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

@@ -1,0 +1,28 @@
+# $Id: PKGBUILD,v 1.9 2007/11/20 13:02:26 roman Exp $
+# Maintainer: kevin <kevin@archlinux.org>
+# Contributor: phrakture <aaronmgriffin+gmail+com>
+
+pkgname=cpufrequtils
+pkgver=002
+pkgrel=3
+pkgdesc="Userspace tools for the kernel cpufreq subsystem"
+arch=('i686' 'x86_64')
+url="http://www.kernel.org/pub/linux/utils/kernel/cpufreq/cpufrequtils.html"
+license=('GPL')
+depends=("sysfsutils")
+backup=('etc/conf.d/cpufreq')
+source=(http://www.kernel.org/pub/linux/utils/kernel/cpufreq/$pkgname-$pkgver.tar.bz2 \
+    cpufreq.rcd cpufreq.confd)
+md5sums=('93291a0d705ee2e19a6d7491b223c9f2' '409047959ba0ac95460c3c1e9dc21fb8'
+         '8335b8503376a3776da2ddc84043887c')
+options=(force !libtool)
+
+build()
+{
+  cd $startdir/src/$pkgname-$pkgver
+  make -j1 || return 1
+  make INSTALL="/bin/install -c" DESTDIR=$startdir/pkg install
+
+  install -D -m755 ../cpufreq.rcd $startdir/pkg/etc/rc.d/cpufreq
+  install -D -m644 ../cpufreq.confd $startdir/pkg/etc/conf.d/cpufreq
+}

@@ -1,0 +1,63 @@
+# $Id: PKGBUILD,v 1.15 2008/03/09 20:34:32 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=java-gcj-compat
+pkgver=1.0.77
+pkgrel=3
+pkgdesc="Wrapper package to wrap free tools into a java 1.5.0.0 compatible java environment"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.eclipse.org/"
+depends=('gcc-gcj>=4.3.0' 'gjdoc>=0.7.8-4')
+makedepends=('perl' 'python')
+provides=('java-environment' 'java-runtime')
+conflicts=('java-environment' 'java-runtime')
+source=(ftp://sources.redhat.com/pub/rhug/${pkgname}-${pkgver}.tar.gz
+	java-gcj-compat.profile
+	ca-bundle.crt)
+options=('!makeflags')
+md5sums=('cafa8e490957ad2c56fc61802332e9a4'
+         'eee3645b754a5dc77644e8973c077c0e'
+         '02410297423b187bd4c6e6e295314e4c')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  sed -i -e 's/sinjdoc/gjdoc/g' Makefile.* || return 1
+  sed -i -e 's/fastjar/gjar/g' Makefile.* || return 1
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+  mkdir -p ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib
+  mkdir -p ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/lib
+  mkdir -p ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/include
+  ln -s /usr/share/java/libgcj-4.?.jar ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/rt.jar
+  ln -s /usr/share/java/libgcj-tools-4.?.jar ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/lib/tools.jar
+  ln -s /usr/lib/gcj-4.?/libjawt.so ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/lib/
+  ln -s /usr/lib/libgcj*.so ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/lib/
+  ln -s /usr/lib/libgij.so ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/lib/
+  for i in jni.h jni_md.h jawt.h jawt_md.h gcj; do
+    ln -s `gcj -print-file-name=include/${i}` ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/include/
+  done
+
+  if [ "${CARCH}" = "x86_64" ]; then
+    _arch=amd64
+  else
+    _arch=i386
+  fi
+  mkdir -p ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/${_arch}/{client,server}
+  ln -s /usr/lib/gcj-4.?/libjvm.so ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/${_arch}/client/
+  ln -s /usr/lib/gcj-4.?/libjvm.so ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/${_arch}/server/
+  ln -s /usr/lib/gcj-4.?/libjawt.so ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/${_arch}/
+
+  mkdir -p ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/security
+  sed -i -e "s|/etc/pki/tls/cert.pem|${startdir}/src/ca-bundle.crt|" generate-cacerts.pl || return 1
+  perl generate-cacerts.pl || return 1
+  install -m644 cacerts ${startdir}/pkg/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre/lib/security/cacerts
+
+
+  mkdir -p ${startdir}/pkg/etc/profile.d
+  install -m755 ${startdir}/src/java-gcj-compat.profile ${startdir}/pkg/etc/profile.d/java-gcj-compat.sh
+
+  mkdir -p ${startdir}/pkg/usr/lib/mozilla/plugins
+  ln -sf /usr/lib/gcj-4.?/libgcjwebplugin.so ${startdir}/pkg/usr/lib/mozilla/plugins/
+}

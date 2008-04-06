@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.5 2006/05/19 19:11:56 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Contributor : whisky <archlinux.cle(at)gmail.com>
+
+pkgname=libchewing
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="Improved Smart Chewing Library - Intelligent Chinese Phonetic Input Method"
+url="http://chewing.csie.net/"
+license="GPL"
+depends=('glibc')
+makedepends=('libtool')
+source=(http://chewing.csie.net/download/libchewing/$pkgname-$pkgver.tar.gz)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}
+
+
+

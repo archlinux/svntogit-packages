@@ -1,0 +1,29 @@
+# $Id: PKGBUILD,v 1.11 2007/10/22 04:07:56 aaron Exp $
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+# Contributor: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=python-pysqlite
+pkgver=2.3.5
+_branch=2.3
+pkgrel=1
+pkgdesc="A Python DB-API 2.0 interface for the SQLite embedded relational database engine"
+license=("custom")
+arch=(i686 x86_64)
+url="http://initd.org/tracker/pysqlite"
+depends=(python sqlite3)
+replaces=(pysqlite2)
+source=(http://initd.org/pub/software/pysqlite/releases/$_branch/$pkgver/pysqlite-$pkgver.tar.gz \
+        setup.cfg)
+md5sums=('b4a185e936848370fcc1a5b17755b641' '86dd356c65afd14a22f2f8f64a26441e')
+
+build()
+{
+  cd $startdir/src/pysqlite-$pkgver
+  cp $startdir/src/setup.cfg .
+  python setup.py install --root=$startdir/pkg
+
+  mkdir -p $startdir/pkg/usr/share/licenses/$pkgname
+  install -m644 LICENSE $startdir/pkg/usr/share/licenses/$pkgname/license.txt
+
+  rm -r $startdir/pkg/usr/pysqlite2-doc
+}

@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.9 2004/05/07 13:09:28 tobias Exp $
+# Contributor: Jochem Kossen <j.kossen@home.nl>
+# Maintainer: dorphell <dorphell@archlinux.org>
+
+pkgname=id3v2
+pkgver=0.1.11
+pkgrel=1
+pkgdesc="Utility to edit id3v2 tags"
+depends=('gcc' 'glibc' 'id3lib' 'zlib')
+source=(http://aleron.dl.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz)
+url="http://id3v2.sourceforge.net/"
+md5sums=('68afc3827cf01501dfb22949f901f1d8')
+
+build() {
+	cd $startdir/src/$pkgname-$pkgver
+	make clean
+	make
+	install -Dm 0755 $pkgname $startdir/pkg/usr/bin/$pkgname
+}
+md5sums=('68afc3827cf01501dfb22949f901f1d8')

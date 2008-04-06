@@ -1,0 +1,37 @@
+# arg 1:  the new package version
+post_install() {
+  if [ ! "`/bin/grep ^SV:345:respawn:/usr/bin/svscan etc/inittab`" ]; then
+    if [ ! "`/bin/grep ^'# End of file' etc/inittab`" ]; then
+      # The 'End of file' sentinel is missing, just append it to the end
+      echo "SV:345:respawn:/usr/bin/svscan /service" >> etc/inittab
+    else
+      # prepend it before 'End of file' sentinel
+      /bin/sed -i "/# End of file/i\
+SV:345:respawn:/usr/bin/svscan /service" etc/inittab
+    fi
+    telinit q
+  fi
+}
+
+post_upgrade() {
+  post_install $1
+}
+
+# arg 1:  the old package version
+pre_remove() {
+  if [ "`/bin/grep ^SV:345:respawn:/usr/bin/svscan etc/inittab`" ]; then
+    /bin/sed -i "/SV:345:respawn:\/usr\/bin\/svscan \/service/d" etc/inittab
+    telinit q
+  fi
+}
+
+# arg 1: the old package version
+post_remove() {
+	/bin/true
+}
+
+op=$1
+shift
+
+$op $*
+# vim: ts=2 sw=2 et ft=sh

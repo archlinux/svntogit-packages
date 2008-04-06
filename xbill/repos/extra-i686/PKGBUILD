@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.7 2006/03/23 11:58:16 arjan Exp $
+# Maintainer: Arjan Timmerman <arjan@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=xbill
+pkgver=2.1
+pkgrel=4
+pkgdesc="Xbill is a game that tests you reflexes as you seek and destroy all forms of Bill"
+depends=('gtk' 'xaw3d' 'lesstif')
+source=(http://www.xbill.org/download/$pkgname-$pkgver.tar.gz)
+md5sums=('585e4866b15255a24203db9959407b2f')
+url="http://www.xbill.org/"
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+}

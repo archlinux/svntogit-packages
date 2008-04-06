@@ -1,0 +1,17 @@
+# $Id: PKGBUILD,v 1.3 2004/02/21 21:10:45 aurelien Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+pkgname=ccmalloc
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="Track down memory related problems with C and C++ programs"
+url="http://www.inf.ethz.ch/personal/biere/projects/ccmalloc/"
+depends=()
+source=(http://www.inf.ethz.ch/personal/biere/projects/$pkgname/$pkgname-$pkgver.tar.gz)
+md5sums=('b90d955149569bbc6e801739f099db3d')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make PREFIX=$startdir/pkg/usr install
+}

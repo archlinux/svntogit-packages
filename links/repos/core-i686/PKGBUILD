@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.1 2008/02/08 03:59:28 eric Exp $
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=links
+pkgver=2.1pre33
+pkgrel=1
+pkgdesc="A text WWW browser, similar to Lynx"
+arch=('i686' 'x86_64')
+url="http://atrey.karlin.mff.cuni.cz/~clock/twibright/links/"
+license=('GPL')
+depends=('bzip2' 'zlib' 'openssl' 'gpm')
+makedepends=('pkgconfig')
+source=(http://links.twibright.com/download/$pkgname-$pkgver.tar.bz2)
+md5sums=('99cdbd1194579eea6d857168a57e0d74')
+sha1sums=('0ac2aa7c45f56692751f5a9ab94f3551c38ba846')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  cd "intl" && ./gen-intl && cd .. || return 1
+  ./configure --prefix=/usr --mandir=/usr/share/man --enable-javascript --disable-graphics --without-x
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

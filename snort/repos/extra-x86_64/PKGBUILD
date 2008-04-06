@@ -1,0 +1,34 @@
+# $Id: PKGBUILD,v 1.37 2008/03/26 21:23:29 andyrtr Exp $
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: dorphell <dorphell@archlinux.org>
+# Contributor: Gregor Ibic <gregor.ibic@intelicom.si>
+pkgname=snort
+pkgver=2.8.0.2
+pkgrel=1
+pkgdesc="A lightweight network intrusion detection system"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('libpcap>=0.9.8' 'pcre')
+backup=('etc/conf.d/snort' 'etc/snort/snort.conf')
+source=(http://www.snort.org/dl/current/$pkgname-$pkgver.tar.gz snort snort.conf.d
+	http://www.snort.org/pub-bin/downloads.cgi/Download/comm_rules/Community-Rules-CURRENT.tar.gz) # rules RELEASED: 2007-04-27
+url="http://www.snort.org"
+options=('!makeflags' '!libtool')
+md5sums=('c4aeac8aa198a5e4d4bc67b5b2d9bdcb'
+         '53284a7996ee41c4c58d13c65d46d776'
+         'a117b68ec3d188e40e117f3197e1db25'
+         'f236b8a4ac12e99d3e7bd81bf3b5a482')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc/snort --with-libpcap-includes=/usr/include/pcap \
+    --without-mysql --without-postgresql --without-oracle --without-odbc
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  mkdir -p $startdir/pkg/{etc/rc.d,etc/snort/rules,var/log/snort}
+  install -D -m644 etc/{*.conf*,*.map} $startdir/pkg/etc/snort
+  install -D -m644 ../../snort.conf.d $startdir/pkg/etc/conf.d/snort
+  install -D -m644 $startdir/src/rules/*.rules $startdir/pkg/etc/snort/rules
+  install -D -m755 $startdir/snort $startdir/pkg/etc/rc.d/snort
+  sed 's|RULE_PATH ../rules|RULE_PATH /etc/snort/rules|' -i $startdir/pkg/etc/snort/snort.conf
+}

@@ -1,0 +1,36 @@
+# $Id: PKGBUILD,v 1.50 2008/03/23 20:52:36 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-games
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="Some Games for GNOME"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('libgnomeui>=2.22.01' 'guile>=1.8.4-2' 'librsvg>=2.22.0' 'filesystem>=0.8-3' 'desktop-file-utils' 'gnome-python-desktop>=2.22.0' 'gstreamer0.10>=0.10.15' 'libgnomeprintui>=2.18.2' 'ggz-client-libs>=0.0.14.1')
+makedepends=('perlxml' 'pkgconfig' 'gnome-doc-utils>=0.12.2')
+provides=('glchess' 'gnome-sudoku')
+conflicts=('glchess' 'gnome-sudoku')
+options=('!emptydirs')
+install=gnome-games.install
+url="http://www.gnome.org"
+groups=('gnome-extra')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('c26ba479a4bb0d4226100944d9ae77db')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-scrollkeeper \
+              --with-scores-user=root --with-scores-group=games \
+	      --with-sound=gstreamer  || return 1
+  make || return 1
+  make -j1 GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  # Remove all scores, we generate them from postinstall
+  rm -rf ${startdir}/pkg/var
+
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}

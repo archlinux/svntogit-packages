@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.5 2004/04/19 06:24:58 dorphell Exp $
+# Maintainer: eric <eric@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=stow
+pkgver=1.3.3
+pkgrel=1
+pkgdesc="GNU Stow is a program for managing the installation of software packages"
+depends=('perl')
+source=(ftp://ftp.gnu.org/pub/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
+url="http://www.gnu.org/software/stow/"
+md5sums=('59a078c7056dd9dd97fb707063b69d03')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+}

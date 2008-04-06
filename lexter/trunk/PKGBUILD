@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.2 2004/04/19 06:24:56 dorphell Exp $
+# Maintainer: eric <eric@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+#
+
+pkgname=lexter
+pkgver=1.0.3
+pkgrel=1
+pkgdesc="Lexter is a text-based word puzzle game resembling tetris"
+url="http://www.kyne.com.au/~mark/software/lexter.php"
+depends=('ncurses' 'gettext')
+source=(http://www.kyne.com.au/~mark/software/$pkgname-$pkgver.tar.gz)
+md5sums=('ee8c63711ded7166759218948f5fdcf0')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  /usr/bin/make || return 1
+  /usr/bin/make prefix=$startdir/pkg/usr datadir=$startdir/pkg/usr/share install
+}

@@ -1,0 +1,55 @@
+# $Id: PKGBUILD,v 1.89 2008/02/12 12:02:45 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+pkgname=mysql
+pkgver=5.0.51
+pkgrel=3
+pkgdesc="A fast SQL database server"
+arch=(i686 x86_64)
+backup=(etc/my.cnf etc/conf.d/mysqld)
+depends=("mysql-clients>=${pkgver}" 'tcp_wrappers')
+makedepends=('libtool')
+url=('http://www.mysql.com/')
+options=('!libtool')
+license=('GPL')
+source=(ftp://mirror.services.wisc.edu/mirrors/mysql/Downloads/MySQL-5.0/mysql-${pkgver}a.tar.gz
+	mysql-no-clients.patch
+	mysqld
+	my.cnf
+	mysqld.conf.d)
+
+build() {
+  # PIC
+  cd ${startdir}/src/${pkgname}-${pkgver}a
+  patch -Np1 -i ${startdir}/src/mysql-no-clients.patch || return 1
+  libtoolize --force
+  ./configure --prefix=/usr --libexecdir=/usr/sbin \
+    --without-debug --without-docs --without-bench --without-readline \
+    --with-innodb --enable-local-infile --with-openssl \
+    --with-charset=latin1 --with-collation=latin1_general_ci \
+    --with-extra-charsets=complex --enable-thread-safe-client \
+    --with-libwrap --with-berkeley-db
+
+  # fixes
+  sed -i -e 's/^.*HAVE_GETHOSTBYNAME_R_GLIBC2_STYLE.*$/#define\ HAVE_GETHOSTBYNAME_R_GLIBC2_STYLE/g' include/config.h || return 1
+  sed -i -e 's/size_socket/socklen_t/g' sql/mysqld.cc || return 1
+
+  pushd include || return
+  make || return 1
+  popd
+  pushd libmysql
+  make link_sources get_password.lo || return
+  popd
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+  rm -rf ${startdir}/pkg/usr/{mysql-test,sql-bench}
+  install -D -m644 ../my.cnf ${startdir}/pkg/etc/my.cnf
+  install -D -m755 ../mysqld ${startdir}/pkg/etc/rc.d/mysqld
+  install -D -m644 ../mysqld.conf.d ${startdir}/pkg/etc/conf.d/mysqld
+  rm -f ${startdir}/pkg/usr/bin/mysql_config
+}
+md5sums=('a83dbdbb91267daf73d2297a9c283dd1'
+         'e892aac36cbeb57f0e003ec0936afb3b'
+         '64d79a5a34043c1de949d734b720c217'
+         '0ee035590ffc61d32de994f461fd2bd2'
+         '4a9077fc95ec6db1d5420e0cdc74d31c')

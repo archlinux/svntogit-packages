@@ -1,0 +1,303 @@
+--- grep-2.5.1/src/dfa.c	2004-02-26 13:09:54.000000000 +0000
++++ grep-2.5.1/src/dfa.c	2004-05-18 16:43:31.189200479 +0100
+@@ -414,7 +414,7 @@
+ 
+ /* This function fetch a wide character, and update cur_mb_len,
+    used only if the current locale is a multibyte environment.  */
+-static wchar_t
++static wint_t
+ fetch_wc (char const *eoferr)
+ {
+   wchar_t wc;
+@@ -423,7 +423,7 @@
+       if (eoferr != 0)
+ 	dfaerror (eoferr);
+       else
+-	return -1;
++	return WEOF;
+     }
+ 
+   cur_mb_len = mbrtowc(&wc, lexptr, lexleft, &mbs);
+@@ -459,7 +459,7 @@
+ static void
+ parse_bracket_exp_mb ()
+ {
+-  wchar_t wc, wc1, wc2;
++  wint_t wc, wc1, wc2;
+ 
+   /* Work area to build a mb_char_classes.  */
+   struct mb_char_classes *work_mbc;
+@@ -496,7 +496,7 @@
+     work_mbc->invert = 0;
+   do
+     {
+-      wc1 = -1; /* mark wc1 is not initialized".  */
++      wc1 = WEOF; /* mark wc1 is not initialized".  */
+ 
+       /* Note that if we're looking at some other [:...:] construct,
+ 	 we just treat it as a bunch of ordinary characters.  We can do
+@@ -586,7 +586,7 @@
+ 		      work_mbc->coll_elems[work_mbc->ncoll_elems++] = elem;
+ 		    }
+  		}
+-	      wc1 = wc = -1;
++	      wc1 = wc = WEOF;
+ 	    }
+ 	  else
+ 	    /* We treat '[' as a normal character here.  */
+@@ -600,7 +600,7 @@
+ 	    wc = fetch_wc(("Unbalanced ["));
+ 	}
+ 
+-      if (wc1 == -1)
++      if (wc1 == WEOF)
+ 	wc1 = fetch_wc(_("Unbalanced ["));
+ 
+       if (wc1 == L'-')
+@@ -630,17 +630,17 @@
+ 	    }
+ 	  REALLOC_IF_NECESSARY(work_mbc->range_sts, wchar_t,
+ 			       range_sts_al, work_mbc->nranges + 1);
+-	  work_mbc->range_sts[work_mbc->nranges] = wc;
++	  work_mbc->range_sts[work_mbc->nranges] = (wchar_t)wc;
+ 	  REALLOC_IF_NECESSARY(work_mbc->range_ends, wchar_t,
+ 			       range_ends_al, work_mbc->nranges + 1);
+-	  work_mbc->range_ends[work_mbc->nranges++] = wc2;
++	  work_mbc->range_ends[work_mbc->nranges++] = (wchar_t)wc2;
+ 	}
+-      else if (wc != -1)
++      else if (wc != WEOF)
+ 	/* build normal characters.  */
+ 	{
+ 	  REALLOC_IF_NECESSARY(work_mbc->chars, wchar_t, chars_al,
+ 			       work_mbc->nchars + 1);
+-	  work_mbc->chars[work_mbc->nchars++] = wc;
++	  work_mbc->chars[work_mbc->nchars++] = (wchar_t)wc;
+ 	}
+     }
+   while ((wc = wc1) != L']');
+@@ -2552,6 +2552,8 @@
+     }
+ 
+   /* match with a character?  */
++  if (case_fold)
++    wc = towlower (wc);
+   for (i = 0; i<work_mbc->nchars; i++)
+     {
+       if (wc == work_mbc->chars[i])
+--- grep-2.5.1/src/grep.c.i18n	2002-03-26 15:54:12.000000000 +0000
++++ grep-2.5.1/src/grep.c	2004-02-26 13:09:54.000000000 +0000
+@@ -30,6 +30,12 @@
+ # include <sys/time.h>
+ # include <sys/resource.h>
+ #endif
++#if defined HAVE_WCTYPE_H && defined HAVE_WCHAR_H && defined HAVE_MBRTOWC
++/* We can handle multibyte string.  */
++# define MBS_SUPPORT
++# include <wchar.h>
++# include <wctype.h>
++#endif
+ #include <stdio.h>
+ #include "system.h"
+ #include "getopt.h"
+@@ -1697,6 +1703,37 @@
+   if (!install_matcher (matcher) && !install_matcher ("default"))
+     abort ();
+ 
++#ifdef MBS_SUPPORT
++  if (MB_CUR_MAX != 1 && match_icase)
++    {
++      wchar_t wc;
++      mbstate_t cur_state, prev_state;
++      int i, len = strlen(keys);
++
++      memset(&cur_state, 0, sizeof(mbstate_t));
++      for (i = 0; i <= len ;)
++	{
++	  size_t mbclen;
++	  mbclen = mbrtowc(&wc, keys + i, len - i, &cur_state);
++	  if (mbclen == (size_t) -1 || mbclen == (size_t) -2 || mbclen == 0)
++	    {
++	      /* An invalid sequence, or a truncated multibyte character.
++		 We treat it as a singlebyte character.  */
++	      mbclen = 1;
++	    }
++	  else
++	    {
++	      if (iswupper((wint_t)wc))
++		{
++		  wc = towlower((wint_t)wc);
++		  wcrtomb(keys + i, wc, &cur_state);
++		}
++	    }
++	  i += mbclen;
++	}
++    }
++#endif /* MBS_SUPPORT */
++
+   (*compile)(keys, keycc);
+ 
+   if ((argc - optind > 1 && !no_filenames) || with_filenames)
+--- grep-2.5.1/src/search.c.i18n	2004-02-26 13:09:54.000000000 +0000
++++ grep-2.5.1/src/search.c	2004-02-26 13:17:12.000000000 +0000
+@@ -149,15 +149,16 @@
+ static char*
+ check_multibyte_string(char const *buf, size_t size)
+ {
+-  char *mb_properties = malloc(size);
++  char *mb_properties = xmalloc(size);
+   mbstate_t cur_state;
++  wchar_t wc;
+   int i;
+   memset(&cur_state, 0, sizeof(mbstate_t));
+   memset(mb_properties, 0, sizeof(char)*size);
+   for (i = 0; i < size ;)
+     {
+       size_t mbclen;
+-      mbclen = mbrlen(buf + i, size - i, &cur_state);
++      mbclen = mbrtowc(&wc, buf + i, size - i, &cur_state);
+ 
+       if (mbclen == (size_t) -1 || mbclen == (size_t) -2 || mbclen == 0)
+ 	{
+@@ -165,6 +166,14 @@
+ 	     We treat it as a singlebyte character.  */
+ 	  mbclen = 1;
+ 	}
++      else if (match_icase)
++	{
++	  if (iswupper((wint_t)wc))
++	    {
++	      wc = towlower((wint_t)wc);
++	      wcrtomb(buf + i, wc, &cur_state);
++	    }
++	}
+       mb_properties[i] = mbclen;
+       i += mbclen;
+     }
+@@ -233,7 +242,7 @@
+       static char const line_end[] = "\\)$";
+       static char const word_beg[] = "\\(^\\|[^[:alnum:]_]\\)\\(";
+       static char const word_end[] = "\\)\\([^[:alnum:]_]\\|$\\)";
+-      char *n = malloc (sizeof word_beg - 1 + size + sizeof word_end);
++      char *n = xmalloc (sizeof word_beg - 1 + size + sizeof word_end);
+       size_t i;
+       strcpy (n, match_lines ? line_beg : word_beg);
+       i = strlen (n);
+@@ -316,7 +325,7 @@
+       static char const line_end[] = ")$";
+       static char const word_beg[] = "(^|[^[:alnum:]_])(";
+       static char const word_end[] = ")([^[:alnum:]_]|$)";
+-      char *n = malloc (sizeof word_beg - 1 + size + sizeof word_end);
++      char *n = xmalloc (sizeof word_beg - 1 + size + sizeof word_end);
+       size_t i;
+       strcpy (n, match_lines ? line_beg : word_beg);
+       i = strlen(n);
+@@ -339,14 +348,20 @@
+   char eol = eolbyte;
+   int backref, start, len;
+   struct kwsmatch kwsm;
+-  size_t i;
++  size_t i, ret_val;
+ #ifdef MBS_SUPPORT
+   char *mb_properties = NULL;
+-#endif /* MBS_SUPPORT */
+-
+-#ifdef MBS_SUPPORT
+-  if (MB_CUR_MAX > 1 && kwset)
+-    mb_properties = check_multibyte_string(buf, size);
++  if (MB_CUR_MAX > 1)
++    {
++      if (match_icase)
++        {
++          char *case_buf = xmalloc(size);
++          memcpy(case_buf, buf, size);
++          buf = case_buf;
++        }
++      if (kwset)
++        mb_properties = check_multibyte_string(buf, size);
++    }
+ #endif /* MBS_SUPPORT */
+ 
+   buflim = buf + size;
+@@ -455,8 +470,13 @@
+ 
+  failure:
+ #ifdef MBS_SUPPORT
+-  if (MB_CUR_MAX > 1 && mb_properties)
+-    free (mb_properties);
++  if (MB_CUR_MAX > 1)
++    {
++      if (mb_properties)
++	free (mb_properties);
++      if (match_icase)
++	free ((char *) buf);
++    }
+ #endif /* MBS_SUPPORT */
+   return (size_t) -1;
+ 
+@@ -467,8 +487,13 @@
+ 
+  success_in_start_and_len:
+ #ifdef MBS_SUPPORT
+-  if (MB_CUR_MAX > 1 && mb_properties)
+-    free (mb_properties);
++  if (MB_CUR_MAX > 1)
++    {
++      if (mb_properties)
++	free (mb_properties);
++      if (match_icase)
++	free ((char *) buf);
++    }
+ #endif /* MBS_SUPPORT */
+   *match_size = len;
+   return start;
+@@ -504,10 +529,19 @@
+   register size_t len;
+   char eol = eolbyte;
+   struct kwsmatch kwsmatch;
++  size_t ret_val;
+ #ifdef MBS_SUPPORT
+-  char *mb_properties;
++  char *mb_properties = NULL;
+   if (MB_CUR_MAX > 1)
+-    mb_properties = check_multibyte_string (buf, size);
++    {
++      if (match_icase)
++        {
++          char *case_buf = xmalloc(size);
++          memcpy(case_buf, buf, size);
++          buf = case_buf;
++        }
++      mb_properties = check_multibyte_string(buf, size);
++    }
+ #endif /* MBS_SUPPORT */
+ 
+   for (beg = buf; beg <= buf + size; ++beg)
+@@ -565,7 +599,12 @@
+  failure:
+ #ifdef MBS_SUPPORT
+   if (MB_CUR_MAX > 1)
+-    free (mb_properties);
++    {
++      if (match_icase)
++        free((char *) buf);
++      if (mb_properties)
++        free(mb_properties);
++    }
+ #endif /* MBS_SUPPORT */
+   return -1;
+ 
+@@ -581,7 +620,12 @@
+   *match_size = len;
+ #ifdef MBS_SUPPORT
+   if (MB_CUR_MAX > 1)
+-    free (mb_properties);
++    {
++      if (mb_properties)
++	free (mb_properties);
++      if (match_icase)
++	free ((char *) buf);
++    }
+ #endif /* MBS_SUPPORT */
+   return beg - buf;
+ }

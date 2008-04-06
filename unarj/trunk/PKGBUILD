@@ -1,0 +1,17 @@
+# $Id: PKGBUILD,v 1.3 2003/11/06 08:27:17 dorphell Exp $
+# Maintainer: dale <dale@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=unarj
+pkgver=2.63a
+pkgrel=1
+pkgdesc="The UNARJ utility is developed for extracting, testing and  viewing the contents of archives created with the ARJ archiver"
+source=(http://ibiblio.org/pub/Linux/utils/compress/$pkgname-$pkgver.tar.gz)
+url="http://www.ibiblio.org/pub/Linux/utils/compress/"
+build() {
+cd $startdir/src/$pkgname-$pkgver
+./configure --prefix=/usr
+mkdir -p $startdir/pkg/usr/bin
+make || return 1
+make INSTALLDIR=$startdir/pkg/usr/bin install
+}

@@ -1,0 +1,159 @@
+
+from RedHat/Fedora
+
+--- 20050325/xdelta-1.1.3/xdmain.c.gcc4	2001-09-24 08:59:18.000000000 +0200
++++ 20050325/xdelta-1.1.3/xdmain.c	2005-03-23 10:18:10.481723800 +0100
+@@ -64,7 +64,7 @@
+ 
+ #include "xdelta.h"
+ 
+-extern HandleFuncTable xd_handle_table;
++static HandleFuncTable xd_handle_table;
+ 
+ #define XD_PAGE_SIZE (1<<20)
+ 
+@@ -141,7 +141,7 @@ typedef struct {
+   gint16         to_name_len;
+ 
+   guint32        header_space[HEADER_WORDS];
+-  guint8         magic_buf[XDELTA_PREFIX_LEN];
++  char           magic_buf[XDELTA_PREFIX_LEN];
+ 
+   XdFileHandle      *patch_in;
+ 
+@@ -1041,7 +1041,7 @@ xd_handle_name (XdFileHandle *fh)
+ }
+ 
+ static gssize
+-xd_handle_read (XdFileHandle *fh, guint8 *buf, gsize nbyte)
++xd_handle_read (XdFileHandle *fh, char *buf, gsize nbyte)
+ {
+   if (nbyte == 0)
+     return 0;
+@@ -1053,7 +1053,7 @@ xd_handle_read (XdFileHandle *fh, guint8
+     }
+ 
+   if (!no_verify)
+-    edsio_md5_update (&fh->ctx, buf, nbyte);
++    edsio_md5_update (&fh->ctx, (guint8 *)buf, nbyte);
+ 
+   fh->current_pos += nbyte;
+ 
+@@ -1061,7 +1061,7 @@ xd_handle_read (XdFileHandle *fh, guint8
+ }
+ 
+ static gboolean
+-xd_handle_write (XdFileHandle *fh, const guint8 *buf, gsize nbyte)
++xd_handle_write (XdFileHandle *fh, const char *buf, gsize nbyte)
+ {
+   g_assert (fh->type == WRITE_TYPE);
+ 
+@@ -1073,7 +1073,7 @@ xd_handle_write (XdFileHandle *fh, const
+     }
+ 
+   if (! no_verify)
+-    edsio_md5_update (&fh->ctx, buf, nbyte);
++    edsio_md5_update (&fh->ctx, (guint8 *)buf, nbyte);
+ 
+   if (! (*fh->out_write) (fh, buf, nbyte))
+     {
+@@ -1360,7 +1360,7 @@ xd_handle_copy (XdFileHandle *from, XdFi
+ {
+   if (from->in)
+     {
+-      guint8 buf[1024];
++      char buf[1024];
+ 
+       /*if (! xd_handle_set_pos (from, off))
+ 	return FALSE;*/
+@@ -1408,7 +1408,7 @@ xd_handle_copy (XdFileHandle *from, XdFi
+ 	  if (xd_handle_map_page (from, off_page, &from->copy_page) < 0)
+ 	    return FALSE;
+ 
+-	  if (! xd_handle_write (to, from->copy_page + off_off, copy))
++	  if (! xd_handle_write (to, (char *)from->copy_page + off_off, copy))
+ 	    return FALSE;
+ 
+ 	  if (! xd_handle_unmap_page (from, off_page, &from->copy_page))
+@@ -1427,13 +1427,13 @@ xd_handle_putui (XdFileHandle *fh, guint
+ {
+   guint32 hi = g_htonl (i);
+ 
+-  return xd_handle_write (fh, (guint8*)&hi, 4);
++  return xd_handle_write (fh, (char *)&hi, 4);
+ }
+ 
+ static gboolean
+ xd_handle_getui (XdFileHandle *fh, guint32* i)
+ {
+-  if (xd_handle_read (fh, (guint8*)i, 4) != 4)
++  if (xd_handle_read (fh, (char *)i, 4) != 4)
+     return FALSE;
+ 
+   *i = g_ntohl (*i);
+@@ -1557,7 +1557,7 @@ delta_command (gint argc, gchar** argv)
+ 
+   htonl_array (header_space, HEADER_WORDS);
+ 
+-  if (! xd_handle_write (out, (guint8*) header_space, HEADER_SPACE))
++  if (! xd_handle_write (out, (char *) header_space, HEADER_SPACE))
+     return 2;
+ 
+   if (! xd_handle_write (out, from_name, strlen (from_name)))
+@@ -1632,7 +1632,7 @@ process_patch (const char* name)
+   if (xd_handle_read (patch->patch_in, patch->magic_buf, XDELTA_PREFIX_LEN) != XDELTA_PREFIX_LEN)
+     return NULL;
+ 
+-  if (xd_handle_read (patch->patch_in, (guint8*) patch->header_space, HEADER_SPACE) != HEADER_SPACE)
++  if (xd_handle_read (patch->patch_in, (char*) patch->header_space, HEADER_SPACE) != HEADER_SPACE)
+     return NULL;
+ 
+   ntohl_array (patch->header_space, HEADER_WORDS);
+@@ -1700,7 +1700,7 @@ process_patch (const char* name)
+ 
+   if (patch->has_trailer)
+     {
+-      guint8 trailer_buf[XDELTA_PREFIX_LEN];
++      char trailer_buf[XDELTA_PREFIX_LEN];
+ 
+       if (xd_handle_read (patch->patch_in, trailer_buf, XDELTA_PREFIX_LEN) != XDELTA_PREFIX_LEN)
+ 	return NULL;
+--- 20050325/xdelta-1.1.3/libedsio/default.c.gcc4	2001-09-24 08:48:52.000000000 +0200
++++ 20050325/xdelta-1.1.3/libedsio/default.c	2005-03-23 10:16:03.512026128 +0100
+@@ -84,7 +84,7 @@ sink_next_bool (SerialSink* sink, gboole
+ static gboolean
+ sink_next_string (SerialSink* sink, const char   *ptr)
+ {
+-  return sink->next_bytes (sink, ptr, strlen (ptr));
++  return sink->next_bytes (sink, (const unsigned char*)ptr, strlen (ptr));
+ }
+ 
+ static gboolean
+@@ -241,7 +241,7 @@ static gboolean
+ source_next_string (SerialSource* source, const char **ptr)
+ {
+   guint32 len;
+-  guint8* buf;
++  char *buf;
+ 
+   if (! source->next_uint (source, &len))
+     return FALSE;
+@@ -253,7 +253,7 @@ source_next_string (SerialSource* source
+ 
+   (*ptr) = buf;
+ 
+-  return source->source_read (source, buf, len);
++  return source->source_read (source, (guint8 *)buf, len);
+ }
+ 
+ static gboolean
+@@ -294,7 +294,7 @@ serializeio_source_alloc (SerialSource* 
+ 
+       source->alloc_buf = source->alloc_buf_orig;
+ 
+-	  { long x = source->alloc_buf; ALIGN_8 (x); source->alloc_buf = x; }
++	  { long x = (long)source->alloc_buf; ALIGN_8 (x); source->alloc_buf = (void*)x; }
+ 
+     }
+ 
+

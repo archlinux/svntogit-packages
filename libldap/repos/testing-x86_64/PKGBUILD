@@ -1,0 +1,59 @@
+# $Id: PKGBUILD,v 1.14 2008/01/16 22:55:39 tom Exp $
+# Maintainer: Judd Vinet <jvinet@zeroflux.org>
+pkgname=libldap
+pkgver=2.3.40
+pkgrel=1
+pkgdesc="LDAP client libraries"
+arch=(i686 x86_64)
+license=('custom')
+url="http://www.openldap.org/"
+backup=(etc/openldap/ldap.conf)
+depends=('libsasl' 'openssl>=0.9.8f')
+options=('!libtool' '!makeflags')
+makedepends=('tcp_wrappers')
+source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-${pkgver}.tgz
+	ntlm.patch)
+
+build() {
+  cd ${startdir}/src/openldap-${pkgver}
+  patch -Np0 -i ${startdir}/src/ntlm.patch || return 1
+
+  ./configure --prefix=/usr \
+              --libexecdir=/usr/sbin \
+              --sysconfdir=/etc \
+              --localstatedir=/var/lib/openldap \
+              --enable-crypt --enable-dynamic \
+              --with-threads --enable-wrappers \
+	      --enable-spasswd --with-cyrus-sasl \
+	      --disable-bdb --disable-hdb
+  cd include
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+
+  cd ../libraries
+  make depend
+  make || return 1
+
+  make DESTDIR=${startdir}/pkg install
+
+  cd ../doc/man/man3
+  make
+  make DESTDIR=${startdir}/pkg install
+
+  cd ../man5
+  make 
+  mkdir -p ${startdir}/pkg/usr/man/man5
+  install -m644 ldap.conf.5.tmp ${startdir}/pkg/usr/man/man5/ldap.conf.5
+  
+  # get rid of duplicate default conf files
+  rm ${startdir}/pkg/etc/openldap/*.default
+
+  ln -sf liblber.so ${startdir}/pkg/usr/lib/liblber.so.2
+  ln -sf libldap.so ${startdir}/pkg/usr/lib/libldap.so.2
+
+  mkdir -p ${startdir}/pkg/usr/share/licenses/openldap
+  install -m644 ${startdir}/src/openldap-${pkgver}/LICENSE \
+    ${startdir}/pkg/usr/share/licenses/openldap/
+}
+md5sums=('728e95d806a3d47d9686481d72e62072'
+         '64c539d5f01f46f329b9d5c1324be4e9')

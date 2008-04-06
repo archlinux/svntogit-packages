@@ -1,0 +1,30 @@
+# $Id: PKGBUILD,v 1.10 2007/05/23 03:30:25 kevin Exp $
+# Maintainer: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor: Comete <la_comete@tiscali.fr>
+pkgname=python-vpython
+pkgver=3.2.9
+pkgrel=3
+pkgdesc="A Python module that offers real-time 3D output, and is easily usable by novice programmers"
+arch=(i686 x86_64)
+url="http://www.vpython.org"
+depends=('gtk' 'python' 'gtkglarea' 'pkgconfig' 'python-numeric'
+'boost>=1.34.0' 'tk')
+license=('custom')
+source=(http://vpython.org/download/visual-$pkgver.tar.bz2 'idlepath.patch')
+md5sums=('58e46ecb628a4fdbb5c58540b6cbede1' '5739f4792c2594cfd5d2862025b6eedc')
+replaces=(vpython)
+
+build() {
+  cd $startdir/src/visual-$pkgver
+  patch -Np1 -i ../idlepath.patch || return 1
+  pythondir=`python -c "from distutils import sysconfig; print sysconfig.get_python_lib()"`
+  unset PYTHONPATH							# ignore developers PYTHONPATH
+  ./configure --prefix=/usr --with-example-dir=$pythondir/visual/demos
+  make || return 1
+  mkdir -p $startdir/pkg${pythondir}
+  mkdir -p $startdir/pkg/usr/bin
+  make DESTDIR=$startdir/pkg install
+  # license
+  install -D -m644 license.txt \
+                   $startdir/pkg/usr/share/licenses/$pkgname/license.txt
+}

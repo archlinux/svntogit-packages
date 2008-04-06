@@ -1,0 +1,15 @@
+# $Id: PKGBUILD,v 1.7 2007/02/06 05:11:06 james Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+
+pkgname=rip
+pkgver=1.07
+pkgrel=2
+pkgdesc="Commandline/console based perl cd ripping tool."
+depends=('cddb_get' 'perl-mp3-info')
+source=(http://freshmeat.net/redir/rip/9024/url_tgz/$pkgname-$pkgver.tar.gz)
+url="http://rip.sourceforge.net/"
+
+build() {
+cd $startdir/src/$pkgname-$pkgver
+install -D -m755 rip $startdir/pkg/usr/bin/rip
+}

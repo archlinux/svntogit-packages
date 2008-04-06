@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.14 2008/01/08 05:55:51 aaron Exp $
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=mutagen
+pkgver=1.13
+pkgrel=1
+pkgdesc="An audio metadata tag reader and writer implemented in pure python"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.sacredchao.net/quodlibet/wiki/Development/Mutagen"
+depends=('python>=2.5')
+source=(http://www.sacredchao.net/~piman/software/$pkgname-$pkgver.tar.gz)
+md5sums=('7afa5a154c15e777898e3188b743ef74')
+
+build()
+{
+  cd $startdir/src/$pkgname-$pkgver
+  sed -i "s|share/man/|man/|g" setup.py
+  python setup.py install --root=$startdir/pkg
+
+  mkdir -p $startdir/pkg/usr/bin
+  install -m755 tools/* $startdir/pkg/usr/bin
+}

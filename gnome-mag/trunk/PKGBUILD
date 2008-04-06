@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.26 2008/03/14 21:46:22 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-mag
+pkgver=0.15.0
+pkgrel=1
+pkgdesc="Gnome magnifier"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.gnome.org"
+depends=('at-spi>=1.22.0')
+makedepends=('perlxml' 'pkgconfig')
+options=('!libtool')
+groups=('gnome-extra')
+source=(http://ftp.gnome.org/pub/gnome/sources/gnome-mag/0.15/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('a297f2b2fae4cd0cde2a30bfacc4c380')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}

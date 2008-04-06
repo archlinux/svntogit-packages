@@ -1,0 +1,33 @@
+# $Id: PKGBUILD,v 1.2 2008/04/05 18:34:36 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gstreamer0.10-base-plugins
+pkgver=0.10.19
+pkgrel=1
+pkgdesc="GStreamer Multimedia Framework Base Plugins (gst-plugins-base)"
+arch=(i686 x86_64)
+license=('GPL' 'LGPL')
+depends=('gstreamer0.10-base>=0.10.18-2' 'gnome-vfs>=2.22.0' 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis' 'libtheora')
+makedepends=('pkgconfig')
+replaces=('gstreamer0.10-alsa' 'gstreamer0.10-theora' 'gstreamer0.10-libvisual' 'gstreamer0.10-pango' 'gstreamer0.10-cdparanoia' 'gstreamer0.10-vorbis' 'gstreamer0.10-gnomevfs' 'gstreamer0.10-ogg')
+conflicts=('gstreamer0.10-alsa' 'gstreamer0.10-theora' 'gstreamer0.10-libvisual' 'gstreamer0.10-pango' 'gstreamer0.10-cdparanoia' 'gstreamer0.10-vorbis' 'gstreamer0.10-gnomevfs' 'gstreamer0.10-ogg')
+provides=("gstreamer0.10-alsa=${pkgver}" "gstreamer0.10-theora=${pkgver}" "gstreamer0.10-libvisual=${pkgver}" "gstreamer0.10-pango=${pkgver}" "gstreamer0.10-cdparanoia=${pkgver}" "gstreamer0.10-vorbis=${pkgver}" "gstreamer0.10-gnomevfs=${pkgver}" "gstreamer0.10-ogg=${pkgver}" "gst-plugins-base=${pkgver}")
+options=(!libtool)
+url="http://gstreamer.freedesktop.org/"
+groups=('gstreamer0.10-plugins')
+_relname=gst-plugins-base
+source=(${url}/src/${_relname}/${_relname}-${pkgver}.tar.bz2)
+md5sums=('9c9614cbb6497b7fee1c954b9d5ae3b7')
+
+build() {
+  cd ${startdir}/src/${_relname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --enable-experimental \
+    --disable-docs-build --disable-plugin-docs \
+    --with-package-name="GStreamer Base Plugins (Archlinux)" \
+    --with-package-origin="http://www.archlinux.org/" || return 1
+
+  make || return 1
+  cd ext || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}

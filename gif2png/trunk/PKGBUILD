@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.7 2004/04/19 06:24:57 dorphell Exp $
+# Maintainer: eric <eric@archlinux.org>
+# Contributor: Andrew Rose <ody@netrux.com>
+
+pkgname=gif2png
+pkgver=2.5.1
+pkgrel=1
+pkgdesc="A GIF to PNG image format converter"
+depends=(libpng)
+source=(http://www.catb.org/~esr/$pkgname/$pkgname-$pkgver.tar.gz)
+url="http://www.catb.org/~esr/gif2png/"
+md5sums=('85bb8ee345fc41c218de19dda0164806')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  /usr/bin/make || return 1
+  /usr/bin/make prefix=$startdir/pkg/usr install
+}

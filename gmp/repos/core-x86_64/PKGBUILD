@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.14 2007/11/15 23:53:15 daniel Exp $
+# Maintainer: Thomas Baechler <thomas@archlinux.org>
+pkgname=gmp
+pkgver=4.2.2
+pkgrel=2
+pkgdesc="A free library for arbitrary precision arithmetic"
+arch=(i686 x86_64)
+depends=('gcc-libs')
+license=('LGPL3')
+options=(!libtool)
+source=(ftp://ftp.gnu.org/gnu/gmp/gmp-${pkgver}.tar.gz)
+url="http://www.swox.com/gmp/"
+md5sums=('1def49df60248a08374ecd6cdcaa5d3d')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --enable-cxx --build=${CHOST}
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

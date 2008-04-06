@@ -1,0 +1,18 @@
+# $Id: PKGBUILD,v 1.12 2006/01/02 07:41:47 tpowa Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+# Committer: Judd Vinet <jvinet@zeroflux.org>
+pkgname=x2x
+pkgver=1.27
+pkgrel=4
+pkgdesc="Control one X display from another"
+depends=('libxtst')
+makedepens=('imake')
+source=(http://gatekeeper.dec.com/pub/DEC/SRC/x2x/$pkgname-$pkgver.tar.gz)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  xmkmf
+  make x2x || return 1
+  install -D -m755 x2x $startdir/pkg/usr/bin/x2x
+  install -D -m644 x2x.1 $startdir/pkg/usr/man/man1/x2x.1
+}

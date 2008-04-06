@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.28 2008/03/06 02:34:14 kevin Exp $
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+
+pkgname=worker
+pkgver=2.16.2
+pkgrel=1
+pkgdesc="Graphical filemanager and a clone of Directory Opus 4"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('avfs' 'bzip2' 'gcc-libs' 'libsm' 'libx11' 'zlib')
+source=(http://www.boomerangsworld.de/worker/downloads/$pkgname-$pkgver.tar.bz2)
+url="http://www.boomerangsworld.de/worker"
+md5sums=('14a5802fe966e0434c2a20398292b6d1')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --with-avfs
+  /usr/bin/make || return 1
+  /usr/bin/make prefix=$startdir/pkg/usr install
+}
+# vim: ts=2 sw=2 et ft=sh

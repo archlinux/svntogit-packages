@@ -1,0 +1,45 @@
+# $Id: PKGBUILD,v 1.57 2008/03/03 19:03:32 tpowa Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kdepim
+pkgver=3.5.9
+kdever=3.5.9
+pkgrel=1
+pkgdesc="KDE PIM Utilities."
+arch=(i686 x86_64)
+url="http://www.kde.org"
+license=('GPL')
+groups=('kde')
+depends=('kdelibs>=3.5.9' 'kdebase>=3.5.9' 'gpgme' 'gnokii>=0.6.14' 'libmal>=0.42' 'cyrus-sasl-plugins' 'libxss' 'libopensync>=0.36')
+#makedepends=('pilot-link' 'gnokii' 'libmal')
+
+# for easier build, just uncomment the mirror you want to use
+  mirror="ftp.solnet.ch/mirror/KDE"         # updated every 2 hours, very fast for Europe
+# mirror="ftp.kde.org/pub/kde/"             # main server
+# mirror="ibiblio.org/pub/mirrors/kde/"     # ibiblio mirror
+
+# latest opensync support
+# svn co svn://anonsvn.kde.org/home/kde/branches/work/kitchensync-OpenSync0.30API kitchensync
+source=(ftp://$mirror/stable/$kdever/src/$pkgname-$pkgver.tar.bz2 \
+	ftp://ftp.archlinux.org/other/kdepim/kitchensync-update.tar.bz2
+	post-3.5.9.patch) 
+
+build() {
+  # Source the QT and KDE profile
+  [ -z "${QTDIR}" ] && source /etc/profile.d/qt3.sh 
+  [ -z "${KDEDIR}" ] && source /etc/profile.d/kde.sh
+  # start building
+  cd $startdir/src/$pkgname-$pkgver
+  cp -rf ../kitchensync ./ || return 1
+  make -f admin/Makefile.common || return 1
+  # fix compiling
+  patch -Np4 -i ../post-3.5.9.patch || return 1
+  ./configure --prefix=/opt/kde --disable-debug --disable-dependency-tracking \
+  --enable-gcc-hidden-visibility --enable-final
+  #        --enable-final # remove this if you build with < 512mb ram.
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+}
+md5sums=('ba27b06599556c572a26f03608471ee2'
+         '3d634c3996bf398715aab107501539a8'
+         '6e85b1aa4083104281aa50bb0257d4ba')

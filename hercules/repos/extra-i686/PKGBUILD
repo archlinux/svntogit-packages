@@ -1,0 +1,27 @@
+# $Id: PKGBUILD,v 1.12 2007/10/07 17:43:14 kevin Exp $
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+
+pkgname=hercules
+pkgver=3.05
+pkgrel=1
+pkgdesc="A software implementation of the mainframe System/370 and ESA/390 architectures"
+url="http://www.hercules-390.org/"
+source=(http://www.hercules-390.org/$pkgname-$pkgver.tar.gz)
+arch=(i686 x86_64)
+license=('custom')
+options=(!libtool)
+depends=('bzip2' 'libgcrypt' 'zlib')
+md5sums=('da8d85ac18c140b460574a0454abb936')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  # Change module extension from .la to .so.
+  sed '/HDL_MODULE_SUFFIX/ s/\.la/.so/' -i hdl.h
+  ./configure --prefix=/usr
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+  # license
+  install -D -m644 COPYRIGHT \
+  		$startdir/pkg/usr/share/licenses/hercules/qpl1
+}

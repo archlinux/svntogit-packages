@@ -1,0 +1,25 @@
+# $Id: PKGBUILD,v 1.26 2008/03/03 19:09:31 tpowa Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+
+pkgname=kde-i18n-mk
+pkgver=3.5.9
+kdever=3.5.9
+pkgrel=1
+arch=(i686 x86_64)
+license=(GPL)
+pkgdesc="Macedonian Localization for KDE."
+url="http://i18n.kde.org/stats/gui/KDE_3.5_BRANCH/mk/index.php"
+source=(ftp://ftp.kde.org/pub/kde/stable/$kdever/src/kde-i18n/$pkgname-$pkgver.tar.bz2)
+depends=('kdebase>=3.5.9')
+
+
+
+build() {
+        cd $startdir/src
+        cd $pkgname-$pkgver
+	./configure --prefix=/opt/kde --disable-debug
+	make || return 1
+	make DESTDIR=$startdir/pkg install || return 1
+}
+md5sums=('15e49cd39c452410f4fe4a39ee4be6e1')

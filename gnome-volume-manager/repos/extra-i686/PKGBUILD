@@ -1,0 +1,36 @@
+# $Id: PKGBUILD,v 1.24 2008/03/16 15:22:57 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Link Dupont <link@subpop.net>
+
+pkgname=gnome-volume-manager
+pkgver=2.22.1
+pkgrel=1
+pkgdesc="GNOME daemon to auto-mount and manage media devices"
+arch=(i686 x86_64)
+license=('GPL')
+url=http://www.gnome.org/
+depends=('libgnomeui>=2.22.01' 'libnotify>=0.4.4' 'gnome-mount>=0.7')
+makedepends=('nautilus>=2.22.0' 'perlxml' 'pkgconfig')
+install=gnome-volume-manager.install
+groups=('gnome')
+options=(!emptydirs)
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2
+	gvm-mount-async.patch
+	gvm-check-local.patch)
+md5sums=('a0cb86f541515f33443c848879d04785'
+         '534b8b9633148bd975b2b9b518c41fb4'
+         '0171374e6bfda523c09a7dbfc1ec0c11')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  patch -Np0 -i ${startdir}/src/gvm-mount-async.patch || return 1
+  patch -Np0 -i ${startdir}/src/gvm-check-local.patch || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}

@@ -1,0 +1,33 @@
+# $Id: PKGBUILD,v 1.32 2008/04/03 18:01:25 andyrtr Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+# Committer: Judd Vinet <jvinet@zeroflux.org>
+pkgname=tk
+pkgver=8.5.2
+pkgrel=1
+pkgdesc="A windowing toolkit for use with tcl"
+arch=('i686' 'x86_64')
+license=('custom')
+depends=("tcl=${pkgver}" 'libxss' 'libxft')
+source=(http://downloads.sourceforge.net/sourceforge/tcl/tk${pkgver}-src.tar.gz)
+md5sums=('bd014bd3e1a818e06ad375b95241452d')
+
+build() {
+  cd ${startdir}/src/tk${pkgver}/unix
+if [ "$CARCH" = "x86_64" ]; then
+  ./configure --prefix=/usr --enable-threads --enable-64bit
+  else   ./configure --prefix=/usr --enable-threads --disable-64bit
+fi
+  make
+  make INSTALL_ROOT=${startdir}/pkg install install-private-headers
+  ln -sf wish8.5 ${startdir}/pkg/usr/bin/wish
+  # install license
+  install -Dm644 ../license.terms $startdir/pkg/usr/share/licenses/$pkgname/LICENSE
+
+  # remove buildroot traces / fixes #3602
+  sed -i \
+  -e "s,^TK_BUILD_LIB_SPEC='-L.*/unix,TK_BUILD_LIB_SPEC='-L/usr/lib," \
+  -e "s,^TK_SRC_DIR='.*',TK_SRC_DIR='/usr/include'," \
+  -e "s,^TK_BUILD_STUB_LIB_SPEC='-L.*/unix,TK_BUILD_STUB_LIB_SPEC='-L/usr/lib," \
+  -e "s,^TK_BUILD_STUB_LIB_PATH='.*/unix,TK_BUILD_STUB_LIB_PATH='/usr/lib," \
+  $startdir/pkg/usr/lib/tkConfig.sh
+}

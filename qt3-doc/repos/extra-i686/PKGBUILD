@@ -1,0 +1,18 @@
+# $Id: PKGBUILD,v 1.2 2007/11/10 20:24:22 pierre Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+pkgname=qt3-doc
+pkgver=3.3.8
+pkgrel=1
+pkgdesc="The QT gui toolkit documentation."
+arch=('i686' 'x86_64')
+url="http://www.trolltech.com/products/qt/index.html"
+pkgfqn=qt-x11-free-${pkgver}
+depends=('qt3')
+source=(ftp://ftp.trolltech.com/qt/source/${pkgfqn}.tar.gz)
+
+build() {
+  cd $startdir/src/$pkgfqn
+  mkdir -p $startdir/pkg/opt/qt/doc/
+  cp -r $startdir/src/$pkgfqn/doc/html $startdir/pkg/opt/qt/doc/
+}
+md5sums=('37aec12c8c7b0e164957ec1aa3fd0189')

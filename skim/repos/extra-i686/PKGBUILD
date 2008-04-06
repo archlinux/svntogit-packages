@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.8 2007/07/12 10:32:52 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+
+pkgname=skim
+pkgver=1.4.5
+pkgrel=2
+pkgdesc="A Input Method development platform optimized for KDE"
+arch=("i686" "x86_64")
+depends=('scim>=1.4.7' 'kdelibs>=3.5.7')
+url="http://www.scim-im.org/projects/skim"
+license=('GPL')
+source=(http://heanet.dl.sourceforge.net/sourceforge/scim/$pkgname-$pkgver.tar.bz2)
+
+build() {
+     cd $startdir/src/$pkgname-$pkgver
+        ./configure --prefix=/opt/kde\
+                    --sysconfdir=/etc
+        make || return 1
+        make DESTDIR=$startdir/pkg install
+}
+

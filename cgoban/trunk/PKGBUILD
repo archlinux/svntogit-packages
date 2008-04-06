@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.8 2006/02/01 00:40:32 simo Exp $
+# Maintainer: Jason Chu <jason@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=cgoban
+pkgver=1.9.12
+pkgrel=3
+pkgdesc="CGoban (Complete Goban) provides a large set of go-related services for Unix and X11"
+depends=('libx11')
+source=(http://www.igoweb.org/~wms/comp/cgoban/$pkgname-$pkgver.tar.gz)
+url="http://www.igoweb.org/~wms/comp/cgoban/"
+md5sums=('11894899d6fe83b47effac9b935a99db')
+
+build() {
+cd $startdir/src/$pkgname-$pkgver
+./configure --prefix=/usr
+mkdir -p $startdir/pkg/usr/bin
+mkdir -p $startdir/pkg/usr//man/man6/
+make PREFIX=$startdir/pkg/usr install
+}

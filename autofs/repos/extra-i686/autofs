@@ -1,0 +1,389 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+# source application-specific settings
+[ -f /etc/conf.d/autofs ] && . /etc/conf.d/autofs
+
+DAEMON=/usr/sbin/automount
+
+if [ ! -z "$TIMEOUT" ]; then
+  daemonoptions="--timeout=$TIMEOUT $daemonoptions"
+fi
+
+# Extract the schemes from /etc/nsswitch.conf
+# (function derived from RedHat)
+function getschemes()
+{
+  grep ^automount: /etc/nsswitch.conf | sed -e 's/^.*://' -e 's/\[.*\]/ /g'
+}
+
+# Process the schemes found in /etc/nsswitch.conf
+# (function derived from RedHat, with some modifications)
+function getrawmounts()
+{
+  for scheme in `getschemes` ; do
+    case "$scheme" in
+      files)
+        if [ -z "$filescheme" ] ; then
+          if getmounts_file /etc/autofs/auto.master; then
+            filescheme=1  # success
+          else
+            filescheme=0  # failure
+          fi
+          export filescheme
+        fi
+      ;;
+      nis)
+        if [ -z "$nisscheme" ] ; then
+          if getnismounts auto.master; then
+            nisscheme=1  # success
+          else
+            nisscheme=0  # failure
+          fi
+          export nisscheme
+        fi
+      ;;
+      ldap*)
+        if [ -z "$ldapscheme" ] ; then
+          if getldapmounts; then
+            ldapscheme=1  # success
+          else
+            ldapscheme=0  # failure
+          fi
+        export ldapscheme
+        fi
+      ;;
+    esac
+  done
+
+  if [ -z "$filescheme" -a -z "$nisscheme" -a -z "$ldapscheme" ]; then
+    # nothing configured in /etc/nsswitch.conf, fall back to old behaviour
+    if ! getmounts_file /etc/autofs/auto.master; then
+      if ! getnismounts auto.master; then
+        if ! getldapmounts; then
+          echo "no autofs mounts configured!" 1>&2
+	fi
+      fi
+    fi
+  else
+    if [ ! \( "$filescheme" == "1" -o "$nisscheme" == "1" -o "$ldapscheme" == "1" \) ]; then
+      # all schemes found in /etc/nsswitch.conf have failed
+      echo "no autofs mounts configured!" 1>&2
+    fi
+  fi
+}
+
+# This function will build a list of automount commands to execute in
+# order to activate all the mount points. It is used to figure out
+# the difference of automount points in case of a reload
+function getmounts()
+{
+  getrawmounts
+}
+
+function getmounts_file()
+{
+  # Check for local maps to be loaded
+  local map="$1"
+  shift
+  if [ -f "$map" ]; then
+    cat "$map" | sed -e '/^#/d' -e '/^$/d' | process_master_file
+  else
+    return 1
+  fi
+}
+
+function process_master_file()
+{
+  local line_options
+  local daemon_options
+  line_options="$@"  # from `+auto.master <line_options>' in /etc/autofs/auto.master
+
+  while read dir map first_option options; do
+    all_options="$first_option $options"
+
+  case "$dir" in
+    +*)
+      # note: $map contains options instead of a map
+      getnismounts "${dir/+/}" "$line_options" "$map" "$all_options"
+      continue;
+    ;;
+    '/-')
+      # ignore (not supported) direct maps
+      continue;
+    ;;
+  esac
+
+  if [ ! -z "$dir" -a ! -z "$map" -a x`echo "$map" | cut -c1` != 'x-' ]; then
+    type=""
+    # Break up the maptype and map, if the map type is specified
+    maptype=`echo $map | cut -f1 -d:`
+    if [ "$maptype" != "$map" ]; then
+      # map has form <maptype>:<map>
+      type=$maptype
+      map=`echo $map | cut -f2- -d:`
+    else
+    # special handling of maps
+    case "$map" in
+      hesiod|userhome)
+	type=$map
+	map=""
+      ;;
+      ldap)
+        # /<mountpoint> ldap <ldap data> <options>
+        type=ldap
+      
+        # extract LDAP data
+        map="$first_option"
+        all_options=$options
+      ;;
+      /*)
+        # map is absolute path
+	if [ -x $map ]; then
+          type=program
+	elif [ -f $map ]; then
+          type=file
+	else
+        # invalid absolute path, ignoring
+          type=""
+	fi
+      ;;
+      !*)
+	# map is executable file
+ 	type=program
+	map="${map/!/}"
+      ;;
+      *)
+        # map is relative path or empty
+        if [ ! -z "$map" ]; then
+	  # map is relative path
+          if [ -x /etc/autofs/$map ]; then
+            type=program
+	    map=/etc/autofs/$map
+	  elif [ -f /etc/autofs/$map ]; then
+	    type=file
+	    map=/etc/autofs/$map
+	  else
+	    type=yp
+	  fi
+	else
+	  # map is empty, ignoring
+	  type=""
+	fi
+      ;;
+    esac
+    fi
+
+    if [ "$type" ]; then
+      options="$line_options $all_options"
+
+      daemon_options=`munge_options daemon $daemonoptions $options`
+      options=`munge_options mount $options`
+
+      echo "$DAEMON $daemon_options -- $dir $type $map $localoptions $options" | sed -e 's/  */ /g'
+    fi
+  fi
+  done
+}
+
+function getnismounts()
+{
+  # Check for YellowPage maps to be loaded
+  local map="$1"
+  shift
+  if [ -e /usr/bin/ypcat ] && [ `ypcat -k "$map" 2>/dev/null | wc -l` -gt 0 ]; then
+    # exclude references to other nis maps (avoid self-references -> inf. loop)
+    # - e.g. a map may look like:
+    #   $ ypcat -k auto.master
+    #   +auto_master             # <- = auto.master = erk!
+    #   /net -hosts             -nosuid,nobrowse
+    #   /home auto_home -nobrowse
+    ypcat -k "$map" | grep -v '^+' | process_master_file "$@"
+  else
+    return 1
+  fi
+}
+
+function getldapmounts() {
+  if [ ! -x /usr/bin/ldapsearch -o -z "$LDAPURI" -o -z "$LDAPBASE" ]; then
+    return 1
+  fi    
+
+  # TODO: Doesn't yet work for LDIF output where lines are continued on the
+  #       next line (starting with space or tab). (See ldif(5))
+
+  ldapsearch -LLL -H $LDAPURI -b $LDAPBASE -x \
+    '(objectClass=automount)' cn automountInformation 2>/dev/null \
+    | while read attr val; do
+  case "$attr" in
+    dn:) 
+      node=""
+      args=""
+    ;;
+    cn:)
+      node=$val
+    ;;
+      automountInformation:)
+      args=$val
+    ;;
+    *)
+    ;;
+  esac
+  if [ -n "$node" -a -n "$args" ]; then
+    echo "$node $args" | process_master_file "$@"
+    node=""
+    args=""
+  fi
+  done
+}
+
+# List active mounts
+function active()
+{
+  ps ax|grep "[0-9]:[0-9][0-9] $DAEMON " |
+    while read pid tt stat time command; do
+      echo $command
+    done
+}
+
+# Status lister.
+function status()
+{
+  echo "Configured Mount Points:"
+  echo "------------------------"
+  getmounts | sed 's/ -- / /'
+  echo ""
+  echo "Active Mount Points:"
+  echo "--------------------"
+  active
+}
+
+function munge_options()
+{
+  local which="$1"
+  shift
+
+  o="$@"
+  # bring `timeout' option in suitable format
+  o=`echo "$o" | sed -e 's/\(\(-\|, *\)t\(imeout\)\?\) \+/\1=/g'`
+  # remove dashes in front of options
+  o=`echo "$o" | sed -e 's/^-\+//' -e 's/ -\+/ /' -e 's/,-\+/,/g'`
+
+  echo "$o" | awk -v which="$which" '
+BEGIN {
+  RS="[, \n]"
+  FS="="
+  daemon_opts[ "timeout" ] = "timeout"
+  daemon_opts[ "t" ] = "timeout"
+}
+{
+  if ( $0 ~ /^$/ )
+    next
+  if ( $1 in daemon_opts ) {
+    daemon[ daemon_opts[ $1 ] ] = $2
+    } else if ($1 ~ /^D.+/) {
+      defines[ $1 ] = $2
+    } else {
+  mount[NR] = $0
+  }
+}
+END {
+  if ( which ~ "^daemon$" ) {
+    if ( "timeout" in daemon ) {
+      printf "--timeout=%s\n", daemon["timeout"]
+    }
+  } else {
+    for ( a in defines ) {
+      printf "-%s=%s ", a, defines[a]
+    }
+    for ( a in mount ) {
+      if ( length( out ) )
+        out=out "," mount[a]
+      else
+	out=mount[a]
+    }
+    printf "%s\n", out
+  }
+}
+'
+}
+
+function get_command_from_pid()
+{
+  ps ax | grep "[0-9]:[0-9][0-9] $DAEMON " | (
+    while read pid tt stat time command; do
+      if [ "$pid" = "$1" ] ; then
+        echo `echo "$command" | sed 's/--pid-file.*\.pid/ /'`
+	return 0
+      fi
+    done
+    )
+
+  return 0
+}
+
+# return true if at least one pid is alive
+function alive()
+{
+  if [ -z "$*" ]; then
+    return 1
+  fi
+  for i in $*; do
+    if kill -0 $i 2> /dev/null; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# Start the fun :)
+PID=`pidof -o %PPID /usr/sbin/automount`
+case "$1" in
+  start)
+    stat_busy "Starting automounter"
+    getmounts | while read cmd args; do
+      opt=${args%%-- *}
+      rest=${args#*-- }
+      mnt=${rest%% *}
+      rest=${rest#* }
+      echo -n " $mnt"
+      if [ ! -d /var/run/autofs ]; then
+        mkdir /var/run/autofs
+      fi
+      pidfile=/var/run/autofs/`echo $mnt | sed 's,_,__,g;s,/,_:,g'`.pid
+      $DAEMON $daemonoptions --pid-file=$pidfile $opt $mnt $rest
+    done
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      add_daemon autofs
+      stat_done
+    fi
+  ;;
+  stop)
+    stat_busy "Stopping automounter"
+    [ ! -z "$PID" ]  && kill $PID &> /dev/null
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      rm_daemon autofs
+      stat_done
+    fi
+  ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+  ;;
+  status)
+    status
+  ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"  
+  ;;
+esac
+
+exit 0  

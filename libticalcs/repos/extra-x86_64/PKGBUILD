@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.5 2008/02/11 23:08:44 simo Exp $
+#Contributor: Simo Leone <neotuli@gmail.com>
+pkgname=libticalcs
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="TI Calculator library"
+arch=(i686 x86_64)
+url="http://tilp.info"
+license="GPL"
+depends=('libticables' 'libtifiles')
+options=('FORCE' 'NOLIBTOOL')
+source=(http://www.archlinux.org/~simo/tilp/tilibs2/libticalcs2-$pkgver.tar.gz)
+md5sums=('c1af83737f2cc9fe156948bc3e889570')
+
+build() {
+  cd $startdir/src/libticalcs2-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

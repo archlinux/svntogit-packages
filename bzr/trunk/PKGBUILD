@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.16 2008/01/19 08:09:07 simo Exp $
+# Maintainer: simo <simo@archlinux.org>
+pkgname=bzr
+pkgver=1.1
+pkgrel=1
+pkgdesc="A decentralized revision control system"
+arch=('i686' 'x86_64')
+url="http://www.bazaar-vcs.org"
+license=('GPL')
+depends=('python')
+source=(http://bazaar-vcs.org/releases/src/bzr-$pkgver.tar.gz)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  python setup.py install --prefix=/usr --root=$startdir/pkg
+
+  # bash-completion
+  install -D -m644 contrib/bash/bzr \
+    $startdir/pkg/etc/bash_completion.d/bzr
+}
+md5sums=('10e9aed1c63227a5cb12f00b03d4ac37')

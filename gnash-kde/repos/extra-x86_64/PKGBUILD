@@ -1,0 +1,38 @@
+# $Id: PKGBUILD,v 1.11 2008/03/17 11:54:27 pierre Exp $
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+pkgname=gnash-kde
+pkgver=0.8.2
+pkgrel=1
+pkgdesc="A GNU Flash movie player for Konqueror"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/gnash/"
+license=("GPL3")
+depends=('kdebase' "gnash-common=${pkgver}" 'agg')
+source=("http://ftp.gnu.org/gnu/gnash/${pkgver}/gnash-${pkgver}.tar.bz2")
+options=('libtool')
+md5sums=('05cac831181be3fb40cbf3c00ab25c0f')
+
+build() {
+	cd $startdir/src/gnash-$pkgver
+
+	. /etc/profile.d/kde.sh
+
+	./configure --prefix=/usr \
+		--enable-gui=KDE \
+		--enable-z \
+		--enable-jpeg \
+		--enable-renderer=agg \
+		--enable-media=ffmpeg \
+		--enable-write \
+		--disable-cygnal \
+		 || return 1
+
+	make || return 1
+
+	install -m755 -D gui/.libs/kde-gnash $startdir/pkg/usr/bin/kde-gnash
+	install -D plugin/klash/.libs/libklashpart.so $startdir/pkg/opt/kde/lib/kde3/libklashpart.so
+	install -D plugin/klash/libklashpart.la $startdir/pkg/opt/kde/lib/kde3/libklashpart.la
+	install -D plugin/klash/klashpartui.rc $startdir/pkg/opt/kde/share/apps/klash/klashpartui.rc
+	install -D plugin/klash/pluginsinfo $startdir/pkg/opt/kde/share/apps/klash/pluginsinfo
+	install -D plugin/klash/klash_part.desktop $startdir/pkg/opt/kde/share/services/klash_part.desktop
+}

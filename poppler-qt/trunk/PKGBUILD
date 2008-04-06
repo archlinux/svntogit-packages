@@ -1,0 +1,42 @@
+# $Id: PKGBUILD,v 1.10 2008/01/26 17:09:28 tpowa Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=poppler-qt
+pkgver=0.6.3
+pkgrel=1
+pkgdesc="Poppler Qt bindings"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('qt' 'poppler>=0.6.3')
+makedepends=('pkgconfig')
+options=('!libtool')
+url="http://poppler.freedesktop.org/"
+source=(http://poppler.freedesktop.org/poppler-${pkgver}.tar.gz
+	poppler-0.6-bindings.patch)
+
+build() {
+  cd ${startdir}/src/poppler-${pkgver}
+
+  patch -Np1 -i ${startdir}/src/poppler-0.6-bindings.patch || return 1
+  
+  AT_M4DIR="m4" autoreconf
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-static \
+	      --enable-zlib \
+	      --enable-libjpeg \
+	      --enable-cairo-output \
+	      --enable-poppler-qt4 \
+	      --disable-poppler-glib \
+	      --disable-gtk-test \
+	      --disable-poppler-qt
+  sed -i -e 's|^LDFLAGS =|LDFLAGS = -lqt-mt|' qt/Makefile
+  pushd poppler || return 1
+  make libpoppler-cairo.la || return 1
+  make libpoppler-arthur.la || return 1
+  popd
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+  rm -f ${startdir}/pkg/usr/lib/pkgconfig/poppler-cairo.pc || return 1
+}
+md5sums=('a585677188cd56a090c4dc3357e03a95'
+         '4255424fcf2c29fe3cae9cb14a671da6')

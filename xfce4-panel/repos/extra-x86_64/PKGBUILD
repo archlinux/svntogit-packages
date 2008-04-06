@@ -1,0 +1,27 @@
+# $Id: PKGBUILD,v 1.18 2007/12/04 07:56:57 tobias Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+
+pkgname=xfce4-panel
+pkgver=4.4.2
+pkgrel=1
+pkgdesc="Panel for the Xfce desktop environment"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://www.xfce.org/"
+groups=('xfce4')
+depends=('libxfcegui4>=4.4.2' 'libxfce4mcs>=4.4.2')
+makedepends=('pkgconfig' 'xfce-mcs-manager')
+options=('!libtool')
+replaces=('xfce4-iconbox' 'xfce4-showdesktop-plugin' 'xfce4-systray' \
+          'xfce4-windowlist-plugin' 'xfce4-taskbar-plugin')
+install=${pkgname}.install
+source=(http://www.xfce.org/archive/xfce-${pkgver}/src/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('8f26b32c442bf9926f98f285a3c251dd')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/xfce4 \
+    --localstatedir=/var --disable-static
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

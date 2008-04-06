@@ -1,0 +1,93 @@
+--- kwin/client.cpp #594158:594159
++++ kwin/client.cpp
+@@ -477,17 +477,30 @@
+     // calls it or when the decoration is created/destroyed
+ 
+     if( Shape::version() >= 0x11 ) // 1.1, has input shape support
+-        { // there appears to be no way to find out if a window has input
+-          // shape set or not, so always set propagate the input shape
+-          // (it's the same like the bounding shape by default)
+-        XShapeCombineShape( qt_xdisplay(), frameId(), ShapeInput, 0, 0,
++        { // There appears to be no way to find out if a window has input
++          // shape set or not, so always propagate the input shape
++          // (it's the same like the bounding shape by default).
++          // Also, build the shape using a helper window, not directly
++          // in the frame window, because the sequence set-shape-to-frame,
++          // remove-shape-of-client, add-input-shape-of-client has the problem
++          // that after the second step there's a hole in the input shape
++          // until the real shape of the client is added and that can make
++          // the window lose focus (which is a problem with mouse focus policies)
++        static Window helper_window = None;
++        if( helper_window == None )
++            helper_window = XCreateSimpleWindow( qt_xdisplay(), qt_xrootwin(),
++                0, 0, 1, 1, 0, 0, 0 );
++        XResizeWindow( qt_xdisplay(), helper_window, width(), height());
++        XShapeCombineShape( qt_xdisplay(), helper_window, ShapeInput, 0, 0,
+                            frameId(), ShapeBounding, ShapeSet );
+-        XShapeCombineShape( qt_xdisplay(), frameId(), ShapeInput,
++        XShapeCombineShape( qt_xdisplay(), helper_window, ShapeInput,
+                            clientPos().x(), clientPos().y(),
+                            window(), ShapeBounding, ShapeSubtract );
+-        XShapeCombineShape( qt_xdisplay(), frameId(), ShapeInput,
++        XShapeCombineShape( qt_xdisplay(), helper_window, ShapeInput,
+                            clientPos().x(), clientPos().y(),
+                            window(), ShapeInput, ShapeUnion );
++        XShapeCombineShape( qt_xdisplay(), frameId(), ShapeInput, 0, 0,
++                           helper_window, ShapeInput, ShapeSet );
+         }
+     }
+  
+--- kioslave/media/mediamanager/halbackend.cpp #593834:593835
++++ kioslave/media/mediamanager/halbackend.cpp
+@@ -215,11 +215,6 @@
+              !libhal_device_get_property_bool(m_halContext, udi, "volume.disc.is_blank", NULL) )
+             return;
+ 
+-        if ( ( libhal_device_get_property_QString(m_halContext, udi, "volume.fsusage") == "filesystem" &&
+-               !libhal_device_get_property_bool(m_halContext, udi, "volume.is_mounted", NULL ) ) &&
+-             ( libhal_device_get_property_bool(m_halContext, udi, "volume.ignore", NULL ) ) )
+-            return;
+-
+         /* Query drive udi */
+         QString driveUdi = libhal_device_get_property_QString(m_halContext, udi, "block.storage_device");
+         /* We don't list floppy volumes because we list floppy drives */
+@@ -240,7 +235,19 @@
+ 
+         /* Create medium */
+         Medium* medium = new Medium(udi, "");
++        setVolumeProperties(medium);
+ 
++        if ( isInFstab( medium ).isNull() )
++        {
++            // if it's not mountable by user and not by HAL, don't show it at all
++            if ( ( libhal_device_get_property_QString(m_halContext, udi, "volume.fsusage") == "filesystem" &&
++                   !libhal_device_get_property_bool(m_halContext, udi, "volume.is_mounted", NULL ) ) &&
++                 ( libhal_device_get_property_bool(m_halContext, udi, "volume.ignore", NULL ) ) )
++            {
++                delete medium;
++                return;
++            }
++        }
+         QMap<QString,QString> options = MediaManagerUtils::splitOptions(mountoptions(udi));
+         kdDebug() << "automount " << options["automount"] << endl;
+         if (options["automount"] == "true" && allowNotification ) {
+@@ -248,7 +255,6 @@
+             if (!error.isEmpty())
+                 kdDebug() << "error " << error << endl;
+         }
+-        setVolumeProperties(medium);
+         m_mediaList.addMedium(medium, allowNotification);
+ 
+         return;
+@@ -992,7 +998,10 @@
+ 
+     for (; it!=end; ++it)
+     {
+-        kdDebug() << "isInFstab -" << medium->deviceNode() << "- -" << (*it)->realDeviceName() << "- -" << (*it)->mountedFrom() << endl;
++        QString reald = (*it)->realDeviceName();
++        if ( reald.endsWith( "/" ) )
++            reald = reald.left( reald.length() - 1 );
++        kdDebug() << "isInFstab -" << medium->deviceNode() << "- -" << reald << "- -" << (*it)->mountedFrom() << "-" << endl;
+         if ((*it)->mountedFrom() == medium->deviceNode() || ( !medium->deviceNode().isEmpty() && (*it)->realDeviceName() == medium->deviceNode() ) )
+ 	{
+             QStringList opts = (*it)->mountOptions();

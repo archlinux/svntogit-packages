@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# ifplugd.action for ArchLinux
+# 
+
+. /etc/rc.conf
+
+# wireless settings
+[ -f /etc/conf.d/wireless ] && . /etc/conf.d/wireless
+# dhcpcd settings
+[ -f /etc/conf.d/dhcpcd ] && . /etc/conf.d/dhcpcd
+
+# directly copied from /etc/rc.d/network ;-)
+ifup()
+{
+  eval iwcfg="\$wlan_${1}"
+  if [ "$iwcfg" != "" ]; then
+    /usr/sbin/iwconfig $iwcfg
+    /bin/sleep 2
+  fi
+  eval ifcfg="\$${1}"
+  if [ "$ifcfg" = "dhcp" ]; then
+    # remove the .pid file if it exists
+    rm -f /etc/dhcpc/dhcpcd-${1}.{pid,cache} >/dev/null 2>&1
+    /sbin/dhcpcd $DHCPCD_ARGS ${1}
+  else
+    /sbin/ifconfig $ifcfg
+  fi
+  return $?
+}
+
+ifdown()
+{
+  eval ifcfg="\$${1}"
+  if [ "$ifcfg" = "dhcp" ]; then
+    /bin/kill `cat /etc/dhcpc/dhcpcd-${1}.pid`
+  fi
+  /sbin/ifconfig ${1} down
+  return $?
+}
+
+case "$2" in
+  up)
+    ifup $1 
+    # ugly way to load up gateway, since
+    # al's net configuration doesn't associate
+    # gateways with specific interfaces 
+    /sbin/route add $gateway
+  ;;
+  down)
+    ifdown $1 
+    # same as up...
+    /sbin/route del $1
+  ;;
+  *)
+    echo "Wrong arguments" > /dev/stderr
+  ;;
+esac  
+
+exit 1

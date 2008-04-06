@@ -1,0 +1,4861 @@
+--- fpicker/prj/build.lst
++++ fpicker/prj/build.lst
+@@ -3,7 +3,9 @@
+ fp	fpicker\source\generic				nmake	-	all	fp_generic fp_inc NULL
+ fp	fpicker\source\office				nmake	-	all	fp_office fp_inc NULL
+ fp	fpicker\source\unx\gnome			nmake	-	u	fp_gnome_filepicker fp_inc NULL
++fp	fpicker\source\unx\kde_unx			nmake	-	u	fp_unx_common fp_inc NULL
++fp	fpicker\source\unx\kde				nmake	-	u	fp_unx_kde_filepicker fp_inc NULL
+ fp	fpicker\source\win32\filepicker		nmake	-	w	fp_win32_filepicker fp_inc NULL
+ fp	fpicker\source\win32\folderpicker	nmake	-	w	fp_win32_folderpicker fp_inc NULL
+ fp  fpicker\source\win32\misc			nmake	-	w	fp_win32_misc fp_win32_filepicker.w fp_win32_folderpicker.w fp_inc NULL
+-fp	fpicker\util				nmake	-	all	fp_util fp_win32_filepicker.w fp_win32_misc.w fp_win32_folderpicker.w NULL
++fp	fpicker\util				nmake	-	all	fp_util fp_gnome_filepicker.u fp_unx_common.u fp_unx_kde_filepicker.u fp_win32_filepicker.w fp_win32_misc.w fp_win32_folderpicker.w NULL
+--- fpicker/prj/d.lst
++++ fpicker/prj/d.lst
+@@ -4,9 +4,11 @@
+ 
+ ..\%__SRC%\bin\f*.res %_DEST%\bin%_EXT%\
+ ..\%__SRC%\bin\f*.dll %_DEST%\bin%_EXT%\
++..\%__SRC%\bin\kdefilepicker %_DEST%\bin%_EXT%\kdefilepicker
+ ..\%__SRC%\lib\f*.so %_DEST%\lib%_EXT%\
+ ..\%__SRC%\lib\*.dylib %_DEST%\lib%_EXT%\*.dylib
+ 
+ ..\source\win32\filepicker\*.xml %_DEST%\xml%_EXT%\*.xml
+ ..\source\win32\folderpicker\*.xml %_DEST%\xml%_EXT%\*.xml
+ ..\source\unx\gnome\fps-gnome-ucd.txt %_DEST%\bin%_EXT%\fps-gnome-ucd.txt
++..\source\unx\kde_unx\fps-kde-ucd.txt %_DEST%\bin%_EXT%\fps-kde-ucd.txt
+--- fpicker/source/office/OfficeFilePicker.cxx
++++ fpicker/source/office/OfficeFilePicker.cxx
+@@ -591,6 +591,33 @@
+ }
+ 
+ //------------------------------------------------------------------------------------
++// XFilePickerWorkaround functions
++//------------------------------------------------------------------------------------
++
++// Obsoletes getFiles
++Sequence< rtl::OUString > SAL_CALL SvtFilePicker::getFilesAsURIs() throw (RuntimeException)
++{
++	checkAlive();
++
++    ::vos::OGuard aGuard( Application::GetSolarMutex() );
++	if ( ! getDialog() )
++	{
++		Sequence< rtl::OUString > aEmpty;
++		return aEmpty;
++	}
++
++	SvStringsDtor* pPathList = getDialog()->GetPathList();
++	USHORT i, nCount = pPathList->Count();
++
++	Sequence< rtl::OUString > aPath( nCount );
++	for ( i = 0; i < nCount; i++)
++		aPath[i] = rtl::OUString( *pPathList->GetObject( i ) );
++
++	delete pPathList;
++	return aPath;	
++}
++
++//------------------------------------------------------------------------------------
+ // XFilePicker functions
+ //------------------------------------------------------------------------------------
+ 
+--- fpicker/source/office/OfficeFilePicker.hxx
++++ fpicker/source/office/OfficeFilePicker.hxx
+@@ -35,8 +35,8 @@
+ #ifndef INCLUDED_SVT_FILEPICKER_HXX
+ #define INCLUDED_SVT_FILEPICKER_HXX
+ 
+-#ifndef  _CPPUHELPER_IMPLBASE7_HXX_
+-#include <cppuhelper/implbase7.hxx>
++#ifndef  _CPPUHELPER_IMPLBASE8_HXX_
++#include <cppuhelper/implbase8.hxx>
+ #endif
+ 
+ #ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERCONTROLACCESS_HPP_
+@@ -45,6 +45,9 @@
+ #ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERNOTIFIER_HPP_
+ #include <com/sun/star/ui/dialogs/XFilePickerNotifier.hpp>
+ #endif
++#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERWORKAROUND_HPP_
++#include <com/sun/star/ui/dialogs/XFilePickerWorkaround.hpp>
++#endif
+ #ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPREVIEW_HPP_
+ #include <com/sun/star/ui/dialogs/XFilePreview.hpp>
+ #endif
+@@ -98,10 +101,11 @@
+ 
+ // class SvtFilePicker ---------------------------------------------------
+ 
+-typedef ::cppu::ImplHelper7	<	::com::sun::star::ui::dialogs::XFilePickerControlAccess
++typedef ::cppu::ImplHelper8	<	::com::sun::star::ui::dialogs::XFilePickerControlAccess
+ 							,	::com::sun::star::ui::dialogs::XFilePickerNotifier
+ 							,	::com::sun::star::ui::dialogs::XFilePreview
+ 							,	::com::sun::star::ui::dialogs::XFilterManager
++							,	::com::sun::star::ui::dialogs::XFilePickerWorkaround
+ 							,	::com::sun::star::ui::dialogs::XFilterGroupManager
+ 							,	::com::sun::star::lang::XServiceInfo
+                             ,   ::com::sun::star::ui::dialogs::XAsynchronousExecutableDialog
+@@ -195,6 +199,12 @@
+     virtual sal_Bool SAL_CALL       getShowState() throw ( ::com::sun::star::uno::RuntimeException );
+ 
+ 	//------------------------------------------------------------------------------------
++	// XFilePickerWorkaround functions
++	//------------------------------------------------------------------------------------
++
++	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getFilesAsURIs() throw (::com::sun::star::uno::RuntimeException);
++
++	//------------------------------------------------------------------------------------
+ 	// XFilterManager functions
+ 	//------------------------------------------------------------------------------------
+ 
+--- fpicker/source/unx/gnome/SalGtkFilePicker.cxx
++++ fpicker/source/unx/gnome/SalGtkFilePicker.cxx
+@@ -161,12 +161,13 @@
+ }
+ 
+ SalGtkFilePicker::SalGtkFilePicker( const uno::Reference<lang::XMultiServiceFactory>& xServiceMgr ) : 
+-	cppu::WeakComponentImplHelper9< 		
++	cppu::WeakComponentImplHelper10< 		
+ 		XFilterManager, 
+-	        XFilterGroupManager,
+-	        XFilePickerControlAccess,
++	    XFilterGroupManager,
++	    XFilePickerControlAccess,
+ 		XFilePickerNotifier,
+-	        XFilePreview,
++	    XFilePreview,
++        XFilePickerWorkaround,
+ 		lang::XInitialization,
+ 		util::XCancellable,
+ 		lang::XEventListener, 
+@@ -221,6 +222,15 @@
+ 
+ 	m_pVBox = gtk_vbox_new( FALSE, 0 );
+ 
++    // We don't want clickable items to have a huge hit-area
++    GtkWidget *pHBox = gtk_hbox_new( FALSE, 0 );
++    GtkWidget *pThinVBox = gtk_vbox_new( FALSE, 0 );
++
++    gtk_box_pack_end (GTK_BOX( m_pVBox ), pHBox, FALSE, FALSE, 0);
++    gtk_box_pack_start (GTK_BOX( pHBox ), pThinVBox, FALSE, FALSE, 0);
++    gtk_widget_show( pHBox );
++    gtk_widget_show( pThinVBox );
++
+     OUString aLabel;
+ 
+ 	for( i = 0; i < TOGGLE_LAST; i++ )
+@@ -246,9 +256,8 @@
+ 				OSL_TRACE("Handle unknown control %d\n", i);
+ 				break;
+ 		}
+-	       
+ 
+-		gtk_box_pack_end( GTK_BOX( m_pVBox ), m_pToggles[i], FALSE, TRUE, 0 );
++		gtk_box_pack_end( GTK_BOX( pThinVBox ), m_pToggles[i], FALSE, FALSE, 0 );
+ 	}
+ 
+ 	for( i = 0; i < BUTTON_LAST; i++ )
+@@ -269,7 +278,7 @@
+ 				break;
+ 		}
+ 
+-		gtk_box_pack_end( GTK_BOX( m_pVBox ), m_pButtons[i], FALSE, TRUE, 0 );
++		gtk_box_pack_end( GTK_BOX( pThinVBox ), m_pButtons[i], FALSE, TRUE, 0 );
+ 	}
+ 
+ 	for( i = 0; i < LIST_LAST; i++ )
+@@ -881,48 +890,41 @@
+ 	return implgetDisplayDirectory();
+ }
+ 
++// Obsoleted by XFilePickerWorkaround::getFilesAsURIs
+ uno::Sequence<rtl::OUString> SAL_CALL SalGtkFilePicker::getFiles() throw( uno::RuntimeException )
+ {
++		uno::Sequence<rtl::OUString> aFiles = getFilesAsURIs();
++		/*
++		  The previous multiselection API design was completely broken
++		  and unimplementable for some hetrogenous pseudo-URIs eg. search://
++		  Thus crop unconditionally to a single selection.
++		*/
++		aFiles.realloc (1);
++		return aFiles;
++}
++
++uno::Sequence<rtl::OUString> SAL_CALL SalGtkFilePicker::getFilesAsURIs() throw( uno::RuntimeException )
++{
+ 	OSL_ASSERT( m_pDialog != NULL );
+ 	::vos::OGuard aGuard( Application::GetSolarMutex() );
+ 
+ 	GSList* pPathList = gtk_file_chooser_get_uris( GTK_FILE_CHOOSER(m_pDialog) );
+ 	
+-	int nFromCount = g_slist_length( pPathList );
+-	OSL_TRACE( "GETFILES called %d files\n", nFromCount );
++	int nCount = g_slist_length( pPathList );
++	int nIndex = 0;
++	OSL_TRACE( "GETFILES called %d files\n", nCount );
+ 
+ 	// get the current action setting
+ 	GtkFileChooserAction eAction = gtk_file_chooser_get_action(
+         GTK_FILE_CHOOSER( m_pDialog ));
+ 	
+-    /*
+-    This is insane, if its one file then return the URL, 
+-    If its its more return the URL of the dir as the first entry, 
+-    and then list each seperate entry (relative to the base URL) after it
+-    */
+-    bool bMultiple = nFromCount > 1;
+-    int nToCount = bMultiple ? nFromCount + 1 : nFromCount;
+-    int nURLOffset = 0;
+-	uno::Sequence< rtl::OUString > aSelectedFiles(nToCount);
+-
+-    if (bMultiple)
+-    {
+-		gchar *path = gtk_file_chooser_get_current_folder_uri( 
+-            GTK_FILE_CHOOSER( m_pDialog ));
+-        nURLOffset = strlen(path) + 1;
+-        aSelectedFiles[0] = uritounicode(path);
+-        g_free(path);
+-    }
++	uno::Sequence< rtl::OUString > aSelectedFiles(nCount);
+ 
+ 	// Convert to OOo
+-	for( int nToIndex = bMultiple ? 1 : 0;
+-        ((nToIndex < nToCount) && pPathList); 
+-        ++nToIndex, pPathList = g_slist_next(pPathList) 
+-       )
+-	{
+-		const gchar *path = reinterpret_cast<gchar*>(pPathList->data) 
+-            + nURLOffset;
+-		aSelectedFiles[ nToIndex ] = uritounicode(path);
++	for( GSList *pElem = pPathList; pElem; pElem = pElem->next)
++	{
++		gchar *pURI = reinterpret_cast<gchar*>(pElem->data);
++		aSelectedFiles[ nIndex ] = uritounicode(pURI);
+ 
+ 		if( GTK_FILE_CHOOSER_ACTION_SAVE == eAction )
+ 		{
+@@ -942,12 +944,12 @@
+             }
+             else
+             {
+-                if( aSelectedFiles[nToIndex].indexOf('.') > 0 )
++                if( aSelectedFiles[nIndex].indexOf('.') > 0 )
+                 {
+                     rtl::OUString sExtension;
+                     nTokenIndex = 0;
+                     do
+-                        sExtension = aSelectedFiles[nToIndex].getToken( 0, '.', nTokenIndex );
++                        sExtension = aSelectedFiles[nIndex].getToken( 0, '.', nTokenIndex );
+                     while( nTokenIndex >= 0 );
+ 
+                     if( sExtension.getLength() >= 3 ) // 3 = typical/minimum extension length
+@@ -1007,14 +1009,11 @@
+ 
+ 			// if AutoExtension is enabled and checked and current filter is not *, 
+ 			// then complete the file name by concatinating the filter
+-			if( mbToggleVisibility[AUTOEXTENSION] 
+-			     && ( !bExtensionTypedIn )
+-			     && ( gtk_toggle_button_get_active( GTK_TOGGLE_BUTTON( m_pToggles[AUTOEXTENSION] ) ) ) 
+-			     && ( !sToken.equalsAscii( "*" ) ) )
++			if( !bExtensionTypedIn && ( !sToken.equalsAscii( "*" ) ) )
+ 			{
+ 				//if the filename does not already have the auto extension, stick it on
+ 				OUString sExtension = OUString::createFromAscii( "." ) + sToken;
+-				OUString &rBase = aSelectedFiles[nToIndex];
++				OUString &rBase = aSelectedFiles[nIndex];
+ 				sal_Int32 nExtensionIdx = rBase.getLength() - sExtension.getLength();
+ 				OSL_TRACE( "idx are %d %d\n", rBase.lastIndexOf( sExtension ), nExtensionIdx );
+ 
+@@ -1024,7 +1023,8 @@
+ 
+ 		}
+ 
+-		g_free( ( char* )( pPathList->data ) );
++		nIndex++;
++		g_free( pURI );
+ 	}
+ 
+ 	g_slist_free( pPathList );
+@@ -1384,7 +1384,10 @@
+ 
+ 	GtkWidget *pWidget;
+ 
+-	if( ( pWidget = getWidget( nControlId ) ) )
++	if ( nControlId == ExtendedFilePickerElementIds::LISTBOX_FILTER_SELECTOR )
++		gtk_expander_set_expanded( GTK_EXPANDER( m_pFilterExpander ), bEnable );
++
++	else if( ( pWidget = getWidget( nControlId ) ) )
+ 	{
+ 		if( bEnable )
+ 		{
+@@ -1670,53 +1673,44 @@
+ 			eAction = GTK_FILE_CHOOSER_ACTION_SAVE;
+ 			first_button_text = GTK_STOCK_SAVE;
+ 			OSL_TRACE( "2all true\n" );
+-		        break;
++            break;
+ 		case FILESAVE_AUTOEXTENSION_PASSWORD:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_SAVE;
+ 			first_button_text = GTK_STOCK_SAVE;
+-			mbToggleVisibility[AUTOEXTENSION] = true;
+ 			mbToggleVisibility[PASSWORD] = true;
+ 			OSL_TRACE( "1all true\n" );
+-			// TODO
+ 			break;
+ 		case FILESAVE_AUTOEXTENSION_PASSWORD_FILTEROPTIONS:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_SAVE;
+ 			first_button_text = GTK_STOCK_SAVE;
+-			mbToggleVisibility[AUTOEXTENSION] = true;
+ 			mbToggleVisibility[PASSWORD] = true;
+ 			mbToggleVisibility[FILTEROPTIONS] = true;
+ 			OSL_TRACE( "4all true\n" );
+-			// TODO
+-		        break;
++            break;
+ 		case FILESAVE_AUTOEXTENSION_SELECTION:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_SAVE; // SELECT_FOLDER ?
+ 			first_button_text = GTK_STOCK_SAVE;
+-			mbToggleVisibility[AUTOEXTENSION] = true;
+ 			mbToggleVisibility[SELECTION] = true;
+ 			OSL_TRACE( "5all true\n" );
+-			// TODO
+-		        break;
++            break;
+ 		case FILESAVE_AUTOEXTENSION_TEMPLATE:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_SAVE;
+ 			first_button_text = GTK_STOCK_SAVE;
+-			mbToggleVisibility[AUTOEXTENSION] = true;
+ 			mbListVisibility[TEMPLATE] = true;
+ 			OSL_TRACE( "6all true\n" );
+-			// TODO
+-		        break;
++            break;
+ 		case FILEOPEN_LINK_PREVIEW_IMAGE_TEMPLATE:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_OPEN;
+ 			first_button_text = GTK_STOCK_OPEN;
+ 			mbToggleVisibility[LINK] = true;
+ 			mbToggleVisibility[PREVIEW] = true;
+ 			mbListVisibility[IMAGE_TEMPLATE] = true;
+-			// TODO
+-		        break;
++            break;
+ 		case FILEOPEN_PLAY:        
+ 			eAction = GTK_FILE_CHOOSER_ACTION_OPEN;
+ 			first_button_text = GTK_STOCK_OPEN;
+ 			// TODO
+-		        break;
++            break;
+ 		case FILEOPEN_READONLY_VERSION:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_OPEN;
+ 			first_button_text = GTK_STOCK_OPEN;
+@@ -1728,17 +1722,14 @@
+ 			first_button_text = GTK_STOCK_OPEN;
+ 			mbToggleVisibility[LINK] = true;
+ 			mbToggleVisibility[PREVIEW] = true;
+-			// TODO
+-		        break;
++            break;
+ 		case FILESAVE_AUTOEXTENSION:
+ 			eAction = GTK_FILE_CHOOSER_ACTION_SAVE;
+ 			first_button_text = GTK_STOCK_SAVE;
+-			mbToggleVisibility[AUTOEXTENSION] = true;
+ 			OSL_TRACE( "7all true\n" );
+-			// TODO
+-		        break;
++            break;
+ 		default:
+-		        throw lang::IllegalArgumentException(
++            throw lang::IllegalArgumentException(
+ 				rtl::OUString::createFromAscii( "Unknown template" ),
+ 				static_cast< XFilePicker* >( this ),
+ 				1 );
+--- fpicker/source/unx/gnome/SalGtkFilePicker.hxx
++++ fpicker/source/unx/gnome/SalGtkFilePicker.hxx
+@@ -40,8 +40,8 @@
+ //	includes of other projects
+ //_______________________________________________________________________________________________________________________
+ 
+-#ifndef _CPPUHELPER_COMPBASE9_HXX_
+-#include <cppuhelper/compbase9.hxx>
++#ifndef _CPPUHELPER_COMPBASE10_HXX_
++#include <cppuhelper/compbase10.hxx>
+ #endif
+ 
+ #ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
+@@ -108,17 +108,18 @@
+ //----------------------------------------------------------
+ 
+ class SalGtkFilePicker : 
+-        public SalGtkPicker,
+-	public cppu::WeakComponentImplHelper9<         
++    public SalGtkPicker,
++	public cppu::WeakComponentImplHelper10<
+         ::com::sun::star::ui::dialogs::XFilterManager,
+         ::com::sun::star::ui::dialogs::XFilterGroupManager,
+         ::com::sun::star::ui::dialogs::XFilePickerControlAccess,
+         ::com::sun::star::ui::dialogs::XFilePickerNotifier,
+         ::com::sun::star::ui::dialogs::XFilePreview,
+-	::com::sun::star::lang::XInitialization,
++        ::com::sun::star::ui::dialogs::XFilePickerWorkaround,
++		::com::sun::star::lang::XInitialization,
+         ::com::sun::star::util::XCancellable,
+-	::com::sun::star::lang::XEventListener,
+-	::com::sun::star::lang::XServiceInfo >		
++		::com::sun::star::lang::XEventListener,
++		::com::sun::star::lang::XServiceInfo >		
+ {
+ 	public:
+ 
+@@ -161,10 +162,17 @@
+ 		virtual ::rtl::OUString SAL_CALL getDisplayDirectory(  ) 
+ 			throw( ::com::sun::star::uno::RuntimeException );
+ 
+-		virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getFiles(  ) 
++		virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getFiles()
+ 			throw( ::com::sun::star::uno::RuntimeException );
+ 
+ 		//------------------------------------------------------------------------------------
++		// XFilePickerWorkaround functions
++		//------------------------------------------------------------------------------------
++
++		virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getFilesAsURIs()
++				throw (::com::sun::star::uno::RuntimeException);
++
++		//------------------------------------------------------------------------------------
+ 		// XFilterManager functions
+ 		//------------------------------------------------------------------------------------
+ 
+--- fpicker/source/unx/gnome/SalGtkPicker.cxx
++++ fpicker/source/unx/gnome/SalGtkPicker.cxx
+@@ -85,6 +85,9 @@
+ 
+ rtl::OUString SalGtkPicker::uritounicode(const gchar* pIn)
+ {
++    rtl::OUString aEmpty;
++    g_return_val_if_fail (pIn != NULL, aEmpty);
++
+ 	rtl::OUString sURL( const_cast<const sal_Char *>(pIn), strlen(pIn),
+         RTL_TEXTENCODING_UTF8 );
+ 
+--- fpicker/source/unx/gnome/SalGtkPicker.hxx
++++ fpicker/source/unx/gnome/SalGtkPicker.hxx
+@@ -48,6 +48,10 @@
+ #include <com/sun/star/ui/dialogs/XFilePicker.hpp>
+ #endif
+ 
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERWORKAROUND_HPP_
++#include <com/sun/star/ui/dialogs/XFilePickerWorkaround.hpp>
++#endif
++
+ #ifndef _COM_SUN_STAR_UI_XFOLDERPICKER_HPP_
+ #include <com/sun/star/ui/dialogs/XFolderPicker.hpp>
+ #endif
+--- fpicker/source/unx/kde/kdecommandthread.cxx
++++ fpicker/source/unx/kde/kdecommandthread.cxx
+@@ -0,0 +1,208 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#include <kdecommandthread.hxx>
++
++#include <qstringlist.h>
++
++#include <kapplication.h>
++
++#include <iostream>
++
++//////////////////////////////////////////////////////////////////////////
++// CommandEvent
++//////////////////////////////////////////////////////////////////////////
++
++CommandEvent::CommandEvent( const QString &qCommand, QStringList *pStringList )
++    : QCustomEvent( TypeId, pStringList ),
++      m_eCommand( Unknown )
++{
++    struct {
++        const char *pName;
++        CommandEventType eType;
++    } *pIdx, pMapping[] =
++    {
++        { "appendControl",     AppendControl },
++        { "enableControl",     EnableControl },
++        { "getValue",          GetValue },
++        { "setValue",          SetValue },
++        { "appendFilter",      AppendFilter },
++        { "appendFilterGroup", AppendFilterGroup },
++        { "getCurrentFilter",  GetCurrentFilter },
++        { "setCurrentFilter",  SetCurrentFilter },
++        { "getDirectory",      GetDirectory },
++        { "setDirectory",      SetDirectory },
++        { "getFiles",          GetFiles },
++        { "setTitle",          SetTitle },
++        { "setType",           SetType },
++        { "setDefaultName",    SetDefaultName },
++        { "setMultiSelection", SetMultiSelection },
++        { "exec",              Exec },
++        { 0, Unknown }
++    };
++
++    for ( pIdx = pMapping; pIdx->pName && qCommand != pIdx->pName; ++pIdx )
++        ;
++
++    m_eCommand = pIdx->eType;
++}
++
++//////////////////////////////////////////////////////////////////////////
++// CommandThread
++//////////////////////////////////////////////////////////////////////////
++
++CommandThread::CommandThread( QWidget *pObject )
++    : m_pObject( pObject )
++{
++}
++
++CommandThread::~CommandThread()
++{
++}
++
++void CommandThread::run()
++{
++    QTextIStream qStream( stdin );
++    qStream.setEncoding( QTextStream::UnicodeUTF8 );
++
++    QString qLine;
++    bool bQuit = false;
++    while ( !bQuit && !qStream.atEnd() )
++    {
++        qLine = qStream.readLine();
++        handleCommand( qLine, bQuit );
++    }
++}
++
++void CommandThread::handleCommand( const QString &rString, bool &bQuit )
++{
++    QMutexLocker qMutexLocker( &m_aMutex );
++
++#if OSL_DEBUG_LEVEL > 0
++    ::std::cerr << "kdefilepicker received: " << rString.latin1() << ::std::endl;
++#endif
++
++    bQuit = false;
++    QStringList *pTokens = tokenize( rString );
++
++    if ( !pTokens )
++        return;
++    if ( pTokens->empty() )
++    {
++        delete pTokens, pTokens = NULL;
++        return;
++    }
++
++    QString qCommand = pTokens->front();
++    pTokens->pop_front();
++
++    if ( qCommand == "exit" )
++    {
++        bQuit = true;
++        kapp->exit();
++        kapp->wakeUpGuiThread();
++    }
++    else
++        kapp->postEvent( m_pObject, new CommandEvent( qCommand, pTokens ) );
++}
++
++QStringList* CommandThread::tokenize( const QString &rString )
++{
++    // Commands look like:
++    // command arg1 arg2 arg3 ...
++    // Args may be enclosed in '"', if they contain spaces.
++
++    QStringList *pList = new QStringList();
++
++    QString qBuffer;
++    qBuffer.reserve( 1024 );
++
++    const QChar *pUnicode = rString.unicode();
++    const QChar *pEnd     = pUnicode + rString.length();
++    bool bQuoted          = false;
++    
++    for ( ; pUnicode != pEnd; ++pUnicode )
++    {
++        if ( *pUnicode == '\\' )
++        {
++            ++pUnicode;
++            if ( pUnicode != pEnd )
++            {
++                if ( *pUnicode == 'n' )
++                    qBuffer.append( '\n' );
++                else
++                    qBuffer.append( *pUnicode );
++            }
++        }
++        else if ( *pUnicode == '"' )
++            bQuoted = !bQuoted;
++        else if ( *pUnicode == ' ' && !bQuoted )
++        {
++            pList->push_back( qBuffer );
++            qBuffer.setLength( 0 );
++        }
++        else
++            qBuffer.append( *pUnicode );
++    }
++    pList->push_back( qBuffer );
++    
++    return pList;
++}
+--- fpicker/source/unx/kde/kdecommandthread.hxx
++++ fpicker/source/unx/kde/kdecommandthread.hxx
+@@ -0,0 +1,128 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _KDECOMMANDTHREAD_HXX_
++#define _KDECOMMANDTHREAD_HXX_
++
++#include <qevent.h>
++#include <qmutex.h>
++#include <qthread.h>
++
++class CommandEvent : public QCustomEvent
++{
++public:
++    enum CommandEventType {
++        Unknown = 0,
++        
++        AppendControl,
++        EnableControl,
++        GetValue,
++        SetValue,
++
++        AppendFilter,
++        AppendFilterGroup,
++        UpdateFilters,
++        GetCurrentFilter,
++        SetCurrentFilter,
++
++        GetDirectory,
++        SetDirectory,
++        
++        GetFiles,
++
++        SetTitle,
++        SetType,
++        SetDefaultName,
++        SetMultiSelection,
++
++        Exec
++    };
++    static const QEvent::Type   TypeId = (QEvent::Type) ( (int) QEvent::User + 42 /*random magic value*/ );
++    
++protected:
++    CommandEventType            m_eCommand;
++
++public:
++    CommandEvent( const QString &qCommand, QStringList *pStringList );
++
++    CommandEventType            command() const { return m_eCommand; }
++    QStringList*                stringList() { return static_cast< QStringList* >( data() ); }
++};
++
++class CommandThread : public QThread
++{
++protected:
++    QObject                    *m_pObject;
++
++    QMutex                      m_aMutex;
++
++public:
++    CommandThread( QWidget *pObject );
++    virtual ~CommandThread();
++
++    virtual void                run();
++
++protected:
++    void                        handleCommand( const QString &rString, bool &bQuit );
++    QStringList*                tokenize( const QString &rString );
++};
++
++#endif // _KDECOMMANDTHREAD_HXX_
+--- fpicker/source/unx/kde/kdefilepicker.cxx
++++ fpicker/source/unx/kde/kdefilepicker.cxx
+@@ -0,0 +1,765 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#include <kdecommandthread.hxx>
++#include <kdefilepicker.hxx>
++
++#include <qcheckbox.h>
++#include <qcombobox.h>
++#include <qgrid.h>
++#include <qhbox.h>
++#include <qlabel.h>
++#include <qlayout.h>
++#include <qobjectlist.h>
++#include <qpushbutton.h>
++#include <qregexp.h>
++#include <qvbox.h>
++
++#ifdef QT_NO_EMIT
++#define emit
++#endif
++
++#include <kdeversion.h>
++#include <kdiroperator.h>
++#include <kfiledialog.h>
++#include <kfilefiltercombo.h>
++#include <kio/netaccess.h>
++#include <klocale.h>
++#include <kmessagebox.h>
++#include <ktempfile.h>
++
++#include <algorithm>
++#include <iostream>
++
++//////////////////////////////////////////////////////////////////////////
++// FileDialog
++//////////////////////////////////////////////////////////////////////////
++
++FileDialog::FileDialog( const QString &startDir, const QString &filter,
++        QWidget *parent, const char *name )
++    : KFileDialog( startDir, filter, parent, name, true, m_pCustomWidget = new QVBox() ),
++      m_pCombosAndButtons( new QHBox( m_pCustomWidget ) ),
++      m_pLabels( new QVBox( m_pCombosAndButtons ) ),
++      m_pComboBoxes( new QVBox( m_pCombosAndButtons ) ),
++      m_pPushButtons( new QVBox( m_pCombosAndButtons ) ),
++      m_pCheckBoxes( new QGrid( 2, m_pCustomWidget ) ),
++      m_bIsSave( false ),
++      m_bIsExecuting( false ),
++      m_bCanNotifySelection( true )
++{
++    connect( this, SIGNAL( fileHighlighted( const QString & ) ),
++             this, SLOT( fileHighlightedCommand( const QString & ) ) );
++
++    connect( this, SIGNAL( selectionChanged() ),
++             this, SLOT( selectionChangedCommand() ) );
++
++    m_pCustomWidget->setSpacing( KDialog::spacingHint() );
++    m_pCombosAndButtons->setSpacing( KDialog::spacingHint() );
++
++    updateCustomWidgetLayout();
++}
++
++FileDialog::~FileDialog()
++{
++}
++
++void FileDialog::resizeEvent( QResizeEvent *pEvent )
++{
++    KFileDialog::resizeEvent( pEvent );
++
++    updateCustomWidgetLayout();
++}
++
++void FileDialog::showEvent( QShowEvent *pEvent )
++{
++    KFileDialog::showEvent( pEvent );
++
++    updateCustomWidgetLayout();
++}
++
++void FileDialog::updateCustomWidgetLayout()
++{
++    QPoint qReferencePoint = filterWidget->mapTo( this, QPoint( 0, 0 ) );
++    QPoint qCustomPoint = m_pCustomWidget->mapTo( this, QPoint( 0, 0 ) );
++
++    int nLeft = qReferencePoint.x() - qCustomPoint.x();
++    int nRight = m_pCustomWidget->width() - filterWidget->width() - nLeft;
++    
++    nLeft -= KDialog::spacingHint();
++    nRight -= KDialog::spacingHint();
++    m_pLabels->setFixedWidth( ( nLeft > 0 )? nLeft: 80 );
++    // FIXME The following call sets the width of m_pPushButtons all right,
++    // but it also increases the width of m_pComboBoxes rapidly. Can we do
++    // anything about it?
++    m_pPushButtons->setFixedWidth( ( nRight > 0 )? nRight: 100 );
++}
++
++void FileDialog::customEvent( QCustomEvent *pEvent )
++{
++    if ( pEvent && pEvent->type() == CommandEvent::TypeId )
++    {
++        CommandEvent *pCommandEvent = static_cast< CommandEvent* >( pEvent );
++        QStringList *pStringList = pCommandEvent->stringList();
++
++        int nListSize = -1;
++        if ( pStringList )
++            nListSize = pStringList->size();
++
++        switch ( pCommandEvent->command() )
++        {
++            case CommandEvent::AppendControl:
++                if ( nListSize >= 3 )
++                {
++                    appendControl( (*pStringList)[0], (*pStringList)[1], (*pStringList)[2] );
++                }
++                break;
++            case CommandEvent::EnableControl:
++                if ( nListSize >= 2 )
++                {
++                    enableControl( (*pStringList)[0], (*pStringList)[1] );
++                }
++                break;
++            case CommandEvent::GetValue:
++                if ( nListSize >= 2 )
++                {
++                    getValue( (*pStringList)[0], (*pStringList)[1] );
++                }
++                break;
++            case CommandEvent::SetValue:
++                if ( nListSize >= 2 )
++                {
++                    QStringList qStringList = (*pStringList);
++                    qStringList.pop_front();
++                    qStringList.pop_front();
++
++                    setValue( (*pStringList)[0], (*pStringList)[1], qStringList );
++                }
++                break;
++            case CommandEvent::AppendFilter:
++                if ( nListSize >= 2 )
++                {
++                    appendFilter( (*pStringList)[0], (*pStringList)[1] );
++
++                    // update the filters widget
++                    setFilter( filters() );
++                }
++                break;
++            case CommandEvent::AppendFilterGroup:
++                if ( nListSize >= 1 )
++                {
++                    QStringList::const_iterator it = pStringList->begin();
++                    ++it; // We ignore the filter group name
++
++                    while ( it != pStringList->end() )
++                    {
++                        QString qTitle = *it;
++                        ++it;
++                        if ( it != pStringList->end() )
++                        {
++                            appendFilter( qTitle, (*it) );
++                            ++it;
++                        }
++                    }
++
++                    // update the filters widget
++                    setFilter( filters() );
++                }
++                break;
++            case CommandEvent::GetCurrentFilter:
++                {
++                    QString qCurrentFilter = filterWidget->currentText();
++                    sendCommand( "currentFilter " + escapeString( qCurrentFilter ) );
++                }
++                break;
++            case CommandEvent::SetCurrentFilter:
++                if ( nListSize >= 1 )
++                {
++                    static_cast< FileFilterComboHack* >( filterWidget )->setCurrentFilter( pStringList->front() );
++                }
++                break;
++            case CommandEvent::GetDirectory:
++                {
++                    QString qDirectory = baseURL().url();
++                    if ( qDirectory.startsWith( "file:/" ) && qDirectory.mid( 6, 1 ) != "/" )
++                        qDirectory.replace( "file:/", "file:///" );
++                    sendCommand( "currentDirectory " + escapeString( qDirectory ) );
++                }
++                break;
++            case CommandEvent::SetDirectory:
++                if ( nListSize >= 1 )
++                {
++                    setURL( pStringList->front() );
++                }
++                break;
++            case CommandEvent::GetFiles:
++                {
++                    QString qString;
++                    qString.reserve( 1024 );
++
++                    qString.append( "files" );
++
++                    if ( result() == QDialog::Accepted )
++                    {
++                        KURL::List qList( selectedURLs() );
++                        for ( KURL::List::const_iterator it = qList.begin(); it != qList.end(); ++it )
++                        {
++                            qString.append( " " );
++                            QString qUrlStr = addExtension( (*it).url() );
++
++                            if ( !isExecuting() && !isSupportedProtocol( KURL( qUrlStr ).protocol() ) )
++                                qUrlStr = localCopy( qUrlStr );
++
++                            if ( qUrlStr.startsWith( "file:/" ) && qUrlStr.mid( 6, 1 ) != "/" )
++                                qUrlStr.replace( "file:/", "file:///" );
++
++                            if ( !qUrlStr.isEmpty() )
++                                appendEscaped( qString, qUrlStr );
++                        }
++                    }
++                    else
++                    {
++                        // we have to return the selected files anyway
++                        const KFileItemList *pItems = ops->selectedItems();
++                        for ( KFileItemListIterator it( *pItems ); it.current(); ++it )
++                        {
++                            qString.append( " " );
++                            QString qUrlStr = addExtension( (*it)->url().url() );
++
++                            if ( !isExecuting() && !isSupportedProtocol( KURL( qUrlStr ).protocol() ) )
++                                qUrlStr = localCopy( qUrlStr );
++
++                            if ( qUrlStr.startsWith( "file:/" ) && qUrlStr.mid( 6, 1 ) != "/" )
++                                qUrlStr.replace( "file:/", "file:///" );
++
++                            if ( !qUrlStr.isEmpty() )
++                                appendEscaped( qString, qUrlStr );
++                        }
++                    }
++
++                    sendCommand( qString );
++                    setCanNotifySelection( true );
++                }
++                break;
++            case CommandEvent::SetTitle:
++                if ( nListSize >= 1 )
++                {
++                    setCaption( pStringList->front() );
++                }
++                break;
++            case CommandEvent::SetType:
++                if ( nListSize >= 1 )
++                {
++                    QString qType( pStringList->front() );
++                    if ( qType == "open" )
++                    {
++                        setIsSave( false );
++                        setCaption( i18n( "Open" ) );
++                    }
++                    else if ( qType == "save" )
++                    {
++                        setIsSave( true );
++                        setCaption( i18n( "Save As" ) );
++                    }
++                }
++                break;
++            case CommandEvent::SetDefaultName:
++                if ( nListSize >= 1 )
++                {
++                    setSelection( pStringList->front() );
++                }
++                break;
++            case CommandEvent::SetMultiSelection:
++                if ( nListSize >= 1 )
++                {
++                    if ( pStringList->front() == "true" )
++                        setMode( KFile::Files );
++                    else
++                        setMode( KFile::File );
++                }   
++                break;
++            case CommandEvent::Exec:
++                {
++                    filterWidget->setEditable( false );
++                    QString qSelectedURL;
++                    setIsExecuting( true );
++                    bool bCanExit = false;
++                    do {
++                        setCanNotifySelection( true );
++                        exec();
++
++                        KURL qLocalSelectedURL = mostLocalURL( selectedURL() );
++
++                        qSelectedURL = addExtension( qLocalSelectedURL.url() );
++                        QString qProtocol( qLocalSelectedURL.protocol() );
++
++                        if ( isSave() && result() == QDialog::Accepted )
++                        {
++                            if ( qSelectedURL.startsWith( "file:" ) )
++                            {
++                                bCanExit =
++                                    !QFile::exists( qSelectedURL.mid( 5 ) ) ||
++                                    ( KMessageBox::warningYesNo( 0,
++                                                                 i18n( "A file named \"%1\" already exists. "
++                                                                     "Are you sure you want to overwrite it?" ).arg( qSelectedURL ),
++                                                                 i18n( "Overwrite File?" ),
++                                                                 i18n( "Overwrite" ), KStdGuiItem::cancel() ) == KMessageBox::Yes );
++                            }
++                            else if ( !isSupportedProtocol( qProtocol ) )
++                            {
++                                KMessageBox::sorry( 0,
++                                        i18n( "Saving using protocol \"%1\" is not supported." ).arg( qProtocol ) );
++                                bCanExit = false;
++                            }
++                            else
++                                bCanExit = true;
++                        }
++                        else if ( !isSave() && result() == QDialog::Accepted && !isSupportedProtocol( qProtocol ) )
++                        {
++                            KMessageBox::information( 0,
++                                    i18n( "Protocol \"%1\" is supported only partially. "
++                                        "Local copy of the file will be created." ).arg( qProtocol ) );
++                            bCanExit = true;
++                        }
++                        else
++                            bCanExit = true;
++                    } while ( !bCanExit );
++                    setIsExecuting( false );
++
++                    if ( result() == QDialog::Accepted )
++                        sendCommand( "accept" );
++                    else
++                        sendCommand( "reject" );
++                }
++                break;
++            default:
++                break;
++        }
++
++        // FIXME Some cleanup of pEvent? delete something, etc.?
++    }
++}
++
++void FileDialog::appendControl( const QString &rId, const QString &rType, const QString &rTitle )
++{
++    QString qLabel( rTitle );
++    qLabel.replace( '~', '&' );
++
++    if ( rType == "checkbox" )
++    {
++        QCheckBox *pCheckBox = new QCheckBox( qLabel, m_pCheckBoxes, rId.utf8() );
++
++        pCheckBox->setEnabled( true );
++        pCheckBox->setChecked( false );
++    }
++    else if ( rType == "listbox" )
++    {
++        QLabel *pComboLabel = new QLabel( qLabel, m_pLabels );
++        QComboBox *pComboBox = new QComboBox( m_pComboBoxes, rId.utf8() );
++
++        pComboLabel->setBuddy( pComboBox );
++        pComboBox->setEnabled( true );
++    }
++    else if ( rType == "pushbutton" )
++    {
++        QPushButton *pPushButton = new QPushButton( qLabel, m_pPushButtons, rId.utf8() );
++        pPushButton->setEnabled( true );
++    }
++}
++
++QWidget* FileDialog::findControl( const QString &rId ) const
++{
++    QObjectList *pList = m_pCustomWidget->queryList();
++    QCString qName( rId.utf8() );
++    QObjectList::const_iterator it = pList->begin();
++    
++    for ( ; it != pList->end() && qName != (*it)->name(); ++it )
++        ;
++
++    QWidget *pWidget = NULL;
++    if ( it != pList->end() )
++        pWidget = static_cast< QWidget* >( *it );
++    
++    delete pList;
++
++    return pWidget;
++}
++
++void FileDialog::enableControl( const QString &rId, const QString &rValue )
++{
++    QWidget *pWidget = findControl( rId );
++
++    if ( pWidget )
++        pWidget->setEnabled( rValue.lower() == "true" );
++}
++
++void FileDialog::getValue( const QString &rId, const QString &rAction )
++{
++    QWidget *pWidget = findControl( rId );
++    QString qString;
++    qString.reserve( 1024 );
++    qString.append( "value" );
++
++    if ( pWidget )
++    {
++        QCString qClassName = pWidget->className();
++        if ( qClassName == "QCheckBox" )
++        {
++            QCheckBox *pCheckBox = static_cast< QCheckBox* >( pWidget );
++
++            if ( pCheckBox->isChecked() )
++                qString.append( " bool true" );
++            else
++                qString.append( " bool false" );
++        }
++        else if ( qClassName == "QComboBox" )
++        {
++            QComboBox *pComboBox = static_cast< QComboBox* >( pWidget );
++            if ( rAction == "getItems" )
++            {
++                qString.append( " stringList" );
++                for ( int nIdx = 0; nIdx < pComboBox->count(); ++nIdx )
++                {
++                    qString.append( ' ' );
++                    appendEscaped( qString, pComboBox->text( nIdx ) );
++                }
++            }
++            else if ( rAction == "getSelectedItem" )
++            {
++                qString.append( " string " );
++                appendEscaped( qString, pComboBox->currentText() );
++            }
++            else if ( rAction == "getSelectedItemIndex" )
++            {
++                qString.append( " int " );
++                qString.append( QString().setNum( pComboBox->currentItem() ) );
++            }
++            // TODO getHelpURL
++        }
++        // TODO push button
++    }
++
++    sendCommand( qString );
++}
++
++void FileDialog::setValue( const QString &rId, const QString &rAction, const QStringList &rValue )
++{
++    QWidget *pWidget = findControl( rId );
++
++    if ( pWidget )
++    {
++        QCString qClassName = pWidget->className();
++        if ( qClassName == "QCheckBox" )
++        {
++            QCheckBox *pCheckBox = static_cast< QCheckBox* >( pWidget );
++
++            bool bValue = ( !rValue.isEmpty() ) && ( rValue.front().lower() == "true" );
++            pCheckBox->setChecked( bValue );
++        }
++        else if ( qClassName == "QComboBox" )
++        {
++            QComboBox *pComboBox = static_cast< QComboBox* >( pWidget );
++            if ( rAction == "addItem" )
++            {
++                if ( !rValue.isEmpty() )
++                    pComboBox->insertItem( rValue.front() );
++            }
++            else if ( rAction == "addItems" )
++            {
++                pComboBox->insertStringList( rValue );
++            }
++            else if ( rAction == "deleteItem" )
++            {
++                if ( !rValue.isEmpty() )
++                    pComboBox->removeItem( rValue.front().toInt() );
++            }
++            else if ( rAction == "deleteItems" )
++            {
++                pComboBox->clear();
++            }
++            else if ( rAction == "setSelectedItem" )
++            {
++                if ( !rValue.isEmpty() )
++                    pComboBox->setCurrentItem( rValue.front().toInt() );
++            }
++            // FIXME setHelpURL is ignored
++        }
++        // TODO push button
++    }
++}
++
++void FileDialog::appendFilter( const QString &rTitle, const QString &rFilter )
++{
++    // Filters are separated by ';'
++    QString qFilter( rFilter );
++    qFilter.replace( QChar( ';' ), QChar( ' ' ) ).replace( "*.*", "*" );
++
++    // Workaround for too wide <All formats> (*.bmp;...) entry
++    QString qTitle( rTitle );
++    qTitle.replace( QRegExp( "^<([^>]*)> \\(.*" ), "<\\1>" );
++
++    m_aFilters.push_back( qMakePair( qTitle, qFilter ) );
++}
++
++QString FileDialog::filters() const
++{
++    QString qString, qTmp;
++    bool bFirstFilter = true;
++    
++    for ( FilterList::const_iterator it = m_aFilters.begin(); it != m_aFilters.end(); ++it )
++    {
++        if ( bFirstFilter )
++            bFirstFilter = false;
++        else
++            qString.append( '\n' );
++        
++        qString.append( (*it).second );
++        qString.append( '|' );
++        
++        qTmp = (*it).first;
++        qString.append( qTmp.replace( '/', "\\/" ) );
++    }
++
++    return qString;
++}
++
++QString FileDialog::addExtension( const QString &rFileName ) const
++{
++    if ( !isSave() )
++        return rFileName;
++
++    QString qExtension;
++
++    QWidget *pExtensionWidget = findControl( "100" ); // CHECKBOX_AUTOEXTENSION
++    QCheckBox *pExtensionCB = pExtensionWidget? static_cast< QCheckBox* >( pExtensionWidget->qt_cast( "QCheckBox" ) ): NULL;
++    if ( pExtensionCB && pExtensionCB->isChecked() )
++    {
++        // FIXME: qFilter can be a MIME; we ignore it now...
++        QStringList qFilterList = QStringList::split( " ", currentFilter() );
++        for ( QStringList::const_iterator it = qFilterList.begin();
++              qExtension.isEmpty() && it != qFilterList.end();
++              ++it )
++        {
++            int nUnwanted = (*it).findRev( '*' );
++            if ( nUnwanted < 0 )
++                nUnwanted = (*it).findRev( '?' );
++            else
++                nUnwanted = ::std::max( nUnwanted, (*it).find( '?', nUnwanted ) );
++
++            int nIdx = (*it).find( '.', ::std::max( nUnwanted, 0 ) );
++            if ( nIdx >= 0 )
++                qExtension = (*it).mid( nIdx ).lower();
++        }
++    }
++
++    if ( qExtension.isEmpty() || qExtension == "." || rFileName.endsWith( qExtension ) )
++        return rFileName;
++    else
++        return rFileName + qExtension;
++}
++
++bool FileDialog::isSupportedProtocol( const QString &rProtocol ) const
++{
++    // TODO Get this information directly from OOo
++    const char * pOOoProtocols[] = { "", "ftp", "http", "file", "mailto",
++        "vnd.sun.star.webdav", "news", "private", "vnd.sun.star.help",
++        "https", "slot", "macro", "javascript", "imap", "pop3", "data",
++        "cid", "out", "vnd.sun.star.wfs", "vnd.sun.star.hier", "vim",
++        ".uno", ".component", "vnd.sun.star.pkg", "ldap", "db",
++        "vnd.sun.star.cmd", "vnd.sun.star.script", "vnd.sun.star.odma",
++        "telnet",
++        NULL };
++
++    for ( const char **pIndex = pOOoProtocols; *pIndex != NULL; ++pIndex )
++    {
++        if ( rProtocol == *pIndex )
++            return true;
++    }
++
++    // TODO gnome-vfs bits here
++
++    return false;
++}
++
++KURL FileDialog::mostLocalURL( const KURL &rURL ) const
++{
++#if KDE_IS_VERSION(3,5,0)
++    KURL qMostLocalURL( KIO::NetAccess::mostLocalURL( rURL, const_cast<FileDialog*>( this ) ) );
++    if ( qMostLocalURL.isLocalFile() )
++        return qMostLocalURL;
++    else
++    {
++        // Terrible hack to get even non-existing media:// files right
++        qMostLocalURL.cd( ".." );
++        KURL qMostLocalPath( KIO::NetAccess::mostLocalURL( qMostLocalURL, const_cast<FileDialog*>( this ) ) );
++        if ( qMostLocalPath.isLocalFile() )
++        {
++            qMostLocalPath.addPath( rURL.fileName() );
++            return qMostLocalPath;
++        }
++    }
++#endif
++
++    return rURL;
++}
++
++QString FileDialog::localCopy( const QString &rFileName ) const
++{
++    KURL qLocalURL = mostLocalURL( KURL( rFileName ) );
++    if ( qLocalURL.isLocalFile() )
++        return qLocalURL.url();
++
++    int nExtensionPos = rFileName.findRev( '/' );
++    if ( nExtensionPos >= 0 )
++        nExtensionPos = rFileName.find( '.', nExtensionPos );
++    else
++        nExtensionPos = rFileName.find( '.' );
++
++    KTempFile qTempFile( QString::null, ( nExtensionPos < 0 )? QString(): rFileName.mid( nExtensionPos ) );
++    KURL qDestURL;
++    qDestURL.setPath( qTempFile.name() );
++
++    if ( !KIO::NetAccess::file_copy( rFileName, qDestURL, 0600, true, false, NULL ) )
++    {
++        KMessageBox::error( 0, KIO::NetAccess::lastErrorString() );
++        return QString::null;
++    }
++
++    return qDestURL.url();
++}
++
++void FileDialog::fileHighlightedCommand( const QString & )
++{
++    if ( canNotifySelection() )
++    {
++	sendCommand( "fileSelectionChanged" );
++	setCanNotifySelection( false );
++    }
++}
++
++void FileDialog::selectionChangedCommand()
++{
++    if ( canNotifySelection() )
++    {
++	sendCommand( "fileSelectionChanged" );
++	setCanNotifySelection( false );
++    }
++}
++
++void FileDialog::sendCommand( const QString &rCommand )
++{
++#if OSL_DEBUG_LEVEL > 0
++    ::std::cerr << "kdefilepicker sent: " << rCommand.latin1() << ::std::endl;
++#endif
++
++    //m_aOutputStream << rCommand << endl;
++    ::std::cout << rCommand.utf8() << ::std::endl;
++}
++
++void FileDialog::appendEscaped( QString &rBuffer, const QString &rString )
++{
++    const QChar *pUnicode = rString.unicode();
++    const QChar *pEnd     = pUnicode + rString.length();
++
++    rBuffer.append( '"' );
++    for ( ; pUnicode != pEnd; ++pUnicode )
++    {
++        if ( *pUnicode == '\\' )
++            rBuffer.append( "\\\\" );
++        else if ( *pUnicode == '"' )
++            rBuffer.append( "\\\"" );
++        else if ( *pUnicode == '\n' )
++            rBuffer.append( "\\\n" );
++        else
++            rBuffer.append( *pUnicode );
++    }
++    rBuffer.append( '"' );
++}
++
++QString FileDialog::escapeString( const QString &rString )
++{
++    QString qString;
++    qString.reserve( 2*rString.length() + 2 ); // every char escaped + quotes
++
++    appendEscaped( qString, rString );
++
++    return qString;
++}
++
++
++void FileFilterComboHack::setCurrentFilter( const QString& filter )
++{
++    setCurrentText( filter );
++    filterChanged();
++
++    // Workaround for 'Filter name (*.blah)' vs. 'Filter name'
++    if ( currentText() != text( currentItem() ) )
++    {
++        int nItem = 0;
++        for ( ; nItem < count() && !text( nItem ).startsWith( filter ); ++nItem );
++
++        if ( nItem < count() )
++            setCurrentItem( nItem );
++        else
++            setCurrentItem( 0 );
++
++        filterChanged();
++    }
++}
+--- fpicker/source/unx/kde/kdefilepicker.hxx
++++ fpicker/source/unx/kde/kdefilepicker.hxx
+@@ -0,0 +1,155 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _KDEFILEPICKER_HXX_
++#define _KDEFILEPICKER_HXX_
++
++#include <kfiledialog.h>
++#include <kfilefiltercombo.h>
++
++class QGrid;
++class QHBox;
++class QVBox;
++
++class FileDialog : public KFileDialog
++{
++    Q_OBJECT
++
++protected:
++    typedef QPair< QString, QString > FilterEntry;
++    typedef QValueList< FilterEntry > FilterList;
++    
++    QVBox                      *m_pCustomWidget;
++    QHBox                      *m_pCombosAndButtons;
++    
++    QVBox                      *m_pLabels;
++    QVBox                      *m_pComboBoxes;
++    QVBox                      *m_pPushButtons;
++
++    QGrid                      *m_pCheckBoxes;
++
++    FilterList                  m_aFilters;
++
++    /** Are we a "Save As" dialog?
++     * 
++     *  We cannot use KFileDialog::setOperationMode() here, because then
++     *  it automatically adds an "Automatically select filename extension"
++     *  check box, and completely destroys the dialog's layout
++     *  (custom list boxes are under this check box, which looks ugly).
++     */
++    bool                        m_bIsSave;
++    bool                        m_bIsExecuting;
++
++    bool                        m_bCanNotifySelection;
++
++public:
++    FileDialog( const QString &startDir, const QString &filter,
++                QWidget *parent, const char *name );
++    virtual ~FileDialog();
++
++protected:
++    virtual void                resizeEvent( QResizeEvent *pEvent );
++    virtual void                showEvent( QShowEvent *pEvent );
++    void                        updateCustomWidgetLayout();
++
++    virtual void                customEvent( QCustomEvent *pEvent );
++
++protected:
++    void                        appendControl( const QString &rId, const QString &rType, const QString &rTitle );
++    QWidget*                    findControl( const QString &rId ) const;
++    void                        enableControl( const QString &rId, const QString &rValue );
++    void                        getValue( const QString &rId, const QString &rAction );
++    void                        setValue( const QString &rId, const QString &rAction, const QStringList &rValue );
++    
++    void                        appendFilter( const QString &rTitle, const QString &rFilter );
++    QString                     filters() const;
++    QString                     addExtension( const QString &rFileName ) const;
++
++    void                        setIsSave( bool bIsSave ) { m_bIsSave = bIsSave; }
++    bool                        isSave( void ) const { return m_bIsSave; }
++
++    void                        setIsExecuting( bool bIsExecuting ) { m_bIsExecuting = bIsExecuting; }
++    bool                        isExecuting( void ) const { return m_bIsExecuting; }
++
++    bool                        isSupportedProtocol( const QString &rProtocol ) const;
++    KURL                        mostLocalURL( const KURL &rURL ) const;
++    QString                     localCopy( const QString &rFileName ) const;
++
++    void                        setCanNotifySelection( bool bCanNotifySelection ) { m_bCanNotifySelection = bCanNotifySelection; }
++    bool                        canNotifySelection( void ) const { return m_bCanNotifySelection; }
++
++protected slots:
++    void                        fileHighlightedCommand( const QString & );
++    void                        selectionChangedCommand();
++
++protected:
++    void                        sendCommand( const QString &rCommand );
++    void                        appendEscaped( QString &rBuffer, const QString &rString );
++    QString                     escapeString( const QString &rString );
++};
++
++class FileFilterComboHack : public KFileFilterCombo
++{
++public:
++    void setCurrentFilter( const QString& filter );
++};
++
++#endif // _KDEFILEPICKER_HXX_
+--- fpicker/source/unx/kde/kdefpmain.cxx
++++ fpicker/source/unx/kde/kdefpmain.cxx
+@@ -0,0 +1,109 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#include <kdemodalityfilter.hxx>
++#include <kdefilepicker.hxx>
++#include <kdecommandthread.hxx>
++
++#include <kaboutdata.h>
++#include <kapplication.h>
++#include <kcmdlineargs.h>
++
++#include <iostream>
++
++//////////////////////////////////////////////////////////////////////////
++// Main
++//////////////////////////////////////////////////////////////////////////
++
++int main( int argc, char* argv[] )
++{
++    // we fake the name of the application to have "OpenOffice.org" in the
++    // title
++    KAboutData qAboutData( "kdefilepicker", I18N_NOOP( "OpenOffice.org" ),
++            "0.1", I18N_NOOP( "kdefilepicker is an implementation of the KDE file dialog for OpenOffice.org." ),
++            KAboutData::License_LGPL,
++            "(c) 2004, Jan Holesovsky" );
++    qAboutData.addAuthor( "Jan Holesovsky", I18N_NOOP("Original author and current maintainer"), "kendy@openoffice.org" );
++
++    // Let the user see that this does something...
++    ::std::cerr << "kdefilepicker, an implementation of KDE file dialog for OOo." << ::std::endl
++        << "Type 'exit' and press Enter to finish." << ::std::endl;
++
++    KCmdLineArgs::init( argc, argv, &qAboutData );
++
++    KLocale::setMainCatalogue( "kdialog" );
++    
++    KApplication kApplication;
++    //ModalityFilter qFilter( /*winid*/ 79691780 );
++
++    FileDialog aFileDialog( NULL, QString(), NULL, "kdefiledialog" );
++    
++    CommandThread qCommandThread( &aFileDialog );
++    qCommandThread.start();
++
++    kApplication.exec();
++
++    qCommandThread.wait();
++
++    ::std::cout << "exited" << ::std::endl;
++
++    return 0;
++}
+--- fpicker/source/unx/kde/kdemodalityfilter.cxx
++++ fpicker/source/unx/kde/kdemodalityfilter.cxx
+@@ -0,0 +1,100 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#include <kdemodalityfilter.hxx>
++
++#include <kapplication.h>
++#include <kdialogbase.h>
++
++#include <netwm.h>
++#include <X11/Xlib.h>
++#include <X11/Xutil.h>
++
++//////////////////////////////////////////////////////////////////////////
++// Modality filter
++//////////////////////////////////////////////////////////////////////////
++
++ModalityFilter::ModalityFilter( WId nWinId )
++    : m_nWinId( nWinId )
++{
++    kapp->installEventFilter( this );
++}
++
++ModalityFilter::~ModalityFilter()
++{
++    kapp->removeEventFilter( this );
++}
++
++bool ModalityFilter::eventFilter( QObject *pObject, QEvent *pEvent )
++{
++    if ( pObject->isWidgetType() && pEvent->type() == QEvent::Show )
++    {
++        KDialogBase* pDlg = ::qt_cast< KDialogBase* >( pObject );
++        if ( pDlg != NULL && m_nWinId != 0 )
++        {
++            XSetTransientForHint( qt_xdisplay(), pDlg->winId(), m_nWinId );
++            NETWinInfo aInfo( qt_xdisplay(), pDlg->winId(), qt_xrootwin(), NET::WMState );
++            aInfo.setState( NET::Modal, NET::Modal );
++            m_nWinId = 0;
++        }
++    }
++    return false;
++}
+--- fpicker/source/unx/kde/kdemodalityfilter.hxx
++++ fpicker/source/unx/kde/kdemodalityfilter.hxx
+@@ -0,0 +1,79 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _KDEMODALITYFILTER_HXX_
++#define _KDEMODALITYFILTER_HXX_
++
++#include <qobject.h>
++
++class ModalityFilter : public QObject
++{
++private:
++    WId m_nWinId;
++
++public:
++    ModalityFilter( WId nWinId );
++    virtual ~ModalityFilter();
++
++    virtual bool eventFilter( QObject *pObject, QEvent *pEvent );
++};
++
++#endif // _KDEMODALITYFILTER_HXX_
+--- fpicker/source/unx/kde/makefile.mk
++++ fpicker/source/unx/kde/makefile.mk
+@@ -0,0 +1,110 @@
++#*************************************************************************
++#
++#
++#
++#
++#
++#
++#
++#   The Contents of this file are made available subject to the terms of
++#   either of the following licenses
++#
++#          - GNU Lesser General Public License Version 2.1
++#          - Sun Industry Standards Source License Version 1.1
++#
++#   Sun Microsystems Inc., October, 2000
++#
++#   GNU Lesser General Public License Version 2.1
++#   =============================================
++#   Copyright 2000 by Sun Microsystems, Inc.
++#   901 San Antonio Road, Palo Alto, CA 94303, USA
++#
++#   This library is free software; you can redistribute it and/or
++#   modify it under the terms of the GNU Lesser General Public
++#   License version 2.1, as published by the Free Software Foundation.
++#
++#   This library is distributed in the hope that it will be useful,
++#   but WITHOUT ANY WARRANTY; without even the implied warranty of
++#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++#   Lesser General Public License for more details.
++#
++#   You should have received a copy of the GNU Lesser General Public
++#   License along with this library; if not, write to the Free Software
++#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++#   MA  02111-1307  USA
++#
++#
++#   Sun Industry Standards Source License Version 1.1
++#   =================================================
++#   The contents of this file are subject to the Sun Industry Standards
++#   Source License Version 1.1 (the "License"); You may not use this file
++#   except in compliance with the License. You may obtain a copy of the
++#   License at http://www.openoffice.org/license.html.
++#
++#   Software provided under this License is provided on an "AS IS" basis,
++#   WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++#   WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++#   MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++#   See the License for the specific provisions governing your rights and
++#   obligations concerning the Software.
++#
++#   The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++#
++#   Copyright: 2000 by Sun Microsystems, Inc.
++#
++#   All Rights Reserved.
++#
++#   Contributor(s): _______________________________________
++#
++#
++#
++#*************************************************************************
++
++PRJ=..$/..$/..
++
++PRJNAME=fpicker
++TARGET=kdefilepicker
++LIBTARGET=NO
++ENABLE_EXCEPTIONS=TRUE
++#COMP1TYPELIST=$(TARGET)
++#COMPRDB=$(SOLARBINDIR)$/types.rdb
++
++# --- Settings -----------------------------------------------------
++
++.INCLUDE :  settings.mk
++
++# ------------------------------------------------------------------
++
++.IF "$(GUIBASE)" != "unx" || "$(ENABLE_KDE)" != "TRUE"
++
++dummy:
++	@echo "Nothing to build. GUIBASE == $(GUIBASE), ENABLE_KDE is not set"
++
++.ELSE # we build for KDE
++
++CFLAGS+= $(KDE_CFLAGS)
++
++# --- Files --------------------------------------------------------
++
++SLOFILES =\
++		$(SLO)$/kdecommandthread.obj \
++		$(SLO)$/kdefilepicker.obj \
++		$(SLO)$/kdefilepicker.moc.obj \
++		$(SLO)$/kdefpmain.obj \
++		$(SLO)$/kdemodalityfilter.obj
++
++APP1TARGET=$(TARGET)
++APP1OBJS=$(SLOFILES)
++APP1STDLIBS=\
++			$(SALLIB) \
++			$(KDE_LIBS) -lkio
++
++
++.ENDIF # "$(GUIBASE)" != "unx" || "$(ENABLE_KDE)" != "TRUE"
++
++# --- Targets ------------------------------------------------------
++
++.INCLUDE :	target.mk
++
++$(MISC)$/kdefilepicker.moc.cxx : kdefilepicker.hxx
++	$(MOC) $< -o $@
+--- fpicker/source/unx/kde_unx/FPServiceInfo.hxx
++++ fpicker/source/unx/kde_unx/FPServiceInfo.hxx
+@@ -0,0 +1,77 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): _______________________________________
++ *
++ *
++ ************************************************************************/
++
++#ifndef _FPSERVICEINFO_HXX_
++#define _FPSERVICEINFO_HXX_
++
++// the service names
++#define FILE_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.KDEFilePicker"
++
++// the implementation names		
++#define FILE_PICKER_IMPL_NAME    "com.sun.star.ui.dialogs.UnxFilePicker"
++
++// the registry key names
++// a key under which this service will be registered,
++// Format: -> "/ImplName/UNO/SERVICES/ServiceName"
++//  <Implementation-Name></UNO/SERVICES/><Service-Name> 
++#define FILE_PICKER_REGKEY_NAME  "/com.sun.star.ui.dialogs.UnxFilePicker/UNO/SERVICES/com.sun.star.ui.dialogs.KDEFilePicker"
++
++#endif
+--- fpicker/source/unx/kde_unx/UnxCommandThread.cxx
++++ fpicker/source/unx/kde_unx/UnxCommandThread.cxx
+@@ -0,0 +1,355 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _UNXCOMMANDTHREAD_HXX_
++#include <UnxCommandThread.hxx>
++#endif
++
++#ifndef _UNXNOTIFYTHREAD_HXX_
++#include <UnxNotifyThread.hxx>
++#endif
++
++#ifndef _RTL_USTRING_H_
++#include <rtl/ustring.hxx>
++#endif
++
++#ifndef _RTL_USTRBUF_HXX_
++#include <rtl/ustrbuf.hxx>
++#endif
++
++#include <unistd.h>
++
++#include <iostream>
++
++using namespace ::com::sun::star;
++
++//////////////////////////////////////////////////////////////////////////
++// UnxFilePickerCommandThread
++//////////////////////////////////////////////////////////////////////////
++
++UnxFilePickerCommandThread::UnxFilePickerCommandThread( UnxFilePickerNotifyThread *pNotifyThread, int nReadFD )
++    : m_pNotifyThread( pNotifyThread ),
++      m_nReadFD( nReadFD )
++{
++}
++
++UnxFilePickerCommandThread::~UnxFilePickerCommandThread()
++{
++}
++
++sal_Bool SAL_CALL UnxFilePickerCommandThread::result()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_aResult;
++}
++
++::rtl::OUString SAL_CALL UnxFilePickerCommandThread::getCurrentFilter()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++    
++    return m_aGetCurrentFilter;
++}
++
++::rtl::OUString SAL_CALL UnxFilePickerCommandThread::getDirectory()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_aGetDirectory;
++}
++
++uno::Sequence< ::rtl::OUString > SAL_CALL UnxFilePickerCommandThread::getFiles()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    sal_Int32 nSize = m_aGetFiles.size();
++    uno::Sequence< ::rtl::OUString > aFiles( ( nSize > 1 )? nSize + 1: nSize );
++
++    if ( nSize == 1 )
++        aFiles[0] = m_aGetFiles.front();
++    else if ( nSize > 1 )
++    {
++        // First entry in the sequence must be the dirname, the others are the
++        // filenames, so we have to rearrange the list...
++
++        ::rtl::OUString aFront = m_aGetFiles.front();
++        sal_Int32 nLastSlash = aFront.lastIndexOf( '/' );
++        
++        aFiles[0] = ( nLastSlash >= 0 )? aFront.copy( 0, nLastSlash ): ::rtl::OUString();
++        ++nLastSlash;
++
++        sal_Int32 nIdx = 1;
++        for ( ::std::list< ::rtl::OUString >::const_iterator it = m_aGetFiles.begin();
++                it != m_aGetFiles.end(); ++it, ++nIdx )
++        {
++            sal_Int32 nLength = (*it).getLength() - nLastSlash;
++            aFiles[nIdx] = ( nLength >= 0 )? (*it).copy( nLastSlash, nLength ): ::rtl::OUString();
++        }
++    }
++
++    return aFiles;
++}
++
++uno::Any SAL_CALL UnxFilePickerCommandThread::getValue()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_aGetValue;
++}
++
++void SAL_CALL UnxFilePickerCommandThread::run()
++{
++    if ( m_nReadFD < 0 )
++        return;
++
++    sal_Int32 nBufferSize = 1024; // 1 is for testing, 1024 for real use
++    sal_Char *pBuffer = new sal_Char[nBufferSize];
++    sal_Char *pBufferEnd = pBuffer + nBufferSize;
++
++    sal_Char *pWhereToRead = pBuffer;
++    sal_Char *pEntryBegin = pBuffer;
++    sal_Int32 nBytesRead = 0;
++    sal_Bool  bShouldExit = sal_False;
++    while ( !bShouldExit && ( nBytesRead = read( m_nReadFD, pWhereToRead, pBufferEnd - pWhereToRead ) ) > 0 )
++    {
++        sal_Bool bFoundNL = sal_False;
++        sal_Char *pWhereToReadEnd = pWhereToRead + nBytesRead;
++        sal_Char *pEntryEnd = pWhereToRead;
++        do {
++            for ( ; pEntryEnd < pWhereToReadEnd && *pEntryEnd != '\n'; ++pEntryEnd )
++                ;
++
++            if ( pEntryEnd < pWhereToReadEnd )
++            {
++                bFoundNL = sal_True;
++                *pEntryEnd = 0;
++
++                if ( strcmp( pEntryBegin, "exited" ) == 0 )
++                    bShouldExit = sal_True;
++                else
++                    handleCommand( ::rtl::OUString( pEntryBegin, pEntryEnd - pEntryBegin, RTL_TEXTENCODING_UTF8 )/*, bQuit*/ );
++
++                pEntryBegin = pEntryEnd + 1;
++            }
++        } while ( pEntryEnd < pWhereToReadEnd );
++
++        if ( bFoundNL )
++        {
++            if ( pEntryBegin < pBufferEnd )
++                memmove( pBuffer, pEntryBegin, pWhereToReadEnd - pEntryBegin );
++        }
++        else
++        {
++            // enlarge the buffer size
++            nBufferSize *= 2;
++            sal_Char *pNewBuffer = new sal_Char[nBufferSize];
++            if ( pEntryBegin < pBufferEnd )
++                memmove( pNewBuffer, pEntryBegin, pWhereToReadEnd - pEntryBegin );
++
++            delete[] pBuffer;
++            pBuffer = pNewBuffer;
++            pBufferEnd = pBuffer + nBufferSize;
++        }
++
++        pWhereToRead = pBuffer + ( pWhereToReadEnd - pEntryBegin );
++        pEntryBegin = pBuffer;
++    }
++}
++
++void SAL_CALL UnxFilePickerCommandThread::handleCommand( const ::rtl::OUString &rCommand )
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++    
++#if OSL_DEBUG_LEVEL > 0
++    ::std::cerr << "UnxFilePicker received: \"" <<
++        OUStringToOString( rCommand, RTL_TEXTENCODING_ASCII_US ).getStr() << "\"" << ::std::endl;
++#endif
++
++    ::std::list< ::rtl::OUString > aList = tokenize( rCommand );
++
++    if ( aList.size() == 0 )
++        return;
++
++    ::rtl::OUString aCommandName = aList.front();
++    aList.pop_front();
++
++    if ( aCommandName.equalsAscii( "accept" ) )
++    {
++        m_aResult = sal_True;
++        m_aExecCondition.set();
++    }
++    else if ( aCommandName.equalsAscii( "reject" ) )
++    {
++        m_aResult = sal_False;
++        m_aExecCondition.set();
++    }
++    else if ( aCommandName.equalsAscii( "fileSelectionChanged" ) )
++    {
++        if ( m_pNotifyThread )
++            m_pNotifyThread->fileSelectionChanged();
++    }
++    else if ( aCommandName.equalsAscii( "files" ) )
++    {
++        m_aGetFiles = aList;
++        m_aGetFilesCondition.set();
++    }
++    else if ( aCommandName.equalsAscii( "value" ) )
++    {
++        ::rtl::OUString aType;
++        if ( !aList.empty() )
++        {
++            aType = aList.front();
++            aList.pop_front();
++        }
++        
++        if ( aType.equalsAscii( "bool" ) )
++        {
++            sal_Bool bValue = !aList.empty() && aList.front().equalsIgnoreAsciiCaseAscii( "true" );
++
++            m_aGetValue <<= bValue;
++            m_aGetValueCondition.set();
++        }
++        else if ( aType.equalsAscii( "int" ) )
++        {
++            sal_Int32 nValue = 0;
++            if ( !aList.empty() )
++                nValue = aList.front().toInt32();
++
++            m_aGetValue <<= nValue;
++            m_aGetValueCondition.set();
++        }
++        else if ( aType.equalsAscii( "string" ) )
++        {
++            ::rtl::OUString aValue;
++            if ( !aList.empty() )
++                aValue = aList.front();
++
++            m_aGetValue <<= aValue;
++            m_aGetValueCondition.set();
++        }
++        else if ( aType.equalsAscii( "stringList" ) )
++        {
++            uno::Sequence< ::rtl::OUString > aSequence( aList.size() );
++            sal_Int32 nIdx = 0;
++            for ( ::std::list< ::rtl::OUString >::const_iterator it = aList.begin(); it != aList.end(); ++it, ++nIdx )
++                aSequence[nIdx] = (*it);
++
++            m_aGetValue <<= aSequence;
++            m_aGetValueCondition.set();
++        }
++        else
++        {
++            m_aGetValue = uno::Any();
++            m_aGetValueCondition.set();
++        }
++    }
++    else if ( aCommandName.equalsAscii( "currentFilter" ) )
++    {
++        m_aGetCurrentFilter = aList.empty()? ::rtl::OUString(): aList.front();
++        m_aGetCurrentFilterCondition.set();
++    }
++    else if ( aCommandName.equalsAscii( "currentDirectory" ) )
++    {
++        m_aGetDirectory = aList.empty()? ::rtl::OUString(): aList.front();
++        m_aGetDirectoryCondition.set();
++    }
++    else
++    {
++#if OSL_DEBUG_LEVEL > 0
++        ::std::cerr << "Unrecognized command: "
++            << OUStringToOString( aCommandName, RTL_TEXTENCODING_ASCII_US ).getStr() << "\"" << ::std::endl;
++#endif
++    }
++}
++
++::std::list< ::rtl::OUString > SAL_CALL UnxFilePickerCommandThread::tokenize( const ::rtl::OUString &rCommand )
++{
++    ::std::list< ::rtl::OUString > aList;
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    const sal_Unicode *pUnicode = rCommand.getStr();
++    const sal_Unicode *pEnd     = pUnicode + rCommand.getLength();
++    sal_Bool bQuoted            = sal_False;
++
++    for ( ; pUnicode != pEnd; ++pUnicode )
++    {
++        if ( *pUnicode == '\\' )
++        {
++            ++pUnicode;
++            if ( pUnicode != pEnd )
++            {
++                if ( *pUnicode == 'n' )
++                    aBuffer.appendAscii( "\n", 1 );
++                else
++                    aBuffer.append( *pUnicode );
++            }
++        }
++        else if ( *pUnicode == '"' )
++            bQuoted = !bQuoted;
++        else if ( *pUnicode == ' ' && !bQuoted )
++            aList.push_back( aBuffer.makeStringAndClear() );
++        else
++            aBuffer.append( *pUnicode );
++    }
++    aList.push_back( aBuffer.makeStringAndClear() );
++
++    return aList;
++}
+--- fpicker/source/unx/kde_unx/UnxCommandThread.hxx
++++ fpicker/source/unx/kde_unx/UnxCommandThread.hxx
+@@ -0,0 +1,142 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _UNXCOMMANDTHREAD_HXX_
++#define _UNXCOMMANDTHREAD_HXX_
++
++#ifndef _COM_SUN_STAR_UNO_ANY_HXX_
++#include <com/sun/star/uno/Any.hxx>
++#endif
++
++#ifndef _COM_SUN_STAR_UNO_SEQUENCE_HXX_
++#include <com/sun/star/uno/Sequence.hxx>
++#endif
++
++#ifndef _OSL_CONDITN_HXX_
++#include <osl/conditn.hxx>
++#endif
++
++#ifndef _OSL_MUTEX_HXX_
++#include <osl/mutex.hxx>
++#endif
++
++#ifndef _OSL_THREAD_HXX_
++#include <osl/thread.hxx>
++#endif
++
++#ifndef _RTL_USTRBUF_HXX_
++#include <rtl/ustring.hxx>
++#endif
++
++#include <list>
++
++class UnxFilePickerNotifyThread;
++
++class UnxFilePickerCommandThread : public ::osl::Thread
++{
++protected:
++    UnxFilePickerNotifyThread  *m_pNotifyThread;
++    int                         m_nReadFD;
++
++    ::osl::Mutex                m_aMutex;
++
++    ::osl::Condition            m_aExecCondition;
++    sal_Bool                    m_aResult;
++
++    ::osl::Condition            m_aGetCurrentFilterCondition;
++    ::rtl::OUString             m_aGetCurrentFilter;
++
++    ::osl::Condition            m_aGetDirectoryCondition;
++    ::rtl::OUString             m_aGetDirectory;
++
++    ::osl::Condition            m_aGetFilesCondition;
++    ::std::list< ::rtl::OUString > m_aGetFiles;
++
++    ::osl::Condition            m_aGetValueCondition;
++    ::com::sun::star::uno::Any  m_aGetValue;
++
++public:
++    UnxFilePickerCommandThread( UnxFilePickerNotifyThread *pNotifyThread, int nReadFD );
++    ~UnxFilePickerCommandThread();
++    
++    ::osl::Condition& SAL_CALL  execCondition() { return m_aExecCondition; }
++    sal_Bool SAL_CALL           result();
++
++    ::osl::Condition& SAL_CALL  getCurrentFilterCondition() { return m_aGetCurrentFilterCondition; }
++    ::rtl::OUString SAL_CALL    getCurrentFilter();
++
++    ::osl::Condition& SAL_CALL  getDirectoryCondition() { return m_aGetDirectoryCondition; }
++    ::rtl::OUString SAL_CALL    getDirectory();
++    
++    ::osl::Condition& SAL_CALL  getFilesCondition() { return m_aGetFilesCondition; }
++    ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getFiles();
++
++    ::osl::Condition& SAL_CALL  getValueCondition() { return m_aGetValueCondition; }
++    ::com::sun::star::uno::Any SAL_CALL getValue();
++
++protected:
++    virtual void SAL_CALL       run();
++    
++    virtual void SAL_CALL       handleCommand( const ::rtl::OUString &rCommand/*, sal_Bool &rQuit*/ );
++    ::std::list< ::rtl::OUString > SAL_CALL tokenize( const ::rtl::OUString &rCommand );
++};
++
++#endif // _UNXCOMMANDTHREAD_HXX_
+--- fpicker/source/unx/kde_unx/UnxFPentry.cxx
++++ fpicker/source/unx/kde_unx/UnxFPentry.cxx
+@@ -0,0 +1,169 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): _______________________________________
++ *
++ *
++ ************************************************************************/
++
++#ifndef _CPPUHELPER_FACTORY_HXX_
++#include <cppuhelper/factory.hxx>
++#endif
++
++#ifndef _COM_SUN_STAR_CONTAINER_XSET_HPP_
++#include <com/sun/star/container/XSet.hpp>
++#endif
++
++#ifndef _OSL_DIAGNOSE_H_
++#include <osl/diagnose.h>
++#endif
++
++#ifndef _UNXFILEPICKER_HXX_
++#include "UnxFilePicker.hxx"
++#endif
++
++#ifndef _FPSERVICEINFO_HXX_
++#include "FPServiceInfo.hxx"
++#endif
++
++using namespace ::rtl;
++using namespace ::com::sun::star::uno;
++using namespace ::com::sun::star::container;
++using namespace ::com::sun::star::lang;
++using namespace ::com::sun::star::registry;
++using namespace ::cppu;
++using ::com::sun::star::ui::dialogs::XFilePicker;
++
++//////////////////////////////////////////////////////////////////////////
++// 
++//////////////////////////////////////////////////////////////////////////
++
++static Reference< XInterface > SAL_CALL createInstance( const Reference< XMultiServiceFactory >& rServiceManager )
++{
++    return Reference< XInterface >( 
++            static_cast< XFilePicker* >( new UnxFilePicker( rServiceManager ) ) );
++}
++
++//////////////////////////////////////////////////////////////////////////
++// the three uno functions that will be exported
++//////////////////////////////////////////////////////////////////////////
++
++extern "C" 
++{
++
++//////////////////////////////////////////////////////////////////////////
++// component_getImplementationEnvironment
++//////////////////////////////////////////////////////////////////////////
++
++void SAL_CALL component_getImplementationEnvironment( const sal_Char ** ppEnvTypeName, uno_Environment ** ppEnv )
++{
++    *ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
++}
++
++//////////////////////////////////////////////////////////////////////////
++//
++//////////////////////////////////////////////////////////////////////////
++
++sal_Bool SAL_CALL component_writeInfo( void* pServiceManager, void* pRegistryKey )
++{
++    sal_Bool bRetVal = sal_True;
++
++    if ( pRegistryKey )
++    {
++        try
++        {
++            Reference< XRegistryKey > pXNewKey( static_cast< XRegistryKey* >( pRegistryKey ) );				
++            pXNewKey->createKey( OUString::createFromAscii( FILE_PICKER_REGKEY_NAME ) );
++        }
++        catch( InvalidRegistryException& )
++        {			
++            OSL_ENSURE( sal_False, "InvalidRegistryException caught" );			
++            bRetVal = sal_False;
++        }
++    }
++
++    return bRetVal;
++}
++
++//////////////////////////////////////////////////////////////////////////
++//
++//////////////////////////////////////////////////////////////////////////
++
++void* SAL_CALL component_getFactory( const sal_Char* pImplName, uno_Interface* pSrvManager, uno_Interface* pRegistryKey )
++{
++    void* pRet = 0;
++
++    if ( pSrvManager && ( 0 == rtl_str_compare( pImplName, FILE_PICKER_IMPL_NAME ) ) )
++    {
++        Sequence< OUString > aSNS( 1 );
++        aSNS.getArray( )[0] = OUString::createFromAscii( FILE_PICKER_SERVICE_NAME );		
++
++        Reference< XSingleServiceFactory > xFactory ( createSingleFactory(
++                    reinterpret_cast< XMultiServiceFactory* > ( pSrvManager ),
++                    OUString::createFromAscii( pImplName ),
++                    createInstance,
++                    aSNS ) );
++        if ( xFactory.is() )
++        {
++            xFactory->acquire();
++            pRet = xFactory.get();
++        }			
++    }
++
++    return pRet;
++}
++
++} // extern "C"
+--- fpicker/source/unx/kde_unx/UnxFilePicker.cxx
++++ fpicker/source/unx/kde_unx/UnxFilePicker.cxx
+@@ -0,0 +1,980 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++//////////////////////////////////////////////////////////////////////////
++// includes
++//////////////////////////////////////////////////////////////////////////
++
++#ifndef _COM_SUN_STAR_LANG_DISPOSEDEXCEPTION_HPP_
++#include <com/sun/star/lang/DisposedException.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
++#include <com/sun/star/lang/XMultiServiceFactory.hpp>
++#endif
++
++#ifndef _CPPUHELPER_INTERFACECONTAINER_H_
++#include <cppuhelper/interfacecontainer.h>
++#endif
++
++#ifndef _OSL_DIAGNOSE_H_
++#include <osl/diagnose.h>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
++#include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_COMMONFILEPICKERELEMENTIDS_HPP_
++#include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_EXTENDEDFILEPICKERELEMENTIDS_HPP_
++#include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_CONTROLACTIONS_HPP_
++#include <com/sun/star/ui/dialogs/ControlActions.hpp>
++#endif
++
++#ifndef _RTL_USTRING_H_
++#include <rtl/ustring.hxx>
++#endif
++
++#ifndef _RTL_USTRBUF_HXX_
++#include <rtl/ustrbuf.hxx>
++#endif
++
++#ifndef _FPSERVICEINFO_HXX_
++#include <FPServiceInfo.hxx>
++#endif
++
++#ifndef _TOOLS_RESMGR_HXX
++#include <tools/resmgr.hxx>
++#endif
++
++#ifndef _SVTOOLS_HRC
++#include <svtools/svtools.hrc>
++#endif
++
++#ifndef _UNXFILEOPENIMPL_HXX_
++#include <UnxFilePicker.hxx>
++#endif
++
++#ifndef _UNXCOMMANDTHREAD_HXX_
++#include <UnxCommandThread.hxx>
++#endif
++
++#ifndef _UNXNOTIFYTHREAD_HXX_
++#include <UnxNotifyThread.hxx>
++#endif
++
++#include <sys/wait.h>
++#include <unistd.h>
++#include <fcntl.h>
++
++#include <iostream>
++
++using namespace ::com::sun::star;
++
++using namespace ::com::sun::star::ui::dialogs;
++using namespace ::com::sun::star::ui::dialogs::TemplateDescription;
++
++//////////////////////////////////////////////////////////////////////////
++// helper functions
++//////////////////////////////////////////////////////////////////////////
++
++namespace
++{
++    // controling event notifications    
++    const bool STARTUP_SUSPENDED = true;
++    const bool STARTUP_ALIVE     = false;
++
++    uno::Sequence<rtl::OUString> SAL_CALL FilePicker_getSupportedServiceNames()
++    {
++        uno::Sequence<rtl::OUString> aRet(3);
++        aRet[0] = rtl::OUString::createFromAscii("com.sun.star.ui.dialogs.FilePicker");
++        aRet[1] = rtl::OUString::createFromAscii("com.sun.star.ui.dialogs.SystemFilePicker");
++        aRet[2] = rtl::OUString::createFromAscii("com.sun.star.ui.dialogs.KDEFilePicker");
++        return aRet;
++    }
++}
++
++//////////////////////////////////////////////////////////////////////////
++// UnxFilePicker
++//////////////////////////////////////////////////////////////////////////
++
++UnxFilePicker::UnxFilePicker( const uno::Reference<lang::XMultiServiceFactory>& xServiceMgr )
++    : cppu::WeakComponentImplHelper8< 		
++          XFilterManager, 
++          XFilterGroupManager,
++          XFilePickerControlAccess,
++          XFilePickerNotifier,
++// TODO   XFilePreview,
++          lang::XInitialization,
++          util::XCancellable,
++          lang::XEventListener, 
++          lang::XServiceInfo>( m_rbHelperMtx ),
++          m_xServiceMgr( xServiceMgr ),
++          m_nFilePickerPid( -1 ),
++          m_nFilePickerWrite( -1 ),
++          m_nFilePickerRead( -1 ),
++          m_pNotifyThread( NULL ),
++          m_pCommandThread( NULL ),
++          m_pResMgr( CREATEVERSIONRESMGR( fps_office ) )
++{	
++}
++
++UnxFilePicker::~UnxFilePicker()
++{
++    if ( m_nFilePickerPid > 0 )
++    {
++        sendCommand( ::rtl::OUString::createFromAscii( "exit" ) );
++        waitpid( m_nFilePickerPid, NULL, 0 );
++    }
++    
++    if ( m_pCommandThread )
++    {
++        m_pCommandThread->join();
++
++        delete m_pCommandThread, m_pCommandThread = NULL;
++    }
++
++    if ( m_pNotifyThread )
++    {
++        m_pNotifyThread->exit();
++
++        m_pNotifyThread->join();
++
++        delete m_pNotifyThread, m_pNotifyThread = NULL;
++    }
++
++    if ( m_nFilePickerWrite >= 0 )
++        close( m_nFilePickerWrite );
++    
++    if ( m_nFilePickerRead >= 0 )
++        close( m_nFilePickerRead );
++
++    delete m_pResMgr, m_pResMgr = NULL;
++}
++
++void SAL_CALL UnxFilePicker::addFilePickerListener( const uno::Reference<XFilePickerListener>& xListener )
++    throw( uno::RuntimeException )
++{
++    OSL_ASSERT( m_pNotifyThread );
++    osl::MutexGuard aGuard( m_aMutex );
++
++    m_pNotifyThread->addFilePickerListener( xListener );
++}
++
++void SAL_CALL UnxFilePicker::removeFilePickerListener( const uno::Reference<XFilePickerListener>& xListener )
++    throw( uno::RuntimeException )
++{
++    OSL_ASSERT( m_pNotifyThread );
++    osl::MutexGuard aGuard( m_aMutex );
++
++    m_pNotifyThread->removeFilePickerListener( xListener );
++}
++
++void SAL_CALL UnxFilePicker::setTitle( const rtl::OUString &rTitle )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "setTitle " );
++    appendEscaped( aBuffer, rTitle );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++sal_Int16 SAL_CALL UnxFilePicker::execute()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++
++    sendCommand( ::rtl::OUString::createFromAscii( "exec" ),
++                 m_pCommandThread->execCondition() );
++
++    return m_pCommandThread->result();
++}
++
++void SAL_CALL UnxFilePicker::setMultiSelectionMode( sal_Bool bMode )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUString aString = bMode?
++        ::rtl::OUString::createFromAscii( "setMultiSelection true" ):
++        ::rtl::OUString::createFromAscii( "setMultiSelection false" );
++
++    sendCommand( aString );
++}
++
++void SAL_CALL UnxFilePicker::setDefaultName( const ::rtl::OUString &rName )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "setDefaultName " );
++    appendEscaped( aBuffer, rName );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++void SAL_CALL UnxFilePicker::setDisplayDirectory( const rtl::OUString &rDirectory )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "setDirectory " );
++    appendEscaped( aBuffer, rDirectory );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++rtl::OUString SAL_CALL UnxFilePicker::getDisplayDirectory()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    sendCommand( ::rtl::OUString::createFromAscii( "getDirectory" ),
++                 m_pCommandThread->getDirectoryCondition() );
++
++    return m_pCommandThread->getDirectory();
++}
++
++uno::Sequence< ::rtl::OUString > SAL_CALL UnxFilePicker::getFiles()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    sendCommand( ::rtl::OUString::createFromAscii( "getFiles" ),
++                 m_pCommandThread->getFilesCondition() );
++
++    return m_pCommandThread->getFiles();
++}
++
++void SAL_CALL UnxFilePicker::appendFilter( const ::rtl::OUString &rTitle, const ::rtl::OUString &rFilter )
++    throw( lang::IllegalArgumentException, uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "appendFilter " );
++    appendEscaped( aBuffer, rTitle );
++    aBuffer.appendAscii( " ", 1 );
++    appendEscaped( aBuffer, rFilter );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++void SAL_CALL UnxFilePicker::setCurrentFilter( const rtl::OUString &rTitle )
++    throw( lang::IllegalArgumentException, uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "setCurrentFilter " );
++    appendEscaped( aBuffer, rTitle );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++rtl::OUString SAL_CALL UnxFilePicker::getCurrentFilter()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    sendCommand( ::rtl::OUString::createFromAscii( "getCurrentFilter" ),
++                 m_pCommandThread->getCurrentFilterCondition() );
++
++    return m_pCommandThread->getCurrentFilter();
++}
++
++void SAL_CALL UnxFilePicker::appendFilterGroup( const rtl::OUString &rGroupTitle, const uno::Sequence<beans::StringPair> &rFilters )
++    throw( lang::IllegalArgumentException, uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "appendFilterGroup " );
++    appendEscaped( aBuffer, rGroupTitle );
++    
++    for ( sal_Int32 i = 0; i < rFilters.getLength(); ++i )
++    {
++        beans::StringPair aPair = rFilters[i];
++
++        aBuffer.appendAscii( " ", 1 );
++        appendEscaped( aBuffer, aPair.First );
++        aBuffer.appendAscii( " ", 1 );
++        appendEscaped( aBuffer, aPair.Second );
++    }
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++void SAL_CALL UnxFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControlAction, const uno::Any &rValue )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUString aType;
++    ::rtl::OUString aAction;
++    sal_Int32 nTitleId;
++
++    if ( controlIdInfo( nControlId, aType, nTitleId ) && controlActionInfo( nControlAction, aAction ) )
++    {
++        ::rtl::OUStringBuffer aBuffer( 1024 );
++
++        aBuffer.appendAscii( "setValue " );
++        aBuffer.append( static_cast< sal_Int32 >( nControlId ) );
++        aBuffer.appendAscii( " ", 1 );
++        aBuffer.append( aAction );
++
++        if ( aType.equalsAscii( "checkbox" ) )
++        {
++            sal_Bool bControlValue;
++            if ( ( rValue >>= bControlValue ) && bControlValue )
++                aBuffer.appendAscii( " true" );
++            else
++                aBuffer.appendAscii( " false" );
++        }
++        else if ( aType.equalsAscii( "listbox" ) )
++        {
++            switch ( nControlAction )
++            {
++                case ControlActions::ADD_ITEM:
++                case ControlActions::SET_HELP_URL:
++                    {
++                        ::rtl::OUString aString;
++                        if ( rValue >>= aString )
++                        {
++                            aBuffer.appendAscii( " ", 1 );
++                            appendEscaped( aBuffer, aString );
++                        }
++                    }
++                    break;
++
++                case ControlActions::ADD_ITEMS:
++                    {
++                        uno::Sequence< ::rtl::OUString > aSequence;
++                        if ( rValue >>= aSequence )
++                        {
++                            for ( sal_Int32 nIdx = 0; nIdx < aSequence.getLength(); ++nIdx )
++                            {
++                                aBuffer.appendAscii( " ", 1 );
++                                appendEscaped( aBuffer, aSequence[nIdx] );
++                            }
++
++                        }
++                    }
++                    break;
++
++                case ControlActions::DELETE_ITEM:
++                case ControlActions::SET_SELECT_ITEM:
++                    {
++                        sal_Int32 nInt;
++                        if ( rValue >>= nInt )
++                        {
++                            aBuffer.appendAscii( " ", 1 );
++                            aBuffer.append( nInt );
++                        }
++                    }
++                    break;
++
++                default:
++                    // nothing
++                    break;
++            }
++        }
++        // TODO else if push button...
++
++        sendCommand( aBuffer.makeStringAndClear() );
++    }
++}
++
++uno::Any SAL_CALL UnxFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlAction )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUString aAction;
++    
++    if ( controlActionInfo( nControlAction, aAction ) )
++    {
++        ::rtl::OUStringBuffer aBuffer( 1024 );
++
++        aBuffer.appendAscii( "getValue " );
++        aBuffer.append( static_cast< sal_Int32 >( nControlId ) );
++        aBuffer.appendAscii( " ", 1 );
++        aBuffer.append( aAction );
++
++        sendCommand( aBuffer.makeStringAndClear(),
++                m_pCommandThread->getValueCondition() );
++
++        return m_pCommandThread->getValue();
++    }
++    
++    return uno::Any();
++}
++
++void SAL_CALL UnxFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEnable )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "enableControl " );
++    aBuffer.append( static_cast< sal_Int32 >( nControlId ) );
++    aBuffer.appendAscii( bEnable? " true": " false" );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++void SAL_CALL UnxFilePicker::setLabel( sal_Int16 nControlId, const ::rtl::OUString &rLabel )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    ::rtl::OUStringBuffer aBuffer( 1024 );
++
++    aBuffer.appendAscii( "setLabel " );
++    aBuffer.append( static_cast< sal_Int32 >( nControlId ) );
++    aBuffer.appendAscii( " ", 1 );
++    appendEscaped( aBuffer, rLabel );
++
++    sendCommand( aBuffer.makeStringAndClear() );
++}
++
++rtl::OUString SAL_CALL UnxFilePicker::getLabel(sal_Int16 nControlId) 
++    throw ( uno::RuntimeException )
++{
++    // FIXME getLabel() is not yet implemented
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    // TODO return m_pImpl->getLabel(nControlId);
++    return ::rtl::OUString();
++}
++
++/* TODO
++uno::Sequence<sal_Int16> SAL_CALL UnxFilePicker::getSupportedImageFormats()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_pImpl->getSupportedImageFormats();
++}
++
++sal_Int32 SAL_CALL UnxFilePicker::getTargetColorDepth()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_pImpl->getTargetColorDepth();
++}
++
++sal_Int32 SAL_CALL UnxFilePicker::getAvailableWidth()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_pImpl->getAvailableWidth();
++}
++
++sal_Int32 SAL_CALL UnxFilePicker::getAvailableHeight()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_pImpl->getAvailableHeight();
++}
++
++void SAL_CALL UnxFilePicker::setImage( sal_Int16 aImageFormat, const uno::Any &rImage ) 
++    throw( lang::IllegalArgumentException, uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    m_pImpl->setImage( aImageFormat, aImage );
++}
++
++sal_Bool SAL_CALL UnxFilePicker::setShowState( sal_Bool bShowState )
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );   
++
++    return m_pImpl->setShowState( bShowState );
++}
++
++sal_Bool SAL_CALL UnxFilePicker::getShowState()
++    throw( uno::RuntimeException )
++{
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    return m_pImpl->getShowState();
++}
++*/
++
++void SAL_CALL UnxFilePicker::initialize( const uno::Sequence<uno::Any> &rArguments ) 
++    throw( uno::Exception, uno::RuntimeException )
++{
++    initFilePicker();
++
++    // parameter checking	    
++    uno::Any aAny;
++    if ( 0 == rArguments.getLength( ) )
++        throw lang::IllegalArgumentException(
++                rtl::OUString::createFromAscii( "no arguments" ),
++                static_cast< XFilePicker* >( this ), 1 );
++
++    aAny = rArguments[0];
++
++    if ( ( aAny.getValueType() != ::getCppuType( (sal_Int16*)0 ) ) && ( aAny.getValueType() != ::getCppuType( (sal_Int8*)0 ) ) )
++        throw lang::IllegalArgumentException(
++                rtl::OUString::createFromAscii( "invalid argument type" ),
++                static_cast< XFilePicker* >( this ), 1 );
++
++    sal_Int16 templateId = -1;
++    aAny >>= templateId;
++
++    ::rtl::OUString aTypeOpen   = ::rtl::OUString::createFromAscii( "setType \"open\"" );
++    ::rtl::OUString aTypeSaveAs = ::rtl::OUString::createFromAscii( "setType \"save\"" );
++
++    switch ( templateId )
++    {
++        case FILEOPEN_SIMPLE:
++            sendCommand( aTypeOpen );
++            break;
++
++        case FILESAVE_SIMPLE:
++            sendCommand( aTypeSaveAs );
++            break;
++
++        case FILESAVE_AUTOEXTENSION_PASSWORD:
++            sendCommand( aTypeSaveAs );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD );
++            break;
++
++        case FILESAVE_AUTOEXTENSION_PASSWORD_FILTEROPTIONS:
++            sendCommand( aTypeSaveAs );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS );
++            break;
++
++        case FILESAVE_AUTOEXTENSION_SELECTION:
++            sendCommand( aTypeSaveAs );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_SELECTION );
++            break;
++
++        case FILESAVE_AUTOEXTENSION_TEMPLATE:
++            sendCommand( aTypeSaveAs );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::LISTBOX_TEMPLATE );
++            break;
++
++        case FILEOPEN_LINK_PREVIEW_IMAGE_TEMPLATE:
++            sendCommand( aTypeOpen );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_LINK );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE );
++            break;
++
++        case FILEOPEN_PLAY:        
++            sendCommand( aTypeOpen );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::PUSHBUTTON_PLAY );
++            break;
++
++        case FILEOPEN_READONLY_VERSION:
++            sendCommand( aTypeOpen );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_READONLY );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::LISTBOX_VERSION );
++            break;
++
++        case FILEOPEN_LINK_PREVIEW:
++            sendCommand( aTypeOpen );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_LINK );
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW );
++            break;
++
++        case FILESAVE_AUTOEXTENSION:
++            sendCommand( aTypeSaveAs );
++
++            sendAppendControlCommand( ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION );
++            break;
++
++        default:
++            throw lang::IllegalArgumentException(
++                    rtl::OUString::createFromAscii( "Unknown template" ),
++                    static_cast< XFilePicker* >( this ),
++                    1 );
++    }
++}
++
++void SAL_CALL UnxFilePicker::cancel()
++    throw ( uno::RuntimeException )
++{
++    // FIXME cancel() is not implemented
++    checkFilePicker();
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    // TODO m_pImpl->cancel();    
++}
++
++void SAL_CALL UnxFilePicker::disposing( const lang::EventObject &rEvent )
++    throw( uno::RuntimeException )
++{
++    uno::Reference<XFilePickerListener> xFilePickerListener( rEvent.Source, uno::UNO_QUERY );
++
++    if ( xFilePickerListener.is() )
++        removeFilePickerListener( xFilePickerListener );
++}
++
++rtl::OUString SAL_CALL UnxFilePicker::getImplementationName() 
++    throw( uno::RuntimeException )
++{
++    return rtl::OUString::createFromAscii( FILE_PICKER_IMPL_NAME );
++}
++
++sal_Bool SAL_CALL UnxFilePicker::supportsService( const rtl::OUString& ServiceName ) 
++    throw( uno::RuntimeException )
++{
++    uno::Sequence< ::rtl::OUString > SupportedServicesNames = FilePicker_getSupportedServiceNames();
++
++    for ( sal_Int32 n = SupportedServicesNames.getLength(); n--; )
++    {
++        if ( SupportedServicesNames[n].compareTo( ServiceName ) == 0 )
++            return sal_True;
++    }
++
++    return sal_False;
++}
++
++uno::Sequence< ::rtl::OUString > SAL_CALL UnxFilePicker::getSupportedServiceNames() 
++    throw( uno::RuntimeException )
++{
++    return FilePicker_getSupportedServiceNames();
++}
++
++void UnxFilePicker::initFilePicker()
++{
++    int aFiledesStdin[2], aFiledesStdout[2];
++    if ( pipe( aFiledesStdin ) < 0 || pipe( aFiledesStdout ) < 0 )
++        return;
++
++    m_nFilePickerPid = fork();
++    if ( m_nFilePickerPid < 0 )
++        return;
++
++    if ( m_nFilePickerPid == 0 )
++    {
++        // Child...
++        close( aFiledesStdin[1] ); // write end of the pipe
++        dup2(  aFiledesStdin[0], 0 );
++        close( aFiledesStdin[0] );
++
++        close( aFiledesStdout[0] ); // read end of the pipe
++        dup2(  aFiledesStdout[1], 1 );
++        close( aFiledesStdout[1] );
++        
++#if OSL_DEBUG_LEVEL == 0
++        int nRedirect = open( "/dev/null", O_WRONLY );
++        if( nRedirect != -1 )
++        {
++            dup2( nRedirect, 2 );
++        }
++#endif
++
++        // FIXME: window id, etc.
++        const char *pFname = "kdefilepicker";
++
++        execlp( pFname, pFname, NULL );
++
++        // Error, finish the child
++        exit( -1 );
++    }
++
++    // Parent continues
++    close( aFiledesStdin[0] );
++    m_nFilePickerWrite = aFiledesStdin[1];
++
++    close( aFiledesStdout[1] );
++    m_nFilePickerRead = aFiledesStdout[0];
++
++    // Create the notify thread
++    if ( !m_pNotifyThread )
++        m_pNotifyThread = new UnxFilePickerNotifyThread( this );
++    
++    // Create the command thread
++    if ( !m_pCommandThread )
++        m_pCommandThread = new UnxFilePickerCommandThread( m_pNotifyThread, m_nFilePickerRead );
++
++    // Start the threads
++    m_pNotifyThread->create();
++    m_pCommandThread->create();
++
++    return;
++}
++
++void UnxFilePicker::checkFilePicker() throw( ::com::sun::star::uno::RuntimeException )
++{
++    if ( m_nFilePickerPid > 0 )
++    {
++        // TODO check if external file picker is runnning
++    }
++    else
++    {
++        throw uno::RuntimeException(
++                ::rtl::OUString::createFromAscii( "the external file picker does not run" ),
++                *this );
++    }
++}
++
++void UnxFilePicker::sendCommand( const ::rtl::OUString &rCommand )
++{
++    if ( m_nFilePickerWrite < 0 )
++        return;
++
++    ::rtl::OString aUtfString = OUStringToOString( rCommand + ::rtl::OUString::createFromAscii( "\n" ), RTL_TEXTENCODING_UTF8 );
++
++#if OSL_DEBUG_LEVEL > 0
++    ::std::cerr << "UnxFilePicker sent: \"" << aUtfString.getStr() << "\"" << ::std::endl;
++#endif
++    
++    write( m_nFilePickerWrite, aUtfString.getStr(), aUtfString.getLength() );
++}
++
++void UnxFilePicker::sendCommand( const ::rtl::OUString &rCommand, ::osl::Condition &rCondition )
++{
++    rCondition.reset();
++    
++    sendCommand( rCommand );
++
++    rCondition.wait();
++}
++
++void UnxFilePicker::appendEscaped( ::rtl::OUStringBuffer &rBuffer, const ::rtl::OUString &rString )
++{
++    const sal_Unicode *pUnicode = rString.getStr();
++    const sal_Unicode *pEnd     = pUnicode + rString.getLength();
++
++    rBuffer.appendAscii( "\"" , 1 );
++    
++    for ( ; pUnicode != pEnd; ++pUnicode )
++    {
++        if ( *pUnicode == '\\' )
++            rBuffer.appendAscii( "\\\\", 2 );
++        else if ( *pUnicode == '"' )
++            rBuffer.appendAscii( "\\\"", 2 );
++        else if ( *pUnicode == '\n' )
++            rBuffer.appendAscii( "\\n", 2 );
++        else
++            rBuffer.append( *pUnicode );
++    }
++    
++    rBuffer.appendAscii( "\"", 1 );
++}
++
++sal_Bool UnxFilePicker::controlIdInfo( sal_Int16 nControlId, ::rtl::OUString &rType, sal_Int32 &rTitleId )
++{
++    typedef struct {
++        sal_Int16 nId;
++        const ::rtl::OUString *pType;
++        sal_Int32 nTitle;
++    } ElementToName;
++
++    const ::rtl::OUString aCheckBox( RTL_CONSTASCII_USTRINGPARAM(   "checkbox" ) );
++    const ::rtl::OUString aControl( RTL_CONSTASCII_USTRINGPARAM(    "control" ) );
++    const ::rtl::OUString aEdit( RTL_CONSTASCII_USTRINGPARAM(       "edit" ) );
++    const ::rtl::OUString aLabel( RTL_CONSTASCII_USTRINGPARAM(      "label" ) );
++    const ::rtl::OUString aListBox( RTL_CONSTASCII_USTRINGPARAM(    "listbox" ) );
++    const ::rtl::OUString aPushButton( RTL_CONSTASCII_USTRINGPARAM( "pushbutton" ) );
++    
++    const ElementToName *pPtr;
++    const ElementToName pArray[] =
++    {
++        { CommonFilePickerElementIds::PUSHBUTTON_OK,            &aPushButton, 0/*FIXME?*/ },
++        { CommonFilePickerElementIds::PUSHBUTTON_CANCEL,        &aPushButton, 0/*FIXME?*/ },
++        { CommonFilePickerElementIds::LISTBOX_FILTER,           &aListBox,    0/*FIXME?*/ },
++        { CommonFilePickerElementIds::CONTROL_FILEVIEW,         &aControl,    0/*FIXME?*/ },
++        { CommonFilePickerElementIds::EDIT_FILEURL,             &aEdit,       0/*FIXME?*/ },
++        { CommonFilePickerElementIds::LISTBOX_FILTER_LABEL,     &aLabel,      0/*FIXME?*/ },
++        { CommonFilePickerElementIds::EDIT_FILEURL_LABEL,       &aLabel,      0/*FIXME?*/ },
++        
++        { ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION, &aCheckBox,   STR_SVT_FILEPICKER_AUTO_EXTENSION },
++        { ExtendedFilePickerElementIds::CHECKBOX_PASSWORD,      &aCheckBox,   STR_SVT_FILEPICKER_PASSWORD },
++        { ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS, &aCheckBox,   STR_SVT_FILEPICKER_FILTER_OPTIONS },
++        { ExtendedFilePickerElementIds::CHECKBOX_READONLY,      &aCheckBox,   STR_SVT_FILEPICKER_READONLY },
++        { ExtendedFilePickerElementIds::CHECKBOX_LINK,          &aCheckBox,   STR_SVT_FILEPICKER_INSERT_AS_LINK },
++        { ExtendedFilePickerElementIds::CHECKBOX_PREVIEW,       &aCheckBox,   STR_SVT_FILEPICKER_SHOW_PREVIEW },
++        { ExtendedFilePickerElementIds::PUSHBUTTON_PLAY,        &aPushButton, STR_SVT_FILEPICKER_PLAY },
++        { ExtendedFilePickerElementIds::LISTBOX_VERSION,        &aListBox,    STR_SVT_FILEPICKER_VERSION },
++        { ExtendedFilePickerElementIds::LISTBOX_TEMPLATE,       &aListBox,    STR_SVT_FILEPICKER_TEMPLATES },
++        { ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE, &aListBox,    STR_SVT_FILEPICKER_IMAGE_TEMPLATE },
++        { ExtendedFilePickerElementIds::CHECKBOX_SELECTION,     &aCheckBox,   STR_SVT_FILEPICKER_SELECTION },
++        { 0, 0, 0 }
++    };
++    
++    for ( pPtr = pArray; pPtr->nId && ( pPtr->nId != nControlId ); ++pPtr )
++        ;
++
++    if ( pPtr->nId == nControlId )
++    {
++        rType = *(pPtr->pType);
++        rTitleId = pPtr->nTitle;
++
++        return sal_True;
++    }
++
++    return sal_False;
++}
++
++sal_Bool UnxFilePicker::controlActionInfo( sal_Int16 nControlAction, ::rtl::OUString &rType )
++{
++    typedef struct {
++        sal_Int16 nId;
++        const ::rtl::OUString pType;
++    } ElementToName;
++
++    const ElementToName *pPtr;
++    const ElementToName pArray[] =
++    {
++        { ControlActions::ADD_ITEM,                ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "addItem" ) ) },
++        { ControlActions::ADD_ITEMS,               ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "addItems" ) ) },
++        { ControlActions::DELETE_ITEM,             ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "deleteItem" ) ) },
++        { ControlActions::DELETE_ITEMS,            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "deleteItems" ) ) },
++        { ControlActions::SET_SELECT_ITEM,         ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "setSelectedItem" ) ) },
++        { ControlActions::GET_ITEMS,               ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "getItems" ) ) },
++        { ControlActions::GET_SELECTED_ITEM,       ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "getSelectedItem" ) ) },
++        { ControlActions::GET_SELECTED_ITEM_INDEX, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "getSelectedItemIndex" ) ) },
++        { ControlActions::SET_HELP_URL,            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "setHelpURL" ) ) },
++        { ControlActions::GET_HELP_URL,            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "getHelpURL" ) ) },
++        { 0,                                       ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "noAction" ) ) }
++    };
++
++    for ( pPtr = pArray; pPtr->nId && ( pPtr->nId != nControlAction ); ++pPtr )
++        ;
++
++    rType = pPtr->pType;
++
++    return sal_True;
++}
++
++void UnxFilePicker::sendAppendControlCommand( sal_Int16 nControlId )
++{
++    ::rtl::OUString aType;
++    sal_Int32 nTitleId;
++
++    if ( controlIdInfo( nControlId, aType, nTitleId ) )
++    {
++        ::rtl::OUStringBuffer aBuffer( 1024 );
++        
++        aBuffer.appendAscii( "appendControl " );
++        aBuffer.append( static_cast< sal_Int32 >( nControlId ) );
++        aBuffer.appendAscii( " ", 1 );
++        appendEscaped( aBuffer, aType );
++        aBuffer.appendAscii( " ", 1 );
++        appendEscaped( aBuffer, String( ResId( nTitleId, m_pResMgr ) ) );
++
++        sendCommand( aBuffer.makeStringAndClear() );
++    }
++}
+--- fpicker/source/unx/kde_unx/UnxFilePicker.hxx
++++ fpicker/source/unx/kde_unx/UnxFilePicker.hxx
+@@ -0,0 +1,241 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _UNXFILEPICKER_HXX_
++#define _UNXFILEPICKER_HXX_
++
++#ifndef _CPPUHELPER_COMPBASE8_HXX_
++#include <cppuhelper/compbase8.hxx>
++#endif
++
++#ifndef _OSL_CONDITN_HXX_
++#include <osl/conditn.hxx>
++#endif
++
++#ifndef _OSL_MUTEX_HXX_
++#include <osl/mutex.hxx>
++#endif
++
++#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
++#include <com/sun/star/lang/XInitialization.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
++#include <com/sun/star/lang/XServiceInfo.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERNOTIFIER_HPP_
++#include <com/sun/star/ui/dialogs/XFilePickerNotifier.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILTERMANAGER_HPP_
++#include <com/sun/star/ui/dialogs/XFilterManager.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILTERGROUPMANAGER_HPP_
++#include <com/sun/star/ui/dialogs/XFilterGroupManager.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERCONTROLACCESS_HPP_
++#include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILEPREVIEW_HPP_
++#include <com/sun/star/ui/dialogs/XFilePreview.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UTIL_XCANCELLABLE_HPP_
++#include <com/sun/star/util/XCancellable.hpp>
++#endif
++
++#ifndef _RTL_USTRBUF_HXX_
++#include <rtl/ustrbuf.hxx>
++#endif
++
++#include <list>
++
++class UnxFilePickerCommandThread;
++class UnxFilePickerNotifyThread;
++class ResMgr;
++
++class UnxFilePickerDummy
++{
++protected:
++    osl::Mutex                  m_aMutex;
++    osl::Mutex                  m_rbHelperMtx;
++};
++
++class UnxFilePicker : 
++    public UnxFilePickerDummy,
++    public cppu::WeakComponentImplHelper8<
++        ::com::sun::star::ui::dialogs::XFilterManager,
++        ::com::sun::star::ui::dialogs::XFilterGroupManager,
++        ::com::sun::star::ui::dialogs::XFilePickerControlAccess,
++        ::com::sun::star::ui::dialogs::XFilePickerNotifier,
++// TODO ::com::sun::star::ui::dialogs::XFilePreview,
++        ::com::sun::star::lang::XInitialization,
++        ::com::sun::star::util::XCancellable,
++        ::com::sun::star::lang::XEventListener,
++        ::com::sun::star::lang::XServiceInfo >		
++{
++protected:
++    ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > m_xServiceMgr;   // to instanciate own services		
++
++    pid_t                       m_nFilePickerPid;
++    int                         m_nFilePickerWrite; // (kde|...)filepicker gets it as stdin
++    int                         m_nFilePickerRead;  // (kde|...)filepicker gets it as stdout
++
++    UnxFilePickerNotifyThread  *m_pNotifyThread;
++    UnxFilePickerCommandThread *m_pCommandThread;
++
++    ResMgr                     *m_pResMgr;
++
++public:
++    UnxFilePicker( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xServiceMgr );
++    virtual ~UnxFilePicker();
++
++    // XFilePickerNotifier
++
++    virtual void SAL_CALL       addFilePickerListener( const ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual void SAL_CALL       removeFilePickerListener( const ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException );
++
++    // XExecutableDialog functions
++
++    virtual void SAL_CALL       setTitle( const ::rtl::OUString &rTitle ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual sal_Int16 SAL_CALL  execute() throw( ::com::sun::star::uno::RuntimeException );
++
++    // XFilePicker functions
++
++    virtual void SAL_CALL       setMultiSelectionMode( sal_Bool bMode ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual void SAL_CALL       setDefaultName( const ::rtl::OUString &rName ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual void SAL_CALL       setDisplayDirectory( const ::rtl::OUString &rDirectory ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual ::rtl::OUString SAL_CALL getDisplayDirectory() throw( ::com::sun::star::uno::RuntimeException );
++    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getFiles() throw( ::com::sun::star::uno::RuntimeException );
++
++    // XFilterManager functions
++
++    virtual void SAL_CALL       appendFilter( const ::rtl::OUString &rTitle, const ::rtl::OUString &rFilter ) throw( ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException );
++    virtual void SAL_CALL       setCurrentFilter( const ::rtl::OUString &rTitle ) throw( ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException );
++    virtual ::rtl::OUString SAL_CALL getCurrentFilter() throw( ::com::sun::star::uno::RuntimeException );
++
++    // XFilterGroupManager functions
++
++    virtual void SAL_CALL       appendFilterGroup( const ::rtl::OUString &rGroupTitle, const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::StringPair > &rFilters ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
++
++    // XFilePickerControlAccess functions
++
++    virtual void SAL_CALL       setValue( sal_Int16 nControlId, sal_Int16 nControlAction, const ::com::sun::star::uno::Any &rValue ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Any SAL_CALL getValue( sal_Int16 nControlId, sal_Int16 nControlAction ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL       enableControl( sal_Int16 nControlId, sal_Bool bEnable ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual void SAL_CALL       setLabel( sal_Int16 nControlId, const ::rtl::OUString &rLabel ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::rtl::OUString SAL_CALL getLabel( sal_Int16 nControlId ) throw (::com::sun::star::uno::RuntimeException);
++
++    /* TODO XFilePreview
++
++    virtual ::com::sun::star::uno::Sequence< sal_Int16 > SAL_CALL getSupportedImageFormats(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Int32 SAL_CALL  getTargetColorDepth(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Int32 SAL_CALL  getAvailableWidth(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Int32 SAL_CALL  getAvailableHeight(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL       setImage( sal_Int16 aImageFormat, const ::com::sun::star::uno::Any &rImage ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL   setShowState( sal_Bool bShowState ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL   getShowState(  ) throw (::com::sun::star::uno::RuntimeException);
++    */
++
++    // XInitialization
++
++    virtual void SAL_CALL       initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any > &rArguments ) throw( ::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException );
++
++    // XCancellable
++
++    virtual void SAL_CALL       cancel( ) throw( ::com::sun::star::uno::RuntimeException );
++
++    // XEventListener
++
++    virtual void SAL_CALL       disposing( const ::com::sun::star::lang::EventObject &rEvent ) throw( ::com::sun::star::uno::RuntimeException );
++
++    // XServiceInfo
++
++    virtual ::rtl::OUString SAL_CALL getImplementationName() throw( ::com::sun::star::uno::RuntimeException );
++    virtual sal_Bool SAL_CALL   supportsService( const ::rtl::OUString &rServiceName ) throw( ::com::sun::star::uno::RuntimeException );
++    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames() throw( ::com::sun::star::uno::RuntimeException );
++
++private:
++    // prevent copy and assignment
++    UnxFilePicker( const UnxFilePicker& );           
++    UnxFilePicker& operator=( const UnxFilePicker& );
++
++protected:
++    void                        initFilePicker();
++    void                        checkFilePicker() throw( ::com::sun::star::uno::RuntimeException );
++
++    // Async sendCommand
++    void                        sendCommand( const ::rtl::OUString &rCommand );
++    // Synchronized sendCommand
++    void                        sendCommand( const ::rtl::OUString &rCommand, ::osl::Condition &rCondition );
++    void                        appendEscaped( ::rtl::OUStringBuffer &rBuffer, const ::rtl::OUString &rString );
++
++private:
++    sal_Bool                    controlIdInfo( sal_Int16 nControlId, ::rtl::OUString &rType, sal_Int32 &rTitleId );
++    sal_Bool                    controlActionInfo( sal_Int16 nControlId, ::rtl::OUString &rType );
++    void                        sendAppendControlCommand( sal_Int16 nControlId );
++}; 
++
++#endif // _UNXFILEPICKER_HXX_
+--- fpicker/source/unx/kde_unx/UnxNotifyThread.cxx
++++ fpicker/source/unx/kde_unx/UnxNotifyThread.cxx
+@@ -0,0 +1,150 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _UNXNOTIFYTHREAD_HXX_
++#include <UnxNotifyThread.hxx>
++#endif
++
++#ifndef _UNXFILEOPENIMPL_HXX_
++#include <UnxFilePicker.hxx>
++#endif
++
++using namespace ::com::sun::star;
++
++//////////////////////////////////////////////////////////////////////////
++// UnxFilePickerNotifyThread
++//////////////////////////////////////////////////////////////////////////
++
++UnxFilePickerNotifyThread::UnxFilePickerNotifyThread( UnxFilePicker *pUnxFilePicker )
++    : m_pUnxFilePicker( pUnxFilePicker ),
++      m_bExit( sal_False ),
++      m_eNotifyType( Nothing ),
++      m_nControlId( 0 )
++{
++}
++
++void SAL_CALL UnxFilePickerNotifyThread::addFilePickerListener( const uno::Reference< ui::dialogs::XFilePickerListener >& xListener )
++    throw( uno::RuntimeException )
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    m_xListener = xListener;
++}
++
++void SAL_CALL UnxFilePickerNotifyThread::removeFilePickerListener( const uno::Reference< ui::dialogs::XFilePickerListener >& xListener ) 
++    throw( uno::RuntimeException )
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    m_xListener.clear();
++}
++
++void SAL_CALL UnxFilePickerNotifyThread::exit()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    m_bExit = sal_True;
++
++    m_aExitCondition.reset();
++    m_aNotifyCondition.set();
++    
++    m_aExitCondition.wait();
++}
++
++void SAL_CALL UnxFilePickerNotifyThread::fileSelectionChanged()
++{
++    ::osl::MutexGuard aGuard( m_aMutex );
++
++    m_eNotifyType = FileSelectionChanged;
++    m_nControlId = 0;
++    
++    m_aNotifyCondition.set();
++}
++
++void SAL_CALL UnxFilePickerNotifyThread::run()
++{
++    do {
++        m_aNotifyCondition.reset();
++        m_aNotifyCondition.wait();
++
++        if ( m_xListener.is() && m_pUnxFilePicker )
++        {
++            ::osl::MutexGuard aGuard( m_aMutex );
++
++            ui::dialogs::FilePickerEvent aEvent( *m_pUnxFilePicker, m_nControlId );
++
++            switch ( m_eNotifyType )
++            {
++                case FileSelectionChanged:
++                    m_xListener->fileSelectionChanged( aEvent );
++                    break;
++
++                // TODO More to come...
++
++                default:
++                    // nothing
++                    break;
++            }
++        }
++    } while ( !m_bExit );
++
++    m_aExitCondition.set();
++}
+--- fpicker/source/unx/kde_unx/UnxNotifyThread.hxx
++++ fpicker/source/unx/kde_unx/UnxNotifyThread.hxx
+@@ -0,0 +1,132 @@
++/*************************************************************************
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *  The Contents of this file are made available subject to the terms of
++ *  either of the following licenses
++ *
++ *         - GNU Lesser General Public License Version 2.1
++ *         - Sun Industry Standards Source License Version 1.1
++ *
++ *  Sun Microsystems Inc., October, 2000
++ *
++ *  GNU Lesser General Public License Version 2.1
++ *  =============================================
++ *  Copyright 2000 by Sun Microsystems, Inc.
++ *  901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public
++ *  License version 2.1, as published by the Free Software Foundation.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *  MA  02111-1307  USA
++ *
++ *
++ *  Sun Industry Standards Source License Version 1.1
++ *  =================================================
++ *  The contents of this file are subject to the Sun Industry Standards
++ *  Source License Version 1.1 (the "License"); You may not use this file
++ *  except in compliance with the License. You may obtain a copy of the
++ *  License at http://www.openoffice.org/license.html.
++ *
++ *  Software provided under this License is provided on an "AS IS" basis,
++ *  WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++ *  WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++ *  MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++ *  See the License for the specific provisions governing your rights and
++ *  obligations concerning the Software.
++ *
++ *  The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++ *
++ *  Copyright: 2000 by Sun Microsystems, Inc.
++ *
++ *  All Rights Reserved.
++ *
++ *  Contributor(s): Jan Holesovsky <kendy@openoffice.org>
++ *
++ *
++ ************************************************************************/
++
++#ifndef _UNXNOTIFYTHREAD_HXX_
++#define _UNXNOTIFYTHREAD_HXX_
++
++#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERLISTENER_HPP_
++#include <com/sun/star/ui/dialogs/XFilePickerListener.hpp>
++#endif
++
++#ifndef _COM_SUN_STAR_UNO_REFERENCE_HXX_
++#include <com/sun/star/uno/Reference.hxx>
++#endif
++
++#ifndef _OSL_CONDITN_HXX_
++#include <osl/conditn.hxx>
++#endif
++
++#ifndef _OSL_MUTEX_HXX_
++#include <osl/mutex.hxx>
++#endif
++
++#ifndef _OSL_THREAD_HXX_
++#include <osl/thread.hxx>
++#endif
++
++class UnxFilePicker;
++
++class UnxFilePickerNotifyThread : public ::osl::Thread
++{
++protected:
++    enum NotifyType
++    {
++        Nothing = 0,
++        FileSelectionChanged
++	// TODO More to come...
++    };
++
++    UnxFilePicker              *m_pUnxFilePicker;
++
++    ::osl::Mutex                m_aMutex;
++
++    ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener > m_xListener;
++
++    sal_Bool                    m_bExit;
++    ::osl::Condition            m_aExitCondition;
++
++    NotifyType                  m_eNotifyType;
++    ::osl::Condition            m_aNotifyCondition;
++    sal_Int16                   m_nControlId;
++    
++public:
++    UnxFilePickerNotifyThread( UnxFilePicker *pUnxFilePicker );
++
++    virtual void SAL_CALL addFilePickerListener( const ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener >& xListener ) 
++        throw( ::com::sun::star::uno::RuntimeException );
++    virtual void SAL_CALL removeFilePickerListener( const ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener >& xListener ) 
++        throw( ::com::sun::star::uno::RuntimeException );
++
++    void SAL_CALL               exit();
++
++    void SAL_CALL               fileSelectionChanged();
++    /* TODO
++    void SAL_CALL directoryChanged( ::com::sun::star::ui::dialogs::FilePickerEvent aEvent );
++    rtl::OUString SAL_CALL helpRequested( ::com::sun::star::ui::dialogs::FilePickerEvent aEvent ) const;
++    void SAL_CALL controlStateChanged( ::com::sun::star::ui::dialogs::FilePickerEvent aEvent );
++    void SAL_CALL dialogSizeChanged( );
++     */
++
++protected:
++    virtual void SAL_CALL       run();
++};
++
++#endif // _UNXNOTIFYTHREAD_HXX_
+--- fpicker/source/unx/kde_unx/fps-kde-ucd.txt
++++ fpicker/source/unx/kde_unx/fps-kde-ucd.txt
+@@ -0,0 +1,6 @@
++[ComponentDescriptor]
++ImplementationName=com.sun.star.ui.dialogs.UnxFilePicker
++ComponentName=fps_gnome.uno.so
++LoaderName=com.sun.star.loader.SharedLibrary
++[SupportedServices]
++com.sun.star.ui.dialogs.KDEFilePicker
+--- fpicker/source/unx/kde_unx/fps_kde.xml
++++ fpicker/source/unx/kde_unx/fps_kde.xml
+@@ -0,0 +1,51 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE module-description PUBLIC "-//StarOffice//DTD ComponentDescription 1.0//EN" "module-description.dtd">
++<module-description xmlns:xlink="http://www.w3.org/1999/xlink">
++    <module-name>fps_kde</module-name>
++    <component-description>
++        <author> Jan Holesovsky </author>
++        <name>    com.sun.star.comp.ui.dialogs.FilePicker </name>
++        <description>
++            The KDE implementation of the FilePicker service.
++        </description>
++        <loader-name>com.sun.star.loader.SharedLibrary</loader-name>
++        <language>    c++    </language>
++        <status value="beta"/>
++        <supported-service>    com.sun.star.ui.dialogs.FilePicker </supported-service>        
++        <service-dependency>...</service-dependency>
++        <type>    com.sun.star.ui.dialogs.XExecutableDialog            </type>
++        <type>    com.sun.star.ui.dialogs.XFilePicker                  </type>
++        <type>    com.sun.star.ui.dialogs.XFilterManager               </type>
++        <type>    com.sun.star.ui.dialogs.XFilterGroupManager          </type>
++        <type>    com.sun.star.ui.dialogs.XFilePickerListener          </type>
++        <type>    com.sun.star.ui.dialogs.ExecutableDialogException    </type>
++        <type>    com.sun.star.ui.dialogs.XFilePickerNotifier          </type>
++        <type>    com.sun.star.ui.dialogs.XFilePickerControlAccess     </type>
++        <type>    com.sun.star.ui.dialogs.XFilePreview                 </type>
++        <type>    com.sun.star.ui.dialogs.ExtendedFilePickerElementIds </type>
++        <type>    com.sun.star.ui.dialogs.ExecutableDialogResults      </type>        
++        <type>    com.sun.star.ui.dialogs.FilePickerEvent              </type>
++        <type>    com.sun.star.ui.dialogs.CommonFilePickerElementIds   </type>
++        <type>    com.sun.star.ui.dialogs.ListboxControlActions        </type>
++        <type>    com.sun.star.ui.dialogs.TemplateDescription          </type>        
++        <type>    com.sun.star.ui.dialogs.FilePreviewImageFormats      </type>    
++        <type>    com.sun.star.util.XCancellable                       </type>
++        <type>    com.sun.star.lang.XComponent                         </type>
++        <type>    com.sun.star.lang.XMultiServiceFactory               </type>
++        <type>    com.sun.star.lang.XSingleServiceFactory              </type>
++        <type>    com.sun.star.lang.XServiceInfo                       </type>
++        <type>    com.sun.star.lang.XTypeProvider                      </type>
++        <type>    com.sun.star.lang.IllegalArgumentException           </type>
++        <type>    com.sun.star.uno.TypeClass                           </type>
++        <type>    com.sun.star.uno.XWeak                               </type>
++        <type>    com.sun.star.uno.XAggregation                        </type>
++        <type>    com.sun.star.registry.XRegistryKey                   </type>
++        <type>    com.sun.star.container.XSet                          </type>
++    </component-description>
++    <project-build-dependency>     cppuhelper  </project-build-dependency>
++    <project-build-dependency>     cppu        </project-build-dependency>
++    <project-build-dependency>     sal         </project-build-dependency>
++    <runtime-module-dependency>    cppuhelper  </runtime-module-dependency>
++    <runtime-module-dependency>    cppu2       </runtime-module-dependency>
++    <runtime-module-dependency>    sal2        </runtime-module-dependency>
++</module-description>
+--- fpicker/source/unx/kde_unx/makefile.mk
++++ fpicker/source/unx/kde_unx/makefile.mk
+@@ -0,0 +1,111 @@
++#*************************************************************************
++#
++#
++#
++#
++#
++#
++#
++#   The Contents of this file are made available subject to the terms of
++#   either of the following licenses
++#
++#          - GNU Lesser General Public License Version 2.1
++#          - Sun Industry Standards Source License Version 1.1
++#
++#   Sun Microsystems Inc., October, 2000
++#
++#   GNU Lesser General Public License Version 2.1
++#   =============================================
++#   Copyright 2000 by Sun Microsystems, Inc.
++#   901 San Antonio Road, Palo Alto, CA 94303, USA
++#
++#   This library is free software; you can redistribute it and/or
++#   modify it under the terms of the GNU Lesser General Public
++#   License version 2.1, as published by the Free Software Foundation.
++#
++#   This library is distributed in the hope that it will be useful,
++#   but WITHOUT ANY WARRANTY; without even the implied warranty of
++#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++#   Lesser General Public License for more details.
++#
++#   You should have received a copy of the GNU Lesser General Public
++#   License along with this library; if not, write to the Free Software
++#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++#   MA  02111-1307  USA
++#
++#
++#   Sun Industry Standards Source License Version 1.1
++#   =================================================
++#   The contents of this file are subject to the Sun Industry Standards
++#   Source License Version 1.1 (the "License"); You may not use this file
++#   except in compliance with the License. You may obtain a copy of the
++#   License at http://www.openoffice.org/license.html.
++#
++#   Software provided under this License is provided on an "AS IS" basis,
++#   WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
++#   WITHOUT LIMITATION, WARRANTIES THAT THE SOFTWARE IS FREE OF DEFECTS,
++#   MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE, OR NON-INFRINGING.
++#   See the License for the specific provisions governing your rights and
++#   obligations concerning the Software.
++#
++#   The Initial Developer of the Original Code is: Sun Microsystems, Inc.
++#
++#   Copyright: 2000 by Sun Microsystems, Inc.
++#
++#   All Rights Reserved.
++#
++#   Contributor(s): _______________________________________
++#
++#
++#
++#*************************************************************************
++
++PRJ=..$/..$/..
++
++PRJNAME=fpicker
++TARGET=fps_kde.uno
++LIBTARGET=NO
++ENABLE_EXCEPTIONS=TRUE
++
++# --- Settings -----------------------------------------------------
++
++.INCLUDE :  settings.mk
++DLLPRE=
++
++# ------------------------------------------------------------------
++
++# Currently just KDE is supported...
++.IF "$(GUIBASE)" != "unx" || "$(ENABLE_KDE)" != "TRUE"
++
++dummy:
++	@echo "Nothing to build. GUIBASE == $(GUIBASE), ENABLE_KDE is not set"
++
++.ELSE # we build for KDE
++
++# --- Files --------------------------------------------------------
++
++SLOFILES =\
++		$(SLO)$/UnxCommandThread.obj	\
++		$(SLO)$/UnxFilePicker.obj		\
++		$(SLO)$/UnxNotifyThread.obj		\
++		$(SLO)$/UnxFPentry.obj
++
++SHL1NOCHECK=TRUE
++SHL1TARGET=fps_kde.uno
++SHL1STDLIBS=$(CPPULIB)\
++		$(CPPUHELPERLIB)\
++		$(SALLIB)\
++		$(VCLLIB)\
++		$(TOOLSLIB)
++
++SHL1OBJS=$(SLOFILES)
++SHL1DEF=$(MISC)$/$(SHL1TARGET).def
++
++DEF1NAME=$(SHL1TARGET)
++DEF1VERSIONMAP=exports.map
++
++.ENDIF # "$(GUIBASE)" != "unx" || "$(ENABLE_KDE)" != "TRUE"
++
++# --- Targets ------------------------------------------------------
++
++.INCLUDE :	target.mk
+--- offapi/com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.idl
++++ offapi/com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.idl
+@@ -121,6 +121,11 @@
+ 	/** 
+ 	*/
+ 	const short LISTBOX_IMAGE_TEMPLATE_LABEL = 209;
++
++	//---------------------------------------------------------------------
++	/** 
++	*/
++	const short LISTBOX_FILTER_SELECTOR = 210;
+ };	
+ 
+ //=============================================================================
+--- offapi/com/sun/star/ui/dialogs/XFilePickerWorkaround.idl
++++ offapi/com/sun/star/ui/dialogs/XFilePickerWorkaround.idl
+@@ -0,0 +1,75 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  
++ *
++ *  
++ *
++ *  
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++#ifndef __com_sun_star_ui_dialogs_XFilePickerWorkaround_idl__
++#define __com_sun_star_ui_dialogs_XFilePickerWorkaround_idl__
++
++#ifndef __com_sun_star_uno_XInterface_idl__
++#include <com/sun/star/uno/XInterface.idl>
++#endif
++
++//=============================================================================
++
++module com { module sun { module star { module ui { module dialogs {
++
++//=============================================================================
++/** It's an "internal" interface to solve the problems behind XFilePicker.getFiles()
++    in combination with multiselection.
++
++    This additional interface will be implemented by some dialogs only.
++    But it must be preferred if it exists and multiselection is used.
++*/
++
++interface XFilePickerWorkaround : ::com::sun::star::uno::XInterface
++{
++	//-------------------------------------------------------------------------
++	/**	Does the same then XFilePicker.getFiles() does ... excepting
++        that independend from an single/multiselection mode every item of
++        the returned list is a value containing path and file name.
++
++        This is needed because some dialogs (e.g. system dialogs) knows
++        additional features to return e.g. the results of a file search or
++        items of a recent files list. And in such case (in combination with multiselection)
++        every item of the resulting list can have another path.
++	*/
++	sequence< string > getFilesAsURIs();
++};
++
++//=============================================================================
++
++}; }; }; }; };
++
++
++#endif
++
+--- offapi/com/sun/star/ui/dialogs/makefile.mk
++++ offapi/com/sun/star/ui/dialogs/makefile.mk
+@@ -63,6 +63,7 @@
+ 	XFilePickerControlAccess.idl	\
+ 	XFilePickerListener.idl\
+ 	XFilePickerNotifier.idl\
++	XFilePickerWorkaround.idl\
+ 	XFilePreview.idl\
+ 	XFilterGroupManager.idl\
+ 	XFilterManager.idl\
+--- scp2/source/ooo/file_library_ooo.scp
++++ scp2/source/ooo/file_library_ooo.scp
+@@ -546,6 +546,24 @@
+ End
+ #endif
+ #endif
++#ifdef ENABLE_KDE
++#ifndef MACOSX
++File gid_File_Lib_Fps_Kde
++    TXT_FILE_BODY;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++    Dir = gid_Dir_Program;
++    Name = SPECIAL_COMPONENT_LIB_NAME(fps_kde.uno);
++    Regmergefile = "fps-kde-ucd.txt";
++End
++File gid_File_Bin_KdeFilePicker
++    BIN_FILE_BODY;
++    Styles = (PACKED);
++    Dir = gid_Dir_Program;
++    Name = "kdefilepicker";
++End
++#endif
++#endif
+ #endif
+ 
+ STD_UNO_LIB_FILE_PATCH( gid_File_Lib_Dba, dba)
+--- sfx2/source/dialog/filedlghelper.cxx
++++ sfx2/source/dialog/filedlghelper.cxx
+@@ -72,6 +72,9 @@
+ #ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERNOTIFIER_HPP_
+ #include <com/sun/star/ui/dialogs/XFilePickerNotifier.hpp>
+ #endif
++#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERWORKAROUND_HPP_
++#include <com/sun/star/ui/dialogs/XFilePickerWorkaround.hpp>
++#endif
+ #ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPREVIEW_HPP_
+ #include <com/sun/star/ui/dialogs/XFilePreview.hpp>
+ #endif
+@@ -1206,7 +1209,14 @@
+ 
+ 	// Export dialog
+ 	if ( mbExport )
++	{
+ 		mxFileDlg->setTitle( OUString( String( SfxResId( STR_SFX_EXPLORERFILE_EXPORT ) ) ) );
++		try {
++				Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY_THROW );
++				xCtrlAccess->enableControl( ExtendedFilePickerElementIds::LISTBOX_FILTER_SELECTOR, sal_True );
++		}
++		catch( const Exception &e ) { }
++	}
+ 
+ 	// the "insert file" dialog needs another title
+ 	if ( mbInsert )
+@@ -1579,10 +1589,30 @@
+ 		getRealFilter( rFilter );
+ 
+ 		// fill the rpURLList
+-		Sequence < OUString > aPathSeq = mxFileDlg->getFiles();
++		Reference<XFilePickerWorkaround> xFileWorkarounds(mxFileDlg, UNO_QUERY);
++		Sequence < OUString > aPathSeq;
++		if (xFileWorkarounds.is())
++		{
++			aPathSeq = xFileWorkarounds->getFilesAsURIs();
++			if ( !aPathSeq.getLength() )
++				return ERRCODE_ABORT;
++
++			rpURLList = new SvStringsDtor;
+ 
+-		if ( aPathSeq.getLength() )
++			for ( USHORT i = 0; i < aPathSeq.getLength(); ++i )
++			{
++				String* pURL = new String( aPathSeq[i] );
++				rpURLList->Insert( pURL, rpURLList->Count() );
++			}
++		}
++		else
+ 		{
++			OSL_TRACE("Obsolete & broken multiselect code path");
++			aPathSeq = mxFileDlg->getFiles();
++
++			if ( !aPathSeq.getLength() )
++				return ERRCODE_ABORT;
++
+ 			rpURLList = new SvStringsDtor;
+ 
+ 			if ( aPathSeq.getLength() == 1 )
+@@ -1608,11 +1638,9 @@
+ 					rpURLList->Insert( pURL, rpURLList->Count() );
+ 				}
+ 			}
+-			SaveLastUsedFilter();
+-			return ERRCODE_NONE;
+ 		}
+-		else
+-			return ERRCODE_ABORT;
++		SaveLastUsedFilter();
++		return ERRCODE_NONE;
+ 	}
+ 	else
+ 		return ERRCODE_ABORT;
+--- svtools/inc/svtdata.hxx
++++ svtools/inc/svtdata.hxx
+@@ -36,6 +36,12 @@
+ #ifndef _SVTOOLS_SVTDATA_HXX
+ #define _SVTOOLS_SVTDATA_HXX
+ 
++#ifndef INCLUDED_SVLDLLAPI_H
++#include "svtools/svldllapi.h"
++#endif
++#ifndef INCLUDED_SVTDLLAPI_H
++#include "svtools/svtdllapi.h"
++#endif
+ #ifndef _TOOLS_RESID_HXX
+ #include <tools/resid.hxx>
+ #endif
+@@ -75,15 +81,15 @@
+ 
+ public:
+ 	ResMgr * GetResMgr(const ::com::sun::star::lang::Locale aLocale);
+-	ResMgr * GetResMgr(); // VCL dependant, only available in SVT, not in SVL!
++	SVT_DLLPUBLIC ResMgr * GetResMgr(); // VCL dependant, only available in SVT, not in SVL!
+ 
+-    ResMgr * GetPatchResMgr();
+-    ResMgr * GetPatchResMgr(const ::com::sun::star::lang::Locale& aLocale);
++	ResMgr * GetPatchResMgr();
++	ResMgr * GetPatchResMgr(const ::com::sun::star::lang::Locale& aLocale);
+ 
+     
+ 	SimpleResMgr * GetSimpleRM(const ::com::sun::star::lang::Locale& rLocale);
+ 
+-	static ImpSvtData & GetSvtData();
++	SVL_DLLPUBLIC static ImpSvtData & GetSvtData();
+ };
+ 
+ //============================================================================
+--- svx/source/dialog/makefile.mk
++++ svx/source/dialog/makefile.mk
+@@ -48,6 +48,10 @@
+ CFLAGS+=-DENABLE_GTK
+ .ENDIF
+ 
++.IF "$(ENABLE_KDE)" != ""
++CFLAGS+=-DENABLE_KDE
++.ENDIF
++
+ CFLAGS+=-DDG_DLL
+ RSCDEFS += -Dause_hack
+ 
+--- svx/source/dialog/optgdlg.cxx
++++ svx/source/dialog/optgdlg.cxx
+@@ -229,7 +229,7 @@
+ 	return LEAVE_PAGE;
+ }
+ 
+-#	ifdef ENABLE_GTK
++#if defined( ENABLE_GTK ) || defined( ENABLE_KDE )
+ namespace
+ {
+ 		::rtl::OUString impl_SystemFileOpenServiceName()
+@@ -303,17 +303,15 @@
+ 
+     //system fileopen only available in Windows and with gtk vclplug based
+     //picker
+-#if !defined( WNT ) && !defined( ENABLE_GTK )
++#if !defined( WNT ) && !defined( ENABLE_GTK ) && !defined( ENABLE_KDE )
+     aFileDlgFL.Hide();
+     aFileDlgCB.Hide();
+-#else
+-#	ifdef ENABLE_GTK
++#elif defined( ENABLE_GTK ) || defined( ENABLE_KDE )
+ 	if (!lcl_HasSystemFilePicker())
+ 	{
+         aFileDlgFL.Hide();
+         aFileDlgCB.Hide();
+ 	}
+-#	endif
+ #endif
+ 
+     if ( !aFileDlgCB.IsVisible() )

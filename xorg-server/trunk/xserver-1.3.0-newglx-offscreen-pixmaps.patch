@@ -1,0 +1,60 @@
+diff -up xorg-server-1.3.0.0/hw/xfree86/xaa/xaaInit.c.offscreen-pixmaps xorg-server-1.3.0.0/hw/xfree86/xaa/xaaInit.c
+--- xorg-server-1.3.0.0/hw/xfree86/xaa/xaaInit.c.offscreen-pixmaps	2007-08-13 10:27:45.000000000 +1000
++++ xorg-server-1.3.0.0/hw/xfree86/xaa/xaaInit.c	2007-08-13 10:28:35.000000000 +1000
+@@ -97,6 +97,30 @@ XAADestroyInfoRec(XAAInfoRecPtr infoRec)
+     xfree(infoRec);
+ }
+ 
++void
++XAAEvictPixmaps(void)
++{
++    XAAScreenPtr pScreenPriv;
++    XAAInfoRecPtr infoRec;
++    ScreenPtr pScreen;
++    int i;
++
++    xf86MsgVerb(X_INFO, 3, "XAA: Evicting pixmaps\n");
++
++    for (i = 0; i < screenInfo.numScreens; i++) {
++	pScreen = screenInfo.screens[i];
++	infoRec = GET_XAAINFORECPTR_FROM_SCREEN(pScreen);
++
++	pScreenPriv = pScreen->devPrivates[XAAScreenIndex].ptr;
++	infoRec = pScreenPriv->AccelInfoRec;
++
++	infoRec->offscreenDepths = 0;
++	infoRec->Flags &= ~OFFSCREEN_PIXMAPS;
++       
++	XAAMoveOutOffscreenPixmaps(pScreen);
++	XAAInvalidatePixmapCache(pScreen);
++    }
++}
+ 
+ Bool 
+ XAAInit(ScreenPtr pScreen, XAAInfoRecPtr infoRec)
+diff -up xorg-server-1.3.0.0/GL/glx/glxdri.c.offscreen-pixmaps xorg-server-1.3.0.0/GL/glx/glxdri.c
+--- xorg-server-1.3.0.0/GL/glx/glxdri.c.offscreen-pixmaps	2007-08-13 10:23:52.000000000 +1000
++++ xorg-server-1.3.0.0/GL/glx/glxdri.c	2007-08-13 10:26:08.000000000 +1000
+@@ -380,6 +380,22 @@ __glXDRIbindTexImage(__GLXcontext *baseC
+     __GLXDRIscreen * const screen =
+ 	(__GLXDRIscreen *) __glXgetActiveScreen(pScreen->myNum);
+ 
++    if (!screen->texOffsetStart) {
++         /* When the GLX_EXT_texture_from_pixmap is used, as it's
++          * implemented here, we want to pull pixmap out of video memory
++          * and into host memory. */
++         extern void XAAEvictPixmaps(void);
++         static int evictedPixmaps = 0;
++
++         if (!evictedPixmaps) {
++             __glXDRIenterServer(GL_FALSE);
++                 if (dlsym(RTLD_DEFAULT, "XAAEvictPixmaps"))
++                      XAAEvictPixmaps();
++             __glXDRIleaveServer(GL_FALSE);
++         evictedPixmaps = TRUE;
++         }
++    }
++
+     pixmap = (PixmapPtr) glxPixmap->pDraw;
+ 
+     if (screen->texOffsetStart && screen->driScreen.setTexOffset) {

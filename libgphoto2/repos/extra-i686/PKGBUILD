@@ -1,0 +1,61 @@
+# $Id: PKGBUILD,v 1.32 2008/03/13 23:25:56 jgc Exp $
+# Maintainer: Jason Chu <jason@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+
+pkgname=libgphoto2
+pkgver=2.4.0
+pkgrel=5
+pkgdesc="The core of gphoto2 software. It is a portable library to gives access to more than 400 digital cameras."
+arch=(i686 x86_64)
+url="http://www.gphoto.org"
+depends=('libexif' 'libjpeg' 'libtool>=2.2-2' 'hal>=0.5.10')
+license=(LGPL)
+install=(libgphoto2.install)
+source=(http://downloads.sourceforge.net/gphoto/${pkgname}-${pkgver}.tar.gz
+	no-mdns.patch fix-udev.patch)
+md5sums=('adef1a564d3d1a48e1c13ece34b111b6'
+         '28f57616cbba6f12ca113b87c8123993'
+         'e5f3b19f7cdca8d72190170da995dfec')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  # Remove check for deprecated libtool call,
+  # replace with function that is present
+  sed -i -e 's/lt_dlcaller_register/lt_dlinterface_register/g' \
+    m4m/gp-libltdl.m4 libgphoto2_port/m4/gp-libltdl.m4 || return 1
+
+  #Remove dns_sd dependency
+  patch -Np0 -i ${startdir}/src/no-mdns.patch || return 1
+
+  # Relibtoolize, doesn't compile without it.
+  libtoolize --force --copy || return 1
+  AT_M4DIR=". m4m" autoreconf || return 1
+  pushd libgphoto2_port || return 1
+  libtoolize --force --copy || return 1
+  autoreconf || return 1
+  popd 
+
+  ./configure --prefix=/usr --with-exif --disable-static || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+
+  rm -f ${startdir}/pkg/usr/lib/*.la
+  rm -f ${startdir}/pkg/usr/lib/libgphoto2/${pkgver}/*.a
+  
+  install -m755 -d ${startdir}/pkg/usr/share/hal/fdi/information/20thirdparty
+  install -m755 -d ${startdir}/pkg/etc/udev/rules.d
+  LD_LIBRARY_PATH="${startdir}/pkg/usr/lib" \
+  CAMLIBS="${startdir}/pkg/usr/lib/libgphoto2/${pkgver}" \
+      ${startdir}/pkg/usr/lib/libgphoto2/print-camera-list hal-fdi > \
+      ${startdir}/pkg/usr/share/hal/fdi/information/20thirdparty/10-camera-libgphoto2.fdi || return 1
+
+  LD_LIBRARY_PATH="${startdir}/pkg/usr/lib" \
+  CAMLIBS="${startdir}/pkg/usr/lib/libgphoto2/${pkgver}" \
+      ${startdir}/pkg/usr/lib/libgphoto2/print-camera-list udev-rules version 0.98 group camera mode 0660 > \
+      ${startdir}/pkg/etc/udev/rules.d/54-gphoto.rules || return 1
+  install -m755 -d ${startdir}/pkg/lib
+  mv ${startdir}/pkg/usr/lib/udev ${startdir}/pkg/lib/ || return 1
+  # fix usb and usb_device subsystems
+  cd ${startdir}/pkg/etc/udev/rules.d/
+  patch -Np0 -i ${startdir}/src/fix-udev.patch || return 1
+}

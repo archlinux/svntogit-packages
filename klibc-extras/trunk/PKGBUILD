@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.13 2008/03/16 09:23:59 thomas Exp $
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=klibc-extras
+pkgver=2.4
+pkgrel=1
+pkgdesc="Extra apps for klibc early-userspace"
+arch=(i686 x86_64)
+url="http://phraktured.net/initramfs/klibc-extras/"
+license=('GPL')
+groups=('base')
+depends=('klibc>=1.5-4')
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('f7887993f4a3d4fbb04aa1ddf730568e')
+
+build()
+{
+  cd $startdir/src/${pkgname}-${pkgver}
+
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

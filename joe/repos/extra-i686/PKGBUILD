@@ -1,0 +1,66 @@
+# $Id: PKGBUILD,v 1.15 2007/06/11 10:42:53 alexander Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+pkgname=joe
+pkgver=3.5
+pkgrel=3
+pkgdesc="JOE has the feel of most IBM PC text editors"
+url="http://sourceforge.net/projects/joe-editor"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('glibc' 'ncurses' 'gpm')
+source=(http://dl.sourceforge.net/joe-editor/$pkgname-$pkgver.tar.gz)
+backup=( etc/joe/ftyperc
+         etc/joe/jicerc.ru
+         etc/joe/jmacsrc
+         etc/joe/joerc
+         etc/joe/jpicorc
+         etc/joe/jstarrc
+         etc/joe/rjoerc
+         etc/joe/syntax/4gl.jsf
+         etc/joe/syntax/ada.jsf
+         etc/joe/syntax/asm.jsf
+         etc/joe/syntax/awk.jsf
+         etc/joe/syntax/c.jsf
+         etc/joe/syntax/cobol.jsf
+         etc/joe/syntax/conf.jsf
+         etc/joe/syntax/csh.jsf
+         etc/joe/syntax/css.jsf
+         etc/joe/syntax/diff.jsf
+         etc/joe/syntax/fortran.jsf
+         etc/joe/syntax/haskell.jsf
+         etc/joe/syntax/html.jsf
+         etc/joe/syntax/java.jsf
+         etc/joe/syntax/joerc.jsf
+         etc/joe/syntax/lisp.jsf
+         etc/joe/syntax/lua.jsf
+         etc/joe/syntax/m4.jsf
+         etc/joe/syntax/mail.jsf
+         etc/joe/syntax/mason.jsf
+         etc/joe/syntax/ocaml.jsf
+         etc/joe/syntax/pascal.jsf
+         etc/joe/syntax/perl.jsf
+         etc/joe/syntax/php.jsf
+         etc/joe/syntax/ps.jsf
+         etc/joe/syntax/python.jsf
+         etc/joe/syntax/rexx.jsf
+         etc/joe/syntax/ruby.jsf
+         etc/joe/syntax/sed.jsf
+         etc/joe/syntax/sh.jsf
+         etc/joe/syntax/skill.jsf
+         etc/joe/syntax/sml.jsf
+         etc/joe/syntax/sql.jsf
+         etc/joe/syntax/tcl.jsf
+         etc/joe/syntax/tex.jsf
+         etc/joe/syntax/troff.jsf
+         etc/joe/syntax/verilog.jsf
+         etc/joe/syntax/vhdl.jsf
+         etc/joe/syntax/xml.jsf)
+md5sums=('9bdffecce7ef910feaa06452d48843de')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

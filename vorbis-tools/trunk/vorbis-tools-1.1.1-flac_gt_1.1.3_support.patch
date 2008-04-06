@@ -1,0 +1,500 @@
+Add support for libFLAC-1.1.3. Original patch from Josh Coalson:
+http://lists.xiph.org/pipermail/vorbis-dev/2006-October/018561.html
+This patch updates that to build against svn trunk, and includes
+automatic detection of libFLAC version in ./configure.
+Tested against libFLAC versions 1.1.2 and 1.1.3. 
+
+--- old/vorbis-tools-1.1.1/configure.ac	2005-06-27 10:25:51.000000000 +0100
++++ vorbis-tools-1.1.1/configure.ac	2007-04-07 17:26:15.000000000 +0100
+@@ -169,17 +169,33 @@
+ 
+ FLAC_LIBS=""
+ if test "x$build_flac" = xyes; then
++
+   AC_CHECK_LIB(m,log,FLAC_LIBS="-lm")
+-  AC_CHECK_LIB(FLAC, [FLAC__stream_decoder_process_single],
+-    [have_libFLAC=yes; FLAC_LIBS="-lFLAC $FLAC_LIBS"],
+-    AC_MSG_WARN([libFLAC missing])
+-    have_libFLAC=no, [$FLAC_LIBS]
+-  )
+-  AC_CHECK_LIB(OggFLAC, [OggFLAC__stream_decoder_new],
+-    [FLAC_LIBS="-lOggFLAC $FLAC_LIBS $OGG_LIBS"],
+-    AC_MSG_WARN([libOggFLAC missing])
+-    have_libFLAC=no, [$FLAC_LIBS $OGG_LIBS]
+-  )
++
++  dnl First check for libFLAC-1.1.3 or later. As of libFLAC 1.1.3,
++  dnl OggFLAC functionality has been rolled into libFLAC rather
++  dnl than being in a separate libOggFLAC library.
++
++  AC_CHECK_LIB(FLAC, [FLAC__stream_decoder_init_ogg_stream],
++    have_libFLAC=yes, have_libFLAC=no, [$FLAC_LIBS $OGG_LIBS])
++
++  if test "x$have_libFLAC" = xyes; then
++    FLAC_LIBS="-lFLAC $FLAC_LIBS $OGG_LIBS"
++  else
++    dnl Check for libFLAC prior to 1.1.3
++    AC_CHECK_LIB(FLAC, [FLAC__stream_decoder_process_single],
++      [have_libFLAC=yes; FLAC_LIBS="-lFLAC $FLAC_LIBS"],
++      AC_MSG_WARN([libFLAC missing])
++      have_libFLAC=no, [$FLAC_LIBS]
++    )
++
++    AC_CHECK_LIB(OggFLAC, [OggFLAC__stream_decoder_new],
++      [FLAC_LIBS="-lOggFLAC $FLAC_LIBS $OGG_LIBS"],
++      AC_MSG_WARN([libOggFLAC missing])
++      have_libFLAC=no, [$FLAC_LIBS $OGG_LIBS]
++    )
++  fi
++
+   AC_CHECK_HEADER(FLAC/stream_decoder.h,,
+     AC_MSG_WARN(libFLAC headers missing)
+     have_libFLAC=no,[ ])
+--- old/vorbis-tools-1.1.1/ogg123/flac_format.c	2005-06-03 11:15:09.000000000 +0100
++++ vorbis-tools-1.1.1/ogg123/flac_format.c	2007-04-07 17:25:14.000000000 +0100
+@@ -20,18 +20,26 @@
+ #include <string.h>
+ #include <sys/types.h>
+ #include <math.h>
+-#include <FLAC/metadata.h>
++#include <FLAC/all.h>
+ #include <ao/ao.h>
+ #include "audio.h"
+ #include "format.h"
+ #include "i18n.h"
++#if !defined(FLAC_API_VERSION_CURRENT) || (FLAC_API_VERSION_CURRENT < 8)
++#define NEED_EASYFLAC 1
++#endif
++#if NEED_EASYFLAC
+ #include "easyflac.h"
++#endif
+ #include "vorbis_comments.h"
+ 
+-#define DEFAULT_FLAC_FRAME_SIZE 4608
+-
+ typedef struct {
++#if NEED_EASYFLAC
+   EasyFLAC__StreamDecoder *decoder;
++#else
++  FLAC__StreamDecoder *decoder;
++  int is_oggflac;
++#endif
+   short channels;
+   int rate;
+   int bits_per_sample;
+@@ -67,10 +75,18 @@
+ 
+ 
+ /* Private functions declarations */
+-FLAC__StreamDecoderReadStatus easyflac_read_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data);
+-FLAC__StreamDecoderWriteStatus easyflac_write_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data);
+-void easyflac_metadata_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data);
+-void easyflac_error_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data);
++#if NEED_EASYFLAC
++static FLAC__StreamDecoderReadStatus easyflac_read_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data);
++static FLAC__StreamDecoderWriteStatus easyflac_write_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data);
++static void easyflac_metadata_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data);
++static void easyflac_error_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data);
++#else
++static FLAC__StreamDecoderReadStatus read_callback(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data);
++static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data);
++static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data);
++static void error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data);
++static FLAC__bool eof_callback(const FLAC__StreamDecoder *decoder, void *client_data);
++#endif
+ 
+ void resize_buffer(flac_private_t *flac, int newchannels, int newsamples);
+ /*void copy_comments (vorbis_comment *v_comments, FLAC__StreamMetadata_VorbisComment *f_comments);*/
+@@ -155,6 +171,7 @@
+   private->buf_start = 0;
+   
+   /* Setup FLAC decoder */
++#if NEED_EASYFLAC
+   if (oggflac_can_decode(source)) {
+     decoder->format = &oggflac_format;
+     private->decoder = EasyFLAC__stream_decoder_new(1);
+@@ -172,13 +189,40 @@
+   EasyFLAC__set_metadata_respond(private->decoder, FLAC__METADATA_TYPE_STREAMINFO);
+   EasyFLAC__set_metadata_respond(private->decoder, FLAC__METADATA_TYPE_VORBIS_COMMENT);
+   EasyFLAC__init(private->decoder);
++#else
++  if (oggflac_can_decode(source)) {
++    private->is_oggflac = 1;
++    decoder->format = &oggflac_format;
++  } else {
++    private->is_oggflac = 0;
++    decoder->format = &flac_format;
++  }
++  private->decoder = FLAC__stream_decoder_new();
++
++  FLAC__stream_decoder_set_md5_checking(private->decoder, false);
++  FLAC__stream_decoder_set_metadata_respond(private->decoder, FLAC__METADATA_TYPE_STREAMINFO);
++  FLAC__stream_decoder_set_metadata_respond(private->decoder, FLAC__METADATA_TYPE_VORBIS_COMMENT);
++  /*FLAC__stream_decoder_init(private->decoder);*/
++  if(private->is_oggflac)
++    FLAC__stream_decoder_init_ogg_stream(private->decoder, read_callback, /*seek_callback=*/0, /*tell_callback=*/0, /*length_callback=*/0, eof_callback, write_callback, metadata_callback, error_callback, decoder);
++  else
++    FLAC__stream_decoder_init_stream(private->decoder, read_callback, /*seek_callback=*/0, /*tell_callback=*/0, /*length_callback=*/0, eof_callback, write_callback, metadata_callback, error_callback, decoder);
++#endif
+   
+   /* Callback will set the total samples and sample rate */
++#if NEED_EASYFLAC
+   EasyFLAC__process_until_end_of_metadata(private->decoder);
++#else
++  FLAC__stream_decoder_process_until_end_of_metadata(private->decoder);
++#endif
+ 
+   /* Callback will set the number of channels and resize the 
+      audio buffer */
++#if NEED_EASYFLAC
+   EasyFLAC__process_single(private->decoder);
++#else
++  FLAC__stream_decoder_process_single(private->decoder);
++#endif
+ 
+   /* FLAC API returns signed samples on all streams */
+   decoder->actual_fmt.signed_sample = 1;
+@@ -241,11 +285,19 @@
+       realsamples += copy;
+     }
+     else if (!priv->eos) {
++#if NEED_EASYFLAC
+       ret = EasyFLAC__process_single(priv->decoder);
+       if (!ret ||
+ 	  EasyFLAC__get_state(priv->decoder)
+ 	  == FLAC__STREAM_DECODER_END_OF_STREAM)
+ 	priv->eos = 1;  /* Bail out! */
++#else
++      ret = FLAC__stream_decoder_process_single(priv->decoder);
++      if (!ret ||
++	  FLAC__stream_decoder_get_state(priv->decoder)
++	  == FLAC__STREAM_DECODER_END_OF_STREAM)
++	priv->eos = 1;  /* Bail out! */
++#endif
+     } else
+       break;
+   }
+@@ -311,8 +363,13 @@
+     free(priv->buf[i]);
+   
+   free(priv->buf);
++#if NEED_EASYFLAC
+   EasyFLAC__finish(priv->decoder);
+   EasyFLAC__stream_decoder_delete(priv->decoder);
++#else
++  FLAC__stream_decoder_finish(priv->decoder);
++  FLAC__stream_decoder_delete(priv->decoder);
++#endif
+ 
+   free(decoder->private);
+   free(decoder);
+@@ -342,7 +399,11 @@
+ 
+ 
+ 
++#if NEED_EASYFLAC
+ FLAC__StreamDecoderReadStatus easyflac_read_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data)
++#else
++FLAC__StreamDecoderReadStatus read_callback(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
++#endif
+ {
+   decoder_t *e_decoder = client_data;
+   flac_private_t *priv = e_decoder->private;
+@@ -363,7 +424,11 @@
+ }
+ 
+ 
++#if NEED_EASYFLAC
+ FLAC__StreamDecoderWriteStatus easyflac_write_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
++#else
++FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
++#endif
+ {
+   decoder_t *e_decoder = client_data;
+   flac_private_t *priv = e_decoder->private;
+@@ -389,7 +454,11 @@
+ }
+ 
+ 
++#if NEED_EASYFLAC
+ void easyflac_metadata_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
++#else
++void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
++#endif
+ {
+   decoder_t *e_decoder = client_data;
+   flac_private_t *priv = e_decoder->private;
+@@ -409,12 +478,26 @@
+ }
+ 
+ 
++#if NEED_EASYFLAC
+ void easyflac_error_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
++#else
++void error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
++#endif
+ {
+ 
+ 
+ }
+ 
++#if !NEED_EASYFLAC
++FLAC__bool eof_callback(const FLAC__StreamDecoder *decoder, void *client_data)
++{
++  decoder_t *e_decoder = client_data;
++  flac_private_t *priv = e_decoder->private;
++
++  return priv->eos;
++}
++#endif
++
+ 
+ void resize_buffer(flac_private_t *flac, int newchannels, int newsamples)
+ {
+@@ -457,7 +540,11 @@
+     
+ 
+   
++#if NEED_EASYFLAC
+   if (EasyFLAC__is_oggflac(priv->decoder))
++#else
++  if (priv->is_oggflac)
++#endif
+     cb->printf_metadata(decoder->callback_arg, 2,
+ 			_("Ogg FLAC stream: %d bits, %d channel, %ld Hz"),
+ 			priv->bits_per_sample,
+--- old/vorbis-tools-1.1.1/ogg123/easyflac.c	2005-06-03 11:15:09.000000000 +0100
++++ vorbis-tools-1.1.1/ogg123/easyflac.c	2007-04-07 17:25:26.000000000 +0100
+@@ -33,10 +33,12 @@
+  *
+  */
+ 
++#include <FLAC/export.h>
++#if !defined(FLAC_API_VERSION_CURRENT) || (FLAC_API_VERSION_CURRENT < 8)
++
+ #include <stdlib.h>
+ #include "easyflac.h"
+ 
+-
+ FLAC__bool EasyFLAC__is_oggflac(EasyFLAC__StreamDecoder *decoder)
+ {
+ 	return decoder->is_oggflac;
+@@ -373,3 +375,5 @@
+ 	else
+ 		return FLAC__stream_decoder_process_until_end_of_stream(decoder->flac);
+ }
++
++#endif
+--- old/vorbis-tools-1.1.1/oggenc/flac.c	2005-06-03 11:15:10.000000000 +0100
++++ vorbis-tools-1.1.1/oggenc/flac.c	2007-04-07 18:17:27.000000000 +0100
+@@ -20,15 +20,25 @@
+ #include "platform.h"
+ #include "resample.h"
+ 
+-#define DEFAULT_FLAC_FRAME_SIZE 4608
++#if !defined(FLAC_API_VERSION_CURRENT) || (FLAC_API_VERSION_CURRENT < 8)
++#define NEED_EASYFLAC 1
++#endif
++
++#if NEED_EASYFLAC
++static FLAC__StreamDecoderReadStatus easyflac_read_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data);
++static FLAC__StreamDecoderWriteStatus easyflac_write_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data);
++static void easyflac_metadata_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data);
++static void easyflac_error_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data);
++#else
++static FLAC__StreamDecoderReadStatus read_callback(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data);
++static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data);
++static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data);
++static void error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data);
++static FLAC__bool eof_callback(const FLAC__StreamDecoder *decoder, void *client_data);
++#endif
+ 
+-FLAC__StreamDecoderReadStatus easyflac_read_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data);
+-FLAC__StreamDecoderWriteStatus easyflac_write_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data);
+-void easyflac_metadata_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data);
+-void easyflac_error_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data);
+-
+-void resize_buffer(flacfile *flac, int newchannels, int newsamples);
+-void copy_comments (vorbis_comment *v_comments, FLAC__StreamMetadata_VorbisComment *f_comments);
++static void resize_buffer(flacfile *flac, int newchannels, int newsamples);
++static void copy_comments (vorbis_comment *v_comments, FLAC__StreamMetadata_VorbisComment *f_comments);
+ 
+ 
+ int flac_id(unsigned char *buf, int len)
+@@ -76,6 +86,7 @@
+ 	flac->in = in;
+ 
+ 	/* Setup FLAC decoder */
++#if NEED_EASYFLAC
+ 	flac->decoder = EasyFLAC__stream_decoder_new(oggflac_id(oldbuf, buflen));
+ 	EasyFLAC__set_client_data(flac->decoder, flac);
+ 	EasyFLAC__set_read_callback(flac->decoder, &easyflac_read_callback);
+@@ -85,14 +96,32 @@
+ 	EasyFLAC__set_metadata_respond(flac->decoder, FLAC__METADATA_TYPE_STREAMINFO);
+ 	EasyFLAC__set_metadata_respond(flac->decoder, FLAC__METADATA_TYPE_VORBIS_COMMENT);
+ 	EasyFLAC__init(flac->decoder);
++#else
++    flac->decoder = FLAC__stream_decoder_new();
++    FLAC__stream_decoder_set_md5_checking(flac->decoder, false);
++    FLAC__stream_decoder_set_metadata_respond(flac->decoder, FLAC__METADATA_TYPE_STREAMINFO);
++    FLAC__stream_decoder_set_metadata_respond(flac->decoder, FLAC__METADATA_TYPE_VORBIS_COMMENT);
++    if(oggflac_id(oldbuf, buflen))
++        FLAC__stream_decoder_init_ogg_stream(flac->decoder, read_callback, /*seek_callback=*/0, /*tell_callback=*/0, /*length_callback=*/0, eof_callback, write_callback, metadata_callback, error_callback, flac);
++    else
++        FLAC__stream_decoder_init_stream(flac->decoder, read_callback, /*seek_callback=*/0, /*tell_callback=*/0, /*length_callback=*/0, eof_callback, write_callback, metadata_callback, error_callback, flac);
++#endif
+ 	
+ 	/* Callback will set the total samples and sample rate */
++#if NEED_EASYFLAC
+ 	EasyFLAC__process_until_end_of_metadata(flac->decoder);
++#else
++    FLAC__stream_decoder_process_until_end_of_metadata(flac->decoder);
++#endif
+ 
+ 	/* Callback will set the number of channels and resize the 
+ 	   audio buffer */
++#if NEED_EASYFLAC
+ 	EasyFLAC__process_single(flac->decoder);
+-	
++#else
++    FLAC__stream_decoder_process_single(flac->decoder);
++#endif
++
+ 	/* Copy format info for caller */
+ 	opt->rate = flac->rate;
+ 	opt->channels = flac->channels;
+@@ -133,11 +162,19 @@
+ 		}
+ 		else if (!flac->eos)
+ 		{
++#if NEED_EASYFLAC
+ 			ret = EasyFLAC__process_single(flac->decoder);
+ 			if (!ret ||
+ 			    EasyFLAC__get_state(flac->decoder)
+ 			    == FLAC__STREAM_DECODER_END_OF_STREAM)
+ 				flac->eos = 1;  /* Bail out! */
++#else
++            ret = FLAC__stream_decoder_process_single(flac->decoder);
++            if (!ret ||
++                FLAC__stream_decoder_get_state(flac->decoder)
++                == FLAC__STREAM_DECODER_END_OF_STREAM)
++                flac->eos = 1;  /* Bail out! */
++#endif
+ 		} else
+ 			break;
+ 	}
+@@ -157,13 +194,22 @@
+ 	free(flac->buf);
+ 	free(flac->oldbuf);
+ 	free(flac->comments);
++#if NEED_EASYFLAC
+ 	EasyFLAC__finish(flac->decoder);
+ 	EasyFLAC__stream_decoder_delete(flac->decoder);
++#else
++    FLAC__stream_decoder_finish(flac->decoder);
++    FLAC__stream_decoder_delete(flac->decoder);
++#endif
+ 	free(flac);
+ }
+ 
+ 
++#if NEED_EASYFLAC
+ FLAC__StreamDecoderReadStatus easyflac_read_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__byte buffer[], unsigned *bytes, void *client_data)
++#else
++FLAC__StreamDecoderReadStatus read_callback(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
++#endif
+ {
+ 	flacfile *flac = (flacfile *) client_data;
+ 	int i = 0;
+@@ -200,7 +246,11 @@
+ 	return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;	 
+ }
+ 
++#if NEED_EASYFLAC
+ FLAC__StreamDecoderWriteStatus easyflac_write_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
++#else
++FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
++#endif
+ {
+ 	flacfile *flac = (flacfile *) client_data;
+ 	int samples = frame->header.blocksize;
+@@ -221,7 +271,11 @@
+ 	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
+ }
+ 
++#if NEED_EASYFLAC
+ void easyflac_metadata_callback(const EasyFLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
++#else
++void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
++#endif
+ {
+ 	flacfile *flac = (flacfile *) client_data;
+ 
+@@ -240,11 +294,24 @@
+ 	}
+ }
+ 
++#if NEED_EASYFLAC
+ void easyflac_error_callback(const EasyFLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
++#else
++void error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
++#endif
+ {
+-	flacfile *flac = (flacfile *) client_data;
++    flacfile *flac = (flacfile *) client_data;
++
++}
++
++#if !NEED_EASYFLAC
++FLAC__bool eof_callback(const FLAC__StreamDecoder *decoder, void *client_data)
++{
++    flacfile *flac = (flacfile *) client_data;
+ 
++    return feof(flac->in)? true : false;
+ }
++#endif
+ 
+ 
+ void resize_buffer(flacfile *flac, int newchannels, int newsamples)
+--- old/vorbis-tools-1.1.1/oggenc/easyflac.c	2005-06-03 11:15:10.000000000 +0100
++++ vorbis-tools-1.1.1/oggenc/easyflac.c	2007-04-07 17:25:56.000000000 +0100
+@@ -33,6 +33,9 @@
+  *
+  */
+ 
++#include <FLAC/export.h>
++#if !defined(FLAC_API_VERSION_CURRENT) || (FLAC_API_VERSION_CURRENT < 8)
++
+ #include <stdlib.h>
+ #include "easyflac.h"
+ 
+@@ -373,3 +376,5 @@
+ 	else
+ 		return FLAC__stream_decoder_process_until_end_of_stream(decoder->flac);
+ }
++
++#endif
+--- old/vorbis-tools-1.1.1/oggenc/flac.h	2005-06-03 11:15:10.000000000 +0100
++++ vorbis-tools-1.1.1/oggenc/flac.h	2007-04-07 17:31:53.000000000 +0100
+@@ -5,10 +5,21 @@
+ #include "encode.h"
+ #include "audio.h"
+ #include <stdio.h>
++#include <FLAC/stream_decoder.h>
++#if !defined(FLAC_API_VERSION_CURRENT) || (FLAC_API_VERSION_CURRENT < 8)
++#define NEED_EASYFLAC 1
++#endif
++#if NEED_EASYFLAC
++#include <OggFLAC/stream_decoder.h>
+ #include "easyflac.h"
++#endif
+ 
+ typedef struct {
++#if NEED_EASYFLAC
+ 	EasyFLAC__StreamDecoder *decoder;
++#else
++	FLAC__StreamDecoder *decoder;
++#endif
+ 	short channels;
+ 	int rate;
+ 	long totalsamples; /* per channel, of course */

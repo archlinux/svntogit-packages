@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.5 2006/02/11 15:48:14 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Contributor: Pajaro
+
+pkgname=liblo
+pkgver=0.23
+pkgrel=1
+pkgdesc="Lightweight OSC implementation: an implementation of the Open Sound Control protocol for POSIX systems"
+url="http://plugin.org.uk/liblo/"
+depends=('glibc>=2.3.5-6')
+#source=(http://plugin.org.uk/liblo/releases/$pkgname-$pkgver.tar.gz)
+source=("http://www.ecs.soton.ac.uk/~njh/liblo/liblo-$pkgver.tar.gz")
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}
+

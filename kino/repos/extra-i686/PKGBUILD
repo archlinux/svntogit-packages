@@ -1,0 +1,24 @@
+# $Id: PKGBUILD,v 1.22 2008/01/17 03:35:44 jason Exp $
+# Maintainer: Jason Chu <jason@archlinux.org>
+# Contributor: Robert Emil Berge <robert@rebi.no>
+
+pkgname=kino
+pkgver=1.2.0
+pkgrel=1
+pkgdesc="A non-linear DV editor."
+url="http://www.kinodv.org/"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=(libglade libdv libsamplerate libxv libiec61883 libavc1394 libsm perlxml)
+source=(http://downloads.sourceforge.net/sourceforge/kino/$pkgname-$pkgver.tar.gz)
+md5sums=('8d7140fce089acce771eade7821d0981')
+options=("!libtool")
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc
+  make || return 1
+  make DESTDIR=$startdir/pkg prefix=/usr sysconfdir=/etc install
+  chown root:root -R $startdir/pkg/usr/share/kino/help
+  #rm $startdir/pkg/usr/man/man1/ffmpeg.1
+}

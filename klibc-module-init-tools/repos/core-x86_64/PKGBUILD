@@ -1,0 +1,30 @@
+# $Id: PKGBUILD,v 1.3 2008/03/16 09:25:07 thomas Exp $
+# Maintainer: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=klibc-module-init-tools
+pkgver=3.2.2
+pkgrel=3
+pkgdesc="Utilities for inserting and removing modules from the Linux kernel"
+arch=(i686 x86_64)
+url="http://www.kernel.org"
+license=('GPL')
+groups=('base')
+depends=('klibc>=1.5-4')
+source=(http://www.kernel.org/pub/linux/utils/kernel/module-init-tools/module-init-tools-$pkgver.tar.bz2 \
+	makefile.patch
+	fix-modprobe-ignore-path.patch)
+md5sums=('a1ad0a09d3231673f70d631f3f5040e9'
+         '47e14fda7a46668290d11d0444d81826'
+         '335c3f8317f257ddd70b09271b4360bd')
+
+build() {
+  cd $startdir/src/module-init-tools-$pkgver
+  patch -p1 -i ../makefile.patch || return 1
+  patch -p0 -i ../fix-modprobe-ignore-path.patch || return 1
+  sed -i 's|/usr/bin/install|/bin/install|g' install-with-care
+  CFLAGS="${CFLAGS} -DCONFIG_NO_BACKWARDS_COMPAT" CC=klcc LD=klcc ./configure --prefix=/usr/lib/klibc
+  make || return 1
+  INSTALL=/bin/install make DESTDIR=$startdir/pkg install || return 1
+  rm -f $startdir/pkg/usr/sbin/{generate-modprobe.conf,insmod.static}
+  rm -rf $startdir/pkg/usr/lib/klibc/{share,man}
+}

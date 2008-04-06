@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.6 2007/09/22 18:04:26 alexander Exp $
+#Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=xf86-video-i740
+pkgver=1.1.0
+pkgrel=4
+pkgdesc="X.org Intel i740 video driver"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org/"
+depends=('glibc')
+makedepends=('pkgconfig' 'xorg-server>=1.1.1')
+groups=('xorg-video-drivers')
+options=('nolibtool')
+source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('57302e225060a7286ae1a970c87a589b')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+              --build=${CHOST} --host=${CHOST}
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}

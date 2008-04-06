@@ -1,0 +1,40 @@
+commit 8a42af6a935b1cf0e15102e986bb527f4fab31a8
+Author: Keith Packard <keithp@neko.keithp.com>
+Date:   Mon Feb 19 15:28:37 2007 -0800
+
+    Check for clientGone before sending events from XFixes (bug #1753).
+    
+    Freeing resources during client closedown can cause cursor changes which
+    attempt to send cursor events through the XFixes extension; a client in the
+    process of closing down has no file to send events to, causing a crash when
+    this path is hit.
+
+diff --git a/xfixes/cursor.c b/xfixes/cursor.c
+index 86a512c..3cdacc0 100755
+--- a/xfixes/cursor.c
++++ b/xfixes/cursor.c
+@@ -143,7 +143,8 @@ CursorDisplayCursor (ScreenPtr pScreen,
+ 	CursorCurrent = pCursor;
+ 	for (e = cursorEvents; e; e = e->next)
+ 	{
+-	    if (e->eventMask & XFixesDisplayCursorNotifyMask)
++	    if ((e->eventMask & XFixesDisplayCursorNotifyMask) &&
++		!e->pClient->clientGone)
+ 	    {
+ 		xXFixesCursorNotifyEvent	ev;
+ 		ev.type = XFixesEventBase + XFixesCursorNotify;
+diff --git a/xfixes/select.c b/xfixes/select.c
+index d1c22c5..f0a9f2f 100755
+--- a/xfixes/select.c
++++ b/xfixes/select.c
+@@ -78,7 +78,9 @@ XFixesSelectionCallback (CallbackListPtr *callbacks, pointer data, pointer args)
+     }
+     for (e = selectionEvents; e; e = e->next)
+     {
+-	if (e->selection == selection->selection && (e->eventMask & eventMask))
++	if (e->selection == selection->selection && 
++	    (e->eventMask & eventMask) &&
++	    !e->pClient->clientGone)
+ 	{
+ 	    xXFixesSelectionNotifyEvent	ev;
+ 

@@ -1,0 +1,112 @@
+Index: /ivtv/trunk/driver/ivtv-i2c.c
+===================================================================
+--- /ivtv/trunk/driver/ivtv-i2c.c (revision 3731)
++++ /ivtv/trunk/driver/ivtv-i2c.c (revision 3797)
+@@ -734,4 +734,7 @@
+ 	       sizeof(struct i2c_client));
+ 	itv->i2c_client.adapter = &itv->i2c_adap;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++        itv->i2c_adap.dev.parent = &itv->dev->dev;
++#endif
+   
+ 	IVTV_DEBUG_I2C("setting scl and sda to 1\n");
+@@ -749,4 +752,7 @@
+ 	IVTV_DEBUG_I2C("i2c exit\n");
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++        i2c_del_adapter(&itv->i2c_adap);
++#else
+         if (itv->options.newi2c > 0) {
+                 i2c_del_adapter(&itv->i2c_adap);
+@@ -754,3 +760,4 @@
+                 i2c_bit_del_bus(&itv->i2c_adap);
+         }
+-}
++#endif
++}
+Index: /ivtv/trunk/driver/ivtv-vbi.c
+===================================================================
+--- /ivtv/trunk/driver/ivtv-vbi.c (revision 3785)
++++ /ivtv/trunk/driver/ivtv-vbi.c (revision 3797)
+@@ -455,7 +455,14 @@
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++void vbi_work_handler(struct work_struct *work)
++{
++	struct vbi_info *info = container_of(work, struct vbi_info, work_queue);
++	struct ivtv *itv = container_of(info, struct ivtv, vbi);
++#else
+ void vbi_work_handler(void *arg)
+ {
+ 	struct ivtv *itv = arg;
++#endif
+ 	struct v4l2_sliced_vbi_data data;
+ 	DEFINE_WAIT(wait);
+Index: /ivtv/trunk/driver/ivtv-yuv.c
+===================================================================
+--- /ivtv/trunk/driver/ivtv-yuv.c (revision 3765)
++++ /ivtv/trunk/driver/ivtv-yuv.c (revision 3797)
+@@ -805,7 +805,14 @@
+ 
+ /* Update the scaling register to the requested value */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++void ivtv_yuv_work_handler (struct work_struct *work)
++{
++	struct yuv_playback_info *info = container_of(work, struct yuv_playback_info, work_queue);
++	struct ivtv *itv = container_of(info, struct ivtv, yuv_info);
++#else
+ void ivtv_yuv_work_handler (void *arg)
+ {
+ 	struct ivtv *itv = arg;
++#endif
+ 	DEFINE_WAIT(wait);
+ 
+Index: /ivtv/trunk/driver/ivtv-vbi.h
+===================================================================
+--- /ivtv/trunk/driver/ivtv-vbi.h (revision 3786)
++++ /ivtv/trunk/driver/ivtv-vbi.h (revision 3797)
+@@ -24,4 +24,8 @@
+ void ivtv_disable_vbi(struct ivtv *itv);
+ void ivtv_set_vbi(unsigned long arg);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++void vbi_work_handler(struct work_struct *work);
++#else
+ void vbi_work_handler(void *arg);
++#endif
+ void vbi_schedule_work(struct ivtv *itv);
+Index: /ivtv/trunk/driver/ivtv-yuv.h
+===================================================================
+--- /ivtv/trunk/driver/ivtv-yuv.h (revision 3757)
++++ /ivtv/trunk/driver/ivtv-yuv.h (revision 3797)
+@@ -20,3 +20,7 @@
+ int ivtv_yuv_prep_frame(struct ivtv *itv, struct ivtvyuv_ioctl_dma_host_to_ivtv_args *args);
+ void ivtv_yuv_close(struct ivtv *itv);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++void ivtv_yuv_work_handler (struct work_struct *work);
++#else
+ void ivtv_yuv_work_handler (void *arg);
++#endif
+Index: /ivtv/trunk/driver/ivtv-driver.c
+===================================================================
+--- /ivtv/trunk/driver/ivtv-driver.c (revision 3795)
++++ /ivtv/trunk/driver/ivtv-driver.c (revision 3797)
+@@ -635,6 +635,11 @@
+ 	}
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
++	INIT_WORK(&itv->vbi.work_queue, vbi_work_handler);
++	INIT_WORK(&itv->yuv_info.work_queue, ivtv_yuv_work_handler);
++#else
+ 	INIT_WORK(&itv->vbi.work_queue, vbi_work_handler, itv);
+ 	INIT_WORK(&itv->yuv_info.work_queue, ivtv_yuv_work_handler, itv);
++#endif
+ 
+ 	/* start counting open_id at 1 */
+@@ -1271,6 +1276,4 @@
+ 	/* Stop all Work Queues */
+ 	IVTV_DEBUG_INFO(" Stop Work Queues.\n");
+-	cancel_delayed_work(&itv->vbi.work_queue);
+-	cancel_delayed_work(&itv->yuv_info.work_queue);
+ 	flush_workqueue(itv->vbi.work_queues);
+ 	flush_workqueue(itv->yuv_info.work_queues);

@@ -1,0 +1,76 @@
+--- fast-user-switch-applet-2.17.4/src/gdm-queue.c.startx	2007-02-22 18:28:42.000000000 -0500
++++ fast-user-switch-applet-2.17.4/src/gdm-queue.c	2007-03-28 16:24:34.000000000 -0400
+@@ -190,6 +190,34 @@
+   gdm_socket_status = GDM_SOCKET_CLOSED;
+ }
+ 
++gboolean
++gdm_is_running (void)
++{ 
++  struct sockaddr_un addr;
++  struct stat file_stat;
++  int fd;
++  
++  fd = socket (PF_LOCAL, SOCK_STREAM, 0);
++
++  if (stat (GDM_NEW_SOCKET_FILENAME, &file_stat) == 0)
++    strcpy (addr.sun_path, GDM_NEW_SOCKET_FILENAME);
++  if (stat (GDM_OLD_SOCKET_FILENAME, &file_stat) == 0)
++    strcpy (addr.sun_path, GDM_OLD_SOCKET_FILENAME);
++  else
++    return FALSE;
++
++  addr.sun_family = AF_UNIX;
++
++  if (connect (fd, (struct sockaddr *)&addr, sizeof (addr)) < 0) {
++    VE_IGNORE_EINTR (close (fd));
++    return FALSE;
++  }
++
++  VE_IGNORE_EINTR (close (fd));
++
++  return TRUE;
++}
++         
+ /* This is the function which gets called repeatedly while we're idle
+  * to remove messages from the queue and send them to GDM.
+  */
+--- fast-user-switch-applet-2.17.4/src/applet.c.startx	2007-03-28 16:24:34.000000000 -0400
++++ fast-user-switch-applet-2.17.4/src/applet.c	2007-03-28 16:24:53.000000000 -0400
+@@ -60,6 +60,7 @@
+ #include "fusa-manager.h"
+ #include "fusa-user-menu-item.h"
+ #include "fusa-utils.h"
++#include "gdm-queue.h"
+ 
+ 
+ /* **************** *
+@@ -296,6 +297,9 @@
+   if (strcmp (iid, "OAFIID:GNOME_FastUserSwitchApplet") != 0)
+     return FALSE;
+ 
++  if (!gdm_is_running ())
++    return TRUE;
++
+   /* Global FusaManager */
+   if (!first_time)
+     {
+@@ -325,6 +329,7 @@
+       gtk_window_set_default_icon_name ("stock_people");
+     }
+ 
++  
+   adata = g_new0 (FusaAppletData, 1);
+   adata->applet = applet;
+ 
+--- fast-user-switch-applet-2.17.4/src/gdm-queue.h.startx	2007-02-02 18:17:07.000000000 -0500
++++ fast-user-switch-applet-2.17.4/src/gdm-queue.h	2007-03-28 16:24:34.000000000 -0400
+@@ -102,6 +102,8 @@
+ /* This just gets a cookie of MIT-MAGIC-COOKIE-1 type */
+ gchar *get_mit_magic_cookie (GdkScreen *screen, gboolean binary);
+ 
++gboolean gdm_is_running (void);
++
+ G_END_DECLS
+ 
+ #endif /* !__GDM_QUEUE_H__ */

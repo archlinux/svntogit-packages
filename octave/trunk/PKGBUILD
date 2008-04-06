@@ -1,0 +1,38 @@
+# $Id: PKGBUILD,v 1.19 2008/03/12 20:02:33 jgc Exp $
+# Maintainer: damir <damir@archlinux.org>
+
+pkgname=octave
+pkgver=2.1.73
+pkgrel=5
+pkgdesc="Octave is a high-level language, primarily intended for numerical computations."
+arch=(i686 x86_64)
+url="http://www.octave.org"
+depends=('gcc-libs>=4.3.0' 'readline' 'fftw>=3.1.2-2' 'blas>=19980702-4')
+mirror="ftp://ftp.octave.org/pub/octave/obsolete/"
+#mirror="ftp://ftp.math.uni-hamburg.de/pub/soft/math/octave/"
+#source=("ftp://ftp.octave.org/pub/octave/$pkgname-$pkgver.tar.bz2")
+source=(${mirror}${pkgname}-${pkgver}.tar.bz2
+	octave.png
+	octave.desktop
+	gcc-4.3.patch)
+install=octave.install
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  patch -Np1 -i ${startdir}/src/gcc-4.3.patch || return 1
+  FFLAGS="-O -ffloat-store" ./configure \
+        --prefix=/usr \
+        --enable-shared \
+        --enable-dl \
+	--without-hdf5
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+
+  # install some freedesktop.org compatibility
+  install -d -m755 ${startdir}/pkg/usr/share/applications
+  install -d -m755 ${startdir}/pkg/usr/share/pixmaps
+  install -m644 ${startdir}/src/octave.desktop \
+  	${startdir}/pkg/usr/share/applications/ || return 1
+  install -m644 ${startdir}/src/octave.png \
+	${startdir}/pkg/usr/share/pixmaps/ || return 1
+}

@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.10 2007/09/29 21:04:46 andyrtr Exp $
+# Maintainer: Judd Vinet <jvinet@zeroflux.org>
+pkgname=arch
+pkgver=1.3.5
+pkgrel=3
+pkgdesc="a modern and remarkable revision control system"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://regexps.srparish.net/www/#Gnu-arch"
+depends=('zlib' 'expat' 'heimdal>=1.0.1')
+source=(ftp://ftp.gnu.org/gnu/gnu-arch/tla-$pkgver.tar.gz)
+md5sums=('db31ee89bc4788eef1eba1cee6c176ef')
+options=('!makeflags')
+
+build() {
+  cd $startdir/src/tla-$pkgver/src
+  mkdir =build
+  cd =build
+  ../configure --prefix /usr
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+}

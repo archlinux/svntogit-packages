@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.2 2003/11/06 08:27:08 dorphell Exp $
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+# Maintainer: dale <dale@archlinux.org>
+
+pkgname=fortunelock
+pkgver=0.1.2
+pkgrel=1
+pkgdesc="Fortunelock is a keep it simple, program to lock a terminal while
+showing fortunes. The user must enter a lock password to lock the terminal."
+url="http://www.freshports.org/sysutils/fortunelock/"
+depends=('fortune-mod' 'ncurses' 'glibc')
+source=(ftp://ftp.se.FreeBSD.org/pub/FreeBSD/ports/local-distfiles/dannyboy/$pkgname-$pkgver.tar.bz2)
+md5sums=('3df38afc59800db77e7cf77b0239a480')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  make || return 1
+  mkdir -p $startdir/pkg/usr/bin
+  mkdir -p $startdir/pkg/usr/man/man1
+  make PREFIXDIR=$startdir/pkg/usr install
+}

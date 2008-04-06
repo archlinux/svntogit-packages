@@ -1,0 +1,121 @@
+--- ksysguard/ksysguardd/Linux/lmsensors.c~	2005-10-10 17:04:31.000000000 +0200
++++ ksysguard/ksysguardd/Linux/lmsensors.c	2007-12-05 12:51:39.000000000 +0100
+@@ -29,9 +28,9 @@
+ 
+ #include "lmsensors.h"
+ 
+-#ifdef HAVE_SENSORS_SENSORS_H
++#ifdef HAVE_LMSENSORS
+ #include <sensors/sensors.h>
+-
++#define BUFFER_SIZE_LMSEN 300
+ typedef struct
+ {
+   char* fullName;
+@@ -49,11 +48,15 @@
+ 
+ static LMSENSOR* findMatchingSensor( const char* name )
+ {
+-  long idx;
++  INDEX idx;
+   LMSENSOR key;
+   LMSENSOR* s;
+ 
++  if(name == NULL || name[0] == '\0') return 0;
+   key.fullName = strdup( name );
++  int end = strlen(key.fullName)-1;
++  if(key.fullName[end] == '?')
++    key.fullName[end] = '\0';
+   if ( ( idx = search_ctnr( LmSensors, sensorCmp, &key ) ) < 0 ) {
+     free( key.fullName );
+     return 0;
+@@ -65,9 +68,21 @@
+   return s;
+ }
+ 
++static const char *chipName(const sensors_chip_name *chip) {
++  static char buffer[256];
++  if (chip->bus == SENSORS_CHIP_NAME_BUS_ISA)
++    sprintf (buffer, "%s-isa-%04x", chip->prefix, chip->addr);
++  else if (chip->bus == SENSORS_CHIP_NAME_BUS_PCI)
++    sprintf (buffer, "%s-pci-%04x", chip->prefix, chip->addr);
++  else
++    sprintf (buffer, "%s-i2c-%d-%02x", chip->prefix, chip->bus, chip->addr);
++  return buffer;
++}
++
+ void initLmSensors( struct SensorModul* sm )
+ {
+   const sensors_chip_name* scn;
++  char buffer[BUFFER_SIZE_LMSEN];
+   int nr = 0;
+ 
+   FILE* input;
+@@ -90,23 +105,23 @@
+     const sensors_feature_data* sfd;
+     nr1 = nr2 = 0;
+     while ( ( sfd = sensors_get_all_features( *scn, &nr1, &nr2 ) ) != 0 ) {
+-      if ( sfd->mapping == SENSORS_NO_MAPPING ) {
++      if ( sfd->mapping == SENSORS_NO_MAPPING && sfd->mode & SENSORS_MODE_R /* readable feature */) {
+         LMSENSOR* p;
+         char* label;
+-        char* s;
+ 
+-        sensors_get_label( *scn, sfd->number, &label );
++        if(sensors_get_label( *scn, sfd->number, &label ) != 0)
++		continue; /*error*/
++	if(sensors_get_ignored( *scn, sfd->number) != 1 )
++		continue; /* 1 for not ignored, 0 for ignore,  <0 for error */
++	double result;
++	if(sensors_get_feature( *scn, sfd->number, &result) != 0 )
++		continue; /* Make sure this feature actually works.  0 for success, <0 for fail */
++
+         p = (LMSENSOR*)malloc( sizeof( LMSENSOR ) );
+ 
+-        p->fullName = (char*)malloc( strlen( "lmsensors/" ) +
+-                                     strlen( scn->prefix ) + 1 +
+-                                     strlen( label ) + 1 );
+-        sprintf( p->fullName, "lmsensors/%s/%s", scn->prefix, label );
+-
+-        /* Make sure that name contains only propper characters. */
+-        for ( s = p->fullName; *s; s++ )
+-          if ( *s == ' ' )
+-            *s = '_';
++        snprintf( buffer, BUFFER_SIZE_LMSEN, "lmsensors/%s/%s", chipName(scn), sfd->name );
++
++        p->fullName = strndup(buffer, BUFFER_SIZE_LMSEN);
+ 
+         p->scn = scn;
+         p->sfd = sfd;
+@@ -123,6 +138,7 @@
+   bsort_ctnr( LmSensors, sensorCmp );
+ }
+ 
++
+ void exitLmSensors( void )
+ {
+   destr_ctnr( LmSensors, free );
+@@ -152,10 +168,21 @@
+   }
+ 
+   /* TODO: print real name here */
+-  fprintf( CurrentClient, "Sensor Info\t0\t0\t\n" );
++  char *label;
++  if(sensors_get_label( *s->scn, s->sfd->number, &label ) != 0) {  /*error*/
++    fprintf( CurrentClient, "0\n" );
++    return;
++  }
++  if( strncmp(s->sfd->name, "temp", sizeof("temp")-1) == 0)
++    fprintf( CurrentClient, "%s\t0\t0\t°C\n", label );
++  else if( strncmp(s->sfd->name, "fan", sizeof("fan")-1) == 0)
++    fprintf( CurrentClient, "%s\t0\t0\trpm\n", label );
++  else
++    fprintf( CurrentClient, "%s\t0\t0\tV\n", label );  /* For everything else, say it's in volts. */
++
+ }
+ 
+-#else /* HAVE_SENSORS_SENSORS_H */
++#else /* HAVE_LMSENSORS */
+ 
+ /* dummy version for systems that have no lmsensors support */
+ 

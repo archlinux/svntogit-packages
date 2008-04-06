@@ -1,0 +1,226 @@
+Index: xmmssensor.cpp
+===================================================================
+--- xmmssensor.cpp	(Revision 508076)
++++ xmmssensor.cpp	(Arbeitskopie)
+@@ -10,11 +10,123 @@
+ #include "xmmssensor.h"
+ 
+ #ifdef HAVE_XMMS
+-#include <xmmsctrl.h>
++#include <qlibrary.h>
++
++class XMMSSensor::XMMS
++{
++public:
++    XMMS() : libxmms( 0 )
++    {
++        libxmms = new QLibrary( "xmms.so.1" );
++        if ( !libxmms->load() )
++        {
++            qDebug("xmms.so.1 not found");
++            delete libxmms;
++            libxmms = 0;
++        }
++
++        if ( libxmms != 0 )
++        {
++            // resolve functions
++            *(void**) (&xmms_remote_is_running) =
++                    libxmms->resolve( "xmms_remote_is_running" );
++
++            *(void**) (&xmms_remote_is_playing) =
++                    libxmms->resolve( "xmms_remote_is_playing" );
++
++            *(void**) (&xmms_remote_get_playlist_title) =
++                    libxmms->resolve( "xmms_remote_get_playlist_title" );
++
++            *(void**) (&xmms_remote_get_playlist_time) =
++                    libxmms->resolve( "xmms_remote_get_playlist_time" );
++
++            *(void**) (&xmms_remote_get_playlist_pos) =
++                    libxmms->resolve( "xmms_remote_get_playlist_pos" );
++
++            *(void**) (&xmms_remote_get_output_time) =
++                    libxmms->resolve( "xmms_remote_get_output_time" );
++        }
++    }
++
++    bool isInitialized() const
++    {
++        return libxmms != 0 &&
++               xmms_remote_is_running != 0 &&
++               xmms_remote_is_playing != 0 &&
++               xmms_remote_get_playlist_title != 0 &&
++               xmms_remote_get_playlist_time  != 0 &&
++               xmms_remote_get_playlist_pos   != 0 &&
++               xmms_remote_get_output_time    != 0;
++    }
++
++    bool isRunning(int session)
++    {
++        if ( !isInitialized() ) return false;
++
++        return (*xmms_remote_is_running)(session);
++    }
++
++    bool isPlaying(int session)
++    {
++        if ( !isInitialized() ) return false;
++
++        return (*xmms_remote_is_playing)(session);
++    }
++
++    char* getPlaylistTitle(int session, int pos)
++    {
++        if ( !isInitialized() ) return "";
++
++        return (*xmms_remote_get_playlist_title)(session, pos);
++    }
++
++    int getPlaylistTime(int session, int pos)
++    {
++        if ( !isInitialized() ) return 0;
++
++        return (*xmms_remote_get_playlist_time)(session, pos);
++    }
++
++    int getPlaylistPos(int session)
++    {
++        if ( !isInitialized() ) return 0;
++
++        return (*xmms_remote_get_playlist_pos)(session);
++    }
++
++    int getOutputTime(int session)
++    {
++        if ( !isInitialized() ) return 0;
++
++        return (*xmms_remote_get_output_time)(session);
++    }
++
++private:
++    QLibrary* libxmms;
++
++    bool (*xmms_remote_is_running)(int);
++    bool (*xmms_remote_is_playing)(int);
++
++    char* (*xmms_remote_get_playlist_title)(int, int);
++    int   (*xmms_remote_get_playlist_time)(int, int);
++    int   (*xmms_remote_get_playlist_pos)(int);
++    int   (*xmms_remote_get_output_time)(int);
++};
++
++#else // No XMMS
++
++class XMMSSensor::XMMS
++{
++public:
++    XMMS() {}
++
++    bool isInitialized() const { return false; }
++};
+ #endif // HAVE_XMMS
+ 
++
+ XMMSSensor::XMMSSensor( int interval, const QString &encoding )
+-    : Sensor( interval )
++    : Sensor( interval ), xmms( 0 )
+ {
+      if( !encoding.isEmpty() )
+     {
+@@ -25,9 +137,13 @@
+     else
+         codec = QTextCodec::codecForLocale();
+ 
++    xmms = new XMMS();
++
+ }
+ XMMSSensor::~XMMSSensor()
+-{}
++{
++    delete xmms;
++}
+ 
+ void XMMSSensor::update()
+ {
+@@ -43,21 +159,21 @@
+     int songLength = 0;
+     int currentTime = 0;
+     bool isPlaying = false;
+-    bool isRunning = xmms_remote_is_running(0);
++    bool isRunning = xmms->isRunning(0);
+ 
+     if( isRunning )
+     {
+-        isPlaying = xmms_remote_is_playing(0);
+-        pos = xmms_remote_get_playlist_pos(0);
++        isPlaying = xmms->isPlaying(0);
++        pos = xmms->getPlaylistPos(0);
+         qDebug("unicode start");
+-        title = codec->toUnicode( QCString( xmms_remote_get_playlist_title( 0, pos ) )  );
++        title = codec->toUnicode( QCString( xmms->getPlaylistTitle( 0, pos ) )  );
+         qDebug("unicode end");
+         if( title.isEmpty() )
+             title = "XMMS";
+ 
+         qDebug("Title: %s", title.ascii());
+-        songLength = xmms_remote_get_playlist_time( 0, pos );
+-        currentTime = xmms_remote_get_output_time( 0 );
++        songLength = xmms->getPlaylistTime( 0, pos );
++        currentTime = xmms->getOutputTime( 0 );
+     }
+ #endif // HAVE_XMMS
+ 
+@@ -144,6 +260,9 @@
+ 
+ }
+ 
++bool XMMSSensor::hasXMMS() const
++{
++    return xmms->isInitialized();
++}
+ 
+-
+ #include "xmmssensor.moc"
+Index: xmmssensor.h
+===================================================================
+--- xmmssensor.h	(Revision 508076)
++++ xmmssensor.h	(Arbeitskopie)
+@@ -28,10 +28,13 @@
+     ~XMMSSensor();
+     void update();
+     void setMaxValue( SensorParams *);
++    bool hasXMMS() const;
+ 
+ private:
+     QTextCodec *codec;
+ 
++    class XMMS;
++    XMMS *xmms;
+ };
+ 
+ 
+Index: Makefile.am
+===================================================================
+--- Makefile.am	(Revision 508076)
++++ Makefile.am	(Arbeitskopie)
+@@ -1,5 +1,5 @@
+ # set the include path for X, qt and KDE
+-INCLUDES = $(all_includes) $(XMMS_INCLUDES) $(PYTHONINC)
++INCLUDES = $(all_includes) $(PYTHONINC)
+ 
+ # these are the headers for your project
+ noinst_HEADERS = karamba.h karambaapp.h karamba_python.h lineparser.h \
+@@ -40,9 +40,9 @@
+ 
+ # kde_cfg_DATA = superkaramba.kcfg
+ 
+-superkaramba_LDFLAGS = -Wl,-export-dynamic  $(KDE_RPATH) $(all_libraries) $(PYTHONLIB) $(XMMS_LDFLAGS)
+-#superkaramba_LDADD = -lkio $(LIB_KDEUI) $(XMMS_LDADD) $(LIBPYTHON) $(LIBKVM) $(MY_LIBKNEWSTUFF)
+-superkaramba_LDADD = -lkio $(LIB_KDEUI) $(XMMS_LIBS) $(LIBPYTHON) $(LIBKVM) $(MY_LIBKNEWSTUFF)
++superkaramba_LDFLAGS = -Wl,-export-dynamic  $(KDE_RPATH) $(all_libraries) $(PYTHONLIB)
++#superkaramba_LDADD = -lkio $(LIB_KDEUI) $(LIBPYTHON) $(LIBKVM) $(MY_LIBKNEWSTUFF)
++superkaramba_LDADD = -lkio $(LIB_KDEUI) $(LIBPYTHON) $(LIBKVM) $(MY_LIBKNEWSTUFF)
+ 
+ # this is where the desktop file will go
+ shelldesktopdir = $(kde_appsdir)/Utilities

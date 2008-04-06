@@ -1,0 +1,27 @@
+# $Id: PKGBUILD,v 1.19 2007/12/04 07:56:57 tobias Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+
+pkgname=xfce4-mixer
+pkgver=4.4.2
+pkgrel=1
+pkgdesc="The volume control plugin for the Xfce panel"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://www.xfce.org/"
+groups=('xfce4')
+depends=('xfce4-panel>=4.4.2' 'alsa-lib')
+makedepends=('xfce-mcs-manager>=4.4.2' 'pkgconfig')
+options=('!libtool')
+install=${pkgname}.install
+source=(http://www.xfce.org/archive/xfce-${pkgver}/src/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('c21cb5680f135dc86e5f0a6f9473003a')
+
+build() {
+  export MAKEFLAGS="-j1"
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/xfce4 \
+    --localstatedir=/var --disable-static \
+    --with-sound=alsa
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

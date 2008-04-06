@@ -1,0 +1,32 @@
+# $Id: PKGBUILD,v 1.28 2007/10/30 02:46:09 eric Exp $
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=bluefish
+pkgver=1.0.7
+pkgrel=3
+pkgdesc="Programmer's HTML editor written using GTK"
+arch=('i686' 'x86_64')
+url="http://bluefish.openoffice.nl/"
+license=('GPL')
+depends=('pcre>=6.6-2' 'aspell>=0.60.4-2' 'gnome-vfs' 'desktop-file-utils' 'shared-mime-info')
+makedepends=('pkgconfig')
+install=bluefish.install
+source=(http://www.bennewitz.com/bluefish/stable/source/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('2c3b3c9c8f8e32b9473dfd879f216dea')
+sha1sums=('c61d6271c49e9fa8c728724e6aadde33a227bdea')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --with-freedesktop_org-menu=/usr/share/applications \
+    --with-freedesktop_org-mime=/usr/share/mime \
+    --without-gnome2_4-mime \
+    --without-gnome2_4-appreg \
+    --with-icon-path=/usr/share/pixmaps \
+    --disable-update-databases \
+    --without-libgnomeui
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+  install -m644 ${startdir}/src/${pkgname}-${pkgver}/data/bluefish.desktop ${startdir}/pkg/usr/share/applications/bluefish.desktop
+}

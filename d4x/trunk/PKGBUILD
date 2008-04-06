@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.16 2006/06/03 13:04:26 arjan Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+pkgname=d4x
+pkgver=2.5.7.1
+pkgrel=1
+pkgdesc="A GUI XFree86 program for downloading files"
+arch=(i686 x86_64)
+depends=('esd' 'gtk2' 'openssl<=0.9.8' 'alsa-lib' 'libstdc++5' 'audiofile') 
+source=(http://d4x.krasu.ru/files/$pkgname-$pkgver.tar.bz2)
+url="http://www.krasu.ru/soft/chuchelo/"
+makedepends=('boost')
+conflicts=('downloaderx')
+replaces=('downloaderx')
+md5sums=('68d6336c3749a7caabb0f5a5f84f4102')
+
+build() {
+    cd $startdir/src/$pkgname-${pkgver}
+    ./configure --prefix=/usr
+    make || return 1
+    make prefix=$startdir/pkg/usr install
+}

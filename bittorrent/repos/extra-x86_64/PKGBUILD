@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.34 2007/03/02 10:45:28 juergen Exp $
+# Mantainer: Juergen Hoetzel <juergen@archlinux.org>
+
+pkgname=bittorrent
+pkgver=5.0.6
+pkgrel=2
+pkgdesc="BitTorrent is a tool for copying files from one machine to another."
+arch=(i686 x86_64)
+url="http://www.bittorrent.com"
+install=bittorrent.install
+depends=("twisted" "pycrypto")
+source=(http://download.bittorrent.com/dl/BitTorrent-${pkgver}.tar.gz)
+md5sums=('c1ac5f78aebc444899aaf20d06dd62b5')
+
+build() {
+  cd $startdir/src/BitTorrent-$pkgver
+  # patch -p1 -i $startdir/src/bittorrent-arch.patch || return 1
+  sed -i -e "s|ip = os.path.join('share', 'pixmaps', appdir)|ip = os.path.join('share', 'bittorrent', 'pixmaps')|" BitTorrent/platform.py || return 1
+  sed -i -e "s|dp = os.path.join('share', 'doc'    , appdir)|dp = os.path.join('share', 'bittorrent', 'doc')|" BitTorrent/platform.py || return 1 
+  python ./setup.py install --root=$startdir/pkg
+}

@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.19 2007/06/19 16:09:45 tpowa Exp $
+# Maintainer: tobias <tobias@archlinux.org>
+# Contributor: Todd Musall <tmusall@comcast.net>
+
+pkgname=grip
+pkgver=3.3.1
+pkgrel=7
+pkgdesc="A cd-player and ripper for the Gnome desktop"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://nostatic.org/grip/"
+depends=('vte>=0.16.1-2' 'curl>=7.16.2' 'libgnomeui>=2.18.1-2' 'id3lib>=3.8.3-7' 'cdparanoia')
+install=grip.install
+source=(http://heanet.dl.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+md5sums=('4b4233999b9f2bc85c711092553ea9aa')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

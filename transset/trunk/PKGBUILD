@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.2 2006/01/02 07:34:39 tpowa Exp $
+# Maintainer: Jan de Groot
+# Contributor: Leslie P. Polzer <leslie.polzer@gmx.net>
+
+pkgname=transset
+pkgver=20050711
+pkgrel=2
+pkgdesc="Translucency settings tool for X.org"
+url="http://www.freedesktop.org/Software/xapps"
+depends=('libxdamage' 'libxcomposite' 'libxrender')
+conflicts=('xapps')
+source=($pkgname-$pkgver.tar.bz2)
+md5sums=('bfb0fc7228636853711734c9a8049ef3')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  make || return 1
+  install -D -m755 transset $startdir/pkg/usr/bin/transset
+}
+

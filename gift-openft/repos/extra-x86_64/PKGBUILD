@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.21 2007/09/30 11:29:22 tpowa Exp $
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+
+pkgname=gift-openft
+pkgver=0.2.1.6
+pkgrel=6
+pkgdesc="GiFT's OpenFT plugin"
+arch=(i686 x86_64)
+depends=('gift' 'zlib' 'db>=4.6')
+url="http://gift.sourceforge.net/"
+source=(http://heanet.dl.sourceforge.net/sourceforge/gift/$pkgname-$pkgver.tar.bz2)
+md5sums=('6661f01304246a29aeabda113691ca93')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

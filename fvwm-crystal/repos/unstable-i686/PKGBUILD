@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.3 2006/06/30 20:41:21 simo Exp $
+# Maintainer: Simo Leone <simo@archlinux.org>
+pkgname=fvwm-crystal
+pkgver=3.0.4
+pkgrel=1
+pkgdesc="Transparent Themes for fvwm"
+url="http://fvwm-crystal.org"
+license="GPL"
+depends=('fvwm-devel' 'imagemagick' 'python' 'habak' 'trayer')
+makedepends=()
+install=fvwm-crystal.install
+source=("http://download.gna.org/fvwm-crystal/$pkgver/$pkgname-$pkgver.tar.gz")
+md5sums=('21baa93802dc8a6827508c32efbfa3ed')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  make || return 1
+  make prefix=$startdir/pkg/usr install
+
+  #make gdm work
+  install -D -m644 addons/fvwm-crystal.desktop $startdir/pkg/etc/X11/sessions/fvwm-crystal.desktop
+}

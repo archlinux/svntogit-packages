@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.7 2006/07/01 08:08:22 jgc Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=wv2
+pkgver=0.2.3
+pkgrel=1
+pkgdesc="wvWare is the continuation of Caolan McNamara's wv - the MSWord library. It can parse MSWord 9,8,7,6 formats"
+arch=(i686)
+url="http://sourceforge.net/projects/wvware/"
+depends=('libgsf>=1.14.1')
+options=(NOLIBTOOL)
+source=(http://heanet.dl.sourceforge.net/sourceforge/wvware/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('ea7e3331fbe597185070c0784411a3f7')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}

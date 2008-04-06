@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.7 2007/10/25 21:01:07 tobias Exp $
+# Maintainer: Tobias Kieslich <neri@archlinux.org>
+# Contributor: Ben <contrasutra@myrealbox.com>
+
+pkgname=lcms
+pkgver=1.17
+pkgrel=2
+pkgdesc="Lightweight color management development library/engine"
+arch=(i686 x86_64)
+license=('CUSTOM')
+depends=('libtiff')
+url="http://www.littlecms.com"
+options=('!libtool')
+source=(http://littlecms.com/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+  install -Dm 644 COPYING \
+    ${startdir}/pkg/usr/share/licenses/${pkgname}/LICENSE
+}

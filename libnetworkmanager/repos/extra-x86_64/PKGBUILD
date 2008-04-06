@@ -1,0 +1,32 @@
+# $Id: PKGBUILD,v 1.7 2007/04/26 17:13:18 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Wael Nasreddine <gandalf@siemens-mobiles.org>
+# Contributor: Tor Krill <tor@krill.nu>
+# Contributor: Will Rea <sillywilly@gmail.com>
+# Contributor: Valentine Sinitsyn <e_val@inbox.ru>
+
+pkgname=libnetworkmanager
+pkgver=0.6.5
+pkgrel=1
+pkgdesc="The Network Manager Library"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.gnome.org/projects/NetworkManager/"
+depends=('libgcrypt' 'dbus-glib>=0.73')
+makedepends=('pkgconfig' 'perlxml' 'wireless_tools' 'iproute' 'dhcdbd' 'hal' 'libnl' 'wpa_supplicant')
+options=('nolibtool')
+source=(http://ftp.gnome.org/pub/GNOME/sources/NetworkManager/0.6/NetworkManager-${pkgver}.tar.bz2)
+md5sums=('b827d300eb28458f6588eb843cba418d')
+
+build() {
+  cd ${startdir}/src/NetworkManager-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-static \
+	      --with-distro=arch --without-gnome
+  for dir in libnm-util utils gnome/libnm_glib include; do
+    pushd ${dir}
+    make || return 1
+    make DESTDIR=${startdir}/pkg install
+    popd
+  done
+}

@@ -1,0 +1,20 @@
+# $Id: PKGBUILD,v 1.6 2006/01/15 13:47:33 juergen Exp $
+# Maintainer: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor : juice <juice@sofy.sk> 
+
+pkgname=selectwm
+pkgver=0.4.1
+pkgrel=2
+pkgdesc="A window manager selector tool."
+depends=('gtk2')
+url="http://ordiluc.net/selectwm"
+source=($url/$pkgname-$pkgver.tar.bz2)
+md5sums=('160199961c552922b5880ebf7e201c3c')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}
+# vim: ts=2 sw=2 et ft=sh

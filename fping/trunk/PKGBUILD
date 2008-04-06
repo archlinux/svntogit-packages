@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.4 2005/01/04 03:30:43 dorphell Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=fping
+pkgver=2.4b2
+pkgrel=2
+pkgdesc="fping is different from ping in that you can specify any number of hosts on the command line"
+depends=('glibc')
+source=(http://www.fping.com/download/$pkgname-$pkgver\_to.tar.gz)
+url="http://www.fping.com/"
+md5sums=('d5e8be59e307cef76bc479e1684df705')
+
+build() {
+	cd $startdir/src/$pkgname-$pkgver\_to
+	./configure --prefix=/usr
+	make || return 1
+	make prefix=$startdir/pkg/usr install
+}

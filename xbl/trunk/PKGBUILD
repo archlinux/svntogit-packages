@@ -1,0 +1,39 @@
+# $Id: PKGBUILD,v 1.5 2006/02/02 01:52:34 simo Exp $
+# Maintainer: eric <eric@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+
+pkgname=xbl
+pkgver=1.1.3
+pkgrel=1
+pkgdesc="A 3D tetris/blockout game"
+url="http://www710.univ-lyon1.fr/ftp/xbl/xbl.html"
+source=(http://www710.univ-lyon1.fr/~exco/XBL/$pkgname-$pkgver.tar.gz)
+depends=('libxext')
+
+
+build() {
+	# obtain GID of 'users' group, otherwise baal
+	#
+	gid=`/bin/grep users /etc/group | /bin/awk -F : '{ print $3 }'`
+	if [ ! $gid ]; then
+		/bin/echo "==> ERROR: unable to determine GID of 'users' group"
+		return 1
+	fi
+
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure
+  /usr/bin/make || return 1
+  /bin/mkdir -p $startdir/pkg/usr/bin
+  /bin/mkdir -p $startdir/pkg/usr/lib/xbl
+  /bin/mkdir -p $startdir/pkg/usr/lib/X11/app-defaults
+  /bin/mkdir -p $startdir/pkg/usr/man/man1
+
+  /usr/bin/yes "" | /usr/bin/make BINDIR=$startdir/pkg/usr/bin \
+		GROUP_GID=$gid LIBDIR=$startdir/pkg/usr/lib \
+		RESOURCEDIR=$startdir/pkg/usr/lib/X11/app-defaults \
+		SCOREDIR=$startdir/pkg/usr/lib/xbl \
+		MANPATH=$startdir/pkg/usr/man install
+
+	/bin/chgrp -R users $startdir/pkg/usr/lib/xbl
+}
+# vim: ts=2 sw=2 et ft=sh

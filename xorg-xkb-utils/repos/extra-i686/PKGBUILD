@@ -1,0 +1,35 @@
+# $Id: PKGBUILD,v 1.6 2007/07/26 11:12:03 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xorg-xkb-utils
+pkgver=1.0.2
+pkgrel=2
+pkgdesc="X.org keyboard utilities"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org/"
+depends=(libxaw libxkbfile)
+makedepends=(pkgconfig)
+source=(${url}/releases/individual/app/xkbutils-1.0.1.tar.bz2
+        ${url}/releases/individual/app/xkbcomp-1.0.3.tar.bz2
+        ${url}/releases/individual/app/xkbevd-1.0.2.tar.bz2
+        ${url}/releases/individual/app/xkbprint-1.0.1.tar.bz2
+        ${url}/releases/individual/app/setxkbmap-1.0.4.tar.bz2)
+
+build() {
+  cd ${startdir}/src
+  for i in *; do
+    if [ -d "${i}" ]; then
+      pushd "${i}"
+      ./configure --prefix=/usr
+      make || return 1
+      make DESTDIR=${startdir}/pkg install || return 1
+      popd
+    fi
+  done
+}
+
+md5sums=('84396a3dd75337caaae29d8fa5616fb1'
+         '2fbcae1323c266edf5b6c61751f2e343'
+         '68f2a143716c23b566f8509d9498f516'
+         'b98ae2d8b21c545b7b322d0b302efefa'
+         '6fab3bb176be9e510c5613d054ef1ca4')

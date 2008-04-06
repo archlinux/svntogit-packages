@@ -1,0 +1,766 @@
+--- libcap-1.10.orig/doc/old/cap_set_fd.3
++++ libcap-1.10/doc/old/cap_set_fd.3
+@@ -0,0 +1 @@
++.so man3/cap_get_file.3
+--- libcap-1.10.orig/doc/old/cap_set_file.3
++++ libcap-1.10/doc/old/cap_set_file.3
+@@ -0,0 +1 @@
++.so man3/cap_get_file.3
+--- libcap-1.10.orig/doc/capset.2
++++ libcap-1.10/doc/capset.2
+@@ -1 +1 @@
+-.so man2/capget.2
++#.so man2/capget.2
+--- libcap-1.10.orig/doc/Makefile
++++ libcap-1.10/doc/Makefile
+@@ -7,7 +7,7 @@
+ topdir=$(shell pwd)/..
+ include $(topdir)/Make.Rules
+ 
+-MAN2S = capget.2 capset.2
++#MAN2S = capget.2 
+ MAN3S = cap_init.3 cap_free.3 cap_dup.3 \
+ 	cap_clear.3 cap_get_flag.3 cap_set_flag.3 \
+ 	cap_get_proc.3 cap_set_proc.3 \
+--- libcap-1.10.orig/Make.Rules
++++ libcap-1.10/Make.Rules
+@@ -8,7 +8,7 @@
+ 
+ # common 'packaging' directoty
+ 
+-FAKEROOT=
++FAKEROOT=$(DESTDIR)
+ 
+ # Autoconf-style prefixes are activated when $(prefix) is defined.
+ # Otherwise binaries and libraraies are installed in /{lib,sbin}/,
+@@ -18,13 +18,13 @@
+ exec_prefix=$(prefix)
+ lib_prefix=$(exec_prefix)
+ inc_prefix=$(lib_prefix)
+-man_prefix=$(prefix)
++man_prefix=$(prefix)/share
+ else
+ prefix=/usr
+ exec_prefix=
+ lib_prefix=$(exec_prefix)
+ inc_prefix=$(prefix)
+-man_prefix=$(prefix)
++man_prefix=$(prefix)/share
+ endif
+ 
+ # Target directories
+@@ -42,7 +42,7 @@
+ # Compilation specifics
+ 
+ CC=gcc
+-COPTFLAGS=-O2
++COPTFLAGS=-O2 
+ DEBUG=-g #-DDEBUG
+ WARNINGS=-ansi -D_POSIX_SOURCE -Wall -Wwrite-strings \
+         -Wpointer-arith -Wcast-qual -Wcast-align \
+--- libcap-1.10.orig/Makefile
++++ libcap-1.10/Makefile
+@@ -3,17 +3,20 @@
+ #
+ # Makefile for libcap
+ 
++ifndef topdir
+ topdir=$(shell pwd)
+-include Make.Rules
++endif
++include $(topdir)/Make.Rules
++DESTDIR=
+ 
+ #
+ # flags
+ #
+ 
+ all install clean: %: %-here
+-	make -C libcap $(MAKE_DEFS) $@
+-	make -C progs $(MAKE_DEFS) $@
+-	make -C doc $(MAKE_DEFS) $@
++	make -C $(topdir)/libcap $(MAKE_DEFS) $@
++	make -C $(topdir)/progs $(MAKE_DEFS) $@
++	make -C $(topdir)/doc $(MAKE_DEFS) $@
+ 
+ all-here:
+ 
+--- libcap-1.10.orig/libcap/include/sys/capability.h
++++ libcap-1.10/libcap/include/sys/capability.h
+@@ -21,7 +21,288 @@
+  */
+ 
+ #include <sys/types.h>
+-#include <linux/capability.h>
++/*
++ * This is <linux/capability.h>
++ *
++ * Andrew G. Morgan <morgan@transmeta.com>
++ * Alexander Kjeldaas <astor@guardian.no>
++ * with help from Aleph1, Roland Buresund and Andrew Main.
++ *
++ * See here for the libcap library ("POSIX draft" compliance):
++ *
++ * ftp://linux.kernel.org/pub/linux/libs/security/linux-privs/kernel-2.2/
++ */ 
++
++#ifndef _LINUX_CAPABILITY_H
++#define _LINUX_CAPABILITY_H
++
++#include <linux/types.h>
++/*#include <linux/fs.h>*/
++	
++/* User-level do most of the mapping between kernel and user
++   capabilities based on the version tag given by the kernel. The
++   kernel might be somewhat backwards compatible, but don't bet on
++   it. */
++
++/* XXX - Note, cap_t, is defined by POSIX to be an "opaque" pointer to
++   a set of three capability sets.  The transposition of 3*the
++   following structure to such a composite is better handled in a user
++   library since the draft standard requires the use of malloc/free
++   etc.. */
++ 
++#define _LINUX_CAPABILITY_VERSION  0x19980330
++
++typedef struct __user_cap_header_struct {
++	__u32 version;
++	int pid;
++} *cap_user_header_t;
++ 
++typedef struct __user_cap_data_struct {
++        __u32 effective;
++        __u32 permitted;
++        __u32 inheritable;
++} *cap_user_data_t;
++  
++#ifdef __KERNEL__
++
++/* #define STRICT_CAP_T_TYPECHECKS */
++
++#ifdef STRICT_CAP_T_TYPECHECKS
++
++typedef struct kernel_cap_struct {
++	__u32 cap;
++} kernel_cap_t;
++
++#else
++
++typedef __u32 kernel_cap_t;
++
++#endif
++  
++#define _USER_CAP_HEADER_SIZE  (2*sizeof(__u32))
++#define _KERNEL_CAP_T_SIZE     (sizeof(kernel_cap_t))
++
++#endif
++
++
++/**
++ ** POSIX-draft defined capabilities. 
++ **/
++
++/* In a system with the [_POSIX_CHOWN_RESTRICTED] option defined, this
++   overrides the restriction of changing file ownership and group
++   ownership. */
++
++#define CAP_CHOWN            0
++
++/* Override all DAC access, including ACL execute access if
++   [_POSIX_ACL] is defined. Excluding DAC access covered by
++   CAP_LINUX_IMMUTABLE. */
++
++#define CAP_DAC_OVERRIDE     1
++
++/* Overrides all DAC restrictions regarding read and search on files
++   and directories, including ACL restrictions if [_POSIX_ACL] is
++   defined. Excluding DAC access covered by CAP_LINUX_IMMUTABLE. */
++
++#define CAP_DAC_READ_SEARCH  2
++    
++/* Overrides all restrictions about allowed operations on files, where
++   file owner ID must be equal to the user ID, except where CAP_FSETID
++   is applicable. It doesn't override MAC and DAC restrictions. */
++
++#define CAP_FOWNER           3
++
++/* Overrides the following restrictions that the effective user ID
++   shall match the file owner ID when setting the S_ISUID and S_ISGID
++   bits on that file; that the effective group ID (or one of the
++   supplementary group IDs) shall match the file owner ID when setting
++   the S_ISGID bit on that file; that the S_ISUID and S_ISGID bits are
++   cleared on successful return from chown(2) (not implemented). */
++
++#define CAP_FSETID           4
++
++/* Used to decide between falling back on the old suser() or fsuser(). */
++
++#define CAP_FS_MASK          0x1f
++
++/* Overrides the restriction that the real or effective user ID of a
++   process sending a signal must match the real or effective user ID
++   of the process receiving the signal. */
++
++#define CAP_KILL             5
++
++/* Allows setgid(2) manipulation */
++/* Allows setgroups(2) */
++/* Allows forged gids on socket credentials passing. */
++
++#define CAP_SETGID           6
++
++/* Allows set*uid(2) manipulation (including fsuid). */
++/* Allows forged pids on socket credentials passing. */
++
++#define CAP_SETUID           7
++
++
++/**
++ ** Linux-specific capabilities
++ **/
++
++/* Transfer any capability in your permitted set to any pid,
++   remove any capability in your permitted set from any pid */
++
++#define CAP_SETPCAP          8
++
++/* Allow modification of S_IMMUTABLE and S_APPEND file attributes */
++
++#define CAP_LINUX_IMMUTABLE  9
++
++/* Allows binding to TCP/UDP sockets below 1024 */
++/* Allows binding to ATM VCIs below 32 */
++
++#define CAP_NET_BIND_SERVICE 10
++
++/* Allow broadcasting, listen to multicast */
++
++#define CAP_NET_BROADCAST    11
++
++/* Allow interface configuration */
++/* Allow administration of IP firewall, masquerading and accounting */
++/* Allow setting debug option on sockets */
++/* Allow modification of routing tables */
++/* Allow setting arbitrary process / process group ownership on
++   sockets */
++/* Allow binding to any address for transparent proxying */
++/* Allow setting TOS (type of service) */
++/* Allow setting promiscuous mode */
++/* Allow clearing driver statistics */
++/* Allow multicasting */
++/* Allow read/write of device-specific registers */
++/* Allow activation of ATM control sockets */
++
++#define CAP_NET_ADMIN        12
++
++/* Allow use of RAW sockets */
++/* Allow use of PACKET sockets */
++
++#define CAP_NET_RAW          13
++
++/* Allow locking of shared memory segments */
++/* Allow mlock and mlockall (which doesn't really have anything to do
++   with IPC) */
++
++#define CAP_IPC_LOCK         14
++
++/* Override IPC ownership checks */
++
++#define CAP_IPC_OWNER        15
++
++/* Insert and remove kernel modules - modify kernel without limit */
++/* Modify cap_bset */
++#define CAP_SYS_MODULE       16
++
++/* Allow ioperm/iopl access */
++/* Allow sending USB messages to any device via /proc/bus/usb */
++
++#define CAP_SYS_RAWIO        17
++
++/* Allow use of chroot() */
++
++#define CAP_SYS_CHROOT       18
++
++/* Allow ptrace() of any process */
++
++#define CAP_SYS_PTRACE       19
++
++/* Allow configuration of process accounting */
++
++#define CAP_SYS_PACCT        20
++
++/* Allow configuration of the secure attention key */
++/* Allow administration of the random device */
++/* Allow examination and configuration of disk quotas */
++/* Allow configuring the kernel's syslog (printk behaviour) */
++/* Allow setting the domainname */
++/* Allow setting the hostname */
++/* Allow calling bdflush() */
++/* Allow mount() and umount(), setting up new smb connection */
++/* Allow some autofs root ioctls */
++/* Allow nfsservctl */
++/* Allow VM86_REQUEST_IRQ */
++/* Allow to read/write pci config on alpha */
++/* Allow irix_prctl on mips (setstacksize) */
++/* Allow flushing all cache on m68k (sys_cacheflush) */
++/* Allow removing semaphores */
++/* Used instead of CAP_CHOWN to "chown" IPC message queues, semaphores
++   and shared memory */
++/* Allow locking/unlocking of shared memory segment */
++/* Allow turning swap on/off */
++/* Allow forged pids on socket credentials passing */
++/* Allow setting readahead and flushing buffers on block devices */
++/* Allow setting geometry in floppy driver */
++/* Allow turning DMA on/off in xd driver */
++/* Allow administration of md devices (mostly the above, but some
++   extra ioctls) */
++/* Allow tuning the ide driver */
++/* Allow access to the nvram device */
++/* Allow administration of apm_bios, serial and bttv (TV) device */
++/* Allow manufacturer commands in isdn CAPI support driver */
++/* Allow reading non-standardized portions of pci configuration space */
++/* Allow DDI debug ioctl on sbpcd driver */
++/* Allow setting up serial ports */
++/* Allow sending raw qic-117 commands */
++/* Allow enabling/disabling tagged queuing on SCSI controllers and sending
++   arbitrary SCSI commands */
++/* Allow setting encryption key on loopback filesystem */
++
++#define CAP_SYS_ADMIN        21
++
++/* Allow use of reboot() */
++
++#define CAP_SYS_BOOT         22
++
++/* Allow raising priority and setting priority on other (different
++   UID) processes */
++/* Allow use of FIFO and round-robin (realtime) scheduling on own
++   processes and setting the scheduling algorithm used by another
++   process. */
++
++#define CAP_SYS_NICE         23
++
++/* Override resource limits. Set resource limits. */
++/* Override quota limits. */
++/* Override reserved space on ext2 filesystem */
++/* NOTE: ext2 honors fsuid when checking for resource overrides, so 
++   you can override using fsuid too */
++/* Override size restrictions on IPC message queues */
++/* Allow more than 64hz interrupts from the real-time clock */
++/* Override max number of consoles on console allocation */
++/* Override max number of keymaps */
++
++#define CAP_SYS_RESOURCE     24
++
++/* Allow manipulation of system clock */
++/* Allow irix_stime on mips */
++/* Allow setting the real-time clock */
++
++#define CAP_SYS_TIME         25
++
++/* Allow configuration of tty devices */
++/* Allow vhangup() of tty */
++
++#define CAP_SYS_TTY_CONFIG   26
++
++/* Allow the privileged aspects of mknod() */
++
++#define CAP_MKNOD            27
++
++/* Allow taking of leases on files */
++
++#define CAP_LEASE            28
++
++#endif /* !_LINUX_CAPABILITY_H */
++
++
+ 
+ /*
+  * POSIX capability types
+--- libcap-1.10.orig/libcap/Makefile
++++ libcap-1.10/libcap/Makefile
+@@ -24,12 +24,15 @@
+ #
+ # defines
+ #
++ifndef $(topdir)
+ topdir=$(shell pwd)/..
+-include ../Make.Rules
++endif
++include $(topdir)/Make.Rules
++
+ #
+ # Library version
+ #
+-LIBNAME=libcap.so
++LIBNAME=libcap
+ #
+ 
+ FILES=cap_alloc cap_proc cap_extint cap_flag cap_text cap_sys
+@@ -39,10 +42,11 @@
+ 
+ INCLS=libcap.h cap_names.h $(INCS)
+ OBJS=$(addsuffix .o, $(FILES))
+-MAJLIBNAME=$(LIBNAME).$(VERSION)
++LOBJS=$(addsuffix .lo, $(FILES))
++MAJLIBNAME=$(LIBNAME).so.$(VERSION)
+ MINLIBNAME=$(MAJLIBNAME).$(MINOR)
+ 
+-all: $(MINLIBNAME)
++all: $(MINLIBNAME) $(LIBNAME).a
+ 
+ _makenames: _makenames.c cap_names.sed
+ 	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
+@@ -50,31 +54,38 @@
+ cap_names.h: _makenames
+ 	./_makenames > cap_names.h
+ 
+-cap_names.sed: Makefile /usr/include/linux/capability.h
+-	@echo "=> making cap_names.c from <linux/capability.h>"
+-	@sed -ne '/^#define[ \t]CAP[_A-Z]\+[ \t]\+[0-9]\+/{s/^#define \([^ \t]*\)[ \t]*\([^ \t]*\)/  \{ \2, \"\1\" \},/;y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/;p;}' < /usr/include/linux/capability.h | fgrep -v 0x > cap_names.sed
+-#	@sed -ne '/^#define[ \t]CAP[_A-Z]\+[ \t]\+[0-9]\+/{s/^#define CAP_\([^ \t]*\)[ \t]*\([^ \t]*\)/  \{ \2, \"\1\" \},/;y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/;p;}' < /usr/include/linux/capability.h | fgrep -v 0x > cap_names.sed
++cap_names.sed: Makefile include/sys/capability.h
++	@echo "=> making cap_names.c from <sys/capability.h>"
++	@sed -ne '/^#define[ \t]CAP[_A-Z]\+[ \t]\+[0-9]\+/{s/^#define \([^ \t]*\)[ \t]*\([^ \t]*\)/  \{ \2, \"\1\" \},/;y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/;p;}' < include/sys/capability.h | fgrep -v 0x > cap_names.sed #   @sed -ne '/^#define[ \t]CAP[_A-Z]\+[ \t]\+[0-9]\+/{s/^#define CAP_\([^ \t]*\)[ \t]*\([^ \t]*\)/  \{ \2, \"\1\" \},/;y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/;p;}' < /usr/include/linux/capability.h | fgrep -v 0x > cap_names.sed
++
++$(LIBNAME).a: $(OBJS)
++	ar cruv $(LIBNAME).a $(OBJS)
+ 
+-$(MINLIBNAME): $(OBJS)
+-	$(LD) -soname $(MAJLIBNAME) -x -shared -o $@ $(OBJS)
++$(MINLIBNAME): $(LOBJS)
++	$(CC) -shared -fPIC -Wl,-soname,$(MAJLIBNAME) -o $@ $(LOBJS)
+ 	ln -sf $(MINLIBNAME) $(MAJLIBNAME)
+-	ln -sf $(MAJLIBNAME) $(LIBNAME)
++	ln -sf $(MAJLIBNAME) $(LIBNAME).so
+ 
+ %.o: %.c $(INCLS)
+ 	$(CC) $(CFLAGS) -c $< -o $@
+ 
++%.lo: %.c $(INCLS)
++	$(CC) $(CFLAGS) -fPIC -c $< -o $@
++
++
+ install: all
+ 	mkdir -p -m 0755 $(INCDIR)/sys
+ 	install -m 0644 include/sys/capability.h $(INCDIR)/sys
+ 	mkdir -p -m 0755 $(LIBDIR)
++	install -m 0644 $(LIBNAME).a $(LIBDIR)
+ 	install -m 0644 $(MINLIBNAME) $(LIBDIR)/$(MINLIBNAME)
+ 	ln -sf $(MINLIBNAME) $(LIBDIR)/$(MAJLIBNAME)
+-	ln -sf $(MAJLIBNAME) $(LIBDIR)/$(LIBNAME)
++	ln -sf $(MAJLIBNAME) $(LIBDIR)/$(LIBNAME).so
+ 	-/sbin/ldconfig
+ 
+ clean:
+ 	$(LOCALCLEAN)
+-	rm -f $(OBJS) $(LIBNAME)*
++	rm -f $(OBJS) $(LOBJS) $(LIBNAME).a $(LIBNAME).so*
+ 	rm -f cap_names.h cap_names.sed _makenames
+ 	cd include/sys && $(LOCALCLEAN)
+ 
+--- libcap-1.10.orig/libcap/_makenames.c
++++ libcap-1.10/libcap/_makenames.c
+@@ -9,7 +9,7 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include <linux/capability.h>
++#include <sys/capability.h>
+ 
+ /*
+  * #include 'sed' generated array
+--- libcap-1.10.orig/libcap/cap_sys.c
++++ libcap-1.10/libcap/cap_sys.c
+@@ -10,7 +10,8 @@
+ #include "libcap.h"
+ #define __LIBRARY__
+ #include <linux/unistd.h>
+-
++/* glic >= 2.1 knows capset/capget. no need to define it here */ 
++/* 
+ _syscall2(int, capget,
+ 	  cap_user_header_t, header,
+ 	  cap_user_data_t, data)
+@@ -18,7 +19,7 @@
+ _syscall2(int, capset,
+ 	  cap_user_header_t, header,
+ 	  const cap_user_data_t, data)
+-
++*/
+ /*
+  * $Log: libcap-1.10-debian.patch,v $
+  * Revision 1.1  2006/10/29 23:14:00  jgc
+  * upgpkg: libcap 1.10-2
+  * Remove amd64 patches that messed things up
+  * Apply debian patch to make it build again
+  * Remove empty man2 directory the right way
+  *
+  * Revision 1.1.1.1 1999/04/17 22:16:31  morgan
+--- libcap-1.10.orig/capfaq-0.2.txt
++++ libcap-1.10/capfaq-0.2.txt
+@@ -0,0 +1,264 @@
++This is the Linux kernel capabilities FAQ
++
++Its history, to the extent that I am able to reconstruct it is that
++v2.0 was posted to the Linux kernel list on 1999/04/02 by Boris
++Tobotras. Thanks to Denis Ducamp for forwarding me a copy.
++
++Cheers
++
++Andrew
++
++Linux Capabilities FAQ 0.2
++==========================
++
++1) What is a capability?
++
++The name "capabilities" as used in the Linux kernel can be confusing.
++First there are Capabilities as defined in computer science. A
++capability is a token used by a process to prove that it is allowed to
++do an operation on an object.  The capability identifies the object
++and the operations allowed on that object.  A file descriptor is a
++capability.  You create the file descriptor with the "open" call and
++request read or write permissions.  Later, when doing a read or write
++operation, the kernel uses the file descriptor as an index into a
++data structure that indicates what operations are allowed.  This is an
++efficient way to check permissions.  The necessary data structures are
++created once during the "open" call.  Later read and write calls only
++have to do a table lookup.  Operations on capabilities include copying
++capabilities, transferring capabilities between processes, modifying a
++capability, and revoking a capability.  Modifying a capability can be
++something like taking a read-write filedescriptor and making it
++read-only.  A capability often has a notion of an "owner" which is
++able to invalidate all copies and derived versions of a capability.
++Entire OSes are based on this "capability" model, with varying degrees
++of purity.  There are other ways of implementing capabilities than the
++file descriptor model - traditionally special hardware has been used,
++but modern systems also use the memory management unit of the CPU.
++
++Then there is something quite different called "POSIX capabilities"
++which is what Linux uses.  These capabilities are a partitioning of
++the all powerful root privilege into a set of distinct privileges (but
++look at securelevel emulation to find out that this isn't necessary
++the whole truth).  Users familiar with VMS or "Trusted" versions of
++other UNIX variants will know this under the name "privileges".  The
++name "capabilities" comes from the now defunct POSIX draft 1003.1e
++which used this name.
++
++2) So what is a "POSIX capability"?
++
++A process has three sets of bitmaps called the inheritable(I),
++permitted(P), and effective(E) capabilities.  Each capability is
++implemented as a bit in each of these bitmaps which is either set or
++unset.  When a process tries to do a privileged operation, the
++operating system will check the appropriate bit in the effective set
++of the process (instead of checking whether the effective uid of the
++process i 0 as is normally done).  For example, when a process tries
++to set the clock, the Linux kernel will check that the process has the
++CAP_SYS_TIME bit (which is currently bit 25) set in its effective set.
++
++The permitted set of the process indicates the capabilities the
++process can use.  The process can have capabilities set in the
++permitted set that are not in the effective set.  This indicates that
++the process has temporarily disabled this capability.  A process is
++allowed to set a bit in its effective set only if it is available in
++the permitted set.  The distinction between effective and permitted
++exists so that processes can "bracket" operations that need privilege.
++
++The inheritable capabilities are the capabilities of the current
++process that should be inherited by a program executed by the current
++process.  The permitted set of a process is masked against the
++inheritable set during exec().  Nothing special happens during fork()
++or clone().  Child processes and threads are given an exact copy of
++the capabilities of the parent process.
++
++3) What about other entities in the system? Users, Groups, Files?
++
++Files have capabilities.  Conceptually they have the same three
++bitmaps that processes have, but to avoid confusion we call them by
++other names.  Only executable files have capabilities, libraries don't
++have capabilities (yet).  The three sets are called the allowed set,
++the forced set, and the effective set.
++
++The allowed set indicates what capabilities the executable is allowed
++to receive from an execing process.  This means that during exec(),
++the capabilities of the old process are first masked against a set
++which indicates what the process gives away (the inheritable set of
++the process), and then they are masked against a set which indicates
++what capabilities the new process image is allowed to receive (the
++allowed set of the executable).
++
++The forced set is a set of capabilities created out of thin air and
++given to the process after execing the executable.  The forced set is
++similar in nature to the setuid feature.  In fact, the setuid bit from
++the filesystem is "read" as a full forced set by the kernel.
++
++The effective set indicates which bits in the permitted set of the new
++process should be transferred to the effective set of the new process.
++The effective set is best thought of as a "capability aware" set.  It
++should consist of only 1s if the executable is capability-dumb, or
++only 0s if the executable is capability-smart.  Since the effective
++set consists of only 0s or only 1s, the filesystem can implement this
++set using a single bit.
++
++NOTE: Filesystem support for capabilities is not part of Linux 2.2.
++
++Users and Groups don't have associated capabilities from the kernel's
++point of view, but it is entirely reasonable to associate users or
++groups with capabilities.  By letting the "login" program set some
++capabilities it is possible to make role users such as a backup user
++that will have the CAP_DAC_READ_SEARCH capability and be able to do
++backups.  This could also be implemented as a PAM module, but nobody
++has implemented one yet.
++
++4) What capabilities exist?
++
++The capabilities available in Linux are listed and documented in the
++file /usr/src/linux/include/linux/capability.h.
++
++5) Are Linux capabilities hierarchical?
++
++No, you cannot make a "subcapability" out of a Linux capability as in
++capability-based OSes.
++
++6) How can I use capabilities to make sure Mr. Evil Luser (eluser)
++can't exploit my "suid" programs?
++
++This is the general outline of how this works given filesystem
++capability support exists.  First, you have a PAM module that sets the
++inheritable capabilities of the login-shell of eluser.  Then for all
++"suid" programs on the system, you decide what capabilities they need
++and set the _allowed_ set of the executable to that set of
++capabilities.  The capability rules
++
++   new permitted = forced | (allowed & inheritable)
++
++means that you should be careful about setting forced capabilities on
++executables.  In a few cases, this can be useful though.  For example
++the login program needs to set the inheritable set of the new user and
++therefore needs an almost full permitted set.  So if you want eluser
++to be able to run login and log in as a different user, you will have
++to set some forced bits on that executable.
++
++7) What about passing capabilities between processes?
++
++Currently this is done by the system call "setcap" which can set the
++capabilities of another process.  This requires the CAP_SETPCAP
++capability which you really only want to grant a _few_ processes.
++CAP_SETPCAP was originally intended as a workaround to be able to
++implement filesystem support for capabilities using a daemon outside
++the kernel.
++
++There has been discussions about implementing socket-level capability
++passing.  This means that you can pass a capability over a socket.  No
++support for this exists in the official kernel yet.
++
++8) I see securelevel has been removed from 2.2 and are superceeded by
++capabilities.  How do I emulate securelevel using capabilities?
++
++The setcap system call can remove a capability from _all_ processes on
++the system in one atomic operation.  The setcap utility from the
++libcap distribution will do this for you.  The utility requires the
++CAP_SETPCAP privilege to do this.  The CAP_SETPCAP capability is not
++enabled by default.
++
++libcap is available from
++ftp://ftp.kernel.org/pub/linux/libs/security/linux-privs/kernel-2.2/
++
++9) I noticed that the capability.h file lacks some capabilities that
++are needed to fully emulate 2.0 securelevel.  Is there a patch for
++this?
++
++Actually yes - funny you should ask :-).  The problem with 2.0
++securelevel is that they for example stop root from accessing block
++devices.  At the same time they restrict the use of iopl.  These two
++changes are fundamentally different.  Blocking access to block devices
++means restricting something that usually isn't restricted.
++Restricting access to the use of iopl on the other hand means
++restricting (blocking) access to something that is already blocked.
++Emulating the parts of 2.0 securelevel that restricts things that are
++normally not restricted means that the capabilites in the kernel has
++to have a set of capabilities that are usually _on_ for a normal
++process (note that this breaks the explanation that capabilities are a
++partitioning of the root privileges).  There is an experimental patch at
++
++ftp://ftp.guardian.no/pub/free/linux/capabilities/patch-cap-exp-1
++
++which implements a set of capabilities with the "CAP_USER" prefix:
++
++cap_user_sock  - allowed to use socket()
++cap_user_dev   - allowed to open char/block devices
++cap_user_fifo  - allowed to use pipes
++
++These should be enough to emulate 2.0 securelevel (tell me if we need
++something more).
++
++10) Seems I need a CAP_SETPCAP capability that I don't have to make use
++of capabilities.  How do I enable this capability?
++
++Change the definition of CAP_INIT_EFF_SET and CAP_INIT_INH_SET to the
++following in include/linux/capability.h:
++
++#define CAP_INIT_EFF_SET    { ~0 }
++#define CAP_INIT_INH_SET    { ~0 }
++
++This will start init with a full capability set and not with
++CAP_SETPCAP removed.
++
++11) How do I start a process with a limited set of capabilities?
++
++Get the libcap library and use the execcap utility.  The following
++example starts the update daemon with only the CAP_SYS_ADMIN
++capability.
++
++execcap 'cap_sys_admin=eip' update
++
++12) How do I start a process with a limited set of capabilities under
++another uid?
++
++Use the sucap utility which changes uid from root without loosing any
++capabilities.  Normally all capabilities are cleared when changing uid
++from root.  The sucap utility requires the CAP_SETPCAP capability.
++The following example starts updated under uid updated and gid updated
++with CAP_SYS_ADMIN raised in the Effective set.
++
++sucap updated updated execcap 'cap_sys_admin=eip' update
++
++[ Sucap is currently available from
++ftp://ftp.guardian.no/pub/free/linux/capabilities/sucap.c. Put it in
++the progs directory of libcap to compile.]
++
++13) What are the "capability rules"
++
++The capability rules are the rules used to set the capabilities of the
++new process image after an exec.  They work like this:
++
++        pI' = pI
++  (***) pP' = fP | (fI & pI)
++        pE' = pP' & fE          [NB. fE is 0 or ~0]
++
++  I=Inheritable, P=Permitted, E=Effective // p=process, f=file
++  ' indicates post-exec().
++
++Now to make sense of the equations think of fP as the Forced set of
++the executable, and fI as the Allowed set of the executable.  Notice
++how the Inheritable set isn't touched at all during exec().
++
++14) What are the laws for setting capability bits in the Inheritable,
++Permitted, and Effective sets?
++
++Bits can be transferred from Permitted to either Effective or
++Inheritable set.
++
++Bits can be removed from all sets.
++
++15) Where is the standard on which the Linux capabilities are based?
++
++There used to be a POSIX draft called POSIX.6 and later POSIX 1003.1e.
++However after the committee had spent over 10 years, POSIX decided
++that enough is enough and dropped the draft.  There will therefore not
++be a POSIX standard covering security anytime soon.  This may lead to
++that the POSIX draft is available for free, however.
++
++--
++        Best regards, -- Boris.
++

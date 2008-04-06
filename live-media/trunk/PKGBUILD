@@ -1,0 +1,32 @@
+#$Id: PKGBUILD,v 1.11 2008/01/08 04:53:49 aaron Exp $
+#Maintainer: Aaron, phrakture, Griffin <aaron@archlinux.org>
+#Contributor: Gilles CHAUVIN <gcnweb@gmail.com>
+
+pkgname=live-media
+pkgver=2008.01.04
+pkgrel=1
+pkgdesc="A set of C++ libraries for multimedia streaming"
+arch=(i686 x86_64)
+license=('LGPL')
+url="http://live555.com/liveMedia/"
+depends=(gcc-libs)
+source=(http://live555.com/liveMedia/public/live.$pkgver.tar.gz)
+md5sums=('c774c9b284a36717b488002e53d07ac7')
+
+build()
+{
+  cd $startdir/src/live
+  sed -i "s|COMPILE_OPTS =.*|COMPILE_OPTS = \$(INCLUDES) -I. -DSOCKLEN_T=socklen_t -D_LARGEFILE_SOURCE=1 $CFLAGS|g" config.linux
+  ./genMakefiles linux
+  make || return 1
+
+  for dir in BasicUsageEnvironment UsageEnvironment groupsock liveMedia; do
+    mkdir -p $startdir/pkg/usr/lib/$pkgname/$dir
+    cp -r $dir/*.a $dir/include $startdir/pkg/usr/lib/$pkgname/$dir
+  done
+
+  mkdir -p $startdir/pkg/usr/bin
+  for testprog in `find testProgs -type f -perm 755`; do
+    install $testprog $startdir/pkg/usr/bin
+  done
+}

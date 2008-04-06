@@ -1,0 +1,48 @@
+# $Id: PKGBUILD,v 1.39 2008/03/15 09:47:43 thomas Exp $
+pkgname=bluez-utils
+pkgver=3.28
+pkgrel=1
+pkgdesc="Utilities for the Linux Bluetooth protocol stack"
+arch=(i686 x86_64)
+url="http://www.bluez.org/"
+makedepends=('alsa-lib' 'hal')
+depends=("bluez-libs=$pkgver" 'libusb' 'dbus>=0.93')
+optdepends=('alsa-lib: support for bluetooth audio'
+            'hal: support for bluetooth networking')
+license=('GPL')
+backup=(etc/bluetooth/{audio,hcid,network,rfcomm}.conf 
+        etc/bluetooth/{audio,input,network,serial}.service
+        etc/conf.d/bluetooth)
+source=(http://bluez.sf.net/download/bluez-utils-${pkgver}.tar.gz
+        bluetooth.rc bluetooth.conf.d)
+options=(!libtool)
+md5sums=('9966fe59e228efc6626d47f2f2732d43'
+         '6f3b248670fe80626466b47bc52330e6'
+         'dda606b16264859b007ec777c7a5627d')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/lib \
+    --localstatedir=/var --enable-pcmcia --enable-inotify --enable-alsa \
+    --enable-cups --enable-pcmciarules --enable-bccmd --enable-avctrl \
+    --enable-dfutool --enable-audio --enable-input --enable-network \
+    --enable-serial --enable-hal --enable-dund --enable-hidd \
+    --enable-pand --enable-hid2hci --enable-sdpd
+  make || return 1
+  # appease the RedHat-centric Makefile
+  mkdir -p ${startdir}/pkg/etc/init.d
+  make DESTDIR=${startdir}/pkg install || return 1
+  
+  install -D -m644 ${startdir}/src/bluez-utils-${pkgver}/network/network.conf ${startdir}/pkg/etc/bluetooth/network.conf
+  
+  rm -rf ${startdir}/pkg/etc/init.d ${startdir}/pkg/etc/rc.d
+  
+  install -D -m755 ${startdir}/src/bluetooth.rc ${startdir}/pkg/etc/rc.d/bluetooth || return 1
+  install -D -m644 ${startdir}/src/bluetooth.conf.d ${startdir}/pkg/etc/conf.d/bluetooth || return 1
+
+  install -D -m755 ${startdir}/src/bluez-utils-${pkgver}/daemon/passkey-agent ${startdir}/pkg/usr/bin/passkey-agent || return 1
+
+  mkdir -p ${startdir}/pkg/etc/udev/rules.d/
+  sed 's|RUN+="bluetooth_serial"|RUN+="/lib/udev/bluetooth_serial"|g' ${startdir}/pkg/etc/udev/bluetooth.rules > ${startdir}/pkg/etc/udev/rules.d/bluetooth.rules || return 1
+  rm ${startdir}/pkg/etc/udev/bluetooth.rules || return 1
+}

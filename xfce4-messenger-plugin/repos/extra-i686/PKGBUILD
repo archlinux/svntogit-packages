@@ -1,0 +1,25 @@
+# $Id: PKGBUILD,v 1.8 2007/12/03 20:22:27 tobias Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+# Contributor: Tobias Kieslich <tobias (at) archlinux.org>
+
+pkgname=xfce4-messenger-plugin
+pkgver=0.1.0
+pkgrel=5
+pkgdesc="plugin that monitors dbus messages for the Xfce4 panel"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://xfce-goodies.berlios.de/"
+groups=('xfce4-goodies')
+depends=('xfce4-panel' 'dbus')
+makedepends=('pkgconfig')
+options=('!libtool')
+source=(ftp://ftp.berlios.de/pub/xfce-goodies/panel-plugins/4.4/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('5b79e030139e1f845124c2eb50da9051')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/xfce4 \
+    --localstatedir=/var --disable-static
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

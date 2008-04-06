@@ -1,0 +1,32 @@
+# $Id: PKGBUILD,v 1.6 2008/03/28 20:30:58 damir Exp $
+# Contributor: 
+# Maintainer: 
+
+pkgname=xournal
+pkgver=0.4.2.1
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('GPL')
+pkgdesc="Notetaking and sketching application"
+url="http://math.mit.edu/~auroux/software/xournal/"
+source=(http://math.mit.edu/~auroux/software/xournal/xournal-$pkgver.tar.gz \
+	xournal.desktop)
+depends=('libgnomecanvas' 'libgnomeprintui' 'poppler>=0.6' 'ghostscript')
+
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./autogen.sh
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  # install some freedesktop.org compatibility
+  install -D -m644 $startdir/src/$pkgname.desktop \
+  $startdir/pkg/usr/share/applications/$pkgname.desktop
+}
+
+
+
+
+md5sums=('b56b1403b68b60a5a27b028d91a38e88'
+         '9842b3979e4cc665bbdf3bc656260d47')

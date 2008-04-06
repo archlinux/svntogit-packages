@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.8 2007/12/03 09:21:03 tobias Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+# Contributor: Tobias Kieslich <tobias (at) archlinux.org>
+
+pkgname=verve-plugin
+pkgver=0.3.5
+pkgrel=4
+pkgdesc="command line plugin Xfce4 panel"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://xfce-goodies.berlios.de/"
+groups=('xfce4-goodies')
+depends=('xfce4-panel' 'pcre' 'exo' 'dbus')
+makedepends=('pkgconfig')
+options=('!libtool')
+replaces=('xfce4-minicmd-plugin')
+source=(http://goodies.xfce.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('85701b960da6bb10762b460c23b84c15')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/xfce4 \
+    --localstatedir=/var --disable-static
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

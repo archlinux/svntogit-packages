@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.8 2007/10/05 15:12:59 tom Exp $
+# Maintainer: Tom Killian <tom@archlinux.org>
+# Committer: dorphell <dorphell@archlinux.org>
+
+pkgname=libtheora
+pkgver=1.0beta1
+pkgrel=1
+pkgdesc="An open video codec developed by the Xiph.org"
+arch=('i686' 'x86_64')
+depends=('libogg')
+makedepends=('libvorbis')
+url=http://www.xiph.org
+license=('custom')
+source=(http://downloads.xiph.org/releases/theora/libtheora-${pkgver}.tar.bz2)
+
+build() {
+  cd ${startdir}/src/libtheora-${pkgver}
+  ./configure --prefix=/usr --enable-shared
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+  
+  for file in LICENSE COPYING ; do
+    install -D $file $startdir/pkg/usr/share/licenses/libtheora/$file
+  done
+}
+md5sums=('e2ff1996c5a9fadd0df1025aa10bc35e')

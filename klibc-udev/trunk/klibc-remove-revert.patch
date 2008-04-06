@@ -1,0 +1,111 @@
+### Archlinux revert
+### revert this patch, crazy udev devs
+From: Kay Sievers <kay.sievers@suse.de>
+Date: Fri, 4 Aug 2006 22:02:58 +0000 (+0200)
+Subject: libvolume_id: read ufs2 label
+X-Git-Tag: 097
+X-Git-Url: http://www.kernel.org/git/?p=linux/hotplug/udev.git;a=commitdiff;h=eb82b76dedc1482b6434c46fee84d3ef13cb9648
+
+libvolume_id: read ufs2 label
+
+Taken from the FreeBSD HAL repository.
+---
+
+--- a/Makefile
++++ b/Makefile
+@@ -33,6 +33,9 @@ USE_GCOV = false
+ # include Security-Enhanced Linux support
+ USE_SELINUX = false
+ 
++# comile with klibc instead of glibc
++USE_KLIBC = false
++
+ # set this to create statically linked binaries
+ USE_STATIC = false
+ 
+@@ -139,6 +142,12 @@ ifeq ($(strip $(USE_GCOV)),true)
+ 	LDFLAGS += -fprofile-arcs
+ endif
+ 
++ifeq ($(strip $(USE_KLIBC)),true)
++	KLCC		= /usr/bin/$(CROSS_COMPILE)klcc
++	CC		= $(KLCC)
++	LD		= $(KLCC)
++endif
++
+ ifeq ($(strip $(USE_SELINUX)),true)
+ 	UDEV_OBJS += udev_selinux.o
+ 	LIB_OBJS += -lselinux -lsepol
+--- a/README
++++ b/README
+@@ -69,6 +69,10 @@ Compile Options:
+   USE_SELINUX
+   	If set to 'true', udev will be built with SELinux support
+   	enabled.  This is disabled by default.
++  USE_KLIBC
++  	If set to 'true', udev is built and linked against klibc.
++  	Default value is 'false'. KLCC specifies the klibc compiler
++  	wrapper, usually located at /usr/bin/klcc.
+   EXTRAS
+   	list of helper programs in extras/ to build.
+         make EXTRAS="extras/cdrom_id extras/scsi_id extras/volume_id"
+--- a/extras/scsi_id/scsi_id.c
++++ b/extras/scsi_id/scsi_id.c
+@@ -402,7 +402,8 @@ static int set_options(int argc, char **
+ 	/*
+ 	 * optind is a global extern used by getopt. Since we can call
+ 	 * set_options twice (once for command line, and once for config
+-	 * file) we have to reset this back to 1.
++	 * file) we have to reset this back to 1. [Note glibc handles
++	 * setting this to 0, but klibc does not.]
+ 	 */
+ 	optind = 1;
+ 	while (1) {
+--- a/test/simple-build-check.sh
++++ b/test/simple-build-check.sh
+@@ -23,6 +23,14 @@ make clean EXTRAS="$EXTRAS" >/dev/null
+ make all $MAKEOPTS USE_LOG=false EXTRAS="$EXTRAS" || exit
+ echo -e "\n\n"
+ 
++# klibc build
++if [ -n "$KLCC" -a -e "$KLCC" ]; then
++	echo KLCC: "$KLCC"
++	make clean EXTRAS="$EXTRAS" >/dev/null
++	make all -j4 $MAKEOPTS USE_KLIBC=true DEBUG=true EXTRAS="$EXTRAS" KLCC="$KLCC" || exit
++	echo -e "\n\n"
++fi
++
+ # install in temporary dir and show it
+ TEMPDIR="`pwd`/.tmp"
+ rm -rf $TEMPDIR
+--- a/udev_libc_wrapper.c
++++ b/udev_libc_wrapper.c
+@@ -30,7 +30,7 @@
+ 
+ #include "udev.h"
+ 
+-#ifndef __GLIBC__
++#ifdef __KLIBC__
+ #define __OWN_USERDB_PARSER__
+ #endif
+ 
+--- a/udev_libc_wrapper.h
++++ b/udev_libc_wrapper.h
+@@ -105,7 +105,7 @@ static inline int inotify_add_watch(int 
+ }
+ #else
+ /* needed until /usr/include/sys/inotify.h is working */
+-#ifndef __GLIBC__
++#ifdef __KLIBC__
+ #include <sys/inotify.h>
+ #else
+ static inline int inotify_init(void)
+@@ -117,7 +117,7 @@ static inline int inotify_add_watch(int 
+ {
+ 	return syscall(__NR_inotify_add_watch, fd, name, mask);
+ }
+-#endif /* __GLIBC__ */
++#endif /* __KLIBC__ */
+ #endif /* __NR_inotify_init */
+ 
+ #ifndef IN_CREATE

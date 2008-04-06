@@ -1,0 +1,436 @@
+From: George Sapountzis <gsap7@yahoo.gr>
+Date: Thu, 5 Apr 2007 16:13:47 +0000 (+0300)
+Subject: glx: Remove stray __GLinterface.
+X-Git-Url: http://gitweb.freedesktop.org/?p=xorg/xserver.git;a=commitdiff;h=a4e2fc703484fffed8dd50c1b4b24c564be4d3cd
+
+glx: Remove stray __GLinterface.
+
+__GLinterface was droped from glcore.h
+---
+
+--- a/GL/glx/glxext.c
++++ b/GL/glx/glxext.c
+@@ -275,7 +275,7 @@ static GLboolean errorOccured = GL_FALSE
+ /*
+ ** The GL was will call this routine if an error occurs.
+ */
+-void __glXErrorCallBack(__GLinterface *gc, GLenum code)
++void __glXErrorCallBack(GLenum code)
+ {
+     errorOccured = GL_TRUE;
+ }
+--- a/GL/glx/glxext.h
++++ b/GL/glx/glxext.h
+@@ -66,7 +66,7 @@ typedef struct {
+ extern GLboolean __glXFreeContext(__GLXcontext *glxc);
+ extern void __glXFlushContextCache(void);
+ 
+-extern void __glXErrorCallBack(__GLinterface *gc, GLenum code);
++extern void __glXErrorCallBack(GLenum code);
+ extern void __glXClearErrorOccured(void);
+ extern GLboolean __glXErrorOccured(void);
+ extern void __glXResetLargeCommandStatus(__GLXclientState*);
+--- a/hw/dmx/glxProxy/glxext.h	2007-04-30 16:25:07.000000000 +0100
++++ b/hw/dmx/glxProxy/glxext.h	2007-04-30 16:25:43.000000000 +0100
+@@ -67,7 +67,7 @@
+ 
+ extern void __glXNoSuchRenderOpcode(GLbyte*);
+ extern int __glXNoSuchSingleOpcode(__GLXclientState*, GLbyte*);
+-extern void __glXErrorCallBack(__GLinterface *gc, GLenum code);
++extern void __glXErrorCallBack(GLenum code);
+ extern void __glXClearErrorOccured(void);
+ extern GLboolean __glXErrorOccured(void);
+ extern void __glXResetLargeCommandStatus(__GLXclientState*);
+--- a/configure.ac	2007-04-20 04:23:40.000000000 +0300
++++ b/configure.ac	2007-04-23 01:31:47.325751948 +0300
+@@ -1697,6 +1697,7 @@
+ GL/mesa/swrast/Makefile
+ GL/mesa/swrast_setup/Makefile
+ GL/mesa/tnl/Makefile
++GL/mesa/vbo/Makefile
+ GL/mesa/X/Makefile
+ include/Makefile
+ afb/Makefile
+--- a/GL/mesa/glapi/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/glapi/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+--- a/GL/mesa/main/Makefile.am	2006-11-17 19:47:26.000000000 +0200
++++ b/GL/mesa/main/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+@@ -62,13 +61,14 @@
+                     matrix.c \
+                     mipmap.c \
+                     mm.c \
+-                    occlude.c \
+                     pixel.c \
+                     points.c \
+                     polygon.c \
++                    queryobj.c \
+                     rastpos.c \
+                     rbadaptors.c \
+                     renderbuffer.c \
++                    shaders.c \
+                     state.c \
+                     stencil.c \
+                     texcompress.c \
+--- a/GL/mesa/Makefile.am	2006-06-06 20:13:51.000000000 +0300
++++ b/GL/mesa/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -1,15 +1,15 @@
+-SUBDIRS = main math array_cache swrast swrast_setup tnl shader X glapi
++SUBDIRS = main math swrast swrast_setup tnl shader X glapi vbo
+ 
+ noinst_LTLIBRARIES = libGLcore.la
+ 
+ libGLcore_la_SOURCES = dummy.c
+ libGLcore_la_LIBADD = main/libmain.la \
+                       math/libmath.la \
+-                      array_cache/libac.la \
+                       swrast/libswrast.la \
+                       swrast_setup/libss.la \
+                       tnl/libtnl.la \
+                       shader/libshader.la \
+ 		      shader/grammar/libgrammar.la \
+ 		      shader/slang/libslang.la \
++                      vbo/libvbo.la \
+                       X/libX.la
+--- a/GL/mesa/math/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/math/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+--- a/GL/mesa/shader/grammar/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/shader/grammar/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../../X \
+-           -I../../array_cache \
+            -I../../glapi \
+            -I../../main \
+            -I../../math \
+--- a/GL/mesa/shader/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/shader/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -9,7 +9,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+@@ -28,8 +27,13 @@
+                       atifragshader.c \
+                       nvfragparse.c \
+                       nvprogram.c \
+-                      nvvertexec.c \
+-		      nvvertparse.c \
++                      nvvertparse.c \
++                      prog_debug.c \
++                      prog_execute.c \
++                      prog_instruction.c \
++                      prog_parameter.c \
++                      prog_print.c \
+                       program.c \
+-                      shaderobjects.c \
+-		      shaderobjects_3dlabs.c
++                      programopt.c \
++                      prog_statevars.c \
++                      shader_api.c
+--- a/GL/mesa/shader/slang/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/shader/slang/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -8,7 +8,6 @@
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../grammar \
+            -I../../X \
+-           -I../../array_cache \
+            -I../../glapi \
+            -I../../main \
+            -I../../math \
+@@ -19,23 +18,24 @@
+            -I../.. \
+            -I$(top_srcdir)/hw/xfree86/os-support
+ 
+-nodist_libslang_la_SOURCES = slang_analyse.c \
+-		      slang_assemble_assignment.c \
+-		      slang_assemble.c \
+-		      slang_assemble_conditional.c \
+-		      slang_assemble_constructor.c \
+-		      slang_assemble_typeinfo.c \
++nodist_libslang_la_SOURCES = slang_builtin.c \
++		      slang_codegen.c \
+ 		      slang_compile.c \
+ 		      slang_compile_function.c \
+ 		      slang_compile_operation.c \
+ 		      slang_compile_struct.c \
+ 		      slang_compile_variable.c \
+-		      slang_execute.c \
+-		      slang_execute_x86.c \
+-		      slang_export.c \
+-		      slang_library_texsample.c \
++		      slang_emit.c \
++		      slang_ir.c \
++		      slang_label.c \
+ 		      slang_library_noise.c \
+ 		      slang_link.c \
++		      slang_log.c \
++		      slang_mem.c \
+ 		      slang_preprocess.c \
++		      slang_print.c \
++		      slang_simplify.c \
+ 		      slang_storage.c \
+-		      slang_utility.c
++		      slang_typeinfo.c \
++		      slang_utility.c \
++		      slang_vartable.c
+--- a/GL/mesa/swrast/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/swrast/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+@@ -24,7 +23,6 @@
+                       s_aatriangle.c \
+                       s_accum.c \
+                       s_alpha.c \
+-                      s_arbshader.c \
+                       s_atifragshader.c \
+                       s_bitmap.c \
+                       s_blend.c \
+@@ -36,11 +34,11 @@
+                       s_drawpix.c \
+                       s_feedback.c \
+                       s_fog.c \
++                      s_fragprog.c \
+                       s_imaging.c \
+                       s_lines.c \
+                       s_logic.c \
+                       s_masking.c \
+-                      s_nvfragprog.c \
+                       s_points.c \
+                       s_readpix.c \
+                       s_span.c \
+--- a/GL/mesa/swrast_setup/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/swrast_setup/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+--- a/GL/mesa/tnl/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/tnl/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -7,7 +7,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+@@ -19,16 +18,9 @@
+            -I.. \
+            -I$(top_srcdir)/hw/xfree86/os-support
+ 
+-nodist_libtnl_la_SOURCES = t_array_api.c \
+-                      t_array_import.c \
+-                      t_context.c \
++nodist_libtnl_la_SOURCES = t_context.c \
++                      t_draw.c \
+                       t_pipeline.c \
+-                      t_save_api.c \
+-                      t_save_loopback.c \
+-                      t_save_playback.c \
+-                      t_vb_arbprogram.c \
+-                      t_vb_arbprogram_sse.c \
+-                      t_vb_arbshader.c \
+                       t_vb_cull.c \
+                       t_vb_fog.c \
+                       t_vb_light.c \
+@@ -42,9 +34,4 @@
+                       t_vertex.c \
+                       t_vertex_generic.c \
+                       t_vertex_sse.c \
+-                      t_vp_build.c \
+-                      t_vtx_api.c \
+-                      t_vtx_eval.c \
+-                      t_vtx_exec.c \
+-                      t_vtx_generic.c \
+-                      t_vtx_x86.c
++                      t_vp_build.c
+--- a/GL/mesa/vbo/Makefile.am	1970-01-01 02:00:00.000000000 +0200
++++ b/GL/mesa/vbo/Makefile.am	2007-04-22 16:13:52.000000000 +0300
+@@ -0,0 +1,35 @@
++noinst_LTLIBRARIES = libvbo.la
++
++AM_CFLAGS = \
++	$(DIX_CFLAGS) \
++	-DXFree86Server \
++	@GLX_DEFINES@
++
++INCLUDES = -I@MESA_SOURCE@/include \
++           -I../X \
++           -I../glapi \
++           -I../main \
++           -I../math \
++           -I../shader \
++           -I../shader/slang \
++           -I../shader/slang \
++           -I../swrast \
++           -I../swrast_setup \
++           -I../tnl \
++           -I.. \
++           -I$(top_srcdir)/hw/xfree86/os-support
++
++nodist_libvbo_la_SOURCES = vbo_context.c \
++			vbo_exec_api.c \
++			vbo_exec_array.c \
++			vbo_exec.c \
++			vbo_exec_draw.c \
++			vbo_exec_eval.c \
++			vbo_rebase.c \
++			vbo_save_api.c \
++			vbo_save.c \
++			vbo_save_draw.c \
++			vbo_save_loopback.c \
++			vbo_split.c \
++			vbo_split_copy.c \
++			vbo_split_inplace.c
+--- a/GL/mesa/X/Makefile.am	2006-09-18 09:04:17.000000000 +0300
++++ b/GL/mesa/X/Makefile.am	2007-04-22 17:57:08.000000000 +0300
+@@ -2,7 +2,6 @@
+ 
+ INCLUDES = -I@MESA_SOURCE@/include \
+            -I../X \
+-           -I../array_cache \
+            -I../glapi \
+            -I../main \
+            -I../math \
+@@ -21,18 +20,15 @@
+ AM_CFLAGS = \
+ 	$(DIX_CFLAGS) \
+ 	-DXFree86Server \
+-	@GLX_DEFINES@ \
+-	-DXFree86Server
++	@GLX_DEFINES@
+ 
+-libX_la_SOURCES = xf86glx.c \
+-                  xf86glx_util.c \
+-                  xf86glx_util.h \
+-                  xf86glxint.h
++libX_la_SOURCES = xf86glx.c
+ 
+ nodist_libX_la_SOURCES = \
+                   xm_api.c \
+ 		  xm_buffer.c \
+                   xm_dd.c \
++                  xm_image.c \
+                   xm_line.c \
+                   xm_span.c \
+                   xm_tri.c \
+--- a/GL/symlink-mesa.sh	2006-10-05 00:46:03.000000000 +0300
++++ b/GL/symlink-mesa.sh	2007-04-22 16:13:52.000000000 +0300
+@@ -85,15 +85,6 @@
+     done
+ }
+ 
+-symlink_mesa_ac() {
+-    src_dir src/mesa/array_cache
+-    dst_dir mesa/array_cache
+-
+-    for src in $REAL_SRC_DIR/*.c $REAL_SRC_DIR/*.h; do
+-        action `basename $src`
+-    done
+-}
+-
+ symlink_mesa_swrast() {
+     src_dir src/mesa/swrast
+     dst_dir mesa/swrast
+@@ -157,6 +148,15 @@
+     done
+ }        
+ 
++symlink_mesa_vbo() {
++    src_dir src/mesa/vbo
++    dst_dir mesa/vbo
++
++    for src in $REAL_SRC_DIR/*.c $REAL_SRC_DIR/*.h; do
++        action `basename $src`
++    done
++}
++
+ symlink_mesa_x() {
+     src_dir src/mesa/drivers/x11
+     dst_dir mesa/X
+@@ -168,6 +168,8 @@
+     action xm_api.c
+     action xm_buffer.c
+     action xm_dd.c
++    action xm_image.c
++    action xm_image.h
+     action xm_line.c
+     action xm_span.c
+     action xm_tri.c
+@@ -203,7 +205,6 @@
+ symlink_mesa() {
+     symlink_mesa_main
+     symlink_mesa_math
+-    symlink_mesa_ac
+     symlink_mesa_swrast
+     symlink_mesa_ss
+     symlink_mesa_tnl
+@@ -215,6 +216,7 @@
+     symlink_mesa_glapi
+     symlink_mesa_ppc
+     symlink_mesa_sparc
++    symlink_mesa_vbo
+     symlink_mesa_x86
+     symlink_mesa_x8664
+ }
+@@ -225,9 +227,6 @@
+     dst_dir glx
+ 
+     action indirect_size.h
+-
+-    src_dir src/mesa/drivers/dri/common
+-
+     action glcontextmodes.c
+     action glcontextmodes.h
+ 
+@@ -289,9 +288,9 @@
+ }
+ 
+ usage() {
+-    echo symlink.sh src-dir dst-dir
+-    echo src-dir: the xc directory of the monolithic source tree
+-    echo dst-dir: the modular source tree containing proto, app, lib, ...
++    echo symlink-mesa.sh src-dir dst-dir
++    echo src-dir: the Mesa source directory
++    echo dst-dir: the GL subdirectory of the Xserver modular tree
+ }
+ 
+ # Check commandline args

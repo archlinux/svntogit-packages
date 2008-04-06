@@ -1,0 +1,56 @@
+# $Id: PKGBUILD,v 1.40 2008/04/02 00:21:17 kevin Exp $
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=squid
+pkgver=2.6.STABLE19
+pkgrel=1
+pkgdesc="A full-featured Web proxy cache server."
+arch=(i686 x86_64)
+url="http://www.squid-cache.org"
+depends=('openssl' 'pam' 'dcron' 'perl')
+license=('GPL')
+backup=(etc/squid/squid.conf etc/squid/mime.conf etc/conf.d/squid)
+install=$pkgname.install
+source=(http://www.squid-cache.org/Versions/v2/2.6/$pkgname-$pkgver.tar.bz2 \
+        squid-makefiles.patch squid squid.conf.d squid.pam \
+        squid.cron)
+md5sums=('e1f355ab907369903b5e28aff0fe8386' '935309e73d2a9c34cf9871cf1ff2f893'
+         'd213b0cc1db72b749bb8c88716fdab39' '81f9a446d143f42c6a3f30304e91c39f'
+         '270977cdd9b47ef44c0c427ab9034777' 'f47bb20c7be3089d78e6d2b491f7923b')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  /usr/bin/patch -Np1 -i ../squid-makefiles.patch
+
+  ./configure --prefix=/usr --datadir=/usr/share/squid \
+      --sysconfdir=/etc/squid --libexecdir=/usr/lib/squid \
+      --localstatedir=/var --enable-auth="basic,digest,ntlm" \
+      --enable-removal-policies="lru,heap" \
+      --enable-digest-auth-helpers="password" \
+      --enable-storeio="aufs,ufs,diskd,coss,null" \
+      --enable-basic-auth-helpers="getpwnam,YP,NCSA,SMB,MSNT,PAM,multi-domain-NTLM" \
+      --enable-external-acl-helpers="ip_user,unix_group,wbinfo_group" \
+      --enable-ntlm-auth-helpers="SMB,fakeauth,no_check" \
+      --enable-delay-pools --enable-arp-acl --enable-ssl \
+      --enable-linux-netfilter --enable-ident-lookups \
+      --enable-useragent-log --enable-cache-digests --enable-referer-log \
+      --enable-async-io --enable-truncate --enable-arp-acl \
+      --enable-htcp --enable-carp --enable-poll --with-maxfd=4096
+#some versions have build problems with both async and truncate enabled:
+#      --enable-async-io --enable-arp-acl \
+
+  /usr/bin/make || return 1
+  /usr/bin/make DESTDIR=$startdir/pkg install || return 1
+  /bin/rm -rf $startdir/pkg/var
+  /bin/mv $startdir/pkg/usr/bin/Run* $startdir/pkg/usr/lib/squid
+  /bin/mkdir -p $startdir/pkg/var/cache/squid
+  /bin/mkdir -p $startdir/pkg/var/log/squid
+  /bin/install -D -m755 $startdir/src/squid $startdir/pkg/etc/rc.d/squid
+  /bin/install -D -m755 $startdir/src/squid.cron $startdir/pkg/etc/cron.weekly/squid
+  /bin/install -D -m644 $startdir/src/squid.conf.d $startdir/pkg/etc/conf.d/squid
+  /bin/install -D -m644 $startdir/src/squid.pam $startdir/pkg/etc/pam.d/squid
+  cp $startdir/pkg/etc/squid/squid.conf \
+     $startdir/pkg/etc/squid/squid.conf.default
+}
+# vim: ts=2 sw=2 et ft=sh

@@ -1,0 +1,156 @@
+diff -urN aMule-2.1.3.org/src/utils/wxCas/src/wxcasprefs.cpp aMule-2.1.3/src/utils/wxCas/src/wxcasprefs.cpp
+--- aMule-2.1.3.org/src/utils/wxCas/src/wxcasprefs.cpp	2005-12-16 13:09:29.000000000 +0100
++++ aMule-2.1.3/src/utils/wxCas/src/wxcasprefs.cpp	2006-12-17 20:20:47.151203000 +0100
+@@ -297,7 +297,7 @@
+ 	m_validateButton =
+ 	    new wxButton ( this, ID_VALIDATE_BUTTON, wxString ( _( "Validate" ) ) );
+ 	m_cancelButton =
+-	    new wxButton ( this, ID_CANCEL_BUTTON, wxString ( _( "Cancel" ) ) );
++	    new wxButton ( this, wxID_CANCEL, wxString ( _( "Cancel" ) ) );
+ 
+ 	m_buttonHBox->Add ( m_validateButton, 0, wxALIGN_CENTER | wxALL, 5 );
+ 	m_buttonHBox->Add ( m_cancelButton, 0, wxALIGN_CENTER | wxALL, 5 );
+@@ -321,7 +321,6 @@
+ EVT_BUTTON ( ID_OSPATH_BROWSE_BUTTON, WxCasPrefs::OnOSPathBrowseButton )
+ EVT_BUTTON ( ID_AUTOSTATIMG_BROWSE_BUTTON, WxCasPrefs::OnAutoStatImgBrowseButton )
+ EVT_BUTTON ( ID_VALIDATE_BUTTON, WxCasPrefs::OnValidateButton )
+-EVT_BUTTON ( ID_CANCEL_BUTTON, WxCasPrefs::OnCancel )       	// Defined in wxDialog
+ EVT_CHECKBOX ( ID_AUTOSTATIMG_CHECK, WxCasPrefs::OnAutoStatImgCheck )
+ EVT_CHECKBOX ( ID_FTP_UPDATE_CHECK, WxCasPrefs::OnFtpUpdateCheck )
+ END_EVENT_TABLE ()
+--- aMule/src/utils/wxCas/src/wxcasprefs.h.org	2006-12-17 22:17:39.017417250 +0100
++++ aMule/src/utils/wxCas/src/wxcasprefs.h	2006-12-17 22:18:17.611829250 +0100
+@@ -101,8 +101,7 @@
+ 	    ID_AUTOSTATIMG_COMBO,
+ 	    ID_AUTOSTATIMG_BROWSE_BUTTON,
+ 	    ID_FTP_UPDATE_CHECK,
+-	    ID_VALIDATE_BUTTON,
+-	    ID_CANCEL_BUTTON
++	    ID_VALIDATE_BUTTON
+ 	};
+ 
+ protected:
+--- aMule/src/MuleGifCtrl.cpp	2006-02-03 20:14:05.000000000 +0100
++++ aMule/src/MuleGifCtrl.cpp	2006-11-19 19:35:33.000000000 +0100
+@@ -24,7 +24,6 @@
+ 
+ #include <wx/mstream.h>
+ #include <wx/gifdecod.h>
+-#include <wx/window.h>
+ #include <wx/dcbuffer.h>
+ 
+ #include "MuleGifCtrl.h"
+@@ -35,6 +34,50 @@
+ 	EVT_ERASE_BACKGROUND(MuleGifCtrl::OnErase)
+ END_EVENT_TABLE()
+ 
++#if wxCHECK_VERSION(2, 7, 1)
++// Wrapper that emulates old wxGIFDecoder API
++
++class MuleGIFDecoder : public wxGIFDecoder {
++public:
++	MuleGIFDecoder(wxInputStream* stream, bool dummy) {
++		m_stream = stream;
++		dummy = dummy; // Unused.
++		m_nframe = 0;
++	}
++	
++	~MuleGIFDecoder() { /* don't delete the stream! */ }
++	
++	wxGIFErrorCode ReadGIF() {
++		return LoadGIF(*m_stream);
++	}
++	
++	void GoFirstFrame() { m_nframe = 0; }
++	void GoNextFrame(bool dummy) { m_nframe < GetFrameCount() ? m_nframe++ : m_nframe = 0; }
++	void GoLastFrame() { m_nframe = GetFrameCount(); }
++	
++	void ConvertToImage(wxImage* image) { wxGIFDecoder::ConvertToImage(m_nframe, image); }
++	
++	size_t GetLogicalScreenWidth() { return GetAnimationSize().GetWidth(); }
++	size_t GetLogicalScreenHeight() { return GetAnimationSize().GetHeight(); }
++	
++	size_t	GetLeft() { return 0; }
++	size_t	GetTop() { return 0; }
++	
++	long GetDelay() { return wxGIFDecoder::GetDelay(m_nframe); }
++	
++private:
++	uint32_t m_nframe;
++	wxInputStream* m_stream;
++};
++
++#else
++class MuleGIFDecoder : public wxGIFDecoder {
++public:
++	MuleGIFDecoder(wxInputStream* stream, bool flag) : wxGIFDecoder(stream,flag) {};
++};
++#endif
++
++
+ 
+ MuleGifCtrl::MuleGifCtrl( wxWindow *parent, wxWindowID id, const wxPoint& pos,
+                           const wxSize& size, long style, const wxValidator& validator,
+@@ -66,7 +109,7 @@
+ 	}
+ 
+   	wxMemoryInputStream stream(data, size);
+-  	m_decoder = new wxGIFDecoder(&stream, TRUE);
++  	m_decoder = new MuleGIFDecoder(&stream, TRUE);
+   	if ( m_decoder->ReadGIF() != wxGIF_OK ) {
+    		delete m_decoder;
+    		m_decoder = NULL;
+@@ -137,3 +180,4 @@
+ 	dc.DrawBitmap( m_frame, x + m_decoder->GetLeft(), y + m_decoder->GetTop(), true);
+ }
+ 
++// File_checked_for_headers
+--- aMule/src/MuleGifCtrl.h	2006-01-01 06:17:25.000000000 +0100
++++ aMule/src/MuleGifCtrl.h	2006-11-18 05:01:22.000000000 +0100
+@@ -27,11 +27,10 @@
+ 
+ #include <wx/control.h>
+ #include <wx/timer.h>
+-#include <wx/bitmap.h>
+ 
+ const int GIFTIMERID = 271283;
+ 
+-class wxGIFDecoder;
++class MuleGIFDecoder;
+ class wxBitmap;
+ 
+ /**
+@@ -121,7 +120,7 @@
+ 	void OnErase( wxEraseEvent& WXUNUSED(event) ) {}
+ 
+ 	//! A pointer to the current gif-animation.
+-	wxGIFDecoder*	m_decoder;
++	MuleGIFDecoder*	m_decoder;
+ 	//! Timer used for the delay between each frame.
+ 	wxTimer			m_timer;
+ 	//! Current frame.
+@@ -133,3 +132,4 @@
+ 
+ #endif
+ 
++// File_checked_for_headers
+--- aMule-2.1.3/src/MuleTextCtrl.cpp~	2006-12-17 20:55:37.157820250 +0100
++++ aMule-2.1.3/src/MuleTextCtrl.cpp	2006-12-17 20:56:21.328580750 +0100
+@@ -26,6 +26,7 @@
+ #include <wx/menu.h>
+ #include <wx/intl.h>
+ #include <wx/clipbrd.h>
++#include <wx/dataobj.h>
+ 
+ /**
+  * These are the IDs used to identify the different menu-items.
+--- amule/src/amule.cpp~	2006-12-17 21:53:26.474639000 +0100
++++ amule/src/amule.cpp	2006-12-17 21:55:40.307003000 +0100
+@@ -96,6 +96,7 @@
+ 		#include <CoreFoundation/CFBundle.h>
+ 		#include <wx/mac/corefoundation/cfstring.h>
+ 	#endif
++	#include <wx/msgdlg.h>
+ #endif
+ 
+ 

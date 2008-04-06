@@ -1,0 +1,79 @@
+*** xwin.c	Wed Apr 11 12:31:43 2007
+--- rdesktop-1.5.0/xwin.c	Mon Aug  7 07:45:44 2006
+*************** ui_create_glyph(int width, int height, u
+*** 2413,2427 ****
+  		g_create_glyph_gc = XCreateGC(g_display, bitmap, 0, NULL);
+  
+  	image = XCreateImage(g_display, g_visual, 1, ZPixmap, 0, (char *) data,
+! 			     width, height, 8, 0);
+! 	/* Patch to prevent Seg Faults - based on changes in libx11
+! 	 * to fix a security issue (CVE-2007-1667)
+! 	 * See: http://lists.debian.org/debian-x/2007/04/msg00052.html
+! 	 * See: http://www.nabble.com/Bug-418295:-vice-broken-by-libx11-security-update-t3544947.html
+! 	 * 
+! 	 * ORIGINAL: width, height, 8, scanline); 
+! 	 * NEW	   : width, height, 8, 0); 
+! 	 */
+  	image->byte_order = MSBFirst;
+  	image->bitmap_bit_order = MSBFirst;
+  	XInitImage(image);
+--- 2413,2419 ----
+  		g_create_glyph_gc = XCreateGC(g_display, bitmap, 0, NULL);
+  
+  	image = XCreateImage(g_display, g_visual, 1, ZPixmap, 0, (char *) data,
+! 			     width, height, 8, scanline);
+  	image->byte_order = MSBFirst;
+  	image->bitmap_bit_order = MSBFirst;
+  	XInitImage(image);
+*************** ui_desktop_restore(uint32 offset, int x,
+*** 3220,3254 ****
+  {
+  	XImage *image;
+  	uint8 *data;
+- 	int bitmap_pad;
+  
+  	offset *= g_bpp / 8;
+  	data = cache_get_desktop(offset, cx, cy, g_bpp / 8);
+  	if (data == NULL)
+  		return;
+  
+- 	if (g_server_depth == 8)
+- 	{
+- 		bitmap_pad = 8;
+- 	}
+- 	else
+- 	{
+- 		bitmap_pad = g_bpp;
+- 
+- 		if (g_bpp == 24)
+- 			bitmap_pad = 32;
+- 	}
+- 
+  	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
+! 			(char *) data, cx, cy, bitmap_pad, 0);
+! 	/* Patch to prevent Seg Faults - based on changes in libx11
+! 	 * to fix a security issue (CVE-2007-1667)
+! 	 * See: http://lists.debian.org/debian-x/2007/04/msg00052.html
+! 	 * See: http://www.nabble.com/Bug-418295:-vice-broken-by-libx11-security-update-t3544947.html
+! 	 * 
+! 	 * ORIGINAL: (char *) data, cx, cy, BitmapPad(g_display), cx * g_bpp / 8); 
+! 	 * NEW	   : (char *) data, cx, cy, BitmapPad(g_display), 0); 
+! 	 */
+  
+  	if (g_ownbackstore)
+  	{
+--- 3212,3225 ----
+  {
+  	XImage *image;
+  	uint8 *data;
+  
+  	offset *= g_bpp / 8;
+  	data = cache_get_desktop(offset, cx, cy, g_bpp / 8);
+  	if (data == NULL)
+  		return;
+  
+  	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
+! 			     (char *) data, cx, cy, BitmapPad(g_display), cx * g_bpp / 8);
+  
+  	if (g_ownbackstore)
+  	{

@@ -1,0 +1,41 @@
+--- branches/gnome-2-18/activation-server/object-directory-corba.c	2007/03/12 13:54:46	3353
++++ branches/gnome-2-18/activation-server/object-directory-corba.c	2007/03/23 14:56:24	3356
+@@ -389,6 +389,7 @@
+         int i, serverinfo_env_idx;
+         const Bonobo_ActivationEnvironment *client_env;
+         const Bonobo_StringList *serverinfo_env = NULL;
++        ClientContext *client_context;
+ 
+         array = g_array_new (FALSE, FALSE, sizeof (Bonobo_ActivationEnvValue));
+ 
+@@ -396,7 +397,16 @@
+         for (i = 0; i < environment->_length; ++i)
+                 g_array_append_val (array, environment->_buffer[i]);
+ 
+-        if (client == CORBA_OBJECT_NIL)
++        if (G_UNLIKELY (client == CORBA_OBJECT_NIL))
++                goto exit;
++
++        client_context = ((ClientContext *) g_hash_table_lookup
++                          (od->client_contexts, client));
++        if (G_UNLIKELY (!client_context))
++                goto exit;
++
++        client_env = client_context->env;
++        if (G_UNLIKELY (!client_env))
+                 goto exit;
+ 
+         /* scan through server properties */
+@@ -417,12 +427,6 @@
+                 goto exit;
+ 
+         /* do the actual merging */
+-        client_env = ((ClientContext *) g_hash_table_lookup
+-                      (od->client_contexts, client))->env;
+-
+-        if (!client_env)
+-                goto exit;
+-
+         for (serverinfo_env_idx = 0;
+              serverinfo_env_idx < serverinfo_env->_length; ++serverinfo_env_idx)
+         {

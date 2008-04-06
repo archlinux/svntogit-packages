@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.6 2005/10/01 10:45:31 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Committer: Arjan Timmerman <arjan@archlinux.org>
+
+pkgname=rep-gtk
+pkgver=0.18
+pkgrel=3
+pkgdesc="GTK bindings for the rep lisp system"
+depends=('librep' 'libglade')
+url="http://rep-gtk.sourceforge.net/"
+source=(http://heanet.dl.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz \
+	rep-gtk-0.18-gtk2{4,6}.patch)
+md5sums=('220b0d728656472c068e40823f0a3b22' '7e43019a0be09f8a64bbc489fa63fd6a'\
+         'b240daed7b25f7875150b314db4f26d0')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  patch -Np1 -i $startdir/src/rep-gtk-0.18-gtk24.patch || return 1
+  patch -Np0 -i $startdir/src/rep-gtk-0.18-gtk26.patch || return 1
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+}

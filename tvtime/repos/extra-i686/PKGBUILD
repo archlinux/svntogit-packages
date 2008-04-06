@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.16 2006/02/02 23:20:51 simo Exp $
+# Maintainer: Jason Chu <jason@archlinux.org>
+
+pkgname=tvtime
+pkgver=1.0.1
+pkgrel=2
+pkgdesc="tvtime is a high quality television application for use with video capture cards."
+depends=('libpng' 'libxml2' 'freetype2' 'libxtst' 'libxinerama' 'libxv' 'libsm' 'libxxf86vm')
+source=(http://dl.sourceforge.net/sourceforge/tvtime/$pkgname-$pkgver.tar.gz)
+md5sums=('e7c7951fa1aabd15254cfbc17fe8a976')
+url='http://tvtime.sourceforge.net/'
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  cp docs/html/default.tvtime.xml $startdir/pkg/usr/share/tvtime
+}

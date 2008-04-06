@@ -1,0 +1,176 @@
+From: Matthias Schwarzott <zzam@gentoo.org>
+Date: Thu, 22 Mar 2007 20:05:56 +0000 (+0100)
+Subject: write_cd_rules: set default link type to "by-id" for usb and ieee1394 devices
+X-Git-Url: http://git.kernel.org/?p=linux%2Fhotplug%2Fudev.git;a=commitdiff_plain;h=491a6a71ff685373422621f4b67f550806072d17
+
+write_cd_rules: set default link type to "by-id" for usb and ieee1394 devices
+---
+
+diff --git a/extras/rule_generator/write_cd_rules b/extras/rule_generator/write_cd_rules
+index 1dbe6b7..bd951c5 100644
+--- a/extras/rule_generator/write_cd_rules
++++ b/extras/rule_generator/write_cd_rules
+@@ -53,7 +53,15 @@ fi
+ if [ "$1" ]; then
+ 	METHOD="$1"
+ else
+-	METHOD='by-path'
++	case "$ID_BUS" in
++		usb|ieee1394)
++		METHOD='by-id'
++		;;
++
++		*)
++		METHOD='by-path'
++		;;
++	esac
+ fi
+ 
+ case "$METHOD" in
+From: Kay Sievers <kay.sievers@vrfy.org>
+Date: Fri, 23 Mar 2007 16:17:18 +0000 (+0100)
+Subject: udevinfo: relax check for the correct device if looked up by name
+X-Git-Url: http://git.kernel.org/?p=linux%2Fhotplug%2Fudev.git;a=commitdiff_plain;h=be8594ab14f15203fcea4b2aa0115171472f3e43
+
+udevinfo: relax check for the correct device if looked up by name
+---
+
+diff --git a/udev_db.c b/udev_db.c
+index 00d68d6..7b8d02b 100644
+--- a/udev_db.c
++++ b/udev_db.c
+@@ -186,7 +186,7 @@ int udev_db_get_device(struct udevice *udev, const char *devpath)
+ 	size_t cur;
+ 	size_t count;
+ 
+-	strlcpy(udev->dev->devpath, devpath, sizeof(udev->dev->devpath));
++	sysfs_device_set_values(udev->dev, devpath, NULL, NULL);
+ 	devpath_to_db_path(devpath, filename, sizeof(filename));
+ 
+ 	if (lstat(filename, &stats) != 0) {
+diff --git a/udevinfo.c b/udevinfo.c
+index 3f25be0..4b4876c 100644
+--- a/udevinfo.c
++++ b/udevinfo.c
+@@ -173,13 +173,17 @@ static void export_db(void) {
+ static int lookup_device_by_name(struct udevice *udev, const char *name)
+ {
+ 	LIST_HEAD(name_list);
++	int count;
+ 	struct name_entry *device;
+ 	int rc  = -1;
+ 
+-	if (udev_db_get_devices_by_name(name, &name_list) <= 0)
++	count = udev_db_get_devices_by_name(name, &name_list);
++	if (count <= 0)
+ 		goto out;
+ 
+-	/* select the device that matches the dev_t of name */
++	info("found %i devices for '%s'", count, name);
++
++	/* select the device that seems to match */
+ 	list_for_each_entry(device, &name_list, node) {
+ 		char filename[PATH_SIZE];
+ 		struct stat statbuf;
+@@ -189,16 +193,18 @@ static int lookup_device_by_name(struct udevice *udev, const char *name)
+ 			continue;
+ 		info("found db entry '%s'", device->name);
+ 
++		/* make sure, we don't get a link of a differnt device */
+ 		strlcpy(filename, udev_root, sizeof(filename));
+ 		strlcat(filename, "/", sizeof(filename));
+ 		strlcat(filename, name, sizeof(filename));
+ 		if (stat(filename, &statbuf) != 0)
+ 			continue;
+-		if (statbuf.st_rdev == udev->devt) {
+-			info("found '%s', dev_t matches", udev->name);
+-			rc = 0;
+-			break;
++		if (major(udev->devt) > 0 && udev->devt != statbuf.st_rdev) {
++			info("skip '%s', dev_t doesn't match", udev->name);
++			continue;
+ 		}
++		rc = 0;
++		break;
+ 	}
+ out:
+ 	name_list_cleanup(&name_list);
+From: Kay Sievers <kay.sievers@vrfy.org>
+Date: Fri, 23 Mar 2007 16:18:03 +0000 (+0100)
+Subject: don't write to sysfs files during test run
+X-Git-Url: http://git.kernel.org/?p=linux%2Fhotplug%2Fudev.git;a=commitdiff_plain;h=d2c9a56e0e624ed448aed8ad18460deed63973e1
+
+don't write to sysfs files during test run
+---
+
+diff --git a/udev_rules.c b/udev_rules.c
+index f8844a8..5078f2d 100644
+--- a/udev_rules.c
++++ b/udev_rules.c
+@@ -861,8 +861,9 @@ try_parent:
+ 			info("writing '%s' to sysfs file '%s'", value, attr);
+ 			f = fopen(attr, "w");
+ 			if (f != NULL) {
+-				if (fprintf(f, "%s", value) <= 0)
+-					err("error writing ATTR{%s}: %s", attr, strerror(errno));
++				if (!udev->test_run)
++					if (fprintf(f, "%s", value) <= 0)
++						err("error writing ATTR{%s}: %s", attr, strerror(errno));
+ 				fclose(f);
+ 			} else
+ 				err("error opening ATTR{%s} for writing: %s", attr, strerror(errno));
+From: Pozsar Balazs <pozsy@uhulinux.hu>
+Date: Fri, 23 Mar 2007 16:21:46 +0000 (+0100)
+Subject: udevsettle: read udev not kernel seqnum first
+X-Git-Url: http://git.kernel.org/?p=linux%2Fhotplug%2Fudev.git;a=commitdiff_plain;h=4e2b290821d083361260f8cdbe7c54886463673e
+
+udevsettle: read udev not kernel seqnum first
+---
+
+diff --git a/udevsettle.c b/udevsettle.c
+index 9e3e03b..f76ad71 100644
+--- a/udevsettle.c
++++ b/udevsettle.c
+@@ -110,9 +110,9 @@ int main(int argc, char *argv[], char *envp[])
+ 			goto exit;
+ 		}
+ 
+-		/* read current kernel seqnum */
+-		strlcpy(filename, sysfs_path, sizeof(filename));
+-		strlcat(filename, "/kernel/uevent_seqnum", sizeof(filename));
++		/* read current udev seqnum */
++		strlcpy(filename, udev_root, sizeof(filename));
++		strlcat(filename, "/" EVENT_SEQNUM, sizeof(filename));
+ 		fd = open(filename, O_RDONLY);
+ 		if (fd < 0)
+ 			goto exit;
+@@ -121,12 +121,12 @@ int main(int argc, char *argv[], char *envp[])
+ 		if (len <= 0)
+ 			goto exit;
+ 		seqnum[len] = '\0';
+-		seq_kernel = strtoull(seqnum, NULL, 10);
+-		info("kernel seqnum = %llu", seq_kernel);
++		seq_udev = strtoull(seqnum, NULL, 10);
++		info("udev seqnum = %llu", seq_udev);
+ 
+-		/* read current udev seqnum */
+-		strlcpy(filename, udev_root, sizeof(filename));
+-		strlcat(filename, "/" EVENT_SEQNUM, sizeof(filename));
++		/* read current kernel seqnum */
++		strlcpy(filename, sysfs_path, sizeof(filename));
++		strlcat(filename, "/kernel/uevent_seqnum", sizeof(filename));
+ 		fd = open(filename, O_RDONLY);
+ 		if (fd < 0)
+ 			goto exit;
+@@ -135,8 +135,8 @@ int main(int argc, char *argv[], char *envp[])
+ 		if (len <= 0)
+ 			goto exit;
+ 		seqnum[len] = '\0';
+-		seq_udev = strtoull(seqnum, NULL, 10);
+-		info("udev seqnum = %llu", seq_udev);
++		seq_kernel = strtoull(seqnum, NULL, 10);
++		info("kernel seqnum = %llu", seq_kernel);
+ 
+ 		/* make sure all kernel events have arrived in the queue */
+ 		if (seq_udev >= seq_kernel) {
+ 

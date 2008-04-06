@@ -1,0 +1,28 @@
+# $Id: PKGBUILD,v 1.4 2008/01/27 15:54:07 travis Exp $
+
+# Maintainer: Travis Willard <travis@archlinux.org> 
+# Contributor: Brad Gordon <brad@rpgcyco.net>
+
+pkgname=libmowgli
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="Development framework for C"
+arch=('i686' 'x86_64')
+url="http://www.atheme.org/projects/mowgli.shtml"
+license=('BSD')
+depends=('glibc')
+makedepends=('pkgconfig')
+options=('!libtool')
+source=(http://distfiles.atheme.org/${pkgname}-${pkgver}.tgz)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+
+  ./configure --prefix=/usr
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+
+  install -m644 -D ${startdir}/src/${pkgname}-${pkgver}/COPYING \
+                   ${startdir}/pkg/usr/share/licenses/${pkgname}/COPYING
+}
+

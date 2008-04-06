@@ -1,0 +1,29 @@
+# $Id: PKGBUILD,v 1.17 2007/12/26 10:23:29 juergen Exp $
+# Maintainer: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor: Kritoke <typeolinux@yahoo.com>
+
+pkgname=smc
+replaces=('smclone')
+conflicts=('smclone')
+pkgver=1.4
+pkgrel=1
+pkgdesc="Secret Maryo Chronicles"
+arch=(i686 x86_64)
+url="http://www.secretmaryo.org/"
+license=('GPL3')
+makedepends=(autoconf automake)
+depends=(sdl_image sdl_ttf sdl_mixer cegui boost libpng)
+source=(http://dl.sourceforge.net/sourceforge/smclone/$pkgname-$pkgver.tar.bz2 smc.desktop smc.png)
+md5sums=('bcbfe8e9a0eba53713103b3935521192' '80fe208132ff41dd7677a53ee429ecdb'\
+         'efca7580e28748625eb676c9d24ee122')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./autogen.sh || return 1
+  ./configure --prefix=/usr || return 1
+  make install LDADD=-lpng DESTDIR=$startdir/pkg || return 1
+  # install some freedesktop.org compatibility
+  install -D -m644 $startdir/src/$pkgname.desktop $startdir/pkg/usr/share/applications/$pkgname.desktop
+  install -D -m644 $startdir/src/$pkgname.png $startdir/pkg/usr/share/pixmaps/$pkgname.png
+}
+

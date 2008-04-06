@@ -1,0 +1,33 @@
+# $Id: PKGBUILD,v 1.21 2008/03/19 19:40:21 damir Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=gcin
+pkgver=1.3.9
+pkgrel=1
+pkgdesc="Traditional Chinese Input Method Server for X window system (XIM)"
+arch=("i686" "x86_64")
+license=('LGPL')
+url="http://www.csie.nctu.edu.tw/~cp76/gcin/"
+depends=('gtk2' 'libxtst' 'bash')
+install=gcin.install
+source=(http://cle.linux.org.tw/gcin/download/$pkgname-$pkgver.tar.bz2 \
+	gcin.install)
+options=('!makeflags')
+
+build() {
+    cd $startdir/src/$pkgname-$pkgver
+    ./configure --prefix=/usr
+    make -C im-client
+    make || return 1
+    make prefix=$startdir/pkg/usr \
+         datadir=$startdir/pkg/usr/share \
+         bindir=$startdir/pkg/usr/bin \
+         libdir=$startdir/pkg/usr/lib \
+         includedir=$startdir/pkg/usr/include \
+         man1dir=$startdir/pkg/usr/share/man/man1 \
+        install
+}
+
+md5sums=('4003d942beaba62547346edb57bfb29f'
+         '3c58b3d1258d1bec593c5312aeb81311')

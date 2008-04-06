@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.20 2007/12/04 07:56:57 tobias Exp $
+# Maintainer: aurelien <aurelien@archlinux.org>
+
+pkgname=xfce-mcs-plugins
+pkgver=4.4.2
+pkgrel=1
+pkgdesc="A set of plugins for the Xfce multi channel settings manager"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://www.xfce.org/"
+groups=('xfce4')
+depends=('xfce-mcs-manager>=4.4.2' 'libxfcegui4>=4.4.2' 'libxfce4mcs>=4.4.2' \
+         'libxxf86vm')
+makedepends=('pkgconfig')
+options=('!libtool')
+install=${pkgname}.install
+source=(http://www.xfce.org/archive/xfce-${pkgver}/src/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('77fcc929058de530d4f91eb25de851a1')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/xfce4 \
+    --localstatedir=/var --disable-static
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}

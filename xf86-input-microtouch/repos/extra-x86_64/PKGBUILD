@@ -1,0 +1,23 @@
+# $Id: PKGBUILD,v 1.5 2007/09/22 18:04:14 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xf86-input-microtouch
+pkgver=1.1.1
+pkgrel=1
+pkgdesc="X.org microtouch input driver"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org/"
+depends=('glibc')
+makedepends=('pkgconfig' 'xorg-server>=1.4')
+groups=('xorg-input-drivers')
+options=('!libtool')
+source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+              --build=${CHOST} --host=${CHOST}
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}
+md5sums=('9843fbea6cc0c4129e96ce9a6c893cf6')

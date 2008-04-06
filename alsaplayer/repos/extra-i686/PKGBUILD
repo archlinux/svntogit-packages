@@ -1,0 +1,28 @@
+# $Id: PKGBUILD,v 1.17 2007/12/16 02:04:09 travis Exp $
+# Maintainer: dorphell <dorphell@archlinux.org>
+# Contributor: Jochem Kossen <j.kossen@home.nl>
+
+pkgname=alsaplayer
+pkgver=0.99.80
+pkgrel=1
+pkgdesc="A heavily multi-threaded PCM player that tries to excercise the ALSA library and driver quite a bit."
+license=('GPL')
+url="http://www.alsaplayer.org/"
+arch=('i686' 'x86_64')
+depends=('gtk' 'libid3tag' 'libvorbis' 'libmad' 'libmikmod' 'jack-audio-connection-kit>=0.102.20-2' 'esd' 'gcc-libs')
+source=(http://www.alsaplayer.org/${pkgname}-${pkgver}.tar.bz2) # flac_patch.diff)
+md5sums=('04f8c2321a37d15f40f9ee21251c6202')
+options=('!libtool')
+
+build() {
+    cd ${startdir}/src/${pkgname}-${pkgver}
+    autoconf
+   #fix compilation with flac support on x86_64
+   # [ "$CARCH" = "x86_64" ] && patch -Np1 -i $startdir/flac_patch.diff
+    ./configure --prefix=/usr --enable-esd \
+      --disable-opengl --enable-gtk --enable-jack \
+      --disable-gtk2 --enable-audiofile
+    make || return 1
+    make DESTDIR=${startdir}/pkg install
+}
+
