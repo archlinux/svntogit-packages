@@ -2,7 +2,7 @@
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=devtools
-pkgver=0.5.1
+pkgver=0.6
 pkgrel=1
 pkgdesc="A few tools to help Arch Linux developers"
 arch=(i686 x86_64)
@@ -15,5 +15,3 @@ build() {
   cd $startdir/src/$pkgname-$pkgver
   make DESTDIR=$startdir/pkg install
 }
-
-md5sums=('78ca577633678f1505591ecbac7246de')
