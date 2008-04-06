@@ -1,0 +1,76 @@
+configs=('20-fix-globaladvance.conf'
+         '20-lohit-gujarati.conf'
+         '20-unhint-small-vera.conf'
+         '30-amt-aliases.conf'
+         '30-urw-aliases.conf'
+         '30-replace-bitmap-fonts.conf'
+         '40-generic.conf'
+         '49-sansserif.conf'
+         '50-user.conf'
+         '51-local.conf'
+         '60-latin.conf'
+         '65-fonts-persian.conf'
+         '65-nonlatin.conf'
+         '69-unifont.conf'
+         '80-delicious.conf'
+         '90-synthetic.conf')
+
+# arg 1:  the new package version
+post_install() {
+  echo -n "updating font cache... "
+  /sbin/ldconfig -r .
+  pushd /etc/fonts/conf.d > /dev/null
+  for config in "${configs[@]}"; do
+    ln -sf ../conf.avail/${config} .
+  done
+  popd > /dev/null
+  /usr/bin/fc-cache -f
+  echo "done."
+}
+
+# arg 1:  the new package version
+# arg 2:  the old package version
+post_upgrade() {
+  rm -f /etc/fonts/conf.d/10-bitmaps.conf
+  cat << _EOF
+
+===> Important Fontconfig configuration change <===
+
+  The way fontconfig is configured has been changed. 
+  Configuration is done via /etc/fonts/conf.avail and conf.d.
+  Read /etc/fonts/conf.avail/README for more information.
+
+  Configuration via /etc/fonts/local.conf is still possible,
+  but is no longer recommended for options available in conf.avail.
+
+_EOF
+
+  if [ "`vercmp 2.4.1-1 $2`" != "-1" ] || [ ! -L /etc/fonts/conf.d/30-replace-bitmap-fonts.conf ]; then
+    pushd /etc/fonts/conf.d > /dev/null
+    for config in "${configs[@]}"; do
+      ln -sf ../conf.avail/${config} .
+    done
+    popd > /dev/null
+  fi
+  echo -n "updating font cache... "
+  /usr/bin/fc-cache -f
+  echo "done."
+}
+
+post_remove() {
+  pushd /etc/fonts/conf.d > /dev/null
+  for config in "${configs[@]}"; do
+    rm -f ${config}
+  done
+  popd > /dev/null
+}
+
+# arg 1:  the old package version
+pre_remove() {
+  /bin/true
+}
+
+op=$1
+shift
+
+$op $*
