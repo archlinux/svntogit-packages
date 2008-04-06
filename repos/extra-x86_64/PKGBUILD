@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.8 2007/09/22 18:06:13 alexander Exp $
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=libxi
+pkgver=1.1.3
+pkgrel=1
+pkgdesc="X11 Input extension library"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org"
+depends=('libxext')
+makedepends=('pkgconfig')
+options=(!libtool)
+source=(${url}/releases/individual/lib/libXi-${pkgver}.tar.bz2)
+
+build() {
+  cd ${startdir}/src/libXi-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --build=${CHOST} --host=${CHOST}
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}
+md5sums=('7c510abb0cad8dc20493fb27ff7859d8')
