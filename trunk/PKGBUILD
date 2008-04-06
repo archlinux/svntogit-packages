@@ -1,0 +1,34 @@
+# $Id: PKGBUILD,v 1.14 2008/04/01 17:55:18 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-power-manager
+pkgver=2.22.1
+pkgrel=1
+pkgdesc="Session daemon that makes it easy to manage your laptop or desktop system."
+arch=(i686 x86_64)
+url="http://www.gnome.org/projects/gnome-power-manager/"
+license=('GPL')
+depends=('libnotify>=0.4.4' 'gnome-panel>=2.22.0' 'gstreamer0.10>=0.10.18')
+makedepends=('gettext' 'perlxml' 'pkgconfig' 'gnome-doc-utils>=0.12.2')
+options=(!emptydirs)
+install=gnome-power-manager.install
+groups=(gnome-extra)
+source=(http://ftp.gnome.org/pub/GNOME/sources/gnome-power-manager/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('bfb10f96771dd161ff16171f78a7dc21')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var \
+	      --with-dpms-ext \
+              --disable-scrollkeeper \
+              --with-dbus-sys=/etc/dbus-1/system.d \
+              --with-dbus-services=/usr/share/dbus-1/services \
+              --enable-applets || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}
