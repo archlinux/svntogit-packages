@@ -1,0 +1,53 @@
+diff -ur valgrind-3.2.3.orig/coregrind/m_syswrap/priv_syswrap-linux.h valgrind-3.2.3.new/coregrind/m_syswrap/priv_syswrap-linux.h
+--- valgrind-3.2.3.orig/coregrind/m_syswrap/priv_syswrap-linux.h	2007-10-24 18:54:10.000000000 -0500
++++ valgrind-3.2.3.new/coregrind/m_syswrap/priv_syswrap-linux.h	2007-10-24 19:58:54.000000000 -0500
+@@ -139,6 +139,7 @@
+ DECL_TEMPLATE(linux, sys_readlinkat);
+ DECL_TEMPLATE(linux, sys_fchmodat);
+ DECL_TEMPLATE(linux, sys_faccessat);
++DECL_TEMPLATE(linux, sys_utimensat);
+ 
+ // These ones have 32-bit generic equivalents, but the 16-bit versions (they
+ // use 16-bit gid_t and uid_t types) seem to be Linux-specific.
+diff -ur valgrind-3.2.3.orig/coregrind/m_syswrap/syswrap-linux.c valgrind-3.2.3.new/coregrind/m_syswrap/syswrap-linux.c
+--- valgrind-3.2.3.orig/coregrind/m_syswrap/syswrap-linux.c	2007-10-24 18:54:10.000000000 -0500
++++ valgrind-3.2.3.new/coregrind/m_syswrap/syswrap-linux.c	2007-10-24 19:35:57.000000000 -0500
+@@ -2611,6 +2611,16 @@
+    PRE_MEM_RASCIIZ( "faccessat(pathname)", ARG2 );
+ }
+ 
++PRE(sys_utimensat)
++{
++   PRINT("sys_utimensat ( %d, %p(%s), %p )", ARG1,ARG2,ARG2,ARG3);
++   PRE_REG_READ3(long, "utimensat",
++                 int, dfd, char *, filename, struct timespec *, tvp);
++   PRE_MEM_RASCIIZ( "utimensat(filename)", ARG2 );
++   if (ARG3 != 0)
++      PRE_MEM_READ( "utimensat(tvp)", ARG3, sizeof(struct vki_timespec) );
++}
++
+ #undef PRE
+ #undef POST
+ 
+diff -ur valgrind-3.2.3.orig/coregrind/m_syswrap/syswrap-x86-linux.c valgrind-3.2.3.new/coregrind/m_syswrap/syswrap-x86-linux.c
+--- valgrind-3.2.3.orig/coregrind/m_syswrap/syswrap-x86-linux.c	2007-10-24 18:54:10.000000000 -0500
++++ valgrind-3.2.3.new/coregrind/m_syswrap/syswrap-x86-linux.c	2007-10-24 20:01:30.000000000 -0500
+@@ -2177,6 +2177,8 @@
+ //   LINX_(__NR_unshare,		 sys_unshare),          // 310
+    LINX_(__NR_set_robust_list,	 sys_set_robust_list),  // 311
+    LINXY(__NR_get_robust_list,	 sys_get_robust_list),  // 312
++
++   LINX_(__NR_utimensat,     sys_utimensat),        // 320
+ };
+ 
+ const UInt ML_(syscall_table_size) = 
+diff -ur valgrind-3.2.3.orig/coregrind/vki_unistd-x86-linux.h valgrind-3.2.3.new/coregrind/vki_unistd-x86-linux.h
+--- valgrind-3.2.3.orig/coregrind/vki_unistd-x86-linux.h	2007-10-24 18:54:10.000000000 -0500
++++ valgrind-3.2.3.new/coregrind/vki_unistd-x86-linux.h	2007-10-24 19:35:57.000000000 -0500
+@@ -346,5 +346,6 @@
+ #define __NR_sync_file_range	314
+ #define __NR_tee		315
+ #define __NR_vmsplice		316
++#define __NR_utimensat		320
+ 
+ #endif /* __VKI_UNISTD_X86_LINUX_H */

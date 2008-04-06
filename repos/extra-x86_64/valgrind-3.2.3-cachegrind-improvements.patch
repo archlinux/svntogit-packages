@@ -1,0 +1,64 @@
+--- valgrind-3.2.3/cachegrind/cg_sim.c.jj	2007-01-08 02:43:10.000000000 -0500
++++ valgrind-3.2.3/cachegrind/cg_sim.c	2007-02-13 07:15:46.000000000 -0500
+@@ -42,29 +42,32 @@ typedef struct {
+    Int          size;                   /* bytes */
+    Int          assoc;
+    Int          line_size;              /* bytes */
+-   Int          sets;
+    Int          sets_min_1;
+    Int          assoc_bits;
+    Int          line_size_bits;
+    Int          tag_shift;
+-   Char         desc_line[128];
+    UWord*       tags;
+-} cache_t2;
++   Char         desc_line[128];
++} cache_t2
++#ifdef __GNUC__
++__attribute__ ((aligned (8 * sizeof (Int))))
++#endif
++;
+ 
+ /* By this point, the size/assoc/line_size has been checked. */
+ static void cachesim_initcache(cache_t config, cache_t2* c)
+ {
+-   Int i;
++   Int sets;
+ 
+    c->size      = config.size;
+    c->assoc     = config.assoc;
+    c->line_size = config.line_size;
+ 
+-   c->sets           = (c->size / c->line_size) / c->assoc;
+-   c->sets_min_1     = c->sets - 1;
++   sets              = (c->size / c->line_size) / c->assoc;
++   c->sets_min_1     = sets - 1;
+    c->assoc_bits     = VG_(log2)(c->assoc);
+    c->line_size_bits = VG_(log2)(c->line_size);
+-   c->tag_shift      = c->line_size_bits + VG_(log2)(c->sets);
++   c->tag_shift      = c->line_size_bits + VG_(log2)(sets);
+ 
+    if (c->assoc == 1) {
+       VG_(sprintf)(c->desc_line, "%d B, %d B, direct-mapped", 
+@@ -74,10 +77,7 @@ static void cachesim_initcache(cache_t c
+                                  c->size, c->line_size, c->assoc);
+    }
+ 
+-   c->tags = VG_(malloc)(sizeof(UWord) * c->sets * c->assoc);
+-
+-   for (i = 0; i < c->sets * c->assoc; i++)
+-      c->tags[i] = 0;
++   c->tags = VG_(calloc)(sizeof(UWord) * sets, c->assoc);
+ }
+ 
+ /* This is done as a macro rather than by passing in the cache_t2 as an 
+@@ -140,8 +140,7 @@ void cachesim_##L##_doref(Addr a, UChar 
+       return;                                                               \
+                                                                             \
+    /* Second case: word straddles two lines. */                             \
+-   /* Nb: this is a fast way of doing ((set1+1) % L.sets) */                \
+-   } else if (((set1 + 1) & (L.sets-1)) == set2) {                          \
++   } else if (((set1 + 1) & (L.sets_min_1)) == set2) {                      \
+       set = &(L.tags[set1 << L.assoc_bits]);                                \
+       if (tag == set[0]) {                                                  \
+          goto block2;                                                       \
