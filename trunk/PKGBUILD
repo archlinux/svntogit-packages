@@ -1,0 +1,19 @@
+# $Id: PKGBUILD,v 1.1 2006/03/19 12:49:12 arjan Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=libcaca
+pkgver=0.9
+pkgrel=1
+pkgdesc="Color AsCii Art library"
+license=(LGPL)
+url="http://sam.zoy.org/libcaca"
+depends=(freetype2 imlib2)
+source=(http://sam.zoy.org/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+md5sums=(95a0a89fbd147f6610176fab66d0dd7c)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --enable-shared --disable-doc
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}
