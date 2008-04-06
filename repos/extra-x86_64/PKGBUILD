@@ -1,0 +1,25 @@
+# $Id: PKGBUILD,v 1.4 2008/04/01 17:28:15 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gvfs
+pkgver=0.2.2
+pkgrel=1
+pkgdesc="Userspace virtual filesystem implemented as a pluggable module for gio"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('libsoup>=2.4.0' 'libcdio>=0.80-2' 'fuse>=2.7.3' 'bluez-libs>=3.27' 'smbclient>=3.0.28A' 'libgphoto2>=2.4.0-5' 'gnome-keyring>=2.22.0' 'avahi>=0.6.20' 'libarchive>=2.4.12' 'dbus>=1.1.20')
+makedepends=('perlxml' 'pkgconfig')
+url="http://www.gnome.org"
+install=gvfs.install
+options=(!libtool)
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/0.2/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('084da50276a83b00725819799f4f1240')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-static \
+	      --libexecdir=/usr/lib/gvfs || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}
