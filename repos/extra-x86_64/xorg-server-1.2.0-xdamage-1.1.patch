@@ -1,0 +1,83 @@
+--- damageext/damageext.c
++++ damageext/damageext.c
+@@ -275,10 +275,31 @@ ProcDamageSubtract (ClientPtr client)
+     return (client->noClientException);
+ }
+ 
++static int
++ProcDamageAdd (ClientPtr client)
++{
++    REQUEST(xDamageAddReq);
++    DrawablePtr	    pDrawable;
++    RegionPtr	    pRegion;
++
++    REQUEST_SIZE_MATCH(xDamageAddReq);
++    VERIFY_REGION(pRegion, stuff->region, client, SecurityWriteAccess);
++    SECURITY_VERIFY_DRAWABLE (pDrawable, stuff->drawable, client, SecurityReadAccess);
++
++    /* The region is relative to the drawable origin, so translate it out to
++     * screen coordinates like damage expects.
++     */
++    REGION_TRANSLATE(pScreen, pRegion, pDrawable->x, pDrawable->y);
++    DamageDamageRegion(pDrawable, pRegion);
++    REGION_TRANSLATE(pScreen, pRegion, -pDrawable->x, -pDrawable->y);
++
++    return (client->noClientException);
++}
++
+ /* Major version controls available requests */
+ static const int version_requests[] = {
+     X_DamageQueryVersion,	/* before client sends QueryVersion */
+-    X_DamageSubtract,		/* Version 1 */
++    X_DamageAdd,		/* Version 1 */
+ };
+ 
+ #define NUM_VERSION_REQUESTS	(sizeof (version_requests) / sizeof (version_requests[0]))
+@@ -289,6 +310,8 @@ int	(*ProcDamageVector[XDamageNumberRequ
+     ProcDamageCreate,
+     ProcDamageDestroy,
+     ProcDamageSubtract,
++/*************** Version 1.1 ****************/
++    ProcDamageAdd,
+ };
+ 
+ 
+@@ -357,12 +380,27 @@ SProcDamageSubtract (ClientPtr client)
+     return (*ProcDamageVector[stuff->damageReqType]) (client);
+ }
+ 
++static int
++SProcDamageAdd (ClientPtr client)
++{
++    register int n;
++    REQUEST(xDamageAddReq);
++
++    swaps (&stuff->length, n);
++    REQUEST_SIZE_MATCH(xDamageSubtractReq);
++    swapl (&stuff->drawable, n);
++    swapl (&stuff->region, n);
++    return (*ProcDamageVector[stuff->damageReqType]) (client);
++}
++
+ int	(*SProcDamageVector[XDamageNumberRequests])(ClientPtr) = {
+ /*************** Version 1 ******************/
+     SProcDamageQueryVersion,
+     SProcDamageCreate,
+     SProcDamageDestroy,
+     SProcDamageSubtract,
++/*************** Version 1.1 ****************/
++    SProcDamageAdd,
+ };
+ 
+ static int
+--- configure.ac
++++ configure.ac
+@@ -514,7 +514,7 @@ XEXT_LIB='$(top_builddir)/Xext/libXext.l
+ XEXTXORG_LIB='$(top_builddir)/Xext/libXextbuiltin.la'
+ 
+ dnl Core modules for most extensions, et al.
+-REQUIRED_MODULES="randrproto renderproto [fixesproto >= 4.0] damageproto xcmiscproto xextproto xproto xtrans xf86miscproto xf86vidmodeproto xf86bigfontproto [scrnsaverproto >= 1.1] bigreqsproto resourceproto fontsproto inputproto xf86dgaproto [kbproto >= 1.0.3]"
++REQUIRED_MODULES="randrproto renderproto [fixesproto >= 4.0] [damageproto >= 1.1] xcmiscproto xextproto xproto xtrans xf86miscproto xf86vidmodeproto xf86bigfontproto [scrnsaverproto >= 1.1] bigreqsproto resourceproto fontsproto inputproto xf86dgaproto [kbproto >= 1.0.3]"
+ REQUIRED_LIBS="xfont xau fontenc"
+ 
+ AM_CONDITIONAL(XV, [test "x$XV" = xyes])

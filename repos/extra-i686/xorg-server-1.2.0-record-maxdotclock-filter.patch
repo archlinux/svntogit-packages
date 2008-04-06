@@ -1,0 +1,63 @@
+From: Adam Jackson <ajax@benzedrine.nwnk.net>
+Date: Thu, 14 Sep 2006 22:41:15 +0000 (-0400)
+Subject: Record the maximum dot clock of the monitor, and filter by it.
+X-Git-Tag: xorg-server-1.2.99.0
+X-Git-Url: http://gitweb.freedesktop.org/?p=xorg/xserver.git;a=commitdiff;h=d89fee68d0e49211871cd9eb3893ed55c1d478a6
+
+Record the maximum dot clock of the monitor, and filter by it.
+---
+
+--- a/hw/xfree86/common/xf86Config.c
++++ b/hw/xfree86/common/xf86Config.c
+@@ -2201,6 +2201,7 @@ configMonitor(MonPtr monitorp, XF86ConfM
+     monitorp->widthmm = conf_monitor->mon_width;
+     monitorp->heightmm = conf_monitor->mon_height;
+     monitorp->reducedblanking = FALSE;
++    monitorp->maxPixClock = 0;
+     monitorp->options = conf_monitor->mon_option_lst;
+ 
+     /*
+--- a/hw/xfree86/common/xf86Mode.c
++++ b/hw/xfree86/common/xf86Mode.c
+@@ -824,6 +824,9 @@ xf86CheckModeForMonitor(DisplayModePtr m
+         }
+     }
+ 
++    if ((monitor->maxPixClock) && (mode->Clock > monitor->maxPixClock))
++	return MODE_CLOCK_HIGH;
++
+     return MODE_OK;
+ }
+ 
+--- a/hw/xfree86/common/xf86str.h
++++ b/hw/xfree86/common/xf86str.h
+@@ -213,6 +213,7 @@ typedef struct {
+     pointer		options;
+     pointer		DDC;
+     Bool                reducedblanking; /* Allow CVT reduced blanking modes? */
++    int			maxPixClock;	 /* in kHz, like mode->Clock */
+ } MonRec, *MonPtr;
+ 
+ /* the list of clock ranges */
+--- a/hw/xfree86/ddc/ddcProperty.c
++++ b/hw/xfree86/ddc/ddcProperty.c
+@@ -296,7 +296,7 @@ void
+ xf86DDCMonitorSet(int scrnIndex, MonPtr Monitor, xf86MonPtr DDC)
+ {
+     DisplayModePtr Modes = NULL, Mode;
+-    int i;
++    int i, clock;
+     Bool have_hsync = FALSE, have_vrefresh = FALSE;
+     int preferred;
+     
+@@ -339,6 +339,10 @@ xf86DDCMonitorSet(int scrnIndex, MonPtr 
+             Monitor->vrefresh[0].lo = DDC->det_mon[i].section.ranges.min_v;
+             Monitor->vrefresh[0].hi = DDC->det_mon[i].section.ranges.max_v;
+ 
++	    clock = DDC->det_mon[i].section.ranges.max_clock * 1000;
++	    if (clock > Monitor->maxPixClock)
++		Monitor->maxPixClock = clock;
++
+             break;
+         case DT:
+             Mode = DDCModeFromDetailedTiming(scrnIndex, 
