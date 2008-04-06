@@ -1,0 +1,32 @@
+# $Id: PKGBUILD,v 1.8 2008/01/22 05:03:13 kevin Exp $
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+# Contributor: Manolis Tzanidakis
+
+pkgname=perl-libwww
+_realname=libwww-perl
+pkgver=5.808
+pkgrel=2
+pkgdesc="A set of Perl modules which provides a simple and consistent API to the WWW."
+arch=(i686 x86_64)
+license=('PerlArtistic')
+url="http://search.cpan.org/dist/${_realname}/"
+depends=('perl-uri' 'perl-html-parser' 'perl>=5.10.0')
+
+options=(!emptydirs)
+replaces=('libwww-perl')
+provides=('libwww-perl')
+source=(http://www.cpan.org/authors/id/G/GA/GAAS/${_realname}-${pkgver}.tar.gz)
+md5sums=('72120d9195ab1649c2d787eb1102a90c')
+
+build() {
+  cd ${startdir}/src/${_realname}-${pkgver}
+  # install module in vendor directories.
+  PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor || return 1
+  make  || return 1
+  make install DESTDIR=${startdir}/pkg || return 1
+
+  # remove perllocal.pod and .packlist
+  find ${startdir}/pkg -name perllocal.pod -delete
+  find ${startdir}/pkg -name .packlist -delete
+}
+# vim: ts=2 sw=2 et ft=sh
