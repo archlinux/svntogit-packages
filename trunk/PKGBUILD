@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.2 2008/03/06 14:09:09 tpowa Exp $
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=redland
+pkgver=1.0.7
+pkgrel=1
+pkgdesc="Redland is a library that provides a high-level interface for the Resource Description Framework (RDF). It contains librdf."
+url="http://librdf.org/"
+license="GPL"
+arch=('i686' 'x86_64')
+depends=('db' 'postgresql-libs' 'libmysqlclient' 'sqlite3' 'curl' 'libxslt')
+source=(http://download.librdf.org/source/$pkgname-$pkgver.tar.gz)
+options=(!libtool)
+
+build() {
+        cd $startdir/src/$pkgname-$pkgver
+         ./configure --prefix=/usr
+        make || return 1
+        make DESTDIR=$startdir/pkg install
+}
+md5sums=('4c066d3dcf6c25f8fb8c9007e73f293c')
