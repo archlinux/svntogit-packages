@@ -1,0 +1,38 @@
+# $Id: PKGBUILD,v 1.43 2008/03/14 23:31:10 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-session
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="The GNOME Session Handler"
+arch=(i686 x86_64)
+license=('GPL' 'LGPL')
+depends=('tcp_wrappers' 'libgnomeui>=2.22.01' 'gnome-settings-daemon>=2.22.0' 'at-spi>=1.22.0')
+makedepends=('perlxml' 'pkgconfig')
+options=(!emptydirs)
+install=gnome-session.install
+url="http://www.gnome.org"
+groups=('gnome')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2
+	gsm-dbus.patch
+	gnome.desktop)
+md5sums=('5f9531565c5ec08104c3518c72c79f42' '80f38a9a76938d08e6437fea24c841b3'
+	 '152cddde06e16f16641746467f7ff965')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  patch -Np1 -i ${startdir}/src/gsm-dbus.patch || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+	      --with-reboot-command=reboot --with-halt-command=halt \
+	      --with-rsh-command=ssh \
+	      --with-at-spi-registryd-directory=/usr/lib/at-spi || return 1
+
+  make || return 1
+  make DESTDIR=${startdir}/pkg GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install || return 1
+  install -d -m755 ${startdir}/pkg/etc/X11/sessions
+  install -m644 ${startdir}/src/gnome.desktop ${startdir}/pkg/etc/X11/sessions/gnome.desktop || return 1
+
+  install -d -m755 ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}
