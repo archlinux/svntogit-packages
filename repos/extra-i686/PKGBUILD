@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.17 2008/03/14 19:42:40 jgc Exp $
+# Maintainer: Jan De Groot <jgc@archlinux.org>
+
+pkgname=gucharmap
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="Gnome Unicode Charmap"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.gnome.org"
+depends=('gconf>=2.22.0')
+makedepends=('perlxml' 'gnome-doc-utils>=0.12.2' 'pkgconfig')
+groups=('gnome-extra')
+options=('!libtool' '!emptydirs')
+install=gucharmap.install
+source=(http://ftp.gnome.org/pub/gnome/sources/gucharmap/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('aff0c556ab360e0d6c63be911260637e')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --disable-static \
+	      --disable-scrollkeeper || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}
