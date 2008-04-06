@@ -1,0 +1,30 @@
+# $Id: PKGBUILD,v 1.21 2008/03/14 22:39:07 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=vino
+pkgver=2.22.0
+pkgrel=1
+pkgdesc="a VNC server for the GNOME desktop"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('libgnomeui>=2.22.01' 'libnotify>=0.4.4' 'libxtst')
+makedepends=('perlxml' 'pkgconfig')
+groups=('gnome-extra')
+url="http://www.gnome.org"
+options=(!emptydirs)
+install=vino.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('c4bb4a18f264ad8dc21e7200911a0412')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --libexecdir=/usr/lib/vino \
+              --localstatedir=/var || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+  
+  install -m755 -d ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}
