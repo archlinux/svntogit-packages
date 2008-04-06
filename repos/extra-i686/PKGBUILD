@@ -1,0 +1,26 @@
+# $Id: PKGBUILD,v 1.10 2006/12/26 13:13:42 arjan Exp $
+# Contributor: Sarah Hay <sarah@archlinux.org>
+# Maintainer: arjan <arjan@archlinux.org>
+
+pkgname=libmpeg2
+pkgver=0.4.1
+pkgrel=1
+force=y
+pkgdesc="libmpeg2 is a library for decoding MPEG-1 and MPEG-2 video streams."
+arch=(i686 x86_64)
+url="http://libmpeg2.sourceforge.net/"
+depends=('sdl' 'libsm' 'libxv')
+source=(http://libmpeg2.sourceforge.net/files/mpeg2dec-$pkgver.tar.gz)
+md5sums=('7631b0a4bcfdd0d78c0bb0083080b0dc')
+
+build() {
+  cd $startdir/src/mpeg2dec-0.4.1
+  if [[ "$CARCH" == "x86_64" ]]; then
+    ./configure --prefix=/usr --enable-shared --disable-accel-detect
+  else
+    ./configure --prefix=/usr --enable-shared
+  fi
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}
