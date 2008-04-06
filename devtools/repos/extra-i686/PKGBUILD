@@ -10,6 +10,7 @@ license=('GPL')
 url="http://projects.archlinux.org/git/?p=devtools.git"
 depends=(namcap)
 source=(ftp://ftp.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz)
+md5sums=('82d66297c798098af6d3cb52ee980141')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
