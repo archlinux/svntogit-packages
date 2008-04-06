@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.5 2005/08/28 23:34:04 jgc Exp $
+# Maintainer: arjan <arjan@archlinux.org>
+#contributor Sarah Hay <sarahhay@mb.sympatico.ca>
+
+pkgname=a52dec
+pkgver=0.7.4
+pkgrel=3
+pkgdesc="liba52 is a free library for decoding ATSC A/52 streams."
+depends=(glibc)
+source=(http://liba52.sourceforge.net/files/$pkgname-$pkgver.tar.gz)
+url="http://liba52.sourceforge.net/"
+md5sums=('caa9f5bc44232dc8aeea773fea56be80')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr --enable-shared
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  install -m644 liba52/a52_internal.h $startdir/pkg/usr/include/a52dec/ 
+  find $startdir/pkg -name '*.la' -exec rm {} \;
+}
