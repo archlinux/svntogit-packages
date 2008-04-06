@@ -1,0 +1,42 @@
+# $Id: PKGBUILD,v 1.17 2008/03/02 00:35:57 dan Exp $
+# Contributor: Lucien Immink <l.immink@student.fnt.hvu.nl>
+# Maintainer: Dan McGee <dan@archlinux.org>
+
+pkgname=pidgin
+pkgver=2.4.0
+pkgrel=1
+pkgdesc="A GTK+-based messaging client"
+arch=(i686 x86_64)
+license=('GPL2')
+url="http://pidgin.im"
+depends=('startup-notification' 'gtkspell' 'libxss' 'gstreamer0.10' 'dbus-glib>=0.73')
+makedepends=('pkgconfig' 'tk' 'avahi' 'intltool')
+replaces=('gaim')
+conflicts=('gaim')
+provides=('gaim')
+options=(!libtool)
+install=pidgin.install
+source=(http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.bz2
+        iconv-fix.patch)
+md5sums=('d03ac2695d5b5304f86812ffd6ba0053'
+         'de084bf1e2f345eada74671787256b74')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+
+  # fix some weird autoconf substitution bug, should report this upstream
+  patch -p0 < ../iconv-fix.patch || return 1
+
+  # gconf won't die with the --disable-schemas-install option
+  sed -i -e 's/gconftool-2/no/g' configure.ac
+  autoconf || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --disable-perl --disable-cap \
+              --disable-schemas-install \
+              --enable-gtkspell --enable-gnutls=yes \
+              --enable-nss=no --disable-gevolution \
+              --enable-dbus --disable-mono \
+              --disable-debug
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+}
