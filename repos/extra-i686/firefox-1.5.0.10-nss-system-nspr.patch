@@ -1,0 +1,40 @@
+--- mozilla/security/coreconf/location.mk.old	2007-02-13 21:41:48.000000000 +0100
++++ mozilla/security/coreconf/location.mk	2007-02-15 16:52:03.000000000 +0100
+@@ -61,6 +61,8 @@
+ 
+ DIST          = $(SOURCE_PREFIX)/$(PLATFORM)
+ 
++NSPR_LIBDIR   = $(DIST)/lib
++
+ ifdef BUILD_DEBUG_GC
+     DEFINES += -DDEBUG_GC
+ endif
+--- mozilla/security/manager/Makefile.in.old	2007-02-13 21:43:11.000000000 +0100
++++ mozilla/security/manager/Makefile.in	2007-02-16 13:58:31.000000000 +0100
+@@ -115,12 +115,23 @@
+ FREEBL_64FPU_CHK = libfreebl_64fpu_3.chk
+ endif
+  
++ABS_DIST := $(shell cd $(DIST) && pwd)
++ifeq ($(OS_ARCH),WINNT)
++ABS_DIST := $(shell cygpath -w $(ABS_DIST) | sed -e 's|\\\\|/|g')
++endif
++NSPR_LIBDIR = $(firstword $(filter -L%,$(NSPR_LIBS)))
++ifneq (,$(strip $(NSPR_LIBDIR)))
++NSPR_LIBDIR := $(subst -L,,$(subst -L$(DIST),-L$(ABS_DIST),$(NSPR_LIBDIR)))
++else
++NSPR_LIBDIR = $(ABS_DIST)/lib
++endif
+ # NSS makefiles are not safe for parallel execution.
+ DEFAULT_GMAKE_FLAGS = MAKE="$(MAKE) -j1" -j1
+ DEFAULT_GMAKE_FLAGS += CC="$(CC)"
+-DEFAULT_GMAKE_FLAGS += MOZILLA_INCLUDES="-I$(MOZ_BUILD_ROOT)/dist/include/nspr -I$(MOZ_BUILD_ROOT)/dist/include/dbm"
+-DEFAULT_GMAKE_FLAGS += SOURCE_MD_DIR=$(MOZ_BUILD_ROOT)/dist
+-DEFAULT_GMAKE_FLAGS += DIST=$(MOZ_BUILD_ROOT)/dist
++DEFAULT_GMAKE_FLAGS += MOZILLA_INCLUDES="$(subst -I$(DIST),-I$(ABS_DIST),$(NSPR_CFLAGS) -I$(DIST)/include/dbm)"
++DEFAULT_GMAKE_FLAGS += SOURCE_MD_DIR=$(ABS_DIST)
++DEFAULT_GMAKE_FLAGS += DIST=$(ABS_DIST)
++DEFAULT_GMAKE_FLAGS += NSPR_LIBDIR=$(NSPR_LIBDIR)
+ DEFAULT_GMAKE_FLAGS += MOZILLA_CLIENT=1
+ DEFAULT_GMAKE_FLAGS += NO_MDUPDATE=1
+ ABS_topsrcdir   := $(shell cd $(topsrcdir); pwd)
