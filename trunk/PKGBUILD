@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.10 2005/07/07 17:14:54 judd Exp $
+# Maintainer: Jason Chu <jason@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+force=y
+pkgname=wipe
+pkgver=2.2.0
+pkgrel=1
+pkgdesc="Wipe repeadetly overwrites special patterns to the files to be destroyed - a secure rm(1)"
+depends=('glibc')
+url="http://wipe.sourceforge.net/"
+source=(http://easynews.dl.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.bz2)
+md5sums=('1e1366c6407e7910f6131ebfee9f1ea6')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+#  patch -i ../rand.patch || return 1
+  ./configure --prefix=/usr
+  make || return 1
+  make bindir=$startdir/pkg/usr/bin prefix=$startdir/pkg/usr install
+}
