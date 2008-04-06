@@ -1,0 +1,47 @@
+# $Id: PKGBUILD,v 1.100 2008/01/21 03:24:47 eric Exp $
+# Maintainer: Eric Belanger <eric@archlinux.org>
+
+# NOTE: ImageMagick builds against an existing installation
+# uninstall ImageMagick before building, or build it, install it, build it.
+
+pkgname=imagemagick
+pkgver=6.3.8.0
+pkgrel=2
+pkgdesc="An image viewing/manipulation program"
+arch=('i686' 'x86_64')
+url="http://www.imagemagick.org/"
+license=('custom')
+depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr')
+#makedepends=('ghostscript' 'openexr')
+options=('!makeflags')
+source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
+        libpng_mmx_patch_x86_64.patch)
+md5sums=('ca771d5c6dc50ac6b0c4d6abc2c9bd77' '069980fc2590c02aed86420996259302')
+sha1sums=('c22e3cf891d4a48289f622011ffcbb37f2ffa74d' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c')
+
+build() {
+  cd ${startdir}/src/ImageMagick-${pkgver%.*}
+
+  if [ "${CARCH}" = "x86_64" ]; then
+    patch -Np1 -i ${startdir}/src/libpng_mmx_patch_x86_64.patch || return 1
+  fi
+
+  ./configure --prefix=/usr --with-modules=no --without-dps \
+              --with-perl=yes --without-gvc --with-jp2=no \
+              --with-gs-font-dir=/usr/share/fonts/Type1 \
+              --without-djvu --with-wmf --with-openexr --disable-static \
+              --disable-openmp LIBS="${LIBS} -lstdc++" \
+              --with-perl-options="INSTALLDIRS=vendor"
+
+  make || return 1
+  make DESTDIR=${startdir}/pkg install
+  install -D -m644 LICENSE ${startdir}/pkg/usr/share/licenses/$pkgname/LICENSE
+  install -D -m644 NOTICE ${startdir}/pkg/usr/share/licenses/$pkgname/NOTICE
+
+  #Cleaning
+  find ${startdir}/pkg -name '*.bs' -exec rm {} \;
+  find ${startdir}/pkg -name '.packlist' -exec rm {} \;
+  find ${startdir}/pkg -name 'perllocal.pod' -exec rm {} \;
+
+  rm -f ${startdir}/pkg/usr/lib/*.la
+}
