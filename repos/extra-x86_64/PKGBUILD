@@ -1,0 +1,44 @@
+# $Id: PKGBUILD,v 1.7 2007/09/08 16:06:57 alexander Exp $
+#  ppc Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# i686 Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=xterm
+pkgver=229
+pkgrel=2
+pkgdesc="X Terminal Emulator"
+arch=(i686 x86_64)
+url="http://invisible-island.net/xterm/"
+depends=('libxft' 'libxaw' 'ncurses' 'xorg-apps')
+groups=('xorg')
+source=(ftp://invisible-island.net/${pkgname}/${pkgname}-${pkgver}.tgz)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+              --libdir=/etc \
+	      --with-app-defaults=/usr/share/X11/app-defaults/ \
+              --with-x \
+	      --disable-full-tgetent \
+	      --disable-imake \
+	      --enable-ansi-color \
+	      --enable-88-color \
+	      --enable-256-color \
+	      --enable-broken-osc \
+	      --enable-broken-st \
+	      --enable-load-vt-fonts \
+	      --enable-i18n \
+	      --enable-wide-chars \
+	      --enable-doublechars \
+	      --enable-warnings \
+	      --enable-tcap-query \
+	      --enable-logging \
+	      --enable-dabbrev \
+	      --enable-freetype \
+	      --enable-luit \
+	      --enable-mini-luit \
+	      --enable-narrowproto \
+              --build=${CHOST} --host=${CHOST}
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+  chmod 0755 ${startdir}/pkg/usr/bin/xterm
+}
+md5sums=('f7b04a66dc401dc22f5ddb7f345be229')
