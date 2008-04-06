@@ -1,0 +1,22 @@
+# $Id: PKGBUILD,v 1.7 2008/01/28 06:13:22 eric Exp $
+# Maintainer: damir <damir@archlinux.org>
+# Committer: Manolis Tzanidakis <manolis@archlinux.org>
+
+pkgname=xclip
+pkgver=0.10
+pkgrel=1
+pkgdesc="A command line utility that provides interface to Xclipboard."
+arch=(i686 x86_64)
+url="http://sourceforge.net/projects/xclip"
+depends=('libxmu')
+license=('GPL')
+source=(http://dl.sourceforge.net/sourceforge/xclip/$pkgname-$pkgver.tar.gz)
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  ./configure --prefix=/usr
+  make || return 1
+  install -D -m 755 xclip $startdir/pkg/usr/bin/xclip
+  install -D -m 644 xclip.man $startdir/pkg/usr/share/man/man1/xclip.1
+}
+md5sums=('6861a48812f9f6dbdf584c70da6fd16b')
