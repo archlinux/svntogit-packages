@@ -1,0 +1,28 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Andrew Simmons <andrew.simmons@gmail.com>
+
+pkgname=perl-archive-zip
+_realname=Archive-Zip
+pkgver=1.23
+pkgrel=2
+pkgdesc="Provide a perl interface to ZIP archive files"
+arch=(i686 x86_64)
+license=('GPL' 'PerlArtistic')
+url="http://search.cpan.org/dist/${_realname}/"
+depends=('perl>=5.10.0')
+options=('!emptydirs')
+source=(http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/${_realname}-${pkgver}.tar.gz)
+md5sums=('7ffcbdc1b603307235fb8d42084cb84d')
+
+
+build() {
+  cd ${startdir}/src/${_realname}-${pkgver}
+  # install module in vendor directories.
+  PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor || return 1
+  make  || return 1
+  make install DESTDIR=${startdir}/pkg || return 1
+
+  # remove perllocal.pod and .packlist
+  find ${startdir}/pkg -name perllocal.pod -delete
+  find ${startdir}/pkg -name .packlist -delete
+}
