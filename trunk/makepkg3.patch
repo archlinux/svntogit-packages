@@ -1,0 +1,126 @@
+diff -Nur devtools.orig/Makefile devtools/Makefile
+--- devtools.orig/Makefile	2004-07-19 07:26:30.000000000 +0200
++++ devtools/Makefile	2007-09-16 14:44:51.000000000 +0200
+@@ -4,6 +4,6 @@
+ 	mkdir -p $(DESTDIR)/usr/bin
+ 	install -m 755 checkpkg $(DESTDIR)/usr/bin
+ 	install -m 755 extrapkg $(DESTDIR)/usr/bin
+-	ln -s extrapkg $(DESTDIR)/usr/bin/currentpkg
++	ln -s extrapkg $(DESTDIR)/usr/bin/corepkg
+ 	ln -s extrapkg $(DESTDIR)/usr/bin/testingpkg
+ 	ln -s extrapkg $(DESTDIR)/usr/bin/unstablepkg
+diff -Nur devtools.orig/checkpkg devtools/checkpkg
+--- devtools.orig/checkpkg	2005-07-18 02:25:38.000000000 +0200
++++ devtools/checkpkg	2007-09-16 14:44:51.000000000 +0200
+@@ -1,5 +1,7 @@
+ #!/bin/bash
+ 
++source /etc/makepkg.conf
++
+ strip_url() {
+ 	echo $1 | sed 's|^.*://.*/||g'
+ }
+@@ -11,9 +13,20 @@
+ 
+ source PKGBUILD
+ 
+-if [ ! -f $pkgname-$pkgver-$pkgrel.pkg.tar.gz ]; then
+-	echo "You must have a built package to check."
+-	exit 1
++pkgfile=${pkgname}-${pkgver}-${pkgrel}-${CARCH}.pkg.tar.gz
++oldstylepkgfile=${pkgname}-${pkgver}-${pkgrel}.pkg.tar.gz
++
++if [ ! -f $pkgfile ]; then
++	if [ -f $PKGDEST/$pkgfile ]; then
++		pkgfile=$PKGDEST/$pkgfile
++	elif [ -f $oldstylepkgfile ]; then
++		pkgfile=$oldstylepkgfile
++	elif [ -f $PKGDEST/$oldstylepkgfile ]; then
++		pkgfile=$PKGDEST/$oldstylepkgfile
++	else
++		echo "You must have a built package to check."
++		exit 1
++	fi
+ fi
+ 
+ tmp=`pacman -Spd --noconfirm $pkgname`
+@@ -27,7 +40,7 @@
+ 
+ oldpkg=`strip_url $pkgurl`
+ 
+-if [ "$oldpkg" = "$pkgname-$pkgver-$pkgrel.pkg.tar.gz" ]; then
++if [ "$oldpkg" = "$pkgfile" ]; then
+ 	echo "The built package is the one in the repo right now!"
+ 	exit 1
+ fi
+@@ -41,7 +54,7 @@
+ fi
+ 
+ tar tzf $oldpkg > filelist-old
+-tar tzf $pkgname-$pkgver-$pkgrel.pkg.tar.gz > filelist
++tar tzf $pkgfile > filelist
+ 
+ sort -o filelist filelist
+ sort -o filelist-old filelist-old
+@@ -51,7 +64,7 @@
+ if diff filelist-old filelist | grep '\.so\.' > /dev/null 2>&1; then
+ 	mkdir -p pkg
+ 	cd pkg
+-	tar xzf ../$pkgname-$pkgver-$pkgrel.pkg.tar.gz > /dev/null
++	tar xzf ../$pkgfile > /dev/null
+ 	for i in `diff ../filelist-old ../filelist | grep \> | grep \.so\. | awk '{print $2}'`; do
+ 		echo -n "${i}: "
+ 		objdump -p $i | grep SONAME
+diff -Nur devtools.orig/extrapkg devtools/extrapkg
+--- devtools.orig/extrapkg	2006-04-28 04:42:45.000000000 +0200
++++ devtools/extrapkg	2007-09-16 14:46:06.000000000 +0200
+@@ -10,22 +10,28 @@
+ fi
+ 
+ source PKGBUILD
+-pkgfile=${pkgname}-${pkgver}-${pkgrel}.pkg.tar.gz
++pkgfile=${pkgname}-${pkgver}-${pkgrel}-${CARCH}.pkg.tar.gz
++oldstylepkgfile=${pkgname}-${pkgver}-${pkgrel}.pkg.tar.gz
+ 
+ if [ ! -f $pkgfile ]; then
+-	pkgfile=$PKGDEST/$pkgfile
+-fi
+-
+-if [ ! -f $pkgfile ]; then
+-	echo "File $pkgfile doesn't exist"
+-	exit 1
++	if [ -f $PKGDEST/$pkgfile ]; then
++		pkgfile=$PKGDEST/$pkgfile
++		oldstylepkgfile=$PKGDEST/$oldstylepkgfile
++	elif [ -f $oldstylepkgfile ]; then
++		pkgfile=$oldstylepkgfile
++	elif [ -f $PKGDEST/$oldstylepkgfile ]; then
++		pkgfile=$PKGDEST/$oldstylepkgfile
++	else
++		echo "File $pkgfile doesn't exist"
++		exit 1
++	fi
+ fi
+ 
+ if [ "$cmd" == "extrapkg" ]; then
+ 	repo="extra"
+ 	tag="CURRENT"
+-elif [ "$cmd" == "currentpkg" ]; then
+-	repo="arch"
++elif [ "$cmd" == "corepkg" ]; then
++	repo="core"
+ 	tag="CURRENT"
+ elif [ "$cmd" == "testingpkg" ]; then
+ 	repo="testing"
+@@ -45,6 +51,11 @@
+ 	   echo "Must configure tupkg via ~/.tupkg, cancelled"
+ 	   exit 1
+ 	fi
++	if [ "$(basename $pkgfile)" != "$(basename $oldstylepkgfile)" ]; then
++		echo "Renaming makepkg3 package for compatability"
++		mv $pkgfile $oldstylepkgfile
++		pkgfile=$oldstylepkgfile
++	fi
+ 	tupkg $pkgfile
+ fi
+ if [ $? -ne 0 ]; then
