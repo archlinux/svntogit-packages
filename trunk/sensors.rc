@@ -1,0 +1,127 @@
+#!/bin/bash
+#
+# chkconfig: 2345 26 74
+# description: sensors is used for monitoring motherboard sensor values.
+# config: /etc/sysconfig/sensors
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+# See also the lm_sensors homepage at:
+#     http://www2.lm-sensors.nu/~lm78/index.html
+
+# It uses a config file /etc/sysconfig/sensors that contains the modules to
+# be loaded/unloaded. That file is sourced into this one.
+
+# The format of that file a shell script that simply defines the modules
+# in order as normal shell variables with the special names:
+#    MODULE_1, MODULE_2, MODULE_3, etc.
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+if grep -q sysfs /proc/mounts; then
+  WITHSYS=1
+else
+  WITHSYS=0
+fi
+
+CONFIG=/etc/sysconfig/lm_sensors
+PSENSORS=/usr/bin/sensors
+if [ ! -x $PSENSORS ]; then
+  PSENSORS=/usr/bin/sensors
+fi
+
+case "$1" in
+  start)
+    stat_busy "Starting Up Sensors"
+
+    if [ $WITHSYS == "0" ]; then
+      # If sensors isn't supported by the kernel, try loading the module...
+      [ -e /proc/sys/dev/sensors ] || /sbin/modprobe i2c-proc &>/dev/null
+
+      # Don't bother if /proc/sensors still doesn't exist, kernel doesn't have
+      # support for sensors.
+      [ -e /proc/sys/dev/sensors ] || exit 0
+
+      # If sensors was not already running, unload the module...
+      [ -e /var/lock/subsys/lm_sensors ] || /sbin/modprobe -r i2c-proc &>/dev/null
+    fi
+
+
+    if [ -r "$CONFIG" ]; then
+        . "$CONFIG"
+        modules=`grep \^MODULE_ $CONFIG | wc -l | tr -d ' '`
+        i=0
+        while [ $i -lt $modules ] ; do
+            module=`eval echo '$'MODULE_$i`
+            #echo starting module __${module}__ #debug
+           /sbin/modprobe $module &>/dev/null
+           i=`expr $i + 1`
+        done
+    fi
+    $PSENSORS -s
+
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      add_daemon sensors
+      stat_done
+    fi	  
+    ;;
+
+  stop)
+    stat_busy "Shutting Down Sensors"
+
+    if [ -r "$CONFIG" ]; then
+        . "$CONFIG"
+        modules=`grep \^MODULE_ $CONFIG | wc -l | tr -d ' '`
+        i=`expr $modules`
+        while [ $i -ge 0 ] ; do
+            module=`eval echo '$'MODULE_$i`
+            /sbin/modprobe -r $module &>/dev/null
+            i=`expr $i - 1`
+        done
+    fi
+
+    if [ $WITHSYS == "0" ]; then
+      /sbin/modprobe -r i2c-proc &>/dev/null
+    fi
+
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      rm_daemon sensors
+      stat_done
+    fi
+    ;;
+    
+  dostatus)
+    $PSENSORS
+    RETVAL=$?
+    ;;
+    
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+
+  condrestart)
+    [ -e /var/lock/subsys/lm_sensors ] && restart || :
+    ;;
+
+  *)
+    echo "Usage: sensors.init {start|stop|status|restart|reload|condrestart}"
+esac
