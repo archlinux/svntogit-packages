@@ -1,0 +1,21 @@
+# $Id: PKGBUILD,v 1.2 2005/12/22 10:32:00 jgc Exp $
+#Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=xorg-fonts-alias
+pkgver=1.0.1
+pkgrel=1
+pkgdesc="X.org font alias files"
+url="http://xorg.freedesktop.org/"
+_xorg=X11R7.0
+_relname=font-alias
+source=(${url}/releases/${_xorg}/src/everything/${_relname}-${_xorg}-${pkgver}.tar.bz2)
+md5sums=('de7035b15ba7edc36f8685ab3c17a9cf')
+
+build() {
+  cd ${startdir}/src/${_relname}-${_xorg}-${pkgver}
+  ./configure --prefix=/usr \
+              --with-top-fontdir=/usr/share/fonts
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+}
+
