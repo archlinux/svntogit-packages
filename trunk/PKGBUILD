@@ -1,0 +1,47 @@
+# $Id: PKGBUILD,v 1.10 2008/03/21 22:59:55 jgc Exp $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Link Dupont <link@subpop.net>
+#
+pkgname=dbus
+pkgver=1.1.20
+pkgrel=2
+pkgdesc="Freedesktop.org message bus system"
+url="http://www.freedesktop.org/Software/dbus"
+arch=(i686 x86_64)
+license=('GPL' 'custom')
+depends=('expat>=2.0' 'libx11' 'libsm')
+options=(!libtool)
+install=dbus.install
+source=(http://dbus.freedesktop.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.gz
+	dbus)
+md5sums=('c552b9bc4b69e4c602644abc21b7661e' 'c109dfdabf11e891dfd6c99e54dd6f56')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+  	      --libexecdir=/usr/lib/dbus-1.0 --with-dbus-user=81 \
+              --with-system-pid-file=/var/run/dbus.pid \
+              --disable-verbose-mode \
+	      --disable-tests --disable-asserts || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+  chown 81:81 ${startdir}/pkg/var/run/dbus || return 1
+
+  install -m755 -d  ${startdir}/pkg/etc/rc.d || return 1
+  install -m 755 ${startdir}/dbus ${startdir}/pkg/etc/rc.d/ || return 1
+
+  #Fix configuration file
+  sed -i -e 's|<user>81</user>|<user>dbus</user>|' ${startdir}/pkg/etc/dbus-1/system.conf || return 1
+
+  #install .keep files so pacman doesn't delete empty dirs
+  touch ${startdir}/pkg/usr/share/dbus-1/services/.keep || return 1
+  touch ${startdir}/pkg/usr/share/dbus-1/system-services/.keep || return 1
+  touch ${startdir}/pkg/etc/dbus-1/session.d/.keep || return 1
+  touch ${startdir}/pkg/etc/dbus-1/system.d/.keep || return 1
+
+  rmdir ${startdir}/pkg/usr/lib/dbus-1.0/dbus-1 || return 1
+
+  install -d -m755 ${startdir}/pkg/usr/share/licenses/dbus
+  install -m644 ${startdir}/src/${pkgname}-${pkgver}/COPYING \
+    ${startdir}/pkg/usr/share/licenses/dbus/ || return 1
+}
