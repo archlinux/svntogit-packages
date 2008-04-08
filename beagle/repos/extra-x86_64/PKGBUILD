@@ -2,13 +2,13 @@
 # Maintainer: Daniel Isenmann <daniel @ archlinux.org>
 # Contributor: Shadowhand <woody.gilk@gmail.com>
 pkgname=beagle
-pkgver=0.3.3
+pkgver=0.3.5
 pkgrel=1
 pkgdesc="Search tool that ransacks your personal information space"
 arch=(i686 x86_64)
 url="http://www.gnome.org/projects/beagle/"
 license=('custom')
-depends=('gnome-sharp' 'gmime>=2.2.10' 'evolution-sharp>=0.14.0.1' 'libexif' 'librsvg>=2.18.2' 'sqlite3' 'libxss' 'wv>=1.2.4' 'chmlib' 'gsf-sharp>=0.8.1' 'libsm' 'xdg-utils' 'ndesk-dbus-glib')
+depends=('gnome-sharp' 'gmime>=2.2.18' 'evolution-sharp>=0.14.0.1' 'libexif' 'librsvg>=2.22.2' 'sqlite3' 'libxss' 'wv>=1.2.4' 'chmlib' 'gsf-sharp>=0.8.1' 'libsm' 'xdg-utils' 'ndesk-dbus-glib' 'mono>=1.9')
 makedepends=('perlxml' 'zip' 'pkgconfig')
 options=('!libtool')
 backup=('etc/beagle/crawl-applications' 'etc/beagle/crawl-documentation'
@@ -16,7 +16,7 @@ backup=('etc/beagle/crawl-applications' 'etc/beagle/crawl-documentation'
 install=beagle.install
 source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/0.3/${pkgname}-${pkgver}.tar.bz2
 	beagle-0.2.1-spew.patch)
-md5sums=('c1b6c340c72a70e33212c85513bc23f2'
+md5sums=('4d89f4fea81c870e6bdaa9fb2bd33f4a'
          '74feeb60c70999db8895b3a9d260869a')
 
 build() {
