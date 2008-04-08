@@ -16,6 +16,7 @@ source=(http://downloads.sourceforge.net/gphoto/${pkgname}-${pkgver}.tar.gz
 md5sums=('adef1a564d3d1a48e1c13ece34b111b6'
          '28f57616cbba6f12ca113b87c8123993'
          'e5f3b19f7cdca8d72190170da995dfec')
+options=('!libtool')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -39,7 +40,6 @@ build() {
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 
-  rm -f ${startdir}/pkg/usr/lib/*.la
   rm -f ${startdir}/pkg/usr/lib/libgphoto2/${pkgver}/*.a
   
   install -m755 -d ${startdir}/pkg/usr/share/hal/fdi/information/20thirdparty
