@@ -3,9 +3,9 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=4.7p1
-pkgrel=6
-_gsskexver=20070927
+pkgver=5.0p1
+pkgrel=1
+#_gsskexver=20080404
 pkgdesc='A Secure SHell server/client'
 arch=(i686 x86_64)
 license=('custom')
@@ -15,8 +15,10 @@ depends=('openssl>=0.9.8g' 'zlib' 'pam' 'tcp_wrappers' 'heimdal')
 source=(ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/$pkgname-$pkgver.tar.gz
         sshd sshd.confd sshd.pam)
         #http://www.sxw.org.uk/computing/patches/$pkgname-$pkgver-gsskex-$_gsskexver.patch
-md5sums=('50a800fd2c6def9e9a53068837e87b91' 'd9ee5e0a0d143689b3d6f11454a2a892'
-         'e2cea70ac13af7e63d40eb04415eacd5' '1c7c2ea8734ec7e3ca58d820634dc73a')
+md5sums=('1f1dfaa775f33dd3328169de9bdc292a'
+         'd9ee5e0a0d143689b3d6f11454a2a892'
+         'e2cea70ac13af7e63d40eb04415eacd5'
+         '1c7c2ea8734ec7e3ca58d820634dc73a')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
