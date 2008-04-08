@@ -1,7 +1,7 @@
 # $Id: PKGBUILD,v 1.16 2008/01/19 08:09:07 simo Exp $
 # Maintainer: simo <simo@archlinux.org>
 pkgname=bzr
-pkgver=1.1
+pkgver=1.3
 pkgrel=1
 pkgdesc="A decentralized revision control system"
 arch=('i686' 'x86_64')
@@ -18,4 +18,4 @@ build() {
   install -D -m644 contrib/bash/bzr \
     $startdir/pkg/etc/bash_completion.d/bzr
 }
-md5sums=('10e9aed1c63227a5cb12f00b03d4ac37')
+md5sums=('1af233c6fa0a68851bc6155b2f563c30')
