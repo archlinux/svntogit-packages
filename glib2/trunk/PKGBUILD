@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=glib2
-pkgver=2.16.2
+pkgver=2.16.3
 pkgrel=1
 pkgdesc="Common C routines used by GTK+ 2.4 and other libs"
 url="http://www.gtk.org/"
@@ -15,7 +15,7 @@ source=(http://ftp.gnome.org/pub/GNOME/sources/glib/2.16/glib-${pkgver}.tar.bz2
 	gkeyfile-bool-nocase.patch
 	glib2.sh
 	glib2.csh)
-md5sums=('662224ad0186183f64de98ef2183454b'
+md5sums=('195f9a803cc5279dbb39afdf985f44cb'
          '5ca65611e824662146369e814d49ad06'
          '803017b365bd35dc20b092ce43b8c8c5'
          '90c7b830bef4baf225c2eb8b7ead0cab')
