@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.5.4.5
+pkgver=1.5.5
 pkgrel=1
 pkgdesc="GIT - the stupid content tracker"
 arch=(i686 x86_64)
@@ -39,5 +39,5 @@ build() {
   rm -rf ${startdir}/pkg/usr/lib
 }
 
-md5sums=('ed28e30c5e9d2a7ffe5b2268eaf8a29a'
-         '0660cfa37f5d94445636507d7214dba5')
+md5sums=('09f15f0b0e330986d930746abf6962f4'
+         '62a82276856add1d2b310d1e0b5ad5db')
