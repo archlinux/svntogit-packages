@@ -2,17 +2,17 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evolution-sharp
-pkgver=0.14.0.1
+pkgver=0.16.1
 pkgrel=1
 pkgdesc="C# bindings for Novell Evolution"
 arch=(i686 x86_64)
 license=('GPL')
 url="http://ftp.gnome.org/pub/GNOME/sources/evolution-sharp/"
-depends=('evolution-data-server>=1.12')
+depends=('evolution-data-server>=2.22.0')
 makedepends=('pkgconfig' 'gtk-sharp-2')
 options=('!libtool')
-source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/0.14/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('ca44b64db3edaa248b03bdf00ea662fd')
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/0.16/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('1f7ba3c3f99c17458af98c2c207001fd')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
