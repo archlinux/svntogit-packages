@@ -2,19 +2,19 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-panel
-pkgver=2.22.0
+pkgver=2.22.1.2
 pkgrel=1
 pkgdesc="The GNOME Panel"
 arch=(i686 x86_64)
 license=('GPL')
 url="http://www.gnome.org"
-depends=('libwnck>=2.22.0' 'gnome-menus>=2.22.0' 'evolution-data-server>=2.22.0' 'gnome-desktop>=2.22.0' 'libgweather>=2.22.0' 'librsvg>=2.22.2')
+depends=('libwnck>=2.22.1' 'gnome-menus>=2.22.1' 'evolution-data-server>=2.22.1' 'gnome-desktop>=2.22.1' 'libgweather>=2.22.1.1' 'librsvg>=2.22.2')
 makedepends=('perlxml' 'gnome-doc-utils>=0.12.2' 'pkgconfig')
 options=('!libtool' '!emptydirs')
 groups=('gnome')
 install=gnome-panel.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('fe10c920c1f182a2bd5dba98863c786c')
+md5sums=('bf89eb75655557c6a1ab9dbd37f028a6')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
