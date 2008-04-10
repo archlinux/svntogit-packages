@@ -1,24 +1,28 @@
-# $Id: PKGBUILD,v 1.9 2008/03/17 22:24:15 jgc Exp $
+# $Id: PKGBUILD,v 1.10 2008/03/30 13:54:02 jgc Exp $
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer0.10-ugly
 pkgver=0.10.7
-pkgrel=1
-pkgdesc="GStreamer Multimedia Framework Ugly Plugins (gst-plugins-ugly)"
+pkgrel=2
+pkgdesc="GStreamer Multimedia Framework Ugly plugin libraries"
 arch=(i686 x86_64)
 license=('LGPL')
-depends=('gstreamer0.10-base>=0.10.17')
+depends=('gstreamer0.10-base>=0.10.18-2')
 makedepends=('pkgconfig')
 url="http://gstreamer.freedesktop.org/"
-groups=('gstreamer0.10-plugins')
 _relname=gst-plugins-ugly
-source=(${url}/src/${_relname}/${_relname}-${pkgver}.tar.bz2
-        uglyconf)
-md5sums=('cff4f55138d12152cf580a3ee71c2519'
-         '825050222a558d0cedeea3cfd2f716ea')
+options=(!libtool)
+source=(${url}/src/${_relname}/${_relname}-${pkgver}.tar.bz2)
+md5sums=('cff4f55138d12152cf580a3ee71c2519')
 
 build() {
   cd ${startdir}/src/${_relname}-${pkgver}
-  . ${startdir}/src/uglyconf
-  rm -f ${startdir}/pkg/usr/lib/gstreamer-0.10/*.{,l}a
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --enable-experimental --disable-external \
+    --disable-docs-build --disable-plugin-docs \
+    --with-package-name="GStreamer Ugly Plugins (Archlinux)" \
+    --with-package-origin="http://www.archlinux.org/" || return 1
+
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
 }
