@@ -1,7 +1,7 @@
 # $Id: PKGBUILD,v 1.2 2008/03/12 23:32:25 jgc Exp $
 # Maintainer: Jan de Groot  <jgc@archlinux.org>
 pkgname=libgweather
-pkgver=2.22.0
+pkgver=2.22.1.1
 pkgrel=1
 pkgdesc="Provides access to weather information from the net"
 arch=(i686 x86_64)
@@ -13,7 +13,7 @@ conflicts=('gnome-applets<2.22.0')
 url="http://www.gnome.org/"
 install=libgweather.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('f25d3dada7416bf2d5edb5c7fd7ffce0')
+md5sums=('6b0e12931db8c640992bef75bd3cc24b')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
