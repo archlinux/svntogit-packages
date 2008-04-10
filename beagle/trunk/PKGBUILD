@@ -3,12 +3,12 @@
 # Contributor: Shadowhand <woody.gilk@gmail.com>
 pkgname=beagle
 pkgver=0.3.5
-pkgrel=1
+pkgrel=2
 pkgdesc="Search tool that ransacks your personal information space"
 arch=(i686 x86_64)
 url="http://www.gnome.org/projects/beagle/"
 license=('custom')
-depends=('gnome-sharp' 'gmime>=2.2.18' 'evolution-sharp>=0.14.0.1' 'libexif' 'librsvg>=2.22.2' 'sqlite3' 'libxss' 'wv>=1.2.4' 'chmlib' 'gsf-sharp>=0.8.1' 'libsm' 'xdg-utils' 'ndesk-dbus-glib' 'mono>=1.9')
+depends=('gnome-sharp' 'gmime>=2.2.18' 'evolution-sharp>=0.16.1' 'libexif' 'librsvg>=2.22.2' 'sqlite3' 'libxss' 'wv>=1.2.4' 'chmlib' 'gsf-sharp>=0.8.1' 'libsm' 'xdg-utils' 'ndesk-dbus-glib' 'mono>=1.9')
 makedepends=('perlxml' 'zip' 'pkgconfig')
 options=('!libtool')
 backup=('etc/beagle/crawl-applications' 'etc/beagle/crawl-documentation'
