@@ -2,17 +2,17 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evolution-data-server
-pkgver=2.22.0
+pkgver=2.22.1
 pkgrel=1
 pkgdesc="Evolution Data Server provides a central location for addressbook and calendar in the GNOME Desktop"
 arch=(i686 x86_64)
-depends=('libsoup>=2.4.0' 'nss>=3.11.9' 'libgnome>=2.22.0' 'libglade>=2.6.2' 'gnome-keyring>=2.22.0' 'db4.1')
+depends=('libsoup>=2.4.1' 'nss>=3.11.9' 'libgnome>=2.22.0' 'libglade>=2.6.2' 'gnome-keyring>=2.22.1' 'db4.1')
 makedepends=('perlxml' 'pkgconfig')
 options=('!libtool')
 url="http://www.gnome.org"
 license=('GPL')
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('0f29044dc21a4bfb915cafafde8f4d6b')
+md5sums=('1972fa3dbd46c25216b00c1d35f83eaf')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
