@@ -3,13 +3,13 @@
 # Contributor: Link Dupont <link@subpop.net>
 
 pkgname=hal
-pkgver=0.5.10
+pkgver=0.5.11rc2
 pkgrel=1
 pkgdesc="Hardware Abstraction Layer"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
 url="http://www.freedesktop.org/wiki/Software/hal"
-depends=('dbus-glib>=0.74' 'libusb' 'udev>=111' 'filesystem>=0.7.1-5' 'hal-info>=0.20071011' 'eject' 'libsmbios>=0.13.6' 'dmidecode' 'pciutils>=2.2.8-2' 'usbutils>=0.73-3' 'pm-utils')
+depends=('dbus-glib>=0.74' 'dbus>=1.2.1' 'libusb>=0.1.12' 'udev>=118' 'filesystem>=0.7.1-5' 'hal-info>=0.20080317' 'eject' 'libsmbios>=2.0.2' 'dmidecode' 'pciutils>=2.2.8-3' 'usbutils>=0.73-5' 'pm-utils>=1.1.0')
 makedepends=('pkgconfig' 'gperf')
 options=('!libtool')
 install=hal.install
@@ -19,7 +19,7 @@ source=(http://hal.freedesktop.org/releases/${pkgname}-${pkgver}.tar.gz
 	cryptsetup_location.patch
 	hal-0.5.9-hide-diagnostic.patch
 	ntfs3g-valid-options.patch)
-md5sums=('fce852c428e7cda0b937087c79eec63f'
+md5sums=('ade962044a62e8f2dc4625a17f4a5c7e'
          '882f67668cb14a0a9e4a27ef22278027'
          '5ba8b610aa9763a5f42b9f7cbd7a86ad'
          'c688a3c6574699365926f4fef7441545'
@@ -43,10 +43,10 @@ build() {
   sed -e 's/device-manager//' -i tools/Makefile || return 1
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
-  mkdir -p ${startdir}/pkg/etc/rc.d
-  mkdir -p ${startdir}/pkg/media
+  install -m755 -d ${startdir}/pkg/etc/rc.d
+  install -m755 -d ${startdir}/pkg/media || return 1
   install -m 755 ${startdir}/src/hal ${startdir}/pkg/etc/rc.d/hal || return 1
 
-  mkdir -p ${startdir}/pkg/usr/share/licenses/${pkgname}
-  install -m644 COPYING ${startdir}/pkg/usr/share/licenses/${pkgname}
+  install -m755 -d ${startdir}/pkg/usr/share/licenses/${pkgname}
+  install -m644 COPYING ${startdir}/pkg/usr/share/licenses/${pkgname}/ || return 1
 }
