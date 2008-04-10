@@ -4,7 +4,7 @@
 
 pkgname=libgphoto2
 pkgver=2.4.0
-pkgrel=5
+pkgrel=6
 pkgdesc="The core of gphoto2 software. It is a portable library to gives access to more than 400 digital cameras."
 arch=(i686 x86_64)
 url="http://www.gphoto.org"
@@ -16,7 +16,7 @@ source=(http://downloads.sourceforge.net/gphoto/${pkgname}-${pkgver}.tar.gz
 md5sums=('adef1a564d3d1a48e1c13ece34b111b6'
          '28f57616cbba6f12ca113b87c8123993'
          'e5f3b19f7cdca8d72190170da995dfec')
-options=('!libtool')
+options=('libtool')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
