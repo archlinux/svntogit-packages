@@ -1,24 +1,27 @@
-# $Id: PKGBUILD,v 1.8 2008/03/17 18:38:18 jgc Exp $
+# $Id: PKGBUILD,v 1.9 2008/03/30 13:53:15 jgc Exp $
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer0.10-good
 pkgver=0.10.7
-pkgrel=1
-pkgdesc="GStreamer Multimedia Framework Good Plugins (gst-plugins-good)"
+pkgrel=2
+pkgdesc="GStreamer Multimedia Framework Good plugin libraries"
 arch=('i686' 'x86_64')
 license=('LGPL')
-depends=('gstreamer0.10-base>=0.10.17' 'libxdamage')
+depends=('gstreamer0.10-base>=0.10.18-2')
 makedepends=('perlxml' 'pkgconfig')
 url="http://gstreamer.freedesktop.org/"
-groups=('gstreamer0.10-plugins')
+options=(!libtool)
 _relname=gst-plugins-good
-source=(${url}/src/${_relname}/${_relname}-${pkgver}.tar.bz2
-        goodconf)
-md5sums=('e02d729b22451f75414a27456ae5c16a'
-	 '286997a71b363bc31ca4d231282bc01f')
+source=(${url}/src/${_relname}/${_relname}-${pkgver}.tar.bz2)
+md5sums=('e02d729b22451f75414a27456ae5c16a')
 build() {
   cd ${startdir}/src/${_relname}-${pkgver}
-  gst_conf="--disable-gconftool --enable-experimental --disable-static"
-  . ${startdir}/src/goodconf
-  rm -f ${startdir}/pkg/usr/lib/gstreamer-0.10/*.{,l}a
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --enable-experimental --disable-external \
+    --disable-docs-build --disable-plugin-docs \
+    --with-package-name="GStreamer Good Plugins (Archlinux)" \
+    --with-package-origin="http://www.archlinux.org/" || return 1
+
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
 }
