@@ -3,8 +3,8 @@
 # Contributor: Link Dupont <link@subpop.net>
 #
 pkgname=dbus
-pkgver=1.1.20
-pkgrel=2
+pkgver=1.2.1
+pkgrel=1
 pkgdesc="Freedesktop.org message bus system"
 url="http://www.freedesktop.org/Software/dbus"
 arch=(i686 x86_64)
@@ -14,7 +14,7 @@ options=(!libtool)
 install=dbus.install
 source=(http://dbus.freedesktop.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.gz
 	dbus)
-md5sums=('c552b9bc4b69e4c602644abc21b7661e' 'c109dfdabf11e891dfd6c99e54dd6f56')
+md5sums=('b57aa1ba0834cbbb1e7502dc2cbfacc2' 'c109dfdabf11e891dfd6c99e54dd6f56')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
