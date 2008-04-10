@@ -2,13 +2,13 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-settings-daemon
-pkgver=2.22.0
+pkgver=2.22.1
 pkgrel=1
 pkgdesc="The GNOME Settings daemon"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('libgnomekbd>=2.21.4.1' 'libxxf86misc' 'gstreamer0.10-base>=0.10.15' 
-	 'gnome-desktop>=2.22.0')
+depends=('libgnomekbd>=2.22.0' 'libxxf86misc' 'gstreamer0.10-base>=0.10.19' 
+	 'gnome-desktop>=2.22.1')
 makedepends=('perlxml' 'pkgconfig')
 conflicts=('gnome-control-center<2.22.0')
 options=(!emptydirs !libtool)
@@ -16,7 +16,7 @@ install=gnome-settings-daemon.install
 url="http://www.gnome.org"
 groups=('gnome')
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('5bb2b129342e3149c00892aa18926317')
+md5sums=('959d0d289ed81f950004fa64dbcff89d')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
