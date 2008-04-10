@@ -1,10 +1,10 @@
-# $Id: PKGBUILD,v 1.298 2008/03/30 09:23:05 thomas Exp $
+# $Id: PKGBUILD,v 1.299 2008/04/05 20:13:31 thomas Exp $
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=kernel26
 _basekernel=2.6.24
-pkgver=2.6.24.4
-pkgrel=1
+pkgver=2.6.25
+pkgrel=0.2
 pkgdesc="The Linux Kernel and modules"
 arch=(i686 x86_64)
 license=('GPL2')
@@ -27,9 +27,9 @@ source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
 	# standard config files for mkinitcpio ramdisk
 	kernel26.preset)
 md5sums=('3f23ad4b69d0a552042d1ed0f4399857'
-         '9d435f1a3b56d74265d9eb7c49060ff4'
-         '817294b52dc1f0acb1a8616fe792f29a'
-         'ae7370a442115f2c7ee45d0123f617e3'
+         '82a3e97c6c0d012771f4a065a0546131'
+         '63d8b00363dd11ad89eabc0212833f2e'
+         'ced8e007750baf2b3e8ffaebbfcb0f32'
          '25584700a0a679542929c4bed31433b6')
 
 build() {
@@ -38,8 +38,7 @@ build() {
   cd $startdir/src/linux-$_basekernel
   # Add -ARCH patches
   # There is no script for the patch generation yet, so I am abusing makepkg to do it
-  # See http://dev.archlinux.org/~thomas/kernel26/
-  # This will be improved
+  # See http://projects.archlinux.org/git/?p=linux-2.6-ARCH.git;a=summary
   patch -Np1 -i $startdir/src/patch-${pkgver}-${pkgrel}-ARCH || return 1
 
   if [ "$CARCH" = "x86_64" ]; then
@@ -50,15 +49,15 @@ build() {
   # build the full kernel version to use in pathnames
   . ./.config
   ### next line is only needed for rc kernels
-  #_kernver="2.6.24-rc6${CONFIG_LOCALVERSION}"
-  _kernver="${_basekernel}${CONFIG_LOCALVERSION}"
+  _kernver="2.6.25${CONFIG_LOCALVERSION}"
+  #_kernver="${_basekernel}${CONFIG_LOCALVERSION}"
   # load configuration
   yes "" | make config
   # build!
   ####################
   # stop here
-  #msg "Stopping build"
-  #return 1
+  msg "Stopping build"
+  return 1
   ####################
   make bzImage modules || return 1
   mkdir -p $startdir/pkg/{lib/modules,boot}
@@ -109,7 +108,6 @@ build() {
   cp include/linux/inotify.h $startdir/pkg/usr/src/linux-${_kernver}/include/linux/
   # add CLUSTERIP file for iptables
   mkdir -p $startdir/pkg/usr/src/linux-${_kernver}/net/ipv4/netfilter/
-  cp net/ipv4/netfilter/ipt_CLUSTERIP.c $startdir/pkg/usr/src/linux-${_kernver}/net/ipv4/netfilter/
   # add wireless headers
   mkdir -p $startdir/pkg/usr/src/linux-${_kernver}/net/mac80211/
   cp net/mac80211/*.h $startdir/pkg/usr/src/linux-${_kernver}/net/mac80211/
