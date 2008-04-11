@@ -3,7 +3,7 @@
 
 pkgname=gnome-panel
 pkgver=2.22.1.2
-pkgrel=2
+pkgrel=3
 pkgdesc="The GNOME Panel"
 arch=(i686 x86_64)
 license=('GPL')
@@ -15,16 +15,15 @@ groups=('gnome')
 install=gnome-panel.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2
 	clock.patch)
-md5sums=('bf89eb75655557c6a1ab9dbd37f028a6' '9a2565449970a214a653762fdf7ce212')
+md5sums=('bf89eb75655557c6a1ab9dbd37f028a6' 'ba7e950377e44297b7b964d74b3e635b')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
   patch -Np0 -i ${startdir}/src/clock.patch || return 1
-  # Set CFLAGS for now, gcc optimizes the clock applet to bad code
-  [ "${CARCH}" = "x86_64" ] && export CFLAGS="-march=x86-64 -O -pipe"
   ./configure --prefix=/usr --sysconfdir=/etc \
               --localstatedir=/var --disable-static \
 	      --libexecdir=/usr/lib/gnome-panel \
+	      --disable-network-manager \
 	      --disable-scrollkeeper || return 1
   make || return 1
   make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
