@@ -1,0 +1,294 @@
+Index: clock-location.c
+===================================================================
+--- applets/clock/clock-location.c	(revision 11046)
++++ applets/clock/clock-location.c	(revision 11051)
+@@ -67,6 +67,34 @@
+ #define PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), CLOCK_LOCATION_TYPE, ClockLocationPrivate))
+ 
+ ClockLocation *
++clock_location_find_and_ref (GList       *locations,
++                             const gchar *name,
++                             const gchar *timezone,
++                             gfloat       latitude,
++                             gfloat       longitude,
++                             const gchar *code)
++{
++        GList *l;
++        ClockLocationPrivate *priv;
++
++        for (l = locations; l != NULL; l = l->next) {
++                priv = PRIVATE (l->data);
++
++                if (priv->latitude == latitude &&
++                    priv->longitude == longitude &&
++                    g_strcmp0 (priv->weather_code, code) == 0 &&
++                    g_strcmp0 (priv->timezone, timezone) == 0 &&
++                    g_strcmp0 (priv->name, name) == 0)
++                        break;
++        }
++
++        if (l != NULL)
++                return g_object_ref (CLOCK_LOCATION (l->data));
++        else
++                return NULL;
++}
++
++ClockLocation *
+ clock_location_new (const gchar *name, const gchar *timezone,
+ 		    gfloat latitude, gfloat longitude,
+ 		    const gchar *code, WeatherPrefs *prefs)
+@@ -467,6 +495,12 @@
+         gchar *filename;
+ 	MakeCurrentData *mcdata;
+ 
++        if (loc == current_location) {
++                if (destroy)
++                        destroy (data);
++                return;
++        }
++
+ 	if (clock_location_is_current_timezone (loc)) {
+ 		if (current_location)
+ 			g_object_remove_weak_pointer (G_OBJECT (current_location), 
+Index: clock-location.h
+===================================================================
+--- applets/clock/clock-location.h	(revision 11046)
++++ applets/clock/clock-location.h	(revision 11051)
+@@ -38,6 +38,13 @@
+ 				   const gchar *code,
+ 				   WeatherPrefs *prefs);
+ 
++ClockLocation *clock_location_find_and_ref (GList       *locations,
++                                            const gchar *name,
++                                            const gchar *timezone,
++                                            gfloat       latitude,
++                                            gfloat       longitude,
++                                            const gchar *code);
++
+ gchar *clock_location_get_tzname (ClockLocation *loc);
+ 
+ const gchar *clock_location_get_name (ClockLocation *loc);
+Index: system-timezone.c
+===================================================================
+--- applets/clock/system-timezone.c	(revision 11046)
++++ applets/clock/system-timezone.c	(revision 11051)
+@@ -636,9 +636,20 @@
+                                   &file_stat,
+                                   localtime_content,
+                                   localtime_content_len,
+-                                  file))
+-                        return g_strdup (file + strlen (SYSTEM_ZONEINFODIR"/"));
+-                else
++                                  file)) {
++                        int skip;
++
++                        g_assert (g_str_has_prefix (file,
++                                                    SYSTEM_ZONEINFODIR"/"));
++
++                        if (g_str_has_prefix (file,
++                                              SYSTEM_ZONEINFODIR"/posix/"))
++                                skip = strlen (SYSTEM_ZONEINFODIR"/posix/");
++                        else
++                                skip = strlen (SYSTEM_ZONEINFODIR"/");
++
++                        return g_strdup (file + skip);
++                } else
+                         return NULL;
+         } else if (S_ISDIR (file_stat.st_mode)) {
+                 GDir       *dir = NULL;
+@@ -741,6 +752,7 @@
+         struct stat   stat_localtime;
+         char         *localtime_content = NULL;
+         unsigned int  localtime_content_len = -1;
++        char         *retval;
+ 
+         if (g_stat (ETC_LOCALTIME, &stat_localtime) != 0)
+                 return NULL;
+@@ -754,11 +766,15 @@
+                                   NULL))
+                 return NULL;
+ 
+-        return recursive_compare (&stat_localtime,
+-                                  localtime_content,
+-                                  localtime_content_len,
+-                                  SYSTEM_ZONEINFODIR,
+-                                  files_are_identical_content);
++        retval = recursive_compare (&stat_localtime,
++                                   localtime_content,
++                                   localtime_content_len,
++                                   SYSTEM_ZONEINFODIR,
++                                   files_are_identical_content);
++
++        g_free (localtime_content);
++
++        return retval;
+ }
+ 
+ typedef char * (*GetSystemTimezone) (void);
+Index: clock.c
+===================================================================
+--- applets/clock/clock.c	(revision 11046)
++++ applets/clock/clock.c	(revision 11051)
+@@ -2208,7 +2208,11 @@
+                 return;
+         }
+ 
+-        loc = clock_location_new (name, timezone, latitude, longitude, code, &prefs);
++	loc = clock_location_find_and_ref (cd->locations, name, timezone,
++					   latitude, longitude, code);
++	if (!loc)
++		loc = clock_location_new (name, timezone,
++					  latitude, longitude, code, &prefs);
+ 
+ 	if (current && clock_location_is_current_timezone (loc))
+ 		clock_location_make_current (loc, NULL, NULL, NULL);
+@@ -3087,9 +3091,10 @@
+ 		clock_location_is_current (loc);
+ 
+                 cd->locations = g_list_append (cd->locations, loc);
+-                locations_changed (cd);
+         }
+ 
++	/* This will update everything related to locations to take into
++	 * account the new location (via the gconf notification) */
+         save_cities_store (cd);
+ 
+         edit_hide (edit_window, cd);
+@@ -3405,8 +3410,12 @@
+                           G_CALLBACK (location_row_activated), cd);
+ 
+ 	model = gweather_xml_load_locations ();
+-	gtk_tree_view_set_model (tree, model);
+-        g_object_unref (model);
++
++	/* Can be NULL if libgweather is not correctly installed */
++	if (model) {
++		gtk_tree_view_set_model (tree, model);
++		g_object_unref (model);
++	}
+ }
+ 
+ static void
+@@ -3416,23 +3425,41 @@
+ 	GtkWidget *name_entry = glade_xml_get_widget (cd->glade_xml, "edit-location-name-entry");
+         GtkWidget *window;
+ 	const char *find;
++	const char *location;
+ 
+ 	fill_location_tree (cd);
+         window = glade_xml_get_widget (cd->glade_xml, "find-location-window");
+ 
+ 	/* prefill the find entry if it's empty */
+ 	find = gtk_entry_get_text (GTK_ENTRY (cd->find_location_entry));
+-	if (!find || !find[0]) {
+-		const char *location;
++	location = gtk_entry_get_text (GTK_ENTRY (name_entry));
+ 
+-		location = gtk_entry_get_text (GTK_ENTRY (name_entry));
+-		gtk_entry_set_text (GTK_ENTRY (cd->find_location_entry),
+-				    location);
++	if (g_strcmp0 (find, location) != 0 || !find || !find[0]) {
++		GtkWidget *scroll = glade_xml_get_widget (cd->glade_xml, "find-location-scroll");
++		GtkAdjustment *adjustment;
++
++		/* If we autofill the entry, reset the state of the treeview
++		 * first so that it looks like a brand new search */
++		gtk_tree_view_collapse_all (GTK_TREE_VIEW (cd->location_tree));
++
++		adjustment = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (scroll));
++		gtk_adjustment_set_value (adjustment, 0);
++		gtk_scrolled_window_set_vadjustment (GTK_SCROLLED_WINDOW (scroll),
++						     adjustment);
++
++		if (g_strcmp0 (find, location) != 0)
++			gtk_entry_set_text (GTK_ENTRY (cd->find_location_entry),
++					    location);
+ 	}
++
+ 	gtk_widget_grab_focus (cd->find_location_entry);
++	gtk_editable_set_position (GTK_EDITABLE (cd->find_location_entry),
++				   -1);
+ 
+-        gtk_window_set_transient_for (GTK_WINDOW (window), GTK_WINDOW (edit_window));
+-        gtk_window_present_with_time (GTK_WINDOW (window), gtk_get_current_event_time ());
++        gtk_window_set_transient_for (GTK_WINDOW (window),
++				      GTK_WINDOW (edit_window));
++        gtk_window_present_with_time (GTK_WINDOW (window),
++				      gtk_get_current_event_time ());
+ }
+ 
+ static gboolean
+@@ -3507,6 +3534,10 @@
+ 
+ 	tree = GTK_TREE_VIEW (cd->location_tree);
+ 	model = gtk_tree_view_get_model (tree);
++	/* Can happen if libgweather is not correctly installed */
++	if (!model)
++		return;
++
+ 	entry = GTK_ENTRY (cd->find_location_entry);
+ 	selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (tree));
+ 
+@@ -3551,6 +3582,9 @@
+ 
+ 	tree = GTK_TREE_VIEW (cd->location_tree);
+ 	model = gtk_tree_view_get_model (tree);
++	/* Can happen if libgweather is not correctly installed */
++	if (!model)
++		return;
+ 
+ 	selection = gtk_tree_view_get_selection (tree);
+ 	gtk_tree_model_get_iter_first (model, &iter);
+@@ -3596,8 +3630,6 @@
+         GtkWidget *lon_entry = glade_xml_get_widget (cd->glade_xml, "edit-location-longitude-entry");
+         GtkWidget *lat_combo = glade_xml_get_widget (cd->glade_xml, "edit-location-latitude-combo");
+         GtkWidget *lon_combo = glade_xml_get_widget (cd->glade_xml, "edit-location-longitude-combo");
+-        GtkWidget *scroll = glade_xml_get_widget (cd->glade_xml, "find-location-scroll");
+-	GtkAdjustment *adjustment;
+ 
+         /* clear out the old data */
+         gtk_combo_box_set_active (GTK_COMBO_BOX (zone_combo), -1);
+@@ -3609,16 +3641,6 @@
+ 
+         gtk_combo_box_set_active (GTK_COMBO_BOX (lat_combo), -1);
+         gtk_combo_box_set_active (GTK_COMBO_BOX (lon_combo), -1);
+-
+-	/* reset the state of the find window */
+-	gtk_entry_set_text (GTK_ENTRY (cd->find_location_entry), "");
+-
+-	gtk_tree_view_collapse_all (GTK_TREE_VIEW (cd->location_tree));
+-
+-	adjustment = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (scroll));
+-	gtk_adjustment_set_value (adjustment, 0);
+-	gtk_scrolled_window_set_vadjustment (GTK_SCROLLED_WINDOW (scroll),
+-					     adjustment);
+ }
+ 
+ static void
+@@ -3725,7 +3747,10 @@
+   data.distance = 1e6;
+   data.location = NULL;
+ 
+-  gtk_tree_model_foreach (GTK_TREE_MODEL (model), compare_location, &data);
++  /* Can be NULL if libgweather is not correctly installed */
++  if (model)
++	  gtk_tree_model_foreach (GTK_TREE_MODEL (model),
++			  	  compare_location, &data);
+ 
+   if (data.location)
+     code = g_strdup (data.location->code);
+@@ -3828,12 +3853,11 @@
+         ClockLocation *loc = NULL;
+ 
+         gtk_tree_model_get (model, iter, COL_CITY_LOC, &loc, -1);
+-
+-        gtk_list_store_remove (cd->cities_store, iter);
+ 	cd->locations = g_list_remove (cd->locations, loc);
+-	locations_changed (cd);
+ 	g_object_unref (loc);
+ 
++	/* This will update everything related to locations to take into
++	 * account the removed location (via the gconf notification) */
+         save_cities_store (cd);
+ }
+ 
