@@ -3,7 +3,7 @@
 
 pkgname=gstreamer0.10-bad-plugins
 pkgver=0.10.6
-pkgrel=1
+pkgrel=2
 pkgdesc="GStreamer Multimedia Framework Bad Plugins (gst-plugins-bad)"
 arch=(i686 x86_64)
 license=('LGPL' 'GPL')
@@ -36,4 +36,5 @@ build() {
 
   make || return 1
   make -C ext DESTDIR=${startdir}/pkg install || return 1
+  make -C sys DESTDIR=${startdir}/pkg install || return 1
 }
