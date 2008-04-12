@@ -3,11 +3,11 @@
 
 pkgname=pango
 pkgver=1.20.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A library for layout and rendering of text"
 arch=(i686 x86_64)
 license=('LGPL')
-depends=('glib2>=2.16.3' 'cairo>=1.4.14' 'libxft>=2.1.12' 'libthai>=0.1.9')
+depends=('glib2>=2.16.3' 'cairo>=1.6.4' 'libxft>=2.1.12' 'libthai>=0.1.9')
 makedepends=('pkgconfig' 'libxt')
 options=('!libtool' '!emptydirs')
 install=pango.install
