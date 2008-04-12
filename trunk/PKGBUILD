@@ -33,12 +33,12 @@ fi
 
   export MAKEFLAGS="-j1"
   /usr/bin/make || return 1
-  /usr/bin/make package pkgdir=${startdir}/pkg/usr
+  /usr/bin/make package pkgdir=${startdir}/pkg/usr PKGMANDIR=share/man
 
   # clean up and fixing symlinks
   /bin/mv ${startdir}/pkg/usr/link/libnetpbm.a ${startdir}/pkg/usr/lib
   /bin/rm ${startdir}/pkg/usr/{config_template,README,pkginfo,misc,VERSION,link} -rf
-  /bin/rm ${startdir}/pkg/usr/man/web -rf
+  /bin/rm ${startdir}/pkg/usr/man -rf
   /bin/rm ${startdir}/pkg/usr/bin/doc.url
   cd ${startdir}/pkg/usr/lib
   /bin/ln -s ./libnetpbm.so.10 libnetpbm.so
