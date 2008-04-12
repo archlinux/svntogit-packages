@@ -3,12 +3,12 @@
 
 pkgname=claws-mail-extra-plugins
 pkgver=3.3.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Extra plugins for claws-mail"
 url="http://www.claws-mail.org/plugins.php?branch=EXT"
 license=('GPL3')
 arch=('i686' 'x86_64')
-depends=("claws-mail>=3.3.1" 'poppler' 'libxml2' 'curl' 'libgtkhtml' 'gpgme' 'libetpan' 'ghostscript' 'poppler-glib' 'libnotify')
+depends=("claws-mail>=3.3.1" 'libxml2' 'curl' 'libgtkhtml' 'gpgme' 'libetpan' 'ghostscript' 'poppler-glib>=0.8.0' 'libnotify')
 makedepends=('make' 'bc' 'perl>=5.10.0-3')
 conflicts=('claws-gtkhtml2_viewer' 'claws-mail-acpinotifier-plugin' 'sylpheed-claws-gtkhtml2-plugin' 'sylpheed-claws-rssyl-plugin' 'sylpheed-claws-extra-plugins')
 replaces=('sylpheed-claws-extra-plugins')
