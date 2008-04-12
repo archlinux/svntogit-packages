@@ -3,17 +3,17 @@
 # Contributor: Brice Carpentier <brice@daknet.org>
 
 pkgname=cairo
-pkgver=1.4.14
+pkgver=1.6.4
 pkgrel=1
 pkgdesc="Cairo vector graphics library"
 arch=(i686 x86_64)
 license=('LGPL' 'MPL')
 url="http://cairographics.org/"
-depends=('libpng' 'libxrender' 'fontconfig')
+depends=('libpng>=1.2.25' 'libxrender' 'fontconfig>=2.5.0' 'pixman>=0.10.0')
 makedepends=('pkgconfig')
 options=('!libtool')
 source=(http://cairographics.org/releases/${pkgname}-${pkgver}.tar.gz)
-md5sums=('e8c442ff821c0719a69508fecba9038f')
+md5sums=('a198d509f9e3a35b78de8bb02174ebb9')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
