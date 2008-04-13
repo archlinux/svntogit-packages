@@ -1,6 +1,6 @@
 # $Id: PKGBUILD,v 1.39 2008/03/15 09:47:43 thomas Exp $
 pkgname=bluez-utils
-pkgver=3.28
+pkgver=3.30
 pkgrel=1
 pkgdesc="Utilities for the Linux Bluetooth protocol stack"
 arch=(i686 x86_64)
@@ -16,7 +16,7 @@ backup=(etc/bluetooth/{audio,hcid,network,rfcomm}.conf
 source=(http://bluez.sf.net/download/bluez-utils-${pkgver}.tar.gz
         bluetooth.rc bluetooth.conf.d)
 options=(!libtool)
-md5sums=('9966fe59e228efc6626d47f2f2732d43'
+md5sums=('3d17bb712d243bb1b316f7e8a909fa82'
          '6f3b248670fe80626466b47bc52330e6'
          'dda606b16264859b007ec777c7a5627d')
 
@@ -34,6 +34,7 @@ build() {
   make DESTDIR=${startdir}/pkg install || return 1
   
   install -D -m644 ${startdir}/src/bluez-utils-${pkgver}/network/network.conf ${startdir}/pkg/etc/bluetooth/network.conf
+  install -D -m644 ${startdir}/src/bluez-utils-${pkgver}/audio/audio.conf ${startdir}/pkg/etc/bluetooth/audio.conf
   
   rm -rf ${startdir}/pkg/etc/init.d ${startdir}/pkg/etc/rc.d
   
