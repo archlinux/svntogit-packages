@@ -3,7 +3,7 @@
 # Contributor: Brad Gordon <brad@rpgcyco.net>
 
 pkgname=libmcs
-pkgver=0.6.0
+pkgver=0.7.0
 pkgrel=1
 pkgdesc="A library and userland tools which abstract the storage of configuration settings"
 arch=('i686')
@@ -13,7 +13,6 @@ depends=('glibc' 'libmowgli')
 makedepends=('pkgconfig')
 source=(http://distfiles.atheme.org/${pkgname}-${pkgver}.tgz)
 options=('!libtool')
-md5sums=('c75046d71dc37e8a8d2d66c412db4569')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -27,3 +26,5 @@ build() {
 
 }
 
+md5sums=('69b46ae0a929f9c7bc480128f12586a3')
+md5sums=('0f0c779609b3481a79937c2e86660a99')
