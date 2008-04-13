@@ -3,8 +3,8 @@
 # Contributor: William Rea <sillywilly@gmail.com>
 
 pkgname=mpg123
-pkgver=1.3.1
-pkgrel=2
+pkgver=1.4.1
+pkgrel=1
 pkgdesc="A console based real time MPEG Audio Player for Layer 1, 2 and 3"
 arch=('i686' 'x86_64')
 url="http://sourceforge.net/projects/mpg123"
@@ -16,13 +16,13 @@ conflicts=('mpg321')
 provides=('mpg321')
 replaces=('mpg321')
 options=('libtool')
-source=(http://downloads.sourceforge.net/sourceforge/mpg123/mpg123-$pkgver.tar.bz2)
-md5sums=('7c55a9f7cfe7358648570335c0325bed')
-sha1sums=('76d7392b1874823b227b1e9c5fd486de33a8637f')
+source=(http://downloads.sourceforge.net/sourceforge/mpg123/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('df541f2daf1e8c356b52be2edb2ad10b')
+sha1sums=('b9a89cba45652d013262c7744edc1f07b16203d5')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
+  cd ${startdir}/src/${pkgname}-${pkgver}
   ./configure --prefix=/usr --with-audio="alsa esd sdl"
   make || return 1
-  make DESTDIR=$startdir/pkg install
+  make DESTDIR=${startdir}/pkg install
 }
