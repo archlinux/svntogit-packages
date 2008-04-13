@@ -2,7 +2,7 @@
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=wireshark
-pkgver=0.99.8
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="A free network protocol analyzer for Unix/Linux and Windows"
 arch=(i686 x86_64)
@@ -11,16 +11,13 @@ depends=('gtk2' 'heimdal>=1.0.1' 'pcre' 'libpcap>=0.9.8'
 source=(http://www.wireshark.org/download/src/$pkgname-$pkgver.tar.gz)
 url="http://www.wireshark.org/"
 replaces=('ethereal')
-md5sums=('417305db903357c7567b789c86283986')
+md5sums=('8c6328955437fd18f9b102a2ea099980')
 options=(!libtool)
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
-#  ln -s ../Makefile.common gtk/
   export CFLAGS="-fno-unit-at-a-time $CFLAGS"
-  ./configure --prefix=/usr --enable-pcap --enable-zlib --enable-tethereal \
-    --enable-editcap --enable-mergecap --enable-text2cap --enable-gtk2 --with-ssl \
-    --without-net-snmp --without-ucd-snmp
+  ./configure --prefix=/usr --with-ssl
   make all || return 1
   make DESTDIR=$startdir/pkg install
 }
