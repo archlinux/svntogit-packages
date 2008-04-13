@@ -2,14 +2,16 @@
 # Maintainer: Travis Willard <travis@archlinux.org>
 
 pkgname=avahi
-pkgver=0.6.20
-pkgrel=3
+pkgver=0.6.22
+pkgrel=1
 pkgdesc="A multicast/unicast DNS-SD framework"
 arch=('i686' 'x86_64')
 url="http://www.avahi.org/"
 license=('LGPL')
-depends=('dbus>=1.0.2-4' 'libcap' 'libdaemon>=0.11' 'nss-mdns' 'gdbm' 'filesystem>=0.7.2-5')
-makedepends=('mono' 'pygtk' 'gtk-sharp-2' 'dbus-python' 'qt3' 'libglade')
+depends=('dbus>=1.1.20-1' 'libcap' 'libdaemon>=0.11' 'gdbm' 'glib2' 'expat')
+optdepends=('qt3:Qt3 UI support' 'libglade:Avahi-discover-standalone'
+            'nss-mdns:NSS support for mDNS')
+makedepends=('mono' 'pygtk' 'gtk-sharp-2' 'dbus-python' 'qt3' 'libglade' 'intltool')
 backup=(etc/avahi/avahi-daemon.conf)
 install=avahi.install
 conflicts=('howl' 'mdnsresponder')
@@ -17,8 +19,6 @@ provides=('howl' 'mdnsresponder')
 replaces=('howl' 'mdnsresponder')
 options=('!libtool')
 source=(http://www.avahi.org/download/avahi-${pkgver}.tar.gz gnome-nettool.png)
-md5sums=('6acdff79afa2631f765f3bbbc3e25a74'
-         '42c2905307c7a5dc6ac4b75f4c3d65a3')
 
 build() {
   [ -z "${QTDIR}" ] && . /etc/profile.d/qt3.sh
@@ -58,3 +58,5 @@ build() {
   install -m 644 ${startdir}/src/gnome-nettool.png ${startdir}/pkg/usr/share/pixmaps/gnome-nettool.png
 }
 
+md5sums=('c84b1a8a23126e188426728710414dc8'
+         '42c2905307c7a5dc6ac4b75f4c3d65a3')
