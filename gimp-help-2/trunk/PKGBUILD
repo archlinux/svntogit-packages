@@ -3,18 +3,18 @@
 # Contributor: Tobias Kieslich <tobias@archlinux.org>
 
 pkgname=gimp-help-2
-pkgver=2.4.0
+pkgver=2.4.1
 pkgrel=1
-pkgdesc="A GIMP help system designed for use with the internal GIMP help
-browser, external web browser and HTML renderers"
+pkgdesc="A GIMP help system designed for use with the internal GIMP help browser, external web browser and HTML renderers"
 arch=('i686' 'x86_64')
 url="http://docs.gimp.org/"
 license=('FDL')
 depends=('gimp>=2.4.0')
-makedepends=('docbook-xml')
+makedepends=('docbook-xsl')
+options=('!makeflags')
 source=(ftp://ftp.gimp.org/pub/gimp/help/gimp-help-${pkgver}.tar.bz2)
-md5sums=('fb4402aabce1d7f4eccc1a8739cc7e56')
-sha1sums=('a9d65ca8b4e54245d35db9f290f469a44710390d')
+md5sums=('da505d7532b6e14713e04b6e79a11379')
+sha1sums=('d875a73de4afd0fc134cb73b428b90868ddeb32c')
 
 build() {
   cd ${startdir}/src/gimp-help-${pkgver}
