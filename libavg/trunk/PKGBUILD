@@ -2,11 +2,11 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=libavg
 pkgver=0.7.0
-pkgrel=3
+pkgrel=4
 pkgdesc="High-level multimedia platform with a focus on interactive art installations"
 arch=('i686' 'x86_64')
 url="http://www.libavg.de"
-depends=('imagemagick' 'ffmpeg>=20071204-1' 'boost>=1.34.1-2' 'python>=2.5'
+depends=('imagemagick>=6.4.0.2' 'ffmpeg>=20071204-1' 'boost>=1.34.1-2' 'python>=2.5'
 	 'libdc1394>=2.0.1')
 makedepends=('pkgconfig' 'diffutils' 'libtool' 'autoconf' 'automake')
 options=('!libtool' '!emptydirs')
@@ -14,8 +14,7 @@ license=('LGPL')
 source=(http://www.libavg.de/${pkgname}-${pkgver}.tar.gz
 	gcc-4.3.patch
 	dc1394-2.0.patch)
-md5sums=('2aedc1ea3cc4a14e98e0c891f217fa03'
-         '50b41c612a64aedbc14958baa2e67355'
+md5sums=('2aedc1ea3cc4a14e98e0c891f217fa03' '50b41c612a64aedbc14958baa2e67355'\
          '35fa2846381016c612d6b68b400b89a1')
 
 build() {
@@ -33,7 +32,7 @@ build() {
   aclocal -I ./m4 || return 1
   autoconf || return 1
   automake || return 1
-  ./configure --prefix=/usr \
+  CXXFLAGS="${CXXFLAGS} -I/usr/include/ImageMagick" ./configure --prefix=/usr \
               --disable-DFB \
               --enable-GL \
               --enable-v4l2 \
