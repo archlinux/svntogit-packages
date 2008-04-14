@@ -2,6 +2,7 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org> 
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 
+
 pkgname=xine-lib
 pkgver=1.1.10
 pkgrel=1
