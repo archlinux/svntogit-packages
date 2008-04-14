@@ -9,8 +9,8 @@ pkgdesc="Utilities to download and work with the Arch Build System (ABS)"
 arch=('i686' 'x86_64')
 url="http://projects.archlinux.org/git/?p=abs.git"
 license=('GPL')
-depends=('bash' 'rsync')
 groups=('base-devel')
+depends=('bash' 'rsync')
 backup=(etc/abs/abs.conf)
 source=(ftp://ftp.archlinux.org/other/abs/$pkgname-$pkgver.tar.gz)
 md5sums=('d5a254606f401fa1b0136ad8b73a088f')
