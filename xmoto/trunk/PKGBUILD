@@ -3,8 +3,8 @@
 # Contributor: Denis (dtonator@gmail.com)
 
 pkgname=xmoto
-pkgver=0.4.1
-pkgrel=2
+pkgver=0.4.2
+pkgrel=1
 pkgdesc="A challenging 2D motocross platform game, where physics play an important role."
 arch=('i686' 'x86_64')
 url="http://xmoto.tuxfamily.org"
@@ -13,7 +13,6 @@ depends=('bzip2' 'libjpeg' 'libpng' 'lua' 'sdl_mixer' 'ode' 'curl>=7.16.2'
 	 'mesa' 'libxdamage' 'libxfixes' 'sqlite3' 'sdl_ttf' 'desktop-file-utils')
 install=xmoto.install
 source=(http://download.tuxfamily.org/$pkgname/$pkgname/$pkgver/$pkgname-$pkgver-src.tar.gz)
-md5sums=('e3e9830ff58bb4a25685ecfd3a9c5f95')
 
 build() {
   cd $startdir/src/xmoto-$pkgver
@@ -27,3 +26,4 @@ build() {
   install -Dm0644 $startdir/src/xmoto-${pkgver}/extra/xmoto.xpm $startdir/pkg/usr/share/pixmaps/xmoto.xpm
 }
 
+md5sums=('15368b282641a225b71c279fe4dc0dc4')
