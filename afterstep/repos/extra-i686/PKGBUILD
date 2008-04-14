@@ -2,7 +2,7 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: DaNiMoTh <jjdanimoth@gmail.com>
 pkgname=afterstep
-pkgver=2.2.7
+pkgver=2.2.8
 pkgrel=1
 pkgdesc="A Window Manager based on NextStep Interface"
 arch=(i686 x86_64)
@@ -11,8 +11,8 @@ license=('GPL')
 depends=('gtk2' 'libpng' 'libtiff' 'readline' 'freetype2' 'libsm' \
          'librsvg')
 makedepends=('pkgconfig' 'libxt')
+options=('!emptydirs')
 source=(http://dl.sourceforge.net/sourceforge/afterstep/AfterStep-${pkgver}.tar.bz2)
-md5sums=('0a6018f7afd8aa7ac1555e9ff3944e3a')
 
 build() {
   cd $startdir/src/AfterStep-$pkgver
@@ -21,3 +21,4 @@ build() {
   make DESTDIR=$startdir/pkg install
   install -D -m644 AfterStep.desktop $startdir/pkg/etc/X11/sessions/AfterStep.desktop
 }
+md5sums=('8734622c9cb549f5baa8b3262312db70')
