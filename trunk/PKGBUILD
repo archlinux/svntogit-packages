@@ -12,7 +12,7 @@ license=('GPL')
 source=("http://puzzle.dl.sourceforge.net/sourceforge/pstoedit/pstoedit-$pkgver.tar.gz" "pstoedit-3.45-gcc-4.3.patch")
 md5sums=('071efc64d9edf5d942b407348ac7451d' '97c5893859c98f446e3b47423dc851fd')
 url="http://www.pstoedit.net/"
-options=('!libtool')
+options=('!libtool' '!makeflags')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
