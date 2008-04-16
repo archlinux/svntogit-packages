@@ -28,7 +28,7 @@ build() {
 
   # change ABS tags for x86_64 to correct values
   if [ "$CARCH" = "x86_64" ]; then
-    sed -i "s|i686|x86_64|g" $startdir/pkg/etc/abs/abs.conf
+    sed -i "s|i686|x86_64|g" $startdir/pkg/etc/abs.conf
   fi
 }
 
