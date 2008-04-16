@@ -4,22 +4,23 @@
 
 pkgname=abs
 pkgver=2.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Utilities to download and work with the Arch Build System (ABS)"
 arch=('i686' 'x86_64')
 url="http://projects.archlinux.org/git/?p=abs.git"
 license=('GPL')
 depends=('bash' 'rsync')
 groups=('base-devel')
-backup=(etc/abs/abs.conf)
+backup=(etc/abs.conf)
+install=abs.install
 source=(ftp://ftp.archlinux.org/other/abs/$pkgname-$pkgver.tar.gz)
-md5sums=('d5a254606f401fa1b0136ad8b73a088f')
+md5sums=('559049b56b7de70f4824c20785835194')
 
 build() {
   cd $startdir/src/$pkgname
 
-  make || return 1
-  make DESTDIR=$startdir/pkg install || return 1
+  make CONFDIR=/etc/ || return 1
+  make CONFDIR=/etc/ DESTDIR=$startdir/pkg install || return 1
 
   # Add readme file, and make base /var/abs path
   install -dm0755 $startdir/pkg/var/abs/local/
