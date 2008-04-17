@@ -87,8 +87,6 @@ build() {
   mkdir -p $startdir/pkg/usr/src/linux-${_kernver}/arch/$KARCH/kernel
 
   cp arch/$KARCH/Makefile $startdir/pkg/usr/src/linux-${_kernver}/arch/$KARCH/
-  cp arch/$KARCH/Makefile_32 $startdir/pkg/usr/src/linux-${_kernver}/arch/$KARCH/
-  cp arch/$KARCH/Makefile_64 $startdir/pkg/usr/src/linux-${_kernver}/arch/$KARCH/
   if [ "$CARCH" = "i686" ]; then
     cp arch/$KARCH/Makefile_32.cpu $startdir/pkg/usr/src/linux-${_kernver}/arch/$KARCH/
   fi
@@ -121,7 +119,6 @@ build() {
   mkdir -p $startdir/pkg/usr/src/linux-${_kernver}/fs/xfs
   mkdir -p $startdir/pkg/usr/src/linux-${_kernver}/mm
   cp fs/xfs/xfs_sb.h $startdir/pkg/usr/src/linux-${_kernver}/fs/xfs/xfs_sb.h
-  cp mm/shmem.c $startdir/pkg/usr/src/linux-${_kernver}/mm/shmem.c
   # add vmlinux
   cp vmlinux $startdir/pkg/usr/src/linux-${_kernver}
   # copy in Kconfig files
