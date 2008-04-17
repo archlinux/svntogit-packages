@@ -2,9 +2,9 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=kernel26
-_basekernel=2.6.24
+_basekernel=2.6.25
 pkgver=2.6.25
-pkgrel=0.2
+pkgrel=1
 pkgdesc="The Linux Kernel and modules"
 arch=(i686 x86_64)
 license=('GPL2')
@@ -26,8 +26,8 @@ source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
 	config config.x86_64
 	# standard config files for mkinitcpio ramdisk
 	kernel26.preset)
-md5sums=('3f23ad4b69d0a552042d1ed0f4399857'
-         '82a3e97c6c0d012771f4a065a0546131'
+md5sums=('db95a49a656a3247d4995a797d333153'
+         'c62d8960d5eb81b11f9fde9e7dfd0cba'
          '63d8b00363dd11ad89eabc0212833f2e'
          'ced8e007750baf2b3e8ffaebbfcb0f32'
          '25584700a0a679542929c4bed31433b6')
@@ -56,8 +56,9 @@ build() {
   # build!
   ####################
   # stop here
-  msg "Stopping build"
-  return 1
+  # this is useful to configure the kernel
+  #msg "Stopping build"
+  #return 1
   ####################
   make bzImage modules || return 1
   mkdir -p $startdir/pkg/{lib/modules,boot}
