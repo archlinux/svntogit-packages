@@ -3,7 +3,7 @@
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributer: Nick Penwarden <toth64@yahoo.com>
 pkgname=firefox
-pkgver=2.0.0.13
+pkgver=2.0.0.14
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(i686 x86_64)
@@ -89,7 +89,7 @@ build() {
   install -m644 ${startdir}/src/mozilla/browser/app/default.xpm ${startdir}/pkg/usr/lib/firefox/chrome/icons/default/
   install -m644 ${startdir}/src/mozilla/browser/app/default.xpm ${startdir}/pkg/usr/lib/firefox/icons/
 }
-md5sums=('2c778aa46525e0f63efbedad0654ed47'
+md5sums=('9e9c13ba7b81f93f2fa10c6f256ee31e'
          'e980891ba998459afb8afe7293f1a2af'
          '224962b5f2446cab7727fdf07fd526de'
          'bd5db57c23c72a02a489592644f18995'
