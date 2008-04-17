@@ -2,7 +2,7 @@
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=swfdec
-pkgver=0.6.2
+pkgver=0.6.4
 pkgrel=1
 pkgdesc="free library for decoding and rendering Flash animations"
 arch=('i686' 'x86_64')
@@ -13,7 +13,7 @@ depends=('gstreamer0.10-base>=0.10.19' 'ffmpeg>=20071204-1' 'alsa-lib>=1.0.16' '
 makedepends=('pkgconfig')
 source=(http://swfdec.freedesktop.org/download/swfdec/0.6/${pkgname}-${pkgver}.tar.gz)
 options=('!libtool' '!emptydirs')
-md5sums=('5437eec5404ae50fa390ebe326ad5877')
+md5sums=('a1568696246889109b884cb5434e81fc')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
