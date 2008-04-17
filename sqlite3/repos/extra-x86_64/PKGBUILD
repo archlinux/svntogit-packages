@@ -2,7 +2,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=sqlite3
-pkgver=3.5.7
+pkgver=3.5.8
 pkgrel=1
 pkgdesc="A C library that implements an SQL database engine"
 arch=('i686' 'x86_64')
@@ -13,7 +13,7 @@ conflicts=('sqlite')
 replaces=('sqlite')
 source=(http://www.sqlite.org/sqlite-$pkgver.tar.gz license.txt)
 options=(!libtool)
-md5sums=('8e4b8c7192c045a4a68c9f4d5cfab8a8'
+md5sums=('1f51122bc944d9f4fdfca36464dafc56'
          'c1cdbc5544034d9012e421e75a5e4890')
 
 build() {
