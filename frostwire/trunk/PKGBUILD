@@ -2,16 +2,18 @@
 # Maintainer: Tom K <tom@archlinux.org>
 
 pkgname=frostwire
-pkgver=4.13.3
+pkgver=4.13.5
 pkgrel=1
 pkgdesc="an absolutely free Gnutella P2P application, with added bittorrent support"
 depends=('jre')
 source=(http://www3.frostwire.com/frostwire/69421145/frostwire-$pkgver.noarch.tar.gz
-	icons.tar.gz frostwire)
+	icons.tar.gz frostwire java-custom-options.patch)
 url="http://www.frostwire.com"
 license="GPL"
 
 build() {
+  cd $startdir/src/frostwire-$pkgver.noarch
+  patch -Np1 -i ../java-custom-options.patch || return 1
   mkdir -p $startdir/pkg/usr/share/frostwire
   cp -r $startdir/src/frostwire-$pkgver.noarch/* $startdir/pkg/usr/share/frostwire
   cp -r $startdir/src/icons $startdir/pkg/usr/share
@@ -24,6 +26,7 @@ build() {
   rm -rf $startdir/pkg/usr/share/frostwire/{runFrostwireOSX.sh,root/{.svn,magnet10/.svn}}
 }
 arch=('i686')
-md5sums=('1c1ace91d6587dda86f063d965a2b6fe'
+md5sums=('f0073070fe70c957710c5a6e08199c02'
          'dbea03ff4e35cc6c190976282682c2cf'
-         '88647e1dbbd3a86472739546b7107949')
+         '88647e1dbbd3a86472739546b7107949'
+         '602ab7d7f7133d62a5bdf180d390c267')
