@@ -3,7 +3,7 @@
 # Contributor: dorphell <dorphell@archlinux.org>
 # Contributor: Gregor Ibic <gregor.ibic@intelicom.si>
 pkgname=snort
-pkgver=2.8.0.2
+pkgver=2.8.1
 pkgrel=1
 pkgdesc="A lightweight network intrusion detection system"
 arch=('i686' 'x86_64')
@@ -14,7 +14,7 @@ source=(http://www.snort.org/dl/current/$pkgname-$pkgver.tar.gz snort snort.conf
 	http://www.snort.org/pub-bin/downloads.cgi/Download/comm_rules/Community-Rules-CURRENT.tar.gz) # rules RELEASED: 2007-04-27
 url="http://www.snort.org"
 options=('!makeflags' '!libtool')
-md5sums=('c4aeac8aa198a5e4d4bc67b5b2d9bdcb'
+md5sums=('a41fd96894ab59ae4df45aa5f3345c52'
          '53284a7996ee41c4c58d13c65d46d776'
          'a117b68ec3d188e40e117f3197e1db25'
          'f236b8a4ac12e99d3e7bd81bf3b5a482')
