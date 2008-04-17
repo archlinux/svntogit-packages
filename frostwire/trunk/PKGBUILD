@@ -3,7 +3,7 @@
 
 pkgname=frostwire
 pkgver=4.13.5
-pkgrel=1
+pkgrel=1.1
 pkgdesc="an absolutely free Gnutella P2P application, with added bittorrent support"
 depends=('jre')
 source=(http://www3.frostwire.com/frostwire/69421145/frostwire-$pkgver.noarch.tar.gz
@@ -25,7 +25,7 @@ build() {
   # Remove .svn dirs & OSX script
   rm -rf $startdir/pkg/usr/share/frostwire/{runFrostwireOSX.sh,root/{.svn,magnet10/.svn}}
 }
-arch=('i686')
+arch=('i686' 'x86_64')
 md5sums=('f0073070fe70c957710c5a6e08199c02'
          'dbea03ff4e35cc6c190976282682c2cf'
          '88647e1dbbd3a86472739546b7107949'
