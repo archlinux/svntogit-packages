@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.299 2008/04/05 20:13:31 thomas Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=kernel26
