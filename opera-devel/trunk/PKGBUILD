@@ -13,6 +13,9 @@ arch=('i686' 'x86_64')
 conflicts=('opera')
 provides=('opera')
 source=(http://snapshot.opera.com/unix/snapshot-1929/intel-linux/opera-9.50-20080417.6-shared-qt.i386-1929.tar.bz2 opera.desktop opera_logo48.png)
+md5sums=('d7fe95095d2ad36fc0a0064297babb1b'
+         '63420a6c4e77f7d9aa3d8f0ebd330947'
+         'a270c65b8d4f8e2e76439f417ea44265')
 
 [ "$CARCH" = "x86_64" ] && source=(http://snapshot.opera.com/unix/snapshot-1929/x86_64-linux/opera-9.50-20080417.2-shared-qt.x86_64-1929.tar.bz2
  opera.desktop opera_logo48.png)
@@ -24,7 +27,7 @@ build() {
 if [ "$CARCH" = "x86_64" ]; then
        cd ${startdir}/src/opera-9.50-20080417.2-shared-qt.x86_64-1929
        sed 's|/usr/X11R6/lib/mozilla/plugins=1|/usr/lib/mozilla/plugins=1|' -i usr/share/opera/ini/pluginpath.ini || return 1
-  else cd ${startdir}/src/opera-9.50-20080327.6-shared-qt.i386-1887
+  else cd ${startdir}/src/opera-9.50-20080417.6-shared-qt.i386-1929
        sed 's|/usr/X11R6/lib/mozilla/plugins=1|/usr/lib/mozilla/plugins=1|' -i usr/share/opera/ini/pluginpath.ini || return 1
 fi
    ./install.sh DESTDIR=${startdir}/pkg
