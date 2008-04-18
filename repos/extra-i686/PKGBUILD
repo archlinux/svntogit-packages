@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/24 04:14:35 kevin Exp $
+# $Id$
 # Maintainer: Kevin <kevin@archlinux.org>
 
 pkgname=perl-test-pod
