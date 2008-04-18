@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/02/06 11:53:23 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=dhcpcd
 pkgver=3.2.1
