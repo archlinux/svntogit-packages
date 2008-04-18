@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2008/03/27 20:00:09 daniel Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 
 pkgname=gtk-sharp-2
