@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.38 2008/03/06 08:13:44 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=findutils
 pkgver=4.2.33
