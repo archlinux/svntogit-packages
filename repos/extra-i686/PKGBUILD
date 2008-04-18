@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/08/22 15:52:37 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xtrans
