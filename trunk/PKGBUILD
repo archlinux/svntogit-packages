@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/01/15 02:05:24 tobias Exp $
+# $Id$
 # Contributor: Andrew Simmons <andrew.simmons@gmail.com>
 
 pkgname=thunar
