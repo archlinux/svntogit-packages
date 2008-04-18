@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2008/02/26 16:04:52 thomas Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=acl
 pkgver=2.2.47
