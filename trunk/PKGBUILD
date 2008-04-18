@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/24 03:32:33 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=perl-net-dns-resolver-programmable
