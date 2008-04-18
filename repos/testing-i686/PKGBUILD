@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/10/13 02:10:29 damir Exp $
+# $Id$
 # Contributor: Tobias Powalowski <t.powa@gmx.de>
 # Maintainer: damir <damir@archlinux.org>
 
