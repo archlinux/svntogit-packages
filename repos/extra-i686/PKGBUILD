@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2008/03/14 20:58:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-settings-daemon
