@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/05/13 11:56:43 thomas Exp $
+# $Id$
 # Contributor: Camille Moncelier <pix@devlife.org>, simo <simo@archlinux.org>
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
