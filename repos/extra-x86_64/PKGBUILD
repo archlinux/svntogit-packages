@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/01/24 16:24:31 jason Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=python-geoip
