@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/10/13 02:05:25 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Packager: Maksim Sipos (maxsipos at gmail dot com)
 
