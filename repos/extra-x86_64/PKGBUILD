@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/11/19 01:06:52 damir Exp $
+# $Id$
 # Maintainer: damir <damir.archlinux.org>
 
 pkgname=muparser
