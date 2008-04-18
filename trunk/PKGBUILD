@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2007/11/15 23:53:13 daniel Exp $
+# $Id$
 # Maintainer: Judd <jvinet@zeroflux.org>
 
 pkgname=bzip2
