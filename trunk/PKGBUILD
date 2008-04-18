@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/12/07 12:05:40 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=libzip
