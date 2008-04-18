@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2007/11/16 00:02:37 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=ppp
 pkgver=2.4.4
