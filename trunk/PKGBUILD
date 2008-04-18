@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.45 2008/04/01 17:52:19 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=nautilus
