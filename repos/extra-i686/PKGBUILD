@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/03/06 11:42:11 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=webmin
 pkgver=1.400
