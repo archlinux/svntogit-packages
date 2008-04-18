@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.47 2007/12/23 23:43:31 kevin Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 # Contributor: Mario Vazquez <mario_vazq@hotmail.com>
 pkgname=bind
