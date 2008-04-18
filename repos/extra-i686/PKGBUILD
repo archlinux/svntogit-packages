@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.49 2008/03/12 22:34:31 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=librsvg
