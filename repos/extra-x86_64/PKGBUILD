@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/03/14 21:17:32 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-backgrounds
