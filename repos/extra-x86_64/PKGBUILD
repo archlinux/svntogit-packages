@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/03/14 19:42:40 jgc Exp $
+# $Id$
 # Maintainer: Jan De Groot <jgc@archlinux.org>
 
 pkgname=gucharmap
