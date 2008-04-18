@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/01/08 18:21:48 jgc Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=libgcrypt
