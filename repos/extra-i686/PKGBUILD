@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/06/01 08:58:56 jgc Exp $
+# $Id$
 # Contributor: Johannes Weiner <hannes@saeurebad.de>
 
 pkgname=libsigsegv
