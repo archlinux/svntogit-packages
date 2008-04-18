@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/12/05 04:19:39 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=fluidsynth
