@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/08/07 20:03:23 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=strace
