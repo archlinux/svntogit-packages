@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2007/12/30 09:42:54 andyrtr Exp $
+# $Id$
 # Maintainer: Judd <judd@archlinux.org>
 pkgname=nano
 pkgver=2.0.7
