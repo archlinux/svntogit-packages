@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/02/07 10:55:15 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 # Contributor: Andrew Simmons <andrew.simmons@gmail.com>
 
