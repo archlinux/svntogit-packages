@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/24 05:08:16 kevin Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 
 pkgname=perl-sys-hostname-long
