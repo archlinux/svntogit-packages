@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/04/02 03:13:31 dan Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 pkgname=libarchive
