@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2008/03/12 03:52:33 tobias Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 
 pkgname=xfwm4
