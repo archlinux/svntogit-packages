@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2006/09/28 09:44:26 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=lame
 pkgver=3.97
