@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/01/22 02:56:51 eric Exp $
+# $Id$
 # Contributor: Wael Nasreddine <gandalf@siemens-mobiles.org>
 
 pkgname=perl-term-readkey
