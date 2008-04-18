@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/12/10 18:13:18 tobias Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 
 pkgname=libmpd
