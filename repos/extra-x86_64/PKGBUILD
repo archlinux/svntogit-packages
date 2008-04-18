@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/11/11 21:58:50 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libxss
