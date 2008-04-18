@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/15 10:30:25 thomas Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=cryptsetup
 pkgver=1.0.6
