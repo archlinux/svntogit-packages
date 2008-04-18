@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.58 2008/04/03 00:00:24 tobias Exp $
+# $Id$
 # Maintainer:
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
 
