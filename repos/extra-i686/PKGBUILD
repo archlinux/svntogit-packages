@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/08/13 13:21:03 jgc Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=hspell
