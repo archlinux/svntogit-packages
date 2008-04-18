@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2007/12/02 14:57:10 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 
 pkgname=gnutls
