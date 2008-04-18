@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/11/16 00:02:35 daniel Exp $
+# $Id$
 # Maintainer: Judd <jvinet@zeroflux.org>
 pkgname=nfsidmap
 pkgver=0.20
