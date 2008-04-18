@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/07/11 01:08:26 travis Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org>
 # Contributor: Manolis Tzanidakis
 pkgname=libdaemon
