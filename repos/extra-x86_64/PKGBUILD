@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/03/18 22:51:53 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=dmxproto
