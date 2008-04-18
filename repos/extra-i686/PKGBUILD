@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.41 2007/09/19 20:06:20 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: John Proctor <jproctor@prium.net>
 pkgname=libxslt
