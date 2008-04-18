@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/01/05 20:05:04 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=eclipse-ecj
