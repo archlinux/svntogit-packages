@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/02/05 13:53:26 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=gutenprint
 pkgver=5.0.2
