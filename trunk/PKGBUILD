@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2008/01/09 03:18:04 tobias Exp $
+# $Id$
 # Maintainer: tobias [tobias [at] archlinux.org]
 pkgname=mutt
 pkgver=1.5.17
