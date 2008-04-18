@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/03/21 14:36:02 tpowa Exp $
+# $Id$
 # Maintainer: Arjan Timmerman <arjan@soufly.nl>
 # Contributer: Tor Krill
 pkgname=autogen
