@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/02/04 22:26:14 jgc Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 
 pkgname=libtasn1
