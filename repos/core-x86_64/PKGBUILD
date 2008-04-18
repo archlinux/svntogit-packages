@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/01/26 21:23:27 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=which
 pkgver=2.19
