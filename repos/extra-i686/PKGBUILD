@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.30 2006/08/15 22:12:51 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 
 pkgname=libtiff
