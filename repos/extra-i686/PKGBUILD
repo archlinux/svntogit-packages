@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/09/19 20:35:36 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=cdrdao
 pkgver=1.2.2
