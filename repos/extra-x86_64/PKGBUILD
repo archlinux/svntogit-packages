@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/07/04 03:27:11 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Andreas Schweitzer <andy@bootblock.de>
 # with ideas by Michael Baehr
