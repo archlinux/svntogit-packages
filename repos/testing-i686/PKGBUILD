@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/31 08:48:03 pierre Exp $
+# $Id$
 # Contributor: nut543 <kfs1@online.no>
 # Maintainer: Dale Blount <dale@archlinux.org>
 pkgname=re2c
