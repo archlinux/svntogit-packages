@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/03/04 18:38:57 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxext
