@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/06/02 11:32:41 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 
