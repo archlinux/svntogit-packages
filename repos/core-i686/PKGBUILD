@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/04/01 17:05:21 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=glib2
