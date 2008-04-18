@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.35 2008/03/13 23:18:51 jgc Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=libtool
 pkgver=2.2
