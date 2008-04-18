@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/12/22 03:24:57 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-xauth
