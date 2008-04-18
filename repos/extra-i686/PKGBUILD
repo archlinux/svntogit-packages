@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2004/07/11 22:28:17 judd Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=cdparanoia
 pkgver=9.8
