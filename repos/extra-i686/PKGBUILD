@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2008/03/10 18:59:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=atk
 pkgver=1.22.0
