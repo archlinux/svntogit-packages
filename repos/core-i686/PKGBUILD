@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/11/15 23:53:14 daniel Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=dmapi
 pkgver=2.2.8
