@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2006/04/02 09:57:31 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=libcroco
 pkgver=0.6.1
