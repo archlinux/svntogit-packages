@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/03/16 15:03:04 roman Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <roman@archlinux.org>
 
 pkgname=deluge
