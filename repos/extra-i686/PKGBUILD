@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/02/25 14:30:16 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=randrproto
