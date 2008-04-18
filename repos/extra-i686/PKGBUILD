@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.46 2007/07/07 12:34:11 jgc Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=freetype2
 pkgver=2.3.5
