@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/11/05 18:01:12 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=pixman
 pkgver=0.10.0
