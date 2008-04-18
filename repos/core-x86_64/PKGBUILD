@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2007/11/15 23:53:18 daniel Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 
 pkgname=libpcap
