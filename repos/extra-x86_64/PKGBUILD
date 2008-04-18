@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/16 21:16:28 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xf86-video-intel
 pkgver=2.2.1
