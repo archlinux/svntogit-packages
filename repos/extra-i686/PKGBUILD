@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/11/11 21:09:45 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libxfixes
