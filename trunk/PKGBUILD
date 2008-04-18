@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.41 2008/01/10 04:10:35 dan Exp $
+# $Id$
 # Contributor: Aurelien Foret <orelien@chez.com>
 
 pkgname=bash-completion
