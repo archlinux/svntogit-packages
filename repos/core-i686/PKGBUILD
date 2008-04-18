@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/11/16 00:02:34 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=m4
 pkgver=1.4.10
