@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/05/20 15:09:50 travis Exp $
+# $Id$
 # Maintainer: Travis Willard <travis@archlinux.org>
 
 pkgname=nss-mdns
