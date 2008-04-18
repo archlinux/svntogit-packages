@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/11/08 01:24:38 simo Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Contributor: Jason Chu <jason@archlinux.org>
 pkgname=gphoto2
