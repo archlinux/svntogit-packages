@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/02/15 17:50:05 jgc Exp $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: John Proctor <jproctor@prium.net>
 
