@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/03/30 13:18:17 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libdc1394
