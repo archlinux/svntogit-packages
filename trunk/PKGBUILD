@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/06/30 10:10:47 jgc Exp $
+# $Id$
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 # Mantainer: Roberto Carvajal <roberto@archlinux.org>
 
