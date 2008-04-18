@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/04/22 17:43:13 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gnome-user-share
 pkgver=0.11
