@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2008/02/23 12:35:16 andyrtr Exp $
+# $Id$
 # Maintainer: Tobias Kieslich <tobias@justdreams.de>
 # Contributor: Sarah Hay <sarah@archlinux.org>
 
