@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2007/11/23 15:41:57 pierre Exp $
+# $Id$
 # Maintainer: Travis Willard <travis@archlinux.org>
 
 pkgname=avahi
