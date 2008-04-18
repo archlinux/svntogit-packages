@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/10/18 11:44:11 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=mcpp
