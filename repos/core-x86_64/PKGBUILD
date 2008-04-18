@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2008/03/15 10:10:44 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=ntfs-3g
