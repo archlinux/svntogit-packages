@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.92 2008/03/08 20:11:22 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gcc
 pkgver=4.3.0
