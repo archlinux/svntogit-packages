@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/09/29 17:38:08 andyrtr Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 
 pkgname=libetpan
