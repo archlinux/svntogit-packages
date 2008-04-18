@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/07/08 14:06:50 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # TU:  Lukas Sabota <punkrockguy318@comcast.net>
 # Contributor: Brice Carpentier <brice@dlfp.org>
