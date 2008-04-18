@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.35 2007/11/16 00:02:38 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=reiserfsprogs
 pkgver=3.6.20
