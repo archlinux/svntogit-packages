@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/10/08 14:20:13 travis Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=flac
