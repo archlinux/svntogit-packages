@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/01/08 08:04:27 aaron Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=valgrind
