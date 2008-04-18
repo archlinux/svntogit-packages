@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/11/16 00:02:38 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=tar
 pkgver=1.19
