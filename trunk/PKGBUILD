@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.49 2008/03/08 20:03:53 jgc Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 
 # compile always twice: first binutils, then gcc, then binutils again
