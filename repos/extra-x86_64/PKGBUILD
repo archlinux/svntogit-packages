@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.46 2008/03/14 17:54:29 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=file-roller
