@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/01/14 20:59:19 jgc Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=readline
 pkgver=5.2
