@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/11/15 23:53:18 daniel Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 pkgname=libusb
 pkgver=0.1.12
