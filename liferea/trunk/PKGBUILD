@@ -3,7 +3,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=liferea
-pkgver=1.4.14
+pkgver=1.4.15
 pkgrel=1
 pkgdesc="A GTK desktop news aggregator for online news feeds and weblogs"
 arch=('i686' 'x86_64')
@@ -14,8 +14,8 @@ makedepends=('perlxml' 'pkgconfig' 'diffutils')
 options=('!libtool')
 install=liferea.install
 source=(http://downloads.sourceforge.net/sourceforge/liferea/liferea-${pkgver}.tar.gz)
-md5sums=('67fcb6b1e504b2ac3b8d151c96071ab4')
-sha1sums=('45ecabf2f4041a82344234f384d1c0e121e2af7a')
+md5sums=('e4ae96a0d41d94c31271ba791caec922')
+sha1sums=('8ff9ed78b03c89a8bc2ff4f8070e665a5cb496c5')
 
 build() {
   [ -z "${MOZ_PLUGIN_PATH}" ] && . /etc/profile.d/mozilla-common.sh
