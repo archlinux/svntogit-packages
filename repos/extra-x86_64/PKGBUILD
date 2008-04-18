@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2007/12/25 14:19:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributer: Sean Middleditch <elanthis@awesomeplay.com>
 
