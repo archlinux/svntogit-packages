@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/11/29 01:43:37 dan Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=hwdetect
 pkgver=0.9
