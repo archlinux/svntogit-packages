@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.100 2007/12/11 18:42:46 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=samba
 pkgver=3.0.28A
