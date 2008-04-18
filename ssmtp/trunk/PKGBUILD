@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/10/28 19:18:32 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=ssmtp
 pkgver=2.61

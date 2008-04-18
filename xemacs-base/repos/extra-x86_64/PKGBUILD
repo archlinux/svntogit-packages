@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/12/26 10:44:47 juergen Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=xemacs-base
 pkgver=2.10

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2007/11/16 00:02:40 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=zlib
 pkgver=1.2.3

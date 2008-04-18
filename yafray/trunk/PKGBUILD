@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/02/04 22:26:40 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tobias Kieslich <tobias@justdreams.de>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/11/15 14:30:45 damir Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-junicode

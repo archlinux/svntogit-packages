@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2004/05/03 00:31:35 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libnet

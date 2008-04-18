@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/09/02 15:17:41 jgc Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 
 pkgname=perl-io-zlib

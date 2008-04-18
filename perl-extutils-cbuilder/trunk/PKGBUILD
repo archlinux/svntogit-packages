@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/09/02 15:27:35 jgc Exp $
+# $Id$
 # Maintainer: Kevin <kevin@archlinux.org>
 # Contributor: pippin <?@?>
 

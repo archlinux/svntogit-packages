@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/02/01 13:12:08 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xf86-video-amd
 pkgver=2.7.7.6

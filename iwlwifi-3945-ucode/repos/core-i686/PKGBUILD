@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/11/15 23:53:17 daniel Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=iwlwifi-3945-ucode

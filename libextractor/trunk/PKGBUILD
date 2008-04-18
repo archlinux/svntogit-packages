@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/29 22:51:13 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libextractor

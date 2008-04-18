@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/12/04 14:34:12 dale Exp $
+# $Id$
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk> and Dale Blount <dale@archlinux.org>
 # Maintainer: Dale Blount <dale@archlinux.org>
 pkgname=nedit

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/02/19 18:50:35 andyrtr Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 #
 pkgname=foomatic-db-ppd

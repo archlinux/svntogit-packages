@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/02/03 08:12:49 eric Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=ginac

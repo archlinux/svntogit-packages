@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/03/26 21:30:27 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libxv

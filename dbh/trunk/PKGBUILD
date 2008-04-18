@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2005/08/27 22:15:50 tobias Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 pkgname=dbh
 pkgver=1.0.24

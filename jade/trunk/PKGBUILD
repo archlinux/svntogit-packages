@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/07/25 18:29:08 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=jade

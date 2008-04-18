@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/21 17:09:22 tpowa Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 
 pkgname=rt2500

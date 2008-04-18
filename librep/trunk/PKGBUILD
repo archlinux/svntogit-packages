@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2005/10/01 10:43:18 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=librep
 pkgver=0.17

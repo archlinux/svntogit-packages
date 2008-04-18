@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2006/12/22 18:16:54 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=enchant
 pkgver=1.3.0

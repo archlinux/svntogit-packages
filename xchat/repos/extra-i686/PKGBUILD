@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.54 2008/02/16 03:26:49 eric Exp $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
 pkgname=xchat

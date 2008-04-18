@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/12 21:24:55 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=rarian

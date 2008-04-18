@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/02/28 20:58:29 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=wireshark

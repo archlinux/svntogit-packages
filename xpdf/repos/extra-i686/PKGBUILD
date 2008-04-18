@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2007/11/08 18:52:32 tobias Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 # Contributor Sarah Hay <sarahhay@mb.sympatico.ca>
 

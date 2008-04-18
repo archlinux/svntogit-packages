@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/04/11 20:35:06 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=lynx

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/16 21:59:59 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=sdl
 pkgver=1.2.13

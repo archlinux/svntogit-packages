@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/12/17 22:21:07 jeff Exp $
+# $Id$
 # Maintainer: Jeff Mickey <jeff@archlinux.org>
 
 pkgname=aria2

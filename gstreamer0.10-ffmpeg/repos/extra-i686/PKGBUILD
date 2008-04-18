@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/26 15:29:18 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer0.10-ffmpeg

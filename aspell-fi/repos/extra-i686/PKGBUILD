@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/06/19 00:00:55 simo Exp $
+# $Id$
 #Maintainer: Simo Leone <simo@archlinux.org>
 #Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=aspell-fi

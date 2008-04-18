@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/11/16 00:02:40 daniel Exp $
+# $Id$
 # Maintainer:  Judd <jvinet@zeroflux.org>
 pkgname=xinetd
 pkgver=2.3.14

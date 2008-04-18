@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2005/09/26 09:55:30 damir Exp $
+# $Id$
 # Contributor: Tobias Kieslich <tobias@justdreams.de>
 # InStagingBy: Damir Perisa <damir.perisa@bluewin.ch>
 # Maintainer: damir <damir@archlinux.org>

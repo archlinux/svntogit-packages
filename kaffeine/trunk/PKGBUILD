@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/03/03 15:32:37 damir Exp $
+# $Id$
 # Maintainer :  Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=kaffeine

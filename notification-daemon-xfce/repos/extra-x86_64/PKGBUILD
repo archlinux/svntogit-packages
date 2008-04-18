@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/12/03 20:22:25 tobias Exp $
+# $Id$
 # Maintainer: Tobias Kieslich
 
 pkgname=notification-daemon-xfce

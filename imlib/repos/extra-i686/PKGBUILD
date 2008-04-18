@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/01/12 00:11:50 aaron Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=imlib

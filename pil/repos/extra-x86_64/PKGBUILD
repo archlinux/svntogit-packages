@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/02/01 02:10:12 eric Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=pil
 pkgver=1.1.6

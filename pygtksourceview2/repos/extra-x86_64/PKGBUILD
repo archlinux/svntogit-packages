@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/14 18:07:02 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=pygtksourceview2

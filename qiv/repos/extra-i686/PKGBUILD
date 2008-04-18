@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/05 13:59:03 alexander Exp $
+# $Id$
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=qiv

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/01/12 03:18:52 paul Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor Daniel Bainton <dpb [at] backarrow.org>
 

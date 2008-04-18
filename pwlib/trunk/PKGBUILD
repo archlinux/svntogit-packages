@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.30 2007/10/18 14:42:48 thomas Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Gregor Ibic <gregor.ibic@intelicom.si>
 # Contributor: Tom K <tomk@runbox.com>

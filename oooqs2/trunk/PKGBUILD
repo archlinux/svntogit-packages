@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/06/10 08:49:15 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=oooqs2

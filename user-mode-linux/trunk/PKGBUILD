@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/04/04 18:39:29 juergen Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Committer: Jason Chu <jason@archlinux.org>
 pkgname=user-mode-linux

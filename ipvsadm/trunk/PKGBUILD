@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2005/06/10 19:15:14 judd Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=ipvsadm
 pkgver=1.24

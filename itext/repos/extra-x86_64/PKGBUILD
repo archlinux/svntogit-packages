@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/12/05 15:45:29 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@mattal.com>
 pkgname=itext
 pkgver=2.0.7

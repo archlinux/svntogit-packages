@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2008/02/26 16:05:15 thomas Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=iproute
 _dlver=2.6.24-rc7

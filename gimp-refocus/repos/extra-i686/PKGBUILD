@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/18 00:33:33 tobias Exp $
+# $Id$
 # Maintainer: Tobias Kieslich <tobias@justdreams.de>
 # Contributor: Tobias Kieslich <tobias@justdreams.de>
 

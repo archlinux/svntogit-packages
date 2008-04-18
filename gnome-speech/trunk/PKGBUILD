@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2008/03/12 22:42:14 jgc Exp $
+# $Id$
 # Maitnainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-speech

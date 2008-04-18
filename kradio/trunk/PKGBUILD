@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/06/01 14:46:13 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kradio

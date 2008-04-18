@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/03/05 13:56:53 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: forest76 <forestt@poczta.onet.pl>
 # Thanx to: neri for the IM-detection fix

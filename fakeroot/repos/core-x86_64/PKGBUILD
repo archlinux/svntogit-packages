@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/02/19 19:28:47 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 # Contributor: Jochem Kossen <j.kossen@home.nl>
 pkgname=fakeroot

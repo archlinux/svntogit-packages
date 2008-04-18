@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/03/18 23:53:00 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=clusterit

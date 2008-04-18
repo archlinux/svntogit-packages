@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/01/07 23:36:24 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=gocr

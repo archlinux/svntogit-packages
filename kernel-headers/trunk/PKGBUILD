@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/03/06 22:14:05 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=kernel-headers
 pkgver=2.6.24.3

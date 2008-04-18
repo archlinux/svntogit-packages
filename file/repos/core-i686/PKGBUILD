@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.41 2008/01/01 13:40:56 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=file

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/07/07 08:54:56 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=dbus-glib

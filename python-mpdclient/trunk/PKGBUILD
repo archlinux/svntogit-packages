@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/05/09 01:48:12 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=python-mpdclient
 _pkgnameorig=py-libmpdclient

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/03/18 23:03:42 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xextproto

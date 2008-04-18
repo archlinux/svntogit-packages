@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/06/23 15:16:23 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=liblrdf

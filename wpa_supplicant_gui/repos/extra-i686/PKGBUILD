@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/03/05 22:18:56 thomas Exp $
+# $Id$
 pkgname=wpa_supplicant_gui
 pkgver=0.5.10
 pkgrel=1

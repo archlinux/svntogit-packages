@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/11/15 23:53:14 daniel Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=dosfstools

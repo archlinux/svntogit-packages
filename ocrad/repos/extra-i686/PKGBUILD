@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/02/03 08:21:28 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=ocrad

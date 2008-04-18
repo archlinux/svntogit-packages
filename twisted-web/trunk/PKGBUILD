@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/08/14 04:02:18 eric Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org>
 # Contributor: William Rea <sillywilly@gmail.com>
 pkgname=twisted-web

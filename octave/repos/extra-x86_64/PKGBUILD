@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/12 20:02:33 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=octave

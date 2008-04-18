@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.35 2008/03/03 19:03:56 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdetoys

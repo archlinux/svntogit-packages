@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/06 08:18:17 tpowa Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=memtest86+

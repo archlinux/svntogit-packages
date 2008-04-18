@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2007/11/16 00:02:35 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=ncurses
 pkgver=5.6

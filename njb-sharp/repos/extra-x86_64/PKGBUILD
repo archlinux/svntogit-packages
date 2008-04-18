@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/10/01 20:53:10 jgc Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org>
 pkgname=njb-sharp
 pkgver=0.3.0

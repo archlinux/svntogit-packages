@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/04/22 02:37:01 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=nph
 pkgver=1.2.3

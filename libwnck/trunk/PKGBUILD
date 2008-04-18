@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.40 2008/03/16 20:37:56 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot  <jgc@archlinux.org>
 pkgname=libwnck
 pkgver=2.22.1

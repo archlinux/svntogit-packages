@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/02/26 19:31:28 dale Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 
 pkgname=prboom

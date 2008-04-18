@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/10/10 20:56:26 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=intel-536ep-utils

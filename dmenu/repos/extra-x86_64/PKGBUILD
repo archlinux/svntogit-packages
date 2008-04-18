@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/17 22:39:20 jeff Exp $
+# $Id$
 # Maintainer: Jeff 'codemac' Mickey <jeff@archlinux.org>
 
 pkgname=dmenu

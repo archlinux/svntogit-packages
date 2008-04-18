@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.45 2008/03/03 19:04:08 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdeutils

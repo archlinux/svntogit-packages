@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2005/12/22 09:02:06 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libxprintapputil

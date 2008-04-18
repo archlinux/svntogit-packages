@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2008/03/17 19:44:55 andyrtr Exp $
+# $Id$
 # Mantainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: Harley Laue <losinggeneration@yahoo.com>
 

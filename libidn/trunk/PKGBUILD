@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2007/08/16 04:02:30 eric Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Eric Johnson <eric@archlinux.org>
 pkgname=libidn

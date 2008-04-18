@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.54 2008/03/21 21:46:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-vfs

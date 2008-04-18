@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/11/28 22:31:42 aaron Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=xfsdump
 pkgver=2.2.46

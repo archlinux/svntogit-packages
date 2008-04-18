@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/04/05 01:05:54 tobias Exp $
+# $Id$
 # Maintainer: roberto <roberto@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Updated to produce shared libs: Andrew Rose <ody@netrux.com>

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/02/12 07:26:07 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=gxine

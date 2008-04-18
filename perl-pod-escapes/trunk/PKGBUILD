@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/09/02 13:11:38 jgc Exp $
+# $Id$
 # Maintainer: Kevin <kevin@archlinux.org>
 
 pkgname=perl-pod-escapes

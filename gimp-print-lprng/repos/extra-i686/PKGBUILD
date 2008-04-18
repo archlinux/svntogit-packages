@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2005/09/30 13:51:54 arjan Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
 pkgname=gimp-print-lprng

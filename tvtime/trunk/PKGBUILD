@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2006/02/02 23:20:51 simo Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=tvtime

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/08/19 12:07:54 jgc Exp $
+# $Id$
 # Contributor: Tobias Kieslich <tobias@justdreams.de>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 

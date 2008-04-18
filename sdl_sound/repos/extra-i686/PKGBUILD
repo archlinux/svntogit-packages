@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/03/12 15:44:12 tpowa Exp $
+# $Id$
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=sdl_sound

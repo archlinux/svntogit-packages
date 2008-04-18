@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2008/03/13 23:42:21 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=deskbar-applet

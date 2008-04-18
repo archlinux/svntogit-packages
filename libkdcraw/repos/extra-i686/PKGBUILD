@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/10/20 13:17:58 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=libkdcraw

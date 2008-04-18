@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2007/07/27 03:19:49 kevin Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Updates By: Helder Correia <helder.correia@netcabo.pt>

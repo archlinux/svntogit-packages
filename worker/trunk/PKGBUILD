@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/03/06 02:34:14 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=worker

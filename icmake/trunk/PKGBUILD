@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/11/30 23:40:49 jeff Exp $
+# $Id$
 # Maintainer: Jeff Mickey <jeff@archlinux.org>
 pkgname=icmake
 pkgver=6.22

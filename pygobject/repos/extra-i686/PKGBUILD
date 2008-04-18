@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/01/10 17:47:12 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=pygobject

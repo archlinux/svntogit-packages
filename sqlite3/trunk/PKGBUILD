@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.38 2008/03/26 21:58:46 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=sqlite3

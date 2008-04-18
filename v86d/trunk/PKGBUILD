@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/04 10:53:06 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname="v86d"
 pkgver=0.1.3

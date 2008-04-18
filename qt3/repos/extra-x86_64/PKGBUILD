@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/27 12:22:24 pierre Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Contributor: John Proctor <jproctor@prium.net>
 pkgname=qt3

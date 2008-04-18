@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/10/17 04:48:02 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-minibufexpl

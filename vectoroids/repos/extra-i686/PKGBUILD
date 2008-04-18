@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2004/04/19 06:24:56 dorphell Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=vectoroids

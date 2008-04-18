@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/12/15 16:22:40 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
  pkgname=speedcrunch

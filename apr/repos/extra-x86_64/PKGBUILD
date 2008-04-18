@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/01 18:29:53 pierre Exp $
+# $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 pkgname=apr
 pkgver=1.2.12

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/07/27 09:29:07 tom Exp $
+# $Id$
 # Originally by kleptophobiac <kleptophobiac@gmail.com>
 # Modified by James Rayner for the repositories <iphitus@gmail.com>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.77 2008/03/27 22:29:41 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=man-pages
 pkgver=2.79

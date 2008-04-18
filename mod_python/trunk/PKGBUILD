@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/03/05 18:24:49 judd Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=mod_python
 pkgver=3.3.1

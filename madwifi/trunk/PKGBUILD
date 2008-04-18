@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.38 2008/03/21 18:46:53 tpowa Exp $
+# $Id$
 # Originally by kleptophobiac <kleptophobiac@gmail.com>
 # Modified by James Rayner for the repositories <iphitus@gmail.com>
 

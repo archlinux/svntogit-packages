@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/04/26 17:13:18 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Wael Nasreddine <gandalf@siemens-mobiles.org>
 # Contributor: Tor Krill <tor@krill.nu>

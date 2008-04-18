@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2004/06/24 23:20:39 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=gtk1-engines
 pkgver=0.12

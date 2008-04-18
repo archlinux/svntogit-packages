@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/16 22:01:05 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=sdl_image

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/02/21 13:38:42 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-input-acecad

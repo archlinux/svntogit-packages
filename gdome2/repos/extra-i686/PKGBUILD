@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/11/08 09:40:58 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gdome2

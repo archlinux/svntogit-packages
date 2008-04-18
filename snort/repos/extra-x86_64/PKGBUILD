@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.37 2008/03/26 21:23:29 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: dorphell <dorphell@archlinux.org>
 # Contributor: Gregor Ibic <gregor.ibic@intelicom.si>

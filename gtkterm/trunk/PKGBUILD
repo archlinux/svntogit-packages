@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/09/30 11:10:56 jgc Exp $
+# $Id$
 #Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=gtkterm
 pkgver=0.99.5

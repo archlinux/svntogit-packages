@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/09/02 19:17:13 jgc Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-freebanglafont

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/05/20 18:43:38 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # AUR: skruw <skruw@home.se>
 pkgname=terminatorx

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.59 2008/03/31 18:57:52 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=archboot

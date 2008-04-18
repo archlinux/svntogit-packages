@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/15 23:53:16 daniel Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=ifenslave
 pkgver=1.1.0

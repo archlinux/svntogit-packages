@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/26 03:37:24 kevin Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=perl-sgmls

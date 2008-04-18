@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/12/07 11:06:10 tpowa Exp $ 
+# $Id$ 
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=qca-tls
 pkgver=1.0 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/03/14 19:48:40 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <kth5@archlinux.org>
 pkgname=xkeyboard-config
 pkgver=1.2

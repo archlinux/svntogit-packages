@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/03/05 22:43:46 simo Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: William Rea <sillywilly@gmail.com>
 pkgname=python-pyspi

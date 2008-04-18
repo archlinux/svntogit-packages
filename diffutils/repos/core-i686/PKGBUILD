@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/12/30 13:38:37 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=diffutils
 pkgver=2.8.1

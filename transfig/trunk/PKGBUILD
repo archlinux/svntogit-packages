@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/01/02 16:28:31 tpowa Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: J. Santiago Hirschfeld <jsantiagoh@yahoo.com.ar>
 pkgname=transfig

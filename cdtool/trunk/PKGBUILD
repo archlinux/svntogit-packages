@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/04/17 15:07:27 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributer: dorphell <dorphell@archlinux.org>
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>

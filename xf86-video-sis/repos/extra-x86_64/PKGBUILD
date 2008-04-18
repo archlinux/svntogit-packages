@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/03/16 21:26:45 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-sis

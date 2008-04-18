@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/10 15:28:02 pierre Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=muse

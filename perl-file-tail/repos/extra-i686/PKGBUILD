@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/18 04:52:30 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=perl-file-tail

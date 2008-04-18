@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/12/04 07:56:56 tobias Exp $
+# $Id$
 # Contributor: Andrew Simmons <andrew.simmons@gmail.com>
 
 pkgname=thunar-media-tags-plugin

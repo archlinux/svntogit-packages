@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/01/19 08:09:07 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=bzr
 pkgver=1.3

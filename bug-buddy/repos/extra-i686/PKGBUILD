@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/03/17 22:22:25 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=bug-buddy

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.128 2008/03/27 20:13:58 pierre Exp $
+# $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 pkgname=php
 pkgver=5.2.5

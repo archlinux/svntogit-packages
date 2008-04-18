@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/09/11 06:57:41 eric Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: DaNiMoTh <jjdanimoth@gmail.com>
 pkgname=afterstep

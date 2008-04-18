@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/08/26 14:30:57 jgc Exp $
+# $Id$
 # Maintainer: Arjan Timmerman <arjan@soulfly.nl>
 # Contributer: Jaroslaw Swierczynski <swiergot@juvepoland.com>
 

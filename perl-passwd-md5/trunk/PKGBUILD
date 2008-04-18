@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/24 04:09:12 kevin Exp $
+# $Id$
 # Maintainer: Travis Willard <travisw@wmpub.ca>
 # Contributor: Wael Nasreddine <gandalf@siemens-mobiles.org>
 

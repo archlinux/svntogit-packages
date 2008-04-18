@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/01/27 15:54:00 travis Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=libmikmod

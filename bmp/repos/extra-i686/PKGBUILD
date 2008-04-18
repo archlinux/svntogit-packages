@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2006/03/27 19:31:41 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 # Contributor: Ben <contrasutra@myrealbox.com>
 

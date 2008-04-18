@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/02/04 13:17:35 jgc Exp $
+# $Id$
 # Maintainer: Judd <jvinet@zeroflux.org>
 # Contributor: Elia Yehuda <z4ziggy@user-contributions.org>
 pkgname=lshwd

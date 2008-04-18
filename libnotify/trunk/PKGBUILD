@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/03/26 22:00:02 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libnotify

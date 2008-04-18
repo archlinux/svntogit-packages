@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.64 2008/03/13 23:59:09 jgc Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 
 pkgname=epiphany

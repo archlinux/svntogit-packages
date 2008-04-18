@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/26 04:10:32 kevin Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=bioperl
 pkgver=1.5.1

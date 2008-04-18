@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/08/22 18:48:16 tpowa Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=makedev
 pkgver=3.23

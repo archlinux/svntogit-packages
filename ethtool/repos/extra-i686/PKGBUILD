@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/08/01 13:29:58 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 # Contributer: Martin Kemp <mdkemp@elys.com>
 pkgname=ethtool

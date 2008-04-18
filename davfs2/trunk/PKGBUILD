@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/15 10:39:07 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=davfs2
 pkgver=1.3.0

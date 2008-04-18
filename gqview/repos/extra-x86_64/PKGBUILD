@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.30 2006/12/21 21:14:19 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=gqview

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/11/15 23:53:15 daniel Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=gmp
 pkgver=4.2.2

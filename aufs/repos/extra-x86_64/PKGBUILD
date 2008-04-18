@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/30 10:27:31 simo Exp $
+# $Id$
 # Contributor: Paul Mattal <paul@mattal.com>
 # Maintainer: Paul Mattal <pjmattal@elys.com>
 pkgname=aufs

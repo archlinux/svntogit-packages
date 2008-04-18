@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2007/11/15 23:53:13 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=cpio
 pkgver=2.9

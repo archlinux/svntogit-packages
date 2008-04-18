@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/03 13:14:50 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=codecs

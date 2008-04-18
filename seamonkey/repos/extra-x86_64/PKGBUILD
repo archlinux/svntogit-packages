@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/12/21 12:07:17 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=seamonkey

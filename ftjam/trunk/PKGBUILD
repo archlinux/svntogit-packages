@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/10/31 09:57:01 roman Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <roman@gmail.com>
 # Contributor: Roman Kyrylych <roman@gmail.com>
 

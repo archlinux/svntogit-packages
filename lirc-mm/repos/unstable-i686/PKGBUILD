@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/05/28 10:47:30 tom Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 
 pkgname=lirc-mm

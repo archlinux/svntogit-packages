@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/02/11 23:38:19 simo Exp $
+# $Id$
 # Contributor: Josh Taylor <joshtaylor.mail@gmail.com>
 # Maintainer: simo <simo@archlinux.org>
 pkgname=python-opengl

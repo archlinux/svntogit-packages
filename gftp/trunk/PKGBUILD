@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2006/05/29 10:07:23 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Lucien Immink <l.immink@student.fnt.hvu.nl>
 pkgname=gftp

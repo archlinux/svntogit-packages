@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2004/02/21 21:12:39 aurelien Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 # Contributor: Herb Rose (hrose56@yahoo.com)
 pkgname=indent

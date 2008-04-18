@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/05/02 20:21:43 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jan@archlinux.org>
 
 pkgname=perl-module-build

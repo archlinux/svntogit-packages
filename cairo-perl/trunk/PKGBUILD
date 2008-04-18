@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/15 03:52:51 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=cairo-perl

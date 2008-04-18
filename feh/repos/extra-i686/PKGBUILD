@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2006/02/21 02:23:00 dorphell Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2008/03/30 09:23:11 thomas Exp $
+# $Id$
 
 pkgname=atl2
 _kernver=2.6.24-ARCH

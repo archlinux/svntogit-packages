@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/02/20 04:49:12 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=emboss
 orgname=EMBOSS

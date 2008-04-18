@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2006/06/04 13:57:39 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 #Contributed by Sarah Hay <sarahhay@mb.sympatico.ca>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/02/12 21:00:31 daniel Exp $
+# $Id$
 # Contributor: orelien <aurelien.foret@wanadoo.fr>
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=rp-pppoe

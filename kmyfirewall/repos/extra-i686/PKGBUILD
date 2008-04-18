@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2006/06/04 18:18:30 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kmyfirewall

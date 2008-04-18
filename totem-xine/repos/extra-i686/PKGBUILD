@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2008/03/21 22:16:16 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=totem-xine

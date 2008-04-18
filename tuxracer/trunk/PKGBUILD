@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/01/29 03:19:00 eric Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca> and patched by orelien <aurelien.foret@wanadoo.fr>
 

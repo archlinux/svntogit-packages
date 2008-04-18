@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.43 2008/03/14 23:31:10 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-session

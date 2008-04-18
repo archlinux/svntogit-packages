@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/11/30 23:53:41 jeff Exp $
+# $Id$
 # Maintainer: Jeff Mickey <jeff@archlinux.org>
 
 pkgname=yodl

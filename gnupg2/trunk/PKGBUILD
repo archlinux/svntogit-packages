@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2008/01/11 14:25:53 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=gnupg2
 pkgver=2.0.8

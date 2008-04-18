@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/03 20:22:26 tobias Exp $
+# $Id$
 # Contributor: Tobias Kieslich <tobias (at) archlinux.org>
 
 pkgname=thunar-archive-plugin

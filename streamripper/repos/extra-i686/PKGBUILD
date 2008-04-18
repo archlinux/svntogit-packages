@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/09/12 19:53:06 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=streamripper

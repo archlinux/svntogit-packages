@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/01/04 09:29:38 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=ladspa

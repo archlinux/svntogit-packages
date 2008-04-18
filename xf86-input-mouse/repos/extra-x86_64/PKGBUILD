@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/10/16 13:10:30 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-input-mouse

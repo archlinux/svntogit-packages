@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/02/19 23:45:44 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=habak
 pkgver=0.2.5

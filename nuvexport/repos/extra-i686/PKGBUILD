@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/02/18 03:56:38 paul Exp $
+# $Id$
 # Contributor: Paul Mattal <paul@mattal.com>
 # Maintainer: Paul Mattal <paul@archlinux.org>
 pkgname=nuvexport

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2006/12/17 21:50:58 alexander Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=openexr

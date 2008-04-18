@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/03/06 08:27:58 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=slmodem-utils
 pkgver=2.9.11

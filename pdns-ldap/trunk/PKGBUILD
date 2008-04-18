@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/02/08 15:53:40 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=pdns-ldap
 pkgver=2.9.20

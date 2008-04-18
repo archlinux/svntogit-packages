@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2007/09/11 18:46:29 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=w3m
 pkgver=0.5.2

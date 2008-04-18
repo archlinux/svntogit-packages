@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/05/31 04:42:02 judd Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 # Contributor: Todd Musall <tmusall@comcast.net>
 pkgname=at

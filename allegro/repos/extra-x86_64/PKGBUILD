@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/08/16 03:57:17 eric Exp $
+# $Id$
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Maintainer: arjan <arjan@archlinux.org>
 pkgname=allegro

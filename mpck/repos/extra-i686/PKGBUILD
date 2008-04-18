@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/10/01 09:28:25 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=mpck

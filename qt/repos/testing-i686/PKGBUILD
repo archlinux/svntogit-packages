@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.41 2008/03/30 16:14:07 pierre Exp $
+# $Id$
 # Contributer: Vinay S Shastry (vinayshastry@gmail.com)
 pkgname=qt
 pkgver=4.3.4

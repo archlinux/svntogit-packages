@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2008/03/19 04:22:31 eric Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kbd

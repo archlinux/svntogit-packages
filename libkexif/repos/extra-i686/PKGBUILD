@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2006/11/04 15:30:50 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=libkexif

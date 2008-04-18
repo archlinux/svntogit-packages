@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/01/28 06:02:02 eric Exp $
+# $Id$
 # Maintainer: Damir Perisa <damir@archlinux.org>
 
 pkgname=glabels

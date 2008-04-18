@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2005/10/01 09:58:58 arjan Exp $
+# $Id$
 # Maintainer: roberto <roberto@archlinux.org>
 pkgname=camsource
 pkgver=0.7.0

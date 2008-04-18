@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/12/05 03:00:03 paul Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 
 # todo: add perl support, DESTDIR has no affect on perl

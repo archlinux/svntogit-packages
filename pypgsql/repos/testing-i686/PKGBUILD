@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/02/05 18:47:50 paul Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=pypgsql
 pkgver=2.5.1

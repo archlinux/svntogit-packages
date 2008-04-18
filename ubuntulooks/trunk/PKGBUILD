@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/09/18 03:54:09 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 
 pkgname=ubuntulooks

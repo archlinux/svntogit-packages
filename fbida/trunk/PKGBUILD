@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2006/12/03 02:10:10 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=fbida

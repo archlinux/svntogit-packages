@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/26 00:23:13 tobias Exp $
+# $Id$
 # Contributor: David Keogh <davekeogh@shaw.ca>
 
 pkgname=squeeze

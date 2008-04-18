@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2008/01/07 15:19:46 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=device-mapper
 pkgver=1.02.24

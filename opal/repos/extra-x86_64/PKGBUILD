@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/09/22 12:23:27 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jan@archlinux.org>
 # Contributor: Tom K <tomk@runbox.com>
 pkgname=opal

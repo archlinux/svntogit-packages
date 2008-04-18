@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/05/03 21:01:12 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-mime-data

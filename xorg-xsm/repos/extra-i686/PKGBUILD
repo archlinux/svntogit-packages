@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/04/17 21:48:07 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xorg-xsm

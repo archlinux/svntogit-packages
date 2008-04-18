@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.22 2007/05/17 04:57:19 aaron Exp $
+#$Id$
 #Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=quodlibet

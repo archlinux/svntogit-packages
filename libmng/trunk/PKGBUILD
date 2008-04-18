@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/07/22 00:43:44 eric Exp $
+# $Id$
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=libmng

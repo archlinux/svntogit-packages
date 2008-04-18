@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/03/24 10:20:45 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=klibc-kbd

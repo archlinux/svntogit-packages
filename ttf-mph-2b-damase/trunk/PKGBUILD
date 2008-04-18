@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/02/03 12:41:37 damir Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 # font is PD, unfortunately nowhere on the net available directly atm, so we use debian as source
 # deb: Paul Wise <pabs3 AT bonedaddy.net>  

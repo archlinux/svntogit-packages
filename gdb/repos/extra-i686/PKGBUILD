@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2007/12/25 14:51:35 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gdb
 pkgver=6.7.1

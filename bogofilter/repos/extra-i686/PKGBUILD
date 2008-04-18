@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2008/03/18 00:33:33 tobias Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 # Contributor: Low Kian Seong <fastmail_low@speedymail.org>
 

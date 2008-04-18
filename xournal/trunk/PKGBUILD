@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/03/28 20:30:58 damir Exp $
+# $Id$
 # Contributor: 
 # Maintainer: 
 

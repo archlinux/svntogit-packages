@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/03/04 20:28:53 eric Exp $
+# $Id$
 # Contributor: red_over_blue (1.1.2), Abaddon <kukububu@go2.pl> (1.1.3)
 # Maintainer: damir <damir@archlinux.org>
 

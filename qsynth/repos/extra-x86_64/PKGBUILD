@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/01/26 16:28:36 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=qsynth

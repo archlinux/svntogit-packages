@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/30 13:18:02 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=libavg
 pkgver=0.7.0

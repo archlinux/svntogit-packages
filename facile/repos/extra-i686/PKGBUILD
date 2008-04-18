@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/03/02 17:49:46 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=facile

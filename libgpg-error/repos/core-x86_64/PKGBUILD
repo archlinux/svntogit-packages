@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/01/01 17:14:27 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 
 pkgname=libgpg-error

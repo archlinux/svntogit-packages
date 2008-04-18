@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/08/03 21:11:34 jgc Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=ttf-ubraille
 pkgver=001.000

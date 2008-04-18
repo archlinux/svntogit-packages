@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/12/23 16:34:36 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: William Rea <sillywilly@gmail.com>
 pkgname=wv

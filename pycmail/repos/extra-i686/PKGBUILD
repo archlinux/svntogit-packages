@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/03/28 19:48:21 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 
 pkgname=pycmail

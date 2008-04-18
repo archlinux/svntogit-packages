@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.39 2008/03/12 21:30:47 jgc Exp $
+# $Id$
 # Maintainer:  Jan de Groot <jan@archlinux.org>
 
 pkgname=gnome-desktop

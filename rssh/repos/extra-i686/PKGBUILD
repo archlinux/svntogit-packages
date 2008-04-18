@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/10/26 05:47:49 tpowa Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=rssh
 pkgver=2.3.2

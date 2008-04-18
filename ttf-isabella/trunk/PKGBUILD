@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/08/03 21:09:53 jgc Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-isabella

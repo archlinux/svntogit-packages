@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/02/17 01:01:55 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=mage

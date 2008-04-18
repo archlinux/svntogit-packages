@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/03/03 19:04:03 tpowa Exp $ 
+# $Id$ 
 # Contributor: William Rea <sillywilly@gmail.com> , Robert Emil Berge <filoktetes@linuxophic.org>
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 

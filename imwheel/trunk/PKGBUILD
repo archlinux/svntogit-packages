@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/08 02:02:16 travis Exp $
+# $Id$
 # Maintainer: Travis Willard <travis@archlinux.org> 
 # Contributor: Paul Mattal <paul@mattal.com>
 

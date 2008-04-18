@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/03/27 09:05:29 damir Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=taglib

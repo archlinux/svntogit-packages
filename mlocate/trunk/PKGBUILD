@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/11/16 00:02:35 daniel Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 # Contributor: lydgate
 

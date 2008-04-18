@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/06/27 15:59:04 simo Exp $
+# $Id$
 # vim: ft=sh ts=2 sw=2
 #Maintainer: Simo Leone <neotuli@gmail.com>
 #Contributor: Simo Leone <neotuli@gmail.com>

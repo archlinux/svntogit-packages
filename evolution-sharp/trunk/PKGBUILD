@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/09/23 19:48:07 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evolution-sharp

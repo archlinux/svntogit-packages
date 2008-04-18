@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/17 18:12:05 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=liboil

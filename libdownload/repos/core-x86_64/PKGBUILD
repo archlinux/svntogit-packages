@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/11/28 07:21:23 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=libdownload

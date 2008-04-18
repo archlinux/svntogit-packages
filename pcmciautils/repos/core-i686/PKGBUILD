@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/12 11:24:44 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=pcmciautils
 pkgver=014

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/06/19 16:44:55 tpowa Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 pkgname=ooodi2
 pkgver=0.68

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/20 13:20:14 travis Exp $
+# $Id$
 # Maintainer: Travis Willard <travisw@wmpub.ca>
 # Contributor: Varun Acharya <ganja.guru@airtelbroadband.in>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/01/08 05:55:51 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=mutagen

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/04/03 17:40:19 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 pkgname=libcups
 pkgver=1.3.7

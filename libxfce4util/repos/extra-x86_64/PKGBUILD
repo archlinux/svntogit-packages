@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2007/12/04 07:56:56 tobias Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 pkgname=libxfce4util
 pkgver=4.4.2

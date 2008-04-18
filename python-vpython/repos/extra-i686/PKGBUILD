@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/05/23 03:30:25 kevin Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 # Contributor: Comete <la_comete@tiscali.fr>
 pkgname=python-vpython

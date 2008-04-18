@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/03/16 03:28:03 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <neotuli@gmail.com>
 # Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=python-feedparser

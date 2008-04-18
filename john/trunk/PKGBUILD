@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2006/06/22 14:04:52 arjan Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 # Original Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Portions from AUR john-devel PKGBUILD used with permission from Michal Krenek <mikos@sg1.cz>

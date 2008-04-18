@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/02/04 20:34:49 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 pkgname=ddrescue
 pkgver=1.7

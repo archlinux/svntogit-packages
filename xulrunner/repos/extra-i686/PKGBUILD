@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2008/04/02 13:19:10 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xulrunner

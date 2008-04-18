@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.40 2008/03/08 21:36:13 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 # There's a circular dependency between gcc-gcj and eclipse-ecj. There is no 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/09/19 10:08:58 tom Exp $
+# $Id$
 # Maintainer: Tom Killian <tom@archlinux.org>
 
 pkgname=rt2x00-rt71w-fw

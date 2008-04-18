@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/10/28 20:34:32 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: deepfreeze (sgrealis1@comcast.net)
 pkgname=pan

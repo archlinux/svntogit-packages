@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/03/16 09:25:07 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=klibc-module-init-tools

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/04/01 17:30:13 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=eel

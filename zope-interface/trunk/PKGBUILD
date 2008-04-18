@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/03/05 19:53:28 juergen Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org>
 # Contributor: Douglas Soares de Andrade <dsandrade@gmail.com>
 pkgname=zope-interface

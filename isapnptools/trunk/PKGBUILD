@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2003/11/18 06:33:42 judd Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=isapnptools
 pkgver=1.26

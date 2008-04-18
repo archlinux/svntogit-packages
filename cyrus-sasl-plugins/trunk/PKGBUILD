@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/09/28 23:28:49 andyrtr Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=cyrus-sasl-plugins

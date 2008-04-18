@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2008/01/29 17:54:35 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jan@archlinux.org>
 
 pkgname=orbit2

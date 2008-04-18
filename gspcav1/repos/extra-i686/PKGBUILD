@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/21 17:12:00 tpowa Exp $
+# $Id$
 # Maintainer: Varun Acharya <varun@archlinux.org>
 # Contributor: Giovanni Scafora <linuxmania@gmail.com>
 # Contributor: Daniel Isenmann <daniel.isenmann@gmx.de>

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.51 2008/03/21 17:13:38 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=intel-536ep

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/03/12 23:42:42 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-pilot-conduits

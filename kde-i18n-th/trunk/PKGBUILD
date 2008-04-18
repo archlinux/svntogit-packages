@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/03/03 19:13:53 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kde-i18n-th

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/10/21 08:53:05 arjan Exp $
+# $Id$
 # Maintainer : Arjan Timmerman <arjan@soulfly.nl>
 # Contributor: Daniel 'maniel' Kaminski <maniel.rulez//gmail.com>
 

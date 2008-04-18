@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.39 2008/02/13 10:07:07 alexander Exp $
+# $Id$
 # Mantainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=mplayer-plugin
 pkgver=3.50

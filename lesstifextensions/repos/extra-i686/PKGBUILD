@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2005/08/27 23:28:38 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=lesstifextensions

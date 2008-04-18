@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/04 21:24:36 thomas Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org>
 pkgname=fuse
 pkgver=2.7.3

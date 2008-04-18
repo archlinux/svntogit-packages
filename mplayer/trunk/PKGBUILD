@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/02/26 14:27:18 thomas Exp $
+# $Id$
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 pkgname=mplayer
 pkgver=1.0rc2

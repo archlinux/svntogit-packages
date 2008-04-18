@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/03/16 13:06:20 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-netstatus

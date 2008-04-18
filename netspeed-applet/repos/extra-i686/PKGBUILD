@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2007/04/23 15:49:11 jgc Exp $
+# $Id$
 # Maintainer: Arjan Timmerman <arjan@archlinux.org>
 
 pkgname=netspeed-applet

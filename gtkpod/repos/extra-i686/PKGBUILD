@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/01/08 15:33:03 daniel Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=gtkpod

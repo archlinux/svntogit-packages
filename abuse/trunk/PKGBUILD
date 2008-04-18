@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/01/11 02:35:09 kevin Exp $
+# $Id$
 # Committer: jlvsimoes <jlvsimoes@oninet.pt>
 # Maintainer: kevin <kevin@archlinux.org>
 pkgname=abuse

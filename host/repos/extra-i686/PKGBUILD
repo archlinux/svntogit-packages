@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/05/02 18:58:08 dale Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 pkgname=host
 pkgver=20070128

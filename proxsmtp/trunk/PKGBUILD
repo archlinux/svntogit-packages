@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/06/15 12:16:41 andyrtr Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 pkgname=proxsmtp
 pkgver=1.7

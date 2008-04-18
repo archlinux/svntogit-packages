@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/09/23 14:33:46 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: damir <damir@archlinux.org>
 

@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.6 2007/11/03 20:30:14 daniel Exp $
+#$Id$
 # Maintainer: Daniel Isenmann <daniel@archlinux.org>
 pkgname=sg3_utils
 pkgver=1.25

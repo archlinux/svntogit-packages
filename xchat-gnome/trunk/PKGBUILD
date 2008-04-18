@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/01/30 19:24:27 roman Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xchat-gnome
 pkgver=0.18

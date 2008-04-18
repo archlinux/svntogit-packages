@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2008/03/14 17:45:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evolution-exchange

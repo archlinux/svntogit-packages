@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/02/11 23:08:44 simo Exp $
+# $Id$
 #Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=libticalcs
 pkgver=1.1.0

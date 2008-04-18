@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/12/22 03:34:18 alexander Exp $
+# $Id$
 # Maintainer:  <juergen@archlinux.org>
 pkgname=xf86-video-radeonhd
 pkgver=1.1.0

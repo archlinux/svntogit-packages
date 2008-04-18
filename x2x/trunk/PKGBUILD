@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2006/01/02 07:41:47 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=x2x

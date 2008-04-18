@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.47 2007/11/17 23:14:02 pierre Exp $
+# $Id$
 # Contributor: Roman Kreisel <roman.kreisel@epost.de>
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 

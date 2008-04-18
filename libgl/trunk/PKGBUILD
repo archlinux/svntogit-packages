@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/16 20:49:49 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <kth5@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libgl

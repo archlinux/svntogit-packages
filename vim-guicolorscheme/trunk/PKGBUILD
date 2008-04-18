@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/08 07:10:22 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-guicolorscheme

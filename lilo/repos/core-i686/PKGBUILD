@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.62 2007/11/15 23:53:18 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=lilo
 pkgver=22.8

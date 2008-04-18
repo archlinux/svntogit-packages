@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.91 2008/03/03 19:01:51 tpowa Exp $
+# $Id$
 # Contributor: Roman Kreisel <roman.kreisel@epost.de>
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 

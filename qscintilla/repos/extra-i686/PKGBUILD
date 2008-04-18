@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/11/17 23:08:24 pierre Exp $
+# $Id$
 # Maintainer: Douglas Soares de Andrade <dsa@aur.archlinux.org>
 # Contributor: Michal Krenek <mikos@sg1.cz>
 # Bug #8577 Modifications made by DaNiMoTh <jjdanimoth.aur@gmail.com>

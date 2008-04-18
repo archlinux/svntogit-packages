@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.30 2007/11/15 23:53:12 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=bison
 pkgver=2.3

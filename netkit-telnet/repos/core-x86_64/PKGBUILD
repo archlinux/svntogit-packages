@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2007/11/16 00:02:35 daniel Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=netkit-telnet
 pkgver=0.17

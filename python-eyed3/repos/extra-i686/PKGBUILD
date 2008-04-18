@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.6 2007/07/07 21:07:37 eric Exp $
+#$Id$
 #Maintainer: Aaron Griffin <aaron@archlinux.org>
 #Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>
 #Contributor: cdhotfire <cdhotfire@gmail.com>

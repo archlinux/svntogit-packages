@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/07/17 01:11:27 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=python-egenix-mx-base

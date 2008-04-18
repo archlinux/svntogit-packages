@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/02/02 09:36:12 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Alexander 'dma147' Mieland <dma147@linux-stats.org>
 # Contributor: Simon Morgan <simon@16hz.net>

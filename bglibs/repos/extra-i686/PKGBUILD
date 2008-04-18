@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/11/10 23:37:05 juergen Exp $
+# $Id$
 # Maintainer: eric <eric@archlinux.org>
 # Committer: Manolis Tzanidakis
 #

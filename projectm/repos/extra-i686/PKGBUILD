@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/09/05 18:14:51 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=projectm
 pkgver=0.99

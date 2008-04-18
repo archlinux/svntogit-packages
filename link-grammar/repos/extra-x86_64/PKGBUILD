@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/12/23 18:41:27 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=link-grammar

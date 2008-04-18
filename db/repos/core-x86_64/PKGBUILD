@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.36 2007/11/15 23:53:13 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=db
 pkgver=4.6.21

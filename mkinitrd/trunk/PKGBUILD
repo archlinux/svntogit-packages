@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/12/14 00:07:20 judd Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org> 
 pkgname=mkinitrd 
 pkgver=1.01

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/11/11 20:31:22 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=kbproto

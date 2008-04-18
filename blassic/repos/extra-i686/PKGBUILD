@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/01/09 19:08:43 kevin Exp $
+# $Id$
 # Maintainer: eric <eric@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=blassic

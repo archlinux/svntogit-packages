@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.37 2008/03/21 17:11:49 tpowa Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <t.powa@gmx.de>
 
 

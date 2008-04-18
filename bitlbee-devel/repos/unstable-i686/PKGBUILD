@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/03/04 07:41:39 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=bitlbee-devel
 pkgver=1.1dev

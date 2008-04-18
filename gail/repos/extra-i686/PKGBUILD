@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2008/03/10 22:59:42 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jan@archlinux.org>
 
 pkgname=gail

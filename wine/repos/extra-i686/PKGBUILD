@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.52 2008/02/25 14:40:01 dale Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 # Contributor: Matt Smith (Majik) <darkknight@helpdesk.zaz.net>
 pkgname=wine

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/10/29 02:31:41 varun Exp $
+# $Id$
 # Maintainer: roberto <roberto@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=bladeenc

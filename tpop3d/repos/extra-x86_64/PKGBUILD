@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2006/06/03 14:38:11 arjan Exp $
+# $Id$
 # Contributor: Roberto Braga <rbap@yap.org>
 # Maintainer: dale <dale@archlinux.org>
 

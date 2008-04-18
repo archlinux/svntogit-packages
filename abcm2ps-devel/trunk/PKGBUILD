@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/10/02 11:37:30 damir Exp $
+# $Id$
 # Maintainer: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=abcm2ps-devel
 orgname=abcm2ps

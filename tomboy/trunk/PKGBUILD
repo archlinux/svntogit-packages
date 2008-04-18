@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/03/24 11:08:23 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=tomboy

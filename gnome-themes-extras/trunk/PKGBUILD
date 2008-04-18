@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/09/23 19:52:37 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gnome-themes-extras
 pkgver=2.20

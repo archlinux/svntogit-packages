@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/02/11 23:44:18 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=sshfs
 pkgver=1.9

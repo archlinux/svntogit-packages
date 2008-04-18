@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/23 20:48:39 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-desktop-sharp

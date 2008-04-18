@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2007/04/22 15:12:26 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gtksourceview

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/04/10 22:26:21 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=mysql-python

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/02/27 19:52:47 jason Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 # Contributor: Nikos Kouremenos <kourem@gmail.com>
 pkgname=gajim

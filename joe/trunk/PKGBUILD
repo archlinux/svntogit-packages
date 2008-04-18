@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2007/06/11 10:42:53 alexander Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=joe

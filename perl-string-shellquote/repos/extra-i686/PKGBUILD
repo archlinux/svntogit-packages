@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/26 03:58:32 kevin Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 
 pkgname=perl-string-shellquote

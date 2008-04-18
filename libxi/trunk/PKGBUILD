@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/09/22 18:06:13 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxi

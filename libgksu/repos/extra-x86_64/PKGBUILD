@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/08/25 09:46:08 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libgksu

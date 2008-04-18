@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/02/03 08:04:04 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=biopython

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/11/16 00:02:39 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=util-linux-ng
 pkgver=2.13.0.1

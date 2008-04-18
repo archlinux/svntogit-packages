@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/01/21 10:39:39 james Exp $
+# $Id$
 # Maintainer: James Rayner <james@archlinux.org>
 # Contributor: Christian Storm <Christian.Storm@gmx.DE>
 pkgname=vbetool

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/27 19:00:10 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=mkpxelinux

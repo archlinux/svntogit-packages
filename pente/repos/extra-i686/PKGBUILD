@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/02/18 18:24:54 simo Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Lukas Sabota <punkrockguy318@comcast.net>
 pkgname=pente

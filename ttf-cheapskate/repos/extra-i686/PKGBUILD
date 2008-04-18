@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/08/03 21:00:17 jgc Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=ttf-cheapskate
 pkgver=2.0

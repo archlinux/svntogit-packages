@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/03/19 00:47:25 tobias Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 
 pkgname=libmemcache

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/03/11 14:24:14 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=emovix-codecs

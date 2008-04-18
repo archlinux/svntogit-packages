@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/01/02 07:34:39 tpowa Exp $
+# $Id$
 # Maintainer: Jan de Groot
 # Contributor: Leslie P. Polzer <leslie.polzer@gmx.net>
 

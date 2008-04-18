@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/09/29 21:04:46 andyrtr Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=arch
 pkgver=1.3.5

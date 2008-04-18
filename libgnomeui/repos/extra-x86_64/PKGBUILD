@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2008/03/16 19:55:32 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libgnomeui

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2004/04/19 06:24:58 dorphell Exp $
+# $Id$
 # Maintainer: eric <eric@archlinux.org>
 # Contributor: orelien <orelien@chez.com>
 #

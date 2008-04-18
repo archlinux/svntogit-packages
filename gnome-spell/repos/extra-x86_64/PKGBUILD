@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/10/19 20:59:32 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-spell

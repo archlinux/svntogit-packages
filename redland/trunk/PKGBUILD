@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/06 14:09:09 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=redland

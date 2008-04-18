@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.100 2008/03/10 22:20:47 tpowa Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
 

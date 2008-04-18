@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.40 2008/03/03 19:00:43 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kde-common

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/09/08 17:40:54 jeff Exp $
+# $Id$
 # Maintainer: phrakture <aaronmgriffin-at-diespam-gmail.com>
 # Contributor: lucke <lucke at o2 dot pl>
 

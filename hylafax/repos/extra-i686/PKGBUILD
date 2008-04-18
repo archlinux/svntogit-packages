@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/12/31 06:38:49 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 pkgname=hylafax
 pkgver=4.4.4

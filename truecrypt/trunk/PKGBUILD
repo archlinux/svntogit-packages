@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/01/25 17:48:42 tpowa Exp $
+# $Id$
 # Maintainer: Tom K <tom@archlinux.org>
 
 pkgname=truecrypt

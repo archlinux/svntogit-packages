@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/03/07 22:57:03 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=abook
 pkgver=0.5.6

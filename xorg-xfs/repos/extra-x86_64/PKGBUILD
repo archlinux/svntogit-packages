@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/10/05 14:48:09 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-xfs

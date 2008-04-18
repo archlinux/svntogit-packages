@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/06/07 14:27:40 tpowa Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=xine-ui

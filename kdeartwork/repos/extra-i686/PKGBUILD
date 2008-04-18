@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.42 2008/03/07 18:51:31 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdeartwork

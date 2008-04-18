@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.40 2008/03/13 16:22:54 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=metacity

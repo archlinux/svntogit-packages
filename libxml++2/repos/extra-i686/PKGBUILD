@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/03/17 23:29:58 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libxml++2

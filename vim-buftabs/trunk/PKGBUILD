@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/28 08:08:14 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-buftabs

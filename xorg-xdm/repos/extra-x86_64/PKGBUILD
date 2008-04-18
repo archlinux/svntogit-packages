@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/08/17 09:14:28 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-xdm

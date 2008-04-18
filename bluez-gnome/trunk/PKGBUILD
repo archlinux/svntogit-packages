@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/03/16 15:42:13 roman Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <roman@archlinux.org>
 
 pkgname=bluez-gnome

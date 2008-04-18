@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2006/08/21 21:16:48 jgc Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 pkgname=ttf-ms-fonts
 pkgver=2.0

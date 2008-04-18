@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/01/01 12:10:18 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=libdca

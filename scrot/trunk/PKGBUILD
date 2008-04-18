@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/02/17 00:41:43 simo Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org>
 pkgname=scrot
 pkgver=0.8

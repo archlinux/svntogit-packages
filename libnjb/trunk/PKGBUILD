@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/09/20 11:39:13 damir Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=libnjb
 pkgver=2.2.5

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.85 2008/03/30 20:25:40 jason Exp $
+# $Id$
 # Contributer: Jason Chu <jason@archlinux.org>
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=subversion

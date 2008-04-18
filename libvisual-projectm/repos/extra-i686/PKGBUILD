@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/09/05 18:16:10 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=libvisual-projectm
 pkgver=0.99

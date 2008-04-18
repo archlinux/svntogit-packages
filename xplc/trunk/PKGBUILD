@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/06/04 11:26:05 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=xplc
 pkgver=0.3.13

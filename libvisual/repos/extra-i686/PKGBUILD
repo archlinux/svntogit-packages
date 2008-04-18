@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/09/04 11:23:29 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libvisual

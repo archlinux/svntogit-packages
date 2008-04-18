@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/04/22 18:11:15 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=gtk2-themes-collection

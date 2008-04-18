@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/05/25 14:32:28 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=fixesproto

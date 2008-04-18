@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/16 08:52:33 tom Exp $ 
+# $Id$ 
 # Maintainer: Tom Killian <tom@archlinux.org>
 
 pkgname=kernel26mm

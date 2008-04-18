@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/10/08 14:36:43 travis Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Patrick Leslie Polzer <leslie.polzer@gmx.net>
 

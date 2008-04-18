@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/03/26 08:49:34 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=scim-hangul

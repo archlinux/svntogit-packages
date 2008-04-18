@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.30 2008/03/29 00:55:17 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=glade

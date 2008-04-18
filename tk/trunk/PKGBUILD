@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2008/04/03 18:01:25 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=tk

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/08/16 10:48:05 tpowa Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=capi4hylafax

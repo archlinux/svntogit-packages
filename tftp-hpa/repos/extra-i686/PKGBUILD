@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/07/01 19:17:50 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Jose Javier  <jojapa@terra.es>
 pkgname=tftp-hpa

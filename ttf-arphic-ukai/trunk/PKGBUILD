@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/09/26 14:32:39 damir Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-arphic-ukai

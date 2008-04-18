@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/08/13 14:32:36 jgc Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=openslp
 pkgver=1.2.1

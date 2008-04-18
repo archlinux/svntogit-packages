@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/03/27 19:48:28 daniel Exp $
+# $Id$
 # Maintainer: Daniel Isenmann <daniel@archlinux.org>
 
 pkgname=mono-basic

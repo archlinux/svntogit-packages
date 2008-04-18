@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/12/19 07:35:27 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-input-joystick

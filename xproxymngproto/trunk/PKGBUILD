@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/02/03 18:33:28 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xproxymngproto

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2005/11/13 06:29:39 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=flite
 pkgver=1.3

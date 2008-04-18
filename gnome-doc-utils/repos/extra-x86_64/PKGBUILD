@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2008/03/12 21:25:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-doc-utils

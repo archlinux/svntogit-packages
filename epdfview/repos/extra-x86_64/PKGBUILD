@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/01/05 17:38:08 andyrtr Exp $
+# $Id$
 # Contributor: Tom K <tomk@runbox.com>
 
 pkgname=epdfview

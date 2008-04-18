@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2008/03/11 20:17:36 juergen Exp $
+# $Id$
 # Maintainer: juergen <juergen@hoetzel.info>
 # Contributor: Manolis Tzanidakis, Petter Gundersen
 

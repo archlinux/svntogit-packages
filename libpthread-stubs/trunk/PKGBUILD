@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/11/24 20:56:15 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libpthread-stubs

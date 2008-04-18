@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2005/09/26 19:36:16 tpowa Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 

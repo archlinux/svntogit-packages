@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/29 16:51:35 tom Exp $
+# $Id$
 # Maintainer: Tom Killian <tom@archlinux.org>
 
 # N.B. Slimserver does not work with YAML::Syck > 0.64, so I'm bundling it to avoid

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/01/29 10:14:37 james Exp $
+# $Id$
 # Maintainer: James Rayner <james@archlinux.org>
 # Contributor: Todd Maynard <arch@toddmaynard.com>
 pkgname=python-cheetah

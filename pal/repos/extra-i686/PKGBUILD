@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2004/08/20 19:11:40 judd Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=pal
 pkgver=0.3.4

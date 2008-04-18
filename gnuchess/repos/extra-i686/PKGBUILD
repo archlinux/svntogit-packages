@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2004/08/20 19:09:14 judd Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=gnuchess

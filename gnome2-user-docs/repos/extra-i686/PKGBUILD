@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/16 14:19:03 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome2-user-docs

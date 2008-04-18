@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/09/04 14:26:25 alexander Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=mp3blaster

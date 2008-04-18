@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/11/20 06:45:49 tpowa Exp $
+# $Id$
 # Maintainer: Tom Killian <tom@archlinux.org>
 
 pkgname=openswan-klips

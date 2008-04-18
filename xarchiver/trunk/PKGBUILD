@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/03/01 00:01:21 tobias Exp $
+# $Id$
 # Contributor: Andrew Simmons <andrew.simmons@gmail.com>
 
 pkgname=xarchiver

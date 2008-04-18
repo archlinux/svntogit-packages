@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/02/28 23:16:02 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=ypserv

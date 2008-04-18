@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/03/24 09:25:55 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=zip
 pkgver=2.32

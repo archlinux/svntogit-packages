@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/21 14:30:47 tpowa Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=sox

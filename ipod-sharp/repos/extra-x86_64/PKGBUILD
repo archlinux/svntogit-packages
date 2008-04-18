@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/04/09 20:06:04 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=ipod-sharp
 pkgver=0.6.3

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/09/22 18:55:47 alexander Exp $
+# $Id$
 # Maintainer; Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-input-keyboard

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/12/26 00:42:11 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libdrm

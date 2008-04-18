@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/06/30 20:41:21 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=fvwm-crystal
 pkgver=3.0.4

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2007/12/11 18:37:51 tpowa Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=smbclient
 pkgver=3.0.28A

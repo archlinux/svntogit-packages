@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/07 18:00:45 tpowa Exp $
+# $Id$
 # Contributor: Vinay S Shastry (vinayshastry@gmail.com)
 # Maintainer: Vinay S Shastry (vinayshastry@gmail.com)
 

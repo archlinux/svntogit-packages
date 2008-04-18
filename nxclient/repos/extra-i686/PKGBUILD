@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/01/12 13:44:07 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 #Contributed: eliott <eliott@solarblue.net>, Andre Naumann <anaumann@SPARCed.org> 
 pkgname=nxclient

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2008/03/03 19:03:12 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 

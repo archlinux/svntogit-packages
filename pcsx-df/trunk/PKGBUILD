@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/01/27 15:41:05 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=pcsx-df
 pkgver=1.818

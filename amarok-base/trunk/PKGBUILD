@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.48 2008/01/08 15:46:48 daniel Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=amarok-base

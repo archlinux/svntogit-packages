@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2006/08/11 09:45:09 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdetv

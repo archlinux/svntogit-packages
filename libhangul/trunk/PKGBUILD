@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/03/26 08:49:24 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libhangul

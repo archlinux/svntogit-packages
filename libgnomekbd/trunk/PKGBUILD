@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/03/21 23:10:25 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libgnomekbd

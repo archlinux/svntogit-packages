@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/10/28 19:31:20 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=bincimap

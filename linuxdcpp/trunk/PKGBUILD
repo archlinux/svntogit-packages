@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/01/01 03:21:49 tom Exp $
+# $Id$
 # Maintainer: Tom K <tom@archlinux.org>
 
 pkgname=linuxdcpp

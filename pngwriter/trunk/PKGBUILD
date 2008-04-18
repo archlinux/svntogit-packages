@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/05/02 21:58:19 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=pngwriter

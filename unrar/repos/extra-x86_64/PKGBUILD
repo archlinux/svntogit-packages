@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/10/04 16:27:12 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: dorphell <dorphell@gmx.net>
 pkgname=unrar

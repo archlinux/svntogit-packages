@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/12/03 09:21:02 tobias Exp $
+# $Id$
 # Contributor: Tobias Kieslich <tobias (at) archlinux.org>
 
 pkgname=thunar-volman

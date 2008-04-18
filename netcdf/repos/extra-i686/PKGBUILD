@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/03/10 18:25:32 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=netcdf

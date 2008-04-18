@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/07/12 10:32:52 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=skim

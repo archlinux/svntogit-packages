@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.35 2007/09/29 09:59:11 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=cvs
 pkgver=1.11.22

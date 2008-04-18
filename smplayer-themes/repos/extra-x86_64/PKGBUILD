@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2008/01/23 18:50:38 varun Exp $
+# $Id$
 # Maintainer: Varun Acharya <varun@archlinux.org>
 # Contributor: Alessio 'mOLOk' Bolognino <themolok@gmail.com>
  

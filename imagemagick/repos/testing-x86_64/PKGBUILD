@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.101 2008/03/30 20:45:00 eric Exp $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
 # NOTE: ImageMagick builds against an existing installation

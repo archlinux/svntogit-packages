@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/12/22 22:59:53 andyrtr Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=openoffice-spell-en

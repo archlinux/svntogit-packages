@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/08/12 09:37:14 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-doxygentoolkit

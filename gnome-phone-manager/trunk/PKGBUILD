@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/12/07 14:51:58 roman Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <roman@archlinux.org>
 
 pkgname=gnome-phone-manager

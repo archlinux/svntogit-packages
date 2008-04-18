@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/04/18 15:26:07 alexander Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=normalize

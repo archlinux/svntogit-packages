@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/02/14 03:52:45 eric Exp $
+# $Id$
 # Maintainer: James Rayner <james@archlinux.org>
 pkgname=netcfg
 pkgver=2.0.6

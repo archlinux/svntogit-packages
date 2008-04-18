@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2004/07/15 06:30:05 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=gtkam

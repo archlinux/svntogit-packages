@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/02/01 13:59:54 alexander Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=libmysqlclient
 pkgver=5.0.51

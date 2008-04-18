@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/16 11:31:50 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libgail-gnome

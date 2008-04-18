@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/01/16 04:34:43 kevin Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=acidrip

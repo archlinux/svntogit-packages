@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.42 2008/03/16 22:18:58 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 
 pkgname=e2fsprogs

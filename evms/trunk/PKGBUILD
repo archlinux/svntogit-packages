@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/05 22:28:37 aaron Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=evms
 pkgver=2.5.5

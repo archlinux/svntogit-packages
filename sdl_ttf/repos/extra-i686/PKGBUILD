@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/08/05 14:36:24 jgc Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=sdl_ttf

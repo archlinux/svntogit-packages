@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.50 2008/02/01 17:35:14 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: dorphell <dorphell@archlinux.org>
 pkgname=sylpheed

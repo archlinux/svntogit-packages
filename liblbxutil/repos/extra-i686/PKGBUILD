@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/07/09 11:51:32 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=liblbxutil

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/02/12 01:17:09 simo Exp $
+# $Id$
 # Contributor : phrakture < aaron m griffin :: gmail-com >
 # Maintainer: simo <simo@archlinux.org>
 pkgname=denyhosts

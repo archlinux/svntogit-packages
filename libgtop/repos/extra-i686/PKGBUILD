@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/03/12 21:32:40 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libgtop

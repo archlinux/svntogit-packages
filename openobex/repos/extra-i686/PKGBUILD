@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/07/01 00:41:56 simo Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=openobex

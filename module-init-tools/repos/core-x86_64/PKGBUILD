@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2008/03/12 09:11:18 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=module-init-tools
 pkgver=3.2.2

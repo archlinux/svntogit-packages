@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/01/15 19:27:59 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-xinit

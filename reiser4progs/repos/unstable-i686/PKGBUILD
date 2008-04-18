@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/02/07 11:33:23 james Exp $
+# $Id$
 #Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=reiser4progs
 pkgver=1.0.6

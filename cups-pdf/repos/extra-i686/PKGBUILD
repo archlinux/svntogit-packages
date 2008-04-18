@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/05/17 13:27:55 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas.baechler@rwth-aachen.de>
 pkgname=cups-pdf
 pkgver=2.4.6

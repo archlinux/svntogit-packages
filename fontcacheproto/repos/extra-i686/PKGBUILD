@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/03/18 22:56:00 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=fontcacheproto

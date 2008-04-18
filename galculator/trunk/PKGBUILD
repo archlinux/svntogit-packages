@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2007/10/01 02:40:43 travis Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 pkgname=galculator
 pkgver=1.3.1

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/05/05 10:33:38 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=pdns-recursor
 pkgver=3.0.1

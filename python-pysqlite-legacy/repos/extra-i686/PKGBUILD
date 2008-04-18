@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/03/05 22:34:32 simo Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=python-pysqlite-legacy

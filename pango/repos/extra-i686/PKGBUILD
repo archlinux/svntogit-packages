@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.61 2008/03/10 19:07:31 jgc Exp $ 
+# $Id$ 
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=pango

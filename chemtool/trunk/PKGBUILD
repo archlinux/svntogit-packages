@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/20 08:05:12 tpowa Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=chemtool

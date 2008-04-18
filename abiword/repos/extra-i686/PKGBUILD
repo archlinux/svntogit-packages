@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/05/14 04:29:36 dan Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=abiword

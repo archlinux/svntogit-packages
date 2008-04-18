@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.24 2008/03/23 16:43:05 jgc Exp $
+#$Id$
 #Maintainer: Jan De Groot <jgc@archlinux.org>
 
 pkgname=gnome-keyring

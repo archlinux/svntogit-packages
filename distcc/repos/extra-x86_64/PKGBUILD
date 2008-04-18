@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/03/09 15:52:36 tpowa Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=distcc
 pkgver=2.18.3

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.55 2008/03/21 17:12:20 tpowa Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 
 pkgname=lirc

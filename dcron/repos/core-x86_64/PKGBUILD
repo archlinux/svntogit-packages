@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2007/11/15 23:53:13 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=dcron
 pkgver=3.2

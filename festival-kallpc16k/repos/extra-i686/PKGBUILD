@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/02/22 01:50:52 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <neuotuli@gmail.com>
 # Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=festival-kallpc16k

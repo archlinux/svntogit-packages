@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/04/22 16:46:57 jgc Exp $
+# $Id$
 # Mantainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gdeskcal

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/08/01 21:20:42 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=ncftp

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.43 2008/03/02 17:39:06 andyrtr Exp $
+# $Id$
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 pkgname=ghostscript
 pkgver=8.62

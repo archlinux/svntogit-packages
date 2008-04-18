@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/02/21 13:23:03 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-apps

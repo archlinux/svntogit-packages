@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/04/16 17:25:10 alexander Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributer: Jason Chu <jchu@xentac.net>
 pkgname=sweep

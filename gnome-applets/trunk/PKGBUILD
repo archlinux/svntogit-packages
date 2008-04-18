@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.41 2008/03/17 18:58:52 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-applets

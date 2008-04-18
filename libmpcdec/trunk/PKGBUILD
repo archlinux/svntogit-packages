@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/06/13 15:16:36 andyrtr Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libmpcdec

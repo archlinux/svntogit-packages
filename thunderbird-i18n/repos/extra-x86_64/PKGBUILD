@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2008/02/28 14:02:01 alexander Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=thunderbird-i18n
 pkgver=2.0.0.12

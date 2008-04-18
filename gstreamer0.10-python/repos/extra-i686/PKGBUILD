@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/12/27 12:02:15 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer0.10-python

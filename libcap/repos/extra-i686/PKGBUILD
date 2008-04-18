@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.3 2006/10/29 23:14:00 jgc Exp $
+#$Id$
 # Maintainer: Arjan Timmerman <arjan@archlinux.org>
 pkgname=libcap
 pkgver=1.10

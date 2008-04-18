@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/09/17 21:42:35 simo Exp $
+# $Id$
 # Contributor: FUBAR <mrfubar@gmail.com>
 # Maintainer: simo <simo@archlinux.org>
 pkgname=bitlbee

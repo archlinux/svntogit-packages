@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.38 2008/02/04 20:25:30 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=sudo

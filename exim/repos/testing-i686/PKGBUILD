@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.80 2007/11/20 18:49:09 aaron Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=exim
 pkgver=4.68

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2008/03/07 01:13:12 tobias Exp $
+# $Id$
 # Maintainer: tobias [ tobias at archlinux org ]
 
 pkgname=vi

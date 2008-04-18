@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/11/27 19:31:35 andyrtr Exp $
+# $Id$
 # Contributor: Torsten Evers <tevers@onlinehome.de>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=ksensors

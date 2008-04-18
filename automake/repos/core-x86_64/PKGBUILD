@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.45 2008/01/27 23:41:43 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=automake
 pkgver=1.10.1

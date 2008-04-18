@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2004/05/26 23:28:47 lou Exp $
+# $Id$
 # Maintainer: Lou Greenwood <lou@archlinux.org>
 
 pkgname=trm

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2005/11/09 11:40:50 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=libungif

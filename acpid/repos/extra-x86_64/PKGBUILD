@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/07/02 19:46:33 andyrtr Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 # Contributor: Manolis Tzanidakis
 pkgname=acpid

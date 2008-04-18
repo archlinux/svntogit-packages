@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/03/16 21:06:53 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-ati

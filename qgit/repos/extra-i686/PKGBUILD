@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/11/10 15:19:08 pierre Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 pkgname=qgit
 pkgver=1.5.7

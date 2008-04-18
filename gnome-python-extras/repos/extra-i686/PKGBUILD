@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2007/04/22 13:16:17 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-python-extras

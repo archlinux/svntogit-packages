@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/31 03:29:21 eric Exp $
+# $Id$
 # Maintainer: Varun Acharya <varun@archlinux.org>
 
 pkgname=miro

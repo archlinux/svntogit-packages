@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2005/09/29 15:58:10 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 # Contributor: Manolis Tzanidakis
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/08/26 15:51:09 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=hibernate-script

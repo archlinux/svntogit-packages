@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/03/04 09:11:56 simo Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Kritoke <kritoke@gamebox.net>
 

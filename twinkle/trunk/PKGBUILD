@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2008/01/07 10:10:17 alexander Exp $
+# $Id$
 # Maintainer: Jeff Mickey <jeff@archlinux.org>
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # AUR Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>

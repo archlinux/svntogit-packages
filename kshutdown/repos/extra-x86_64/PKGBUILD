@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/12/20 08:30:01 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kshutdown

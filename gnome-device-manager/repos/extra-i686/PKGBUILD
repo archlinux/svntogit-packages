@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/10/28 21:25:09 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-device-manager

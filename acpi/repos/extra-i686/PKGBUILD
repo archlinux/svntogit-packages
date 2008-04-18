@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2005/05/02 02:21:42 judd Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=acpi
 pkgver=0.09

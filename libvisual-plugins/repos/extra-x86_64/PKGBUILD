@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/06/05 20:45:19 andyrtr Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libvisual-plugins

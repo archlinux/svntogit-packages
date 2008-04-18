@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/07/30 23:05:07 tom Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=nvidia-mm

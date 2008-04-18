@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.36 2008/02/28 18:30:56 thomas Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=klibc-udev

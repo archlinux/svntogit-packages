@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/10/08 20:02:41 andyrtr Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=openoffice-spell-nl

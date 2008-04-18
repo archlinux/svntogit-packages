@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/06/17 09:56:51 andyrtr Exp $
+# $Id$
 # Contributor: Greg Grabinski <greg@grabinski.ch>
 # Maintainer: dorphell <dorphell@archlinux.org>
 

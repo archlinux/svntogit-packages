@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.50 2008/03/23 20:52:36 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-games

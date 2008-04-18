@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2004/11/07 17:43:46 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=ogmtools

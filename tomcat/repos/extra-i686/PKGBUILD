@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/12 04:02:04 paul Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=tomcat
 pkgver=5.5.23

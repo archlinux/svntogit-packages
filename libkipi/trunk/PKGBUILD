@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2006/12/20 19:56:50 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=libkipi

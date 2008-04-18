@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/03/12 23:41:11 jgc Exp $
+# $Id$
 # Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-pilot

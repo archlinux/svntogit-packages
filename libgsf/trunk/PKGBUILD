@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/12 22:26:35 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
 

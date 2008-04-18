@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/03/13 16:20:01 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=totem-plparser

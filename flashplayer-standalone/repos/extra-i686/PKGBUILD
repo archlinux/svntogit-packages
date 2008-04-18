@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/07/17 01:28:18 simo Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=flashplayer-standalone
 pkgver=9.0.48.0

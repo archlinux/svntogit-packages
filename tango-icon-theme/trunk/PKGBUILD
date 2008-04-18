@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/10/26 17:14:38 andyrtr Exp $
+# $Id$
 # Maintainer: James Rayner <james@archlinux.org>
 # Contributor: William Rea <sillywilly@gmail.com>
 pkgname=tango-icon-theme

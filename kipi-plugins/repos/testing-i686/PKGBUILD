@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2008/04/02 22:20:58 tobias Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 # 0.1.3-1 -> 0.1.3-2 : rebuild against exiv2=0.13, libnamechange 0.12 -> 0.13 - damir 

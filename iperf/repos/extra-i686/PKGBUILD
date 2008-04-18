@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/03/29 17:08:32 jgc Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 
 pkgname=iperf

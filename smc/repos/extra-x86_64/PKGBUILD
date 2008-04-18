@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/12/26 10:23:29 juergen Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 # Contributor: Kritoke <typeolinux@yahoo.com>
 

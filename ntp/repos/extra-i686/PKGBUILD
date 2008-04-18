@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2007/12/31 04:11:20 paul Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=ntp
 pkgver=4.2.4p4

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/07/12 09:51:18 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=scim-anthy

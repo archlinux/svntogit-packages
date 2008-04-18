@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/08/14 03:39:50 eric Exp $
+# $Id$
 # Maintainer: eric <eric@archlinux.org>
 
 pkgname=vtun

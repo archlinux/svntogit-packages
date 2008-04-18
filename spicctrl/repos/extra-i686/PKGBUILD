@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2005/07/18 02:39:38 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Contributer: Jason Chu <jchu@xentac.net>
 pkgname=spicctrl

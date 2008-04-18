@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.49 2008/03/21 17:09:13 tpowa Exp $
+#$Id$
 #Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=ndiswrapper

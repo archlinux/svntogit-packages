@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/01/12 18:45:38 juergen Exp $
+# $Id$
 # Contributor: Paul Mattal <paul@mattal.com>
 # Maintainer: Juergen Hoetzel <juergen@hoetzel.info>
 

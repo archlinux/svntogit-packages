@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/04/01 17:28:15 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gvfs

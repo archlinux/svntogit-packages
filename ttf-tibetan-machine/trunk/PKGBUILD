@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/12/28 18:51:13 damir Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-tibetan-machine

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/09/20 18:14:50 jason Exp $
+# $Id$
 # Contributor: John Proctor <jproctor@prium.net>
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=ctags

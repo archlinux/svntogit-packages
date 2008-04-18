@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/03/16 13:52:43 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-system-monitor

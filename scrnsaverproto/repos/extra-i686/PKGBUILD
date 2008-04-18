@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/04/17 21:11:14 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=scrnsaverproto

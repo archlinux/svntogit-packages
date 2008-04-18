@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/08/25 11:56:53 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=libgtkhtml
 pkgver=2.11.1

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/08/22 20:58:49 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxpm

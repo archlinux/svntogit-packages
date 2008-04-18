@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/10/08 15:38:54 daniel Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=ntop

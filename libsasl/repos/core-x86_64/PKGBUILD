@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/11/15 23:53:18 daniel Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libsasl

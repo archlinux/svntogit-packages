@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2004/04/19 06:24:58 dorphell Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=usbview
 pkgver=1.0

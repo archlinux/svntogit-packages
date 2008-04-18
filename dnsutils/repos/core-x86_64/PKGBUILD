@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/12/19 02:56:20 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: mario <mario_vazq@hotmail.com>
 pkgname=dnsutils

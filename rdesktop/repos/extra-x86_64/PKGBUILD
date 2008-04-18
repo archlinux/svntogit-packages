@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2007/04/17 00:43:46 dan Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 pkgname=rdesktop
 pkgver=1.5.0

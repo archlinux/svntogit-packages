@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/09/02 15:59:29 jgc Exp $
+# $Id$
 # Maintainer: Kevin <kevin@archlinux.org>
 
 pkgname=perl-compress-raw-zlib

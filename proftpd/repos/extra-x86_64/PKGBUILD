@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2007/10/10 00:51:46 eric Exp $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
 pkgname=proftpd

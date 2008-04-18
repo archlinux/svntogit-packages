@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.30 2008/03/03 19:04:32 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 provides=('quanta')

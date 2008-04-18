@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2007/11/16 00:02:35 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=net-tools
 pkgver=1.60

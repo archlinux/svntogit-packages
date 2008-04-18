@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2006/02/17 00:37:31 simo Exp $
+# $Id$
 # Contributer: Jason Chu <jchu@xentac.net>
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=sonypid

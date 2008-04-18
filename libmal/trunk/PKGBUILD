@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/09/29 15:21:19 jgc Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=libmal

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/08/21 11:10:23 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libice

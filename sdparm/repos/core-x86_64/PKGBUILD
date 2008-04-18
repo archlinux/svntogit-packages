@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/11/16 00:02:38 daniel Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <Roman.Kyrylych@gmail.com>
 # Contributor: grimi@poczta.fm
 

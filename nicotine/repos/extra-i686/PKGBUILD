@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2007/10/08 16:37:55 varun Exp $
+# $Id$
 # Maintainer: Jan de Groot <jan@jgc.homeip.net>
 # Contributor: Andrew Wright <andreww@photism.org>
 

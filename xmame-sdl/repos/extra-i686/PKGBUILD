@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2006/08/19 12:35:45 jgc Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=xmame-sdl

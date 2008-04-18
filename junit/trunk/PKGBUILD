@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/05 21:34:06 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=junit
 pkgver=4.4

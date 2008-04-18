@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/01/19 09:03:04 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=ghc
 pkgver=6.8.2

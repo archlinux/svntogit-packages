@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2007/11/02 19:50:59 tpowa Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=mdadm
 pkgver=2.6.4

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2005/12/11 12:54:51 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libvisual-bmp

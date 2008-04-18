@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/03/30 13:17:27 jgc Exp $
+# $Id$
 # Contributor : Rohan Dhruva
 
 pkgname=gnash-common

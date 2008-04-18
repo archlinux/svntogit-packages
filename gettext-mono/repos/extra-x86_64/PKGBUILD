@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/03/27 20:02:50 daniel Exp $
+# $Id$
 # Maintainer: Daniel Isenmann <daniel@archlinux.org>
 
 pkgname=gettext-mono

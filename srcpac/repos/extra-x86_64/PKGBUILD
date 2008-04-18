@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/05/01 03:37:02 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=srcpac

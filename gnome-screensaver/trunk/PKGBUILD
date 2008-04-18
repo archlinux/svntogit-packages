@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/16 13:01:30 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-screensaver

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/07/09 22:44:35 tpowa Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gcc34
 pkgver=3.4.6

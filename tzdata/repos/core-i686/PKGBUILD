@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/03/27 22:39:52 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=tzdata

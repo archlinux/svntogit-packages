@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/09/06 15:45:31 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=culmus

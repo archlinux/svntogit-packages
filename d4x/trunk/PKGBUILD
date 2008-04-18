@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2006/06/03 13:04:26 arjan Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=d4x
 pkgver=2.5.7.1

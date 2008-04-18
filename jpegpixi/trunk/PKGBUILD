@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/08/08 11:38:21 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=jpegpixi

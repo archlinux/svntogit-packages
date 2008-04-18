@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/02/11 23:08:32 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=libticables
 pkgver=1.2.0

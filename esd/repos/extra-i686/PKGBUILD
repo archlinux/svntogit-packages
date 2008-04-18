@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2007/06/30 12:50:41 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=esd
 pkgver=0.2.38

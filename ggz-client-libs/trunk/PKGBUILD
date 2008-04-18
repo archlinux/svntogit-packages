@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/14 22:03:07 jgc Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=ggz-client-libs

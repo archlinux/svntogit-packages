@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/08/14 02:03:04 eric Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=mtx

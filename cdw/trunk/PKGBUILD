@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/05/05 14:40:09 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 # Contributor: Simon Csaba Endre <secsaba@pagony.net>
 

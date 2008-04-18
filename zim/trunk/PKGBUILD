@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2007/11/28 04:05:04 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=zim

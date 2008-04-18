@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/10/08 13:04:46 travis Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=desktop-file-utils
 pkgver=0.14

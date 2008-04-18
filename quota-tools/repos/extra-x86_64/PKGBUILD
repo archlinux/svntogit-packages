@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/09/10 04:56:21 eric Exp $
+# $Id$
 # Maintainer: Judd <judd@archlinux.org>
 pkgname=quota-tools
 pkgver=3.15

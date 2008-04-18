@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/02/18 21:41:09 eric Exp $
+# $Id$
 # Maintainer: Damir Perisa <damir.perisa@bluewin.ch>
 # Contributor: Ben <ben@benmazer.net>
 

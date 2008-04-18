@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2008/01/15 03:51:55 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Sarah Hay <sarah@archlinux.org>
 

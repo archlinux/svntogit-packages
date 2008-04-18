@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/11/16 00:02:40 daniel Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=zd1211-firmware

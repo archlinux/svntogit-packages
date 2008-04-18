@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/01/29 14:37:01 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=ms-sys
 pkgver=2.1.2

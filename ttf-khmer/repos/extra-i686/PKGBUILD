@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/11/01 01:08:48 damir Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-khmer

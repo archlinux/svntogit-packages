@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/29 15:35:12 damir Exp $
+# $Id$
 # Contributor: Giovanni Scafora <linuxmania@gmail.com>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=kdebluetooth

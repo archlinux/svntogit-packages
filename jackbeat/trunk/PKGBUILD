@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/02/10 22:05:05 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=jackbeat

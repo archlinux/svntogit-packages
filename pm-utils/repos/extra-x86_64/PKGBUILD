@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.4 2007/12/26 14:07:40 jgc Exp $
+#$Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=pm-utils
 pkgver=1.1.0

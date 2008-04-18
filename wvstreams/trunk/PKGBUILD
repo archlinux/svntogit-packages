@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2008/03/23 17:09:09 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=wvstreams
 pkgver=4.4.1

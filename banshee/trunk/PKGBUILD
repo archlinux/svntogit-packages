@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2008/03/24 14:53:40 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=banshee

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/12/03 20:22:29 tobias Exp $
+# $Id$
 
 pkgname=xfce4-xmms-plugin
 pkgver=0.5.1

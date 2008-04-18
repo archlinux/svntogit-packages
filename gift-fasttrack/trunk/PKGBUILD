@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2005/10/01 14:20:32 jgc Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 # Contributor: Andrew Wright <andreww@photism.org>
 

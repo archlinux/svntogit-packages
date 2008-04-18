@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/03/19 23:18:15 dan Exp $
+# $Id$
 # Maintainer: Woody Gilk <woody@archlinux.org>
 pkgname=libflashsupport
 pkgver=9.0.21.78

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/09/19 20:26:50 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Jochem Kossen <j.kossen@home.nl>
 pkgname=aspell

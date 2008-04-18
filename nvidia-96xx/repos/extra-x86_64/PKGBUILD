@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/21 17:12:50 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=nvidia-96xx

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/05/22 22:05:11 jason Exp $
+# $Id$
 # Maintainer: Arjan timmerman <arjan@soulfly.nl>
 # Contributor: Link Dupont <link@subpop.net>
 

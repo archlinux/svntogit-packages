@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/05/27 07:26:23 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=dirmngr
 pkgver=0.9.7

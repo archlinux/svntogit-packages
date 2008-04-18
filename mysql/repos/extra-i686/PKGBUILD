@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.89 2008/02/12 12:02:45 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
 pkgname=mysql

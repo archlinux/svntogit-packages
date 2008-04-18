@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2004/10/28 05:51:26 judd Exp $
+# $Id$
 # Maintainer: 
 pkgname=tpctl
 pkgver=4.15

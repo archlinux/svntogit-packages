@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/06/18 02:12:45 eric Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 
 pkgname=cdrkit

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/09/04 20:12:53 andyrtr Exp $
+# $Id$
 # Maintainer: Corrado 'bardo' Primier <corrado.primier@mail.polimi.it>
 # Contributor: pressh <pressh at gmail dot com>
 

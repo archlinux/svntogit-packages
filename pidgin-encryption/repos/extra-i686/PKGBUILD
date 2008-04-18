@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/05/11 16:56:34 dan Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 # Contributor: Dale Blount <dale@archlinux.org>
 

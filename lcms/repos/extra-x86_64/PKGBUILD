@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/10/25 21:01:07 tobias Exp $
+# $Id$
 # Maintainer: Tobias Kieslich <neri@archlinux.org>
 # Contributor: Ben <contrasutra@myrealbox.com>
 

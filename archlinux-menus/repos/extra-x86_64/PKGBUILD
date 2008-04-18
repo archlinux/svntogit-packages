@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2008/03/12 21:15:36 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=archlinux-menus

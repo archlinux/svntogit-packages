@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/03/02 11:05:55 juergen Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 # Contributor: Douglas Soares de Andrade <dsandrade@gmail.com>
 pkgname=twisted

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/26 19:53:26 daniel Exp $
+# $Id$
 # Maintainer: Daniel Isenmann <daniel@archlinux.org>
 
 pkgname=gtklp

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2004/09/30 16:17:24 damir Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=fortune-mod-futurama

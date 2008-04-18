@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.54 2008/03/03 19:02:29 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdegraphics

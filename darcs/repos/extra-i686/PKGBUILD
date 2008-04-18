@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/06/18 16:26:45 dan Exp $
+# $Id$
 # Maintainer: Simo Leone <simo@archlinux.org>
 # Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=darcs

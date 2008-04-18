@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/10/14 23:09:21 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=fyre

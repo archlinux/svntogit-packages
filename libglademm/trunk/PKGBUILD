@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/17 23:25:39 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Kritoke <typeolinux@yahoo.com>
 pkgname=libglademm

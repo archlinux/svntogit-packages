@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/10/04 16:13:51 andyrtr Exp $
+# $Id$
 # Maintainer: 
 # Contributor: Jochem Kossen <j.kossen@home.nl>
 pkgname=id3lib

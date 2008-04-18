@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/09/16 17:44:36 thomas Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libstdc++5

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/08/12 09:34:37 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-a

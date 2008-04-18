@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.41 2008/03/21 17:11:39 tpowa Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=fcpci

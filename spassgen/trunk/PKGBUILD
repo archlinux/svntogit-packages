@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/11/10 15:43:30 pierre Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=spassgen

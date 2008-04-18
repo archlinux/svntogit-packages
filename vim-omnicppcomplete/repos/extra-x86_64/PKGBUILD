@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/02/04 21:02:20 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-omnicppcomplete

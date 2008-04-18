@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/05/12 13:07:59 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 
 pkgname=nppangband

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/01/26 15:07:18 andyrtr Exp $
+# $Id$
 # Contributor: Markus Meissner <markus@meissna.de>
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=nvclock

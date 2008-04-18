@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/12/12 16:25:09 alexander Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 
 pkgname=mozilla-common

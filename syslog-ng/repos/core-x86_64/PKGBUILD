@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/12/09 00:09:26 eric Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=syslog-ng
 pkgver=2.0.6

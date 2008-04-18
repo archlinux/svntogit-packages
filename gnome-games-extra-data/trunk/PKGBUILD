@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/09/23 19:50:09 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-games-extra-data

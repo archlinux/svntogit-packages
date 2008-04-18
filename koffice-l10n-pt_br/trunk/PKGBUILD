@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/06/09 21:44:51 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org> 
 pkgname=koffice-l10n-pt_br
 pkgver=1.6.3

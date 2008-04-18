@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.43 2008/03/25 23:44:42 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
  
 pkgname=rhythmbox

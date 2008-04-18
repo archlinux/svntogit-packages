@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/01/16 22:55:39 tom Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=libldap
 pkgver=2.3.40

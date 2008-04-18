@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2005/08/24 17:26:51 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=libjpeg

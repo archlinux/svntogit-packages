@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/12/15 03:26:29 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=lyx
 pkgver=1.5.2

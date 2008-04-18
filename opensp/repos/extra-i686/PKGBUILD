@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2005/09/30 18:33:32 tobias Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=opensp

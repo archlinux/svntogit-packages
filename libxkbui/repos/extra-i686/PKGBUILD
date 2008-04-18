@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/04/29 13:44:08 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libxkbui

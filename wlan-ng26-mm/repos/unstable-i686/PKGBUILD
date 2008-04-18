@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/07/27 09:30:27 tom Exp $
+# $Id$
 # Maintainer: Tom Killian <tom@archlinux.org>
 
 pkgname=wlan-ng26-mm

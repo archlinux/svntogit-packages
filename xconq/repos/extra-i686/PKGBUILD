@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/10/22 01:34:07 jeff Exp $
+# $Id$
 # Maintainer: Jeff 'codemac' Mickey <jeff@archlinux.org>
 # Maintainer: roberto <roberto@archlinux.org>
 pkgname=xconq

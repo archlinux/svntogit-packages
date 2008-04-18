@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/05/30 20:45:49 tpowa Exp $
+# $Id$
 #Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=lablgtk

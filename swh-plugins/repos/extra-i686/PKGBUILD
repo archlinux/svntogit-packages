@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/09/23 15:21:57 damir Exp $
+# $Id$
 #Maintainer: Damir Perisa <damir.perisa@bluewin.ch>
 #Contributor: Robert Emil Berge
 

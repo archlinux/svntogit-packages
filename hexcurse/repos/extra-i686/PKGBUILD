@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2004/04/19 06:20:46 dorphell Exp $
+# $Id$
 # Maintainer: eric <eric@archlinux.org>
 
 pkgname=hexcurse

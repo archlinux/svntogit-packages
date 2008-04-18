@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/02/18 21:47:02 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=phpbb

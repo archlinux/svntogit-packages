@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/04/09 20:05:18 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libipoddevice

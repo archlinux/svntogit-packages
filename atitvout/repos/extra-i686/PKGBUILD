@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2004/04/19 06:24:58 dorphell Exp $
+# $Id$
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 # Maintainer: damir <damir@archlinux.org>
 pkgname=atitvout

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2007/12/05 02:54:52 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 
 pkgname=motion

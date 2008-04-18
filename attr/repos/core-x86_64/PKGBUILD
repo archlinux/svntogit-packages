@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/02/26 15:19:33 thomas Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=attr
 pkgver=2.4.41

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2008/03/12 21:16:12 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jan@archlinux.org>
 
 pkgname=gnome-menus

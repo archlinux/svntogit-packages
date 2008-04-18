@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2008/01/19 08:11:32 simo Exp $
+# $Id$
 # vim: ts=2 sw=2 noet
 #Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=freepops

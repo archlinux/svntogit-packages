@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/03/25 21:48:51 damir Exp $
+# $Id$
 # Maintainer : Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=ttf-fireflysung

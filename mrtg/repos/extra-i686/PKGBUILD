@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/07/08 23:57:51 eric Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 
 pkgname=mrtg

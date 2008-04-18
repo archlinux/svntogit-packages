@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.5 2007/10/28 21:21:24 jgc Exp $
+#$Id$
 # Maintainer: Jan de Groot <jgc@arclinux.org>
 
 pkgname=gnome-mount

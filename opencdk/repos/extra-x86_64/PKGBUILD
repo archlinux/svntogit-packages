@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/12/02 14:55:04 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=opencdk
 pkgver=0.6.6

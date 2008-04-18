@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/21 17:13:54 tpowa Exp $
+# $Id$
 # Maintainer:
 # Contributor: Steve Vialle <steve_v@orcon.net.nz>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2007/09/19 21:19:54 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=fam

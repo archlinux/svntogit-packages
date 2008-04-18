@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/09/25 15:24:27 alexander Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-unichrome
 pkgver=0.2.6

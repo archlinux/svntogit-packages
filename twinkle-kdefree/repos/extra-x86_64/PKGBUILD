@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2008/01/07 10:13:03 alexander Exp $
+# $Id$
 # Maintainer: Jeff Mickey <jeff@archlinux.org>
 # AUR Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>
 pkgname=twinkle-kdefree

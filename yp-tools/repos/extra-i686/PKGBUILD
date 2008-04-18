@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/02/28 23:18:24 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=yp-tools

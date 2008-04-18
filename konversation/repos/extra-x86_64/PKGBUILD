@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/10/18 00:18:25 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 # Contributor: Sergio Jovani Guzman <moret@paretux.org>
 

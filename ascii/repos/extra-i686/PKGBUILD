@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2004/04/19 06:19:24 dorphell Exp $
+# $Id$
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 # Maintainer: damir <damir@archlinux.org>
 

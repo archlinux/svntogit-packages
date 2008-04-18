@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2008/04/02 20:12:52 juergen Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@hoetzel.info>
 # Contributor: basilburn (basilburn), Paul Bredbury (brebs) 
 

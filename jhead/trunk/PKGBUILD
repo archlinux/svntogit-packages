@@ -1,5 +1,5 @@
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
-# $Id: PKGBUILD,v 1.5 2005/12/19 18:25:39 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=jhead
 pkgver=2.4

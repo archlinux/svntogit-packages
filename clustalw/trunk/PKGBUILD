@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/02/15 14:49:02 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=clustalw

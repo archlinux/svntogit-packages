@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/01/16 23:42:35 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=dvgrab
 pkgver=3.1

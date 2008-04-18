@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/07/24 20:07:32 dale Exp $
+# $Id$
 # Contributor: Dale Blount <dale@archlinux.org>
 # Maintainer: Dale Blount <dale@archlinux.org>
 pkgname=rbldnsd

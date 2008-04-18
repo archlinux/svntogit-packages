@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.49 2008/03/03 19:03:01 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdemultimedia

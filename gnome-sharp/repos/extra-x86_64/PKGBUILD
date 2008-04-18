@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/14 23:03:42 jgc Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 
 pkgname=gnome-sharp

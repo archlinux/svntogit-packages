@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2008/03/17 11:54:27 pierre Exp $
+# $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 pkgname=gnash-kde
 pkgver=0.8.2

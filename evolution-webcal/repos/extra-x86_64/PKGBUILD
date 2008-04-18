@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/14 17:48:25 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evolution-webcal

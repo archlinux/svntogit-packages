@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.38 2008/01/17 04:08:55 jason Exp $
+# $Id$
 # Contributor: Jason Chu <jason@archlinux.org>
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=namcap

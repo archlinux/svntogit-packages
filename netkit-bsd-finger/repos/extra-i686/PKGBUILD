@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/06/19 19:43:03 judd Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=netkit-bsd-finger
 pkgver=0.17

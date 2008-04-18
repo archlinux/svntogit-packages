@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/03/18 14:42:19 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=startup-notification
 pkgver=0.9

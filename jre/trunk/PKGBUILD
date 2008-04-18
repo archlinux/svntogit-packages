@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/30 09:25:48 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=jre

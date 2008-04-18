@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/03/21 23:09:11 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 
 pkgname=gtk-doc 

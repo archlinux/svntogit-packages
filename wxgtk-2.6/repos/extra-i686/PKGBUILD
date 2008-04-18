@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/08/31 07:54:59 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=wxgtk-2.6
 pkgver=2.6.4

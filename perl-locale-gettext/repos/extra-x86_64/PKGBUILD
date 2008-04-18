@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/04 03:53:45 kevin Exp $
+# $Id$
 # Contributor: Mark Rosenstand <mark@borkware.net>
 # Maintainer: Paul Mattal <paul@archlinux.org>
 

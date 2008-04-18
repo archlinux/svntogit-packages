@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/11/05 23:34:37 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 # Contributor: Tom K <tomk@runbox.com>
 pkgname=gnupod

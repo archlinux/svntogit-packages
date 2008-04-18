@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/04/10 22:03:31 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=potrace

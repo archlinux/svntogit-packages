@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/05/14 18:56:54 uid1015 Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xorg-clients

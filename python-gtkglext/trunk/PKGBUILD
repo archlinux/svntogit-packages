@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/02/12 22:49:23 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=python-gtkglext
 pkgver=1.1.0

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2004/04/19 06:24:56 dorphell Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Kritoke <typeolinux@yahoo.com>
 pkgname=xpenguins_themes

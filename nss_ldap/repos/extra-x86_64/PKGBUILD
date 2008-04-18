@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/10/01 17:11:52 jgc Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 # Contributor: Comete <la_comete@tiscali.fr>
 pkgname=nss_ldap

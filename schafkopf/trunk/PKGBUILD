@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/02/13 19:10:34 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=schafkopf

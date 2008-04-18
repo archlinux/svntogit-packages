@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/05/16 21:53:41 jgc Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=pyvorbis
 pkgver=1.4

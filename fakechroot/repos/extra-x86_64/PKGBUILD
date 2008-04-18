@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/06/15 23:47:26 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=fakechroot

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/11/15 23:53:12 daniel Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=bcm43xx-fwcutter

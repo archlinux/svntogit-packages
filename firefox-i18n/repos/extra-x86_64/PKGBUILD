@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/04/01 11:50:45 alexander Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 # Contributor: Jaroslaw Swierczynski <swiergot@juvepoland.com>
 # Contributor: Michal Hybner <dta081@gmail.com>

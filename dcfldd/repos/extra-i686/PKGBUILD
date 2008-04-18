@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/01/18 16:11:34 paul Exp $
+# $Id$
 # Contributor: Paul Mattal <pjmattal@elys.com>
 # Maintainer: Paul Mattal <pjmattal@elys.com>
 pkgname=dcfldd

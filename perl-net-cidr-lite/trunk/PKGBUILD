@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/24 03:31:51 kevin Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 
 pkgname=perl-net-cidr-lite

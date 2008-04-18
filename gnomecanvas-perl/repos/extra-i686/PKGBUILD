@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/15 03:54:15 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gnomecanvas-perl
 _realname=Gnome2-Canvas

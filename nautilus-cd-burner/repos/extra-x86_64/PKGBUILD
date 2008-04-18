@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.40 2008/03/13 23:35:45 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=nautilus-cd-burner

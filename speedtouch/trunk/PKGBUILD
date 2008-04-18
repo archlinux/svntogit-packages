@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2005/07/31 16:29:07 dorphell Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>
 pkgname=speedtouch

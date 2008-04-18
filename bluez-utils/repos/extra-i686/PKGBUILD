@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.39 2008/03/15 09:47:43 thomas Exp $
+# $Id$
 pkgname=bluez-utils
 pkgver=3.30
 pkgrel=1

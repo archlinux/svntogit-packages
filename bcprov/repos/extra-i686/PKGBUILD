@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/05 21:33:28 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=bcprov
 pkgver=1.38

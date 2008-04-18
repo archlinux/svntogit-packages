@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/02/09 15:32:33 dan Exp $
+# $Id$
 # Maintainer: Judd Vinet <judd@archlinux.org>
 
 pkgname=licenses

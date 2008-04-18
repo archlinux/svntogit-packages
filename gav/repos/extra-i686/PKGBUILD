@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/06/06 02:01:37 jeff Exp $
+# $Id$
 # Maintainer: Jeff 'codemac' Mickey <jeff@archlinux.org>
 # Maintainer: eric <eric@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>

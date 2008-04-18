@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.46 2008/03/03 21:26:57 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=kdeaddons

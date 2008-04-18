@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2004/10/23 15:43:07 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=sn

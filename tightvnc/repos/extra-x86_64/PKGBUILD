@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/12/30 22:28:08 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 pkgname=tightvnc
 pkgver=1.3.9

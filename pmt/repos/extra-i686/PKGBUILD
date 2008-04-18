@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/06/11 21:20:24 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=pmt

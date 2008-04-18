@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/01/24 16:29:18 jason Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=pyxml

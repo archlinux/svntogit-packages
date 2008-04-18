@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/11/15 23:53:13 daniel Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 # Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>
 pkgname=cracklib

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2005/05/01 19:33:21 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 pkgname=hping
 pkgver=2.0.0

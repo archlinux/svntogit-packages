@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/03/25 13:28:57 arjan Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=achessclock
 pkgver=0.9.2b

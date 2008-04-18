@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/07/27 09:29:38 tom Exp $
+# $Id$
 # Contributor: Giovanni Scafora <linuxmania@gmail.com>
 # Maintainer: James Rayner <iphitus@gmail.com>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/02/06 09:30:59 jgc Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=pmount

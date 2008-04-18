@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2004/10/29 11:12:48 damir Exp $
+# $Id$
 # Maintainter: Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=thttpd

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2008/01/27 22:19:45 andyrtr Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=wget
 pkgver=1.11

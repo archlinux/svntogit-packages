@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/02/28 11:35:14 roman Exp $
+# $Id$
 # Committer: nifan <carlos@nifan.tk>
 # Mantainer: Roman Kyrylych <roman@archlinux.org>
 

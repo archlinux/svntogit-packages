@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2007/06/10 17:55:04 jgc Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=tunepimp

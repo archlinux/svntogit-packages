@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/11/15 23:53:13 daniel Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=csup

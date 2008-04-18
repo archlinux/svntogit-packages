@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/09/22 18:06:14 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxxf86dga

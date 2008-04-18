@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/11/22 18:17:31 juergen Exp $
+# $Id$
 # Contributor: Jason Chu <jason@archlinux.org>, Chris Stromblad
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 # Use makepkg -n to prevent library stripping errors.

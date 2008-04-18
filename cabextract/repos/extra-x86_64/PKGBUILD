@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/05/01 18:58:53 andyrtr Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 pkgname=cabextract
 pkgver=1.2

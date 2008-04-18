@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2004/02/21 21:10:45 aurelien Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 pkgname=ccmalloc
 pkgver=0.4.0

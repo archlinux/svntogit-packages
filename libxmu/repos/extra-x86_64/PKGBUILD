@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/02/01 12:59:30 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxmu

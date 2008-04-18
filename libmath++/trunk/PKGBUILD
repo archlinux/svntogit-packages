@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2005/09/26 18:46:16 tpowa Exp $
+# $Id$
 # Contributor: Kritoke <typeolinux@yahoo.com>
 # Maintainer: damir <damir@archlinux.org>
 

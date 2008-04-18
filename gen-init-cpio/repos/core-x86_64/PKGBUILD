@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/15 23:53:15 daniel Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=gen-init-cpio

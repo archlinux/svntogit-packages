@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/04/01 18:30:50 paul Exp $
+# $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 pkgname=mailman
 pkgver=2.1.9

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/03/04 20:22:56 eric Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=eboard

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/04/22 17:59:06 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Sebastian Sariego B. <seba@craftlink.org>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2007/08/22 18:48:55 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=naim
 pkgver=0.11.8.3.1

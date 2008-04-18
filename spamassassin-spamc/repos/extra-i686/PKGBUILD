@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/05/30 14:42:29 dale Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 
 pkgname=spamassassin-spamc

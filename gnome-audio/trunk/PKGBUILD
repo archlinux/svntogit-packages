@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/03/23 16:46:24 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-audio

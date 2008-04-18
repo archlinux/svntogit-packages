@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/06/27 00:21:38 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <simo@archlinux.org>
 pkgname=mod_hosts_access
 pkgver=1.1.0

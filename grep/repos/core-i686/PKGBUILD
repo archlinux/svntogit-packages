@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2007/12/08 11:22:54 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=grep
 pkgver=2.5.3

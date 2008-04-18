@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/11/10 15:43:00 pierre Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=pinentry
 pkgver=0.7.3

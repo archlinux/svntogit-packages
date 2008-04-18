@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2005/04/28 13:55:32 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=cpudyn

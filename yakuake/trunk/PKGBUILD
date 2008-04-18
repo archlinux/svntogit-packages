@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/01/29 10:27:07 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 #Contributor: leeghoofd <abcdefg@solcon.nl>
 

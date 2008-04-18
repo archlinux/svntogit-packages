@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2006/01/02 14:33:53 tpowa Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=apmd
 pkgver=3.0.2

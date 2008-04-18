@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/04 07:56:56 tobias Exp $
+# $Id$
 # Maintainer: tobias [tobias at archlinux.org]
 
 pkgname=mousepad

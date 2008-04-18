@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/02/28 09:50:22 roman Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <roman@archlinux.org>
 
 pkgname=libbtctl

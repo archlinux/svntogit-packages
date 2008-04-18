@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/12/06 20:00:40 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=lsdvd

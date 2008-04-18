@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2005/03/09 19:54:55 aurelien Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>
 pkgname=setserial

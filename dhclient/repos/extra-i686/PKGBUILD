@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.7 2008/03/30 08:18:33 thomas Exp $
+#$Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Mirko Messer <mirk@chao.ch>
 pkgname=dhclient 

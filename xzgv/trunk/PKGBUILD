@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/22 03:11:39 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: dorphell <dorphell@archlinux.org>
 pkgname=xzgv

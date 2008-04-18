@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.44 2007/10/26 16:34:58 andyrtr Exp $
+# $Id$
 # Contributor: Jeff Brodnax <tullyarcher@bellsouth.net>
 # Maintainer: Dale Blount <dale@archlinux.org>
 pkgname=postfix

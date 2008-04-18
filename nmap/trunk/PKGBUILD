@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.54 2008/03/22 15:29:32 dan Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=nmap

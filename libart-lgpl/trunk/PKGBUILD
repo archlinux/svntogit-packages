@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/03/10 23:10:05 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=libart-lgpl
 pkgver=2.3.20

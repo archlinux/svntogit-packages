@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2008/01/18 22:47:33 tom Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 pkgname=irssi
 pkgver=0.8.12

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/02/05 18:46:29 paul Exp $
+# $Id$
 #
 # Contributor: Paul Mattal <paul@mattal.com>
 # Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>

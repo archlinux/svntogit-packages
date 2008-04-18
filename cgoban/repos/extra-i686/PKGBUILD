@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2006/02/01 00:40:32 simo Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/01/30 02:46:57 judd Exp $
+# $Id$
 # Maintainer: Judd <jvinet@zeroflux.org>
 pkgname=sqlite2
 pkgver=2.8.17

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/12/07 16:43:34 jgc Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributer: Jan De Groot <jan@jgc.homeip.net>
 pkgname=hicolor-icon-theme

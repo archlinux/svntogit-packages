@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.52 2008/02/23 21:16:35 andyrtr Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=python
 pkgver=2.5.2

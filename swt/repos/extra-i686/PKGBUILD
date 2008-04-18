@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/12/21 12:07:17 alexander Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=swt
 pkgver=3.3

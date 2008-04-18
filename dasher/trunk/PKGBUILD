@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2008/03/12 23:09:23 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=dasher

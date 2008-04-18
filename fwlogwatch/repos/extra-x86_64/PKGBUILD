@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/05/08 21:42:18 juergen Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Contributor: Moritz Alexander Esser <Moritz.Esser@rwth-aachen.de>
 pkgname=fwlogwatch

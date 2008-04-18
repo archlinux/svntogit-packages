@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/07/06 02:01:06 eric Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=abcm2ps
 pkgver=4.12.30

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2007/12/07 14:22:46 roman Exp $
+# $Id$
 # Maintainer: Roman Kyrylych <roman@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>
 

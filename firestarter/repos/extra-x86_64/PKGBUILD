@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2007/04/26 21:11:52 jgc Exp $
+# $Id$
 # Maintainer: tobias <tobias@archlinux.org>
 # Contributor: Tobias Kieslich <tobias@justdreams.de>
 # kernel_log_path.patch by Darwin Bautista

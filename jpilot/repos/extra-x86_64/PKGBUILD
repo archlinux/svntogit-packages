@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2006/09/29 15:13:18 jgc Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 
 pkgname=jpilot

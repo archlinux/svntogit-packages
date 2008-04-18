@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/08/18 11:45:14 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-utils

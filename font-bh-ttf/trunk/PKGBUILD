@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/08/03 18:17:34 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=font-bh-ttf

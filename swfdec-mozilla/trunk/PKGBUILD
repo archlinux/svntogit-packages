@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.13 2008/03/17 20:07:41 andyrtr Exp $
+#$Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=swfdec-mozilla

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/10/07 06:35:33 tpowa Exp $
+# $Id$
 # Contributor: Essien Ita Essien <essiene@datavibe.net>
 # Maintainer: damir <damir@archlinux.org>
 

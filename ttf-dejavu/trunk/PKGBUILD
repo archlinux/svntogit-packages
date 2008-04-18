@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/03/16 13:09:56 andyrtr Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Michal Krenek <mikos@sg1.cz>

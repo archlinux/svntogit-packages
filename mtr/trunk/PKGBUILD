@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/03/25 20:42:01 dan Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=mtr
 pkgver=0.72

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/03/27 00:34:03 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=corewars
 pkgver=0.9.13

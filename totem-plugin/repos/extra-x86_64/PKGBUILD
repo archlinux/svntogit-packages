@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2008/03/16 14:52:03 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=totem-plugin

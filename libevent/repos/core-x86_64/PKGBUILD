@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/11 17:59:57 tom Exp $
+# $Id$
 # Maintainer: Judd <jvinet@zeroflux.org>
 
 pkgname=libevent

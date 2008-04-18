@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/03 20:22:28 tobias Exp $
+# $Id$
 # Maintainer: 
 
 pkgname=xfce4-taskmanager

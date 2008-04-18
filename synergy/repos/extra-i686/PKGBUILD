@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/04/11 20:43:38 dale Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 
 pkgname=synergy

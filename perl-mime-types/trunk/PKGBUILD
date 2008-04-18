@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/01/24 03:46:50 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot
 # Contributor: Charles Mauch <cmauch@gmail.com>
 

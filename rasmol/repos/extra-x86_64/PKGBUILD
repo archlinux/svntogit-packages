@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/02/23 23:29:07 damir Exp $
+# $Id$
 # Maintainer :  Damir Perisa <damir.perisa@bluewin.ch>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=rasmol

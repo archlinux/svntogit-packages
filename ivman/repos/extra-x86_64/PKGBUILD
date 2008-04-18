@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/04/06 22:03:19 james Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 
 pkgname=ivman

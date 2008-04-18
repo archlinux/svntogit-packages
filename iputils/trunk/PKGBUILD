@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2007/12/08 11:39:45 tpowa Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=iputils

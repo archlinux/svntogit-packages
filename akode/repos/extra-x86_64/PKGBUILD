@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/06/12 07:44:33 alexander Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=akode
 pkgver=2.0.2

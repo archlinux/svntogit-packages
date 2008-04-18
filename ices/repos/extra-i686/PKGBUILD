@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/04/16 15:12:41 alexander Exp $
+# $Id$
 # Contributer: Jason Chu <jchu@xentac.net>
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=ices

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/12/07 10:46:44 tpowa Exp $
+# $Id$
 # Contributor: Mircea Bardac <dev@mircea.bardac.net> 
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=qca-qt3 

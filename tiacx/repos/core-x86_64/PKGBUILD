@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/03/30 11:21:33 thomas Exp $
+# $Id$
 # Maintainer: James Rayner <iphitus@gmail.com>
 
 pkgname=tiacx

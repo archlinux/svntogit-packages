@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/05/16 20:52:58 jgc Exp $
+# $Id$
 # Maintainer: roberto <roberto@archlinux.org>
 
 pkgname=artwiz-fonts

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2004/09/03 10:05:02 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=tuxpuck

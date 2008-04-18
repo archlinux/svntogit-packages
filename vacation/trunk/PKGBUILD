@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/05/02 19:12:23 dale Exp $
+# $Id$
 # Maintainer: dale <dale@archlinux.org>
 
 pkgname=vacation

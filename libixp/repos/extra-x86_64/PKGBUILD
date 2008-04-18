@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/12/19 23:25:09 jeff Exp $
+# $Id$
 # Maintainer: Jeff Mickey <jeff@archlinux.org>
 # Thanks to Alessio 'mOLOk' Bolognino
 

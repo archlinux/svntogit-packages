@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2007/04/22 16:51:39 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=ggv
 pkgver=2.12.0

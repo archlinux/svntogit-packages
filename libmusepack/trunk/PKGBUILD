@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2005/09/05 04:12:11 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libmusepack

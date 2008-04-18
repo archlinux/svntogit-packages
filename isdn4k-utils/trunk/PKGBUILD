@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2007/11/15 23:53:17 daniel Exp $
+# $Id$
 # Contributor: Dennis "Gyroplast" Herbrich <dennis@archlinux.org>
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=isdn4k-utils

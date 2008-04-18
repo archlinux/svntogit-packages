@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/03/16 21:02:33 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=unichrome-dri

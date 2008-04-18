@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2007/12/28 15:44:56 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 _enginename=xine

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/09/08 16:06:57 alexander Exp $
+# $Id$
 #  ppc Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # i686 Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xterm

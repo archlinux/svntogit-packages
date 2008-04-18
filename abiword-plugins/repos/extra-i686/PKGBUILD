@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/09/07 21:56:56 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=abiword-plugins
 pkgver=2.4.6

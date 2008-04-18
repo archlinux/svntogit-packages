@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2007/08/04 21:14:32 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libglade

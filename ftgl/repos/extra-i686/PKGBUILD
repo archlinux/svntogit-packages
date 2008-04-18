@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2006/07/11 16:07:31 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: tobias <tobias@archlinux.org>
 pkgname=ftgl

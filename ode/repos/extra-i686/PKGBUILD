@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/20 03:49:15 travis Exp $
+# $Id$
 # Maintainer: Travis Willard <travisw@wmpub.ca>
 # Contributor: Giovanni Scafora <linuxmania@gmail.com>
 # Contributor: Adam Griffiths <adam_griffithsAATTdart.net.au>

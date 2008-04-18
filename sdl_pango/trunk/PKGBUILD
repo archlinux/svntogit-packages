@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/10/29 11:35:49 arjan Exp $
+# $Id$
 #
 # Contributor: gyo <nucleogeek@gmail.com>
 

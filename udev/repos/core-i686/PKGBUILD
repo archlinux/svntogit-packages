@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.161 2008/03/21 22:05:16 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 pkgname=udev

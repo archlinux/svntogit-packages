@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2007/03/02 10:45:28 juergen Exp $
+# $Id$
 # Mantainer: Juergen Hoetzel <juergen@archlinux.org>
 
 pkgname=bittorrent

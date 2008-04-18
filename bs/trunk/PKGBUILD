@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2004/04/19 18:46:30 dale Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 pkgname=bs
 pkgver=2.7

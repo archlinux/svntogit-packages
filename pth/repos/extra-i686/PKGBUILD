@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2006/07/16 12:03:35 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=pth

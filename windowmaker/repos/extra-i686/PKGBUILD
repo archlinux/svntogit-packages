@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2007/09/10 20:39:22 tpowa Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=windowmaker

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2005/09/04 18:49:07 tobias Exp $
+# $Id$
 # Committer: Tobias Kieslich <tobias@justdreams.de>
 
 pkgname=gimageview

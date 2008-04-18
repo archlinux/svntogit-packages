@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/02/11 23:08:22 simo Exp $
+# $Id$
 #Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=libtifiles
 pkgver=1.1.0

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2008/02/19 19:18:28 andyrtr Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=vsftpd
 pkgver=2.0.6

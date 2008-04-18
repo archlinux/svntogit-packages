@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.83 2008/03/08 11:58:25 pierre Exp $
+# $Id$
 # Maintainer: Pierre Schmitz <pierre@zeroflux.de>
 pkgname=apache
 pkgver=2.2.8

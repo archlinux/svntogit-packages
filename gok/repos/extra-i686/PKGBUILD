@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/03/14 21:42:41 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gok

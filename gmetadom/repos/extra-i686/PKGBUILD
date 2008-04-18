@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/09/19 21:29:48 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gmetadom

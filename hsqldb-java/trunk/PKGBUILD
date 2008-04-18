@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/02 20:30:30 andyrtr Exp $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: Andrew Wright <andreww@photism.org>
 

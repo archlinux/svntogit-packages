@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/09 03:18:04 tobias Exp $
+# $Id$
 # Maintainer: tobias <tobias@justdreams.de>
 # Modified by: eliott <eliott@cactuswax.net>
 # Original by Benjamin Andresen, klapmuetz [at] gmail [dot] com

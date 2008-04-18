@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/02/16 16:17:33 travis Exp $
+# $Id$
 # Maintainer: Travis Willard <travisw@wmpub.ca>
 # Contributor: Alexander 'dma147' Mieland <dma147@linux-stats.org>
 # Contributor: Roberto Filippone <rfilippone@gmail.com>

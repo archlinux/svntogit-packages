@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/02/08 15:55:04 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=pdns-mysql
 pkgver=2.9.20

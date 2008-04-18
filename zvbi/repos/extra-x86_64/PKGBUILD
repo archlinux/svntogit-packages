@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/12/22 02:53:38 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: dorphell <dorphell@archlinux.org>
 pkgname=zvbi

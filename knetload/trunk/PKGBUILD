@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/06/04 18:17:56 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=knetload

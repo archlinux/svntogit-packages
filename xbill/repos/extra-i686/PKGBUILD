@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2006/03/23 11:58:16 arjan Exp $
+# $Id$
 # Maintainer: Arjan Timmerman <arjan@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 

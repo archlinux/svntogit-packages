@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2007/12/28 10:58:12 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=x11vnc

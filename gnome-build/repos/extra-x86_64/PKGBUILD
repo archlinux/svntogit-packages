@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/09/09 18:55:47 andyrtr Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-build

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2008/01/20 08:25:21 eric Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=licq
 pkgver=1.3.5

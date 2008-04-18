@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2005/12/22 08:43:45 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xf86driproto

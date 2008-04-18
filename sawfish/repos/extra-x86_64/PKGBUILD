@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/10/08 16:58:20 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org> 
 
 pkgname=sawfish

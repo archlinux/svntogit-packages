@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.42 2008/03/14 00:15:48 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evince

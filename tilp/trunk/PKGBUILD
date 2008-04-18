@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/02/11 23:09:04 simo Exp $
+# $Id$
 #Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=tilp
 pkgver=1.10

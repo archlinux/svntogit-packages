@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/01/29 10:11:17 james Exp $
+# $Id$
 # Maintainer: James Rayner <james@archlinux.org>
 # Contributor: Scott Horowitz <stonecrest@gmail.com>
 pkgname=mirage

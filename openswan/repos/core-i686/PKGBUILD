@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/12/08 09:45:43 tom Exp $
+# $Id$
 # Maintainer: Tom Killian <tom@arclinux.org>
 
 pkgname=openswan

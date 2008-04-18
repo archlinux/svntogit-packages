@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/08/05 17:54:17 jgc Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=graveman
 pkgver=0.3.12.5

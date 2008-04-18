@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/12/03 00:13:44 damir Exp $
+# $Id$
 # Maintainer: Roberto Carvajal <roberto@archlinux.org>
 pkgname=mp32ogg
 pkgver=0.11

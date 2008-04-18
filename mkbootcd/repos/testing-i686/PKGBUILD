@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/03/27 18:49:37 tpowa Exp $
+# $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=mkbootcd

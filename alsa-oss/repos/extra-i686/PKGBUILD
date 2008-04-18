@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.24 2007/10/19 07:17:02 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=alsa-oss
 pkgver=1.0.15

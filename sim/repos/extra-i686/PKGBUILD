@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/03/25 06:57:14 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=sim

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/08/22 11:12:22 daniel Exp $
+# $Id$
 # Contributor: dibblethewrecker dibblethewrecker.at.jiwe.dot.org
 pkgname=userui
 pkgver=0.7.2

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/10/04 19:48:35 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=tin
 pkgver=1.8.3

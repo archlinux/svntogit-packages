@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2008/03/16 20:57:36 jgc Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-mga

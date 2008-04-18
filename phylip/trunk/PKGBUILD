@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/02/17 00:34:44 damir Exp $
+# $Id$
 # Maintainter: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=phylip
 pkgver=3.67

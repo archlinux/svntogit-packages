@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2007/05/03 16:04:33 jgc Exp $
+# $Id$
 # Maintainer: Roberto Carvajal <roberto@archlinux.org>
 # Contributor: Kritoke <typeolinux@yahoo.com>
 

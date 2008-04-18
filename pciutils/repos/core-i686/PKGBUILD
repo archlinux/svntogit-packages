@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/11/16 00:02:36 daniel Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=pciutils
 pkgver=2.2.8

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/03/08 21:50:43 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gjdoc

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2008/03/15 15:17:28 travis Exp $
+# $Id$
 # Maintainer: Travis Willard <travisw@wmpub.ca>
 # Contributor: William Rea <sillywilly@gmail.com>
 

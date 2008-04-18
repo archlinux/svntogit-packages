@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.32 2007/12/08 08:31:29 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 #Contributor: Jacobo Arvelo <unix4all@ya.com> 
 pkgname=wesnoth 

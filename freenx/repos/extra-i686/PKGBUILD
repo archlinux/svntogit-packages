@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2007/10/31 17:48:06 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 #Contributed: eliott <eliott@solarblue.net>, Andre Naumann <anaumann@SPARCed.org> 
 pkgname=freenx

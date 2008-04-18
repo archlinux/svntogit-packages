@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/11/16 00:02:34 daniel Exp $
+# $Id$
 # Contributor: Low Kian Seong <fastmail_low@speedymail.org>
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=lzo2

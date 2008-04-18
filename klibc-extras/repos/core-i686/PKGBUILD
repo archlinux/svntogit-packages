@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/16 09:23:59 thomas Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=klibc-extras

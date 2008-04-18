@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2008/02/13 02:27:10 dan Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=doxygen
 pkgver=1.5.5

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/02/06 05:11:06 james Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 
 pkgname=rip

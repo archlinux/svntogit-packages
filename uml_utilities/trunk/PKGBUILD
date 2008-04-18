@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2007/08/26 12:51:29 thomas Exp $
+# $Id$
 # Contributor: Jason Chu <jason@archlinux.org>
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=uml_utilities

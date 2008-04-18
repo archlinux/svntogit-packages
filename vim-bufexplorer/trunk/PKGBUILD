@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.9 2007/11/28 08:10:32 aaron Exp $
+#$Id$
 #Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=vim-bufexplorer

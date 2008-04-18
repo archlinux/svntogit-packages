@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2008/01/17 03:35:44 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Contributor: Robert Emil Berge <robert@rebi.no>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2007/12/10 18:29:10 varun Exp $
+# $Id$
 # Maintainer: Daniel Isenmann <daniel@archlinux.org>
 
 pkgname=libbeagle

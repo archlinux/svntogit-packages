@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2008/01/14 20:47:15 dale Exp $
+# $Id$
 # Contributor: lowercase
 # Maintainer: Dale Blount <dale@archlinux.org>
 pkgname=syslinux

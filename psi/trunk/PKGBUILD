@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2008/01/26 12:56:02 pierre Exp $
+# $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 pkgname=psi
 pkgver=0.11

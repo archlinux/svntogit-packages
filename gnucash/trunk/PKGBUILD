@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/03/27 05:14:05 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 # Contributor: Mark Schneider <queueRAM@gmail.com>
 

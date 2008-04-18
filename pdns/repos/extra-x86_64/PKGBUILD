@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/02/08 15:51:30 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=pdns
 pkgver=2.9.20

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2008/01/24 04:02:03 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=perl-net-ip

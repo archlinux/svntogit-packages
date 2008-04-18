@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/03/30 09:24:58 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 
 pkgname=jdk

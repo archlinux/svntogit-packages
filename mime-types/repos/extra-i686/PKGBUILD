@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2007/04/28 18:05:18 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=mime-types
 pkgver=1.0

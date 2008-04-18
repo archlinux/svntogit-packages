@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.35 2008/03/16 22:29:51 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gtk-engines

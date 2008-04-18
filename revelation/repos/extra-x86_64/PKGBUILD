@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2007/04/22 17:48:08 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=revelation

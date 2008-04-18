@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/09/30 08:23:42 pierre Exp $
+# $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 # Contributor: Johannes Lauer <grosser.schlumpf@gmx.de>
 pkgname=gwenview-i18n

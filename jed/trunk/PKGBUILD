@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/05/29 19:16:27 juergen Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 
 pkgname=jed

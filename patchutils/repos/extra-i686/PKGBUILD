@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2005/06/13 20:15:31 aurelien Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>
 pkgname=patchutils

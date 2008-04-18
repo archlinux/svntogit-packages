@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/06/15 20:45:10 kevin Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 # Contributer: Jason Chu <jchu@xentac.net>
 pkgname=mahjong

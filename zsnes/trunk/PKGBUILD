@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2007/04/03 03:01:29 alexander Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>
 pkgname=zsnes

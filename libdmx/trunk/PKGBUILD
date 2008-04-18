@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/04/29 14:53:22 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libdmx

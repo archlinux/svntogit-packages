@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.16 2008/02/04 02:48:25 eric Exp $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Contributor: Lukas Sabota <punkrockguy318@cocmast.net> (Timidity Patch)

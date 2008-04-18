@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2008/03/21 17:08:53 tpowa Exp $
+# $Id$
 # Contributor: Giovanni Scafora <linuxmania@gmail.com>
 # Maintainer: James Rayner <iphitus@gmail.com>
 _kernver=2.6.24-ARCH

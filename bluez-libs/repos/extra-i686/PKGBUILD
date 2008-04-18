@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/03/15 09:43:43 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=bluez-libs
 pkgver=3.30

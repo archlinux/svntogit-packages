@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/12/15 00:47:35 damir Exp $
+# $Id$
 # Contributor: Camille Moncelier <pix@devlife.org>
 
 pkgname=m17n-lib

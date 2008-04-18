@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.21 2008/03/14 22:39:07 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=vino

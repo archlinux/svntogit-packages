@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/01/15 03:56:37 kevin Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-perl

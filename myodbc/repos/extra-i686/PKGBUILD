@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/08/02 19:05:07 juergen Exp $
+# $Id$
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=myodbc
 pkgver=3.51.17

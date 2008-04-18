@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/07/09 01:27:30 eric Exp $
+# $Id$
 # Contributor: John Proctor <jproctor@prium.net>
 # Maintainer: arjan <arjan@archlinux.org>
 pkgname=ccaudio

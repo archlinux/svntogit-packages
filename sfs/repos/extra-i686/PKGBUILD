@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2004/03/08 06:36:33 jason Exp $
+# $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 # Contributor: Jason Chu <jason@archlinux.org>
 # You need an sfs user and group to build this package

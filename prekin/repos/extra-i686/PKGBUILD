@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/06/04 21:02:34 simo Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 pkgname=prekin

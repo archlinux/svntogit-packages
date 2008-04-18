@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.33 2008/03/21 23:13:58 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=epiphany-extensions

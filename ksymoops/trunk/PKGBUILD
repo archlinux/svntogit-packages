@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2005/01/15 09:09:52 aurelien Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 # Contributor: Aurelien Foret <orelien@chez.com>
 pkgname=ksymoops

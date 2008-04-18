@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2008/03/09 20:34:32 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=java-gcj-compat

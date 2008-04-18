@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2007/12/22 16:14:58 alexander Exp $
+# $Id$
 # Maintainer: Dale Blount <dale@archlinux.org>
 # Parts Borrowed from Woody Gilk's <woody@archlinux.org> fp9 beta PKGBUILD
 pkgname=flashplugin

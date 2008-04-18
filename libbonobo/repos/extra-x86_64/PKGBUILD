@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.23 2008/03/10 19:18:48 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libbonobo

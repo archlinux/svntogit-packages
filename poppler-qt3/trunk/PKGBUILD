@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2008/01/26 17:05:11 tpowa Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=poppler-qt3

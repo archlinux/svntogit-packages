@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/02/02 21:42:01 andyrtr Exp $
+# $Id$
 # Maintainer: 
 pkgname=meld
 pkgver=1.1.5.1

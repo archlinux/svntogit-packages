@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2008/03/14 17:59:35 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gconf-editor

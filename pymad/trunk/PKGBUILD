@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/07/14 02:33:56 eric Exp $
+# $Id$
 # Maintainer: Mark Rosenstand <mark@archlinux.org
 # Contributor: Corrado Primier <cp663137@stud.polimi.it>
 pkgname=pymad

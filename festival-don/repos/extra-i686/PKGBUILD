@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/02/22 01:50:39 simo Exp $
+# $Id$
 # Maintainer: Simo Leone <neotuli@gmail.com>
 # Contributor: Simo Leone <neotuli@gmail.com>
 pkgname=festival-don

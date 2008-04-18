@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.36 2008/03/12 12:15:45 travis Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Maintainer: Travis Willard <travis@archlinux.org>
 

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/07/17 20:32:35 tpowa Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 

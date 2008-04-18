@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/02/11 23:54:50 simo Exp $
+# $Id$
 # Maintainer: simo <simo@archlinux.org>
 pkgname=tor
 pkgver=0.1.2.19

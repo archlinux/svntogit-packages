@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/10/02 20:14:34 tom Exp $
+# $Id$
 # Maintainer: Tom K <tom@archlinux.org>
 
 pkgname=frostwire

@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2008/03/14 21:46:22 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-mag

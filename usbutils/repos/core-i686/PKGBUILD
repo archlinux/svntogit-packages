@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.15 2007/11/16 00:02:39 daniel Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 # Contributor: Curtis Campbell <curtisjamescampbell@hotmail.com>
 pkgname=usbutils
