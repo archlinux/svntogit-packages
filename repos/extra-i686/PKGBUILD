@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/01/06 12:38:14 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=htop
