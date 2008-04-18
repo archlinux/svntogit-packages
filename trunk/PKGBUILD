@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2006/06/28 19:48:44 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libmp4v2
