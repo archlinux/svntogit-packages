@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.34 2007/12/16 01:48:02 travis Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=fontconfig
 pkgver=2.5.0
