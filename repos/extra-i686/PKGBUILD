@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/10/10 15:39:15 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-vmware
