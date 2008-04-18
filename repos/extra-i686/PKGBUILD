@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/05/31 09:22:08 tpowa Exp $
+# $Id$
 # Maintainer: arjan <arjan@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=imlib2
