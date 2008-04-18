@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/02/01 16:00:57 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=damageproto
