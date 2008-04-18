@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/07/06 10:25:23 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxcomposite
