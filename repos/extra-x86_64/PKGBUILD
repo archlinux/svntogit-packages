@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/04 00:30:47 tobias Exp $
+# $Id$
 # AUR-Maintainer: William Rea <sillywilly@gmail.com>
 # Contributor: SleepyDog
 
