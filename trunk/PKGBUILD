@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.14 2008/01/12 13:57:58 tpowa Exp $
+# $Id$
 # Maintainer: Kevin Piche <kevin@archlinux.org>
 
 pkgname=expect
