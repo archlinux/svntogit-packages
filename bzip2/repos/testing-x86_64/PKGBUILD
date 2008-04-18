@@ -3,7 +3,7 @@
 
 pkgname=bzip2
 pkgver=1.0.5
-pkgrel=1
+pkgrel=2
 pkgdesc="A high-quality data compression program"
 arch=(i686 x86_64)
 license=('custom')
@@ -21,7 +21,7 @@ build() {
   sed -e 's/^CFLAGS=\(.*\)$/CFLAGS=\1 \$(BIGFILES)/' -i ./Makefile-libbz2_so
   make -f Makefile-libbz2_so || return 1
   make bzip2recover libbz2.a || return 1
-  ln -s libbz2.so.$pkgver libbz2.so
+  ln -s libbz2.so.1.0.4 libbz2.so
   cp bzip2-shared $startdir/pkg/bin/bzip2
   cp bzip2recover $startdir/pkg/bin
   cp bzip2.1 $startdir/pkg/usr/share/man/man1
