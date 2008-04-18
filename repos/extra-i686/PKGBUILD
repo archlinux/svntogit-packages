@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2005/08/28 09:34:42 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=libid3tag
 pkgver=0.15.1b
