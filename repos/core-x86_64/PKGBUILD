@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/05 22:31:51 tpowa Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=xfsprogs
 pkgver=2.9.7
