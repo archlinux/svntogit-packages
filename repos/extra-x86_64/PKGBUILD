@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/01/27 17:27:44 travis Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=libao
 pkgver=0.8.8
