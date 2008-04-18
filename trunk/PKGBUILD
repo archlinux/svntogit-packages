@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2007/12/16 15:39:34 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=dialog
 pkgver=1.1_20071028
