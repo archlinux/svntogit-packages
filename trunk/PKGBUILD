@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2007/06/01 09:30:25 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=clisp
 pkgver=2.41
