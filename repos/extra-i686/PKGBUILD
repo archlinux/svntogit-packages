@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.7 2007/09/05 16:33:01 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxrender
