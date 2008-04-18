@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2006/08/03 18:09:08 jgc Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=gsfonts
 pkgver=8.11
