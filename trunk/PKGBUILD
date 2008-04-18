@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/04/05 02:39:36 eric Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=libkexiv2
