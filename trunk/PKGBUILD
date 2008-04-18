@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2006/10/01 11:13:34 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: William Rea <sillywilly@gmail.com>
 pkgname=brltty
