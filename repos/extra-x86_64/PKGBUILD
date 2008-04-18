@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.11 2007/09/30 11:09:36 tpowa Exp $
+# $Id$
 # Maintainer: Arjan Timmerman <arjan@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 pkgname=libsndfile
