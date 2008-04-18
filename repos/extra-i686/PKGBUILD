@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2008/04/05 15:20:51 dan Exp $
+# $Id$
 # Contributor: Lucien Immink <l.immink@student.fnt.hvu.nl>
 # Maintainer: Dan McGee <dan@archlinux.org>
 
