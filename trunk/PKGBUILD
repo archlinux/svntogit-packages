@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2008/03/24 00:09:57 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-control-center
