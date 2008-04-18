@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.20 2008/01/13 03:48:09 kevin Exp $
+# $Id$
 # Maintainer: eric <eric@archlinux.org>
 # Contributor:  Matt Thompson <mattt@defunct.ca>
 pkgname=perl-dbi
