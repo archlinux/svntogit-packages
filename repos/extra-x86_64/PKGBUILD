@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2007/11/05 16:17:27 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxcb
