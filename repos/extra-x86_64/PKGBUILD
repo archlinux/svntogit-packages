@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.22 2008/03/01 00:01:21 tobias Exp $
+# $Id$
 # Maintainer: aurelien <aurelien@archlinux.org>
 
 pkgname=xfdesktop
