@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/02/04 21:10:56 aaron Exp $
+# $Id$
 # Maintainer : Aaron Griffin <aaron@archlinux.org>
 
 pkgname=convmv
