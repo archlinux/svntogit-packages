@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.4 2008/03/16 21:46:54 jgc Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aarongriffin@gmail.com>
 # Contributor: Mario A. Vazquez <mario_vazq@hotmail.com>
 pkgname=pyxdg
