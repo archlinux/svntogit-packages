@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.1 2005/12/31 17:19:36 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xbitmaps
