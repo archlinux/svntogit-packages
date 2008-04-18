@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/04/27 18:06:07 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xorg-fonts-encodings
