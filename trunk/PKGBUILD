@@ -1,4 +1,4 @@
-#$Id: PKGBUILD,v 1.10 2008/04/05 02:29:03 eric Exp $
+#$Id$
 # Maintainer: tobias <tobias@arhlinux.org>
 
 pkgname=exiv2
