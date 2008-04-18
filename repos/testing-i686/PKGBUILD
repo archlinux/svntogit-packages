@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.54 2008/01/16 23:01:03 tom Exp $
+# $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=openldap
 pkgver=2.3.40
