@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/07/16 13:28:44 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libpqxx
