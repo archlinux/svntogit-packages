@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/21 13:31:50 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=libwpd
