@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2008/03/06 11:43:52 tpowa Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=usermin
 pkgver=1.330
