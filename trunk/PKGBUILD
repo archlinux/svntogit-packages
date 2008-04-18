@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2006/08/19 18:02:43 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: FJ <joostef@gmail.com>
 pkgname=libwmf
