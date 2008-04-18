@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.5 2008/01/18 04:46:31 kevin Exp $
+# $Id$
 # Maintainer: kevin <kevin@archlinux.org>
 
 pkgname=perl-file-desktopentry
