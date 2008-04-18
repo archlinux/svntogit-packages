@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.8 2007/12/19 23:23:41 jgc Exp $
+# $Id$
 # Maintainer: Travis Willard <travis@archlinux.org>
 pkgname=libmad
 pkgver=0.15.1b
