@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2007/09/12 20:29:39 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xdg-utils
