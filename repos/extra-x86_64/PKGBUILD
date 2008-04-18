@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.31 2008/03/14 21:22:13 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-terminal
