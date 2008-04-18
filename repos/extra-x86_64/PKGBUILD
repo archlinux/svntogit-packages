@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.12 2008/03/27 03:02:13 aaron Exp $
+# $Id$
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=goffice
