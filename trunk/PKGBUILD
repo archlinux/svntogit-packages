@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.19 2008/03/07 02:07:41 tobias Exp $
+# $Id$
 # Maintainer: tobias [ tobias at archlinux org ]
 
 pkgname=vim
