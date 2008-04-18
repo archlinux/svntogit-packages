@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/08/01 14:13:14 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xorg-font-utils
