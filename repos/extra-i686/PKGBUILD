@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.28 2008/03/12 21:36:27 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libsoup
