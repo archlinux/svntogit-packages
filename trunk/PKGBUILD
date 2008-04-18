@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.25 2008/02/07 19:20:36 paul Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=flex
 pkgver=2.5.33
