@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2007/11/06 15:54:30 alexander Exp $
+# $Id$
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor Jan de Groot <jgc@archlinux.org>
 pkgname=libx11
