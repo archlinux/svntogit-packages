@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.35 2008/04/03 17:57:22 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=tcl
