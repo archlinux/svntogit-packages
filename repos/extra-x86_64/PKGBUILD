@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.18 2007/06/29 04:22:28 eric Exp $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
 pkgname=gd
