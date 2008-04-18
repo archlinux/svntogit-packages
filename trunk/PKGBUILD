@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.50 2008/03/03 19:04:20 tpowa Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 # Maintainer: Travis Willard <travis@archlinux.org> 
 # Committer: Judd Vinet <jvinet@zeroflux.org>
