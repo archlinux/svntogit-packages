@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.17 2008/04/05 14:05:09 dan Exp $
+# $Id$
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=unzip
