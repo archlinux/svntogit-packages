@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.10 2007/11/16 00:02:38 daniel Exp $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=sysfsutils
