@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/04/27 17:46:28 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libfontenc
