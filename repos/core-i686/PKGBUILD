@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.57 2008/03/09 18:13:43 kevin Exp $
+# $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=perl
 pkgver=5.10.0
