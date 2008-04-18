@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.38 2008/03/13 23:51:52 jgc Exp $
+# $Id$
 # Jan de Groot <jgc@archlinux.org>
 
 pkgname=eog
