@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.9 2007/07/12 09:42:21 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=anthy
