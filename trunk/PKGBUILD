@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.2 2006/03/15 05:02:17 paul Exp $
+# $Id$
 # Contributor: Paul Mattal <paul@mattal.com>
 # Maintainer: Paul Mattal <paul@archlinux.org>
 pkgname=help2man
