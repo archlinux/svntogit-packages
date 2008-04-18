@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.6 2007/05/31 11:48:46 jgc Exp $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=iso-codes
