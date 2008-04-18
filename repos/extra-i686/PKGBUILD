@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.13 2008/03/08 22:01:57 jgc Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=fftw
