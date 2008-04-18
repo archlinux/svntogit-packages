@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.29 2008/02/17 23:45:54 damir Exp $
+# $Id$
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=avidemux
