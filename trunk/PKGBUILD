@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.26 2008/01/09 16:43:45 thomas Exp $
+# $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=bftpd
