@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.3 2006/08/03 19:39:46 jgc Exp $
+# $Id$
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xcursor-themes
