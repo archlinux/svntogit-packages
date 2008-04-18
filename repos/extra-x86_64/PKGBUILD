@@ -1,4 +1,4 @@
-# $Id: PKGBUILD,v 1.36 2008/01/01 16:32:17 andyrtr Exp $
+# $Id$
 # Maintainer: dorphell <dorphell@archlinux.org>
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=gnupg
