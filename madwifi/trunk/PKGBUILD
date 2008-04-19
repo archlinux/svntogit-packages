@@ -2,16 +2,16 @@
 # Originally by kleptophobiac <kleptophobiac@gmail.com>
 # Modified by James Rayner for the repositories <iphitus@gmail.com>
 
-_kernver=2.6.24-ARCH;
+_kernver=2.6.25-ARCH;
 
 pkgname=madwifi
 pkgver=0.9.4.3382
-pkgrel=3
+pkgrel=4
 pkgdesc="Madwifi drivers for Atheros wireless chipsets. For stock arch 2.6 kernel"
 arch=(i686 x86_64)
 license=('GPL')
 url="http://madwifi.org"
-depends=('madwifi-utils' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0')
+depends=('madwifi-utils' 'kernel26>=2.6.25' 'kernel26<2.6.26')
 makedepends=('sharutils')
 install=madwifi-ng.install
 # subversion source: svn checkout http://svn.madwifi.org/madwifi/trunk madwifi
