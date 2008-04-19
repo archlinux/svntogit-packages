@@ -3,18 +3,17 @@
 # Maintainer: Travis Willard <travis@archlinux.org>	
 
 pkgname=abs
-pkgver=2.0
-pkgrel=4
+pkgver=2.1
+pkgrel=1
 pkgdesc="Utilities to download and work with the Arch Build System (ABS)"
 arch=('i686' 'x86_64')
 url="http://projects.archlinux.org/git/?p=abs.git"
 license=('GPL')
 depends=('bash' 'rsync')
-groups=('base-devel')
 backup=(etc/abs.conf)
 install=abs.install
 source=(ftp://ftp.archlinux.org/other/abs/$pkgname-$pkgver.tar.gz)
-md5sums=('559049b56b7de70f4824c20785835194')
+md5sums=('7846683d07a77e72cdb6bd3ef85c565e')
 
 build() {
   cd $startdir/src/$pkgname
