@@ -4,13 +4,13 @@
 
 pkgname=catalyst
 pkgver=8.3
-_kernel_version=2.6.24
-pkgrel=2
+_kernel_version=2.6.25
+pkgrel=3
 pkgdesc="Proprietary AMD/ATI kernel drivers for Radeon brand cards. Stock kernel."
 arch=('i686' 'x86_64')
 url="http://www.ati.amd.com"
 license=('custom') 
-depends=("catalyst-utils>=${pkgver}" "kernel26>=${_kernel_version}.3-4" "kernel26<=${_kernel_version}.9999")
+depends=("catalyst-utils>=${pkgver}" "kernel26>=${_kernel_version}" "kernel26<=${_kernel_version}.9999")
 makedepends=()
 replaces=('ati-fglrx' 'fglrx') # Yay rebranding
 install=${pkgname}.install
