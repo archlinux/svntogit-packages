@@ -3,13 +3,13 @@
 
 pkgname=fcpci
 pkgver=31107
-pkgrel=41
-_kernver=2.6.24-ARCH
+pkgrel=42
+_kernver=2.6.25-ARCH
 pkgdesc="AVM ISDN driver for FRITZ PCI isdn cards. For stock arch 2.6 kernel."
 arch=(i686 x86_64)
 license=('custom:"AVM"' 'LGPL')
 url="http://www.avm.de"
-depends=('capi4k-utils' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0')
+depends=('capi4k-utils' 'kernel26>=2.6.25' 'kernel26<2.6.26')
 if [ "$CARCH" = "i686" ]; then
   source=(ftp://ftp.avm.de/cardware/fritzcrd.pci/linux/suse.93/fcpci-suse93-3.11-07.tar.gz \
 	kernel-2.6.19.patch atomic.patch kernel-2.6.20.patch kernel-2.6.22.patch kernel-2.6.24.patch)
