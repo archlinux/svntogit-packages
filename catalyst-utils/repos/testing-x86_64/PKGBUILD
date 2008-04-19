@@ -1,0 +1,125 @@
+# $Id$
+# Maintainer: Travis Willard <travisw@wmpub.ca>
+
+# Thanks to dibblethewrecker for the original work and packages.
+# Thanks to testing monkey S1G1 for contributions
+
+pkgname=catalyst-utils
+pkgver=8.4
+pkgrel=1
+pkgdesc="Proprietary AMD/ATI userspace tools and libraries for Radeon brand cards."
+arch=('i686' 'x86_64')
+url="http://www.ati.amd.com"
+license=('custom') 
+#finger required for acpi scripts
+depends=('xorg-server>=1.1.1' 'libdrm' 'libstdc++5' 'netkit-bsd-finger' \
+         'libxrandr' 'libsm' 'fontconfig' 'libxcursor' 'libxi' 'gcc-libs')
+replaces=('ati-drivers' 'ati-fglrx-utils' 'fglrx-utils')
+conflicts=('libgl' 'ati-drivers-module' 'ati-drivers' 'nvidia') 
+provides=('libgl')
+install=${pkgname}.install
+source=(http://www2.ati.com/drivers/linux/ati-driver-installer-${pkgver/./-}-x86.x86_64.run \
+        amdcccle.desktop catalyst.sh atieventsd.sh ati-powermode.sh.patch)
+md5sums=('8fa23f45b4becc9721e67858e41ff85c'
+         '1f4b870e977b155af549442932e8ce6f'
+         'bdafe749e046bfddee2d1c5e90eabd83'
+         'f729bf913613f49b0b9759c246058a87'
+         'b157eecaf2e26b386c427f3a64672dbc')
+options=('!strip')
+
+build() {
+    cd $startdir/src
+
+    [ "$CARCH" = "i686" ] && _arch="x86";
+    [ "$CARCH" = "x86_64" ] && _arch="x86_64";
+
+    /bin/sh ./ati-driver-installer-${pkgver/./-}-x86.x86_64.run --extract archive_files
+
+    # Grab the example ACPI scripts for lid close and AC plugged/unplugged
+    mkdir -p $startdir/src/etc/
+    cp $startdir/src/archive_files/common/usr/share/doc/fglrx/examples/etc/acpi $startdir/src/etc -r
+    cd $startdir/src/etc/acpi
+    sed -i "s#/usr/X11R6/bin/aticonfig#/usr/bin/aticonfig#g" $startdir/src/etc/acpi/ati-powermode.sh || return 1
+    sed -i "s#--effective=now##g" $startdir/src/etc/acpi/ati-powermode.sh || return 1
+    patch -Np0 -i $startdir/src/ati-powermode.sh.patch
+    cd ../..
+ 
+    # Get our architecture files and common files all in one place
+    cp $startdir/src/archive_files/arch/${_arch}/* $startdir/src/ -r
+    cp $startdir/src/archive_files/common/* $startdir/src/ -r
+    if [ "$CARCH" = "x86_64" ]; then
+       cp $startdir/src/archive_files/x710_64a/* $startdir/src/ -r
+     else
+       cp $startdir/src/archive_files/x710/* $startdir/src/ -r
+    fi
+
+    # Remove src and documents - install remaining files
+    mkdir -p $startdir/src/usr/share/pixmaps
+    mv $startdir/src/usr/share/icons/* $startdir/src/usr/share/pixmaps/
+    rm -rf $startdir/src/usr/{src,share/{icons,doc,applnk,gnome}}
+
+    # Install into correct paths for Xorg7
+    install -d -m 755 $startdir/pkg/usr/include $startdir/pkg/usr/bin \
+            $startdir/pkg/usr/lib/xorg/modules $startdir/pkg/etc \
+            $startdir/pkg/usr/share $startdir/pkg/usr/sbin \
+            $startdir/pkg/etc/rc.d $startdir/pkg/etc/acpi
+
+    mv $startdir/src/etc/* $startdir/pkg/etc/
+    mv $startdir/src/usr/sbin/* $startdir/pkg/usr/sbin/
+    mv $startdir/src/usr/include/* $startdir/pkg/usr/include/
+    mv $startdir/src/usr/share/* $startdir/pkg/usr/share/
+    mv $startdir/src/usr/X11R6/include/* $startdir/pkg/usr/include/
+    mv $startdir/src/usr/X11R6/bin/* $startdir/pkg/usr/bin/
+    if [ "$CARCH" == "x86_64" ]; then
+      mv $startdir/src/usr/X11R6/lib64/modules/* $startdir/pkg/usr/lib/xorg/modules/
+      rm -rf $startdir/src/usr/X11R6/lib64/modules
+      mv $startdir/src/usr/X11R6/lib64/* $startdir/pkg/usr/lib
+     else 
+      mv $startdir/src/usr/X11R6/lib/modules/* $startdir/pkg/usr/lib/xorg/modules/
+      rm -rf $startdir/src/usr/X11R6/lib/modules
+      mv $startdir/src/usr/X11R6/lib/* $startdir/pkg/usr/lib/
+    fi
+
+   # correct dir permissions
+    find $startdir/pkg/usr -type d -exec chmod 755 {} \;
+
+    # correct FILE permissions - >=8.39.4 has nearly every file marked 0744. This
+    # is dumb, and previous versions of the drivers had no files marked this
+    # way.  Fixing permissions of files to what they were in 8.38.6
+    find $startdir/pkg/etc -not -type d -exec chmod 0444 {} \;
+    find $startdir/pkg/etc -name '*.sh' -not -type d -exec chmod a+x {} \;
+    chmod u+w $startdir/pkg/etc/{ati/control,acpi/ati-powermode.sh}
+    find $startdir/pkg/usr/{bin,lib,sbin} -not -type d -exec chmod 0755 {} \;
+    chmod 0555 $startdir/pkg/usr/sbin/atigetsysteminfo.sh
+    find $startdir/pkg/usr/lib -name '*.a' -not -type d -exec chmod 0644 {} \;
+    find $startdir/pkg/usr/{share,include} -not -type d -exec chmod 0444 {} \;
+    find $startdir/pkg/usr/share/ati/amdcccle/ -name '*.qm' -not -type d -exec chmod 0644 {} \;
+    find $startdir/pkg/usr/share/man -not -type d -exec chmod 0644 {} \;
+
+    # create proper symlinks to libGL.so, libfglrx_pp.so, and libfglrx_gamma.so
+    cd $startdir/pkg/usr/lib
+    ln -s libGL.so.1.2 libGL.so
+    ln -s libGL.so.1.2 libGL.so.1
+    ln -sf /usr/lib/libfglrx_pp.so.1.0 libfglrx_pp.so.1
+    ln -sf /usr/lib/libfglrx_gamma.so.1.0 libfglrx_gamma.so.1
+
+    mkdir -p ${startdir}/pkg/usr/lib/xorg/modules/extensions
+    cd ${startdir}/pkg/usr/lib/xorg/modules/extensions
+    ln -sf libGLcore.xorg libGLcore.so
+    ln -sf libglx.xorg libglx.so
+    
+    # install licenses
+    install -m 0644 -D $startdir/src/archive_files/ATI_LICENSE.TXT \
+                     $startdir/pkg/usr/share/licenses/${pkgname}/AMD_ATI_LICENSE.TXT
+    # create DE file
+    install -m 0755 -D $startdir/src/amdcccle.desktop \
+            $startdir/pkg/usr/share/applications/amdcccle.desktop
+    # thanks to cerebral, we dont need that damned symlink
+    install -m 0755 -D $startdir/src/catalyst.sh \
+            $startdir/pkg/etc/profile.d/catalyst.sh
+    # Add ATI Events Daemon launcher
+    install -m 0755 -D $startdir/src/atieventsd.sh \
+            $startdir/pkg/etc/rc.d/atieventsd
+
+}
+
