@@ -2,7 +2,7 @@
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=ntfs-3g
-pkgver=1.2310
+pkgver=1.2412
 pkgrel=1
 pkgdesc="Third generation Linux NTFS driver"
 arch=(i686 x86_64)
@@ -12,7 +12,7 @@ license=('GPL')
 depends=('glibc')
 makedepends=('pkgconfig')
 source=(http://www.ntfs-3g.org/${pkgname}-${pkgver}.tgz)
-md5sums=('70579e20da7cb5c1649096c6bf6d1b73')
+md5sums=('e8762770b2be3b1d24da61571d79fc92')
 options=(!libtool)
 
 build() {
