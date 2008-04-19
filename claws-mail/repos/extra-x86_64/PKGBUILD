@@ -3,7 +3,7 @@
 # Contributor: Sarah Hay <sarah@archlinux.org>
 
 pkgname=claws-mail
-pkgver=3.3.1
+pkgver=3.4.0
 pkgrel=1
 pkgdesc="A GTK+ based e-mail client."
 arch=('i686' 'x86_64')
@@ -17,7 +17,7 @@ provides=('claws')
 options=(!libtool)
 install=claws-mail.install
 source=(http://downloads.sourceforge.net/sourceforge/sylpheed-claws/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('f4bfa174cf1e6bda86ec5ff276be9d9a')
+md5sums=('ec5ee743baa198c7fd707b0461b6c68a')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
