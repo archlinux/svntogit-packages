@@ -1,12 +1,12 @@
 # $Id$
 
 pkgname=atl2
-_kernver=2.6.24-ARCH
+_kernver=2.6.25-ARCH
 pkgver=2.0.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Drivers for atl2 ethernet card"
 url="http://people.redhat.com/csnook/atl2"
-depends=('kernel26>=2.6.24.4-1' 'kernel26<2.6.25')
+depends=('kernel26>=2.6.25' 'kernel26<2.6.26')
 arch=('i686' 'x86_64')
 license=('GPL')
 install=$pkgname.install
