@@ -1,17 +1,17 @@
 # $Id$
 # Contributor: Giovanni Scafora <linuxmania@gmail.com>
 # Maintainer: James Rayner <iphitus@gmail.com>
-_kernver=2.6.24-ARCH
+_kernver=2.6.25-ARCH
 pkgname=ipw3945
 pkgver=1.2.2
-pkgrel=8
+pkgrel=9
 pkgdesc="Driver for the Intel PRO/Wireless 3945ABG miniPCI express adapter"
 arch=(i686 x86_64)
 url="http://ipw3945.sourceforge.net"
 license=("GPL")
-depends=('wireless_tools' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0' 'ipw3945-ucode' 'ipw3945d')
+depends=('wireless_tools' 'kernel26>=2.6.25' 'kernel26<2.6.26' 'ipw3945-ucode' 'ipw3945d')
 install=ipw3945.install
-source=(http://optusnet.dl.sourceforge.net/sourceforge/ipw3945/ipw3945-$pkgver.tgz
+source=(http://downloads.sourceforge.net/sourceforge/ipw3945/ipw3945-$pkgver.tgz
         compile-2.6.24.patch)
 md5sums=('9e5ca2f3ffbb84270ede45d5572df4c9'
          '12db6e8410ab38f1fbca15681cfa752a')
