@@ -10,7 +10,7 @@ url="http://acx100.sourceforge.net/"
 license=('MPL')
 depends=('wireless_tools' 'kernel26>=2.6.25' 'kernel26<2.6.26' 'tiacx-firmware')
 install=acx.install
-source=(http://heanet.dl.sourceforge.net/sourceforge/acx100/acx-$pkgver.tar.bz2)
+source=(http://downloads.sourceforge.net/sourceforge/acx100/acx-$pkgver.tar.bz2)
 md5sums=('7d5ce3215708e4e9f95cf567a9ee3a12')
 
 _kernver=2.6.25-ARCH
