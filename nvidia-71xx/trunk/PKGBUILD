@@ -3,21 +3,24 @@
 
 pkgname=nvidia-71xx
 pkgver=71.86.04
-_kernver='2.6.24-ARCH'
-pkgrel=2
+_kernver='2.6.25-ARCH'
+pkgrel=3
 pkgdesc="NVIDIA legacy drivers for kernel26, 71xx branch"
 arch=(i686 x86_64)
 [ "$CARCH" = "i686"   ] && ARCH=x86
 [ "$CARCH" = "x86_64" ] && ARCH=x86_64
 url="http://www.nvidia.com/"
-depends=('nvidia-71xx-utils' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0')
+depends=('nvidia-71xx-utils' 'kernel26>=2.6.25' 'kernel26<2.6.26')
 conflicts=('nvidia' 'nvidia-96xx' 'nvidia-legacy')
 replaces=('nvidia-legacy')
 license=('custom')
-source=(ftp://download.nvidia.com/XFree86/Linux-${ARCH}/${pkgver}/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run) 
+source=(ftp://download.nvidia.com/XFree86/Linux-${ARCH}/${pkgver}/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run
+        NVIDIA_kernel-96.43.05-2290218.diff.txt)
 install="nvidia-71xx.install"
-md5sums=('56354473bddff67eefed22d79398fb93')
-[ "$CARCH" = "x86_64" ] && md5sums=('9d102e8a6a1746423f0e0a231df63eeb')
+md5sums=('56354473bddff67eefed22d79398fb93'
+         'a238b659c665036d1281ab0f3c567d8e')
+[ "$CARCH" = "x86_64" ] && md5sums=('9d102e8a6a1746423f0e0a231df63eeb'
+                                    'a238b659c665036d1281ab0f3c567d8e')
 
 build() {  
   cd $startdir/src 
@@ -27,6 +30,8 @@ build() {
   sh NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run --extract-only
   cd NVIDIA-Linux-${ARCH}-${pkgver}-pkg0
   # Any extra patches are applied in here...
+  patch -Np0 -i ../NVIDIA_kernel-96.43.05-2290218.diff.txt || return 1
+  
   cd usr/src/nv/
   ln -s Makefile.kbuild Makefile
   make SYSSRC=/lib/modules/$_kernver/build module 
