@@ -5,6 +5,7 @@ pkgname=kernel26
 _basekernel=2.6.25
 pkgver=2.6.25
 pkgrel=1
+_patchname="patch-${pkgver}-${pkgrel}-ARCH"
 pkgdesc="The Linux Kernel and modules"
 arch=(i686 x86_64)
 license=('GPL2')
@@ -21,13 +22,13 @@ replaces=('kernel24' 'kernel24-scsi' 'kernel26-scsi'
 	  'zd1211' 'kvm-modules' 'iwlwifi' 'rt2x00-cvs')
 install=kernel26.install
 source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
-        ftp://ftp.archlinux.org/other/kernel26/patch-${pkgver}-${pkgrel}-ARCH.bz2
-	# the main kernel config files
-	config config.x86_64
-	# standard config files for mkinitcpio ramdisk
-	kernel26.preset)
+        ftp://ftp.archlinux.org/other/kernel26/${_patchname}.bz2
+        # the main kernel config files
+        config config.x86_64
+        # standard config files for mkinitcpio ramdisk
+        kernel26.preset)
 md5sums=('db95a49a656a3247d4995a797d333153'
-         'c62d8960d5eb81b11f9fde9e7dfd0cba'
+         '3ad790f1efe9cb5a609085763bd2b3b4'
          '7f536cb23effa2af68373d5929d84fa2'
          'b5b7cf6be0399ce54a84d3f12d657dd0'
          '25584700a0a679542929c4bed31433b6')
@@ -37,9 +38,8 @@ build() {
 
   cd $startdir/src/linux-$_basekernel
   # Add -ARCH patches
-  # There is no script for the patch generation yet, so I am abusing makepkg to do it
   # See http://projects.archlinux.org/git/?p=linux-2.6-ARCH.git;a=summary
-  patch -Np1 -i $startdir/src/patch-${pkgver}-${pkgrel}-ARCH || return 1
+  patch -Np1 -i $startdir/src/${_patchname} || return 1
 
   if [ "$CARCH" = "x86_64" ]; then
     cat ../config.x86_64 >./.config
