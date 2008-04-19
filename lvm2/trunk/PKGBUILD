@@ -1,7 +1,7 @@
 # $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=lvm2
-pkgver=2.02.34
+pkgver=2.02.35
 pkgrel=1
 pkgdesc="Logical Volume Manager 2 utilities"
 arch=('i686' 'x86_64')
@@ -14,7 +14,7 @@ backup=('etc/lvm/lvm.conf')
 source=(ftp://sources.redhat.com/pub/lvm2/LVM2.$pkgver.tgz
         lvm2_install
         lvm2_hook)
-md5sums=('f71c0f63df887ae1b39b15a63d405de2'
+md5sums=('0544fb7e791f78e3824653dbf4574c2e'
          '40dccdb1044f00fc1e29ca549933d4bd'
 	 '73c8c2eba0fe891712c859c18b5b8aa2')
 
