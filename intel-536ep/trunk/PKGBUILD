@@ -4,13 +4,13 @@
 pkgname=intel-536ep
 name=intel-536EP
 pkgver=2.56.76.0
-pkgrel=54
-_kernver=2.6.24-ARCH
+pkgrel=55
+_kernver=2.6.25-ARCH
 pkgdesc="Intel Modem Drivers for 536EP chipset. For stock arch 2.6 kernel "
 arch=(i686)
 license=('custom:"INTEL536"')
 url="http://linmodems.technion.ac.il/packages/Intel/"
-depends=('intel-536ep-utils' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0')
+depends=('intel-536ep-utils' 'kernel26>=2.6.25' 'kernel26<2.6.26')
 source=(http://linmodems.technion.ac.il/packages/intel/Philippe.Vouters/intel-536EP-2.56.76.0_23_02_2007.tgz kernel-2.6.24.patch)
 install=intel-536EP.install
 
