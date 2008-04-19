@@ -4,7 +4,7 @@
 
 pkgname=abs
 pkgver=2.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Utilities to download and work with the Arch Build System (ABS)"
 arch=('i686' 'x86_64')
 url="http://projects.archlinux.org/git/?p=abs.git"
