@@ -3,14 +3,14 @@
 
 pkgname=lirc
 pkgver=0.8.2
-pkgrel=11
-_kernver=2.6.24-ARCH
+pkgrel=12
+_kernver=2.6.25-ARCH
 pkgdesc="Linux Infrared Remote Control kernel modules for stock arch kernel"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('lirc-utils' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0')
+depends=('lirc-utils' 'kernel26>=2.6.25' 'kernel26<2.6.26')
 makedepends=(help2man)
-source=(http://puzzle.dl.sf.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.bz2 \
+source=(http://downloads.sf.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.bz2 \
 	kernel-2.6.23.patch kernel-2.6.24.patch)
 url="http://www.lirc.org/"
 install=$pkgname.install
