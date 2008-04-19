@@ -1,16 +1,16 @@
 # $Id$
 # Maintainer : Tobias Powalowski <tpowa@archlinux.org>
 
-_kernver=2.6.24-ARCH;
+_kernver=2.6.25-ARCH;
 
 pkgname=intel-537
 pkgver=2.60.80.0
-pkgrel=54
+pkgrel=55
 pkgdesc="Intel Modem Drivers for 537 chipsets. For stock arch 2.6 kernel"
 arch=(i686 x86_64)
 license=('custom:"INTEL537"')
 url="http://linmodems.technion.ac.il/packages/Intel/"
-depends=('intel-537-utils' 'kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0')
+depends=('intel-537-utils' 'kernel26>=2.6.25' 'kernel26<2.6.26')
 source=(http://downloadmirror.intel.com/9284/eng/Intel-537EP-2.70.95.0-suse9.3.tgz flip.patch compile.patch \
 	module-parm.patch pm_unregister.patch asmlinkage.patch kernel-2.6.19.patch kernel-2.6.20.patch kernel-2.6.24.patch)
 install=intel-537.install
