@@ -5,7 +5,7 @@
 # Thanks to testing monkey S1G1 for contributions
 
 pkgname=catalyst-utils
-pkgver=8.3
+pkgver=8.4
 pkgrel=1
 pkgdesc="Proprietary AMD/ATI userspace tools and libraries for Radeon brand cards."
 arch=('i686' 'x86_64')
@@ -20,7 +20,7 @@ provides=('libgl')
 install=${pkgname}.install
 source=(http://www2.ati.com/drivers/linux/ati-driver-installer-${pkgver/./-}-x86.x86_64.run \
         amdcccle.desktop catalyst.sh atieventsd.sh ati-powermode.sh.patch)
-md5sums=('42d8b1581a61c1945196dd5ed47519b8'
+md5sums=('8fa23f45b4becc9721e67858e41ff85c'
          '1f4b870e977b155af549442932e8ce6f'
          'bdafe749e046bfddee2d1c5e90eabd83'
          'f729bf913613f49b0b9759c246058a87'
