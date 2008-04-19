@@ -3,9 +3,9 @@
 # Contributor: amdviaman
 
 pkgname=catalyst
-pkgver=8.3
+pkgver=8.4
 _kernel_version=2.6.25
-pkgrel=3
+pkgrel=1
 pkgdesc="Proprietary AMD/ATI kernel drivers for Radeon brand cards. Stock kernel."
 arch=('i686' 'x86_64')
 url="http://www.ati.amd.com"
@@ -14,9 +14,9 @@ depends=("catalyst-utils>=${pkgver}" "kernel26>=${_kernel_version}" "kernel26<=$
 makedepends=()
 replaces=('ati-fglrx' 'fglrx') # Yay rebranding
 install=${pkgname}.install
-source=(http://www2.ati.com/drivers/linux/ati-driver-installer-${pkgver/./-}-x86.x86_64.run)
-md5sums=('42d8b1581a61c1945196dd5ed47519b8')
-
+source=(http://www2.ati.com/drivers/linux/ati-driver-installer-${pkgver/./-}-x86.x86_64.run compat-2.6.25.diff)
+md5sums=('8fa23f45b4becc9721e67858e41ff85c'
+         'b5eab9bcdbe05913ed263f3a3cd01a4f')
 _kernver=${_kernel_version}-ARCH
 
 build() {
@@ -37,6 +37,9 @@ build() {
     fi
     cd $startdir/src
     cd $startdir/src/lib/modules/fglrx/build_mod/
+
+    # patch catalyst 8.4 to work with 2.6.25
+    patch -p1 < $startdir/src/compat-2.6.25.diff
 
     # Build the kernel module
     cp 2.6.x/Makefile .
