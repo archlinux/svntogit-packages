@@ -3,12 +3,12 @@
 
 pkgname=wlan-ng26
 pkgver=0.2.8
-pkgrel=15
-_kernver=2.6.24-ARCH
+pkgrel=16
+_kernver=2.6.25-ARCH
 pkgdesc="Wireless Lan usb modules. For kernel26."
 arch=(i686 x86_64)
 license=('MPL')
-depends=('kernel26>=2.6.24.3-4' 'kernel26<=2.6.25-0' 'wlan-ng26-utils')
+depends=('kernel26>=2.6.25' 'kernel26<2.6.26' 'wlan-ng26-utils')
 source=(ftp://ftp.linux-wlan.org/pub/linux-wlan-ng/linux-wlan-ng-$pkgver.tar.bz2
 	kernel-2.6.22-r1832.patch kernel-2.6.24.patch)
 url="ftp://ftp.linux-wlan.org/pub/linux-wlan-ng/"
