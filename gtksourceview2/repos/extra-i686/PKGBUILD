@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gtksourceview2
-pkgver=2.2.0
+pkgver=2.2.1
 pkgrel=1
 pkgdesc="A text widget adding syntax highlighting and more to GNOME"
 arch=(i686 x86_64)
@@ -12,7 +12,7 @@ makedepends=('perlxml' 'pkgconfig')
 options=('!libtool')
 url="http://www.gnome.org"
 source=(http://ftp.gnome.org/pub/gnome/sources/gtksourceview/2.2/gtksourceview-${pkgver}.tar.bz2)
-md5sums=('f794b2bfea6f56bbdb6da494b5335f74')
+md5sums=('1c5bd86f854ead3aedb96463ebbb275f')
 
 build() {
   cd ${startdir}/src/gtksourceview-${pkgver}
