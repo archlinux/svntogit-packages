@@ -1,16 +1,16 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 pkgname=hunspell
-pkgver=1.2.1
-pkgrel=2
+pkgver=1.2.2
+pkgrel=1
 pkgdesc="Hunspell is a spell checker and morphological analyzer library"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL' 'MPL')
 url="http://hunspell.sourceforge.net/"
-depends=('gcc')
+depends=('gcc-libs')
 options=('!libtool')
 source=(http://downloads.sourceforge.net/sourceforge/hunspell/${pkgname}-${pkgver}.tar.gz)
-md5sums=('c504f9c2065f697e586593992dd74dae')
+md5sums=('e8cde1130894dcd3f732248db945d0c0')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
