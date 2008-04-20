@@ -2,17 +2,19 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=poppler-qt3
-pkgver=0.6.3
+pkgver=0.8.0
 pkgrel=1
 pkgdesc="Poppler Qt3 bindings"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('qt3>=3.3.8' 'poppler>=0.6.3')
+depends=('qt3>=3.3.8' 'poppler>=0.8.0')
 makedepends=('pkgconfig')
 options=('!libtool')
 url="http://poppler.freedesktop.org/"
 source=(http://poppler.freedesktop.org/poppler-${pkgver}.tar.gz
 	poppler-0.6-bindings.patch)
+md5sums=('1a3ea3000d3446a97366c37b876979f4'
+         '4255424fcf2c29fe3cae9cb14a671da6')
 
 build() {
   . /etc/profile.d/qt3.sh
@@ -20,8 +22,8 @@ build() {
   cd ${startdir}/src/poppler-${pkgver}
 
   patch -Np1 -i ${startdir}/src/poppler-0.6-bindings.patch || return 1
-  
-  AT_M4DIR="m4" autoreconf
+  libtoolize --force --copy || return 1
+  AT_M4DIR="m4" autoreconf || return 1
   ./configure --prefix=/usr --sysconfdir=/etc \
               --localstatedir=/var --disable-static \
 	      --enable-zlib \
@@ -38,5 +40,3 @@ build() {
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 }
-md5sums=('a585677188cd56a090c4dc3357e03a95'
-         '4255424fcf2c29fe3cae9cb14a671da6')
