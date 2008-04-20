@@ -5,8 +5,8 @@
 # build order: foomatic-db / -filters / -db-ppd / -db-engines / -db-hpijs
 
 pkgname=foomatic-filters
-pkgver=3.0_20080211
-_snapver=3.0-20080211
+pkgver=3.0_20080420
+_snapver=3.0-20080420
 pkgrel=1
 pkgdesc="Foomatic is a system for using free software printer drivers with common spoolers on Unix"
 arch=(i686 x86_64)
@@ -16,7 +16,7 @@ makedepends=('enscript')
 source=(http://www.linuxprinting.org/download/foomatic/$pkgname-$_snapver.tar.gz)
 url="http://www.linuxprinting.org/foomatic.html"
 options=('force')
-md5sums=('97b517e94ac85534cdc84a446a872bc2')
+md5sums=('272335d7c459f6cfb4216ed88ff86a58')
 
 build() {
    cd $startdir/src/$pkgname-$_snapver
