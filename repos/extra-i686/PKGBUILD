@@ -3,8 +3,8 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 #
 pkgname=foomatic-db
-pkgver=3.0_20080211
-_snapver=3.0-20080211
+pkgver=3.0_20080420
+_snapver=3.0-20080420
 pkgrel=1
 pkgdesc="Foomatic is a system for using free software printer drivers with common spoolers on Unix"
 arch=(i686 x86_64)
@@ -13,7 +13,7 @@ depends=('perl' 'libxml2')
 source=(http://www.linuxprinting.org/download/foomatic/$pkgname-$_snapver.tar.gz)
 url="http://www.linuxprinting.org/foomatic.html"
 options=('force')
-md5sums=('5d827cd3d95807c28609d49a5c412c29')
+md5sums=('b8f48ba660b4e8ee038533a509a44597')
 
 build() {
    cd $startdir/src/$pkgname-*
