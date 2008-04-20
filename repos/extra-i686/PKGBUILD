@@ -3,7 +3,7 @@
 # Contributor: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=lftp
-pkgver=3.7.0
+pkgver=3.7.1
 pkgrel=1
 pkgdesc="Sophisticated command line based FTP client"
 arch=('i686' 'x86_64')
@@ -12,7 +12,7 @@ depends=(gcc-libs readline 'openssl>=0.9.8f' 'expat>=2.0.1')
 url="http://lftp.yar.ru/"
 backup=('etc/lftp.conf')
 source=(http://ftp.yars.free.net/pub/source/lftp/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('7026dad237434ee35603049b978930df')
+md5sums=('60bb61fc1a5e96392bbd2dc88b938109')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
