@@ -3,14 +3,15 @@
 # Maintainer: juergen <juergen@archlinux.org>
 
 pkgname=ecl
-pkgver=0.9i
+pkgver=0.9j
 pkgrel=1
 pkgdesc="Embeddable Common Lisp"
 arch=(i686 x86_64)
 depends=('bash' 'gmp')
 makedepends=('texinfo')
+license=('LGPL')
 source=(http://dl.sourceforge.net/sourceforge/${pkgname}s/${pkgname}-${pkgver}.tgz)
-md5sums=('ea47c0a9f47c510ff4654b44b004537a')
+md5sums=('9825dba9b0198e5e7822cf2bfae84a6d')
 url="http://sourceforge.net/projects/ecls/"
 
 
