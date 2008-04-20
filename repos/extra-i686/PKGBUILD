@@ -2,19 +2,19 @@
 #Maintainer: Jan De Groot <jgc@archlinux.org>
 
 pkgname=gnome-keyring
-pkgver=2.22.0
-pkgrel=2
+pkgver=2.22.1
+pkgrel=1
 pkgdesc="GNOME Password Management daemon"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL')
-depends=('gconf>=2.22.0' 'hal>=0.5.10')
+depends=('gconf>=2.22.0' 'hal>=0.5.11rc2')
 makedepends=('perlxml' 'pkgconfig')
 options=('!libtool' '!emptydirs')
 url="http://www.gnome.org"
 install=gnome-keyring.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2
 	gnome-keyring.service)
-md5sums=('d27c5bf11579069eb694f93b71364bb4' '16062d82eb8062201fb24f3e0ceb49a6')
+md5sums=('4ca9c19fa6ada61cdc93ab24214b5c4f' '16062d82eb8062201fb24f3e0ceb49a6')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
