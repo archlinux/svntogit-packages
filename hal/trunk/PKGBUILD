@@ -4,7 +4,7 @@
 
 pkgname=hal
 pkgver=0.5.11rc2
-pkgrel=1
+pkgrel=2
 pkgdesc="Hardware Abstraction Layer"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
@@ -14,12 +14,14 @@ makedepends=('pkgconfig' 'gperf')
 options=('!libtool')
 install=hal.install
 source=(http://hal.freedesktop.org/releases/${pkgname}-${pkgver}.tar.gz
+	addon-input-nval.patch
 	hal
 	hal-policy.patch
 	cryptsetup_location.patch
 	hal-0.5.9-hide-diagnostic.patch
 	ntfs3g-valid-options.patch)
 md5sums=('ade962044a62e8f2dc4625a17f4a5c7e'
+	 '272755ed2004cfc362ffcf98167a4ef9'
          '882f67668cb14a0a9e4a27ef22278027'
          '5ba8b610aa9763a5f42b9f7cbd7a86ad'
          'c688a3c6574699365926f4fef7441545'
@@ -32,6 +34,7 @@ build() {
   patch -Np1 -i ${startdir}/src/cryptsetup_location.patch || return 1
   patch -Np1 -i ${startdir}/src/hal-0.5.9-hide-diagnostic.patch || return 1
   patch -Np0 -i ${startdir}/src/ntfs3g-valid-options.patch || return 1
+  patch -Np0 -i ${startdir}/src/addon-input-nval.patch || return 1
 
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
               --libexecdir=/usr/lib/hal --enable-static=no \
