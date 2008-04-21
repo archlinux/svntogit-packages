@@ -1,0 +1,98 @@
+From maximlevitsky at gmail.com  Fri Feb 29 09:12:56 2008
+From: maximlevitsky at gmail.com (Maxim Levitsky)
+Date: Fri, 29 Feb 2008 19:12:56 +0200
+Subject: [PATCH 1/2] Since G965 class hardware has overlay too, enable it
+In-Reply-To: <200802291911.08259.maximlevitsky@gmail.com>
+References: <200802241815.33057.maximlevitsky@gmail.com>
+	<8a7302370802290600w68c13aa8kb43ae82fe003342a@mail.gmail.com>
+	<200802291911.08259.maximlevitsky@gmail.com>
+Message-ID: <200802291912.56278.maximlevitsky@gmail.com>
+
+From 140320b85c634ad58701243fde3ff41cdcf1863d Mon Sep 17 00:00:00 2001
+From: Maxim Levitsky <maximlevitsky at gmail.com>
+Date: Sun, 24 Feb 2008 17:31:35 +0200
+Subject: [PATCH] Since G965 class hardware has overlay too, enable it
+
+*replace explicit checks for G965 for having no overlay since it has one,
+ with general check for future chips that may have no overlay.
+
+*make overlay registers to be mapped correctly for G965
+*remove a check for register bit that isn't present on G965
+"(INREG(pipeconf_reg) & PIPEACONF_DOUBLE_WIDE)"
+---
+ src/common.h      |    5 ++++-
+ src/i830_memory.c |    2 +-
+ src/i830_video.c  |   10 ++++------
+ 3 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/src/common.h b/src/common.h
+index c0af1ad..f7e47e7 100644
+--- a/src/common.h
++++ b/src/common.h
+@@ -440,7 +440,10 @@ extern int I810_DEBUG;
+ 
+ #define IS_MOBILE(pI810) (IS_I830(pI810) || IS_I85X(pI810) || IS_I915GM(pI810) || IS_I945GM(pI810) || IS_I965GM(pI810) || IS_IGD_GM(pI810))
+ /* mark chipsets for using gfx VM offset for overlay */
+-#define OVERLAY_NOPHYSICAL(pI810) (IS_G33CLASS(pI810))
++#define OVERLAY_NOPHYSICAL(pI810) (IS_G33CLASS(pI810) || IS_I965G(pI810))
++#define HW_HAS_OVERLAY(pI810) (1)
++
++
+ /* chipsets require graphics mem for hardware status page */
+ #define HWS_NEED_GFX(pI810) (IS_G33CLASS(pI810) || IS_IGD_GM(pI810))
+ 
+diff --git a/src/i830_memory.c b/src/i830_memory.c
+index 1861c64..2d8c40f 100644
+--- a/src/i830_memory.c
++++ b/src/i830_memory.c
+@@ -1044,7 +1044,7 @@ i830_allocate_overlay(ScrnInfoPtr pScrn)
+     if (!OVERLAY_NOPHYSICAL(pI830))
+ 	flags |= NEED_PHYSICAL_ADDR;
+ 
+-    if (!IS_I965G(pI830)) {
++    if (HW_HAS_OVERLAY(pI830)) {
+ 	pI830->overlay_regs = i830_allocate_memory(pScrn, "overlay registers",
+ 						   OVERLAY_SIZE, GTT_PAGE_SIZE,
+ 						   flags);
+diff --git a/src/i830_video.c b/src/i830_video.c
+index 79e0574..894f55a 100644
+--- a/src/i830_video.c
++++ b/src/i830_video.c
+@@ -352,7 +352,7 @@ i830_overlay_switch_to_crtc (ScrnInfoPtr pScrn, xf86CrtcPtr crtc)
+     I830CrtcPrivatePtr  intel_crtc = crtc->driver_private;
+     int			pipeconf_reg = intel_crtc->pipe == 0 ? PIPEACONF : PIPEBCONF;
+ 
+-    if (INREG(pipeconf_reg) & PIPEACONF_DOUBLE_WIDE)
++    if (!IS_I965G(pI830) && (INREG(pipeconf_reg) & PIPEACONF_DOUBLE_WIDE))
+ 	pPriv->overlayOK = FALSE;
+     else
+ 	pPriv->overlayOK = TRUE;
+@@ -580,7 +580,7 @@ I830InitVideo(ScreenPtr pScreen)
+     }
+ 
+     /* Set up overlay video if we can do it at this depth. */
+-    if (!IS_I965G(pI830) && pScrn->bitsPerPixel != 8 &&
++    if (HW_HAS_OVERLAY(pI830) && pScrn->bitsPerPixel != 8 &&
+ 	pI830->overlay_regs != NULL)
+     {
+ 	overlayAdaptor = I830SetupImageVideoOverlay(pScreen);
+@@ -2563,8 +2563,7 @@ I830VideoBlockHandler(int i, pointer blockData, pointer pTimeout,
+     if (pI830->adaptor == NULL)
+         return;
+ 
+-    /* No overlay scaler on the 965. */
+-    if (IS_I965G(pI830))
++    if (!HW_HAS_OVERLAY(pI830))
+         return;
+ 
+     pPriv = GET_PORT_PRIVATE(pScrn);
+@@ -2846,8 +2845,7 @@ i830_crtc_dpms_video(xf86CrtcPtr crtc, Bool on)
+     if (pI830->adaptor == NULL)
+ 	return;
+ 
+-    /* No overlay scaler on the 965. */
+-    if (IS_I965G(pI830))
++    if (!HW_HAS_OVERLAY(pI830))
+ 	return;
+ 
+     pPriv = GET_PORT_PRIVATE(pScrn);
