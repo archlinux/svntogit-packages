@@ -3,8 +3,8 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=mesa
-pkgver=7.0.3rc3
-_mesaver=7.0.3-rc3
+pkgver=7.0.3
+_mesaver=7.0.3
 pkgrel=1
 pkgdesc="Mesa OpenGL library"
 arch=(i686 x86_64)
@@ -14,8 +14,8 @@ depends=('libgl' 'glproto>=1.4.9' 'gcc-libs' 'libxt')
 makedepends=('imake' 'pkgconfig')
 conflicts=('mesa-apps')
 replaces=('mesa-apps')
-source=(http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz
-	http://www.mesa3d.org/beta/MesaDemos-${_mesaver}.tar.gz
+source=(http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaDemos-${_mesaver}.tar.bz2
 	ftp://ftp.archlinux.org/other/mesa/gl-manpages-1.0.1.tar.bz2
 	mesa-6.5-apps-noglut.patch)
 
@@ -56,7 +56,7 @@ build() {
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 }
-md5sums=('8caf88712f76f28ed36aa0cedad6d7cb'
-         '60855ec39300ba5f4cf56410a5eacaf4'
+md5sums=('e6e6379d7793af40a6bc3ce1bace572e'
+         '47fd6863621d3c9c7dbb870ab7f0c303'
          '6ae05158e678f4594343f32c2ca50515'
          'cc5a4ea4ea8de4425997fcda2a9d8648')
