@@ -2,14 +2,14 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-savage
-pkgver=2.1.3
-pkgrel=3
+pkgver=2.2.0
+pkgrel=1
 pkgdesc="X.org savage video driver"
-mesaver="7.0.3-rc2"
+mesaver="7.0.3-rc3"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0' 'expat>=2.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc2' 'xf86driproto' 'glproto>=1.4.9')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc3' 'xf86driproto' 'glproto>=1.4.9')
 options=(!libtool)
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
@@ -45,3 +45,5 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('0f7858b58e14dce53bcbaec2160bfcb9'
+         '8caf88712f76f28ed36aa0cedad6d7cb')
