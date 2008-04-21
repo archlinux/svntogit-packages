@@ -5,15 +5,15 @@ pkgname=xf86-video-tdfx
 pkgver=1.4.0
 pkgrel=1
 pkgdesc="X.org tdfx video driver"
-_mesaver="7.0.3-rc3"
+_mesaver="7.0.3"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('expat>=2.0' 'libdrm>=2.3.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc3')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3')
 options=(!libtool)
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
-	http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz)
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2)
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -46,4 +46,4 @@ build() {
   make DESTDIR=${startdir}/pkg install || return 1
 }
 md5sums=('b13132f24683ef759bfb0c1db5096496'
-         '8caf88712f76f28ed36aa0cedad6d7cb')
+         'e6e6379d7793af40a6bc3ce1bace572e')
