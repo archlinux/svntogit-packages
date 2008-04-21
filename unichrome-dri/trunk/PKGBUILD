@@ -2,17 +2,17 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=unichrome-dri
-pkgver=7.0.3rc3
-_mesaver=7.0.3-rc3
+pkgver=7.0.3
+_mesaver=7.0.3
 pkgrel=1
 pkgdesc="DRI drivers for Unichrome-based videochipsets"
 arch=(i686 x86_64)
 license=('GPL')
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0' 'expat>=2.0')
-makedepends=('imake' 'mesa>=7.0.3rc3' 'glproto>=1.4.9')
+makedepends=('imake' 'mesa>=7.0.3' 'glproto>=1.4.9')
 options=('!libtool')
-source=(http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz)
+source=(http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2)
 
 build() {
   cd ${startdir}/src/Mesa-${_mesaver}/configs
@@ -37,4 +37,4 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
-md5sums=('8caf88712f76f28ed36aa0cedad6d7cb')
+md5sums=('e6e6379d7793af40a6bc3ce1bace572e')
