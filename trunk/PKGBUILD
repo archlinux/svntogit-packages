@@ -2,14 +2,14 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xf86-video-intel
 pkgver=2.2.1
-pkgrel=2
-_mesaver=7.0.3-rc2
+pkgrel=3
+_mesaver=7.0.3-rc3
 pkgdesc="X.org Intel i810/i830/i915 video drivers"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0' 'expat>=2.0')
 makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'xf86driproto'
-             'libxvmc' 'mesa>=7.0.3rc2')
+             'libxvmc' 'mesa>=7.0.3rc3')
 options=('!libtool')
 groups=('xorg-video-drivers')
 conflicts=('xf86-video-i810')
@@ -21,14 +21,6 @@ source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
 	05_intel_exa_force_greedy.patch
 	08_945gm_quirk.diff
 	10_hw_overlay.diff)
-md5sums=('3334dc5142871b78fc609fd1b3dac3f2'
-         '141f5c1c89b090d0f0bd92522ebb8de9'
-         '67c0e2e7d7d5666c584ef9e2c72e48db'
-         'c11277be9520840785fb8604d6cd2b57'
-         '4b231516fe9d04e1332c6c85d6a4672a'
-         '5f6a966d3ab4b1ae9009e9601e7ce9fa'
-         '9ac8addd03f4ddc7446d3e3b58b38314'
-         '50f8c51b82f4ed86e956b7b04775e15a')
 
 build() {
   export CFLAGS="${CLFAGS} -fno-strict-aliasing"
@@ -70,3 +62,11 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('3334dc5142871b78fc609fd1b3dac3f2'
+         '8caf88712f76f28ed36aa0cedad6d7cb'
+         '67c0e2e7d7d5666c584ef9e2c72e48db'
+         'c11277be9520840785fb8604d6cd2b57'
+         '4b231516fe9d04e1332c6c85d6a4672a'
+         '5f6a966d3ab4b1ae9009e9601e7ce9fa'
+         '9ac8addd03f4ddc7446d3e3b58b38314'
+         '50f8c51b82f4ed86e956b7b04775e15a')
