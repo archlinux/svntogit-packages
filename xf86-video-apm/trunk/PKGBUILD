@@ -1,23 +1,22 @@
 # $Id$
-#Maintainer: Jan de Groot <jgc@archlinux.org>
-
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-apm
-pkgver=1.1.1
-pkgrel=4
+pkgver=1.2.0
+pkgrel=1
 pkgdesc="X.org Alliance ProMotion video driver"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('glibc')
-makedepends=('pkgconfig' 'xorg-server>=1.1.1')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90')
 groups=('xorg-video-drivers')
-options=('nolibtool')
+options=('!libtool')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('ac7e05f0dfc7e02cac0bf17b9eb89b11')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr \
-              --build=${CHOST} --host=${CHOST}
+  ./configure --prefix=/usr
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('4f78650d79656dc803a720049d65682e')
