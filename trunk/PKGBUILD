@@ -4,8 +4,8 @@
 
 pkgname=xorg-server
 pkgver=1.4.0.90
-pkgrel=10
-_mesaver=7.0.3-rc3
+pkgrel=11
+_mesaver=7.0.3
 pkgdesc="X.Org X servers"
 arch=('i686' 'x86_64')
 license=('custom')
@@ -24,7 +24,7 @@ provides=('x-server')
 groups=('xorg')
 install=xorg-server.install
 source=(${url}/releases/individual/xserver/${pkgname}-${pkgver}.tar.bz2
-	http://www.mesa3d.org/beta/MesaLib-7.0.3-rc3.tar.gz
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-7.0.3.tar.bz2
 	ftp://ftp.archlinux.org/other/xorg-server/xorg-server-patches-1.4-8.tar.bz2
 	xkb-fixes.patch)
 
@@ -126,6 +126,6 @@ build() {
   install -m644 ${startdir}/src/${pkgname}-${pkgver}/COPYING ${startdir}/pkg/usr/share/licenses/${pkgname}/ || return 1
 }
 md5sums=('bb16e969850dbb5d3805cb88d35656d0'
-         '8caf88712f76f28ed36aa0cedad6d7cb'
+         'e6e6379d7793af40a6bc3ce1bace572e'
          '55341205777a42712c445c5e24b57b6a'
          '11fb627cd9004822050ef13a6d27f9a0')
