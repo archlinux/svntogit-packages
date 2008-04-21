@@ -3,22 +3,19 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-i810
 pkgver=1.7.4
-pkgrel=7
+pkgrel=8
 pkgdesc="X.org Intel i810/i830/i915 video drivers"
-_mesaver="7.0.3-rc2"
+_mesaver="7.0.3-rc3"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0' 'expat>=2.0')
 makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'xf86driproto'
-             'libxvmc' 'glproto' 'mesa>=7.0.3rc2')
+             'libxvmc' 'glproto' 'mesa>=7.0.3rc3')
 options=(!libtool)
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
 	http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz
 	mergedfb-checks.patch)
-md5sums=('744a6ee1ebfe1c74e3b170b8d7ef8395'
-         '141f5c1c89b090d0f0bd92522ebb8de9'
-         '529511b1e0c2c2f7c5c03aa98178b1ae')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -51,3 +48,6 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('744a6ee1ebfe1c74e3b170b8d7ef8395'
+         '8caf88712f76f28ed36aa0cedad6d7cb'
+         '529511b1e0c2c2f7c5c03aa98178b1ae')
