@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xf86-video-i810
+pkgver=1.7.4
+pkgrel=8
+pkgdesc="X.org Intel i810/i830/i915 video drivers"
+_mesaver="7.0.3-rc3"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org/"
+depends=('libdrm>=2.3.0' 'expat>=2.0')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'xf86driproto'
+             'libxvmc' 'glproto' 'mesa>=7.0.3rc3')
+options=(!libtool)
+groups=('xorg-video-drivers')
+source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
+	http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz
+	mergedfb-checks.patch)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  patch -Np1 -R -i ${startdir}/src/mergedfb-checks.patch || return 1
+  ./configure --prefix=/usr \
+              --enable-dri || return 1
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+
+  cd ${startdir}/src/Mesa-${_mesaver}
+  cd configs
+
+  CONFIG="linux-dri-x86"
+  [ "$CARCH" = "x86_64" ] && CONFIG="linux-dri-x86-64"
+  echo "EXTRA_LIB_PATH =" >> ${CONFIG}
+  echo "OPT_FLAGS = ${CFLAGS}" >> ${CONFIG}
+  echo "SRC_DIRS = glx/x11 mesa" >> ${CONFIG}
+  echo "USING_EGL = 0" >> ${CONFIG}
+  echo "PROGRAM_DIRS =" >> ${CONFIG}
+  echo "MKDEP = makedepend" >> ${CONFIG}
+  echo "DRI_DIRS = i810 i915 i915tex i965" >> ${CONFIG}
+  echo "DRI_DRIVER_SEARCH_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
+  echo "DRI_DRIVER_INSTALL_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
+  echo "ARCH_FLAGS += -DGLX_USE_TLS" >> ${CONFIG}
+  echo "X11_INCLUDES = `pkg-config --cflags-only-I x11`" >> ${CONFIG}
+
+  ln -s ${CONFIG} current
+  cd ${startdir}/src/Mesa-${_mesaver}/src/mesa
+  make linux-solo || return 1
+  cd drivers/dri
+  make DESTDIR=${startdir}/pkg install || return 1
+}
+md5sums=('744a6ee1ebfe1c74e3b170b8d7ef8395'
+         '8caf88712f76f28ed36aa0cedad6d7cb'
+         '529511b1e0c2c2f7c5c03aa98178b1ae')
