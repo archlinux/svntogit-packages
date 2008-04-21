@@ -2,7 +2,7 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-nv
-pkgver=2.1.7
+pkgver=2.1.8
 pkgrel=1
 pkgdesc="X.org nv video driver"
 arch=(i686 x86_64)
@@ -16,8 +16,7 @@ source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2)
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr \
-              --build=${CHOST} --host=${CHOST}
+  ./configure --prefix=/usr
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 
@@ -25,3 +24,4 @@ build() {
                    ${startdir}/pkg/usr/share/licenses/${pkgname}/LICENSE
 }
 md5sums=('192414222f1a98e228832ee53f8178c0')
+md5sums=('c3e8c98287dc98677bebfbe1ba51ab77')
