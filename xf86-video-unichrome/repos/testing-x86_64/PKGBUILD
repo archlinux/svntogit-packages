@@ -2,13 +2,13 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-unichrome
 pkgver=0.2.6
-pkgrel=7
+pkgrel=8
 pkgdesc="Unichrome video drivers for X.Org"
 arch=(i686 x86_64)
 url="http://unichrome.sf.net/"
-depends=('unichrome-dri>=7.0.3rc3')
+depends=('unichrome-dri>=7.0.3')
 makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'xorg-util-macros' 'xf86driproto' \
-             'glproto' 'mesa>=7.0.3rc3' 'autoconf' 'automake' 'libtool')
+             'glproto' 'mesa>=7.0.3' 'autoconf' 'automake' 'libtool')
 options=('!libtool')
 conflicts=('xf86-video-via' 'openchrome')
 groups=('xorg-video-drivers')
