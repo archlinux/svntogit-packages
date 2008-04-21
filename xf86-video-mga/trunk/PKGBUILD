@@ -3,20 +3,18 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-mga
 pkgver=1.4.8
-pkgrel=1
+pkgrel=2
 pkgdesc="X.org mga video driver"
-mesaver="7.0.3-rc2"
+mesaver="7.0.3-rc3"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm' 'expat>=2.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc1' \
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc3' \
              'xf86driproto' 'glproto>=1.4.9')
 options=('!libtool' 'force')
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
 	http://www.mesa3d.org/beta/MesaLib-${mesaver}.tar.gz)
-md5sums=('e7783c7609d441237d665b7fc47288c7'
-         '141f5c1c89b090d0f0bd92522ebb8de9')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -47,3 +45,5 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('e7783c7609d441237d665b7fc47288c7'
+         '8caf88712f76f28ed36aa0cedad6d7cb')
