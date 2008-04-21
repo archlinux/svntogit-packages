@@ -2,19 +2,19 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xf86-video-intel
 pkgver=2.2.1
-pkgrel=3
-_mesaver=7.0.3-rc3
+pkgrel=4
+_mesaver=7.0.3
 pkgdesc="X.org Intel i810/i830/i915 video drivers"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0' 'expat>=2.0')
 makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'xf86driproto'
-             'libxvmc' 'mesa>=7.0.3rc3')
+             'libxvmc' 'mesa>=7.0.3')
 options=('!libtool')
 groups=('xorg-video-drivers')
 conflicts=('xf86-video-i810')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
-	http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2
 	01_fix_compiz_video.diff
 	03_dell_1535_quirk.diff
 	04_dell_1735_quirk.diff
@@ -63,7 +63,7 @@ build() {
   make DESTDIR=${startdir}/pkg install || return 1
 }
 md5sums=('3334dc5142871b78fc609fd1b3dac3f2'
-         '8caf88712f76f28ed36aa0cedad6d7cb'
+         'e6e6379d7793af40a6bc3ce1bace572e'
          '67c0e2e7d7d5666c584ef9e2c72e48db'
          'c11277be9520840785fb8604d6cd2b57'
          '4b231516fe9d04e1332c6c85d6a4672a'
