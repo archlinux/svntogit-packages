@@ -3,21 +3,19 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-ati
 pkgver=6.8.0
-pkgrel=2
-_mesaver="7.0.3-rc2"
+pkgrel=3
+_mesaver="7.0.3-rc3"
 pkgdesc="X.org ati video driver"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4' 'imake' 'mesa>=7.0.3rc2'
+makedepends=('pkgconfig' 'xorg-server>=1.4' 'imake' 'mesa>=7.0.3rc3'
 	     'glproto>=1.4.9' 'xf86driproto' 'diffutils')
 groups=('xorg-video-drivers')
 options=('!libtool')
 license=('custom')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
 	http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz)
-md5sums=('3c97c7925ebf4162eeb3463e23adc0e3'
-         '141f5c1c89b090d0f0bd92522ebb8de9')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -49,3 +47,5 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('3c97c7925ebf4162eeb3463e23adc0e3'
+         '8caf88712f76f28ed36aa0cedad6d7cb')
