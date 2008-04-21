@@ -1,22 +1,25 @@
 # $Id$
-#Maintainer: Jan de Groot <jgc@archlinux.org>
-
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxkbfile
-pkgver=1.0.4
+pkgver=1.0.5
 pkgrel=1
 pkgdesc="X11 keyboard file manipulation library"
 arch=(i686 x86_64)
+license=('custom')
 url="http://xorg.freedesktop.org/"
 depends=('libx11')
 makedepends=('pkgconfig')
-options=('nolibtool')
+options=('!libtool')
 source=(${url}/releases/individual/lib/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('12b4ceb5d42b520228b5fb40a96ae6c5')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr --sysconfdir=/etc \
-              --host=${CHOST} --build=${CHOST}
+  ./configure --prefix=/usr --sysconfdir=/etc
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
+
+  install -D -m644 ${startdir}/src/${pkgname}-${pkgver}/COPYING \
+                   ${startdir}/pkg/usr/share/licenses/${pkgname}/COPYING
 }
+md5sums=('0726a845fe5a56551de2718c9f6b0e35')
