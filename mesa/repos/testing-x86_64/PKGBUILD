@@ -3,8 +3,8 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=mesa
-pkgver=7.0.3rc2
-_mesaver=7.0.3-rc2
+pkgver=7.0.3rc3
+_mesaver=7.0.3-rc3
 pkgrel=1
 pkgdesc="Mesa OpenGL library"
 arch=(i686 x86_64)
@@ -56,3 +56,7 @@ build() {
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('8caf88712f76f28ed36aa0cedad6d7cb'
+         '60855ec39300ba5f4cf56410a5eacaf4'
+         '6ae05158e678f4594343f32c2ca50515'
+         'cc5a4ea4ea8de4425997fcda2a9d8648')
