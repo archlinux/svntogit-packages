@@ -4,8 +4,8 @@
 
 pkgname=xorg-server
 pkgver=1.4.0.90
-pkgrel=9
-_mesaver=7.0.3-rc2
+pkgrel=10
+_mesaver=7.0.3-rc3
 pkgdesc="X.Org X servers"
 arch=('i686' 'x86_64')
 license=('custom')
@@ -13,7 +13,7 @@ url="http://xorg.freedesktop.org"
 depends=('libxkbui' 'ncurses' 'libxi' 'libxxf86misc' 'libxfont'
          'libxrender' 'libdmx' 'libxaw' 'libxxf86vm' 'xcursor-themes'
 	 'xkeyboard-config' 'xorg-server-utils' 'xorg-utils' 'libdrm>=2.3.0'
-	 'libxfixes' 'xorg-fonts-misc' 'pixman>=0.9.6' 'xbitmaps' 'libgl')
+	 'libxfixes' 'xorg-fonts-misc' 'pixman>=0.10' 'xbitmaps' 'libgl')
 makedepends=('pkgconfig' 'xf86driproto' 'xcmiscproto' 'xtrans' 'bigreqsproto'
              'xf86bigfontproto' 'resourceproto' 'evieext' 'damageproto>=1.1.0'
 	     'compositeproto>=0.4' 'scrnsaverproto' 'libxres' 'xorg-util-macros'
@@ -24,14 +24,9 @@ provides=('x-server')
 groups=('xorg')
 install=xorg-server.install
 source=(${url}/releases/individual/xserver/${pkgname}-${pkgver}.tar.bz2
-	http://www.mesa3d.org/beta/MesaLib-7.0.3-rc2.tar.gz
+	http://www.mesa3d.org/beta/MesaLib-7.0.3-rc3.tar.gz
 	ftp://ftp.archlinux.org/other/xorg-server/xorg-server-patches-1.4-8.tar.bz2
 	xkb-fixes.patch)
-
-md5sums=('bb16e969850dbb5d3805cb88d35656d0'
-         '141f5c1c89b090d0f0bd92522ebb8de9'
-         '55341205777a42712c445c5e24b57b6a'
-	 '11fb627cd9004822050ef13a6d27f9a0')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -130,3 +125,7 @@ build() {
   install -m755 -d ${startdir}/pkg/usr/share/licenses/${pkgname}
   install -m644 ${startdir}/src/${pkgname}-${pkgver}/COPYING ${startdir}/pkg/usr/share/licenses/${pkgname}/ || return 1
 }
+md5sums=('bb16e969850dbb5d3805cb88d35656d0'
+         '8caf88712f76f28ed36aa0cedad6d7cb'
+         '55341205777a42712c445c5e24b57b6a'
+         '11fb627cd9004822050ef13a6d27f9a0')
