@@ -2,8 +2,8 @@
 # Maintainer: Daniel Isenmann <daniel @ archlinux.org>
 # Contributor: Shadowhand <woody.gilk@gmail.com>
 pkgname=beagle
-pkgver=0.3.5
-pkgrel=2
+pkgver=0.3.6.1
+pkgrel=1
 pkgdesc="Search tool that ransacks your personal information space"
 arch=(i686 x86_64)
 url="http://www.gnome.org/projects/beagle/"
@@ -16,7 +16,7 @@ backup=('etc/beagle/crawl-applications' 'etc/beagle/crawl-documentation'
 install=beagle.install
 source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/0.3/${pkgname}-${pkgver}.tar.bz2
 	beagle-0.2.1-spew.patch)
-md5sums=('4d89f4fea81c870e6bdaa9fb2bd33f4a'
+md5sums=('b2ef90b36bed0a24b7ccf52d388c5b98'
          '74feeb60c70999db8895b3a9d260869a')
 
 build() {
