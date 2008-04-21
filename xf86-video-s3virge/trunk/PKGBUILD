@@ -5,15 +5,15 @@ pkgname=xf86-video-s3virge
 pkgver=1.10.0
 pkgrel=1
 pkgdesc="X.org S3 Virge video driver"
-mesaver="7.0.3-rc3"
+mesaver="7.0.3"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('expat>=2.0' 'libdrm')
-makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc3')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3')
 options=(!libtool)
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
-	http://www.mesa3d.org/beta/MesaLib-${mesaver}.tar.gz)
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${mesaver}.tar.bz2)
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -46,4 +46,4 @@ build() {
   make DESTDIR=${startdir}/pkg install || return 1
 }
 md5sums=('5b8381077b9ac6e112c8665e7864001e'
-         '8caf88712f76f28ed36aa0cedad6d7cb')
+         'e6e6379d7793af40a6bc3ce1bace572e')
