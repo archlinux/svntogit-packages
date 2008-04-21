@@ -1,6 +1,6 @@
 # $Id$
-#Maintainer: Jan de Groot <jgc@archlinux.org>
-
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-via
 pkgver=0.2.2
 pkgrel=4
@@ -8,7 +8,7 @@ pkgdesc="X.org via video driver"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('unichrome-dri')
-makedepends=('pkgconfig' 'xorg-server>=1.3.99.2' 'xf86driproto' 'libxvmc' 'mesa')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'xf86driproto' 'libxvmc' 'mesa>=7.0.3rc3')
 options=('!libtool')
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2)
