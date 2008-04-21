@@ -2,20 +2,18 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-trident
-pkgver=1.2.3
-pkgrel=6
+pkgver=1.3.0
+pkgrel=1
 pkgdesc="X.org Trident video driver"
-_mesaver="7.0.3-rc2"
+_mesaver="7.0.3-rc3"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
 depends=('libdrm>=2.3.0' 'expat>=2.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc2' 'xf86driproto')
+makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3rc3' 'xf86driproto')
 groups=('xorg-video-drivers')
 options=(!libtool)
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
 	http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz)
-md5sums=('c0e8b2f54942b6902b7dd4f30defe800'
-         '141f5c1c89b090d0f0bd92522ebb8de9')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -47,3 +45,5 @@ build() {
   cd drivers/dri
   make DESTDIR=${startdir}/pkg install || return 1
 }
+md5sums=('e89799579d0cf3858362bd751469e0bf'
+         '8caf88712f76f28ed36aa0cedad6d7cb')
