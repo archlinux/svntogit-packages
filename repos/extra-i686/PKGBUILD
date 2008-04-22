@@ -2,7 +2,7 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 pkgname=hunspell
 pkgver=1.2.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Hunspell is a spell checker and morphological analyzer library"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL' 'MPL')
@@ -18,7 +18,4 @@ build() {
   ./configure --prefix=/usr --disable-static
   make || return 1
   make DESTDIR=${startdir}/pkg install
-
-  # hack to make it usable for OpenOffice
-  sed -i "s/-1.2//" $startdir/pkg/usr/lib/pkgconfig/hunspell.pc
 }
