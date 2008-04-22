@@ -11,7 +11,7 @@ url="http://www.abisource.com"
 options=('!libtool' '!makeflags')
 depends=("abiword>=${pkgver}" 'aiksaurus>=1.2.1' 'libgnomedb>=1.2.2'
          'gtkmathview>=0.7.7' 'link-grammar>=4.2.4' 'libwmf>=0.2.8.4'
-         'librsvg>=2.18.1' 'libwpd>=0.8.7' 'psiconv>=0.9.8')
+         'librsvg>=2.18.1' 'libwpd>=0.8.7' 'psiconv>=0.9.8' 'boost')
 source=(http://www.abisource.com/downloads/abiword/${pkgver}/source/abiword-plugins-${pkgver}.tar.gz
         http://www.abisource.com/downloads/abiword/${pkgver}/source/abiword-${pkgver}.tar.gz)
 md5sums=('8e3f0717327b712c6d091128709f5599'
