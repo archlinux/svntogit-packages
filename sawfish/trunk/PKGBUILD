@@ -8,7 +8,7 @@ pkgdesc="An alternate window manager for GNOME"
 url="http://sawmill.sourceforge.net/"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('librep' 'esd' 'gtk2' 'rep-gtk' 'libsm')
+depends=('librep' 'esd' 'gtk2' 'rep-gtk' 'libsm' 'gmp')
 source=(http://downloads.sourceforge.net/sourceforge/sawmill/sawfish-$pkgver.tar.gz
         no-info.patch)
 options=(!libtool)
