@@ -3,7 +3,7 @@
 
 pkgname=openoffice-base
 pkgver=2.4.0
-pkgrel=1 # =RC6(identical)
+pkgrel=2 # =RC6(identical)
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=('i686' 'x86_64')
 _OO_milestone=ooh680-m12
@@ -12,7 +12,7 @@ license=('LGPL')
 url="http://www.openoffice.org"
 install=openoffice.install
 depends=('ttf-dejavu' 'curl' 'desktop-file-utils' 'fontconfig>=2.5' 'gtk2>=2.12.7'
-         'hunspell>=1.2.1-2' 'perl' 'python>=2.5.1' 'libwpd' 'libsndfile'
+         'hunspell>=1.2.2-2' 'perl' 'python>=2.5.1' 'libwpd' 'libsndfile'
          'startup-notification>=0.9' 'xalan-java' 'libxaw' 'libcups' 'hsqldb-java'
          'neon>=0.27.2' 'dbus-glib' 'nss' 'pstoedit')
 	# 'xmlsec' - broken 
