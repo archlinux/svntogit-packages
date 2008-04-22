@@ -3,16 +3,17 @@
 # Contributor: Jochem Kossen <j.kossen@home.nl>
 
 pkgname=lsof
-pkgver=4.78
+pkgver=4.79
 pkgrel=1
 pkgdesc="lsof (LiSt Open Files) lists information about files that are open by the running processes"
 arch=(i686 x86_64)
 license=(custom)
 depends=('glibc')
-url="ftp://vic.cc.purdue.edu/pub/tools/unix/lsof/"
-source=(ftp://lsof.itap.purdue.edu/pub/tools/unix/lsof/${pkgname}_$pkgver.tar.bz2 \
+url="http://people.freebsd.org/~abe/"
+source=(ftp://lsof.itap.purdue.edu/pub/tools/unix/lsof/${pkgname}_${pkgver}.tar.bz2
         license.txt)
-md5sums=('00360ce2b62de3015fa7e0f8f92179a8' '1b63c76bd10437cabf890508c8e58d36')
+md5sums=('34e35c07973b5175d787f72a29ab5711'
+         '1b63c76bd10437cabf890508c8e58d36')
 
 build() {
    cd $startdir/src/${pkgname}_${pkgver}
