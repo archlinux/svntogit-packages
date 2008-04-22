@@ -2,7 +2,7 @@
 # Contributor: John Proctor <jproctor@prium.net>
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=swi-prolog
-pkgver=5.6.52
+pkgver=5.6.54
 pkgrel=1
 pkgdesc="Prolog environment"
 arch=(i686 x86_64)
@@ -12,7 +12,7 @@ license=('GPL')
 makedepends=('libxft' 'libjpeg' 'unixodbc' 'openssl' 'libxpm' 'libxinerama')
 options=('!makeflags')
 source=(http://gollem.science.uva.nl/cgi-bin/nph-download/SWI-Prolog/pl-$pkgver.tar.gz)
-md5sums=('3b15a61d4e395cf85118ecb8905b245e')
+md5sums=('08b0715a2ee27296215c13dd14ef0275')
 
 build() {
   cd $startdir/src/pl-$pkgver
