@@ -2,7 +2,7 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org> 
 
 pkgname=sawfish
-pkgver=1.3.1
+pkgver=1.3.3
 pkgrel=1
 pkgdesc="An alternate window manager for GNOME"
 url="http://sawmill.sourceforge.net/"
@@ -11,8 +11,9 @@ license=('GPL')
 depends=('librep' 'esd' 'gtk2' 'rep-gtk' 'libsm')
 source=(http://downloads.sourceforge.net/sourceforge/sawmill/sawfish-$pkgver.tar.gz
         no-info.patch)
-md5sums=('2ebed60d4fcae075f1f171972c40660a' '48be9727db805d8c9f3e9410b7ba638e')
 options=(!libtool)
+md5sums=('456724c79ddb0b78d03d45dcaffa4103'
+         '48be9727db805d8c9f3e9410b7ba638e')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
