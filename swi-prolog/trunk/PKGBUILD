@@ -1,4 +1,4 @@
-# $id: PKGBUILD,v 1.25 2006/11/30 20:07:03 juergen Exp $
+# $Id$
 # Contributor: John Proctor <jproctor@prium.net>
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=swi-prolog
