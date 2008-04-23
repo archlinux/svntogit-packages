@@ -3,7 +3,7 @@
 # Contributor: Shadowhand <woody.gilk@gmail.com>
 pkgname=beagle
 pkgver=0.3.6.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Search tool that ransacks your personal information space"
 arch=(i686 x86_64)
 url="http://www.gnome.org/projects/beagle/"
@@ -32,7 +32,8 @@ build() {
 	--enable-inotify \
 	--disable-libbeagle \
 	--disable-static \
-	--disable-docs 
+	--disable-docs \
+        --disable-evolution	
   make || return 1
   make DESTDIR=${startdir}/pkg install
 
