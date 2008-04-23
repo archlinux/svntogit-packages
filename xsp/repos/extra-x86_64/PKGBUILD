@@ -3,18 +3,18 @@
 # Contributor: Tobias Kieslich <tobias@justdreams.de>
 
 pkgname=xsp
-pkgver=1.9
+pkgver=1.9.1
 pkgrel=1
 pkgdesc="A simple webserver based on mono - provides ASP.NET support"
 arch=(i686 x86_64)
 license=('custom')
 url="http://www.go-mono.com"
-depends=('mono>=1.9')
+depends=('mono>=1.9.1')
 options=(!makeflags)
 install=${pkgname}.install
 source=(http://www.go-mono.com/sources/${pkgname}/${pkgname}-${pkgver}.tar.bz2 \
         ${pkgname}.rc.d ${pkgname}.conf.d ${pkgname}.webapp)
-md5sums=('6ec9e718e2c67088bba4e21092b85f22'
+md5sums=('f53f440714a8126d7221212c6d79ea11'
          '9575bd7d6f64d51ba05bdd6370665858'
          '35d921df0fefc30f47a438c95d420efc'
          '3136575652778d8b905dae8302ceec03')
