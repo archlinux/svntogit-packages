@@ -3,7 +3,7 @@
 # Contributor: Brice Carpentier <brice@dlfp.org>
 
 pkgname=mono
-pkgver=1.9
+pkgver=1.9.1
 pkgrel=1
 pkgdesc="Free implementation of the .NET platform including runtime and compiler"
 arch=(i686 x86_64)
@@ -14,7 +14,7 @@ makedepends=('pkgconfig')
 options=('!libtool' '!makeflags')
 source=(http://www.go-mono.com/sources/${pkgname}/${pkgname}-${pkgver}.tar.bz2
         mono.rc.d)
-md5sums=('371158ca0bbd9d6fb391d9c0f9834529'
+md5sums=('6610c3b999d791553a9dc21059ca9d35'
          '8315e46c6a6e9625502521fc0ad1a322')
 
 build() {
@@ -30,7 +30,8 @@ build() {
   ./configure --prefix=/usr --sysconfdir=/etc \
               --with-libgdiplus=installed --with-icu=no \
               --with-tls=pthread --with-jit=yes --with-preview=yes \
-              --with-sigaltstack=yes,no --enable-nunit-tests
+              --with-sigaltstack=yes --enable-nunit-tests \
+	      --with-moonlight=yes
   make || return 1
   sed -i "/NO_INSTALL = yes/d" mcs/nunit20/nunit-console/Makefile
   make DESTDIR=${startdir}/pkg install
