@@ -4,15 +4,15 @@
 
 # KEEP LIBTOOL FILES!
 pkgname=neon
-pkgver=0.27.2
+pkgver=0.28.2
 pkgrel=1
 pkgdesc="HTTP and WebDAV client library with a C interface"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
-depends=('libxml2' 'openssl>=0.9.8f' 'heimdal>=1.0.1' 'zlib' 'expat>=2.0.1' 'db>=4.6')
+depends=('libxml2' 'openssl>=0.9.8g-2' 'heimdal>=1.0.1-2' 'zlib' 'expat>=2.0.1' 'db>=4.6.21')
 url="http://www.webdav.org/neon/"
 source=(http://www.webdav.org/neon/${pkgname}-${pkgver}.tar.gz)
-md5sums=('24d434a4d5d4b6ce8f076039688f60ce')
+md5sums=('b99b3f44e8507ae2d17362f1b34aaf02')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
