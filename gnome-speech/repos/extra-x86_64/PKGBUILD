@@ -2,7 +2,7 @@
 # Maitnainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-speech
-pkgver=0.4.18
+pkgver=0.4.19
 pkgrel=1
 pkgdesc="Gnome Text-to-Speech"
 arch=(i686 x86_64)
@@ -12,7 +12,7 @@ depends=('libbonobo>=2.22.0')
 makedepends=('perlxml' 'pkgconfig')
 options=('!libtool')
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/0.4/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('f325037fdc74e19d943f397066454ac3')
+md5sums=('70816666e1359684eb3699c5dcaeafe6')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
