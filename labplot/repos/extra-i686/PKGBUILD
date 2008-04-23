@@ -6,13 +6,13 @@ pkgname=labplot
 origname=LabPlot
 pkgver=1.6.0.1
 origver=1.6.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Plotting, Data analysis and visualisation"
 arch=(i686 x86_64)
 url="http://staff.mbi-berlin.de/gerlach/Linux/LabPlot/"
 source=(http://dl.sourceforge.net/sourceforge/labplot/LabPlot-$pkgver.tar.gz)
 # http://staff.mbi-berlin.de/gerlach/Linux/LabPlot/src/$origname-$pkgver.tar.gz)
-depends=('kdelibs>=3.5.8' 'gsl' 'pstoedit' 'imagemagick>=6.2.6' 'qwtplot3d' 'fftw>=3.0.1-5' 'netcdf>=3.6.0.p1')
+depends=('kdelibs>=3.5.8' 'gsl' 'pstoedit' 'imagemagick>=6.4.0.2' 'qwtplot3d' 'fftw>=3.0.1-5' 'netcdf>=3.6.0.p1')
 makedepends=('libxml++>=1.0.4-2')
 options=("!libtool")
 license=("GPL")
