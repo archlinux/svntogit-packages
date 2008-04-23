@@ -1,7 +1,7 @@
 # $Id$
 # Maintainer: Judd Vinet <jvinet@zeroflux.org>
 pkgname=wget
-pkgver=1.11
+pkgver=1.11.1
 pkgrel=1
 pkgdesc="A network utility to retrieve files from the Web"
 arch=(i686 x86_64)
@@ -11,7 +11,7 @@ groups=('base')
 depends=('glibc' 'openssl')
 backup=('etc/wgetrc')
 source=(ftp://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
-md5sums=('b0a4d178672df06435fcbded07cfc054')
+md5sums=('9ce16ff30a236e474e3c19d988e1f119')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
