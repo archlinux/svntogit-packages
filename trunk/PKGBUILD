@@ -1,8 +1,8 @@
 # $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=tar
-pkgver=1.19
-pkgrel=2
+pkgver=1.20
+pkgrel=1
 pkgdesc="Utility used to store, backup, and transport files"
 arch=(i686 x86_64)
 license=('GPL')
@@ -10,7 +10,7 @@ groups=('base')
 url="http://www.gnu.org/software/tar/tar.html"
 depends=('glibc' 'bash')
 source=(ftp://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.bz2 tar.1)
-md5sums=('bcc2e19b19823b9ab68c94586067a792'
+md5sums=('1a7e17f27abf583b3b0bc059a827e68b'
          'a5f8c5da7a9465ea1978145f3ef0610c')
 
 build() {
