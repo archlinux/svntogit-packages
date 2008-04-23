@@ -1,19 +1,19 @@
 # $Id$
 # Maintainer: Jan de Groot  <jgc@archlinux.org>
 pkgname=libgweather
-pkgver=2.22.1.1
+pkgver=2.22.1.2
 pkgrel=1
 pkgdesc="Provides access to weather information from the net"
 arch=(i686 x86_64)
 license=('LGPL')
 depends=('gnome-vfs>=2.22.0')
 makedepends=('pkgconfig' 'perlxml')
-options=('!libtool' '!emptydirs')
+options=('!libtool' '!emptydirs' '!makeflags')
 conflicts=('gnome-applets<2.22.0')
 url="http://www.gnome.org/"
 install=libgweather.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('6b0e12931db8c640992bef75bd3cc24b')
+md5sums=('6283f775434066e0183ee0c6cb789ac5')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
