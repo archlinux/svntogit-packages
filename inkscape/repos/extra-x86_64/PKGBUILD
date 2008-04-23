@@ -4,14 +4,14 @@
 
 pkgname=inkscape
 pkgver=0.46
-pkgrel=3
+pkgrel=4
 pkgdesc="A vector-based drawing program - svg compliant"
 url="http://inkscape.sourceforge.net/"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL')
 depends=('gtkmm>=2.12.6' 'gc>=7.0' 'desktop-file-utils' 'libxslt>=1.1.22' \
          'perl>=5.10.0' 'pyxml' 'openssl>=0.9.8d' 'lcms' 'gtkspell' 'poppler-glib>=0.8.0' \
-         'imagemagick>=6.3.8.0' 'popt')
+         'imagemagick>=6.4.0.2' 'popt')
 makedepends=('perlxml' 'pkgconfig' 'boost')
 options=('!libtool')
 install=inkscape.install
