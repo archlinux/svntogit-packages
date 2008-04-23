@@ -4,15 +4,14 @@
 
 pkgname=vips
 pkgver=7.14.1
-mainver=7.14
-pkgrel=1
+pkgrel=2
 pkgdesc="VIPS is a free image processing system."
 arch=("i686" "x86_64")
-license=('LGPL2.1')
+license=('LGPL')
 url="http://www.vips.ecs.soton.ac.uk/index.php"
-depends=('fftw>=3.0.1-5' 'lcms' 'pango' 'imagemagick>=6.2.6' 'libpng' 'libtiff' 'libjpeg' 'zlib' 'glib2' 'libexif' 'openexr' 'liboil')
+depends=('fftw>=3.0.1-5' 'lcms' 'pango' 'imagemagick>=6.4.0.2' 'libpng' 'libtiff' 'libjpeg' 'zlib' 'glib2' 'libexif' 'openexr' 'liboil')
 makedepends=('make' 'pkgconfig' 'perl' 'swig>=1.3.31' 'perlxml')
-source=("http://www.vips.ecs.soton.ac.uk/supported/$mainver/$pkgname-$pkgver.tar.gz")
+source=("http://www.vips.ecs.soton.ac.uk/supported/${pkgver%.*}/$pkgname-$pkgver.tar.gz")
 options=('!libtool')
 
 build() {
