@@ -5,19 +5,22 @@
 # uninstall ImageMagick before building, or build it, install it, build it.
 
 pkgname=imagemagick
-pkgver=6.3.8.0
-pkgrel=2
+pkgver=6.4.0.2
+pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr')
+depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool>=2.2')
 #makedepends=('ghostscript' 'openexr')
 options=('!makeflags')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
-        libpng_mmx_patch_x86_64.patch)
-md5sums=('ca771d5c6dc50ac6b0c4d6abc2c9bd77' '069980fc2590c02aed86420996259302')
-sha1sums=('c22e3cf891d4a48289f622011ffcbb37f2ffa74d' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c')
+        libpng_mmx_patch_x86_64.patch add_delegate.patch)
+md5sums=('81cf4a9c720759d28ae5db269b868ef1' '069980fc2590c02aed86420996259302'\
+         '7f5851c4450b73d52df55c7e806cc316')
+sha1sums=('314748cdec0939d210641a403281b05a80da765c'
+          'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
+          '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
 build() {
   cd ${startdir}/src/ImageMagick-${pkgver%.*}
@@ -26,17 +29,19 @@ build() {
     patch -Np1 -i ${startdir}/src/libpng_mmx_patch_x86_64.patch || return 1
   fi
 
-  ./configure --prefix=/usr --with-modules=no --without-dps \
-              --with-perl=yes --without-gvc --with-jp2=no \
-              --with-gs-font-dir=/usr/share/fonts/Type1 \
-              --without-djvu --with-wmf --with-openexr --disable-static \
-              --disable-openmp LIBS="${LIBS} -lstdc++" \
-              --with-perl-options="INSTALLDIRS=vendor"
+  patch -p0 < ../add_delegate.patch || return 1
+
+  ./configure --prefix=/usr --without-modules --disable-static --disable-openmp \
+              --with-x --with-wmf --with-openexr \
+              --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
+              --with-perl --with-perl-options="INSTALLDIRS=vendor" \
+              --without-gvc --without-djvu --without-jp2 \
+              --without-jbig --without-fpx --without-dps
 
   make || return 1
   make DESTDIR=${startdir}/pkg install
-  install -D -m644 LICENSE ${startdir}/pkg/usr/share/licenses/$pkgname/LICENSE
-  install -D -m644 NOTICE ${startdir}/pkg/usr/share/licenses/$pkgname/NOTICE
+  install -D -m644 LICENSE ${startdir}/pkg/usr/share/licenses/${pkgname}/LICENSE
+  install -D -m644 NOTICE ${startdir}/pkg/usr/share/licenses/${pkgname}/NOTICE
 
   #Cleaning
   find ${startdir}/pkg -name '*.bs' -exec rm {} \;
