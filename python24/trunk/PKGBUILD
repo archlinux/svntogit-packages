@@ -1,15 +1,16 @@
 # $Id$
 # Maintainer: Jason Chu <jason@archlinux.org>
 pkgname=python24
-pkgver=2.4.4
-pkgrel=3
+pkgver=2.4.5
+pkgrel=1
 pkgdesc="A high-level scripting language"
 arch=(i686 x86_64)
+license=('custom')
 url="http://www.python.org"
 depends=('db>=4.6' 'bzip2' 'gdbm' 'openssl' 'zlib' 'gcc-libs' 'readline')
 makedepends=('tk')
 source=(http://www.python.org/ftp/python/$pkgver/Python-$pkgver.tar.bz2 db4.6-setup.py-detection.patch db_fix.patch)
-md5sums=('0ba90c79175c017101100ebf5978e906'
+md5sums=('aade3958cb097cc1c69ae0074297d359'
          '437410b4d9b8889e26d70182527ea110'
          '1c178479d17ae1e59cccb0a3f7be043b')
 options=('!makeflags')
@@ -27,9 +28,13 @@ build() {
   rm $startdir/pkg/usr/bin/python
 
   # Rename all the scripts
-  cd $startdir/pkg/usr/bin
+  pushd $startdir/pkg/usr/bin
   mv idle idle2.4
   mv pydoc pydoc2.4
   mv smtpd.py smtpd2.4.py
-  mv $startdir/pkg/usr/man/man1/python.1 $startdir/pkg/usr/man/man1/python2.4.1
+  mv $startdir/pkg/usr/man/man1/python.1 $startdir/pkg/usr/man/man1/python${pkgver}
+  popd
+
+  # license
+  install -D -m644 LICENSE ${startdir}/pkg/usr/share/licenses/${pkgname}/LICENSE
 }
