@@ -227,7 +227,7 @@ build() {
 
 	# to compile with SMP add -P2 or above, remove any -Px if your cou has only one core or if you want to fix it for non smp build
 	cd instsetoo_native
-	build.pl -P6 --all || return 1
+	build.pl -P1 --all || return 1
 
 	cd ..
 
