@@ -2,7 +2,7 @@
 # Maintainer: Jan De Groot <jgc@archlinux.org>
 
 pkgname=gucharmap
-pkgver=2.22.0
+pkgver=2.22.1
 pkgrel=1
 pkgdesc="Gnome Unicode Charmap"
 arch=(i686 x86_64)
@@ -14,7 +14,7 @@ groups=('gnome-extra')
 options=('!libtool' '!emptydirs')
 install=gucharmap.install
 source=(http://ftp.gnome.org/pub/gnome/sources/gucharmap/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('aff0c556ab360e0d6c63be911260637e')
+md5sums=('cd5f6ae44d29a7582dc179ebc64b42b4')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
