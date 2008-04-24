@@ -10,7 +10,7 @@ arch=('i686' 'x86_64')
 url='http://www.gnu.org/software/commoncpp/'
 license=('GPL' 'custom')
 depends=('gcc' 'bash')
-options=('!libtool')
+options=('!libtool' '!makeflags')
 source=(http://ftp.gnu.org/pub/gnu/commoncpp/$pkgname-$pkgver.tar.gz)
 
 build() {
