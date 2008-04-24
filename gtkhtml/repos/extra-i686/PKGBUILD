@@ -2,23 +2,23 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gtkhtml
-pkgver=3.18.0
+pkgver=3.18.1
 pkgrel=1
 pkgdesc="A lightweight HTML renderer/editor widget"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('libgnomeui>=2.22.01' 'gnome-icon-theme>=2.22.0')
+depends=('libgnomeui>=2.22.1' 'gnome-icon-theme>=2.22.0')
 makedepends=('pkgconfig' 'perlxml')
 url="http://www.gnome.org"
 options=('!libtool')
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/3.18/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('ec541b078ea9fbb1dd93f77075f77bd8')
+md5sums=('e314eba21158afa018d47f63c67000d3')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
   ./configure --prefix=/usr --sysconfdir=/etc \
               --libexecdir=/usr/lib/gtkhtml \
-              --localstatedir=/var --disable-static
+              --localstatedir=/var --disable-static || return 1
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 }
