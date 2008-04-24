@@ -15,7 +15,7 @@ url="http://www.gnome.org"
 install=gcalctool.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/5.22/${pkgname}-${pkgver}.tar.bz2
 	power-parser-precedence.patch)
-md5sums=('a4103972f07e85cf242b9a5e4efcfa91')
+md5sums=('a4103972f07e85cf242b9a5e4efcfa91' 'b10550a494b87014bd5a06d09b5615a0')
 	
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
