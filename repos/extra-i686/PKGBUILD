@@ -3,12 +3,12 @@
 
 pkgname=evince
 pkgver=2.22.1.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Simply a document viewer"
 url="http://www.gnome.org"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('ghostscript' 'poppler-glib>=0.8.0' 'libdjvu>=3.5.20' 'gnome-icon-theme>=2.22.0' 't1lib' 'libglade>=2.6.2' 'gnome-keyring>=2.22.1')
+depends=('libspectre>=0.2.0' 'gsfonts' 'poppler-glib>=0.8.0' 'libdjvu>=3.5.20' 'gnome-icon-theme>=2.22.0' 't1lib' 'libglade>=2.6.2' 'gnome-keyring>=2.22.1')
 makedepends=('perlxml' 'gnome-doc-utils>=0.12.2' 'nautilus>=2.22.2' 'pkgconfig' 'tetex')
 install=evince.install
 options=('!libtool' '!emptydirs')
