@@ -2,7 +2,7 @@
 # Maintainer: James Rayner <james@archlinux.org>
 # Contributor: Scott Horowitz <stonecrest@gmail.com>
 pkgname=mirage
-pkgver=0.9.2
+pkgver=0.9.3
 pkgrel=1
 pkgdesc="A simple GTK+ Image Viewer"
 url="http://mirageiv.berlios.de"
@@ -19,4 +19,5 @@ build() {
 
 
 
-md5sums=('eaa9a871d7c626a56482d5b6c8b16adc')
+
+md5sums=('3b51ef6aa1a423e2c22079668add0f2b')
