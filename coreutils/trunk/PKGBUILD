@@ -1,8 +1,8 @@
 # $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=coreutils
-pkgver=6.10
-pkgrel=2
+pkgver=6.11
+pkgrel=1
 pkgdesc="The basic file, shell and text manipulation utilities of the GNU operating system"
 arch=(i686 x86_64)
 license=('GPL3')
@@ -13,19 +13,13 @@ provides=('mktemp')
 conflicts=('mktemp')
 replaces=('sh-utils' 'fileutils' 'textutils' 'mktemp')
 backup=('etc/pam.d/su')
-options=('!emptydirs')
+options=('!emptydirs' !makeflags)
 source=(ftp://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz
 	coreutils-i18n.patch
 	coreutils-uname.patch
 	coreutils-pam.patch
 	coreutils-6.10-configuration.patch
 	su)
-md5sums=('eca0de1bf7389694305d7e52cd76a472'
-         '3beb1fcdd7374239a7584efa9fbc4885'
-         '18d3ba178e2691242287b59bd81aedb9'
-         '8810a22cdc05d502a69b59511e9abf79'
-         '65f3338712893b282694d4601507b355'
-         'fa85e5cce5d723275b14365ba71a8aad')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
@@ -39,7 +33,8 @@ build() {
   export DEFAULT_POSIX2_VERSION=199209
   autoconf
   ./configure --prefix=/usr ac_cv_func_openat=no --enable-install-program=su --enable-pam
-  make || return 1
+#  make || return 1
+  make all su_LDFLAGS="-pie -lpam -lpam_misc" || return 1
   make DESTDIR=$startdir/pkg install
   rm -f $startdir/pkg/usr/bin/hostname $startdir/pkg/usr/share/man/man1/hostname.1 || return 1
   rm -f $startdir/pkg/usr/bin/uptime $startdir/pkg/usr/share/man/man1/uptime.1 || return 1
