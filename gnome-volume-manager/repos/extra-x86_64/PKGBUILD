@@ -3,21 +3,21 @@
 # Contributor: Link Dupont <link@subpop.net>
 
 pkgname=gnome-volume-manager
-pkgver=2.22.1
+pkgver=2.22.3
 pkgrel=1
 pkgdesc="GNOME daemon to auto-mount and manage media devices"
 arch=(i686 x86_64)
 license=('GPL')
 url=http://www.gnome.org/
-depends=('libgnomeui>=2.22.01' 'libnotify>=0.4.4' 'gnome-mount>=0.7')
-makedepends=('nautilus>=2.22.0' 'perlxml' 'pkgconfig')
+depends=('libgnomeui>=2.22.1' 'libnotify>=0.4.4' 'gnome-mount>=0.8')
+makedepends=('nautilus>=2.22.2' 'perlxml' 'pkgconfig')
 install=gnome-volume-manager.install
 groups=('gnome')
 options=(!emptydirs)
 source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2
 	gvm-mount-async.patch
 	gvm-check-local.patch)
-md5sums=('a0cb86f541515f33443c848879d04785'
+md5sums=('09a3f020478caad6c0e54f291488a6b0'
          '534b8b9633148bd975b2b9b518c41fb4'
          '0171374e6bfda523c09a7dbfc1ec0c11')
 
@@ -26,7 +26,7 @@ build() {
   patch -Np0 -i ${startdir}/src/gvm-mount-async.patch || return 1
   patch -Np0 -i ${startdir}/src/gvm-check-local.patch || return 1
   ./configure --prefix=/usr --sysconfdir=/etc \
-              --localstatedir=/var || return 1
+              --localstatedir=/var --libexecdir=/usr/lib/gnome-volume-manager || return 1
   make || return 1
   make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
 
