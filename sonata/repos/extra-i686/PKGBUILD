@@ -3,7 +3,7 @@
 # Contributor: William Rea <sillywilly@gmail.com>
 
 pkgname=sonata
-pkgver=1.4.2
+pkgver=1.5
 pkgrel=1
 pkgdesc="A lightweight GTK+ music client for MPD"
 url="http://sonata.berlios.de"
@@ -20,4 +20,5 @@ build() {
 }
 
 
-md5sums=('a1c9b6539b5c9225baf1bbcb58bb942d')
+
+md5sums=('8ab9c7a9ccfcb10056e44297cab1074a')
