@@ -2,11 +2,11 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gnome-control-center
-pkgver=2.22.0
-pkgrel=3
+pkgver=2.22.1
+pkgrel=1
 pkgdesc="The Control Center for GNOME"
 arch=(i686 x86_64)
-depends=('libgnomekbd>=2.22.0' 'metacity>=2.22.0' 'nautilus>=2.22.0' 'gstreamer0.10-base>=0.10.18' 'libxss' 'gnome-panel>=2.22.0' 'desktop-file-utils' 'gnome-settings-daemon>=2.22.0')
+depends=('libgnomekbd>=2.22.0' 'metacity>=2.22.0' 'nautilus>=2.22.2' 'gstreamer0.10-base>=0.10.18' 'libxss' 'gnome-panel>=2.22.1.3' 'desktop-file-utils' 'gnome-settings-daemon>=2.22.1')
 makedepends=('perlxml' 'gnome-doc-utils>=0.12.2' 'pkgconfig')
 url="http://www.gnome.org"
 groups=('gnome')
@@ -17,7 +17,7 @@ install=gnome-control-center.install
 license=('GPL')
 options=('!libtool' '!emptydirs')
 source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('e6730ac4ee8b14a577978dee6c1cb88f')
+md5sums=('170815bcf2627bf64436283f86c751aa')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
