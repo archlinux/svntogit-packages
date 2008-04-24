@@ -3,20 +3,20 @@
 # Contributor: Michel Brabants <michel.linux@tiscali.be>
 
 pkgname=seahorse
-pkgver=2.22.0
+pkgver=2.22.1
 pkgrel=1
 pkgdesc="GNOME application for managing PGP keys."
 arch=(i686 x86_64)
 license=('GPL')
 url="http://seahorse.sourceforge.net/"
-depends=('libgnomeui>=2.22.01' 'libnotify>=0.4.4' 'libsoup>=2.4.0' 'gpgme' 'desktop-file-utils' 'zip')
-makedepends=('gettext' 'libldap' 'perlxml' 'pkgconfig' 'gnome-doc-utils>=0.12.0' 'nautilus>=2.22.0' 'epiphany>=2.22.0' 'gnome-panel>=2.22.0' 'gedit>=2.22.0')
+depends=('libgnomeui>=2.22.1' 'libnotify>=0.4.4' 'libsoup>=2.4.1' 'gpgme' 'desktop-file-utils' 'zip')
+makedepends=('gettext' 'libldap' 'perlxml' 'pkgconfig' 'gnome-doc-utils>=0.12.2' 'nautilus>=2.22.2' 'epiphany>=2.22.0' 'gnome-panel>=2.22.0' 'gedit>=2.22.0')
 options=('!libtool' '!emptydirs')
 groups=('gnome-extra')
 replaces=('gnome-keyring-manager')
 install=seahorse.install
 source=(http://ftp.gnome.org/pub/GNOME/sources/seahorse/2.22/seahorse-${pkgver}.tar.bz2)
-md5sums=('5dd87139d872c51c17de55ab4779a52a')
+md5sums=('e0e409ab825c954b5937b8b115dd5118')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
