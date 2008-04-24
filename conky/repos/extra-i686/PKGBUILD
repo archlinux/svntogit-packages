@@ -3,7 +3,7 @@
 # Contributor: MrGreen <mrgreen.linuxuser@gmail.com>
 
 pkgname=conky
-pkgver=1.4.9
+pkgver=1.5.1
 pkgrel=1
 pkgdesc="Conky is an advanced, highly configurable system monitor for X based on torsmo"
 arch=(i686 x86_64)
@@ -18,10 +18,9 @@ build() {
   --enable-proc-uptime --enable-seti --enable-wlan --enable-rss 
   make || return 1
   make DESTDIR=$startdir/pkg install
-  install -D -m644 doc/conkyrc.sample $startdir/pkg/etc/xdg/conky/conkyrc.sample
+  mkdir -p $startdir/pkg/etc/xdg/
+  mv $startdir/pkg/usr/etc/conky/ $startdir/pkg/etc/xdg/
   install -D -m644 COPYING $startdir/pkg/usr/share/licenses/$pkgname/COPYING
 }
 
-
-
-md5sums=('42d966fce5aa5c5a326575ec214bff07')
+md5sums=('afc121a67e4405cb44b7738be79946ac')
