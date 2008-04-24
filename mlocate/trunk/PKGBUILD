@@ -3,8 +3,8 @@
 # Contributor: lydgate
 
 pkgname=mlocate
-pkgver=0.18
-pkgrel=2
+pkgver=0.20
+pkgrel=1
 pkgdesc="Faster merging drop-in for slocate"
 arch=(i686 x86_64)
 url="http://carolina.mff.cuni.cz/~trmac/blog/mlocate"
@@ -15,11 +15,8 @@ replaces=('slocate')
 depends=('glibc')
 backup=('etc/updatedb.conf')
 install=mlocate.install
-source=(http://people.redhat.com/mitr/mlocate/mlocate-$pkgver.tar.bz2 \
+source=("https://fedorahosted.org/mlocate/attachment/wiki/MlocateDownloads/mlocate-$pkgver.tar.bz2?format=raw" \
 	updatedb.conf updatedb.cron.daily)
-md5sums=('c4352d10b47e569297caedd2c2d22675' '0b12d7a78c8fcbd5fea7f3c9dc55c1bd'\
-         'eee7f9db8c6145724313af6fd5fe9d66')
-
 build() {
   cd "$startdir"/src/$pkgname-$pkgver
 
@@ -43,3 +40,6 @@ build() {
   mkdir -pv var/lib
   install -d -m750 -g21 var/lib/locate
 }
+md5sums=('ad5e4eb1f2aecf1a5af9fe36c6e297f4'
+         '0b12d7a78c8fcbd5fea7f3c9dc55c1bd'
+         'eee7f9db8c6145724313af6fd5fe9d66')
