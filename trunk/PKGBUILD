@@ -1,4 +1,4 @@
-# $Id: PKGBUILD 356 2008-04-18 22:56:27Z aaron $
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: Charles-Henri d'Adhemar <cdadhemar@gmail.com>
 
