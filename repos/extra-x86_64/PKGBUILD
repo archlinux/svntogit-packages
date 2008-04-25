@@ -1,3 +1,4 @@
+# $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: Charles-Henri d'Adhemar <cdadhemar@gmail.com>
 
