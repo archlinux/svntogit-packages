@@ -2,18 +2,18 @@
 # Maintainer: Alexander Baldeck <kth5@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libgl
-pkgver=7.0.3rc3
-_mesaver=7.0.3-rc3
+pkgver=7.0.3
+_mesaver=7.0.3
 pkgrel=1
 pkgdesc="Mesa DRI OpenGL library and drivers"
 arch=(i686 x86_64)
 license=('LGPL')
-url="http://mesa3d.sourceforge.net"
+url="http://www.mesa3d.org"
 depends=('libxxf86vm' 'libdrm>=2.3' 'libxfixes' 'libxdamage')
 makedepends=('imake' 'glproto>=1.4.9' 'fixesproto' 'damageproto' 'pkgconfig')
 provides=('libgl-dri')
 replaces=('libgl-dri' 'libgl-mesa')
-source=(http://www.mesa3d.org/beta/MesaLib-${_mesaver}.tar.gz)
+source=(http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2)
 
 build() {
   cd ${startdir}/src/Mesa-${_mesaver}
@@ -47,4 +47,4 @@ build() {
   ln -sf libGLcore.xorg libGLcore.so
   ln -sf libglx.xorg libglx.so
 }
-md5sums=('8caf88712f76f28ed36aa0cedad6d7cb')
+md5sums=('e6e6379d7793af40a6bc3ce1bace572e')
