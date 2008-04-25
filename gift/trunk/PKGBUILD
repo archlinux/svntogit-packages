@@ -15,7 +15,7 @@ url="http://gift.sourceforge.net"
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
-  ./configure --prefix=/usr
+  ./configure --prefix=/usr --mandir=/usr/share/man
   make || return 1
   make DESTDIR=$startdir/pkg install
 }
