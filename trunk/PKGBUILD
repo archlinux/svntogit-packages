@@ -3,19 +3,20 @@
 
 pkgname=libnotify
 pkgver=0.4.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Desktop notification library"
 arch=(i686 x86_64)
-depends=('dbus-glib>=0.73' 'gtk2>=2.10.11')
+license=('LGPL')
+depends=('dbus-glib>=0.74' 'gtk2>=2.12.9')
 makedepends=('pkgconfig')
-options=('nolibtool')
+options=('!libtool')
 source=(http://www.galago-project.org/files/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz)
 url="http://www.galago-project.org/"
 md5sums=('ba76f68b7e3bd284ac2c2a1b9c5ecb06')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr
+  ./configure --prefix=/usr --disable-static || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${startdir}/pkg install || return 1
 }
