@@ -2,19 +2,19 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=vino
-pkgver=2.22.0
+pkgver=2.22.1
 pkgrel=1
 pkgdesc="a VNC server for the GNOME desktop"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('libgnomeui>=2.22.01' 'libnotify>=0.4.4' 'libxtst')
+depends=('libgnomeui>=2.22.1' 'libnotify>=0.4.4' 'libxtst')
 makedepends=('perlxml' 'pkgconfig')
 groups=('gnome-extra')
 url="http://www.gnome.org"
 options=(!emptydirs)
 install=vino.install
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('c4bb4a18f264ad8dc21e7200911a0412')
+md5sums=('01c5ffd0b252edb8921bfcca88438339')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
