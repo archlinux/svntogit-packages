@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=zenity
-pkgver=2.22.0
+pkgver=2.22.1
 pkgrel=1
 pkgdesc="Display graphical dialog boxes from shell scripts"
 arch=(i686 x86_64)
@@ -12,7 +12,7 @@ makedepends=('perlxml' 'gnome-doc-utils>=0.12.2' 'pkgconfig')
 groups=('gnome-extra')
 url="http://www.gnome.org"
 source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('f482090f1bd4946a2f8aee8e73200b04')
+md5sums=('4e1e1f080e7253ee4f6a5cee3306c78d')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
