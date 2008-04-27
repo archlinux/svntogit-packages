@@ -4,17 +4,17 @@
 
 pkgname=glib-perl
 _realname=Glib
-pkgver=1.162
+pkgver=1.182
 pkgrel=1
 pkgdesc="Perl wrappers for glib 2.x, including GObject"
 arch=(i686 x86_64)
 license=('LGPL')
 url="http://gtk2-perl.sourceforge.net/"
 options=('!emptydirs')
-depends=('glib2>=2.14.1' 'perl>=5.10.0')
-makedepends=('perl-extutils-depends' 'perl-extutils-pkgconfig')
+depends=('glib2>=2.16.3' 'perl>=5.10.0')
+makedepends=('perl-extutils-depends>=0.300' 'perl-extutils-pkgconfig>=1.11')
 source=(http://downloads.sourceforge.net/sourceforge/gtk2-perl/${_realname}-${pkgver}.tar.gz)
-md5sums=('b2c3e4bb5e56c15709df2dd9a6704886')
+md5sums=('23e0fcd52760820b70758adf591b84eb')
 
 build() {
   cd ${startdir}/src/${_realname}-${pkgver}
