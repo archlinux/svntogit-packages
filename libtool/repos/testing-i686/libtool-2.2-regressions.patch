@@ -1,0 +1,406 @@
+--- libltdl/config/ltmain.m4sh	2008/01/28 15:49:46	1.97
++++ libltdl/config/ltmain.m4sh	2008/03/04 21:25:48	1.98
+@@ -1694,12 +1694,14 @@
+ 	# Do a test to see if this is really a libtool program.
+ 	if func_ltwrapper_script_p "$file"; then
+ 	  func_source "$file"
++	  # Transform arg to wrapped name.
++	  file="$progdir/$program"
+ 	elif func_ltwrapper_executable_p "$file"; then
+ 	  func_ltwrapper_scriptname "$file"
+ 	  func_source "$func_ltwrapper_scriptname_result"
++	  # Transform arg to wrapped name.
++	  file="$progdir/$program"
+ 	fi
+-	# Transform arg to wrapped name.
+-	file="$progdir/$program"
+ 	;;
+       esac
+       # Quote arguments (to preserve shell metacharacters).
+@@ -2468,7 +2470,7 @@
+ 	  ;;
+ 	esac
+ 	$ECHO "\
+-      \$ECHO \"\$0: cannot exec \$program \$*\"
++      \$ECHO \"\$0: cannot exec \$program \$*\" 1>&2
+       exit 1
+     fi
+   else
+--- libltdl/loaders/dld_link.c	2007/05/08 14:38:50	1.9
++++ libltdl/loaders/dld_link.c	2008/03/04 21:00:18	1.10
+@@ -1,7 +1,7 @@
+ /* loader-dld_link.c -- dynamic linking with dld
+ 
+    Copyright (C) 1998, 1999, 2000, 2004, 2006,
+-                 2007 Free Software Foundation, Inc.
++                 2007, 2008 Free Software Foundation, Inc.
+    Written by Thomas Tanner, 1998
+ 
+    NOTE: The canonical source of this file is maintained with the
+@@ -45,20 +45,21 @@
+ 
+ /* Boilerplate code to set up the vtable for hooking this loader into
+    libltdl's loader list:  */
++static int	 vl_exit  (lt_user_data loader_data);
+ static lt_module vm_open  (lt_user_data loader_data, const char *filename,
+                            lt_dladvise advise);
+ static int	 vm_close (lt_user_data loader_data, lt_module module);
+ static void *	 vm_sym   (lt_user_data loader_data, lt_module module,
+ 			  const char *symbolname);
+ 
++static lt_dlvtable *vtable = 0;
++
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+    change between loaders.  */
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = lt__zalloc (sizeof *vtable);
+@@ -70,6 +71,7 @@
+       vtable->module_open	= vm_open;
+       vtable->module_close	= vm_close;
+       vtable->find_sym		= vm_sym;
++      vtable->dlloader_exit	= vl_exit;
+       vtable->dlloader_data	= loader_data;
+       vtable->priority		= LT_DLLOADER_APPEND;
+     }
+@@ -92,6 +94,15 @@
+ #  include <dld.h>
+ #endif
+ 
++/* A function called through the vtable when this loader is no
++   longer needed by the application.  */
++static int
++vl_exit (lt_user_data LT__UNUSED loader_data)
++{
++  vtable = NULL;
++  return 0;
++}
++
+ /* A function called through the vtable to open a module with this
+    loader.  Returns an opaque representation of the newly opened
+    module for processing with this loader's other vtable functions.  */
+--- libltdl/loaders/dlopen.c	2008/01/12 17:00:51	1.12
++++ libltdl/loaders/dlopen.c	2008/03/04 21:00:18	1.13
+@@ -45,20 +45,21 @@
+ 
+ /* Boilerplate code to set up the vtable for hooking this loader into
+    libltdl's loader list:  */
++static int	 vl_exit  (lt_user_data loader_data);
+ static lt_module vm_open  (lt_user_data loader_data, const char *filename,
+                            lt_dladvise advise);
+ static int	 vm_close (lt_user_data loader_data, lt_module module);
+ static void *	 vm_sym   (lt_user_data loader_data, lt_module module,
+ 			  const char *symbolname);
+ 
++static lt_dlvtable *vtable = 0;
++
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+    change between loaders.  */
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = (lt_dlvtable *) lt__zalloc (sizeof *vtable);
+@@ -73,6 +74,7 @@
+       vtable->module_open	= vm_open;
+       vtable->module_close	= vm_close;
+       vtable->find_sym		= vm_sym;
++      vtable->dlloader_exit	= vl_exit;
+       vtable->dlloader_data	= loader_data;
+       vtable->priority		= LT_DLLOADER_PREPEND;
+     }
+@@ -146,6 +148,17 @@
+ #define DL__SETERROR(errorcode) \
+ 	LT__SETERRORSTR (DLERROR (errorcode))
+ 
++
++/* A function called through the vtable when this loader is no
++   longer needed by the application.  */
++static int
++vl_exit (lt_user_data LT__UNUSED loader_data)
++{
++  vtable = NULL;
++  return 0;
++}
++
++
+ /* A function called through the vtable to open a module with this
+    loader.  Returns an opaque representation of the newly opened
+    module for processing with this loader's other vtable functions.  */
+--- libltdl/loaders/dyld.c	2007/07/04 23:05:05	1.9
++++ libltdl/loaders/dyld.c	2008/03/04 21:00:18	1.10
+@@ -1,7 +1,7 @@
+ /* loader-dyld.c -- dynamic linking on darwin and OS X
+ 
+    Copyright (C) 1998, 1999, 2000, 2004, 2006,
+-                 2007 Free Software Foundation, Inc.
++                 2007, 2008 Free Software Foundation, Inc.
+    Written by Peter O'Gorman, 1998
+ 
+    NOTE: The canonical source of this file is maintained with the
+@@ -53,14 +53,14 @@
+ static void *	 vm_sym   (lt_user_data loader_data, lt_module module,
+ 			  const char *symbolname);
+ 
++static lt_dlvtable *vtable = 0;
++
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+    change between loaders.  */
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = lt__zalloc (sizeof *vtable);
+@@ -74,6 +74,7 @@
+       vtable->module_open	= vm_open;
+       vtable->module_close	= vm_close;
+       vtable->find_sym		= vm_sym;
++      vtable->dlloader_exit	= vl_exit;
+       vtable->dlloader_data	= loader_data;
+       vtable->priority		= LT_DLLOADER_APPEND;
+     }
+@@ -181,6 +182,15 @@
+ static int dyld_cannot_close				  = 0;
+ 
+ 
++/* A function called through the vtable when this loader is no
++   longer needed by the application.  */
++static int
++vl_exit (lt_user_data LT__UNUSED loader_data)
++{
++  vtable = NULL;
++  return 0;
++}
++
+ /* A function called through the vtable to initialise this loader.  */
+ static int
+ vl_init (lt_user_data loader_data)
+--- libltdl/loaders/load_add_on.c	2007/05/08 14:38:50	1.9
++++ libltdl/loaders/load_add_on.c	2008/03/04 21:00:18	1.10
+@@ -1,7 +1,7 @@
+ /* loader-load_add_on.c --  dynamic linking for BeOS
+ 
+    Copyright (C) 1998, 1999, 2000, 2004, 2006,
+-                 2007 Free Software Foundation, Inc.
++                 2007, 2008 Free Software Foundation, Inc.
+    Written by Thomas Tanner, 1998
+ 
+    NOTE: The canonical source of this file is maintained with the
+@@ -45,20 +45,21 @@
+ 
+ /* Boilerplate code to set up the vtable for hooking this loader into
+    libltdl's loader list:  */
++static int	 vl_exit  (lt_user_data loader_data);
+ static lt_module vm_open  (lt_user_data loader_data, const char *filename,
+                            lt_dladvise advise);
+ static int	 vm_close (lt_user_data loader_data, lt_module module);
+ static void *	 vm_sym   (lt_user_data loader_data, lt_module module,
+ 			  const char *symbolname);
+ 
++static lt_dlvtable *vtable = 0;
++
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+    change between loaders.  */
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = lt__zalloc (sizeof *vtable);
+@@ -70,6 +71,7 @@
+       vtable->module_open	= vm_open;
+       vtable->module_close	= vm_close;
+       vtable->find_sym		= vm_sym;
++      vtable->dlloader_exit	= vl_exit;
+       vtable->dlloader_data	= loader_data;
+       vtable->priority		= LT_DLLOADER_APPEND;
+     }
+@@ -90,6 +92,15 @@
+ 
+ #include <kernel/image.h>
+ 
++/* A function called through the vtable when this loader is no
++   longer needed by the application.  */
++static int
++vl_exit (lt_user_data LT__UNUSED loader_data)
++{
++  vtable = NULL;
++  return 0;
++}
++
+ /* A function called through the vtable to open a module with this
+    loader.  Returns an opaque representation of the newly opened
+    module for processing with this loader's other vtable functions.  */
+--- libltdl/loaders/loadlibrary.c	2007/05/08 14:38:50	1.15
++++ libltdl/loaders/loadlibrary.c	2008/03/04 21:00:19	1.16
+@@ -1,7 +1,7 @@
+ /* loader-loadlibrary.c --  dynamic linking for Win32
+ 
+    Copyright (C) 1998, 1999, 2000, 2004, 2005, 2006,
+-                 2007 Free Software Foundation, Inc.
++                 2007, 2008 Free Software Foundation, Inc.
+    Written by Thomas Tanner, 1998
+ 
+    NOTE: The canonical source of this file is maintained with the
+@@ -49,6 +49,7 @@
+ 
+ /* Boilerplate code to set up the vtable for hooking this loader into
+    libltdl's loader list:  */
++static int	 vl_exit  (lt_user_data loader_data);
+ static lt_module vm_open  (lt_user_data loader_data, const char *filename,
+                            lt_dladvise advise);
+ static int	 vm_close (lt_user_data loader_data, lt_module module);
+@@ -56,6 +57,7 @@
+ 			  const char *symbolname);
+ 
+ static lt_dlinterface_id iface_id = 0;
++static lt_dlvtable *vtable = 0;
+ 
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+@@ -63,8 +65,6 @@
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = (lt_dlvtable *) lt__zalloc (sizeof *vtable);
+@@ -77,6 +77,7 @@
+       vtable->module_open	= vm_open;
+       vtable->module_close	= vm_close;
+       vtable->find_sym		= vm_sym;
++      vtable->dlloader_exit	= vl_exit;
+       vtable->dlloader_data	= loader_data;
+       vtable->priority		= LT_DLLOADER_APPEND;
+     }
+@@ -97,6 +98,15 @@
+ 
+ #include <windows.h>
+ 
++/* A function called through the vtable when this loader is no
++   longer needed by the application.  */
++static int
++vl_exit (lt_user_data LT__UNUSED loader_data)
++{
++  vtable = NULL;
++  return 0;
++}
++
+ /* A function called through the vtable to open a module with this
+    loader.  Returns an opaque representation of the newly opened
+    module for processing with this loader's other vtable functions.  */
+--- libltdl/loaders/preopen.c	2007/08/30 18:39:10	1.16
++++ libltdl/loaders/preopen.c	2008/03/04 21:00:19	1.17
+@@ -1,7 +1,7 @@
+ /* loader-preopen.c -- emulate dynamic linking using preloaded_symbols
+ 
+    Copyright (C) 1998, 1999, 2000, 2004, 2006,
+-                 2007 Free Software Foundation, Inc.
++                 2007, 2008 Free Software Foundation, Inc.
+    Written by Thomas Tanner, 1998
+ 
+    NOTE: The canonical source of this file is maintained with the
+@@ -53,14 +53,14 @@
+ static void *	 vm_sym   (lt_user_data loader_data, lt_module module,
+ 			  const char *symbolname);
+ 
++static lt_dlvtable *vtable = 0;
++
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+    change between loaders.  */
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = (lt_dlvtable *) lt__zalloc (sizeof *vtable);
+@@ -132,6 +132,7 @@
+ static int
+ vl_exit (lt_user_data LT__UNUSED loader_data)
+ {
++  vtable = NULL;
+   free_symlists ();
+   return 0;
+ }
+--- libltdl/loaders/shl_load.c	2007/05/08 14:38:50	1.10
++++ libltdl/loaders/shl_load.c	2008/03/04 21:00:19	1.11
+@@ -1,7 +1,7 @@
+ /* loader-shl_load.c --  dynamic linking with shl_load (HP-UX)
+ 
+    Copyright (C) 1998, 1999, 2000, 2004, 2006,
+-                 2007 Free Software Foundation, Inc.
++                 2007, 2008 Free Software Foundation, Inc.
+    Written by Thomas Tanner, 1998
+ 
+    NOTE: The canonical source of this file is maintained with the
+@@ -45,20 +45,21 @@
+ 
+ /* Boilerplate code to set up the vtable for hooking this loader into
+    libltdl's loader list:  */
++static int	 vl_exit  (lt_user_data loader_data);
+ static lt_module vm_open  (lt_user_data loader_data, const char *filename,
+                            lt_dladvise advise);
+ static int	 vm_close (lt_user_data loader_data, lt_module module);
+ static void *	 vm_sym   (lt_user_data loader_data, lt_module module,
+ 			  const char *symbolname);
+ 
++static lt_dlvtable *vtable = 0;
++
+ /* Return the vtable for this loader, only the name and sym_prefix
+    attributes (plus the virtual function implementations, obviously)
+    change between loaders.  */
+ lt_dlvtable *
+ get_vtable (lt_user_data loader_data)
+ {
+-  static lt_dlvtable *vtable = 0;
+-
+   if (!vtable)
+     {
+       vtable = lt__zalloc (sizeof *vtable);
+@@ -70,6 +71,7 @@
+       vtable->module_open	= vm_open;
+       vtable->module_close	= vm_close;
+       vtable->find_sym		= vm_sym;
++      vtable->dlloader_exit	= vl_exit;
+       vtable->dlloader_data	= loader_data;
+       vtable->priority		= LT_DLLOADER_APPEND;
+     }
+@@ -133,6 +135,15 @@
+ #define	LT_BIND_FLAGS	(BIND_IMMEDIATE | BIND_NONFATAL | DYNAMIC_PATH)
+ 
+ 
++/* A function called through the vtable when this loader is no
++   longer needed by the application.  */
++static int
++vl_exit (lt_user_data LT__UNUSED loader_data)
++{
++  vtable = NULL;
++  return 0;
++}
++
+ /* A function called through the vtable to open a module with this
+    loader.  Returns an opaque representation of the newly opened
+    module for processing with this loader's other vtable functions.  */
+
