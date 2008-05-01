@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer: dorphell <dorphell@archlinux.org>
+# Maintainer: Travis Willard <travis@archlinux.org>
+
+pkgname=libpng
+pkgver=1.2.27
+pkgrel=1
+pkgdesc="A collection of routines used to create PNG format graphics files"
+arch=('i686' 'x86_64')
+url="http://www.libpng.org/pub/png/libpng.html"
+license=('custom')
+depends=('zlib')
+source=(http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.bz2
+        #http://littlesvr.ca/apng/diff/${pkgname}-${pkgver}-apng.patch
+	${pkgname}-${pkgver}-apng.patch)
+options=('!libtool')
+md5sums=('d2f0339117eb190ce3db98c139198c88'
+         'b5c0770b2e8f97763bcedbb10451d87b')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+
+  # Add animated PNG (apng) support
+  patch -Np1 -i $startdir/src/${pkgname}-${pkgver}-apng.patch || return 1
+
+  libtoolize --force --copy || return 1
+  aclocal || return 1
+  autoconf || return 1
+  automake || return 1
+
+  ./configure --prefix=/usr || return 1
+  make ECHO=echo || return 1
+  make ECHO=echo DESTDIR=${startdir}/pkg install || return 1
+
+  cd contrib/pngminus
+  make ECHO=echo PNGLIB="-L${startdir}/pkg/usr/lib -lpng" -f makefile.std png2pnm pnm2png
+  install -m755 png2pnm pnm2png ${startdir}/pkg/usr/bin/
+  install -m755 -d ${startdir}/pkg/usr/share/licenses/${pkgname}
+  install -m644 ../../LICENSE ${startdir}/pkg/usr/share/licenses/${pkgname}/ || return 1
+
+  # Removing unneeded symlink
+  rm ${startdir}/pkg/usr/lib/libpng.la
+}
+
