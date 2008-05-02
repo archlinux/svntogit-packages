@@ -1,8 +1,8 @@
 # $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=autoconf
-pkgver=2.61
-pkgrel=3
+pkgver=2.62
+pkgrel=1
 pkgdesc="A GNU tool for automatically configuring source code"
 arch=(i686 x86_64)
 license=('GPL')
@@ -11,7 +11,7 @@ groups=('base-devel')
 depends=('awk' 'm4' 'diffutils' 'bash')
 options=('!makeflags')
 source=(ftp://ftp.gnu.org/pub/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
-md5sums=('51f472f71a6a04850a0f0126bf594cdb')
+md5sums=('6c1f3b3734999035d77da5024aab4fbd')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
