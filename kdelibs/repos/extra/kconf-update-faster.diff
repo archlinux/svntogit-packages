@@ -1,0 +1,145 @@
+Index: kconf_update/kconf_update.cpp
+===================================================================
+--- kconf_update/kconf_update.cpp	(revision 717097)
++++ kconf_update/kconf_update.cpp	(working copy)
+@@ -386,7 +386,7 @@ bool KonfUpdate::updateFile(const QStrin
+    config->setGroup(currentFilename);
+    config->writeEntry("ctime", buff.st_ctime);
+    config->writeEntry("mtime", buff.st_mtime);
+-   config->sync();
++   //config->sync();
+    return true;
+ }
+ 
+@@ -402,7 +402,7 @@ void KonfUpdate::gotId(const QString &_i
+        {
+           ids.append(id);
+           config->writeEntry("done", ids);
+-          config->sync();
++          //config->sync();
+        }
+    }
+ 
+@@ -433,6 +433,24 @@ void KonfUpdate::gotId(const QString &_i
+ 
+ void KonfUpdate::gotFile(const QString &_file)
+ {
++   QString test_oldFile, test_newFile;
++
++   int i = _file.find(',');
++   if (i == -1)
++   {
++      test_oldFile = _file.stripWhiteSpace();
++   }
++   else
++   {
++      test_oldFile = _file.left(i).stripWhiteSpace();
++      test_newFile = _file.mid(i+1).stripWhiteSpace();
++      if (test_oldFile == test_newFile)
++         test_newFile = QString::null;
++   }
++
++   if (test_oldFile == oldFile && test_newFile == newFile)
++       return;
++
+    // Reset group
+    gotGroup(QString::null);
+  
+@@ -486,19 +504,9 @@ void KonfUpdate::gotFile(const QString &
+    }
+    newConfig = 0; 
+ 
+-   int i = _file.find(',');
+-   if (i == -1)
+-   {
+-      oldFile = _file.stripWhiteSpace();
+-   }
+-   else
+-   {
+-      oldFile = _file.left(i).stripWhiteSpace();
+-      newFile = _file.mid(i+1).stripWhiteSpace();
+-      if (oldFile == newFile)
+-         newFile = QString::null;
+-   }
+-   
++   oldFile = test_oldFile;
++   newFile = test_newFile;
++  
+    if (!oldFile.isEmpty())
+    {
+       oldConfig2 = new KConfig(oldFile, false, false);
+Index: kdecore/klockfile.cpp
+===================================================================
+--- kdecore/klockfile.cpp	(revision 717097)
++++ kdecore/klockfile.cpp	(working copy)
+@@ -28,6 +28,7 @@
+ #ifdef HAVE_SYS_TIME_H
+ #include <sys/time.h>
+ #endif
++#include <fcntl.h>
+ #include <signal.h>
+ #include <errno.h>
+ #include <stdlib.h>
+@@ -116,37 +117,46 @@ static KLockFile::LockResult lockFile(co
+   if (result == 0)
+      return KLockFile::LockFail;
+   
++#if 0
+   KTempFile uniqueFile(lockFile, QString::null, 0644);
+   uniqueFile.setAutoDelete(true);
+   if (uniqueFile.status() != 0)
+      return KLockFile::LockError;
++#endif
+ 
+   char hostname[256];
+   hostname[0] = 0;
+   gethostname(hostname, 255);
+   hostname[255] = 0;
+-  QCString instanceName = KCmdLineArgs::appName();
++  QString instanceName = KCmdLineArgs::appName();
+ 
++#if 0
+   (*(uniqueFile.textStream())) << QString::number(getpid()) << endl
+       << instanceName << endl
+       << hostname << endl;
+   uniqueFile.close();
+   
+   QCString uniqueName = QFile::encodeName( uniqueFile.name() );
++#endif
+       
+ #ifdef Q_OS_UNIX
+-  // Create lock file
+-  result = ::link( uniqueName, lockFileName );
+-  if (result != 0)
+-     return KLockFile::LockError;
+-     
+-  if (!linkCountSupport)
+-     return KLockFile::LockOK;
++  result = open(lockFileName.data(), O_CREAT|O_EXCL);
++  if (result >= 0) {
++      QCString lock =QString( QString::number(getpid()) + "\n"
++          + instanceName + "\n"
++          + hostname + "\n").latin1();
++      ::write(result, lock.data(), lock.length());
++      ::close(result);
++      return KLockFile::LockOK;
++  }
++
++  return KLockFile::LockError;
+ #else
+   //TODO for win32
+   return KLockFile::LockOK;
+ #endif
+ 
++#if 0  
+   KDE_struct_stat st_buf2;
+   result = KDE_lstat( uniqueName, &st_buf2 );
+   if (result != 0)
+@@ -167,6 +177,7 @@ static KLockFile::LockResult lockFile(co
+      }
+      return KLockFile::LockFail;
+   }
++#endif
+ 
+   return KLockFile::LockOK;
+ }
