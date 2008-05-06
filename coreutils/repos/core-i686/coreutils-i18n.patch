@@ -329,7 +329,7 @@
      error (EXIT_FAILURE, errno, "-");
 --- coreutils-6.8+/src/join.c.i18n	2007-01-14 15:41:28.000000000 +0000
 +++ coreutils-6.8+/src/join.c	2007-03-01 15:08:24.000000000 +0000
-@@ -23,16 +23,30 @@
+@@ -23,17 +23,31 @@
  #include <sys/types.h>
  #include <getopt.h>
  
@@ -352,6 +352,7 @@
  #include "stdio--.h"
  #include "xmemcoll.h"
  #include "xstrtol.h"
+ #include "argmatch.h"
  
 +/* Some systems, like BeOS, have multibyte encodings but lack mbstate_t.  */
 +#if HAVE_MBRTOWC && defined mbstate_t
@@ -562,144 +563,6 @@
    xfields (line);
    return true;
  }
-@@ -303,56 +469,114 @@
- keycmp (struct line const *line1, struct line const *line2)
- {
-   /* Start of field to compare in each file.  */
--  char *beg1;
--  char *beg2;
--
--  size_t len1;
--  size_t len2;		/* Length of fields to compare.  */
-+  char *beg[2];
-+  char *copy[2];
-+  size_t len[2];	/* Length of fields to compare.  */
-   int diff;
-+  int i, j;
- 
-   if (join_field_1 < line1->nfields)
-     {
--      beg1 = line1->fields[join_field_1].beg;
--      len1 = line1->fields[join_field_1].len;
-+      beg[0] = line1->fields[join_field_1].beg;
-+      len[0] = line1->fields[join_field_1].len;
-     }
-   else
-     {
--      beg1 = NULL;
--      len1 = 0;
-+      beg[0] = NULL;
-+      len[0] = 0;
-     }
- 
-   if (join_field_2 < line2->nfields)
-     {
--      beg2 = line2->fields[join_field_2].beg;
--      len2 = line2->fields[join_field_2].len;
-+      beg[1] = line2->fields[join_field_2].beg;
-+      len[1] = line2->fields[join_field_2].len;
-     }
-   else
-     {
--      beg2 = NULL;
--      len2 = 0;
-+      beg[1] = NULL;
-+      len[1] = 0;
-     }
- 
--  if (len1 == 0)
--    return len2 == 0 ? 0 : -1;
--  if (len2 == 0)
-+  if (len[0] == 0)
-+    return len[1] == 0 ? 0 : -1;
-+  if (len[1] == 0)
-     return 1;
- 
-   if (ignore_case)
-     {
--      /* FIXME: ignore_case does not work with NLS (in particular,
--         with multibyte chars).  */
--      diff = memcasecmp (beg1, beg2, MIN (len1, len2));
-+#ifdef HAVE_MBRTOWC
-+      if (MB_CUR_MAX > 1)
-+      {
-+        size_t mblength;
-+        wchar_t wc, uwc;
-+        mbstate_t state, state_bak;
-+
-+        memset (&state, '\0', sizeof (mbstate_t));
-+
-+        for (i = 0; i < 2; i++)
-+          {
-+            copy[i] = alloca (len[i] + 1);
-+
-+            for (j = 0; j < MIN (len[0], len[1]);)
-+              {
-+                state_bak = state;
-+                mblength = mbrtowc (&wc, beg[i] + j, len[i] - j, &state);
-+
-+                switch (mblength)
-+                  {
-+                  case (size_t) -1:
-+                  case (size_t) -2:
-+                    state = state_bak;
-+                    /* Fall through */
-+                  case 0:
-+                    mblength = 1;
-+                    break;
-+
-+                  default:
-+                    uwc = towupper (wc);
-+
-+                    if (uwc != wc)
-+                      {
-+                        mbstate_t state_wc;
-+
-+                        memset (&state_wc, '\0', sizeof (mbstate_t));
-+                        wcrtomb (copy[i] + j, uwc, &state_wc);
-+                      }
-+                    else
-+                      memcpy (copy[i] + j, beg[i] + j, mblength);
-+                  }
-+                j += mblength;
-+              }
-+            copy[i][j] = '\0';
-+          }
-+      }
-+      else
-+#endif
-+      {
-+        for (i = 0; i < 2; i++)
-+          {
-+            copy[i] = alloca (len[i] + 1);
-+
-+            for (j = 0; j < MIN (len[0], len[1]); j++)
-+              copy[i][j] = toupper (beg[i][j]);
-+
-+            copy[i][j] = '\0';
-+          }
-+      }
-     }
-   else
-     {
--      if (hard_LC_COLLATE)
--	return xmemcoll (beg1, len1, beg2, len2);
--      diff = memcmp (beg1, beg2, MIN (len1, len2));
-+      copy[0] = (unsigned char *) beg[0];
-+      copy[1] = (unsigned char *) beg[1];
-     }
- 
-+  if (hard_LC_COLLATE)
-+    return xmemcoll ((char *) copy[0], len[0], (char *) copy[1], len[1]);
-+  diff = memcmp (copy[0], copy[1], MIN (len[0], len[1]));
-+
-   if (diff)
-     return diff;
--  return len1 < len2 ? -1 : len1 != len2;
-+  return len[0] - len[1];
- }
- 
- /* Print field N of LINE if it exists and is nonempty, otherwise
 @@ -377,11 +601,18 @@
  
  /* Print the join of LINE1 and LINE2.  */
@@ -823,7 +686,149 @@
 +	    tablen = newtablen;
  	  }
  	  break;
+
+diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
+--- coreutils-6.11-orig/src/join.c	2008-04-21 13:44:32.000000000 +0200
++++ coreutils-6.11/src/join.c	2008-04-21 14:03:22.000000000 +0200
+@@ -324,56 +324,115 @@ keycmp (struct line const *line1, struct
+ 	size_t jf_1, size_t jf_2)
+ {
+   /* Start of field to compare in each file.  */
+-  char *beg1;
+-  char *beg2;
+-
+-  size_t len1;
+-  size_t len2;		/* Length of fields to compare.  */
++  char *beg[2];
++  char *copy[2];
++  size_t len[2]; /* Length of fields to compare.  */
+   int diff;
++  int i, j;
  
+   if (jf_1 < line1->nfields)
+     {
+-      beg1 = line1->fields[jf_1].beg;
+-      len1 = line1->fields[jf_1].len;
++      beg[0] = line1->fields[jf_1].beg;
++      len[0] = line1->fields[jf_1].len;
+     }
+   else
+     {
+-      beg1 = NULL;
+-      len1 = 0;
++      beg[0] = NULL;
++      len[0] = 0;
+     }
+ 
+   if (jf_2 < line2->nfields)
+     {
+-      beg2 = line2->fields[jf_2].beg;
+-      len2 = line2->fields[jf_2].len;
++      beg[1] = line2->fields[jf_2].beg;
++      len[1] = line2->fields[jf_2].len;
+     }
+   else
+     {
+-      beg2 = NULL;
+-      len2 = 0;
++      beg[1] = NULL;
++      len[1] = 0;
+     }
+ 
+-  if (len1 == 0)
+-    return len2 == 0 ? 0 : -1;
+-  if (len2 == 0)
++  if (len[0] == 0)
++    return len[1] == 0 ? 0 : -1;
++  if (len[1] == 0)
+     return 1;
+ 
+   if (ignore_case)
+     {
+-      /* FIXME: ignore_case does not work with NLS (in particular,
+-         with multibyte chars).  */
+-      diff = memcasecmp (beg1, beg2, MIN (len1, len2));
++#ifdef HAVE_MBRTOWC
++      if (MB_CUR_MAX > 1)
++      {
++        size_t mblength;
++        wchar_t wc, uwc;
++        mbstate_t state, state_bak;
++
++        memset (&state, '\0', sizeof (mbstate_t));
++
++        for (i = 0; i < 2; i++)
++          {
++            copy[i] = alloca (len[i] + 1);
++
++            for (j = 0; j < MIN (len[0], len[1]);)
++              {
++                state_bak = state;
++                mblength = mbrtowc (&wc, beg[i] + j, len[i] - j, &state);
++
++                switch (mblength)
++                  {
++                  case (size_t) -1:
++                  case (size_t) -2:
++                    state = state_bak;
++                    /* Fall through */
++                  case 0:
++                    mblength = 1;
++                    break;
++
++                  default:
++                    uwc = towupper (wc);
++
++                    if (uwc != wc)
++                      {
++                        mbstate_t state_wc;
++
++                        memset (&state_wc, '\0', sizeof (mbstate_t));
++                        wcrtomb (copy[i] + j, uwc, &state_wc);
++                      }
++                    else
++                      memcpy (copy[i] + j, beg[i] + j, mblength);
++                  }
++                j += mblength;
++              }
++            copy[i][j] = '\0';
++          }
++      }
++      else
++#endif
++      {
++        for (i = 0; i < 2; i++)
++          {
++            copy[i] = alloca (len[i] + 1);
++
++            for (j = 0; j < MIN (len[0], len[1]); j++)
++              copy[i][j] = toupper (beg[i][j]);
++
++            copy[i][j] = '\0';
++          }
++      }
+     }
+   else
+     {
+-      if (hard_LC_COLLATE)
+-	return xmemcoll (beg1, len1, beg2, len2);
+-      diff = memcmp (beg1, beg2, MIN (len1, len2));
++      copy[0] = (unsigned char *) beg[0];
++      copy[1] = (unsigned char *) beg[1];  
+     }
+ 
++  if (hard_LC_COLLATE)
++    return xmemcoll ((char *) copy[0], len[0], (char *) copy[1], len[1]);
++  diff = memcmp (copy[0], copy[1], MIN (len[0], len[1]));
++
++
+   if (diff)
+     return diff;
+-  return len1 < len2 ? -1 : len1 != len2;
++  return len[0] - len[1];
+ }
+ 
+ /* Check that successive input lines PREV and CURRENT from input file 
 --- coreutils-6.8+/src/uniq.c.i18n	2007-01-14 15:41:28.000000000 +0000
 +++ coreutils-6.8+/src/uniq.c	2007-03-01 15:08:24.000000000 +0000
 @@ -23,6 +23,16 @@
@@ -3946,8 +3951,8 @@
 -	    FATAL_ERROR (_("the delimiter must be a single character"));
 -	  delim = optarg[0];
 -	  delim_specified = true;
-+#if HAVE_MBRTOWC
 +	    {
++#if HAVE_MBRTOWC
 +	      if(MB_CUR_MAX > 1)
 +		{
 +		  mbstate_t state;
