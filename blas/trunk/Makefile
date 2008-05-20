@@ -8,7 +8,7 @@ OBJS = caxpy.o ccopy.o cdotc.o cdotu.o cgbmv.o cgemm.o cgemv.o cgerc.o	\
        dspr2.o dswap.o dsymm.o dsymv.o dsyr.o dsyr2.o dsyr2k.o dsyrk.o	\
        dtbmv.o dtbsv.o dtpmv.o dtpsv.o dtrmm.o dtrmv.o dtrsm.o dtrsv.o	\
        dzasum.o dznrm2.o icamax.o idamax.o isamax.o izamax.o lsame.o	\
-       sasum.o saxpy.o scasum.o scnrm2.o scopy.o sdot.o sdsdot.o	\
+       sasum.o saxpy.o scabs1.o scasum.o scnrm2.o scopy.o sdot.o sdsdot.o \
        sgbmv.o sgemm.o sgemv.o sger.o snrm2.o srot.o srotg.o srotm.o	\
        srotmg.o ssbmv.o sscal.o sspmv.o sspr.o sspr2.o sswap.o ssymm.o	\
        ssymv.o ssyr.o ssyr2.o ssyr2k.o ssyrk.o stbmv.o stbsv.o stpmv.o	\
