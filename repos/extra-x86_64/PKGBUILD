@@ -5,7 +5,7 @@
 # uninstall ImageMagick before building, or build it, install it, build it.
 
 pkgname=imagemagick
-pkgver=6.4.1.0
+pkgver=6.4.1.3
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -16,9 +16,9 @@ depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'l
 options=('!makeflags')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('2ff188f7b85f0a14f3ccba8076606537' '069980fc2590c02aed86420996259302'\
+md5sums=('3d1976afe522c572aa5e97cff3029649' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('cfbea097395ca13c8a6b6ce4141e378bc07434eb'
+sha1sums=('d5769c2c827eff280aa955057dba07bbc0dee401'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
