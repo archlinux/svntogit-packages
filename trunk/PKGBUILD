@@ -1,25 +1,26 @@
 # $Id$
 # Maintainer: tobias [tobias [at] archlinux.org]
 pkgname=mutt
-pkgver=1.5.17
-pkgrel=4
+pkgver=1.5.18
+pkgrel=1
 pkgdesc="A small but very powerful text-based mail client"
 arch=(i686 x86_64)
 license=('GPL')
 url="http://www.mutt.org/"
-depends=('ncurses' 'openssl>=0.9.8e' 'gdbm' 'mime-types' 'zlib' 'libsasl')
+depends=('slang' 'openssl>=0.9.8e' 'gdbm' 'mime-types' 'zlib' 'libsasl' 'gpgme')
 makedepends=('gnupg')
 install=${pkgname}.install
 source=(ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz)
 url="http://www.mutt.org/"
-md5sums=('49387458be0cb52b85ae0d73af699aae')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
   ./configure --prefix=/usr --sysconfdir=/etc \
     --enable-pop --enable-imap --enable-smtp \
-    --with-sasl --with-ssl --without-idn \
-    --enable-hcache --enable-inodesort
+    --with-sasl --with-ssl=/usr --without-idn \
+    --enable-hcache --enable-pgp --enable-inodesort \
+	 --enable-compressed --with-regex \
+	 --enable-gpgme --with-slang=/usr
   make || return 1
   make DESTDIR=${startdir}/pkg install
   rm -f ${startdir}/pkg/usr/bin/{flea,muttbug}
