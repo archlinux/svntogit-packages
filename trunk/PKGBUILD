@@ -4,7 +4,7 @@
 # Contributor: Anders Bostrom <anders.bostrom@home.se>
 pkgname=thunderbird
 pkgver=2.0.0.14
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone Mail/News reader"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL')
@@ -12,46 +12,36 @@ url="http://www.mozilla.org/projects/thunderbird"
 provides=('mozilla-thunderbird')
 conflicts=('mozilla-thunderbird')
 replaces=('mozilla-thunderbird')
-depends=('gtk2>=2.12.0' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss>=3.11.5' 'libxt')
+depends=('gtk2>=2.12.9' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss>=3.11.9' 'libxt')
 makedepends=('zip' 'pkgconfig' 'imagemagick' 'diffutils' 'patch' 'make' 'gcc')
+options=('!makeflags')
 source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}-source.tar.bz2
 	mozconfig
-        launcher.patch
         thunderbird.desktop
         thunderbird-1.5-lang.patch
-        firefox-visibility.patch
-        firefox-1.5-new-gtkim.patch
-        firefox-1.5-pango-cursor-position.patch
-        firefox-2.0-link-layout.patch
-        firefox-1.5-pango-underline.patch
-        firefox-1.5-pango-justified-range.patch
-        firefox-1.5-xft-rangewidth.patch
-        firefox-1.5-theme-change.patch
-        firefox-2.0.0.4-undo-uriloader.patch
-        firefox-1.5-bullet-bill.patch)
-options=('!makeflags')
+	firefox-2.0-buildversion.patch
+	firefox-2.0-link-layout.patch)
+md5sums=('e304510d08f7e226bbfff8e7e549232f'
+         'ca1f30e6048740440ca1a3f08fdeee34'
+         'ea4e3c3dee98e3891bef16409551eb6e'
+         'bc6f10a06407faee6494acad546aabf9'
+         '11b221ff41078d97c131e17361072e47'
+         'b933c00957ea793fe940f4d46a85e10e')
 
 build() {
   cd ${startdir}/src/mozilla
-  patch -Np0 -i ${startdir}/src/launcher.patch || return 1
   patch -Np1 -i ${startdir}/src/thunderbird-1.5-lang.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-1.5-new-gtkim.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-1.5-pango-cursor-position.patch || return 1
+  patch -Np0 -i ${startdir}/src/firefox-2.0-buildversion.patch || return 1
   patch -Np1 -i ${startdir}/src/firefox-2.0-link-layout.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-1.5-pango-underline.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-1.5-pango-justified-range.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-1.5-xft-rangewidth.patch || return 1
-  patch -Np0 -i ${startdir}/src/firefox-1.5-theme-change.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-2.0.0.4-undo-uriloader.patch || return 1
-  patch -Np1 -i ${startdir}/src/firefox-1.5-bullet-bill.patch || return 1
+  cp ${startdir}/src/mozconfig .mozconfig
 
   if [ "${CARCH}" = "x86_64" ]; then
-    patch -Np0 -i ${startdir}/src/firefox-visibility.patch || return 1
+    echo "ac_cv_visibility_pragma=no" >> .mozconfig
   fi
 
-  sed "s/#CFLAGS#/${CFLAGS}/g" ${startdir}/src/mozconfig >.mozconfig
-  
   export MOZ_PROJECT=mail
+  unset CXXFLAGS
+  unset CFLAGS
 
   make -f client.mk build || return 1
   make DESTDIR=${startdir}/pkg install || return 1
@@ -73,34 +63,20 @@ build() {
   
   rm -rf ${startdir}/pkg/usr/bin/defaults
 
-  mkdir -p ${startdir}/pkg/usr/share/{applications,pixmaps}
+  install -m755 -d ${startdir}/pkg/usr/share/applications
+  install -m755 -d ${startdir}/pkg/usr/share/pixmaps
   convert ${startdir}/src/mozilla/mail/app/default.xpm \
-      ${startdir}/pkg/usr/share/pixmaps/thunderbird.png
+      ${startdir}/pkg/usr/share/pixmaps/thunderbird.png || return 1
   install -m644 ${startdir}/src/thunderbird.desktop \
-      ${startdir}/pkg/usr/share/applications/
+      ${startdir}/pkg/usr/share/applications/ || return 1
 
-  mkdir -p ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default
+  install -m755 -d ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default
   install -m644 ${startdir}/src/mozilla/mail/app/default.xpm \
-      ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default/
+      ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default/ || return 1
   install -m644 ${startdir}/src/mozilla/mail/app/default.xpm \
-      ${startdir}/pkg/usr/lib/thunderbird/icons/
+      ${startdir}/pkg/usr/lib/thunderbird/icons/ || return 1
 
   #fix #6512
   install -m644 ${startdir}/src/mozilla/dist/bin/chrome/icons/default/*.xpm \
-      ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default/
+      ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default/ || return 1
 }
-md5sums=('e304510d08f7e226bbfff8e7e549232f'
-         '1eb3982e207c79500149db327f868f6a'
-         'aaaa941f1a25075d65c60180fb608955'
-         'ea4e3c3dee98e3891bef16409551eb6e'
-         'bc6f10a06407faee6494acad546aabf9'
-         '362f9e0b0f25b964f7120b68fb629ee0'
-         '60b4bbe73d2e919ee4a6476dca6705b6'
-         '288fb7db871700ff5cf7286db6192b45'
-         'b933c00957ea793fe940f4d46a85e10e'
-         '713a9587dd024f5d03f1fe9c095da9de'
-         '4d0713c0a94a367a4e84d5f7e56de631'
-         'affb470ca6bac11a7f3005e2508621a8'
-         '51681f096254c07149f687fdc4c3c5b7'
-         'd023d8eff67788f7c2adca5b9d388825'
-         '1b16a6b00e88ffd937d7a983753fef67')
