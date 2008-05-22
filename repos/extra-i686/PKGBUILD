@@ -1,20 +1,19 @@
 # $Id$
-#Maintainer: Jan de Groot <jgc@archlinux.org>
-
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86driproto
-pkgver=2.0.3
+pkgver=2.0.4
 pkgrel=1
 pkgdesc="X11 DRI extension wire protocol"
 url="http://xorg.freedesktop.org/"
-_xorg=X11R7.0
-_relname=xf86driproto
-source=(${url}/releases/${_xorg}/src/everything/${_relname}-${_xorg}-${pkgver}.tar.bz2)
-md5sums=('839a70dfb8d5b02bcfc24996ab99a618')
+arch=(i686 x86_64)
+source=(${url}/releases/individual/proto/${pkgname}-${pkgver}.tar.bz2)
 
 build() {
-  cd ${startdir}/src/${_relname}-${_xorg}-${pkgver}
+  cd ${startdir}/src/${pkgname}-${pkgver}
   ./configure --prefix=/usr
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
 }
 
+md5sums=('01470d088da3a8a3deefa8e1f45d69cb')
