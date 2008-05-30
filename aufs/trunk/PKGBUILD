@@ -2,8 +2,8 @@
 # Contributor: Paul Mattal <paul@mattal.com>
 # Maintainer: Paul Mattal <pjmattal@elys.com>
 pkgname=aufs
-pkgver=20080421
-pkgrel=2
+pkgver=20080527
+pkgrel=1
 _kernver='2.6.25-ARCH'
 pkgdesc="Another Unionfs Implementation that supports NFS branches"
 arch=('i686' 'x86_64')
@@ -11,17 +11,26 @@ url="http://aufs.sourceforge.net/"
 license=('GPL2')
 depends=('kernel26>=2.6.25.3-1' 'kernel26<=2.6.26' 'glibc' 'aufs-utils')
 install=$pkgname.install
-source=(ftp://ftp.archlinux.org/other/aufs/$pkgname-$pkgver.tar.gz \
-        vfs_splice.diff)
+source=(ftp://ftp.archlinux.org/other/aufs/$pkgname-$pkgver.tar.gz)
 options=(!libtool !makeflags)
-md5sums=('e3c68f2357cac5a9ffab3f69bb39f041'
-         'c3a52c86149908f3a44f233d1174fb0a')
+md5sums=('4378221aa5763d1f4408a0bbb0e80f0a')
 
 build() {
   cd $startdir/src/$pkgname || return 1
 
   # use splice functions exported by unionfs kernel patch
-  patch -p1 < $startdir/src/vfs_splice.diff
+  # - important for loopback fs mounts
+  sed s'|#if.*KERNEL_VERSION(2, 6, 26).*|#if 0|' -i fs/aufs25/vfsub.h \
+    || return 1
+  sed -i 's|CONFIG_AUFS_SPLICE_PATCH =|CONFIG_AUFS_SPLICE_PATCH = y|' \
+    local.mk || return 1
+
+  # patch for spin_lock conflict with the new unionfs patch
+  sed s'|#if.*KERNEL_VERSION(2, 6, 26).*|#if 0|' -i fs/aufs25/cpup.c \
+    || return 1
+
+  sed -i 's|.*CONFIG_AUFS_SHWH =.*|CONFIG_AUFS_SHWH = y|' \
+    local.mk || return 1
 
   # configure for NFS by:
   # 1) configure local.mk to use FILP and LHASH
