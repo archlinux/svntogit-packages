@@ -8,22 +8,18 @@ pkgdesc='Common CA certificates'
 arch=('i686' 'x86_64')
 url='http://www.debian.org'
 license=('MPL' 'GPL')
-source=("http://ftp.debian.org/debian/pool/main/c/${pkgname}/${pkgname}_${pkgver}.tar.gz" 'no-hooks.patch')
-depends=('openssl')
+source=("http://ftp.debian.org/debian/pool/main/c/${pkgname}/${pkgname}_${pkgver}.tar.gz")
+depends=('openssl' 'run-parts')
 makedepends=('ruby')
 install=ca-certificates.install
 backup=('etc/ca-certificates.conf')
-md5sums=('25ca8aba089ffeb6d5051eee0027b427'
-         '1eff5b1fabbe60144846be6772b95aa6')
+md5sums=('25ca8aba089ffeb6d5051eee0027b427')
 
 build() {
 	cd $srcdir/$pkgname
 
-	# remove hooks support (uses run-parts which is debian specific)
-	patch -p0 -i $srcdir/no-hooks.patch
-
-	install -d -m755 $pkgdir/{etc,usr/{sbin,share/ca-certificates}}
-
+	install -d -m755 $pkgdir/{etc/ca-certificates/update.d,usr/{sbin,share/ca-certificates}}
+	install -D -m644 sbin/update-ca-certificates.8 $pkgdir/usr/share/man/man8/update-ca-certificates.8
 	make
 	make install DESTDIR=$pkgdir
 
