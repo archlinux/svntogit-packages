@@ -1,0 +1,108 @@
+# $Id$
+# Contributor: Roman Kreisel <roman.kreisel@epost.de>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kdelibs
+pkgver=3.5.9
+kdever=3.5.9
+pkgrel=4
+pkgdesc="KDE Core Libraries"
+arch=(i686 x86_64)
+url="http://www.kde.org"
+license=('GPL' 'LGPL')
+
+groups=('kde')
+
+depends=('arts>=1.5.9' 'db>=4.6' 'libxslt' 'pcre' 'libart-lgpl' 'openexr'
+         'avahi>=0.6.9' 'jasper>=1.900.1' 'fam' 'bzip2' 'openssl' 'libidn' 'perl'
+	 'aspell' 'heimdal>=1.0.1' 'acl' 'libtiff' 'qt3>=3.3.7' 'ca-certificates' )
+makedepends=(pkgconfig cups lua)
+
+# for easier build, just uncomment the mirror you want to use
+  mirror="ftp.solnet.ch/mirror/KDE"         # updated every 2 hours, very fast for Europe
+# mirror="ftp.kde.org/pub/kde/"             # main server
+# mirror="ibiblio.org/pub/mirrors/kde/"     # ibiblio mirror
+
+source=(ftp://$mirror/stable/$kdever/src/$pkgname-$pkgver.tar.bz2
+	http://www.archlinux.org/~jgc/kdnssd-avahi-20060319.tar.bz2
+	kconf-update-faster.diff
+	applications.menu.patch
+	kdeprintrc.patch
+	fileshareset-wrapper.c
+	xdg-icon-lookup.patch
+	kicker-crash.patch
+	kde-menu.patch
+	inotify.patch
+	gmail.fix
+	ftp://ftp.kde.org/pub/kde/security_patches/post-kde-3.5.5-kinit.diff
+	fix-kate.patch) 
+
+build() {
+  # Source the QT and KDE profile
+  [ "$QTDIR" = "" ] && source /etc/profile.d/qt3.sh 
+  [ "$KDEDIR" = "" ] && source /etc/profile.d/kde.sh
+  # start building
+  cd $startdir/src/$pkgname-$pkgver
+  # fix security issue
+  patch -Np0 -i $startdir/src/post-kde-3.5.5-kinit.diff || return 1
+  # fix http://bugs.archlinux.org/task/9891
+  patch -Np4 -i $startdir/src/fix-kate.patch || return 1
+  #patch -Np0 -i $startdir/src/xdg-icon-lookup.patch || return 1
+  patch -Np1 -i $startdir/src/kde-menu.patch || return 1
+  patch -Np0 -i $startdir/src/applications.menu.patch || return 1
+  patch -Np0 -i $startdir/src/kicker-crash.patch  || return 1
+  patch -Np0 -i $startdir/src/inotify.patch || return 1
+  patch -Np0 -i $startdir/src/kconf-update-faster.diff || return 1
+  # fix gmail
+  patch -Np1 -i $startdir/src/gmail.fix || return 1
+
+  # Replace dns-sd implementation with avahi implementation
+  rm dnssd/*
+  cp -r ${startdir}/src/kdnssd-avahi-20060319/* dnssd/
+  rm dnssd/configure{,.in}
+  sed -i -e 's/kdnssd-avahi/dnssd/g' dnssd/configure.in.in 
+  sed -i -e 's|ksocketaddress\.h|network/ksocketaddress\.h|' dnssd/publicservice.cpp
+
+  #Needed for updated kdnssd-avahi and inotify patch
+  make -f admin/Makefile.common dist
+
+  ./configure --prefix=/opt/kde --with-distribution="Arch Linux" --with-alsa \
+              --disable-dependency-tracking --disable-debug \
+	      --disable-dnotify --enable-inotify --enable-sendfile --x-libraries=/usr/share \
+	      --without-lua-dir --without-lua-includes --without-lua-libraries \
+              --without-hspell --enable-gcc-hidden-visibility --enable-final \
+	      --enable-new-ldflags LDFLAGS="${LDFLAGS} -L/opt/qt/lib"
+  # --enable-final # remove this if you build with < 512mb ram.
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+  # Set cups as default printing system
+  cd $startdir/pkg/opt/kde/share/config
+  patch -Np0 -i $startdir/src/kdeprintrc.patch || return 1
+
+  # fix that stupid fileshareset suid problem
+  mv $startdir/pkg/opt/kde/bin/fileshareset $startdir/pkg/opt/kde/bin/fileshareset.pl
+  gcc -Wall $startdir/src/fileshareset-wrapper.c -o $startdir/pkg/opt/kde/bin/fileshareset
+  chmod 0755 $startdir/pkg/opt/kde/bin/fileshareset.pl
+  chmod 4755 $startdir/pkg/opt/kde/bin/fileshareset
+  rm $startdir/pkg/opt/kde/bin/filesharelist
+  cd $startdir/pkg/opt/kde/bin/
+  ln -s fileshareset.pl filesharelist 
+  
+  # cert bundle seems to be hardcoded
+  # link it to the one from ca-certificates
+  rm -f $pkgdir/opt/kde/share/apps/kssl/ca-bundle.crt
+  ln -sf /etc/ssl/certs/ca-certificates.crt $pkgdir/opt/kde/share/apps/kssl/ca-bundle.crt
+}
+md5sums=('55e5f00874933d1a7ba7c95e369a205e'
+         'b7b98e965960f2d55741a10070aa943d'
+         'c9e8c50d4b26648cf4487001db9dca48'
+         'a66270abcdd0dcb2e28d3b2464927ff6'
+         '6061c259247f56f0ede21deabfad2732'
+         '60ab1a486895d6c18ef334ec958c48d6'
+         'f7abfe849e5122dd01d6b8a884999da0'
+         '091d05a08330372ddbaf5ef9d426be53'
+         'e94aef45b5a59fe58c7cc085ab1dd3ae'
+         '42d288e71fa0a886bc8882c198a27f2e'
+         'd888793ff50dafb970f503e3ab6851b6'
+         '9d99d5f02b696e7a493836f285a319da'
+         '1886d7ad148f8ca63908126d7a642e8b')
