@@ -1,31 +1,39 @@
 # $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
-# Contributor: Steve Vialle <steve_v@orcon.net.nz>
+# Contributor: Jonathan Liu <net147@hotmail.com>
 
 pkgname=martian-utils
-pkgver=20061203
+pkgver=20080407
 pkgrel=1
-license=("GPL" "custom:Agere Systems license")
+pkgdesc="Alternative driver for the Agere Systems PCI WinModem."
 arch=('i686')
-_kernver=2.6.21-ARCH
-pkgdesc="Alternative drivers for the Mars chipset Lucent LT Winmodem (PCI). For beyond 2.6 kernel" 
 url="http://martian.barrelsoutofbond.org/"
-source=(http://www.barrelsoutofbond.org/downloads/martian/martian-full-${pkgver}.tar.gz martian.rc.d) 
+license=("GPL" "custom:Agere Systems WinModem License")
+makedepends=('kernel26>=2.6.25.3-1' 'kernel26<2.6.26')
 depends=('glibc')
-options=('NOSTRIP')
 replaces=('ltmodem-utils')
+backup=(etc/conf.d/martian)
+options=(!strip)
+source=(http://linmodems.technion.ac.il/packages/ltmodem/kernel-2.6/martian/martian-full-${pkgver}.tar.gz
+        fastcall.patch
+        stringify.patch
+        martian
+        martian.conf.d)
+md5sums=('11fc90f7522810a002b5632dccb0af5c'
+         'ad11cd70747c4217122c12172bca4ad0'
+         'b6b32f57e13d60f4427ba8361f52478a'
+         'e13f080f084db58f32bbc09141896e48'
+         'ee94c46259e9c4f7f16980060ccd3f4d')
+
+_kernver=2.6.25-ARCH
 
 build() { 
-
-#Build
-  cd $startdir/src/martian && make KERNEL_DIR=/usr/src/linux-${_kernver} all || return 1 
-
-#install helper app
-install -D -m 755 $startdir/src/martian/modem/martian_modem $startdir/pkg/usr/sbin/martian_modem
-
-#Install rc script
-install -D -m 755 $startdir/src/martian.rc.d $startdir/pkg/etc/rc.d/martian
-}  
-
-md5sums=('599dcd2441ce996bb466853cb95b9ec9'
-         '4e735ae1e74b8c2740637ff2308b9a33')
+  cd $startdir/src/martian-full-$pkgver
+  patch -Np1 -i ../fastcall.patch || return 1
+  patch -Np1 -i ../stringify.patch || return 1
+  make KERNEL_DIR=/usr/src/linux-${_kernver} all || return 1
+  install -D -m755 $startdir/src/martian-full-$pkgver/modem/martian_modem $startdir/pkg/usr/sbin/martian_modem
+  install -D -m755 $startdir/src/martian $startdir/pkg/etc/rc.d/martian
+  install -D -m644 $startdir/src/martian.conf.d $startdir/pkg/etc/conf.d/martian
+  install -D -m644 $startdir/src/martian-full-$pkgver/modem/ASWMLICENSE $startdir/pkg/usr/share/licenses/$pkgname/LICENSE
+}
