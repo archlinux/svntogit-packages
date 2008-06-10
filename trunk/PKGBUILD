@@ -1,8 +1,9 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=glibc
-pkgver=2.7
-pkgrel=9
+pkgver=2.8
+pkgrel=1
+_glibcdate=20080610
 install=glibc.install
 backup=(etc/locale.gen)
 pkgdesc="GNU C Library"
@@ -10,50 +11,38 @@ arch=(i686 x86_64)
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('sh' 'kernel-headers>=2.6.24.3' 'tzdata')
-makedepends=('gcc>=4.2.2-2')
+depends=('sh' 'kernel-headers>=2.6.25.6' 'tzdata')
+makedepends=('gcc>=4.3.1-1')
 replaces=('glibc-xen')
-source=(http://ftp.gnu.org/gnu/glibc/glibc-${pkgver}.tar.bz2
-	http://ftp.gnu.org/gnu/glibc/glibc-libidn-${pkgver}.tar.bz2
-	ftp://ftp.archlinux.org/other/glibc/glibc-patches-2.7-8.tar.bz2
-	fix-makecontext.patch
+source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-2.8_${_glibcdate}.tar.bz2
+	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-1.tar.bz2
 	nscd
 	locale.gen.txt
 	locale-gen)
-md5sums=('065c5952b439deba40083ccd67bcc8f7'
-         '226809992fb1f3dc6ea23e0f26952ea4'
-         '0a74af666f39171cf9f03eba05faab4b'
-	 'cd56c14f38207cb3a5d0ad2d7bce540c'
+md5sums=('63def58972f0e8429247916154c21323'
+         'a816b94ff5e94f1ee1bbaa5c447e6f8d'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
 build() {
-  cd ${startdir}/src/glibc-${pkgver}
-  mv ../glibc-libidn-${pkgver} ./libidn
 
-  # some important patches from Debian
-  patch -Np0 -i ${startdir}/src/glibc-patches/locale.patch || return 1
-  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.5-localedef_segfault-1.patch || return 1
+  # for cvs checkout
+#  mkdir ${startdir}/src/glibc-${_glibcdate}
+#  cd ${startdir}/src/glibc-${_glibcdate}
+#  export _TAG=glibc-2_8-branch
+#  export 'CVSROOT=:pserver:anoncvs@sources.redhat.com:/cvs/glibc'
+#  cvs -z9 co -r $_TAG libc || return 1
+#  tar -cvjf glibc-2.8_${_glibcdate}.tar.bz2 libc
+#  return 1
 
-  # Upstream fixes. See sources.redhat.com bugzilla
-  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.7-bz4781.patch || return 1
-  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.7-bz5375.patch || return 1
-  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.7-bz5382.patch || return 1
-  patch -Np0 -i ${startdir}/src/glibc-patches/glibc-2.7-bz5435.patch || return 1
-  patch -Np0 -i ${startdir}/src/glibc-patches/glibc-2.7-bz5441.patch || return 1
-  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.7-bz5531.patch || return 1
+  cd ${startdir}/src/libc
 
-  # Fixes breakage introduced by patch bz5435
-  patch -Np1 -i ${startdir}/src/fix-makecontext.patch || return 1
+  # patch from Debian
+  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.5-localedef_segfault-1.patch || return 1 # still needed?
 
   # Gentoo fixes
-  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-handle-long-kernel-versions.patch || return 1
   patch -Np1 -i ${startdir}/src/glibc-patches/glibc-dont-build-timezone.patch || return 1
-  patch -Np0 -i ${startdir}/src/glibc-patches/gcc-4.3-include-fixed.patch || return 1
-
-  # fix some broken locales (upstream fixes)
-  patch -Np1 -i ${startdir}/src/glibc-patches/fix_broken_locales.patch || return 1
 
   install -m755 -d ${startdir}/pkg/etc
   touch ${startdir}/pkg/etc/ld.so.conf
@@ -83,7 +72,7 @@ build() {
   install -m755 -d ${startdir}/pkg/etc/rc.d
   install -m755 -d ${startdir}/pkg/usr/sbin
   install -m755 -d ${startdir}/pkg/usr/lib/locale
-  install -m644 ${startdir}/src/glibc-${pkgver}/nscd/nscd.conf ${startdir}/pkg/etc/nscd.conf
+  install -m644 ${startdir}/src/libc/nscd/nscd.conf ${startdir}/pkg/etc/nscd.conf
   install -m755 ${startdir}/src/nscd ${startdir}/pkg/etc/rc.d/nscd
   install -m755 ${startdir}/src/locale-gen ${startdir}/pkg/usr/sbin
 
@@ -91,10 +80,10 @@ build() {
 
   # create /etc/locale.gen
   install -m644 ${startdir}/src/locale.gen.txt ${startdir}/pkg/etc/locale.gen
-  sed -i "s|/| |g" ${startdir}/src/glibc-${pkgver}/localedata/SUPPORTED
-  sed -i 's|\\| |g' ${startdir}/src/glibc-${pkgver}/localedata/SUPPORTED
-  sed -i "s|SUPPORTED-LOCALES=||" ${startdir}/src/glibc-${pkgver}/localedata/SUPPORTED
-  cat ${startdir}/src/glibc-${pkgver}/localedata/SUPPORTED >> ${startdir}/pkg/etc/locale.gen
+  sed -i "s|/| |g" ${startdir}/src/libc/localedata/SUPPORTED
+  sed -i 's|\\| |g' ${startdir}/src/libc/localedata/SUPPORTED
+  sed -i "s|SUPPORTED-LOCALES=||" ${startdir}/src/libc/localedata/SUPPORTED
+  cat ${startdir}/src/libc/localedata/SUPPORTED >> ${startdir}/pkg/etc/locale.gen
   sed -i "s|^|#|g" ${startdir}/pkg/etc/locale.gen
 
   if [ "${CARCH}" = "x86_64" ]; then
