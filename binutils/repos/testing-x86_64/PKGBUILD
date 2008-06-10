@@ -1,0 +1,67 @@
+# $Id$
+# Maintainer: judd <jvinet@zeroflux.org>
+
+# compile always twice: first binutils, then gcc, then binutils again
+
+pkgname=binutils
+pkgver=2.18
+pkgrel=7
+_date=20080610
+pkgdesc="A set of programs to assemble and manipulate binary and object files"
+arch=('i686' 'x86_64')
+url="http://sources.redhat.com/binutils"
+license=('GPL')
+groups=('base')
+options=('!libtool' '!distcc' '!ccache')
+depends=('glibc>=2.8-1')
+makedepends=('texinfo>=4.12-2')
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2)
+md5sums=('9847b4141a1c99558cfd88dd65182566')
+
+build() {
+  # for cvs checkout
+#  mkdir ${startdir}/src/${pkgname}-${_date}
+#  cd ${startdir}/src/${pkgname}-${_date}
+#  export _TAG=binutils-2_18-branch
+#  export 'CVSROOT=:pserver:anoncvs@sourceware.org:/cvs/src'
+#  cvs -z9 co -r $_TAG binutils || return 1
+#  cd src && tar -cvjf ../binutils-2.18_${_date}.tar.bz2 *
+#  return 1
+
+  cd ${startdir}/src
+  autoconf
+
+  mkdir build
+  cd build
+
+  CC="gcc -L`pwd`/bfd/.libs/"
+  if [ "${CARCH}" = "x86_64" ]; then
+    ../configure --prefix=/usr --enable-shared --enable-64-bit-bfd --disable-multilib 
+  else
+    ../configure --prefix=/usr --enable-shared
+  fi
+
+  # This checks the host environment and makes sure all the necessary tools are available to compile Binutils.
+  make configure-host || return 1
+
+  make tooldir=${startdir}/pkg/usr || return 1
+  make prefix=${startdir}/pkg/usr tooldir=${startdir}/pkg/usr install
+  install -m 644 ../include/libiberty.h ${startdir}/pkg/usr/include
+
+  if [ "${CARCH}" = "x86_64" ]; then
+    # Rebuild libiberty.a with -fPIC
+    make -C libiberty clean
+    make CFLAGS="$CFLAGS -fPIC" -C libiberty
+    install -m 644 libiberty/libiberty.a ${startdir}/pkg/usr/lib
+    # Rebuild libbfd.a with -fPIC
+    make -C bfd clean
+    make CFLAGS="$CFLAGS -fPIC" -C bfd
+    install -m 644 bfd/libbfd.a ${startdir}/pkg/usr/lib
+  fi
+
+  rm -f ${startdir}/pkg/usr/man/man1/{dlltool,nlmconv,windres}*
+
+  # Remove these symlinks, with binutils prereleases they are not ABI stable.
+  # Programs should compile static to the .a file.
+  rm -f ${startdir}/pkg/usr/lib/lib{bfd,opcodes}.so
+}
