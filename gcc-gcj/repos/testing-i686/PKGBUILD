@@ -1,0 +1,95 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+# There's a circular dependency between gcc-gcj and eclipse-ecj. There is no 
+# way to solve this issue other than first building an older version without
+# the dependency and using that with eclipse-ecj to build this version.
+
+pkgname=gcc-gcj
+pkgver=4.3.1
+pkgrel=1
+pkgdesc="GNU Java Environment"
+arch=(i686 x86_64)
+license=('GPL' 'LGPL')
+url="http://gcc.gnu.org"
+depends=("gcc>=4.3.0" "gtk2>=2.12.5" 'file' 'libsm' 'libxtst' 'alsa-lib' "eclipse-ecj>=3.3.1.1")
+makedepends=('texinfo' 'pkgconfig' 'xulrunner>=1.8.1.12' 'libart-lgpl' 'jack-audio-connection-kit' 'libxtst')
+options=('!libtool')
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++,java}-${pkgver}.tar.bz2
+	gcj-4.3-tools.jar-path.diff
+	gcc_pure64.patch
+	libjava-disable-static.dpatch
+	libjava-sjlj.dpatch
+	gcc-hash-style-both.patch)
+md5sums=('f30652bdee577911681c86f5d7f23d65'
+         '1e0eadf92c2aeff4611fe9da286348d4'
+         '1987df86bd860ea9b7d9c7668d6ad5e3'
+         '602eb960c7752cc4877309e691110c06'
+         '4030ee1c08dd1e843c0225b772360e76'
+         'e5e13a1815b676b66e119c7f46550a90'
+         'afe3541abf5ce163223f94ccdbc66e30'
+         'bb420bc84b1104455b7230b1cd4b96c2')
+
+build() {
+  if ! locale -a | grep ^de_DE; then
+    echo "You need the de_DE locale to build gcc."
+    return 1
+  fi
+  [ -z "${MOZ_PLUGIN_PATH}" ] && . /etc/profile.d/mozilla-common.sh ]
+
+  cd ${startdir}/src/gcc-${pkgver}
+
+  # Don't install libiberty
+  sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
+
+  if [ "${CARCH}" = "x86_64" ]; then
+    patch -Np1 -i ../gcc_pure64.patch || return 1
+  fi
+  chmod +x ${startdir}/src/*.dpatch
+  ${startdir}/src/libjava-disable-static.dpatch -patch || return 1
+  echo 'sjlj'
+  ${startdir}/src/libjava-sjlj.dpatch -patch || return 1
+
+  echo 'hash'
+  patch -Np0 -i ${startdir}/src/gcc-hash-style-both.patch || return 1
+  echo 'tools'
+  patch -Np0 -i ${startdir}/src/gcj-4.3-tools.jar-path.diff || return 1
+
+  mkdir build
+  cd build
+  ../configure --prefix=/usr --enable-shared \
+     --enable-languages=java --enable-threads=posix \
+     --enable-__cxa_atexit --enable-java-awt=gtk \
+     --libdir=/usr/lib --libexecdir=/usr/lib --disable-multilib \
+     --enable-clocale=gnu --mandir=/usr/share/man \
+     --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre \
+     --enable-libgcj-multifile --with-tune=generic \
+     --with-ecj-jar=/usr/share/java/eclipse-ecj.jar \
+     --enable-plugin --with-system-zlib --disable-libstdcxx-pch
+   make || return 1
+   make -j1 DESTDIR=${startdir}/pkg install-target-libjava
+
+   cd gcc
+   make -j1 DESTDIR=${startdir}/pkg java.install-common java.install-man
+
+   install -m755 jc1 ${startdir}/pkg/usr/lib/gcc/${CHOST}/${pkgver}/
+   install -m755 jvgenmain ${startdir}/pkg/usr/lib/gcc/${CHOST}/${pkgver}/
+
+   # Remove files which belong to the base gcc package
+   rm -f ${startdir}/pkg/usr/bin/{c,g}++
+   if [ "${CARCH}" = "x86_64" ]; then
+     rm -f ${startdir}/pkg/usr/bin/x86_64-unknown-linux-gnu-{c,g}++
+    else
+     rm -f ${startdir}/pkg/usr/bin/i686-pc-linux-gnu-{c,g}++
+   fi
+   rm -f ${startdir}/pkg/usr/man/man1/g++.*
+
+   # Save >10MB with this one, makepkg only strips debug symbols.
+   find ${startdir}/pkg/usr/lib -type f -name '*.so.*' -exec strip --strip-unneeded {} \;
+
+   linkdir=`basename $startdir/pkg/usr/lib/gcj-${pkgver}*`
+   ln -sf $linkdir ${startdir}/pkg/usr/lib/gcj-4.3
+   ln -sf libgcj-${pkgver}.jar ${startdir}/pkg/usr/share/java/libgcj-4.3.jar
+   ln -sf libgcj-tools-${pkgver}.jar ${startdir}/pkg/usr/share/java/libgcj-tools-4.3.jar
+
+}
