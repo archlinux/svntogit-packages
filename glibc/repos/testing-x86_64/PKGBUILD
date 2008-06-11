@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=glibc
 pkgver=2.8
-pkgrel=1
+pkgrel=2
 _glibcdate=20080610
 install=glibc.install
 backup=(etc/locale.gen)
@@ -15,12 +15,12 @@ depends=('sh' 'kernel-headers>=2.6.25.6' 'tzdata')
 makedepends=('gcc>=4.3.1-1')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-2.8_${_glibcdate}.tar.bz2
-	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-1.tar.bz2
+	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-2.tar.bz2
 	nscd
 	locale.gen.txt
 	locale-gen)
 md5sums=('63def58972f0e8429247916154c21323'
-         'a816b94ff5e94f1ee1bbaa5c447e6f8d'
+         '3ec00d9aa3f2fec046bc3e615dfb723a'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -40,6 +40,9 @@ build() {
 
   # patch from Debian
   patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.5-localedef_segfault-1.patch || return 1 # still needed?
+
+  # Upstream fixes. See sources.redhat.com bugzilla
+  patch -Np1 -i ${startdir}/src/glibc-patches/glibc-2.7-bz4781.patch || return 1
 
   # Gentoo fixes
   patch -Np1 -i ${startdir}/src/glibc-patches/glibc-dont-build-timezone.patch || return 1
