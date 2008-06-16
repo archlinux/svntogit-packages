@@ -1,0 +1,62 @@
+diff -urN coreutils-6.12-orig/tests/misc/cut coreutils-6.12/tests/misc/cut
+--- coreutils-6.12-orig/tests/misc/cut	2008-05-17 08:41:11.000000000 +0200
++++ coreutils-6.12/tests/misc/cut	2008-06-02 11:13:08.000000000 +0200
+@@ -26,7 +26,7 @@
+ my $prog = 'cut';
+ my $try = "Try \`$prog --help' for more information.\n";
+ my $from_1 = "$prog: fields and positions are numbered from 1\n$try";
+-my $inval = "$prog: invalid byte or field list\n$try";
++my $inval = "$prog: invalid byte, character or field list\n$try";
+ my $no_endpoint = "$prog: invalid range with no endpoint: -\n$try";
+ 
+ my @Tests =
+@@ -140,8 +140,8 @@
+   ['od-overlap5', '-b1-3,1-4', '--output-d=:', {IN=>"abcde\n"}, {OUT=>"abcd\n"}],
+ 
+   # None of the following invalid ranges provoked an error up to coreutils-6.9.
+-  ['inval1', qw(-f 2-0), {IN=>''}, {OUT=>''}, {EXIT=>1},
+-   {ERR=>"$prog: invalid decreasing range\n$try"}],
++  ['inval1', qw(-f 2-0), {IN=>''}, {OUT=>''}, {EXIT=>1},
++   {ERR=>"$prog: invalid byte, character or field list\n$try"}],
+   ['inval2', qw(-f -), {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
+   ['inval3', '-f', '4,-', {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
+   ['inval4', '-f', '1-2,-', {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
+diff -urN coreutils-6.11-orig/tests/mkdir/selinux coreutils-6.11/tests/mkdir/selinux
+--- coreutils-6.11-orig/tests/mkdir/selinux	2008-04-19 23:34:23.000000000 +0200
++++ coreutils-6.11/tests/mkdir/selinux	2008-04-22 13:23:50.000000000 +0200
+@@ -38,6 +28,7 @@
+ # successfully, in spite of the invalid context string.
+  
+ . $srcdir/test-lib.sh
++require_selinux_
+ 
+ c=invalid-selinux-context
+ msg="failed to set default file creation context to \`$c':"
+diff -urNp coreutils-6.11-orig/tests/test-lib.sh coreutils-6.11/tests/test-lib.sh
+--- coreutils-6.11-orig/tests/test-lib.sh	2008-04-19 23:34:23.000000000 +0200
++++ coreutils-6.11/tests/test-lib.sh	2008-04-24 14:18:59.000000000 +0200
+@@ -97,8 +97,8 @@ skip_if_()
+ 
+ require_selinux_()
+ {
+-  case `ls -Zd .` in
+-    '? .'|'unlabeled .')
++  case `ls --scontext -d . | cut -f1 -d" "` in
++    '?'|'unlabeled')
+       skip_test_ "this system (or maybe just" \
+         "the current file system) lacks SELinux support"
+     ;;
+diff -urp coreutils-6.11-orig/gnulib-tests/test-getaddrinfo.c coreutils-6.11/gnulib-tests/test-getaddrinfo.c
+--- coreutils-6.11-orig/gnulib-tests/test-getaddrinfo.c
++++ coreutils-6.11/gnulib-tests/test-getaddrinfo.c
+@@ -70,6 +70,10 @@ int simple (char *host, char *service)
+       if (res == EAI_NODATA)
+ 	return 0;
+ 
++      /* Do not fail this test for temporary name resolution errors. */
++      if (res == EAI_AGAIN)
++         return 0;
++
+       return 1;
+     }
+ 
