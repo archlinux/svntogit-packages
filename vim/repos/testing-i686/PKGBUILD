@@ -1,0 +1,62 @@
+# $Id$
+# Maintainer: tobias [ tobias at archlinux org ]
+
+pkgname=vim
+_srcver=7.1
+_patchlevel=315
+pkgver=${_srcver}.${_patchlevel}
+pkgrel=1
+pkgdesc="a highly configurable, improved version of the vi text editor"
+arch=(i686 x86_64)
+license=('custom:vim')
+url="http://www.vim.org"
+depends=("vi>=${pkgver}" 'perl' 'python' 'ruby' 'acl' 'gpm>=1.20.4' 'libxt')
+makedepends=('wget' 'sed' 'grep')
+backup=(etc/vimrc)
+install=${pkgname}.install
+# we need the extra-stuff to get all patches applied smoothly
+source=(ftp://ftp.vim.org/pub/vim/unix/vim-${_srcver}.tar.bz2 \
+        ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-extra.tar.gz \
+        ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-lang.tar.gz \
+        fetch_patches.sh)
+md5sums=('44c6b4914f38d6f9aa959640b89da329' '605cc7ae31bcc9d7864bb0bb6025f55d'\
+         '144aa049ba70621acf4247f0459f3ee7' 'a792973dcd1d5d1103a1bb620e494b55')
+
+build()
+{
+  # pull in patches from vim.org (or the src cache alternatively)
+  . ${startdir}/src/fetch_patches.sh
+  get_patches || return 1
+  cd ${startdir}/src/vim$(echo ${_srcver} | sed "s/\.//")
+  sed -i 's|^.*\(#define SYS_.*VIMRC_FILE.*"\) .*$|\1|' src/feature.h
+  # build party
+  ./configure --prefix=/usr --localstatedir=/var/lib/vim --mandir=/usr/share/man \
+    --with-compiledby=ArchLinux --with-features=big \
+    --with-x=yes --disable-gui \
+    --with-global-runtime=/usr/share/vim --with-vim-name=vim \
+    --enable-multibyte --enable-cscope \
+    --enable-perlinterp --enable-pythoninterp --enable-rubyinterp
+  make || return 1
+  make  VIMRCLOC=/etc DESTDIR=${startdir}/pkg VIMRTDIR= install
+  cd ${startdir}/pkg/usr/bin
+  rm -f ex view rview xxd vimtutor
+  ln -s vitutor vimtutor
+
+   # delete the manpages/symlinks provided by vi package
+  find ${startdir}/pkg/usr/share/man -type d -name 'man1' 2> /dev/null | \
+   while read mandir; do
+    cd ${mandir}
+    rm -f *.1
+    ln -s rvi.1.gz rvim.1.gz
+    ln -s vi.1.gz vim.1.gz
+    ln -s vidiff.1.gz vimdiff.1.gz
+    ln -s vitutor.1.gz vimtutor.1.gz
+  done
+
+  # kill the nobackup parts
+  sed -i '/vms/,+4 d' ${startdir}/pkg/usr/share/vim/vimrc_example.vim
+  install -Dm644 ${startdir}/pkg/usr/share/vim/vimrc_example.vim \
+    ${startdir}/pkg/etc/vimrc
+  # clean all settings and controls -  served by vi package
+  rm -rf ${startdir}/pkg/usr/share/vim
+}
