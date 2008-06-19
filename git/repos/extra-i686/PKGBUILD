@@ -2,13 +2,13 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.5.5.3
+pkgver=1.5.6
 pkgrel=1
 pkgdesc="GIT - the stupid content tracker"
 arch=(i686 x86_64)
 url="http://git.or.cz/"
 license=('GPL2')
-depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.10.0' 'cpio')
+depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.10.0')
 replaces=('git-core')
 provides=('git-core')
 install=git.install
@@ -39,5 +39,5 @@ build() {
   rm -rf ${startdir}/pkg/usr/lib
 }
 
-md5sums=('022ce5772b900243ef5d289deb7a3667'
-         '374a62ddf37343a5130f3318eab1ce2b')
+md5sums=('76c4efaaa5470a5385e22d99349a97b3'
+         '9e74eefba7179944ab88e6f6d75506cf')
