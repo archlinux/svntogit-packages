@@ -1,0 +1,164 @@
+Summary:
+
+Fix configure.in to detect xulrunner-1.9 as gecko=mozilla 1.9
+  - update configure.in:
+
+Instructions:
+
+1. Drop this into debian/patches directory of totem package and add the filename
+used into the debian/patches/series file such that it gets applied _before_ the
+autoconf patch.
+2. Update autoconf patch by: QUILT_PATCHES=debian/patches quilt push -a; autoconf; quilt refresh --diffstat -U --no-timestamps
+3. Build as usually (e.g. dpkg-buildpackage -rfakeroot -b)
+
+Tested Package Versions:
+ + totem >= 2.21.2-0ubuntu2, build: OK, works: OK (asac)
+
+---
+ configure.in |   77 ++++++++++++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 58 insertions(+), 19 deletions(-)
+
+--- a/configure.in	2008-02-27 12:24:51.000000000 +0100
++++ b/configure.in	2008-02-27 12:25:05.000000000 +0100
+@@ -590,13 +590,19 @@
+ 	if test -z "$with_gecko"; then
+ 		dnl Autodetect gecko
+ 		for g in $GECKOS; do
++			if $PKG_CONFIG --exists $g-plugin; then
++				gecko=$g
++				break;
++			fi
+ 			if $PKG_CONFIG --exists $g-xpcom; then
+ 				gecko=$g
+ 				break;
+ 			fi
+ 		done
+ 	elif ! $PKG_CONFIG --exists $gecko-xpcom; then
+-		AC_MSG_ERROR([Gecko "$gecko" not found])
++		if ! $PKG_CONFIG --exists $gecko-plugin; then
++			AC_MSG_ERROR([Gecko "$gecko" not found])
++		fi
+ 	fi
+ 
+ 	if test -z "$gecko" -a "$enable_browser_plugins" = "autodetect"; then
+@@ -634,24 +640,35 @@
+ # Check for mozilla modules, but keep the CFLAGS and LIBS in
+ # separate vars
+ if test "$enable_browser_plugins" = "yes" ; then
+-	PKG_CHECK_MODULES([MOZILLA_NOT_LINKED],
+-		[$MOZILLA-xpcom >= $MOZILLA_VERSION_MIN \
+-		 $MOZILLA-plugin],,
+-                [enable_browser_plugins=no])
++	if $PKG_CONFIG --exists $MOZILLA-plugin; then
++		MOZILLA_VERSION_MIN=1.9
++		PKG_CHECK_MODULES([MOZILLA_NOT_LINKED],
++			[libxul $MOZILLA-plugin >= $MOZILLA_VERSION_MIN],,
++        	         [enable_browser_plugins=no])
++ 	else
++		PKG_CHECK_MODULES([MOZILLA_NOT_LINKED],
++			[$MOZILLA-xpcom >= $MOZILLA_VERSION_MIN \
++			$MOZILLA-plugin],,
++			[enable_browser_plugins=no])
++	fi
+ fi
+ # Check for other required modules, and merge CFLAGS, but not link
+ # flags to avoid linking against -lxpcom -lplds4 -lplc4 -lnspr4
+ if test "$enable_browser_plugins" = "yes" ; then
+ 	PKG_CHECK_MODULES([BROWSER_PLUGIN],
+ 		[glib-2.0
+-		 gnome-vfs-2.0 >= $GNOMEVFS_REQS
+-		 gnome-vfs-module-2.0 >= $GNOMEVFS_REQS
+-		 gthread-2.0
+-		 totem-plparser-mini >= $TOTEM_PLPARSER_REQS],
++		gnome-vfs-2.0 >= $GNOMEVFS_REQS
++		gnome-vfs-module-2.0 >= $GNOMEVFS_REQS
++		gthread-2.0
++		totem-plparser-mini >= $TOTEM_PLPARSER_REQS],
+ 		[],[enable_browser_plugins=no])
+ 
+ 	BROWSER_PLUGIN_CFLAGS="$MOZILLA_NOT_LINKED_CFLAGS $BROWSER_PLUGIN_CFLAGS"
+ 	AC_SUBST([BROWSER_PLUGIN_CFLAGS])
++	# for xul 1.9 we have to link anyway
++	if test "$MOZILLA_VERSION_MIN" = 1.9; then
++		BROWSER_PLUGIN_LIBS="$MOZILLA_NOT_LINKED_LIBS $BROWSER_PLUGIN_LIBS"
++	fi
+ 	AC_SUBST([BROWSER_PLUGIN_LIBS])
+ 
+ 	# Earlier versions misdetect playlists
+@@ -683,10 +700,18 @@
+ 
+ # Sets some variables, and check for xpidl
+ if test "$enable_browser_plugins" = "yes" ; then
+-	MOZILLA_PREFIX="`$PKG_CONFIG $MOZILLA-xpcom --variable=prefix`"
+-	MOZILLA_LIBDIR="`$PKG_CONFIG $MOZILLA-xpcom --variable=libdir`"
+-	MOZILLA_INCLUDE_ROOT="`$PKG_CONFIG --variable=includedir $MOZILLA-xpcom`"
+-	MOZILLA_XPCOM_CFLAGS="-I`$PKG_CONFIG --variable=includedir $MOZILLA-xpcom`"
++	if $PKG_CONFIG --exists $MOZILLA-plugin; then
++		MOZILLA_PREFIX="`$PKG_CONFIG $MOZILLA-plugin --variable=prefix`"
++		MOZILLA_LIBDIR="`$PKG_CONFIG $MOZILLA-plugin --variable=sdkdir`/bin"
++		MOZILLA_INCLUDE_ROOT="`$PKG_CONFIG --variable=includedir $MOZILLA-plugin`"
++		MOZILLA_XPCOM_CFLAGS="`$PKG_CONFIG --cflags $MOZILLA-plugin` `$PKG_CONFIG --cflags libxul-unstable`"
++	else
++		MOZILLA_PREFIX="`$PKG_CONFIG $MOZILLA-plugin --variable=prefix`"
++		MOZILLA_LIBDIR="`$PKG_CONFIG $MOZILLA-plugin --variable=libdir`"
++		MOZILLA_INCLUDE_ROOT="`$PKG_CONFIG --variable=includedir $MOZILLA-xpcom`"
++		MOZILLA_XPCOM_CFLAGS="`$PKG_CONFIG --cflags $MOZILLA-xpcom`"
++	fi
++
+ 	MOZILLA_PLUGINDIR="${MOZILLA_PLUGINDIR:-"\${libdir}/mozilla/plugins"}"
+ 
+ 	AC_PATH_PROG([MOZILLA_XPIDL], [xpidl], [no], [$MOZILLA_LIBDIR:$PATH])
+@@ -708,8 +733,12 @@
+ 
+ # Search for the idl include directory
+ if test "$enable_browser_plugins" = "yes" ; then
+-	dnl This only works on gecko 1.8
+-	MOZILLA_IDLDIR="`$PKG_CONFIG --variable=idldir $MOZILLA-xpcom`"
++	dnl This only works on gecko 1.9 and 1.8
++	if $PKG_CONFIG --exists libxul; then
++		MOZILLA_IDLDIR="`$PKG_CONFIG --variable=idldir libxul`/unstable"
++	else
++		MOZILLA_IDLDIR="`$PKG_CONFIG --variable=idldir $MOZILLA-xpcom`"
++	fi
+ 	dnl Fallback for older versions
+ 	if test "x$MOZILLA_IDLDIR" = "x"; then
+ 		MOZILLA_IDLDIR="`echo $MOZILLA_LIBDIR | sed -e s!lib!share/idl!`"
+@@ -741,8 +770,14 @@
+ 
+ 	CPPFLAGS="$CPPFLAGS -I$MOZILLA_INCLUDE_ROOT"
+ 	CXXFLAGS="$CXXFLAGS $MOZILLA_NOT_LINKED_CFLAGS"
+-	LIBS="$LIBS -L$MOZILLA_LIBDIR -lxpcom -lxpcomglue_s"
+-	LDFLAGS="$LDFLAGS -Wl,--rpath -Wl,$MOZILLA_LIBDIR"
++	if test $MOZILLA_VERSION_MIN = 1.9; then
++		CPPFLAGS="$CPPFLAGS -I$MOZILLA_INCLUDE_ROOT/unstable"
++		LIBS="$LIBS $MOZILLA_NOT_LINKED_LIBS"
++		LDFLAGS="$LDFLAGS -Wl,--rpath -Wl,$MOZILLA_LIBDIR"
++        else 
++		LIBS="$LIBS -L$MOZILLA_LIBDIR -lxpcom -lxpcomglue_s"
++		LDFLAGS="$LDFLAGS -Wl,--rpath -Wl,$MOZILLA_LIBDIR"
++	fi
+ 
+ 	AC_MSG_CHECKING([for libxpcomglue_s])
+ 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+@@ -763,7 +798,11 @@
+ 	AC_LANG_POP([C++])
+ 
+ 	if test "$have_libxpcomglue_s" = "yes"; then
+-		LIBXPCOMGLUE_S="-L$MOZILLA_LIBDIR -lxpcomglue_s"
++		if test $MOZILLA_VERSION_MIN = 1.9; then
++			LIBXPCOMGLUE_S="$MOZILLA_NOT_LINKED_LIBS"
++		else
++			LIBXPCOMGLUE_S="-L$MOZILLA_LIBDIR -lxpcomglue_s"
++		fi
+ 	else
+ 		AC_MSG_WARN([libxpcomglue_s not available; plugins may not be portable])
+ 	fi
+@@ -795,7 +834,7 @@
+ if test "$enable_browser_plugins" = "yes"; then
+ 	AC_LANG_PUSH([C++])
+ 	__SAVE_CPPFLAGS=$CPPFLAGS
+-	CPPFLAGS="$CPPFLAGS $MOZILLA_NOT_LINKED_CFLAGS -I$MOZILLA_INCLUDE_ROOT -I$MOZILLA_INCLUDE_ROOT/xpcom"
++	CPPFLAGS="$CPPFLAGS $MOZILLA_NOT_LINKED_CFLAGS -I$MOZILLA_INCLUDE_ROOT/xpcom -I$MOZILLA_INCLUDE_ROOT/unstable -I$MOZILLA_INCLUDE_ROOT/stable"
+ 
+ 	AC_CHECK_HEADERS([nsTArray.h])
+ 
