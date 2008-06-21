@@ -2,23 +2,31 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=nss
-pkgver=3.11.9
+pkgver=3.12rc4
+_nssver=3.12.0.3
 pkgrel=1
 pkgdesc="Mozilla Network Security Services"
 arch=(i686 x86_64)
 url="http://www.mozilla.org/projects/security/pki/nss/"
 license=('MPL' 'GPL')
-_nsprver=4.7
-depends=("nspr>=${_nsprver}")
+_nsprver=4.7.1
+depends=("nspr>=${_nsprver}" 'sqlite3>=3.5.9-2')
 replaces=('nss-nspr')
-source=(ftp://ftp.mozilla.org/pub/mozilla.org/security/nss/releases/NSS_3_11_9_RTM/src/${pkgname}-${pkgver}.tar.gz
+source=(#ftp://ftp.mozilla.org/pub/mozilla.org/security/nss/releases/NSS_3_11_9_RTM/src/${pkgname}-${pkgver}.tar.gz
+	ftp://ftp.archlinux.org/other/nss/nss-${pkgver}.tar.bz2
+	nss-nolocalsql.patch
 	nss.pc.in
 	nss-config.in)
+md5sums=('9a18090d4f43f3019246d0a1cd55925c'
+         '1837781eed35bfb6f826cfb3efcd6409'
+         'c547b030c57fe1ed8b77c73bf52b3ded'
+         '46bee81908f1e5b26d6a7a2e14c64d9f')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
+  patch -Np0 -i ${startdir}/src/nss-nolocalsql.patch || return 1
+  unset CFLAGS
+  unset CXXFLAGS
   export BUILD_OPT=1
-  export XCFLAGS=${CFLAGS}
   export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
   export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
   export NSPR_INCLUDE_DIR=`pkg-config --cflags-only-I nspr | sed 's/-I//'`
@@ -43,7 +51,7 @@ build() {
 				-e "s,%exec_prefix%,/usr/bin,g" \
 				-e "s,%includedir%,/usr/include/nss,g" \
 				-e "s,%NSPR_VERSION%,${_nsprver},g" \
-				-e "s,%NSS_VERSION%,${pkgver},g" > \
+				-e "s,%NSS_VERSION%,${_nssver},g" > \
 			${startdir}/pkg/usr/lib/pkgconfig/nss.pc || return 1
   ln -sf nss.pc ${startdir}/pkg/usr/lib/pkgconfig/mozilla-nss.pc || return 1
   chmod 644 ${startdir}/pkg/usr/lib/pkgconfig/*.pc || return 1
@@ -58,18 +66,16 @@ build() {
 			    > ${startdir}/pkg/usr/bin/nss-config || return 1
   chmod 755 ${startdir}/pkg/usr/bin/nss-config || return 1
 
-  for file in libnss3.so libssl3.so libsmime3.so \
-	      libsoftokn3.so libnssckbi.so \
-	      libfreebl3.so; do
+  for file in libsoftokn3.so libfreebl3.so libnss3.so libnssutil3.so \
+              libssl3.so libsmime3.so libnssckbi.so libnssdbm3.so
+  do
     install -m755 mozilla/dist/*.OBJ/lib/${file} ${startdir}/pkg/usr/lib/ || return 1
   done
-  
-
-  for file in libcrmf.a libnssb.a libnssckfw.a libfreebl3.chk libsoftokn3.chk; do
+  for file in libcrmf.a libnssb.a libnssckfw.a; do
     install -m644 mozilla/dist/*.OBJ/lib/${file} ${startdir}/pkg/usr/lib/ || return 1
   done
 
-  for file in certutil modutil pk12util signtool ssltap; do
+  for file in certutil cmsutil crlutil modutil pk12util signtool signver ssltap; do
     install -m755 mozilla/dist/*.OBJ/bin/${file} ${startdir}/pkg/usr/bin/ || return 1
   done
 
