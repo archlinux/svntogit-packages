@@ -1,0 +1,114 @@
+---
+ xulrunner/installer/Makefile.in                     |   17 ++++++++++++++---
+ xulrunner/installer/libxul-embedding-unstable.pc.in |    2 +-
+ xulrunner/installer/libxul-embedding.pc.in          |    2 +-
+ xulrunner/installer/mozilla-nss.pc.in               |    6 +++---
+ 4 files changed, 19 insertions(+), 8 deletions(-)
+
+Index: mozilla/xulrunner/installer/Makefile.in
+===================================================================
+--- mozilla.orig/xulrunner/installer/Makefile.in
++++ mozilla/xulrunner/installer/Makefile.in
+@@ -90,40 +90,51 @@
+ 	mozilla-plugin.pc \
+ 	mozilla-gtkmozembed.pc \
+ 	mozilla-gtkmozembed-embedding.pc \
+ 	$(NULL)
+ 
+ ifdef MOZ_NATIVE_NSPR
+ NSPR_NAME=nspr
+ NSPR_VERSION=$(shell $(NSPR_CONFIG) --version)
++FULL_NSPR_CFLAGS=$(shell $(NSPR_CONFIG) --cflags)
++FULL_NSPR_LIBS=$(shell $(NSPR_CONFIG) --libs)
+ else
+-pkg_config_files += mozilla-nspr.pc
+ NSPR_NAME=mozilla-nspr
+ FULL_NSPR_CFLAGS=-I\$${includedir}/stable
+ FULL_NSPR_LIBS=$(subst $(prefix),\$${sdkdir},$(shell $(DEPTH)/nsprpub/config/nspr-config --libs))
+ NSPR_VERSION=$(shell $(DEPTH)/nsprpub/config/nspr-config --version)
+ endif
++pkg_config_files += mozilla-nspr.pc
+ 
+ $(warning FULL_NSPR_CFLAGS=$(FULL_NSPR_CFLAGS))
+ 
+-ifndef MOZ_NATIVE_NSS
+-pkg_config_files += mozilla-nss.pc
++ifdef MOZ_NATIVE_NSS
++NSPR_VERSION=$(shell $(NSS_CONFIG) --version)
++FULL_NSS_CFLAGS=$(shell $(NSS_CONFIG) --cflags)
++FULL_NSS_LIBS=$(shell $(NSS_CONFIG) --libs)
++else
++NSS_VERSION=$(shell $(DEPTH)/nsprpub/config/nss-config --version)
++FULL_NSS_CFLAGS=-I\$${includedir}/stable
++FULL_NSS_LIBS=$(subst $(prefix),\$${sdkdir},$(shell $(DEPTH)/nsprpub/config/nss-config --libs))
+ endif
++pkg_config_files += mozilla-nss.pc
+ 
+ %.pc: $(srcdir)/%.pc.in Makefile.in Makefile $(DEPTH)/config/autoconf.mk
+ 	cat $< | sed \
+ 	-e "s|%prefix%|$(prefix)|" \
+ 	-e "s|%includedir%|$(includedir)|" \
+ 	-e "s|%idldir%|$(idldir)|" \
+ 	-e "s|%sdkdir%|$(sdkdir)|" \
+ 	-e "s|%MOZ_APP_NAME%|$(MOZ_APP_NAME)|" \
+ 	-e "s|%MOZILLA_VERSION%|$(MOZ_APP_VERSION)|" \
+ 	-e "s|%FULL_NSPR_LIBS%|$(FULL_NSPR_LIBS)|" \
+ 	-e "s|%FULL_NSPR_CFLAGS%|$(FULL_NSPR_CFLAGS)|" \
++	-e "s|%FULL_NSS_LIBS%|$(FULL_NSS_LIBS)|" \
++	-e "s|%FULL_NSS_CFLAGS%|$(FULL_NSS_CFLAGS)|" \
+ 	-e "s|%NSPR_NAME%|$(NSPR_NAME)|" \
+ 	-e "s|%NSPR_VERSION%|$(NSPR_VERSION)|" > $@
+ 	chmod 644 $@
+ 
+ install:: $(pkg_config_files)
+ 	@echo pkg_config_file: $(pkg_config_files)
+ 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(libdir)/pkgconfig
+ 
+Index: mozilla/xulrunner/installer/libxul-embedding-unstable.pc.in
+===================================================================
+--- mozilla.orig/xulrunner/installer/libxul-embedding-unstable.pc.in
++++ mozilla/xulrunner/installer/libxul-embedding-unstable.pc.in
+@@ -3,9 +3,9 @@
+ includedir=%includedir%
+ idldir=%idldir%
+ includetype=unstable
+ 
+ Name: libxul-embedding-unstable
+ Description: Static library for version-independent embedding of the Mozilla runtime (unstable API)
+ Version: %MOZILLA_VERSION%
+ Libs: -L${sdkdir}/lib -lxpcomglue
+-Cflags: -DXPCOM_GLUE -I${includedir}/${includetype} -fshort-wchar
++Cflags: -DXPCOM_GLUE -I${includedir}/${includetype} -fshort-wchar %FULL_NSPR_CFLAGS%
+Index: mozilla/xulrunner/installer/libxul-embedding.pc.in
+===================================================================
+--- mozilla.orig/xulrunner/installer/libxul-embedding.pc.in
++++ mozilla/xulrunner/installer/libxul-embedding.pc.in
+@@ -7,9 +7,9 @@
+ # Note: the default pkg-config cflags will only list include directories
+ # that contain stable (frozen or safe for linking) header files. To include
+ # nonfrozen headers, run pkg-config with --define-variable=includetype=unstable
+ 
+ Name: libxul-embedding
+ Description: Static library for version-independent embedding of the Mozilla runtime
+ Version: %MOZILLA_VERSION%
+ Libs: -L${sdkdir}/lib -lxpcomglue
+-Cflags: -DXPCOM_GLUE -I${includedir}/${includetype} -fshort-wchar
++Cflags: -DXPCOM_GLUE -I${includedir}/${includetype} -fshort-wchar %FULL_NSPR_CFLAGS%
+Index: mozilla/xulrunner/installer/mozilla-nss.pc.in
+===================================================================
+--- mozilla.orig/xulrunner/installer/mozilla-nss.pc.in
++++ mozilla/xulrunner/installer/mozilla-nss.pc.in
+@@ -1,10 +1,10 @@
+ prefix=%prefix%
+ sdkdir=%sdkdir%
+ includedir=%includedir%
+ 
+ Name: NSS
+ Description: Mozilla Network Security Services
+-Version: %MOZILLA_VERSION%
++Version: %NSS_VERSION%
+ Requires: %NSPR_NAME% >= %NSPR_VERSION%
+-Libs: -L${sdkdir}/lib -lnss3 -lnssutil3 -lsmime3 -lssl3 -lsoftokn3
+-Cflags: -I${includedir}/stable
++Libs: %FULL_NSS_LIBS%
++Cflags: %FULL_NSS_CFLAGS%

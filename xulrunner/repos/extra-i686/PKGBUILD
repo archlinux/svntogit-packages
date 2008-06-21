@@ -2,58 +2,54 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xulrunner
-pkgver=1.8.1.14
-pkgrel=2
+pkgver=1.9
+pkgrel=1
 pkgdesc="Mozilla Runtime Environment"
 arch=(i686 x86_64)
 license=('MPL' 'GPL' 'LGPL')
-depends=('gtk2>=2.12.10' 'gcc-libs>=4.3.0' 'libidl2>=0.8.10' 'mozilla-common' 'nss>=3.11.9' 'libxt')
-makedepends=('zip' 'pkgconfig' 'diffutils' 'libgnome>=2.22.0')
-options=(!makeflags)
+depends=('gtk2>=2.12.10' 'gcc-libs>=4.3.1' 'libidl2>=0.8.10' 'mozilla-common' 'nss>=3.12rc4' 'libxt' 'lcms' 'hunspell>=1.2.2')
+makedepends=('zip' 'pkgconfig' 'diffutils' 'libgnomeui>=2.22.1')
 provides=(gecko-sdk)
 replaces=(gecko-sdk)
 url="http://wiki.mozilla.org/XUL:Xul_Runner"
 source=(ftp://ftp.archlinux.org/other/xulrunner/${pkgname}-${pkgver}.tar.bz2
-	about-plugins.patch
         mozconfig
-        moz310924.patch
-        firefox-2.0-buildversion.patch
-	gnome_helpers_with_params.patch)
-md5sums=('29139dcd6037e7c935edb29fb552d4d2'
-         'b2b5ce5ddf6e84858b8acb1e71b4682f'
-         'bd53b644c5a2855d3a2288a382b0d1e5'
-         '29194973e2a535b460c6b7f92c635eaf'
-         '11b221ff41078d97c131e17361072e47'
-         'fd50e0a1c20f5418eb10effb9eaacac2')
+	mozilla-ps-pdf-simplify-operators.patch
+	mozilla-ssl-exception.patch
+	100-system-hunspell-corrections.patch
+	bzXXX_pc_honour_system_nspr_nss.patch)
+md5sums=('b08e330db311b12dfe9c83a786f8a07b'
+         '33e6aa4d7119977f7e2464d3de8cff2a'
+         '13dca58c04e62a8916691c63c5c492a0'
+         '38c8a53e3f18b57249de3f40c7b28e81'
+         '5efd6772ed0ecf8eddec5d5650191d3c'
+         '2b5f800d1887e0b26781cd2d3682ab19')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  patch -Np0 -i ${startdir}/src/moz310924.patch || return 1
-  patch -Np1 -i ${startdir}/src/gnome_helpers_with_params.patch || return 1
-  patch -Np0 -i ${startdir}/src/firefox-2.0-buildversion.patch || return 1
-  patch -Np1 -i ${startdir}/src/about-plugins.patch || return 1
-
+  cd ${startdir}/src/mozilla
   cp ${startdir}/src/mozconfig .mozconfig
 
-  if [ "${CARCH}" = "x86_64" ]; then
-    echo "ac_cv_visibility_pragma=no" >> .mozconfig
-  fi
-  
+  #upstream fixes
+  patch -Np1 -i ${srcdir}/mozilla-ps-pdf-simplify-operators.patch || return 1
+  patch -Np1 -i ${srcdir}/mozilla-ssl-exception.patch || return 1
+
+  #fix build with system hunspell - gentoo
+  patch -Np0 -i ${srcdir}/100-system-hunspell-corrections.patch || return 1
+
+  #fix pkgconfig files when building with system nss/nspr - ubuntu
+  patch -Np1 -i ${srcdir}/bzXXX_pc_honour_system_nspr_nss.patch || return 1
+
+  #fix profiling
   unset CFLAGS
   unset CXXFLAGS
+  export LDFLAGS="-Wl,-rpath,/usr/lib/xulrunner-1.9"
 
-  make -f client.mk build || return 1
-  make DESTDIR=${startdir}/pkg DISTDIR=${startdir}/pkg install || return 1
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS" || return 1
+  make -j1 DESTDIR=${startdir}/pkg install || return 1
 
-  cd ${startdir}/pkg/usr/lib && ln -sf xulrunner-${pkgver} xulrunner
-  cd ${startdir}/pkg/usr/include && ln -sf xulrunner-${pkgver} xulrunner
-  cd ${startdir}/pkg/usr/share/idl && ln -sf xulrunner-${pkgver} xulrunner
+  rm -f ${startdir}/pkg/usr/bin/xulrunner
+  ln -sf /usr/lib/xulrunner-1.9/xulrunner ${startdir}/pkg/usr/bin/xulrunner
 
-  rm -rf ${startdir}/pkg/usr/bin/defaults
-
-  #NSPR and NSS aren't built anyways, remove pkgconfig files for it
-  rm -f ${startdir}/pkg/usr/lib/pkgconfig/xulrunner-ns{s,pr}.pc
-  #Remove versioned directories from .pc files, fixes problems with updates
-  sed -i -e "s/xulrunner-${pkgver}/xulrunner/" \
-  	${startdir}/pkg/usr/lib/pkgconfig/*.pc
+  # The ubuntu patch adds these... get rid of it, NSS/NSPR has it.
+  rm -f ${startdir}/pkg/usr/lib/pkgconfig/mozilla-ns{s,pr}.pc || return 1
 }
