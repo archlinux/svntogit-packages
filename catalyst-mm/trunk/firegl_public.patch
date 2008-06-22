@@ -1,0 +1,620 @@
+--- orig/firegl_public.c	2008-06-22 07:18:50.000000000 -0400
++++ new/firegl_public.c	2008-06-22 08:57:56.000000000 -0400
+@@ -3274,26 +3274,21 @@
+ 
+ /*****************************************************************************/
+ 
+-#ifndef NOPAGE_SIGBUS
+-#define NOPAGE_SIGBUS 0
+-#endif /* !NOPAGE_SIGBUS */
++typedef int vm_fault_ret_t;
+ 
+-typedef struct page mem_map_t;
+-typedef mem_map_t *vm_nopage_ret_t;
+-
+-static __inline__ vm_nopage_ret_t do_vm_nopage(struct vm_area_struct* vma,
+-                                                     unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_fault(struct vm_area_struct* vma,
++                                             struct vm_fault *vmf)
+ {
+     return 0;   /* Disallow mremap */
+ }
+ 
+ #ifdef __AGP__BUILTIN__
+ #ifdef __ia64__
+-static __inline__ vm_nopage_ret_t do_vm_cant_nopage(struct vm_area_struct* vma,
+-                                                          unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_cant_fault(struct vm_area_struct* vma,
++                                                  struct vm_fault *vmf)
+ {
+ 	void *dev;
+-	unsigned long offset = address - vma->vm_start;
++	unsigned long offset = (unsigned long)vmf->virtual_address - vma->vm_start;
+ 	unsigned long baddr = VM_OFFSET(vma) + offset;
+ 	unsigned long mem;
+ 	struct page *page;
+@@ -3307,31 +3302,32 @@
+ 		{
+ 			page = virt_to_page((unsigned long)__va(mem));
+ 			get_page(page);
+-			return page;
++      vmf->page = page;
++			return 0;
+ 		}
+ 	}
+-	return NOPAGE_SIGBUS;		/* Disallow mremap */
++	return VM_FAULT_SIGBUS;		/* Disallow mremap */
+ }
+ 
+ #endif /* __ia64__ */
+ #endif /* __AGP__BUILTIN__ */
+ 
+ 
+-static __inline__ vm_nopage_ret_t do_vm_shm_nopage(struct vm_area_struct* vma,
+-                                                   unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_shm_fault(struct vm_area_struct* vma,
++                                                 struct vm_fault *vmf)
+ {
+     pgd_t* pgd_p;
+     pmd_t* pmd_p;
+     pte_t  pte;
+     unsigned long vma_offset;
+     unsigned long pte_linear;
+-    mem_map_t* pMmPage;
++    struct page* pMmPage;
+ 
+     /*
+         vm_start           => start of vm-area,  regular address
+         vm_end             => end of vm-area,    regular address
+         vm_offset/vm_pgoff => start of area,     linear address
+-        address            => requested address, regular address
++	      vmf->virtual_address => requested address, regular address
+ 
+         Check range
+         Seems the surrounding framework already does that test -
+@@ -3350,11 +3346,11 @@
+             vma->vm_end,
+             (unsigned long)__ke_vm_offset(vma));
+ 
+-    if (address > vma->vm_end)
+-        return NOPAGE_SIGBUS; /* address is out of range */
++    if ((unsigned long)vmf->virtual_address > vma->vm_end)
++        return VM_FAULT_SIGBUS; /* address is out of range */
+ 
+     /*  Calculate offset into VMA */
+-    vma_offset = address - vma->vm_start;
++	  vma_offset = (unsigned long)vmf->virtual_address - vma->vm_start;
+ 
+     /*
+       Find the map with the given handle (vm_offset) and get the
+@@ -3363,7 +3359,7 @@
+     pte_linear = firegl_get_addr_from_vm(vma);
+     if (!pte_linear)
+     {
+-        return NOPAGE_SIGBUS; /* bad address */
++        return VM_FAULT_SIGBUS; /* bad address */
+     }
+     pte_linear += vma_offset;
+ 
+@@ -3389,9 +3385,11 @@
+ 
+     get_page(pMmPage);  /* inc usage count of page */
+ 
++    vmf->page = pMmPage;
++
+     //  __KE_DEBUG3("vm-address 0x%08lx => kernel-page-address 0x%p\n",
+     //    address, page_address(pMmPage));
+-    return pMmPage;
++    return 0;
+ }
+ 
+ /*
+@@ -3400,12 +3398,13 @@
+       (which is one ore more pages in size)
+ 
+ */
+-static __inline__ vm_nopage_ret_t do_vm_dma_nopage(struct vm_area_struct* vma, unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_dma_fault(struct vm_area_struct* vma,
++                                                 struct vm_fault *vmf)
+ {
+     unsigned long kaddr;
+-    mem_map_t* pMmPage;
++    struct page* pMmPage;
+ 
+-    if (address > vma->vm_end)
++    if ((unsigned long)vmf->virtual_address > vma->vm_end)
+         return 0; /* Disallow mremap */
+ 
+     /*
+@@ -3417,9 +3416,9 @@
+     kaddr = firegl_get_addr_from_vm(vma);
+     if (!kaddr)
+     {
+-        return NOPAGE_SIGBUS; /* bad address */
++        return VM_FAULT_SIGBUS; /* bad address */
+     }
+-    kaddr += (address - vma->vm_start);
++    kaddr += ((unsigned long)vmf->virtual_address - vma->vm_start);
+ 
+     pMmPage = virt_to_page(kaddr);
+ 
+@@ -3435,31 +3434,35 @@
+     get_page(pMmPage); /* inc usage count of page */
+ #endif
+ 
++    vmf->page = pMmPage;
++
+     __KE_DEBUG3("vm-address 0x%08lx => kernel-page-address 0x%p\n",
+-        address, page_address(pMmPage));
+-    return pMmPage;
++        (unsigned long)vmf->virtual_address, page_address(pMmPage));
++    return 0;
+ }
+ 
+-static __inline__ vm_nopage_ret_t do_vm_kmap_nopage(struct vm_area_struct* vma, unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_kmap_fault(struct vm_area_struct* vma,
++                                                  struct vm_fault *vmf)
+ {
+     unsigned long kaddr;
+-    mem_map_t* pMmPage;
++    struct page* pMmPage;
+ 
+-    if (address > vma->vm_end)
++    if ((unsigned long)vmf->virtual_address > vma->vm_end)
+         return 0; /* Disallow mremap */
+ 
+-    if ((pMmPage = (mem_map_t*) firegl_get_pagetable_page_from_vm(vma)))
++    if ((pMmPage = (struct page*) firegl_get_pagetable_page_from_vm(vma)))
+     {
+         get_page(pMmPage);
+-        return pMmPage;
++        vmf->page = pMmPage;
++        return 0;
+     }
+ 
+     kaddr = firegl_get_addr_from_vm(vma);
+     if (!kaddr)
+     {
+-        return NOPAGE_SIGBUS; /* bad address */
++        return VM_FAULT_SIGBUS; /* bad address */
+     }
+-    kaddr += (address - vma->vm_start);
++    kaddr += ((unsigned long)vmf->virtual_address - vma->vm_start);
+ 
+     __KE_DEBUG3("kaddr=0x%08lx\n", kaddr);
+ 
+@@ -3467,10 +3470,11 @@
+     __KE_DEBUG3("pMmPage=0x%08lx\n", (unsigned long)pMmPage);
+ 
+     get_page(pMmPage); /* inc usage count of page */
++    vmf->page = pMmPage;
+ 
+-    __KE_DEBUG3("vm-address 0x%08lx => kernel-page-address 0x%p\n", address, page_address(pMmPage));
++    __KE_DEBUG3("vm-address 0x%08lx => kernel-page-address 0x%p\n", (unsigned long)vmf->virtual_address, page_address(pMmPage));
+ 
+-    return pMmPage;
++    return 0;
+ }
+ 
+ /** 
+@@ -3478,13 +3482,13 @@
+  **  This routine is intented to locate the page table through the 
+  **  pagelist table created earlier in dev-> pcie
+  **/
+-static __inline__ vm_nopage_ret_t do_vm_pcie_nopage(struct vm_area_struct* vma,
+-                                                         unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_pcie_fault(struct vm_area_struct* vma,
++                                                  struct vm_fault *vmf)
+ {
+ 
+     unsigned long vma_offset;
+     unsigned long i; 
+-    mem_map_t* pMmPage;
++    struct page* pMmPage;
+     struct firegl_pcie_mem* pciemem;
+     unsigned long* pagelist;
+     
+@@ -3492,59 +3496,60 @@
+     if (dev == NULL)
+     {
+         __KE_ERROR("dev is NULL\n");
+-        return NOPAGE_SIGBUS;
++        return VM_FAULT_SIGBUS;
+     }
+ 
+-    if (address > vma->vm_end)
++    if ((unsigned long)vmf->virtual_address > vma->vm_end)
+     {
+         __KE_ERROR("address out of range\n");
+-        return NOPAGE_SIGBUS; /* address is out of range */
++        return VM_FAULT_SIGBUS; /* address is out of range */
+     }
+-    pciemem = firegl_get_pciemem_from_addr ( vma, address);
++    pciemem = firegl_get_pciemem_from_addr ( vma, (unsigned long)vmf->virtual_address);
+     if (pciemem == NULL)
+     {
+         __KE_ERROR("No pciemem found! \n");
+-        return NOPAGE_SIGBUS;
++        return VM_FAULT_SIGBUS;
+     }    
+     pagelist = firegl_get_pagelist_from_vm(vma);
+ 
+     if (pagelist == NULL) 
+     {
+         __KE_ERROR("No pagelist! \n");
+-        return NOPAGE_SIGBUS;
++        return VM_FAULT_SIGBUS;
+     }
+      
+     /** Find offset in  vma */
+-    vma_offset = address - vma->vm_start;
++    vma_offset = (unsigned long)vmf->virtual_address - vma->vm_start;
+     /** Which entry in the pagelist */
+     i = vma_offset >> PAGE_SHIFT;
+     pMmPage = virt_to_page(firegl_get_pcie_pageaddr_from_vm(vma,pciemem, i));
+ 
+     get_page(pMmPage);
++    vmf->page = pMmPage;
+ 
+     if (page_address(pMmPage) == 0x0)
+     {
+         __KE_ERROR("Invalid page address\n");
+-        return NOPAGE_SIGBUS;
++        return VM_FAULT_SIGBUS;
+     }
+-    return pMmPage;
++    return 0;
+ }
+ 
+-static __inline__ vm_nopage_ret_t do_vm_gart_nopage(struct vm_area_struct* vma,
+-                                                    unsigned long address)
++static __inline__ vm_fault_ret_t do_vm_gart_fault(struct vm_area_struct* vma,
++                                                  struct vm_fault *vmf)
+ {
+ 
+     unsigned long page_addr;
+     unsigned long offset;
+     struct page *page;
+ 
+-    if (address > vma->vm_end)
++    if ((unsigned long)vmf->virtual_address > vma->vm_end)
+     {
+         __KE_ERROR("Invalid virtual address\n");
+-        return NOPAGE_SIGBUS;   /* Disallow mremap */
++        return VM_FAULT_SIGBUS;   /* Disallow mremap */
+     }          
+ 
+-    offset      = address - vma->vm_start;
++    offset      = (unsigned long)vmf->virtual_address - vma->vm_start;
+ #ifdef FIREGL_CF_SUPPORT    
+     page_addr   = mc_heap_get_page_addr(vma, offset);
+ #else
+@@ -3553,37 +3558,33 @@
+     if( !page_addr)
+     {
+         __KE_ERROR("Invalid page address\n");
+-        return NOPAGE_SIGBUS;   /* Disallow mremap */
++        return VM_FAULT_SIGBUS;   /* Disallow mremap */
+     }
+     page        = virt_to_page(page_addr);
+     get_page(page);
++    vmf->page = page;
+ 
+-    return page;
++    return 0;
+ }
+ 
+ 
+ 
+ #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,0)
+ 
+-static vm_nopage_ret_t vm_nopage(struct vm_area_struct* vma,
+-                                 unsigned long address,
+-                                 int *type)
++static vm_fault_ret_t vm_fault(struct vm_area_struct* vma,
++                               struct vm_fault *vmf)
+ {
+-    if (type) *type = VM_FAULT_MINOR;
+-        return do_vm_nopage(vma, address);
++    return do_vm_fault(vma, vmf);
+ }
+ 
+ #ifdef __AGP__BUILTIN__
+ #ifdef __ia64__
+ 
+ 
+-static vm_nopage_ret_t vm_cant_nopage(struct vm_area_struct* vma,
+-                                      unsigned long address,
+-                                      int *type)
++static vm_fault_ret_t vm_cant_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-    if (type) *type = VM_FAULT_MINOR;
+-        return do_cant_nopage(vma, address);
+-
++    return do_cant_fault(vma, vmf);
+ }
+ #endif /* __ia64__ */
+ #endif /* __AGP__BUILTIN__ */
+@@ -3602,12 +3603,10 @@
+     (which is one or more pages in size)
+ 
+  */
+-static vm_nopage_ret_t vm_shm_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int *type)
++static vm_fault_ret_t vm_shm_fault(struct vm_area_struct* vma,
++                                   struct vm_fault *vmf)
+ {
+-    if (type) *type = VM_FAULT_MINOR;
+-        return do_vm_shm_nopage(vma, address);
++    return do_vm_shm_fault(vma, vmf);
+ }
+ 
+ /*
+@@ -3616,54 +3615,46 @@
+       (which is one ore more pages in size)
+ 
+ */
+-static vm_nopage_ret_t vm_dma_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int *type)
++static vm_fault_ret_t vm_dma_fault(struct vm_area_struct* vma,
++                                   struct vm_fault *vmf)
+ {
+-    if (type) *type = VM_FAULT_MINOR;
+-        return do_vm_dma_nopage(vma, address);
++    return do_vm_dma_fault(vma, vmf);
+ }
+ 
+-static vm_nopage_ret_t vm_kmap_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int *type)
++static vm_fault_ret_t vm_kmap_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-    if (type) *type = VM_FAULT_MINOR;
+-        return do_vm_kmap_nopage(vma, address);
++    return do_vm_kmap_fault(vma, vmf);
+ }
+ 
+-static vm_nopage_ret_t vm_pcie_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int *type)
++static vm_fault_ret_t vm_pcie_fault(struct vm_area_struct* vma,
++                                      struct vm_fault *vmf)
+ {  
+-       return do_vm_pcie_nopage(vma, address);
++    return do_vm_pcie_fault(vma, vmf);
+ }
+ 
+-static vm_nopage_ret_t vm_gart_nopage(struct vm_area_struct* vma,
+-                                      unsigned long address, 
+-                                      int *type)
++static vm_fault_ret_t vm_gart_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-       return do_vm_gart_nopage(vma, address);
++    return do_vm_gart_fault(vma, vmf);
+ }
+ 
+ #else   /* LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,0) */
+ 
+-static vm_nopage_ret_t vm_nopage(struct vm_area_struct* vma,
+-                                 unsigned long address,
+-                                 int write_access)
++static vm_fault_ret_t vm_fault(struct vm_area_struct* vma,
++                               struct vm_fault *vmf)
+ {
+-    return do_vm_nopage(vma, address);
++    return do_vm_fault(vma, vmf);
+ }
+ 
+ #ifdef __AGP__BUILTIN__
+ #ifdef __ia64__
+ 
+ 
+-static vm_nopage_ret_t vm_cant_nopage(struct vm_area_struct* vma,
+-                                 unsigned long address,
+-                                 int write_access)
++static vm_fault_ret_t vm_cant_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-    return do_vm_cant_nopage(vma, address);
++    return do_vm_cant_fault(vma, vmf);
+ }
+ #endif /* __ia64__ */
+ #endif /* __AGP__BUILTIN__ */
+@@ -3682,11 +3673,10 @@
+     (which is one or more pages in size)
+ 
+  */
+-static vm_nopage_ret_t vm_shm_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int write_access)
++static vm_fault_ret_t vm_shm_fault(struct vm_area_struct* vma,
++                                   struct vm_fault *vmf)
+ {
+-    return do_vm_shm_nopage(vma, address);
++    return do_vm_shm_fault(vma, vmf);
+ }
+ 
+ /*
+@@ -3695,32 +3685,28 @@
+       (which is one ore more pages in size)
+ 
+ */
+-static vm_nopage_ret_t vm_dma_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int write_access)
++static vm_fault_ret_t vm_dma_fault(struct vm_area_struct* vma,
++                                   struct vm_fault *vmf)
+ {
+-     return do_vm_dma_nopage(vma, address);
++    return do_vm_dma_fault(vma, vmf);
+ }
+ 
+-static vm_nopage_ret_t vm_kmap_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int write_access)
++static vm_fault_ret_t vm_kmap_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-     return do_vm_kmap_nopage(vma, address);
++    return do_vm_kmap_fault(vma, vmf);
+ }
+ 
+-static vm_nopage_ret_t vm_pcie_nopage(struct vm_area_struct* vma,
+-                                     unsigned long address,
+-                                     int write_access)
++static vm_fault_ret_t vm_pcie_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-        return do_vm_pcie_nopage(vma, address);
++    return do_vm_pcie_fault(vma, vmf);
+ }
+ 
+-static vm_nopage_ret_t vm_gart_nopage(struct vm_area_struct* vma,
+-                                      unsigned long address, 
+-                                      int *type)
++static vm_fault_ret_t vm_gart_fault(struct vm_area_struct* vma,
++                                    struct vm_fault *vmf)
+ {
+-       return do_vm_gart_nopage(vma, address);
++    return do_vm_gart_fault(vma, vmf);
+ }
+ 
+ 
+@@ -3830,7 +3816,7 @@
+ 
+ static struct vm_operations_struct vm_ops =
+ {
+-    nopage:  vm_nopage,
++    fault:   vm_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+@@ -3839,7 +3825,7 @@
+ #ifdef __ia64__
+ static struct vm_operations_struct vm_cant_ops =
+ {
+-    nopage:  vm_cant_nopage,
++    fault:   vm_cant_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+@@ -3848,42 +3834,42 @@
+ 
+ static struct vm_operations_struct vm_shm_ops =
+ {
+-    nopage:  vm_shm_nopage,
++    fault:   vm_shm_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+ 
+ static struct vm_operations_struct vm_pci_bq_ops =
+ {
+-    nopage:  vm_dma_nopage,
++    fault:   vm_dma_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+ 
+ static struct vm_operations_struct vm_ctx_ops =
+ {
+-    nopage:  vm_dma_nopage,
++    fault:   vm_dma_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+ 
+ static struct vm_operations_struct vm_pcie_ops = 
+ {
+-    nopage:  vm_pcie_nopage,
++    fault:   vm_pcie_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+ 
+ static struct vm_operations_struct vm_kmap_ops =
+ {
+-    nopage:  vm_kmap_nopage,
++    fault:   vm_kmap_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+ 
+ static struct vm_operations_struct vm_gart_ops =
+ {
+-    nopage:  vm_gart_nopage,
++    fault:   vm_gart_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+@@ -3892,14 +3878,14 @@
+ #ifndef __ia64__
+ static struct vm_operations_struct vm_agp_bq_ops =
+ {
+-    nopage:  vm_nopage,
++    fault:   vm_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+ #else		
+ static struct vm_operations_struct vm_cant_agp_bq_ops =
+ {
+-    nopage:  vm_cant_nopage,
++    fault:   vm_cant_fault,
+     open:    ip_drm_vm_open,
+     close:   ip_drm_vm_close,
+ };
+--- orig/firegl_public.h	2008-06-22 07:18:57.000000000 -0400
++++ new/firegl_public.h	2008-06-22 08:58:26.000000000 -0400
+@@ -78,7 +78,7 @@
+     if (!pgd_present(*(pgd_p)))	\
+     { \
+         __KE_ERROR("FATAL ERROR: User queue buffer not present! (pgd)\n"); \
+-        return (unsigned long)NOPAGE_SIGBUS;   /* Something bad happened; generate SIGBUS */ \
++        return 0;   /* Something bad happened; generate SIGBUS */ \
+         /* alternatively we could generate a NOPAGE_OOM "out of memory" */ \
+     } \
+ } while(0)
+@@ -91,7 +91,7 @@
+     if (!pud_present(*(pud_p)))	\
+     { \
+         __KE_ERROR("FATAL ERROR: User queue buffer not present! (pud)\n"); \
+-        return (unsigned long)NOPAGE_SIGBUS;   /* Something bad happened; generate SIGBUS */ \
++        return 0;   /* Something bad happened; generate SIGBUS */ \
+         /* alternatively we could generate a NOPAGE_OOM "out of memory" */ \
+     } \
+     pmd_p = pmd_offset(pud_p, pte_linear); \
+@@ -111,7 +111,7 @@
+     if (!pmd_present(*(pmd_p)))	\
+     { \
+         __KE_ERROR("FATAL ERROR: User queue buffer not present! (pmd)\n"); \
+-        return (unsigned long)NOPAGE_SIGBUS;   /* Something bad happened; generate SIGBUS */ \
++        return 0;   /* Something bad happened; generate SIGBUS */ \
+         /* alternatively we could generate a NOPAGE_OOM "out of memory" */ \
+     } \
+ } while(0)
+@@ -157,7 +157,7 @@
+     if (!pte_present(pte)) \
+     { \
+         __KE_ERROR("FATAL ERROR: User queue buffer not present! (pte)\n"); \
+-        return (unsigned long)NOPAGE_SIGBUS;   /* Something bad happened; generate SIGBUS */ \
++        return 0;   /* Something bad happened; generate SIGBUS */ \
+         /* alternatively we could generate a NOPAGE_OOM "out of memory" */ \
+     } \
+ } while(0)
+--- orig/firegl_public.c	2008-06-22 09:12:19.000000000 -0400
++++ new/firegl_public.c	2008-06-22 09:18:26.000000000 -0400
+@@ -1365,7 +1365,7 @@
+ #else   
+    read_lock(&tasklist_lock);
+ #endif   
+-   p = find_task_by_pid( pid );
++   p = find_task_by_vpid( pid );
+    if (p) 
+    {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,10)
