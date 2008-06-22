@@ -1,8 +1,9 @@
 # $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
 pkgname=php
 pkgver=5.2.6
-pkgrel=1
+pkgrel=2
 _suhosinver=0.9.6.2
 pkgdesc='A high-level scripting language'
 arch=('i686' 'x86_64')
@@ -38,10 +39,11 @@ optdepends=('bzip2: bz2' \
 options=('emptydirs' '!makeflags')
 source=("http://www.php.net/distributions/${pkgname}-${pkgver}.tar.bz2" \
         "http://download.suhosin.org/suhosin-patch-${pkgver}-${_suhosinver}.patch.gz" \
-        'php.ini')
-md5sums=('7380ffecebd95c6edb317ef861229ebd' \
-         'f2ec986341a314c271259dbe4d940858' \
-         '7cb9c272fb373ee431f4a808952e0bef')
+        'php.ini' 'apache.conf')
+md5sums=('7380ffecebd95c6edb317ef861229ebd'
+         'f2ec986341a314c271259dbe4d940858'
+         '7cb9c272fb373ee431f4a808952e0bef'
+         '96ca078be6729b665be8a865535a97bf')
 
 build() {
 	[ -e /usr/lib/libdb-4.1.so ] && echo 'remove db4.1 package' && return 1
@@ -122,10 +124,10 @@ build() {
 	--with-mime-magic=shared \
 	"
 
-	cd ${startdir}/src/${pkgname}-${pkgver}
+	cd ${srcdir}/${pkgname}-${pkgver}
 
 	# apply suhosin patch
-	patch -p1 -i ${startdir}/src/suhosin-patch-${pkgver}-${_suhosinver}.patch || return 1
+	patch -p1 -i ${srcdir}/suhosin-patch-${pkgver}-${_suhosinver}.patch || return 1
 
 	# cli
 	./configure ${phpconfig} \
@@ -136,17 +138,17 @@ build() {
 		${phpextensions} || return 1
 	make || return 1
 	# make test
-	make INSTALL_ROOT=${startdir}/pkg install || return 1
+	make INSTALL_ROOT=${pkgdir} install || return 1
 
 	# fix pear path
-	sed "s|$PWD||g" -i ${startdir}/pkg/usr/{bin/pear,share/pear/pearcmd.php}
+	sed "s|$PWD||g" -i ${pkgdir}/usr/{bin/pear,share/pear/pearcmd.php}
 	# cleanup
-	rm -f ${startdir}/pkg`${startdir}/pkg/usr/bin/php-config --extension-dir`/*.a
-	rm -rf ${startdir}/pkg/{.registry,.channels,.depdb*,.lock,.filemap}
-	rmdir ${startdir}/pkg/usr/include/php/include
+	rm -f ${pkgdir}`${pkgdir}/usr/bin/php-config --extension-dir`/*.a
+	rm -rf ${pkgdir}/{.registry,.channels,.depdb*,.lock,.filemap}
+	rmdir ${pkgdir}/usr/include/php/include
 	# install php.ini
-	install -D -m644 ${startdir}/src/php.ini ${startdir}/pkg/etc/php/php.ini
-	install -d -m755 ${startdir}/pkg/etc/php/conf.d/
+	install -D -m644 ${srcdir}/php.ini ${pkgdir}/etc/php/php.ini
+	install -d -m755 ${pkgdir}/etc/php/conf.d/
 
 	# cgi and fcgi
 	./configure ${phpconfig} \
@@ -157,7 +159,7 @@ build() {
 		--disable-cli \
 		${phpextensions} || return 1
 	make || return 1
-	install -D -m755 sapi/cgi/php-cgi ${startdir}/pkg/usr/bin/php-cgi || return 1
+	install -D -m755 sapi/cgi/php-cgi ${pkgdir}/usr/bin/php-cgi || return 1
 
 	# mod_php
 	./configure ${phpconfig} \
@@ -165,5 +167,6 @@ build() {
 		--disable-cli \
 		${phpextensions} || return 1
 	make || return 1
-	install -D -m644 libs/libphp5.so ${startdir}/pkg/usr/lib/apache/libphp5.so || return 1
+	install -D -m644 libs/libphp5.so ${pkgdir}/usr/lib/httpd/modules/libphp5.so || return 1
+	install -D -m644 ${srcdir}/apache.conf ${pkgdir}/etc/httpd/conf/extra/php5_module.conf || return 1
 }
