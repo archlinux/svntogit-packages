@@ -1,0 +1,52 @@
+# $Id: PKGBUILD,v 1.13 2007/09/26 23:53:30 Snowman Exp $
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: mouse256 & AndyRTR
+
+pkgname=keytouch
+pkgver=2.4.0
+pkgrel=1
+pkgdesc="A program which allows you to easily configure the extra function keys of your keyboard"
+arch=('i686' 'x86_64')
+url="http://keytouch.sourceforge.net/"
+license=('GPL')
+depends=('libxtst' 'gnome-menus' 'alsa-lib')
+makedepends=('pkgconfig')
+options=('!makeflags')
+install=keytouch.install
+source=(http://downloads.sourceforge.net/sourceforge/keytouch/${pkgname}-${pkgver}.tar.gz \
+        keytouch.daemon keytouch.desktop Xsession keytouch-2.4.0-glibc28.patch)
+md5sums=('e5e93f94f74469d1a6dc37548ec15eba' '80dbcf0dfb9d4d4d2c2d7932ca551040'\
+         'c5ffe28988dc74fae812ffe204f8883b' '795430001f4fdb6691d0e93b09a241a9'\
+         '7153d15b684d2f56e9f7f732a6f40498')
+sha1sums=('6b9aaa6cd60ff0ba42c39d325f2d80e51bc1e968'
+          'cd87632574349bd7c9ac00b7b8a8711000d43569'
+          '5bac2f62f1ac26caa32da02a8075dc090d981cfb'
+          '960b2fa51cfdeb2bc3fa7e086dc9f3a3be483dff'
+          'ea66f7c2517d8c4d309c08bd8d036c591df708bc')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -p0 < ../keytouch-2.4.0-glibc28.patch || return 1
+  autoreconf
+  ./configure --prefix=/usr --sysconfdir=/etc || return 1
+  make  || return 1
+  install -d ${pkgdir}/etc/{rc.d,X11/Xsession.d} || return 1
+  install -d ${pkgdir}/usr/share/keytouch || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  cd ${srcdir}/${pkgname}-${pkgver}/keytouch-config
+  ./configure --prefix=/usr --sysconfdir=/etc || return 1
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  cd ${srcdir}/${pkgname}-${pkgver}/keytouch-keyboard
+  ./configure --prefix=/usr --sysconfdir=/etc || return 1
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  install -D -m755 ${srcdir}/keytouch.daemon ${pkgdir}/etc/rc.d/keytouch || return 1
+  install -D -m644 ${srcdir}/keytouch.desktop ${pkgdir}/usr/share/applications/keytouch.desktop || return 1
+  install -D -m755 ${srcdir}/Xsession ${pkgdir}/etc/X11/Xsession || return 1
+  chmod 755  ${pkgdir}/etc/X11/Xsession.d/* || return 1
+  rm ${pkgdir}/etc/rc.d/*.sh
+}
