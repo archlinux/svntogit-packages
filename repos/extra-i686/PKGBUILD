@@ -4,8 +4,11 @@
 # NOTE: ImageMagick builds against an existing installation
 # uninstall ImageMagick before building, or build it, install it, build it.
 
+# NOTE 2: To circumvent linking problems (FS#10574), this package must now be built the following way:
+# install old package, build new package, install new package, rebuild
+
 pkgname=imagemagick
-pkgver=6.4.1.3
+pkgver=6.4.2.1
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -16,37 +19,37 @@ depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'l
 options=('!makeflags')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('3d1976afe522c572aa5e97cff3029649' '069980fc2590c02aed86420996259302'\
+md5sums=('6140e6a9a25b9a3c2dc6c52e6c3c4651' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('d5769c2c827eff280aa955057dba07bbc0dee401'
+sha1sums=('e871379acace6048b50e55d870d9d41b0dc776a5'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
 build() {
-  cd ${startdir}/src/ImageMagick-${pkgver%.*}
+  cd ${srcdir}/ImageMagick-${pkgver%.*}
 
   if [ "${CARCH}" = "x86_64" ]; then
-    patch -Np1 -i ${startdir}/src/libpng_mmx_patch_x86_64.patch || return 1
+    patch -Np1 < ../libpng_mmx_patch_x86_64.patch || return 1
   fi
 
   patch -p0 < ../add_delegate.patch || return 1
 
-  ./configure --prefix=/usr --without-modules --disable-static --disable-openmp \
+  LIBS=-lMagickWand ./configure --prefix=/usr --without-modules --disable-static --disable-openmp \
               --with-x --with-wmf --with-openexr \
               --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
               --with-perl --with-perl-options="INSTALLDIRS=vendor" \
               --without-gvc --without-djvu --without-jp2 \
-              --without-jbig --without-fpx --without-dps
+              --without-jbig --without-fpx --without-dps || return 1
 
   make || return 1
-  make DESTDIR=${startdir}/pkg install
-  install -D -m644 LICENSE ${startdir}/pkg/usr/share/licenses/${pkgname}/LICENSE
-  install -D -m644 NOTICE ${startdir}/pkg/usr/share/licenses/${pkgname}/NOTICE
+  make DESTDIR=${pkgdir} install || return 1
+  install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE || return 1
+  install -D -m644 NOTICE ${pkgdir}/usr/share/licenses/${pkgname}/NOTICE || return 1
 
   #Cleaning
-  find ${startdir}/pkg -name '*.bs' -exec rm {} \;
-  find ${startdir}/pkg -name '.packlist' -exec rm {} \;
-  find ${startdir}/pkg -name 'perllocal.pod' -exec rm {} \;
+  find ${pkgdir} -name '*.bs' -exec rm {} \; || return 1
+  find ${pkgdir} -name '.packlist' -exec rm {} \; || return 1
+  find ${pkgdir} -name 'perllocal.pod' -exec rm {} \; || return 1
 
-  rm -f ${startdir}/pkg/usr/lib/*.la
+  rm -f ${pkgdir}/usr/lib/*.la || return 1
 }
