@@ -1,3 +1,1 @@
-export PATH="${PATH}:/opt/mozilla/bin"
-export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/opt/mozilla/lib/pkgconfig"
-export MOZ_PLUGIN_PATH="/opt/mozilla/lib/plugins:/usr/lib/mozilla/plugins"
+export MOZ_PLUGIN_PATH="/usr/lib/mozilla/plugins:/opt/mozilla/lib/plugins"
