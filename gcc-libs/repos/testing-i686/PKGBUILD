@@ -1,0 +1,65 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=gcc-libs
+pkgver=4.3.1
+pkgrel=2
+_snapshot=4.3-20080626
+pkgdesc="Runtime libraries shipped by GCC for C and C++ languages"
+arch=(i686 x86_64)
+license=('GPL' 'LGPL')
+groups=('base')
+url="http://gcc.gnu.org"
+depends=('glibc>=2.8-2')
+makedepends=('binutils>=2.18-8' 'gcc>=4.3.1' 'mpfr>=2.3.1' 'texinfo')
+conflicts=('gcc-fortran' 'gcc-objc')
+provides=("gcc-objc=${pkgver}")
+options=('!libtool' '!emptydirs')
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++,fortran,objc}-${pkgver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-{core,g++,fortran,objc}-${_snapshot}.tar.bz2
+	gcc_pure64.patch
+	gcc-hash-style-both.patch)
+md5sums=('1b2112da8bdc700d0e095b55b98911e5'
+         '300196b968ab718afa2b340c810cf4c8'
+         '3dc1f56795f981b333125d45a47250da'
+         'f24df07e1aae5ae2b80ef88bc562bd03'
+         '4030ee1c08dd1e843c0225b772360e76'
+         'bb420bc84b1104455b7230b1cd4b96c2')
+
+build() {
+  if ! locale -a | grep ^de_DE; then
+    echo "You need the de_DE locale to build gcc."
+    return 1
+  fi
+  
+  #cd ${srcdir}/gcc-${pkgver}
+  cd ${srcdir}/gcc-${_snapshot}
+  # Don't install libiberty
+  sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
+
+  if [ "${CARCH}" = "x86_64" ]; then
+    patch -Np1 -i ../gcc_pure64.patch || return 1
+  fi
+  patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch || return 1
+
+  # Don't run fixincludes
+  sed -i -e 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+
+  echo ${pkgver} > gcc/BASE-VER
+
+  mkdir build
+  cd build
+  ../configure --prefix=/usr --enable-shared \
+      --enable-languages=c,c++,fortran,objc,obj-c++,treelang --enable-threads=posix \
+      --enable-__cxa_atexit  --disable-multilib --libdir=/usr/lib \
+      --libexecdir=/usr/lib --enable-clocale=gnu --disable-libstdcxx-pch \
+      --with-tune=generic
+  make || return 1
+  make -j1 DESTDIR=${pkgdir} install-target-libstdc++-v3 install-target-libmudflap install-target-libgomp install-target-libssp install-target-libgfortran install-target-libobjc install-target-libgcc || return 1
+
+  # Cleanup, libgomp installs the whole compiler it seems...
+  rm -rf ${pkgdir}/usr/include
+  rm -rf ${pkgdir}/usr/lib/gcc
+  rm -rf ${pkgdir}/usr/bin
+  rm -rf ${pkgdir}/usr{,share}/man
+  find ${pkgdir} -name gcc.mo -delete
+}
