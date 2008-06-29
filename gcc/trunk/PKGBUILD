@@ -37,16 +37,18 @@ build() {
     return 1
   fi
   
-  #cd ${startdir}/src/gcc-${pkgver}
-  cd ${startdir}/src/gcc-${_snapshot}
+  #cd ${srcdir}/gcc-${pkgver}
+  cd ${srcdir}/gcc-${_snapshot}
   # Don't install libiberty
   sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
 
   if [ "${CARCH}" = "x86_64" ]; then
     patch -Np1 -i ../gcc_pure64.patch || return 1
   fi
-  patch -Np0 -i ${startdir}/src/gcc-hash-style-both.patch || return 1
-  patch -Np0 -i ${startdir}/src/gcc-java-driver.patch || return 1
+  patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch || return 1
+  patch -Np0 -i ${srcdir}/gcc-java-driver.patch || return 1
+
+  echo ${pkgver} > gcc/BASE-VER
 
   mkdir build
   cd build
@@ -57,20 +59,20 @@ build() {
       --libexecdir=/usr/lib --enable-clocale=gnu --disable-libstdcxx-pch \
       --with-tune=generic
   make || return 1
-  make -j1 DESTDIR=${startdir}/pkg install || return 1
-  mkdir -p ${startdir}/pkg/lib
-  ln -sf ../usr/bin/cpp ${startdir}/pkg/lib/cpp
-  ln -sf gcc ${startdir}/pkg/usr/bin/cc
-  ln -sf g++ ${startdir}/pkg/usr/bin/c++
+  make -j1 DESTDIR=${pkgdir} install || return 1
+  mkdir -p ${pkgdir}/lib
+  ln -sf ../usr/bin/cpp ${pkgdir}/lib/cpp
+  ln -sf gcc ${pkgdir}/usr/bin/cc
+  ln -sf g++ ${pkgdir}/usr/bin/c++
 
   # install the libstdc++ man pages
-  mkdir -p ${startdir}/pkg/usr/share/man/man3
-  install -m644 ${startdir}/src/man/man3/* ${startdir}/pkg/usr/share/man/man3/
+  mkdir -p ${pkgdir}/usr/share/man/man3
+  install -m644 ${srcdir}/man/man3/* ${pkgdir}/usr/share/man/man3/
 
   # Remove libraries and translations in gcc-libs
-  rm -f ${startdir}/pkg/usr/lib/lib*
-  find ${startdir}/pkg -name libstdc++.mo -delete
+  rm -f ${pkgdir}/usr/lib/lib*
+  find ${pkgdir} -name libstdc++.mo -delete
 
   # Remove fixed includes, either no need for them, or they're not complete
-  rm -rf ${startdir}/pkg/usr/lib/${CHOST}/${pkgver}/include-fixed/*
+  rm -rf ${pkgdir}/usr/lib/${CHOST}/${pkgver}/include-fixed/*
 }
