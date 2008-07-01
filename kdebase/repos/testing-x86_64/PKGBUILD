@@ -1,0 +1,75 @@
+# $Id$
+# Contributor: Roman Kreisel <roman.kreisel@epost.de>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kdebase
+pkgver=3.5.9
+kdever=3.5.9 # if minor 0, then without .0
+pkgrel=3
+pkgdesc="KDE Base Programs."
+arch=(i686 x86_64)
+url="http://www.kde.org"
+license=('GPL')
+groups=('kde')
+makedepends=('samba>=3.0.30-2' 'jre' 'imake' 'xorg-font-utils' 'pkgconfig')
+depends=('kdelibs>=3.5.9-5' 'libldap' 'eject>=2.1.5' 'lm_sensors>=3.0.0' 'mtools' 'libusb' 'libraw1394' 'cyrus-sasl>=2.1.22-9' \
+	 'libxcomposite' 'libxdamage' 'hal>=0.5.8.1-2' 'pmount>=0.9.13-2' 'libxxf86misc' 'libxkbfile' 'libxss' \
+	 'libfontenc' 'dbus-qt3' 'xorg-xauth' 'db>=4.7')
+backup=('opt/kde/share/config/kdm/Xservers' 'opt/kde/share/config/kdm/kdmrc' \
+        'opt/kde/share/config/kdm/Xaccess' 'opt/kde/share/config/kdm/Xresources' )
+
+# for easier build, just uncomment the mirror you want to use
+  mirror="ftp.solnet.ch/mirror/KDE"         # updated every 2 hours, very fast for Europe
+# mirror="ftp.kde.org/pub/kde/"             # main server
+# mirror="ibiblio.org/pub/mirrors/kde/"     # ibiblio mirror
+# parallel builds break kcontrol and whatnot
+options=(!makeflags)
+source=(ftp://$mirror/stable/$kdever/src/$pkgname-$pkgver.tar.bz2
+	tango.diff kdm-grub.patch fix-hal.patch kdm-zsh-profile.patch
+	kdesu-3.5.9-glibc28-struct-ucred.patch)
+md5sums=('c8c35389a238aa1b73e68ef5298eadf8'
+         '43232dcb916b1d25e0ad7ef3575763a4'
+         'f8645dc5d0044476a01c9c6a95c4853f'
+         '6202110beb1faf768c3f76e2b4e811b7'
+         '40f5556820d52a14e9d9722a5a8a491e'
+         '77078f9599ed93f28006ae853e6c7623')
+
+build() {
+  # Source the QT and KDE profile
+  [ "$QTDIR" = "" ] && source /etc/profile.d/qt3.sh 
+  [ "$KDEDIR" = "" ] && source /etc/profile.d/kde.sh
+  # start building
+  cd $startdir/src/$pkgname-$pkgver
+  patch -Np1 -i ../kdm-grub.patch || return 1
+  patch -Np1 -i ../kdm-zsh-profile.patch || return 1
+  patch -Np0 -i ../tango.diff || return 1
+  # fix hal #8342
+  patch -Np1 -i ../fix-hal.patch || return 1
+  # fix a glibc2.8 build issue see http://bugs.gentoo.org/show_bug.cgi?id=225727
+  patch -Np1 -i ../kdesu-3.5.9-glibc28-struct-ucred.patch || return 1
+  sed -i -e 's/applications-merged/kde-applications-merged/g' applnk/Makefile.{am,in}
+  #make -f admin/Makefile.common || return 1
+  ./configure --prefix=/opt/kde --with-dpms --build="${CHOST}" --host="${CHOST}" \
+  --disable-dependency-tracking --disable-debug --enable-gcc-hidden-visibility --enable-final \
+  --enable-new-ldflags LDFLAGS="${LDFLAGS} -L/opt/kde/lib"
+  #        --enable-final # remove this if you build with < 512mb ram.
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+  
+  # fix kdm config stuff
+  cd $startdir/src/$pkgname-$pkgver/kdm 
+  make DESTDIR=$startdir/pkg GENKDMCONF_FLAGS="--no-old --no-backup --no-in-notice" install
+  
+  # make kdm compliant with the new *dm scheme
+  install -D -m 644 $startdir/src/$pkgname-$pkgver/kdm/kfrontend/sessions/kde.desktop \
+  $startdir/pkg/etc/X11/sessions/kde.desktop
+  
+  # Adding new defaults for kdm
+  cd $startdir/pkg/opt/kde/share/config/kdm
+  mv kdmrc kdmrc.default
+  mv backgroundrc backgroundrc.default
+
+  # Adding Arch graphics for kde
+  mv $startdir/pkg/opt/kde/share/apps/ksmserver/pics/shutdownkonq.png \
+  $startdir/pkg/opt/kde/share/apps/ksmserver/pics/shutdownkonq.png.old
+}
