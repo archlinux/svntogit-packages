@@ -2,11 +2,11 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 pkgname=ghostscript
 pkgver=8.62
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
-depends=('libxext' 'libxt' 'libcups' 'fontconfig' 'gtk2')
+depends=('libxext' 'libxt' 'libcups>=1.3.7-2' 'fontconfig' 'gtk2')
 makedepends=('automake' 'autoconf')
 replaces=('ghostscript-lrpng')
 provides=('ghostscript-lprng')
