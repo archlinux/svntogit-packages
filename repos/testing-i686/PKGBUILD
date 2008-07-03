@@ -1,0 +1,88 @@
+# $Id$
+# Maintainer:
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+
+pkgname=vlc
+pkgver=0.8.6h
+_ffmpegver=20071204
+pkgrel=4
+pkgdesc="A multi-platform MPEG, VCD/DVD, and DivX player"
+depends=('libmad>=0.15.1b-2' 'libmpeg2>=0.4.0b-3'
+         'wxgtk-2.6>=2.6.4' 'hal>=0.5.9.1' 'libid3tag>=0.15.1b-2' 'bash>=3.1'
+         'libdvbpsi4>=0.1.5' 'fribidi>=0.10.7' 'sysfsutils>=2.0.0'
+         'libdvdnav>=0.1.10-2' 'libdvdread>=0.9.4-3' 'xvidcore>=1.1.0-2'
+         'libmatroska>=0.8.0' 'libxv>=1.0.1' 'libcdio>=0.78.2' 'desktop-file-utils'
+         'lame' 'sdl' 'libvorbis' 'a52dec' 'faad2' 'faac' 'zlib' 'imlib2'
+         'x264>=20080625' 'libtheora' 'libdca')
+
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.videolan.org/vlc/"
+#Note: These build plugins, so I guess they'd be runtime depends
+makedepends=('live-media' 'gnome-vfs' 'mesa' 'sdl_image' 'libmpcdec' 'speex'
+             'libnotify' 'libmodplug' 'lirc-utils' 'ffmpeg')
+install=${pkgname}.install
+source=(http://download.videolan.org/pub/videolan/vlc/${pkgver}/${pkgname}-${pkgver}.tar.bz2
+        http://gerolde.archlinux.org/~paul/ffmpeg-$_ffmpegver.tar.gz
+        ffmpeg-20071204.patch)
+md5sums=('4a6eece2f56d4ad5dfa786e934d2b4a8' '3d34e511d0466de6feabed85dddbb2a8'\
+         '9297c3487716429192f6185a63da6fd8')
+options=(force)
+
+build() {
+     cd $startdir/src/ffmpeg || return 1
+
+     # configure
+     ./configure \
+          --enable-gpl \
+          --enable-libmp3lame \
+          --enable-libvorbis \
+          --enable-pp \
+          --enable-libfaac \
+          --enable-libfaad \
+          --enable-liba52 \
+          --enable-libxvid \
+          --enable-libx264 \
+          --enable-libtheora \
+          --disable-libamr-nb \
+          --enable-pp \
+          --enable-shared \
+          --enable-pthreads \
+          --enable-x11grab \
+       || return 1
+
+     # build
+     make -j 2 || return 1
+
+  cd $startdir/src/${pkgname}-${pkgver}
+  patch -Np1 < ../ffmpeg-20071204.patch
+  sed -i -e 's:#include <vlc\/vlc.h>:#include <vlc/vlc.h> \n #include <locale.h>: ' src/misc/charset.c
+  sed -i -e 's:/truetype/freefont/FreeSerifBold.ttf:/TTF/VeraBd.ttf:' modules/misc/freetype.c
+
+  # features that won't build on x86_64
+  [ "${CARCH}" = "i686" ] && EXTRAFEATURES="--enable-loader"
+
+  # export linker flags for the ffmpeg tree
+  # this has to be in sync with how ffmpeg was configured above
+  export LDFLAGS_ffmpeg="-lfaad -la52 -lxvidcore -lmp3lame -lx264"
+
+
+  ./configure --prefix=/usr --enable-dvdread --enable-dvdnav --enable-madi \
+    --enable-ffmpeg --disable-rpath --enable-wxwidgets --enable-faad \
+    --enable-alsa --enable-skins2 --enable-livedotcom --enable-dvb --enable-theora \
+    --enable-dmo --with-livedotcom-tree=/usr/lib/live-media \
+    --with-ffmpeg-faac --with-ffmpeg-vorbis --with-ffmpeg-dts \
+    --with-ffmpeg-ogg --with-ffmpeg-theora --with-ffmpeg-tree=$startdir/src/ffmpeg/ \
+     --with-ffmpeg-config-path=$startdir/src/ffmpeg/ \
+    --enable-v4l --enable-lirc \
+    --with-wx-config=wx-config-2.6 ${EXTRAFEATURES}
+  make || return 1
+  make DESTDIR=${startdir}/pkg install || return 1
+
+  for res in 16 32 48; do
+    install -D -m644 share/vlc${res}x${res}.png \
+      ${startdir}/pkg/usr/share/icons/hicolor/${res}x${res}/apps/vlc.png || return 1
+  done
+
+  rm -rf ${startdir}/pkg/usr/lib/mozilla
+}
