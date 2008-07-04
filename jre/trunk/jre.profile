@@ -1,4 +1,6 @@
 export J2REDIR=/opt/java/jre
 export PATH=$PATH:$J2REDIR/bin
 export CLASSPATH=$CLASSPATH:$J2REDIR/lib
-export JAVA_HOME=/opt/java/jre
+if [ ! -f /etc/profile.d/jdk.sh ]; then
+        export JAVA_HOME=/opt/java/jre
+fi
