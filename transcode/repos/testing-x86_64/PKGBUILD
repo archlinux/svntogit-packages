@@ -1,0 +1,64 @@
+# $Id$
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+# Maintainer: roberto <roberto@archlinux.org>
+
+pkgname=transcode
+_sripver=0.3-4
+pkgver=1.0.6rc1
+pkgrel=2
+pkgdesc="Transcode is a video/DVD ripper and encoder for the terminal/console."
+arch=(i686 x86_64)
+license=('GPL2')
+depends=('imagemagick>=6.2.6' 'lzo' 'libdv' 'libdvdread' 'ffmpeg' 'mjpegtools'
+         'xvidcore' 'libmpeg2' 'libtheora' 'libxaw' 'x264>=20080625')
+makedepends=('nasm')
+install=transcode.install
+url="http://transcoding.org"
+options=(!libtool !makeflags)
+source=(http://fromani.exit1.org/${pkgname}-${pkgver}.tar.bz2 \
+        http://dl.sourceforge.net/sourceforge/subtitleripper/subtitleripper-${_sripver}.tgz)
+md5sums=('ca666e74bab93fcc7f4d773b77229fad' 'c0bd49a88f667c68c4430ad25bbed510')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  sed -i 's|ffmpeg/avcodec.h|libavcodec/avcodec.h|' import/{import_ffmpeg.c,decode_lavc.c} || return 1
+  sed -i 's|ffmpeg/avcodec.h|libavcodec/avcodec.h|' export/{aud_aux.c,export_ffmpeg.c,ffmpeg_cfg.h} || return 1
+  sed -i 's|ffmpeg/avcodec.h|libavcodec/avcodec.h|' filter/filter_resample.c || return 1
+ # building from here
+  ./configure --prefix=/usr \
+    --enable-sse=no --enable-sse2=no --enable-altivec=no --enable-mmx \
+    --enable-avifile=no --enable-lame --enable-ogg --enable-vorbis --enable-theora \
+    --enable-libdv --enable-a52-default-decoder --enable-libxml2 --enable-v4l \
+    --enable-imagemagick --enable-libjpeg --enable-lzo --enable-mjpegtools \
+    --enable-sdl --enable-freetype2 --enable-a52 --enable-libpostproc \
+    --with-libxml2-prefix=/usr \
+    --with-mjpegtools-prefix=/usr \
+    --with-imagemagick-prefix=/usr \
+    --with-libdv-includes=/usr \
+    --with-libpostproc-includes=/usr/include/postproc \
+    --with-ogg-prefix=/usr \
+    --with-lame-libs=/usr \
+    --with-lzo-includes=/usr/include \
+    --with-libavcodec-prefix=/usr \
+    --with-libavcodec-includes=/usr/include \
+    --with-libavcodec-libs=/usr/lib
+
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+ ##############################################################################
+ # this imports the latest subtitleripper sources and replaces the internal
+  rm -rf $startdir/src/$pkgname-$pkgver/contrib/subrip
+  tar xzf ../subtitleripper-$_sripver.tgz -C $startdir/src/$pkgname-$pkgver/contrib
+  mv $startdir/src/$pkgname-$pkgver/contrib/subtitleripper \
+    $startdir/src/$pkgname-$pkgver/contrib/subrip
+ # removes dependency on libppm, make it dependend on netpbm just failed, argh...
+  sed -i 's|^\(.*lppm.*\)$|#\1|' contrib/subrip/Makefile
+  sed -i 's|^\(.*D_HAVE_LIB_PPM.*\)$|#\1|' contrib/subrip/Makefile
+  cd contrib/subrip
+  make
+  install -m 755 pgm2txt $startdir/pkg/usr/bin/
+  install -m 755 srttool $startdir/pkg/usr/bin/
+  install -m 755 subtitle2pgm $startdir/pkg/usr/bin/
+  install -m 755 subtitle2vobsub $startdir/pkg/usr/bin/
+  install -m 755 vobsub2pgm $startdir/pkg/usr/bin/
+}
