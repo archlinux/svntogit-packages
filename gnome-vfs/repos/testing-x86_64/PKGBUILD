@@ -1,0 +1,43 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-vfs
+pkgver=2.22.0
+pkgrel=3
+pkgdesc="The GNOME Virtual File System"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('fam' 'gconf>=2.22.0' 'hal>=0.5.10' 'bzip2' 'avahi>=0.6.20' 'smbclient>=3.0.28A' 'gnome-mime-data>=2.18.0-2' 'heimdal>=1.2')
+makedepends=('perlxml' 'pkgconfig')
+options=('!libtool' '!emptydirs')
+conflicts=(gnome-vfs-samba)
+provides=(gnome-vfs-samba)
+replaces=(gnome-vfs-samba gnome-vfs-extras)
+url="http://www.gnome.org"
+install=gnome-vfs.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.22/gnome-vfs-${pkgver}.tar.bz2
+	hal-show-volume-names.patch
+	http-neon-method-youtube.patch)
+md5sums=('369105fd82cb99e69e63acab8f3b89b7' '109d07aa1dc8cb6523c47c4984047dce'\
+         'a980d7abfbf483b25e2a93bfb868b758')
+
+build() {
+  cd ${startdir}/src/${pkgname}-${pkgver}
+  #Archlinux patch (b.g.o #321498)
+  patch -Np1 -i ${startdir}/src/hal-show-volume-names.patch || return 1
+
+  patch -Np1 -i ${startdir}/src/http-neon-method-youtube.patch || return 1
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+        --localstatedir=/var --disable-static \
+	--libexecdir=/usr/lib/gnome-vfs-2.0 \
+  	--enable-samba --enable-hal \
+        --enable-avahi --disable-howl \
+	--disable-openssl --enable-gnutls
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${startdir}/pkg install || return 1
+
+  mkdir -p ${startdir}/pkg/usr/share/gconf/schemas
+  gconf-merge-schema ${startdir}/pkg/usr/share/gconf/schemas/${pkgname}.schemas ${startdir}/pkg/etc/gconf/schemas/*.schemas
+  rm -f ${startdir}/pkg/etc/gconf/schemas/*.schemas
+}
