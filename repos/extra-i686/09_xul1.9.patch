@@ -1,0 +1,189 @@
+---
+ configure.in |    7 +++++++
+ m4/gecko.m4  |   31 ++++++++++++++++++++++++++++---
+ 2 files changed, 35 insertions(+), 3 deletions(-)
+
+Index: seahorse-2.21.91/m4/gecko.m4
+===================================================================
+--- seahorse-2.21.91.orig/m4/gecko.m4
++++ seahorse-2.21.91/m4/gecko.m4
+@@ -46,31 +46,34 @@
+ 
+ # ************************
+ # Check which gecko to use
+ # ************************
+ 
+ AC_MSG_CHECKING([which gecko to use])
+ 
+ AC_ARG_WITH([gecko],
+-	AS_HELP_STRING([--with-gecko@<:@=mozilla|firefox|seamonkey|xulrunner@:>@],
++	AS_HELP_STRING([--with-gecko@<:@=mozilla|firefox|seamonkey|xulrunner|libxul-unstable@:>@],
+ 		       [Which gecko engine to use (autodetected by default)]))
+ 
+ # Backward compat
+ AC_ARG_WITH([mozilla],[],[with_gecko=$withval],[])
+ 
+ gecko_cv_gecko=$with_gecko
+ 
+ # Autodetect gecko
+-_geckos="firefox mozilla-firefox seamonkey mozilla xulrunner"
++_geckos="firefox mozilla-firefox seamonkey mozilla xulrunner libxul-unstable"
+ if test -z "$gecko_cv_gecko"; then
+ 	for lizard in $_geckos; do
+ 		if $PKG_CONFIG --exists $lizard-xpcom; then
+ 			gecko_cv_gecko=$lizard
+ 			break;
++		elif $PKG_CONFIG --exists $lizard; then
++			gecko_cv_gecko=$lizard
++			break;
+ 		fi
+ 	done
+ fi
+ 
+ AC_MSG_RESULT([$gecko_cv_gecko])
+ 
+ if test "x$gecko_cv_gecko" = "x"; then
+ 	ifelse([$3],,[AC_MSG_ERROR([No gecko found; you may need to adjust PKG_CONFIG_PATH or install a mozilla/firefox/xulrunner -devel package])],[$3])
+@@ -88,21 +91,28 @@
+ 
+ if test "$gecko_cv_have_gecko" = "yes"; then
+ 
+ case "$gecko_cv_gecko" in
+ mozilla) gecko_cv_gecko_flavour=mozilla ;;
+ seamonkey) gecko_cv_gecko_flavour=mozilla ;;
+ *firefox) gecko_cv_gecko_flavour=toolkit ;;
+ xulrunner) gecko_cv_gecko_flavour=toolkit ;;
++libxul*) gecko_cv_gecko_flavour=toolkit ;;
+ esac
+ 
++if test $gecko_cv_gecko = libxul-unstable; then
++_GECKO_INCLUDE_ROOT="`$PKG_CONFIG --variable=includedir ${gecko_cv_gecko}`/unstable"
++_GECKO_HOME=""
++_GECKO_PREFIX="`$PKG_CONFIG --variable=prefix ${gecko_cv_gecko}`"
++else
+ _GECKO_INCLUDE_ROOT="`$PKG_CONFIG --variable=includedir ${gecko_cv_gecko}-xpcom`"
+ _GECKO_HOME="`$PKG_CONFIG --variable=libdir ${gecko_cv_gecko}-xpcom`"
+ _GECKO_PREFIX="`$PKG_CONFIG --variable=prefix ${gecko_cv_gecko}-xpcom`"
++fi
+ 
+ fi # if gecko_cv_have_gecko
+ 
+ if test "$gecko_cv_gecko_flavour" = "toolkit"; then
+ 	AC_DEFINE([HAVE_MOZILLA_TOOLKIT],[1],[Define if mozilla is of the toolkit flavour])
+ fi
+ 
+ AM_CONDITIONAL([HAVE_MOZILLA_TOOLKIT],[test "$gecko_cv_gecko_flavour" = "toolkit"])
+@@ -349,27 +359,34 @@
+ fi
+ 
+ AC_LANG_PUSH([C++])
+ 
+ _SAVE_CPPFLAGS="$CPPFLAGS"
+ _SAVE_CXXFLAGS="$CXXFLAGS"
+ _SAVE_LDFLAGS="$LDFLAGS"
+ _SAVE_LIBS="$LIBS"
++if test $gecko_cv_gecko = libxul-unstable; then
++CPPFLAGS="$CPPFLAGS $_GECKO_EXTRA_CPPFLAGS -I$_GECKO_INCLUDE_ROOT $($PKG_CONFIG --cflags-only-I ${gecko_cv_gecko})"
++CXXFLAGS="$CXXFLAGS $_GECKO_EXTRA_CXXFLAGS $($PKG_CONFIG --cflags-only-other ${gecko_cv_gecko})"
++LDFLAGS="$LDFLAGS $_GECKO_EXTRA_LDFLAGS"
++LIBS="$LIBS $($PKG_CONFIG --libs ${gecko_cv_gecko})"
++else
+ CPPFLAGS="$CPPFLAGS $_GECKO_EXTRA_CPPFLAGS -I$_GECKO_INCLUDE_ROOT $($PKG_CONFIG --cflags-only-I ${gecko_cv_gecko}-xpcom)"
+ CXXFLAGS="$CXXFLAGS $_GECKO_EXTRA_CXXFLAGS $($PKG_CONFIG --cflags-only-other ${gecko_cv_gecko}-xpcom)"
+ LDFLAGS="$LDFLAGS $_GECKO_EXTRA_LDFLAGS -Wl,--rpath=$_GECKO_HOME"
+ LIBS="$LIBS $($PKG_CONFIG --libs ${gecko_cv_gecko}-xpcom)"
++fi
+ 
+ _GECKO_DISPATCH_INCLUDEDIRS="$2"
+ 
+ # Sigh Gentoo has a rubbish header layout
+ # http://bugs.gentoo.org/show_bug.cgi?id=100804
+ # Mind you, it's useful to be able to test against uninstalled mozilla builds...
+-_GECKO_DISPATCH_INCLUDEDIRS="$_GECKO_DISPATCH_INCLUDEDIRS dom necko pref"
++_GECKO_DISPATCH_INCLUDEDIRS="$_GECKO_DISPATCH_INCLUDEDIRS dom necko pref unstable"
+ 
+ # Now add them to CPPFLAGS
+ for i in $_GECKO_DISPATCH_INCLUDEDIRS; do
+ 	CPPFLAGS="$CPPFLAGS -I$_GECKO_INCLUDE_ROOT/$i"
+ done
+ 
+ m4_indir([$1],m4_shiftn(2,$@))
+ 
+@@ -585,21 +602,29 @@
+ #
+ # Variables set:
+ # XPIDL:        the xpidl program
+ # XPIDL_IDLDIR: the xpidl include directory
+ 
+ AC_DEFUN([GECKO_XPIDL],
+ [AC_REQUIRE([GECKO_INIT])dnl
+ 
++if test $gecko_cv_gecko = libxul-unstable; then
++_GECKO_LIBDIR="`$PKG_CONFIG --variable=sdkdir ${gecko_cv_gecko}`/bin"
++else
+ _GECKO_LIBDIR="`$PKG_CONFIG --variable=libdir ${gecko_cv_gecko}-xpcom`"
++fi
+ 
+ AC_PATH_PROG([XPIDL],[xpidl],[no],[$_GECKO_LIBDIR:$PATH])
+ 
++if test $gecko_cv_gecko = libxul-unstable; then
++XPIDL_IDLDIR="`$PKG_CONFIG --variable=idldir ${gecko_cv_gecko}`/unstable"
++else
+ XPIDL_IDLDIR="`$PKG_CONFIG --variable=idldir ${gecko_cv_gecko}-xpcom`"
++fi
+ 
+ # Older geckos don't have this variable, see
+ # https://bugzilla.mozilla.org/show_bug.cgi?id=240473
+ 
+ if test -z "$XPIDL_IDLDIR" -o ! -f "$XPIDL_IDLDIR/nsISupports.idl"; then
+ 	XPIDL_IDLDIR="`echo $_GECKO_LIBDIR | sed -e s!lib!share/idl!`"
+ fi
+ 
+Index: seahorse-2.21.91/configure.in
+===================================================================
+--- seahorse-2.21.91.orig/configure.in
++++ seahorse-2.21.91/configure.in
+@@ -505,16 +505,17 @@
+         if test "$with_epiphany_plugin" = "yes"; then
+             AC_SUBST([MOZILLA])
+             AC_SUBST([MOZILLA_FLAVOUR])
+             AC_SUBST([MOZILLA_HOME])
+             AC_SUBST([MOZILLA_PREFIX])
+             AC_SUBST([MOZILLA_INCLUDE_ROOT])
+ 
+             case "$MOZILLA" in
++            libxul-unstable) min_version=1.9 ;;
+             xulrunner) min_version=1.8 ;;
+             *firefox) min_version=1.5 ;;
+             *) AC_MSG_ERROR([Unsupported gecko "$gecko_cv_gecko"]) ;;
+             esac
+              
+             PKG_CHECK_MODULES([EPIPHANY_DEPENDENCY], [\
+                     		  libxml-2.0 >= $EPIPHANY_LIBXML_REQUIRED \
+                     		  libglade-2.0 \
+@@ -587,19 +588,25 @@
+                                                     		  gtk+-2.0 >= $EPIPHANY_LIBGTK_REQUIRED \
+                                                     		  epiphany-2.14 >= $EPIPHANY_REQUIRED], 
+                                                     		  [with_epiphany_plugin=yes E_API_VERSION=2.14 e_api_minor=14],[with_epiphany_plugin=no; echo "no"; echo "disabling epiphany plugin"])])])])])])])])])
+         else
+             echo "disabling epiphany plugin"
+         fi
+         
+         if test "$with_epiphany_plugin" = "yes"; then
++	    if test $gecko_cv_gecko = libxul-unstable; then
++            PKG_CHECK_MODULES([MOZILLA_COMPONENT],
++            		          [${gecko_cv_gecko} >= $min_version $gecko_cv_extra_pkg_dependencies],
++            		          [with_epiphany_plugin=yes],[with_epiphany_plugin=no echo "disabling epiphany plugin"])
++	    else
+             PKG_CHECK_MODULES([MOZILLA_COMPONENT],
+             		          [${gecko_cv_gecko}-xpcom >= $min_version $gecko_cv_extra_pkg_dependencies],
+             		          [with_epiphany_plugin=yes],[with_epiphany_plugin=no echo "disabling epiphany plugin"])
++	    fi
+         fi
+         		          
+         if test "$with_epiphany_plugin" = "yes"; then
+             echo "enabling epiphany plugin"
+             
+             if test "$e_api_minor" -ge 21; then
+                 AC_DEFINE([EPHY_NOTAB], 1, [Defines whether EphyTab exists in the API])
+             else
