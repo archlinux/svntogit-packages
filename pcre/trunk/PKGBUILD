@@ -4,7 +4,7 @@
 
 pkgname=pcre
 pkgver=7.7
-pkgrel=1
+pkgrel=2
 pkgdesc="A library that implements Perl 5-style regular expressions"
 arch=('i686' 'x86_64') 
 url="http://pcre.sourceforge.net"
@@ -12,19 +12,21 @@ license=('custom')
 groups=('base')
 depends=('gcc-libs')
 options=('!libtool' '!makeflags')
-source=(ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('4b2e9cde1f7227448dddba59843efa0b')
-sha1sums=('f1f54d3e13e6cb427de962e62eaaee32c74cba38')
+source=(ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/${pkgname}-${pkgver}.tar.bz2 \
+        libpcre-7.7-buffer-overflow.patch)
+md5sums=('4b2e9cde1f7227448dddba59843efa0b' 'ea2204b6a0cbc83b3ca925ace06459a1')
+sha1sums=('f1f54d3e13e6cb427de962e62eaaee32c74cba38' '5a69fb97f1fa547f9012082221a6b98d77b65277')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
+  cd ${srcdir}/${pkgname}-${pkgver}
   [ "${CARCH}" = "x86_64" ] && export CFLAGS="${CFLAGS} -fPIC"
-  ./configure --prefix=/usr --enable-utf8 --enable-unicode-properties
+  patch -p1 < ../libpcre-7.7-buffer-overflow.patch || return 1
+  ./configure --prefix=/usr --enable-utf8 --enable-unicode-properties || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${pkgdir} install || return 1
   # grep uses pcre, so we need the libs in /lib
-  mkdir -p ${startdir}/pkg/lib
-  mv ${startdir}/pkg/usr/lib/libpcre.so.* ${startdir}/pkg/lib/
-  ln -sf ../../lib/libpcre.so.0 ${startdir}/pkg/usr/lib/libpcre.so
-  install -D -m644 LICENCE ${startdir}/pkg/usr/share/licenses/${pkgname}/license.txt
+  mkdir -p ${pkgdir}/lib
+  mv ${pkgdir}/usr/lib/libpcre.so.* ${pkgdir}/lib/ || return 1
+  ln -sf ../../lib/libpcre.so.0 ${pkgdir}/usr/lib/libpcre.so || return 1
+  install -D -m644 LICENCE ${pkgdir}/usr/share/licenses/${pkgname}/license.txt || return 1
 }
