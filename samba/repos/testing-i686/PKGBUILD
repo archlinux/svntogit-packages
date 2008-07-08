@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: judd <jvinet@zeroflux.org>
+pkgname=samba
+pkgver=3.0.30
+# We use the 'A' to fake out pacman's version comparators.  Samba chooses
+# to append 'a','b',etc to their subsequent releases, which pamcan
+# misconstrues as alpha, beta, etc.  Bad samba!
+_realver=3.0.30
+pkgrel=2
+pkgdesc="Tools to access a server's filespace and printers via SMB"
+arch=(i686 x86_64)
+url="http://www.samba.org"
+license=('GPL')
+backup=(etc/logrotate.d/samba etc/pam.d/samba etc/samba/smb.conf etc/xinetd.d/swat etc/conf.d/samba)
+depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' 'smbclient>=3.0.30-2' 'libcap' 'heimdal>=1.2-1' 'pam' 'fam')
+options=(!makeflags)
+source=(http://us1.samba.org/samba/ftp/${pkgname}-${_realver}.tar.gz \
+        no-clients.patch samba samba.logrotate swat.xinetd samba.pam samba.conf.d)
+md5sums=('d647ec1f34414fa8691f74536dcccfb5' '9fc80d2b5210a94b386ea0904337f5bd'\
+         'e93533fa2296c07c1f645dfdd373657f' '5697da77590ec092cc8a883bae06093c'\
+         'a4bbfa39fee95bba2e7ad6b535fae7e6' '96f82c38f3f540b53f3e5144900acf17'\
+         'f2f2e348acd1ccb566e95fa8a561b828')
+
+# for x86_64 and probably i686 make sure to not have dmapi/xfsdump installed when 
+# compiling or it will link against it which is not wanted right now(?)
+
+build() {
+  cd ${startdir}/src/${pkgname}-${_realver}/source
+  patch -Np2 -i ${startdir}/src/no-clients.patch || return 1
+
+  ./configure --prefix=/usr --with-configdir=/etc/samba \
+              --with-lockdir=/var/cache/samba \
+              --with-piddir=/var/run/samba \
+              --with-fhs --with-pam --with-ads --with-acl-support \
+              --without-smbmount --without-libsmbclient \
+              --localstatedir=/var
+  make || return 1
+  mkdir -p $startdir/pkg/var/log/samba
+  mkdir -p $startdir/pkg/etc/samba/private
+  chmod 700 $startdir/pkg/etc/samba/private
+  make DESTDIR=$startdir/pkg install
+  chmod 644 $startdir/pkg/usr/include/*.h
+  rm -rf $startdir/pkg/usr/var
+  (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
+  install -D -m755 ../../samba $startdir/pkg/etc/rc.d/samba
+  install -D -m644 ../../samba.conf.d $startdir/pkg/etc/conf.d/samba
+  mkdir -p $startdir/pkg/etc/samba
+  cat ../examples/smb.conf.default | \
+    sed 's|log file = .*$|log file = /var/log/samba/log.%m|g' >$startdir/pkg/etc/samba/smb.conf.default
+  install -D -m644 ../../samba.logrotate $startdir/pkg/etc/logrotate.d/samba
+  install -D -m644 ../../swat.xinetd $startdir/pkg/etc/xinetd.d/swat
+  install -D -m644 ../../samba.pam $startdir/pkg/etc/pam.d/samba
+  # spool directory
+  install -d -m1777 $startdir/pkg/var/spool/samba
+  sed -i 's|/usr/spool/samba|/var/spool/samba|g' $startdir/pkg/etc/samba/smb.conf.default
+  # fix logrotate
+  sed -i -e 's|log.%m|%m.log|g' $startdir/pkg/etc/samba/smb.conf.default
+  # nsswitch libraries
+  install -D -m755 nsswitch/libnss_wins.so $startdir/pkg/lib/libnss_wins.so
+  ln -s libnss_wins.so $startdir/pkg/lib/libnss_wins.so.2
+  install -D -m755 nsswitch/libnss_winbind.so $startdir/pkg/lib/libnss_winbind.so
+  install -D -m755 bin/pam_winbind.so $startdir/pkg/lib/security/pam_winbind.so
+
+  for man in libsmbclient smbmnt smbmount smbspool \
+      smbumount umount.cifs mount.cifs net; do
+    rm -f ${startdir}/pkg/usr/share/man/man8/${man}.8
+  done
+  for man in rpcclient smbcacls smbclient smbcquotas \
+      smbtree smbtar nmblookup smbget; do
+    rm -f ${startdir}/pkg/usr/share/man/man1/${man}.1
+  done
+  rm -f ${startdir}/pkg/usr/share/man/man7/libsmbclient.7
+
+  rm -f ${startdir}/pkg/usr/include/libsmbclient.h
+  # remove mount and umount.cifs
+  rm $startdir/pkg/usr/sbin/mount.cifs
+  rm $startdir/pkg/usr/sbin/umount.cifs
+}
