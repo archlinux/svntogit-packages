@@ -1,0 +1,2933 @@
+--- avmedia/prj/build.lst
++++ avmedia/prj/build.lst
+@@ -7,4 +7,5 @@
+ av  avmedia\source\win	    	nmake	-	all	av_win	            									NULL
+ av	avmedia\source\java			nmake	-	all	av_java	            									NULL
+ av	avmedia\source\xine			nmake	-	all	av_xine	            									NULL
+-av	avmedia\util				nmake	-	all	av_util av_viewer av_framework av_win av_java av_xine	NULL
++av	avmedia\source\gstreamer		nmake	-	all	av_gstreamer           									NULL
++av	avmedia\util				nmake	-	all	av_util av_viewer av_framework av_win av_java av_xine av_gstreamer	NULL
+--- avmedia/source/gstreamer/exports.dxp
++++ avmedia/source/gstreamer/exports.dxp
+@@ -0,0 +1,4 @@
++component_getImplementationEnvironment
++component_writeInfo
++component_getFactory
++
+--- avmedia/source/gstreamer/gstcommon.hxx
++++ avmedia/source/gstreamer/gstcommon.hxx
+@@ -0,0 +1,83 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#ifndef _GSTCOMMON_HXX
++#define _GSTCOMMON_HXX
++
++#include <gst/gst.h>
++
++#ifndef _OSL_MUTEX_HXX_
++#include <osl/mutex.hxx>
++#endif
++#ifndef _DEBUG_HXX
++#include <tools/debug.hxx>
++#endif
++#ifndef _STREAM_HXX
++#include <tools/stream.hxx>
++#endif
++#ifndef _STRING_HXX
++#include <tools/string.hxx>
++#endif
++#ifndef _URLOBJ_HXX
++#include <tools/urlobj.hxx>
++#endif
++#ifndef _CPPUHELPER_IMPLBASE1_HXX_
++#include <cppuhelper/implbase1.hxx>
++#endif
++#ifndef _CPPUHELPER_IMPLBASE2_HXX_
++#include <cppuhelper/implbase2.hxx>
++#endif
++#ifndef _CPPUHELPER_WEAK_HXX_
++#include <cppuhelper/weak.hxx>
++#endif
++#ifndef _CPPUHELPER_FACTORY_HXX_
++#include <cppuhelper/factory.hxx>
++#endif
++
++#include <com/sun/star/uno/Reference.h>
++#include <com/sun/star/uno/RuntimeException.hpp>
++#include <com/sun/star/lang/XMultiServiceFactory.hpp>
++#include <com/sun/star/lang/XComponent.hpp>
++#include <com/sun/star/registry/XRegistryKey.hpp>
++#include <com/sun/star/lang/XComponent.hpp>
++#include <com/sun/star/lang/XServiceInfo.hpp>
++#include <com/sun/star/awt/Rectangle.hpp>
++#include <com/sun/star/awt/KeyModifier.hpp>
++#include <com/sun/star/awt/MouseButton.hpp>
++#include <com/sun/star/media/XManager.hpp>
++
++#define WM_GRAPHNOTIFY (WM_USER + 567)
++
++#endif // _GSTCOMMOM_HXX
+--- avmedia/source/gstreamer/gstframegrabber.cxx
++++ avmedia/source/gstreamer/gstframegrabber.cxx
+@@ -0,0 +1,244 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#include <tools/prewin.h>
++#include <windows.h>
++#include <objbase.h>
++#include <strmif.h>
++#include <Amvideo.h>
++#include <Qedit.h>
++#include <uuids.h>
++#include <tools/postwin.h>
++
++#include "framegrabber.hxx"
++#include "player.hxx"
++
++#include <tools/stream.hxx>
++#include <vcl/graph.hxx>
++#include <unotools/localfilehelper.hxx>
++
++#define AVMEDIA_GST_FRAMEGRABBER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.FrameGrabber_GStreamer"
++#define AVMEDIA_GST_FRAMEGRABBER_SERVICENAME "com.sun.star.media.FrameGrabber_GStreamer"
++
++using namespace ::com::sun::star;
++
++namespace avmedia { namespace gstreamer {
++
++// ----------------
++// - FrameGrabber -
++// ----------------
++
++FrameGrabber::FrameGrabber( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
++    mxMgr( rxMgr )
++{
++    ::CoInitialize( NULL );
++}
++
++// ------------------------------------------------------------------------------
++
++FrameGrabber::~FrameGrabber()
++{
++    ::CoUninitialize();
++}
++
++// ------------------------------------------------------------------------------
++
++IMediaDet* FrameGrabber::implCreateMediaDet( const ::rtl::OUString& rURL ) const
++{
++    IMediaDet* pDet = NULL;
++
++    if( SUCCEEDED( CoCreateInstance( CLSID_MediaDet, NULL, CLSCTX_INPROC_SERVER, IID_IMediaDet, (void**) &pDet ) ) )
++    {
++		String aLocalStr;
++		
++		if( ::utl::LocalFileHelper::ConvertURLToPhysicalName( rURL, aLocalStr ) && aLocalStr.Len() )
++		{
++            if( !SUCCEEDED( pDet->put_Filename( ::SysAllocString( aLocalStr.GetBuffer() ) ) ) )
++            {
++                pDet->Release();
++                pDet = NULL;
++            }
++        }
++    }
++    
++    return pDet;
++}
++
++// ------------------------------------------------------------------------------
++
++bool FrameGrabber::create( const ::rtl::OUString& rURL )
++{
++    // just check if a MediaDet interface can be created with the given URL
++    IMediaDet*  pDet = implCreateMediaDet( rURL );
++   
++    if( pDet )
++    {
++        maURL = rURL;
++        pDet->Release();
++        pDet = NULL;
++    }
++    else
++        maURL = ::rtl::OUString();
++
++    return( maURL.getLength() > 0 );
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Reference< graphic::XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
++    throw (uno::RuntimeException)
++{
++    uno::Reference< graphic::XGraphic > xRet;
++    IMediaDet*                          pDet = implCreateMediaDet( maURL );
++   
++    if( pDet )
++    {
++        double  fLength;
++        long    nStreamCount;
++        bool    bFound = false;
++    
++        if( SUCCEEDED( pDet->get_OutputStreams( &nStreamCount ) ) )
++        {
++            for( long n = 0; ( n < nStreamCount ) && !bFound; ++n )
++            {
++                GUID aMajorType;
++                
++                if( SUCCEEDED( pDet->put_CurrentStream( n ) )  &&
++                    SUCCEEDED( pDet->get_StreamType( &aMajorType ) ) &&
++                    ( aMajorType == MEDIATYPE_Video ) )
++                {
++                    bFound = true;
++                }
++            }
++        }
++        
++        if( bFound &&
++            ( S_OK == pDet->get_StreamLength( &fLength ) ) &&
++            ( fLength > 0.0 ) && ( fMediaTime >= 0.0 ) && ( fMediaTime <= fLength ) )
++        {
++            AM_MEDIA_TYPE   aMediaType;
++            long            nWidth = 0, nHeight = 0, nSize = 0; 
++            
++            if( SUCCEEDED( pDet->get_StreamMediaType( &aMediaType ) ) )
++            {
++                if( ( aMediaType.formattype == FORMAT_VideoInfo ) && 
++                    ( aMediaType.cbFormat >= sizeof( VIDEOINFOHEADER ) ) )
++                {
++                    VIDEOINFOHEADER* pVih = reinterpret_cast< VIDEOINFOHEADER* >( aMediaType.pbFormat );
++                    
++                    nWidth = pVih->bmiHeader.biWidth;
++                    nHeight = pVih->bmiHeader.biHeight;
++                
++                    if( nHeight < 0 )
++                        nHeight *= -1;
++                }
++
++                if( aMediaType.cbFormat != 0 )
++                {
++                    ::CoTaskMemFree( (PVOID) aMediaType.pbFormat );
++                    aMediaType.cbFormat = 0;
++                    aMediaType.pbFormat = NULL;
++                }
++                
++                if( aMediaType.pUnk != NULL )
++                {
++                    aMediaType.pUnk->Release();
++                    aMediaType.pUnk = NULL;
++                }            
++            }
++            
++            if( ( nWidth > 0 ) && ( nHeight > 0 ) &&
++                SUCCEEDED( pDet->GetBitmapBits( 0, &nSize, NULL, nWidth, nHeight ) ) &&
++                ( nSize > 0  ) )
++            {
++                char* pBuffer = new char[ nSize ];
++
++                try 
++                {
++                    if( SUCCEEDED( pDet->GetBitmapBits( fMediaTime, NULL, pBuffer, nWidth, nHeight ) ) )
++                    {
++                        SvMemoryStream  aMemStm( pBuffer, nSize, STREAM_READ | STREAM_WRITE );
++                        Bitmap          aBmp;
++                        
++                        if( aBmp.Read( aMemStm, false ) && !aBmp.IsEmpty() )
++                        {
++                            const Graphic aGraphic( aBmp );
++                            xRet = aGraphic.GetXGraphic();
++                        }
++                    }
++                }
++                catch( ... )
++                {
++                }
++
++                delete [] pBuffer;
++            }
++        }
++
++        pDet->Release();
++    }
++    
++    return xRet;
++}
++
++// ------------------------------------------------------------------------------
++
++::rtl::OUString SAL_CALL FrameGrabber::getImplementationName(  )
++    throw (uno::RuntimeException)
++{
++    return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_GST_FRAMEGRABBER_IMPLEMENTATIONNAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL FrameGrabber::supportsService( const ::rtl::OUString& ServiceName )
++    throw (uno::RuntimeException)
++{
++    return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_GST_FRAMEGRABBER_SERVICENAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Sequence< ::rtl::OUString > SAL_CALL FrameGrabber::getSupportedServiceNames(  )
++    throw (uno::RuntimeException)
++{
++    uno::Sequence< ::rtl::OUString > aRet(1);
++    aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_GST_FRAMEGRABBER_SERVICENAME ) );
++
++    return aRet;
++}
++
++} // namespace gstreamer
++} // namespace avmedia
+--- avmedia/source/gstreamer/gstframegrabber.hxx
++++ avmedia/source/gstreamer/gstframegrabber.hxx
+@@ -0,0 +1,78 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#ifndef _FRAMEGRABBER_HXX
++#define _FRAMEGRABBER_HXX
++
++#include "gstcommon.hxx"
++
++#ifndef _COM_SUN_STAR_MEDIA_XFRAMEGRABBER_HDL_
++#include "com/sun/star/media/XFrameGrabber.hdl"
++#endif
++
++namespace avmedia { namespace gstreamer {
++
++// ----------------
++// - FrameGrabber -
++// ----------------
++
++class FrameGrabber : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XFrameGrabber,
++                                                      ::com::sun::star::lang::XServiceInfo >
++{
++public:
++
++            FrameGrabber( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
++            ~FrameGrabber();
++
++    bool    create( const ::rtl::OUString& rURL );
++
++    // XFrameGrabber
++    virtual ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic > SAL_CALL grabFrame( double fMediaTime ) throw (::com::sun::star::uno::RuntimeException);
++
++    // XServiceInfo
++    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException);
++
++private:
++
++    ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >    mxMgr;
++    ::rtl::OUString                                                                     maURL;
++};
++
++} // namespace gstreamer
++} // namespace avmedia
++
++#endif // _FRAMEGRABBER_HXX
+--- avmedia/source/gstreamer/gstmanager.cxx
++++ avmedia/source/gstreamer/gstmanager.cxx
+@@ -0,0 +1,114 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#include "gstmanager.hxx"
++#include "gstplayer.hxx"
++
++#include <tools/urlobj.hxx>
++
++#define AVMEDIA_GST_MANAGER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Manager_GStreamer"
++#define AVMEDIA_GST_MANAGER_SERVICENAME "com.sun.star.media.Manager"
++
++#if DEBUG
++#define DBG OSL_TRACE
++#else
++#define DBG(...)
++#endif
++
++using namespace ::com::sun::star;
++
++namespace avmedia { namespace gstreamer {
++// ----------------
++// - Manager -
++// ----------------
++
++Manager::Manager( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
++    mxMgr( rxMgr )
++{
++    DBG( "avmediagst: Manager::Manager" );
++}
++
++// ------------------------------------------------------------------------------
++
++Manager::~Manager()
++{
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Reference< media::XPlayer > SAL_CALL Manager::createPlayer( const ::rtl::OUString& rURL )
++    throw (uno::RuntimeException)
++{
++    Player*                             pPlayer( new Player( mxMgr ) );
++    uno::Reference< media::XPlayer >    xRet( pPlayer );
++    const INetURLObject                 aURL( rURL );
++
++    DBG( "avmediagst: Manager::createPlayer" );
++
++    if( !pPlayer->create( aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ) )  )
++        xRet = uno::Reference< media::XPlayer >();
++
++    return xRet;
++}
++
++// ------------------------------------------------------------------------------
++
++::rtl::OUString SAL_CALL Manager::getImplementationName(  )
++    throw (uno::RuntimeException)
++{
++    return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_GST_MANAGER_IMPLEMENTATIONNAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Manager::supportsService( const ::rtl::OUString& ServiceName )
++    throw (uno::RuntimeException)
++{
++    return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_GST_MANAGER_SERVICENAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Sequence< ::rtl::OUString > SAL_CALL Manager::getSupportedServiceNames(  )
++    throw (uno::RuntimeException)
++{
++    uno::Sequence< ::rtl::OUString > aRet(1);
++    aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_GST_MANAGER_SERVICENAME ) );
++
++    return aRet;
++}
++
++} // namespace gstreamer
++} // namespace avmedia
+--- avmedia/source/gstreamer/gstmanager.hxx
++++ avmedia/source/gstreamer/gstmanager.hxx
+@@ -0,0 +1,74 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#ifndef _MANAGER_HXX
++#define _MANAGER_HXX
++
++#include "gstcommon.hxx"
++
++#ifndef _COM_SUN_STAR_MEDIA_XMANAGER_HDL_
++#include "com/sun/star/media/XManager.hdl"
++#endif
++
++// -----------
++// - Manager -
++// -----------
++
++namespace avmedia { namespace gstreamer {
++
++class Manager : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XManager,
++                                                 ::com::sun::star::lang::XServiceInfo >
++{
++public:
++
++    Manager( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
++    ~Manager();
++
++    // XManager
++    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XPlayer > SAL_CALL createPlayer( const ::rtl::OUString& aURL ) throw (::com::sun::star::uno::RuntimeException);
++
++    // XServiceInfo
++    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException);
++private:
++
++    ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > mxMgr;
++};
++
++} // namespace gstreamer
++} // namespace avmedia
++
++#endif // _MANAGER_HXX
+--- avmedia/source/gstreamer/gstplayer.cxx
++++ avmedia/source/gstreamer/gstplayer.cxx
+@@ -0,0 +1,628 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#include <math.h>
++
++#ifndef __RTL_USTRING_
++#include <rtl/string.hxx>
++#endif
++
++#include "gstplayer.hxx"
++#include "gstframegrabber.hxx"
++#include "gstwindow.hxx"
++
++#include <gst/interfaces/xoverlay.h>
++
++#define AVMEDIA_GST_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_GStreamer"
++#define AVMEDIA_GST_PLAYER_SERVICENAME "com.sun.star.media.Player_GStreamer"
++
++#if DEBUG
++#define DBG OSL_TRACE
++#else
++#define DBG(...)
++#endif
++
++using namespace ::com::sun::star;
++
++namespace avmedia { namespace gstreamer {
++
++// ----------------
++// - Player -
++// ----------------
++
++Player::Player( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
++    mxMgr( rxMgr ),
++    mpPlaybin( NULL ),
++    mbFakeVideo (sal_False ),
++    mnUnmutedVolume( 0 ),
++    mbMuted( false ),
++    mbLooping( false ),
++    mbInitialized( false ),
++    mnWindowID( 0 ),
++    mpXOverlay( NULL ),
++    mnDuration( 0 ),
++    mnWidth( 0 ),
++    mnHeight( 0 ),
++    maSizeCondition( osl_createCondition() )
++{
++    // Initialize GStreamer library
++    int argc = 1;
++    char *arguments[] = { "openoffice.org" };
++    char** argv = arguments;
++    GError* pError = NULL;
++
++    mbInitialized = gst_init_check( &argc, &argv, &pError );
++
++    if (pError != NULL)
++        // TODO: thow an exception?
++        g_error_free (pError);
++}
++
++// ------------------------------------------------------------------------------
++
++Player::~Player()
++{
++    // Release the elements and pipeline
++    if( mbInitialized )
++    {
++        if( mpPlaybin )
++        {
++            gst_element_set_state( mpPlaybin, GST_STATE_NULL );
++            gst_object_unref( GST_OBJECT( mpPlaybin ) );
++
++            mpPlaybin = NULL;
++        }
++
++        if( mpXOverlay ) {
++            g_object_unref( G_OBJECT ( mpXOverlay ) );
++            mpXOverlay = NULL;
++        }
++    }
++}
++
++// ------------------------------------------------------------------------------
++
++static gboolean gst_pipeline_bus_callback( GstBus *, GstMessage *message, gpointer data )
++{
++    Player* pPlayer = (Player *) data;
++
++    pPlayer->processMessage( message );
++
++    return TRUE;
++}
++
++static GstBusSyncReply gst_pipeline_bus_sync_handler( GstBus *, GstMessage * message, gpointer data )
++{
++    Player* pPlayer = (Player *) data;
++
++    return pPlayer->processSyncMessage( message );
++}
++
++void Player::processMessage( GstMessage *message )
++{
++    //DBG ( "gst message received: src name: %s structure type: %s",
++    //            gst_object_get_name (message->src),
++    //            message->structure ? gst_structure_get_name (message->structure) : "<none>");
++
++    switch( GST_MESSAGE_TYPE( message ) ) {
++    case GST_MESSAGE_EOS:
++        //DBG( "EOS, reset state to NULL" );
++        gst_element_set_state( mpPlaybin, GST_STATE_READY );
++        break;
++    case GST_MESSAGE_STATE_CHANGED:
++        if( message->src == GST_OBJECT( mpPlaybin ) ) {
++            GstState newstate, pendingstate;
++
++            gst_message_parse_state_changed (message, NULL, &newstate, &pendingstate);
++
++            if( newstate == GST_STATE_PAUSED &&
++                pendingstate == GST_STATE_VOID_PENDING &&
++                mpXOverlay )
++                gst_x_overlay_expose( mpXOverlay );
++        }
++    default:
++        break;
++    }
++}
++
++GstBusSyncReply Player::processSyncMessage( GstMessage *message )
++{
++    DBG( "%p processSyncMessage", this );
++    //DBG ( "gst message received: src name: %s structure type: %s",
++    //            gst_object_get_name (message->src),
++    //            message->structure ? gst_structure_get_name (message->structure) : "<none>");
++
++    if (message->structure) {
++        if( !strcmp( gst_structure_get_name( message->structure ), "prepare-xwindow-id" ) && mnWindowID != 0 ) {
++            if( mpXOverlay )
++                g_object_unref( G_OBJECT ( mpXOverlay ) );
++            mpXOverlay = GST_X_OVERLAY( GST_MESSAGE_SRC( message ) );
++            g_object_ref( G_OBJECT ( mpXOverlay ) );
++            gst_x_overlay_set_xwindow_id( mpXOverlay, mnWindowID );
++            return GST_BUS_DROP;
++        }
++    }
++
++    if( GST_MESSAGE_TYPE( message ) == GST_MESSAGE_STATE_CHANGED ) {
++        if( message->src == GST_OBJECT( mpPlaybin ) ) {
++            GstState newstate, pendingstate;
++
++            gst_message_parse_state_changed (message, NULL, &newstate, &pendingstate);
++
++            DBG( "%p state change received, new state %d", this, newstate );
++            if( newstate == GST_STATE_PAUSED &&
++                pendingstate == GST_STATE_VOID_PENDING ) {
++                
++                DBG( "%p change to paused received", this );
++
++                if( mnDuration == 0) {
++                    GstFormat format = GST_FORMAT_TIME;
++                    gint64 gst_duration = 0L;
++
++                    if( gst_element_query_duration( mpPlaybin, &format, &gst_duration) && format == GST_FORMAT_TIME && gst_duration > 0L )
++                        mnDuration = gst_duration;
++                }
++
++                if( mnWidth == 0 ) {
++                    GList *pStreamInfo = NULL;
++
++                    g_object_get( G_OBJECT( mpPlaybin ), "stream-info", &pStreamInfo, NULL );
++
++                    for ( ; pStreamInfo != NULL; pStreamInfo = pStreamInfo->next) {
++                        GObject *pInfo = G_OBJECT( pStreamInfo->data );
++
++                        if( !pInfo )
++                            continue;
++
++                        int nType;
++                        g_object_get( pInfo, "type", &nType, NULL );
++                        GEnumValue *pValue = g_enum_get_value( G_PARAM_SPEC_ENUM( g_object_class_find_property( G_OBJECT_GET_CLASS( pInfo ), "type" ) )->enum_class,
++                                                               nType );
++
++                        if( !g_strcasecmp( pValue->value_nick, "video" ) ) {
++                            GstStructure *pStructure;
++                            GstPad *pPad;
++
++                            g_object_get( pInfo, "object", &pPad, NULL );
++                            pStructure = gst_caps_get_structure( GST_PAD_CAPS( pPad ), 0 );
++                            if( pStructure ) {
++                                gst_structure_get_int( pStructure, "width", &mnWidth );
++                                gst_structure_get_int( pStructure, "height", &mnHeight );
++                                DBG( "queried size: %d x %d", mnWidth, mnHeight );
++                            }
++                        }
++                    }
++
++                    sal_Bool aSuccess = osl_setCondition( maSizeCondition );
++                    DBG( "%p set condition result: %d", this, aSuccess );
++                }
++            }
++        }
++    } else if( GST_MESSAGE_TYPE( message ) == GST_MESSAGE_ERROR ) {
++        if( mnWidth == 0 ) {
++            // an error occured, set condition so that OOo thread doesn't wait for us
++            sal_Bool aSuccess = osl_setCondition( maSizeCondition );
++            DBG( "%p set condition result: %d", this, aSuccess );
++        }
++    }
++
++    return GST_BUS_PASS;
++}
++
++void Player::preparePlaybin( const ::rtl::OUString& rURL, bool bFakeVideo )
++{
++        GstBus *pBus;
++
++        //sal_Bool aSuccess = osl_setCondition( maSizeCondition );
++        //DBG( "%p set condition result: %d", this, aSuccess );
++
++        if( mpPlaybin != NULL ) {
++            gst_element_set_state( mpPlaybin, GST_STATE_NULL );
++            g_object_unref( mpPlaybin );
++        }
++
++        mpPlaybin = gst_element_factory_make( "playbin", NULL );
++
++        if( bFakeVideo )
++            g_object_set( G_OBJECT( mpPlaybin ), "video-sink", gst_element_factory_make( "fakesink", NULL ), NULL );
++
++        mbFakeVideo = bFakeVideo;
++
++        rtl::OString ascURL = OUStringToOString( rURL, RTL_TEXTENCODING_ASCII_US );
++        g_object_set( G_OBJECT( mpPlaybin ), "uri", ascURL.getStr() , NULL );
++
++        pBus = gst_element_get_bus( mpPlaybin );
++        gst_bus_add_watch( pBus, gst_pipeline_bus_callback, this );
++        DBG( "%p set sync handler", this );
++        gst_bus_set_sync_handler( pBus, gst_pipeline_bus_sync_handler, this );
++        g_object_unref( pBus );
++}
++
++bool Player::create( const ::rtl::OUString& rURL )
++{
++    bool    bRet = false;
++
++    // create all the elements and link them     
++    
++    if( mbInitialized )
++    {
++        preparePlaybin( rURL, true );
++
++        gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
++
++        bRet = true;
++    }
++
++
++    if( bRet )
++        maURL = rURL;
++    else
++        maURL = ::rtl::OUString();
++
++    return bRet;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::start(  )
++    throw (uno::RuntimeException)
++{
++    //DBG ("Player::start");
++
++    // set the pipeline state to READY and run the loop
++    if( mbInitialized && NULL != mpPlaybin )
++    {
++        gst_element_set_state( mpPlaybin, GST_STATE_PLAYING );
++    }
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::stop(  )
++    throw (uno::RuntimeException)
++{
++    // set the pipeline in PAUSED STATE
++    if( mpPlaybin )
++        gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
++
++    DBG( "stop %p", mpPlaybin );
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Player::isPlaying()
++    throw (uno::RuntimeException)
++{
++    bool            bRet = false;
++
++    // return whether the pipeline is in PLAYING STATE or not
++    if( mbInitialized && mpPlaybin )
++    {
++        bRet = GST_STATE_PLAYING == GST_STATE( mpPlaybin );
++    }
++
++    DBG( "isPlaying %d", bRet );
++
++    return bRet;
++}
++
++// ------------------------------------------------------------------------------
++
++double SAL_CALL Player::getDuration(  )
++    throw (uno::RuntimeException)
++{
++    // slideshow checks for non-zero duration, so cheat here
++    double duration = 0.01;
++
++    if( mpPlaybin && mnDuration > 0 ) {
++        duration = mnDuration / 1E9;
++
++        //DBG( "gst duration: %lld ns duration: %lf s", gst_duration, duration );
++    }
++
++    return duration;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::setMediaTime( double fTime )
++    throw (uno::RuntimeException)
++{
++    if( mpPlaybin ) {
++        gint64 gst_position = llround (fTime * 1E9);
++
++        gst_element_seek( mpPlaybin, 1.0,
++                          GST_FORMAT_TIME,
++                          GST_SEEK_FLAG_FLUSH,
++                          GST_SEEK_TYPE_SET, gst_position,
++                          GST_SEEK_TYPE_NONE, 0 );
++        if( !isPlaying() )
++            gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
++
++        DBG( "seek to: %lld ns original: %lf s", gst_position, fTime );
++    }
++}
++
++// ------------------------------------------------------------------------------
++
++double SAL_CALL Player::getMediaTime(  )
++    throw (uno::RuntimeException)
++{
++    double position = 0.0;
++
++    if( mpPlaybin ) {
++        // get current position in the stream
++        GstFormat format = GST_FORMAT_TIME;
++        gint64 gst_position;
++        if( gst_element_query_position( mpPlaybin, &format, &gst_position ) && format == GST_FORMAT_TIME && gst_position > 0L )
++            position = gst_position / 1E9;
++    }
++    
++    return position; 
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::setStopTime( double fTime )
++    throw (uno::RuntimeException)
++{
++    // TODO implement
++}
++
++// ------------------------------------------------------------------------------
++
++double SAL_CALL Player::getStopTime(  )
++    throw (uno::RuntimeException)
++{
++    // Get the time at which to stop
++
++    return 0; 
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::setRate( double fRate )
++    throw (uno::RuntimeException)
++{
++    // TODO set the window rate
++}
++
++// ------------------------------------------------------------------------------
++
++double SAL_CALL Player::getRate(  )
++    throw (uno::RuntimeException)
++{
++    double rate = 0.0;
++
++    // TODO get the window rate
++    if( mbInitialized )
++    {
++        
++    }
++    
++    return rate;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
++    throw (uno::RuntimeException)
++{
++    // TODO check how to do with GST
++    mbLooping = bSet;
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Player::isPlaybackLoop(  )
++    throw (uno::RuntimeException)
++{
++    // TODO check how to do with GST
++    return mbLooping;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::setMute( sal_Bool bSet )
++    throw (uno::RuntimeException)
++{
++    DBG( "set mute: %d muted: %d unmuted volume: %lf", bSet, mbMuted, mnUnmutedVolume );
++
++    // change the volume to 0 or the unmuted volume
++    if(  mpPlaybin && mbMuted != bSet )
++    {
++        double nVolume = mnUnmutedVolume;
++        if( bSet )
++        {
++            nVolume = 0.0;
++        }
++
++        g_object_set( G_OBJECT( mpPlaybin ), "volume", nVolume, NULL );
++
++        mbMuted = bSet;
++    }
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Player::isMute(  )
++    throw (uno::RuntimeException)
++{
++    return mbMuted;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) 
++    throw (uno::RuntimeException)
++{
++    mnUnmutedVolume = pow( 10.0, nVolumeDB / 20.0 );
++
++    DBG( "set volume: %d gst volume: %lf", nVolumeDB, mnUnmutedVolume );
++
++    // change volume
++     if( !mbMuted && mpPlaybin )
++     {
++         g_object_set( G_OBJECT( mpPlaybin ), "volume", (gdouble) mnUnmutedVolume, NULL );
++     }
++}
++
++// ------------------------------------------------------------------------------
++    
++sal_Int16 SAL_CALL Player::getVolumeDB(  ) 
++    throw (uno::RuntimeException)
++{
++    sal_Int16 nVolumeDB;
++
++    if( mpPlaybin ) {
++        double nGstVolume = 0.0;
++
++        g_object_get( G_OBJECT( mpPlaybin ), "volume", &nGstVolume, NULL );
++
++        nVolumeDB = (sal_Int16) ( 20.0*log10 ( nGstVolume ) );
++
++        //DBG( "get volume: %d gst volume: %lf", nVolumeDB, nGstVolume );
++    }
++
++    return nVolumeDB;
++}
++
++// ------------------------------------------------------------------------------
++
++awt::Size SAL_CALL Player::getPreferredPlayerWindowSize(  )
++    throw (uno::RuntimeException)
++{
++    awt::Size aSize( 0, 0 );
++    
++    DBG( "%p Player::getPreferredPlayerWindowSize, member %d x %d", this, mnWidth, mnHeight );
++
++    TimeValue aTimeout = { 10, 0 };
++    oslConditionResult aResult = osl_waitCondition( maSizeCondition, &aTimeout );
++
++    if( mbFakeVideo ) {
++        mbFakeVideo = sal_False;
++
++         g_object_set( G_OBJECT( mpPlaybin ), "video-sink", NULL, NULL );
++         gst_element_set_state( mpPlaybin, GST_STATE_READY );
++         gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
++    }
++
++    DBG( "%p Player::getPreferredPlayerWindowSize after waitCondition %d, member %d x %d", this, aResult, mnWidth, mnHeight );
++
++    if( mnWidth != 0 && mnHeight != 0 ) {
++        aSize.Width = mnWidth;
++        aSize.Height = mnHeight;
++    }
++
++    return aSize;
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Reference< ::media::XPlayerWindow > SAL_CALL Player::createPlayerWindow( const uno::Sequence< uno::Any >& rArguments )
++    throw (uno::RuntimeException)
++{
++    uno::Reference< ::media::XPlayerWindow >    xRet;
++    awt::Size                                   aSize( getPreferredPlayerWindowSize() );
++
++    DBG( "Player::createPlayerWindow %d %d length: %d", aSize.Width, aSize.Height, rArguments.getLength() );
++
++    if( aSize.Width > 0 && aSize.Height > 0 )
++    {
++        ::avmedia::gstreamer::Window* pWindow = new ::avmedia::gstreamer::Window( mxMgr, *this );
++
++        xRet = pWindow;
++
++        if( rArguments.getLength() > 2 ) {
++            rArguments[ 2 ] >>= mnWindowID;
++            DBG( "window ID: %ld", mnWindowID );
++        }
++
++        //if( !pWindow->create( aArguments ) )
++        //xRet = uno::Reference< ::media::XPlayerWindow >();
++    }
++
++    return xRet;
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Reference< media::XFrameGrabber > SAL_CALL Player::createFrameGrabber(  )
++    throw (uno::RuntimeException)
++{
++    uno::Reference< media::XFrameGrabber > xRet;
++
++    /*if( maURL.getLength() > 0 )
++    {
++        FrameGrabber* pGrabber = new FrameGrabber( mxMgr );
++        
++        xRet = pGrabber;
++        
++        if( !pGrabber->create( maURL ) )
++            xRet.clear();
++            }*/
++    
++    return xRet;
++}
++
++// ------------------------------------------------------------------------------
++
++::rtl::OUString SAL_CALL Player::getImplementationName(  )
++    throw (uno::RuntimeException)
++{
++    return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_GST_PLAYER_IMPLEMENTATIONNAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Player::supportsService( const ::rtl::OUString& ServiceName )
++    throw (uno::RuntimeException)
++{
++    return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_GST_PLAYER_SERVICENAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Sequence< ::rtl::OUString > SAL_CALL Player::getSupportedServiceNames(  )
++    throw (uno::RuntimeException)
++{
++    uno::Sequence< ::rtl::OUString > aRet(1);
++    aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_GST_PLAYER_SERVICENAME ) );
++
++    return aRet;
++}
++
++} // namespace gstreamer
++} // namespace avmedia
+--- avmedia/source/gstreamer/gstplayer.hxx
++++ avmedia/source/gstreamer/gstplayer.hxx
+@@ -0,0 +1,120 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#ifndef _PLAYER_HXX
++#define _PLAYER_HXX
++
++#include <osl/conditn.h>
++#include "gstcommon.hxx"
++
++#ifndef _COM_SUN_STAR_MEDIA_XPLAYER_HDL_
++#include "com/sun/star/media/XPlayer.hdl"
++#endif
++
++typedef struct _GstXOverlay GstXOverlay;
++
++namespace avmedia { namespace gstreamer {
++
++// ----------
++// - Player -
++// ----------
++
++class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer,
++                                               ::com::sun::star::lang::XServiceInfo >
++{
++public:
++
++    Player( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
++    ~Player();
++
++    void preparePlaybin( const ::rtl::OUString& rURL, bool bFakeVideo );
++    bool create( const ::rtl::OUString& rURL );
++    void processMessage( GstMessage *message );
++    GstBusSyncReply processSyncMessage( GstMessage *message );
++
++    // XPlayer
++    virtual void SAL_CALL start(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL stop(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL isPlaying(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual double SAL_CALL getDuration(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setMediaTime( double fTime ) throw (::com::sun::star::uno::RuntimeException);
++    virtual double SAL_CALL getMediaTime(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setStopTime( double fTime ) throw (::com::sun::star::uno::RuntimeException);
++    virtual double SAL_CALL getStopTime(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setRate( double fRate ) throw (::com::sun::star::uno::RuntimeException);
++    virtual double SAL_CALL getRate(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setPlaybackLoop( sal_Bool bSet ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL isPlaybackLoop(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setMute( sal_Bool bSet ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL isMute(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setVolumeDB( sal_Int16 nVolumeDB ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Int16 SAL_CALL getVolumeDB(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::awt::Size SAL_CALL getPreferredPlayerWindowSize(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XPlayerWindow > SAL_CALL createPlayerWindow( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XFrameGrabber > SAL_CALL createFrameGrabber(  ) throw (::com::sun::star::uno::RuntimeException);
++
++    // XServiceInfo
++    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException);
++
++private:
++
++    ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > mxMgr;
++
++    ::rtl::OUString         maURL;
++    
++    // Add elements and pipeline here
++    GstElement*             mpPlaybin;  // the playbin is also a pipeline
++    sal_Bool                mbFakeVideo;
++
++    gdouble                 mnUnmutedVolume;
++    sal_Bool                mbMuted;
++    sal_Bool                mbLooping;
++    sal_Bool                mbInitialized;
++
++    long                    mnWindowID;
++    GstXOverlay*            mpXOverlay;
++    gint64                  mnDuration;
++    int                     mnWidth;
++    int                     mnHeight;
++
++    oslCondition            maSizeCondition;
++};
++
++} // namespace gstreamer
++} // namespace avmedia
++
++#endif // _PLAYER_HXX
+--- avmedia/source/gstreamer/gstuno.cxx
++++ avmedia/source/gstreamer/gstuno.cxx
+@@ -0,0 +1,111 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#include "gstmanager.hxx"
++
++using namespace ::com::sun::star;
++
++// -------------------
++// - factory methods -
++// -------------------
++
++static uno::Reference< uno::XInterface > SAL_CALL create_MediaPlayer( const uno::Reference< lang::XMultiServiceFactory >& rxFact )
++{
++	return uno::Reference< uno::XInterface >( *new ::avmedia::gstreamer::Manager( rxFact ) );
++}
++
++// ------------------------------------------
++// - component_getImplementationEnvironment -
++// ------------------------------------------
++
++extern "C" void SAL_CALL component_getImplementationEnvironment( const sal_Char ** ppEnvTypeName, uno_Environment ** ppEnv )
++{
++	*ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
++}
++
++// -----------------------
++// - component_writeInfo -
++// -----------------------
++
++extern "C" sal_Bool SAL_CALL component_writeInfo( void* pServiceManager, void* pRegistryKey )
++{
++	sal_Bool bRet = sal_False;
++
++	if( pRegistryKey )
++	{
++		try
++		{
++			uno::Reference< registry::XRegistryKey > xNewKey1(
++				static_cast< registry::XRegistryKey* >( pRegistryKey )->createKey(                                
++                ::rtl::OUString::createFromAscii( "/com.sun.star.comp.media.Manager_GStreamer/UNO/SERVICES/com.sun.star.media.Manager_GStreamer" ) ) );
++
++			bRet = sal_True;
++		}
++		catch( registry::InvalidRegistryException& )
++		{
++			OSL_ENSURE( sal_False, "### InvalidRegistryException!" );
++		}
++	}
++
++	return bRet;
++}
++
++// ------------------------
++// - component_getFactory -
++// ------------------------
++
++extern "C" void* SAL_CALL component_getFactory( const sal_Char* pImplName, void* pServiceManager, void* pRegistryKey )
++{
++	uno::Reference< lang::XSingleServiceFactory > xFactory;
++	void*									pRet = 0;
++
++	if( rtl_str_compare( pImplName, "com.sun.star.comp.media.Manager_GStreamer" ) == 0 )
++	{
++		const ::rtl::OUString aServiceName( ::rtl::OUString::createFromAscii( "com.sun.star.media.Manager_GStreamer" ) );
++
++		xFactory = uno::Reference< lang::XSingleServiceFactory >( ::cppu::createSingleFactory(
++						reinterpret_cast< lang::XMultiServiceFactory* >( pServiceManager ),
++						::rtl::OUString::createFromAscii( "com.sun.star.comp.media.Manager_GStreamer" ),
++						create_MediaPlayer, uno::Sequence< ::rtl::OUString >( &aServiceName, 1 ) ) );
++	}
++
++	if( xFactory.is() )
++	{
++		xFactory->acquire();
++		pRet = xFactory.get();
++	}
++
++	return pRet;
++}
+--- avmedia/source/gstreamer/gstwindow.cxx
++++ avmedia/source/gstreamer/gstwindow.cxx
+@@ -0,0 +1,365 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#include <com/sun/star/awt/SystemPointer.hdl>
++
++#include "gstwindow.hxx"
++#include "gstplayer.hxx"
++
++#define AVMEDIA_GST_WINDOW_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Window_GStreamer"
++#define AVMEDIA_GST_WINDOW_SERVICENAME "com.sun.star.media.Window_GStreamer"
++
++using namespace ::com::sun::star;
++
++namespace avmedia { namespace gstreamer {
++
++// -----------
++// - statics -
++// -----------
++
++static ::osl::Mutex& ImplGetOwnStaticMutex()
++{
++    static ::osl::Mutex* pMutex = NULL;
++
++    if( pMutex == NULL )
++    {
++        ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
++
++        if( pMutex == NULL )
++        {
++            static ::osl::Mutex aMutex;
++            pMutex = &aMutex;
++        }
++    }
++
++    return *pMutex;
++}
++
++// ---------------
++// - Window -
++// ---------------
++
++// ------------------------------------------------------------------------------
++
++Window::Window( const uno::Reference< lang::XMultiServiceFactory >& rxMgr, Player& rPlayer ) :
++    mxMgr( rxMgr ),
++    maListeners( maMutex ),
++    meZoomLevel( media::ZoomLevel_NOT_AVAILABLE ),
++    mrPlayer( rPlayer ),
++    mnPointerType( awt::SystemPointer::ARROW )
++{
++    ::osl::MutexGuard aGuard( ImplGetOwnStaticMutex() );
++
++}
++
++// ------------------------------------------------------------------------------
++
++Window::~Window()
++{
++}
++
++// XPlayerWindow
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::update(  )
++    throw (uno::RuntimeException)
++{
++    //::RedrawWindow( (HWND) mnFrameWnd, NULL, NULL, RDW_ALLCHILDREN | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE  );
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Window::setZoomLevel( media::ZoomLevel eZoomLevel )
++    throw (uno::RuntimeException)
++{
++        sal_Bool bRet = false;
++
++        if( media::ZoomLevel_NOT_AVAILABLE != meZoomLevel &&
++            media::ZoomLevel_NOT_AVAILABLE != eZoomLevel )
++        {
++            if( eZoomLevel != meZoomLevel )
++            {
++                meZoomLevel = eZoomLevel;
++                //ImplLayoutVideoWindow();
++            }
++
++            bRet = true;
++        }
++
++        return bRet;
++}
++
++// ------------------------------------------------------------------------------
++
++media::ZoomLevel SAL_CALL Window::getZoomLevel(  )
++    throw (uno::RuntimeException)
++{
++    return meZoomLevel;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::setPointerType( sal_Int32 nPointerType ) 
++    throw (uno::RuntimeException)
++{
++    mnPointerType = nPointerType;
++}
++
++// XWindow
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::setPosSize( sal_Int32 X, sal_Int32 Y, sal_Int32 Width, sal_Int32 Height, sal_Int16 Flags )
++    throw (uno::RuntimeException)
++{
++//     if( mnFrameWnd )
++//     {
++//         ::SetWindowPos( (HWND) mnFrameWnd, HWND_TOP, X, Y, Width, Height, 0 );
++//         ImplLayoutVideoWindow();
++//     }
++}
++
++// ------------------------------------------------------------------------------
++
++awt::Rectangle SAL_CALL Window::getPosSize()
++    throw (uno::RuntimeException)
++{
++    awt::Rectangle aRet;
++
++    aRet.X = aRet.Y = 0;
++    aRet.Width = 320;
++    aRet.Height = 240;
++
++//     if( mnFrameWnd )
++//     {
++//         ::RECT  aWndRect;
++//         long    nX = 0, nY = 0, nWidth = 0, nHeight = 0;
++
++//         if( ::GetClientRect( (HWND) mnFrameWnd, &aWndRect ) )
++//         {
++//             aRet.X = aWndRect.left;
++//             aRet.Y = aWndRect.top;
++//             aRet.Width = aWndRect.right - aWndRect.left + 1;
++//             aRet.Height = aWndRect.bottom - aWndRect.top + 1;
++//         }
++//     }
++
++    return aRet;
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::setVisible( sal_Bool bVisible )
++    throw (uno::RuntimeException)
++{
++//     if( mnFrameWnd )
++//     {
++//         IVideoWindow* pVideoWindow = const_cast< IVideoWindow* >( mrPlayer.getVideoWindow() );
++
++//         if( pVideoWindow )
++//             pVideoWindow->put_Visible( bVisible ? OATRUE : OAFALSE );
++
++//         ::ShowWindow( (HWND) mnFrameWnd, bVisible ? SW_SHOW : SW_HIDE );
++//     }
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::setEnable( sal_Bool bEnable )
++    throw (uno::RuntimeException)
++{
++//     if( mnFrameWnd )
++//         ::EnableWindow( (HWND) mnFrameWnd, bEnable );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::setFocus(  )
++    throw (uno::RuntimeException)
++{
++//     if( mnFrameWnd )
++//         ::SetFocus( (HWND) mnFrameWnd );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addWindowListener( const uno::Reference< awt::XWindowListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removeWindowListener( const uno::Reference< awt::XWindowListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addFocusListener( const uno::Reference< awt::XFocusListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removeFocusListener( const uno::Reference< awt::XFocusListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addKeyListener( const uno::Reference< awt::XKeyListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removeKeyListener( const uno::Reference< awt::XKeyListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addMouseListener( const uno::Reference< awt::XMouseListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removeMouseListener( const uno::Reference< awt::XMouseListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addMouseMotionListener( const uno::Reference< awt::XMouseMotionListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removeMouseMotionListener( const uno::Reference< awt::XMouseMotionListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addPaintListener( const uno::Reference< awt::XPaintListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removePaintListener( const uno::Reference< awt::XPaintListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++
++// XComponent
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::dispose(  )
++    throw (uno::RuntimeException)
++{
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::addEventListener( const uno::Reference< lang::XEventListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.addInterface( getCppuType( &xListener ), xListener );
++}
++
++// ------------------------------------------------------------------------------
++
++void SAL_CALL Window::removeEventListener( const uno::Reference< lang::XEventListener >& xListener )
++    throw (uno::RuntimeException)
++{
++    maListeners.removeInterface( getCppuType( &xListener ), xListener );
++}
++
++// XServiceInfo
++// ------------------------------------------------------------------------------
++
++::rtl::OUString SAL_CALL Window::getImplementationName(  )
++    throw (uno::RuntimeException)
++{
++    return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_GST_WINDOW_IMPLEMENTATIONNAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++sal_Bool SAL_CALL Window::supportsService( const ::rtl::OUString& ServiceName )
++    throw (uno::RuntimeException)
++{
++    return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_GST_WINDOW_SERVICENAME ) );
++}
++
++// ------------------------------------------------------------------------------
++
++uno::Sequence< ::rtl::OUString > SAL_CALL Window::getSupportedServiceNames(  )
++    throw (uno::RuntimeException)
++{
++    uno::Sequence< ::rtl::OUString > aRet(1);
++    aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_GST_WINDOW_SERVICENAME ) );
++
++    return aRet;
++}
++
++} // namespace gstreamer
++} // namespace avmedia
+--- avmedia/source/gstreamer/gstwindow.hxx
++++ avmedia/source/gstreamer/gstwindow.hxx
+@@ -0,0 +1,119 @@
++/*************************************************************************
++ *
++ *  OpenOffice.org - a multi-platform office productivity suite
++ *
++ *  $RCSfile: gstreamer-support_oog680_m1.diff,v $
++ *
++ *  $Revision: 1.1 $
++ *
++ *  last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++ *
++ *  The Contents of this file are made available subject to
++ *  the terms of GNU Lesser General Public License Version 2.1.
++ *
++ *
++ *    GNU Lesser General Public License Version 2.1
++ *    =============================================
++ *    Copyright 2005 by Sun Microsystems, Inc.
++ *    901 San Antonio Road, Palo Alto, CA 94303, USA
++ *
++ *    This library is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU Lesser General Public
++ *    License version 2.1, as published by the Free Software Foundation.
++ *
++ *    This library is distributed in the hope that it will be useful,
++ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *    Lesser General Public License for more details.
++ *
++ *    You should have received a copy of the GNU Lesser General Public
++ *    License along with this library; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ *    MA  02111-1307  USA
++ *
++ ************************************************************************/
++
++#ifndef _WINDOW_HXX
++#define _WINDOW_HXX
++
++#include "gstcommon.hxx"
++#include <cppuhelper/interfacecontainer.h>
++
++#ifndef _COM_SUN_STAR_MEDIA_XPLAYERWINDOW_HDL_
++#include "com/sun/star/media/XPlayerWindow.hdl"
++#endif
++
++namespace avmedia { namespace gstreamer {
++
++// ---------------
++// - Window -
++// ---------------
++
++class Player;
++
++class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayerWindow,
++                                                ::com::sun::star::lang::XServiceInfo >
++{
++public:
++
++            Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr,
++                    Player& rPlayer );
++            ~Window();
++
++    bool    create( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments );
++    void    processGraphEvent();
++    void    updatePointer();
++
++    // XPlayerWindow
++    virtual void SAL_CALL update(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL setZoomLevel( ::com::sun::star::media::ZoomLevel ZoomLevel ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::media::ZoomLevel SAL_CALL getZoomLevel(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setPointerType( sal_Int32 nPointerType ) throw (::com::sun::star::uno::RuntimeException);
++
++    // XWindow
++    virtual void SAL_CALL setPosSize( sal_Int32 X, sal_Int32 Y, sal_Int32 Width, sal_Int32 Height, sal_Int16 Flags ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::awt::Rectangle SAL_CALL getPosSize(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setVisible( sal_Bool Visible ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setEnable( sal_Bool Enable ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL setFocus(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addWindowListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removeWindowListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addFocusListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XFocusListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removeFocusListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XFocusListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addKeyListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XKeyListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removeKeyListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XKeyListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addMouseListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XMouseListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removeMouseListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XMouseListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addMouseMotionListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XMouseMotionListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removeMouseMotionListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XMouseMotionListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addPaintListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XPaintListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removePaintListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XPaintListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++
++    // XComponent
++    virtual void SAL_CALL dispose(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL addEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
++    virtual void SAL_CALL removeEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& aListener ) throw (::com::sun::star::uno::RuntimeException);
++
++    // XServiceInfo
++    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException);
++    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException);
++    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException);
++
++
++private:
++
++    ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > mxMgr;
++
++    ::osl::Mutex                                maMutex;
++    ::cppu::OMultiTypeInterfaceContainerHelper  maListeners;
++    ::com::sun::star::media::ZoomLevel          meZoomLevel;
++    Player&                                     mrPlayer;
++    int                                         mnPointerType;
++
++    void                                        ImplLayoutVideoWindow();
++};
++
++} // namespace gstreamer
++} // namespace avmedia
++
++#endif // _WINDOW_HXX
+--- avmedia/source/gstreamer/makefile.mk
++++ avmedia/source/gstreamer/makefile.mk
+@@ -0,0 +1,85 @@
++#*************************************************************************
++#
++#   OpenOffice.org - a multi-platform office productivity suite
++#
++#   $RCSfile: gstreamer-support_oog680_m1.diff,v $
++#
++#   $Revision: 1.1 $
++#
++#   last change: $Author: andyrtr $ $Date: 2007/08/25 10:52:35 $
++#
++#   The Contents of this file are made available subject to
++#   the terms of GNU Lesser General Public License Version 2.1.
++#
++#
++#     GNU Lesser General Public License Version 2.1
++#     =============================================
++#     Copyright 2005 by Sun Microsystems, Inc.
++#     901 San Antonio Road, Palo Alto, CA 94303, USA
++#
++#     This library is free software; you can redistribute it and/or
++#     modify it under the terms of the GNU Lesser General Public
++#     License version 2.1, as published by the Free Software Foundation.
++#
++#     This library is distributed in the hope that it will be useful,
++#     but WITHOUT ANY WARRANTY; without even the implied warranty of
++#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++#     Lesser General Public License for more details.
++#
++#     You should have received a copy of the GNU Lesser General Public
++#     License along with this library; if not, write to the Free Software
++#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++#     MA  02111-1307  USA
++#
++#*************************************************************************
++
++PRJ=..$/..
++PRJNAME=avmedia
++TARGET=avmediagst
++
++# --- Settings ----------------------------------
++
++.INCLUDE :  	settings.mk
++
++.IF "$(ENABLE_GSTREAMER)" == "TRUE"
++
++.IF "$(verbose)"!="" || "$(VERBOSE)"!=""
++CDEFS+= -DVERBOSE
++.ENDIF
++
++PKGCONFIG_MODULES=gstreamer-0.10, gstreamer-plugins-base-0.10
++.INCLUDE: pkg_config.mk
++PKGCONFIG_LIBS+=-lgstinterfaces-0.10
++
++# --- Files ----------------------------------
++
++.IF "$(GUI)" == "UNX" || "$(GUI)" == "WNT"
++
++.IF "$(GUI)" == "WNT"
++CDEFS+= -DWINNT
++.ENDIF
++
++SLOFILES= \
++		$(SLO)$/gstuno.obj      \
++		$(SLO)$/gstmanager.obj  \
++		$(SLO)$/gstplayer.obj	\
++		$(SLO)$/gstwindow.obj
++        
++
++EXCEPTIONSFILES= \
++		$(SLO)$/gstuno.obj      \
++
++SHL1TARGET=$(TARGET)
++SHL1STDLIBS= $(CPPULIB) $(SALLIB) $(COMPHELPERLIB) $(CPPUHELPERLIB) $(PKGCONFIG_LIBS) $(TOOLSLIB)
++SHL1IMPLIB=i$(TARGET)
++SHL1LIBS=$(SLB)$/$(TARGET).lib
++SHL1DEF=$(MISC)$/$(SHL1TARGET).def
++
++DEF1NAME=$(SHL1TARGET)
++DEF1EXPORTFILE=exports.dxp
++
++.ENDIF
++
++.ENDIF
++
++.INCLUDE :  	target.mk
+--- avmedia/source/inc/mediamisc.hxx
++++ avmedia/source/inc/mediamisc.hxx
+@@ -37,13 +37,16 @@
+ 
+ #define AVMEDIA_RESID( nId ) ResId( nId, * ::avmedia::GetResMgr() )
+ 
++#ifdef GSTREAMER
++#define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_GStreamer"
++#else
+ #ifdef WNT
+ #define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_DirectX"
+ #else
+ #define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_Java"
+ #endif
++#endif
+ 
+- 
+ namespace avmedia
+ {
+     ResMgr* GetResMgr();
+--- avmedia/source/viewer/mediawindow.cxx
++++ avmedia/source/viewer/mediawindow.cxx
+@@ -383,8 +383,10 @@
+                                         "AU Audio", "au",
+                                         "AVI", "avi",
+                                         "CD Audio", "cda",
++                                        "FLAC Audio", "flac",
+                                         "MIDI Audio", "mid;midi",
+                                         "MPEG Audio", "mp2;mp3;mpa",
++                                        "OGG Audio/Video", "ogg",
+                                         "MPEG Video", "mpg;mpeg;mpv",
+                                         "Quicktime Video", "mov",
+                                         "Vivo Video", "viv",
+--- avmedia/source/viewer/mediawindow_impl.cxx
++++ avmedia/source/viewer/mediawindow_impl.cxx
+@@ -44,6 +44,11 @@
+ #include <osl/mutex.hxx>
+ #include <tools/time.hxx>
+ #include <vcl/svapp.hxx>
++#ifdef UNX
++#ifndef _SV_SYSDATA_HXX
++#include <vcl/sysdata.hxx>
++#endif
++#endif
+ 
+ #ifndef _COM_SUN_STAR_AWT_SYSTEMPOINTER_HDL_
+ #include <com/sun/star/awt/SystemPointer.hdl>
+@@ -102,7 +107,11 @@
+ // --------------------
+ 
+ MediaChildWindow::MediaChildWindow( Window* pParent ) :
++#ifdef GSTREAMER
++	SystemChildWindow( pParent, WB_CLIPCHILDREN )
++#else
+ 	JavaChildWindow( pParent, WB_CLIPCHILDREN )
++#endif
+ {
+ }
+ 
+@@ -119,7 +128,11 @@
+ 	const MouseEvent aTransformedEvent( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( rMEvt.GetPosPixel() ) ),
+ 								  		rMEvt.GetClicks(), rMEvt.GetMode(), rMEvt.GetButtons(), rMEvt.GetModifier() );
+ 	
++#ifdef GSTREAMER
++	SystemChildWindow::MouseMove( rMEvt );
++#else
+ 	JavaChildWindow::MouseMove( rMEvt );
++#endif
+ 	GetParent()->MouseMove( aTransformedEvent );
+ }
+ 
+@@ -130,7 +143,11 @@
+ 	const MouseEvent aTransformedEvent( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( rMEvt.GetPosPixel() ) ),
+ 								  		rMEvt.GetClicks(), rMEvt.GetMode(), rMEvt.GetButtons(), rMEvt.GetModifier() );
+ 	
++#ifdef GSTREAMER
++	SystemChildWindow::MouseButtonDown( rMEvt );
++#else
+ 	JavaChildWindow::MouseButtonDown( rMEvt );
++#endif
+ 	GetParent()->MouseButtonDown( aTransformedEvent );
+ }
+ 
+@@ -140,8 +157,12 @@
+ {
+ 	const MouseEvent aTransformedEvent( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( rMEvt.GetPosPixel() ) ),
+ 								  		rMEvt.GetClicks(), rMEvt.GetMode(), rMEvt.GetButtons(), rMEvt.GetModifier() );
+-	
++
++#ifdef GSTREAMER
++	SystemChildWindow::MouseButtonUp( rMEvt );
++#else
+ 	JavaChildWindow::MouseButtonUp( rMEvt );
++#endif
+ 	GetParent()->MouseButtonUp( aTransformedEvent );
+ }
+ 
+@@ -149,7 +170,11 @@
+ 
+ void MediaChildWindow::KeyInput( const KeyEvent& rKEvt )
+ {
++#ifdef GSTREAMER
++	SystemChildWindow::KeyInput( rKEvt );
++#else
+ 	JavaChildWindow::KeyInput( rKEvt );
++#endif
+ 	GetParent()->KeyInput( rKEvt );
+ }
+ 
+@@ -157,7 +182,11 @@
+ 
+ void MediaChildWindow::KeyUp( const KeyEvent& rKEvt )
+ {
++#ifdef GSTREAMER
++	SystemChildWindow::KeyUp( rKEvt );
++#else
+ 	JavaChildWindow::KeyUp( rKEvt );
++#endif
+ 	GetParent()->KeyUp( rKEvt );
+ }
+ 
+@@ -168,7 +197,11 @@
+ 	const CommandEvent aTransformedEvent( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( rCEvt.GetMousePosPixel() ) ),
+ 								  		  rCEvt.GetCommand(), rCEvt.IsMouseEvent(), rCEvt.GetData() );
+ 	
++#ifdef GSTREAMER
++	SystemChildWindow::Command( rCEvt );
++#else
+ 	JavaChildWindow::Command( rCEvt );
++#endif
+ 	GetParent()->Command( aTransformedEvent );
+ }
+ 
+@@ -237,18 +270,31 @@
+ {
+     if( getPlayer().is() )
+     {
+-        uno::Sequence< uno::Any >              aArgs( 2 );
++        uno::Sequence< uno::Any >              aArgs( 3 );
+         uno::Reference< media::XPlayerWindow > xPlayerWindow;
+     	const Point                            aPoint;
+ 		const Size					           aSize( maChildWindow.GetSizePixel() );
++#ifndef GSTREAMER
+         const sal_Int32                        nWndHandle = static_cast< sal_Int32 >( maChildWindow.getParentWindowHandleForJava() );
++#else
++        const sal_Int32                        nWndHandle = 0;
++#endif
+ 		
+ 		aArgs[ 0 ] = uno::makeAny( nWndHandle );
+ 		aArgs[ 1 ] = uno::makeAny( awt::Rectangle( aPoint.X(), aPoint.Y(), aSize.Width(), aSize.Height() ) );
++#ifdef GSTREAMER
++                const SystemEnvData *pSystemData = maChildWindow.GetSystemData();
++                OSL_TRACE( "MediaWindowImpl::onURLChanged xwindow id: %ld", pSystemData->aWindow );
++                aArgs[ 2 ] = uno::makeAny( pSystemData->aWindow );
++#endif
+         
+         try
+         {
++#ifdef GSTREAMER
++            if( pSystemData->aWindow != 0 )
++#else
+             if( nWndHandle != 0 )
++#endif
+                 xPlayerWindow = getPlayer()->createPlayerWindow( aArgs );
+         }
+         catch( uno::RuntimeException )
+--- avmedia/source/viewer/mediawindow_impl.hxx
++++ avmedia/source/viewer/mediawindow_impl.hxx
+@@ -37,7 +37,11 @@
+ #define _AVMEDIA_MEDIAWINDOW_IMPL_HXX
+ 
+ #include <svtools/transfer.hxx>
++#ifdef GSTREAMER
++#include <vcl/syschild.hxx>
++#else
+ #include <vcl/javachild.hxx>
++#endif
+ 
+ #include "mediawindowbase_impl.hxx"
+ #include "mediacontrol.hxx"
+@@ -69,7 +73,11 @@
+ 		// - MediaChildWindow -
+ 		// --------------------
+ 		
++#ifdef GSTREAMER
++		class MediaChildWindow : public SystemChildWindow
++#else
+ 		class MediaChildWindow : public JavaChildWindow
++#endif
+ 		{
+ 		public:
+ 		
+--- config_office/configure.in
++++ config_office/configure.in
+@@ -742,6 +742,7 @@
+ 	solaris*)
+ 		test_gtk=yes
+ 		build_cairo=yes
++		build_gstreamer=yes
+ 		test_kde=yes
+ 		test_cups=yes
+ 		_os=SunOS
+@@ -768,6 +769,7 @@
+ 	linux-gnu)
+ 		test_gtk=yes
+ 		build_cairo=yes
++		build_gstreamer=yes
+ 		test_kde=yes
+ 		test_cups=yes
+ 		if getconf GNU_LIBPTHREAD_VERSION |grep -q NPTL; then
+@@ -787,6 +789,7 @@
+ 		test_cups=yes
+ 		test_gtk=yes
+ 		build_cairo=no
++		build_gstreamer=no
+ 		_os=Darwin
+       if test "$enable_systray" = "yes" && test "$enable_gtk" != "no"; then
+          AC_MSG_WARN([Disabling gtk-quickstarter - not supported on Mac. Use --disable-systray])
+@@ -797,6 +800,7 @@
+ 	freebsd*)
+ 		test_gtk=yes
+ 		build_cairo=yes
++		build_gstreamer=yes
+ 		test_kde=yes
+ 		test_cups=yes
+ 		AC_MSG_CHECKING([the FreeBSD operating system release])
+@@ -827,6 +831,7 @@
+ 	netbsd)
+ 		test_gtk=yes
+ 		build_cairo=yes
++		build_gstreamer=yes
+ 		test_kde=yes
+ 		test_cups=no
+ 		PTHREAD_CFLAGS="-pthread"
+@@ -4755,6 +4760,26 @@
+ AC_SUBST(CAIRO_LIBS)
+ 
+ dnl ===================================================================
++dnl Check whether the GStreamer libraries are available.
++dnl ===================================================================
++
++ENABLE_GSTREAMER=""
++
++if test  "$build_gstreamer" = "yes"; then
++
++    AC_MSG_CHECKING([whether to enable the GStreamer avmedia backend])
++    if test "x$enable_gstreamer" != "xno" ; then
++        ENABLE_GSTREAMER="TRUE"
++	AC_MSG_RESULT([yes])
++	PKG_CHECK_MODULES( GSTREAMER, gstreamer-0.10 gstreamer-plugins-base-0.10 )
++    else
++	     AC_MSG_RESULT([no])
++    fi
++fi
++
++AC_SUBST(ENABLE_GSTREAMER)
++
++dnl ===================================================================
+ dnl Check whether the Qt and KDE libraries are available.
+ dnl ===================================================================
+ 
+--- config_office/set_soenv.in
++++ config_office/set_soenv.in
+@@ -1546,6 +1546,7 @@
+ ToFile( "ENABLE_STATIC_GTK", "@ENABLE_STATIC_GTK@", "e" );
+ ToFile( "ENABLE_CAIRO",      "@ENABLE_CAIRO@",     "e" );
+ ToFile( "ENABLE_DBUS",       "@ENABLE_DBUS@",      "e" );
++ToFile( "ENABLE_GSTREAMER",  "@ENABLE_GSTREAMER@", "e" );
+ ToFile( "ENABLE_GNOMEVFS",   "@ENABLE_GNOMEVFS@",  "e" );
+ ToFile( "ENABLE_KDE",        "@ENABLE_KDE@",       "e" );
+ ToFile( "KDE_CFLAGS",        "@KDE_CFLAGS@",       "e" );
+--- scp2/source/ooo/file_library_ooo.scp
++++ scp2/source/ooo/file_library_ooo.scp
+@@ -2565,6 +2565,9 @@
+ // AVMedia
+ STD_LIB_FILE_PATCH( gid_File_Lib_AVMedia, avmedia )
+ 
++#ifdef GSTREAMER
++SPECIAL_UNO_LIB_FILE_PATCH( gid_File_Lib_AVMediaGStreamer, avmediagst )
++#else
+ #if defined UNX
+ #ifdef SOLAR_JAVA
+ UNO_JAR_FILE_PATCH( gid_File_Jar_AVmedia, avmedia )
+@@ -2574,6 +2577,7 @@
+ SPECIAL_UNO_LIB_FILE_PATCH( gid_File_Lib_AVMediaWin, avmediawin )
+ #endif
+ #endif
++#endif
+ 
+ #ifndef WITHOUT_MOZILLA
+ File gid_File_Lib_XSec_Framework
+--- scp2/source/ooo/module_hidden_ooo.scp
++++ scp2/source/ooo/module_hidden_ooo.scp
+@@ -246,6 +246,7 @@
+ 	gid_File_Lib_Svx,
+ 	gid_File_Lib_AVMedia,
+ 	gid_File_Lib_AVMediaWin,
++	gid_File_Lib_AVMediaGStreamer,
+ 	gid_File_Lib_BaseGfx,
+ 	gid_File_Lib_Sysdtrans,
+ 	gid_File_Lib_Sw,
+--- sd/source/ui/animations/CustomAnimationDialog.cxx
++++ sd/source/ui/animations/CustomAnimationDialog.cxx
+@@ -1943,11 +1943,15 @@
+ // TODO(Q3): This breaks encapsulation. Either export
+ // these strings from avmedia, or provide an XManager
+ // factory there
++#ifdef GSTREAMER
++#	define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_GStreamer"
++#else
+ #ifdef WNT
+ #	define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_DirectX"
+ #else
+ #	define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_Java"
+ #endif
++#endif
+ 
+ void CustomAnimationEffectTabPage::onSoundPreview()
+ {
+--- slideshow/source/engine/shapes/viewmediashape.cxx
++++ slideshow/source/engine/shapes/viewmediashape.cxx
+@@ -75,11 +75,22 @@
+ #include "mediashape.hxx"
+ #include "tools.hxx"
+ 
++#ifdef GSTREAMER
++#ifndef _SV_SYSDATA_HXX
++#include <vcl/sysdata.hxx>
++#endif
++
++// TODO(Q3): This breaks encapsulation. Either export
++// these strings from avmedia, or provide an XManager
++// factory there
++#define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_GStreamer"
++#else
+ #ifdef WNT
+ #define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_DirectX"
+ #else
+ #define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_Java"
+ #endif
++#endif
+ 
+ using namespace ::com::sun::star;
+ 
+@@ -157,7 +168,11 @@
+ 				mxPlayerWindow.clear();
+ 			}
+ 
++#ifdef GSTREAMER
++            mpMediaWindow = ::std::auto_ptr< SystemChildWindow >();
++#else
+             mpMediaWindow = ::std::auto_ptr< JavaChildWindow >();
++#endif
+             			
+ 			// shutdown player
+ 			if( mxPlayer.is() )
+@@ -292,7 +307,8 @@
+ 							aDeviceParams[ 0 ] >>= aImplName;
+ 						
+ 							if( aImplName.endsWithIgnoreAsciiCaseAsciiL( 
+-                                    RTL_CONSTASCII_STRINGPARAM("VCLCanvas") ))
++                                    RTL_CONSTASCII_STRINGPARAM("VCLCanvas") ) || aImplName.endsWithIgnoreAsciiCaseAsciiL( 
++                                    RTL_CONSTASCII_STRINGPARAM("CairoCanvas") ) )
+                             {
+ 								implInitializeVCLBasedPlayerWindow( rBounds, aDeviceParams );
+                             }
+@@ -414,6 +430,7 @@
+ 		bool ViewMediaShape::implInitializeVCLBasedPlayerWindow( const ::basegfx::B2DRectangle&   rBounds,
+ 																 const uno::Sequence< uno::Any >& rVCLDeviceParams)
+ 		{
++                    OSL_TRACE( "ViewMediaShape::implInitializeVCLBasedPlayerWindow" );
+ 			if( !mpMediaWindow.get() && !rBounds.isEmpty() )
+ 			{
+ 				try
+@@ -435,28 +452,48 @@
+ 																	
+ 						if( !rRangePix.isEmpty() )
+ 						{
+-							uno::Sequence< uno::Any > 	aArgs( 2 );
++							uno::Sequence< uno::Any > 	aArgs( 3 );
+ 							awt::Rectangle				aAWTRect( rRangePix.getMinX(),
+ 																  rRangePix.getMinY(),
+ 														  		  rRangePix.getMaxX() - rRangePix.getMinX(),
+ 														  		  rRangePix.getMaxY() - rRangePix.getMinY() );
+-
++#ifdef GSTREAMER
++                                                        OSL_TRACE( "created sys child window for viewmediashape" );
++							mpMediaWindow = ::std::auto_ptr< SystemChildWindow >( new SystemChildWindow( pWindow, WB_CLIPCHILDREN ) );
++#else
+ 							mpMediaWindow = ::std::auto_ptr< JavaChildWindow >( new JavaChildWindow( pWindow, WB_CLIPCHILDREN ) );
++#endif
+ 							mpMediaWindow->SetBackground( Color( COL_BLACK ) );
+ 							mpMediaWindow->SetPosSizePixel( Point( aAWTRect.X, 
+                                                                    aAWTRect.Y ),
+ 															Size( aAWTRect.Width, 
+                                                                   aAWTRect.Height ));
++
++                            mpMediaWindow->SetParentClipMode( PARENTCLIPMODE_NOCLIP );
++                            mpMediaWindow->EnableEraseBackground( FALSE );
++                            mpMediaWindow->EnablePaint( FALSE );
++                            mpMediaWindow->SetForwardKey( TRUE );
++                            mpMediaWindow->SetMouseTransparent( TRUE );
++
+ 							mpMediaWindow->Show();
+ 							
+ 							if( mxPlayer.is() )
+ 							{
++#ifndef GSTREAMER
+ 								aArgs[ 0 ] = uno::makeAny( 
+                                     sal::static_int_cast<sal_Int32>(
+                                         mpMediaWindow->getParentWindowHandleForJava()) );
+-								
++					
++#else
++                                                                aArgs[ 0 ] = uno::makeAny ( (sal_Int32) 0 );
++#endif			
+ 								aAWTRect.X = aAWTRect.Y = 0;
+ 								aArgs[ 1 ] = uno::makeAny( aAWTRect );
++#ifdef GSTREAMER
++                                                                const SystemEnvData *pSystemData = mpMediaWindow->GetSystemData();
++                                                                OSL_TRACE( "xwindow id: %ld", pSystemData->aWindow );
++								aArgs[ 2 ] = uno::makeAny( pSystemData->aWindow );
++#endif
+ 								
+ 								mxPlayerWindow.set( mxPlayer->createPlayerWindow( aArgs ) );
+ 								
+--- slideshow/source/engine/shapes/viewmediashape.hxx
++++ slideshow/source/engine/shapes/viewmediashape.hxx
+@@ -45,6 +45,7 @@
+ #include "viewlayer.hxx"
+ 
+ class JavaChildWindow;
++class SystemChildWindow;
+ 
+ namespace com { namespace sun { namespace star { namespace drawing {
+     class XShape;
+@@ -149,7 +150,11 @@
+ 													const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& rDXDeviceParams );
+ 			
+ 			ViewLayerSharedPtr					  mpViewLayer;
++#ifdef GSTREAMER
++			::std::auto_ptr< SystemChildWindow >	mpMediaWindow;
++#else
+ 			::std::auto_ptr< JavaChildWindow >    mpMediaWindow;
++#endif
+ 			mutable ::com::sun::star::awt::Point  maWindowOffset;
+             mutable ::basegfx::B2DRectangle       maBounds;
+         
+--- slideshow/source/engine/soundplayer.cxx
++++ slideshow/source/engine/soundplayer.cxx
+@@ -58,12 +58,15 @@
+ // TODO(Q3): This breaks encapsulation. Either export
+ // these strings from avmedia, or provide an XManager
+ // factory there
++#ifdef GSTREAMER
++#	define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_GStreamer"
++#else
+ #ifdef WNT
+ #	define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_DirectX"
+ #else
+ #	define AVMEDIA_MANAGER_SERVICE_NAME "com.sun.star.media.Manager_Java"
+ #endif 
+-
++#endif
+ 
+ namespace slideshow
+ {
+--- solenv/inc/settings.mk
++++ solenv/inc/settings.mk
+@@ -1080,6 +1080,10 @@
+ LOCAL_EXCEPTIONS_FLAGS+=$(CFLAGSEXCEPTIONS)
+ LOCAL_EXCEPTIONS_FLAGS+=-DEXCEPTIONS_ON
+ 
++.IF "$(ENABLE_GSTREAMER)" == "TRUE"
++CDEFS+=-DGSTREAMER
++.ENDIF
++
+ # compose flags and defines for GUI
+ .IF "$(TARGETTYPE)"=="GUI"
+ CDEFS+= $(CDEFSGUI)
+--- svtools/inc/svtools/inettype.hxx
++++ svtools/inc/svtools/inettype.hxx
+@@ -105,6 +105,7 @@
+ #define CONTENT_TYPE_STR_AUDIO_AIFF "audio/aiff"
+ #define CONTENT_TYPE_STR_AUDIO_BASIC "audio/basic"
+ #define CONTENT_TYPE_STR_AUDIO_MIDI "audio/midi"
++#define CONTENT_TYPE_STR_AUDIO_VORBIS "audio/vorbis"
+ #define CONTENT_TYPE_STR_AUDIO_WAV "audio/wav"
+ #define CONTENT_TYPE_STR_X_CNT_DOCUMENT ".chaos/document"
+ #define CONTENT_TYPE_STR_X_CNT_FSYSBOX ".chaos/fsys-box"
+@@ -170,6 +171,7 @@
+ #define CONTENT_TYPE_STR_TEXT_URL "text/x-url"
+ #define CONTENT_TYPE_STR_TEXT_VCALENDAR "text/x-vCalendar"
+ #define CONTENT_TYPE_STR_TEXT_VCARD "text/x-vCard"
++#define CONTENT_TYPE_STR_VIDEO_THEORA "video/theora"
+ #define CONTENT_TYPE_STR_VIDEO_VDO "video/vdo"
+ #define CONTENT_TYPE_STR_VIDEO_MSVIDEO "video/x-msvideo"
+ #define CONTENT_TYPE_STR_X_STARMAIL "x-starmail"
+@@ -243,6 +245,7 @@
+ 	CONTENT_TYPE_AUDIO_AIFF,
+ 	CONTENT_TYPE_AUDIO_BASIC,
+ 	CONTENT_TYPE_AUDIO_MIDI,
++	CONTENT_TYPE_AUDIO_VORBIS,
+ 	CONTENT_TYPE_AUDIO_WAV,
+ 	CONTENT_TYPE_IMAGE_GIF,
+ 	CONTENT_TYPE_IMAGE_JPEG,
+@@ -254,6 +257,7 @@
+ 	CONTENT_TYPE_TEXT_PLAIN,
+ 	CONTENT_TYPE_TEXT_URL,
+ 	CONTENT_TYPE_TEXT_VCARD,
++	CONTENT_TYPE_VIDEO_THEORA,
+ 	CONTENT_TYPE_VIDEO_VDO,
+ 	CONTENT_TYPE_VIDEO_MSVIDEO,
+ 	CONTENT_TYPE_X_CNT_MESSAGE,
+--- svtools/inc/svtools/svtools.hrc
++++ svtools/inc/svtools/svtools.hrc
+@@ -151,110 +151,112 @@
+ #define STR_SVT_MIMETYPE_APP_ZIP			(STR_SVT_MIMETYPE_START+10)
+ #define STR_SVT_MIMETYPE_AUDIO_AIFF 		(STR_SVT_MIMETYPE_START+11)
+ #define STR_SVT_MIMETYPE_AUDIO_BASIC		(STR_SVT_MIMETYPE_START+12)
+-#define STR_SVT_MIMETYPE_AUDIO_MIDI 		(STR_SVT_MIMETYPE_START+13)
+-#define STR_SVT_MIMETYPE_AUDIO_WAV			(STR_SVT_MIMETYPE_START+14)
+-#define STR_SVT_MIMETYPE_IMAGE_GIF			(STR_SVT_MIMETYPE_START+15)
+-#define STR_SVT_MIMETYPE_IMAGE_JPEG 		(STR_SVT_MIMETYPE_START+16)
+-#define STR_SVT_MIMETYPE_IMAGE_PCX			(STR_SVT_MIMETYPE_START+17)
+-#define STR_SVT_MIMETYPE_IMAGE_BMP			(STR_SVT_MIMETYPE_START+18)
+-#define STR_SVT_MIMETYPE_TEXT_HTML			(STR_SVT_MIMETYPE_START+19)
+-#define STR_SVT_MIMETYPE_TEXT_PLAIN 		(STR_SVT_MIMETYPE_START+20)
+-#define STR_SVT_MIMETYPE_TEXT_URL			(STR_SVT_MIMETYPE_START+21)
+-#define STR_SVT_MIMETYPE_TEXT_VCARD 		(STR_SVT_MIMETYPE_START+22)
+-#define STR_SVT_MIMETYPE_VIDEO_VDO			(STR_SVT_MIMETYPE_START+23)
+-#define STR_SVT_MIMETYPE_VIDEO_MSVIDEO		(STR_SVT_MIMETYPE_START+24)
+-#define STR_SVT_MIMETYPE_X_STARMAIL 		(STR_SVT_MIMETYPE_START+25)
+-#define STR_SVT_MIMETYPE_X_VRML 			(STR_SVT_MIMETYPE_START+26)
+-#define STR_SVT_MIMETYPE_APP_STARHELP		(STR_SVT_MIMETYPE_START+27)
+-#define STR_SVT_MIMETYPE_APP_STARIMPRESS	(STR_SVT_MIMETYPE_START+28)
+-#define STR_SVT_MIMETYPE_APP_SCHED_CMB		(STR_SVT_MIMETYPE_START+29)
+-#define STR_SVT_MIMETYPE_APP_SCHED_EVT		(STR_SVT_MIMETYPE_START+30)
+-#define STR_SVT_MIMETYPE_APP_SCHED_TASK 	(STR_SVT_MIMETYPE_START+31)
+-#define STR_SVT_MIMETYPE_APP_SCHED_TVIEW	(STR_SVT_MIMETYPE_START+32)
+-
+-#define STR_SVT_MIMETYPE_CNT_MSG			(STR_SVT_MIMETYPE_START+33)
+-#define STR_SVT_MIMETYPE_CNT_DOCUMENT		(STR_SVT_MIMETYPE_START+34)
+-#define STR_SVT_MIMETYPE_CNT_POP3BOX		(STR_SVT_MIMETYPE_START+35)
+-#define STR_SVT_MIMETYPE_CNT_IMAPBOX		(STR_SVT_MIMETYPE_START+36)
+-#define STR_SVT_MIMETYPE_CNT_IMAPFLD		(STR_SVT_MIMETYPE_START+37)
+-#define STR_SVT_MIMETYPE_CNT_VIMBOX 		(STR_SVT_MIMETYPE_START+38)
+-#define STR_SVT_MIMETYPE_CNT_VIMINBOX		(STR_SVT_MIMETYPE_START+39)
+-#define STR_SVT_MIMETYPE_CNT_BBBOX			(STR_SVT_MIMETYPE_START+40)
+-#define STR_SVT_MIMETYPE_CNT_VIM_BB 		(STR_SVT_MIMETYPE_START+41)
+-#define STR_SVT_MIMETYPE_CNT_NEWSBOX		(STR_SVT_MIMETYPE_START+42)
+-#define STR_SVT_MIMETYPE_CNT_NEWSGRP		(STR_SVT_MIMETYPE_START+43)
+-#define STR_SVT_MIMETYPE_CNT_OUTBOX 		(STR_SVT_MIMETYPE_START+44)
+-#define STR_SVT_MIMETYPE_CNT_FTPBOX 		(STR_SVT_MIMETYPE_START+45)
+-#define STR_SVT_MIMETYPE_CNT_FTPFLD 		(STR_SVT_MIMETYPE_START+46)
+-#define STR_SVT_MIMETYPE_CNT_FTPFILE		(STR_SVT_MIMETYPE_START+47)
+-#define STR_SVT_MIMETYPE_CNT_FTPLINK		(STR_SVT_MIMETYPE_START+48)
+-#define STR_SVT_MIMETYPE_CNT_HTTPBOX		(STR_SVT_MIMETYPE_START+49)
+-#define STR_SVT_MIMETYPE_CNT_FSYSBOX		(STR_SVT_MIMETYPE_START+50)
+-#define STR_SVT_MIMETYPE_CNT_FSYSFLD		(STR_SVT_MIMETYPE_START+51)
+-#define STR_SVT_MIMETYPE_CNT_FSYSFILE		(STR_SVT_MIMETYPE_START+52)
+-#define STR_SVT_MIMETYPE_CNT_FSYSURLFILE	(STR_SVT_MIMETYPE_START+53)
+-#define STR_SVT_MIMETYPE_CNT_PUBLBOX		(STR_SVT_MIMETYPE_START+54)
+-#define STR_SVT_MIMETYPE_CNT_SRCHBOX		(STR_SVT_MIMETYPE_START+55)
+-#define STR_SVT_MIMETYPE_CNT_SUBSCRBOX		(STR_SVT_MIMETYPE_START+56)
+-#define STR_SVT_MIMETYPE_CNT_BOOKMARK		(STR_SVT_MIMETYPE_START+57)
+-#define STR_SVT_MIMETYPE_CNT_CDF			(STR_SVT_MIMETYPE_START+58)
+-#define STR_SVT_MIMETYPE_CNT_CDFSUB 		(STR_SVT_MIMETYPE_START+59)
+-#define STR_SVT_MIMETYPE_CNT_CDFITEM		(STR_SVT_MIMETYPE_START+60)
+-#define STR_SVT_MIMETYPE_CNT_STARCHANNEL	(STR_SVT_MIMETYPE_START+61)
+-#define STR_SVT_MIMETYPE_CNT_TRASHBOX		(STR_SVT_MIMETYPE_START+62)
+-#define STR_SVT_MIMETYPE_CNT_TRASH			(STR_SVT_MIMETYPE_START+63)
+-#define STR_SVT_MIMETYPE_CNT_REMOV_VOL		(STR_SVT_MIMETYPE_START+64)
+-#define STR_SVT_MIMETYPE_CNT_FIX_VOL		(STR_SVT_MIMETYPE_START+65)
+-#define STR_SVT_MIMETYPE_CNT_REM_VOL		(STR_SVT_MIMETYPE_START+66)
+-#define STR_SVT_MIMETYPE_CNT_RAM_VOL		(STR_SVT_MIMETYPE_START+67)
+-#define STR_SVT_MIMETYPE_CNT_CDROM			(STR_SVT_MIMETYPE_START+68)
+-#define STR_SVT_MIMETYPE_CNT_DISK_35		(STR_SVT_MIMETYPE_START+69)
+-#define STR_SVT_MIMETYPE_CNT_DISK_525		(STR_SVT_MIMETYPE_START+70)
+-#define STR_SVT_MIMETYPE_CNT_TAPEDRIVE		(STR_SVT_MIMETYPE_START+71)
+-#define STR_SVT_MIMETYPE_APP_GAL			(STR_SVT_MIMETYPE_START+72)
+-#define STR_SVT_MIMETYPE_APP_GAL_THEME		(STR_SVT_MIMETYPE_START+73)
+-#define STR_SVT_MIMETYPE_CNT_SEPARATOR		(STR_SVT_MIMETYPE_START+74)
+-#define STR_SVT_MIMETYPE_APP_STARW_GLOB 	(STR_SVT_MIMETYPE_START+75)
+-#define STR_SVT_MIMETYPE_APP_SDM			(STR_SVT_MIMETYPE_START+76)
+-#define STR_SVT_MIMETYPE_APP_SMD			(STR_SVT_MIMETYPE_START+77)
+-#define STR_SVT_MIMETYPE_APP_STARW_WEB		(STR_SVT_MIMETYPE_START+78)
+-#define STR_SVT_MIMETYPE_SCHEDULE			(STR_SVT_MIMETYPE_START+79)
+-#define STR_SVT_MIMETYPE_SCHEDULE_EVT		(STR_SVT_MIMETYPE_START+80)
+-#define STR_SVT_MIMETYPE_SCHEDULE_TASK		(STR_SVT_MIMETYPE_START+81)
+-#define STR_SVT_MIMETYPE_SCHEDULE_FEVT		(STR_SVT_MIMETYPE_START+82)
+-#define STR_SVT_MIMETYPE_SCHEDULE_FTASK 	(STR_SVT_MIMETYPE_START+83)
+-#define STR_SVT_MIMETYPE_FRAMESET			(STR_SVT_MIMETYPE_START+84)
+-#define STR_SVT_MIMETYPE_MACRO				(STR_SVT_MIMETYPE_START+85)
+-#define STR_SVT_MIMETYPE_CNT_SFSYSFOLDER	(STR_SVT_MIMETYPE_START+86)
+-#define STR_SVT_MIMETYPE_CNT_SFSYSFILE		(STR_SVT_MIMETYPE_START+87)
+-#define STR_SVT_MIMETYPE_APP_TEMPLATE		(STR_SVT_MIMETYPE_START+88)
+-#define STR_SVT_MIMETYPE_IMAGE_GENERIC		(STR_SVT_MIMETYPE_START+89)
+-#define STR_SVT_MIMETYPE_APP_MSEXCEL		(STR_SVT_MIMETYPE_START+90)
+-#define STR_SVT_MIMETYPE_APP_MSEXCEL_TEMPL	(STR_SVT_MIMETYPE_START+91)
+-#define STR_SVT_MIMETYPE_APP_MSPPOINT		(STR_SVT_MIMETYPE_START+92)
+-#define STR_SVT_MIMETYPE_TEXT_VCALENDAR 	(STR_SVT_MIMETYPE_START+93)
+-#define STR_SVT_MIMETYPE_TEXT_ICALENDAR 	(STR_SVT_MIMETYPE_START+94)
+-#define STR_SVT_MIMETYPE_TEXT_XMLICALENDAR 	(STR_SVT_MIMETYPE_START+95)
+-#define STR_SVT_MIMETYPE_TEXT_CDE_CALENDAR_APP 	(STR_SVT_MIMETYPE_START+96)
+-#define STR_SVT_MIMETYPE_INET_MSG_RFC822 		(STR_SVT_MIMETYPE_START+97)
+-#define STR_SVT_MIMETYPE_INET_MULTI_ALTERNATIVE	(STR_SVT_MIMETYPE_START+98)
+-#define STR_SVT_MIMETYPE_INET_MULTI_DIGEST 		(STR_SVT_MIMETYPE_START+99)
+-#define STR_SVT_MIMETYPE_INET_MULTI_PARALLEL 	(STR_SVT_MIMETYPE_START+100)
+-#define STR_SVT_MIMETYPE_INET_MULTI_RELATED		(STR_SVT_MIMETYPE_START+101)
+-#define STR_SVT_MIMETYPE_INET_MULTI_MIXED 		(STR_SVT_MIMETYPE_START+102)
+-#define STR_SVT_MIMETYPE_APP_IMPRESSPACKED		(STR_SVT_MIMETYPE_START+103)
+-#define STR_SVT_MIMETYPE_APP_JAR				(STR_SVT_MIMETYPE_START+104)
+-#define STR_SVT_MIMETYPE_IMAGE_PNG				(STR_SVT_MIMETYPE_START+105)
+-#define STR_SVT_MIMETYPE_IMAGE_TIFF 			(STR_SVT_MIMETYPE_START+106)
+-
+-#define STR_SVT_MIMETYPE_APP_SXCALC			(STR_SVT_MIMETYPE_START+107)
+-#define STR_SVT_MIMETYPE_APP_SXCHART		(STR_SVT_MIMETYPE_START+108)
+-#define STR_SVT_MIMETYPE_APP_SXDRAW			(STR_SVT_MIMETYPE_START+109)
+-#define STR_SVT_MIMETYPE_APP_SXMATH			(STR_SVT_MIMETYPE_START+110)
+-#define STR_SVT_MIMETYPE_APP_SXWRITER		(STR_SVT_MIMETYPE_START+111)
+-#define STR_SVT_MIMETYPE_APP_SXIMPRESS		(STR_SVT_MIMETYPE_START+112)
+-#define STR_SVT_MIMETYPE_APP_SXGLOBAL		(STR_SVT_MIMETYPE_START+113)
+-#define STR_SVT_MIMETYPE_APP_SXIPACKED		(STR_SVT_MIMETYPE_START+114)
++#define STR_SVT_MIMETYPE_AUDIO_VORBIS 		(STR_SVT_MIMETYPE_START+13)
++#define STR_SVT_MIMETYPE_AUDIO_MIDI 		(STR_SVT_MIMETYPE_START+14)
++#define STR_SVT_MIMETYPE_AUDIO_WAV			(STR_SVT_MIMETYPE_START+15)
++#define STR_SVT_MIMETYPE_IMAGE_GIF			(STR_SVT_MIMETYPE_START+16)
++#define STR_SVT_MIMETYPE_IMAGE_JPEG 		(STR_SVT_MIMETYPE_START+17)
++#define STR_SVT_MIMETYPE_IMAGE_PCX			(STR_SVT_MIMETYPE_START+18)
++#define STR_SVT_MIMETYPE_IMAGE_BMP			(STR_SVT_MIMETYPE_START+19)
++#define STR_SVT_MIMETYPE_TEXT_HTML			(STR_SVT_MIMETYPE_START+20)
++#define STR_SVT_MIMETYPE_TEXT_PLAIN 		(STR_SVT_MIMETYPE_START+21)
++#define STR_SVT_MIMETYPE_TEXT_URL			(STR_SVT_MIMETYPE_START+22)
++#define STR_SVT_MIMETYPE_TEXT_VCARD 		(STR_SVT_MIMETYPE_START+23)
++#define STR_SVT_MIMETYPE_VIDEO_THEORA			(STR_SVT_MIMETYPE_START+24)
++#define STR_SVT_MIMETYPE_VIDEO_VDO			(STR_SVT_MIMETYPE_START+25)
++#define STR_SVT_MIMETYPE_VIDEO_MSVIDEO		(STR_SVT_MIMETYPE_START+26)
++#define STR_SVT_MIMETYPE_X_STARMAIL 		(STR_SVT_MIMETYPE_START+27)
++#define STR_SVT_MIMETYPE_X_VRML 			(STR_SVT_MIMETYPE_START+28)
++#define STR_SVT_MIMETYPE_APP_STARHELP		(STR_SVT_MIMETYPE_START+29)
++#define STR_SVT_MIMETYPE_APP_STARIMPRESS	(STR_SVT_MIMETYPE_START+30)
++#define STR_SVT_MIMETYPE_APP_SCHED_CMB		(STR_SVT_MIMETYPE_START+31)
++#define STR_SVT_MIMETYPE_APP_SCHED_EVT		(STR_SVT_MIMETYPE_START+32)
++#define STR_SVT_MIMETYPE_APP_SCHED_TASK 	(STR_SVT_MIMETYPE_START+33)
++#define STR_SVT_MIMETYPE_APP_SCHED_TVIEW	(STR_SVT_MIMETYPE_START+34)
++
++#define STR_SVT_MIMETYPE_CNT_MSG			(STR_SVT_MIMETYPE_START+35)
++#define STR_SVT_MIMETYPE_CNT_DOCUMENT		(STR_SVT_MIMETYPE_START+36)
++#define STR_SVT_MIMETYPE_CNT_POP3BOX		(STR_SVT_MIMETYPE_START+37)
++#define STR_SVT_MIMETYPE_CNT_IMAPBOX		(STR_SVT_MIMETYPE_START+38)
++#define STR_SVT_MIMETYPE_CNT_IMAPFLD		(STR_SVT_MIMETYPE_START+39)
++#define STR_SVT_MIMETYPE_CNT_VIMBOX 		(STR_SVT_MIMETYPE_START+40)
++#define STR_SVT_MIMETYPE_CNT_VIMINBOX		(STR_SVT_MIMETYPE_START+41)
++#define STR_SVT_MIMETYPE_CNT_BBBOX			(STR_SVT_MIMETYPE_START+42)
++#define STR_SVT_MIMETYPE_CNT_VIM_BB 		(STR_SVT_MIMETYPE_START+43)
++#define STR_SVT_MIMETYPE_CNT_NEWSBOX		(STR_SVT_MIMETYPE_START+44)
++#define STR_SVT_MIMETYPE_CNT_NEWSGRP		(STR_SVT_MIMETYPE_START+45)
++#define STR_SVT_MIMETYPE_CNT_OUTBOX 		(STR_SVT_MIMETYPE_START+46)
++#define STR_SVT_MIMETYPE_CNT_FTPBOX 		(STR_SVT_MIMETYPE_START+47)
++#define STR_SVT_MIMETYPE_CNT_FTPFLD 		(STR_SVT_MIMETYPE_START+48)
++#define STR_SVT_MIMETYPE_CNT_FTPFILE		(STR_SVT_MIMETYPE_START+49)
++#define STR_SVT_MIMETYPE_CNT_FTPLINK		(STR_SVT_MIMETYPE_START+50)
++#define STR_SVT_MIMETYPE_CNT_HTTPBOX		(STR_SVT_MIMETYPE_START+51)
++#define STR_SVT_MIMETYPE_CNT_FSYSBOX		(STR_SVT_MIMETYPE_START+52)
++#define STR_SVT_MIMETYPE_CNT_FSYSFLD		(STR_SVT_MIMETYPE_START+53)
++#define STR_SVT_MIMETYPE_CNT_FSYSFILE		(STR_SVT_MIMETYPE_START+54)
++#define STR_SVT_MIMETYPE_CNT_FSYSURLFILE	(STR_SVT_MIMETYPE_START+55)
++#define STR_SVT_MIMETYPE_CNT_PUBLBOX		(STR_SVT_MIMETYPE_START+56)
++#define STR_SVT_MIMETYPE_CNT_SRCHBOX		(STR_SVT_MIMETYPE_START+57)
++#define STR_SVT_MIMETYPE_CNT_SUBSCRBOX		(STR_SVT_MIMETYPE_START+58)
++#define STR_SVT_MIMETYPE_CNT_BOOKMARK		(STR_SVT_MIMETYPE_START+59)
++#define STR_SVT_MIMETYPE_CNT_CDF			(STR_SVT_MIMETYPE_START+60)
++#define STR_SVT_MIMETYPE_CNT_CDFSUB 		(STR_SVT_MIMETYPE_START+61)
++#define STR_SVT_MIMETYPE_CNT_CDFITEM		(STR_SVT_MIMETYPE_START+62)
++#define STR_SVT_MIMETYPE_CNT_STARCHANNEL	(STR_SVT_MIMETYPE_START+63)
++#define STR_SVT_MIMETYPE_CNT_TRASHBOX		(STR_SVT_MIMETYPE_START+64)
++#define STR_SVT_MIMETYPE_CNT_TRASH			(STR_SVT_MIMETYPE_START+65)
++#define STR_SVT_MIMETYPE_CNT_REMOV_VOL		(STR_SVT_MIMETYPE_START+66)
++#define STR_SVT_MIMETYPE_CNT_FIX_VOL		(STR_SVT_MIMETYPE_START+67)
++#define STR_SVT_MIMETYPE_CNT_REM_VOL		(STR_SVT_MIMETYPE_START+68)
++#define STR_SVT_MIMETYPE_CNT_RAM_VOL		(STR_SVT_MIMETYPE_START+69)
++#define STR_SVT_MIMETYPE_CNT_CDROM			(STR_SVT_MIMETYPE_START+70)
++#define STR_SVT_MIMETYPE_CNT_DISK_35		(STR_SVT_MIMETYPE_START+71)
++#define STR_SVT_MIMETYPE_CNT_DISK_525		(STR_SVT_MIMETYPE_START+72)
++#define STR_SVT_MIMETYPE_CNT_TAPEDRIVE		(STR_SVT_MIMETYPE_START+73)
++#define STR_SVT_MIMETYPE_APP_GAL			(STR_SVT_MIMETYPE_START+74)
++#define STR_SVT_MIMETYPE_APP_GAL_THEME		(STR_SVT_MIMETYPE_START+75)
++#define STR_SVT_MIMETYPE_CNT_SEPARATOR		(STR_SVT_MIMETYPE_START+76)
++#define STR_SVT_MIMETYPE_APP_STARW_GLOB 	(STR_SVT_MIMETYPE_START+77)
++#define STR_SVT_MIMETYPE_APP_SDM			(STR_SVT_MIMETYPE_START+78)
++#define STR_SVT_MIMETYPE_APP_SMD			(STR_SVT_MIMETYPE_START+79)
++#define STR_SVT_MIMETYPE_APP_STARW_WEB		(STR_SVT_MIMETYPE_START+80)
++#define STR_SVT_MIMETYPE_SCHEDULE			(STR_SVT_MIMETYPE_START+81)
++#define STR_SVT_MIMETYPE_SCHEDULE_EVT		(STR_SVT_MIMETYPE_START+82)
++#define STR_SVT_MIMETYPE_SCHEDULE_TASK		(STR_SVT_MIMETYPE_START+83)
++#define STR_SVT_MIMETYPE_SCHEDULE_FEVT		(STR_SVT_MIMETYPE_START+84)
++#define STR_SVT_MIMETYPE_SCHEDULE_FTASK 	(STR_SVT_MIMETYPE_START+85)
++#define STR_SVT_MIMETYPE_FRAMESET			(STR_SVT_MIMETYPE_START+86)
++#define STR_SVT_MIMETYPE_MACRO				(STR_SVT_MIMETYPE_START+87)
++#define STR_SVT_MIMETYPE_CNT_SFSYSFOLDER	(STR_SVT_MIMETYPE_START+88)
++#define STR_SVT_MIMETYPE_CNT_SFSYSFILE		(STR_SVT_MIMETYPE_START+89)
++#define STR_SVT_MIMETYPE_APP_TEMPLATE		(STR_SVT_MIMETYPE_START+90)
++#define STR_SVT_MIMETYPE_IMAGE_GENERIC		(STR_SVT_MIMETYPE_START+91)
++#define STR_SVT_MIMETYPE_APP_MSEXCEL		(STR_SVT_MIMETYPE_START+92)
++#define STR_SVT_MIMETYPE_APP_MSEXCEL_TEMPL	(STR_SVT_MIMETYPE_START+93)
++#define STR_SVT_MIMETYPE_APP_MSPPOINT		(STR_SVT_MIMETYPE_START+94)
++#define STR_SVT_MIMETYPE_TEXT_VCALENDAR 	(STR_SVT_MIMETYPE_START+95)
++#define STR_SVT_MIMETYPE_TEXT_ICALENDAR 	(STR_SVT_MIMETYPE_START+96)
++#define STR_SVT_MIMETYPE_TEXT_XMLICALENDAR 	(STR_SVT_MIMETYPE_START+97)
++#define STR_SVT_MIMETYPE_TEXT_CDE_CALENDAR_APP 	(STR_SVT_MIMETYPE_START+98)
++#define STR_SVT_MIMETYPE_INET_MSG_RFC822 		(STR_SVT_MIMETYPE_START+99)
++#define STR_SVT_MIMETYPE_INET_MULTI_ALTERNATIVE	(STR_SVT_MIMETYPE_START+100)
++#define STR_SVT_MIMETYPE_INET_MULTI_DIGEST 		(STR_SVT_MIMETYPE_START+101)
++#define STR_SVT_MIMETYPE_INET_MULTI_PARALLEL 	(STR_SVT_MIMETYPE_START+102)
++#define STR_SVT_MIMETYPE_INET_MULTI_RELATED		(STR_SVT_MIMETYPE_START+103)
++#define STR_SVT_MIMETYPE_INET_MULTI_MIXED 		(STR_SVT_MIMETYPE_START+104)
++#define STR_SVT_MIMETYPE_APP_IMPRESSPACKED		(STR_SVT_MIMETYPE_START+105)
++#define STR_SVT_MIMETYPE_APP_JAR				(STR_SVT_MIMETYPE_START+106)
++#define STR_SVT_MIMETYPE_IMAGE_PNG				(STR_SVT_MIMETYPE_START+107)
++#define STR_SVT_MIMETYPE_IMAGE_TIFF 			(STR_SVT_MIMETYPE_START+108)
++
++#define STR_SVT_MIMETYPE_APP_SXCALC			(STR_SVT_MIMETYPE_START+109)
++#define STR_SVT_MIMETYPE_APP_SXCHART		(STR_SVT_MIMETYPE_START+110)
++#define STR_SVT_MIMETYPE_APP_SXDRAW			(STR_SVT_MIMETYPE_START+111)
++#define STR_SVT_MIMETYPE_APP_SXMATH			(STR_SVT_MIMETYPE_START+112)
++#define STR_SVT_MIMETYPE_APP_SXWRITER		(STR_SVT_MIMETYPE_START+113)
++#define STR_SVT_MIMETYPE_APP_SXIMPRESS		(STR_SVT_MIMETYPE_START+114)
++#define STR_SVT_MIMETYPE_APP_SXGLOBAL		(STR_SVT_MIMETYPE_START+115)
++#define STR_SVT_MIMETYPE_APP_SXIPACKED		(STR_SVT_MIMETYPE_START+116)
+ #define STR_SVT_MIMETYPE_END				(STR_SVT_MIMETYPE_APP_SXIPACKED)
+ 
+ #define STR_SVT_PRNDLG_START				(STR_SVT_MIMETYPE_END+1)
+--- svtools/source/misc1/inettype.cxx
++++ svtools/source/misc1/inettype.cxx
+@@ -318,6 +318,7 @@
+ 		{ CONTENT_TYPE_STR_AUDIO_AIFF, CONTENT_TYPE_AUDIO_AIFF, "aif" },
+ 		{ CONTENT_TYPE_STR_AUDIO_BASIC, CONTENT_TYPE_AUDIO_BASIC, "au" },
+ 		{ CONTENT_TYPE_STR_AUDIO_MIDI, CONTENT_TYPE_AUDIO_MIDI, "mid" },
++		{ CONTENT_TYPE_STR_AUDIO_VORBIS, CONTENT_TYPE_AUDIO_VORBIS, "ogg" },
+ 		{ CONTENT_TYPE_STR_AUDIO_WAV, CONTENT_TYPE_AUDIO_WAV, "wav" },
+ 		{ CONTENT_TYPE_STR_IMAGE_GENERIC, CONTENT_TYPE_IMAGE_GENERIC, "tmp" },
+ 		{ CONTENT_TYPE_STR_IMAGE_GIF, CONTENT_TYPE_IMAGE_GIF, "gif" },
+@@ -348,6 +349,7 @@
+ 		{ CONTENT_TYPE_STR_TEXT_VCALENDAR, CONTENT_TYPE_TEXT_VCALENDAR,
+ 		  "vcs" },
+ 		{ CONTENT_TYPE_STR_TEXT_VCARD, CONTENT_TYPE_TEXT_VCARD, "vcf" },
++		{ CONTENT_TYPE_STR_VIDEO_THEORA, CONTENT_TYPE_VIDEO_THEORA, "ogg" },
+ 		{ CONTENT_TYPE_STR_VIDEO_VDO, CONTENT_TYPE_VIDEO_VDO, "vdo" },
+ 		{ CONTENT_TYPE_STR_VIDEO_MSVIDEO, CONTENT_TYPE_VIDEO_MSVIDEO, "avi" },
+ 		{ CONTENT_TYPE_STR_X_STARMAIL, CONTENT_TYPE_X_STARMAIL, "smd" },
+@@ -376,6 +378,7 @@
+ 		STR_SVT_MIMETYPE_AUDIO_AIFF, // CONTENT_TYPE_AUDIO_AIFF
+ 		STR_SVT_MIMETYPE_AUDIO_BASIC, // CONTENT_TYPE_AUDIO_BASIC
+ 		STR_SVT_MIMETYPE_AUDIO_MIDI, // CONTENT_TYPE_AUDIO_MIDI
++		STR_SVT_MIMETYPE_AUDIO_VORBIS, // CONTENT_TYPE_AUDIO_VORBIS
+ 		STR_SVT_MIMETYPE_AUDIO_WAV, // CONTENT_TYPE_AUDIO_WAV
+ 		STR_SVT_MIMETYPE_IMAGE_GIF, // CONTENT_TYPE_IMAGE_GIF
+ 		STR_SVT_MIMETYPE_IMAGE_JPEG, // CONTENT_TYPE_IMAGE_JPEG
+@@ -387,6 +390,7 @@
+ 		STR_SVT_MIMETYPE_TEXT_PLAIN, // CONTENT_TYPE_TEXT_PLAIN
+ 		STR_SVT_MIMETYPE_TEXT_URL, // CONTENT_TYPE_TEXT_URL
+ 		STR_SVT_MIMETYPE_TEXT_VCARD, // CONTENT_TYPE_TEXT_VCARD
++		STR_SVT_MIMETYPE_VIDEO_THEORA, // CONTENT_TYPE_VIDEO_THEORA
+ 		STR_SVT_MIMETYPE_VIDEO_VDO, // CONTENT_TYPE_VIDEO_VDO
+ 		STR_SVT_MIMETYPE_VIDEO_MSVIDEO, // CONTENT_TYPE_VIDEO_MSVIDEO
+ 		STR_SVT_MIMETYPE_CNT_MSG, // CONTENT_TYPE_X_CNT_MESSAGE
+@@ -522,6 +526,7 @@
+ 		{ "met", CONTENT_TYPE_IMAGE_GENERIC, "" },
+ 		{ "mid", CONTENT_TYPE_AUDIO_MIDI, "" },
+ 		{ "midi", CONTENT_TYPE_AUDIO_MIDI, "" },
++		{ "ogg", CONTENT_TYPE_AUDIO_VORBIS, "" },
+ 		{ "pbm", CONTENT_TYPE_IMAGE_GENERIC, "" },
+ 		{ "pcd", CONTENT_TYPE_IMAGE_GENERIC, "" },
+ 		{ "pct", CONTENT_TYPE_IMAGE_GENERIC, "" },
+--- svtools/source/misc1/mediatyp.src
++++ svtools/source/misc1/mediatyp.src
+@@ -118,6 +118,13 @@
+ 	Text [ en-US ] = "Audio file" ;
+ };
+ 
++String STR_SVT_MIMETYPE_AUDIO_VORBIS
++{
++	Text [ de ] = "Audio-Datei" ;
++	Text [ en-US ] = "Audio file" ;
++	Text [ x-comment ] = " ";
++};
++
+ String STR_SVT_MIMETYPE_AUDIO_WAV
+ {
+ 	Text [ en-US ] = "Audio file" ;
+@@ -163,6 +170,13 @@
+ 	Text [ en-US ] = "vCard file" ;
+ };
+ 
++String STR_SVT_MIMETYPE_VIDEO_THEORA
++{
++	Text [ de ] = "Video-Datei" ;
++	Text [ en-US ] = "Video file" ;
++	Text [ x-comment ] = " ";
++};
++
+ String STR_SVT_MIMETYPE_VIDEO_VDO
+ {
+ 	Text [ en-US ] = "Video file" ;
+--- vcl/inc/vcl/salobj.hxx
++++ vcl/inc/vcl/salobj.hxx
+@@ -88,6 +88,8 @@
+ 	virtual void					SetBackground() = 0;
+ 	virtual void					SetBackground( SalColor nSalColor ) = 0;
+ 
++        virtual void                                    SetForwardKey( BOOL bEnable ) {}
++
+ 	virtual const SystemEnvData*	GetSystemData() const = 0;
+ 
+ 	void					SetCallback( void* pInst, SALOBJECTPROC pProc )
+--- vcl/inc/vcl/syschild.hxx
++++ vcl/inc/vcl/syschild.hxx
+@@ -77,6 +77,7 @@
+     //  however, this might not always be required
+     void                    EnableEraseBackground( BOOL bEnable = TRUE );
+     BOOL                    IsEraseBackgroundEnabled();
++     void                    SetForwardKey( BOOL bEnable );
+ };
+ 
+ #endif // _SV_SYSCHILD_HXX
+--- vcl/source/window/syschild.cxx
++++ vcl/source/window/syschild.cxx
+@@ -210,3 +210,9 @@
+     else
+         return FALSE;
+ }
++
++void SystemChildWindow::SetForwardKey( BOOL bEnable )
++{
++       if ( mpWindowImpl->mpSysObj )
++               mpWindowImpl->mpSysObj->SetForwardKey( bEnable );
++}
+--- vcl/unx/gtk/window/gtkobject.cxx
++++ vcl/unx/gtk/window/gtkobject.cxx
+@@ -214,3 +214,11 @@
+         pThis->m_pSocket = NULL;
+     }
+ }
++
++void GtkSalObject::SetForwardKey( BOOL bEnable )
++{
++    if( bEnable )
++        gtk_widget_add_events( GTK_WIDGET( m_pSocket ), GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE );
++    else
++        gtk_widget_set_events( GTK_WIDGET( m_pSocket ), ~(GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE) & gtk_widget_get_events( GTK_WIDGET( m_pSocket ) ) );
++}
+--- vcl/unx/inc/plugins/gtk/gtkobject.hxx
++++ vcl/unx/inc/plugins/gtk/gtkobject.hxx
+@@ -78,6 +78,8 @@
+ 	virtual void					SetBackground();
+ 	virtual void					SetBackground( SalColor nSalColor );
+ 
++        virtual void                                    SetForwardKey( BOOL bEnable );
++
+ 	virtual const SystemEnvData*	GetSystemData() const;
+    
+ };
