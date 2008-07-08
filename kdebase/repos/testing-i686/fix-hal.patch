@@ -1,0 +1,75 @@
+diff -r -u kdebase-3.5.5a.dfsg.1.orig/kioslave/media/mediamanager/halbackend.cpp kdebase-3.5.5a.dfsg.1/kioslave/media/mediamanager/halbackend.cpp
+--- kdebase-3.5.5a.dfsg.1.orig/kioslave/media/mediamanager/halbackend.cpp	2007-01-25 12:34:07.805485000 +0300
++++ kdebase-3.5.5a.dfsg.1/kioslave/media/mediamanager/halbackend.cpp	2007-01-25 16:46:59.118184525 +0300
+@@ -745,6 +745,33 @@
+     s_HALBackend->DeviceCondition(udi, condition_name);
+ }
+ 
++QStringList HALBackend::getHALmountoptions(QString udi)
++{
++    const char*   _ppt_string;
++    LibHalVolume* volume;
++    LibHalDrive* drive;
++
++    QString _ppt_QString;
++    
++    volume = libhal_volume_from_udi( m_halContext, udi.latin1() );
++    if( volume )
++        drive = libhal_drive_from_udi( m_halContext, libhal_volume_get_storage_device_udi( volume ) );
++    else
++        drive = libhal_drive_from_udi( m_halContext, udi.latin1() );
++
++    if( !drive )
++	    return QString::null;
++
++    if( volume )
++       _ppt_string = libhal_volume_policy_get_mount_options ( drive, volume, NULL );
++    else
++       _ppt_string = libhal_drive_policy_get_mount_options ( drive, NULL );
++
++    _ppt_QString = QString(_ppt_string ? _ppt_string : "");
++
++   return QStringList::split(",",_ppt_QString);
++}
++
+ QStringList HALBackend::mountoptions(const QString &name)
+ {
+     const Medium* medium = m_mediaList.findById(name);
+@@ -1069,10 +1096,25 @@
+             soptions << QString("data=ordered");
+     }
+ 
++    QStringList hal_mount_options = getHALmountoptions(medium->id());
++    for (QValueListIterator<QString> it=hal_mount_options.begin();it!=hal_mount_options.end();it++)
++    {
++    	soptions << *it;
++	kdDebug()<<"HALOption: "<<*it<<endl;
++	if ((*it).startsWith("iocharset="))
++	{
++	    soptions.remove("utf8");
++	    kdDebug()<<"\"iocharset=\" found. Removing \"utf8\" from options."<<endl;
++	}
++    }
++
+     const char **options = new const char*[soptions.size() + 1];
+     uint noptions = 0;
+     for (QStringList::ConstIterator it = soptions.begin(); it != soptions.end(); ++it, ++noptions)
++    {
+         options[noptions] = (*it).latin1();
++        kdDebug()<<"Option: "<<*it<<endl;
++    }
+     options[noptions] = NULL;
+ 
+     QString qerror = mount_priv(medium->id().latin1(), mount_point.utf8(), options, noptions, dbus_connection);
+diff -r -u kdebase-3.5.5a.dfsg.1.orig/kioslave/media/mediamanager/halbackend.h kdebase-3.5.5a.dfsg.1/kioslave/media/mediamanager/halbackend.h
+--- kdebase-3.5.5a.dfsg.1.orig/kioslave/media/mediamanager/halbackend.h	2007-01-25 12:34:07.133446000 +0300
++++ kdebase-3.5.5a.dfsg.1/kioslave/media/mediamanager/halbackend.h	2007-01-25 16:33:54.413638693 +0300
+@@ -192,6 +192,7 @@
+ 				const char* message
+ 				);
+ 
++	QStringList getHALmountoptions(QString udi);
+ /* HAL and DBus structures */
+ private:
+ 	/**
+ 
