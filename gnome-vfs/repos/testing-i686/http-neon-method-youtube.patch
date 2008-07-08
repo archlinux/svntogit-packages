@@ -1,0 +1,80 @@
+--- trunk/modules/http-neon-method.c	2008/02/15 05:17:33	5446
++++ trunk/modules/http-neon-method.c	2008/03/21 11:21:39	5467
+@@ -1773,6 +1773,25 @@
+ 	return GNOME_VFS_OK;
+ }
+ 
++static gboolean
++http_context_host_matches (HttpContext *context, const char *glob)
++{
++        GnomeVFSToplevelURI *uri;
++        GPatternSpec *spec;
++        gboolean res;
++
++        uri = gnome_vfs_uri_get_toplevel (context->uri);
++
++        if (uri == NULL ||  uri->host_name == NULL || glob == NULL)
++                return FALSE;
++
++        spec = g_pattern_spec_new (glob);
++        res = g_pattern_match_string (spec, uri->host_name);
++        g_pattern_spec_free (spec);
++
++        return res;
++}
++
+ static GnomeVFSResult
+ http_follow_redirect (HttpContext *context)
+ {
+@@ -2255,7 +2274,7 @@
+ 	hctx = handle->context;
+ 	
+ get_start:	
+-	req  = ne_request_create (hctx->session, "GET", hctx->path);
++	req = ne_request_create (hctx->session, "GET", hctx->path);
+ 	
+ 	if (handle->use_range) {
+ 		
+@@ -2330,8 +2349,8 @@
+ 
+ 		handle->transfer_state = TRANSFER_READ;
+ 		handle->transfer.read = req;
+-	}
+-	
++	} 
++
+ 	return result;
+ }
+ 
+@@ -2347,6 +2366,20 @@
+ 	return GNOME_VFS_ERROR_INTERNAL;
+ }
+ 
++/* TRUE means we can range, ie server is sane, FALSE means FAIL */
++static gboolean
++i_can_haz_range_cause_serverz_not_br0ken (HttpContext *hctx)
++{
++        gboolean br0ken = FALSE;
++
++        if (http_context_host_matches (hctx, "*youtube.*")) {
++                DEBUG_HTTP ("Youtube detected! Cannot use ranged gets");
++                br0ken = TRUE;
++        }
++
++        return br0ken == FALSE;
++}
++
+ /* ************************************************************************** */
+ 
+ static GnomeVFSResult
+@@ -2402,8 +2435,8 @@
+ 			return result;
+ 		} 
+ 	} else {
+-                /* Always try to make Ranged puts */
+-		handle->use_range = TRUE;
++		handle->use_range = i_can_haz_range_cause_serverz_not_br0ken (hctx);
++                DEBUG_HTTP ("Use range: %s\n", handle->use_range ? "on" : "off");
+ 	}
+ 
+ 	result = http_transfer_start (handle);	
