@@ -1,57 +1,64 @@
 # $Id$
-# Maintainer: tobias <tobias@archlinux.org>
-# Modifications: eliott <eliott@cactuswax.net>
-# Originally by klapmuetz
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=lighttpd
 pkgver=1.4.19
-pkgrel=1
-pkgdesc="lighttpd is a secure, fast, compliant and very flexible web-server"
+pkgrel=2
+pkgdesc='a secure, fast, compliant and very flexible web-server'
 license=('custom')
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 url="http://www.lighttpd.net/"
-depends=('pcre' 'openssl' 'zlib' 'bzip2' 'attr')
-makedepends=('fcgi' 'libmysqlclient' 'libldap' 'lua' 'gdbm' 'libmemcache' 'sqlite3' \
-             'libxml2' 'vim' 'pkgconfig')
-backup=('etc/lighttpd/lighttpd.conf' 'etc/logrotate.d/lighttpd' \
-        'etc/conf.d/lighttpd' 'etc/conf.d/spawn-php' \
-        'home/lighttpd/html/index.html')
-options=(!libtool emptydirs)
-install=$pkgname.install
-source=(http://www.lighttpd.net/download/$pkgname-$pkgver.tar.bz2 \
-        index.html $pkgname.rc.d $pkgname.conf.d $pkgname.logrotate.d \
-        spawn-php.rc.d spawn-php.conf.d tweakconf.vim)
-md5sums=('d787374e4e4aaa09d5cfa9ab9d23ad40' '85593eb67b928fec79b1efb3fa3cce84' \
-         '6d05e499e47425e99bf809c88bd4969d' '14565fa5d30c60941190ceb32b1b551f' \
-         'a8c31344b90328c5b751d965d79c5047' 'a7e25d699422e2cfe2e802414052a1dc' \
-         '1ba657b113b7e473fb301631a7e2e1a4' 'ce4ca9773d5698549f9d7216fa59c4ee')
+depends=('pcre' 'openssl' 'zlib' 'bzip2' 'attr' 'libldap' 'libmysqlclient' \
+         'lua' 'libxml2' 'e2fsprogs' 'sqlite3' 'gdbm')
+makedepends=('fcgi' 'libmemcache' 'pkgconfig')
+backup=('etc/lighttpd/lighttpd.conf' 'etc/logrotate.d/lighttpd')
+options=('!libtool' 'emptydirs')
+install='lighttpd.install'
+source=("http://www.lighttpd.net/download/lighttpd-${pkgver}.tar.bz2" \
+        'lighttpd.rc.d' 'lighttpd.logrotate.d')
+md5sums=('d787374e4e4aaa09d5cfa9ab9d23ad40'
+         '4e6483a1f13d9062aa294fb46b0e9971'
+         '857e174643fd7761a2f0d8431a679f6c')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
-  ./configure --prefix=/usr --libdir=/usr/lib/lighttpd \
-    --with-ldap --with-gdbm --with-lua --with-memcache \
-    --with-openssl=/usr/include/openssl \
-    --with-kerberos5 \
-    --with-mysql=/usr/bin/mysql_config \
-    --with-webdav-props --with-webdav-locks \
-    --with-attr --without-fam
-  make || return 1
-  make DESTDIR=$startdir/pkg install || return 1
+	cd $srcdir/$pkgname-$pkgver
+	./configure --prefix=/usr \
+		--libexecdir=/usr/lib/lighttpd/modules \
+		--sysconfdir=/etc/lighttpd \
+		--sharedstatedir=/usr/var \
+		--localstatedir=/var \
+		--libdir=/usr/lib/lighttpd \
+		--includedir=/usr/include/lighttpd \
+		--with-mysql \
+		--with-ldap \
+		--with-attr \
+		--with-openssl \
+		--with-kerberos5 \
+		--without-fam \
+		--with-webdav-props \
+		--with-webdav-locks \
+		--with-gdbm \
+		--with-memcache \
+		--with-lua || return 1
+	make || return 1
+	make DESTDIR=$pkgdir install || return 1
 
-   # install configuration scripts and daemons
-  install -Dm644 ../index.html $startdir/pkg/home/lighttpd/html/index.html
-  install -Dm755 ../lighttpd.rc.d $startdir/pkg/etc/rc.d/lighttpd
-  install -Dm644 ../lighttpd.conf.d $startdir/pkg/etc/conf.d/lighttpd
-  install -Dm644 ../lighttpd.logrotate.d $startdir/pkg/etc/logrotate.d/lighttpd
-  install -Dm755 ../spawn-php.rc.d $startdir/pkg/etc/rc.d/spawn-php
-  install -Dm644 ../spawn-php.conf.d $startdir/pkg/etc/conf.d/spawn-php
-  install -dm755 -g nobody -o nobody $startdir/pkg/var/run/lighttpd/
+	install -D -m755 ../lighttpd.rc.d $pkgdir/etc/rc.d/lighttpd
+	install -D -m644 ../lighttpd.logrotate.d $pkgdir/etc/logrotate.d/lighttpd
+	install -d -m755 -o http -g http $pkgdir/var/{run,log}/lighttpd/
 
-   # show some mercy on docfiles
-  mkdir -p $startdir/pkg/usr/share/lighttpd
-  install -m644 doc/*.txt $startdir/pkg/usr/share/lighttpd
+	install -D -m644 doc/lighttpd.conf $pkgdir/etc/lighttpd/lighttpd.conf
 
-  install -Dm644 doc/lighttpd.conf $startdir/pkg/etc/lighttpd/lighttpd.conf
-  ex $startdir/pkg/etc/lighttpd/lighttpd.conf < $startdir/src/tweakconf.vim
-  install -D -m 0644 COPYING $startdir/pkg/usr/share/licenses/$pkgname/COPYING
+	# set sane defaults
+	sed -e 's|#                               "mod_userdir",|                                "mod_userdir",|' \
+	    -e 's|/srv/www/htdocs/|/srv/http/|' \
+	    -e 's|/srv/www/|/srv/http/|' \
+	    -e 's|#dir-listing.activate       = "enable"| dir-listing.activate       = "enable"|' \
+	    -e 's|#server.username            = "wwwrun"| server.username            = "http"|' \
+	    -e 's|#server.groupname           = "wwwrun"| server.groupname           = "http"|' \
+	    -e 's|#server.pid-file            = "/var/run/lighttpd.pid"| server.pid-file            = "/var/run/lighttpd/lighttpd.pid"|' \
+	    -e 's|/usr/local/bin/php-cgi|/usr/bin/php-cgi|' \
+	    -i ${pkgdir}/etc/lighttpd/lighttpd.conf || return 1
+
+	install -D -m644 COPYING $pkgdir/usr/share/licenses/$pkgname/COPYING
 }

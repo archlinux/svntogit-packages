@@ -1,73 +1,16 @@
-post_install() {
-  # set post_install message
-  /bin/cat << EOM
-
- --> This release marks a minor (NOT micro!) version change and is not 100%
- --> compatible with former versions. Have a look at the new lighttpd.conf,
- --> there are some changes in the index files syntax and nested conditions
- --> are possible by now. Also please read the documentation in
- --> /usr/share/lighttpd or on lighttpds's hompage:   http://lighttpd.net
-
- --> for the following OPTIONAL modules (when choosen from lighttpd.conf)
- --> you will need the following dependencies:
-          mod_webdav :         libxml2, sqlite3, e2fsprogs
-          mod_cml:             libmemcache, lua
-          mod_magnet:          lua
-          mod_trigger_b4_dl:   libmemcache, gdbm
-          mod_auth.so:         libldap
-          mod_mysql_vhost:     libmysqlclient
-
-EOM
-
-   # import daemon configuration file to detect lighttpd.conf location
-  [ -f /etc/conf.d/lighttpd ] && . /etc/conf.d/lighttpd
-   # some automagic dealing with the users preferences as marked in
-   # /etc/lighttpd/lighttpd.conf
-   # a simple conf-file parser to isolate the user, logfiles etc.
-  FILES=`sed -n -e '/accesslog\.filename/p;/server\.errorlog/p' \
-          ${DAEMON_CONF} \
-          | sed -e 's/^.*"\(.*\)".*$/\1/'`
-  DAEMON_USER=`sed -n -e '/server\.username/p' ${DAEMON_CONF} \
-                | sed -e 's/^.*"\(.*\)".*$/\1/'`
-  DAEMON_GROUP=`sed -n -e '/server\.groupname/p' ${DAEMON_CONF} \
-                | sed -e 's/^.*"\(.*\)".*$/\1/'`
-  DIRECTORIES=`sed -n -e '/\.cache-dir/p;/\.server-root/p' ${DAEMON_CONF} \
-                | sed -e 's/^.*"\(.*\)".*$/\1/'`
-  DOCROOTDIRS=`sed -n -e '/server.\document-root/p' ${DAEMON_CONF} \
-                | sed -e 's/^.*"\(.*\)".*$/\1/'`
-  CHROOT=`sed -n -e '/server\.chroot/p' ${DAEMON_CONF} \
-                | sed -e '/^ *#.*$/d' \
-                | sed -e 's/^.*"\(.*\)".*$/\1/'`
-
-  touch /tmp/empty
-  # make sure logfiles exist
-  for FILE in $FILES; do
-    [ ! -f ${CHROOT}${FILE}  ] && \
-      install -Dm644 -o $DAEMON_USER -g $DAEMON_GROUP /tmp/empty ${CHROOT}${FILE} && \
-      echo 'Creating file ' ${CHROOT}${FILE}
-  done
-  # make sure the lighttpd.user owns the cache dirs and vhost-root ...
-  for DIR in $DIRECTORIES; do
-    [ ! -d ${CHROOT}${DIR} ] && \
-      install -dm755 -o $DAEMON_USER -g $DAEMON_GROUP ${CHROOT}${DIR} && \
-      echo "Creating directory ${CHROOT}${DIR}" && \
-      chown $DAEMON_USER:$DAEMON_GROUP ${CHROOT}${DIR}
-  done
-  # ... and the document roots
-  for DIR in $DOCROOTDIRS; do
-    [ ! -d ${CHROOT}${DIR} ] && \
-      install -dm755 -o $DAEMON_USER -g $DAEMON_GROUP ${CHROOT}${DIR} && \
-      echo "Creating directory ${CHROOT}${DIR}"
-      chown -R $DAEMON_USER:$DAEMON_GROUP ${CHROOT}${DIR}
-  done
-  rm -f /tmp/empty
-}
-
 post_upgrade() {
-  post_install $1
-}
+	if [ $(vercmp '1.4.19-1' $2) -ge 0 ]; then
+	echo '
+	==> New default DocumentRoot
 
-op=$1
-shift
-$op $*
-# vim: ft=sh ts=2
+	Apache lighttpd uses /srv/http as default DocumentRoot.
+	You can still use your current DocumentRoot
+
+	==> New default user and group
+
+	Instead of "nobody" lighttpd runs as user/group "http" by default now. You might
+	want to adjust your lighttpd.conf according to this change. But you can still
+	run lighttpd as nobody.
+	'
+	fi
+}
