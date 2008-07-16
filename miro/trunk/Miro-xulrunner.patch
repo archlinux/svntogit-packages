@@ -1,0 +1,64 @@
+diff -up Miro-1.2.3/platform/gtk-x11/platform/mozsetup.py.old Miro-1.2.3/platform/gtk-x11/platform/mozsetup.py
+--- Miro-1.2.3/platform/gtk-x11/platform/mozsetup.py.old	2008-04-22 17:17:01.000000000 +0200
++++ Miro-1.2.3/platform/gtk-x11/platform/mozsetup.py	2008-04-28 12:51:46.000000000 +0200
+@@ -106,8 +106,8 @@ def setupMozillaEnvironment():
+         set_profile_path = gtkmozembed.gtk_moz_embed_set_profile_path
+         
+     set_profile_path(config.get(prefs.SUPPORT_DIRECTORY), 'mozilla')
+-    if hasattr(gtkmozembed, 'set_comp_path'):
+-        set_comp_path = gtkmozembed.set_comp_path
++    if hasattr(gtkmozembed, 'set_path'):
++        set_comp_path = gtkmozembed.set_path
+     elif hasattr(gtkmozembed, 'set_path'):
+         set_comp_path = gtkmozembed.set_path
+     else:
+diff -up Miro-1.2.3/platform/gtk-x11/setup.py.old Miro-1.2.3/platform/gtk-x11/setup.py
+--- Miro-1.2.3/platform/gtk-x11/setup.py.old	2008-04-22 17:17:01.000000000 +0200
++++ Miro-1.2.3/platform/gtk-x11/setup.py	2008-04-28 13:14:27.000000000 +0200
+@@ -209,6 +209,7 @@ def parsePkgConfig(command, components, 
+         options_dict = {
+             'include_dirs' : [],
+             'library_dirs' : [],
++            'runtime_dirs' : [],
+             'libraries' : [],
+             'extra_compile_args' : []
+         }
+@@ -224,6 +225,11 @@ def parsePkgConfig(command, components, 
+             options_dict['libraries'].append(rest)
+         else:
+             options_dict['extra_compile_args'].append(comp)
++            
++    commandLine = "%s --variable=libdir %s" % (command, components)
++    output = getCommandOutput(commandLine).strip()
++    options_dict['runtime_dirs'].append(output)
++    
+     return options_dict
+ 
+ #### The fasttypes extension ####
+@@ -279,6 +285,8 @@ mozilla_browser_options = parsePkgConfig
+         "gtk+-2.0 glib-2.0 pygtk-2.0 --define-variable=includetype=unstable %s %s" % (gtkmozembed, xpcom))
+ mozilla_lib_path = parsePkgConfig('pkg-config', 
+         '%s' % gtkmozembed)['library_dirs']
++runtime_lib_path = parsePkgConfig('pkg-config', 
++        '%s' % gtkmozembed)['runtime_dirs']
+ # Find the base mozilla directory, and add the subdirs we need.
+ def allInDir(directory, subdirs):
+     for subdir in subdirs:
+@@ -334,7 +342,7 @@ mozilla_browser_ext = Extension("miro.pl
+           os.path.join(platform_html_frontend_dir,'DragAndDrop.cc'),
+           os.path.join(platform_html_frontend_dir,'XPCOMUtil.cc'),
+         ],
+-        runtime_library_dirs=mozilla_lib_path,
++        runtime_library_dirs=runtime_lib_path,
+         **mozilla_browser_options)
+ #### Xlib Extension ####
+ xlib_ext = \
+@@ -434,7 +442,7 @@ class install_data (distutils.command.in
+                              BUILD_MACHINE="%s@%s" % (getlogin(),
+                                                       os.uname()[1]),
+                              BUILD_TIME=str(time.time()),
+-                             MOZILLA_LIB_PATH=mozilla_lib_path[0])
++                             MOZILLA_LIB_PATH=runtime_lib_path[0])
+         self.outfiles.append(dest)
+ 
+         locale_dir = os.path.join (resource_dir, "locale")
