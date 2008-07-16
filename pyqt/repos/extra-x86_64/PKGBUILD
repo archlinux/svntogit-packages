@@ -3,18 +3,20 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.3.3
+pkgver=4.4.2
 pkgrel=1
 pkgdesc="PyQt is a set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/pyqt/"
-depends=('sip>=4.7.3' 'qscintilla>=2.1' 'qt>=4.3.3')
+depends=('sip>=4.7.6' 'qscintilla>=2.2' 'qt>=4.4.0')
 license=('GPL')
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
 pkgurl="http://www.riverbankcomputing.com/Downloads/PyQt4/GPL/"
-source=($pkgurl/PyQt-x11-gpl-${pkgver}.tar.gz)
+source=(http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-$pkgver.tar.gz)
+
+md5sums=('a3f1e828fe74242441f17020c10ba06b')
 
 build() {
   cd ${startdir}/src/PyQt-x11-gpl-${pkgver}
