@@ -4,22 +4,29 @@
 
 pkgname=gksu	
 pkgver=2.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc="A graphical frontend for su"
 arch=(i686 x86_64)
 url="http://www.nongnu.org/gksu/index.html"
 license=('GPL')
-depends=('libgksu>=2.0.4')
-makedepends=('gtk-doc' 'pkgconfig' 'nautilus>=2.18.1')
-options=('nolibtool')
-source=(http://people.debian.org/~kov/gksu/${pkgname}-${pkgver}.tar.gz)
-md5sums=('f517302cff6f09e4f2f312c4b618bd40')
+depends=('libgksu>=2.0.7')
+makedepends=('gtk-doc' 'pkgconfig' 'nautilus>=2.22.5.1')
+options=('!libtool')
+source=(http://people.debian.org/~kov/gksu/${pkgname}-${pkgver}.tar.gz
+	16_fix_ftbfs.patch
+	20_move_to_extensions-2.0.patch)
+md5sums=('f517302cff6f09e4f2f312c4b618bd40'
+	 '60d2765bd4e89ab91c1eae8d20b48b6a'
+         '0df1c0a1298c99ee8019698f0d83f67d')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  sed -i -e 's|/usr/bin/x-terminal-emulator|gnome-terminal|g' gksu.desktop
+  cd ${srcdir}/${pkgname}-${pkgver}
+  sed -i -e 's|/usr/bin/x-terminal-emulator|gnome-terminal|g' gksu.desktop || return 1
+  patch -Np1 -i ${srcdir}/16_fix_ftbfs.patch || return 1
+  patch -Np1 -i ${srcdir}/20_move_to_extensions-2.0.patch || return 1
+  autoconf || return 1 
   ./configure --prefix=/usr --sysconfdir=/etc \
-              --localstatedir=/var --disable-static
+              --localstatedir=/var --disable-static || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${pkgdir} install || return 1
 }
