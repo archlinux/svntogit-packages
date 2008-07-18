@@ -2,26 +2,29 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gcc34
 pkgver=3.4.6
-pkgrel=1
-#_snapshot=4.1-20060519
+pkgrel=2
 pkgdesc="The GNU Compiler Collection"
 arch=(i686 x86_64)
 url="http://gcc.gnu.org"
-depends=('libstdc++5' 'gcc')
+license=('GPL') # with exception, per fsf.org
+depends=('libstdc++5' 'gcc-libs')
 options=('!libtool')
 source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++}-${pkgver}.tar.bz2 \
-	gcc-localeversion.patch gcc-3.3-pure64.patch)
+	gcc-localeversion.patch
+	gcc-3.3-pure64.patch)
+md5sums=('5324ace5145b12afd9ca867af7ec084d'
+         'ef81fd74bc9fd964120af47243a1360f'
+         'e93d6f49b254dc2879a4e181603599b0'
+         'eb834abd7620a5f11492ee2c243b8346')
 
 build() {
-  export MAKEFLAGS="-j1"
-  # use "defaults" CFLAGS and CXXFLAGS
-  if [ "${CARCH}" = "i686" ]; then
-    export CFLAGS="-march=i686 -O2 -pipe"
-    export CXXFLAGS="-march=i686 -O2 -pipe"
-  else
-    export CFLAGS="-march=x86-64 -O2 -pipe"
-    export CXXFLAGS="-march=x86-64 -O2 -pipe"
+  if ! locale -a | grep ^de_DE; then
+    echo "You need the de_DE locale to build gcc."
+    return 1
   fi
+
+  export CFLAGS="${CFLAGS/-mtune=generic/}"
+  export CXXFLAGS="${CXXFLAGS/-mtune=generic/}"
 
   cd ${startdir}/src/gcc-${pkgver}
 
@@ -40,15 +43,14 @@ build() {
   cd ../gcc-build
   ../gcc-${pkgver}/configure --prefix=/usr --enable-shared \
       --enable-languages=c,c++ --enable-threads=posix \
+      --mandir=/usr/share/man --libexecdir=/usr/lib \
       --enable-__cxa_atexit  --disable-multilib --libdir=/usr/lib \
       --enable-clocale=gnu --program-suffix=-3.4
 
   make bootstrap || return 1
-  make DESTDIR=${startdir}/pkg install || return 1
+  make -j1 DESTDIR=${startdir}/pkg install || return 1
 
   rm -f ${startdir}/pkg/usr/lib/lib{stdc++,supc++,gcc_s}.*
   rm -f ${startdir}/pkg/usr/share/locale/*/LC_MESSAGES/libstdc++.mo
-  rm -rf ${startdir}/pkg/usr/man/man7
-  #mv ${startdir}/pkg/usr/man/man1/cpp.1 ${startdir}/pkg/usr/man/man1/cpp-3.4.1
-  #mv ${startdir}/pkg/usr/man/man1/gcov.1 ${startdir}/pkg/usr/man/man1/gcov-3.4.1
+  rm -rf ${startdir}/pkg/usr/share/man/man7
 }
