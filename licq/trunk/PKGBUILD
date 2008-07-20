@@ -2,33 +2,43 @@
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 pkgname=licq
 pkgver=1.3.5
-pkgrel=2
+pkgrel=3
 pkgdesc="Advanced graphical ICQ clone and more for Unix" 
 arch=(i686 x86_64)
 url="http://www.licq.org"
 license=('GPL')
-depends=('libxss' 'qt3' 'openssl' 'bash')
-source=(http://heanet.dl.sourceforge.net/sourceforge/licq/licq-$pkgver.tar.bz2)
-md5sums=('842a73c82980721961fe824f40377292')
+depends=('libxss' 'qt3' 'openssl')
+options=(!libtool)
+source=(http://downloads.sourceforge.net/sourceforge/licq/licq-${pkgver}.tar.bz2
+	gcc4.3.patch
+	CVE-2008-1996.patch
+	icq-protocol-version.patch)
+md5sums=('842a73c82980721961fe824f40377292'
+         '84e22c584249128d74f71e08ef098bb1'
+         '2707540b24b905b536d7c98afaf021be'
+         '8b49bf52ff8ad76619d57d6eb7ae66ed')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
+  cd ${srcdir}/${pkgname}-${pkgver}
   . /etc/profile.d/qt3.sh
-  # licq
-  ./configure --prefix=/usr --enable-gpgme=no 
-  make || return 1
-  make DESTDIR=$startdir/pkg install
 
-  # qt-guiA
-  cd plugins/qt-gui
+  # licq
+  patch -Np1 -i ${srcdir}/gcc4.3.patch || return 1
+  patch -Np3 -i ${srcdir}/CVE-2008-1996.patch || return 1
+  patch -Np0 -i ${srcdir}/icq-protocol-version.patch || return 1
+  GPGME_CONFIG=/bin/false ./configure --prefix=/usr || return 1
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  # qt-gui
+  cd plugins/qt-gui || return 1
   # for some reason, --without-kde makes ./configure think that
   # the QT libs are missing.  ???
-  ./configure --prefix=/usr  
+  GPGME_CONFIG=/bin/false ./configure --prefix=/usr || return 1 
   make || return 1
-  cd po
+  cd po || return 1
   lrelease *.ts || return 1
-  cd -
-  make DESTDIR=$startdir/pkg install
-  rm -rf $startdir/pkg/opt
-  find $startdir/pkg -name "*.la" -exec rm -f {} \;
+  cd ..
+  make DESTDIR=${pkgdir} install || return 1
+  rm -rf ${pkgdir}/opt
 }
