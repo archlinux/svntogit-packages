@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=klibc-udev
+pkgver=116
+pkgrel=4
+pkgdesc="udevd compiled under klibc"
+arch=(i686 x86_64)
+url="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
+groups=('base')
+depends=('coreutils' 'klibc' $(basename /lib/klibc-*.so .so))
+license=('GPL')
+source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev-$pkgver.tar.bz2 \
+        udev_hook udev_install start_udev udev.rules load-modules.sh \
+        vol_id-suspend2.patch)
+md5sums=('02c49d93ffda4a104c853c082138b835'
+         'bcfed63882660e7d33f367d722e0a5c9'
+         '92b62124dd43d61a2e610c305bf95d15'
+         '22741baf8f5d7d8bc88022b39bca74d8'
+         'f50bd6b378a5e75b2475bc67b32cb692'
+         '1ecfeec15e88485e88f2e37f46861f2e'
+         '80f75fc9a8fc32c7b8ff146d53bf579f')
+
+build()
+{
+  cd $startdir/src/udev-$pkgver
+  patch -p1 -i ${startdir}/src/vol_id-suspend2.patch || return 1
+  sed -i "s|USE_LOG = .*|USE_LOG = false|g" Makefile
+
+  #I need to look at this... it appears the __CTYPE_NO_INLINE may be a klibc issue - aaron
+  make VOLUME_ID_STATIC=true CC=klcc LD=klcc PROGRAMS="udevd udevsettle udevtrigger" \
+        CFLAGS="$CFLAGS -U__CTYPE_NO_INLINE" \
+        EXTRAS="extras/firmware extras/cdrom_id extras/ata_id \
+                extras/edd_id extras/usb_id extras/volume_id" \
+        || return 1
+
+  mkdir -p $startdir/pkg/lib/initcpio/udev
+  install -m755 udevd $startdir/pkg/lib/initcpio/udev
+  install -m755 udevtrigger  $startdir/pkg/lib/initcpio/udev
+  install -m755 udevsettle  $startdir/pkg/lib/initcpio/udev
+  install -m755 extras/firmware/firmware.sh  $startdir/pkg/lib/initcpio/udev
+  install -m755 extras/cdrom_id/cdrom_id  $startdir/pkg/lib/initcpio/udev
+  install -m755 extras/ata_id/ata_id  $startdir/pkg/lib/initcpio/udev
+  install -m755 extras/edd_id/edd_id  $startdir/pkg/lib/initcpio/udev
+  install -m755 extras/scsi_id/scsi_id  $startdir/pkg/lib/initcpio/udev
+  install -m755 extras/usb_id/usb_id  $startdir/pkg/lib/initcpio/udev
+  # broken atm
+  install -m755 extras/volume_id/vol_id  $startdir/pkg/lib/initcpio/udev
+  #install -m755 extras/path_id/path_id  $startdir/pkg/lib/initcpio/udev
+  install -m755 $startdir/src/start_udev $startdir/pkg/lib/initcpio/udev
+  install -m644 $startdir/src/udev.rules  $startdir/pkg/lib/initcpio/udev
+  install -m755 $startdir/src/load-modules.sh $startdir/pkg/lib/initcpio/udev
+
+  mkdir -p $startdir/pkg/lib/initcpio/install
+  install -m644 $startdir/src/udev_install $startdir/pkg/lib/initcpio/install/udev
+  mkdir -p $startdir/pkg/lib/initcpio/hooks/
+  install -m644 $startdir/src/udev_hook $startdir/pkg/lib/initcpio/hooks/udev  
+}
