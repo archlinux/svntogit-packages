@@ -1,0 +1,31 @@
+# $Id$
+# Contributor: Giovanni Scafora <linuxmania@gmail.com>
+# Maintainer: James Rayner <iphitus@gmail.com>
+_kernver=2.6.26-ARCH
+pkgname=ipw3945
+pkgver=1.2.2
+pkgrel=11
+pkgdesc="Driver for the Intel PRO/Wireless 3945ABG miniPCI express adapter"
+arch=(i686 x86_64)
+url="http://ipw3945.sourceforge.net"
+license=("GPL")
+depends=('wireless_tools' 'kernel26>=2.6.26-1' 'kernel26<2.6.27' 'ipw3945-ucode' 'ipw3945d')
+install=ipw3945.install
+source=(http://downloads.sourceforge.net/sourceforge/ipw3945/ipw3945-$pkgver.tgz
+        compile-2.6.24.patch)
+md5sums=('9e5ca2f3ffbb84270ede45d5572df4c9'
+         '12db6e8410ab38f1fbca15681cfa752a')
+
+build() {
+  cd $startdir/src/ipw3945-$pkgver
+  sed -i -e "s:^#\(CONFIG_IPW3945_QOS\)=.*:\1=y:" \
+           -e "s:^# \(CONFIG_IPW3945_MONITOR\)=.*:\1=y:" \
+           -e "s:^# \(CONFIG_IEEE80211_RADIOTAP\)=.*:\1=y:" \
+           -e "s:^# \(CONFIG_IPW3945_PROMISCUOUS\)=.*:\1=y:" \
+           Makefile
+  patch -Np1 -i ../compile-2.6.24.patch || return 1
+  make  KVER=${_kernver} IEEE80211_INC=/usr/src/linux-${_kernver}/ IEEE80211_IGNORE_DUPLICATE=y || return 1
+  #Install kernel module
+  install -D -m 644 ipw3945.ko  $startdir/pkg/lib/modules/${_kernver}/kernel/drivers/net/wireless/ipw3945/ipw3945.ko
+  sed -i -e "s/KERNEL_VERSION='.*'/KERNEL_VERSION='${_kernver}'/" $startdir/*.install
+}
