@@ -4,33 +4,12 @@
 . /etc/rc.d/functions
 . /etc/conf.d/transmissiond
 
-if [ "$(id -u)" != 0 ]
-then
-	echo "You must be root to start Transmission as daemon."
-	exit 2
-fi
-
-if [ -z $TRANS_USER ]
-then
-	echo "Unable to run Transmission. You must set the user in /etc/conf.d/transmissiond"
-	exit 2
-fi
-
-confdir=$(su -l $TRANS_USER -c "echo ~")/.transmission
-if [ ! -d $confdir ]; then 
-    su -l $TRANS_USER  -c "mkdir -p $confdir"
-fi
-
 PID=`pidof -o %PPID /usr/bin/transmission-daemon`
 case "$1" in
   start)
     stat_busy "Starting Transmission Daemon"
-
-    if [ -z "$PID" ]; then 
-       su -l $TRANS_USER -c "/usr/bin/transmission-daemon"
-    fi
-
-    if [ ! -z "$PID" -o $? -gt 0 ]; then
+    [ -z "$PID" ] && su -l -c "/usr/bin/transmission-daemon" $TRANS_USER
+    if [ $? -gt 0 ]; then
       stat_fail
     else
       add_daemon transmissiond
@@ -39,8 +18,7 @@ case "$1" in
     ;;
   stop)
     stat_busy "Stopping Transmission Daemon"
-
-    [ ! -z "$PID" ]  && su -l $TRANS_USER -c "/usr/bin/transmission-remote -q"
+    [ ! -z "$PID" ] && su -l -c "/usr/bin/transmission-remote -q" $TRANS_USER
     if [ $? -gt 0 ]; then
       stat_fail
     else
@@ -57,4 +35,3 @@ case "$1" in
     echo "usage: $0 {start|stop|restart}"
 esac
 exit 0
-
