@@ -1,0 +1,1877 @@
+diff -r -u rt2500-1.1.0-b4/Module/Makefile rt2500-cvs-2007020414/Module/Makefile
+--- rt2500-1.1.0-b4/Module/Makefile	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/Makefile	2006-12-02 16:25:57.000000000 +0100
+@@ -113,7 +113,7 @@
+ clean:
+ 	@rm -f $(RESMAN_GLUE_OBJS) $(RESMAN_CORE_OBJS) .*.{cmd,flags}
+ 	@rm -f $(MODULE_NAME).{o,ko,mod.{o,c}} built-in.o $(VERSION_HEADER) *~
+-	@rm -fr .tmp_versions
++	@rm -fr .tmp_versions Module.symvers
+ 
+ modules_install:
+ ifeq ($(PATCHLEVEL),4)
+diff -r -u rt2500-1.1.0-b4/Module/README rt2500-cvs-2007020414/Module/README
+--- rt2500-1.1.0-b4/Module/README	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/README	2006-07-14 00:56:44.000000000 +0200
+@@ -9,7 +9,7 @@
+ 
+ b. $make                # compile driver source code
+ 
+-c. $make install	# installs kernel module driver 
++c. $make install        # installs kernel module driver 
+ 
+ (read end of file for FedoraCore3 specific information) 
+  
+@@ -125,13 +125,14 @@
+         OPEN      For Open System
+         SHARED    For Shared key system
+         AUTO
+-        WPAPSK    
++        WPANONE   For pre-shared key in adhoc mode
++        WPAPSK    For pre-shared key in infrastructure mode
+ 7.  EncrypType=value
+     value
+         NONE      :For AuthMode=OPEN
+         WEP       :For AuthMode=OPEN or AuthMode=SHARED
+-        TKIP      :For AuthMode=WPAPSK
+-        AES       :For AuthMode=WPAPSK
++        TKIP      :For AuthMode=WPAPSK or AuthMode=WPANONE
++        AES       :For AuthMode=WPAPSK or AuthMode=WPANONE
+ 8.  DefaultKeyID=value
+     value
+         1 ~ 4
+@@ -210,13 +211,13 @@
+ 
+ 23. AdhocOfdm=value
+     value
+-    0:		Tx MAX rate will be 11Mbps in Adhoc mode.
+-    1:		Tx MAX rate will be 54Mbps in Adhoc mode.
++         0:     Tx MAX rate will be 11Mbps in Adhoc mode.
++         1:     Tx MAX rate will be 54Mbps in Adhoc mode.
+ 
+ 24. StaWithEtherBridge=value
+     value
+-    0:		Disable sta with ethernet to wireless bridge.
+-    1:		Enable sta with ethernet to wireless bridge.
++         0:     Disable sta with ethernet to wireless bridge.
++         1:     Enable sta with ethernet to wireless bridge.
+ 
+ 
+ MORE INFORMATION
+diff -r -u rt2500-1.1.0-b4/Module/mlme.c rt2500-cvs-2007020414/Module/mlme.c
+--- rt2500-1.1.0-b4/Module/mlme.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/mlme.c	2007-01-20 22:12:59.000000000 +0100
+@@ -357,9 +357,15 @@
+     schedule_work(&pAd->mlme_work);
+ }
+ 
++# if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
++VOID MlmeWork(struct work_struct *work)
++{
++    PRTMP_ADAPTER pAd = container_of(work, struct _RTMP_ADAPTER ,mlme_work);
++# else /* 2.6.20 patch "older kernels" */
+ VOID MlmeWork(void *vpAd)
+ {
+-    PRTMP_ADAPTER pAd = vpAd;
++      PRTMP_ADAPTER pAd = vpAd;
++#endif /* 2.6.20 patch */
+ #endif
+     MLME_QUEUE_ELEM        *Elem = NULL;
+     unsigned long flags;
+@@ -1724,6 +1730,32 @@
+ 
+ UCHAR	ZeroSsid[32] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+ 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
++
++static NDIS_802_11_WEP_STATUS setWepStatus(
++		IN USHORT mask,							// Peer cipher capability set
++		IN NDIS_802_11_WEP_STATUS WepStatus)	// local cipher selection
++{
++	static const unsigned char transtoieee[] = {
++		CIPHER_TYPE_WEP104,0,0,0,CIPHER_TYPE_TKIP,0,CIPHER_TYPE_CCMP,0
++	};
++	static const unsigned char transtondis[] = {
++		Ndis802_11EncryptionDisabled, Ndis802_11WEPEnabled,
++		Ndis802_11Encryption2Enabled, Ndis802_11WEPKeyAbsent,
++		Ndis802_11Encryption3Enabled, Ndis802_11WEPEnabled
++	};
++	NDIS_802_11_WEP_STATUS	wepstatus = Ndis802_11WEPDisabled;
++	USHORT					suite = transtoieee[WepStatus];
++
++	DBGPRINT(RT_DEBUG_TRACE, " - (%s) mask 0x%04x wepstatus %d ieee %d\n",
++			__FUNCTION__, mask, WepStatus, suite);
++
++	if (suite && (mask & 0x01 << suite)) {
++		wepstatus = transtondis[suite];
++	}
++	return wepstatus;
++
++} /* End setWepStatus () */
++
+ /*! \brief
+  *  \param 
+  *  \return
+@@ -1749,6 +1781,7 @@
+     IN UCHAR Rssi,
+     IN UCHAR Noise,
+     IN LARGE_INTEGER TimeStamp,
++    IN USHORT VarIELen,               // Length of all saved IEs.
+     IN PNDIS_802_11_VARIABLE_IEs pVIE) 
+ {
+     COPY_MAC_ADDR(&pBss->Bssid, pBssid);
+@@ -1801,15 +1834,23 @@
+ 	pBss->FixIEs.Capabilities = CapabilityInfo;
+ 
+ 	// New for microsoft Variable IEs
+-	if (pVIE->Length != 0)
++	pBss->VarIELen = VarIELen;
++	if (VarIELen != 0)
+ 	{
+-		pBss->VarIELen = pVIE->Length + 2;
+-		memcpy(pBss->VarIEs, pVIE, pBss->VarIELen);
+-		pBss->WepStatus = BssCipherParse(pBss->VarIEs);
++		memcpy(pBss->VarIEs, pVIE, VarIELen);
++		pBss->CipherCap = BssCipherParse((PBEACON_EID_STRUCT)pBss->VarIEs,
++										VarIELen);
++		if (pBss->CipherCap & (0x01 << CIPHER_TYPE_GRP)) {
++			pBss->WepStatus = setWepStatus(pBss->CipherCap >> 8,
++											pAd->PortCfg.WepStatus);
++		}
++		else {
++			pBss->WepStatus = setWepStatus(pBss->CipherCap,
++											pAd->PortCfg.WepStatus);
++		}
+ 	}
+ 	else
+ 	{
+-		pBss->VarIELen = 0;
+ 		// No SSN ID, if security is on, this is WEP algorithm
+ 		if  (pBss->Privacy)
+ 			pBss->WepStatus = Ndis802_11WEPEnabled;
+@@ -1817,6 +1858,8 @@
+ 		else
+ 			pBss->WepStatus = Ndis802_11WEPDisabled;
+ 	}
++	DBGPRINT(RT_DEBUG_TRACE, "%s: Ndis WepStatus (Local=%d, Remote=%d)\n",
++			__FUNCTION__, pAd->PortCfg.WepStatus, pBss->WepStatus);
+ }
+ 
+ /*! 
+@@ -1858,9 +1901,11 @@
+     IN UCHAR Rssi,
+     IN UCHAR Noise,
+     IN LARGE_INTEGER TimeStamp,
++    IN USHORT VarIELen,          // Length of all saved IEs.
+     IN PNDIS_802_11_VARIABLE_IEs pVIE)
+ {
+     ULONG   Idx;
++
+     Idx = BssTableSearch(Tab, Bssid);
+     if (Idx == BSS_NOT_FOUND) 
+     {
+@@ -1870,14 +1915,14 @@
+         Idx = Tab->BssNr;
+         BssEntrySet(pAd, &Tab->BssEntry[Idx], Bssid, Ssid, SsidLen, BssType, BeaconPeriod,
+                     CfExist, CfParm, AtimWin, CapabilityInfo, Rates, RatesLen, ExtendedRateIeExist,
+-                    ChannelNo, Rssi, Noise, TimeStamp, pVIE);
++                    ChannelNo, Rssi, Noise, TimeStamp, VarIELen, pVIE);
+         Tab->BssNr++;
+     } 
+     else
+     {
+         BssEntrySet(pAd, &Tab->BssEntry[Idx], Bssid, Ssid, SsidLen, BssType, BeaconPeriod,
+                     CfExist, CfParm, AtimWin, CapabilityInfo, Rates, RatesLen, ExtendedRateIeExist,
+-                    ChannelNo, Rssi, Noise, TimeStamp, pVIE);
++                    ChannelNo, Rssi, Noise, TimeStamp, VarIELen, pVIE);
+     }
+     
+     return Idx;
+@@ -1976,34 +2021,178 @@
+     }
+ }
+ 
+-NDIS_802_11_WEP_STATUS	BssCipherParse(
+-	IN	PUCHAR	pCipher)
++/*
++ * ============================================================================
++ * Description:
++ * 		Scan cipher suite list and return cipher capability set.
++ * ============================================================================
++ */
++static USHORT scan_csl(
++		IN suite_list_t *psl,
++		IN USHORT curtype)
+ {
+-	PBEACON_EID_STRUCT	pEid;
+-	PUCHAR				pTmp;
++	USHORT	ciphertype = curtype;	// Cipher "capability set"
++	int		i, j;
+ 
+-	pEid = (PBEACON_EID_STRUCT) pCipher;
++	DBGPRINT(RT_DEBUG_TRACE, " -  scan %d pair cipher(s)\n", psl->count);
+ 
+-	// Double check sanity information, although it should be done at peer beacon sanity check already.
+-	if (pEid->Eid != IE_WPA)
+-		return (Ndis802_11WEPDisabled);
++	for (i = 0, j = psl->count; i < j; i++) {
+ 
+-	// Double check Var IE length, it must be no less than 0x16
+-	if (pEid->Len < 0x16)
+-		return (Ndis802_11WEPDisabled);
+-	
+-	// Skip OUI, version, and multicast suite
+-	// This part should be improved in the future when AP supported multiple cipher suite.
+-	// For now, it's OK since almost all APs have fixed cipher suite supported.
+-	pTmp = (PUCHAR) pEid->Octet;
+-	pTmp += 9;
+-
+-	if (*pTmp == 4)			// AES
+-		return (Ndis802_11Encryption3Enabled);
+-	else if (*pTmp == 2)	// TKIP
+-		return (Ndis802_11Encryption2Enabled);
++		if (psl->suite[i].type < NUM_CIPHER_TYPES) {
++			ciphertype |= 0x01 << psl->suite[i].type;
++		}
++		else {
++			DBGPRINT(RT_DEBUG_ERROR, " -  invalid pair cipher type %d\n",
++					psl->suite[i].type);
++		}
++		DBGPRINT(RT_DEBUG_TRACE, " -  (pair) CipherType now=0x%04x\n",
++				ciphertype);
++	}
++	return ciphertype;
++
++} /* End scan_csl () */
+ 
+-	return (Ndis802_11WEPDisabled);
++USHORT	BssCipherParse(
++	IN	PBEACON_EID_STRUCT	pEid,
++    IN USHORT           VarIELen)	// Length of all saved IEs.
++{
++	USHORT				ciphertype = 0;
++	PBEACON_EID_STRUCT	ptEid;
++	USHORT              len;
++
++	DBGPRINT(RT_DEBUG_TRACE, "%s: using VarIELen=%d\n", __FUNCTION__, VarIELen);
++
++	// Handle the stinerman problem (a too-short WPA IE followed by
++	// a long-enough WPA IE from an AP), the onishin/dacull problem
++	// (a RSN - WPA2 - IE followed by a WPA1 IE from an AP), and the
++	// holtzmichel problem (a WPA1 IE followed by a WPA2 IE). We end
++	// up using the *last* one we find. This may (or may not) really
++	// be the thing to do. - bb
++	for (ptEid = pEid, len = 0; len < VarIELen;
++			len += ptEid->Len + 2,
++			ptEid = (PBEACON_EID_STRUCT)((UCHAR *)pEid + len)) {
++
++		DBGPRINT(RT_DEBUG_TRACE, " - examining IE=%d, Len=%d\n",
++				ptEid->Eid, ptEid->Len);
++
++		switch (ptEid->Eid) {
++			default:
++				DBGPRINT(RT_DEBUG_ERROR, " -  Not a WPA/WPA2 IE=%d, Len=%d\n",
++						ptEid->Eid, ptEid->Len);
++				break;
++
++			case IE_WPA: {
++				#define p ((PRSN_EID_STRUCT)ptEid)
++
++				// Double check Var IE length, it must be no less than 0x16
++				// Silently ignore if not
++				if (ptEid->Len < 0x16) {
++					DBGPRINT(RT_DEBUG_ERROR, " -  Len %d too short\n",
++							ptEid->Len);
++					break;
++				}
++				// Skip OUI, version, and multicast suite
++				// This part should be improved in the future when AP
++				// supported multiple cipher suite. For now, it's OK since
++				// almost all APs have fixed cipher suite supported.
++				// (The future is now - bb)
++				if (p->Multicast[3] < NUM_CIPHER_TYPES) {
++					ciphertype |= 0x100 << p->Multicast[3];
++				}
++				else {
++					DBGPRINT(RT_DEBUG_ERROR,
++							" -  IE_WPA invalid group cipher %d\n",
++							p->Multicast[3]);
++				}
++				DBGPRINT(RT_DEBUG_TRACE, " -  WPA CipherType now=0x%04x\n",
++						ciphertype);
++
++				if (p->Length >= sizeof(RSN_EID_STRUCT) -
++					offsetof(RSN_EID_STRUCT, Oui)) {
++					suite_list_p psl = (suite_list_p)((UCHAR *)p +
++							offsetof(RSN_EID_STRUCT, Count));
++
++					if (psl->count * sizeof(suite_sel_t) +
++						offsetof(RSN_EID_STRUCT,Count) -
++						offsetof(RSN_EID_STRUCT,Oui) >
++						p->Length) {
++						DBGPRINT(RT_DEBUG_ERROR,
++								" -  malformed WPA pair cipher count "
++								"(needs %d bytes, %d bytes avail)\n",
++								psl->count*sizeof(suite_sel_t) +
++								offsetof(RSN_EID_STRUCT,Count) -
++								offsetof(RSN_EID_STRUCT,Oui),
++								p->Length);
++						break;
++					}
++					ciphertype = scan_csl(psl, ciphertype);
++				}
++				else {
++					ciphertype |= 0x01;		// Indicate use group cipher
++				}
++				#undef p
++				break;
++			}
++			case IE_RSN: {			// 802.11i pp. 27 - 32
++				#define p ((rsn_ie_p)ptEid)
++
++				if (p->length == sizeof(p->version)) {
++					ciphertype = 0x01 | 0x100 << CIPHER_TYPE_CCMP;
++					break;
++				}
++				if (p->length >= sizeof(p->version) + sizeof(p->gcsuite)) {
++
++					// Right now, we use the group cipher suite since it
++					// appears (to me, at any rate) that that's what is
++					// being used from the WPA IE.
++					// (SWAG - cf. RSN_EID_STRUCT - is that WPA_IE is RSN_IE
++					// with 4 bytes in front of the version tag. So we
++					// use the group cipher suite ala case IE_WPA above.)
++					// cf. the Holtzmichel problem: Looks like the Sinus 154
++					// Basic 3 includes either 3 pairwise cipher suites, or
++					// 1 pairwise cipher suite, 1 AKM suite, and an RSN
++					// capabilities field, because the len is 20.
++					if (p->gcsuite.type < NUM_CIPHER_TYPES) {
++						ciphertype |= 0x100 << p->gcsuite.type;
++					}
++					else {
++						DBGPRINT(RT_DEBUG_ERROR,
++								" -  IE_RSN invalid group cipher %d\n",
++								p->gcsuite.type);
++					}
++					DBGPRINT(RT_DEBUG_TRACE,
++							" -  (grp) CipherType now=0x%04x\n", ciphertype);
++				}
++				if (p->length > sizeof(p->version) + sizeof(p->gcsuite)) {
++					suite_list_p psl = (suite_list_p)((UCHAR *)p +
++							offsetof(rsn_ie_t, version) +
++							sizeof(ie_version_t) + sizeof(suite_sel_t));
++
++					if (psl->count * sizeof(suite_sel_t) +
++						sizeof(ie_version_t) + sizeof(suite_sel_t) >
++						p->length) {
++						DBGPRINT(RT_DEBUG_ERROR,
++								" -  malformed RSN pair cipher count "
++								"(needs %d bytes, %d bytes avail)\n",
++								psl->count*sizeof(suite_sel_t) +
++								sizeof(ie_version_t) + sizeof(suite_sel_t),
++								p->length);
++						break;
++					}
++					ciphertype = scan_csl(psl, ciphertype);
++				}
++				else {
++					ciphertype |= 0x01;		// Indicate use group cipher
++				}
++				#undef p
++				break;
++			} /* End case IE_RSN */
++		} /* End switch EID */
++	} /* End for () */
++
++	DBGPRINT(RT_DEBUG_TRACE, "%s: return CipherType=0x%04x\n",
++			__FUNCTION__, ciphertype);
++	return ciphertype;
+ }
+ 
+ // ===========================================================================================
+Nur in rt2500-1.1.0-b4/Module/: mlme.c.orig.
+diff -r -u rt2500-1.1.0-b4/Module/mlme.h rt2500-cvs-2007020414/Module/mlme.h
+--- rt2500-1.1.0-b4/Module/mlme.h	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/mlme.h	2006-11-28 09:00:02.000000000 +0100
+@@ -333,9 +333,10 @@
+     ULONG   LastBeaconRxTime; // OS's timestamp
+ 
+     // New for microsoft WPA support
++	USHORT					CipherCap;	// Pair (0:7), Group (8:15) cipher cap
+     NDIS_802_11_FIXED_IEs   FixIEs;
+     NDIS_802_11_WEP_STATUS  WepStatus;
+-    UCHAR                   VarIELen;               // Length of next VIE include EID & Length
++    USHORT                  VarIELen;	// Length of all saved IEs.
+     UCHAR                   VarIEs[MAX_VIE_LEN];
+ } BSS_ENTRY, *PBSS_ENTRY;
+ 
+@@ -482,7 +483,7 @@
+ typedef struct PACKED _BEACON_EID_STRUCT {
+     UCHAR   Eid;
+     UCHAR   Len;
+-    CHAR   Octet[1];
++    UCHAR   Octet[1];
+ } BEACON_EID_STRUCT,*PBEACON_EID_STRUCT;
+ 
+ // New for WPA cipher suite 
+@@ -497,6 +498,98 @@
+         UCHAR   Oui[4];
+     }   Unicast[1];
+ }   RSN_EID_STRUCT, *PRSN_EID_STRUCT;
++#define MIN_WPA_KEYDATA_LEN	(4 + sizeof(ie_version_t) + sizeof(suite_sel_t) + \
++							2*sizeof(suite_list_t))
++
++
++/* Country Information Element (802.11d pp. 4, 5) */
++
++typedef struct country_subelement {
++	unsigned char	first_chan,
++					num_chans;
++	signed char		max_tx_pwr;		// in dBm
++} PACKED country_subelement_t, *country_subelement_p;
++
++typedef struct country_string {	// (all alpha)
++	UCHAR	co[2];				// ISO/IEC 3166-1 country code
++	UCHAR	env;				// ' '/'O'/'I' - 802.11d pp. 19
++} PACKED country_string_t, *country_string_p;
++
++typedef struct country_ie {
++	UCHAR					eid;
++	UCHAR					length;
++	country_string_t		cs;
++	country_subelement_t	chans[1];
++	UCHAR					pad[0];	// may or may not be present
++} PACKED country_ie_t, *country_ie_p;
++
++
++/* WPA2 (cf. 802.11i pp. 27 ff.) */
++
++// access
++#define wtohs(x)	(le16_to_cpu(x))// sic (802.11 is "native" little-endian)
++#define htows(x)	(cpu_to_le16(x))// i.e. opposite of internet byte order
++
++// primitives
++typedef USHORT	ie_version_t;
++typedef USHORT	ie_count_t;
++typedef UCHAR	ie_oui_t[3];		// Organizationally Unique Identifier
++typedef UCHAR pmkid_t[16], *pmkid_p;// 802.11i pp. 76
++
++typedef struct rsncap {
++#ifdef BIG_ENDIAN
++	USHORT	Reserved:10;
++	USHORT	GTKSAReplayCounter:2;	// 0/2/4/16 replay counters
++	USHORT	PTKSAReplayCounter:2;
++	USHORT	NoPairwise:1;			// WEP key 0 and pairwise key n/a
++	USHORT	PreAuth:1;				// AP STA supports pre-authentication
++#else
++	USHORT	PreAuth:1;				// AP STA supports pre-authentication
++	USHORT	NoPairwise:1;			// WEP key 0 and pairwise key n/a
++	USHORT	PTKSAReplayCounter:2;
++	USHORT	GTKSAReplayCounter:2;	// 0/2/4/16 replay counters
++	USHORT	Reserved:10;
++#endif
++} PACKED rsncap_t, *rsncap_p;
++
++typedef struct suite_sel {
++	ie_oui_t	oui;
++	UCHAR		type;
++} PACKED suite_sel_t, *suite_sel_p;
++
++/* Cipher suite selectors - 802.11i pp. 28, 29 */
++#define CIPHER_TYPE_GRP		0
++#define CIPHER_TYPE_WEP40	1
++#define CIPHER_TYPE_TKIP	2
++#define CIPHER_TYPE_RES		3
++#define CIPHER_TYPE_CCMP	4
++#define CIPHER_TYPE_WEP104	5
++#define NUM_CIPHER_TYPES	6
++
++/* Authentication and Key Management suite selectors - 802.11i pp. 30 */
++#define AKM_TYPE_802_1X		1
++#define AKM_TYPE_PSK		2
++
++typedef struct suite_list {
++	ie_count_t	count;
++	suite_sel_t	suite[1];
++} PACKED suite_list_t, *suite_list_p;
++
++typedef struct pmkid_list {
++	ie_count_t	count;
++	pmkid_t		list[1];
++} PACKED pmkid_list_t, *pmkid_list_p;
++
++typedef struct rsn_ie {
++	UCHAR  			eid;
++	UCHAR  			length;
++	ie_version_t	version;
++
++	// Optional fields
++	suite_sel_t	gcsuite;		// Group Cipher Suite
++}  PACKED rsn_ie_t, *rsn_ie_p;
++#define MIN_RSN_KEYDATA_LEN	(sizeof(ie_version_t) + sizeof(suite_sel_t) + \
++							2*sizeof(suite_list_t))
+ 
+ extern UCHAR  RateIdToMbps[];
+ extern USHORT RateIdTo500Kbps[];
+diff -r -u rt2500-1.1.0-b4/Module/oid.h rt2500-cvs-2007020414/Module/oid.h
+--- rt2500-1.1.0-b4/Module/oid.h	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/oid.h	2007-01-11 21:20:58.000000000 +0100
+@@ -30,6 +30,7 @@
+  *      --------        -----------     ----------------------------- 
+  *      MarkW           8th  Dec 04     Baseline code  
+  *      RobinC          10th Dec 04     RFMON Support 
++ *      RomainB         31st Dec 06     RFMON getter
+  ***************************************************************************/ 
+ 
+ #ifndef _OID_H_
+@@ -56,7 +57,8 @@
+ #define RTPRIV_IOCTL_BBP                            SIOCIWFIRSTPRIV + 0x03
+ #define RTPRIV_IOCTL_MAC                            SIOCIWFIRSTPRIV + 0x05
+ #define RTPRIV_IOCTL_E2P                            SIOCIWFIRSTPRIV + 0x07
+-#define RTPRIV_IOCTL_RFMONTX                        SIOCIWFIRSTPRIV + 0x0D
++#define RTPRIV_IOCTL_SET_RFMONTX                    SIOCIWFIRSTPRIV + 0x0C
++#define RTPRIV_IOCTL_GET_RFMONTX                    SIOCIWFIRSTPRIV + 0x0D
+ 
+ #define OID_GET_SET_TOGGLE                          0x8000
+ 
+diff -r -u rt2500-1.1.0-b4/Module/rt_config.h rt2500-cvs-2007020414/Module/rt_config.h
+--- rt2500-1.1.0-b4/Module/rt_config.h	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rt_config.h	2006-12-01 00:18:16.000000000 +0100
+@@ -39,8 +39,8 @@
+ #define NIC_DEVICE_NAME             "RT2500STA"
+ 
+ #define	DRV_NAME	"rt2500"
+-#define DRV_VERSION	"1.1.0 BETA4"
+-#define DRV_RELDATE	"2006/06/18"
++#define DRV_VERSION	"1.1.0 CVS"
++#define DRV_RELDATE	"CVS"
+ #define DRV_VERSION_MAJOR 1
+ #define DRV_VERSION_MINOR 1 
+ #define DRV_VERSION_SUB 0
+@@ -55,7 +55,6 @@
+ #error  You must compile this driver with "-O".
+ #endif
+ 
+-#include <linux/config.h>  //can delete
+ #include <linux/module.h>
+ #include <linux/version.h>
+ #include <linux/kernel.h>
+@@ -92,7 +91,7 @@
+ #ifndef ULONG
+ #define CHAR            char
+ #define INT             int
+-#define SHORT           int
++#define SHORT           short 
+ #define UINT            u32
+ #define ULONG           u32
+ #define USHORT          u16
+diff -r -u rt2500-1.1.0-b4/Module/rtmp.h rt2500-cvs-2007020414/Module/rtmp.h
+--- rt2500-1.1.0-b4/Module/rtmp.h	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rtmp.h	2007-01-11 21:20:58.000000000 +0100
+@@ -37,6 +37,7 @@
+  *      MarkW (rt2400)  15th Dec 04     Spinlock fix 
+  *      Ivo (rt2400)    15th Dec 04     Debug level switching
+  *      GregorG         29th Mar 05     Big endian fixes
++ *      RomainB         31st Dec 06     RFMON getter
+  ***************************************************************************/ 
+ 
+ #ifndef __RTMP_H__
+@@ -91,9 +92,27 @@
+ #ifdef RT2500_DBG
+ #define DBGPRINT(Level, fmt, args...) 					\
+ 	if(debug){printk(Level DRV_NAME ": " fmt, ## args);}
++
++#define DBGHEXSTR(level, prefix, src, len)							\
++	{																\
++	    char			buf[128];	/* allows 64 bytes/512 bits */	\
++		int				i, j;										\
++		unsigned char	*p;											\
++																	\
++		if (len > 0) {												\
++			j = len < sizeof(buf)/2? len: sizeof(buf)/2 - 1;		\
++																	\
++			for (p = (unsigned char *)(src), i = 0; i < j; i++) {	\
++				sprintf(&buf[i*2], "%02x", *p++);					\
++			}														\
++			DBGPRINT(level, prefix "%s\n", buf);					\
++		}															\
++	}
+ #else
+ #define DBGPRINT(Level, fmt, args...)					\
+ 	while(0){}
++#define DBGHEXSTR(level, prefix, src, len)							\
++	while(0){}
+ #endif
+ 
+ //
+@@ -400,10 +419,10 @@
+ typedef struct  _WPA_KEY {
+     UCHAR   KeyLen;             // Key length for each key, 0: entry is invalid
+     UCHAR   Key[16];            // right now we implement 4 keys, 128 bits max
+-    UCHAR   RxMic[8];
+-    UCHAR   TxMic[8];
++    UCHAR   RxMic[8];		// Message Integrity Code
++    UCHAR   TxMic[8];		// MIC
+     NDIS_802_11_MAC_ADDRESS BssId;  // For pairwise key only
+-    UCHAR   TxTsc[6];           // 48bit TSC value
++    UCHAR   TxTsc[6];           // 48bit TKIP Sequence Counter value
+     UCHAR   RxTsc[6];           // 48bit TSC value
+     UCHAR   Type;               // Indicate Pairwise / Group
+ }   WPA_KEY, *PWPA_KEY;
+@@ -1096,10 +1115,16 @@
+ INT     RT2500_close(
+     IN  struct net_device *net_dev);
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
+ irqreturn_t RTMPIsr(
+     IN  INT             irq, 
+     IN  VOID            *dev_instance, 
+     IN  struct pt_regs  *rgs);
++#else
++irqreturn_t RTMPIsr(
++    IN  INT             irq, 
++    IN  VOID            *dev_instance);
++#endif
+ 
+ VOID    RT2500_timer(
+     IN  unsigned long data);
+@@ -1501,6 +1526,7 @@
+     IN UCHAR Rssi,
+     IN UCHAR Noise,
+     IN LARGE_INTEGER TimeStamp,
++    IN USHORT VarIELen,          // Length of all saved IEs.
+     IN PNDIS_802_11_VARIABLE_IEs pVIE);
+ 
+ ULONG  BssTableSetEntry(
+@@ -1522,6 +1548,7 @@
+     IN UCHAR Rssi,
+     IN UCHAR Noise,
+     IN LARGE_INTEGER TimeStamp,
++    IN USHORT VarIELen,          // Length of all saved IEs.
+     IN PNDIS_802_11_VARIABLE_IEs pVIE);
+ 
+ VOID  BssTableSsidSort(
+@@ -1533,8 +1560,9 @@
+ VOID  BssTableSortByRssi(
+     IN OUT BSS_TABLE *OutTab);
+ 
+-NDIS_802_11_WEP_STATUS  BssCipherParse(
+-    IN  PUCHAR  pCipher);
++USHORT  BssCipherParse(
++    IN  PBEACON_EID_STRUCT	pEid,
++    IN  USHORT              VarIELen); // Length of all saved IEs.
+ 
+ NDIS_STATUS  MlmeQueueInit(
+     IN MLME_QUEUE *Queue);
+@@ -2012,6 +2040,7 @@
+ 	OUT UCHAR *SupRateLen,
+ 	OUT UCHAR ExtRate[],
+ 	OUT UCHAR *ExtRateLen,
++    OUT USHORT *VarIELen,	// Length of all saved IEs.
+     OUT	PNDIS_802_11_VARIABLE_IEs pVIE);
+ 
+ //BOOLEAN JoinParmSanity(
+@@ -2425,10 +2454,14 @@
+     IN  struct iwreq    *wrq);
+ #endif
+ 
+-int RTMPIoctlRFMONTX(
+-    IN OUT PRTMP_ADAPTER   pAdapter,
++int RTMPIoctlSetRFMONTX(
++    IN PRTMP_ADAPTER   pAdapter,
+     IN  struct iwreq    *wrq);
+ 
++int RTMPIoctlGetRFMONTX(
++    IN PRTMP_ADAPTER   pAdapter,
++    OUT  struct iwreq    *wrq);
++
+ //
+ // prototype in wpa.c
+ //
+diff -r -u rt2500-1.1.0-b4/Module/rtmp_data.c rt2500-cvs-2007020414/Module/rtmp_data.c
+--- rt2500-1.1.0-b4/Module/rtmp_data.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rtmp_data.c	2006-07-13 15:57:41.000000000 +0200
+@@ -1125,7 +1125,9 @@
+ 		// header sanity again, the only thing we have to check is icv_err bit
+ 		if (pRxD->IcvError == 1)
+ 		{
+-   		    DBGPRINT(RT_DEBUG_TRACE,"Rx DecryptDone - ICV error (len %d)\n", pRxD->DataByteCnt);
++   		    DBGPRINT(RT_DEBUG_TRACE,
++					"Rx DecryptDone - ICV error (CipherAlg=%d) (len %d)\n", 
++					pRxD->CipherAlg, pRxD->DataByteCnt);
+ 			pRxD->Drop =1;			// Drop frame with icv error
+ 		}
+ 		// Saved data pointer for management frame which will pass to MLME block
+@@ -2233,7 +2235,7 @@
+ 	UCHAR                   AccessCategory;
+         unsigned long           irqflag;
+ 	
+-	DBGPRINT(RT_DEBUG_INFO, "<==== RTMPSendPacket\n");
++	DBGPRINT(RT_DEBUG_INFO, "====> RTMPSendPacket\n");
+ 
+ 	// Init priority value
+ 	Priority = 0;
+@@ -2371,7 +2373,7 @@
+ 	if (INFRA_ON(pAdapter))
+ 	{
+ 	    // In infrastructure mode, simply enqueue the packet into Tx waiting queue.
+-	    DBGPRINT(RT_DEBUG_INFO, "Infrastructure -> Enqueue one frame\n");
++	    DBGPRINT(RT_DEBUG_INFO, "<=== RTMPSendPacket Infrastructure -> Enqueue one frame\n");
+ 		
+ 	    // Enqueue Ndis packet to end of Tx wait queue
+ 	    skb_queue_tail(pTxQueue, skb);
+@@ -2383,7 +2385,7 @@
+ 	    PsMode = PWR_ACTIVE;		// Faked
+ 	    if (PsMode == PWR_ACTIVE)
+ 	    {
+-		DBGPRINT(RT_DEBUG_INFO,"Ad-Hoc -> Enqueue one frame\n");
++		DBGPRINT(RT_DEBUG_INFO,"<=== RTMPSendPacket Ad-Hoc -> Enqueue one frame\n");
+ 
+ 		// Enqueue Ndis packet to end of Tx wait queue
+ 		skb_queue_tail(pTxQueue, skb);
+@@ -3278,6 +3280,7 @@
+ 		{
+ 			INT		i;
+ 			PUCHAR	pTmp;
++			DBGPRINT(RT_DEBUG_TRACE,"Ndis802_11Encryption3Enabled::DefaultKeyId = %d\n", pAdapter->PortCfg.DefaultKeyId);
+ 
+ 			i = 0;
+ 			pTmp = (PUCHAR) &Iv16;
+@@ -3308,8 +3311,11 @@
+ 			CipherAlg = CIPHER_AES;                         // Set Cipher suite
+ 		}
+ 		else
++		{
++			DBGPRINT(RT_DEBUG_TRACE,"Ndis802_11EncryptionDisabled\n");
+ 			CipherAlg = CIPHER_NONE;
+-		
++		}	
++
+ 		//
+ 		// Only the first fragment required LLC-SNAP header !!!
+ 		//
+@@ -3382,16 +3388,18 @@
+ 				(MICFrag == FALSE) &&
+ 				(pWpaKey != NULL))
+ 			{
+-				INT i;
+-
+ 			    NdisBufferLength = 8;		// Set length to MIC length
+-				DBGPRINT(RT_DEBUG_INFO, "Calculated TX MIC value =");  
+-				for (i = 0; i < 8; i++)
+-				{
+-					DBGPRINT(RT_DEBUG_INFO, "%02x:", pAdapter->PrivateInfo.Tx.MIC[i]);  
+-				}
+-				DBGPRINT(RT_DEBUG_INFO, "\n"); 
+-							
++		            DBGPRINT(RT_DEBUG_INFO,
++				"--- TX MIC=%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
++				pAdapter->PrivateInfo.Tx.MIC[0],
++				pAdapter->PrivateInfo.Tx.MIC[1],
++				pAdapter->PrivateInfo.Tx.MIC[2],
++				pAdapter->PrivateInfo.Tx.MIC[3],
++				pAdapter->PrivateInfo.Tx.MIC[4],
++				pAdapter->PrivateInfo.Tx.MIC[5],
++				pAdapter->PrivateInfo.Tx.MIC[6],
++				pAdapter->PrivateInfo.Tx.MIC[7]);
++					
+     			if (FreeFragSize >= NdisBufferLength)
+ 				{
+ 					memcpy(pDest, pAdapter->PrivateInfo.Tx.MIC, NdisBufferLength);
+diff -r -u rt2500-1.1.0-b4/Module/rtmp_def.h rt2500-cvs-2007020414/Module/rtmp_def.h
+--- rt2500-1.1.0-b4/Module/rtmp_def.h	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rtmp_def.h	2006-08-29 04:32:00.000000000 +0200
+@@ -190,7 +190,7 @@
+ #define HASH_TABLE_SIZE                   256
+ #define MAX_LEN_OF_MLME_BUFFER            1024
+ #define MAX_FRAME_LEN                     2338
+-#define MAX_VIE_LEN                       128   // New for WPA cipher suite variable IE sizes.
++#define MAX_VIE_LEN                       257	// sum of WPAx IEs
+ #define MAX_MLME_HANDLER_MEMORY           20    //each them cantains  MAX_LEN_OF_MLME_BUFFER size 
+ #define MAX_INI_BUFFER_SIZE               1024
+ 
+diff -r -u rt2500-1.1.0-b4/Module/rtmp_info.c rt2500-cvs-2007020414/Module/rtmp_info.c
+--- rt2500-1.1.0-b4/Module/rtmp_info.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rtmp_info.c	2007-01-11 21:20:58.000000000 +0100
+@@ -43,6 +43,7 @@
+  *      LuisCorreia     23rd Feb 05     fix unknown IOCTL's
+  *      MarkW           9th  Mar 05     Quality reporting in scan for current
+  * 		MarkW			9th  Jun 05		Fix channel change for ADHOC mode
++ * 		RomainB         31st Dec 06     RFMON getter
+  ***************************************************************************/ 
+ 
+ #include    "rt_config.h"
+@@ -166,9 +167,12 @@
+ { RTPRIV_IOCTL_E2P,
+   IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
+   "e2p"},
+-{ RTPRIV_IOCTL_RFMONTX,
+-  IW_PRIV_TYPE_INT | 2, IW_PRIV_TYPE_CHAR | sizeof (char),
+-  "rfmontx"}
++{ RTPRIV_IOCTL_SET_RFMONTX,
++  IW_PRIV_TYPE_INT | 2, 0,
++  "rfmontx"},
++{ RTPRIV_IOCTL_GET_RFMONTX,
++  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,
++  "get_rfmontx"}
+ };
+ 
+ static struct {
+@@ -233,7 +237,7 @@
+ 	u16 val;
+ 	int i,chan;
+ 
+-	DBGPRINT(RT_DEBUG_TRACE,"0. rtusb_ioctl_giwrange\n");		
++	DBGPRINT(RT_DEBUG_TRACE,"0. rt_ioctl_giwrange\n");		
+ 	data->length = sizeof(struct iw_range);
+ 	memset(range, 0, sizeof(struct iw_range));
+ 
+@@ -422,6 +426,8 @@
+ 		Status = NDIS_STATUS_SUCCESS;
+ 		StateMachineTouched = TRUE;
+ 	}while(0);
++    if(StateMachineTouched) // Upper layer sent a MLME-related operations
++        MlmeHandler(pAdapter);
+ 	return 0;
+ }
+ int
+@@ -522,7 +528,7 @@
+                 memset(&iwe, 0, sizeof(iwe));
+ 	}
+ 	data->length = current_ev - extra;
+-	DBGPRINT(RT_DEBUG_TRACE,"rtusb_ioctl_giwscan. %d BSS returned\n",pAdapter->PortCfg.BssTab.BssNr);						
++	DBGPRINT(RT_DEBUG_TRACE,"rt_ioctl_giwscan. %d BSS returned\n",pAdapter->PortCfg.BssTab.BssNr);						
+ 	return 0;
+ }
+ #endif
+@@ -1236,6 +1242,8 @@
+             Status = -EOPNOTSUPP;
+             break;
+     }
++    if(StateMachineTouched) // Upper layer sent a MLME-related operations
++        MlmeHandler(pAdapter);
+ 
+     return Status;
+ }
+@@ -1628,6 +1636,7 @@
+     USHORT                              subcmd;
+     BOOLEAN                             StateMachineTouched = FALSE;
+     int                                 i, chan = -1, index = 0, len = 0;
++    ULONG				Length;
+ 
+ 
+     switch(cmd) {
+@@ -1646,23 +1655,29 @@
+                     break;
+                 }
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
++		Length = erq->length - 1; // minux null character.
++#else
++		Length = erq->length;
++#endif
++
+ 		if(RTMP_TEST_FLAG(pAdapter, fRTMP_ADAPTER_INTERRUPT_IN_USE))
+ 		{
+-                	if (copy_from_user(Ssid.Ssid, erq->pointer, (erq->length - 1)))
++                	if (copy_from_user(Ssid.Ssid, erq->pointer, Length))
+                 	{
+                    	 Status = -EFAULT;
+                    	 break;
+                 	}
+-                	Ssid.SsidLength = erq->length - 1;  //minus null character.
++                	Ssid.SsidLength = Length;
+ 		}else{
+ 			// This SEEMS to be needed to actual work RobinC when iface
+ 			// is down
+-	                if (copy_from_user(pAdapter->PortCfg.Ssid, erq->pointer, (erq->length - 1)))
++	                if (copy_from_user(pAdapter->PortCfg.Ssid, erq->pointer, Length))
+ 	                {
+ 	                    Status = -EFAULT;
+ 	                    break;
+ 	                }
+-	                pAdapter->PortCfg.SsidLen = erq->length - 1;  //minus null character.
++	                pAdapter->PortCfg.SsidLen = Length;
+ 
+ 			memcpy(pAdapter->Mlme.CntlAux.Ssid, pAdapter->PortCfg.Ssid, pAdapter->PortCfg.SsidLen);	
+ 			pAdapter->Mlme.CntlAux.SsidLen = pAdapter->PortCfg.SsidLen; 
+@@ -1850,7 +1865,8 @@
+ 		}
+                 pAdapter->PortCfg.SharedKey[index].KeyLen = len <= WEP_SMALL_KEY_LEN ? WEP_SMALL_KEY_LEN : WEP_LARGE_KEY_LEN;
+             }
+-            pAdapter->PortCfg.DefaultKeyId = (UCHAR) index;
++	    else
++            	pAdapter->PortCfg.DefaultKeyId = (UCHAR) index;
+             if (wrq->u.encoding.flags & IW_ENCODE_DISABLED)
+                 pAdapter->PortCfg.WepStatus = Ndis802_11WEPDisabled;
+             else
+@@ -2161,8 +2177,12 @@
+             break;
+ #endif
+ 
+-	case RTPRIV_IOCTL_RFMONTX:
+-	    Status = RTMPIoctlRFMONTX(pAdapter, wrq);
++	case RTPRIV_IOCTL_SET_RFMONTX:
++	    Status = RTMPIoctlSetRFMONTX(pAdapter, wrq);
++	    break;
++
++	case RTPRIV_IOCTL_GET_RFMONTX:
++	    Status = RTMPIoctlGetRFMONTX(pAdapter, wrq);
+ 	    break;
+ 
+         default:
+@@ -2960,13 +2980,11 @@
+     int                                 success = TRUE;
+ 
+     WirelessMode = simple_strtol(arg, 0, 10);
++    DBGPRINT(RT_DEBUG_TRACE, "Set_WirelessMode_Proc::(=%d)\n", WirelessMode);
+ 
+     if ((WirelessMode == PHY_11BG_MIXED) || (WirelessMode == PHY_11B) ||
+         (WirelessMode == PHY_11A) || (WirelessMode == PHY_11ABG_MIXED))
+-    {
+         RTMPSetPhyMode(pAdapter, WirelessMode);
+-        DBGPRINT(RT_DEBUG_TRACE, "Set_WirelessMode_Proc::(=%d)\n", WirelessMode);
+-    }
+     else
+         success = FALSE;
+ 
+@@ -3703,14 +3721,14 @@
+  
+     if (strlen(arg) == 64)
+     {
+-        AtoH(arg, pAdapter->PortCfg.PskKey.Key, 32);
++        AtoH(arg, keyMaterial, 32);
+     }
+     else
+     {
+     	PasswordHash((char *)arg, pAdapter->Mlme.CntlAux.Ssid, pAdapter->Mlme.CntlAux.SsidLen, keyMaterial);
+-
+-    	memcpy(pAdapter->PortCfg.PskKey.Key, keyMaterial, 32);
+     }
++    memcpy(pAdapter->PortCfg.PskKey.Key, keyMaterial, 32);
++
+     // Use RaConfig as PSK agent.
+     // Start STA supplicant state machine
+     pAdapter->PortCfg.WpaState = SS_START;
+@@ -3734,9 +3752,9 @@
+         // 6. Copy information into Group Key structure.
+         // pKey->KeyLength will include TxMic and RxMic, therefore, we use 16 bytes hardcoded.
+         pAdapter->PortCfg.GroupKey[0].KeyLen = 16;     
+-        memcpy(pAdapter->PortCfg.GroupKey[0].Key,   (PUCHAR)(keyMaterial) +  0, 16);
+-        memcpy(pAdapter->PortCfg.GroupKey[0].RxMic, (PUCHAR)(keyMaterial) + 16, 8);
+-        memcpy(pAdapter->PortCfg.GroupKey[0].TxMic, (PUCHAR)(keyMaterial) + 16, 8);
++        memcpy(pAdapter->PortCfg.GroupKey[0].Key,   &keyMaterial[0], 16);
++        memcpy(pAdapter->PortCfg.GroupKey[0].RxMic, &keyMaterial[16], 8);
++        memcpy(pAdapter->PortCfg.GroupKey[0].TxMic, &keyMaterial[16], 8);
+         memcpy(pAdapter->PortCfg.GroupKey[0].BssId, &pAdapter->PortCfg.Bssid, 6);
+ 
+         // Init TxTsc to one based on WiFi WPA specs
+@@ -3887,9 +3905,9 @@
+     kfree(arg);
+ }
+ 
+-int RTMPIoctlRFMONTX(
++int RTMPIoctlSetRFMONTX(
+     IN PRTMP_ADAPTER   pAdapter,
+-    IN OUT struct iwreq    *wrq)
++    IN struct iwreq    *wrq)
+ {
+     char		*pvalue;
+     char		value;
+@@ -3912,15 +3930,16 @@
+         else return -EINVAL;
+     }
+ 
+-    /* Display the state. Use "value" to indicate it. */
+-    value = pAdapter->PortCfg.MallowRFMONTx == TRUE ? '1'
+-                                                    : '0';
+-    wrq->u.data.length = sizeof (char);
+-
+-    if (copy_to_user (wrq->u.data.pointer, &value, wrq->u.data.length))
+-        DBGPRINT (RT_DEBUG_ERROR, "RTMPIoctlRFMONTX - copy to user failure.\n");
++    return 0;
++}
+ 
++int RTMPIoctlGetRFMONTX(
++    IN PRTMP_ADAPTER   pAdapter,
++    OUT struct iwreq    *wrq)
++{
++    *(int *) wrq->u.name = pAdapter->PortCfg.MallowRFMONTx == TRUE ? 1 : 0;
+     return 0;
++
+ }
+ 
+ /* 
+Nur in rt2500-1.1.0-b4/Module/: rtmp_info.c.orig.
+diff -r -u rt2500-1.1.0-b4/Module/rtmp_init.c rt2500-cvs-2007020414/Module/rtmp_init.c
+--- rt2500-1.1.0-b4/Module/rtmp_init.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rtmp_init.c	2007-01-22 20:34:22.000000000 +0100
+@@ -916,8 +916,12 @@
+ 	DBGPRINT(RT_DEBUG_TRACE, "<-- NICInitAsicFromEEPROM\n");
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
++extern VOID MlmeWork(struct work_struct *work);
++#else 
+ extern VOID MlmeWork(void *vpAd);
+-
++#endif
++    
+ void NICInitializeAdapter(IN    PRTMP_ADAPTER   pAdapter)
+ {
+     TXCSR2_STRUC    TxCSR2;
+@@ -974,7 +978,9 @@
+     // Initialze ASIC for TX & Rx operation
+     NICInitializeAsic(pAdapter);
+ 
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
++    INIT_WORK(&pAdapter->mlme_work, MlmeWork);
++#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
+     INIT_WORK(&pAdapter->mlme_work, MlmeWork, (void*)pAdapter);
+ #endif
+     DBGPRINT(RT_DEBUG_TRACE, "<-- NICInitializeAdapter\n");
+Nur in rt2500-1.1.0-b4/Module/: rtmp_init.c.orig.
+diff -r -u rt2500-1.1.0-b4/Module/rtmp_main.c rt2500-cvs-2007020414/Module/rtmp_main.c
+--- rt2500-1.1.0-b4/Module/rtmp_main.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/rtmp_main.c	2006-12-01 00:18:16.000000000 +0100
+@@ -85,7 +85,7 @@
+ #define CSR_REG_BASE			0x0000
+ #define CSR_REG_SIZE			0x0174
+ #define EEPROM_BASE			0x0000
+-#define EEPROM_SIZE			0x01ff
++#define EEPROM_SIZE			0x0200
+ 
+ #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0)
+ static void
+@@ -217,8 +217,8 @@
+     csr_addr = (unsigned long) ioremap(pci_resource_start(pPci_Dev, 0), pci_resource_len(pPci_Dev, 0));
+     if (!csr_addr) 
+     {
+-        DBGPRINT(RT_DEBUG_TRACE, "ioremap failed for device %s, region 0x%X @ 0x%lX\n",
+-            print_name, (ULONG)pci_resource_len(pPci_Dev, 0), pci_resource_start(pPci_Dev, 0));
++        DBGPRINT(RT_DEBUG_TRACE, "ioremap failed for device %s, region 0x%X @ 0x%X\n",
++            print_name, (ULONG)pci_resource_len(pPci_Dev, 0), (ULONG)pci_resource_start(pPci_Dev, 0));
+         goto err_out_free_res;
+     }
+ 
+@@ -284,8 +284,8 @@
+     if (Status != NDIS_STATUS_SUCCESS)
+ 		goto err_out_unmap;
+ 
+-    DBGPRINT(RT_DEBUG_TRACE, "%s: at 0x%lx, VA 0x%lx, IRQ %d. \n", 
+-        net_dev->name, pci_resource_start(pPci_Dev, 0), (unsigned long)csr_addr, pPci_Dev->irq);
++    DBGPRINT(RT_DEBUG_TRACE, "%s: at 0x%x, VA 0x%lx, IRQ %d. \n", 
++        net_dev->name, (ULONG)pci_resource_start(pPci_Dev, 0), (unsigned long)csr_addr, pPci_Dev->irq);
+ 
+     // Set driver data
+     pci_set_drvdata(pPci_Dev, net_dev);
+@@ -514,10 +514,16 @@
+ 
+     ========================================================================
+ */
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
+ irqreturn_t RTMPIsr(
+     IN  INT             irq, 
+     IN  VOID            *dev_instance, 
+     IN  struct pt_regs  *rgs)
++#else
++irqreturn_t RTMPIsr(
++    IN  INT             irq, 
++    IN  VOID            *dev_instance)
++#endif
+ {
+     struct net_device   *net_dev = dev_instance;
+     PRTMP_ADAPTER       pAdapter = net_dev->priv;
+diff -r -u rt2500-1.1.0-b4/Module/sanity.c rt2500-cvs-2007020414/Module/sanity.c
+--- rt2500-1.1.0-b4/Module/sanity.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/sanity.c	2006-11-28 09:00:02.000000000 +0100
+@@ -33,7 +33,8 @@
+ 
+ #include "rt_config.h"
+ 
+-UCHAR   WPA_OUI[] = {0x00, 0x50, 0xf2, 0x01};
++static const UCHAR		WPA_OUI[] = {0x00, 0x50, 0xf2, 0x01};
++static const ie_oui_t	wpa2_oui = {0x00, 0x0f, 0xac};	// 802.11i pp. 28, 30
+ 
+ /* 
+     ==========================================================================
+@@ -235,7 +236,7 @@
+                     }
+                     break;
+                 default:
+-                    DBGPRINT(RT_DEBUG_TRACE, "PeerAssocRspSanity - ignore unrecognized EID = %d\n", eid_ptr->Eid);
++                    DBGPRINT(RT_DEBUG_TRACE, "PeerAssocRspSanity - ignore unrecognized EID=%d (Len=%d)\n", eid_ptr->Eid, eid_ptr->Len);
+                     break;
+             }
+ 
+@@ -408,6 +409,94 @@
+     return TRUE;
+ }
+ 
++static inline void handle_country_ie(
++		country_ie_p p)
++{
++	int i;
++
++	DBGPRINT(RT_DEBUG_INFO,
++			" -  IE_COUNTRY (ID=%d) (Len=%d) "
++			"(string=\"%c%c:%c\")\n",
++			p->eid, p->length, p->cs.co[0], p->cs.co[1], p->cs.env);
++
++	// drop malformed elements
++	if (p->length & 1 || p->length < 6) {
++		DBGPRINT(RT_DEBUG_ERROR,
++				" -  IE_COUNTRY invalid length\n");
++		return;
++	}
++	for (i = 0; i < offsetof(country_string_t, env); i++) {
++		if (p->cs.co[i] < 'A' || p->cs.co[i] > 'z') {
++			DBGPRINT(RT_DEBUG_ERROR,
++					" -  IE_COUNTRY invalid co fld\n");
++			return;
++		}
++	}
++	if (p->cs.env != ' ' && p->cs.env != 'O' && p->cs.env != 'I') {
++		DBGPRINT(RT_DEBUG_ERROR,
++				" -  IE_COUNTRY invalid env field\n");
++		return;
++	}
++	if (p->length % 3 && *(char *)((char *)p + p->length + 1) != 0) {
++		DBGPRINT(RT_DEBUG_ERROR,
++				" -  IE_COUNTRY pad non-null\n");
++		return;
++	}
++#ifdef RT2500_DBG
++	{
++	int num_subelements = p->length/3 - 1;
++	country_subelement_p sep = p->chans;
++	for (i = 0; i < num_subelements; i++, sep++)
++	{
++		DBGPRINT(RT_DEBUG_INFO,
++				" -  Band %d First chan=%d, Num chans=%d, Max Tx Pwr=%d\n",
++				i, sep->first_chan, sep->num_chans, sep->max_tx_pwr);
++	}
++	}
++#endif /* RT2500_DBG */
++	/* TODO */
++
++} /* End handle_country_ie () */
++
++static inline int handle_rsn_ie(
++		rsn_ie_p p,
++		PNDIS_802_11_VARIABLE_IEs pVIE)
++{
++	DBGPRINT(RT_DEBUG_INFO,
++			" -  IE_RSN (ID=%d, Len=%d)\n",
++			p->eid, p->length);
++
++	// drop malformed elements
++	if (p->length < 2 || p->length & 1) {
++		DBGPRINT(RT_DEBUG_ERROR,
++				" -  IE_RSN invalid length\n");
++		return 0;
++	}
++	if (wtohs(p->version) != 1) {
++		DBGPRINT(RT_DEBUG_ERROR,
++				" -  IE_RSN invalid version %d\n",
++				p->version);
++		return 0;
++	}
++	if (p->length >= 6) { // group cipher suite
++		if (!RTMPEqualMemory(&p->gcsuite.oui, wpa2_oui, sizeof(wpa2_oui)))
++		{
++			DBGPRINT(RT_DEBUG_ERROR,
++					" -  IE_RSN invalid oui "
++					"%02x %02x %02x\n",
++					p->gcsuite.oui[0], p->gcsuite.oui[1], p->gcsuite.oui[2]);
++			return 0;
++		}
++	}
++	// Copy to pVIE which will report to microsoft bssid list.
++	pVIE->ElementID = p->eid;
++	pVIE->Length = p->length;
++	memcpy(pVIE->data, &p->version, p->length);
++
++	return (p->length + 2);
++
++} /* End handle_rsn_ie () */
++
+ /* 
+     ==========================================================================
+     Description:
+@@ -445,6 +534,7 @@
+ 	OUT UCHAR *SupRateLen,
+ 	OUT UCHAR ExtRate[],
+ 	OUT UCHAR *ExtRateLen,
++    OUT USHORT *VarIELen,	// Length of all saved IEs.
+     OUT	PNDIS_802_11_VARIABLE_IEs pVIE) 
+ {
+     CHAR                *Ptr, TimLen;
+@@ -452,12 +542,20 @@
+     PBEACON_EID_STRUCT  eid_ptr;
+     UCHAR               SubType;
+     UCHAR               Sanity;
++    UCHAR               VarIE[MAX_VIE_LEN];
++
++	// armor against buffer overflow
++	UCHAR						*vielim = &VarIE[MAX_VIE_LEN];
++    NDIS_802_11_VARIABLE_IEs    *ptVIE = (PNDIS_802_11_VARIABLE_IEs)VarIE;
++
++	DBGPRINT(RT_DEBUG_TRACE,"===> %s\n", __FUNCTION__);
+ 
+     // Add for 3 necessary EID field check
+     Sanity = 0;
+ 
+     *ExtendedRateIeExist = FALSE;
+     *Erp = 0;
++	*VarIELen = 0;
+ 
+     Fr = (MACFRAME *)Msg;
+ 
+@@ -481,6 +579,7 @@
+     // get capability info from payload and advance the pointer
+     memcpy(CapabilityInfo, Ptr, 2);
+     Ptr += 2;
++    DBGPRINT(RT_DEBUG_INFO, " - CapabilityInfo=0x%.2x\n", *CapabilityInfo);
+     if (CAP_IS_ESS_ON(*CapabilityInfo)) 
+     {
+         *BssType = BSS_INFRA;
+@@ -498,23 +597,30 @@
+     // get variable fields from payload and advance the pointer
+     while(((UCHAR*)eid_ptr + eid_ptr->Len + 1) < ((UCHAR*)Fr + MsgLen))
+     {
++		DBGPRINT(RT_DEBUG_INFO, " - IE #%d len=%d\n",
++							eid_ptr->Eid, eid_ptr->Len);
+         switch(eid_ptr->Eid)
+         {
+             case IE_SSID:
+-                // Already has one SSID EID in this beacon, ignore the second one
++                // Already have one SSID EID in this beacon, ignore second one
+ 				if (Sanity & 0x1)
+ 					break;
+                 if(eid_ptr->Len <= MAX_LEN_OF_SSID)
+                 {
+                     memcpy(Ssid, eid_ptr->Octet, eid_ptr->Len);
+-		    memset(Ssid + eid_ptr->Len,0,1);
++					if (eid_ptr->Len < MAX_LEN_OF_SSID)
++                    	memset(Ssid + eid_ptr->Len,0,1);
+                     *SsidLen = eid_ptr->Len;
+                     Sanity |= 0x1;
+-                    //DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - ESSID=%s Len=%d\n",Ssid,eid_ptr->Len);
++                    DBGPRINT(RT_DEBUG_INFO, " -  SSID=%s Len=%d\n",
++							Ssid, eid_ptr->Len);
++                    DBGHEXSTR(RT_DEBUG_INFO, " -  SSID(hex)=",
++							Ssid, eid_ptr->Len);
+                 }
+                 else
+                 {
+-                    DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - wrong IE_SSID (len=%d)\n",eid_ptr->Len);
++                    DBGPRINT(RT_DEBUG_TRACE, "<=== %s - bad IE_SSID len=%d\n",
++							__FUNCTION__, eid_ptr->Len);
+                     return FALSE;
+                 }
+                 break;
+@@ -546,13 +652,15 @@
+                 }
+                 else
+                 {
+-                    DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - wrong IE_SUPP_RATES (len=%d)\n",eid_ptr->Len);
++                    DBGPRINT(RT_DEBUG_TRACE,
++							"<=== %s - wrong IE_SUPP_RATES (len=%d)\n",
++							__FUNCTION__, eid_ptr->Len);
+                     return FALSE;
+                 }
+                 break;
+ 
+             case IE_FH_PARM:
+-                DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity(IE_FH_PARM) \n");
++                DBGPRINT(RT_DEBUG_INFO, " - (IE_FH_PARM) \n");
+                 break;
+ 
+             case IE_DS_PARM:
+@@ -561,14 +669,18 @@
+                     *Channel = *eid_ptr->Octet;
+                     if (ChannelSanity(pAd, *Channel) == 0)
+                     {
+-                        DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - wrong IE_DS_PARM (ch=%d)\n",*Channel);
++                        DBGPRINT(RT_DEBUG_TRACE,
++								"<=== %s - wrong IE_DS_PARM (ch=%d)\n",
++								__FUNCTION__, *Channel);
+                         return FALSE;
+                     }
+                     Sanity |= 0x4;
+                 }
+                 else
+                 {
+-                    DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - wrong IE_DS_PARM (len=%d)\n",eid_ptr->Len);
++                    DBGPRINT(RT_DEBUG_TRACE,
++							"<=== %s - wrong IE_DS_PARM (len=%d)\n",
++							__FUNCTION__, eid_ptr->Len);
+                     return FALSE;
+                 }
+                 break;
+@@ -581,7 +693,8 @@
+                 }
+                 else
+                 {
+-                    DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - wrong IE_CF_PARM\n");
++                    DBGPRINT(RT_DEBUG_TRACE, "<=== %s - wrong IE_CF_PARM\n",
++							__FUNCTION__);
+                     return FALSE;
+                 }
+                 break;
+@@ -593,7 +706,8 @@
+                 }
+                 else
+                 {
+-                    DBGPRINT(RT_DEBUG_TRACE, "PeerBeaconAndProbeRspSanity - wrong IE_IBSS_PARM\n");
++                    DBGPRINT(RT_DEBUG_TRACE, "<=== %s - wrong IE_IBSS_PARM\n",
++							__FUNCTION__);
+                     return FALSE;
+                 }
+                 break;
+@@ -605,18 +719,45 @@
+                 }
+                 break;
+ 
++			case IE_COUNTRY:
++				handle_country_ie((country_ie_p)eid_ptr);
++				break;
++
+             // New for WPA
+             case IE_WPA:
+-                // Check the OUI version, filter out non-standard usage
+-                if (RTMPEqualMemory(eid_ptr->Octet, WPA_OUI, 4))
+-                {
+-                    // Copy to pVIE which will report to microsoft bssid list.
+-                    pVIE->ElementID = eid_ptr->Eid;
+-                    pVIE->Length = eid_ptr->Len;
+-                    memcpy(pVIE->data, eid_ptr->Octet, eid_ptr->Len);
+-                }
+-                DBGPRINT(RT_DEBUG_INFO, "PeerBeaconAndProbeRspSanity - Receive IE_WPA\n");
+-                break;
++				if (vielim >= (UCHAR *)ptVIE + eid_ptr->Len + 2)
++				{
++                    // ptVIE will report to microsoft bssid list.
++                   	ptVIE->ElementID = eid_ptr->Eid;
++                   	ptVIE->Length = eid_ptr->Len;
++                   	memcpy(ptVIE->data, eid_ptr->Octet, eid_ptr->Len);
++					ptVIE = (PNDIS_802_11_VARIABLE_IEs)((UCHAR *)ptVIE +
++							ptVIE->Length + 2);
++					DBGPRINT(RT_DEBUG_INFO, " -  OUI (%02x:%02x:%02x:%02x)\n",
++							eid_ptr->Octet[0], eid_ptr->Octet[1],
++							eid_ptr->Octet[2], eid_ptr->Octet[3]);
++                }
++				else
++				{
++					DBGPRINT(RT_DEBUG_ERROR,
++							" -  IE_WPA rcv area needs %d bytes: has %d left\n",
++							eid_ptr->Len + 2, vielim - (UCHAR *)ptVIE);
++				}
++                break;
++
++			case IE_RSN:
++				if (vielim >= (UCHAR *)ptVIE + eid_ptr->Len + 2)
++				{
++					ptVIE = (PNDIS_802_11_VARIABLE_IEs)((UCHAR *)ptVIE +
++							handle_rsn_ie((rsn_ie_p)eid_ptr, ptVIE));
++				}
++				else
++				{
++					DBGPRINT(RT_DEBUG_ERROR,
++							" -  IE_RSN rcv area needs %d bytes: has %d left\n",
++							eid_ptr->Len + 2, vielim - (UCHAR *)ptVIE);
++				}
++				break;
+ 
+             case IE_EXT_SUPP_RATES:
+                 // concatenate all extended rates to Rates[] and RateLen
+@@ -656,13 +797,18 @@
+                 break;
+                 
+             default:
+-                DBGPRINT(RT_DEBUG_INFO, "PeerBeaconAndProbeRspSanity - unrecognized EID = %d\n", eid_ptr->Eid);
++                DBGPRINT(RT_DEBUG_ERROR, " -  EID=%d (Len=%d) unrecognized\n",
++						eid_ptr->Eid, eid_ptr->Len);
+                 break;
+         }
+         
+         eid_ptr = (PBEACON_EID_STRUCT)((UCHAR*)eid_ptr + 2 + eid_ptr->Len);
+     }
+-
++	if ((UCHAR *)ptVIE > VarIE) {
++		int vielen = (UCHAR *)ptVIE - VarIE;
++		*VarIELen = vielen;
++		memcpy(pVIE, VarIE, vielen);
++	}
+ 
+     // in 802.11a band, AP may skip this DS IE in their BEACON
+     if ((pAd->PortCfg.Channel > 14) && ((Sanity & 0x04)==0))
+@@ -671,6 +817,7 @@
+         Sanity |= 0x04;
+     }
+     
++	DBGPRINT(RT_DEBUG_TRACE, "<=== %s: Sanity=0x%02x\n", __FUNCTION__, Sanity);
+     if (Sanity != 0x7)
+     {
+         DBGPRINT(RT_DEBUG_WARN, "PeerBeaconAndProbeRspSanity - missing field, Sanity=0x%02x\n", Sanity);
+diff -r -u rt2500-1.1.0-b4/Module/sync.c rt2500-cvs-2007020414/Module/sync.c
+--- rt2500-1.1.0-b4/Module/sync.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/sync.c	2006-08-29 04:32:00.000000000 +0200
+@@ -344,7 +344,7 @@
+                 Ssid, SsidLen, pAd->PortCfg.BssType, pAd->PortCfg.BeaconPeriod, 
+                 CfExist, &CfParm, pAd->PortCfg.AtimWin, pAd->PortCfg.CapabilityInfo, 
+                 pAd->PortCfg.SupportedRates, pAd->PortCfg.SupportedRatesLen, TRUE,
+-                pAd->PortCfg.Channel, Elem->Rssi, TimeStamp, pVIE);
++                pAd->PortCfg.Channel, Elem->Rssi, TimeStamp, 0, pVIE);
+         }
+ #endif
+ 
+@@ -383,14 +383,14 @@
+ 	UCHAR           SupRateLen, ExtRateLen;
+ 
+     // New for WPA security suites
+-    UCHAR                       VarIE[MAX_VIE_LEN];     // Total VIE length = MAX_VIE_LEN - -5
++    USHORT           VarIELen;	// Length of all saved IEs.
++    UCHAR            VarIE[MAX_VIE_LEN];     // Total VIE length = MAX_VIE_LEN - -5
+     NDIS_802_11_VARIABLE_IEs    *pVIE = NULL;
+ 
+     // NdisFillMemory(Ssid, MAX_LEN_OF_SSID, 0x00);
+     Fr = (MACFRAME *) Elem->Msg;
+     // Init Variable IE structure
+     pVIE = (PNDIS_802_11_VARIABLE_IEs) VarIE;
+-    pVIE->Length = 0;
+     if (PeerBeaconAndProbeRspSanity(pAd, 
+                                 Elem->Msg, 
+                                 Elem->MsgLen, 
+@@ -418,6 +418,7 @@
+                                 &SupRateLen,
+                                 ExtRate,
+                                 &ExtRateLen,
++                                &VarIELen,
+                                 pVIE)) 
+     {
+         ULONG Idx;
+@@ -447,7 +448,7 @@
+         CapabilityInfo &= SUPPORTED_CAPABILITY_INFO;
+         BssTableSetEntry(pAd, &pAd->PortCfg.BssTab, &Bssid, Ssid, SsidLen, BssType, 
+                          BeaconPeriod, CfExist, &CfParm, AtimWin, CapabilityInfo, Rates, 
+-                         RatesLen, ExtendedRateIeExist, Channel, Rssi, Noise, TimeStamp, pVIE);
++                         RatesLen, ExtendedRateIeExist, Channel, Rssi, Noise, TimeStamp, VarIELen, pVIE);
+     }
+     // sanity check fail, ignored
+ }
+@@ -474,7 +475,8 @@
+ 	UCHAR		  SupRateLen, ExtRateLen;
+ 
+ 	// New for WPA security suites
+-	UCHAR						VarIE[MAX_VIE_LEN];		// Total VIE length = MAX_VIE_LEN - -5
++    USHORT        VarIELen;				// Length of all saved IEs.
++	UCHAR         VarIE[MAX_VIE_LEN];	// Total VIE length = MAX_VIE_LEN - -5
+ 	NDIS_802_11_VARIABLE_IEs	*pVIE = NULL;
+ 
+ 	// Init Variable IE structure
+@@ -508,6 +510,7 @@
+ 								&SupRateLen,
+ 								ExtRate,
+ 								&ExtRateLen,
++                                &VarIELen,
+                                 pVIE)) 
+     {
+ 		// Disqualify 11b only adhoc when we are in 11g only adhoc mode
+@@ -679,7 +682,8 @@
+ 	UCHAR		  SupRateLen, ExtRateLen;
+ 
+     // New for WPA security suites
+-    UCHAR                       VarIE[MAX_VIE_LEN];     // Total VIE length = MAX_VIE_LEN - -5
++    USHORT        VarIELen;				// Length of all saved IEs.
++    UCHAR         VarIE[MAX_VIE_LEN];	// Total VIE length = MAX_VIE_LEN - -5
+     NDIS_802_11_VARIABLE_IEs    *pVIE = NULL;
+ 
+     if (!INFRA_ON(pAd) && !ADHOC_ON(pAd))
+@@ -716,6 +720,7 @@
+                                 &SupRateLen,
+                                 ExtRate,
+                                 &ExtRateLen,
++                                &VarIELen,
+                                 pVIE)) 
+     {
+         BOOLEAN is_my_bssid, is_my_ssid;
+@@ -747,7 +752,7 @@
+             // discover new AP of this network, create BSS entry
+             Bssidx = BssTableSetEntry(pAd, &pAd->Mlme.CntlAux.SsidBssTab, &Bssid, Ssid, SsidLen, 
+                         BssType, BeaconPeriod, CfExist, &CfParm, AtimWin, CapabilityInfo, 
+-                        Rates, RatesLen, ExtendedRateIeExist, Channel, Elem->Rssi, Elem->Noise, TimeStamp, pVIE);
++                        Rates, RatesLen, ExtendedRateIeExist, Channel, Elem->Rssi, Elem->Noise, TimeStamp, VarIELen, pVIE);
+ 
+             if (Bssidx == BSS_NOT_FOUND) // return if BSS table full
+                 return;  
+@@ -919,7 +924,7 @@
+                 {
+                     Bssidx = BssTableSetEntry(pAd, &pAd->PortCfg.BssTab, &Bssid, Ssid, SsidLen, 
+                                 BssType, BeaconPeriod, CfExist, &CfParm, AtimWin, CapabilityInfo, 
+-                                Rates, RatesLen, ExtendedRateIeExist, Channel, Elem->Rssi, Elem->Noise, TimeStamp, pVIE);
++                                Rates, RatesLen, ExtendedRateIeExist, Channel, Elem->Rssi, Elem->Noise, TimeStamp, VarIELen, pVIE);
+                 }
+             }
+ #endif
+diff -r -u rt2500-1.1.0-b4/Module/wpa.c rt2500-cvs-2007020414/Module/wpa.c
+--- rt2500-1.1.0-b4/Module/wpa.c	2006-06-17 22:12:58.000000000 +0200
++++ rt2500-cvs-2007020414/Module/wpa.c	2006-11-28 09:00:02.000000000 +0100
+@@ -47,6 +47,7 @@
+         };
+ UCHAR   CipherWpaPskTkipLen = (sizeof(CipherWpaPskTkip) / sizeof(UCHAR));
+ 
++// Needed for APs using WPA1 IEs (#221) to indicate CCMP encryption
+ UCHAR   CipherWpaPskAes[] = {
+         0xDD, 0x16,             // RSN IE
+         0x00, 0x50, 0xf2, 0x01, // oui
+@@ -59,6 +60,9 @@
+         };
+ UCHAR   CipherWpaPskAesLen = (sizeof(CipherWpaPskAes) / sizeof(UCHAR));
+ 
++static UCHAR MSOUI[] = {0x00, 0x50, 0xf2, 0x01};	// Microsoft OUI
++static UCHAR WGOUI[] = {0x00, 0x0f, 0xac};	// 802.11i Working Group OUI
++
+ /*
+     ========================================================================
+     
+@@ -153,9 +157,12 @@
+ 	*(USHORT *)((UCHAR *)pKeyDesc+1) = SWAP16(*(USHORT *)((UCHAR *)pKeyDesc+1));
+ #endif
+     // Sanity check, this should only happen in WPA-PSK mode
+-    if (pAdapter->PortCfg.AuthMode != Ndis802_11AuthModeWPAPSK)
++    if (pAdapter->PortCfg.AuthMode != Ndis802_11AuthModeWPAPSK) {
++    	DBGPRINT(RT_DEBUG_TRACE,
++				"<----- WpaEAPOLKeyAction - AuthMode (%d) != WPPSK\n",
++				pAdapter->PortCfg.AuthMode);
+         return;
+-
++	}
+     // 0. Debug print all bit information
+     DBGPRINT(RT_DEBUG_INFO, "KeyInfo Key Description Version %d\n", pKeyDesc->KeyInfo.KeyDescVer);
+     DBGPRINT(RT_DEBUG_INFO, "KeyInfo Key Type %d\n", pKeyDesc->KeyInfo.KeyType);
+@@ -190,9 +197,18 @@
+     // First validate replay counter, only accept message with larger replay counter
+     // Let equal pass, some AP start with all zero replay counter
+     memset(ZeroReplay, 0, LEN_KEY_DESC_REPLAY);
+-    if ((RTMPCompareMemory(pKeyDesc->ReplayCounter, pAdapter->PortCfg.ReplayCounter, LEN_KEY_DESC_REPLAY) != 1) &&
+-        (RTMPCompareMemory(pKeyDesc->ReplayCounter, ZeroReplay, LEN_KEY_DESC_REPLAY) != 0))
++    if ((RTMPCompareMemory(pKeyDesc->ReplayCounter,
++			pAdapter->PortCfg.ReplayCounter, LEN_KEY_DESC_REPLAY) != 1) &&
++        (RTMPCompareMemory(pKeyDesc->ReplayCounter,
++						 ZeroReplay, LEN_KEY_DESC_REPLAY) != 0)) {
++        DBGPRINT(RT_DEBUG_TRACE, "<----- %s:  Replay count error\n",
++				__FUNCTION__);
++		DBGHEXSTR(RT_DEBUG_TRACE, "  AP replay = ",
++				pKeyDesc->ReplayCounter, LEN_KEY_DESC_REPLAY);
++		DBGHEXSTR(RT_DEBUG_TRACE, "  our replay = ",
++			pAdapter->PortCfg.ReplayCounter, LEN_KEY_DESC_REPLAY);
+         return;
++	}
+ 
+     // Classify message Type, either pairwise message 1, 3, or group message 1 for supplicant
+     MsgType = EAPOL_MSG_INVALID;
+@@ -457,6 +473,172 @@
+ }
+ 
+ /*
++	========================================================================
++
++	Description:
++		Check the information element packaged in the KeyData field of the
++		EAPOL packet. At least one of the AP's offerings in each of
++
++		1) the group cipher suite
++		2) the pairwise master key cipher(s), and
++		3) the authentication and key management suite
++
++		need to match the configuration for the corresponding attribute
++		in the driver.
++		
++	Arguments:
++		pAd			Pointer to our adapter
++		pie			Pointer to the "logical" IE
++		pie_len		Value of the real IE length field.
++		poui		Pointer to the WPA1/WPA2 OUI
++		
++	Return Value:
++		0 -> OK:	At least one of the offerings in each category
++					matches what is configured in the driver.
++
++	Note:
++		On entry, it is known that the length of the RSN IE is consistent
++		with the length specification of the EAPOL KeyData field, and that
++		the IE is at least long enough to contain one group cipher suite
++		selection, one PMK cipher suite selection,
++		and one AKM suite selection.
++	========================================================================
++*/
++static int checkEAPIE(
++	IN RTMP_ADAPTER *pAd,
++	IN rsn_ie_t		*pie,		// (not really, if we're WPA 1)
++	IN u8			pie_len,	// ... so we provide the length separately.
++	IN ie_oui_t		*poui)
++{
++	suite_list_t	*suite_list_p;
++	suite_sel_t		*suite_sel_p;
++	int				i, j;
++	int				needs = 7;
++	suite_sel_t		*limit = (suite_sel_t *)((void *)pie + pie_len + 2);
++
++	if (wtohs(pie->version) != 1) {
++		DBGPRINT(RT_DEBUG_ERROR, "Invalid ver %d (sb 1)\n",
++				wtohs(pie->version));
++		return needs;
++	}
++	if (memcmp(pie->gcsuite.oui, poui, sizeof(ie_oui_t)) != 0) {
++		DBGPRINT(RT_DEBUG_ERROR, "Invalid Grp Cipher OUI %02x:%02x:%02x\n",
++				pie->gcsuite.oui[0], pie->gcsuite.oui[1], pie->gcsuite.oui[2]);
++		return needs;
++	}
++	switch (pie->gcsuite.type) {
++		case CIPHER_TYPE_WEP40:
++		case CIPHER_TYPE_WEP104:
++    		if (pAd->PortCfg.WepStatus == Ndis802_11Encryption1Enabled)
++				needs &= 6;
++			break;
++		case CIPHER_TYPE_TKIP:
++    		if (pAd->PortCfg.WepStatus == Ndis802_11Encryption2Enabled)
++				needs &= 6;
++			break;
++		case CIPHER_TYPE_CCMP:
++    		if (pAd->PortCfg.WepStatus == Ndis802_11Encryption3Enabled)
++				needs &= 6;
++			break;
++		default:
++			DBGPRINT(RT_DEBUG_ERROR, "Invalid Grp Cipher Type %d\n",
++					pie->gcsuite.type);
++			return needs;
++	} /* End switch (group cipher suite type) */
++
++	suite_list_p = (suite_list_t *)((void *)&pie->gcsuite+sizeof(suite_sel_t));
++
++	// Search the PMK list
++	for (suite_sel_p = suite_list_p->suite,
++		i = 0, j = wtohs(suite_list_p->count);
++		suite_sel_p + 1 <= limit && i < j;
++		suite_sel_p++, i++) {
++		if (memcmp(suite_sel_p->oui, poui, sizeof(ie_oui_t)) != 0) {
++			DBGPRINT(RT_DEBUG_ERROR, "Invalid PMK Cipher OUI "
++									"%02x:%02x:%02x\n",
++					suite_sel_p->oui[0], suite_sel_p->oui[1],
++					suite_sel_p->oui[2]);
++			break;			// Keep going. We may also have a valid one.
++		}
++		switch (suite_sel_p->type) {
++			case CIPHER_TYPE_WEP40:
++			case CIPHER_TYPE_WEP104:
++    			if (pAd->PortCfg.WepStatus == Ndis802_11Encryption1Enabled)
++					needs &= 5;
++				break;
++			case CIPHER_TYPE_TKIP:
++    			if (pAd->PortCfg.WepStatus == Ndis802_11Encryption2Enabled)
++					needs &= 5;
++				break;
++			case CIPHER_TYPE_CCMP:
++    			if (pAd->PortCfg.WepStatus == Ndis802_11Encryption3Enabled)
++					needs &= 5;
++				break;
++			default:
++				DBGPRINT(RT_DEBUG_ERROR, "Invalid PMK Cipher Type %d\n",
++						suite_sel_p->type);
++				break;			// Keep going. We may also have a valid one.
++		} /* End switch (PMK type) */
++	} /* End search PMK list */
++
++	if (suite_sel_p >= limit && i < j) {
++		DBGPRINT(RT_DEBUG_ERROR, "Too many PMK suites in EAPOL pkt "
++								"(have %d, room for %d) (need=%d)\n",
++								j, i, needs);
++		return needs;
++	}
++	if (j == 0) {
++		DBGPRINT(RT_DEBUG_ERROR, "Zero count PMK list in EAPOL pkt "
++								"(need=%d)\n", needs);
++		return needs;
++	}
++
++	suite_list_p = (suite_list_t *)suite_sel_p;
++
++	//Search the Authentication and Key Management (AKM) list
++	for (suite_sel_p = suite_list_p->suite,
++		i = 0, j = wtohs(suite_list_p->count);
++		suite_sel_p + 1 <= limit && i < j;
++		suite_sel_p++, i++) {
++		if (memcmp(suite_sel_p->oui, poui, sizeof(ie_oui_t)) != 0) {
++			DBGPRINT(RT_DEBUG_ERROR, "Invalid AKM OUI %02x:%02x:%02x\n",
++					suite_sel_p->oui[0], suite_sel_p->oui[1],
++					suite_sel_p->oui[2]);
++			break;			// Keep going. We may also have a valid one.
++		}
++		switch (suite_sel_p->type) {
++			case AKM_TYPE_802_1X:
++				if (pAd->PortCfg.AuthMode == Ndis802_11AuthModeWPA)
++					needs &= 3;
++				break;
++			case AKM_TYPE_PSK:
++				if (pAd->PortCfg.AuthMode >= Ndis802_11AuthModeWPAPSK)
++					needs &= 3;
++				break;
++			default:
++				DBGPRINT(RT_DEBUG_ERROR, "Invalid PMK Cipher Type %d\n",
++						suite_sel_p->type);
++				break;			// Keep going. We may also have a valid one.
++		} /* End switch (AKM type) */
++	} /* End search AKM list */
++
++	if (suite_sel_p >= limit && i < j) {
++		DBGPRINT(RT_DEBUG_ERROR, "Too many AKM suites in EAPOL pkt "
++								"(have %d, room for %d) (need=%d)\n",
++								j, i, needs);
++		return needs;			// NB. May still have met all needs.
++	}
++	if (j == 0) {
++		DBGPRINT(RT_DEBUG_ERROR, "Zero count AKM list in EAPOL pkt "
++								"(need=%d)\n", needs);
++		return needs;
++	}
++
++	return needs;
++
++} /* End checkEAPIE () */
++
++/*
+     ========================================================================
+     
+     Routine Description:
+@@ -487,7 +669,6 @@
+     UCHAR               EAPHEAD[8] = {0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00,0x88,0x8e};
+     EAPOL_PACKET        Packet;
+     PEAPOL_PACKET       pMsg3;
+-    PUCHAR              pTmp;
+     UCHAR               Mic[16], OldMic[16];    
+     NDIS_802_11_KEY     PeerKey;
+     
+@@ -502,31 +683,60 @@
+ #ifdef BIG_ENDIAN
+ 	*(USHORT *)(&(pMsg3->KeyDesc.KeyInfo)) = SWAP16(*(USHORT *)(&(pMsg3->KeyDesc.KeyInfo)));
+ #endif
++	#define pie ((rsn_ie_t *)(void *)pMsg3->KeyDesc.KeyData)
++	if (wtohs(pie->length) + 2 != pMsg3->KeyDesc.KeyDataLen[1]) {
++        DBGPRINT(RT_DEBUG_ERROR, "RSN IE len %d != KeyDataLen %d)\n",
++				pie->length + 2, pMsg3->KeyDesc.KeyDataLen[1]);
++		return;
++	}
++	else {
++		switch (pie->eid) {
++			case IE_RSN:
++				if (wtohs(pie->length) < MIN_RSN_KEYDATA_LEN) {
++        			DBGPRINT(RT_DEBUG_ERROR,
++							"RSN IE msg 3 too short (sb >= %d, is %d)\n",
++							MIN_RSN_KEYDATA_LEN, wtohs(pie->length));
++					DBGHEXSTR(RT_DEBUG_ERROR, "KeyData ",
++							pMsg3->KeyDesc.KeyData,
++							pMsg3->KeyDesc.KeyDataLen[1]);
++					return;
++				}
++				if (checkEAPIE(pAdapter, pie, pie->length,
++								(ie_oui_t *)WGOUI) != 0) return;
++				break;
++			case IE_WPA:
++				#undef pie
++				#define pie ((RSN_EID_STRUCT *)(void *)pMsg3->KeyDesc.KeyData)
++				if (wtohs(pie->Length) < MIN_WPA_KEYDATA_LEN) {
++        			DBGPRINT(RT_DEBUG_ERROR,
++							"WPA IE msg 3 too short (sb >= %d, is %d)\n",
++							MIN_WPA_KEYDATA_LEN, wtohs(pie->Length));
++					DBGHEXSTR(RT_DEBUG_ERROR, "KeyData ",
++							pMsg3->KeyDesc.KeyData,
++							pMsg3->KeyDesc.KeyDataLen[1]);
++					return;
++				}
++				if (memcmp(pie->Oui, MSOUI, sizeof(pie->Oui)) != 0) {
++					DBGPRINT(RT_DEBUG_ERROR,
++							"Invalid WPA 1 OUI %02x:%02x:%02x:%02x\n",
++							pie->Oui[0], pie->Oui[1], pie->Oui[2], pie->Oui[3]);
++					return;
++				}
++				if (checkEAPIE(pAdapter, (rsn_ie_t *)&pie->Oui[2], pie->Length,
++								(ie_oui_t *)MSOUI) != 0) return;
++				break;
++			default:
++        		DBGPRINT(RT_DEBUG_ERROR, "RSN IE type %d invalid)\n",
++						pie->Eid);
++				return;
++		} /* End switch (element ID) */
++	} /* End if (packet length sane) */
++	#undef pie
++
++	DBGPRINT(RT_DEBUG_TRACE, "RSN IE matched msg 3 of 4-way handshake "
++				"KeyDataLen=%d)\n",
++				 pMsg3->KeyDesc.KeyDataLen[1]);
+ 
+-    // 1. Verify RSN IE & cipher type match
+-    if (pAdapter->PortCfg.WepStatus == Ndis802_11Encryption3Enabled)
+-    {
+-        if (pMsg3->KeyDesc.KeyInfo.KeyDescVer != 2)
+-            return;
+-        pTmp = (PUCHAR) &CipherWpaPskAes;
+-    }
+-    else    // TKIP
+-    {
+-        if (pMsg3->KeyDesc.KeyInfo.KeyDescVer != 1)
+-            return;
+-        pTmp = (PUCHAR) &CipherWpaPskTkip;
+-    }
+-
+-    // Fix compatibility issue, when AP append nonsense data after auth mode with different size.
+-    // We should qualify this kind of RSN as acceptable
+-    if (!NdisEqualMemory((PUCHAR) &pMsg3->KeyDesc.KeyData[2], pTmp + 2, CipherWpaPskTkipLen - 2))
+-    {
+-        DBGPRINT(RT_DEBUG_ERROR, " RSN IE mismatched msg 3 of 4-way handshake!!!!!!!!!! \n");
+-        return;
+-    }
+-    else
+-        DBGPRINT(RT_DEBUG_TRACE, " RSN IE matched in msg 3 of 4-way handshake!!!!!!!!!! \n");
+-    
+ #ifdef BIG_ENDIAN
+ 	*(USHORT *)(&(pMsg3->KeyDesc.KeyInfo)) = SWAP16(*(USHORT *)(&(pMsg3->KeyDesc.KeyInfo)));
+ #endif
+@@ -556,16 +766,31 @@
+     else
+         DBGPRINT(RT_DEBUG_TRACE, " MIC VALID in msg 3 of 4-way handshake!!!!!!!!!! \n");
+ 
+-    // 3. Check Replay Counter, it has to be larger than last one. No need to be exact one larger
+-    if (RTMPCompareMemory(pMsg3->KeyDesc.ReplayCounter, pAdapter->PortCfg.ReplayCounter, LEN_KEY_DESC_REPLAY) != 1)
++    // 3. Check Replay Counter, it has to be larger than last one.
++	//    No need to be exact one larger
++    if (RTMPCompareMemory(pMsg3->KeyDesc.ReplayCounter,
++				pAdapter->PortCfg.ReplayCounter, LEN_KEY_DESC_REPLAY) != 1) {
++        DBGPRINT(RT_DEBUG_TRACE, " Replay count error\n");
++		DBGHEXSTR(RT_DEBUG_TRACE, " AP replay = ",
++				pMsg3->KeyDesc.ReplayCounter, LEN_KEY_DESC_REPLAY);
++		DBGHEXSTR(RT_DEBUG_TRACE, " our replay = ",
++				pAdapter->PortCfg.ReplayCounter, LEN_KEY_DESC_REPLAY);
+         return;
+-
++	}
+     // Update new replay counter
+-    memcpy(pAdapter->PortCfg.ReplayCounter, pMsg3->KeyDesc.ReplayCounter, LEN_KEY_DESC_REPLAY);     
++    memcpy(pAdapter->PortCfg.ReplayCounter, pMsg3->KeyDesc.ReplayCounter,
++			LEN_KEY_DESC_REPLAY);     
+ 
+     // 4. Double check ANonce
+-    if (!NdisEqualMemory(pAdapter->PortCfg.ANonce, pMsg3->KeyDesc.KeyNonce, LEN_KEY_DESC_NONCE))
++    if (!NdisEqualMemory(pAdapter->PortCfg.ANonce, pMsg3->KeyDesc.KeyNonce,
++				LEN_KEY_DESC_NONCE)) {
++        DBGPRINT(RT_DEBUG_TRACE, " Nonce error\n");
++		DBGHEXSTR(RT_DEBUG_TRACE, " AP Nonce = ",
++				pMsg3->KeyDesc.KeyNonce, LEN_KEY_DESC_NONCE);
++		DBGHEXSTR(RT_DEBUG_TRACE, " our Nonce = ",
++				pAdapter->PortCfg.ANonce, LEN_KEY_DESC_NONCE);
+         return;
++	}
+     
+     // 5. Construct Message 4
+     // =====================================
