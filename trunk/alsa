@@ -7,7 +7,8 @@
 case "$1" in
   start)
     stat_busy "Restoring ALSA Levels"
-    /usr/sbin/alsactl restore
+    STATE_FILE=${STATE_FILE:-/etc/asound.state}
+    /usr/sbin/alsactl --file $STATE_FILE restore
     if [ $? -gt 0 ]; then
       stat_fail
     else
@@ -17,20 +18,29 @@ case "$1" in
 
     POWERSAVE=${POWERSAVE:-0}
     if [ -e /sys/module/snd_ac97_codec/parameters/power_save \
-	 -a $POWERSAVE -ne 0 ]; then
-        echo $POWERSAVE > /sys/module/snd_ac97_codec/parameters/power_save
-        echo 1 > /dev/dsp
+	  -a $POWERSAVE -ne 0 ]; then
+      echo $POWERSAVE > /sys/module/snd_ac97_codec/parameters/power_save
+      echo 1 > /dev/dsp
     fi
 
     if [ -e /sys/module/snd_hda_intel/parameters/power_save \
-	 -a $POWERSAVE -ne 0 ]; then
-	echo $POWERSAVE > /sys/module/snd_hda_intel/parameters/power_save
-        echo 1 > /dev/dsp
+      -a $POWERSAVE -ne 0 ]; then
+      echo $POWERSAVE > /sys/module/snd_hda_intel/parameters/power_save
+      echo 1 > /dev/dsp
     fi
     ;;
   stop)
-    stat_busy "Saving ALSA Levels"
-    /usr/sbin/alsactl store
+    STATE_FILE=${STATE_FILE:-/etc/asound.state}
+    SAVE_VOLUME=${SAVE_VOLUME:-yes}
+    if [ "$SAVE_VOLUME" == "yes" ]; then
+      stat_busy "Saving ALSA Levels"
+      /usr/sbin/alsactl --file $STATE_FILE store
+    else
+      stat_busy "Stopping ALSA"
+    fi
+    if [ "$MUTE_VOLUME" == "yes" ]; then
+      /usr/bin/amixer -q set Master 0 mute
+    fi
     if [ $? -gt 0 ]; then
       stat_fail
     else
@@ -44,5 +54,5 @@ case "$1" in
     $0 start
     ;;
   *)
-    echo "usage: $0 {start|stop|restart}"  
+    echo "usage: $0 {start|stop|restart}"
 esac
