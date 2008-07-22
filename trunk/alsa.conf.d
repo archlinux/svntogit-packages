@@ -1,5 +1,6 @@
-# Sound card state storage file, containing mixer settings.
-STATE_FILE=/etc/asound.state
+# Arguments for alsactl
+# example: ALSA_ARGS="--file /var/run/alsa-state"
+ALSA_ARGS=""
 
 # Enables powersaving mode for AC97 and hda_intel audio chips.
 # Set to 1 to enable powersaving.
