@@ -1,0 +1,122 @@
+--- a/drivers/kcompat.h	2008-01-13 11:26:28.000000000 +0100
++++ b/drivers/kcompat.h	2008-05-14 18:37:49.000000000 +0200
+@@ -1,4 +1,4 @@
+-/*      $Id: kcompat.h,v 5.34 2008/01/13 10:26:28 lirc Exp $      */
++/*      $Id: kcompat.h,v 5.36 2008/05/14 16:37:49 lirc Exp $      */
+ 
+ #ifndef _KCOMPAT_H
+ #define _KCOMPAT_H
+@@ -36,10 +36,10 @@
+ 	class_simple_destroy(cls);
+ }
+ 
+-#define lirc_class_device_create(cs, parent, dev, device, fmt, args...) \
+-	class_simple_device_add(cs, dev, device, fmt, ## args)
++#define lirc_device_create(cs, parent, dev, fmt, args...) \
++	class_simple_device_add(cs, dev, parent, fmt, ## args)
+ 
+-static inline void class_device_destroy(lirc_class_t *cls, dev_t devt)
++static inline void lirc_device_destroy(lirc_class_t *cls, dev_t devt)
+ {
+ 	class_simple_device_remove(devt);
+ }
+@@ -48,20 +48,40 @@
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 15)
+ 
+-#define lirc_class_device_create(cs, parent, dev, device, fmt, args...) \
+-	class_device_create(cs, dev, device, fmt, ## args)
++#define lirc_device_create(cs, parent, dev, fmt, args...) \
++	class_device_create(cs, dev, parent, fmt, ## args)
+ 
+ #else /* >= 2.6.15 */
+ 
+-#define lirc_class_device_create class_device_create
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
++
++#define lirc_device_create(cs, parent, dev, fmt, args...) \
++	class_device_create(cs, NULL, dev, parent, fmt, ## args)
++
++#else /* >= 2.6.26 */
++
++#define lirc_device_create device_create
++
++#endif /* >= 2.6.26 */
++
+ #define LIRC_DEVFS_PREFIX
+ 
+-#endif
++#endif /* >= 2.6.15 */
+ 
+ typedef struct class lirc_class_t;
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
++
++#define lirc_device_destroy class_device_destroy
++
++#else
++
++#define lirc_device_destroy device_destroy
++
+ #endif
+ 
++#endif /* >= 2.6.13 */
++
+ #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
+ #define LIRC_HAVE_DEVFS
+ #define LIRC_HAVE_DEVFS_24
+@@ -133,8 +153,8 @@
+ #ifndef LIRC_HAVE_SYSFS
+ #define class_destroy(x) do { } while (0)
+ #define class_create(x, y) NULL
+-#define class_device_destroy(x, y) do { } while (0)
+-#define lirc_class_device_create(x, y, z, xx, yy, zz) 0
++#define lirc_class_destroy(x, y) do { } while (0)
++#define lirc_class_create(x, y, z, xx, yy, zz) 0
+ #define IS_ERR(x) 0
+ typedef struct class_simple
+ {
+--- a/drivers/lirc_dev/lirc_dev.c	2008-01-13 11:45:02.000000000 +0100
++++ b/drivers/lirc_dev/lirc_dev.c	2008-05-14 18:37:49.000000000 +0200
+@@ -17,7 +17,7 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  *
+- * $Id: lirc_dev.c,v 1.56 2008/01/13 10:45:02 lirc Exp $
++ * $Id: lirc_dev.c,v 1.58 2008/05/14 16:37:49 lirc Exp $
+  *
+  */
+ 
+@@ -145,7 +145,8 @@
+ #ifdef LIRC_HAVE_DEVFS_26
+ 	devfs_remove(DEV_LIRC "/%u", ir->p.minor);
+ #endif
+-	class_device_destroy(lirc_class, MKDEV(IRCTL_DEV_MAJOR, ir->p.minor));
++	lirc_device_destroy(lirc_class,
++			    MKDEV(IRCTL_DEV_MAJOR, ir->p.minor));
+ 
+ 	if (ir->buf != ir->p.rbuf) {
+ 		lirc_buffer_free(ir->buf);
+@@ -400,9 +401,9 @@
+ 			S_IFCHR|S_IRUSR|S_IWUSR,
+ 			DEV_LIRC "/%u", ir->p.minor);
+ #endif
+-	(void) lirc_class_device_create(lirc_class, NULL,
+-					MKDEV(IRCTL_DEV_MAJOR, ir->p.minor),
+-					ir->p.dev, "lirc%u", ir->p.minor);
++	(void) lirc_device_create(lirc_class, ir->p.dev,
++				  MKDEV(IRCTL_DEV_MAJOR, ir->p.minor),
++				  "lirc%u", ir->p.minor);
+ 
+ 	if (p->sample_rate || p->get_queue) {
+ 		/* try to fire up polling thread */
+@@ -441,7 +442,8 @@
+ 	return minor;
+ 
+ out_sysfs:
+-	class_device_destroy(lirc_class, MKDEV(IRCTL_DEV_MAJOR, ir->p.minor));
++	lirc_device_destroy(lirc_class,
++			    MKDEV(IRCTL_DEV_MAJOR, ir->p.minor));
+ #ifdef LIRC_HAVE_DEVFS_24
+ 	devfs_unregister(ir->devfs_handle);
+ #endif
