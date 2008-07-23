@@ -1,41 +1,32 @@
-# $Id$
-# Contributor: Roman Kreisel <roman.kreisel@epost.de>
-# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# $ Id: $
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=kdebindings
-pkgver=3.5.9
-kdever=3.5.9 # if minor 0, then without .0
+pkgver=4.1.0
 pkgrel=1
-pkgdesc="KDE Bindings."
-arch=(i686 x86_64)
-url="http://www.kde.org"
-license=('GPL')
-groups=('kde')
-makedepends=('jdk' 'gtk' 'pkgconfig')
-depends=('kdelibs>=3.5.9' 'ruby' 'qscintilla-qt3')
-
-# for easier build, just uncomment the mirror you want to use
-  mirror="ftp.solnet.ch/mirror/KDE"         # updated every 2 hours, very fast for Europe
-# mirror="ftp.kde.org/pub/kde/"             # main server
-# mirror="ibiblio.org/pub/mirrors/kde/"     # ibiblio mirror
-options=(!makeflags)
-source=(ftp://$mirror/stable/$kdever/src/$pkgname-$pkgver.tar.bz2
-	fix-perl-policy.patch)
+pkgdesc="KDE Language Bindings"
+arch=('i686' 'x86_64')
+url='http://www.kde.org'
+license=('GPL' 'LGPL')
+depends=('kdepimlibs' 'python' 'ruby' 'qscintilla')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'sip' 'pyqt')
+options=('docs')
+source=("ftp://ftp.archlinux.org/other/kde/${pkgname}-${pkgver}.tar.bz2"
+        'ktexteditor.patch')
+md5sums=('b76d5138f9194bcc0a000bb905cf4246'
+         '20a34ec3fed8b51a6793468ba77b3b56')
 
 build() {
-  # Source the QT and KDE profile
-  [ "$QTDIR" = "" ] && source /etc/profile.d/qt3.sh 
-  [ "$KDEDIR" = "" ] && source /etc/profile.d/kde.sh
-  # start building
-  cd $startdir/src/$pkgname-$pkgver
-  patch -Np0 -i ../fix-perl-policy.patch || return 1
-  ./configure --prefix=/opt/kde --disable-debug --disable-dependency-tracking \
-  --enable-gcc-hidden-visibility DO_NOT_COMPILE="python" --enable-final
-  #        --enable-final # remove this if you build with < 1512mb ram.
-  # python packages are seperated from kdebindings
-  make || return 1
-  make DESTDIR=$startdir/pkg install || return 1    
-  rm -rf $startdir/pkg/usr/lib/perl5/core_perl/perllocal.pod
+	cd $srcdir/${pkgname}-${pkgver}
+	patch -p0 -i $srcdir/ktexteditor.patch
+	cd ..
+	mkdir build
+	cd build
+
+	cmake ../${pkgname}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DBUILD_csharp=OFF
+	make
+	make DESTDIR=$pkgdir install
 }
-md5sums=('ba780920f6b810a30a61b1ffa888706b'
-         '7ba28a153587501bf83c099c2a9876a8')
