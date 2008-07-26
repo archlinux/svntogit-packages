@@ -3,8 +3,8 @@
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributor: Anders Bostrom <anders.bostrom@home.se>
 pkgname=thunderbird
-pkgver=2.0.0.14
-pkgrel=2
+pkgver=2.0.0.16
+pkgrel=1
 pkgdesc="Standalone Mail/News reader"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL')
@@ -12,26 +12,23 @@ url="http://www.mozilla.org/projects/thunderbird"
 provides=('mozilla-thunderbird')
 conflicts=('mozilla-thunderbird')
 replaces=('mozilla-thunderbird')
-depends=('gtk2>=2.12.9' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss>=3.11.9' 'libxt')
-makedepends=('zip' 'pkgconfig' 'imagemagick' 'diffutils' 'patch' 'make' 'gcc')
+depends=('gtk2>=2.12.11' 'gcc-libs>=4.3.1' 'libidl2' 'mozilla-common' 'nss>=3.12' 'libxt' 'shared-mime-info' 'mime-types')
+makedepends=('zip' 'pkgconfig' 'imagemagick' 'diffutils' 'patch' 'make' 'gcc' 'libgnomeui')
 options=('!makeflags')
 source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}-source.tar.bz2
 	mozconfig
         thunderbird.desktop
         thunderbird-1.5-lang.patch
-	firefox-2.0-buildversion.patch
 	firefox-2.0-link-layout.patch)
-md5sums=('e304510d08f7e226bbfff8e7e549232f'
-         'ca1f30e6048740440ca1a3f08fdeee34'
+md5sums=('591c9f80a2f6772c5acf8fb6128f40bd'
+         '17e3015259da53f40bc445b27078f693'
          'ea4e3c3dee98e3891bef16409551eb6e'
          'bc6f10a06407faee6494acad546aabf9'
-         '11b221ff41078d97c131e17361072e47'
          'b933c00957ea793fe940f4d46a85e10e')
 
 build() {
   cd ${startdir}/src/mozilla
   patch -Np1 -i ${startdir}/src/thunderbird-1.5-lang.patch || return 1
-  patch -Np0 -i ${startdir}/src/firefox-2.0-buildversion.patch || return 1
   patch -Np1 -i ${startdir}/src/firefox-2.0-link-layout.patch || return 1
   cp ${startdir}/src/mozconfig .mozconfig
 
@@ -49,17 +46,12 @@ build() {
   cd ${startdir}/pkg/usr/lib/thunderbird-${pkgver}
   export MOZ_DISABLE_GNOME=1
   export MOZTMP=`mktemp -d -p ${startdir}/src`
-  LD_LIBRARY_PATH="`pwd`" HOME="${MOZTMP}" ./thunderbird-bin -register
+  LD_PRELOAD="" LD_LIBRARY_PATH="`pwd`" HOME="${MOZTMP}" ./thunderbird-bin -register || return 1
   rm -rf "${MOZTMP}"
-  cd chrome
-  find . -maxdepth 1 -type d -exec rm -rf {} \;
 
-  # Remove common mozilla aclocal stuff, XULRunner has it
-  rm -rf ${startdir}/pkg/usr/share
-  rm -rf ${startdir}/pkg/usr/include
-  rm -rf ${startdir}/pkg/usr/lib/pkgconfig
-
-  cd ${startdir}/pkg/usr/lib && ln -sf thunderbird-${pkgver} thunderbird
+  ln -sf thunderbird-${pkgver} ${pkgdir}/usr/lib/thunderbird || return 1
+  ln -sf thunderbird-${pkgver} ${pkgdir}/usr/include/thunderbird || return 1
+  ln -sf thunderbird-${pkgver} ${pkgdir}/usr/share/idl/thunderbird || return 1
   
   rm -rf ${startdir}/pkg/usr/bin/defaults
 
@@ -70,13 +62,10 @@ build() {
   install -m644 ${startdir}/src/thunderbird.desktop \
       ${startdir}/pkg/usr/share/applications/ || return 1
 
-  install -m755 -d ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default
-  install -m644 ${startdir}/src/mozilla/mail/app/default.xpm \
-      ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default/ || return 1
   install -m644 ${startdir}/src/mozilla/mail/app/default.xpm \
       ${startdir}/pkg/usr/lib/thunderbird/icons/ || return 1
 
-  #fix #6512
-  install -m644 ${startdir}/src/mozilla/dist/bin/chrome/icons/default/*.xpm \
-      ${startdir}/pkg/usr/lib/thunderbird/chrome/icons/default/ || return 1
+  rm -f ${pkgdir}/usr/lib/pkgconfig/thunderbird-ns{s,pr}.pc
+  sed -e "s/thunderbird-${pkgver}/thunderbird/g" \
+      -i ${pkgdir}/usr/lib/pkgconfig/*.pc || return 1
 }
