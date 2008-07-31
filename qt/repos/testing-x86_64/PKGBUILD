@@ -1,0 +1,76 @@
+# $Id$
+
+pkgname=qt
+pkgver=4.4.1
+pkgrel=1
+_qtcopyver=840171
+pkgdesc="The QT gui toolkit."
+arch=('i686' 'x86_64')
+url="http://www.trolltech.com/products/qt"
+license=('GPL3')
+options=('!libtool')
+depends=('libpng' 'libxi' 'mesa' 'fontconfig' 'libxrandr' 'glib2' 'libtiff' 'libmng' 'sqlite3')
+optdepends=('libmysqlclient' 'unixodbc')
+makedepends=('mysql' 'unixodbc')
+provides=("qt4=${pkgver}")
+replaces=('qt4')
+conflicts=('qt4')
+_pkgfqn=qt-x11-opensource-src-$pkgver
+# svn export -r -${_qtcopyver} svn://anonsvn.kde.org/home/kde/trunk/qt-copy/patches/ qt-copy-patches-${_qtcopyver}
+source=("ftp://ftp.trolltech.com/qt/source/${_pkgfqn}.tar.gz" 
+        "ftp://ftp.archlinux.org/other/qt/qt-copy-patches-${_qtcopyver}.tar.bz2")
+md5sums=('b09decad252b5181f300135e3122481d'
+         '9a48c310c89e3e7b0f494b4537f208b2')
+
+build() {
+	unset QMAKESPEC
+	export QT4DIR=$srcdir/$_pkgfqn
+	export PATH=${QT4DIR}/bin:${PATH}
+	export LD_LIBRARY_PATH=${QT4DIR}/lib:${LD_LIBRARY_PATH}
+
+	cd $srcdir/$_pkgfqn
+	for i in $srcdir/qt-copy-patches-${_qtcopyver}/*.diff; do
+		echo "applying $i"
+		patch -p0 -i $i || return 1
+	done
+	
+	# remove unwanted mkspecs
+	cd mkspecs/
+	find . -maxdepth 1 -regextype posix-egrep -type d ! -regex "./linux.*|./common|./features|./qws" -exec rm -rf "{}" \;
+	cd qws
+	find . -maxdepth 1 -regextype posix-egrep -type d ! -regex "./linux.*" -exec rm -rf "{}" \;
+	cd ../../
+
+	sed -i 's|-cp -P -f|-cp -L -f|' qmake/Makefile.unix
+	sed -i "s|-O2|$CXXFLAGS|" mkspecs/common/g++.conf
+	# do not compile demos, examples and docs
+	sed -i 's|CFG_NOBUILD_PARTS=""|CFG_NOBUILD_PARTS="demos examples docs"|' configure
+
+	./configure -confirm-license \
+		-prefix /usr \
+		-docdir /usr/share/doc/qt \
+		-plugindir /usr/lib/qt/plugins \
+		-datadir /usr/share/qt \
+		-translationdir /usr/share/qt/translations \
+		-sysconfdir /etc \
+		-examplesdir /usr/share/doc/qt/examples \
+		-demosdir /usr/share/doc/qt/demos \
+		-no-exceptions \
+		-plugin-sql-{mysql,sqlite,odbc} \
+		-system-sqlite \
+		-no-phonon \
+		-no-separate-debug-info \
+		-nomake examples \
+		-nomake docs \
+		-nomake demos \
+		-optimized-qmake || return 1
+
+	make || return 1
+	make INSTALL_ROOT=$pkgdir install || return 1
+
+	# lots of cleanup and path fixes - thanks to crazy (frugalware)
+	find $pkgdir/usr/lib -type f -name '*prl' -print -exec sed -i -e "/^QMAKE_PRL_BUILD_DIR/d" {} \;
+	sed -i -e "s|-L$srcdir/${_pkgfqn}/lib||g" $pkgdir/usr/lib/pkgconfig/*.pc
+	sed -i -e "s|$srcdir/${_pkgfqn}/bin/moc|/usr/bin/moc|g" $pkgdir/usr/lib/pkgconfig/*.pc
+	sed -i -e "s|$srcdir/${_pkgfqn}/bin/uic|/usr/bin/uic|g" $pkgdir/usr/lib/pkgconfig/*.pc
+}
