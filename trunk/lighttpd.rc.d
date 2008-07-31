@@ -9,7 +9,7 @@ PID=`pidof -o %PPID /usr/sbin/lighttpd`
 case "$1" in
   start)
     stat_busy "Starting lighttpd Daemon"
-    [ -z "$PID" ] && /usr/sbin/lighttpd -f /etc/lighttpd/lighttpd.conf >> /var/log/lighttpd/error.log 2>&1
+    [ -z "$PID" ] && /usr/sbin/lighttpd -f /etc/lighttpd/lighttpd.conf 2>&1
     if [ $? -gt 0 ]; then
       stat_fail
     else
