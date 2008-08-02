@@ -1,4 +1,6 @@
-# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Baptiste Daroussin <baptiste.daroussin@gmail.com>
+# Contributor: Kosenko Roman <madkite@gmail.com>
+# Contributor: mightyjaym <jm.ambrosino@free.fr>
 
 pkgname=openjdk6
 pkgver=1.2
@@ -8,42 +10,34 @@ pkgdesc='Free Java environment based on OpenJDK 6.0 with IcedTea6 replacing bina
 url='http://icedtea.classpath.org'
 arch=('i686' 'x86_64')
 license=('GPL')
+
 _javaver=1.6.0
 _openjdk_version=b11
 _openjdk_date=10_jul_2008
+
 if [ "${CARCH}" = 'x86_64' ]; then
       _arch=amd64
  else _arch=i586
 fi
-depends=('gcc-libs')
-makedepends=('alsa-lib' 'libxtst' 'giflib' 'gtk2' 'nspr' 'zlib' 'freetype2' 'libjpeg' 'libx11' 'libcups' 'patch'
-             'xalan-java' 'xulrunner>=1.9.0.1' 'apache-ant>=1.7.0' 'autoconf' 'unzip' 'openjdk6')
+
+depends=(java-xerces2 lesstif libungif giflib java-gcj-compat)
+depends=('gcc' 'glibc')
+makedepends=(cups libx11 freetype2 patch sed tar wget alsa-lib xalan-java 'xulrunner>=1.9' glib2 gtk2 'apache-ant>=1.7.0' libxinerama \
+	autoconf 'automake>=1.9' libjpeg libpng giflib zlib libxaw libxtst 'java-gcj-compat' 'zip')
+
 conflicts=('jdk' 'j2sdk' 'java-environment' 'j2re' 'java-runtime' 'jre' 'gcc-gcj' 'java-gcj-compat')
 provides=("jdk=6" "j2sdk" "java-environment" "jre=6" "j2re" "java-runtime")
+
 source=(http://download.java.net/openjdk/jdk6/promoted/${_openjdk_version}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz
 	ftp://ftp.archlinux.org/other/openjdk6/icedtea6-${_date}.tar.bz2
 	fix_jdk_cmds_path.diff
 	fix_corba_cmds_path.diff
-	gcjwebplugin_xulrunner.diff
 	$pkgname.profile)
 noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz)
-md5sums=('8e60cdac02ec1b2d8ddb9d7369be69df'
-         '0d4f3b981212e29621a0faf3edd8acf7'
-         '5da3e39fa60985576c4f37d1491efbe2'
-         'f7e7a212e50abb56a6ef1a2b1bd27405'
-         'ed2e808df2d2fc2ea7dae5139d475192'
-         '3ee3f2a7a1dfb33d58e39e01d6234519')
+#install="$pkgname.install"
+#options=('!makeflags')
 
-# for bootstrap build:
-# makedepend on 'java-gcj-compat'
-# remove 
-#	--with-openjdk \
-# add
-# 	--with-gcj-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0 \
-#	--with-openjdk-src-dir=${srcdir}/icedtea6-${pkgver}/openjdk \
-#	--with-openjdk-src-zip=${srcdir} \
-#	--with-javac \
-                                        
+
 build() {
   # for hg checkout install mercurial and
 #  mkdir ${startdir}/src/icedtea6-${_date}
@@ -56,10 +50,10 @@ build() {
   unset CLASSPATH
 
   cd ${srcdir}/icedtea6
-  ln ${srcdir}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz .
-
-  # fix xulrunner linking
-  patch -Np0 -i ${srcdir}/gcjwebplugin_xulrunner.diff || return 1
+  mkdir -p ${srcdir}/icedtea6/openjdk
+  pushd ${srcdir}/icedtea6/openjdk
+  tar -xf ${srcdir}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz
+  popd
 
   cp ${srcdir}/*.diff ${srcdir}/icedtea6/patches/
   export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/fix_corba_cmds_path.diff"
@@ -72,12 +66,14 @@ build() {
 
   ./configure --with-parallel-jobs=${HOTSPOT_BUILD_JOBS} \
 	--with-xalan2-jar=/usr/share/java/xalan.jar \
-	--with-openjdk \
-	--with-openjdk-home=/usr/lib/java-${_javaver}-openjdk \
+	--with-gcj-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0 \
+	--with-openjdk-src-dir=${srcdir}/icedtea6-${pkgver}/openjdk \
+	--with-openjdk-src-zip=${srcdir} \
+	--with-javac \
 	--with-rhino=no
 
   LD_PRELOAD="" make || return 1
-  make || return 1
+#  make || return 1
   
   mkdir -p ${pkgdir}/usr/lib/java-${_javaver}-openjdk/jre
   mkdir -p ${pkgdir}/usr/share/man
@@ -116,3 +112,4 @@ build() {
   # set some variables
   install -m755 -D ${startdir}/src/openjdk6.profile ${startdir}/pkg/etc/profile.d/openjdk6.sh
 }
+
