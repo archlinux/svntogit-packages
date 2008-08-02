@@ -1,13 +1,4 @@
-export JAVA_HOME=/usr/lib/java-1.6.0-openjdk/
-export PATH=$PATH:$JAVA_HOME/bin
-export MANPATH=$MANPATH:$JAVA_HOME/man
-export JAVADIR=$JAVA_HOME
-export JAVA_ROOT=$JAVA_HOME
-export JAVA_BINDIR=$JAVA_HOME/bin
-export JDK_HOME=$JAVA_HOME
-export J2SDKDIR=$JAVA_HOME
-export JRE_HOME=$JAVA_HOME/jre
-export J2REDIR=$JRE_HOME
-export PATH=$PATH:$J2REDIR/bin
-export CLASSPATH=$CLASSPATH:$J2REDIR/lib
-export CLASSPATH=$CLASSPATH:$J2SDKDIR/lib
+export J2SDKDIR=/usr/lib/jvm/java-1.6.0-openjdk
+export J2REDIR=$J2SDKDIR/jre
+export JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk
+export CLASSPATH="${CLASSPATH:+$CLASSPATH:}$J2SDKDIR/lib:$J2REDIR/lib"
