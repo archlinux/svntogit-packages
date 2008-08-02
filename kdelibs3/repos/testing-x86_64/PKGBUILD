@@ -1,0 +1,59 @@
+# $ Id: $
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kdelibs3
+pkgver=3.5.9
+pkgrel=3
+pkgdesc="KDE3 Core Libraries"
+arch=('i686' 'x86_64')
+url="http://www.kde.org"
+license=('GPL' 'LGPL')
+depends=('libxslt' 'pcre' 'libart-lgpl' 'alsa-lib' 'libcups'
+         'jasper' 'bzip2' 'openssl' 'libidn' 'libxrender'
+	 'aspell' 'heimdal' 'acl' 'libtiff' 'qt3' 'ca-certificates')
+makedepends=('pkgconfig' 'cups')
+options=('libtool')
+install='kdelibs3.install'
+source=("http://download.kde.org/stable/${pkgver}/src/kdelibs-${pkgver}.tar.bz2"
+        'ftp://ftp.archlinux.org/other/kdelibs3/kde-3.5.9-837226.patch.bz2'
+        'kde3.profile')
+md5sums=('55e5f00874933d1a7ba7c95e369a205e'
+         '6129eedb884eaecd4dfd23cb665f577f'
+         '3c49828eb8985cfb25af8e1495f7800a')
+
+build() {
+	cd $srcdir/kdelibs-$pkgver
+
+	patch -p0 -i ${srcdir}/kde-3.5.9-837226.patch || return 1
+
+	. /etc/profile.d/qt3.sh
+	. $srcdir/kde3.profile
+
+	# install KDE3 profile
+	install -D -m755 $srcdir/kde3.profile $pkgdir/etc/profile.d/kde3.sh
+
+	./configure --prefix=/opt/kde \
+		--with-distribution='Arch Linux' \
+		--with-alsa \
+		--disable-dependency-tracking \
+		--disable-debug \
+		--disable-dnssd \
+		--disable-dnotify \
+		--enable-inotify \
+		--enable-sendfile \
+		--without-lua \
+		--without-hspell \
+		--enable-gcc-hidden-visibility \
+		--enable-final \
+		--enable-new-ldflags LDFLAGS="${LDFLAGS} -L/opt/qt/lib" \
+		--without-arts \
+		--disable-libfam || return 1
+	make || return 1
+	make DESTDIR=$pkgdir install || return 1
+
+	# cert bundle seems to be hardcoded
+	# link it to the one from ca-certificates
+	rm -f $pkgdir/opt/kde/share/apps/kssl/ca-bundle.crt
+	ln -sf /etc/ssl/certs/ca-certificates.crt $pkgdir/opt/kde/share/apps/kssl/ca-bundle.crt
+}
