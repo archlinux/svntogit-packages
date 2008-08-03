@@ -16,7 +16,7 @@ url="http://www.cs.wisc.edu/~ghost/"
 install=ghostscript.install
 source=(ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/gs863/ghostscript-${pkgver}.tar.bz2
 	ghostscript-fPIC.patch)
-options=('!libtool')
+options=('!libtool' '!makeflags')
 md5sums=('c770eedfdd846a53e211e3ba5339de21'
          '29540cd88aad9a3a788d68193523080d')
 
