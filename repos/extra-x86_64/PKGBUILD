@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=8.63
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
@@ -14,19 +14,25 @@ provides=('ghostscript-lprng')
 url="http://www.cs.wisc.edu/~ghost/"
 #url="http://www.cups.org/espgs/"
 install=ghostscript.install
-source=(ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/gs863/ghostscript-${pkgver}.tar.bz2)
-options=('!libtool' '!makeflags')
-md5sums=('c770eedfdd846a53e211e3ba5339de21')
+source=(ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/gs863/ghostscript-${pkgver}.tar.bz2
+	ghostscript-fPIC.patch)
+options=('!libtool')
+md5sums=('c770eedfdd846a53e211e3ba5339de21'
+         '29540cd88aad9a3a788d68193523080d')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
-  [ "${CARCH}" = "x86_64" ] && export CFLAGS="${CFLAGS} -fPIC"
+  if [ "$CARCH" = "x86_64" ]; then
+    patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch || return 1
+  fi
+
   # Build IJS
   cd ${srcdir}/ghostscript-${pkgver}/ijs
   ./autogen.sh
   ./configure --prefix=/usr --enable-shared --disable-static
   make || return 1
-  make DESTDIR=${pkgdir}/g install || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
   cd ..
   ./configure --prefix=/usr --enable-dynamic --enable-threads --with-ijs \
               --with-jbig2dec --with-omni --with-x --with-drivers=ALL\
