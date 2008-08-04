@@ -30,7 +30,7 @@ umask 022
 ##
 ## Set our SHELL variable.
 ##
-setenv SHELL /usr/bin/tcsh
+setenv SHELL /bin/tcsh
 
 ##
 ## Setup a default MAIL variable
