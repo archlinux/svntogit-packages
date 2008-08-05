@@ -13,7 +13,3 @@ if [ -z $XDG_CONFIG_DIRS ]; then
 else
 	export XDG_CONFIG_DIRS=/etc/xdg:$XDG_CONFIG_DIRS
 fi
-
-# temporarily loosen restrictions in libxcb to get java
-# application involving X to work.
-export  LIBXCB_ALLOW_SLOPPY_LOCK=true
