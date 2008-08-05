@@ -1,0 +1,31 @@
+--- coredrv/coredrv.c~	2006-03-12 17:19:41.000000000 +0100
++++ coredrv/coredrv.c	2006-03-12 17:29:07.000000000 +0100
+@@ -38,6 +38,7 @@
+ #include <linux/sched.h>
+ #include <linux/pci.h>
+ #include <linux/tty.h>
++#include <linux/tty_flip.h>
+ #include <linux/serial.h>
+ #include <linux/serialP.h>
+ #include <linux/interrupt.h>
+@@ -583,18 +584,11 @@
+    unsigned char ch;
+    unsigned long flags;
+ 
+-   while ((UART_dte_to_num() > 0) && 
+-          (G.softcore->ptty->flip.count < TTY_FLIPBUF_SIZE))
++   while (UART_dte_to_num() > 0)
+    {
+       ch = UART_dte_from_char();
+       spin_lock_irqsave(&(G.softcore->ptty->read_lock), flags);
+-
+-      *(G.softcore->ptty->flip.char_buf_ptr) = ch;
+-      *(G.softcore->ptty->flip.flag_buf_ptr) = 0;
+-
+-      G.softcore->ptty->flip.flag_buf_ptr++;
+-      G.softcore->ptty->flip.char_buf_ptr++;
+-      G.softcore->ptty->flip.count++;
++      tty_insert_flip_char(G.softcore->ptty,ch,TTY_NORMAL);
+       tty_flip_buffer_push(G.softcore->ptty);
+ 
+       spin_unlock_irqrestore(&(G.softcore->ptty->read_lock), flags);
