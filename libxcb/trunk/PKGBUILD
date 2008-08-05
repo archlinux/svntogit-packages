@@ -2,28 +2,33 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=libxcb
-pkgver=1.1
+pkgver=1.1.90.1
 pkgrel=1
 pkgdesc="X11 client-side library"
 arch=(i686 x86_64)
 url="http://xcb.freedesktop.org/"
-depends=('xcb-proto>=1.1' 'libxdmcp' 'libxau')
-makedepends=('pkgconfig' 'libxslt' 'libpthread-stubs')
+depends=('xcb-proto>=1.2' 'libxdmcp' 'libxau')
+makedepends=('pkgconfig' 'libxslt' 'python')
 options=('!libtool')
 license=('custom')
-source=(${url}/dist/${pkgname}-${pkgver}.tar.bz2)
+source=(${url}/dist/${pkgname}-${pkgver}.tar.bz2
+	libxcb-1.1-no-pthread-stubs.patch
+	libxcb-1.1-sloppy-lock.patch)
+md5sums=('c4b67c5576ed58e2fd4a2855c0b21aa6'
+         'a53f09ab3ec5cbfc1b0848bd137c535a'
+         '4b3fbedc471d7ab336a18f1d0f853ddd')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr \
-              --build=${CHOST} --host=${CHOST}
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -Np1 -i ${srcdir}/libxcb-1.1-no-pthread-stubs.patch || return 1
+  patch -Np1 -i ${srcdir}/libxcb-1.1-sloppy-lock.patch || return 1
+  libtoolize --force --copy || return 1
+  aclocal || return 1
+  autoconf || return 1
+  automake --add-missing || return 1
+  ./configure --prefix=/usr --enable-xinput || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install || return 1
-  # Remove pthread-stubs dependency from pc files,
-  # the stubs package doesn't provide any libs since our libc is complete.
-  sed -i -e 's/pthread-stubs//' ${startdir}/pkg/usr/lib/pkgconfig/*.pc
-
-  install -m644 -D ${startdir}/src/${pkgname}-${pkgver}/COPYING \
-                   ${startdir}/pkg/usr/share/licenses/${pkgname}/COPYING
+  make DESTDIR=${pkgdir} install || return 1
+  install -m755 -d ${pkgdir}/usr/share/licenses/${pkgname}
+  install -m644 COPYING ${pkgdir}/usr/share/licenses/${pkgname}/ || return 1
 }
-md5sums=('9310b02433273d75d42f10da3c7455aa')
