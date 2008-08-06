@@ -1,0 +1,82 @@
+diff -u -r ghc-6.8.2-orig/libraries/network/Network/Socket.hsc ghc-6.8.2/libraries/network/Network/Socket.hsc
+--- ghc-6.8.2-orig/libraries/network/Network/Socket.hsc	2007-12-10 20:25:19.000000000 +0200
++++ ghc-6.8.2/libraries/network/Network/Socket.hsc	2008-08-06 21:36:47.045962479 +0300
+@@ -95,7 +95,7 @@
+     getPeerName,	-- :: Socket -> IO SockAddr
+     getSocketName,	-- :: Socket -> IO SockAddr
+ 
+-#ifdef SO_PEERCRED
++#ifdef HAVE_STRUCT_UCRED
+ 	-- get the credentials of our domain socket peer.
+     getPeerCred,         -- :: Socket -> IO (CUInt{-pid-}, CUInt{-uid-}, CUInt{-gid-})
+ #endif
+@@ -1134,7 +1134,7 @@
+        fromIntegral `liftM` peek ptr_v
+ 
+ 
+-#ifdef SO_PEERCRED
++#ifdef HAVE_STRUCT_UCRED
+ -- | Returns the processID, userID and groupID of the socket's peer.
+ --
+ -- Only available on platforms that support SO_PEERCRED on domain sockets.
+diff -u -r ghc-6.8.2-orig/libraries/network/configure.ac ghc-6.8.2/libraries/network/configure.ac
+--- ghc-6.8.2-orig/libraries/network/configure.ac	2007-12-10 20:25:19.000000000 +0200
++++ ghc-6.8.2/libraries/network/configure.ac	2008-08-06 21:37:53.285955355 +0300
+@@ -40,6 +40,39 @@
+  AC_MSG_RESULT(no))
+ 
+ dnl --------------------------------------------------
++dnl * test for SO_PEERCRED and struct ucred
++dnl --------------------------------------------------
++AC_MSG_CHECKING(for SO_PEERCRED and struct ucred in sys/socket.h)
++AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
++#include <sys/socket.h>
++#ifndef SO_PEERCRED
++# error no SO_PEERCRED
++#endif
++struct ucred u;]])],ac_cv_ucred=yes,ac_cv_ucred=no)
++if test "x$ac_cv_ucred" = xno; then
++    old_CFLAGS="$CFLAGS"
++    CFLAGS="-D_GNU_SOURCE $CFLAGS"
++    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
++#include <sys/socket.h>
++#ifndef SO_PEERCRED
++# error no SO_PEERCRED
++#endif
++struct ucred u;]])],ac_cv_ucred=yes,ac_cv_ucred=no)
++    if test "x$ac_cv_ucred" = xyes; then
++        EXTRA_CPPFLAGS=-D_GNU_SOURCE
++    fi
++else
++    old_CFLAGS="$CFLAGS"
++fi
++if test "x$ac_cv_ucred" = xno; then
++    CFLAGS="$old_CFLAGS"
++    AC_MSG_RESULT(no)
++else
++    AC_DEFINE([HAVE_STRUCT_UCRED], [1], [Define to 1 if you have both SO_PEERCRED and struct ucred.])
++    AC_MSG_RESULT(yes)
++fi
++
++dnl --------------------------------------------------
+ dnl * test for getaddrinfo as proxy for IPv6 support
+ dnl --------------------------------------------------
+ AC_CHECK_FUNCS(getaddrinfo)
+@@ -84,6 +117,7 @@
+ esac
+ AC_SUBST([CALLCONV])
+ AC_SUBST([EXTRA_LIBS])
++AC_SUBST([EXTRA_CPPFLAGS])
+ AC_SUBST([EXTRA_SRCS])
+ 
+ AC_CONFIG_FILES([network.buildinfo])
+diff -u -r ghc-6.8.2-orig/libraries/network/network.buildinfo.in ghc-6.8.2/libraries/network/network.buildinfo.in
+--- ghc-6.8.2-orig/libraries/network/network.buildinfo.in	2007-12-10 20:25:19.000000000 +0200
++++ ghc-6.8.2/libraries/network/network.buildinfo.in	2008-08-06 21:38:52.255190968 +0300
+@@ -1,4 +1,4 @@
+-ghc-options: -DCALLCONV=@CALLCONV@
+-cc-options: -DCALLCONV=@CALLCONV@
++ghc-options: -DCALLCONV=@CALLCONV@ @EXTRA_CPPFLAGS@
++cc-options: -DCALLCONV=@CALLCONV@ @EXTRA_CPPFLAGS@
+ c-sources: @EXTRA_SRCS@
+ extra-libraries: @EXTRA_LIBS@
