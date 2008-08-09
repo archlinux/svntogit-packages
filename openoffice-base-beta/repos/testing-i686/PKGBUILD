@@ -2,12 +2,12 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
 pkgname=openoffice-base-beta
-pkgver=3.0_ooo300_m1
+pkgver=3.0_ooo300_m2
 pkgrel=1
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=(i686 x86_64)
-#_OO_milestone=ooo300-m1
-_OO_milestone=OOO300_m1
+#_OO_milestone=ooo300-m2
+_OO_milestone=OOO300_m2
 license=('LGPL3')
 url="http://www.openoffice.org"
 install=openoffice.install
@@ -18,13 +18,7 @@ makedepends=('bison' 'cvs' 'curl' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-l
              'boost' 'apache-ant' 'cairo' 'gperf' 'gconf' 'openjdk6>=1.2-1')
 provides=('openoffice-base')
 optdepends=("java-runtime: adds java support")
-
-MIRROR=ftp://ftp5.gwdg.de/pub/openoffice/extended/developer
-#MIRROR=ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/Sources
-#MIRROR=http://download.go-oo.org/DEV300
-
-source=($MIRROR/${_OO_milestone}/OOo-Dev_${_OO_milestone}_src_{core,system}.tar.bz2
-	#$MIRROR/OOo_${_OO_milestone}_source.tar.gz
+source=(${pkgname}-${_OO_milestone}.tar.bz2
 	template.desktop
 	default-no-startup-wizard.diff
 	default-system-fpicker.diff
@@ -36,22 +30,37 @@ source=($MIRROR/${_OO_milestone}/OOo-Dev_${_OO_milestone}_src_{core,system}.tar.
 	# from http://www.openoffice.org/issues/show_bug.cgi?id=81102
 	FontOOo_1.7.1.sxw)
 options=('!distcc' '!ccache' '!makeflags')
+md5sums=('15633e9d92dc5a7f28483eb8b8b9a73a'
+         'a247ba577007d8169201bd8f41cf41b5'
+         '71f136a31e296a04ab68932a31dd533e'
+         '6c596129fb48316226ce3adfd3a4c86d'
+         'a8b96e9d0ce92a8f6690f277b1cfacc9'
+         '1dc7480a04f572ad136d35923a2af66d'
+         '094f7b2a86086fc76382bd98e3291d6b'
+         'a51200f770c635355c430cc5052db8cf'
+         '1fc1ca5205730655eab2d2e119aa06fe')
 
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
 build() {
+	cd ${srcdir}
+	export _MILESTONE=${_OO_milestone}
+	export 'CVSROOT=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs'
+	# checkout snapshot
+#	cvs -q -z9 co -r $_MILESTONE OpenOffice3
+#	tar -cvjf ../${pkgname}-${_OO_milestone}.tar.bz2 *
+#	return 1
+
+	# fetch missing modules
+	cvs -q -z9 co -r $_MILESTONE cppunit hyphen swext apache-commons tomcat
+
+
+
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
 	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
 	JAVAHOME=${JAVA_HOME}
 	[ -z "${MOZ_PLUGIN_PATH}" ] && . /etc/profile.d/mozilla-common.sh
-
-	cd ${srcdir}/${_OO_milestone}/
-#	cd ${srcdir}/ooo_${_OO_milestone}_src/
-
-	export _MILESTONE=OOO300_m1
-	export 'CVSROOT=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs'
-	cvs -z9 co -r $_MILESTONE swext apache-commons tomcat || return 1
 
 	# some speedups
 	export SMP="6"
@@ -61,33 +70,31 @@ build() {
 	export NO_HIDS=true
 
 	# build fixes
-	patch -Np0 -i ../buildfix-gcc43.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix-gcc43.diff || return 1
 
 	# allows xmlsec to be able to read the format of the digital certificates.
-	patch -Np0 -i ../libxmlsec-findcerts.diff || return 1
+	patch -Np0 -i ${srcdir}/libxmlsec-findcerts.diff || return 1
 	# allows soffice to find the user's firefox profile so that it can read
 	# his digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
-	patch -Np0 -i ../soffice-detect-mozilla-certificates.diff || return 1
+	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
 
 
 	# important bugfixes
 	# try to fix non-gtk integration 
-	patch -Np0 -i ../shell.patch || return 1
+	patch -Np0 -i ${srcdir}/shell.patch || return 1
 
 	# remove the startup wizard
-	patch -Np0 -i ../default-no-startup-wizard.diff || return 1
+	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff || return 1
 	# enables the default system-file-picker in case we have that built
-	patch -Np0 -i ../default-system-fpicker.diff || return 1
+	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
 
 	if [ "$CARCH" = "x86_64" ]; then
           # fixes to build with SUN jdk/jre
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
-	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
-#	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/ooo_${_OO_milestone}_src/solenv/inc/libs.mk
+	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/solenv/inc/libs.mk
 	fi
 
-	cd ${srcdir}/${_OO_milestone}/config_office
-#	cd ${srcdir}/ooo_${_OO_milestone}_src/config_office
+	cd ${srcdir}/config_office
 
 	# Set OOO_VENDOR in build environment
 	export OOO_VENDOR="ArchLinux"
@@ -200,7 +207,7 @@ build() {
 
 	# prepare filesystem entries
 	mkdir -p ${pkgdir}/usr/{bin,share/applications}
-	mkdir -p ${pkgdir}/usr/share/icons/{HighContrast,hicolor,locolor}
+	mkdir -p ${pkgdir}/usr/share/icons/{hicolor,locolor}
 
 	# make symlinks
 	cd ${pkgdir}/usr/bin
@@ -227,9 +234,7 @@ build() {
 	install -D -m644 ${srcdir}/template.desktop ${pkgdir}/usr/share/applications/template.desktop
 
 	# install icons
-	cd ${srcdir}/${_OO_milestone}/sysui/desktop/icons
-#	cd ${srcdir}/ooo_${_OO_milestone}_src/sysui/desktop/icons
-	#cp -a -v HighContrast/*x* ${pkgdir}/usr/share/icons/HighContrast
+	cd ${srcdir}/sysui/desktop/icons
 	cp -a -v hicolor/*x* ${pkgdir}/usr/share/icons/hicolor
 	cp -a -v locolor/*x* ${pkgdir}/usr/share/icons/locolor
 
@@ -256,8 +261,7 @@ build() {
 	install -D -m644 ${srcdir}/FontOOo_1.7.1.sxw ${pkgdir}/opt/openoffice/share/dict/ooo/FontOOo.sxw
 
 	# add missing spell wizard
-	install -D -m644 ${srcdir}/${_OO_milestone}/dictionaries/diclst/DicOOo.sxw ${pkgdir}/opt/openoffice/share/dict/ooo/DicOOo.sxw
-#	install -D -m644 ${srcdir}/ooo_${_OO_milestone}_src/dictionaries/diclst/DicOOo.sxw ${pkgdir}/opt/openoffice/share/dict/ooo/DicOOo.sxw
+	install -D -m644 ${srcdir}/dictionaries/diclst/DicOOo.sxw ${pkgdir}/opt/openoffice/share/dict/ooo/DicOOo.sxw
 
 	# link the mozilla-plugin
 	mkdir -p ${pkgdir}/usr/lib/mozilla/plugins/
@@ -286,19 +290,8 @@ build() {
 	sed -i -e 's|OpenOffice\.org\ 3\.0|OpenOffice\.org\ beta|g' ${pkgdir}/usr/share/applications/*.desktop
 	sed -i -e 's|\/opt\/openoffice\-beta\/program\/soffice|\/usr\/bin\/soffice\-beta|g' ${pkgdir}/usr/share/applications/*.desktop
 
-#	mv ${pkgdir}/opt/openoffice-beta/program/soffice.bin ${pkgdir}/opt/openoffice-beta/program/soffice-beta.bin
 	mv ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-beta.so
 	cd ${pkgdir}/opt/openoffice-beta/program/
 	ln -sf /opt/openoffice-beta/program/soffice.bin soffice-beta.bin
 	
 }
-md5sums=('c71c0a5837031dc4a1cbab61e67c2862'
-         '22742e78439c3ba9e776676652449cb8'
-         'a247ba577007d8169201bd8f41cf41b5'
-         '71f136a31e296a04ab68932a31dd533e'
-         '6c596129fb48316226ce3adfd3a4c86d'
-         'a8b96e9d0ce92a8f6690f277b1cfacc9'
-         '1dc7480a04f572ad136d35923a2af66d'
-         '094f7b2a86086fc76382bd98e3291d6b'
-         'a51200f770c635355c430cc5052db8cf'
-         '1fc1ca5205730655eab2d2e119aa06fe')
