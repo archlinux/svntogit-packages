@@ -3,7 +3,7 @@
 # Contributor: Sean Middleditch <elanthis@awesomeplay.com>
 
 pkgname=xscreensaver
-pkgver=5.06
+pkgver=5.07
 pkgrel=1
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
@@ -14,9 +14,9 @@ makedepends=('bc')
 backup=('etc/pam.d/xscreensaver')
 source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz \
 	xscreensaver.pam LICENSE)
-md5sums=('c6b2cab02aaea32684d37a9a76488e0f' '367a3538f54db71f108b34cfa31088ac'\
+md5sums=('55a12fcb5d3a7231c9850ef9d9f82918' '367a3538f54db71f108b34cfa31088ac'\
          '5e7f3f2a63d20a484742f5b4cb5d572c')
-sha1sums=('3310789ecf1ed8ff790d94512fe536857e793e4c'
+sha1sums=('82c611ab271807ad871aa46a3a7f6b95706d31aa'
           '106635aa1aae51d6f0668b1853f6c49a4fe9d3d8'
           '4209ea586b204fd1d81c382a0522c654f9fd9134')
 
