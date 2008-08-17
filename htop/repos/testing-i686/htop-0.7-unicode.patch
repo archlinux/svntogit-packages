@@ -1,0 +1,285 @@
+diff -wbBur htop-0.7/configure.ac htop-0.7-unicode/configure.ac
+--- htop-0.7/configure.ac	2007-11-09 02:28:26.000000000 +0300
++++ htop-0.7-unicode/configure.ac	2007-12-16 03:09:28.000000000 +0300
+@@ -11,7 +11,7 @@
+ AC_PROG_CC
+ 
+ # Checks for libraries.
+-AC_CHECK_LIB([ncurses], [refresh], [], [missing_libraries="$missing_libraries libncurses"])
++AC_CHECK_LIB([ncursesw], [refresh], [], [missing_libraries="$missing_libraries libncursesw"])
+ AC_CHECK_LIB([m], [ceil], [], [missing_libraries="$missing_libraries libm"])
+ 
+ if test ! -z "$missing_libraries"; then
+diff -wbBur htop-0.7/htop.c htop-0.7-unicode/htop.c
+--- htop-0.7/htop.c	2007-11-09 03:31:32.000000000 +0300
++++ htop-0.7-unicode/htop.c	2007-12-16 02:17:55.000000000 +0300
+@@ -11,6 +11,7 @@
+ #include <sys/param.h>
+ #include <ctype.h>
+ #include <stdbool.h>
++#include <locale.h>
+ 
+ #include "ProcessList.h"
+ #include "CRT.h"
+@@ -214,6 +215,16 @@
+    uid_t userId = 0;
+    int sortKey = 0;
+ 
++    char *lc_ctype = getenv("LC_CTYPE");
++    if(lc_ctype != NULL)
++    {
++	setlocale(LC_CTYPE, lc_ctype);
++    }
++    else
++    {
++	setlocale(LC_CTYPE, getenv("LC_ALL"));
++    }
++
+    int arg = 1;
+    while (arg < argc) {
+       if (String_eq(argv[arg], "--help")) {
+diff -wbBur htop-0.7/htop.h htop-0.7-unicode/htop.h
+--- htop-0.7/htop.h	2007-11-09 03:32:37.000000000 +0300
++++ htop-0.7-unicode/htop.h	2007-12-16 02:18:03.000000000 +0300
+@@ -15,6 +15,7 @@
+ #include <sys/param.h>
+ #include <ctype.h>
+ #include <stdbool.h>
++#include <locale.h>
+ 
+ #include "ProcessList.h"
+ #include "CRT.h"
+diff -wbBur htop-0.7/Makefile.am htop-0.7-unicode/Makefile.am
+--- htop-0.7/Makefile.am	2007-11-09 00:04:28.000000000 +0300
++++ htop-0.7-unicode/Makefile.am	2007-12-16 03:10:00.000000000 +0300
+@@ -8,7 +8,7 @@
+ pixmapdir = $(datadir)/pixmaps
+ pixmap_DATA = htop.png
+ 
+-AM_CFLAGS = -pedantic -Wall -std=c99
++AM_CFLAGS = -pedantic -Wall -std=c99 -D_XOPEN_SOURCE_EXTENDED
+ AM_CPPFLAGS = -DSYSCONFDIR=\"$(sysconfdir)\"
+ 
+ myhtopsources = AvailableMetersPanel.c CategoriesPanel.c CheckItem.c \
+diff -wbBur htop-0.7/Meter.c htop-0.7-unicode/Meter.c
+--- htop-0.7/Meter.c	2007-10-10 08:42:39.000000000 +0400
++++ htop-0.7-unicode/Meter.c	2007-12-16 02:41:42.000000000 +0300
+@@ -266,7 +266,7 @@
+    Meter_displayToStringBuffer(this, buffer);
+    mvhline(y, x, ' ', CRT_colors[DEFAULT_COLOR]);
+    attrset(CRT_colors[RESET_COLOR]);
+-   mvaddchstr(y, x, Meter_stringBuffer.chstr);
++   mvadd_wchstr(y, x, Meter_stringBuffer.chstr);
+ }
+ 
+ /* ---------- BarMeterMode ---------- */
+@@ -418,7 +418,7 @@
+    mvaddstr(y+2, x, this->caption);
+    int xx = x + strlen(this->caption);
+    for (int i = 0; i < Meter_stringBuffer.len; i++) {
+-      char c = Meter_stringBuffer.chstr[i];
++      char c = Meter_stringBuffer.chstr[i].chars[0] & 255;
+       if (c >= '0' && c <= '9') {
+          LEDMeterMode_drawDigit(xx, y, c-48);
+          xx += 4;
+diff -wbBur htop-0.7/Panel.c htop-0.7-unicode/Panel.c
+--- htop-0.7/Panel.c	2007-10-10 08:42:39.000000000 +0400
++++ htop-0.7-unicode/Panel.c	2007-12-16 02:38:41.000000000 +0300
+@@ -260,7 +260,7 @@
+       attrset(attr);
+       mvhline(y, x, ' ', this->w);
+       if (scrollH < this->header.len) {
+-         mvaddchnstr(y, x, this->header.chstr + scrollH,
++         mvadd_wchnstr(y, x, this->header.chstr + scrollH,
+                      MIN(this->header.len - scrollH, this->w));
+       }
+       attrset(CRT_colors[RESET_COLOR]);
+@@ -284,12 +284,12 @@
+             RichString_setAttr(&itemRef, highlight);
+             mvhline(y + j, x+0, ' ', this->w);
+             if (amt > 0)
+-               mvaddchnstr(y+j, x+0, itemRef.chstr + scrollH, amt);
++               mvadd_wchnstr(y+j, x+0, itemRef.chstr + scrollH, amt);
+             attrset(CRT_colors[RESET_COLOR]);
+          } else {
+             mvhline(y+j, x+0, ' ', this->w);
+             if (amt > 0)
+-               mvaddchnstr(y+j, x+0, itemRef.chstr + scrollH, amt);
++               mvadd_wchnstr(y+j, x+0, itemRef.chstr + scrollH, amt);
+          }
+       }
+       for (int i = y + (last - first); i < y + this->h; i++)
+@@ -307,12 +307,12 @@
+       newObj->display(newObj, &newRef);
+       mvhline(y+ this->oldSelected - this->scrollV, x+0, ' ', this->w);
+       if (scrollH < oldRef.len)
+-         mvaddchnstr(y+ this->oldSelected - this->scrollV, x+0, oldRef.chstr + this->scrollH, MIN(oldRef.len - scrollH, this->w));
++         mvadd_wchnstr(y+ this->oldSelected - this->scrollV, x+0, oldRef.chstr + this->scrollH, MIN(oldRef.len - scrollH, this->w));
+       attrset(highlight);
+       mvhline(y+this->selected - this->scrollV, x+0, ' ', this->w);
+       RichString_setAttr(&newRef, highlight);
+       if (scrollH < newRef.len)
+-         mvaddchnstr(y+this->selected - this->scrollV, x+0, newRef.chstr + this->scrollH, MIN(newRef.len - scrollH, this->w));
++         mvadd_wchnstr(y+this->selected - this->scrollV, x+0, newRef.chstr + this->scrollH, MIN(newRef.len - scrollH, this->w));
+       attrset(CRT_colors[RESET_COLOR]);
+    }
+    this->oldSelected = this->selected;
+diff -wbBur htop-0.7/Process.c htop-0.7-unicode/Process.c
+--- htop-0.7/Process.c	2007-11-09 00:59:46.000000000 +0300
++++ htop-0.7-unicode/Process.c	2007-12-16 03:04:46.000000000 +0300
+@@ -42,7 +42,7 @@
+    STIME, CUTIME, CSTIME, PRIORITY, NICE, ITREALVALUE, STARTTIME, VSIZE, RSS, RLIM, STARTCODE, ENDCODE,
+    STARTSTACK, KSTKESP, KSTKEIP, SIGNAL, BLOCKED, SSIGIGNORE, SIGCATCH, WCHAN, NSWAP, CNSWAP, EXIT_SIGNAL,
+    PROCESSOR, M_SIZE, M_RESIDENT, M_SHARE, M_TRS, M_DRS, M_LRS, M_DT, ST_UID, PERCENT_CPU, PERCENT_MEM,
+-   USER, TIME, NLWP, TGID
++   USER, TIME, NLWP, TGID,
+    #ifdef HAVE_OPENVZ
+    VEID, VPID,
+    #endif
+@@ -263,19 +263,25 @@
+ 
+ static inline void Process_writeCommand(Process* this, int attr, RichString* str) {
+    if (this->pl->highlightBaseName) {
+-      char* firstSpace = strchr(this->comm, ' ');
++      wchar_t comm[4096];
++      if(mbstowcs(comm, this->comm, 4096)<0)
++      {
++         return;
++      }
++
++      wchar_t* firstSpace = wcschr(comm, L' ');
+       if (firstSpace) {
+-         char* slash = firstSpace;
+-         while (slash > this->comm && *slash != '/')
++         wchar_t* slash = firstSpace;
++         while (slash > comm && *slash != L'/')
+             slash--;
+-         if (slash > this->comm) {
++         if (slash > comm) {
+             slash++;
+-            RichString_appendn(str, attr, this->comm, slash - this->comm);
++            RichString_wappendn(str, attr, comm, slash - comm);
+          }
+-         RichString_appendn(str, CRT_colors[PROCESS_BASENAME], slash, firstSpace - slash);
+-         RichString_append(str, attr, firstSpace);
++         RichString_wappendn(str, CRT_colors[PROCESS_BASENAME], slash, firstSpace - slash);
++         RichString_wappend(str, attr, firstSpace);
+       } else {
+-         RichString_append(str, CRT_colors[PROCESS_BASENAME], this->comm);
++         RichString_wappend(str, CRT_colors[PROCESS_BASENAME], comm);
+       }
+    } else {
+       RichString_append(str, attr, this->comm);
+diff -wbBur htop-0.7/RichString.c htop-0.7-unicode/RichString.c
+--- htop-0.7/RichString.c	2007-11-09 03:10:26.000000000 +0300
++++ htop-0.7-unicode/RichString.c	2007-12-16 03:06:46.000000000 +0300
+@@ -17,7 +17,7 @@
+ 
+ typedef struct RichString_ {
+    int len;
+-   chtype chstr[RICHSTRING_MAXLEN+1];
++   cchar_t chstr[RICHSTRING_MAXLEN+1];
+ } RichString;
+ 
+ }*/
+@@ -26,11 +26,24 @@
+ #define MIN(a,b) ((a)<(b)?(a):(b))
+ #endif
+ 
+-inline void RichString_appendn(RichString* this, int attrs, char* data, int len) {
++inline void RichString_appendn(RichString* this, int attrs, char* data_c, int len) {
++
++   wchar_t data[RICHSTRING_MAXLEN];
++   len = mbstowcs(data, data_c, RICHSTRING_MAXLEN);
++   if(len<0)
++   {
++      return;
++   }
++
+    int last = MIN(RICHSTRING_MAXLEN - 1, len + this->len);
+    for (int i = this->len, j = 0; i < last; i++, j++)
+-      this->chstr[i] = data[j] | attrs;
+-   this->chstr[last] = 0;
++   {
++      memset(&this->chstr[i], 0, sizeof(this->chstr[i]));
++      this->chstr[i].chars[0] = data[j];
++      this->chstr[i].attr = attrs;
++   }
++
++   this->chstr[last].chars[0] = 0;
+    this->len = last;
+ }
+ 
+@@ -38,23 +51,40 @@
+    RichString_appendn(this, attrs, data, strlen(data));
+ }
+ 
++inline void RichString_wappendn(RichString* this, int attrs, wchar_t* data, int len) {
++   int last = MIN(RICHSTRING_MAXLEN - 1, len + this->len);
++   for (int i = this->len, j = 0; i < last; i++, j++)
++   {
++      memset(&this->chstr[i], 0, sizeof(this->chstr[i]));
++      this->chstr[i].chars[0] = data[j];
++      this->chstr[i].attr = attrs;
++   }
++
++   this->chstr[last].chars[0] = 0;
++   this->len = last;
++}
++
++inline void RichString_wappend(RichString* this, int attrs, wchar_t* data) {
++   RichString_wappendn(this, attrs, data, wcslen(data));
++}
++
+ void RichString_write(RichString* this, int attrs, char* data) {
+    RichString_init(this);
+    RichString_append(this, attrs, data);
+ }
+ 
+ void RichString_setAttr(RichString *this, int attrs) {
+-   chtype* ch = this->chstr;
++   cchar_t* ch = this->chstr;
+    for (int i = 0; i < this->len; i++) {
+-      *ch = (*ch & 0xff) | attrs;
++      ch->attr = attrs;
+       ch++;
+    }
+ }
+ 
+ void RichString_applyAttr(RichString *this, int attrs) {
+-   chtype* ch = this->chstr;
++   cchar_t* ch = this->chstr;
+    for (int i = 0; i < this->len; i++) {
+-      *ch |= attrs;
++      ch->attr |= attrs;
+       ch++;
+    }
+ }
+diff -wbBur htop-0.7/RichString.h htop-0.7-unicode/RichString.h
+--- htop-0.7/RichString.h	2007-11-09 03:10:28.000000000 +0300
++++ htop-0.7-unicode/RichString.h	2007-12-16 03:06:50.000000000 +0300
+@@ -19,7 +19,7 @@
+ 
+ typedef struct RichString_ {
+    int len;
+-   chtype chstr[RICHSTRING_MAXLEN+1];
++   cchar_t chstr[RICHSTRING_MAXLEN+1];
+ } RichString;
+ 
+ 
+@@ -27,10 +27,14 @@
+ #define MIN(a,b) ((a)<(b)?(a):(b))
+ #endif
+ 
+-extern void RichString_appendn(RichString* this, int attrs, char* data, int len);
++extern void RichString_appendn(RichString* this, int attrs, char* data_c, int len);
+ 
+ extern void RichString_append(RichString* this, int attrs, char* data);
+ 
++extern void RichString_wappendn(RichString* this, int attrs, wchar_t* data, int len);
++
++extern void RichString_wappend(RichString* this, int attrs, wchar_t* data);
++
+ void RichString_write(RichString* this, int attrs, char* data);
+ 
+ void RichString_setAttr(RichString *this, int attrs);
