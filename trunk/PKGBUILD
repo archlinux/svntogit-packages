@@ -2,7 +2,7 @@
 # Maintainer: judd <jvinet@zeroflux.org>
 pkgname=readline
 pkgver=5.2
-pkgrel=7
+pkgrel=8
 pkgdesc="GNU readline library"
 arch=(i686 x86_64)
 url="ftp://ftp.cwru.edu/pub/bash/"
@@ -44,7 +44,9 @@ build() {
   for i in 001 002 003 004 005 006 007 008 009 010 011 012; do
     patch -Np2 -i ${startdir}/src/readline52-${i} || return 1
   done
-  ./configure --prefix=/usr
+  
+  ./configure --prefix=/usr --mandir=/usr/share/man \
+    --infodir=/usr/share/info
   make SHLIB_LIBS=-lncurses || return 1
   make DESTDIR=${startdir}/pkg install || return 1
   
@@ -56,4 +58,6 @@ build() {
   mv -v usr/lib/lib{readline,history}.so.5* lib/
   ln -svf ../../lib/libreadline.so.5 usr/lib/libreadline.so
   ln -svf ../../lib/libhistory.so.5 usr/lib/libhistory.so
+  
+  rm -f ${pkgdir}/usr/share/info/dir
 }
