@@ -11,6 +11,7 @@ depends=('slang' 'openssl>=0.9.8e' 'gdbm' 'mime-types' 'zlib' 'libsasl' 'gpgme')
 makedepends=('gnupg')
 install=${pkgname}.install
 source=(ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz)
+md5sums=('27c30037120189b9f9c0d3e76361b8f8')
 url="http://www.mutt.org/"
 
 build() {
