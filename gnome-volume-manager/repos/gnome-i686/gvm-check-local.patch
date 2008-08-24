@@ -1,0 +1,64 @@
+--- src/manager.c.orig	2008-03-16 15:14:05.000000000 +0000
++++ src/manager.c	2008-03-16 15:16:03.000000000 +0000
+@@ -3637,58 +3637,9 @@
+ static gboolean
+ gvm_user_is_local_fallback (void)
+ {
+-	static guint local = 0;
+-	struct dirent *dent;
+-	struct utmp *utmp;
+-	const char *user;
+-	char *vtend;
+-	size_t n;
+-	DIR *dir;
+-	int vt;
+-	
+-	if (local & LOCAL_USER_CHECKED)
+-		return (local & LOCAL_USER_FOUND);
+-	
+-	user = g_get_user_name ();
+-	n = strlen (user);
+-	
+-	if (!(dir = opendir (GVM_CONSOLE_AUTH_DIR)))
+-		goto fallback;
+-	
+-	/* this works for pam_console ($path/user) and pam_foreground ($path/user:vt) - see bug #336932 */
+-	while ((dent = readdir (dir))) {
+-                if (!strncmp (user, dent->d_name, n)
+-		    && (dent->d_name[n] == '\0'
+-			|| (dent->d_name[n] == ':'
+-			    && ((vt = strtol (dent->d_name + n + 1, &vtend, 10)) >= 0)
+-			    && *vtend == '\0'))) {
+-			local = LOCAL_USER_FOUND;
+-			break;
+-		}
+-	}
+-	
+-	closedir (dir);
+-	
+- fallback:
+-	
+-	if (!(local & LOCAL_USER_FOUND)) {
+-		setutent ();
+-		
+-		while (!(local & LOCAL_USER_FOUND) && (utmp = getutent ())) {
+-			if (utmp->ut_type != USER_PROCESS || strncmp (utmp->ut_user, user, n) != 0)
+-				continue;
+-			
+-			/* only accept local X sessions or local tty's (user started X via `startx`) */
+-			local = (utmp->ut_line[0] == ':' && utmp->ut_line[1] >= '0' && utmp->ut_line[1] <= '9')
+-				|| !strncmp (utmp->ut_line, "tty", 3) ? LOCAL_USER_FOUND : 0;
+-		}
+-		
+-		endutent ();
+-	}
+-	
+-	local |= LOCAL_USER_CHECKED;
+-	
+-	return (local & LOCAL_USER_FOUND);
++	const gchar* display;
++	display = g_getenv("DISPLAY");
++	return (display != NULL && display[0] == ':');
+ }
+ #endif /* __linux__ */
+ 
