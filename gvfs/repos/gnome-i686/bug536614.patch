@@ -1,0 +1,47 @@
+--- branches/gnome-2-22/client/gvfsfusedaemon.c	2008/05/23 03:22:22	1784
++++ branches/gnome-2-22/client/gvfsfusedaemon.c	2008/07/18 23:18:04	1821
+@@ -313,9 +313,11 @@
+                                      (gpointer *) &fh))
+       goto out;
+ 
++  g_hash_table_steal (global_fh_table, old_path);
++
+   g_free (fh->path);
+   fh->path = g_strdup (new_path);
+-  g_hash_table_steal (global_fh_table, old_path);
++
+   g_hash_table_insert (global_fh_table, fh->path, fh);
+ 
+  out:
+@@ -959,11 +961,15 @@
+ 
+               /* Set up a stream here, so we can check for errors */
+ 
++              g_mutex_lock (fh->mutex);
++
+               if (fi->flags & O_WRONLY || fi->flags & O_RDWR)
+                 result = setup_output_stream (file, fh);
+               else
+                 result = setup_input_stream (file, fh);
+ 
++              g_mutex_unlock (fh->mutex);
++
+               /* The added reference to the file handle is released in vfs_release() */
+             }
+           else if (file_type == G_FILE_TYPE_DIRECTORY)
+@@ -1047,11 +1053,14 @@
+ 
+               SET_FILE_HANDLE (fi, fh);
+ 
+-              g_assert (fh->stream == NULL);
++              g_mutex_lock (fh->mutex);
+ 
++              file_handle_close_stream (fh);
+               fh->stream = file_output_stream;
+               fh->op = FILE_OP_WRITE;
+ 
++              g_mutex_unlock (fh->mutex);
++
+               /* The added reference to the file handle is released in vfs_release() */
+             }
+           else
