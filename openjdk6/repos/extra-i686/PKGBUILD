@@ -3,15 +3,15 @@
 
 pkgname=openjdk6
 pkgver=1.2
-_date=20080801
-pkgrel=2
+_date=20080825
+pkgrel=3
 pkgdesc='Free Java environment based on OpenJDK 6.0 with IcedTea6 replacing binary plugs.'
 url='http://icedtea.classpath.org'
 arch=('i686' 'x86_64')
 license=('GPL')
 _openjdk_version=b11
 _openjdk_date=10_jul_2008
-depends=('gcc-libs' 'xdg-utils' 'hicolor-icon-theme' 'rhino')
+depends=('gcc-libs' 'xdg-utils' 'hicolor-icon-theme')
 makedepends=('alsa-lib' 'libxtst' 'giflib' 'libxp' 'gtk2' 'nspr' 'zlib' 'freetype2' 'libjpeg' 'libx11' 'libcups' 'patch' 'xalan-java' 'xulrunner>=1.9.0.1' 'apache-ant>=1.7.0' 'autoconf' 'unzip')
 conflicts=('jdk' 'j2sdk' 'java-environment' 'j2re' 'java-runtime' 'jre')
 provides=('jdk=6' 'j2sdk' 'java-environment' 'jre=6' 'j2re' 'java-runtime')
@@ -22,13 +22,17 @@ source=(http://download.java.net/openjdk/jdk6/promoted/${_openjdk_version}/openj
 	fix_jdk_cmds_path.diff
 	fix_corba_cmds_path.diff
 	gcjwebplugin_xulrunner.diff
+	aatext_by_default.diff
+	fontconfig-paths.diff
 	openjdk6.profile)
 noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz)
 md5sums=('8e60cdac02ec1b2d8ddb9d7369be69df'
-         '0d4f3b981212e29621a0faf3edd8acf7'
+         'f374729cb5dd59ff3b494441555eb7d6'
          '5da3e39fa60985576c4f37d1491efbe2'
          'f7e7a212e50abb56a6ef1a2b1bd27405'
          'ed2e808df2d2fc2ea7dae5139d475192'
+         'ef60d567c0d9bad111212851220deafd'
+         '104380f0b900c840141e572a7fb70c27'
          '23583f0bf1418aa59f241b1082a2999e')
 
 build() {
@@ -47,6 +51,7 @@ build() {
     _arch=i586
   fi
   _javaver=1.6.0
+  _jvmdir=/usr/lib/java-${_javaver}-openjdk
 
   cd ${srcdir}/icedtea6
   ln -s ${srcdir}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz .
@@ -55,16 +60,17 @@ build() {
   patch -Np0 -i ${srcdir}/gcjwebplugin_xulrunner.diff || return 1
 
   cp ${srcdir}/*.diff ${srcdir}/icedtea6/patches/
-  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/fix_corba_cmds_path.diff"
+  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/fix_corba_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff"
 
+  ./autogen.sh
   autoreconf # needed due to mercurial build
 
   export ALT_PARALLEL_COMPILE_JOBS="${MAKEFLAGS/-j}"
   export HOTSPOT_BUILD_JOBS="${ALT_PARALLEL_COMPILE_JOBS}"
   unset MAKEFLAGS
 
-  if [ -x /usr/lib/jvm/java-${_javaver}-openjdk/bin/javac ]; then
-    JCONF="--with-openjdk --with-openjdk-home=/usr/lib/jvm/java-${_javaver}-openjdk"
+  if [ -x ${_jvmdir}/bin/javac ]; then
+    JCONF="--with-openjdk --with-openjdk-home=${_jvmdir}"
   elif [ -x /opt/java/bin/javac ]; then
     JCONF="--with-openjdk --with-openjdk-home=/opt/java"
   elif [ -x /usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/bin/javac ]; then
@@ -74,35 +80,44 @@ build() {
     return 1
   fi
 
+  # Build without rhino for now:
+  # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=179
   ./configure --with-parallel-jobs=${HOTSPOT_BUILD_JOBS} \
 	--with-xalan2-jar=/usr/share/java/xalan.jar \
+	--without-rhino \
 	$JCONF
   LD_PRELOAD="" make || return 1
   
-  install -m755 -d ${pkgdir}/usr/lib/jvm/java-${_javaver}-openjdk/jre
-  install -m755 -d ${pkgdir}/usr/share/man
+  install -m755 -d ${pkgdir}/${_jvmdir}/jre
 
   pushd ${srcdir}/icedtea6/openjdk/control/build/linux-${_arch}/j2sdk-image
    # Install main files.
-  cp -a bin include lib src.zip ${pkgdir}/usr/lib/jvm/java-${_javaver}-openjdk || return 1
-  cp -a jre/bin jre/lib ${pkgdir}/usr/lib/jvm/java-${_javaver}-openjdk/jre || return 1
+  cp -a bin include lib src.zip ${pkgdir}/${_jvmdir}/ || return 1
+  cp -a jre/bin jre/lib ${pkgdir}/${_jvmdir}/jre/ || return 1
+
+  mv ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.Ubuntu.properties.src \
+     ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.properties.src || return 1
+  mv ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.Ubuntu.bfc \
+     ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.bfc || return 1
+  rm -f ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.*.bfc
+  rm -f ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.*.properties.src
 
    # Install man pages.
   install -m755 -d ${pkgdir}/usr/share/man/man1
   install -m644 man/man1/*.1 ${pkgdir}/usr/share/man/man1/ || return 1
 
    # Install demos and samples.
-  cp -a demo ${pkgdir}/usr/lib/jvm/java-${_javaver}-openjdk/ || return 1
+  cp -a demo ${pkgdir}/${_jvmdir}/ || return 1
   install -m755 -d sample/rmi
   mv bin/java-rmi.cgi sample/rmi || return 1
-  cp -a sample ${pkgdir}/usr/lib/jvm/java-${_javaver}-openjdk || return 1
+  cp -a sample ${pkgdir}/${_jvmdir}/ || return 1
   popd
 
   # Install icons and menu entries.
   for s in 16 24 32 48 ; do
     install -m755 -d ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps
     install -m644 openjdk/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
-    ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/java.png || return 1
+      ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/java.png || return 1
   done
 
   # Install desktop files.
@@ -112,15 +127,16 @@ build() {
 
   # link the mozilla-plugin
   install -m755 -d ${pkgdir}/usr/lib/mozilla/plugins/
-  ln -sf /usr/lib/jvm/java-${_javaver}-openjdk/jre/lib/${_arch/i586/i386}/gcjwebplugin.so ${pkgdir}/usr/lib/mozilla/plugins/ || return 1
+  ln -sf ${_jvmdir}/jre/lib/${_arch/i586/i386}/gcjwebplugin.so ${pkgdir}/usr/lib/mozilla/plugins/ || return 1
 
   # link binaries into /usr/bin
   install -m755 -d ${pkgdir}/usr/bin
-  pushd ${pkgdir}/usr/lib/jvm/java-${_javaver}-openjdk/bin
+  pushd ${pkgdir}/${_jvmdir}/bin
   for file in *; do
-    ln -sf /usr/lib/jvm/java-${_javaver}-openjdk/bin/${file} \
+    ln -sf ${_jvmdir}/bin/${file} \
       ${pkgdir}/usr/bin || return 1
   done
+  popd
  
   # set some variables
   install -m755 -d ${pkgdir}/etc/profile.d
