@@ -10,6 +10,7 @@ arch=(i686 x86_64)
 depends=('bash' 'gmp')
 makedepends=('texinfo')
 license=('LGPL')
+options=('!makeflags')
 source=(http://dl.sourceforge.net/sourceforge/${pkgname}s/${pkgname}-${pkgver}.tgz)
 md5sums=('9825dba9b0198e5e7822cf2bfae84a6d')
 url="http://sourceforge.net/projects/ecls/"
