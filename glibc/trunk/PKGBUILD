@@ -2,8 +2,8 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=glibc
 pkgver=2.8
-pkgrel=2
-_glibcdate=20080610
+pkgrel=3
+_glibcdate=20080828
 install=glibc.install
 backup=(etc/locale.gen)
 pkgdesc="GNU C Library"
@@ -12,14 +12,14 @@ license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
 depends=('sh' 'kernel-headers>=2.6.25.6' 'tzdata')
-makedepends=('gcc>=4.3.1-1')
+makedepends=('gcc>=4.3.2-1')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-2.8_${_glibcdate}.tar.bz2
 	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-2.tar.bz2
 	nscd
 	locale.gen.txt
 	locale-gen)
-md5sums=('63def58972f0e8429247916154c21323'
+md5sums=('76be5bc7308956562afc84550d099404'
          '3ec00d9aa3f2fec046bc3e615dfb723a'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
@@ -28,10 +28,10 @@ md5sums=('63def58972f0e8429247916154c21323'
 build() {
 
   # for cvs checkout
-#  mkdir ${startdir}/src/glibc-${_glibcdate}
-#  cd ${startdir}/src/glibc-${_glibcdate}
-#  export _TAG=glibc-2_8-branch
-#  export 'CVSROOT=:pserver:anoncvs@sources.redhat.com:/cvs/glibc'
+  mkdir ${startdir}/src/glibc-${_glibcdate}
+  cd ${startdir}/src/glibc-${_glibcdate}
+  export _TAG=glibc-2_8-branch
+  export 'CVSROOT=:pserver:anoncvs@sources.redhat.com:/cvs/glibc'
 #  cvs -z9 co -r $_TAG libc || return 1
 #  tar -cvjf glibc-2.8_${_glibcdate}.tar.bz2 libc
 #  return 1
@@ -97,4 +97,6 @@ build() {
     cd ${startdir}/pkg/lib64
     ln -v -s ../lib/ld* .
   fi
+
+  rm -f ${pkgdir}/usr/share/info/dir
 }
