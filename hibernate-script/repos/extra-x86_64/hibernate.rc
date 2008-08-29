@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 . /etc/rc.conf
 . /etc/rc.d/functions
@@ -24,7 +24,7 @@ clear_swap() {
 	where=$1
 	wason=
 	swapoff $where 2>/dev/null && wason=yes
-	mkswap $where > /dev/null || msg_status " (failed: $?)"
+	mkswap $where > /dev/null || stat_append " (failed: $?)"
 	[ -n "$wason" ] && swapon $where
 }
 
@@ -33,10 +33,10 @@ check_swap_sig() {
 	while read  where what type rest ; do
 		test "$type" = "swap" || continue
 		case "$(dd if=$where bs=1 count=6 skip=4086 2>/dev/null)" in
-			S1SUSP|S2SUSP|pmdisk|[zZ]*)
-				msg_status "$where"
+			S1SUSP|S2SUSP|ULSUSP|pmdisk|[zZ]*)
+				stat_append "$where"
 				clear_swap $where
-				msg_status ", "
+				stat_append ", "
 		esac
 	done < /etc/fstab
 }
@@ -49,7 +49,7 @@ check_filewriter_sig() {
 	case "`dd \"if=$target\" bs=8 count=1 2>/dev/null`" in
 		HaveImag)
 			/bin/echo -ne "Suspend2\n\0\0" | dd "of=$target" bs=11 count=1 conv=notrunc 2>/dev/null
-			msg_status -n "$target, "
+			stat_append -n "$target, "
 			rm -f $HIBERNATE_FILEWRITER_TRAIL
 	esac
 }
