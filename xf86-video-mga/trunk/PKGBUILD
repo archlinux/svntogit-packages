@@ -3,20 +3,23 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-mga
 pkgver=1.4.9
-pkgrel=1
+pkgrel=2
 pkgdesc="X.org mga video driver"
-mesaver="7.0.3"
+_mesaver="7.1"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
-depends=('libdrm' 'expat>=2.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4.2' 'imake' 'mesa>=7.0.3' \
+depends=('libgl>=7.1-2' 'expat>=2.0')
+makedepends=('pkgconfig' 'xorg-server>=1.4.99.906' 'imake' 'mesa>=7.1'
              'xf86driproto' 'glproto>=1.4.9')
+conflicts=('xorg-server<1.4.99.906')
 options=('!libtool' 'force')
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
-        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${mesaver}.tar.bz2)
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2
+	mesa-7.1-link-shared.patch)
 md5sums=('11066b84b949cd04300ec819c9c51532'
-         'e6e6379d7793af40a6bc3ce1bace572e')
+         '6bff7f532d16f90f944a400c8bd7074d'
+         'f0baa948d9810f268413111ee439d24b')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -24,26 +27,23 @@ build() {
               --enable-dri || return 1
   make || return 1
   make DESTDIR=${startdir}/pkg install || return 1
-
-  cd ${startdir}/src/Mesa-${mesaver}/configs
-
-  CONFIG="linux-dri-x86"
-  [ "$CARCH" = "x86_64" ] && CONFIG="linux-dri-x86-64"
-  echo "EXTRA_LIB_PATH =" >> ${CONFIG}
-  echo "OPT_FLAGS = ${CFLAGS}" >> ${CONFIG}
-  echo "SRC_DIRS = glx/x11 mesa" >> ${CONFIG}
-  echo "USING_EGL = 0" >> ${CONFIG}
-  echo "PROGRAM_DIRS =" >> ${CONFIG}
-  echo "MKDEP = makedepend" >> ${CONFIG}
-  echo "DRI_DIRS = mga" >> ${CONFIG}
-  echo "DRI_DRIVER_SEARCH_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
-  echo "DRI_DRIVER_INSTALL_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
-  echo "ARCH_FLAGS += -DGLX_USE_TLS" >> ${CONFIG}
-  echo "X11_INCLUDES = `pkg-config --cflags-only-I x11`" >> ${CONFIG}
-
-  ln -s ${CONFIG} current
-  cd ${startdir}/src/Mesa-${mesaver}/src/mesa
-  make linux-solo || return 1
-  cd drivers/dri
-  make DESTDIR=${startdir}/pkg install || return 1
+  cd ${srcdir}/Mesa-${_mesaver}
+  patch -Np1 -i ${srcdir}/mesa-7.1-link-shared.patch || return 1
+  export CFLAGS="${CFLAGS} -ffast-math"
+  ./configure --prefix=/usr \
+    --with-dri-driverdir=/usr/lib/xorg/modules/dri \
+    --with-dri-drivers=mga \
+    --enable-glx-tls \
+    --disable-ttm-api \
+    --with-driver=dri \
+    --enable-xcb \
+    --disable-glu \
+    --disable-glut \
+    --disable-glw || return 1
+  make || return 1
+  cd src/mesa/drivers/dri || return 1
+  make DESTDIR=${pkgdir} install || return 1
+  rm -f ${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so
+  rm -rf ${pkgdir}/usr/include
+  rm -rf ${pkgdir}/usr/lib/pkgconfig
 }
