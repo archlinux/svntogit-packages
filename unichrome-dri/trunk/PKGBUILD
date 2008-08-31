@@ -2,39 +2,37 @@
 # Maintainer: Alexander Baldeck <alexander@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=unichrome-dri
-pkgver=7.0.3
-_mesaver=7.0.3
+pkgver=7.1
 pkgrel=1
 pkgdesc="DRI drivers for Unichrome-based videochipsets"
 arch=(i686 x86_64)
-license=('GPL')
 url="http://xorg.freedesktop.org/"
-depends=('libdrm>=2.3.0' 'expat>=2.0')
-makedepends=('imake' 'mesa>=7.0.3' 'glproto>=1.4.9')
+depends=('libdrm>=2.3.1' 'expat>=2.0.1' 'libgl>=7.1-2')
+makedepends=('dri2proto>=1.1' 'glproto>=1.4.9' 'pkgconfig' 'libxfixes' 'libxdamage' 'libxxf86vm' 'libxext')
 options=('!libtool')
-source=(http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2)
+source=(http://downloads.sourceforge.net/mesa3d/MesaLib-${pkgver}.tar.bz2
+	mesa-7.1-link-shared.patch)
+md5sums=('6bff7f532d16f90f944a400c8bd7074d'
+         'f0baa948d9810f268413111ee439d24b')
 
 build() {
-  cd ${startdir}/src/Mesa-${_mesaver}/configs
-
-  CONFIG="linux-dri-x86"
-  [ "$CARCH" = "x86_64" ] && CONFIG="linux-dri-x86-64"
-  echo "EXTRA_LIB_PATH =" >> ${CONFIG}
-  echo "OPT_FLAGS = ${CFLAGS} -fno-strict-aliasing" >> ${CONFIG}
-  echo "SRC_DIRS = glx/x11 mesa" >> ${CONFIG}
-  echo "USING_EGL = 0" >> ${CONFIG}
-  echo "PROGRAM_DIRS =" >> ${CONFIG}
-  echo "MKDEP = makedepend" >> ${CONFIG}
-  echo "DRI_DIRS = unichrome" >> ${CONFIG}
-  echo "DRI_DRIVER_SEARCH_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
-  echo "DRI_DRIVER_INSTALL_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
-  echo "ARCH_FLAGS += -DGLX_USE_TLS" >> ${CONFIG}
-  echo "X11_INCLUDES = `pkg-config --cflags-only-I x11`" >> ${CONFIG}
-
-  ln -s ${CONFIG} current
-  cd ${startdir}/src/Mesa-${_mesaver}/src/mesa
-  make linux-solo || return 1
-  cd drivers/dri
-  make DESTDIR=${startdir}/pkg install || return 1
+  cd ${srcdir}/Mesa-${pkgver}
+  patch -Np1 -i ${srcdir}/mesa-7.1-link-shared.patch
+  export CFLAGS="${CFLAGS} -ffast-math"
+  ./configure --prefix=/usr \
+    --with-dri-driverdir=/usr/lib/xorg/modules/dri \
+    --with-dri-drivers=unichrome \
+    --enable-glx-tls \
+    --disable-ttm-api \
+    --with-driver=dri \
+    --enable-xcb \
+    --disable-glu \
+    --disable-glut \
+    --disable-glw || return 1
+  make || return 1
+  cd src/mesa/drivers/dri || return 1
+  make DESTDIR=${pkgdir} install || return 1
+  rm -rf ${pkgdir}/usr/lib/pkgconfig
+  rm -rf ${pkgdir}/usr/include
+  rm -f ${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so
 }
-md5sums=('e6e6379d7793af40a6bc3ce1bace572e')
