@@ -1,0 +1,40 @@
+--- gdm-stop	2006-04-08 05:48:44.000000000 +1000
++++ gdm-stop	2006-04-08 07:34:49.000000000 +1000
+@@ -1,7 +1,12 @@
+ #!/bin/sh
+ 
+-PIDFILE=`gdmflexiserver --command="GET_CONFIG daemon/PidFile"`
+-CHECKPIDFILE=`echo $PIDFILE | sed 's/^\([^ ]*\) .*$/\1/'`
++if [ "x$(pidof X)" != "x" ]; then
++	PIDFILE=`/usr/bin/gdmflexiserver --command="GET_CONFIG daemon/PidFile"`
++	CHECKPIDFILE=`echo $PIDFILE | sed 's/^\([^ ]*\) .*$/\1/'`
++fi
++
++RUNLEVEL=`runlevel | awk '{ print $2 }'`
++
+ if [ "x$CHECKPIDFILE" = "xOK" ]; then
+ 	PIDFILE=`echo $PIDFILE | sed 's/^.* \(.*\)$/\1/'`
+ else
+@@ -9,13 +14,18 @@
+ fi
+ 
+ if test x$PIDFILE = x ; then
+-	echo "Can't find the PID file in the configuration file, going to try:"
+-	echo "/var/run/gdm.pid"
++	if [ $RUNLEVEL -gt 0 ] && [ $RUNLEVEL -lt 6 ]; then
++		echo "Can't find the PID file in the configuration file, going to try:"
++		echo "/var/run/gdm.pid"
++	fi
+ 	PIDFILE=/var/run/gdm.pid
+ fi
+ if test '!' -f $PIDFILE ; then
+-	echo "$PIDFILE doesn't exist, perhaps GDM isn't running"
+-	exit 1
++	if [ $RUNLEVEL -gt 0 ] && [ $RUNLEVEL -lt 6 ]; then
++		echo "$PIDFILE doesn't exist, perhaps GDM isn't running"
++		exit 1
++	fi
++	exit 0
+ fi
+ # exec the kill to get the correct return code
+ exec kill -TERM `cat $PIDFILE`
