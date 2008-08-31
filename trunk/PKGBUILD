@@ -3,7 +3,7 @@
 
 pkgname=shadow
 pkgver=4.1.2.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Shadow password file utilities"
 arch=(i686 x86_64)
 url='http://pkg-shadow.alioth.debian.org/'
@@ -32,6 +32,13 @@ md5sums=('c178e49c45495e296dabbe4ae01a0fbe'
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
+
+  #Ugh, force this to build shared libraries, for god's sake
+  sed -i "s/noinst_LTLIBRARIES/lib_LTLIBRARIES/g" lib/Makefile.am
+  libtoolize
+  autoreconf
+  export LDFLAGS="$LDFLAGS -lcrypt"
+
   patch -Np1 -i $startdir/src/xstrdup.patch || return 1
 
   # supress etc/pam.d/*, we provide our own
@@ -40,6 +47,7 @@ build() {
   ./configure \
   	--prefix=/usr --libdir=/lib \
 	--mandir=/usr/share/man --sysconfdir=/etc \
+    --enable-shared --disable-static \
     --with-libpam --without-selinux
   make || return 1
   make DESTDIR=$startdir/pkg install
