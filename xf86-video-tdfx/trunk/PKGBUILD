@@ -3,17 +3,19 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=xf86-video-tdfx
 pkgver=1.4.0
-pkgrel=1
+pkgrel=2
 pkgdesc="X.org tdfx video driver"
-_mesaver="7.0.3"
+_mesaver="7.1"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
-depends=('expat>=2.0' 'libdrm>=2.3.0')
-makedepends=('pkgconfig' 'xorg-server>=1.4.0.90' 'imake' 'mesa>=7.0.3')
+depends=('libgl>=7.1-2')
+makedepends=('pkgconfig' 'xorg-server>=1.4.99.906' 'mesa>=7.1')
+conflicts=('xorg-server<1.4.99.906')
 options=(!libtool)
 groups=('xorg-video-drivers')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
-        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2)
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2
+	mesa-7.1-link-shared.patch)
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
@@ -23,27 +25,23 @@ build() {
   make DESTDIR=${startdir}/pkg install || return 1
 
   cd ${startdir}/src/Mesa-${_mesaver}
-  cd configs
+  patch -Np1 -i ${srcdir}/mesa-7.1-link-shared.patch
+  export CFLAGS="${CFLAGS} -ffast-math"
+  ./configure --prefix=/usr \
+    --with-dri-driverdir=/usr/lib/xorg/modules/dri \
+    --with-dri-drivers=tdfx \
+    --enable-glx-tls \
+    --disable-ttm-api \
+    --with-driver=dri \
+    --enable-xcb \
+    --disable-glu \
+    --disable-glut \
+    --disable-glw || return 1
+  make || return 1
+  cd src/mesa/drivers/dri || return 1
+  make DESTDIR=${pkgdir} install || return 1
+  rm -rf ${pkgdir}/usr/lib/pkgconfig
+  rm -rf ${pkgdir}/usr/include
+  rm -f ${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so
 
-  CONFIG="linux-dri-x86"
-  [ "$CARCH" = "x86_64" ] && CONFIG="linux-dri-x86-64"
-  echo "EXTRA_LIB_PATH =" >> ${CONFIG}
-  echo "OPT_FLAGS = ${CFLAGS} -fno-strict-aliasing" >> ${CONFIG}
-  echo "SRC_DIRS = glx/x11 mesa" >> ${CONFIG}
-  echo "USING_EGL = 0" >> ${CONFIG}
-  echo "PROGRAM_DIRS =" >> ${CONFIG}
-  echo "MKDEP = makedepend" >> ${CONFIG}
-  echo "DRI_DIRS = tdfx" >> ${CONFIG}
-  echo "DRI_DRIVER_SEARCH_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
-  echo "DRI_DRIVER_INSTALL_DIR = /usr/lib/xorg/modules/dri" >> ${CONFIG}
-  echo "ARCH_FLAGS += -DGLX_USE_TLS" >> ${CONFIG}
-  echo "X11_INCLUDES = `pkg-config --cflags-only-I x11`" >> ${CONFIG}
-
-  ln -s ${CONFIG} current
-  cd ${startdir}/src/Mesa-${_mesaver}/src/mesa
-  make linux-solo || return 1
-  cd drivers/dri
-  make DESTDIR=${startdir}/pkg install || return 1
 }
-md5sums=('b13132f24683ef759bfb0c1db5096496'
-         'e6e6379d7793af40a6bc3ce1bace572e')
