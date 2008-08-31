@@ -3,22 +3,29 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 pkgname=intel-dri
 pkgver=7.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Mesa DRI drivers for Intel chipsets"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
-depends=('libdrm>=2.3.1' 'expat>=2.0.1')
+depends=('libdrm>=2.3.1' 'expat>=2.0.1' 'libgl>=7.1-2')
 makedepends=('dri2proto>=1.1' 'glproto>=1.4.9' 'pkgconfig' 'libxfixes' 'libxdamage' 'libxxf86vm' 'libxext')
 options=('!libtool')
-source=(http://downloads.sourceforge.net/mesa3d/MesaLib-${pkgver}.tar.bz2)
-md5sums=('6bff7f532d16f90f944a400c8bd7074d')
+source=(http://downloads.sourceforge.net/mesa3d/MesaLib-${pkgver}.tar.bz2
+	mesa-7.1-link-shared.patch)
+md5sums=('6bff7f532d16f90f944a400c8bd7074d'
+         'f0baa948d9810f268413111ee439d24b')
 
 build() {
   cd ${srcdir}/Mesa-${pkgver}
+  patch -Np1 -i ${srcdir}/mesa-7.1-link-shared.patch
+  export CFLAGS="${CFLAGS} -ffast-math"
   ./configure --prefix=/usr \
     --with-dri-driverdir=/usr/lib/xorg/modules/dri \
     --with-dri-drivers=i810,i915,i965 \
     --enable-glx-tls \
+    --disable-ttm-api \
+    --with-driver=dri \
+    --enable-xcb \
     --disable-glu \
     --disable-glut \
     --disable-glw || return 1
@@ -27,4 +34,5 @@ build() {
   make DESTDIR=${pkgdir} install || return 1
   rm -rf ${pkgdir}/usr/lib/pkgconfig
   rm -rf ${pkgdir}/usr/include
+  rm -f ${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so
 }
