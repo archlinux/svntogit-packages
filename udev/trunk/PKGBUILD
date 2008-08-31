@@ -2,8 +2,8 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 pkgname=udev
-pkgver=126
-pkgrel=2
+pkgver=127
+pkgrel=1
 pkgdesc="The userspace dev tools (udev)"
 arch=(i686 x86_64)
 url="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
@@ -20,17 +20,12 @@ conflicts=('pcmcia-cs' 'hotplug')
 replaces=('devfsd')
 options=(!makeflags)
 source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.tar.bz2
-        migrate-udev start_udev 51-arch.rules load-modules.sh
-        cdsymlinks.sh root-link.sh readme-udev-arch.txt arch-udev-rules.patch)
-md5sums=('502964d8623b81b6565c727dd28024de'
-         '49434a593918c822077bc3af765f1aff'
-         'a68a519d1ed8cbbd2f45c23eb32ea218'
-         '082e76ef9053495a5cade321817467cd'
-         '945f6d30ab458189b3c17f8e6722da1f'
-         '8424b78e9dd772e75b4ef90814807815'
-         '2d6dc6842464f107bccc68cd505a6c31'
-         '780db5316a762dc5cdcf52027ab8a8eb'
-         'c43a736b66edadadd9b91b8af1aa2d1c')
+        81-arch.rules 
+        load-modules.sh
+        cdsymlinks.sh 
+        root-link.sh 
+        readme-udev-arch.txt 
+        arch-udev-rules.patch)
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
@@ -38,9 +33,7 @@ build() {
   make || return 1
   make DESTDIR=$startdir/pkg install
 
-  install -D -m755 $startdir/src/start_udev $startdir/pkg/etc/start_udev
-  install -D -m755 $startdir/src/migrate-udev $startdir/pkg/sbin/migrate-udev
-  install -D -m644 $startdir/src/51-arch.rules $startdir/pkg/etc/udev/rules.d/51-arch.rules
+  install -D -m644 $startdir/src/81-arch.rules $startdir/pkg/lib/udev/rules.d/81-arch.rules
   # install our module loading subsystem
   install -D -m755 $startdir/src/load-modules.sh $startdir/pkg/lib/udev/load-modules.sh
   # install cdsymlinks.sh
@@ -54,21 +47,20 @@ build() {
   # disable error loggin to prevent startup failures printed to vc on boot
   sed -i -e 's|udev_log="err"|udev_log="0"|g' $startdir/pkg/etc/udev/udev.conf
   # install additional rules files
-  for rule in $startdir/src/$pkgname-$pkgver/rules/packages/*; do
+  for rule in $startdir/src/$pkgname-$pkgver/rules/packages/*.rules; do
       install -D -m 644 $rule $startdir/pkg/lib/udev/rules.d/
   done
-  # fix 60-cdrom_id.rules
-  cd $startdir/pkg/lib/udev/rules.d/
-  #patch -Np0 -i $startdir/src/cdrom-rules.patch || return 1
   # fix standard udev rules to fit to arch
+  cd $startdir/pkg/lib/udev/rules.d/
   patch -Np0 -i $startdir/src/arch-udev-rules.patch || return 1
   # fix modprobe rules to use the load-modules.sh
-  sed -i -e "s#/sbin/modprobe#/lib/udev/load-modules.sh#g" $startdir/pkg/etc/udev/rules.d/*
-  # disable persistent cdromsymlinks and network by default
+  sed -i -e "s#/sbin/modprobe#/lib/udev/load-modules.sh#g" $startdir/pkg/lib/udev/rules.d/*
+  # disable persistent cdromsymlinks and network by default 
+  # and move it to /etc/udev/rules.d
   mv $startdir/pkg/lib/udev/rules.d/75-persistent-net-generator.rules \
-     $startdir/pkg/lib/udev/rules.d/75-persistent-net-generator.rules.optional
+     $startdir/pkg/etc/udev/rules.d/75-persistent-net-generator.rules.optional
   mv $startdir/pkg/lib/udev/rules.d/75-cd-aliases-generator.rules \
-     $startdir/pkg/lib/udev/rules.d/75-cd-aliases-generator.rules.optional
+     $startdir/pkg/etc/udev/rules.d/75-cd-aliases-generator.rules.optional
   # create framebuffer blacklist
   mkdir -p $startdir/pkg/etc/modprobe.d/
   for mod in $(find /lib/modules/ -name '*fb*.ko' -exec basename {} .ko \;); do 

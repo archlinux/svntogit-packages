@@ -1,7 +1,7 @@
 ==========================
 Cold/Hotplugging with Udev
 ==========================
-Version 1.1.5
+Version 1.1.6
 written by Tobias Powalowski <tpowa@archlinux.org>
 
 ---------------
@@ -48,6 +48,8 @@ written by Tobias Powalowski <tpowa@archlinux.org>
   in most cases it will be empty.
   --- snap Changelog Udev 098
 - optional udev >= 099 Persistent rules generator for network and cd/dvd devices was added.
+- default udev rules are installed to /lib/udev/rules.d/, they can be overriden by placing
+  own rules files to /etc/udev/rules.d/ .
 
 ---------------
 * How it works:
@@ -57,7 +59,7 @@ written by Tobias Powalowski <tpowa@archlinux.org>
 - Udev loads the modules simultaneously, which is much faster, 
   but can cause some troubles with multiple network/sound/etc devices
   (see below).
-- To reload your rules please use /etc/start_udev.
+- To reload your rules please use '/sbin/udevadm trigger'.
 
 ======================
 * Autoloading modules:
@@ -113,7 +115,7 @@ is only used in mkinitrd now.
 - To enable this feature copy in /etc/udev/rules.d
   75-cd-aliases-generator.rules.optinal
   to 75-cd-aliases-generator.rules
-  Also disable this part in /etc/udev/rules.d/40-arch.rules by putting a # in front:
+  Also disable this part in /lib/udev/rules.d/81-arch.rules by putting a # in front:
   --- snip
   ACTION=="add", SUBSYSTEMS=="ide", KERNEL=="hd[a-z]", ATTR{removable}=="1", ATTRS{media}=="cdrom*", RUN+="/lib/udev/cdsymlinks.sh"
   ACTION=="add", SUBSYSTEMS=="scsi", KERNEL=="sr[0-9]*", ATTRS{type}=="5", RUN+="/lib/udev/cdsymlinks.sh"
@@ -124,7 +126,7 @@ is only used in mkinitrd now.
 --- snap
 
 - To get the same device name for CD/DVD symlinks each time you boot,
-  a rule will be generated during bootup or by executing /etc/start_udev.
+  a rule will be generated during bootup or by executing '/sbin/udevadm trigger'.
 - Examples: dvd, cdrom ,cdrw etc.
 - If you want to change those links,
   modify '/etc/udev/rules.d/70-peristent-cd.rules' to your needs.
@@ -142,7 +144,7 @@ if you change your CD/DVD device, you have to check the
   75-persistent-net-generator.rules.optional
   to 75-persistent-net-generator.rules
 - To get the same network device name each time you boot,
-  a rule will be generated during bootup or by executing /etc/start_udev.
+  a rule will be generated during bootup or by executing '/sbin/udevadm trigger'.
 - Examples: eth0, eth1, wlan0 etc.
 - If you want to change those names, 
   modify '/etc/udev/rules.d/70-peristent-net.rules' to your needs.
