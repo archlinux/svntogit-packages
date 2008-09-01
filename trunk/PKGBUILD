@@ -1,57 +1,54 @@
 # $Id$
-# Maintainer: Travis Willard <travisw@wmpub.ca>
+# Maintainer: Alexander Fehr <pizzapunk gmail com>
 # Contributor: William Rea <sillywilly@gmail.com>
 
 pkgname=audacious-plugins
-pkgver=1.5.0
+pkgver=1.5.1
 pkgrel=1
-pkgdesc="Plugins for the audacious media player."
+pkgdesc="Plugins for Audacious"
 arch=('i686' 'x86_64')
 url="http://audacious-media-player.org/"
-license=('GPL3')
-depends=('audacious>=1.5.0' 'lame' 'libmcs' 'gtk2' 'libxml2' 'libvorbis' \
-         'libsidplay' 'libsndfile' 'libmpcdec>=1.2.5' 'taglib' 'flac>=1.1.4' \
-         'libmad' 'libxcomposite' 'libmowgli' 'dbus-glib' 'libcdio')
-# Makedepends: first two lines are for optdepends - they need to be present at build to be enabled
-makedepends=('jack-audio-connection-kit' 'curl>=7.16.2' 'musicbrainz' 'lirc-utils' \
-             'libmodplug' 'projectm' 'sdl' 'neon' 'wavpack' 'fluidsynth' \
-             'pkgconfig')
-optdepends=('jack-audio-connection-kit: Jack output' \
-            'curl>=7.16.2: Audioscrobbler plugin' \
-            'musicbrainz: Audioscrobbler plugin' \
-            'lirc-utils: Infra-red support' \
-            'libmodplug: Modplug plugin' \
-            'projectm: Projectm visualization plugin' \
-            'sdl: Paranormal visualization plugin' \
-            'neon: HTTP and Web-stream playback' \
-            'wavpack: Wavpack input' \
-            'fluidsynth: Fluidsynth amidi-plug backend' \
-            )
-install=audacious-plugins.install
-source=(http://distfiles.atheme.org/$pkgname-$pkgver.tgz)
-md5sums=('42c82ffffd57aca612141bc106b9f51e')
-options=('!libtool')
+license=('GPL')
+depends=('audacious' 'libmad' 'libvorbis')
+makedepends=('jack-audio-connection-kit' 'lame' 'fluidsynth' 'libcdio' 'libsidplay' 'wavpack'
+             'libmpcdec' 'taglib' 'lirc-utils' 'curl' 'libmtp' 'sdl' 'projectm' 'imlib2'
+             'neon' 'libmms')
+optdepends=('jack-audio-connection-kit: JACK output plugin'
+            'lame: FileWriter output plugin'
+            'fluidsynth: FluidSynth backend for AMIDI-Plug input plugin'
+            'libcdio: CD Audio input plugin'
+            'libsidplay: SID input plugin'
+            'wavpack: WavPack input plugin'
+            'libmpcdec: Musepack input plugin'
+            'taglib: Musepack input plugin'
+            'lirc-utils: LIRC plugin'
+            'curl: Audioscrobbler plugin'
+            'libmtp: MTP upload plugin'
+            'sdl: Paranormal and projectM visualization plugins'
+            'projectm: projectM visualization plugin'
+            'imlib2: RootVis visualization plugin'
+            'neon: HTTP transport plugin'
+            'libmms: MMS transport plugin')
+source=(http://distfiles.atheme.org/audacious-plugins-$pkgver.tbz2
+        audacious-plugins-amidi.patch)
+md5sums=('b237754a615cf9a3d77a93bf18de26fc'
+         'd8887eb15957b106bcb84acc0e243ac9')
 
 build() {
+  cd "$srcdir/audacious-plugins-$pkgver"
 
-  # NOTE TO ANYONE BUILDING THIS PKG!
-  # 
-  # Audacious and Audacious-plugins must both be built with
-  # the same CFLAGS and CXXFLAGS.  
-  # If ever strange, unexplainable playlist corruption happens, this
-  # is likely the cause - make sure both packages were built with
-  # the same flags and same version of GCC.
+  patch -Np1 -i "$srcdir/audacious-plugins-amidi.patch" || return 1
 
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr \
-              --disable-esd --enable-jack \
-              --disable-timidity --enable-amidiplug \
-              --enable-chardet --enable-modplug \
-	      --enable-wavpack \
-	      --enable-fluidsynth \
-              --enable-sid --disable-sse2
+  if [[ $CARCH == "i686" ]]; then
+    ./configure --prefix=/usr --disable-esd --disable-arts --disable-pulse \
+      --enable-amidiplug --disable-timidity --disable-adplug \
+      --disable-projectm-1.0 --enable-chardet --disable-sse2 || return 1
+  elif [[ $CARCH == "x86_64" ]]; then
+    ./configure --prefix=/usr --disable-esd --disable-arts --disable-pulse \
+      --enable-amidiplug --disable-timidity --disable-adplug \
+      --disable-projectm-1.0 --enable-chardet || return 1
+  fi
 
   make || return 1
-  make DESTDIR=${startdir}/pkg install
-} 
-
+  make DESTDIR="$pkgdir" install || return 1
+}
