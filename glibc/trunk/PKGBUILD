@@ -1,5 +1,6 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
 pkgname=glibc
 pkgver=2.8
 pkgrel=3
@@ -11,7 +12,7 @@ arch=(i686 x86_64)
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('sh' 'kernel-headers>=2.6.25.6' 'tzdata')
+depends=('sh' 'kernel-headers>=2.6.26.3' 'tzdata')
 makedepends=('gcc>=4.3.2-1')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-2.8_${_glibcdate}.tar.bz2
