@@ -3,7 +3,7 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 pkgname=udev
 pkgver=127
-pkgrel=1
+pkgrel=ed
 pkgdesc="The userspace dev tools (udev)"
 arch=(i686 x86_64)
 url="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
@@ -18,14 +18,12 @@ backup=(etc/udev/udev.conf
         etc/modprobe.d/framebuffer_blacklist)
 conflicts=('pcmcia-cs' 'hotplug')
 replaces=('devfsd')
+# older initscripts versions required start_udev
+conflicts=('initscripts<2008.02')
 options=(!makeflags)
 source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.tar.bz2
-        81-arch.rules 
-        load-modules.sh
-        cdsymlinks.sh 
-        root-link.sh 
-        readme-udev-arch.txt 
-        arch-udev-rules.patch)
+        81-arch.rules load-modules.sh cdsymlinks.sh root-link.sh arch-udev-rules.patch
+        readme-udev-arch.txt)
 
 build() {
   cd $startdir/src/$pkgname-$pkgver
@@ -33,18 +31,23 @@ build() {
   make || return 1
   make DESTDIR=$startdir/pkg install
 
-  install -D -m644 $startdir/src/81-arch.rules $startdir/pkg/lib/udev/rules.d/81-arch.rules
+  #Non-stock rules still go in /etc
+  install -D -m644 $startdir/src/81-arch.rules $startdir/pkg/etc/udev/rules.d/81-arch.rules
+
   # install our module loading subsystem
   install -D -m755 $startdir/src/load-modules.sh $startdir/pkg/lib/udev/load-modules.sh
   # install cdsymlinks.sh
   install -D -m755 $startdir/src/cdsymlinks.sh $startdir/pkg/lib/udev/cdsymlinks.sh
   # install root-link.sh
   install -D -m755 $startdir/src/root-link.sh $startdir/pkg/lib/udev/root-link.sh
+
   # install instructions
-  install -D -m644 $startdir/src/readme-udev-arch.txt $startdir/pkg/etc/udev/readme-udev-arch.txt
+  # NOTE: We should delete this file
+  install -D -m644 $startdir/src/readme-udev-arch.txt $startdir/pkg/usr/share/udev/readme-udev-arch.txt
+
   # add devices dir
   mkdir $startdir/pkg/lib/udev/devices
-  # disable error loggin to prevent startup failures printed to vc on boot
+  # disable error logging to prevent startup failures printed to vc on boot
   sed -i -e 's|udev_log="err"|udev_log="0"|g' $startdir/pkg/etc/udev/udev.conf
   # install additional rules files
   for rule in $startdir/src/$pkgname-$pkgver/rules/packages/*.rules; do
@@ -53,8 +56,7 @@ build() {
   # fix standard udev rules to fit to arch
   cd $startdir/pkg/lib/udev/rules.d/
   patch -Np0 -i $startdir/src/arch-udev-rules.patch || return 1
-  # fix modprobe rules to use the load-modules.sh
-  sed -i -e "s#/sbin/modprobe#/lib/udev/load-modules.sh#g" $startdir/pkg/lib/udev/rules.d/*
+
   # disable persistent cdromsymlinks and network by default 
   # and move it to /etc/udev/rules.d
   mv $startdir/pkg/lib/udev/rules.d/75-persistent-net-generator.rules \
