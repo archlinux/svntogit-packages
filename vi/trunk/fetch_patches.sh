@@ -43,9 +43,6 @@ get_patches() {
     fi
   done
 
-  ## TEMPFIX stupid fuckup upstream
-  mv ./7.1.126ne ./7.1.126
-  downloads=$((${downloads} - 1))
   ########
 
   if [ ${downloads} != ${_patchlevel} ]; then
