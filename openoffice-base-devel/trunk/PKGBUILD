@@ -2,17 +2,17 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
 pkgname=openoffice-base-devel
-pkgver=3.0_dev300_m30
+pkgver=3.0_dev300_m31
 pkgrel=1
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=('i686' 'x86_64')
-#_OO_milestone=dev300-m30
-_OO_milestone=DEV300_m30
+#_OO_milestone=dev300-m31
+_OO_milestone=DEV300_m31
 license=('LGPL3')
 url="http://www.openoffice.org"
 install=openoffice.install
 depends=('curl>=7.18.0' 'hunspell>=1.2.2-2' 'python>=2.5.1' 'libwpd' 
-         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'redland')
+         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'redland' 'hsqldb-java')
 optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
@@ -37,11 +37,9 @@ source=(#$MIRROR/${_OO_milestone}/OOo-Dev_${_OO_milestone}_src_{core,system}.tar
 	soffice-detect-mozilla-certificates.diff
 	buildfix-gcc43.diff
 	shell.patch
-	#http://oooconv.free.fr/fontooo/FontOOo.sxw
-	# from http://www.openoffice.org/issues/show_bug.cgi?id=81102
-	FontOOo_1.7.1.sxw)
+	system_hsqldb.diff)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('a2ffad8555cc1846254805960d4dce81'
+md5sums=('b90b79081f5bbe7ca561518ba92b5b10'
          '50f1b6923deb05756de0efa02c5a63e0'
          '71f136a31e296a04ab68932a31dd533e'
          '6c596129fb48316226ce3adfd3a4c86d'
@@ -49,7 +47,7 @@ md5sums=('a2ffad8555cc1846254805960d4dce81'
          '1dc7480a04f572ad136d35923a2af66d'
          'bf7119084a2d1e0566b5e34b57dce8eb'
          'a51200f770c635355c430cc5052db8cf'
-         '1fc1ca5205730655eab2d2e119aa06fe')
+         '4addae44d20bb2b247e429d88b66a4c1')
 
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
@@ -80,6 +78,7 @@ build() {
 
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc43.diff || return 1
+	patch -Np0 -i ${srcdir}/system_hsqldb.diff || return 1
 
 	# allows xmlsec to be able to read the format of the digital certificates.
 	patch -Np0 -i ${srcdir}/libxmlsec-findcerts.diff || return 1
@@ -117,8 +116,10 @@ build() {
 	--prefix=/usr --exec-prefix=/usr\
 	--disable-ldap\
 	--with-lang="en-US"\
+	--with-dict=ALL\
 	--disable-gnome-vfs\
 	--disable-binfilter\
+	--disable-kde\
 	--disable-lockdown\
 	--disable-odk\
 	--disable-systray\
@@ -157,10 +158,8 @@ build() {
 	--with-system-zlib\
 	--with-system-openssl\
 	--without-fonts\
-	--without-myspell-dicts\
 	--without-afms\
 	--without-gpc\
-	--without-myspell-dicts\
 	--without-nas\
 	--without-stlport\
 	--with-jdk-home=${JAVA_HOME} \
@@ -170,15 +169,15 @@ build() {
 	--with-xalan-jar=/usr/share/java/xalan.jar \
 	--with-system-xml-apis\
 	--with-xml-apis-jar=/usr/share/java/xml-apis.jar \
+ 	--with-system-hsqldb \
+	--with-hsqldb-jar=/usr/share/java/hsqldb.jar \
 	--with-serializer-jar=/usr/share/java/serializer.jar \
 	--with-use-shell=bash\
 	 $EXTRAOPTS || return 1
 
 #	--enable-kde\
 #	--disable-qadevooo\ http://www.openoffice.org/issues/show_bug.cgi?id=91452
-
-# 	--with-system-hsqldb \
-#	--with-hsqldb-jar=/usr/share/java/hsqldb.jar \
+#	--without-myspell-dicts\
 
 	cd ..
 
@@ -227,24 +226,29 @@ build() {
 	ln -s ../../opt/openoffice/program/soffice soffice
 	ln -s ../../opt/openoffice/program/spadmin spadmin
 
+	# install more dictionaries from source tree
+	for i in `ls -1 ${srcdir}/src/dictionaries/unxlngx6.pro/bin/dict-??.oxt`; do
+	  install -Dm644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
+	done
+
 	# install shortcuts
 	mv ${pkgdir}/opt/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
 	cd ${pkgdir}/usr/share/applications
-	sed -i -e 's|Exec=openoffice.org3.0|Exec=/opt/openoffice/program/soffice|g' *.desktop
-	sed -i -e 's|Exec=/opt/openoffice/program/soffice-printeradmin|Exec=/opt/openoffice/program/spadmin|g' printeradmin.desktop
+	sed -i -e 's|Exec=openoffice.org3|Exec=/opt/openoffice/program/soffice|g' *.desktop || return 1
+	sed -i -e 's|Exec=/opt/openoffice/program/soffice-printeradmin|Exec=/opt/openoffice/program/spadmin|g' printeradmin.desktop || return 1
 	# fix exec commands in shortcuts for Xfce menu
-	sed -i -e 's|base %U|base|g' base.desktop
-	sed -i -e 's|calc %U|calc|g' calc.desktop
-	sed -i -e 's|draw %U|draw|g' draw.desktop
-	sed -i -e 's|impress %U|impress|g' impress.desktop
-	sed -i -e 's|math %U|math|g' math.desktop
-	sed -i -e 's|writer %U|writer|g' writer.desktop
+	sed -i -e 's|base %U|base|g' base.desktop || return 1
+	sed -i -e 's|calc %U|calc|g' calc.desktop || return 1
+	sed -i -e 's|draw %U|draw|g' draw.desktop || return 1
+	sed -i -e 's|impress %U|impress|g' impress.desktop || return 1
+	sed -i -e 's|math %U|math|g' math.desktop || return 1
+	sed -i -e 's|writer %U|writer|g' writer.desktop || return 1
 	# remove quickstarter, we disabled it above
 	rm -rf ${pkgdir}/usr/share/applications/qstart.desktop
 	# fix icons in shortcuts
-	sed -i -e 's|Icon=openofficeorg30-|Icon=|g' *.desktop
+	sed -i -e 's|Icon=openofficeorg3-|Icon=|g' *.desktop
 	# add template desktop file
-	install -D -m644 ${srcdir}/template.desktop ${pkgdir}/usr/share/applications/template.desktop
+	install -D -m644 ${srcdir}/template.desktop ${pkgdir}/usr/share/applications/template.desktop || return 1
 
 	# install icons
 	cd ${srcdir}/sysui/desktop/icons
@@ -270,12 +274,6 @@ build() {
 	rm -f  ${pkgdir}/opt/openoffice/program/root*.dat
 	rm -f  ${pkgdir}/opt/openoffice/program/root*.dat.*
 
- 	# fix font wizard not installed by default (from http://qa.openoffice.org/issues/show_bug.cgi?id=81102)
-	install -D -m644 ${srcdir}/FontOOo_1.7.1.sxw ${pkgdir}/opt/openoffice/share/dict/ooo/FontOOo.sxw
-
-	# add missing spell wizard
-	install -D -m644 ${srcdir}/dictionaries/diclst/DicOOo.sxw ${pkgdir}/opt/openoffice/share/dict/ooo/DicOOo.sxw
-
 	# link the mozilla-plugin
 	mkdir -p ${pkgdir}/usr/lib/mozilla/plugins/
 	cd ${pkgdir}/usr/lib/mozilla/plugins/
@@ -284,7 +282,7 @@ build() {
 	## Develize it!
 	cd ${pkgdir}/opt/
 	mv openoffice openoffice-dev
-	sed -i -e 's|Exec=/opt/openoffice/program|Exec=/opt/openoffice-dev/program|g' ${pkgdir}/usr/share/applications/*.desktop
+	sed -i -e 's|Exec=/opt/openoffice/program|Exec=/opt/openoffice-dev/program|g' ${pkgdir}/usr/share/applications/*.desktop || return 1
 
 	cd ${pkgdir}/usr/bin
 	rm -f soffice spadmin
@@ -299,12 +297,11 @@ build() {
 	for i in `find ${pkgdir}/usr/share/icons -name '*.png'`  ; do  mv $i `dirname $i`/dev-`basename $i` ; done ;
 	
 	cd ${pkgdir}/usr/share/applications/
-	sed -i -e 's|Icon=|Icon=dev-|g' $startdir/pkg/usr/share/applications/*.desktop
-	sed -i -e 's|OpenOffice\.org\ 3\.0|OpenOffice\.org\ devel|g' ${pkgdir}/usr/share/applications/*.desktop
-	sed -i -e 's|\/opt\/openoffice\-dev\/program\/soffice|\/usr\/bin\/soffice\-dev|g' ${pkgdir}/usr/share/applications/*.desktop
+	sed -i -e 's|Icon=|Icon=dev-|g' $startdir/pkg/usr/share/applications/*.desktop || return 1
+	sed -i -e 's|OpenOffice\.org\ 3\.0|OpenOffice\.org\ devel|g' ${pkgdir}/usr/share/applications/*.desktop || return 1
+	sed -i -e 's|\/opt\/openoffice\-dev\/program\/soffice|\/usr\/bin\/soffice\-dev|g' ${pkgdir}/usr/share/applications/*.desktop || return 1
 
 	mv ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-dev.so
-
 	cd ${pkgdir}/opt/openoffice-dev/program/
 	ln -sf /opt/openoffice-dev/program/soffice.bin soffice-dev.bin
 }
