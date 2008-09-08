@@ -1,0 +1,130 @@
+pre_install() {
+	cat >> /usr/share/texmf-config/web2c/updmap.cfg <<EOF
+Map charter.map
+Map fpls.map
+Map lm.map
+Map marvosym.map
+Map mathpple.map
+Map pazo.map
+Map pxfonts.map
+Map qag.map
+Map qbk.map
+Map qcr.map
+Map qcs.map
+Map qhv.map
+Map qpl.map
+Map qtm.map
+Map qzc.map
+Map tabvar.map
+Map txfonts.map
+Map utopia.map
+Map zpeu.map
+MixedMap ams-bsr-interpolated.map
+MixedMap ams-bsr.map
+MixedMap ams-cmcsc-bsr-interpolated.map
+MixedMap ccpl.map
+MixedMap cmother-bsr.map
+MixedMap cmtext-bsr-interpolated.map
+MixedMap cmtext-bsr.map
+MixedMap csother.map
+MixedMap cstext.map
+MixedMap eurosym.map
+MixedMap latex-bsr.map
+MixedMap mflogo.map
+MixedMap plother.map
+MixedMap pltext.map
+MixedMap rsfs.map
+MixedMap stmaryrd.map
+MixedMap tipa.map
+MixedMap ttcmex.map
+MixedMap wasy.map
+MixedMap yhmath.map
+EOF
+}
+
+post_install() {
+	# create local texmf skeleton
+	mkdir -p /usr/local/share/texmf/tex/{latex,plain}
+	mkdir -p /usr/local/share/texmf/{dvips,metapost,web2c}
+	mkdir -p /usr/local/share/texmf/bibtex/{bib,bst}
+	mkdir -p /usr/local/share/texmf/fonts/{tfm,vf,source,type1}
+	chmod -R 775 /usr/local/share/texmf
+	/usr/sbin/groupadd tex 2>/dev/null || true
+  	chown -R root:tex /usr/local/share/texmf
+	echo    ">>> texlive: updating the filename database..."
+	texconfig-sys rehash
+	echo -n ">>> texlive: creating the fontmap files with updmap..."
+	updmap-sys --quiet --nohash
+	echo    " done." 
+	echo    "    (see /usr/share/texmf-var/web2c/updmap.log)"
+	echo -n ">>> texlive: creating all formats ..."
+	fmtutil-sys --all 1>/dev/null
+	echo    " done." 
+	echo    "    (logs are under /usr/share/texmf-var/<engine>/<formatname>.log)"
+	echo ">>> ------------------------------------------------------------------ <<<"
+	echo ">>>                   Welcome to TeXLive 2008!                         <<<"
+	echo ">>> ------------------------------------------------------------------ <<<"
+	echo ">>>"
+	echo ">>> * The installation now goes to /usr instead of /opt/texlive."
+	echo ">>>"
+	echo ">>> * For help and information about TeXLive see:"
+	echo ">>>   http://tug.org/texlive/doc/texlive-en/live.html"
+	echo ">>>   and http://wiki.archlinux.org/index.php/TeXLive"
+	echo ">>>"
+	echo ">>> * Some tools and utilities included in TeX Live rely on"
+	echo ">>>   ghostscript, perl and/or ruby." 
+	echo ">>>"
+	echo ">>> * To consult the documentation with texdoc or texdoctk"
+	echo ">>>   you need to install 'texlive-core-doc' (>> 100MB!)."
+	echo ">>>   NB: texdoctk requires perl-tk."
+	echo ">>>   You can also access the whole documentation online via" 
+	echo ">>>   http://tug.org/texlive/Contents/live/doc.html or on CTAN."
+	echo ">>>"
+	echo ">>> * System-wide configuration files are under /usr/share/texmf-config."
+	echo ">>>   User-spefic ones should be put under ~/.texlive/texmf-config."
+	echo ">>>   \$TEXMFHOME is ~/texmf and \$TEXMFVAR is ~/.texlive/texmf-var."
+	echo ">>>"
+	echo ">>> * A skeleton of a local texmf tree is at /usr/local/share/texmf:"
+	echo ">>>   this directory is writable for members of the group tex."
+	echo ">>>   Users of TeXLive 2007 should move /opt/texlive/texmf-local"
+	echo ">>>   accordingly or change TEXMFLOCAL in texmf.cnf"
+	echo ">>>"
+	echo ">>> ------------------------------------------------------------------ <<<"
+}
+
+pre_upgrade() {
+	# TODO 
+	updmapfile="/usr/share/texmf-config/web2c/updmap.cfg"
+	if [[ ! -f $updmapfile ]]; then
+		echo ">>> WARNING: Can't find /usr/share/texmf-config/web2c/updmap.cfg !"
+	else
+		noofmaps=`grep -c -e ^Map $updmapfile`
+		noofmixedmaps=`grep -c -e ^MixedMap $updmapfile`
+		totalmaps=$(($noofmaps+$noofmixedmaps))
+		if [[ $totalmaps == 0 ]] ; then
+			pre_install 
+		else
+			echo ">>> NB: The file $updmap has not been changed"
+		fi
+	fi
+}
+
+post_upgrade() {
+	echo    ">>> texlive: updating the filename database..."
+	texconfig-sys rehash
+	echo -n ">>> texlive: updating the fontmap files with updmap..."
+	updmap-sys --quiet --nohash
+	echo    " done." 
+	echo    "    (see /usr/share/texmf-var/web2c/updmap.log)"
+	echo ">>> If you encounter a problem with one of the tex binaries,"
+	echo ">>> try to rebuild its format file with 'sudo fmtutil-sys --byfmt <formatname>'"
+}
+
+post_remove() {
+	echo ">>> In case you had kept the /usr/local/share/texmf setup,"
+	echo ">>> it has not been removed, nor has the group tex been deleted."
+}
+
+op=$1
+shift
+$op $*
