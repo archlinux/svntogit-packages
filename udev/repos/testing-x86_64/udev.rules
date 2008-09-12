@@ -1,0 +1,456 @@
+# Udev rules for Archlinux by Tobias Powalowski <tpowa@archlinux.org>
+#
+# This ruleset should provide a DevFS-compatible device tree.
+#
+# There are a number of modifiers that are allowed to be used in some
+# of the different fields. They provide the following subsitutions:
+#
+# %n the "kernel number" of the device.
+#    For example, 'sda3' has a "kernel number" of '3'
+# %k the kernel name for the device.
+# %M the kernel major number for the device
+# %m the kernel minor number for the device
+# %b the bus id for the device
+# %c the string returned by the PROGRAM
+# %s{filename} the content of a sysfs attribute.
+# %% the '%' char itself.
+#
+# There are a number of modifiers that are allowed to be used in some of the
+# fields.  See the udev man page for a full description of them.
+# global stuff
+#
+
+#####################################
+# Early rules - begin
+#####################################
+# wait for sysfs
+ACTION=="add", KERNEL=="[0-9]*:[0-9]*", SUBSYSTEM=="scsi", WAIT_FOR_SYSFS="ioerr_cnt"
+# Setting timeout for tape-devices (type 1) to 900 seconds
+# and 60 seconds for device types 0, 7 and 14
+SUBSYSTEM=="scsi", KERNEL=="[0-9]*:[0-9]*", ACTION=="add", ATTR{type}=="0|7|14", ATTR{timeout}="60"
+SUBSYSTEM=="scsi", KERNEL=="[0-9]*:[0-9]*", ACTION=="add", ATTR{type}=="1", ATTR{timeout}="900"
+#####################################
+# Early rules -end
+#####################################
+
+#####################################
+###### Hotplug rules - begin
+#####################################
+# check if the device has already been claimed by a driver
+ENV{DRIVER}=="?*", SUBSYSTEM!="input", GOTO="hotplug_driver_loaded"
+ACTION!="add", GOTO="hotplug_not_add_event"
+
+#Skip auto-loading of framebuffer devices
+KERNEL=="fb[0-9]*", GOTO="hotplug_driver_loaded"
+
+# Modaliases to load
+ENV{MODALIAS}=="?*", RUN{ignore_error}+="/lib/udev/load-modules.sh $env{MODALIAS}"
+
+# SCSI addon modules
+SUBSYSTEM=="scsi", ATTRS{type}=="[07]", RUN+="/lib/udev/load-modules.sh sd_mod"
+SUBSYSTEM=="scsi", ATTRS{type}=="14", RUN+="/lib/udev/load-modules.sh sd_mod"
+SUBSYSTEM=="scsi", ATTRS{type}=="[45]", RUN+="/lib/udev/load-modules.sh sr_mod"
+SUBSYSTEM=="scsi", ATTRS{type}=="1", ATTRS{vendor}=="Onstream", ATTRS{model}!="ADR*", RUN+="/lib/udev/load-modules.sh osst"
+SUBSYSTEM=="scsi", ATTRS{type}=="1", ATTRS{vendor}=="Onstream", ATTRS{model}=="ADR*", RUN+="/lib/udev/load-modules.sh st"
+SUBSYSTEM=="scsi", ATTRS{type}=="1", ATTRS{vendor}!="Onstream", RUN+="/lib/udev/load-modules.sh st"
+SUBSYSTEM=="scsi", ATTRS{type}=="[235689]", TEST!="[module/sg]", RUN+="/lib/udev/load-modules.sh sg"
+
+# load sg module for burners
+SUBSYSTEM=="block", ATTRS{type}=="[45]", RUN+="/lib/udev/load-modules.sh sg"
+
+# MMC block devices
+SUBSYSTEM=="mmc", RUN+="/lib/udev/load-modules.sh mmc_block"
+
+# I2O block devices
+SUBSYSTEM=="i2o", RUN+="/lib/udev/load-modules.sh i2o_block"
+
+# Skip already claimed drivers
+DRIVERS=="?*", GOTO="hotplug_driver_loaded"
+
+# PNP modules
+SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", RUN{ignore_error}+="/bin/sh -c 'while read id; do /lib/udev/load-modules.sh pnp:d$$id; /lib/udev/load-modules.sh pnp:c$$id ; done < /sys$devpath/id'"
+
+# SOUND addon modules
+SUBSYSTEM=="sound", RUN+="/lib/udev/load-modules.sh snd-pcm-oss"
+SUBSYSTEM=="sound", RUN+="/lib/udev/load-modules.sh snd-seq-oss"
+
+LABEL="hotplug_driver_loaded"
+
+#PNP addon modules
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNP0800", RUN+="/lib/udev/load-modules.sh pcspkr"
+# not needed anymore with kernel >= 2.6.21
+#ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNP0b00", RUN+="/lib/udev/load-modules.sh rtc"
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNP0b00", RUN+="/lib/udev/load-modules.sh rtc_cmos"
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="*PNP0510*", RUN+="/lib/udev/load-modules.sh irtty-sir"
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="*PNP0511*", RUN+="/lib/udev/load-modules.sh irtty-sir"
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNPb02f", RUN+="/lib/udev/load-modules.sh analog"
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNP0501", RUN+="/lib/udev/load-modules.sh ppp-generic"
+
+# PARPORT addon modules
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNP040*", RUN+="/lib/udev/load-modules.sh lp"
+ACTION=="add", SUBSYSTEM=="pnp", ENV{MODALIAS}!="?*", ATTRS{id}=="PNP040*", RUN+="/lib/udev/load-modules.sh ppdev"
+
+# fix ide cdrom detection on old proliant servers
+ACTION=="add", SUBSYSTEM=="pci", ENV{MODALIAS}=="pci:v00000E11d00000001sv00000000sd00000000bc06sc02i00", RUN+="/lib/udev/load-modules.sh ide-generic"
+
+# FIRMWARE
+ACTION=="add", SUBSYSTEM=="firmware", ENV{FIRMWARE}=="?*", RUN+="/lib/udev/firmware.sh"
+LABEL="hotplug_not_add_event"
+#####################################
+##### Hotplug rules - end
+#####################################
+
+#####################################
+###### CD/DVD symlinks - begin
+#####################################
+ACTION=="add", SUBSYSTEMS=="ide", KERNEL=="hd[a-z]", IMPORT="/lib/udev/cdrom_id --export $tempnode"
+ACTION=="add", SUBSYSTEMS=="scsi",	KERNEL=="sr[0-9]*", IMPORT="/lib/udev/cdrom_id --export $tempnode"
+ACTION=="add", SUBSYSTEMS=="scsi",	KERNEL=="scd[a-z]", IMPORT="/lib/udev/cdrom_id --export $tempnode"
+ENV{ID_CDROM}=="?*", SYMLINK+="cd/cdrom-%b"
+ENV{ID_CDROM_CD_RW}=="?*", SYMLINK+="cd/cdrw-%b"
+ENV{ID_CDROM_DVD}=="?*", SYMLINK+="cd/dvd-%b"
+ENV{ID_CDROM_DVD_R}=="?*", SYMLINK+="cd/dvd-%b"
+ACTION=="add", SUBSYSTEMS=="ide", KERNEL=="hd[a-z]", ATTR{removable}=="1", ATTRS{media}=="cdrom*", RUN+="/lib/udev/cdsymlinks.sh"
+ACTION=="add", SUBSYSTEMS=="scsi", KERNEL=="sr[0-9]*", ATTRS{type}=="5", RUN+="/lib/udev/cdsymlinks.sh"
+ACTION=="add", SUBSYSTEMS=="scsi", KERNEL=="sg[0-9]*", ATTRS{type}=="5", RUN+="/lib/udev/cdsymlinks.sh"
+ACTION=="remove", SUBSYSTEMS=="block", KERNEL=="hd[a-z]", RUN+="/lib/udev/cdsymlinks.sh"
+ACTION=="remove", SUBSYSTEMS=="block", KERNEL=="sr[0-9]*", RUN+="/lib/udev/cdsymlinks.sh"
+ACTION=="remove", SUBSYSTEMS=="block", KERNEL=="sg[0-9]*", RUN+="/lib/udev/cdsymlinks.sh"
+#####################################
+###### CD/DVD symlinks - end
+#####################################
+
+# fix /dev/root symlink
+SUBSYSTEM=="block", RUN+="/lib/udev/root-link.sh"
+
+#####################################
+# Permissions and Symlinks - begin
+#####################################
+# default permissions for all block devices
+SUBSYSTEM=="block", 	GROUP="disk"
+
+# permissions for IDE CD devices
+SUBSYSTEMS=="ide", KERNEL=="hd[a-z]", ATTR{removable}=="1", ATTRS{media}=="cdrom*", GROUP="optical"
+
+# permissions for SCSI CD devices
+SUBSYSTEMS=="scsi", KERNEL=="sr[0-9]*", ATTRS{type}=="5", SYMLINK+="scd%n", GROUP="optical"
+SUBSYSTEMS=="scsi", KERNEL=="sg[0-9]*", ATTRS{type}=="5", GROUP="optical"
+
+# permissions for IDE floppy devices
+SUBSYSTEMS=="ide", KERNEL=="hd*", ATTRS{media}=="floppy*", NAME{all_partitions}="%k", GROUP="floppy"
+
+# permissions for removable devices like cardreaders or sticks
+KERNEL=="sd*", ATTRS{scsi_level}=="0", ATTRS{type}=="0", GROUP="storage"
+
+# permissions for firewire external drives
+KERNEL=="sd*", ATTRS{scsi_level}=="5", GROUP="storage"
+
+# permissions for usb to scsi external adapters
+KERNEL=="sd*", ATTRS{scsi_level}=="3", ATTRS{type}=="7", GROUP="storage"
+
+# permissions for ide storage like pcmcia card readers
+ACTION!="add", GOTO="pcmcia_end"
+SUBSYSTEM!="block", GOTO="pcmcia_end"
+KERNEL=="hd*[!0-9]", IMPORT{program}="/lib/udev/ata_id --export $tempnode"
+KERNEL=="hd*", IMPORT{parent}=="ID_*"
+KERNEL=="hd*", ENV{ID_TYPE}=="generic", GROUP="storage"
+LABEL="pcmcia_end"
+
+# permissions for SCSI scanners
+SUBSYSTEMS=="scsi", KERNEL=="sg[0-9]*", ATTRS{type}=="6", GROUP="scanner"
+
+# pty and tty legacy devices
+KERNEL=="pty[a-z][a-z,0-9]*", NAME="legacy/%k", OPTIONS="last_rule"
+KERNEL=="tty[a-z][a-z,0-9]*", NAME="legacy/%k", OPTIONS="last_rule"
+
+# md block devices
+KERNEL=="md[0-9]*", NAME="md%n", SYMLINK+="md/%n"
+
+# device-mapper
+KERNEL=="device-mapper", NAME="mapper/control"
+
+# floppy devices
+KERNEL=="fd[0-9]*", NAME="fd%n", SYMLINK+="floppy/%n fd%nu1440 fd%nu720 fd%nh1200 fd%nu360", GROUP="floppy"
+
+# tty devices
+SUBSYSTEM=="tty",	GROUP="tty"
+KERNEL=="tty[0-9]*",    NAME="vc/%n", SYMLINK+="%k"
+KERNEL=="ttyS[0-9]*",   NAME="tts/%n", SYMLINK+="ttyS%n"
+KERNEL=="ttyUSB[0-9]*", NAME="tts/USB%n", SYMLINK+="%k"
+
+# vc devices
+KERNEL=="vcs",        NAME="vcc/0", OPTIONS="last_rule"
+KERNEL=="vcs[0-9]*",  NAME="vcc/%n", OPTIONS="last_rule"
+KERNEL=="vcsa",       NAME="vcc/a0", OPTIONS="last_rule"
+KERNEL=="vcsa[0-9]*", NAME="vcc/a%n", OPTIONS="last_rule"
+KERNEL=="ptmx",		MODE="0666", OPTIONS="last_rule"
+KERNEL=="tty",		MODE="0666", OPTIONS="last_rule"
+
+# video devices
+SUBSYSTEM=="video4linux", GROUP="video"
+KERNEL=="dvb*",	PROGRAM="/bin/sh -c 'K=%k; K=$${K#dvb}; A=$${K%%%%.*}; D=$${K#*.}; echo dvb/adapter$$A/$$D'", \
+		NAME="%c", GROUP="video"
+### xorg resets those permissions, adjust your xorg.conf!
+KERNEL=="nvidia*",	GROUP="video"
+KERNEL=="card[0-9]*",	NAME="dri/%k", GROUP="video"
+KERNEL=="3dfx*",	GROUP="video"
+
+# v4l devices
+KERNEL=="video[0-9]*", NAME="v4l/video%n", SYMLINK+="%k", GROUP="video"
+KERNEL=="video0", SYMLINK+="video"
+KERNEL=="radio[0-9]*", NAME="v4l/radio%n", SYMLINK+="radio%n", GROUP="video"
+KERNEL=="radio0", SYMLINK+="radio"
+KERNEL=="vbi[0-9]*",   NAME="v4l/vbi%n", SYMLINK+="%k", GROUP="video"
+KERNEL=="vbi0", SYMLINK+="vbi"
+KERNEL=="vtx[0-9]*",   NAME="v4l/vtx%n", SYMLINK+="%k", GROUP="video"
+KERNEL=="vtx0", SYMLINK+="vtx"
+
+# i2c devices
+KERNEL=="i2c-[0-9]*", NAME="i2c/%n", SYMLINK+="%k"
+
+# loop devices
+KERNEL=="loop[0-9]*", NAME="loop/%n", SYMLINK+="%k"
+
+# ramdisks
+KERNEL=="ram[0-9]*", NAME="rd/%n", SYMLINK+="%k"
+
+# framebuffer devices
+KERNEL=="fb[0-9]*", NAME="fb/%n", SYMLINK+="%k", GROUP="video"
+
+# misc
+KERNEL=="rtc*",     NAME="misc/%k", SYMLINK+="%k", GROUP="audio", MODE="0664"
+KERNEL=="rtc0",     SYMLINK+="rtc"
+KERNEL=="nvram",   NAME="misc/%k", SYMLINK+="%k", GROUP="kmem", MODE="0640"
+KERNEL=="psaux",   NAME="misc/%k", SYMLINK+="%k"
+KERNEL=="agpgart", NAME="misc/%k", SYMLINK+="%k" GROUP="video"
+KERNEL=="uinput",  NAME="misc/%k", SYMLINK+="%k"
+KERNEL=="random",        MODE="0666"
+KERNEL=="urandom",       MODE="0666"
+KERNEL=="mem",           MODE="0640", GROUP="kmem"
+KERNEL=="kmem",          MODE="0640", GROUP="kmem"
+KERNEL=="port",          MODE="0640", GROUP="kmem"
+KERNEL=="full",          MODE="0666"
+KERNEL=="null",          MODE="0666"
+KERNEL=="zero",          MODE="0666"
+KERNEL=="sgi_fetchop",   MODE="0666"
+KERNEL=="sonypi",        MODE="0666"
+KERNEL=="inotify",	NAME="misc/%k", SYMLINK+="%k", MODE="0666"
+KERNEL=="cpu[0-9]*", NAME="cpu/%n/cpuid", SYMLINK="%k"
+KERNEL=="msr[0-9]*", NAME="cpu/%n/msr", SYMLINK="%k"
+
+# sound devices
+# alsa devices
+SUBSYSTEM=="sound",	GROUP="audio"
+KERNEL=="controlC[0-9]*", NAME="snd/%k"
+KERNEL=="hw[CD0-9]*",     NAME="snd/%k"
+KERNEL=="pcm[CD0-9cp]*",  NAME="snd/%k"
+KERNEL=="midi[CD0-9]*",   NAME="snd/%k"
+KERNEL=="timer",          NAME="snd/%k"
+KERNEL=="seq",            NAME="snd/%k"
+# oss devices
+KERNEL=="audio*",     NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="dmmidi*",    NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="admmidi*",   NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="dsp*",       NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="adsp*",      NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="midi*",      NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="amidi*",     NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="mixer*",     NAME="sound/%k", SYMLINK+="%k"
+KERNEL=="sequencer*", NAME="sound/%k", SYMLINK+="%k"
+
+# input devices
+KERNEL=="mice",   NAME="input/%k", MODE="0644"
+KERNEL=="mouse*", NAME="input/%k", MODE="0644"
+KERNEL=="event*", NAME="input/%k"
+KERNEL=="js*",    NAME="input/%k", MODE="0664"
+KERNEL=="ts*",	 NAME="input/%k"
+KERNEL=="uinput", NAME="input/%k"
+
+# USB devices
+KERNEL=="hiddev*",	NAME="usb/%k"
+KERNEL=="auer*",		NAME="usb/%k"
+KERNEL=="legousbtower*",	NAME="usb/%k", MODE="0666"
+KERNEL=="dabusb*",	NAME="usb/%k"
+SUBSYSTEMS=="usb", KERNEL=="lp[0-9]*",	NAME="usb/%k", GROUP="lp"
+SUBSYSTEMS=="usb", KERNEL=="ttyUSB*", ATTRS{product}=="Palm Handheld*", SYMLINK+="pilot"
+SUBSYSTEMS=="usb", KERNEL=="ttyUSB*", ATTRS{product}=="palmOne Handheld*", SYMLINK+="pilot"
+SUBSYSTEMS=="usb", KERNEL=="ttyUSB*", ATTRS{product}=="Handspring Visor*", SYMLINK+="pilot"
+
+# printer devices
+SUBSYSTEM=="printer",	GROUP="lp"
+
+# netlink devices
+KERNEL=="route",		NAME="netlink/%k"
+KERNEL=="skip",		NAME="netlink/%k"
+KERNEL=="usersock",	NAME="netlink/%k"
+KERNEL=="fwmonitor",	NAME="netlink/%k"
+KERNEL=="tcpdiag",	NAME="netlink/%k"
+KERNEL=="nflog",		NAME="netlink/%k"
+KERNEL=="xfrm",		NAME="netlink/%k"
+KERNEL=="arpd",		NAME="netlink/%k"
+KERNEL=="route6",	NAME="netlink/%k"
+KERNEL=="ip6_fw",	NAME="netlink/%k"
+KERNEL=="dnrtmsg",	NAME="netlink/%k"
+### ! disabled seems to break device creation !
+# KERNEL=="tap*",		NAME="netlink/%k"
+
+# CAPI devices
+KERNEL=="capi",		NAME="capi20", SYMLINK+="isdn/capi20"
+KERNEL=="capi*",		NAME="capi/%n"
+
+# Network devices
+KERNEL=="tun",		NAME="net/%k", OPTIONS+="ignore_remove"
+KERNEL=="ppp",          OPTIONS+="ignore_remove"
+
+# IEEE1394 (firewire) devices
+KERNEL=="raw1394", NAME="%k", GROUP="video"
+KERNEL=="dv1394*", NAME="dv1394/%n", GROUP="video"
+KERNEL=="video1394*", NAME="video1394/%n", GROUP="video"
+
+# raw devices
+KERNEL=="raw[0-9]*",     NAME="raw/%k" 
+
+# kbd devices
+KERNEL=="kbd",		MODE="0664"
+
+# packet devices
+KERNEL=="pktcdvd",	NAME="pktcdvd/control", GROUP="optical", MODE="0660"
+KERNEL=="pktcdvd[0-9]*",	NAME="pktcdvd/pktcdvd%n", GROUP="optical", MODE="0660"
+
+# usbfs-like device nodes, libusb device access
+# for kernel 2.6.21 and below
+SUBSYSTEM=="usb_device", ACTION=="add", PROGRAM="/bin/sh -c 'K=%k; K=$${K#usbdev};printf bus/usb/%%03i/%%03i $${K%%%%.*} $${K#*.}'", NAME="%c", MODE="0664"
+# starting from kernel 2.6.22 use this rule
+SUBSYSTEM=="usb", ACTION=="add", ENV{DEVTYPE}=="usb_device", NAME="bus/usb/$env{BUSNUM}/$env{DEVNUM}", MODE="0664" 
+#######################################
+# Permissions and Symlinks - end
+#######################################
+
+#######################################
+# Persistant block device stuff - begin
+#######################################
+# persistent storage links: /dev/{disk,tape}/{by-id,by-uuid,by-label,by-path,by-name}
+# scheme based on "Linux persistent device names", 2004, Hannes Reinecke <hare@suse.de>
+
+# needed like this!!!
+ACTION!="add|change", GOTO="persistent_storage_end"
+KERNEL=="nst[0-9]", SUBSYSTEMS=="scsi", IMPORT{program}="/lib/udev/scsi_id --export --whitelisted --fallback-to-sysfs -s %p -d $tempnode", SYMLINK+="tape/by-id/$env{ID_BUS}-$env{ID_SERIAL}-nst"
+
+# type 8 devices are "Medium Changers"
+KERNEL=="sg*", SUBSYSTEMS=="scsi", ATTRS{type}=="8", IMPORT{program}="/lib/udev/scsi_id --export --whitelisted --fallback-to-sysfs -s %p -d $tempnode", SYMLINK+="tape/by-id/$env{ID_BUS}-$env{ID_SERIAL}"
+SUBSYSTEM!="block", GOTO="persistent_storage_end"
+
+# skip rules for inappropriate block devices
+# don't add dm-*!!!
+KERNEL=="ram*|loop*|fd*|nbd*|gnbd*|md*", GOTO="persistent_storage_end"
+
+# never access non-cdrom removable ide devices, the drivers are causing event loops on open()
+KERNEL=="hd*[!0-9]", ATTR{removable}=="1", DRIVERS=="ide-cs|ide-floppy", GOTO="persistent_storage_end"
+KERNEL=="hd*[0-9]", ATTRS{removable}=="1", GOTO="persistent_storage_end"
+
+# ignore partitions that span the entire disk
+ATTR{whole_disk}=="*", GOTO="persistent_storage_end"
+
+# /sys/class/block will export this
+ENV{DEVTYPE}!="?*", ATTR{range}=="?*", ENV{DEVTYPE}="disk"
+ENV{DEVTYPE}!="?*", ATTR{start}=="?*", ENV{DEVTYPE}="partition"
+
+# for partitions import parent information
+ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_*"
+
+# by-id (hardware serial number)
+KERNEL=="hd*[!0-9]", IMPORT{program}="/lib/udev/ata_id --export $tempnode"
+KERNEL=="hd*[!0-9]", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-id/ata-$env{ID_MODEL}_$env{ID_SERIAL}"
+KERNEL=="hd*[0-9]", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-id/ata-$env{ID_MODEL}_$env{ID_SERIAL}-part%n"
+
+KERNEL=="sd*[!0-9]|sr*|st*", ATTRS{ieee1394_id}=="?*", ENV{ID_SERIAL}="$attr{ieee1394_id}", ENV{ID_SUBSYSTEMS}="ieee1394"
+KERNEL=="sd*[!0-9]|sr*|st*", ENV{ID_SERIAL}!="?*", SUBSYSTEMS=="usb", IMPORT{program}="/lib/udev/usb_id --export %p"
+KERNEL=="sd*[!0-9]|sr*|st*", ENV{ID_SERIAL}!="?*", IMPORT{program}="/lib/udev/scsi_id --export --whitelisted --fallback-to-sysfs -s %p -d $tempnode"
+KERNEL=="cciss?c[0-9]d[0-9]", ENV{ID_SERIAL}!="?*", IMPORT{program}="/lib/udev/scsi_id --export --whitelisted --ignore-sysfs -s %p -d $tempnode", ENV{ID_BUS}="cciss"
+KERNEL=="sd*[!0-9]|sr*|cciss?c[0-9]d[0-9]", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-id/$env{ID_BUS}-$env{ID_SERIAL}"
+KERNEL=="sd*[0-9]|cciss*p[0-9]", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-id/$env{ID_BUS}-$env{ID_SERIAL}-part%n"
+KERNEL=="st*", ENV{ID_SERIAL}=="?*", SYMLINK+="tape/by-id/$env{ID_BUS}-$env{ID_SERIAL}"
+
+# libata compat (links like hd*)
+KERNEL=="sd*[!0-9]|sr*", ENV{ID_VENDOR}=="ATA", PROGRAM="/lib/udev/ata_id $tempnode", RESULT=="?*", ENV{ID_ATA_COMPAT}="$result", SYMLINK+="disk/by-id/ata-$env{ID_ATA_COMPAT}"
+KERNEL=="sd*[0-9]", ENV{ID_ATA_COMPAT}=="?*", SYMLINK+="disk/by-id/ata-$env{ID_ATA_COMPAT}-part%n"
+
+KERNEL=="mmcblk[0-9]", SUBSYSTEMS=="mmc", ATTRS{name}=="?*", ATTRS{serial}=="?*", ENV{ID_NAME}="$attr{name}", ENV{ID_SERIAL}="$attr{serial}", SYMLINK+="disk/by-id/mmc-$env{ID_NAME}_$env{ID_SERIAL}"
+KERNEL=="mmcblk[0-9]p[0-9]", ENV{ID_NAME}=="?*", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-id/mmc-$env{ID_NAME}_$env{ID_SERIAL}-part%n"
+ 
+# by-path (shortest physical path)
+ENV{DEVTYPE}=="disk", IMPORT{program}="/lib/udev/path_id %p"
+ENV{DEVTYPE}=="disk", ENV{ID_PATH}=="?*", SYMLINK+="disk/by-path/$env{ID_PATH}"
+ENV{DEVTYPE}=="partition", ENV{ID_PATH}=="?*", SYMLINK+="disk/by-path/$env{ID_PATH}-part%n"
+KERNEL=="st*", ENV{ID_PATH}=="?*", SYMLINK+="tape/by-path/$env{ID_PATH}"
+
+KERNEL=="sr*|st*", GOTO="persistent_storage_end"
+KERNEL=="hd*[!0-9]", ATTR{removable}=="1", GOTO="persistent_storage_end"
+
+# by-label/by-uuid (filesystem properties)
+IMPORT{program}="/lib/udev/vol_id --export $tempnode"
+ENV{ID_FS_USAGE}=="filesystem|other|crypto", ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
+ENV{ID_FS_USAGE}=="filesystem|other", ENV{ID_FS_LABEL_ENC}=="?*", SYMLINK+="disk/by-label/$env{ID_FS_LABEL_ENC}"
+
+# BIOS Enhanced Disk Device
+ENV{DEVTYPE}=="disk", IMPORT{program}="/lib/udev/edd_id --export $tempnode"
+ENV{DEVTYPE}=="disk", ENV{ID_EDD}=="?*", SYMLINK+="disk/by-id/edd-$env{ID_EDD}"
+ENV{DEVTYPE}=="partition", ENV{ID_EDD}=="?*", SYMLINK+="disk/by-id/edd-$env{ID_EDD}-part%n"
+LABEL="persistent_storage_end"
+
+# md links hook into "change" events, when the array becomes available
+KERNEL!="md[0-9]*", GOTO="md_end"
+ACTION!="add|change", GOTO="md_end"
+
+ATTR{md/array_state}=="|clear|inactive", GOTO="md_end"
+IMPORT{program}="/lib/udev/vol_id --export $tempnode"
+OPTIONS="link_priority=100"
+ENV{ID_FS_USAGE}=="filesystem|other|crypto", ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
+ENV{ID_FS_USAGE}=="filesystem|other", ENV{ID_FS_LABEL_ENC}=="?*", SYMLINK+="disk/by-label/$env{ID_FS_LABEL_ENC}"
+LABEL="md_end"
+# Persistant block device stuff - end
+#####################################
+
+#######################################
+# Persistant input stuff - begin
+#######################################
+SUBSYSTEM!="input",                     GOTO="persistent_input_end"
+ACTION!="add",                          GOTO="persistent_input_end"
+# ignore the mid-level drivers
+KERNEL=="input[0-9]*",                  GOTO="persistent_input_end"
+ 
+# usb devices
+SUBSYSTEMS=="usb", IMPORT{program}="/lib/udev/usb_id --export"
+SUBSYSTEMS=="usb", ATTRS{bInterfaceClass}=="03", ATTRS{bInterfaceProtocol}=="01", ENV{ID_CLASS}="kbd"
+SUBSYSTEMS=="usb", ATTRS{bInterfaceClass}=="03", ATTRS{bInterfaceProtocol}=="02", ENV{ID_CLASS}="mouse"
+
+# other devices
+DRIVERS=="pcspkr",                       ENV{ID_CLASS}="spkr"
+DRIVERS=="atkbd",                        ENV{ID_CLASS}="kbd"
+DRIVERS=="psmouse",                      ENV{ID_CLASS}="mouse"
+ATTRS{name}=="*dvb*|*DVB*|* IR *",      ENV{ID_CLASS}="ir"
+ATTRS{modalias}=="input:*-*a[068],*|input:*-*a*,[68],*m*", ATTRS{modalias}!="input:*-*k*14A,*r*", ENV{ID_CLASS}="joystick"
+
+# fill empty serial number
+ENV{ID_CLASS}=="?*", ENV{ID_SERIAL}=="", ENV{ID_SERIAL}="noserial"
+
+# by-id links, generic and for the event devices
+KERNEL=="mouse*|js*", ENV{ID_BUS}=="?*", ENV{ID_SERIAL}=="?*", ENV{ID_CLASS}=="?*", SYMLINK+="input/by-id/$env{ID_BUS}-$env{ID_SERIAL}-$env{ID_CLASS}"
+KERNEL=="event*", ENV{ID_BUS}=="?*", ENV{ID_SERIAL}=="?*", ENV{ID_CLASS}=="?*", SYMLINK+="input/by-id/$env{ID_BUS}-$env{ID_SERIAL}-event-$env{ID_CLASS}"
+
+ 
+# by-path links
+IMPORT{program}="/lib/udev/path_id %p"
+KERNEL=="mouse*|js*", ENV{ID_PATH}=="?*", SYMLINK+="input/by-path/$env{ID_PATH}-$env{ID_CLASS}"
+KERNEL=="event*", ENV{ID_PATH}=="?*", SYMLINK+="input/by-path/$env{ID_PATH}-event-$env{ID_CLASS}" 
+
+LABEL="persistent_input_end"
+#####################################
+# Persistant input stuff - end
+#####################################
+
+# run a command on remove events
+ACTION=="remove", ENV{REMOVE_CMD}!="", RUN+="$env{REMOVE_CMD}"
+
+# debugging monitor
+RUN+="socket:/org/kernel/udev/monitor"
