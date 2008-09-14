@@ -61,12 +61,12 @@ usage () {
 # setting kernel version
 case $1 in
 	--kernel_version=*)
-	KERNEL_VERSION="`echo $1 | awk -F= '{print $2;}'`"
+	KERNEL_VERSION="$(echo $1 | awk -F= '{print $2;}')"
 	;;
 esac
 
 if [ "$KERNEL_VERSION" = "" ]; then
-	KERNEL_VERSION="`uname -r`"
+	KERNEL_VERSION="$(uname -r)"
 fi
 
 # IDE/PATA switch
@@ -117,7 +117,7 @@ fi
 : >/tmp/moduleslist
 
 # find pci aliases
-aliases=`find /sys/ -noleaf -name modalias  -exec cat {} +`
+aliases=$(find /sys/ -noleaf -name modalias  -exec cat {} +)
 
 # check for empty aliases
 if [ "$aliases" = "" ]; then
@@ -128,25 +128,16 @@ fi
 # generate files for the different actions
 modprobe -a --set-version=$KERNEL_VERSION --show-depends $aliases >> /tmp/modules-plain 2>/dev/null
 
-# fix evdev detection
-#if [ "`echo $aliases | grep 'serio:ty06pr*[id]*[ex]*'`" ]; then
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends evdev >> /tmp/modules-plain 2>/dev/null
-#fi
-# fix Intel536ep detection
-#if [ "`echo $aliases | grep 'pci:v00008086d00001040sv000016BEsd00001040bc07sc80i00'`" ]; then
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends Intel536 >> /tmp/modules-plain 2>/dev/null
-#fi
-
 # fix ide cdrom detection on proliant 1600
-if [ "`echo $aliases | grep 'pci:v00000E11d00000001sv00000000sd00000000bc06sc02i00'`" ]; then
+if [ "$(echo $aliases | grep 'pci:v00000E11d00000001sv00000000sd00000000bc06sc02i00')" ]; then
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends ide-generic >> /tmp/modules-plain 2>/dev/null
 fi
 
 # find PNP devices like parports, soundcards etc.
 #   (workaround for rtc, pcspkr, irtty-sir and analog are included)
-if [ "`find /sys/devices -noleaf -name 'id' | grep /pnp`" ]; then
-	for i in `find /sys/devices -noleaf -name "id" | grep /pnp`; do
-		devid=`cat $i | grep PNP`
+if [ "$(find /sys/devices -noleaf -name 'id' | grep /pnp)" ]; then
+	for i in $(find /sys/devices -noleaf -name "id" | grep /pnp); do
+		devid=$(cat $i | grep PNP)
 		[ "$devid" ] || continue
 	
 		modprobe -i --set-version=$KERNEL_VERSION --show-depends pnp:d${devid} >> /tmp/modules-plain 2>/dev/null
@@ -165,21 +156,9 @@ if [ "`find /sys/devices -noleaf -name 'id' | grep /pnp`" ]; then
 	done
 fi
 
-# IDE disks/cdroms/floppy/tape
-#if [ "`find /proc/ide -noleaf -name 'media'`" ]; then
-#	for i in $(cat `find /proc/ide -noleaf -name "media"`); do
-#		case $i in
-#			cdrom)  modprobe -i --set-version=$KERNEL_VERSION --show-depends ide-cd >> /tmp/modules-plain 2>/dev/null ;;
-#			floppy) modprobe -i --set-version=$KERNEL_VERSION --show-depends ide-floppy >> /tmp/modules-plain 2>/dev/null ;;
-#			disk)   modprobe -i --set-version=$KERNEL_VERSION --show-depends ide-disk >> /tmp/modules-plain 2>/dev/null ;;
-#			tape)   modprobe -i --set-version=$KERNEL_VERSION --show-depends ide-tape >> /tmp/modules-plain 2>/dev/null ;;
-#		esac
-#	done
-#fi
-
 # SCSI disks/cdroms/tapes/generic devices
-if [ "`find /sys/devices -noleaf -name 'type'`" ]; then
-	for i in $(cat `find /sys/devices -noleaf -name "type"`); do
+if [ "$(find /sys/devices -noleaf -name 'type')" ]; then
+	for i in $(cat $(find /sys/devices -noleaf -name "type")); do
 		case $i in (4|5)       modprobe -i --set-version=$KERNEL_VERSION --show-depends sr-mod >> /tmp/modules-plain 2>/dev/null ;; esac
 		case $i in (2|3|6|8|9) modprobe -i --set-version=$KERNEL_VERSION --show-depends sg >> /tmp/modules-plain 2>/dev/null ;; esac
 		case $i in (0|7|14)	     modprobe -i --set-version=$KERNEL_VERSION --show-depends sd-mod >> /tmp/modules-plain 2>/dev/null ;; esac
@@ -192,37 +171,19 @@ if [ "$VMWARE" = "1" ]; then
 	 modprobe -i --set-version=$KERNEL_VERSION --show-depends BusLogic >> /tmp/modules-plain 2>/dev/null
 fi
 
-# Firewire disks/cdroms/network
-#if [ "`grep 'ohci1394' /tmp/modules-plain`" ]; then
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends sbp2 >> /tmp/modules-plain 2>/dev/null
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends eth1394 >> /tmp/modules-plain 2>/dev/null
-#fi
-
-# Modem devices
-#case $i in (Intel536|Intel537|ltmodem|ltserial|slamr|slusb) \ 
-#	grep "$i" /tmp/modules-plain && modprobe -i --set-version=$KERNEL_VERSION --show-depends ppp-generic >> /tmp/modules-plain 2>/dev/null ;; \
-#	esac
-
 # Parport modules
-if [ "`grep 'parport' /tmp/modules-plain`" ]; then
+if [ "$(grep 'parport' /tmp/modules-plain)" ]; then
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends lp >> /tmp/modules-plain 2>/dev/null
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends ppdev >> /tmp/modules-plain 2>/dev/null
 fi
 
 # Sound OSS compat modules
-if [ "`grep 'snd-pcm' /tmp/modules-plain`" ]; then
+if [ "$(grep 'snd-pcm' /tmp/modules-plain)" ]; then
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends snd-pcm-oss >> /tmp/modules-plain 2>/dev/null
 fi
-if [ "`grep 'snd-seq' /tmp/modules-plain`" ]; then
+if [ "$(grep 'snd-seq' /tmp/modules-plain)" ]; then
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends snd-seq-oss >> /tmp/modules-plain 2>/dev/null
 fi
-
-# USB modules
-#if [ "`grep 'usb/' /tmp/modules-plain`" ]; then
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends usbhid >> /tmp/modules-plain 2>/dev/null
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends usb-storage >> /tmp/modules-plain 2>/dev/null
-#	modprobe -i --set-version=$KERNEL_VERSION --show-depends usblp >> /tmp/modules-plain 2>/dev/null
-#fi
 
 sort -u /tmp/modules-plain >> /tmp/modules-stripped
 
@@ -278,11 +239,11 @@ for i in $BLACKLIST; do
 	[ "$i" ] || continue
 	sed -i -e "/^$i$/d" /tmp/moduleslist
 	# since '-' and '_' are interchangeable, we have to cover both
-	if [ "`echo $i | grep '-'`" ]; then
-		i="`echo $i | sed 's|-|_|g'`"
+	if [ "$(echo $i | grep '-')" ]; then
+		i="$(echo $i | sed 's|-|_|g')"
 		sed -i -e "/^$i$/d" /tmp/moduleslist
-	elif [ "`echo $i | grep '_'`" ]; then
-		i="`echo $i | sed 's|_|-|g'`"
+	elif [ "$(echo $i | grep '_')" ]; then
+		i="$(echo $i | sed 's|_|-|g')"
 		sed -i -e "/^$i$/d" /tmp/moduleslist
 	fi
 done
@@ -294,7 +255,7 @@ listmods() {
 		[ "$ex" ] && ex="$ex|$1" || ex="$1"
 		shift
 	done
-	for ln in `grep "$key" /tmp/modules-sorted | sed 's|^insmod ||g'`; do
+	for ln in $(grep "$key" /tmp/modules-sorted | sed 's|^insmod ||g'); do
 		if [ "$ex" ]; then
 			echo $ln | egrep -v "$ex" | sed -ne "s#^/.*/\(.*\)\.ko.*#\1#p"
 		else
@@ -333,76 +294,76 @@ while [ $# -gt 0 ]; do
 			 ;;
 		--load-modules)
 			# load all detected pci modules
-			for i in `cat /tmp/moduleslist`; do
+			for i in $(cat /tmp/moduleslist); do
 				modprobe $i > /dev/null 2>&1
 			done
 			;;
 
 		--unload-modules)
 			# load all detected pci modules
-			for i in `cat /tmp/moduleslist`; do
+			for i in $(cat /tmp/moduleslist); do
 				modprobe -r $i > /dev/null 2>&1
 			done
 			;;
 
 		--show-modules)
-			showlist "AGP    " `listmods agp/`
-			showlist "ACPI   " `listmods acpi/`
-			showlist "IDE    " `listmods ide/`
-			showlist "PATA   " `listmods ata/pata` `listmods ata/ata_generic`
-			showlist "SCSI   " `listmods scsi/` `listmods message/fusion/` `listmods drivers/block/ nbd pktcdvd sx8 floppy`
-			showlist "SATA   " `listmods ata/ pata ata_generic` `listmods drivers/block/sx8`
-			showlist "USB    " `listmods usb/ usb/input`
-			showlist "FW     " `listmods firewire/` `listmods ieee1394/`
-			showlist "NET    " `listmods net/ irda/`
-			showlist "INPUT  " `listmods input/` `listmods hid/`
-			showlist "IRDA   " `listmods irda/`
-			showlist "ISDN   " `listmods isdn/`
-			showlist "PCMCIA " `listmods pcmcia/`
-			showlist "SOUND  " `listmods sound/`
-			showlist "VIDEO  " `listmods video/`
-			showlist "OTHER  " `listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/`
+			showlist "AGP    " $(listmods agp/)
+			showlist "ACPI   " $(listmods acpi/)
+			showlist "IDE    " $(listmods ide/)
+			showlist "PATA   " $(listmods ata/pata) $(listmods ata/ata_generic)
+			showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy)
+			showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)
+			showlist "USB    " $(listmods usb/ usb/input)
+			showlist "FW     " $(listmods firewire/) $(listmods ieee1394/)
+			showlist "NET    " $(listmods net/ irda/)
+			showlist "INPUT  " $(listmods input/) $(listmods hid/)
+			showlist "IRDA   " $(listmods irda/)
+			showlist "ISDN   " $(listmods isdn/)
+			showlist "PCMCIA " $(listmods pcmcia/)
+			showlist "SOUND  " $(listmods sound/)
+			showlist "VIDEO  " $(listmods video/)
+			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/)
 			;;
 
 		--show-modules-order)
-			showlist "MODULES ORDER" `listmods modules/`
+			showlist "MODULES ORDER" $(listmods modules/)
 			;;
 
-		--show-agp)    showlist "AGP    " `listmods agp/` ;;
-		--show-acpi)   showlist "ACPI   " `listmods acpi/` ;;
-		--show-ide)    showlist "IDE    " `listmods ide/` ;;
-		--show-pata)   showlist "PATA   " `listmods ata/pata` `listmods ata/ata_generic`;;
-		--show-scsi)   showlist "SCSI   " `listmods scsi/` `listmods message/fusion/` `listmods drivers/block/ nbd pktcdvd sx8 floppy`;;
-		--show-sata)   showlist "SATA   " `listmods ata/ pata ata_generic` `listmods drivers/block/sx8` ;;
-		--show-usb)    showlist "USB    " `listmods usb/ usb/input` ;;
-		--show-fw)     showlist "FW     " `listmods firewire/` `listmods ieee1394/` ;;
-		--show-net)    showlist "NET    " `listmods net/ irda/` ;;
-		--show-input)  showlist "INPUT  " `listmods input/` `listmods hid/` ;;
-		--show-irda)   showlist "IRDA   " `listmods irda/` ;;
-		--show-isdn)   showlist "ISDN   " `listmods isdn/` ;;
-		--show-pcmcia) showlist "PCMCIA " `listmods pcmcia/` ;;
-		--show-sound)  showlist "SOUND  " `listmods sound/` ;;
-		--show-video)  showlist "VIDEO  " `listmods video/` ;;
-		--show-other)  showlist "OTHER  " `listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/` ;;
-		--hostcontroller)  showlist2 "MODULES" \"`listmods ide/pci` `listmods ata/pata` `listmods ata/ata_generic` `listmods scsi/ /sg.ko /st.ko sr_mod sd_mod` `listmods message/fusion/` `listmods drivers/block/  nbd pktcdvd sx8 floppy` `listmods ata/ pata ata_generic` `listmods drivers/block/sx8`\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+		--show-agp)    showlist "AGP    " $(listmods agp/) ;;
+		--show-acpi)   showlist "ACPI   " $(listmods acpi/) ;;
+		--show-ide)    showlist "IDE    " $(listmods ide/) ;;
+		--show-pata)   showlist "PATA   " $(listmods ata/pata) $(listmods ata/ata_generic);;
+		--show-scsi)   showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) ;;
+		--show-sata)   showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) ;;
+		--show-usb)    showlist "USB    " $(listmods usb/ usb/input) ;;
+		--show-fw)     showlist "FW     " $(listmods firewire/) $(listmods ieee1394/) ;;
+		--show-net)    showlist "NET    " $(listmods net/ irda/) ;;
+		--show-input)  showlist "INPUT  " $(listmods input/) $(listmods hid/) ;;
+		--show-irda)   showlist "IRDA   " $(listmods irda/) ;;
+		--show-isdn)   showlist "ISDN   " $(listmods isdn/) ;;
+		--show-pcmcia) showlist "PCMCIA " $(listmods pcmcia/) ;;
+		--show-sound)  showlist "SOUND  " $(listmods sound/) ;;
+		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
+		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/) ;;
+		--hostcontroller)  showlist2 "MODULES" \"$(listmods ide/pci) $(listmods ata/pata) $(listmods ata/ata_generic) $(listmods scsi/ /sg.ko /st.ko sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
-		--net)  if [ "$(showlist2 "MODULES"  \(`listmods drivers/net/ irda ppp_generic slhc` `listmods drivers/usb/net/`\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
+		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(dmesg | grep '"8139too"')" ]; then
-						MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc` `listmods drivers/usb/net/)"
+						MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)"
 					 showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/8139cp//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				else
-					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc` `listmods drivers/usb/net/)"
+					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)"
 					showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/8139too//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				fi
 			else
-				MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc` `listmods drivers/usb/net/)"
+				MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)"
 				showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			fi
 			;;
 		--sound) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods sound/)"
 			showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
-		--modules) showlist2 "MODULES" \(`listmods modules/`\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--hooks) 
 			if [ "$HOOKS_DIR" = "" ]; then
