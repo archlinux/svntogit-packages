@@ -1,36 +1,42 @@
 # $Id$
-# Maintainer: Alexander Baldeck <alexander@archlinux.org>
-# Contributor: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xf86-video-ati
 pkgver=6.9.0
-pkgrel=1
+pkgrel=3
 _mesaver="7.1"
 pkgdesc="X.org ati video driver"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
-depends=('libdrm>=2.3.1' 'libgl>=7.1-2')
-makedepends=('pkgconfig' 'xorg-server>=1.4.99.906' 'imake' 'mesa>=7.1'
-	     'glproto>=1.4.9' 'xf86driproto' 'diffutils')
-conflicts=('xorg-server<1.4.99.906')
+depends=('libdrm>=2.3.1' 'libgl>=7.1-2' 'libpciaccess')
+makedepends=('pkgconfig' 'xorg-server>=1.5.0' "mesa>=${_mesaver}"
+	     'glproto>=1.4.9' 'xf86driproto' 'diffutils' 'dri2proto')
+conflicts=('xorg-server<1.5.0')
 groups=('xorg-video-drivers')
 options=('!libtool')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2
-       mesa-7.1-link-shared.patch)
+       mesa-7.1-link-shared.patch
+       git-20080827.patch)
 md5sums=('afa4873f58ae6fa31fedeb9ed31531db'
          '6bff7f532d16f90f944a400c8bd7074d'
-         'f0baa948d9810f268413111ee439d24b')
+         'f0baa948d9810f268413111ee439d24b'
+	 '22bc6f86627fd2f4a613ce2958f9f325')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/git-20080827.patch" || return 1
+  libtoolize --force --copy || return 1
+  aclocal || return 1
+  autoconf || return 1
+  automake || return 1
   ./configure --prefix=/usr \
               --enable-dri || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install || return 1
+  make "DESTDIR=${pkgdir}" install || return 1
 
-  cd ${srcdir}/Mesa-${_mesaver}
-  patch -Np1 -i ${srcdir}/mesa-7.1-link-shared.patch || return 1
-  export CFLAGS="${CFLAGS} -ffast-math"
+  cd "${srcdir}/Mesa-${_mesaver}"
+  patch -Np1 -i "${srcdir}/mesa-7.1-link-shared.patch" || return 1
   ./configure --prefix=/usr \
     --with-dri-driverdir=/usr/lib/xorg/modules/dri \
     --with-dri-drivers=radeon,r200,r300 \
@@ -43,8 +49,8 @@ build() {
     --disable-glw || return 1
   make || return 1
   cd src/mesa/drivers/dri || return 1
-  make DESTDIR=${pkgdir} install || return 1
-  rm -f ${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so
-  rm -rf ${pkgdir}/usr/include
-  rm -rf ${pkgdir}/usr/lib/pkgconfig
+  make DESTDIR="${pkgdir}" install || return 1
+  rm -f "${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so"
+  rm -rf "${pkgdir}/usr/include"
+  rm -rf "${pkgdir}/usr/lib/pkgconfig"
 }
