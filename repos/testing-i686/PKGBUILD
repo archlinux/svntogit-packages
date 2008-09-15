@@ -3,15 +3,15 @@
 # Contributor: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xf86-video-ati
 pkgver=6.9.0
-pkgrel=2
+pkgrel=3
 _mesaver="7.1"
 pkgdesc="X.org ati video driver"
 arch=(i686 x86_64)
 url="http://xorg.freedesktop.org/"
-depends=('libdrm>=2.3.1' 'libgl>=7.1-2')
-makedepends=('pkgconfig' 'xorg-server>=1.4.99.906' 'imake' 'mesa>=7.1'
-	     'glproto>=1.4.9' 'xf86driproto' 'diffutils')
-conflicts=('xorg-server<1.4.99.906')
+depends=('libdrm>=2.3.1' 'libgl>=7.1-2' 'libpciaccess')
+makedepends=('pkgconfig' 'xorg-server>=1.5.0' "mesa>=${_mesaver}"
+	     'glproto>=1.4.9' 'xf86driproto' 'diffutils' 'dri2proto')
+conflicts=('xorg-server<1.5.0')
 groups=('xorg-video-drivers')
 options=('!libtool')
 source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
@@ -26,6 +26,10 @@ md5sums=('afa4873f58ae6fa31fedeb9ed31531db'
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   patch -Np1 -i "${srcdir}/git-20080827.patch" || return 1
+  libtoolize --force --copy || return 1
+  aclocal || return 1
+  autoconf || return 1
+  automake || return 1
   ./configure --prefix=/usr \
               --enable-dri || return 1
   make || return 1
@@ -33,7 +37,6 @@ build() {
 
   cd "${srcdir}/Mesa-${_mesaver}"
   patch -Np1 -i "${srcdir}/mesa-7.1-link-shared.patch" || return 1
-  export CFLAGS="${CFLAGS} -ffast-math"
   ./configure --prefix=/usr \
     --with-dri-driverdir=/usr/lib/xorg/modules/dri \
     --with-dri-drivers=radeon,r200,r300 \
