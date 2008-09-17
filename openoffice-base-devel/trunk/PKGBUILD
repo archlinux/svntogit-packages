@@ -3,10 +3,9 @@
 
 pkgname=openoffice-base-devel
 pkgver=3.0_dev300_m31
-pkgrel=1
+pkgrel=2
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=('i686' 'x86_64')
-#_OO_milestone=dev300-m31
 _OO_milestone=DEV300_m31
 license=('LGPL3')
 url="http://www.openoffice.org"
@@ -20,7 +19,7 @@ optdepends=('java-runtime:	adds java support'
             'pstoedit:		translates PostScript and PDF graphics into other vector formats')
 makedepends=('bison' 'cvs' 'curl' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
              'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig'  'unzip' 'xulrunner>=1.9.0.1'
-             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6')
+             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.2-5')
 provides=('openoffice-base')
 
 #MIRROR=ftp://ftp5.gwdg.de/pub/openoffice/extended/developer/
@@ -37,9 +36,10 @@ source=(#$MIRROR/${_OO_milestone}/OOo-Dev_${_OO_milestone}_src_{core,system}.tar
 	soffice-detect-mozilla-certificates.diff
 	buildfix-gcc43.diff
 	shell.patch
-	system_hsqldb.diff)
+	system_hsqldb.diff
+	buildfix-openjdk-6-no-rhino.diff)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('b90b79081f5bbe7ca561518ba92b5b10'
+md5sums=('c719780c6441f21aedc980fa2b9f0915'
          '50f1b6923deb05756de0efa02c5a63e0'
          '71f136a31e296a04ab68932a31dd533e'
          '6c596129fb48316226ce3adfd3a4c86d'
@@ -47,22 +47,19 @@ md5sums=('b90b79081f5bbe7ca561518ba92b5b10'
          '1dc7480a04f572ad136d35923a2af66d'
          'bf7119084a2d1e0566b5e34b57dce8eb'
          'a51200f770c635355c430cc5052db8cf'
-         '4addae44d20bb2b247e429d88b66a4c1')
+         '4addae44d20bb2b247e429d88b66a4c1'
+         '4fe2810b40358b0e7dc2df3d056bde7a')
 
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
 build() {
 	cd ${srcdir}
-	export _MILESTONE=${_OO_milestone}
-	export 'CVSROOT=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs'
-	# checkout snapshot
-#	cvs -q -z9 co -r $_MILESTONE OpenOffice3
-#	tar -cvzf ../${pkgname}-${_OO_milestone}.tar.gz *
+	# now svn: http://wiki.services.openoffice.org/wiki/OOo_and_Subversion
+#	svn checkout svn://svn.services.openoffice.org/ooo/tags/${_OO_milestone}
+#	tar -cvzf ../${pkgname}-${_OO_milestone}.tar.gz ${_OO_milestone}/*
 #	return 1
 
-	# fetch missing modules
-	cvs -q -z9 co -r $_MILESTONE cppunit hyphen swext apache-commons tomcat
-
+	cd ${srcdir}/${_OO_milestone}
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
 	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
@@ -79,6 +76,7 @@ build() {
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc43.diff || return 1
 	patch -Np0 -i ${srcdir}/system_hsqldb.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix-openjdk-6-no-rhino.diff || return 1
 
 	# allows xmlsec to be able to read the format of the digital certificates.
 	patch -Np0 -i ${srcdir}/libxmlsec-findcerts.diff || return 1
@@ -99,10 +97,10 @@ build() {
 	if [ "$CARCH" = "x86_64" ]; then
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
-	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/solenv/inc/libs.mk
+	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
 	fi
 
-	cd ${srcdir}/config_office
+	cd ${srcdir}/${_OO_milestone}/config_office
 
 	# Set OOO_VENDOR in build environment
 	export OOO_VENDOR="ArchLinux"
@@ -119,6 +117,7 @@ build() {
 	--with-dict=ALL\
 	--disable-gnome-vfs\
 	--disable-binfilter\
+	--disable-evolution2\
 	--disable-kde\
 	--disable-lockdown\
 	--disable-odk\
@@ -129,7 +128,6 @@ build() {
 	--enable-cups\
 	--enable-dbus\
 	--enable-cairo\
-	--enable-evolution2\
 	--enable-crashdump\
 	--enable-vba\
 	--enable-verbose\
@@ -175,9 +173,8 @@ build() {
 	--with-use-shell=bash\
 	 $EXTRAOPTS || return 1
 
-#	--enable-kde\
 #	--disable-qadevooo\ http://www.openoffice.org/issues/show_bug.cgi?id=91452
-#	--without-myspell-dicts\
+#	--enable-evolution2\
 
 	cd ..
 
@@ -227,7 +224,7 @@ build() {
 	ln -s ../../opt/openoffice/program/spadmin spadmin
 
 	# install more dictionaries from source tree
-	for i in `ls -1 ${srcdir}/src/dictionaries/unxlngx6.pro/bin/dict-??.oxt`; do
+	for i in `ls -1 ${srcdir}/${_OO_milestone}/dictionaries/unxlngx6.pro/bin/dict-??.oxt`; do
 	  install -Dm644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
 	done
 
@@ -251,7 +248,7 @@ build() {
 	install -D -m644 ${srcdir}/template.desktop ${pkgdir}/usr/share/applications/template.desktop || return 1
 
 	# install icons
-	cd ${srcdir}/sysui/desktop/icons
+	cd ${srcdir}/${_OO_milestone}/sysui/desktop/icons
 	cp -a -v hicolor/*x* ${pkgdir}/usr/share/icons/hicolor
 	cp -a -v locolor/*x* ${pkgdir}/usr/share/icons/locolor
 
