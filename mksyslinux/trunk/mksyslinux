@@ -4,14 +4,22 @@
 APPNAME=$(basename "${0}")
 CONFIG="/etc/mksyslinux.conf"
 export TEMPDIR=$(mktemp /tmp/mksyslinux.XXX)
+TMPDIR=$(mktemp -d /tmp/mksyslinux-image.XXX)
 
 usage ()
 {
     echo "${APPNAME}: usage"
-    echo "PREPARATION: Your device must have a bootable first partition in FAT16 format!"
-    echo "ATTENTION: The MBR of your DEVICE will be overwritten! You have been warned!"
-    echo""
+    echo "WRITING TO DEVICE:"
+    echo "- PREPARATION: Your device must have a bootable first partition in FAT16 format!"
+    echo "- ATTENTION: The MBR of your DEVICE will be overwritten! You have been warned!"
+    echo ""
+    echo "CREATING AN IMAGE FILE:"
+    echo "- For creating an image file use the -i=IMAGEFILE switch"
+    echo "- use 'dd if=<yourimage> of=<yourdevice>' to write to your device afterwards."
+    echo ""
+    echo "PARAMETERS:"
     echo "  -d=DEVICE        Your DEVICE first partition from /dev/xxx tree to install"
+    echo "  -i=IMAGENAME     Your IMAGENAME"
     echo "  -c=CONFIG        Use CONFIG file. default: /etc/mksyslinux.conf"
     echo "  -h               This message."
     exit 1
@@ -24,6 +32,7 @@ while [ $# -gt 0 ]; do
 	case $1 in
 		-c=*|--c=*) CONFIG="$(echo $1 | awk -F= '{print $2;}')" ;;
 		-d=*|--d=*) DEVICE="$(echo $1 | awk -F= '{print $2;}')" ;;
+		-i=*|--i=*) IMAGENAME="$(echo $1 | awk -F= '{print $2;}')" ;;
 		-h|--h|?) usage ;; 
 		*) usage ;;
 		esac
@@ -35,9 +44,11 @@ if [ ! -f "${CONFIG}" ]; then
     exit 1
 fi
 
-if [ "${DEVICE}" = "" ]; then 
-	echo "ERROR: No DEVICE name specified, please use the -d option"
-	 exit 1
+if [ "${IMAGENAME}" = "" ]; then
+	if [ "${DEVICE}" = "" ]; then 
+		echo "ERROR: No DEVICE name specified, please use the -d option"
+	 	exit 1
+	fi
 fi
 
 if ! [ $UID -eq 0 ]; then 
@@ -62,7 +73,11 @@ export USEKERNEL=${VERSION}
 [ -e ${TEMPDIR} ] && rm -r ${TEMPDIR}
 mkdir -p ${TEMPDIR}
 echo ":: Mounting ${DEVICE} ..."
-mount ${DEVICE} ${TEMPDIR} || exit 1
+if ! [ "${IMAGENAME}" = "" ]; then
+	modprobe loop
+else
+	mount ${DEVICE} ${TEMPDIR} || exit 1
+fi
 # create syslinux.cfg
 echo ":: Creating syslinux.cfg ..."
 if [ "${SYSLINUXCFG}" = "" ]; then
@@ -91,11 +106,31 @@ echo ":: Using ${KERNEL} as image kernel ..."
 	install -m644 ${OPTIONSBOOTMESSAGE} ${TEMPDIR}/options.msg
 	[ ! -s ${TEMPDIR}/boot.msg ] && echo 'ERROR:no boot.msg found, aborting!' && exit 1
 	[ ! -s ${TEMPDIR}/options.msg ] && echo 'ERROR:no options.msg found, aborting!' && exit 1
-echo ":: Unmounting ${DEVICE} ..."
+if ! [ "${IMAGENAME}" = "" ]; then
+	# ext2 overhead's upper bound is 6%
+	# empirically tested up to 1GB
+	rootsize=$(du -bs ${TEMPDIR}|cut -f1)
+	IMGSZ=$(( (${rootsize}*106)/100/512 + 1)) # image size in sectors
+	# create the filesystem image file
+	dd if=/dev/zero of="${IMAGENAME}" bs=512 count="${IMGSZ}"
+	# create a filesystem on the image
+	mkfs.vfat "${IMAGENAME}"
+	mount -o loop ${IMAGENAME} ${TMPDIR} || exit 1
+	cp -r "${TEMPDIR}"/* "$TMPDIR"
+	umount ${TMPDIR}
+else
+	echo ":: Unmounting ${DEVICE} ..."
 	umount ${TEMPDIR} || exit 1
-echo ":: Installing MBR on ${MBRDEVICE} ..."
+fi
+if ! [ "${IMAGENAME}" = "" ]; then
+	echo ":: Installing SYSLINUX on ${IMAGENAME} ..."
+	/usr/bin/syslinux ${IMAGENAME} && echo "Installation completed."
+else
+	echo ":: Installing MBR on ${MBRDEVICE} ..."
 	cat ${MBR} > ${MBRDEVICE}
-echo ":: Installing SYSLINUX on ${DEVICE} ..."
+	echo ":: Installing SYSLINUX on ${DEVICE} ..."
 	/usr/bin/syslinux -o offset ${DEVICE} && echo "Installation completed."
+fi
 # clean /tmp
 rm -r ${TEMPDIR}
+! [ ${IMAGENAME} = "" ] && rm -r ${TMPDIR}
