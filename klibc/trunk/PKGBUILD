@@ -9,28 +9,24 @@
 ###
 
 pkgname=klibc
-pkgver=1.5
-_klibcbranch=Stable #Stable/Testing
+pkgver=1.5.14
+_klibcbranch=Testing #Stable/Testing
 _kver=2.6.26-ARCH
-pkgrel=6
+pkgrel=1
 pkgdesc="A minimal libc made for early-userspace"
 arch=(i686 x86_64)
 url="http://www.kernel.org/pub/linux/libs/klibc/"
 license=('BSD')
 groups=('base')
 options=(!ccache !strip)
-source=(http://www.kernel.org/pub/linux/libs/klibc/$_klibcbranch/$pkgname-$pkgver.tar.gz
-        multiple_raid_assembly_fix.patch
+source=(http://www.kernel.org/pub/linux/libs/klibc/${_klibcbranch}/${pkgname}-${pkgver}.tar.gz
         klibc-compile-shared-by-default.patch
-        klibc-module-init-tools.patch
-        klibc-2.6.24.patch
-        klibc-Kbuild.patch)
-md5sums=('d55ce89c0656a7d6896ec0b2af07b5dc'
-         '8d257d50a4554d57b8f461c6a87a2877'
+        klibc-Kbuild.patch
+        klibc-x86_64-fix-io.h.patch)
+md5sums=('8c65712a24c4bde5ec9870f5a4f8113e'
          'c263a7c3fd290fcc84a4e230d456d022'
-         '4d78311ebce63f2fbb711f8518e71839'
-         'a98b3e96aff53339572ed0bdccc8aed2'
-         'c928be0153585a487b72a7eb5dfa8b13')
+         'ff5b113024256de31af59c2f1a966516'
+         'fcee75cfaa65638b07f9cc4a7719fa29')
                   
 build()
 {
@@ -39,22 +35,15 @@ build()
   sed -i "/#define INI_DEBUG/d" usr/kinit/kinit.h || return 1
   ln -sf /usr/src/linux-${_kver} linux
 
-  patch -p1 -i ../multiple_raid_assembly_fix.patch || return 1
-  # make klibc-module-init-tools compile
-  # don't build insmod
-  patch -p1 -i ../klibc-module-init-tools.patch || return 1
   # compile binaries shared by default
   patch -p1 -i ../klibc-compile-shared-by-default.patch || return 1
-  # fix compilation on 2.6.24
-  patch -p1 -i ../klibc-2.6.24.patch || return 1
-  # don't build kill, gzip and cpio
-  patch -p1 -i ../klibc-Kbuild.patch || return 1  
+  # don't build gzip, cpio, kill, build shared binaries for kinit and sh
+  patch -p1 -i ../klibc-Kbuild.patch || return 1
+  # fix errors in io.h header
+  patch -p1 -i ../klibc-x86_64-fix-io.h.patch || return 1
   
   make EXTRA_KLIBCFLAGS='' || return 1
   make INSTALLROOT=$startdir/pkg install || return 1
-  #simplify
-  mv $startdir/pkg/usr/lib/klibc/bin/sh.shared $startdir/pkg/usr/lib/klibc/bin/sh
-  mv $startdir/pkg/usr/lib/klibc/bin/kinit.shared $startdir/pkg/usr/lib/klibc/bin/kinit
   ln -sf asm-x86 $startdir/pkg/usr/lib/klibc/include/asm
   
   provides[${#provides[@]}]="$(basename $startdir/pkg/lib/klibc-*.so .so)"
