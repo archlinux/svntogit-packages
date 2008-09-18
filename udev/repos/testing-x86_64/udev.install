@@ -12,6 +12,21 @@ if [ "$(vercmp $2 100)" -lt 0 ]; then
 fi
 }
 
+post_install() {
+  # If a ramfs is mounted, we still need to make sure that /dev/{console,null,zero} exist
+  # The Archlinux installer bind-mounts /dev to /mnt/dev, thus making the real /dev invisible
+  DEVDIR="/dev"
+  [ "$(stat -c %D /)" != "$(stat -c %D /dev)" ] && DEVDIR=$(mktemp -d /tmp/udevinstall.XXXXXX)
+  [ "${DEVDIR}" != "/dev" ] && mount --bind /dev ${DEVDIR}
+  [ -c ${DEVDIR}/console ] || mknod -m600 ${DEVDIR}/console c 5 1
+  [ -c ${DEVDIR}/null ]    || mknod -m644 ${DEVDIR}/null c 1 3
+  [ -c ${DEVDIR}/zero ]    || mknod -m644 ${DEVDIR}/zero c 1 5
+  if [ "${DEVDIR}" != "/dev" ]; then
+    umount ${DEVDIR}
+    rmdir ${DEVDIR}
+  fi
+}
+
 op=$1
 shift
 $op $*
