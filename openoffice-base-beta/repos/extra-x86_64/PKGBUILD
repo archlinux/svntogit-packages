@@ -2,22 +2,26 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
 pkgname=openoffice-base-beta
-pkgver=3.0_ooo300_m5 # =RC1
-pkgrel=2
+pkgver=3.0_ooo300_m6 # m5=RC1
+pkgrel=1
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=(i686 x86_64)
-#_OO_milestone=ooo300-m5
-_OO_milestone=OOO300_m5
+#_OO_milestone=ooo300-m6
+_OO_milestone=OOO300_m6
 license=('LGPL3')
 url="http://www.openoffice.org"
 install=openoffice.install
 depends=('curl>=7.18.0' 'hunspell>=1.2.2-2' 'python>=2.5.1' 'libwpd' 
-         'libxaw' 'libcups' 'neon>=0.28.2' 'dbus-glib' 'pstoedit' 'icu>=4.0')
+         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'hsqldb-java')
+optdepends=('java-runtime:	adds java support'
+            'libcups:		adds printing support'
+            'gconf:		adds additional gnome support'
+            'nss:		adds support for signed files/macros'
+            'pstoedit:		translates PostScript and PDF graphics into other vector formats')
 makedepends=('bison' 'cvs' 'curl' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
              'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'xulrunner>=1.9.0.1'
-             'boost' 'apache-ant' 'cairo' 'gperf' 'gconf' 'openjdk6>=1.2-1')
+             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.2-5')
 provides=('openoffice-base')
-optdepends=("java-runtime: adds java support")
 source=(${pkgname}-${_OO_milestone}.tar.gz
 	template.desktop
 	default-no-startup-wizard.diff
@@ -26,11 +30,11 @@ source=(${pkgname}-${_OO_milestone}.tar.gz
 	soffice-detect-mozilla-certificates.diff
 	buildfix-gcc43.diff
 	shell.patch
-	#http://oooconv.free.fr/fontooo/FontOOo.sxw
-	# from http://www.openoffice.org/issues/show_bug.cgi?id=81102
-	FontOOo_1.7.1.sxw)
+	system_hsqldb.diff
+	buildfix-openjdk-6-no-rhino.diff
+	buildfix_dict_parallel.diff)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('3dd848a318bd3ed444c8b8f84bace96d'
+md5sums=('e3684b9314e4aaafe2b5edf23701d874'
          'a247ba577007d8169201bd8f41cf41b5'
          '71f136a31e296a04ab68932a31dd533e'
          '6c596129fb48316226ce3adfd3a4c86d'
@@ -38,7 +42,9 @@ md5sums=('3dd848a318bd3ed444c8b8f84bace96d'
          '1dc7480a04f572ad136d35923a2af66d'
          'bf7119084a2d1e0566b5e34b57dce8eb'
          'a51200f770c635355c430cc5052db8cf'
-         '1fc1ca5205730655eab2d2e119aa06fe')
+         '4addae44d20bb2b247e429d88b66a4c1'
+         '4fe2810b40358b0e7dc2df3d056bde7a'
+         '991b4a9dac2e6b84c45fa6f0494dd41a')
 
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
@@ -53,8 +59,6 @@ build() {
 
 	# fetch missing modules
 	cvs -q -z9 co -r $_MILESTONE cppunit hyphen swext apache-commons tomcat reportbuilder
-
-
 
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
@@ -71,13 +75,16 @@ build() {
 
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc43.diff || return 1
+	patch -Np0 -i ${srcdir}/system_hsqldb.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix-openjdk-6-no-rhino.diff || return 1
+	 # http://qa.openoffice.org/issues/show_bug.cgi?id=93391
+	patch -Np0 -i ${srcdir}/buildfix_dict_parallel.diff || return 1
 
 	# allows xmlsec to be able to read the format of the digital certificates.
 	patch -Np0 -i ${srcdir}/libxmlsec-findcerts.diff || return 1
 	# allows soffice to find the user's firefox profile so that it can read
 	# his digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
 	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
-
 
 	# important bugfixes
 	# try to fix non-gtk integration 
@@ -89,9 +96,9 @@ build() {
 	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
 
 	if [ "$CARCH" = "x86_64" ]; then
-          # fixes to build with SUN jdk/jre
+          # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
-	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/solenv/inc/libs.mk
+	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/solenv/inc/libs.mk || return 1
 	fi
 
 	cd ${srcdir}/config_office
@@ -111,6 +118,7 @@ build() {
 	--with-dict=ALL\
 	--disable-gnome-vfs\
 	--disable-binfilter\
+	--disable-kde\
 	--disable-odk\
 	--disable-systray\
 	--disable-mathmldtd\
@@ -165,8 +173,7 @@ build() {
 	--with-use-shell=bash\
 	 $EXTRAOPTS || return 1
 
-#	--disable-qadevooo\
-#	--without-myspell-dicts\
+#	--disable-qadevooo\ http://www.openoffice.org/issues/show_bug.cgi?id=91452
 
 	cd ..
 
@@ -217,27 +224,27 @@ build() {
 
 	# install more dictionaries from source tree
 	for i in `ls -1 ${srcdir}/src/dictionaries/unxlngx6.pro/bin/dict-??.oxt`; do
-	  install -Dm644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i
+	  install -Dm644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
 	done
 
 	# install shortcuts
 	mv ${pkgdir}/opt/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
 	cd ${pkgdir}/usr/share/applications
-	sed -i -e 's|Exec=openoffice.org3|Exec=/opt/openoffice/program/soffice|g' *.desktop
-	sed -i -e 's|Exec=/opt/openoffice/program/soffice-printeradmin|Exec=/opt/openoffice/program/spadmin|g' printeradmin.desktop
+	sed -i -e 's|Exec=openoffice.org3|Exec=/opt/openoffice/program/soffice|g' *.desktop || return 1
+	sed -i -e 's|Exec=/opt/openoffice/program/soffice-printeradmin|Exec=/opt/openoffice/program/spadmin|g' printeradmin.desktop || return 1
 	# fix exec commands in shortcuts for Xfce menu
-	sed -i -e 's|base %U|base|g' base.desktop
-	sed -i -e 's|calc %U|calc|g' calc.desktop
-	sed -i -e 's|draw %U|draw|g' draw.desktop
-	sed -i -e 's|impress %U|impress|g' impress.desktop
-	sed -i -e 's|math %U|math|g' math.desktop
-	sed -i -e 's|writer %U|writer|g' writer.desktop
+	sed -i -e 's|base %U|base|g' base.desktop || return 1
+	sed -i -e 's|calc %U|calc|g' calc.desktop || return 1
+	sed -i -e 's|draw %U|draw|g' draw.desktop || return 1
+	sed -i -e 's|impress %U|impress|g' impress.desktop || return 1
+	sed -i -e 's|math %U|math|g' math.desktop || return 1
+	sed -i -e 's|writer %U|writer|g' writer.desktop || return 1
 	# remove quickstarter, we disabled it above
 	rm -rf ${pkgdir}/usr/share/applications/qstart.desktop
 	# fix icons in shortcuts
 	sed -i -e 's|Icon=openofficeorg3-|Icon=|g' *.desktop
 	# add template desktop file
-	install -D -m644 ${srcdir}/template.desktop ${pkgdir}/usr/share/applications/template.desktop
+	install -D -m644 ${srcdir}/template.desktop ${pkgdir}/usr/share/applications/template.desktop || return 1
 
 	# install icons
 	cd ${srcdir}/sysui/desktop/icons
