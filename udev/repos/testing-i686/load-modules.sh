@@ -15,15 +15,13 @@ USEBLACKLIST="--use-blacklist"
 if [ -f /proc/cmdline ]; then 
     for cmd in $(cat /proc/cmdline); do
         case $cmd in
-            *=*) eval $cmd ;;
+            disablemodules=*) eval $cmd ;;
+            load_modules=off) exit ;;
         esac
     done
     #parse cmdline entries of the form "disablemodules=x,y,z"
     if [ -n "$disablemodules" ]; then
         BLACKLIST="$BLACKLIST $(echo $disablemodules | sed 's|,| |g')"
-    fi
-    if [ "$load_modules" == "off" ]; then
-        MOD_AUTOLOAD="no"
     fi
 fi
 
@@ -41,7 +39,9 @@ if [ "$MOD_AUTOLOAD" = "yes" -o "$MOD_AUTOLOAD" = "YES" ]; then
       $LOGGER -p info -t "$(basename $0)" "Not loading module alias '$1' because it is blacklisted"
       exit
     fi
-    # Try to find all aliases for the module
+    #sanitize the blacklist
+    BLACKLIST="$(echo "$BLACKLIST" | sed -e 's|-|_|g')"
+    # Try to find all modules for the alias
     mods=$($RESOLVEALIAS /lib/modules/$(uname -r)/modules.alias $1)
     # If no modules could be found, try if the alias name is a module name
     # In that case, omit the --use-blacklist parameter to imitate normal modprobe behaviour
@@ -56,8 +56,6 @@ if [ "$MOD_AUTOLOAD" = "yes" -o "$MOD_AUTOLOAD" = "YES" ]; then
       deps="$(echo "$deps" | sed \
               -e "s#^insmod /lib.*/\(.*\)\.ko.*#\1#g" \
               -e 's|-|_|g')"
-      #sanitize the blacklist
-      BLACKLIST="$(echo "$BLACKLIST" | sed -e 's|-|_|g')"
 
       # If the module or any of its dependencies is blacklisted, don't load it
       for dep in $deps; do
