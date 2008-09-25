@@ -1,27 +1,28 @@
 # $Id$
-# Maintainer:
+# Maintainer: 
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
-
 pkgname=libldap
-pkgver=2.4.11
-pkgrel=1
+pkgver=2.3.43
+pkgrel=2
 pkgdesc="LDAP client libraries"
-arch=('i686' 'x86_64')
+arch=(i686 x86_64)
 license=('custom')
 url="http://www.openldap.org/"
 backup=(etc/openldap/ldap.conf)
 depends=('libsasl' 'openssl>=0.9.8f')
-options=('!libtool' '!makeflags')
+options=('!libtool' '!makeflags' 'force')
 makedepends=('tcp_wrappers')
 source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-${pkgver}.tgz
-	getpeereid.patch)
-md5sums=('920fedbbb5bc61c2ca52c56edeef770a'
+	'ntlm.patch' 'getpeereid.patch')
+md5sums=('1b25281086eb146b8e11ebd33de086dc'
+         '64c539d5f01f46f329b9d5c1324be4e9'
          'c2b4328654f109adf6ad424d60d232c2')
 
 build() {
   cd ${srcdir}/openldap-${pkgver}
-  
-  patch -Np1 -i ${srcdir}/getpeereid.patch || return 1
+
+  patch -Np0 -i ${startdir}/src/ntlm.patch || return 1
+  patch -Np1 -i $srcdir/getpeereid.patch || return 1
 
   ./configure --prefix=/usr \
               --libexecdir=/usr/sbin \
@@ -36,26 +37,26 @@ build() {
   make DESTDIR=${pkgdir} install || return 1
 
   cd ../libraries
-  make depend
+  make depend || return 1
   make || return 1
 
-  make DESTDIR=${pkgdir} install
+  make DESTDIR=${pkgdir} install || return 1
 
   cd ../doc/man/man3
-  make
-  make DESTDIR=${startdir}/pkg install
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
 
   cd ../man5
-  make 
-  install -Dm644 ldap.conf.5.tmp ${pkgdir}/usr/man/man5/ldap.conf.5
+  make || return 1
+  install -Dm644 ldap.conf.5.tmp \
+	${pkgdir}/usr/man/man5/ldap.conf.5 || return 1
   
   # get rid of duplicate default conf files
   rm ${pkgdir}/etc/openldap/*.default
 
-  ln -sf liblber.so ${pkgdir}/usr/lib/liblber.so.2
-  ln -sf libldap.so ${pkgdir}/usr/lib/libldap.so.2
+  ln -sf liblber.so ${pkgdir}/usr/lib/liblber.so.2 || return 1
+  ln -sf libldap.so ${pkgdir}/usr/lib/libldap.so.2 || return 1
 
-  # install custom license
-  install -Dm644 ${srcdir}/openldap-${pkgver}/LICENSE \
-	${pkgdir}/usr/share/licenses/openldap/LICENSE
+  install -Dm644 ${startdir}/src/openldap-${pkgver}/LICENSE \
+    ${pkgdir}/usr/share/licenses/$pkgname/LICENSE
 }
