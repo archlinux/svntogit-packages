@@ -1,10 +1,12 @@
 # $Id$
-# Maintainer: Judd Vinet <jvinet@zeroflux.org>
+# Maintainer:
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
 pkgname=libldap
-pkgver=2.3.40
+pkgver=2.4.11
 pkgrel=1
 pkgdesc="LDAP client libraries"
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 license=('custom')
 url="http://www.openldap.org/"
 backup=(etc/openldap/ldap.conf)
@@ -12,11 +14,14 @@ depends=('libsasl' 'openssl>=0.9.8f')
 options=('!libtool' '!makeflags')
 makedepends=('tcp_wrappers')
 source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-${pkgver}.tgz
-	ntlm.patch)
+	getpeereid.patch)
+md5sums=('920fedbbb5bc61c2ca52c56edeef770a'
+         'c2b4328654f109adf6ad424d60d232c2')
 
 build() {
-  cd ${startdir}/src/openldap-${pkgver}
-  patch -Np0 -i ${startdir}/src/ntlm.patch || return 1
+  cd ${srcdir}/openldap-${pkgver}
+  
+  patch -Np1 -i ${srcdir}/getpeereid.patch || return 1
 
   ./configure --prefix=/usr \
               --libexecdir=/usr/sbin \
@@ -28,13 +33,13 @@ build() {
 	      --disable-bdb --disable-hdb
   cd include
   make || return 1
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${pkgdir} install || return 1
 
   cd ../libraries
   make depend
   make || return 1
 
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${pkgdir} install
 
   cd ../doc/man/man3
   make
@@ -42,18 +47,15 @@ build() {
 
   cd ../man5
   make 
-  mkdir -p ${startdir}/pkg/usr/man/man5
-  install -m644 ldap.conf.5.tmp ${startdir}/pkg/usr/man/man5/ldap.conf.5
+  install -Dm644 ldap.conf.5.tmp ${pkgdir}/usr/man/man5/ldap.conf.5
   
   # get rid of duplicate default conf files
-  rm ${startdir}/pkg/etc/openldap/*.default
+  rm ${pkgdir}/etc/openldap/*.default
 
-  ln -sf liblber.so ${startdir}/pkg/usr/lib/liblber.so.2
-  ln -sf libldap.so ${startdir}/pkg/usr/lib/libldap.so.2
+  ln -sf liblber.so ${pkgdir}/usr/lib/liblber.so.2
+  ln -sf libldap.so ${pkgdir}/usr/lib/libldap.so.2
 
-  mkdir -p ${startdir}/pkg/usr/share/licenses/openldap
-  install -m644 ${startdir}/src/openldap-${pkgver}/LICENSE \
-    ${startdir}/pkg/usr/share/licenses/openldap/
+  # install custom license
+  install -Dm644 ${srcdir}/openldap-${pkgver}/LICENSE \
+	${pkgdir}/usr/share/licenses/openldap/LICENSE
 }
-md5sums=('728e95d806a3d47d9686481d72e62072'
-         '64c539d5f01f46f329b9d5c1324be4e9')
