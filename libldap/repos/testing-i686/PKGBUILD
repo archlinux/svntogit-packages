@@ -1,0 +1,61 @@
+# $Id$
+# Maintainer:
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
+pkgname=libldap
+pkgver=2.4.11
+pkgrel=2
+pkgdesc="LDAP client libraries"
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://www.openldap.org/"
+backup=(etc/openldap/ldap.conf)
+depends=('libsasl' 'openssl>=0.9.8f')
+options=('!libtool' '!makeflags')
+makedepends=('tcp_wrappers')
+source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-${pkgver}.tgz
+	getpeereid.patch)
+md5sums=('920fedbbb5bc61c2ca52c56edeef770a'
+         'c2b4328654f109adf6ad424d60d232c2')
+
+build() {
+  cd ${srcdir}/openldap-${pkgver}
+  
+  patch -Np1 -i ${srcdir}/getpeereid.patch || return 1
+
+  ./configure --prefix=/usr \
+              --libexecdir=/usr/sbin \
+              --sysconfdir=/etc \
+              --localstatedir=/var/lib/openldap \
+              --enable-crypt --enable-dynamic \
+              --with-threads --enable-wrappers \
+	      --enable-spasswd --with-cyrus-sasl \
+	      --disable-bdb --disable-hdb
+  cd include
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  cd ../libraries
+  make depend
+  make || return 1
+
+  make DESTDIR=${pkgdir} install
+
+  cd ../doc/man/man3
+  make
+  make DESTDIR=${startdir}/pkg install
+
+  cd ../man5
+  make 
+  install -Dm644 ldap.conf.5.tmp ${pkgdir}/usr/man/man5/ldap.conf.5
+  
+  # get rid of duplicate default conf files
+  rm ${pkgdir}/etc/openldap/*.default
+
+  ln -sf liblber.so ${pkgdir}/usr/lib/liblber.so.2
+  ln -sf libldap.so ${pkgdir}/usr/lib/libldap.so.2
+
+  # install custom license
+  install -Dm644 ${srcdir}/openldap-${pkgver}/LICENSE \
+	${pkgdir}/usr/share/licenses/$pkgname/LICENSE
+}
