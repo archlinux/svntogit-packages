@@ -1,7 +1,9 @@
 # $Id$
-# Maintainer: judd <jvinet@zeroflux.org>
+# Maintainer:
+# Contributor: judd <jvinet@zeroflux.org>
+
 pkgname=dhcpcd
-pkgver=3.2.1
+pkgver=4.0.1
 pkgrel=1
 pkgdesc="A DHCP client daemon"
 arch=(i686 x86_64)
@@ -10,18 +12,28 @@ url="http://roy.marples.name/dhcpcd"
 groups=('base')
 depends=('glibc')
 backup=('etc/conf.d/dhcpcd')
-source=(http://roy.marples.name/dhcpcd/$pkgname-$pkgver.tar.bz2
+source=(http://roy.marples.name/downloads/dhcpcd/$pkgname-$pkgver.tar.bz2
 	dhcpcd.conf.d)
-md5sums=('5a437882b6b9eb29bde323dc411be4a4'
+md5sums=('4e84bcba4f5c9c2b558db1b1f22e6828'
          '12d866a78d9f5fa5f31ca18b3940d847')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
+  cd $srcdir/$pkgname-$pkgver
+  
   #disable DUID usage
   echo "#undef ENABLE_DUID" >> config.h
+  
+  # fix installation locations
+  export PREFIX=/usr 
+  sed -i 's/${PREFIX}\/etc/\/etc/' Makefile
+  sed -i 's/${PREFIX}\/sbin/\/sbin/' Makefile  # compatibility hack for current scripts
+
   make || return 1
-  make DESTDIR=$startdir/pkg install
-  mkdir -p $startdir/pkg/usr/sbin
-  ln -sf /sbin/dhcpcd $startdir/pkg/usr/sbin/dhcpcd
-  install -D -m644 ../dhcpcd.conf.d $startdir/pkg/etc/conf.d/dhcpcd
+  make DESTDIR=$pkgdir install || return 1
+  
+  install -d $startdir/pkg/usr/sbin || return 1
+  ln -sf /sbin/dhcpcd $pkgdir/usr/sbin/dhcpcd
+  
+  # install standard configuration file
+  install -Dm644 ../dhcpcd.conf.d $pkgdir/etc/conf.d/dhcpcd || return 1
 }
