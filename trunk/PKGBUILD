@@ -2,25 +2,28 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=iputils
-pkgver=20070202
+pkgver=20071127
 _traceroutever=1.4a12
-pkgrel=4
+pkgrel=1
 pkgdesc="IP Configuration Utilities (and Ping)"
 arch=(i686 x86_64)
 license=('GPL')
-url="ftp://ftp.inr.ac.ru/ip-routing/"
+url="http://www.linuxfoundation.org/en/Net:Iputils"
 groups=('base')
 depends=('glibc')
-makedepends=('jade')
+makedepends=('opensp' 'libxslt' 'docbook-xsl')
 conflicts=('netkit-base' 'arping' 'netkit-tftpd' 'traceroute')
 replaces=('netkit-base' 'traceroute')
 source=(http://www.skbuff.net/iputils/$pkgname-s$pkgver.tar.bz2
         ftp://ftp.ee.lbl.gov/traceroute-$_traceroutever.tar.gz
-	iputils-20070202-no-open-max.patch)
+	iputils-20070202-no-open-max.patch
+	permission-fix.patch)
 options=(!makeflags)
-md5sums=('1d38fb3cfc2b71496e43cf646bfc1d6e'
+md5sums=('12245e9927d60ff5cf4a99d265bcb7d3'
          '964d599ef696efccdeebe7721cd4828d'
-	 'a2cbc0174dd883f68297aa7f3e7c4f5c')
+	 'a2cbc0174dd883f68297aa7f3e7c4f5c'
+	 '76d2b3aa00d88225b11d6cc296c7a39a')
+
 
 build()
 {
@@ -42,31 +45,21 @@ build()
   cd doc
   for file in *.sgml; do
       xf=${file/.sgml/.xml}
-      sx -xlower -xno-nl-in-tag $file > $xf
+      osx -xlower -xno-nl-in-tag $file > $xf
       sed -i "s|<refname>\(.*\), \(.*\)</refname>|<refname>\1</refname>, <refname>\2</refname>|g" $xf
-      xsltproc /usr/share/xml/docbook/xsl-stylesheets-1.73.1/manpages/docbook.xsl $xf
+      xsltproc /usr/share/xml/docbook/xsl-stylesheets-1.73.2/manpages/docbook.xsl $xf
   done
 
-  mkdir -p $startdir/pkg/usr/man/man8
+  mkdir -p $startdir/pkg/usr/share/man/man8
   install -m644 arping.8 clockdiff.8 ping.8 ping6.8 rarpd.8 rdisc.8 \
-                    tftpd.8 tracepath.8 tracepath6.8 traceroute6 \
-                    $startdir/pkg/usr/man/man8/
-  #make man
-  #for i in arping clockdiff ping rarpd rdisc tftpd tracepath traceroute6; do
-  #  install -D -m644 $i.8 $startdir/pkg/usr/man/man8/$i.8
-  #done
+                    tftpd.8 tracepath.8 tracepath6.8 traceroute6.8 \
+                    $startdir/pkg/usr/share/man/man8/
 
   # build traceroute
   # this is combined in this package because it's awkward as a separate package
   cd ${startdir}/src/traceroute-$_traceroutever
-  ./configure --prefix=/usr --sbindir=/bin
-  #if [ "${CARCH}" = "x86_64" ]; then
-    make CFLAGS="${CFLAGS} -Ilinux-include/" || return 1
-  #else
-  #  make || return 1
-  #fi
+  patch -Np1 -i ../permission-fix.patch || return 1
+  ./configure --prefix=/usr --sbindir=/bin --mandir=/usr/share/man
+  make CFLAGS="${CFLAGS} -Ilinux-include/" || return 1
   make DESTDIR=${startdir}/pkg install install-man
-
-  chmod 4775 ${startdir}/pkg/bin/traceroute
 }
-
