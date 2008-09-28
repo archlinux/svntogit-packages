@@ -1,0 +1,55 @@
+# $Id$
+# Maintainer Tobias Powalowski <tpowa@archlinux.org>
+# Contributed: eliott <eliott@solarblue.net>, Andre Naumann <anaumann@SPARCed.org>
+pkgname=nx-common
+pkgver=3.2.0
+pkgrel=1
+pkgdesc="NoMachine NX common package for client and server"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://nomachine.com/"
+depends=('libjpeg' 'libpng' 'openssl>=0.9.8g' 'gcc-libs' 'audiofile' 'alsa-lib' 'bash')
+source=(\
+#Compression libs and proxy sources
+http://64.34.161.181/download/$pkgver/sources/nxcomp-$pkgver-7.tar.gz \
+http://64.34.161.181/download/$pkgver/sources/nxssh-$pkgver-1.tar.gz \
+# ESD Support
+http://64.34.161.181/download/$pkgver/sources/nxesd-$pkgver-1.tar.gz
+# 64bit fixes
+NXproto.h.64bit.diff)
+options=(!libtool)
+
+
+build() {
+  cd $startdir/src
+ 
+  mkdir -p $startdir/pkg/opt/NX/bin
+  mkdir -p $startdir/pkg/opt/NX/lib 
+
+  cd $startdir/src/nxcomp
+  if [ "$CARCH" = "x86_64" ]; then
+    patch -Np1 -i ../NXproto.h.64bit.diff  || return 1
+  fi
+  ./configure --prefix=/opt/NX
+  make || return 1
+  cp -a libXcomp.so.* $startdir/pkg/opt/NX/lib
+  cd $startdir/pkg/opt/NX/lib
+  ln -s libXcomp.so.1 libXcomp.so
+
+  cd $startdir/src/nxssh
+  ./configure --prefix=/opt/NX
+  make || return 1
+  install -D -m755 nxssh $startdir/pkg/opt/NX/bin/nxssh
+ 
+  cd $startdir/src/nxesd
+  ./configure --prefix=/opt/NX
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+  # fix libxcomp linking
+  cd $startdir/pkg/opt/NX/lib
+  ln -s libXcomp.so.3 libXcomp.so.1
+}
+md5sums=('5ea64a557c770d9f5cc4b9a7a9d1343c'
+         '6d4955376ea1dfcb6971b2b46d31ece1'
+         '4a239b52e5bcf6efb2e7f33ebcd24188'
+         '58341ba70dfab92ff38570071fbbf88a')
