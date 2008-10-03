@@ -12,7 +12,7 @@ arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
 backup=(etc/logrotate.d/samba etc/pam.d/samba etc/samba/smb.conf etc/xinetd.d/swat etc/conf.d/samba)
-depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' 'smbclient>=3.2.4' 'libcap' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1')
+depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' 'smbclient=3.2.4' 'libcap' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1' 'tdb=3.2.4')
 options=(!makeflags)
 source=(http://us1.samba.org/samba/ftp/stable/${pkgname}-${_realver}.tar.gz \
         no-clients.patch samba samba.logrotate swat.xinetd samba.pam samba.conf.d)
@@ -26,7 +26,7 @@ build() {
               --with-piddir=/var/run/samba \
               --with-fhs --with-pam --with-ads --with-acl-support \
               --without-cifsmount --without-libsmbclient \
-              --localstatedir=/var --disable-dnssd
+              --localstatedir=/var --disable-dnssd --libdir=/usr/lib/samba
   make || return 1
   mkdir -p $startdir/pkg/var/log/samba
   mkdir -p $startdir/pkg/etc/samba/private
@@ -43,6 +43,10 @@ build() {
   install -D -m644 ../../samba.logrotate $startdir/pkg/etc/logrotate.d/samba
   install -D -m644 ../../swat.xinetd $startdir/pkg/etc/xinetd.d/swat
   install -D -m644 ../../samba.pam $startdir/pkg/etc/pam.d/samba
+  # symlink libs
+  for i in ${startdir}/pkg/usr/lib/samba/libsmbshare*; do
+	ln -sf samba/$(basename $i) ${startdir}/pkg/usr/lib/$(basename $i)
+  done
   # spool directory
   install -d -m1777 $startdir/pkg/var/spool/samba
   sed -i 's|/usr/spool/samba|/var/spool/samba|g' $startdir/pkg/etc/samba/smb.conf.default
@@ -58,6 +62,9 @@ build() {
       umount.cifs mount.cifs net; do
     rm -f ${startdir}/pkg/usr/share/man/man8/${man}.8
   done
+  for i in libnetapi* libtdb* libtalloc* libwbclient*; do
+	  rm -f ${startdir}/pkg/usr/lib/samba/$i
+  done
   for man in rpcclient smbcacls smbclient smbcquotas \
       smbtree smbtar nmblookup smbget; do
     rm -f ${startdir}/pkg/usr/share/man/man1/${man}.1
@@ -65,5 +72,4 @@ build() {
   rm -f ${startdir}/pkg/usr/share/man/man7/libsmbclient.7
 
   rm -f ${startdir}/pkg/usr/include/libsmbclient.h
-  rm -f ${startdir}/pkg/usr/lib/{libnetapi.so,libnetapi.so.0,libtalloc.so,libtalloc.so.1,libtdb.so,libtdb.so.1,libwbclient.so,libwbclient.so.0}
 }
