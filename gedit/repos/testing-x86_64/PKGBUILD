@@ -1,0 +1,33 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gedit
+pkgver=2.24.0
+pkgrel=1
+pkgdesc="A text editor for GNOME"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('gconf>=2.24.0' 'pygtk>=2.13.0' 'pygtksourceview2>=2.4.0' 'enchant>=1.4.2' 'desktop-file-utils' 'iso-codes')
+makedepends=('perlxml' 'pkgconfig' 'gnome-doc-utils>=0.14.0')
+groups=('gnome-extra')
+options=('!libtool' '!emptydirs')
+url="http://www.gnome.org"
+install=gedit.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.24/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('c6a13bd45ddde3e6a1e45131f430086b')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  #http://bugzilla.gnome.org/show_bug.cgi?id=553883
+  sed -e 's/"ISO-8859-15"/"[ISO-8859-15]"/' -i po/hr.po || return 1
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+              --libexecdir=/usr/lib --disable-scrollkeeper || return 1
+  make || return 1
+  make -j1 GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+ 
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
