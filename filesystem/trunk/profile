@@ -32,6 +32,10 @@ umask 022
 PATH="/bin:/usr/bin:/sbin:/usr/sbin"
 export PATH
 
+# Export default pkg-config path
+PKG_CONFIG_PATH="/usr/lib/pkgconfig"
+export PKG_CONFIG_PATH
+
 # Some readline stuff that is fairly common
 HISTSIZE=1000
 HISTCONTROL="erasedups"
