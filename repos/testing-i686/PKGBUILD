@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=totem
+pkgver=2.24.2
+pkgrel=1
+url="http://www.hadess.net/totem.php3"
+pkgdesc="A GNOME2 integrated movie player based on Gstreamer."
+arch=(i686 x86_64)
+license=('GPL2' 'custom')
+depends=('gstreamer0.10-good-plugins' 'totem-plparser>=2.24.1' 'libxxf86vm' 'libxtst' 'desktop-file-utils' 'iso-codes>=2.0' 'libepc>=0.3.5' 'python>=2.5.2' 'startup-notification' 'libgnomeui>=2.24.0' 'python-gdata' 'gnome-vfs>=2.24.0')
+makedepends=('nautilus>=2.24.0' 'xulrunner>=1.9' 'pkgconfig' 'bluez' 'lirc-utils' 'gnome-doc-utils>=0.14.0' 'gnome-control-center>=2.24.0' 'libtracker' 'intltool' 'pygtk')
+options=('!libtool' '!emptydirs')
+conflicts=('totem-xine')
+groups=('gnome-extra')
+install=totem.install
+source=(http://ftp.gnome.org/pub/gnome/sources/totem/2.24/${pkgname}-${pkgver}.tar.bz2)
+md5sums=('e85064c48fe28e8e87c1da04a06173df')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  LD_PRELOAD="" ./configure --enable-python || return 1
+  LD_PRELOAD="" ./configure --prefix=/usr --sysconfdir=/etc \
+              --libexecdir=/usr/lib/totem \
+              --localstatedir=/var --disable-static \
+	      --enable-python \
+	      --enable-nautilus --with-gecko=mozilla \
+	      --enable-mozilla --with-dbus \
+	      --disable-scrollkeeper || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 \
+       DESTDIR="${pkgdir}" install || return 1
+
+  rm -f ${pkgdir}/usr/share/totem/vanity.*
+  rm -f "${pkgdir}/usr/share/pixmaps/vanity.png"
+
+  rm -rf "${pkgdir}/usr/lib/mozilla"
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
+}
