@@ -1,0 +1,86 @@
+# $Id$
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+pkgname=udev
+pkgver=130
+pkgrel=1
+pkgdesc="The userspace dev tools (udev)"
+arch=(i686 x86_64)
+url="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
+license=('GPL')
+groups=('base')
+depends=('glibc' 'coreutils' 'util-linux')
+makedepends=('kernel26') #needed to build framebuffer blacklist
+install=udev.install
+backup=(etc/udev/udev.conf
+        etc/scsi_id.config
+        etc/udev/cdsymlinks.conf
+        etc/modprobe.d/framebuffer_blacklist)
+conflicts=('pcmcia-cs' 'hotplug')
+replaces=('devfsd')
+# older initscripts versions required start_udev
+conflicts=('initscripts<2008.02')
+options=(!makeflags)
+source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.tar.bz2
+        81-arch.rules load-modules.sh resolve-modalias.c cdsymlinks.sh root-link.sh
+        arch-udev-rules.patch readme-udev-arch.txt)
+md5sums=('eaaac3c45b8c87d81a82fed254ecee25'
+         '3a955ca8e2122a48a223f9d8adf87b70'
+         'f4951f61438d69894b728212dac7318b'
+         'fca04a608009069beb786e26338a783b'
+         '8424b78e9dd772e75b4ef90814807815'
+         '2d6dc6842464f107bccc68cd505a6c31'
+         'beb8ebffc3652584363804e41445ba17'
+         '7fc6d33bb218e752302eef0a80ff0a89')
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+  ./configure --prefix="" --mandir=/usr/share/man --includedir=/usr/include
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+
+  # Fix pkgconfig path
+  install -d -m755 $pkgdir/usr/lib
+  mv $pkgdir/lib/pkgconfig $pkgdir/usr/lib
+
+  # Non-stock rules still go in /etc
+  install -D -m644 $srcdir/81-arch.rules $pkgdir/etc/udev/rules.d/81-arch.rules
+
+  # install our module loading subsystem
+  install -D -m755 $srcdir/load-modules.sh $pkgdir/lib/udev/load-modules.sh
+  install -d -m755 $pkgdir/bin
+  gcc -Wall $CFLAGS -o $pkgdir/bin/resolve-modalias $srcdir/resolve-modalias.c
+  # install cdsymlinks.sh
+  install -D -m755 $srcdir/cdsymlinks.sh $pkgdir/lib/udev/cdsymlinks.sh
+  # install root-link.sh
+  install -D -m755 $srcdir/root-link.sh $pkgdir/lib/udev/root-link.sh
+
+  # install instructions
+  # NOTE: We should delete this file
+  install -D -m644 $srcdir/readme-udev-arch.txt $pkgdir/usr/share/udev/readme-udev-arch.txt
+
+  # add devices dir
+  mkdir $pkgdir/lib/udev/devices
+  # disable error logging to prevent startup failures printed to vc on boot
+  sed -i -e 's|udev_log="err"|udev_log="0"|g' $pkgdir/etc/udev/udev.conf
+  # install additional rules files
+  for rule in $srcdir/$pkgname-$pkgver/rules/packages/*.rules; do
+      install -D -m 644 $rule $pkgdir/lib/udev/rules.d/
+  done
+  # fix standard udev rules to fit to arch
+  cd $pkgdir/lib/udev/rules.d/
+  patch -Np1 -i $srcdir/arch-udev-rules.patch || return 1
+
+  # disable persistent cdromsymlinks and network by default 
+  # and move it to /etc/udev/rules.d
+  mv $pkgdir/lib/udev/rules.d/75-persistent-net-generator.rules \
+     $pkgdir/etc/udev/rules.d/75-persistent-net-generator.rules.optional
+  mv $pkgdir/lib/udev/rules.d/75-cd-aliases-generator.rules \
+     $pkgdir/etc/udev/rules.d/75-cd-aliases-generator.rules.optional
+  # create framebuffer blacklist
+  mkdir -p $pkgdir/etc/modprobe.d/
+  for mod in $(find /lib/modules/*/kernel/drivers/video -name '*fb.ko' -exec basename {} .ko \;); do 
+	echo "blacklist $mod" >> $pkgdir/etc/modprobe.d/framebuffer_blacklist
+  done
+}
