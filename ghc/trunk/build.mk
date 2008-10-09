@@ -29,10 +29,14 @@ MyWarningOpts   = -W -fno-warn-unused-matches -fwarn-unused-imports
 
 ifeq "$(BuildFlavour)" "perf"
 
-SRC_HC_OPTS   = -H32m -O2
-GhcHcOpts     = -Rghc-timing
-GhcLibHcOpts  =
-GhcLibWays    = p
+# perf matches the default settings, repeated here for comparison:
+
+SRC_HC_OPTS     = -O -H64m
+GhcStage1HcOpts = -O -fasm
+GhcStage2HcOpts = -O2 -fasm
+GhcHcOpts       = -Rghc-timing
+GhcLibHcOpts    = -O2 -XGenerics
+GhcLibWays      = p
 
 endif
 
@@ -40,10 +44,10 @@ endif
 
 ifeq "$(BuildFlavour)" "quickest"
 
-SRC_HC_OPTS     = -H64m -Onot -fasm
+SRC_HC_OPTS     = -H64m -O0 -fasm
 GhcStage1HcOpts = -O -fasm
-GhcStage2HcOpts = -Onot -fasm
-GhcLibHcOpts    = -Onot -fasm
+GhcStage2HcOpts = -O0 -fasm
+GhcLibHcOpts    = -O0 -fasm
 GhcLibWays      =
 SplitObjs       = NO
 
@@ -53,9 +57,9 @@ endif
 
 ifeq "$(BuildFlavour)" "quick"
 
-SRC_HC_OPTS     = -H64m -Onot -fasm
+SRC_HC_OPTS     = -H64m -O0 -fasm
 GhcStage1HcOpts = -O -fasm
-GhcStage2HcOpts = -Onot -fasm
+GhcStage2HcOpts = -O0 -fasm
 GhcLibHcOpts    = -O -fasm
 GhcLibWays      =
 SplitObjs       = NO
