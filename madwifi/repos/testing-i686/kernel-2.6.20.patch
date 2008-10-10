@@ -1,0 +1,73 @@
+diff -urNad madwifi-0.9.2+r1842.20061207~/ath/if_ath.c madwifi-0.9.2+r1842.20061207/ath/if_ath.c
+--- madwifi-0.9.2+r1842.20061207~/ath/if_ath.c	2006-12-25 23:40:20.000000000 +0900
++++ madwifi-0.9.2+r1842.20061207/ath/if_ath.c	2006-12-25 23:40:20.968184598 +0900
+@@ -118,7 +118,11 @@
+ static void ath_rxorn_tasklet(TQUEUE_ARG);
+ static void ath_bmiss_tasklet(TQUEUE_ARG);
+ static void ath_bstuck_tasklet(TQUEUE_ARG);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+ static void ath_radar_task(TQUEUE_ARG);
++#else
++static void ath_radar_task(struct work_struct *);
++#endif
+ static void ath_dfs_test_return(unsigned long);
+ 
+ static int ath_stop_locked(struct net_device *);
+@@ -414,8 +418,11 @@
+ 	ATH_INIT_TQUEUE(&sc->sc_bstucktq,ath_bstuck_tasklet,	dev);
+ 	ATH_INIT_TQUEUE(&sc->sc_rxorntq, ath_rxorn_tasklet,	dev);
+ 	ATH_INIT_TQUEUE(&sc->sc_fataltq, ath_fatal_tasklet,	dev);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+ 	ATH_INIT_SCHED_TASK(&sc->sc_radartask, ath_radar_task,	dev);
+-
++#else
++	ATH_INIT_SCHED_TASK(&sc->sc_radartask, ath_radar_task);
++#endif
+ 	/*
+ 	 * Attach the HAL and verify ABI compatibility by checking
+ 	 * the HAL's ABI signature against the one the driver was
+@@ -1737,10 +1744,18 @@
+ }
+ 
+ static void
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+ ath_radar_task(TQUEUE_ARG data)
++#else
++ath_radar_task(struct work_struct *work)
++#endif
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+ 	struct net_device *dev = (struct net_device *)data;
+ 	struct ath_softc *sc = dev->priv;
++#else
++	struct ath_softc *sc = container_of(work, struct ath_softc, sc_radartask);
++#endif
+ 	struct ath_hal *ah = sc->sc_ah;
+ 	struct ieee80211com *ic = &sc->sc_ic;
+ 	struct ieee80211_channel ichan;
+diff -urNad madwifi-0.9.2+r1842.20061207~/ath/if_athvar.h madwifi-0.9.2+r1842.20061207/ath/if_athvar.h
+--- madwifi-0.9.2+r1842.20061207~/ath/if_athvar.h	2006-12-25 23:40:20.000000000 +0900
++++ madwifi-0.9.2+r1842.20061207/ath/if_athvar.h	2006-12-25 23:40:20.968184598 +0900
+@@ -84,7 +84,11 @@
+ #include <linux/workqueue.h>
+ #define ATH_SCHEDULE_TASK(t)		schedule_work((t))
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+ #define ATH_INIT_SCHED_TASK(_t, _f, _d)	INIT_WORK((_t), (void (*)(void *))(_f), (void *)(_d));
++#else
++#define ATH_INIT_SCHED_TASK(_t, _f)	INIT_WORK((_t), (_f));
++#endif
+ 
+ #define ATH_WORK_THREAD			work_struct
+ #define	ATH_FLUSH_TASKS			flush_scheduled_work
+diff -urNad madwifi-0.9.2+r1842.20061207~/net80211/ieee80211_linux.h madwifi-0.9.2+r1842.20061207/net80211/ieee80211_linux.h
+--- madwifi-0.9.2+r1842.20061207~/net80211/ieee80211_linux.h	2006-08-05 11:05:05.000000000 +0900
++++ madwifi-0.9.2+r1842.20061207/net80211/ieee80211_linux.h	2006-12-25 23:40:50.452136942 +0900
+@@ -427,6 +427,7 @@
+ #define CLONE_KERNEL	(CLONE_FS | CLONE_FILES | CLONE_SIGHAND)
+ #endif
+ 
++#include <linux/mm.h>
+ #ifndef offset_in_page
+ #define	offset_in_page(p) ((unsigned long) (p) & ~PAGE_MASK)
+ #endif
