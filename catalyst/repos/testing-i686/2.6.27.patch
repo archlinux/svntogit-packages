@@ -1,0 +1,64 @@
+diff -Nur archive_files.orig/common/lib/modules/fglrx/build_mod/firegl_public.c archive_files/common/lib/modules/fglrx/build_mod/firegl_public.c
+--- archive_files.orig/common/lib/modules/fglrx/build_mod/firegl_public.c	2008-08-18 13:45:42.000000000 +0200
++++ archive_files/common/lib/modules/fglrx/build_mod/firegl_public.c	2008-10-10 19:57:39.000000000 +0200
+@@ -202,6 +202,13 @@
+ #define preempt_enable()
+ #endif
+ 
++/* Since 2.6.27 smp_call_function doesn't have a nonatomic/retry argument */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
++#define SMP_CALL_FUNCTION(func, info, retry, wait) smp_call_function(func, info, wait)
++#else
++#define SMP_CALL_FUNCTION(func, info, retry, wait) smp_call_function(func, info, retry, wait)
++#endif
++
+ // ============================================================
+ /* globals */
+ 
+@@ -2668,8 +2675,8 @@
+ {
+ /*Some kernel developer removed the export of symbol "flush_tlb_page" on 2.6.25 x86_64 SMP kernel.
+   Define a simple version here.*/
+-#if defined(__x86_64__) && defined(__SMP__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)) 
+-    on_each_cpu(KCL_flush_tlb_one, &va, 1, 1);
++#if defined(__x86_64__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)) 
++    on_each_cpu(KCL_flush_tlb_one, &va, 1);
+ #else
+     flush_tlb_page(vma, va);
+ #endif
+@@ -3077,7 +3084,7 @@
+ {
+ #ifdef __SMP__
+     /* write back invalidate all other CPUs (exported by kernel) */
+-	if (smp_call_function(deferred_flush, NULL, 1, 0) != 0)
++	if (SMP_CALL_FUNCTION(deferred_flush, NULL, 1, 0) != 0)
+ 		panic("timed out waiting for the other CPUs!\n");
+ 
+     /* invalidate this CPU */
+@@ -4796,7 +4803,7 @@
+ void ATI_API_CALL KCL_CallFuncOnOtherCpus(firegl_void_routine_t func_to_call) 
+ {
+ #ifdef CONFIG_SMP
+-	smp_call_function( firegl_smp_func_parameter_wrap, (void*)func_to_call, 0, 1 );
++	SMP_CALL_FUNCTION( firegl_smp_func_parameter_wrap, (void*)func_to_call, 0, 1 );
+ #endif
+ }
+ 
+@@ -4910,7 +4917,7 @@
+    }
+ 
+ #ifdef CONFIG_SMP
+-   if (smp_call_function(KCL_setup_pat, NULL, 0, 1) != 0)
++   if (SMP_CALL_FUNCTION(KCL_setup_pat, NULL, 0, 1) != 0)
+        return 0;
+ #endif
+    KCL_setup_pat(NULL);
+@@ -4929,7 +4936,7 @@
+     }
+ 
+ #ifdef CONFIG_SMP
+-    if (smp_call_function(KCL_restore_pat, NULL, 0, 1) != 0)
++    if (SMP_CALL_FUNCTION(KCL_restore_pat, NULL, 0, 1) != 0)
+        return;
+ #endif
+     KCL_restore_pat(NULL);
