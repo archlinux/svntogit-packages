@@ -1,0 +1,116 @@
+diff -aur driver.old/iw_ndis.c driver/iw_ndis.c
+--- driver.old/iw_ndis.c	2008-08-04 21:10:16.000000000 +0200
++++ driver/iw_ndis.c	2008-08-04 21:30:12.000000000 +0200
+@@ -1015,7 +1015,7 @@
+ 	return 0;
+ }
+ 
+-static char *ndis_translate_scan(struct net_device *dev, char *event,
++static char *ndis_translate_scan(struct net_device *dev, struct iw_request_info *info, char *event,
+ 				 char *end_buf, void *item)
+ {
+ 	struct iw_event iwe;
+@@ -1034,7 +1034,7 @@
+ 	iwe.u.ap_addr.sa_family = ARPHRD_ETHER;
+ 	iwe.len = IW_EV_ADDR_LEN;
+ 	memcpy(iwe.u.ap_addr.sa_data, bssid->mac, ETH_ALEN);
+-	event = iwe_stream_add_event(event, end_buf, &iwe, IW_EV_ADDR_LEN);
++	event = iwe_stream_add_event(info, event, end_buf, &iwe, IW_EV_ADDR_LEN);
+ 
+ 	/* add essid */
+ 	memset(&iwe, 0, sizeof(iwe));
+@@ -1044,13 +1044,13 @@
+ 		iwe.u.data.length = IW_ESSID_MAX_SIZE;
+ 	iwe.u.data.flags = 1;
+ 	iwe.len = IW_EV_POINT_LEN + iwe.u.data.length;
+-	event = iwe_stream_add_point(event, end_buf, &iwe, bssid->ssid.essid);
++	event = iwe_stream_add_point(info, event, end_buf, &iwe, bssid->ssid.essid);
+ 
+ 	/* add protocol name */
+ 	memset(&iwe, 0, sizeof(iwe));
+ 	iwe.cmd = SIOCGIWNAME;
+ 	strncpy(iwe.u.name, network_type_to_name(bssid->net_type), IFNAMSIZ);
+-	event = iwe_stream_add_event(event, end_buf, &iwe, IW_EV_CHAR_LEN);
++	event = iwe_stream_add_event(info, event, end_buf, &iwe, IW_EV_CHAR_LEN);
+ 
+ 	/* add mode */
+ 	memset(&iwe, 0, sizeof(iwe));
+@@ -1061,7 +1061,7 @@
+ 		iwe.u.mode = IW_MODE_INFRA;
+ 	else // if (bssid->mode == Ndis802_11AutoUnknown)
+ 		iwe.u.mode = IW_MODE_AUTO;
+-	event = iwe_stream_add_event(event, end_buf, &iwe, IW_EV_UINT_LEN);
++	event = iwe_stream_add_event(info, event, end_buf, &iwe, IW_EV_UINT_LEN);
+ 
+ 	/* add freq */
+ 	memset(&iwe, 0, sizeof(iwe));
+@@ -1076,7 +1076,7 @@
+ 	/* convert from kHz to Hz */
+ 	iwe.u.freq.e += 3;
+ 	iwe.len = IW_EV_FREQ_LEN;
+-	event = iwe_stream_add_event(event, end_buf, &iwe, IW_EV_FREQ_LEN);
++	event = iwe_stream_add_event(info, event, end_buf, &iwe, IW_EV_FREQ_LEN);
+ 
+ 	/* add qual */
+ 	memset(&iwe, 0, sizeof(iwe));
+@@ -1090,7 +1090,7 @@
+ 	iwe.u.qual.noise = WL_NOISE;
+ 	iwe.u.qual.qual  = i;
+ 	iwe.len = IW_EV_QUAL_LEN;
+-	event = iwe_stream_add_event(event, end_buf, &iwe, IW_EV_QUAL_LEN);
++	event = iwe_stream_add_event(info, event, end_buf, &iwe, IW_EV_QUAL_LEN);
+ 
+ 	/* add key info */
+ 	memset(&iwe, 0, sizeof(iwe));
+@@ -1101,7 +1101,7 @@
+ 		iwe.u.data.flags = IW_ENCODE_ENABLED | IW_ENCODE_NOKEY;
+ 	iwe.u.data.length = 0;
+ 	iwe.len = IW_EV_POINT_LEN;
+-	event = iwe_stream_add_point(event, end_buf, &iwe, bssid->ssid.essid);
++	event = iwe_stream_add_point(info, event, end_buf, &iwe, bssid->ssid.essid);
+ 
+ 	/* add rate */
+ 	memset(&iwe, 0, sizeof(iwe));
+@@ -1115,7 +1115,7 @@
+ 		if (bssid->rates[i] & 0x7f) {
+ 			iwe.u.bitrate.value = ((bssid->rates[i] & 0x7f) *
+ 					       500000);
+-			current_val = iwe_stream_add_value(event, current_val,
++			current_val = iwe_stream_add_value(info, event, current_val,
+ 							   end_buf, &iwe,
+ 							   IW_EV_PARAM_LEN);
+ 		}
+@@ -1128,13 +1128,13 @@
+ 	iwe.cmd = IWEVCUSTOM;
+ 	sprintf(buf, "bcn_int=%d", bssid->config.beacon_period);
+ 	iwe.u.data.length = strlen(buf);
+-	event = iwe_stream_add_point(event, end_buf, &iwe, buf);
++	event = iwe_stream_add_point(info, event, end_buf, &iwe, buf);
+ 
+ 	memset(&iwe, 0, sizeof(iwe));
+ 	iwe.cmd = IWEVCUSTOM;
+ 	sprintf(buf, "atim=%u", bssid->config.atim_window);
+ 	iwe.u.data.length = strlen(buf);
+-	event = iwe_stream_add_point(event, end_buf, &iwe, buf);
++	event = iwe_stream_add_point(info, event, end_buf, &iwe, buf);
+ 
+ 	TRACE2("%d, %u", bssid->length, (unsigned int)sizeof(*bssid));
+ 	if (bssid->length > sizeof(*bssid)) {
+@@ -1155,7 +1155,7 @@
+ 				memset(&iwe, 0, sizeof(iwe));
+ 				iwe.cmd = IWEVGENIE;
+ 				iwe.u.data.length = ielen;
+-				event = iwe_stream_add_point(event, end_buf,
++				event = iwe_stream_add_point(info, event, end_buf,
+ 							     &iwe, iep);
+ 			}
+ 			iep += ielen;
+@@ -1236,7 +1236,7 @@
+ 	TRACE2("%d", bssid_list->num_items);
+ 	cur_item = &bssid_list->bssid[0];
+ 	for (i = 0; i < bssid_list->num_items; i++) {
+-		event = ndis_translate_scan(dev, event,
++		event = ndis_translate_scan(dev, info, event,
+ 					    extra + IW_SCAN_MAX_DATA, cur_item);
+ 		cur_item = (struct ndis_wlan_bssid *)((char *)cur_item +
+ 						      cur_item->length);    
