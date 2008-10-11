@@ -1,13 +1,13 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=gdm
-pkgver=2.20.1
-pkgrel=2
+pkgver=2.20.8
+pkgrel=1
 pkgdesc="Gnome Display Manager (a reimplementation of xdm)"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('pam>=0.99.8' 'libdmx' 'tcp_wrappers>=7.6' 'libgnomecanvas>=2.20.1' 'librsvg>=2.18.2' 'gksu' 'xorg-xsm' 'dbus-glib>=0.7.4')
-makedepends=('perlxml' 'zenity>=2.20.0' 'gnome-doc-utils>=0.12.0' 'pkgconfig')
+depends=('pam>=1.0.2' 'libdmx' 'tcp_wrappers>=7.6' 'libgnomecanvas>=2.20.1.1' 'librsvg>=2.22.3' 'gksu>=2.0.0' 'xorg-xsm' 'dbus-glib>=0.76' 'consolekit' 'zenity>=2.24.0')
+makedepends=('perlxml' 'gnome-doc-utils>=0.14.0' 'pkgconfig')
 install=gdm.install
 url="http://www.gnome.org"
 groups=('gnome-extra')
@@ -18,16 +18,15 @@ source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.20/${pkgname}-${pkgv
 	defaults.conf
 	gdm.pam
 	gdm-autologin.pam)
-md5sums=('ed7b7efcb7fd97cc400e2416e0093e71' '770fe5aeb8d35271a5a2330ce01508f0'
-         '0fbc2d17fad5a3e979e742e0403c19d5' 'b20fe3c8487a039050986d60e45233a9'
-	 '157f32e089a7aab50732dc122e592b35')
+md5sums=('c183b017280e6ef25ad38d618aac2271'
+         '2fdb6d6fd7fd8124b1e00621b3d238f9'
+         'c7cff1c785d59e7266f05be16b1ab933'
+         '2e52f326dccc833e9c135f8df8297b12'
+         '157f32e089a7aab50732dc122e592b35')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
-
+  cd "${srcdir}/${pkgname}-${pkgver}"
   sed -i -e 's|/dev/tty%d|/dev/vc/%d|' daemon/getvt.c || return 1
-
-  cd ${startdir}/src/${pkgname}-${pkgver}
   ./configure --prefix=/usr --sysconfdir=/etc \
               --libexecdir=/usr/lib/gdm \
               --localstatedir=/var/lib --disable-static \
@@ -35,20 +34,19 @@ build() {
 	      --enable-secureremote
   sed -i -e 's|${prefix}|/usr|' config.h || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install
-  mkdir -p ${startdir}/pkg/etc/rc.d
+  make DESTDIR="${pkgdir}" install
+
 
   #PAM, we use our own, not Redhat stuff
-  install -m644 ${startdir}/src/gdm-autologin.pam ${startdir}/pkg/etc/pam.d/gdm-autologin
-  install -m644 ${startdir}/src/gdm.pam ${startdir}/pkg/etc/pam.d/gdm
+  install -m644 "${srcdir}/gdm-autologin.pam" "${pkgdir}/etc/pam.d/gdm-autologin" || return 1
+  install -m644 "${srcdir}/gdm.pam" "${pkgdir}/etc/pam.d/gdm" || return 1
   
   #init script and configuration
-  install -m755 ${startdir}/src/gdm ${startdir}/pkg/etc/rc.d/ 
-  install -m444 ${startdir}/defaults.conf ${startdir}/pkg/usr/share/gdm/ 
+  install -m755 -d "${pkgdir}/etc/rc.d"
+  install -m755 "${srcdir}/gdm" "${pkgdir}/etc/rc.d/" || return 1
+  install -m444 "${srcdir}/defaults.conf" "${pkgdir}/usr/share/gdm/" || return 1 
 
-  #Remove the session .desktop file, we have this one in gnome-session now.
-  rm -rf ${startdir}/pkg/usr/share/xsessions
-  
+  rm -f ${pkgdir}/usr/share/xsessions/gnome.desktop
   # fix gdmsetup 
-  sed -i -e 's|^Exec=|Exec=gksu |' ${startdir}/pkg/usr/share/gdm/applications/gdmsetup.desktop
+  sed -i -e 's|^Exec=|Exec=gksu |' "${pkgdir}/usr/share/gdm/applications/gdmsetup.desktop" || return 1
 }
