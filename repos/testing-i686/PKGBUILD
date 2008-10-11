@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=gdm
+pkgver=2.20.8
+pkgrel=1
+pkgdesc="Gnome Display Manager (a reimplementation of xdm)"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('pam>=1.0.2' 'libdmx' 'tcp_wrappers>=7.6' 'libgnomecanvas>=2.20.1.1' 'librsvg>=2.22.3' 'gksu>=2.0.0' 'xorg-xsm' 'dbus-glib>=0.76' 'consolekit' 'zenity>=2.24.0')
+makedepends=('perlxml' 'gnome-doc-utils>=0.14.0' 'pkgconfig')
+install=gdm.install
+url="http://www.gnome.org"
+groups=('gnome-extra')
+backup=('etc/gdm/custom.conf' 'etc/pam.d/gdm' 'etc/pam.d/gdm-autologin')
+options=('!libtool')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.20/${pkgname}-${pkgver}.tar.bz2
+	gdm
+	defaults.conf
+	gdm.pam
+	gdm-autologin.pam)
+md5sums=('c183b017280e6ef25ad38d618aac2271'
+         '2fdb6d6fd7fd8124b1e00621b3d238f9'
+         'c7cff1c785d59e7266f05be16b1ab933'
+         '2e52f326dccc833e9c135f8df8297b12'
+         '157f32e089a7aab50732dc122e592b35')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -i -e 's|/dev/tty%d|/dev/vc/%d|' daemon/getvt.c || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --libexecdir=/usr/lib/gdm \
+              --localstatedir=/var/lib --disable-static \
+	      --with-xevie=yes --disable-scrollkeeper \
+	      --enable-secureremote
+  sed -i -e 's|${prefix}|/usr|' config.h || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install
+
+
+  #PAM, we use our own, not Redhat stuff
+  install -m644 "${srcdir}/gdm-autologin.pam" "${pkgdir}/etc/pam.d/gdm-autologin" || return 1
+  install -m644 "${srcdir}/gdm.pam" "${pkgdir}/etc/pam.d/gdm" || return 1
+  
+  #init script and configuration
+  install -m755 -d "${pkgdir}/etc/rc.d"
+  install -m755 "${srcdir}/gdm" "${pkgdir}/etc/rc.d/" || return 1
+  install -m444 "${srcdir}/defaults.conf" "${pkgdir}/usr/share/gdm/" || return 1 
+
+  rm -f ${pkgdir}/usr/share/xsessions/gnome.desktop
+  # fix gdmsetup 
+  sed -i -e 's|^Exec=|Exec=gksu |' "${pkgdir}/usr/share/gdm/applications/gdmsetup.desktop" || return 1
+}
