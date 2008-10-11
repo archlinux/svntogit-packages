@@ -22,3 +22,57 @@ diff -Nur lirc-0.8.3.orig/drivers/lirc_i2c/lirc_i2c.c lirc-0.8.3/drivers/lirc_i2
  
  #include "drivers/kcompat.h"
  #include "drivers/lirc_dev/lirc_dev.h"
+--- lirc-0.8.3.orig/drivers/kcompat.h	2008/05/14 16:37:49	5.36
++++ lirc-0.8.3.orig/drivers/kcompat.h	2008/09/27 08:16:15	5.37
+@@ -36,7 +36,7 @@
+ 	class_simple_destroy(cls);
+ }
+ 
+-#define lirc_device_create(cs, parent, dev, fmt, args...) \
++#define lirc_device_create(cs, parent, dev, drvdata, fmt, args...) \
+ 	class_simple_device_add(cs, dev, parent, fmt, ## args)
+ 
+ static inline void lirc_device_destroy(lirc_class_t *cls, dev_t devt)
+@@ -48,20 +48,29 @@
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 15)
+ 
+-#define lirc_device_create(cs, parent, dev, fmt, args...) \
++#define lirc_device_create(cs, parent, dev, drvdata, fmt, args...) \
+ 	class_device_create(cs, dev, parent, fmt, ## args)
+ 
+ #else /* >= 2.6.15 */
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
+ 
+-#define lirc_device_create(cs, parent, dev, fmt, args...) \
++#define lirc_device_create(cs, parent, dev, drvdata, fmt, args...) \
+ 	class_device_create(cs, NULL, dev, parent, fmt, ## args)
+ 
+ #else /* >= 2.6.26 */
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 27)
++
++#define lirc_device_create(cs, parent, dev, drvdata, fmt, args...) \
++	class_device_create(cs, parent, dev, fmt, ## args)
++
++#else /* >= 2.6.27 */
++
+ #define lirc_device_create device_create
+ 
++#endif /* >= 2.6.27 */
++
+ #endif /* >= 2.6.26 */
+ 
+ #define LIRC_DEVFS_PREFIX
+--- lirc-0.8.3.orig/drivers/lirc_dev/lirc_dev.c	2008/09/06 07:30:16	1.60
++++ lirc-0.8.3.orig/drivers/lirc_dev/lirc_dev.c	2008/09/27 08:16:15	1.61
+@@ -397,7 +397,7 @@
+ 			DEV_LIRC "/%u", ir->p.minor);
+ #endif
+ 	(void) lirc_device_create(lirc_class, ir->p.dev,
+-				  MKDEV(IRCTL_DEV_MAJOR, ir->p.minor),
++				  MKDEV(IRCTL_DEV_MAJOR, ir->p.minor), NULL,
+ 				  "lirc%u", ir->p.minor);
+ 
+ 	if (p->sample_rate || p->get_queue) {
