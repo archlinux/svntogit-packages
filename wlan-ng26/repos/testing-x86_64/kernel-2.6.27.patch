@@ -1,0 +1,179 @@
+--- src/p80211/p80211wext.c	(revision 1865)
++++ src/p80211/p80211wext.c	(working copy)
+@@ -81,6 +81,12 @@
+ /* compatibility to wireless extensions */
+ #ifdef WIRELESS_EXT
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 27) && \
++    !defined(IW_REQUEST_FLAG_COMPAT)
++#define iwe_stream_add_event(a, b, c, d, e) iwe_stream_add_event(b, c, d, e)
++#define iwe_stream_add_point(a, b, c, d, e) iwe_stream_add_point(b, c, d, e)
++#endif
++
+ static UINT8 p80211_mhz_to_channel(UINT16 mhz)
+ {
+ 	if (mhz >= 5000) {
+@@ -1520,7 +1526,8 @@
+  * airo driver code.
+  */
+ static char *
+-wext_translate_bss(char *current_ev, char *end_buf, p80211msg_dot11req_scan_results_t *bss)
++wext_translate_bss(struct iw_request_info *info, char *current_ev,
++		   char *end_buf, p80211msg_dot11req_scan_results_t *bss)
+ {
+ 	struct iw_event iwe;	/* Temporary buffer */
+ 
+@@ -1528,7 +1535,8 @@
+ 	memcpy(iwe.u.ap_addr.sa_data, bss->bssid.data.data, WLAN_BSSID_LEN);
+ 	iwe.u.ap_addr.sa_family = ARPHRD_ETHER;
+ 	iwe.cmd = SIOCGIWAP;
+-	current_ev = iwe_stream_add_event(current_ev, end_buf, &iwe, IW_EV_ADDR_LEN);
++	current_ev = iwe_stream_add_event(info, current_ev, end_buf, &iwe,
++					  IW_EV_ADDR_LEN);
+ 
+ 	/* The following entries will be displayed in the same order we give them */
+ 
+@@ -1544,7 +1552,8 @@
+ 		iwe.u.data.length = size;
+ 		iwe.u.data.flags = 1;
+ 		iwe.cmd = SIOCGIWESSID;
+-		current_ev = iwe_stream_add_point(current_ev, end_buf, &iwe, &essid[0]);
++		current_ev = iwe_stream_add_point(info, current_ev, end_buf,
++						  &iwe, &essid[0]);
+ 		WLAN_LOG_DEBUG(1, " essid size OK.\n");
+ 	}
+ 
+@@ -1563,7 +1572,8 @@
+ 	}
+ 	iwe.cmd = SIOCGIWMODE;
+ 	if (iwe.u.mode)
+-		current_ev = iwe_stream_add_event(current_ev, end_buf, &iwe, IW_EV_UINT_LEN);
++		current_ev = iwe_stream_add_event(info, current_ev, end_buf,
++						  &iwe, IW_EV_UINT_LEN);
+ 
+ 	/* Encryption capability */
+ 	if (bss->privacy.data == P80211ENUM_truth_true)
+@@ -1572,13 +1582,15 @@
+ 		iwe.u.data.flags = IW_ENCODE_DISABLED;
+ 	iwe.u.data.length = 0;
+ 	iwe.cmd = SIOCGIWENCODE;
+-	current_ev = iwe_stream_add_point(current_ev, end_buf, &iwe, NULL);
++	current_ev = iwe_stream_add_point(info, current_ev, end_buf, &iwe,
++					  NULL);
+ 
+ 	/* Add frequency. (short) bss->channel is the frequency in MHz */
+ 	iwe.u.freq.m = bss->dschannel.data;
+ 	iwe.u.freq.e = 0;
+ 	iwe.cmd = SIOCGIWFREQ;
+-	current_ev = iwe_stream_add_event(current_ev, end_buf, &iwe, IW_EV_FREQ_LEN);
++	current_ev = iwe_stream_add_event(info, current_ev, end_buf, &iwe,
++					  IW_EV_FREQ_LEN);
+ 
+ 	/* Add quality statistics */
+ 	iwe.u.qual.level = bss->signal.data;
+@@ -1586,7 +1598,8 @@
+ 	/* do a simple SNR for quality */
+ 	iwe.u.qual.qual = qual_as_percent(bss->signal.data - bss->noise.data);
+ 	iwe.cmd = IWEVQUAL;
+-	current_ev = iwe_stream_add_event(current_ev, end_buf, &iwe, IW_EV_QUAL_LEN);
++	current_ev = iwe_stream_add_event(info, current_ev, end_buf, &iwe,
++					  IW_EV_QUAL_LEN);
+ 
+ 	return current_ev;
+ }
+@@ -1627,7 +1640,8 @@
+ 			break;
+ 		}
+ 		  
+-		current_ev = wext_translate_bss(current_ev, extra + IW_SCAN_MAX_DATA, &msg);
++		current_ev = wext_translate_bss(info, current_ev,
++						extra + IW_SCAN_MAX_DATA, &msg);
+ 		scan_good = 1;
+ 		i++;
+ 	} while (i < IW_MAX_AP);
+--- src/p80211/p80211netdev.c
++++ src/p80211/p80211netdev.c
+@@ -869,6 +869,30 @@ static int wlan_change_mtu(netdevice_t *dev, int new_mtu)
+         return 0;
+ }
+ 
++/*---------------------------------------------------------
++ * wlan_alloc_netdev
++ *
++ * create a netdev properly over different kernel versions
++ * this should work with kernels earlier than 2.6.26, and if
++ * anyone cares they can change it
++----------------------------------------------------------*/   
++
++static inline netdevice_t * wlan_alloc_netdev() {
++	netdevice_t *dev;
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26) )
++	dev = alloc_netdev(0,"wlan%d",ether_setup);
++#else
++	dev = kmalloc(sizeof(netdevice_t), GFP_ATOMIC);
++	if ( dev ) {
++		memset( dev, 0, sizeof(netdevice_t));
++		ether_setup(dev);
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24) )
++		dev->nd_net = &init_net;
++#endif
++	}
++#endif
++	return dev;
++}
+ 
+ 
+ /*----------------------------------------------------------------
+@@ -911,14 +935,12 @@ int wlan_setup(wlandevice_t *wlandev)
+ 		     p80211netdev_rx_bh, 
+ 		     (unsigned long)wlandev);
+ 
+-	/* Allocate and initialize the struct device */
+-	dev = kmalloc(sizeof(netdevice_t), GFP_ATOMIC);
++	/* Allocate and initialize the struct net device */
++	dev = wlan_alloc_netdev();
+ 	if ( dev == NULL ) {
+ 		WLAN_LOG_ERROR("Failed to alloc netdev.\n");
+ 		result = 1;
+ 	} else {
+-		memset( dev, 0, sizeof(netdevice_t));
+-		ether_setup(dev);
+ 		wlandev->netdev = dev;
+ 		dev->priv = wlandev;
+ 		dev->hard_start_xmit =	p80211knetdev_hard_start_xmit;
+@@ -946,10 +968,8 @@ int wlan_setup(wlandevice_t *wlandev)
+ 		dev->wireless_handlers = &p80211wext_handler_def;
+ #endif
+ #endif
+-	
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26) )
+-		dev_net_set(dev, &init_net);
+-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24) )
++
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24) && LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26))
+ 		dev->nd_net = &init_net;
+ #endif
+ 		
+@@ -1044,7 +1064,12 @@ int register_wlandev(wlandevice_t *wlandev)
+ 	netdevice_t	*dev = wlandev->netdev;
+ 
+ 	DBFENTER;
+-
++/* alloc_netdev already sets up the name */
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26) )
++	i = register_netdev(dev);
++	if (i) 
++		return i;
++#else
+ 	i = dev_alloc_name(wlandev->netdev, "wlan%d");
+ 	if (i >= 0) {
+ 		i = register_netdev(wlandev->netdev);
+@@ -1058,6 +1083,8 @@ int register_wlandev(wlandevice_t *wlandev)
+ #else
+ 	strcpy(wlandev->name, dev->name);
+ #endif
++#endif
++
+ 
+ #ifdef CONFIG_PROC_FS
+ 	if (proc_p80211) {
