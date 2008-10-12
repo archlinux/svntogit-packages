@@ -1,0 +1,33 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Link Dupont <link@subpop.net>
+
+pkgname=gnome-volume-manager
+pkgver=2.24.0
+pkgrel=1
+pkgdesc="GNOME daemon to auto-mount and manage media devices"
+arch=(i686 x86_64)
+license=('GPL')
+url=http://www.gnome.org/
+depends=('libgnomeui>=2.24.0' 'libnotify>=0.4.4')
+makedepends=('nautilus>=2.24.0' 'perlxml' 'pkgconfig')
+install=gnome-volume-manager.install
+groups=('gnome-extra')
+options=(!emptydirs)
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.24/${pkgname}-${pkgver}.tar.bz2
+	gvm-mount-async.patch)
+md5sums=('a8ae620c2633f3ac13444736ef61122a'
+         '534b8b9633148bd975b2b9b518c41fb4')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np0 -i "${srcdir}/gvm-mount-async.patch" || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+              --localstatedir=/var --libexecdir=/usr/lib/gnome-volume-manager || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
