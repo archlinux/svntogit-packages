@@ -1,0 +1,153 @@
+diff -Nur -x '*.orig' -x '*~' devhelp-0.17/src/default-prefs-gecko-1-9.js devhelp-0.17.new/src/default-prefs-gecko-1-9.js
+--- devhelp-0.17/src/default-prefs-gecko-1-9.js	2007-04-20 10:44:13.000000000 +0200
++++ devhelp-0.17.new/src/default-prefs-gecko-1-9.js	2008-01-16 11:44:13.000000000 +0100
+@@ -1,2 +1,2 @@
+-pref("browser.display.use_document_colors", false);
++pref("browser.display.use_document_colors", true);
+ 
+diff -Nur -x '*.orig' -x '*~' devhelp-0.17/src/dh-gecko-utils.cpp devhelp-0.17.new/src/dh-gecko-utils.cpp
+--- devhelp-0.17/src/dh-gecko-utils.cpp	2007-12-19 18:30:30.000000000 +0100
++++ devhelp-0.17.new/src/dh-gecko-utils.cpp	2008-01-16 11:45:11.000000000 +0100
+@@ -21,6 +21,9 @@
+  */
+ 
+ #include <config.h>
++#ifdef XPCOM_GLUE
++#	include <gtkmozembed_glue.cpp>
++#endif
+ #include <gtkmozembed.h>
+ #include <gtkmozembed_internal.h>
+ 
+@@ -41,7 +44,7 @@
+ 
+ #include <stdlib.h>
+ 
+-#ifndef HAVE_GECKO_1_8
++#if !defined(HAVE_GECKO_1_8) && !defined(HAVE_GECKO_1_9)
+ #if defined (HAVE_CHROME_NSICHROMEREGISTRYSEA_H)
+ #include <chrome/nsIChromeRegistrySea.h>
+ #elif defined(MOZ_NSIXULCHROMEREGISTRY_SELECTSKIN)
+@@ -226,7 +229,7 @@
+ 	g_free (name);
+ }		   
+ 
+-#ifndef HAVE_GECKO_1_8
++#if !defined(HAVE_GECKO_1_8) && !defined(HAVE_GECKO_1_9)
+ 
+ static nsresult
+ getUILang (nsAString& aUILang)
+@@ -286,7 +289,7 @@
+ #endif
+ }
+ 
+-#endif /* !HAVE_GECKO_1_8 */
++#endif /* !HAVE_GECKO_1_8  && !HAVE_GECKO_1_9 */
+ 
+ static nsresult
+ gecko_utils_init_prefs (void)
+@@ -318,11 +321,55 @@
+ 	NS_LogInit ();
+ #endif
+ 
++nsresult rv;
++#ifdef XPCOM_GLUE
++    static const GREVersionRange greVersion = {
++    "1.9a", PR_TRUE,
++    "1.9.*", PR_TRUE
++    };
++    char xpcomLocation[4096];
++    rv = GRE_GetGREPathWithProperties(&greVersion, 1, nsnull, 0, xpcomLocation, 4096);
++    if (NS_FAILED (rv))
++    {
++       g_warning ("Could not determine locale!\n");
++       return;
++    }
++
++    // Startup the XPCOM Glue that links us up with XPCOM.
++    rv = XPCOMGlueStartup(xpcomLocation);
++    if (NS_FAILED (rv))
++    {
++       g_warning ("Could not determine locale!\n");
++       return;
++    }
++
++    rv = GTKEmbedGlueStartup();
++    if (NS_FAILED (rv))
++    {
++       g_warning ("Could not startup embed glue!\n");
++       return;
++    }
++
++    rv = GTKEmbedGlueStartupInternal();
++    if (NS_FAILED (rv))
++    {
++       g_warning ("Could not startup embed glue (internal)!\n");
++       return;
++    }
++
++    char *lastSlash = strrchr(xpcomLocation, '/');
++    if (lastSlash)
++      *lastSlash = '\0';
++
++    gtk_moz_embed_set_path(xpcomLocation);
++
++#else
+ #ifdef HAVE_GECKO_1_9
+ 	gtk_moz_embed_set_path (GECKO_HOME);
+ #else
+ 	gtk_moz_embed_set_comp_path (GECKO_HOME);
+ #endif
++#endif // XPCOM_GLUE
+ 
+ 	gchar *profile_dir = g_build_filename (g_get_home_dir (),
+ 					       ".gnome2",
+@@ -336,7 +383,7 @@
+ 
+ 	gecko_utils_init_prefs ();
+ 
+-#ifndef HAVE_GECKO_1_8
++#if !defined(HAVE_GECKO_1_8) && !defined(HAVE_GECKO_1_9)
+ 	gecko_utils_init_chrome ();
+ #endif
+ }
+diff -Nur -x '*.orig' -x '*~' devhelp-0.17/src/Makefile.am devhelp-0.17.new/src/Makefile.am
+--- devhelp-0.17/src/Makefile.am	2007-04-20 10:54:09.000000000 +0200
++++ devhelp-0.17.new/src/Makefile.am	2008-01-16 11:44:13.000000000 +0100
+@@ -25,7 +25,7 @@
+         $(DEVHELP_LIBS)					\
+         libdevhelp-1.la
+ 
+-devhelp_LDFLAGS = -R$(GECKO_HOME) $(AM_LDFLAGS)
++devhelp_LDFLAGS = $(AM_LDFLAGS)
+ 
+ # Build the C++ code in a separate library so we can use our warning
+ # flags for the C code.
+@@ -87,6 +87,9 @@
+ 	dh-window.h					\
+ 	eggfindbar.h
+ 
++nodist_libdevhelp_1_la_SOURCES =			\
++	dummy.cpp
++
+ libdevhelp_1_la_SOURCES =				\
+ 	bacon-message-connection.c			\
+ 	bacon-message-connection.h			\
+@@ -121,7 +124,7 @@
+ 	$(GECKO_LIBS)					\
+ 	$(GECKO_EXTRA_LIBS)
+ 
+-libdevhelp_1_la_LDFLAGS = -R$(GECKO_HOME) $(AM_LDFLAGS)
++libdevhelp_1_la_LDFLAGS = $(AM_LDFLAGS)
+ 
+ dh-marshal.h: dh-marshal.list
+ 	(cd $(srcdir) && \
+@@ -171,4 +174,8 @@
+ 	$(devhelpinclude_HEADERS)			\
+ 	$(default_prefs_in_FILES)
+ 
+-CLEANFILES = $(BUILT_SOURCES) $(default_prefs_DATA)
++dummy.cpp:
++	echo 'static void __YYYY_dummy();' > $@
++
++CLEANFILES = $(BUILT_SOURCES) $(default_prefs_DATA) dummy.cpp
++
