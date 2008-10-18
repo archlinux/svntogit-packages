@@ -1,0 +1,107 @@
+# $Id$
+# Maintainer: Travis Willard <travisw@wmpub.ca>
+
+# Thanks to dibblethewrecker for the original work and packages.
+# Thanks to testing monkey S1G1 for contributions
+
+pkgname=catalyst-utils
+pkgver=8.11
+pkgrel=0.1
+pkgdesc="Proprietary AMD/ATI userspace tools and libraries for Radeon brand cards."
+arch=('i686' 'x86_64')
+url="http://www.ati.amd.com"
+license=('custom') 
+#finger required for acpi scripts
+depends=('xorg-server>=1.5.2-2' 'libdrm>=2.3.1' 'libstdc++5' 'netkit-bsd-finger' \
+         'libxrandr' 'libsm' 'fontconfig' 'libxcursor' 'libxi' 'gcc-libs')
+replaces=('ati-drivers' 'ati-fglrx-utils' 'fglrx-utils')
+conflicts=('libgl' 'ati-drivers-module' 'ati-drivers' 'nvidia') 
+provides=('libgl')
+options=('!strip')
+install=catalyst-utils.install
+source=(http://archive.ubuntu.com/ubuntu/pool/multiverse/f/fglrx-installer/fglrx-installer_8.543.orig.tar.gz
+        amdcccle.desktop catalyst.sh atieventsd.sh)
+md5sums=('6abc8e86f1a00168ba8f43d58f71cb69'
+         '4efa8414a8fe9eeb50da38b5522ef81d'
+         'bdafe749e046bfddee2d1c5e90eabd83'
+         'f729bf913613f49b0b9759c246058a87')
+
+build() {
+  # Create directories
+  install -m755 -d "${pkgdir}/usr/lib/xorg/modules/dri"
+  install -m755 -d "${pkgdir}/usr/lib/xorg/modules/drivers"
+  install -m755 -d "${pkgdir}/usr/lib/xorg/modules/extensions"
+  install -m755 -d "${pkgdir}/usr/lib/xorg/modules/linux"
+  install -m755 -d "${pkgdir}/usr/bin"
+  install -m755 -d "${pkgdir}/usr/sbin"
+  install -m755 -d "${pkgdir}/etc/acpi/events"
+  install -m755 -d "${pkgdir}/etc/ati"
+  install -m755 -d "${pkgdir}/etc/rc.d"
+  install -m755 -d "${pkgdir}/etc/profile.d"
+  install -m755 -d "${pkgdir}/usr/include/X11/extensions"
+  install -m755 -d "${pkgdir}/usr/include/GL"
+  install -m755 -d "${pkgdir}/usr/share/ati/amdcccle"
+  install -m755 -d "${pkgdir}/usr/share/pixmaps"
+  install -m755 -d "${pkgdir}/usr/share/man/man8"
+  install -m755 -d "${pkgdir}/usr/share/applications"
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+
+  # X driver installation
+  if [ "${CARCH}" = "i686" ]; then
+    cd "${srcdir}/x740/usr/X11R6/lib/modules" || return 1
+  elif [ "${CARCH}" = "x86_64" ]; then
+    cd "${srcdir}/x740_64a/usr/X11R6/lib64/modules" || return 1
+  fi
+  install -m644 *.a "${pkgdir}/usr/lib/xorg/modules/" || return 1
+  install -m755 *.so "${pkgdir}/usr/lib/xorg/modules/" || return 1
+  install -m755 drivers/*.so "${pkgdir}/usr/lib/xorg/modules/drivers/" || return 1
+  install -m755 linux/*.so "${pkgdir}/usr/lib/xorg/modules/linux/" || return 1
+  install -m755 extensions/libglx.so "${pkgdir}/usr/lib/xorg/modules/extensions/" || return 1
+  install -m755 extensions/libdri.so "${pkgdir}/usr/lib/xorg/modules/extensions/libdri.ati" || return 1
+
+  # Controlcenter / library installation
+  if [ "${CARCH}" = "i686" ]; then
+    cd "${srcdir}/arch/x86/usr" || return 1
+    _lib=lib
+  elif [ "${CARCH}" = "x86_64" ]; then
+    cd "${srcdir}/arch/x86_64/usr" || return 1
+    _lib=lib64
+  fi
+  install -m755 X11R6/bin/* "${pkgdir}/usr/bin/" || return 1
+  install -m755 sbin/* "${pkgdir}/usr/sbin/"  || return 1
+  install -m755 X11R6/${_lib}/*.so* "${pkgdir}/usr/lib/" || return 1
+  install -m644 X11R6/${_lib}/*.a "${pkgdir}/usr/lib/" || return 1
+  install -m644 X11R6/${_lib}/*.cap "${pkgdir}/usr/lib/" || return 1
+  install -m755 X11R6/${_lib}/modules/dri/*.so "${pkgdir}/usr/lib/xorg/modules/dri/" || return 1
+  ln -sf libfglrx_dm.so.1.0 "${pkgdir}/usr/lib/libfglrx_dm.so.1"
+  ln -sf libfglrx_pp.so.1.0 "${pkgdir}/usr/lib/libfglrx_pp.so.1"
+  ln -sf libfglrx_tvout.so.1.0 "${pkgdir}/usr/lib/libfglrx_tvout.so.1"
+  ln -sf libfglrx_gamma.so.1.0 "${pkgdir}/usr/lib/libfglrx_gamma.so.1"
+  ln -sf libGL.so.1.2 "${pkgdir}/usr/lib/libGL.so.1"
+  ln -sf libGL.so.1.2 "${pkgdir}/usr/lib/libGL.so"
+
+  cd "${srcdir}"
+  install -m644 etc/ati/* "${pkgdir}/etc/ati/" || return 1
+  chmod 755 "${pkgdir}/etc/ati/authatieventsd.sh" || return 1
+
+  install -m644 usr/X11R6/include/X11/extensions/*.h "${pkgdir}/usr/include/X11/extensions/" || return 1
+  install -m644 usr/include/GL/*.h "${pkgdir}/usr/include/GL/" || return 1
+  install -m755 usr/sbin/*.sh "${pkgdir}/usr/sbin/" || return 1
+  install -m644 usr/share/ati/amdcccle/* "${pkgdir}/usr/share/ati/amdcccle/" || return 1
+  install -m644 usr/share/icons/*.xpm "${pkgdir}/usr/share/pixmaps/" || return 1
+  install -m644 usr/share/man/man8/*.8 "${pkgdir}/usr/share/man/man8/" || return 1
+  install -m644 "${srcdir}/amdcccle.desktop" "${pkgdir}/usr/share/applications/" || return 1
+
+  # ACPI example files
+  install -m755 usr/share/doc/fglrx/examples/etc/acpi/*.sh "${pkgdir}/etc/acpi/" || return 1
+  sed -i -e 's/usr\/X11R6/usr/g' "${pkgdir}/etc/acpi/ati-powermode.sh" || return 1
+  install -m644 usr/share/doc/fglrx/examples/etc/acpi/events/* "${pkgdir}/etc/acpi/events/" || return 1
+
+  # Add ATI Events Daemon launcher
+  install -m755 "${srcdir}/atieventsd.sh" "${pkgdir}/etc/rc.d/atieventsd" || return 1
+  
+  # thanks to cerebral, we dont need that damned symlink
+  install -m755 "${srcdir}/catalyst.sh" "${pkgdir}/etc/profile.d/" || return 1
+
+  install -m644 "${srcdir}/usr/share/doc/fglrx/ATI_LICENSE.TXT" "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
+}
