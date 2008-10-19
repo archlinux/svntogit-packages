@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer:
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=dhcpcd
+pkgver=4.0.2
+pkgrel=2
+pkgdesc="A DHCP client daemon"
+arch=('i686' 'x86_64')
+license=('BSD')
+url="http://roy.marples.name/dhcpcd"
+groups=('base')
+depends=('glibc')
+backup=('etc/conf.d/dhcpcd')
+source=(http://roy.marples.name/downloads/dhcpcd/$pkgname-$pkgver.tar.bz2
+	dhcpcd.conf.d)
+options=('emptydirs')
+md5sums=('7cdc25f37f37260f94335d5b6c76f40e'
+         '533c51cc09fb4202798c7d5421bc3084')
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+  
+  #disable DUID usage
+  #echo "#undef ENABLE_DUID" >> config.h
+  
+  # fix installation locations
+  export PREFIX=/usr 
+  sed -i 's/${PREFIX}\/etc/\/etc/' Makefile || return 1
+  sed -i 's/\/db/\/lib\/dhcpcd/' Makefile || return 1
+  sed -i 's/\/libexec/\/lib\/dhcpcd/' Makefile || return 1
+  sed -i 's/\/libexec/\/lib\/dhcpcd/' dhcpcd-hooks/Makefile || return 1 
+  sed -i 's/${PREFIX}\/sbin/\/sbin/' Makefile  || return 1
+
+  make || return 1
+  make DESTDIR=$pkgdir install || return 1
+  
+  install -d $startdir/pkg/usr/sbin || return 1
+  ln -sf /sbin/dhcpcd $pkgdir/usr/sbin/dhcpcd || return 1
+  
+  # install standard configuration file
+  install -Dm644 ../dhcpcd.conf.d $pkgdir/etc/conf.d/dhcpcd || return 1
+
+  # get the license
+  install -d $pkgdir/usr/share/licenses/$pkgname || return 1
+  awk '{if(FNR<27)print $0}' $srcdir/$pkgname-$pkgver/config.h \
+	>> $pkgdir/usr/share/licenses/$pkgname/license || return 1
+
+# make man pages FHS compliant
+  mv -f $pkgdir/usr/man $pkgdir/usr/share/man || return 1
+}
