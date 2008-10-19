@@ -25,7 +25,6 @@ sha1sums=('52791e106b590116936ce02edb70c8badf34db07'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
-
 build() {
   cd ${srcdir}/ImageMagick-${pkgver%.*}
 
