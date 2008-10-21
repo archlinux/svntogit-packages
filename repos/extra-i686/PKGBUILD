@@ -3,24 +3,27 @@
 
 pkgname=gnome-session
 pkgver=2.24.0
-pkgrel=1
+pkgrel=2
 pkgdesc="The GNOME Session Handler"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL')
-depends=('libgnomeui>=2.24.0' 'policykit-gnome>=0.9.2' 'gnome-settings-daemon>=2.24.0' 'at-spi>=1.24.0' 'startup-notification>=0.9')
-makedepends=('perlxml' 'pkgconfig')
+depends=('libgnomeui>=2.24.0' 'policykit-gnome>=0.9.2' 'gnome-settings-daemon>=2.24.0' 'at-spi>=1.24.0' 'startup-notification>=0.9' 'dbus>=1.2.3-3')
+makedepends=('perlxml' 'pkgconfig' 'intltool')
 options=(!emptydirs)
 install=gnome-session.install
 url="http://www.gnome.org"
 groups=('gnome')
-source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.24/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('2f586c2829430937fb2d18b4b8478bad')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.24/${pkgname}-${pkgver}.tar.bz2
+	gnome-session.sh
+	bgo554202.patch)
+md5sums=('2f586c2829430937fb2d18b4b8478bad'
+         '7c6aa6eef09e4f7ece9aaad45c08add0'
+         '65e7781b8bb69c795ef8cf70a61ce3cc')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/bgo554202.patch" || return 1
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-	      --with-reboot-command=reboot --with-halt-command=halt \
-	      --with-rsh-command=ssh \
 	      --with-at-spi-registryd-directory=/usr/lib/at-spi || return 1
   make || return 1
   make DESTDIR="${pkgdir}" GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install || return 1
@@ -28,4 +31,7 @@ build() {
   install -d -m755 "${pkgdir}/usr/share/gconf/schemas"
   gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
   rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+
+  mv "${pkgdir}/usr/bin/gnome-session" "${pkgdir}/usr/lib/gnome-session/" || return 1
+  install -m755 "${srcdir}/gnome-session.sh" "${pkgdir}/usr/bin/gnome-session" || return 1
 }
