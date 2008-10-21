@@ -2,24 +2,24 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
 pkgname=openoffice-base-devel
-pkgver=3.0_dev300_m31
-pkgrel=2
+pkgver=3.1_dev300_m33
+pkgrel=1
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=('i686' 'x86_64')
-_OO_milestone=DEV300_m31
+_OO_milestone=DEV300_m33
 license=('LGPL3')
 url="http://www.openoffice.org"
 install=openoffice.install
 depends=('curl>=7.18.0' 'hunspell>=1.2.2-2' 'python>=2.5.1' 'libwpd' 
-         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'redland' 'hsqldb-java')
+         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'redland' 'hsqldb-java' 'libxslt')
 optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
             'nss:		adds support for signed files/macros'
             'pstoedit:		translates PostScript and PDF graphics into other vector formats')
 makedepends=('bison' 'cvs' 'curl' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig'  'unzip' 'xulrunner>=1.9.0.1'
-             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.2-5')
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'xulrunner>=1.9.0.3'
+             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.3')
 provides=('openoffice-base')
 
 #MIRROR=ftp://ftp5.gwdg.de/pub/openoffice/extended/developer/
@@ -37,18 +37,9 @@ source=(#$MIRROR/${_OO_milestone}/OOo-Dev_${_OO_milestone}_src_{core,system}.tar
 	buildfix-gcc43.diff
 	shell.patch
 	system_hsqldb.diff
-	buildfix-openjdk-6-no-rhino.diff)
+	buildfix-openjdk-6-no-rhino.diff
+	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('c719780c6441f21aedc980fa2b9f0915'
-         '50f1b6923deb05756de0efa02c5a63e0'
-         '71f136a31e296a04ab68932a31dd533e'
-         '6c596129fb48316226ce3adfd3a4c86d'
-         'a8b96e9d0ce92a8f6690f277b1cfacc9'
-         '1dc7480a04f572ad136d35923a2af66d'
-         'bf7119084a2d1e0566b5e34b57dce8eb'
-         'a51200f770c635355c430cc5052db8cf'
-         '4addae44d20bb2b247e429d88b66a4c1'
-         '4fe2810b40358b0e7dc2df3d056bde7a')
 
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
@@ -56,6 +47,7 @@ build() {
 	cd ${srcdir}
 	# now svn: http://wiki.services.openoffice.org/wiki/OOo_and_Subversion
 #	svn checkout svn://svn.services.openoffice.org/ooo/tags/${_OO_milestone}
+#	find ${srcdir} -type d -depth -name ".svn" -exec rm -rf {} \;
 #	tar -cvzf ../${pkgname}-${_OO_milestone}.tar.gz ${_OO_milestone}/*
 #	return 1
 
@@ -95,6 +87,7 @@ build() {
 	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
 
 	if [ "$CARCH" = "x86_64" ]; then
+	   EXTRAOPTS="--with-stlport"
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
@@ -102,8 +95,6 @@ build() {
 
 	cd ${srcdir}/${_OO_milestone}/config_office
 
-	# Set OOO_VENDOR in build environment
-	export OOO_VENDOR="ArchLinux"
 	# export C(XX)FLAGS
 	export ARCH_FLAGS="$CFLAGS"
 
@@ -111,6 +102,7 @@ build() {
 	autoreconf -v || return 1
 
 	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
+	--with-vendor="ArchLinux"\
 	--prefix=/usr --exec-prefix=/usr\
 	--disable-ldap\
 	--with-lang="en-US"\
@@ -120,7 +112,12 @@ build() {
 	--disable-evolution2\
 	--disable-kde\
 	--disable-lockdown\
+	--disable-mediawiki\
+	--disable-minimizer\
 	--disable-odk\
+	--disable-pdfimport\
+	--disable-qadevooo\
+	--disable-reportdesign\
 	--disable-systray\
 	--disable-mathmldtd\
 	--enable-gio\
@@ -159,7 +156,6 @@ build() {
 	--without-afms\
 	--without-gpc\
 	--without-nas\
-	--without-stlport\
 	--with-jdk-home=${JAVA_HOME} \
 	--with-system-xerces \
 	--with-xerces-jar=/usr/share/java/xercesImpl.jar \
@@ -175,6 +171,8 @@ build() {
 
 #	--disable-qadevooo\ http://www.openoffice.org/issues/show_bug.cgi?id=91452
 #	--enable-evolution2\
+
+#	--disable-fontooo\	# seems removed
 
 	cd ..
 
@@ -201,14 +199,14 @@ build() {
 
         ## Step 1 
         cd ${pkgdir}/opt/openoffice.org || return 1
-        mv ure/ basis3.0/ || return 1
-        cd basis3.0 || return 1
+        mv ure/ basis3.1/ || return 1
+        cd basis3.1 || return 1
         rm ure-link && mv ure ure-link || return 1
         ## Step 2
         cd ${pkgdir}/opt/ || return 1
-        mv openoffice.org/basis3.0/ openoffice.org3/ || return 1
+        mv openoffice.org/basis3.1/ openoffice.org3/ || return 1
         cd openoffice.org3/ || return 1
-        rm basis-link && mv basis3.0 basis-link || return 1
+        rm basis-link && mv basis3.1 basis-link || return 1
         ## Step 3        
         cd ${pkgdir}/opt/ || return 1
         rmdir ${pkgdir}/opt/openoffice.org || return 1
@@ -223,11 +221,16 @@ build() {
 	ln -s ../../opt/openoffice/program/soffice soffice
 	ln -s ../../opt/openoffice/program/spadmin spadmin
 
-	# install more dictionaries from source tree
-	for i in `ls -1 ${srcdir}/${_OO_milestone}/dictionaries/unxlngx6.pro/bin/dict-??.oxt`; do
-	  install -Dm644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
-	done
-
+       # install all built dictionaries from source tree
+       if [ "$CARCH" = "x86_64" ]; then
+              pushd ${srcdir}/${_OO_milestone}/dictionaries/unxlngx6.pro/bin
+         else pushd ${srcdir}/${_OO_milestone}/dictionaries/unxlngi6.pro/bin
+       fi
+       for i in `ls -1 dict-??.oxt`; do
+         install -D -m644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
+       done
+       popd
+               
 	# install shortcuts
 	mv ${pkgdir}/opt/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
 	cd ${pkgdir}/usr/share/applications
@@ -261,14 +264,7 @@ build() {
 	chmod +rX -R ${pkgdir}/usr
 
 	# some cleanup
-	find ${pkgdir}/usr/share/icons -depth -name "CVS" -type d -exec rm -r {} \; > /dev/null 2>&1
-	rm -f ${pkgdir}/opt/openoffice/program/oo_product.bmp
-	mkdir -p ${pkgdir}/opt/openoffice/basis-link/share/dict/ooo
-	touch ${pkgdir}/opt/openoffice/basis-link/share/dict/ooo/.directory 
-	touch ${pkgdir}/opt/openoffice/basis-link/presets/template/.directory 
-	touch ${pkgdir}/opt/openoffice/share/extension/install/.directory
-	# remove unecessary temp files if they exist 
-	rm -f  ${pkgdir}/opt/openoffice/program/root*.dat
+#	find ${pkgdir}/usr/share/icons -depth -name "CVS" -type d -exec rm -r {} \; > /dev/null 2>&1
 	rm -f  ${pkgdir}/opt/openoffice/program/root*.dat.*
 
 	# link the mozilla-plugin
@@ -301,5 +297,8 @@ build() {
 	mv ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-dev.so
 	cd ${pkgdir}/opt/openoffice-dev/program/
 	ln -sf /opt/openoffice-dev/program/soffice.bin soffice-dev.bin
+	
+       # set desktop variable to force gtk/gnome vcl usage
+       install -m755 -d ${pkgdir}/etc/profile.d
+       install -m755 ${srcdir}/openoffice.profile ${pkgdir}/etc/profile.d/openoffice-devel.sh || return 1
 }
-
