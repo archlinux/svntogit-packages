@@ -4,11 +4,11 @@
 
 pkgname=pyqt
 pkgver=4.4.3
-pkgrel=1
+pkgrel=2
 pkgdesc="PyQt is a set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/pyqt/"
-depends=('sip>=4.7.6' 'qscintilla>=2.2' 'qt>=4.4.0')
+depends=('sip>=4.7.7' 'qscintilla>=2.3' 'qt>=4.4.3')
 license=('GPL')
 provides=('pyqt4')
 replaces=('pyqt4')
@@ -22,7 +22,7 @@ build() {
   cd ${startdir}/src/PyQt-x11-gpl-${pkgver}
 
   echo yes | python configure.py -b /usr/bin \
-  -d /usr/lib/python2.5/site-packages \
+  -d /usr/lib/python2.6/site-packages \
   -v /usr/share/sip
 
   make || return 1
