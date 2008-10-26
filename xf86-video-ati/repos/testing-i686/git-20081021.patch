@@ -1,3 +1,31 @@
+diff --git a/man/radeon.man b/man/radeon.man
+index 03622a0..68029ed 100644
+--- a/man/radeon.man
++++ b/man/radeon.man
+@@ -283,7 +283,8 @@ The default value is
+ .BI "Option \*qEnablePageFlip\*q \*q" boolean \*q
+ Enable page flipping for 3D acceleration. This will increase performance
+ but not work correctly in some rare cases, hence the default is
+-.B off.
++.B off.  
++It is currently only supported on r4xx and older hardware.
+ .TP
+ .BI "Option \*qForceMinDotClock\*q \*q" frequency \*q
+ Override minimum dot clock. Some Radeon BIOSes report a minimum dot
+@@ -297,10 +298,9 @@ parameter may be specified as a float value with standard suffixes like
+ "k", "kHz", "M", "MHz".
+ .TP
+ .BI "Option \*qRenderAccel\*q \*q" boolean \*q
+-Enables or disables hardware Render acceleration.  This driver does not
+-support component alpha (subpixel) rendering.  It is only supported on
+-Radeon series up to and including 9200 (9500/9700 and newer
+-unsupported).  The default is to
++Enables or disables hardware Render acceleration.  It is supported on
++Radeon series up to and including r5xx for EXA and up to and 
++including r2xx for XAA.  The default is to
+ .B enable
+ Render acceleration.
+ .TP
 diff --git a/src/AtomBios/CD_Operations.c b/src/AtomBios/CD_Operations.c
 index 509aa0c..58c4ae9 100644
 --- a/src/AtomBios/CD_Operations.c
@@ -590,8 +618,83 @@ index 24c25fc..1e143f0 100644
  
  #define	SOURCE_ONLY_CMD_TYPE		0//0xFE
  #define SOURCE_DESTINATION_CMD_TYPE	1//0xFD
+diff --git a/src/AtomBios/includes/ObjectID.h b/src/AtomBios/includes/ObjectID.h
+index 4b106cf..f1f18a4 100644
+--- a/src/AtomBios/includes/ObjectID.h
++++ b/src/AtomBios/includes/ObjectID.h
+@@ -78,6 +78,10 @@
+ #define ENCODER_OBJECT_ID_DP_DP501                0x1D
+ #define ENCODER_OBJECT_ID_INTERNAL_UNIPHY         0x1E
+ #define ENCODER_OBJECT_ID_INTERNAL_KLDSCP_LVTMA   0x1F
++#define ENCODER_OBJECT_ID_INTERNAL_UNIPHY1        0x20
++#define ENCODER_OBJECT_ID_INTERNAL_UNIPHY2        0x21
++
++#define ENCODER_OBJECT_ID_GENERAL_EXTERNAL_DVO    0xFF
+ 
+ /****************************************************/
+ /* Connector Object ID Definition                   */
+@@ -118,6 +122,8 @@
+ #define GRAPH_OBJECT_ENUM_ID2                     0x02
+ #define GRAPH_OBJECT_ENUM_ID3                     0x03
+ #define GRAPH_OBJECT_ENUM_ID4                     0x04
++#define GRAPH_OBJECT_ENUM_ID5                     0x05
++#define GRAPH_OBJECT_ENUM_ID6                     0x06
+ 
+ /****************************************************/
+ /* Graphics Object ID Bit definition                */
+@@ -173,7 +179,7 @@
+ #define ENCODER_SI178_ENUM_ID1                   0x2117 
+ #define ENCODER_MVPU_FPGA_ENUM_ID1               0x2118
+ #define ENCODER_INTERNAL_DDI_ENUM_ID1            0x2119
+-#define ENCODER_VT1625_ENUM_ID1               0x211A
++#define ENCODER_VT1625_ENUM_ID1                  0x211A
+ #define ENCODER_HDMI_SI1932_ENUM_ID1             0x211B
+ #define ENCODER_ENCODER_DP_AN9801_ENUM_ID1       0x211C
+ #define ENCODER_DP_DP501_ENUM_ID1                0x211D
+@@ -323,6 +329,26 @@
+                                                  GRAPH_OBJECT_ENUM_ID1 << ENUM_ID_SHIFT |\
+                                                  ENCODER_OBJECT_ID_INTERNAL_KLDSCP_LVTMA << OBJECT_ID_SHIFT)  
+ 
++#define ENCODER_INTERNAL_UNIPHY1_ENUM_ID1         ( GRAPH_OBJECT_TYPE_ENCODER << OBJECT_TYPE_SHIFT |\
++                                                 GRAPH_OBJECT_ENUM_ID1 << ENUM_ID_SHIFT |\
++                                                 ENCODER_OBJECT_ID_INTERNAL_UNIPHY1 << OBJECT_ID_SHIFT)
++
++#define ENCODER_INTERNAL_UNIPHY1_ENUM_ID2         ( GRAPH_OBJECT_TYPE_ENCODER << OBJECT_TYPE_SHIFT |\
++                                                 GRAPH_OBJECT_ENUM_ID2 << ENUM_ID_SHIFT |\
++                                                 ENCODER_OBJECT_ID_INTERNAL_UNIPHY1 << OBJECT_ID_SHIFT)
++
++#define ENCODER_INTERNAL_UNIPHY2_ENUM_ID1         ( GRAPH_OBJECT_TYPE_ENCODER << OBJECT_TYPE_SHIFT |\
++                                                 GRAPH_OBJECT_ENUM_ID1 << ENUM_ID_SHIFT |\
++                                                 ENCODER_OBJECT_ID_INTERNAL_UNIPHY2 << OBJECT_ID_SHIFT)
++
++#define ENCODER_INTERNAL_UNIPHY2_ENUM_ID2         ( GRAPH_OBJECT_TYPE_ENCODER << OBJECT_TYPE_SHIFT |\
++                                                 GRAPH_OBJECT_ENUM_ID2 << ENUM_ID_SHIFT |\
++                                                 ENCODER_OBJECT_ID_INTERNAL_UNIPHY2 << OBJECT_ID_SHIFT)
++
++#define ENCODER_GENERAL_EXTERNAL_DVO_ENUM_ID1    ( GRAPH_OBJECT_TYPE_ENCODER << OBJECT_TYPE_SHIFT |\
++                                                  GRAPH_OBJECT_ENUM_ID1 << ENUM_ID_SHIFT |\
++                                                  ENCODER_OBJECT_ID_GENERAL_EXTERNAL_DVO << OBJECT_ID_SHIFT)
++
+ /****************************************************/
+ /* Connector Object ID definition - Shared with BIOS */
+ /****************************************************/
+@@ -453,6 +479,14 @@
+                                                  GRAPH_OBJECT_ENUM_ID2 << ENUM_ID_SHIFT |\
+                                                  CONNECTOR_OBJECT_ID_DISPLAYPORT << OBJECT_ID_SHIFT)
+ 
++#define CONNECTOR_DISPLAYPORT_ENUM_ID3         ( GRAPH_OBJECT_TYPE_CONNECTOR << OBJECT_TYPE_SHIFT |\
++                                                 GRAPH_OBJECT_ENUM_ID3 << ENUM_ID_SHIFT |\
++                                                 CONNECTOR_OBJECT_ID_DISPLAYPORT << OBJECT_ID_SHIFT)
++
++#define CONNECTOR_DISPLAYPORT_ENUM_ID4         ( GRAPH_OBJECT_TYPE_CONNECTOR << OBJECT_TYPE_SHIFT |\
++                                                 GRAPH_OBJECT_ENUM_ID4 << ENUM_ID_SHIFT |\
++                                                 CONNECTOR_OBJECT_ID_DISPLAYPORT << OBJECT_ID_SHIFT)
++
+ /****************************************************/
+ /* Router Object ID definition - Shared with BIOS   */
+ /****************************************************/
 diff --git a/src/AtomBios/includes/atombios.h b/src/AtomBios/includes/atombios.h
-index 17483a6..2e7dc6c 100644
+index 17483a6..9932b09 100644
 --- a/src/AtomBios/includes/atombios.h
 +++ b/src/AtomBios/includes/atombios.h
 @@ -34,6 +34,12 @@
@@ -607,8 +710,49 @@ index 17483a6..2e7dc6c 100644
  
  #ifdef _H2INC
    #ifndef ULONG 
-@@ -304,7 +310,7 @@ typedef struct _ATOM_MASTER_COMMAND_TABLE
+@@ -260,7 +266,7 @@ typedef struct _ATOM_MASTER_LIST_OF_COMMAND_TABLES{
+   USHORT SetCRTC_UsingDTDTiming;                 //Atomic Table,  directly used by various SW components,latest version 1.1
+   USHORT ExternalEncoderControl;                 //Atomic Table,  directly used by various SW components,latest version 2.1
+   USHORT LVTMAOutputControl;                     //Atomic Table,  directly used by various SW components,latest version 1.1
+-  USHORT VRAM_BlockDetectionByStrap;
++  USHORT VRAM_BlockDetectionByStrap;             //Atomic Table,  used only by Bios
+   USHORT MemoryCleanUp;                          //Atomic Table,  only used by Bios    
+   USHORT ProcessI2cChannelTransaction;           //Function Table,only used by Bios
+   USHORT WriteOneByteToHWAssistedI2C;            //Function Table,indirectly used by various SW components 
+@@ -270,9 +276,9 @@ typedef struct _ATOM_MASTER_LIST_OF_COMMAND_TABLES{
+   USHORT MC_Synchronization;                     //Atomic Table,  indirectly used by various SW components,called from SetMemoryClock
+   USHORT ComputeMemoryEnginePLL;                 //Atomic Table,  indirectly used by various SW components,called from SetMemory/EngineClock
+   USHORT MemoryRefreshConversion;                //Atomic Table,  indirectly used by various SW components,called from SetMemory or SetEngineClock
+-  USHORT VRAM_GetCurrentInfoBlock;
++  USHORT VRAM_GetCurrentInfoBlock;               //Atomic Table,  used only by Bios
+   USHORT DynamicMemorySettings;                  //Atomic Table,  indirectly used by various SW components,called from SetMemoryClock
+-  USHORT MemoryTraining;
++  USHORT MemoryTraining;                         //Atomic Table,  used only by Bios
+   USHORT EnableSpreadSpectrumOnPPLL;             //Atomic Table,  directly used by various SW components,latest version 1.2
+   USHORT TMDSAOutputControl;                     //Atomic Table,  directly used by various SW components,latest version 1.1
+   USHORT SetVoltage;                             //Function Table,directly and/or indirectly used by various SW components,latest version 1.1
+@@ -290,11 +296,12 @@ typedef struct _ATOM_MASTER_LIST_OF_COMMAND_TABLES{
+   USHORT DPEncoderService;											 //Function Table,only used by Bios
+ }ATOM_MASTER_LIST_OF_COMMAND_TABLES;   
  
++// For backward compatible 
+ #define ReadEDIDFromHWAssistedI2C                ProcessI2cChannelTransaction
+-
+ #define UNIPHYTransmitterControl						     DIG1TransmitterControl
+ #define LVTMATransmitterControl							     DIG2TransmitterControl
+-#define SetCRTC_DPM_State                                    GetConditionalGoldenSetting
++#define SetCRTC_DPM_State                        GetConditionalGoldenSetting
++#define SetUniphyInstance                        ASIC_StaticPwrMgtStatusChange
+ 
+ typedef struct _ATOM_MASTER_COMMAND_TABLE
+ {
+@@ -302,9 +309,12 @@ typedef struct _ATOM_MASTER_COMMAND_TABLE
+   ATOM_MASTER_LIST_OF_COMMAND_TABLES ListOfCommandTables;
+ }ATOM_MASTER_COMMAND_TABLE;
+ 
++/****************************************************************************/	
++// Structures used in every command table
++/****************************************************************************/	
  typedef struct _ATOM_TABLE_ATTRIBUTE
  {
 -#if X_BYTE_ORDER == X_BIG_ENDIAN
@@ -616,20 +760,718 @@ index 17483a6..2e7dc6c 100644
    USHORT  UpdatedByUtility:1;         //[15]=Table updated by utility flag
    USHORT  PS_SizeInBytes:7;           //[14:8]=Size of parameter space in Bytes (multiple of a dword), 
    USHORT  WS_SizeInBytes:8;           //[7:0]=Size of workspace in Bytes (in multiple of a dword), 
-@@ -315,6 +321,12 @@ typedef struct _ATOM_TABLE_ATTRIBUTE
+@@ -315,23 +325,26 @@ typedef struct _ATOM_TABLE_ATTRIBUTE
  #endif
  }ATOM_TABLE_ATTRIBUTE;
  
+-// Common header for all command tables.
+-//Every table pointed by _ATOM_MASTER_COMMAND_TABLE has this common header. 
+-//And the pointer actually points to this header.
 +typedef union _ATOM_TABLE_ATTRIBUTE_ACCESS
 +{
 +  ATOM_TABLE_ATTRIBUTE sbfAccess;
 +  USHORT               susAccess;
 +}ATOM_TABLE_ATTRIBUTE_ACCESS;
+ 
++/****************************************************************************/	
++// Common header for all command tables.
++// Every table pointed by _ATOM_MASTER_COMMAND_TABLE has this common header. 
++// And the pointer actually points to this header.
++/****************************************************************************/	
+ typedef struct _ATOM_COMMON_ROM_COMMAND_TABLE_HEADER
+ {
+   ATOM_COMMON_TABLE_HEADER CommonHeader;
+   ATOM_TABLE_ATTRIBUTE     TableAttribute;	
+ }ATOM_COMMON_ROM_COMMAND_TABLE_HEADER;
+ 
+-
+-typedef struct _ASIC_INIT_PARAMETERS
+-{
+-  ULONG ulDefaultEngineClock;         //In 10Khz unit
+-  ULONG ulDefaultMemoryClock;         //In 10Khz unit
+-}ASIC_INIT_PARAMETERS;
+-
++/****************************************************************************/	
++// Structures used by ComputeMemoryEnginePLLTable
++/****************************************************************************/	
+ #define COMPUTE_MEMORY_PLL_PARAM        1
+ #define COMPUTE_ENGINE_PLL_PARAM        2
+ 
+@@ -368,6 +381,57 @@ typedef struct _COMPUTE_MEMORY_ENGINE_PLL_PARAMETERS_V2
+ #define b3FIRST_TIME_CHANGE_CLOCK									0x08       //Applicable to both memory and engine clock change,when set, it means this is 1st time to change clock after ASIC bootup
+ #define b3SKIP_SW_PROGRAM_PLL											0x10			 //Applicable to both memory and engine clock change, when set, it means the table will not program SPLL/MPLL
+ 
++typedef struct _ATOM_COMPUTE_CLOCK_FREQ
++{
++#if ATOM_BIG_ENDIAN
++  ULONG ulComputeClockFlag:8;                 // =1: COMPUTE_MEMORY_PLL_PARAM, =2: COMPUTE_ENGINE_PLL_PARAM
++  ULONG ulClockFreq:24;                       // in unit of 10kHz
++#else
++  ULONG ulClockFreq:24;                       // in unit of 10kHz
++  ULONG ulComputeClockFlag:8;                 // =1: COMPUTE_MEMORY_PLL_PARAM, =2: COMPUTE_ENGINE_PLL_PARAM
++#endif
++}ATOM_COMPUTE_CLOCK_FREQ;
 +
- // Common header for all command tables.
- //Every table pointed by _ATOM_MASTER_COMMAND_TABLE has this common header. 
- //And the pointer actually points to this header.
-@@ -1258,7 +1270,7 @@ typedef struct _ATOM_MULTIMEDIA_CONFIG_INFO
++typedef struct _ATOM_S_MPLL_FB_DIVIDER
++{
++  USHORT usFbDivFrac;  
++  USHORT usFbDiv;  
++}ATOM_S_MPLL_FB_DIVIDER;
++
++typedef struct _COMPUTE_MEMORY_ENGINE_PLL_PARAMETERS_V3
++{
++  union
++  {
++    ATOM_COMPUTE_CLOCK_FREQ  ulClock;         //Input Parameter
++    ATOM_S_MPLL_FB_DIVIDER   ulFbDiv;         //Output Parameter
++  };
++  UCHAR   ucRefDiv;                           //Output Parameter      
++  UCHAR   ucPostDiv;                          //Output Parameter      
++  UCHAR   ucCntlFlag;                         //Output Parameter      
++  UCHAR   ucReserved;
++}COMPUTE_MEMORY_ENGINE_PLL_PARAMETERS_V3;
++
++// ucCntlFlag
++#define ATOM_PLL_CNTL_FLAG_PLL_POST_DIV_EN          1
++#define ATOM_PLL_CNTL_FLAG_MPLL_VCO_MODE            2
++#define ATOM_PLL_CNTL_FLAG_FRACTION_DISABLE         4
++
++typedef struct _DYNAMICE_MEMORY_SETTINGS_PARAMETER
++{
++  ATOM_COMPUTE_CLOCK_FREQ ulClock;
++  ULONG ulReserved[2];
++}DYNAMICE_MEMORY_SETTINGS_PARAMETER;
++
++typedef struct _DYNAMICE_ENGINE_SETTINGS_PARAMETER
++{
++  ATOM_COMPUTE_CLOCK_FREQ ulClock;
++  ULONG ulMemoryClock;
++  ULONG ulReserved;
++}DYNAMICE_ENGINE_SETTINGS_PARAMETER;
++
++/****************************************************************************/	
++// Structures used by SetEngineClockTable
++/****************************************************************************/	
+ typedef struct _SET_ENGINE_CLOCK_PARAMETERS
+ {
+   ULONG ulTargetEngineClock;          //In 10Khz unit
+@@ -379,7 +443,9 @@ typedef struct _SET_ENGINE_CLOCK_PS_ALLOCATION
+   COMPUTE_MEMORY_ENGINE_PLL_PARAMETERS_PS_ALLOCATION sReserved;
+ }SET_ENGINE_CLOCK_PS_ALLOCATION;
+ 
+-
++/****************************************************************************/	
++// Structures used by SetMemoryClockTable
++/****************************************************************************/	
+ typedef struct _SET_MEMORY_CLOCK_PARAMETERS
+ {
+   ULONG ulTargetMemoryClock;          //In 10Khz unit
+@@ -391,13 +457,24 @@ typedef struct _SET_MEMORY_CLOCK_PS_ALLOCATION
+   COMPUTE_MEMORY_ENGINE_PLL_PARAMETERS_PS_ALLOCATION sReserved;
+ }SET_MEMORY_CLOCK_PS_ALLOCATION;
+ 
++/****************************************************************************/	
++// Structures used by ASIC_Init.ctb
++/****************************************************************************/	
++typedef struct _ASIC_INIT_PARAMETERS
++{
++  ULONG ulDefaultEngineClock;         //In 10Khz unit
++  ULONG ulDefaultMemoryClock;         //In 10Khz unit
++}ASIC_INIT_PARAMETERS;
++
+ typedef struct _ASIC_INIT_PS_ALLOCATION
+ {
+   ASIC_INIT_PARAMETERS sASICInitClocks;
+   SET_ENGINE_CLOCK_PS_ALLOCATION sReserved; //Caller doesn't need to init this structure
+ }ASIC_INIT_PS_ALLOCATION;
+ 
+-
++/****************************************************************************/	
++// Structure used by DynamicClockGatingTable.ctb
++/****************************************************************************/	
+ typedef struct _DYNAMIC_CLOCK_GATING_PARAMETERS 
+ {
+   UCHAR ucEnable;                     // ATOM_ENABLE or ATOM_DISABLE
+@@ -405,7 +482,9 @@ typedef struct _DYNAMIC_CLOCK_GATING_PARAMETERS
+ }DYNAMIC_CLOCK_GATING_PARAMETERS;
+ #define  DYNAMIC_CLOCK_GATING_PS_ALLOCATION  DYNAMIC_CLOCK_GATING_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structure used by EnableASIC_StaticPwrMgtTable.ctb
++/****************************************************************************/	
+ typedef struct _ENABLE_ASIC_STATIC_PWR_MGT_PARAMETERS
+ {
+   UCHAR ucEnable;                     // ATOM_ENABLE or ATOM_DISABLE
+@@ -413,7 +492,9 @@ typedef struct _ENABLE_ASIC_STATIC_PWR_MGT_PARAMETERS
+ }ENABLE_ASIC_STATIC_PWR_MGT_PARAMETERS;
+ #define ENABLE_ASIC_STATIC_PWR_MGT_PS_ALLOCATION  ENABLE_ASIC_STATIC_PWR_MGT_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structures used by DAC_LoadDetectionTable.ctb
++/****************************************************************************/	
+ typedef struct _DAC_LOAD_DETECTION_PARAMETERS
+ {
+   USHORT usDeviceID;                  //{ATOM_DEVICE_CRTx_SUPPORT,ATOM_DEVICE_TVx_SUPPORT,ATOM_DEVICE_CVx_SUPPORT}
+@@ -424,14 +505,15 @@ typedef struct _DAC_LOAD_DETECTION_PARAMETERS
+ // DAC_LOAD_DETECTION_PARAMETERS.ucMisc
+ #define DAC_LOAD_MISC_YPrPb						0x01
+ 
+-
+ typedef struct _DAC_LOAD_DETECTION_PS_ALLOCATION
+ {
+   DAC_LOAD_DETECTION_PARAMETERS            sDacload;
+   ULONG                                    Reserved[2];// Don't set this one, allocation for EXT DAC
+ }DAC_LOAD_DETECTION_PS_ALLOCATION;
+ 
+-
++/****************************************************************************/	
++// Structures used by DAC1EncoderControlTable.ctb and DAC2EncoderControlTable.ctb
++/****************************************************************************/	
+ typedef struct _DAC_ENCODER_CONTROL_PARAMETERS 
+ {
+   USHORT usPixelClock;                // in 10KHz; for bios convenient
+@@ -443,14 +525,11 @@ typedef struct _DAC_ENCODER_CONTROL_PARAMETERS
+ 
+ #define DAC_ENCODER_CONTROL_PS_ALLOCATION  DAC_ENCODER_CONTROL_PARAMETERS
+ 
+-typedef struct _TV_ENCODER_CONTROL_PARAMETERS
+-{
+-  USHORT usPixelClock;                // in 10KHz; for bios convenient
+-  UCHAR  ucTvStandard;                // See definition "ATOM_TV_NTSC ..."
+-  UCHAR  ucAction;                    // 0: turn off encoder
+-                                      // 1: setup and turn on encoder
+-}TV_ENCODER_CONTROL_PARAMETERS;
+-
++/****************************************************************************/	
++// Structures used by DIG1EncoderControlTable
++//                    DIG2EncoderControlTable
++//                    ExternalEncoderControlTable
++/****************************************************************************/	
+ typedef struct _DIG_ENCODER_CONTROL_PARAMETERS
+ {
+   USHORT usPixelClock;		// in 10KHz; for bios convenient
+@@ -475,7 +554,6 @@ typedef struct _DIG_ENCODER_CONTROL_PARAMETERS
+ }DIG_ENCODER_CONTROL_PARAMETERS;
+ #define DIG_ENCODER_CONTROL_PS_ALLOCATION			  DIG_ENCODER_CONTROL_PARAMETERS
+ #define EXTERNAL_ENCODER_CONTROL_PARAMETER			DIG_ENCODER_CONTROL_PARAMETERS
+-#define EXTERNAL_ENCODER_CONTROL_PS_ALLOCATION	DIG_ENCODER_CONTROL_PS_ALLOCATION
+ 
+ //ucConfig
+ #define ATOM_ENCODER_CONFIG_DPLINKRATE_MASK				0x01
+@@ -506,6 +584,56 @@ typedef struct _DIG_ENCODER_CONTROL_PARAMETERS
+ #define ATOM_ENCODER_MODE_CV											14
+ #define ATOM_ENCODER_MODE_CRT											15
+ 
++typedef struct _ATOM_DIG_ENCODER_CONFIG_V2
++{
++#if ATOM_BIG_ENDIAN
++    UCHAR ucReserved1:2;
++    UCHAR ucTransmitterSel:2;     // =0: UniphyAB, =1: UniphyCD  =2: UniphyEF
++    UCHAR ucLinkSel:1;            // =0: linkA/C/E =1: linkB/D/F
++    UCHAR ucReserved:1;
++    UCHAR ucDPLinkRate:1;         // =0: 1.62Ghz, =1: 2.7Ghz
++#else
++    UCHAR ucDPLinkRate:1;         // =0: 1.62Ghz, =1: 2.7Ghz
++    UCHAR ucReserved:1;
++    UCHAR ucLinkSel:1;            // =0: linkA/C/E =1: linkB/D/F
++    UCHAR ucTransmitterSel:2;     // =0: UniphyAB, =1: UniphyCD  =2: UniphyEF
++    UCHAR ucReserved1:2;
++#endif
++}ATOM_DIG_ENCODER_CONFIG_V2;
++
++
++typedef struct _DIG_ENCODER_CONTROL_PARAMETERS_V2
++{
++  USHORT usPixelClock;      // in 10KHz; for bios convenient
++  ATOM_DIG_ENCODER_CONFIG_V2 acConfig;
++  UCHAR ucAction;                                       
++  UCHAR ucEncoderMode;
++                            // =0: DP   encoder      
++                            // =1: LVDS encoder          
++                            // =2: DVI  encoder  
++                            // =3: HDMI encoder
++                            // =4: SDVO encoder
++  UCHAR ucLaneNum;          // how many lanes to enable
++  UCHAR ucReserved[2];
++}DIG_ENCODER_CONTROL_PARAMETERS_V2;
++
++//ucConfig
++#define ATOM_ENCODER_CONFIG_V2_DPLINKRATE_MASK				0x01
++#define ATOM_ENCODER_CONFIG_V2_DPLINKRATE_1_62GHZ		  0x00
++#define ATOM_ENCODER_CONFIG_V2_DPLINKRATE_2_70GHZ		  0x01
++#define ATOM_ENCODER_CONFIG_V2_LINK_SEL_MASK				  0x04
++#define ATOM_ENCODER_CONFIG_V2_LINKA								  0x00
++#define ATOM_ENCODER_CONFIG_V2_LINKB								  0x04
++#define ATOM_ENCODER_CONFIG_V2_TRANSMITTER_SEL_MASK	  0x18
++#define ATOM_ENCODER_CONFIG_V2_TRANSMITTER1				    0x00
++#define ATOM_ENCODER_CONFIG_V2_TRANSMITTER2				    0x08
++#define ATOM_ENCODER_CONFIG_V2_TRANSMITTER3				    0x10
++
++/****************************************************************************/	
++// Structures used by UNIPHYTransmitterControlTable
++//                    LVTMATransmitterControlTable
++//                    DVOOutputControlTable
++/****************************************************************************/	
+ typedef struct _ATOM_DP_VS_MODE
+ {
+   UCHAR ucLaneSel;
+@@ -583,7 +711,82 @@ typedef struct _DIG_TRANSMITTER_CONTROL_PARAMETERS
+ #define ATOM_TRANSMITTER_ACTION_SETUP						       10
+ #define ATOM_TRANSMITTER_ACTION_SETUP_VSEMPH           11
+ 
+-/****************************Device Output Control Command Table Definitions**********************/
++
++// Following are used for DigTransmitterControlTable ver1.2
++typedef struct _ATOM_DIG_TRANSMITTER_CONFIG_V2
++{
++#if ATOM_BIG_ENDIAN
++  UCHAR ucTransmitterSel:2;         //bit7:6: =0 Dig Transmitter 1 ( Uniphy AB )
++                                    //        =1 Dig Transmitter 2 ( Uniphy CD )
++                                    //        =2 Dig Transmitter 3 ( Uniphy EF )
++  UCHAR ucReserved:1;               
++  UCHAR fDPConnector:1;             //bit4=0: DP connector  =1: None DP connector
++  UCHAR ucEncoderSel:1;             //bit3=0: Data/Clk path source from DIGA( DIG inst0 ). =1: Data/clk path source from DIGB ( DIG inst1 )
++  UCHAR ucLinkSel:1;                //bit2=0: Uniphy LINKA or C or E when fDualLinkConnector=0. when fDualLinkConnector=1, it means master link of dual link is A or C or E
++                                    //    =1: Uniphy LINKB or D or F when fDualLinkConnector=0. when fDualLinkConnector=1, it means master link of dual link is B or D or F
++
++  UCHAR fCoherentMode:1;            //bit1=1: Coherent Mode ( for DVI/HDMI mode )
++  UCHAR fDualLinkConnector:1;       //bit0=1: Dual Link DVI connector
++#else
++  UCHAR fDualLinkConnector:1;       //bit0=1: Dual Link DVI connector
++  UCHAR fCoherentMode:1;            //bit1=1: Coherent Mode ( for DVI/HDMI mode )
++  UCHAR ucLinkSel:1;                //bit2=0: Uniphy LINKA or C or E when fDualLinkConnector=0. when fDualLinkConnector=1, it means master link of dual link is A or C or E
++                                    //    =1: Uniphy LINKB or D or F when fDualLinkConnector=0. when fDualLinkConnector=1, it means master link of dual link is B or D or F
++  UCHAR ucEncoderSel:1;             //bit3=0: Data/Clk path source from DIGA( DIG inst0 ). =1: Data/clk path source from DIGB ( DIG inst1 )
++  UCHAR fDPConnector:1;             //bit4=0: DP connector  =1: None DP connector
++  UCHAR ucReserved:1;               
++  UCHAR ucTransmitterSel:2;         //bit7:6: =0 Dig Transmitter 1 ( Uniphy AB )
++                                    //        =1 Dig Transmitter 2 ( Uniphy CD )
++                                    //        =2 Dig Transmitter 3 ( Uniphy EF )
++#endif
++}ATOM_DIG_TRANSMITTER_CONFIG_V2;
++
++//ucConfig 
++//Bit0
++#define ATOM_TRANSMITTER_CONFIG_V2_DUAL_LINK_CONNECTOR			0x01
++
++//Bit1
++#define ATOM_TRANSMITTER_CONFIG_V2_COHERENT				          0x02
++
++//Bit2
++#define ATOM_TRANSMITTER_CONFIG_V2_LINK_SEL_MASK		        0x04
++#define ATOM_TRANSMITTER_CONFIG_V2_LINKA  			            0x00			
++#define ATOM_TRANSMITTER_CONFIG_V2_LINKB				            0x04
++
++// Bit3
++#define ATOM_TRANSMITTER_CONFIG_V2_ENCODER_SEL_MASK	        0x08
++#define ATOM_TRANSMITTER_CONFIG_V2_DIG1_ENCODER		          0x00				// only used when ucAction == ATOM_TRANSMITTER_ACTION_ENABLE or ATOM_TRANSMITTER_ACTION_SETUP
++#define ATOM_TRANSMITTER_CONFIG_V2_DIG2_ENCODER		          0x08				// only used when ucAction == ATOM_TRANSMITTER_ACTION_ENABLE or ATOM_TRANSMITTER_ACTION_SETUP
++
++// Bit4
++#define ATOM_TRASMITTER_CONFIG_V2_DP_CONNECTOR			        0x10
++
++// Bit7:6
++#define ATOM_TRANSMITTER_CONFIG_V2_TRANSMITTER_SEL_MASK     0xC0
++#define ATOM_TRANSMITTER_CONFIG_V2_TRANSMITTER1           	0x00	//AB
++#define ATOM_TRANSMITTER_CONFIG_V2_TRANSMITTER2           	0x40	//CD
++#define ATOM_TRANSMITTER_CONFIG_V2_TRANSMITTER3           	0x80	//EF
++
++typedef struct _DIG_TRANSMITTER_CONTROL_PARAMETERS_V2
++{
++	union
++	{
++  USHORT usPixelClock;		// in 10KHz; for bios convenient
++	USHORT usInitInfo;			// when init uniphy,lower 8bit is used for connector type defined in objectid.h
++  ATOM_DP_VS_MODE asMode; // DP Voltage swing mode
++	};
++  ATOM_DIG_TRANSMITTER_CONFIG_V2 acConfig;
++	UCHAR ucAction;				  // define as ATOM_TRANSMITER_ACTION_XXX	                       
++  UCHAR ucReserved[4];
++}DIG_TRANSMITTER_CONTROL_PARAMETERS_V2;
++
++
++/****************************************************************************/	
++// Structures used by DAC1OuputControlTable
++//                    DAC2OuputControlTable
++//                    LVTMAOutputControlTable  (Before DEC30)
++//                    TMDSAOutputControlTable  (Before DEC30)
++/****************************************************************************/	
+ typedef struct _DISPLAY_DEVICE_OUTPUT_CONTROL_PARAMETERS
+ {
+   UCHAR  ucAction;                    // Possible input:ATOM_ENABLE||ATOMDISABLE
+@@ -622,7 +825,9 @@ typedef struct _DISPLAY_DEVICE_OUTPUT_CONTROL_PARAMETERS
+ #define DVO_OUTPUT_CONTROL_PS_ALLOCATION   DIG_TRANSMITTER_CONTROL_PS_ALLOCATION
+ #define DVO_OUTPUT_CONTROL_PARAMETERS_V3	 DIG_TRANSMITTER_CONTROL_PARAMETERS
+ 
+-/**************************************************************************/
++/****************************************************************************/	
++// Structures used by BlankCRTCTable
++/****************************************************************************/	
+ typedef struct _BLANK_CRTC_PARAMETERS
+ {
+   UCHAR  ucCRTC;                    	// ATOM_CRTC1 or ATOM_CRTC2
+@@ -633,7 +838,11 @@ typedef struct _BLANK_CRTC_PARAMETERS
+ }BLANK_CRTC_PARAMETERS;
+ #define BLANK_CRTC_PS_ALLOCATION    BLANK_CRTC_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structures used by EnableCRTCTable
++//                    EnableCRTCMemReqTable
++//                    UpdateCRTC_DoubleBufferRegistersTable
++/****************************************************************************/	
+ typedef struct _ENABLE_CRTC_PARAMETERS
+ {
+   UCHAR ucCRTC;                    	  // ATOM_CRTC1 or ATOM_CRTC2
+@@ -642,7 +851,9 @@ typedef struct _ENABLE_CRTC_PARAMETERS
+ }ENABLE_CRTC_PARAMETERS;
+ #define ENABLE_CRTC_PS_ALLOCATION   ENABLE_CRTC_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structures used by SetCRTC_OverScanTable
++/****************************************************************************/	
+ typedef struct _SET_CRTC_OVERSCAN_PARAMETERS
+ {
+   USHORT usOverscanRight;             // right
+@@ -654,7 +865,9 @@ typedef struct _SET_CRTC_OVERSCAN_PARAMETERS
+ }SET_CRTC_OVERSCAN_PARAMETERS;
+ #define SET_CRTC_OVERSCAN_PS_ALLOCATION  SET_CRTC_OVERSCAN_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structures used by SetCRTC_ReplicationTable
++/****************************************************************************/	
+ typedef struct _SET_CRTC_REPLICATION_PARAMETERS
+ {
+   UCHAR ucH_Replication;              // horizontal replication
+@@ -664,7 +877,9 @@ typedef struct _SET_CRTC_REPLICATION_PARAMETERS
+ }SET_CRTC_REPLICATION_PARAMETERS;
+ #define SET_CRTC_REPLICATION_PS_ALLOCATION  SET_CRTC_REPLICATION_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structures used by SelectCRTC_SourceTable
++/****************************************************************************/	
+ typedef struct _SELECT_CRTC_SOURCE_PARAMETERS
+ {
+   UCHAR ucCRTC;                    	  // ATOM_CRTC1 or ATOM_CRTC2
+@@ -701,6 +916,10 @@ typedef struct _SELECT_CRTC_SOURCE_PARAMETERS_V2
+ //#define ATOM_ENCODER_MODE_CV										14
+ //#define ATOM_ENCODER_MODE_CRT										15
+ 
++/****************************************************************************/	
++// Structures used by SetPixelClockTable
++//                    GetPixelClockTable 
++/****************************************************************************/	
+ //Major revision=1., Minor revision=1
+ typedef struct _PIXEL_CLOCK_PARAMETERS
+ {
+@@ -716,7 +935,6 @@ typedef struct _PIXEL_CLOCK_PARAMETERS
+   UCHAR  ucPadding;
+ }PIXEL_CLOCK_PARAMETERS;
+ 
+-
+ //Major revision=1., Minor revision=2, add ucMiscIfno
+ //ucMiscInfo:
+ #define MISC_FORCE_REPROG_PIXEL_CLOCK 0x1
+@@ -787,6 +1005,9 @@ typedef struct _PIXEL_CLOCK_PARAMETERS_V3
+ #define PIXEL_CLOCK_PARAMETERS_LAST			PIXEL_CLOCK_PARAMETERS_V2
+ #define GET_PIXEL_CLOCK_PS_ALLOCATION		PIXEL_CLOCK_PARAMETERS_LAST
+ 
++/****************************************************************************/	
++// Structures used by AdjustDisplayPllTable
++/****************************************************************************/	
+ typedef struct _ADJUST_DISPLAY_PLL_PARAMETERS
+ {
+ 	USHORT usPixelClock;
+@@ -804,6 +1025,9 @@ typedef struct _ADJUST_DISPLAY_PLL_PARAMETERS
+ 
+ #define ADJUST_DISPLAY_PLL_PS_ALLOCATION			ADJUST_DISPLAY_PLL_PARAMETERS
+ 
++/****************************************************************************/	
++// Structures used by EnableYUVTable
++/****************************************************************************/	
+ typedef struct _ENABLE_YUV_PARAMETERS
+ {
+   UCHAR ucEnable;                     // ATOM_ENABLE:Enable YUV or ATOM_DISABLE:Disable YUV (RGB)
+@@ -812,20 +1036,27 @@ typedef struct _ENABLE_YUV_PARAMETERS
+ }ENABLE_YUV_PARAMETERS;
+ #define ENABLE_YUV_PS_ALLOCATION ENABLE_YUV_PARAMETERS
+ 
++/****************************************************************************/	
++// Structures used by GetMemoryClockTable
++/****************************************************************************/	
+ typedef struct _GET_MEMORY_CLOCK_PARAMETERS
+ {
+   ULONG ulReturnMemoryClock;          // current memory speed in 10KHz unit
+ } GET_MEMORY_CLOCK_PARAMETERS;
+ #define GET_MEMORY_CLOCK_PS_ALLOCATION  GET_MEMORY_CLOCK_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structures used by GetEngineClockTable
++/****************************************************************************/	
+ typedef struct _GET_ENGINE_CLOCK_PARAMETERS
+ {
+   ULONG ulReturnEngineClock;          // current engine speed in 10KHz unit
+ } GET_ENGINE_CLOCK_PARAMETERS;
+ #define GET_ENGINE_CLOCK_PS_ALLOCATION  GET_ENGINE_CLOCK_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Following Structures and constant may be obsolete
++/****************************************************************************/	
+ //Maxium 8 bytes,the data read in will be placed in the parameter space.
+ //Read operaion successeful when the paramter space is non-zero, otherwise read operation failed
+ typedef struct _READ_EDID_FROM_HW_I2C_DATA_PARAMETERS
+@@ -875,6 +1106,9 @@ typedef struct _SET_UP_HW_I2C_DATA_PARAMETERS
+ /**************************************************************************/
+ #define SPEED_FAN_CONTROL_PS_ALLOCATION   WRITE_ONE_BYTE_HW_I2C_DATA_PARAMETERS
+ 
++/****************************************************************************/	
++// Structures used by PowerConnectorDetectionTable
++/****************************************************************************/	
+ typedef struct	_POWER_CONNECTOR_DETECTION_PARAMETERS
+ {
+   UCHAR   ucPowerConnectorStatus;      //Used for return value 0: detected, 1:not detected
+@@ -891,6 +1125,10 @@ typedef struct POWER_CONNECTOR_DETECTION_PS_ALLOCATION
+ }POWER_CONNECTOR_DETECTION_PS_ALLOCATION;
+ 
+ /****************************LVDS SS Command Table Definitions**********************/
++
++/****************************************************************************/	
++// Structures used by EnableSpreadSpectrumOnPPLLTable
++/****************************************************************************/	
+ typedef struct	_ENABLE_LVDS_SS_PARAMETERS
+ {
+   USHORT  usSpreadSpectrumPercentage;       
+@@ -936,6 +1174,9 @@ typedef struct _SET_PIXEL_CLOCK_PS_ALLOCATION
+ 
+ #define ENABLE_VGA_RENDER_PS_ALLOCATION   SET_PIXEL_CLOCK_PS_ALLOCATION
+ 
++/****************************************************************************/	
++// Structures used by ###
++/****************************************************************************/	
+ typedef struct	_MEMORY_TRAINING_PARAMETERS
+ {
+   ULONG ulTargetMemoryClock;          //In 10Khz unit
+@@ -943,8 +1184,14 @@ typedef struct	_MEMORY_TRAINING_PARAMETERS
+ #define MEMORY_TRAINING_PS_ALLOCATION MEMORY_TRAINING_PARAMETERS
+ 
+ 
+-
+ /****************************LVDS and other encoder command table definitions **********************/
++
++
++/****************************************************************************/	
++// Structures used by LVDSEncoderControlTable   (Before DCE30)
++//                    LVTMAEncoderControlTable  (Before DCE30)
++//                    TMDSAEncoderControlTable  (Before DCE30)
++/****************************************************************************/	
+ typedef struct _LVDS_ENCODER_CONTROL_PARAMETERS
+ {
+   USHORT usPixelClock;  // in 10KHz; for bios convenient
+@@ -964,19 +1211,6 @@ typedef struct _LVDS_ENCODER_CONTROL_PARAMETERS
+ #define TMDS2_ENCODER_CONTROL_PARAMETERS    TMDS1_ENCODER_CONTROL_PARAMETERS
+ #define TMDS2_ENCODER_CONTROL_PS_ALLOCATION TMDS2_ENCODER_CONTROL_PARAMETERS
+ 
+-typedef struct _ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS
+-{                               
+-  UCHAR    ucEnable;            // Enable or Disable External TMDS encoder
+-  UCHAR    ucMisc;              // Bit0=0:Enable Single link;=1:Enable Dual link;Bit1 {=0:666RGB, =1:888RGB}
+-  UCHAR    ucPadding[2];
+-}ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS;
+-
+-typedef struct _ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION
+-{                               
+-  ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS    sXTmdsEncoder;
+-  WRITE_ONE_BYTE_HW_I2C_DATA_PS_ALLOCATION   sReserved;     //Caller doesn't need to init this portion
+-}ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION;
+-
+ 
+ //ucTableFormatRevision=1,ucTableContentRevision=2
+ typedef struct _LVDS_ENCODER_CONTROL_PARAMETERS_V2
+@@ -1016,6 +1250,32 @@ typedef struct _LVDS_ENCODER_CONTROL_PARAMETERS_V2
+   
+ #define TMDS2_ENCODER_CONTROL_PARAMETERS_V2    TMDS1_ENCODER_CONTROL_PARAMETERS_V2
+ #define TMDS2_ENCODER_CONTROL_PS_ALLOCATION_V2 TMDS2_ENCODER_CONTROL_PARAMETERS_V2
++
++#define LVDS_ENCODER_CONTROL_PARAMETERS_V3     LVDS_ENCODER_CONTROL_PARAMETERS_V2
++#define LVDS_ENCODER_CONTROL_PS_ALLOCATION_V3  LVDS_ENCODER_CONTROL_PARAMETERS_V3
++
++#define TMDS1_ENCODER_CONTROL_PARAMETERS_V3    LVDS_ENCODER_CONTROL_PARAMETERS_V3
++#define TMDS1_ENCODER_CONTROL_PS_ALLOCATION_V3 TMDS1_ENCODER_CONTROL_PARAMETERS_V3
++
++#define TMDS2_ENCODER_CONTROL_PARAMETERS_V3    LVDS_ENCODER_CONTROL_PARAMETERS_V3
++#define TMDS2_ENCODER_CONTROL_PS_ALLOCATION_V3 TMDS2_ENCODER_CONTROL_PARAMETERS_V3
++
++/****************************************************************************/	
++// Structures used by ###
++/****************************************************************************/	
++typedef struct _ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS
++{                               
++  UCHAR    ucEnable;            // Enable or Disable External TMDS encoder
++  UCHAR    ucMisc;              // Bit0=0:Enable Single link;=1:Enable Dual link;Bit1 {=0:666RGB, =1:888RGB}
++  UCHAR    ucPadding[2];
++}ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS;
++
++typedef struct _ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION
++{                               
++  ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS    sXTmdsEncoder;
++  WRITE_ONE_BYTE_HW_I2C_DATA_PS_ALLOCATION   sReserved;     //Caller doesn't need to init this portion
++}ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION;
++
+ #define ENABLE_EXTERNAL_TMDS_ENCODER_PARAMETERS_V2  LVDS_ENCODER_CONTROL_PARAMETERS_V2
+ 
+ typedef struct _ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION_V2
+@@ -1024,7 +1284,15 @@ typedef struct _ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION_V2
+   WRITE_ONE_BYTE_HW_I2C_DATA_PS_ALLOCATION      sReserved;     //Caller doesn't need to init this portion
+ }ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION_V2;
+ 
++typedef struct _EXTERNAL_ENCODER_CONTROL_PS_ALLOCATION
++{
++  DIG_ENCODER_CONTROL_PARAMETERS            sDigEncoder;
++  WRITE_ONE_BYTE_HW_I2C_DATA_PS_ALLOCATION sReserved;
++}EXTERNAL_ENCODER_CONTROL_PS_ALLOCATION;
+ 
++/****************************************************************************/	
++// Structures used by DVOEncoderControlTable
++/****************************************************************************/	
+ //ucTableFormatRevision=1,ucTableContentRevision=3
+ 
+ //ucDVOConfig:
+@@ -1050,15 +1318,6 @@ typedef struct _DVO_ENCODER_CONTROL_PARAMETERS_V3
+ // bit1=0: non-coherent mode
+ //     =1: coherent mode
+ 
+-#define LVDS_ENCODER_CONTROL_PARAMETERS_V3     LVDS_ENCODER_CONTROL_PARAMETERS_V2
+-#define LVDS_ENCODER_CONTROL_PS_ALLOCATION_V3  LVDS_ENCODER_CONTROL_PARAMETERS_V3
+-
+-#define TMDS1_ENCODER_CONTROL_PARAMETERS_V3    LVDS_ENCODER_CONTROL_PARAMETERS_V3
+-#define TMDS1_ENCODER_CONTROL_PS_ALLOCATION_V3 TMDS1_ENCODER_CONTROL_PARAMETERS_V3
+-
+-#define TMDS2_ENCODER_CONTROL_PARAMETERS_V3    LVDS_ENCODER_CONTROL_PARAMETERS_V3
+-#define TMDS2_ENCODER_CONTROL_PS_ALLOCATION_V3 TMDS2_ENCODER_CONTROL_PARAMETERS_V3
+-
+ //==========================================================================================
+ //Only change is here next time when changing encoder parameter definitions again!
+ #define LVDS_ENCODER_CONTROL_PARAMETERS_LAST     LVDS_ENCODER_CONTROL_PARAMETERS_V3
+@@ -1102,20 +1361,23 @@ typedef struct _DVO_ENCODER_CONTROL_PARAMETERS_V3
+ #define PANEL_ENCODER_75FRC_E                  0x00
+ #define PANEL_ENCODER_75FRC_F                  0x80
+ 
+-/**************************************************************************/
+-
++/****************************************************************************/	
++// Structures used by SetVoltageTable
++/****************************************************************************/	
+ #define SET_VOLTAGE_TYPE_ASIC_VDDC             1
+ #define SET_VOLTAGE_TYPE_ASIC_MVDDC            2
+ #define SET_VOLTAGE_TYPE_ASIC_MVDDQ            3
+ #define SET_VOLTAGE_TYPE_ASIC_VDDCI            4
++#define SET_VOLTAGE_INIT_MODE                  5
++#define SET_VOLTAGE_GET_MAX_VOLTAGE            6					//Gets the Max. voltage for the soldered Asic
+ 
+ #define SET_ASIC_VOLTAGE_MODE_ALL_SOURCE       0x1
+ #define SET_ASIC_VOLTAGE_MODE_SOURCE_A         0x2
+ #define SET_ASIC_VOLTAGE_MODE_SOURCE_B         0x4
+ 
+-#define	SET_ASIC_VOLTAGE_MODE_SET_VOLTAGE			 0x0
+-#define	SET_ASIC_VOLTAGE_MODE_GET_GPIOVAL			 0x1	
+-#define	SET_ASIC_VOLTAGE_MODE_GET_GPIOMASK		 0x2
++#define	SET_ASIC_VOLTAGE_MODE_SET_VOLTAGE      0x0
++#define	SET_ASIC_VOLTAGE_MODE_GET_GPIOVAL      0x1	
++#define	SET_ASIC_VOLTAGE_MODE_GET_GPIOMASK     0x2
+ 
+ typedef struct	_SET_VOLTAGE_PARAMETERS
+ {
+@@ -1125,7 +1387,6 @@ typedef struct	_SET_VOLTAGE_PARAMETERS
+   UCHAR    ucReserved;          
+ }SET_VOLTAGE_PARAMETERS;
+ 
+-
+ typedef struct	_SET_VOLTAGE_PARAMETERS_V2
+ {
+   UCHAR    ucVoltageType;               // To tell which voltage to set up, VDDC/MVDDC/MVDDQ
+@@ -1133,13 +1394,23 @@ typedef struct	_SET_VOLTAGE_PARAMETERS_V2
+   USHORT   usVoltageLevel;              // real voltage level
+ }SET_VOLTAGE_PARAMETERS_V2;
+ 
+-
+ typedef struct _SET_VOLTAGE_PS_ALLOCATION
+ {
+   SET_VOLTAGE_PARAMETERS sASICSetVoltage;
+   WRITE_ONE_BYTE_HW_I2C_DATA_PS_ALLOCATION sReserved;
+ }SET_VOLTAGE_PS_ALLOCATION;
+ 
++/****************************************************************************/	
++// Structures used by TVEncoderControlTable
++/****************************************************************************/	
++typedef struct _TV_ENCODER_CONTROL_PARAMETERS
++{
++  USHORT usPixelClock;                // in 10KHz; for bios convenient
++  UCHAR  ucTvStandard;                // See definition "ATOM_TV_NTSC ..."
++  UCHAR  ucAction;                    // 0: turn off encoder
++                                      // 1: setup and turn on encoder
++}TV_ENCODER_CONTROL_PARAMETERS;
++
+ typedef struct _TV_ENCODER_CONTROL_PS_ALLOCATION
+ {
+   TV_ENCODER_CONTROL_PARAMETERS sTVEncoder;          
+@@ -1153,6 +1424,9 @@ typedef struct _TV_ENCODER_CONTROL_PS_ALLOCATION
+ 	#define	USHORT	void*
+ #endif
+ 
++/****************************************************************************/	
++// Structure used in Data.mtb
++/****************************************************************************/	
+ typedef struct _ATOM_MASTER_LIST_OF_DATA_TABLES
+ {
+   USHORT        UtilityPipeLine;	        // Offest for the utility to get parser info,Don't change this position!
+@@ -1195,14 +1469,15 @@ typedef struct _ATOM_MASTER_LIST_OF_DATA_TABLES
+ 	#define	USHORT	UTEMP
+ #endif
+ 
+-
+ typedef struct _ATOM_MASTER_DATA_TABLE
+ { 
+   ATOM_COMMON_TABLE_HEADER sHeader;  
+   ATOM_MASTER_LIST_OF_DATA_TABLES   ListOfDataTables;
+ }ATOM_MASTER_DATA_TABLE;
+ 
+-
++/****************************************************************************/	
++// Structure used in MultimediaCapabilityInfoTable
++/****************************************************************************/	
+ typedef struct _ATOM_MULTIMEDIA_CAPABILITY_INFO
+ {
+   ATOM_COMMON_TABLE_HEADER sHeader;  
+@@ -1213,7 +1488,9 @@ typedef struct _ATOM_MULTIMEDIA_CAPABILITY_INFO
+   UCHAR                    ucHostPortInfo;   // Provides host port configuration information
+ }ATOM_MULTIMEDIA_CAPABILITY_INFO;
+ 
+-
++/****************************************************************************/	
++// Structure used in MultimediaConfigInfoTable
++/****************************************************************************/	
+ typedef struct _ATOM_MULTIMEDIA_CONFIG_INFO
+ {
+   ATOM_COMMON_TABLE_HEADER sHeader;
+@@ -1232,7 +1509,9 @@ typedef struct _ATOM_MULTIMEDIA_CONFIG_INFO
+   UCHAR                    ucVideoInput4Info;// Video Input 4 Type (1:0) F/B setting (2) physical connector ID (5:3) reserved (7:6)
+ }ATOM_MULTIMEDIA_CONFIG_INFO;
+ 
+-/****************************Firmware Info Table Definitions**********************/
++/****************************************************************************/	
++// Structures used in FirmwareInfoTable
++/****************************************************************************/	
+ 
+ // usBIOSCapability Defintion:
+ // Bit 0 = 0: Bios image is not Posted, =1:Bios image is Posted; 
+@@ -1258,7 +1537,7 @@ typedef struct _ATOM_MULTIMEDIA_CONFIG_INFO
  //Please don't add or expand this bitfield structure below, this one will retire soon.!
  typedef struct _ATOM_FIRMWARE_CAPABILITY
  {
@@ -638,8 +1480,162 @@ index 17483a6..2e7dc6c 100644
    USHORT Reserved:3;
    USHORT HyperMemory_Size:4;
    USHORT HyperMemory_Support:1;
-@@ -1767,7 +1779,7 @@ for Griffin or Greyhound. SBIOS needs to convert to actual time by:
+@@ -1447,6 +1726,9 @@ typedef struct _ATOM_FIRMWARE_INFO_V1_4
  
+ #define ATOM_FIRMWARE_INFO_LAST  ATOM_FIRMWARE_INFO_V1_4
+ 
++/****************************************************************************/	
++// Structures used in IntegratedSystemInfoTable
++/****************************************************************************/	
+ #define IGP_CAP_FLAG_DYNAMIC_CLOCK_EN      0x2
+ #define IGP_CAP_FLAG_AC_CARD               0x4
+ #define IGP_CAP_FLAG_SDVO_CARD             0x8
+@@ -1528,11 +1810,11 @@ typedef struct _ATOM_INTEGRATED_SYSTEM_INFO_V2
+ {
+   ATOM_COMMON_TABLE_HEADER   sHeader;
+   ULONG	                     ulBootUpEngineClock;       //in 10kHz unit
+-  ULONG			                 ulReserved1[2];            //must be 0x0 for the reserved
++  ULONG			     ulReserved1[2];            //must be 0x0 for the reserved
+   ULONG	                     ulBootUpUMAClock;          //in 10kHz unit
+   ULONG	                     ulBootUpSidePortClock;     //in 10kHz unit
+   ULONG	                     ulMinSidePortClock;        //in 10kHz unit
+-  ULONG			                 ulReserved2[6];            //must be 0x0 for the reserved
++  ULONG			     ulReserved2[6];            //must be 0x0 for the reserved
+   ULONG                      ulSystemConfig;            //see explanation below
+   ULONG                      ulBootUpReqDisplayVector;
+   ULONG                      ulOtherDisplayMisc;
+@@ -1555,7 +1837,13 @@ typedef struct _ATOM_INTEGRATED_SYSTEM_INFO_V2
+   USHORT                     usUMADataReturnTime;
+   USHORT                     usLinkStatusZeroTime;
+   USHORT                     usReserved;
+-  ULONG                      ulReserved3[101];          //must be 0x0
++  ULONG                      ulHighVoltageHTLinkFreq;     // in 10Khz
++  ULONG                      ulLowVoltageHTLinkFreq;      // in 10Khz
++  USHORT                     usMaxUpStreamHTLinkWidth;
++  USHORT                     usMaxDownStreamHTLinkWidth;
++  USHORT                     usMinUpStreamHTLinkWidth;
++  USHORT                     usMinDownStreamHTLinkWidth;
++  ULONG                      ulReserved3[97];          //must be 0x0
+ }ATOM_INTEGRATED_SYSTEM_INFO_V2;   
+ 
+ /*
+@@ -1564,8 +1852,20 @@ ulBootUpUMAClock:      Boot-up UMA Clock in 10Khz; it must be 0x0 when UMA is no
+ ulBootUpSidePortClock: Boot-up SidePort Clock in 10Khz; it must be 0x0 when SidePort Memory is not present,this could be equal to or less than maximum supported Sideport memory clock
+ 
+ ulSystemConfig:  
+-Bit[0]: =1 PowerExpress mode =0 Non-PowerExpress mode; 
+-Bit[1]=1: system is running at overdrived engine clock =0:system is not running at overdrived engine clock
++Bit[0]=1: PowerExpress mode =0 Non-PowerExpress mode; 
++Bit[1]=1: system boots up at AMD overdrived state or user customized  mode. In this case, driver will just stick to this boot-up mode. No other PowerPlay state
++      =0: system boots up at driver control state. Power state depends on PowerPlay table.
++Bit[2]=1: PWM method is used on NB voltage control. =0: GPIO method is used.
++Bit[3]=1: Only one power state(Performance) will be supported.
++      =0: Multiple power states supported from PowerPlay table.
++Bit[4]=1: CLMC is supported and enabled on current system. 
++      =0: CLMC is not supported or enabled on current system. SBIOS need to support HT link/freq change through ATIF interface.  
++Bit[5]=1: Enable CDLW for all driver control power states. Max HT width is from SBIOS, while Min HT width is determined by display requirement.  
++      =0: CDLW is disabled. If CLMC is enabled case, Min HT width will be set equal to Max HT width. If CLMC disabled case, Max HT width will be applied.
++Bit[6]=1: High Voltage requested for all power states. In this case, voltage will be forced at 1.1v and powerplay table voltage drop/throttling request will be ignored.
++      =0: Voltage settings is determined by powerplay table.
++Bit[7]=1: Enable CLMC as hybrid Mode. CDLD and CILR will be disabled in this case and we're using legacy C1E. This is workaround for CPU(Griffin) performance issue.
++      =0: Enable CLMC as regular mode, CDLD and CILR will be enabled.
+ 
+ ulBootUpReqDisplayVector: This dword is a bit vector indicates what display devices are requested during boot-up. Refer to ATOM_DEVICE_xxx_SUPPORT for the bit vector definitions.
+ 
+@@ -1594,16 +1894,21 @@ ucDockingPinBit:     which bit in this register to read the pin status;
+ ucDockingPinPolarity:Polarity of the pin when docked;
+ 
+ ulCPUCapInfo:        [7:0]=1:Griffin;[7:0]=2:Greyhound;[7:0]=3:K8, other bits reserved for now and must be 0x0
+- 
++
+ usNumberOfCyclesInPeriod:Indicate how many cycles when PWM duty is 100%.
+-usMaxNBVoltage:Voltage regulator dependent PWM value.Set this one to 0xFF if VC without PWM. Set this to 0x0 if no VC at all.
+-usMinNBVoltage:Voltage regulator dependent PWM value.Set this one to 0x00 if VC without PWM or no VC at all.
++usMaxNBVoltage:Max. voltage control value in either PWM or GPIO mode. 
++usMinNBVoltage:Min. voltage control value in either PWM or GPIO mode.
++                    GPIO mode: both usMaxNBVoltage & usMinNBVoltage have a valid value ulSystemConfig.SYSTEM_CONFIG_USE_PWM_ON_VOLTAGE=0
++                    PWM mode: both usMaxNBVoltage & usMinNBVoltage have a valid value ulSystemConfig.SYSTEM_CONFIG_USE_PWM_ON_VOLTAGE=1
++                    GPU SW don't control mode: usMaxNBVoltage & usMinNBVoltage=0 and no care about ulSystemConfig.SYSTEM_CONFIG_USE_PWM_ON_VOLTAGE
+ usBootUpNBVoltage:Boot-up voltage regulator dependent PWM value.
+ 
++ulHTLinkFreq:       Bootup HT link Frequency in 10Khz.
++usMinHTLinkWidth:   Bootup minimum HT link width. If CDLW disabled, this is equal to usMaxHTLinkWidth. 
++                    If CDLW enabled, both upstream and downstream width should be the same during bootup.
++usMaxHTLinkWidth:   Bootup maximum HT link width. If CDLW disabled, this is equal to usMinHTLinkWidth. 
++                    If CDLW enabled, both upstream and downstream width should be the same during bootup.  
+ 
+-ulHTLinkFreq:        Current HT link Frequency in 10Khz.
+-usMinHTLinkWidth:   
+-usMaxHTLinkWidth:
+ usUMASyncStartDelay: Memory access latency, required for watermark calculation 
+ usUMADataReturnTime: Memory access latency, required for watermark calculation
+ usLinkStatusZeroTime:Memory access latency required for watermark calculation, set this to 0x0 for K8 CPU, set a proper value in 0.01 the unit of us 
+@@ -1612,10 +1917,27 @@ for Griffin or Greyhound. SBIOS needs to convert to actual time by:
+                      if T0Ttime [5:4]=01b, then usLinkStatusZeroTime=T0Ttime [3:0]*0.5us (0.0 to 7.5us)
+                      if T0Ttime [5:4]=10b, then usLinkStatusZeroTime=T0Ttime [3:0]*2.0us (0.0 to 30us)
+                      if T0Ttime [5:4]=11b, and T0Ttime [3:0]=0x0 to 0xa, then usLinkStatusZeroTime=T0Ttime [3:0]*20us (0.0 to 200us)
++
++ulHighVoltageHTLinkFreq:     HT link frequency for power state with low voltage. If boot up runs in HT1, this must be 0.
++                             This must be less than or equal to ulHTLinkFreq(bootup frequency). 
++ulLowVoltageHTLinkFreq:      HT link frequency for power state with low voltage or voltage scaling 1.0v~1.1v. If boot up runs in HT1, this must be 0.
++                             This must be less than or equal to ulHighVoltageHTLinkFreq.
++
++usMaxUpStreamHTLinkWidth:    Asymmetric link width support in the future, to replace usMaxHTLinkWidth. Not used for now.
++usMaxDownStreamHTLinkWidth:  same as above.
++usMinUpStreamHTLinkWidth:    Asymmetric link width support in the future, to replace usMinHTLinkWidth. Not used for now.
++usMinDownStreamHTLinkWidth:  same as above.
+ */
+ 
++
+ #define SYSTEM_CONFIG_POWEREXPRESS_ENABLE                 0x00000001
+ #define SYSTEM_CONFIG_RUN_AT_OVERDRIVE_ENGINE             0x00000002
++#define SYSTEM_CONFIG_USE_PWM_ON_VOLTAGE                  0x00000004 
++#define SYSTEM_CONFIG_PERFORMANCE_POWERSTATE_ONLY         0x00000008
++#define SYSTEM_CONFIG_CLMC_ENABLED                        0x00000010
++#define SYSTEM_CONFIG_CDLW_ENABLED                        0x00000020
++#define SYSTEM_CONFIG_HIGH_VOLTAGE_REQUESTED              0x00000040
++#define SYSTEM_CONFIG_CLMC_HYBRID_MODE_ENABLED            0x00000080
+ 
+ #define IGP_DDI_SLOT_LANE_CONFIG_MASK                     0x000000FF
+ 
+@@ -1671,14 +1993,16 @@ for Griffin or Greyhound. SBIOS needs to convert to actual time by:
+ #define ATOM_DEVICE_DFP2_INDEX                            0x00000007
+ #define ATOM_DEVICE_CV_INDEX                              0x00000008
+ #define ATOM_DEVICE_DFP3_INDEX														0x00000009
+-#define ATOM_DEVICE_RESERVEDA_INDEX                       0x0000000A
+-#define ATOM_DEVICE_RESERVEDB_INDEX                       0x0000000B
++#define ATOM_DEVICE_DFP4_INDEX														0x0000000A
++#define ATOM_DEVICE_DFP5_INDEX														0x0000000B
+ #define ATOM_DEVICE_RESERVEDC_INDEX                       0x0000000C
+ #define ATOM_DEVICE_RESERVEDD_INDEX                       0x0000000D
+ #define ATOM_DEVICE_RESERVEDE_INDEX                       0x0000000E
+ #define ATOM_DEVICE_RESERVEDF_INDEX                       0x0000000F
+-#define ATOM_MAX_SUPPORTED_DEVICE_INFO                    (ATOM_DEVICE_CV_INDEX+2)
++#define ATOM_MAX_SUPPORTED_DEVICE_INFO                    (ATOM_DEVICE_DFP3_INDEX+1)
+ #define ATOM_MAX_SUPPORTED_DEVICE_INFO_2                  ATOM_MAX_SUPPORTED_DEVICE_INFO
++#define ATOM_MAX_SUPPORTED_DEVICE_INFO_3                  (ATOM_DEVICE_DFP5_INDEX + 1 )
++
+ #define ATOM_MAX_SUPPORTED_DEVICE                         (ATOM_DEVICE_RESERVEDF_INDEX+1)
+ 
+ #define ATOM_DEVICE_CRT1_SUPPORT                          (0x1L << ATOM_DEVICE_CRT1_INDEX )
+@@ -1691,9 +2015,11 @@ for Griffin or Greyhound. SBIOS needs to convert to actual time by:
+ #define ATOM_DEVICE_DFP2_SUPPORT                          (0x1L << ATOM_DEVICE_DFP2_INDEX)
+ #define ATOM_DEVICE_CV_SUPPORT                            (0x1L << ATOM_DEVICE_CV_INDEX   )
+ #define ATOM_DEVICE_DFP3_SUPPORT													(0x1L << ATOM_DEVICE_DFP3_INDEX )
++#define ATOM_DEVICE_DFP4_SUPPORT													(0x1L << ATOM_DEVICE_DFP4_INDEX )
++#define ATOM_DEVICE_DFP5_SUPPORT													(0x1L << ATOM_DEVICE_DFP5_INDEX )
+ 
+ #define ATOM_DEVICE_CRT_SUPPORT                           ATOM_DEVICE_CRT1_SUPPORT | ATOM_DEVICE_CRT2_SUPPORT
+-#define ATOM_DEVICE_DFP_SUPPORT                           ATOM_DEVICE_DFP1_SUPPORT | ATOM_DEVICE_DFP2_SUPPORT |  ATOM_DEVICE_DFP3_SUPPORT
++#define ATOM_DEVICE_DFP_SUPPORT                           ATOM_DEVICE_DFP1_SUPPORT | ATOM_DEVICE_DFP2_SUPPORT |  ATOM_DEVICE_DFP3_SUPPORT | ATOM_DEVICE_DFP4_SUPPORT | ATOM_DEVICE_DFP5_SUPPORT
+ #define ATOM_DEVICE_TV_SUPPORT                            ATOM_DEVICE_TV1_SUPPORT  | ATOM_DEVICE_TV2_SUPPORT
+ #define ATOM_DEVICE_LCD_SUPPORT                           ATOM_DEVICE_LCD1_SUPPORT | ATOM_DEVICE_LCD2_SUPPORT
+ 
+@@ -1764,10 +2090,9 @@ for Griffin or Greyhound. SBIOS needs to convert to actual time by:
+ //                          =	3-7	Reserved for future I2C engines
+ //		[3-0] - I2C_LINE_MUX  = A Mux number when it's HW assisted I2C or GPIO ID when it's SW I2C
+ 
+-
  typedef struct _ATOM_I2C_ID_CONFIG
  {
 -#if X_BYTE_ORDER == X_BIG_ENDIAN
@@ -647,7 +1643,26 @@ index 17483a6..2e7dc6c 100644
    UCHAR   bfHW_Capable:1;
    UCHAR   bfHW_EngineID:3;
    UCHAR   bfI2C_LineMux:4;
-@@ -1820,7 +1832,7 @@ typedef struct _ATOM_GPIO_I2C_INFO
+@@ -1785,6 +2110,9 @@ typedef union _ATOM_I2C_ID_CONFIG_ACCESS
+ }ATOM_I2C_ID_CONFIG_ACCESS;
+    
+ 
++/****************************************************************************/	
++// Structure used in GPIO_I2C_InfoTable
++/****************************************************************************/	
+ typedef struct _ATOM_GPIO_I2C_ASSIGMENT
+ {
+   USHORT                    usClkMaskRegisterIndex;
+@@ -1814,13 +2142,16 @@ typedef struct _ATOM_GPIO_I2C_INFO
+   ATOM_GPIO_I2C_ASSIGMENT   asGPIO_Info[ATOM_MAX_SUPPORTED_DEVICE];
+ }ATOM_GPIO_I2C_INFO;
+ 
++/****************************************************************************/	
++// Common Structure used in other structures
++/****************************************************************************/	
+ 
+ #ifndef _H2INC
+   
  //Please don't add or expand this bitfield structure below, this one will retire soon.!
  typedef struct _ATOM_MODE_MISC_INFO
  { 
@@ -656,7 +1671,343 @@ index 17483a6..2e7dc6c 100644
    USHORT Reserved:6;
    USHORT RGB888:1;
    USHORT DoubleClock:1;
-@@ -3426,7 +3438,7 @@ typedef struct _ATOM_MEMORY_VENDOR_BLOCK{
+@@ -1896,7 +2227,9 @@ typedef union _ATOM_MODE_MISC_INFO_ACCESS
+ //	VESA_HSYNC_WIDTH	=	VESA_HSYNC_TIME	=	EDID_HSPW
+ //	VESA_BORDER			=	EDID_BORDER
+ 
+-
++/****************************************************************************/	
++// Structure used in SetCRTC_UsingDTDTimingTable
++/****************************************************************************/	
+ typedef struct _SET_CRTC_USING_DTD_TIMING_PARAMETERS
+ {
+   USHORT  usH_Size;
+@@ -1914,6 +2247,9 @@ typedef struct _SET_CRTC_USING_DTD_TIMING_PARAMETERS
+   UCHAR   ucPadding[3];
+ }SET_CRTC_USING_DTD_TIMING_PARAMETERS;
+ 
++/****************************************************************************/	
++// Structure used in SetCRTC_TimingTable
++/****************************************************************************/	
+ typedef struct _SET_CRTC_TIMING_PARAMETERS
+ {
+   USHORT                      usH_Total;        // horizontal total
+@@ -1934,7 +2270,11 @@ typedef struct _SET_CRTC_TIMING_PARAMETERS
+ }SET_CRTC_TIMING_PARAMETERS;
+ #define SET_CRTC_TIMING_PARAMETERS_PS_ALLOCATION SET_CRTC_TIMING_PARAMETERS
+ 
+-
++/****************************************************************************/	
++// Structure used in StandardVESA_TimingTable
++//                   AnalogTV_InfoTable 
++//                   ComponentVideoInfoTable
++/****************************************************************************/	
+ typedef struct _ATOM_MODE_TIMING
+ {
+   USHORT  usCRTC_H_Total;
+@@ -1956,7 +2296,6 @@ typedef struct _ATOM_MODE_TIMING
+   UCHAR   ucRefreshRate;
+ }ATOM_MODE_TIMING;
+ 
+- 
+ typedef struct _ATOM_DTD_FORMAT
+ {
+   USHORT  usPixClk;
+@@ -1977,12 +2316,19 @@ typedef struct _ATOM_DTD_FORMAT
+   UCHAR   ucRefreshRate;
+ }ATOM_DTD_FORMAT;
+ 
++/****************************************************************************/	
++// Structure used in LVDS_InfoTable 
++//  * Need a document to describe this table
++/****************************************************************************/	
+ #define SUPPORTED_LCD_REFRESHRATE_30Hz          0x0004
+ #define SUPPORTED_LCD_REFRESHRATE_40Hz          0x0008
+ #define SUPPORTED_LCD_REFRESHRATE_50Hz          0x0010
+ #define SUPPORTED_LCD_REFRESHRATE_60Hz          0x0020
+ 
+-/****************************LVDS Info Table Definitions **********************/
++//Once DAL sees this CAP is set, it will read EDID from LCD on its own instead of using sLCDTiming in ATOM_LVDS_INFO_V12. 
++//Other entries in ATOM_LVDS_INFO_V12 are still valid/useful to DAL 
++#define	LCDPANEL_CAP_READ_EDID									0x1
++
+ //ucTableFormatRevision=1
+ //ucTableContentRevision=1
+ typedef struct _ATOM_LVDS_INFO
+@@ -2111,9 +2457,9 @@ typedef struct _ATOM_SPREAD_SPECTRUM_INFO
+   ATOM_SPREAD_SPECTRUM_ASSIGNMENT   asSS_Info[ATOM_MAX_SS_ENTRY];
+ }ATOM_SPREAD_SPECTRUM_INFO;
+ 
+-
+-
+-
++/****************************************************************************/	
++// Structure used in AnalogTV_InfoTable (Top level)
++/****************************************************************************/	
+ //ucTVBootUpDefaultStd definiton:
+ 
+ //ATOM_TV_NTSC                1
+@@ -2125,7 +2471,6 @@ typedef struct _ATOM_SPREAD_SPECTRUM_INFO
+ //ATOM_TV_PAL60               7
+ //ATOM_TV_SECAM               8
+ 
+-
+ //ucTVSuppportedStd definition:
+ #define NTSC_SUPPORT          0x1
+ #define NTSCJ_SUPPORT         0x2
+@@ -2215,7 +2560,15 @@ typedef struct _ATOM_ANALOG_TV_INFO
+ #define ATOM_DFP3_DTD_MODE_TBL_ADDR     (ATOM_DFP3_EDID_ADDR + ATOM_EDID_RAW_DATASIZE)
+ #define ATOM_DFP3_STD_MODE_TBL_ADDR     (ATOM_DFP3_DTD_MODE_TBL_ADDR + ATOM_DTD_MODE_SUPPORT_TBL_SIZE)
+ 
+-#define ATOM_DP_TRAINING_TBL_ADDR				(ATOM_DFP3_STD_MODE_TBL_ADDR+ATOM_STD_MODE_SUPPORT_TBL_SIZE)       
++#define ATOM_DFP4_EDID_ADDR             (ATOM_DFP3_STD_MODE_TBL_ADDR + ATOM_STD_MODE_SUPPORT_TBL_SIZE)
++#define ATOM_DFP4_DTD_MODE_TBL_ADDR     (ATOM_DFP4_EDID_ADDR + ATOM_EDID_RAW_DATASIZE)
++#define ATOM_DFP4_STD_MODE_TBL_ADDR     (ATOM_DFP4_DTD_MODE_TBL_ADDR + ATOM_DTD_MODE_SUPPORT_TBL_SIZE)
++
++#define ATOM_DFP5_EDID_ADDR             (ATOM_DFP4_STD_MODE_TBL_ADDR + ATOM_STD_MODE_SUPPORT_TBL_SIZE)
++#define ATOM_DFP5_DTD_MODE_TBL_ADDR     (ATOM_DFP5_EDID_ADDR + ATOM_EDID_RAW_DATASIZE)
++#define ATOM_DFP5_STD_MODE_TBL_ADDR     (ATOM_DFP5_DTD_MODE_TBL_ADDR + ATOM_DTD_MODE_SUPPORT_TBL_SIZE)
++
++#define ATOM_DP_TRAINING_TBL_ADDR				(ATOM_DFP5_STD_MODE_TBL_ADDR+ATOM_STD_MODE_SUPPORT_TBL_SIZE)       
+ 
+ #define ATOM_STACK_STORAGE_START        (ATOM_DP_TRAINING_TBL_ADDR+256)       
+ #define ATOM_STACK_STORAGE_END          ATOM_STACK_STORAGE_START+512        
+@@ -2228,6 +2581,15 @@ typedef struct _ATOM_ANALOG_TV_INFO
+ #define	ATOM_VRAM_BLOCK_NEEDS_NO_RESERVATION   0x1
+ #define	ATOM_VRAM_BLOCK_NEEDS_RESERVATION      0x0
+ 
++/***********************************************************************************/	
++// Structure used in VRAM_UsageByFirmwareTable
++// Note1: This table is filled by SetBiosReservationStartInFB in CoreCommSubs.asm
++//        at running time.   
++// note2: From RV770, the memory is more than 32bit addressable, so we will change 
++//        ucTableFormatRevision=1,ucTableContentRevision=4, the strcuture remains 
++//        exactly same as 1.1 and 1.2 (1.3 is never in use), but ulStartAddrUsedByFirmware 
++//        (in offset to start of memory address) is KB aligned instead of byte aligend.
++/***********************************************************************************/	
+ #define ATOM_MAX_FIRMWARE_VRAM_USAGE_INFO			1
+ 
+ typedef struct _ATOM_FIRMWARE_VRAM_RESERVE_INFO
+@@ -2243,8 +2605,9 @@ typedef struct _ATOM_VRAM_USAGE_BY_FIRMWARE
+   ATOM_FIRMWARE_VRAM_RESERVE_INFO	asFirmwareVramReserveInfo[ATOM_MAX_FIRMWARE_VRAM_USAGE_INFO];
+ }ATOM_VRAM_USAGE_BY_FIRMWARE;
+ 
+-/**************************************************************************/
+-//GPIO Pin lut table definition
++/****************************************************************************/	
++// Structure used in GPIO_Pin_LUTTable
++/****************************************************************************/	
+ typedef struct _ATOM_GPIO_PIN_ASSIGNMENT
+ {
+   USHORT                   usGpioPin_AIndex;
+@@ -2258,9 +2621,9 @@ typedef struct _ATOM_GPIO_PIN_LUT
+   ATOM_GPIO_PIN_ASSIGNMENT	asGPIO_Pin[1];
+ }ATOM_GPIO_PIN_LUT;
+ 
+-/**************************************************************************/
+-
+-
++/****************************************************************************/	
++// Structure used in ComponentVideoInfoTable	
++/****************************************************************************/	
+ #define GPIO_PIN_ACTIVE_HIGH          0x1
+ 
+ #define MAX_SUPPORTED_CV_STANDARDS    5
+@@ -2350,8 +2713,9 @@ typedef struct _ATOM_COMPONENT_VIDEO_INFO_V21
+ 
+ #define ATOM_COMPONENT_VIDEO_INFO_LAST  ATOM_COMPONENT_VIDEO_INFO_V21
+ 
+-/**************************************************************************/
+-//Object table starts here
++/****************************************************************************/	
++// Structure used in object_InfoTable
++/****************************************************************************/	
+ typedef struct _ATOM_OBJECT_HEADER
+ { 
+   ATOM_COMMON_TABLE_HEADER	sHeader;
+@@ -2596,9 +2960,9 @@ typedef struct _ATOM_ROUTER_DATA_CLOCK_PATH_SELECT_RECORD
+ #define ATOM_ROUTER_MUX_PIN_STATE_MASK								0x0f
+ #define ATOM_ROUTER_MUX_PIN_SINGLE_STATE_COMPLEMENT		0x01
+ 
+-/**************************************************************************/
+-//ASIC voltage data table starts here
+-
++/****************************************************************************/	
++// ASIC voltage data table
++/****************************************************************************/	
+ typedef struct  _ATOM_VOLTAGE_INFO_HEADER
+ {
+    USHORT   usVDDCBaseLevel;                //In number of 50mv unit
+@@ -2824,13 +3188,16 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S0_CV_DIN                  0x00002000L
+ #define ATOM_S0_CV_MASK                 (ATOM_S0_CV+ATOM_S0_CV_DIN)
+ 
+-
+ #define ATOM_S0_DFP1                    0x00010000L
+ #define ATOM_S0_DFP2                    0x00020000L
+ #define ATOM_S0_LCD1                    0x00040000L
+ #define ATOM_S0_LCD2                    0x00080000L
+ #define ATOM_S0_TV2                     0x00100000L
+ #define ATOM_S0_DFP3										0x00200000L
++#define ATOM_S0_DFP4										0x00400000L
++#define ATOM_S0_DFP5										0x00800000L
++
++#define ATOM_S0_DFP_MASK                ATOM_S0_DFP1 | ATOM_S0_DFP2 | ATOM_S0_DFP3 | ATOM_S0_DFP4 | ATOM_S0_DFP5
+ 
+ #define ATOM_S0_FAD_REGISTER_BUG        0x02000000L // If set, indicates we are running a PCIE asic with 
+                                                     // the FAD/HDP reg access bug.  Bit is read by DAL
+@@ -2888,7 +3255,6 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S1_ROM_LOCATION_MASK       0x0000FFFFL
+ #define ATOM_S1_PCI_BUS_DEV_MASK        0xFFFF0000L
+ 
+-     
+ //	BIOS_2_SCRATCH Definition
+ #define ATOM_S2_TV1_STANDARD_MASK       0x0000000FL
+ #define ATOM_S2_CURRENT_BL_LEVEL_MASK   0x0000FF00L
+@@ -2904,12 +3270,14 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S2_DFP2_DPMS_STATE         0x00800000L
+ #define ATOM_S2_CV_DPMS_STATE           0x01000000L
+ #define ATOM_S2_DFP3_DPMS_STATE					0x02000000L
++#define ATOM_S2_DFP4_DPMS_STATE					0x04000000L
++#define ATOM_S2_DFP5_DPMS_STATE					0x08000000L
+ 
+-#define ATOM_S2_DEVICE_DPMS_STATE       (ATOM_S2_CRT1_DPMS_STATE+ATOM_S2_LCD1_DPMS_STATE+ATOM_S2_TV1_DPMS_STATE+\
+-                                        ATOM_S2_DFP1I_DPMS_STATE+ATOM_S2_CRT2_DPMS_STATE+ATOM_S2_LCD2_DPMS_STATE+\
+-                                        ATOM_S2_TV2_DPMS_STATE+ATOM_S2_DFP1X_DPMS_STATE+ATOM_S2_CV_DPMS_STATE+\
+-                                        ATOM_S2_DFP3_DPMS_STATE)
++#define ATOM_S2_DFP_DPM_STATE           ATOM_S2_DFP1_DPMS_STATE | ATOM_S2_DFP2_DPMS_STATE | ATOM_S2_DFP3_DPMS_STATE | ATOM_S2_DFP4_DPMS_STATE | ATOM_S2_DFP5_DPMS_STATE
+ 
++#define ATOM_S2_DEVICE_DPMS_STATE       (ATOM_S2_CRT1_DPMS_STATE+ATOM_S2_LCD1_DPMS_STATE+ATOM_S2_TV1_DPMS_STATE+\
++                                        ATOM_S2_DFP_DPMS_STATE+ATOM_S2_CRT2_DPMS_STATE+ATOM_S2_LCD2_DPMS_STATE+\
++                                        ATOM_S2_TV2_DPMS_STATE+ATOM_S2_CV_DPMS_STATE
+ 
+ #define ATOM_S2_FORCEDLOWPWRMODE_STATE_MASK       0x0C000000L
+ #define ATOM_S2_FORCEDLOWPWRMODE_STATE_MASK_SHIFT 26
+@@ -2938,6 +3306,8 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S2_DFP2_DPMS_STATEb2       0x80
+ #define ATOM_S2_CV_DPMS_STATEb3         0x01
+ #define ATOM_S2_DFP3_DPMS_STATEb3				0x02
++#define ATOM_S2_DFP4_DPMS_STATEb3				0x04
++#define ATOM_S2_DFP5_DPMS_STATEb3				0x08
+ 
+ #define ATOM_S2_DEVICE_DPMS_MASKw1      0x3FF
+ #define ATOM_S2_FORCEDLOWPWRMODE_STATE_MASKb3     0x0C
+@@ -2957,6 +3327,8 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S3_DFP2_ACTIVE             0x00000080L
+ #define ATOM_S3_CV_ACTIVE               0x00000100L
+ #define ATOM_S3_DFP3_ACTIVE							0x00000200L
++#define ATOM_S3_DFP4_ACTIVE							0x00000400L
++#define ATOM_S3_DFP5_ACTIVE							0x00000800L
+ 
+ #define ATOM_S3_DEVICE_ACTIVE_MASK      0x000003FFL
+ 
+@@ -2973,8 +3345,10 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S3_DFP2_CRTC_ACTIVE        0x00800000L
+ #define ATOM_S3_CV_CRTC_ACTIVE          0x01000000L
+ #define ATOM_S3_DFP3_CRTC_ACTIVE				0x02000000L
++#define ATOM_S3_DFP4_CRTC_ACTIVE				0x04000000L
++#define ATOM_S3_DFP5_CRTC_ACTIVE				0x08000000L
+ 
+-#define ATOM_S3_DEVICE_CRTC_ACTIVE_MASK 0x03FF0000L
++#define ATOM_S3_DEVICE_CRTC_ACTIVE_MASK 0x0FFF0000L
+ #define ATOM_S3_ASIC_GUI_ENGINE_HUNG    0x20000000L
+ #define ATOM_S3_ALLOW_FAST_PWR_SWITCH   0x40000000L
+ #define ATOM_S3_RQST_GPU_USE_MIN_PWR    0x80000000L
+@@ -2990,8 +3364,10 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S3_DFP2_ACTIVEb0           0x80
+ #define ATOM_S3_CV_ACTIVEb1             0x01
+ #define ATOM_S3_DFP3_ACTIVEb1						0x02
++#define ATOM_S3_DFP4_ACTIVEb1						0x04
++#define ATOM_S3_DFP5_ACTIVEb1						0x08
+ 
+-#define ATOM_S3_ACTIVE_CRTC1w0          0x3FF
++#define ATOM_S3_ACTIVE_CRTC1w0          0xFFF
+ 
+ #define ATOM_S3_CRT1_CRTC_ACTIVEb2      0x01
+ #define ATOM_S3_LCD1_CRTC_ACTIVEb2      0x02
+@@ -3003,8 +3379,10 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S3_DFP2_CRTC_ACTIVEb2      0x80
+ #define ATOM_S3_CV_CRTC_ACTIVEb3        0x01
+ #define ATOM_S3_DFP3_CRTC_ACTIVEb3			0x02
++#define ATOM_S3_DFP4_CRTC_ACTIVEb3			0x04
++#define ATOM_S3_DFP5_CRTC_ACTIVEb3			0x08
+ 
+-#define ATOM_S3_ACTIVE_CRTC2w1          0x3FF
++#define ATOM_S3_ACTIVE_CRTC2w1          0xFFF
+ 
+ #define ATOM_S3_ASIC_GUI_ENGINE_HUNGb3	0x20
+ #define ATOM_S3_ALLOW_FAST_PWR_SWITCHb3 0x40
+@@ -3015,13 +3393,11 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S4_LCD1_REFRESH_MASK       0x0000FF00L
+ #define ATOM_S4_LCD1_REFRESH_SHIFT      8
+ 
+-
+ //Byte aligned defintion for BIOS usage
+ #define ATOM_S4_LCD1_PANEL_ID_MASKb0	  0x0FF
+ #define ATOM_S4_LCD1_REFRESH_MASKb1		  ATOM_S4_LCD1_PANEL_ID_MASKb0
+ #define ATOM_S4_VRAM_INFO_MASKb2        ATOM_S4_LCD1_PANEL_ID_MASKb0
+ 
+-
+ // BIOS_5_SCRATCH Definition, BIOS_5_SCRATCH is used by Firmware only !!!!
+ #define ATOM_S5_DOS_REQ_CRT1b0          0x01
+ #define ATOM_S5_DOS_REQ_LCD1b0          0x02
+@@ -3033,6 +3409,8 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S5_DOS_REQ_DFP2b0          0x80
+ #define ATOM_S5_DOS_REQ_CVb1            0x01
+ #define ATOM_S5_DOS_REQ_DFP3b1					0x02
++#define ATOM_S5_DOS_REQ_DFP4b1					0x04
++#define ATOM_S5_DOS_REQ_DFP5b1					0x08
+ 
+ #define ATOM_S5_DOS_REQ_DEVICEw0        0x03FF
+ 
+@@ -3046,6 +3424,8 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S5_DOS_REQ_DFP2            0x0080
+ #define ATOM_S5_DOS_REQ_CV              0x0100
+ #define ATOM_S5_DOS_REQ_DFP3						0x0200
++#define ATOM_S5_DOS_REQ_DFP4						0x0400
++#define ATOM_S5_DOS_REQ_DFP5						0x0800
+ 
+ #define ATOM_S5_DOS_FORCE_CRT1b2        ATOM_S5_DOS_REQ_CRT1b0
+ #define ATOM_S5_DOS_FORCE_TV1b2         ATOM_S5_DOS_REQ_TV1b0
+@@ -3073,7 +3453,6 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S6_DISPLAY_STATE_CHANGE    0x00004000L        //This bit is recycled when ATOM_BIOS_INFO_BIOS_SCRATCH6_SCL2_REDEFINE is set,previously it's SCL2_H_expansion
+ #define ATOM_S6_I2C_STATE_CHANGE        0x00008000L        //This bit is recycled,when ATOM_BIOS_INFO_BIOS_SCRATCH6_SCL2_REDEFINE is set,previously it's SCL2_V_expansion
+ 
+-
+ #define ATOM_S6_ACC_REQ_CRT1            0x00010000L
+ #define ATOM_S6_ACC_REQ_LCD1            0x00020000L
+ #define ATOM_S6_ACC_REQ_TV1             0x00040000L
+@@ -3084,8 +3463,10 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S6_ACC_REQ_DFP2            0x00800000L
+ #define ATOM_S6_ACC_REQ_CV              0x01000000L
+ #define ATOM_S6_ACC_REQ_DFP3						0x02000000L
++#define ATOM_S6_ACC_REQ_DFP4						0x04000000L
++#define ATOM_S6_ACC_REQ_DFP5						0x08000000L
+ 
+-#define ATOM_S6_ACC_REQ_MASK                0x03FF0000L
++#define ATOM_S6_ACC_REQ_MASK                0x0FFF0000L
+ #define ATOM_S6_SYSTEM_POWER_MODE_CHANGE    0x10000000L
+ #define ATOM_S6_ACC_BLOCK_DISPLAY_SWITCH    0x20000000L
+ #define ATOM_S6_VRI_BRIGHTNESS_CHANGE       0x40000000L
+@@ -3117,6 +3498,8 @@ typedef struct _ATOM_ASIC_INTERNAL_SS_INFO{
+ #define ATOM_S6_ACC_REQ_DFP2b2          0x80
+ #define ATOM_S6_ACC_REQ_CVb3            0x01
+ #define ATOM_S6_ACC_REQ_DFP3b3					0x02
++#define ATOM_S6_ACC_REQ_DFP4b3					0x04
++#define ATOM_S6_ACC_REQ_DFP5b3					0x08
+ 
+ #define ATOM_S6_ACC_REQ_DEVICEw1        ATOM_S5_DOS_REQ_DEVICEw0
+ #define ATOM_S6_SYSTEM_POWER_MODE_CHANGEb3 0x10
+@@ -3391,7 +3774,7 @@ typedef struct _ATOM_TV_MODE_SCALER_PTR
+ typedef struct _ATOM_STANDARD_VESA_TIMING
+ {
+   ATOM_COMMON_TABLE_HEADER sHeader;  
+-  ATOM_MODE_TIMING				 aModeTimings[16];      // 16 is not the real array number, just for initial allocation
++  ATOM_DTD_FORMAT 				 aModeTimings[16];      // 16 is not the real array number, just for initial allocation
+ }ATOM_STANDARD_VESA_TIMING;
+ 
+ 
+@@ -3426,7 +3809,7 @@ typedef struct _ATOM_MEMORY_VENDOR_BLOCK{
  
  
  typedef struct _ATOM_MEMORY_SETTING_ID_CONFIG{
@@ -665,7 +2016,238 @@ index 17483a6..2e7dc6c 100644
  	ULONG												ucMemBlkId:8;
  	ULONG												ulMemClockRange:24;
  #else
-@@ -4072,7 +4084,7 @@ typedef struct  _COMPASSIONATE_DATA
+@@ -3470,6 +3853,11 @@ typedef struct _ATOM_INIT_REG_BLOCK{
+ #define VALUE_SAME_AS_ABOVE     0
+ #define VALUE_MASK_DWORD        0x84
+ 
++#define INDEX_ACCESS_RANGE_BEGIN	    (VALUE_DWORD + 1)
++#define INDEX_ACCESS_RANGE_END		    (INDEX_ACCESS_RANGE_BEGIN + 1)
++#define VALUE_INDEX_ACCESS_SINGLE	    (INDEX_ACCESS_RANGE_END + 1)
++
++
+ typedef struct _ATOM_MC_INIT_PARAM_TABLE
+ { 
+   ATOM_COMMON_TABLE_HEADER		sHeader;
+@@ -3508,6 +3896,28 @@ typedef struct _ATOM_MC_INIT_PARAM_TABLE
+ #define QIMONDA             INFINEON
+ #define PROMOS              MOSEL
+ 
++/////////////Support for GDDR5 MC uCode to reside in upper 64K of ROM/////////////
++
++#define UCODE_ROM_START_ADDRESS		0x1c000
++#define	UCODE_SIGNATURE			0x4375434d // 'MCuC' - MC uCode
++
++//uCode block header for reference
++
++typedef struct _MCuCodeHeader
++{
++  ULONG  ulSignature;
++  UCHAR  ucRevision;
++  UCHAR  ucChecksum;
++  UCHAR  ucReserved1;
++  UCHAR  ucReserved2;
++  USHORT usParametersLength;
++  USHORT usUCodeLength;
++  USHORT usReserved1;
++  USHORT usReserved2;
++} MCuCodeHeader;
++
++//////////////////////////////////////////////////////////////////////////////////
++
+ #define ATOM_MAX_NUMBER_OF_VRAM_MODULE	16
+ 
+ #define ATOM_VRAM_MODULE_MEMORY_VENDOR_ID_MASK	0xF
+@@ -3564,6 +3974,42 @@ typedef struct _ATOM_VRAM_MODULE_V2
+ typedef	struct _ATOM_MEMORY_TIMING_FORMAT
+ {
+ 	ULONG											 ulClkRange;				// memory clock in 10kHz unit, when target memory clock is below this clock, use this memory timing 	
++  union{
++	  USHORT										 usMRS;							// mode register						
++    USHORT                     usDDR3_MR0;
++  };
++  union{
++	  USHORT										 usEMRS;						// extended mode register
++    USHORT                     usDDR3_MR1;
++  };
++	UCHAR											 ucCL;							// CAS latency
++	UCHAR											 ucWL;							// WRITE Latency				
++	UCHAR											 uctRAS;						// tRAS
++	UCHAR											 uctRC;							// tRC	
++	UCHAR											 uctRFC;						// tRFC
++	UCHAR											 uctRCDR;						// tRCDR	
++	UCHAR											 uctRCDW;						// tRCDW
++	UCHAR											 uctRP;							// tRP
++	UCHAR											 uctRRD;						// tRRD	
++	UCHAR											 uctWR;							// tWR
++	UCHAR											 uctWTR;						// tWTR
++	UCHAR											 uctPDIX;						// tPDIX
++	UCHAR											 uctFAW;						// tFAW
++	UCHAR											 uctAOND;						// tAOND
++  union 
++  {
++    struct {
++	    UCHAR											 ucflag;						// flag to control memory timing calculation. bit0= control EMRS2 Infineon 
++	    UCHAR											 ucReserved;						
++    };
++    USHORT                   usDDR3_MR2;
++  };
++}ATOM_MEMORY_TIMING_FORMAT;
++
++
++typedef	struct _ATOM_MEMORY_TIMING_FORMAT_V1
++{
++	ULONG											 ulClkRange;				// memory clock in 10kHz unit, when target memory clock is below this clock, use this memory timing 	
+ 	USHORT										 usMRS;							// mode register						
+ 	USHORT										 usEMRS;						// extended mode register
+ 	UCHAR											 ucCL;							// CAS latency
+@@ -3581,16 +4027,31 @@ typedef	struct _ATOM_MEMORY_TIMING_FORMAT
+ 	UCHAR											 uctFAW;						// tFAW
+ 	UCHAR											 uctAOND;						// tAOND
+ 	UCHAR											 ucflag;						// flag to control memory timing calculation. bit0= control EMRS2 Infineon 
+-	UCHAR											 ucReserved;				// 
+-}ATOM_MEMORY_TIMING_FORMAT;
++////////////////////////////////////GDDR parameters///////////////////////////////////
++	UCHAR											 uctCCDL;						// 
++	UCHAR											 uctCRCRL;						// 
++	UCHAR											 uctCRCWL;						// 
++	UCHAR											 uctCKE;						// 
++	UCHAR											 uctCKRSE;						// 
++	UCHAR											 uctCKRSX;						// 
++	UCHAR											 uctFAW32;						// 
++	UCHAR											 ucReserved1;					// 
++	UCHAR											 ucReserved2;					// 
++	UCHAR											 ucTerminator;
++}ATOM_MEMORY_TIMING_FORMAT_V1;
+ 
+-#define	MEM_TIMING_FLAG_APP_MODE								0x01									// =0 mid clock range  =1 high clock range
+ 
+ typedef	struct _ATOM_MEMORY_FORMAT
+ {
+ 	ULONG											 ulDllDisClock;			// memory DLL will be disable when target memory clock is below this clock
+-  USHORT                     usEMRS2Value;      // EMRS2 Value is used for GDDR2 and GDDR4 memory type
+-  USHORT                     usEMRS3Value;      // EMRS3 Value is used for GDDR2 and GDDR4 memory type
++  union{
++    USHORT                     usEMRS2Value;      // EMRS2 Value is used for GDDR2 and GDDR4 memory type
++    USHORT                     usDDR3_Reserved;   // Not used for DDR3 memory
++  };
++  union{
++    USHORT                     usEMRS3Value;      // EMRS3 Value is used for GDDR2 and GDDR4 memory type
++    USHORT                     usDDR3_MR3;        // Used for DDR3 memory
++  };
+   UCHAR                      ucMemoryType;      // [7:4]=0x1:DDR1;=0x2:DDR2;=0x3:DDR3;=0x4:DDR4;[3:0] - must not be used for now;
+   UCHAR                      ucMemoryVenderID;  // Predefined,never change across designs or memory type/vender. If not predefined, vendor detection table gets executed
+   UCHAR                      ucRow;             // Number of Row,in power of 2;
+@@ -3629,6 +4090,79 @@ typedef struct _ATOM_VRAM_MODULE_V3
+ 
+ #define ATOM_VRAM_MODULE		 ATOM_VRAM_MODULE_V3
+ 
++typedef struct _ATOM_VRAM_MODULE_V4
++{
++  ULONG	  ulChannelMapCfg;	                // board dependent parameter: Channel combination
++  USHORT  usModuleSize;                     // size of ATOM_VRAM_MODULE_V4, make it easy for VBIOS to look for next entry of VRAM_MODULE
++  USHORT  usPrivateReserved;                // BIOS internal reserved space to optimize code size, updated by the compiler, shouldn't be modified manually!!
++                                            // MC_ARB_RAMCFG (includes NOOFBANK,NOOFRANKS,NOOFROWS,NOOFCOLS)
++  USHORT  usReserved;
++  UCHAR   ucExtMemoryID;    		            // An external indicator (by hardcode, callback or pin) to tell what is the current memory module
++  UCHAR   ucMemoryType;                     // [7:4]=0x1:DDR1;=0x2:DDR2;=0x3:DDR3;=0x4:DDR4; 0x5:DDR5 [3:0] - Must be 0x0 for now;
++  UCHAR   ucChannelNum;                     // Number of channels present in this module config
++  UCHAR   ucChannelWidth;                   // 0 - 32 bits; 1 - 64 bits
++	UCHAR   ucDensity;                        // _8Mx32, _16Mx32, _16Mx16, _32Mx16
++	UCHAR	  ucFlag;						                // To enable/disable functionalities based on memory type
++	UCHAR	  ucMisc;						                // bit0: 0 - single rank; 1 - dual rank;   bit2: 0 - burstlength 4, 1 - burstlength 8
++  UCHAR		ucVREFI;                          // board dependent parameter
++  UCHAR   ucNPL_RT;                         // board dependent parameter:NPL round trip delay, used for calculate memory timing parameters
++  UCHAR		ucPreamble;                       // [7:4] Write Preamble, [3:0] Read Preamble
++  UCHAR   ucMemorySize;                     // BIOS internal reserved space to optimize code size, updated by the compiler, shouldn't be modified manually!!
++                                            // Total memory size in unit of 16MB for CONFIG_MEMSIZE - bit[23:0] zeros
++  UCHAR   ucReserved[3];
++
++//compare with V3, we flat the struct by merging ATOM_MEMORY_FORMAT (as is) into V4 as the same level
++  union{
++    USHORT	usEMRS2Value;                   // EMRS2 Value is used for GDDR2 and GDDR4 memory type
++    USHORT  usDDR3_Reserved;
++  };
++  union{
++    USHORT	usEMRS3Value;                   // EMRS3 Value is used for GDDR2 and GDDR4 memory type
++    USHORT  usDDR3_MR3;                     // Used for DDR3 memory
++  };  
++  UCHAR   ucMemoryVenderID;  		            // Predefined, If not predefined, vendor detection table gets executed
++  UCHAR	  ucRefreshRateFactor;              // [1:0]=RefreshFactor (00=8ms, 01=16ms, 10=32ms,11=64ms)
++  UCHAR   ucReserved2[2];
++  ATOM_MEMORY_TIMING_FORMAT  asMemTiming[5];//Memory Timing block sort from lower clock to higher clock
++}ATOM_VRAM_MODULE_V4;
++
++#define VRAM_MODULE_V4_MISC_RANK_MASK       0x3
++#define VRAM_MODULE_V4_MISC_DUAL_RANK       0x1
++#define VRAM_MODULE_V4_MISC_BL_MASK         0x4
++#define VRAM_MODULE_V4_MISC_BL8             0x4
++#define VRAM_MODULE_V4_MISC_DUAL_CS         0x10
++
++typedef struct _ATOM_VRAM_MODULE_V5
++{
++  ULONG	  ulChannelMapCfg;	                // board dependent parameter: Channel combination
++  USHORT  usModuleSize;                     // size of ATOM_VRAM_MODULE_V4, make it easy for VBIOS to look for next entry of VRAM_MODULE
++  USHORT  usPrivateReserved;                // BIOS internal reserved space to optimize code size, updated by the compiler, shouldn't be modified manually!!
++                                            // MC_ARB_RAMCFG (includes NOOFBANK,NOOFRANKS,NOOFROWS,NOOFCOLS)
++  USHORT  usReserved;
++  UCHAR   ucExtMemoryID;    		            // An external indicator (by hardcode, callback or pin) to tell what is the current memory module
++  UCHAR   ucMemoryType;                     // [7:4]=0x1:DDR1;=0x2:DDR2;=0x3:DDR3;=0x4:DDR4; 0x5:DDR5 [3:0] - Must be 0x0 for now;
++  UCHAR   ucChannelNum;                     // Number of channels present in this module config
++  UCHAR   ucChannelWidth;                   // 0 - 32 bits; 1 - 64 bits
++	UCHAR   ucDensity;                        // _8Mx32, _16Mx32, _16Mx16, _32Mx16
++	UCHAR	  ucFlag;						                // To enable/disable functionalities based on memory type
++	UCHAR	  ucMisc;						                // bit0: 0 - single rank; 1 - dual rank;   bit2: 0 - burstlength 4, 1 - burstlength 8
++  UCHAR		ucVREFI;                          // board dependent parameter
++  UCHAR   ucNPL_RT;                         // board dependent parameter:NPL round trip delay, used for calculate memory timing parameters
++  UCHAR		ucPreamble;                       // [7:4] Write Preamble, [3:0] Read Preamble
++  UCHAR   ucMemorySize;                     // BIOS internal reserved space to optimize code size, updated by the compiler, shouldn't be modified manually!!
++                                            // Total memory size in unit of 16MB for CONFIG_MEMSIZE - bit[23:0] zeros
++  UCHAR   ucReserved[3];
++
++//compare with V3, we flat the struct by merging ATOM_MEMORY_FORMAT (as is) into V4 as the same level
++  USHORT	usEMRS2Value;      		            // EMRS2 Value is used for GDDR2 and GDDR4 memory type
++  USHORT	usEMRS3Value;      		            // EMRS3 Value is used for GDDR2 and GDDR4 memory type
++  UCHAR   ucMemoryVenderID;  		            // Predefined, If not predefined, vendor detection table gets executed
++  UCHAR	  ucRefreshRateFactor;              // [1:0]=RefreshFactor (00=8ms, 01=16ms, 10=32ms,11=64ms)
++  UCHAR	  ucFIFODepth;			                // FIFO depth supposes to be detected during vendor detection, but if we dont do vendor detection we have to hardcode FIFO Depth
++  UCHAR   ucCDR_Bandwidth;		   // [0:3]=Read CDR bandwidth, [4:7] - Write CDR Bandwidth
++  ATOM_MEMORY_TIMING_FORMAT_V1  asMemTiming[5];//Memory Timing block sort from lower clock to higher clock
++}ATOM_VRAM_MODULE_V5;
++
+ typedef struct _ATOM_VRAM_INFO_V2
+ {
+   ATOM_COMMON_TABLE_HEADER   sHeader;
+@@ -3651,6 +4185,21 @@ typedef struct _ATOM_VRAM_INFO_V3
+ 
+ #define	ATOM_VRAM_INFO_LAST	     ATOM_VRAM_INFO_V3
+ 
++typedef struct _ATOM_VRAM_INFO_V4
++{
++  ATOM_COMMON_TABLE_HEADER   sHeader;
++	USHORT										 usMemAdjustTblOffset;													 // offset of ATOM_INIT_REG_BLOCK structure for memory vendor specific MC adjust setting
++	USHORT										 usMemClkPatchTblOffset;												 //	offset of ATOM_INIT_REG_BLOCK structure for memory clock specific MC setting
++	USHORT										 usRerseved;
++	UCHAR           	         ucMemDQ7_0ByteRemap;													   // DQ line byte remap, =0: Memory Data line BYTE0, =1: BYTE1, =2: BYTE2, =3: BYTE3
++  ULONG                      ulMemDQ7_0BitRemap;                             // each DQ line ( 7~0) use 3bits, like: DQ0=Bit[2:0], DQ1:[5:3], ... DQ7:[23:21]
++  UCHAR                      ucReservde[4]; 
++  UCHAR                      ucNumOfVRAMModule;
++  ATOM_VRAM_MODULE_V4		     aVramInfo[ATOM_MAX_NUMBER_OF_VRAM_MODULE];      // just for allocation, real number of blocks is in ucNumOfVRAMModule;
++	ATOM_INIT_REG_BLOCK				 asMemPatch;																		 // for allocation
++																																						 //	ATOM_INIT_REG_BLOCK				 aMemAdjust;
++}ATOM_VRAM_INFO_V4;
++
+ typedef struct _ATOM_VRAM_GPIO_DETECTION_INFO
+ {
+   ATOM_COMMON_TABLE_HEADER   sHeader;
+@@ -3954,6 +4503,7 @@ typedef struct _DP_ENCODER_SERVICE_PARAMETERS
+ #define ATOM_DP_ACTION_TRAINING_PATTERN_SEL				0x04
+ #define ATOM_DP_ACTION_SET_VSWING_PREEMP					0x05
+ #define ATOM_DP_ACTION_GET_VSWING_PREEMP					0x06
++#define ATOM_DP_ACTION_BLANKING                   0x07
+ 
+ // ucConfig
+ #define ATOM_DP_CONFIG_ENCODER_SEL_MASK						0x03
+@@ -4072,7 +4622,7 @@ typedef struct  _COMPASSIONATE_DATA
  
  typedef struct _ATOM_CONNECTOR_INFO
  {
@@ -674,8 +2256,26 @@ index 17483a6..2e7dc6c 100644
    UCHAR   bfConnectorType:4;
    UCHAR   bfAssociatedDAC:4;
  #else
+@@ -4469,17 +5019,6 @@ typedef struct  _ATOM_POWERPLAY_INFO_V3
+ #define ENABLE_LVDS_SS_PARAMETERS_V3  ENABLE_SPREAD_SPECTRUM_ON_PPLL  
+ 
+ /*********************************************************************************/
+-#define ATOM_S3_SCALER2_ACTIVE_H          0x00004000L
+-#define ATOM_S3_SCALER2_ACTIVE_V          0x00008000L
+-#define ATOM_S6_REQ_SCALER2_H             0x00004000L
+-#define ATOM_S6_REQ_SCALER2_V             0x00008000L
+- 
+-#define ATOM_S3_SCALER1_ACTIVE_H          ATOM_S3_LCD_FULLEXPANSION_ACTIVE
+-#define ATOM_S3_SCALER1_ACTIVE_V          ATOM_S3_LCD_EXPANSION_ASPEC_RATIO_ACTIVE
+- 
+-#define ATOM_S6_REQ_SCALER1_H             ATOM_S6_REQ_LCD_EXPANSION_FULL
+-#define ATOM_S6_REQ_SCALER1_V             ATOM_S6_REQ_LCD_EXPANSION_ASPEC_RATIO
+-//==========================================================================================
+ 
+ #pragma pack() // BIOS data must use byte aligment
+ 
 diff --git a/src/Makefile.am b/src/Makefile.am
-index 5333495..c79b635 100644
+index 5333495..d65a3e4 100644
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
 @@ -26,8 +26,11 @@
@@ -707,7 +2307,7 @@ index 5333495..c79b635 100644
  radeon_drv_ladir = @moduledir@/drivers
  radeon_drv_la_SOURCES = \
 -	radeon_accel.c radeon_cursor.c radeon_dga.c \
-+	radeon_accel.c radeon_cursor.c radeon_dga.c radeon_memory.c \
++	radeon_accel.c radeon_cursor.c radeon_dga.c radeon_legacy_memory.c \
  	radeon_driver.c radeon_video.c radeon_bios.c radeon_mm_i2c.c \
  	radeon_vip.c radeon_misc.c radeon_probe.c \
  	legacy_crtc.c legacy_output.c \
@@ -748,7 +2348,7 @@ index a740df8..633c5d3 100644
  #define PCI_CHIP_RV630_9581 0x9581
  #define PCI_CHIP_RV630_9583 0x9583
 diff --git a/src/atombios_crtc.c b/src/atombios_crtc.c
-index 363addf..412a181 100644
+index 363addf..4e2395f 100644
 --- a/src/atombios_crtc.c
 +++ b/src/atombios_crtc.c
 @@ -43,11 +43,33 @@
@@ -830,7 +2430,7 @@ index 363addf..412a181 100644
  	uint32_t temp;
  
 -	pll_flags |= RADEON_PLL_PREFER_LOW_REF_DIV;
-+	if (mode->Clock > 120000) /* range limits??? */
++	if (IS_DCE3_VARIANT && mode->Clock > 200000) /* range limits??? */
 +	    pll_flags |= RADEON_PLL_PREFER_HIGH_FB_DIV;
 +	else
 +	    pll_flags |= RADEON_PLL_PREFER_LOW_REF_DIV;
@@ -1038,10 +2638,19 @@ index 363addf..412a181 100644
 +
 +}
 diff --git a/src/atombios_output.c b/src/atombios_output.c
-index 51be301..83b86a7 100644
+index 51be301..49de04f 100644
 --- a/src/atombios_output.c
 +++ b/src/atombios_output.c
-@@ -78,7 +78,7 @@ atombios_output_dac1_setup(xf86OutputPtr output, DisplayModePtr mode)
+@@ -43,6 +43,8 @@
+ #include "radeon_macros.h"
+ #include "radeon_atombios.h"
+ 
++#include "ati_pciids_gen.h"
++
+ static int
+ atombios_output_dac1_setup(xf86OutputPtr output, DisplayModePtr mode)
+ {
+@@ -78,7 +80,7 @@ atombios_output_dac1_setup(xf86OutputPtr output, DisplayModePtr mode)
  	}
      }
  
@@ -1050,7 +2659,7 @@ index 51be301..83b86a7 100644
      data.exec.index = GetIndexIntoMasterTable(COMMAND, DAC1EncoderControl);
      data.exec.dataSpace = (void *)&space;
      data.exec.pspace = &disp_data;
-@@ -128,7 +128,7 @@ atombios_output_dac2_setup(xf86OutputPtr output, DisplayModePtr mode)
+@@ -128,7 +130,7 @@ atombios_output_dac2_setup(xf86OutputPtr output, DisplayModePtr mode)
  	}
      }
  
@@ -1059,7 +2668,7 @@ index 51be301..83b86a7 100644
      data.exec.index = GetIndexIntoMasterTable(COMMAND, DAC2EncoderControl);
      data.exec.dataSpace = (void *)&space;
      data.exec.pspace = &disp_data;
-@@ -188,7 +188,7 @@ atombios_output_tv1_setup(xf86OutputPtr output, DisplayModePtr mode)
+@@ -188,7 +190,7 @@ atombios_output_tv1_setup(xf86OutputPtr output, DisplayModePtr mode)
  	}
      }
  
@@ -1068,7 +2677,26 @@ index 51be301..83b86a7 100644
      data.exec.index = GetIndexIntoMasterTable(COMMAND, TVEncoderControl);
      data.exec.dataSpace = (void *)&space;
      data.exec.pspace = &disp_data;
-@@ -243,7 +243,7 @@ atombios_output_ddia_setup(xf86OutputPtr output, DisplayModePtr mode)
+@@ -206,7 +208,8 @@ atombios_output_tv1_setup(xf86OutputPtr output, DisplayModePtr mode)
+ int
+ atombios_external_tmds_setup(xf86OutputPtr output, DisplayModePtr mode)
+ {
+-    RADEONInfoPtr info       = RADEONPTR(output->scrn);
++    ScrnInfoPtr pScrn = output->scrn;
++    RADEONInfoPtr info       = RADEONPTR(pScrn);
+     ENABLE_EXTERNAL_TMDS_ENCODER_PS_ALLOCATION disp_data;
+     AtomBiosArgRec data;
+     unsigned char *space;
+@@ -218,7 +221,7 @@ atombios_external_tmds_setup(xf86OutputPtr output, DisplayModePtr mode)
+     else
+ 	disp_data.sXTmdsEncoder.ucMisc = 0;
+ 
+-    if (!info->dac6bits)
++    if (pScrn->rgbBits == 8)
+ 	disp_data.sXTmdsEncoder.ucMisc |= (1 << 1);
+ 
+     data.exec.index = GetIndexIntoMasterTable(COMMAND, DVOEncoderControl);
+@@ -243,7 +246,7 @@ atombios_output_ddia_setup(xf86OutputPtr output, DisplayModePtr mode)
      unsigned char *space;
  
      disp_data.sDVOEncoder.ucAction = ATOM_ENABLE;
@@ -1077,34 +2705,181 @@ index 51be301..83b86a7 100644
  
      if (mode->Clock > 165000)
  	disp_data.sDVOEncoder.usDevAttr.sDigAttrib.ucAttribute = PANEL_ENCODER_MISC_DUAL;
-@@ -276,7 +276,7 @@ atombios_output_tmds1_setup(xf86OutputPtr output, DisplayModePtr mode)
- 	disp_data.ucMisc = 1;
-     else
- 	disp_data.ucMisc = 0;
+@@ -264,84 +267,110 @@ atombios_output_ddia_setup(xf86OutputPtr output, DisplayModePtr mode)
+ }
+ 
+ static int
+-atombios_output_tmds1_setup(xf86OutputPtr output, DisplayModePtr mode)
++atombios_output_digital_setup(xf86OutputPtr output, int device, DisplayModePtr mode)
+ {
+-    RADEONInfoPtr info       = RADEONPTR(output->scrn);
+-    TMDS1_ENCODER_CONTROL_PS_ALLOCATION disp_data;
++    RADEONOutputPrivatePtr radeon_output = output->driver_private;
++    ScrnInfoPtr pScrn = output->scrn;
++    RADEONInfoPtr info       = RADEONPTR(pScrn);
++    LVDS_ENCODER_CONTROL_PS_ALLOCATION disp_data;
++    LVDS_ENCODER_CONTROL_PS_ALLOCATION_V2 disp_data2;
+     AtomBiosArgRec data;
+     unsigned char *space;
++    int index;
++    int major, minor;
+ 
+-    disp_data.ucAction = 1;
+-    if (mode->Clock > 165000)
+-	disp_data.ucMisc = 1;
+-    else
+-	disp_data.ucMisc = 0;
 -    disp_data.usPixelClock = mode->Clock / 10;
-+    disp_data.usPixelClock = cpu_to_le16(mode->Clock / 10);
-     data.exec.index = GetIndexIntoMasterTable(COMMAND, TMDS1EncoderControl);
-     data.exec.dataSpace = (void *)&space;
-     data.exec.pspace = &disp_data;
-@@ -304,7 +304,7 @@ atombios_output_tmds2_setup(xf86OutputPtr output, DisplayModePtr mode)
- 	disp_data.ucMisc = 1;
-     else
- 	disp_data.ucMisc = 0;
+-    data.exec.index = GetIndexIntoMasterTable(COMMAND, TMDS1EncoderControl);
+-    data.exec.dataSpace = (void *)&space;
+-    data.exec.pspace = &disp_data;
+-
+-    if (RHDAtomBiosFunc(info->atomBIOS->scrnIndex, info->atomBIOS, ATOMBIOS_EXEC, &data) == ATOM_SUCCESS) {
+-	ErrorF("Output TMDS1 setup success\n");
+-	return ATOM_SUCCESS;
++    switch (device) {
++    case ATOM_DEVICE_DFP1_INDEX:
++	index = GetIndexIntoMasterTable(COMMAND, TMDS1EncoderControl);
++	break;
++    case ATOM_DEVICE_LCD1_INDEX:
++	index = GetIndexIntoMasterTable(COMMAND, LVDSEncoderControl);
++	break;
++    case ATOM_DEVICE_DFP3_INDEX:
++	index = GetIndexIntoMasterTable(COMMAND, TMDS2EncoderControl);
++	break;
++    default:
++	return ATOM_NOT_IMPLEMENTED;
++	break;
+     }
+ 
+-    ErrorF("Output TMDS1 setup failed\n");
+-    return ATOM_NOT_IMPLEMENTED;
+-
+-}
+-
+-static int
+-atombios_output_tmds2_setup(xf86OutputPtr output, DisplayModePtr mode)
+-{
+-    RADEONInfoPtr info       = RADEONPTR(output->scrn);
+-    TMDS2_ENCODER_CONTROL_PS_ALLOCATION disp_data;
+-    AtomBiosArgRec data;
+-    unsigned char *space;
+-
+-    disp_data.ucAction = 1;
+-    if (mode->Clock > 165000)
+-	disp_data.ucMisc = 1;
+-    else
+-	disp_data.ucMisc = 0;
 -    disp_data.usPixelClock = mode->Clock / 10;
-+    disp_data.usPixelClock = cpu_to_le16(mode->Clock / 10);
-     data.exec.index = GetIndexIntoMasterTable(COMMAND, TMDS2EncoderControl);
-     data.exec.dataSpace = (void *)&space;
-     data.exec.pspace = &disp_data;
-@@ -331,7 +331,7 @@ atombios_output_lvds_setup(xf86OutputPtr output, DisplayModePtr mode)
- 	disp_data.ucMisc = 1;
-     else
- 	disp_data.ucMisc = 0;
+-    data.exec.index = GetIndexIntoMasterTable(COMMAND, TMDS2EncoderControl);
+-    data.exec.dataSpace = (void *)&space;
+-    data.exec.pspace = &disp_data;
++    atombios_get_command_table_version(info->atomBIOS, index, &major, &minor);
+ 
+-    if (RHDAtomBiosFunc(info->atomBIOS->scrnIndex, info->atomBIOS, ATOMBIOS_EXEC, &data) == ATOM_SUCCESS) {
+-	ErrorF("Output TMDS2 setup success\n");
+-	return ATOM_SUCCESS;
++    /*ErrorF("table is %d %d\n", major, minor);*/
++    switch (major) {
++    case 0:
++    case 1:
++	switch (minor) {
++	case 1:
++	    disp_data.ucMisc = 0;
++	    disp_data.ucAction = PANEL_ENCODER_ACTION_ENABLE;
++	    if (radeon_output->type == OUTPUT_HDMI)
++		disp_data.ucMisc |= PANEL_ENCODER_MISC_HDMI_TYPE;
++	    disp_data.usPixelClock = cpu_to_le16(mode->Clock / 10);
++	    if (device == ATOM_DEVICE_LCD1_INDEX) {
++		if (radeon_output->lvds_misc & (1 << 0))
++		    disp_data.ucMisc |= PANEL_ENCODER_MISC_DUAL;
++		if (radeon_output->lvds_misc & (1 << 1))
++		    disp_data.ucMisc |= (1 << 1);
++	    } else {
++		if (mode->Clock > 165000)
++		    disp_data.ucMisc |= PANEL_ENCODER_MISC_DUAL;
++		if (pScrn->rgbBits == 8)
++		    disp_data.ucMisc |= (1 << 1);
++	    }
++	    data.exec.pspace = &disp_data;
++	    break;
++	case 2:
++	case 3:
++	    disp_data2.ucMisc = 0;
++	    disp_data2.ucAction = PANEL_ENCODER_ACTION_ENABLE;
++	    if (minor == 3) {
++		if (radeon_output->coherent_mode) {
++		    disp_data2.ucMisc |= PANEL_ENCODER_MISC_COHERENT;
++		    xf86DrvMsg(output->scrn->scrnIndex, X_INFO, "Coherent Mode enabled\n");
++		}
++	    }
++	    if (radeon_output->type == OUTPUT_HDMI)
++		disp_data2.ucMisc |= PANEL_ENCODER_MISC_HDMI_TYPE;
++	    disp_data2.usPixelClock = cpu_to_le16(mode->Clock / 10);
++	    disp_data2.ucTruncate = 0;
++	    disp_data2.ucSpatial = 0;
++	    disp_data2.ucTemporal = 0;
++	    disp_data2.ucFRC = 0;
++	    if (device == ATOM_DEVICE_LCD1_INDEX) {
++		if (radeon_output->lvds_misc & (1 << 0))
++		    disp_data2.ucMisc |= PANEL_ENCODER_MISC_DUAL;
++		if (radeon_output->lvds_misc & (1 << 5)) {
++		    disp_data2.ucSpatial = PANEL_ENCODER_SPATIAL_DITHER_EN;
++		    if (radeon_output->lvds_misc & (1 << 1))
++			disp_data2.ucSpatial |= PANEL_ENCODER_SPATIAL_DITHER_DEPTH;
++		}
++		if (radeon_output->lvds_misc & (1 << 6)) {
++		    disp_data2.ucTemporal = PANEL_ENCODER_TEMPORAL_DITHER_EN;
++		    if (radeon_output->lvds_misc & (1 << 1))
++			disp_data2.ucTemporal |= PANEL_ENCODER_TEMPORAL_DITHER_DEPTH;
++		    if (((radeon_output->lvds_misc >> 2) & 0x3) == 2)
++			disp_data2.ucTemporal |= PANEL_ENCODER_TEMPORAL_LEVEL_4;
++		}
++	    } else {
++		if (mode->Clock > 165000)
++		    disp_data2.ucMisc |= PANEL_ENCODER_MISC_DUAL;
++	    }
++	    data.exec.pspace = &disp_data2;
++	    break;
++	}
++	break;
+     }
+ 
+-    ErrorF("Output TMDS2 setup failed\n");
+-    return ATOM_NOT_IMPLEMENTED;
+-}
+-
+-static int
+-atombios_output_lvds_setup(xf86OutputPtr output, DisplayModePtr mode)
+-{
+-    RADEONInfoPtr info       = RADEONPTR(output->scrn);
+-    LVDS_ENCODER_CONTROL_PS_ALLOCATION disp_data;
+-    AtomBiosArgRec data;
+-    unsigned char *space;
+-
+-    disp_data.ucAction = 1;
+-    if (mode->Clock > 165000)
+-	disp_data.ucMisc = 1;
+-    else
+-	disp_data.ucMisc = 0;
 -    disp_data.usPixelClock = mode->Clock / 10;
-+    disp_data.usPixelClock = cpu_to_le16(mode->Clock / 10);
-     data.exec.index = GetIndexIntoMasterTable(COMMAND, LVDSEncoderControl);
+-    data.exec.index = GetIndexIntoMasterTable(COMMAND, LVDSEncoderControl);
++    data.exec.index = index;
      data.exec.dataSpace = (void *)&space;
-     data.exec.pspace = &disp_data;
-@@ -355,7 +355,7 @@ atombios_output_dig1_setup(xf86OutputPtr output, DisplayModePtr mode)
+-    data.exec.pspace = &disp_data;
+ 
+     if (RHDAtomBiosFunc(info->atomBIOS->scrnIndex, info->atomBIOS, ATOMBIOS_EXEC, &data) == ATOM_SUCCESS) {
+-	ErrorF("Output LVDS setup success\n");
++	ErrorF("Output digital setup success\n");
+ 	return ATOM_SUCCESS;
+     }
+ 
+-    ErrorF("Output LVDS setup failed\n");
++    ErrorF("Output digital setup failed\n");
+     return ATOM_NOT_IMPLEMENTED;
+ }
+ 
+@@ -355,7 +384,7 @@ atombios_output_dig1_setup(xf86OutputPtr output, DisplayModePtr mode)
      unsigned char *space;
  
      disp_data.ucAction = 1;
@@ -1113,7 +2888,7 @@ index 51be301..83b86a7 100644
      disp_data.ucConfig = ATOM_ENCODER_CONFIG_TRANSMITTER1;
      if (OUTPUT_IS_DVI || (radeon_output->type == OUTPUT_HDMI)) {
  	if (radeon_output->coherent_mode) {
-@@ -406,7 +406,7 @@ atombios_output_dig1_transmitter_setup(xf86OutputPtr output, DisplayModePtr mode
+@@ -406,7 +435,7 @@ atombios_output_dig1_transmitter_setup(xf86OutputPtr output, DisplayModePtr mode
      unsigned char *space;
  
      disp_data.ucAction = ATOM_TRANSMITTER_ACTION_ENABLE;
@@ -1122,7 +2897,7 @@ index 51be301..83b86a7 100644
      disp_data.ucConfig = ATOM_TRANSMITTER_CONFIG_DIG1_ENCODER | ATOM_TRANSMITTER_CONFIG_CLKSRC_PPLL;
  
      if (info->IsIGP && (radeon_output->TMDSType == TMDS_UNIPHY)) {
-@@ -464,7 +464,7 @@ atombios_output_dig2_setup(xf86OutputPtr output, DisplayModePtr mode)
+@@ -464,7 +493,7 @@ atombios_output_dig2_setup(xf86OutputPtr output, DisplayModePtr mode)
      unsigned char *space;
  
      disp_data.ucAction = 1;
@@ -1131,7 +2906,7 @@ index 51be301..83b86a7 100644
      disp_data.ucConfig = ATOM_ENCODER_CONFIG_TRANSMITTER2;
      if (OUTPUT_IS_DVI || (radeon_output->type == OUTPUT_HDMI)) {
  	if (radeon_output->coherent_mode) {
-@@ -515,7 +515,7 @@ atombios_output_dig2_transmitter_setup(xf86OutputPtr output, DisplayModePtr mode
+@@ -515,7 +544,7 @@ atombios_output_dig2_transmitter_setup(xf86OutputPtr output, DisplayModePtr mode
      unsigned char *space;
  
      disp_data.ucAction = ATOM_TRANSMITTER_ACTION_ENABLE;
@@ -1140,7 +2915,126 @@ index 51be301..83b86a7 100644
      disp_data.ucConfig = ATOM_TRANSMITTER_CONFIG_DIG2_ENCODER | ATOM_TRANSMITTER_CONFIG_CLKSRC_PPLL;
  
      if (info->IsIGP && (radeon_output->TMDSType == TMDS_UNIPHY)) {
-@@ -979,19 +979,19 @@ atom_bios_dac_load_detect(atomBiosHandlePtr atomBIOS, xf86OutputPtr output)
+@@ -600,34 +629,6 @@ atombios_output_scaler_setup(xf86OutputPtr output, DisplayModePtr mode)
+ 
+ }
+ 
+-static void
+-dfp_disable_dither(xf86OutputPtr output, int device)
+-{
+-    RADEONInfoPtr info       = RADEONPTR(output->scrn);
+-    unsigned char *RADEONMMIO = info->MMIO;
+-
+-    switch (device) {
+-    case ATOM_DEVICE_DFP1_SUPPORT:
+-	OUTREG(AVIVO_TMDSA_BIT_DEPTH_CONTROL, 0); /* TMDSA */
+-	break;
+-    case ATOM_DEVICE_DFP2_SUPPORT:
+-	if ((info->ChipFamily == CHIP_FAMILY_RS600) ||
+-	    (info->ChipFamily == CHIP_FAMILY_RS690) ||
+-	    (info->ChipFamily == CHIP_FAMILY_RS740))
+-	    OUTREG(AVIVO_DDIA_BIT_DEPTH_CONTROL, 0); /* DDIA */
+-	else
+-	    OUTREG(AVIVO_DVOA_BIT_DEPTH_CONTROL, 0); /* DVO */
+-	break;
+-    /*case ATOM_DEVICE_LCD1_SUPPORT:*/ /* LVDS panels need dither enabled */
+-    case ATOM_DEVICE_DFP3_SUPPORT:
+-	OUTREG(AVIVO_LVTMA_BIT_DEPTH_CONTROL, 0); /* LVTMA */
+-	break;
+-    default:
+-	break;
+-    }
+-
+-}
+-
+ static AtomBiosResult
+ atombios_display_device_control(atomBiosHandlePtr atomBIOS, int device, Bool state)
+ {
+@@ -896,6 +897,30 @@ atombios_set_output_crtc_source(xf86OutputPtr output)
+     return;
+ }
+ 
++static void
++atombios_apply_output_quirks(xf86OutputPtr output)
++{
++    RADEONOutputPrivatePtr radeon_output = output->driver_private;
++    RADEONInfoPtr info       = RADEONPTR(output->scrn);
++    unsigned char *RADEONMMIO = info->MMIO;
++
++    /* Funky macbooks */
++    if ((info->Chipset == PCI_CHIP_RV530_71C5) &&
++	(PCI_SUB_VENDOR_ID(info->PciInfo) == 0x106b) &&
++	(PCI_SUB_DEVICE_ID(info->PciInfo) == 0x0080)) {
++	if (radeon_output->MonType == MT_LCD) {
++	    if (radeon_output->devices & ATOM_DEVICE_LCD1_SUPPORT) {
++		uint32_t lvtma_bit_depth_control = INREG(AVIVO_LVTMA_BIT_DEPTH_CONTROL);
++
++		lvtma_bit_depth_control &= ~AVIVO_LVTMA_BIT_DEPTH_CONTROL_TRUNCATE_EN;
++		lvtma_bit_depth_control &= ~AVIVO_LVTMA_BIT_DEPTH_CONTROL_SPATIAL_DITHER_EN;
++
++		OUTREG(AVIVO_LVTMA_BIT_DEPTH_CONTROL, lvtma_bit_depth_control);
++	    }
++	}
++    }
++}
++
+ void
+ atombios_output_mode_set(xf86OutputPtr output,
+ 			 DisplayModePtr mode,
+@@ -920,10 +945,8 @@ atombios_output_mode_set(xf86OutputPtr output,
+ 	    if (IS_DCE3_VARIANT) {
+ 		atombios_output_dig1_setup(output, adjusted_mode);
+ 		atombios_output_dig1_transmitter_setup(output, adjusted_mode);
+-	    } else {
+-		atombios_output_tmds1_setup(output, adjusted_mode);
+-		dfp_disable_dither(output, ATOM_DEVICE_DFP1_SUPPORT);
+-	    }
++	    } else
++		atombios_output_digital_setup(output, ATOM_DEVICE_DFP1_INDEX, adjusted_mode);
+ 	} else if (radeon_output->devices & ATOM_DEVICE_DFP2_SUPPORT) {
+ 	    if (IS_DCE3_VARIANT) {
+ 		// fix me
+@@ -934,26 +957,21 @@ atombios_output_mode_set(xf86OutputPtr output,
+ 		    atombios_output_ddia_setup(output, adjusted_mode);
+ 		else
+ 		    atombios_external_tmds_setup(output, adjusted_mode);
+-		dfp_disable_dither(output, ATOM_DEVICE_DFP2_SUPPORT);
+ 	    }
+ 	} else if (radeon_output->devices & ATOM_DEVICE_DFP3_SUPPORT) {
+ 	    if (IS_DCE3_VARIANT) {
+ 		atombios_output_dig2_setup(output, adjusted_mode);
+ 		atombios_output_dig2_transmitter_setup(output, adjusted_mode);
+-	    } else {
+-		atombios_output_tmds2_setup(output, adjusted_mode);
+-		dfp_disable_dither(output, ATOM_DEVICE_DFP3_SUPPORT);
+-	    }
++	    } else
++		atombios_output_digital_setup(output, ATOM_DEVICE_DFP3_INDEX, adjusted_mode);
+ 	}
+     } else if (radeon_output->MonType == MT_LCD) {
+ 	if (radeon_output->devices & ATOM_DEVICE_LCD1_SUPPORT) {
+ 	    if (IS_DCE3_VARIANT) {
+ 		atombios_output_dig2_setup(output, adjusted_mode);
+ 		atombios_output_dig2_transmitter_setup(output, adjusted_mode);
+-	    } else {
+-		atombios_output_lvds_setup(output, adjusted_mode);
+-		dfp_disable_dither(output, ATOM_DEVICE_LCD1_SUPPORT);
+-	    }
++	    } else
++		atombios_output_digital_setup(output, ATOM_DEVICE_LCD1_INDEX, adjusted_mode);
+ 	}
+     } else if ((radeon_output->MonType == MT_CTV) ||
+ 	       (radeon_output->MonType == MT_STV) ||
+@@ -964,7 +982,7 @@ atombios_output_mode_set(xf86OutputPtr output,
+ 	    atombios_output_dac2_setup(output, adjusted_mode);
+ 	atombios_output_tv1_setup(output, adjusted_mode);
+     }
+-
++    atombios_apply_output_quirks(output);
+ }
+ 
+ static AtomBiosResult
+@@ -979,19 +997,19 @@ atom_bios_dac_load_detect(atomBiosHandlePtr atomBIOS, xf86OutputPtr output)
      dac_data.sDacload.ucMisc = 0;
  
      if (radeon_output->devices & ATOM_DEVICE_CRT1_SUPPORT) {
@@ -1163,7 +3057,7 @@ index 51be301..83b86a7 100644
  	if (radeon_output->DACType == DAC_PRIMARY)
  	    dac_data.sDacload.ucDacType = ATOM_DAC_A;
  	else if (radeon_output->DACType == DAC_TVDAC)
-@@ -999,7 +999,7 @@ atom_bios_dac_load_detect(atomBiosHandlePtr atomBIOS, xf86OutputPtr output)
+@@ -999,7 +1017,7 @@ atom_bios_dac_load_detect(atomBiosHandlePtr atomBIOS, xf86OutputPtr output)
  	if (IS_DCE3_VARIANT)
  	    dac_data.sDacload.ucMisc = 1;
      } else if (radeon_output->devices & ATOM_DEVICE_TV1_SUPPORT) {
@@ -1903,7 +3797,7 @@ index 0000000..232ccb7
 +maketable(512)
 +maketable(2048)
 diff --git a/src/legacy_crtc.c b/src/legacy_crtc.c
-index 3df61a7..c16d0a3 100644
+index 3df61a7..75ab6c8 100644
 --- a/src/legacy_crtc.c
 +++ b/src/legacy_crtc.c
 @@ -48,8 +48,7 @@
@@ -1916,22 +3810,26 @@ index 3df61a7..c16d0a3 100644
  #include "sarea.h"
  #ifdef DRM_IOCTL_MODESET_CTL
  #include <sys/ioctl.h>
-@@ -625,10 +624,13 @@ radeon_crtc_modeset_ioctl(xf86CrtcPtr crtc, Bool post)
+@@ -624,11 +623,17 @@ radeon_crtc_modeset_ioctl(xf86CrtcPtr crtc, Bool post)
+     RADEONInfoPtr info = RADEONPTR(crtc->scrn);
      RADEONCrtcPrivatePtr radeon_crtc = crtc->driver_private;
      struct drm_modeset_ctl modeset;
- 
++    unsigned char *RADEONMMIO = info->MMIO;
++
 +    if (!info->directRenderingEnabled)
 +	return;
-+
+ 
      modeset.crtc = radeon_crtc->crtc_id;
      modeset.cmd = post ? _DRM_POST_MODESET : _DRM_PRE_MODESET;
  
 -    ioctl(info->drmFD, DRM_IOCTL_MODESET_CTL, &modeset);
 +    ioctl(info->dri->drmFD, DRM_IOCTL_MODESET_CTL, &modeset);
++
++    info->ModeReg->gen_int_cntl = INREG( RADEON_GEN_INT_CNTL );
  #endif
  }
  
-@@ -752,13 +754,13 @@ RADEONInitCrtcBase(xf86CrtcPtr crtc, RADEONSavePtr save,
+@@ -752,13 +757,13 @@ RADEONInitCrtcBase(xf86CrtcPtr crtc, RADEONSavePtr save,
      RADEONInfoPtr  info       = RADEONPTR(pScrn);
      int    Base;
  #ifdef XF86DRI
@@ -1947,7 +3845,7 @@ index 3df61a7..c16d0a3 100644
  	save->crtc_offset_cntl = RADEON_CRTC_OFFSET_FLIP_CNTL;
      else
  #endif
-@@ -851,7 +853,7 @@ RADEONInitCrtcBase(xf86CrtcPtr crtc, RADEONSavePtr save,
+@@ -851,7 +856,7 @@ RADEONInitCrtcBase(xf86CrtcPtr crtc, RADEONSavePtr save,
  	pSAREA->frame.height = pScrn->frameY1 - y + 1;
  
  	if (pSAREAPriv->pfCurrentPage == 1) {
@@ -1956,7 +3854,7 @@ index 3df61a7..c16d0a3 100644
  	}
      }
  #endif
-@@ -970,7 +972,7 @@ RADEONInitCrtc2Base(xf86CrtcPtr crtc, RADEONSavePtr save,
+@@ -970,7 +975,7 @@ RADEONInitCrtc2Base(xf86CrtcPtr crtc, RADEONSavePtr save,
      RADEONInfoPtr  info       = RADEONPTR(pScrn);
      int    Base;
  #ifdef XF86DRI
@@ -1965,7 +3863,7 @@ index 3df61a7..c16d0a3 100644
      XF86DRISAREAPtr pSAREA;
  #endif
  
-@@ -978,7 +980,7 @@ RADEONInitCrtc2Base(xf86CrtcPtr crtc, RADEONSavePtr save,
+@@ -978,7 +983,7 @@ RADEONInitCrtc2Base(xf86CrtcPtr crtc, RADEONSavePtr save,
       */
      save->crtc2_offset      = pScrn->fbOffset;
  #ifdef XF86DRI
@@ -1974,7 +3872,7 @@ index 3df61a7..c16d0a3 100644
  	save->crtc2_offset_cntl = RADEON_CRTC_OFFSET_FLIP_CNTL;
      else
  #endif
-@@ -1065,7 +1067,7 @@ RADEONInitCrtc2Base(xf86CrtcPtr crtc, RADEONSavePtr save,
+@@ -1065,7 +1070,7 @@ RADEONInitCrtc2Base(xf86CrtcPtr crtc, RADEONSavePtr save,
  	pSAREAPriv->crtc2_base = Base;
  
  	if (pSAREAPriv->pfCurrentPage == 1) {
@@ -1983,7 +3881,7 @@ index 3df61a7..c16d0a3 100644
  	}
      }
  #endif
-@@ -1327,9 +1329,12 @@ radeon_update_tv_routing(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -1327,9 +1332,12 @@ radeon_update_tv_routing(ScrnInfoPtr pScrn, RADEONSavePtr restore)
  }
  
  /* Calculate display buffer watermark to prevent buffer underflow */
@@ -1998,7 +3896,7 @@ index 3df61a7..c16d0a3 100644
      RADEONEntPtr pRADEONEnt   = RADEONEntPriv(pScrn);
      unsigned char *RADEONMMIO = info->MMIO;
  
-@@ -1352,10 +1357,10 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1352,10 +1360,10 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
      float min_mem_eff = 0.8;
      float sclk_eff, sclk_delay;
      float mc_latency_mclk, mc_latency_sclk, cur_latency_mclk, cur_latency_sclk;
@@ -2011,7 +3909,7 @@ index 3df61a7..c16d0a3 100644
      int stop_req, max_stop_req;
      float read_return_rate, time_disp1_drop_priority;
  
-@@ -1366,15 +1371,15 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1366,15 +1374,15 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
       */
      if ((info->DispPriority == 2) && IS_R300_VARIANT) {
  	uint32_t mc_init_misc_lat_timer = INREG(R300_MC_INIT_MISC_LAT_TIMER);
@@ -2033,7 +3931,7 @@ index 3df61a7..c16d0a3 100644
      /* R420 and RV410 family not supported yet */
      if (info->ChipFamily == CHIP_FAMILY_R420 || info->ChipFamily == CHIP_FAMILY_RV410) return; 
  
-@@ -1383,15 +1388,17 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1383,15 +1391,17 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
       */
      mem_bw = info->mclk * (info->RamWidth / 8) * (info->IsDDR ? 2 : 1);
  
@@ -2059,7 +3957,7 @@ index 3df61a7..c16d0a3 100644
  
      if (peak_disp_bw >= mem_bw * min_mem_eff) {
  	xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-@@ -1399,20 +1406,6 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1399,20 +1409,6 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
  		   "If you have flickering problem, try to lower resolution, refresh rate, or color depth\n");
      }
  
@@ -2080,7 +3978,7 @@ index 3df61a7..c16d0a3 100644
      /*  Get values from the EXT_MEM_CNTL register...converting its contents. */
      temp = INREG(RADEON_MEM_TIMING_CNTL);
      if ((info->ChipFamily == CHIP_FAMILY_RV100) || info->IsIGP) { /* RV100, M6, IGPs */
-@@ -1435,9 +1428,8 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1435,9 +1431,8 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
      }
  
      if (IS_R300_VARIANT) {
@@ -2091,7 +3989,7 @@ index 3df61a7..c16d0a3 100644
  	temp = INREG(RADEON_MEM_CNTL);
  	data = (R300_MEM_NUM_CHANNELS_MASK & temp);
  	if (data == 1) {
-@@ -1467,13 +1459,14 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1467,13 +1462,14 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
      } else {
  #ifdef XF86DRI
  	if (info->directRenderingEnabled)
@@ -2108,7 +4006,7 @@ index 3df61a7..c16d0a3 100644
      */
      if (IS_R300_VARIANT) {
  	/*not enough for R350 ???*/
-@@ -1527,89 +1520,107 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1527,89 +1523,107 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
      mc_latency_sclk = mc_latency_sclk + disp_latency_overhead + cur_latency_sclk;
      disp_latency = MAX(mc_latency_mclk, mc_latency_sclk);
  
@@ -2282,7 +4180,7 @@ index 3df61a7..c16d0a3 100644
  	temp = info->SavedReg->grph2_buffer_cntl;
  	temp &= ~(RADEON_GRPH_STOP_REQ_MASK);
  	temp |= (stop_req << RADEON_GRPH_STOP_REQ_SHIFT);
-@@ -1629,7 +1640,10 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1629,7 +1643,10 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
  	    critical_point2 = 0;
  	else {
  	    read_return_rate = MIN(info->sclk, info->mclk*(info->RamWidth*(info->IsDDR+1)/128));
@@ -2294,7 +4192,7 @@ index 3df61a7..c16d0a3 100644
  
  	    critical_point2 = (uint32_t)((disp_latency + time_disp1_drop_priority + 
  					disp_latency) * disp_drain_rate2 + 0.5);
-@@ -1681,45 +1695,6 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
+@@ -1681,45 +1698,6 @@ RADEONInitDispBandwidth2(ScrnInfoPtr pScrn, RADEONInfoPtr info, int pixel_bytes2
  }
  
  void
@@ -2340,7 +4238,7 @@ index 3df61a7..c16d0a3 100644
  legacy_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
  		     DisplayModePtr adjusted_mode, int x, int y)
  {
-@@ -1729,10 +1704,15 @@ legacy_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
+@@ -1729,10 +1707,15 @@ legacy_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
      RADEONInfoPtr info = RADEONPTR(pScrn);
      int i = 0;
      double dot_clock = 0;
@@ -2349,7 +4247,7 @@ index 3df61a7..c16d0a3 100644
      Bool update_tv_routing = FALSE;
      Bool tilingChanged = FALSE;
  
-+    if (adjusted_mode->Clock > 120000) /* range limits??? */
++    if (adjusted_mode->Clock > 200000) /* range limits??? */
 +	pll_flags |= RADEON_PLL_PREFER_HIGH_FB_DIV;
 +    else
 +	pll_flags |= RADEON_PLL_PREFER_LOW_REF_DIV;
@@ -2501,7 +4399,7 @@ index 1f6fa82..07e71a3 100644
  "0x9581","RV630_9581","RV630",1,,,,,"ATI Mobility Radeon HD 2600"
  "0x9583","RV630_9583","RV630",1,,,,,"ATI Mobility Radeon HD 2600 XT"
 diff --git a/src/radeon.h b/src/radeon.h
-index 4f77c3b..6cce736 100644
+index 4f77c3b..f7ae1a8 100644
 --- a/src/radeon.h
 +++ b/src/radeon.h
 @@ -72,9 +72,10 @@
@@ -2849,9 +4747,7 @@ index 4f77c3b..6cce736 100644
 -    uint32_t          sc_bottom;
 +};
 +#endif
- 
--    uint32_t          re_top_left;
--    uint32_t          re_width_height;
++
 +struct radeon_accel_state {
 +    /* common accel data */
 +    int               fifo_slots;       /* Free slots in the FIFO (64 max)   */
@@ -2863,16 +4759,14 @@ index 4f77c3b..6cce736 100644
 +    int               xdir;
 +    int               ydir;
 +    uint32_t          dst_pitch_offset;
- 
--    uint32_t          aux_sc_cntl;
++
 +    /* render accel */
 +    unsigned short    texW[2];
 +    unsigned short    texH[2];
 +    Bool              XInited3D; /* X itself has the 3D context */
 +    int               num_gb_pipes;
 +    Bool              has_tcl;
- 
--    int               irq;
++
 +#ifdef USE_EXA
 +    /* EXA */
 +    ExaDriverPtr      exa;
@@ -2882,8 +4776,7 @@ index 4f77c3b..6cce736 100644
 +#define EXA_ENGINEMODE_UNKNOWN 0
 +#define EXA_ENGINEMODE_2D      1
 +#define EXA_ENGINEMODE_3D      2
- 
--    Bool              DMAForXv;
++
 +    Bool              is_transform[2];
 +    PictTransform     *transform[2];
 +    Bool              has_mask;
@@ -2894,9 +4787,7 @@ index 4f77c3b..6cce736 100644
 +    Bool              src_tile_width;
 +    Bool              src_tile_height;
 +#endif
- 
--#ifdef PER_CONTEXT_SAREA
--    int               perctx_sarea_size;
++
 +#ifdef USE_XAA
 +    /* XAA */
 +    XAAInfoRecPtr     accel;
@@ -2930,14 +4821,12 @@ index 4f77c3b..6cce736 100644
 +     * SetupForScreenToScreenCopy function, to make it DGA-friendly.
 +     */
 +    Bool              XAAForceTransBlit;
- #endif
- 
--    /* Debugging info for BEGIN_RING/ADVANCE_RING pairs. */
--    int               dma_begin_count;
--    char              *dma_debug_func;
--    int               dma_debug_lineno;
-+};
++#endif
 +
++};
+ 
+-    uint32_t          re_top_left;
+-    uint32_t          re_width_height;
 +typedef struct {
 +    EntityInfoPtr     pEnt;
 +    pciVideoPtr       PciInfo;
@@ -2954,22 +4843,27 @@ index 4f77c3b..6cce736 100644
 +    uint32_t          mc_fb_location;
 +    uint32_t          mc_agp_location;
 +    uint32_t          mc_agp_location_hi;
-+
+ 
+-    uint32_t          aux_sc_cntl;
 +    void              *MMIO;            /* Map of MMIO region                */
 +    void              *FB;              /* Map of frame buffer               */
 +    uint8_t           *VBIOS;           /* Video BIOS pointer                */
-+
+ 
+-    int               irq;
 +    Bool              IsAtomBios;       /* New BIOS used in R420 etc.        */
 +    int               ROMHeaderStart;   /* Start of the ROM Info Table       */
 +    int               MasterDataStart;  /* Offset for Master Data Table for ATOM BIOS */
-+
+ 
+-    Bool              DMAForXv;
 +    uint32_t          MemCntl;
 +    uint32_t          BusCntl;
 +    unsigned long     MMIOSize;         /* MMIO region physical address      */
 +    unsigned long     FbMapSize;        /* Size of frame buffer, in bytes    */
 +    unsigned long     FbSecureSize;     /* Size of secured fb area at end of
 +                                           framebuffer */
-+
+ 
+-#ifdef PER_CONTEXT_SAREA
+-    int               perctx_sarea_size;
 +    Bool              IsMobility;       /* Mobile chips for laptops */
 +    Bool              IsIGP;            /* IGP chips */
 +    Bool              HasSingleDAC;     /* only TVDAC on chip */
@@ -3007,10 +4901,14 @@ index 4f77c3b..6cce736 100644
 +    xf86CursorInfoPtr cursor;
 +#ifdef ARGB_CURSOR
 +    Bool	      cursor_argb;
-+#endif
+ #endif
 +    int               cursor_fg;
 +    int               cursor_bg;
-+
+ 
+-    /* Debugging info for BEGIN_RING/ADVANCE_RING pairs. */
+-    int               dma_begin_count;
+-    char              *dma_debug_func;
+-    int               dma_debug_lineno;
 +    int               pix24bpp;         /* Depth of pixmap for 24bpp fb      */
 +    Bool              dac6bits;         /* Use 6 bit DAC?                    */
 +
@@ -3137,15 +5035,15 @@ index 4f77c3b..6cce736 100644
  extern void RADEONInitVideo(ScreenPtr pScreen);
  extern void RADEONResetVideo(ScrnInfoPtr pScrn);
  
-+/* radeon_memory.c */
++/* radeon_legacy_memory.c */
 +extern uint32_t
-+radeon_allocate_memory(ScrnInfoPtr pScrn,
-+		       void **mem_struct,
-+		       int size,
-+		       int align);
++radeon_legacy_allocate_memory(ScrnInfoPtr pScrn,
++			      void **mem_struct,
++			      int size,
++			      int align);
 +extern void
-+radeon_free_memory(ScrnInfoPtr pScrn,
-+		   void *mem_struct);
++radeon_legacy_free_memory(ScrnInfoPtr pScrn,
++		          void *mem_struct);
 +
  #ifdef XF86DRI
  #  ifdef USE_XAA
@@ -3307,7 +5205,7 @@ index 4f77c3b..6cce736 100644
  	RADEONCPFlushIndirect(pScrn, 0);				\
      }									\
  } while (0)
-@@ -1236,7 +1297,7 @@ static __inline__ void RADEON_MARK_SYNC(RADEONInfoPtr info, ScrnInfoPtr pScrn)
+@@ -1236,19 +1297,19 @@ static __inline__ void RADEON_MARK_SYNC(RADEONInfoPtr info, ScrnInfoPtr pScrn)
  #endif
  #ifdef USE_XAA
      if (!info->useEXA)
@@ -3316,7 +5214,11 @@ index 4f77c3b..6cce736 100644
  #endif
  }
  
-@@ -1247,8 +1308,8 @@ static __inline__ void RADEON_SYNC(RADEONInfoPtr info, ScrnInfoPtr pScrn)
+ static __inline__ void RADEON_SYNC(RADEONInfoPtr info, ScrnInfoPtr pScrn)
+ {
+ #ifdef USE_EXA
+-    if (info->useEXA)
++    if (info->useEXA && pScrn->pScreen)
  	exaWaitSync(pScrn->pScreen);
  #endif
  #ifdef USE_XAA
@@ -4679,7 +6581,7 @@ index 56793cd..45eb6d5 100644
  	= FUNC_NAME(RADEONSetupForScanlineImageWrite);
      a->SubsequentScanlineImageWriteRect
 diff --git a/src/radeon_atombios.c b/src/radeon_atombios.c
-index 20aa722..f0a3a31 100644
+index 20aa722..851014b 100644
 --- a/src/radeon_atombios.c
 +++ b/src/radeon_atombios.c
 @@ -501,11 +501,11 @@ rhdAtomASICInit(atomBiosHandlePtr handle)
@@ -4737,14 +6639,15 @@ index 20aa722..f0a3a31 100644
  	    break;
  	default:
  	    return ATOM_NOT_IMPLEMENTED;
-@@ -1391,36 +1386,6 @@ const int object_connector_convert[] =
+@@ -1391,35 +1386,57 @@ const int object_connector_convert[] =
        CONNECTOR_DISPLAY_PORT,
      };
  
 -static void
 -rhdAtomParseI2CRecord(atomBiosHandlePtr handle,
 -			ATOM_I2C_RECORD *Record, int *ddc_line)
--{
++xf86MonPtr radeon_atom_get_edid(xf86OutputPtr output)
+ {
 -    ErrorF(" %s:  I2C Record: %s[%x] EngineID: %x I2CAddr: %x\n",
 -	     __func__,
 -	     Record->sucI2cId.bfHW_Capable ? "HW_Line" : "GPIO_ID",
@@ -4770,11 +6673,59 @@ index 20aa722..f0a3a31 100644
 -	    /* add GPIO pin parsing */
 -	}
 -    }
--}
++    RADEONOutputPrivatePtr radeon_output = output->driver_private;
++    RADEONInfoPtr info       = RADEONPTR(output->scrn);
++    READ_EDID_FROM_HW_I2C_DATA_PS_ALLOCATION edid_data;
++    AtomBiosArgRec data;
++    unsigned char *space;
++    int i2c_clock = 50;
++    int engine_clk = info->sclk * 100;
++    int prescale;
++    unsigned char *edid;
++    xf86MonPtr mon = NULL;
++
++    if (!radeon_output->ddc_i2c.hw_capable)
++	return mon;
++
++    if (info->atomBIOS->fbBase)
++	edid = (unsigned char *)info->FB + info->atomBIOS->fbBase;
++    else if (info->atomBIOS->scratchBase)
++	edid = (unsigned char *)info->atomBIOS->scratchBase;
++    else
++	return mon;
++
++    memset(edid, 0, ATOM_EDID_RAW_DATASIZE);
++
++    if (info->ChipFamily == CHIP_FAMILY_R520)
++	prescale = (127 << 8) + (engine_clk * 10) / (4 * 127 * i2c_clock);
++    else if (info->ChipFamily < CHIP_FAMILY_R600)
++	prescale = (((engine_clk * 10)/(4 * 128 * 100) + 1) << 8) + 128;
++    else
++	prescale = (info->pll.reference_freq * 10) / i2c_clock;
++
++    edid_data.usPrescale = prescale;
++    edid_data.usVRAMAddress = 0;
++    edid_data.ucSlaveAddr = 0xa0;
++    edid_data.ucLineNumber = radeon_output->ddc_i2c.hw_line;
++
++    data.exec.index = GetIndexIntoMasterTable(COMMAND, ReadEDIDFromHWAssistedI2C);
++    data.exec.dataSpace = (void *)&space;
++    data.exec.pspace = &edid_data;
++
++    if (RHDAtomBiosFunc(info->atomBIOS->scrnIndex, info->atomBIOS, ATOMBIOS_EXEC, &data) == ATOM_SUCCESS)
++	ErrorF("Atom Get EDID success\n");
++    else
++	ErrorF("Atom Get EDID failed\n");
++
++    if (edid[1] == 0xff)
++	mon = xf86InterpretEDID(output->scrn->scrnIndex, edid);
++
++    return mon;
++
+ }
  
  static RADEONI2CBusRec
- RADEONLookupGPIOLineForDDC(ScrnInfoPtr pScrn, uint8_t id)
-@@ -1450,12 +1415,16 @@ RADEONLookupGPIOLineForDDC(ScrnInfoPtr pScrn, uint8_t id)
+@@ -1450,36 +1467,53 @@ RADEONLookupGPIOLineForDDC(ScrnInfoPtr pScrn, uint8_t id)
      i2c.put_data_reg = le16_to_cpu(gpio.usDataEnRegisterIndex) * 4;
      i2c.get_clk_reg = le16_to_cpu(gpio.usClkY_RegisterIndex) * 4;
      i2c.get_data_reg = le16_to_cpu(gpio.usDataY_RegisterIndex) * 4;
@@ -4788,10 +6739,18 @@ index 20aa722..f0a3a31 100644
      i2c.get_data_mask = (1 <<  gpio.ucDataY_Shift);
 +    i2c.a_clk_mask = (1 << gpio.ucClkA_Shift);
 +    i2c.a_data_mask = (1 <<  gpio.ucDataA_Shift);
++    i2c.hw_line = gpio.sucI2cId.sbfAccess.bfI2C_LineMux;
++    i2c.hw_capable = gpio.sucI2cId.sbfAccess.bfHW_Capable;
      i2c.valid = TRUE;
  
  #if 0
-@@ -1465,21 +1434,28 @@ RADEONLookupGPIOLineForDDC(ScrnInfoPtr pScrn, uint8_t id)
++    ErrorF("id: %d\n", id);
++    ErrorF("hw capable: %d\n", gpio.sucI2cId.sbfAccess.bfHW_Capable);
++    ErrorF("hw engine id: %d\n", gpio.sucI2cId.sbfAccess.bfHW_EngineID);
++    ErrorF("line mux %d\n", gpio.sucI2cId.sbfAccess.bfI2C_LineMux);
+     ErrorF("mask_clk_reg: 0x%x\n", gpio.usClkMaskRegisterIndex * 4);
+     ErrorF("mask_data_reg: 0x%x\n", gpio.usDataMaskRegisterIndex * 4);
+     ErrorF("put_clk_reg: 0x%x\n", gpio.usClkEnRegisterIndex * 4);
      ErrorF("put_data_reg: 0x%x\n", gpio.usDataEnRegisterIndex * 4);
      ErrorF("get_clk_reg: 0x%x\n", gpio.usClkY_RegisterIndex * 4);
      ErrorF("get_data_reg: 0x%x\n", gpio.usDataY_RegisterIndex * 4);
@@ -4824,7 +6783,7 @@ index 20aa722..f0a3a31 100644
  Bool
  RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
  {
-@@ -1489,7 +1465,7 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
+@@ -1489,7 +1523,7 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
      atomDataTablesPtr atomDataPtr;
      ATOM_CONNECTOR_OBJECT_TABLE *con_obj;
      ATOM_INTEGRATED_SYSTEM_INFO_V2 *igp_obj = NULL;
@@ -4833,7 +6792,53 @@ index 20aa722..f0a3a31 100644
  
      atomDataPtr = info->atomBIOS->atomDataPtr;
      if (!rhdAtomGetTableRevisionAndSize((ATOM_COMMON_TABLE_HEADER *)(atomDataPtr->Object_Header), &crev, &frev, &size))
-@@ -1617,10 +1593,8 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
+@@ -1560,15 +1594,23 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
+ 		break;
+ 	    case ENCODER_OBJECT_ID_INTERNAL_TMDS1:
+ 	    case ENCODER_OBJECT_ID_INTERNAL_KLDSCP_TMDS1:
+-		info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP1_INDEX);
+-		info->BiosConnector[i].TMDSType = TMDS_INT;
++		if (info->BiosConnector[i].ConnectorType == CONNECTOR_LVDS)
++		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_LCD1_INDEX);
++		else {
++		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP1_INDEX);
++		    info->BiosConnector[i].TMDSType = TMDS_INT;
++		}
+ 		break;
+ 	    case ENCODER_OBJECT_ID_INTERNAL_UNIPHY:
+-		if (num == 1)
+-		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP1_INDEX);
+-		else
+-		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP2_INDEX);
+-		info->BiosConnector[i].TMDSType = TMDS_UNIPHY;
++		if (info->BiosConnector[i].ConnectorType == CONNECTOR_LVDS)
++		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_LCD1_INDEX);
++		else {
++		    if (num == 1)
++			info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP1_INDEX);
++		    else
++			info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP2_INDEX);
++		    info->BiosConnector[i].TMDSType = TMDS_UNIPHY;
++		}
+ 		break;
+ 	    case ENCODER_OBJECT_ID_INTERNAL_TMDS2:
+ 	    case ENCODER_OBJECT_ID_INTERNAL_KLDSCP_DVO1:
+@@ -1577,8 +1619,12 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
+ 		break;
+ 	    case ENCODER_OBJECT_ID_INTERNAL_LVTM1:
+ 	    case ENCODER_OBJECT_ID_INTERNAL_KLDSCP_LVTMA:
+-		info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP3_INDEX);
+-		info->BiosConnector[i].TMDSType = TMDS_LVTMA;
++		if (info->BiosConnector[i].ConnectorType == CONNECTOR_LVDS)
++		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_LCD1_INDEX);
++		else {
++		    info->BiosConnector[i].devices |= (1 << ATOM_DEVICE_DFP3_INDEX);
++		    info->BiosConnector[i].TMDSType = TMDS_LVTMA;
++		}
+ 		break;
+ 	    case ENCODER_OBJECT_ID_INTERNAL_DAC1:
+ 	    case ENCODER_OBJECT_ID_INTERNAL_KLDSCP_DAC1:
+@@ -1617,10 +1663,8 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
  	    ErrorF("record type %d\n", Record->ucRecordType);
  	    switch (Record->ucRecordType) {
  		case ATOM_I2C_RECORD_TYPE:
@@ -4846,7 +6851,79 @@ index 20aa722..f0a3a31 100644
  		    break;
  		case ATOM_HPD_INT_RECORD_TYPE:
  		    break;
-@@ -1751,6 +1725,15 @@ static void RADEONApplyATOMQuirks(ScrnInfoPtr pScrn, int index)
+@@ -1636,6 +1680,71 @@ RADEONGetATOMConnectorInfoFromBIOSObject (ScrnInfoPtr pScrn)
+ }
+ 
+ Bool
++RADEONGetATOMLVDSInfo(xf86OutputPtr output)
++{
++    ScrnInfoPtr pScrn = output->scrn;
++    RADEONInfoPtr  info       = RADEONPTR(pScrn);
++    RADEONOutputPrivatePtr radeon_output = output->driver_private;
++    atomDataTablesPtr atomDataPtr;
++    uint8_t crev, frev;
++
++    atomDataPtr = info->atomBIOS->atomDataPtr;
++
++    if (!rhdAtomGetTableRevisionAndSize(
++	    (ATOM_COMMON_TABLE_HEADER *)(atomDataPtr->LVDS_Info.base),
++	    &frev,&crev,NULL)) {
++	return FALSE;
++    }
++
++    switch (crev) {
++    case 1:
++	radeon_output->PanelXRes = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usHActive);
++	radeon_output->PanelYRes = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usVActive);
++	radeon_output->DotClock   = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usPixClk) * 10;
++	radeon_output->HBlank     = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usHBlanking_Time);
++	radeon_output->HOverPlus  = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usHSyncOffset);
++	radeon_output->HSyncWidth = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usHSyncWidth);
++	radeon_output->VBlank     = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usVBlanking_Time);
++	radeon_output->VOverPlus  = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usVSyncOffset);
++	radeon_output->VSyncWidth = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->sLCDTiming.usVSyncWidth);
++	radeon_output->PanelPwrDly = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info->usOffDelayInMs);
++	radeon_output->lvds_misc   =  atomDataPtr->LVDS_Info.LVDS_Info->ucLVDS_Misc;
++	radeon_output->lvds_ss_id  =  atomDataPtr->LVDS_Info.LVDS_Info->ucSS_Id;
++	break;
++    case 2:
++	radeon_output->PanelXRes = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usHActive);
++	radeon_output->PanelYRes = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usVActive);
++	radeon_output->DotClock   = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usPixClk) * 10;
++	radeon_output->HBlank     = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usHBlanking_Time);
++	radeon_output->HOverPlus  = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usHSyncOffset);
++	radeon_output->HSyncWidth = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usHSyncWidth);
++	radeon_output->VBlank     = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usVBlanking_Time);
++	radeon_output->VOverPlus  = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usVSyncOffset);
++	radeon_output->VSyncWidth = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->sLCDTiming.usVSyncWidth);
++	radeon_output->PanelPwrDly = le16_to_cpu(atomDataPtr->LVDS_Info.LVDS_Info_v12->usOffDelayInMs);
++	radeon_output->lvds_misc   =  atomDataPtr->LVDS_Info.LVDS_Info_v12->ucLVDS_Misc;
++	radeon_output->lvds_ss_id  =  atomDataPtr->LVDS_Info.LVDS_Info_v12->ucSS_Id;
++	break;
++    }
++
++    if (radeon_output->PanelPwrDly > 2000 || radeon_output->PanelPwrDly < 0)
++	radeon_output->PanelPwrDly = 2000;
++
++    radeon_output->Flags = 0;
++
++    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
++	       "LVDS Info:\n"
++	       "XRes: %d, YRes: %d, DotClock: %d\n"
++	       "HBlank: %d, HOverPlus: %d, HSyncWidth: %d\n"
++	       "VBlank: %d, VOverPlus: %d, VSyncWidth: %d\n",
++	       radeon_output->PanelXRes, radeon_output->PanelYRes, radeon_output->DotClock,
++	       radeon_output->HBlank, radeon_output->HOverPlus, radeon_output->HSyncWidth,
++	       radeon_output->VBlank, radeon_output->VOverPlus, radeon_output->VSyncWidth);
++
++    return TRUE;
++}
++
++Bool
+ RADEONGetATOMTVInfo(xf86OutputPtr output)
+ {
+     ScrnInfoPtr pScrn = output->scrn;
+@@ -1751,6 +1860,30 @@ static void RADEONApplyATOMQuirks(ScrnInfoPtr pScrn, int index)
  	}
      }
  
@@ -4859,10 +6936,25 @@ index 20aa722..f0a3a31 100644
 +	}
 +    }
 +
++    /* Funky macbooks */
++    if ((info->Chipset == PCI_CHIP_RV530_71C5) &&
++	(PCI_SUB_VENDOR_ID(info->PciInfo) == 0x106b) &&
++	(PCI_SUB_DEVICE_ID(info->PciInfo) == 0x0080)) {
++	if ((index == ATOM_DEVICE_CRT1_INDEX) ||
++	    (index == ATOM_DEVICE_CRT2_INDEX) ||
++	    (index == ATOM_DEVICE_DFP2_INDEX))
++	    info->BiosConnector[index].valid = FALSE;
++
++	if (index == ATOM_DEVICE_DFP1_INDEX) {
++	    info->BiosConnector[index].DACType = DAC_TVDAC;
++	    info->BiosConnector[index].devices |= (1 << ATOM_DEVICE_CRT2_INDEX);
++	}
++    }
++
  }
  
  Bool
-@@ -2027,9 +2010,12 @@ RHDAtomBiosFunc(int scrnIndex, atomBiosHandlePtr handle,
+@@ -2027,9 +2160,12 @@ RHDAtomBiosFunc(int scrnIndex, atomBiosHandlePtr handle,
  VOID*
  CailAllocateMemory(VOID *CAIL,UINT16 size)
  {
@@ -4876,7 +6968,7 @@ index 20aa722..f0a3a31 100644
  }
  
  VOID
-@@ -2256,4 +2242,15 @@ atombios_get_command_table_version(atomBiosHandlePtr atomBIOS, int index, int *m
+@@ -2256,4 +2392,15 @@ atombios_get_command_table_version(atomBiosHandlePtr atomBIOS, int index, int *m
  }
  
  
@@ -4892,6 +6984,29 @@ index 20aa722..f0a3a31 100644
 +
 +
  #endif /* ATOM_BIOS */
+diff --git a/src/radeon_atombios.h b/src/radeon_atombios.h
+index fe7044d..fbe8dd5 100644
+--- a/src/radeon_atombios.h
++++ b/src/radeon_atombios.h
+@@ -125,12 +125,18 @@ atombios_static_pwrmgt_setup(ScrnInfoPtr pScrn, int enable);
+ extern Bool
+ RADEONGetATOMTVInfo(xf86OutputPtr output);
+ 
++extern Bool
++RADEONGetATOMLVDSInfo(xf86OutputPtr output);
++
+ extern int
+ atombios_external_tmds_setup(xf86OutputPtr output, DisplayModePtr mode);
+ 
+ extern void
+ atombios_get_command_table_version(atomBiosHandlePtr atomBIOS, int index, int *major, int *minor);
+ 
++extern xf86MonPtr
++radeon_atom_get_edid(xf86OutputPtr output);
++
+ Bool
+ rhdAtomASICInit(atomBiosHandlePtr handle);
+ 
 diff --git a/src/radeon_atomwrapper.c b/src/radeon_atomwrapper.c
 index 3e7ae01..bed1471 100644
 --- a/src/radeon_atomwrapper.c
@@ -4905,7 +7020,7 @@ index 3e7ae01..bed1471 100644
  
  
 diff --git a/src/radeon_bios.c b/src/radeon_bios.c
-index 529dda7..b34a421 100644
+index 529dda7..22bb5ed 100644
 --- a/src/radeon_bios.c
 +++ b/src/radeon_bios.c
 @@ -266,6 +266,26 @@ radeon_read_unposted_bios(ScrnInfoPtr pScrn)
@@ -5202,7 +7317,50 @@ index 529dda7..b34a421 100644
  			    info->BiosConnector[4].ddc_i2c.put_clk_mask = RADEON_BIOS32(tmp0 + 0x03);
  			    info->BiosConnector[4].ddc_i2c.put_data_mask = RADEON_BIOS32(tmp0 + 0x07);
  			    info->BiosConnector[4].ddc_i2c.get_clk_mask = RADEON_BIOS32(tmp0 + 0x03);
-@@ -1118,6 +1176,50 @@ Bool RADEONGetTMDSInfoFromBIOS (xf86OutputPtr output)
+@@ -917,30 +975,9 @@ Bool RADEONGetLVDSInfoFromBIOS (xf86OutputPtr output)
+ 
+     if (!info->VBIOS) return FALSE;
+ 
+-    if (info->IsAtomBios) {
+-	if((tmp = RADEON_BIOS16 (info->MasterDataStart + 16))) {
+-
+-	    radeon_output->PanelXRes = RADEON_BIOS16(tmp+6);
+-	    radeon_output->PanelYRes = RADEON_BIOS16(tmp+10);
+-	    radeon_output->DotClock   = RADEON_BIOS16(tmp+4)*10;
+-	    radeon_output->HBlank     = RADEON_BIOS16(tmp+8);
+-	    radeon_output->HOverPlus  = RADEON_BIOS16(tmp+14);
+-	    radeon_output->HSyncWidth = RADEON_BIOS16(tmp+16);
+-	    radeon_output->VBlank     = RADEON_BIOS16(tmp+12);
+-	    radeon_output->VOverPlus  = RADEON_BIOS16(tmp+18);
+-	    radeon_output->VSyncWidth = RADEON_BIOS16(tmp+20);
+-	    radeon_output->PanelPwrDly = RADEON_BIOS16(tmp+40);
+-
+-	    if (radeon_output->PanelPwrDly > 2000 || radeon_output->PanelPwrDly < 0)
+-		radeon_output->PanelPwrDly = 2000;
+-
+-	    radeon_output->Flags = 0;
+-	} else {
+-	    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+-		       "No LVDS Info Table found in BIOS!\n");
+-	    return FALSE;
+-	}
+-    } else {
++    if (info->IsAtomBios)
++	return RADEONGetATOMLVDSInfo(output);
++    else {
+ 
+ 	tmp = RADEON_BIOS16(info->ROMHeaderStart + 0x40);
+ 
+@@ -963,7 +1000,7 @@ Bool RADEONGetLVDSInfoFromBIOS (xf86OutputPtr output)
+ 	    radeon_output->PanelYRes = RADEON_BIOS16(tmp+27);
+ 	    xf86DrvMsg(0, X_INFO, "Panel Size from BIOS: %dx%d\n",
+ 		       radeon_output->PanelXRes, radeon_output->PanelYRes);
+-	
++
+ 	    radeon_output->PanelPwrDly = RADEON_BIOS16(tmp+44);
+ 	    if (radeon_output->PanelPwrDly > 2000 || radeon_output->PanelPwrDly < 0)
+ 		radeon_output->PanelPwrDly = 2000;
+@@ -1118,6 +1155,50 @@ Bool RADEONGetTMDSInfoFromBIOS (xf86OutputPtr output)
      return FALSE;
  }
  
@@ -5253,7 +7411,7 @@ index 529dda7..b34a421 100644
  Bool RADEONGetExtTMDSInfoFromBIOS (xf86OutputPtr output)
  {
      ScrnInfoPtr pScrn = output->scrn;
-@@ -1129,6 +1231,52 @@ Bool RADEONGetExtTMDSInfoFromBIOS (xf86OutputPtr output)
+@@ -1129,6 +1210,52 @@ Bool RADEONGetExtTMDSInfoFromBIOS (xf86OutputPtr output)
  
      if (info->IsAtomBios) {
  	return FALSE;
@@ -5306,7 +7464,7 @@ index 529dda7..b34a421 100644
      } else {
  	offset = RADEON_BIOS16(info->ROMHeaderStart + 0x58);
  	if (offset) {
-@@ -1148,10 +1296,11 @@ Bool RADEONGetExtTMDSInfoFromBIOS (xf86OutputPtr output)
+@@ -1148,10 +1275,11 @@ Bool RADEONGetExtTMDSInfoFromBIOS (xf86OutputPtr output)
  		radeon_output->dvo_i2c = legacy_setup_i2c_bus(RADEON_GPIO_VGA_DDC);
  	    else if (gpio_reg == 4)
  		radeon_output->dvo_i2c = legacy_setup_i2c_bus(RADEON_GPIO_CRT2_DDC);
@@ -5320,7 +7478,7 @@ index 529dda7..b34a421 100644
  		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  			   "Unknown gpio reg: %d\n", gpio_reg);
  		return FALSE;
-@@ -1179,12 +1328,82 @@ Bool RADEONInitExtTMDSInfoFromBIOS (xf86OutputPtr output)
+@@ -1179,12 +1307,82 @@ Bool RADEONInitExtTMDSInfoFromBIOS (xf86OutputPtr output)
      unsigned char *RADEONMMIO = info->MMIO;
      RADEONOutputPrivatePtr radeon_output = output->driver_private;
      int offset, index, id;
@@ -5404,7 +7562,7 @@ index 529dda7..b34a421 100644
      } else {
  	offset = RADEON_BIOS16(info->ROMHeaderStart + 0x58);
  	if (offset) {
-@@ -1194,24 +1413,24 @@ Bool RADEONInitExtTMDSInfoFromBIOS (xf86OutputPtr output)
+@@ -1194,24 +1392,24 @@ Bool RADEONInitExtTMDSInfoFromBIOS (xf86OutputPtr output)
  		index += 2;
  		switch(id >> 13) {
  		case 0:
@@ -5439,7 +7597,7 @@ index 529dda7..b34a421 100644
  		    break;
  		case 4:
  		    val = RADEON_BIOS16(index);
-@@ -1221,15 +1440,15 @@ Bool RADEONInitExtTMDSInfoFromBIOS (xf86OutputPtr output)
+@@ -1221,15 +1419,15 @@ Bool RADEONInitExtTMDSInfoFromBIOS (xf86OutputPtr output)
  		    break;
  		case 5:
  		    reg = id & 0x1fff;
@@ -6175,7 +8333,7 @@ index 58fe306..dba197e 100644
  		    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  			       "%s: CP idle %d\n", __FUNCTION__, ret);
 diff --git a/src/radeon_crtc.c b/src/radeon_crtc.c
-index c63b650..99992fc 100644
+index c63b650..9040bae 100644
 --- a/src/radeon_crtc.c
 +++ b/src/radeon_crtc.c
 @@ -48,8 +48,7 @@
@@ -6335,7 +8493,7 @@ index c63b650..99992fc 100644
 -#endif
 -    }
 -#endif /* USE_XAA */
-+    rotate_offset = radeon_allocate_memory(pScrn, &radeon_crtc->crtc_rotate_mem, size, align);
++    rotate_offset = radeon_legacy_allocate_memory(pScrn, &radeon_crtc->crtc_rotate_mem, size, align);
 +    if (rotate_offset == 0)
 +	return NULL;
  
@@ -6365,7 +8523,7 @@ index c63b650..99992fc 100644
 -	    radeon_crtc->rotate_mem_xaa = NULL;
 -	}
 -#endif /* USE_XAA */
-+	radeon_free_memory(pScrn, radeon_crtc->crtc_rotate_mem);
++	radeon_legacy_free_memory(pScrn, radeon_crtc->crtc_rotate_mem);
 +	radeon_crtc->crtc_rotate_mem = NULL;
      }
 +
@@ -6426,7 +8584,7 @@ index c63b650..99992fc 100644
  	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  		       "[drm] failed changing tiling status\n");
 diff --git a/src/radeon_cursor.c b/src/radeon_cursor.c
-index c4472db..22a33d6 100644
+index c4472db..08bfddf 100644
 --- a/src/radeon_cursor.c
 +++ b/src/radeon_cursor.c
 @@ -209,21 +209,23 @@ radeon_crtc_set_cursor_position (xf86CrtcPtr crtc, int x, int y)
@@ -6509,7 +8667,7 @@ index c4472db..22a33d6 100644
 +	    RADEONCrtcPrivatePtr radeon_crtc = crtc->driver_private;
  
 +	    radeon_crtc->cursor_offset =
-+		radeon_allocate_memory(pScrn, &radeon_crtc->cursor_mem, size_bytes, align);
++		radeon_legacy_allocate_memory(pScrn, &radeon_crtc->cursor_mem, size_bytes, align);
 +
 +	    if (radeon_crtc->cursor_offset == 0)
 +		return FALSE;
@@ -8307,7 +10465,7 @@ index fcde08e..0000000
 -
 -#endif
 diff --git a/src/radeon_driver.c b/src/radeon_driver.c
-index f18ad99..42b6d0c 100644
+index f18ad99..c759bd6 100644
 --- a/src/radeon_driver.c
 +++ b/src/radeon_driver.c
 @@ -79,7 +79,7 @@
@@ -8318,6 +10476,15 @@ index f18ad99..42b6d0c 100644
 +#include "radeon_drm.h"
  #include "sarea.h"
  #endif
+ 
+@@ -498,7 +498,7 @@ static Bool RADEONUnmapMem(ScrnInfoPtr pScrn)
+ void RADEONPllErrataAfterIndex(RADEONInfoPtr info)
+ {
+     unsigned char *RADEONMMIO = info->MMIO;
+-	
++
+     if (!(info->ChipErrata & CHIP_ERRATA_PLL_DUMMYREADS))
+ 	return;
  
 @@ -669,7 +669,14 @@ static void radeon_write_mc_fb_agp_location(ScrnInfoPtr pScrn, int mask, uint32_
      RADEONInfoPtr  info       = RADEONPTR(pScrn);
@@ -8832,6 +10999,15 @@ index f18ad99..42b6d0c 100644
      }
  
  
+@@ -3276,7 +3311,7 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
+     RADEONInitMemoryMap(pScrn);
+ 
+     /* empty the surfaces */
+-    {
++    if (info->ChipFamily < CHIP_FAMILY_R600) {
+ 	unsigned char *RADEONMMIO = info->MMIO;
+ 	unsigned int j;
+ 	for (j = 0; j < 8; j++) {
 @@ -3288,14 +3323,14 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
  
  #ifdef XF86DRI
@@ -8910,7 +11086,7 @@ index f18ad99..42b6d0c 100644
  
      /* Setup DRI after visuals have been established, but before fbScreenInit is
       * called.  fbScreenInit will eventually call the driver's InitGLXVisuals
-@@ -3408,7 +3444,7 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
+@@ -3408,18 +3444,18 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
      }
  
      /* Tell DRI about new memory map */
@@ -8919,7 +11095,45 @@ index f18ad99..42b6d0c 100644
          if (RADEONDRISetParam(pScrn, RADEON_SETPARAM_NEW_MEMMAP, 1) < 0) {
  		xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
  			   "[drm] failed to enable new memory map\n");
-@@ -3495,14 +3531,14 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
+ 		RADEONDRICloseScreen(pScreen);
+-		info->directRenderingEnabled = FALSE;		
++		info->directRenderingEnabled = FALSE;
+ 	}
+     }
+ #endif
+     xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, RADEON_LOGLEVEL_DEBUG,
+ 		   "Initializing fb layer\n");
+-    
++
+     if (info->r600_shadow_fb) {
+ 	info->fb_shadow = xcalloc(1,
+ 				  pScrn->displayWidth * pScrn->virtualY *
+@@ -3473,18 +3509,16 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
+ 	else if (strcmp(s, "BGR") == 0) subPixelOrder = SubPixelHorizontalBGR;
+ 	else if (strcmp(s, "NONE") == 0) subPixelOrder = SubPixelNone;
+ 	PictureSetSubpixelOrder (pScreen, subPixelOrder);
+-    } 
++    }
+ #endif
+ 
+     pScrn->vtSema = TRUE;
+ 
+-    /* xf86CrtcRotate() accesses pScrn->pScreen */
+-    pScrn->pScreen = pScreen;
+-
+-    if (!xf86SetDesiredModes (pScrn))
+-	return FALSE;
+-
+-    RADEONSaveScreen(pScreen, SCREEN_SAVER_ON);
++    /* restore the memory map here otherwise we may get a hang when
++     * initializing the drm below
++     */
++    RADEONInitMemMapRegisters(pScrn, info->ModeReg, info);
++    RADEONRestoreMemMapRegisters(pScrn, info->ModeReg);
+ 
+     /* Backing store setup */
+     xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, RADEON_LOGLEVEL_DEBUG,
+@@ -3495,14 +3529,14 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
      /* DRI finalisation */
  #ifdef XF86DRI
      if (info->directRenderingEnabled && info->cardType==CARD_PCIE &&
@@ -8938,7 +11152,7 @@ index f18ad99..42b6d0c 100644
  	  xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  		     "[drm] failed set pci gart table size\n");
        }
-@@ -3519,10 +3555,6 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
+@@ -3519,10 +3553,6 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
  	 */
  	RADEONAdjustMemMapRegisters(pScrn, info->ModeReg);
  
@@ -8949,7 +11163,18 @@ index f18ad99..42b6d0c 100644
  	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Direct rendering enabled\n");
  
  	/* we might already be in tiled mode, tell drm about it */
-@@ -3910,7 +3942,7 @@ static void RADEONAdjustMemMapRegisters(ScrnInfoPtr pScrn, RADEONSavePtr save)
+@@ -3620,6 +3650,10 @@ Bool RADEONScreenInit(int scrnIndex, ScreenPtr pScreen,
+         }
+     }
+ 
++    /* set the modes with desired rotation, etc. */
++    if (!xf86SetDesiredModes (pScrn))
++	return FALSE;
++
+     /* Provide SaveScreen & wrap BlockHandler and CloseScreen */
+     /* Wrap CloseScreen */
+     info->CloseScreen    = pScreen->CloseScreen;
+@@ -3910,7 +3944,7 @@ static void RADEONAdjustMemMapRegisters(ScrnInfoPtr pScrn, RADEONSavePtr save)
  	else
  	    info->fbLocation = (info->mc_fb_location & 0xffff) << 16;
  
@@ -8958,7 +11183,7 @@ index f18ad99..42b6d0c 100644
  	    (((pScrn->displayWidth * info->CurrentLayout.pixel_bytes / 64)
  	      << 22) | ((info->fbLocation + pScrn->fbOffset) >> 10));
  	RADEONInitMemMapRegisters(pScrn, save, info);
-@@ -3920,14 +3952,14 @@ static void RADEONAdjustMemMapRegisters(ScrnInfoPtr pScrn, RADEONSavePtr save)
+@@ -3920,14 +3954,14 @@ static void RADEONAdjustMemMapRegisters(ScrnInfoPtr pScrn, RADEONSavePtr save)
  #ifdef USE_EXA
      if (info->accelDFS)
      {
@@ -8975,7 +11200,7 @@ index f18ad99..42b6d0c 100644
  				sizeof(gp)) < 0) {
  	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  		       "Failed to determine GART area MC location, not using "
-@@ -4011,35 +4043,35 @@ void RADEONChangeSurfaces(ScrnInfoPtr pScrn)
+@@ -4011,35 +4045,35 @@ void RADEONChangeSurfaces(ScrnInfoPtr pScrn)
      }   
  #ifdef XF86DRI
      if (info->directRenderingInited) {
@@ -9022,7 +11247,7 @@ index f18ad99..42b6d0c 100644
  	drmsurfalloc.flags = swap_pattern;
  
  	if (info->tilingEnabled) {
-@@ -4048,15 +4080,15 @@ void RADEONChangeSurfaces(ScrnInfoPtr pScrn)
+@@ -4048,15 +4082,15 @@ void RADEONChangeSurfaces(ScrnInfoPtr pScrn)
  	    else
  		drmsurfalloc.flags |= (width_bytes / 16) | color_pattern;
  	}
@@ -9042,7 +11267,7 @@ index f18ad99..42b6d0c 100644
  				       &drmsurfalloc, sizeof(drmsurfalloc));
  	    if (retvalue < 0)
  		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-@@ -4081,18 +4113,18 @@ void RADEONChangeSurfaces(ScrnInfoPtr pScrn)
+@@ -4081,18 +4115,18 @@ void RADEONChangeSurfaces(ScrnInfoPtr pScrn)
  	}
  
  	/* rv100 and probably the derivative igps don't have depth tiling on all the time? */
@@ -9065,7 +11290,7 @@ index f18ad99..42b6d0c 100644
  		&drmsurfalloc, sizeof(drmsurfalloc));
  	    if (retvalue < 0)
  		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-@@ -4178,6 +4210,7 @@ avivo_save(ScrnInfoPtr pScrn, RADEONSavePtr save)
+@@ -4178,6 +4212,7 @@ avivo_save(ScrnInfoPtr pScrn, RADEONSavePtr save)
  
      state->crtc_master_en = INREG(AVIVO_DC_CRTC_MASTER_EN);
      state->crtc_tv_control = INREG(AVIVO_DC_CRTC_TV_CONTROL);
@@ -9073,7 +11298,7 @@ index f18ad99..42b6d0c 100644
  
      state->pll1.ref_div_src = INREG(AVIVO_EXT1_PPLL_REF_DIV_SRC);
      state->pll1.ref_div = INREG(AVIVO_EXT1_PPLL_REF_DIV);
-@@ -4233,8 +4266,10 @@ avivo_save(ScrnInfoPtr pScrn, RADEONSavePtr save)
+@@ -4233,8 +4268,10 @@ avivo_save(ScrnInfoPtr pScrn, RADEONSavePtr save)
      state->grph1.x_end = INREG(AVIVO_D1GRPH_X_END);
      state->grph1.y_end = INREG(AVIVO_D1GRPH_Y_END);
  
@@ -9084,7 +11309,7 @@ index f18ad99..42b6d0c 100644
  
      state->crtc2.pll_source = INREG(AVIVO_PCLK_CRTC2_CNTL);
  
-@@ -4272,8 +4307,10 @@ avivo_save(ScrnInfoPtr pScrn, RADEONSavePtr save)
+@@ -4272,8 +4309,10 @@ avivo_save(ScrnInfoPtr pScrn, RADEONSavePtr save)
      state->grph2.x_end = INREG(AVIVO_D2GRPH_X_END);
      state->grph2.y_end = INREG(AVIVO_D2GRPH_Y_END);
  
@@ -9095,7 +11320,7 @@ index f18ad99..42b6d0c 100644
  
      if (IS_DCE3_VARIANT) {
  	/* save DVOA regs */
-@@ -4477,14 +4514,71 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -4477,14 +4516,71 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
      struct avivo_state *state = &restore->avivo;
      int i, j;
  
@@ -9136,7 +11361,7 @@ index f18ad99..42b6d0c 100644
 +    OUTREG(AVIVO_D1GRPH_PITCH, state->grph1.pitch);
 +    OUTREG(AVIVO_D1GRPH_ENABLE, state->grph1.enable);
 +    OUTREG(AVIVO_D1GRPH_UPDATE, 0);
- 
++
 +    OUTREG(AVIVO_D2GRPH_UPDATE, AVIVO_D1GRPH_UPDATE_LOCK);
 +    OUTREG(AVIVO_D2GRPH_PRIMARY_SURFACE_ADDRESS, state->grph2.prim_surf_addr);
 +    OUTREG(AVIVO_D2GRPH_SECONDARY_SURFACE_ADDRESS, state->grph2.sec_surf_addr);
@@ -9151,8 +11376,6 @@ index f18ad99..42b6d0c 100644
 +    OUTREG(AVIVO_D2GRPH_ENABLE, state->grph2.enable);
 +    OUTREG(AVIVO_D2GRPH_UPDATE, 0);
  
--    OUTREG(AVIVO_DC_CRTC_MASTER_EN, state->crtc_master_en);
--    OUTREG(AVIVO_DC_CRTC_TV_CONTROL, state->crtc_tv_control);
 +    /* Whack some mode regs too */
 +    OUTREG(AVIVO_D1SCL_UPDATE, AVIVO_D1SCL_UPDATE_LOCK);
 +    OUTREG(AVIVO_D1MODE_DESKTOP_HEIGHT, state->grph1.desktop_height);
@@ -9161,18 +11384,20 @@ index f18ad99..42b6d0c 100644
 +    OUTREG(AVIVO_D1MODE_DATA_FORMAT, state->grph1.mode_data_format);
 +    OUTREG(AVIVO_D1SCL_UPDATE, 0);
  
+-    OUTREG(AVIVO_DC_CRTC_MASTER_EN, state->crtc_master_en);
+-    OUTREG(AVIVO_DC_CRTC_TV_CONTROL, state->crtc_tv_control);
 +    OUTREG(AVIVO_D2SCL_UPDATE, AVIVO_D1SCL_UPDATE_LOCK);
 +    OUTREG(AVIVO_D2MODE_DESKTOP_HEIGHT, state->grph2.desktop_height);
 +    OUTREG(AVIVO_D2MODE_VIEWPORT_START, state->grph2.viewport_start);
 +    OUTREG(AVIVO_D2MODE_VIEWPORT_SIZE, state->grph2.viewport_size);
 +    OUTREG(AVIVO_D2MODE_DATA_FORMAT, state->grph2.mode_data_format);
 +    OUTREG(AVIVO_D2SCL_UPDATE, 0);
-+
+ 
 +    /* Set the PLL */
      OUTREG(AVIVO_EXT1_PPLL_REF_DIV_SRC, state->pll1.ref_div_src);
      OUTREG(AVIVO_EXT1_PPLL_REF_DIV, state->pll1.ref_div);
      OUTREG(AVIVO_EXT1_PPLL_FB_DIV, state->pll1.fb_div);
-@@ -4504,7 +4598,9 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -4504,7 +4600,9 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
      OUTREG(AVIVO_P2PLL_INT_SS_CNTL, state->pll2.int_ss_cntl);
  
      OUTREG(AVIVO_PCLK_CRTC1_CNTL, state->crtc1.pll_source);
@@ -9182,7 +11407,7 @@ index f18ad99..42b6d0c 100644
      OUTREG(AVIVO_D1CRTC_H_TOTAL, state->crtc1.h_total);
      OUTREG(AVIVO_D1CRTC_H_BLANK_START_END, state->crtc1.h_blank_start_end);
      OUTREG(AVIVO_D1CRTC_H_SYNC_A, state->crtc1.h_sync_a);
-@@ -4519,29 +4615,12 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -4519,29 +4617,12 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
      OUTREG(AVIVO_D1CRTC_V_SYNC_B, state->crtc1.v_sync_b);
      OUTREG(AVIVO_D1CRTC_V_SYNC_B_CNTL, state->crtc1.v_sync_b_cntl);
  
@@ -9213,7 +11438,7 @@ index f18ad99..42b6d0c 100644
  
      OUTREG(AVIVO_D2CRTC_H_TOTAL, state->crtc2.h_total);
      OUTREG(AVIVO_D2CRTC_H_BLANK_START_END, state->crtc2.h_blank_start_end);
-@@ -4557,29 +4636,11 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -4557,29 +4638,11 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
      OUTREG(AVIVO_D2CRTC_V_SYNC_B, state->crtc2.v_sync_b);
      OUTREG(AVIVO_D2CRTC_V_SYNC_B_CNTL, state->crtc2.v_sync_b_cntl);
  
@@ -9243,7 +11468,7 @@ index f18ad99..42b6d0c 100644
      if (IS_DCE3_VARIANT) {
  	/* DVOA regs */
  	OUTREG(0x7080, state->dvoa[0]);
-@@ -4699,7 +4760,7 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -4699,7 +4762,7 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
  	}
  
  	j = 0;
@@ -9252,7 +11477,7 @@ index f18ad99..42b6d0c 100644
  	for (i = 0x7800; i <= 0x782c; i += 4) {
  	    OUTREG(i, state->daca[j]);
  	    OUTREG((i + 0x200), state->dacb[j]);
-@@ -4766,8 +4827,31 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
+@@ -4766,8 +4829,31 @@ avivo_restore(ScrnInfoPtr pScrn, RADEONSavePtr restore)
      OUTREG(0x6e30, state->dxscl[6]);
      OUTREG(0x6e34, state->dxscl[7]);
  
@@ -9284,7 +11509,7 @@ index f18ad99..42b6d0c 100644
  }
  
  static void avivo_restore_vga_regs(ScrnInfoPtr pScrn, RADEONSavePtr restore)
-@@ -5045,7 +5129,7 @@ Bool RADEONSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
+@@ -5045,7 +5131,7 @@ Bool RADEONSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
      Bool           tilingOld   = info->tilingEnabled;
      Bool           ret;
  #ifdef XF86DRI
@@ -9293,7 +11518,7 @@ index f18ad99..42b6d0c 100644
  
      if (CPStarted) {
  	DRILock(pScrn->pScreen, 0);
-@@ -5060,7 +5144,7 @@ Bool RADEONSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
+@@ -5060,7 +5146,7 @@ Bool RADEONSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
          info->tilingEnabled = (mode->Flags & (V_DBLSCAN | V_INTERLACE)) ? FALSE : TRUE;
  #ifdef XF86DRI	
  	if (info->directRenderingEnabled && (info->tilingEnabled != tilingOld)) {
@@ -9302,7 +11527,7 @@ index f18ad99..42b6d0c 100644
  	  if (RADEONDRISetParam(pScrn, RADEON_SETPARAM_SWITCH_TILING, (info->tilingEnabled ? 1 : 0)) < 0)
    	      xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  			 "[drm] failed changing tiling status\n");
-@@ -5170,7 +5254,7 @@ void RADEONDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, Bool crtc2)
+@@ -5170,7 +5256,7 @@ void RADEONDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, Bool crtc2)
      unsigned char *RADEONMMIO = info->MMIO;
      int            Base, reg, regcntl, crtcoffsetcntl, xytilereg, crtcxytile = 0;
  #ifdef XF86DRI
@@ -9311,7 +11536,7 @@ index f18ad99..42b6d0c 100644
      XF86DRISAREAPtr pSAREA;
  #endif
  
-@@ -5209,7 +5293,7 @@ void RADEONDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, Bool crtc2)
+@@ -5209,7 +5295,7 @@ void RADEONDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, Bool crtc2)
  #if 0
      /* try to get rid of flickering when scrolling at least for 2d */
  #ifdef XF86DRI
@@ -9320,7 +11545,7 @@ index f18ad99..42b6d0c 100644
  #endif
      crtcoffsetcntl &= ~RADEON_CRTC_OFFSET_FLIP_CNTL;
  #endif
-@@ -5266,7 +5350,7 @@ void RADEONDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, Bool crtc2)
+@@ -5266,7 +5352,7 @@ void RADEONDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, Bool crtc2)
  	}
  
  	if (pSAREAPriv->pfCurrentPage == 1) {
@@ -9329,7 +11554,7 @@ index f18ad99..42b6d0c 100644
  	}
      }
  #endif
-@@ -5290,7 +5374,7 @@ void RADEONAdjustFrame(int scrnIndex, int x, int y, int flags)
+@@ -5290,7 +5376,7 @@ void RADEONAdjustFrame(int scrnIndex, int x, int y, int flags)
      xf86CrtcPtr	crtc = output->crtc;
  
  #ifdef XF86DRI
@@ -9338,7 +11563,7 @@ index f18ad99..42b6d0c 100644
  #endif
  
      if (info->accelOn)
-@@ -5307,7 +5391,7 @@ void RADEONAdjustFrame(int scrnIndex, int x, int y, int flags)
+@@ -5307,7 +5393,7 @@ void RADEONAdjustFrame(int scrnIndex, int x, int y, int flags)
  
  
  #ifdef XF86DRI
@@ -9347,7 +11572,7 @@ index f18ad99..42b6d0c 100644
  #endif
  }
  
-@@ -5318,26 +5402,18 @@ Bool RADEONEnterVT(int scrnIndex, int flags)
+@@ -5318,26 +5404,18 @@ Bool RADEONEnterVT(int scrnIndex, int flags)
  {
      ScrnInfoPtr    pScrn = xf86Screens[scrnIndex];
      RADEONInfoPtr  info  = RADEONPTR(pScrn);
@@ -9376,7 +11601,7 @@ index f18ad99..42b6d0c 100644
  	    pInt = xf86InitInt10 (info->pEnt->index);
  	    if (pInt) {
  		pInt->num = 0xe6;
-@@ -5382,10 +5458,10 @@ Bool RADEONEnterVT(int scrnIndex, int flags)
+@@ -5382,10 +5460,10 @@ Bool RADEONEnterVT(int scrnIndex, int flags)
  #ifdef XF86DRI
      if (info->directRenderingEnabled) {
      	if (info->cardType == CARD_PCIE &&
@@ -9389,7 +11614,7 @@ index f18ad99..42b6d0c 100644
      	}
  
  	/* get the DRI back into shape after resume */
-@@ -5433,18 +5509,18 @@ void RADEONLeaveVT(int scrnIndex, int flags)
+@@ -5433,18 +5511,18 @@ void RADEONLeaveVT(int scrnIndex, int flags)
  	RADEONCP_STOP(pScrn, info);
  
          if (info->cardType == CARD_PCIE &&
@@ -9410,12 +11635,12 @@ index f18ad99..42b6d0c 100644
 +	if (info->dri->textureSize) {
 +	    drm_radeon_sarea_t *pSAREAPriv =
 +		(drm_radeon_sarea_t*)DRIGetSAREAPrivate(pScrn->pScreen);
-+	    drmTextureRegionPtr list = pSAREAPriv->tex_list[0];
++	    struct drm_tex_region *list = pSAREAPriv->tex_list[0];
 +	    int age = ++pSAREAPriv->tex_age[0];
  
  	    i = 0;
  
-@@ -5501,12 +5577,12 @@ static Bool RADEONCloseScreen(int scrnIndex, ScreenPtr pScreen)
+@@ -5501,12 +5579,12 @@ static Bool RADEONCloseScreen(int scrnIndex, ScreenPtr pScreen)
  
  #ifdef XF86DRI
  #ifdef DAMAGE
@@ -9432,7 +11657,7 @@ index f18ad99..42b6d0c 100644
      }
  #endif
  
-@@ -5514,9 +5590,9 @@ static Bool RADEONCloseScreen(int scrnIndex, ScreenPtr pScreen)
+@@ -5514,9 +5592,9 @@ static Bool RADEONCloseScreen(int scrnIndex, ScreenPtr pScreen)
  #endif
  
  #ifdef USE_XAA
@@ -9445,7 +11670,7 @@ index f18ad99..42b6d0c 100644
      }
  #endif /* USE_XAA */
  
-@@ -5527,21 +5603,21 @@ static Bool RADEONCloseScreen(int scrnIndex, ScreenPtr pScreen)
+@@ -5527,21 +5605,21 @@ static Bool RADEONCloseScreen(int scrnIndex, ScreenPtr pScreen)
      xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, RADEON_LOGLEVEL_DEBUG,
  		   "Disposing accel...\n");
  #ifdef USE_EXA
@@ -9478,10 +11703,10 @@ index f18ad99..42b6d0c 100644
  
 diff --git a/src/radeon_drm.h b/src/radeon_drm.h
 new file mode 100644
-index 0000000..c0d566c
+index 0000000..66cefb7
 --- /dev/null
 +++ b/src/radeon_drm.h
-@@ -0,0 +1,755 @@
+@@ -0,0 +1,756 @@
 +/* radeon_drm.h -- Public header for the radeon driver -*- linux-c -*-
 + *
 + * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.
@@ -10027,8 +12252,9 @@ index 0000000..c0d566c
 +	unsigned int depth_bpp;
 +	unsigned int depth_offset, depth_pitch;
 +
-+	unsigned long fb_offset DEPRECATED;	/* deprecated, driver asks hardware */
-+	unsigned long mmio_offset DEPRECATED;	/* deprecated, driver asks hardware */
++	/* DEPRECATED commented out below to allow for -Werror build */
++	unsigned long fb_offset /*DEPRECATED*/;	/* deprecated, driver asks hardware */
++	unsigned long mmio_offset /*DEPRECATED*/;	/* deprecated, driver asks hardware */
 +	unsigned long ring_offset;
 +	unsigned long ring_rptr_offset;
 +	unsigned long buffers_offset;
@@ -11296,49 +13522,12 @@ index 4736e4f..97199ae 100644
  	    if (w > remainingWidth)
  		w = remainingWidth;
  	    remainingWidth -= w;
-diff --git a/src/radeon_macros.h b/src/radeon_macros.h
-index afe442e..f19bc3e 100644
---- a/src/radeon_macros.h
-+++ b/src/radeon_macros.h
-@@ -51,32 +51,6 @@
- 
- #include "compiler.h"
- 
--#if HAVE_BYTESWAP_H
--#include <byteswap.h>
--#elif defined(USE_SYS_ENDIAN_H)
--#include <sys/endian.h>
--#else
--#define	bswap_16(value)  \
-- 	((((value) & 0xff) << 8) | ((value) >> 8))
--
--#define	bswap_32(value)	\
-- 	(((uint32_t)bswap_16((uint16_t)((value) & 0xffff)) << 16) | \
-- 	(uint32_t)bswap_16((uint16_t)((value) >> 16)))
-- 
--#define	bswap_64(value)	\
-- 	(((uint64_t)bswap_32((uint32_t)((value) & 0xffffffff)) \
-- 	    << 32) | \
-- 	(uint64_t)bswap_32((uint32_t)((value) >> 32)))
--#endif
--
--#if X_BYTE_ORDER == X_BIG_ENDIAN
--#define le32_to_cpu(x) bswap_32(x)
--#define le16_to_cpu(x) bswap_16(x)
--#else
--#define le32_to_cpu(x) (x)
--#define le16_to_cpu(x) (x)
--#endif
--
- #define RADEON_BIOS8(v)  (info->VBIOS[v])
- #define RADEON_BIOS16(v) (info->VBIOS[v] | \
-                           (info->VBIOS[(v) + 1] << 8))
-diff --git a/src/radeon_memory.c b/src/radeon_memory.c
+diff --git a/src/radeon_legacy_memory.c b/src/radeon_legacy_memory.c
 new file mode 100644
-index 0000000..178eed0
+index 0000000..2a9ee94
 --- /dev/null
-+++ b/src/radeon_memory.c
-@@ -0,0 +1,118 @@
++++ b/src/radeon_legacy_memory.c
+@@ -0,0 +1,117 @@
 +
 +#ifdef HAVE_CONFIG_H
 +#include "config.h"
@@ -11353,16 +13542,14 @@ index 0000000..178eed0
 + * returned.
 + */
 +uint32_t
-+radeon_allocate_memory(ScrnInfoPtr pScrn,
++radeon_legacy_allocate_memory(ScrnInfoPtr pScrn,
 +		       void **mem_struct,
 +		       int size,
 +		       int align)
 +{
-+    ScreenPtr pScreen;
++    ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
 +    RADEONInfoPtr info = RADEONPTR(pScrn);
 +    uint32_t offset = 0;
-+
-+    pScreen = screenInfo.screens[pScrn->scrnIndex];
 +
 +#ifdef USE_EXA
 +    if (info->useEXA) {
@@ -11372,10 +13559,10 @@ index 0000000..178eed0
 +	    if (area->size >= size)
 +		return area->offset;
 +
-+	    exaOffscreenFree(pScrn->pScreen, area);
++	    exaOffscreenFree(pScreen, area);
 +	}
 +
-+	area = exaOffscreenAlloc(pScrn->pScreen, size, align, TRUE,
++	area = exaOffscreenAlloc(pScreen, size, align, TRUE,
 +				 NULL, NULL);
 +
 +	*mem_struct = area;
@@ -11433,9 +13620,10 @@ index 0000000..178eed0
 +}
 +
 +void
-+radeon_free_memory(ScrnInfoPtr pScrn,
++radeon_legacy_free_memory(ScrnInfoPtr pScrn,
 +		   void *mem_struct)
 +{
++    ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
 +    RADEONInfoPtr info = RADEONPTR(pScrn);
 +
 +#ifdef USE_EXA
@@ -11443,7 +13631,7 @@ index 0000000..178eed0
 +	ExaOffscreenArea *area = mem_struct;
 +
 +	if (area != NULL)
-+	    exaOffscreenFree(pScrn->pScreen, area);
++	    exaOffscreenFree(pScreen, area);
 +	area = NULL;
 +    }
 +#endif /* USE_EXA */
@@ -11457,8 +13645,45 @@ index 0000000..178eed0
 +    }
 +#endif /* USE_XAA */
 +}
+diff --git a/src/radeon_macros.h b/src/radeon_macros.h
+index afe442e..f19bc3e 100644
+--- a/src/radeon_macros.h
++++ b/src/radeon_macros.h
+@@ -51,32 +51,6 @@
+ 
+ #include "compiler.h"
+ 
+-#if HAVE_BYTESWAP_H
+-#include <byteswap.h>
+-#elif defined(USE_SYS_ENDIAN_H)
+-#include <sys/endian.h>
+-#else
+-#define	bswap_16(value)  \
+- 	((((value) & 0xff) << 8) | ((value) >> 8))
+-
+-#define	bswap_32(value)	\
+- 	(((uint32_t)bswap_16((uint16_t)((value) & 0xffff)) << 16) | \
+- 	(uint32_t)bswap_16((uint16_t)((value) >> 16)))
+- 
+-#define	bswap_64(value)	\
+- 	(((uint64_t)bswap_32((uint32_t)((value) & 0xffffffff)) \
+- 	    << 32) | \
+- 	(uint64_t)bswap_32((uint32_t)((value) >> 32)))
+-#endif
+-
+-#if X_BYTE_ORDER == X_BIG_ENDIAN
+-#define le32_to_cpu(x) bswap_32(x)
+-#define le16_to_cpu(x) bswap_16(x)
+-#else
+-#define le32_to_cpu(x) (x)
+-#define le16_to_cpu(x) (x)
+-#endif
+-
+ #define RADEON_BIOS8(v)  (info->VBIOS[v])
+ #define RADEON_BIOS16(v) (info->VBIOS[v] | \
+                           (info->VBIOS[(v) + 1] << 8))
 diff --git a/src/radeon_output.c b/src/radeon_output.c
-index 7b89d66..2cc38a5 100644
+index 7b89d66..8c794fb 100644
 --- a/src/radeon_output.c
 +++ b/src/radeon_output.c
 @@ -173,9 +173,6 @@ static const uint32_t default_tvdac_adj [CHIP_FAMILY_LAST] =
@@ -11569,21 +13794,30 @@ index 7b89d66..2cc38a5 100644
  static RADEONMonitorType
  radeon_ddc_connected(xf86OutputPtr output)
  {
-@@ -304,8 +221,11 @@ radeon_ddc_connected(xf86OutputPtr output)
+@@ -304,8 +221,20 @@ radeon_ddc_connected(xf86OutputPtr output)
      xf86MonPtr MonInfo = NULL;
      RADEONOutputPrivatePtr radeon_output = output->driver_private;
  
 -    if (radeon_output->pI2CBus)
 -	MonInfo = radeon_do_ddc(output);
 +    if (radeon_output->pI2CBus) {
-+	RADEONI2CDoLock(output, TRUE);
-+	MonInfo = xf86OutputGetEDID(output, radeon_output->pI2CBus);
-+	RADEONI2CDoLock(output, FALSE);
++	/* RV410 RADEON_GPIO_VGA_DDC seems to only work via hw i2c
++	 * We may want to extend this to other cases if the need arises...
++	 */
++	if ((info->ChipFamily == CHIP_FAMILY_RV410) &&
++	    (radeon_output->ddc_i2c.mask_clk_reg == RADEON_GPIO_VGA_DDC) &&
++	    info->IsAtomBios)
++	    MonInfo = radeon_atom_get_edid(output);
++	else {
++	    RADEONI2CDoLock(output, TRUE);
++	    MonInfo = xf86OutputGetEDID(output, radeon_output->pI2CBus);
++	    RADEONI2CDoLock(output, FALSE);
++	}
 +    }
      if (MonInfo) {
  	if (!xf86ReturnOptValBool(info->Options, OPTION_IGNORE_EDID, FALSE))
  	    xf86OutputSetEDID(output, MonInfo);
-@@ -317,13 +237,14 @@ radeon_ddc_connected(xf86OutputPtr output)
+@@ -317,13 +246,14 @@ radeon_ddc_connected(xf86OutputPtr output)
  	    MonType = MT_DFP;
  	else if (radeon_output->type == OUTPUT_DP)
  	    MonType = MT_DFP;
@@ -11600,7 +13834,7 @@ index 7b89d66..2cc38a5 100644
      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
  	       "Output: %s, Detected Monitor Type: %d\n", output->name, MonType);
  
-@@ -537,7 +458,7 @@ radeon_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
+@@ -537,7 +467,7 @@ radeon_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
  		if (IS_AVIVO_VARIANT) {
  		    /* set to the panel's native mode */
  		    adjusted_mode->HDisplay = radeon_output->PanelXRes;
@@ -11609,7 +13843,7 @@ index 7b89d66..2cc38a5 100644
  		    adjusted_mode->HTotal = radeon_output->PanelXRes + radeon_output->HBlank;
  		    adjusted_mode->HSyncStart = radeon_output->PanelXRes + radeon_output->HOverPlus;
  		    adjusted_mode->HSyncEnd = adjusted_mode->HSyncStart + radeon_output->HSyncWidth;
-@@ -580,12 +501,20 @@ radeon_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
+@@ -580,12 +510,20 @@ radeon_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
  	}
      }
  
@@ -11630,7 +13864,7 @@ index 7b89d66..2cc38a5 100644
      xf86CrtcConfigPtr	config = XF86_CRTC_CONFIG_PTR (output->scrn);
      int o;
  
-@@ -595,9 +524,12 @@ radeon_mode_prepare(xf86OutputPtr output)
+@@ -595,9 +533,12 @@ radeon_mode_prepare(xf86OutputPtr output)
  	    continue;
  	else if (loop_output->crtc) {
  	    xf86CrtcPtr other_crtc = loop_output->crtc;
@@ -11644,7 +13878,7 @@ index 7b89d66..2cc38a5 100644
  	    }
  	}
      }
-@@ -625,6 +557,7 @@ radeon_mode_set(xf86OutputPtr output, DisplayModePtr mode,
+@@ -625,6 +566,7 @@ radeon_mode_set(xf86OutputPtr output, DisplayModePtr mode,
  static void
  radeon_mode_commit(xf86OutputPtr output)
  {
@@ -11652,7 +13886,7 @@ index 7b89d66..2cc38a5 100644
      xf86CrtcConfigPtr	config = XF86_CRTC_CONFIG_PTR (output->scrn);
      int o;
  
-@@ -634,9 +567,12 @@ radeon_mode_commit(xf86OutputPtr output)
+@@ -634,9 +576,12 @@ radeon_mode_commit(xf86OutputPtr output)
  	    continue;
  	else if (loop_output->crtc) {
  	    xf86CrtcPtr other_crtc = loop_output->crtc;
@@ -11666,7 +13900,26 @@ index 7b89d66..2cc38a5 100644
  	    }
  	}
      }
-@@ -1682,8 +1618,8 @@ Bool AVIVOI2CReset(ScrnInfoPtr pScrn)
+@@ -1201,8 +1146,7 @@ radeon_create_resources(xf86OutputPtr output)
+ 	}
+     }
+ 
+-    if (IS_DCE3_VARIANT &&
+-	(OUTPUT_IS_DVI || (radeon_output->type == OUTPUT_HDMI))) {
++    if (OUTPUT_IS_DVI || (radeon_output->type == OUTPUT_HDMI)) {
+ 	coherent_mode_atom = MAKE_ATOM("coherent_mode");
+ 
+ 	range[0] = 0; /* off */
+@@ -1214,7 +1158,7 @@ radeon_create_resources(xf86OutputPtr output)
+ 		       "RRConfigureOutputProperty error, %d\n", err);
+ 	}
+ 
+-	data = 1; /* use coherent mode by default */
++	data = 0; /* coherent mode off by default */
+ 
+ 	err = RRChangeOutputProperty(output->randr_output, coherent_mode_atom,
+ 				     XA_INTEGER, 32, PropModeReplace, 1, &data,
+@@ -1682,8 +1626,8 @@ Bool AVIVOI2CReset(ScrnInfoPtr pScrn)
  }
  #endif
  
@@ -11677,7 +13930,7 @@ index 7b89d66..2cc38a5 100644
  {
      ScrnInfoPtr pScrn = output->scrn;
      RADEONInfoPtr  info       = RADEONPTR(pScrn);
-@@ -1692,19 +1628,29 @@ Bool AVIVOI2CDoLock(xf86OutputPtr output, int lock_state)
+@@ -1692,19 +1636,29 @@ Bool AVIVOI2CDoLock(xf86OutputPtr output, int lock_state)
      unsigned char *RADEONMMIO = info->MMIO;
      uint32_t temp;
  
@@ -11713,12 +13966,14 @@ index 7b89d66..2cc38a5 100644
      OUTREG(pRADEONI2CBus->mask_data_reg, temp);
      temp = INREG(pRADEONI2CBus->mask_data_reg);
  
-@@ -1786,8 +1732,10 @@ legacy_setup_i2c_bus(int ddc_line)
+@@ -1786,8 +1740,12 @@ legacy_setup_i2c_bus(int ddc_line)
  {
      RADEONI2CBusRec i2c;
  
 -    i2c.mask_clk_mask = RADEON_GPIO_EN_1 | RADEON_GPIO_Y_1;
 -    i2c.mask_data_mask =  RADEON_GPIO_EN_0 | RADEON_GPIO_Y_0;
++    i2c.hw_line = 0;
++    i2c.hw_capable = FALSE;
 +    i2c.mask_clk_mask = RADEON_GPIO_EN_1;
 +    i2c.mask_data_mask = RADEON_GPIO_EN_0;
 +    i2c.a_clk_mask = RADEON_GPIO_A_1;
@@ -11726,7 +13981,7 @@ index 7b89d66..2cc38a5 100644
      i2c.put_clk_mask = RADEON_GPIO_EN_1;
      i2c.put_data_mask = RADEON_GPIO_EN_0;
      i2c.get_clk_mask = RADEON_GPIO_Y_1;
-@@ -1796,6 +1744,8 @@ legacy_setup_i2c_bus(int ddc_line)
+@@ -1796,6 +1754,8 @@ legacy_setup_i2c_bus(int ddc_line)
  	(ddc_line == RADEON_MDGPIO_EN_REG)) {
  	i2c.mask_clk_reg = ddc_line;
  	i2c.mask_data_reg = ddc_line;
@@ -11735,7 +13990,7 @@ index 7b89d66..2cc38a5 100644
  	i2c.put_clk_reg = ddc_line;
  	i2c.put_data_reg = ddc_line;
  	i2c.get_clk_reg = ddc_line + 4;
-@@ -1803,6 +1753,8 @@ legacy_setup_i2c_bus(int ddc_line)
+@@ -1803,6 +1763,8 @@ legacy_setup_i2c_bus(int ddc_line)
      } else {
  	i2c.mask_clk_reg = ddc_line;
  	i2c.mask_data_reg = ddc_line;
@@ -11744,7 +13999,16 @@ index 7b89d66..2cc38a5 100644
  	i2c.put_clk_reg = ddc_line;
  	i2c.put_data_reg = ddc_line;
  	i2c.get_clk_reg = ddc_line;
-@@ -1829,6 +1781,8 @@ atom_setup_i2c_bus(int ddc_line)
+@@ -1822,6 +1784,8 @@ atom_setup_i2c_bus(int ddc_line)
+ {
+     RADEONI2CBusRec i2c;
+ 
++    i2c.hw_line = 0;
++    i2c.hw_capable = FALSE;
+     if (ddc_line == AVIVO_GPIO_0) {
+ 	i2c.put_clk_mask = (1 << 19);
+ 	i2c.put_data_mask = (1 << 18);
+@@ -1829,6 +1793,8 @@ atom_setup_i2c_bus(int ddc_line)
  	i2c.get_data_mask = (1 << 18);
  	i2c.mask_clk_mask = (1 << 19);
  	i2c.mask_data_mask = (1 << 18);
@@ -11753,7 +14017,7 @@ index 7b89d66..2cc38a5 100644
      } else {
  	i2c.put_clk_mask = (1 << 0);
  	i2c.put_data_mask = (1 << 8);
-@@ -1836,9 +1790,13 @@ atom_setup_i2c_bus(int ddc_line)
+@@ -1836,9 +1802,13 @@ atom_setup_i2c_bus(int ddc_line)
  	i2c.get_data_mask = (1 << 8);
  	i2c.mask_clk_mask = (1 << 0);
  	i2c.mask_data_mask = (1 << 8);
@@ -11767,7 +14031,7 @@ index 7b89d66..2cc38a5 100644
      i2c.put_clk_reg = ddc_line + 0x8;
      i2c.put_data_reg = ddc_line + 0x8;
      i2c.get_clk_reg = ddc_line + 0xc;
-@@ -2301,13 +2259,13 @@ static Bool RADEONSetupAppleConnectors(ScrnInfoPtr pScrn)
+@@ -2301,13 +2271,13 @@ static Bool RADEONSetupAppleConnectors(ScrnInfoPtr pScrn)
  	info->BiosConnector[0].ddc_i2c = legacy_setup_i2c_bus(RADEON_GPIO_DVI_DDC);
  	info->BiosConnector[0].DACType = DAC_NONE;
  	info->BiosConnector[0].TMDSType = TMDS_NONE;
@@ -11784,7 +14048,7 @@ index 7b89d66..2cc38a5 100644
  	info->BiosConnector[1].valid = TRUE;
  
  	info->BiosConnector[2].ConnectorType = CONNECTOR_STV;
-@@ -2677,7 +2635,6 @@ Bool RADEONSetupConnectors(ScrnInfoPtr pScrn)
+@@ -2677,7 +2647,6 @@ Bool RADEONSetupConnectors(ScrnInfoPtr pScrn)
  {
      xf86CrtcConfigPtr   xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
      RADEONInfoPtr info       = RADEONPTR(pScrn);
@@ -11792,7 +14056,7 @@ index 7b89d66..2cc38a5 100644
      xf86OutputPtr output;
      char *optstr;
      int i = 0;
-@@ -2742,13 +2699,6 @@ Bool RADEONSetupConnectors(ScrnInfoPtr pScrn)
+@@ -2742,13 +2711,6 @@ Bool RADEONSetupConnectors(ScrnInfoPtr pScrn)
  	    RADEONSetupGenericConnectors(pScrn);
      }
  
@@ -11867,7 +14131,7 @@ index d81cbe3..d650f9f 100644
   ATI_DEVICE_MATCH( PCI_CHIP_RV630_9581, 0 ),
   ATI_DEVICE_MATCH( PCI_CHIP_RV630_9583, 0 ),
 diff --git a/src/radeon_probe.h b/src/radeon_probe.h
-index 24af52b..ce4ba93 100644
+index 24af52b..c14241e 100644
 --- a/src/radeon_probe.h
 +++ b/src/radeon_probe.h
 @@ -166,6 +166,8 @@ typedef struct
@@ -11879,12 +14143,14 @@ index 24af52b..ce4ba93 100644
      uint32_t put_clk_reg;
      uint32_t put_data_reg;
      uint32_t get_clk_reg;
-@@ -176,15 +178,13 @@ typedef struct
+@@ -176,15 +178,15 @@ typedef struct
      uint32_t put_data_mask;
      uint32_t get_clk_mask;
      uint32_t get_data_mask;
 +    uint32_t a_clk_mask;
 +    uint32_t a_data_mask;
++    int hw_line;
++    Bool hw_capable;
  } RADEONI2CBusRec, *RADEONI2CBusPtr;
  
  typedef struct _RADEONCrtcPrivateRec {
@@ -11899,7 +14165,19 @@ index 24af52b..ce4ba93 100644
      int crtc_id;
      int binding;
      uint32_t cursor_offset;
-@@ -310,8 +310,10 @@ struct avivo_grph_state {
+@@ -235,8 +237,10 @@ typedef struct _RADEONOutputPrivateRec {
+     int               VSyncWidth;
+     int               VBlank;
+     int               Flags;            /* Saved copy of mode flags          */
+-    int               PanelPwrDly;
+     int               DotClock;
++    int               PanelPwrDly;
++    int               lvds_misc;
++    int               lvds_ss_id;
+     RADEONTMDSPll     tmds_pll[4];
+     RADEONRMXType     rmx_type;
+     /* dvo */
+@@ -310,8 +314,10 @@ struct avivo_grph_state {
      uint32_t x_end;
      uint32_t y_end;
  
@@ -11910,7 +14188,7 @@ index 24af52b..ce4ba93 100644
  };
  
  struct avivo_state
-@@ -326,6 +328,7 @@ struct avivo_state
+@@ -326,6 +332,7 @@ struct avivo_state
  
      uint32_t crtc_master_en;
      uint32_t crtc_tv_control;
@@ -12563,7 +14841,7 @@ index 80333a4..0000000
 -
 -#endif
 diff --git a/src/radeon_textured_video.c b/src/radeon_textured_video.c
-index cfa349d..4005df9 100644
+index cfa349d..c185b46 100644
 --- a/src/radeon_textured_video.c
 +++ b/src/radeon_textured_video.c
 @@ -81,33 +81,43 @@ static __inline__ uint32_t F_TO_DW(float val)
@@ -12629,7 +14907,7 @@ index cfa349d..4005df9 100644
  
      if (pPriv->video_memory != NULL && size != pPriv->size) {
 -	RADEONFreeMemory(pScrn, pPriv->video_memory);
-+	radeon_free_memory(pScrn, pPriv->video_memory);
++	radeon_legacy_free_memory(pScrn, pPriv->video_memory);
  	pPriv->video_memory = NULL;
      }
  
@@ -12637,9 +14915,9 @@ index cfa349d..4005df9 100644
 -	pPriv->video_offset = RADEONAllocateMemory(pScrn,
 -						       &pPriv->video_memory,
 -						       size * 2);
-+	pPriv->video_offset = radeon_allocate_memory(pScrn,
-+						     &pPriv->video_memory,
-+						     size * 2, 64);
++	pPriv->video_offset = radeon_legacy_allocate_memory(pScrn,
++						            &pPriv->video_memory,
++						            size * 2, 64);
  	if (pPriv->video_offset == 0)
  	    return BadAlloc;
      }
@@ -12648,9 +14926,9 @@ index cfa349d..4005df9 100644
 +    if (!IS_R500_3D)
 +	pPriv->bicubic_enabled = FALSE;
 +    if (pPriv->bicubic_memory == NULL && pPriv->bicubic_enabled) {
-+	pPriv->bicubic_offset = radeon_allocate_memory(pScrn,
-+						       &pPriv->bicubic_memory,
-+						       sizeof(bicubic_tex_512), 64);
++	pPriv->bicubic_offset = radeon_legacy_allocate_memory(pScrn,
++						              &pPriv->bicubic_memory,
++						              sizeof(bicubic_tex_512), 64);
 +	pPriv->bicubic_src_offset = pPriv->bicubic_offset + info->fbLocation + pScrn->fbOffset;
 +	if (pPriv->bicubic_offset == 0)
 +		pPriv->bicubic_enabled = FALSE;
@@ -14491,7 +16769,7 @@ index ccc1367..5717ead 100644
  #ifndef RADEON_VERSION_EXTRA
  #define RADEON_VERSION_EXTRA ""
 diff --git a/src/radeon_video.c b/src/radeon_video.c
-index ac60166..18299d5 100644
+index ac60166..6249cea 100644
 --- a/src/radeon_video.c
 +++ b/src/radeon_video.c
 @@ -89,10 +89,6 @@ static void RADEON_MSP_SetEncoding(RADEONPortPrivPtr pPriv);
@@ -14558,11 +16836,11 @@ index ac60166..18299d5 100644
 +  if (pPriv->textured) {
 +      if (cleanup) {
 +	  if (pPriv->bicubic_memory != NULL) {
-+	      radeon_free_memory(pScrn, pPriv->bicubic_memory);
++	      radeon_legacy_free_memory(pScrn, pPriv->bicubic_memory);
 +	      pPriv->bicubic_memory = NULL;
 +	  }
 +	  if (pPriv->video_memory != NULL) {
-+	      radeon_free_memory(pScrn, pPriv->video_memory);
++	      radeon_legacy_free_memory(pScrn, pPriv->video_memory);
 +	      pPriv->video_memory = NULL;
 +	  }
 +      }
@@ -14576,7 +16854,7 @@ index ac60166..18299d5 100644
       }
       if (pPriv->video_memory != NULL) {
 -	 RADEONFreeMemory(pScrn, pPriv->video_memory);
-+	 radeon_free_memory(pScrn, pPriv->video_memory);
++	 radeon_legacy_free_memory(pScrn, pPriv->video_memory);
  	 pPriv->video_memory = NULL;
       }
       pPriv->videoStatus = 0;
@@ -14609,7 +16887,7 @@ index ac60166..18299d5 100644
      if (info->accelOn) RADEON_SYNC(info, pScrn);
  
      if(attribute == xvAutopaintColorkey)
-@@ -2433,114 +2419,6 @@ RADEONCopyMungedData(
+@@ -2433,120 +2419,13 @@ RADEONCopyMungedData(
      }
  }
  
@@ -14724,15 +17002,14 @@ index ac60166..18299d5 100644
  static void
  RADEONDisplayVideo(
      ScrnInfoPtr pScrn,
-@@ -2586,6 +2464,7 @@ RADEONDisplayVideo(
-     RADEONOutputPrivatePtr radeon_output;
-     xf86OutputPtr output;
-     RADEONCrtcPrivatePtr radeon_crtc = crtc->driver_private;
-+    int base_offset;
- 
-     is_rgb=0; is_planar=0;
-     switch(id){
-@@ -2715,6 +2594,22 @@ RADEONDisplayVideo(
+     xf86CrtcPtr crtc,
+     RADEONPortPrivPtr pPriv,
+     int id,
++    int base_offset,
+     int offset1, int offset2,
+     int offset3, int offset4,
+     int offset5, int offset6,
+@@ -2715,6 +2594,20 @@ RADEONDisplayVideo(
          }
  #endif
  
@@ -14740,9 +17017,7 @@ index ac60166..18299d5 100644
 +     * prevent the buffer offsets from exceeding the hardware limit of 128 MB.
 +     * The base address must be aligned to a multiple of 4 MB.
 +     */
-+    base_offset = ((info->fbLocation +
-+		    min(offset1, min(offset2, min(offset3, min(offset4,
-+			min(offset5, offset6)))))) & (~0 << 22)) -
++    base_offset = ((info->fbLocation + base_offset) & (~0 << 22)) -
 +	info->fbLocation;
 +
 +    offset1 -= base_offset;
@@ -14755,11 +17030,13 @@ index ac60166..18299d5 100644
      /* keep everything in 16.16 */
  
      if (is_planar) {
-@@ -2846,6 +2741,10 @@ RADEONDisplayVideo(
+@@ -2846,6 +2739,12 @@ RADEONDisplayVideo(
  	src_w >>= 1;
      OUTREG(RADEON_OV0_P2_X_START_END, (src_w + leftuv - 1) | (leftuv << 16));
      OUTREG(RADEON_OV0_P3_X_START_END, (src_w + leftuv - 1) | (leftuv << 16));
 +    if (info->ModeReg->ov0_base_addr != (info->fbLocation + base_offset)) {
++	ErrorF("Changing OV0_BASE_ADDR from 0x%08x to 0x%08x\n",
++	       info->ModeReg->ov0_base_addr, info->fbLocation + base_offset);
 +	info->ModeReg->ov0_base_addr = info->fbLocation + base_offset;
 +	OUTREG(RADEON_OV0_BASE_ADDR, info->ModeReg->ov0_base_addr);
 +    }
@@ -14773,75 +17050,118 @@ index ac60166..18299d5 100644
 -   pPriv->video_offset = RADEONAllocateMemory(pScrn, &pPriv->video_memory,
 -					      (pPriv->doubleBuffer ?
 -					       (new_size * 2) : new_size));
-+   pPriv->video_offset = radeon_allocate_memory(pScrn, &pPriv->video_memory,
-+						(pPriv->doubleBuffer ?
-+						 (new_size * 2) : new_size), 64);
++   pPriv->video_offset = radeon_legacy_allocate_memory(pScrn, &pPriv->video_memory,
++						       (pPriv->doubleBuffer ?
++						       (new_size * 2) : new_size), 64);
     if (pPriv->video_offset == 0)
        return BadAlloc;
  
-@@ -3233,7 +3132,7 @@ RADEONVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
+@@ -3150,9 +3049,10 @@ RADEONPutImage(
+ 
+     /* FIXME: someone should look at these offsets, I don't think it makes sense how
+               they are handled throughout the source. */
+-    RADEONDisplayVideo(pScrn, crtc, pPriv, idconv, offset, offset + d2line, offset + d3line,
+-		     offset, offset + d2line, offset + d3line, width, height, dstPitch,
+-		     xa, xb, ya, &dstBox, src_w, src_h, drw_w, drw_h, METHOD_BOB);
++    RADEONDisplayVideo(pScrn, crtc, pPriv, idconv, pPriv->video_offset, offset,
++		       offset + d2line, offset + d3line, offset, offset + d2line,
++		       offset + d3line, width, height, dstPitch, xa, xb, ya,
++		       &dstBox, src_w, src_h, drw_w, drw_h, METHOD_BOB);
+ 
+     pPriv->videoStatus = CLIENT_VIDEO_ON;
+ 
+@@ -3233,7 +3133,7 @@ RADEONVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
  	} else {  /* FREE_TIMER */
  	    if(pPriv->freeTime < now) {
  		if (pPriv->video_memory != NULL) {
 -		    RADEONFreeMemory(pScrn, pPriv->video_memory);
-+		    radeon_free_memory(pScrn, pPriv->video_memory);
++		    radeon_legacy_free_memory(pScrn, pPriv->video_memory);
  		    pPriv->video_memory = NULL;
  		}
  		pPriv->videoStatus = 0;
-@@ -3268,7 +3167,7 @@ RADEONAllocateSurface(
+@@ -3268,7 +3168,7 @@ RADEONAllocateSurface(
      pitch = ((w << 1) + 15) & ~15;
      size = pitch * h;
  
 -    offset = RADEONAllocateMemory(pScrn, &surface_memory, size);
-+    offset = radeon_allocate_memory(pScrn, &surface_memory, size, 64);
++    offset = radeon_legacy_allocate_memory(pScrn, &surface_memory, size, 64);
      if (offset == 0)
  	return BadAlloc;
  
-@@ -3276,18 +3175,18 @@ RADEONAllocateSurface(
+@@ -3276,18 +3176,18 @@ RADEONAllocateSurface(
      surface->height = h;
  
      if(!(surface->pitches = xalloc(sizeof(int)))) {
 -	RADEONFreeMemory(pScrn, surface_memory);
-+	radeon_free_memory(pScrn, surface_memory);
++	radeon_legacy_free_memory(pScrn, surface_memory);
  	return BadAlloc;
      }
      if(!(surface->offsets = xalloc(sizeof(int)))) {
  	xfree(surface->pitches);
 -	RADEONFreeMemory(pScrn, surface_memory);
-+	radeon_free_memory(pScrn, surface_memory);
++	radeon_legacy_free_memory(pScrn, surface_memory);
  	return BadAlloc;
      }
      if(!(pPriv = xalloc(sizeof(OffscreenPrivRec)))) {
  	xfree(surface->pitches);
  	xfree(surface->offsets);
 -	RADEONFreeMemory(pScrn, surface_memory);
-+	radeon_free_memory(pScrn, surface_memory);
++	radeon_legacy_free_memory(pScrn, surface_memory);
  	return BadAlloc;
      }
  
-@@ -3328,7 +3227,8 @@ RADEONFreeSurface(
+@@ -3328,7 +3228,8 @@ RADEONFreeSurface(
  
      if(pPriv->isOn)
  	RADEONStopSurface(surface);
 -    RADEONFreeMemory(pScrn, pPriv->surface_memory);
-+    radeon_free_memory(pScrn, pPriv->surface_memory);
++    radeon_legacy_free_memory(pScrn, pPriv->surface_memory);
 +    pPriv->surface_memory = NULL;
      xfree(surface->pitches);
      xfree(surface->offsets);
      xfree(surface->devPrivate.ptr);
-@@ -3602,9 +3502,9 @@ RADEONPutVideo(
+@@ -3417,8 +3318,9 @@ RADEONDisplaySurface(
+ 		       surface->offsets[0], surface->offsets[0],
+ 		       surface->offsets[0], surface->offsets[0],
+ 		       surface->offsets[0], surface->offsets[0],
+-		       surface->width, surface->height, surface->pitches[0],
+-		       xa, xb, ya, &dstBox, src_w, src_h, drw_w, drw_h, METHOD_BOB);
++		       surface->offsets[0], surface->width, surface->height,
++		       surface->pitches[0], xa, xb, ya, &dstBox, src_w, src_h,
++		       drw_w, drw_h, METHOD_BOB);
+ 
+     if (portPriv->autopaint_colorkey)
+ 	xf86XVFillKeyHelper(pScrn->pScreen, portPriv->colorKey, clipBoxes);
+@@ -3602,9 +3504,9 @@ RADEONPutVideo(
     if (pPriv->capture_vbi_data)
        alloc_size += 2 * 2 * vbi_line_width * 21;
  
 -   pPriv->video_offset = RADEONAllocateMemory(pScrn, &pPriv->video_memory,
 -					      (pPriv->doubleBuffer ?
 -					       (new_size * 2) : new_size));
-+   pPriv->video_offset = radeon_allocate_memory(pScrn, &pPriv->video_memory,
-+						(pPriv->doubleBuffer ?
-+						 (new_size * 2) : new_size), 64);
++   pPriv->video_offset = radeon_legacy_allocate_memory(pScrn, &pPriv->video_memory,
++						      (pPriv->doubleBuffer ?
++						      (new_size * 2) : new_size), 64);
     if (pPriv->video_offset == 0)
        return BadAlloc;
  
+@@ -3705,10 +3607,12 @@ RADEONPutVideo(
+ 	    RADEONFillKeyHelper(pDraw, pPriv->colorKey, clipBoxes);
+    }
+ 
+-   RADEONDisplayVideo(pScrn, crtc, pPriv, id, offset1+top*srcPitch, offset2+top*srcPitch,
+-		offset3+top*srcPitch, offset4+top*srcPitch, offset1+top*srcPitch,
+-		offset2+top*srcPitch, width, height, dstPitch*mult/2,
+-                     xa, xb, ya, &dstBox, src_w, src_h*mult/2, drw_w, drw_h, pPriv->overlay_deinterlacing_method);
++   RADEONDisplayVideo(pScrn, crtc, pPriv, id, pPriv->video_offset,
++		      offset1+top*srcPitch, offset2+top*srcPitch,
++		      offset3+top*srcPitch, offset4+top*srcPitch,
++		      offset1+top*srcPitch, offset2+top*srcPitch, width, height,
++		      dstPitch*mult/2, xa, xb, ya, &dstBox, src_w, src_h*mult/2,
++		      drw_w, drw_h, pPriv->overlay_deinterlacing_method);
+ 
+    RADEONWaitForFifo(pScrn, 1);
+    OUTREG(RADEON_OV0_REG_LOAD_CNTL,  RADEON_REG_LD_CTL_LOCK);
 diff --git a/src/radeon_video.h b/src/radeon_video.h
 index 096de37..11b8029 100644
 --- a/src/radeon_video.h
