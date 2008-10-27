@@ -9,11 +9,10 @@ arch=(i686 x86_64)
 license=('GPL' 'custom')
 depends=('libxext' 'libxt' 'libcups>=1.3.8-2' 'fontconfig>=2.6.0' 'gtk2>=2.12.11' 'gnutls>=2.4.1')
 makedepends=('automake' 'autoconf')
+optdepends=('texlive-core: dvipdf')
 replaces=('ghostscript-lrpng')
 provides=('ghostscript-lprng')
 url="http://www.cs.wisc.edu/~ghost/"
-#url="http://www.cups.org/espgs/"
-install=ghostscript.install
 source=(ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/gs863/ghostscript-${pkgver}.tar.bz2
 	ghostscript-fPIC.patch)
 options=('!libtool' '!makeflags')
