@@ -11,8 +11,8 @@ arch=(i686 x86_64)
 license=('GPL' 'LGPL')
 groups=('base-devel')
 url="http://gcc.gnu.org"
-depends=('binutils>=2.18-9' "gcc-libs>=${pkgver}" 'mpfr>=2.3.1')
-makedepends=('texinfo')
+depends=('binutils>=2.18-9' "gcc-libs>=${pkgver}" 'mpfr>=2.3.1' 'texinfo')
+makedepends=('flex')
 replaces=('gcc-fortran' 'gcc-objc')
 options=('!libtool')
 install=gcc.install
