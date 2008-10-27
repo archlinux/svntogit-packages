@@ -39,13 +39,12 @@ fi
  done
 }
 
-
 post_upgrade() {
-  echo -n "reloading init: "
   ldconfig -r .
   init u
-  echo "done."
-  cat << _EOF
+
+  if [ "`vercmp $2 2.3.6`" -lt 0 ]; then
+    cat << _EOF
   ==> ATTENTION INTERNATIONAL USERS:
   ==>
   ==> Locales are no longer included in the glibc package.
@@ -54,21 +53,20 @@ post_upgrade() {
   ==> glibc will try to autodetect the required locales now, if you need
   ==> additional locales, please enable them in /etc/locale.gen and run
   ==> /usr/sbin/locale-gen
-  ==>
-  ==> Check /etc/locale.gen.pacnew for new supported locales
   ==>  
 _EOF
-  # Check active locales, enable the ones that are in use
-  loc=("$LANG"
-       "`grep '^LOCALE=' etc/rc.conf | awk -F '=' '{ print $2 }'`")
-  for l in "${loc[@]}"; do
-    if [ ! -z "${l}" ]; then
-      line="`grep -i "^#${l}[[:space:]]" etc/locale.gen`"
-      if [ ! -z "${line}" ]; then
-        sed -i -e "s|${line}|${line/\#/}|" etc/locale.gen
+    # Check active locales, enable the ones that are in use
+    loc=("$LANG"
+         "`grep '^LOCALE=' etc/rc.conf | awk -F '=' '{ print $2 }'`")
+    for l in "${loc[@]}"; do
+      if [ ! -z "${l}" ]; then
+        line="`grep -i "^#${l}[[:space:]]" etc/locale.gen`"
+        if [ ! -z "${line}" ]; then
+          sed -i -e "s|${line}|${line/\#/}|" etc/locale.gen
+        fi
       fi
-    fi
-  done
+    done
+  fi
 
   usr/sbin/locale-gen
 
@@ -133,6 +131,3 @@ pre_remove() {
     install-info --delete $infodir/$file $infodir/dir 2> /dev/null
   done
 }
-op=$1
-shift
-$op $*
