@@ -8,22 +8,19 @@
 # install old package, build new package, install new package, rebuild
 
 pkgname=imagemagick
-pkgver=6.4.5.0
+pkgver=6.4.5.1
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
 depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool>=2.2' 'bzip2' 'libxml2' 'jasper')
-#makedepends=('ghostscript' 'openexr')
-options=('!makeflags' '!docs')
+options=('!makeflags' '!docs' '!libtool')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('b4dd42fa190ba06627567df6cd33291e' '069980fc2590c02aed86420996259302'\
+md5sums=('bb56af6fb74e887b0d079e3a350fad03'
+         '069980fc2590c02aed86420996259302'
          '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('6c7c7cc2ac1ab3357ba22556c0c14d309256eb68'
-          'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
-          '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
 build() {
   cd ${srcdir}/ImageMagick-${pkgver%.*}
@@ -51,6 +48,4 @@ build() {
   find ${pkgdir} -name '*.bs' -exec rm {} \; || return 1
   find ${pkgdir} -name '.packlist' -exec rm {} \; || return 1
   find ${pkgdir} -name 'perllocal.pod' -exec rm {} \; || return 1
-
-  rm -f ${pkgdir}/usr/lib/*.la || return 1
 }
