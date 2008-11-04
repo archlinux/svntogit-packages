@@ -15,7 +15,8 @@ arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
 depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool>=2.2' 'bzip2' 'libxml2' 'jasper')
-options=('!makeflags' '!docs' '!libtool')
+#makedepends=('ghostscript' 'openexr')
+options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
 md5sums=('bb56af6fb74e887b0d079e3a350fad03'
@@ -48,4 +49,6 @@ build() {
   find ${pkgdir} -name '*.bs' -exec rm {} \; || return 1
   find ${pkgdir} -name '.packlist' -exec rm {} \; || return 1
   find ${pkgdir} -name 'perllocal.pod' -exec rm {} \; || return 1
+
+  rm -f ${pkgdir}/usr/lib/*.la || return 1
 }
