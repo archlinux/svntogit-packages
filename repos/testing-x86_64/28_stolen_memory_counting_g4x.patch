@@ -1,0 +1,35 @@
+From: Eric Anholt <eric@anholt.net>
+Date: Tue, 14 Oct 2008 18:33:33 +0000 (-0700)
+Subject: Fix broken stolen memory counting on G4X.
+X-Git-Tag: xserver-xorg-video-intel-2_2.3.2-2+lenny5~5
+X-Git-Url: http://git.debian.org/?p=pkg-xorg%2Fdriver%2Fxserver-xorg-video-intel.git;a=commitdiff_plain;h=8971411781c5bd0b9e9d4c2c776ba6e21c313f00
+
+Fix broken stolen memory counting on G4X.
+
+On the GM45 we were assuming too little stolen memory (mostly harmless,
+except when it wasn't, until the AGP fix), and on the G45 we were assuming too
+much stolen memory, which was quite harmful when we touched the page that
+didn't get mapped.
+
+Future stolen memory accounting should use src/reg_dumper/intel_gtt before and
+after enabling AGP on the chipset to confirm that only the GTT entries not
+mapped to stolen are replaced, and that all of the unmapped GTT entries are
+replaced with the constant scratch page.
+(cherry picked from commit 4dd00681dd0f9fce8dfd4592b46418edbbd2eeb4)
+---
+
+diff --git a/src/i830_driver.c b/src/i830_driver.c
+index 5269871..a9f4478 100644
+--- a/src/i830_driver.c
++++ b/src/i830_driver.c
+@@ -520,8 +520,8 @@ I830DetectMemory(ScrnInfoPtr pScrn)
+    range = gtt_size + 4;
+ 
+    /* new 4 series hardware has seperate GTT stolen with GFX stolen */
+-   if (IS_G4X(pI830))
+-       range = 0;
++   if (IS_G4X(pI830) || IS_GM45(pI830))
++       range = 4;
+ 
+    if (IS_I85X(pI830) || IS_I865G(pI830) || IS_I9XX(pI830)) {
+       switch (gmch_ctrl & I855_GMCH_GMS_MASK) {
