@@ -2,41 +2,45 @@
 # Maintainer: kevin <kevin@archlinux.org>
 
 pkgname=expectk
-pkgver=5.44.1.4
+pkgver=5.44.1.10
 pkgrel=1
 pkgdesc="An X and Tk variant of expect, a tool for automating interactive applications"
 arch=(i686 x86_64)
-depends=('tcl>=8.5.0' 'tk>=8.5.0')
-tcltkver=8.5.0
-source=(ftp://ftp.archlinux.org/expect/expect-$pkgver.tar.bz2
-#http://expect.nist.gov/src/expect-$pkgver.tar.gz
-http://dl.sourceforge.net/sourceforge/tcl/tk$tcltkver-src.tar.gz
-http://dl.sourceforge.net/sourceforge/tcl/tcl$tcltkver-src.tar.gz)
 url="http://expect.nist.gov/"
-
+depends=("expect=${pkgver}" 'tk>=8.5.0')
+# CVS checkout on gerolde.
+source=(ftp://ftp.archlinux.org/other/expect/expect-${pkgver}.tar.bz2)
+md5sums=('da02c862015da2d67f72f1693adab0db')
+#source=(http://expect.nist.gov/src/expect-${pkgver}.tar.bz2)
+license=('custom')
 
 build() {
-  BIN="expectk multixterm tknewsbiff tkpasswd xpstat"
-  MAN="multixterm tknewsbiff"
-  cd $startdir/src/expect-$pkgver
+  # stuff to build.
+  BIN="expectk multixterm tknewsbiff tkpasswd xkibitz xpstat"
+  MAN="multixterm tknewsbiff xkibitz"
+
+  cd ${srcdir}/expect-${pkgver}
+  sed 's#/usr/local/bin#/usr/bin#' -i expectk.man
+  sed '/^PACKAGE_/ s/5\.44\.1\.9/5.44.1.10/' -i configure
+
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-      --with-tcl=/usr/lib --with-tk=/usr/lib \
-      --with-tclinclude=$startdir/src/tcl$tcltkver/generic \
-      --with-tkinclude=$startdir/src/tk$tcltkver/generic
-  # Keep $startdir/pkg out of library search paths.
+      --mandir=/usr/share/man --with-tcl=/usr/lib \
+      --with-tclinclude=/usr/include --with-tk=/usr/lib \
+      --with-tkinclude=/usr/include \
+
+  # Keep ${pkgdir} out of library search paths.
   sed -e 's/-rpath,${LIB_RUNTIME_DIR}:/-rpath,/' -i Makefile
   # expect needed during build.
-  make -j1 expect $BIN || return 1
+  make -j1 expect ${BIN} || return 1
 
   # install binaries and manpages.
-  for i in $BIN ; do
-      install -D -m755 $i $startdir/pkg/usr/bin/$i
+  for i in ${BIN} ; do
+      install -D -m755 ${i} ${pkgdir}/usr/bin/${i}
   done
-  install -D -m644 expectk.man $startdir/pkg/usr/man/man1/expectk.1
-  for i in $MAN ; do
-      install -D -m644 example/$i.man $startdir/pkg/usr/man/man1/$i.1
+  for i in ${MAN} ; do
+      install -D -m644 example/${i}.man ${pkgdir}/usr/share/man/man1/${i}.1
   done
+
+  # license.
+  install -D -m644 README ${pkgdir}/usr/share/licenses/${pkgname}/README
 }
-md5sums=('bbfd5ef50f3c1df4fe79e5a20a947d41'
-         'bc217c45ed6b2f5b8d3120df63fa13bd'
-         'd890c505465411b25050b6cd95971d2c')
