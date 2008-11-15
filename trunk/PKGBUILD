@@ -1,7 +1,7 @@
 # $Id$
-# Maintainer: Alexander Baldeck <kth5@archlinux.org>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xkeyboard-config
-pkgver=1.3
+pkgver=1.4
 pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(i686 x86_64)
@@ -13,7 +13,7 @@ provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
 source=(http://xlibs.freedesktop.org/xkbdesc/xkeyboard-config-${pkgver}.tar.bz2)
-md5sums=('d9e9f69f9c6ef5c5a8255cfbe6a57d51')
+md5sums=('a9fe7efbc67a6966c4d4501f0cf88073')
 
 build() {
   cd ${startdir}/src/${pkgname}-${pkgver}
