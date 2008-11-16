@@ -1,35 +1,47 @@
 # $Id$
-# Maintainer: Thomas Baechler <thomas@archlinux.org>
+# Maintainer: Eric Belanger <eric@archlinux.org>
+
 pkgname=lvm2
-pkgver=2.02.36
+pkgver=2.02.43
 pkgrel=1
 pkgdesc="Logical Volume Manager 2 utilities"
 arch=('i686' 'x86_64')
-license=('GPL')
 url="http://sourceware.org/lvm2/"
+license=('GPL')
 groups=('base')
-depends=('device-mapper>=1.02.22')
+depends=('device-mapper>=1.02.29')
 conflicts=('lvm')
 backup=('etc/lvm/lvm.conf')
-source=(ftp://sources.redhat.com/pub/lvm2/LVM2.$pkgver.tgz
+options=('!makeflags')
+source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${pkgver}.tgz
         lvm2_install
         lvm2_hook)
-md5sums=('39617ecc99d7e1aa8712ac60302e36c6'
-         '40dccdb1044f00fc1e29ca549933d4bd'
-	 '73c8c2eba0fe891712c859c18b5b8aa2')
+md5sums=('fc34655706a2aa116b92328b24fad619' '40dccdb1044f00fc1e29ca549933d4bd'\
+         '73c8c2eba0fe891712c859c18b5b8aa2')
+sha1sums=('28a1f553f53fa568e85b41879bb32d1c11fdd07d'
+          '86358b3360373dcd1d7e1bf009fe6e6d0c70cdc3'
+          '671339dc33a672134350a9d68d0136ddef6178f6')
 
 build() {
-  cd $startdir/src/LVM2.$pkgver
-  ./configure --prefix=/usr --sysconfdir=/etc  --localstatedir=/var
+  cd ${srcdir}/LVM2.${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var || return 1
   make || return 1
-  make DESTDIR=$startdir/pkg sbindir=$startdir/pkg/sbin install || return 1
-  mkdir -p $startdir/pkg/etc/lvm/{archive,backup}
+  make DESTDIR=${pkgdir} sbindir=${pkgdir}/sbin install || return 1
+  install -d ${pkgdir}/etc/lvm/{archive,backup} || return 1
   # a static binary is required for Arch's initrd
   ./configure --prefix=/usr --sysconfdir=/etc  --localstatedir=/var \
-    --enable-static_link
+    --enable-static_link || return 1
   make || return 1
-  install -D -m755 tools/lvm.static $startdir/pkg/sbin/lvm.static
+  install -D -m755 tools/lvm.static ${pkgdir}/sbin/lvm.static || return 1
   # add hook
-  install -D -m644 $startdir/src/lvm2_hook $startdir/pkg/lib/initcpio/hooks/lvm2
-  install -D -m644 $startdir/src/lvm2_install $startdir/pkg/lib/initcpio/install/lvm2
+  install -D -m644 ${srcdir}/lvm2_hook ${pkgdir}/lib/initcpio/hooks/lvm2 || return 1
+  install -D -m644 ${srcdir}/lvm2_install ${pkgdir}/lib/initcpio/install/lvm2 || return 1
+
+ # remove files provided by device-mapper package
+  rm ${pkgdir}/usr/include/libdevmapper.h
+  rmdir ${pkgdir}/usr/include
+  rm ${pkgdir}/usr/lib/libdevmapper.*
+  rmdir ${pkgdir}/usr/lib
+  rm ${pkgdir}/sbin/dmsetup
+  rm ${pkgdir}/usr/share/man/man8/dmsetup.8
 }
