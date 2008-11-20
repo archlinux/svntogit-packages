@@ -1,0 +1,226 @@
+--- valgrind-3.3.0/configure.in.jj	2008-11-14 06:51:43.000000000 -0500
++++ valgrind-3.3.0/configure.in	2008-11-14 06:53:04.664658000 -0500
+@@ -481,6 +481,16 @@ AC_EGREP_CPP([GLIBC_28], [
+ ],
+ libc="2.8")
+ 
++AC_EGREP_CPP([GLIBC_29], [
++#include <features.h>
++#ifdef __GNU_LIBRARY__
++ #if (__GLIBC__ == 2 && __GLIBC_MINOR__ == 9)
++  GLIBC_29
++ #endif
++#endif
++],
++libc="2.9")
++
+ AC_EGREP_CPP([AIX5_LIBC], [
+ #include <standards.h>
+ #if defined(_AIXVERSION_510) || defined(_AIXVERSION_520) || defined(_AIXVERSION_530)
+@@ -537,6 +547,12 @@ case "${libc}" in
+ 	DEFAULT_SUPP="glibc-2.8.supp ${DEFAULT_SUPP}"
+ 	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
+ 	;;
++     2.9)
++	AC_MSG_RESULT(2.9 family)
++	AC_DEFINE([GLIBC_2_9], 1, [Define to 1 if you're using glibc 2.9.x])
++	DEFAULT_SUPP="glibc-2.9.supp ${DEFAULT_SUPP}"
++	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
++	;;
+      aix5)
+ 	AC_MSG_RESULT(AIX 5.1 or 5.2 or 5.3)
+ 	AC_DEFINE([AIX5_LIBC], 1, [Define to 1 if you're using AIX 5.1 or 5.2 or 5.3])
+@@ -545,7 +561,7 @@ case "${libc}" in
+ 
+      *)
+ 	AC_MSG_RESULT(unsupported version)
+-	AC_MSG_ERROR([Valgrind requires glibc version 2.2 - 2.7])
++	AC_MSG_ERROR([Valgrind requires glibc version 2.2 - 2.9])
+ 	AC_MSG_ERROR([or AIX 5.1 or 5.2 or 5.3 libc])
+ 	;;
+ esac
+--- valgrind-3.3.0/glibc-2.34567-NPTL-helgrind.supp.jj	2008-11-14 06:51:43.000000000 -0500
++++ valgrind-3.3.0/glibc-2.34567-NPTL-helgrind.supp	2008-11-14 06:55:02.935064000 -0500
+@@ -6,7 +6,7 @@
+ ######------------ glibc-2.5 specific ------------######
+ #
+ ## NB.  This is the "reference set".  Derived sets for
+-## glibc 2.7, 2.6, 2.4 and 2.3 follow below.
++## glibc 2.9, 2.8, 2.7, 2.6, 2.4 and 2.3 follow below.
+ {
+    helgrind-glibc25-001
+    Helgrind:Race
+@@ -145,6 +145,65 @@
+    fun:start_thread
+ }
+ 
++######------------ glibc-2.9 specific ---------######
++#
++{
++   helgrind-glibc29-001
++   Helgrind:Race
++   obj:/lib*/ld-2.9.*so
++   obj:/lib*/ld-2.9.*so
++}
++{
++   helgrind-glibc29-003
++   Helgrind:Race
++   obj:/lib*/ld-2.9.*so
++   obj:/lib*/libc-2.9.*so
++   obj:/lib*/libc-2.9.*so
++}
++{
++   helgrind-glibc29-004
++   Helgrind:Race
++   obj:/lib*/libc-2.9.*so
++   obj:/lib*/libc-2.9.*so
++}
++{
++   helgrind-glibc29-005
++   Helgrind:Race
++   obj:/lib*/libpthread-2.9.*so
++   obj:/lib*/libpthread-2.9.*so
++   obj:/lib*/libpthread-2.9.*so
++}
++{
++   helgrind-glibc29-011
++   Helgrind:Race
++   obj:/lib*/libc-2.9.*so
++   obj:/lib*/libpthread-2.9.*so
++}
++
++{
++   helgrind-glibc29-101
++   Helgrind:Race
++   obj:/lib*/libpthread-2.9.*so
++   fun:pthread_*
++}
++{
++   helgrind-glibc29-102
++   Helgrind:Race
++   fun:mythread_wrapper
++   obj:/lib*/libpthread-2.9.*so
++}
++{
++   helgrind-glibc29-107
++   Helgrind:Race
++   obj:/lib*/libpthread-2.9.*so
++   fun:sem_*
++}
++{
++   helgrind-glibc29-199
++   Helgrind:Race
++   fun:pthread_barrier_wait
++}
++
+ ######------------ glibc-2.8 specific ---------######
+ #
+ {
+--- valgrind-3.3.0/glibc-2.9.supp.jj	2008-11-14 06:55:20.412817000 -0500
++++ valgrind-3.3.0/glibc-2.9.supp	2008-11-14 06:55:33.029105000 -0500
+@@ -0,0 +1,37 @@
++
++# Errors to suppress by default with glibc 2.9.x
++
++# Format of this file is:
++# {
++#     name_of_suppression
++#     tool_name:supp_kind
++#     (optional extra info for some suppression types)
++#     caller0 name, or /name/of/so/file.so
++#     caller1 name, or ditto
++#     (optionally: caller2 name)
++#     (optionally: caller3 name)
++#  }
++#
++# For Memcheck, the supp_kinds are:
++#
++#     Param Value1 Value2 Value4 Value8 Value16 Jump
++#     Free Addr1 Addr2 Addr4 Addr8 Addr16
++#     Cond (previously known as Value0)
++#
++# and the optional extra info is:
++#     if Param: name of system call param
++
++{
++   dl-hack1
++   Memcheck:Cond
++   fun:_dl_start
++   fun:_start
++}
++
++{
++   dl-hack3-1
++   Memcheck:Cond
++   obj:/lib*/ld-2.9*.so*
++   obj:/lib*/ld-2.9*.so*
++   obj:/lib*/ld-2.9*.so*
++}
+--- valgrind-3.3.0/configure.jj	2008-11-14 06:51:43.000000000 -0500
++++ valgrind-3.3.0/configure	2008-11-14 06:59:26.356352000 -0500
+@@ -4283,6 +4283,7 @@ echo $ECHO_N "checking for a supported C
+ 
+ 
+ 
++
+ case "$VG_ARCH-$VG_OS" in
+      x86-linux)
+ 	VG_PLATFORM_PRI="X86_LINUX"
+@@ -4646,6 +4647,28 @@ cat confdefs.h >>conftest.$ac_ext
+ cat >>conftest.$ac_ext <<_ACEOF
+ /* end confdefs.h.  */
+ 
++#include <features.h>
++#ifdef __GNU_LIBRARY__
++ #if (__GLIBC__ == 2 && __GLIBC_MINOR__ == 9)
++  GLIBC_29
++ #endif
++#endif
++
++_ACEOF
++if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
++  $EGREP "GLIBC_29" >/dev/null 2>&1; then
++  libc="2.9"
++fi
++rm -f conftest*
++
++
++cat >conftest.$ac_ext <<_ACEOF
++/* confdefs.h.  */
++_ACEOF
++cat confdefs.h >>conftest.$ac_ext
++cat >>conftest.$ac_ext <<_ACEOF
++/* end confdefs.h.  */
++
+ #include <standards.h>
+ #if defined(_AIXVERSION_510) || defined(_AIXVERSION_520) || defined(_AIXVERSION_530)
+   AIX5_LIBC
+@@ -4743,6 +4766,17 @@ _ACEOF
+ 	DEFAULT_SUPP="glibc-2.8.supp ${DEFAULT_SUPP}"
+ 	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
+ 	;;
++     2.9)
++	echo "$as_me:$LINENO: result: 2.9 family" >&5
++echo "${ECHO_T}2.9 family" >&6
++
++cat >>confdefs.h <<\_ACEOF
++#define GLIBC_2_9 1
++_ACEOF
++
++	DEFAULT_SUPP="glibc-2.9.supp ${DEFAULT_SUPP}"
++	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
++	;;
+      aix5)
+ 	echo "$as_me:$LINENO: result: AIX 5.1 or 5.2 or 5.3" >&5
+ echo "${ECHO_T}AIX 5.1 or 5.2 or 5.3" >&6
+@@ -4757,8 +4791,8 @@ _ACEOF
+      *)
+ 	echo "$as_me:$LINENO: result: unsupported version" >&5
+ echo "${ECHO_T}unsupported version" >&6
+-	{ { echo "$as_me:$LINENO: error: Valgrind requires glibc version 2.2 - 2.7" >&5
+-echo "$as_me: error: Valgrind requires glibc version 2.2 - 2.7" >&2;}
++	{ { echo "$as_me:$LINENO: error: Valgrind requires glibc version 2.2 - 2.9" >&5
++echo "$as_me: error: Valgrind requires glibc version 2.2 - 2.9" >&2;}
+    { (exit 1); exit 1; }; }
+ 	{ { echo "$as_me:$LINENO: error: or AIX 5.1 or 5.2 or 5.3 libc" >&5
+ echo "$as_me: error: or AIX 5.1 or 5.2 or 5.3 libc" >&2;}
