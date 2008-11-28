@@ -9,29 +9,35 @@ pkgrel=4
 pkgdesc="dopewars is a Drug dealing game set in New York"
 url="http://dopewars.sourceforge.net/"
 license=('GPL')
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 depends=('gtk2>=2.12.11' 'alsa-lib' 'audiofile' 'esd' 'sdl_mixer' 'ncurses>=5.6-7')
 install='dopewars.install'
 source=("http://downloads.sourceforge.net/$pkgname/$pkgname-$pkgver.tar.gz")
 md5sums=('debf749de9053dc2fb2e74c37ae06206')
 
 build() {
-	cd $srcdir/$pkgname-$pkgver
-	./configure --prefix=/usr --localstatedir=$pkgdir/var/games \
-    --mandir=$pkgdir/usr/share/man || return 1
-	make || return 1
-	make prefix=$pkgdir/usr install || return 1
+    cd $srcdir/$pkgname-$pkgver
+
+    # score path is hardwired so we must set to /var/games 
+    sed -i 's|${prefix}/var|/var/games|' configure || return 1
+
+    ./configure --prefix=/usr || return 1
+    make || return 1
+    make DESTDIR=$pkgdir install || return 1
 
     # setup shortcut menu entries
-	mkdir -p $pkgdir/usr/share/applications
-	mv $pkgdir/usr/share/gnome/apps/Games/dopewars.desktop $pkgdir/usr/share/applications
-	rm -r $pkgdir/usr/share/gnome
+    mkdir -p $pkgdir/usr/share/applications
+    mv $pkgdir/usr/share/gnome/apps/Games/dopewars.desktop \
+        $pkgdir/usr/share/applications
+    rm -r $pkgdir/usr/share/gnome
 
-    # set appropriate permissions
-	chown root.root $pkgdir/usr/bin/dopewars
-	chmod 755 $pkgdir/usr/bin/dopewars
-	chmod 775 $pkgdir/var/games
+    # set appropriate permissions and destinations
+    mv $pkgdir/usr/man $pkgdir/usr/share
+    chown root:games $pkgdir/usr/bin/dopewars
+    chmod 2755 $pkgdir/usr/bin/dopewars
+    chmod 775 $pkgdir/var/games
 
-	# Handle the scores file creation in the install script
-	rm $pkgdir/var/games/dopewars.sco
+    # Handle the scores file creation in the install script
+    rm $pkgdir/var/games/dopewars.sco
 }
+
