@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=8.63
-pkgrel=3
+pkgrel=4
 pkgdesc="An interpreter for the PostScript language"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
