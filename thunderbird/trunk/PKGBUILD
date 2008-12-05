@@ -3,7 +3,7 @@
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributor: Anders Bostrom <anders.bostrom@home.se>
 pkgname=thunderbird
-pkgver=2.0.0.17
+pkgver=2.0.0.18
 pkgrel=1
 pkgdesc="Standalone Mail/News reader"
 arch=('i686' 'x86_64')
@@ -12,24 +12,27 @@ url="http://www.mozilla.org/projects/thunderbird"
 provides=('mozilla-thunderbird')
 conflicts=('mozilla-thunderbird')
 replaces=('mozilla-thunderbird')
-depends=('gtk2>=2.12.11' 'gcc-libs>=4.3.1' 'libidl2' 'mozilla-common' 'nss>=3.12' 'libxt' 'shared-mime-info' 'mime-types')
-makedepends=('zip' 'pkgconfig' 'imagemagick' 'diffutils' 'patch' 'make' 'gcc' 'libgnomeui')
+depends=('gtk2>=2.14.5' 'gcc-libs>=4.3.1' 'libidl2' 'mozilla-common' 'nss>=3.12.1' 'libxt' 'shared-mime-info')
+makedepends=('zip' 'pkgconfig' 'imagemagick' 'libgnomeui')
 options=('!makeflags')
 source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}-source.tar.bz2
 	mozconfig
         thunderbird.desktop
         thunderbird-1.5-lang.patch
-	firefox-2.0-link-layout.patch)
-md5sums=('3adb8fabdc26a5859c55b9ce241edb3f'
+	firefox-2.0-link-layout.patch
+	thunderbird-appversion.patch)
+md5sums=('1d131408b2338132a154700cc92a1d58'
          '17e3015259da53f40bc445b27078f693'
          'ea4e3c3dee98e3891bef16409551eb6e'
          'bc6f10a06407faee6494acad546aabf9'
-         'b933c00957ea793fe940f4d46a85e10e')
+         'b933c00957ea793fe940f4d46a85e10e'
+	 '63dd0436e43e2de71abcf9160a1a6f44')
 
 build() {
   cd "${srcdir}/mozilla"
   patch -Np1 -i "${srcdir}/thunderbird-1.5-lang.patch" || return 1
   patch -Np1 -i "${srcdir}/firefox-2.0-link-layout.patch" || return 1
+  patch -Np1 -i "${srcdir}/thunderbird-appversion.patch" || return 1
   cp "${srcdir}/mozconfig" .mozconfig
 
   if [ "${CARCH}" = "x86_64" ]; then
@@ -43,16 +46,6 @@ build() {
   make -f client.mk build || return 1
   make DESTDIR="${pkgdir}" install || return 1
 
-  cd "${pkgdir}/usr/lib/thunderbird-${pkgver}"
-  export MOZ_DISABLE_GNOME=1
-  export MOZTMP=`mktemp -d -p ${srcdir}`
-  LD_PRELOAD="" LD_LIBRARY_PATH="`pwd`" HOME="${MOZTMP}" ./thunderbird-bin -register || return 1
-  rm -rf "${MOZTMP}"
-
-  ln -sf thunderbird-${pkgver} "${pkgdir}/usr/lib/thunderbird" || return 1
-  ln -sf thunderbird-${pkgver} "${pkgdir}/usr/include/thunderbird" || return 1
-  ln -sf thunderbird-${pkgver} "${pkgdir}/usr/share/idl/thunderbird" || return 1
-  
   rm -rf "${pkgdir}/usr/bin/defaults"
 
   install -m755 -d "${pkgdir}/usr/share/applications"
@@ -63,9 +56,7 @@ build() {
       "${pkgdir}/usr/share/applications/" || return 1
 
   install -m644 "${srcdir}/mozilla/mail/app/default.xpm" \
-      "${pkgdir}/usr/lib/thunderbird/icons/" || return 1
+      "${pkgdir}/usr/lib/thunderbird-2.0/icons/" || return 1
 
   rm -f ${pkgdir}/usr/lib/pkgconfig/thunderbird-ns{s,pr}.pc
-  sed -e "s/thunderbird-${pkgver}/thunderbird/g" \
-      -i ${pkgdir}/usr/lib/pkgconfig/*.pc || return 1
 }
