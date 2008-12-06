@@ -1,42 +1,44 @@
 # $Id$
-# Maintainer : Aaron Griffin <aaron@archlinux.org>
+# Maintainer: Alexander Fehr <pizzapunk gmail com>
 # Contributor: Hugo Ideler <hugoideler@dse.nl>
 
 pkgname=slim
-pkgver=1.3.0
-pkgrel=2
-pkgdesc="Simple Login Manager for X11"
-arch=(i686 x86_64)
-url="http://slim.berlios.de"
-backup=(etc/slim.conf)
-depends=(gcc libxmu libxft libjpeg libpng bash)
+pkgver=1.3.1
+pkgrel=1
+pkgdesc="Desktop-independent graphical login manager for X11"
+arch=('i686' 'x86_64')
+url="http://slim.berlios.de/"
+license=('GPL2')
+depends=('gcc-libs' 'libxmu' 'libpng' 'libjpeg' 'libxft')
+backup=('etc/slim.conf')
 install=slim.install
-license=('GPL')
-source=(http://download.berlios.de/$pkgname/$pkgname-$pkgver.tar.gz
-        slim slim.logrotate)
-md5sums=('1c1a87f3cbd3c334c874585e42701961' '07431fcbd753d3abbcfedaa76401e212'\
-         '257cf53a3f762ff609e2afd265dac953')
+source=(http://download.berlios.de/slim/slim-$pkgver.tar.gz
+        slim
+        slim.logrotate
+        slim.pam
+        slim-restart.patch)
+md5sums=('727d0acb24c0fbf0751134c37a9c895f'
+         'd8ea9c4dee2811524b67f4f666311a1f'
+         '43da096480bf72c3ccec8ad8400f34f0'
+         'b20fe3c8487a039050986d60e45233a9'
+         '648d871fe7d2a97b7d7b928019e2feee')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
+  cd "$srcdir/slim-$pkgver"
 
-  sed -i "s|/usr/X11R6/include|/usr/include/xorg|g" Makefile
-  cp /usr/include/shadow.h . #wtf is going on with this? it works fine if copied locally
-  sed -i "s|/usr/X11R6/|/usr/|g" Makefile
-  make || return 1
+  # Restart Xserver if killed
+  # http://developer.berlios.de/patch/?func=detailpatch&patch_id=2378&group_id=2663
+  patch -Np1 -i "$srcdir/slim-restart.patch" || return 1
 
-  sed -i "s|/usr/X11R6/include|/usr/include/xorg|g" slim.conf
-  sed -i "s|/usr/X11R6/|/usr/|g" slim.conf
-  make DESTDIR=$startdir/pkg install
+  make USE_PAM=1 || return 1
+  make DESTDIR="$pkgdir" MANDIR=/usr/share/man install || return 1
 
-  install -D -m755 -o root -g root $startdir/src/slim $startdir/pkg/etc/rc.d/slim
-  install -D -m644 -o root -g root $startdir/src/slim.logrotate $startdir/pkg/etc/logrotate.d/slim
+  install -D -m755 "$srcdir/slim" "$pkgdir/etc/rc.d/slim" || return 1
+  install -D -m644 "$srcdir/slim.logrotate" "$pkgdir/etc/logrotate.d/slim" || return 1
+  install -D -m644 "$srcdir/slim.pam" "$pkgdir/etc/pam.d/slim" || return 1
 
-  # let's make this a tad safer... "sane defaults" and all
-  sed -i "s@#xserver_arguments.*@xserver_arguments   -nolisten tcp vt07@"\
-    $startdir/pkg/etc/slim.conf
-
-  # lockfile is defaulted in /var/run, which is not cleared at boot
-  # (causes problems) - thanks bogomipz
-  sed -i 's@/var/run/slim.lock@/var/lock/slim.lock@' $startdir/pkg/etc/slim.conf
+  # Provide sane defaults
+  sed -i 's|#xserver_arguments.*|xserver_arguments   -nolisten tcp vt07|' \
+    "$pkgdir/etc/slim.conf" || return 1
+  sed -i 's|/var/run/slim.lock|/var/lock/slim.lock|' "$pkgdir/etc/slim.conf" || return 1
 }
