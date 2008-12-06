@@ -8,25 +8,25 @@
 # install old package, build new package, install new package, rebuild
 
 pkgname=imagemagick
-pkgver=6.4.6.3
+pkgver=6.4.7.0
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool>=2.2' 'bzip2' 'libxml2' 'jasper')
+depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool>=2.2' 'heimdal>=1.2.1' 'bzip2' 'libxml2' 'jasper')
 #makedepends=('ghostscript' 'openexr')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('56d1f2ed5ce97590afbd066ea709a8b0' '069980fc2590c02aed86420996259302'\
+md5sums=('6b04710f39aa640e61cfd62910e8b126' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('7ed2ca1a0ce81ad02e464e0e31d565f0910f72bd'
+sha1sums=('0267b2e2acc5387fde23fa3734f7f53724663061'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
 build() {
-  cd ${srcdir}/ImageMagick-${pkgver%.*}
+  cd ${srcdir}/ImageMagick-${pkgver%.*}-${pkgver##*.}
 
   if [ "${CARCH}" = "x86_64" ]; then
     patch -Np1 < ../libpng_mmx_patch_x86_64.patch || return 1
