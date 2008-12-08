@@ -1,0 +1,46 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
+pkgname=xine-lib
+pkgver=1.1.15
+pkgrel=4
+pkgdesc="A free video player for Unix"
+arch=('i686' 'x86_64')
+url="http://xinehq.de/"
+license=('LGPL' 'GPL')
+depends=('libgl' 'libxvmc' 'esound' 'flac>=1.1.4' 'libvorbis' 'sdl' 'libmng' 'libtheora'
+         'libxcb' 'wavpack' 'ffmpeg>=20080715' 'heimdal>=1.2.1')
+makedepends=('pkgconfig' 'libtool' 'imagemagick' 'smbclient' 'mesa' 'alsa-lib' 
+             'vcdimager' 'jack-audio-connection-kit')
+options=('!libtool')
+source=(http://downloads.sourceforge.net/sourceforge/xine/${pkgname}-${pkgver}.tar.bz2
+        xine-lib-1.1.1-configure-no-mcpu-march.patch xine-header.patch xine-imagemagick.patch)
+md5sums=('42a2b4893b7f892eb334de2fc36d49c8' '9776df4eb54d2f1f68d8268adbc3b5c2'\
+         'b139ee72700f8d118f9051e9140473f5' '45d248d45b747f049129925cbf25716d')
+sha1sums=('bcb567ea2a11c5f26b2384d5400b8466ea9048c6'
+          '121a8358d7919b2e51067412373f52848290338a'
+          '30cd75db3f0c0002f467d85466f1c404452397df'
+          'f0a0c04d5dfa3d0cd9246a1310f628deff489c12')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+
+  patch -p0 < ../xine-lib-1.1.1-configure-no-mcpu-march.patch || return 1
+  patch -p0 <../xine-header.patch || return 1
+  #patch -p1 <../xine-imagemagick.patch || return 1
+
+  libtoolize --force --copy || return 1
+  aclocal -I m4 || return 1
+  autoconf || return 1
+  automake --add-missing || return 1
+
+  ./configure --prefix=/usr --with-w32-path=/usr/lib/codecs \
+    --with-xv-path=/usr/lib --with-xxmc-path=/usr/lib --with-xvmc-path=/usr/lib \
+    --with-libflac --with-wavpack --with-xcb \
+    --without-arts --with-jack --without-speex \
+    --disable-gnomevfs --without-pulseaudio --disable-aalib \
+    --disable-modplug --with-external-ffmpeg || return 1
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+}
