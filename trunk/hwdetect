@@ -51,6 +51,7 @@ usage () {
 	echo "  For /etc/rc.conf use:"
 	echo "    --net                  show network MODULES"
 	echo "    --sound                show sound MODULES"
+	echo "    --usbhost              show usb hostcontroller MODULES"
 	echo "    --modules              show all detected MODULES"
 	echo ""
 	exit 1
@@ -82,6 +83,9 @@ fi
 if ! [ "$RAID_PARTITIONS" = "1" ]; then
 	[ "$(echo $* | grep '\-raid')" ] && RAID=1
 fi
+
+# dmraid switch
+[ "$(echo $* | grep '\-dmraid')" ] && DMRAID=1
 
 # encrypt switch
 [ "$(echo $* | grep '\-encrypt')" ] && ENCRYPT=1
@@ -230,10 +234,10 @@ sed -ne "s#^insmod.*/\(.*\)\.ko.*#\1#p" /tmp/modules-sorted >> /tmp/moduleslist
 
 # blacklist framebuffer modules
 for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*/*fb*); do
-	BLACKLIST="$BLACKLIST $(/usr/bin/basename $x .ko)"
+	BLACKLIST="$BLACKLIST $(basename $x .ko)"
 done
 for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*fb*); do
-	BLACKLIST="$BLACKLIST $(/usr/bin/basename $x .ko)"
+	BLACKLIST="$BLACKLIST $(basename $x .ko)"
 done
 # delete modules that are blacklisted
 BLACKLIST="${BLACKLIST} $(echo ${disablemodules} | sed 's|-|_|g' | sed 's|,| |g')"
@@ -318,11 +322,11 @@ while [ $# -gt 0 ]; do
 			showlist "USB    " $(listmods usb/ usb/input)
 			showlist "FW     " $(listmods firewire/) $(listmods ieee1394/)
 			showlist "NET    " $(listmods net/ irda/)
-			showlist "INPUT  " $(listmods input/) $(listmods hid/)
+			showlist "INPUT  " $(listmods input/ pcspkr) $(listmods hid/)
 			showlist "IRDA   " $(listmods irda/)
 			showlist "ISDN   " $(listmods isdn/)
 			showlist "PCMCIA " $(listmods pcmcia/)
-			showlist "SOUND  " $(listmods sound/)
+			showlist "SOUND  " $(listmods pcspkr) $(listmods sound/)
 			showlist "VIDEO  " $(listmods video/)
 			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/)
 			;;
@@ -340,14 +344,14 @@ while [ $# -gt 0 ]; do
 		--show-usb)    showlist "USB    " $(listmods usb/ usb/input) ;;
 		--show-fw)     showlist "FW     " $(listmods firewire/) $(listmods ieee1394/) ;;
 		--show-net)    showlist "NET    " $(listmods net/ irda/) ;;
-		--show-input)  showlist "INPUT  " $(listmods input/) $(listmods hid/) ;;
+		--show-input)  showlist "INPUT  " $(listmods input/ pcspkr) $(listmods hid/) ;;
 		--show-irda)   showlist "IRDA   " $(listmods irda/) ;;
 		--show-isdn)   showlist "ISDN   " $(listmods isdn/) ;;
 		--show-pcmcia) showlist "PCMCIA " $(listmods pcmcia/) ;;
-		--show-sound)  showlist "SOUND  " $(listmods sound/) ;;
+		--show-sound)  showlist "SOUND  " $(listmods pcspkr) $(listmods sound/) ;;
 		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
 		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/) ;;
-		--hostcontroller)  showlist2 "MODULES" \"$(listmods ide/pci) $(listmods ata/pata) $(listmods ata/ata_generic) $(listmods scsi/ /sg.ko /st.ko sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+		--hostcontroller)  showlist2 "MODULES" \"$(listmods ide/pci) $(listmods ata/pata) $(listmods ata/ata_generic) $(listmods scsi/ /sg.ko /st.ko sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
 		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(dmesg | grep '"8139too"')" ]; then
@@ -362,7 +366,10 @@ while [ $# -gt 0 ]; do
 				showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			fi
 			;;
-		--sound) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods sound/)"
+		--sound) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods pcspkr) $(listmods sound/)"
+			showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+			 ;;
+		--usbhost) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
 			showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
