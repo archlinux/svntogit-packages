@@ -2,25 +2,25 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
 pkgname=openoffice-base-beta
-pkgver=3.0_ooo300_m6 # m5=RC1
+pkgver=3.0.1_ooo300_m14 # m14=RC1
 pkgrel=1
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=(i686 x86_64)
-#_OO_milestone=ooo300-m6
-_OO_milestone=OOO300_m6
+#_OO_milestone=ooo300-m14
+_OO_milestone=OOO300_m14
 license=('LGPL3')
 url="http://www.openoffice.org"
 install=openoffice.install
-depends=('curl>=7.18.0' 'hunspell>=1.2.2-2' 'python>=2.5.1' 'libwpd' 
-         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'hsqldb-java')
+depends=('curl>=7.19.2' 'hunspell>=1.2.8' 'python>=2.6.1' 'libwpd' 'redland'
+         'libxaw' 'neon>=0.28.3-2' 'dbus-glib' 'icu>=4.0-2' 'hsqldb-java' 'libxslt')
 optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
             'nss:		adds support for signed files/macros'
             'pstoedit:		translates PostScript and PDF graphics into other vector formats')
 makedepends=('bison' 'cvs' 'curl' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'xulrunner>=1.9.0.1'
-             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.2-5')
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'xulrunner>=1.9.0.4'
+             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.3.1-2')
 provides=('openoffice-base')
 source=(${pkgname}-${_OO_milestone}.tar.gz
 	template.desktop
@@ -32,9 +32,11 @@ source=(${pkgname}-${_OO_milestone}.tar.gz
 	shell.patch
 	system_hsqldb.diff
 	buildfix-openjdk-6-no-rhino.diff
-	buildfix_dict_parallel.diff)
+	openoffice-beta.profile
+	http://www.openoffice.org/nonav/issues/showattachment.cgi/58937/workspace.fpicker8.patch
+	http://www.openoffice.org/nonav/issues/showattachment.cgi/56152/run_fpicker_in_main.patch)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('e3684b9314e4aaafe2b5edf23701d874'
+md5sums=('e0499e259482320650bc30b302ad6e67'
          'a247ba577007d8169201bd8f41cf41b5'
          '71f136a31e296a04ab68932a31dd533e'
          '6c596129fb48316226ce3adfd3a4c86d'
@@ -44,7 +46,10 @@ md5sums=('e3684b9314e4aaafe2b5edf23701d874'
          'a51200f770c635355c430cc5052db8cf'
          '4addae44d20bb2b247e429d88b66a4c1'
          '4fe2810b40358b0e7dc2df3d056bde7a'
-         '991b4a9dac2e6b84c45fa6f0494dd41a')
+         '8d68d44c941a687813ddd968383cdf27'
+         '4d91aaa94f9e702e184ab1ce99287a73'
+         'c835885b68a5f3ff18b74c53d9b0bea3')
+
 
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
@@ -54,11 +59,11 @@ build() {
 	export 'CVSROOT=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs'
 	# checkout snapshot
 #	cvs -q -z9 co -r $_MILESTONE OpenOffice3
+	# fetch missing modules
+#	cvs -q -z9 co -r $_MILESTONE cppunit hyphen swext apache-commons tomcat reportbuilder
 #	tar -cvzf ../${pkgname}-${_OO_milestone}.tar.gz *
 #	return 1
 
-	# fetch missing modules
-	cvs -q -z9 co -r $_MILESTONE cppunit hyphen swext apache-commons tomcat reportbuilder
 
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
@@ -77,8 +82,6 @@ build() {
 	patch -Np0 -i ${srcdir}/buildfix-gcc43.diff || return 1
 	patch -Np0 -i ${srcdir}/system_hsqldb.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix-openjdk-6-no-rhino.diff || return 1
-	 # http://qa.openoffice.org/issues/show_bug.cgi?id=93391
-	patch -Np0 -i ${srcdir}/buildfix_dict_parallel.diff || return 1
 
 	# allows xmlsec to be able to read the format of the digital certificates.
 	patch -Np0 -i ${srcdir}/libxmlsec-findcerts.diff || return 1
@@ -89,6 +92,9 @@ build() {
 	# important bugfixes
 	# try to fix non-gtk integration 
 	patch -Np0 -i ${srcdir}/shell.patch || return 1
+	# fix high cpu load in fpicker, FS#11710
+	patch -Np1 -i ${srcdir}/workspace.fpicker8.patch || return 1
+	patch -Np1 -i ${srcdir}/run_fpicker_in_main.patch || return 1
 
 	# remove the startup wizard
 	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff || return 1
@@ -96,6 +102,7 @@ build() {
 	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
 
 	if [ "$CARCH" = "x86_64" ]; then
+          EXTRAOPTS="--with-stlport"
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/solenv/inc/libs.mk || return 1
@@ -103,8 +110,6 @@ build() {
 
 	cd ${srcdir}/config_office
 
-	# Set OOO_VENDOR in build environment
-	export OOO_VENDOR="ArchLinux"
 	# export C(XX)FLAGS
 	export ARCH_FLAGS="$CFLAGS"
 
@@ -112,6 +117,7 @@ build() {
 	autoreconf -v || return 1
 
 	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
+	--with-vendor="ArchLinux"\
 	--prefix=/usr --exec-prefix=/usr\
 	--disable-ldap\
 	--with-lang="en-US"\
@@ -129,15 +135,13 @@ build() {
 	--enable-dbus\
 	--enable-cairo\
 	--enable-evolution2\
-	--enable-crashdump\
+	--enable-crashdump=no\
 	--enable-vba\
-	--enable-verbose\
 	--with-package-format=native\
 	--with-system-boost\
 	--with-system-db\
 	--with-system-cairo\
 	--with-system-curl\
-	--with-system-dicts\
 	--with-system-expat\
 	--with-system-freetype\
 	--with-system-hunspell\
@@ -159,17 +163,16 @@ build() {
 	--without-afms\
 	--without-gpc\
 	--without-nas\
-	--without-stlport\
-	--with-jdk-home=${JAVA_HOME} \
- 	--with-system-hsqldb \
-	--with-hsqldb-jar=/usr/share/java/hsqldb.jar \
-	--with-system-xerces \
-	--with-xerces-jar=/usr/share/java/xercesImpl.jar \
-	--with-system-xalan \
-	--with-xalan-jar=/usr/share/java/xalan.jar \
+	--with-jdk-home=${JAVA_HOME}\
+ 	--with-system-hsqldb\
+	--with-hsqldb-jar=/usr/share/java/hsqldb.jar\
+	--with-system-xerces\
+	--with-xerces-jar=/usr/share/java/xercesImpl.jar\
+	--with-system-xalan\
+	--with-xalan-jar=/usr/share/java/xalan.jar\
 	--with-system-xml-apis\
-	--with-xml-apis-jar=/usr/share/java/xml-apis.jar \
-	--with-serializer-jar=/usr/share/java/serializer.jar \
+	--with-xml-apis-jar=/usr/share/java/xml-apis.jar\
+	--with-serializer-jar=/usr/share/java/serializer.jar\
 	--with-use-shell=bash\
 	 $EXTRAOPTS || return 1
 
@@ -192,7 +195,7 @@ build() {
 
 	# install binaries
 	if [ "$CARCH" = "x86_64" ]; then
-	  cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
+	        cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
 	 else 	cp -R instsetoo_native/unxlngi6.pro/OpenOffice/native/install/en-US/linux-2.6-intel/buildroot/* ${pkgdir}/
 	fi
 
@@ -222,10 +225,15 @@ build() {
 	ln -s ../../opt/openoffice/program/soffice soffice
 	ln -s ../../opt/openoffice/program/spadmin spadmin
 
-	# install more dictionaries from source tree
-	for i in `ls -1 ${srcdir}/src/dictionaries/unxlngx6.pro/bin/dict-??.oxt`; do
-	  install -Dm644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
+	# install all built dictionaries from source tree
+	if [ "$CARCH" = "x86_64" ]; then
+	       pushd ${srcdir}/dictionaries/unxlngx6.pro/bin
+  	  else pushd ${srcdir}/dictionaries/unxlngi6.pro/bin
+	fi
+	for i in `ls -1 dict-??.oxt`; do
+	  install -D -m644 $i ${pkgdir}/opt/openoffice/share/extension/install/$i || return 1
 	done
+	popd
 
 	# install shortcuts
 	mv ${pkgdir}/opt/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
@@ -261,19 +269,15 @@ build() {
 
 	# some cleanup
 	find ${pkgdir}/usr/share/icons -depth -name "CVS" -type d -exec rm -r {} \; > /dev/null 2>&1
-	rm -f ${pkgdir}/opt/openoffice/program/oo_product.bmp
-	mkdir -p ${pkgdir}/opt/openoffice/basis-link/share/dict/ooo
-	touch ${pkgdir}/opt/openoffice/basis-link/share/dict/ooo/.directory 
-	touch ${pkgdir}/opt/openoffice/basis-link/presets/template/.directory 
-	touch ${pkgdir}/opt/openoffice/share/extension/install/.directory
-	# remove unecessary temp files if they exist 
-	rm -f  ${pkgdir}/opt/openoffice/program/root*.dat
-	rm -f  ${pkgdir}/opt/openoffice/program/root*.dat.*
 
 	# link the mozilla-plugin
 	mkdir -p ${pkgdir}/usr/lib/mozilla/plugins/
 	cd ${pkgdir}/usr/lib/mozilla/plugins/
 	ln -v -s /opt/openoffice/program/libnpsoplugin.so .
+
+	# set desktop variable to force gtk/gnome vcl usage
+	install -m755 -d ${pkgdir}/etc/profile.d
+	install -m755 ${srcdir}/openoffice-beta.profile ${pkgdir}/etc/profile.d/openoffice-beta.sh || return 1
 
 	## Develize it for BETA!
 	cd ${pkgdir}/opt/
