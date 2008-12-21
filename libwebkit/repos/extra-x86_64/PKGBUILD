@@ -2,40 +2,38 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=libwebkit
-_origname=webkit
 pkgver=1.0.3 # see configure.ac
-pkgrel=0.39096
-_svnver=39096 # date: 20081208
+_svnver=39370 # date: 20081218
+pkgrel=0.${_svnver}
 pkgdesc="an opensource web content engine, derived from KHTML and KJS from KDE"
 arch=('i686' 'x86_64')
 url="http://webkit.org/"
 license=('custom')
-depends=('libxt' 'libxslt' 'curl' 'sqlite3' 'gtk2' 'icu>=4.0')
-makedepends=('subversion' 'gperf')
+depends=('libxt' 'libxslt' 'sqlite3' 'gtk2' 'icu>=4.0' 'gstreamer0.10-base' 'libsoup')
+makedepends=('gperf')
 provides=('webkitgtk-svn')
 conflicts=('webkitgtk-svn')
 replaces=('webgitgtk-svn')
-source=(#http://people.freedesktop.org/~alp/${_origname}/gtk/${_origname}-${pkgver}.tar.gz
-	${pkgname}-${pkgver}.${_svnver}.tar.gz
-	buildfix_webkit_bison2.4.diff)
+source=(http://builds.nightly.webkit.org/files/trunk/src/WebKit-r${_svnver}.tar.bz2
+	buildfix_webkit_bison2.4.diff buildfix_soup.diff)
 options=('!libtool')
-md5sums=('2a1d2b41b3676f8e73f9c81f0bd1343c'
-         '98c8c22b290160f4de7dfcf62eef67bc')
+md5sums=('0f5b867df3b660511f01c2c456904da3'
+         '98c8c22b290160f4de7dfcf62eef67bc'
+         '9225bbfc0d92de0863a1aad76f57dafb')
 
 build() {
-  cd ${srcdir}/ #${_origname}
-#  svn checkout -r ${_svnver} http://svn.webkit.org/repository/webkit/trunk WebKit
-#  find ${srcdir} -type d -depth -name ".svn" -exec rm -rf {} \;
-#  tar -cvzf ../${pkgname}-${pkgver}.${_svnver}.tar.gz WebKit/*
-#  return 1
-
-  cd ${srcdir}/WebKit
+  cd ${srcdir}/WebKit-r${_svnver}
   patch -Np1 -i ${srcdir}/buildfix_webkit_bison2.4.diff || return 1 
-  ./autogen.sh --prefix=/usr
+  patch -Np1 -i ${srcdir}/buildfix_soup.diff || return 1 
+  ./autogen.sh --prefix=/usr \
+	--enable-video \
+	--with-font-backend=pango \
+	--with-http-backend=soup \
+	--enable-jit # not yet supported on x86_64
   make || return 1
   make DESTDIR="$pkgdir" install
 
   # install license
-  install -Dm644 ${srcdir}/WebKit/WebKit/LICENSE $pkgdir/usr/share/licenses/$pkgname/LICENSE
+  install -Dm644 ${srcdir}/WebKit-r${_svnver}/WebKit/LICENSE $pkgdir/usr/share/licenses/$pkgname/LICENSE
 }
 
