@@ -3,12 +3,12 @@
 # Contributor: Shadowhand <woody.gilk@gmail.com>
 pkgname=beagle
 pkgver=0.3.8
-pkgrel=1
+pkgrel=2
 pkgdesc="Search tool that ransacks your personal information space"
 arch=(i686 x86_64)
 url="http://www.gnome.org/projects/beagle/"
 license=('custom')
-depends=('gnome-sharp' 'gmime>=2.2.18' 'evolution-sharp>=0.16.1' 'libexif' 'librsvg>=2.22.2' 'sqlite3' 'libxss' 'wv>=1.2.4' 'chmlib' 'gsf-sharp>=0.8.1' 'libsm' 'xdg-utils' 'ndesk-dbus-glib' 'mono>=1.9' 'taglib-sharp')
+depends=('gnome-sharp>=2.24.0' 'gmime>=2.2.18' 'evolution-sharp>=0.18.1' 'libexif' 'librsvg>=2.22.2' 'sqlite3' 'libxss' 'wv>=1.2.4' 'chmlib' 'gsf-sharp>=0.8.1' 'libsm' 'xdg-utils' 'ndesk-dbus-glib' 'mono>=2.0' 'taglib-sharp')
 makedepends=('perlxml' 'zip' 'pkgconfig')
 options=('!libtool')
 backup=('etc/beagle/crawl-applications' 'etc/beagle/crawl-documentation'
@@ -23,23 +23,21 @@ build() {
   export MONO_SHARED_DIR=${startdir}/src/.wabi
   mkdir -p ${MONO_SHARED_DIR}
 
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  sed -i -e 's/CRAWL_USER=beagleindex/CRAWL_USER=beaglidx/' tools/beagle-crawl-system.in
-  sed -i -e 's/libchm.so.1/libchm.so.0/' Util/ChmFile.cs
-  patch -Np1 -i ${startdir}/src/beagle-0.2.1-spew.patch || return 1
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -i -e 's/CRAWL_USER=beagleindex/CRAWL_USER=beaglidx/' tools/beagle-crawl-system.in || return 1
+  sed -i -e 's/libchm.so.1/libchm.so.0/' Util/ChmFile.cs || return 1
+  patch -Np1 -i "${srcdir}/beagle-0.2.1-spew.patch" || return 1
 
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 	--enable-inotify \
 	--disable-libbeagle \
 	--disable-static \
-	--disable-docs 
+	--disable-docs || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR="${pkgdir}" install || return 1
 
-  mkdir -p ${startdir}/pkg/var/cache/beagle/indexes
-  chown -R beaglidx:beaglidx ${startdir}/pkg/var/cache/beagle
-  mkdir -p ${startdir}/pkg/usr/share/licenses/beagle
-  install -m644 ${startdir}/src/${pkgname}-${pkgver}/COPYING \
-                ${startdir}/pkg/usr/share/licenses/beagle
-  chown -R beaglidx:beaglidx ${startdir}/pkg/var/cache/beagle
+  install -m755 -d "${pkgdir}/var/cache/beagle/indexes" || return 1
+  chown -R 86:86 "${pkgdir}/var/cache/beagle" || return 1
+  install -m755 -d "${pkgdir}/usr/share/licenses/beagle"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/beagle/" || return 1
 }
