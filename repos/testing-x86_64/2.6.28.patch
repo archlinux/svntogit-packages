@@ -1,0 +1,181 @@
+diff -ru usr/src/nv/Makefile.kbuild usr/src/nv.2990799/Makefile.kbuild
+--- usr/src/nv/Makefile.kbuild	2008-10-01 15:13:04.000000000 -0700
++++ usr/src/nv.2990799/Makefile.kbuild	2008-10-27 10:46:28.199802537 -0700
+@@ -185,14 +185,16 @@
+ 	acquire_console_sem \
+ 	kmem_cache_create \
+ 	on_each_cpu \
+-	smp_call_function
++	smp_call_function \
++ 	acpi_evaluate_integer
+ else
+  COMPILE_TESTS = \
+ 	remap_page_range \
+ 	vmap \
+ 	change_page_attr \
+ 	i2c_adapter \
+-	smp_call_function
++	smp_call_function \
++ 	acpi_evaluate_integer
+ endif
+ 
+ #
+diff -ru usr/src/nv/Makefile.nvidia usr/src/nv.2990799/Makefile.nvidia
+--- usr/src/nv/Makefile.nvidia	2008-10-01 15:13:04.000000000 -0700
++++ usr/src/nv.2990799/Makefile.nvidia	2008-10-27 10:45:54.973909102 -0700
+@@ -59,7 +59,8 @@
+ 	vmap \
+ 	change_page_attr \
+ 	i2c_adapter \
+-	smp_call_function
++	smp_call_function \
++	acpi_evaluate_integer
+ 
+ DEFINES+=$(EXTRA_DEFINES)
+ 
+diff -ru usr/src/nv/conftest.sh usr/src/nv.2990799/conftest.sh
+--- usr/src/nv/conftest.sh	2008-10-01 15:13:04.000000000 -0700
++++ usr/src/nv.2990799/conftest.sh	2008-10-27 10:45:57.710065030 -0700
+@@ -67,6 +67,8 @@
+ }
+ 
+ build_cflags() {
++    ARCH=`uname -m | sed -e 's/i.86/i386/'`
++
+     BASE_CFLAGS="-D__KERNEL__ \
+ -DKBUILD_BASENAME=\"#conftest$$\" -DKBUILD_MODNAME=\"#conftest$$\" \
+ -nostdinc -isystem $ISYSTEM"
+@@ -80,16 +82,20 @@
+     test_xen
+ 
+     if [ "$OUTPUT" != "$SOURCES" ]; then
+-        ARCH=`uname -m | sed -e 's/i.86/i386/'`
+         MACH_CFLAGS="-I$HEADERS/asm-$ARCH/mach-default"
+         if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]; then
+             MACH_CFLAGS="$MACH_CFLAGS -I$HEADERS/asm-x86/mach-default"
++            MACH_CFLAGS="$MACH_CFLAGS -I$SOURCES/arch/x86/include/asm/mach-default"
+         fi
+         if [ "$XEN_PRESENT" != "0" ]; then
+             MACH_CFLAGS="-I$HEADERS/asm-$ARCH/mach-xen $MACH_CFLAGS"
+         fi
+     else
+         MACH_CFLAGS="-I$HEADERS/asm/mach-default"
++        if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]; then
++            MACH_CFLAGS="$MACH_CFLAGS -I$HEADERS/asm-x86/mach-default"
++            MACH_CFLAGS="$MACH_CFLAGS -I$SOURCES/arch/x86/include/asm/mach-default"
++        fi
+         if [ "$XEN_PRESENT" != "0" ]; then
+             MACH_CFLAGS="-I$HEADERS/asm/mach-xen $MACH_CFLAGS"
+         fi
+@@ -97,6 +103,9 @@
+ 
+     CFLAGS="$BASE_CFLAGS $MACH_CFLAGS $OUTPUT_CFLAGS -I$HEADERS"
+ 
++    if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]; then
++        CFLAGS="$CFLAGS -I$SOURCES/arch/x86/include"
++    fi
+     if [ -n "$BUILD_PARAMS" ]; then
+         CFLAGS="$CFLAGS -D$BUILD_PARAMS"
+     fi
+@@ -858,7 +867,7 @@
+ 
+             if [ -f conftest$$.o ]; then
+                 rm -f conftest$$.o
+-                echo "#undef NV_ON_EACH_CPU" >> conftest.h
++                echo "#undef NV_ON_EACH_CPU_PRESENT" >> conftest.h
+                 return
+             fi
+ 
+@@ -897,6 +906,57 @@
+             fi
+         ;;
+ 
++        acpi_evaluate_integer)
++            #
++            # Determine if the acpi_evaluate_integer() function is
++            # present and the type of its 'data' argument.
++            #
++
++            echo "$CONFTEST_PREAMBLE
++            #include <acpi/acpi_bus.h>
++            acpi_status acpi_evaluate_integer(acpi_handle h, acpi_string s,
++                struct acpi_object_list *l, unsigned long long *d) {
++                return AE_OK;
++            }" > conftest$$.c
++
++            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
++            rm -f conftest$$.c
++
++            if [ -f conftest$$.o ]; then
++                rm -f conftest$$.o
++                echo "#define NV_ACPI_EVALUATE_INTEGER_PRESENT" >> conftest.h
++                echo "typedef unsigned long long nv_acpi_integer_t;" >> conftest.h
++                return
++            fi
++
++            echo "$CONFTEST_PREAMBLE
++            #include <acpi/acpi_bus.h>
++            acpi_status acpi_evaluate_integer(acpi_handle h, acpi_string s,
++                struct acpi_object_list *l, unsigned long *d) {
++                return AE_OK;
++            }" > conftest$$.c
++
++            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
++            rm -f conftest$$.c
++
++            if [ -f conftest$$.o ]; then
++                rm -f conftest$$.o
++                echo "#define NV_ACPI_EVALUATE_INTEGER_PRESENT" >> conftest.h
++                echo "typedef unsigned long nv_acpi_integer_t;" >> conftest.h
++                return
++            else
++                #
++                # We can't report a compile test failure here because
++                # this is a catch-all for both kernels that don't
++                # have acpi_evaluate_integer() and kernels that have
++                # broken header files that make it impossible to
++                # tell if the function is present.
++                #
++                echo "#undef NV_ACPI_EVALUATE_INTEGER_PRESENT" >> conftest.h
++                echo "typedef unsigned long nv_acpi_integer_t;" >> conftest.h
++            fi
++        ;;
++
+     esac
+ }
+ 
+diff -ru usr/src/nv/nvacpi.c usr/src/nv.2990799/nvacpi.c
+--- usr/src/nv/nvacpi.c	2008-10-01 15:13:04.000000000 -0700
++++ usr/src/nv.2990799/nvacpi.c	2008-10-27 10:46:05.710520948 -0700
+@@ -136,7 +136,7 @@
+     struct acpi_object_list control_argument_list = { 0, NULL };
+     nv_stack_t *sp = NULL;
+     struct list_head *node, *next;
+-    unsigned long device_id = 0;
++    nv_acpi_integer_t device_id = 0;
+     int device_counter = 0;
+ 
+     NV_KMEM_CACHE_ALLOC_STACK(sp);
+@@ -158,11 +158,9 @@
+ 
+     os_mem_set((void *)pNvAcpiObject, 0, sizeof(nv_acpi_t));
+ 
+-    // assign driver data structure ptr to this device
+-    acpi_driver_data(device) = pNvAcpiObject;
+-
+-    // store a device reference in our object
++    device->driver_data = pNvAcpiObject;
+     pNvAcpiObject->device = device;
++
+     pNvAcpiObject->sp = sp;
+ 
+     // grab handles to all the important nodes representing devices
+@@ -306,7 +304,7 @@
+      */
+     nv_acpi_t *pNvAcpiObject = data;
+     u32 event_val = 0;
+-    unsigned long state;
++    nv_acpi_integer_t state;
+     int status = 0;
+     int device_counter = 0;
+ 
