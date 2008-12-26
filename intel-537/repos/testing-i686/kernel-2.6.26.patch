@@ -1,0 +1,92 @@
+diff -ruN intel-536EP-2.56.76.0/coredrv/coredrv.c intel-536EP-2.56.76.0.patched/coredrv/coredrv.c
+--- coredrv/coredrv.c	2007-02-23 09:49:06.000000000 +0100
++++ coredrv/coredrv.c	2008-08-05 11:26:09.000000000 +0200
+@@ -740,7 +740,7 @@
+ 
+ int create_hamproc(void)
+ {
+-   hamproc = create_proc_entry("ham", S_IFREG | S_IRUGO, &proc_root);
++   hamproc = create_proc_entry("ham", S_IFREG | S_IRUGO, NULL);
+    if(hamproc == NULL) return -ENOMEM;
+    hamproc->read_proc = hamproc_read;
+    hamproc->write_proc = hamproc_write;
+@@ -748,7 +748,7 @@
+ }
+ void detach_hamproc(void)
+ {
+-   remove_proc_entry("ham", &proc_root);
++   remove_proc_entry("ham", NULL);
+ }
+ 
+ 
+--- coredrv/afedsp_int.c~	2008-08-05 10:01:45.000000000 +0000
++++ coredrv/afedsp_int.c	2008-08-05 10:01:45.000000000 +0000
+@@ -368,7 +368,7 @@
+ 
+ int create_afeproc(void)
+ {
+-    afeproc = create_proc_entry("afe", S_IFREG|S_IRUGO, &proc_root);
++    afeproc = create_proc_entry("afe", S_IFREG|S_IRUGO, NULL);
+     if(afeproc == NULL)
+         return -ENOMEM;
+     afeproc->proc_fops = &proc_afe_operations;
+@@ -377,7 +377,7 @@
+ 
+ void remove_afeproc(void)
+ {
+-    remove_proc_entry("afe", &proc_root);
++    remove_proc_entry("afe", NULL);
+ }
+ 
+ static int use_count = 0;
+--- coredrv/softserial.c~	2008-10-11 18:37:41.000000000 +0000
++++ coredrv/softserial.c	2008-10-11 18:37:41.000000000 +0000
+@@ -135,25 +135,29 @@
+                                                   CLOCAL;
+    G.softserial_tty_driver.magic           = TTY_DRIVER_MAGIC;
+ 
+-   G.softserial_tty_driver.open            = softserial_open;
+-   G.softserial_tty_driver.close           = softserial_close;
+-   G.softserial_tty_driver.write           = softserial_write;
+-   G.softserial_tty_driver.put_char        = softserial_put_char;
+-   G.softserial_tty_driver.flush_chars     = softserial_flush_chars;
+-   G.softserial_tty_driver.write_room      = softserial_write_room;
+-   G.softserial_tty_driver.chars_in_buffer = softserial_chars_in_buffer;
+-   G.softserial_tty_driver.flush_buffer    = softserial_flush_buffer;
+-   G.softserial_tty_driver.ioctl           = softserial_ioctl;
+-   G.softserial_tty_driver.throttle        = softserial_throttle;
+-   G.softserial_tty_driver.unthrottle      = softserial_unthrottle;
+-   G.softserial_tty_driver.send_xchar      = softserial_send_xchar;
+-   G.softserial_tty_driver.set_termios     = softserial_set_termios;
+-   G.softserial_tty_driver.stop            = softserial_stop;
+-   G.softserial_tty_driver.start           = softserial_start;
+-   G.softserial_tty_driver.hangup          = softserial_hangup;
+-   G.softserial_tty_driver.break_ctl       = softserial_break;
+-   G.softserial_tty_driver.wait_until_sent = softserial_wait_until_sent;
+-   G.softserial_tty_driver.set_ldisc       = softserial_set_ldisc;
++   static struct tty_operations ops = {
++     .open            = softserial_open,
++     .close           = softserial_close,
++     .write           = softserial_write,
++     .put_char        = softserial_put_char,
++     .flush_chars     = softserial_flush_chars,
++     .write_room      = softserial_write_room,
++     .chars_in_buffer = softserial_chars_in_buffer,
++     .flush_buffer    = softserial_flush_buffer,
++     .ioctl           = softserial_ioctl,
++     .throttle        = softserial_throttle,
++     .unthrottle      = softserial_unthrottle,
++     .send_xchar      = softserial_send_xchar,
++     .set_termios     = softserial_set_termios,
++     .stop            = softserial_stop,
++     .start           = softserial_start,
++     .hangup          = softserial_hangup,
++     .break_ctl       = softserial_break,
++     .wait_until_sent = softserial_wait_until_sent,
++     .set_ldisc       = softserial_set_ldisc,
++   };
++   tty_set_operations(&(G.softserial_tty_driver), &ops);
++ 
+    rc = tty_register_driver(&(G.softserial_tty_driver));
+    if(rc)
+    {
