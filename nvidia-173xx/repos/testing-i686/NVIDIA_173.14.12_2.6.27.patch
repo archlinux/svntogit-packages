@@ -1,0 +1,87 @@
+diff -Nru NVIDIA-Linux-x86-173.14.12-pkg0.orig/usr/src/nv/nv.c NVIDIA-Linux-x86-173.14.12-pkg0/usr/src/nv/nv.c
+--- usr/src/nv/nv.c	2008-07-18 03:42:50.000000000 +0200
++++ NVIDIA-Linux-x86-173.14.12-pkg0/usr/src/nv/nv.c	2008-08-12 00:35:45.000000000 +0200
+@@ -1296,14 +1296,22 @@
+             if (get_cpu() == cpu)
+                 __nv_setup_pat_entries(NULL);
+             else
++	    	#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
++		smp_call_function(__nv_setup_pat_entries, hcpu, 1);
++		#else
+                 smp_call_function(__nv_setup_pat_entries, hcpu, 1, 1);
++		#endif
+             put_cpu();
+             break;
+         case CPU_DOWN_PREPARE:
+             if (get_cpu() == cpu)
+                 __nv_restore_pat_entries(NULL);
+             else
++	    	#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
++		smp_call_function(__nv_restore_pat_entries, hcpu, 1);
++		#else
+                 smp_call_function(__nv_restore_pat_entries, hcpu, 1, 1);
++		#endif
+             put_cpu();
+             break;
+     }
+diff -Nru NVIDIA-Linux-x86-173.14.12-pkg0.orig/usr/src/nv/nv-linux.h NVIDIA-Linux-x86-173.14.12-pkg0/usr/src/nv/nv-linux.h
+--- usr/src/nv/nv-linux.h	2008-07-18 03:42:51.000000000 +0200
++++ NVIDIA-Linux-x86-173.14.12-pkg0/usr/src/nv/nv-linux.h	2008-08-12 00:44:27.000000000 +0200
+@@ -104,7 +104,10 @@
+ #endif
+ 
+ #include <linux/spinlock.h>
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
++#else
+ #include <asm/semaphore.h>
++#endif
+ #include <linux/completion.h>
+ #include <linux/highmem.h>
+ 
+@@ -665,13 +668,21 @@
+ #if defined(preempt_disable)
+     preempt_disable();
+ #endif
++    #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
++    ret = smp_call_function(func, info, 1);
++    #else
+     ret = smp_call_function(func, info, 1, 1);
++    #endif
+     func(info);
+ #if defined(preempt_enable)
+     preempt_enable();
+ #endif
+ #else
++    #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
++    ret = on_each_cpu(func, info, 1);
++    #else
+     ret = on_each_cpu(func, info, 1, 1);
++    #endif
+ #endif
+     return ret;
+ }
+diff -Nru NVIDIA-Linux-x86-173.14.12-pkg0.orig/usr/src/nv/os-interface.c NVIDIA-Linux-x86-173.14.12-pkg0/usr/src/nv/os-interface.c
+--- usr/src/nv/os-interface.c	2008-07-18 03:42:50.000000000 +0200
++++ NVIDIA-Linux-x86-173.14.12-pkg0/usr/src/nv/os-interface.c	2008-08-12 00:48:07.000000000 +0200
+@@ -48,7 +48,11 @@
+ #endif
+     local_bh_disable();
+     atomic_set(&os_smp_barrier, 1);
++    #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
++    ret = smp_call_function(ipi_handler, NULL, 0);
++    #else
+     ret = smp_call_function(ipi_handler, NULL, 1, 0);
++    #endif
+ #endif
+     return (ret == 0) ? RM_OK : RM_ERROR;
+ }
+@@ -704,7 +708,9 @@
+     U032 sig
+ )
+ {
++    #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 26)
+     return kill_proc(pid, sig, 1) ? RM_ERR_OPERATING_SYSTEM : RM_OK;
++    #endif
+ }
+ 
+ /*******************************************************************************/
