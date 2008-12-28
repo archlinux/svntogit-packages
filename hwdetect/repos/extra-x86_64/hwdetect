@@ -31,6 +31,7 @@ usage () {
 	echo "    --show-other           show OTHER modules"
 	echo ""
 	echo "  For /etc/mkinitcpio.conf use:"
+	echo "    --filesystem           add filesystems to MODULES="
 	echo "    --hostcontroller       show MODULES= for all hostcontrollers"
 	echo "    --vmware               add BusLogic to MODULES for vmware"
         echo "" 
@@ -44,6 +45,7 @@ usage () {
 	echo "    --lvm2                 add lvm2 to HOOKS="
 	echo "    --keymap               add keymap to HOOKS="
 	echo "    --usb                  add usb to HOOKS="
+	echo "    --usbinput             add usbinput to HOOKS="
 	echo "    --fw                   add fw to HOOKS="
 	echo "    --pcmcia               add pcmcia to HOOKS="
 	echo "    --nfs                  add net to HOOKS="
@@ -97,7 +99,10 @@ fi
 [ "$(echo $* | grep '\-keymap')" ] && KEYMAP=1
 
 # usb switch
-[ "$(echo $* | grep '\-usb')" ] && USB=1
+[ "$(echo $* | grep '\-usb ')" ] && USB=1
+
+# usbinput switch
+[ "$(echo $* | grep '\-usbinput')" ] && USBINPUT=1
 
 # fw switch
 [ "$(echo $* | grep '\-fw')" ] && FW=1
@@ -121,6 +126,10 @@ fi
 : >/tmp/modules-stripped
 : >/tmp/modules-sorted
 : >/tmp/moduleslist
+: >/tmp/blkid
+
+# generate blkid
+blkid -c /dev/null -s TYPE > /tmp/blkid
 
 # find pci aliases
 aliases=$(find /sys/ -noleaf -name modalias  -exec cat {} +)
@@ -212,7 +221,7 @@ grep "fusion/" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "ata/"  /tmp/modules-stripped| grep -v "pata" | grep -v "ata_generic" | grep -v "libata" >> /tmp/modules-sorted
 grep "block/" /tmp/modules-stripped | grep "sx8" >> /tmp/modules-sorted
 grep "net/" /tmp/modules-stripped | grep -v "wireless/" | grep -v "usb/" >> /tmp/modules-sorted
-grep "wireless/" /tmp/modules-stripped >> /tmp/modules-sorted
+grep "wireless/" /tmp/modules-stripped | grep "staging" >> /tmp/modules-sorted
 grep "pcmcia/" /tmp/modules-stripped >> /tmp/modules-sorted
 
 # speed up usb module loading
@@ -351,18 +360,23 @@ while [ $# -gt 0 ]; do
 		--show-sound)  showlist "SOUND  " $(listmods pcspkr) $(listmods sound/) ;;
 		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
 		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/) ;;
-		--hostcontroller)  showlist2 "MODULES" \"$(listmods ide/pci) $(listmods ata/pata) $(listmods ata/ata_generic) $(listmods scsi/ /sg.ko /st.ko sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+		--filesystem) FILESYSTEM="ext2 ext3 ext4 reiserfs xfs jfs"
+				  for i in $FILESYSTEM; do
+					 [ "$(grep $i /tmp/blkid)" ] && FS="$FS $i"
+				  done
+				  ;;
+		--hostcontroller) showlist2 "MODULES" \"$(listmods ide/pci) $(listmods ata/pata) $(listmods ata/ata_generic) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $FS\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
-		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
+		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) \) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(dmesg | grep '"8139too"')" ]; then
-						MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)"
+						MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
 					 showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/8139cp//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				else
-					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)"
+					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
 					showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/8139too//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				fi
 			else
-				MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/)"
+				MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
 				showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			fi
 			;;
@@ -391,35 +405,22 @@ while [ $# -gt 0 ]; do
 			else
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/ide//g")
 			fi
-			# usbinput, check for usbhid
-			if ! [ "$(cat /proc/modules | grep usbhid)" ]; then
+			if !  [ "$USBINPUT" = "1" ]; then
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/usbinput//g")
 			fi
-			# keymap, check rc.conf for KEYMAP="us"
-			if [ "$(grep '^KEYMAP="us"' /etc/rc.conf)" ]; then
-				if ! [ "${KEYMAP}" = "1" ]; then
+			if ! [ "$KEYMAP" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/keymap//g")
-				fi
 			fi
-			### TODO raid, check for presence of md devices in /dev
-			#if ! [ "$(ls /dev/md* > /dev/null 2>&1 )" ]; then
-			#	START_HOOKS=$(echo $START_HOOKS | sed -e "s/raid//g")
-			#fi
-			if ! [ "$RAID" = "1" ] ; then 
+			if ! [ "$RAID" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/\ raid\ //g")
 			fi
-			if ! [ "$RAID_PARTITIONS" = "1" ] ; then 
+			if ! [ "$RAID_PARTITIONS" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/raid-partitions\ //g")
 			fi
-			if ! [ "$DMRAID" = "1" ] ; then 
+			if ! [ "$DMRAID" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/dmraid//g")
 			fi
-			### TODO lvm2, encrypt check
-			# encrypt, check for presence of mapper/root
-			#if ! [ "$(ls /dev/mapper/root > /dev/null 2>&1 )" ]; then
-			#	START_HOOKS=$(echo $START_HOOKS | sed -e "s/encrypt//g")
-			#fi
-			if ! [ "$ENCRYPT" = "1" ] ; then
+			if ! [ "$ENCRYPT" = "1" ]; then
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/encrypt//g")
 			fi
 			if ! [ "$LVM2" = "1" ]; then
