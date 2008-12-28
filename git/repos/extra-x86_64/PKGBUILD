@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.0.6
+pkgver=1.6.1
 pkgrel=1
 pkgdesc="GIT - the stupid content tracker"
 arch=(i686 x86_64)
@@ -20,18 +20,16 @@ source=("http://kernel.org/pub/software/scm/git/${pkgname}-${pkgver}.tar.bz2" \
 
 build() {
   cd $srcdir/$pkgname-$pkgver
-  make THREADED_DELTA_SEARCH=1 \
-    prefix=/usr gitexecdir=/usr/lib/git-core || return 1
-  make THREADED_DELTA_SEARCH=1 \
-    prefix=/usr gitexecdir=/usr/lib/git-core \
-    INSTALLDIRS=vendor DESTDIR=${pkgdir} install
+  make prefix=/usr gitexecdir=/usr/lib/git-core || return 1
+  make prefix=/usr gitexecdir=/usr/lib/git-core \
+    INSTALLDIRS=vendor DESTDIR=${pkgdir} install || return 1
   
   # let's plop gitweb in /usr/share
-  mkdir -p $pkgdir/usr/share/ || return 1
+  mkdir -p $pkgdir/usr/share/
   cp -dR ./gitweb $pkgdir/usr/share/gitweb || return 1
 
   #bash completion
-  mkdir -p $pkgdir/etc/bash_completion.d/ || return 1
+  mkdir -p $pkgdir/etc/bash_completion.d/
   install -m644 ./contrib/completion/git-completion.bash $pkgdir/etc/bash_completion.d/git || return 1
 
   # how 'bout some manpages?
@@ -45,5 +43,5 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('b5be9b34b441cb57f92086bfaf59f255'
-         'e795e251df5c14a8c7212742880a6a9e')
+md5sums=('66265d85593473b23290232b9dccef77'
+         'f53f454c397f691ad50ca6657b56d35c')
