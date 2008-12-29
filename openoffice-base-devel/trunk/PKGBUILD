@@ -2,24 +2,24 @@
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
 pkgname=openoffice-base-devel
-pkgver=3.1_dev300_m37
+pkgver=3.1_dev300_m38
 pkgrel=1
 pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=('i686' 'x86_64')
-_OO_milestone=DEV300_m37
+_OO_milestone=DEV300_m38
 license=('LGPL3')
 url="http://www.openoffice.org"
 install=openoffice.install
-depends=('curl>=7.18.0' 'hunspell>=1.2.2-2' 'python>=2.6' 'libwpd' 
-         'libxaw' 'neon>=0.28.2' 'dbus-glib' 'icu>=4.0' 'redland' 'hsqldb-java' 'libxslt')
+depends=('curl>=7.19.2' 'hunspell>=1.2.8' 'python>=2.6.1' 'libwpd' 'redland' 
+         'libxaw' 'neon>=0.28.3-2' 'dbus-glib' 'icu>=4.0-2' 'hsqldb-java' 'libxslt' 'sqlite3')
 optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
             'nss:		adds support for signed files/macros'
             'pstoedit:		translates PostScript and PDF graphics into other vector formats')
 makedepends=('bison' 'cvs' 'curl' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'xulrunner>=1.9.0.3'
-             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.3')
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'xulrunner>=1.9.0.5'
+             'boost' 'apache-ant' 'cairo' 'gperf' 'libcups' 'pstoedit' 'gconf' 'openjdk6>=1.3.1-2')
 provides=('openoffice-base')
 
 #MIRROR=ftp://ftp5.gwdg.de/pub/openoffice/extended/developer/
@@ -38,7 +38,9 @@ source=(#$MIRROR/${_OO_milestone}/OOo-Dev_${_OO_milestone}_src_{core,system}.tar
 	shell.patch
 	system_hsqldb.diff
 	buildfix-openjdk-6-no-rhino.diff
-	extensions-missing-MOZ_INC.diff
+	cws-swffixes02.diff
+	fix_EOL_STLport-4.5.patch
+	fix-mozbootstrap.diff
 	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
 
@@ -61,6 +63,7 @@ build() {
 
 	# some speedups
 	export SMP="6"
+#	export SMP="1"
 	MAXMODULESFLAG="-P${SMP}"
 	MAXPROCESSESFLAG="-P${SMP}"
 	export nodep=true
@@ -68,8 +71,10 @@ build() {
 
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc43.diff || return 1
-	patch -Np0 -i ${srcdir}/extensions-missing-MOZ_INC.diff || return 1
+	patch -Np0 -i ${srcdir}/cws-swffixes02.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix-openjdk-6-no-rhino.diff || return 1
+	patch -Np0 -i ${srcdir}/fix_EOL_STLport-4.5.patch || return 1
+	patch -Np0 -i ${srcdir}/fix-mozbootstrap.diff || return 1
 
 	# allows xmlsec to be able to read the format of the digital certificates.
 	patch -Np0 -i ${srcdir}/libxmlsec-findcerts.diff || return 1
@@ -88,10 +93,11 @@ build() {
 	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
 
 	if [ "$CARCH" = "x86_64" ]; then
-	   EXTRAOPTS="--with-stlport"
+	   EXTRAOPTS="--without-stlport"
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
+	 else EXTRAOPTS="--with-stlport"
 	fi
 
 	cd ${srcdir}/${_OO_milestone}/config_office
@@ -133,7 +139,6 @@ build() {
 	--with-system-db\
 	--with-system-cairo\
 	--with-system-curl\
-	--with-system-dicts\
 	--with-system-expat\
 	--with-system-freetype\
 	--with-system-hunspell\
@@ -171,7 +176,7 @@ build() {
 
 #	--disable-qadevooo\ http://www.openoffice.org/issues/show_bug.cgi?id=91452
 #	--enable-evolution2\
-
+#	--with-system-dicts\
 	cd ..
 
 	# Setup environment for build
@@ -189,7 +194,7 @@ build() {
 
 	# install binaries
 	if [ "$CARCH" = "x86_64" ]; then
-	  cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
+                cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
 	 else 	cp -R instsetoo_native/unxlngi6.pro/OpenOffice/native/install/en-US/linux-2.6-intel/buildroot/* ${pkgdir}/
 	fi
 
@@ -293,6 +298,6 @@ build() {
 	# link the mozilla-plugin
 	mkdir -p ${pkgdir}/usr/lib/mozilla/plugins/
 	cd ${pkgdir}/usr/lib/mozilla/plugins/
-	ln -v -s /opt/openoffice-dev/program/libnpsoplugin.so . # should be fixed to reflect the devel path in the next release
+	ln -v -s /opt/openoffice-dev/program/libnpsoplugin.so . 
 	mv ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-dev.so
 }
