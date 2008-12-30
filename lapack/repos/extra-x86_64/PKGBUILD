@@ -1,43 +1,46 @@
 # $Id$
-# Maintainer: damir <damir@archlinux.org>
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: damir <damir@archlinux.org>
 # Contributor: Jason Taylor <jftaylor21@gmail.com>
 
 pkgname=lapack
-pkgver=3.1.1
-pkgrel=4
+pkgver=3.2
+pkgrel=1
 pkgdesc="Linear Algebra PACKage"
 url="http://www.netlib.org/lapack"
 arch=('i686' 'x86_64')
 license=("custom")
-depends=('blas>=20070405')
+depends=('blas>=20070405-2')
 source=(http://www.netlib.org/${pkgname}/${pkgname}-${pkgver}.tgz
-	make.inc.archlinux
-	blas-link.patch)
-md5sums=('00b21551a899bcfbaa7b8443e1faeef9'
-         'cc368c407e396227c473db5bac92cf02'
-         'c223181737ed2eb68422b139233cc019')
+	make.inc.archlinux)
+md5sums=('db2e9b01bd157b65440f8306c0ba5446'
+         'cc368c407e396227c473db5bac92cf02')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -Np1 -i "${srcdir}/blas-link.patch" || return 1
   install -m755 -d "${pkgdir}/usr/lib" || return 1
   install -m755 -d "${pkgdir}/usr/share/man/man1" || return 1
-  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}" || return 1
 
   cp "${srcdir}/make.inc.archlinux" make.inc || return 1
-  if [ "${CARCH}" = "x86_64" ]; then
-    CFLAGS="${CFLAGS} -fPIC"
-  fi
+  
+  # Build with Position Independent Code (PIC) FS#12464 (i686), required for x86_64
+  CFLAGS="${CFLAGS} -fPIC"
+
   make clean
   make lib OPTS="${CFLAGS}" NOOPT="${CFLAGS/-O?/-O0}" || return 1
   install -m755 *.so* "${startdir}/pkg/usr/lib/" || return 1
   ln -sf liblapack.so.3 "${pkgdir}/usr/lib/liblapack.so"
   ln -sf libtmglib.so.3 "${pkgdir}/usr/lib/libtmglib.so"
 
-# manpages
-  for _file in manpages/man/manl/* manpages/blas/man/manl/*; do
-    install -m644 "${_file}" "${pkgdir}/usr/share/man/man1/$(basename ${_file} .l).1" || return 1
-  done
+  # upstream does not provide manpages for this release
+  # you can browse them online: http://www.netlib.org/lapack/explore-html/
 
-  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
+  # Manpages
+  #for _file in manpages/man/manl/* manpages/blas/man/manl/*; do
+  #  install -m644 "${_file}" "${pkgdir}/usr/share/man/man1/$(basename ${_file} .l).1" || return 1
+  #done
+
+  # Install custom license
+  install -Dm644 ${srcdir}/${pkgname}-${pkgver}/LICENSE \
+	"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
 }
