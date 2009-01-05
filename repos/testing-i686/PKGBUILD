@@ -1,41 +1,56 @@
-# $Id$
-# Maintainer: Thomas Baechler <thomas@archlinux.org>
+# Maintainer: Geoffroy Carrier <geoffroy@archlinux.org>
+
 pkgname=bluez
-pkgver=4.1
+pkgver=4.25
 pkgrel=1
-pkgdesc="Libraries and tools for the Linux Bluetooth protocol stack"
-arch=('i686' 'x86_64')
+pkgdesc="Libraries and tools for the Bluetooth protocol stack"
 url="http://www.bluez.org/"
-makedepends=('gstreamer0.10-base' 'alsa-lib')
-optdepends=('gstreamer0.10-base' 'alsa-lib')
-depends=('libusb' 'dbus')
+arch=('i686' 'x86_64')
+license=('GPL2')
+depends=('dbus-core' 'glib')
+makedepends=('gstreamer0.10-base' 'alsa-lib' 'libusb')
+optdepends=('gstreamer0.10-base' 'alsa-lib' 'libusb')
 conflicts=('bluez-libs' 'bluez-utils')
 provides=('bluez-libs' 'bluez-utils')
 replaces=('bluez-libs' 'bluez-utils')
-backup=(etc/bluetooth/{main,rfcomm}.conf
+backup=(etc/bluetooth/{main,rfcomm,audio,network,input}.conf
         etc/conf.d/bluetooth)
-license=('GPL')
-options=(!libtool)
-source=(http://www.kernel.org/pub/linux/bluetooth/bluez-${pkgver}.tar.gz
-        bluetooth.conf.d
-        bluetooth.rc
-        PATH_MAX-compile-failure.patch)
-md5sums=('605b6dc32833b61c22edcac2ef2cd12e'
-         '8593ea9cfa9814e2a22b19845b3c276c'
-         '03d4f2463b1b580e8d2ada3767140685'
-         '0ea12486a5a407c28d48c18b62be60fa')
+source=("http://www.kernel.org/pub/linux/bluetooth/$pkgname-$pkgver.tar.bz2"
+        'bluetooth.conf.d'
+        'rc.bluetooth')
 
 build() {
-  cd ${srcdir}/${pkgname}-${pkgver}
-  patch -Np1 -i ../PATH_MAX-compile-failure.patch || return 1
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/lib \
-              --enable-gstreamer --enable-alsa --enable-usb --enable-netlink \
-              --enable-tools --enable-bccmd --enable-hid2hci --enable-dfutool \
-              --enable-hidd --enable-pand --enable-dund --enable-cups --enable-manpages \
-              --enable-configfiles --enable-pcmciarules
+  cd "$srcdir/$pkgname-$pkgver"
+  ./configure --prefix=/usr \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --libexecdir=/lib \
+        --mandir=/usr/share/man \
+        --enable-gstreamer \
+        --enable-alsa \
+        --enable-usb \
+        --enable-netlink \
+        --enable-tools \
+        --enable-bccmd \
+        --enable-hid2hci \
+        --enable-dfutool \
+        --enable-hidd \
+        --enable-pand \
+        --enable-dund \
+        --enable-cups \
+        --enable-manpages \
+        --enable-configfiles \
+        --enable-pcmciarules || return 1
   make || return 1
-  make DESTDIR=${pkgdir} install || return 1
+  make DESTDIR="$pkgdir" install || return 1
 
-  install -D -m755 ${srcdir}/bluetooth.rc ${pkgdir}/etc/rc.d/bluetooth || return 1
-  install -D -m644 ${srcdir}/bluetooth.conf.d ${pkgdir}/etc/conf.d/bluetooth || return 1
+  install -D -m644 "$srcdir/$pkgname-$pkgver/network/network.conf" "$pkgdir/etc/bluetooth/" || return 1
+  install -D -m644 "$srcdir/$pkgname-$pkgver/input/input.conf"     "$pkgdir/etc/bluetooth/" || return 1
+  install -D -m644 "$srcdir/$pkgname-$pkgver/audio/audio.conf"     "$pkgdir/etc/bluetooth/" || return 1
+  install -D -m755 "$srcdir/rc.bluetooth"                          "$pkgdir/etc/rc.d/bluetooth" || return 1
+  install -D -m644 "$srcdir/bluetooth.conf.d"                      "$pkgdir/etc/conf.d/bluetooth" || return 1
 }
+
+md5sums=('3d7b621b5b8a63f78f59e008b87c0738'
+         '8593ea9cfa9814e2a22b19845b3c276c'
+         '03d4f2463b1b580e8d2ada3767140685')
