@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# $Id: auto.net,v 1.1 2003/11/15 15:40:14 manolis Exp $
+
+# Look at what a host is exporting to determine what we can mount.
+# This is very simple, but it appears to work surprisingly well
+
+key="$1"
+
+# add "nosymlink" here if you want to suppress symlinking local filesystems
+# Note: "nonstrict" is now set by default, remove it if you don't want it.
+opts="-fstype=nfs,hard,intr,nodev,nosuid,nonstrict"
+
+# Showmount comes in a number of names and varieties.  "showmount" is
+# typically an older version which accepts the '--no-headers' flag
+# but ignores it.  "kshowmount" is the newer version installed with knfsd,
+# which both accepts and acts on the '--no-headers' flag.
+#SHOWMOUNT="kshowmount --no-headers -e $key"
+#SHOWMOUNT="showmount -e $key | tail +2"
+
+# Newer distributions get this right
+SHOWMOUNT="/usr/sbin/showmount --no-headers -e $key"
+
+$SHOWMOUNT | LC_ALL=C sort +0 | \
+	awk -v key="$key" -v opts="$opts" -- '
+	BEGIN		{ ORS=""; first=1 }
+			{ if (first) { print opts; first=0 }; print " \\\n\t" $1, key ":" $1 }
+	END		{ if (!first) print "\n"; else exit 1 }
+	'
