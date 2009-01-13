@@ -4,11 +4,11 @@
 
 pkgname=pyqt
 pkgver=4.4.4
-pkgrel=1
+pkgrel=2
 pkgdesc="PyQt is a set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/pyqt/"
-depends=('sip>=4.7.9' 'qscintilla>=2.3' 'qt>=4.4.3')
+depends=('sip>=4.7.9' 'qscintilla>=2.3' 'qt>=4.4.3' 'dbus-python')
 license=('GPL')
 provides=('pyqt4')
 replaces=('pyqt4')
