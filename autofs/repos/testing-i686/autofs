@@ -3,15 +3,21 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-PID=`pidof -o %PPID /usr/bin/automuonter`
+# source application-specific settings
+[ -f /etc/conf.d/autofs ] && . /etc/conf.d/autofs
+
+if [ ! -z "$TIMEOUT" ]; then
+  daemonoptions="--timeout=$TIMEOUT $daemonoptions"
+fi
+
+PID=`cat /var/run/autofs-running &> /dev/null`
 case "$1" in
   start)
     stat_busy "Starting Automounter"
-    [ -z "$PID" ] && /usr/bin/automuonter &> /dev/null &
+    [ -z "$PID" ] && /usr/sbin/automount $daemonoptions &> /dev/null &
     if [ $? -gt 0 ]; then
       stat_fail
     else
-      echo $PID > /var/run/autofs.pid
       add_daemon autofs
       stat_done
     fi
@@ -22,7 +28,6 @@ case "$1" in
     if [ $? -gt 0 ]; then
       stat_fail
     else
-      rm -f /var/run/autofs.pid
       rm_daemon autofs
       stat_done
     fi
