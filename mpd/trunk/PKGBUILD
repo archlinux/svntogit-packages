@@ -3,20 +3,20 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.14
-pkgrel=2
+pkgver=0.14.1
+pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://musicpd.org"
 depends=('libid3tag' 'libmad' 'flac>=1.1.3' 'audiofile' 'faad2>=2.6.1' 'libmikmod'
-         'alsa-lib' 'libshout' 'libmpcdec>=1.2.5' 'libsamplerate' 'libao')
+         'alsa-lib' 'libshout' 'libmpcdec>=1.2.5' 'libsamplerate' 'libao' 'ffmpeg'
+	 'wavpack')
 install=mpd.install
 source=(http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.gz
-        'mpd' 'mpd.conf.example')
-md5sums=('4a4854e5998f4f0b226d541717aa4fa6'
-	'b1fd15de359db08e4b9ae4b199640f0e'
-	'b3e370377d39d17427c50f04a0cdea6e')
+        'mpd')
+md5sums=('7bb77277b784024faca1a6c922fcf80e'
+	'b1fd15de359db08e4b9ae4b199640f0e')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
@@ -28,9 +28,13 @@ build() {
   make || return 1
   make DESTDIR=${pkgdir} install
 
-  install -D ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd
-  install -Dm644 ${srcdir}/mpd.conf.example ${pkgdir}/etc/mpd.conf.example
-  install -d ${pkgdir}/var/lib/mpd/playlists
-  install -d ${pkgdir}/var/log/mpd
-  install -d ${pkgdir}/var/run/mpd
+  sed -i 's|music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
+  sed -i 's|playlist_directory.*$|playlist_directory "/var/lib/mpd/playlists"|1' doc/mpdconf.example
+  sed -i 's|db_file.*$|db_file "/var/lib/mpd/mpd.db"|1' doc/mpdconf.example
+  sed -i 's|log_file.*$|log_file "/var/log/mpd/mpd.log"|1' doc/mpdconf.example
+  sed -i 's|error_file.*$|error_file "/var/log/mpd/mpd.error"|1' doc/mpdconf.example
+  install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example || return 1
+
+  install -D ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd || return 1
+  install -d ${pkgdir}/var/lib/mpd/playlists ${pkgdir}/var/log/mpd ${pkgdir}/var/run/mpd
 }
