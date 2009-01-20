@@ -3,29 +3,43 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.13.2
-pkgrel=1
+pkgver=0.14.1
+pkgrel=3
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
-license=("GPL")
+license=('GPL')
 url="http://musicpd.org"
 depends=('libid3tag' 'libmad' 'flac>=1.1.3' 'audiofile' 'faad2>=2.6.1' 'libmikmod'
-         'alsa-lib' 'libshout' 'libmpcdec>=1.2.5' 'libsamplerate' 'libao')
+         'alsa-lib' 'libshout' 'libmpcdec>=1.2.5' 'libsamplerate' 'libao' 'ffmpeg'
+	 'wavpack')
 install=mpd.install
-source=(http://musicpd.org/uploads/files/mpd-${pkgver}.tar.gz
-        mpd mpd.conf.example)
-md5sums=('33d0c7b08e2c9e2a6ad55703cb0d18d0' 'b1fd15de359db08e4b9ae4b199640f0e'\
-         'b3e370377d39d17427c50f04a0cdea6e')
+source=(http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.gz
+        'mpd')
+md5sums=('7bb77277b784024faca1a6c922fcf80e'
+	'b1fd15de359db08e4b9ae4b199640f0e')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  ./configure --prefix=/usr --sysconfdir=/etc --disable-jack --enable-ao -with-zeroconf=no
+  cd ${srcdir}/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --disable-jack \
+    --enable-ao \
+    --with-zeroconf=no
   make || return 1
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${pkgdir} install
 
-  install -D ../mpd ${startdir}/pkg/etc/rc.d/mpd
-  install -Dm644 ../mpd.conf.example ${startdir}/pkg/etc/mpd.conf.example
-  mkdir -p ${startdir}/pkg/var/lib/mpd/playlists
-  mkdir -p ${startdir}/pkg/var/log/mpd
-  mkdir -p ${startdir}/pkg/var/run/mpd
+  # set ours dirs in mpd.conf file
+  sed -i 's|music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
+  sed -i 's|playlist_directory.*$|playlist_directory "/var/lib/mpd/playlists"|1' doc/mpdconf.example
+  sed -i 's|db_file.*$|db_file "/var/lib/mpd/mpd.db"|1' doc/mpdconf.example
+  sed -i 's|log_file.*$|log_file "/var/log/mpd/mpd.log"|1' doc/mpdconf.example
+  sed -i 's|error_file.*$|error_file "/var/log/mpd/mpd.error"|1' doc/mpdconf.example
+  sed -i 's|#pid_file.*$|pid_file "/var/run/mpd/mpd.pid"|1' doc/mpdconf.example
+  sed -i 's|#state_file.*$|state_file "/var/lib/mpd/mpdstate"|1' doc/mpdconf.example
+  sed -i 's|#user.*$|user "mpd"|1' doc/mpdconf.example
+
+  install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example || return 1
+
+  install -D ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd || return 1
+  install -d ${pkgdir}/var/lib/mpd/playlists ${pkgdir}/var/log/mpd ${pkgdir}/var/run/mpd
 }
