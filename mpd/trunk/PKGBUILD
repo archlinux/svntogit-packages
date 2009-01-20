@@ -4,7 +4,7 @@
 
 pkgname=mpd
 pkgver=0.14.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
