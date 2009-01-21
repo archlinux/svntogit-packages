@@ -42,9 +42,19 @@ static char *getline(FILE *file) {
 }
 
 int main(int argc, char *argv[]) {
-  FILE *f=fopen(argv[1], "r");
   char *line, *pattern, *module;
   char *pos1, *pos2;
+
+  if(argc != 3) {
+      fprintf(stderr, "usage: resolve-modalias <alias file> <modalias>\n");
+      return 1;
+  }
+
+  FILE *f=fopen(argv[1], "r");
+  if(!f) {
+    perror("error opening alias file");
+    return 1;
+  }
 
   while((line=getline(f))!=NULL) {
     if(!strncmp(line, "alias", strlen("alias"))) {
@@ -60,3 +70,4 @@ int main(int argc, char *argv[]) {
   }
   return 0;
 }
+//vim: set ts=2 sw=2 et:
