@@ -8,7 +8,12 @@ MYSQLD_ROOT="/var/lib/mysql"
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-PID=`pidof -o %PPID /usr/sbin/mysqld`
+getPID() {
+	if [ -f $MYSQLD_ROOT/$HOSTNAME.pid ]; then
+		echo `cat $MYSQLD_ROOT/$HOSTNAME.pid`
+	fi
+}
+
 if [ ! `egrep '^mysql:' /etc/group` ]; then
   stat_busy "Adding mysql group"
   groupadd -g 89 mysql
@@ -30,19 +35,18 @@ fi
 case "$1" in
   start)
     stat_busy "Starting MySQL"
-    if [ -z "$PID" ]; then
+    if [ -z "$(getPID)" ]; then
        /usr/bin/mysqld_safe --datadir=$MYSQLD_ROOT &>/dev/null &
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
       else
         sleep 1 # wait on children
-        PID=`pidof -o %PPID /usr/sbin/mysqld`
-        if [ -z "$PID" ]; then
+        if [ -z "$(getPID)" ]; then
           stat_fail
           exit 1
         else
-          echo $PID >/var/run/mysqld.pid
+          cp $MYSQLD_ROOT/$HOSTNAME.pid /var/run/mysqld.pid
           add_daemon mysqld
           stat_done
         fi
@@ -55,8 +59,8 @@ case "$1" in
 
   stop)
     stat_busy "Stopping MySQL"
-    if [ ! -z "$PID" ]; then
-      kill $PID &> /dev/null      
+    if [ ! -z "$(getPID)" ]; then
+      kill $(getPID) &> /dev/null      
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
