@@ -1,35 +1,36 @@
 # $Id$
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
-# Contributor: damir <damir@archlinux.org>
+# Contributor: damir <damir.archlinux.org>
 
 pkgname=qtiplot
-pkgver=0.9.7.3
+pkgver=0.9.7.4
 pkgrel=1
 pkgdesc="Data analysis and scientific plotting - free clone of Origin"
-arch=("i686" "x86_64")
+arch=('i686' 'x86_64')
 url="http://soft.proindependent.com/qtiplot.html"
-depends=('qwtplot3d>=0.2.7' 'muparser>=1.30' 'gsl' 'python>=2.6' 'pyqt' 'sip' \
+depends=('qwtplot3d' 'muparser>=1.30' 'gsl' 'python>=2.6' 'pyqt' 'sip' \
 	'boost>=1.36' 'libgl')
 # build against static liborigin provided in the package ...
 # as systemwide one doesn't provide all needed functions
-license=("GPL2")
+license=('GPL2')
 
 source=("http://soft.proindependent.com/src/qtiplot-$pkgver.tar.bz2" \
 	"$pkgname.desktop" "$pkgname.png" \
         "qtiplot-gcc4.3.patch" "liborigin-gcc4.3.patch" \
 	"qtiplot.archlinux.patch" "qtiplot-0.9.7.3-qwt3d.patch" \
-	"dynamicgsl.patch")
+	"dynamicgsl.patch" "qtiplot-sip.patch" "qtiplot-nopython.patch")
 
-md5sums=('814c6719643304626c33a9073293f77b' '56bd53f4f1367c285086acb969f13348'
-         'ad8affbd6f0d5cbdcde46c923ee2668a' '927149a0c3623209d4aaef867031ba76'
-         'ad2333cfb8df37d33a6449c2c49ec945' '3e1c6ba4997d587ebe25118f86f8e1b3'
-         '20ae1d441f299aa2c2c54e3bed3a9786' '2c858d26255ecde7bcd157515ed767d6')
+md5sums=('dd149d024501e34cda685023522b4d8d'         '56bd53f4f1367c285086acb969f13348'
+         'ad8affbd6f0d5cbdcde46c923ee2668a'         '927149a0c3623209d4aaef867031ba76'
+         'ad2333cfb8df37d33a6449c2c49ec945'         '6e30bd907a945881f667036df3b3d96b'
+         '20ae1d441f299aa2c2c54e3bed3a9786'         '2c858d26255ecde7bcd157515ed767d6'
+         'f68e62cd6c6762345f1a123321f49e57'         'b65f2b1266b42b9c298ac4dee3d19c90')
 
 build() {
 
-  # patching
-
   cd $srcdir/$pkgname-$pkgver
+
+  # patching
   patch -Np0 < $srcdir/dynamicgsl.patch || return 1
 
   cd $srcdir/$pkgname-$pkgver/$pkgname
@@ -37,21 +38,18 @@ build() {
   patch -Np0 -i $srcdir/qtiplot-0.9.7.3-qwt3d.patch || return 1
   patch -Np0 -i $srcdir/liborigin-gcc4.3.patch || return 1
   patch -Np0 -i $srcdir/qtiplot.archlinux.patch || return 1
+  patch -Np0 -i $srcdir/qtiplot-sip.patch || return 1
+  patch -Np2 -i $srcdir/qtiplot-nopython.patch || return 1
 
   export QMAKESPEC=linux-g++
 
   qmake qtiplot.pro || return 1
   make QTDIR=/usr/ QMAKESPEC=linux-g++ || return 1
-  install -D $srcdir/$pkgname-$pkgver/$pkgname/$pkgname \
-	$pkgdir/usr/bin/$pkgname || return 1
+  INSTALL_ROOT=${pkgdir} make install || return 1
 
   # make it nice:
   install -D -m644 $srcdir/$pkgname.png \
   	$pkgdir/usr/share/pixmaps/$pkgname.png || return 1
   install -D -m644 $srcdir/$pkgname.desktop \
   	$pkgdir/usr/share/applications/$pkgname.desktop || return 1
-
-# install wordlist for autocompletion
- install -Dm644 $srcdir/$pkgname-$pkgver/$pkgname/qti_wordlist.txt \
-	$pkgdir/usr/bin/qti_wordlist.txt || return 1
 }
