@@ -4,7 +4,7 @@
 
 pkgname=glibc
 pkgver=2.9
-pkgrel=3
+pkgrel=4
 _glibcdate=20081119
 install=glibc.install
 backup=(etc/locale.gen)
@@ -13,7 +13,7 @@ arch=(i686 x86_64)
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('sh' 'kernel-headers>=2.6.27.6' 'tzdata')
+depends=('kernel-headers>=2.6.27.6' 'tzdata')
 makedepends=('gcc>=4.3.2-2')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
