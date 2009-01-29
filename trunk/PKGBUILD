@@ -4,13 +4,13 @@
 
 pkgname=readline
 pkgver=5.2.013
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU readline library"
 arch=(i686 x86_64)
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
 license=('GPL')
 groups=('base')
-depends=('glibc' 'ncurses' 'texinfo')
+depends=('glibc' 'ncurses')
 backup=("etc/inputrc")
 source=(#ftp://ftp.cwru.edu/pub/bash/readline-${pkgver}.tar.gz
 	http://www.sfr-fresh.com/unix/misc/readline-${pkgver}.tar.gz
