@@ -8,7 +8,7 @@
 # install old package, build new package, install new package, rebuild
 
 pkgname=imagemagick
-pkgver=6.4.8.2
+pkgver=6.4.8.10
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -19,9 +19,9 @@ depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'l
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('8454e93a0b88fd9319157b5301deff38' '069980fc2590c02aed86420996259302'\
+md5sums=('f0701df4ac1bc0c46a596994e2a8bbf2' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('e5de65c998776c5b49a1b364d05ca3515310e23a'
+sha1sums=('a123a65da1622ee3b04d388b937d9fa16e2bd178'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
@@ -35,6 +35,7 @@ build() {
   patch -p0 < ../add_delegate.patch || return 1
   sed -i "s/with_autotrace='no'/with_autotrace='yes'/" configure || return 1
 
+ # When there is a soname bump, remove 'LIBS=-lMagickWand' from configure line and build/install. Then, readd 'LIBS=-lMagickWand' and build/install twice.
   LIBS=-lMagickWand ./configure --prefix=/usr --without-modules --disable-static --enable-openmp \
               --with-x --with-wmf --with-openexr --with-xml \
               --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
