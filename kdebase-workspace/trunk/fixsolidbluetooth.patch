@@ -1,19 +1,7 @@
-Index: solid_bluez.desktop
+Index: kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothinterface.cpp
 ===================================================================
---- solid/bluez/solid_bluez.desktop~	2009-02-04 17:44:34.000000000 +0100
-+++ solid/bluez/solid_bluez.desktop	2009-02-04 17:44:40.000000000 +0100
-@@ -7,7 +7,6 @@
- Name=BlueZ
- Name[hi]=ब्लूज़
- Name[kn]=ಬ್ಲೂಜ಼್
--Name[mai]=ब्लूज
- Name[ne]=ब्लुZ
- Name[sr]=БлуЗ
- Name[x-test]=xxBlueZxx
-Index: bluez-bluetoothinterface.cpp
-===================================================================
---- solid/bluez/bluez-bluetoothinterface.cpp~	2009-02-04 17:34:11.000000000 +0100
-+++ solid/bluez/bluez-bluetoothinterface.cpp	2009-02-04 17:41:10.000000000 +0100
+--- kdebase-workspace-4.2.0.orig/solid/bluez/bluez-bluetoothinterface.cpp	2008-12-04 03:34:48.000000000 -0500
++++ kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothinterface.cpp	2009-01-24 19:48:30.000000000 -0500
 @@ -25,6 +25,7 @@
  #include <solid/control/bluetoothinterface.h>
  
@@ -98,7 +86,7 @@ Index: bluez-bluetoothinterface.cpp
  }
  
  void BluezBluetoothInterface::requestSession()
-@@ -183,305 +161,16 @@
+@@ -183,305 +161,20 @@
  
  void BluezBluetoothInterface::unregisterAgent(const QString &agentUBI)
  {
@@ -179,8 +167,9 @@ Index: bluez-bluetoothinterface.cpp
 -QString BluezBluetoothInterface::majorClass() const
 -{
 -    return stringReply("GetMajorClass");
--}
--
++    d->iface.call("UnregisterAgent",qVariantFromValue(QDBusObjectPath(agentUBI)));
+ }
+ 
 -QStringList BluezBluetoothInterface::listAvailableMinorClasses() const
 -{
 -    return listReply("ListAvailableMinorClasses");
@@ -200,7 +189,7 @@ Index: bluez-bluetoothinterface.cpp
 -{
 -    return stringReply("GetName");
 -}
--
+ 
 -QString BluezBluetoothInterface::getRemoteName(const QString &mac)
 -{
 -    return stringReply("GetRemoteName",mac);
@@ -220,7 +209,7 @@ Index: bluez-bluetoothinterface.cpp
 -{
 -    return boolReply("IsPeriodicDiscovery");
 -}
--
+ 
 -bool BluezBluetoothInterface::isPeriodicDiscoveryNameResolvingActive() const
 -{
 -    return boolReply("IsPeriodicDiscoveryNameResolving");
@@ -236,10 +225,12 @@ Index: bluez-bluetoothinterface.cpp
 -}
 -
 -QStringList BluezBluetoothInterface::listRecentRemoteDevices(const QDateTime &) const
--{
++void BluezBluetoothInterface::slotDeviceCreated(const QDBusObjectPath &path)
+ {
 -    return listReply("ListRecentRemoteDevices");
 -}
--
++    kDebug() << "device created";
+ 
 -void BluezBluetoothInterface::setMode(const Solid::Control::BluetoothInterface::Mode mode)
 -{
 -    QString modeString;
@@ -254,7 +245,10 @@ Index: bluez-bluetoothinterface.cpp
 -    case Solid::Control::BluetoothInterface::Connectable:
 -        modeString = "connectable";
 -        break;
--    }
++    if (!d->devices.contains(path.path())) {
++        BluezBluetoothRemoteDevice* bluetoothRemoteDev = new BluezBluetoothRemoteDevice(path.path());
++        d->devices.insert(path.path(), bluetoothRemoteDev);
+     }
 -    d->iface.call("SetMode", modeString);
 -}
 -
@@ -266,14 +260,13 @@ Index: bluez-bluetoothinterface.cpp
 -void BluezBluetoothInterface::setMinorClass(const QString &minorClass)
 -{
 -    d->iface.call("SetMinorClass", minorClass);
-+    d->iface.call("UnregisterAgent",qVariantFromValue(QDBusObjectPath(agentUBI)));
- }
- 
+-}
+-
 -void BluezBluetoothInterface::setName(const QString &name)
 -{
 -    d->iface.call("SetName", name);
 -}
--
+ 
 -void BluezBluetoothInterface::discoverDevices()
 -{
 -    d->iface.call("DiscoverDevices");
@@ -399,17 +392,13 @@ Index: bluez-bluetoothinterface.cpp
 -
 -*/
 -
- void BluezBluetoothInterface::slotDeviceCreated(const QDBusObjectPath &path)
- {
-     kDebug() << "device created";
-+    if (!d->devices.contains(path.path())) {
-+        BluezBluetoothRemoteDevice* bluetoothRemoteDev = new BluezBluetoothRemoteDevice(path.path());
-+        d->devices.insert(path.path(), bluetoothRemoteDev);
-+    }
+-void BluezBluetoothInterface::slotDeviceCreated(const QDBusObjectPath &path)
+-{
+-    kDebug() << "device created";
      emit deviceCreated(path.path());
  }
  
-@@ -523,6 +212,18 @@
+@@ -523,6 +216,19 @@
      return bluetoothInterface;
  }
  
@@ -425,28 +414,29 @@ Index: bluez-bluetoothinterface.cpp
 +    return bluetoothInputDev;
 +}
 +
++
  
  /******************* DBus Calls *******************************/
  
-@@ -574,10 +275,13 @@
+@@ -574,10 +280,13 @@
  
      if (param.isEmpty())
  	    reply = d->iface.call(method);
 -    else
 +    else {
-+	    qDebug() << "ObjectReply calling: " << method << " " << param;
++            qDebug() << "ObjectReply calling: " << method << " " << param;
  	    reply = d->iface.call(method, param);
 +    }
-
+ 	    	
      if (reply.isValid()) {
-+	     qDebug() << "ObjectReply Valid? "<<  reply.value().path();
++        qDebug() << "ObjectReply Valid? "<<  reply.value().path();
          return reply.value();
      }
  
-Index: bluez-bluetoothinterface.h
+Index: kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothinterface.h
 ===================================================================
---- bluez-bluetoothinterface.h    (.../branches/KDE/4.2/kdebase/workspace/solid/bluez)    (revision 912529)
-+++ solid/bluez/bluez-bluetoothinterface.h    (.../trunk/KDE/kdebase/workspace/solid/bluez)    (revision 912529)
+--- kdebase-workspace-4.2.0.orig/solid/bluez/bluez-bluetoothinterface.h	2008-12-04 03:34:48.000000000 -0500
++++ kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothinterface.h	2009-01-24 19:48:30.000000000 -0500
 @@ -27,6 +27,7 @@
  #include <QtDBus>
  #include <QDBusVariant>
@@ -531,10 +521,10 @@ Index: bluez-bluetoothinterface.h
      void slotDeviceCreated(const QDBusObjectPath &);
      void slotDeviceDisappeared(const QString &);
      void slotDeviceFound(const QString &, const QMap< QString, QVariant > &);
-Index: bluez-bluetoothmanager.cpp
+Index: kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothmanager.cpp
 ===================================================================
---- bluez-bluetoothmanager.cpp    (.../branches/KDE/4.2/kdebase/workspace/solid/bluez)    (revision 912529)
-+++ solid/bluez/bluez-bluetoothmanager.cpp    (.../trunk/KDE/kdebase/workspace/solid/bluez)    (revision 912529)
+--- kdebase-workspace-4.2.0.orig/solid/bluez/bluez-bluetoothmanager.cpp	2008-10-17 07:00:20.000000000 -0400
++++ kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothmanager.cpp	2009-01-24 19:48:30.000000000 -0500
 @@ -104,6 +104,7 @@
  
  QString BluezBluetoothManager::defaultInterface() const
@@ -560,10 +550,31 @@ Index: bluez-bluetoothmanager.cpp
  /*
  KJob *BluezBluetoothManager::setupInputDevice(const QString &ubi)
  {
-Index: bluez-bluetoothmanager.h
+Index: kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothremotedevice.cpp
 ===================================================================
---- bluez-bluetoothmanager.h    (.../branches/KDE/4.2/kdebase/workspace/solid/bluez)    (revision 912529)
-+++ solid/bluez/bluez-bluetoothmanager.h    (.../trunk/KDE/kdebase/workspace/solid/bluez)    (revision 912529)
+--- kdebase-workspace-4.2.0.orig/solid/bluez/bluez-bluetoothremotedevice.cpp	2008-10-17 07:00:20.000000000 -0400
++++ kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothremotedevice.cpp	2009-01-24 19:48:30.000000000 -0500
+@@ -42,6 +42,7 @@
+ 	m_adapter = m_objectPath.left(objectPath.size() - 18);
+ 	m_address = m_objectPath.right(17);
+ 
++        kdDebug() << "Connecting to ObjectPath: " << objectPath;
+ 
+ 	device = new QDBusInterface("org.bluez", objectPath,
+ 				    "org.bluez.Device", QDBusConnection::systemBus());
+@@ -79,7 +80,7 @@
+ 
+ void BluezBluetoothRemoteDevice::setProperty(const QString &name, const QVariant &value)
+ {
+-    device->call("SetProperty",name,value);
++    device->call("SetProperty",name,qVariantFromValue(QDBusVariant(value)));
+ }
+ 
+ void BluezBluetoothRemoteDevice::discoverServices(const QString& pattern) const
+Index: kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothmanager.h
+===================================================================
+--- kdebase-workspace-4.2.0.orig/solid/bluez/bluez-bluetoothmanager.h	2008-10-17 07:00:20.000000000 -0400
++++ kdebase-workspace-4.2.0/solid/bluez/bluez-bluetoothmanager.h	2009-01-24 19:48:30.000000000 -0500
 @@ -43,6 +43,7 @@
      virtual ~BluezBluetoothManager();
      QStringList bluetoothInterfaces() const;
@@ -572,9 +583,10 @@ Index: bluez-bluetoothmanager.h
  //  QStringList bluetoothInputDevices() const;
      QString defaultInterface() const;
      QString findInterface(const QString &) const;
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinputdevice.cpp kdebase/workspace/libs/solid/control/bluetoothinputdevice.cpp
---- 4_2libsControl/bluetoothinputdevice.cpp    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothinputdevice.cpp    2009-01-14 21:06:47.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothinputdevice.cpp
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothinputdevice.cpp	2008-10-30 10:13:17.000000000 -0400
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothinputdevice.cpp	2009-01-24 19:48:30.000000000 -0500
 @@ -91,8 +91,8 @@
      FrontendObjectPrivate::setBackendObject(object);
  
@@ -586,9 +598,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinputdevice.cpp kdebase
      }
  }
  
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinterface.cpp kdebase/workspace/libs/solid/control/bluetoothinterface.cpp
---- 4_2libsControl/bluetoothinterface.cpp    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothinterface.cpp    2009-01-16 12:11:03.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothinterface.cpp
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothinterface.cpp	2008-12-04 03:34:54.000000000 -0500
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothinterface.cpp	2009-01-24 19:48:30.000000000 -0500
 @@ -25,7 +25,7 @@
  #include <QStringList>
  #include <QVariant>
@@ -761,12 +774,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinterface.cpp kdebase/w
      }
  }
  
-@@ -521,6 +572,32 @@
-         }
- 
+@@ -523,4 +574,30 @@
      }
-+}
-+
+ }
+ 
 +QPair<Solid::Control::BluetoothInputDevice *, Solid::Control::Ifaces::BluetoothInputDevice *> Solid::Control::BluetoothInterfacePrivate::findRegisteredBluetoothInputDevice(const QString &ubi) const
 +{
 +    if (inputDeviceMap.contains(ubi)) {
@@ -791,12 +802,13 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinterface.cpp kdebase/w
 +        }
 +
 +    }
- }
- 
++}
++
  #include "bluetoothinterface.moc"
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinterface.h kdebase/workspace/libs/solid/control/bluetoothinterface.h
---- 4_2libsControl/bluetoothinterface.h    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothinterface.h    2009-01-14 14:17:14.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothinterface.h
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothinterface.h	2008-12-04 03:34:54.000000000 -0500
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothinterface.h	2009-01-24 19:48:30.000000000 -0500
 @@ -28,7 +28,9 @@
  #include <QtCore/QMap>
  
@@ -860,9 +872,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothinterface.h kdebase/wor
  };
  
  } //Control
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothmanager.cpp kdebase/workspace/libs/solid/control/bluetoothmanager.cpp
---- 4_2libsControl/bluetoothmanager.cpp    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothmanager.cpp    2009-01-16 13:17:33.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothmanager.cpp
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothmanager.cpp	2008-12-04 03:34:54.000000000 -0500
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothmanager.cpp	2009-01-24 19:48:30.000000000 -0500
 @@ -58,6 +58,7 @@
  
      void _k_interfaceAdded(const QString &ubi);
@@ -962,9 +975,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothmanager.cpp kdebase/wor
              BluetoothInterface *device = new BluetoothInterface(iface);
              QPair<BluetoothInterface *, Ifaces::BluetoothInterface *> pair(device, iface);
              QObject::connect(iface, SIGNAL(destroyed(QObject *)),
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothmanager.h kdebase/workspace/libs/solid/control/bluetoothmanager.h
---- 4_2libsControl/bluetoothmanager.h    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothmanager.h    2009-01-16 13:17:33.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothmanager.h
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothmanager.h	2008-12-04 03:34:54.000000000 -0500
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothmanager.h	2009-01-24 19:48:30.000000000 -0500
 @@ -188,6 +188,7 @@
  
      Q_PRIVATE_SLOT(d, void _k_interfaceAdded(const QString &))
@@ -973,9 +987,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothmanager.h kdebase/works
      Q_PRIVATE_SLOT(d, void _k_interfaceDestroyed(QObject *))
  /*
      Q_PRIVATE_SLOT(d, void _k_inputDeviceCreated(const QString &))
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothremotedevice.cpp kdebase/workspace/libs/solid/control/bluetoothremotedevice.cpp
---- 4_2libsControl/bluetoothremotedevice.cpp    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothremotedevice.cpp    2009-01-13 14:53:39.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothremotedevice.cpp
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothremotedevice.cpp	2008-10-17 07:00:21.000000000 -0400
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothremotedevice.cpp	2009-01-24 19:48:30.000000000 -0500
 @@ -88,6 +88,15 @@
      return_SOLID_CALL(Ifaces::BluetoothRemoteDevice *, d->backendObject(), (QMap< QString,QVariant >()), getProperties());
  }
@@ -1026,8 +1041,8 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothremotedevice.cpp kdebas
 +void Solid::Control::BluetoothRemoteDevice::setTrusted(bool trust)
 +{
 +    setProperty("Trusted",QVariant(trust));
- }
- 
++}
++
 +QString Solid::Control::BluetoothRemoteDevice::icon()
 +{
 +     QVariant var = getProperty("Icon");
@@ -1056,8 +1071,8 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothremotedevice.cpp kdebas
 +        return var.value<bool>();
 +    else
 +        return false;
-+}
-+
+ }
+ 
 +/*
  bool Solid::Control::BluetoothRemoteDevice::isConnected() const
  {
@@ -1087,9 +1102,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothremotedevice.cpp kdebas
  QString Solid::Control::BluetoothRemoteDevice::alias() const
  {
      Q_D(const BluetoothRemoteDevice);
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothremotedevice.h kdebase/workspace/libs/solid/control/bluetoothremotedevice.h
---- 4_2libsControl/bluetoothremotedevice.h    2009-01-17 17:51:33.000000000 +0100
-+++ libs/solid/control/bluetoothremotedevice.h    2009-01-13 14:53:39.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/bluetoothremotedevice.h
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/bluetoothremotedevice.h	2008-10-17 07:00:21.000000000 -0400
++++ kdebase-workspace-4.2.0/libs/solid/control/bluetoothremotedevice.h	2009-01-24 19:48:30.000000000 -0500
 @@ -82,11 +82,46 @@
      bool operator==(const BluetoothRemoteDevice  & other) const;
  
@@ -1148,9 +1164,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/bluetoothremotedevice.h kdebase/
  };
  
  } //Control
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/ifaces/bluetoothinterface.h kdebase/workspace/libs/solid/control/ifaces/bluetoothinterface.h
---- 4_2libsControl/ifaces/bluetoothinterface.h    2009-01-17 17:51:32.000000000 +0100
-+++ libs/solid/control/ifaces/bluetoothinterface.h    2009-01-16 17:16:55.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/ifaces/bluetoothinterface.h
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/ifaces/bluetoothinterface.h	2008-12-04 03:34:54.000000000 -0500
++++ kdebase-workspace-4.2.0/libs/solid/control/ifaces/bluetoothinterface.h	2009-01-24 19:48:30.000000000 -0500
 @@ -240,7 +240,7 @@
       */
  
@@ -1181,9 +1198,10 @@ diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/ifaces/bluetoothinterface.h kdeb
  
      /**
       * Marks the device as trusted.
-diff -Nur -x '[^b][^l]*' -x .svn 4_2libsControl/ifaces/bluetoothmanager.h kdebase/workspace/libs/solid/control/ifaces/bluetoothmanager.h
---- 4_2libsControl/ifaces/bluetoothmanager.h    2009-01-17 17:51:32.000000000 +0100
-+++ libs/solid/control/ifaces/bluetoothmanager.h    2009-01-16 12:42:32.000000000 +0100
+Index: kdebase-workspace-4.2.0/libs/solid/control/ifaces/bluetoothmanager.h
+===================================================================
+--- kdebase-workspace-4.2.0.orig/libs/solid/control/ifaces/bluetoothmanager.h	2008-10-17 07:00:21.000000000 -0400
++++ kdebase-workspace-4.2.0/libs/solid/control/ifaces/bluetoothmanager.h	2009-01-24 19:48:30.000000000 -0500
 @@ -89,6 +89,13 @@
       virtual QObject *createInterface(const QString &ubi) = 0;
  
