@@ -2,22 +2,22 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=8.63
-pkgrel=4
+pkgver=8.64
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
-depends=('libxext' 'libxt' 'libcups>=1.3.8-2' 'fontconfig>=2.6.0' 'gtk2>=2.12.11' 'gnutls>=2.4.1')
+depends=('libxext' 'libxt' 'libcups>=1.3.9-3' 'fontconfig>=2.6.0' 'gtk2>=2.14.7' 'gnutls>=2.6.3')
 makedepends=('automake' 'autoconf')
 optdepends=('texlive-core: dvipdf')
 replaces=('ghostscript-lrpng')
 provides=('ghostscript-lprng')
 url="http://www.cs.wisc.edu/~ghost/"
-source=(ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/gs863/ghostscript-${pkgver}.tar.bz2
+source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.bz2
 	ghostscript-fPIC.patch)
 options=('!libtool' '!makeflags')
-md5sums=('c770eedfdd846a53e211e3ba5339de21'
-         '29540cd88aad9a3a788d68193523080d')
+md5sums=('b13289cb2115f38f40c5e064f87e228a'
+         '1a8fcacf0005214db823225c870f093d')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
