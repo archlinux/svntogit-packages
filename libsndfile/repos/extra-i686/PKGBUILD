@@ -1,27 +1,23 @@
 # $Id$
-# Maintainer: Arjan Timmerman <arjan@archlinux.org>
+# Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
 pkgname=libsndfile
-pkgver=1.0.17
-pkgrel=2
-options=(!libtool)
-pkgdesc="a C library for reading and writing files containing sampled sound"
-arch=(i686 x86_64)
+pkgver=1.0.18
+pkgrel=1
+pkgdesc="A C library for reading and writing files containing sampled sound"
+arch=('i686' 'x86_64')
 url="http://www.mega-nerd.com/libsndfile"
-depends=('alsa-lib' 'flac>=1.1.4')
-source=(http://www.mega-nerd.com/libsndfile/$pkgname-$pkgver.tar.gz flac-1.1.4.patch flac-buffer-overflow.patch)
-md5sums=('2d126c35448503f6dbe33934d9581f6b' '87efbec75b3321e4a015ad2dfc3ee965')
+license=('LGPL')
+depends=('alsa-lib' 'flac>=1.2.1')
+options=('!libtool')
+source=(http://www.mega-nerd.com/libsndfile/${pkgname}-${pkgver}.tar.gz)
+md5sums=('9fde6efb1b75ef38398acf856f252416')
+sha1sums=('d0fb643dc5b1030cf769e06d1260c70320fc877e')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
-  patch -Np1 -i ../flac-1.1.4.patch || return 1
-  patch -Np1 -i ../flac-buffer-overflow.patch || return 1
-  aclocal
-  automake
-  ./configure --prefix=/usr --disable-sqlite
+  cd ${srcdir}/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --disable-sqlite || return 1
   make || return 1
-  make DESTDIR=$startdir/pkg install
+  make DESTDIR=${pkgdir} install || return 1
 }
-md5sums=('2d126c35448503f6dbe33934d9581f6b'
-         '87efbec75b3321e4a015ad2dfc3ee965'
-         '6cd2ad05491221f1d3a0e3e5131a5642')
