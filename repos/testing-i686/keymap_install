@@ -1,0 +1,44 @@
+# vim: set ft=sh:
+
+install ()
+{
+    MODULES=""
+    BINARIES=""
+    FILES=""
+    SCRIPT="keymap"
+    KEYMAP_FILE="$(mktemp /tmp/keymap.XXXXXX)"
+    add_file /bin/loadkeys.static /bin/loadkeys
+    add_file /usr/bin/dumpkeys.static /bin/dumpkeys
+    add_file /usr/bin/kbd_mode.static /bin/kdb_mode
+    add_file /usr/bin/setfont.static /bin/setfont
+    grep "KEYMAP=" /etc/rc.conf >> ${KEYMAP_FILE}
+    grep "CONSOLEFONT=" /etc/rc.conf >> ${KEYMAP_FILE}
+    grep "CONSOLEMAP=" /etc/rc.conf >> ${KEYMAP_FILE}
+    if [ "$(echo $LOCALE | /bin/grep -i utf)" != "" ]; then
+        echo UTF8="yes" >> ${KEYMAP_FILE}
+    fi
+    . ${KEYMAP_FILE}
+    add_file ${KEYMAP_FILE} /keymap
+    [ "$CONSOLEFONT" != "" ] && add_file /usr/share/kbd/consolefonts/$(grep "CONSOLEFONT=" /etc/rc.conf | awk -FCONSOLEFONT= '{print $2}' | sed -e "s@[\"']*@@g")*
+    [ "$CONSOLEMAP" != "" ] && add_file /usr/share/kbd/unimaps/$(grep "CONSOLEMAP=" /etc/rc.conf | awk -FCONSOLEMAP= '{print $2}' | sed -e "s@[\"']*@@g")*
+    if [ "$KEYMAP" != "" ]; then
+        for i in $(find /usr/share/kbd/ -name "$(grep "KEYMAP=" /etc/rc.conf |\
+            awk -FKEYMAP= '{print $2}' | awk -F- '{print $1}' | sed -e "s@[\"']*@@g")*.map.gz"); do
+            add_file $i
+        done
+        for i in $(echo /usr/share/kbd/keymaps/include/*); do
+            add_file $i
+        done
+        for i in $(echo /usr/share/kbd/keymaps/*/include/*); do
+            add_file $i
+        done
+    fi
+}
+
+help ()
+{
+cat<<HELPEOF
+  This hook loads the specified keymap and consolefont from rc.conf,
+  during early userspace.
+HELPEOF
+}
