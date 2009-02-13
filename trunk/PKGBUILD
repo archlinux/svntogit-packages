@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=8.64
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
@@ -14,13 +14,18 @@ replaces=('ghostscript-lrpng')
 provides=('ghostscript-lprng')
 url="http://www.cs.wisc.edu/~ghost/"
 source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.bz2
-	ghostscript-fPIC.patch)
+	ghostscript-fPIC.patch
+	gdevbit.c.patch)
 options=('!libtool' '!makeflags')
 md5sums=('b13289cb2115f38f40c5e064f87e228a'
-         '1a8fcacf0005214db823225c870f093d')
+         '1a8fcacf0005214db823225c870f093d'
+         '47cda3310c19cd19bd822012a12f1e07')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
+  #fix http://bugs.ghostscript.com/show_bug.cgi?id=690287 / http://bugs.archlinux.org/task/13259
+  patch -Np0 -i ${srcdir}/gdevbit.c.patch || return 1
+
   if [ "$CARCH" = "x86_64" ]; then
     patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch || return 1
   fi
