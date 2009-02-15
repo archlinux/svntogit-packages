@@ -1,43 +1,43 @@
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=openjdk6
 pkgver=1.4
 _icedteaver=1.4
-pkgrel=1
+pkgrel=2
 pkgdesc='Free Java environment based on OpenJDK 6.0 with IcedTea6 replacing binary plugs.'
 url='http://icedtea.classpath.org'
 arch=('i686' 'x86_64')
 license=('GPL')
 _openjdk_version=b14
 _openjdk_date=25_nov_2008
-_hotspotver=
+_hotspotver=f9d938ede196 # what it downlopads itself / remove from configure to get it
 depends=('gcc-libs' 'xdg-utils' 'hicolor-icon-theme')
 makedepends=('alsa-lib' 'libxtst' 'giflib' 'libxp' 'gtk2' 'nspr' 'zlib' 'freetype2' 'libjpeg' 'libx11' 'libcups' 'patch' 'xalan-java' 'xulrunner>=1.9.0.3' 'apache-ant>=1.7.0' 'autoconf' 'unzip' 'rhino')
-conflicts=('jdk' 'j2sdk' 'java-environment' 'j2re' 'java-runtime' 'jre')
-provides=('jdk=6' 'j2sdk' 'java-environment' 'jre=6' 'j2re' 'java-runtime')
+conflicts=('java-environment' 'java-runtime')
+provides=('java-environment=6' 'java-runtime=6')
 options=(!emptydirs)
 install=openjdk6.install
 source=(http://download.java.net/openjdk/jdk6/promoted/${_openjdk_version}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz
 	http://icedtea.classpath.org/download/source/icedtea6-${_icedteaver}.tar.gz
-	http://hg.openjdk.java.net/jdk7/hotspot/hotspot/archive/hotspot.tar.gz
+	http://hg.openjdk.java.net/jdk7/hotspot/hotspot/archive/${_hotspotver}.tar.gz
 	fix_jdk_cmds_path.diff
 	fix_corba_cmds_path.diff
 	gcjwebplugin_xulrunner.diff
 	aatext_by_default.diff
 	fontconfig-paths.diff
 	openjdk6.profile)
-noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz)
+noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz ${_hotspotver}.tar.gz)
 md5sums=('9f9773a822156dd3d576d83d794364ce'
          '6428ca1b0c38111cca230f5b69460b03'
-         '17bf7324fe660e71c22d0ea2652579ec'
+         'c8f78d48ac83987bc2adebeebcd354e9'
          '5da3e39fa60985576c4f37d1491efbe2'
          'f7e7a212e50abb56a6ef1a2b1bd27405'
          'ed2e808df2d2fc2ea7dae5139d475192'
          'ef60d567c0d9bad111212851220deafd'
          '104380f0b900c840141e572a7fb70c27'
          'd0703088e10aa957c037644ab88d716d')
-
 
 build() {
   # for hg checkout install mercurial and
@@ -60,6 +60,7 @@ build() {
   #cd ${srcdir}/icedtea6
   cd ${srcdir}/icedtea6-${_icedteaver}
   ln -s ${srcdir}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz .
+  ln -s ${srcdir}/${_hotspotver}.tar.gz .
 
   # fix xulrunner linking
   patch -Np0 -i ${srcdir}/gcjwebplugin_xulrunner.diff || return 1
@@ -69,7 +70,7 @@ build() {
   export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/fix_corba_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff"
 
 #  ./autogen.sh
-  autoreconf # needed due to mercurial build
+#  autoreconf # needed due to mercurial build
 
   export ALT_PARALLEL_COMPILE_JOBS="${MAKEFLAGS/-j}"
   export HOTSPOT_BUILD_JOBS="${ALT_PARALLEL_COMPILE_JOBS}"
@@ -89,11 +90,10 @@ build() {
     return 1
   fi
 
-  # Build without rhino for now:
-  # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=179
   ./configure --with-parallel-jobs=${HOTSPOT_BUILD_JOBS} \
 	--with-xalan2-jar=/usr/share/java/xalan.jar \
-	--with-hotspot-build=original $JCONF # 	--with-hotspot-src-zip=hotspot.tar.gz 
+	--with-hotspot-src-zip=${_hotspotver}.tar.gz \
+	--with-pkgversion=ArchLinux-${pkgver}-${pkgrel}-$CARCH  $JCONF
   LD_PRELOAD="" make || return 1
   
   install -m755 -d ${pkgdir}/${_jvmdir}/jre
