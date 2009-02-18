@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Sergej Pupykin <sergej@aur.archlinux.org>
+
+pkgname=man-db
+pkgver=2.5.3
+pkgrel=1
+pkgdesc="A utility for reading man pages"
+arch=('i686' 'x86_64')
+url="http://www.nongnu.org/man-db/"
+license=('GPL' 'LGPL')
+depends=( 'bash' 'gdbm' 'zlib')
+optdepends=('groff' 'less' 'gzip')
+conflicts=('man')
+provides=('man')
+replaces=('man')
+install=${pkgname}.install
+source=(http://savannah.nongnu.org/download/man-db/$pkgname-$pkgver.tar.gz
+        convert-mans man-db.cron.daily)
+md5sums=('656507b8ff6abd1b7a9af9692ba22edc'
+         '2b7662a7d5b33fe91f9f3e034361a2f6'
+         '1da25ff14b258a6c7f925fda47a6e166')
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib \
+	--with-db=gdbm --disable-setuid --enable-mandirs=GNU
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  # part of groff pkg
+  rm -f ${pkgdir}/usr/bin/zsoelim
+
+  # script from LFS to convert manpages, see
+  # http://www.linuxfromscratch.org/lfs/view/6.4/chapter06/man-db.html
+  install -D -m755 ${srcdir}/convert-mans  ${pkgdir}/usr/bin/convert-mans 
+
+  #install whatis cron script
+  install -D -m744 ${srcdir}/man-db.cron.daily ${pkgdir}/etc/cron.daily/man-db
+}
+
