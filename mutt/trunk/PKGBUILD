@@ -1,7 +1,7 @@
 # $Id$
 # Maintainer: tobias [tobias [at] archlinux.org]
 pkgname=mutt
-pkgver=1.5.18
+pkgver=1.5.19
 pkgrel=1
 pkgdesc="A small but very powerful text-based mail client"
 arch=(i686 x86_64)
@@ -11,7 +11,7 @@ depends=('slang' 'openssl>=0.9.8e' 'gdbm' 'mime-types' 'zlib' 'libsasl' 'gpgme')
 makedepends=('gnupg')
 install=${pkgname}.install
 source=(ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz)
-md5sums=('27c30037120189b9f9c0d3e76361b8f8')
+
 url="http://www.mutt.org/"
 
 build() {
@@ -29,3 +29,4 @@ build() {
   rm -f ${startdir}/pkg/etc/mime.types*
   install -Dm644 contrib/gpg.rc ${startdir}/pkg/etc/Muttrc.gpg.dist
 }
+md5sums=('73b3747bc7f7c805921e8d24ebac693f')
