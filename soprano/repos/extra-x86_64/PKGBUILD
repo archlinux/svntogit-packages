@@ -2,29 +2,35 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=soprano
-pkgver=2.2.1
+pkgver=2.2.2
 pkgrel=1
 pkgdesc='a library which provides a highly usable object-oriented C++/Qt4 framework for RDF data'
 arch=('i686' 'x86_64')
 url='http://soprano.sourceforge.net/'
 license=('GPL' 'LGPL')
-depends=('qt' 'clucene' 'openjdk6')
-makedepends=('cmake' 'pkgconfig')
-source=("http://downloads.sourceforge.net/$pkgname/$pkgname-$pkgver.tar.bz2")
-#options=(!libtool)
-md5sums=('69688a71273e1e9389fc60e3085c695f')
+depends=('qt' 'clucene' 'redland')
+makedepends=('cmake' 'pkgconfig' 'openjdk6')
+optdepends=('java-runtime=6: Sesame2 backend')
+source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2")
+md5sums=('101527bd62a1d27ab101d345fbf4cf25')
 
 build() {
-	. /etc/profile.d/openjdk6.sh
-	cd $srcdir
-	mkdir build
-	cd build
-	# disable redland backend; its unusable
-	sed -e 's/find_package(Redland)/#find_package(Redland)/' \
-		-i ../${pkgname}-${pkgver}/CMakeLists.txt || return 1
-	cmake ../${pkgname}-${pkgver} \
-		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX=/usr
-	make
-	make DESTDIR=$pkgdir install
+  . /etc/profile.d/openjdk6.sh
+  if [ "${CARCH}" = "x86_64" ]; then
+    _jvmarch=amd64
+  else
+    _jvmarch=i686
+  fi
+  cd "${srcdir}"
+  mkdir build
+  cd build
+  cmake "../${pkgname}-${pkgver}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr || return 1
+  #This is evil. We hack the library paths in the binary so that jre is also possible instead of just only openjdk.
+  sed -e "s#${JAVA_HOME}/jre/lib/${_jvmarch}/server/libjvm.so#-L ${JAVA_HOME}/jre/lib/${_jvmarch}/server -ljvm#" \
+      -e "s#:${JAVA_HOME}/jre/lib/${_jvmarch}/server#:${JAVA_HOME}/jre/lib/${_jvmarch}/server:/opt/java/jre/lib/${_jvmarch}/server#" \
+      -i backends/sesame2/CMakeFiles/soprano_sesame2backend.dir/link.txt || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
 }
