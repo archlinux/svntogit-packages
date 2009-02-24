@@ -90,14 +90,14 @@
 diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
 --- coreutils-6.12-orig/tests/Makefile.am	2008-05-27 13:47:53.000000000 +0200
 +++ coreutils-6.12/tests/Makefile.am	2008-06-02 10:06:03.000000000 +0200
-@@ -191,6 +191,7 @@
-   misc/shuf					\
+@@ -192,6 +192,7 @@
    misc/sort					\
    misc/sort-compress				\
+   misc/sort-files0-from				\
 +  misc/sort-mb-tests				\
    misc/sort-merge				\
    misc/sort-rand				\
-   misc/split-a					\
+   misc/sort-version				\
 @@ -391,6 +392,10 @@
    $(root_tests)
  
@@ -331,7 +331,7 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
      error (EXIT_FAILURE, errno, "-");
 --- coreutils-6.8+/src/join.c.i18n	2007-01-14 15:41:28.000000000 +0000
 +++ coreutils-6.8+/src/join.c	2007-03-01 15:08:24.000000000 +0000
-@@ -23,17 +23,31 @@
+@@ -23,16 +23,30 @@
  #include <sys/types.h>
  #include <getopt.h>
  
@@ -347,7 +347,6 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
 +
  #include "system.h"
  #include "error.h"
- #include "hard-locale.h"
  #include "linebuffer.h"
 -#include "memcasecmp.h"
  #include "quote.h"
@@ -379,17 +378,8 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
 +/* The number of bytes used for tab. */
 +static size_t tablen = 0;
  
- static struct option const longopts[] =
- {
-@@ -190,6 +206,8 @@
- 
- /* Fill in the `fields' structure in LINE.  */
- 
-+/* Fill in the `fields' structure in LINE.  */
-+
- static void
- xfields (struct line *line)
- {
+ /* If nonzero, check that the input is correctly ordered. */
+ static enum
 @@ -199,10 +217,11 @@
    if (ptr == lim)
      return;
@@ -549,22 +539,10 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
 +  extract_field (line, ptr, lim - ptr);
 +}
 +#endif
-+
- /* Read a line from FP into LINE and split it into fields.
-    Return true if successful.  */
- 
-@@ -249,6 +410,11 @@
-   line->nfields_allocated = 0;
-   line->nfields = 0;
-   line->fields = NULL;
-+#if HAVE_MBRTOWC
-+  if (MB_CUR_MAX > 1)
-+    xfields_multibyte (line);
-+  else
-+#endif
-   xfields (line);
-   return true;
- }
++ 
+ static void
+ freeline (struct line *line)
+ {
 @@ -377,11 +601,18 @@
  
  /* Print the join of LINE1 and LINE2.  */
@@ -703,7 +681,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 -  size_t len2;		/* Length of fields to compare.  */
 +  char *beg[2];
 +  char *copy[2];
-+  size_t len[2]; /* Length of fields to compare.  */
++  size_t len[2]; 	/* Length of fields to compare.  */
    int diff;
 +  int i, j;
  
@@ -830,7 +808,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  return len[0] - len[1];
  }
  
- /* Check that successive input lines PREV and CURRENT from input file 
+ /* Check that successive input lines PREV and CURRENT from input file
 --- coreutils-6.8+/src/uniq.c.i18n	2007-01-14 15:41:28.000000000 +0000
 +++ coreutils-6.8+/src/uniq.c	2007-03-01 15:08:24.000000000 +0000
 @@ -23,6 +23,16 @@
@@ -886,13 +864,13 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
     return a pointer to the beginning of the line's field to be compared. */
  
  static char *
--find_field (const struct linebuffer *line)
+-find_field (struct linebuffer const *line)
 +find_field_uni (struct linebuffer *line)
  {
    size_t count;
-   char *lp = line->buffer;
+   char const *lp = line->buffer;
 @@ -219,6 +245,83 @@
-   return lp + i;
+   return line->buffer + i;
  }
  
 +#if HAVE_MBRTOWC
@@ -1235,9 +1213,9 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
  #define TAB_WIDTH 8
  
  /* The official name of this program (e.g., no `g' prefix).  */
-@@ -35,23 +57,44 @@
+@@ -35,20 +57,41 @@
  
- #define AUTHORS "David MacKenzie"
+ #define AUTHORS proper_name ("David MacKenzie")
  
 +#define FATAL_ERROR(Message)                                            \
 +  do                                                                    \
@@ -1259,9 +1237,6 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  character_mode,
 +};
 +
- /* The name this program was run with. */
- char *program_name;
- 
 +/* The argument shows current mode. (Default: column_mode) */
 +static enum operating_mode operating_mode;
 +
@@ -1756,7 +1731,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    if (hard_LC_TIME)
      {
 @@ -1031,6 +1100,64 @@
- #endif
+     xstrtol_fatal (e, oi, c, long_options, s);
  }
  
 +#if HAVE_MBRTOWC
@@ -1819,7 +1794,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +
  /* Specify the amount of main memory to use when sorting.  */
  static void
- specify_sort_size (char const *s)
+ specify_sort_size (int oi, char c, char const *s)
 @@ -1241,7 +1368,7 @@
     by KEY in LINE. */
  
@@ -2865,11 +2840,11 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
     line of 1st page printed). */
 @@ -696,6 +756,7 @@
     -a|COLUMN|-m is a `space' and with the -J option a `tab'. */
- static char *col_sep_string = "";
+ static char *col_sep_string = (char *) "";
  static int col_sep_length = 0;
 +static int col_sep_width = 0;
- static char *column_separator = " ";
- static char *line_separator = "\t";
+ static char *column_separator = (char *) " ";
+ static char *line_separator = (char *) "\t";
  
 @@ -852,6 +913,13 @@
    col_sep_length = (int) strlen (optarg_S);
@@ -2951,7 +2926,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 @@ -1031,7 +1122,7 @@
  	  old_s = false;
  	  /* Reset an additional input of -s, -S dominates -s */
- 	  col_sep_string = "";
+ 	  col_sep_string = bad_cast ("");
 -	  col_sep_length = 0;
 +	  col_sep_length = col_sep_width = 0;
  	  use_col_separator = true;
@@ -3921,7 +3896,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  size_t delimlen = 0;
  
    initialize_main (&argc, &argv);
-   program_name = argv[0];
+   set_program_name (argv[0]);
 @@ -770,7 +1090,6 @@
        switch (optc)
  	{
@@ -4043,3 +4018,19 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
      }
  
    if (optind == argc)
+diff -urNp coreutils-6.12/src/join.c coreutils-6.12-orig/src/join.c
+--- coreutils-6.12/src/join.c	2008-07-16 14:08:01.000000000 +0200
++++ coreutils-6.12-orig/src/join.c	2008-07-16 14:07:02.000000000 +0200
+@@ -634,6 +634,11 @@ get_line (FILE *fp, struct line *line, i
+       return false;
+     }
+ 
++#if HAVE_MBRTOWC
++  if (MB_CUR_MAX > 1)
++    xfields_multibyte (line);
++  else
++#endif
+   xfields (line);
+ 
+   if (prevline[which - 1])
+
