@@ -2,14 +2,14 @@
 # Maintainer: Paul Mattal <paul@archlinux.org>
 
 pkgname=postgresql
-pkgver=8.3.5
+pkgver=8.3.6
 pkgrel=1
 pkgdesc="A sophisticated object-relational DBMS"
 arch=(i686 x86_64)
 license=('BSD')
-backup=('etc/conf.d/postgresql')
+backup=('etc/conf.d/postgresql' '/etc/pam.d/postgresql')
 url="http://www.postgresql.org/"
-depends=("postgresql-libs>=$pkgver")
+depends=("postgresql-libs>=$pkgver" "libxml2")
 options=('!makeflags')
 source=(ftp://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2 \
         postgresql postgresql.confd build.patch postgresql.pam)
@@ -21,8 +21,10 @@ build() {
   patch -Np1 -i ../build.patch || return 1
 
   # configure
-  ./configure --prefix=/usr --mandir=/usr/share/man --with-docdir=/usr/share/doc --with-openssl --datadir=/usr/share/postgresql --with-pam \
-  	|| return 1
+  ./configure --prefix=/usr --mandir=/usr/share/man \
+  --with-docdir=/usr/share/doc --with-openssl \
+  --datadir=/usr/share/postgresql --with-pam --with-libxml || return 1
+
   sed -i -e '/interfaces/d' src/Makefile || return 1
 
   # build
@@ -31,13 +33,22 @@ build() {
   # install
   make DESTDIR=${startdir}/pkg install || return 1
 
+  (
+  cd contrib/adminpack;
+  make || return 1;
+  make DESTDIR=${startdir}/pkg install || return 1;
+  );
+
+
   # clean up unneeded installed items
   rm -rf $startdir/pkg/usr/include/postgresql/internal || return 1
   rm -rf $startdir/pkg/usr/include/libpq || return 1
   # the below line is expected to produce an error; fix this one day
   rm -f $startdir/pkg/usr/include/*
   rm -f $startdir/pkg/usr/bin/pg_config || return 1
-  rm -f $startdir/pkg/usr/lib/libpgport.a || return 1
+  
+  # Maintaining the lib below because of qt
+  #rm -f $startdir/pkg/usr/lib/libpgport.a || return 1
 
   # install launch script
   install -D -m755 ../postgresql $startdir/pkg/etc/rc.d/postgresql \
@@ -55,7 +66,13 @@ build() {
 
   chown root:root $startdir/pkg/usr/share/doc/postgresql/html/*
 }
-md5sums=('3bc028774d7a79e926be0c6a9c7ca209'
+
+md5sums=('4f8c67d802bd03b5b844e268bba7d44a'
+         '7d8ea2abb6a8cdacf35604bda659a34a'
+         'df6ddf9e2ab4700a3415f17c0f4f4172'
+         '4d74f4227dc5e12bf95b3490758d86c9'
+         '96f82c38f3f540b53f3e5144900acf17')
+md5sums=('4f8c67d802bd03b5b844e268bba7d44a'
          '7d8ea2abb6a8cdacf35604bda659a34a'
          'df6ddf9e2ab4700a3415f17c0f4f4172'
          '4d74f4227dc5e12bf95b3490758d86c9'
