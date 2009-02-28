@@ -3,7 +3,7 @@
 # Contributor: James Rayner <iphitus@gmail.com>
 
 pkgname=nvidia-utils
-pkgver=180.22
+pkgver=180.35
 pkgrel=1
 pkgdesc="NVIDIA drivers utilities and libraries."
 arch=('i686' 'x86_64')
@@ -11,60 +11,56 @@ arch=('i686' 'x86_64')
 [ "$CARCH" = "x86_64" ] && ARCH=x86_64
 url="http://www.nvidia.com/"
 depends=('xorg-server')
-conflicts=('libgl' 'libgl-dri' 'ati-fglrx-utils' 'nvidia-legacy-utils' \
-           'nvidia-71xx-utils' 'nvidia-96xx-utils')
+optdepends=('gtk2: nvidia-settings' 'pkgconfig: nvidia-xconfig')
+conflicts=('libgl')
 provides=('libgl')
 license=('custom')
 install=nvidia.install
-source=(http://us.download.nvidia.com/XFree86/Linux-${ARCH}/${pkgver}/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run \
-        supported-cards.txt)
-md5sums=('265a984e973bcf5a7c2feeba4b0927a9'
-         'bf8d68d66757096c3ab17653230bf2a8')
-[ "$CARCH" = "x86_64" ] && md5sums=('91a40e758b06429453d780932f51d6d9'
-                        	    'bf8d68d66757096c3ab17653230bf2a8')
+source=("http://download.nvidia.com/XFree86/Linux-${ARCH}/${pkgver}/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run")
+md5sums=('23a4e1cbe24943452c82eeab9dd8200d')
+[ "$CARCH" = "x86_64" ] && md5sums=('451fdd8d5196a15aba424618ab16ed12')
 
-options=(docs !strip)
+build() {
+	cd $srcdir
+	sh NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run --extract-only
+	cd NVIDIA-Linux-${ARCH}-${pkgver}-pkg0/usr/
 
-build()
-{
-  # override nvida install routine and do it the long way.
-  cd $startdir/src/
-  sh NVIDIA-Linux-${ARCH}-${pkgver}-pkg0.run --extract-only
-  cd NVIDIA-Linux-${ARCH}-${pkgver}-pkg0/usr/
+	mkdir -p $pkgdir/usr/{lib,bin,share/applications,share/pixmaps,share/man/man1}
+	mkdir -p $pkgdir/usr/lib/xorg/modules/{extensions,drivers}
+	mkdir -p $pkgdir/usr/share/licenses/nvidia-utils/
+	mkdir -p $pkgdir/usr/include/{cuda,vdpau}
 
-  mkdir -p $startdir/pkg/usr/{lib,bin,share/applications,share/pixmaps,man/man1}
-  mkdir -p $startdir/pkg/usr/lib/xorg/modules/{extensions,drivers}
-  mkdir -p $startdir/pkg/usr/share/licenses/nvidia/
-  
-  install lib/{libGLcore,libGL,libnvidia-cfg,libcuda,tls/libnvidia-tls}.so.${pkgver} \
-       $startdir/pkg/usr/lib/ || return 1
-  install -m644 share/man/man1/* $startdir/pkg/usr/man/man1/ || return 1
-  rm $startdir/pkg/usr/man/man1/nvidia-installer.1.gz || return 1
-  install X11R6/lib/libXv* $startdir/pkg/usr/lib/ || return 1
-  install -m644 share/applications/nvidia-settings.desktop $startdir/pkg/usr/share/applications/ || return 1
-  # fix nvidia .desktop file
-  sed -e 's:__UTILS_PATH__:/usr/bin:' -e 's:__PIXMAP_PATH__:/usr/share/pixmaps:' -i $startdir/pkg/usr/share/applications/nvidia-settings.desktop
-  install -m644 share/pixmaps/nvidia-settings.png $startdir/pkg/usr/share/pixmaps/ || return 1
-  #install X11R6/lib/modules/libnvidia-wfb.so.$pkgver $startdir/pkg/usr/lib/xorg/modules || return 1
-  install X11R6/lib/modules/drivers/nvidia_drv.so $startdir/pkg/usr/lib/xorg/modules/drivers || return 1
-  install X11R6/lib/modules/extensions/libglx.so.$pkgver $startdir/pkg/usr/lib/xorg/modules/extensions || return 1
-  install -m755 bin/nvidia-{settings,xconfig,bug-report.sh} $startdir/pkg/usr/bin/ || return 1
-  cd $startdir/pkg/usr/lib/
-  ln -s libGL.so.$pkgver libGL.so || return 1
-  ln -s libGL.so.$pkgver libGL.so.1 || return 1
-  ln -s libGLcore.so.$pkgver libGLcore.so.1 || return 1
-  ln -s libnvidia-cfg.so.$pkgver libnvidia-cfg.so.1 || return 1
-  ln -s libnvidia-tls.so.$pkgver libnvidia-tls.so.1 || return 1
-  ln -s libcuda.so.$pkgver libcuda.so.1 || return 1
-  ln -s libXvMCNVIDIA.so.$pkgver libXvMCNVIDIA_dynamic.so.1 || return 1
-  cd $startdir/pkg/usr/lib/xorg/modules/extensions
-  ln -s libglx.so.$pkgver libglx.so || return 1
+	install -m644 include/cuda/cuda*.h $pkgdir/usr/include/cuda
+	install -m644 include/vdpau/vdpau*.h $pkgdir/usr/include/vdpau
 
-  install -m644 $startdir/src/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0/LICENSE $startdir/pkg/usr/share/licenses/nvidia/ || return 1
-  ln -s nvidia $startdir/pkg/usr/share/licenses/nvidia-utils || return 1
-  install -D -m644 $startdir/src/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0/usr/share/doc/README.txt $startdir/pkg/usr/share/doc/nvidia/README || return 1
-  install -D -m644 $startdir/src/supported-cards.txt $startdir/pkg/usr/share/doc/nvidia/supported-cards.txt || return 1
-  
-  find $startdir/pkg/usr -type d -exec chmod 755 {} \;
-  # phew :)
+	install lib/{libGLcore,libGL,libnvidia-cfg,libcuda,libvdpau_trace,libvdpau_nvidia,libvdpau,tls/libnvidia-tls}.so.${pkgver} \
+	$pkgdir/usr/lib/ || return 1
+	install -m644 share/man/man1/* $pkgdir/usr/share/man/man1/ || return 1
+	rm $pkgdir/usr/share/man/man1/nvidia-installer.1.gz || return 1
+	install X11R6/lib/libXv* $pkgdir/usr/lib/ || return 1
+	install -m644 share/applications/nvidia-settings.desktop $pkgdir/usr/share/applications/ || return 1
+	# fix nvidia .desktop file
+	sed -e 's:__UTILS_PATH__:/usr/bin:' -e 's:__PIXMAP_PATH__:/usr/share/pixmaps:' -i $pkgdir/usr/share/applications/nvidia-settings.desktop
+	install -m644 share/pixmaps/nvidia-settings.png $pkgdir/usr/share/pixmaps/ || return 1
+	install X11R6/lib/modules/drivers/nvidia_drv.so $pkgdir/usr/lib/xorg/modules/drivers || return 1
+	install X11R6/lib/modules/extensions/libglx.so.$pkgver $pkgdir/usr/lib/xorg/modules/extensions || return 1
+	install -m755 bin/nvidia-{settings,xconfig,bug-report.sh} $pkgdir/usr/bin/ || return 1
+	cd $pkgdir/usr/lib/
+	ln -s libGL.so.$pkgver libGL.so || return 1
+	ln -s libGL.so.$pkgver libGL.so.1 || return 1
+	ln -s libGLcore.so.$pkgver libGLcore.so.1 || return 1
+	ln -s libnvidia-cfg.so.$pkgver libnvidia-cfg.so.1 || return 1
+	ln -s libnvidia-tls.so.$pkgver libnvidia-tls.so.1 || return 1
+	ln -s libcuda.so.$pkgver libcuda.so.1 || return 1
+	ln -s libXvMCNVIDIA.so.$pkgver libXvMCNVIDIA_dynamic.so.1 || return 1
+	ln -s libvdpau.so.$pkgver libvdpau.so.1 || return 1
+	ln -s libvdpau.so.$pkgver libvdpau.so || return 1
+
+	cd $pkgdir/usr/lib/xorg/modules/extensions
+	ln -s libglx.so.$pkgver libglx.so || return 1
+
+	install -m644 $srcdir/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0/LICENSE $pkgdir/usr/share/licenses/nvidia-utils/ || return 1
+	install -D -m644 $srcdir/NVIDIA-Linux-${ARCH}-${pkgver}-pkg0/usr/share/doc/README.txt $pkgdir/usr/share/doc/nvidia/README || return 1
+
+	find $pkgdir/usr -type d -exec chmod 755 {} \;
 }
