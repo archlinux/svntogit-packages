@@ -1,0 +1,138 @@
+From 5bfd73cd31ba197a62f549cdbad1a1270b571027 Mon Sep 17 00:00:00 2001
+From: Eric Anholt <eric@anholt.net>
+Date: Sat, 28 Feb 2009 03:09:49 +0000
+Subject: Only allocate pixmaps aligned for tiling when requested by DRI2 GetBuffers.
+
+This saves massive quantities of memory on pre-965 since the DRI2 tiling
+enable caused the minimum size of any pixmap to be 1MB.
+---
+diff --git a/src/i830.h b/src/i830.h
+index a0ae571..cd9c38a 100644
+--- a/src/i830.h
++++ b/src/i830.h
+@@ -1090,4 +1090,15 @@ extern const int I830CopyROP[16];
+ #define QUIRK_BROKEN_ACPI_LID		0x00000100
+ extern void i830_fixup_devices(ScrnInfoPtr);
+ 
++/**
++ * Hints to CreatePixmap to tell the driver how the pixmap is going to be
++ * used.
++ *
++ * Compare to CREATE_PIXMAP_USAGE_* in the server.
++ */
++enum {
++    INTEL_CREATE_PIXMAP_TILING_X = 0x10000000,
++    INTEL_CREATE_PIXMAP_TILING_Y,
++};
++
+ #endif /* _I830_H_ */
+diff --git a/src/i830_dri.c b/src/i830_dri.c
+index 540bf5e..96c711e 100644
+--- a/src/i830_dri.c
++++ b/src/i830_dri.c
+@@ -1561,36 +1561,33 @@ I830DRI2CreateBuffers(DrawablePtr pDraw, unsigned int *attachments, int count)
+ 	    pPixmap = pDepthPixmap;
+ 	    pPixmap->refcnt++;
+ 	} else {
+-	    uint32_t tiling = I915_TILING_NONE;
++	    unsigned int hint = 0;
+ 
+-	    pPixmap = (*pScreen->CreatePixmap)(pScreen,
+-					       pDraw->width,
+-					       pDraw->height,
+-					       pDraw->depth, 0);
+ 	    switch (attachments[i]) {
+ 	    case DRI2BufferDepth:
+ 		if (SUPPORTS_YTILING(pI830))
+-		    tiling = I915_TILING_Y;
++		    hint = INTEL_CREATE_PIXMAP_TILING_Y;
+ 		else
+-		    tiling = I915_TILING_X;
++		    hint = INTEL_CREATE_PIXMAP_TILING_X;
+ 		break;
+ 	    case DRI2BufferFakeFrontLeft:
+ 	    case DRI2BufferFakeFrontRight:
+ 	    case DRI2BufferBackLeft:
+ 	    case DRI2BufferBackRight:
+-		    tiling = I915_TILING_X;
++		    hint = INTEL_CREATE_PIXMAP_TILING_X;
+ 		break;
+ 	    }
+ 
+ 	    if (!pI830->tiling ||
+ 		(!IS_I965G(pI830) && !pI830->kernel_exec_fencing))
+-		tiling = I915_TILING_NONE;
++		hint = 0;
++
++	    pPixmap = (*pScreen->CreatePixmap)(pScreen,
++					       pDraw->width,
++					       pDraw->height,
++					       pDraw->depth,
++					       hint);
+ 
+-	    if (tiling != I915_TILING_NONE) {
+-		bo = i830_get_pixmap_bo(pPixmap);
+-		drm_intel_bo_set_tiling(bo, &tiling,
+-					intel_get_pixmap_pitch(pPixmap));
+-	    }
+ 	}
+ 
+ 	if (attachments[i] == DRI2BufferDepth)
+diff --git a/src/i830_exa.c b/src/i830_exa.c
+index b9d6c64..0a22486 100644
+--- a/src/i830_exa.c
++++ b/src/i830_exa.c
+@@ -935,29 +935,38 @@ i830_uxa_create_pixmap (ScreenPtr screen, int w, int h, int depth, unsigned usag
+     if (w && h)
+     {
+ 	unsigned int size;
++	uint32_t tiling = I915_TILING_NONE;
+ 
+ 	stride = ROUND_TO((w * pixmap->drawable.bitsPerPixel + 7) / 8,
+ 			  i830->accel_pixmap_pitch_alignment);
+ 
+-	/* Use the I915_FENCE_TILING_X even if it may end up being TILING_Y,
+-	 * as it just results in larger alignment.  Really, we need to use the
+-	 * usage hint to tell what the pixmap's going to be.
+-	 */
+-	stride = i830_get_fence_pitch(i830, stride, I915_TILING_X);
+-	/* Round the object up to the size of the fence it will live in
+-	 * if necessary.  We could potentially make the kernel allocate
+-	 * a larger aperture space and just bind the subset of pages in,
+-	 * but this is easier and also keeps us out of trouble (as much)
+-	 * with drm_intel_bufmgr_check_aperture().
+-	 */
+-	size = i830_get_fence_size(i830, stride * h);
++	if (usage == INTEL_CREATE_PIXMAP_TILING_X)
++	    tiling = I915_TILING_X;
++	else if (usage == INTEL_CREATE_PIXMAP_TILING_Y)
++	    tiling = I915_TILING_Y;
++
++	if (tiling == I915_TILING_NONE) {
++	    size = stride * h;
++	} else {
++	    stride = i830_get_fence_pitch(i830, stride, tiling);
++	    /* Round the object up to the size of the fence it will live in
++	     * if necessary.  We could potentially make the kernel allocate
++	     * a larger aperture space and just bind the subset of pages in,
++	     * but this is easier and also keeps us out of trouble (as much)
++	     * with drm_intel_bufmgr_check_aperture().
++	     */
++	    size = i830_get_fence_size(i830, stride * h);
++	}
+ 
+ 	bo = drm_intel_bo_alloc_for_render(i830->bufmgr, "pixmap", size, 0);
+ 	if (!bo) {
+ 	    fbDestroyPixmap (pixmap);
+ 	    return NullPixmap;
+ 	}
+-	
++
++	if (tiling != I915_TILING_NONE)
++	    drm_intel_bo_set_tiling(bo, &tiling, stride);
++
+ 	screen->ModifyPixmapHeader (pixmap, w, h, 0, 0, stride, NULL);
+     
+ 	i830_uxa_set_pixmap_bo (pixmap, bo);
+--
+cgit v0.8.2
