@@ -1,0 +1,63 @@
+diff -Nurp patched/src/bios_reader/bios_reader.c working/src/bios_reader/bios_reader.c
+--- patched/src/bios_reader/bios_reader.c	2008-10-16 14:06:07.000000000 -0700
++++ working/src/bios_reader/bios_reader.c	2008-10-16 14:25:07.000000000 -0700
+@@ -180,6 +180,19 @@ static void dump_lvds_options(void *data
+     printf("\tPFIT mode: %d\n", options->pfit_mode);
+ }
+ 
++static void dump_lvds_ptr_data(void *data, unsigned char *base)
++{
++    struct bdb_lvds_lfp_data_ptrs *ptrs = data;
++
++    struct lvds_fp_timing *fp_timing =
++        (struct lvds_fp_timing *)(base + ptrs->ptr[panel_type].fp_timing_offset);
++
++    printf("LVDS timing pointer data:\n");
++
++    printf("\tpanel type %02i: %dx%d\n", panel_type, fp_timing->x_res,
++           fp_timing->y_res);
++}
++
+ static void dump_lvds_data(void *data, unsigned char *base)
+ {
+     struct bdb_lvds_lfp_data *lvds_data = data;
+@@ -274,6 +287,8 @@ int main(int argc, char **argv)
+     dump_general_definitions(find_section(bdb, BDB_GENERAL_DEFINITIONS));
+     dump_lvds_options(find_section(bdb, BDB_LVDS_OPTIONS));
+     dump_lvds_data(find_section(bdb, BDB_LVDS_LFP_DATA), bdb);
++    dump_lvds_ptr_data(find_section(bdb, BDB_LVDS_LFP_DATA_PTRS),
++                       (unsigned char *)bdb);
+ 
+     return 0;
+ }
+diff -Nurp patched/src/i830_bios.c working/src/i830_bios.c
+--- patched/src/i830_bios.c	2008-10-16 14:06:07.000000000 -0700
++++ working/src/i830_bios.c	2008-10-16 14:27:15.000000000 -0700
+@@ -89,7 +89,8 @@ parse_panel_data(I830Ptr pI830, struct b
+ {
+     struct bdb_lvds_options *lvds_options;
+     struct bdb_lvds_lfp_data *lvds_lfp_data;
+-    struct bdb_lvds_lfp_data_entry *entry;
++    struct bdb_lvds_lfp_data_ptrs *lvds_lfp_data_ptrs;
++    int timing_offset;
+     DisplayModePtr fixed_mode;
+     unsigned char *timing_ptr;
+ 
+@@ -104,12 +105,13 @@ parse_panel_data(I830Ptr pI830, struct b
+     if (lvds_options->panel_type == 0xff)
+ 	return;
+ 
+-    lvds_lfp_data = find_section(bdb, BDB_LVDS_LFP_DATA);
+-    if (!lvds_lfp_data)
++    lvds_lfp_data_ptrs = find_section(bdb, BDB_LVDS_LFP_DATA_PTRS);
++    if (!lvds_lfp_data_ptrs)
+ 	return;
+ 
+-    entry = &lvds_lfp_data->data[lvds_options->panel_type];
+-    timing_ptr = (unsigned char *)&entry->dvo_timing;
++    timing_offset =
++        lvds_lfp_data_ptrs->ptr[lvds_options->panel_type].dvo_timing_offset;
++    timing_ptr = (unsigned char *)bdb + timing_offset;
+ 
+     fixed_mode = xnfalloc(sizeof(DisplayModeRec));
+     memset(fixed_mode, 0, sizeof(*fixed_mode));
