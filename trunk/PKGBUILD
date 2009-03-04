@@ -3,7 +3,7 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=libsndfile
-pkgver=1.0.18
+pkgver=1.0.19
 pkgrel=1
 pkgdesc="A C library for reading and writing files containing sampled sound"
 arch=('i686' 'x86_64')
@@ -12,8 +12,8 @@ license=('LGPL')
 depends=('alsa-lib' 'flac>=1.2.1')
 options=('!libtool')
 source=(http://www.mega-nerd.com/libsndfile/${pkgname}-${pkgver}.tar.gz)
-md5sums=('9fde6efb1b75ef38398acf856f252416')
-sha1sums=('d0fb643dc5b1030cf769e06d1260c70320fc877e')
+md5sums=('8fa24b0c0a8758543427c9741ea06924')
+sha1sums=('7cf8d3f032501642e36fecd8c899b09d3f7c986c')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
