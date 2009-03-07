@@ -1,15 +1,33 @@
 # arg 1:  the new package version
 # arg 2:  the old package version
+
+_make_udev_devices() {
+  [ -c /lib/udev/devices/console ] || mknod -m 0600 /lib/udev/devices/console c 5 1
+  [ -c /lib/udev/devices/null ]    || mknod -m 0666 /lib/udev/devices/null c 1 3
+  [ -c /lib/udev/devices/zero ]    || mknod -m 0666 /lib/udev/devices/zero c 1 5
+
+  [ -L /lib/udev/devices/fd ] || ln -snf /proc/self/fd /lib/udev/devices/fd
+
+  [ -L /lib/udev/devices/fd/stdin ]  || ln -snf /proc/self/fd/0 /lib/udev/devices/stdin
+  [ -L /lib/udev/devices/fd/stdout ] || ln -snf /proc/self/fd/1 /lib/udev/devices/stdout
+  [ -L /lib/udev/devices/fd/stderr ] || ln -snf /proc/self/fd/2 /lib/udev/devices/stderr
+
+  [ -L /lib/udev/devices/core ] || ln -snf /proc/kcore /lib/udev/devices/core
+}
+
 post_upgrade() {
-if [ "$(vercmp $2 100)" -lt 0 ]; then
-  echo "ATTENTION UDEV:"
-  echo "----------"
-  echo "udev >=098 rules syntax has changed, please update your own rules."
-  echo "udev >=099 Added persistent network and CD/DVD Symlink generator rules."
-  echo "Please read the instructions carefully before reboot."
-  echo "They are located in /etc/udev/readme-udev-arch.txt"
-  echo "----------"
-fi
+  if [ "$(vercmp $2 100)" -lt 0 ]; then
+    echo "ATTENTION UDEV:"
+    echo "----------"
+    echo "udev >=098 rules syntax has changed, please update your own rules."
+    echo "udev >=099 Added persistent network and CD/DVD Symlink generator rules."
+    echo "Please read the instructions carefully before reboot."
+    echo "They are located in /etc/udev/readme-udev-arch.txt"
+    echo "----------"
+  fi
+  if [ "$(vercmp $2 135-2)" -lt 0 ]; then
+    _make_udev_devices
+  fi
 }
 
 post_install() {
@@ -25,6 +43,11 @@ post_install() {
     umount ${ROOTDIR}
     rmdir ${ROOTDIR}
   fi
+  _make_udev_devices
+}
+
+pre_remove() {
+  rm /lib/udev/devices/{console,null,zero,fd,stdin,stdout,stderr,core} &> /dev/null
 }
 
 op=$1
