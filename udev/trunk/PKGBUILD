@@ -26,7 +26,7 @@ source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.ta
         81-arch.rules load-modules.sh resolve-modalias.c cdsymlinks.sh root-link.sh
         arch-udev-rules.patch readme-udev-arch.txt ignore-remove.sh)
 md5sums=('7e705e237d29734c77bc26f6ccbc4594'
-         '1aa06a1133e102dd3567331838913246'
+         'de602ae07903946c0bbd518ef48702b3'
          'f4951f61438d69894b728212dac7318b'
          'e0d7ab73ec42eb81947daf23e224c0fb'
          '8424b78e9dd772e75b4ef90814807815'
@@ -101,4 +101,19 @@ build() {
   ln -snf /proc/self/fd/2 ${pkgdir}/lib/udev/devices/stderr || return 1
 
   ln -snf /proc/kcore ${pkgdir}/lib/udev/devices/core || return 1
+  # these static devices are created for convenience, to autoload the modules if necessary
+  # /dev/loopX, /dev/loop/X
+  mkdir ${pkgdir}/lib/udev/devices/loop
+  for i in $(seq 0 7); do
+    mknod -m 0660 ${pkgdir}/lib/udev/devices/loop/$i b 7 $i || return 1
+    chgrp disk ${pkgdir}/lib/udev/devices/loop/$i || return 1
+    ln -snf loop/$i ${pkgdir}/lib/udev/devices/loop$i || return 1
+  done
+  # /dev/net/tun
+  mkdir ${pkgdir}/lib/udev/devices/net
+  mknod -m 0666 ${pkgdir}/lib/udev/devices/net/tun c 10 200 || return 1
+  # /dev/fuse
+  mknod -m 0666 ${pkgdir}/lib/udev/devices/fuse c 10 229 || return 1
+  # /dev/ppp
+  mknod -m 0600 ${pkgdir}/lib/udev/devices/ppp c 108 0 || return 1
 }
