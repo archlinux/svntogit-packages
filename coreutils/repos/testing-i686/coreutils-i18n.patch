@@ -1,3 +1,26 @@
+diff -urN coreutils-6.12-orig/tests/misc/cut coreutils-6.12/tests/misc/cut
+--- coreutils-6.12-orig/tests/misc/cut	2008-05-17 08:41:11.000000000 +0200
++++ coreutils-6.12/tests/misc/cut	2008-06-02 11:13:08.000000000 +0200
+@@ -26,7 +26,7 @@
+ my $prog = 'cut';
+ my $try = "Try \`$prog --help' for more information.\n";
+ my $from_1 = "$prog: fields and positions are numbered from 1\n$try";
+-my $inval = "$prog: invalid byte or field list\n$try";
++my $inval = "$prog: invalid byte, character or field list\n$try";
+ my $no_endpoint = "$prog: invalid range with no endpoint: -\n$try";
+ 
+ my @Tests =
+@@ -140,8 +140,8 @@
+   ['od-overlap5', '-b1-3,1-4', '--output-d=:', {IN=>"abcde\n"}, {OUT=>"abcd\n"}],
+ 
+   # None of the following invalid ranges provoked an error up to coreutils-6.9.
+-  ['inval1', qw(-f 2-0), {IN=>''}, {OUT=>''}, {EXIT=>1},
+-   {ERR=>"$prog: invalid decreasing range\n$try"}],
++  ['inval1', qw(-f 2-0), {IN=>''}, {OUT=>''}, {EXIT=>1},
++   {ERR=>"$prog: invalid byte, character or field list\n$try"}],
+   ['inval2', qw(-f -), {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
+   ['inval3', '-f', '4,-', {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
+   ['inval4', '-f', '1-2,-', {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
 --- /dev/null	2007-03-01 09:16:39.219409909 +0000
 +++ coreutils-6.8+/tests/misc/sort-mb-tests	2007-03-01 15:08:24.000000000 +0000
 @@ -0,0 +1,58 @@
@@ -1915,7 +1938,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
        if (newlim)
  	lim = newlim;
      }
-@@ -1384,6 +1570,107 @@
+@@ -1384,6 +1570,113 @@
    return ptr;
  }
  
@@ -1928,6 +1951,9 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  int i;
 +  size_t mblength;
 +  mbstate_t state;
++
++  if (echar == 0)
++    eword++; /* skip all of end field. */
 +
 +  memset (&state, '\0', sizeof(mbstate_t));
 +
@@ -1997,24 +2023,27 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +    }
 +# endif
 +
-+  /* If we're skipping leading blanks, don't start counting characters
-+   *      until after skipping past any leading blanks.  */
-+  if (key->skipsblanks)
-+    while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-+      ptr += mblength;
++  if (echar != 0)
++  {
++    /* If we're skipping leading blanks, don't start counting characters
++     *      until after skipping past any leading blanks.  */
++    if (key->skipsblanks)
++      while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
++        ptr += mblength;
 +
-+  memset (&state, '\0', sizeof(mbstate_t));
++    memset (&state, '\0', sizeof(mbstate_t));
 +
-+  /* Advance PTR by ECHAR (if possible), but no further than LIM.  */
-+  for (i = 0; i < echar; i++)
-+    {
-+      GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++    /* Advance PTR by ECHAR (if possible), but no further than LIM.  */
++    for (i = 0; i < echar; i++)
++     {
++        GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
 +
-+      if (ptr + mblength > lim)
-+	break;
-+      else
-+	ptr += mblength;
-+    }
++        if (ptr + mblength > lim)
++  	break;
++        else
++	  ptr += mblength;
++      }
++  }
 +
 +  return ptr;
 +}
@@ -2735,7 +2764,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +
  #include "system.h"
  #include "error.h"
- #include "hard-locale.h"
+ #include "mbswidth.h"
 @@ -324,6 +350,18 @@
  #include "strftime.h"
  #include "xstrtol.h"
