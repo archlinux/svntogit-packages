@@ -1,0 +1,37 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+
+pkgname=proftpd
+pkgver=1.3.2
+pkgrel=1
+pkgdesc="A high-performance, scalable FTP server"
+arch=('i686' 'x86_64')
+url="http://www.proftpd.org"
+license=('GPL')
+depends=('glibc' 'pam' 'ncurses')
+makedepends=('libcap>=2.16')
+backup=('etc/proftpd.conf' 'etc/conf.d/proftpd')
+source=(ftp://ftp.proftpd.org/distrib/source/$pkgname-$pkgver.tar.bz2 proftpd \
+        proftpd.logrotate proftpd.conf.d \
+        mode_t.patch)
+md5sums=('89f5e31fc3d3e02b66424dfc6cc5892d'
+         '2ab07084433a57c994e65eabdf3971a9'
+         'ddb09eb13131becdf0e081eef413116b'
+         '71d5932b0461c318ed68c2c0c2660736'
+         'abe1733dd7c43ea98534b32b98a8984a')
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+#  patch -Np0 -i ${srcdir}/mode_t.patch
+  ./configure --prefix=/usr --disable-pam \
+    --with-modules=mod_quotatab:mod_quotatab_file \
+    --sysconfdir=/etc --localstatedir=/var --enable-ctrls
+  make || return 1
+  make DESTDIR=$startdir/pkg install
+  install -D -m644 ../proftpd.logrotate $startdir/pkg/etc/logrotate.d/proftpd
+  install -D -m644 ../proftpd.conf.d $startdir/pkg/etc/conf.d/proftpd
+  install -D -m755 ../proftpd ${startdir}/pkg/etc/rc.d/proftpd
+  cd $startdir/pkg/etc
+  sed -i 's|nogroup|nobody|g' proftpd.conf
+  rm -r ${startdir}/pkg/usr/{libexec,share}
+}
