@@ -12,6 +12,7 @@ license=('GPL')
 groups=('base')
 depends=('glibc' 'ncurses')
 backup=("etc/inputrc")
+install=readline.install
 source=(#ftp://ftp.cwru.edu/pub/bash/readline-${pkgver}.tar.gz
 	http://www.sfr-fresh.com/unix/misc/readline-${pkgver}.tar.gz
 	inputrc)
