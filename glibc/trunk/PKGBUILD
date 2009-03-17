@@ -7,7 +7,8 @@ pkgver=2.9
 pkgrel=4
 _glibcdate=20081119
 install=glibc.install
-backup=(etc/locale.gen)
+backup=(etc/locale.gen
+	etc/nscd.conf)
 pkgdesc="GNU C Library"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL')
