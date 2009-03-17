@@ -12,7 +12,8 @@ depends=('glibc')
 provides=('common-lisp')
 makedepends=('sbcl' 'texinfo')
 source=("http://dl.sourceforge.net/sourceforge/sbcl/${pkgname}-${pkgver}-source.tar.bz2" \
-	"sbcl-default-sbcl-home.patch")
+  "sbcl-default-sbcl-home.patch" \
+  "sbcl-fix-source-path.lisp")
 md5sums=('7ac79e6e66121dc7bde881c67b88693f' '053ef3ab65501635406134382df17278')
 url="http://www.sbcl.org/"
 install=sbcl.install
@@ -35,7 +36,26 @@ EOF
   popd 
   INSTALL_ROOT=${startdir}/pkg/usr sh install.sh
 
-  # drop unwanted files
+  ./src/runtime/sbcl --core output/sbcl.core --script \
+    ${startdir}/sbcl-fix-source-path.lisp
+  mv sbcl-new.core ${startdir}/pkg/usr/lib/sbcl/sbcl.core
+
+# sources
+  mkdir -p ${startdir}/pkg/usr/share/sbcl-source
+  cp -R -t ${startdir}/pkg/usr/share/sbcl-source \
+    ${startdir}/src/${pkgname}-${pkgver}/{src,contrib}
+
+# drop unwanted files
+  find ${startdir}/pkg/usr/share/sbcl-source -type f \
+    -name \*.fasl -or \
+    -name \*.o -or \
+    -name \*.log -or \
+    -name \*.so -or \
+    -name a.out -delete
+  
+  rm ${startdir}/pkg/usr/share/sbcl-source/src/runtime/sbcl
+  rm ${startdir}/pkg/usr/share/sbcl-source/src/runtime/sbcl.nm
+
   find ${startdir}/pkg \( -name Makefile -o -name .cvsignore \) -delete
 
   rm $startdir/pkg/usr/share/info/dir
