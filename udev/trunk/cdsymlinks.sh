@@ -1,11 +1,15 @@
 #! /bin/sh
 # Creates cdsymlinks in /dev
 # for Archlinux by Tobias Powalowski <tpowa@archlinux.org>
-if [ -d /dev/cd ]; then
+
+# check on cd/dvd drives and if persistant rules file is used
+if [ -d /dev/cd -a ! -e /etc/udev/rules.d/75-cd-aliases-generator.rules ]; then
+	# remove existing device files
 	rm /dev/cdrom*
 	rm /dev/cdrw*
 	rm /dev/dvd*
 	rm /dev/dvdrw*
+	# start creating symlinks
 	for i in /dev/cd/cdrom-*; do
 		if [ -h $i ]; then
 		[ "$CD_NUMBER" = "" ] && ln -s $i /dev/cdrom
@@ -37,9 +41,4 @@ if [ -d /dev/cd ]; then
 		! [ "$DVDRW_NUMBER" = "" ] && DVDRW_NUMBER="$((DVDRW_NUMBER+1))" && ln -s $i /dev/dvdrw$DVDRW_NUMBER
 		fi
 	done
-else
-	rm /dev/cdrom*
-	rm /dev/cdrw*
-	rm /dev/dvd*
-	rm /dev/dvdrw*
 fi

@@ -1,13 +1,13 @@
 ==========================
 Cold/Hotplugging with Udev
 ==========================
-Version 1.1.6
+Version 1.1.7
 written by Tobias Powalowski <tpowa@archlinux.org>
 
 ---------------
 * Requirements:
 ---------------
-- recommended kernel >=2.6.18 for this udev to work properly.
+- recommended kernel >=2.6.23 for this udev to work properly.
 - No more DevFS device paths!  If you have them, update /etc/fstab:
   /dev/discs/... etc. has been deprecated in favor of the old style:
     /dev/discs/disc0/part1 -> /dev/hda1
@@ -113,18 +113,8 @@ is only used in mkinitrd now.
 ========================================
 
 - To enable this feature copy in /etc/udev/rules.d
-  75-cd-aliases-generator.rules.optinal
+  75-cd-aliases-generator.rules.optional 
   to 75-cd-aliases-generator.rules
-  Also disable this part in /lib/udev/rules.d/81-arch.rules by putting a # in front:
-  --- snip
-  ACTION=="add", SUBSYSTEMS=="ide", KERNEL=="hd[a-z]", ATTR{removable}=="1", ATTRS{media}=="cdrom*", RUN+="/lib/udev/cdsymlinks.sh"
-  ACTION=="add", SUBSYSTEMS=="scsi", KERNEL=="sr[0-9]*", ATTRS{type}=="5", RUN+="/lib/udev/cdsymlinks.sh"
-  ACTION=="add", SUBSYSTEMS=="scsi", KERNEL=="sg[0-9]*", ATTRS{type}=="5", RUN+="/lib/udev/cdsymlinks.sh"
-  ACTION=="remove", SUBSYSTEMS=="block", KERNEL=="hd[a-z]", RUN+="/lib/udev/cdsymlinks.sh"
-  ACTION=="remove", SUBSYSTEMS=="block", KERNEL=="sr[0-9]*", RUN+="/lib/udev/cdsymlinks.sh"
-  ACTION=="remove", SUBSYSTEMS=="block", KERNEL=="sg[0-9]*", RUN+="/lib/udev/cdsymlinks.sh"
---- snap
-
 - To get the same device name for CD/DVD symlinks each time you boot,
   a rule will be generated during bootup or by executing '/sbin/udevadm trigger'.
 - Examples: dvd, cdrom ,cdrw etc.
@@ -134,7 +124,7 @@ is only used in mkinitrd now.
 Known issues:
 The symlink name is then bound to the hardware pci adress, 
 if you change your CD/DVD device, you have to check the
-/etc/udev/rules.d/70-peristent-net.rules file for correctness.
+/etc/udev/rules.d/70-peristent-cd.rules file for correctness.
 
 ======================================
 * Persistent Network names (optional):
