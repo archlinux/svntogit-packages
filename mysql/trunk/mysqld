@@ -8,12 +8,7 @@ MYSQLD_ROOT="/var/lib/mysql"
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-getPID() {
-   if [ -f $MYSQLD_ROOT/$HOSTNAME.pid ]; then
-       echo `pidof -o %PPID /usr/sbin/mysqld`;
-   fi
-}
-
+PID=`pidof -o %PPID /usr/sbin/mysqld`
 if [ ! `egrep '^mysql:' /etc/group` ]; then
   stat_busy "Adding mysql group"
   groupadd -g 89 mysql
@@ -22,31 +17,32 @@ fi
 if [ ! `egrep '^mysql:' /etc/passwd` ]; then
   stat_busy "Adding mysql user"
   useradd -u 89 -g mysql -d $MYSQLD_ROOT -s /bin/false mysql
-  [ -d $MYSQLD_ROOT ] && chown -R mysql:mysql $MYSQLD_ROOT
+  [ -d $MYSQLD_ROOT ] && chown -R mysql.mysql $MYSQLD_ROOT
   stat_done
 fi
 
 if [ ! -d $MYSQLD_ROOT ]; then
   mkdir $MYSQLD_ROOT
   /usr/bin/mysql_install_db --datadir=$MYSQLD_ROOT --user=mysql
-  chown -R mysql:mysql $MYSQLD_ROOT
+  chown -R mysql.mysql $MYSQLD_ROOT
 fi
 
 case "$1" in
   start)
     stat_busy "Starting MySQL"
-    if [ -z "$(getPID)" ]; then
+    if [ -z "$PID" ]; then
        /usr/bin/mysqld_safe --datadir=$MYSQLD_ROOT &>/dev/null &
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
       else
         sleep 1 # wait on children
-        if [ -z "$(getPID)" ]; then
+        PID=`pidof -o %PPID /usr/sbin/mysqld`
+        if [ -z "$PID" ]; then
           stat_fail
           exit 1
         else
-          echo $(getPID) >/var/run/mysqld.pid
+          echo $PID >/var/run/mysqld.pid
           add_daemon mysqld
           stat_done
         fi
@@ -59,8 +55,8 @@ case "$1" in
 
   stop)
     stat_busy "Stopping MySQL"
-    if [ ! -z "$(getPID)" ]; then
-      kill $(getPID) &> /dev/null      
+    if [ ! -z "$PID" ]; then
+      kill $PID &> /dev/null      
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
