@@ -1,38 +1,67 @@
 #!/bin/bash
 
-# general config
+daemon_name=lighttpd
+
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-PID=`pidof -o %PPID /usr/sbin/lighttpd`
+get_pid() {
+	pidof -o %PPID $daemon_name
+}
 
 case "$1" in
   start)
-    stat_busy "Starting lighttpd Daemon"
-    [ -z "$PID" ] && /usr/sbin/lighttpd -f /etc/lighttpd/lighttpd.conf 2>&1
-    if [ $? -gt 0 ]; then
-      stat_fail
+    stat_busy "Starting $daemon_name daemon"
+
+    PID=$(get_pid)
+    if [ -z "$PID" ]; then
+      [ -f /var/run/$daemon_name.pid ] && rm -f /var/run/$daemon_name.pid
+      # RUN
+      $daemon_name -f /etc/lighttpd/lighttpd.conf
+      #
+      if [ $? -gt 0 ]; then
+        stat_fail
+        exit 1
+      else
+        echo $(get_pid) > /var/run/$daemon_name.pid
+        add_daemon $daemon_name
+        stat_done
+      fi
     else
-      add_daemon lighttpd
-      stat_done
+      stat_fail
+      exit 1
     fi
     ;;
+
   stop)
-    stat_busy "Stopping lighttpd Daemon"
-    [ ! -z "$PID" ] && kill $PID &>/dev/null
+    stat_busy "Stopping $daemon_name daemon"
+    PID=$(get_pid)
+    # KILL
+    [ ! -z "$PID" ] && kill $PID &> /dev/null
+    #
     if [ $? -gt 0 ]; then
       stat_fail
+      exit 1
     else
-      rm_daemon lighttpd
-      rm -f /var/run/lighttpd/lighttpd.pid
+      rm -f /var/run/$daemon_name.pid &> /dev/null
+      rm_daemon $daemon_name
       stat_done
     fi
     ;;
+
   restart)
     $0 stop
-    sleep 1
+    sleep 3
     $0 start
     ;;
+
+  status)
+    stat_busy "Checking $daemon_name status";
+    ck_status $daemon_name
+    ;;
+
   *)
-    echo "usage: $0 {start|stop|restart}"
+    echo "usage: $0 {start|stop|restart|status}"
 esac
+
+exit 0
