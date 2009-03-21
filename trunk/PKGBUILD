@@ -28,7 +28,7 @@ build() {
   make DESTDIR=${pkgdir} install
 
   # set ours dirs in mpd.conf file
-  sed -i 's|music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
+  sed -i 's|^music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
   sed -i 's|playlist_directory.*$|playlist_directory "/var/lib/mpd/playlists"|1' doc/mpdconf.example
   sed -i 's|db_file.*$|db_file "/var/lib/mpd/mpd.db"|1' doc/mpdconf.example
   sed -i 's|log_file.*$|log_file "/var/log/mpd/mpd.log"|1' doc/mpdconf.example
