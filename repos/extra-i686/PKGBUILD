@@ -2,25 +2,25 @@
 # Maintainer: dorphell <dorphell@archlinux.org>
 pkgname=ntp
 pkgver=4.2.4p6
-pkgrel=1
+pkgrel=2
 pkgdesc="NTP (Network Time Protocol) tries to keep servers in sync"
 arch=(i686 x86_64)
 license=('custom')
 url="http://www.ntp.org/"
 depends=('openssl>=0.9.8h' 'readline')
-backup=('etc/ntp.conf' 'conf.d/ntp-client.conf')
-source=(http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${pkgver}.tar.gz \
-        ftp://ftp.archlinux.org/other/ntp//ntp-4.2.0a-manpages.tar.bz2 ntp.conf ntp-client.conf ntpd ntpdate)
+backup=('etc/ntp.conf' 'etc/conf.d/ntp-client.conf')
 options=('!emptydirs')
-md5sums=('1961c2c12b66b9046d5df37d0a41b181' 'd3a5a6185ef5ed71d2fa8e06598fc28f'
-         '5bd3924f5720b97837969ec4ec4d5e09' 'c7f50632b69bd4f32cf052d0b1848463'
+source=(http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${pkgver}.tar.gz \
+        ftp://ftp.archlinux.org/other/ntp/ntp-${pkgver}-manpages.tar.bz2 ntp.conf ntp-client.conf ntpd ntpdate)
+md5sums=('1961c2c12b66b9046d5df37d0a41b181' '3396ea6276147617e5cf79cefffee018'\
+         '5bd3924f5720b97837969ec4ec4d5e09' 'c7f50632b69bd4f32cf052d0b1848463'\
          '46118a8ec2c4f5bbfafd730af21b7c03' '140855352baeb89da0c6c1c475c18b57')
 
 build() {
   cd $startdir/src/$pkgname-$pkgver || return 1
 
   # configure
-  ac_cv_header_dns_sd_h=0 ./configure --prefix=/usr --enable-linux-caps || return 1
+  ac_cv_header_dns_sd_h=0 ./configure --prefix=/usr --mandir=/usr/share/man --enable-linux-caps || return 1
 
   # build and install
   make || return 1
@@ -34,9 +34,15 @@ build() {
   mkdir -p $startdir/pkg/etc/rc.d || return 1
   install -D -m755 $startdir/src/{ntpd,ntpdate} $startdir/pkg/etc/rc.d/ || return 1
 
-  # install man pages
-  install -D -m644 $startdir/src/man/{ntpdate,ntptime,ntptrace,tickadj}.1 \
-  	$startdir/pkg/usr/man/man1/ || return 1
+  # install and remove duplicate man pages
+  install -d $startdir/pkg/usr/share/man/man{5,8}
+  install -D -m644 $startdir/src/man/*.5 \
+  	$startdir/pkg/usr/share/man/man5/ || return 1
+  install -D -m644 $startdir/src/man/*.8 \
+  	$startdir/pkg/usr/share/man/man8/ || return 1
+  rm $startdir/pkg/usr/share/man/man1/{ntpd.1,ntpdc.1,ntpdsim.1,ntpq.1,ntp-keygen.1}
+  rm $startdir/pkg/usr/share/man/man8/ntpdsim.8
+  mv $startdir/pkg/usr/share/man/man8/keygen.8 $startdir/pkg/usr/share/man/man8/ntp-keygen.8
 
   # install sample configs
   install -D -m644 $startdir/src/ntp.conf $startdir/pkg/etc/ntp.conf || return 1
@@ -48,6 +54,4 @@ build() {
   touch $startdir/pkg/var/lib/ntp/.placeholder || return 1
 
   install -Dm644 $startdir/src/$pkgname-$pkgver/COPYRIGHT $startdir/pkg/usr/share/licenses/$pkgname/COPYRIGHT
-  
-  mv ${pkgdir}/usr/man ${pkgdir}/usr/share
 }
