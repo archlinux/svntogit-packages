@@ -3,7 +3,7 @@
 
 pkgname=mysql-clients
 pkgver=5.1.32
-pkgrel=1
+pkgrel=2
 pkgdesc="MySQL client tools"
 arch=(i686 x86_64)
 depends=("libmysqlclient>=${pkgver}")
@@ -11,10 +11,12 @@ makedepends=('tcp_wrappers' 'libtool' 'gcc' 'readline')
 url=('http://www.mysql.com/')
 options=('!libtool')
 license=('GPL')
-source=(ftp://ftp.pucpr.br/mysql/Downloads/MySQL-5.1/mysql-$pkgver.tar.gz)
+source=(ftp://ftp.pucpr.br/mysql/Downloads/MySQL-5.1/mysql-$pkgver.tar.gz
+        mysql-fix-libs.patch)
 
 build() {
   cd $startdir/src/mysql-${pkgver}
+  patch -Np1 -i ${startdir}/src/mysql-fix-libs.patch || return 1
   
   ./configure --prefix=/usr --libexecdir=/usr/sbin \
   --localstatedir=/var --sysconfdir=/etc \
@@ -23,18 +25,14 @@ build() {
   --with-charset=latin1 --with-collation=latin1_general_ci \
   --with-extra-charsets=complex --enable-thread-safe-client \
   --with-libwrap
-  
-  pushd include || return
-    make || return 1
-  popd
  
-  for dir in libmysql libmysql_r; do
-    pushd ${dir} || return 1
-    make link_sources
-    make || return 1
-    make DESTDIR=${startdir}/pkg install
-    popd
-  done
+  pushd include || return
+  make || return 1
+  popd
+
+  pushd libmysql
+  make link_sources get_password.lo || return
+  popd 
   
   for dir in strings regex mysys dbug extra; do
     pushd ${dir} || return 1
@@ -53,4 +51,5 @@ build() {
   rm -rf $pkgdir/usr/lib/
 
 }
-md5sums=('f2d14b5e3b9d50b809c9b9985e4513b7')
+md5sums=('f2d14b5e3b9d50b809c9b9985e4513b7'
+         'd1921e85821a66196c24ef6e5346b572')
