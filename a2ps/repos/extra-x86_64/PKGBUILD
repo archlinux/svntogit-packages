@@ -1,51 +1,46 @@
 # $Id$
-# Maintainer: eric <eric@archlinux.org>
+# Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
 
 pkgname=a2ps
-pkgver=4.13c
+pkgver=4.14
 pkgrel=1
 pkgdesc="a2ps is an Any to PostScript filter"
-arch=(i686 x86_64)
-license=('GPL')
-url="http://www.inf.enst.fr/~demaille/a2ps/"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/a2ps/"
+license=('GPL3')
 depends=('ghostscript' 'psutils' 'imagemagick' 'perl')
-options=('!libtool')
+makedepends=('gperf')
 replaces=('a2ps-lprng')
 provides=('a2ps-lprng')
-source=(http://www.archlinux.org/~jgc/${pkgname}/${pkgname}-${pkgver}.tar.gz
-        http://www.archlinux.org/~jgc/${pkgname}/${pkgname}-4.13c-ja_nls.patch.gz
-	4.13c-gcc34.patch
-	a2ps-4.13-fixcachecheck.patch
-	a2ps-4.13-manpage-chmod.patch
-	a2ps-4.13-select-freebsd.patch
-	a2ps-4.13c-fixps.patch
-	a2ps-4.13c-psmandup.diff
-	a2ps-4.13c-psset.patch
-	a2ps-4.13c-stdarg.patch)
-md5sums=('97164e84ba911e4604155507e0893669' 'e315466f75d99c0c1ca563d82f2ace2e'\
-         '449b2445dc0949a990a2b29cab89dc59' '6432b1da449b96b531b0843259839236'\
-         '09cc5ed4d3d8ff1b2103e519191e8286' 'b62538dbd828d995bdc3ce36188b0768'\
-         'df6bc895cc6fb0fd47f22fd1c36d1ed3' 'd68d0bfab547ef1ce70576c7a5570f13'\
-         'b8ef4708f4a65e9b373f9f42df11b92d' '2e24d355a977969b83fce03510ebd7b8')
+backup=('etc/a2ps/a2ps.cfg' 'etc/a2ps/a2ps-site.cfg')
+options=('!libtool')
+install=a2ps.install
+source=(ftp://ftp.gnu.org/gnu/a2ps/${pkgname}-${pkgver}.tar.gz \
+        a2ps-4.13c-fnmatch-replacement.patch a2ps-4.13c-emacs.patch a2ps-4.13-manpage-chmod.patch \
+        a2ps-4.14-check-mempcpy.patch a2ps-4.14-fix-stpcpy-proto.patch)
+md5sums=('781ac3d9b213fa3e1ed0d79f986dc8c7' '93011b58e9f20a7fafa31287a51884a4'\
+         '2e493d0bc00d71eb3e8a9b6febc52b69' '09cc5ed4d3d8ff1b2103e519191e8286'\
+         '42aa39b74f6da8cf6e94185c4fc3e601' '066f9327fee6b6eca3a57d657d1097d1')
+sha1sums=('365abbbe4b7128bf70dad16d06e23c5701874852' '8783952d3410d8d59ed953e1db45e2ef1a0b8f65'\
+          '94e35a6ad9268161bec22a56d4cfb696d635994a' '2bb3d0a2ef2f3ff9262723e35c742a80ab0235ce'\
+          '6aed29c1399e79f3914b408059610f9e7c0fc38e' '58fa90134f1027e3f05aeb08212cbcc10f420738')
 
 build() {
-  cd ${startdir}/src/${pkgname}-4.13
-  patch -Np0 -i ${startdir}/src/a2ps-4.13-select-freebsd.patch || return 1
-  patch -Np1 -i ${startdir}/src/a2ps-4.13c-stdarg.patch || return 1
-  patch -Np1 -i ${startdir}/src/4.13c-gcc34.patch || return 1
-  patch -Np1 -i ${startdir}/src/a2ps-4.13c-ja_nls.patch || return 1
-  patch -Np0 -i ${startdir}/src/a2ps-4.13c-fixps.patch || return 1
-  patch -Np0 -i ${startdir}/src/a2ps-4.13c-psmandup.diff || return 1
-  patch -Np1 -i ${startdir}/src/a2ps-4.13c-psset.patch || return 1
-  patch -Np1 -i ${startdir}/src/a2ps-4.13-fixcachecheck.patch || return 1
-  patch -Np1 -i ${startdir}/src/a2ps-4.13-manpage-chmod.patch || return 1
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -p1 < ../a2ps-4.13c-fnmatch-replacement.patch || return 1
+  patch -p1 < ../a2ps-4.13c-emacs.patch || return 1
+  patch -p1 < ../a2ps-4.13-manpage-chmod.patch || return 1
+  patch -p1 < ../a2ps-4.14-check-mempcpy.patch || return 1
+  patch -p0 < ../a2ps-4.14-fix-stpcpy-proto.patch || return 1
   libtoolize --force --copy || return 1
   autoreconf -I m4 || return 1
   ./configure --prefix=/usr --sysconfdir=/etc/a2ps \
-              --includedir=/usr/include --enable-nls
+              --includedir=/usr/include --enable-nls || return 1
   export LANG=C
   make || return 1
-  make DESTDIR=${startdir}/pkg install
-  sed -i "s:^countdictstack: \0:" ${startdir}/pkg/usr/bin/psset || return 1
+  make DESTDIR=${pkgdir} install || return 1
+  sed -i "s:^countdictstack: \0:" ${pkgdir}/usr/bin/psset || return 1
+  rm ${pkgdir}/usr/share/info/dir
+  gzip ${pkgdir}/usr/share/info/*
 }
