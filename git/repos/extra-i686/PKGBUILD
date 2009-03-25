@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.2
+pkgver=1.6.2.1
 pkgrel=1
 pkgdesc="GIT - the stupid content tracker"
 arch=(i686 x86_64)
@@ -44,7 +44,7 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('12c7d874e17c6e111697b1714b5f4319'
-         '163809f883e693a3a675a487d96b5a11')
-sha256sums=('ab7dc40240092aa2e72a8db7e0045893ca5fa07a936e9fa83b242248e3c9f635'
-            '13e7d352f9cac1f34d64b5deb006d0961941e43975a33f7d8507df58df1fe68e')
+md5sums=('e96481361887f63227fdaa5ccdbb03b7'
+         '90464ce3082b6a00bf6b274047e9e0e5')
+sha256sums=('519a4a137b282771297f9991ec231301106d4e35420e92345f92a8e82933a79c'
+            '43a1994de25f75cfa1a4d62f0927f25be77b545089cadafd0f602707522d7a14')
