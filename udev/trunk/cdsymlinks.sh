@@ -3,7 +3,7 @@
 # for Archlinux by Tobias Powalowski <tpowa@archlinux.org>
 
 # check on cd/dvd drives and if persistant rules file is used
-if [ -d /dev/cd -a ! -e /etc/udev/rules.d/75-cd-aliases-generator.rules ]; then
+if [ -d /dev/cd -a ! -e /etc/udev/rules.d/75-persistent-cd.rules ]; then
 	# remove existing device files
 	rm /dev/cdrom*
 	rm /dev/cdrw*
