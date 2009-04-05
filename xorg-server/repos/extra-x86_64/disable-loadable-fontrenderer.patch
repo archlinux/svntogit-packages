@@ -1,0 +1,520 @@
+From affec10635343668839994ea2bac16c1d4524200 Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Wed, 16 Jul 2008 18:44:33 +0000
+Subject: Remove loadable font renderer support.
+
+---
+diff --git a/dix/dixfonts.c b/dix/dixfonts.c
+index 1c6d37f..7b79bac 100644
+--- a/dix/dixfonts.c
++++ b/dix/dixfonts.c
+@@ -87,7 +87,7 @@ extern FontPtr defaultFont;
+ 
+ static FontPathElementPtr *font_path_elements = (FontPathElementPtr *) 0;
+ static int  num_fpes = 0;
+-_X_EXPORT FPEFunctions *fpe_functions = (FPEFunctions *) 0;
++static FPEFunctions *fpe_functions = (FPEFunctions *) 0;
+ static int  num_fpe_types = 0;
+ 
+ static unsigned char *font_path_string;
+@@ -97,7 +97,7 @@ static int  size_slept_fpes = 0;
+ static FontPathElementPtr *slept_fpes = (FontPathElementPtr *) 0;
+ static FontPatternCachePtr patternCache;
+ 
+-_X_EXPORT int
++static int
+ FontToXError(err)
+     int         err;
+ {
+@@ -117,6 +117,16 @@ FontToXError(err)
+     }
+ }
+ 
++static int
++LoadGlyphs(ClientPtr client, FontPtr pfont, unsigned nchars, int item_size,
++	   unsigned char *data)
++{
++    if (fpe_functions[pfont->fpe->type].load_glyphs)
++	return (*fpe_functions[pfont->fpe->type].load_glyphs)
++	    (client, pfont, 0, nchars, item_size, data);
++    else
++	return Successful;
++}
+ 
+ /*
+  * adding RT_FONT prevents conflict with default cursor font
+@@ -470,7 +480,7 @@ OpenFont(ClientPtr client, XID fid, Mask flags, unsigned lenfname, char *pfontna
+  *
+  *  \param value must conform to DeleteType
+  */
+-_X_EXPORT int
++int
+ CloseFont(pointer value, XID fid)
+ {
+     int         nscr;
+@@ -1879,16 +1889,6 @@ GetFontPath(ClientPtr client, int *count, int *length, unsigned char **result)
+     return Success;
+ }
+ 
+-_X_EXPORT int
+-LoadGlyphs(ClientPtr client, FontPtr pfont, unsigned nchars, int item_size, unsigned char *data)
+-{
+-    if (fpe_functions[pfont->fpe->type].load_glyphs)
+-	return (*fpe_functions[pfont->fpe->type].load_glyphs)
+-	    (client, pfont, 0, nchars, item_size, data);
+-    else
+-	return Successful;
+-}
+-
+ void
+ DeleteClientFontStuff(ClientPtr client)
+ {
+@@ -1911,6 +1911,7 @@ InitFonts (void)
+ #ifdef BUILTIN_FONTS
+     BuiltinRegisterFpeFunctions();
+ #else
++    FreeTypeRegisterFontFileFunctions();
+     FontFileRegisterFpeFunctions();
+     fs_register_fpe_functions();
+ #endif
+diff --git a/hw/xfree86/common/xf86Module.h b/hw/xfree86/common/xf86Module.h
+index c8bf1ce..3c75df0 100644
+--- a/hw/xfree86/common/xf86Module.h
++++ b/hw/xfree86/common/xf86Module.h
+@@ -194,7 +194,6 @@ pointer LoadSubModuleLocal(pointer, const char *, const char **,
+ 			   const char **, pointer, const XF86ModReqInfo *,
+ 			   int *, int *);
+ void UnloadSubModule(pointer);
+-void LoadFont(pointer);
+ void UnloadModule (pointer);
+ #endif
+ pointer LoaderSymbol(const char *);
+diff --git a/hw/xfree86/dixmods/Makefile.am b/hw/xfree86/dixmods/Makefile.am
+index f19a852..365f006 100644
+--- a/hw/xfree86/dixmods/Makefile.am
++++ b/hw/xfree86/dixmods/Makefile.am
+@@ -23,9 +23,6 @@ extsmodule_LTLIBRARIES = $(RECORDMOD) \
+ 			 $(DBEMOD) \
+                          $(GLXMODS)
+ 
+-fontsmoduledir = $(moduledir)/fonts
+-fontsmodule_LTLIBRARIES = libfreetype.la
+-
+ AM_CFLAGS = @XORG_CFLAGS@ @DIX_CFLAGS@
+ INCLUDES = @XORG_INCS@ \
+            -I$(top_srcdir)/dbe \
+@@ -64,9 +61,6 @@ libshadow_la_LDFLAGS = -avoid-version
+ libshadow_la_LIBADD = $(top_builddir)/miext/shadow/libshadow.la
+ libshadow_la_SOURCES = shmodule.c
+ 
+-libfreetype_la_LDFLAGS = -avoid-version
+-libfreetype_la_SOURCES = ftmodule.c
+-
+ libdixmods_la_SOURCES = $(top_srcdir)/mi/miinitext.c
+ libdixmods_la_CFLAGS = -DXFree86LOADER $(AM_CFLAGS)
+ 
+diff --git a/hw/xfree86/dixmods/ftmodule.c b/hw/xfree86/dixmods/ftmodule.c
+deleted file mode 100644
+index 382c0b3..0000000
+--- a/hw/xfree86/dixmods/ftmodule.c
++++ b/dev/null
+@@ -1,75 +0,0 @@
+-/*
+- * Copyright (C) 1998-2002 The XFree86 Project, Inc.  All Rights Reserved.
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining a copy
+- * of this software and associated documentation files (the "Software"), to
+- * deal in the Software without restriction, including without limitation the
+- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+- * sell copies of the Software, and to permit persons to whom the Software is
+- * furnished to do so, subject to the following conditions:
+- *
+- * The above copyright notice and this permission notice shall be included in
+- * all copies or substantial portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+- * XFREE86 PROJECT BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+- *
+- * Except as contained in this notice, the name of the XFree86 Project shall
+- * not be used in advertising or otherwise to promote the sale, use or other
+- * dealings in this Software without prior written authorization from the
+- * XFree86 Project.
+- */
+-
+-#ifdef HAVE_XORG_CONFIG_H
+-#include <xorg-config.h>
+-#endif
+-
+-#include "misc.h"
+-
+-#include <X11/fonts/fontmod.h>
+-#include "xf86Module.h"
+-
+-static MODULESETUPPROTO(freetypeSetup);
+-
+-    /*
+-     * This is the module data function that is accessed when loading
+-     * libfreetype as a module.
+-     */
+-
+-static XF86ModuleVersionInfo VersRec =
+-{
+-	"freetype",
+-	MODULEVENDORSTRING " & the After X-TT Project",
+-	MODINFOSTRING1,
+-	MODINFOSTRING2,
+-	XORG_VERSION_CURRENT,
+-        2, 1, 0,
+-	ABI_CLASS_FONT,			/* Font module */
+-	ABI_FONT_VERSION,
+-	MOD_CLASS_FONT,
+-	{0,0,0,0}       /* signature, to be patched into the file by a tool */
+-};
+-
+-_X_EXPORT XF86ModuleData freetypeModuleData = { &VersRec, freetypeSetup, NULL };
+-
+-extern void FreeTypeRegisterFontFileFunctions(void);
+-
+-static FontModule freetypeModule = {
+-    FreeTypeRegisterFontFileFunctions,
+-    "FreeType",
+-    NULL
+-};
+-
+-static pointer
+-freetypeSetup(pointer module, pointer opts, int *errmaj, int *errmin)
+-{
+-    freetypeModule.module = module;
+-    LoadFont(&freetypeModule);
+-
+-    /* Need a non-NULL return */
+-    return (pointer)1;
+-}
+diff --git a/hw/xfree86/loader/dixsym.c b/hw/xfree86/loader/dixsym.c
+index eba52ec..1505e8e 100644
+--- a/hw/xfree86/loader/dixsym.c
++++ b/hw/xfree86/loader/dixsym.c
+@@ -57,7 +57,6 @@
+ #include "cursorstr.h"
+ #include "dix.h"
+ #include "dixevents.h"
+-#include "dixfont.h"
+ #include "dixstruct.h"
+ #include "misc.h"
+ #include "globals.h"
+@@ -99,6 +98,7 @@ _X_HIDDEN void *dixLookupTab[] = {
+     /* dix */
+     /* atom.c */
+     SYMFUNC(MakeAtom)
++    SYMFUNC(NameForAtom)
+     SYMFUNC(ValidAtom)
+     /* colormap.c */
+     SYMFUNC(AllocColor)
+@@ -147,11 +147,6 @@ _X_HIDDEN void *dixLookupTab[] = {
+     SYMVAR(isItTimeToYield)
+     SYMVAR(ClientStateCallback)
+     SYMVAR(ServerGrabCallback)
+-    /* dixfonts.c */
+-    SYMFUNC(CloseFont)
+-    SYMFUNC(FontToXError)
+-    SYMFUNC(LoadGlyphs)
+-    SYMVAR(fpe_functions)
+     /* dixutils.c */
+     SYMFUNC(AddCallback)
+     SYMFUNC(ClientSleep)
+diff --git a/hw/xfree86/loader/fontsym.c b/hw/xfree86/loader/fontsym.c
+deleted file mode 100644
+index 82d4b1c..0000000
+--- a/hw/xfree86/loader/fontsym.c
++++ b/dev/null
+@@ -1,109 +0,0 @@
+-/*
+- * Copyright (c) 1998-2002 by The XFree86 Project, Inc.
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining a
+- * copy of this software and associated documentation files (the "Software"),
+- * to deal in the Software without restriction, including without limitation
+- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+- * and/or sell copies of the Software, and to permit persons to whom the
+- * Software is furnished to do so, subject to the following conditions:
+- *
+- * The above copyright notice and this permission notice shall be included in
+- * all copies or substantial portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+- * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
+- * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+- * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+- * OTHER DEALINGS IN THE SOFTWARE.
+- *
+- * Except as contained in this notice, the name of the copyright holder(s)
+- * and author(s) shall not be used in advertising or otherwise to promote
+- * the sale, use or other dealings in this Software without prior written
+- * authorization from the copyright holder(s) and author(s).
+- */
+-
+-#ifdef HAVE_XORG_CONFIG_H
+-#include <xorg-config.h>
+-#endif
+-
+-#include <X11/fonts/font.h>
+-#include "sym.h"
+-#include <X11/fonts/fntfilst.h>
+-#include <X11/fonts/fontenc.h>
+-#ifdef FONTENC_COMPATIBILITY
+-#include <X11/fonts/fontencc.h>
+-#endif
+-#include <X11/fonts/fntfilio.h>
+-#include <X11/fonts/fntfil.h>
+-#include <X11/fonts/fontutil.h>
+-#include <X11/fonts/fontxlfd.h>
+-#ifdef FONTCACHE
+-#define _FONTCACHE_SERVER_
+-#include "fontcache.h"
+-#endif
+-
+-_X_HIDDEN void *fontLookupTab[] = {
+-
+-    SYMFUNC(TwoByteSwap)
+-    SYMFUNC(FourByteSwap)
+-    SYMFUNC(FontCouldBeTerminal)
+-    SYMFUNC(BufFileRead)
+-    SYMFUNC(BufFileWrite)
+-    SYMFUNC(CheckFSFormat)
+-    SYMFUNC(FontFileOpen)
+-    SYMFUNC(FontFilePriorityRegisterRenderer)
+-    SYMFUNC(FontFileRegisterRenderer)
+-    SYMFUNC(FontParseXLFDName)
+-    SYMFUNC(FontFileCloseFont)
+-    SYMFUNC(FontFileOpenBitmap)
+-    SYMFUNC(FontFileCompleteXLFD)
+-    SYMFUNC(FontFileCountDashes)
+-    SYMFUNC(FontFileFindNameInDir)
+-    SYMFUNC(FontFileClose)
+-    SYMFUNC(FontComputeInfoAccelerators)
+-    SYMFUNC(FontDefaultFormat)
+-    SYMFUNC(NameForAtom)
+-    SYMFUNC(BitOrderInvert)
+-    SYMFUNC(FontFileMatchRenderer)
+-    SYMFUNC(RepadBitmap)
+-    SYMFUNC(FontEncName)
+-    SYMFUNC(FontEncRecode)
+-    SYMFUNC(FontEncFind)
+-    SYMFUNC(FontMapFind)
+-    SYMFUNC(FontEncMapFind)
+-    SYMFUNC(FontEncFromXLFD)
+-    SYMFUNC(FontEncDirectory)
+-    SYMFUNC(FontMapReverse)
+-    SYMFUNC(FontMapReverseFree)
+-    SYMFUNC(CreateFontRec)
+-    SYMFUNC(DestroyFontRec)
+-    SYMFUNC(GetGlyphs)
+-    SYMFUNC(QueryGlyphExtents)
+-
+-    SYMVAR(FontFileBitmapSources)
+-
+-#ifdef FONTENC_COMPATIBILITY
+-    /* Obsolete backwards compatibility symbols -- fontencc.c */
+-    SYMFUNC(font_encoding_from_xlfd)
+-    SYMFUNC(font_encoding_find)
+-    SYMFUNC(font_encoding_recode)
+-    SYMFUNC(font_encoding_name)
+-    SYMFUNC(identifyEncodingFile)
+-#endif
+-
+-#ifdef FONTCACHE
+-    /* fontcache.c */
+-    SYMFUNC(FontCacheGetSettings)
+-    SYMFUNC(FontCacheGetStatistics)
+-    SYMFUNC(FontCacheChangeSettings)
+-    SYMFUNC(FontCacheOpenCache)
+-    SYMFUNC(FontCacheCloseCache)
+-    SYMFUNC(FontCacheSearchEntry)
+-    SYMFUNC(FontCacheGetEntry)
+-    SYMFUNC(FontCacheInsertEntry)
+-    SYMFUNC(FontCacheGetBitmap)
+-#endif
+-};
+diff --git a/hw/xfree86/loader/loader.c b/hw/xfree86/loader/loader.c
+index b05c48e..c1df446 100644
+--- a/hw/xfree86/loader/loader.c
++++ b/hw/xfree86/loader/loader.c
+@@ -113,8 +113,7 @@ LoaderInit(void)
+ 
+     xf86MsgVerb(X_INFO, 2, "Loader magic: %p\n", (void *)
+ 		((long)dixLookupTab ^ (long)extLookupTab
+-	        ^ (long)fontLookupTab ^ (long)miLookupTab
+-		^ (long)xfree86LookupTab));
++	        ^ (long)miLookupTab ^ (long)xfree86LookupTab));
+     xf86MsgVerb(X_INFO, 2, "Module ABI versions:\n");
+     xf86ErrorFVerb(2, "\t%s: %d.%d\n", ABI_CLASS_ANSIC,
+ 		   GET_ABI_MAJOR(LoaderVersionInfo.ansicVersion),
+@@ -128,9 +127,6 @@ LoaderInit(void)
+     xf86ErrorFVerb(2, "\t%s : %d.%d\n", ABI_CLASS_EXTENSION,
+ 		   GET_ABI_MAJOR(LoaderVersionInfo.extensionVersion),
+ 		   GET_ABI_MINOR(LoaderVersionInfo.extensionVersion));
+-    xf86ErrorFVerb(2, "\t%s : %d.%d\n", ABI_CLASS_FONT,
+-		   GET_ABI_MAJOR(LoaderVersionInfo.fontVersion),
+-		   GET_ABI_MINOR(LoaderVersionInfo.fontVersion));
+ 
+     LoaderGetOS(&osname, NULL, NULL, NULL);
+     if (osname)
+diff --git a/hw/xfree86/loader/loaderProcs.h b/hw/xfree86/loader/loaderProcs.h
+index 9c73db3..827f3a9 100644
+--- a/hw/xfree86/loader/loaderProcs.h
++++ b/hw/xfree86/loader/loaderProcs.h
+@@ -87,7 +87,6 @@ ModuleDescPtr LoadSubModuleLocal(ModuleDescPtr, const char *,
+ 				 pointer, const XF86ModReqInfo *,
+ 				 int *, int *);
+ ModuleDescPtr DuplicateModule(ModuleDescPtr mod, ModuleDescPtr parent);
+-void LoadFont(FontModule *);
+ void UnloadModule(ModuleDescPtr);
+ void UnloadSubModule(ModuleDescPtr);
+ void UnloadDriver(ModuleDescPtr);
+diff --git a/hw/xfree86/loader/loadfont.c b/hw/xfree86/loader/loadfont.c
+deleted file mode 100644
+index 94d31d6..0000000
+--- a/hw/xfree86/loader/loadfont.c
++++ b/dev/null
+@@ -1,81 +0,0 @@
+-/*
+- * Copyright (c) 1998 by The XFree86 Project, Inc.
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining a
+- * copy of this software and associated documentation files (the "Software"),
+- * to deal in the Software without restriction, including without limitation
+- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+- * and/or sell copies of the Software, and to permit persons to whom the
+- * Software is furnished to do so, subject to the following conditions:
+- *
+- * The above copyright notice and this permission notice shall be included in
+- * all copies or substantial portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+- * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
+- * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+- * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+- * OTHER DEALINGS IN THE SOFTWARE.
+- *
+- * Except as contained in this notice, the name of the copyright holder(s)
+- * and author(s) shall not be used in advertising or otherwise to promote
+- * the sale, use or other dealings in this Software without prior written
+- * authorization from the copyright holder(s) and author(s).
+- */
+-
+-/* Maybe this file belongs in lib/font/fontfile/module/ ? */
+-
+-#define LOADERDECLARATIONS
+-#ifdef HAVE_XORG_CONFIG_H
+-#include <xorg-config.h>
+-#endif
+-
+-#include "loaderProcs.h"
+-#include "misc.h"
+-#include "xf86.h"
+-
+-/* XXX this should be static, but xorgcfg needs it, nngh */
+-FontModule *FontModuleList = NULL;
+-static int numFontModules = 0;
+-
+-static FontModule *
+-NewFontModule(void)
+-{
+-    FontModule *save = FontModuleList;
+-    int n;
+-
+-    /* Sanity check */
+-    if (!FontModuleList)
+-	numFontModules = 0;
+-
+-    n = numFontModules + 1;
+-    FontModuleList = xrealloc(FontModuleList, (n + 1) * sizeof(FontModule));
+-    if (FontModuleList == NULL) {
+-	FontModuleList = save;
+-	return NULL;
+-    } else {
+-	numFontModules++;
+-	FontModuleList[numFontModules].name = NULL;
+-	return FontModuleList + (numFontModules - 1);
+-    }
+-}
+-
+-_X_EXPORT void
+-LoadFont(FontModule * f)
+-{
+-    FontModule *newfont;
+-
+-    if (f == NULL)
+-	return;
+-
+-    if (!(newfont = NewFontModule()))
+-	return;
+-
+-    xf86MsgVerb(X_INFO, 2, "Loading font %s\n", f->name);
+-
+-    newfont->name = f->name;
+-    newfont->initFunc = f->initFunc;
+-    newfont->module = f->module;
+-}
+diff --git a/hw/xfree86/loader/loadmod.c b/hw/xfree86/loader/loadmod.c
+index 04719a6..6031db7 100644
+--- a/hw/xfree86/loader/loadmod.c
++++ b/hw/xfree86/loader/loadmod.c
+@@ -198,7 +198,6 @@ LoaderSetPath(const char *path)
+ /* Standard set of module subdirectories to search, in order of preference */
+ static const char *stdSubdirs[] = {
+     "",
+-    "fonts/",
+     "input/",
+     "drivers/",
+     "multimedia/",
+diff --git a/hw/xfree86/loader/xf86sym.c b/hw/xfree86/loader/xf86sym.c
+index 5f0a683..8a45fe7 100644
+--- a/hw/xfree86/loader/xf86sym.c
++++ b/hw/xfree86/loader/xf86sym.c
+@@ -671,7 +671,6 @@ _X_HIDDEN void *xfree86LookupTab[] = {
+     SYMFUNC(LoaderErrorMsg)
+     SYMFUNC(LoaderCheckUnresolved)
+     SYMFUNC(LoadExtension)
+-    SYMFUNC(LoadFont)
+     SYMFUNC(LoaderReqSymbols)
+     SYMFUNC(LoaderReqSymLists)
+     SYMFUNC(LoaderRefSymbols)
+diff --git a/include/dixfont.h b/include/dixfont.h
+index 516d91b..d61dd7e 100644
+--- a/include/dixfont.h
++++ b/include/dixfont.h
+@@ -33,10 +33,6 @@ SOFTWARE.
+ 
+ typedef struct _DIXFontProp *DIXFontPropPtr;
+ 
+-extern FPEFunctions *fpe_functions;
+-
+-extern int FontToXError(int /*err*/);
+-
+ extern Bool SetDefaultFont(char * /*defaultfontname*/);
+ 
+ extern void QueueFontWakeup(FontPathElementPtr /*fpe*/);
+@@ -110,12 +106,6 @@ extern int GetFontPath(ClientPtr client,
+ 		       int *length,
+ 		       unsigned char **result);
+ 
+-extern int LoadGlyphs(ClientPtr /*client*/,
+-		      FontPtr /*pfont*/,
+-		      unsigned /*nchars*/,
+-		      int /*item_size*/,
+-		      unsigned char * /*data*/);
+-
+ extern void DeleteClientFontStuff(ClientPtr /*client*/);
+ 
+ /* Quartz support on Mac OS X pulls in the QuickDraw
+--
+cgit v0.8.2
