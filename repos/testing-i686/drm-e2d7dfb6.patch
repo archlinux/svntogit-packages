@@ -1,0 +1,401 @@
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/intel/intel_bufmgr.h drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/intel/intel_bufmgr.h
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/intel/intel_bufmgr.h	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/intel/intel_bufmgr.h	2009-03-26 23:43:00.000000000 +0000
+@@ -115,6 +115,7 @@
+ 						unsigned int handle);
+ void drm_intel_bufmgr_gem_enable_reuse(drm_intel_bufmgr *bufmgr);
+ int drm_intel_gem_bo_map_gtt(drm_intel_bo *bo);
++int drm_intel_gem_bo_unmap_gtt(drm_intel_bo *bo);
+ void drm_intel_gem_bo_start_gtt_access(drm_intel_bo *bo, int write_enable);
+ 
+ /* drm_intel_bufmgr_fake.c */
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/intel/intel_bufmgr_fake.c drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/intel/intel_bufmgr_fake.c
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/intel/intel_bufmgr_fake.c	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/intel/intel_bufmgr_fake.c	2009-03-26 23:43:00.000000000 +0000
+@@ -444,7 +444,8 @@
+ 
+ /* Release the card storage associated with buf:
+  */
+-static void free_block(drm_intel_bufmgr_fake *bufmgr_fake, struct block *block)
++static void free_block(drm_intel_bufmgr_fake *bufmgr_fake, struct block *block,
++		       int skip_dirty_copy)
+ {
+    drm_intel_bo_fake *bo_fake;
+    DBG("free block %p %08x %d %d\n", block, block->mem->ofs, block->on_hardware, block->fenced);
+@@ -453,7 +454,11 @@
+       return;
+ 
+    bo_fake = (drm_intel_bo_fake *)block->bo;
+-   if (!(bo_fake->flags & (BM_PINNED | BM_NO_BACKING_STORE)) && (bo_fake->card_dirty == 1)) {
++
++   if (bo_fake->flags & (BM_PINNED | BM_NO_BACKING_STORE))
++      skip_dirty_copy = 1;
++
++   if (!skip_dirty_copy && (bo_fake->card_dirty == 1)) {
+      memcpy(bo_fake->backing_store, block->virtual, block->bo->size);
+      bo_fake->card_dirty = 0;
+      bo_fake->dirty = 1;
+@@ -534,7 +539,7 @@
+       set_dirty(&bo_fake->bo);
+       bo_fake->block = NULL;
+ 
+-      free_block(bufmgr_fake, block);
++      free_block(bufmgr_fake, block, 0);
+       return 1;
+    }
+ 
+@@ -557,7 +562,7 @@
+       set_dirty(&bo_fake->bo);
+       bo_fake->block = NULL;
+ 
+-      free_block(bufmgr_fake, block);
++      free_block(bufmgr_fake, block, 0);
+       return 1;
+    }
+ 
+@@ -872,7 +877,7 @@
+       assert(bo_fake->map_count == 0);
+       /* No remaining references, so free it */
+       if (bo_fake->block)
+-	 free_block(bufmgr_fake, bo_fake->block);
++	 free_block(bufmgr_fake, bo_fake->block, 1);
+       free_backing_store(bo);
+ 
+       for (i = 0; i < bo_fake->nr_relocs; i++)
+@@ -1064,7 +1069,7 @@
+       drm_intel_bo_fake *bo_fake = (drm_intel_bo_fake *)block->bo;
+ 
+       block->on_hardware = 0;
+-      free_block(bufmgr_fake, block);
++      free_block(bufmgr_fake, block, 0);
+       bo_fake->block = NULL;
+       bo_fake->validated = 0;
+       if (!(bo_fake->flags & BM_NO_BACKING_STORE))
+@@ -1463,7 +1468,7 @@
+ 
+    DRMLISTFOREACHSAFE(block, tmp, &bufmgr_fake->lru) {
+       /* Releases the memory, and memcpys dirty contents out if necessary. */
+-      free_block(bufmgr_fake, block);
++      free_block(bufmgr_fake, block, 0);
+    }
+ 
+    pthread_mutex_unlock(&bufmgr_fake->lock);
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/intel/intel_bufmgr_gem.c drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/intel/intel_bufmgr_gem.c
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/intel/intel_bufmgr_gem.c	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/intel/intel_bufmgr_gem.c	2009-03-26 23:43:00.000000000 +0000
+@@ -145,7 +145,9 @@
+     /** Number of entries in relocs */
+     int reloc_count;
+     /** Mapped address for the buffer, saved across map/unmap cycles */
+-    void *virtual;
++    void *mem_virtual;
++    /** GTT virtual address for the buffer, saved across map/unmap cycles */
++    void *gtt_virtual;
+ 
+     /** BO cache list */
+     drmMMListHead head;
+@@ -524,8 +526,10 @@
+     struct drm_gem_close close;
+     int ret;
+ 
+-    if (bo_gem->virtual)
+-	munmap (bo_gem->virtual, bo_gem->bo.size);
++    if (bo_gem->mem_virtual)
++	munmap (bo_gem->mem_virtual, bo_gem->bo.size);
++    if (bo_gem->gtt_virtual)
++	munmap (bo_gem->gtt_virtual, bo_gem->bo.size);
+ 
+     /* Close this object */
+     memset(&close, 0, sizeof(close));
+@@ -609,7 +613,7 @@
+     /* Allow recursive mapping. Mesa may recursively map buffers with
+      * nested display loops.
+      */
+-    if (!bo_gem->virtual) {
++    if (!bo_gem->mem_virtual) {
+ 	struct drm_i915_gem_mmap mmap_arg;
+ 
+ 	DBG("bo_map: %d (%s)\n", bo_gem->gem_handle, bo_gem->name);
+@@ -626,12 +630,12 @@
+ 	    pthread_mutex_unlock(&bufmgr_gem->lock);
+ 	    return ret;
+ 	}
+-	bo_gem->virtual = (void *)(uintptr_t)mmap_arg.addr_ptr;
++	bo_gem->mem_virtual = (void *)(uintptr_t)mmap_arg.addr_ptr;
+ 	bo_gem->swrast = 0;
+     }
+     DBG("bo_map: %d (%s) -> %p\n", bo_gem->gem_handle, bo_gem->name,
+-	bo_gem->virtual);
+-    bo->virtual = bo_gem->virtual;
++	bo_gem->mem_virtual);
++    bo->virtual = bo_gem->mem_virtual;
+ 
+     if (bo_gem->global_name != 0 || !bo_gem->swrast) {
+ 	set_domain.handle = bo_gem->gem_handle;
+@@ -669,7 +673,7 @@
+     pthread_mutex_lock(&bufmgr_gem->lock);
+ 
+     /* Get a mapping of the buffer if we haven't before. */
+-    if (bo_gem->virtual == NULL) {
++    if (bo_gem->gtt_virtual == NULL) {
+ 	struct drm_i915_gem_mmap_gtt mmap_arg;
+ 
+ 	DBG("bo_map_gtt: %d (%s)\n", bo_gem->gem_handle, bo_gem->name);
+@@ -690,10 +694,10 @@
+ 	}
+ 
+ 	/* and mmap it */
+-	bo_gem->virtual = mmap(0, bo->size, PROT_READ | PROT_WRITE,
+-			       MAP_SHARED, bufmgr_gem->fd,
+-			       mmap_arg.offset);
+-	if (bo_gem->virtual == MAP_FAILED) {
++	bo_gem->gtt_virtual = mmap(0, bo->size, PROT_READ | PROT_WRITE,
++				   MAP_SHARED, bufmgr_gem->fd,
++				   mmap_arg.offset);
++	if (bo_gem->gtt_virtual == MAP_FAILED) {
+ 	    fprintf(stderr,
+ 		    "%s:%d: Error mapping buffer %d (%s): %s .\n",
+ 		    __FILE__, __LINE__,
+@@ -704,10 +708,10 @@
+ 	}
+     }
+ 
+-    bo->virtual = bo_gem->virtual;
++    bo->virtual = bo_gem->gtt_virtual;
+ 
+     DBG("bo_map: %d (%s) -> %p\n", bo_gem->gem_handle, bo_gem->name,
+-	bo_gem->virtual);
++	bo_gem->gtt_virtual);
+ 
+     /* Now move it to the GTT domain so that the CPU caches are flushed */
+     set_domain.handle = bo_gem->gem_handle;
+@@ -719,7 +723,7 @@
+     } while (ret == -1 && errno == EINTR);
+ 
+     if (ret != 0) {
+-	    fprintf (stderr, "%s:%d: Error setting swrast %d: %s\n",
++	    fprintf (stderr, "%s:%d: Error setting domain %d: %s\n",
+ 		     __FILE__, __LINE__, bo_gem->gem_handle, strerror (errno));
+     }
+ 
+@@ -728,6 +732,26 @@
+     return 0;
+ }
+ 
++int
++drm_intel_gem_bo_unmap_gtt(drm_intel_bo *bo)
++{
++    drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bo->bufmgr;
++    drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *)bo;
++    struct drm_i915_gem_sw_finish sw_finish;
++    int ret = 0;
++
++    if (bo == NULL)
++	return 0;
++
++    assert(bo_gem->gtt_virtual != NULL);
++
++    pthread_mutex_lock(&bufmgr_gem->lock);
++    bo->virtual = NULL;
++    pthread_mutex_unlock(&bufmgr_gem->lock);
++
++    return ret;
++}
++
+ static int
+ drm_intel_gem_bo_unmap(drm_intel_bo *bo)
+ {
+@@ -739,7 +763,7 @@
+     if (bo == NULL)
+ 	return 0;
+ 
+-    assert(bo_gem->virtual != NULL);
++    assert(bo_gem->mem_virtual != NULL);
+ 
+     pthread_mutex_lock(&bufmgr_gem->lock);
+     if (bo_gem->swrast) {
+@@ -750,6 +774,7 @@
+ 	} while (ret == -1 && errno == EINTR);
+ 	bo_gem->swrast = 0;
+     }
++    bo->virtual = NULL;
+     pthread_mutex_unlock(&bufmgr_gem->lock);
+     return 0;
+ }
+@@ -1260,8 +1285,21 @@
+     int i;
+     unsigned int total = 0;
+ 
+-    for (i = 0; i < count; i++)
++    for (i = 0; i < count; i++) {
+ 	total += drm_intel_gem_bo_get_aperture_space(bo_array[i]);
++	/* For the first buffer object in the array, we get an accurate count
++	 * back for its reloc_tree size (since nothing had been flagged as
++	 * being counted yet).  We can save that value out as a more
++	 * conservative reloc_tree_size that avoids double-counting target
++	 * buffers.  Since the first buffer happens to usually be the batch
++	 * buffer in our callers, this can pull us back from doing the tree
++	 * walk on every new batch emit.
++	 */
++	if (i == 0) {
++	    drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *)bo_array[i];
++	    bo_gem->reloc_tree_size = total;
++	}
++    }
+ 
+     for (i = 0; i < count; i++)
+ 	drm_intel_gem_bo_clear_aperture_space_flag(bo_array[i]);
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/Makefile.am drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/Makefile.am
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/Makefile.am	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/Makefile.am	2009-03-26 23:43:00.000000000 +0000
+@@ -19,7 +19,9 @@
+ 			    nouveau_bo.c \
+ 			    nouveau_resource.c \
+ 			    nouveau_dma.c \
+-			    nouveau_fence.c
++			    nouveau_fence.c \
++			    nouveau_dma.h \
++			    nouveau_private.h
+ 
+ libdrm_nouveaucommonincludedir = ${includedir}/nouveau
+ libdrm_nouveaucommoninclude_HEADERS = \
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_bo.c drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_bo.c
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_bo.c	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_bo.c	2009-03-26 23:43:00.000000000 +0000
+@@ -347,24 +347,25 @@
+ 	if (!bo || !handle)
+ 		return -EINVAL;
+ 
+-	if (!nvdev->mm_enabled)
+-		return -ENODEV;
+-
+ 	if (!nvbo->global_handle) {
+ 		struct drm_gem_flink req;
+  
+ 		ret = nouveau_bo_kalloc(nvbo, NULL);
+ 		if (ret)
+ 			return ret;
+- 
+-		req.handle = nvbo->handle;
+-		ret = ioctl(nvdev->fd, DRM_IOCTL_GEM_FLINK, &req);
+-		if (ret) {
+-			nouveau_bo_kfree(nvbo);
+-			return ret;
++
++		if (nvdev->mm_enabled) {
++			req.handle = nvbo->handle;
++			ret = ioctl(nvdev->fd, DRM_IOCTL_GEM_FLINK, &req);
++			if (ret) {
++				nouveau_bo_kfree(nvbo);
++				return ret;
++			}
++	 
++			nvbo->global_handle = req.name;
++		} else {
++			nvbo->global_handle = nvbo->offset;
+ 		}
+- 
+-		nvbo->global_handle = req.name;
+ 	}
+  
+ 	*handle = nvbo->global_handle;
+@@ -412,6 +413,8 @@
+ {
+ 	struct nouveau_bo_priv *nvbo = priv;
+ 
++	nouveau_fence_ref(NULL, &nvbo->fence);
++	nouveau_fence_ref(NULL, &nvbo->wr_fence);
+ 	nouveau_bo_kfree(nvbo);
+ 	free(nvbo);
+ }
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_device.c drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_device.c
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_device.c	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_device.c	2009-03-26 23:43:00.000000000 +0000
+@@ -76,6 +76,22 @@
+ 	}
+ 	nvdev->base.vm_vram_base = value;
+ 
++	ret = nouveau_device_get_param(&nvdev->base,
++				       NOUVEAU_GETPARAM_FB_SIZE, &value);
++	if (ret) {
++		nouveau_device_close((void *)&nvdev);
++		return ret;
++	}
++	nvdev->vram_aper_size = value;
++
++	ret = nouveau_device_get_param(&nvdev->base,
++				       NOUVEAU_GETPARAM_AGP_SIZE, &value);
++	if (ret) {
++		nouveau_device_close((void *)&nvdev);
++		return ret;
++	}
++	nvdev->gart_aper_size = value;
++
+ 	ret = nouveau_bo_init(&nvdev->base);
+ 	if (ret) {
+ 		nouveau_device_close((void *)&nvdev);
+@@ -128,7 +144,7 @@
+ {
+ 	struct nouveau_device_priv *nvdev;
+ 
+-	if (dev || !*dev)
++	if (!dev || !*dev)
+ 		return;
+ 	nvdev = nouveau_device(*dev);
+ 	*dev = NULL;
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_drmif.h drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_drmif.h
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_drmif.h	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_drmif.h	2009-03-26 23:43:00.000000000 +0000
+@@ -37,6 +37,9 @@
+ 	int needs_close;
+ 
+ 	int mm_enabled;
++/*XXX: move to nouveau_device when interface gets bumped */
++	uint64_t vram_aper_size;
++	uint64_t gart_aper_size;
+ };
+ #define nouveau_device(n) ((struct nouveau_device_priv *)(n))
+ 
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_fence.c drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_fence.c
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_fence.c	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_fence.c	2009-03-26 23:43:00.000000000 +0000
+@@ -96,22 +96,16 @@
+ int
+ nouveau_fence_ref(struct nouveau_fence *ref, struct nouveau_fence **fence)
+ {
+-	struct nouveau_fence_priv *nvfence;
+-
+ 	if (!fence)
+ 		return -EINVAL;
+ 
+-	if (*fence) {
+-		nouveau_fence_del(fence);
+-		*fence = NULL;
+-	}
++	if (ref)
++		nouveau_fence(ref)->refcount++;
+ 
+-	if (ref) {
+-		nvfence = nouveau_fence(ref);
+-		nvfence->refcount++;	
+-		*fence = &nvfence->base;
+-	}
++	if (*fence)
++		nouveau_fence_del(fence);
+ 
++	*fence = ref;
+ 	return 0;
+ }
+ 
+diff -ruN drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_private.h drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_private.h
+--- drm-a773ce1db8801fcbbdb55b54172c9cd48b92e2d7/libdrm/nouveau/nouveau_private.h	2009-02-23 21:30:44.000000000 +0000
++++ drm-e2d7dfb61ad7a97367f050150160c205614d152e/libdrm/nouveau/nouveau_private.h	2009-03-26 23:43:00.000000000 +0000
+@@ -173,7 +173,7 @@
+ 
+ 	/* Kernel object */
+ 	uint32_t global_handle;
+-	unsigned handle;
++	drm_handle_t handle;
+ 	void *map;
+ 
+ 	/* Last known information from kernel on buffer status */
