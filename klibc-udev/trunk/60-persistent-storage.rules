@@ -10,10 +10,10 @@ ACTION!="add|change", GOTO="persistent_storage_end"
 SUBSYSTEM!="block", GOTO="persistent_storage_end"
 
 # skip rules for inappropriate block devices
-KERNEL=="ram*|loop*|fd*|nbd*|gnbd*|md*|btibm*", GOTO="persistent_storage_end"
+KERNEL=="fd*|mtd*|nbd*|gnbd*|md*|btibm*", GOTO="persistent_storage_end"
 
 # never access non-cdrom removable ide devices, the drivers are causing event loops on open()
-KERNEL=="hd*[!0-9]", ATTR{removable}=="1", DRIVERS=="ide-cs|ide-floppy", GOTO="persistent_storage_end"
+KERNEL=="hd*[!0-9]", ATTR{removable}=="1", SUBSYSTEMS=="ide", ATTRS{media}=="disk|floppy", GOTO="persistent_storage_end"
 KERNEL=="hd*[0-9]", ATTRS{removable}=="1", GOTO="persistent_storage_end"
 
 # ignore partitions that span the entire disk
@@ -39,6 +39,9 @@ KERNEL=="sr*", ENV{ID_CDROM_MEDIA_TRACK_COUNT}=="?*", IMPORT{program}="vol_id --
 
 # probe filesystem metadata of disks
 KERNEL!="sr*", IMPORT{program}="vol_id --export $tempnode"
+
+# watch for future changes
+KERNEL!="sr*", OPTIONS+="watch"
 
 # by-label/by-uuid links (filesystem metadata)
 ENV{ID_FS_USAGE}=="filesystem|other|crypto", ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
