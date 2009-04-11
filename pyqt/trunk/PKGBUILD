@@ -4,7 +4,7 @@
 
 pkgname=pyqt
 pkgver=4.4.4
-pkgrel=2
+pkgrel=3
 pkgdesc="PyQt is a set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/pyqt/"
@@ -13,7 +13,7 @@ license=('GPL')
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-pkgurl="http://www.riverbankcomputing.com/Downloads/PyQt4/GPL/"
+pkgurl="http://riverbankcomputing.com/software/pyqt/download"
 source=(http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-$pkgver.tar.gz)
 
 build() {
@@ -22,6 +22,9 @@ build() {
   echo yes | python configure.py -b /usr/bin \
   -d /usr/lib/python2.6/site-packages \
   -v /usr/share/sip
+
+  # Thanks Gerardo for the rpath fix
+  find -name 'Makefile' | xargs sed -i 's|-Wl,-rpath,/usr/lib||g;s|-Wl,-rpath,.* ||g'
 
   make || return 1
   make DESTDIR=${startdir}/pkg install
