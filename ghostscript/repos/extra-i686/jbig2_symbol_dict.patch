@@ -1,0 +1,45 @@
+From 902b821d05aaeb052d591f9fba697624c2faad81 Mon Sep 17 00:00:00 2001
+From: Ralph Giles <giles@ghostscript.com>
+Date: Wed, 1 Apr 2009 15:52:17 -0700
+Subject: [PATCH] Bounds check exported symbol run-lengths. CVE-2009-0196.
+
+The final symbol dictionary is built from a combination of symbols
+from referenced dictionaries and new symbols coded in the current
+segment. Because the symbols can be composed and refined, not all
+coded symbols are necessarily exported.
+
+The list of symbols to export from those constructed by the decoding
+process is coded as a series of on/off run-lengths. Previously we
+accepted the value read as the run-length, even though this could
+result in writing off the end of the exported symbol array. This
+commit checks the read value against the number of elements remaining
+in the export array and throws a fatal error if there is an overflow.
+
+Thanks for Alin Rad Pop of Secunia Research for pointing out the issue.
+---
+ jbig2_symbol_dict.c |    9 +++++++++
+ 1 files changed, 9 insertions(+), 0 deletions(-)
+
+diff --git a/jbig2_symbol_dict.c b/jbig2_symbol_dict.c
+index 10a0211..4524f85 100644
+--- jbid2dec/jbig2_symbol_dict.c
++++ jbig2dec/jbig2_symbol_dict.c
+@@ -696,6 +696,15 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
+         exrunlength = params->SDNUMEXSYMS;
+       else
+         code = jbig2_arith_int_decode(IAEX, as, &exrunlength);
++      if (exrunlength > params->SDNUMEXSYMS - j) {
++        jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
++          "runlength too large in export symbol table (%d > %d - %d)\n",
++          exrunlength, params->SDNUMEXSYMS, j);
++        jbig2_sd_release(ctx, SDEXSYMS);
++        /* skip to the cleanup code and return SDEXSYMS = NULL */
++        SDEXSYMS = NULL;
++        break;
++      }
+       for(k = 0; k < exrunlength; k++)
+         if (exflag) {
+           SDEXSYMS->glyphs[j++] = (i < m) ?
+-- 
+1.6.1.3
+
