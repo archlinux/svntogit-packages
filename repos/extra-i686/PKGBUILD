@@ -3,11 +3,11 @@
 
 pkgname=ghostscript
 pkgver=8.64
-pkgrel=4
+pkgrel=5
 pkgdesc="An interpreter for the PostScript language"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
-depends=('libxext' 'libxt' 'libcups>=1.3.9-3' 'fontconfig>=2.6.0' 'gnutls>=2.6.3')
+depends=('libxext' 'libxt' 'libcups>=1.3.9-3' 'fontconfig>=2.6.0' 'gnutls>=2.6.3' 'cairo>=1.8.6')
 makedepends=('automake' 'autoconf' 'gtk2>=2.14.7')
 optdepends=('texlive-core: dvipdf' 'gtk2: gsx')
 replaces=('ghostscript-lrpng')
