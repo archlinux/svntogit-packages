@@ -3,64 +3,54 @@
 # Contributor: Link Dupont <link@subpop.net>
 
 pkgname=hal
-pkgver=0.5.11
-pkgrel=7
+pkgver=0.5.12git20090406.46dc48
+pkgrel=1
 pkgdesc="Hardware Abstraction Layer"
+_gitver=46dc48d2235c5916179bacf58f800132cd7a7257
 arch=(i686 x86_64)
 license=('GPL' 'custom')
 url="http://www.freedesktop.org/wiki/Software/hal"
-depends=('dbus-glib>=0.76' 'dbus>=1.2.4' 'libusb>=0.1.12' 'udev>=118' 'filesystem>=0.7.1-5' 'hal-info>=0.20081022' 'eject' 'libsmbios>=2.0.2' 'dmidecode' 'pciutils>=3.0.2' 'usbutils>=0.73-5' 'pm-utils>=1.2.2.1' 'policykit>=0.9-6' 'consolekit>=0.3.0')
+depends=('dbus-glib>=0.80' 'libusb>=0.1.12' 'udev>=141' 'filesystem>=0.7.1-5' 'hal-info>=0.20090330' 'eject' 'dmidecode' 'pciutils>=3.0.2' 'usbutils>=0.73-5' 'pm-utils>=1.2.5' 'policykit>=0.9-6' 'consolekit>=0.3.0')
 makedepends=('pkgconfig' 'gperf')
-options=('!libtool')
+options=('!libtool' '!makeflags')
 install=hal.install
-source=(http://hal.freedesktop.org/releases/${pkgname}-${pkgver}.tar.bz2
+source=(ftp://ftp.archlinux.org/other/hal/hal-${_gitver}.tar.bz2
 	hal
 	cryptsetup_location.patch
 	hal-0.5.9-hide-diagnostic.patch
-	ntfs3g-valid-options.patch
-	fix-udev-compatibility.patch
-	ntfs-mount-fix.patch
-	consolekit-0.3.patch
-	libtool-fix.patch)
-md5sums=('5e8935ab61bcb14afd2d4548084aace0'
+	ntfs-mount-fix.patch)
+md5sums=('2b3012d9f4a5b0c1666df20763124d4c'
          '277e96ac130d7bfce0b30f0b80db8782'
          'c688a3c6574699365926f4fef7441545'
          '4d4b6801a1cedca22b8bdd9db73b16fb'
-         '4242a2c78885e396f639d0cd5e33218c'
-         '1a33d73fa422df2f05b7e3483836f778'
-         '96cf8835c30dc581c4fcf72b6ad7675e'
-	 'ad73507bbf4a7dd350072ab8ea61bb96'
-	 '89b38c39c395d55a9575a76e5c6cd759')
+         '96cf8835c30dc581c4fcf72b6ad7675e')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
+  cd "${srcdir}/${pkgname}-${_gitver}"
   patch -Np1 -i ${startdir}/src/cryptsetup_location.patch || return 1
   patch -Np1 -i ${startdir}/src/hal-0.5.9-hide-diagnostic.patch || return 1
-  patch -Np0 -i ${startdir}/src/ntfs3g-valid-options.patch || return 1
-  # Fix compatibility with udev 126 and later
-  patch -Np1 -i ${startdir}/src/fix-udev-compatibility.patch || return 1
   patch -Np0 -i ${srcdir}/ntfs-mount-fix.patch || return 1
-  patch -Np1 -i ${srcdir}/consolekit-0.3.patch || return 1
-  patch -Np0 -i ${srcdir}/libtool-fix.patch || return 1
 
   libtoolize --force || return 1
   aclocal || return 1
   autoconf || return 1
   autoheader || return 1
-  automake || return 1
+  automake --add-missing || return 1
 
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-              --libexecdir=/usr/lib/hal --enable-static=no \
-	      --enable-acpi-ibm --enable-acpi-toshiba \
-              --disable-docbook-docs \
+              --libexecdir=/usr/lib/hal --with-udev-prefix=/etc \
+	      --enable-static=no --enable-acpi-ibm --enable-acpi-toshiba \
+              --disable-docbook-docs --enable-console-kit \
+	      --enable-policy-kit --enable-acl-management \
+	      --enable-umount-helper --disable-smbios \
 	      --with-hal-user=hal --with-hal-group=hal \
 	      --with-pid-file=/var/run/hald.pid || return 1
   make || return 1
-  make DESTDIR=${startdir}/pkg install || return 1
-  install -m755 -d ${startdir}/pkg/etc/rc.d
-  install -m755 -d ${startdir}/pkg/media || return 1
-  install -m 755 ${startdir}/src/hal ${startdir}/pkg/etc/rc.d/hal || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/etc/rc.d"
+  install -m755 -d "${pkgdir}/media" || return 1
+  install -m755 "${srcdir}/hal" "${pkgdir}/etc/rc.d/" || return 1
 
-  install -m755 -d ${startdir}/pkg/usr/share/licenses/${pkgname}
-  install -m644 COPYING ${startdir}/pkg/usr/share/licenses/${pkgname}/ || return 1
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
 }
