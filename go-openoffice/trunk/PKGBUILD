@@ -1,0 +1,121 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+pkgname=go-openoffice
+pkgver=3.0.99.4
+pkgrel=1
+pkgdesc="OpenOffice.org - go-oo.org enhanced version"
+arch=('i686' 'x86_64')
+_go_tree="OOO310"
+_dir=DEV300
+_ootag=ooo310-m9
+license=('LGPL3')
+url="http://www.openoffice.org"
+install=${pkgname}.install
+depends=("curl>=7.19.4" "hunspell>=1.2.8" "python>=2.6.1" 'libwpd' 'redland' 'gstreamer0.10-base-plugins>=0.10.22'
+         'libxaw' "neon>=0.28.3-2" "icu>=4.0-2" 'hsqldb-java' 'libxslt' 'desktop-file-utils')
+optdepends=('java-runtime:	adds java support'
+            'libcups:		adds printing support'
+            'gconf:		adds additional gnome support'
+            'nss:		adds support for signed files/macros'
+            'pstoedit:		translates PostScript and PDF graphics into other vector formats')
+makedepends=('automake' 'autoconf' 'wget' 'bison' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
+	'pam' 'sane' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.0.8" 'apache-ant' 'cairo' 
+	'gperf' 'libcups' 'pstoedit' 'gconf' "openjdk6>=1.4" 'unixodbc') # 'boost' # 'libjpeg' 
+#?checking which polygon clipping code to use... internal
+	# extra 
+	# community saxon 
+provides=('openoffice-base')
+conflicts=('openoffice-base')
+_mirror="http://download.go-oo.org/"
+source=(${_mirror}/${_go_tree}/ooo-build-${pkgver}.tar.gz
+	ArchLinux.patch
+	http://download.go-oo.org//DEV300/ooo-cli-prebuilt-3.1.tar.bz2
+	http://cairographics.org/releases//cairo-1.4.10.tar.gz
+	http://download.go-oo.org//SRC680/mdbtools-0.6pre1.tar.gz
+	${_mirror}/${_go_tree}/${_ootag}-{artwork,base,bootstrap,calc,components,extras,filters,help,impress,libs-gui,libs-core,libs-extern,postprocess,sdk,testing,ure,writer,libs-extern-sys,extensions}.tar.bz2
+	http://download.go-oo.org//SRC680/extras-3.tar.bz2
+	http://download.go-oo.org//SRC680/biblio.tar.bz2
+	http://tools.openoffice.org/unowinreg_prebuild/680//unowinreg.dll
+	http://download.go-oo.org//DEV300/scsolver.2008-10-30.tar.bz2
+	http://download.go-oo.org//libwpd/libwpd-0.8.14.tar.gz
+	http://download.go-oo.org//SRC680/libwps-0.1.2.tar.gz
+	http://download.go-oo.org//SRC680/libwpg-0.1.3.tar.gz)
+#options=('!distcc' '!ccache' '!makeflags')
+noextract=(ooo-cli-prebuilt-3.1.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar.gz
+	${_ootag}-{artwork,base,bootstrap,calc,components,extras,filters,help,impress,libs-gui,libs-core,libs-extern,postprocess,sdk,testing,ure,writer,libs-extern-sys,extensions}.tar.bz2
+	extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz)
+	
+build() {
+	cd ${srcdir}/ooo-build-${pkgver}
+	
+	# our ArchLinux distrivution patch until we get upstream
+	patch -Np0 -i ${srcdir}/ArchLinux.patch || return 1
+	autoreconf
+
+	export ARCH_FLAGS="${CXXFLAGS}"
+#	if [ "$CARCH" = "x86_64" ]; then
+#           EXTRAOPTS="--without-stlport"
+#	 else
+#	   EXTRAOPTS="--with-stlport"
+#	fi
+
+	./configure --with-distro=ArchLinux \
+		--with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
+		--with-srcdir=${srcdir} \
+		--with-max-jobs=${MAKEFLAGS/-j/} \
+		--with-installed-ooo-dirname="${pkgname}-${pkgver}" \
+		--prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
+		--with-docdir=/usr/share/doc/packages/"${pkgname}-${pkgver}" \
+		--mandir=/usr/share/man \
+		--with-lang="en-US" \
+		--with-dict=ALL\
+		--disable-ldap \
+		--disable-kde\
+		--without-system-jpeg \
+		--disable-evolution2\
+		--disable-lockdown\
+		--disable-mediawiki\
+		--disable-minimizer\
+		--disable-odk\
+		--disable-pdfimport\
+		--disable-qadevooo\
+		--disable-reportdesign\
+		--disable-systray\
+		--disable-mathmldtd\
+		--enable-cairo\
+		--enable-crashdump\
+		--enable-verbose\
+		--with-package-format=native\
+		--with-system-cairo\
+		--without-fonts\
+		--without-afms\
+		--without-gpc\
+		--without-nas\
+		--with-jdk-home=${JAVA_HOME} \
+		--with-system-xerces \
+		--with-xerces-jar=/usr/share/java/xercesImpl.jar \
+		--with-system-xalan \
+		--with-xalan-jar=/usr/share/java/xalan.jar \
+		--with-system-xml-apis\
+		--with-xml-apis-jar=/usr/share/java/xml-apis.jar \
+	 	--with-system-hsqldb \
+		--with-hsqldb-jar=/usr/share/java/hsqldb.jar \
+		--with-serializer-jar=/usr/share/java/serializer.jar \
+		--with-use-shell=bash\
+		$EXTRAOPTS || return 1
+
+#	--with-system-jpeg\ # broken, see http://qa.openoffice.org/issues/show_bug.cgi?id=74749
+		
+	unset MAKEFLAGS
+	./download
+
+	make  || return 1
+
+#	bin/ooinstall ${pkgdir} || return 1
+	make DESTDIR=${pkgdir} install || return 1
+	
+	# fix broken soffice link
+	cd ${pkgdir}/usr/bin
+	ln -sfv ../lib/${pkgname}-${pkgver}/program/soffice soffice3.1
+}
