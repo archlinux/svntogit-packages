@@ -2,7 +2,7 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=go-openoffice
-pkgver=3.0.99.4
+pkgver=3.0.99.5
 pkgrel=1
 pkgdesc="OpenOffice.org - go-oo.org enhanced version"
 arch=('i686' 'x86_64')
@@ -13,7 +13,7 @@ license=('LGPL3')
 url="http://www.openoffice.org"
 install=${pkgname}.install
 depends=("curl>=7.19.4" "hunspell>=1.2.8" "python>=2.6.1" 'libwpd' 'redland' 'gstreamer0.10-base-plugins>=0.10.22'
-         'libxaw' "neon>=0.28.3-2" "icu>=4.0-2" 'hsqldb-java' 'libxslt' 'desktop-file-utils')
+         'libxaw' "neon>=0.28.3-2" "icu>=4.0-2" 'hsqldb-java' 'libxslt' 'libxtst' 'desktop-file-utils' 'mono>=2.4')
 optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
@@ -22,9 +22,6 @@ optdepends=('java-runtime:	adds java support'
 makedepends=('automake' 'autoconf' 'wget' 'bison' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
 	'pam' 'sane' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.0.8" 'apache-ant' 'cairo' 
 	'gperf' 'libcups' 'pstoedit' 'gconf' "openjdk6>=1.4" 'unixodbc') # 'boost' # 'libjpeg' 
-#?checking which polygon clipping code to use... internal
-	# extra 
-	# community saxon 
 provides=('openoffice-base')
 conflicts=('openoffice-base')
 _mirror="http://download.go-oo.org/"
@@ -47,18 +44,16 @@ noextract=(ooo-cli-prebuilt-3.1.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar
 	extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz)
 	
 build() {
+	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
+	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
+
 	cd ${srcdir}/ooo-build-${pkgver}
 	
-	# our ArchLinux distrivution patch until we get upstream
+	# our ArchLinux distribution patch until we go upstream
 	patch -Np0 -i ${srcdir}/ArchLinux.patch || return 1
 	autoreconf
 
 	export ARCH_FLAGS="${CXXFLAGS}"
-#	if [ "$CARCH" = "x86_64" ]; then
-#           EXTRAOPTS="--without-stlport"
-#	 else
-#	   EXTRAOPTS="--with-stlport"
-#	fi
 
 	./configure --with-distro=ArchLinux \
 		--with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
@@ -70,52 +65,38 @@ build() {
 		--mandir=/usr/share/man \
 		--with-lang="en-US" \
 		--with-dict=ALL\
+		--with-binsuffix=no
 		--disable-ldap \
 		--disable-kde\
-		--without-system-jpeg \
-		--disable-evolution2\
-		--disable-lockdown\
-		--disable-mediawiki\
-		--disable-minimizer\
-		--disable-odk\
-		--disable-pdfimport\
-		--disable-qadevooo\
-		--disable-reportdesign\
-		--disable-systray\
-		--disable-mathmldtd\
 		--enable-cairo\
-		--enable-crashdump\
-		--enable-verbose\
-		--with-package-format=native\
 		--with-system-cairo\
-		--without-fonts\
-		--without-afms\
+		--enable-crashdump\
+		--without-system-jpeg \
 		--without-gpc\
-		--without-nas\
-		--with-jdk-home=${JAVA_HOME} \
-		--with-system-xerces \
-		--with-xerces-jar=/usr/share/java/xercesImpl.jar \
-		--with-system-xalan \
-		--with-xalan-jar=/usr/share/java/xalan.jar \
-		--with-system-xml-apis\
-		--with-xml-apis-jar=/usr/share/java/xml-apis.jar \
-	 	--with-system-hsqldb \
-		--with-hsqldb-jar=/usr/share/java/hsqldb.jar \
-		--with-serializer-jar=/usr/share/java/serializer.jar \
-		--with-use-shell=bash\
 		$EXTRAOPTS || return 1
 
-#	--with-system-jpeg\ # broken, see http://qa.openoffice.org/issues/show_bug.cgi?id=74749
-		
+#		--with-system-jpeg\ # broken, see http://qa.openoffice.org/issues/show_bug.cgi?id=74749
+
+#		--disable-lockdown\
+#		  --enable-lockdown       Enables the gconf integration work in OOo
+
+#		--disable-mediawiki\
+#		--disable-minimizer\		
+#		--disable-odk\
+#		--disable-pdfimport\
+#		--disable-qadevooo\
+#		--disable-reportdesign\
+#		--disable-systray\
+#		--disable-mathmldtd\
+#		--disable-evolution2\
+#		--enable-verbose\
+#		--with-package-format=native\
+#		--without-fonts\
+#		--without-afms\
+
+
 	unset MAKEFLAGS
 	./download
-
 	make  || return 1
-
-#	bin/ooinstall ${pkgdir} || return 1
 	make DESTDIR=${pkgdir} install || return 1
-	
-	# fix broken soffice link
-	cd ${pkgdir}/usr/bin
-	ln -sfv ../lib/${pkgname}-${pkgver}/program/soffice soffice3.1
 }
