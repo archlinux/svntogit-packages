@@ -1,20 +1,22 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
-# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Maintainer: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: kernel-headers->glibc->binutils->gcc-libs->gcc->binutils->glibc
 
 pkgname=glibc
 pkgver=2.9
-pkgrel=4
-_glibcdate=20081119
+pkgrel=5
+_glibcdate=20090418
 install=glibc.install
 backup=(etc/locale.gen
 	etc/nscd.conf)
 pkgdesc="GNU C Library"
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('kernel-headers>=2.6.27.6' 'tzdata')
+depends=('kernel-headers>=2.6.29.1' 'tzdata')
 makedepends=('gcc>=4.3.2-2')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
@@ -22,7 +24,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
 	nscd
 	locale.gen.txt
 	locale-gen)
-md5sums=('1f7cc590a7a9bbef8b09fe89af69fb8c'
+md5sums=('fcea264758b93e279e399cd651ad6a74'
          '7679e2bcd981847efccb2bad9e57fee3'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
@@ -36,18 +38,12 @@ build() {
   export _TAG=glibc-2_9-branch
   export 'CVSROOT=:pserver:anoncvs@sources.redhat.com:/cvs/glibc'
 #  cvs -z9 co -r $_TAG libc || return 1
-#  tar -cvjf ../../glibc-2.9_${_glibcdate}.tar.bz2 libc
+#  tar -cvjf ${startdir}/glibc-2.9_${_glibcdate}.tar.bz2 libc
 #  return 1
 
   cd ${srcdir}/libc
 
-  # patch from Debian
-  patch -Np1 -i ${srcdir}/glibc-patches/glibc-2.5-localedef_segfault-1.patch || return 1 # still needed?
-
-  # Upstream fixes. See sources.redhat.com bugzilla
-  patch -Np1 -i ${srcdir}/glibc-patches/glibc-2.7-bz4781.patch || return 1
-
-  # Gentoo fixes
+  # timezone data is in separate package (tzdata)
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-dont-build-timezone.patch || return 1
 
   # fixes taken from FC10 2.9-3 rpm, fixes FS#12215
@@ -56,7 +52,7 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-nss_dns-gethostbyname4-disable.patch || return 1
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-fixes1.patch || return 1
 
-  install -m755 -d ${pkgdir}/etc
+  install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
 
   mkdir glibc-build
@@ -81,9 +77,9 @@ build() {
 
   rm -f ${pkgdir}/etc/ld.so.cache ${pkgdir}/etc/ld.so.conf ${pkgdir}/etc/localtime
 
-  install -m755 -d ${pkgdir}/etc/rc.d
-  install -m755 -d ${pkgdir}/usr/sbin
-  install -m755 -d ${pkgdir}/usr/lib/locale
+  install -dm755 ${pkgdir}/etc/rc.d
+  install -dm755 ${pkgdir}/usr/sbin
+  install -dm755 ${pkgdir}/usr/lib/locale
   install -m644 ${srcdir}/libc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
   install -m755 ${srcdir}/nscd ${pkgdir}/etc/rc.d/nscd
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
@@ -108,4 +104,5 @@ build() {
   fi
 
   rm -f ${pkgdir}/usr/share/info/dir
+  gzip -9 ${pkgdir}/usr/share/info/*
 }
