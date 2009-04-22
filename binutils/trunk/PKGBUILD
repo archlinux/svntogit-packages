@@ -1,34 +1,38 @@
 # $Id$
-# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Maintainer: Allan McRae <allan@archlinux.org>
 
 # toolchain build order: kernel-headers->glibc->binutils->gcc-libs->gcc->binutils->glibc
 
 pkgname=binutils
 pkgver=2.19.1
-pkgrel=1
-_date=20090205
+pkgrel=2
+_date=20090419
 pkgdesc="A set of programs to assemble and manipulate binary and object files"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/binutils/"
 license=('GPL')
 groups=('base')
+depends=('glibc>=2.9-5' 'zlib')
 options=('!libtool' '!distcc' '!ccache')
-depends=('glibc>=2.9-4' 'texinfo>=4.13a-3' 'zlib')
-source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2)
-md5sums=('8fd8a7082814124917289eba9f2b46f1')
 install=binutils.install
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2
+        binutils-2.19-as-needed.patch)
+md5sums=('18db08329c4a1a22ec57ea4c0d7440a6'
+         'f6fd22284040a0b05e74ed2ff504a6d9')
 
 build() {
   # for cvs checkout
-  mkdir ${startdir}/src/${pkgname}-${_date}
-  cd ${startdir}/src/${pkgname}-${_date}
+  mkdir ${srcdir}/${pkgname}-${_date}
+  cd ${srcdir}/${pkgname}-${_date}
   export _TAG=binutils-2_19-branch
   export 'CVSROOT=:pserver:anoncvs@sourceware.org:/cvs/src'
 #  cvs -z9 co -r $_TAG binutils || return 1
-#  cd src && tar -cvjf ../../../binutils-{pkgver}_${_date}.tar.bz2 *
+#  cd src && tar -cvjf ${startdir}/binutils-${pkgver}_${_date}.tar.bz2 *
 #  return 1
 
-  cd ${startdir}/src
+  cd ${srcdir}
+
+  patch -Np1 -i binutils-2.19-as-needed.patch
 
   mkdir build
   cd build
@@ -47,26 +51,29 @@ build() {
   # This checks the host environment and makes sure all the necessary tools are available to compile Binutils.
   make configure-host || return 1
 
-  make tooldir=${startdir}/pkg/usr || return 1
-  make prefix=${startdir}/pkg/usr tooldir=${startdir}/pkg/usr install
-  install -m 644 ../include/libiberty.h ${startdir}/pkg/usr/include
+  make tooldir=${pkgdir}/usr || return 1
+  make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
+  install -m644 ${srcdir}/include/libiberty.h ${pkgdir}/usr/include
 
   if [ "${CARCH}" = "x86_64" ]; then
     # Rebuild libiberty.a with -fPIC
     make -C libiberty clean
     make CFLAGS="$CFLAGS -fPIC" -C libiberty
-    install -m 644 libiberty/libiberty.a ${startdir}/pkg/usr/lib
+    install -m644 libiberty/libiberty.a ${pkgdir}/usr/lib
     # Rebuild libbfd.a with -fPIC
     make -C bfd clean
     make CFLAGS="$CFLAGS -fPIC" -C bfd
-    install -m 644 bfd/libbfd.a ${startdir}/pkg/usr/lib
+    install -m644 bfd/libbfd.a ${pkgdir}/usr/lib
   fi
 
-  rm -f ${startdir}/pkg/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
+  rm -f ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
 
   # Remove these symlinks, with binutils prereleases they are not ABI stable.
   # Programs should compile static to the .a file.
-  rm -f ${startdir}/pkg/usr/lib/lib{bfd,opcodes}.so
+  rm -f ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
+  echo "INPUT (libbfd.a -liberty -lz )" >${pkgdir}/usr/lib/libbfd.so
+  echo "INPUT ( %{_libdir}/libopcodes.a -lbfd )" >${pkgdir}/usr/lib/libopcodes.so
 
   rm -f ${pkgdir}/usr/share/info/dir
+  gzip -9 ${pkgdir}/usr/share/info/*
 }
