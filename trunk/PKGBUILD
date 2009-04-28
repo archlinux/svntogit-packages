@@ -52,7 +52,7 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-nss_dns-gethostbyname4-disable.patch || return 1
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-fixes1.patch || return 1
 
-  # fixes taken from upstream cvs for gdb, fixed FS#14481
+  # fixes for gdb taken from upstream cvs, fixed FS#14481
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-2.9-libhread_db.patch
 
   install -dm755 ${pkgdir}/etc
