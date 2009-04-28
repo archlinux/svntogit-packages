@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.9
-pkgrel=5
+pkgrel=6
 _glibcdate=20090418
 install=glibc.install
 backup=(etc/locale.gen
@@ -20,12 +20,12 @@ depends=('kernel-headers>=2.6.29.1' 'tzdata')
 makedepends=('gcc>=4.3.2-2')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
-	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-2.tar.gz
+	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-6.tar.gz
 	nscd
 	locale.gen.txt
 	locale-gen)
 md5sums=('fcea264758b93e279e399cd651ad6a74'
-         '7679e2bcd981847efccb2bad9e57fee3'
+         '59bbb2c88720dfc4d52a1bbda1931553'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -51,6 +51,9 @@ build() {
   # see https://bugzilla.redhat.com/show_bug.cgi?id=459756
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-nss_dns-gethostbyname4-disable.patch || return 1
   patch -Np1 -i ${srcdir}/glibc-patches/glibc-fixes1.patch || return 1
+
+  # fixes taken from upstream cvs for gdb, fixed FS#14481
+  patch -Np1 -i ${srcdir}/glibc-patches/glibc-2.9-libhread_db.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
