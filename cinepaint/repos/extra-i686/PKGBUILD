@@ -4,18 +4,18 @@
 
 pkgname=cinepaint
 _srcver=0.22-1
-pkgver=`echo $_srcver | sed 's:-:.:g'`
-pkgrel=3
+pkgver=${_srcver/-/.}
+pkgrel=4
 pkgdesc="sophisticated graphics manipulation programm supporting >8bit pictures"
 arch=(i686 x86_64)
 license=('LGPL' 'GPL' 'MIT-OSI')
 url=(http://cinepaint.org.sourceforge.net/)
-depends=('gtk2>=2.10.11' 'openexr>=1.6' 'lcms>=1.16' 'libxmu>=1.0.3' \
-         'libxpm>=3.5.6' 'fltk>=1.1.7')
-makedepends=('python>=2.6' 'gutenprint>=5.0')
+depends=('gtk2>=2.16.1' 'openexr>=1.6.1' 'lcms>=1.18' 'libxmu>=1.0.4' 'libxpm>=3.5.7' 'fltk>=1.1.9' 'desktop-file-utils' 'ftgl>=2.1.3rc5')
+makedepends=('python>=2.6' 'gutenprint>=5.2.3')
+optdepends=('python' 'gutenprint')
 options=('!libtool')
-install=$pkgname.install
-source=(http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-${_srcver}.tar.gz
+install=cinepaint.install
+source=(http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${_srcver}.tar.gz
         cinepaint-0.22.1-gcc43.patch
         cinepaint-0.22.1-multiple_parameters_named.patch
         cinepaint-0.22.1-ambiguousawake.patch)
@@ -25,23 +25,26 @@ md5sums=('f360587240db6b6d2f0bfd94c420c492'
          '4586aa153a0d3cac36120afc1f95a880')
 
 build() {
-  cd $startdir/src/$pkgname-$_srcver
+  cd "${srcdir}/${pkgname}-${_srcver}"
  # FIXES
-  patch -Np1 -i $srcdir/cinepaint-0.22.1-gcc43.patch
-  patch -Np1 -i $srcdir/cinepaint-0.22.1-multiple_parameters_named.patch
-  patch -Np0 -i $srcdir/cinepaint-0.22.1-ambiguousawake.patch
+  patch -Np1 -i "${srcdir}/cinepaint-0.22.1-gcc43.patch" || return 1
+  patch -Np1 -i "${srcdir}/cinepaint-0.22.1-multiple_parameters_named.patch" || return 1
+  patch -Np0 -i "${srcdir}/cinepaint-0.22.1-ambiguousawake.patch" || return 1
   find plug-ins/print -type f -exec \
     sed -i "s:gutenprintui/gutenprintui:gutenprintui2/gutenprintui:" {} \;
+  # Fix insecure rpath
+  sed '/-rpath/d' -i plug-ins/icc_examin/icc_examin/configure
+
  # build
-  ./configure --prefix=/usr \
+  ./configure --prefix=/usr --mandir=/usr/share/man \
     --enable-gtk2 --enable-pygimp \
     --with-python=/usr/bin/python2.6
  # FIXES
   sed -i 's/^\(X_LIBS.*\)$/\1 -lpthread/' plug-ins/openexr/Makefile
   make || return 1
-  make DESTDIR=$startdir/pkg install
-  install -D -m644 $pkgname.desktop \
-    $startdir/pkg/usr/share/applications/$pkgname.desktop
-  install -D -m644 $pkgname.png \
-    $startdir/pkg/usr/share/pixmaps/$pkgname.png
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/usr/share/applications"
+  install -m755 -d "${pkgdir}/usr/share/pixmaps"
+  install -m644 cinepaint.desktop "${pkgdir}/usr/share/applications/" || return 1
+  install -m644 cinepaint.png "${pkgdir}/usr/share/pixmaps/" || return 1
 }
