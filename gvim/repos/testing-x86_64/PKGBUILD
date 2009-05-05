@@ -1,0 +1,68 @@
+# $Id$
+# Maintainer: tobias [ tobias at archlinux org ]
+
+pkgname=gvim
+_srcver=7.2
+_patchlevel=166
+pkgver=${_srcver}.${_patchlevel}
+pkgrel=1
+pkgdesc="the vim text editor with advanced features enabled, such as a gui mode"
+arch=(i686 x86_64)
+license=('custom:vim')
+url="http://www.vim.org"
+depends=("vim=${pkgver}" 'perl' 'python' 'ruby' 'libxt' 'desktop-file-utils' 'gtk2')
+makedepends=('pkgconfig' 'sed')
+install=${pkgname}.install
+source=(ftp://ftp.vim.org/pub/vim/unix/vim-${_srcver}.tar.bz2 \
+        ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-extra.tar.gz \
+        ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-lang.tar.gz \
+        ${pkgname}.desktop fetch_patches.sh)
+
+build()
+{
+  _versiondir="vim"$(echo ${_srcver} | sed "s/\.//")
+  # patch party
+  # pull in patches from vim.org (or the src cache alternatively)
+  . ${srcdir}/fetch_patches.sh
+  get_patches || return 1
+  cd ${srcdir}/${_versiondir}
+   # define the place for the global (g)vimrc file (set to /etc/vimrc)
+  sed -i 's|^.*\(#define SYS_.*VIMRC_FILE.*"\) .*$|\1|' src/feature.h
+  ./configure --prefix=/usr --localstatedir=/var/lib/vim --mandir=/usr/share/man \
+    --with-compiledby=ArchLinux --with-features=big \
+    --with-x=yes --disable-gpm --enable-gui=gtk2 \
+    --enable-multibyte --enable-cscope \
+    --enable-perlinterp --enable-pythoninterp --enable-rubyinterp
+  make || return 1
+   # install everything first ...
+  make VIMRCLOC=/etc DESTDIR=${pkgdir} install
+
+   # ... and clean up what vim already has for us
+  cd ${pkgdir}/usr/bin
+  rm -f xxd ex view vimtutor vimdiff rview rvim
+  mv vim vim-big
+  # ... make g* related symlinks point directly to the actual binary
+  ln -sf vim-big eview
+  ln -sf vim-big evim
+  ln -sf vim-big gview
+  ln -sf vim-big gvim
+  ln -sf vim-big gvimdiff
+  ln -sf vim-big rgview
+  ln -sf vim-big rgvim
+
+   # delete the manpages/symlinks provided by vim and (n)vi package
+  find ${pkgdir}/usr/share/man -type d -name 'man1' 2> /dev/null | \
+  while read _mandir; do
+    cd ${_mandir}
+      rm -f ex.1 view.1       # provided by (n)vi
+      rm -f rvim.1 rview.1 vim.1 vimtutor.1 vimdiff.1 xxd.1  # provided by vim
+  done
+
+   # clean all settings and controls -  served by vim package
+  rm -rf ${pkgdir}/usr/share/vim
+   # freedesktop links
+  install -D -m644 ${srcdir}/${pkgname}.desktop \
+    ${startdir}/pkg/usr/share/applications/gvim.desktop
+  install -D -m644 ${srcdir}/${_versiondir}/runtime/vim48x48.png \
+    ${pkgdir}/usr/share/pixmaps/gvim.png
+}
