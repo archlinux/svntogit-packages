@@ -12,7 +12,7 @@ win32 {
 
 target.path    = $$INSTALLBASE/lib
 headers.path   = $$INSTALLBASE/include/qwt
-doc.path       = $$INSTALLBASE/share/qwt/doc
+doc.path       = $$INSTALLBASE/share
 
 ######################################################################
 # qmake internal options
