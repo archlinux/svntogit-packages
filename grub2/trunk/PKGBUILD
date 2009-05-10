@@ -3,27 +3,27 @@
 # Contributor: dongiovanni <dongiovanni.archlinux.de>
 
 pkgname=grub2
-pkgver=1.96_20081229
+pkgver=1.96_20090507
 pkgrel=1
 pkgdesc="The GNU GRand Unified Bootloader"
 url="http://www.gnu.org/software/grub/"
 arch=('i686' 'x86_64')
 license=('GPL3')
-
-depends=('bash' 'lzo2')
+depends=('bash' 'lzo2' 'freetype2')
+optdepens=('ruby:usr/share/grub/genmk.rb script')
+makedepends=('bdf-unifont' 'ruby')
 conflicts=('grub')
 provides=('grub')
 backup=('boot/grub/grub.cfg')
 install=${pkgname}.install
-
-source=(http://www.archlinux.org/~ronald/grub2-1.96_20081229.tar.bz2
+source=(ftp://ftp.archlinux.org/sources/${pkgname}-${pkgver}.src.tar.gz
 	# use our own svn checkout so disable snapshot
 	#ftp://alpha.gnu.org/gnu/grub/grub-${pkgver}.tar.gz  
-	'grub.cfg'  
-	'install-grub')  
-md5sums=('e677ad5d3048c48c614bf703a74e4599'
-         '743215998a581a54ac77630f0db222ce'
-         '3182c4ae4963a16930bc772bba89dacf')
+	'grub.cfg')  
+# don't install auto-install script. TODO: It needs a rewrite to work with grub2
+#	'install-grub')  
+md5sums=('3092406035593543c0c62aeab1135008'
+         '743215998a581a54ac77630f0db222ce')
 
 build() {
   # Set destination architecture here
@@ -31,6 +31,11 @@ build() {
   #DESTARCH="x86_64"
 
   cd $srcdir/${pkgname}-${pkgver}
+  # run autogen.sh to create configure files
+  ./autogen.sh
+
+  # fix unifont.bdf location
+  sed -i 's|/usr/src/unifont.bdf|/usr/share/fonts/misc/unifont.bdf|' configure || return 1
 
   # Arch64 grub2 needs to be statically build on i686
   if [ "$CARCH" = "x86_64" ]; then
@@ -41,15 +46,15 @@ build() {
     if [ "$DESTARCH" = "x86_64" ]; then
 	export LDFLAGS=-static
         export CFLAGS=-static
-	./configure --prefix=/usr --bindir=/bin --sbindir=/sbin \
-                        --mandir=/usr/share/man --infodir=/usr/share/info \
-			--sysconfdir=/etc
+	./configure --prefix=/usr --enable-grub-mkfont --bindir=/bin \
+			--sbindir=/sbin --mandir=/usr/share/man \
+			--infodir=/usr/share/info --sysconfdir=/etc
 	unset CFLAGS CPPFLAGS LDFLAGS
 
     else
-      CFLAGS= ./configure --prefix=/usr --bindir=/bin --sbindir=/sbin \
-                --mandir=/usr/share/man --infodir=/usr/share/info \
-		--sysconfdir=/etc
+      CFLAGS= ./configure --prefix=/usr --enable-grub-mkfont --bindir=/bin \
+			--sbindir=/sbin --mandir=/usr/share/man \
+			--infodir=/usr/share/info --sysconfdir=/etc
     fi
   fi
 
@@ -57,10 +62,11 @@ build() {
   make DESTDIR=${pkgdir} install || return 1
   
   install -Dm644 ${srcdir}/grub.cfg $startdir/pkg/boot/grub/grub.cfg
-  install -Dm755 ${srcdir}/install-grub $startdir/pkg/sbin/install-grub
+  #install -Dm755 ${srcdir}/install-grub $startdir/pkg/sbin/install-grub
 
   # Fool makepkg into building a x86_64 package
   if [ "$DESTARCH" = "x86_64" ]; then
     export CARCH="x86_64"
   fi
 }
+
