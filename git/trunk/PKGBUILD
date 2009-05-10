@@ -2,11 +2,11 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.2.4
+pkgver=1.6.3
 pkgrel=1
 pkgdesc="GIT - the stupid content tracker"
 arch=(i686 x86_64)
-url="http://git.or.cz/"
+url="http://git-scm.com/"
 license=('GPL2')
 depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.10.0')
 optdepends=('tk: gitk and git gui'
@@ -44,7 +44,5 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('c24d796879bb09e1cc5545bf3a3d7cf6'
-         '7a1c179cfc1ee135dc54877be9c6a5f3')
-sha256sums=('7f33a25798452a637740a65591608777e876cc6774162c50ace3822c0532a10f'
-            '68ad3a55a2bd0bdad8e180586700450e1bdc499809684c225780d6d4d3a88208')
+md5sums=('a5e6165506cddd94954277cf81f44b14'
+         'e9de25813ed281f63ce24ab88e907f18')
