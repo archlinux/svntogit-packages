@@ -5,9 +5,9 @@
 # toolchain build order: kernel-headers->glibc->binutils->gcc-libs->gcc->binutils->glibc
 
 pkgname=glibc
-pkgver=2.9
-pkgrel=7
-_glibcdate=20090418
+pkgver=2.10.1
+pkgrel=1
+_glibcdate=20090511
 install=glibc.install
 backup=(etc/locale.gen
 	etc/nscd.conf)
@@ -16,44 +16,36 @@ arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('kernel-headers>=2.6.29.1' 'tzdata')
-makedepends=('gcc>=4.3.2-2')
+depends=('kernel-headers>=2.6.29.3' 'tzdata')
+makedepends=('gcc>=4.3')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
-	ftp://ftp.archlinux.org/other/glibc/glibc-patches-${pkgver}-6.tar.gz
+	glibc-2.10-dont-build-timezone.patch
 	nscd
 	locale.gen.txt
 	locale-gen)
-md5sums=('fcea264758b93e279e399cd651ad6a74'
-         '59bbb2c88720dfc4d52a1bbda1931553'
+md5sums=('7a34595abeeedb9aab758aa51d09ed88'
+         '4dadb9203b69a3210d53514bb46f41c3'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
 build() {
 
-  # for cvs checkout
-  mkdir ${srcdir}/glibc-${_glibcdate}
-  cd ${srcdir}/glibc-${_glibcdate}
-  export _TAG=glibc-2_9-branch
-  export 'CVSROOT=:pserver:anoncvs@sources.redhat.com:/cvs/glibc'
-#  cvs -z9 co -r $_TAG libc || return 1
-#  tar -cvjf ${startdir}/glibc-2.9_${_glibcdate}.tar.bz2 libc
-#  return 1
+  # for git checkout
+  #mkdir ${srcdir}/glibc-${pkgver}_${_glibcdate}
+  #cd ${srcdir}/glibc-${pkgver}_${_glibcdate}
+  #git clone git://sourceware.org/git/glibc.git
+  #pushd glibc
+  #git checkout --track -b glibc-${pkgver} origin/cvs/glibc-2_10-branch
+  #popd
+  #tar -cvjf ${startdir}/glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
+  #return 1
 
-  cd ${srcdir}/libc
+  cd ${srcdir}/glibc
 
   # timezone data is in separate package (tzdata)
-  patch -Np1 -i ${srcdir}/glibc-patches/glibc-dont-build-timezone.patch || return 1
-
-  # fixes taken from FC10 2.9-3 rpm, fixes FS#12215
-  # see http://sources.redhat.com/bugzilla/show_bug.cgi?id=7060 
-  # see https://bugzilla.redhat.com/show_bug.cgi?id=459756
-  patch -Np1 -i ${srcdir}/glibc-patches/glibc-nss_dns-gethostbyname4-disable.patch || return 1
-  patch -Np1 -i ${srcdir}/glibc-patches/glibc-fixes1.patch || return 1
-
-  # fixes for gdb taken from upstream cvs, fixed FS#14481
-  patch -Np0 -i ${srcdir}/glibc-patches/glibc-2.9-libthread_db.patch || return 1
+  patch -Np1 -i ${srcdir}/glibc-2.10-dont-build-timezone.patch || return 1
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -70,11 +62,11 @@ build() {
 
   ../configure --prefix=/usr \
       --enable-add-ons=nptl,libidn --without-cvs \
-      --enable-kernel=2.6.16 --disable-profile \
+      --enable-kernel=2.6.18 --disable-profile \
       --with-headers=/usr/include --libexecdir=/usr/lib \
       --enable-bind-now --with-tls --with-__thread \
       --libdir=/usr/lib --without-gd
-    
+        
   make || return 1
   make install_root=${pkgdir} install || return 1
 
@@ -83,7 +75,7 @@ build() {
   install -dm755 ${pkgdir}/etc/rc.d
   install -dm755 ${pkgdir}/usr/sbin
   install -dm755 ${pkgdir}/usr/lib/locale
-  install -m644 ${srcdir}/libc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
+  install -m644 ${srcdir}/glibc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
   install -m755 ${srcdir}/nscd ${pkgdir}/etc/rc.d/nscd
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
 
@@ -91,10 +83,10 @@ build() {
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
-  sed -i "s|/| |g" ${srcdir}/libc/localedata/SUPPORTED
-  sed -i 's|\\| |g' ${srcdir}/libc/localedata/SUPPORTED
-  sed -i "s|SUPPORTED-LOCALES=||" ${srcdir}/libc/localedata/SUPPORTED
-  cat ${srcdir}/libc/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
+  sed -i "s|/| |g" ${srcdir}/glibc/localedata/SUPPORTED
+  sed -i 's|\\| |g' ${srcdir}/glibc/localedata/SUPPORTED
+  sed -i "s|SUPPORTED-LOCALES=||" ${srcdir}/glibc/localedata/SUPPORTED
+  cat ${srcdir}/glibc/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
   sed -i "s|^|#|g" ${pkgdir}/etc/locale.gen
 
   if [ "${CARCH}" = "x86_64" ]; then
