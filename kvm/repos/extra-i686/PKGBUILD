@@ -1,74 +1,31 @@
 # $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=kvm
-pkgver=85
-pkgrel=2
+pkgver=86
+pkgrel=1
 pkgdesc="Latest KVM QEMU is a generic and open source processor emulator which achieves a good emulation speed by using dynamic translation."
 arch=(i686 x86_64)
 license=('GPL2')
 url="http://www.linux-kvm.org"
-depends=('libsasl' 'sdl' 'alsa-lib' 'esound' 'zlib' 'e2fsprogs' 'gnutls>=2.4.1' 'bluez')
+depends=('libsasl' 'sdl' 'alsa-lib' 'esound' 'gnutls>=2.4.1' 'bluez')
 install=kvm.install
 conflicts=('qemu')
 source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz
-        65-kvm.rules
-        70-kqemu.rules)
+        65-kvm.rules)
 
 build()
 {
     cd ${srcdir}/${pkgname}-${pkgver}
-    ./configure --prefix=/usr --audio-drv-list=oss,alsa,sdl,esd
-    # fix sdl compilation, JON: and extboot
-    sed -i -e 's#-rpath,/usr/lib#-rpath,/usr/lib,-rpath,/lib#g' qemu/config-host.mak
-    for dir in libkvm user qemu extboot; do
-        cd ${srcdir}/kvm-${pkgver}/${dir}
-        make || return 1
-    done
-    # install qemu-kvm
-    install -D -m 755 ${srcdir}/${pkgname}-${pkgver}/qemu/x86_64-softmmu/qemu-system-x86_64 \
-        ${pkgdir}/usr/bin/qemu-kvm
-    # install qemu-img and qemu-nbd
-    install -D -m 755 ${srcdir}/${pkgname}-${pkgver}/qemu/{qemu-nbd,qemu-img} \
-        ${pkgdir}/usr/bin/
-    # install kvm bios files
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/bamboo.dtb \
-        ${pkgdir}/usr/share/qemu/bamboo.dtb
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/bios.bin \
-        ${pkgdir}/usr/share/qemu/bios.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/openbios-ppc \
-        ${pkgdir}/usr/share/qemu/openbios-ppc
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/openbios-sparc32 \
-        ${pkgdir}/usr/share/qemu/openbios-sparc32
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/openbios-sparc64 \
-        ${pkgdir}/usr/share/qemu/openbios-sparc64
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/ppc_rom.bin \
-        ${pkgdir}/usr/share/qemu/ppc_rom.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/pxe-e1000.bin \
-        ${pkgdir}/usr/share/qemu/pxe-e1000.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/pxe-ne2k_pci.bin \
-        ${pkgdir}/usr/share/qemu/pxe-ne2k_pci.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/pxe-pcnet.bin \
-        ${pkgdir}/usr/share/qemu/pxe-pcnet.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/pxe-rtl8139.bin \
-        ${pkgdir}/usr/share/qemu/pxe-rtl8139.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/vgabios.bin \
-        ${pkgdir}/usr/share/qemu/vgabios.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/vgabios-cirrus.bin \
-        ${pkgdir}/usr/share/qemu/vgabios-cirrus.bin
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/qemu/pc-bios/video.x \
-        ${pkgdir}/usr/share/qemu/video.x
-    install -D -m644 ${srcdir}/${pkgname}-${pkgver}/extboot/extboot.bin \
-         ${pkgdir}/usr/share/qemu/extboot.bin
-    # install keymap files
-    for i in ${srcdir}/${pkgname}-${pkgver}/qemu/keymaps/*; do
-        install -D -m644 $i ${pkgdir}/usr/share/qemu/keymaps/$(basename $i)
-    done
-     install udev rules
-    install -D -m644 ${srcdir}/70-kqemu.rules \
-                     ${pkgdir}/lib/udev/rules.d/70-kqemu.rules
+    # don't compile kvm kernel module!
+    rm kvm/kernel/configure
+    ./configure --prefix=/usr --audio-drv-list=alsa,sdl,oss,esd --audio-card-list=ac97,sb16,es1370,adlib
+    make || return 1
+    make DESTDIR=${pkgdir} install || return 1
+    # symbolic link for backwards compatibility
+    ln -s qemu-system-x86_64 ${pkgdir}/usr/bin/qemu-kvm
+    # install udev rules
     install -D -m644 ${srcdir}/65-kvm.rules \
                      ${pkgdir}/lib/udev/rules.d/65-kvm.rules
 }
-md5sums=('7eec5cec0368e098f11ced03395e7439'
-         'cead7ba387159d360f892281499975df'
-         'ec06591830b8fcf53913f05f3d66f7e5')
+md5sums=('cd8cc78c56ddaaf0be421919f8a6835c'
+         'cead7ba387159d360f892281499975df')
