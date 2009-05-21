@@ -2,23 +2,26 @@
 # Maintainer: dale <dale@archlinux.org>
 
 pkgname=evolution
-pkgver=2.26.1.1
+pkgver=2.26.2
 _majorver=2.26
 pkgrel=1
 pkgdesc="Integrated Workgroup and Personal Information Management for Gnome"
 arch=(i686 x86_64)
 license=('GPL')
-depends=('libnotify>=0.4.5' 'gtkhtml>=3.26.1.1' 'evolution-data-server>=2.26.1.1' 'gnome-pilot>=2.0.17' 'gstreamer0.10>=0.10.22')
+depends=('libnotify>=0.4.5' 'gtkhtml>=3.26.2' 'evolution-data-server>=2.26.2' 'gnome-pilot>=2.0.17' 'gstreamer0.10>=0.10.23' 'libpst>=0.6.37' 'libytnef>=0.1.5')
 makedepends=('pkgconfig' 'gnome-doc-utils>=0.16.0' 'intltool' 'networkmanager')
 options=('!libtool' '!emptydirs')
 install=evolution.install
 url=http://www.gnome.org/projects/evolution/
-source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/${_majorver}/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('e24b8c13d350c17ab8332482f60aa144')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/${_majorver}/${pkgname}-${pkgver}.tar.bz2
+	libpst-0.6.37-support.patch)
+md5sums=('f93b02141a8e67588ed258d0dc310a0f'
+	 'd30473005fae6c2372cfae293ca40ea4')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  # TODO: add libpst and yTNEF
+  # http://bugzilla.gnome.org/show_bug.cgi?id=578945
+  patch -Np0 -i "${srcdir}/libpst-0.6.37-support.patch" || return 1
   ./configure --prefix=/usr --sysconfdir=/etc \
         --localstatedir=/var \
 	--libexecdir=/usr/lib \
@@ -30,6 +33,9 @@ build() {
 	--with-krb5=/usr || return 1
   make || return 1
   make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+  cd plugins/tnef-attachments || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
 
   install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
   gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain evolution-${_majorver} ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
