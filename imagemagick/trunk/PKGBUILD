@@ -8,7 +8,7 @@
 # install old package, build new package, install new package, rebuild
 
 pkgname=imagemagick
-pkgver=6.5.1.9
+pkgver=6.5.2.7
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -19,14 +19,14 @@ depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr>=1.
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('b2a0f76a83bfe38fd1cdfc3b8ed44c6e' '069980fc2590c02aed86420996259302'\
+md5sums=('267b5671220098369eeb6f7436701cda' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('92c398ca549d2e66dc77e6a7bfa5f925d0bc6db4'
+sha1sums=('289084e4091ffcc2bb687a3e193580a585810c19'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
 
 build() {
-  cd ${srcdir}/ImageMagick-${pkgver%.*}-${pkgver##*.}
+  cd "${srcdir}/ImageMagick-${pkgver%.*}-${pkgver##*.}"
 
   if [ "${CARCH}" = "x86_64" ]; then
     patch -Np1 < ../libpng_mmx_patch_x86_64.patch || return 1
@@ -44,9 +44,9 @@ build() {
               --without-jbig --without-fpx --without-dps || return 1
 
   make || return 1
-  make DESTDIR=${pkgdir} install || return 1
-  install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE || return 1
-  install -D -m644 NOTICE ${pkgdir}/usr/share/licenses/${pkgname}/NOTICE || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+  install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
+  install -D -m644 NOTICE "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE" || return 1
 
   #Cleaning
   find ${pkgdir} -name '*.bs' -exec rm {} \; || return 1
