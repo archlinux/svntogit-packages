@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.10.1
-pkgrel=1
+pkgrel=2
 _glibcdate=20090511
 install=glibc.install
 backup=(etc/locale.gen
@@ -21,11 +21,13 @@ makedepends=('gcc>=4.3')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
 	glibc-2.10-dont-build-timezone.patch
+	glibc-2.10-bz4781.patch
 	nscd
 	locale.gen.txt
 	locale-gen)
 md5sums=('7a34595abeeedb9aab758aa51d09ed88'
          '4dadb9203b69a3210d53514bb46f41c3'
+         '0c5540efc51c0b93996c51b57a8540ae'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -46,6 +48,9 @@ build() {
 
   # timezone data is in separate package (tzdata)
   patch -Np1 -i ${srcdir}/glibc-2.10-dont-build-timezone.patch || return 1
+
+  # http://sources.redhat.com/bugzilla/show_bug.cgi?id=4781
+  patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch || return 1
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
