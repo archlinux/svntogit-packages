@@ -5,7 +5,7 @@
 pkgname=openjdk6
 _date=20090524
 #pkgver=1.5_hg${_date}
-pkgver=1.5rc3
+pkgver=1.5
 _hgver=926c38e2b283 # =hg rc3 tagged, see http://icedtea.classpath.org/hg/icedtea6/summary
 _icedteaver=1.5
 pkgrel=1
@@ -16,15 +16,19 @@ license=('GPL')
 _openjdk_version=b16
 _openjdk_date=24_apr_2009
 _hotspotver=25a020f13592 # what it downlopads itself / remove from configure to get it
-depends=('gcc-libs' 'xdg-utils' 'hicolor-icon-theme' 'ca-certificates-java')
-makedepends=('alsa-lib' 'libxtst' 'giflib' 'libxp' 'gtk2' 'nspr' 'zlib' 'freetype2' 'libjpeg' 'libx11' 'libcups' 'patch' 'xalan-java' 'xulrunner>=1.9.0.10' 'apache-ant>=1.7.0' 'autoconf' 'unzip' 'rhino' 'mercurial')
+depends=('gcc-libs' 'xdg-utils' 'hicolor-icon-theme' 'ca-certificates-java' 'libxtst')
+makedepends=('alsa-lib' 'giflib' 'libxp' 'gtk2' 'nspr' 'zlib' 'freetype2' 'libjpeg' 'libx11'
+	     'libcups' 'patch' 'xalan-java' 'xulrunner>=1.9.0.10' 'apache-ant>=1.7.0' 'autoconf' 'unzip' 'rhino' 'mercurial')
+optdepends=('xulrunner: for the browser plugin'
+            'alsa-lib: for sound'
+            'giflib: for gif format support')
 conflicts=('java-environment' 'java-runtime')
 provides=('java-environment=6' 'java-runtime=6')
 options=('!emptydirs')
 install=openjdk6.install
-source=(#http://icedtea.classpath.org/download/source/icedtea6-${_icedteaver}.tar.gz
+source=(http://icedtea.classpath.org/download/source/icedtea6-${_icedteaver}.tar.gz
 	#ftp://ftp.archlinux.org/other/openjdk6/icedtea6-${_date}.tar.bz2
-	http://icedtea.classpath.org/hg/icedtea6/archive/${_hgver}.tar.gz
+	#http://icedtea.classpath.org/hg/icedtea6/archive/${_hgver}.tar.gz
 	http://download.java.net/openjdk/jdk6/promoted/${_openjdk_version}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz
 	http://hg.openjdk.java.net/hsx/hsx14/master/archive/${_hotspotver}.tar.gz
 	fix_jdk_cmds_path.diff
@@ -33,6 +37,14 @@ source=(#http://icedtea.classpath.org/download/source/icedtea6-${_icedteaver}.ta
 	fontconfig-paths.diff
 	openjdk6.profile)
 noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz ${_hotspotver}.tar.gz)
+md5sums=('a67303675a53781c4e42bdb02ec78e40'
+         '850a29b70206bc7fa083cd26acc781f3'
+         'dbd7aca5544d1aeebf0eadd45d29d08e'
+         '5da3e39fa60985576c4f37d1491efbe2'
+         'f7e7a212e50abb56a6ef1a2b1bd27405'
+         'ef60d567c0d9bad111212851220deafd'
+         'ee1afda124d5927345014ab382ef581e'
+         'd0703088e10aa957c037644ab88d716d')
 
 build() {
   # for hg checkout install mercurial and
@@ -55,19 +67,19 @@ build() {
   _jvmdir=/usr/lib/jvm/java-${_javaver}-openjdk
 
 #  cd ${srcdir}/icedtea6
-#  cd ${srcdir}/icedtea6-${_icedteaver}
-  cd ${srcdir}/icedtea6-${_hgver}
+  cd ${srcdir}/icedtea6-${_icedteaver}
+#  cd ${srcdir}/icedtea6-${_hgver}
   ln -s ${srcdir}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz .
   ln -s ${srcdir}/${_hotspotver}.tar.gz .
 
 #  cp ${srcdir}/*.diff ${srcdir}/icedtea6/patches/
-#  cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_icedteaver}/patches/
-  cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_hgver}/patches/
+  cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_icedteaver}/patches/
+#  cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_hgver}/patches/
 #  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/fix_corba_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff"
-  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff"
+  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff patches/fix_corba_cmds_path.diff"
 
-  ./autogen.sh
-  autoreconf # needed due to mercurial build
+#  ./autogen.sh
+#  autoreconf # needed due to mercurial build
 
   export ALT_PARALLEL_COMPILE_JOBS="${MAKEFLAGS/-j}"
   export HOTSPOT_BUILD_JOBS="${ALT_PARALLEL_COMPILE_JOBS}"
@@ -87,16 +99,16 @@ build() {
 	--with-hotspot-src-zip=${_hotspotver}.tar.gz \
 	--with-pkgversion=ArchLinux-${pkgver}-${pkgrel}-$CARCH  $JCONF
 
-# 	--enable-visualvm \ --with-additional-vms=cacao,zero,shark \
 #	--enable-npplugin \
+# 	--enable-visualvm \ --with-additional-vms=cacao,zero,shark \
 
   LD_PRELOAD="" make || return 1
  
   install -m755 -d ${pkgdir}/${_jvmdir}/jre
 
 #  pushd ${srcdir}/icedtea6/openjdk/build/linux-${_arch}/j2sdk-image
-#  pushd ${srcdir}/icedtea6-${_icedteaver}/openjdk/build/linux-${_arch}/j2sdk-image
-  pushd ${srcdir}/icedtea6-${_hgver}/openjdk/build/linux-${_arch}/j2sdk-image
+  pushd ${srcdir}/icedtea6-${_icedteaver}/openjdk/build/linux-${_arch}/j2sdk-image
+#  pushd ${srcdir}/icedtea6-${_hgver}/openjdk/build/linux-${_arch}/j2sdk-image
    # Install main files.
   cp -a bin include lib src.zip ${pkgdir}/${_jvmdir}/ || return 1
   cp -a jre/bin jre/lib ${pkgdir}/${_jvmdir}/jre/ || return 1
@@ -134,6 +146,7 @@ build() {
   # link the mozilla-plugin
   install -m755 -d ${pkgdir}/usr/lib/mozilla/plugins/
   ln -sf ${_jvmdir}/jre/lib/${_arch/i586/i386}/IcedTeaPlugin.so ${pkgdir}/usr/lib/mozilla/plugins/ || return 1
+#  ln -sf ${_jvmdir}/jre/lib/${_arch/i586/i386}/IcedTeaNPPlugin.so ${pkgdir}/usr/lib/mozilla/plugins/ || return 1
 
   # link binaries into /usr/bin
   install -m755 -d ${pkgdir}/usr/bin
