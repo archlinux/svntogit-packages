@@ -205,10 +205,9 @@ grep -v "ide/" /tmp/modules-stripped | grep -v "scsi/" | grep -v "fusion/" | gre
 # make a correct order for the modules, internal devices have priority!
 # only use old ide modules if boot parameter 'ide-legacy' is given
 if [ "$IDE_LEGACY" = "1" ]; then
-	grep "ide/" /tmp/modules-stripped >> /tmp/modules-sorted
+	grep "ide/" /tmp/modules-stripped  | grep -v "ide-pci-generic" >> /tmp/modules-sorted
 else
-	grep "ata/pata" /tmp/modules-stripped >> /tmp/modules-sorted
-	grep "ata/ata_generic" /tmp/modules-stripped >> /tmp/modules-sorted
+	grep "ata/pata" /tmp/modules-stripped | grep -v "pata_acpi" >> /tmp/modules-sorted
 fi
 grep "scsi/" /tmp/modules-stripped | grep -v "sd_mod" | grep -v "sr_mod" | grep -v "/sg.ko" | grep -v "/st.ko" >> /tmp/modules-sorted
 grep "block/" /tmp/modules-stripped | grep -v "sx8" | grep -v "nbd" | grep -v "pktcdvd" | grep -v "floppy" >> /tmp/modules-sorted
@@ -319,8 +318,8 @@ while [ $# -gt 0 ]; do
 		--show-modules)
 			showlist "AGP    " $(listmods agp/)
 			showlist "ACPI   " $(listmods acpi/)
-			showlist "IDE    " $(listmods ide/)
-			showlist "PATA   " $(listmods ata/pata) $(listmods ata/ata_generic)
+			showlist "IDE    " $(listmods ide/ ide-)
+			showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) 
 			showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy)
 			showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)
 			showlist "USB    " $(listmods usb/ usb/input)
@@ -341,8 +340,8 @@ while [ $# -gt 0 ]; do
 
 		--show-agp)    showlist "AGP    " $(listmods agp/) ;;
 		--show-acpi)   showlist "ACPI   " $(listmods acpi/) ;;
-		--show-ide)    showlist "IDE    " $(listmods ide/) ;;
-		--show-pata)   showlist "PATA   " $(listmods ata/pata) $(listmods ata/ata_generic);;
+		--show-ide)    showlist "IDE    " $(listmods ide/ ide-) ;;
+		--show-pata)   showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) ;;
 		--show-scsi)   showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) ;;
 		--show-sata)   showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) ;;
 		--show-usb)    showlist "USB    " $(listmods usb/ usb/input) ;;
@@ -360,7 +359,7 @@ while [ $# -gt 0 ]; do
 					 [ "$(grep $i /tmp/.blkid)" ] && FS="$FS $i"
 				  done
 				  ;;
-		--hostcontroller) showlist2 "MODULES" \"$(listmods ide/pci) $(listmods ata/pata) $(listmods ata/ata_generic) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $FS\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+		--hostcontroller) showlist2 "MODULES" \"$(listmods ide/ ide-) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $FS\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
 		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) \) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(cat /proc/modules | grep '8139too')" ]; then
