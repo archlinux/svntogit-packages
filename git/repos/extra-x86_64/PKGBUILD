@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.3.1
+pkgver=1.6.3.2
 pkgrel=1
 pkgdesc="GIT - the stupid content tracker"
 arch=(i686 x86_64)
@@ -23,12 +23,9 @@ build() {
   cd $srcdir/$pkgname-$pkgver
   make prefix=/usr gitexecdir=/usr/lib/git-core || return 1
   make prefix=/usr gitexecdir=/usr/lib/git-core \
+    NO_CROSS_DIRECTORY_HARDLINKS=1 \
     INSTALLDIRS=vendor DESTDIR=${pkgdir} install || return 1
   
-  # let's plop gitweb in /usr/share
-  mkdir -p $pkgdir/usr/share/
-  cp -dR ./gitweb $pkgdir/usr/share/gitweb || return 1
-
   #bash completion
   mkdir -p $pkgdir/etc/bash_completion.d/
   install -m644 ./contrib/completion/git-completion.bash $pkgdir/etc/bash_completion.d/git || return 1
@@ -44,5 +41,5 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('c1f4aab741359c29f0fbf28563ac7387'
-         '971d573e8f261feb83290a59728c2b33')
+md5sums=('149948ff33fb7d8cf9eef925e6c08157'
+         '2fb5ba5cabe0057470d577d2d4ff4816')
