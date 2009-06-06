@@ -8,7 +8,7 @@
 # install old package, build new package, install new package, rebuild
 
 pkgname=imagemagick
-pkgver=6.5.2.7
+pkgver=6.5.3.2
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -18,12 +18,13 @@ depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr>=1.
 #makedepends=('ghostscript' 'openexr')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
-        libpng_mmx_patch_x86_64.patch add_delegate.patch)
-md5sums=('267b5671220098369eeb6f7436701cda' '069980fc2590c02aed86420996259302'\
-         '7f5851c4450b73d52df55c7e806cc316')
-sha1sums=('289084e4091ffcc2bb687a3e193580a585810c19'
+        libpng_mmx_patch_x86_64.patch add_delegate.patch perlmagick.rpath.patch)
+md5sums=('eabd6431db7d5c3ef6661b0e5062e238' '069980fc2590c02aed86420996259302'\
+         '7f5851c4450b73d52df55c7e806cc316' 'ff9974decbfe9846f8e347239d87e4eb')
+sha1sums=('8563f665b4f87c50b876ccdff2d16b967bbdae17'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
-          '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5')
+          '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5'
+          '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
   cd "${srcdir}/ImageMagick-${pkgver%.*}-${pkgver##*.}"
@@ -33,6 +34,7 @@ build() {
   fi
 
   patch -p0 < ../add_delegate.patch || return 1
+  patch -p0 < ../perlmagick.rpath.patch || return 1
   sed -i "s/with_autotrace='no'/with_autotrace='yes'/" configure || return 1
 
  # When there is a soname bump, remove 'LIBS=-lMagickWand' from configure line and build/install. Then, readd 'LIBS=-lMagickWand' and build/install twice.
@@ -40,7 +42,7 @@ build() {
               --with-x --with-wmf --with-openexr --with-xml \
               --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
               --with-perl --with-perl-options="INSTALLDIRS=vendor" \
-              --without-gvc --without-djvu --with-jp2 \
+              --without-gvc --without-djvu --without-autotrace --with-jp2 \
               --without-jbig --without-fpx --without-dps || return 1
 
   make || return 1
