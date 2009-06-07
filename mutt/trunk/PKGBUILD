@@ -29,4 +29,6 @@ build() {
   rm -f ${startdir}/pkg/etc/mime.types*
   install -Dm644 contrib/gpg.rc ${startdir}/pkg/etc/Muttrc.gpg.dist
 }
+
 md5sums=('73b3747bc7f7c805921e8d24ebac693f')
+
