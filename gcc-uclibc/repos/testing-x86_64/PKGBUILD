@@ -1,0 +1,57 @@
+# $Id: PKGBUILD 40117 2009-05-28 11:36:09Z allan $
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: kernel-headers->glibc->binutils->gcc-libs->gcc->binutils->glibc
+
+pkgname=gcc-uclibc
+pkgver=4.4.0
+pkgrel=1
+_snapshot=4.4-20090526
+_libstdcppmanver=4.4.0
+pkgdesc="The GNU Compiler Collection"
+arch=('i686' 'x86_64')
+license=('GPL' 'LGPL' 'custom')
+groups=('base-devel')
+url="http://gcc.gnu.org"
+depends=('binutils-uclibc>=2.19.1' 'uclibc' 'mpfr>=2.4.1' 'cloog-ppl>=0.15.3' 'kernel-headers')
+makedepends=('flex')
+options=('!libtool')
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-core-${pkgver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-core-${_snapshot}.tar.bz2
+	gcc-hash-style-both.patch
+  gcc_pure64.patch)
+
+build() {
+  if ! locale -a | grep ^de_DE; then
+    echo "You need the de_DE locale to build gcc."
+    return 1
+  fi
+  
+  #cd ${srcdir}/gcc-${pkgver}
+  cd ${srcdir}/gcc-${_snapshot}
+  # Don't install libiberty
+  sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
+
+  patch -Np1 -i "${srcdir}/gcc_pure64.patch" || return 1
+  patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch || return 1
+
+  echo ${pkgver} > gcc/BASE-VER
+
+  mkdir build
+  cd build
+  LDFLAGS="-Wl,-rpath,/usr/x86_64-unknown-linux-uclibc/lib" \
+    ../configure --prefix=/usr --enable-shared \
+      --enable-languages=c \
+      --enable-threads=posix --mandir=/usr/share/man --infodir=/usr/share/info \
+      --enable-__cxa_atexit  --disable-multilib --libdir=/usr/lib \
+      --libexecdir=/usr/lib --enable-clocale=gnu --disable-libstdcxx-pch \
+      --with-tune=generic --disable-nls --target=x86_64-unknown-linux-uclibc \
+      --disable-decimal-float || return 1
+  make || return 1
+  make -j1 DESTDIR=${pkgdir} install || return 1
+
+  rmdir "${pkgdir}/usr/include"
+  rm -rf "${pkgdir}/usr/share/info"
+  rm -rf "${pkgdir}/usr/share/man/man7"
+}
