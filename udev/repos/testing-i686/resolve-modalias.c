@@ -3,7 +3,7 @@
 #include <string.h>
 #include <malloc.h>
 
-static char *getline(FILE *file) {
+static char *my_getline(FILE *file) {
   static size_t size = 1024;
   static char *buf = NULL;
   static unsigned int i = 0, r = 0;;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  while((line=getline(f))!=NULL) {
+  while((line=my_getline(f))!=NULL) {
     if(!strncmp(line, "alias", strlen("alias"))) {
       pos1 = index(line, ' ');
       pos2 = index(pos1+1, ' ');
