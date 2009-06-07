@@ -1,0 +1,55 @@
+# $Id: PKGBUILD 36435 2009-04-22 12:40:20Z allan $
+# Maintainer: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: kernel-headers->glibc->binutils->gcc-libs->gcc->binutils->glibc
+
+pkgname=binutils-uclibc
+pkgver=2.19.1
+pkgrel=1
+_date=20090419
+pkgdesc="A set of programs to assemble and manipulate binary and object files"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/binutils/"
+license=('GPL')
+groups=('base')
+depends=('binutils' 'zlib')
+options=('!libtool' '!distcc' '!ccache')
+source=(ftp://ftp.archlinux.org/other/binutils/binutils-${pkgver}_${_date}.tar.bz2
+        binutils-2.19-as-needed.patch)
+md5sums=('18db08329c4a1a22ec57ea4c0d7440a6'
+         'f6fd22284040a0b05e74ed2ff504a6d9')
+
+build() {
+  # for cvs checkout
+  mkdir ${srcdir}/binutils-${_date}
+  cd ${srcdir}/binutils-${_date}
+  export _TAG=binutils-2_19-branch
+  export 'CVSROOT=:pserver:anoncvs@sourceware.org:/cvs/src'
+#  cvs -z9 co -r $_TAG binutils || return 1
+#  cd src && tar -cvjf ${startdir}/binutils-${pkgver}_${_date}.tar.bz2 *
+#  return 1
+
+  cd ${srcdir}
+
+  patch -Np1 -i binutils-2.19-as-needed.patch || return 1
+
+  mkdir build
+  cd build
+
+  _thost="${CHOST/gnu/uclibc}"
+
+  CC="gcc -L`pwd`/bfd/.libs/"
+  if [ "${CARCH}" = "x86_64" ]; then
+    ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --enable-shared --enable-64-bit-bfd --disable-multilib --target=${_thost} --disable-nls || return 1
+  else
+    ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --enable-shared --target=${_thost} --disable-nls || return 1
+  fi
+  make configure-host || return 1
+
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+
+  rm -rf "${pkgdir}/usr/share/info"
+  rm -rf "${pkgdir}/usr/lib"
+  rm -rf "${pkgdir}/usr/${CHOST}"
+}
