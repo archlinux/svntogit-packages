@@ -1,41 +1,34 @@
 # $Id$
-# Maintainer: Dan McGee <dan@archlinux.org>
+# Maintainer: Douglas Soares de Andrade <douglas@archlinux.org>
+# Contributor: Robson Peixoto
 
 pkgname=unzip
-pkgver=5.52
-pkgrel=4
+pkgver=6.0
+pkgrel=1
 pkgdesc="Unpacks .zip archives such as those made by PKZIP"
 arch=('i686' 'x86_64')
 url="http://www.info-zip.org/"
 license=('custom')
 depends=('glibc')
-source=(http://downloads.sourceforge.net/infozip/unzip552.tar.gz
-        unzip-5.5.2-CVE-2008-0888.patch
-        unzip-5.50-alt-iconv-v1.2-utf8.patch
-        unzip542-size-64bit.patch)
-md5sums=('9d23919999d6eac9217d1f41472034a9'
-         '2de357c2ba84576f38b17aed87915c87'
-         'a4797a1f6e45385f5e021f9f6f2ec0fa'
-         '83c7e79de9618bf7d081dd639dd3dde1')
+source=(http://downloads.sourceforge.net/infozip/unzip60.tar.gz)
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
+  cd $startdir/src/$pkgname${pkgver/./}
 
-  # http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-0888
-  patch -Np0 -i ../unzip-5.5.2-CVE-2008-0888.patch || return 1
+  # From Debian
+  export CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DACORN_FTYPE_NFS \
+  -DWILD_STOP_AT_DIR -DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT \
+  -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_LCHMOD -DDATE_FORMAT=DF_YMD \
+  -DUSE_BZIP2"
 
-  # FS#8383
-  patch -Np1 -i ../unzip-5.50-alt-iconv-v1.2-utf8.patch || return 1
+  # From Debian
+  make -f unix/Makefile LOCAL_UNZIP="$CFLAGS" prefix=/usr LF2="" \
+  D_USE_BZ2=-DUSE_BZIP2 L_BZ2=-lbz2 unzips
 
-  [ "$CARCH" == "x86_64" ] && (patch -Np0 -i ../unzip542-size-64bit.patch || return 1)
-  
-  export CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64"
-  if [ "${CARCH}" = "i686" ]; then
-    make -f unix/Makefile LOCAL_UNZIP="$CFLAGS" prefix=/usr linux || return 1
-  else
-    make -f unix/Makefile LOCAL_UNZIP="$CFLAGS" prefix=/usr linux_noasm || return 1
-  fi
-  make -f unix/Makefile prefix=$startdir/pkg/usr install
+  make -f unix/Makefile prefix=$startdir/pkg/usr INSTALL_PROGRAM="install" \
+  install
 
   install -Dm644 LICENSE $startdir/pkg/usr/share/licenses/unzip/LICENSE
 }
+
+md5sums=('62b490407489521db863b523a7f86375')
