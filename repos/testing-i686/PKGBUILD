@@ -1,0 +1,36 @@
+# $Id$
+# Maintainer : Thomas Baechler <thomas@archlinux.org>
+
+pkgname=nvidia
+pkgver=185.18.14
+_kernver='2.6.30-ARCH'
+pkgrel=1
+pkgdesc="NVIDIA drivers for kernel26."
+arch=('i686' 'x86_64')
+[ "$CARCH" = "i686"   ] && ARCH=x86
+[ "$CARCH" = "x86_64" ] && ARCH=x86_64
+url="http://www.nvidia.com/"
+depends=('kernel26>=2.6.30' 'kernel26<2.6.31' 'nvidia-utils=185.18.14')
+conflicts=('nvidia-96xx' 'nvidia-173xx')
+license=('custom')
+install=nvidia.install
+source=("http://download.nvidia.com/XFree86/Linux-$ARCH/${pkgver}/NVIDIA-Linux-$ARCH-${pkgver}-pkg0.run")
+md5sums=('a91d31a9dec5deb2f9e4ca9a09e0019f')
+[ "$CARCH" = "x86_64" ] && md5sums=('534a36a15caef39118e698a871047f1a')
+
+build() {
+	cd $srcdir
+	sh NVIDIA-Linux-$ARCH-${pkgver}-pkg0.run --extract-only
+	cd NVIDIA-Linux-$ARCH-${pkgver}-pkg0
+
+	cd usr/src/nv/
+	ln -s Makefile.kbuild Makefile
+	make SYSSRC=/lib/modules/${_kernver}/build module || return 1
+
+	mkdir -p $pkgdir/lib/modules/${_kernver}/kernel/drivers/video/
+	install -m644 nvidia.ko $pkgdir/lib/modules/${_kernver}/kernel/drivers/video/
+
+	sed -i -e "s/KERNEL_VERSION='.*'/KERNEL_VERSION='${_kernver}'/" $startdir/nvidia.install
+}
+
+
