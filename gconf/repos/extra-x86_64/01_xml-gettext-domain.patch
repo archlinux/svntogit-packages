@@ -1,26 +1,17 @@
 # Description: Support calling gettext at runtime and putting the gettext domain into the .schemas file instead of replicating translations in /usr/share/gconf/schemas/*.schemas *and* /var/lib/gconf/defaults/%gconf-tree-$LANG.xml. This saves in the order of 90 MB uncompressed/10 MB compressed on hard disks.
 # Ubuntu: https://bugs.launchpad.net/bugs/123025
 # Upstream: http://bugzilla.gnome.org/show_bug.cgi?id=568845
-diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.new/backends/markup-tree.c
---- gconf-2.25.0/backends/markup-tree.c	2009-01-10 05:55:08.000000000 +0100
-+++ gconf-2.25.0.new/backends/markup-tree.c	2009-01-23 12:11:48.000000000 +0100
-@@ -52,6 +52,7 @@
+--- GConf-2.26.0/backends/markup-tree.c.gettext	2009-04-26 23:33:05.258484987 -0400
++++ GConf-2.26.0/backends/markup-tree.c	2009-04-26 23:34:25.026700526 -0400
+@@ -52,6 +52,7 @@ struct _MarkupEntry
    char       *schema_name;
    char       *mod_user;
    GTime       mod_time;
-+  char       *gettext_domain;
++  const char *gettext_domain;
  };
  
  static LocalSchemaInfo* local_schema_info_new  (void);
-@@ -1351,6 +1352,7 @@
-     gconf_value_free (entry->value);
-   g_free (entry->schema_name);
-   g_free (entry->mod_user);
-+  g_free (entry->gettext_domain);
- 
-   g_slist_foreach (entry->local_schemas,
-                    (GFunc) local_schema_info_free,
-@@ -1593,6 +1595,8 @@
+@@ -1593,6 +1594,8 @@ markup_entry_set_value (MarkupEntry     
                               gconf_schema_get_type (schema));
        gconf_schema_set_owner (current_schema,
                                gconf_schema_get_owner (schema));
@@ -29,7 +20,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
      }
  
    /* Update mod time */
-@@ -1805,6 +1809,8 @@
+@@ -1805,6 +1808,8 @@ markup_entry_get_value (MarkupEntry *ent
        else if (c_local_schema && c_local_schema->long_desc)
          gconf_schema_set_long_desc (schema, c_local_schema->long_desc);
  
@@ -38,7 +29,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
        return retval;
      }
  }
-@@ -2339,8 +2345,9 @@
+@@ -2339,8 +2344,9 @@ parse_value_element (GMarkupParseContext
    const char *ltype;
    const char *list_type;
    const char *owner;
@@ -49,7 +40,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
    
  #if 0
    g_assert (ELEMENT_IS ("entry") ||
-@@ -2377,6 +2384,7 @@
+@@ -2377,6 +2383,7 @@ parse_value_element (GMarkupParseContext
                            "muser", &dummy2,
                            "mtime", &dummy3,
                            "schema", &dummy4,
@@ -57,7 +48,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
  
                            NULL))
      return;
-@@ -2682,6 +2690,7 @@
+@@ -2683,6 +2690,7 @@ parse_entry_element (GMarkupParseContext
        const char *mtime;
        const char *schema;
        const char *type;
@@ -65,7 +56,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
        const char *dummy1, *dummy2, *dummy3, *dummy4;
        const char *dummy5, *dummy6, *dummy7;
        GConfValue *value;
-@@ -2692,6 +2701,7 @@
+@@ -2693,6 +2701,7 @@ parse_entry_element (GMarkupParseContext
        mtime = NULL;
        schema = NULL;
        type = NULL;
@@ -73,7 +64,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
  
        if (!locate_attributes (context, element_name, attribute_names, attribute_values,
                                error,
-@@ -2700,6 +2710,7 @@
+@@ -2701,6 +2710,7 @@ parse_entry_element (GMarkupParseContext
                                "mtime", &mtime,
                                "schema", &schema,
                                "type", &type,
@@ -81,17 +72,17 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
                            
                                /* These are allowed but we don't use them until
                                 * parse_value_element
-@@ -2767,6 +2778,9 @@
+@@ -2768,6 +2778,9 @@ parse_entry_element (GMarkupParseContext
         */
        if (schema)
          entry->schema_name = g_strdup (schema);
 +
 +      if (gettext_domain)
-+        entry->gettext_domain = g_strdup (gettext_domain);
++        entry->gettext_domain = g_intern_string (gettext_domain);
      }
    else
      {
-@@ -3705,6 +3719,7 @@
+@@ -3716,6 +3729,7 @@ write_value_element (GConfValue *value,
          GConfSchema *schema;
          GConfValueType stype;
          const char *owner;
@@ -99,7 +90,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
          
          schema = gconf_value_get_schema (value);
  
-@@ -3730,6 +3745,23 @@
+@@ -3741,6 +3755,23 @@ write_value_element (GConfValue *value,
              
              g_free (s);
            }
@@ -123,35 +114,79 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/backends/markup-tree.c gconf-2.25.0.n
          
          if (stype == GCONF_VALUE_LIST)
            {
-diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.c gconf-2.25.0.new/gconf/gconf-schema.c
---- gconf-2.25.0/gconf/gconf-schema.c	2009-01-10 05:55:07.000000000 +0100
-+++ gconf-2.25.0.new/gconf/gconf-schema.c	2009-01-23 12:11:48.000000000 +0100
-@@ -35,6 +35,7 @@
-   gchar* owner;        /* Name of creating application */
+diff -up GConf-2.26.0/doc/gconf-1.0.dtd.gettext GConf-2.26.0/doc/gconf-1.0.dtd
+--- GConf-2.26.0/doc/gconf-1.0.dtd.gettext	2009-04-26 23:33:17.240736103 -0400
++++ GConf-2.26.0/doc/gconf-1.0.dtd	2009-04-26 23:34:25.027700384 -0400
+@@ -7,7 +7,7 @@
+ <!-- A single schema. What I am trying to say is "this set of
+ elements, in any order". Duplicate elements (apart from <locale>) are
+ not allowed). -->
+-<!ELEMENT schema  (key|applyto*|owner?|type|(list_type|(car_type,cdr_type))?|default?|locale*)*>
++<!ELEMENT schema  (key|applyto*|owner?|type|(list_type|(car_type,cdr_type))?|default?|locale*|gettext_domain?)*>
+ 
+ <!-- The key for this schema (e.g. /schemas/apps/foo/bar) -->
+ <!ELEMENT key     (#PCDATA)>
+diff -up GConf-2.26.0/gconf/gconf-internals.c.gettext GConf-2.26.0/gconf/gconf-internals.c
+--- GConf-2.26.0/gconf/gconf-internals.c.gettext	2009-04-26 23:34:10.994700035 -0400
++++ GConf-2.26.0/gconf/gconf-internals.c	2009-04-26 23:34:53.767450191 -0400
+@@ -513,6 +513,7 @@ gconf_fill_corba_schema_from_gconf_schem
+   cs->short_desc = CORBA_string_dup (gconf_schema_get_short_desc (sc) ? gconf_schema_get_short_desc (sc) : "");
+   cs->long_desc = CORBA_string_dup (gconf_schema_get_long_desc (sc) ? gconf_schema_get_long_desc (sc) : "");
+   cs->owner = CORBA_string_dup (gconf_schema_get_owner (sc) ? gconf_schema_get_owner (sc) : "");
++  cs->gettext_domain = CORBA_string_dup (gconf_schema_get_gettext_domain (sc) ? gconf_schema_get_gettext_domain (sc) : "");
+ 
+   {
+     gchar* encoded;
+@@ -600,6 +601,14 @@ gconf_schema_from_corba_schema(const Con
+         gconf_schema_set_owner(sc, cs->owner);
+     }
+       
++  if (*cs->gettext_domain != '\0')
++    {
++      if (!g_utf8_validate (cs->gettext_domain, -1, NULL))
++        gconf_log (GCL_ERR, _("Invalid UTF-8 in gettext domain for schema"));
++      else
++        gconf_schema_set_gettext_domain(sc, cs->gettext_domain);
++    }
++      
+   {
+     GConfValue* val;
+ 
+diff -up GConf-2.26.0/gconf/gconf-schema.c.gettext GConf-2.26.0/gconf/gconf-schema.c
+--- GConf-2.26.0/gconf/gconf-schema.c.gettext	2009-04-26 23:33:26.787483545 -0400
++++ GConf-2.26.0/gconf/gconf-schema.c	2009-04-26 23:35:54.240450142 -0400
+@@ -32,9 +32,10 @@ typedef struct {
+   GConfValueType car_type; /* Pair car type of the described entry */
+   GConfValueType cdr_type; /* Pair cdr type of the described entry */
+   gchar* locale;       /* Schema locale */
+-  gchar* owner;        /* Name of creating application */
++  const gchar* owner;        /* Name of creating application */
    gchar* short_desc;   /* 40 char or less description, no newlines */
    gchar* long_desc;    /* could be a paragraph or so */
-+  gchar* gettext_domain; /* description gettext domain */
++  const gchar* gettext_domain; /* description gettext domain */
    GConfValue* default_value; /* Default value of the key */
  } GConfRealSchema;
  
-@@ -63,6 +64,7 @@
+@@ -63,7 +64,6 @@ gconf_schema_free (GConfSchema* sc)
    g_free (real->locale);
    g_free (real->short_desc);
    g_free (real->long_desc);
-+  g_free (real->gettext_domain);
-   g_free (real->owner);
+-  g_free (real->owner);
  
    if (real->default_value)
-@@ -91,6 +93,8 @@
+     gconf_value_free (real->default_value);
+@@ -91,7 +91,9 @@ gconf_schema_copy (const GConfSchema* sc
  
    dest->long_desc = g_strdup (real->long_desc);
  
-+  dest->gettext_domain = g_strdup (real->gettext_domain);
+-  dest->owner = g_strdup (real->owner);
++  dest->gettext_domain = real->gettext_domain;
 +
-   dest->owner = g_strdup (real->owner);
++  dest->owner = real->owner;
  
    dest->default_value = real->default_value ? gconf_value_copy (real->default_value) : NULL;
-@@ -136,6 +140,20 @@
+   
+@@ -136,6 +138,17 @@ gconf_schema_set_locale (GConfSchema* sc
      REAL_SCHEMA (sc)->locale = NULL;
  }
  
@@ -160,11 +195,8 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.c gconf-2.25.0.new
 +{
 +  g_return_if_fail (domain == NULL || g_utf8_validate (domain, -1, NULL));
 +  
-+  if (REAL_SCHEMA (sc)->gettext_domain)
-+    g_free (REAL_SCHEMA (sc)->gettext_domain);
-+
 +  if (domain)
-+    REAL_SCHEMA (sc)->gettext_domain = g_strdup (domain);
++    REAL_SCHEMA (sc)->gettext_domain = g_intern_string (domain);
 +  else 
 +    REAL_SCHEMA (sc)->gettext_domain = NULL;
 +}
@@ -172,7 +204,20 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.c gconf-2.25.0.new
  void          
  gconf_schema_set_short_desc (GConfSchema* sc, const gchar* desc)
  {
-@@ -228,6 +246,14 @@
+@@ -169,11 +182,8 @@ gconf_schema_set_owner (GConfSchema* sc,
+ {
+   g_return_if_fail (owner == NULL || g_utf8_validate (owner, -1, NULL));
+   
+-  if (REAL_SCHEMA (sc)->owner)
+-    g_free (REAL_SCHEMA (sc)->owner);
+-
+   if (owner)
+-    REAL_SCHEMA (sc)->owner = g_strdup (owner);
++    REAL_SCHEMA (sc)->owner = g_intern_string (owner);
+   else
+     REAL_SCHEMA (sc)->owner = NULL;
+ }
+@@ -228,6 +238,14 @@ gconf_schema_validate (const GConfSchema
        return FALSE;
      }
  
@@ -187,7 +232,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.c gconf-2.25.0.new
    if (real->owner && !g_utf8_validate (real->owner, -1, NULL))
      {
        g_set_error (err, GCONF_ERROR,
-@@ -299,11 +325,22 @@
+@@ -299,11 +317,32 @@ gconf_schema_get_locale (const GConfSche
  }
  
  const char*
@@ -198,35 +243,42 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.c gconf-2.25.0.new
 +  return REAL_SCHEMA (schema)->gettext_domain;
 +}
 +
++static inline const char *
++schema_translate (const GConfSchema *schema,
++                  const char        *string)
++{
++  if (REAL_SCHEMA (schema)->gettext_domain)
++    {
++      bind_textdomain_codeset (REAL_SCHEMA (schema)->gettext_domain, "UTF-8");
++      return g_dgettext(REAL_SCHEMA (schema)->gettext_domain, string);
++    }
++  else
++    return string;
++}
++
 +const char*
  gconf_schema_get_short_desc (const GConfSchema *schema)
  {
    g_return_val_if_fail (schema != NULL, NULL);
  
 -  return REAL_SCHEMA (schema)->short_desc;
-+ if (REAL_SCHEMA (schema)->gettext_domain)
-+    return g_dgettext(REAL_SCHEMA (schema)->gettext_domain, REAL_SCHEMA (schema)->short_desc);
-+  else
-+    return REAL_SCHEMA (schema)->short_desc;
++ return schema_translate (schema, REAL_SCHEMA (schema)->short_desc);
  }
  
  const char*
-@@ -311,7 +348,10 @@
+@@ -311,7 +350,7 @@ gconf_schema_get_long_desc (const GConfS
  {
    g_return_val_if_fail (schema != NULL, NULL);
  
 -  return REAL_SCHEMA (schema)->long_desc;
-+  if (REAL_SCHEMA (schema)->gettext_domain)
-+    return dgettext(REAL_SCHEMA (schema)->gettext_domain, REAL_SCHEMA (schema)->long_desc);
-+  else
-+    return REAL_SCHEMA (schema)->long_desc;
++ return schema_translate (schema, REAL_SCHEMA (schema)->long_desc);
  }
  
  const char*
-diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.h gconf-2.25.0.new/gconf/gconf-schema.h
---- gconf-2.25.0/gconf/gconf-schema.h	2009-01-10 05:55:07.000000000 +0100
-+++ gconf-2.25.0.new/gconf/gconf-schema.h	2009-01-23 12:11:48.000000000 +0100
-@@ -48,6 +48,8 @@
+diff -up GConf-2.26.0/gconf/gconf-schema.h.gettext GConf-2.26.0/gconf/gconf-schema.h
+--- GConf-2.26.0/gconf/gconf-schema.h.gettext	2009-04-26 23:33:33.979744088 -0400
++++ GConf-2.26.0/gconf/gconf-schema.h	2009-04-26 23:34:25.030737043 -0400
+@@ -48,6 +48,8 @@ void gconf_schema_set_cdr_type          
                                              GConfValueType  type);
  void gconf_schema_set_locale               (GConfSchema    *sc,
                                              const gchar    *locale);
@@ -235,7 +287,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.h gconf-2.25.0.new
  void gconf_schema_set_short_desc           (GConfSchema    *sc,
                                              const gchar    *desc);
  void gconf_schema_set_long_desc            (GConfSchema    *sc,
-@@ -65,6 +67,7 @@
+@@ -65,6 +67,7 @@ GConfValueType gconf_schema_get_list_typ
  GConfValueType gconf_schema_get_car_type      (const GConfSchema *schema);
  GConfValueType gconf_schema_get_cdr_type      (const GConfSchema *schema);
  const char*    gconf_schema_get_locale        (const GConfSchema *schema);
@@ -243,10 +295,10 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconf-schema.h gconf-2.25.0.new
  const char*    gconf_schema_get_short_desc    (const GConfSchema *schema);
  const char*    gconf_schema_get_long_desc     (const GConfSchema *schema);
  const char*    gconf_schema_get_owner         (const GConfSchema *schema);
-diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconftool.c gconf-2.25.0.new/gconf/gconftool.c
---- gconf-2.25.0/gconf/gconftool.c	2009-01-10 05:55:07.000000000 +0100
-+++ gconf-2.25.0.new/gconf/gconftool.c	2009-01-23 12:11:48.000000000 +0100
-@@ -3293,6 +3293,7 @@
+diff -up GConf-2.26.0/gconf/gconftool.c.gettext GConf-2.26.0/gconf/gconftool.c
+--- GConf-2.26.0/gconf/gconftool.c.gettext	2009-04-26 23:33:41.907451190 -0400
++++ GConf-2.26.0/gconf/gconftool.c	2009-04-26 23:34:25.034736752 -0400
+@@ -3295,6 +3295,7 @@ struct _SchemaInfo {
    GConfValueType cdr_type;
    GConfValue* global_default;
    GHashTable* hash;
@@ -254,7 +306,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconftool.c gconf-2.25.0.new/gc
  };
  
  static int
-@@ -3545,6 +3546,15 @@
+@@ -3547,6 +3548,15 @@ extract_global_info(xmlNodePtr node,
                else
                  g_printerr (_("WARNING: empty <applyto> node"));
              }
@@ -270,7 +322,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconftool.c gconf-2.25.0.new/gc
            else
              g_printerr (_("WARNING: node <%s> not understood below <schema>\n"),
  			iter->name);
-@@ -3634,6 +3644,9 @@
+@@ -3636,6 +3646,9 @@ process_locale_info(xmlNodePtr node, Sch
    if (info->owner != NULL)
      gconf_schema_set_owner(schema, info->owner);
  
@@ -280,7 +332,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconftool.c gconf-2.25.0.new/gc
    xmlFree(name);
  
    /* Locale-specific info */
-@@ -3763,6 +3776,7 @@
+@@ -3765,6 +3778,7 @@ get_schema_from_xml(xmlNodePtr node, gch
    info.apply_to = NULL;
    info.owner = NULL;
    info.global_default = NULL;
@@ -288,7 +340,7 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconftool.c gconf-2.25.0.new/gc
    info.hash = g_hash_table_new(g_str_hash, g_str_equal);
    
    extract_global_info(node, &info);
-@@ -3799,6 +3813,8 @@
+@@ -3801,6 +3815,8 @@ get_schema_from_xml(xmlNodePtr node, gch
              ;  /* nothing */
            else if (strcmp((char *)iter->name, "applyto") == 0)
              ;  /* nothing */
@@ -297,3 +349,14 @@ diff -Nur -x '*.orig' -x '*~' gconf-2.25.0/gconf/gconftool.c gconf-2.25.0.new/gc
            else if (strcmp((char *)iter->name, "locale") == 0)
              {
                process_locale_info(iter, &info);
+diff -up GConf-2.26.0/gconf/GConfX.idl.gettext GConf-2.26.0/gconf/GConfX.idl
+--- GConf-2.26.0/gconf/GConfX.idl.gettext	2009-04-26 23:33:58.457483190 -0400
++++ GConf-2.26.0/gconf/GConfX.idl	2009-04-26 23:34:53.764448732 -0400
+@@ -16,6 +16,7 @@ struct ConfigSchema {
+   string short_desc;
+   string long_desc;
+   string owner;
++  string gettext_domain;
+   // Work around lack of recursive data types
+   string encoded_default_value;
+ };
