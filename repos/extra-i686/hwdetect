@@ -27,6 +27,7 @@ usage () {
 	echo "    --show-isdn            show ISDN modules"
 	echo "    --show-pcmcia          show PCMCIA modules"
 	echo "    --show-sound           show SOUND modules"
+	echo "    --show-staging         show STAGING modules"
 	echo "    --show-video           show VIDEO modules"
 	echo "    --show-other           show OTHER modules"
 	echo ""
@@ -37,7 +38,6 @@ usage () {
         echo "" 
 	echo "    --hooks                show HOOKS="
 	echo "    --hooks-dir            use this directory for HOOKS check"
-	echo "    --dsdt                 add dsdt to HOOKS="
 	echo "    --mdadm                add mdadm to HOOKS="
 	echo "    --dmraid               add dmraid to HOOKS="
 	echo "    --encrypt              add encrypt to HOOKS="
@@ -75,9 +75,6 @@ fi
 
 # IDE/PATA switch
 [ "$(echo $* | grep '\-ide-legacy')" ] && IDE_LEGACY=1
-
-# dsdt switch
-[ "$(echo $* | grep '\-dsdt')" ] && DSDT=1
 
 # mdadm switch
 [ "$(echo $* | grep '\-mdadm')" ] && MDADM=1
@@ -201,7 +198,7 @@ sort -u /tmp/modules-plain >> /tmp/modules-stripped
 grep -v "ide/" /tmp/modules-stripped | grep -v "scsi/" | grep -v "fusion/" | grep -v "block/sx8" | grep -v "message/fusion" | \
 	grep -v  "block/cciss" | grep -v "block/cpqarray" | grep -v "block/DAC960" | grep -v "ata/" | \
 	grep -v "net/" | grep -v "pcmcia/" | grep -v "usb/" | \
-	grep -v "ieee1394/" >> /tmp/modules-sorted
+	grep -v "ieee1394/" | grep -v "usbhid/" >> /tmp/modules-sorted
 # make a correct order for the modules, internal devices have priority!
 # only use old ide modules if boot parameter 'ide-legacy' is given
 if [ "$IDE_LEGACY" = "1" ]; then
@@ -319,7 +316,7 @@ while [ $# -gt 0 ]; do
 			showlist "AGP    " $(listmods agp/)
 			showlist "ACPI   " $(listmods acpi/)
 			showlist "IDE    " $(listmods ide/ ide-)
-			showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) 
+			showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix)
 			showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy)
 			showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)
 			showlist "USB    " $(listmods usb/ usb/input)
@@ -330,8 +327,9 @@ while [ $# -gt 0 ]; do
 			showlist "ISDN   " $(listmods isdn/)
 			showlist "PCMCIA " $(listmods pcmcia/)
 			showlist "SOUND  " $(listmods pcspkr) $(listmods sound/)
+			showlist "STAGING" $(listmods staging/)
 			showlist "VIDEO  " $(listmods video/)
-			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/)
+			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/)
 			;;
 
 		--show-modules-order)
@@ -352,8 +350,9 @@ while [ $# -gt 0 ]; do
 		--show-isdn)   showlist "ISDN   " $(listmods isdn/) ;;
 		--show-pcmcia) showlist "PCMCIA " $(listmods pcmcia/) ;;
 		--show-sound)  showlist "SOUND  " $(listmods pcspkr) $(listmods sound/) ;;
+		--show-staging) showlist "STAGING" $(listmods staging/) ;;
 		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
-		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/) ;;
+		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/) ;;
 		--filesystem) FILESYSTEM="ext2 ext3 ext4 reiserfs xfs jfs"
 				  for i in $FILESYSTEM; do
 					 [ "$(grep $i /tmp/.blkid)" ] && FS="$FS $i"
@@ -386,7 +385,7 @@ while [ $# -gt 0 ]; do
 			if [ "$HOOKS_DIR" = "" ]; then
 				HOOKS_DIR="/lib/initcpio/install"
 			fi
-			START_HOOKS="base udev dsdt autodetect ide pata scsi sata usb fw pcmcia net dmraid mdadm usbinput keymap lvm2 encrypt filesystems"
+			START_HOOKS="base udev autodetect ide pata scsi sata usb fw pcmcia net dmraid mdadm usbinput keymap lvm2 encrypt filesystems"
 			# remove the ones that don't exist on the system
 			for i in ${START_HOOKS}; do
 				if ! [ -e "${HOOKS_DIR}/$i" ]; then 
@@ -428,9 +427,6 @@ while [ $# -gt 0 ]; do
 			fi
 			if ! [ "$NFS" = "1" ]; then
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/net//g")
-			fi
-			if ! [ "$DSDT" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/dsdt//g")
 			fi
 			echo "HOOKS=\"$START_HOOKS\"" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 		;;
