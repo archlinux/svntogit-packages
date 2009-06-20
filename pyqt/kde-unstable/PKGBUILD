@@ -5,7 +5,7 @@
 pkgname=pyqt
 pkgver=4.5.0
 _pkgver=4.5
-pkgrel=1
+pkgrel=2
 pkgdesc="A set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/pyqt/"
