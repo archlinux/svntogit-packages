@@ -15,37 +15,6 @@
 onintr -
 ##
 
-
-##
-## Start by unsetting all our variables.  This is needed to prevent inheritance
-## from the shell that started us -- e.g. when performing a 'su'.
-##
-unsetenv TCSH_SHELL_CTRLD
-unsetenv TCSH_SHELL_SAFEHISTORY
-unsetenv TCSH_SHELL_AUTOLOGOUT
-unsetenv TCSH_SHELL_SAFETY
-unsetenv TCSH_SHELL_DOS
-unsetenv TCSH_SHELL_CDALIAS
-unsetenv TCSH_SHELL_COMPLETION
-
-
-##
-## Get our own settings.  Make sure they exist in the user's directory.
-##
-if ( ! -e ~/.tcsh.config ) then
-    if ( -e /etc/skel/.tcsh.config ) then
-        echo ">>> Copying /etc/skel/.tcsh.config to your home directory ..."
-        cp /etc/skel/.tcsh.config ~/.tcsh.config
-        echo ">>> Please edit it to fine-tune the TCSH behaviour."
-    else
-        echo "### Missing .tcsh.config!"
-    endif
-endif
-if ( -e ~/.tcsh.config ) then
-    source ~/.tcsh.config
-endif
-
-
 ##
 ## Load the environment defaults.
 ##
@@ -115,10 +84,8 @@ endif
 ##
 ## Load our command completions -- for interactive shells only
 ##
-if ( $?TCSH_SHELL_COMPLETION ) then
-    if ( -e /etc/profile.d/tcsh-complete ) then
-        source /etc/profile.d/tcsh-complete
-    endif
+if ( -e /etc/profile.d/tcsh-complete ) then
+    source /etc/profile.d/tcsh-complete
 endif
 
 
