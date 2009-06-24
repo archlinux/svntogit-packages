@@ -1,10 +1,10 @@
 # $Id$
-# Contributer: Jason Chu <jason@archlinux.org>
-# Maintainer: Jason Chu <jason@archlinux.org>
+# Maintainer: Douglas Soares de Andrade <douglas@archlinux.org>
+# Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=subversion
-pkgver=1.6.2
-pkgrel=3
+pkgver=1.6.3
+pkgrel=1
 pkgdesc="Replacement for CVS, another versioning system (svn)"
 arch=(i686 x86_64)
 license=('apache' 'bsd')
@@ -13,7 +13,8 @@ makedepends=('heimdal>=1.2' 'db>=4.7' 'apache>=2.2.9-3' 'python>=2.6-1'
              'perl>=5.10.0-3' 'swig>=1.3.31' 'ruby' 'openjdk6' 'autoconf'
              'sqlite3')
 source=(http://subversion.tigris.org/downloads/$pkgname-$pkgver.tar.bz2
-        svnserve svn svnserve.conf svnmerge.py)
+        svnserve svn svnserve.conf svnmerge.py
+        subversion.rpath.fix.patch)
 
 backup=('etc/xinetd.d/svn' 'etc/conf.d/svnserve')
 url="http://subversion.tigris.org/"
@@ -26,6 +27,7 @@ build() {
    [ -z "${J2REDIR}" ] && . /etc/profile.d/openjdk6.sh
    [ -z "${J2SDKDIR}" ] && . /etc/profile.d/openjdk6.sh
 
+   patch -p0 < $srcdir/subversion.rpath.fix.patch || return 1
    autoreconf
    ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
                --with-zlib=/usr --with-neon=/usr --with-apxs \
@@ -46,12 +48,6 @@ build() {
    mkdir -p $startdir/pkg/usr/share/subversion
    install -d -m 755 tools/hook-scripts $startdir/pkg/usr/share/subversion/
    rm -f $startdir/pkg/usr/share/subversion/hook-scripts/*.in
-
-   (
-     cd subversion/bindings/swig/perl/native
-     perl Makefile.PL
-     sed 's|^LD_RUN_PATH|#LD_RUN_PATH|g;s|LD_RUN_PATH="$(LD_RUN_PATH)" ||g' -i Makefile{,.{client,delta,fs,ra,repos,wc}}
-   ) || return 1
 
    make DESTDIR=$startdir/pkg swig-pl || return 1
    make install-swig-pl DESTDIR=$startdir/pkg INSTALLDIRS=vendor || return 1
@@ -75,8 +71,9 @@ build() {
    install -m 755 $startdir/src/svnmerge.py $startdir/pkg/usr/bin/svnmerge
    install -D -m 644 $startdir/src/subversion-$pkgver/COPYING $startdir/pkg/usr/share/licenses/$pkgname/LICENSE
 }
-md5sums=('ebb1cecd313533ca0876f9bfc86bd5d9'
+md5sums=('8bf7637ac99368db0890e3f085fa690d'
          'c5a2e490b3e58c6bd2ca3a2e72b71845'
          'a0db6dd43af33952739b6ec089852630'
          'c459e299192552f61578f3438abf0664'
-         '21bf3aa5b797ce98eba8307f30e9c070')
+         '21bf3aa5b797ce98eba8307f30e9c070'
+         '6b4340ba9d8845cd8497e013ae01be3f')
