@@ -110,7 +110,7 @@ update_runtime() {
     sed -i "/find the end/,+3{s/changelog_date_entry_search/changelog_date_end_entry_search/}" ftplugin/changelog.vim
   fi
   # make Aaron happy
-  wget http://www.vim.org/scripts/download_script.php\?src_id=7766 \
+  wget http://www.vim.org/scripts/download_script.php\?src_id=10872 \
     -O autoload/pythoncomplete.vim
   cd "${_OLDDIR}"
   return 0
