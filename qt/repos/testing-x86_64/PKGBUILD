@@ -1,0 +1,102 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=qt
+pkgver=4.5.2
+pkgrel=1
+_kdeqtver=766bf1d15ff245e186aae19b9152c0506125ec2f
+pkgdesc='A cross-platform application and UI framework'
+arch=('i686' 'x86_64')
+url='http://www.qtsoftware.com/'
+license=('GPL3' 'LGPL')
+depends=('libpng' 'mesa' 'fontconfig' 'libtiff' 'libmng' 'sqlite3' 'libxrandr' 'glib2' 'libxi' 'dbus' 'libxcursor' 'libxinerama' 'libxrender')
+optdepends=('postgresql-libs' 'libmysqlclient' 'unixodbc')
+makedepends=('inputproto' 'postgresql-libs' 'mysql' 'unixodbc' 'cups' 'libxfixes')
+provides=("qt4=${pkgver}")
+replaces=('qt4')
+conflicts=('qt4')
+options=('!libtool')
+_pkgfqn="qt-x11-opensource-src-${pkgver}"
+source=("ftp://ftp.qtsoftware.com/qt/source/${_pkgfqn}.tar.bz2"
+        "ftp://ftp.archlinux.org/other/kde-qt/kde-qt-patches-${_kdeqtver}.tar.bz2"
+        'assistant.desktop' 'designer.desktop' 'linguist.desktop' 'qtconfig.desktop'
+        'qdoc3.patch')
+md5sums=('28a7e8ac9805a6f614d2a27ee1a6ac9d'
+         '69f190301a06e87b77d00da6422e0ba5'
+         'b352b4b70faba2571af3fce5d119580a'
+         '491a96682faa03407f768a53cca71db5'
+         'cda7ed7e132689991dc2968a0043b4b0'
+         '717669b728a0a795217d2f52969e454c'
+         '9c0a0db3569e889a54a6cddcd55c538c')
+
+_create-kdeqt-patches() {
+	local codir=$(mktemp -d)
+	mkdir -p "${codir}/kde-qt"
+	git clone git://gitorious.org/+kde-developers/qt/kde-qt.git "${codir}/kde-qt"
+	pushd "${codir}/kde-qt"
+	local kdeqtver=$(git --no-pager show --format='%H' "${pkgver}-patched")
+	mkdir "../kde-qt-patches-${kdeqtver}"
+	git format-patch -k "v${pkgver}..${pkgver}-patched" -o "../kde-qt-patches-${kdeqtver}"
+	popd
+	pushd "${codir}"
+	bsdtar -cjf "kde-qt-patches-${kdeqtver}.tar.bz2" kde-qt-patches-${kdeqtver}
+	popd
+	mv "${codir}/kde-qt-patches-${kdeqtver}.tar.bz2" .
+	rm -rf "${codir}"
+}
+
+build() {
+	unset QMAKESPEC
+	export QT4DIR=$srcdir/$_pkgfqn
+	export PATH=${QT4DIR}/bin:${PATH}
+	export LD_LIBRARY_PATH=${QT4DIR}/lib:${LD_LIBRARY_PATH}
+
+	cd $srcdir/$_pkgfqn
+	for i in $srcdir/kde-qt-patches-${_kdeqtver}/*; do
+		echo "applying $i"
+		patch -p1 -i $i || return 1
+	done
+
+	patch -p0 -i $srcdir/qdoc3.patch
+
+	sed -i "s|-O2|$CXXFLAGS|" mkspecs/common/g++.conf
+	sed -i "/^QMAKE_RPATH/s| -Wl,-rpath,||g" mkspecs/common/g++.conf
+
+	./configure -confirm-license -opensource \
+		-silent \
+		-prefix /usr \
+		-sysconfdir /etc \
+		-plugindir /usr/lib/qt/plugins \
+		-translationdir /usr/share/qt/translations \
+		-datadir /usr/share/qt \
+		-docdir /usr/share/doc/qt \
+		-examplesdir /usr/share/doc/qt/examples \
+		-demosdir /usr/share/doc/qt/demos \
+		-no-separate-debug-info \
+		-plugin-sql-{psql,mysql,sqlite,odbc} \
+		-system-sqlite \
+		-openssl-linked \
+		-nomake demos \
+		-nomake examples \
+		-nomake docs \
+		-no-phonon \
+		-optimized-qmake \
+		-reduce-relocations
+
+	make
+	make INSTALL_ROOT=$pkgdir install
+
+	install -D -m644 tools/assistant/tools/assistant/images/assistant.png ${pkgdir}/usr/share/pixmaps/assistant.png
+	install -D -m644 tools/linguist/linguist/images/appicon.png ${pkgdir}/usr/share/pixmaps/linguist.png
+	install -D -m644 tools/designer/src/designer/images/designer.png ${pkgdir}/usr/share/pixmaps/designer.png
+	install -D -m644 src/gui/dialogs/images/qtlogo-64.png ${pkgdir}/usr/share/pixmaps/qtlogo.png
+	install -d ${pkgdir}/usr/share/applications
+	install -m644 ${srcdir}/{linguist,designer,assistant,qtconfig}.desktop ${pkgdir}/usr/share/applications/
+	install -D -m644 LGPL_EXCEPTION.txt ${pkgdir}/usr/share/licenses/qt/LGPL_EXCEPTION.txt
+
+	# cleanup and path fixes
+	find $pkgdir/usr/lib -type f -name '*prl' -print -exec sed -i -e "/^QMAKE_PRL_BUILD_DIR/d" {} \;
+	sed -i -e "s|-L$srcdir/${_pkgfqn}/lib||g" $pkgdir/usr/lib/pkgconfig/*.pc
+	sed -i -e "s|$srcdir/${_pkgfqn}/bin/moc|/usr/bin/moc|g" $pkgdir/usr/lib/pkgconfig/*.pc
+	sed -i -e "s|$srcdir/${_pkgfqn}/bin/uic|/usr/bin/uic|g" $pkgdir/usr/lib/pkgconfig/*.pc
+}
