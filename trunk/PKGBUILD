@@ -38,6 +38,9 @@ build() {
   
   mkdir -p ${startdir}/pkg/etc
   install -m644 ../inputrc ${startdir}/pkg/etc/inputrc || return 1
+  #FHS recommends only shared libs in /lib
+  mkdir -p $pkgdir/usr/lib
+  mv $pkgdir/lib/*.a $pkgdir/usr/lib
 
   rm -f ${pkgdir}/usr/share/info/dir
 }
