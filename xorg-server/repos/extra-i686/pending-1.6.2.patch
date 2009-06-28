@@ -1590,3 +1590,218 @@ index 601288c..27607a1 100644
 -- 
 1.6.2.4
 
+cgit v0.8.2
+From 6f9e22049862ee9ac7f604411d005d8bb1b2dd1c Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 11 May 2009 02:51:40 +0000
+Subject: dix: ensure Activate/DeactivateGrab has a valid value.
+
+Xephyr doesn't manually set Activate/DeactivateGrab for new devices,
+resulting in a NULL-pointer dereference later when a grab is activated.
+Avoid the segfault by ensuring that the pointer is always valid.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+diff --git a/dix/devices.c b/dix/devices.c
+index afe340b..6f464e7 100644
+--- a/dix/devices.c
++++ b/dix/devices.c
+@@ -224,6 +224,8 @@ AddInputDevice(ClientPtr client, DeviceProc deviceProc, Bool autoStart)
+ 
+     /* device grab defaults */
+     dev->deviceGrab.grabTime = currentTime;
++    dev->deviceGrab.ActivateGrab = ActivateKeyboardGrab;
++    dev->deviceGrab.DeactivateGrab = DeactivateKeyboardGrab;
+ 
+     dev->coreEvents = TRUE;
+ 
+--
+cgit v0.8.2
+From b1b5ec45c1cb650ccb8c659218f9481379c777d9 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 11 May 2009 02:53:56 +0000
+Subject: kdrive: set Activate/Deactivate grab for input devices (#21591)
+
+X.Org Bug 21591 <http://bugs.freedesktop.org/show_bug.cgi?id=21591>
+---
+diff --git a/hw/kdrive/src/kinput.c b/hw/kdrive/src/kinput.c
+index 7ed3601..0d216a9 100644
+--- a/hw/kdrive/src/kinput.c
++++ b/hw/kdrive/src/kinput.c
+@@ -915,6 +915,8 @@ KdAddKeyboard (KdKeyboardInfo *ki)
+         return !Success;
+     }
+ 
++    ki->dixdev->deviceGrab.ActivateGrab = ActivateKeyboardGrab;
++    ki->dixdev->deviceGrab.DeactivateGrab = DeactivateKeyboardGrab;
+     RegisterOtherDevice(ki->dixdev);
+ 
+ #ifdef DEBUG
+@@ -984,6 +986,8 @@ KdAddPointer (KdPointerInfo *pi)
+         return BadDevice;
+     }
+ 
++    pi->dixdev->deviceGrab.ActivateGrab = ActivatePointerGrab;
++    pi->dixdev->deviceGrab.DeactivateGrab = DeactivatePointerGrab;
+     RegisterOtherDevice(pi->dixdev);
+ 
+     for (prev = &kdPointers; *prev; prev = &(*prev)->next);
+--
+cgit v0.8.2
+From e244a5991e2cc55f5aa2f6e5255f1dabf56f0235 Mon Sep 17 00:00:00 2001
+From: Federico Mena Quintero <federico@novell.com>
+Date: Tue, 09 Jun 2009 20:28:28 +0000
+Subject: dix/randr: Add missing fields to SRR*NotifyEvent()
+
+Also, remove redundant field swaps and make others match the order in which
+they are declared in the xRR*NotifyEvent structs.
+
+Signed-off-by: Federico Mena Quintero <federico@novell.com>
+Signed-off-by: Keith Packard <keithp@keithp.com>
+---
+diff --git a/randr/randr.c b/randr/randr.c
+index fd0a30a..1c1d0c4 100644
+--- a/randr/randr.c
++++ b/randr/randr.c
+@@ -115,11 +115,11 @@ SRRScreenChangeNotifyEvent(xRRScreenChangeNotifyEvent *from,
+     cpswapl(from->root, to->root);
+     cpswapl(from->window, to->window);
+     cpswaps(from->sizeID, to->sizeID);
++    cpswaps(from->subpixelOrder, to->subpixelOrder);
+     cpswaps(from->widthInPixels, to->widthInPixels);
+     cpswaps(from->heightInPixels, to->heightInPixels);
+     cpswaps(from->widthInMillimeters, to->widthInMillimeters);
+     cpswaps(from->heightInMillimeters, to->heightInMillimeters);
+-    cpswaps(from->subpixelOrder, to->subpixelOrder);
+ }
+ 
+ static void
+@@ -133,8 +133,8 @@ SRRCrtcChangeNotifyEvent(xRRCrtcChangeNotifyEvent *from,
+     cpswapl(from->window, to->window);
+     cpswapl(from->crtc, to->crtc);
+     cpswapl(from->mode, to->mode);
+-    cpswapl(from->window, to->window);
+     cpswaps(from->rotation, to->rotation);
++    /* pad1 */
+     cpswaps(from->x, to->x);
+     cpswaps(from->y, to->y);
+     cpswaps(from->width, to->width);
+@@ -155,6 +155,8 @@ SRROutputChangeNotifyEvent(xRROutputChangeNotifyEvent *from,
+     cpswapl(from->crtc, to->crtc);
+     cpswapl(from->mode, to->mode);
+     cpswaps(from->rotation, to->rotation);
++    to->connection = from->connection;
++    to->subpixelOrder = from->subpixelOrder;
+ }
+ 
+ static void
+@@ -168,6 +170,11 @@ SRROutputPropertyNotifyEvent(xRROutputPropertyNotifyEvent *from,
+     cpswapl(from->output, to->output);
+     cpswapl(from->atom, to->atom);
+     cpswapl(from->timestamp, to->timestamp);
++    to->state = from->state;
++    /* pad1 */
++    /* pad2 */
++    /* pad3 */
++    /* pad4 */
+ }
+ 
+ static void
+--
+cgit v0.8.2
+From 69a9545d1f8110841538410818df19fd960412c5 Mon Sep 17 00:00:00 2001
+From: Keith Packard <keithp@keithp.com>
+Date: Thu, 28 May 2009 21:43:27 +0000
+Subject: Make RANDR 'set' timestamps follow client specified time. Bug 21987.
+
+The lastSetTime value which indicates when the configuration within the
+server was last changed was not getting set in the appropriate RandR
+requests.
+
+Signed-off-by: Keith Packard <keithp@keithp.com>
+---
+diff --git a/randr/rrcrtc.c b/randr/rrcrtc.c
+index 287c211..32a0992 100644
+--- a/randr/rrcrtc.c
++++ b/randr/rrcrtc.c
+@@ -978,6 +978,7 @@ ProcRRSetCrtcConfig (ClientPtr client)
+ 	goto sendReply;
+     }
+     rep.status = RRSetConfigSuccess;
++    pScrPriv->lastSetTime = time;
+     
+ sendReply:
+     if (outputs)
+@@ -987,7 +988,7 @@ sendReply:
+     /* rep.status has already been filled in */
+     rep.length = 0;
+     rep.sequenceNumber = client->sequence;
+-    rep.newTimestamp = pScrPriv->lastConfigTime.milliseconds;
++    rep.newTimestamp = pScrPriv->lastSetTime.milliseconds;
+ 
+     if (client->swapped) 
+     {
+@@ -1130,6 +1131,8 @@ ProcRRSetPanning (ClientPtr client)
+     if (! pScrPriv->rrSetPanning (pScreen, crtc, &total, &tracking, border))
+ 	return BadMatch;
+ 
++    pScrPriv->lastSetTime = time;
++
+     rep.status = RRSetConfigSuccess;
+ 
+ sendReply:
+diff --git a/randr/rrscreen.c b/randr/rrscreen.c
+index 46890bf..a919ffd 100644
+--- a/randr/rrscreen.c
++++ b/randr/rrscreen.c
+@@ -946,8 +946,10 @@ ProcRRSetScreenConfig (ClientPtr client)
+ 
+     if (!RRCrtcSet (crtc, mode, 0, 0, stuff->rotation, 1, &output))
+ 	rep.status = RRSetConfigFailed;
+-    else
++    else {
++	pScrPriv->lastSetTime = time;
+ 	rep.status = RRSetConfigSuccess;
++    }
+ 
+     /*
+      * XXX Configure other crtcs to mirror as much as possible
+--
+cgit v0.8.2
+From 3323f7ac880d5a8261d5b22059374fc9de8ca683 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 25 Mar 2009 12:55:42 +1000
+Subject: [PATCH] xfree86: fix SWCursor check in xf86CursorSetCursor.
+
+Wrong check for inputInfo.pointer resulted in a SW cursor being rendered when
+the pointer left the screen (in a Xinerama setup).
+We must call the sprite rendering function if
+- SW cursors are enabled, or
+- The current device is not the VCP and not attached to the VCP.
+
+Reported-by: Gordon Yuan <GordonYuan@viatech.com.cn>
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ hw/xfree86/ramdac/xf86Cursor.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/hw/xfree86/ramdac/xf86Cursor.c b/hw/xfree86/ramdac/xf86Cursor.c
+index 2b73b16..896ed37 100644
+--- a/hw/xfree86/ramdac/xf86Cursor.c
++++ b/hw/xfree86/ramdac/xf86Cursor.c
+@@ -302,9 +302,9 @@ xf86CursorSetCursor(DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCurs,
+ 
+ 
+     if (pCurs == NullCursor) {	/* means we're supposed to remove the cursor */
+-        if (ScreenPriv->SWCursor || pDev != inputInfo.pointer)
+-            (*ScreenPriv->spriteFuncs->SetCursor)(pDev, pScreen, NullCursor,
+-                                                  x, y);
++        if (ScreenPriv->SWCursor ||
++            !(pDev == inputInfo.pointer || !pDev->isMaster && pDev->u.master == inputInfo.pointer))
++                (*ScreenPriv->spriteFuncs->SetCursor)(pDev, pScreen, NullCursor, x, y);
+         else if (ScreenPriv->isUp) {
+             xf86SetCursor(pScreen, NullCursor, x, y);
+             ScreenPriv->isUp = FALSE;
+-- 
+1.6.0.6
+
