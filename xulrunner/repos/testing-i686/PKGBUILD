@@ -1,0 +1,76 @@
+# $Id$
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xulrunner
+pkgver=1.9.0.11
+_ffoxver=3.0.11
+pkgrel=2
+pkgdesc="Mozilla Runtime Environment"
+arch=(i686 x86_64)
+license=('MPL' 'GPL' 'LGPL')
+depends=('gtk2>=2.16.2-2' 'gcc-libs>=4.4.0' 'libidl2>=0.8.13' 'mozilla-common' 'nss>=3.12.3' 'nspr>=4.8' 'libxt' 'lcms>=1.18-2' 'hunspell>=1.2.8' 'startup-notification>=0.10' 'mime-types')
+makedepends=('zip' 'pkgconfig' 'diffutils' 'libgnomeui>=2.24.1' 'python')
+optdepends=('libgnomeui')
+provides=(gecko-sdk)
+replaces=(gecko-sdk)
+url="http://wiki.mozilla.org/XUL:Xul_Runner"
+source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${_ffoxver}/source/firefox-${_ffoxver}-source.tar.bz2
+        mozconfig
+      	100-system-hunspell-corrections.patch
+        bzXXX_pc_honour_system_nspr_nss.patch
+        mozilla-pkgconfig.patch
+        fix-mozilla-launcher.patch
+        mozilla-ps-pdf-simplify-operators.patch
+        nsThreadUtils.patch
+        gcc-4.4.patch)
+md5sums=('b509f7c05e9566ed290e2c098316c7c3'
+         '6509d12e6b17bfc51c09e1dc35259035'
+         '5efd6772ed0ecf8eddec5d5650191d3c'
+         '7a5151f90cb360bc1ea911e5cf7208e9'
+         'dfbfb4e35912112668ac66dae0783686'
+         '63eee2d1da3b43c9d604f2253f242f40'
+         '13dca58c04e62a8916691c63c5c492a0'
+         'ccc3a0672c783c043434f256fbd38c86'
+         'b465a9c538402d16c0b811ef81953d35')
+
+build() {
+  cd "${srcdir}/mozilla"
+  cp "${srcdir}/mozconfig" .mozconfig
+
+  #Upstream patch. Still not applied to 1.9.0.1
+  patch -Np1 -i "${srcdir}/mozilla-ps-pdf-simplify-operators.patch" || return 1
+
+  #fix build with system hunspell - gentoo
+  patch -Np0 -i "${srcdir}/100-system-hunspell-corrections.patch" || return 1
+
+  #fix pkgconfig files when building with system nss/nspr - ubuntu
+  patch -Np1 -i "${srcdir}/bzXXX_pc_honour_system_nspr_nss.patch" || return 1
+
+  #fix libdir/sdkdir - fedora - with local modifications
+  patch -Np1 -i "${srcdir}/mozilla-pkgconfig.patch" || return 1
+
+  #Fix stub launcher - archlinux
+  patch -Np0 -i "${srcdir}/fix-mozilla-launcher.patch" || return 1
+
+  #Fix epiphany crashes - requires epiphany rebuild
+  patch -Np1 -i "${srcdir}/nsThreadUtils.patch" || return 1
+
+  patch -Np1 -i "${srcdir}/gcc-4.4.patch" || return 1
+
+  unset CFLAGS
+  unset CXXFLAGS
+  export LDFLAGS="-Wl,-rpath,/usr/lib/xulrunner-1.9"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS" || return 1
+  make -j1 DESTDIR=${startdir}/pkg install || return 1
+
+  ln -sf xulrunner-${pkgver} "${pkgdir}/usr/lib/xulrunner-1.9"
+  ln -sf xulrunner-devel-${pkgver} "${pkgdir}/usr/lib/xulrunner-devel-1.9"
+  ln -sf xulrunner-${pkgver} "${pkgdir}/usr/include/xulrunner-1.9"
+  ln -sf xulrunner-${pkgver} "${pkgdir}/usr/share/idl/xulrunner-1.9"
+
+  # The ubuntu patch adds these... get rid of it, NSS/NSPR has it.
+  rm -f ${pkgdir}/usr/lib/pkgconfig/mozilla-ns{s,pr}.pc || return 1
+
+  sed -i -e "s/xulrunner-${pkgver}/xulrunner-1.9/g" -e "s/xulrunner-devel-${pkgver}/xulrunner-devel-1.9/g" ${pkgdir}/usr/lib/pkgconfig/*.pc || return 1
+}
