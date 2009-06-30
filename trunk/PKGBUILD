@@ -1,27 +1,28 @@
 # $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
-# NOTE: ImageMagick builds against an existing installation
-# uninstall ImageMagick before building, or build it, install it, build it.
-
-# NOTE 2: To circumvent linking problems (FS#10574), this package must now be built the following way:
+# NOTE: To circumvent linking problems (FS#10574), this package must now be built the following way:
 # install old package, build new package, install new package, rebuild
+# Just uninstalling ImageMagick before build fails as it is used during the build processs
 
 pkgname=imagemagick
-pkgver=6.5.3.2
+pkgver=6.5.3.10
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr>=1.6.1' 'libtool>=2.2' 'heimdal>=1.2.1' 'bzip2' 'libxml2' 'jasper')
+depends=('lcms>=1.18-2' 'libwmf>=0.2.8.4-5' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript>=8.64-6' 'openexr>=1.6.1' 'libtool>=2.2' 'heimdal>=1.2.1' 'bzip2' 'libxml2' 'jasper')
+makedepends=('imagemagick')
 #makedepends=('ghostscript' 'openexr')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch perlmagick.rpath.patch)
-md5sums=('eabd6431db7d5c3ef6661b0e5062e238' '069980fc2590c02aed86420996259302'\
-         '7f5851c4450b73d52df55c7e806cc316' 'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('8563f665b4f87c50b876ccdff2d16b967bbdae17'
+md5sums=('ad485ed0eca5eb8b8a1649bae40cec7d'
+         '069980fc2590c02aed86420996259302'
+         '7f5851c4450b73d52df55c7e806cc316'
+         'ff9974decbfe9846f8e347239d87e4eb')
+sha1sums=('64ac87fbc433c9e449bc630998657196421d179d'
           'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
           '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
