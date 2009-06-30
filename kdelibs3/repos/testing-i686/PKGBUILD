@@ -1,0 +1,60 @@
+# $ Id: $
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kdelibs3
+pkgver=3.5.10
+pkgrel=4
+pkgdesc="KDE3 Core Libraries"
+arch=('i686' 'x86_64')
+url="http://www.kde.org"
+license=('GPL' 'LGPL')
+depends=('libxslt' 'pcre' 'libart-lgpl' 'alsa-lib' 'libcups>=1.3.10-3'
+         'jasper>=1.900.1-3' 'bzip2' 'openssl' 'libidn' 'libxrender' 'openexr'
+	 'aspell' 'heimdal' 'acl' 'libtiff' 'qt3>=3.3.8-12' 'ca-certificates')
+makedepends=('pkgconfig' 'cups')
+options=('libtool')
+install='kdelibs3.install'
+source=("http://download.kde.org/stable/${pkgver}/src/kdelibs-${pkgver}.tar.bz2"
+        'kde3.profile' 'ftp-kioslave-constness.patch' 'inotify-compile.patch')
+md5sums=('43cd55ed15f63b5738d620ef9f9fd568'
+         '3c49828eb8985cfb25af8e1495f7800a'
+         '4089cba4fe34abcdd77188b5cb635a90'
+         '3bdff94f04f9282e8acde3fe7605d126')
+
+build() {
+	cd $srcdir/kdelibs-$pkgver
+
+	. /etc/profile.d/qt3.sh
+	. $srcdir/kde3.profile
+
+	patch -p1 -i $srcdir/inotify-compile.patch
+	patch -p1 -i $srcdir/ftp-kioslave-constness.patch
+
+	# install KDE3 profile
+	install -D -m755 $srcdir/kde3.profile $pkgdir/etc/profile.d/kde3.sh
+
+	./configure --prefix=/opt/kde \
+		--with-distribution='Arch Linux' \
+		--with-alsa \
+		--disable-dependency-tracking \
+		--disable-debug \
+		--disable-dnssd \
+		--disable-dnotify \
+		--enable-inotify \
+		--enable-sendfile \
+		--without-lua \
+		--without-hspell \
+		--enable-gcc-hidden-visibility \
+		--enable-final \
+		--enable-new-ldflags LDFLAGS="${LDFLAGS} -L/opt/qt/lib" \
+		--without-arts \
+		--disable-libfam || return 1
+	make || return 1
+	make DESTDIR=$pkgdir install || return 1
+
+	# cert bundle seems to be hardcoded
+	# link it to the one from ca-certificates
+	rm -f $pkgdir/opt/kde/share/apps/kssl/ca-bundle.crt
+	ln -sf /etc/ssl/certs/ca-certificates.crt $pkgdir/opt/kde/share/apps/kssl/ca-bundle.crt
+}
