@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer : Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Morgan LEFIEUX <comete@archlinuxfr.org>
+
+pkgname=hplip
+pkgver=3.9.4b
+pkgrel=2
+pkgdesc="Drivers for HP DeskJet, OfficeJet, Photosmart, Business Inkjet and some LaserJet."
+arch=('i686' 'x86_64')
+url="http://hplipopensource.com"
+license=('GPL')
+makedepends=('pyqt' 'pkgconfig' 'sane' 'rpcbind' 'dbus-python' 'cups')
+depends=('python' 'ghostscript>=8.64-6' 'foomatic-db' 'foomatic-db-hpijs' \
+         'foomatic-db-engine' 'libcups>=1.3.10-3' 'net-snmp>=5.4')
+replaces=('hpijs')
+options=('!libtool')
+install=hplip.install
+source=(http://downloads.sourceforge.net/sourceforge/hplip/$pkgname-$pkgver.tar.gz
+        hplip-3.9.4b-gcc44.patch)
+optdepends=('cups: for printing support'
+            'dbus-python: for dbus support'
+            'sane: for scanner support'
+            'portmap: for network support'
+            'pyqt4: for running hp-toolbox')
+
+build() {
+ cd $srcdir/$pkgname-$pkgver
+ patch -Np1 -i $srcdir/hplip-3.9.4b-gcc44.patch || return 1
+ ./configure --prefix=/usr --enable-qt4 --enable-foomatic-rip-hplip-install --enable-foomatic-ppd-install
+ make || return 1
+ make DESTDIR=$pkgdir/ install
+
+ rm -rf $pkgdir/etc/sane.d
+ # remove autostart of hp-daemon
+ rm -r $pkgdir/etc/xdg
+ # move udev rules to /lib/udev/rules.d
+ mkdir -p $pkgdir/lib/udev/rules.d
+ mv $pkgdir/etc/udev/rules.d/* $pkgdir/lib/udev/rules.d/
+ rm -r $pkgdir/etc/udev
+ # remove lp user, it's not used on archlinux
+ sed -i 's|OWNER="lp", ||g' $pkgdir/lib/udev/rules.d/55-hpmud.rules
+}
+md5sums=('6ebe6716493de8fbf394a178a33b84d9'
+         '77896a00f4c518edab560a246cf2d0f6')
