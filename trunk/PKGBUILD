@@ -4,7 +4,7 @@
 
 pkgname=xscreensaver
 pkgver=5.08
-pkgrel=1
+pkgrel=2
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
 url="http://www.jwz.org/xscreensaver/"
