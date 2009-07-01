@@ -2,12 +2,13 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=3.0.11
+pkgver=3.5
 pkgrel=1
+_xulver=1.9.1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(i686 x86_64)
 license=('MPL' 'GPL' 'LGPL')
-depends=('xulrunner=1.9.0.11' 'desktop-file-utils')
+depends=("xulrunner>=${_xulver}" 'desktop-file-utils')
 makedepends=('zip' 'pkgconfig' 'diffutils' 'libgnomeui>=2.24.1' 'python' 'xorg-server')
 replaces=('firefox3')
 install=firefox.install
@@ -17,36 +18,24 @@ source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${pkgver}/s
         firefox.desktop
         firefox-safe.desktop
         mozilla-firefox-1.0-lang.patch
-        mozbug421977.patch
-        firefox-appversion.patch
         browser-defaulturls.patch)
-md5sums=('b509f7c05e9566ed290e2c098316c7c3'
-         '8b6e5f7d0a9e3f64747a024cf8f12069'
+md5sums=('6dd59399db08963ef022a1d0e5010053'
+         '9ef5d73fdcda6b9f99f17ed9993693aa'
          '68cf02788491c6e846729b2f2913bf79'
          '5e68cabfcf3c021806b326f664ac505e'
          'bd5db57c23c72a02a489592644f18995'
-         '7976e3ff52e01af3388dfc3a479c4955'
-         'c6f27fca2e6bd2a570b271ec3ce35782'
-         '417deb9f5b62de91f3777fe526ebdf63')
+         '346d74ec560e7bbf453c02ff21f4b868')
 
 build() {
-  cd "${srcdir}/mozilla"
-
+  cd "${srcdir}/mozilla-${_xulver}"
   patch -Np1 -i "${srcdir}/mozilla-firefox-1.0-lang.patch" || return 1
-
-  # FS#10836: fixes backgroundcolor parsing with gnome
-  patch -Np0 -i "${srcdir}/mozbug421977.patch" || return 1
-
-  patch -Np1 -i "${srcdir}/firefox-appversion.patch" || return 1
-
   patch -Np0 -i "${srcdir}/browser-defaulturls.patch" || return 1
 
   cp "${srcdir}/mozconfig" .mozconfig
-
   unset CFLAGS
   unset CXXFLAGS
 
-  export LDFLAGS="-Wl,-rpath,/usr/lib/firefox-3.0"
+  export LDFLAGS="-Wl,-rpath,/usr/lib/firefox-3.5"
 
   LD_PRELOAD="" /usr/bin/Xvfb -nolisten tcp -extension GLX :99 &
   XPID=$!
@@ -57,11 +46,11 @@ build() {
 
   make -j1 DESTDIR=${pkgdir} -C ff-opt-obj install || return 1
 
-  rm -f ${pkgdir}/usr/lib/firefox-3.0/libjemalloc.so
+  rm -f ${pkgdir}/usr/lib/firefox-3.5/libjemalloc.so
 
   install -m755 -d ${pkgdir}/usr/share/applications
   install -m755 -d ${pkgdir}/usr/share/pixmaps
-  install -m644 ${srcdir}/mozilla/browser/branding/unofficial/default48.png ${pkgdir}/usr/share/pixmaps/firefox.png || return 1
+  install -m644 ${srcdir}/mozilla-${_xulver}/browser/branding/unofficial/default48.png ${pkgdir}/usr/share/pixmaps/firefox.png || return 1
   install -m644 ${srcdir}/firefox.desktop ${pkgdir}/usr/share/applications/ || return 1
   install -m644 ${srcdir}/firefox-safe.desktop ${pkgdir}/usr/share/applications/ || return 1
 }
