@@ -1,0 +1,171 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=openjdk6
+_date=20090524
+#pkgver=1.5_hg${_date}
+pkgver=1.5
+_hgver=926c38e2b283 # =hg rc3 tagged, see http://icedtea.classpath.org/hg/icedtea6/summary
+_icedteaver=1.5
+pkgrel=4
+pkgdesc='Free Java environment based on OpenJDK 6.0 with IcedTea6 replacing binary plugs.'
+url='http://icedtea.classpath.org'
+arch=('i686' 'x86_64')
+license=('GPL')
+_openjdk_version=b16
+_openjdk_date=24_apr_2009
+_hotspotver=25a020f13592 # what it downlopads itself / remove from configure to get it
+depends=('gcc-libs' 'xdg-utils' 'hicolor-icon-theme' 'ca-certificates-java' 'libxtst')
+makedepends=('alsa-lib' 'giflib' 'libxp' 'gtk2' 'nspr' 'zlib' 'freetype2' 'libjpeg>=7' 'libx11'
+	     'libcups' 'patch' 'xalan-java' 'xulrunner>=1.9.1-2' 'apache-ant>=1.7.0-2' 'autoconf' 'unzip' 'rhino' 'mercurial' 'zip')
+optdepends=('xulrunner: for the browser plugin'
+            'alsa-lib: for sound'
+            'giflib: for gif format support')
+conflicts=('java-environment' 'java-runtime')
+provides=('java-environment=6' 'java-runtime=6')
+options=('!emptydirs' 'force')
+install=openjdk6.install
+source=(http://icedtea.classpath.org/download/source/icedtea6-${_icedteaver}.tar.gz
+	#ftp://ftp.archlinux.org/other/openjdk6/icedtea6-${_date}.tar.bz2
+	#http://icedtea.classpath.org/hg/icedtea6/archive/${_hgver}.tar.gz
+	http://download.java.net/openjdk/jdk6/promoted/${_openjdk_version}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz
+	http://hg.openjdk.java.net/hsx/hsx14/master/archive/${_hotspotver}.tar.gz
+	fix_jdk_cmds_path.diff
+	fix_corba_cmds_path.diff
+	aatext_by_default.diff
+	fontconfig-paths.diff
+	openjdk6.profile)
+noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz ${_hotspotver}.tar.gz)
+md5sums=('a67303675a53781c4e42bdb02ec78e40'
+         '850a29b70206bc7fa083cd26acc781f3'
+         'dbd7aca5544d1aeebf0eadd45d29d08e'
+         '5da3e39fa60985576c4f37d1491efbe2'
+         'f7e7a212e50abb56a6ef1a2b1bd27405'
+         'ef60d567c0d9bad111212851220deafd'
+         'ee1afda124d5927345014ab382ef581e'
+         'd0703088e10aa957c037644ab88d716d')
+
+build() {
+  # for hg checkout install mercurial and
+#  mkdir ${srcdir}/icedtea6-${_date}
+#  cd ${srcdir}/icedtea6-${_date}
+  ##  hg -v clone http://icedtea.classpath.org/hg/icedtea6 || return 1
+  # use 1.5 release branch
+#  hg -v clone http://icedtea.classpath.org/hg/release/icedtea6-1.5/ || return 1
+#  tar -cvjf ../../icedtea6-${_date}.tar.bz2 *
+#  return 1
+
+  unset JAVA_HOME
+  unset CLASSPATH
+  
+    [ -z "${ANT_HOME}" ] && . /etc/profile.d/apache-ant.sh
+  
+  if [ "${CARCH}" = "x86_64" ]; then
+    _arch=amd64
+  else
+    _arch=i586
+  fi
+  _javaver=1.6.0
+  _jvmdir=/usr/lib/jvm/java-${_javaver}-openjdk
+
+#  cd ${srcdir}/icedtea6
+  cd ${srcdir}/icedtea6-${_icedteaver}
+#  cd ${srcdir}/icedtea6-${_hgver}
+  ln -s ${srcdir}/openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz .
+  ln -s ${srcdir}/${_hotspotver}.tar.gz .
+
+#  cp ${srcdir}/*.diff ${srcdir}/icedtea6/patches/
+  cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_icedteaver}/patches/
+#  cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_hgver}/patches/
+#  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/fix_corba_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff"
+  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff patches/fix_corba_cmds_path.diff"
+
+#  ./autogen.sh
+#  autoreconf # needed due to mercurial build
+
+  export ALT_PARALLEL_COMPILE_JOBS="${MAKEFLAGS/-j}"
+  export HOTSPOT_BUILD_JOBS="${ALT_PARALLEL_COMPILE_JOBS}"
+  unset MAKEFLAGS
+
+  if [ -x ${_jvmdir}/bin/javac ]; then
+    JCONF="--with-openjdk --with-openjdk-home=${_jvmdir}"
+  elif [ -x /opt/java/bin/javac ]; then
+    JCONF="--with-openjdk --with-openjdk-home=/opt/java"
+  else
+    echo "No supported java installation found, install either openjdk6 or jdk"
+    return 1
+  fi
+
+  ./configure --with-parallel-jobs=${HOTSPOT_BUILD_JOBS} \
+	--with-xalan2-jar=/usr/share/java/xalan.jar \
+	--with-hotspot-src-zip=${_hotspotver}.tar.gz \
+	--with-ant-home=/usr/share/java/apache-ant \
+	--with-pkgversion=ArchLinux-${pkgver}-${pkgrel}-$CARCH  $JCONF
+
+#	--enable-npplugin \
+# 	--enable-visualvm \ --with-additional-vms=cacao,zero,shark \
+
+  LD_PRELOAD="" make || return 1
+ 
+  install -m755 -d ${pkgdir}/${_jvmdir}/jre
+
+#  pushd ${srcdir}/icedtea6/openjdk/build/linux-${_arch}/j2sdk-image
+  pushd ${srcdir}/icedtea6-${_icedteaver}/openjdk/build/linux-${_arch}/j2sdk-image
+#  pushd ${srcdir}/icedtea6-${_hgver}/openjdk/build/linux-${_arch}/j2sdk-image
+   # Install main files.
+  cp -a bin include lib src.zip ${pkgdir}/${_jvmdir}/ || return 1
+  cp -a jre/bin jre/lib ${pkgdir}/${_jvmdir}/jre/ || return 1
+
+  mv ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.Ubuntu.properties.src \
+     ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.properties.src || return 1
+  mv ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.Ubuntu.bfc \
+     ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.bfc || return 1
+  rm -f ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.*.bfc
+  rm -f ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.*.properties.src
+
+   # Install man pages.
+  install -m755 -d ${pkgdir}/usr/share/man/man1
+  install -m644 man/man1/*.1 ${pkgdir}/usr/share/man/man1/ || return 1
+
+   # Install demos and samples.
+  cp -a demo ${pkgdir}/${_jvmdir}/ || return 1
+  install -m755 -d sample/rmi
+  mv bin/java-rmi.cgi sample/rmi || return 1
+  cp -a sample ${pkgdir}/${_jvmdir}/ || return 1
+  popd
+
+  # Install icons and menu entries.
+  for s in 16 24 32 48 ; do
+    install -m755 -d ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps
+    install -m644 openjdk/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
+      ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/java.png || return 1
+  done
+
+  # Install desktop files.
+  install -m755 -d ${pkgdir}/usr/share/{applications,pixmaps}
+  install -m644 javaws.png ${pkgdir}/usr/share/pixmaps || return 1
+  install -m644 {javaws,jconsole,policytool}.desktop ${pkgdir}/usr/share/applications || return 1
+
+  # link the mozilla-plugin
+  install -m755 -d ${pkgdir}/usr/lib/mozilla/plugins/
+  ln -sf ${_jvmdir}/jre/lib/${_arch/i586/i386}/IcedTeaPlugin.so ${pkgdir}/usr/lib/mozilla/plugins/ || return 1
+#  ln -sf ${_jvmdir}/jre/lib/${_arch/i586/i386}/IcedTeaNPPlugin.so ${pkgdir}/usr/lib/mozilla/plugins/ || return 1
+
+  # link binaries into /usr/bin
+  install -m755 -d ${pkgdir}/usr/bin
+  pushd ${pkgdir}/${_jvmdir}/bin
+  for file in *; do
+    ln -sf ${_jvmdir}/bin/${file} \
+      ${pkgdir}/usr/bin || return 1
+  done
+  popd
+
+  # link JKS keystore from ca-certificates-java
+  rm -f ${pkgdir}/${_jvmdir}/jre/lib/security/cacerts
+  ln -sf /etc/ssl/certs/java/cacerts "${pkgdir}/${_jvmdir}/jre/lib/security/cacerts"
+ 
+  # set some variables
+  install -m755 -d ${pkgdir}/etc/profile.d
+  install -m755 ${srcdir}/openjdk6.profile ${pkgdir}/etc/profile.d/openjdk6.sh || return 1
+}
