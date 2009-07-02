@@ -1,8 +1,8 @@
 only in patch2:
 unchanged:
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/configure.in libgweather-2.25.5.new/configure.in
---- libgweather-2.25.5/configure.in	2009-01-19 22:29:46.000000000 +0100
-+++ libgweather-2.25.5.new/configure.in	2009-01-22 15:36:29.000000000 +0100
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/configure.in libgweather-2.26.1.new/configure.in
+--- libgweather-2.26.1/configure.in	2009-04-14 00:07:38.000000000 +0200
++++ libgweather-2.26.1.new/configure.in	2009-04-23 18:18:50.000000000 +0200
 @@ -38,6 +38,10 @@
  AM_MAINTAINER_MODE
  GNOME_MAINTAINER_MODE_DEFINES
@@ -57,9 +57,9 @@ diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/configure.in libgweather-2.25.5
 -	Locations.xml translations:	${LOCATIONS_XML_TRANSLATIONS}
 -	Locations.xml compression:	${enable_locations_compression}
  " >&2
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/data/Makefile.am libgweather-2.25.5.new/data/Makefile.am
---- libgweather-2.25.5/data/Makefile.am	2009-01-19 22:22:26.000000000 +0100
-+++ libgweather-2.25.5.new/data/Makefile.am	2009-01-22 15:36:56.000000000 +0100
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/data/Makefile.am libgweather-2.26.1.new/data/Makefile.am
+--- libgweather-2.26.1/data/Makefile.am	2009-04-14 00:00:59.000000000 +0200
++++ libgweather-2.26.1.new/data/Makefile.am	2009-04-23 18:18:50.000000000 +0200
 @@ -4,55 +4,23 @@
  libgweatherlocationsdir = $(pkgdatadir)
  libgweatherlocations_in_files = Locations.xml.in
@@ -121,9 +121,9 @@ diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/data/Makefile.am libgweather-2.
  check:
  	xmllint --valid --noout $(top_srcdir)/data/Locations.xml.in
  	$(srcdir)/check-timezones.sh $(srcdir)/Locations.xml.in
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/libgweather/gweather-location.c libgweather-2.25.5.new/libgweather/gweather-location.c
---- libgweather-2.25.5/libgweather/gweather-location.c	2009-01-19 22:22:08.000000000 +0100
-+++ libgweather-2.25.5.new/libgweather/gweather-location.c	2009-01-22 15:36:30.000000000 +0100
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/libgweather/gweather-location.c libgweather-2.26.1.new/libgweather/gweather-location.c
+--- libgweather-2.26.1/libgweather/gweather-location.c	2009-04-14 00:00:47.000000000 +0200
++++ libgweather-2.26.1.new/libgweather/gweather-location.c	2009-04-23 18:19:23.000000000 +0200
 @@ -22,11 +22,14 @@
  #include <config.h>
  #endif
@@ -139,21 +139,32 @@ diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/libgweather/gweather-location.c
  
  #define GWEATHER_I_KNOW_THIS_IS_UNSTABLE
  #include "gweather-location.h"
-@@ -184,7 +187,10 @@
+@@ -184,10 +187,20 @@
  
  	tagname = (const char *) xmlTextReaderConstName (parser->xml);
  	if (!strcmp (tagname, "name") && !loc->name) {
 -	    value = gweather_parser_get_localized_value (parser);
++	    char *context = NULL;
++	    context = xmlTextReaderGetAttribute(parser->xml,"msgctxt"); 
++	   
 +	    value = gweather_parser_get_value (parser);
-+#ifdef HAVE_DGETTEXT
-+	    value = dgettext(GETTEXT_PACKAGE "-locations",value);
-+#endif
  	    if (!value)
  		goto error_out;
- 	    loc->name = g_strdup (value);
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/libgweather/gweather-timezone.c libgweather-2.25.5.new/libgweather/gweather-timezone.c
---- libgweather-2.25.5/libgweather/gweather-timezone.c	2009-01-19 22:22:08.000000000 +0100
-+++ libgweather-2.25.5.new/libgweather/gweather-timezone.c	2009-01-22 15:36:30.000000000 +0100
+-	    loc->name = g_strdup (value);
++
++	    if (context != NULL) {
++	    	loc->name = g_strdup (g_dpgettext2(GETTEXT_PACKAGE "-locations", context, value));
++	    	xmlFree (context);
++	    }
++	    else
++	    	loc->name = g_strdup (dgettext(GETTEXT_PACKAGE "-locations",value));
++	    
+ 	    xmlFree (value);
+ 	    normalized = g_utf8_normalize (loc->name, -1, G_NORMALIZE_ALL);
+ 	    loc->sort_name = g_utf8_casefold (normalized, -1);
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/libgweather/gweather-timezone.c libgweather-2.26.1.new/libgweather/gweather-timezone.c
+--- libgweather-2.26.1/libgweather/gweather-timezone.c	2009-04-14 00:00:47.000000000 +0200
++++ libgweather-2.26.1.new/libgweather/gweather-timezone.c	2009-04-23 18:19:37.000000000 +0200
 @@ -23,6 +23,7 @@
  #endif
  
@@ -162,29 +173,57 @@ diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/libgweather/gweather-timezone.c
  
  #define GWEATHER_I_KNOW_THIS_IS_UNSTABLE
  #include "gweather-timezone.h"
-@@ -179,7 +180,7 @@
+@@ -155,7 +156,7 @@
+ parse_timezone (GWeatherParser *parser)
+ {
+     GWeatherTimezone *zone = NULL;
+-    char *id = NULL, *name = NULL;
++    char *id = NULL, *name = NULL, *context = NULL;
+     int offset, dst_offset;
+     gboolean has_dst = FALSE;
+ 
+@@ -178,27 +179,34 @@
+ 		continue;
  	    }
  
- 	    if (!strcmp ((const char *) xmlTextReaderConstName (parser->xml), "name"))
+-	    if (!strcmp ((const char *) xmlTextReaderConstName (parser->xml), "name"))
 -		name = gweather_parser_get_localized_value (parser);
++	    if (!strcmp ((const char *) xmlTextReaderConstName (parser->xml), "name")) {
++		context = xmlTextReaderGetAttribute(parser->xml,"msgctxt"); 
 +		name = gweather_parser_get_value (parser);
++	    }
  	    else {
  		if (xmlTextReaderNext (parser->xml) != 1)
  		    break;
-@@ -187,6 +188,10 @@
+ 	    }
  	}
      }
- 
-+#ifdef HAVE_DGETTEXT
-+    name = dgettext(GETTEXT_PACKAGE "-locations",name);
-+#endif
-+
+-
++	    
      if (parse_tzdata (id, parser->year_start, parser->year_end,
  		      &offset, &has_dst, &dst_offset)) {
  	zone = g_slice_new0 (GWeatherTimezone);
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/po-locations/LINGUAS libgweather-2.25.5.new/po-locations/LINGUAS
---- libgweather-2.25.5/po-locations/LINGUAS	1970-01-01 01:00:00.000000000 +0100
-+++ libgweather-2.25.5.new/po-locations/LINGUAS	2009-01-22 15:36:30.000000000 +0100
+ 	zone->ref_count = 1;
+ 	zone->id = g_strdup (id);
+-	zone->name = g_strdup (name);
++	if (context != NULL)
++		zone->name = g_strdup (g_dpgettext2(GETTEXT_PACKAGE "-locations", context, name));
++	else
++		zone->name = g_strdup (dgettext(GETTEXT_PACKAGE "-locations",name));
+ 	zone->offset = offset;
+ 	zone->has_dst = has_dst;
+ 	zone->dst_offset = dst_offset;
+     }
+ 
+     xmlFree (id);
++    if (context)
++    	xmlFree (context);
+     if (name)
+ 	xmlFree (name);
+ 
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/po-locations/LINGUAS libgweather-2.26.1.new/po-locations/LINGUAS
+--- libgweather-2.26.1/po-locations/LINGUAS	1970-01-01 01:00:00.000000000 +0100
++++ libgweather-2.26.1.new/po-locations/LINGUAS	2009-04-23 18:18:50.000000000 +0200
 @@ -0,0 +1,78 @@
 +ang
 +ar
@@ -264,9 +303,9 @@ diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/po-locations/LINGUAS libgweathe
 +zh_CN
 +zh_HK
 +zh_TW
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/po-locations/Makefile.in.in libgweather-2.25.5.new/po-locations/Makefile.in.in
---- libgweather-2.25.5/po-locations/Makefile.in.in	1970-01-01 01:00:00.000000000 +0100
-+++ libgweather-2.25.5.new/po-locations/Makefile.in.in	2009-01-22 15:36:30.000000000 +0100
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/po-locations/Makefile.in.in libgweather-2.26.1.new/po-locations/Makefile.in.in
+--- libgweather-2.26.1/po-locations/Makefile.in.in	1970-01-01 01:00:00.000000000 +0100
++++ libgweather-2.26.1.new/po-locations/Makefile.in.in	2009-04-23 18:18:50.000000000 +0200
 @@ -0,0 +1,217 @@
 +# Makefile for program source directory in GNU NLS utilities package.
 +# Copyright (C) 1995, 1996, 1997 by Ulrich Drepper <drepper@gnu.ai.mit.edu>
@@ -485,9 +524,9 @@ diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/po-locations/Makefile.in.in lib
 +# Tell versions [3.59,3.63) of GNU make not to export all variables.
 +# Otherwise a system limit (for SysV at least) may be exceeded.
 +.NOEXPORT:
-diff -Nur -x '*.orig' -x '*~' libgweather-2.25.5/po-locations/POTFILES.in libgweather-2.25.5.new/po-locations/POTFILES.in
---- libgweather-2.25.5/po-locations/POTFILES.in	1970-01-01 01:00:00.000000000 +0100
-+++ libgweather-2.25.5.new/po-locations/POTFILES.in	2009-01-22 15:36:30.000000000 +0100
+diff -Nur -x '*.orig' -x '*~' libgweather-2.26.1/po-locations/POTFILES.in libgweather-2.26.1.new/po-locations/POTFILES.in
+--- libgweather-2.26.1/po-locations/POTFILES.in	1970-01-01 01:00:00.000000000 +0100
++++ libgweather-2.26.1.new/po-locations/POTFILES.in	2009-04-23 18:18:50.000000000 +0200
 @@ -0,0 +1,4 @@
 +# This list should contain *only* data/Locations.xml.in.
 +# Everything else should be in POTFILES.skip.
