@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=grep
+pkgver=2.5.4
+pkgrel=3
+pkgdesc="A string search utility"
+arch=('i686' 'x86_64')
+license=('GPL3')
+url="http://www.gnu.org/software/grep/grep.html"
+groups=('base')
+depends=('glibc' 'pcre')
+makedepends=('texinfo>=4.8a')
+install=${pkgname}.install
+source=(ftp://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz
+	14-mem-exhausted.patch
+	15-empty-pattern.patch
+	# utf8 grep speed fix - FS#7141
+	64-egf-speedup.patch
+	# fix the case insensitive search issues the above patch causes
+	# FS#14877 and FS#15330
+	65-dfa-optional.patch
+	66-match_icase.patch
+	67-w.patch)
+md5sums=('92258031d98d4f12dfc6a6d24057e672'
+         'bc937da562d468f32c1fef2894610283'
+         'f421415b679ebcc9152797caaa0b1d51'
+         'efbe9d49d71a74092db6b86224b09fdd'
+         'f913cc834cda9be198b98318048a5ded'
+         '253351c7d960331a8268b4d853c511ff'
+         'c5ab886a6072474cf5ccfc59ed45dd74')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  for i in ${srcdir}/*.patch; do
+	patch -Np1 -i $i || return 1
+  done
+  ./configure --prefix=/usr --bindir=/bin --without-included-regex
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  rm -f ${pkgdir}/usr/share/info/dir
+  gzip -9 ${pkgdir}/usr/share/info/*
+}
