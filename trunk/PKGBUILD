@@ -2,14 +2,14 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=cups
-pkgver=1.3.10
-pkgrel=4
+pkgver=1.3.11
+pkgrel=1
 pkgdesc="The CUPS Printing System"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.cups.org/"
-depends=('acl' 'openslp' 'pam' "libcups>=${pkgver}-3" 'xdg-utils' 'avahi' 'heimdal>=1.2.1-3' 'gnutls>=2.6.5' 'poppler>=0.10.6')
-makedepends=('xinetd' 'gzip')
+depends=('acl' 'openslp' 'pam' "libcups>=${pkgver}" 'xdg-utils' 'avahi' 'heimdal>=1.2.1-5' 'gnutls>=2.8.1' 'poppler>=0.10.7-2')
+makedepends=('xinetd' 'gzip' 'autoconf')
 install=cups.install
 backup=(etc/cups/cupsd.conf
         etc/cups/mime.convs
@@ -20,19 +20,26 @@ backup=(etc/cups/cupsd.conf
         etc/pam.d/cups
         etc/xinetd.d/cups-lpd)
 source=(ftp://ftp.easysw.com/pub/cups/${pkgver}/cups-${pkgver}-source.tar.bz2
-        cups cups.logrotate cups.pam)
+        cups cups.logrotate cups.pam
+	gnutls-pkgconfig.dpatch)
 options=('!emptydirs') #'!makeflags') seems smp safe now; find pkg/ | sort | wc -l gives 1815
-md5sums=('84fffe96b8537c81a463faccead80026'
+md5sums=('17f3e2bcb3cae3dd9dceb65a2bfd295f'
          '5c85b7d8d2ddd02c2c64955cebbf55ea'
          'f861b18f4446c43918c8643dcbbd7f6d'
-         '96f82c38f3f540b53f3e5144900acf17')
+         '96f82c38f3f540b53f3e5144900acf17'
+	 '7322c46c2f33863dce85eb75a1d9ccab')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
+  # http://patch-tracking.debian.net/patch/series/view/cups/1.3.10-5/gnutls-pkgconfig.dpatch
+  patch -Np1 -i ${srcdir}/gnutls-pkgconfig.dpatch || return 1
+  aclocal
+  autoconf
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
      --with-logdir=/var/log/cups -with-docdir=/usr/share/cups/doc \
-     --with-cups-user=daemon --with-cups-group=lp --enable-ssl=yes \
-     --enable-pam=yes --disable-ldap --disable-dbus --enable-raw-printing \
+     --with-cups-user=daemon --with-cups-group=lp --without-php \
+     --enable-pam=yes --disable-ldap --libdir=/usr/lib --enable-raw-printing \
+     --enable-dbus --with-dbusdir=/etc/dbus-1 --enable-ssl=yes --enable-gnutls \
      --enable-pdftops --with-pdftops=pdftops --with-optim="$CFLAGS"
   make || return 1
 
