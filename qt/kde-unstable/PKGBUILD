@@ -1,0 +1,117 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=qt
+pkgver=4.5.2
+pkgrel=3
+_kdeqtver=2d1727e396d5dca24ae0fb6a45d35ffc1abd0c12
+pkgdesc='A cross-platform application and UI framework'
+arch=('i686' 'x86_64')
+url='http://www.qtsoftware.com/'
+license=('GPL3' 'LGPL')
+depends=('libpng' 'mesa' 'fontconfig' 'libtiff>=3.8.2-5' 'libmng>=1.0.10-2' 'sqlite3' 'xdg-utils'
+         'libxrandr' 'glib2' 'libxi' 'dbus' 'libxcursor' 'libxinerama' 'libxrender' 'gstreamer0.10-base-plugins')
+optdepends=('postgresql-libs' 'libmysqlclient' 'unixodbc')
+makedepends=('inputproto' 'postgresql-libs' 'mysql' 'unixodbc' 'cups' 'libxfixes')
+install=qt.install
+provides=("qt4=${pkgver}" 'phonon')
+replaces=('qt4' 'phonon')
+conflicts=('qt4' 'phonon')
+options=('!libtool')
+_pkgfqn="qt-x11-opensource-src-${pkgver}"
+source=("ftp://ftp.qtsoftware.com/qt/source/${_pkgfqn}.tar.bz2"
+        "ftp://ftp.archlinux.org/other/kde-qt/kde-qt-patches-${_kdeqtver}.tar.bz2"
+	'gstreamer-logo.png'
+        'assistant.desktop' 'designer.desktop' 'linguist.desktop' 'qtconfig.desktop'
+        'qdoc3.patch' 'phonon.patch')
+md5sums=('28a7e8ac9805a6f614d2a27ee1a6ac9d'
+         '4b333add3031f59538629b35858178d9'
+         'f0c26f76acf8b6a3297cfb31f872b0b7'
+         'a445c6917086d80f1cfc1e40cb6b0132'
+         'd457f0a0ad68a3861c3cadefe3b42ded'
+         '668331d9798a0e2b94381efb7be4c513'
+         'c29f2993d6a0f73d756d2fa36e130e1c'
+         'a7e450751f42bdff17e57fdc4af72a18'
+         'ca0debc49d3505423e3b5742fdbfd852')
+
+_create-kdeqt-patches() {
+	local codir=$(mktemp -d)
+	mkdir -p "${codir}/kde-qt"
+	git clone git://gitorious.org/+kde-developers/qt/kde-qt.git "${codir}/kde-qt"
+	pushd "${codir}/kde-qt"
+	local kdeqtver=$(git --no-pager show --format='%H' "${pkgver}-patched" | head -1)
+	mkdir "../kde-qt-patches-${kdeqtver}"
+	git format-patch -k "v${pkgver}..${pkgver}-patched" -o "../kde-qt-patches-${kdeqtver}"
+	popd
+	pushd "${codir}"
+	bsdtar -cjf "kde-qt-patches-${kdeqtver}.tar.bz2" kde-qt-patches-${kdeqtver}
+	popd
+	mv "${codir}/kde-qt-patches-${kdeqtver}.tar.bz2" .
+	rm -rf "${codir}"
+}
+
+build() {
+	unset QMAKESPEC
+	export QT4DIR=$srcdir/$_pkgfqn
+	export PATH=${QT4DIR}/bin:${PATH}
+	export LD_LIBRARY_PATH=${QT4DIR}/lib:${LD_LIBRARY_PATH}
+
+	cd $srcdir/$_pkgfqn
+	for i in $srcdir/kde-qt-patches-${_kdeqtver}/*; do
+		echo "applying $i"
+		patch -p1 -i $i || return 1
+	done
+
+	# see http://cvs.fedoraproject.org/viewvc/rpms/qt/devel/
+	# enable qdoc3
+	patch -p1 -i $srcdir/qdoc3.patch || return 1
+	# install service files needed by KDE
+	patch -p1 -i $srcdir/phonon.patch || return 1
+
+	sed -i "s|-O2|$CXXFLAGS|" mkspecs/common/g++.conf
+	sed -i "/^QMAKE_RPATH/s| -Wl,-rpath,||g" mkspecs/common/g++.conf
+
+	./configure -confirm-license -opensource \
+		-silent \
+		-prefix /usr \
+		-sysconfdir /etc \
+		-plugindir /usr/lib/qt/plugins \
+		-translationdir /usr/share/qt/translations \
+		-datadir /usr/share/qt \
+		-docdir /usr/share/doc/qt \
+		-examplesdir /usr/share/doc/qt/examples \
+		-demosdir /usr/share/doc/qt/demos \
+		-no-separate-debug-info \
+		-plugin-sql-{psql,mysql,sqlite,odbc} \
+		-system-sqlite \
+		-openssl-linked \
+		-nomake demos \
+		-nomake examples \
+		-nomake docs \
+		-phonon \
+		-optimized-qmake \
+		-reduce-relocations
+	make
+	make INSTALL_ROOT=$pkgdir install
+
+	# install missing icons and desktop files
+	for icon in tools/linguist/linguist/images/icons/linguist-*-32.png ; do
+		size=$(echo $(basename ${icon}) | cut -d- -f2)
+		install -p -D -m644 ${icon} ${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/linguist.png
+	done
+	install -p -D -m644 src/gui/dialogs/images/qtlogo-64.png ${pkgdir}/usr/share/icons/hicolor/64x64/apps/qtlogo.png
+	install -p -D -m644 tools/assistant/tools/assistant/images/assistant.png ${pkgdir}/usr/share/icons/hicolor/32x32/apps/assistant.png
+	install -p -D -m644 tools/designer/src/designer/images/designer.png ${pkgdir}/usr/share/icons/hicolor/128x128/apps/designer.png
+	install -p -D -m644 ${srcdir}/gstreamer-logo.png ${pkgdir}/usr/share/icons/hicolor/128x128/apps/phonon-gstreamer.svg
+	install -d ${pkgdir}/usr/share/applications
+	install -m644 ${srcdir}/{linguist,designer,assistant,qtconfig}.desktop ${pkgdir}/usr/share/applications/
+
+	# install license addition
+	install -D -m644 LGPL_EXCEPTION.txt ${pkgdir}/usr/share/licenses/qt/LGPL_EXCEPTION.txt
+
+	# cleanup and path fixes
+	find $pkgdir/usr/lib -type f -name '*prl' -print -exec sed -i -e "/^QMAKE_PRL_BUILD_DIR/d" {} \;
+	sed -i -e "s|-L$srcdir/${_pkgfqn}/lib||g" $pkgdir/usr/lib/pkgconfig/*.pc
+	sed -i -e "s|$srcdir/${_pkgfqn}/bin/moc|/usr/bin/moc|g" $pkgdir/usr/lib/pkgconfig/*.pc
+	sed -i -e "s|$srcdir/${_pkgfqn}/bin/uic|/usr/bin/uic|g" $pkgdir/usr/lib/pkgconfig/*.pc
+}
