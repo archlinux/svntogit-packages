@@ -3,45 +3,33 @@
 # Contributor: Brice Carpentier <brice@dlfp.org>
 
 pkgname=mono
-pkgver=2.4
-pkgrel=2
+pkgver=2.4.2
+pkgrel=1
 pkgdesc="Free implementation of the .NET platform including runtime and compiler"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL2' 'MPL' 'custom:MITX11')
 url="http://www.mono-project.com/"
-depends=('zlib' 'libgdiplus>=2.4')
+depends=('zlib' 'libgdiplus>=2.4.2')
 makedepends=('pkgconfig')
 options=('!libtool' '!makeflags')
 provides=('monodoc')
 conflicts=('monodoc')
 source=(http://ftp.novell.com/pub/mono/sources/${pkgname}/${pkgname}-${pkgver}.tar.bz2
-        mono.rc.d
-	mini_amd64.patch)
-md5sums=('da2bf1c0aba2958d26c5e8a9a49fd9d1'
-         '8315e46c6a6e9625502521fc0ad1a322'
-         '332530de044cabff941c712b7f2ace8e')
+        mono.rc.d)
+md5sums=('f086227f3cd4cecb5c1fe0f566760f81'
+         '8315e46c6a6e9625502521fc0ad1a322')
 
 build() {
-  # get rid of that .wapi errors; thanks to brice
-  export MONO_SHARED_DIR=${startdir}/src/weird
-  mkdir -p "${MONO_SHARED_DIR}"
   mkdir -p ${startdir}/pkg/usr/share/licenses/$pkgname
   # build mono
   cd ${startdir}/src/${pkgname}-${pkgver}
 
-  patch -p0 < ${srcdir}/mini_amd64.patch || return 1
-
-  rm -f libgc/libtool.m4
-  autoreconf --force --install
-  autoreconf --force --install libgc
   ./configure --prefix=/usr --sysconfdir=/etc \
-              --with-libgdiplus=installed --with-icu=no \
-              --with-tls=pthread --with-jit=yes --with-preview=yes \
-              --with-sigaltstack=yes --enable-nunit-tests \
+              --with-libgdiplus=installed \
+              --with-tls=__thread \
 	      --with-moonlight=yes
   make || return 1
-  sed -i "/NO_INSTALL = yes/d" mcs/nunit20/nunit-console/Makefile
-  make DESTDIR=${startdir}/pkg install
+  make DESTDIR=${startdir}/pkg install || return 1
 
   # install daemons and pathes
   mkdir -p ${startdir}/pkg/etc/rc.d
