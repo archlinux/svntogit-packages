@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.10.1
-pkgrel=2
+pkgrel=3
 _glibcdate=20090511
 install=glibc.install
 backup=(etc/locale.gen
@@ -16,8 +16,8 @@ arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('kernel-headers>=2.6.29.3' 'tzdata')
-makedepends=('gcc>=4.3')
+depends=('kernel-headers>=2.6.30.1' 'tzdata')
+makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
 	glibc-2.10-dont-build-timezone.patch
