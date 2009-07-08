@@ -1,0 +1,44 @@
+# $Id$
+# Contributer: Jason Chu <jason@archlinux.org>
+# Maintainer: Juergen Hoetzel <jason@archlinux.org>
+
+pkgname=kismet
+pkgver=2008_05_R1
+_realver=2008-05-R1
+pkgrel=5
+pkgdesc="802.11b sniffing software"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('gmp' 'imagemagick' 'libpcap>=1.0.0' 'ncurses' 'dbus' 'libjpeg>=7')
+optdepends=(perl-libwww)
+url="http://www.kismetwireless.net/"
+backup=('etc/ap_manuf' 'etc/client_manuf' 'etc/kismet.conf' 'etc/kismet_drone.conf' 'etc/kismet_ui.conf')
+options=('!makeflags')
+source=(http://www.kismetwireless.net/code/kismet-$_realver.tar.gz\
+	kismet-2008-05-R1-infinite-loop.diff kismet-build.patch)
+md5sums=('6ee365d36354b4dee4945e67f8149294' '80350b09c8bece4c4fc08f219bbb1548'\
+         '72201caaa709272c50cb06f1042c553e')
+sha1sums=('8355aeb0374a39549dfdc0c73160125eadd7c6e2'
+          '65f7fd29c3c55466ce6a647b6b80b66161b348f5'
+          '6127b69d6c4dc7db4a32bdd4fdffdced9df33511')
+
+build() {
+   cd "$srcdir/kismet-$_realver"
+   patch -p0 -i "${srcdir}/kismet-2008-05-R1-infinite-loop.diff" || return 1
+   patch -p0 -i "${srcdir}/kismet-build.patch" || return 1
+   # patch -Np1 -i ${srcdir}/kismet-gcc43.patch
+   
+   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var || return 1
+
+   make dep || return 1
+   make || return 1
+   sed -i 's/prism2/wlanng/g' conf/kismet.conf || return 1
+   make DESTDIR="$pkgdir" install || return 1
+
+   chown root:root "$pkgdir"/usr/share/man/man{1,5}/*
+
+   install -D -m 644 "$srcdir/kismet-$_realver/README" "$pkgdir/usr/share/kismet/README"
+
+   # Fix the *.conf unexpanded ${prefix} problems
+   sed -i 's%\${prefix}%/usr%' "$pkgdir"/etc/*.conf || return 1
+}
