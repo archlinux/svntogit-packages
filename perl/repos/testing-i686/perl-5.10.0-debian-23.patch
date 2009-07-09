@@ -1,0 +1,3239 @@
+This patch is from Debian:
+
+http://patch-tracking.debian.net/patch/nondebian/dl/perl/5.10.0-23
+
+We are omitting a few Debian-specific bits here
+
+--- perl-5.10.0.orig/perl.c
++++ perl-5.10.0/perl.c
+@@ -1364,10 +1364,17 @@
+ 	 */
+ 	const char * const s = PerlEnv_getenv("PERL_DESTRUCT_LEVEL");
+ 	if (!s || atoi(s) == 0) {
++	    const U32 old_debug = PL_debug;
+ 	    /* Emulate the PerlHost behaviour of free()ing all memory allocated in this
+ 	       thread at thread exit.  */
++	    if (DEBUG_m_TEST) {
++		PerlIO_puts(Perl_debug_log, "Disabling memory debugging as we "
++			    "free this thread's memory\n");
++		PL_debug &= ~ DEBUG_m_FLAG;
++	    }
+ 	    while(aTHXx->Imemory_debug_header.next != &(aTHXx->Imemory_debug_header))
+ 		safesysfree(sTHX + (char *)(aTHXx->Imemory_debug_header.next));
++	    PL_debug = old_debug;
+ 	}
+     }
+ #endif
+--- perl-5.10.0.orig/embed.fnc
++++ perl-5.10.0/embed.fnc
+@@ -140,7 +140,7 @@
+ Afnp	|OP*	|die_nocontext	|NN const char* pat|...
+ Afnp	|void	|deb_nocontext	|NN const char* pat|...
+ Afnp	|char*	|form_nocontext	|NN const char* pat|...
+-Anp	|void	|load_module_nocontext|U32 flags|NN SV* name|NN SV* ver|...
++Anp	|void	|load_module_nocontext|U32 flags|NN SV* name|NULLOK SV* ver|...
+ Afnp	|SV*	|mess_nocontext	|NN const char* pat|...
+ Afnp	|void	|warn_nocontext	|NN const char* pat|...
+ Afnp	|void	|warner_nocontext|U32 err|NN const char* pat|...
+@@ -296,7 +296,7 @@
+ Apd	|HV*	|gv_stashpvn	|NN const char* name|U32 namelen|I32 flags
+ Apd	|HV*	|gv_stashsv	|NULLOK SV* sv|I32 flags
+ Apd	|void	|hv_clear	|NULLOK HV* tb
+-poM	|HV *	|hv_copy_hints_hv|NN HV *const ohv
++poM	|HV *	|hv_copy_hints_hv|NULLOK HV *const ohv
+ Ap	|void	|hv_delayfree_ent|NN HV* hv|NULLOK HE* entry
+ Abmd	|SV*	|hv_delete	|NULLOK HV* tb|NN const char* key|I32 klen \
+ 				|I32 flags
+@@ -486,8 +486,8 @@
+ Afp	|SV*	|mess		|NN const char* pat|...
+ Ap	|SV*	|vmess		|NN const char* pat|NULLOK va_list* args
+ EXp	|void	|qerror		|NN SV* err
+-Apd	|void	|sortsv		|NN SV** array|size_t num_elts|NN SVCOMPARE_t cmp
+-Apd	|void	|sortsv_flags	|NN SV** array|size_t num_elts|NN SVCOMPARE_t cmp|U32 flags
++Apd	|void	|sortsv		|NULLOK SV** array|size_t num_elts|NN SVCOMPARE_t cmp
++Apd	|void	|sortsv_flags	|NULLOK SV** array|size_t num_elts|NN SVCOMPARE_t cmp|U32 flags
+ Apd	|int	|mg_clear	|NN SV* sv
+ Apd	|int	|mg_copy	|NN SV* sv|NN SV* nsv|NULLOK const char* key|I32 klen
+ pd	|void	|mg_localize	|NN SV* sv|NN SV* nsv
+@@ -768,7 +768,7 @@
+ Ap	|void	|save_list	|NN SV** sarg|I32 maxsarg
+ Ap	|void	|save_long	|NN long* longp
+ Ap	|void	|save_mortalizesv|NN SV* sv
+-Ap	|void	|save_nogv	|NULLOK GV* gv
++Ap	|void	|save_nogv	|NN GV* gv
+ p	|void	|save_op
+ Ap	|SV*	|save_scalar	|NN GV* gv
+ Ap	|void	|save_pptr	|NN char** pptr
+@@ -842,8 +842,8 @@
+ pd	|I32	|sv_clean_all
+ pd	|void	|sv_clean_objs
+ Apd	|void	|sv_clear	|NN SV* sv
+-Apd	|I32	|sv_cmp		|NN SV* sv1|NN SV* sv2
+-Apd	|I32	|sv_cmp_locale	|NN SV* sv1|NN SV* sv2
++Apd	|I32	|sv_cmp		|NULLOK SV* sv1|NULLOK SV* sv2
++Apd	|I32	|sv_cmp_locale	|NULLOK SV* sv1|NULLOK SV* sv2
+ #if defined(USE_LOCALE_COLLATE)
+ Apd	|char*	|sv_collxfrm	|NN SV* sv|NN STRLEN* nxp
+ #endif
+@@ -1094,7 +1094,7 @@
+ Ap	|yy_parser*|parser_dup	|NN const yy_parser *proto|NN CLONE_PARAMS* param
+ #endif
+ Apa	|PTR_TBL_t*|ptr_table_new
+-ApR	|void*	|ptr_table_fetch|NN PTR_TBL_t *tbl|NN const void *sv
++ApR	|void*	|ptr_table_fetch|NN PTR_TBL_t *tbl|NULLOK const void *sv
+ Ap	|void	|ptr_table_store|NN PTR_TBL_t *tbl|NULLOK const void *oldsv|NN void *newsv
+ Ap	|void	|ptr_table_split|NN PTR_TBL_t *tbl
+ Ap	|void	|ptr_table_clear|NULLOK PTR_TBL_t *tbl
+@@ -1352,7 +1352,7 @@
+ s	|I32	|sortcv		|NN SV *a|NN SV *b
+ s	|I32	|sortcv_xsub	|NN SV *a|NN SV *b
+ s	|I32	|sortcv_stacked	|NN SV *a|NN SV *b
+-s	|void	|qsortsvu	|NN SV** array|size_t num_elts|NN SVCOMPARE_t compare
++s	|void	|qsortsvu	|NULLOK SV** array|size_t num_elts|NN SVCOMPARE_t compare
+ #endif
+ 
+ #if defined(PERL_IN_PP_SYS_C) || defined(PERL_DECL_PROT)
+@@ -1623,7 +1623,8 @@
+ Ap	|int	|PerlIO_flush		|NULLOK PerlIO *f
+ Ap	|void	|PerlIO_clearerr	|NULLOK PerlIO *f
+ Ap	|void	|PerlIO_set_cnt		|NULLOK PerlIO *f|int cnt
+-Ap	|void	|PerlIO_set_ptrcnt	|NULLOK PerlIO *f|NN STDCHAR *ptr|int cnt
++Ap	|void	|PerlIO_set_ptrcnt	|NULLOK PerlIO *f|NULLOK STDCHAR *ptr \
++					|int cnt
+ Ap	|void	|PerlIO_setlinebuf	|NULLOK PerlIO *f
+ Ap	|SSize_t|PerlIO_read		|NULLOK PerlIO *f|NN void *buf|Size_t count
+ Ap	|SSize_t|PerlIO_write		|NULLOK PerlIO *f|NN const void *buf|Size_t count
+--- perl-5.10.0.orig/util.c
++++ perl-5.10.0/util.c
+@@ -178,11 +178,11 @@
+     ptr = (Malloc_t)PerlMem_realloc(where,size);
+     PERL_ALLOC_CHECK(ptr);
+ 
+-    DEBUG_m(PerlIO_printf(Perl_debug_log, "0x%"UVxf": (%05ld) rfree\n",PTR2UV(where),(long)PL_an++));
+-    DEBUG_m(PerlIO_printf(Perl_debug_log, "0x%"UVxf": (%05ld) realloc %ld bytes\n",PTR2UV(ptr),(long)PL_an++,(long)size));
+-
+-    if (ptr != NULL) {
++    /* MUST do this fixup first, before doing ANYTHING else, as anything else
++       might allocate memory/free/move memory, and until we do the fixup, it
++       may well be chasing (and writing to) free memory.  */
+ #ifdef PERL_TRACK_MEMPOOL
++    if (ptr != NULL) {
+ 	struct perl_memory_debug_header *const header
+ 	    = (struct perl_memory_debug_header *)ptr;
+ 
+@@ -198,7 +198,17 @@
+ 	header->prev->next = header;
+ 
+         ptr = (Malloc_t)((char*)ptr+sTHX);
++    }
+ #endif
++
++    /* In particular, must do that fixup above before logging anything via
++     *printf(), as it can reallocate memory, which can cause SEGVs.  */
++
++    DEBUG_m(PerlIO_printf(Perl_debug_log, "0x%"UVxf": (%05ld) rfree\n",PTR2UV(where),(long)PL_an++));
++    DEBUG_m(PerlIO_printf(Perl_debug_log, "0x%"UVxf": (%05ld) realloc %ld bytes\n",PTR2UV(ptr),(long)PL_an++,(long)size));
++
++
++    if (ptr != NULL) {
+ 	return ptr;
+     }
+     else if (PL_nomemok)
+--- perl-5.10.0.orig/toke.c
++++ perl-5.10.0/toke.c
+@@ -692,6 +692,7 @@
+ #else
+     parser->nexttoke = 0;
+ #endif
++    parser->error_count = oparser ? oparser->error_count : 0;
+     parser->copline = NOLINE;
+     parser->lex_state = LEX_NORMAL;
+     parser->expect = XSTATE;
+--- perl-5.10.0.orig/MANIFEST
++++ perl-5.10.0/MANIFEST
+@@ -3804,6 +3804,7 @@
+ t/op/reverse.t			See if reverse operator works
+ t/op/runlevel.t			See if die() works from perl_call_*()
+ t/op/rxcode.t			See if /(?{ code })/ works
++t/op/setpgrpstack.t		See if setpgrp works
+ t/op/sleep.t			See if sleep works
+ t/op/smartmatch.t		See if the ~~ operator works
+ t/op/sort.t			See if sort works
+--- perl-5.10.0.orig/pp_sort.c
++++ perl-5.10.0/pp_sort.c
+@@ -1553,11 +1553,12 @@
+ 	max = AvFILL(av) + 1;
+ 	if (SvMAGICAL(av)) {
+ 	    MEXTEND(SP, max);
+-	    p2 = SP;
+ 	    for (i=0; i < max; i++) {
+ 		SV **svp = av_fetch(av, i, FALSE);
+ 		*SP++ = (svp) ? *svp : NULL;
+ 	    }
++	    SP--;
++	    p1 = p2 = SP - (max-1);
+ 	}
+ 	else {
+ 	    if (SvREADONLY(av))
+@@ -1713,7 +1714,7 @@
+ 	SvREADONLY_off(av);
+     else if (av && !sorting_av) {
+ 	/* simulate pp_aassign of tied AV */
+-	SV** const base = ORIGMARK+1;
++	SV** const base = MARK+1;
+ 	for (i=0; i < max; i++) {
+ 	    base[i] = newSVsv(base[i]);
+ 	}
+--- perl-5.10.0.orig/perliol.h
++++ perl-5.10.0/perliol.h
+@@ -170,7 +170,7 @@
+ 
+ /* PerlIO_teardown doesn't need exporting, but the EXTERN_C is needed
+  * for compiling as C++.  Must also match with what perl.h says. */
+-EXTERN_C void PerlIO_teardown();
++EXTERN_C void PerlIO_teardown(void);
+ 
+ /*--------------------------------------------------------------------------------------*/
+ /* Generic, or stub layer functions */
+--- perl-5.10.0.orig/hv.c
++++ perl-5.10.0/hv.c
+@@ -1961,6 +1961,7 @@
+     if (av) {
+ 	HvAUX(hv)->xhv_backreferences = 0;
+ 	Perl_sv_kill_backrefs(aTHX_ (SV*) hv, av);
++	SvREFCNT_dec(av);
+     }
+ }
+ 
+--- perl-5.10.0.orig/pp_sys.c
++++ perl-5.10.0/pp_sys.c
+@@ -3002,7 +3002,7 @@
+ 
+     case OP_FTEEXEC:
+ #ifdef PERL_EFF_ACCESS
+-	access_mode = W_OK;
++	access_mode = X_OK;
+ #else
+ 	use_access = 0;
+ #endif
+@@ -4289,6 +4289,7 @@
+     if (MAXARG < 2) {
+ 	pgrp = 0;
+ 	pid = 0;
++	XPUSHi(-1);
+     }
+     else {
+ 	pgrp = POPi;
+--- perl-5.10.0.orig/perlio.c
++++ perl-5.10.0/perlio.c
+@@ -2413,7 +2413,7 @@
+     }
+ }
+ 
+-void PerlIO_teardown() /* Call only from PERL_SYS_TERM(). */
++void PerlIO_teardown(void) /* Call only from PERL_SYS_TERM(). */
+ {
+     dVAR;
+ #if 0
+--- perl-5.10.0.orig/Makefile.SH
++++ perl-5.10.0/Makefile.SH
+@@ -43,12 +43,7 @@
+ true)
+ 	# Prefix all runs of 'miniperl' and 'perl' with
+ 	# $ldlibpth so that ./perl finds *this* shared libperl.
+-	case "$LD_LIBRARY_PATH" in
+-	'')
+-		ldlibpth="LD_LIBRARY_PATH=`pwd`";;
+-	*)
+-		ldlibpth="LD_LIBRARY_PATH=`pwd`:${LD_LIBRARY_PATH}";;
+-	esac
++	ldlibpth=LD_LIBRARY_PATH=`pwd`'$${LD_LIBRARY_PATH:+:}$$LD_LIBRARY_PATH'
+ 
+ 	pldlflags="$cccdlflags"
+ 	static_target='static_pic'
+@@ -101,7 +96,7 @@
+ 	    ;;
+ 	esac
+ 	case "$ldlibpthname" in
+-	'') ;;
++	''|LD_LIBRARY_PATH) ;;
+ 	*)
+ 	    case "$osname" in
+ 	    os2)
+--- perl-5.10.0.orig/pp_ctl.c
++++ perl-5.10.0/pp_ctl.c
+@@ -218,7 +218,6 @@
+ 	if (!(cx->sb_rxtainted & 2) && SvTAINTED(TOPs))
+ 	    cx->sb_rxtainted |= 2;
+ 	sv_catsv(dstr, POPs);
+-	FREETMPS; /* Prevent excess tmp stack */
+ 
+ 	/* Are we done */
+ 	if (cx->sb_once || !CALLREGEXEC(rx, s, cx->sb_strend, orig,
+@@ -3076,14 +3075,6 @@
+ 
+     sv = POPs;
+     if ( (SvNIOKp(sv) || SvVOK(sv)) && PL_op->op_type != OP_DOFILE) {
+-	if ( SvVOK(sv) && ckWARN(WARN_PORTABLE) ) {	/* require v5.6.1 */
+-	    HV * hinthv = GvHV(PL_hintgv);
+-	    SV ** ptr = NULL;
+-	    if (hinthv) ptr = hv_fetchs(hinthv, "v_string", FALSE);
+-	    if ( !(ptr && *ptr && SvIOK(*ptr) && SvIV(*ptr)) )
+-		Perl_warner(aTHX_ packWARN(WARN_PORTABLE),
+-                        "v-string in use/require non-portable");
+-	}
+ 	sv = new_version(sv);
+ 	if (!sv_derived_from(PL_patchlevel, "version"))
+ 	    upg_version(PL_patchlevel, TRUE);
+@@ -3135,26 +3126,14 @@
+ 
+         /* We do this only with use, not require. */
+ 	if (PL_compcv &&
+-	  /* If we request a version >= 5.6.0, then v-string are OK
+-	     so set $^H{v_string} to suppress the v-string warning */
+-	    vcmp(sv, sv_2mortal(upg_version(newSVnv(5.006), FALSE))) >= 0) {
+-	  HV * hinthv = GvHV(PL_hintgv);
+-	  if( hinthv ) {
+-	      SV *hint = newSViv(1);
+-	      (void)hv_stores(hinthv, "v_string", hint);
+-	      /* This will call through to Perl_magic_sethint() which in turn
+-		 sets PL_hints correctly.  */
+-	      SvSETMAGIC(hint);
+-	  }
+ 	  /* If we request a version >= 5.9.5, load feature.pm with the
+ 	   * feature bundle that corresponds to the required version. */
+-	  if (vcmp(sv, sv_2mortal(upg_version(newSVnv(5.009005), FALSE))) >= 0) {
++		vcmp(sv, sv_2mortal(upg_version(newSVnv(5.009005), FALSE))) >= 0) {
+ 	    SV *const importsv = vnormal(sv);
+ 	    *SvPVX_mutable(importsv) = ':';
+ 	    ENTER;
+ 	    Perl_load_module(aTHX_ 0, newSVpvs("feature"), NULL, importsv, NULL);
+ 	    LEAVE;
+-	  }
+ 	}
+ 
+ 	RETPUSHYES;
+--- perl-5.10.0.orig/sv.c
++++ perl-5.10.0/sv.c
+@@ -3557,8 +3557,10 @@
+ 		GvMULTI_on(dstr);
+ 		return;
+ 	    }
+-	    glob_assign_glob(dstr, sstr, dtype);
+-	    return;
++	    if (isGV_with_GP(sstr)) {
++		glob_assign_glob(dstr, sstr, dtype);
++		return;
++	    }
+ 	}
+ 
+ 	if (dtype >= SVt_PV) {
+@@ -10263,10 +10265,11 @@
+ 			daux->xhv_eiter = saux->xhv_eiter
+ 			    ? he_dup(saux->xhv_eiter,
+ 					(bool)!!HvSHAREKEYS(sstr), param) : 0;
++			/* backref array needs refcnt=2; see sv_add_backref */
+ 			daux->xhv_backreferences =
+ 			    saux->xhv_backreferences
+ 				? (AV*) SvREFCNT_inc(
+-					sv_dup((SV*)saux->xhv_backreferences, param))
++					sv_dup_inc((SV*)saux->xhv_backreferences, param))
+ 				: 0;
+ 
+                         daux->xhv_mro_meta = saux->xhv_mro_meta
+--- perl-5.10.0.orig/av.c
++++ perl-5.10.0/av.c
+@@ -433,7 +433,7 @@
+     /* Give any tie a chance to cleanup first */
+     if (SvRMAGICAL(av)) {
+ 	const MAGIC* const mg = SvMAGIC(av);
+-	if (PL_delaymagic && mg->mg_type == PERL_MAGIC_isa)
++	if (PL_delaymagic && mg && mg->mg_type == PERL_MAGIC_isa)
+ 	    PL_delaymagic |= DM_ARRAY;
+         else
+ 	    mg_clear((SV*)av); 
+--- perl-5.10.0.orig/mg.c
++++ perl-5.10.0/mg.c
+@@ -1543,10 +1543,11 @@
+     stash = GvSTASH(
+         SvTYPE(mg->mg_obj) == SVt_PVGV
+             ? (GV*)mg->mg_obj
+-            : (GV*)SvMAGIC(mg->mg_obj)->mg_obj
++            : (GV*)mg_find(mg->mg_obj, PERL_MAGIC_isa)->mg_obj
+     );
+ 
+-    mro_isa_changed_in(stash);
++    if (stash)
++	mro_isa_changed_in(stash);
+ 
+     return 0;
+ }
+--- perl-5.10.0.orig/proto.h
++++ perl-5.10.0/proto.h
+@@ -260,8 +260,7 @@
+ 			__attribute__nonnull__(1);
+ 
+ PERL_CALLCONV void	Perl_load_module_nocontext(U32 flags, SV* name, SV* ver, ...)
+-			__attribute__nonnull__(2)
+-			__attribute__nonnull__(3);
++			__attribute__nonnull__(2);
+ 
+ PERL_CALLCONV SV*	Perl_mess_nocontext(const char* pat, ...)
+ 			__attribute__format__(__printf__,1,2)
+@@ -678,9 +677,7 @@
+ 
+ PERL_CALLCONV HV*	Perl_gv_stashsv(pTHX_ SV* sv, I32 flags);
+ PERL_CALLCONV void	Perl_hv_clear(pTHX_ HV* tb);
+-PERL_CALLCONV HV *	Perl_hv_copy_hints_hv(pTHX_ HV *const ohv)
+-			__attribute__nonnull__(pTHX_1);
+-
++PERL_CALLCONV HV *	Perl_hv_copy_hints_hv(pTHX_ HV *const ohv);
+ PERL_CALLCONV void	Perl_hv_delayfree_ent(pTHX_ HV* hv, HE* entry)
+ 			__attribute__nonnull__(pTHX_1);
+ 
+@@ -1303,11 +1300,9 @@
+ 			__attribute__nonnull__(pTHX_1);
+ 
+ PERL_CALLCONV void	Perl_sortsv(pTHX_ SV** array, size_t num_elts, SVCOMPARE_t cmp)
+-			__attribute__nonnull__(pTHX_1)
+ 			__attribute__nonnull__(pTHX_3);
+ 
+ PERL_CALLCONV void	Perl_sortsv_flags(pTHX_ SV** array, size_t num_elts, SVCOMPARE_t cmp, U32 flags)
+-			__attribute__nonnull__(pTHX_1)
+ 			__attribute__nonnull__(pTHX_3);
+ 
+ PERL_CALLCONV int	Perl_mg_clear(pTHX_ SV* sv)
+@@ -2079,7 +2074,9 @@
+ PERL_CALLCONV void	Perl_save_mortalizesv(pTHX_ SV* sv)
+ 			__attribute__nonnull__(pTHX_1);
+ 
+-PERL_CALLCONV void	Perl_save_nogv(pTHX_ GV* gv);
++PERL_CALLCONV void	Perl_save_nogv(pTHX_ GV* gv)
++			__attribute__nonnull__(pTHX_1);
++
+ PERL_CALLCONV void	Perl_save_op(pTHX);
+ PERL_CALLCONV SV*	Perl_save_scalar(pTHX_ GV* gv)
+ 			__attribute__nonnull__(pTHX_1);
+@@ -2263,14 +2260,8 @@
+ PERL_CALLCONV void	Perl_sv_clear(pTHX_ SV* sv)
+ 			__attribute__nonnull__(pTHX_1);
+ 
+-PERL_CALLCONV I32	Perl_sv_cmp(pTHX_ SV* sv1, SV* sv2)
+-			__attribute__nonnull__(pTHX_1)
+-			__attribute__nonnull__(pTHX_2);
+-
+-PERL_CALLCONV I32	Perl_sv_cmp_locale(pTHX_ SV* sv1, SV* sv2)
+-			__attribute__nonnull__(pTHX_1)
+-			__attribute__nonnull__(pTHX_2);
+-
++PERL_CALLCONV I32	Perl_sv_cmp(pTHX_ SV* sv1, SV* sv2);
++PERL_CALLCONV I32	Perl_sv_cmp_locale(pTHX_ SV* sv1, SV* sv2);
+ #if defined(USE_LOCALE_COLLATE)
+ PERL_CALLCONV char*	Perl_sv_collxfrm(pTHX_ SV* sv, STRLEN* nxp)
+ 			__attribute__nonnull__(pTHX_1)
+@@ -2936,8 +2927,7 @@
+ 
+ PERL_CALLCONV void*	Perl_ptr_table_fetch(pTHX_ PTR_TBL_t *tbl, const void *sv)
+ 			__attribute__warn_unused_result__
+-			__attribute__nonnull__(pTHX_1)
+-			__attribute__nonnull__(pTHX_2);
++			__attribute__nonnull__(pTHX_1);
+ 
+ PERL_CALLCONV void	Perl_ptr_table_store(pTHX_ PTR_TBL_t *tbl, const void *oldsv, void *newsv)
+ 			__attribute__nonnull__(pTHX_1)
+@@ -3625,7 +3615,6 @@
+ 			__attribute__nonnull__(pTHX_2);
+ 
+ STATIC void	S_qsortsvu(pTHX_ SV** array, size_t num_elts, SVCOMPARE_t compare)
+-			__attribute__nonnull__(pTHX_1)
+ 			__attribute__nonnull__(pTHX_3);
+ 
+ #endif
+@@ -4245,9 +4234,7 @@
+ PERL_CALLCONV int	Perl_PerlIO_flush(pTHX_ PerlIO *f);
+ PERL_CALLCONV void	Perl_PerlIO_clearerr(pTHX_ PerlIO *f);
+ PERL_CALLCONV void	Perl_PerlIO_set_cnt(pTHX_ PerlIO *f, int cnt);
+-PERL_CALLCONV void	Perl_PerlIO_set_ptrcnt(pTHX_ PerlIO *f, STDCHAR *ptr, int cnt)
+-			__attribute__nonnull__(pTHX_2);
+-
++PERL_CALLCONV void	Perl_PerlIO_set_ptrcnt(pTHX_ PerlIO *f, STDCHAR *ptr, int cnt);
+ PERL_CALLCONV void	Perl_PerlIO_setlinebuf(pTHX_ PerlIO *f);
+ PERL_CALLCONV SSize_t	Perl_PerlIO_read(pTHX_ PerlIO *f, void *buf, Size_t count)
+ 			__attribute__nonnull__(pTHX_2);
+--- perl-5.10.0.orig/regcomp.c
++++ perl-5.10.0/regcomp.c
+@@ -8239,6 +8239,9 @@
+         *STRING(ret)= (char)value;
+         STR_LEN(ret)= 1;
+         RExC_emit += STR_SZ(1);
++	if (listsv) {
++	    SvREFCNT_dec(listsv);
++	}
+         return ret;
+     }
+     /* optimize case-insensitive simple patterns (e.g. /[a-z]/i) */
+--- perl-5.10.0.orig/doop.c
++++ perl-5.10.0/doop.c
+@@ -1204,7 +1204,13 @@
+ 
+     if (sv != left || (optype != OP_BIT_AND && !SvOK(sv) && !SvGMAGICAL(sv)))
+ 	sv_setpvn(sv, "", 0);	/* avoid undef warning on |= and ^= */
+-    lsave = lc = SvPV_nomg_const(left, leftlen);
++    if (sv == left) {
++	lsave = lc = SvPV_force_nomg(left, leftlen);
++    }
++    else {
++	lsave = lc = SvPV_nomg_const(left, leftlen);
++	SvPV_force_nomg_nolen(sv);
++    }
+     rsave = rc = SvPV_nomg_const(right, rightlen);
+ 
+     /* This need to come after SvPV to ensure that string overloading has
+--- perl-5.10.0.orig/perl.h
++++ perl-5.10.0/perl.h
+@@ -663,6 +663,11 @@
+ #   include <unistd.h>
+ #endif
+ 
++/* for WCOREDUMP */
++#ifdef I_SYS_WAIT
++#   include <sys/wait.h>
++#endif
++
+ #ifdef __SYMBIAN32__
+ #   undef _SC_ARG_MAX /* Symbian has _SC_ARG_MAX but no sysconf() */
+ #endif
+@@ -2652,6 +2657,25 @@
+ #  define PERL_SYS_INIT3_BODY(argvp,argcp,envp) PERL_SYS_INIT_BODY(argvp,argcp)
+ #endif
+ 
++/*
++=for apidoc Am|void|PERL_SYS_INIT|int argc|char** argv
++Provides system-specific tune up of the C runtime environment necessary to
++run Perl interpreters. This should be called only once, before creating
++any Perl interpreters.
++
++=for apidoc Am|void|PERL_SYS_INIT3|int argc|char** argv|char** env
++Provides system-specific tune up of the C runtime environment necessary to
++run Perl interpreters. This should be called only once, before creating
++any Perl interpreters.
++
++=for apidoc Am|void|PERL_SYS_TERM|
++Provides system-specific clean up of the C runtime environment after
++running Perl interpreters. This should be called only once, after
++freeing any remaining Perl interpreters.
++
++=cut
++ */
++
+ #define PERL_SYS_INIT(argc, argv)	Perl_sys_init(argc, argv)
+ #define PERL_SYS_INIT3(argc, argv, env)	Perl_sys_init3(argc, argv, env)
+ #define PERL_SYS_TERM()			Perl_sys_term()
+@@ -3966,7 +3990,7 @@
+ #endif
+ 
+ #ifdef USE_PERLIO
+-EXTERN_C void PerlIO_teardown();
++EXTERN_C void PerlIO_teardown(void);
+ # ifdef USE_ITHREADS
+ #  define PERLIO_INIT MUTEX_INIT(&PL_perlio_mutex)
+ #  define PERLIO_TERM 				\
+--- perl-5.10.0.orig/pp_hot.c
++++ perl-5.10.0/pp_hot.c
+@@ -1028,8 +1028,14 @@
+ 		*(relem++) = sv;
+ 		didstore = av_store(ary,i++,sv);
+ 		if (magic) {
+-		    if (SvSMAGICAL(sv))
++		    if (SvSMAGICAL(sv)) {
++			/* More magic can happen in the mg_set callback, so we
++			 * backup the delaymagic for now. */
++			U16 dmbak = PL_delaymagic;
++			PL_delaymagic = 0;
+ 			mg_set(sv);
++			PL_delaymagic = dmbak;
++		    }
+ 		    if (!didstore)
+ 			sv_2mortal(sv);
+ 		}
+@@ -1059,8 +1065,12 @@
+ 			duplicates += 2;
+ 		    didstore = hv_store_ent(hash,sv,tmpstr,0);
+ 		    if (magic) {
+-			if (SvSMAGICAL(tmpstr))
++			if (SvSMAGICAL(tmpstr)) {
++			    U16 dmbak = PL_delaymagic;
++			    PL_delaymagic = 0;
+ 			    mg_set(tmpstr);
++			    PL_delaymagic = dmbak;
++			}
+ 			if (!didstore)
+ 			    sv_2mortal(tmpstr);
+ 		    }
+@@ -1084,7 +1094,13 @@
+ 	    }
+ 	    else
+ 		sv_setsv(sv, &PL_sv_undef);
+-	    SvSETMAGIC(sv);
++
++	    if (SvSMAGICAL(sv)) {
++		U16 dmbak = PL_delaymagic;
++		PL_delaymagic = 0;
++		mg_set(sv);
++		PL_delaymagic = dmbak;
++	    }
+ 	    break;
+ 	}
+     }
+@@ -1198,6 +1214,9 @@
+     if (rx->extflags & RXf_TAINTED)
+         SvTAINTED_on(rv);
+     sv_magic(sv,(SV*)ReREFCNT_inc(rx), PERL_MAGIC_qr,0,0);
++    if (pkg) {
++	SvREFCNT_dec(pkg);
++    }
+     XPUSHs(rv);
+     RETURN;
+ }
+--- perl-5.10.0.orig/t/comp/require.t
++++ perl-5.10.0/t/comp/require.t
+@@ -15,7 +15,7 @@
+ 
+ my $Is_EBCDIC = (ord('A') == 193) ? 1 : 0;
+ my $Is_UTF8   = (${^OPEN} || "") =~ /:utf8/;
+-my $total_tests = 49;
++my $total_tests = 50;
+ if ($Is_EBCDIC || $Is_UTF8) { $total_tests -= 3; }
+ print "1..$total_tests\n";
+ 
+@@ -258,6 +258,20 @@
+     }
+ }
+ 
++#  [perl #49472] Attributes + Unkown Error
++
++{
++    do_require
++	'use strict;sub MODIFY_CODE_ATTRIBUTE{} sub f:Blah {$nosuchvar}';
++    my $err = $@;
++    $err .= "\n" unless $err =~ /\n$/;
++    unless ($err =~ /Global symbol "\$nosuchvar" requires /) {
++	$err =~ s/^/# /mg;
++	print "${err}not ";
++    }
++    print "ok ", ++$i, " [perl #49472]\n";
++}
++
+ ##########################################
+ # What follows are UTF-8 specific tests. #
+ # Add generic tests before this point.   #
+--- perl-5.10.0.orig/t/op/fork.t
++++ perl-5.10.0/t/op/fork.t
+@@ -445,16 +445,14 @@
+ my $pid = fork;
+ die "fork: $!" if !defined $pid;
+ if ($pid == 0) {
+-    my $rand_child = rand;
+     close RDR;
+-    print WTR $rand_child, "\n";
++    print WTR "STRING_FROM_CHILD\n";
+     close WTR;
+ } else {
+-    my $rand_parent = rand;
+     close WTR;
+-    chomp(my $rand_child  = <RDR>);
++    chomp(my $string_from_child  = <RDR>);
+     close RDR;
+-    print $rand_child ne $rand_parent, "\n";
++    print $string_from_child eq "STRING_FROM_CHILD", "\n";
+ }
+ EXPECT
+ 1
+--- perl-5.10.0.orig/t/op/setpgrpstack.t
++++ perl-5.10.0/t/op/setpgrpstack.t
+@@ -0,0 +1,16 @@
++#!./perl -w
++
++BEGIN {
++    chdir 't' if -d 't';
++    @INC = '../lib';
++    require './test.pl';
++}
++
++use Config;
++plan tests => 2;
++
++SKIP: {
++    skip "setpgrp() is not available", 2 unless $Config{d_setpgrp};
++    ok(!eval { package A;sub foo { die("got here") }; package main; A->foo(setpgrp())});
++    ok($@ =~ /got here/, "setpgrp() should extend the stack before modifying it");
++}
+--- perl-5.10.0.orig/t/op/bop.t
++++ perl-5.10.0/t/op/bop.t
+@@ -15,7 +15,7 @@
+ # If you find tests are failing, please try adding names to tests to track
+ # down where the failure is, and supply your new names as a patch.
+ # (Just-in-time test naming)
+-plan tests => 161;
++plan tests => 161 + (10*13*2) + 4;
+ 
+ # numerics
+ ok ((0xdead & 0xbeef) == 0x9ead);
+@@ -428,3 +428,105 @@
+   my $ref = "\x{10000}\0";
+   is(~~$str, $ref);
+ }
++
++# ref tests
++
++my %res;
++
++for my $str ("x", "\x{100}") {
++    for my $chr (qw/S A H G X ( * F/) {
++        for my $op (qw/| & ^/) {
++            my $co = ord $chr;
++            my $so = ord $str;
++            $res{"$chr$op$str"} = eval qq/chr($co $op $so)/;
++        }
++    }
++    $res{"undef|$str"} = $str;
++    $res{"undef&$str"} = "";
++    $res{"undef^$str"} = $str;
++}
++
++sub PVBM () { "X" }
++index PVBM, "foo";
++
++my $warn = 0;
++local $^W = 1;
++local $SIG{__WARN__} = sub { $warn++ };
++
++sub is_first {
++    my ($got, $orig, $op, $str, $name) = @_;
++    is(substr($got, 0, 1), $res{"$orig$op$str"}, $name);
++}
++
++for (
++    # [object to test, first char of stringification, name]
++    [undef,             "undef",    "undef"         ],
++    [\1,                "S",        "scalar ref"    ],
++    [[],                "A",        "array ref"     ],
++    [{},                "H",        "hash ref"      ],
++    [qr/x/,             "(",        "qr//"          ],
++    [*foo,              "*",        "glob"          ],
++    [\*foo,             "G",        "glob ref"      ],
++    [PVBM,              "X",        "PVBM"          ],
++    [\PVBM,             "S",        "PVBM ref"      ],
++    [bless([], "Foo"),  "F",        "object"        ],
++) {
++    my ($val, $orig, $type) = @$_;
++
++    for (["x", "string"], ["\x{100}", "utf8"]) {
++        my ($str, $desc) = @$_;
++
++        $warn = 0;
++
++        is_first($val | $str, $orig, "|", $str, "$type | $desc");
++        is_first($val & $str, $orig, "&", $str, "$type & $desc");
++        is_first($val ^ $str, $orig, "^", $str, "$type ^ $desc");
++
++        is_first($str | $val, $orig, "|", $str, "$desc | $type");
++        is_first($str & $val, $orig, "&", $str, "$desc & $type");
++        is_first($str ^ $val, $orig, "^", $str, "$desc ^ $type");
++
++        my $new;
++        ($new = $val) |= $str;
++        is_first($new, $orig, "|", $str, "$type |= $desc");
++        ($new = $val) &= $str;
++        is_first($new, $orig, "&", $str, "$type &= $desc");
++        ($new = $val) ^= $str;
++        is_first($new, $orig, "^", $str, "$type ^= $desc");
++
++        ($new = $str) |= $val;
++        is_first($new, $orig, "|", $str, "$desc |= $type");
++        ($new = $str) &= $val;
++        is_first($new, $orig, "&", $str, "$desc &= $type");
++        ($new = $str) ^= $val;
++        is_first($new, $orig, "^", $str, "$desc ^= $type");
++
++        if ($orig eq "undef") {
++            # undef |= and undef ^= don't warn
++            is($warn, 10, "no duplicate warnings");
++        }
++        else {
++            is($warn, 0, "no warnings");
++        }
++    }
++}
++
++my $strval;
++
++{
++    package Bar;
++    use overload q/""/ => sub { $strval };
++
++    package Baz;
++    use overload q/|/ => sub { "y" };
++}
++
++ok(!eval { bless([], "Bar") | "x"; 1 },     "string overload can't use |");
++like($@, qr/no method found/,               "correct error");
++is(eval { bless([], "Baz") | "x" }, "y",    "| overload works");
++
++my $obj = bless [], "Bar";
++$strval = "x";
++eval { $obj |= "Q" };
++$strval = "z";
++is("$obj", "z", "|= doesn't break string overload");
+--- perl-5.10.0.orig/t/mro/pkg_gen.t
++++ perl-5.10.0/t/mro/pkg_gen.t
+@@ -4,7 +4,7 @@
+ use warnings;
+ 
+ chdir 't' if -d 't';
+-require q(./test.pl); plan(tests => 6);
++require q(./test.pl); plan(tests => 7);
+ 
+ {
+     package Foo;
+@@ -34,3 +34,7 @@
+ 
+ delete $::{"Foo::"};
+ is(mro::get_pkg_gen('Foo'), 0, 'pkg_gen 0 for delete $::{Pkg::}');
++
++delete $::{"Quux::"};
++push @Quux::ISA, "Woot"; # should not segfault
++ok(1, "No segfault on modification of ISA in a deleted stash");
+--- perl-5.10.0.orig/t/lib/h2ph.h
++++ perl-5.10.0/t/lib/h2ph.h
+@@ -26,6 +26,10 @@
+ #undef MAX
+ #define MAX(a,b) ((a) > (b) ? (a) : (b))
+ 
++/* Test #undef'ining an existing constant function */
++#define NOTTRUE 0
++#undef NOTTRUE
++
+ /* Test #ifdef */
+ #ifdef __SOME_UNIMPORTANT_PROPERTY
+ #define MIN(a,b) ((a) < (b) ? (a) : (b))
+@@ -68,9 +72,11 @@
+  *  with `use lib qw(/opt/perl5/lib/site_perl/i586-linux/linux);' or whatever
+  *  your equivalent is...
+  */
++#if 0
+ #include <sys/socket.h>
+ #import "sys/ioctl.h"
+ #include_next <sys/fcntl.h>
++#endif
+ 
+ /* typedefs should be ignored */
+ typedef struct a_struct {
+--- perl-5.10.0.orig/t/lib/proxy_constant_subs.t
++++ perl-5.10.0/t/lib/proxy_constant_subs.t
+@@ -7,20 +7,20 @@
+         print "1..0 # Skip -- Perl configured without B module\n";
+         exit 0;
+     }
+-    if ($Config::Config{'extensions'} !~ /\bPOSIX\b/) {
+-        print "1..0 # Skip -- Perl configured without POSIX\n";
++    if ($Config::Config{'extensions'} !~ /\bFcntl\b/) {
++        print "1..0 # Skip -- Perl configured without Fcntl\n";
+         exit 0;
+     }
+-    # errno is a real subroutine, and acts as control
++    # S_IFMT is a real subroutine, and acts as control
+     # SEEK_SET is a proxy constant subroutine.
+-    @symbols = qw(errno SEEK_SET);
++    @symbols = qw(S_IFMT SEEK_SET);
+ }
+ 
+ use strict;
+ use warnings;
+ use Test::More tests => 4 * @symbols;
+ use B qw(svref_2object GVf_IMPORTED_CV);
+-use POSIX @symbols;
++use Fcntl @symbols;
+ 
+ # GVf_IMPORTED_CV should not be set on the original, but should be set on the
+ # imported GV.
+@@ -29,7 +29,7 @@
+     my ($ps, $ms);
+     {
+ 	no strict 'refs';
+-	$ps = svref_2object(\*{"POSIX::$symbol"});
++	$ps = svref_2object(\*{"Fcntl::$symbol"});
+ 	$ms = svref_2object(\*{"::$symbol"});
+     }
+     isa_ok($ps, 'B::GV');
+--- perl-5.10.0.orig/t/lib/h2ph.pht
++++ perl-5.10.0/t/lib/h2ph.pht
+@@ -1,6 +1,6 @@
+ require '_h2ph_pre.ph';
+ 
+-no warnings 'redefine';
++no warnings qw(redefine misc);
+ 
+ unless(defined(&SQUARE)) {
+     sub SQUARE {
+@@ -22,6 +22,8 @@
+         my($a,$b) = @_;
+ 	    eval q((($a) > ($b) ? ($a) : ($b)));
+     }' unless defined(&MAX);
++    eval 'sub NOTTRUE () {0;}' unless defined(&NOTTRUE);
++    undef(&NOTTRUE) if defined(&NOTTRUE);
+     if(defined(&__SOME_UNIMPORTANT_PROPERTY)) {
+ 	eval 'sub MIN {
+ 	    my($a,$b) = @_;
+@@ -47,15 +49,17 @@
+     } else {
+ 	eval 'sub WHATEVER () {1000;}' unless defined(&WHATEVER);
+     }
+-    require 'sys/socket.ph';
+-    require 'sys/ioctl.ph';
+-    eval {
+-	my(@REM);
+-	my(%INCD) = map { $INC{$_} => 1 } (grep { $_ eq "sys/fcntl.ph" } keys(%INC));
+-	@REM = map { "$_/sys/fcntl.ph" } (grep { not exists($INCD{"$_/sys/fcntl.ph"}) and -f "$_/sys/fcntl.ph" } @INC);
+-	require "$REM[0]" if @REM;
+-    };
+-    warn($@) if $@;
++    if(0) {
++	require 'sys/socket.ph';
++	require 'sys/ioctl.ph';
++	eval {
++	    my(@REM);
++	    my(%INCD) = map { $INC{$_} => 1 } (grep { $_ eq "sys/fcntl.ph" } keys(%INC));
++	    @REM = map { "$_/sys/fcntl.ph" } (grep { not exists($INCD{"$_/sys/fcntl.ph"}) and -f "$_/sys/fcntl.ph" } @INC);
++	    require "$REM[0]" if @REM;
++	};
++	warn($@) if $@;
++    }
+     eval("sub sun () { 0; }") unless defined(&sun);
+     eval("sub mon () { 1; }") unless defined(&mon);
+     eval("sub tue () { 2; }") unless defined(&tue);
+--- perl-5.10.0.orig/t/lib/warnings/pp_ctl
++++ perl-5.10.0/t/lib/warnings/pp_ctl
+@@ -222,18 +222,6 @@
+ Use of uninitialized value $foo in print at (eval 1) line 1.
+ ########
+ # pp_ctl.c
+-use warnings 'portable';
+-eval 'use 5.6.1';
+-EXPECT
+-v-string in use/require non-portable at (eval 1) line 2.
+-########
+-# pp_ctl.c
+-use warnings 'portable';
+-eval 'use v5.6.1';
+-EXPECT
+-v-string in use/require non-portable at (eval 1) line 2.
+-########
+-# pp_ctl.c
+ use warnings;
+ {
+     no warnings;
+@@ -245,15 +233,3 @@
+ use warnings;
+ eval 'use 5.006; use 5.10.0';
+ EXPECT
+-########
+-# pp_ctl.c
+-use warnings;
+-eval '{use 5.006;} use 5.10.0';
+-EXPECT
+-v-string in use/require non-portable at (eval 1) line 2.
+-########
+-# pp_ctl.c
+-use warnings;
+-eval 'use vars; use 5.10.0';
+-EXPECT
+-v-string in use/require non-portable at (eval 1) line 2.
+--- perl-5.10.0.orig/lib/h2ph.t
++++ perl-5.10.0/lib/h2ph.t
+@@ -15,7 +15,7 @@
+     exit 0;
+ }
+ 
+-print "1..2\n";
++print "1..4\n";
+ 
+ # quickly compare two text files
+ sub txt_compare {
+@@ -32,6 +32,14 @@
+ $ok = txt_compare("lib/h2ph.ph", "lib/h2ph.pht");
+ print(($ok == 0 ? "" : "not "), "ok 2\n");
+     
++# does the output compile?
++$ok = system($^X, "-I../lib", "lib/h2ph.pht");
++print(($ok == 0 ? "" : "not "), "ok 3\n");
++
++# is the output warning free?
++$ok = system($^X, "-w", "-I../lib", "-e", '$SIG{__WARN__} = sub { die $_[0] }; require "lib/h2ph.pht"');
++print(($ok == 0 ? "" : "not "), "ok 4\n");
++
+ # cleanup - should this be in an END block?
+ unlink("lib/h2ph.ph");
+ unlink("_h2ph_pre.ph");
+--- perl-5.10.0.orig/lib/CGI.pm
++++ perl-5.10.0/lib/CGI.pm
+@@ -4032,7 +4032,7 @@
+     my $filename;
+     find_tempdir() unless -w $TMPDIRECTORY;
+     for (my $i = 0; $i < $MAXTRIES; $i++) {
+-	last if ! -f ($filename = sprintf("${TMPDIRECTORY}${SL}CGItemp%d",$sequence++));
++	last if ! -f ($filename = sprintf("\%s${SL}CGItemp%d",$TMPDIRECTORY,$sequence++));
+     }
+     # check that it is a more-or-less valid filename
+     return unless $filename =~ m!^([a-zA-Z0-9_ \'\":/.\$\\-]+)$!;
+@@ -4109,6 +4109,8 @@
+ 	     hr;
+    }
+ 
++   print end_html;
++
+ =head1 ABSTRACT
+ 
+ This perl library uses perl5 objects to make it easy to create Web
+@@ -5388,7 +5390,7 @@
+ If Apache's mod_rewrite is turned on, then the script name and path
+ info probably won't match the request that the user sent. Set
+ -rewrite=>1 (default) to return URLs that match what the user sent
+-(the original request URI). Set -rewrite->0 to return URLs that match
++(the original request URI). Set -rewrite=>0 to return URLs that match
+ the URL after mod_rewrite's rules have run. Because the additional
+ path information only makes sense in the context of the rewritten URL,
+ -rewrite is set to false when you request path info in the URL.
+--- perl-5.10.0.orig/lib/Pod/Html.pm
++++ perl-5.10.0/lib/Pod/Html.pm
+@@ -246,8 +246,8 @@
+ my $Doindex;
+ 
+ my $Backlink;
+-my($Listlevel, @Listend);
+-my $After_Lpar;
++my($Listlevel, @Listtype);
++my $ListNewTerm;
+ use vars qw($Ignore);  # need to localize it later.
+ 
+ my(%Items_Named, @Items_Seen);
+@@ -286,7 +286,7 @@
+     $Htmldir = "";	    	# The directory to which the html pages
+ 				# will (eventually) be written.
+     $Htmlfile = "";		# write to stdout by default
+-    $Htmlfileurl = "" ;		# The url that other files would use to
++    $Htmlfileurl = "";		# The url that other files would use to
+ 				# refer to this file.  This is only used
+ 				# to make relative urls that point to
+ 				# other files.
+@@ -302,8 +302,9 @@
+     $Doindex = 1;   	    	# non-zero if we should generate an index
+     $Backlink = '';		# text for "back to top" links
+     $Listlevel = 0;		# current list depth
+-    @Listend = ();		# the text to use to end the list.
+-    $After_Lpar = 0;            # set to true after a par in an =item
++    @Listtype = ();		# list types for open lists
++    $ListNewTerm = 0;		# indicates new term in definition list; used
++    				# to correctly open/close <dd> tags
+     $Ignore = 1;		# whether or not to format text.  we don't
+ 				#   format text until we hit our first pod
+ 				#   directive.
+@@ -519,7 +520,6 @@
+ 
+     # now convert this file
+     my $after_item;             # set to true after an =item
+-    my $need_dd = 0;
+     warn "Converting input file $Podfile\n" if $Verbose;
+     foreach my $i (0..$#poddata){
+ 	$_ = $poddata[$i];
+@@ -527,7 +527,6 @@
+ 	if (/^(=.*)/s) {	# is it a pod directive?
+ 	    $Ignore = 0;
+ 	    $after_item = 0;
+-	    $need_dd = 0;
+ 	    $_ = $1;
+ 	    if (/^=begin\s+(\S+)\s*(.*)/si) {# =begin
+ 		process_begin($1, $2);
+@@ -543,12 +542,12 @@
+ 		if (/^=(head[1-6])\s+(.*\S)/s) {	# =head[1-6] heading
+ 		    process_head( $1, $2, $Doindex && $index );
+ 		} elsif (/^=item\s*(.*\S)?/sm) {	# =item text
+-		    $need_dd = process_item( $1 );
++		    process_item( $1 );
+ 		    $after_item = 1;
+ 		} elsif (/^=over\s*(.*)/) {		# =over N
+ 		    process_over();
+ 		} elsif (/^=back/) {		# =back
+-		    process_back($need_dd);
++		    process_back();
+ 		} elsif (/^=for\s+(\S+)\s*(.*)/si) {# =for
+ 		    process_for($1,$2);
+ 		} else {
+@@ -563,8 +562,14 @@
+ 	    next if $Ignore;
+ 	    next if @Begin_Stack && $Begin_Stack[-1] ne 'html';
+ 	    print HTML and next if @Begin_Stack && $Begin_Stack[-1] eq 'html';
+-	    print HTML "<dd>\n" if $need_dd;
+ 	    my $text = $_;
++
++	    # Open tag for definition list as we have something to put in it
++	    if( $ListNewTerm ){
++		print HTML "<dd>\n";
++		$ListNewTerm = 0;
++	    }
++
+ 	    if( $text =~ /\A\s+/ ){
+ 		process_pre( \$text );
+ 	        print HTML "<pre>\n$text</pre>\n";
+@@ -594,12 +599,8 @@
+ 		}
+ 		## end of experimental
+ 
+-		if( $after_item ){
+-		    $After_Lpar = 1;
+-		}
+ 		print HTML "<p>$text</p>\n";
+ 	    }
+-	    print HTML "</dd>\n" if $need_dd;
+ 	    $after_item = 0;
+ 	}
+     }
+@@ -1074,12 +1075,12 @@
+ 
+ 	# figure out what kind of item it is.
+ 	# Build string for referencing this item.
+-	if ( $txt =~ /\A=item\s+\*\s*(.*)\Z/s ) { # bullet
++	if ( $txt =~ /\A=item\s+\*\s*(.*)\Z/s ) { # bulleted list
+ 	    next unless $1;
+ 	    $item = $1;
+         } elsif( $txt =~ /\A=item\s+(?>\d+\.?)\s*(.*)\Z/s ) { # numbered list
+ 	    $item = $1;
+-	} elsif( $txt =~ /\A=item\s+(.*)\Z/s ) { # plain item
++	} elsif( $txt =~ /\A=item\s+(.*)\Z/s ) { # definition list
+ 	    $item = $1;
+ 	} else {
+ 	    next;
+@@ -1099,12 +1100,7 @@
+     $tag =~ /head([1-6])/;
+     my $level = $1;
+ 
+-    if( $Listlevel ){
+-	warn "$0: $Podfile: unterminated list at =head in paragraph $Paragraph.  ignoring.\n" unless $Quiet;
+-        while( $Listlevel ){
+-            process_back();
+-        }
+-    }
++    finish_list();
+ 
+     print HTML "<p>\n";
+     if( $level == 1 && ! $Top ){
+@@ -1143,19 +1139,32 @@
+         $name = anchorify($name);
+ 	print HTML qq{<a name="$name" class="item">}, process_text( \$otext ), '</a>';
+     }
+-    print HTML "</strong>\n";
++    print HTML "</strong>";
+     undef( $EmittedItem );
+ }
+ 
+-sub emit_li {
++sub new_listitem {
+     my( $tag ) = @_;
++    # Open tag for definition list as we have something to put in it
++    if( ($tag ne 'dl') && ($ListNewTerm) ){
++	print HTML "<dd>\n";
++	$ListNewTerm = 0;
++    }
++
+     if( $Items_Seen[$Listlevel]++ == 0 ){
+-	push( @Listend, "</$tag>" );
++	# start of new list
++	push( @Listtype, "$tag" );
+ 	print HTML "<$tag>\n";
++    } else {
++	# if this is not the first item, close the previous one
++	if ( $tag eq 'dl' ){
++	    print HTML "</dd>\n" unless $ListNewTerm;
++	} else {
++	    print HTML "</li>\n";
++	}
+     }
+-    my $emitted = $tag eq 'dl' ? 'dt' : 'li';
+-    print HTML "<$emitted>";
+-    return $emitted;
++    my $opentag = $tag eq 'dl' ? 'dt' : 'li';
++    print HTML "<$opentag>";
+ }
+ 
+ #
+@@ -1163,7 +1172,6 @@
+ #
+ sub process_item {
+     my( $otext ) = @_;
+-    my $need_dd = 0; # set to 1 if we need a <dd></dd> after an item
+ 
+     # lots of documents start a list without doing an =over.  this is
+     # bad!  but, the proper thing to do seems to be to just assume
+@@ -1173,43 +1181,41 @@
+ 	process_over();
+     }
+ 
+-    # formatting: insert a paragraph if preceding item has >1 paragraph
+-    if( $After_Lpar ){
+-	print HTML $need_dd ? "</dd>\n" : "</li>\n" if $After_Lpar;
+-	$After_Lpar = 0;
+-    }
+-
+     # remove formatting instructions from the text
+     my $text = depod( $otext );
+ 
+-    my $emitted; # the tag actually emitted, used for closing
+-
+     # all the list variants:
+     if( $text =~ /\A\*/ ){ # bullet
+-        $emitted = emit_li( 'ul' );
++        new_listitem( 'ul' );
+         if ($text =~ /\A\*\s+(\S.*)\Z/s ) { # with additional text
+             my $tag = $1;
+             $otext =~ s/\A\*\s+//;
+             emit_item_tag( $otext, $tag, 1 );
++            print HTML "\n";
+         }
+ 
+     } elsif( $text =~ /\A\d+/ ){ # numbered list
+-        $emitted = emit_li( 'ol' );
++        new_listitem( 'ol' );
+         if ($text =~ /\A(?>\d+\.?)\s*(\S.*)\Z/s ) { # with additional text
+             my $tag = $1;
+             $otext =~ s/\A\d+\.?\s*//;
+             emit_item_tag( $otext, $tag, 1 );
++            print HTML "\n";
+         }
+ 
+     } else {			# definition list
+-        $emitted = emit_li( 'dl' );
++        # new_listitem takes care of opening the <dt> tag
++        new_listitem( 'dl' );
+         if ($text =~ /\A(.+)\Z/s ){ # should have text
+             emit_item_tag( $otext, $text, 1 );
++	    # write the definition term and close <dt> tag
++	    print HTML "</dt>\n";
+         }
+-        $need_dd = 1;
++        # trigger opening a <dd> tag for the actual definition; will not
++        # happen if next paragraph is also a definition term (=item)
++        $ListNewTerm = 1;
+     }
+     print HTML "\n";
+-    return $need_dd;
+ }
+ 
+ #
+@@ -1219,30 +1225,31 @@
+     # start a new list
+     $Listlevel++;
+     push( @Items_Seen, 0 );
+-    $After_Lpar = 0;
+ }
+ 
+ #
+ # process_back - process a pod back tag and convert it to HTML format.
+ #
+ sub process_back {
+-    my $need_dd = shift;
+     if( $Listlevel == 0 ){
+ 	warn "$0: $Podfile: unexpected =back directive in paragraph $Paragraph.  ignoring.\n" unless $Quiet;
+ 	return;
+     }
+ 
+-    # close off the list.  note, I check to see if $Listend[$Listlevel] is
++    # close off the list.  note, I check to see if $Listtype[$Listlevel] is
+     # defined because an =item directive may have never appeared and thus
+-    # $Listend[$Listlevel] may have never been initialized.
++    # $Listtype[$Listlevel] may have never been initialized.
+     $Listlevel--;
+-    if( defined $Listend[$Listlevel] ){
+-	print HTML $need_dd ? "</dd>\n" : "</li>\n" if $After_Lpar;
+-	print HTML $Listend[$Listlevel];
+-        print HTML "\n";
+-        pop( @Listend );
++    if( defined $Listtype[$Listlevel] ){
++        if ( $Listtype[$Listlevel] eq 'dl' ){
++            print HTML "</dd>\n" unless $ListNewTerm;
++        } else {
++            print HTML "</li>\n";
++        }
++        print HTML "</$Listtype[$Listlevel]>\n";
++        pop( @Listtype );
++        $ListNewTerm = 0;
+     }
+-    $After_Lpar = 0;
+ 
+     # clean up item count
+     pop( @Items_Seen );
+@@ -2025,9 +2032,11 @@
+ # after the entire pod file has been read and converted.
+ #
+ sub finish_list {
+-    while ($Listlevel > 0) {
+-	print HTML "</dl>\n";
+-	$Listlevel--;
++    if( $Listlevel ){
++	warn "$0: $Podfile: unterminated list(s) at =head in paragraph $Paragraph.  ignoring.\n" unless $Quiet;
++	while( $Listlevel ){
++            process_back();
++        }
+     }
+ }
+ 
+--- perl-5.10.0.orig/lib/Pod/Usage.pm
++++ perl-5.10.0/lib/Pod/Usage.pm
+@@ -631,7 +631,7 @@
+             $$self{PENDING}[-1][1] = $_;
+         }
+     }
+-    if ($$self{USAGE_SKIPPING}) {
++    if ($$self{USAGE_SKIPPING} && $element !~ m/^over-/) {
+         pop @{ $$self{PENDING} };
+     } else {
+         $self->SUPER::_handle_element_end($element);
+--- perl-5.10.0.orig/lib/Pod/Man.pm
++++ perl-5.10.0/lib/Pod/Man.pm
+@@ -1,7 +1,6 @@
+ # Pod::Man -- Convert POD data to formatted *roff input.
+-# $Id: Man.pm,v 2.16 2007-11-29 01:35:53 eagle Exp $
+ #
+-# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
++# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+ #     Russ Allbery <rra@stanford.edu>
+ # Substantial contributions by Sean Burke <sburke@cpan.org>
+ #
+@@ -37,10 +36,9 @@
+ 
+ @ISA = qw(Pod::Simple);
+ 
+-# Don't use the CVS revision as the version, since this module is also in Perl
+-# core and too many things could munge CVS magic revision strings.  This
+-# number should ideally be the same as the CVS revision in podlators, however.
+-$VERSION = '2.16';
++# Custom Debian version, see http://bugs.debian.org/500210
++$VERSION = '2.18_01';
++$VERSION = eval $VERSION;
+ 
+ # Set the debugging level.  If someone has inserted a debug function into this
+ # class already, use that.  Otherwise, use any Pod::Simple debug function
+@@ -73,7 +71,9 @@
+     my $class = shift;
+     my $self = $class->SUPER::new;
+ 
+-    # Tell Pod::Simple to handle S<> by automatically inserting &nbsp;.
++    # Tell Pod::Simple not to handle S<> by automatically inserting &nbsp;.
++    # Note that this messes up Unicode output by embedding explicit ISO 8859-1
++    # non-breaking spaces that we have to clean up later.
+     $self->nbsp_for_S (1);
+ 
+     # Tell Pod::Simple to keep whitespace whenever possible.
+@@ -348,23 +348,22 @@
+     my $convert = $$options{convert};
+     my $literal = $$options{literal};
+ 
+-    # Normally we do character translation, but we won't even do that in
+-    # <Data> blocks.
+-    if ($convert) {
+-        if (ASCII) {
+-            $text =~ s/(\\|[^\x00-\x7F])/$ESCAPES{ord ($1)} || "X"/eg;
+-        } else {
+-            $text =~ s/(\\)/$ESCAPES{ord ($1)} || "X"/eg;
+-        }
+-    }
+-
+     # Cleanup just tidies up a few things, telling *roff that the hyphens are
+-    # hard and putting a bit of space between consecutive underscores.
++    # hard, putting a bit of space between consecutive underscores, and
++    # escaping backslashes.  Be careful not to mangle our character
++    # translations by doing this before processing character translation.
+     if ($cleanup) {
++        $text =~ s/\\/\\e/g;
+         $text =~ s/-/\\-/g;
+         $text =~ s/_(?=_)/_\\|/g;
+     }
+ 
++    # Normally we do character translation, but we won't even do that in
++    # <Data> blocks or if UTF-8 output is desired.
++    if ($convert && !$$self{utf8} && ASCII) {
++        $text =~ s/([^\x00-\x7F])/$ESCAPES{ord ($1)} || "X"/eg;
++    }
++
+     # Ensure that *roff doesn't convert literal quotes to UTF-8 single quotes,
+     # but don't mess up our accept escapes.
+     if ($literal) {
+@@ -641,10 +640,10 @@
+         # to Roman rather than the actual previous font when used in headings.
+         # troff output may still be broken, but at least we can fix nroff by
+         # just switching the font changes to the non-fixed versions.
+-        $nroff =~ s/\Q$$self{FONTS}{100}\E(.*)\\f[PR]/$1/g;
+-        $nroff =~ s/\Q$$self{FONTS}{101}\E(.*)\\f([PR])/\\fI$1\\f$2/g;
+-        $nroff =~ s/\Q$$self{FONTS}{110}\E(.*)\\f([PR])/\\fB$1\\f$2/g;
+-        $nroff =~ s/\Q$$self{FONTS}{111}\E(.*)\\f([PR])/\\f\(BI$1\\f$2/g;
++        $nroff =~ s/\Q$$self{FONTS}{100}\E(.*?)\\f[PR]/$1/g;
++        $nroff =~ s/\Q$$self{FONTS}{101}\E(.*?)\\f([PR])/\\fI$1\\f$2/g;
++        $nroff =~ s/\Q$$self{FONTS}{110}\E(.*?)\\f([PR])/\\fB$1\\f$2/g;
++        $nroff =~ s/\Q$$self{FONTS}{111}\E(.*?)\\f([PR])/\\f\(BI$1\\f$2/g;
+ 
+         # Now finally output the command.  Bother with .ie only if the nroff
+         # and troff output aren't the same.
+@@ -710,6 +709,7 @@
+     for (@output) {
+         my ($type, $entry) = @$_;
+         $entry =~ s/\"/\"\"/g;
++        $entry =~ s/\\/\\\\/g;
+         $self->output (".IX $type " . '"' . $entry . '"' . "\n");
+     }
+ }
+@@ -734,6 +734,19 @@
+         return;
+     }
+ 
++    # If we were given the utf8 option, set an output encoding on our file
++    # handle.  Wrap in an eval in case we're using a version of Perl too old
++    # to understand this.
++    #
++    # This is evil because it changes the global state of a file handle that
++    # we may not own.  However, we can't just blindly encode all output, since
++    # there may be a pre-applied output encoding (such as from PERL_UNICODE)
++    # and then we would double-encode.  This seems to be the least bad
++    # approach.
++    if ($$self{utf8}) {
++        eval { binmode ($$self{output_fh}, ':encoding(UTF-8)') };
++    }
++
+     # Determine information for the preamble and then output it.
+     my ($name, $section);
+     if (defined $$self{name}) {
+@@ -851,7 +864,7 @@
+ # module, but this order is correct for both Solaris and Linux.
+ sub preamble {
+     my ($self, $name, $section, $date) = @_;
+-    my $preamble = $self->preamble_template;
++    my $preamble = $self->preamble_template (!$$self{utf8});
+ 
+     # Build the index line and make sure that it will be syntactically valid.
+     my $index = "$name $section";
+@@ -1025,7 +1038,7 @@
+ sub cmd_head2 {
+     my ($self, $attrs, $text) = @_;
+     $text = $self->heading_common ($text, $$attrs{start_line});
+-    $self->output ($self->switchquotes ('.Sh', $self->mapfonts ($text)));
++    $self->output ($self->switchquotes ('.SS', $self->mapfonts ($text)));
+     $self->outindex ('Subsection', $text);
+     $$self{NEEDSPACE} = 0;
+     return '';
+@@ -1273,7 +1286,7 @@
+ # results are pretty poor.
+ #
+ # This only works in an ASCII world.  What to do in a non-ASCII world is very
+-# unclear.
++# unclear -- hopefully we can assume UTF-8 and just leave well enough alone.
+ @ESCAPES{0xA0 .. 0xFF} = (
+     "\\ ", undef, undef, undef,            undef, undef, undef, undef,
+     undef, undef, undef, undef,            undef, "\\%", undef, undef,
+@@ -1294,27 +1307,18 @@
+     "o\\*/" , "u\\*`", "u\\*'", "u\\*^",   "u\\*:", "y\\*'", "\\*(th", "y\\*:",
+ ) if ASCII;
+ 
+-# Make sure that at least this works even outside of ASCII.
+-$ESCAPES{ord("\\")} = "\\e";
+-
+ ##############################################################################
+ # Premable
+ ##############################################################################
+ 
+ # The following is the static preamble which starts all *roff output we
+-# generate.  It's completely static except for the font to use as a
+-# fixed-width font, which is designed by @CFONT@, and the left and right
+-# quotes to use for C<> text, designated by @LQOUTE@ and @RQUOTE@.
++# generate.  Most is static except for the font to use as a fixed-width font,
++# which is designed by @CFONT@, and the left and right quotes to use for C<>
++# text, designated by @LQOUTE@ and @RQUOTE@.  However, the second part, which
++# defines the accent marks, is only used if $escapes is set to true.
+ sub preamble_template {
+-    return <<'----END OF PREAMBLE----';
+-.de Sh \" Subsection heading
+-.br
+-.if t .Sp
+-.ne 5
+-.PP
+-\fB\\$1\fR
+-.PP
+-..
++    my ($self, $accents) = @_;
++    my $preamble = <<'----END OF PREAMBLE----';
+ .de Sp \" Vertical space (when we can't use .PP)
+ .if t .sp .5v
+ .if n .sp
+@@ -1358,7 +1362,7 @@
+ .el       .ds Aq '
+ .\"
+ .\" If the F register is turned on, we'll generate index entries on stderr for
+-.\" titles (.TH), headers (.SH), subsections (.Sh), items (.Ip), and index
++.\" titles (.TH), headers (.SH), subsections (.SS), items (.Ip), and index
+ .\" entries marked with X<> in POD.  Of course, you'll have to process the
+ .\" output yourself in some meaningful fashion.
+ .ie \nF \{\
+@@ -1372,6 +1376,10 @@
+ .    de IX
+ ..
+ .\}
++----END OF PREAMBLE----
++
++    if ($accents) {
++        $preamble .= <<'----END OF PREAMBLE----'
+ .\"
+ .\" Accent mark definitions (@(#)ms.acc 1.5 88/02/08 SMI; from UCB 4.2).
+ .\" Fear.  Run.  Save yourself.  No user-serviceable parts.
+@@ -1436,6 +1444,8 @@
+ .rm #[ #] #H #V #F C
+ ----END OF PREAMBLE----
+ #`# for cperl-mode
++    }
++    return $preamble;
+ }
+ 
+ ##############################################################################
+@@ -1582,6 +1592,28 @@
+ By default, section 1 will be used unless the file ends in .pm in which case
+ section 3 will be selected.
+ 
++=item utf8
++
++By default, Pod::Man produces the most conservative possible *roff output
++to try to ensure that it will work with as many different *roff
++implementations as possible.  Many *roff implementations cannot handle
++non-ASCII characters, so this means all non-ASCII characters are converted
++either to a *roff escape sequence that tries to create a properly accented
++character (at least for troff output) or to C<X>.
++
++If this option is set, Pod::Man will instead output UTF-8.  If your *roff
++implementation can handle it, this is the best output format to use and
++avoids corruption of documents containing non-ASCII characters.  However,
++be warned that *roff source with literal UTF-8 characters is not supported
++by many implementations and may even result in segfaults and other bad
++behavior.
++
++Be aware that, when using this option, the input encoding of your POD
++source must be properly declared unless it is US-ASCII or Latin-1.  POD
++input without an C<=encoding> command will be assumed to be in Latin-1,
++and if it's actually in UTF-8, the output will be double-encoded.  See
++L<perlpod(1)> for more information on the C<=encoding> command.
++
+ =back
+ 
+ The standard Pod::Simple method parse_file() takes one argument naming the
+@@ -1617,14 +1649,11 @@
+ 
+ =head1 BUGS
+ 
+-Eight-bit input data isn't handled at all well at present.  The correct
+-approach would be to map EE<lt>E<gt> escapes to the appropriate UTF-8
+-characters and then do a translation pass on the output according to the
+-user-specified output character set.  Unfortunately, we can't send eight-bit
+-data directly to the output unless the user says this is okay, since some
+-vendor *roff implementations can't handle eight-bit data.  If the *roff
+-implementation can, however, that's far superior to the current hacked
+-characters that only work under troff.
++Encoding handling assumes that PerlIO is available and does not work
++properly if it isn't since encode and decode do not work well in
++combination with PerlIO encoding layers.  It's very unclear how to
++correctly handle this without PerlIO encoding layers.  The C<utf8> option
++is therefore not supported unless Perl is built with PerlIO support.
+ 
+ There is currently no way to turn off the guesswork that tries to format
+ unmarked text appropriately, and sometimes it isn't wanted (particularly
+@@ -1651,6 +1680,13 @@
+ 
+ =head1 CAVEATS
+ 
++If Pod::Man is given the C<utf8> option, the encoding of its output file
++handle will be forced to UTF-8 if possible, overriding any existing
++encoding.  This will be done even if the file handle is not created by
++Pod::Man and was passed in from outside.  This seems to be the only way to
++consistently enforce UTF-8-encoded output regardless of PERL_UNICODE and
++other settings.
++
+ The handling of hyphens and em dashes is somewhat fragile, and one may get
+ the wrong one under some circumstances.  This should only matter for
+ B<troff> output.
+--- perl-5.10.0.orig/lib/Pod/t/htmlview.pod
++++ perl-5.10.0/lib/Pod/t/htmlview.pod
+@@ -110,7 +110,7 @@
+ 
+ =head1 TESTING FOR AND BEGIN
+ 
+-=for html    <br>
++=for html    <br />
+ <p>
+ blah blah
+ </p>
+--- perl-5.10.0.orig/lib/Pod/t/htmlview.t
++++ perl-5.10.0/lib/Pod/t/htmlview.t
+@@ -86,17 +86,15 @@
+ <h2><a name="new__"><code>new()</code></a></h2>
+ <p>Constructor method.  Accepts the following config options:</p>
+ <dl>
+-<dt><strong><a name="foo" class="item">foo</a></strong>
++<dt><strong><a name="foo" class="item">foo</a></strong></dt>
+ 
+ <dd>
+ <p>The foo item.</p>
+ </dd>
+-</li>
+-<dt><strong><a name="bar" class="item">bar</a></strong>
++<dt><strong><a name="bar" class="item">bar</a></strong></dt>
+ 
+ <dd>
+ <p>The bar item.</p>
+-</dd>
+ <p>This is a list within a list</p>
+ <ul>
+ <li>
+@@ -106,30 +104,36 @@
+ <p>The waz item.</p>
+ </li>
+ </ul>
+-<dt><strong><a name="baz" class="item">baz</a></strong>
++</dd>
++<dt><strong><a name="baz" class="item">baz</a></strong></dt>
+ 
+ <dd>
+ <p>The baz item.</p>
+ </dd>
+-</li>
+ </dl>
+ <p>Title on the same line as the =item + * bullets</p>
+ <ul>
+ <li><strong><a name="black_cat" class="item"><code>Black</code> Cat</a></strong>
+ 
++</li>
+ <li><strong><a name="sat_on_the" class="item">Sat <em>on</em>&nbsp;the</a></strong>
+ 
++</li>
+ <li><strong><a name="mat" class="item">Mat&lt;!&gt;</a></strong>
+ 
++</li>
+ </ul>
+ <p>Title on the same line as the =item + numerical bullets</p>
+ <ol>
+ <li><strong><a name="cat" class="item">Cat</a></strong>
+ 
++</li>
+ <li><strong><a name="sat" class="item">Sat</a></strong>
+ 
++</li>
+ <li><strong><a name="mat2" class="item">Mat</a></strong>
+ 
++</li>
+ </ol>
+ <p>No bullets, no title</p>
+ <dl>
+@@ -137,17 +141,14 @@
+ <dd>
+ <p>Cat</p>
+ </dd>
+-</li>
+ <dt>
+ <dd>
+ <p>Sat</p>
+ </dd>
+-</li>
+ <dt>
+ <dd>
+ <p>Mat</p>
+ </dd>
+-</li>
+ </dl>
+ <p>
+ </p>
+@@ -157,7 +158,7 @@
+ </p>
+ <hr />
+ <h1><a name="testing_for_and_begin">TESTING FOR AND BEGIN</a></h1>
+-<br>
++<br />
+ <p>
+ blah blah
+ </p><p>intermediate text</p>
+--- perl-5.10.0.orig/lib/Pod/t/htmllink.t
++++ perl-5.10.0/lib/Pod/t/htmllink.t
+@@ -108,24 +108,21 @@
+ <h2><a name="section_three">section three</a></h2>
+ <p>This is section three.</p>
+ <dl>
+-<dt><strong><a name="item1" class="item">item1</a></strong>
++<dt><strong><a name="item1" class="item">item1</a></strong></dt>
+ 
+ <dd>
+ <p>This is item one.</p>
+ </dd>
+-</li>
+-<dt><strong><a name="item_2" class="item">item 2</a></strong>
++<dt><strong><a name="item_2" class="item">item 2</a></strong></dt>
+ 
+ <dd>
+ <p>This is item two.</p>
+ </dd>
+-</li>
+-<dt><strong><a name="item_three" class="item">item three</a></strong>
++<dt><strong><a name="item_three" class="item">item three</a></strong></dt>
+ 
+ <dd>
+ <p>This is item three.</p>
+ </dd>
+-</li>
+ </dl>
+ 
+ </body>
+--- perl-5.10.0.orig/lib/Pod/t/man.t
++++ perl-5.10.0/lib/Pod/t/man.t
+@@ -17,7 +17,7 @@
+     }
+     unshift (@INC, '../blib/lib');
+     $| = 1;
+-    print "1..22\n";
++    print "1..23\n";
+ }
+ 
+ END {
+@@ -344,7 +344,7 @@
+ ###
+ .SH "NAME"
+ "Stuff" (no guesswork)
+-.Sh "\s-1THINGS\s0"
++.SS "\s-1THINGS\s0"
+ .IX Subsection "THINGS"
+ Oboy, is this \*(C+ \*(L"fun\*(R" yet! (guesswork)
+ ###
+@@ -431,3 +431,14 @@
+ .IX Header "Quote escaping"
+ Don't escape `this' but do escape \f(CW\`this\*(Aq\fR (and don't surround it in quotes).
+ ###
++
++###
++=head1 INDEX
++
++Index entry matching a whitespace escape.X<\n>
++###
++.SH "INDEX"
++.IX Header "INDEX"
++Index entry matching a whitespace escape.
++.IX Xref "\\n"
++###
+--- perl-5.10.0.orig/lib/Pod/t/basic.man
++++ perl-5.10.0/lib/Pod/t/basic.man
+@@ -7,7 +7,7 @@
+ .ie n .SH "This ""is"" a ""level 1"" heading"
+ .el .SH "This \f(CWis\fP a ``level 1'' heading"
+ .IX Header "This is a level 1 heading"
+-.Sh "``Level'' ""2 \fIheading\fP"
++.SS "``Level'' ""2 \fIheading\fP"
+ .IX Subsection "``Level'' ""2 heading"
+ \fILevel 3 \f(BIheading \f(BIwith \f(CB\*(C`weird \f(CBstuff "" (double quote)\f(CB\*(C'\f(BI\f(BI\fI\fR
+ .IX Subsection "Level 3 heading with weird stuff """" (double quote)"
+@@ -20,7 +20,7 @@
+ .el .SH "This \f(CWis\fP a ``level 1'' heading"
+ .IX Header "This is a level 1 heading"
+ Text.
+-.Sh "``Level'' 2 \fIheading\fP"
++.SS "``Level'' 2 \fIheading\fP"
+ .IX Subsection "``Level'' 2 heading"
+ Text.
+ .PP
+--- perl-5.10.0.orig/lib/Object/Accessor.pm
++++ perl-5.10.0/lib/Object/Accessor.pm
+@@ -621,6 +621,7 @@
+ 
+ See C<perldoc perlsub> for details.
+ 
++=back
+ 
+ =cut
+ 
+--- perl-5.10.0.orig/lib/Net/SMTP.pm
++++ perl-5.10.0/lib/Net/SMTP.pm
+@@ -625,6 +625,7 @@
+ 
+ B<Debug> - Enable debugging information
+ 
++B<Port> - Select a port on the remote host to connect to (default is 25)
+ 
+ Example:
+ 
+--- perl-5.10.0.orig/lib/Net/Config.pm
++++ perl-5.10.0/lib/Net/Config.pm
+@@ -57,9 +57,8 @@
+ }
+ TRY_INTERNET_CONFIG
+ 
+-my $file = __FILE__;
++my $file = '/etc/perl/Net/libnet.cfg';
+ my $ref;
+-$file =~ s/Config.pm/libnet.cfg/;
+ if (-f $file) {
+   $ref = eval { local $SIG{__DIE__}; do $file };
+   if (ref($ref) eq 'HASH') {
+@@ -132,8 +131,8 @@
+ C<Net::Config> holds configuration data for the modules in the libnet
+ distribution. During installation you will be asked for these values.
+ 
+-The configuration data is held globally in a file in the perl installation
+-tree, but a user may override any of these values by providing their own. This
++The configuration data is held globally in C</etc/perl/Net/libnet.cfg>,
++but a user may override any of these values by providing their own. This
+ can be done by having a C<.libnetrc> file in their home directory. This file
+ should return a reference to a HASH containing the keys described below.
+ For example
+--- perl-5.10.0.orig/lib/Net/hostent.t
++++ perl-5.10.0/lib/Net/hostent.t
+@@ -16,6 +16,9 @@
+     }
+     if ($^O eq 'MacOS' || ($^O eq 'irix' && $Config{osvers} == 5)) {
+ 	plan skip_all => "Test relies on resolution of localhost, fails on $^O ($Config{osvers})";
++    } elsif (!-f '/etc/hosts') {
++	# /etc/hosts is not always present on buildds
++	plan skip_all => "Test requires /etc/hosts: not found";
+     }
+ }
+ 
+--- perl-5.10.0.orig/lib/ExtUtils/CBuilder.pm
++++ perl-5.10.0/lib/ExtUtils/CBuilder.pm
+@@ -36,6 +36,8 @@
+ 		 sunos     Unix
+ 		 cygwin    Unix
+ 		 os2       Unix
++		 gnukfreebsd Unix
++		 gnu       Unix
+ 		 
+ 		 dos       Windows
+ 		 MSWin32   Windows
+--- perl-5.10.0.orig/lib/ExtUtils/MM_Unix.pm
++++ perl-5.10.0/lib/ExtUtils/MM_Unix.pm
+@@ -2088,16 +2088,16 @@
+     my(@m);
+ 
+     push @m, q{
+-install :: all pure_install doc_install
++install :: pure_install doc_install
+ 	$(NOECHO) $(NOOP)
+ 
+-install_perl :: all pure_perl_install doc_perl_install
++install_perl :: pure_perl_install doc_perl_install
+ 	$(NOECHO) $(NOOP)
+ 
+-install_site :: all pure_site_install doc_site_install
++install_site :: pure_site_install doc_site_install
+ 	$(NOECHO) $(NOOP)
+ 
+-install_vendor :: all pure_vendor_install doc_vendor_install
++install_vendor :: pure_vendor_install doc_vendor_install
+ 	$(NOECHO) $(NOOP)
+ 
+ pure_install :: pure_$(INSTALLDIRS)_install
+@@ -2112,10 +2112,8 @@
+ doc__install : doc_site_install
+ 	$(NOECHO) $(ECHO) INSTALLDIRS not defined, defaulting to INSTALLDIRS=site
+ 
+-pure_perl_install ::
+-	$(NOECHO) $(MOD_INSTALL) \
+-		read }.$self->catfile('$(PERL_ARCHLIB)','auto','$(FULLEXT)','.packlist').q{ \
+-		write }.$self->catfile('$(DESTINSTALLARCHLIB)','auto','$(FULLEXT)','.packlist').q{ \
++pure_perl_install :: all
++	$(NOECHO) umask 022; $(MOD_INSTALL) \
+ 		$(INST_LIB) $(DESTINSTALLPRIVLIB) \
+ 		$(INST_ARCHLIB) $(DESTINSTALLARCHLIB) \
+ 		$(INST_BIN) $(DESTINSTALLBIN) \
+@@ -2126,8 +2124,8 @@
+ 		}.$self->catdir('$(SITEARCHEXP)','auto','$(FULLEXT)').q{
+ 
+ 
+-pure_site_install ::
+-	$(NOECHO) $(MOD_INSTALL) \
++pure_site_install :: all
++	$(NOECHO) umask 02; $(MOD_INSTALL) \
+ 		read }.$self->catfile('$(SITEARCHEXP)','auto','$(FULLEXT)','.packlist').q{ \
+ 		write }.$self->catfile('$(DESTINSTALLSITEARCH)','auto','$(FULLEXT)','.packlist').q{ \
+ 		$(INST_LIB) $(DESTINSTALLSITELIB) \
+@@ -2139,10 +2137,8 @@
+ 	$(NOECHO) $(WARN_IF_OLD_PACKLIST) \
+ 		}.$self->catdir('$(PERL_ARCHLIB)','auto','$(FULLEXT)').q{
+ 
+-pure_vendor_install ::
+-	$(NOECHO) $(MOD_INSTALL) \
+-		read }.$self->catfile('$(VENDORARCHEXP)','auto','$(FULLEXT)','.packlist').q{ \
+-		write }.$self->catfile('$(DESTINSTALLVENDORARCH)','auto','$(FULLEXT)','.packlist').q{ \
++pure_vendor_install :: all
++	$(NOECHO) umask 022; $(MOD_INSTALL) \
+ 		$(INST_LIB) $(DESTINSTALLVENDORLIB) \
+ 		$(INST_ARCHLIB) $(DESTINSTALLVENDORARCH) \
+ 		$(INST_BIN) $(DESTINSTALLVENDORBIN) \
+@@ -2150,38 +2146,20 @@
+ 		$(INST_MAN1DIR) $(DESTINSTALLVENDORMAN1DIR) \
+ 		$(INST_MAN3DIR) $(DESTINSTALLVENDORMAN3DIR)
+ 
+-doc_perl_install ::
+-	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
+-	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
+-	-$(NOECHO) $(DOC_INSTALL) \
+-		"Module" "$(NAME)" \
+-		"installed into" "$(INSTALLPRIVLIB)" \
+-		LINKTYPE "$(LINKTYPE)" \
+-		VERSION "$(VERSION)" \
+-		EXE_FILES "$(EXE_FILES)" \
+-		>> }.$self->catfile('$(DESTINSTALLARCHLIB)','perllocal.pod').q{
++doc_perl_install :: all
+ 
+-doc_site_install ::
+-	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
+-	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
+-	-$(NOECHO) $(DOC_INSTALL) \
++doc_site_install :: all
++	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLSITEARCH)/perllocal.pod
++	-$(NOECHO) umask 02; $(MKPATH) $(DESTINSTALLSITEARCH)
++	-$(NOECHO) umask 02; $(DOC_INSTALL) \
+ 		"Module" "$(NAME)" \
+ 		"installed into" "$(INSTALLSITELIB)" \
+ 		LINKTYPE "$(LINKTYPE)" \
+ 		VERSION "$(VERSION)" \
+ 		EXE_FILES "$(EXE_FILES)" \
+-		>> }.$self->catfile('$(DESTINSTALLARCHLIB)','perllocal.pod').q{
++		>> }.$self->catfile('$(DESTINSTALLSITEARCH)','perllocal.pod').q{
+ 
+-doc_vendor_install ::
+-	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
+-	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
+-	-$(NOECHO) $(DOC_INSTALL) \
+-		"Module" "$(NAME)" \
+-		"installed into" "$(INSTALLVENDORLIB)" \
+-		LINKTYPE "$(LINKTYPE)" \
+-		VERSION "$(VERSION)" \
+-		EXE_FILES "$(EXE_FILES)" \
+-		>> }.$self->catfile('$(DESTINSTALLARCHLIB)','perllocal.pod').q{
++doc_vendor_install :: all
+ 
+ };
+ 
+@@ -2190,13 +2168,12 @@
+ 	$(NOECHO) $(NOOP)
+ 
+ uninstall_from_perldirs ::
+-	$(NOECHO) $(UNINSTALL) }.$self->catfile('$(PERL_ARCHLIB)','auto','$(FULLEXT)','.packlist').q{
+ 
+ uninstall_from_sitedirs ::
+ 	$(NOECHO) $(UNINSTALL) }.$self->catfile('$(SITEARCHEXP)','auto','$(FULLEXT)','.packlist').q{
+ 
+ uninstall_from_vendordirs ::
+-	$(NOECHO) $(UNINSTALL) }.$self->catfile('$(VENDORARCHEXP)','auto','$(FULLEXT)','.packlist').q{
++
+ };
+ 
+     join("",@m);
+@@ -2474,7 +2451,7 @@
+ 	($lperl = $libperl) =~ s/\$\(A\)/$self->{LIB_EXT}/;
+     }
+     unless ($libperl && -f $lperl) { # Ilya's code...
+-	my $dir = $self->{PERL_SRC} || "$self->{PERL_ARCHLIB}/CORE";
++	my $dir = $self->{PERL_SRC} || "/usr/lib";
+ 	$dir = "$self->{PERL_ARCHLIB}/.." if $self->{UNINSTALLED_PERL};
+ 	$libperl ||= "libperl$self->{LIB_EXT}";
+ 	$libperl   = "$dir/$libperl";
+@@ -3065,8 +3042,7 @@
+     print STDERR "  prefixify $var => $path\n" if $Verbose >= 2;
+     print STDERR "    from $sprefix to $rprefix\n" if $Verbose >= 2;
+ 
+-    if( $self->{ARGS}{PREFIX} && $self->file_name_is_absolute($path) && 
+-        $path !~ s{^\Q$sprefix\E\b}{$rprefix}s ) 
++    if( $path !~ s{^\Q$sprefix\E\b}{$rprefix}s && $self->{ARGS}{PREFIX} )
+     {
+ 
+         print STDERR "    cannot prefix, using default.\n" if $Verbose >= 2;
+@@ -3110,14 +3086,11 @@
+ 	    # pm_to_blib depends on then it can't depend on pm_to_blib
+ 	    # else we have a dependency loop.
+ 	    my $pm_dep;
+-	    my $perlrun;
+ 	    if( defined $self->{PM}{$target} ) {
+ 		$pm_dep  = '';
+-		$perlrun = 'PERLRUN';
+ 	    }
+ 	    else {
+ 		$pm_dep  = 'pm_to_blib';
+-		$perlrun = 'PERLRUNINST';
+ 	    }
+ 
+             $m .= <<MAKE_FRAG;
+@@ -3126,7 +3099,7 @@
+ 	\$(NOECHO) \$(NOOP)
+ 
+ $target :: $plfile $pm_dep
+-	\$($perlrun) $plfile $target
++	\$(PERLRUNINST) $plfile $target
+ MAKE_FRAG
+ 
+ 	}
+--- perl-5.10.0.orig/lib/ExtUtils/MM_Any.pm
++++ perl-5.10.0/lib/ExtUtils/MM_Any.pm
+@@ -685,8 +685,6 @@
+ sub manifypods_target {
+     my($self) = shift;
+ 
+-    my $man1pods      = '';
+-    my $man3pods      = '';
+     my $dependencies  = '';
+ 
+     # populate manXpods & dependencies:
+@@ -702,7 +700,7 @@
+     foreach my $section (qw(1 3)) {
+         my $pods = $self->{"MAN${section}PODS"};
+         push @man_cmds, $self->split_command(<<CMD, %$pods);
+-	\$(NOECHO) \$(POD2MAN) --section=$section --perm_rw=\$(PERM_RW)
++	\$(NOECHO) \$(POD2MAN) --section=\$(MAN${section}EXT) --perm_rw=\$(PERM_RW)
+ CMD
+     }
+ 
+@@ -1157,9 +1155,11 @@
+         $self->{SITEPREFIX}   ||= $sprefix;
+         $self->{VENDORPREFIX} ||= $vprefix;
+ 
+-        # Lots of MM extension authors like to use $(PREFIX) so we
+-        # put something sensible in there no matter what.
+-        $self->{PREFIX} = '$('.uc $self->{INSTALLDIRS}.'PREFIX)';
++	my $p = $self->{PREFIX} = $self->{PERLPREFIX};
++	for my $t (qw/PERL SITE VENDOR/)
++	{
++	    $self->{"${t}PREFIX"} =~ s!^\Q$p\E(?=/|$)!\$(PREFIX)!;
++	}
+     }
+ 
+     my $arch    = $Config{archname};
+--- perl-5.10.0.orig/lib/ExtUtils/Install.pm
++++ perl-5.10.0/lib/ExtUtils/Install.pm
+@@ -453,7 +453,7 @@
+     return 0;
+ }
+ 
+-=item _mkpath($dir,$show,$mode,$verbose,$fake)
++=item _mkpath($dir,$show,$verbose,$fake)
+ 
+ Wrapper around File::Path::mkpath() to handle errors.
+ 
+@@ -470,13 +470,13 @@
+ =cut
+ 
+ sub _mkpath {
+-    my ($dir,$show,$mode,$verbose,$fake)=@_;
++    my ($dir,$show,$verbose,$fake)=@_;
+     if ( $verbose && $verbose > 1 && ! -d $dir) {
+         $show= 1;
+-        printf "mkpath(%s,%d,%#o)\n", $dir, $show, $mode;
++        printf "mkpath(%s,%d)\n", $dir, $show;
+     }
+     if (!$fake) {
+-        if ( ! eval { File::Path::mkpath($dir,$show,$mode); 1 } ) {
++        if ( ! eval { File::Path::mkpath($dir,$show); 1 } ) {
+             _choke("Can't create '$dir'","$@");
+         }
+ 
+@@ -644,7 +644,7 @@
+     }   
+     
+     foreach my $targetdir (sort keys %check_dirs) {
+-        _mkpath( $targetdir, 0, 0755, $verbose, $nonono );
++        _mkpath( $targetdir, 0, $verbose, $nonono );
+     }
+     foreach my $found (@found_files) {
+         my ($diff, $ffd, $origfile, $mode, $size, $atime, $mtime,
+@@ -657,7 +657,7 @@
+                 $targetfile= _unlink_or_rename( $targetfile, 'tryhard', 'install' )
+                     unless $nonono;
+             } elsif ( ! -d $targetdir ) {
+-                _mkpath( $targetdir, 0, 0755, $verbose, $nonono );
++                _mkpath( $targetdir, 0, $verbose, $nonono );
+             }
+             print "Installing $targetfile\n";
+             _copy( $sourcefile, $targetfile, $verbose, $nonono, );
+@@ -686,7 +686,7 @@
+ 
+     if ($pack{'write'}) {
+         $dir = install_rooted_dir(dirname($pack{'write'}));
+-        _mkpath( $dir, 0, 0755, $verbose, $nonono );
++        _mkpath( $dir, 0, $verbose, $nonono );
+         print "Writing $pack{'write'}\n";
+         $packlist->write(install_rooted_file($pack{'write'})) unless $nonono;
+     }
+@@ -984,7 +984,7 @@
+ sub pm_to_blib {
+     my($fromto,$autodir,$pm_filter) = @_;
+ 
+-    _mkpath($autodir,0,0755);
++    _mkpath($autodir,0);
+     while(my($from, $to) = each %$fromto) {
+         if( -f $to && -s $from == -s $to && -M $to < -M $from ) {
+             print "Skip $to (unchanged)\n";
+@@ -1007,7 +1007,7 @@
+             # we wont try hard here. its too likely to mess things up.
+             forceunlink($to);
+         } else {
+-            _mkpath(dirname($to),0,0755);
++            _mkpath(dirname($to),0);
+         }
+         if ($need_filtering) {
+             run_filter($pm_filter, $from, $to);
+--- perl-5.10.0.orig/lib/ExtUtils/t/INST.t
++++ perl-5.10.0/lib/ExtUtils/t/INST.t
+@@ -65,9 +65,7 @@
+ is( $mm->{NAME}, 'Big::Dummy',  'NAME' );
+ is( $mm->{VERSION}, 0.01,            'VERSION' );
+ 
+-my $config_prefix = $Config{installprefixexp} || $Config{installprefix} ||
+-                    $Config{prefixexp}        || $Config{prefix};
+-is( $mm->{PERLPREFIX}, $config_prefix,   'PERLPREFIX' );
++is( $mm->{PERLPREFIX}, '$(PREFIX)',   'PERLPREFIX' );
+ 
+ is( !!$mm->{PERL_CORE}, !!$ENV{PERL_CORE}, 'PERL_CORE' );
+ 
+--- perl-5.10.0.orig/lib/ExtUtils/t/INST_PREFIX.t
++++ perl-5.10.0/lib/ExtUtils/t/INST_PREFIX.t
+@@ -16,7 +16,7 @@
+ }
+ 
+ use strict;
+-use Test::More tests => 52;
++use Test::More tests => 47;
+ use MakeMaker::Test::Utils;
+ use MakeMaker::Test::Setup::BFD;
+ use ExtUtils::MakeMaker;
+@@ -62,16 +62,16 @@
+                         Writing\ $Makefile\ for\ Big::Dummy\n
+ }x );
+ 
+-is( $mm->{PREFIX}, '$(SITEPREFIX)', 'PREFIX set based on INSTALLDIRS' );
++#is( $mm->{PREFIX}, '$(SITEPREFIX)', 'PREFIX set based on INSTALLDIRS' );
+ 
+ isa_ok( $mm, 'ExtUtils::MakeMaker' );
+ 
+ is( $mm->{NAME}, 'Big::Dummy',  'NAME' );
+ is( $mm->{VERSION}, 0.01,            'VERSION' );
+ 
+-foreach my $prefix (qw(PREFIX PERLPREFIX SITEPREFIX VENDORPREFIX)) {
+-    unlike( $mm->{$prefix}, qr/\$\(PREFIX\)/ );
+-}
++#foreach my $prefix (qw(PREFIX PERLPREFIX SITEPREFIX VENDORPREFIX)) {
++#    unlike( $mm->{$prefix}, qr/\$\(PREFIX\)/ );
++#}
+ 
+ 
+ my $PREFIX = File::Spec->catdir('foo', 'bar');
+--- perl-5.10.0.orig/lib/Getopt/Long.pm
++++ perl-5.10.0/lib/Getopt/Long.pm
+@@ -1483,7 +1483,6 @@
+ use overload
+   # Treat this object as an oridinary string for legacy API.
+   '""'	   => \&name,
+-  '0+'	   => sub { 0 },
+   fallback => 1;
+ 
+ 1;
+--- perl-5.10.0.orig/lib/File/Temp.pm
++++ perl-5.10.0/lib/File/Temp.pm
+@@ -890,7 +890,12 @@
+ 		  @{ $dirs_to_unlink{$$} } : () );
+       foreach my $dir (@dirs) {
+ 	if (-d $dir) {
+-	  rmtree($dir, $DEBUG, 0);
++          # Some versions of rmtree will abort if you attempt to remove
++          # the directory you are sitting in. We protect that and turn it
++          # into a warning. We do this because this occurs during
++          # cleanup and so can not be caught by the user.
++          eval { rmtree($dir, $DEBUG, 0); };
++          warn $@ if ($@ && $^W);
+ 	}
+       }
+ 
+@@ -2234,6 +2239,12 @@
+ through the same set of random file names and may well cause
+ themselves to give up if they exceed the number of retry attempts.
+ 
++=head2 Directory removal
++
++Note that if you have chdir'ed into the temporary directory and it is
++subsequently cleaned up in the END block, then you will get a warning
++from File::Path::rmtree().
++
+ =head2 BINMODE
+ 
+ The file returned by File::Temp will have been opened in binary mode
+--- perl-5.10.0.orig/lib/File/Find.pm
++++ perl-5.10.0/lib/File/Find.pm
+@@ -84,7 +84,7 @@
+ 
+ Reports the name of a directory only AFTER all its entries
+ have been reported.  Entry point C<finddepth()> is a shortcut for
+-specifying C<<{ bydepth => 1 }>> in the first argument of C<find()>.
++specifying C<{ bydepth =E<gt> 1 }> in the first argument of C<find()>.
+ 
+ =item C<preprocess>
+ 
+--- perl-5.10.0.orig/lib/File/Path.pm
++++ perl-5.10.0/lib/File/Path.pm
+@@ -316,10 +316,8 @@
+                     print "skipped $root\n" if $arg->{verbose};
+                     next ROOT_DIR;
+                 }
+-                if (!chmod $perm | 0700, $root) {
+-                    if ($Force_Writeable) {
+-                        _error($arg, "cannot make directory writeable", $canon);
+-                    }
++                if ($Force_Writeable && !chmod $perm | 0700, $root) {
++                    _error($arg, "cannot make directory writeable", $canon);
+                 }
+                 print "rmdir $root\n" if $arg->{verbose};
+                 if (rmdir $root) {
+@@ -328,7 +326,7 @@
+                 }
+                 else {
+                     _error($arg, "cannot remove directory", $canon);
+-                    if (!chmod($perm, ($Is_VMS ? VMS::Filespec::fileify($root) : $root))
++                    if ($Force_Writeable && !chmod($perm, ($Is_VMS ? VMS::Filespec::fileify($root) : $root))
+                     ) {
+                         _error($arg, sprintf("cannot restore permissions to 0%o",$perm), $canon);
+                     }
+@@ -351,10 +349,8 @@
+             }
+ 
+             my $nperm = $perm & 07777 | 0600;
+-            if ($nperm != $perm and not chmod $nperm, $root) {
+-                if ($Force_Writeable) {
+-                    _error($arg, "cannot make file writeable", $canon);
+-                }
++            if ($Force_Writeable && $nperm != $perm and not chmod $nperm, $root) {
++                _error($arg, "cannot make file writeable", $canon);
+             }
+             print "unlink $canon\n" if $arg->{verbose};
+             # delete all versions under VMS
+--- perl-5.10.0.orig/lib/Math/Complex.t
++++ perl-5.10.0/lib/Math/Complex.t
+@@ -34,6 +34,11 @@
+ }			# cos(), sin(), cosh(), sinh().  The division
+ 			# of doubles is the current suspect.
+ 
++my %skip;
++if (`uname -m` =~ /^arm/) {
++    $skip{$_} = 'non-IEEE fp rounding' for 289, 509;
++}
++
+ while (<DATA>) {
+ 	s/^\s+//;
+ 	next if $_ eq '' || /^\#/;
+@@ -563,7 +568,9 @@
+ 
+ 	print "# @_\n";
+ 
+-	if ("$got" eq "$expected"
++	if ($skip{$test}) {
++		print "ok $test # skipped: $skip{$test}\n";
++	} elsif ("$got" eq "$expected"
+ 	    ||
+ 	    ($expected =~ /^-?\d/ && $got == $expected)
+ 	    ||
+--- perl-5.10.0.orig/lib/Math/BigFloat.pm
++++ perl-5.10.0/lib/Math/BigFloat.pm
+@@ -2142,8 +2142,9 @@
+   # But we need at least $scale digits, so calculate how many are missing
+   my $shift = $scale - $digits;
+ 
+-  # That should never happen (we take care of integer guesses above)
+-  # $shift = 0 if $shift < 0; 
++  # This happens if the input had enough digits 
++  # (we take care of integer guesses above)
++  $shift = 0 if $shift < 0; 
+ 
+   # Multiply in steps of 100, by shifting left two times the "missing" digits
+   my $s2 = $shift * 2;
+--- perl-5.10.0.orig/lib/Math/BigInt/CalcEmu.pm
++++ perl-5.10.0/lib/Math/BigInt/CalcEmu.pm
+@@ -295,7 +295,7 @@
+ =head1 DESCRIPTION
+ 
+ Contains routines that emulate low-level math functions in BigInt, e.g.
+-optional routines the low-level math package does not provide on it's own.
++optional routines the low-level math package does not provide on its own.
+ 
+ Will be loaded on demand and called automatically by BigInt.
+ 
+--- perl-5.10.0.orig/lib/Math/BigInt/t/mbimbf.t
++++ perl-5.10.0/lib/Math/BigInt/t/mbimbf.t
+@@ -32,7 +32,7 @@
+   print "# INC = @INC\n";
+ 
+   plan tests => 684 
+-    + 23;		# own tests
++    + 26;		# own tests
+   }
+ 
+ use Math::BigInt 1.70;
+@@ -100,3 +100,9 @@
+ $x = $x->blog(Math::BigInt->new(10));
+ 
+ ok ($x,2);
++
++for my $i (80,88,100) {
++    $x = Math::BigFloat->new("1." . ("0" x $i) . "1");
++    $x = $x->bsqrt;
++    ok ($x, 1);
++}
+--- perl-5.10.0.orig/lib/CPAN/FirstTime.pm
++++ perl-5.10.0/lib/CPAN/FirstTime.pm
+@@ -940,7 +940,7 @@
+     }
+ 
+     if (!$matcher or 'makepl_arg make_arg' =~ /$matcher/) {
+-        my_dflt_prompt(makepl_arg => "", $matcher);
++        my_dflt_prompt(makepl_arg => "INSTALLDIRS=site", $matcher);
+         my_dflt_prompt(make_arg => "", $matcher);
+     }
+ 
+--- perl-5.10.0.orig/lib/CPAN/HandleConfig.pm
++++ perl-5.10.0/lib/CPAN/HandleConfig.pm
+@@ -526,7 +526,7 @@
+         $configpm = $INC{"CPAN/MyConfig.pm"};
+         $redo++;
+     } else {
+-        my($path_to_cpan) = File::Basename::dirname($INC{"CPAN.pm"});
++        my($path_to_cpan) = '/etc/perl';
+         my($configpmdir) = File::Spec->catdir($path_to_cpan,"CPAN");
+         my($configpmtest) = File::Spec->catfile($configpmdir,"Config.pm");
+         my $inc_key;
+--- perl-5.10.0.orig/lib/Module/Build.pm
++++ perl-5.10.0/lib/Module/Build.pm
+@@ -49,6 +49,8 @@
+ 		 cygwin    Unix
+ 		 os2       Unix
+ 		 interix   Unix
++		 gnukfreebsd Unix
++		 gnu       Unix
+ 		 
+ 		 dos       Windows
+ 		 MSWin32   Windows
+--- perl-5.10.0.orig/lib/Module/Build/Base.pm
++++ perl-5.10.0/lib/Module/Build/Base.pm
+@@ -2552,7 +2552,7 @@
+   foreach my $file (keys %$files) {
+     # Pod::Simple based parsers only support one document per instance.
+     # This is expected to change in a future version (Pod::Simple > 3.03).
+-    my $parser  = Pod::Man->new( section => 1 ); # binaries go in section 1
++    my $parser  = Pod::Man->new( section => '1p' ); # binaries go in section 1p
+     my $manpage = $self->man1page_name( $file ) . '.' .
+ 	          $self->config( 'man1ext' );
+     my $outfile = File::Spec->catfile($mandir, $manpage);
+@@ -2576,7 +2576,7 @@
+   while (my ($file, $relfile) = each %$files) {
+     # Pod::Simple based parsers only support one document per instance.
+     # This is expected to change in a future version (Pod::Simple > 3.03).
+-    my $parser  = Pod::Man->new( section => 3 ); # libraries go in section 3
++    my $parser  = Pod::Man->new( section => '3pm' ); # libraries go in section 3pm
+     my $manpage = $self->man3page_name( $relfile ) . '.' .
+ 	          $self->config( 'man3ext' );
+     my $outfile = File::Spec->catfile( $mandir, $manpage);
+--- perl-5.10.0.orig/lib/Archive/Tar.pm
++++ perl-5.10.0/lib/Archive/Tar.pm
+@@ -261,6 +261,13 @@
+                 $self->_error( qq[Cannot read compressed format in tar-mode] );
+                 return;
+             }
++            
++            ### size is < HEAD, which means a corrupted file, as the minimum
++            ### length is _at least_ HEAD
++            if (length $chunk != HEAD) {
++                $self->_error( qq[Cannot read enough bytes from the tarfile] );
++                return;
++            }
+         }
+ 
+         ### if we can't read in all bytes... ###
+@@ -561,26 +568,61 @@
+ 
+     ### it's a relative path ###
+     } else {
+-        my $cwd     = (defined $self->{cwd} ? $self->{cwd} : cwd());
++        my $cwd     = (ref $self and defined $self->{cwd}) 
++                        ? $self->{cwd} 
++                        : cwd();
+ 
+         my @dirs = defined $alt
+             ? File::Spec->splitdir( $dirs )         # It's a local-OS path
+             : File::Spec::Unix->splitdir( $dirs );  # it's UNIX-style, likely
+                                                     # straight from the tarball
+ 
+-        ### paths that leave the current directory are not allowed under
+-        ### strict mode, so only allow it if a user tells us to do this.
+         if( not defined $alt            and 
+-            not $INSECURE_EXTRACT_MODE  and 
+-            grep { $_ eq '..' } @dirs
+-        ) {
+-            $self->_error(
+-                q[Entry ']. $entry->full_path .q[' is attempting to leave the ].
+-                q[current working directory. Not extracting under SECURE ].
+-                q[EXTRACT MODE]
+-            );
+-            return;
+-        }            
++            not $INSECURE_EXTRACT_MODE 
++        ) {            
++
++            ### paths that leave the current directory are not allowed under
++            ### strict mode, so only allow it if a user tells us to do this.
++            if( grep { $_ eq '..' } @dirs ) {
++    
++                $self->_error(
++                    q[Entry ']. $entry->full_path .q[' is attempting to leave ].
++                    q[the current working directory. Not extracting under ].
++                    q[SECURE EXTRACT MODE]
++                );
++                return;
++            } 
++        
++            ### the archive may be asking us to extract into a symlink. This
++            ### is not sane and a possible security issue, as outlined here:
++            ### https://rt.cpan.org/Ticket/Display.html?id=30380
++            ### https://bugzilla.redhat.com/show_bug.cgi?id=295021
++            ### https://issues.rpath.com/browse/RPL-1716
++            my $full_path = $cwd;
++            for my $d ( @dirs ) {
++                $full_path = File::Spec->catdir( $full_path, $d );
++                
++                ### we've already checked this one, and it's safe. Move on.
++                next if ref $self and $self->{_link_cache}->{$full_path};
++
++                if( -l $full_path ) {
++                    my $to   = readlink $full_path;
++                    my $diag = "symlinked directory ($full_path => $to)";
++
++                    $self->_error(
++                        q[Entry ']. $entry->full_path .q[' is attempting to ].
++                        qq[extract to a $diag. This is considered a security ].
++                        q[vulnerability and not allowed under SECURE EXTRACT ].
++                        q[MODE]
++                    );
++                    return;
++                }
++                
++                ### XXX keep a cache if possible, so the stats become cheaper:
++                $self->{_link_cache}->{$full_path} = 1 if ref $self;
++            }
++        }
++
+         
+         ### '.' is the directory delimiter, of which the first one has to
+         ### be escaped/changed.
+@@ -622,7 +664,8 @@
+     unless ( -d _ ) {
+         eval { File::Path::mkpath( $dir, 0, 0777 ) };
+         if( $@ ) {
+-            $self->_error( qq[Could not create directory '$dir': $@] );
++            my $fp = $entry->full_path;
++            $self->_error(qq[Could not create directory '$dir' for '$fp': $@]);
+             return;
+         }
+         
+@@ -672,8 +715,13 @@
+         $self->_make_special_file( $entry, $full ) or return;
+     }
+ 
+-    utime time, $entry->mtime - TIME_OFFSET, $full or
+-        $self->_error( qq[Could not update timestamp] );
++    ### only update the timestamp if it's not a symlink; that will change the
++    ### timestamp of the original. This addresses bug #33669: Could not update
++    ### timestamp warning on symlinks
++    if( not -l $full ) {
++        utime time, $entry->mtime - TIME_OFFSET, $full or
++            $self->_error( qq[Could not update timestamp] );
++    }
+ 
+     if( $CHOWN && CAN_CHOWN ) {
+         chown $entry->uid, $entry->gid, $full or
+@@ -707,8 +755,8 @@
+                 or $fail++;
+         }
+ 
+-        $err =  qq[Making symbolink link from '] . $entry->linkname .
+-                qq[' to '$file' failed] if $fail;
++        $err =  qq[Making symbolic link '$file' to '] .
++                $entry->linkname .q[' failed] if $fail;
+ 
+     } elsif ( $entry->is_hardlink ) {
+         my $fail;
+--- perl-5.10.0.orig/lib/Archive/Extract.pm
++++ perl-5.10.0/lib/Archive/Extract.pm
+@@ -550,12 +550,19 @@
+                              $self->bin_tar, '-tf', '-'] :
+             [$self->bin_tar, '-tf', $self->archive];
+ 
+-        ### run the command ###
+-        my $buffer = '';
+-        unless( scalar run( command => $cmd,
++            ### run the command 
++            ### newer versions of 'tar' (1.21 and up) now print record size
++            ### to STDERR as well if v OR t is given (used to be both). This 
++            ### is a 'feature' according to the changelog, so we must now only
++            ### inspect STDOUT, otherwise, failures like these occur:
++            ### nntp.perl.org/group/perl.cpan.testers/2009/02/msg3230366.html
++            my $buffer  = '';
++            my @out     = run(  command => $cmd,
+                             buffer  => \$buffer,
+-                            verbose => $DEBUG )
+-        ) {
++                                verbose => $DEBUG );
++
++            ### command was unsuccessful            
++            unless( $out[0] ) { 
+             return $self->_error(loc(
+                             "Error listing contents of archive '%1': %2",
+                             $self->archive, $buffer ));
+@@ -578,7 +585,8 @@
+                                             \s+ [\d,.]+ \s tape \s blocks
+                                         |x ? $1 : $_);
+ 
+-                    } split $/, $buffer;
++                        ### only STDOUT, see above
++                        } map { split $/, $_ } @{$out[3]};     
+ 
+             ### store the files that are in the archive ###
+             $self->files(\@files);
+--- perl-5.10.0.orig/lib/Archive/Tar/File.pm
++++ perl-5.10.0/lib/Archive/Tar/File.pm
+@@ -445,7 +445,14 @@
+ 
+     ### don't know why this one is different from the one we /write/ ###
+     substr ($raw, 148, 8) = "        ";
+-	return unpack ("%16C*", $raw) == $self->chksum ? 1 : 0;
++
++    ### bug #43513: [PATCH] Accept wrong checksums from SunOS and HP-UX tar
++    ### like GNU tar does. See here for details:
++    ### http://www.gnu.org/software/tar/manual/tar.html#SEC139
++    ### so we do both a signed AND unsigned validate. if one succeeds, that's
++    ### good enough
++	return (   (unpack ("%16C*", $raw) == $self->chksum)
++	        or (unpack ("%16c*", $raw) == $self->chksum)) ? 1 : 0;
+ }
+ 
+ =head2 has_content
+--- perl-5.10.0.orig/lib/Archive/Tar/t/04_resolved_issues.t
++++ perl-5.10.0/lib/Archive/Tar/t/04_resolved_issues.t
+@@ -159,3 +159,27 @@
+     
+ 
+ }
++
++### return error properly on corrupted archives
++### Addresses RT #44680: Improve error reporting on short corrupted archives
++{   ok( 1,                      "Testing bug 44680" );
++
++    {   ### XXX whitebox test -- resetting the error string
++        no warnings 'once'; 
++        $Archive::Tar::error = "";
++    }
++
++    my $src = File::Spec->catfile( qw[src short b] );
++    my $tar = $Class->new;
++    
++    isa_ok( $tar, $Class,       "   Object" );
++    
++    
++    ### we quell the error on STDERR
++    local $Archive::Tar::WARN = 0;
++
++    ok( !$tar->read( $src ),    "   No files in the corrupted archive" );
++    like( $tar->error, qr/enough bytes/,
++                                "       Expected error reported" );
++}
++
+--- perl-5.10.0.orig/ext/POSIX/POSIX.pm
++++ perl-5.10.0/ext/POSIX/POSIX.pm
+@@ -13,7 +13,9 @@
+ use Fcntl qw(FD_CLOEXEC F_DUPFD F_GETFD F_GETFL F_GETLK F_RDLCK F_SETFD
+ 	     F_SETFL F_SETLK F_SETLKW F_UNLCK F_WRLCK O_ACCMODE O_APPEND
+ 	     O_CREAT O_EXCL O_NOCTTY O_NONBLOCK O_RDONLY O_RDWR O_TRUNC
+-	     O_WRONLY);
++	     O_WRONLY SEEK_CUR SEEK_END SEEK_SET
++	     S_IRGRP S_IROTH S_IRUSR S_IRWXG S_IRWXO S_IRWXU S_ISGID S_ISUID
++	     S_IWGRP S_IWOTH S_IWUSR S_IXGRP S_IXOTH S_IXUSR);
+ 
+ # Grandfather old foo_h form to new :foo_h form
+ my $loaded;
+--- perl-5.10.0.orig/ext/POSIX/Makefile.PL
++++ perl-5.10.0/ext/POSIX/Makefile.PL
+@@ -48,13 +48,11 @@
+       MAX_INPUT MB_LEN_MAX MSG_CTRUNC MSG_DONTROUTE MSG_EOR MSG_OOB MSG_PEEK 
+       MSG_TRUNC MSG_WAITALL NAME_MAX NCCS NGROUPS_MAX NOFLSH OPEN_MAX OPOST
+       PARENB PARMRK PARODD PATH_MAX PIPE_BUF RAND_MAX R_OK SCHAR_MAX
+-      SCHAR_MIN SEEK_CUR SEEK_END SEEK_SET SHRT_MAX SHRT_MIN SIGABRT SIGALRM
++      SCHAR_MIN SHRT_MAX SHRT_MIN SIGABRT SIGALRM
+       SIGCHLD SIGCONT SIGFPE SIGHUP SIGILL SIGINT SIGKILL SIGPIPE SIGQUIT
+       SIGSEGV SIGSTOP SIGTERM SIGTSTP SIGTTIN SIGTTOU
+       SIGUSR1 SIGUSR2 SIG_BLOCK SIG_SETMASK SIG_UNBLOCK SSIZE_MAX
+-      STDERR_FILENO STDIN_FILENO STDOUT_FILENO STREAM_MAX
+-      S_IRGRP S_IROTH S_IRUSR S_IRWXG S_IRWXO S_IRWXU S_ISGID S_ISUID
+-      S_IWGRP S_IWOTH S_IWUSR S_IXGRP S_IXOTH S_IXUSR TCIFLUSH TCIOFF
++      STDERR_FILENO STDIN_FILENO STDOUT_FILENO STREAM_MAX TCIFLUSH TCIOFF
+       TCIOFLUSH TCION TCOFLUSH TCOOFF TCOON TCSADRAIN TCSAFLUSH TCSANOW
+       TMP_MAX TOSTOP TZNAME_MAX VEOF VEOL VERASE VINTR VKILL VMIN VQUIT
+       VSTART VSTOP VSUSP VTIME WNOHANG WUNTRACED W_OK X_OK
+--- perl-5.10.0.orig/ext/NDBM_File/NDBM_File.xs
++++ perl-5.10.0/ext/NDBM_File/NDBM_File.xs
+@@ -1,7 +1,7 @@
+ #include "EXTERN.h"
+ #include "perl.h"
+ #include "XSUB.h"
+-#include <ndbm.h>
++#include <gdbm-ndbm.h>
+ 
+ typedef struct {
+ 	DBM * 	dbp ;
+--- perl-5.10.0.orig/ext/NDBM_File/hints/linux.pl
++++ perl-5.10.0/ext/NDBM_File/hints/linux.pl
+@@ -2,7 +2,4 @@
+ # Prefer gdbm to avoid the broken ndbm in some distributions
+ # (no null key support)
+ # Jonathan Stowe <gellyfish@gellyfish.com>
+-use Config;
+-use ExtUtils::Liblist;
+-($self->{LIBS}) = ExtUtils::Liblist->ext('-lgdbm -lgdbm_compat')
+-	if $Config{libs} =~ /(?:^|\s)-lgdbm(?:\s|$)/;
++$self->{LIBS} = ['-lgdbm_compat'];
+--- perl-5.10.0.orig/ext/Data/Dumper/Dumper.pm
++++ perl-5.10.0/ext/Data/Dumper/Dumper.pm
+@@ -65,7 +65,7 @@
+ 
+   croak "Usage:  PACKAGE->new(ARRAYREF, [ARRAYREF])" 
+     unless (defined($v) && (ref($v) eq 'ARRAY'));
+-  $n = [] unless (defined($n) && (ref($v) eq 'ARRAY'));
++  $n = [] unless (defined($n) && (ref($n) eq 'ARRAY'));
+ 
+   my($s) = { 
+              level      => 0,           # current recursive depth
+--- perl-5.10.0.orig/ext/Compress/Raw/Zlib/config.in
++++ perl-5.10.0/ext/Compress/Raw/Zlib/config.in
+@@ -16,9 +16,9 @@
+ #    Setting the Gzip OS Code
+ #
+ 
+-BUILD_ZLIB      = True
+-INCLUDE         = ./zlib-src
+-LIB             = ./zlib-src
++BUILD_ZLIB      = False
++INCLUDE         = /usr/include
++LIB             = /usr/lib
+ 
+ OLD_ZLIB        = False
+ GZIP_OS_CODE    = AUTO_DETECT
+--- perl-5.10.0.orig/ext/Compress/Raw/Zlib/Zlib.xs
++++ perl-5.10.0/ext/Compress/Raw/Zlib/Zlib.xs
+@@ -1295,7 +1295,7 @@
+ 
+         if (s->stream.avail_out == 0 ) {
+ 	    /* out of space in the output buffer so make it bigger */
+-            Sv_Grow(output, SvLEN(output) + bufinc) ;
++            Sv_Grow(output, SvLEN(output) + bufinc +1) ;
+             cur_length += increment ;
+             s->stream.next_out = (Bytef*) SvPVbyte_nolen(output) + cur_length ;
+             increment = bufinc ;
+--- perl-5.10.0.orig/ext/Errno/Errno_pm.PL
++++ perl-5.10.0/ext/Errno/Errno_pm.PL
+@@ -337,13 +337,8 @@
+ package Errno;
+ our (\@EXPORT_OK,\%EXPORT_TAGS,\@ISA,\$VERSION,\%errno,\$AUTOLOAD);
+ use Exporter ();
+-use Config;
+ use strict;
+ 
+-"\$Config{'archname'}-\$Config{'osvers'}" eq
+-"$Config{'archname'}-$Config{'osvers'}" or
+-	die "Errno architecture ($Config{'archname'}-$Config{'osvers'}) does not match executable architecture (\$Config{'archname'}-\$Config{'osvers'})";
+-
+ \$VERSION = "$VERSION";
+ \$VERSION = eval \$VERSION;
+ \@ISA = qw(Exporter);
+--- perl-5.10.0.orig/ext/ODBM_File/hints/linux.pl
++++ perl-5.10.0/ext/ODBM_File/hints/linux.pl
+@@ -1,8 +1,2 @@
+ # uses GDBM dbm compatibility feature - at least on SuSE 8.0
+-$self->{LIBS} = ['-lgdbm'];
+-
+-# Debian/Ubuntu have /usr/lib/libgdbm_compat.so.3* but not this file,
+-# so linking may fail
+-if (-e '/usr/lib/libgdbm_compat.so' or -e '/usr/lib64/libgdbm_compat.so') {
+-    $self->{LIBS}->[0] .= ' -lgdbm_compat';
+-}
++$self->{LIBS} = ['-lgdbm_compat'];
+--- perl-5.10.0.orig/ext/B/B/Deparse.pm
++++ perl-5.10.0/ext/B/B/Deparse.pm
+@@ -1456,7 +1456,6 @@
+ my %ignored_hints = (
+     'open<' => 1,
+     'open>' => 1,
+-    'v_string' => 1,
+     );
+ 
+ sub declare_hinthash {
+--- perl-5.10.0.orig/ext/DB_File/version.c
++++ perl-5.10.0/ext/DB_File/version.c
+@@ -48,12 +48,14 @@
+ 
+     (void)db_version(&Major, &Minor, &Patch) ;
+ 
++#ifndef DEBIAN
+     /* Check that the versions of db.h and libdb.a are the same */
+     if (Major != DB_VERSION_MAJOR || Minor != DB_VERSION_MINOR 
+ 		|| Patch != DB_VERSION_PATCH)
+ 	croak("\nDB_File needs compatible versions of libdb & db.h\n\tyou have db.h version %d.%d.%d and libdb version %d.%d.%d\n",  
+ 		DB_VERSION_MAJOR, DB_VERSION_MINOR, DB_VERSION_PATCH, 
+ 		Major, Minor, Patch) ;
++#endif /* DEBIAN */
+     
+     /* check that libdb is recent enough  -- we need 2.3.4 or greater */
+     if (Major == 2 && (Minor < 3 || (Minor ==  3 && Patch < 4)))
+--- perl-5.10.0.orig/ext/Sys/Syslog/Syslog.pm
++++ perl-5.10.0/ext/Sys/Syslog/Syslog.pm
+@@ -741,7 +741,7 @@
+ 
+     my $rin = '';
+     vec($rin, fileno(SYSLOG), 1) = 1;
+-    my $ret = select $rin, undef, $rin, 0.25;
++    my $ret = select $rin, undef, $rin, 0;
+     return ($ret ? 0 : 1);
+ }
+ 
+--- perl-5.10.0.orig/ext/Sys/Syslog/t/syslog.t
++++ perl-5.10.0/ext/Sys/Syslog/t/syslog.t
+@@ -189,6 +189,9 @@
+     skip "the 'unix' mechanism works, so the tests will likely fail with the 'stream' mechanism", 10 
+         if grep {/unix/} @passed;
+ 
++    skip "can't connect to Unix socket: _PATH_LOG unavailable", 10
++      unless -e Sys::Syslog::_PATH_LOG();
++
+     # setlogsock() with "stream" and an undef path
+     $r = eval { setlogsock("stream", undef ) } || '';
+     is( $@, '', "setlogsock() called, with 'stream' and an undef path" );
+--- perl-5.10.0.orig/ext/PerlIO/via/via.xs
++++ perl-5.10.0/ext/PerlIO/via/via.xs
+@@ -89,7 +89,7 @@
+ 	    if (!s->fh) {
+ 		GV *gv = newGVgen(HvNAME_get(s->stash));
+ 		GvIOp(gv) = newIO();
+-		s->fh = newRV_noinc((SV *) gv);
++		s->fh = newRV((SV *) gv);
+ 		s->io = GvIOp(gv);
+ 	    }
+ 	    IoIFP(s->io) = PerlIONext(f);
+--- perl-5.10.0.orig/ext/Time/HiRes/t/HiRes.t
++++ perl-5.10.0/ext/Time/HiRes/t/HiRes.t
+@@ -68,7 +68,7 @@
+ 
+ my $have_alarm = $Config{d_alarm};
+ my $have_fork  = $Config{d_fork};
+-my $waitfor = 180; # 30-45 seconds is normal (load affects this).
++my $waitfor = 300; # 30-45 seconds is normal (load affects this).
+ my $timer_pid;
+ my $TheEnd;
+ 
+--- perl-5.10.0.orig/ext/IO/lib/IO/Socket/INET.pm
++++ perl-5.10.0/ext/IO/lib/IO/Socket/INET.pm
+@@ -27,7 +27,7 @@
+ 		  );
+ my %proto_number;
+ $proto_number{tcp}  = Socket::IPPROTO_TCP()  if defined &Socket::IPPROTO_TCP;
+-$proto_number{upd}  = Socket::IPPROTO_UDP()  if defined &Socket::IPPROTO_UDP;
++$proto_number{udp}  = Socket::IPPROTO_UDP()  if defined &Socket::IPPROTO_UDP;
+ $proto_number{icmp} = Socket::IPPROTO_ICMP() if defined &Socket::IPPROTO_ICMP;
+ my %proto_name = reverse %proto_number;
+ 
+--- perl-5.10.0.orig/ext/Encode/Encode.pm
++++ perl-5.10.0/ext/Encode/Encode.pm
+@@ -734,7 +734,7 @@
+ 
+ =back
+ 
+-=Head2 coderef for CHECK
++=head2 coderef for CHECK
+ 
+ As of Encode 2.12 CHECK can also be a code reference which takes the
+ ord value of unmapped caharacter as an argument and returns a string
+--- perl-5.10.0.orig/ext/Encode/bin/enc2xs
++++ perl-5.10.0/ext/Encode/bin/enc2xs
+@@ -924,11 +924,11 @@
+ sub find_e2x{
+     eval { require File::Find; };
+     my (@inc, %e2x_dir);
+-    for my $inc (@INC){
++    for my $inc (grep -d, @INC){
+     push @inc, $inc unless $inc eq '.'; #skip current dir
+     }
+     File::Find::find(
+-         sub {
++         { wanted => sub {
+          my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+              $atime,$mtime,$ctime,$blksize,$blocks)
+              = lstat($_) or return;
+@@ -938,7 +938,7 @@
+              $e2x_dir{$File::Find::dir} ||= $mtime;
+          }
+          return;
+-         }, @inc);
++         }, follow => 1}, @inc);
+     warn join("\n", keys %e2x_dir), "\n";
+     for my $d (sort {$e2x_dir{$a} <=> $e2x_dir{$b}} keys %e2x_dir){
+     $_E2X = $d;
+@@ -1005,7 +1005,7 @@
+ 	    $LocalMod{$enc} ||= $mod;
+ 	}
+     };
+-    File::Find::find({wanted => $wanted}, @INC);
++    File::Find::find({wanted => $wanted, follow => 1}, grep -d, @INC);
+     $_ModLines = "";
+     for my $enc ( sort keys %LocalMod ) {
+         $_ModLines .=
+--- perl-5.10.0.orig/utils/h2xs.PL
++++ perl-5.10.0/utils/h2xs.PL
+@@ -901,6 +901,7 @@
+ 
+         # Remove C and C++ comments
+         $src =~ s#/\*[^*]*\*+([^/*][^*]*\*+)*/|("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|.[^/"'\\]*)#$2#gs;
++        $src =~ s#//.*$##gm;
+ 
+ 	while ($src =~ /\benum\s*([\w_]*)\s*\{\s([^}]+)\}/gsc) {
+ 	    my ($enum_name, $enum_body) = ($1, $2);
+@@ -912,7 +913,7 @@
+                 my ($key, $declared_val) = $item =~ /(\w+)\s*(?:=\s*(.*))?/;
+                 $val = defined($declared_val) && length($declared_val) ? $declared_val : 1 + $val;
+                 $seen_define{$key} = $val;
+-                $const_names{$key}++;
++                $const_names{$key} = { name => $key, macro => 1 };
+             }
+         } # while (...)
+       } # if (!defined $opt_e or $opt_e)
+@@ -1076,7 +1077,14 @@
+     }
+   }
+ }
+-my @const_names = sort keys %const_names;
++my (@const_specs, @const_names);
++
++for (sort(keys(%const_names))) {
++    my $v = $const_names{$_};
++    
++    push(@const_specs, ref($v) ? $v : $_);
++    push(@const_names, $_);
++}
+ 
+ -d $modpmdir || mkpath([$modpmdir], 0, 0775);
+ open(PM, ">$modpmname") || die "Can't create $ext$modpname/$modpmname: $!\n";
+@@ -1465,7 +1473,7 @@
+                    XS_FILE =>      $xsfallback,
+                    DEFAULT_TYPE => $opt_t,
+                    NAME =>         $module,
+-                   NAMES =>        \@const_names,
++                   NAMES =>        \@const_specs,
+                  );
+   print XS "#include \"$constscfname\"\n";
+ }
+@@ -1950,7 +1958,7 @@
+                            XS_FILE =>      $constsxsfname,
+                            DEFAULT_TYPE => $opt_t,
+                            NAME =>         $module,
+-                           NAMES =>        \@const_names,
++                           NAMES =>        \@const_specs,
+                  );
+   print PL <<"END";
+ if  (eval {require ExtUtils::Constant; 1}) {
+--- perl-5.10.0.orig/utils/perlivp.PL
++++ perl-5.10.0/utils/perlivp.PL
+@@ -142,6 +142,7 @@
+ my $INC_there = 0;
+ foreach (@INC) {
+     next if $_ eq '.'; # skip -d test here
++    next if m|/usr/local|;
+     if ($^O eq 'MacOS') {
+         next if $_ eq ':'; # skip -d test here
+         next if $_ eq 'Dev:Pseudo:'; # why is this in @INC?
+--- perl-5.10.0.orig/utils/h2ph.PL
++++ perl-5.10.0/utils/h2ph.PL
+@@ -85,7 +85,7 @@
+ }
+ 
+ my ($t, $tab, %curargs, $new, $eval_index, $dir, $name, $args, $outfile);
+-my ($incl, $incl_type, $next);
++my ($incl, $incl_type, $incl_quote, $next);
+ while (defined (my $file = next_file())) {
+     if (-l $file and -d $file) {
+         link_if_possible($file) if ($opt_l);
+@@ -123,7 +123,7 @@
+ 
+     print OUT
+         "require '_h2ph_pre.ph';\n\n",
+-        "no warnings 'redefine';\n\n";
++        "no warnings qw(redefine misc);\n\n";
+ 
+     while (defined (local $_ = next_line($file))) {
+ 	if (s/^\s*\#\s*//) {
+@@ -186,9 +186,10 @@
+                       print OUT $t,"unless(defined(\&$name)) {\n    sub $name () {\t",$new,";}\n}\n";
+ 		    }
+ 		}
+-	    } elsif (/^(include|import|include_next)\s*[<\"](.*)[>\"]/) {
++	    } elsif (/^(include|import|include_next)\s*([<\"])(.*)[>\"]/) {
+                 $incl_type = $1;
+-                $incl = $2;
++                $incl_quote = $2;
++                $incl = $3;
+                 if (($incl_type eq 'include_next') ||
+                     ($opt_e && exists($bad_file{$incl}))) {
+                     $incl =~ s/\.h$/.ph/;
+@@ -221,6 +222,10 @@
+ 			   "warn(\$\@) if \$\@;\n");
+                 } else {
+                     $incl =~ s/\.h$/.ph/;
++                    # copy the prefix in the quote syntax (#include "x.h") case
++                    if ($incl !~ m|/| && $incl_quote eq q{"} && $file =~ m|^(.*)/|) {
++                        $incl = "$1/$incl";
++                    }
+ 		    print OUT $t,"require '$incl';\n";
+                 }
+ 	    } elsif (/^ifdef\s+(\w+)/) {
+@@ -724,8 +729,13 @@
+                 $line .= <HEADER>;
+             }
+ 
+-            if ($line =~ /^#\s*include\s+<(.*?)>/) {
+-                push(@ARGV, $1) unless $Is_converted{$1};
++            if ($line =~ /^#\s*include\s+([<"])(.*?)[>"]/) {
++                my ($delimiter, $new_file) = ($1, $2);
++                # copy the prefix in the quote syntax (#include "x.h") case
++                if ($delimiter eq q{"} && $file =~ m|^(.*)/|) {
++                    $new_file = "$1/$new_file";
++                }
++                push(@ARGV, $new_file) unless $Is_converted{$new_file};
+             }
+         }
+     close HEADER;
+@@ -733,7 +743,7 @@
+ 
+ 
+ # Determine include directories; $Config{usrinc} should be enough for (all
+-# non-GCC?) C compilers, but gcc uses an additional include directory.
++# non-GCC?) C compilers, but gcc uses additional include directories.
+ sub inc_dirs
+ {
+     my $from_gcc    = `LC_ALL=C $Config{cc} -v 2>&1`;
+@@ -745,7 +755,7 @@
+            $from_gcc = '';
+        };
+     };
+-    length($from_gcc) ? ($from_gcc, $Config{usrinc}) : ($Config{usrinc});
++    length($from_gcc) ? ($from_gcc, $from_gcc . "-fixed", $Config{usrinc}) : ($Config{usrinc});
+ }
+ 
+ 
+--- perl-5.10.0.orig/pod/perldoc.pod
++++ perl-5.10.0/pod/perldoc.pod
+@@ -222,6 +222,10 @@
+ even more descriptive output than the C<-v> switch does -- the higher the
+ number, the more it emits.
+ 
++=head1 SEE ALSO
++
++L<perlpod>, L<Pod::Perldoc>
++
+ =head1 AUTHOR
+ 
+ Current maintainer: Sean M. Burke, <sburke@cpan.org>
+--- perl-5.10.0.orig/pod/perlapi.pod
++++ perl-5.10.0/pod/perlapi.pod
+@@ -1193,6 +1193,50 @@
+ 
+ =back
+ 
++=head1 Functions in file perl.h
++
++
++=over 8
++
++=item PERL_SYS_INIT
++X<PERL_SYS_INIT>
++
++Provides system-specific tune up of the C runtime environment necessary to
++run Perl interpreters. This should be called only once, before creating
++any Perl interpreters.
++
++	void	PERL_SYS_INIT(int argc, char** argv)
++
++=for hackers
++Found in file perl.h
++
++=item PERL_SYS_INIT3
++X<PERL_SYS_INIT3>
++
++Provides system-specific tune up of the C runtime environment necessary to
++run Perl interpreters. This should be called only once, before creating
++any Perl interpreters.
++
++	void	PERL_SYS_INIT3(int argc, char** argv, char** env)
++
++=for hackers
++Found in file perl.h
++
++=item PERL_SYS_TERM
++X<PERL_SYS_TERM>
++
++Provides system-specific clean up of the C runtime environment after
++running Perl interpreters. This should be called only once, after
++freeing any remaining Perl interpreters.
++
++	void	PERL_SYS_TERM()
++
++=for hackers
++Found in file perl.h
++
++
++=back
++
+ =head1 Functions in file pp_ctl.c
+ 
+ 
+--- perl-5.10.0.orig/pod/perlpodspec.pod
++++ perl-5.10.0/pod/perlpodspec.pod
+@@ -338,7 +338,7 @@
+ before any non-US-ASCII data!), declares that this document is
+ encoded in the encoding I<encodingname>, which must be
+ an encoding name that L<Encoding> recognizes.  (Encoding's list
+-of supported encodings, in L<Encoding::Supported>, is useful here.)
++of supported encodings, in L<Encode::Supported>, is useful here.)
+ If the Pod parser cannot decode the declared encoding, it 
+ should emit a warning and may abort parsing the document
+ altogether.
+--- perl-5.10.0.orig/pod/pod2man.PL
++++ perl-5.10.0/pod/pod2man.PL
+@@ -36,9 +36,9 @@
+ print OUT <<'!NO!SUBS!';
+ 
+ # pod2man -- Convert POD data to formatted *roff input.
+-# $Id: pod2man.PL,v 1.16 2006-01-21 01:53:55 eagle Exp $
+ #
+-# Copyright 1999, 2000, 2001, 2004, 2006 by Russ Allbery <rra@stanford.edu>
++# Copyright 1999, 2000, 2001, 2004, 2006, 2008
++#     Russ Allbery <rra@stanford.edu>
+ #
+ # This program is free software; you may redistribute it and/or modify it
+ # under the same terms as Perl itself.
+@@ -66,7 +66,7 @@
+ GetOptions (\%options, 'section|s=s', 'release|r:s', 'center|c=s',
+             'date|d=s', 'fixed=s', 'fixedbold=s', 'fixeditalic=s',
+             'fixedbolditalic=s', 'name|n=s', 'official|o', 'quotes|q=s',
+-            'lax|l', 'help|h', 'verbose|v') or exit 1;
++            'lax|l', 'help|h', 'verbose|v', 'utf8|u') or exit 1;
+ pod2usage (0) if $options{help};
+ 
+ # Official sets --center, but don't override things explicitly set.
+@@ -104,7 +104,7 @@
+ [B<--center>=I<string>] [B<--date>=I<string>] [B<--fixed>=I<font>]
+ [B<--fixedbold>=I<font>] [B<--fixeditalic>=I<font>]
+ [B<--fixedbolditalic>=I<font>] [B<--name>=I<name>] [B<--official>]
+-[B<--lax>] [B<--quotes>=I<quotes>] [B<--verbose>]
++[B<--lax>] [B<--quotes>=I<quotes>] [B<--utf8>] [B<--verbose>]
+ [I<input> [I<output>] ...]
+ 
+ pod2man B<--help>
+@@ -243,6 +243,28 @@
+ By default, section 1 will be used unless the file ends in .pm in which case
+ section 3 will be selected.
+ 
++=item B<-u>, B<--utf8>
++
++By default, B<pod2man> produces the most conservative possible *roff
++output to try to ensure that it will work with as many different *roff
++implementations as possible.  Many *roff implementations cannot handle
++non-ASCII characters, so this means all non-ASCII characters are converted
++either to a *roff escape sequence that tries to create a properly accented
++character (at least for troff output) or to C<X>.
++
++This option says to instead output literal UTF-8 characters.  If your
++*roff implementation can handle it, this is the best output format to use
++and avoids corruption of documents containing non-ASCII characters.
++However, be warned that *roff source with literal UTF-8 characters is not
++supported by many implementations and may even result in segfaults and
++other bad behavior.
++
++Be aware that, when using this option, the input encoding of your POD
++source must be properly declared unless it is US-ASCII or Latin-1.  POD
++input without an C<=encoding> command will be assumed to be in Latin-1,
++and if it's actually in UTF-8, the output will be double-encoded.  See
++L<perlpod(1)> for more information on the C<=encoding> command.
++
+ =item B<-v>, B<--verbose>
+ 
+ Print out the name of each output file as it is being generated.
+@@ -518,8 +540,8 @@
+ 
+ =head1 SEE ALSO
+ 
+-L<Pod::Man>, L<Pod::Simple>, L<man(1)>, L<nroff(1)>, L<podchecker(1)>,
+-L<troff(1)>, L<man(7)>
++L<Pod::Man>, L<Pod::Simple>, L<man(1)>, L<nroff(1)>, L<perlpod(1)>,
++L<podchecker(1)>, L<troff(1)>, L<man(7)>
+ 
+ The man page documenting the an macro set may be L<man(5)> instead of
+ L<man(7)> on your system.
+@@ -537,7 +559,8 @@
+ 
+ =head1 COPYRIGHT AND LICENSE
+ 
+-Copyright 1999, 2000, 2001, 2004, 2006 by Russ Allbery <rra@stanford.edu>.
++Copyright 1999, 2000, 2001, 2004, 2006, 2008 Russ Allbery
++<rra@stanford.edu>.
+ 
+ This program is free software; you may redistribute it and/or modify it
+ under the same terms as Perl itself.
+--- perl-5.10.0.orig/pod/perlre.pod
++++ perl-5.10.0/pod/perlre.pod
+@@ -102,7 +102,7 @@
+ 
+ =head3 Metacharacters
+ 
+-The patterns used in Perl pattern matching evolved from the ones supplied in
++The patterns used in Perl pattern matching evolved from those supplied in
+ the Version 8 regex routines.  (The routines are derived
+ (distantly) from Henry Spencer's freely redistributable reimplementation
+ of the V8 routines.)  See L<Version 8 Regular Expressions> for
+--- perl-5.10.0.orig/pod/perlxs.pod
++++ perl-5.10.0/pod/perlxs.pod
+@@ -1212,6 +1212,12 @@
+ 
+     VERSIONCHECK: DISABLE
+ 
++Note that if the version of the PM module is an NV (a floating point
++number), it will be stringified with a possible loss of precision
++(currently chopping to nine decimal places) so that it may not match
++the version of the XS module anymore. Quoting the $VERSION declaration
++to make it a string is recommended if long version numbers are used.
++
+ =head2 The PROTOTYPES: Keyword
+ 
+ The PROTOTYPES: keyword corresponds to B<xsubpp>'s C<-prototypes> and
+--- perl-5.10.0.orig/pod/perlembed.pod
++++ perl-5.10.0/pod/perlembed.pod
+@@ -196,11 +196,20 @@
+ 
+ Notice that we don't use the C<env> pointer.  Normally handed to
+ C<perl_parse> as its final argument, C<env> here is replaced by
+-C<NULL>, which means that the current environment will be used.  The macros
+-PERL_SYS_INIT3() and PERL_SYS_TERM() provide system-specific tune up 
+-of the C runtime environment necessary to run Perl interpreters; since
+-PERL_SYS_INIT3() may change C<env>, it may be more appropriate to provide
+-C<env> as an argument to perl_parse().
++C<NULL>, which means that the current environment will be used.
++
++The macros PERL_SYS_INIT3() and PERL_SYS_TERM() provide system-specific
++tune up of the C runtime environment necessary to run Perl interpreters;
++they should only be called once regardless of how many interpreters you
++create or destroy. Call PERL_SYS_INIT3() before you create your first
++interpreter, and PERL_SYS_TERM() after you free your last interpreter.
++
++Since PERL_SYS_INIT3() may change C<env>, it may be more appropriate to
++provide C<env> as an argument to perl_parse().
++
++Also notice that no matter what arguments you pass to perl_parse(),
++PERL_SYS_INIT3() must be invoked on the C main() argc, argv and env and
++only once.
+ 
+ Now compile this program (I'll call it I<interp.c>) into an executable:
+ 
+--- perl-5.10.0.orig/pod/perlfunc.pod
++++ perl-5.10.0/pod/perlfunc.pod
+@@ -1556,6 +1556,10 @@
+ is implemented.  It is also Perl's exception trapping mechanism, where
+ the die operator is used to raise exceptions.
+ 
++If you want to trap errors when loading an XS module, some problems with
++the binary interface (such as Perl version skew) may be fatal even with
++C<eval> unless C<$ENV{PERL_DL_NONLAZY}> is set. See L<perlrun>.
++
+ If the code to be executed doesn't vary, you may use the eval-BLOCK
+ form to trap run-time errors without incurring the penalty of
+ recompiling each time.  The error, if any, is still returned in C<$@>.
+@@ -5214,7 +5218,7 @@
+ limited control of the sort.  Its rather blunt control of the
+ underlying algorithm may not persist into future Perls, but the
+ ability to characterize the input or output in implementation
+-independent ways quite probably will.  See L<sort>.
++independent ways quite probably will.  See L<the sort pragma|sort>.
+ 
+ Examples:
+ 
+@@ -6855,22 +6859,16 @@
+ 
+ Specifying VERSION as a literal of the form v5.6.1 should generally be
+ avoided, because it leads to misleading error messages under earlier
+-versions of Perl that do not support this syntax.  The equivalent numeric
+-version should be used instead.
+-
+-Alternatively, you can use a numeric version C<use 5.006> followed by a
+-v-string version like C<use v5.10.1>, to avoid the unintuitive C<use
+-5.010_001>. (older perl versions fail gracefully at the first C<use>,
+-later perl versions understand the v-string syntax in the second).
++versions of Perl (that is, prior to 5.6.0) that do not support this
++syntax.  The equivalent numeric version should be used instead.
+ 
+     use v5.6.1;		# compile time version check
+     use 5.6.1;		# ditto
+     use 5.006_001;	# ditto; preferred for backwards compatibility
+-    use 5.006; use 5.6.1;	# ditto, for compatibility and readability
+ 
+ This is often useful if you need to check the current Perl version before
+-C<use>ing library modules that have changed in incompatible ways from
+-older versions of Perl.  (We try not to do this more than we have to.)
++C<use>ing library modules that won't work with older versions of Perl.
++(We try not to do this more than we have to.)
+ 
+ Also, if the specified perl version is greater than or equal to 5.9.5,
+ C<use VERSION> will also load the C<feature> pragma and enable all
+--- perl-5.10.0.orig/pod/perldiag.pod
++++ perl-5.10.0/pod/perldiag.pod
+@@ -4935,18 +4935,6 @@
+ (W misc) The version string contains invalid characters at the end, which
+ are being ignored.
+ 
+-=item v-string in use/require is non-portable
+-
+-(W portable) The use of v-strings is non-portable to older, pre-5.6, Perls.
+-If you want your scripts to be backward portable, use the floating
+-point version number: for example, instead of C<use 5.6.1> say
+-C<use 5.006_001>. This of course won't make older Perls suddenly start
+-understanding newer features, but at least they will show a sensible
+-error message indicating the required minimum version.
+-
+-This warning is suppressed if the C<use 5.x.y> is preceded by a
+-C<use 5.006> (see C<use VERSION> in L<perlfunc/use>).
+-
+ =item Warning: something's wrong
+ 
+ (W) You passed warn() an empty string (the equivalent of C<warn "">) or
+--- perl-5.10.0.orig/pod/perllol.pod
++++ perl-5.10.0/pod/perllol.pod
+@@ -276,7 +276,7 @@
+ 
+     @newAoA = map { [ @{ $AoA[$_] } [ 7..12 ] ] } 4 .. 8;
+ 
+-Although if your manager accused of seeking job security (or rapid
++Although if your manager accused you of seeking job security (or rapid
+ insecurity) through inscrutable code, it would be hard to argue. :-)
+ If I were you, I'd put that in a function:
+ 
+
