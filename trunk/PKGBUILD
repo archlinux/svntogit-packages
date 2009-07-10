@@ -4,12 +4,12 @@
 
 pkgname=libsndfile
 pkgver=1.0.20
-pkgrel=2
+pkgrel=3
 pkgdesc="A C library for reading and writing files containing sampled sound"
 arch=('i686' 'x86_64')
 url="http://www.mega-nerd.com/libsndfile"
 license=('LGPL')
-depends=('alsa-lib' 'flac>=1.2.1')
+depends=('alsa-lib' 'flac>=1.2.1' 'libvorbis')
 makedepends=('jack-audio-connection-kit')
 optdepends=('jack-audio-connection-kit: for JACK support')
 options=('!libtool')
