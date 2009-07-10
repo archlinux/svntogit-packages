@@ -1,0 +1,34 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+
+pkgname=device-mapper
+pkgver=1.02.33
+_lvmver=2.02.48
+pkgrel=1
+pkgdesc="Device mapper userspace library and tools"
+arch=('i686' 'x86_64')
+url="http://sourceware.org/dm/"
+license=('GPL')
+groups=('base')
+depends=('glibc')
+source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${_lvmver}.tgz device-mapper.rules)
+md5sums=('0d24c2709f439eeca36261e5cea68330' '065f32a36947e6183722ed9aef13dc0c')
+sha1sums=('8a6f29f08f731caffa09f52e5ca41bcce80ff3b9' '003f5cf654503dcc9c1ba7c11c7d6e77bf27bb8d')
+
+build() {
+  cd "${srcdir}/LVM2.${_lvmver}"
+  ./configure --prefix=/usr --enable-static_link --disable-readline || return 1
+  make LDFLAGS+="-Wl,--as-needed" device-mapper || return 1
+  make DESTDIR="${pkgdir}" sbindir="${pkgdir}/sbin" \
+    libdir="${pkgdir}/lib" install_device-mapper || return 1
+
+  # install the static library as well
+  rm "${pkgdir}"/lib/libdevmapper.a*
+  install -D -m644 libdm/ioctl/libdevmapper.a "${pkgdir}/usr/lib/libdevmapper.a" || return 1
+  # install pkgconfig file
+  install -D -m644 libdm/libdevmapper.pc "${pkgdir}/usr/lib/pkgconfig/libdevmapper.pc" || return 1
+  # install udev rule
+  install -D -m644 "${srcdir}/device-mapper.rules" "${pkgdir}/etc/udev/rules.d/device-mapper.rules" || return 1
+  # fix device-mapper link bug
+  ln -sf /lib/libdevmapper.so "${pkgdir}/usr/lib/libdevmapper.so" || return 1
+}
