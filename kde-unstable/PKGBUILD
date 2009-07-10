@@ -1,29 +1,44 @@
 # $ Id: $
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
-pkgname=phonon
-pkgver=4.3.1.977430
+pkgbase=phonon
+pkgname=('phonon-xine')
+pkgver=4.3.1
 pkgrel=1
-pkgdesc='The multimedia API for KDE 4'
 arch=('i686' 'x86_64')
 url='http://phonon.kde.org'
 license=('LGPL')
-depends=('qt' 'xine-lib')
-makedepends=('pkgconfig' 'cmake' 'automoc4')
-#source=("http://download.kde.org/stable/4.2.1/src/${pkgname}-${pkgver}.tar.bz2")
-source=("ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.bz2")
-md5sums=('5ab8ac3f41adb09e2ac0ed288783c079')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'qt>=4.5.2-3' 'xine-lib')
+source=("http://download.kde.org/stable/4.2.1/src/${pkgbase}-${pkgver}.tar.bz2")
+md5sums=('767cb68052c108e95f293f30acdef3fb')
 
 build() {
 	cd $srcdir
 	mkdir build
 	cd build
-	cmake ../${pkgname}-${pkgver} \
+	sed -e '/add_subdirectory(phonon)/d' \
+	    -e '/add_subdirectory(includes)/d' \
+	    -i ../phonon-${pkgver}/CMakeLists.txt
+	cmake ../${pkgbase}-${pkgver} \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-DCMAKE_SKIP_RPATH=ON \
 		-DCMAKE_{SHARED,MODULE,EXE}_LINKER_FLAGS='-Wl,--no-undefined -Wl,--as-needed' \
 		-DWITH_GStreamer=OFF
+	cd xine
 	make
+}
+
+package() {
+	package_phonon-xine
+}
+
+package_phonon-xine() {
+	pkgdesc='Xine backend for phonon'
+	depends=('qt>=4.5.2-3' 'xine-lib')
+
+	cd $srcdir/build
 	make DESTDIR=$pkgdir install
+	mv $pkgdir/usr/lib/kde4 $pkgdir/usr/lib/qt
+	mv $pkgdir/usr/share/icons/oxygen $pkgdir/usr/share/icons/hicolor
 }
