@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+
+pkgname=lvm2
+pkgver=2.02.48
+pkgrel=1
+pkgdesc="Logical Volume Manager 2 utilities"
+arch=('i686' 'x86_64')
+url="http://sourceware.org/lvm2/"
+license=('GPL')
+groups=('base')
+depends=('bash' 'device-mapper>=1.02.33')
+conflicts=('lvm')
+backup=('etc/lvm/lvm.conf')
+options=('!makeflags')
+source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${pkgver}.tgz lvm2_install lvm2_hook)
+md5sums=('0d24c2709f439eeca36261e5cea68330' '40dccdb1044f00fc1e29ca549933d4bd'\
+         'd6f3ca901747c386aa0d842e9ea64413')
+sha1sums=('8a6f29f08f731caffa09f52e5ca41bcce80ff3b9'
+          '86358b3360373dcd1d7e1bf009fe6e6d0c70cdc3'
+          '0c2a367f2217e6363e5e80257cbc7730d3841e42')
+
+build() {
+  cd "${srcdir}/LVM2.${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" sbindir="${pkgdir}/sbin" install || return 1
+  install -d "${pkgdir}"/etc/lvm/{archive,backup} || return 1
+  # a static binary is required for Arch's initrd
+  ./configure --prefix=/usr --sysconfdir=/etc  --localstatedir=/var \
+    --enable-static_link || return 1
+  make || return 1
+  install -D -m755 tools/lvm.static "${pkgdir}/sbin/lvm.static" || return 1
+  # add hook
+  install -D -m644 "${srcdir}/lvm2_hook" "${pkgdir}/lib/initcpio/hooks/lvm2" || return 1
+  install -D -m644 "${srcdir}/lvm2_install" "${pkgdir}/lib/initcpio/install/lvm2" || return 1
+
+  # remove files provided by device-mapper package
+  rm "${pkgdir}/usr/include/libdevmapper.h"
+  rmdir "${pkgdir}/usr/include"
+  rm "${pkgdir}"/usr/lib/libdevmapper.*
+  rmdir "${pkgdir}/usr/lib"
+  rm "${pkgdir}/sbin/dmsetup"
+  rm "${pkgdir}/usr/share/man/man8/dmsetup.8"
+}
