@@ -3,44 +3,43 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=syslog-ng
-pkgver=3.0.1
-pkgrel=6
+pkgver=3.0.3
+pkgrel=1
 pkgdesc="Next-generation syslogd with advanced networking and filtering capabilities"
-arch=(i686 x86_64)
-license=('GPL')
+arch=('i686' 'x86_64')
+license=('GPL2')
 groups=('base')
 url="http://www.balabit.com/network-security/syslog-ng/"
-depends=('glibc')
-makedepends=('flex' 'pkgconfig' 'glib2' 'eventlog' 'tcp_wrappers' 'libcap>=2.16') 
+depends=('glib2' 'eventlog' 'tcp_wrappers' 'libcap>=2.16' 'openssl')
+makedepends=('flex' 'pkgconfig') 
 optdepends=('logrotate')
 provides=('logger')
 backup=('etc/syslog-ng.conf' 'etc/logrotate.d/syslog-ng')
 source=(http://www.balabit.com/downloads/files/syslog-ng/sources/$pkgver/source/$pkgname\_$pkgver.tar.gz
-        syslog-ng.conf syslog-ng.logrotate syslog-ng.rc uid.patch)
+        syslog-ng.conf
+        syslog-ng.logrotate
+        syslog-ng.rc)
 install=syslog-ng.install
-md5sums=('14e13519bad47d0a6308905292385321'
+md5sums=('b8b3c9af28696bce48ceca0de6444426'
          'c42c6b19bfe784e41c1d4f99c9e7d600'
          '9714c7479119922b55a7992677ebecb5'
-         '9bd98250cfa49e13fa3fa731b6040549'
-         '675a92c583932468e5424f9afaacc032')
-
+         '9bd98250cfa49e13fa3fa731b6040549')
 build() {
     cd $srcdir/$pkgname-$pkgver
-    # fix http://bugs.archlinux.org/task/13760
-    patch -Np0 -i ../uid.patch || return 1
-    ./configure --prefix=/usr \
+
+    LDFLAGS="-Wl,--as-needed -Wl,--no-undefined" ./configure \
+                --prefix=/usr \
                 --sysconfdir=/etc \
                 --localstatedir=/var/lib/syslog-ng \
                 --enable-tcp-wrapper \
-                --with-pidfile-dir=/var/run
-                --enable-mixed-linking \
+                --with-pidfile-dir=/var/run \
                 --disable-spoof-source
     make || return 1
     make DESTDIR=$pkgdir install || return 1
-    mkdir -p $pkgdir/var/lib/syslog-ng
-    install -D -m644 $srcdir/syslog-ng.conf $pkgdir/etc/syslog-ng.conf
-    install -D -m644 $srcdir/syslog-ng.logrotate $pkgdir/etc/logrotate.d/syslog-ng
-    install -D -m755 $srcdir/syslog-ng.rc $pkgdir/etc/rc.d/syslog-ng
+    install -dm755 $pkgdir/var/lib/syslog-ng
+    install -Dm644 $srcdir/syslog-ng.conf $pkgdir/etc/syslog-ng.conf
+    install -Dm644 $srcdir/syslog-ng.logrotate $pkgdir/etc/logrotate.d/syslog-ng
+    install -Dm755 $srcdir/syslog-ng.rc $pkgdir/etc/rc.d/syslog-ng
     # remove libexec
     rm -rf $pkgdir/usr/libexec
 }
