@@ -4,26 +4,39 @@
 
 pkgname=glhack
 pkgver=1.2
-pkgrel=2
+pkgrel=3
 pkgdesc="A port of Nethack, a single player dungeon exploration game in 2D"
 arch=('i686' 'x86_64')
 url="http://glhack.sourceforge.net/"
 license=('custom')
 depends=('sdl' 'libpng' 'mesa')
 options=('!makeflags')
-source=(http://downloads.sourceforge.net/$pkgname/$pkgname-$pkgver.tar.gz)
+install=glhack.install
+source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz)
 md5sums=('b4c68e3ab689610ca638b7660c1b05bd')
 
 build(){
-  cd $srcdir/$pkgname-$pkgver
-  sed -i -e 's|GAMEDIR  = $(PREFIX)/lib/games/$(GAME)|GAMEDIR  = $(PREFIX)/share/$(GAME)|g' Makefile || return 1
-  sed -i -e 's|SHELLDIR = $(PREFIX)/games|SHELLDIR = $(PREFIX)/bin|g' Makefile || return 1
-  sed -i -e 's|VARDIR   = /var/lib/games/glhack|VARDIR   = $(PREFIX)/share/$(GAME)|g' Makefile || return 1
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  sed -i 's|/usr/lib/games|/usr/share|' include/config.h || return 1
+  sed -i 's|/var/lib/games/glhack|/var/games/glhack|' include/unixconf.h || return 1
+  sed -i -e 's|PREFIX	 = /usr|PREFIX	 = $(DESTDIR)/usr|' Makefile || return 1
+  sed -i -e 's|VARDIR   = /var/lib/games/glhack|VARDIR   = $(DESTDIR)/var/games/glhack|' Makefile || return 1
+  sed -i -e 's|/usr/man/man6|$(DESTDIR)/usr/share/man/man6|' doc/Makefile || return 1
+  sed -i -e 's|GAMEDIR  = $(PREFIX)/lib/games/$(GAME)|GAMEDIR  = $(PREFIX)/share/$(GAME)|' Makefile || return 1
+
   make   || return 1
-  install -d $pkgdir/usr/share/man/man{5,6}
-  sed -i "s|/usr/man/man6|$pkgdir/usr/share/man/man6|" doc/Makefile || return 1
-  sed -i -e "s|PREFIX[\t]* = /usr|PREFIX   = $pkgdir/usr|g" Makefile || return 1
-  sed -i -e 's|s;/usr/games/lib/nethackdir;$(GAMEDIR);|s;/usr/games/lib/nethackdir;/usr/share/$(GAME);|g' Makefile || return 1
-  make install || return 1
-  install -D -m644 dat/license $pkgdir/usr/share/licenses/$pkgname/license
+  install -d "${pkgdir}"/usr/share/man/man{5,6}
+  make DESTDIR="$pkgdir" install || return 1
+  install -D -m644 dat/license "${pkgdir}/usr/share/licenses/${pkgname}/license"
+
+  mv "${pkgdir}/usr/share/glhack/glhack" "${pkgdir}/usr/bin/glhack"
+  mv "${pkgdir}/usr/share/glhack/recover_glhack" "${pkgdir}/usr/bin/recover_glhack"
+
+  chown -R root:root "${pkgdir}/usr/share/glhack"
+
+  rm -r "${pkgdir}"/var/games/glhack
+  install -d "${pkgdir}/var/games/glhack/save"
+  chmod -R 775 "${pkgdir}/var/games"
+  chown -R root:games "${pkgdir}/var/games"
 }
