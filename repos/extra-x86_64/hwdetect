@@ -36,12 +36,10 @@ usage () {
 	echo "    --hostcontroller       show MODULES= for all hostcontrollers"
 	echo "    --vmware               add BusLogic to MODULES for vmware"
         echo "" 
+	echo "    --rootdevice=          autodetected advanced features of rootdevice"
+	echo "    --hooks-dir=           use this directory for HOOKS check"
 	echo "    --hooks                show HOOKS="
-	echo "    --hooks-dir            use this directory for HOOKS check"
-	echo "    --mdadm                add mdadm to HOOKS="
 	echo "    --dmraid               add dmraid to HOOKS="
-	echo "    --encrypt              add encrypt to HOOKS="
-	echo "    --lvm2                 add lvm2 to HOOKS="
 	echo "    --keymap               add keymap to HOOKS="
 	echo "    --usb                  add usb to HOOKS="
 	echo "    --usbinput             add usbinput to HOOKS="
@@ -67,6 +65,9 @@ case $1 in
 	--kernel_version=*)
 	KERNEL_VERSION="$(echo $1 | awk -F= '{print $2;}')"
 	;;
+	--rootdevice=*)
+	ROOTDEVICE="$(echo $1 | awk -F= '{print $2;}')"
+	;;
 esac
 
 if [ "$KERNEL_VERSION" = "" ]; then
@@ -76,17 +77,8 @@ fi
 # IDE/PATA switch
 [ "$(echo $* | grep '\-ide-legacy')" ] && IDE_LEGACY=1
 
-# mdadm switch
-[ "$(echo $* | grep '\-mdadm')" ] && MDADM=1
-
 # dmraid switch
 [ "$(echo $* | grep '\-dmraid')" ] && DMRAID=1
-
-# encrypt switch
-[ "$(echo $* | grep '\-encrypt')" ] && ENCRYPT=1
-
-# lvm2 switch
-[ "$(echo $* | grep '\-lvm2')" ] && LVM2=1
 
 # keymap switch
 [ "$(echo $* | grep '\-keymap')" ] && KEYMAP=1
@@ -108,6 +100,106 @@ fi
 
 # vmware switch
 [ "$(echo $* | grep '\-vmware')" ] && VMWARE=1
+
+ADVANCED=""
+# root device check
+if ! [ "$ROOTDEVICE" = "" ]; then
+        # check device mapper devices
+	if [ "$(echo "$ROOTDEVICE" | grep "/dev/mapper")" ]; then
+		# check if encryption is used
+		if [ "$(cryptsetup status $ROOTDEVICE 2>/dev/null)" ]; then
+			ADVANCED="encrypt"
+			# check on lvm
+			realdevice="$(cryptsetup status $ROOTDEVICE 2>/dev/null | grep "device:.*/dev/mapper/" | sed -e 's#.*\ ##g')"
+			if [ "$(lvs $realdevice 2>/dev/null)" ]; then
+				ADVANCED="lvm2 encrypt"
+				vg="$(echo $(lvs -o vg_name --noheading $realdevice))"
+				# check on raid
+				[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")" ] && ADVANCED="mdadm lvm2 encrypt"
+			fi
+			# check on raid
+			if [ "$(cryptsetup status $ROOTDEVICE 2>/dev/null | grep "device:.*/dev/md" | sed -e 's#.*\ ##g')" ]; then
+				ADVANCED="mdadm encrypt"
+				realdevice="$(cryptsetup status $ROOTDEVICE 2>/dev/null | grep "device:.*/dev/md" | sed -e 's#.*\ ##g')"
+				# check on lvm
+				[ "$(mdadm --detail $realdevice | grep "/dev/block/254")" ] && ADVANCED="lvm2 mdadm encrypt"
+			fi
+		fi
+		# check if lvm is used
+		if [ "$(lvs $ROOTDEVICE 2>/dev/null)" ]; then
+			ADVANCED="lvm2"
+			vg="$(echo $(lvs -o vg_name --noheading $ROOTDEVICE))"
+			# check on encrypt
+			if [ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ]; then 
+				ADVANCED="encrypt lvm2"
+				# check on raid
+				[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")" ] && ADVANCED="mdadm encrypt lvm2"
+				for i in "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")"; do
+					realdevice="$(echo $i | cut -d ' ' -f1)"
+					getsymlink="$(readlink $realdevice)"
+					correctdevice="$(echo $getsymlink | sed -e 's#\.\.#/dev#g')"
+					[ "$(cryptsetup status $correctdevice 2>/dev/null | grep "device:.*/dev/md")" ] && ADVANCED="mdadm encrypt lvm2"
+				done
+			fi
+			# check on raid
+			if [ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")" ]; then
+				ADVANCED="mdadm lvm2"
+				#check on encrypt
+				[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ] && ADVANCED="encrypt mdadm lvm2"
+				for i in "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")"; do
+					realdevice="$(echo $i | cut -d ' ' -f1)"
+					[ "$(mdadm --detail $realdevice | grep "/dev/block/254")" ] && ADVANCED="encrypt mdadm lvm2"
+				done
+			fi
+		fi
+	fi
+	# check md device
+	if [ "$(echo "$ROOTDEVICE" | grep "/dev/md")" ]; then
+		ADVANCED="mdadm"
+		# raid partitions or raid?
+		if [ "$(echo "$ROOTDEVICE" | grep "/dev/md_d")" ]; then
+			realdevice="$(echo $ROOTDEVICE | sed -e 's#p.*##g' -e 's#/dev/##g')"
+			if ! [ "$(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null)" = "" ]; then
+				SET_LVM=""
+				SET_ENCRYPT=""
+				for k in $(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null); do
+					[ "$(lvs /dev/mapper/$(cat $k/dm/name) 2>/dev/null)" ] && SET_LVM="1"
+					[ "$(cryptsetup status $(cat $k/dm/name) 2>/dev/null)" ] && SET_ENCRYPT="1"
+					# check on lvm
+					[ "$(lvs /dev/mapper/$(cat $k/dm/name) 2>/dev/null)" ] && ADVANCED="lvm2 mdadm"
+					# check on encrypt
+					[ "$(cryptsetup status $(cat $k/dm/name) 2>/dev/null)" ] && ADVANCED="encrypt mdadm"
+					# check encrypted volume device
+					realdevice="$(cryptsetup status $(cat $k/dm/name) 2>/dev/null | grep "device:.*/dev/mapper/" | sed -e 's#.*\ ##g')"
+					[ "$(lvs $realdevice 2>/dev/null)" ] && ADVANCED="lvm2 encrypt mdadm"
+					vg="$(echo $(lvs -o vg_name --noheading /dev/mapper/$(cat $k/dm/name) 2>/dev/null))"
+					[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ] && ADVANCED="encrypt lvm2 mdadm"
+				done
+				[ "$SET_LVM" = "1" -a "$SET_ENCRYPT" = "1" ] && ADVANCED="lvm2 encrypt mdadm"
+			fi
+		else
+			realdevice="$(echo $ROOTDEVICE | sed -e 's#/dev/##g')"
+			if ! [ "$(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null)" = "" ]; then
+				SET_LVM=""
+				SET_ENCRYPT=""
+				for k in $(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null); do
+					[ "$(lvs /dev/mapper/$(cat $k/dm/name) 2>/dev/null)" ] && SET_LVM="1"
+					[ "$(cryptsetup status $(cat $k/dm/name) 2>/dev/null)" ] && SET_ENCRYPT="1"
+					# check on lvm
+					[ "$(lvs /dev/mapper/$(cat $k/dm/name) 2>/dev/null)" ] && ADVANCED="lvm2 mdadm"
+					# check on encrypt
+					[ "$(cryptsetup status $(cat $k/dm/name) 2>/dev/null)" ] && ADVANCED="encrypt mdadm"
+					# check encrypted volume device
+					realdevice="$(cryptsetup status $(cat $k/dm/name) 2>/dev/null | grep "device:.*/dev/mapper/" | sed -e 's#.*\ ##g')"
+					[ "$(lvs $realdevice 2>/dev/null)" ] && ADVANCED="lvm2 encrypt mdadm"
+					vg="$(echo $(lvs -o vg_name --noheading /dev/mapper/$(cat $k/dm/name) 2>/dev/null))"
+					[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ] && ADVANCED="encrypt lvm2 mdadm"
+				done
+				[ "$SET_LVM" = "1" -a "$SET_ENCRYPT" = "1" ] && ADVANCED="lvm2 encrypt mdadm"
+			fi
+		fi
+	fi
+fi
 
 # checking /sys
 if ! [ -d /sys/ ]; then
@@ -385,7 +477,7 @@ while [ $# -gt 0 ]; do
 			if [ "$HOOKS_DIR" = "" ]; then
 				HOOKS_DIR="/lib/initcpio/install"
 			fi
-			START_HOOKS="base udev autodetect ide pata scsi sata usb fw pcmcia net dmraid mdadm usbinput keymap lvm2 encrypt filesystems"
+			START_HOOKS="base udev autodetect ide pata scsi sata usb fw pcmcia net dmraid usbinput keymap $ADVANCED filesystems"
 			# remove the ones that don't exist on the system
 			for i in ${START_HOOKS}; do
 				if ! [ -e "${HOOKS_DIR}/$i" ]; then 
@@ -404,17 +496,8 @@ while [ $# -gt 0 ]; do
 			if ! [ "$KEYMAP" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/keymap//g")
 			fi
-			if ! [ "$MDADM" = "1" ]; then 
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/mdadm//g")
-			fi
 			if ! [ "$DMRAID" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/dmraid//g")
-			fi
-			if ! [ "$ENCRYPT" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/encrypt//g")
-			fi
-			if ! [ "$LVM2" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/lvm2//g")
 			fi
 			if ! [ "$USB" = "1" ]; then
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/usb\ //g")
