@@ -1,0 +1,652 @@
+From b74bf3f9a65af9e72921d4e9028d9d4d023f8bc6 Mon Sep 17 00:00:00 2001
+From: Barry Scott <barry.scott@onelan.co.uk>
+Date: Mon, 13 Jul 2009 23:34:20 +0000
+Subject: Fix XV scan line calculation when rotated.
+
+---
+diff --git a/src/i830_video.c b/src/i830_video.c
+index 4bba902..92b6324 100644
+--- a/src/i830_video.c
++++ b/src/i830_video.c
+@@ -2539,7 +2539,7 @@ I830PutImage(ScrnInfoPtr pScrn,
+ 
+         if (sync) {
+ 	    BoxPtr box;
+-	    int y1, y2;
++	    pixman_box16_t box_in_crtc_coordinates;
+ 	    int pipe = -1, event, load_scan_lines_pipe;
+ 
+ 	    if (pixmap_is_scanout(pPixmap))
+@@ -2555,16 +2555,17 @@ I830PutImage(ScrnInfoPtr pScrn,
+ 		}
+ 
+ 		box = REGION_EXTENTS(unused, clipBoxes);
+-		y1 = box->y1 - crtc->y;
+-		y2 = box->y2 - crtc->y;
++		box_in_crtc_coordinates = *box;
++		if (crtc->transform_in_use)
++		    pixman_f_transform_bounds (&crtc->f_framebuffer_to_crtc, &box_in_crtc_coordinates);
+ 
+ 		BEGIN_BATCH(5);
+ 		/* The documentation says that the LOAD_SCAN_LINES command
+ 		 * always comes in pairs. Don't ask me why. */
+ 		OUT_BATCH(MI_LOAD_SCAN_LINES_INCL | load_scan_lines_pipe);
+-		OUT_BATCH((y1 << 16) | y2);
++		OUT_BATCH((box_in_crtc_coordinates.y1 << 16) | box_in_crtc_coordinates.y2);
+ 		OUT_BATCH(MI_LOAD_SCAN_LINES_INCL | load_scan_lines_pipe);
+-		OUT_BATCH((y1 << 16) | y2);
++		OUT_BATCH((box_in_crtc_coordinates.y1 << 16) | box_in_crtc_coordinates.y2);
+ 		OUT_BATCH(MI_WAIT_FOR_EVENT | event);
+ 		ADVANCE_BATCH();
+ 	    }
+--
+cgit v0.8.2
+From e386e7b14b139f15205e14b173e8222bf38d9e18 Mon Sep 17 00:00:00 2001
+From: Keith Packard <keithp@keithp.com>
+Date: Wed, 15 Jul 2009 16:43:04 +0000
+Subject: Reset framebuffer offset when rebinding aperture (22760).
+
+scrn->fbOffset may be changed when binding objects to the aperture during
+server initialization or VT enter. This was accidentally removed when the
+NoAlloc option was eliminated.
+
+Signed-off-by: Keith Packard <keithp@keithp.com>
+---
+diff --git a/src/i830_memory.c b/src/i830_memory.c
+index f2f3966..cc9d376 100644
+--- a/src/i830_memory.c
++++ b/src/i830_memory.c
+@@ -1581,6 +1581,9 @@ i830_bind_all_memory(ScrnInfoPtr pScrn)
+ 	i830_update_cursor_offsets(pScrn);
+     i830_set_max_gtt_map_size(pScrn);
+ 
++    if (pI830->front_buffer)
++	pScrn->fbOffset = pI830->front_buffer->offset;
++
+     return TRUE;
+ }
+ 
+--
+cgit v0.8.2
+From a1e6abb5ca89d699144d10fdc4309b3b78f2f7a9 Mon Sep 17 00:00:00 2001
+From: Eric Anholt <eric@anholt.net>
+Date: Wed, 15 Jul 2009 21:15:10 +0000
+Subject: Use batch_start_atomic to fix batchbuffer wrapping problems with 8xx render.
+
+Bug #22483.
+---
+diff --git a/src/i830.h b/src/i830.h
+index f7ca687..ec57662 100644
+--- a/src/i830.h
++++ b/src/i830.h
+@@ -468,6 +468,14 @@ typedef struct _I830Rec {
+   /** Transform pointers for src/mask, or NULL if identity */
+    PictTransform *transform[2];
+    float coord_adjust;
++
++   /* i830 render accel state */
++   PixmapPtr render_src, render_mask, render_dst;
++   PicturePtr render_src_picture, render_mask_picture, render_dst_picture;
++   uint32_t render_dst_format;
++   Bool needs_render_state_emit;
++   uint32_t cblend, ablend, s8_blendctl;
++
+    /* i915 render accel state */
+    uint32_t mapstate[6];
+    uint32_t samplerstate[6];
+@@ -790,6 +798,7 @@ Bool i915_prepare_composite(int op, PicturePtr pSrc, PicturePtr pMask,
+ void i915_composite(PixmapPtr pDst, int srcX, int srcY,
+ 		    int maskX, int maskY, int dstX, int dstY, int w, int h);
+ void i915_batch_flush_notify(ScrnInfoPtr pScrn);
++void i830_batch_flush_notify(ScrnInfoPtr scrn);
+ /* i965_render.c */
+ unsigned int gen4_render_state_size(ScrnInfoPtr pScrn);
+ void gen4_render_state_init(ScrnInfoPtr pScrn);
+diff --git a/src/i830_driver.c b/src/i830_driver.c
+index dfc2bdf..33079fe 100644
+--- a/src/i830_driver.c
++++ b/src/i830_driver.c
+@@ -2757,7 +2757,7 @@ I830ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+    else if (IS_I9XX(pI830))
+        pI830->batch_flush_notify = i915_batch_flush_notify;
+    else
+-       pI830->batch_flush_notify = NULL;
++       pI830->batch_flush_notify = i830_batch_flush_notify;
+ 
+    miInitializeBackingStore(pScreen);
+    xf86SetBackingStore(pScreen);
+diff --git a/src/i830_render.c b/src/i830_render.c
+index b1d6f50..ecee6f2 100644
+--- a/src/i830_render.c
++++ b/src/i830_render.c
+@@ -255,7 +255,7 @@ i8xx_get_card_format(PicturePtr pPict)
+     FatalError("Unsupported format type %d\n", pPict->format);
+ }
+ 
+-static Bool
++static void
+ i830_texture_setup(PicturePtr pPict, PixmapPtr pPix, int unit)
+ {
+ 
+@@ -299,7 +299,7 @@ i830_texture_setup(PicturePtr pPict, PixmapPtr pPix, int unit)
+         break;
+     default:
+ 	filter = 0;
+-        I830FALLBACK("Bad filter 0x%x\n", pPict->filter);
++        FatalError("Bad filter 0x%x\n", pPict->filter);
+     }
+     filter |= (MIPFILTER_NONE << TM0S3_MIP_FILTER_SHIFT); 
+ 
+@@ -344,10 +344,6 @@ i830_texture_setup(PicturePtr pPict, PixmapPtr pPix, int unit)
+ 		  TEX_STREAM_MAP_IDX(unit));
+ 	ADVANCE_BATCH();
+      }
+-
+-    i830_debug_sync(pScrn);
+-
+-    return TRUE;
+ }
+ 
+ Bool
+@@ -391,29 +387,27 @@ i830_prepare_composite(int op, PicturePtr pSrcPicture,
+ {
+     ScrnInfoPtr pScrn = xf86Screens[pSrcPicture->pDrawable->pScreen->myNum];
+     I830Ptr pI830 = I830PTR(pScrn);
+-    uint32_t dst_format, dst_pitch;
+     Bool is_affine_src, is_affine_mask;
+     Bool is_nearest = FALSE;
+ 
++    pI830->render_src_picture = pSrcPicture;
++    pI830->render_src = pSrc;
++    pI830->render_mask_picture = pMaskPicture;
++    pI830->render_mask = pMask;
++    pI830->render_dst_picture = pDstPicture;
++    pI830->render_dst = pDst;
++
+     i830_exa_check_pitch_3d(pSrc);
+     if (pMask)
+ 	i830_exa_check_pitch_3d(pMask);
+     i830_exa_check_pitch_3d(pDst);
+ 
+-    IntelEmitInvarientState(pScrn);
+-    pI830->last_3d = LAST_3D_RENDER;
+-
+-    if (!i830_get_dest_format(pDstPicture, &dst_format))
++    if (!i830_get_dest_format(pDstPicture, &pI830->render_dst_format))
+ 	return FALSE;
+-    dst_pitch = intel_get_pixmap_pitch(pDst);
+ 
+-    if (!i830_texture_setup(pSrcPicture, pSrc, 0))
+-	I830FALLBACK("fail to setup src texture\n");
+     if (pSrcPicture->filter == PictFilterNearest)
+ 	is_nearest = TRUE;
+     if (pMask != NULL) {
+-	if (!i830_texture_setup(pMaskPicture, pMask, 1))
+-	    I830FALLBACK("fail to setup mask texture\n");
+ 	if (pMaskPicture->filter == PictFilterNearest)
+ 	    is_nearest = TRUE;
+     } else {
+@@ -434,45 +428,7 @@ i830_prepare_composite(int op, PicturePtr pSrcPicture,
+ 	I830FALLBACK("non-affine transform unsupported on 8xx hardware\n");
+ 
+     {
+-	uint32_t cblend, ablend, blendctl, vf2;
+-
+-	BEGIN_BATCH(30);
+-
+-	/* color buffer */
+-	OUT_BATCH(_3DSTATE_BUF_INFO_CMD);
+-	OUT_BATCH(BUF_3D_ID_COLOR_BACK| BUF_3D_USE_FENCE |
+-		  BUF_3D_PITCH(dst_pitch));
+-	OUT_RELOC_PIXMAP(pDst, I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
+-	OUT_BATCH(MI_NOOP);
+-
+-	OUT_BATCH(_3DSTATE_DST_BUF_VARS_CMD);
+-	OUT_BATCH(dst_format);
+-
+-	/* defaults */
+-	OUT_BATCH(_3DSTATE_DFLT_Z_CMD);
+-	OUT_BATCH(0);
+-
+-	OUT_BATCH(_3DSTATE_DFLT_DIFFUSE_CMD);
+-	OUT_BATCH(0);
+-
+-	OUT_BATCH(_3DSTATE_DFLT_SPEC_CMD);
+-	OUT_BATCH(0);
+-
+-	OUT_BATCH(_3DSTATE_DRAW_RECT_CMD);
+-	OUT_BATCH(0);
+-	OUT_BATCH(0); /* ymin, xmin */
+-	OUT_BATCH(DRAW_YMAX(pDst->drawable.height - 1) |
+-		  DRAW_XMAX(pDst->drawable.width - 1));
+-	OUT_BATCH(0); /* yorig, xorig */
+-
+-	OUT_BATCH(_3DSTATE_LOAD_STATE_IMMEDIATE_1 | I1_LOAD_S(2) |
+-		  I1_LOAD_S(3) | 1);
+-	if (pMask)
+-	    vf2 = 2 << 12; /* 2 texture coord sets */
+-	else
+-	    vf2 = 1 << 12;
+-	OUT_BATCH(vf2); /* TEXCOORDFMT_2D */
+-	OUT_BATCH(S3_CULLMODE_NONE | S3_VERTEXHAS_XY);
++	uint32_t cblend, ablend, blendctl;
+ 
+ 	/* If component alpha is active in the mask and the blend operation
+ 	 * uses the source alpha, then we know we don't need the source
+@@ -541,36 +497,90 @@ i830_prepare_composite(int op, PicturePtr pSrcPicture,
+ 	    ablend |= TB0A_ARG2_SEL_ONE;
+ 	}
+ 
+-	OUT_BATCH(_3DSTATE_LOAD_STATE_IMMEDIATE_2 |
+-		  LOAD_TEXTURE_BLEND_STAGE(0)|1);
+-	OUT_BATCH(cblend);
+-	OUT_BATCH(ablend);
+-	OUT_BATCH(0);
+-
+ 	blendctl = i830_get_blend_cntl(op, pMaskPicture, pDstPicture->format);
+-	OUT_BATCH(_3DSTATE_INDPT_ALPHA_BLEND_CMD | DISABLE_INDPT_ALPHA_BLEND);
+-	OUT_BATCH(MI_NOOP);
+-	OUT_BATCH(_3DSTATE_LOAD_STATE_IMMEDIATE_1 | I1_LOAD_S(8) | 0);
+-	OUT_BATCH(S8_ENABLE_COLOR_BLEND | S8_BLENDFUNC_ADD | blendctl |
+-		  S8_ENABLE_COLOR_BUFFER_WRITE);
+-
+-	OUT_BATCH(_3DSTATE_ENABLES_1_CMD | DISABLE_LOGIC_OP |
+-		  DISABLE_STENCIL_TEST | DISABLE_DEPTH_BIAS |
+-		  DISABLE_SPEC_ADD | DISABLE_FOG | DISABLE_ALPHA_TEST |
+-		  ENABLE_COLOR_BLEND | DISABLE_DEPTH_TEST);
+-	/* We have to explicitly say we don't want write disabled */
+-	OUT_BATCH(_3DSTATE_ENABLES_2_CMD | ENABLE_COLOR_MASK |
+-		  DISABLE_STENCIL_WRITE | ENABLE_TEX_CACHE |
+-		  DISABLE_DITHER | ENABLE_COLOR_WRITE |
+-		  DISABLE_DEPTH_WRITE);
+-	ADVANCE_BATCH();
++
++	pI830->cblend = cblend;
++	pI830->ablend = ablend;
++	pI830->s8_blendctl = blendctl;
+     }
+ 
+     i830_debug_sync(pScrn);
+ 
++    pI830->needs_render_state_emit = TRUE;
++
+     return TRUE;
+ }
+ 
++static void
++i830_emit_composite_state(ScrnInfoPtr pScrn)
++{
++    I830Ptr pI830 = I830PTR(pScrn);
++    uint32_t vf2;
++
++    pI830->needs_render_state_emit = FALSE;
++
++    IntelEmitInvarientState(pScrn);
++    pI830->last_3d = LAST_3D_RENDER;
++
++    BEGIN_BATCH(24);
++
++    OUT_BATCH(_3DSTATE_BUF_INFO_CMD);
++    OUT_BATCH(BUF_3D_ID_COLOR_BACK| BUF_3D_USE_FENCE |
++	      BUF_3D_PITCH(intel_get_pixmap_pitch(pI830->render_dst)));
++    OUT_RELOC_PIXMAP(pI830->render_dst,
++		     I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
++    OUT_BATCH(MI_NOOP);
++
++    OUT_BATCH(_3DSTATE_DST_BUF_VARS_CMD);
++    OUT_BATCH(pI830->render_dst_format);
++
++    OUT_BATCH(_3DSTATE_DRAW_RECT_CMD);
++    OUT_BATCH(0);
++    OUT_BATCH(0); /* ymin, xmin */
++    OUT_BATCH(DRAW_YMAX(pI830->render_dst->drawable.height - 1) |
++	      DRAW_XMAX(pI830->render_dst->drawable.width - 1));
++    OUT_BATCH(0); /* yorig, xorig */
++
++    OUT_BATCH(_3DSTATE_LOAD_STATE_IMMEDIATE_1 |
++	      I1_LOAD_S(2) |
++	      I1_LOAD_S(3) | 1);
++    if (pI830->render_mask)
++	vf2 = 2 << 12; /* 2 texture coord sets */
++    else
++	vf2 = 1 << 12;
++    OUT_BATCH(vf2); /* TEXCOORDFMT_2D */
++    OUT_BATCH(S3_CULLMODE_NONE | S3_VERTEXHAS_XY);
++
++    OUT_BATCH(_3DSTATE_INDPT_ALPHA_BLEND_CMD | DISABLE_INDPT_ALPHA_BLEND);
++    OUT_BATCH(MI_NOOP);
++    OUT_BATCH(_3DSTATE_LOAD_STATE_IMMEDIATE_1 | I1_LOAD_S(8) | 0);
++    OUT_BATCH(S8_ENABLE_COLOR_BLEND | S8_BLENDFUNC_ADD | pI830->s8_blendctl |
++	      S8_ENABLE_COLOR_BUFFER_WRITE);
++
++    OUT_BATCH(_3DSTATE_LOAD_STATE_IMMEDIATE_2 |
++	      LOAD_TEXTURE_BLEND_STAGE(0)|1);
++    OUT_BATCH(pI830->cblend);
++    OUT_BATCH(pI830->ablend);
++    OUT_BATCH(0);
++
++    OUT_BATCH(_3DSTATE_ENABLES_1_CMD | DISABLE_LOGIC_OP |
++	      DISABLE_STENCIL_TEST | DISABLE_DEPTH_BIAS |
++	      DISABLE_SPEC_ADD | DISABLE_FOG | DISABLE_ALPHA_TEST |
++	      ENABLE_COLOR_BLEND | DISABLE_DEPTH_TEST);
++    /* We have to explicitly say we don't want write disabled */
++    OUT_BATCH(_3DSTATE_ENABLES_2_CMD | ENABLE_COLOR_MASK |
++	      DISABLE_STENCIL_WRITE | ENABLE_TEX_CACHE |
++	      DISABLE_DITHER | ENABLE_COLOR_WRITE |
++	      DISABLE_DEPTH_WRITE);
++    ADVANCE_BATCH();
++
++    i830_texture_setup(pI830->render_src_picture, pI830->render_src, 0);
++    if (pI830->render_mask) {
++	i830_texture_setup(pI830->render_mask_picture,
++			   pI830->render_mask, 1);
++    }
++}
++
+ /**
+  * Do a single rectangle composite operation.
+  *
+@@ -582,7 +592,6 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+ {
+     ScrnInfoPtr pScrn = xf86Screens[pDst->drawable.pScreen->myNum];
+     I830Ptr pI830 = I830PTR(pScrn);
+-    Bool has_mask;
+     Bool is_affine_src, is_affine_mask;
+     int per_vertex, num_floats;
+     float src_x[3], src_y[3], src_w[3], mask_x[3], mask_y[3], mask_w[3];
+@@ -590,12 +599,6 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+     is_affine_src = i830_transform_is_affine (pI830->transform[0]);
+     is_affine_mask = i830_transform_is_affine (pI830->transform[1]);
+ 
+-    if (pI830->scale_units[1][0] == -1 || pI830->scale_units[1][1] == -1) {
+-	has_mask = FALSE;
+-    } else {
+-	has_mask = TRUE;
+-    }
+-
+     per_vertex = 2; /* dest x/y */
+     if (is_affine_src)
+     {
+@@ -630,7 +633,7 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+ 	    return;
+ 	per_vertex += 4;    /* src x/y/z/w */
+     }
+-    if (has_mask) {
++    if (pI830->render_mask) {
+ 	if (is_affine_mask) {
+ 	    if (!i830_get_transformed_coordinates(maskX, maskY,
+ 						  pI830->transform[1],
+@@ -666,6 +669,16 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+     }
+ 
+     num_floats = 3 * per_vertex;
++
++    intel_batch_start_atomic(pScrn,
++			     58 + /* invarient */
++			     24 + /* setup */
++			     20 + /* 2 * setup_texture */
++			     6 + num_floats /* verts */);
++
++    if (pI830->needs_render_state_emit)
++	i830_emit_composite_state(pScrn);
++
+     BEGIN_BATCH(6 + num_floats);
+ 
+     OUT_BATCH(MI_NOOP);
+@@ -683,7 +696,7 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+ 	OUT_BATCH_F(0.0);
+ 	OUT_BATCH_F(src_w[2]);
+     }
+-    if (has_mask) {
++    if (pI830->render_mask) {
+ 	OUT_BATCH_F(mask_x[2] / pI830->scale_units[1][0]);
+ 	OUT_BATCH_F(mask_y[2] / pI830->scale_units[1][1]);
+ 	if (!is_affine_mask) {
+@@ -700,7 +713,7 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+ 	OUT_BATCH_F(0.0);
+ 	OUT_BATCH_F(src_w[1]);
+     }
+-    if (has_mask) {
++    if (pI830->render_mask) {
+ 	OUT_BATCH_F(mask_x[1] / pI830->scale_units[1][0]);
+ 	OUT_BATCH_F(mask_y[1] / pI830->scale_units[1][1]);
+ 	if (!is_affine_mask) {
+@@ -717,7 +730,7 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+ 	OUT_BATCH_F(0.0);
+ 	OUT_BATCH_F(src_w[0]);
+     }
+-    if (has_mask) {
++    if (pI830->render_mask) {
+ 	OUT_BATCH_F(mask_x[0] / pI830->scale_units[1][0]);
+ 	OUT_BATCH_F(mask_y[0] / pI830->scale_units[1][1]);
+ 	if (!is_affine_mask) {
+@@ -727,4 +740,16 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+     }
+ 
+     ADVANCE_BATCH();
++
++    intel_batch_end_atomic(pScrn);
++
++    i830_debug_sync(pScrn);
++}
++
++void
++i830_batch_flush_notify(ScrnInfoPtr scrn)
++{
++    I830Ptr i830 = I830PTR(scrn);
++
++    i830->needs_render_state_emit = TRUE;
+ }
+--
+cgit v0.8.2
+From 8dd7ccf37e2de6d80b556e6d18af244cefc1e417 Mon Sep 17 00:00:00 2001
+From: Eric Anholt <eric@anholt.net>
+Date: Thu, 16 Jul 2009 18:40:51 +0000
+Subject: Fix 915-class Render after the 8xx-class Render fix.
+
+The two shared i830_composite.c, so giving i830 atomic batch support
+triggered anger about starting i830's atomic area while in i915's atomic
+area.  Instead, split the emit-a-primitive stuff from the state emission.
+---
+diff --git a/src/i830.h b/src/i830.h
+index ec57662..54dddd8 100644
+--- a/src/i830.h
++++ b/src/i830.h
+@@ -788,6 +788,9 @@ i830_transform_is_affine (PictTransformPtr t);
+ 
+ void i830_composite(PixmapPtr pDst, int srcX, int srcY,
+ 		    int maskX, int maskY, int dstX, int dstY, int w, int h);
++void i830_emit_composite_primitive(PixmapPtr pDst, int srcX, int srcY,
++				   int maskX, int maskY, int dstX, int dstY,
++				   int w, int h);
+ void i830_done_composite(PixmapPtr pDst);
+ /* i915_render.c */
+ Bool i915_check_composite(int op, PicturePtr pSrc, PicturePtr pMask,
+diff --git a/src/i830_render.c b/src/i830_render.c
+index ecee6f2..c5196cc 100644
+--- a/src/i830_render.c
++++ b/src/i830_render.c
+@@ -581,14 +581,10 @@ i830_emit_composite_state(ScrnInfoPtr pScrn)
+     }
+ }
+ 
+-/**
+- * Do a single rectangle composite operation.
+- *
+- * This function is shared between i830 and i915 generation code.
+- */
+ void
+-i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+-	       int dstX, int dstY, int w, int h)
++i830_emit_composite_primitive(PixmapPtr pDst, int srcX, int srcY,
++			      int maskX, int maskY,
++			      int dstX, int dstY, int w, int h)
+ {
+     ScrnInfoPtr pScrn = xf86Screens[pDst->drawable.pScreen->myNum];
+     I830Ptr pI830 = I830PTR(pScrn);
+@@ -670,15 +666,6 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+ 
+     num_floats = 3 * per_vertex;
+ 
+-    intel_batch_start_atomic(pScrn,
+-			     58 + /* invarient */
+-			     24 + /* setup */
+-			     20 + /* 2 * setup_texture */
+-			     6 + num_floats /* verts */);
+-
+-    if (pI830->needs_render_state_emit)
+-	i830_emit_composite_state(pScrn);
+-
+     BEGIN_BATCH(6 + num_floats);
+ 
+     OUT_BATCH(MI_NOOP);
+@@ -740,6 +727,32 @@ i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+     }
+ 
+     ADVANCE_BATCH();
++}
++
++
++/**
++ * Do a single rectangle composite operation.
++ *
++ * This function is shared between i830 and i915 generation code.
++ */
++void
++i830_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
++	       int dstX, int dstY, int w, int h)
++{
++    ScrnInfoPtr pScrn = xf86Screens[pDst->drawable.pScreen->myNum];
++    I830Ptr pI830 = I830PTR(pScrn);
++
++    intel_batch_start_atomic(pScrn,
++			     58 + /* invarient */
++			     24 + /* setup */
++			     20 + /* 2 * setup_texture */
++			     6 + 30 /* verts */);
++
++    if (pI830->needs_render_state_emit)
++	i830_emit_composite_state(pScrn);
++
++    i830_emit_composite_primitive(pDst, srcX, srcY, maskX, maskY, dstX, dstY,
++				  w, h);
+ 
+     intel_batch_end_atomic(pScrn);
+ 
+diff --git a/src/i915_render.c b/src/i915_render.c
+index ab04e9c..2d11986 100644
+--- a/src/i915_render.c
++++ b/src/i915_render.c
+@@ -556,7 +556,8 @@ i915_composite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY,
+     if (pI830->i915_render_state.needs_emit)
+ 	i915_emit_composite_setup(pScrn);
+ 
+-    i830_composite(pDst, srcX, srcY, maskX, maskY, dstX, dstY, w, h);
++    i830_emit_composite_primitive(pDst, srcX, srcY, maskX, maskY, dstX, dstY,
++				  w, h);
+ 
+     intel_batch_end_atomic(pScrn);
+ }
+--
+cgit v0.8.2
+From bb3007384298cb57625ec0b3868dff9b23568f3e Mon Sep 17 00:00:00 2001
+From: Eric Anholt <eric@anholt.net>
+Date: Thu, 16 Jul 2009 19:56:07 +0000
+Subject: Really fix i915 render.  Fail at commit --amend.
+
+---
+diff --git a/src/i830.h b/src/i830.h
+index 54dddd8..21c98f5 100644
+--- a/src/i830.h
++++ b/src/i830.h
+@@ -482,8 +482,6 @@ typedef struct _I830Rec {
+ 
+    struct {
+       int op;
+-      PicturePtr pSrcPicture, pMaskPicture, pDstPicture;
+-      PixmapPtr pSrc, pMask, pDst;
+       uint32_t dst_format;
+       Bool is_nearest;
+       Bool needs_emit;
+diff --git a/src/i915_render.c b/src/i915_render.c
+index 2d11986..c81366a 100644
+--- a/src/i915_render.c
++++ b/src/i915_render.c
+@@ -322,6 +322,13 @@ i915_prepare_composite(int op, PicturePtr pSrcPicture,
+ 	i830_get_pixmap_bo(pDst),
+     };
+ 
++    pI830->render_src_picture = pSrcPicture;
++    pI830->render_src = pSrc;
++    pI830->render_mask_picture = pMaskPicture;
++    pI830->render_mask = pMask;
++    pI830->render_dst_picture = pDstPicture;
++    pI830->render_dst = pDst;
++
+     i830_exa_check_pitch_3d(pSrc);
+     if (pMask)
+ 	i830_exa_check_pitch_3d(pMask);
+@@ -351,12 +358,6 @@ i915_prepare_composite(int op, PicturePtr pSrcPicture,
+     }
+ 
+     pI830->i915_render_state.op = op;
+-    pI830->i915_render_state.pSrcPicture = pSrcPicture;
+-    pI830->i915_render_state.pMaskPicture = pMaskPicture;
+-    pI830->i915_render_state.pDstPicture = pDstPicture;
+-    pI830->i915_render_state.pSrc = pSrc;
+-    pI830->i915_render_state.pMask = pMask;
+-    pI830->i915_render_state.pDst = pDst;
+     pI830->i915_render_state.needs_emit = TRUE;
+ 
+     return TRUE;
+@@ -367,12 +368,12 @@ i915_emit_composite_setup(ScrnInfoPtr pScrn)
+ {
+     I830Ptr pI830 = I830PTR(pScrn);
+     int op = pI830->i915_render_state.op;
+-    PicturePtr pSrcPicture = pI830->i915_render_state.pSrcPicture;
+-    PicturePtr pMaskPicture = pI830->i915_render_state.pMaskPicture;
+-    PicturePtr pDstPicture = pI830->i915_render_state.pDstPicture;
+-    PixmapPtr pSrc = pI830->i915_render_state.pSrc;
+-    PixmapPtr pMask = pI830->i915_render_state.pMask;
+-    PixmapPtr pDst = pI830->i915_render_state.pDst;
++    PicturePtr pSrcPicture = pI830->render_src_picture;
++    PicturePtr pMaskPicture = pI830->render_mask_picture;
++    PicturePtr pDstPicture = pI830->render_dst_picture;
++    PixmapPtr pSrc = pI830->render_src;
++    PixmapPtr pMask = pI830->render_mask;
++    PixmapPtr pDst = pI830->render_dst;
+     uint32_t dst_format = pI830->i915_render_state.dst_format, dst_pitch;
+     uint32_t blendctl;
+     int out_reg = FS_OC;
+--
+cgit v0.8.2
+From 57c7cbade9556e7b21867e61353f0928fd553616 Mon Sep 17 00:00:00 2001
+From: Owain Ainsworth <zerooa@googlemail.com>
+Date: Thu, 16 Jul 2009 19:38:43 +0000
+Subject: accessing a pixmap if prepare_access fails is verboten.
+
+Don't do it, treat this the same as every other prepare access call in uxa.
+
+Reviewed-by: Keith Packard <keithp@keithp.com>
+Signed-off-by: Owain Ainsworth <zerooa@googlemail.com>
+---
+diff --git a/uxa/uxa.c b/uxa/uxa.c
+index 1f2d75b..22c7c40 100644
+--- a/uxa/uxa.c
++++ b/uxa/uxa.c
+@@ -244,9 +244,10 @@ uxa_validate_gc (GCPtr pGC, unsigned long changes, DrawablePtr pDrawable)
+ 	/* We can't inline stipple handling like we do for GCTile because it sets
+ 	 * fbgc privates.
+ 	 */
+-	uxa_prepare_access(&pGC->stipple->drawable, UXA_ACCESS_RW);
+-	fbValidateGC (pGC, changes, pDrawable);
+-	uxa_finish_access(&pGC->stipple->drawable);
++	if (uxa_prepare_access(&pGC->stipple->drawable, UXA_ACCESS_RW)) {
++	    fbValidateGC (pGC, changes, pDrawable);
++	    uxa_finish_access(&pGC->stipple->drawable);
++	}
+     } else {
+ 	fbValidateGC (pGC, changes, pDrawable);
+     }
+--
+cgit v0.8.2
