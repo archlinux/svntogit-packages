@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xf86-video-mga
+pkgver=1.4.10
+pkgrel=2
+pkgdesc="X.org mga video driver"
+_mesaver="7.5"
+arch=(i686 x86_64)
+url="http://xorg.freedesktop.org/"
+license=('custom')
+depends=("libgl>=${_mesaver}" 'expat>=2.0.1')
+makedepends=('pkgconfig' 'xorg-server>=1.6.2' "mesa>=${_mesaver}"
+             'xf86driproto' 'glproto>=1.4.9' 'dri2proto>=2.1')
+conflicts=('xorg-server<1.6.2')
+options=('!libtool' 'force')
+groups=('xorg-video-drivers')
+source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
+        http://downloads.sourceforge.net/sourceforge/mesa3d/MesaLib-${_mesaver}.tar.bz2
+        mesa-7.1-link-shared.patch
+        LICENSE)
+md5sums=('e2515e7476185a2d0482a3004a84cfd9'
+         '459f332551f6ebb86f384d21dd15e1f0'
+         '9eddc02e23ec08295822911e726ae89a'
+         'b71a5cd59dcaa0b7d9bbbfc597915dd6')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr \
+              --enable-dri || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+  cd "${srcdir}/Mesa-${_mesaver}"
+  patch -Np1 -i "${srcdir}/mesa-7.1-link-shared.patch" || return 1
+  ./configure --prefix=/usr \
+    --with-dri-driverdir=/usr/lib/xorg/modules/dri \
+    --with-dri-drivers=mga \
+    --enable-glx-tls \
+    --with-driver=dri \
+    --enable-xcb \
+    --disable-glu \
+    --disable-glut \
+    --disable-glw || return 1
+  make || return 1
+  cd src/mesa/drivers/dri || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+  rm -f "${pkgdir}/usr/lib/xorg/modules/dri/libdricore.so"
+  rm -rf "${pkgdir}/usr/include"
+  rm -rf "${pkgdir}/usr/lib/pkgconfig"
+  install -D -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
