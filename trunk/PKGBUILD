@@ -3,7 +3,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=readline
-_patchlevel=00 #prepare for some patches
+_patchlevel=003 #prepare for some patches
 pkgver=6.0.$_patchlevel
 pkgrel=1
 pkgdesc="GNU readline library"
@@ -21,7 +21,10 @@ if [ $_patchlevel -gt 00 ]; then
     done
 fi
 md5sums=('b7f65a48add447693be6e86f04a63019'
-         'e5fc955f56d9fa5beb871f3279b8fa8b')
+         'e5fc955f56d9fa5beb871f3279b8fa8b'
+         '85c01ea031ad38a179053c67186bafed'
+         '4fad2a4ce987e3101229d0c8dfb0cd80'
+         '80967f663864983a889af2eb53aea177')
 
 build() {
   cd ${startdir}/src/${pkgname}-6.0
