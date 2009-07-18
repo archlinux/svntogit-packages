@@ -1,0 +1,38 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=libdrm
+pkgver=2.4.12
+pkgrel=1
+pkgdesc="Userspace interface to kernel DRM services"
+arch=(i686 x86_64)
+license=('custom')
+depends=('glibc')
+options=('!libtool')
+url="http://dri.freedesktop.org/"
+source=(http://dri.freedesktop.org/${pkgname}/${pkgname}-${pkgver}.tar.bz2
+        no-pthread-stubs.patch
+        git-fixes.patch
+        COPYING)
+md5sums=('15d26219c046377d5fcb1cb37e7b03a2'
+         '97584cada4db57c1eb799f0b94e738ae'
+         '268de9ab6a6380e46189e577023cce42'
+         'ba65e71c481b94ef0fb6c23c7f21ffa1')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/no-pthread-stubs.patch" || return 1
+  patch -Np1 -i "${srcdir}/git-fixes.patch" || return 1
+  libtoolize --force || return 1
+  aclocal || return 1
+  autoconf || return 1
+  automake || return 1
+  ./configure --prefix=/usr \
+      --enable-nouveau-experimental-api \
+      --enable-radeon-experimental-api \
+      --enable-udev || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 "${srcdir}/COPYING" "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
+}
