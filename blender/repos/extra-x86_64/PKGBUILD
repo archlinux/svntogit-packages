@@ -14,21 +14,21 @@
 cvs=false
 
 pkgname=blender
-pkgver=2.48a
-pkgrel=2
+pkgver=2.49a
+pkgrel=1
 pkgdesc="A fully integrated 3D graphics creation suite"
 arch=(i686 x86_64)
 license=(GPL)
 url="http://blender3d.org"
 depends=('libjpeg' 'libpng' 'openexr' 'sdl' 'python>=2.6' 'desktop-file-utils' \
-         'gettext' 'libxi' 'libxmu')
-makedepends=('glut' 'libtiff' 'librsvg')
+         'gettext' 'libxi' 'libxmu' 'mesa' 'freetype2' 'openal')
+makedepends=('freeglut' 'libtiff' 'librsvg' 'yasm' 'csv')
 options=('!makeflags')
 install=blender.install
 source=($pkgname.desktop $pkgname.svg)
 if [ ! $cvs -o $cvs = false ]; then
   source=(${source[@]} http://download.blender.org/source/$pkgname-$pkgver.tar.gz)
-  makedepends=('glut' 'libtiff' 'librsvg')
+  makedepends=('freeglut' 'libtiff' 'librsvg' 'yasm')
 fi
 
 build() {
@@ -51,27 +51,22 @@ build() {
    # disable static binaries and enable blenderplayer binary
   sed -i "s|^.*\(BINTARGETS += blenderstatic\)|    #\1|g" source/Makefile
   sed -i "s|^#\(.*BINTARGETS += blenderplayer\)|\1|g" source/Makefile
-  # fixing a nasty bug to make it pick up openexr linking
-  sed -i "s|/lib/libIex.a|/lib/libIex.a -lIlmImf|g" source/nan_definitions.mk
-  # link freetype dynamically
-  sed -i 's|LOPTS)|LOPTS) -lfreetype|g' source/Makefile
+  # link freetype and openal dynamically
+  sed -i 's|LOPTS)|LOPTS) -lfreetype -lopenal|g' source/Makefile
   sed -i 's|COMLIB.*libfreetype\.a|#\0|g' source/Makefile
+  sed -i 's|NAN_SND_LIBS.*libopenal\.a|#\0|g' source/Makefile
    # make ode (alternative physics engine)
    # does not work for Arch64
    #[ "$CARCH" = "i686" ] && sed -i 's|^\(DIRS.*\)$|\1 ode|' extern/Makefile
-   # get rid of buggy openal
-  export NAN_NO_OPENAL=true
    # make the nan_makefiles happy
   export NAN_PYTHON_VERSION=2.6
   export INTERNATIONAL=true
   export WITH_FREETYPE2=true
   export NAN_FREETYPE=/usr
   export WITH_ICONV=true
-  export WITH_BF_OPENMP=true
 
   export NAN_NO_PLUGIN=true
 
-  export WITH_FFMPEG=true
   export NAN_OPENAL=/usr
   export NAN_FMOD=/usr
   export NAN_JPEG=/usr
@@ -85,11 +80,13 @@ build() {
   export NAN_ZLIB=/usr
   export NAN_MESA=/usr
 
-  export NAN_NO_STATIC=true
-
+  export NAN_USE_BULLET=true
+  export NAN_USE_FFMPEG_CONFIG=true
+  export WITH_BF_VERSE=true
   export WITH_VERSE=true
-  export WITH_BULLET=true
-
+  export WITH_BF_OPENMP=true
+  # there is an issue with a file
+  export NAN_DEBUG=-O
  ###########################################################################
  # build
   make || return 1
