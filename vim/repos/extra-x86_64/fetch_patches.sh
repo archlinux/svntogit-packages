@@ -1,8 +1,8 @@
 # the external logic for pulling in patches
 
 get_patches() {
-  _patchdir=${startdir}/src/patches
-  cd ${startdir}/src/vim$(echo ${_srcver} | sed "s/\.//")
+  _patchdir=${srcdir}/patches
+  cd ${srcdir}/${_versiondir}
   if [ -d ${_patchdir} ]; then
     rm -rf ${_patchdir}
     echo -e "\tremove patches from old build"
@@ -17,11 +17,12 @@ get_patches() {
   echo -e "\tfetching checksumfile for patches"
   wget ${_rpath}/MD5SUMS >/dev/null 2>&1
 
-  downloads=0
+  _downloads=0
   for _line in $(/bin/cat MD5SUMS); do
-    downloads=$((${downloads} + 1))
-    _md5=$(echo $_line | cut -d ' ' -f1)
     _file=$(echo $_line | cut -d ' ' -f3)
+    [ ${_file##*.} == "gz" ] && continue
+    _downloads=$((${_downloads} + 1))
+    _md5=$(echo $_line | cut -d ' ' -f1)
     if [ -f ${SRCDEST}/vim-${_srcver}/${_file} ]; then
       echo -e "\thaving patch file:${_file}"
       cp ${SRCDEST}/vim-${_srcver}/${_file} ./
@@ -45,14 +46,20 @@ get_patches() {
 
   ########
 
-  if [ ${downloads} != ${_patchlevel} ]; then
-    echo -e "Number of patches does not match the patchlevel!\nEdit the PKGBUILD accordingly!"
-    return 1
+  if [ ${_downloads} != ${_patchlevel} ]; then
+    echo ""
+    echo -e "\t\tWARNING!"
+    echo "You are not building the latest available version! A newer patchlevel"
+    echo "seems to be available. Please edit the PKGBUILD and add the latest"
+    echo "${_downloads} as pkgrel number!"
+    echo ""
+    sleep 10
   fi
   IFS=$_OLDIFS
   rm MD5SUMS
-  cd ${startdir}/src/vim$(echo ${_srcver} | sed "s/\.//")
-  for _patch in $(/bin/ls ${_patchdir}); do
+  cd ${srcdir}/${_versiondir}
+  for _patchnum in $(/usr/bin/seq 1 ${_patchlevel}); do
+    _patch=${_srcver}.$(printf "%03d" ${_patchnum})
     patch -Np0 -i ${_patchdir}/${_patch} || return 1
   done
   rm -rf ${_patchdir}
