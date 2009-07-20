@@ -3,61 +3,67 @@
 
 pkgname=vim
 _srcver=7.2
-_patchlevel=65
+_patchlevel=234
 pkgver=${_srcver}.${_patchlevel}
-pkgrel=1.1
-pkgdesc="a highly configurable, improved version of the vi text editor"
+pkgrel=1
+pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor'
 arch=(i686 x86_64)
 license=('custom:vim')
 url="http://www.vim.org"
-depends=("vi>=${pkgver}" 'perl' 'python' 'ruby' 'acl' 'gpm>=1.20.4' 'libxt')
-makedepends=('wget' 'sed' 'grep')
+depends=('gpm' 'coreutils')
+makedepends=('wget' 'sed' 'grep' 'gettext' 'perl')
+optdepends=('perl:    the runtime provides a view useful perl scripts')
 backup=(etc/vimrc)
 install=${pkgname}.install
 # we need the extra-stuff to get all patches applied smoothly
 source=(ftp://ftp.vim.org/pub/vim/unix/vim-${_srcver}.tar.bz2 \
         ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-extra.tar.gz \
         ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-lang.tar.gz \
-        fetch_patches.sh)
-md5sums=('f0901284b338e448bfd79ccca0041254' '35e04482f07c57221c9a751aaa3b8dac' \
-         'd8884786979e0e520c112faf2e176f05' 'a3b03cd44b8ed78a99850d4cbfaafe55')
+        fetch_patches.sh fetch_runtime.sh vimrc archlinux.vim)
 
 build()
 {
+  _versiondir="vim"$(echo ${_srcver} | sed "s/\.//")
   # pull in patches from vim.org (or the src cache alternatively)
-  . ${startdir}/src/fetch_patches.sh
+  . ${srcdir}/fetch_patches.sh
+  . ${srcdir}/fetch_runtime.sh
   get_patches || return 1
-  cd ${startdir}/src/vim$(echo ${_srcver} | sed "s/\.//")
+  cd ${srcdir}/${_versiondir}
   sed -i 's|^.*\(#define SYS_.*VIMRC_FILE.*"\) .*$|\1|' src/feature.h
+  sed -i 's|^.*\(#define VIMRC_FILE.*"\) .*$|\1|' src/feature.h
   # build party
   ./configure --prefix=/usr --localstatedir=/var/lib/vim --mandir=/usr/share/man \
     --with-compiledby=ArchLinux --with-features=big \
-    --with-x=yes --disable-gui \
-    --with-global-runtime=/usr/share/vim --with-vim-name=vim \
+    --enable-gpm --enable-acl --with-x=no --disable-gui \
     --enable-multibyte --enable-cscope \
-    --enable-perlinterp --enable-pythoninterp --enable-rubyinterp
+    --enable-perlinterp
+    #--with-global-runtime=/usr/share/vim --with-vim-name=vim \
   make || return 1
-  make  VIMRCLOC=/etc DESTDIR=${startdir}/pkg VIMRTDIR= install
-  cd ${startdir}/pkg/usr/bin
-  rm -f ex view rview xxd vimtutor
-  ln -s vitutor vimtutor
+  make  VIMRCLOC=/etc DESTDIR=${pkgdir} install
+  cd ${pkgdir}/usr/bin
+  rm ex view          # provided by (n)vi in core
+  mv vim vim-normal   # we create a vim-symlink on post_install
+  ln -sf vim-normal vim
+  # ... make g* related symlinks point directly to the actual binary
+  ln -sf vim-normal rview
+  ln -sf vim-normal rvim
+  ln -sf vim-normal vimdiff
 
-   # delete the manpages/symlinks provided by vi package
-  find ${startdir}/pkg/usr/share/man -type d -name 'man1' 2> /dev/null | \
+  # delete some manpages
+  find ${pkgdir}/usr/share/man -type d -name 'man1' 2> /dev/null | \
    while read mandir; do
     cd ${mandir}
-    mv vimdiff.1 vimdiff.org
-    rm -f *.1
-    ln -s rvi.1.gz rvim.1.gz
-    ln -s vi.1.gz vim.1.gz
-    ln -s vitutor.1.gz vimtutor.1.gz
-    mv vimdiff.org vimdiff.1
+    rm -f ex.1 view.1       # provided by (n)vi
+    rm -f evim.1            # this does not make sense in the console version
   done
 
-  # kill the nobackup parts
-  sed -i '/vms/,+4 d' ${startdir}/pkg/usr/share/vim/vimrc_example.vim
-  install -Dm644 ${startdir}/pkg/usr/share/vim/vimrc_example.vim \
-    ${startdir}/pkg/etc/vimrc
-  # clean all settings and controls -  served by vi package
-  rm -rf ${startdir}/pkg/usr/share/vim
+  _runtimedir="${pkgdir}/usr/share/vim/${_versiondir}/"
+  update_runtime
+  cd ${srcdir}/${_versiondir}
+  install -Dm644 ${srcdir}/vimrc  ${pkgdir}/etc/vimrc
+  install -Dm644 ${srcdir}/archlinux.vim  \
+                 ${pkgdir}/usr/share/vim/vimfiles/archlinux.vim
+  install -dm755 ${pkgdir}/usr/share/licenses/vim
+  cd ${pkgdir}/usr/share/licenses/vim
+  ln -s ../../vim/${_versiondir}/doc/uganda.txt license.txt
 }
