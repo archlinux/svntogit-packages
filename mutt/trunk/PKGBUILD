@@ -1,7 +1,7 @@
 # $Id$
 # Maintainer: tobias [tobias [at] archlinux.org]
 pkgname=mutt
-pkgver=1.5.19
+pkgver=1.5.20
 pkgrel=1
 pkgdesc="A small but very powerful text-based mail client"
 arch=(i686 x86_64)
@@ -30,5 +30,5 @@ build() {
   install -Dm644 contrib/gpg.rc ${startdir}/pkg/etc/Muttrc.gpg.dist
 }
 
-md5sums=('73b3747bc7f7c805921e8d24ebac693f')
+md5sums=('027cdd9959203de0c3c64149a7ee351c')
 
