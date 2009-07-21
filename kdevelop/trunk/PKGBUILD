@@ -1,30 +1,38 @@
 # $Id$
-# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Maintainer: Andrea Scarpino <bash@archlinux.it>
 # Contributor: damir <damir@archlinux.org>
 # Contributor: Travis Willard <travis@archlinux.org> 
 # Committer: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=kdevelop
-pkgver=3.9.94
-pkgrel=1
-pkgdesc="A C/C++ development environment for KDE"
+pkgver=3.5.4
+pkgrel=2
+pkgdesc="A C/C++ development environment for KDE - stable snapshot build"
 arch=('i686' 'x86_64')
 url="http://www.kdevelop.org/"
 license=('GPL')
-depends=('kdebase-workspace' 'kdevplatform')
-makedepends=('cmake' 'automoc4' 'perl')
-source=("http://download.kde.org/unstable/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.bz2")
-md5sums=('f5c5f042ccc34fb877c6080ae2ff8bc5')
+depends=('kdelibs3>=3.5.9' 'flex>=2.5.4' 'gcc' 'perl' 'make' 
+         'automake>=1.6' 'autoconf>=2.52' 'gettext' 'db>=4.7' 'cvs' 'subversion')
+replaces=('kdevelop3-cvs') # compatibility reasons
+conflicts=('kdevelop-devel')
+options=('!makeflags')
+source=(http://download.kde.org/stable/3.5.10/src/${pkgname}-${pkgver}.tar.bz2
+        kdevelop-3.5.4-gcc44.patch)
+md5sums=('06aa12a89b2c09968a92e1d8b575819c'
+         '90b2be44dd5bf7d48ce981dfa3207cdb')
 
 build() {
-  cd ${srcdir}
-  mkdir build
-  cd build 
-  cmake ../${pkgname}-${pkgver} \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_SKIP_RPATH=ON \
-    -DCMAKE_{SHARED,MODULE,EXE}_LINKER_FLAGS='-Wl,--no-undefined -Wl,--as-needed'
-  make || return 1
-  make DESTDIR=${pkgdir} install || return 1
+   # Source the QT and KDE profile
+   [ "$QTDIR" = "" ] && source /etc/profile.d/qt3.sh 
+   [ "$KDEDIR" = "" ] && source /etc/profile.d/kde3.sh
+   # start building
+   cd ${srcdir}/${pkgname}-${pkgver}
+   patch -Np1 -i ${srcdir}/kdevelop-3.5.4-gcc44.patch || return 1
+   ./configure --prefix=/opt/kde \
+               --enable-gcc-hidden-visibility \
+	       --without-arts || return 1
+   make || return 1
+   make DESTDIR=${pkgdir} install || return 1
+   rm -f ${pkgdir}/opt/kde/bin/extractrc
 }
+
