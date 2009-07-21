@@ -1,0 +1,71 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=avidemux
+pkgver=2.5.0
+pkgrel=1
+pkgdesc="A graphical tool to edit video (filter/re-encode/split)"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://fixounet.free.fr/avidemux/"
+depends=( 'libxv' 'libxml2' 'sdl')
+makedepends=('cmake' 'libxslt' 'gtk2' 'qt' 'jack-audio-connection-kit' 'libdca' 'esound' \
+             'libvorbis' 'alsa-lib' 'lame' 'xvidcore' 'faad2' 'faac' 'x264' 'libsamplerate')
+optdepends=('gtk2: for using the GTK GUI' \
+            'qt: for using the QT4 GUI' \
+            'lame, faac: for the corresponding audio encoder plugin' \
+            'faad2, libdca : for the corresponding audio decoder plugin' \
+            'esound, jack-audio-connection-kit: for the corresponding audio device plugin' \
+            'x264, xvidcore: for the corresponding video encoder plugin')
+options=('!makeflags')
+source=(http://download.berlios.de/avidemux/${pkgname}_${pkgver}.tar.gz \
+        avidemux.desktop avidemux-2.5.0-gcc-4.4.patch avidemux-plugins-2.5.0-gcc-4.4.patch \
+        avidemux-2.5-i18n.patch avidemux-2.5.0-format-strings.patch \
+        avidemux_2.5.0-underlinking.patch avidemux_2.5.0-wrong-include.patch)
+md5sums=('69624352ac4e4cbb507e02b2bace5f56' 'a9cf864c209782307afda5bc6a33a0cd'\
+         'ba2a8dccd6f9feaa0edf70dd341cea5b' 'cfda32c031dedc9c1ea1ec1e5d61a7f6'\
+         '0adb7cee81e06bfc454baf1d8fbcdd64' 'd78352e32ba2544a51f34ba9858de28e'\
+         '65d9ac8381b5db24a64edf23ea843c49' '37feb1fcdc3323e8b3734c209e9c0fa3')
+sha1sums=('9697f1a54006e362a361aa609d3bdc1065676fb2'
+          'e575817d59cd992c2b056c1ff978c23f7fa0e50b'
+          '98919d1779ede3d739cd7fc7292d42d1a89f5a7e'
+          'c1ff1e952d2078df5f7097fb6db14df5dfa3d814'
+          'd510ca55cd1b9c162b4c3bcd224a80b6a18421ef'
+          '963919986fc778972432db9460dbffca0368d739'
+          'e7358a93f643403ef95b6072c9311d59a0c40a7d'
+          '233a5c63d81aa86d85e9aafc926a729d3216478b')
+
+build() {
+  cd "${srcdir}/${pkgname}_${pkgver}"
+  patch -p1 < ../avidemux-2.5.0-gcc-4.4.patch || return 1
+  patch -p1 < ../avidemux-2.5-i18n.patch || return 1
+  patch -p1 < ../avidemux-2.5.0-format-strings.patch || return 1
+  patch -p1 < ../avidemux_2.5.0-underlinking.patch || return 1
+  patch -p1 < ../avidemux_2.5.0-wrong-include.patch || return 1
+  patch -p1 < ../avidemux-plugins-2.5.0-gcc-4.4.patch || return 1
+
+  mkdir build
+  cd build
+  cmake -D CMAKE_INSTALL_PREFIX=/usr -D CMAKE_BUILD_TYPE=Release -D NO_GTK=0 -D NO_QT4=0 .. || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+
+# plugin build expects libraries to be already installed; we fake a prefix
+# in build/ by symlinking all libraries to build/lib/
+  mkdir -p lib
+  cd lib
+  find ../avidemux -name '*.so*' | xargs ln -sft .  || return 1
+  cd ../../plugins                 
+  mkdir build
+  cd build
+  cmake -D CMAKE_INSTALL_PREFIX=/usr -D AVIDEMUX_SOURCE_DIR=${srcdir}/avidemux_${pkgver} \
+    -D AVIDEMUX_CORECONFIG_DIR=${srcdir}/avidemux_${pkgver}/build/config \
+    -D AVIDEMUX_INSTALL_PREFIX=${srcdir}/avidemux_${pkgver}/build -D CMAKE_BUILD_TYPE=Release .. || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+
+  install -D -m644 ../../avidemux_icon.png "${pkgdir}/usr/share/pixmaps/avidemux.png" || return 1
+  install -D -m644 "${srcdir}/avidemux.desktop" "${pkgdir}/usr/share/applications/avidemux.desktop" || return 1
+  install -D -m644 ../../man/avidemux.1 "${pkgdir}/usr/share/man/man1/avidemux.1" || return 1
+}
