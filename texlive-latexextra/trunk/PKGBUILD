@@ -1,33 +1,43 @@
 # Maintainer: Firmicus <firmicus āt gmx dōt net>
 
 pkgname=texlive-latexextra
-pkgver=2008.13015
+pkgver=2009.14354
 pkgrel=1
 pkgdesc="TeX Live - Large collection of add-on packages for LaTeX"
 license=('GPL')
-arch=('i686' 'x86_64')
+arch=(any)
 depends=('texlive-core')
 optdepends=('texlive-pictures')
-makedepends=('lzma-utils')
 groups=('texlive-most')
 url='http://tug.org/texlive/'
 source=("ftp://ftp.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip")
+options=('!emptydirs')
 install=texlive.install
-md5sums=('b06028ba8b3ff83e6d735393bd9f82e3')
+md5sums=('d8cf32208d61108f6150d1d7db94f0fa')
 
 build() {
    cd $srcdir
    install -m755 -d $pkgdir/usr/share/texmf-var/arch/installedpkgs || return 1
    sed -i '/^#/d' CONTENTS || return 1
-   _revnr=`echo $pkgver | sed 's/2008\.//'`
+   _revnr=`echo $pkgver | sed 's/2009\.//'`
    install -m644 CONTENTS $pkgdir/usr/share/texmf-var/arch/installedpkgs/${pkgname}_${_revnr}.pkgs || return 1
-   for p in *.tar.lzma; do 
-	   lzma --force -dc $p | tar xf - || return 1
+   for p in *.tar.xz; do 
+	   bsdtar -xf $p || return 1
    done
+   rm -rf {tlpkg,doc,source}
    install -m755 -d $pkgdir/usr/share || return 1
-   find texmf* -type d -exec install -d -m755 $pkgdir/usr/share/'{}' \; || exit 1
-   find texmf* -type f -exec install -m644 '{}' $pkgdir/usr/share/'{}' \; || exit 1
-   find $pkgdir/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \; || return 1
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done)
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 $pkgdir/usr/share/texmf-dist/'{}' \; || return 1
+     find $dir -type f -exec install -m644 '{}' $pkgdir/usr/share/texmf-dist/'{}' \; || return 1
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 $pkgdir/usr/share/'{}' \; || return 1
+     find texmf-dist -type f -exec install -m644 '{}' $pkgdir/usr/share/'{}' \; || return 1
+   fi
+   if [[ -d $pkgdir/usr/share/texmf-dist/scripts ]]; then
+     find $pkgdir/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
    rm $pkgdir/usr/share/texmf-dist/scripts/glossaries/makeglossaries.bat
    rm $pkgdir/usr/share/texmf-dist/scripts/pst-pdf/ps4pdf.bat*
    rm $pkgdir/usr/share/texmf-dist/scripts/shipunov/biokey2html.bat
