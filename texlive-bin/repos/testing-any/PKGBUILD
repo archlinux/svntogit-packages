@@ -1,0 +1,188 @@
+# Maintainer: francois at archlinux dot org
+
+pkgname=texlive-bin
+pkgver=2009
+pkgrel=pre5
+pkgdesc="TeX Live binaries"
+license=('GPL')
+arch=('i686' 'x86_64')
+depends=('gcc-libs' 't1lib' 'gd' 'libsigsegv')
+optdepends=('psutils' 't1utils' 'perl')
+makedepends=('clisp' 'ffcall')
+##conflicts=('asymptote')
+##provides=('asymptote=1.80')
+options=('!makeflags' '!libtool')
+url='http://tug.org/texlive/'
+source=('texmf.cnf' 'source-20090723.tar.xz' 'texmf-20090723.tar.xz')
+backup=(usr/share/texmf/web2c/texmf.cnf \
+	usr/share/texmf-config/web2c/mktex.cnf \
+	usr/share/texmf-config/web2c/updmap.cfg \
+	usr/share/texmf-config/web2c/fmtutil.cfg \
+	usr/share/texmf-config/tex/generic/config/language.dat \
+	usr/share/texmf-config/tex/generic/config/pdftexconfig.tex \
+	usr/share/texmf-config/ttf2pk/ttf2pk.cfg \
+	usr/share/texmf-config/dvips/config/config.ps \
+	usr/share/texmf-config/dvipdfm/dvipdfmx.cfg \
+	usr/share/texmf-config/dvipdfm/config/config \
+	usr/share/texmf-config/xdvi/XDvi)
+md5sums=('351a6136e4faafe7fba123a07aef7787'
+         '6f39667d832949017c1273dcd4b9606d'
+         'a84922fc1947a5c581c10eb4b75358f3')
+build() {
+   if [ "${CARCH}" = "x86_64" ]; then
+     export CFLAGS="${CFLAGS} -fPIC"
+     export CXXFLAGS="${CXXFLAGS} -fPIC"
+   fi
+
+   cd $srcdir
+
+   install -m755 -d $pkgdir/usr/share || return 1
+   cp -r texmf $pkgdir/usr/share/ || return 1
+   ## TODO  
+   ## same problem with latest german patterns!
+   # currently latvian hyphenation is missing:
+   # FIXME reenable when texlive-core 2009 is available
+   ## sed -i 's|^\addlanguage{latvian}|%%\addlanguage{latvian}|' $pkgdir/usr/share/texmf/tex/generic/config/language.def
+   ## sed -i 's|^latvian|%%latvian|' $pkgdir/usr/share/texmf/tex/generic/config/language.dat
+
+   cd source
+   ## prevent compiling Xdvi with libXp
+   sed -i~ 's|-lXp ||' texk/xdvik/configure
+   test ! -d Work && mkdir Work
+   cd Work
+   echo "--> Initial configuration..."
+   ../configure --prefix=/usr \
+    --datarootdir=$pkgdir/usr/share \
+    --datadir=$pkgdir/usr/share \
+    --mandir=$pkgdir/usr/share/man \
+    --disable-native-texlive-build \
+    --with-tex-banner="TeX Live 2009/Arch Linux" \
+    --disable-multiplatform --disable-dialog \
+    --disable-psutils --disable-t1utils --disable-xz \
+    --with-system-zlib --with-system-pnglib --with-system-ncurses \
+    --with-system-t1lib --with-system-gd --with-system-xpdf \
+    --with-system-freetype2 --with-freetype2-libdir=/usr/lib \
+    --with-freetype2-include=/usr/include/freetype2 \
+    --with-xdvi-x-toolkit=xaw --disable-dump-share  \
+    --disable-aleph --without-graphite \
+    --enable-xindy || return 1
+   #############################################################
+   #############################################################
+   echo "-------------------------------------------------------"
+   echo "--> Building the whole beast ..."
+   make || return 1
+   #############################################################
+
+   ### fixes for xindy
+   find utils/xindy -name Makefile -exec sed -i -e "s|^prefix =.\+$|prefix = $pkgname/usr|" -e "s|^mandir =.\+$|mandir = \${prefix}/share/man|" -e "s|^datadir =.\+$|datadir = \${datarootdir}/texmf|" -e "s|^docdir =.\+$|docdir = \${datadir}/doc/xindy|" '{}' \; || return 1
+   echo "-------------------------------------------------------"
+   echo "--> Proceeding with make install ..."
+   install -d -m755 $pkgdir/usr/share/man/man5
+   make prefix=$pkgdir/usr texmf=$pkgdir/usr/share/texmf install || return 1
+   echo "-------------------------------------------------------"
+   echo "--> Fixing symlinks for scripts ..."
+   for f in $pkgdir/usr/bin/* ; do
+	   if [ -L $f ]; then
+		   target=`ls -l "$f" | sed 's/^.\+ -> //'`
+		   if [[ "$target" == ..* ]]; then
+			   newtarget=`echo $target | sed -e 's#../#/usr/share/#'`
+			   rm -f $f
+			   ln -s $newtarget $f
+			   test -f $pkgdir/$newtarget && chmod a+x $pkgdir/$newtarget
+		   fi
+	   fi
+   done
+
+   ## create symlinks for formats 
+   echo "--> Create symlinks for TeX formats ..."
+   $pkgdir/usr/bin/texlinks -f $pkgdir/usr/share/texmf/web2c/fmtutil.cnf $pkgdir/usr/bin/ || return 1
+   #############################################################
+   
+   ## CLEAN UP... 
+   echo "--> ...Cleaning up installation"
+   # remove tlmgr from PATH
+   rm -f $pkgdir/usr/bin/tlmgr
+   # spurious symlink
+   rm -f $pkgdir/usr/bin/man
+   
+   # the mandirs contain Makefiles ...
+   find $pkgdir -name Makefile -delete
+
+   rm -f $pkgdir/usr/share/texmf/scripts/texlive/*-{win32,w32}*
+   rm -rf $pkgdir/usr/share/texmf/scripts/tlgs
+   rm -rf $pkgdir/usr/share/texmf/asymptote
+
+   # make install targets are somewhat chaotic :)
+   mv -n  $pkgdir/usr/texmf/* $pkgdir/usr/share/texmf/
+   mv -n  $pkgdir/usr/texmf-dist/* $pkgdir/usr/share/texmf/
+   rm -rf $pkgdir/usr/{texmf,texmf-dist}
+   rmdir  $pkgdir/usr/share/lcdf-typetools
+
+   # most man files went to two different places:
+   for i in 1 5; do
+	   # remove pdf versions of manpages:
+     rm -f $pkgdir/usr/share/texmf/doc/man/man$i/*.pdf
+     # move to 
+     mv -n $pkgdir/usr/share/texmf/doc/man/man$i/*.$i $pkgdir/usr/share/man/man$i/
+   done
+   # remove all doc (essentially xindy and duplicated man files)
+   rm -rf $pkgdir/usr/share/texmf/doc
+   # those files are also in base, but "make install" duplicated them here:
+   rm -rf $pkgdir/usr/share/texmf/bibtex/
+   # remove files that belong to asymptote
+   rm -rf $pkgdir/usr/share/texmf/tex/latex/asymptote
+   for f in asy xasy; do
+	   rm -f $pkgdir/usr/share/man/man1/$f.1
+   done
+   # remove files that belong to t1utils
+   for f in t1ascii t1asm t1binary t1disasm t1mac t1unmac; do
+	   rm -f $pkgdir/usr/share/man/man1/$f.1
+   done
+   # remove files that belong to psutils
+   for f in epsffit extractres fixdlsrps fixfmps fixmacps fixpsditps fixpspps fixscribeps fixtpps fixwfwps fixwpps fixwwps getafm includeres psbook psmerge psnup psresize psselect pstops; do
+	   rm -f $pkgdir/usr/share/man/man1/$f.1
+   done
+   # remove man files that belong to omega/aleph
+   for f in lambda odvicopy odvitype ofm2opl opl2ofm otp2ocp outocp ovf2ovp ovp2ovf ; do
+	   rm -f $pkgdir/usr/share/man/man1/$f.1
+   done
+   # replace upstream texmf.cnf with ours
+   rm -f $pkgdir/usr/share/texmf/web2c/texmf.cnf
+   install -m644 $srcdir/texmf.cnf $pkgdir/usr/share/texmf/web2c/texmf.cnf
+   ## remove aleph from fmtutil.cnf
+   sed -i -e '/aleph/d' $pkgdir/usr/share/texmf/web2c/fmtutil.cnf || return 1
+   ###################################################################
+   # copy config files to texmf-config tree
+   install -d -m755 $pkgdir/usr/share/texmf-config/web2c
+   install -d -m755 $pkgdir/usr/share/texmf-config/dvips/config
+   install -d -m755 $pkgdir/usr/share/texmf-config/dvipdfm/config
+   install -d -m755 $pkgdir/usr/share/texmf-config/dvipdfmx
+   install -d -m755 $pkgdir/usr/share/texmf-config/tex/generic/config
+   install -d -m755 $pkgdir/usr/share/texmf-config/xdvi
+   cp -a $pkgdir/usr/share/texmf/web2c/mktex.cnf \
+   	$pkgdir/usr/share/texmf-config/web2c/
+   cp -a $pkgdir/usr/share/texmf/web2c/updmap.cfg \
+   	$pkgdir/usr/share/texmf-config/web2c/
+   cp -a $pkgdir/usr/share/texmf/web2c/fmtutil.cnf \
+   	$pkgdir/usr/share/texmf-config/web2c/
+   cp -a $pkgdir/usr/share/texmf/dvips/config/config.ps \
+   	$pkgdir/usr/share/texmf-config/dvips/config/
+   cp -a $pkgdir/usr/share/texmf/dvipdfm/config/config \
+   	$pkgdir/usr/share/texmf-config/dvipdfm/config/
+   cp -a $pkgdir/usr/share/texmf/dvipdfmx/dvipdfmx.cfg \
+   	$pkgdir/usr/share/texmf-config/dvipdfmx/
+   cp -a $pkgdir/usr/share/texmf/tex/generic/config/pdftexconfig.tex \
+   	$pkgdir/usr/share/texmf-config/tex/generic/config/
+   cp -a $pkgdir/usr/share/texmf/tex/generic/config/language.dat \
+   	$pkgdir/usr/share/texmf-config/tex/generic/config/
+   cp -a $pkgdir/usr/share/texmf/xdvi/XDvi \
+   	$pkgdir/usr/share/texmf-config/xdvi/
+   # clean updmap.cfg
+   sed -i '/^\(Map\|MixedMap\)/d' $pkgdir/usr/share/texmf-config/web2c/updmap.cfg
+   sed -i '/^#! \(Map\|MixedMap\)/d' $pkgdir/usr/share/texmf-config/web2c/updmap.cfg
+   # fix hard-coded paths in xindy.pl
+   sed -i "s|'/.\+/pkg/usr|'/usr|" $pkgdir/usr/share/texmf/scripts/xindy/xindy.pl
+   # move xindy modules to /usr/share/xindy
+   rm -rf $pkgdir/usr/share/xindy
+   mv $pkgdir/usr/share/texmf/xindy $pkgdir/usr/share/
+}
