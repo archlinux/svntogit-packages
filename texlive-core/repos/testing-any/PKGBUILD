@@ -1,0 +1,62 @@
+# Maintainer: Firmicus <firmicus ατ gmx δοτ net>
+
+pkgname=texlive-core
+pkgver=2009.14365
+pkgrel=1
+pkgdesc="TeX Live core distribution"
+license=('GPL')
+arch=(any)
+depends=('texlive-bin')
+optdepends=('perl' 'ruby' 'ghostscript' 'psutils')
+groups=('texlive-most')
+conflicts=('tetex')
+provides=('tetex')
+replaces=('tetex')
+url='http://tug.org/texlive/'
+source=("ftp://ftp.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip")
+install=texlive.install
+backup=(usr/share/texmf-config/tex/context/config/cont-usr.tex)
+md5sums=('f5925b5cdd0f75e17c671d6b75a4dc40')
+
+build() {
+   cd $srcdir
+   install -m755 -d $pkgdir/usr/share/texmf-var/arch/installedpkgs || return 1
+   sed -i '/^#/d' CONTENTS || return 1
+   _revnr=`echo $pkgver | sed 's/2009\.//'`
+   install -m644 CONTENTS $pkgdir/usr/share/texmf-var/arch/installedpkgs/${pkgname}_${_revnr}.pkgs || return 1
+   echo -n "   --> extracting all packages... "
+   for p in *.tar.xz; do 
+     bsdtar -xf $p || return 1
+   done
+   echo "done"
+   rm -rf {tlpkg,doc,source,omega}
+   install -m755 -d $pkgdir/usr/share || return 1
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done)
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 $pkgdir/usr/share/texmf-dist/'{}' \; || return 1
+     find $dir -type f -exec install -m644 '{}' $pkgdir/usr/share/texmf-dist/'{}' \; || return 1
+   done
+   find texmf-dist -type d -exec install -d -m755 $pkgdir/usr/share/'{}' \; || return 1
+   find texmf-dist -type f -exec install -m644 '{}' $pkgdir/usr/share/'{}' \; || return 1
+   if [[ -d $pkgdir/usr/share/texmf-dist/scripts ]]; then
+     find $pkgdir/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+
+   # copy config file to texmf-config
+   mkdir -p $pkgdir/usr/share/texmf-config/tex/context/config
+   cp -a $pkgdir/usr/share/texmf-dist/tex/context/config/cont-usr.tex \
+  	  $pkgdir/usr/share/texmf-config/tex/context/config/cont-usr.tex
+   
+   # remove obsolete stuff (we don't provide the omega and aleph binaries anyway)
+   #rm -rf $pkgdir/usr/share/texmf-dist/omega
+   rm -f $pkgdir/usr/share/texmf-dist/tex/plain/config/{omega,aleph}.ini
+   # more cleanup
+   rm -rf $pkgdir/usr/share/texmf-dist/scripts/context/stubs/mswin/
+   # remove doc and sources for koma-script
+   #rm -rf $pkgdir/usr/share/texmf-dist/doc/
+   #rm -rf $pkgdir/usr/share/texmf-dist/source/
+   # TEMPORARY FIX: symlinks for context
+   for s in mtxrun luatools; do
+     ln -s /usr/share/texmf-dist/scripts/context/lua/$s.lua $pkgdir/usr/share/texmf-dist/scripts/context/stubs/unix/$s 
+   done
+}
