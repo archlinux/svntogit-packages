@@ -5,7 +5,7 @@
 pkgname=readline
 _patchlevel=003 #prepare for some patches
 pkgver=6.0.$_patchlevel
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU readline library"
 arch=(i686 x86_64)
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
@@ -27,23 +27,30 @@ md5sums=('b7f65a48add447693be6e86f04a63019'
          '80967f663864983a889af2eb53aea177')
 
 build() {
-  cd ${startdir}/src/${pkgname}-6.0
+  cd ${srcdir}/${pkgname}-6.0
   for p in ../readline60-*; do
     [ -e "$p" ] || continue
     msg "applying patch ${p}"
     patch -Np0 -i ${p} || return 1
   done
 
+  # Remove RPATH from shared objects #FS14366
+  sed -i 's|-Wl,-rpath,$(libdir) ||g' support/shobj-conf
+
   ./configure --prefix=/usr --libdir=/lib \
         --mandir=/usr/share/man --infodir=/usr/share/info
   make SHLIB_LIBS=-lncurses || return 1
-  make DESTDIR=${startdir}/pkg install || return 1
+  make DESTDIR=${pkgdir} install || return 1
   
-  mkdir -p ${startdir}/pkg/etc
-  install -m644 ../inputrc ${startdir}/pkg/etc/inputrc || return 1
+  mkdir -p ${pkgdir}/etc
+  install -m644 ../inputrc ${pkgdir}/etc/inputrc || return 1
   #FHS recommends only shared libs in /lib
   mkdir -p $pkgdir/usr/lib
   mv $pkgdir/lib/*.a $pkgdir/usr/lib
+
+  # to make the linker find the shared lib and fix compile issues
+  cd ${pkgdir}/usr/lib
+  ln -sv /lib/libreadline.so .
 
   rm -f ${pkgdir}/usr/share/info/dir
 }
