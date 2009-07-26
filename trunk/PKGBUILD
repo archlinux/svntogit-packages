@@ -3,26 +3,27 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.14.2
+pkgver=0.15.1
 pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://musicpd.org"
-depends=('libid3tag' 'libmad' 'flac>=1.1.3' 'audiofile' 'faad2>=2.7' 'libmikmod'
-         'alsa-lib' 'libshout' 'libmpcdec>=1.2.5' 'libsamplerate' 'libao' 'ffmpeg'
-	 'wavpack' 'glib2' 'curl')
+depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 
+         'sqlite3' 'libsamplerate' 'libmms' 'libmikmod' 'wavpack' 'libmpcdec')
+makedepends=('pkgconfig')
 install=mpd.install
 source=(http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.gz
         'mpd')
-md5sums=('64177135f64aca555887ba378de8cdfb' 'b1fd15de359db08e4b9ae4b199640f0e')
+md5sums=('e9730f00b89aa35bcf02059f2c98192b' 'b1fd15de359db08e4b9ae4b199640f0e')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --disable-jack \
-    --enable-ao --enable-mod \
+    --enable-ao \
+    --enable-mikmod \
     --with-zeroconf=no
   make || return 1
   make DESTDIR=${pkgdir} install
