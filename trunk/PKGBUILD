@@ -5,7 +5,7 @@
 pkgname=readline
 _patchlevel=003 #prepare for some patches
 pkgver=6.0.$_patchlevel
-pkgrel=2
+pkgrel=3
 pkgdesc="GNU readline library"
 arch=(i686 x86_64)
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
@@ -51,6 +51,7 @@ build() {
   # to make the linker find the shared lib and fix compile issues
   cd ${pkgdir}/usr/lib
   ln -sv /lib/libreadline.so .
+  ln -sv /lib/libhistory.so .
 
   rm -f ${pkgdir}/usr/share/info/dir
 }
