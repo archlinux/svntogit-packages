@@ -2,9 +2,9 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.3.3
+pkgver=1.6.4
 pkgrel=1
-pkgdesc="GIT - the stupid content tracker"
+pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
 license=('GPL2')
@@ -41,5 +41,5 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('91ae46ac01dadab1962beb064abd5b60'
-         '36be16310d1e24f23c966c8e17a499d7')
+md5sums=('d41e3d43c8f1d23024fb3d3fe6aa3858'
+         '851e1df833895c5046a994c28d3d8368')
