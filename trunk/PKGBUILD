@@ -3,9 +3,9 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=readline
-_patchlevel=003 #prepare for some patches
+_patchlevel=004 #prepare for some patches
 pkgver=6.0.$_patchlevel
-pkgrel=3
+pkgrel=1
 pkgdesc="GNU readline library"
 arch=(i686 x86_64)
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
@@ -24,7 +24,8 @@ md5sums=('b7f65a48add447693be6e86f04a63019'
          'e5fc955f56d9fa5beb871f3279b8fa8b'
          '85c01ea031ad38a179053c67186bafed'
          '4fad2a4ce987e3101229d0c8dfb0cd80'
-         '80967f663864983a889af2eb53aea177')
+         '80967f663864983a889af2eb53aea177'
+         'dd5dd5ff7f7229714bf1c2e274ad2ae9')
 
 build() {
   cd ${srcdir}/${pkgname}-6.0
@@ -34,8 +35,11 @@ build() {
     patch -Np0 -i ${p} || return 1
   done
 
-  # Remove RPATH from shared objects #FS14366
+  # Remove RPATH from shared objects (FS#14366)
   sed -i 's|-Wl,-rpath,$(libdir) ||g' support/shobj-conf
+
+  # build with -fPIC for x86_64 (FS#15634)
+  [ $CARCH == "x86_64" ] && CFLAGS="$CFLAGS -fPIC"
 
   ./configure --prefix=/usr --libdir=/lib \
         --mandir=/usr/share/man --infodir=/usr/share/info
