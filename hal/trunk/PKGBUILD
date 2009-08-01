@@ -3,45 +3,41 @@
 # Contributor: Link Dupont <link@subpop.net>
 
 pkgname=hal
-pkgver=0.5.12git20090421.4fc367
-pkgrel=2
+pkgver=0.5.13
+pkgrel=1
 pkgdesc="Hardware Abstraction Layer"
-_gitver=4fc367117b20eea5e7f8f05c0d59de4976d37c49
 arch=(i686 x86_64)
 license=('GPL' 'custom')
 url="http://www.freedesktop.org/wiki/Software/hal"
-depends=('dbus-glib>=0.80' 'libusb>=0.1.12' 'udev>=141' 'filesystem>=0.7.1-5' 'hal-info>=0.20090414' 'eject' 'dmidecode' 'pciutils>=3.0.2' 'usbutils>=0.73-5' 'pm-utils>=1.2.5' 'policykit>=0.9-6' 'consolekit>=0.3.0')
+depends=('dbus-glib>=0.80' 'libusb>=0.1.12' 'udev>=141' 'filesystem>=0.7.1-5' 'hal-info>=0.20090716' 'eject' 'dmidecode' 'pciutils>=3.0.2' 'usbutils>=0.73-5' 'pm-utils>=1.2.5' 'policykit>=0.9-6' 'consolekit>=0.3.0' 'util-linux-ng>=2.16')
 makedepends=('pkgconfig' 'gperf')
 options=('!libtool' '!makeflags')
 install=hal.install
-source=(ftp://ftp.archlinux.org/other/hal/hal-${_gitver}.tar.bz2
-	hal
-	cryptsetup_location.patch
-	hal-0.5.9-hide-diagnostic.patch)
-md5sums=('3f9eab71ccf483cf880528901ef227e5'
+source=(http://hal.freedesktop.org/releases/${pkgname}-${pkgver}.tar.gz
+        hal
+        cryptsetup_location.patch
+        hal-0.5.9-hide-diagnostic.patch
+        mdraid-segfault.patch)
+md5sums=('46ecc5d2e5bd964fb78099688f01bb6a'
          '277e96ac130d7bfce0b30f0b80db8782'
          'c688a3c6574699365926f4fef7441545'
-         '4d4b6801a1cedca22b8bdd9db73b16fb')
+         '4d4b6801a1cedca22b8bdd9db73b16fb'
+         '3732682a5fe3b2b5279ced988909f554')
 
 build() {
-  cd "${srcdir}/${pkgname}-${_gitver}"
+  cd "${srcdir}/${pkgname}-${pkgver}"
   patch -Np1 -i "${srcdir}/cryptsetup_location.patch" || return 1
   patch -Np1 -i "${srcdir}/hal-0.5.9-hide-diagnostic.patch" || return 1
-
-  libtoolize --force || return 1
-  aclocal || return 1
-  autoconf || return 1
-  autoheader || return 1
-  automake --add-missing || return 1
+  patch -Np1 -i "${srcdir}/mdraid-segfault.patch" || return 1
 
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-              --libexecdir=/usr/lib/hal --with-udev-prefix=/etc \
-	      --enable-static=no --enable-acpi-ibm --enable-acpi-toshiba \
-              --disable-docbook-docs --enable-console-kit \
-	      --enable-policy-kit --enable-acl-management \
-	      --enable-umount-helper --disable-smbios \
-	      --with-hal-user=hal --with-hal-group=hal \
-	      --with-pid-file=/var/run/hald.pid || return 1
+      --libexecdir=/usr/lib/hal --with-udev-prefix=/etc \
+      --enable-static=no --enable-acpi-ibm --enable-acpi-toshiba \
+      --disable-docbook-docs --enable-console-kit \
+      --enable-policy-kit --enable-acl-management \
+      --enable-umount-helper --disable-smbios \
+      --with-hal-user=hal --with-hal-group=hal \
+      --with-pid-file=/var/run/hald.pid || return 1
   make || return 1
   make DESTDIR="${pkgdir}" install || return 1
   install -m755 -d "${pkgdir}/etc/rc.d"
