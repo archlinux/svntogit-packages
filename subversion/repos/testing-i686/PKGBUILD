@@ -1,0 +1,79 @@
+# $Id$
+# Maintainer: Douglas Soares de Andrade <douglas@archlinux.org>
+# Contributor: Jason Chu <jason@archlinux.org>
+
+pkgname=subversion
+pkgver=1.6.3
+pkgrel=2
+pkgdesc="Replacement for CVS, another versioning system (svn)"
+arch=(i686 x86_64)
+license=('apache' 'bsd')
+depends=('neon>=0.28.2-2' 'apr-util>=1.3.2-2')
+makedepends=('heimdal>=1.2' 'db>=4.7' 'apache>=2.2.9-3' 'python>=2.6-1'
+             'perl>=5.10.0-3' 'swig>=1.3.31' 'ruby' 'openjdk6' 'autoconf'
+             'sqlite3')
+source=(http://subversion.tigris.org/downloads/$pkgname-$pkgver.tar.bz2
+        svnserve svn svnserve.conf svnmerge.py
+        subversion.rpath.fix.patch)
+md5sums=('8bf7637ac99368db0890e3f085fa690d' 'c5a2e490b3e58c6bd2ca3a2e72b71845'\
+         'a0db6dd43af33952739b6ec089852630' 'c459e299192552f61578f3438abf0664'\
+         '21bf3aa5b797ce98eba8307f30e9c070' '6b4340ba9d8845cd8497e013ae01be3f')
+sha1sums=('88a4a21509f9d8f95a64f7545f3294d356f619c8' '37796cd8222fd77c5ed1985d170bcdbc43907262'\
+         '73b36c046c09cec2093354911c89e3ba8056af6c' 'ad117bf3b2a838a9a678a93fd8db1a066ad46c41'\
+         '87eec187de915f9ace925bd18385971cd8ea38e8' '3d1e28408a9abb42af2e531adc0d01ce21acfad6')
+
+backup=('etc/xinetd.d/svn' 'etc/conf.d/svnserve')
+url="http://subversion.tigris.org/"
+provides=('svn')
+options=('!makeflags' '!libtool')
+
+build() {
+   cd $startdir/src/${pkgname}-${pkgver}
+
+   [ -z "${J2REDIR}" ] && . /etc/profile.d/openjdk6.sh
+   [ -z "${J2SDKDIR}" ] && . /etc/profile.d/openjdk6.sh
+
+   patch -p0 < $srcdir/subversion.rpath.fix.patch || return 1
+   autoreconf
+   ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
+               --with-zlib=/usr --with-neon=/usr --with-apxs \
+               --with-sqlite=/usr \
+               --enable-javahl --with-jdk=/usr/lib/jvm/java-1.6.0-openjdk
+
+   (make external-all && make LT_LDFLAGS="-L$Fdestdir/usr/lib" local-all ) || return 1
+
+   export LD_LIBRARY_PATH=$startdir/pkg/usr/lib:$LD_LIBRARY_PATH
+   make DESTDIR=$startdir/pkg install || return 1
+
+   make DESTDIR=$startdir/pkg swig-py || return 1
+   make install-swig-py DESTDIR=$startdir/pkg || return 1
+
+   mkdir -p $startdir/pkg/usr/lib/python2.6
+   mv $startdir/pkg/usr/lib/svn-python/ $startdir/pkg/usr/lib/python2.6/site-packages
+
+   mkdir -p $startdir/pkg/usr/share/subversion
+   install -d -m 755 tools/hook-scripts $startdir/pkg/usr/share/subversion/
+   rm -f $startdir/pkg/usr/share/subversion/hook-scripts/*.in
+
+   make DESTDIR=$startdir/pkg swig-pl || return 1
+   make install-swig-pl DESTDIR=$startdir/pkg INSTALLDIRS=vendor || return 1
+   rm -f $startdir/pkg/usr/lib/perl5/vendor_perl/auto/SVN/_Core/.packlist
+   rm -rf $startdir/pkg/usr/lib/perl5/core_perl
+
+   make DESTDIR=$startdir/pkg swig-rb || return 1
+   make install-swig-rb DESTDIR=$startdir/pkg  || return 1
+
+   make DESTDIR=$startdir/pkg javahl || return 1
+   make DESTDIR=$startdir/pkg install-javahl || return 1
+
+   mkdir -p $startdir/pkg/etc/rc.d
+   mkdir -p $startdir/pkg/etc/xinetd.d
+   mkdir -p $startdir/pkg/etc/conf.d
+
+   install -m 755 $startdir/src/svnserve $startdir/pkg/etc/rc.d
+   install -m 644 $startdir/src/svn $startdir/pkg/etc/xinetd.d
+   install -m 644 $startdir/src/svnserve.conf $startdir/pkg/etc/conf.d/svnserve
+   #install -m 755 $startdir/src/subversion-$pkgver/contrib/client-side/svnmerge/svnmerge.py $startdir/pkg/usr/bin/svnmerge
+   install -m 755 $startdir/src/svnmerge.py $startdir/pkg/usr/bin/svnmerge
+   install -D -m 644 $startdir/src/subversion-$pkgver/COPYING $startdir/pkg/usr/share/licenses/$pkgname/LICENSE
+}
