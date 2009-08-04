@@ -16,7 +16,7 @@ provides=('ghostscript-lprng')
 url="http://www.cs.wisc.edu/~ghost/"
 source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.bz2
 	ghostscript-fPIC.patch)
-options=('!libtool' '!makeflags')
+options=('!libtool') # '!makeflags'
 md5sums=('526366f8cb4fda0d3d293597cc5b984b'
          '1a8fcacf0005214db823225c870f093d')
 
