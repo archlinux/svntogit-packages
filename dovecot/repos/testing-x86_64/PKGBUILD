@@ -1,0 +1,47 @@
+# $Id$
+#
+# Contributor: Paul Mattal <paul@mattal.com>
+# Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>
+# Contributor: GARETTE Emmanuel <gnunux at laposte dot net>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=dovecot
+pkgver=1.2.1
+pkgrel=2
+pkgdesc="An IMAP and POP3 server written with security primarily in mind"
+arch=('i686' 'x86_64')
+url="http://dovecot.org/"
+license=("LGPL")
+depends=("pam>=1.0.4" "libmysqlclient>=5.1.35-2" "postgresql-libs>=8.3.7" "sqlite3>=3.6.15-2" "db>=4.7.25.4"\
+	 "heimdal>=1.2.1-5" 'libcap>=2.16-3' 'bzip2')
+optdepends=('libldap: ldap plugin')
+makedepends=('libldap>=2.3.43-3')
+provides=('imap-server' 'pop3-server')
+replaces=()
+options=('!libtool')
+install=$pkgname.install
+source=(http://dovecot.org/releases/1.2/${pkgname}-${pkgver}.tar.gz dovecot.sh)
+md5sums=('c269cfe38fc40061e232dd28e5fe3721'
+         'd020d43eab4ded6fb379dadc570a9490')
+
+build() {
+  cd ${srcdir}/$pkgname-$pkgver || return 1
+
+  # configure with openssl, mysql, and postgresql support
+  ./configure --prefix=/usr --sysconfdir=/etc/dovecot --localstatedir=/var \
+  	--libexecdir=/usr/lib  --with-moduledir=/usr/lib/dovecot/modules \
+	--with-db --with-mysql --with-pgsql --with-sqlite \
+	--with-ssl=openssl --with-ssldir=/etc/dovecot/ssl \
+	--with-gssapi --with-ldap=plugin --enable-header-install --with-docs || return 1
+
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+  # install the launch script
+  install -D -m755 ${srcdir}/$pkgname.sh ${pkgdir}/etc/rc.d/$pkgname || return 1
+
+  # fix paths in the config example file where we have a different layout
+  sed -i 's|/usr/lib/dovecot|/usr/lib/dovecot/modules|g;
+	  s|libexec|lib|g;
+	  s|lib/sendmail|sbin/sendmail|g' $pkgdir/etc/dovecot/dovecot-example.conf || return 1
+}
