@@ -4,13 +4,13 @@
 
 pkgname=pacman
 pkgver=3.3.0
-pkgrel=2
+pkgrel=3
 pkgdesc="A library-based package manager with dependency support"
 arch=('i686' 'x86_64')
 url="http://www.archlinux.org/pacman/"
 license=('GPL')
 groups=('base')
-depends=('bash' 'libarchive>=2.7.0' 'libfetch>=2.20' 'pacman-mirrorlist')
+depends=('bash' 'libarchive>=2.7.0-2' 'libfetch>=2.20' 'pacman-mirrorlist')
 optdepends=('fakeroot: for makepkg usage as normal user'
             'python: for rankmirrors script usage')
 backup=(etc/pacman.conf etc/makepkg.conf)
