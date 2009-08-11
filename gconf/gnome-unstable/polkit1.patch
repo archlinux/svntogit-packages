@@ -1,0 +1,1340 @@
+diff -up GConf-2.26.2/configure.in.polkit1 GConf-2.26.2/configure.in
+--- GConf-2.26.2/configure.in.polkit1	2009-05-14 11:18:34.000000000 -0400
++++ GConf-2.26.2/configure.in	2009-06-12 13:00:27.978836073 -0400
+@@ -181,7 +181,7 @@ AC_ARG_ENABLE(defaults_service,
+   , enable_defaults_service=auto)
+ 
+ if test "x$enable_defaults_service" != "xno" ; then
+-  PKG_CHECK_MODULES(DEFAULTS, glib-2.0 gobject-2.0 dbus-1 dbus-glib-1 polkit-dbus, HAVE_POLKIT=yes)
++  PKG_CHECK_MODULES(DEFAULTS, glib-2.0 gobject-2.0 dbus-1 dbus-glib-1 polkit-gobject-1, HAVE_POLKIT=yes)
+   if test "x$HAVE_POLKIT" = "xno"; then
+     if test "x$enable_defaults_service" = "xyes" ; then
+       AC_MSG_ERROR([[
+@@ -194,13 +194,6 @@ fi
+ 
+ if test "x$enable_defaults_service" != "xno" ; then
+   AC_DEFINE(ENABLE_DEFAULTS_SERVICE, 1, [enable defaults DBus service])
+-
+-  AC_CHECK_PROG([POLKIT_POLICY_FILE_VALIDATE],
+-    [polkit-policy-file-validate], [polkit-policy-file-validate])
+-
+-  if test -z "$POLKIT_POLICY_FILE_VALIDATE"; then
+-    AC_MSG_ERROR([polkit-policy-file-validate not found])
+-  fi
+ fi
+ 
+ AM_CONDITIONAL(ENABLE_DEFAULTS_SERVICE, [test "x$enable_defaults_service" != "xno"])
+diff -up GConf-2.26.2/defaults/gconf-defaults.c.polkit1 GConf-2.26.2/defaults/gconf-defaults.c
+--- GConf-2.26.2/defaults/gconf-defaults.c.polkit1	2009-05-14 11:13:40.000000000 -0400
++++ GConf-2.26.2/defaults/gconf-defaults.c	2009-06-12 14:21:50.117398713 -0400
+@@ -1,6 +1,6 @@
+ /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 8 -*-
+  *
+- * Copyright (C) 2008 Matthias Clasen <mclasen@redhat.com>
++ * Copyright (C) 2008, 2009 Matthias Clasen <mclasen@redhat.com>
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -37,7 +37,6 @@
+ #include <dbus/dbus-glib.h>
+ #include <dbus/dbus-glib-lowlevel.h>
+ 
+-#include <polkit-dbus/polkit-dbus.h>
+ #include <polkit/polkit.h>
+ 
+ #define GCONF_ENABLE_INTERNALS
+@@ -56,10 +55,14 @@ do_exit (gpointer user_data)
+ }
+ 
+ static guint timer_id = 0;
++gboolean disable_killtimer = FALSE;
+ 
+ static void
+ stop_killtimer (void)
+ {
++	if (disable_killtimer)
++		return;
++
+         if (timer_id > 0) {
+                 g_source_remove (timer_id);
+ 		timer_id = 0;
+@@ -69,15 +72,38 @@ stop_killtimer (void)
+ static void
+ start_killtimer (void)
+ {
+-        g_debug ("Setting killtimer to 30 seconds...");
+-        timer_id = g_timeout_add_seconds (30, do_exit, NULL);
++	if (disable_killtimer)
++		return;
++
++	if (timer_id == 0) {
++        	g_debug ("Setting killtimer to 30 seconds...");
++        	timer_id = g_timeout_add_seconds (30, do_exit, NULL);
++	}
++}
++
++static gint operations = 0;
++
++static void
++start_operation (void)
++{
++	if (operations == 0)
++		stop_killtimer ();
++	operations++;
++}
++
++static void
++stop_operation (void)
++{
++	if (operations == 1)
++		start_killtimer ();
++	operations --;
+ }
+ 
+ struct GConfDefaultsPrivate
+ {
+         DBusGConnection *system_bus_connection;
+         DBusGProxy      *system_bus_proxy;
+-        PolKitContext   *pol_ctx;
++        PolkitAuthority *auth;
+ };
+ 
+ static void gconf_defaults_finalize (GObject *object);
+@@ -105,7 +131,7 @@ GType
+ gconf_defaults_error_get_type (void)
+ {
+         static GType etype = 0;
+-        
++
+         if (etype == 0)
+         {
+                 static const GEnumValue values[] =
+@@ -114,12 +140,12 @@ gconf_defaults_error_get_type (void)
+                                 ENUM_ENTRY (GCONF_DEFAULTS_ERROR_NOT_PRIVILEGED, "NotPrivileged"),
+                                 { 0, 0, 0 }
+                         };
+-                
++
+                 g_assert (GCONF_DEFAULTS_NUM_ERRORS == G_N_ELEMENTS (values) - 1);
+-                
++
+                 etype = g_enum_register_static ("GConfDefaultsError", values);
+         }
+-        
++
+         return etype;
+ }
+ 
+@@ -191,56 +217,18 @@ gconf_defaults_finalize (GObject *object
+ 
+         g_return_if_fail (mechanism->priv != NULL);
+ 
++	g_object_unref (mechanism->priv->auth);
+         g_object_unref (mechanism->priv->system_bus_proxy);
+ 
+         G_OBJECT_CLASS (gconf_defaults_parent_class)->finalize (object);
+ }
+ 
+ static gboolean
+-pk_io_watch_have_data (GIOChannel *channel, GIOCondition condition, gpointer user_data)
+-{
+-        int fd;
+-        PolKitContext *pk_context = user_data;
+-        fd = g_io_channel_unix_get_fd (channel);
+-        polkit_context_io_func (pk_context, fd);
+-        return TRUE;
+-}
+-
+-static int 
+-pk_io_add_watch (PolKitContext *pk_context, int fd)
+-{
+-        guint id = 0;
+-        GIOChannel *channel;
+-        channel = g_io_channel_unix_new (fd);
+-        if (channel == NULL)
+-                goto out;
+-        id = g_io_add_watch (channel, G_IO_IN, pk_io_watch_have_data, pk_context);
+-        if (id == 0) {
+-                g_io_channel_unref (channel);
+-                goto out;
+-        }
+-        g_io_channel_unref (channel);
+-out:
+-        return id;
+-}
+-
+-static void 
+-pk_io_remove_watch (PolKitContext *pk_context, int watch_id)
+-{
+-        g_source_remove (watch_id);
+-}
+-
+-static gboolean
+ register_mechanism (GConfDefaults *mechanism)
+ {
+         GError *error = NULL;
+ 
+-        mechanism->priv->pol_ctx = polkit_context_new ();
+-        polkit_context_set_io_watch_functions (mechanism->priv->pol_ctx, pk_io_add_watch, pk_io_remove_watch);
+-        if (!polkit_context_init (mechanism->priv->pol_ctx, NULL)) {
+-                g_critical ("cannot initialize libpolkit");
+-                goto error;
+-        }
++        mechanism->priv->auth = polkit_authority_get ();
+ 
+         error = NULL;
+         mechanism->priv->system_bus_connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
+@@ -252,7 +240,7 @@ register_mechanism (GConfDefaults *mecha
+                 goto error;
+         }
+ 
+-        dbus_g_connection_register_g_object (mechanism->priv->system_bus_connection, "/", 
++        dbus_g_connection_register_g_object (mechanism->priv->system_bus_connection, "/",
+                                              G_OBJECT (mechanism));
+ 
+         mechanism->priv->system_bus_proxy = dbus_g_proxy_new_for_name (mechanism->priv->system_bus_connection,
+@@ -288,33 +276,37 @@ gconf_defaults_new (void)
+ 
+ static const char *
+ polkit_action_for_gconf_path (GConfDefaults *mechanism,
++			      GList         *action_descriptions,
+ 			      const char    *annotation_key,
+ 			      const char    *path)
+ {
+-	PolKitPolicyCache *cache;
+-	PolKitPolicyFileEntry *entry;
+ 	char *prefix, *p;
+ 	const char *action;
++        GList *l;
++        PolkitActionDescription *action_description;
++	const gchar *annotation;
+ 
+-	cache = polkit_context_get_policy_cache (mechanism->priv->pol_ctx);	
+ 	prefix = g_strdup (path);
+ 
+ 	while (1) {
+-		entry = polkit_policy_cache_get_entry_by_annotation (cache,
+-								     annotation_key,
+-								     prefix);
+-		if (entry) {
+-			action = polkit_policy_file_entry_get_id (entry);
+-			break;
++                for (l = action_descriptions; l; l = l->next) {
++			action_description = l->data;
++
++			annotation = polkit_action_description_get_annotation (action_description, annotation_key);
++			if (g_strcmp0 (prefix, annotation) == 0) {
++				action = polkit_action_description_get_action_id (action_description);
++				g_debug ("action for path '%s': '%s'\n", action, path);
++				break;
++			}
+ 		}
+-		
++
+ 		p = strrchr (prefix, '/');
+ 
+ 		if (p == NULL || p == prefix) {
+ 			action = NULL;
+ 			break;
+ 		}
+-	
++
+ 		*p = 0;
+ 	}
+ 
+@@ -323,56 +315,160 @@ polkit_action_for_gconf_path (GConfDefau
+ 	return action;
+ }
+ 
+-static gboolean
+-check_polkit_for_action (GConfDefaults         *mechanism,
+-                         DBusGMethodInvocation *context,
+-                         const char            *action)
+-{
+-        const char *sender;
+-        GError *error;
+-        DBusError dbus_error;
+-        PolKitCaller *pk_caller;
+-        PolKitAction *pk_action;
+-        PolKitResult pk_result;
++static void
++throw_error (DBusGMethodInvocation *context,
++             gint                   error_code,
++             const gchar           *format,
++             ...)
++{
++	GError *error;
++	va_list args;
++	gchar *message;
+ 
+-        error = NULL;
++	va_start (args, format);
++	message = g_strdup_vprintf (format, args);
++	va_end (args);
++
++	error = g_error_new (GCONF_DEFAULTS_ERROR,
++			     error_code,
++			     "%s", message);
++	dbus_g_method_return_error (context, error);
++	g_error_free (error);
++	g_free (message);
++}
++
++typedef void (*AuthObtainedCallback) (GConfDefaults          *mechanism,
++                                      DBusGMethodInvocation  *context,
++                                      gpointer                user_data);
++
++typedef struct
++{
++	GConfDefaults                   *mechanism;
++	DBusGMethodInvocation           *context;
++	gchar                          **actions;
++	gint				 id;
++	gint				 flags;
++	AuthObtainedCallback             auth_obtained_callback;
++	GAsyncReadyCallback		 check_auth_callback;
++	gpointer                         user_data;
++	GDestroyNotify                   destroy;
++	PolkitSubject			*subject;
++	gboolean			 challenge;
++} CheckAuthData;
+ 
+-        /* Check that caller is privileged */
+-        sender = dbus_g_method_get_sender (context);
+-        dbus_error_init (&dbus_error);
+-        pk_caller = polkit_caller_new_from_dbus_name (
+-                dbus_g_connection_get_connection (mechanism->priv->system_bus_connection),
+-                sender,
+-                &dbus_error);
+-        if (pk_caller == NULL) {
+-                error = g_error_new (GCONF_DEFAULTS_ERROR,
+-                                     GCONF_DEFAULTS_ERROR_GENERAL,
+-                                     "Error getting information about caller: %s: %s",
+-                                     dbus_error.name, dbus_error.message);
+-                dbus_error_free (&dbus_error);
+-                dbus_g_method_return_error (context, error);
+-                g_error_free (error);
+-                return FALSE;
+-        }
++static void
++check_auth_data_free (CheckAuthData *data)
++{
++	g_object_unref (data->mechanism);
++	g_strfreev (data->actions);
++	if (data->destroy)
++		data->destroy (data->user_data);
++        g_object_unref (data->subject);
++	g_free (data);
++}
+ 
+-        pk_action = polkit_action_new ();
+-        polkit_action_set_action_id (pk_action, action);
+-        pk_result = polkit_context_is_caller_authorized (mechanism->priv->pol_ctx, pk_action, pk_caller, TRUE, NULL);
+-        polkit_caller_unref (pk_caller);
+-
+-        if (pk_result != POLKIT_RESULT_YES) {
+-		dbus_error_init (&dbus_error);
+-		polkit_dbus_error_generate (pk_action, pk_result, &dbus_error);
+-		dbus_set_g_error (&error, &dbus_error);
+-                dbus_g_method_return_error (context, error);
+-                dbus_error_free (&dbus_error);
+-                g_error_free (error);
+-        	polkit_action_unref (pk_action);
+-                return FALSE;
+-        }
++static void check_next_action (CheckAuthData *data);
+ 
+-        polkit_action_unref (pk_action);
+-        return TRUE;
++static void
++check_authorization_callback (PolkitAuthority *authority,
++                              GAsyncResult    *res,
++                              gpointer         user_data)
++{
++	CheckAuthData *data = user_data;
++	PolkitAuthorizationResult *result;
++	GError *error;
++	gboolean is_authorized;
++
++	is_authorized = FALSE;
++
++	error = NULL;
++	result = polkit_authority_check_authorization_finish (authority,
++							      res,
++							      &error);
++	if (error != NULL) {
++		g_debug ("error checking action '%s'\n", error->message);
++		throw_error (data->context,
++                             GCONF_DEFAULTS_ERROR_NOT_PRIVILEGED,
++                             "Not Authorized: %s", error->message);
++		g_error_free (error);
++	}
++	else {
++		if (polkit_authorization_result_get_is_authorized (result)) {
++			g_debug ("result for '%s': authorized\n",
++				 data->actions[data->id]);
++			is_authorized = TRUE;
++		}
++		else if (polkit_authorization_result_get_is_challenge (result)) {
++			g_debug ("result for '%s': challenge\n",
++				 data->actions[data->id]);
++			throw_error (data->context,
++                                     GCONF_DEFAULTS_ERROR_NOT_PRIVILEGED,
++                                     "Authorization is required");
++		}
++		else {
++			g_debug ("result for '%s': not authorized\n",
++				 data->actions[data->id]);
++			throw_error (data->context,
++                                     GCONF_DEFAULTS_ERROR_NOT_PRIVILEGED,
++                                     "Not Authorized");
++		}
++	}
++
++	if (is_authorized) {
++		data->id++;
++		if (data->actions[data->id] == NULL)
++			data->auth_obtained_callback (data->mechanism,
++					   	      data->context,
++						      data->user_data);
++		else {
++			check_next_action (data);
++			return; /* continue operation */
++		}
++	}
++
++	check_auth_data_free (data);
++	g_object_unref (result);
++	stop_operation ();
++}
++
++static void
++check_next_action (CheckAuthData *data)
++{
++	g_debug ("checking action '%s'\n", data->actions[data->id]);
++        polkit_authority_check_authorization (data->mechanism->priv->auth,
++                                              data->subject,
++                                              data->actions[data->id],
++					      NULL,
++					      data->flags,
++                                              NULL,
++                                              data->check_auth_callback,
++                                              data);
++}
++
++static void
++check_polkit_for_actions (GConfDefaults                   *mechanism,
++                          DBusGMethodInvocation           *context,
++                          gchar                          **actions,
++                          AuthObtainedCallback             auth_obtained_callback,
++                          gpointer                         user_data,
++			  GDestroyNotify                   destroy)
++{
++        CheckAuthData *data;
++
++	data = g_new0 (CheckAuthData, 1);
++	data->mechanism = g_object_ref (mechanism);
++	data->context = context;
++	data->actions = actions;
++        data->flags = POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION;
++	data->id = 0;
++	data->auth_obtained_callback = auth_obtained_callback;
++	data->check_auth_callback = (GAsyncReadyCallback)check_authorization_callback;
++	data->user_data = user_data;
++	data->destroy = destroy;
++	data->subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
++	data->challenge = FALSE;
++
++	check_next_action (data);
+ }
+ 
+ static char *
+@@ -398,11 +494,11 @@ gconf_address_for_caller (GConfDefaults 
+ 		dbus_error_free (&error);
+ 		return NULL;
+ 	}
+-	
++
+ 	pwd = getpwuid (uid);
+ 	if (pwd == NULL) {
+-		g_set_error (gerror, 
+-			     0, 0, 
++		g_set_error (gerror,
++			     0, 0,
+ 			     "Failed to get passwd information for uid %d", uid);
+ 		return NULL;
+ 	}
+@@ -434,13 +530,13 @@ copy_tree (GConfClient     *src,
+ 	GSList *list, *l;
+ 	GConfEntry *entry;
+ 
+-	if (path_is_excluded (path, excludes)) 
++	if (path_is_excluded (path, excludes))
+ 		return;
+ 
+ 	list = gconf_client_all_entries (src, path, NULL);
+ 	for (l = list; l; l = l->next) {
+ 		entry = l->data;
+-		if (!path_is_excluded (entry->key, excludes)) 
++		if (!path_is_excluded (entry->key, excludes))
+ 			gconf_change_set_set (changes, entry->key, entry->value);
+ 	}
+ 	g_slist_foreach (list, (GFunc)gconf_entry_free, NULL);
+@@ -461,7 +557,7 @@ copy_entry (GConfClient     *src,
+ {
+ 	GConfValue *value;
+ 
+-	if (path_is_excluded (path, excludes)) 
++	if (path_is_excluded (path, excludes))
+ 		return;
+ 
+ 	value = gconf_client_get (src, path, NULL);
+@@ -471,69 +567,66 @@ copy_entry (GConfClient     *src,
+ 	}
+ }
+ 
++typedef void (*ChangeSetCallback) (GConfDefaults  *mechanism,
++                                   GConfChangeSet *changes,
++                                   gpointer        data);
++
++typedef struct
++{
++	GConfDefaults                   *mechanism;
++	DBusGMethodInvocation           *context;
++	const char 			*dest_address;
++	char 			       **actions;
++	char            	       **includes;
++	char            	       **excludes;
++	ChangeSetCallback 		 changeset_callback;
++	gpointer			 user_data;
++	GDestroyNotify			 destroy;
++} CopyData;
+ 
+ static void
+-do_copy (GConfDefaults          *mechanism,
+-	 gboolean                mandatory,
+-	 const char            **includes,
+-	 const char            **excludes,
+-	 DBusGMethodInvocation  *context,
+-	 GConfChangeSet        **changeset_out)
++copy_data_free (gpointer user_data)
+ {
+-        char *address = NULL;
+-	GConfClient *source = NULL; 
++	CopyData *data = user_data;
++
++	g_object_unref (data->mechanism);
++	g_strfreev (data->includes);
++	g_strfreev (data->excludes);
++	g_strfreev (data->actions);
++	if (data->destroy)
++		data->destroy (data->user_data);
++	g_free (data);
++}
++
++static void
++do_copy_authorized (GConfDefaults          *mechanism,
++                    DBusGMethodInvocation  *context,
++		    gpointer                user_data)
++{
++        CopyData    *data = user_data;
++	GConfClient *source = NULL;
+ 	GConfClient *dest = NULL;
+ 	GConfChangeSet *changes = NULL;
+ 	GConfEngine *engine;
++        char *address = NULL;
++        gint i;
+ 	GError *error;
+-	GError *error2;
+-	const char *action;
+-	const char *annotation_key;
+-	const char *default_action;
+-	const char *dest_address;
+-	int i;
+-
+-	if (changeset_out)
+-		*changeset_out = NULL;
+-
+-        stop_killtimer ();
+-
+-	/* check privileges for each include */
+-	if (mandatory) {
+-		annotation_key = "org.gnome.gconf.defaults.set-mandatory.prefix"; 
+-		default_action = "org.gnome.gconf.defaults.set-mandatory";
+-		dest_address = "xml:merged:" SYSGCONFDIR "/gconf.xml.mandatory";
+-	}
+-	else {
+-		annotation_key = "org.gnome.gconf.defaults.set-system.prefix"; 
+-		default_action = "org.gnome.gconf.defaults.set-system";
+-		dest_address = "xml:merged:" SYSGCONFDIR "/gconf.xml.system";
+-	}
+-
+-	for (i = 0; includes[i]; i++) {
+-		action = polkit_action_for_gconf_path (mechanism, annotation_key, includes[i]);
+-		if (action == NULL) 
+-			action = default_action;
+-
+-		if (!check_polkit_for_action (mechanism, context, action)) 
+-			goto out;
+-	}
+ 
+ 	error = NULL;
+-	engine = gconf_engine_get_local (dest_address, &error);
+-	if (error) 
+-		goto cleanup;	
++	engine = gconf_engine_get_local (data->dest_address, &error);
++	if (error)
++		goto cleanup;
+ 
+ 	dest = gconf_client_get_for_engine (engine);
+ 	gconf_engine_unref (engine);
+ 
+ 	/* find the address to from the caller id */
+-        address = gconf_address_for_caller (mechanism, context, &error);
++        address = gconf_address_for_caller (data->mechanism, data->context, &error);
+ 	if (error)
+ 		goto cleanup;
+ 
+ 	engine = gconf_engine_get_local (address, &error);
+-	if (error) 
++	if (error)
+ 		goto cleanup;
+ 
+ 	source = gconf_client_get_for_engine (engine);
+@@ -542,45 +635,175 @@ do_copy (GConfDefaults          *mechani
+ 	changes = gconf_change_set_new ();
+ 
+  	/* recursively copy each include, leaving out the excludes */
+-	for (i = 0; includes[i]; i++) {
+-		if (gconf_client_dir_exists (source, includes[i], NULL))
+-			copy_tree (source, includes[i], changes, excludes);
++	for (i = 0; data->includes[i]; i++) {
++		if (gconf_client_dir_exists (source, data->includes[i], NULL))
++			copy_tree (source, data->includes[i], changes, (const char **)data->excludes);
+ 		else
+-			copy_entry (source, includes[i], changes, excludes);
++			copy_entry (source, data->includes[i], changes, (const char **)data->excludes);
+ 	}
+ 
+ 	gconf_client_commit_change_set (dest, changes, FALSE, &error);
+ 	gconf_client_suggest_sync (dest, NULL);
+ 
+-	if (changeset_out) {
+-		*changeset_out = changes;
+-		changes = NULL;
++	if (data->changeset_callback) {
++		data->changeset_callback (data->mechanism, changes, data->user_data);
+ 	}
+ 
+ cleanup:
+ 	g_free (address);
+ 	if (changes)
+ 		gconf_change_set_unref (changes);
+-	if (dest) 
++	if (dest)
+ 		g_object_unref (dest);
+ 	if (source)
+ 		g_object_unref (source);
+ 
+ 	if (error) {
+-		g_print ("failed to set GConf values:  %s\n", error->message);
+-		error2 = g_error_new_literal (GCONF_DEFAULTS_ERROR,
+-					      GCONF_DEFAULTS_ERROR_GENERAL,
+-					      error->message);
++		throw_error (data->context,
++			     GCONF_DEFAULTS_ERROR_GENERAL,
++			     "%s", error->message);
+ 		g_error_free (error);
+-
+-		dbus_g_method_return_error (context, error2);
+-		g_error_free (error2);
+ 	}
+ 	else
+-        	dbus_g_method_return (context);
++        	dbus_g_method_return (data->context);
++}
+ 
+-out:
+-	start_killtimer ();
++typedef void (*ActionsReadyCallback) (GConfDefaults          *mechanism,
++				      DBusGMethodInvocation  *context,
++				      gchar                 **actions,
++                          	      AuthObtainedCallback    auth_obtained_callback,
++				      gpointer                data,
++				      GDestroyNotify          destroy);
++
++typedef struct
++{
++	GConfDefaults 			*mechanism;
++	DBusGMethodInvocation           *context;
++	char                           **includes;
++	const char			*default_action;
++	const char			*annotation_key;
++        ActionsReadyCallback		 actions_ready_callback;
++	AuthObtainedCallback             auth_obtained_callback;
++	gpointer			 data;
++	GDestroyNotify			 destroy;
++} ActionData;
++
++static void
++action_data_free (ActionData *data)
++{
++	g_object_unref (data->mechanism);
++	g_strfreev (data->includes);
++	if (data->destroy)
++		data->destroy (data->data);
++	g_free (data);
++}
++
++static void
++actions_ready_cb (GObject      *source,
++		  GAsyncResult *res,
++		  gpointer      user_data)
++{
++	ActionData *data = user_data;
++	GList *action_descriptions;
++	GError *error = NULL;
++	int i;
++	GHashTable *obtained;
++	GHashTableIter iter;
++	const gchar *action;
++	gchar **actions;
++	gpointer key, value;
++
++	action_descriptions = polkit_authority_enumerate_actions_finish (data->mechanism->priv->auth, res, &error);
++
++	if (error) {
++		throw_error (data->context,
++                             GCONF_DEFAULTS_ERROR_GENERAL,
++                             "Failed to get action descriptions: %s", error->message);
++		g_error_free (error);
++		action_data_free (data);
++		stop_operation ();
++		return;
++	}
++
++	obtained = g_hash_table_new (g_str_hash, g_str_equal);
++
++	for (i = 0; data->includes[i]; i++) {
++		action = polkit_action_for_gconf_path (data->mechanism, action_descriptions, data->annotation_key, data->includes[i]);
++		if (action == NULL) {
++			g_debug ("using default action '%s' for path '%s'",
++				 data->default_action, data->includes[i]);
++			action = data->default_action;
++		}
++
++		g_hash_table_insert (obtained, (gpointer)action, (gpointer)action);
++	}
++	actions = g_new0 (char *, g_hash_table_size (obtained) + 1);
++	g_hash_table_iter_init (&iter, obtained);
++	i = 0;
++	while (g_hash_table_iter_next (&iter, &key, &value)) {
++		actions[i] = g_strdup ((char *)key);
++		i++;
++	}
++	g_hash_table_destroy (obtained);
++	g_list_foreach (action_descriptions, (GFunc)g_object_unref, NULL);
++	g_list_free (action_descriptions);
++
++	data->actions_ready_callback (data->mechanism, data->context, actions, data->auth_obtained_callback, data->data, data->destroy);
++
++	data->destroy = NULL;
++	action_data_free (data);
++}
++
++static void
++do_copy (GConfDefaults          *mechanism,
++	 gboolean                mandatory,
++	 const gchar           **includes,
++	 const gchar           **excludes,
++	 DBusGMethodInvocation  *context,
++	 ChangeSetCallback       changeset_callback,
++	 gpointer                user_data,
++         GDestroyNotify          destroy)
++{
++	CopyData *cdata;
++	ActionData *adata;
++
++        start_operation ();
++
++	cdata = g_new0 (CopyData, 1);
++	cdata->mechanism = g_object_ref (mechanism);
++	cdata->context = context;
++	cdata->includes = g_strdupv ((gchar **)includes);
++	cdata->excludes = g_strdupv ((gchar **)excludes);
++	cdata->actions = NULL;
++	cdata->changeset_callback = changeset_callback;
++	cdata->user_data = user_data;
++	cdata->destroy = destroy;
++
++	adata = g_new0 (ActionData, 1);
++	adata->mechanism = g_object_ref (mechanism);
++	adata->context = context;
++	adata->includes = g_strdupv ((gchar **)includes);
++	adata->actions_ready_callback = check_polkit_for_actions;
++	adata->auth_obtained_callback = do_copy_authorized;
++	adata->data = cdata;
++	adata->destroy = copy_data_free;
++
++	/* check privileges for each include */
++	if (mandatory) {
++		adata->annotation_key = "org.gnome.gconf.defaults.set-mandatory.prefix";
++		adata->default_action = "org.gnome.gconf.defaults.set-mandatory";
++		cdata->dest_address = "xml:merged:" SYSGCONFDIR "/gconf.xml.mandatory";
++	}
++	else {
++		adata->annotation_key = "org.gnome.gconf.defaults.set-system.prefix";
++		adata->default_action = "org.gnome.gconf.defaults.set-system";
++		cdata->dest_address = "xml:merged:" SYSGCONFDIR "/gconf.xml.system";
++	}
++
++        polkit_authority_enumerate_actions (mechanism->priv->auth,
++				            NULL,
++				            actions_ready_cb,
++				            adata);
+ }
+ 
+ static void
+@@ -594,20 +817,13 @@ append_key (GConfChangeSet *cs,
+ 	g_ptr_array_add (keys, (gpointer) key);
+ }
+ 
+-void
+-gconf_defaults_set_system (GConfDefaults          *mechanism,
+-			   const char            **includes,
+-			   const char            **excludes,
+-			   DBusGMethodInvocation  *context)
++static void
++set_system_changes (GConfDefaults  *mechanism,
++		    GConfChangeSet *changes,
++                    gpointer        data)
+ {
+-	GConfChangeSet *changes = NULL;
+ 	GPtrArray *keys;
+ 
+-	do_copy (mechanism, FALSE, includes, excludes, context, &changes);
+-
+-	if (!changes)
+-		return;
+-
+ 	keys = g_ptr_array_new ();
+ 	gconf_change_set_foreach (changes, append_key, keys);
+ 	g_ptr_array_add (keys, NULL);
+@@ -615,7 +831,15 @@ gconf_defaults_set_system (GConfDefaults
+ 	g_signal_emit (mechanism, signals[SYSTEM_SET], 0, keys->pdata);
+ 
+ 	g_ptr_array_free (keys, TRUE);
+-	gconf_change_set_unref (changes);
++}
++
++void
++gconf_defaults_set_system (GConfDefaults          *mechanism,
++			   const char            **includes,
++			   const char            **excludes,
++			   DBusGMethodInvocation  *context)
++{
++	do_copy (mechanism, FALSE, includes, excludes, context, set_system_changes, NULL, NULL);
+ }
+ 
+ void
+@@ -624,7 +848,7 @@ gconf_defaults_set_mandatory (GConfDefau
+                               const char            **excludes,
+                               DBusGMethodInvocation  *context)
+ {
+-	do_copy (mechanism, TRUE, includes, excludes, context, NULL);
++	do_copy (mechanism, TRUE, includes, excludes, context, NULL, NULL, NULL);
+ }
+ 
+ static void
+@@ -636,13 +860,13 @@ unset_tree (GConfClient     *dest,
+ 	GSList *list, *l;
+ 	GConfEntry *entry;
+ 
+-	if (path_is_excluded (path, excludes)) 
++	if (path_is_excluded (path, excludes))
+ 		return;
+ 
+ 	list = gconf_client_all_entries (dest, path, NULL);
+ 	for (l = list; l; l = l->next) {
+ 		entry = l->data;
+-		if (!path_is_excluded (entry->key, excludes)) 
++		if (!path_is_excluded (entry->key, excludes))
+ 			gconf_change_set_unset (changes, entry->key);
+ 	}
+ 	g_slist_foreach (list, (GFunc)gconf_entry_free, NULL);
+@@ -654,25 +878,25 @@ unset_tree (GConfClient     *dest,
+ 	g_slist_foreach (list, (GFunc)g_free, NULL);
+ 	g_slist_free (list);
+ }
+-            
++
+ static void
+ unset_entry (GConfClient     *dest,
+              const char      *path,
+ 	     GConfChangeSet  *changes,
+              const char     **excludes)
+ {
+-	if (path_is_excluded (path, excludes)) 
++	if (path_is_excluded (path, excludes))
+ 		return;
+ 
+ 	gconf_change_set_unset (changes, path);
+ }
+-            
++
+ static void
+-unset_in_db (GConfDefaults  *mechanism,
+-	     const char     *address,
+-             const char    **includes,
+-             const char    **excludes,
+-	     GError        **error)
++unset_in_db (GConfDefaults   *mechanism,
++	     const gchar     *address,
++             const gchar    **includes,
++             const gchar    **excludes,
++	     GError         **error)
+ {
+ 	GConfEngine *engine;
+ 	GConfClient *dest = NULL;
+@@ -680,7 +904,7 @@ unset_in_db (GConfDefaults  *mechanism,
+ 	int i;
+ 
+ 	engine = gconf_engine_get_local (address, error);
+-	if (*error) 
++	if (*error)
+ 		goto out;
+ 
+ 	dest = gconf_client_get_for_engine (engine);
+@@ -706,48 +930,224 @@ out:
+ 		gconf_change_set_unref (changes);
+ }
+ 
++typedef struct
++{
++	GConfDefaults          *mechanism;
++        DBusGMethodInvocation  *context;
++        char                  **includes;
++        char                  **excludes;
++} UnsetData;
++
++static void
++unset_data_free (gpointer user_data)
++{
++	UnsetData *data = user_data;
++
++	g_object_unref (data->mechanism);
++	g_strfreev (data->includes);
++	g_strfreev (data->excludes);
++	g_free (data);
++}
++
++static void
++do_unset_authorized (GConfDefaults          *mechanism,
++                     DBusGMethodInvocation  *context,
++		     gpointer 		     user_data)
++{
++        UnsetData *data = user_data;
++	GError *error;
++
++	error = NULL;
++	unset_in_db (mechanism, "xml:merged:" SYSGCONFDIR "/gconf.xml.mandatory", 
++		     (const gchar **)data->includes,
++		     (const gchar **)data->excludes, &error);
++
++	if (error) {
++		throw_error (data->context,
++			     GCONF_DEFAULTS_ERROR,
++			     GCONF_DEFAULTS_ERROR_GENERAL,
++			     "%s", error->message);
++		g_error_free (error);
++	}
++	else
++        	dbus_g_method_return (data->context);
++}
++
+ void
+ gconf_defaults_unset_mandatory (GConfDefaults          *mechanism,
+                                 const char            **includes,
+                                 const char            **excludes,
+                                 DBusGMethodInvocation  *context)
+ {
+-	const char *annotation_key;
+-	const char *default_action;
+-	int i;
+-	const char *action;
+-	GError *error;
+-	GError *error2;
++	UnsetData *udata;
++	ActionData *adata;
+ 
+-	stop_killtimer ();
++	start_operation ();
+ 
+-	annotation_key = "org.gnome.gconf.defaults.set-mandatory.prefix"; 
+-	default_action = "org.gnome.gconf.defaults.set-mandatory";
++	udata = g_new0 (UnsetData, 1);
++	udata->mechanism = g_object_ref (mechanism);
++	udata->context = context;
++	udata->includes = g_strdupv ((gchar **)includes);
++	udata->excludes = g_strdupv ((gchar **)excludes);
++
++	adata = g_new0 (ActionData, 1);
++	adata->mechanism = g_object_ref (mechanism);
++	adata->context = context;
++	adata->includes = g_strdupv ((gchar **)includes);
++	adata->auth_obtained_callback = do_unset_authorized;
++	adata->data = udata;
++	adata->destroy = unset_data_free;
++
++	adata->annotation_key = "org.gnome.gconf.defaults.set-mandatory.prefix";
++	adata->default_action = "org.gnome.gconf.defaults.set-mandatory";
++
++	polkit_authority_enumerate_actions (mechanism->priv->auth,
++					    NULL,
++					    actions_ready_cb,
++					    adata);
++}
+ 
+-	for (i = 0; includes[i]; i++) {
+-		action = polkit_action_for_gconf_path (mechanism, annotation_key, includes[i]);
+-		if (action == NULL) 
+-			action = default_action;
++static void
++check_authorization_only_callback (PolkitAuthority *authority,
++                                   GAsyncResult    *res,
++                                   gpointer         user_data)
++{
++	CheckAuthData *data = user_data;
++	PolkitAuthorizationResult *result;
++	GError *error;
++	gboolean is_authorized;
+ 
+-		if (!check_polkit_for_action (mechanism, context, action)) 
+-			goto out;
+-	}
++	is_authorized = FALSE;
+ 
+ 	error = NULL;
+-	unset_in_db (mechanism, "xml:merged:" SYSGCONFDIR "/gconf.xml.mandatory", 
+-		     includes, excludes, &error);
+-
+-	if (error) {
+-		error2 = g_error_new_literal (GCONF_DEFAULTS_ERROR,
+-					      GCONF_DEFAULTS_ERROR_GENERAL,
+-					      error->message);
++	result = polkit_authority_check_authorization_finish (authority,
++							      res,
++							      &error);
++	if (error != NULL) {
++		g_debug ("error checking action '%s'\n", error->message);
++		throw_error (data->context,
++                             GCONF_DEFAULTS_ERROR_NOT_PRIVILEGED,
++                             "Not Authorized: %s", error->message);
+ 		g_error_free (error);
++		goto out;
++	}
++	else {
++		if (polkit_authorization_result_get_is_authorized (result)) {
++                        g_debug ("result for '%s': authorized\n",
++                                 data->actions[data->id]);
++			is_authorized = TRUE;
++		}
++		else if (polkit_authorization_result_get_is_challenge (result)) {
++			g_debug ("result for '%s': challenge\n",
++                                 data->actions[data->id]);
++			is_authorized = TRUE;
++			data->challenge = TRUE;
++		}
++		else {
++			g_debug ("result for '%s': not authorized\n",
++                                 data->actions[data->id]);
++			is_authorized = FALSE;
++		}
++	}
+ 
+-		dbus_g_method_return_error (context, error2);
+-		g_error_free (error2);
++	if (is_authorized) {
++		data->id++;
++		if (data->actions[data->id] == NULL) {
++			gint result;
++
++			result = data->challenge ? 1 : 2;
++			g_debug ("return %d\n", result);
++			dbus_g_method_return (data->context, result);
++		}
++		else {
++			check_next_action (data);
++			return; /* continue operation */
++		}
+ 	}
+-	else
+-        	dbus_g_method_return (context);
++	else {
++		g_debug ("return 0\n");
++		dbus_g_method_return (data->context, 0);
++	}
++
+ out:
+-	start_killtimer();
++	check_auth_data_free (data);
++	g_object_unref (result);
++	stop_operation ();
++}
++
++static void
++check_permissions_only (GConfDefaults                   *mechanism,
++                        DBusGMethodInvocation           *context,
++                        gchar                          **actions,
++                        AuthObtainedCallback             auth_obtained_callback,
++                        gpointer                         user_data,
++ 	 		GDestroyNotify                   destroy)
++{
++        CheckAuthData *data;
++
++	data = g_new0 (CheckAuthData, 1);
++	data->mechanism = g_object_ref (mechanism);
++	data->context = context;
++	data->actions = actions;
++	data->flags = 0;
++	data->id = 0;
++	data->check_auth_callback = (GAsyncReadyCallback)check_authorization_only_callback;
++	data->auth_obtained_callback = NULL;
++	data->user_data = NULL;
++	data->destroy = NULL;
++	data->subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
++	data->challenge = FALSE;
++
++	check_next_action (data);
++}
++
++static void
++do_check (GConfDefaults          *mechanism,
++          gboolean                mandatory,
++          const gchar           **includes,
++          DBusGMethodInvocation  *context)
++{
++	ActionData *adata;
++
++	start_operation ();
++
++	adata = g_new0 (ActionData, 1);
++	adata->mechanism = g_object_ref (mechanism);
++	adata->context = context;
++	adata->includes = g_strdupv ((gchar **)includes);
++	adata->actions_ready_callback = check_permissions_only;
++	adata->auth_obtained_callback = NULL;
++	adata->data = NULL;
++	adata->destroy = NULL;
++
++	if (mandatory) {
++		adata->annotation_key = "org.gnome.gconf.defaults.set-mandatory.prefix";
++		adata->default_action = "org.gnome.gconf.defaults.set-mandatory";
++	}
++	else {
++		adata->annotation_key = "org.gnome.gconf.defaults.set-system.prefix";
++		adata->default_action = "org.gnome.gconf.defaults.set-system";
++	}
++
++	polkit_authority_enumerate_actions (mechanism->priv->auth,
++					    NULL,
++					    actions_ready_cb,
++					    adata);
++}
++
++void
++gconf_defaults_can_set_system (GConfDefaults          *mechanism,
++			       const char            **includes,
++			       DBusGMethodInvocation  *context)
++{
++	do_check (mechanism, FALSE, includes, context);
+ }
++
++void
++gconf_defaults_can_set_mandatory (GConfDefaults          *mechanism,
++			          const char            **includes,
++			          DBusGMethodInvocation  *context)
++{
++	do_check (mechanism, TRUE, includes, context);
++}
++
+diff -up GConf-2.26.2/defaults/gconf-defaults.h.polkit1 GConf-2.26.2/defaults/gconf-defaults.h
+--- GConf-2.26.2/defaults/gconf-defaults.h.polkit1	2009-05-14 11:13:40.000000000 -0400
++++ GConf-2.26.2/defaults/gconf-defaults.h	2009-06-12 13:00:27.984836059 -0400
+@@ -83,6 +83,14 @@ void           gconf_defaults_unset_mand
+                                                  const char            **excludes,
+                                                  DBusGMethodInvocation  *context);
+ 
++void		gconf_defaults_can_set_system    (GConfDefaults         *mechanism,
++						  const char	       **includes,
++                                                  DBusGMethodInvocation  *context);
++
++void		gconf_defaults_can_set_mandatory (GConfDefaults         *mechanism,
++						  const char	       **includes,
++                                                  DBusGMethodInvocation  *context);
++
+ G_END_DECLS
+ 
+ #endif /* GCONF_DEFAULTS_H */
+diff -up GConf-2.26.2/defaults/gconf-defaults-main.c.polkit1 GConf-2.26.2/defaults/gconf-defaults-main.c
+--- GConf-2.26.2/defaults/gconf-defaults-main.c.polkit1	2009-05-05 20:37:32.000000000 -0400
++++ GConf-2.26.2/defaults/gconf-defaults-main.c	2009-06-12 13:00:27.987836052 -0400
+@@ -122,6 +122,29 @@ get_system_bus (void)
+         return bus;
+ }
+ 
++extern gboolean disable_killtimer;
++gboolean debug = FALSE;
++
++GOptionEntry entries [] = {
++	{ "debug", 0, 0, G_OPTION_ARG_NONE, &debug, "Emit debug output", NULL },
++	{ "no-kill", 0, 0, G_OPTION_ARG_NONE, &disable_killtimer, "Don't exit when idle", NULL },
++	{ NULL, }
++};
++
++static gint log_levels = (G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING);
++
++void
++log_default_handler (const gchar   *log_domain,
++                     GLogLevelFlags log_level,
++                     const gchar   *message,
++                     gpointer       unused_data)
++{
++	if ((log_level & log_levels) != 0) {
++		g_log_default_handler (log_domain, log_level, message, unused_data);
++	}
++}
++
++
+ int
+ main (int argc, char **argv)
+ {
+@@ -130,6 +153,8 @@ main (int argc, char **argv)
+         DBusGProxy          *bus_proxy;
+         DBusGConnection     *connection;
+         int                  ret;
++	GOptionContext      *options;
++	GError              *error = NULL;
+ 
+         ret = 1;
+ 
+@@ -139,8 +164,22 @@ main (int argc, char **argv)
+         dbus_g_thread_init ();
+         g_type_init ();
+ 
++	options = g_option_context_new (NULL);
++	g_option_context_add_main_entries (options, entries, NULL);
++	if (!g_option_context_parse (options, &argc, &argv, &error)) {
++		g_warning ("Failed to parse options: %s\n", error->message);
++		g_error_free (error);
++	}
++	g_option_context_free (options);
++
++	g_log_set_default_handler (log_default_handler, NULL);
++	if (debug) {
++		log_levels = log_levels | G_LOG_LEVEL_DEBUG;
++	}
++
+         connection = get_system_bus ();
+         if (connection == NULL) {
++                g_warning ("Could not get system bus connection; bailing out");
+                 goto out;
+         }
+ 
+diff -up GConf-2.26.2/defaults/gconf-defaults.xml.polkit1 GConf-2.26.2/defaults/gconf-defaults.xml
+--- GConf-2.26.2/defaults/gconf-defaults.xml.polkit1	2009-05-14 11:13:40.000000000 -0400
++++ GConf-2.26.2/defaults/gconf-defaults.xml	2009-06-12 14:21:43.646401662 -0400
+@@ -2,12 +2,12 @@
+ <node name="/">
+   <interface name="org.gnome.GConf.Defaults">
+     <!--
+-      includes: an array of GConf paths to copy from the 
++      includes: an array of GConf paths to copy from the
+                 callers GConf database to the system database
+       excludes: an array of GConf paths to omit
+ 
+-      Copies values from the callers GConf database to the system-wide 
+-      database. The subtree below each included path is copied recursively, 
++      Copies values from the callers GConf database to the system-wide
++      database. The subtree below each included path is copied recursively,
+       skipping the excluded subtrees.
+       To decide which PolicyKit privilege to require for the copying of
+       each path in includes, the mechanism looks for a privilege with an
+@@ -21,16 +21,22 @@
+       <arg name="excludes" direction="in" type="as"/>
+     </method>
+ 
++    <method name="CanSetSystem">
++      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
++      <arg name="includes" direction="in" type="as"/>
++      <arg name="result" direction="out" type="u"/>
++    </method>
++
+     <signal name="SystemSet">
+       <arg name="keys" type="as"/>
+     </signal>
+     <!--
+-      includes: an array of GConf paths to copy from the 
++      includes: an array of GConf paths to copy from the
+                 callers GConf database to the mandatory database
+       excludes: an array of GConf paths to omit
+ 
+-      Copies values from the callers GConf database to the system-wide 
+-      mandatory database. The subtree below each included path is copied 
++      Copies values from the callers GConf database to the system-wide
++      mandatory database. The subtree below each included path is copied
+       recursively, skipping the excluded subtrees.
+       To decide which PolicyKit privilege to require for the copying of
+       each path in includes, the mechanism looks for a privilege with an
+@@ -46,7 +52,7 @@
+ 
+     <!--
+       Unsets keys in the system-wide mandatory GConf database, making the
+-      keys writable again. The subtree below each included path is copied 
++      keys writable again. The subtree below each included path is copied
+       recursively, skipping the excluded subtrees.
+       To decide which PolicyKit privilege to require for the copying of
+       each path in includes, the mechanism looks for a privilege with an
+@@ -59,6 +65,12 @@
+       <arg name="includes" direction="in" type="as"/>
+       <arg name="excludes" direction="in" type="as"/>
+     </method>
+-   
++
++    <method name="CanSetMandatory">
++      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
++      <arg name="includes" direction="in" type="as"/>
++      <arg name="result" direction="out" type="u"/>
++    </method>
++
+   </interface>
+ </node>
+diff -up GConf-2.26.2/defaults/Makefile.am.polkit1 GConf-2.26.2/defaults/Makefile.am
+--- GConf-2.26.2/defaults/Makefile.am.polkit1	2009-04-25 02:44:06.000000000 -0400
++++ GConf-2.26.2/defaults/Makefile.am	2009-06-12 13:00:27.990835416 -0400
+@@ -20,13 +20,13 @@ INCLUDES = \
+ 
+ gconf_defaults_mechanism_LDADD = \
+ 	$(top_builddir)/gconf/libgconf-2.la \
+-	$(DEFAULTS_LIBS) 
++	$(DEFAULTS_LIBS)
+ 
+ BUILT_SOURCES = gconf-defaults-glue.h
+ 
+ dbus_servicesdir = $(datadir)/dbus-1/system-services
+ dbus_confdir = $(sysconfdir)/dbus-1/system.d
+-polkitdir = $(datadir)/PolicyKit/policy
++polkitdir = $(datadir)/polkit-1/actions
+ 
+ dbus_services_in_files = org.gnome.GConf.Defaults.service.in
+ polkit_in_files = org.gnome.gconf.defaults.policy.in
+@@ -41,9 +41,6 @@ dbus_conf_DATA = org.gnome.GConf.Default
+ @INTLTOOL_POLICY_RULE@
+ polkit_DATA = $(polkit_in_files:.policy.in=.policy)
+ 
+-check:
+-	$(POLKIT_POLICY_FILE_VALIDATE) $(polkit_DATA)
+-
+ EXTRA_DIST =					\
+ 	$(dbus_services_in_files)		\
+ 	org.gnome.GConf.Defaults.conf		\
