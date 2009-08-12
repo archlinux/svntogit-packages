@@ -1,0 +1,39 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-panel
+pkgver=2.27.4
+pkgrel=1
+pkgdesc="The GNOME Panel"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.gnome.org"
+depends=('libwnck>=2.27.5' 'gnome-menus>=2.27.5' 'evolution-data-server>=2.27.90' 'gnome-desktop>=2.27.5' 'libgweather>=2.26.2.1' 'librsvg>=2.26.0' 'libgnomeui>=2.24.1' 'hicolor-icon-theme')
+makedepends=('gnome-doc-utils>=0.17.3' 'pkgconfig' 'intltool' 'gnome-common')
+options=('!libtool' '!emptydirs')
+groups=('gnome')
+install=gnome-panel.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.27/${pkgname}-${pkgver}.tar.bz2
+        polkit1.patch)
+sha256sums=('baf349ff8032979ace8668cb011d9f8ca9007713f689096dd3eaf09718f92b95'
+            'f077e5bf63b715c808be99228049a7fcc7eef348f36768130a588576eba523c8')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/polkit1.patch" || return 1
+  libtoolize -f || return 1
+  aclocal -I m4 || return 1
+  autoconf || return 1
+  automake || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --libexecdir=/usr/lib/gnome-panel \
+      --disable-network-manager \
+      --disable-scrollkeeper || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-panel-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
