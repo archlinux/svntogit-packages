@@ -29,13 +29,13 @@ makedepends=('apache' 'imap' 'postgresql-libs' 'mysql' 'libldap' 'postfix'
              'libmcrypt' 'tidyhtml' 'aspell' 'libtool' 'gd'  'icu'
              'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
-        "http://www.suspekt.org/downloads/suhosin-patch-${_suhosinver}.patch"
+        "http://download.suhosin.org/suhosin-patch-${_suhosinver}.patch.gz"
         'php.ini.patch' 'apache.conf' 'db-configure.patch')
 md5sums=('846760cd655c98dfd86d6d97c3d964b0'
-         '818023a7d7fe55a0c17828f0070f9e7d'
+         '62dc36545b86bf86e44ada1fccc17d0a'
          '65e73c648b2c062aac2f59624ca4edaf'
          '96ca078be6729b665be8a865535a97bf'
-         '74e5ce5a02488ec91b1c59f539e42936')
+         '45ecb6fb0aadfd3462097e3bab951aa5')
 
 build() {
 	phpconfig="--prefix=/usr \
@@ -135,7 +135,9 @@ build() {
 	# php
 	mkdir ${srcdir}/build-php
 	cd ${srcdir}/build-php
-	${srcdir}/${pkgbase}-${pkgver}/configure ${phpconfig} \
+	ln -s ../${pkgbase}-${pkgver}/configure
+	./configure --srcdir=../${pkgbase}-${pkgver} \
+		${phpconfig} \
 		--disable-cgi \
 		--with-readline \
 		--enable-pcntl \
@@ -146,7 +148,8 @@ build() {
 	# reuse the previous run; this will save us a lot of time
 	cp -a ${srcdir}/build-php ${srcdir}/build-cgi
 	cd ${srcdir}/build-cgi
-	${srcdir}/${pkgbase}-${pkgver}/configure ${phpconfig} \
+	./configure --srcdir=../${pkgbase}-${pkgver} \
+		${phpconfig} \
 		--enable-cgi \
 		--disable-cli \
 		${phpextensions} || return 1
@@ -155,7 +158,8 @@ build() {
 	# apache
 	cp -a ${srcdir}/build-php ${srcdir}/build-apache
 	cd ${srcdir}/build-apache
-	${srcdir}/${pkgbase}-${pkgver}/configure ${phpconfig} \
+	./configure --srcdir=../${pkgbase}-${pkgver} \
+		${phpconfig} \
 		--with-apxs2 \
 		--disable-cli \
 		${phpextensions} || return 1
@@ -164,7 +168,8 @@ build() {
 	# pear
 	cp -a ${srcdir}/build-php ${srcdir}/build-pear
 	cd ${srcdir}/build-pear
-	${srcdir}/${pkgbase}-${pkgver}/configure ${phpconfig} \
+	./configure --srcdir=../${pkgbase}-${pkgver} \
+		${phpconfig} \
 		--disable-cgi \
 		--with-readline \
 		--enable-pcntl \
@@ -177,16 +182,12 @@ package_php() {
 	pkgdesc='An HTML-embedded scripting language'
 	depends=('pcre' 'libxml2' 'bzip2' 'openssl')
 	replaces=('php-fileinfo')
-	conflicts=('php-fileinfo')
 	provides=('php-fileinfo')
 	backup=('etc/php/php.ini')
 
 	cd ${srcdir}/build-php
 	make INSTALL_ROOT=${pkgdir} install || return 1
 	install -d -m755 ${pkgdir}/usr/share/pear
-	# cleanup
-	rm -f ${pkgdir}/usr/lib/php/modules/*.a
-	sed -e "s#${srcdir}/${pkgbase}-${pkgver}/configure#./configure#g" -i $pkgdir/usr/include/php/main/build-defs.h
 	# fix broken link
 	ln -sf phar.phar $pkgdir/usr/bin/phar
 	# install php.ini
