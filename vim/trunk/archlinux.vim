@@ -5,8 +5,6 @@
 " NEVER EDIT THIS FILE, IT'S OVERWRITTEN UPON UPGRADES, GLOBAL CONFIGURATION
 " SHALL BE DONE IN /etc/vimrc, USER SPECIFIC CONFIGURATION IN ~/.vimrc
 
-set runtimepath=~/.vim,/usr/share/vim,/usr/share/vim/vimcurrent
-
 " Normally we use vim-extensions. If you want true vi-compatibility
 " remove change the following statements
 set nocompatible                " Use Vim defaults instead of 100% vi compatibility
