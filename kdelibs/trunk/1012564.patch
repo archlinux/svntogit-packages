@@ -1,0 +1,69 @@
+Index: kio/kio/kfileitem.cpp
+===================================================================
+--- kio/kio/kfileitem.cpp	(Revision 1012563)
++++ kio/kio/kfileitem.cpp	(Revision 1012564)
+@@ -532,6 +532,9 @@
+ {
+     d->m_strName = name;
+     d->m_strText = KIO::decodeFileName( d->m_strName );
++    if (d->m_entry.contains(KIO::UDSEntry::UDS_NAME))
++        d->m_entry.insert(KIO::UDSEntry::UDS_NAME, d->m_strName); // #195385
++
+ }
+ 
+ QString KFileItem::linkDest() const
+Index: kio/tests/kfileitemtest.cpp
+===================================================================
+--- kio/tests/kfileitemtest.cpp	(Revision 1012563)
++++ kio/tests/kfileitemtest.cpp	(Revision 1012564)
+@@ -241,6 +241,21 @@
+     QVERIFY(fileItem.cmp(fileItem2));
+ }
+ 
++void KFileItemTest::testRename()
++{
++    KIO::UDSEntry entry;
++    const QString origName = QString::fromLatin1("foo");
++    entry.insert(KIO::UDSEntry::UDS_NAME, origName);
++    entry.insert(KIO::UDSEntry::UDS_FILE_TYPE, S_IFDIR);
++    KFileItem fileItem(entry, KUrl("/dir/foo"));
++    QCOMPARE(fileItem.name(), origName);
++    QCOMPARE(fileItem.text(), origName);
++    const QString newName = QString::fromLatin1("FiNeX_rocks");
++    fileItem.setName(newName);
++    QCOMPARE(fileItem.name(), newName);
++    QCOMPARE(fileItem.text(), newName);
++    QCOMPARE(fileItem.entry().stringValue(KIO::UDSEntry::UDS_NAME), newName); // #195385
++}
+ 
+ void KFileItemTest::testDecodeFileName_data()
+ {
+Index: kio/tests/kdirmodeltest.cpp
+===================================================================
+--- kio/tests/kdirmodeltest.cpp	(Revision 1012563)
++++ kio/tests/kdirmodeltest.cpp	(Revision 1012564)
+@@ -418,6 +418,12 @@
+     // check renaming happened
+     QCOMPARE( m_dirModel->itemForIndex( m_secondFileIndex ).url().url(), newUrl.url() );
+ 
++    // check that KDirLister::cachedItemForUrl won't give a bad name if copying that item (#195385)
++    KFileItem cachedItem = KDirLister::cachedItemForUrl(newUrl);
++    Q_ASSERT(!cachedItem.isNull());
++    QCOMPARE(cachedItem.name(), QString("toplevelfile_2_renamed"));
++    QCOMPARE(cachedItem.entry().stringValue(KIO::UDSEntry::UDS_NAME), QString("toplevelfile_2_renamed"));
++
+     // Put things back to normal
+     job = KIO::rename(newUrl, url, KIO::HideProgressInfo);
+     ok = job->exec();
+Index: kio/tests/kfileitemtest.h
+===================================================================
+--- kio/tests/kfileitemtest.h	(Revision 1012563)
++++ kio/tests/kfileitemtest.h	(Revision 1012564)
+@@ -35,6 +35,7 @@
+     void testHiddenFile();
+     void testMimeTypeOnDemand();
+     void testCmp();
++    void testRename();
+ 
+     void testDecodeFileName_data();
+     void testDecodeFileName();
