@@ -2,7 +2,7 @@
 # Maintainer: tobias [tobias [at] archlinux.org]
 pkgname=mutt
 pkgver=1.5.20
-pkgrel=1
+pkgrel=2
 pkgdesc="A small but very powerful text-based mail client"
 arch=(i686 x86_64)
 license=('GPL')
@@ -10,12 +10,19 @@ url="http://www.mutt.org/"
 depends=('slang' 'openssl>=0.9.8e' 'gdbm' 'mime-types' 'zlib' 'libsasl' 'gpgme')
 makedepends=('gnupg')
 install=${pkgname}.install
-source=(ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz)
-
+source=(ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz 
+        mutt-unmailbox.patch)
 url="http://www.mutt.org/"
+md5sums=('027cdd9959203de0c3c64149a7ee351c'
+         'fa8e03a49a2fa7b294dc8237d928cdb7')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
+  cd ${srcdir}/${pkgname}-${pkgver}
+
+  # patch a segfault bug in 1.5.20 -- remove for next release
+  patch -p1 < ${srcdir}/mutt-unmailbox.patch || return 1
+  #patch -Np1 -i ../mutt-unmailbox.patch || exit 1
+
   ./configure --prefix=/usr --sysconfdir=/etc \
     --enable-pop --enable-imap --enable-smtp \
     --with-sasl --with-ssl=/usr --without-idn \
@@ -23,12 +30,10 @@ build() {
 	 --enable-compressed --with-regex \
 	 --enable-gpgme --with-slang=/usr
   make || return 1
-  make DESTDIR=${startdir}/pkg install
-  rm -f ${startdir}/pkg/usr/bin/{flea,muttbug}
-  rm -f $startdir/pkg/usr/share/man/man1/{flea,muttbug}.1
-  rm -f ${startdir}/pkg/etc/mime.types*
-  install -Dm644 contrib/gpg.rc ${startdir}/pkg/etc/Muttrc.gpg.dist
+  make DESTDIR=${pkgdir} install
+  rm -f ${pkgdir}/usr/bin/{flea,muttbug}
+  rm -f ${pkgdir}/usr/share/man/man1/{flea,muttbug}.1
+  rm -f ${pkgdir}/etc/mime.types*
+  install -Dm644 contrib/gpg.rc ${pkgdir}/etc/Muttrc.gpg.dist
 }
-
-md5sums=('027cdd9959203de0c3c64149a7ee351c')
 
