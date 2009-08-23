@@ -1,0 +1,451 @@
+diff -up gconf-editor-2.26.0/configure.in.polkit1 gconf-editor-2.26.0/configure.in
+--- gconf-editor-2.26.0/configure.in.polkit1	2009-03-17 10:30:40.000000000 -0400
++++ gconf-editor-2.26.0/configure.in	2009-06-12 14:17:03.455358136 -0400
+@@ -35,7 +35,6 @@ changequote([,])dnl
+ PKG_CHECK_MODULES(GCONF_EDITOR,
+ 		  gconf-2.0 >= 2.9.2
+ 		  gtk+-2.0 >= 2.12.0
+-		  polkit-dbus >= 0.7
+ 		  dbus-glib-1 >= 0.71)
+ 
+ if test "$enable_maintainer_mode" = "yes"; then
+diff -up gconf-editor-2.26.0/src/gconf-editor-window.c.polkit1 gconf-editor-2.26.0/src/gconf-editor-window.c
+--- gconf-editor-2.26.0/src/gconf-editor-window.c.polkit1	2009-03-17 10:29:30.000000000 -0400
++++ gconf-editor-2.26.0/src/gconf-editor-window.c	2009-06-12 14:17:03.457357782 -0400
+@@ -689,7 +689,6 @@ gconf_editor_popup_window_set_as_default
+   if (can_use_pk) {
+     gconf_client_suggest_sync (gconfwindow->client, NULL);
+     gconf_pk_set_default_async (path,
+-                                GDK_WINDOW_XWINDOW (GTK_WIDGET (window)->window),
+                                 (GFunc) gconf_editor_popup_policykit_callback,
+                                 g_object_ref (window), g_object_unref);
+   }
+@@ -737,7 +736,6 @@ gconf_editor_popup_window_set_as_mandato
+   if (can_use_pk) {
+     gconf_client_suggest_sync (gconfwindow->client, NULL);
+     gconf_pk_set_mandatory_async (path,
+-                                  GDK_WINDOW_XWINDOW (GTK_WIDGET (window)->window),
+                                   (GFunc) gconf_editor_popup_policykit_callback,
+                                   g_object_ref (window), g_object_unref);
+   }
+@@ -934,10 +932,10 @@ list_view_button_press_event (GtkTreeVie
+ 						  window->type != GCONF_EDITOR_WINDOW_TYPE_DEFAULTS);
+ 			gtk_widget_set_sensitive (gtk_ui_manager_get_widget (window->ui_manager, "/GConfKeyPopupMenu/DefaultKey"), 
+ 						  (gconf_util_can_edit_defaults () && window->type != GCONF_EDITOR_WINDOW_TYPE_DEFAULTS) ||
+-						  (gconf_pk_can_set_default () && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
++						  (gconf_pk_can_set_default ("/") && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
+ 			gtk_widget_set_sensitive (gtk_ui_manager_get_widget (window->ui_manager, "/GConfKeyPopupMenu/MandatoryKey"), 
+ 						  (gconf_util_can_edit_mandatory () && window->type != GCONF_EDITOR_WINDOW_TYPE_MANDATORY) ||
+-						  (gconf_pk_can_set_mandatory () && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
++						  (gconf_pk_can_set_mandatory ("/") && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
+ 			
+ 			gtk_tree_path_free (path);
+ 		}
+@@ -1037,10 +1035,10 @@ gconf_editor_window_list_view_popup_menu
+ 					  window->type != GCONF_EDITOR_WINDOW_TYPE_DEFAULTS);
+ 		gtk_widget_set_sensitive (gtk_ui_manager_get_widget (window->ui_manager, "/GConfKeyPopupMenu/DefaultKey"), 
+ 					  (gconf_util_can_edit_defaults () && window->type != GCONF_EDITOR_WINDOW_TYPE_DEFAULTS) ||
+-					  (gconf_pk_can_set_default () && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
++					  (gconf_pk_can_set_default ("/") && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
+ 		gtk_widget_set_sensitive (gtk_ui_manager_get_widget (window->ui_manager, "/GConfKeyPopupMenu/MandatoryKey"), 
+ 					  (gconf_util_can_edit_mandatory () && window->type != GCONF_EDITOR_WINDOW_TYPE_MANDATORY) ||
+-					  (gconf_pk_can_set_mandatory () && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
++					  (gconf_pk_can_set_mandatory ("/") && window->type == GCONF_EDITOR_WINDOW_TYPE_NORMAL));
+ 			
+ 	}
+ 	else {
+diff -up gconf-editor-2.26.0/src/gconf-policykit.c.polkit1 gconf-editor-2.26.0/src/gconf-policykit.c
+--- gconf-editor-2.26.0/src/gconf-policykit.c.polkit1	2009-03-17 10:29:30.000000000 -0400
++++ gconf-editor-2.26.0/src/gconf-policykit.c	2009-06-12 14:20:28.549111475 -0400
+@@ -36,9 +36,6 @@
+ #include <dbus/dbus-glib.h>
+ #include <dbus/dbus-glib-lowlevel.h>
+ 
+-#include <polkit/polkit.h>
+-#include <polkit-dbus/polkit-dbus.h>
+-
+ #include "gconf-policykit.h"
+ 
+ #define CACHE_VALIDITY_SEC 10
+@@ -81,156 +78,118 @@ get_system_bus (void)
+         return bus;
+ }
+ 
+-static gboolean
+-pk_io_watch_have_data (GIOChannel *channel, GIOCondition condition, gpointer user_data)
+-{
+-        int fd;
+-        PolKitContext *pk_context = user_data;
+-        fd = g_io_channel_unix_get_fd (channel);
+-        polkit_context_io_func (pk_context, fd);
+-        return TRUE;
+-}
+-
+-static int
+-pk_io_add_watch_fn (PolKitContext *pk_context, int fd)
+-{
+-        guint id = 0;
+-        GIOChannel *channel;
+-        channel = g_io_channel_unix_new (fd);
+-        if (channel == NULL)
+-                goto out;
+-        id = g_io_add_watch (channel, G_IO_IN, pk_io_watch_have_data, pk_context);
+-        if (id == 0) {
+-                g_io_channel_unref (channel);
+-                goto out;
+-        }
+-        g_io_channel_unref (channel);
+-out:
+-        return id;
+-}
+-
+-static void
+-pk_io_remove_watch_fn (PolKitContext *pk_context, int watch_id)
+-{
+-        g_source_remove (watch_id);
+-}
+-
+-static PolKitContext *
+-get_pk_context (void)
+-{
+-        static PolKitContext *pk_context = NULL;
+-
+-        if (pk_context == NULL) {
+-                pk_context = polkit_context_new ();
+-                polkit_context_set_io_watch_functions (pk_context,
+-                                                       pk_io_add_watch_fn,
+-                                                       pk_io_remove_watch_fn);
+-                if (!polkit_context_init (pk_context, NULL)) {
+-                        polkit_context_unref (pk_context);
+-                        pk_context = NULL;
+-                }
+-        }
+-
+-        return pk_context;
+-}
+-
+-static gint
+-can_do (const gchar *pk_action_id)
++static guint
++can_set (const gchar *key, gboolean mandatory)
+ {
+-        DBusConnection *system_bus;
+-        PolKitCaller *pk_caller;
+-        PolKitAction *pk_action;
+-        PolKitResult pk_result;
+-        PolKitContext *pk_context;
+-        DBusError dbus_error;
+-        gint res = 0;
+-
+-        pk_caller = NULL;
+-        pk_action = NULL;
++        DBusConnection *bus;
++        DBusGProxy *proxy = NULL;
++	const gchar *keys[2];
++	const gchar *func;
++	GError *error = NULL;
++        guint res = 0;
+ 
+-        system_bus = dbus_g_connection_get_connection (get_system_bus ());
+-        if (system_bus == NULL)
+-                goto out;
+-
+-        pk_context = get_pk_context ();
+-        if (pk_context == NULL)
++        bus = get_system_bus ();
++        if (bus == NULL)
+                 goto out;
+ 
+-        pk_action = polkit_action_new ();
+-        polkit_action_set_action_id (pk_action, pk_action_id);
+-
+-        dbus_error_init (&dbus_error);
+-        pk_caller = polkit_caller_new_from_pid (system_bus, getpid (), &dbus_error);
+-        if (pk_caller == NULL) {
+-                fprintf (stderr, "cannot get caller from dbus name\n");
++        proxy = dbus_g_proxy_new_for_name (bus,
++                                           "org.gnome.GConf.Defaults",
++                                           "/",
++                                           "org.gnome.GConf.Defaults");
++        if (proxy == NULL)
+                 goto out;
+-        }
+ 
+-        pk_result = polkit_context_is_caller_authorized (pk_context, pk_action, pk_caller, FALSE, NULL);
+-
+-        switch (pk_result) {
+-        case POLKIT_RESULT_UNKNOWN:
+-        case POLKIT_RESULT_NO:
+-                 res = 0;
+-                break;
+-        case POLKIT_RESULT_YES:
+-                res = 2;
+-                break;
+-        default:
+-                /* This covers all the
+-                 * POLKIT_RESULT_ONLY_VIA_[SELF|ADMIN]_AUTH_* cases as more of
+-                 * these may be added in the future.
+-                 */
+-                res = 1;
+-                break;
+-        }
++	keys[0] = key;
++	keys[1] = NULL;
++	func = mandatory ? "CanSetMandatory" : "CanSetSystem";
++
++        if (!dbus_g_proxy_call (proxy, func,
++                                &error,
++                                G_TYPE_STRV, keys,
++                                G_TYPE_INVALID,
++				G_TYPE_UINT, &res,
++                                G_TYPE_INVALID)) {
++    		g_warning ("error calling %s: %s\n", func, error->message);
++    		g_error_free (error);
++  	}
+ 
+ out:
+-        if (pk_action != NULL)
+-                polkit_action_unref (pk_action);
+-        if (pk_caller != NULL)
+-                polkit_caller_unref (pk_caller);
++	if (proxy)
++		g_object_unref (proxy);
+ 
+         return res;
+ }
+ 
++typedef struct
++{
++	time_t last_refreshed;
++	gint can_set;
++} CacheEntry;
++
++static GHashTable *defaults_cache = NULL;
++static GHashTable *mandatory_cache = NULL;
++
+ gint
+-gconf_pk_can_set_default (void)
++gconf_pk_can_set (const gchar *key, gboolean mandatory)
+ {
+-        static gboolean cache = FALSE;
+-        static time_t   last_refreshed = 0;
+-        time_t          now;
++        time_t now;
++	GHashTable **cache;
++	CacheEntry *entry;
+ 
+         time (&now);
+-        if (ABS (now - last_refreshed) > CACHE_VALIDITY_SEC) {
+-                cache = can_do ("org.gnome.gconf.defaults.set-system");
+-                last_refreshed = now;
++	cache = mandatory ? &mandatory_cache : &defaults_cache;
++	if (!*cache)
++		*cache = g_hash_table_new (g_str_hash, g_str_equal);
++	entry = (CacheEntry *) g_hash_table_lookup (*cache, key);
++	if (!entry) {
++		entry = g_new0 (CacheEntry, 1);
++		g_hash_table_insert (*cache, key, entry);
++	}
++        if (ABS (now - entry->last_refreshed) > CACHE_VALIDITY_SEC) {
++        	entry->can_set = can_set (key, mandatory);
++                entry->last_refreshed = now;
+         }
+ 
+-        return cache;
++        return entry->can_set;
++}
++
++gint
++gconf_pk_can_set_default (const gchar *key)
++{
++	return gconf_pk_can_set (key, FALSE);
+ }
+ 
+ gint
+-gconf_pk_can_set_mandatory (void)
++gconf_pk_can_set_mandatory (const gchar *key)
++{
++	return gconf_pk_can_set (key, TRUE);
++}
++
++static void
++gconf_pk_update_can_set_cache (const gchar *key,
++                               gboolean     mandatory)
+ {
+-        static gboolean cache = FALSE;
+-        static time_t   last_refreshed = 0;
+         time_t          now;
++	GHashTable **cache;
++	CacheEntry *entry;
+ 
+         time (&now);
+-        if (ABS (now - last_refreshed) > CACHE_VALIDITY_SEC) {
+-                cache = can_do ("org.gnome.gconf.defaults.set-mandatory");
+-                last_refreshed = now;
+-        }
+-
+-        return cache;
++	cache = mandatory ? &mandatory_cache : &defaults_cache;
++	if (!*cache)
++		*cache = g_hash_table_new (g_str_hash, g_str_equal);
++	entry = (CacheEntry *) g_hash_table_lookup (*cache, key);
++	if (!entry) {
++		entry = g_new0 (CacheEntry, 1);
++		g_hash_table_insert (*cache, key, entry);
++	}
++        entry->can_set = 2;
++        entry->last_refreshed = now;
+ }
+ 
+ typedef struct {
+         gint            ref_count;
+-        const gchar    *call;
++        gboolean        mandatory;
+         gchar          *key;
+-        guint           transient_parent_xid;
+         GFunc           callback;
+         gpointer        data;
+         GDestroyNotify  notify;
+@@ -284,33 +243,8 @@ auth_notify (DBusGProxy     *proxy,
+ }
+ 
+ static void
+-do_auth_async (const gchar         *action,
+-               const gchar         *result,
+-               GConfPKCallbackData *data)
+-{
+-        DBusGConnection *bus;
+-        DBusGProxy *proxy;
+-
+-        /* Now ask the user for auth... */
+-        bus = get_session_bus ();
+-        if (bus == NULL)
+-                return;
+-
+-        proxy = dbus_g_proxy_new_for_name (bus,
+-                                        "org.gnome.PolicyKit",
+-                                        "/org/gnome/PolicyKit/Manager",
+-                                        "org.gnome.PolicyKit.Manager");
+-
+-        dbus_g_proxy_begin_call_with_timeout (proxy,
+-                                              "ShowDialog",
+-                                              auth_notify,
+-                                              _gconf_pk_data_ref (data),
+-                                              _gconf_pk_data_unref,
+-                                              INT_MAX,
+-                                              G_TYPE_STRING, action,
+-                                              G_TYPE_UINT, data->transient_parent_xid,
+-                                              G_TYPE_INVALID);
+-}
++gconf_pk_update_can_set_cache (const gchar *key,
++                               gboolean     mandatory);
+ 
+ static void
+ set_key_notify (DBusGProxy     *proxy,
+@@ -321,6 +255,7 @@ set_key_notify (DBusGProxy     *proxy,
+         GError *error = NULL;
+ 
+         if (dbus_g_proxy_end_call (proxy, call, &error, G_TYPE_INVALID)) {
++		gconf_pk_update_can_set_cache (data->key, data->mandatory);
+                 if (data->callback)
+                         data->callback (data->data, NULL);
+         }
+@@ -335,17 +270,6 @@ set_key_notify (DBusGProxy     *proxy,
+                         if (data->callback)
+                                 data->callback (data->data, NULL);
+                 }
+-                else if (dbus_g_error_has_name (error, "org.freedesktop.PolicyKit.Error.NotAuthorized")) {
+-                        gchar **tokens;
+-
+-                        tokens = g_strsplit (error->message, " ", 2);
+-                        g_error_free (error);
+-                        if (g_strv_length (tokens) == 2)
+-                                do_auth_async (tokens[0], tokens[1], data);
+-                        else
+-                                g_warning ("helper return string malformed");
+-                        g_strfreev (tokens);
+-                }
+                 else {
+                         if (data->callback)
+                                 data->callback (data->data, error);
+@@ -360,6 +284,7 @@ set_key_async (GConfPKCallbackData *data
+ {
+         DBusGConnection *bus;
+         DBusGProxy      *proxy;
++	const gchar     *call;
+         gchar           *keys[2] = { data->key, NULL };
+ 
+         bus = get_system_bus ();
+@@ -371,8 +296,9 @@ set_key_async (GConfPKCallbackData *data
+                                            "/",
+                                            "org.gnome.GConf.Defaults");
+ 
++	call = data->mandatory ? "SetMandatory" : "SetSystem";
+         dbus_g_proxy_begin_call_with_timeout (proxy,
+-                                              data->call,
++                                              call,
+                                               set_key_notify,
+                                               _gconf_pk_data_ref (data),
+                                               _gconf_pk_data_unref,
+@@ -387,7 +313,6 @@ set_key_async (GConfPKCallbackData *data
+ 
+ void
+ gconf_pk_set_default_async (const gchar    *key,
+-                            guint           transient_parent_xid,
+                             GFunc           callback,
+                             gpointer        d,
+                             GDestroyNotify  notify)
+@@ -399,9 +324,8 @@ gconf_pk_set_default_async (const gchar 
+ 
+         data = g_slice_new0 (GConfPKCallbackData);
+         data->ref_count = 1;
+-        data->call = "SetSystem";
++        data->mandatory = FALSE;
+         data->key = g_strdup (key);
+-        data->transient_parent_xid = transient_parent_xid;
+         data->callback = callback;
+         data->data = d;
+         data->notify = notify;
+@@ -412,7 +336,6 @@ gconf_pk_set_default_async (const gchar 
+ 
+ void
+ gconf_pk_set_mandatory_async (const gchar    *key,
+-                              guint           transient_parent_xid,
+                               GFunc           callback,
+                               gpointer        d,
+                               GDestroyNotify  notify)
+@@ -424,9 +347,8 @@ gconf_pk_set_mandatory_async (const gcha
+ 
+         data = g_slice_new0 (GConfPKCallbackData);
+         data->ref_count = 1;
+-        data->call = "SetMandatory";
++        data->mandatory = TRUE;
+         data->key = g_strdup (key);
+-        data->transient_parent_xid = transient_parent_xid;
+         data->callback = callback;
+         data->data = d;
+         data->notify = notify;
+diff -up gconf-editor-2.26.0/src/gconf-policykit.h.polkit1 gconf-editor-2.26.0/src/gconf-policykit.h
+--- gconf-editor-2.26.0/src/gconf-policykit.h.polkit1	2009-03-17 10:29:30.000000000 -0400
++++ gconf-editor-2.26.0/src/gconf-policykit.h	2009-06-12 14:17:03.464117020 -0400
+@@ -27,18 +27,16 @@
+ 
+ #include <glib.h>
+ 
+-gint     gconf_pk_can_set_default    (void);
++gint     gconf_pk_can_set_default    (const gchar *key);
+ 
+-gint     gconf_pk_can_set_mandatory  (void);
++gint     gconf_pk_can_set_mandatory  (const gchar *key);
+ 
+ void     gconf_pk_set_default_async  (const gchar    *key,
+-                                      guint           transient_parent_xid,
+                                       GFunc           callback,
+                                       gpointer        data,
+                                       GDestroyNotify  notify);
+ 
+ void     gconf_pk_set_mandatory_async (const gchar    *key,
+-                                       guint           transient_parent_xid,
+                                        GFunc           callback,
+                                        gpointer        data,
+                                        GDestroyNotify  notify);
