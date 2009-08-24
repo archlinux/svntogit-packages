@@ -1,0 +1,32 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gok
+pkgver=2.27.91
+pkgrel=1
+pkgdesc="Gnome Onscreen Keyboard"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.gnome.org"
+depends=('gnome-speech>=0.4.25' 'at-spi>=1.27.91' 'libwnck>=2.27.5' 'hicolor-icon-theme' 'libcanberra>=0.14' 'libglade>=2.6.4' 'gconf>=2.26.2-3')
+makedepends=('intltool' 'pkgconfig' 'gnome-doc-utils>=0.17.3')
+options=('!emptydirs')
+groups=('gnome-extra')
+install=gok.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.27/${pkgname}-${pkgver}.tar.bz2
+        lm.patch)
+sha256sums=('b6cb950439b975440210c540f8bb4a9f8d5b9ad0a4d953f6f41094cfc1ee1911'
+            '2da4a8e5f1f3726c31fe8fd465f33b42959da68692cddf01e79430afec898b90')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/lm.patch" || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gok ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
