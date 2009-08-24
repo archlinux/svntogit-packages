@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-screensaver
+pkgver=2.27.0
+pkgrel=1
+pkgdesc="Screensaver designed to integrate well with the GNOME desktop."
+arch=(i686 x86_64)
+license=('GPL')
+url="http://live.gnome.org/GnomeScreensaver"
+backup=(etc/pam.d/gnome-screensaver)
+depends=('gnome-menus>=2.27.5' 'libgnomekbd>=2.27.4' 'libgl' 'libnotify>=0.4.5' 'gnome-desktop>=2.27.5' 'libxxf86misc')
+makedepends=('pkgconfig' 'intltool' 'mesa' 'xscreensaver' 'libxss' 'libxslt')
+optdepends=('xscreensaver')
+groups=('gnome')
+options=(!emptydirs)
+install=gnome-screensaver.install
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.27/${pkgname}-${pkgver}.tar.bz2
+	      gnome-screensaver.pam)
+md5sums=('94e5c11bdc687e1383c9d497446b9842'
+         '4b4d2672a787e0d2ed792b4c308ccf8d')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --libexecdir=/usr/lib/gnome-screensaver \
+      --localstatedir=/var \
+      --with-xscreensaverdir=/usr/share/xscreensaver/config \
+      --with-xscreensaverhackdir=/usr/lib/xscreensaver || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+
+  install -m644 "${srcdir}/gnome-screensaver.pam" "${pkgdir}/etc/pam.d/gnome-screensaver" || return 1
+
+  #Migrate xscreensaver configuration files
+  sed -e 's|Exec=|Exec=/usr/lib/xscreensaver/|' \
+      -i data/xscreensaver-config.xsl || return 1
+  cd "${pkgdir}/usr/share/applications/screensavers"
+  "${srcdir}/${pkgname}-${pkgver}/data/migrate-xscreensaver-config.sh" \
+      /usr/share/xscreensaver/config/*.xml || return 1
+  
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-screensaver ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
