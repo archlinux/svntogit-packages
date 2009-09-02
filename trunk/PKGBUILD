@@ -1,15 +1,53 @@
 # $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
-pkgname=cups
-pkgver=1.3.11
+pkgbase="cups"
+pkgname=('libcups' 'cups')
+pkgver=1.4.0
 pkgrel=1
-pkgdesc="The CUPS Printing System"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.cups.org/"
-depends=('acl' 'openslp' 'pam' "libcups>=${pkgver}" 'xdg-utils' 'avahi' 'heimdal>=1.2.1-5' 'gnutls>=2.8.1' 'poppler>=0.10.7-2')
-makedepends=('xinetd' 'gzip' 'autoconf')
+makedepends=('libtiff>=3.9.1' 'libpng>=1.2.39'  'acl' 'openslp' 'pam' 'xdg-utils' 'heimdal>=1.2.1-5' 'gnutls>=2.8.3' 'poppler>=0.10.7-2'
+             'xinetd' 'gzip' 'autoconf' 'php' 'libusb' 'dbus-glib' 'avahi'  'hicolor-icon-theme') 
+source=(ftp://ftp.easysw.com/pub/cups/${pkgver}/cups-${pkgver}-source.tar.bz2
+        cups cups.logrotate cups.pam
+	gnutls-pkgconfig.dpatch)
+options=('!emptydirs')
+md5sums=('bc5e777d4320cecdd1a64de8035171a8'
+         '5c85b7d8d2ddd02c2c64955cebbf55ea'
+         'f861b18f4446c43918c8643dcbbd7f6d'
+         '96f82c38f3f540b53f3e5144900acf17'
+         '7322c46c2f33863dce85eb75a1d9ccab')
+
+build() {
+  cd ${srcdir}/${pkgbase}-${pkgver}
+  # Rebuild configure script for --enable-avahi.
+  aclocal -I config-scripts
+  autoconf -I config-scripts
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+     --with-logdir=/var/log/cups -with-docdir=/usr/share/cups/doc \
+     --with-cups-user=daemon --with-cups-group=lp --enable-pam=yes \
+     --disable-ldap --libdir=/usr/lib --enable-raw-printing \
+     --enable-dbus --with-dbusdir=/etc/dbus-1 --enable-ssl=yes --enable-gnutls \
+     --with-php=/usr/bin/php-cgi --with-pdftops=pdftops --with-optim="$CFLAGS"
+  make || return 1
+}
+
+package_libcups() {
+pkgdesc="The CUPS Printing System - client libraries and headers"
+depends=('gnutls>=2.8.3' 'libtiff>=3.9.1' 'libpng>=1.2.39' 'heimdal>=1.2.1-5')
+
+
+  cd ${srcdir}/${pkgbase}-${pkgver}
+  make BUILDROOT=${pkgdir} install-headers install-libs || return 1
+  # put this into the libs pkg to make other software find the libs(no pkg-config file included)
+  mkdir -p ${pkgdir}/usr/bin
+  install -m755 ${srcdir}/${pkgbase}-${pkgver}/cups-config ${pkgdir}/usr/bin/cups-config
+}
+
+package_cups() {
+pkgdesc="The CUPS Printing System - deamon package"
 install=cups.install
 backup=(etc/cups/cupsd.conf
         etc/cups/mime.convs
@@ -19,59 +57,29 @@ backup=(etc/cups/cupsd.conf
         etc/logrotate.d/cups
         etc/pam.d/cups
         etc/xinetd.d/cups-lpd)
-source=(ftp://ftp.easysw.com/pub/cups/${pkgver}/cups-${pkgver}-source.tar.bz2
-        cups cups.logrotate cups.pam
-	gnutls-pkgconfig.dpatch)
-options=('!emptydirs') #'!makeflags') seems smp safe now; find pkg/ | sort | wc -l gives 1815
-md5sums=('17f3e2bcb3cae3dd9dceb65a2bfd295f'
-         '5c85b7d8d2ddd02c2c64955cebbf55ea'
-         'f861b18f4446c43918c8643dcbbd7f6d'
-         '96f82c38f3f540b53f3e5144900acf17'
-	 '7322c46c2f33863dce85eb75a1d9ccab')
+depends=('acl' 'openslp' 'pam' "libcups>=${pkgver}" 'xdg-utils' 'heimdal>=1.2.1-5' 'gnutls>=2.8.3' 'poppler>=0.10.7-2' 
+         'libusb' 'dbus-glib' 'avahi' 'hicolor-icon-theme')
+optdepends=('php: for included phpcups.so module')
 
-build() {
-  cd ${srcdir}/${pkgname}-${pkgver}
-  # http://patch-tracking.debian.net/patch/series/view/cups/1.3.10-5/gnutls-pkgconfig.dpatch
-  patch -Np1 -i ${srcdir}/gnutls-pkgconfig.dpatch || return 1
-  aclocal
-  autoconf
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-     --with-logdir=/var/log/cups -with-docdir=/usr/share/cups/doc \
-     --with-cups-user=daemon --with-cups-group=lp --without-php \
-     --enable-pam=yes --disable-ldap --libdir=/usr/lib --enable-raw-printing \
-     --enable-dbus --with-dbusdir=/etc/dbus-1 --enable-ssl=yes --enable-gnutls \
-     --enable-pdftops --with-pdftops=pdftops --with-optim="$CFLAGS"
-  make || return 1
+  cd ${srcdir}/${pkgbase}-${pkgver}
+  make BUILDROOT=${pkgdir} install-data install-exec || return 1
 
-  #Wreck out cups library installation
-  sed -i -e 's/^DIRS\s=\scups/DIRS = /' Makefile
-
-  make BUILDROOT=${pkgdir} install
-
-  #Wreck out some stuff included in libcups
-  
-  if [ "$CARCH" = "x86_64" ]; then 
-    if [ -f $pkgdir/usr/lib64 ]; then
-	 rm -rf ${pkgdir}/usr/lib64/
-    fi
-  fi
-  rm -f ${startdir}/pkg/usr/lib/libcupsimage.so* 
-  rm -f ${startdir}/pkg/usr/bin/cups-config
-  rm -rf ${startdir}/pkg/usr/include
+  # this one we ship in the libcups pkg
+  rm -f ${pkgdir}/usr/bin/cups-config
 
   # kill the sysv stuff
-  rm -rf ${startdir}/pkg/etc/rc*.d
-  rm -rf ${startdir}/pkg/etc/init.d
-  install -D -m755 ../cups ${startdir}/pkg/etc/rc.d/cups
-  install -D -m644 ../cups.logrotate ${startdir}/pkg/etc/logrotate.d/cups
-  install -D -m644 ../cups.pam ${startdir}/pkg/etc/pam.d/cups
+  rm -rf ${pkgdir}/etc/rc*.d
+  rm -rf ${pkgdir}/etc/init.d
+  install -D -m755 ../cups ${pkgdir}/etc/rc.d/cups
+  install -D -m644 ../cups.logrotate ${pkgdir}/etc/logrotate.d/cups
+  install -D -m644 ../cups.pam ${pkgdir}/etc/pam.d/cups
   
   # fix perms on /var/spool and /etc
-  chmod 755 ${startdir}/pkg/var/spool
-  chmod 755 ${startdir}/pkg/etc
+  chmod 755 ${pkgdir}/var/spool
+  chmod 755 ${pkgdir}/etc
 
   # fix .desktop file
-  sed -i 's|^Exec=htmlview http://localhost:631/|Exec=xdg-open http://localhost:631/|g' $startdir/pkg/usr/share/applications/cups.desktop
+  sed -i 's|^Exec=htmlview http://localhost:631/|Exec=xdg-open http://localhost:631/|g' ${pkgdir}/usr/share/applications/cups.desktop
   
   # compress some driver files, adopted from Fedora
   find ${pkgdir}/usr/share/cups/model -name "*.ppd" | xargs gzip -n9f
