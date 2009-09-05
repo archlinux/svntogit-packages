@@ -1,29 +1,25 @@
+# $Id$
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 # Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
 
-pkgname=openoffice-base-devel
-pkgver=3.2_dev300_m55
+
+pkgbase="openoffice-base-devel"
+pkgname=('openoffice-base-devel' 'openoffice-sdk-devel')
+_OO_milestone=DEV300_m57
+pkgver=3.2_${_OO_milestone/DEV/dev}
 pkgrel=1
-pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
 arch=('i686' 'x86_64')
-_OO_milestone=DEV300_m55
 license=('LGPL3')
 url="http://www.openoffice.org"
-install=openoffice.install
-depends=("curl>=7.19.2" "hunspell>=1.2.8" "python>=2.6.2" 'libwpd' 'redland' 'libxaw' "neon>=0.28.4"
-	 'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils')
-optdepends=('java-runtime:	adds java support'
-            'libcups:		adds printing support'
-            'gconf:		adds additional gnome support'
-            'nss:		adds support for signed files/macros'
-            'pstoedit:		translates PostScript and PDF graphics into other vector formats'
-            'poppler:		for shipped pdfimport extension')
-makedepends=('bison' 'svn' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.1.2"
-             'apache-ant>=1.7.1-3' 'cairo' 'gperf' 'libcups' 'poppler' 'pstoedit' 'gconf' "openjdk6>=1.5-5") # 'boost'
-backup=(usr/lib/openoffice-dev/program/sofficerc )
-provides=('openoffice-base')
+makedepends=(# the real makedeps
+             'bison' 'svn' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst'
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.1.2" 'boost'
+             'apache-ant>=1.7.1-3' 'cairo' 'gperf' 'libcups' 'poppler' 'pstoedit' 'gconf' "openjdk6>=1.5-5"
+	     # from main OOo the deps
+	     "curl>=7.19.2" "hunspell>=1.2.8" "python>=2.6.2" 'libwpd' 'redland' 'libxaw' "neon>=0.28.4"
+          'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils')
 source=(${pkgname}-${_OO_milestone}.tar.gz
+	http://tools.openoffice.org/unowinreg_prebuild/680/unowinreg.dll
 	startcenter.desktop
 	default-no-startup-wizard.diff
 	default-system-fpicker.diff
@@ -34,7 +30,8 @@ source=(${pkgname}-${_OO_milestone}.tar.gz
 	openoffice.org-3.0.1.oooXXXXX.extensions.npapi.patch
 	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('1c98f281cd12199cc404c1648615d52f'
+md5sums=('699d90ad8de3f080ed022b0b10e3d22c'
+         'e3a0b76dcd876f3d721ee7183729153d'
          '63209bbc64c901ef105455bda0282f45'
          '71f136a31e296a04ab68932a31dd533e'
          '6c596129fb48316226ce3adfd3a4c86d'
@@ -61,7 +58,8 @@ build() {
 	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
 	JAVAHOME=${JAVA_HOME}
 	[ -z "${MOZ_PLUGIN_PATH}" ] && . /etc/profile.d/mozilla-common.sh
-
+	[ -z "${ANT_HOME}" ] && . /etc/profile.d/apache-ant.sh
+	
 	# some speedups
 	export SMP="6"
 #	export SMP="1"
@@ -98,6 +96,8 @@ build() {
 
 	cd ${srcdir}/${_OO_milestone}
 
+	# needed to build the OO-SDK
+	mv ${srcdir}/unowinreg.dll external/unowinreg || return 1
 	# export C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
@@ -110,57 +110,48 @@ build() {
 	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
 	--with-vendor="ArchLinux"\
 	--prefix=/usr --exec-prefix=/usr\
-	--disable-ldap\
 	--with-lang="en-US"\
 	--with-dict=ALL\
 	--disable-gnome-vfs\
-	--disable-binfilter\
-	--disable-evolution2\
-	--disable-kde\
-	--enable-lockdown\
-	--enable-mediawiki\
-	--enable-minimizer\
-	--disable-odk\
-	--enable-pdfimport\
 	--disable-qadevooo\
 	--disable-reportdesign\
 	--disable-systray\
 	--disable-mathmldtd\
-	--enable-gio\
-	--enable-gtk\
+	--enable-binfilter\
+	--enable-cairo\
+	--enable-crashdump=yes\
 	--enable-cups\
 	--enable-dbus\
-	--enable-cairo\
-	--enable-crashdump\
+	--enable-evolution2\
+	--enable-gio\
+	--enable-gtk\
+	--enable-graphite\
+	--enable-kde4\
+	--enable-layout\
+	--enable-ldap\
+	--enable-lockdown\
+	--enable-mediawiki\
+	--enable-minimizer\
+	--enable-odk\
+	--enable-opengl\
+	--enable-pdfimport\
+	--enable-presenter-console\
+	--enable-report-builder\
 	--enable-vba\
 	--enable-verbose\
+	--enable-wiki-publisher\
 	--with-package-format=native\
-	--with-system-db\
-	--with-system-cairo\
-	--with-system-curl\
-	--with-system-expat\
-	--with-system-freetype\
-	--with-system-hunspell\
-	--with-system-icu\
-	--with-system-jpeg\
-	--with-system-libwpd\
-	--with-system-libxml\
-	--with-system-libxslt\
-	--with-system-mozilla=libxul\
-	--with-system-neon\
-	--with-system-poppler\
-	--with-system-python\
-	--with-system-redland\
-	--with-system-sane-header\
-	--with-system-sndfile\
-	--with-system-stdlibs\
-	--with-system-xrender-headers\
-	--with-system-zlib\
-	--with-system-openssl\
 	--without-fonts\
 	--without-afms\
 	--without-gpc\
 	--without-nas\
+	--without-ppds\
+	--with-system-stdlibs\
+	--with-system-libs\
+	--with-system-sane-header\
+	--with-system-mozilla=libxul\
+	--with-system-xrender-headers\
+	--with-system-headers\
 	--with-jdk-home=${JAVA_HOME} \
 	--with-system-xerces \
 	--with-xerces-jar=/usr/share/java/xercesImpl.jar \
@@ -175,7 +166,32 @@ build() {
 	--with-use-shell=bash\
 	 $EXTRAOPTS || return 1
 
+
+#--with-system-libs should cover all expect  mozilla and odbc/sane/xrender-header(s)
 #	--with-system-boost\
+#	--with-system-db\
+#	--with-system-cairo\
+#	--with-system-curl\
+#	--with-system-expat\
+#	--with-system-freetype\
+#	--with-system-hunspell\
+#	--with-system-icu\
+#	--with-system-jpeg\
+#	--with-system-libwpd\
+#	--with-system-libxml\
+#	--with-system-libxslt\
+#	--with-system-neon\
+#	--with-system-poppler\
+#	--with-system-python\
+#	--with-system-redland\
+#	--with-system-sndfile\
+#	--with-system-zlib\
+#	--with-system-openssl\
+
+
+# packages needed for system graphite --with-system-graphite
+# we will need myspell dicts for --with-system-dicts --without-myspell-dicts
+
 
 	# Setup environment for build
 	if [ "$CARCH" = "x86_64" ]; then
@@ -189,7 +205,26 @@ build() {
 	cd instsetoo_native
 	build.pl -P${SMP} ${MAXMODULESFLAG} ${MAXPROCESSESFLAG} --dlv_switch -link --all || return 1
 	cd ..
+}
 
+package_openoffice-base-devel() {
+
+ pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
+ install=openoffice.install
+ depends=("curl>=7.19.2" "hunspell>=1.2.8" "python>=2.6.2" 'libwpd' 'redland' 'libxaw' "neon>=0.28.4"
+          'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils')
+ optdepends=('java-runtime:	adds java support'
+            'libcups:		adds printing support'
+            'gconf:		adds additional gnome support'
+            'nss:		adds support for signed files/macros'
+            'pstoedit:		translates PostScript and PDF graphics into other vector formats'
+            'poppler:		for shipped pdfimport extension'
+	    'kdelibs:		for kde integration')
+ backup=(usr/lib/openoffice-dev/program/sofficerc )
+ provides=('openoffice-base')
+
+
+	cd ${srcdir}/${_OO_milestone}
 	# install binaries
 	if [ "$CARCH" = "x86_64" ]; then
                 cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
@@ -295,4 +330,55 @@ build() {
 	cd ${pkgdir}/usr/lib/mozilla/plugins/
 	ln -v -s /usr/lib/openoffice-dev/program/libnpsoplugin.so . 
 	mv ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-dev.so
+}
+
+package_openoffice-sdk-devel() {
+
+ pkgdesc="OpenOffice.org SDK - development files"
+ depends=('openoffice-base-devel')
+
+	cd ${srcdir}/${_OO_milestone}
+
+	# install SDK
+	if [ "$CARCH" = "x86_64" ]; then
+			cp -R instsetoo_native/unxlngx6.pro/OpenOffice_SDK/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
+	 else 	cp -R instsetoo_native/unxlngi6.pro/OpenOffice_SDK/native/install/en-US/linux-2.6-intel/buildroot/* ${pkgdir}/
+	fi
+
+	# move all to /usr/lib
+	mkdir -p ${pkgdir}/usr/lib
+	mv ${pkgdir}/opt/* ${pkgdir}/usr/lib/
+	rmdir ${pkgdir}/opt
+
+	cd ${pkgdir}/usr/lib/openoffice.org/basis3.2/sdk
+	
+	for file in setsdkenv_unix.csh setsdkenv_unix.sh ; do
+        sed -e "s,@OO_SDK_NAME@,sdk," \
+            -e "s,@OO_SDK_HOME@,/usr/lib/openoffice-dev/basis-link/sdk," \
+            -e "s,@OFFICE_HOME@,/usr/lib/openoffice-dev," \
+            -e "s,@OFFICE_BASE_HOME@,/usr/lib/openoffice-dev/basis-link," \
+            -e "s,@OO_SDK_URE_HOME@,/usr/lib/openoffice-dev/basis-link/ure-link," \
+            -e "s,@OO_SDK_MAKE_HOME@,/usr/bin," \
+            -e "s,@OO_SDK_ZIP_HOME@,/usr/bin," \
+            -e "s,@OO_SDK_CPP_HOME@,/usr/bin," \
+            -e "s,@OO_SDK_CC_55_OR_HIGHER@,," \
+            -e "s,@OO_SDK_JAVA_HOME@,\$JAVA_HOME," \
+            -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
+            -e "s,@SDK_AUTO_DEPLOYMENT@,NO," \
+            $file.in > $file
+        chmod 755 $file
+	done
+
+	cd ${pkgdir}/usr/lib/ || return 1
+	mv openoffice.org openoffice || return 1
+
+ 	cd ${pkgdir}/usr/lib/openoffice/ || return 1
+	mv basis3.2 basis-link || return 1
+
+	# fix ownership and permissions
+	chown root.root -R ${pkgdir}/
+	
+	## Develize it!
+	cd ${pkgdir}/usr/lib/
+	mv openoffice openoffice-dev
 }
