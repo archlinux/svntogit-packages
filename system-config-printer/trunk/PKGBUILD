@@ -1,32 +1,74 @@
 # $Id: PKGBUILD,v 1.20 2008/12/29 15:30:49 BaSh Exp $
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 
-pkgname=system-config-printer
-pkgver=1.1.7
-pkgrel=3
+pkgbase=system-config-printer
+pkgname=('system-config-printer-common'
+	'system-config-printer-gnome')
+pkgver=1.1.12
+pkgrel=1
 pkgdesc="Pygtk CUPS Configuration"
 url="http://cyberelk.net/tim/software/system-config-printer/"
 arch=('i686' 'x86_64')
 license=('GPL')
-depends=('pycups' 'pyxml' 'dbus-python')
 makedepends=('intltool' 'xmlto' 'docbook-xsl' 'perlxml' 'desktop-file-utils')
-source=(http://cyberelk.net/tim/data/$pkgname/1.1/$pkgname-$pkgver.tar.bz2)
-md5sums=('a77bde5adc5ee8822b0764ff786ccc09')
+source=(http://cyberelk.net/tim/data/$pkgbase/1.1/$pkgbase-$pkgver.tar.bz2)
+md5sums=('43be348b60651e79479b5c396d9f6003')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd ${srcdir}/${pkgbase}-${pkgver}
 
   ./configure --prefix=/usr \
     --sbindir=/usr/bin \
-    --sysconfdir=/etc
+    --sysconfdir=/etc \
+    --disable-nls
   make || return 1
-  
-  install -d ${pkgdir}/usr/share/${pkgname}
-  install -m644 config.py debug.py smburi.py \
-    ${pkgdir}/usr/share/${pkgname}/ || return 1
+}
+
+package_system-config-printer-common() {
+  pkgdesc='Pygtk CUPS Configuration'
+  depends=('pycups' 'libxml2' 'dbus-python' 'pygobject')
+  replaces=('system-config-printer')
+  cd ${srcdir}/${pkgbase}-${pkgver}
+  install -d ${pkgdir}/usr/share/${pkgbase}
+  install -m644 config.py \
+    debug.py \
+    installpackage.py \
+    monitor.py \
+    PhysicalDevice.py \
+    ppdippstr.py \
+    probe_printer.py \
+    SearchCriterion.py \
+    smburi.py \
+    statereason.py \
+    XmlHelper.py \
+    ${pkgdir}/usr/share/${pkgbase}/ || return 1
+
+  install -m755 pysmb.py \
+    ${pkgdir}/usr/share/${pkgbase}/ || return 1
   
   for file in build/lib/cupshelpers/*.py; do
     install -Dm644 $file \
       ${pkgdir}/usr/lib/python2.6/site-packages/cupshelpers/$(basename $file) || return 1
   done
+}
+
+package_system-config-printer-gnome() {
+  pkgdesc='Pygtk CUPS Configuration - GNOME'
+  depends=('system-config-printer-common' 'python-notify' 'gnome-python')
+  cd ${srcdir}/${pkgbase}-${pkgver}
+  make DESTDIR=${pkgdir} install || return 1
+  cd ${pkgdir}/usr/share/${pkgbase}
+  rm config.py \
+    debug.py \
+    installpackage.py \
+    monitor.py \
+    PhysicalDevice.py \
+    ppdippstr.py \
+    probe_printer.py \
+    SearchCriterion.py \
+    smburi.py \
+    statereason.py \
+    XmlHelper.py \
+    pysmb.py || return 1
+  rm -r ${pkgdir}/usr/lib/python2.6/site-packages/cupshelpers/ || return 1
 }
