@@ -305,7 +305,8 @@ grep "fusion/" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "ata/"  /tmp/modules-stripped| grep -v "pata" | grep -v "ata_generic" | grep -v "libata" >> /tmp/modules-sorted
 grep "block/" /tmp/modules-stripped | grep "sx8" >> /tmp/modules-sorted
 grep "net/" /tmp/modules-stripped | grep -v "wireless/" | grep -v "usb/" >> /tmp/modules-sorted
-grep "wireless/" /tmp/modules-stripped | grep "staging" >> /tmp/modules-sorted
+grep "wireless/" /tmp/modules-stripped >> /tmp/modules-sorted
+grep "staging/" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "pcmcia/" /tmp/modules-stripped >> /tmp/modules-sorted
 
 # speed up usb module loading
@@ -455,22 +456,38 @@ while [ $# -gt 0 ]; do
 				;;
 		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) \) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(cat /proc/modules | grep '8139too')" ]; then
-						MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
-					 showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/8139cp//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
+					BLACKLIST_UDEV=""
+					for i in $MODULES_EXPORTED; do
+						BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+					done
+					showlist2 "MODULES"  \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/8139cp//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				else
 					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
-					showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/8139too//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+					BLACKLIST_UDEV=""
+					for i in $MODULES_EXPORTED; do
+						BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+					done
+					showlist2 "MODULES"  \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/8139too//g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				fi
 			else
 				MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
-				showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+				BLACKLIST_UDEV=""
+				for i in $MODULES_EXPORTED; do
+					BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+				done
+				showlist2 "MODULES"  \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			fi
 			;;
 		--sound) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods pcspkr) $(listmods sound/)"
-			showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+			 BLACKLIST_UDEV=""
+			 for i in $MODULES_EXPORTED; do
+				BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+			 done
+			 showlist2 "MODULES" \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--usbhost) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
-			showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+			 showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
@@ -525,9 +542,9 @@ while [ $# -gt 0 ]; do
 done
 
 # cleanup
-rm /tmp/modules-plain
-rm /tmp/modules-sorted
-rm /tmp/modules-stripped
-rm /tmp/moduleslist
+#rm /tmp/modules-plain
+#rm /tmp/modules-sorted
+#rm /tmp/modules-stripped
+#rm /tmp/moduleslist
 
 # vim: set ts=2 sw=2 noet:
