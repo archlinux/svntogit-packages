@@ -4,7 +4,7 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 pkgname=udev
 pkgver=146
-pkgrel=1
+pkgrel=2
 pkgdesc="The userspace dev tools (udev)"
 arch=(i686 x86_64)
 url="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
@@ -14,17 +14,14 @@ depends=('glibc' 'coreutils' 'util-linux' 'libusb' 'glib2')
 makedepends=('kernel26' 'gperf' 'libxslt') #kernel26 needed to build framebuffer blacklist 
 install=udev.install
 backup=(etc/udev/udev.conf
-        etc/scsi_id.config
-        etc/udev/cdsymlinks.conf
         etc/modprobe.d/framebuffer_blacklist.conf)
-conflicts=('pcmcia-cs' 'hotplug')
+conflicts=('pcmcia-cs' 'hotplug' 'initscripts<2009.07')
 replaces=('devfsd')
 # older initscripts versions required start_udev
-conflicts=('initscripts<2009.07')
 options=(!makeflags !libtool)
 source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.tar.bz2
         81-arch.rules load-modules.sh resolve-modalias.c cdsymlinks.sh root-link.sh
-        arch-udev-rules.patch ignore-remove.sh)
+        arch-udev-rules.patch ignore-remove.sh cups-hplip-fix.patch)
 md5sums=('b2a8acefda4fa8a70d45642035abd718'
          'cc6406e8b67b2b8711942098a66cde6b'
          'f4951f61438d69894b728212dac7318b'
@@ -32,10 +29,13 @@ md5sums=('b2a8acefda4fa8a70d45642035abd718'
          '2e808ee78d237c478b57af2a68d43769'
          '2d6dc6842464f107bccc68cd505a6c31'
          '9be4683c480488926fdf92a34ae5963c'
-         '35fa97500243a79b2370fa4684828e69')
+         '35fa97500243a79b2370fa4684828e69'
+         '8cd53a3d91d2321a646033dc18f29217')
 
 build() {
   cd $srcdir/$pkgname-$pkgver
+  # fix raw printers, will be fixed in udev-147
+  patch -Np1 -i ../cups-hplip-fix.patch || return 1
   ./configure --prefix="" --mandir=/usr/share/man\
                           --includedir=/usr/include\
                           --libexecdir=/lib/udev\
@@ -69,7 +69,7 @@ build() {
   cd $pkgdir/lib/udev/rules.d/
   patch -Np1 -i $srcdir/arch-udev-rules.patch || return 1
   # remove .orig files
-  rm -f pkgdir/lib/udev/rules.d/*.orig
+  rm -f $pkgdir/lib/udev/rules.d/*.orig
   # disable persistent cdromsymlinks and network by default 
   # and move it to /etc/udev/rules.d
   mv $pkgdir/lib/udev/rules.d/75-persistent-net-generator.rules \
