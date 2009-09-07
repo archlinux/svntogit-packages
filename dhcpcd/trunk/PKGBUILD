@@ -4,7 +4,7 @@
 # Contributor: Judd Vinet <jvinet.zeroflux.org>
 
 pkgname=dhcpcd
-pkgver=5.0.7
+pkgver=5.1.0
 pkgrel=1
 pkgdesc="RFC2131 compliant DHCP client daemon"
 url="http://roy.marples.name/dhcpcd/"
@@ -16,19 +16,14 @@ backup=('etc/conf.d/dhcpcd' 'etc/dhcpcd.conf')
 options=('emptydirs')  # We Need the Empty /var/lib/dhcpcd Directory
 source=("http://roy.marples.name/downloads/$pkgname/$pkgname-$pkgver.tar.bz2" \
         'dhcpcd.conf.d')
-md5sums=('1c85790576deb6106879430b24e1fa9c'
+md5sums=('beb430d11f982881ce3d824643467490'
          '372d33485556982b64a97f301e17c5dd')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
 
-  # Fix Installation Locations
-  export PREFIX=/usr
-  sed -i 's/${PREFIX}\/etc/\/etc/' Makefile || return 1
-  sed -i 's/\/db/\/lib\/dhcpcd/' Makefile || return 1
-  sed -i 's/\/libexec/\/lib\/dhcpcd/' Makefile || return 1
-  sed -i 's/\/libexec/\/lib\/dhcpcd/' dhcpcd-hooks/Makefile || return 1
-  sed -i 's/${PREFIX}\/sbin/\/sbin/' Makefile || return 1
+  # configure variables
+  ./configure --libexecdir=/usr/lib/dhcpcd --dbdir=/var/lib/dhcpcd
 
   # Build
   make || return 1
@@ -45,9 +40,6 @@ build() {
   install -d $pkgdir/usr/share/licenses/$pkgname || return 1
   awk '{if(FNR<27)print $0}' ${srcdir}/${pkgname}-${pkgver}/config.h \
 	>> ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE || return 1
-
-  # Make Man Pages FHS Compliant
-  mv -f ${pkgdir}/usr/man ${pkgdir}/usr/share/man || return 1
 
   # Set Options in /etc/dhcpcd.conf
   echo noipv4ll >> ${pkgdir}/etc/dhcpcd.conf || return 1 # Disable ip4vall
