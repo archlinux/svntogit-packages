@@ -187,14 +187,6 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
  /* The official name of this program (e.g., no `g' prefix).  */
  #define PROGRAM_NAME "expand"
  
-@@ -183,6 +200,7 @@
- 	      stops = num_start + len - 1;
- 	    }
- 	}
-+
-       else
- 	{
- 	  error (0, 0, _("tab size contains invalid character(s): %s"),
 @@ -365,6 +383,142 @@
      }
  }
@@ -414,7 +406,7 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
        char *sep;
 -      for (; (sep = memchr (ptr, tab, lim - ptr)) != NULL; ptr = sep + 1)
 +      for (; (sep = memchr (ptr, t, lim - ptr)) != NULL; ptr = sep + 1)
- 	extract_field (line, ptr, sep - ptr);
+         extract_field (line, ptr, sep - ptr);
      }
    else
 @@ -229,6 +248,148 @@
@@ -586,115 +578,100 @@ diff -urN coreutils-6.12-orig/tests/Makefile.am coreutils-6.12/tests/Makefile.am
  
    outlist = outlist_head.next;
    if (outlist)
-@@ -397,12 +628,12 @@
- 	  if (o->file == 0)
- 	    {
- 	      if (line1 == &uni_blank)
--	        {
-+		{
- 		  line = line2;
- 		  field = join_field_2;
- 		}
- 	      else
--	        {
-+		{
- 		  line = line1;
- 		  field = join_field_1;
- 		}
 @@ -416,7 +647,7 @@
- 	  o = o->next;
- 	  if (o == NULL)
- 	    break;
--	  putchar (output_separator);
-+	  PUT_TAB_CHAR;
- 	}
+           o = o->next;
+           if (o == NULL)
+             break;
+-          putchar (output_separator);
++          PUT_TAB_CHAR;
+         }
        putchar ('\n');
      }
 @@ -434,23 +665,23 @@
        prfield (join_field_1, line1);
        for (i = 0; i < join_field_1 && i < line1->nfields; ++i)
- 	{
--	  putchar (output_separator);
-+	  PUT_TAB_CHAR;
- 	  prfield (i, line1);
- 	}
+         {
+-          putchar (output_separator);
++          PUT_TAB_CHAR;
+           prfield (i, line1);
+         }
        for (i = join_field_1 + 1; i < line1->nfields; ++i)
- 	{
--	  putchar (output_separator);
-+	  PUT_TAB_CHAR;
- 	  prfield (i, line1);
- 	}
+         {
+-          putchar (output_separator);
++          PUT_TAB_CHAR;
+           prfield (i, line1);
+         }
  
        for (i = 0; i < join_field_2 && i < line2->nfields; ++i)
- 	{
--	  putchar (output_separator);
-+	  PUT_TAB_CHAR;
- 	  prfield (i, line2);
- 	}
+         {
+-          putchar (output_separator);
++          PUT_TAB_CHAR;
+           prfield (i, line2);
+         }
        for (i = join_field_2 + 1; i < line2->nfields; ++i)
- 	{
--	  putchar (output_separator);
-+	  PUT_TAB_CHAR;
- 	  prfield (i, line2);
- 	}
+         {
+-          putchar (output_separator);
++          PUT_TAB_CHAR;
+           prfield (i, line2);
+         }
        putchar ('\n');
 @@ -859,20 +1090,41 @@
  
- 	case 't':
- 	  {
--	    unsigned char newtab = optarg[0];
--	    if (! newtab)
-+	    char *newtab;
-+	    size_t newtablen;
-+	    if (! optarg[0])
- 	      error (EXIT_FAILURE, 0, _("empty tab"));
--	    if (optarg[1])
-+	    newtab = xstrdup (optarg);
+         case 't':
+           {
+-            unsigned char newtab = optarg[0];
+-            if (! newtab)
++            char *newtab;
++            size_t newtablen;
++            if (! optarg[0])
+               error (EXIT_FAILURE, 0, _("empty tab"));
+-            if (optarg[1])
++            newtab = xstrdup (optarg);
 +#if HAVE_MBRTOWC
-+	    if (MB_CUR_MAX > 1)
-+	      {
-+		mbstate_t state;
++            if (MB_CUR_MAX > 1)
++              {
++                mbstate_t state;
 +
-+		memset (&state, 0, sizeof (mbstate_t));
-+		newtablen = mbrtowc (NULL, newtab,
-+				     strnlen (newtab, MB_LEN_MAX),
-+				     &state);
-+		if (newtablen == (size_t) 0
-+		    || newtablen == (size_t) -1
-+		    || newtablen == (size_t) -2)
-+		  newtablen = 1;
-+	      }
-+	    else
++                memset (&state, 0, sizeof (mbstate_t));
++                newtablen = mbrtowc (NULL, newtab,
++                                     strnlen (newtab, MB_LEN_MAX),
++                                     &state);
++                if (newtablen == (size_t) 0
++                    || newtablen == (size_t) -1
++                    || newtablen == (size_t) -2)
++                  newtablen = 1;
++              }
++            else
 +#endif
-+	      newtablen = 1;
-+		
-+	    if (newtablen == 1 && newtab[1])
-+	      {
-+		if (STREQ (newtab, "\\0"))
-+		  newtab[0] = '\0';
-+	      }
-+	    if (tab != NULL && strcmp (tab, newtab))
- 	      {
--		if (STREQ (optarg, "\\0"))
--		  newtab = '\0';
--		else
--		  error (EXIT_FAILURE, 0, _("multi-character tab %s"),
--			 quote (optarg));
-+		free (newtab);
-+		error (EXIT_FAILURE, 0, _("incompatible tabs"));
- 	      }
--	    if (0 <= tab && tab != newtab)
--	      error (EXIT_FAILURE, 0, _("incompatible tabs"));
- 	    tab = newtab;
-+	    tablen = newtablen;
- 	  }
- 	  break;
-
++              newtablen = 1;
++                
++            if (newtablen == 1 && newtab[1])
++              {
++                if (STREQ (newtab, "\\0"))
++                  newtab[0] = '\0';
++              }
++            if (tab != NULL && strcmp (tab, newtab))
+               {
+-                if (STREQ (optarg, "\\0"))
+-                  newtab = '\0';
+-                else
+-                  error (EXIT_FAILURE, 0, _("multi-character tab %s"),
+-                         quote (optarg));
++                free (newtab);
++                error (EXIT_FAILURE, 0, _("incompatible tabs"));
+               }
+-            if (0 <= tab && tab != newtab)
+-              error (EXIT_FAILURE, 0, _("incompatible tabs"));
+             tab = newtab;
++            tablen = newtablen;
+           }
+           break;
+ 
 diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 --- coreutils-6.11-orig/src/join.c	2008-04-21 13:44:32.000000000 +0200
 +++ coreutils-6.11/src/join.c	2008-04-21 14:03:22.000000000 +0200
 @@ -324,56 +324,115 @@ keycmp (struct line const *line1, struct
- 	size_t jf_1, size_t jf_2)
+         size_t jf_1, size_t jf_2)
  {
    /* Start of field to compare in each file.  */
 -  char *beg1;
@@ -814,7 +791,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    else
      {
 -      if (hard_LC_COLLATE)
--	return xmemcoll (beg1, len1, beg2, len2);
+-        return xmemcoll (beg1, len1, beg2, len2);
 -      diff = memcmp (beg1, beg2, MIN (len1, len2));
 +      copy[0] = (unsigned char *) beg[0];
 +      copy[1] = (unsigned char *) beg[1];  
@@ -899,26 +876,26 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +#if HAVE_MBRTOWC
 +
 +# define MBCHAR_TO_WCHAR(WC, MBLENGTH, LP, POS, SIZE, STATEP, CONVFAIL)  \
-+  do									\
-+    {									\
-+      mbstate_t state_bak;						\
-+									\
-+      CONVFAIL = 0;							\
-+      state_bak = *STATEP;						\
-+									\
-+      MBLENGTH = mbrtowc (&WC, LP + POS, SIZE - POS, STATEP);		\
-+									\
-+      switch (MBLENGTH)							\
-+	{								\
-+	case (size_t)-2:						\
-+	case (size_t)-1:						\
-+	  *STATEP = state_bak;						\
-+	  CONVFAIL++;							\
-+	  /* Fall through */						\
-+	case 0:								\
-+	  MBLENGTH = 1;							\
-+	}								\
-+    }									\
++  do                                                                        \
++    {                                                                        \
++      mbstate_t state_bak;                                                \
++                                                                        \
++      CONVFAIL = 0;                                                        \
++      state_bak = *STATEP;                                                \
++                                                                        \
++      MBLENGTH = mbrtowc (&WC, LP + POS, SIZE - POS, STATEP);                \
++                                                                        \
++      switch (MBLENGTH)                                                        \
++        {                                                                \
++        case (size_t)-2:                                                \
++        case (size_t)-1:                                                \
++          *STATEP = state_bak;                                                \
++          CONVFAIL++;                                                        \
++          /* Fall through */                                                \
++        case 0:                                                                \
++          MBLENGTH = 1;                                                        \
++        }                                                                \
++    }                                                                        \
 +  while (0)
 +
 +static char *
@@ -940,26 +917,26 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  for (count = 0; count < skip_fields && pos < size; count++)
 +    {
 +      while (pos < size)
-+	{
-+	  MBCHAR_TO_WCHAR (wc, mblength, lp, pos, size, statep, convfail);
++        {
++          MBCHAR_TO_WCHAR (wc, mblength, lp, pos, size, statep, convfail);
 + 
-+	  if (convfail || !iswblank (wc))
-+	    {
-+	      pos += mblength;
-+	      break;
-+	    }
-+	  pos += mblength;
-+	}
++          if (convfail || !iswblank (wc))
++            {
++              pos += mblength;
++              break;
++            }
++          pos += mblength;
++        }
 +
 +      while (pos < size)
-+	{
-+	  MBCHAR_TO_WCHAR (wc, mblength, lp, pos, size, statep, convfail);
++        {
++          MBCHAR_TO_WCHAR (wc, mblength, lp, pos, size, statep, convfail);
 +
-+	  if (!convfail && iswblank (wc))
-+	    break;
++          if (!convfail && iswblank (wc))
++            break;
 +
-+	  pos += mblength;
-+	}
++          pos += mblength;
++        }
 +    }
 +
 +  /* skip fields. */
@@ -997,10 +974,10 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      copy_new = alloca (oldlen + 1);
 +
 +      for (i = 0; i < oldlen; i++)
-+	{
-+	  copy_old[i] = toupper (old[i]);
-+	  copy_new[i] = toupper (new[i]);
-+	}
++        {
++          copy_old[i] = toupper (old[i]);
++          copy_new[i] = toupper (new[i]);
++        }
      }
 -  else if (hard_LC_COLLATE)
 -    return xmemcoll (old, oldlen, new, newlen) != 0;
@@ -1039,40 +1016,40 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      copy[i] = alloca (len[i] + 1);
 +
 +      for (j = 0, chars = 0; j < len[i] && chars < check_chars; chars++)
-+	{
-+	  state_bak = state[i];
-+	  mblength = mbrtowc (&wc, str[i] + j, len[i] - j, &(state[i]));
++        {
++          state_bak = state[i];
++          mblength = mbrtowc (&wc, str[i] + j, len[i] - j, &(state[i]));
 +
-+	  switch (mblength)
-+	    {
-+	    case (size_t)-1:
-+	    case (size_t)-2:
-+	      state[i] = state_bak;
-+	      /* Fall through */
-+	    case 0:
-+	      mblength = 1;
-+	      break;
++          switch (mblength)
++            {
++            case (size_t)-1:
++            case (size_t)-2:
++              state[i] = state_bak;
++              /* Fall through */
++            case 0:
++              mblength = 1;
++              break;
 +
-+	    default:
-+	      if (ignore_case)
-+		{
-+		  uwc = towupper (wc);
++            default:
++              if (ignore_case)
++                {
++                  uwc = towupper (wc);
 +
-+		  if (uwc != wc)
-+		    {
-+		      mbstate_t state_wc;
++                  if (uwc != wc)
++                    {
++                      mbstate_t state_wc;
 +
-+		      memset (&state_wc, '\0', sizeof(mbstate_t));
-+		      wcrtomb (copy[i] + j, uwc, &state_wc);
-+		    }
-+		  else
-+		    memcpy (copy[i] + j, str[i] + j, mblength);
-+		}
-+	      else
-+		memcpy (copy[i] + j, str[i] + j, mblength);
-+	    }
-+	  j += mblength;
-+	}
++                      memset (&state_wc, '\0', sizeof(mbstate_t));
++                      wcrtomb (copy[i] + j, uwc, &state_wc);
++                    }
++                  else
++                    memcpy (copy[i] + j, str[i] + j, mblength);
++                }
++              else
++                memcpy (copy[i] + j, str[i] + j, mblength);
++            }
++          j += mblength;
++        }
 +      copy[i][j] = '\0';
 +      len[i] = j;
 +    }
@@ -1094,19 +1071,19 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +#endif
  
        while (!feof (stdin))
- 	{
- 	  char *thisfield;
- 	  size_t thislen;
+         {
+           char *thisfield;
+           size_t thislen;
 +#if HAVE_MBRTOWC
-+	  mbstate_t thisstate;
++          mbstate_t thisstate;
 +#endif
 +
- 	  if (readlinebuffer_delim (thisline, stdin, delimiter) == 0)
- 	    break;
- 	  thisfield = find_field (thisline);
- 	  thislen = thisline->length - 1 - (thisfield - thisline->buffer);
+           if (readlinebuffer_delim (thisline, stdin, delimiter) == 0)
+             break;
+           thisfield = find_field (thisline);
+           thislen = thisline->length - 1 - (thisfield - thisline->buffer);
 +#if HAVE_MBRTOWC
-+	  if (MB_CUR_MAX > 1)
++          if (MB_CUR_MAX > 1)
 +            {
 +            thisstate = thisline->state;
 +
@@ -1122,11 +1099,11 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +                prevstate = thisstate;
 +              }
 +          }
-+	else
++        else
 +#endif
- 	  if (prevline->length == 0
- 	      || different (thisfield, prevfield, thislen, prevlen))
- 	    {
+           if (prevline->length == 0
+               || different (thisfield, prevfield, thislen, prevlen))
+             {
 @@ -322,17 +533,26 @@
        size_t prevlen;
        uintmax_t match_count = 0;
@@ -1136,7 +1113,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +#endif
  
        if (readlinebuffer_delim (prevline, stdin, delimiter) == 0)
- 	goto closefiles;
+         goto closefiles;
        prevfield = find_field (prevline);
        prevlen = prevline->length - 1 - (prevfield - prevline->buffer);
 +#if HAVE_MBRTOWC
@@ -1144,42 +1121,42 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +#endif
  
        while (!feof (stdin))
- 	{
- 	  bool match;
- 	  char *thisfield;
- 	  size_t thislen;
+         {
+           bool match;
+           char *thisfield;
+           size_t thislen;
 +#if HAVE_MBRTOWC
-+	  mbstate_t thisstate;
++          mbstate_t thisstate;
 +#endif
- 	  if (readlinebuffer_delim (thisline, stdin, delimiter) == 0)
- 	    {
- 	      if (ferror (stdin))
+           if (readlinebuffer_delim (thisline, stdin, delimiter) == 0)
+             {
+               if (ferror (stdin))
 @@ -341,6 +561,15 @@
- 	    }
- 	  thisfield = find_field (thisline);
- 	  thislen = thisline->length - 1 - (thisfield - thisline->buffer);
+             }
+           thisfield = find_field (thisline);
+           thislen = thisline->length - 1 - (thisfield - thisline->buffer);
 +#if HAVE_MBRTOWC
-+	  if (MB_CUR_MAX > 1)
-+	    {
++          if (MB_CUR_MAX > 1)
++            {
 +              thisstate = thisline->state;
 +              match = !different_multi (thisfield, prevfield,
 +                                thislen, prevlen, thisstate, prevstate);
 +            }
-+	  else
++          else
 +#endif
- 	  match = !different (thisfield, prevfield, thislen, prevlen);
- 	  match_count += match;
+           match = !different (thisfield, prevfield, thislen, prevlen);
+           match_count += match;
  
 @@ -373,6 +602,9 @@
- 	      SWAP_LINES (prevline, thisline);
- 	      prevfield = thisfield;
- 	      prevlen = thislen;
+               SWAP_LINES (prevline, thisline);
+               prevfield = thisfield;
+               prevlen = thislen;
 +#if HAVE_MBRTOWC
-+	      prevstate = thisstate;
++              prevstate = thisstate;
 +#endif
- 	      if (!match)
- 		match_count = 0;
- 	    }
+               if (!match)
+                 match_count = 0;
+             }
 @@ -417,6 +649,19 @@
  
    atexit (close_stdout);
@@ -1298,7 +1275,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (operating_mode != byte_mode)
      {
        if (c == '\b')
- 	{
+         {
 @@ -121,30 +165,14 @@
     to stdout, with maximum line length WIDTH.
     Return true if successful.  */
@@ -1333,22 +1310,22 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    while ((c = getc (istream)) != EOF)
      {
 @@ -172,6 +200,15 @@
- 	      bool found_blank = false;
- 	      size_t logical_end = offset_out;
+               bool found_blank = false;
+               size_t logical_end = offset_out;
  
-+	      /* If LINE_OUT has no wide character,
-+		 put a new wide character in LINE_OUT
-+		 if column is bigger than width. */
-+	      if (offset_out == 0)
-+		{
-+		  line_out[offset_out++] = c;
-+		  continue;
-+		}
++              /* If LINE_OUT has no wide character,
++                 put a new wide character in LINE_OUT
++                 if column is bigger than width. */
++              if (offset_out == 0)
++                {
++                  line_out[offset_out++] = c;
++                  continue;
++                }
 +
- 	      /* Look for the last blank. */
- 	      while (logical_end)
- 		{
-@@ -218,11 +255,225 @@
+               /* Look for the last blank. */
+               while (logical_end)
+                 {
+@@ -218,11 +255,222 @@
        line_out[offset_out++] = c;
      }
  
@@ -1358,7 +1335,6 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (offset_out)
 +    fwrite (line_out, sizeof (char), (size_t) offset_out, stdout);
 +
-+  free(line_out);
 +}
 +
 +#if HAVE_MBRTOWC
@@ -1366,17 +1342,17 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +fold_multibyte_text (FILE *istream, size_t width, int *saved_errno)
 +{
 +  char buf[MB_LEN_MAX + BUFSIZ];  /* For spooling a read byte sequence. */
-+  size_t buflen = 0;	/* The length of the byte sequence in buf. */
-+  char *bufpos;         /* Next read position of BUF. */
-+  wint_t wc;		/* A gotten wide character. */
-+  size_t mblength;	/* The byte size of a multibyte character which shows
-+			   as same character as WC. */
-+  mbstate_t state, state_bak;	/* State of the stream. */
-+  int convfail;		/* 1, when conversion is failed. Otherwise 0. */
++  size_t buflen = 0;        /* The length of the byte sequence in buf. */
++  char *bufpos = NULL;         /* Next read position of BUF. */
++  wint_t wc;                /* A gotten wide character. */
++  size_t mblength;        /* The byte size of a multibyte character which shows
++                           as same character as WC. */
++  mbstate_t state, state_bak;        /* State of the stream. */
++  int convfail;                /* 1, when conversion is failed. Otherwise 0. */
 +
-+  char *line_out = NULL;
-+  size_t offset_out = 0;	/* Index in `line_out' for next char. */
-+  size_t allocated_out = 0;
++  static char *line_out = NULL;
++  size_t offset_out = 0;        /* Index in `line_out' for next char. */
++  static size_t allocated_out = 0;
 +
 +  int increment;
 +  size_t column = 0;
@@ -1384,31 +1360,31 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  size_t last_blank_pos;
 +  size_t last_blank_column;
 +  int is_blank_seen;
-+  int last_blank_increment;
++  int last_blank_increment = 0;
 +  int is_bs_following_last_blank;
 +  size_t bs_following_last_blank_num;
 +  int is_cr_after_last_blank;
 +
-+#define CLEAR_FLAGS				\
-+   do						\
-+     {						\
-+	last_blank_pos = 0;			\
-+	last_blank_column = 0;			\
-+	is_blank_seen = 0;			\
-+	is_bs_following_last_blank = 0;		\
-+	bs_following_last_blank_num = 0;	\
-+	is_cr_after_last_blank = 0;		\
-+     }						\
++#define CLEAR_FLAGS                                \
++   do                                                \
++     {                                                \
++        last_blank_pos = 0;                        \
++        last_blank_column = 0;                        \
++        is_blank_seen = 0;                        \
++        is_bs_following_last_blank = 0;                \
++        bs_following_last_blank_num = 0;        \
++        is_cr_after_last_blank = 0;                \
++     }                                                \
 +   while (0)
 +
-+#define START_NEW_LINE			\
-+   do					\
-+     {					\
-+      putchar ('\n');			\
-+      column = 0;			\
-+      offset_out = 0;			\
-+      CLEAR_FLAGS;			\
-+    }					\
++#define START_NEW_LINE                        \
++   do                                        \
++     {                                        \
++      putchar ('\n');                        \
++      column = 0;                        \
++      offset_out = 0;                        \
++      CLEAR_FLAGS;                        \
++    }                                        \
 +   while (0)
 +
 +  CLEAR_FLAGS;
@@ -1417,14 +1393,14 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  for (;; bufpos += mblength, buflen -= mblength)
 +    {
 +      if (buflen < MB_LEN_MAX && !feof (istream) && !ferror (istream))
-+	{
-+	  memmove (buf, bufpos, buflen);
-+	  buflen += fread (buf + buflen, sizeof(char), BUFSIZ, istream);
-+	  bufpos = buf;
-+	}
++        {
++          memmove (buf, bufpos, buflen);
++          buflen += fread (buf + buflen, sizeof(char), BUFSIZ, istream);
++          bufpos = buf;
++        }
 +
 +      if (buflen < 1)
-+	break;
++        break;
 +
 +      /* Get a wide character. */
 +      convfail = 0;
@@ -1432,103 +1408,102 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      mblength = mbrtowc ((wchar_t *)&wc, bufpos, buflen, &state);
 +
 +      switch (mblength)
-+	{
-+	case (size_t)-1:
-+	case (size_t)-2:
-+	  convfail++;
-+	  state = state_bak;
-+	  /* Fall through. */
++        {
++        case (size_t)-1:
++        case (size_t)-2:
++          convfail++;
++          state = state_bak;
++          /* Fall through. */
 +
-+	case 0:
-+	  mblength = 1;
-+	  break;
-+	}
++        case 0:
++          mblength = 1;
++          break;
++        }
 +
 +rescan:
-+      if (operating_mode == byte_mode)			/* byte mode */
-+	increment = mblength;
-+      else if (operating_mode == character_mode)	/* character mode */
-+	increment = 1;
-+      else						/* column mode */
-+	{
-+	  if (convfail)
-+	    increment = 1;
-+	  else
-+	    {
-+	      switch (wc)
-+		{
-+		case L'\n':
-+		  fwrite (line_out, sizeof(char), offset_out, stdout);
-+		  START_NEW_LINE;
-+		  continue;
-+		  
-+		case L'\b':
-+		  increment = (column > 0) ? -1 : 0;
-+		  break;
++      if (operating_mode == byte_mode)                        /* byte mode */
++        increment = mblength;
++      else if (operating_mode == character_mode)        /* character mode */
++        increment = 1;
++      else                                                /* column mode */
++        {
++          if (convfail)
++            increment = 1;
++          else
++            {
++              switch (wc)
++                {
++                case L'\n':
++                  fwrite (line_out, sizeof(char), offset_out, stdout);
++                  START_NEW_LINE;
++                  continue;
++                  
++                case L'\b':
++                  increment = (column > 0) ? -1 : 0;
++                  break;
 +
-+		case L'\r':
-+		  increment = -1 * column;
-+		  break;
++                case L'\r':
++                  increment = -1 * column;
++                  break;
 +
-+		case L'\t':
-+		  increment = 8 - column % 8;
-+		  break;
++                case L'\t':
++                  increment = 8 - column % 8;
++                  break;
 +
-+		default:
-+		  increment = wcwidth (wc);
-+		  increment = (increment < 0) ? 0 : increment;
-+		}
-+	    }
-+	}
++                default:
++                  increment = wcwidth (wc);
++                  increment = (increment < 0) ? 0 : increment;
++                }
++            }
++        }
 +
 +      if (column + increment > width && break_spaces && last_blank_pos)
-+	{
-+	  fwrite (line_out, sizeof(char), last_blank_pos, stdout);
-+	  putchar ('\n');
++        {
++          fwrite (line_out, sizeof(char), last_blank_pos, stdout);
++          putchar ('\n');
 +
-+	  offset_out = offset_out - last_blank_pos;
-+	  column = column - last_blank_column + ((is_cr_after_last_blank)
-+	      ? last_blank_increment : bs_following_last_blank_num);
-+	  memmove (line_out, line_out + last_blank_pos, offset_out);
-+	  CLEAR_FLAGS;
-+	  goto rescan;
-+	}
++          offset_out = offset_out - last_blank_pos;
++          column = column - last_blank_column + ((is_cr_after_last_blank)
++              ? last_blank_increment : bs_following_last_blank_num);
++          memmove (line_out, line_out + last_blank_pos, offset_out);
++          CLEAR_FLAGS;
++          goto rescan;
++        }
 +
 +      if (column + increment > width && column != 0)
-+	{
-+	  fwrite (line_out, sizeof(char), offset_out, stdout);
-+	  START_NEW_LINE;
-+	  goto rescan;
-+	}
++        {
++          fwrite (line_out, sizeof(char), offset_out, stdout);
++          START_NEW_LINE;
++          goto rescan;
++        }
 +
 +      if (allocated_out < offset_out + mblength)
-+	{
-+	  allocated_out += 1024;
-+	  line_out = xrealloc (line_out, allocated_out);
-+	}
++        {
++          line_out = X2REALLOC (line_out, &allocated_out);
++        }
 +
 +      memcpy (line_out + offset_out, bufpos, mblength);
 +      offset_out += mblength;
 +      column += increment;
 +
 +      if (is_blank_seen && !convfail && wc == L'\r')
-+	is_cr_after_last_blank = 1;
++        is_cr_after_last_blank = 1;
 +
 +      if (is_bs_following_last_blank && !convfail && wc == L'\b')
-+	++bs_following_last_blank_num;
++        ++bs_following_last_blank_num;
 +      else
-+	is_bs_following_last_blank = 0;
++        is_bs_following_last_blank = 0;
 +
 +      if (break_spaces && !convfail && iswblank (wc))
-+	{
-+	  last_blank_pos = offset_out;
-+	  last_blank_column = column;
-+	  is_blank_seen = 1;
-+	  last_blank_increment = increment;
-+	  is_bs_following_last_blank = 1;
-+	  bs_following_last_blank_num = 0;
-+	  is_cr_after_last_blank = 0;
-+	}
++        {
++          last_blank_pos = offset_out;
++          last_blank_column = column;
++          is_blank_seen = 1;
++          last_blank_increment = increment;
++          is_bs_following_last_blank = 1;
++          bs_following_last_blank_num = 0;
++          is_cr_after_last_blank = 0;
++        }
 +    }
 +
 +  *saved_errno = errno;
@@ -1536,7 +1511,6 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    if (offset_out)
      fwrite (line_out, sizeof (char), (size_t) offset_out, stdout);
  
-+  free(line_out);
 +}
 +#endif
 +
@@ -1587,21 +1561,21 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
      {
 @@ -264,7 +516,15 @@
        switch (optc)
- 	{
- 	case 'b':		/* Count bytes rather than columns. */
--	  count_bytes = true;
-+	  if (operating_mode != column_mode)
-+	    FATAL_ERROR (_("only one way of folding may be specified"));
-+	  operating_mode = byte_mode;
-+	  break;
+         {
+         case 'b':		/* Count bytes rather than columns. */
+-          count_bytes = true;
++          if (operating_mode != column_mode)
++            FATAL_ERROR (_("only one way of folding may be specified"));
++          operating_mode = byte_mode;
++          break;
 +
-+	case 'c':
-+	  if (operating_mode != column_mode)
-+	    FATAL_ERROR (_("only one way of folding may be specified"));
-+	  operating_mode = character_mode;
- 	  break;
++        case 'c':
++          if (operating_mode != column_mode)
++            FATAL_ERROR (_("only one way of folding may be specified"));
++          operating_mode = character_mode;
+           break;
  
- 	case 's':		/* Break at word boundaries. */
+         case 's':		/* Break at word boundaries. */
 --- coreutils-6.8+/src/sort.c.i18n	2007-02-24 11:23:23.000000000 +0000
 +++ coreutils-6.8+/src/sort.c	2007-03-01 15:10:57.000000000 +0000
 @@ -23,10 +23,19 @@
@@ -1640,25 +1614,25 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
  #define NONZERO(x) ((x) != 0)
  
 +/* get a multibyte character's byte length. */
-+#define GET_BYTELEN_OF_CHAR(LIM, PTR, MBLENGTH, STATE)			\
-+  do									\
-+    {									\
-+      wchar_t wc;							\
-+      mbstate_t state_bak;						\
-+									\
-+      state_bak = STATE;						\
-+      mblength = mbrtowc (&wc, PTR, LIM - PTR, &STATE);			\
-+									\
-+      switch (MBLENGTH)							\
-+	{								\
-+	case (size_t)-1:						\
-+	case (size_t)-2:						\
-+	  STATE = state_bak;						\
-+		/* Fall through. */					\
-+	case 0:								\
-+	  MBLENGTH = 1;							\
-+      }									\
-+    }									\
++#define GET_BYTELEN_OF_CHAR(LIM, PTR, MBLENGTH, STATE)                        \
++  do                                                                        \
++    {                                                                        \
++      wchar_t wc;                                                        \
++      mbstate_t state_bak;                                                \
++                                                                        \
++      state_bak = STATE;                                                \
++      mblength = mbrtowc (&wc, PTR, LIM - PTR, &STATE);                        \
++                                                                        \
++      switch (MBLENGTH)                                                        \
++        {                                                                \
++        case (size_t)-1:                                                \
++        case (size_t)-2:                                                \
++          STATE = state_bak;                                                \
++                /* Fall through. */                                        \
++        case 0:                                                                \
++          MBLENGTH = 1;                                                        \
++      }                                                                        \
++    }                                                                        \
 +  while (0)
 +
  /* The kind of blanks for '-b' to skip in various options. */
@@ -1779,35 +1753,35 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      memset (&state_wc, '\0', sizeof (mbstate_t));
 +
 +      for (j = 0; j < s_len;)
-+	{
-+	  if (!ismbblank (s + j, s_len - j, &mblength))
-+	    break;
-+	  j += mblength;
-+	}
++        {
++          if (!ismbblank (s + j, s_len - j, &mblength))
++            break;
++          j += mblength;
++        }
 +
 +      for (k = 0; j < s_len;)
-+	{
-+	  mblength = mbrtowc (&wc, (s + j), (s_len - j), &state_mb);
-+	  assert (mblength != (size_t)-1 && mblength != (size_t)-2);
-+	  if (mblength == 0)
-+	    break;
++        {
++          mblength = mbrtowc (&wc, (s + j), (s_len - j), &state_mb);
++          assert (mblength != (size_t)-1 && mblength != (size_t)-2);
++          if (mblength == 0)
++            break;
 +
-+	  pwc = towupper (wc);
-+	  if (pwc == wc)
-+	    {
-+	      memcpy (mbc, s + j, mblength);
-+	      j += mblength;
-+	    }
-+	  else
-+	    {
-+	      j += mblength;
-+	      mblength = wcrtomb (mbc, pwc, &state_wc);
-+	      assert (mblength != (size_t)0 && mblength != (size_t)-1);
-+	    }
++          pwc = towupper (wc);
++          if (pwc == wc)
++            {
++              memcpy (mbc, s + j, mblength);
++              j += mblength;
++            }
++          else
++            {
++              j += mblength;
++              mblength = wcrtomb (mbc, pwc, &state_wc);
++              assert (mblength != (size_t)0 && mblength != (size_t)-1);
++            }
 +
-+	  for (l = 0; l < mblength; l++)
-+	    name[k++] = mbc[l];
-+	}
++          for (l = 0; l < mblength; l++)
++            name[k++] = mbc[l];
++        }
 +      name[k] = '\0';
 +    }
 +  qsort ((void *) monthtab, MONTHS_PER_YEAR,
@@ -1835,11 +1809,11 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (tab_length)
      while (ptr < lim && sword--)
        {
--	while (ptr < lim && *ptr != tab)
-+	while (ptr < lim && *ptr != tab[0])
- 	  ++ptr;
- 	if (ptr < lim)
- 	  ++ptr;
+-        while (ptr < lim && *ptr != tab)
++        while (ptr < lim && *ptr != tab[0])
+           ++ptr;
+         if (ptr < lim)
+           ++ptr;
 @@ -1282,11 +1409,70 @@
    return ptr;
  }
@@ -1860,29 +1834,29 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (tab_length)
 +    while (ptr < lim && sword--)
 +      {
-+	while (ptr < lim && memcmp (ptr, tab, tab_length) != 0)
-+	  {
-+	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	    ptr += mblength;
-+	  }
-+	if (ptr < lim)
-+	  {
-+	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	    ptr += mblength;
-+	  }
++        while (ptr < lim && memcmp (ptr, tab, tab_length) != 0)
++          {
++            GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++            ptr += mblength;
++          }
++        if (ptr < lim)
++          {
++            GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++            ptr += mblength;
++          }
 +      }
 +  else
 +    while (ptr < lim && sword--)
 +      {
-+	while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-+	  ptr += mblength;
-+	if (ptr < lim)
-+	  {
-+	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	    ptr += mblength;
-+	  }
-+	while (ptr < lim && !ismbblank (ptr, lim - ptr, &mblength))
-+	  ptr += mblength;
++        while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
++          ptr += mblength;
++        if (ptr < lim)
++          {
++            GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++            ptr += mblength;
++          }
++        while (ptr < lim && !ismbblank (ptr, lim - ptr, &mblength))
++          ptr += mblength;
 +      }
 +
 +  if (key->skipsblanks)
@@ -1894,9 +1868,9 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
 +
 +      if (ptr + mblength > lim)
-+	break;
++        break;
 +      else
-+	ptr += mblength;
++        ptr += mblength;
 +    }
 +
 +  return ptr;
@@ -1920,11 +1894,11 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (tab_length)
      while (ptr < lim && eword--)
        {
--	while (ptr < lim && *ptr != tab)
-+	while (ptr < lim && *ptr != tab[0])
- 	  ++ptr;
- 	if (ptr < lim && (eword | echar))
- 	  ++ptr;
+-        while (ptr < lim && *ptr != tab)
++        while (ptr < lim && *ptr != tab[0])
+           ++ptr;
+         if (ptr < lim && (eword | echar))
+           ++ptr;
 @@ -1348,10 +1534,10 @@
       */
  
@@ -1936,7 +1910,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 -      newlim = memchr (ptr, tab, lim - ptr);
 +      newlim = memchr (ptr, tab[0], lim - ptr);
        if (newlim)
- 	lim = newlim;
+         lim = newlim;
      }
 @@ -1384,6 +1570,113 @@
    return ptr;
@@ -1960,29 +1934,29 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (tab_length)
 +    while (ptr < lim && eword--)
 +      {
-+	while (ptr < lim && memcmp (ptr, tab, tab_length) != 0)
-+	  {
-+	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	    ptr += mblength;
-+	  }
-+	if (ptr < lim && (eword | echar))
-+	  {
-+	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	    ptr += mblength;
-+	  }
++        while (ptr < lim && memcmp (ptr, tab, tab_length) != 0)
++          {
++            GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++            ptr += mblength;
++          }
++        if (ptr < lim && (eword | echar))
++          {
++            GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++            ptr += mblength;
++          }
 +      }
 +  else
 +    while (ptr < lim && eword--)
 +      {
-+	while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-+	  ptr += mblength;
-+	if (ptr < lim)
-+	  {
-+	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	    ptr += mblength;
-+	  }
-+	while (ptr < lim && !ismbblank (ptr, lim - ptr, &mblength))
-+	  ptr += mblength;
++        while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
++          ptr += mblength;
++        if (ptr < lim)
++          {
++            GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++            ptr += mblength;
++          }
++        while (ptr < lim && !ismbblank (ptr, lim - ptr, &mblength))
++          ptr += mblength;
 +      }
 +
 +
@@ -1994,16 +1968,16 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +
 +      newlim = NULL;
 +      for (p = ptr; p < lim;)
-+ 	{
-+	  if (memcmp (p, tab, tab_length) == 0)
-+	    {
-+	      newlim = p;
-+	      break;
-+	    }
++         {
++          if (memcmp (p, tab, tab_length) == 0)
++            {
++              newlim = p;
++              break;
++            }
 +
-+	  GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	  p += mblength;
-+	}
++          GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++          p += mblength;
++        }
 +    }
 +  else
 +    {
@@ -2011,14 +1985,14 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      newlim = ptr;
 +
 +      while (newlim < lim && ismbblank (newlim, lim - newlim, &mblength))
-+	newlim += mblength;
++        newlim += mblength;
 +      if (ptr < lim)
-+	{
-+	  GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-+	  ptr += mblength;
-+	}
++        {
++          GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
++          ptr += mblength;
++        }
 +      while (newlim < lim && !ismbblank (newlim, lim - newlim, &mblength))
-+	newlim += mblength;
++        newlim += mblength;
 +      lim = newlim;
 +    }
 +# endif
@@ -2039,9 +2013,9 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +        GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
 +
 +        if (ptr + mblength > lim)
-+  	break;
++          break;
 +        else
-+	  ptr += mblength;
++          ptr += mblength;
 +      }
 +  }
 +
@@ -2053,32 +2027,32 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
     of buf->buf to the beginning first.  If EOF is reached and the
     file wasn't terminated by a newline, supply one.  Set up BUF's line
 @@ -1466,8 +1753,24 @@
- 		  else
- 		    {
- 		      if (key->skipsblanks)
--			while (blanks[to_uchar (*line_start)])
--			  line_start++;
-+			{
+                   else
+                     {
+                       if (key->skipsblanks)
+-                        while (blanks[to_uchar (*line_start)])
+-                          line_start++;
++                        {
 +#if HAVE_MBRTOWC
-+			  if (MB_CUR_MAX > 1)
-+			    {
-+			      size_t mblength;
-+			      mbstate_t state;
-+			      memset (&state, '\0', sizeof(mbstate_t));
-+			      while (line_start < line->keylim &&
-+				     ismbblank (line_start,
-+						line->keylim - line_start,
-+						&mblength))
-+				line_start += mblength;
-+			    }
-+			  else
++                          if (MB_CUR_MAX > 1)
++                            {
++                              size_t mblength;
++                              mbstate_t state;
++                              memset (&state, '\0', sizeof(mbstate_t));
++                              while (line_start < line->keylim &&
++                                     ismbblank (line_start,
++                                                line->keylim - line_start,
++                                                &mblength))
++                                line_start += mblength;
++                            }
++                          else
 +#endif
-+			  while (blanks[to_uchar (*line_start)])
-+			    line_start++;
-+			}
- 		      line->keybeg = line_start;
- 		    }
- 		}
++                          while (blanks[to_uchar (*line_start)])
++                            line_start++;
++                        }
+                       line->keybeg = line_start;
+                     }
+                 }
 @@ -1500,7 +1803,7 @@
     hideously fast. */
  
@@ -2089,7 +2063,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    while (blanks[to_uchar (*a)])
      a++;
 @@ -1510,6 +1813,25 @@
- 	  : strnumcmp (a, b, decimal_point, thousands_sep));
+           : strnumcmp (a, b, decimal_point, thousands_sep));
  }
  
 +#if HAVE_MBRTOWC
@@ -2166,10 +2140,10 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +    {
 +      month_wcs[i] = towupper(month_wcs[i]);
 +      if (iswblank (month_wcs[i]))
-+	{
-+	  month_wcs[i] = L'\0';
-+	  break;
-+	}
++        {
++          month_wcs[i] = L'\0';
++          break;
++        }
 +    }
 +
 +  wpp = (const wchar_t **)&month_wcs;
@@ -2182,9 +2156,9 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      int ix = (lo + hi) / 2;
 +
 +      if (strncmp (month, monthtab[ix].name, strlen (monthtab[ix].name)) < 0)
-+	hi = ix;
++        hi = ix;
 +      else
-+	lo = ix;
++        lo = ix;
 +    }
 +  while (hi - lo > 1);
 +
@@ -2243,133 +2217,133 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      if (key->random)
 +        diff = compare_random (texta, lena, textb, lenb);
 +      else if (key->numeric | key->general_numeric | key->human_numeric)
-+	{
-+	  char savea = *lima, saveb = *limb;
++        {
++          char savea = *lima, saveb = *limb;
 +
-+	  *lima = *limb = '\0';
-+	  diff = (key->numeric ? numcompare (texta, textb)
-+		  : key->general_numeric ? general_numcompare (texta, textb)
-+		  : human_numcompare (texta, textb, key));
-+	  *lima = savea, *limb = saveb;
-+	}
++          *lima = *limb = '\0';
++          diff = (key->numeric ? numcompare (texta, textb)
++                  : key->general_numeric ? general_numcompare (texta, textb)
++                  : human_numcompare (texta, textb, key));
++          *lima = savea, *limb = saveb;
++        }
 +      else if (key->version)
-+	diff = compare_version (texta, lena, textb, lenb);
++        diff = compare_version (texta, lena, textb, lenb);
 +      else if (key->month)
-+	diff = getmonth (texta, lena) - getmonth (textb, lenb);
++        diff = getmonth (texta, lena) - getmonth (textb, lenb);
 +      else
-+	{
-+	  if (ignore || translate)
-+	    {
-+	      char *copy_a = (char *) alloca (lena + 1 + lenb + 1);
-+	      char *copy_b = copy_a + lena + 1;
-+	      size_t new_len_a, new_len_b;
-+	      size_t i, j;
++        {
++          if (ignore || translate)
++            {
++              char *copy_a = (char *) alloca (lena + 1 + lenb + 1);
++              char *copy_b = copy_a + lena + 1;
++              size_t new_len_a, new_len_b;
++              size_t i, j;
 +
-+	      /* Ignore and/or translate chars before comparing.  */
-+# define IGNORE_CHARS(NEW_LEN, LEN, TEXT, COPY, WC, MBLENGTH, STATE)	\
-+  do									\
-+    {									\
-+      wchar_t uwc;							\
-+      char mbc[MB_LEN_MAX];						\
-+      mbstate_t state_wc;						\
-+									\
-+      for (NEW_LEN = i = 0; i < LEN;)					\
-+	{								\
-+	  mbstate_t state_bak;						\
-+									\
-+	  state_bak = STATE;						\
-+	  MBLENGTH = mbrtowc (&WC, TEXT + i, LEN - i, &STATE);		\
-+									\
-+	  if (MBLENGTH == (size_t)-2 || MBLENGTH == (size_t)-1		\
-+	      || MBLENGTH == 0)						\
-+	    {								\
-+	      if (MBLENGTH == (size_t)-2 || MBLENGTH == (size_t)-1)	\
-+		STATE = state_bak;					\
-+	      if (!ignore)						\
-+		COPY[NEW_LEN++] = TEXT[i++];				\
-+	      continue;							\
-+	    }								\
-+									\
-+	  if (ignore)							\
-+	    {								\
-+	      if ((ignore == nonprinting && !iswprint (WC))		\
-+		   || (ignore == nondictionary				\
-+		       && !iswalnum (WC) && !iswblank (WC)))		\
-+		{							\
-+		  i += MBLENGTH;					\
-+		  continue;						\
-+		}							\
-+	    }								\
-+									\
-+	  if (translate)						\
-+	    {								\
-+									\
-+	      uwc = towupper(WC);					\
-+	      if (WC == uwc)						\
-+		{							\
-+		  memcpy (mbc, TEXT + i, MBLENGTH);			\
-+		  i += MBLENGTH;					\
-+		}							\
-+	      else							\
-+		{							\
-+		  i += MBLENGTH;					\
-+		  WC = uwc;						\
-+		  memset (&state_wc, '\0', sizeof (mbstate_t));		\
-+									\
-+		  MBLENGTH = wcrtomb (mbc, WC, &state_wc);		\
-+		  assert (MBLENGTH != (size_t)-1 && MBLENGTH != 0);	\
-+		}							\
-+									\
-+	      for (j = 0; j < MBLENGTH; j++)				\
-+		COPY[NEW_LEN++] = mbc[j];				\
-+	    }								\
-+	  else								\
-+	    for (j = 0; j < MBLENGTH; j++)				\
-+	      COPY[NEW_LEN++] = TEXT[i++];				\
-+	}								\
-+      COPY[NEW_LEN] = '\0';						\
-+    }									\
++              /* Ignore and/or translate chars before comparing.  */
++# define IGNORE_CHARS(NEW_LEN, LEN, TEXT, COPY, WC, MBLENGTH, STATE)        \
++  do                                                                        \
++    {                                                                        \
++      wchar_t uwc;                                                        \
++      char mbc[MB_LEN_MAX];                                                \
++      mbstate_t state_wc;                                                \
++                                                                        \
++      for (NEW_LEN = i = 0; i < LEN;)                                        \
++        {                                                                \
++          mbstate_t state_bak;                                                \
++                                                                        \
++          state_bak = STATE;                                                \
++          MBLENGTH = mbrtowc (&WC, TEXT + i, LEN - i, &STATE);                \
++                                                                        \
++          if (MBLENGTH == (size_t)-2 || MBLENGTH == (size_t)-1                \
++              || MBLENGTH == 0)                                                \
++            {                                                                \
++              if (MBLENGTH == (size_t)-2 || MBLENGTH == (size_t)-1)        \
++                STATE = state_bak;                                        \
++              if (!ignore)                                                \
++                COPY[NEW_LEN++] = TEXT[i++];                                \
++              continue;                                                        \
++            }                                                                \
++                                                                        \
++          if (ignore)                                                        \
++            {                                                                \
++              if ((ignore == nonprinting && !iswprint (WC))                \
++                   || (ignore == nondictionary                                \
++                       && !iswalnum (WC) && !iswblank (WC)))                \
++                {                                                        \
++                  i += MBLENGTH;                                        \
++                  continue;                                                \
++                }                                                        \
++            }                                                                \
++                                                                        \
++          if (translate)                                                \
++            {                                                                \
++                                                                        \
++              uwc = towupper(WC);                                        \
++              if (WC == uwc)                                                \
++                {                                                        \
++                  memcpy (mbc, TEXT + i, MBLENGTH);                        \
++                  i += MBLENGTH;                                        \
++                }                                                        \
++              else                                                        \
++                {                                                        \
++                  i += MBLENGTH;                                        \
++                  WC = uwc;                                                \
++                  memset (&state_wc, '\0', sizeof (mbstate_t));                \
++                                                                        \
++                  MBLENGTH = wcrtomb (mbc, WC, &state_wc);                \
++                  assert (MBLENGTH != (size_t)-1 && MBLENGTH != 0);        \
++                }                                                        \
++                                                                        \
++              for (j = 0; j < MBLENGTH; j++)                                \
++                COPY[NEW_LEN++] = mbc[j];                                \
++            }                                                                \
++          else                                                                \
++            for (j = 0; j < MBLENGTH; j++)                                \
++              COPY[NEW_LEN++] = TEXT[i++];                                \
++        }                                                                \
++      COPY[NEW_LEN] = '\0';                                                \
++    }                                                                        \
 +  while (0)
-+	      IGNORE_CHARS (new_len_a, lena, texta, copy_a,
-+			    wc_a, mblength_a, state_a);
-+	      IGNORE_CHARS (new_len_b, lenb, textb, copy_b,
-+			    wc_b, mblength_b, state_b);
-+	      diff = xmemcoll (copy_a, new_len_a, copy_b, new_len_b);
-+	    }
-+	  else if (lena == 0)
-+	    diff = - NONZERO (lenb);
-+	  else if (lenb == 0)
-+	    goto greater;
-+	  else
-+	    diff = xmemcoll (texta, lena, textb, lenb);
-+	}
++              IGNORE_CHARS (new_len_a, lena, texta, copy_a,
++                            wc_a, mblength_a, state_a);
++              IGNORE_CHARS (new_len_b, lenb, textb, copy_b,
++                            wc_b, mblength_b, state_b);
++              diff = xmemcoll (copy_a, new_len_a, copy_b, new_len_b);
++            }
++          else if (lena == 0)
++            diff = - NONZERO (lenb);
++          else if (lenb == 0)
++            goto greater;
++          else
++            diff = xmemcoll (texta, lena, textb, lenb);
++        }
 +
 +      if (diff)
-+	goto not_equal;
++        goto not_equal;
 +
 +      key = key->next;
 +      if (! key)
-+	break;
++        break;
 +
 +      /* Find the beginning and limit of the next field.  */
 +      if (key->eword != -1)
-+	lima = limfield (a, key), limb = limfield (b, key);
++        lima = limfield (a, key), limb = limfield (b, key);
 +      else
-+	lima = a->text + a->length - 1, limb = b->text + b->length - 1;
++        lima = a->text + a->length - 1, limb = b->text + b->length - 1;
 +
 +      if (key->sword != -1)
-+	texta = begfield (a, key), textb = begfield (b, key);
++        texta = begfield (a, key), textb = begfield (b, key);
 +      else
-+	{
-+	  texta = a->text, textb = b->text;
-+	  if (key->skipsblanks)
-+	    {
-+	      while (texta < lima && ismbblank (texta, lima - texta, &mblength_a))
-+		texta += mblength_a;
-+	      while (textb < limb && ismbblank (textb, limb - textb, &mblength_b))
-+		textb += mblength_b;
-+	    }
-+	}
++        {
++          texta = a->text, textb = b->text;
++          if (key->skipsblanks)
++            {
++              while (texta < lima && ismbblank (texta, lima - texta, &mblength_a))
++                texta += mblength_a;
++              while (textb < limb && ismbblank (textb, limb - textb, &mblength_b))
++                textb += mblength_b;
++            }
++        }
 +    }
 +
 +  return 0;
@@ -2423,58 +2397,58 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
  
 @@ -3015,13 +3599,35 @@
  
- 	case 't':
- 	  {
--	    char newtab = optarg[0];
--	    if (! newtab)
-+	    char newtab[MB_LEN_MAX + 1];
-+	    size_t newtab_length = 1;
-+	    strncpy (newtab, optarg, MB_LEN_MAX);
-+	    if (! newtab[0])
- 	      error (SORT_FAILURE, 0, _("empty tab"));
--	    if (optarg[1])
+         case 't':
+           {
+-            char newtab = optarg[0];
+-            if (! newtab)
++            char newtab[MB_LEN_MAX + 1];
++            size_t newtab_length = 1;
++            strncpy (newtab, optarg, MB_LEN_MAX);
++            if (! newtab[0])
+               error (SORT_FAILURE, 0, _("empty tab"));
+-            if (optarg[1])
 +#if HAVE_MBRTOWC
-+	    if (MB_CUR_MAX > 1)
-+	      {
-+		wchar_t wc;
-+		mbstate_t state;
-+		size_t i;
++            if (MB_CUR_MAX > 1)
++              {
++                wchar_t wc;
++                mbstate_t state;
++                size_t i;
 +
-+		memset (&state, '\0', sizeof (mbstate_t));
-+		newtab_length = mbrtowc (&wc, newtab, strnlen (newtab,
-+							       MB_LEN_MAX),
-+					 &state);
-+		switch (newtab_length)
-+		  {
-+		  case (size_t) -1:
-+		  case (size_t) -2:
-+		  case 0:
-+		    newtab_length = 1;
-+		  }
-+	      }
++                memset (&state, '\0', sizeof (mbstate_t));
++                newtab_length = mbrtowc (&wc, newtab, strnlen (newtab,
++                                                               MB_LEN_MAX),
++                                         &state);
++                switch (newtab_length)
++                  {
++                  case (size_t) -1:
++                  case (size_t) -2:
++                  case 0:
++                    newtab_length = 1;
++                  }
++              }
 +#endif
-+	    if (newtab_length == 1 && optarg[1])
- 	      {
- 		if (STREQ (optarg, "\\0"))
--		  newtab = '\0';
-+		  newtab[0] = '\0';
- 		else
- 		  {
- 		    /* Provoke with `sort -txx'.  Complain about
++            if (newtab_length == 1 && optarg[1])
+               {
+                 if (STREQ (optarg, "\\0"))
+-                  newtab = '\0';
++                  newtab[0] = '\0';
+                 else
+                   {
+                     /* Provoke with `sort -txx'.  Complain about
 @@ -3032,9 +3638,12 @@
- 			   quote (optarg));
- 		  }
- 	      }
--	    if (tab != TAB_DEFAULT && tab != newtab)
-+	    if (tab_length
-+		&& (tab_length != newtab_length
-+		    || memcmp (tab, newtab, tab_length) != 0))
- 	      error (SORT_FAILURE, 0, _("incompatible tabs"));
--	    tab = newtab;
-+	    memcpy (tab, newtab, newtab_length);
-+	    tab_length = newtab_length;
- 	  }
- 	  break;
+                            quote (optarg));
+                   }
+               }
+-            if (tab != TAB_DEFAULT && tab != newtab)
++            if (tab_length
++                && (tab_length != newtab_length
++                    || memcmp (tab, newtab, tab_length) != 0))
+               error (SORT_FAILURE, 0, _("incompatible tabs"));
+-            tab = newtab;
++            memcpy (tab, newtab, newtab_length);
++            tab_length = newtab_length;
+           }
+           break;
  
 --- coreutils-6.8+/src/unexpand.c.i18n	2007-01-14 15:41:28.000000000 +0000
 +++ coreutils-6.8+/src/unexpand.c	2007-03-01 15:08:24.000000000 +0000
@@ -2810,8 +2784,8 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
  static void pad_across_to (int position);
  static void add_line_number (COLUMN *p);
  static void getoptarg (char *arg, char switch_char, char *character,
-+		       int *character_length, int *character_width,
- 		       int *number);
++                       int *character_length, int *character_width,
+                        int *number);
  void usage (int status);
  static void print_files (int number_of_files, char **av);
 @@ -440,7 +492,6 @@
@@ -2910,134 +2884,134 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +
    n_files = 0;
    file_names = (argc > 1
- 		? xmalloc ((argc - 1) * sizeof (char *))
+                 ? xmalloc ((argc - 1) * sizeof (char *))
 @@ -949,8 +1032,12 @@
- 	  break;
- 	case 'e':
- 	  if (optarg)
--	    getoptarg (optarg, 'e', &input_tab_char,
--		       &chars_per_input_tab);
-+	    {
-+	      int dummy_length, dummy_width;
+           break;
+         case 'e':
+           if (optarg)
+-            getoptarg (optarg, 'e', &input_tab_char,
+-                       &chars_per_input_tab);
++            {
++              int dummy_length, dummy_width;
 +
-+	      getoptarg (optarg, 'e', input_tab_char, &dummy_length,
-+			 &dummy_width, &chars_per_input_tab);
-+	    }
- 	  /* Could check tab width > 0. */
- 	  untabify_input = true;
- 	  break;
++              getoptarg (optarg, 'e', input_tab_char, &dummy_length,
++                         &dummy_width, &chars_per_input_tab);
++            }
+           /* Could check tab width > 0. */
+           untabify_input = true;
+           break;
 @@ -963,8 +1050,12 @@
- 	  break;
- 	case 'i':
- 	  if (optarg)
--	    getoptarg (optarg, 'i', &output_tab_char,
--		       &chars_per_output_tab);
-+	    {
-+	      int dummy_width;
+           break;
+         case 'i':
+           if (optarg)
+-            getoptarg (optarg, 'i', &output_tab_char,
+-                       &chars_per_output_tab);
++            {
++              int dummy_width;
 +
-+	      getoptarg (optarg, 'i', output_tab_char, &output_tab_char_length,
-+			 &dummy_width, &chars_per_output_tab);
-+	    }
- 	  /* Could check tab width > 0. */
- 	  tabify_output = true;
- 	  break;
++              getoptarg (optarg, 'i', output_tab_char, &output_tab_char_length,
++                         &dummy_width, &chars_per_output_tab);
++            }
+           /* Could check tab width > 0. */
+           tabify_output = true;
+           break;
 @@ -991,8 +1082,8 @@
- 	case 'n':
- 	  numbered_lines = true;
- 	  if (optarg)
--	    getoptarg (optarg, 'n', &number_separator,
--		       &chars_per_number);
-+	    getoptarg (optarg, 'n', number_separator, &number_separator_length,
-+		       &number_separator_width, &chars_per_number);
- 	  break;
- 	case 'N':
- 	  skip_count = false;
+         case 'n':
+           numbered_lines = true;
+           if (optarg)
+-            getoptarg (optarg, 'n', &number_separator,
+-                       &chars_per_number);
++            getoptarg (optarg, 'n', number_separator, &number_separator_length,
++                       &number_separator_width, &chars_per_number);
+           break;
+         case 'N':
+           skip_count = false;
 @@ -1031,7 +1122,7 @@
- 	  old_s = false;
- 	  /* Reset an additional input of -s, -S dominates -s */
- 	  col_sep_string = bad_cast ("");
--	  col_sep_length = 0;
-+	  col_sep_length = col_sep_width = 0;
- 	  use_col_separator = true;
- 	  if (optarg)
- 	    separator_string (optarg);
+           old_s = false;
+           /* Reset an additional input of -s, -S dominates -s */
+           col_sep_string = bad_cast ("");
+-          col_sep_length = 0;
++          col_sep_length = col_sep_width = 0;
+           use_col_separator = true;
+           if (optarg)
+             separator_string (optarg);
 @@ -1188,10 +1279,45 @@
     a number. */
  
  static void
 -getoptarg (char *arg, char switch_char, char *character, int *number)
 +getoptarg (char *arg, char switch_char, char *character, int *character_length,
-+	   int *character_width, int *number)
++           int *character_width, int *number)
  {
    if (!ISDIGIT (*arg))
 -    *character = *arg++;
 +    {
 +#ifdef HAVE_MBRTOWC
-+      if (MB_CUR_MAX > 1)	/* for multibyte locale. */
-+	{
-+	  wchar_t wc;
-+	  size_t mblength;
-+	  int width;
-+	  mbstate_t state = {'\0'};
++      if (MB_CUR_MAX > 1)        /* for multibyte locale. */
++        {
++          wchar_t wc;
++          size_t mblength;
++          int width;
++          mbstate_t state = {'\0'};
 +
-+	  mblength = mbrtowc (&wc, arg, strnlen(arg, MB_LEN_MAX), &state);
++          mblength = mbrtowc (&wc, arg, strnlen(arg, MB_LEN_MAX), &state);
 +
-+	  if (mblength == (size_t)-1 || mblength == (size_t)-2)
-+	    {
-+	      *character_length = 1;
-+	      *character_width = 1;
-+	    }
-+	  else
-+	    {
-+	      *character_length = (mblength < 1) ? 1 : mblength;
-+	      width = wcwidth (wc);
-+	      *character_width = (width < 0) ? 0 : width;
-+	    }
++          if (mblength == (size_t)-1 || mblength == (size_t)-2)
++            {
++              *character_length = 1;
++              *character_width = 1;
++            }
++          else
++            {
++              *character_length = (mblength < 1) ? 1 : mblength;
++              width = wcwidth (wc);
++              *character_width = (width < 0) ? 0 : width;
++            }
 +
-+	  strncpy (character, arg, *character_length);
-+	  arg += *character_length;
-+	}
-+      else			/* for single byte locale. */
++          strncpy (character, arg, *character_length);
++          arg += *character_length;
++        }
++      else                        /* for single byte locale. */
 +#endif
-+	{
-+	  *character = *arg++;
-+	  *character_length = 1;
-+	  *character_width = 1;
-+	}
++        {
++          *character = *arg++;
++          *character_length = 1;
++          *character_width = 1;
++        }
 +    }
 +
    if (*arg)
      {
        long int tmp_long;
 @@ -1256,7 +1382,7 @@
- 	  else
- 	    col_sep_string = column_separator;
+           else
+             col_sep_string = column_separator;
  
--	  col_sep_length = 1;
-+	  col_sep_length = col_sep_width = 1;
- 	  use_col_separator = true;
- 	}
+-          col_sep_length = 1;
++          col_sep_length = col_sep_width = 1;
+           use_col_separator = true;
+         }
        /* It's rather pointless to define a TAB separator with column
 @@ -1288,11 +1414,11 @@
- 	     TAB_WIDTH (chars_per_input_tab, chars_per_number);   */
+              TAB_WIDTH (chars_per_input_tab, chars_per_number);   */
  
        /* Estimate chars_per_text without any margin and keep it constant. */
 -      if (number_separator == '\t')
 +      if (number_separator[0] == '\t')
- 	number_width = chars_per_number +
- 	  TAB_WIDTH (chars_per_default_tab, chars_per_number);
+         number_width = chars_per_number +
+           TAB_WIDTH (chars_per_default_tab, chars_per_number);
        else
--	number_width = chars_per_number + 1;
-+	number_width = chars_per_number + number_separator_width;
+-        number_width = chars_per_number + 1;
++        number_width = chars_per_number + number_separator_width;
  
        /* The number is part of the column width unless we are
- 	 printing files in parallel. */
+          printing files in parallel. */
 @@ -1307,7 +1433,7 @@
      }
  
    chars_per_column = (chars_per_line - chars_used_by_number -
--		     (columns - 1) * col_sep_length) / columns;
-+		     (columns - 1) * col_sep_width) / columns;
+-                     (columns - 1) * col_sep_length) / columns;
++                     (columns - 1) * col_sep_width) / columns;
  
    if (chars_per_column < 1)
      error (EXIT_FAILURE, 0, _("page width too narrow"));
@@ -3051,13 +3025,13 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    /* This loop takes care of all but the rightmost column. */
  
 @@ -1466,7 +1592,7 @@
- 	}
+         }
        else
- 	{
--	  h = h_next + col_sep_length;
-+	  h = h_next + col_sep_width;
- 	  h_next = h + chars_per_column;
- 	}
+         {
+-          h = h_next + col_sep_length;
++          h = h_next + col_sep_width;
+           h_next = h + chars_per_column;
+         }
      }
 @@ -1756,9 +1882,9 @@
  align_column (COLUMN *p)
@@ -3089,19 +3063,19 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
  
 @@ -2058,22 +2184,24 @@
        /* Tabification is assumed for multiple columns, also for n-separators,
- 	 but `default n-separator = TAB' hasn't been given priority over
- 	 equal column_width also specified by POSIX. */
+          but `default n-separator = TAB' hasn't been given priority over
+          equal column_width also specified by POSIX. */
 -      if (number_separator == '\t')
 +      if (number_separator[0] == '\t')
          {
            i = number_width - chars_per_number;
            while (i-- > 0)
- 	    (p->char_func) (' ');
+             (p->char_func) (' ');
          }
        else
 -        (p->char_func) (number_separator);
-+	for (j = 0; j < number_separator_length; j++)
-+	  (p->char_func) (number_separator[j]);
++        for (j = 0; j < number_separator_length; j++)
++          (p->char_func) (number_separator[j]);
      }
    else
      /* To comply with POSIX, we avoid any expansion of default TAB
@@ -3111,14 +3085,14 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 -      (p->char_func) (number_separator);
 -      if (number_separator == '\t')
 +      for (j = 0; j < number_separator_length; j++)
-+	(p->char_func) (number_separator[j]);
++        (p->char_func) (number_separator[j]);
 +      if (number_separator[0] == '\t')
          output_position = POS_AFTER_TAB (chars_per_output_tab,
- 			  output_position);
+                           output_position);
      }
 @@ -2234,7 +2362,7 @@
    while (goal - h_old > 1
- 	 && (h_new = POS_AFTER_TAB (chars_per_output_tab, h_old)) <= goal)
+          && (h_new = POS_AFTER_TAB (chars_per_output_tab, h_old)) <= goal)
      {
 -      putchar (output_tab_char);
 +      fwrite (output_tab_char, sizeof(char), output_tab_char_length, stdout);
@@ -3136,28 +3110,28 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 @@ -2267,6 +2396,7 @@
      {
        for (; separators_not_printed > 0; --separators_not_printed)
- 	{
-+	  not_space_flag = 0;
- 	  while (l-- > 0)
- 	    {
- 	      /* 3 types of sep_strings: spaces only, spaces and chars,
+         {
++          not_space_flag = 0;
+           while (l-- > 0)
+             {
+               /* 3 types of sep_strings: spaces only, spaces and chars,
 @@ -2280,12 +2410,15 @@
- 		}
- 	      else
- 		{
-+		  not_space_flag = 1;
- 		  if (spaces_not_printed > 0)
- 		    print_white_space ();
- 		  putchar (*s++);
--		  ++output_position;
- 		}
- 	    }
-+	  if (not_space_flag)
-+	    output_position += col_sep_width;
+                 }
+               else
+                 {
++                  not_space_flag = 1;
+                   if (spaces_not_printed > 0)
+                     print_white_space ();
+                   putchar (*s++);
+-                  ++output_position;
+                 }
+             }
++          if (not_space_flag)
++            output_position += col_sep_width;
 +
            /* sep_string ends with some spaces */
- 	  if (spaces_not_printed > 0)
- 	    print_white_space ();
+           if (spaces_not_printed > 0)
+             print_white_space ();
 @@ -2313,7 +2446,7 @@
     required number of tabs and spaces. */
  
@@ -3190,49 +3164,49 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      mblength = mbrtowc (&wc, mbc, mbc_pos, &state);
 +
 +      while (mbc_pos > 0)
-+	{
-+	  switch (mblength)
-+	    {
-+	    case (size_t)-2:
-+	      state = state_bak;
-+	      return;
++        {
++          switch (mblength)
++            {
++            case (size_t)-2:
++              state = state_bak;
++              return;
 +
-+	    case (size_t)-1:
-+	      state = state_bak;
-+	      ++output_position;
-+	      putchar (mbc[0]);
-+	      memmove (mbc, mbc + 1, MB_CUR_MAX - 1);
-+	      --mbc_pos;
-+	      break;
++            case (size_t)-1:
++              state = state_bak;
++              ++output_position;
++              putchar (mbc[0]);
++              memmove (mbc, mbc + 1, MB_CUR_MAX - 1);
++              --mbc_pos;
++              break;
 +
-+	    case 0:
-+	      mblength = 1;
++            case 0:
++              mblength = 1;
 +
-+	    default:
-+	      if (wc == L' ')
-+		{
-+		  memmove (mbc, mbc + mblength, MB_CUR_MAX - mblength);
-+		  --mbc_pos;
-+		  ++spaces_not_printed;
-+		  return;
-+		}
-+	      else if (spaces_not_printed > 0)
-+		print_white_space ();
++            default:
++              if (wc == L' ')
++                {
++                  memmove (mbc, mbc + mblength, MB_CUR_MAX - mblength);
++                  --mbc_pos;
++                  ++spaces_not_printed;
++                  return;
++                }
++              else if (spaces_not_printed > 0)
++                print_white_space ();
 +
-+	      /* Nonprintables are assumed to have width 0, except L'\b'. */
-+	      if ((width = wcwidth (wc)) < 1)
-+		{
-+		  if (wc == L'\b')
-+		    --output_position;
-+		}
-+	      else
-+		output_position += width;
++              /* Nonprintables are assumed to have width 0, except L'\b'. */
++              if ((width = wcwidth (wc)) < 1)
++                {
++                  if (wc == L'\b')
++                    --output_position;
++                }
++              else
++                output_position += width;
 +
-+	      fwrite (mbc, sizeof(char), mblength, stdout);
-+	      memmove (mbc, mbc + mblength, MB_CUR_MAX - mblength);
-+	      mbc_pos -= mblength;
-+	    }
-+	}
++              fwrite (mbc, sizeof(char), mblength, stdout);
++              memmove (mbc, mbc + mblength, MB_CUR_MAX - mblength);
++              mbc_pos -= mblength;
++            }
++        }
 +      return;
 +    }
 +  putchar (c);
@@ -3243,19 +3217,19 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
     PAGE may be larger than total number of pages. */
  
 @@ -2517,9 +2718,9 @@
- 	  align_empty_cols = false;
- 	}
+           align_empty_cols = false;
+         }
  
 -      if (padding_not_printed - col_sep_length > 0)
 +      if (padding_not_printed - col_sep_width > 0)
- 	{
--	  pad_across_to (padding_not_printed - col_sep_length);
-+	  pad_across_to (padding_not_printed - col_sep_width);
- 	  padding_not_printed = ANYWHERE;
- 	}
+         {
+-          pad_across_to (padding_not_printed - col_sep_length);
++          pad_across_to (padding_not_printed - col_sep_width);
+           padding_not_printed = ANYWHERE;
+         }
  
 @@ -2620,9 +2821,9 @@
- 	}
+         }
      }
  
 -  if (padding_not_printed - col_sep_length > 0)
@@ -3271,9 +3245,9 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
      {
        output_position = p->start_position + end_vector[line];
 -      if (p->start_position - col_sep_length == chars_per_margin)
--	output_position -= col_sep_length;
+-        output_position -= col_sep_length;
 +      if (p->start_position - col_sep_width == chars_per_margin)
-+	output_position -= col_sep_width;
++        output_position -= col_sep_width;
      }
  
    return true;
@@ -3330,118 +3304,118 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  while (mbc_pos > 0)
 +    {
 +      switch (mblength)
-+	{
-+	case (size_t)-2:
-+	  state = state_bak;
-+	  return 0;
++        {
++        case (size_t)-2:
++          state = state_bak;
++          return 0;
 +
-+	case (size_t)-1:
-+	  state = state_bak;
-+	  mblength = 1;
++        case (size_t)-1:
++          state = state_bak;
++          mblength = 1;
 +
-+	  if (use_esc_sequence || use_cntrl_prefix)
-+	    {
-+	      width = +4;
-+	      chars = +4;
-+	      *s++ = '\\';
-+	      sprintf (esc_buff, "%03o", mbc[0]);
-+	      for (i = 0; i <= 2; ++i)
-+		*s++ = (int) esc_buff[i];
-+	    }
-+	  else
-+	    {
-+	      width += 1;
-+	      chars += 1;
-+	      *s++ = mbc[0];
-+	    }
-+	  break;
++          if (use_esc_sequence || use_cntrl_prefix)
++            {
++              width = +4;
++              chars = +4;
++              *s++ = '\\';
++              sprintf (esc_buff, "%03o", mbc[0]);
++              for (i = 0; i <= 2; ++i)
++                *s++ = (int) esc_buff[i];
++            }
++          else
++            {
++              width += 1;
++              chars += 1;
++              *s++ = mbc[0];
++            }
++          break;
 +
-+	case 0:
-+	  mblength = 1;
-+		/* Fall through */
++        case 0:
++          mblength = 1;
++                /* Fall through */
 +
-+	default:
-+	  if (memcmp (mbc, input_tab_char, mblength) == 0)
-+	    chars_per_c = chars_per_input_tab;
++        default:
++          if (memcmp (mbc, input_tab_char, mblength) == 0)
++            chars_per_c = chars_per_input_tab;
 +
-+	  if (memcmp (mbc, input_tab_char, mblength) == 0 || c == '\t')
-+	    {
-+	      int  width_inc;
++          if (memcmp (mbc, input_tab_char, mblength) == 0 || c == '\t')
++            {
++              int  width_inc;
 +
-+	      width_inc = TAB_WIDTH (chars_per_c, input_position);
-+	      width += width_inc;
++              width_inc = TAB_WIDTH (chars_per_c, input_position);
++              width += width_inc;
 +
-+	      if (untabify_input)
-+		{
-+		  for (i = width_inc; i; --i)
-+		    *s++ = ' ';
-+		  chars += width_inc;
-+		}
-+	      else
-+		{
-+		  for (i = 0; i <  mblength; i++)
-+		    *s++ = mbc[i];
-+		  chars += mblength;
-+		}
-+	    }
-+	  else if ((wc_width = wcwidth (wc)) < 1)
-+	    {
-+	      if (use_esc_sequence)
-+		{
-+		  for (i = 0; i < mblength; i++)
-+		    {
-+		      width += 4;
-+		      chars += 4;
-+		      *s++ = '\\';
-+		      sprintf (esc_buff, "%03o", c);
-+		      for (j = 0; j <= 2; ++j)
-+			*s++ = (int) esc_buff[j];
-+		    }
-+		}
-+	      else if (use_cntrl_prefix)
-+		{
-+		  if (wc < 0200)
-+		    {
-+		      width += 2;
-+		      chars += 2;
-+		      *s++ = '^';
-+		      *s++ = wc ^ 0100;
-+		    }
-+		  else
-+		    {
-+		      for (i = 0; i < mblength; i++)
-+			{
-+			  width += 4;
-+			  chars += 4;
-+			  *s++ = '\\';
-+			  sprintf (esc_buff, "%03o", c);
-+			  for (j = 0; j <= 2; ++j)
-+			    *s++ = (int) esc_buff[j];
-+			}
-+		    }
-+		}
-+	      else if (wc == L'\b')
-+		{
-+		  width += -1;
-+		  chars += 1;
-+		  *s++ = c;
-+		}
-+	      else
-+		{
-+		  width += 0;
-+		  chars += mblength;
-+		  for (i = 0; i < mblength; i++)
-+		    *s++ = mbc[i];
-+		}
-+	    }
-+	  else
-+	    {
-+	      width += wc_width;
-+	      chars += mblength;
-+	      for (i = 0; i < mblength; i++)
-+		*s++ = mbc[i];
-+	    }
-+	}
++              if (untabify_input)
++                {
++                  for (i = width_inc; i; --i)
++                    *s++ = ' ';
++                  chars += width_inc;
++                }
++              else
++                {
++                  for (i = 0; i <  mblength; i++)
++                    *s++ = mbc[i];
++                  chars += mblength;
++                }
++            }
++          else if ((wc_width = wcwidth (wc)) < 1)
++            {
++              if (use_esc_sequence)
++                {
++                  for (i = 0; i < mblength; i++)
++                    {
++                      width += 4;
++                      chars += 4;
++                      *s++ = '\\';
++                      sprintf (esc_buff, "%03o", c);
++                      for (j = 0; j <= 2; ++j)
++                        *s++ = (int) esc_buff[j];
++                    }
++                }
++              else if (use_cntrl_prefix)
++                {
++                  if (wc < 0200)
++                    {
++                      width += 2;
++                      chars += 2;
++                      *s++ = '^';
++                      *s++ = wc ^ 0100;
++                    }
++                  else
++                    {
++                      for (i = 0; i < mblength; i++)
++                        {
++                          width += 4;
++                          chars += 4;
++                          *s++ = '\\';
++                          sprintf (esc_buff, "%03o", c);
++                          for (j = 0; j <= 2; ++j)
++                            *s++ = (int) esc_buff[j];
++                        }
++                    }
++                }
++              else if (wc == L'\b')
++                {
++                  width += -1;
++                  chars += 1;
++                  *s++ = c;
++                }
++              else
++                {
++                  width += 0;
++                  chars += mblength;
++                  for (i = 0; i < mblength; i++)
++                    *s++ = mbc[i];
++                }
++            }
++          else
++            {
++              width += wc_width;
++              chars += mblength;
++              for (i = 0; i < mblength; i++)
++                *s++ = mbc[i];
++            }
++        }
 +      memmove (mbc, mbc + mblength, MB_CUR_MAX - mblength);
 +      mbc_pos -= mblength;
 +    }
@@ -3473,7 +3447,7 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
  #include "xstrndup.h"
  
 +/* MB_LEN_MAX is incorrectly defined to be 1 in at least one GCC
-+   installation; work around this configuration error.	*/
++   installation; work around this configuration error.        */
 +#if !defined MB_LEN_MAX || MB_LEN_MAX < 2
 +# undef MB_LEN_MAX
 +# define MB_LEN_MAX 16
@@ -3492,49 +3466,49 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    while (0)
  
 +/* Refill the buffer BUF to get a multibyte character. */
-+#define REFILL_BUFFER(BUF, BUFPOS, BUFLEN, STREAM)			\
-+  do									\
-+    {									\
-+      if (BUFLEN < MB_LEN_MAX && !feof (STREAM) && !ferror (STREAM))	\
-+	{								\
-+	  memmove (BUF, BUFPOS, BUFLEN);				\
-+	  BUFLEN += fread (BUF + BUFLEN, sizeof(char), BUFSIZ, STREAM); \
-+	  BUFPOS = BUF;							\
-+	}								\
-+    }									\
++#define REFILL_BUFFER(BUF, BUFPOS, BUFLEN, STREAM)                        \
++  do                                                                        \
++    {                                                                        \
++      if (BUFLEN < MB_LEN_MAX && !feof (STREAM) && !ferror (STREAM))        \
++        {                                                                \
++          memmove (BUF, BUFPOS, BUFLEN);                                \
++          BUFLEN += fread (BUF + BUFLEN, sizeof(char), BUFSIZ, STREAM); \
++          BUFPOS = BUF;                                                        \
++        }                                                                \
++    }                                                                        \
 +  while (0)
 +
 +/* Get wide character on BUFPOS. BUFPOS is not included after that.
 +   If byte sequence is not valid as a character, CONVFAIL is 1. Otherwise 0. */ 
 +#define GET_NEXT_WC_FROM_BUFFER(WC, BUFPOS, BUFLEN, MBLENGTH, STATE, CONVFAIL) \
-+  do									\
-+    {									\
-+      mbstate_t state_bak;						\
-+									\
-+      if (BUFLEN < 1)							\
-+	{								\
-+	  WC = WEOF;							\
-+	  break;							\
-+	}								\
-+									\
-+      /* Get a wide character. */					\
-+      CONVFAIL = 0;							\
-+      state_bak = STATE;						\
-+      MBLENGTH = mbrtowc ((wchar_t *)&WC, BUFPOS, BUFLEN, &STATE);	\
-+									\
-+      switch (MBLENGTH)							\
-+	{								\
-+	case (size_t)-1:						\
-+	case (size_t)-2:						\
-+	  CONVFAIL++;							\
-+	  STATE = state_bak;						\
-+	  /* Fall througn. */						\
-+									\
-+	case 0:								\
-+	  MBLENGTH = 1;							\
-+	  break;							\
-+	}								\
-+    }									\
++  do                                                                        \
++    {                                                                        \
++      mbstate_t state_bak;                                                \
++                                                                        \
++      if (BUFLEN < 1)                                                        \
++        {                                                                \
++          WC = WEOF;                                                        \
++          break;                                                        \
++        }                                                                \
++                                                                        \
++      /* Get a wide character. */                                        \
++      CONVFAIL = 0;                                                        \
++      state_bak = STATE;                                                \
++      MBLENGTH = mbrtowc ((wchar_t *)&WC, BUFPOS, BUFLEN, &STATE);        \
++                                                                        \
++      switch (MBLENGTH)                                                        \
++        {                                                                \
++        case (size_t)-1:                                                \
++        case (size_t)-2:                                                \
++          CONVFAIL++;                                                        \
++          STATE = state_bak;                                                \
++          /* Fall througn. */                                                \
++                                                                        \
++        case 0:                                                                \
++          MBLENGTH = 1;                                                        \
++          break;                                                        \
++        }                                                                \
++    }                                                                        \
 +  while (0)
 +
  struct range_pair
@@ -3611,49 +3585,49 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
        fputs (_("\
        --complement        complement the set of selected bytes, characters\n\
 @@ -362,7 +439,7 @@
- 	  in_digits = false;
- 	  /* Starting a range. */
- 	  if (dash_found)
--	    FATAL_ERROR (_("invalid byte or field list"));
-+	    FATAL_ERROR (_("invalid byte, character or field list"));
- 	  dash_found = true;
- 	  fieldstr++;
+           in_digits = false;
+           /* Starting a range. */
+           if (dash_found)
+-            FATAL_ERROR (_("invalid byte or field list"));
++            FATAL_ERROR (_("invalid byte, character or field list"));
+           dash_found = true;
+           fieldstr++;
  
 @@ -387,14 +464,16 @@
- 	      if (!rhs_specified)
- 		{
- 		  /* `n-'.  From `initial' to end of line. */
--		  eol_range_start = initial;
-+		  if (eol_range_start == 0 ||
-+		      (eol_range_start != 0 && eol_range_start > initial))
-+		    eol_range_start = initial;
- 		  field_found = true;
- 		}
- 	      else
- 		{
- 		  /* `m-n' or `-n' (1-n). */
- 		  if (value < initial)
--		    FATAL_ERROR (_("invalid decreasing range"));
-+		    FATAL_ERROR (_("invalid byte, character or field list"));
+               if (!rhs_specified)
+                 {
+                   /* `n-'.  From `initial' to end of line. */
+-                  eol_range_start = initial;
++                  if (eol_range_start == 0 ||
++                      (eol_range_start != 0 && eol_range_start > initial))
++                    eol_range_start = initial;
+                   field_found = true;
+                 }
+               else
+                 {
+                   /* `m-n' or `-n' (1-n). */
+                   if (value < initial)
+-                    FATAL_ERROR (_("invalid decreasing range"));
++                    FATAL_ERROR (_("invalid byte, character or field list"));
  
- 		  /* Is there already a range going to end of line? */
- 		  if (eol_range_start != 0)
+                   /* Is there already a range going to end of line? */
+                   if (eol_range_start != 0)
 @@ -467,6 +546,9 @@
- 	      if (operating_mode == byte_mode)
- 		error (0, 0,
- 		       _("byte offset %s is too large"), quote (bad_num));
-+	      else if (operating_mode == character_mode)
-+		error (0, 0,
-+		       _("character offset %s is too large"), quote (bad_num));
- 	      else
- 		error (0, 0,
- 		       _("field number %s is too large"), quote (bad_num));
+               if (operating_mode == byte_mode)
+                 error (0, 0,
+                        _("byte offset %s is too large"), quote (bad_num));
++              else if (operating_mode == character_mode)
++                error (0, 0,
++                       _("character offset %s is too large"), quote (bad_num));
+               else
+                 error (0, 0,
+                        _("field number %s is too large"), quote (bad_num));
 @@ -477,7 +559,7 @@
- 	  fieldstr++;
- 	}
+           fieldstr++;
+         }
        else
--	FATAL_ERROR (_("invalid byte or field list"));
-+	FATAL_ERROR (_("invalid byte, character or field list"));
+-        FATAL_ERROR (_("invalid byte or field list"));
++        FATAL_ERROR (_("invalid byte, character or field list"));
      }
  
    max_range_endpoint = 0;
@@ -3673,15 +3647,15 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +static void
 +cut_characters_or_cut_bytes_no_split (FILE *stream)
 +{
-+  int idx;		/* number of bytes or characters in the line so far. */
++  int idx;                /* number of bytes or characters in the line so far. */
 +  char buf[MB_LEN_MAX + BUFSIZ];  /* For spooling a read byte sequence. */
-+  char *bufpos;		/* Next read position of BUF. */
-+  size_t buflen;	/* The length of the byte sequence in buf. */
-+  wint_t wc;		/* A gotten wide character. */
-+  size_t mblength;	/* The byte size of a multibyte character which shows
-+			   as same character as WC. */
-+  mbstate_t state;	/* State of the stream. */
-+  int convfail;		/* 1, when conversion is failed. Otherwise 0. */
++  char *bufpos;                /* Next read position of BUF. */
++  size_t buflen;        /* The length of the byte sequence in buf. */
++  wint_t wc;                /* A gotten wide character. */
++  size_t mblength;        /* The byte size of a multibyte character which shows
++                           as same character as WC. */
++  mbstate_t state;        /* State of the stream. */
++  int convfail;                /* 1, when conversion is failed. Otherwise 0. */
 +
 +  idx = 0;
 +  buflen = 0;
@@ -3695,29 +3669,29 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +      GET_NEXT_WC_FROM_BUFFER (wc, bufpos, buflen, mblength, state, convfail);
 +
 +      if (wc == WEOF)
-+	{
-+	  if (idx > 0)
-+	    putchar ('\n');
-+	  break;
-+	}
++        {
++          if (idx > 0)
++            putchar ('\n');
++          break;
++        }
 +      else if (wc == L'\n')
-+	{
-+	  putchar ('\n');
-+	  idx = 0;
-+	}
++        {
++          putchar ('\n');
++          idx = 0;
++        }
 +      else
-+	{
-+	  idx += (operating_mode == byte_mode) ? mblength : 1;
-+	  if (print_kth (idx, NULL))
-+	    fwrite (bufpos, mblength, sizeof(char), stdout);
-+	}
++        {
++          idx += (operating_mode == byte_mode) ? mblength : 1;
++          if (print_kth (idx, NULL))
++            fwrite (bufpos, mblength, sizeof(char), stdout);
++        }
 +
 +      buflen -= mblength;
 +      bufpos += mblength;
 +    }
 +}
 +#endif
-+		   
++                   
  /* Read from stream STREAM, printing to standard output any selected fields.  */
  
  static void
@@ -3735,13 +3709,13 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  int buffer_first_field;
 +  int empty_input;
 +  char buf[MB_LEN_MAX + BUFSIZ];  /* For spooling a read byte sequence. */
-+  char *bufpos;		/* Next read position of BUF. */
-+  size_t buflen;	/* The length of the byte sequence in buf. */
-+  wint_t wc = 0;	/* A gotten wide character. */
-+  size_t mblength;	/* The byte size of a multibyte character which shows
-+			   as same character as WC. */
-+  mbstate_t state;	/* State of the stream. */
-+  int convfail;		/* 1, when conversion is failed. Otherwise 0. */
++  char *bufpos;                /* Next read position of BUF. */
++  size_t buflen;        /* The length of the byte sequence in buf. */
++  wint_t wc = 0;        /* A gotten wide character. */
++  size_t mblength;        /* The byte size of a multibyte character which shows
++                           as same character as WC. */
++  mbstate_t state;        /* State of the stream. */
++  int convfail;                /* 1, when conversion is failed. Otherwise 0. */
 +
 +  found_any_selected_field = 0;
 +  field_idx = 1;
@@ -3767,111 +3741,111 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  while (1)
 +    {
 +      if (field_idx == 1 && buffer_first_field)
-+	{
-+	  int len = 0;
++        {
++          int len = 0;
 +
-+	  while (1)
-+	    {
-+	      REFILL_BUFFER (buf, bufpos, buflen, stream);
++          while (1)
++            {
++              REFILL_BUFFER (buf, bufpos, buflen, stream);
 +
-+	      GET_NEXT_WC_FROM_BUFFER
-+		(wc, bufpos, buflen, mblength, state, convfail);
++              GET_NEXT_WC_FROM_BUFFER
++                (wc, bufpos, buflen, mblength, state, convfail);
 +
-+	      if (wc == WEOF)
-+		break;
++              if (wc == WEOF)
++                break;
 +
-+	      field_1_buffer = xrealloc (field_1_buffer, len + mblength);
-+	      memcpy (field_1_buffer + len, bufpos, mblength);
-+	      len += mblength;
-+	      buflen -= mblength;
-+	      bufpos += mblength;
++              field_1_buffer = xrealloc (field_1_buffer, len + mblength);
++              memcpy (field_1_buffer + len, bufpos, mblength);
++              len += mblength;
++              buflen -= mblength;
++              bufpos += mblength;
 +
-+	      if (!convfail && (wc == L'\n' || wc == wcdelim))
-+		break;
-+	    }
++              if (!convfail && (wc == L'\n' || wc == wcdelim))
++                break;
++            }
 +
-+	  if (wc == WEOF)
-+	    break;
++          if (wc == WEOF)
++            break;
 +
-+	  /* If the first field extends to the end of line (it is not
-+	     delimited) and we are printing all non-delimited lines,
-+	     print this one.  */
-+	  if (convfail || (!convfail && wc != wcdelim))
-+	    {
-+	      if (suppress_non_delimited)
-+		{
-+		  /* Empty.	*/
-+		}
-+	      else
-+		{
-+		  fwrite (field_1_buffer, sizeof (char), len, stdout);
-+		  /* Make sure the output line is newline terminated.  */
-+		  if (convfail || (!convfail && wc != L'\n'))
-+		    putchar ('\n');
-+		}
-+	      continue;
-+	    }
++          /* If the first field extends to the end of line (it is not
++             delimited) and we are printing all non-delimited lines,
++             print this one.  */
++          if (convfail || (!convfail && wc != wcdelim))
++            {
++              if (suppress_non_delimited)
++                {
++                  /* Empty.        */
++                }
++              else
++                {
++                  fwrite (field_1_buffer, sizeof (char), len, stdout);
++                  /* Make sure the output line is newline terminated.  */
++                  if (convfail || (!convfail && wc != L'\n'))
++                    putchar ('\n');
++                }
++              continue;
++            }
 +
-+	  if (print_kth (1, NULL))
-+	    {
-+	      /* Print the field, but not the trailing delimiter.  */
-+	      fwrite (field_1_buffer, sizeof (char), len - 1, stdout);
-+	      found_any_selected_field = 1;
-+	    }
-+	  ++field_idx;
-+	}
++          if (print_kth (1, NULL))
++            {
++              /* Print the field, but not the trailing delimiter.  */
++              fwrite (field_1_buffer, sizeof (char), len - 1, stdout);
++              found_any_selected_field = 1;
++            }
++          ++field_idx;
++        }
 +
 +      if (wc != WEOF)
-+	{
-+	  if (print_kth (field_idx, NULL))
-+	    {
-+	      if (found_any_selected_field)
-+		{
-+		  fwrite (output_delimiter_string, sizeof (char),
-+			  output_delimiter_length, stdout);
-+		}
-+	      found_any_selected_field = 1;
-+	    }
++        {
++          if (print_kth (field_idx, NULL))
++            {
++              if (found_any_selected_field)
++                {
++                  fwrite (output_delimiter_string, sizeof (char),
++                          output_delimiter_length, stdout);
++                }
++              found_any_selected_field = 1;
++            }
 +
-+	  while (1)
-+	    {
-+	      REFILL_BUFFER (buf, bufpos, buflen, stream);
++          while (1)
++            {
++              REFILL_BUFFER (buf, bufpos, buflen, stream);
 +
-+	      GET_NEXT_WC_FROM_BUFFER
-+		(wc, bufpos, buflen, mblength, state, convfail);
++              GET_NEXT_WC_FROM_BUFFER
++                (wc, bufpos, buflen, mblength, state, convfail);
 +
-+	      if (wc == WEOF)
-+		break;
-+	      else if (!convfail && (wc == wcdelim || wc == L'\n'))
-+		{
-+		  buflen -= mblength;
-+		  bufpos += mblength;
-+		  break;
-+		}
++              if (wc == WEOF)
++                break;
++              else if (!convfail && (wc == wcdelim || wc == L'\n'))
++                {
++                  buflen -= mblength;
++                  bufpos += mblength;
++                  break;
++                }
 +
-+	      if (print_kth (field_idx, NULL))
-+		fwrite (bufpos, mblength, sizeof(char), stdout);
++              if (print_kth (field_idx, NULL))
++                fwrite (bufpos, mblength, sizeof(char), stdout);
 +
-+	      buflen -= mblength;
-+	      bufpos += mblength;
-+	    }
-+	}
++              buflen -= mblength;
++              bufpos += mblength;
++            }
++        }
 +
 +      if ((!convfail || wc == L'\n') && buflen < 1)
-+	wc = WEOF;
++        wc = WEOF;
 +
 +      if (!convfail && wc == wcdelim)
-+	++field_idx;
++        ++field_idx;
 +      else if (wc == WEOF || (!convfail && wc == L'\n'))
-+	{
-+	  if (found_any_selected_field
-+	      || (!empty_input && !(suppress_non_delimited && field_idx == 1)))
-+	    putchar ('\n');
-+	  if (wc == WEOF)
-+	    break;
-+	  field_idx = 1;
-+	  found_any_selected_field = 0;
-+	}
++        {
++          if (found_any_selected_field
++              || (!empty_input && !(suppress_non_delimited && field_idx == 1)))
++            putchar ('\n');
++          if (wc == WEOF)
++            break;
++          field_idx = 1;
++          found_any_selected_field = 0;
++        }
 +    }
 +}
 +#endif
@@ -3885,34 +3859,34 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 +  if (MB_CUR_MAX > 1 && !force_singlebyte_mode)
 +    {
 +      switch (operating_mode)
-+	{
-+	case byte_mode:
-+	  if (byte_mode_character_aware)
-+	    cut_characters_or_cut_bytes_no_split (stream);
-+	  else
-+	    cut_bytes (stream);
-+	  break;
++        {
++        case byte_mode:
++          if (byte_mode_character_aware)
++            cut_characters_or_cut_bytes_no_split (stream);
++          else
++            cut_bytes (stream);
++          break;
 +
-+	case character_mode:
-+	  cut_characters_or_cut_bytes_no_split (stream);
-+	  break;
++        case character_mode:
++          cut_characters_or_cut_bytes_no_split (stream);
++          break;
 +
-+	case field_mode:
-+	  cut_fields_mb (stream);
-+	  break;
++        case field_mode:
++          cut_fields_mb (stream);
++          break;
 +
-+	default:
-+	  abort ();
-+	}
++        default:
++          abort ();
++        }
 +    }
    else
 -    cut_fields (stream);
 +#endif
 +    {
 +      if (operating_mode == field_mode)
-+	cut_fields (stream);
++        cut_fields (stream);
 +      else
-+	cut_bytes (stream);
++        cut_bytes (stream);
 +    }
  }
  
@@ -3928,75 +3902,75 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
    set_program_name (argv[0]);
 @@ -770,7 +1090,6 @@
        switch (optc)
- 	{
- 	case 'b':
--	case 'c':
- 	  /* Build the byte list. */
- 	  if (operating_mode != undefined_mode)
- 	    FATAL_ERROR (_("only one type of list may be specified"));
+         {
+         case 'b':
+-        case 'c':
+           /* Build the byte list. */
+           if (operating_mode != undefined_mode)
+             FATAL_ERROR (_("only one type of list may be specified"));
 @@ -778,6 +1097,14 @@
- 	  spec_list_string = optarg;
- 	  break;
+           spec_list_string = optarg;
+           break;
  
-+	case 'c':
-+	  /* Build the character list. */
-+	  if (operating_mode != undefined_mode)
-+	    FATAL_ERROR (_("only one type of list may be specified"));
-+	  operating_mode = character_mode;
-+	  spec_list_string = optarg;
-+	  break;
++        case 'c':
++          /* Build the character list. */
++          if (operating_mode != undefined_mode)
++            FATAL_ERROR (_("only one type of list may be specified"));
++          operating_mode = character_mode;
++          spec_list_string = optarg;
++          break;
 +
- 	case 'f':
- 	  /* Build the field list. */
- 	  if (operating_mode != undefined_mode)
+         case 'f':
+           /* Build the field list. */
+           if (operating_mode != undefined_mode)
 @@ -789,10 +1116,35 @@
- 	case 'd':
- 	  /* New delimiter. */
- 	  /* Interpret -d '' to mean `use the NUL byte as the delimiter.'  */
--	  if (optarg[0] != '\0' && optarg[1] != '\0')
--	    FATAL_ERROR (_("the delimiter must be a single character"));
--	  delim = optarg[0];
--	  delim_specified = true;
-+	    {
+         case 'd':
+           /* New delimiter. */
+           /* Interpret -d '' to mean `use the NUL byte as the delimiter.'  */
+-          if (optarg[0] != '\0' && optarg[1] != '\0')
+-            FATAL_ERROR (_("the delimiter must be a single character"));
+-          delim = optarg[0];
+-          delim_specified = true;
++            {
 +#if HAVE_MBRTOWC
-+	      if(MB_CUR_MAX > 1)
-+		{
-+		  mbstate_t state;
++              if(MB_CUR_MAX > 1)
++                {
++                  mbstate_t state;
 +
-+		  memset (&state, '\0', sizeof(mbstate_t));
-+		  delimlen = mbrtowc (&wcdelim, optarg, strnlen(optarg, MB_LEN_MAX), &state);
++                  memset (&state, '\0', sizeof(mbstate_t));
++                  delimlen = mbrtowc (&wcdelim, optarg, strnlen(optarg, MB_LEN_MAX), &state);
 +
-+		  if (delimlen == (size_t)-1 || delimlen == (size_t)-2)
-+		    ++force_singlebyte_mode;
-+		  else
-+		    {
-+		      delimlen = (delimlen < 1) ? 1 : delimlen;
-+		      if (wcdelim != L'\0' && *(optarg + delimlen) != '\0')
-+			FATAL_ERROR (_("the delimiter must be a single character"));
-+		      memcpy (mbdelim, optarg, delimlen);
-+		    }
-+		}
++                  if (delimlen == (size_t)-1 || delimlen == (size_t)-2)
++                    ++force_singlebyte_mode;
++                  else
++                    {
++                      delimlen = (delimlen < 1) ? 1 : delimlen;
++                      if (wcdelim != L'\0' && *(optarg + delimlen) != '\0')
++                        FATAL_ERROR (_("the delimiter must be a single character"));
++                      memcpy (mbdelim, optarg, delimlen);
++                    }
++                }
 +
-+	      if (MB_CUR_MAX <= 1 || force_singlebyte_mode)
++              if (MB_CUR_MAX <= 1 || force_singlebyte_mode)
 +#endif
-+		{
-+		  if (optarg[0] != '\0' && optarg[1] != '\0')
-+		    FATAL_ERROR (_("the delimiter must be a single character"));
-+		  delim = (unsigned char) optarg[0];
-+		}
-+	    delim_specified = true;
-+	  }
- 	  break;
++                {
++                  if (optarg[0] != '\0' && optarg[1] != '\0')
++                    FATAL_ERROR (_("the delimiter must be a single character"));
++                  delim = (unsigned char) optarg[0];
++                }
++            delim_specified = true;
++          }
+           break;
  
- 	case OUTPUT_DELIMITER_OPTION:
+         case OUTPUT_DELIMITER_OPTION:
 @@ -805,6 +1157,7 @@
- 	  break;
+           break;
  
- 	case 'n':
-+	  byte_mode_character_aware = 1;
- 	  break;
+         case 'n':
++          byte_mode_character_aware = 1;
+           break;
  
- 	case 's':
+         case 's':
 @@ -827,7 +1180,7 @@
    if (operating_mode == undefined_mode)
      FATAL_ERROR (_("you must specify a list of bytes, characters, or fields"));
@@ -4030,20 +4004,20 @@ diff -urNp coreutils-6.11-orig/src/join.c coreutils-6.11/src/join.c
 -      output_delimiter_length = 1;
 +#ifdef HAVE_MBRTOWC
 +      if (MB_CUR_MAX > 1 && !force_singlebyte_mode)
-+	{
-+	  output_delimiter_string = xstrdup(mbdelim);
-+	  output_delimiter_length = delimlen;
-+	}
++        {
++          output_delimiter_string = xstrdup(mbdelim);
++          output_delimiter_length = delimlen;
++        }
 +
 +      if (MB_CUR_MAX <= 1 || force_singlebyte_mode)
 +#endif
-+	{
-+	  static char dummy[2]; 
-+	  dummy[0] = delim;
-+	  dummy[1] = '\0';
-+	  output_delimiter_string = dummy;
-+	  output_delimiter_length = 1;
-+	}
++        {
++          static char dummy[2]; 
++          dummy[0] = delim;
++          dummy[1] = '\0';
++          output_delimiter_string = dummy;
++          output_delimiter_length = 1;
++        }
      }
  
    if (optind == argc)
