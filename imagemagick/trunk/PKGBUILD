@@ -6,7 +6,7 @@
 # Just uninstalling ImageMagick before build fails as it is used during the build processs
 
 pkgname=imagemagick
-pkgver=6.5.5.6
+pkgver=6.5.6.1
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -18,9 +18,9 @@ makedepends=('imagemagick')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch perlmagick.rpath.patch)
-md5sums=('b231ba36023ef82044a98076f0be6eb0' '069980fc2590c02aed86420996259302'\
+md5sums=('e74cc971e0e6dbf14e498fceba86a33a' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316' 'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('190f139700003a11bc83162ab202c48b20ee6f5d' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
+sha1sums=('73b4125e14f4cce577a7d861c58275cc49b768b3' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
          '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5' '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
@@ -48,9 +48,6 @@ build() {
   install -D -m644 NOTICE "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE" || return 1
 
   #Cleaning
-  find ${pkgdir} -name '*.bs' -exec rm {} \; || return 1
-  find ${pkgdir} -name '.packlist' -exec rm {} \; || return 1
-  find ${pkgdir} -name 'perllocal.pod' -exec rm {} \; || return 1
-
-  rm -f ${pkgdir}/usr/lib/*.la || return 1
+  find "${pkgdir}" -name '*.bs' -exec rm {} \; || return 1
+  rm -f "${pkgdir}"/usr/lib/*.la || return 1
 }
