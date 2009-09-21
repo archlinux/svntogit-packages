@@ -1,4 +1,4 @@
 #
 # Parameters to be passed to gpm
 #
-GPM_ARGS="-m /dev/psaux"
+GPM_ARGS="-m /dev/input/mice"
