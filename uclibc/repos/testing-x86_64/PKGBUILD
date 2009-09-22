@@ -1,16 +1,22 @@
-# $Id: $
+# $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
-pkgname=uclibc
+pkgbase=uclibc
+pkgname=('uclibc-runtime' 'uclibc')
 pkgver=0.9.30.1
-pkgrel=1
-pkgdesc="C library for developing embedded Linux systems"
+pkgrel=3
 arch=(i686 x86_64)
 url="http://www.uclibc.org/"
 license=('LGPL')
+makedepeds=('gcc-uclibc')
 source=(http://www.uclibc.org/downloads/uClibc-${pkgver}.tar.bz2
         0.9.30-branch.patch
-	      unifdef.patch)
+        unifdef.patch
+	config)
+sha256sums=('2d9769a02c46cff73f56a076268192da1ce91c913e2e4e31c120be098f704c8c'
+            'c35bccadb0a4b1d6fb07aa0e57501d42a06d01e4a6df303c217a928d8c23d457'
+            '33fc925de237ddcb70ee01a587ee360ba1e202c2ccffb73c1d510dfbdb017e35'
+            '706c6f91a12311c2baba8b70c9f1e7fda1360d51c97c5da5ac0608a0e541aa04')
 
 build() {
   cd "${srcdir}/uClibc-${pkgver}"
@@ -24,20 +30,43 @@ build() {
   patch -Np1 -i "${srcdir}/unifdef.patch" || return 1
   cd ..
   patch -Np1 -i "${srcdir}/0.9.30-branch.patch" || return 1
-  make defconfig || return 1
-  sed -e 's|linux-uclibc/usr/|linux-uclibc/|' \
-      -e 's|linux-uclibc|unknown-linux-uclibc|' \
-      -i .config || return 1
+  cp "${srcdir}/config" .config
   make || return 1
+}
+
+package_uclibc-runtime() {
+  pkgdesc="C library for developing embedded Linux systems - runtime libraries"
+  options=(!emptydirs)
+  cd "${srcdir}/uClibc-${pkgver}"
+  _thost="${CHOST/gnu/uclibc}"
+  if [ "${CARCH}" = "x86_64" ]; then
+    _ld="ld64-uClibc"
+  else
+    _ld="ld-uClibc"
+  fi
   make DESTDIR="${pkgdir}" install || return 1
+  find "${pkgdir}/" -not -name '*.so*' -not -type d -exec rm -f {} \;
 
   mkdir "${pkgdir}/lib"
   mv "${pkgdir}/usr/x86_64-unknown-linux-uclibc/lib/${_ld}-${pkgver}.so" \
      "${pkgdir}/lib/" || return 1
   ln -s ld64-uClibc-${pkgver}.so "${pkgdir}/lib/${_ld}.so.0" || return 1
   ln -s /lib/${_ld}-${pkgver}.so "${pkgdir}/usr/${_thost}/lib/" || return 1
+}
+
+package_uclibc() {
+  pkgdesc="C library for developing embedded Linux systems"
+  depends=('uclibc-runtime')
+  cd "${srcdir}/uClibc-${pkgver}"
+  _thost="${CHOST/gnu/uclibc}"
+  if [ "${CARCH}" = "x86_64" ]; then
+    _ld="ld64-uClibc"
+  else
+    _ld="ld-uClibc"
+  fi
+  make DESTDIR="${pkgdir}" install || return 1
+  find "${pkgdir}/" -name '*.so*' -not -type d -exec rm -f {} \;
 
   ln -s /usr/include/{asm,asm-generic,linux,mtd,rdma,sound,video} "${pkgdir}/usr/${_thost}/include/" || return 1
-
   ln -s include "${pkgdir}/usr/${_thost}/sys-include" || return 1
 }
