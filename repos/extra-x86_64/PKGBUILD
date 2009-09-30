@@ -1,19 +1,20 @@
 # Maintainer: francois at archlinux dot org
 
 pkgname=texlive-bin
-pkgver=2009.2
-pkgrel=2
+pkgver=2009.4
+pkgrel=1
 pkgdesc="TeX Live binaries"
 license=('GPL')
 arch=('i686' 'x86_64')
 depends=('t1lib' 'gd' 'libsigsegv' 'poppler')
-optdepends=('psutils' 't1utils' 'perl')
 makedepends=('clisp' 'ffcall')
 options=('!makeflags' '!libtool')
 url='http://tug.org/texlive/'
 source=('texmf.cnf' 
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20090908.tar.xz'
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20090908.tar.xz')
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20090930.tar.xz'
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20090930.tar.xz'
+        'http://foundry.supelec.fr/gf/download/frsrelease/353/1363/luatex-beta-0.43.0.tar.bz2' 
+	'fix-fontforge-encoding.patch')
 backup=(usr/share/texmf/web2c/texmf.cnf \
 	usr/share/texmf-config/web2c/mktex.cnf \
 	usr/share/texmf-config/web2c/updmap.cfg \
@@ -26,8 +27,10 @@ backup=(usr/share/texmf/web2c/texmf.cnf \
 	usr/share/texmf-config/dvipdfm/config/config \
 	usr/share/texmf-config/xdvi/XDvi)
 md5sums=('04aff1501d9a8418903dd7342b6db87f'
-         '5f52a89351ef27d429ae02a998e237ce'
-         '3f3da6b88f6b0ecd186f2a1391cc3d6b')
+         '1baf3379a2be374d5793f82134b17f4f'
+         '95bfd32a0176645694935d117271e1db'
+         '2ca3f261191310b62fc93c98791a67e7'
+         'bfb9716aa00c86c08cd31e5b32edeb98')
 build() {
    if [ "${CARCH}" = "x86_64" ]; then
      export CFLAGS="${CFLAGS} -fPIC"
@@ -38,6 +41,90 @@ build() {
 
    install -m755 -d $pkgdir/usr/share || return 1
    cp -r texmf $pkgdir/usr/share/ || return 1
+
+   ### provisory: we configure and build luatex 0.43 separately, because 
+   # it is needed for latest ConTeXT in texlive-core, but it fails to build
+   # when integrated in the texlive build tree
+   cd luatex-beta-0.43.0
+   patch -p0 -i ../fix-fontforge-encoding.patch || return 1
+   mkdir build
+   cd build
+   ../source/configure --prefix=/usr \
+    --enable-cxx-runtime-hack \
+    --disable-afm2pl \
+    --disable-aleph \
+    --disable-bibtex \
+    --disable-bibtex8 \
+    --disable-cfftot1 \
+    --disable-cjkutils \
+    --disable-detex \
+    --disable-devnag \
+    --disable-dialog \
+    --disable-dtl \
+    --disable-dump-share \
+    --disable-dvi2tty \
+    --disable-dvidvi \
+    --disable-dviljk \
+    --disable-dvipdfm \
+    --disable-dvipdfmx \
+    --disable-dvipos \
+    --disable-dvipsk \
+    --disable-gsftopk \
+    --disable-lacheck \
+    --disable-lcdf-typetools \
+    --disable-makeindexk \
+    --disable-mf \
+    --disable-mmafm \
+    --disable-mmpfb \
+    --disable-musixflx \
+    --disable-otfinfo \
+    --disable-otftotfm \
+    --disable-pdfopen \
+    --disable-pdftex \
+    --disable-ps2eps \
+    --disable-ps2pkm \
+    --disable-psutils \
+    --disable-seetexk \
+    --disable-t1dotlessj \
+    --disable-t1lint \
+    --disable-t1rawafm \
+    --disable-t1reencode \
+    --disable-t1testpage \
+    --disable-t1utils \
+    --disable-tex \
+    --disable-tex4htk \
+    --disable-tpic2pdftex \
+    --disable-ttf2pk \
+    --disable-ttfdump \
+    --disable-ttftotype42 \
+    --disable-vlna \
+    --disable-web-progs \
+    --disable-xdv2pdf \
+    --disable-xdvipdfmx \
+    --without-system-kpathsea \
+    --with-system-freetype2 \
+    --with-freetype2-libdir=/usr/lib \
+    --with-freetype2-include=/usr/include/freetype2 \
+    --with-system-gd \
+    --with-system-libpng \
+    --without-system-teckit \
+    --with-system-zlib \
+    --with-system-t1lib \
+    --with-system-xpdf \
+    --disable-shared \
+    --disable-largefile \
+    --disable-ipc \
+    --without-mf-x-toolkit \
+    --without-x  || return 1
+   make || return 1
+
+   ## install luatex binary
+   install -d -m755 $pkgdir/usr/bin || return 1
+   install -m755 texk/web2c/luatex $pkgdir/usr/bin/ || return 1
+   cd ../.. 
+   ##################################
+   # TODO don't forget to remove --disable-luatex below 
+   # once luatex is updated in TeXLive...
 
    cd source
    ## prevent compiling Xdvi with libXp
@@ -51,14 +138,25 @@ build() {
     --mandir=$pkgdir/usr/share/man \
     --disable-native-texlive-build \
     --with-tex-banner="TeX Live 2009/Arch Linux" \
-    --disable-multiplatform --disable-dialog \
-    --disable-psutils --disable-t1utils --disable-xz \
-    --with-system-zlib --with-system-pnglib --with-system-ncurses \
-    --with-system-t1lib --with-system-gd --with-system-xpdf \
-    --with-system-freetype2 --with-freetype2-libdir=/usr/lib \
+    --disable-multiplatform \
+    --disable-dialog \
+    --disable-psutils \
+    --disable-t1utils \
+    --disable-xz \
+    --with-system-zlib \
+    --with-system-pnglib \
+    --with-system-ncurses \
+    --with-system-t1lib \
+    --with-system-gd \
+    --with-system-xpdf \
+    --with-system-freetype2 \
+    --with-freetype2-libdir=/usr/lib \
     --with-freetype2-include=/usr/include/freetype2 \
-    --with-xdvi-x-toolkit=xaw --disable-dump-share  \
-    --disable-aleph --without-graphite \
+    --with-xdvi-x-toolkit=xaw \
+    --disable-dump-share  \
+    --disable-aleph \
+    --disable-luatex \
+    --without-graphite \
     --enable-xindy || return 1
    #############################################################
    #############################################################
@@ -100,7 +198,9 @@ build() {
    rm -f $pkgdir/usr/bin/man
 
    # remove symlinks to scripts that are not in texlive-core:
-   for s in ht htcontext htlatex htmex httex httexi htxelatex htxetex mk4ht htcontext mkgrkindex epspdftk pst2pdf epspdf ulqda ebong ; do
+   for s in ht htcontext htlatex htmex httex httexi htxelatex htxetex mk4ht \
+     htcontext mkgrkindex epspdftk pst2pdf epspdf ulqda ebong makeglossaries \
+     pdfannotextractor perltex pdfthumb ppower4 ps4pdf splitindex svn-multi vpe; do
      rm $pkgdir/usr/bin/$s
    done
    
