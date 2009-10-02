@@ -2,9 +2,9 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=qt
-pkgver=4.5.2
-pkgrel=7
-_kdeqtver=5b7a2eb42acfdea07c6075556cb43e2c95852145
+pkgver=4.5.3
+pkgrel=1
+_kdeqtver=8d1fe78bf12d9c21dfdf00ef24c3d6ce9cc89f0b
 pkgdesc='A cross-platform application and UI framework'
 arch=('i686' 'x86_64')
 url='http://www.qtsoftware.com/'
@@ -19,37 +19,30 @@ replaces=('qt4' 'phonon')
 conflicts=('qt4' 'phonon')
 options=('!libtool')
 _pkgfqn="qt-x11-opensource-src-${pkgver}"
-source=("ftp://ftp.qtsoftware.com/qt/source/${_pkgfqn}.tar.bz2"
-        "ftp://ftp.archlinux.org/other/kde-qt/kde-qt-patches-${_kdeqtver}.tar.bz2"
+source=("ftp://ftp.qtsoftware.com/qt/source/${_pkgfqn}.tar.gz"
+        "ftp://ftp.archlinux.org/other/kde-qt/kde-qt-${_kdeqtver}.patch.gz"
 	'gstreamer-logo.png'
         'assistant.desktop' 'designer.desktop' 'linguist.desktop' 'qtconfig.desktop'
-        'qdoc3.patch' 'phonon.patch' 'CVE-2009-1725.patch'
-        '9e5fa633913ef952ca4ef5312fe396bcfc885321.patch')
-md5sums=('28a7e8ac9805a6f614d2a27ee1a6ac9d'
-         '5024f809e76a3550ef91bec0971536c2'
+        'qdoc3.patch' 'phonon.patch')
+md5sums=('3988cf9af68be2df8a8000ede231de9b'
+         'b38b9bc91b4e5451cad7a922e246bd14'
          'f0c26f76acf8b6a3297cfb31f872b0b7'
          'a445c6917086d80f1cfc1e40cb6b0132'
          'd457f0a0ad68a3861c3cadefe3b42ded'
          '668331d9798a0e2b94381efb7be4c513'
          'c29f2993d6a0f73d756d2fa36e130e1c'
          'a7e450751f42bdff17e57fdc4af72a18'
-         'ca0debc49d3505423e3b5742fdbfd852'
-         '428fa87aab0032df1ac97f4561c6b08c'
-         'ca409a4aade97cd506df21a4f17842d8')
+         'ca0debc49d3505423e3b5742fdbfd852')
 
-_create-kdeqt-patches() {
+_create-kdeqt-patch() {
 	local codir=$(mktemp -d)
 	mkdir -p "${codir}/kde-qt"
 	git clone git://gitorious.org/+kde-developers/qt/kde-qt.git "${codir}/kde-qt"
 	pushd "${codir}/kde-qt"
 	local kdeqtver=$(git --no-pager show --format='%H' "${pkgver}-patched" | head -1)
-	mkdir "../kde-qt-patches-${kdeqtver}"
-	git format-patch -k "v${pkgver}..${pkgver}-patched" -o "../kde-qt-patches-${kdeqtver}"
+	git diff "v${pkgver}..${pkgver}-patched" | gzip > "${codir}/kde-qt-${kdeqtver}.patch.gz"
 	popd
-	pushd "${codir}"
-	bsdtar -cjf "kde-qt-patches-${kdeqtver}.tar.bz2" kde-qt-patches-${kdeqtver}
-	popd
-	mv "${codir}/kde-qt-patches-${kdeqtver}.tar.bz2" .
+	mv "${codir}/kde-qt-${kdeqtver}.patch.gz" .
 	rm -rf "${codir}"
 }
 
@@ -60,23 +53,13 @@ build() {
 	export LD_LIBRARY_PATH=${QT4DIR}/lib:${LD_LIBRARY_PATH}
 
 	cd $srcdir/$_pkgfqn
-	for i in $srcdir/kde-qt-patches-${_kdeqtver}/*; do
-		echo "applying $i"
-		patch -p1 -i $i || return 1
-	done
+	patch -p1 -i $srcdir/kde-qt-${_kdeqtver}.patch || return 1
 
 	# see http://cvs.fedoraproject.org/viewvc/rpms/qt/devel/
 	# enable qdoc3
 	patch -p1 -i $srcdir/qdoc3.patch || return 1
 	# install service files needed by KDE
 	patch -p1 -i $srcdir/phonon.patch || return 1
-
-	# fix security issue FS#15706
-	# patch from svn://svn.debian.org/pkg-kde/trunk/packages/qt4-x11/debian/patches/
-	patch -p1 -i $srcdir/CVE-2009-1725.patch || return 1
-
-	# fix clipboard issue; see http://bugs.archlinux.org/task/15291
-	patch -p1 -i $srcdir/9e5fa633913ef952ca4ef5312fe396bcfc885321.patch || return 1
 
 	sed -i "s|-O2|$CXXFLAGS|" mkspecs/common/g++.conf
 	sed -i "/^QMAKE_RPATH/s| -Wl,-rpath,||g" mkspecs/common/g++.conf
