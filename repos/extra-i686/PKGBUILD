@@ -1,9 +1,10 @@
 # $Id$
-# Maintainer: Damir Perisa <damir.perisa@bluewin.ch>
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.15.2
+pkgver=0.15.3
 pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
@@ -15,7 +16,7 @@ makedepends=('pkgconfig')
 install=mpd.install
 source=(http://downloads.sourceforge.net/project/musicpd/mpd/${pkgver}/mpd-${pkgver}.tar.bz2
         'mpd')
-md5sums=('869779fdf592ac45d067c7dec228cb51'
+md5sums=('40f01c53333885f86aace5a37ae55bd1'
          'b1fd15de359db08e4b9ae4b199640f0e')
 
 build() {
