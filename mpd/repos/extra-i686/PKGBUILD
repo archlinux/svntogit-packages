@@ -5,7 +5,7 @@
 
 pkgname=mpd
 pkgver=0.15.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -24,9 +24,7 @@ build() {
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --disable-jack \
-    --enable-ao \
-    --enable-mikmod \
-    --with-zeroconf=no
+    --enable-mikmod
   make || return 1
   make DESTDIR=${pkgdir} install
 
