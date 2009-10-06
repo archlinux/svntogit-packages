@@ -1,23 +1,25 @@
 # $Id$
 # Maintainer: Douglas Soares de Andrade <douglas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.5.4
+pkgver=4.6.0
+_pkgver=4.6
 pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
-depends=('sip>=4.8.2' 'qscintilla>=2.4.0' 'qt>=4.5.2' 'dbus-python' 'openssl')
+depends=('sip>=4.9.0' 'qscintilla>=2.4.0' 'qt>=4.5.3' 'dbus-python' 'openssl')
 license=('GPL')
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=(http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-$pkgver.tar.gz)
-md5sums=('b721266d14c450dd7045025e042819ec')
+source=(http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz)
+md5sums=('e03ad1d98b0cf803743e08258f0004d1')
 
 build() {
-  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
 
   python configure.py --confirm-license -b /usr/bin \
   -d /usr/lib/python2.6/site-packages \
