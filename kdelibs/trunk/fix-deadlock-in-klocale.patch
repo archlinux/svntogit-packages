@@ -1,5 +1,127 @@
---- kdelibs-4.3.2/kdecore/localization/klocale.cpp~	2009-10-07 11:00:48.011642430 +0200
-+++ kdelibs-4.3.2/kdecore/localization/klocale.cpp	2009-10-07 11:05:40.921623724 +0200
+Index: kdecore/localization/klocale_p.h
+===================================================================
+--- kdecore/localization/klocale_p.h	(revision 0)
++++ kdecore/localization/klocale_p.h	(revision 1032185)
+@@ -0,0 +1,10 @@
++#ifndef KLOCALE_P_H
++#define KLOCALE_P_H
++
++class QMutex;
++
++// Used by both KLocale and KLocalizedString, since they call each other.
++QMutex* kLocaleMutex();
++
++#endif /* KLOCALE_P_H */
++
+Index: kdecore/localization/klocalizedstring.cpp
+===================================================================
+--- kdecore/localization/klocalizedstring.cpp	(revision 1032184)
++++ kdecore/localization/klocalizedstring.cpp	(revision 1032185)
+@@ -24,6 +24,7 @@
+ #include <kglobal.h>
+ #include <kdebug.h>
+ #include <klocale.h>
++#include <klocale_p.h>
+ #include <kcomponentdata.h>
+ #include <klibrary.h>
+ #include <kstandarddirs.h>
+@@ -126,8 +127,6 @@
+ 
+     QHash<QString, KuitSemantics*> formatters;
+ 
+-    QMutex mutex;
+-
+     KLocalizedStringPrivateStatics () :
+         theFence("|/|"),
+         startInterp("$["),
+@@ -144,9 +143,7 @@
+ 
+         translits(),
+ 
+-        formatters(),
+-
+-        mutex(QMutex::Recursive)
++        formatters()
+     {}
+ 
+     ~KLocalizedStringPrivateStatics ()
+@@ -216,7 +213,7 @@
+ QString KLocalizedStringPrivate::toString (const KLocale *locale) const
+ {
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     // Assure the message has been supplied.
+     if (msg.isEmpty())
+@@ -474,7 +471,7 @@
+                                              const QString &ctxt) const
+ {
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     QString final = text;
+ 
+@@ -499,7 +496,7 @@
+                                                        bool &fallback) const
+ {
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     if (s->ktrs == NULL)
+         // Scripting engine not available.
+@@ -564,7 +561,7 @@
+     // fallback is set to true if Transcript evaluation requested so.
+ 
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     result.clear();
+     fallback = false;
+@@ -716,7 +713,7 @@
+ QVariant KLocalizedStringPrivate::segmentToValue (const QString &seg) const
+ {
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     // Return invalid variant if segment is either not a proper
+     // value reference, or the reference is out of bounds.
+@@ -751,7 +748,7 @@
+                                                  const QString &final) const
+ {
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     if (s->ktrs == NULL)
+         // Scripting engine not available.
+@@ -945,7 +942,7 @@
+ void KLocalizedStringPrivate::loadTranscript ()
+ {
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    QMutexLocker lock(kLocaleMutex());
+ 
+     s->loadTranscriptCalled = true;
+     s->ktrs = NULL; // null indicates that Transcript is not available
+@@ -979,7 +976,8 @@
+         return;
+     }
+     KLocalizedStringPrivateStatics *s = staticsKLSP;
+-    QMutexLocker lock(&s->mutex);
++    // Very important: do not the mutex here.
++    //QMutexLocker lock(kLocaleMutex());
+ 
+     // Find script modules for all included language/catalogs that have them,
+     // and remember their paths.
+Index: kdecore/localization/klocale.cpp
+===================================================================
+--- kdecore/localization/klocale.cpp	(revision 1032184)
++++ kdecore/localization/klocale.cpp	(revision 1032185)
 @@ -22,6 +22,7 @@
  */
  
@@ -132,136 +254,3 @@
 +{
 +    return s_kLocaleMutex();
 +}
---- kdelibs-4.3.2/kdecore/localization/klocalizedstring.cpp~	2009-10-07 11:06:04.208286632 +0200
-+++ kdelibs-4.3.2/kdecore/localization/klocalizedstring.cpp	2009-10-07 11:10:20.208259953 +0200
-@@ -24,6 +24,7 @@
- #include <kglobal.h>
- #include <kdebug.h>
- #include <klocale.h>
-+#include <klocale_p.h>
- #include <kcomponentdata.h>
- #include <klibrary.h>
- #include <kstandarddirs.h>
-@@ -126,8 +127,6 @@
- 
-     QHash<QString, KuitSemantics*> formatters;
- 
--    QMutex mutex;
--
-     KLocalizedStringPrivateStatics () :
-         theFence("|/|"),
-         startInterp("$["),
-@@ -145,8 +144,6 @@
-         translits(),
- 
-         formatters(),
--
--        mutex(QMutex::Recursive)
-     {}
- 
-     ~KLocalizedStringPrivateStatics ()
-@@ -216,7 +213,7 @@
- QString KLocalizedStringPrivate::toString (const KLocale *locale) const
- {
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     // Assure the message has been supplied.
-     if (msg.isEmpty())
-@@ -474,7 +471,7 @@
-                                              const QString &ctxt) const
- {
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     QString final = text;
- 
-@@ -499,7 +496,7 @@
-                                                        bool &fallback) const
- {
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     if (s->ktrs == NULL)
-         // Scripting engine not available.
-@@ -564,7 +561,7 @@
-     // fallback is set to true if Transcript evaluation requested so.
- 
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     result.clear();
-     fallback = false;
-@@ -716,7 +713,7 @@
- QVariant KLocalizedStringPrivate::segmentToValue (const QString &seg) const
- {
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     // Return invalid variant if segment is either not a proper
-     // value reference, or the reference is out of bounds.
-@@ -751,7 +748,7 @@
-                                                  const QString &final) const
- {
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     if (s->ktrs == NULL)
-         // Scripting engine not available.
-@@ -945,7 +942,7 @@
- void KLocalizedStringPrivate::loadTranscript ()
- {
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    QMutexLocker lock(kLocaleMutex());
- 
-     s->loadTranscriptCalled = true;
-     s->ktrs = NULL; // null indicates that Transcript is not available
-@@ -979,7 +976,8 @@
-         return;
-     }
-     KLocalizedStringPrivateStatics *s = staticsKLSP;
--    QMutexLocker lock(&s->mutex);
-+    // Very important: do not the mutex here.
-+    //QMutexLocker lock(kLocaleMutex());
- 
-     // Find script modules for all included language/catalogs that have them,
-     // and remember their paths.
---- /dev/null	2009-09-07 08:17:07.000000000 +0200
-+++ kdelibs-4.3.2/kdecore/localization/klocale_p.h	2009-10-07 12:13:26.424549785 +0200
-@@ -0,0 +1,29 @@
-+/*  This file is part of the KDE libraries
-+ *  Copyright 2009 David Faure <faure@kde.org>
-+ *
-+ *  This library is free software; you can redistribute it and/or
-+ *  modify it under the terms of the GNU Library General Public
-+ *  License as published by the Free Software Foundation; either
-+ *  version 2 of the License, or (at your option) any later version.
-+ *
-+ *  This library is distributed in the hope that it will be useful,
-+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ *  Library General Public License for more details.
-+ *
-+ *  You should have received a copy of the GNU Library General Public License
-+ *  along with this library; see the file COPYING.LIB.  If not, write to
-+ *  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-+ *  Boston, MA 02110-1301, USA.
-+ */
-+
-+#ifndef KLOCALE_P_H
-+#define KLOCALE_P_H
-+
-+class QMutex;
-+
-+// Used by both KLocale and KLocalizedString, since they call each other.
-+QMutex* kLocaleMutex();
-+
-+#endif /* KLOCALE_P_H */
-+
