@@ -98,3 +98,4 @@ newttm-devel-compat.tar.gz: EXTRAS=nouveau README-nouveau
 
 # The commit id of the archive can be read with
 # $ zcat foo.tar.gz | git get-tar-commit-id
+
