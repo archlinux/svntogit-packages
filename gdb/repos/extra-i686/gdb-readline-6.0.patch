@@ -1,0 +1,123 @@
+gdb/
+2009-07-31  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix compatibility of --with-system-readline and readline-6.0+.
+	* configure.ac <--with-system-readline> (for readline_echoing_p): New
+	test.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+Index: gdb-6.8.50.20090909/gdb/configure.ac
+===================================================================
+--- gdb-6.8.50.20090909.orig/gdb/configure.ac	2009-09-09 20:11:04.000000000 +0200
++++ gdb-6.8.50.20090909/gdb/configure.ac	2009-09-09 20:11:54.000000000 +0200
+@@ -773,6 +773,21 @@ if test "$with_system_readline" = yes; t
+   READLINE=-lreadline
+   READLINE_DEPS=
+   READLINE_CFLAGS=
++
++  # readline-6.0 started to use the name `_rl_echoing_p'.
++  # `$(READLINE_DIR)/' of bundled readline would not resolve in configure.
++
++  AC_MSG_CHECKING([for readline_echoing_p])
++  save_LIBS=$LIBS
++  LIBS="$LIBS $READLINE"
++  AC_LINK_IFELSE(AC_LANG_PROGRAM(,[[extern int readline_echoing_p;
++				    return readline_echoing_p;]]),
++		 [READLINE_ECHOING_P=yes],
++		 [READLINE_ECHOING_P=no
++		  AC_DEFINE([readline_echoing_p], [_rl_echoing_p],
++			    [readline-6.0 started to use different name.])])
++  LIBS="$save_LIBS"
++  AC_MSG_RESULT([$READLINE_ECHOING_P])
+ else
+   READLINE='$(READLINE_DIR)/libreadline.a'
+   READLINE_DEPS='$(READLINE)'
+Index: gdb-6.8.50.20090909/gdb/config.in
+===================================================================
+--- gdb-6.8.50.20090909.orig/gdb/config.in	2009-09-09 20:11:33.000000000 +0200
++++ gdb-6.8.50.20090909/gdb/config.in	2009-09-09 20:12:00.000000000 +0200
+@@ -815,6 +815,9 @@
+ /* Define to `int' if <sys/types.h> does not define. */
+ #undef pid_t
+ 
++/* readline-6.0 started to use different name. */
++#undef readline_echoing_p
++
+ /* Define to the equivalent of the C99 'restrict' keyword, or to
+    nothing if this is not supported.  Do not define if restrict is
+    supported directly.  */
+Index: gdb-6.8.50.20090909/gdb/configure
+===================================================================
+--- gdb-6.8.50.20090909.orig/gdb/configure	2009-09-09 20:11:07.000000000 +0200
++++ gdb-6.8.50.20090909/gdb/configure	2009-09-09 20:11:54.000000000 +0200
+@@ -9197,6 +9197,69 @@ if test "$with_system_readline" = yes; t
+   READLINE=-lreadline
+   READLINE_DEPS=
+   READLINE_CFLAGS=
++
++  # readline-6.0 started to use the name `_rl_echoing_p'.
++  # `$(READLINE_DIR)/' of bundled readline would not resolve in configure.
++
++  echo "$as_me:$LINENO: checking for readline_echoing_p" >&5
++echo $ECHO_N "checking for readline_echoing_p... $ECHO_C" >&6
++  save_LIBS=$LIBS
++  LIBS="$LIBS $READLINE"
++  cat >conftest.$ac_ext <<_ACEOF
++/* confdefs.h.  */
++_ACEOF
++cat confdefs.h >>conftest.$ac_ext
++cat >>conftest.$ac_ext <<_ACEOF
++/* end confdefs.h.  */
++
++int
++main ()
++{
++extern int readline_echoing_p;
++				    return readline_echoing_p;
++  ;
++  return 0;
++}
++_ACEOF
++rm -f conftest.$ac_objext conftest$ac_exeext
++if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
++  (eval $ac_link) 2>conftest.er1
++  ac_status=$?
++  grep -v '^ *+' conftest.er1 >conftest.err
++  rm -f conftest.er1
++  cat conftest.err >&5
++  echo "$as_me:$LINENO: \$? = $ac_status" >&5
++  (exit $ac_status); } &&
++	 { ac_try='test -z "$ac_c_werror_flag"
++			 || test ! -s conftest.err'
++  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  echo "$as_me:$LINENO: \$? = $ac_status" >&5
++  (exit $ac_status); }; } &&
++	 { ac_try='test -s conftest$ac_exeext'
++  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  echo "$as_me:$LINENO: \$? = $ac_status" >&5
++  (exit $ac_status); }; }; then
++  READLINE_ECHOING_P=yes
++else
++  echo "$as_me: failed program was:" >&5
++sed 's/^/| /' conftest.$ac_ext >&5
++
++READLINE_ECHOING_P=no
++
++cat >>confdefs.h <<\_ACEOF
++#define readline_echoing_p _rl_echoing_p
++_ACEOF
++
++fi
++rm -f conftest.err conftest.$ac_objext \
++      conftest$ac_exeext conftest.$ac_ext
++  LIBS="$save_LIBS"
++  echo "$as_me:$LINENO: result: $READLINE_ECHOING_P" >&5
++echo "${ECHO_T}$READLINE_ECHOING_P" >&6
+ else
+   READLINE='$(READLINE_DIR)/libreadline.a'
+   READLINE_DEPS='$(READLINE)'
