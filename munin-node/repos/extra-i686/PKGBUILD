@@ -1,0 +1,41 @@
+# Maintainer: Dan McGee <dan@archlinux.org>
+# Contributor: Roberto Alsina <ralsina@kde.org>
+pkgname=munin-node
+pkgver=1.2.6
+pkgrel=14
+pkgdesc="A distributed monitoring/graphing agent"
+arch=('i686' 'x86_64')
+url="http://munin.projects.linpro.no/"
+license=("GPL")
+depends=('perl>=5.10.1' 'perl<5.10.2' 'perl-net-server')
+backup=(etc/munin/munin-node.conf etc/logrotate.d/munin-node)
+install=munin-node.install
+source=(http://downloads.sourceforge.net/sourceforge/munin/munin_$pkgver.tar.gz
+        Makefile.config munin-node.init munin-node.install logrotate.munin-node iostat_partition)
+
+build() {
+	cd $srcdir/munin-$pkgver
+	cp $srcdir/Makefile.config $srcdir/munin-$pkgver || exit 1
+	make PREFIX='' || exit 1
+}
+
+package() {
+	cd $srcdir/munin-$pkgver
+	# stupid makefile installs a program as '/usr/sbin/sbin' if I don't do this
+	mkdir -p $pkgdir/usr/sbin/
+	make DESTDIR=$pkgdir install-node install-node-plugins || exit 1
+	install -m755 $srcdir/iostat_partition $pkgdir/usr/lib/munin/plugins/
+
+	sed -i "s|\$ENV{'MUNIN_HOSTNAME'}.*|\$ENV{'MUNIN_HOSTNAME'} = \`hostname\`;|g" $pkgdir/usr/sbin/munin-node
+	sed -i "s|\$ENV{'MUNIN_HOSTNAME'}.*|\$ENV{'MUNIN_HOSTNAME'} = \`hostname\`;|g" $pkgdir/usr/sbin/munin-run
+
+	install -D -m755 $srcdir/munin-node.init $pkgdir/etc/rc.d/munin-node
+	install -D -m644 $srcdir/logrotate.munin-node $pkgdir/etc/logrotate.d/munin-node
+}
+
+md5sums=('45f84d58f80642ce914f147232f0d396'
+         '5f9b83e0c876821cf2b20012f7cb63f0'
+         '9551a2f7c0f0364fd1b7dd010675e47a'
+         '5cb638b6905340e1e01d51ad850d4115'
+         'cdf139f2b6ae36852113f3411caa6e99'
+         '12289ab5d062449eaa14376f927f5d26')
