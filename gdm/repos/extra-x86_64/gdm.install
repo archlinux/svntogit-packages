@@ -5,9 +5,10 @@ post_install() {
   getent passwd gdm >/dev/null 2>&1 || usr/sbin/useradd -c 'Gnome Display Manager' -u 120 -g gdm -d /var/lib/gdm -s /sbin/nologin gdm
   passwd -l gdm > /dev/null
   chown root:gdm /var/lib/gdm > /dev/null
-  chmod 1770 /var/lib/gdm > /dev/null
+  chown -R root:gdm /var/lib/gdm/.gconf.mandatory
 
   gtk-update-icon-cache -q -t -f usr/share/icons/hicolor
+  gconfpkg --install ${pkgname}
 }
 
 pre_upgrade() {
@@ -19,6 +20,13 @@ pre_upgrade() {
      opt/gnome/etc/gdm/custom.conf > etc/gdm/custom.conf
      mv opt/gnome/etc/gdm/custom.conf opt/gnome/etc/gdm/custom.conf.pacsave
   fi
+  pre_remove
+}
+
+pre_remove() {
+  if [ -f usr/share/gconf/schemas/${pkgname}.schemas ]; then
+    gconfpkg --uninstall ${pkgname}
+  fi
 }
 
 post_upgrade() {
@@ -27,6 +35,6 @@ post_upgrade() {
 
 post_remove() {
   gtk-update-icon-cache -q -t -f usr/share/icons/hicolor
-  getent passwd gdm || userdel gdm
-  getent group gdm || groupdel gdm
+  getent passwd gdm >/dev/null 2>&1 || userdel gdm
+  getent group gdm >/dev/null 2>&1 || groupdel gdm
 }
