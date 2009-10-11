@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.4.4
+pkgver=1.6.5
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -26,9 +26,12 @@ build() {
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
     INSTALLDIRS=vendor DESTDIR=${pkgdir} install || return 1
   
-  #bash completion
+  # bash completion
   mkdir -p $pkgdir/etc/bash_completion.d/
   install -m644 ./contrib/completion/git-completion.bash $pkgdir/etc/bash_completion.d/git || return 1
+
+  # more contrib stuff
+  cp -a ./contrib $pkgdir/usr/share/ || return 1
 
   # how 'bout some manpages?
   for mansect in man1 man5 man7; do
@@ -41,7 +44,7 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('b150352782998ca1f84185e6af53ec26'
-         '5ee880f408f1299d541c273fb7e3c1db')
-sha256sums=('fc7e4d6c4172c62c93d5e974019f7193b03c8bc0a1c6f3a9fcc1d0928b808d7a'
-            'a2b2fb1aabdbb3e1e8ae9472523b9fef23c3e8a992bb8f68f17ad832a6e59c98')
+md5sums=('da86c1736c55edb9f446828581137b51'
+         '17b46ccbec5e02e82a76f7ee81a0b182')
+sha256sums=('377962fe1176a36030ca450d801fe745adc88a69bbba69d76d48e141d0147f92'
+            '4fb88e4217a82594581a8cae148766fea77a2d9778141fde8bc17517e90a5ca4')
