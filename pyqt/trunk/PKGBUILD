@@ -6,7 +6,7 @@
 pkgname=pyqt
 pkgver=4.6.0
 _pkgver=4.6
-pkgrel=1
+pkgrel=2
 pkgdesc="A set of Python bindings for the Qt toolkit."
 arch=(i686 x86_64)
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -30,4 +30,8 @@ build() {
 
   make || return 1
   make DESTDIR=${pkgdir} install
+
+  # FS#16599
+  install -d ${pkgdir}/usr/lib/qt/plugins/designer/
+  install -m755 libpythonplugin.so ${pkgdir}/usr/lib/qt/plugins/designer/
 } 
