@@ -1,0 +1,1561 @@
+diff --git a/configure.in b/configure.in
+index 8f806f2..d8fbba6 100644
+--- a/configure.in
++++ b/configure.in
+@@ -19,7 +19,7 @@
+ dnl needed if you want to build Pan with spellchecking in the Post window.
+ 
+ GLIB_REQUIRED=2.14.0
+-GMIME_REQUIRED=2.1.9
++GMIME_REQUIRED=2.4.0
+ GTK_REQUIRED=2.12.0
+ GTKSPELL_REQUIRED=2.0.7
+ AC_SUBST(GLIB_REQUIRED)
+@@ -49,7 +49,7 @@
+ panlocaledir='${prefix}/${DATADIRNAME}/locale'
+ 
+ AM_PATH_GLIB_2_0($GLIB_REQUIRED,,exit 1,gobject gmodule gthread)
+-PKG_CHECK_MODULES(GMIME, gmime-2.0    >= $GMIME_REQUIRED)
++PKG_CHECK_MODULES(GMIME, gmime-2.4    >= $GMIME_REQUIRED)
+ AM_PATH_GTK_2_0($GTK_REQUIRED,,exit 1,gthread)
+ 
+ 
+diff --git a/pan/general/utf8-utils.cc b/pan/general/utf8-utils.cc
+index 517da50..b12447f 100644
+--- a/pan/general/utf8-utils.cc
++++ b/pan/general/utf8-utils.cc
+@@ -136,7 +136,7 @@ pan :: header_to_utf8 (const StringView  & header,
+ {
+   std::string s = content_to_utf8 (header, fallback_charset1, fallback_charset2);
+   if (header.strstr ("=?")) {
+-    char * decoded (g_mime_utils_8bit_header_decode ((const guchar*) s.c_str()));
++    char * decoded (g_mime_utils_header_decode_text ( s.c_str()));
+     s = clean_utf8 (decoded);
+     g_free (decoded);
+   }
+@@ -150,12 +150,17 @@ pan :: mime_part_to_utf8 (GMimePart     * part,
+   std::string ret;
+ 
+   g_return_val_if_fail (GMIME_IS_PART(part), ret);
+-
+-  size_t content_len (0);
+-  const char * specified_charset (g_mime_object_get_content_type_parameter (GMIME_OBJECT (part), "charset"));
+-  const char * content = g_mime_part_get_content (part, &content_len);
+-  if (content && content_len)
+-    ret = content_to_utf8 (StringView (content, content_len), specified_charset, fallback_charset);
++  const char * charset =
++    g_mime_object_get_content_type_parameter (GMIME_OBJECT (part), "charset");
++  GMimeDataWrapper * content = g_mime_part_get_content_object (part);
++  GMimeStream *stream = g_mime_stream_mem_new ();
++  
++  g_mime_data_wrapper_write_to_stream (content,stream);
++  GByteArray *buf = ((GMimeStreamMem *) stream)->buffer;
++  ret = content_to_utf8 (StringView ((const char *) buf->data, buf->len)
++    , charset, fallback_charset);
++
++  g_object_unref (stream);
+ 
+   return ret;
+ }
+diff --git a/pan/gui/body-pane.cc b/pan/gui/body-pane.cc
+index fec86c7..eeb3b05 100644
+--- a/pan/gui/body-pane.cc
++++ b/pan/gui/body-pane.cc
+@@ -837,7 +837,7 @@ namespace
+       }
+ 
+       g_object_unref (mem_stream);
+-      g_object_unref (wrapper);
++      //g_object_unref (wrapper);
+     }
+ 
+     // flush the loader
+@@ -874,7 +874,7 @@ BodyPane :: append_part (GMimeObject * obj, GtkAllocation * widget_size)
+     return;
+ 
+   GMimePart * part = GMIME_PART (obj);
+-  const GMimeContentType * type = g_mime_object_get_content_type (GMIME_OBJECT (part));
++  GMimeContentType * type = g_mime_object_get_content_type (GMIME_OBJECT (part));
+ 
+   // decide whether or not this part is a picture
+   bool is_image (g_mime_content_type_is_type (type, "image", "*"));
+@@ -956,15 +956,11 @@ BodyPane :: append_part (GMimeObject * obj, GtkAllocation * widget_size)
+   }
+ }
+ void
+-BodyPane :: foreach_part_cb (GMimeObject* o, gpointer self)
++BodyPane :: foreach_part_cb (GMimeObject* /*parent*/, GMimeObject* o, gpointer self)
+ {
+-  if (GMIME_IS_MULTIPART (o))
+-    g_mime_multipart_foreach (GMIME_MULTIPART (o), foreach_part_cb, self);
+-  else {
+-    BodyPane * pane = static_cast<BodyPane*>(self);
+-    GtkWidget * w (pane->_text);
+-    pane->append_part (o, &w->allocation);
+-  }
++  BodyPane * pane = static_cast<BodyPane*>(self);
++  GtkWidget * w (pane->_text);
++  pane->append_part (o, &w->allocation);
+ }
+ 
+ 
+@@ -978,7 +974,7 @@ namespace
+                               const char    * key,
+                               const char    * fallback_charset)
+   {
+-    const char * val (message ? g_mime_message_get_header (message, key) : "");
++    const char * val (message ? g_mime_object_get_header ((GMimeObject *)message, key) : "");
+     const std::string utf8_val (header_to_utf8 (val, fallback_charset));
+     char * e (0);
+     if (strcmp (key, "From"))
+@@ -1015,7 +1011,7 @@ namespace
+                           const char    * key,
+                           const char    * fallback_charset)
+   {
+-    const char * val (msg ? g_mime_message_get_header (msg, key) : "");
++    const char * val (msg ? g_mime_object_get_header ((GMimeObject *) msg, key) : "");
+     return add_header_line (s, key_i18n, key, val, fallback_charset);
+   }
+ }
+@@ -1037,19 +1033,20 @@ BodyPane :: set_text_from_message (GMimeMessage * message)
+ 
+   // conditional headers...
+   if (message) {
+-    const StringView newsgroups (g_mime_message_get_header (message, "Newsgroups"));
++    const StringView newsgroups (g_mime_object_get_header ((GMimeObject *) message
++      , "Newsgroups"));
+     if (newsgroups.strchr(',')) {
+       l = add_header_line (s, message, _("Newsgroups"), "Newsgroups", fallback_charset);
+       w = std::max (w, l);
+     }
+-    const StringView followup_to (g_mime_message_get_header (message, "Followup-To"));
++    const StringView followup_to (g_mime_object_get_header ((GMimeObject *) message, "Followup-To"));
+     if (!followup_to.empty() && (followup_to!=newsgroups)) {
+       l = add_header_line (s, message, _("Followup-To"), "Followup-To", fallback_charset);
+       w = std::max (w, l);
+     }
+-    const StringView reply_to (g_mime_message_get_header (message, "Reply-To"));
++    const StringView reply_to (g_mime_object_get_header ((GMimeObject *) message, "Reply-To"));
+     if (!reply_to.empty()) {
+-      const StringView from (g_mime_message_get_header (message, "From"));
++      const StringView from (g_mime_object_get_header ((GMimeObject *) message, "From"));
+       StringView f_addr, f_name, rt_addr, rt_name;
+       GNKSA :: do_check_from (from, f_addr, f_name, false);
+       GNKSA :: do_check_from (reply_to, rt_addr, rt_name, false);
+@@ -1068,7 +1065,7 @@ BodyPane :: set_text_from_message (GMimeMessage * message)
+ 
+   // set the x-face...
+   GdkPixbuf * pixbuf (0);
+-  const char * pch = message ? g_mime_message_get_header (message, "X-Face") : 0;
++  const char * pch = message ? g_mime_object_get_header ((GMimeObject *) message, "X-Face") : 0;
+   if (pch && _xface->window)
+     pixbuf = pan_gdk_pixbuf_create_from_x_face (gtk_widget_get_colormap(_xface), _xface->window, pch);
+   gtk_image_set_from_pixbuf (GTK_IMAGE(_xface), pixbuf);
+@@ -1097,7 +1094,7 @@ BodyPane :: set_text_from_message (GMimeMessage * message)
+   // maybe add the headers
+   const bool do_show_headers (_prefs.get_flag ("show-all-headers", false));
+   if (message && do_show_headers) {
+-    char * headers (g_mime_message_get_headers (message));
++    char * headers (g_mime_object_get_headers ((GMimeObject *) message));
+     GtkTextIter end;
+     gtk_text_buffer_get_end_iter (_buffer, &end);
+     StringView line, v(headers);
+@@ -1115,7 +1112,7 @@ BodyPane :: set_text_from_message (GMimeMessage * message)
+ 
+   // set the text buffer...
+   if (message)
+-    g_mime_message_foreach_part (message, foreach_part_cb, this);
++    g_mime_message_foreach (message, foreach_part_cb, this);
+ 
+   // if there was a picture, scroll to it.
+   // otherwise scroll to the top of the body.
+@@ -1504,7 +1501,7 @@ namespace
+                           const char   * fallback_charset_1,
+                           const char   * fallback_charset_2)
+   {
+-    const StringView v (g_mime_message_get_header (msg, key));
++    const StringView v (g_mime_object_get_header ((GMimeObject *) msg, key));
+     std::string s;
+     if (!v.empty())
+       s = header_to_utf8 (v, fallback_charset_1, fallback_charset_2);
+@@ -1517,24 +1514,17 @@ namespace
+     std::string body;
+   };
+ 
+-  void get_utf8_body_foreach_part (GMimeObject *o, gpointer user_data)
++  void get_utf8_body_foreach_part (GMimeObject* /*parent*/, GMimeObject *o
++    , gpointer user_data)
+   {
+-    if (GMIME_IS_MULTIPART(o))
++    GMimePart * part;
++    GMimeContentType * type = g_mime_object_get_content_type (o);
++    const bool is_text (g_mime_content_type_is_type (type, "text", "*"));
++    if (is_text)
+     {
+-      g_mime_multipart_foreach (GMIME_MULTIPART(o),
+-                                get_utf8_body_foreach_part,
+-                                user_data);
+-    }
+-    else
+-    {
+-      GMimePart * part = GMIME_PART (o);
+-      const GMimeContentType * type = g_mime_object_get_content_type (o);
+-      const bool is_text (g_mime_content_type_is_type (type, "text", "*"));
+-      if (is_text)
+-      {
+-        ForeachPartData *data (static_cast<ForeachPartData*>(user_data));
+-        data->body += mime_part_to_utf8 (part, data->fallback_charset.c_str());
+-      }
++      part = GMIME_PART (o);
++      ForeachPartData *data (static_cast<ForeachPartData*>(user_data));
++      data->body += mime_part_to_utf8 (part, data->fallback_charset.c_str());
+     }
+   }
+ 
+@@ -1545,7 +1535,7 @@ namespace
+     if (fallback_charset)
+       tmp.fallback_charset = fallback_charset;
+     if (source)
+-      g_mime_message_foreach_part (source, get_utf8_body_foreach_part, &tmp);
++      g_mime_message_foreach (source, get_utf8_body_foreach_part, &tmp);
+     return tmp.body;
+   }
+ }
+@@ -1561,7 +1551,7 @@ BodyPane :: create_followup_or_reply (bool is_reply)
+ 
+     // fallback character encodings
+     const char * group_charset (_charset.c_str());
+-    const GMimeContentType * type (g_mime_object_get_content_type (GMIME_OBJECT(_message)));
++    GMimeContentType * type (g_mime_object_get_content_type (GMIME_OBJECT(_message)));
+     const char * message_charset (type ? g_mime_content_type_get_parameter (type, "charset") : 0);
+ 
+     ///
+@@ -1575,14 +1565,14 @@ BodyPane :: create_followup_or_reply (bool is_reply)
+     const std::string reply_to   (get_header (_message, "Reply-To",    message_charset, group_charset));
+     if (is_reply || fup_to=="poster") {
+       const std::string& to (reply_to.empty() ? from : reply_to);
+-      g_mime_message_add_recipients_from_string (msg, (char*)GMIME_RECIPIENT_TYPE_TO, to.c_str());
++      pan_g_mime_message_add_recipients_from_string (msg, GMIME_RECIPIENT_TYPE_TO, to.c_str());
+     } else {
+       const std::string& groups (fup_to.empty() ? newsgroups : fup_to);
+-      g_mime_message_add_header (msg, "Newsgroups", groups.c_str());
++      g_mime_object_append_header ((GMimeObject *) msg, "Newsgroups", groups.c_str());
+     }
+ 
+     // Subject:
+-    StringView v = g_mime_message_get_header (_message, "Subject");
++    StringView v = g_mime_object_get_header ((GMimeObject *) _message, "Subject");
+     std::string h = header_to_utf8 (v, message_charset, group_charset);
+     std::string val (normalize_subject_re (h));
+     if (val.find ("Re:") != 0) // add "Re: " if we don't have one
+@@ -1591,22 +1581,22 @@ BodyPane :: create_followup_or_reply (bool is_reply)
+ 
+     // attribution lines
+ 
+-    const char * cpch = g_mime_message_get_header (_message, "From");
++    const char * cpch = g_mime_object_get_header ((GMimeObject *)_message, "From");
+     h = header_to_utf8 (cpch, message_charset, group_charset);
+-    g_mime_message_add_header (msg, "X-Draft-Attribution-Author", h.c_str());
++    g_mime_object_append_header ((GMimeObject *) msg, "X-Draft-Attribution-Author", h.c_str());
+ 
+     cpch = g_mime_message_get_message_id (_message);
+     h = header_to_utf8 (cpch, message_charset, group_charset);
+-    g_mime_message_add_header (msg, "X-Draft-Attribution-Id", h.c_str());
++    g_mime_object_append_header ((GMimeObject *) msg, "X-Draft-Attribution-Id", h.c_str());
+ 
+-    char * tmp = g_mime_message_get_date_string (_message);
++    char * tmp = g_mime_message_get_date_as_string (_message);
+     h = header_to_utf8 (tmp, message_charset, group_charset);
+-    g_mime_message_add_header (msg, "X-Draft-Attribution-Date", h.c_str());
++    g_mime_object_append_header ((GMimeObject *) msg, "X-Draft-Attribution-Date", h.c_str());
+     g_free (tmp);
+ 
+     // references
+     const char * header = "References";
+-    v = g_mime_message_get_header (_message, header);
++    v = g_mime_object_get_header ((GMimeObject *)_message, header);
+     val.assign (v.str, v.len);
+     if (!val.empty())
+       val += ' ';
+@@ -1614,7 +1604,7 @@ BodyPane :: create_followup_or_reply (bool is_reply)
+     val += g_mime_message_get_message_id (_message);
+     val += ">";
+     val = GNKSA :: trim_references (val);
+-    g_mime_message_add_header (msg, header, val.c_str());
++    g_mime_object_append_header ((GMimeObject *) msg, header, val.c_str());
+ 
+     ///
+     ///  BODY
+@@ -1650,17 +1640,18 @@ BodyPane :: create_followup_or_reply (bool is_reply)
+     // set the clone's content object with our modified body
+     GMimeStream * stream = g_mime_stream_mem_new ();
+     g_mime_stream_write_string (stream, s.c_str());
+-    GMimeDataWrapper * wrapper = g_mime_data_wrapper_new_with_stream (stream, GMIME_PART_ENCODING_8BIT);
++    GMimeDataWrapper * wrapper = g_mime_data_wrapper_new_with_stream (stream, GMIME_CONTENT_ENCODING_8BIT);
+     GMimePart * part = g_mime_part_new ();
+     GMimeContentType * new_type = g_mime_content_type_new_from_string ("text/plain; charset=UTF-8");
+-    g_mime_part_set_content_type (part, new_type);
++    g_mime_object_set_content_type ((GMimeObject *) part, new_type);
+     g_mime_part_set_content_object (part, wrapper);
+-    g_mime_part_set_encoding (part, GMIME_PART_ENCODING_8BIT);
++    g_mime_part_set_content_encoding (part, GMIME_CONTENT_ENCODING_8BIT);
+     g_mime_message_set_mime_part (msg, GMIME_OBJECT(part));
++    g_object_unref (new_type);
+     g_object_unref (wrapper);
+     g_object_unref (part);
+     g_object_unref (stream);
+-//std::cerr << LINE_ID << " here is the modified clone\n [" << g_mime_message_to_string(msg) << ']' << std::endl;
++//std::cerr << LINE_ID << " here is the modified clone\n [" << g_mime_object_to_string((GMimeObject *)msg) << ']' << std::endl;
+   }
+ 
+   return msg;
+diff --git a/pan/gui/body-pane.h b/pan/gui/body-pane.h
+index 6ab7a87..be878aa 100644
+--- a/pan/gui/body-pane.h
++++ b/pan/gui/body-pane.h
+@@ -86,7 +86,7 @@ namespace pan
+       void append_part (GMimeObject*, GtkAllocation*);
+       static gboolean expander_activated_idle (gpointer self);
+       static void expander_activated_cb (GtkExpander*, gpointer self);
+-      static void foreach_part_cb (GMimeObject*, gpointer self);
++      static void foreach_part_cb (GMimeObject*, GMimeObject*, gpointer self);
+       static void text_size_allocated (GtkWidget*, GtkAllocation*, gpointer);
+       static gboolean text_size_allocated_idle_cb (gpointer p);
+       void text_size_allocated_idle ();
+diff --git a/pan/gui/gui.cc b/pan/gui/gui.cc
+index ec39739..fa7df10 100644
+--- a/pan/gui/gui.cc
++++ b/pan/gui/gui.cc
+@@ -31,6 +31,7 @@ extern "C" {
+ #include <pan/general/file-util.h>
+ #include <pan/general/macros.h>
+ #include <pan/usenet-utils/scorefile.h>
++#include <pan/usenet-utils/mime-utils.h>
+ #include <pan/tasks/task-article.h>
+ #include <pan/tasks/task-groups.h>
+ #include <pan/tasks/task-xover.h>
+@@ -555,7 +556,7 @@ namespace
+                          ArticleCache& c, const Article& a, const std::string& path):
+       _data(d), _queue(q), _root(r), _prefs(p), _cache(c), _article(a), _path(path) {}
+ 
+-    static void foreach_part_cb (GMimeObject *o, gpointer self)
++    static void foreach_part_cb (GMimeObject */*parent*/, GMimeObject *o, gpointer self)
+     {
+       static_cast<SaveArticlesFromNZB*>(self)->foreach_part (o);
+     }
+@@ -579,7 +580,6 @@ namespace
+         if (!tasks.empty())
+           _queue.add_tasks (tasks, Queue::BOTTOM);
+         g_object_unref (mem_stream);
+-        g_object_unref (wrapper);
+       }
+     }
+ 
+@@ -589,7 +589,7 @@ namespace
+     {
+       if (status == OK) {
+         GMimeMessage * message = _cache.get_message (_article.get_part_mids());
+-        g_mime_message_foreach_part (message, foreach_part_cb, this);
++        g_mime_message_foreach (message, foreach_part_cb, this);
+         g_object_unref (message);
+       }
+       delete this;
+@@ -1029,19 +1029,20 @@ void GUI :: do_supersede_article ()
+   const char * cpch;
+   char * old_mid (g_strdup_printf ("<%s>", g_mime_message_get_message_id(message)));
+   GMimeMessage * new_message (g_mime_message_new (false));
+-  g_mime_message_set_header (new_message, "Supersedes", old_mid);
++  g_mime_object_set_header ((GMimeObject *) new_message, "Supersedes", old_mid);
+   g_mime_message_set_sender (new_message, g_mime_message_get_sender (message));
+   g_mime_message_set_subject (new_message, g_mime_message_get_subject (message));
+-  g_mime_message_set_header (new_message, "Newsgroups", g_mime_message_get_header (message, "Newsgroups"));
+-  g_mime_message_set_header (new_message, "References", g_mime_message_get_header (message, "References"));
++  g_mime_object_set_header ((GMimeObject *)new_message, "Newsgroups", g_mime_object_get_header ((GMimeObject *)message, "Newsgroups"));
++  g_mime_object_set_header ((GMimeObject *)new_message, "References", g_mime_object_get_header ((GMimeObject *)message, "References"));
+   if ((cpch = g_mime_message_get_reply_to (message)))
+               g_mime_message_set_reply_to (new_message, cpch);
+-  if ((cpch = g_mime_message_get_header (message,     "Followup-To")))
+-              g_mime_message_set_header (new_message, "Followup-To", cpch);
++  if ((cpch = g_mime_object_get_header ((GMimeObject *)message,     "Followup-To")))
++              g_mime_object_set_header ((GMimeObject *)new_message, "Followup-To", cpch);
+   gboolean  unused (false);
+-  char * body (g_mime_message_get_body (message, true, &unused));
++  char * body (pan_g_mime_message_get_body (message, &unused));
+   GMimeStream * stream = g_mime_stream_mem_new_with_buffer (body, strlen(body));
+-  GMimeDataWrapper * content_object = g_mime_data_wrapper_new_with_stream (stream, GMIME_PART_ENCODING_DEFAULT);
++  g_free (body);
++  GMimeDataWrapper * content_object = g_mime_data_wrapper_new_with_stream (stream, GMIME_CONTENT_ENCODING_DEFAULT);
+   GMimePart * part = g_mime_part_new ();
+   g_mime_part_set_content_object (part, content_object);
+   g_mime_message_set_mime_part (new_message, GMIME_OBJECT(part));
+@@ -1099,11 +1100,11 @@ void GUI :: do_cancel_article ()
+   char * cancel_message = g_strdup_printf ("cancel <%s>", g_mime_message_get_message_id(message));
+   g_mime_message_set_sender (cancel, g_mime_message_get_sender (message));
+   g_mime_message_set_subject (cancel, "Cancel");
+-  g_mime_message_set_header (cancel, "Newsgroups", g_mime_message_get_header (message, "Newsgroups"));
+-  g_mime_message_set_header (cancel, "Control", cancel_message);
++  g_mime_object_set_header ((GMimeObject *)cancel, "Newsgroups", g_mime_object_get_header ((GMimeObject *)message, "Newsgroups"));
++  g_mime_object_set_header ((GMimeObject *)cancel, "Control", cancel_message);
+   const char * body ("Ignore\r\nArticle canceled by author using " PACKAGE_STRING "\r\n");
+   GMimeStream * stream = g_mime_stream_mem_new_with_buffer (body, strlen(body));
+-  GMimeDataWrapper * content_object = g_mime_data_wrapper_new_with_stream (stream, GMIME_PART_ENCODING_DEFAULT);
++  GMimeDataWrapper * content_object = g_mime_data_wrapper_new_with_stream (stream, GMIME_CONTENT_ENCODING_DEFAULT);
+   GMimePart * part = g_mime_part_new ();
+   g_mime_part_set_content_object (part, content_object);
+   g_mime_message_set_mime_part (cancel, GMIME_OBJECT(part));
+@@ -1182,12 +1183,14 @@ GUI :: do_post ()
+       newsgroups = group;
+   }
+   if (!newsgroups.empty())
+-    g_mime_message_add_header (message, "Newsgroups", newsgroups.c_str());
++    g_mime_object_append_header ((GMimeObject *) message, "Newsgroups", newsgroups.c_str());
+ 
+   // content type
+   GMimePart * part = g_mime_part_new ();
+-  g_mime_part_set_content_type (part, g_mime_content_type_new_from_string ("text/plain; charset=UTF-8"));
+-  g_mime_part_set_encoding (part, GMIME_PART_ENCODING_8BIT);
++  GMimeContentType *type = g_mime_content_type_new_from_string ("text/plain; charset=UTF-8");
++  g_mime_object_set_content_type ((GMimeObject *) part, type);
++  g_object_unref (type);
++  g_mime_part_set_content_encoding (part, GMIME_CONTENT_ENCODING_8BIT);
+   g_mime_message_set_mime_part (message, GMIME_OBJECT(part));
+   g_object_unref (part);
+ 
+diff --git a/pan/gui/pan.cc b/pan/gui/pan.cc
+index bc54c0c..140d09a 100644
+--- a/pan/gui/pan.cc
++++ b/pan/gui/pan.cc
+@@ -211,7 +211,7 @@ main (int argc, char *argv[])
+   textdomain (GETTEXT_PACKAGE);
+ 
+   g_thread_init (0);
+-  g_mime_init (GMIME_INIT_FLAG_UTF8);
++  g_mime_init (GMIME_ENABLE_RFC2047_WORKAROUNDS);
+ 
+   bool gui(true), nzb(false);
+   std::string url;
+diff --git a/pan/gui/post-ui.cc b/pan/gui/post-ui.cc
+index 4fe1b05..b902ba0 100644
+--- a/pan/gui/post-ui.cc
++++ b/pan/gui/post-ui.cc
+@@ -510,8 +510,8 @@ PostUI :: maybe_mail_message (GMimeMessage * message)
+ {
+   std::string url, to, groups;
+   gboolean unused;
+-  char * headers (g_mime_message_get_headers (message));
+-  char * body (g_mime_message_get_body (message, true, &unused));
++  char * headers (g_mime_object_get_headers ((GMimeObject *) message));
++  char * body (pan_g_mime_message_get_body (message, &unused));
+   StringView key, val, v(headers);
+   v.trim ();
+   while (v.pop_token (val, '\n') && val.pop_token(key,':')) {
+@@ -610,7 +610,7 @@ PostUI :: maybe_post_message (GMimeMessage * message)
+   *** If this is email only, skip the rest of the posting...
+   *** we only stayed this long to get check_message()
+   **/
+-  const StringView groups (g_mime_message_get_header (message, "Newsgroups"));
++  const StringView groups (g_mime_object_get_header ((GMimeObject *) message, "Newsgroups"));
+   if (groups.empty()) {
+     maybe_mail_message (message);
+     return true;
+@@ -884,9 +884,9 @@ namespace
+    */
+   void pan_g_mime_message_set_message_id (GMimeMessage *msg, const char *mid)
+   {
+-    g_mime_message_add_header (msg, "Message-ID", mid);
++    g_mime_object_append_header ((GMimeObject *) msg, "Message-ID", mid);
+     char * bracketed = g_strdup_printf ("<%s>", mid);
+-    g_mime_header_set (GMIME_OBJECT(msg)->headers, "Message-ID", bracketed);
++    g_mime_header_list_set (GMIME_OBJECT(msg)->headers, "Message-ID", bracketed);
+     g_free (bracketed);
+   }
+ }
+@@ -909,27 +909,27 @@ PostUI :: new_message_from_ui (Mode mode)
+   // headers from the ui: To
+   const StringView to (gtk_entry_get_text (GTK_ENTRY(_to_entry)));
+   if (!to.empty())
+-    g_mime_message_add_recipients_from_string (msg, (char*)GMIME_RECIPIENT_TYPE_TO, to.str);
++    pan_g_mime_message_add_recipients_from_string (msg, GMIME_RECIPIENT_TYPE_TO, to.str);
+ 
+   // headers from the ui: Newsgroups
+   const StringView groups (gtk_entry_get_text (GTK_ENTRY(_groups_entry)));
+   if (!groups.empty())
+-    g_mime_message_set_header (msg, "Newsgroups", groups.str);
++    g_mime_object_set_header ((GMimeObject *) msg, "Newsgroups", groups.str);
+ 
+   // headers from the ui: Followup-To
+   const StringView followupto (gtk_entry_get_text (GTK_ENTRY(_followupto_entry)));
+   if (!followupto.empty())
+-    g_mime_message_set_header (msg, "Followup-To", followupto.str);
++    g_mime_object_set_header ((GMimeObject *) msg, "Followup-To", followupto.str);
+ 
+   // headers from the ui: Reply-To
+   const StringView replyto (gtk_entry_get_text (GTK_ENTRY(_replyto_entry)));
+   if (!replyto.empty())
+-    g_mime_message_set_header (msg, "Reply-To", replyto.str);
++    g_mime_object_set_header ((GMimeObject *) msg, "Reply-To", replyto.str);
+ 
+   // add the 'hidden headers'
+   foreach_const (str2str_t, _hidden_headers, it)
+     if ((mode==DRAFTING) || (it->first.find ("X-Draft-")!=0))
+-      g_mime_message_set_header (msg, it->first.c_str(), it->second.c_str());
++      g_mime_object_set_header ((GMimeObject *) msg, it->first.c_str(), it->second.c_str());
+ 
+   // build headers from the 'more headers' entry field
+   std::map<std::string,std::string> headers;
+@@ -945,14 +945,14 @@ PostUI :: new_message_from_ui (Mode mode)
+     val.trim ();
+     std::string key_str (key.to_string());
+     if (extra_header_is_editable (key, val))
+-      g_mime_message_set_header (msg, key.to_string().c_str(),
+-                                      val.to_string().c_str());
++      g_mime_object_set_header ((GMimeObject *) msg, key.to_string().c_str(),
++                                val.to_string().c_str());
+   }
+   g_free (pch);
+ 
+   // User-Agent
+   if (mode==POSTING && _prefs.get_flag (USER_AGENT_PREFS_KEY, true))
+-    g_mime_message_set_header (msg, "User-Agent", get_user_agent());
++    g_mime_object_set_header ((GMimeObject *) msg, "User-Agent", get_user_agent());
+ 
+   // Message-ID
+   if (mode==POSTING && _prefs.get_flag (MESSAGE_ID_PREFS_KEY, false)) {
+@@ -968,22 +968,22 @@ PostUI :: new_message_from_ui (Mode mode)
+   const std::string charset ((mode==POSTING && !_charset.empty()) ? _charset : "UTF-8");
+   if (charset != "UTF-8") {
+     // add a wrapper to convert from UTF-8 to $charset
+-    GMimeStream * tmp = g_mime_stream_filter_new_with_stream (stream);
++    GMimeStream * tmp = g_mime_stream_filter_new (stream);
+     g_object_unref (stream);
+     GMimeFilter * filter = g_mime_filter_charset_new ("UTF-8", charset.c_str());
+     g_mime_stream_filter_add (GMIME_STREAM_FILTER(tmp), filter);
+     g_object_unref (filter);
+     stream = tmp;
+   }
+-  GMimeDataWrapper * content_object = g_mime_data_wrapper_new_with_stream (stream, GMIME_PART_ENCODING_DEFAULT);
++  GMimeDataWrapper * content_object = g_mime_data_wrapper_new_with_stream (stream, GMIME_CONTENT_ENCODING_DEFAULT);
+   g_object_unref (stream);
+   GMimePart * part = g_mime_part_new ();
+   pch = g_strdup_printf ("text/plain; charset=%s", charset.c_str());
+   GMimeContentType * type = g_mime_content_type_new_from_string (pch);
+   g_free (pch);
+-  g_mime_part_set_content_type (part, type); // part owns type now. type isn't refcounted.
++  g_mime_object_set_content_type ((GMimeObject *) part, type); // part owns type now. type isn't refcounted.
+   g_mime_part_set_content_object (part, content_object);
+-  g_mime_part_set_encoding (part, GMIME_PART_ENCODING_8BIT);
++  g_mime_part_set_content_encoding (part, GMIME_CONTENT_ENCODING_8BIT);
+   g_object_unref (content_object);
+   g_mime_message_set_mime_part (msg, GMIME_OBJECT(part));
+   g_object_unref (part);
+@@ -1017,7 +1017,7 @@ PostUI :: save_draft ()
+ 
+     errno = 0;
+     std::ofstream o (filename);
+-    char * pch = g_mime_message_to_string (msg);
++    char * pch = g_mime_object_to_string ((GMimeObject *) msg);
+     o << pch;
+     o.close ();
+ 
+@@ -1485,16 +1485,16 @@ PostUI :: set_message (GMimeMessage * message)
+   std::string s = utf8ize (g_mime_message_get_subject (message));
+   gtk_entry_set_text (GTK_ENTRY(_subject_entry), s.c_str());
+ 
+-  s = utf8ize (g_mime_message_get_header (message, "Newsgroups"));
++  s = utf8ize (g_mime_object_get_header ((GMimeObject *) message, "Newsgroups"));
+   gtk_entry_set_text (GTK_ENTRY(_groups_entry), s.c_str());
+ 
+-  s = utf8ize (g_mime_message_get_header (message, "Followup-To"));
++  s = utf8ize (g_mime_object_get_header ((GMimeObject *) message, "Followup-To"));
+   gtk_entry_set_text (GTK_ENTRY(_followupto_entry), s.c_str());
+ 
+-  s = utf8ize (g_mime_message_get_header (message, "Reply-To"));
++  s = utf8ize (g_mime_object_get_header ((GMimeObject *) message, "Reply-To"));
+   gtk_entry_set_text (GTK_ENTRY(_replyto_entry), s.c_str());
+ 
+-  const InternetAddressList * addresses = g_mime_message_get_recipients (message, GMIME_RECIPIENT_TYPE_TO);
++  InternetAddressList * addresses = g_mime_message_get_recipients (message, GMIME_RECIPIENT_TYPE_TO);
+   char * pch  = internet_address_list_to_string (addresses, true);
+   s = utf8ize (pch);
+   gtk_entry_set_text (GTK_ENTRY(_to_entry), s.c_str());
+@@ -1502,16 +1502,34 @@ PostUI :: set_message (GMimeMessage * message)
+ 
+   // update 'other headers'
+   SetMessageForeachHeaderData data;
+-  if (message->mime_part && g_mime_header_has_raw (message->mime_part->headers))
+-    g_mime_header_foreach (message->mime_part->headers, set_message_foreach_header_func, &data);
+-  g_mime_header_foreach (GMIME_OBJECT(message)->headers, set_message_foreach_header_func, &data);
++  const char *name, *value;
++  GMimeHeaderIter iter;
++  
++  if (message->mime_part && g_mime_header_list_has_raw (message->mime_part->headers)) {
++    if (g_mime_header_list_get_iter (message->mime_part->headers, &iter)) {
++      do {
++        value = g_mime_header_iter_get_value (&iter);
++        name = g_mime_header_iter_get_name (&iter);
++        set_message_foreach_header_func (name, value, &data);
++      } while (g_mime_header_iter_next (&iter));
++    }
++  }
++  
++  if (g_mime_header_list_get_iter (GMIME_OBJECT (message)->headers, &iter)) {
++    do {
++      value = g_mime_header_iter_get_value (&iter);
++      name = g_mime_header_iter_get_name (&iter);
++      set_message_foreach_header_func (name, value, &data);
++    } while (g_mime_header_iter_next (&iter));
++  }
++  
+   s = utf8ize (data.visible_headers);
+   gtk_text_buffer_set_text (_headers_buf, s.c_str(), -1);
+   _hidden_headers = data.hidden_headers;
+ 
+   // update body
+   int ignored;
+-  char * tmp = g_mime_message_get_body (message, true, &ignored);
++  char * tmp = pan_g_mime_message_get_body (message, &ignored);
+   s = utf8ize (tmp);
+   g_free (tmp);
+   if (!s.empty()) {
+diff --git a/pan/usenet-utils/message-check-test.cc b/pan/usenet-utils/message-check-test.cc
+index d60e552..a451971 100644
+--- a/pan/usenet-utils/message-check-test.cc
++++ b/pan/usenet-utils/message-check-test.cc
+@@ -22,6 +22,20 @@ using namespace pan;
+       std::cerr << LINE_ID << " [" << i << "][" << *it << ']' << std::endl; \
+   }
+ 
++static void
++mime_part_set_content (GMimePart *part, const char *str)
++{
++	GMimeDataWrapper *content;
++	GMimeStream *stream;
++	
++	stream = g_mime_stream_mem_new_with_buffer (str, strlen (str));
++	content = g_mime_data_wrapper_new_with_stream (stream, GMIME_CONTENT_ENCODING_DEFAULT);
++	g_object_unref (stream);
++	
++	g_mime_part_set_content_object (part, content);
++	g_object_unref (content);
++}
++
+ int main (void)
+ {
+   g_mime_init (0);
+@@ -41,11 +55,11 @@ int main (void)
+   std::string message_id = GNKSA :: generate_message_id ("rebelbase.com");
+   g_mime_message_set_message_id (msg, message_id.c_str());
+   g_mime_message_set_subject (msg, "MAKE MONEY FAST");
+-  g_mime_message_set_header (msg, "Organization", "Lazars Android Works");
+-  g_mime_message_set_header (msg, "Newsgroups", "alt.test");
++  g_mime_object_set_header ((GMimeObject *) msg, "Organization", "Lazars Android Works");
++  g_mime_object_set_header ((GMimeObject *) msg, "Newsgroups", "alt.test");
+   GMimePart * part = g_mime_part_new_with_type ("text", "plain");
+   const char * cpch = "Hello World!";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   g_mime_message_set_mime_part (msg, GMIME_OBJECT(part));
+   // this should pass the tests
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+@@ -54,7 +68,7 @@ int main (void)
+ 
+   // all quoted
+   cpch = "> Hello World!\n> All quoted text.";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   std::vector<std::string> e (errors.begin(), errors.end());
+   check (errors.size() == 2)
+@@ -64,7 +78,7 @@ int main (void)
+ 
+   // mostly quoted
+   cpch = "> Hello World!\n> quoted\n> text\n> foo\n> bar\nnew text";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -73,14 +87,14 @@ int main (void)
+ 
+   // mostly quoted border condition: 20% of message is new content (should pass)
+   cpch = "> Hello World!\n> quoted\n> text\n> foo\nnew text";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   check (errors.empty())
+   check (goodness.is_ok())
+ 
+   // sig check: too long
+   cpch = "Hello!\n\n-- \nThis\nSig\nIs\nToo\nLong\n";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -95,7 +109,7 @@ int main (void)
+          "This sig line is greater than 80 characters wide.  In fact, it's 84 characters wide.\n"
+          "This sig line is greater than 80 characters wide.  In fact, it measures 95 characters in width!\n"
+          "This sig line is less than 80 characters wide.";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -104,7 +118,7 @@ int main (void)
+ 
+   // sig check: sig marker, no sig
+   cpch = "Hello!\n\n-- \n";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -113,7 +127,7 @@ int main (void)
+ 
+   // sig check: okay sig
+   cpch = "Hello!\n\n-- \nThis is a short, narrow sig.\nIt should pass.\n";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   check (errors.empty())
+   check (goodness.is_ok())
+@@ -146,7 +160,7 @@ int main (void)
+          "This sig line is greater than 80 characters wide.  In fact, it's 84 characters wide.\n"
+          "This sig line is greater than 80 characters wide.  In fact, it measures 95 characters in width!\n"
+          "This sig line is less than 80 characters wide.";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -155,7 +169,7 @@ int main (void)
+ 
+   // body empty
+   cpch = "\n\t\n   \n-- \nThis is the sig.";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 2)
+@@ -163,7 +177,7 @@ int main (void)
+   check (e[0] == "Error: Message appears to have no new content.");
+   check (e[1] == "Error: Message is empty.");
+   cpch = "Some valid message.";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+ 
+   // empty subject
+   g_mime_message_set_subject (msg, "");
+@@ -175,17 +189,17 @@ int main (void)
+   g_mime_message_set_subject (msg, "Happy Lucky Feeling");
+ 
+   // newsgroups
+-  g_mime_message_set_header (msg, "Newsgroups", "alt.test,unknown.group");
++  g_mime_object_set_header ((GMimeObject *) msg, "Newsgroups", "alt.test,unknown.group");
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+   check (goodness.is_warn())
+   check (e[0] == "Warning: The posting profile's server doesn't carry newsgroup\n\t\"unknown.group\".\n\tIf the group name is correct, switch profiles in the \"From:\"\n\tline or edit the profile with \"Edit|Manage Posting Profiles\".")
+-  g_mime_message_set_header (msg, "Newsgroups", "alt.test");
++	  g_mime_object_set_header ((GMimeObject *) msg, "Newsgroups", "alt.test");
+ 
+   // newsgroups w/o followup
+-  g_mime_message_set_header (msg, "Newsgroups", "alt.test,alt.religion.kibology,alt.binaries.sounds.mp3.indie");
+-  g_mime_header_remove (GMIME_OBJECT(msg)->headers, "Followup-To");
++  g_mime_object_set_header ((GMimeObject *) msg, "Newsgroups", "alt.test,alt.religion.kibology,alt.binaries.sounds.mp3.indie");
++  g_mime_header_list_remove (GMIME_OBJECT(msg)->headers, "Followup-To");
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -193,8 +207,8 @@ int main (void)
+   check (e[0] == "Warning: Crossposting without setting Followup-To header.")
+ 
+   // unknown follow-up
+-  g_mime_message_set_header (msg, "Newsgroups", "alt.test");
+-  g_mime_message_set_header (msg, "Followup-To", "alt.test,unknown.group");
++	  g_mime_object_set_header ((GMimeObject *) msg, "Newsgroups", "alt.test");
++  g_mime_object_set_header ((GMimeObject *) msg, "Followup-To", "alt.test,unknown.group");
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -203,11 +217,11 @@ int main (void)
+   g_mime_object_remove_header (GMIME_OBJECT(msg), "Followup-To");
+ 
+   // top posting
+-  g_mime_message_set_header (msg, "References", "<asdf@foo.com>");
++  g_mime_object_set_header ((GMimeObject *) msg, "References", "<asdf@foo.com>");
+   cpch = "How Fascinating!\n"
+          "\n"
+          "> Blah blah blah.\n";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -216,7 +230,7 @@ int main (void)
+   g_mime_object_remove_header (GMIME_OBJECT(msg), "References");
+ 
+   // top posting
+-  g_mime_message_set_header (msg, "References", "<asdf@foo.com>");
++  g_mime_object_set_header ((GMimeObject *) msg, "References", "<asdf@foo.com>");
+   cpch = "How Fascinating!\n"
+          "\n"
+          "> Blah blah blah.\n"
+@@ -224,7 +238,7 @@ int main (void)
+          "-- \n"
+          "Pan shouldn't mistake this signature for\n"
+          "original content in the top-posting check.\n";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+@@ -238,7 +252,7 @@ int main (void)
+          "\n"
+          "--\n"
+          "This is my signature.\n";
+-  g_mime_part_set_content (part, cpch, strlen(cpch));
++  mime_part_set_content (part, cpch);
+   MessageCheck :: message_check (msg, attribution, groups_our_server_has, errors, goodness);
+   e.assign (errors.begin(), errors.end());
+   check (errors.size() == 1)
+diff --git a/pan/usenet-utils/message-check.cc b/pan/usenet-utils/message-check.cc
+index 922f365..7174818 100644
+--- a/pan/usenet-utils/message-check.cc
++++ b/pan/usenet-utils/message-check.cc
+@@ -30,6 +30,7 @@ extern "C" {
+ #include "gnksa.h"
+ #include "message-check.h"
+ #include "text-massager.h"
++#include "mime-utils.h"
+ 
+ using namespace pan;
+ 
+@@ -62,7 +63,7 @@ namespace
+       std::string body (body_in.to_string());
+ 
+       // strip attribution
+-      const char * attribution = g_mime_message_get_header (message, PAN_ATTRIBUTION);
++      const char * attribution = g_mime_object_get_header ((GMimeObject *) message, PAN_ATTRIBUTION);
+       if (attribution && *attribution)
+       {
+          std::string::size_type attrib_start_pos = body.find (attribution);
+@@ -99,7 +100,7 @@ namespace
+                     GMimeMessage           * message)
+   {
+     // if it's not a reply, then top-posting check is moot
+-    if (g_mime_message_get_header (message, "References") == NULL)
++    if (g_mime_object_get_header ((GMimeObject *) message, "References") == NULL)
+       return;
+ 
+     bool quoted_found (false);
+@@ -414,7 +415,6 @@ namespace
+   }
+ }
+ 
+-
+ void
+ MessageCheck :: message_check (const GMimeMessage * message_const,
+                                const StringView   & attribution,
+@@ -432,7 +432,7 @@ MessageCheck :: message_check (const GMimeMessage * message_const,
+   check_subject (errors, goodness, g_mime_message_get_subject (message));
+ 
+   // check the author...
+-  if (GNKSA::check_from (g_mime_message_get_header (message, "From"), true)) {
++  if (GNKSA::check_from (g_mime_object_get_header ((GMimeObject *) message, "From"), true)) {
+     errors.insert (_("Error: Bad email address."));
+     goodness.raise_to_warn ();
+   }
+@@ -440,17 +440,17 @@ MessageCheck :: message_check (const GMimeMessage * message_const,
+   // check the body...
+   TextMassager tm;
+   gboolean is_html;
+-  char * body = g_mime_message_get_body (message, true, &is_html);
++  char * body = pan_g_mime_message_get_body (message, &is_html);
+   if (is_html) {
+     errors.insert (_("Warning: Most newsgroups frown upon HTML posts."));
+     goodness.raise_to_warn ();
+   }
+   check_body (errors, goodness, tm, message, body, attribution);
+   g_free (body);
+-
++  
+   // check the optional followup-to...
+   bool followup_to_set (false);
+-  const char * cpch = g_mime_message_get_header (message, "Followup-To");
++  const char * cpch = g_mime_object_get_header ((GMimeObject *) message, "Followup-To");
+   if (cpch && *cpch) {
+     quarks_t groups;
+     get_nntp_rcpts (cpch, groups);
+@@ -460,7 +460,7 @@ MessageCheck :: message_check (const GMimeMessage * message_const,
+ 
+   // check the groups...
+   size_t group_qty (0);
+-  cpch = g_mime_message_get_header (message, "Newsgroups");
++  cpch = g_mime_object_get_header ((GMimeObject *) message, "Newsgroups");
+   if (cpch && *cpch) {
+     quarks_t groups;
+     get_nntp_rcpts (cpch, groups);
+@@ -469,7 +469,7 @@ MessageCheck :: message_check (const GMimeMessage * message_const,
+   }
+ 
+   // one last error check
+-  const InternetAddressList * list (g_mime_message_get_recipients (message, GMIME_RECIPIENT_TYPE_TO));
++  InternetAddressList * list (g_mime_message_get_recipients (message, GMIME_RECIPIENT_TYPE_TO));
+   const int n_to (internet_address_list_length (list));
+   if (!group_qty && !n_to) {
+     errors.insert (_("Error: No Recipients."));
+diff --git a/pan/usenet-utils/mime-utils.cc b/pan/usenet-utils/mime-utils.cc
+index 80a5546..61378f9 100644
+--- a/pan/usenet-utils/mime-utils.cc
++++ b/pan/usenet-utils/mime-utils.cc
+@@ -31,6 +31,7 @@ extern "C"
+ #include <pan/general/macros.h>
+ #include <pan/general/messages.h>
+ #include <pan/general/string-view.h>
++#include <pan/general/log.h>
+ #include "mime-utils.h"
+ 
+ #define is_nonempty_string(a) ((a) && (*a))
+@@ -359,7 +360,7 @@ namespace
+ namespace
+ {
+   guint
+-  stream_readln (GMimeStream *stream, GByteArray *line, off_t* startpos)
++  stream_readln (GMimeStream *stream, GByteArray *line, gint64* startpos)
+   {
+     char linebuf[1024];
+     gssize len;
+@@ -441,12 +442,13 @@ namespace
+     return 0;
+   }
+ 
+-  void append_if_not_present (temp_parts_t& parts, TempPart * part)
++  bool append_if_not_present (temp_parts_t& parts, TempPart * part)
+   {
+     foreach (temp_parts_t, parts, it)
+       if (part == *it)
+-        return;
++        return false;
+     parts.push_back (part);
++    return true;
+   }
+ 
+   void apply_source_and_maybe_filter (TempPart * part, GMimeStream * s)
+@@ -455,10 +457,10 @@ namespace
+       part->stream = g_mime_stream_mem_new ();
+       if (part->type != ENC_PLAIN) {
+ 	part->filter_stream =
+-	  g_mime_stream_filter_new_with_stream (part->stream);
++	  g_mime_stream_filter_new (part->stream);
+         part->filter = part->type == ENC_UU
+-	  ? g_mime_filter_basic_new_type (GMIME_FILTER_BASIC_UU_DEC)
+-	  : g_mime_filter_yenc_new (GMIME_FILTER_YENC_DIRECTION_DECODE);
++	  ? g_mime_filter_basic_new (GMIME_CONTENT_ENCODING_UUENCODE, FALSE)
++	  : g_mime_filter_yenc_new (FALSE);
+ 	g_mime_stream_filter_add (GMIME_STREAM_FILTER(part->filter_stream),
+                                   part->filter);
+       }
+@@ -468,25 +470,37 @@ namespace
+ 				   part->stream : part->filter_stream);
+     g_object_unref (s);
+   }
+-}
+ 
+-static void
+-separate_encoded_parts (GMimeStream  * istream,
+-                        temp_parts_t & appendme)
++  struct sep_state
++  {
++    temp_parts_t master_list;
++    temp_parts_t current_list;
++    TempPart *uu_temp;
++    
++    sep_state():uu_temp(NULL) {};
++  };
++  
++bool
++separate_encoded_parts (GMimeStream  * istream, sep_state &state)
+ {
++  temp_parts_t& master(state.master_list);
++  temp_parts_t& appendme(state.current_list);
+ 	TempPart * cur = NULL;
+ 	EncType type = ENC_PLAIN;
+ 	GByteArray * line;
+ 	gboolean yenc_looking_for_part_line = FALSE;
+-	off_t linestart_pos = 0;
+-	off_t sub_begin = 0;
++	gint64 linestart_pos = 0;
++	gint64 sub_begin = 0;
+ 	guint line_len;
++  bool found=false;
+ 
+ 	/* sanity clause */
+-	pan_return_if_fail (istream!=NULL);
++	pan_return_val_if_fail (istream!=NULL,false);
+ 
+ 	sub_begin = 0;
+ 	line = g_byte_array_sized_new (4096);
++  char *line_str, *pch;
++  
+ 	while ((line_len = stream_readln (istream, line, &linestart_pos)))
+ 	{
+ 		char * line_str = (char*) line->data;
+@@ -507,30 +521,35 @@ separate_encoded_parts (GMimeStream  * istream,
+ 					gulong mode = 0ul;
+ 					char * filename = NULL;
+ 
++          found=true;
+ 					// flush the current entry
+ 					if (cur != NULL) {
+ 						GMimeStream * s = g_mime_stream_substream (istream, sub_begin, linestart_pos);
+   						apply_source_and_maybe_filter (cur, s);
+-						append_if_not_present (appendme, cur);
++            if ( append_if_not_present (master, cur) )
++              append_if_not_present (appendme, cur);
+ 						cur = NULL;
+ 					}
+ 
+ 					// start a new section (or, if filename matches, continue an existing one)
+ 					sub_begin = linestart_pos;
+ 					uu_parse_begin_line (line_pstr, &filename, &mode);
+-  					cur = find_filename_part (appendme, filename);
+-                                        if (cur)
++  				cur = find_filename_part (master, filename);
++          if (cur)
+ 						g_free (filename);
+ 					else
+ 						cur = new TempPart (type=ENC_UU, filename);
++          state.uu_temp=cur;
+ 				}
+ 				else if (yenc_is_beginning_line (line_str))
+ 				{
++          found=true;
+ 					// flush the current entry
+ 					if (cur != NULL) {
+ 						GMimeStream * s = g_mime_stream_substream (istream, sub_begin, linestart_pos);
+   						apply_source_and_maybe_filter (cur, s);
+-						append_if_not_present (appendme, cur);
++            if ( append_if_not_present (master, cur) )
++              append_if_not_present (appendme, cur);
+ 						cur = NULL;
+ 					}
+ 					sub_begin = linestart_pos;
+@@ -539,7 +558,7 @@ separate_encoded_parts (GMimeStream  * istream,
+ 					char * fname;
+ 					int line_len, attach_size, part;
+ 					yenc_parse_begin_line (line_str, &fname, &line_len, &attach_size, &part);
+-					cur = find_filename_part (appendme, fname);
++					cur = find_filename_part (master, fname);
+ 					if (cur) {
+ 						g_free (fname);
+             g_mime_filter_yenc_set_state (GMIME_FILTER_YENC (cur->filter),
+@@ -554,6 +573,23 @@ separate_encoded_parts (GMimeStream  * istream,
+ 						yenc_looking_for_part_line = cur->y_part!=0;
+ 					}
+ 				}
++        else if (state.uu_temp != NULL && is_uu_line(line_str, line_len) )
++        {
++          // continue an incomplete uu decode
++          found=true;
++					// flush the current entry
++					if (cur != NULL) {
++						GMimeStream * s = g_mime_stream_substream (istream, sub_begin, linestart_pos);
++  						apply_source_and_maybe_filter (cur, s);
++            if ( append_if_not_present (master, cur) )
++              append_if_not_present (appendme, cur);
++						cur = NULL;
++					}
++					sub_begin = linestart_pos;
++          cur = state.uu_temp;
++          ++cur->valid_lines;
++          type=ENC_UU;
++        }
+ 				else if (cur == NULL)
+ 				{
+ 					sub_begin = linestart_pos;
+@@ -570,11 +606,13 @@ separate_encoded_parts (GMimeStream  * istream,
+ 					if (sub_begin < 0)
+ 						sub_begin = linestart_pos;
+ 					stream = g_mime_stream_substream (istream, sub_begin, linestart_pos+line_len);
+-  					apply_source_and_maybe_filter (cur, stream);
+-					append_if_not_present (appendme, cur);
++          apply_source_and_maybe_filter (cur, stream);
++					if( append_if_not_present (master, cur) )
++            append_if_not_present (appendme, cur);
+ 
+ 					cur = NULL;
+ 					type = ENC_PLAIN;
++          state.uu_temp=NULL;
+ 				}
+ 				else if (!is_uu_line(line_str, line_len))
+ 				{
+@@ -606,7 +644,8 @@ separate_encoded_parts (GMimeStream  * istream,
+ 					GMimeStream * stream = g_mime_stream_substream (istream, sub_begin, linestart_pos+line_len);
+   					apply_source_and_maybe_filter (cur, stream);
+ 					yenc_parse_end_line (line_str, &cur->y_size, NULL, &cur->y_pcrc, &cur->y_crc);
+-					append_if_not_present (appendme, cur);
++					if( append_if_not_present (master, cur) )
++            append_if_not_present (appendme, cur);
+ 
+ 					cur = NULL;
+ 					type = ENC_PLAIN;
+@@ -639,12 +678,16 @@ separate_encoded_parts (GMimeStream  * istream,
+ 		if (cur->valid_lines < 10u)
+ 			cur->type = ENC_PLAIN;
+ 
+-		append_if_not_present (appendme, cur);
++    if( append_if_not_present (master, cur) )
++      append_if_not_present (appendme, cur);
+ 		cur = NULL;
+ 		type = ENC_PLAIN;
+ 	}
+ 
+ 	g_byte_array_free (line, TRUE);
++  return found;
++}
++
+ }
+ 
+ void
+@@ -718,22 +761,47 @@ mime :: guess_part_type_from_filename (const char   * filename,
+ 
+ namespace
+ {
+-  void handle_uu_and_yenc_in_text_plain (GMimeObject **part)
++  void
++  ptr_array_insert (GPtrArray *array, guint index, gpointer object)
++  {
++    unsigned char *dest, *src;
++    guint n;
++    
++    g_ptr_array_set_size (array, array->len + 1);
++    
++    if (index != array->len) {
++      /* need to move items down */
++      dest = ((unsigned char *) array->pdata) + (sizeof (void *) * (index + 1));
++      src = ((unsigned char *) array->pdata) + (sizeof (void *) * index);
++      n = array->len - index - 1;
++      
++      g_memmove (dest, src, (sizeof (void *) * n));
++    }
++    
++    array->pdata[index] = object;
++  }
++  
++  void handle_uu_and_yenc_in_text_plain_cb (GMimeObject *parent, GMimeObject *part, gpointer data)
+   {
+     // if the part is a multipart, check its subparts
+     if (GMIME_IS_MULTIPART (*part)) {
+-      GList * subparts = GMIME_MULTIPART (*part)->subparts;
+-      while (subparts) {
+-        GMimeObject * subpart = (GMimeObject *) subparts->data;
++      GMimeMultipart *multipart = (GMimeMultipart *) *part;
++      int count = g_mime_multipart_get_count(multipart);
++      int i;
++      for (i = 0; i < count; i++) {
++        GMimeObject * subpart = g_mime_multipart_remove_at (multipart, i);
++        //work around possible gmime bug
++        if(!subpart)
++          continue;
+         handle_uu_and_yenc_in_text_plain (&subpart);
+-        subparts->data = subpart;
+-        subparts = subparts->next;
++        g_mime_multipart_insert (multipart, i, subpart);
++        g_object_unref (subpart);
+       }
+       return;
+     }
+ 
+     // we assume that inlined yenc and uu are only in text/plain blocks
+-    const GMimeContentType * content_type = g_mime_object_get_content_type (*part);
++    GMimeContentType * content_type = g_mime_object_get_content_type (*part);
+     if (!g_mime_content_type_is_type (content_type, "text", "plain"))
+       return;
+ 
+@@ -746,50 +814,110 @@ namespace
+     GMimeStream * stream = g_mime_data_wrapper_get_stream (content);
+     g_mime_stream_reset (stream);
+     GMimeStream * istream = g_mime_stream_buffer_new (stream, GMIME_STREAM_BUFFER_BLOCK_READ);
+-    g_object_unref (stream);
+-    g_object_unref (content);
+ 
+     // break it into separate parts for text, uu, and yenc pieces.
+-    temp_parts_t parts;
+-    separate_encoded_parts (istream, parts);
++    sep_state &state(*(sep_state*)data);
++    temp_parts_t &parts(state.current_list);
++    bool split=separate_encoded_parts (istream, state);
+     g_mime_stream_reset (istream);
+ 
+     // split?
+-    if (parts.size()>1 || (parts.size()==1 && parts.front()->type!=ENC_PLAIN))
++    if(split)
+     {
+-      GMimeMultipart * multipart = g_mime_multipart_new_with_subtype ("mixed");
+-		
+-      foreach (temp_parts_t, parts, it)
++      //this part was completely folded into a previous part
++      //so delete it
++      if(parts.size()==0) {
++        GMimeMultipart *mp=GMIME_MULTIPART (parent);
++        int index=g_mime_multipart_index_of (mp,part);
++        if(index>0)
++          g_mime_multipart_remove_at (mp,index);
++        g_object_unref(part);
++      }
++      else
+       {
+-        const TempPart * tmp_part (*it);
+-			
+-        const char * type = "text";
+-        const char * subtype = "plain";
+-        const char * filename = tmp_part->filename;
+-        if (filename && *filename)
+-          mime::guess_part_type_from_filename (filename, &type, &subtype);
+-
+-        GMimePart * subpart = g_mime_part_new_with_type (type, subtype);
+-        if (filename && *filename)
+-          g_mime_part_set_filename (subpart, filename);
+-
+-        GMimeStream * subpart_stream = tmp_part->stream;
+-        content = g_mime_data_wrapper_new_with_stream (subpart_stream, GMIME_PART_ENCODING_DEFAULT);
+-        g_mime_part_set_content_object (subpart, content);
+-        g_mime_multipart_add_part (GMIME_MULTIPART (multipart), GMIME_OBJECT (subpart));
+-
+-        g_object_unref (content);
+-        g_object_unref (subpart);
++        GMimeMultipart * multipart = g_mime_multipart_new_with_subtype ("mixed");
++      
++        const TempPart *tmp_part;
++        const char *filename;
++        GMimePart *subpart;
++        GMimeStream *subpart_stream;
++        foreach (temp_parts_t, parts, it)
++        {
++          // reset these for each part
++          const char * type = "text";
++          const char * subtype = "plain";
++          tmp_part = *it;
++          filename = tmp_part->filename;
++
++          if (filename && *filename)
++            mime::guess_part_type_from_filename (filename, &type, &subtype);
++
++          subpart = g_mime_part_new_with_type (type, subtype);
++          if (filename && *filename)
++            g_mime_part_set_filename (subpart, filename);
++
++          subpart_stream = tmp_part->stream;
++          content = g_mime_data_wrapper_new_with_stream (subpart_stream, GMIME_CONTENT_ENCODING_DEFAULT);
++          g_mime_part_set_content_object (subpart, content);
++          g_mime_multipart_add (GMIME_MULTIPART (multipart), GMIME_OBJECT (subpart));
++
++          g_object_unref (content);
++          g_object_unref (subpart);
++        }
++      
++        // replace the old part with the new multipart
++        GMimeObject *newpart=GMIME_OBJECT(multipart);
++        if(parts.size()==1)
++        {
++          //only one part so no need for multipart
++          newpart=g_mime_multipart_remove_at(multipart,0);
++          g_object_unref(multipart);
++        }
++        if(GMIME_IS_MULTIPART(parent))
++        {
++          GMimeMultipart *mp=GMIME_MULTIPART (parent);
++          int index=g_mime_multipart_index_of (mp,part);
++          g_mime_multipart_remove_at (mp,index);
++          g_object_unref (part);
++          
++          //workaround gmime insert bug
++          //g_mime_multipart_insert (mp,index,newpart);
++          {
++            ptr_array_insert(mp->children,index,newpart);
++            g_object_ref(newpart);
++          }
++        }
++        else if(GMIME_IS_MESSAGE(parent))
++        {
++          g_mime_message_set_mime_part((GMimeMessage*)parent,newpart);
++        }
++        g_object_unref(newpart);
+       }
+-		
+-      // replace the old part with the new multipart
+-      g_mime_object_unref (*part);
+-      *part = GMIME_OBJECT (multipart);
+     }
++    parts.clear();
++    g_object_unref (istream);
++  }
++}
+ 
+-    foreach (temp_parts_t, parts, it)
+-      delete *it;
+-    g_mime_stream_unref (istream);
++namespace{
++  struct temp_p {
++    GMimeObject *parent,*part;
++    
++    temp_p(GMimeObject *p, GMimeObject *par):parent(p),part(par) {};
++  };
++  typedef std::vector<temp_p> temp_p_t;
++
++  void find_text_cb(GMimeObject *parent, GMimeObject *part, gpointer data)
++  {
++    if(!GMIME_IS_PART(part))
++      return;
++      
++    temp_p_t *v( (temp_p_t *) data);
++    // we assume that inlined yenc and uu are only in text/plain blocks
++    GMimeContentType * content_type = g_mime_object_get_content_type (part);
++    if (!g_mime_content_type_is_type (content_type, "text", "plain"))
++      return;
++    v->push_back(temp_p(parent,part) );
+   }
+ }
+ 
+@@ -810,7 +938,7 @@ mime :: construct_message (GMimeStream  ** istreams,
+   pan_return_val_if_fail (qty>=1, NULL);
+   for (int i=0; i<qty; ++i)
+     pan_return_val_if_fail (GMIME_IS_STREAM(istreams[i]), NULL);
+-
++  
+   // build the GMimeMessages
+   GMimeParser * parser = g_mime_parser_new ();
+   GMimeMessage ** messages = g_new (GMimeMessage*, qty);
+@@ -819,28 +947,18 @@ mime :: construct_message (GMimeStream  ** istreams,
+     messages[i] = g_mime_parser_construct_message (parser);
+   }
+   g_object_unref (parser);
+-
++  
+   if (qty > 1) // fold multiparts together
+   {
+-    GMimeStream * cat = g_mime_stream_cat_new ();
++    GMimeMultipart * mp = g_mime_multipart_new ();
+     
+     for (int i=0; i<qty; ++i)
+     {
+-      GMimeMessage * message = messages[i];
+-      GMimeDataWrapper * wrapper = g_mime_part_get_content_object (GMIME_PART(message->mime_part));
+-      GMimeStream * stream = g_mime_data_wrapper_get_stream (wrapper);
+-      g_mime_stream_reset (stream);
+-      g_mime_stream_cat_add_source (GMIME_STREAM_CAT (cat), stream);
+-      g_object_unref (stream);
+-      g_object_unref (wrapper);
++      g_mime_multipart_add(mp,g_mime_message_get_mime_part(messages[i]) );
+     }
+ 
+-    GMimeMessage * message = messages[0];
+-    GMimeDataWrapper * wrapper = g_mime_part_get_content_object (GMIME_PART(message->mime_part));
+-    g_mime_stream_reset (cat);
+-    g_mime_data_wrapper_set_stream (wrapper, cat);
+-    g_object_unref (wrapper);
+-    g_object_unref (cat);
++    g_mime_message_set_mime_part(messages[0],GMIME_OBJECT(mp));
++    g_object_unref(mp);
+   }
+ 
+   retval = messages[0];
+@@ -848,10 +966,21 @@ mime :: construct_message (GMimeStream  ** istreams,
+     g_object_unref (messages[i]);
+ 
+   // pick out yenc and uuenc data in text/plain messages
++  temp_p_t partslist;
++  sep_state state;
+   if (retval != NULL)
+-    handle_uu_and_yenc_in_text_plain (&retval->mime_part);
+-
++    g_mime_message_foreach(retval,find_text_cb,&partslist);
++  foreach(temp_p_t, partslist, it)
++  {
++    temp_p &data(*it);
++    handle_uu_and_yenc_in_text_plain_cb(data.parent,data.part,&state);
++  }
++  
+   // cleanup
++  foreach (temp_parts_t, state.master_list, it)
++  {
++    delete *it;
++  }
+   g_free (messages);
+   return retval;
+ }
+@@ -1007,3 +1136,155 @@ mime :: remove_multipart_part_from_subject (const StringView    & subject,
+ {
+   normalize_subject (subject, STRIP_MULTIPART_NUMERATOR, setme);
+ }
++
++namespace
++{
++GMimeObject *
++handle_multipart_mixed (GMimeMultipart *multipart, gboolean *is_html);
++
++GMimeObject *
++handle_multipart_alternative (GMimeMultipart *multipart, gboolean *is_html)
++{
++        GMimeObject *mime_part, *text_part = NULL;
++        GMimeContentType *type;
++        int count = g_mime_multipart_get_count (multipart);
++
++        for (int i = 0; i < count; ++i) {
++                mime_part = g_mime_multipart_get_part (multipart, i);
++
++                type = g_mime_object_get_content_type (mime_part);
++                if (g_mime_content_type_is_type (type, "text", "*")) {
++                        if (!text_part || !g_ascii_strcasecmp (type->subtype, "plain")) {
++                                *is_html = !g_ascii_strcasecmp (type->subtype, "html");
++                                text_part = mime_part;
++                        }
++                }
++        }
++
++        return text_part;
++}
++
++GMimeObject *
++handle_multipart_mixed (GMimeMultipart *multipart, gboolean *is_html)
++{
++        GMimeObject *mime_part, *text_part = NULL;
++        GMimeContentType *type, *first_type = NULL;
++        int count = g_mime_multipart_get_count (multipart);
++
++        for (int i = 0; i < count; ++i) {
++                mime_part = g_mime_multipart_get_part (multipart, i);
++
++                type = g_mime_object_get_content_type (mime_part);
++                if (GMIME_IS_MULTIPART (mime_part)) {
++                        multipart = GMIME_MULTIPART (mime_part);
++                        if (g_mime_content_type_is_type (type, "multipart", "alternative")) {
++                                mime_part = handle_multipart_alternative (multipart, is_html);
++                                if (mime_part)
++                                        return mime_part;
++                        } else {
++                                mime_part = handle_multipart_mixed (multipart, is_html);
++                                if (mime_part && !text_part)
++                                        text_part = mime_part;
++                        }
++                } else if (g_mime_content_type_is_type (type, "text", "*")) {
++                        if (!g_ascii_strcasecmp (type->subtype, "plain")) {
++                                /* we got what we came for */
++                                *is_html = !g_ascii_strcasecmp (type->subtype, "html");
++                                return mime_part;
++                        }
++
++                        /* if we haven't yet found a text part or if it is a type we can
++ *                          * understand and it is the first of that type, save it */
++                        if (!text_part || (!g_ascii_strcasecmp (type->subtype, "plain") && (first_type &&
++                                           g_ascii_strcasecmp (type->subtype, first_type->subtype) != 0))) {
++                                *is_html = !g_ascii_strcasecmp (type->subtype, "html");
++                                text_part = mime_part;
++                                first_type = type;
++                        }
++                }
++        }
++
++        return text_part;
++}
++
++}
++#define NEEDS_DECODING(encoding) ((encoding == GMIME_CONTENT_ENCODING_BASE64) ||   \
++                                  (encoding == GMIME_CONTENT_ENCODING_UUENCODE) || \
++                                  (encoding == GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE))
++
++namespace
++{
++char *
++pan_g_mime_part_get_content (const GMimePart *mime_part, size_t *len)
++{
++        char *retval = NULL;
++
++        g_return_val_if_fail (GMIME_IS_PART (mime_part), NULL);
++
++        if (!mime_part->content || !mime_part->content->stream) {
++                g_warning ("no content set on this mime part");
++                return NULL;
++        }
++
++        GMimeDataWrapper *wrapper = g_mime_part_get_content_object(mime_part);
++        GMimeStream *stream = g_mime_stream_mem_new();
++        g_mime_data_wrapper_write_to_stream (wrapper, stream);
++        GByteArray *bytes=g_mime_stream_mem_get_byte_array((GMimeStreamMem*)stream);
++        *len=bytes->len+1;
++        if (bytes->len)
++        {
++          retval=(char*)g_malloc0(bytes->len+1);
++          memcpy(retval,bytes->data,bytes->len);
++        }
++        g_object_unref(stream);
++
++        return retval;
++}
++}
++
++char *pan::pan_g_mime_message_get_body (GMimeMessage *message, gboolean *is_html)
++{
++        GMimeObject *mime_part = NULL;
++        GMimeContentType *type;
++        GMimeMultipart *multipart;
++        char *body = NULL;
++        size_t len = 0;
++
++        g_return_val_if_fail (GMIME_IS_MESSAGE (message), NULL);
++        g_return_val_if_fail (is_html != NULL, NULL);
++
++        type = g_mime_object_get_content_type (message->mime_part);
++        if (GMIME_IS_MULTIPART (message->mime_part)) {
++                /* let's see if we can find a body in the multipart */
++                multipart = GMIME_MULTIPART (message->mime_part);
++                if (g_mime_content_type_is_type (type, "multipart", "alternative"))
++                        mime_part = handle_multipart_alternative (multipart, is_html);
++                else
++                        mime_part = handle_multipart_mixed (multipart, is_html);
++        } else if (g_mime_content_type_is_type (type, "text", "*")) {
++                /* this *has* to be the message body */
++                if (g_mime_content_type_is_type (type, "text", "html"))
++                        *is_html = TRUE;
++                else
++                        *is_html = FALSE;
++                mime_part = message->mime_part;
++        }
++
++        if (mime_part != NULL) {
++                body = pan_g_mime_part_get_content (GMIME_PART (mime_part), &len);
++        }
++
++        return body;
++}
++
++void pan::pan_g_mime_message_add_recipients_from_string (GMimeMessage *message, GMimeRecipientType type, const char *string)
++{
++        InternetAddressList *addrlist;
++        if ((addrlist = internet_address_list_parse_string (string))) {
++        	for (int i = 0; i < internet_address_list_length (addrlist); ++i) {
++                	InternetAddress *ia = internet_address_list_get_address (addrlist, i);
++                	if (INTERNET_ADDRESS_IS_MAILBOX(ia))
++				g_mime_message_add_recipient (message, type, internet_address_get_name(ia), internet_address_mailbox_get_addr(INTERNET_ADDRESS_MAILBOX(ia)));
++		}
++        }
++}
+diff --git a/pan/usenet-utils/mime-utils.h b/pan/usenet-utils/mime-utils.h
+index 4e05892..fbfa71c 100644
+--- a/pan/usenet-utils/mime-utils.h
++++ b/pan/usenet-utils/mime-utils.h
+@@ -62,6 +62,12 @@ namespace pan
+                                         std::string         & setme);
+ 
+   };
++
++  char *pan_g_mime_message_get_body (GMimeMessage *message, gboolean *is_html);
++  void pan_g_mime_message_add_recipients_from_string (GMimeMessage *message, GMimeRecipientType type, const char *string);
++
+ }
+ 
++
++
+ #endif
