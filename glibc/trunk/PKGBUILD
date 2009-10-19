@@ -2,12 +2,12 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Maintainer: Allan McRae <allan@archlinux.org>
 
-# toolchain build order: kernel-headers->glibc->binutils->gcc-libs->gcc->binutils->glibc
+# toolchain build order: kernel-headers->glibc->binutils->gcc->binutils->glibc
 
 pkgname=glibc
 pkgver=2.10.1
-pkgrel=4
-_glibcdate=20090511
+pkgrel=5
+_glibcdate=20091018
 install=glibc.install
 backup=(etc/locale.gen
         etc/nscd.conf)
@@ -16,20 +16,22 @@ arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
 groups=('base')
-depends=('kernel-headers>=2.6.30.5' 'tzdata')
+depends=('kernel-headers>=2.6.31.4' 'tzdata')
 makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
         glibc-2.10-dont-build-timezone.patch
         glibc-2.10-bz4781.patch
-        signalfd-compat.patch
+        formatting-integer-overflow.patch
+        binutils-2.20.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('7a34595abeeedb9aab758aa51d09ed88'
+md5sums=('87e9009100427505ef1a0091ae4f4eaa'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
-         '48996ab265324683704b72d5522cae4b'
+         '977f3323b51008604acb5297ee76a470'
+         '3011eb913d9807bc3fbb72ebff3ae136'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -41,7 +43,8 @@ build() {
   #cd ${srcdir}/glibc-${pkgver}_${_glibcdate}
   #git clone git://sourceware.org/git/glibc.git
   #pushd glibc
-  #git checkout --track -b glibc-${pkgver} origin/cvs/glibc-2_10-branch
+  #git checkout -b glibc-2.10-arch origin/cvs/glibc-2_10-branch
+  #git merge origin/release/2.10/master     #proposed 2.10 maintenance branch
   #popd
   #tar -cvjf ${startdir}/glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
   #return 1
@@ -54,8 +57,12 @@ build() {
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=4781
   patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch || return 1
 
-  #Compatibility with older kernels that have no signalfd4 but do have signalfd
-  patch -Np1 -i "${srcdir}/signalfd-compat.patch" || return 1
+  #Fix integer overflow vulnerability in formatting functions
+  #http://sources.redhat.com/bugzilla/show_bug.cgi?id=10600
+  patch -Np1 -i ${srcdir}/formatting-integer-overflow.patch || return 1  
+
+  #Fix detection of binutils-2.20
+  patch -Np1 -i ${srcdir}/binutils-2.20.patch || return 1
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -80,7 +87,10 @@ build() {
   make || return 1
   make install_root=${pkgdir} install || return 1
 
-  rm -f ${pkgdir}/etc/ld.so.cache ${pkgdir}/etc/ld.so.conf ${pkgdir}/etc/localtime
+  # provided by kernel-headers
+  rm ${pkgdir}/usr/include/scsi/scsi.h
+
+  rm ${pkgdir}/etc/ld.so.cache ${pkgdir}/etc/ld.so.conf ${pkgdir}/etc/localtime
 
   install -dm755 ${pkgdir}/etc/rc.d
   install -dm755 ${pkgdir}/usr/sbin
@@ -108,6 +118,4 @@ build() {
     ln -v -s ../lib/ld* .
   fi
 
-  rm -f ${pkgdir}/usr/share/info/dir
-  gzip -9 ${pkgdir}/usr/share/info/*
 }
