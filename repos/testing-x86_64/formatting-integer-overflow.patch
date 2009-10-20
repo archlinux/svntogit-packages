@@ -1,0 +1,144 @@
+From 199eb0de8d673fb23aa127721054b4f1803d61f3 Mon Sep 17 00:00:00 2001
+From: Andreas Schwab <schwab@redhat.com>
+Date: Tue, 29 Sep 2009 06:11:59 -0700
+Subject: [PATCH] Check for integer overflows in formatting functions
+
+---
+ stdio-common/printf_fp.c |   11 ++++++++-
+ stdio-common/vfprintf.c  |   49 +++++++++++++++++++++++++++++----------------
+ 3 files changed, 45 insertions(+), 20 deletions(-)
+
+diff --git a/stdio-common/printf_fp.c b/stdio-common/printf_fp.c
+index cd3ada6..b60ddec 100644
+--- a/stdio-common/printf_fp.c
++++ b/stdio-common/printf_fp.c
+@@ -891,8 +891,15 @@ ___printf_fp (FILE *fp,
+        it is possible that we need two more characters in front of all the
+        other output.  If the amount of memory we have to allocate is too
+        large use `malloc' instead of `alloca'.  */
+-    size_t wbuffer_to_alloc = (2 + (size_t) chars_needed) * sizeof (wchar_t);
+-    buffer_malloced = ! __libc_use_alloca (chars_needed * 2 * sizeof (wchar_t));
++    if (__builtin_expect (chars_needed >= (size_t) -1 / sizeof (wchar_t) - 2
++			  || chars_needed < fracdig_max, 0))
++      {
++	/* Some overflow occurred.  */
++	__set_errno (ERANGE);
++	return -1;
++      }
++    size_t wbuffer_to_alloc = (2 + chars_needed) * sizeof (wchar_t);
++    buffer_malloced = ! __libc_use_alloca (wbuffer_to_alloc);
+     if (__builtin_expect (buffer_malloced, 0))
+       {
+ 	wbuffer = (wchar_t *) malloc (wbuffer_to_alloc);
+diff --git a/stdio-common/vfprintf.c b/stdio-common/vfprintf.c
+index 38ba8ff..6e0e85c 100644
+--- a/stdio-common/vfprintf.c
++++ b/stdio-common/vfprintf.c
+@@ -1439,23 +1439,29 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap)
+ 	    left = 1;
+ 	  }
+ 
+-	if (width + 32 >= (int) (sizeof (work_buffer)
+-				 / sizeof (work_buffer[0])))
++	if (__builtin_expect (width >= (size_t) -1 / sizeof (CHAR_T) - 32, 0))
++	  {
++	    __set_errno (ERANGE);
++	    done = -1;
++	    goto all_done;
++	  }
++
++	if (width >= sizeof (work_buffer) / sizeof (work_buffer[0]) - 32)
+ 	  {
+ 	    /* We have to use a special buffer.  The "32" is just a safe
+ 	       bet for all the output which is not counted in the width.  */
+-	    if (__libc_use_alloca ((width + 32) * sizeof (CHAR_T)))
+-	      workend = ((CHAR_T *) alloca ((width + 32) * sizeof (CHAR_T))
+-			 + (width + 32));
++	    size_t needed = ((size_t) width + 32) * sizeof (CHAR_T);
++	    if (__libc_use_alloca (needed))
++	      workend = (CHAR_T *) alloca (needed) + width + 32;
+ 	    else
+ 	      {
+-		workstart = (CHAR_T *) malloc ((width + 32) * sizeof (CHAR_T));
++		workstart = (CHAR_T *) malloc (needed);
+ 		if (workstart == NULL)
+ 		  {
+ 		    done = -1;
+ 		    goto all_done;
+ 		  }
+-		workend = workstart + (width + 32);
++		workend = workstart + width + 32;
+ 	      }
+ 	  }
+       }
+@@ -1465,22 +1471,29 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap)
+     LABEL (width):
+       width = read_int (&f);
+ 
+-      if (width + 32 >= (int) (sizeof (work_buffer) / sizeof (work_buffer[0])))
++      if (__builtin_expect (width >= (size_t) -1 / sizeof (CHAR_T) - 32, 0))
++	{
++	  __set_errno (ERANGE);
++	  done = -1;
++	  goto all_done;
++	}
++
++      if (width >= sizeof (work_buffer) / sizeof (work_buffer[0]) - 32)
+ 	{
+ 	  /* We have to use a special buffer.  The "32" is just a safe
+ 	     bet for all the output which is not counted in the width.  */
+-	  if (__libc_use_alloca ((width + 32) * sizeof (CHAR_T)))
+-	    workend = ((CHAR_T *) alloca ((width + 32) * sizeof (CHAR_T))
+-		       + (width + 32));
++	  size_t needed = ((size_t) width + 32) * sizeof (CHAR_T);
++	  if (__libc_use_alloca (needed))
++	    workend = (CHAR_T *) alloca (needed) + width + 32;
+ 	  else
+ 	    {
+-	      workstart = (CHAR_T *) malloc ((width + 32) * sizeof (CHAR_T));
++	      workstart = (CHAR_T *) malloc (needed);
+ 	      if (workstart == NULL)
+ 		{
+ 		  done = -1;
+ 		  goto all_done;
+ 		}
+-	      workend = workstart + (width + 32);
++	      workend = workstart + width + 32;
+ 	    }
+ 	}
+       if (*f == L_('$'))
+@@ -1510,18 +1523,18 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap)
+       else
+ 	prec = 0;
+       if (prec > width
+-	  && prec + 32 > (int)(sizeof (work_buffer) / sizeof (work_buffer[0])))
++	  && prec > sizeof (work_buffer) / sizeof (work_buffer[0]) - 32)
+ 	{
+-	  if (__builtin_expect (prec > ~((size_t) 0) / sizeof (CHAR_T) - 31,
+-				0))
++	  if (__builtin_expect (prec >= (size_t) -1 / sizeof (CHAR_T) - 32, 0))
+ 	    {
++	      __set_errno (ERANGE);
+ 	      done = -1;
+ 	      goto all_done;
+ 	    }
+ 	  size_t needed = ((size_t) prec + 32) * sizeof (CHAR_T);
+ 
+ 	  if (__libc_use_alloca (needed))
+-	    workend = (((CHAR_T *) alloca (needed)) + ((size_t) prec + 32));
++	    workend = (CHAR_T *) alloca (needed) + prec + 32;
+ 	  else
+ 	    {
+ 	      workstart = (CHAR_T *) malloc (needed);
+@@ -1530,7 +1543,7 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap)
+ 		  done = -1;
+ 		  goto all_done;
+ 		}
+-	      workend = workstart + ((size_t) prec + 32);
++	      workend = workstart + prec + 32;
+ 	    }
+ 	}
+       JUMP (*f, step2_jumps);
+-- 
+1.6.4
+
