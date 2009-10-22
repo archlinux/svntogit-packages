@@ -41,7 +41,7 @@ else
 		--data-urlencode "packages@${pkglist}" \
 		--data-urlencode "arch=$(uname -m)" \
 		--data-urlencode "pkgstatsver=${pkgstatsver}" \
-		'http://www.archlinux.de/?page=PostPackageList' \
+		'https://www.archlinux.de/?page=PostPackageList' \
 		|| echo 'Sorry, package list could not be sent.'
 fi
 
