@@ -5,7 +5,7 @@
 
 pkgbase="openoffice-base-devel"
 pkgname=('openoffice-base-devel' 'openoffice-sdk-devel')
-_OO_milestone=DEV300_m61
+_OO_milestone=DEV300_m62
 pkgver=3.2_${_OO_milestone/DEV/dev}
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -29,32 +29,20 @@ source=(${pkgname}-${_OO_milestone}.tar.gz
 	soffice-detect-mozilla-certificates.diff
 	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
-	http://www.openoffice.org/nonav/issues/showattachment.cgi/64767/openldap.patch
 	buildfix_system_db48.diff
 	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('6244c09b0b4c67519191bef0f9ec393d'
-         'e3a0b76dcd876f3d721ee7183729153d'
-         '63209bbc64c901ef105455bda0282f45'
-         '71f136a31e296a04ab68932a31dd533e'
-         '6c596129fb48316226ce3adfd3a4c86d'
-         '1dc7480a04f572ad136d35923a2af66d'
-         'c8e82b4d2324fe62ad8c6e29213e80b5'
-         '863a3ab2c17a3d11b8fa3ec321986366'
-         'a130ad960f76b692e34f8566e5ca3f2b'
-         '0cd6f3525939d3ef6e5a30ad30c25d27'
-         '8d68d44c941a687813ddd968383cdf27')
                                                                        
 # see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
 
 build() {
+	# now mercurial http://wiki.services.openoffice.org/wiki/Mercurial_Pilot and http://wiki.services.openoffice.org/wiki/OOo_and_Mercurial
+#	mkdir -p ${srcdir}/${_OO_milestone}  # needed?
 	cd ${srcdir}
-	# now svn: http://wiki.services.openoffice.org/wiki/OOo_and_Subversion
-#	svn checkout svn://svn.services.openoffice.org/ooo/tags/${_OO_milestone}
-#	find ${srcdir} -type d -depth -name ".svn" -exec rm -rf {} \;
+#	hg -v clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/DEV300 ${srcdir}/${_OO_milestone}
 #	tar -cvzf ../${pkgname}-${_OO_milestone}.tar.gz ${_OO_milestone}/*
 #	return 1
-
+	
 	cd ${srcdir}/${_OO_milestone}
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
@@ -74,7 +62,6 @@ build() {
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
-	patch -Np0 -i ${srcdir}/openldap.patch || return 1
 	patch -Np0 -i ${srcdir}/buildfix_system_db48.diff || return 1
 	
 	# allows soffice to find the user's firefox profile so that it can read
@@ -102,7 +89,7 @@ build() {
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
 	unset CXXFLAGS
-#	export ARCH_FLAGS="$CFLAGS"
+#	export ARCH_FLAGS="$CFLAGS" # causes errors
 
 	# Need to recreate the configure script because of patches
 	autoreconf -v || return 1
@@ -166,11 +153,8 @@ build() {
 
 
 #	--enable-layout\ /bin/bash: tralay: command not found ???
-
-#--with-system-jfreereport
-
+#	--with-system-jfreereport
 #	--with-system-mythes\
-
 # we will need myspell dicts for --with-system-dicts --without-myspell-dicts
 
 	# Setup environment for build
@@ -238,6 +222,16 @@ package_openoffice-base-devel() {
          install -D -m644 $i ${pkgdir}/usr/lib/openoffice/share/extension/install/$i || return 1
        done
        popd
+       
+       # install extensions
+       pushd ${srcdir}/${_OO_milestone}/solver/300/unxlng?6.pro/bin
+         install -D -m644 sun-report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/sun-report-builder.oxt || return 1
+	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/wiki-publisher.oxt || return 1
+	 install -D -m644 minimizer/sun-presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/sun-presentation-minimizer.oxt || return 1
+	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presenter-screen.oxt || return 1
+	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/pdfimport.oxt || return 1
+       popd
+
 
 	# prepare filesystem entries
 	mkdir -p ${pkgdir}/usr/{bin,share/applications}
@@ -287,6 +281,7 @@ package_openoffice-base-devel() {
 	rm -f soffice spadmin
 	ln -sf /usr/lib/openoffice-dev/program/soffice soffice-dev
 	ln -sf /usr/lib/openoffice-dev/program/spadmin spadmin-dev
+	ln -sf /usr/lib/openoffice-dev/program/unopkg unopkg-dev
 	
 	cd ${pkgdir}/usr/share/applications/
 	for desktopz in *.desktop
