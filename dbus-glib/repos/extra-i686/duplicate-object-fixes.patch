@@ -1,0 +1,418 @@
+From: Colin Walters <walters@verbum.org>
+Date: Wed, 19 Aug 2009 17:27:53 +0000 (-0400)
+Subject: Support duplicate object registrations
+X-Git-Url: http://git.collabora.co.uk/?p=user%2Fwjt%2Fdbus-glib-wjt.git;a=commitdiff_plain;h=0263b72669de710e0adda419a520ae9f123a1be9
+
+Support duplicate object registrations
+
+Before commit e869fda4, we semi-supported registering the
+same object multiple times.  We'd accept messages for both paths,
+however when signals were emitted, they'd both use the first object
+path.
+
+That commit simply disallowed multiple registrations, which broke
+backwards compatibility with some projects like PolicyKit which
+had the same object registered with different paths.
+
+With this commit, explicitly allow and support multiple registrations.
+The primary change is that signals are now emitted once for each
+registration path of an object, using the correct path.
+---
+
+diff --git a/dbus/dbus-gobject.c b/dbus/dbus-gobject.c
+index f0c4df8..fb41168 100644
+--- a/dbus/dbus-gobject.c
++++ b/dbus/dbus-gobject.c
+@@ -407,9 +407,16 @@ object_registration_free (ObjectRegistration *o)
+ {
+   if (o->object != NULL)
+     {
++      GSList *registrations;
++
++      /* Ok, the object is still around; clear out this particular registration
++       * from the registrations list.
++       */
++      registrations = g_object_steal_data (o->object, "dbus_glib_object_registrations");
++      registrations = g_slist_remove (registrations, o);
++      g_object_set_data (o->object, "dbus_glib_object_registrations", registrations);
++
+       g_object_weak_unref (o->object, object_registration_object_died, o);
+-      g_object_steal_data (o->object, "dbus_glib_object_registration");
+-      o->object = NULL;
+     }
+ 
+   g_free (o->object_path);
+@@ -1741,30 +1748,19 @@ dbus_g_signal_closure_finalize (gpointer data,
+ }
+ 
+ static void
+-signal_emitter_marshaller (GClosure        *closure,
+-			   GValue          *retval,
+-			   guint            n_param_values,
+-			   const GValue    *param_values,
+-			   gpointer         invocation_hint,
+-			   gpointer         marshal_data)
++emit_signal_for_registration (ObjectRegistration *o,
++                              DBusGSignalClosure *sigclosure,
++                              GValue             *retval,
++                              guint               n_param_values,
++                              const GValue       *param_values)
+ {
+-  DBusGSignalClosure *sigclosure;
+   DBusMessage *signal;
+   DBusMessageIter iter;
+   guint i;
+-  const char *path;
+-
+-  sigclosure = (DBusGSignalClosure *) closure;
+-  
+-  g_assert (retval == NULL);
+-
+-  path = _dbus_gobject_get_path (sigclosure->object);
+ 
+-  g_assert (path != NULL);
+-
+-  signal = dbus_message_new_signal (path,
+-				    sigclosure->sigiface,
+-				    sigclosure->signame);
++  signal = dbus_message_new_signal (o->object_path,
++                                    sigclosure->sigiface,
++                                    sigclosure->signame);
+   if (!signal)
+     {
+       g_error ("out of memory");
+@@ -1777,20 +1773,45 @@ signal_emitter_marshaller (GClosure        *closure,
+   for (i = 1; i < n_param_values; i++)
+     {
+       if (!_dbus_gvalue_marshal (&iter,
+-				(GValue *) (&(param_values[i]))))
+-	{
+-	  g_warning ("failed to marshal parameter %d for signal %s",
+-		     i, sigclosure->signame);
+-	  goto out;
+-	}
++                                (GValue *) (&(param_values[i]))))
++        {
++          g_warning ("failed to marshal parameter %d for signal %s",
++                     i, sigclosure->signame);
++          goto out;
++        }
+     }
+   dbus_connection_send (DBUS_CONNECTION_FROM_G_CONNECTION (sigclosure->connection),
+-			signal, NULL);
+- out:
++                        signal, NULL);
++out:
+   dbus_message_unref (signal);
+ }
+ 
+ static void
++signal_emitter_marshaller (GClosure        *closure,
++			   GValue          *retval,
++			   guint            n_param_values,
++			   const GValue    *param_values,
++			   gpointer         invocation_hint,
++			   gpointer         marshal_data)
++{
++  DBusGSignalClosure *sigclosure;
++  GSList *registrations, *iter;
++
++  sigclosure = (DBusGSignalClosure *) closure;
++
++  g_assert (retval == NULL);
++
++  registrations = g_object_get_data (sigclosure->object, "dbus_glib_object_registrations");
++
++  for (iter = registrations; iter; iter = iter->next)
++    {
++      ObjectRegistration *o = iter->data;
++
++      emit_signal_for_registration (o, sigclosure, retval, n_param_values, param_values);
++    }
++}
++
++static void
+ export_signals (DBusGConnection *connection, const GList *info_list, GObject *object)
+ {
+   GType gtype;
+@@ -2092,14 +2113,18 @@ void
+ dbus_g_connection_unregister_g_object (DBusGConnection *connection,
+                                        GObject *object)
+ {
+-  ObjectRegistration *o;
++  GList *registrations, *iter;
+ 
+-  o = g_object_get_data (object, "dbus_glib_object_registration");
++  registrations = g_object_get_data (object, "dbus_glib_object_registrations");
+ 
+-  g_return_if_fail (o != NULL);
++  g_return_if_fail (registrations != NULL);
+ 
+-  dbus_connection_unregister_object_path (DBUS_CONNECTION_FROM_G_CONNECTION (o->connection),
+-      o->object_path);
++  for (iter = registrations; iter; iter = iter->next)
++    {
++      ObjectRegistration *o = iter->data;
++      dbus_connection_unregister_object_path (DBUS_CONNECTION_FROM_G_CONNECTION (o->connection),
++          o->object_path);
++    }
+ }
+ 
+ /**
+@@ -2116,6 +2141,9 @@ dbus_g_connection_unregister_g_object (DBusGConnection *connection,
+  * The registration will be cancelled if either the #DBusConnection or
+  * the #GObject gets finalized, or if dbus_g_connection_unregister_g_object()
+  * is used.
++ *
++ * Note: If an object is registered multiple times, the first registration
++ * takes priority for cases such as turning an object into an object path.
+  */
+ void
+ dbus_g_connection_register_g_object (DBusGConnection       *connection,
+@@ -2123,28 +2151,44 @@ dbus_g_connection_register_g_object (DBusGConnection       *connection,
+                                      GObject               *object)
+ {
+   GList *info_list;
++  GSList *registrations, *iter;
+   ObjectRegistration *o;
++  gboolean is_first_registration;
+ 
+   g_return_if_fail (connection != NULL);
+   g_return_if_fail (at_path != NULL);
+   g_return_if_fail (G_IS_OBJECT (object));
+ 
+-  info_list = lookup_object_info (object);
+-  if (info_list == NULL)
++  /* This is a GSList of ObjectRegistration*  */
++  registrations = g_object_steal_data (object, "dbus_glib_object_registrations");
++
++  for (iter = registrations; iter; iter = iter->next)
+     {
+-      g_warning ("No introspection data registered for object class \"%s\"",
+-		 g_type_name (G_TYPE_FROM_INSTANCE (object)));
+-      return;
++      o = iter->data;
++
++      /* Silently ignore duplicate registrations */
++      if (strcmp (o->object_path, at_path) == 0)
++        return;
+     }
+ 
+-  o = g_object_get_data (object, "dbus_glib_object_registration");
++  is_first_registration = registrations == NULL;
+ 
+-  if (o != NULL)
++  /* This is used to hook up signals below, but we do this check
++   * before trying to register the object to make sure we have
++   * introspection data for it.
++   */
++  if (is_first_registration)
+     {
+-      g_warning ("Object already registered at %s, can't re-register at %s",
+-          o->object_path, at_path);
+-      return;
++      info_list = lookup_object_info (object);
++      if (info_list == NULL)
++        {
++          g_warning ("No introspection data registered for object class \"%s\"",
++                     g_type_name (G_TYPE_FROM_INSTANCE (object)));
++          return;
++        }
+     }
++  else
++    info_list = NULL;
+ 
+   o = object_registration_new (connection, at_path, object);
+ 
+@@ -2155,12 +2199,22 @@ dbus_g_connection_register_g_object (DBusGConnection       *connection,
+     {
+       g_error ("Failed to register GObject with DBusConnection");
+       object_registration_free (o);
++      g_list_free (info_list);
+       return;
+     }
+ 
+-  export_signals (connection, info_list, object);
+-  g_list_free (info_list);
+-  g_object_set_data (object, "dbus_glib_object_registration", o);
++  if (is_first_registration)
++    {
++      /* This adds a hook into every signal for the object.  Only do this
++       * on the first registration, because inside the signal marshaller
++       * we emit a signal for each registration.
++       */
++      export_signals (connection, info_list, object);
++      g_list_free (info_list);
++    }
++
++  registrations = g_slist_append (registrations, o);
++  g_object_set_data (object, "dbus_glib_object_registrations", registrations);
+ }
+ 
+ /**
+@@ -2539,15 +2593,20 @@ dbus_g_method_return_error (DBusGMethodInvocation *context, const GError *error)
+   g_free (context);
+ }
+ 
+-const char * _dbus_gobject_get_path (GObject *obj)
++const char *
++_dbus_gobject_get_path (GObject *obj)
+ {
++  GSList *registrations;
+   ObjectRegistration *o;
+ 
+-  o = g_object_get_data (obj, "dbus_glib_object_registration");
++  registrations = g_object_get_data (obj, "dbus_glib_object_registrations");
+ 
+-  if (o == NULL)
++  if (registrations == NULL)
+     return NULL;
+ 
++  /* First one to have been registered wins */
++  o = registrations->data;
++
+   return o->object_path;
+ }
+ 
+diff --git a/test/core/test-dbus-glib.c b/test/core/test-dbus-glib.c
+index c6071a7..288606f 100644
+--- a/test/core/test-dbus-glib.c
++++ b/test/core/test-dbus-glib.c
+@@ -15,6 +15,7 @@ static const char *await_terminating_service = NULL;
+ static int n_times_foo_received = 0;
+ static int n_times_frobnicate_received = 0;
+ static int n_times_frobnicate_received_2 = 0;
++static int n_times_compat_frobnicate_received = 0;
+ static int n_times_sig0_received = 0;
+ static int n_times_sig1_received = 0;
+ static int n_times_sig2_received = 0;
+@@ -139,6 +140,20 @@ frobnicate_signal_handler_2 (DBusGProxy  *proxy,
+ }
+ 
+ static void
++frobnicate_signal_handler_compat (DBusGProxy  *proxy,
++                                  int          val,
++                                  void        *user_data)
++{
++  n_times_compat_frobnicate_received += 1;
++
++  g_assert (val == 42);
++  g_print ("Got Frobnicate signal (compat)\n");
++
++  g_main_loop_quit (loop);
++  g_source_remove (exit_timeout);
++}
++
++static void
+ sig0_signal_handler (DBusGProxy  *proxy,
+ 		     const char  *str0,
+ 		     int          val,
+@@ -1886,6 +1901,32 @@ main (int argc, char **argv)
+ 
+   run_mainloop ();
+ 
++  /* Tests for a "compatibilty" object path.  This is the same object as above, just
++   * at a different path.
++   */
++  proxy = dbus_g_proxy_new_for_name_owner (connection,
++                                           "org.freedesktop.DBus.GLib.TestService",
++                                           "/org/freedesktop/DBus/GLib/Tests/Compat/MyTestObjectCompat",
++                                           "org.freedesktop.DBus.GLib.Tests.MyObject",
++                                           &error);
++  dbus_g_proxy_add_signal (proxy, "Frobnicate", G_TYPE_INT, G_TYPE_INVALID);
++
++  dbus_g_proxy_connect_signal (proxy, "Frobnicate",
++                               G_CALLBACK (frobnicate_signal_handler_compat),
++                               NULL, NULL);
++
++  g_print ("Calling EmitFrobnicate (compat)\n");
++  if (!dbus_g_proxy_call (proxy, "EmitFrobnicate", &error,
++                          G_TYPE_INVALID, G_TYPE_INVALID))
++    lose_gerror ("Failed to complete EmitFrobnicate call on compat proxy", error);
++
++  g_main_loop_run (loop);
++
++  if (n_times_compat_frobnicate_received != 1)
++    lose ("Frobnicate signal received %d times for compat proxy, should have been 1", n_times_compat_frobnicate_received);
++
++  g_object_unref (proxy);
++
+   /* Test introspection */
+   proxy = dbus_g_proxy_new_for_name_owner (connection,
+                                            "org.freedesktop.DBus.GLib.TestService",
+diff --git a/test/core/test-service-glib.c b/test/core/test-service-glib.c
+index 1cdb0ac..fad2473 100644
+--- a/test/core/test-service-glib.c
++++ b/test/core/test-service-glib.c
+@@ -66,6 +66,10 @@ main (int argc, char **argv)
+   dbus_g_connection_register_g_object (connection,
+                                        "/org/freedesktop/DBus/GLib/Tests/MyTestObject",
+                                        obj);
++  /* Register a second time; we want the object to also be reachable through this interface */
++  dbus_g_connection_register_g_object (connection,
++                                       "/org/freedesktop/DBus/GLib/Tests/Compat/MyTestObjectCompat",
++                                       obj);
+   dbus_g_connection_register_g_object (connection,
+                                        "/org/freedesktop/DBus/GLib/Tests/MyTestObject2",
+                                        obj2);
+From: Will Thompson <will.thompson@collabora.co.uk>
+Date: Sat, 12 Sep 2009 10:28:25 +0000 (+0100)
+Subject: Only re-set registration list if it's non-empty
+X-Git-Url: http://git.collabora.co.uk/?p=user%2Fwjt%2Fdbus-glib-wjt.git;a=commitdiff_plain;h=39e2642e41b2293de7556fa15c57872f78ffcdc8
+
+Only re-set registration list if it's non-empty
+---
+
+diff --git a/dbus/dbus-gobject.c b/dbus/dbus-gobject.c
+index fb41168..85574c7 100644
+--- a/dbus/dbus-gobject.c
++++ b/dbus/dbus-gobject.c
+@@ -414,7 +414,9 @@ object_registration_free (ObjectRegistration *o)
+        */
+       registrations = g_object_steal_data (o->object, "dbus_glib_object_registrations");
+       registrations = g_slist_remove (registrations, o);
+-      g_object_set_data (o->object, "dbus_glib_object_registrations", registrations);
++
++      if (registrations != NULL)
++        g_object_set_data (o->object, "dbus_glib_object_registrations", registrations);
+ 
+       g_object_weak_unref (o->object, object_registration_object_died, o);
+     }
+From: Will Thompson <will.thompson@collabora.co.uk>
+Date: Sat, 12 Sep 2009 10:58:22 +0000 (+0100)
+Subject: Copy object registration list when unregistering.
+X-Git-Url: http://git.collabora.co.uk/?p=user%2Fwjt%2Fdbus-glib-wjt.git;a=commitdiff_plain;h=90e2199ac99f5b8ab0cd5f45dcb398ecf9af03d9
+
+Copy object registration list when unregistering.
+
+Since the list of registrations on the object is modified when each path
+is removed, iterating it directly is wrong: after the first pass of the
+loop, 'iter' would point to a link which has been freed.
+---
+
+diff --git a/dbus/dbus-gobject.c b/dbus/dbus-gobject.c
+index 85574c7..816194c 100644
+--- a/dbus/dbus-gobject.c
++++ b/dbus/dbus-gobject.c
+@@ -2117,7 +2117,10 @@ dbus_g_connection_unregister_g_object (DBusGConnection *connection,
+ {
+   GList *registrations, *iter;
+ 
+-  registrations = g_object_get_data (object, "dbus_glib_object_registrations");
++  /* Copy the list before iterating it: it will be modified in
++   * object_registration_free() each time an object path is unregistered.
++   */
++  registrations = g_list_copy (g_object_get_data (object, "dbus_glib_object_registrations"));
+ 
+   g_return_if_fail (registrations != NULL);
+ 
+@@ -2127,6 +2130,9 @@ dbus_g_connection_unregister_g_object (DBusGConnection *connection,
+       dbus_connection_unregister_object_path (DBUS_CONNECTION_FROM_G_CONNECTION (o->connection),
+           o->object_path);
+     }
++
++  g_list_free (registrations);
++  g_assert (g_object_get_data (object, "dbus_glib_object_registrations") == NULL);
+ }
+ 
+ /**
