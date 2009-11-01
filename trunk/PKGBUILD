@@ -5,50 +5,45 @@
 # toolchain build order: kernel-headers->glibc->binutils->gcc->binutils->glibc
 
 pkgname=glibc
-pkgver=2.10.1
-pkgrel=5
-_glibcdate=20091018
-install=glibc.install
-backup=(etc/locale.gen
-        etc/nscd.conf)
+pkgver=2.11
+pkgrel=1
+_glibcdate=20091101
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
-license=('GPL' 'LGPL')
 url="http://www.gnu.org/software/libc"
+license=('GPL' 'LGPL')
 groups=('base')
-depends=('kernel-headers>=2.6.31.4' 'tzdata')
+depends=('kernel-headers>=2.6.31.5' 'tzdata')
 makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
+backup=(etc/locale.gen
+        etc/nscd.conf)
+install=glibc.install
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
         glibc-2.10-dont-build-timezone.patch
         glibc-2.10-bz4781.patch
-        formatting-integer-overflow.patch
-        binutils-2.20.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('87e9009100427505ef1a0091ae4f4eaa'
+md5sums=('de56eefcb4070c0cbe4336652ead854e'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
-         '977f3323b51008604acb5297ee76a470'
-         '3011eb913d9807bc3fbb72ebff3ae136'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
+mksource() {
+  mkdir glibc-${pkgver}_${_glibcdate}
+  cd $glibc-${pkgver}_${_glibcdate}
+  git clone git://sourceware.org/git/glibc.git
+  pushd glibc
+  #git checkout -b glibc-2.11-arch origin/cvs/glibc-2_11-branch
+  git checkout -b glibc-2.11-arch glibc-2.11
+  popd
+  tar -cvjf glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
+}
+
 build() {
-
-  # for git checkout
-  #mkdir ${srcdir}/glibc-${pkgver}_${_glibcdate}
-  #cd ${srcdir}/glibc-${pkgver}_${_glibcdate}
-  #git clone git://sourceware.org/git/glibc.git
-  #pushd glibc
-  #git checkout -b glibc-2.10-arch origin/cvs/glibc-2_10-branch
-  #git merge origin/release/2.10/master     #proposed 2.10 maintenance branch
-  #popd
-  #tar -cvjf ${startdir}/glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
-  #return 1
-
   cd ${srcdir}/glibc
 
   # timezone data is in separate package (tzdata)
@@ -56,13 +51,6 @@ build() {
 
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=4781
   patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch || return 1
-
-  #Fix integer overflow vulnerability in formatting functions
-  #http://sources.redhat.com/bugzilla/show_bug.cgi?id=10600
-  patch -Np1 -i ${srcdir}/formatting-integer-overflow.patch || return 1  
-
-  #Fix detection of binutils-2.20
-  patch -Np1 -i ${srcdir}/binutils-2.20.patch || return 1
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -117,5 +105,4 @@ build() {
     cd ${pkgdir}/lib64
     ln -v -s ../lib/ld* .
   fi
-
 }
