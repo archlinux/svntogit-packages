@@ -7,9 +7,9 @@
 
 pkgname=python-lxml
 pkgver=2.2.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Python binding for the libxml2 and libxslt libraries"
-arch=('any')
+arch=('i686' 'x86_64')
 license=('BSD' 'GPL' 'custom')
 url="http://codespeak.net/lxml"
 depends=('python' 'libxslt')
