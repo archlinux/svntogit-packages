@@ -1,0 +1,106 @@
+From 041cb4450d1d7c525c3fde20c38e293665619bd3 Mon Sep 17 00:00:00 2001
+From: Nick Schermer <nick@xfce.org>
+Date: Sun, 11 Oct 2009 12:02:05 +0000
+Subject: Fix the check for Xi so it does not fail with Xi2 (bug #4929).
+
+---
+diff --git a/dialogs/mouse-settings/main.c b/dialogs/mouse-settings/main.c
+index dc5604d..6edddac 100644
+--- a/dialogs/mouse-settings/main.c
++++ b/dialogs/mouse-settings/main.c
+@@ -60,6 +60,10 @@
+ #define IsXExtensionPointer 4
+ #endif
+ 
++/* Xi 1.4 is required */
++#define MIN_XI_VERS_MAJOR 1
++#define MIN_XI_VERS_MINOR 4
++
+ /* settings */
+ #ifdef HAVE_XCURSOR
+ #define PREVIEW_ROWS    (3)
+@@ -1221,13 +1225,21 @@ main (gint argc, gchar **argv)
+ 
+         return EXIT_FAILURE;
+     }
+-    
+-    /* check for Xi 1.4 */
++
++    /* check for Xi */
+     version = XGetExtensionVersion (GDK_DISPLAY (), INAME);
+-    if (!version || !version->present || version->major_version < 1 || version->minor_version < 4)
++    if (version == NULL || !version->present)
++    {
++        g_critical ("XI is not present.");
++        return EXIT_FAILURE;
++    }
++    else if (version->major_version < MIN_XI_VERS_MAJOR
++             || (version->major_version == MIN_XI_VERS_MAJOR
++                 && version->minor_version < MIN_XI_VERS_MINOR))
+     {
+-        g_critical ("XI is not present or too old.");
+-        
++        g_critical ("Your XI is too old (%d.%d) version %d.%d is required.",
++                    version->major_version, version->minor_version,
++                    MIN_XI_VERS_MAJOR, MIN_XI_VERS_MINOR);
+         return EXIT_FAILURE;
+     }
+ 
+diff --git a/xfce4-settings-helper/pointers.c b/xfce4-settings-helper/pointers.c
+index 6dd2cd4..b8718ba 100644
+--- a/xfce4-settings-helper/pointers.c
++++ b/xfce4-settings-helper/pointers.c
+@@ -42,6 +42,10 @@
+ 
+ #define MAX_DENOMINATOR (100.00)
+ 
++/* Xi 1.4 is required */
++#define MIN_XI_VERS_MAJOR 1
++#define MIN_XI_VERS_MINOR 4
++
+ /* test if the required version of inputproto (1.4.2) is available */
+ #if XI_Add_DevicePresenceNotify_Major >= 1 && defined (DeviceRemoved)
+ #define HAS_DEVICE_HOTPLUGGING
+@@ -133,18 +137,22 @@ xfce_pointers_helper_init (XfcePointersHelper *helper)
+ 
+     /* get the default display */
+     xdisplay = gdk_x11_display_get_xdisplay (gdk_display_get_default ());
+-    
++
+     /* query the extension version */
+     version = XGetExtensionVersion (xdisplay, INAME);
+-    
+-    /* check for Xi 1.4 */
+-    if (!version || !version->present || version->major_version < 1 || version->minor_version < 4)
+-    {
+-        /* print error */
+-        g_critical ("XI is not present or too old.");
+ 
+-        /* no channel */
+-        helper->channel = NULL;
++    /* check for Xi */
++    if (version == NULL || !version->present)
++    {
++        g_critical ("XI is not present.");
++    }
++    else if (version->major_version < MIN_XI_VERS_MAJOR
++             || (version->major_version == MIN_XI_VERS_MAJOR
++                 && version->minor_version < MIN_XI_VERS_MINOR))
++    {
++        g_critical ("Your XI is too old (%d.%d) version %d.%d is required.",
++                    version->major_version, version->minor_version,
++                    MIN_XI_VERS_MAJOR, MIN_XI_VERS_MINOR);
+     }
+     else
+     {
+@@ -162,7 +170,7 @@ xfce_pointers_helper_init (XfcePointersHelper *helper)
+         gdk_flush ();
+         gdk_error_trap_push ();
+ 
+-        
++
+         if (G_LIKELY (xdisplay))
+         {
+             /* monitor device changes */
+--
+cgit v0.8.2.1
