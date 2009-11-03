@@ -8,7 +8,7 @@ _icedteaver=1.6.1
 _openjdk_version=b16
 _openjdk_date=24_apr_2009
 pkgver=${_icedteaver}
-pkgrel=1
+pkgrel=2
 url='http://icedtea.classpath.org'
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -29,7 +29,9 @@ source=(http://icedtea.classpath.org/download/source/icedtea6-${_icedteaver}.tar
 	aatext_by_default.diff
 	fontconfig-paths.diff
 	nonreparenting-wm.diff
-	libjpeg7.patch
+	libjpeg7.diff
+	X11.diff
+	security.diff
 	openjdk6.profile)
 noextract=(openjdk-6-src-${_openjdk_version}-${_openjdk_date}.tar.gz ${_hotspotver}.tar.gz)
 md5sums=('f1c98bb31de87a5e15550b9672ea4027'
@@ -40,9 +42,11 @@ md5sums=('f1c98bb31de87a5e15550b9672ea4027'
          'ef60d567c0d9bad111212851220deafd'
          'ee1afda124d5927345014ab382ef581e'
          '409812b5675f9678b1c9e1a12a945a9a'
-         '2f820743e8ed5540b5667fda33c53d26'
+         '024a266e12d8cd89c38dfd9080573f82'
+         '509fbe1a3ac27fd50a38f62f501bb429'
+         'c466cbab2ca4cc0265e575f189e6e853'
          '10d13b19762218ee157273cee874394e')
-                                                                          
+                                               
 build() {
 
   unset JAVA_HOME
@@ -60,10 +64,17 @@ build() {
 
   cp ${srcdir}/*.diff ${srcdir}/icedtea6-${_icedteaver}/patches/
 
-  # workaround for libjpeg .so bump to avoid a few segfaults. some stuff will remain broken
-  patch -Np1 -i ${srcdir}/libjpeg7.patch || return 1
+  # some security fixes http://icedtea.classpath.org/hg/release/icedtea6-1.6/rev/2c854193cc9d
+  patch -Np1 -i ${srcdir}/security.diff || return 1
+  # http://icedtea.classpath.org/hg/icedtea6/rev/b862917f2b93
+  patch -Np1 -i ${srcdir}/libjpeg7.diff || return 1
+  # fix for new Xorg headers
+  # http://icedtea.classpath.org/hg/icedtea6/rev/c75348f9db6a
+  patch -Np1 -i ${srcdir}/X11.diff || return 1
 
-  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff patches/fix_corba_cmds_path.diff patches/nonreparenting-wm.diff "
+  autoreconf
+
+  export DISTRIBUTION_PATCHES="patches/fix_jdk_cmds_path.diff patches/aatext_by_default.diff patches/fontconfig-paths.diff patches/fix_corba_cmds_path.diff patches/nonreparenting-wm.diff"
 
   export ALT_PARALLEL_COMPILE_JOBS="${MAKEFLAGS/-j}"
   export HOTSPOT_BUILD_JOBS="${ALT_PARALLEL_COMPILE_JOBS}"
