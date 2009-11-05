@@ -1,0 +1,50 @@
+From 7d1378e2631e0d400943d2d05b5b79a3c631a12f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?S=C3=B8ren=20Sandmann=20Pedersen?= <sandmann@redhat.com>
+Date: Wed, 4 Nov 2009 07:46:05 -0500
+Subject: [PATCH] fb: Use fb functions to copy the window to a temporary pixmap.
+
+Previously, it would use the screen ops, but this meant that the new
+pixmap would be created by the DDX and then immediately accessed by
+software fallbacks without the DDX having a chance to map the drawable
+correctly.
+
+Instead, use fbCreatePixmap() and fbCopyArea() directly, without going
+through the DDX hooks.
+---
+ fb/fbpict.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/fb/fbpict.c b/fb/fbpict.c
+index 2fbef15..b9fe32a 100644
+--- a/fb/fbpict.c
++++ b/fb/fbpict.c
+@@ -280,7 +280,7 @@ copy_drawable (DrawablePtr pDraw)
+     width = pDraw->width;
+     height = pDraw->height;
+     
+-    pPixmap = (*pScreen->CreatePixmap) (pScreen, width, height, pDraw->depth, 0);
++    pPixmap = fbCreatePixmap (pScreen, width, height, pDraw->depth, 0);
+     
+     if (!pPixmap)
+ 	return NULL;
+@@ -289,7 +289,7 @@ copy_drawable (DrawablePtr pDraw)
+     
+     if (!pGC)
+     {
+-	(*pScreen->DestroyPixmap) (pPixmap);
++	fbDestroyPixmap (pPixmap);
+ 	return NULL;
+     }
+     
+@@ -302,7 +302,7 @@ copy_drawable (DrawablePtr pDraw)
+     
+     /* Then copy the window there */
+     ValidateGC(&pPixmap->drawable, pGC);
+-    (* pGC->ops->CopyArea) (pDraw, &pPixmap->drawable, pGC, 0, 0, width, height, 0, 0);
++    fbCopyArea (pDraw, &pPixmap->drawable, pGC, 0, 0, width, height, 0, 0);
+     
+     FreeScratchGC (pGC);
+     
+-- 
+1.6.5.1
+
