@@ -1,0 +1,88 @@
+From 94287454c3931d6acc81d3e4dbe853a9ebcb8515 Mon Sep 17 00:00:00 2001
+From: David Zeuthen <davidz@redhat.com>
+Date: Tue, 03 Nov 2009 17:47:33 +0000
+Subject: Update udev rules to cope better with device-mapper
+
+See https://bugzilla.redhat.com/show_bug.cgi?id=528909#c24 for details.
+---
+diff --git a/data/95-devkit-disks.rules b/data/95-devkit-disks.rules
+index a7b658c..cff8277 100644
+--- a/data/95-devkit-disks.rules
++++ b/data/95-devkit-disks.rules
+@@ -10,8 +10,15 @@ KERNEL=="loop*|ram*", GOTO="devkit_disks_end"
+ # devices - never touch the device on add events
+ KERNEL=="dm-*", ACTION!="change", GOTO="devkit_disks_end"
+ 
++# honor the flag that device-mapper sets if the device should be ignored
+ ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", GOTO="devkit_disks_end"
+ 
++# ignore private devices - see https://bugzilla.redhat.com/show_bug.cgi?id=528909#c24
++KERNEL=="dm-*", IMPORT{program}="devkit-disks-dm-export %M %m"
++ENV{DKD_DM_UUID}=="CRYPT-TEMP-?*", GOTO="devkit_disks_end"
++ENV{DKD_DM_UUID}!="?*", ENV{DKD_DM_NAME}=="temporary-cryptsetup-?*", GOTO="devkit_disks_end"
++ENV{DKD_DM_NAME}=="?*-pvmove[0-9]*", GOTO="devkit_disks_end"
++
+ ##############################################################################################################
+ 
+ # Probe for partition tables; this really should be part of udev
+@@ -41,7 +48,6 @@ LABEL="probe_parttable_end"
+ KERNEL!="dm-*", GOTO="device_mapper_end"
+ ACTION!="change", GOTO="device_mapper_end"
+ 
+-IMPORT{program}="devkit-disks-dm-export %M %m"
+ ENV{DKD_DM_NAME}!="?*", GOTO="device_mapper_end"
+ 
+ ENV{DKD_DM_STATE}=="SUSPENDED", GOTO="device_mapper_end"
+--
+cgit v0.8.2
+From 351618d08270a0832db3c282082207e6dfa24845 Mon Sep 17 00:00:00 2001
+From: Martin Pitt <martin.pitt@ubuntu.com>
+Date: Tue, 03 Nov 2009 20:50:25 +0000
+Subject: Bug 24885 — LVM LVs now have NOPOLICY=0
+
+Commit a95d3 caused the NOPOLICY rules get cut short for LVs. Move the NOPOLICY
+check close to the top, since its (1) very cheap, and (2) very generic, i. e.
+rules further down might want to tweak it for special cases.
+
+Signed-off-by: David Zeuthen <davidz@redhat.com>
+---
+diff --git a/data/95-devkit-disks.rules b/data/95-devkit-disks.rules
+index cff8277..7f210ad 100644
+--- a/data/95-devkit-disks.rules
++++ b/data/95-devkit-disks.rules
+@@ -6,6 +6,17 @@ ACTION!="add|change", GOTO="devkit_disks_end"
+ SUBSYSTEM!="block", GOTO="devkit_disks_end"
+ KERNEL=="loop*|ram*", GOTO="devkit_disks_end"
+ 
++# Mark devices that shouldn't be automounted / autoassembled etc.
++#
++# Deny all, then punch holes for what looks like physical drives
++# (TODO: this heuristic might need some work)
++#
++
++ENV{DKD_PRESENTATION_NOPOLICY}="1"
++KERNEL=="sd*|hd*|sr*|mmcblk*|mspblk*", ENV{DKD_PRESENTATION_NOPOLICY}="0"
++
++##############################################################################################################
++
+ # we only care about change events on device-mapper
+ # devices - never touch the device on add events
+ KERNEL=="dm-*", ACTION!="change", GOTO="devkit_disks_end"
+@@ -152,15 +163,5 @@ ENV{ID_FS_TYPE}=="ntfs|vfat", \
+ 
+ ##############################################################################################################
+ 
+-# Mark devices that shouldn't be automounted / autoassembled etc.
+-#
+-# Deny all, then punch holes for what looks like physical drives
+-# (TODO: this heuristic might need some work)
+-#
+-
+-ENV{DKD_PRESENTATION_NOPOLICY}="1"
+-KERNEL=="sd*|hd*|sr*|mmcblk*|mspblk*", ENV{DKD_PRESENTATION_NOPOLICY}="0"
+-
+-##############################################################################################################
+ 
+ LABEL="devkit_disks_end"
+--
+cgit v0.8.2
