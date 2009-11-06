@@ -1,7 +1,7 @@
-From 7d1378e2631e0d400943d2d05b5b79a3c631a12f Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?S=C3=B8ren=20Sandmann=20Pedersen?= <sandmann@redhat.com>
-Date: Wed, 4 Nov 2009 07:46:05 -0500
-Subject: [PATCH] fb: Use fb functions to copy the window to a temporary pixmap.
+From 9f493b930ef99253ba7e37dc280daff6738b6401 Mon Sep 17 00:00:00 2001
+From: Soren Sandmann Pedersen <sandmann@redhat.com>
+Date: Fri, 6 Nov 2009 10:29:49 +1000
+Subject: [PATCH] [PATCH] fb: Use fb functions to copy the window to a temporary pixmap.
 
 Previously, it would use the screen ops, but this meant that the new
 pixmap would be created by the DDX and then immediately accessed by
@@ -10,12 +10,16 @@ correctly.
 
 Instead, use fbCreatePixmap() and fbCopyArea() directly, without going
 through the DDX hooks.
+
+airlied: also remove the miClearDrawable call, since we are going
+to copy over the whole drawable, and this also reenters the wrap
+chain which confuses EXA.
 ---
- fb/fbpict.c |    6 +++---
- 1 files changed, 3 insertions(+), 3 deletions(-)
+ fb/fbpict.c |    7 +++----
+ 1 files changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/fb/fbpict.c b/fb/fbpict.c
-index 2fbef15..b9fe32a 100644
+index 2fbef15..5c96427 100644
 --- a/fb/fbpict.c
 +++ b/fb/fbpict.c
 @@ -280,7 +280,7 @@ copy_drawable (DrawablePtr pDraw)
@@ -36,7 +40,11 @@ index 2fbef15..b9fe32a 100644
  	return NULL;
      }
      
-@@ -302,7 +302,7 @@ copy_drawable (DrawablePtr pDraw)
+@@ -298,11 +298,10 @@ copy_drawable (DrawablePtr pDraw)
+     gcv[1].val = IncludeInferiors;
+     dixChangeGC (NullClient, pGC, GCBackground | GCSubwindowMode, NULL, gcv);
+     ValidateGC ((DrawablePtr)pPixmap, pGC);
+-    miClearDrawable ((DrawablePtr)pPixmap, pGC);
      
      /* Then copy the window there */
      ValidateGC(&pPixmap->drawable, pGC);
@@ -46,5 +54,5 @@ index 2fbef15..b9fe32a 100644
      FreeScratchGC (pGC);
      
 -- 
-1.6.5.1
+1.6.5.2
 
