@@ -6,7 +6,7 @@
 # Just uninstalling ImageMagick before build fails as it is used during the build processs
 
 pkgname=imagemagick
-pkgver=6.5.6.10
+pkgver=6.5.7.5
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -18,9 +18,9 @@ makedepends=('imagemagick')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch perlmagick.rpath.patch)
-md5sums=('126011a6ae3196f5aac252217380e962' '069980fc2590c02aed86420996259302'\
+md5sums=('e430815f117091e9eabaa4ba060828b6' '069980fc2590c02aed86420996259302'\
          '7f5851c4450b73d52df55c7e806cc316' 'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('53d732cadf7bc62b4342c103796f8d8f30424d8f' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
+sha1sums=('b3e926e2991b387a8683f295352145081c07e640' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
          '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5' '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
