@@ -1,48 +1,56 @@
 # $Id$
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
 # Contributor: damir <damir.archlinux.org>
+# Contributor: Gergely Imreh <imrehg@gmail.com>
 
 pkgname=qtiplot
-pkgver=0.9.7.9
+pkgver=0.9.7.10
 pkgrel=1
 pkgdesc="Data analysis and scientific plotting - free clone of Origin"
 arch=('i686' 'x86_64')
 url="http://soft.proindependent.com/qtiplot.html"
-depends=('muparser>=1.30' 'gsl' 'pyqt' 'sip' 'boost>=1.39.0' 'libgl')
+depends=('muparser>=1.30' 'gsl' 'pyqt' 'sip>=4.9.1' \
+         'boost>=1.39.0' 'libgl' 'shared-mime-info')
 # build against liborigin provided in the package ...
 # build against qwtplot3d provided in the package ...
 # build against qwt provided in the package ...
 # as systemwide one doesn't provide all needed functions
 makedepends=('pkgconfig')
 license=('GPL2')
-source=(http://soft.proindependent.com/src/qtiplot-$pkgver.tar.bz2
+install=${pkgname}.install
+source=(http://download.berlios.de/qtiplot/qtiplot-${pkgver}.tar.bz2
         $pkgname.desktop
         $pkgname.png
         qtiplot.pro.archlinux
-        qwtplot3d_gcc.patch)
-md5sums=('08e4943cadd5ee39e28e4ce0d61d475a'
+        qwtplot3d_gcc.patch
+        sip.patch
+        qtiplot.xml)
+md5sums=('627e5beeee598c6761de593921003335'
          '56bd53f4f1367c285086acb969f13348'
          'ad8affbd6f0d5cbdcde46c923ee2668a'
          'b0f586e74badeedca21b1875f96507cb'
-         'ab02c436ec2c04b1838cb5517383b4eb')
+         'ab02c436ec2c04b1838cb5517383b4eb'
+         'd02a4db813dff3b847500fbbbde233fa'
+         '35683f3b32e1edcca0bb02c471d284e9')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
+
+  # Make qwt
   sed -i "s:elif:else:g" qtiplot/src/scripting/ScriptEdit.cpp
   patch -Np1 -i ${srcdir}/qwtplot3d_gcc.patch || return 1
-
   cd ./3rdparty/qwt
   qmake || return 1
   make || return 1
 
+  # Make qtiplot
   cd ${srcdir}/${pkgname}-${pkgver}/${pkgname}
-  install -Dm644 ${srcdir}/qtiplot.pro.archlinux qtiplot.pro
-
+  cp ${srcdir}/qtiplot.pro.archlinux .
   sed -i 's#d_python_config_folder + "#"/usr/share/qtiplot#' src/core/ApplicationWindow.cpp
+  # Change references for invalid file, due to sip changes
+  patch -p1 < ${srcdir}/sip.patch || return 1
 
-  export QMAKESPEC=linux-g++
-
-  qmake qtiplot.pro || return 1
+  qmake qtiplot.pro.archlinux QMAKESPEC=linux-g++ || return 1
   make QTDIR=/usr/ QMAKESPEC=linux-g++ || return 1
   INSTALL_ROOT=${pkgdir} make install || return 1
 
@@ -51,4 +59,6 @@ build() {
   	${pkgdir}/usr/share/pixmaps/${pkgname}.png || return 1
   install -D -m644 ${srcdir}/${pkgname}.desktop \
   	${pkgdir}/usr/share/applications/${pkgname}.desktop || return 1
+  install -D -m644 ${srcdir}/${pkgname}.xml \
+        ${pkgdir}/usr/share/mime/packages/${pkgname}.xml || return 1
 }
