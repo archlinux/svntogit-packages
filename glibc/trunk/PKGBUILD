@@ -3,6 +3,7 @@
 # Maintainer: Allan McRae <allan@archlinux.org>
 
 # toolchain build order: kernel-headers->glibc->binutils->gcc->binutils->glibc
+# NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
 pkgver=2.11
