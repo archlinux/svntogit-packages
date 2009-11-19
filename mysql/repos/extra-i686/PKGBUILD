@@ -1,4 +1,4 @@
-# $Id: PKGBUILD 58956 2009-11-18 15:09:53Z andrea $
+# $Id: PKGBUILD 58999 2009-11-19 02:03:21Z andrea $
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
@@ -6,7 +6,7 @@
 pkgbase=mysql
 pkgname=('libmysqlclient' 'mysql-clients' 'mysql')
 pkgver=5.1.41
-pkgrel=1
+pkgrel=2
 pkgdesc="A fast SQL database server"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -33,12 +33,14 @@ build() {
     --without-readline \
     --with-ssl \
     --with-libwrap \
-    --with-charset=latin1 \
-    --with-collation=latin1_general_ci \
+    --with-charset=utf8 \
+    --with-collation=utf8_general_ci \
     --with-extra-charsets=complex \
     --with-embedded-server \
+    --with-unix-socket-path=/var/run/mysqld/mysqld.sock \
     --enable-local-infile \
-    --with-plugins=partition,ftexample,archive,blackhole,federated,heap,innobase,ndbcluster
+    --with-plugins=partition,ftexample,archive,blackhole,federated,heap,innobase,innodb_plugin,ndbcluster
+  make || return 1
 }
 
 package_libmysqlclient(){
@@ -46,24 +48,18 @@ package_libmysqlclient(){
   depends=('openssl' 'zlib' 'gcc-libs' 'tcp_wrappers')
   
   cd ${srcdir}/${pkgbase}-${pkgver}
-  for dir in include strings mysys dbug storage regex extra vio sql; do
-    pushd ${dir} || return 1
-    make || return 1
-    popd
-  done
   for dir in libmysql libmysql_r libmysqld; do
     pushd ${dir} || return 1
-    make link_sources
-    make || return 1
-    make DESTDIR=${pkgdir} install
+      make DESTDIR=${pkgdir} install
     popd
   done
+  
   cd include
   make DESTDIR=${pkgdir} install
-
   # Copy missing includes
   install -m644 *.h ${pkgdir}/usr/include/mysql
 
+  # mysql_config
   cd ../scripts
   make mysql_config
   install -d ${pkgdir}/usr/bin
@@ -83,27 +79,17 @@ package_mysql-clients(){
   depends=("libmysqlclient>=${pkgver}")
   
   cd ${srcdir}/${pkgbase}-${pkgver}
-  pushd include || return
-    make || return 1
-  popd
-
   pushd libmysql
     make link_sources get_password.lo || return
-  popd 
+  popd
   
-  for dir in strings regex mysys dbug extra; do
-    pushd ${dir} || return 1
-    make || return 1
-    popd
-  done
-
   cd client
-  make link_sources
-  make || return 1
   make DESTDIR=${pkgdir} install
 
-  # Removing libmysql stuff
+  # Removing libmysqlclient stuff
   rm -rf $pkgdir/usr/lib/
+  # These will be provided by mysql
+  rm -f ${pkgdir}/usr/bin/{mysql_upgrade,mysqlbinlog,mysqltest}
 }
 
 package_mysql(){
@@ -113,15 +99,10 @@ package_mysql(){
   optdepends=('perl-dbi' 'perl-dbd-mysql')
 
   cd ${srcdir}/${pkgbase}-${pkgver}
-  pushd include || return
-    make || return 1
-  popd
-    
   pushd libmysql
     make link_sources get_password.lo || return
   popd
   
-  make || return 1
   make DESTDIR=${pkgdir} install
 
   rm -rf ${pkgdir}/usr/{mysql-test,sql-bench,lib,include}
@@ -129,8 +110,8 @@ package_mysql(){
   install -D -m755 ../mysqld ${pkgdir}/etc/rc.d/mysqld
   install -D -m644 ../mysqld.conf.d ${pkgdir}/etc/conf.d/mysqld
 
-  # Cleanup files provided by the other packages
-  rm -f ${pkgdir}/usr/bin/{mysql,mysql_config,mysql_client_test_embedded,mysql_upgrade,mysqladmin,mysqlbinlog,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap,mysqltest,mysqltest_embedded}
+  # Cleanup files provided by the others packages
+  rm -f ${pkgdir}/usr/bin/{mysql,mysql_config,mysql_client_test_embedded,mysqladmin,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap,mysqltest_embedded}
   rm -rf ${pkgdir}/usr/{include,lib}
 
   # create directory for PID and sock files
