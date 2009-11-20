@@ -4,20 +4,50 @@
 
 pkgname=manedit
 pkgver=1.2.1
-pkgrel=1
+pkgrel=2
 pkgdesc="An editor specifically tailored for UNIX manual pages"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.battlefieldlinux.com/wolfpack/ManEdit/"
 depends=('gcc-libs' 'bzip2' 'zlib' 'gtk')
-source=(http://wolfsinger.com/~wolfpack/packages/$pkgname-$pkgver.tar.bz2)
-md5sums=('a7ee1835e32ed3c9279412af7caf13ef')
+source=(http://wolfsinger.com/~wolfpack/packages/${pkgname}-${pkgver}.tar.bz2
+        manedit-1.2.1-fix-man-page.patch
+        manedit.desktop)
+md5sums=('a7ee1835e32ed3c9279412af7caf13ef'
+         '60cb0c224a6659f8a8183006608f368b'
+         'bac6986fc25dda6f0e27e3673eef4600')
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
-  ./configure Linux --prefix=/usr -v --enable="arch-$CARCH"
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Patch to fix generate man page
+  patch -Np1 -i ${srcdir}/manedit-1.2.1-fix-man-page.patch || return 1
+
+  env CFLAGS="${CFLAGS}" \
+  ./configure Linux \
+              --prefix=/usr \
+              --mandir=/usr/share/man \
+              --datadir=/usr/share \
+              --enable=bzip2 \
+              --enable=zlib \
+              --disable="arch-i486" \
+              --disable="arch-i586" \
+              --disable="arch-i686" \
+              --disable="arch-pentiumpro"
+
   make all || return 1
-  make PREFIX=$startdir/pkg/usr install
-  # move manpage to FHS location
-  mv $startdir/pkg/usr/man $startdir/pkg/usr/share/man
+
+  # Fix strip error (tries to strip a shell script)
+  cp manedit/Makefile.install.UNIX{,.orig}
+  sed -e '/INST.*FLAGS.*-s$/s:-s::' \
+         manedit/Makefile.install.UNIX.orig > manedit/Makefile.install.UNIX
+
+  # Set man dir too or FHS is violated
+  make PREFIX="${pkgdir}/usr" \
+       MAN_DIR="${pkgdir}/usr/share/man/man1" \
+       ICONS_DIR="${pkgdir}/usr/share/pixmaps" \
+       DATA_DIR="${pkgdir}/usr/share/doc/${pkgname}/" install || return 1
+
+  # Install desktop file
+  install -Dm644 ${srcdir}/manedit.desktop "${pkgdir}/usr/share/applications/manedit.desktop"
 }
