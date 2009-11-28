@@ -3,7 +3,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=coreutils
-pkgver=7.6
+pkgver=8.1
 pkgrel=1
 pkgdesc="The basic file, shell and text manipulation utilities of the GNU operating system"
 arch=('i686' 'x86_64')
@@ -16,18 +16,18 @@ conflicts=('mktemp')
 replaces=('sh-utils' 'fileutils' 'textutils' 'mktemp')
 backup=('etc/pam.d/su')
 install=${pkgname}.install
-options=('!emptydirs' '!makeflags')
+options=('!emptydirs')
 source=(ftp://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz
 	coreutils-i18n.patch
 	coreutils-uname.patch
 	coreutils-pam.patch
 	coreutils-6.10-configuration.patch
 	su)
-md5sums=('3d82f979229365f880da750642e67cf3'
-         '8a93fa488e9329a8174085aa023d0d54'
-         'f743664abbc82cc93f39b6c2fefe8936'
-         '72aa92f24ff078d1c7b6d2d92a1075b5'
-         '9f1e0859009814970c5893bbc6d66e2e'
+md5sums=('4cde9f31604f4da188ed302ca55545ea'
+         '0ccdad826d251515b61d4b60da93a7e5'
+         'c4fcca138b6abf6d443d48a6f0cd8833'
+         '7efee4d5b3653711f9e229493316841c'
+         '8db636d7bf3c05068d96f88cb84bdf9d'
          'fa85e5cce5d723275b14365ba71a8aad')
 
 build() {
@@ -48,21 +48,27 @@ build() {
   make || return 1
   make DESTDIR=${pkgdir} install || return 1
 
-  rm -f ${pkgdir}/usr/bin/hostname ${pkgdir}/usr/share/man/man1/hostname.1 || return 1
-  rm -f ${pkgdir}/usr/bin/uptime ${pkgdir}/usr/share/man/man1/uptime.1 || return 1
-  rm -f ${pkgdir}/usr/bin/groups ${pkgdir}/usr/share/man/man1/groups.1 || return 1
-  rm -f ${pkgdir}/usr/bin/kill ${pkgdir}/usr/share/man/man1/kill.1 || return 1
+  for f in hostname uptime groups kill; do
+    rm -f ${pkgdir}/usr/{bin/${f},share/man/man1/${f}.1} || return 1
+  done
   
   cd ${pkgdir}/usr/bin
-  install -dm755 ${pkgdir}/{bin,sbin,usr/sbin}
-  mv su date echo false pwd stty true uname cat tr cut readlink $pkgdir/bin
-  mv dd cp df du ln ls mv rm dir sync vdir chgrp chmod chown $pkgdir/bin
-  mv mkdir mknod rmdir shred touch mkfifo dircolors install sleep $pkgdir/bin
-  mv chroot $pkgdir/usr/sbin
-  ln -sf test [
-  ln -sf /bin/sleep ${pkgdir}/usr/bin/sleep
-  install -Dm644 $srcdir/su ${pkgdir}/etc/pam.d/su
-
+  install -dm755 ${pkgdir}/{bin,usr/sbin}
+  
+  # binaries required by FHS
+  _fhs="cat chgrp chmod chown cp date dd df echo false ln ls \
+        mkdir mknod mv pwd rm rmdir stty su sync true uname"
+  mv ${_fhs} $pkgdir/bin
   ls -lha ${pkgdir}/bin/su
   chmod -v 4555 ${pkgdir}/bin/su
+
+  # binaries required by various scripts
+  _bin="cut dd dir dircolors du install mkfifo readlink shred \
+        sleep touch tr vdir"
+  mv ${_bin} $pkgdir/bin
+  ln -sf /bin/sleep ${pkgdir}/usr/bin/sleep
+    
+  mv chroot $pkgdir/usr/sbin
+  ln -sf test [
+  install -Dm644 $srcdir/su ${pkgdir}/etc/pam.d/su
 }
