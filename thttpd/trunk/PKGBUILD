@@ -3,32 +3,44 @@
 
 pkgname=thttpd
 pkgver=2.25b
-pkgrel=2
+pkgrel=3
 pkgdesc="tiny/turbo/throttling HTTP server"
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 url="http://www.acme.com/software/thttpd/"
 license=('BSD')
 depends=('bash')
-backup=('usr/www/thttpd_config')
+backup=('etc/thttpd/thttpd_config')
 conflicts=('apache')
 source=(http://www.acme.com/software/thttpd/$pkgname-$pkgver.tar.gz \
-        thttpd thttpd_config LICENSE)
-md5sums=('156b249b3b0bcd48b06badd2db0d56c5' '256b995472c8f0fea235b46fdd97e6ec'\
-         'b899c226895dcaa3fb131e98720843c1' '0c5762c2c34dcbe9eb18815516502872')
+        thttpd thttpd_config LICENSE thttpd-2.25b-getline.patch)
 
 build() {
-  cd $startdir/src/$pkgname-$pkgver
-  ./configure --prefix=/usr --mandir=/usr/share/man || return 1
-  make || return 1
-  install -d  $startdir/pkg/usr/sbin
-  install -d  $startdir/pkg/usr/share/man/man{1,8}
-  install -d  $startdir/pkg/usr/www/data/log
-  make BINDIR=$startdir/pkg/usr/sbin \
-    MANDIR=$startdir/pkg/usr/share/man WEBDIR=$startdir/pkg/usr/www \
-    WEBGROUP=root install || return 1
-  chown root:root $startdir/pkg/usr/share/man/man8/thttpd.8
-  install -D -m755 ../thttpd $startdir/pkg/etc/rc.d/thttpd
-  install -D -m755 ../thttpd_config  $startdir/pkg/usr/www/thttpd_config
-  install -D -m644 ../LICENSE $startdir/pkg/usr/share/licenses/$pkgname/LICENSE
-}
+  cd $srcdir/$pkgname-$pkgver
+  patch -Np1 -i $srcdir/thttpd-2.25b-getline.patch || return 1
 
+  ./configure --prefix=/usr \
+  	--mandir=/usr/share/man || return 1
+  make || return 1
+
+  install -d  $pkgdir/usr/sbin
+  install -d  $pkgdir/usr/share/man/man{1,8}
+  install -d  $pkgdir/srv/http
+  install -d  $pkgdir/var/log/thttpd
+
+  make BINDIR=$pkgdir/usr/sbin \
+    MANDIR=$pkgdir/usr/share/man WEBDIR=$pkgdir/srv/http \
+    WEBGROUP=root install || return 1
+
+  chown root:root $pkgdir/usr/share/man/man8/thttpd.8
+  chown root:root $pkgdir/usr/sbin/thttpd
+  install -D -m755 ../thttpd $pkgdir/etc/rc.d/thttpd
+  install -D -m755 ../thttpd_config  $pkgdir/etc/thttpd/thttpd_config
+
+  install -D -m644 ../LICENSE $pkgdir/usr/share/licenses/$pkgname/LICENSE
+
+}
+sha256sums=('07719b08b1cff6a21c08697a7bcb4395425b07ee753106262fb62a03a7d32360'
+            '9cf9b42633a53be922acdceada79897081ab9b987f2d9c20ce090a354114ef28'
+            '1f45e999622ff554820a627deb994357b61d11017db93bff65153e6725c1ca06'
+            '2a2480c032320a319b387c929b9e5e4ae4dad248ec8abb3b3accac99462368ef'
+            '302d32bbaa96da6579547a5b132c4a64ad949a630c4ab46391531e80a132f559')
