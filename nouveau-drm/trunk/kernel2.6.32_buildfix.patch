@@ -1,0 +1,36 @@
+diff --git a/drivers/gpu/drm/drm_sysfs.c b/drivers/gpu/drm/drm_sysfs.c
+index 5161172..16a2938 100644
+--- a/drivers/gpu/drm/drm_sysfs.c
++++ b/drivers/gpu/drm/drm_sysfs.c
+ -15,6 +15,7 @@
+ #include <linux/device.h>
+ #include <linux/kdev_t.h>
+ #include <linux/err.h>
++#include <linux/version.h>
+ 
+ #include "drm_sysfs.h"
+ #include "drm_core.h"
+ -77,7 +78,11 @@ static ssize_t version_show(struct class *dev, char *buf)
+ 		       CORE_MINOR, CORE_PATCHLEVEL, CORE_DATE);
+ }
+ 
+-static char *drm_nodename(struct device *dev)
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32))
++  static char *drm_nodename(struct device *dev)
++#else
++  static char *drm_devnode(struct device *dev, mode_t *mode)
++#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)) */
+ {
+ 	return kasprintf(GFP_KERNEL, "dri/%s", dev_name(dev));
+ }
+ -113,7 +118,11 @@ struct class *drm_sysfs_create(struct module *owner, char *name)
+ 	if (err)
+ 		goto err_out_class;
+ 
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32))
+ 	class->nodename = drm_nodename;
++#else
++	class->devnode = drm_devnode;
++#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)) */
+ 
+ 	return class;
