@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.5.3
+pkgver=1.6.5.4
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -44,7 +44,7 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('a1dbc3da46cbf33c4367db689853c142'
-         'dc2cf85cb1f29b586a1353307093bc62')
-sha256sums=('3822c8350be782f28a7a60138ec65a6f04f259940f84f7062e508d9f9d64eefa'
-            '0ace2ac5b3be31f919f594a3c56fbd567fbc90ac7d1db72b17335495ca29759b')
+md5sums=('1c214e8175e8dd372618ecf3d76448f5'
+         '513390db5f38534f5f2459202a8feccc')
+sha256sums=('e5548c4a4ddefbdb3e4a846061861c51b2498f7453606e03fa67f6ae1dc1dace'
+            '3047eb40c5239b7c6d67628db60446e50027e7282eee6db400996081ca244ec7')
