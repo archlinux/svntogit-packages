@@ -14,6 +14,7 @@
  * Original work by Jeff Garzik
  *
  * External file lists, symlink, pipe and fifo support by Thayne Harbaugh
+ * Hard link support by Luciano Rocha
  */
 
 #define xstr(s) #s
@@ -286,16 +287,19 @@ static int cpio_mknod_line(const char *line)
 	return rc;
 }
 
-/* Not marked static to keep the compiler quiet, as no one uses this yet... */
 static int cpio_mkfile(const char *name, const char *location,
-			unsigned int mode, uid_t uid, gid_t gid)
+			unsigned int mode, uid_t uid, gid_t gid,
+			unsigned int nlinks)
 {
 	char s[256];
 	char *filebuf = NULL;
 	struct stat buf;
+	long size;
 	int file = -1;
 	int retval;
 	int rc = -1;
+	int namesize;
+	int i;
 
 	mode |= S_IFREG;
 
@@ -323,29 +327,41 @@ static int cpio_mkfile(const char *name, const char *location,
 		goto error;
 	}
 
-	sprintf(s,"%s%08X%08X%08lX%08lX%08X%08lX"
-	       "%08X%08X%08X%08X%08X%08X%08X",
-		"070701",		/* magic */
-		ino++,			/* ino */
-		mode,			/* mode */
-		(long) uid,		/* uid */
-		(long) gid,		/* gid */
-		1,			/* nlink */
-		(long) buf.st_mtime,	/* mtime */
-		(int) buf.st_size,	/* filesize */
-		3,			/* major */
-		1,			/* minor */
-		0,			/* rmajor */
-		0,			/* rminor */
-		(unsigned)strlen(name) + 1,/* namesize */
-		0);			/* chksum */
-	push_hdr(s);
-	push_string(name);
-	push_pad();
+	size = 0;
+	for (i = 1; i <= nlinks; i++) {
+		/* data goes on last link */
+		if (i == nlinks) size = buf.st_size;
 
-	fwrite(filebuf, buf.st_size, 1, stdout);
-	offset += buf.st_size;
-	push_pad();
+		namesize = strlen(name) + 1;
+		sprintf(s,"%s%08X%08X%08lX%08lX%08X%08lX"
+		       "%08lX%08X%08X%08X%08X%08X%08X",
+			"070701",		/* magic */
+			ino,			/* ino */
+			mode,			/* mode */
+			(long) uid,		/* uid */
+			(long) gid,		/* gid */
+			nlinks,			/* nlink */
+			(long) buf.st_mtime,	/* mtime */
+			size,			/* filesize */
+			3,			/* major */
+			1,			/* minor */
+			0,			/* rmajor */
+			0,			/* rminor */
+			namesize,		/* namesize */
+			0);			/* chksum */
+		push_hdr(s);
+		push_string(name);
+		push_pad();
+
+		if (size) {
+			fwrite(filebuf, size, 1, stdout);
+			offset += size;
+			push_pad();
+		}
+
+		name += namesize;
+	}
+	ino++;
 	rc = 0;
 	
 error:
@@ -354,25 +370,83 @@ error:
 	return rc;
 }
 
+static char *cpio_replace_env(char *new_location)
+{
+       char expanded[PATH_MAX + 1];
+       char env_var[PATH_MAX + 1];
+       char *start;
+       char *end;
+
+       for (start = NULL; (start = strstr(new_location, "${")); ) {
+               end = strchr(start, '}');
+               if (start < end) {
+                       *env_var = *expanded = '\0';
+                       strncat(env_var, start + 2, end - start - 2);
+                       strncat(expanded, new_location, start - new_location);
+                       strncat(expanded, getenv(env_var), PATH_MAX);
+                       strncat(expanded, end + 1, PATH_MAX);
+                       strncpy(new_location, expanded, PATH_MAX);
+               } else
+                       break;
+       }
+
+       return new_location;
+}
+
+
 static int cpio_mkfile_line(const char *line)
 {
 	char name[PATH_MAX + 1];
+	char *dname = NULL; /* malloc'ed buffer for hard links */
 	char location[PATH_MAX + 1];
 	unsigned int mode;
 	int uid;
 	int gid;
+	int nlinks = 1;
+	int end = 0, dname_len = 0;
 	int rc = -1;
 
-	if (5 != sscanf(line, "%" str(PATH_MAX) "s %" str(PATH_MAX) "s %o %d %d", name, location, &mode, &uid, &gid)) {
+	if (5 > sscanf(line, "%" str(PATH_MAX) "s %" str(PATH_MAX)
+				"s %o %d %d %n",
+				name, location, &mode, &uid, &gid, &end)) {
 		fprintf(stderr, "Unrecognized file format '%s'", line);
 		goto fail;
 	}
-	rc = cpio_mkfile(name, location, mode, uid, gid);
+	if (end && isgraph(line[end])) {
+		int len;
+		int nend;
+
+		dname = malloc(strlen(line));
+		if (!dname) {
+			fprintf (stderr, "out of memory (%d)\n", dname_len);
+			goto fail;
+		}
+
+		dname_len = strlen(name) + 1;
+		memcpy(dname, name, dname_len);
+
+		do {
+			nend = 0;
+			if (sscanf(line + end, "%" str(PATH_MAX) "s %n",
+					name, &nend) < 1)
+				break;
+			len = strlen(name) + 1;
+			memcpy(dname + dname_len, name, len);
+			dname_len += len;
+			nlinks++;
+			end += nend;
+		} while (isgraph(line[end]));
+	} else {
+		dname = name;
+	}
+	rc = cpio_mkfile(dname, cpio_replace_env(location),
+	                 mode, uid, gid, nlinks);
  fail:
+	if (dname_len) free(dname);
 	return rc;
 }
 
-void usage(const char *prog)
+static void usage(const char *prog)
 {
 	fprintf(stderr, "Usage:\n"
 		"\t%s <cpio_list>\n"
@@ -381,22 +455,24 @@ void usage(const char *prog)
 		"describe the files to be included in the initramfs archive:\n"
 		"\n"
 		"# a comment\n"
-		"file <name> <location> <mode> <uid> <gid>\n"
+		"file <name> <location> <mode> <uid> <gid> [<hard links>]\n"
 		"dir <name> <mode> <uid> <gid>\n"
 		"nod <name> <mode> <uid> <gid> <dev_type> <maj> <min>\n"
 		"slink <name> <target> <mode> <uid> <gid>\n"
 		"pipe <name> <mode> <uid> <gid>\n"
 		"sock <name> <mode> <uid> <gid>\n"
 		"\n"
-		"<name>      name of the file/dir/nod/etc in the archive\n"
-		"<location>  location of the file in the current filesystem\n"
-		"<target>    link target\n"
-		"<mode>      mode/permissions of the file\n"
-		"<uid>       user id (0=root)\n"
-		"<gid>       group id (0=root)\n"
-		"<dev_type>  device type (b=block, c=character)\n"
-		"<maj>       major number of nod\n"
-		"<min>       minor number of nod\n"
+		"<name>       name of the file/dir/nod/etc in the archive\n"
+		"<location>   location of the file in the current filesystem\n"
+		"             expands shell variables quoted with ${}\n"
+		"<target>     link target\n"
+		"<mode>       mode/permissions of the file\n"
+		"<uid>        user id (0=root)\n"
+		"<gid>        group id (0=root)\n"
+		"<dev_type>   device type (b=block, c=character)\n"
+		"<maj>        major number of nod\n"
+		"<min>        minor number of nod\n"
+		"<hard links> space separated list of other links to file\n"
 		"\n"
 		"example:\n"
 		"# A simple initramfs\n"
@@ -448,7 +524,9 @@ int main (int argc, char *argv[])
 		exit(1);
 	}
 
-	if (! (cpio_list = fopen(argv[1], "r"))) {
+	if (!strcmp(argv[1], "-"))
+		cpio_list = stdin;
+	else if (! (cpio_list = fopen(argv[1], "r"))) {
 		fprintf(stderr, "ERROR: unable to open '%s': %s\n\n",
 			argv[1], strerror(errno));
 		usage(argv[0]);
