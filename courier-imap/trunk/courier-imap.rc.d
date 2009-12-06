@@ -1,11 +1,16 @@
 CI_DAEMONS=
 [ -f /etc/conf.d/courier-imap ] && . /etc/conf.d/courier-imap
+[ -z $AUTO_AUTHDAEMON_LAG ]   && AUTO_AUTHDAEMON_LAG=2
 
 . /etc/rc.conf
 . /etc/rc.d/functions
 
 case "$1" in
   start)
+    if [ ${AUTO_AUTHDAEMON="true"} ]; then
+      /etc/rc.d/authdaemond start
+      sleep ${AUTO_AUTHDAEMON_LAG}
+    fi
     if [ ! -f /var/run/daemons/authdaemond ]; then
       echo "ERROR: authdaemond is not running"
       stat_fail
