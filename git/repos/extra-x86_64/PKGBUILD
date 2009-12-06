@@ -3,7 +3,7 @@
 
 pkgname=git
 pkgver=1.6.5.5
-pkgrel=1
+pkgrel=2
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
@@ -31,7 +31,7 @@ build() {
   install -m644 ./contrib/completion/git-completion.bash $pkgdir/etc/bash_completion.d/git || return 1
 
   # more contrib stuff
-  cp -a ./contrib $pkgdir/usr/share/ || return 1
+  cp -a ./contrib $pkgdir/usr/share/git/ || return 1
 
   # how 'bout some manpages?
   for mansect in man1 man5 man7; do
