@@ -35,6 +35,9 @@ usage () {
 	echo "    --filesystem           add filesystems to MODULES="
 	echo "    --hostcontroller       show MODULES= for all hostcontrollers"
 	echo "    --vmware               add BusLogic to MODULES for vmware"
+	echo "    --ati-kms              add ati kernel mode setting" 
+	echo "    --intel-kms            add intel kernel mode setting"
+	echo "    --nvidia-kms           add nvidia kernel mode setting"
         echo "" 
 	echo "    --rootdevice=          autodetected advanced features of rootdevice"
 	echo "    --hooks-dir=           use this directory for HOOKS check"
@@ -77,6 +80,9 @@ fi
 
 # IDE/PATA switch
 [ "$(echo $* | grep '\-ide-legacy')" ] && IDE_LEGACY=1
+
+# uvesafb switch
+[ "$(echo $* | grep '\-uvesafb')" ] && UVESAFB=1
 
 # dmraid switch
 [ "$(echo $* | grep '\-dmraid')" ] && DMRAID=1
@@ -259,10 +265,10 @@ fi
 # SCSI disks/cdroms/tapes/generic devices
 if [ "$(find /sys/devices -noleaf -name 'type')" ]; then
 	for i in $(cat $(find /sys/devices -noleaf -name "type")); do
-		case $i in (4|5)       modprobe -i --set-version=$KERNEL_VERSION --show-depends sr-mod >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (4|5)       modprobe -i --set-version=$KERNEL_VERSION --show-depends sr_mod >> /tmp/modules-plain 2>/dev/null ;; esac
 		case $i in (2|3|6|8|9) modprobe -i --set-version=$KERNEL_VERSION --show-depends sg >> /tmp/modules-plain 2>/dev/null ;; esac
-		case $i in (0|7|14)	     modprobe -i --set-version=$KERNEL_VERSION --show-depends sd-mod >> /tmp/modules-plain 2>/dev/null ;; esac
-		case $i in (1)           modprobe -i --set-version=$KERNEL_VERSION --show-depends st >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (0|7|14)    modprobe -i --set-version=$KERNEL_VERSION --show-depends sd_mod >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (1)         modprobe -i --set-version=$KERNEL_VERSION --show-depends st >> /tmp/modules-plain 2>/dev/null ;; esac
 	done
 fi
 
@@ -327,12 +333,13 @@ grep "/sg.ko" /tmp/modules-stripped >> /tmp/modules-sorted
 sed -ne "s#^insmod.*/\(.*\)\.ko.*#\1#p" /tmp/modules-sorted >> /tmp/moduleslist
 
 # blacklist framebuffer modules
-for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*/*fb*); do
-	BLACKLIST="$BLACKLIST $(basename $x .ko)"
-done
-for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*fb*); do
-	BLACKLIST="$BLACKLIST $(basename $x .ko)"
-done
+# not needed anymore since blacklist file!
+#for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*/*fb*); do
+#	BLACKLIST="$BLACKLIST $(basename $x .ko)"
+#done
+#for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*fb*); do
+#	BLACKLIST="$BLACKLIST $(basename $x .ko)"
+#done
 # delete modules that are blacklisted
 BLACKLIST="${BLACKLIST} $(echo ${disablemodules} | sed 's|-|_|g' | sed 's|,| |g')"
 for i in $BLACKLIST; do
@@ -447,12 +454,40 @@ while [ $# -gt 0 ]; do
 		--show-staging) showlist "STAGING" $(listmods staging/) ;;
 		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
 		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/) ;;
-		--filesystem) FILESYSTEM="ext2 ext3 ext4 reiserfs xfs jfs"
-				  for i in $FILESYSTEM; do
+		--filesystem)   FILESYSTEM="ext2 ext3 ext4 reiserfs xfs jfs vfat"
+				for i in $FILESYSTEM; do
 					 [ "$(grep $i /tmp/.blkid)" ] && FS="$FS $i"
-				  done
-				  ;;
-		--hostcontroller) showlist2 "MODULES" \"$(listmods ide/ ide-) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $FS\" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				done
+				MODULES_INITRAMFS="$MODULES_INITRAMFS $FS"
+				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				;;
+		--hostcontroller)HOSTCONTROLLER="$(listmods ide/ ide-) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
+				 MODULES_INITRAMFS="$MODULES_INITRAMFS $HOSTCONTROLLER"
+				 showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				 ;;
+		--ati-kms) 	KMS="radeon"
+				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
+				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				;;
+		--intel-kms) 	KMS="i915"
+				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
+				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				;;
+		--nvidia-kms) 	KMS="nouveau"
+				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
+				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				;;
+		--uvesafb) 	FB="uvesafb"
+				MODULES_INITRAMFS="$FB $MODULES_INITRAMFS"
+				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				;;
+		--fbmodule) 	FB=""
+				for i in $(cat /etc/modprobe.d/framebuffer_blacklist.conf); do
+				    i=$(echo $i | sed -e 's/blacklist //g')
+                                    cat /proc/modules | grep -q ^$i && FB="$i"
+                                done
+				MODULES_INITRAMFS="$FB $MODULES_INITRAMFS "
+				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
 		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) \) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(dmesg | grep 'use 8139too')" ]; then
@@ -489,7 +524,11 @@ while [ $# -gt 0 ]; do
 			 showlist2 "MODULES" \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--usbhost) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
-			 showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+			 BLACKLIST_UDEV=""
+			 for i in $MODULES_EXPORTED; do
+				BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+			 done
+			 showlist2 "MODULES" \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
@@ -497,7 +536,7 @@ while [ $# -gt 0 ]; do
 			if [ "$HOOKS_DIR" = "" ]; then
 				HOOKS_DIR="/lib/initcpio/install"
 			fi
-			START_HOOKS="base udev keymap autodetect ide pata scsi sata usb fw pcmcia net dmraid usbinput $ADVANCED filesystems"
+			START_HOOKS="base v86d udev keymap autodetect ide pata scsi sata usb fw pcmcia net dmraid usbinput $ADVANCED filesystems"
 			# remove the ones that don't exist on the system
 			for i in ${START_HOOKS}; do
 				if ! [ -e "${HOOKS_DIR}/$i" ]; then 
@@ -515,6 +554,9 @@ while [ $# -gt 0 ]; do
 			fi
 			if ! [ "$KEYMAP" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/keymap//g")
+			fi
+			if ! [ "$UVESAFB" = "1" ]; then 
+				START_HOOKS=$(echo $START_HOOKS | sed -e "s/v86d//g")
 			fi
 			if ! [ "$DMRAID" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/dmraid//g")
