@@ -1,36 +1,57 @@
 # $Id $
 # Maintainer: Dan McGee <dan@archlinux.org>
 # Contributor: Evan LeCompte <evanlec@gmail.com>
-pkgname=munin
-pkgver=1.2.6
-pkgrel=13
+pkgname=('munin' 'munin-node')
+pkgbase=munin
+pkgver=1.4.1
+pkgrel=1
 pkgdesc="A distributed monitoring/graphing tool"
-arch=('i686' 'x86_64')
+arch=('any')
 url="http://munin.projects.linpro.no/"
 license=("GPL")
-depends=('perl>=5.10.1' 'perl<5.10.2' 'rrdtool' 'perl-html-template' 'perl-date-manip' 'ttf-dejavu')
-backup=(etc/munin/munin.conf etc/logrotate.d/munin)
-install=munin.install
-source=(http://downloads.sourceforge.net/sourceforge/munin/munin_$pkgver.tar.gz
-        Makefile.config munin-cron-entry logrotate.munin
-        rrdtool-utf8-only.diff)
+depends=('perl>=5.10.1' 'perl<5.10.2')
+source=(http://downloads.sourceforge.net/sourceforge/munin/munin-$pkgver.tar.gz
+        Makefile.config
+        munin-cron-entry
+        munin-node.init
+        logrotate.munin
+        logrotate.munin-node
+        iostat_partition)
 
 build() { 
-	cd $srcdir/$pkgname-$pkgver
+	cd $srcdir/munin-$pkgver
 	cp $srcdir/Makefile.config $srcdir/$pkgname-$pkgver || exit 1
-	patch -Np3 < $srcdir/rrdtool-utf8-only.diff
-	make PREFIX='' || exit 1
+	# multithreading wrecks havoc on the build, should probably report this upstream
+	make -j1 PREFIX='' || exit 1
 }
 
-package() {
-	cd $srcdir/$pkgname-$pkgver
-	make DESTDIR=$pkgdir install-main install-doc install-man || exit 1
+package_munin() {
+	depends=('perl>=5.10.1' 'perl<5.10.2' 'rrdtool' 'perl-html-template' 'perl-date-manip' 'perl-log-log4perl')
+	backup=(etc/munin/munin.conf etc/logrotate.d/munin)
+	install=munin.install
+	cd $srcdir/munin-$pkgver
+	make DESTDIR=$pkgdir install-master-prime || exit 1
 	install -D -m644 $srcdir/munin-cron-entry $pkgdir/etc/munin/munin-cron-entry
 	install -D -m644 $srcdir/logrotate.munin $pkgdir/etc/logrotate.d/munin
 }
 
-md5sums=('45f84d58f80642ce914f147232f0d396'
-         '5f9b83e0c876821cf2b20012f7cb63f0'
+package_munin-node() {
+	depends=('perl>=5.10.1' 'perl<5.10.2' 'perl-net-server')
+	optdepends=('perl-net-snmp: for SNMP plugins'
+	            'perl-net-ssleay: for SSL/TLS support')
+	backup=(etc/munin/munin-node.conf etc/logrotate.d/munin-node)
+	install=munin-node.install
+	cd $srcdir/munin-$pkgver
+	make DESTDIR=$pkgdir install-common-prime install-node-prime install-plugins-prime || exit 1
+	install -m755 $srcdir/iostat_partition $pkgdir/usr/lib/munin/plugins/
+	install -D -m755 $srcdir/munin-node.init $pkgdir/etc/rc.d/munin-node
+	install -D -m644 $srcdir/logrotate.munin-node $pkgdir/etc/logrotate.d/munin-node
+}
+
+md5sums=('04086f23b657e05e4e5e5a8fa6082f16'
+         '6ebc31eaa09734394606f7a1e19e38a5'
          'dc9c83aa2a278466fb475364462f4119'
+         '9551a2f7c0f0364fd1b7dd010675e47a'
          'db77b53150a906256a71a9f539c7fac2'
-         '36f52b88d6465e198b5cf40e06d30b4d')
+         'cdf139f2b6ae36852113f3411caa6e99'
+         '12289ab5d062449eaa14376f927f5d26')
