@@ -3,7 +3,7 @@
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributor: Anders Bostrom <anders.bostrom@home.se>
 pkgname=thunderbird
-pkgver=2.0.0.23
+pkgver=3.0
 pkgrel=1
 pkgdesc="Standalone Mail/News reader"
 arch=('i686' 'x86_64')
@@ -12,33 +12,25 @@ url="http://www.mozilla.org/projects/thunderbird"
 provides=('mozilla-thunderbird')
 conflicts=('mozilla-thunderbird')
 replaces=('mozilla-thunderbird')
-depends=('gtk2>=2.16.5' 'gcc-libs>=4.4' 'libidl2>=0.8.13' 'mozilla-common' 'nss>=3.12.3' 'libxt' 'shared-mime-info')
+depends=('gtk2>=2.18.4' 'gcc-libs>=4.4' 'libidl2>=0.8.13' 'mozilla-common' 'nss>=3.12.3' 'libxt' 'shared-mime-info'
+	 'alsa-lib>=1.0.21.a' 'dbus-glib>=0.82')
 makedepends=('zip' 'pkgconfig' 'imagemagick>=6.5.3.10-1' 'libgnomeui')
 options=('!makeflags')
-source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}-source.tar.bz2
+source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}.source.tar.bz2
         mozconfig
         thunderbird.desktop
-        thunderbird-1.5-lang.patch
-        firefox-2.0-link-layout.patch
+        thunderbird-3.0-lang.patch
         thunderbird-appversion.patch
-        xulrunner-elif.patch)
-md5sums=('2e118fcf752ee60ce994f1471f9632d1'
-         '17e3015259da53f40bc445b27078f693'
-         'ea4e3c3dee98e3891bef16409551eb6e'
-         'bc6f10a06407faee6494acad546aabf9'
-         'b933c00957ea793fe940f4d46a85e10e'
-         '63dd0436e43e2de71abcf9160a1a6f44'
-         '38457261a6355365079dbe5c2342ec68')
+	thunderbird-shared-error.patch)
+md5sums=('9a564ac2489b1b0f9348dc298b913f6c' '7552d546b9d88331806965100454fa0d'
+         'ea4e3c3dee98e3891bef16409551eb6e' '25b6fe16ac24cd5c852213e5c1adb272'
+         '69a0134af6466c021a3f515022b7fb67' '3dca714ee8054634e6dfdb059464dc42')
 
 build() {
-  # -Wl,--as-needed seems to fail here
-  unset LDFLAGS
-
-  cd "${srcdir}/mozilla"
-  patch -Np1 -i "${srcdir}/thunderbird-1.5-lang.patch" || return 1
-  patch -Np1 -i "${srcdir}/firefox-2.0-link-layout.patch" || return 1
+  cd "${srcdir}/comm-1.9.1"
+  patch -Np1 -i "${srcdir}/thunderbird-3.0-lang.patch" || return 1
   patch -Np1 -i "${srcdir}/thunderbird-appversion.patch" || return 1
-  patch -Np1 -i "${srcdir}/xulrunner-elif.patch" || return 1
+  patch -Np1 -i "${srcdir}/thunderbird-shared-error.patch" || return 1
   cp "${srcdir}/mozconfig" .mozconfig
 
   echo "ac_cv_visibility_pragma=no" >> .mozconfig
@@ -47,6 +39,8 @@ build() {
   unset CXXFLAGS
   unset CFLAGS
 
+  export LDFLAGS="-Wl,-rpath,/usr/lib/thunderbird-3.0"
+
   make -f client.mk build || return 1
   make DESTDIR="${pkgdir}" install || return 1
 
@@ -54,13 +48,12 @@ build() {
 
   install -m755 -d "${pkgdir}/usr/share/applications"
   install -m755 -d "${pkgdir}/usr/share/pixmaps"
-  convert "${srcdir}/mozilla/mail/app/default.xpm" \
-      "${pkgdir}/usr/share/pixmaps/thunderbird.png" || return 1
+
+  install -m644 "${srcdir}/comm-1.9.1/mail/branding/nightly/mailicon48.png" \
+  	"${pkgdir}/usr/share/pixmaps/thunderbird.png" || return 1
+
   install -m644 "${srcdir}/thunderbird.desktop" \
       "${pkgdir}/usr/share/applications/" || return 1
-
-  install -m644 "${srcdir}/mozilla/mail/app/default.xpm" \
-      "${pkgdir}/usr/lib/thunderbird-2.0/icons/" || return 1
 
   rm -f ${pkgdir}/usr/lib/pkgconfig/thunderbird-ns{s,pr}.pc
 }
