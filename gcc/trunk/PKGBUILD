@@ -7,8 +7,8 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada')
 pkgver=4.4.2
-pkgrel=3
-#_snapshot=4.4-20090630
+pkgrel=4
+_snapshot=4.4-20091208
 _libstdcppmanver=4.4.0
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -16,20 +16,25 @@ license=('GPL' 'LGPL' 'custom')
 url="http://gcc.gnu.org"
 makedepends=('binutils>=2.20' 'mpfr>=2.4.1' 'cloog-ppl>=0.15.3' 'gcc-ada')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++,fortran,objc,ada}-${pkgver}.tar.bz2
-	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-{core,g++,fortran,objc,ada}-${_snapshot}.tar.bz2
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++,fortran,objc,ada}-${pkgver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-{core,g++,fortran,objc,ada}-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-man.${_libstdcppmanver}.tar.bz2
-	#ftp://ftp.archlinux.org/other/${pkgname}/libstdc++-man.${_libstdcppmanver}.tar.bz2
 	gcc_pure64.patch
 	gcc-hash-style-both.patch)
-md5sums=('d50ec5af20508974411d0c83c5f4e396'
-         '43b1e4879eb282dc4b05e4c016d356d7'
-         '184897e1b5e8c76760813c1955ee02c2'
-         'd8d26187d386a0591222a580b5a5b3d3'
-         '7e68d87a335e8ebb832bf5390070f13e'
+md5sums=('4bb3d4871e1a8bc56a6069c029be56db'
+         '6da1a15e82bc00f9374bf19e3b2979ae'
+         '066927b94be8f92b575b8eab8c3c353b'
+         'a538eb3f64e7102b4a89c155b2adb98b'
+         '99398c9aec34a479a748d260b5d14708'
          '3b94fe4a3cd49819bf57ecc407851b9b'
          '4030ee1c08dd1e843c0225b772360e76'
          '6fd395bacbd7b6e47c7b74854b478363')
+
+if [ -n "${_snapshot}" ]; then 
+  _basedir="${srcdir}/gcc-${_snapshot}"
+else
+  _basedir="${srcdir}/gcc-${pkgver}"
+fi
 
 build() {
   if ! locale -a | grep ^de_DE > /dev/null; then
@@ -37,8 +42,7 @@ build() {
     return 1
   fi
   
-  cd ${srcdir}/gcc-${pkgver}
-  #cd ${srcdir}/gcc-${_snapshot}
+  cd ${_basedir}
   
   # Do not install libiberty
   sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
@@ -70,7 +74,7 @@ package_gcc-libs()
   depends=('glibc>=2.10.1-5')
   install=gcc-libs.install
 
-  cd ${srcdir}/gcc-${pkgver}/build
+  cd ${_basedir}/build
   make -j1 -C $CHOST/libgcc DESTDIR=${pkgdir} install-shared
   for lib in libmudflap libgomp libssp libstdc++-v3/src; do
     make -j1 -C $CHOST/$lib DESTDIR=${pkgdir} install-toolexeclibLTLIBRARIES
@@ -88,7 +92,7 @@ package_gcc-libs()
   find ${pkgdir} -name *.a -delete
   
   # Install Runtime Library Exception
-  install -Dm644 ${srcdir}/gcc-${pkgver}/COPYING.RUNTIME \
+  install -Dm644 ${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -98,7 +102,7 @@ package_gcc()
   groups=('base-devel')
   install=gcc.install
 
-  cd ${srcdir}/gcc-${pkgver}/build
+  cd ${_basedir}/build
   
   # much, much easier to install the lot and clean-up the mess
   make -j1 DESTDIR=${pkgdir} install || return 1
@@ -124,7 +128,7 @@ package_gcc()
   rm -f ${pkgdir}/usr/share/man/man3/{ctime,queue,random,regex,string}.3
 
   # Install Runtime Library Exception
-  install -Dm644 ${srcdir}/gcc-${pkgver}/COPYING.RUNTIME \
+  install -Dm644 ${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -134,7 +138,7 @@ package_gcc-fortran()
   depends=("gcc=$pkgver")
   install=gcc-fortran.install
 
-  cd ${srcdir}/gcc-${pkgver}/build
+  cd ${_basedir}/build
   make -j1 DESTDIR=$pkgdir install-target-libgfortran
   make -j1 -C $CHOST/libgomp DESTDIR=$pkgdir install-nodist_fincludeHEADERS
   make -j1 -C gcc DESTDIR=$pkgdir fortran.install-{common,man,info}
@@ -144,7 +148,7 @@ package_gcc-fortran()
   rm -f ${pkgdir}/usr/lib/libgfortran.so*
   
   # Install Runtime Library Exception
-  install -Dm644 ${srcdir}/gcc-${pkgver}/COPYING.RUNTIME \
+  install -Dm644 ${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-fortran/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -153,7 +157,7 @@ package_gcc-objc()
   pkgdesc="Objective-C front-end for GCC"
   depends=("gcc=$pkgver")
 
-  cd ${srcdir}/gcc-${pkgver}/build
+  cd ${_basedir}/build
   make -j1 DESTDIR=$pkgdir install-target-libobjc
   install -dm755 $pkgdir/usr/lib/gcc/$CHOST/$pkgver/
   install -m755 gcc/cc1obj{,plus} $pkgdir/usr/lib/gcc/$CHOST/$pkgver/
@@ -162,7 +166,7 @@ package_gcc-objc()
   rm -f ${pkgdir}/usr/lib/libobjc.so*
 
   # Install Runtime Library Exception
-  install -Dm644 ${srcdir}/gcc-${pkgver}/COPYING.RUNTIME \
+  install -Dm644 ${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-objc/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -172,11 +176,11 @@ package_gcc-ada()
   depends=("gcc=$pkgver")
   install=gcc-ada.install
 
-  cd ${srcdir}/gcc-${pkgver}/build/gcc
+  cd ${_basedir}/build/gcc
   make -j1 DESTDIR=$pkgdir ada.install-{common,info}
   install -m755 gnat1 $pkgdir/usr/lib/gcc/$CHOST/$pkgver
   
   # Install Runtime Library Exception
-  install -Dm644 ${srcdir}/gcc-${pkgver}/COPYING.RUNTIME \
+  install -Dm644 ${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-ada/RUNTIME.LIBRARY.EXCEPTION
 }
