@@ -1,0 +1,59 @@
+# $Id: PKGBUILD 60156 2009-12-01 10:21:15Z andrea $
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=kdelibs
+pkgver=4.3.80
+pkgrel=1
+pkgdesc="KDE Core Libraries"
+arch=('i686' 'x86_64')
+url='http://www.kde.org'
+license=('GPL' 'LGPL' 'FDL')
+depends=('shared-mime-info' 'hal' 'xz-utils' 'enchant' 'jasper' 'openexr'
+	'strigi' 'libxtst' 'soprano' 'ca-certificates' 'xdg-utils' 'qca' 'polkit-qt'
+	'libxss' 'phonon' 'shared-desktop-ontologies')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'intltool' 'avahi' 'libgl' 'hspell' 'libxslt')
+replaces=('arts')
+install='kdelibs.install'
+source=(http://download.kde.org/unstable/${pkgver}/src/${pkgname}-${pkgver}.tar.bz2
+        'kde-applications-menu.patch' 'archlinux-menu.patch' 'abs-syntax-highlight.patch')
+md5sums=('3d4fe702be4a85c02e56e80a8f06ae76'
+         '280f34ee159845f8902c31bd499254fc'
+         '79e39afdfc7081f44971da21a8427879'
+         '18ea42696a7f41332a092d6ead7efc6a')
+
+build() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	# avoid file conflict with gnome-menu
+	patch -p1 -i $srcdir/kde-applications-menu.patch
+	# add Archlinux menu entry
+	patch -p1 -i $srcdir/archlinux-menu.patch
+	# add syntax highlightning for PKGBUILD and .install files
+	patch -p1 -i $srcdir/abs-syntax-highlight.patch
+
+	cd ${srcdir}
+	mkdir build
+	cd build
+	cmake ../${pkgname}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_SKIP_RPATH=ON \
+		-DCMAKE_{SHARED,MODULE,EXE}_LINKER_FLAGS='-Wl,--no-undefined -Wl,--as-needed' \
+		-DKDE_DISTRIBUTION_TEXT='Arch Linux' \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DSYSCONF_INSTALL_DIR=/etc \
+		-DHTML_INSTALL_DIR=/usr/share/doc/kde/html \
+		-DKDE_DEFAULT_HOME='.kde4' \
+		-DWITH_FAM=OFF \
+		-DWITH_LibAttica=OFF
+	make
+}
+
+package() {
+	cd $srcdir/build
+	make DESTDIR=$pkgdir install
+
+	# cert bundle seems to be hardcoded
+	# link it to the one from ca-certificates
+	rm -f $pkgdir/usr/share/apps/kssl/ca-bundle.crt
+	ln -sf /etc/ssl/certs/ca-certificates.crt $pkgdir/usr/share/apps/kssl/ca-bundle.crt
+}
