@@ -6,15 +6,15 @@
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
-pkgver=2.11
+pkgver=2.11.1
 pkgrel=1
-_glibcdate=20091101
+_glibcdate=20091212
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('kernel-headers>=2.6.31.5' 'tzdata')
+depends=('kernel-headers>=2.6.32' 'tzdata')
 makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
 backup=(etc/locale.gen
@@ -25,8 +25,8 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.10-bz4781.patch
         nscd
         locale.gen.txt
-        locale-gen)
-md5sums=('de56eefcb4070c0cbe4336652ead854e'
+        locale-gen)    
+md5sums=('a3e7414c1eedb7a56cf095d1bb06250e'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          'b587ee3a70c9b3713099295609afde49'
@@ -35,11 +35,10 @@ md5sums=('de56eefcb4070c0cbe4336652ead854e'
 
 mksource() {
   mkdir glibc-${pkgver}_${_glibcdate}
-  cd $glibc-${pkgver}_${_glibcdate}
+  cd glibc-${pkgver}_${_glibcdate}
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  #git checkout -b glibc-2.11-arch origin/cvs/glibc-2_11-branch
-  git checkout -b glibc-2.11-arch glibc-2.11
+  git checkout -b glibc-2.11-arch origin/release/2.11/master
   popd
   tar -cvjf glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
 }
