@@ -5,11 +5,11 @@
 
 pkgname=pyqt
 pkgver=4.6.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A set of Python bindings for the Qt toolkit."
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
-depends=('sip>=4.9.3' 'qscintilla>=2.4.0' 'qt>=4.5.3' 'dbus-python' 'openssl')
+depends=('sip>=4.9.3' 'qscintilla>=2.4.1' 'qt>=4.6.0' 'dbus-python' 'openssl')
 license=('GPL')
 provides=('pyqt4')
 replaces=('pyqt4')
