@@ -16,14 +16,16 @@ BuildFlavour = perf
 # Fast build with optimised libraries:
 #BuildFlavour = quick
 
+# Profile the stage2 compiler:
+#BuildFlavour = prof
+
 # A development build, working on the stage 1 compiler:
 #BuildFlavour = devel1
 
 # A development build, working on the stage 2 compiler:
 #BuildFlavour = devel2
 
-# Which warnings we like to use
-MyWarningOpts   = -W -fno-warn-unused-matches -fwarn-unused-imports
+GhcLibWays = v
 
 # -------- 1. A Performance/Distribution build--------------------------------
 
@@ -36,7 +38,11 @@ GhcStage1HcOpts = -O -fasm
 GhcStage2HcOpts = -O2 -fasm
 GhcHcOpts       = -Rghc-timing
 GhcLibHcOpts    = -O2 -XGenerics
-GhcLibWays      = p
+GhcLibWays     += p
+
+ifeq "$(PlatformSupportsSharedLibs)" "YES"
+GhcLibWays += dyn
+endif
 
 endif
 
@@ -44,12 +50,15 @@ endif
 
 ifeq "$(BuildFlavour)" "quickest"
 
-SRC_HC_OPTS     = -H64m -O0 -fasm
-GhcStage1HcOpts = -O -fasm
-GhcStage2HcOpts = -O0 -fasm
-GhcLibHcOpts    = -O0 -fasm
-GhcLibWays      =
-SplitObjs       = NO
+SRC_HC_OPTS        = -H64m -O0 -fasm
+GhcStage1HcOpts    = -O -fasm
+GhcStage2HcOpts    = -O0 -fasm
+GhcLibHcOpts       = -O0 -fasm
+SplitObjs          = NO
+HADDOCK_DOCS       = NO
+BUILD_DOCBOOK_HTML = NO
+BUILD_DOCBOOK_PS   = NO
+BUILD_DOCBOOK_PDF  = NO
 
 endif
 
@@ -57,25 +66,52 @@ endif
 
 ifeq "$(BuildFlavour)" "quick"
 
-SRC_HC_OPTS     = -H64m -O0 -fasm
-GhcStage1HcOpts = -O -fasm
-GhcStage2HcOpts = -O0 -fasm
-GhcLibHcOpts    = -O -fasm
-GhcLibWays      =
-SplitObjs       = NO
+SRC_HC_OPTS        = -H64m -O0 -fasm
+GhcStage1HcOpts    = -O -fasm
+GhcStage2HcOpts    = -O0 -fasm
+GhcLibHcOpts       = -O -fasm
+SplitObjs          = NO
+HADDOCK_DOCS       = NO
+BUILD_DOCBOOK_HTML = NO
+BUILD_DOCBOOK_PS   = NO
+BUILD_DOCBOOK_PDF  = NO
 
 endif
+
+# -------- Profile the stage2 compiler ---------------------------------------
+
+ifeq "$(BuildFlavour)" "prof"
+
+SRC_HC_OPTS        = -H64m -O0 -fasm
+GhcStage1HcOpts    = -O -fasm
+GhcStage2HcOpts    = -O -fasm
+GhcLibHcOpts       = -O -fasm
+
+GhcLibWays         += p
+GhcProfiled        = YES
+
+SplitObjs          = NO
+HADDOCK_DOCS       = NO
+BUILD_DOCBOOK_HTML = NO
+BUILD_DOCBOOK_PS   = NO
+BUILD_DOCBOOK_PDF  = NO
+
+endif
+
 
 # -------- A Development build (stage 1) -------------------------------------
 
 ifeq "$(BuildFlavour)" "devel1"
 
-SRC_HC_OPTS     = -H64m -O -fasm $(MyWarningOpts)
-GhcLibHcOpts    = -O -dcore-lint $(MyWarningOpts)
-GhcLibWays      =
-GhcStage1HcOpts = -Rghc-timing -O0 -DDEBUG
-GhcStage2HcOpts = -Rghc-timing -O -fasm
-SplitObjs = NO
+SRC_HC_OPTS        = -H64m -O -fasm
+GhcLibHcOpts       = -O -dcore-lint
+GhcStage1HcOpts    = -Rghc-timing -O0 -DDEBUG
+GhcStage2HcOpts    = -Rghc-timing -O -fasm
+SplitObjs          = NO
+HADDOCK_DOCS       = NO
+BUILD_DOCBOOK_HTML = NO
+BUILD_DOCBOOK_PS   = NO
+BUILD_DOCBOOK_PDF  = NO
 
 endif
 
@@ -83,12 +119,15 @@ endif
 
 ifeq "$(BuildFlavour)" "devel2"
 
-SRC_HC_OPTS     = -H64m -O -fasm $(MyWarningOpts)
-GhcLibHcOpts    = -O -dcore-lint $(MyWarningOpts)
-GhcLibWays      =
-GhcStage1HcOpts = -Rghc-timing -O -fasm
-GhcStage2HcOpts = -Rghc-timing -O0 -DDEBUG
-SplitObjs = NO
+SRC_HC_OPTS        = -H64m -O -fasm
+GhcLibHcOpts       = -O -dcore-lint
+GhcStage1HcOpts    = -Rghc-timing -O -fasm
+GhcStage2HcOpts    = -Rghc-timing -O0 -DDEBUG
+SplitObjs          = NO
+HADDOCK_DOCS       = NO
+BUILD_DOCBOOK_HTML = NO
+BUILD_DOCBOOK_PS   = NO
+BUILD_DOCBOOK_PDF  = NO
 
 endif
 
