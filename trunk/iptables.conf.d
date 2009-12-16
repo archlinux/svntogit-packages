@@ -5,4 +5,4 @@ IP6TABLES=/usr/sbin/ip6tables
 
 IPTABLES_CONF=/etc/iptables/iptables.rules
 IP6TABLES_CONF=/etc/iptables/ip6tables.rules
-IPTABLES_FORWARD=1  # enable IP forwarding?
+IPTABLES_FORWARD=0  # enable IP forwarding?
