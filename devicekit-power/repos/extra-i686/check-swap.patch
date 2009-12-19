@@ -1,0 +1,43 @@
+From bbb102c394eff71d84801b48b11e022b1fecb497 Mon Sep 17 00:00:00 2001
+From: Debbie Beliveau <debbie.beliveau@gmail.com>
+Date: Wed, 16 Dec 2009 16:29:29 +0000
+Subject: Check if swap exists before determining how much is free
+
+Signed-off-by: Richard Hughes <richard@hughsie.com>
+---
+diff --git a/src/dkp-daemon.c b/src/dkp-daemon.c
+index eb16a63..47d84d5 100644
+--- a/src/dkp-daemon.c
++++ b/src/dkp-daemon.c
+@@ -250,6 +250,7 @@ dkp_daemon_check_swap_space (DkpDaemon *daemon)
+ 	gboolean ret;
+ 	guint active = 0;
+ 	guint swap_free = 0;
++	guint swap_total = 0;
+ 	guint len;
+ 	guint i;
+ 	gfloat percentage = 0.0f;
+@@ -271,12 +272,21 @@ dkp_daemon_check_swap_space (DkpDaemon *daemon)
+ 		if (len > 3) {
+ 			if (g_strcmp0 (tokens[0], "SwapFree") == 0)
+ 				swap_free = atoi (tokens[len-2]);
++			if (g_strcmp0 (tokens[0], "SwapTotal") == 0)
++				swap_total = atoi (tokens[len-2]);
+ 			else if (g_strcmp0 (tokens[0], "Active") == 0)
+ 				active = atoi (tokens[len-2]);
+ 		}
+ 		g_strfreev (tokens);
+ 	}
+ 
++	/* first check if we even have swap, if not consider all swap space used */
++	if (swap_total == 0) {
++		egg_debug ("no swap space found");
++		percentage = 100.0f;
++		goto out;
++	}
++
+ 	/* work out how close to the line we are */
+ 	if (swap_free > 0 && active > 0)
+ 		percentage = (active * 100) / swap_free;
+--
+cgit v0.8.3-6-g21f6
