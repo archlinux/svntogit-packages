@@ -43,6 +43,7 @@ DRMCFG := \
 	CONFIG_DRM_NOUVEAU=m \
 	CONFIG_DRM_NOUVEAU_KMS=n \
 	CONFIG_DRM_NOUVEAU_BACKLIGHT=y \
+	CONFIG_DRM_NOUVEAU_DEBUG=y \
 	CONFIG_DRM_I2C_CH7006=m \
 	CONFIG_DRM_TDFX=n \
 	CONFIG_DRM_R128=n \
@@ -58,6 +59,7 @@ DRMCFG := \
 EXTRA_CFLAGS :=
 MYEXTRA_CFLAGS :=
 MYEXTRA_CFLAGS += -DCONFIG_DRM_NOUVEAU_BACKLIGHT
+MYEXTRA_CFLAGS += -DCONFIG_DRM_NOUVEAU_DEBUG
 
 ifneq ($(GIT_REVISION),)
 MYEXTRA_CFLAGS += '-DGIT_REVISION=\"$(GIT_REVISION)\"'
@@ -98,4 +100,3 @@ newttm-devel-compat.tar.gz: EXTRAS=nouveau README-nouveau
 
 # The commit id of the archive can be read with
 # $ zcat foo.tar.gz | git get-tar-commit-id
-
