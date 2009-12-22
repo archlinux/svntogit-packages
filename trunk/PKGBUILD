@@ -5,7 +5,7 @@
 
 pkgname=mpd
 pkgver=0.15.6
-pkgrel=1.1
+pkgrel=2
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -22,7 +22,11 @@ md5sums=('e0b7a11f86f8f021a92c49a96032ff39'
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
   ./configure --prefix=/usr \
-    --sysconfdir=/etc
+    --sysconfdir=/etc \
+    --enable-lastfm \
+    --disable-cue \
+    --disable-sidplay \
+    --disable-pulse || return 1
   make || return 1
   make DESTDIR=${pkgdir} install
 
