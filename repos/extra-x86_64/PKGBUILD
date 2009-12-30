@@ -3,8 +3,8 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=libsndfile
-pkgver=1.0.20
-pkgrel=3
+pkgver=1.0.21
+pkgrel=1
 pkgdesc="A C library for reading and writing files containing sampled sound"
 arch=('i686' 'x86_64')
 url="http://www.mega-nerd.com/libsndfile"
@@ -13,9 +13,9 @@ depends=('alsa-lib' 'flac>=1.2.1' 'libvorbis')
 makedepends=('jack-audio-connection-kit')
 optdepends=('jack-audio-connection-kit: for JACK support')
 options=('!libtool')
-source=(http://www.mega-nerd.com/libsndfile/${pkgname}-${pkgver}.tar.gz)
-md5sums=('e0553e12c7a467af44693e95e2eac668')
-sha1sums=('d4f88b919c644f54dd4038c4cf4fb2e7b0d32f7b')
+source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz)
+md5sums=('880a40ec636ab2185b97f8927299b292')
+sha1sums=('136845a8bb5679e033f8f53fb98ddeb5ee8f1d97')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
