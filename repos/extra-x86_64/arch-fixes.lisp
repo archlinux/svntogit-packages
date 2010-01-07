@@ -16,7 +16,6 @@
 	  ("SYS:CONTRIB;**;*.*.*" ,contrib))))
 
 (ignore-errors
- (sb-ext:gc :full t)
- (sb-ext:save-lisp-and-die "sbcl-new.core"))
-
-
+  (sb-ext:gc :full t)
+  (sb-ext:enable-debugger)
+  (sb-ext:save-lisp-and-die "sbcl-new.core"))
