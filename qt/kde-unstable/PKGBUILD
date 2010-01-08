@@ -3,15 +3,15 @@
 
 pkgname=qt
 pkgver=4.6.0
-pkgrel=2
+pkgrel=3
 pkgdesc='A cross-platform application and UI framework'
 arch=('i686' 'x86_64')
 url='http://qt.nokia.com/'
 license=('GPL3' 'LGPL')
-depends=('libpng' 'mesa' 'fontconfig' 'libtiff' 'libmng' 'sqlite3' 'xdg-utils' 'hicolor-icon-theme' 'alsa-lib'
-         'libxrandr' 'glib2' 'libxi' 'dbus' 'libxcursor' 'libxinerama' 'libxrender' 'ca-certificates')
+depends=('libpng' 'fontconfig' 'libtiff' 'libmng' 'sqlite3' 'xdg-utils' 'ca-certificates'
+         'hicolor-icon-theme' 'alsa-lib' 'glib2' 'dbus' 'libxrender' 'libgl' 'libsm')
 optdepends=('postgresql-libs' 'libmysqlclient' 'unixodbc')
-makedepends=('inputproto' 'postgresql-libs' 'mysql' 'unixodbc' 'cups' 'libxfixes' 'gtk2')
+makedepends=('mesa' 'inputproto' 'postgresql-libs' 'mysql' 'unixodbc' 'cups' 'libxfixes' 'gtk2')
 install=qt.install
 options=('!libtool')
 _pkgfqn="qt-everywhere-opensource-src-${pkgver}"
@@ -98,9 +98,10 @@ package() {
 	# install license addition
 	install -D -m644 LGPL_EXCEPTION.txt ${pkgdir}/usr/share/licenses/qt/LGPL_EXCEPTION.txt
 
-	# cleanup and path fixes
-	find $pkgdir/usr/lib -type f -name '*prl' -print -exec sed -i -e "/^QMAKE_PRL_BUILD_DIR/d" {} \;
-	sed -i -e "s|-L$srcdir/${_pkgfqn}/lib||g" $pkgdir/usr/lib/pkgconfig/*.pc
-	sed -i -e "s|$srcdir/${_pkgfqn}/bin/moc|/usr/bin/moc|g" $pkgdir/usr/lib/pkgconfig/*.pc
-	sed -i -e "s|$srcdir/${_pkgfqn}/bin/uic|/usr/bin/uic|g" $pkgdir/usr/lib/pkgconfig/*.pc
+	# Fix wrong path in pkgconfig files
+	find ${pkgdir}/usr/lib/pkgconfig -type f -name '*.pc' \
+		-exec perl -pi -e "s, -L${srcdir}/?\S+,,g" {} \;
+	# Fix wrong path in prl files
+	find ${pkgdir}/usr/lib -type f -name '*.prl' \
+		-exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
 }
