@@ -4,8 +4,8 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.720091231
-_pkgver=4.7-snapshot-20091231
+pkgver=4.720100108
+_pkgver=4.7-snapshot-20100108
 pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
@@ -16,7 +16,7 @@ provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
 source=(http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz)
-md5sums=('970d442f51979858699862cb6de99320')
+md5sums=('4581a56d2858dfd893bd25a945d16b8f')
 
 build() {
   cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
