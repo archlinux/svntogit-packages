@@ -3,37 +3,46 @@
 
 pkgbase=kdebindings
 pkgname=('kdebindings-csharp'
-	'kdebindings-python'
-	'kdebindings-ruby'
-	'kdebindings-smoke')
+         'kdebindings-python'
+         'kdebindings-ruby'
+         'kdebindings-smoke')
 groups=('kdebindings')
 pkgver=4.3.90
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url='http://www.kde.org'
 license=('GPL' 'LGPL')
-makedepends=('pkgconfig' 'cmake' 'automoc4' 'kdepimlibs' 'pyqt>=4.7' 'polkit-qt>=0.9.3'
-             'qimageblitz' 'qscintilla' 'kdegraphics-okular' 'mono' 'ruby')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'kdepimlibs' 'pyqt>=4.6.0' 'polkit-qt' 
+             'qimageblitz' 'qscintilla' 'ruby' 'mono' 'kdegraphics-okular')
 source=("http://download.kde.org/unstable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2")
 md5sums=('80687fa18608e081c814fdaf467f3eb5')
 
 build() {
-	cd ${srcdir}
-	mkdir build
-	cd build
+	export MONO_SHARED_DIR="${srcdir}/build/.mono"
+	mkdir -p "$MONO_SHARED_DIR"
+	cd $srcdir/build
+
+	# disable broken examples
+	sed -e 's#add_subdirectory( examples )##' -i ../${pkgbase}-${pkgver}/csharp/plasma/CMakeLists.txt || return 1
+
+	# fix build with ruby 1.9
+	# see http://bugs.archlinux.org/task/16175
+	find ../$pkgbase-$pkgver/ruby -name CMakeLists.txt \
+		-exec sed -i "s|\${RUBY_INCLUDE_PATH}|\${RUBY_INCLUDE_PATH} /usr/include/ruby-1.9.1/${CARCH}-linux|" {} \;
+
 	cmake ../${pkgbase}-${pkgver} \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_SKIP_RPATH=OFF \
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-DBUILD_java=OFF \
 		-DBUILD_php=OFF \
-		-DBUILD_falcon=OFF
+		-DBUILD_falcon=OFF \
+		-DENABLE_KROSSRUBY=OFF
 	make
 }
 
 package_kdebindings-csharp() {
 	pkgdesc='KDE bindings for mono'
-	depends=('kdebindings-smoke' 'mono' 'kdepimlibs')
+	depends=('kdebindings-smoke' 'mono')
 	export MONO_SHARED_DIR="${srcdir}/build/.mono"
 	mkdir -p "$MONO_SHARED_DIR"
 	cd $srcdir/build/csharp
