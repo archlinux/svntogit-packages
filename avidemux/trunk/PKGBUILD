@@ -2,37 +2,26 @@
 # Maintainer: Eric Belanger <eric@archlinux.org>
 # Contributor: damir <damir@archlinux.org>
 
-pkgname=avidemux
-pkgver=2.5.1
+pkgbase=avidemux
+pkgname=('avidemux-cli' 'avidemux-gtk' 'avidemux-qt')
+pkgver=2.5.2
 pkgrel=1
-pkgdesc="A graphical tool to edit video (filter/re-encode/split)"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://fixounet.free.fr/avidemux/"
-depends=('libxv' 'libxml2' 'sdl')
-makedepends=('cmake' 'libxslt' 'gtk2' 'qt' 'jack-audio-connection-kit' 'esound' 'libvorbis' \
-             'alsa-lib' 'lame' 'xvidcore' 'faad2' 'faac' 'x264' 'libsamplerate')
-optdepends=('gtk2: for using the GTK GUI' \
-            'qt: for using the QT4 GUI' \
-            'lame: for the corresponding audio encoder plugin' \
-            'faac: for the corresponding audio encoder plugin' \
-            'faad2: for the corresponding audio decoder plugin' \
-            'esound: for the corresponding audio device plugin' \
-            'jack-audio-connection-kit: for the corresponding audio device plugin' \
-            'x264: for the corresponding video encoder plugin' \
-            'xvidcore: for the corresponding video encoder plugin')
-source=(http://downloads.sourceforge.net/avidemux/avidemux_2.5.1.tar.gz avidemux-2.5-i18n.patch)
-md5sums=('081db3af87f1f93c7b4e5d5975e07e40' '0adb7cee81e06bfc454baf1d8fbcdd64')
-sha1sums=('50fe78548e0ebf0611d23aa4755f332056520392' 'd510ca55cd1b9c162b4c3bcd224a80b6a18421ef')
+makedepends=('cmake' 'libxslt' 'gtk2' 'qt' 'jack-audio-connection-kit' 'esound' 'libvorbis' 'sdl'
+             'alsa-lib' 'lame' 'xvidcore' 'faad2' 'faac' 'x264' 'libsamplerate' 'opencore-amr')
+source=(http://downloads.sourceforge.net/avidemux/avidemux_${pkgver}.tar.gz avidemux-2.5-i18n.patch)
+md5sums=('9027e1324c06e833e6c3c22298503cc7' '0adb7cee81e06bfc454baf1d8fbcdd64')
+sha1sums=('7fbec6f832b31b45a979184b8d1cf32c61a71e5f' 'd510ca55cd1b9c162b4c3bcd224a80b6a18421ef')
 
 build() {
-  cd "${srcdir}/${pkgname}_${pkgver}"
+  cd "${srcdir}/${pkgbase}_${pkgver}"
   patch -p1 < ../avidemux-2.5-i18n.patch || return 1
   mkdir build
   cd build
-  cmake -D CMAKE_INSTALL_PREFIX=/usr -D CMAKE_BUILD_TYPE=Release -D NO_GTK=0 -D NO_QT4=0 .. || return 1
+  cmake -D CMAKE_INSTALL_PREFIX=/usr -D CMAKE_BUILD_TYPE=Release -D CMAKE_SKIP_RPATH=ON -D GTK=1 -D QT4=1 .. || return 1
   make || return 1
-  make DESTDIR="${pkgdir}" install || return 1
 
 # plugin build expects libraries to be already installed; we fake a prefix
 # in build/ by symlinking all libraries to build/lib/
@@ -44,14 +33,83 @@ build() {
   cd build
   cmake -D CMAKE_INSTALL_PREFIX=/usr -D AVIDEMUX_SOURCE_DIR=${srcdir}/avidemux_${pkgver} \
     -D AVIDEMUX_CORECONFIG_DIR=${srcdir}/avidemux_${pkgver}/build/config \
-    -D AVIDEMUX_INSTALL_PREFIX=${srcdir}/avidemux_${pkgver}/build -D CMAKE_BUILD_TYPE=Release .. || return 1
+    -D AVIDEMUX_INSTALL_PREFIX=${srcdir}/avidemux_${pkgver}/build \
+    -D CMAKE_BUILD_TYPE=Release -D CMAKE_SKIP_RPATH=ON .. || return 1
   make || return 1
+}
+
+package_avidemux-cli() {
+  pkgdesc="A graphical tool to edit video (filter/re-encode/split)"
+  depends=('libxv' 'libxml2' 'sdl')
+  optdepends=('lame: for the corresponding audio encoder plugin' \
+              'faac: for the corresponding audio encoder plugin' \
+              'faad2: for the corresponding audio decoder plugin' \
+              'opencore-amr: for the corresponding audio decoder plugin' \
+              'esound: for the corresponding audio device plugin' \
+              'jack-audio-connection-kit: for the corresponding audio device plugin' \
+              'sdl: for the corresponding audio device plugin' \
+              'x264: for the corresponding video encoder plugin' \
+              'xvidcore: for the corresponding video encoder plugin')
+  provides=('avidemux')
+  conflicts=('avidemux')
+  replaces=('avidemux')
+
+  cd "${srcdir}/${pkgbase}_${pkgver}/build"
   make DESTDIR="${pkgdir}" install || return 1
+
+  cd "${srcdir}/${pkgbase}_${pkgver}/plugins/build"
+  make DESTDIR="${pkgdir}" install || return 1
+  rm -r "${pkgdir}"/usr/share/avidemux
+  rm "${pkgdir}"/usr/bin/avidemux2_{gtk,qt4}
+  rm "${pkgdir}"/usr/lib/*{_gtk,_qt4,Gtk,QT4}.so
+  rm "${pkgdir}"/usr/lib/ADM_plugins/videoEncoder/x264/*{Gtk,Qt}.so
+  rm "${pkgdir}"/usr/lib/ADM_plugins/videoEncoder/xvid/*{Gtk,Qt}.so
+  rm "${pkgdir}"/usr/lib/ADM_plugins/videoFilter/*{_gtk,_qt4}.so
 
   ln -s /usr/lib/ADM_plugins/videoEncoder/libADM_vidEnc_xvid.so "${pkgdir}/usr/lib/libADM_vidEnc_xvid.so"
   ln -s /usr/lib/ADM_plugins/videoEncoder/libADM_vidEnc_x264.so "${pkgdir}/usr/lib/libADM_vidEnc_x264.so"
 
   install -D -m644 ../../avidemux_icon.png "${pkgdir}/usr/share/pixmaps/avidemux.png" || return 1
-  install -D -m644 ../../avidemux2.desktop "${pkgdir}/usr/share/applications/avidemux.desktop" || return 1
   install -D -m644 ../../man/avidemux.1 "${pkgdir}/usr/share/man/man1/avidemux.1" || return 1
+}
+
+package_avidemux-gtk() {
+  pkgdesc="A graphical tool to edit video (filter/re-encode/split) - GTK GUI"
+  depends=('avidemux-cli' 'gtk2')
+
+  cd "${srcdir}/${pkgbase}_${pkgver}"
+  install -D -m755 build/avidemux/avidemux2_gtk "${pkgdir}/usr/bin/avidemux2_gtk" || return 1
+
+  install -d "${pkgdir}"/usr/lib/ADM_plugins/videoEncoder/{x264,xvid}
+  install -d "${pkgdir}"/usr/lib/ADM_plugins/videoFilter
+
+  install -D -m755 build/lib/*{_gtk,Gtk}.so "${pkgdir}/usr/lib"
+  install -D -m755 plugins/build/ADM_videoEncoder/ADM_vidEnc_x264/gtk/*Gtk.so "${pkgdir}/usr/lib/ADM_plugins/videoEncoder/x264"
+  install -D -m755 plugins/build/ADM_videoEncoder/ADM_vidEnc_xvid/gtk/*Gtk.so "${pkgdir}/usr/lib/ADM_plugins/videoEncoder/xvid"
+  install -D -m755 plugins/build/ADM_videoFilters/*/*_gtk.so "${pkgdir}/usr/lib/ADM_plugins/videoFilter"
+
+  install -D -m644 avidemux2.desktop "${pkgdir}/usr/share/applications/avidemux-gtk.desktop" || return 1
+  sed -i 's/Name=avidemux2/Name=avidemux (GTK)/' "${pkgdir}/usr/share/applications/avidemux-gtk.desktop" || return 1
+}
+
+package_avidemux-qt() {
+  pkgdesc="A graphical tool to edit video (filter/re-encode/split) - QT GUI"
+  depends=('avidemux-cli' 'qt')
+
+  cd "${srcdir}/${pkgbase}_${pkgver}"
+  install -D -m755 build/avidemux/avidemux2_qt4 "${pkgdir}/usr/bin/avidemux2_qt4" || return 1
+  install -d "${pkgdir}"/usr/lib/ADM_plugins/videoEncoder/{x264,xvid}
+  install -d "${pkgdir}"/usr/lib/ADM_plugins/videoFilter
+
+  install -D -m755 build/lib/*{_qt4,QT4}.so "${pkgdir}/usr/lib"
+  install -D -m755 plugins/build/ADM_videoEncoder/ADM_vidEnc_x264/qt4/*Qt.so "${pkgdir}/usr/lib/ADM_plugins/videoEncoder/x264"
+  install -D -m755 plugins/build/ADM_videoEncoder/ADM_vidEnc_xvid/qt4/*Qt.so "${pkgdir}/usr/lib/ADM_plugins/videoEncoder/xvid"
+  install -D -m755 plugins/build/ADM_videoFilters/*/*_qt4.so "${pkgdir}/usr/lib/ADM_plugins/videoFilter"
+
+  install -d "${pkgdir}/usr/share/avidemux/i18n"
+  install -D -m644 build/po/*.qm "${pkgdir}/usr/share/avidemux/i18n"
+
+  install -D -m644 avidemux2.desktop "${pkgdir}/usr/share/applications/avidemux-qt.desktop" || return 1
+  sed -i 's/Name=avidemux2/Name=avidemux (QT)/' "${pkgdir}/usr/share/applications/avidemux-qt.desktop" || return 1
+  sed -i 's/avidemux2_gtk/avidemux2_qt4/' "${pkgdir}/usr/share/applications/avidemux-qt.desktop" || return 1
 }
