@@ -1,0 +1,36 @@
+# Maintainer: Paul Mattal <paul.archlinux.org>
+
+pkgname=dcron
+pkgver=4.1
+pkgrel=1
+pkgdesc="dillon's lightweight cron daemon"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://www.jimpryor.net/linux/dcron"
+backup=(var/spool/cron/root etc/rc.d/crond etc/logrotate.d/crond)
+depends=('glibc')
+provides=('cron')
+source=("http://www.jimpryor.net/linux/releases/${pkgname}-${pkgver}.tar.gz")
+md5sums=('07167517b9383972587e20ec23f2dc12')
+
+
+build() {
+	cd "$srcdir/${pkgname}-${pkgver}"
+
+	make || return 1
+	make DESTDIR="$pkgdir" PREFIX=/usr install || return 1
+
+	# default make install sets root/wheel
+	chgrp root $pkgdir/{etc/cron.d,usr/sbin/crond,var/spool/cron,var/spool/cronstamps}
+	chgrp -R root $pkgdir/usr/share/man
+	# by default, any member of group "users" can edit their own crontab
+	chgrp users $pkgdir/usr/bin/crontab
+	chmod u+s $pkgdir/usr/bin/crontab
+
+	install -d -m755 $pkgdir/etc/cron.{hourly,daily,weekly,monthly} || return 1
+	install -D -m755 extra/crond.rc $pkgdir/etc/rc.d/crond || return 1
+	install -D -m755 extra/run-cron $pkgdir/usr/sbin/run-cron || return 1
+	install -D -m0600 extra/root.crontab $pkgdir/var/spool/cron/root || return 1
+	install -D -m644 extra/crond.logrotate $pkgdir/etc/logrotate.d/crond || return 1
+
+}
