@@ -1,80 +1,64 @@
 # $Id$
-# Maintainer: judd <jvinet@zeroflux.org>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
 pkgbase=samba
-pkgname=('tdb' 'smbclient' 'samba')
-pkgver=3.4.3
+pkgname=('smbclient' 'samba')
+pkgver=3.4.4
 # We use the 'A' to fake out pacman's version comparators.  Samba chooses
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
-_realver=3.4.3
-pkgrel=4
+_realver=3.4.4
+pkgrel=1
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
-makedepends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' 'libcap>=2.16' 'heimdal>=1.3.1' 'pam' 'fam' 'gnutls>=2.4.1')
+makedepends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' 'libcap>=2.16' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1' 'talloc' 'tdb')
 options=(!makeflags)
 source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
         samba samba.logrotate 
         swat.xinetd 
         samba.pam 
-        samba.conf.d
-        fix-workgroup-listing.patch)
+        samba.conf.d)
 
 build() {
-  # fix https://bugzilla.samba.org/show_bug.cgi?id=6880
-  cd ${srcdir}/${pkgbase}-${_realver}
-  patch -Np1 -i ../fix-workgroup-listing.patch || return 1
   cd ${srcdir}/${pkgbase}-${_realver}/source3
-  
-  # heimdal-1.3.1 build fix
-  sed -i "/KRB5_DEPRECATED/s#1##" libsmb/clikrb5.c
-  
-  ./configure --prefix=/usr --with-configdir=/etc/samba \
+  ./configure --prefix=/usr \
+              --libdir=/usr/lib/ \
+              --localstatedir=/var \
+              --with-configdir=/etc/samba \
               --with-lockdir=/var/cache/samba \
               --with-piddir=/var/run/samba \
-              --with-fhs --with-pam --with-ads --with-acl-support \
-              --with-cifsmount --with-libsmbclient \
-              --with-syslog --with-pam_smbpass \
-              --localstatedir=/var --disable-dnssd \
-	      --disable-avahi --libdir=/usr/lib/samba
+              --with-fhs \
+              --with-pam \
+              --with-pam_smbpass \
+              --with-pammodulesdir=/lib/security \
+              --with-ads \
+              --with-acl-support \
+              --with-cifsmount \
+              --with-libsmbclient \
+              --with-syslog \
+              --enable-external-libtalloc \
+              --disable-dnssd \
+              --disable-avahi \
+              --without-libtdb 
   make || return 1
-}
-
-package_tdb () {
-pkgdesc="A Trivia Database similar to GDBM but allows simultaneous commits"
-   cd ${srcdir}/${pkgbase}-${_realver}/lib/replace
-   ./autogen.sh
-   ./configure --prefix=/usr
-   make || return 1
-   cp replace.o snprintf.o getpass.o ../tdb/
-   cd ${srcdir}/${pkgbase}-${_realver}/lib/tdb
-   ./autogen.sh
-   ./configure --prefix=/usr
-   make || return 1
-   make DESTDIR=${pkgdir} install || return 1
-   ln -sf  /usr/lib/libtdb.so.1.1.3 ${pkgdir}/usr/lib/libtdb.so.1
-   ln -sf  /usr/lib/libtdb.so.1.1.3 ${pkgdir}/usr/lib/libtdb.so
 }
 
 package_smbclient () {
 pkgdesc="Tools to access a server's filespace and printers via SMB"
-depends=('readline>=6.0.00' 'popt' 'libldap>=2.4.18-1' 'libcap>=2.16' 'heimdal>=1.2-1' 'db>=4.7' "tdb>=$pkgver")
+depends=('readline>=6.0.00' 'popt' 'libldap>=2.4.18-1' 'libcap>=2.16' 'heimdal>=1.2-1' 'db>=4.7' 'e2fsprogs' 'tdb' 'talloc')
   cd ${srcdir}/${pkgbase}-${_realver}/source3
-  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/sbin ${pkgdir}/usr/lib/samba
+  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/sbin ${pkgdir}/usr/lib
   install -m755 bin/{smbclient,rpcclient,smbspool,smbtree,smbcacls,smbcquotas,smbget,net,nmblookup} ${pkgdir}/usr/bin/
   install -m755 bin/{mount.cifs,umount.cifs} ${pkgdir}/sbin/
-  mv  bin/*.so* ${pkgdir}/usr/lib/samba
+  for i in libnetapi* libwbclient* libsmbclient*;do
+      cp  -a bin/${i}*.so* ${pkgdir}/usr/lib/
+  done
   install -m755 script/smbtar ${pkgdir}/usr/bin/
   mkdir -p ${pkgdir}/usr/lib/cups/backend
   ln -sf /usr/bin/smbspool ${pkgdir}/usr/lib/cups/backend/smb
-  rm -rf  ${pkgdir}/usr/lib/samba/libsmbsharemodes*
-  for i in ${pkgdir}/usr/lib/samba/*; do
-      ln -sf samba/$(basename $i) ${pkgdir}/usr/lib/$(basename $i)
-  done
-  rm -rf ${pkgdir}/usr/lib/libtdb*
   mkdir -p ${pkgdir}/usr/include
   install -m644 include/libsmbclient.h ${pkgdir}/usr/include/
-  install -m644 ${srcdir}/${pkgbase}-${_realver}/lib/talloc/talloc.h ${pkgdir}/usr/include/
   install -m644 lib/netapi/netapi.h ${pkgdir}/usr/include/
   mkdir -p ${pkgdir}/usr/share/man/man{1,7,8}
   for man in smbspool \
@@ -95,12 +79,12 @@ backup=(etc/logrotate.d/samba
         etc/samba/smb.conf
         etc/xinetd.d/swat
         etc/conf.d/samba)
-depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap>=2.16' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1' "tdb>=$pkgver")
+depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap>=2.16' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1' 'e2fsprogs' 'tdb' 'talloc')
   cd ${srcdir}/samba-${_realver}/source3
   mkdir -p ${pkgdir}/var/log/samba
   mkdir -p ${pkgdir}/etc/samba/private
   chmod 700 ${pkgdir}/etc/samba/private
-  make DESTDIR=$pkgdir install || return 1
+  make DESTDIR=${pkgdir} install || return 1
   chmod 644 ${pkgdir}/usr/include/*.h
   rm -rf ${pkgdir}/usr/var
   (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
@@ -112,10 +96,6 @@ depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap
   install -D -m644 ../../samba.logrotate ${pkgdir}/etc/logrotate.d/samba
   install -D -m644 ../../swat.xinetd ${pkgdir}/etc/xinetd.d/swat
   install -D -m644 ../../samba.pam ${pkgdir}/etc/pam.d/samba
-  # symlink libs
-  for i in ${pkgdir}/usr/lib/samba/libsmbshare*; do
-      ln -sf samba/$(basename $i) ${pkgdir}/usr/lib/$(basename $i)
-  done
   # spool directory
   install -d -m1777 ${pkgdir}/var/spool/samba
   sed -i 's|/usr/spool/samba|/var/spool/samba|g' ${pkgdir}/etc/samba/smb.conf.default
@@ -125,34 +105,34 @@ depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap
   install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_wins.so ${pkgdir}/lib/libnss_wins.so
   ln -s libnss_wins.so ${pkgdir}/lib/libnss_wins.so.2
   install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_winbind.so ${pkgdir}/lib/libnss_winbind.so
-  install -D -m755 bin/pam_winbind.so ${pkgdir}/lib/security/pam_winbind.so
-  # remove conflict files of smbclient and tdb
+  # remove conflict files of smbclient
   for man in libsmbclient smbspool \
       umount.cifs mount.cifs net; do
       rm -f ${pkgdir}/usr/share/man/man8/${man}.8
   done
-  for i in libnetapi* libtdb* libtalloc* libwbclient* libsmbclient*;do
-      rm -f ${pkgdir}/usr/lib/samba/$i
+  for i in libnetapi* libwbclient* libsmbclient*;do
+      rm -f ${pkgdir}/usr/lib/$i
   done
-  for bin in tdbbackup tdbdump tdbtool net \
+  for bin in net \
       nmblookup rpcclient smbcacls smbclient \
       smbcquotas smbget smbspool smbtar smbtree; do
       rm -f ${pkgdir}/usr/bin/$bin
   done
-  rm -f ${pkgdir}/usr/include/{tdb.h,talloc.h,netapi.h}
+  rm -f ${pkgdir}/usr/include/netapi.h
   for man in rpcclient smbcacls smbclient smbcquotas \
       smbtree smbtar nmblookup smbget; do
       rm -f ${pkgdir}/usr/share/man/man1/${man}.1
   done
   rm -f ${pkgdir}/usr/share/man/man7/libsmbclient.7
   rm -f ${pkgdir}/usr/include/libsmbclient.h
+  # remove conflict files of tdb
+  rm -f ${pkgdir}/usr/bin/{tdbbackup,tdbdump,tdbtool}
   # copy ldap example
   install -D -m644 ${srcdir}/samba-${_realver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
 }
-md5sums=('322379680c12057f57685652a35a6b05'
+md5sums=('491a1bc9c94ad2f1e6d1c29da271b242'
          'e93533fa2296c07c1f645dfdd373657f'
          '5697da77590ec092cc8a883bae06093c'
          'a4bbfa39fee95bba2e7ad6b535fae7e6'
          '96f82c38f3f540b53f3e5144900acf17'
-         'f2f2e348acd1ccb566e95fa8a561b828'
-         '5afd9b6346d90e002ccd6d33f175dd9a')
+         'f2f2e348acd1ccb566e95fa8a561b828')
