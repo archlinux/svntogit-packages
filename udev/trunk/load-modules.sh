@@ -9,7 +9,7 @@
 BLACKLIST="${MOD_BLACKLIST[@]}"
 MODPROBE="/sbin/modprobe"
 LOGGER="/usr/bin/logger"
-RESOLVEALIAS="/bin/resolve-modalias"
+RESOLVEALIAS="${MODPROBE} --resolve-alias"
 USEBLACKLIST="--use-blacklist"
 
 if [ -f /proc/cmdline ]; then 
