@@ -14,7 +14,8 @@ source=('texmf.cnf'
         'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20100112.tar.xz'
         'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20100112.tar.xz'
         'http://foundry.supelec.fr/gf/download/frsrelease/364/1424/luatex-beta-0.50.0.tar.bz2'
-        'fix-fontforge-encoding.patch')
+        'fix-fontforge-encoding.patch'
+        'luatex-0.50-poppler.patch')
 backup=(usr/share/texmf/web2c/texmf.cnf \
 	usr/share/texmf-config/web2c/mktex.cnf \
 	usr/share/texmf-config/web2c/updmap.cfg \
@@ -30,7 +31,8 @@ md5sums=('04aff1501d9a8418903dd7342b6db87f'
          'bed5410ff12bb62da1064b306af0baa2'
          '8c4eb9b70a3abc86339c285b01439e1f'
          '125a21f67ff54440606660306106d331'
-         'bfb9716aa00c86c08cd31e5b32edeb98')
+         'bfb9716aa00c86c08cd31e5b32edeb98'
+         'c5c12aa500e54286b30db0dbb28d4e81')
 build() {
    if [ "${CARCH}" = "x86_64" ]; then
      export CFLAGS="${CFLAGS} -fPIC"
@@ -47,6 +49,7 @@ build() {
    # when integrated in the texlive build tree
    cd luatex-beta-0.50.0 || return 1
    patch -p0 -i ../fix-fontforge-encoding.patch || return 1
+   patch -p1 -i ../luatex-0.50-poppler.patch || return 1
    mkdir build || return 1
    cd build || return 1
    ../source/configure --prefix=/usr \
@@ -103,6 +106,7 @@ build() {
     --disable-xdvipdfmx \
     --without-system-kpathsea \
     --with-system-freetype2 \
+    --with-system-xpdf \
     --with-freetype2-libdir=/usr/lib \
     --with-freetype2-include=/usr/include/freetype2 \
     --with-system-gd \
@@ -115,7 +119,6 @@ build() {
     --disable-ipc \
     --without-mf-x-toolkit \
     --without-x  || return 1
-    ### NEW: removed --with-system-xpdf
    make || return 1
 
    ## install luatex binary
@@ -189,7 +192,7 @@ build() {
 
    ## create symlinks for formats 
    echo "--> Create symlinks for TeX formats ..."
-   $pkgdir/usr/bin/texlinks -f $pkgdir/usr/share/texmf/web2c/fmtutil.cnf $pkgdir/usr/bin/ || return 1
+   PATH="$PATH:${pkgdir}/usr/bin" texlinks -f $pkgdir/usr/share/texmf/web2c/fmtutil.cnf $pkgdir/usr/bin/ || return 1
    #############################################################
    
    ## CLEAN UP... 
