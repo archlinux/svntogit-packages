@@ -1,9 +1,8 @@
-# $Id$
 # Maintainer: francois at archlinux dot org
 
 pkgname=texlive-bin
-pkgver=2009.4
-pkgrel=3
+pkgver=2009.5
+pkgrel=1
 pkgdesc="TeX Live binaries"
 license=('GPL')
 arch=('i686' 'x86_64')
@@ -12,13 +11,11 @@ makedepends=('clisp' 'ffcall')
 options=('!makeflags' '!libtool')
 url='http://tug.org/texlive/'
 source=('texmf.cnf' 
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20090930.tar.xz'
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20090930.tar.xz'
-        'http://foundry.supelec.fr/gf/download/frsrelease/353/1363/luatex-beta-0.43.0.tar.bz2'
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20100112.tar.xz'
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20100112.tar.xz'
+        'http://foundry.supelec.fr/gf/download/frsrelease/364/1424/luatex-beta-0.50.0.tar.bz2'
         'fix-fontforge-encoding.patch'
-        ubuntu_libpoppler-0.11.patch
-        ubuntu_libpoppler-0.12.patch
-        luatex-libpoppler-0.12.patch)
+        'luatex-0.50-poppler.patch')
 backup=(usr/share/texmf/web2c/texmf.cnf \
 	usr/share/texmf-config/web2c/mktex.cnf \
 	usr/share/texmf-config/web2c/updmap.cfg \
@@ -31,13 +28,11 @@ backup=(usr/share/texmf/web2c/texmf.cnf \
 	usr/share/texmf-config/dvipdfm/config/config \
 	usr/share/texmf-config/xdvi/XDvi)
 md5sums=('04aff1501d9a8418903dd7342b6db87f'
-         '1baf3379a2be374d5793f82134b17f4f'
-         '95bfd32a0176645694935d117271e1db'
-         '2ca3f261191310b62fc93c98791a67e7'
+         'bed5410ff12bb62da1064b306af0baa2'
+         '8c4eb9b70a3abc86339c285b01439e1f'
+         '125a21f67ff54440606660306106d331'
          'bfb9716aa00c86c08cd31e5b32edeb98'
-         'b315cb924632ba1eed0781f8202db437'
-         '8bea4a0e0cbd2f73d57d5de1f61ac5fe'
-         '9da233c460e6c98ca0cd775a45bb77d0')
+         'c5c12aa500e54286b30db0dbb28d4e81')
 build() {
    if [ "${CARCH}" = "x86_64" ]; then
      export CFLAGS="${CFLAGS} -fPIC"
@@ -45,20 +40,18 @@ build() {
    fi
 
    cd $srcdir
-   patch -Np2 -i "${srcdir}/ubuntu_libpoppler-0.11.patch" || return 1
-   patch -Np2 -i "${srcdir}/ubuntu_libpoppler-0.12.patch" || return 1
 
    install -m755 -d $pkgdir/usr/share || return 1
    cp -r texmf $pkgdir/usr/share/ || return 1
 
-   ### provisory: we configure and build luatex 0.43 separately, because 
+   ### provisory: we configure and build luatex 0.50 separately, because 
    # it is needed for latest ConTeXT in texlive-core, but it fails to build
    # when integrated in the texlive build tree
-   cd "${srcdir}/luatex-beta-0.43.0"
+   cd luatex-beta-0.50.0 || return 1
    patch -p0 -i ../fix-fontforge-encoding.patch || return 1
-   patch -p1 -i "${srcdir}/luatex-libpoppler-0.12.patch" || return 1
-   mkdir build
-   cd build
+   patch -p1 -i ../luatex-0.50-poppler.patch || return 1
+   mkdir build || return 1
+   cd build || return 1
    ../source/configure --prefix=/usr \
     --enable-cxx-runtime-hack \
     --disable-afm2pl \
@@ -113,6 +106,7 @@ build() {
     --disable-xdvipdfmx \
     --without-system-kpathsea \
     --with-system-freetype2 \
+    --with-system-xpdf \
     --with-freetype2-libdir=/usr/lib \
     --with-freetype2-include=/usr/include/freetype2 \
     --with-system-gd \
@@ -120,22 +114,19 @@ build() {
     --without-system-teckit \
     --with-system-zlib \
     --with-system-t1lib \
-    --with-system-xpdf \
     --disable-shared \
     --disable-largefile \
     --disable-ipc \
     --without-mf-x-toolkit \
-    --without-x || return 1
+    --without-x  || return 1
    make || return 1
 
    ## install luatex binary
    install -d -m755 $pkgdir/usr/bin || return 1
    install -m755 texk/web2c/luatex $pkgdir/usr/bin/ || return 1
-   /bin/ln -s $pkgdir/usr/bin/luatex texlua || return 1
-   /bin/ln -s $pkgdir/usr/bin/luatexc texluac || return 1
-   ln -s luatex ${pkgdir}/usr/bin/texlua || return 1
-   ln -s luatexc ${pkgdir}/usr/bin/texluac || return 1
-   cd ../.. 
+   cd $pkgdir/usr/bin
+   /bin/ln -s luatex texlua || return 1
+   cd $srcdir
    ##################################
    # TODO don't forget to remove --disable-luatex below 
    # once luatex is updated in TeXLive...
@@ -213,9 +204,9 @@ build() {
 
    # remove symlinks to scripts that are not in texlive-core:
    for s in cachepic ht htcontext htlatex htmex httex httexi htxelatex htxetex mk4ht \
-     htcontext mkgrkindex epspdftk pst2pdf epspdf ulqda ebong makeglossaries \
+     mkgrkindex epspdftk pst2pdf epspdf ulqda ebong makeglossaries \
      pdfannotextractor perltex pdfthumb ppower4 ps4pdf splitindex svn-multi vpe; do
-     rm -f $pkgdir/usr/bin/$s
+     rm $pkgdir/usr/bin/$s
    done
    
    # the mandirs contain Makefiles ...
