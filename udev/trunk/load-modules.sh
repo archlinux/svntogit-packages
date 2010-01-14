@@ -42,7 +42,7 @@ if [ "$MOD_AUTOLOAD" = "yes" -o "$MOD_AUTOLOAD" = "YES" ]; then
     #sanitize the blacklist
     BLACKLIST="$(echo "$BLACKLIST" | sed -e 's|-|_|g')"
     # Try to find all modules for the alias
-    mods=$($RESOLVEALIAS /lib/modules/$(uname -r)/modules.alias $1)
+    mods=$($RESOLVEALIAS $1)
     # If no modules could be found, try if the alias name is a module name
     # In that case, omit the --use-blacklist parameter to imitate normal modprobe behaviour
     [ -z "${mods}" ] && $MODPROBE -qni $1 && mods="$1" && USEBLACKLIST=""
