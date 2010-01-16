@@ -1,0 +1,81 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=poppler
+pkgname=('poppler' 'poppler-glib' 'poppler-qt' 'poppler-qt3')
+pkgver=0.12.3
+pkgrel=1
+arch=(i686 x86_64)
+license=('GPL')
+makedepends=('libjpeg>=8' 'gcc-libs>=4.4.2' 'cairo>=1.8.8-2' 'libxml2>=2.7.6' 'fontconfig>=2.8.0' 'openjpeg>=1.3-3' 'gtk2>=2.18.6' 'qt>=4.5.3' 'qt3>=3.3.8' 'pkgconfig' 'lcms')
+options=('!libtool')
+url="http://poppler.freedesktop.org/"
+source=(http://poppler.freedesktop.org/${pkgname}-${pkgver}.tar.gz)
+md5sums=('d0ca8344d8d94e27aaba6d432688365d')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --enable-cairo-output \
+      --enable-xpdf-headers \
+      --enable-libjpeg --enable-zlib \
+      --enable-poppler-qt4 \
+      --enable-poppler-glib \
+      --enable-poppler-qt || return 1
+  make || return 1
+}
+
+package_poppler() {
+  pkgdesc="PDF rendering library based on xpdf 3.0"
+  depends=('libjpeg>=8' 'gcc-libs>=4.4.2' 'cairo>=1.8.8-2' 'libxml2>=2.7.6' 'fontconfig>=2.8.0' 'openjpeg>=1.3-3' 'lcms')
+  optdepends=('poppler-data')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make DESTDIR="${pkgdir}" install || return 1
+
+  rm -rf "${pkgdir}"/usr/include/poppler/{glib,qt3,qt4}
+  rm -f "${pkgdir}"/usr/lib/libpoppler-{glib,qt,qt4}.so*
+  rm -f "${pkgdir}"/usr/lib/pkgconfig/poppler-{glib,qt,qt4}.pc
+  rm -rf "${pkgdir}/usr/share/gtk-doc"
+}
+
+
+package_poppler-glib() {
+  pkgdesc="Poppler glib bindings"
+  depends=("poppler=${pkgver}" 'gtk2>=2.18.6')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/poppler"
+  make DESTDIR="${pkgdir}" install-libLTLIBRARIES || return 1
+  cd "${srcdir}/${pkgbase}-${pkgver}/glib"
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/usr/lib/pkgconfig"
+  install -m644 ../poppler-glib.pc "${pkgdir}/usr/lib/pkgconfig/" || return 1
+  rm -f "${pkgdir}"/usr/lib/libpoppler.*
+}
+
+package_poppler-qt3() {
+  pkgdesc="Poppler Qt3 bindings"
+  depends=("poppler=${pkgver}" 'qt3>=3.3.8')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/poppler"
+  make DESTDIR="${pkgdir}" install-libLTLIBRARIES || return 1
+  cd "${srcdir}/${pkgbase}-${pkgver}/qt"
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/usr/lib/pkgconfig"
+  install -m644 ../poppler-qt.pc "${pkgdir}/usr/lib/pkgconfig/" || return 1
+  rm -f "${pkgdir}"/usr/lib/libpoppler.*
+}
+
+package_poppler-qt() {
+  pkgdesc="Poppler Qt bindings"
+  depends=("poppler=${pkgver}" 'qt>=4.5.3')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/poppler"
+  make DESTDIR="${pkgdir}" install-libLTLIBRARIES || return 1
+  cd "${srcdir}/${pkgbase}-${pkgver}/qt4"
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/usr/lib/pkgconfig"
+  install -m644 ../poppler-qt4.pc "${pkgdir}/usr/lib/pkgconfig/" || return 1
+  rm -f "${pkgdir}"/usr/lib/libpoppler.*
+}
