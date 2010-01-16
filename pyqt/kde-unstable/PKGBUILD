@@ -17,6 +17,7 @@ replaces=('pyqt4')
 conflicts=('pyqt4')
 source=(http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz)
 md5sums=('4882179ab4da128aaa8520f146afb955')
+options=('force')
 
 build() {
   cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
