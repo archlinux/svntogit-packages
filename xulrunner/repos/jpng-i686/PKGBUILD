@@ -1,0 +1,66 @@
+# $Id$
+# Maintainer: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+pkgname=xulrunner
+pkgver=1.9.1.7
+_ffoxver=3.5.7
+pkgrel=2
+pkgdesc="Mozilla Runtime Environment"
+arch=(i686 x86_64)
+license=('MPL' 'GPL' 'LGPL')
+depends=('gtk2>=2.18.6' 'gcc-libs>=4.4.2' 'libidl2>=0.8.13' 'mozilla-common' 'nss>=3.12.4' 'libxt' 'hunspell>=1.2.8' 'startup-notification>=0.10' 'mime-types' 'dbus-glib>=0.82' 'alsa-lib>=1.0.21.a')
+makedepends=('zip' 'pkgconfig' 'diffutils' 'libgnomeui' 'python' 'wireless_tools')
+optdepends=('libgnomeui' 'python' 'wireless_tools')
+provides=(gecko-sdk)
+replaces=(gecko-sdk)
+url="http://wiki.mozilla.org/XUL:Xul_Runner"
+source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${_ffoxver}/source/firefox-${_ffoxver}.source.tar.bz2
+        mozconfig
+      	100-system-hunspell-corrections.patch
+        mozilla-pkgconfig.patch
+        fix-mozilla-launcher.patch
+        mozilla-ps-pdf-simplify-operators.patch
+        nsThreadUtils.patch
+        xulrunner-version.patch
+        xulrunner-png14.patch)
+md5sums=('82e6f568ddeaae52e85aa089277f5d14'
+         '7c87142a23e75bbd4d41e0c8de8ab4a6'
+         '5efd6772ed0ecf8eddec5d5650191d3c'
+         'd806ffcd9fa8d178ebfa9057c1221fbf'
+         '63eee2d1da3b43c9d604f2253f242f40'
+         '13dca58c04e62a8916691c63c5c492a0'
+         'ccc3a0672c783c043434f256fbd38c86'
+         'd8a3066a3d9039b6f375316ed763e8f8'
+         '3bd0566180ad2daa32743b3ce58b2095')
+
+build() {
+  cd "${srcdir}/mozilla-1.9.1"
+  cp "${srcdir}/mozconfig" .mozconfig
+
+  #Upstream patch. Still not applied to 1.9.0.1
+  patch -Np1 -i "${srcdir}/mozilla-ps-pdf-simplify-operators.patch" || return 1
+
+  #fix build with system hunspell - gentoo
+  patch -Np0 -i "${srcdir}/100-system-hunspell-corrections.patch" || return 1
+
+  #fix libdir/sdkdir - fedora - with local modifications
+  patch -Np1 -i "${srcdir}/mozilla-pkgconfig.patch" || return 1
+
+  #Fix stub launcher - archlinux
+  patch -Np0 -i "${srcdir}/fix-mozilla-launcher.patch" || return 1
+
+  #Fix epiphany crashes - requires epiphany rebuild
+  patch -Np1 -i "${srcdir}/nsThreadUtils.patch" || return 1
+
+  #Force installation to the same path for every version
+  patch -Np1 -i "${srcdir}/xulrunner-version.patch" || return 1
+
+  patch -Np0 -i "${srcdir}/xulrunner-png14.patch" || return 1
+
+  unset CFLAGS
+  unset CXXFLAGS
+  export LDFLAGS="${LDFLAGS} -Wl,-rpath,/usr/lib/xulrunner-1.9.1"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS" || return 1
+  make -j1 DESTDIR="${pkgdir}" install || return 1
+}
