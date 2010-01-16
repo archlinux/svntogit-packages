@@ -1,0 +1,39 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=zlib
+pkgver=1.2.3.4
+pkgrel=4
+pkgdesc='compression library implementing the deflate compression method found in gzip and PKZIP'
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://www.zlib.net/"
+groups=('base')
+depends=('glibc')
+# source from http://packages.qa.debian.org/z/zlib.html
+source=("ftp://ftp.archlinux.org/other/zlib/zlib-${pkgver}.tar.gz"
+        'install.patch' 'revert-eof-reporting.patch'
+        'revert-transparent-feof-test.patch')
+md5sums=('70cad33163abe3c234939a5c63bf95ea'
+         'e0b303fabe9272803ab57d988be1e88e'
+         '40293a11f8d5032af18c31c8522feb7e'
+         '79c0b09bfe269883cb36f8f29993cbcf')
+
+build() {
+	cd ${srcdir}/zlib-$pkgver
+
+	export CFLAGS="${CFLAGS/-O2/-O3} -DUNALIGNED_OK"
+	patch -p1 -i ${srcdir}/install.patch || return 1
+	patch -p1 -i ${srcdir}/revert-eof-reporting.patch || return 1
+	patch -p1 -i ${srcdir}/revert-transparent-feof-test.patch || return 1
+	./configure --prefix=/usr --shared
+	make || return 1
+
+	grep -A 24 '^  Copyright' zlib.h > LICENSE
+}
+
+package() {
+	cd ${srcdir}/zlib-$pkgver
+	make install DESTDIR=${pkgdir} || return 1
+	install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/zlib/LICENSE
+}
