@@ -1,0 +1,19 @@
+Only check for and set the EOF flag if we've read zero bytes in from a
+transparent stream, otherwise we may read the entire file into our
+buffer (causing feof() to become true), flag EOF and begin reporting EOF
+to users before we have actually returned all the data in the stream to
+the application.
+
+Index: debian/gzio.c
+===================================================================
+--- debian.orig/gzio.c	2009-12-28 18:48:57.000000000 +0000
++++ debian/gzio.c	2009-12-28 18:49:02.000000000 +0000
+@@ -472,7 +472,7 @@
+             len -= s->stream.avail_out;
+             s->in  += len;
+             s->out += len;
+-            if (feof(s->file)) s->z_eof = 1;
++            if (len == 0 && feof(s->file)) s->z_eof = 1;
+             return (int)len;
+         }
+         if (s->stream.avail_in == 0 && !s->z_eof) {
