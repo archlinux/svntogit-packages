@@ -1,0 +1,49 @@
+# $Id$
+# Maintainer: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor: Renchi Raju <renchi@green.tam.uiuc.edu>
+pkgname=emacs
+pkgver=23.1
+pkgrel=4
+pkgdesc="The Emacs Editor"
+arch=(i686 x86_64)
+url="http://www.gnu.org/software/emacs/emacs.html"
+license=('GPL')
+options=(docs)
+depends=('dbus-core' 'librsvg' 'gpm'  'giflib' 'libtiff'  'libxpm' 'libjpeg' 'gtk2' 'texinfo' 'hicolor-icon-theme')
+source=(ftp://ftp.gnu.org/gnu/emacs/$pkgname-$pkgver.tar.gz emacs.desktop libpng14.patch)
+md5sums=('a620d4452769d04ad8864d662f34f8dd' '8af038d2ba4561271e935bb444ceb4e3'\
+         'ad06d0cbbff8cba40fd33a37407258c1')
+sha1sums=('e993445d14d2fdedd1418bc32c8c4ea30442bc51' '50060b676382719955c4e43e28a597ec0bc5805a'\
+         '2c7c13708eaf4cab102d6c9cddecfc06a0538413')
+install=emacs.install
+
+build() {
+  cd $startdir/src/$pkgname-$pkgver
+  patch -p1 < ../libpng14.patch || return 1
+  mandir=/usr/share/man
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib \
+  --localstatedir=/var --mandir=${mandir} --without-sound -with-x-toolkit=gtk
+  make || return 1
+  make DESTDIR=$startdir/pkg install || return 1
+
+  # remove conflict with ctags package
+  mv $startdir/pkg/usr/bin/{ctags,ctags.emacs} || return 1
+  mv $startdir/pkg/usr/bin/{etags,etags.emacs} || return 1
+  mv $startdir/pkg${mandir}/man1/{etags.1,etags.emacs.1} || return 1
+  mv $startdir/pkg${mandir}/man1/{ctags.1,ctags.emacs.1} || return 1
+  # fix all the 777 perms on directories
+  find $startdir/pkg/usr/share/emacs/$pkgver -type d -exec chmod 755 {} \;
+  # fix user/root permissions on usr/share files
+  find $startdir/pkg/usr/share/emacs/$pkgver -exec chown root.root {} \;
+  # fix perms on /var/games
+  chmod 775 ${startdir}/pkg/var/games
+  chmod 775 ${startdir}/pkg/var/games/emacs
+  chmod 664 ${startdir}/pkg/var/games/emacs/*
+  chown -R root:50 ${startdir}/pkg/var/games
+
+
+  # fix  FS#9253 
+  mkdir -p $startdir/pkg/usr/share/pixmaps ${startdir}/pkg/usr/share/applications
+  install -D -m644 ${startdir}/src/${pkgname}.desktop   ${startdir}/pkg/usr/share/applications
+  ln -s  ../emacs/${pkgver}/etc/images/icons/hicolor/48x48/apps/emacs.png $startdir/pkg/usr/share/pixmaps/emacs-icon.png  
+}
