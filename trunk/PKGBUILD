@@ -4,7 +4,7 @@
 
 pkgname=xscreensaver
 pkgver=5.10
-pkgrel=2
+pkgrel=3
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
 url="http://www.jwz.org/xscreensaver/"
@@ -12,16 +12,22 @@ license=('BSD')
 depends=('libxxf86misc' 'libglade' 'mesa' 'pam' 'xorg-res-utils')
 makedepends=('bc')
 backup=('etc/pam.d/xscreensaver')
-source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz \
-	add-electricsheep.diff xscreensaver.pam LICENSE)
-md5sums=('0d7205f9da8e3f1b83bcda549d73a7c4' 'f82524626ed8a6832cd279e0548a9b46'\
-         '367a3538f54db71f108b34cfa31088ac' '5e7f3f2a63d20a484742f5b4cb5d572c')
-sha1sums=('d8379928de2e6e86cc7b17d75150daafe57e93c4' '65c2933380267475f2c4560bc22f4350393b00ce'\
-         '106635aa1aae51d6f0668b1853f6c49a4fe9d3d8' '4209ea586b204fd1d81c382a0522c654f9fd9134')
+source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz
+        add-electricsheep.diff
+        xscreensaver.pam
+        LICENSE)
+md5sums=('0d7205f9da8e3f1b83bcda549d73a7c4'
+         'f82524626ed8a6832cd279e0548a9b46'
+         '367a3538f54db71f108b34cfa31088ac'
+         '5e7f3f2a63d20a484742f5b4cb5d572c')
+sha1sums=('d8379928de2e6e86cc7b17d75150daafe57e93c4'
+          '65c2933380267475f2c4560bc22f4350393b00ce'
+          '106635aa1aae51d6f0668b1853f6c49a4fe9d3d8'
+          '4209ea586b204fd1d81c382a0522c654f9fd9134')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -p0 < ../add-electricsheep.diff || return 1
+  patch -Np0 -i "${srcdir}/add-electricsheep.diff" || return 1
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     --libexecdir=/usr/lib --with-x-app-defaults=/usr/share/X11/app-defaults \
     --with-pam --without-motif --with-gtk --without-gnome --with-xml --with-gl \
