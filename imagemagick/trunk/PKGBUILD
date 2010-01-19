@@ -1,14 +1,19 @@
 # $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
+# NOTE: To circumvent linking problems (FS#10574), this package must now be built the following way:
+# install old package, build new package, install new package, rebuild
+# Just uninstalling ImageMagick before build fails as it is used during the build processs
+
 pkgname=imagemagick
 pkgver=6.5.9.0
-pkgrel=1
+pkgrel=2
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('lcms>=1.18-2' 'libwmf>=0.2.8.4-5' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript>=8.64-6' 'openexr>=1.6.1' 'libtool>=2.2' 'heimdal>=1.2.1' 'bzip2' 'libxml2' 'jasper')
+depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr>=1.6.1' 'libtool' 'heimdal' 'bzip2' 'libxml2' 'jasper')
+makedepends=('imagemagick')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
         libpng_mmx_patch_x86_64.patch add_delegate.patch perlmagick.rpath.patch)
@@ -27,7 +32,8 @@ build() {
   patch -p0 < ../add_delegate.patch || return 1
   patch -p0 < ../perlmagick.rpath.patch || return 1
 
-  ./configure --prefix=/usr --without-modules --disable-static --enable-openmp \
+ # When there is a soname bump, remove 'LIBS=-lMagickWand' from configure line and build/install. Then, readd 'LIBS=-lMagickWand' and build/install twice.
+   LIBS=-lMagickWand ./configure --prefix=/usr --without-modules --disable-static --enable-openmp \
               --with-x --with-wmf --with-openexr --with-xml \
               --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
               --with-perl --with-perl-options="INSTALLDIRS=vendor" \
