@@ -1,0 +1,85 @@
+#!/bin/bash
+
+
+pkgver=4.3.95
+pkgrel=1
+
+
+. /etc/makepkg.conf
+
+if [ -r ~/.makepkg.conf ]; then
+	. ~/.makepkg.conf
+fi
+
+
+_tmp=$(mktemp -d)
+svn export -q svn://anonsvn.kde.org/home/kde/tags/KDE/${pkgver}/kde-l10n/subdirs ${_tmp}/subdirs
+svn export -q svn://anonsvn.kde.org/home/kde/tags/KDE/${pkgver}/kde-l10n/teamnames ${_tmp}/teamnames
+
+echo     '# $Id: $'
+echo -e  '# Maintainer: Pierre Schmitz <pierre@archlinux.de>\n'
+echo     'pkgbase=kde-l10n'
+
+echo -en 'pkgname=('
+ct=0
+for j in $(cat ${_tmp}/subdirs|sort -u); do
+	_l10nPkgName="kde-l10n-$(echo "${j}" | tr [:upper:] [:lower:])"
+	[ $ct -gt 0 ] && echo -en "\n         "
+	echo -n "'${_l10nPkgName}'"
+	ct=$(($ct+1))
+done
+echo    ')'
+
+echo     "pkgver=${pkgver}"
+echo     "pkgrel=${pkgrel}"
+echo     "arch=('any')"
+echo     "url='http://www.kde.org'"
+echo     "license=('GPL')"
+echo     "groups=('kde-l10n')"
+echo     "makedepends=('pkgconfig' 'cmake' 'automoc4' 'kdelibs')"
+echo     "options=('docs')"
+
+echo -en 'source=('
+ct=0
+for k in $(cat ${_tmp}/subdirs|sort -u); do
+	[ $ct -gt 0 ] && echo -en "\n        "
+	echo -n '"http://download.kde.org/unstable/${pkgver}/src/kde-l10n/kde-l10n-'${k}'-${pkgver}.tar.bz2"'
+	ct=$(($ct+1))
+done
+echo    ')'
+
+echo -en 'md5sums=('
+ct=0
+for l in $(cat ${_tmp}/subdirs|sort -u); do
+	[ $ct -gt 0 ] && echo -en "\n         "
+	echo -n "'$(md5sum ${SRCDEST}/kde-l10n-${l}-${pkgver}.tar.bz2 | awk '{print $1};')'"
+	ct=$(($ct+1))
+done
+echo -e ')\n'
+
+echo     'build() {'
+echo     '	cd $srcdir'
+for m in $(cat ${_tmp}/subdirs|sort -u); do
+echo     "	mkdir -p build/${m}"
+echo     "	cd build/${m}"
+echo     "	cmake \${srcdir}/kde-l10n-${m}-\${pkgver} \\"
+echo     '		-DCMAKE_BUILD_TYPE=Release \'
+echo     '		-DCMAKE_INSTALL_PREFIX=/usr'
+echo     '	make'
+echo  -e '	cd ../..\n'
+done
+echo -e '}\n'
+
+for i in $(cat ${_tmp}/subdirs|sort -u); do
+	_l10nPkgName="kde-l10n-$(echo "${i}" | tr [:upper:] [:lower:])"
+	_l10nName=$(grep -E "^${i}=" ${_tmp}/teamnames)
+	_l10nName=${_l10nName#${i}=}
+	echo    "package_${_l10nPkgName}() {"
+	echo -e "\tpkgdesc=('${_l10nName} Localization for KDE')"
+	echo -e "\treplaces=('${_l10nPkgName/l10n/i18n}')"
+	echo -e "\tprovides=('${_l10nPkgName/l10n/i18n}')"
+	echo -e '\tcd $srcdir/build'
+	echo -e '\tmake DESTDIR=$pkgdir install'
+	echo -e  "}\n"
+done
+rm -rf ${_tmp}
