@@ -4,19 +4,19 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.15.7
+pkgver=0.15.8
 pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://musicpd.org"
-depends=('libao' 'ffmpeg>=20100108' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl'
+depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl'
          'sqlite3' 'libsamplerate' 'libmms' 'wavpack' 'libmpcdec' 'avahi')
 makedepends=('pkgconfig')
 install=mpd.install
 source=(http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2
         'mpd')
-md5sums=('ecec7f0bdfe8024cc4daa53e4cc476a4'
+md5sums=('824e1ce46c0f468865d9e5e403cdaf5d'
          'b1fd15de359db08e4b9ae4b199640f0e')
 
 build() {
