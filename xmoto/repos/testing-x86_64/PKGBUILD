@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Travis Willard <travisw@wmpub.ca> 
+# Contributor: Denis (dtonator@gmail.com)
+
+pkgname=xmoto
+pkgver=0.5.2
+pkgrel=3
+pkgdesc="A challenging 2D motocross platform game, where physics play an important role."
+arch=('i686' 'x86_64')
+url="http://xmoto.tuxfamily.org"
+license=('GPL')
+depends=('bzip2' 'libjpeg' 'libpng' 'lua' 'sdl_mixer' 'ode=0.11.1' 'curl>=7.16.2' 
+	 'mesa' 'sqlite3' 'sdl_ttf' 'desktop-file-utils' 'sdl_net')
+install=xmoto.install
+source=(http://download.tuxfamily.org/${pkgname}/${pkgname}/${pkgver}/${pkgname}-${pkgver}-src.tar.gz libpng-1.4.patch)
+md5sums=('1e3678ebceca21d61844efb53c140227' 'ddf2e68295a00b69fb733f8b8a305db9')
+sha1sums=('aa819872f06beb114025c490cea8e229cd85135d' '44f6b18a8d03054fd8975b82373f422d72f51347')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+
+  # upstream fix compilation issue
+  sed -i 's|v_replay << m_Chunks.size();|v_replay << (unsigned int) m_Chunks.size();|' src/Replay.cpp || return 1
+  patch -p1 < ../libpng-1.4.patch || return 1
+
+  # build and install 
+  ./configure LDFLAGS="-L/usr/lib" --prefix=/usr --disable-sdltest
+
+  make || return 1
+  make DESTDIR=${pkgdir} mangdir=/usr/share/man/man6 install
+
+  # install desktop file
+  install -Dm0644 ${srcdir}/${pkgname}-${pkgver}/extra/xmoto.desktop \
+	${pkgdir}/usr/share/applications/xmoto.desktop
+
+  # install icon for desktop file
+  install -Dm0644 ${srcdir}/${pkgname}-${pkgver}/extra/xmoto.xpm \
+	${pkgdir}/usr/share/pixmaps/xmoto.xpm
+}
