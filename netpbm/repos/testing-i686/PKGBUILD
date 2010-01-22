@@ -1,0 +1,63 @@
+# $Id$
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+# Contributor: Jochem Kossen <j.kossen@home.nl>
+
+pkgname=netpbm
+pkgver=10.35.841
+pkgrel=2
+pkgdesc="A toolkit for manipulation of graphic images"
+arch=(i686 x86_64)
+license=('custom' 'BSD' 'GPL' 'LGPL')
+url="http://netpbm.sourceforge.net/"
+depends=('perl' 'libjpeg>=7' 'libpng' 'libtiff' 'libxml2')
+makedepends=('python')
+options=('!makeflags')
+# Releases after 10.34 are available via SVN only.
+# remake snapshot with: svn export http://netpbm.svn.sourceforge.net/svnroot/netpbm/stable@${pkgrel} netpbm
+# get doc with: wget --recursive --relative -nH http://netpbm.sourceforge.net/doc/
+source=(ftp://ftp.archlinux.org/other/netpbm/$pkgname-$pkgver.tar.bz2 \
+        ftp://ftp.archlinux.org/other/netpbm/netpbm-doc-20090222.tar.bz2 \
+        Makefile.config arch.patch netpbm-10.35-glibc.patch netpbm-10.35-jpeg7.patch libpng-1.4.patch)
+md5sums=('04d94bf5eefd56e6443b4008196d5969' '20f5392fd1deacfa267bf64ab9d420c5'\
+         'cfdb69f77f8ef06f8863fe02ce27db71' '88992e053dbfa9fdde2cccea32e6632b'\
+         '8e278fba37c8f70f6a8658b98686dfad' '6a3da4565f6623f4875bd62871a8dda5'\
+         'a644dd64e197cd5f29df2962742f01d5')
+sha1sums=('e934e4b5a3ecaa448163b249bdb9546f51e28f87' 'c60e393e9eaf0cc9c5caf6a9294632ec012ea31b'\
+         'de15f60bc472c4ae920f4465889d4d57e9524ef6' '125c737470695efc23895844d14e886caae5ae67'\
+         '5c79325ea6d97f939c09179d9f1983cb2f160c95' '682d0245d4ce3bb3b8d689656e40960231541a7f'\
+         '20c46bd7e7303a5aa48a001bd7e4e5ec9c8d2b1e')
+
+build() {
+  cd ${srcdir}/${pkgname}
+  patch -p1 < ../arch.patch || return 1
+  patch -p0 < ../netpbm-10.35-glibc.patch || return 1
+  patch -p0 < ../netpbm-10.35-jpeg7.patch || return 1
+  patch -p1 < ../libpng-1.4.patch || return 1
+  cp ../Makefile.config .
+
+  if [ "${CARCH}" == "x86_64" ]; then
+    sed -i "s/^\(CFLAGS =\) .*/\1 $CFLAGS/" Makefile.config || return 1
+    sed -i "s/^\(CFLAGS_SHLIB =\) .*/\1 -fPIC/" Makefile.config  || return 1 # real 64bit fix 
+    sed -i 's/\(.*\$(SYMLINK) \)\(pnmtopnm\)\(\$(EXE) \)\(pamtopnm\)/\1\4\3\2/' converter/other/Makefile || return 1
+  fi
+
+  make || return 1
+  make package pkgdir=${pkgdir}/usr PKGMANDIR=share/man || return 1
+
+  # Generating useful man pages with html doc 
+  cd  ${srcdir}/doc
+  make MAKEMAN=${srcdir}/netpbm/buildtools/makeman \
+    -f ${srcdir}/netpbm/buildtools/Makefile.manpage manpages || return 1
+  make MAKEMAN=${srcdir}/netpbm/buildtools/makeman MANDIR=${pkgdir}/usr/share/man \
+    -f ${srcdir}/netpbm/buildtools/Makefile.manpage installman || return 1
+
+  # clean up and fixing symlinks
+  mv ${pkgdir}/usr/link/libnetpbm.a ${pkgdir}/usr/lib || return 1
+  rm -rf ${pkgdir}/usr/{config_template,README,pkginfo,misc,VERSION,link} || return 1
+  rm -rf ${pkgdir}/usr/man 
+  rm ${pkgdir}/usr/bin/doc.url
+  ln -s libnetpbm.so.10 ${pkgdir}/usr/lib/libnetpbm.so || return 1
+
+  # Licensing.  Note that each program in the package has a separate license.
+  install -D -m644 ${srcdir}/${pkgname}/doc/copyright_summary ${pkgdir}/usr/share/licenses/${pkgname}/copyright_summary.txt || return 1
+}
