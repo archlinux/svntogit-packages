@@ -1,0 +1,38 @@
+# $Id$
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+pkgname=cryptsetup
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="Userspace setup tool for transparent encryption of block devices using the Linux 2.6 cryptoapi"
+arch=(i686 x86_64)
+license=('GPL')
+url="http://code.google.com/p/cryptsetup/"
+groups=('base')
+depends=('device-mapper' 'libgcrypt' 'popt' 'e2fsprogs')
+conflicts=('mkinitcpio<0.5.24.99')
+options=('!libtool' '!emptydirs')
+source=(http://cryptsetup.googlecode.com/files/${pkgname}-${pkgver}.tar.bz2
+        encrypt_hook
+	encrypt_install)
+sha256sums=('b343fa6bf3c48b633e68da25e44aebd6a32a3dc21c10604acd6faa04e41f58f3'
+            'b2a8ee13156b7962b48186c97080421336fd3b9641a7711b89bcc49ab73dc62a'
+            'fa76c48065e26109592431867f468721c360d481dcb0bdc0adc49e750171faa2')
+md5sums=('8177f1833f4d6aaacc5812046d2010b6'
+         '6bdb1b83539453d403335aed1a579a5c'
+         '24b76e9cb938bc3c8dcff396cbab28c7')
+
+build() {
+  cd $srcdir/$pkgname-${pkgver}
+  ./configure --prefix=/usr --disable-static
+  make || return 1
+  make DESTDIR=$pkgdir install
+  # include a static cryptsetup binary for initrd setups
+  make clean
+  cd $srcdir/$pkgname-${pkgver}
+  ./configure --prefix=/usr --enable-static
+  make || return 1
+  install -D -m755 src/cryptsetup $pkgdir/sbin/cryptsetup.static || return 1
+  # install hook
+  install -D -m644 $srcdir/encrypt_hook $pkgdir/lib/initcpio/hooks/encrypt || return 1
+  install -D -m644 $srcdir/encrypt_install $pkgdir/lib/initcpio/install/encrypt || return 1
+}
