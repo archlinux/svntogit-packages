@@ -3,8 +3,8 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=readline
-_patchlevel=004 #prepare for some patches
-pkgver=6.0.$_patchlevel
+_patchlevel=001 #prepare for some patches
+pkgver=6.1.$_patchlevel
 pkgrel=1
 pkgdesc="GNU readline library"
 arch=(i686 x86_64)
@@ -13,23 +13,20 @@ license=('GPL')
 groups=('base')
 depends=('glibc' 'ncurses')
 backup=("etc/inputrc")
-source=(http://ftp.gnu.org/gnu/readline/readline-6.0.tar.gz
+source=(http://ftp.gnu.org/gnu/readline/readline-6.1.tar.gz
         inputrc)
 if [ $_patchlevel -gt 00 ]; then
     for p in $(seq -w 01 $_patchlevel); do
-        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-6.0-patches/readline60-$p)
+        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-6.1-patches/readline61-$p)
     done
 fi
-md5sums=('b7f65a48add447693be6e86f04a63019'
+md5sums=('fc2f7e714fe792db1ce6ddc4c9fb4ef3'
          'e5fc955f56d9fa5beb871f3279b8fa8b'
-         '85c01ea031ad38a179053c67186bafed'
-         '4fad2a4ce987e3101229d0c8dfb0cd80'
-         '80967f663864983a889af2eb53aea177'
-         'dd5dd5ff7f7229714bf1c2e274ad2ae9')
+         'c642f2e84d820884b0bf9fd176bc6c3f')
 
 build() {
-  cd ${srcdir}/${pkgname}-6.0
-  for p in ../readline60-*; do
+  cd ${srcdir}/${pkgname}-6.1
+  for p in ../readline61-*; do
     [ -e "$p" ] || continue
     msg "applying patch ${p}"
     patch -Np0 -i ${p} || return 1
