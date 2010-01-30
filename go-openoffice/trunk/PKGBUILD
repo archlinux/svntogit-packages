@@ -2,13 +2,13 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=go-openoffice
-_GOver=3.2.0.2 # = OOo 3.2 RC2
+_GOver=3.2.0.4 # = OOo 3.2 RC2
 pkgver=${_GOver}
 pkgrel=1
 pkgdesc="OpenOffice.org - go-oo.org enhanced version of SUN's office suite"
 arch=('i686' 'x86_64')
 _go_tree="OOO320"
-_ootag=ooo320-m9 # m8 = OOo 3.2.0 RC2
+_ootag=ooo320-m11 # m11 = OOo 3.2.0 RC4
 license=('LGPL3')
 url="http://go-oo.org/"
 install=${pkgname}.install
@@ -52,9 +52,22 @@ source=(${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
 	http://archive.apache.org/dist/ant/binaries/apache-ant-1.7.0-bin.tar.gz
 	buildfix_64bit_system_libjpeg.diff)
 #options=('!distcc' '!ccache' '!makeflags')
-#options=('!fakeroot')
 noextract=(ooo-cli-prebuilt-3.2.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar.gz extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll 
            scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz ooo_oxygen_images-2009-06-17.tar.gz)
+
+# source PKGBUILD && mksource
+mksource() {
+        mkdir /tmp/$pkgname-source
+        pushd /tmp/$pkgname-source
+	wget ${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
+	tar -xvf ooo-build-${_GOver}.tar.gz
+	cd ooo-build-${_GOver}
+	./configure --quiet --with-distro=ArchLinux
+	./download # --all
+	pushd src; tar -cvzf ../../${_ootag}.tar.gz clone; popd
+        popd
+}
+
 
 build() {
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
@@ -129,10 +142,7 @@ build() {
 #		--with-additional-sections="OOXMLExport"
 
 	unset MAKEFLAGS
-	./download --all
-	# compress the sources after first run
-#	tar -cvzf ${SRCDEST}/${_ootag}.tar.gz ../clone && return 1
-	
+#	./download
 	LD_PRELOAD="" make  || return 1
 	make DESTDIR=${pkgdir} install || return 1
 
@@ -153,4 +163,10 @@ build() {
 	
 	# fix unopkg call for mktemp, #15410
 	sed -i "s:\/bin\/mktemp:\/usr\/bin\/mktemp:" ${pkgdir}/usr/lib/go-openoffice/program/unopkg || return 1
+	
+	#fix http://bugs.archlinux.org/task/17656
+	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
+	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
+	find ${pkgdir} -perm 555 -exec ls -lh {} \;
+	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
