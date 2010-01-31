@@ -1,0 +1,206 @@
+From a191318f8dde2a4ff47c051244e8c88e8f92883a Mon Sep 17 00:00:00 2001
+From: Christian Zander <chzander@nvidia.com>
+Date: Mon, 11 Jan 2010 20:29:07 +0000
+Subject: x86emu: Respect the LEA 67h address size prefix.
+
+Signed-off-by: Christian Zander <chzander@nvidia.com>
+Signed-off-by: Aaron Plattner <aplattner@nvidia.com>
+Tested-by: Tiago Vignatti <tiago.vignatti@nokia.com>
+Signed-off-by: Keith Packard <keithp@keithp.com>
+(cherry picked from commit f57bc0ede8e018c7e264b917927c42a018cd1d5a)
+---
+diff --git a/hw/xfree86/x86emu/ops.c b/hw/xfree86/x86emu/ops.c
+index 37ae2c9..21a0347 100644
+--- a/hw/xfree86/x86emu/ops.c
++++ b/hw/xfree86/x86emu/ops.c
+@@ -6567,42 +6567,62 @@ Handles opcode 0x8d
+ static void x86emuOp_lea_word_R_M(u8 X86EMU_UNUSED(op1))
+ {
+     int mod, rl, rh;
+-    u16 *srcreg;
+     uint destoffset;
+ 
+-/*
+- * TODO: Need to handle address size prefix!
+- *
+- * lea  eax,[eax+ebx*2] ??
+- */
+-    
+     START_OF_INSTR();
+     DECODE_PRINTF("LEA\t");
+     FETCH_DECODE_MODRM(mod, rh, rl);
+     switch (mod) {
+     case 0:
+-        srcreg = DECODE_RM_WORD_REGISTER(rh);
+-        DECODE_PRINTF(",");
+-        destoffset = decode_rm00_address(rl);
+-        DECODE_PRINTF("\n");
+-        TRACE_AND_STEP();
+-        *srcreg = (u16)destoffset;
++        if (M.x86.mode & SYSMODE_PREFIX_ADDR) {
++            u32 *srcreg = DECODE_RM_LONG_REGISTER(rh);
++            DECODE_PRINTF(",");
++            destoffset = decode_rm00_address(rl);
++            DECODE_PRINTF("\n");
++            TRACE_AND_STEP();
++            *srcreg = (u32)destoffset;
++        } else {
++            u16 *srcreg = DECODE_RM_WORD_REGISTER(rh);
++            DECODE_PRINTF(",");
++            destoffset = decode_rm00_address(rl);
++            DECODE_PRINTF("\n");
++            TRACE_AND_STEP();
++            *srcreg = (u16)destoffset;
++        }
+         break;
+     case 1:
+-        srcreg = DECODE_RM_WORD_REGISTER(rh);
+-        DECODE_PRINTF(",");
+-        destoffset = decode_rm01_address(rl);
+-        DECODE_PRINTF("\n");
+-        TRACE_AND_STEP();
+-        *srcreg = (u16)destoffset;
++        if (M.x86.mode & SYSMODE_PREFIX_ADDR) {
++            u32 *srcreg = DECODE_RM_LONG_REGISTER(rh);
++            DECODE_PRINTF(",");
++            destoffset = decode_rm01_address(rl);
++            DECODE_PRINTF("\n");
++            TRACE_AND_STEP();
++            *srcreg = (u32)destoffset;
++        } else {
++            u16 *srcreg = DECODE_RM_WORD_REGISTER(rh);
++            DECODE_PRINTF(",");
++            destoffset = decode_rm01_address(rl);
++            DECODE_PRINTF("\n");
++            TRACE_AND_STEP();
++            *srcreg = (u16)destoffset;
++        }
+         break;
+     case 2:
+-        srcreg = DECODE_RM_WORD_REGISTER(rh);
+-        DECODE_PRINTF(",");
+-        destoffset = decode_rm10_address(rl);
+-        DECODE_PRINTF("\n");
+-        TRACE_AND_STEP();
+-        *srcreg = (u16)destoffset;
++        if (M.x86.mode & SYSMODE_PREFIX_ADDR) {
++            u32 *srcreg = DECODE_RM_LONG_REGISTER(rh);
++            DECODE_PRINTF(",");
++            destoffset = decode_rm10_address(rl);
++            DECODE_PRINTF("\n");
++            TRACE_AND_STEP();
++            *srcreg = (u32)destoffset;
++        } else {
++            u16 *srcreg = DECODE_RM_WORD_REGISTER(rh);
++            DECODE_PRINTF(",");
++            destoffset = decode_rm10_address(rl);
++            DECODE_PRINTF("\n");
++            TRACE_AND_STEP();
++            *srcreg = (u16)destoffset;
++        }
+         break;
+     case 3:                     /* register to register */
+         /* undefined.  Do nothing. */
+--
+cgit v0.8.3-6-g21f6
+From 66b6e2fd49fdc650703e56aa176a902e4921251c Mon Sep 17 00:00:00 2001
+From: Pierre-Loup A. Griffais <pgriffais@nvidia.com>
+Date: Wed, 27 Jan 2010 22:03:03 +0000
+Subject: Fix source pictures getting random transforms after 2d6a8f668342a5190cdf43b5.
+
+*xoff and *yoff were uninitialized for source-only pictures.x
+
+Signed-off-by: Pierre-Loup A. Griffais <pgriffais@nvidia.com>
+Reviewed-by: Aaron Plattner <aplattner@nvidia.com>
+Signed-off-by: Keith Packard <keithp@keithp.com>
+(cherry picked from commit a6bd5d2e482a5aa84acb3d4932e2a166d8670ef1)
+---
+diff --git a/fb/fbpict.c b/fb/fbpict.c
+index f9f4343..c046bae 100644
+--- a/fb/fbpict.c
++++ b/fb/fbpict.c
+@@ -453,6 +453,7 @@ image_from_pict_18 (PicturePtr pict, Bool has_clip, int *xoff, int *yoff)
+ 	    else if (sp->type == SourcePictTypeConical)
+ 		image = create_conical_gradient_image (gradient);
+ 	}
++	*xoff = *yoff = 0;
+     }
+     
+     if (image)
+--
+cgit v0.8.3-6-g21f6
+From 734a6b9c2150ce38cf120e179cdac9d3c625434e Mon Sep 17 00:00:00 2001
+From: Alan Coopersmith <alan.coopersmith@sun.com>
+Date: Wed, 27 Jan 2010 06:25:04 +0000
+Subject: Avoid segfaults in XF86VidMode GammaRamp functions if randr_crtc is NULL
+
+Fixes crash when xscreensaver tries to use GammaRamp calls to fade out
+http://bugs.opensolaris.org/bugdatabase/view_bug.do?bug_id=6915712
+
+Signed-off-by: Alan Coopersmith <alan.coopersmith@sun.com>
+Reviewed-by: Keith Packard <keithp@keithp.com>
+Signed-off-by: Keith Packard <keithp@keithp.com>
+---
+diff --git a/hw/xfree86/common/xf86cmap.c b/hw/xfree86/common/xf86cmap.c
+index 08f557c..edd5ae9 100644
+--- a/hw/xfree86/common/xf86cmap.c
++++ b/hw/xfree86/common/xf86cmap.c
+@@ -1004,12 +1004,14 @@ xf86ChangeGammaRamp(
+ 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(pScrn);
+ 	RRCrtcPtr crtc = config->output[config->compat_output]->crtc->randr_crtc;
+ 
+-	if (crtc->gammaSize != size)
+-	    return BadValue;
++	if (crtc) {
++	    if (crtc->gammaSize != size)
++		return BadValue;
+ 
+-	RRCrtcGammaSet(crtc, red, green, blue);
++	    RRCrtcGammaSet(crtc, red, green, blue);
+ 
+-	return Success;
++	    return Success;
++	}
+     }
+ 
+     if(CMapScreenKey == NULL)
+@@ -1077,7 +1079,8 @@ xf86GetGammaRampSize(ScreenPtr pScreen)
+ 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(pScrn);
+ 	RRCrtcPtr crtc = config->output[config->compat_output]->crtc->randr_crtc;
+ 
+-	return crtc->gammaSize;
++	if (crtc)
++	    return crtc->gammaSize;
+     }
+ 
+     if(CMapScreenKey == NULL) return 0;
+@@ -1106,17 +1109,19 @@ xf86GetGammaRamp(
+ 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(pScrn);
+ 	RRCrtcPtr crtc = config->output[config->compat_output]->crtc->randr_crtc;
+ 
+-	if (crtc->gammaSize < size)
+-	    return BadValue;
++	if (crtc) {
++	    if (crtc->gammaSize < size)
++		return BadValue;
+ 
+-	if (!RRCrtcGammaGet(crtc))
+-	    return BadImplementation;
++	    if (!RRCrtcGammaGet(crtc))
++		return BadImplementation;
+ 
+-	memcpy(red, crtc->gammaRed, size * sizeof(*red));
+-	memcpy(green, crtc->gammaGreen, size * sizeof(*green));
+-	memcpy(blue, crtc->gammaBlue, size * sizeof(*blue));
++	    memcpy(red, crtc->gammaRed, size * sizeof(*red));
++	    memcpy(green, crtc->gammaGreen, size * sizeof(*green));
++	    memcpy(blue, crtc->gammaBlue, size * sizeof(*blue));
+ 
+-	return Success;
++	    return Success;
++	}
+     }
+ 
+     if(CMapScreenKey == NULL) 
+--
+cgit v0.8.3-6-g21f6
