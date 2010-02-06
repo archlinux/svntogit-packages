@@ -8,7 +8,7 @@ case "$1" in
   start)
     for device in ${RFKILL_BLOCK}; do
       stat_busy "Blocking rfkill device: ${device}"
-      /usr/bin/rfkill block ${device}
+      /usr/sbin/rfkill block ${device}
       if [ $? -eq 0 ]; then
         stat_done
       else
@@ -17,7 +17,7 @@ case "$1" in
     done
     for device in ${RFKILL_UNBLOCK}; do
       stat_busy "Unblocking rfkill device: ${device}"
-      /usr/bin/rfkill unblock ${device}
+      /usr/sbin/rfkill unblock ${device}
       if [ $? -eq 0 ]; then
         stat_done
       else
