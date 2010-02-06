@@ -5,48 +5,40 @@ run_hook ()
     mdconfig="/etc/mdadm.conf"
     # for partitionable raid, we need to load md_mod first!
     modprobe md_mod 2>/dev/null
-    # if no config file is present create one from command line parameters
-    if ! [ -e $mdconfig ]; then
+    # If md is specified on commandline, create config file from those parameters.
+    if [ "$(echo $input | grep "md=")" ]; then
         #Create initial mdadm.conf
         # scan all devices in /proc/partitions
         echo DEVICE partitions > $mdconfig
         for i in $input; do 
-        case $i in
+            case $i in
                 # raid 
                 md=[0-9]*,/*)
                     device="$(echo "$i" | sed -e 's|,/.*||g' -e 's|=||g')"
                     array="$(echo $i | cut -d, -f2-)"
                     echo "ARRAY /dev/$device devices=$array" >> $mdconfig
-                    RAID_FOUND=1
                     ;;
                 # partitionable raid
                 md=d[0-9]*,/*)
                     device="$(echo "$i" | sed -e 's|,/.*||g' -e 's|=|_|g')"
                     array="$(echo $i | cut -d, -f2-)"
                     echo "ARRAY /dev/$device devices=$array" >> $mdconfig
-                    RAID_FOUND=1
                     ;;
                 # raid UUID 
                 md=[0-9]*,[0-9,a-z]*)
                     device="$(echo "$i" | sed -e 's|,.*||g' -e 's|=||g')"
                     array="$(echo $i | cut -d, -f2-)"
                     echo "ARRAY /dev/$device UUID=$array" >> $mdconfig
-                    RAID_FOUND=1
                     ;;
                 # partitionable raid UUID
                 md=d[0-9]*,[0-9,a-z]*)
                     device="$(echo "$i" | sed -e 's|,.*||g' -e 's|=|_|g')"
                     array="$(echo $i | cut -d, -f2-)"
                     echo "ARRAY /dev/$device UUID=$array" >> $mdconfig
-                    RAID_FOUND=1
                     ;;
             esac 
         done
-    else
-        RAID_FOUND=1
     fi
-    if [ "$RAID_FOUND" = 1 ]; then
-        # assemble everything
-        /sbin/mdassemble
-    fi
+    # assemble everything
+    [ -e $mdconfig ] && /sbin/mdassemble
 }
