@@ -297,7 +297,7 @@ sort -u /tmp/modules-plain >> /tmp/modules-stripped
 grep -v "ide/" /tmp/modules-stripped | grep -v "scsi/" | grep -v "fusion/" | grep -v "block/sx8" | grep -v "message/fusion" | \
 	grep -v  "block/cciss" | grep -v "block/cpqarray" | grep -v "block/DAC960" | grep -v "ata/" | \
 	grep -v "net/" | grep -v "pcmcia/" | grep -v "usb/" | \
-	grep -v "ieee1394/" | grep -v "usbhid/" >> /tmp/modules-sorted
+	grep -v "firewire" | grep -v "ieee1394/" | grep -v "usbhid/" | grep -v "staging/" | grep -v "wireless/" >> /tmp/modules-sorted
 # make a correct order for the modules, internal devices have priority!
 # only use old ide modules if boot parameter 'ide-legacy' is given
 if [ "$IDE_LEGACY" = "1" ]; then
@@ -341,19 +341,19 @@ sed -ne "s#^insmod.*/\(.*\)\.ko.*#\1#p" /tmp/modules-sorted >> /tmp/moduleslist
 #	BLACKLIST="$BLACKLIST $(basename $x .ko)"
 #done
 # delete modules that are blacklisted
-BLACKLIST="${BLACKLIST} $(echo ${disablemodules} | sed 's|-|_|g' | sed 's|,| |g')"
-for i in $BLACKLIST; do
-	[ "$i" ] || continue
-	sed -i -e "/^$i$/d" /tmp/moduleslist
-	# since '-' and '_' are interchangeable, we have to cover both
-	if [ "$(echo $i | grep '-')" ]; then
-		i="$(echo $i | sed 's|-|_|g')"
-		sed -i -e "/^$i$/d" /tmp/moduleslist
-	elif [ "$(echo $i | grep '_')" ]; then
-		i="$(echo $i | sed 's|_|-|g')"
-		sed -i -e "/^$i$/d" /tmp/moduleslist
-	fi
-done
+#BLACKLIST="${BLACKLIST} $(echo ${disablemodules} | sed 's|-|_|g' | sed 's|,| |g')"
+#for i in $BLACKLIST; do
+#	[ "$i" ] || continue
+#	sed -i -e "/^$i$/d" /tmp/moduleslist
+#	# since '-' and '_' are interchangeable, we have to cover both
+#	if [ "$(echo $i | grep '-')" ]; then
+#		i="$(echo $i | sed 's|-|_|g')"
+#		sed -i -e "/^$i$/d" /tmp/moduleslist
+#	elif [ "$(echo $i | grep '_')" ]; then
+#		i="$(echo $i | sed 's|_|-|g')"
+#		sed -i -e "/^$i$/d" /tmp/moduleslist
+#	fi
+#done
 
 listmods() {
 	key=$1 ; shift
@@ -402,7 +402,11 @@ while [ $# -gt 0 ]; do
 		--load-modules)
 			# load all detected pci modules
 			for i in $(cat /tmp/moduleslist); do
-				modprobe $i > /dev/null 2>&1
+				if [ -e /lib/udev/load-modules.sh ]; then 
+					/lib/udev/load-modules.sh $i > /dev/null 2>&1
+				else
+					modprobe $i > /dev/null 2>&1
+				fi
 			done
 			;;
 
