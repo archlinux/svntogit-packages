@@ -129,7 +129,7 @@ if ! [ "$ROOTDEVICE" = "" ]; then
 				ADVANCED="mdadm encrypt"
 				realdevice="$(cryptsetup status $ROOTDEVICE 2>/dev/null | grep "device:.*/dev/md" | sed -e 's#.*\ ##g')"
 				# check on lvm
-				[ "$(mdadm --detail $realdevice | grep "/dev/block/254")" ] && ADVANCED="lvm2 mdadm encrypt"
+				[ "$(mdadm --detail $realdevice | grep "/dev/dm-")" ] && ADVANCED="lvm2 mdadm encrypt"
 			fi
 		fi
 		# check if lvm is used
@@ -137,25 +137,25 @@ if ! [ "$ROOTDEVICE" = "" ]; then
 			ADVANCED="lvm2"
 			vg="$(echo $(lvs -o vg_name --noheading $ROOTDEVICE))"
 			# check on encrypt
-			if [ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ]; then 
+			if [ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/dm-")" ]; then 
 				ADVANCED="encrypt lvm2"
 				# check on raid
 				[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")" ] && ADVANCED="mdadm encrypt lvm2"
-				for i in "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")"; do
+				for i in "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/dm-")"; do
 					realdevice="$(echo $i | cut -d ' ' -f1)"
-					getsymlink="$(readlink $realdevice)"
-					correctdevice="$(echo $getsymlink | sed -e 's#\.\.#/dev#g')"
-					[ "$(cryptsetup status $correctdevice 2>/dev/null | grep "device:.*/dev/md")" ] && ADVANCED="mdadm encrypt lvm2"
+					#getsymlink="$(readlink $realdevice)"
+					#correctdevice="$(echo $getsymlink | sed -e 's#\.\.#/dev#g')"
+					[ "$(cryptsetup status $realdevice 2>/dev/null | grep "device:.*/dev/md")" ] && ADVANCED="mdadm encrypt lvm2"
 				done
 			fi
 			# check on raid
 			if [ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")" ]; then
 				ADVANCED="mdadm lvm2"
 				#check on encrypt
-				[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ] && ADVANCED="encrypt mdadm lvm2"
+				[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/dm-")" ] && ADVANCED="encrypt mdadm lvm2"
 				for i in "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/md")"; do
 					realdevice="$(echo $i | cut -d ' ' -f1)"
-					[ "$(mdadm --detail $realdevice | grep "/dev/block/254")" ] && ADVANCED="encrypt mdadm lvm2"
+					[ "$(mdadm --detail $realdevice | grep "/dev/dm-")" ] && ADVANCED="encrypt mdadm lvm2"
 				done
 			fi
 		fi
@@ -166,10 +166,10 @@ if ! [ "$ROOTDEVICE" = "" ]; then
 		# raid partitions or raid?
 		if [ "$(echo "$ROOTDEVICE" | grep "/dev/md_d")" ]; then
 			realdevice="$(echo $ROOTDEVICE | sed -e 's#p.*##g' -e 's#/dev/##g')"
-			if ! [ "$(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null)" = "" ]; then
+			if ! [ "$(find /sys/block/$realdevice/slaves/ -name 'dm*' 2>/dev/null)" = "" ]; then
 				SET_LVM=""
 				SET_ENCRYPT=""
-				for k in $(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null); do
+				for k in $(find /sys/block/$realdevice/slaves/ -name 'dm*' 2>/dev/null); do
 					[ "$(lvs /dev/mapper/$(cat $k/dm/name) 2>/dev/null)" ] && SET_LVM="1"
 					[ "$(cryptsetup status $(cat $k/dm/name) 2>/dev/null)" ] && SET_ENCRYPT="1"
 					# check on lvm
@@ -180,16 +180,16 @@ if ! [ "$ROOTDEVICE" = "" ]; then
 					realdevice="$(cryptsetup status $(cat $k/dm/name) 2>/dev/null | grep "device:.*/dev/mapper/" | sed -e 's#.*\ ##g')"
 					[ "$(lvs $realdevice 2>/dev/null)" ] && ADVANCED="lvm2 encrypt mdadm"
 					vg="$(echo $(lvs -o vg_name --noheading /dev/mapper/$(cat $k/dm/name) 2>/dev/null))"
-					[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ] && ADVANCED="encrypt lvm2 mdadm"
+					[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/dm-")" ] && ADVANCED="encrypt lvm2 mdadm"
 				done
 				[ "$SET_LVM" = "1" -a "$SET_ENCRYPT" = "1" ] && ADVANCED="lvm2 encrypt mdadm"
 			fi
 		else
 			realdevice="$(echo $ROOTDEVICE | sed -e 's#/dev/##g')"
-			if ! [ "$(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null)" = "" ]; then
+			if ! [ "$(find /sys/block/$realdevice/slaves/ -name 'dm*' 2>/dev/null)" = "" ]; then
 				SET_LVM=""
 				SET_ENCRYPT=""
-				for k in $(find /sys/block/$realdevice/ -name 'dm*' 2>/dev/null); do
+				for k in $(find /sys/block/$realdevice/slaves/ -name 'dm*' 2>/dev/null); do
 					[ "$(lvs /dev/mapper/$(cat $k/dm/name) 2>/dev/null)" ] && SET_LVM="1"
 					[ "$(cryptsetup status $(cat $k/dm/name) 2>/dev/null)" ] && SET_ENCRYPT="1"
 					# check on lvm
@@ -200,7 +200,7 @@ if ! [ "$ROOTDEVICE" = "" ]; then
 					realdevice="$(cryptsetup status $(cat $k/dm/name) 2>/dev/null | grep "device:.*/dev/mapper/" | sed -e 's#.*\ ##g')"
 					[ "$(lvs $realdevice 2>/dev/null)" ] && ADVANCED="lvm2 encrypt mdadm"
 					vg="$(echo $(lvs -o vg_name --noheading /dev/mapper/$(cat $k/dm/name) 2>/dev/null))"
-					[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/block/254")" ] && ADVANCED="encrypt lvm2 mdadm"
+					[ "$(pvs -o pv_name,vg_name --noheading | grep "$vg$" | grep "/dev/dm-")" ] && ADVANCED="encrypt lvm2 mdadm"
 				done
 				[ "$SET_LVM" = "1" -a "$SET_ENCRYPT" = "1" ] && ADVANCED="lvm2 encrypt mdadm"
 			fi
