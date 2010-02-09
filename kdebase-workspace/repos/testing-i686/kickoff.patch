@@ -1,0 +1,268 @@
+Index: plasma/desktop/applets/kickoff/core/systemmodel.cpp
+===================================================================
+--- plasma/desktop/applets/kickoff/core/systemmodel.cpp	(Revision 1087229)
++++ plasma/desktop/applets/kickoff/core/systemmodel.cpp	(Revision 1087230)
+@@ -52,21 +52,22 @@
+ 
+ struct UsageInfo {
+     UsageInfo()
+-            : used(0),
+-            available(0),
+-            dirty(true) {}
++        : used(0),
++          available(0)
++     {}
+ 
+     quint64 used;
+     quint64 available;
+-    bool dirty;
+ };
+ 
+ class SystemModel::Private
+ {
+ public:
+     Private(SystemModel *parent)
+-            : q(parent)
+-            , placesModel(new KFilePlacesModel(parent)) {
++            : q(parent),
++              placesModel(new KFilePlacesModel(parent)),
++              currentPlacesModelUsageIndex(0)
++    {
+         q->setSourceModel(placesModel);
+ 
+         connect(placesModel, SIGNAL(dataChanged(QModelIndex, QModelIndex)),
+@@ -84,44 +85,15 @@
+         << i18n("Places")
+         << i18n("Removable Storage")
+         << i18n("Storage");
+-        loadApplications();
+-        connect(&refreshTimer, SIGNAL(timeout()),
+-                q, SLOT(startRefreshingUsageInfo()));
+-        refreshTimer.start(10000);
+-        QTimer::singleShot(0, q, SLOT(startRefreshingUsageInfo()));
+         connect(KSycoca::self(), SIGNAL(databaseChanged(const QStringList&)), q, SLOT(reloadApplications()));
+     }
+ 
+-    void queryFreeSpace(const QString& mountPoint) {
+-        KDiskFreeSpaceInfo freeSpace = KDiskFreeSpaceInfo::freeSpaceInfo(mountPoint);
+-        if (freeSpace.isValid())
+-            q->freeSpaceInfoAvailable(freeSpace.mountPoint(), freeSpace.size() / 1024,
+-                                      freeSpace.used() / 1024, freeSpace.available() / 1024);
+-    }
+-
+-    void loadApplications() {
+-        const QStringList apps = Kickoff::systemApplicationList();
+-        appsList.clear();
+-
+-        foreach(const QString &app, apps) {
+-            KService::Ptr service = KService::serviceByStorageId(app);
+-
+-            if (!service) {
+-                continue;
+-            }
+-
+-            appsList << service;
+-        }
+-        //kDebug() << "*************" << appsList;
+-    }
+-
+     SystemModel * const q;
+     KFilePlacesModel *placesModel;
+     QStringList topLevelSections;
+     KService::List appsList;
+-    QList<QString> mountPointsQueue;
+     QMap<QString, UsageInfo> usageByMountpoint;
+-    QTimer refreshTimer;
++    int currentPlacesModelUsageIndex;
+ };
+ 
+ SystemModel::SystemModel(QObject *parent)
+@@ -137,7 +109,9 @@
+ 
+ QModelIndex SystemModel::mapFromSource(const QModelIndex &sourceIndex) const
+ {
+-    if (!sourceIndex.isValid()) return QModelIndex();
++    if (!sourceIndex.isValid()) {
++        return QModelIndex();
++    }
+ 
+     QModelIndex parent;
+ 
+@@ -356,75 +330,60 @@
+     }
+ }
+ 
+-void SystemModel::startRefreshingUsageInfo()
++void SystemModel::refreshUsageInfo()
+ {
+-    if (!d->mountPointsQueue.isEmpty()) {
+-        return;
+-    }
+-
+-    int rowCount = d->placesModel->rowCount();
+-    for (int i = 0; i < rowCount; ++i) {
+-        QModelIndex index = d->placesModel->index(i, 0);
+-        if (d->placesModel->isDevice(index)) {
+-            Solid::Device dev = d->placesModel->deviceForIndex(index);
+-            Solid::StorageAccess *access = dev.as<Solid::StorageAccess>();
+-
+-            if (access && !access->filePath().isEmpty()) {
+-                d->mountPointsQueue << access->filePath();
+-            }
+-        }
+-    }
+-
+-    if (!d->mountPointsQueue.isEmpty()) {
+-        d->queryFreeSpace(d->mountPointsQueue.takeFirst());
+-    }
++    d->currentPlacesModelUsageIndex = 0;
++    QTimer::singleShot(100, this, SLOT(refreshNextUsageInfo()));
+ }
+ 
+-void SystemModel::reloadApplications()
++void SystemModel::stopRefreshingUsageInfo()
+ {
+-    d->loadApplications();
++    d->currentPlacesModelUsageIndex = d->placesModel->rowCount();
+ }
+ 
+-void SystemModel::freeSpaceInfoAvailable(const QString& mountPoint, quint64,
+-        quint64 kbUsed, quint64 kbAvailable)
++void SystemModel::refreshNextUsageInfo()
+ {
+-    UsageInfo info;
+-    info.used = kbUsed;
+-    info.available = kbAvailable;
+-
+-    d->usageByMountpoint[mountPoint] = info;
+-
+-    // More to process
+-    if (!d->mountPointsQueue.isEmpty()) {
+-        d->queryFreeSpace(d->mountPointsQueue.takeFirst());
++    if (d->currentPlacesModelUsageIndex >= d->placesModel->rowCount()) {
+         return;
+     }
+ 
+-    // We're done, let's emit the changes
+-    int rowCount = d->placesModel->rowCount();
+-    for (int i = 0; i < rowCount; ++i) {
+-        QModelIndex sourceIndex = d->placesModel->index(i, 0);
+-        if (d->placesModel->isDevice(sourceIndex)) {
+-            Solid::Device dev = d->placesModel->deviceForIndex(sourceIndex);
+-            Solid::StorageAccess *access = dev.as<Solid::StorageAccess>();
++    QModelIndex sourceIndex = d->placesModel->index(d->currentPlacesModelUsageIndex, 0);
++    if (d->placesModel->isDevice(sourceIndex)) {
++        Solid::Device dev = d->placesModel->deviceForIndex(sourceIndex);
++        Solid::StorageAccess *access = dev.as<Solid::StorageAccess>();
+ 
+-            if (access && d->usageByMountpoint.contains(access->filePath())) {
+-                info = d->usageByMountpoint[access->filePath()];
++        if (access && !access->filePath().isEmpty()) {
++            KDiskFreeSpaceInfo freeSpace = KDiskFreeSpaceInfo::freeSpaceInfo(access->filePath());
++            if (freeSpace.isValid()) {
++                UsageInfo info;
++                info.used = freeSpace.used() / 1024;
++                info.available = freeSpace.available() / 1024;
+ 
+-                if (info.dirty) {
+-                    info.dirty = false;
+-                    d->usageByMountpoint[access->filePath()] = info;
+-                } else {
+-                    d->usageByMountpoint.remove(access->filePath());
+-                }
+-
++                d->usageByMountpoint[freeSpace.mountPoint()] = info;
+                 QModelIndex index = mapFromSource(sourceIndex);
+                 emit dataChanged(index, index);
+             }
+         }
+     }
++
++    ++d->currentPlacesModelUsageIndex;
++    QTimer::singleShot(0, this, SLOT(refreshNextUsageInfo()));
+ }
+ 
++void SystemModel::reloadApplications()
++{
++    const QStringList apps = Kickoff::systemApplicationList();
++    d->appsList.clear();
++
++    foreach (const QString &app, apps) {
++        KService::Ptr service = KService::serviceByStorageId(app);
++
++        if (service) {
++            d->appsList << service;
++        }
++    }
++}
++
+ void Kickoff::SystemModel::sourceDataChanged(const QModelIndex &start, const QModelIndex &end)
+ {
+     if (start.parent().isValid()) return;
+Index: plasma/desktop/applets/kickoff/core/systemmodel.h
+===================================================================
+--- plasma/desktop/applets/kickoff/core/systemmodel.h	(Revision 1087229)
++++ plasma/desktop/applets/kickoff/core/systemmodel.h	(Revision 1087230)
+@@ -48,13 +48,12 @@
+     virtual int columnCount(const QModelIndex &parent = QModelIndex()) const;
+     virtual QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+     virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
++    void refreshUsageInfo();
++    void stopRefreshingUsageInfo();
+ 
+ private Q_SLOTS:
+-    void startRefreshingUsageInfo();
++    void refreshNextUsageInfo();
+     void reloadApplications();
+-    void freeSpaceInfoAvailable(const QString& mountPoint, quint64 kbSize,
+-                                quint64 kbUsed, quint64 kbAvailable);
+-
+     void sourceDataChanged(const QModelIndex &start, const QModelIndex &end);
+     void sourceRowsAboutToBeInserted(const QModelIndex &parent, int start, int end);
+     void sourceRowsInserted(const QModelIndex &parent, int start, int end);
+Index: plasma/desktop/applets/kickoff/ui/launcher.cpp
+===================================================================
+--- plasma/desktop/applets/kickoff/ui/launcher.cpp	(Revision 1087229)
++++ plasma/desktop/applets/kickoff/ui/launcher.cpp	(Revision 1087230)
+@@ -228,7 +228,7 @@
+ 
+     void setupSystemView()
+     {
+-        SystemModel *model = new SystemModel(q);
++        systemModel = new SystemModel(q);
+         UrlItemView *view = new UrlItemView();
+         ItemDelegate *delegate = new ItemDelegate(q);
+         delegate->setRoleMapping(Plasma::Delegate::SubTitleRole, SubTitleRole);
+@@ -236,7 +236,7 @@
+         view->setItemDelegate(delegate);
+         view->setItemStateProvider(delegate);
+ 
+-        addView(i18n("Computer"), systemIcon(), model, view);
++        addView(i18n("Computer"), systemIcon(), systemModel, view);
+     }
+ 
+     void setupSearchView()
+@@ -448,6 +448,7 @@
+     ApplicationModel  *applicationModel;
+     RecentlyUsedModel *recentlyUsedModel;
+     KRunnerModel *searchModel;
++    SystemModel *systemModel;
+     LeaveModel *leaveModel;
+     SearchBar *searchBar;
+     QWidget *footer;
+@@ -807,6 +808,7 @@
+ {
+     Q_UNUSED(event)
+     reset();
++    d->systemModel->stopRefreshingUsageInfo();
+ }
+ 
+ void Launcher::keyPressEvent(QKeyEvent *event)
+@@ -828,6 +830,7 @@
+ void Launcher::showEvent(QShowEvent *e)
+ {
+     d->searchBar->setFocus();
++    d->systemModel->refreshUsageInfo();
+ 
+     QWidget::showEvent(e);
+ }
