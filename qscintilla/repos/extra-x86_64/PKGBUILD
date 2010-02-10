@@ -5,51 +5,46 @@
 # Contributor: DaNiMoTh <jjdanimoth.aur@gmail.com>
 
 pkgname=qscintilla
-pkgver=2.4.1
+pkgver=2.4.2
 pkgrel=1
 license=('GPL')
 pkgdesc="A port to Qt4 of Neil Hodgson's Scintilla C++ editor class"
 arch=('i686' 'x86_64')
 url="http://www.riverbankcomputing.co.uk/software/qscintilla/intro"
-depends=('qt>=4.6.0')
+depends=('qt')
 provides=('qscintilla2')
 conflicts=('qscintilla2')
-replaces=('qscintilla2')
-source=(http://riverbankcomputing.com/static/Downloads/QScintilla2/QScintilla-gpl-$pkgver.tar.gz)
-md5sums=('2815ea8b7f15d857d657743d023dcbc3')
-options=('force')
+creplaces=('qscintilla2')
+source=("http://riverbankcomputing.com/static/Downloads/QScintilla2/QScintilla-gpl-${pkgver}.tar.gz")
+md5sums=('316dc8b53ec02548cae1c0d5acfa8ace')
 
 build() {
     cd $srcdir/QScintilla-gpl-$pkgver/Qt4
-    sed -i "s|DESTDIR = .*|DESTDIR = $pkgdir/usr/lib|g" qscintilla.pro
     sed -i "s|header.path = .*|header.path = $pkgdir/usr/include|g" qscintilla.pro
     sed -i "s|trans.path = .*|trans.path = $pkgdir/usr/share/qt/translations|g" qscintilla.pro
     sed -i "s|qsci.path = .*|qsci.path = $pkgdir/usr/share/qt/translations|g" qscintilla.pro
 
     qmake qscintilla.pro
     sed -i 's|$(MOVE) $(TARGET)|$(COPY) $(TARGET)|g' Makefile
-    make || return 1
-    make DESTDIR=$pkgdir install
+    make DESTDIR=${pkgdir} || return 1
     
-    cd ../designer-Qt4
-
     # Qt4 designer qscintilla2 plugin
-    mkdir -p $pkgdir/usr/lib/qt/plugins/designer
-
+    cd ../designer-Qt4
+    install -d ${pkgdir}/usr/lib/qt/plugins/designer
     echo "INCPATH += ../Qt4" >> designer.pro
     sed -i "s|LIBS.*|LIBS += -L../Qt4 -lqscintilla2|g" designer.pro
     qmake designer.pro
     make || return 1
-    cp libqscintillaplugin.so $pkgdir/usr/lib/qt/plugins/designer/ || return 1
+}
 
-    msg "Installing the libs to the right place"
+package() {
+  cd ${srcdir}/QScintilla-gpl-${pkgver}/Qt4
+  make DESTDIR=${pkgdir} install || return 1
+  cp libqscintilla2.so.5.2.0 ${pkgdir}/usr/lib/ || return 1
+  ln -s libqscintilla2.so.5.2.0 ${pkgdir}/usr/lib/libqscintilla2.so
+  ln -s libqscintilla2.so.5.2.0 ${pkgdir}/usr/lib/libqscintilla2.so.5
+  ln -s libqscintilla2.so.5.2.0 ${pkgdir}/usr/lib/libqscintilla2.so.5.2
 
-    cd ../Qt4
-    cp libqscintilla2.so.5.2.0 $pkgdir/usr/lib/ || return 1
-
-    pushd $pkgdir/usr/lib/
-        ln -s libqscintilla2.so.5.2.0 libqscintilla2.so
-        ln -s libqscintilla2.so.5.2.0 libqscintilla2.so.5
-        ln -s libqscintilla2.so.5.2.0 libqscintilla2.so.5.2
-    popd
+  cd ${srcdir}/QScintilla-gpl-${pkgver}/designer-Qt4
+  cp libqscintillaplugin.so ${pkgdir}/usr/lib/qt/plugins/designer/ || return 1
 }
