@@ -1,1 +1,2 @@
 export OOO_FORCE_DESKTOP=gnome
+#export OOO_FORCE_DESKTOP=KDE4
