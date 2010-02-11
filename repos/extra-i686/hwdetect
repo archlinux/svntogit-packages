@@ -108,6 +108,9 @@ fi
 # vmware switch
 [ "$(echo $* | grep '\-vmware')" ] && VMWARE=1
 
+# vmware switch
+[ "$(echo $* | grep '\-hooks')" ] && HOOKS=1
+
 ADVANCED=""
 # root device check
 if ! [ "$ROOTDEVICE" = "" ]; then
@@ -483,15 +486,18 @@ while [ $# -gt 0 ]; do
 				;;
 		--uvesafb) 	FB="uvesafb"
 				MODULES_INITRAMFS="$FB $MODULES_INITRAMFS"
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				! [ "$HOOKS" = "1" ] && showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
 		--fbmodule) 	FB=""
 				for i in $(cat /etc/modprobe.d/framebuffer_blacklist.conf); do
 				    i=$(echo $i | sed -e 's/blacklist //g')
-                                    cat /proc/modules | grep -q ^$i && FB="$i"
+				    # check if already in FB array, to avoid double entries
+				    if [ "$(cat /proc/modules | grep ^$i)" ]; then
+					! [ "$(grep -w $FB)" ] && FB="$i"
+				    fi
                                 done
 				MODULES_INITRAMFS="$FB $MODULES_INITRAMFS "
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				! [ "$HOOKS" = "1" ] && showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
 		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) \) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(dmesg | grep 'use 8139too')" ]; then
