@@ -2,25 +2,25 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=8.70
-pkgrel=4
+pkgver=8.71
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
-depends=('libxext' 'libxt' 'libcups>=1.4.2-3' 'fontconfig>=2.6.0' 'gnutls>=2.8.3' 'cairo>=1.8.8-2'
+depends=('libxext' 'libxt' 'libcups>=1.4.2-3' 'fontconfig>=2.8.0' 'gnutls>=2.8.5' 'cairo>=1.8.8-2'
           'jasper>=1.900.1-4' 'zlib' 'libpng>=1.4.0' 'libjpeg>=8')
 makedepends=('automake' 'autoconf' 'gtk2>=2.18.6')
 optdepends=('texlive-core:	dvipdf'
             'gtk2:		gsx')
 replaces=('ghostscript-lrpng')
 provides=('ghostscript-lprng')
-url="http://www.cs.wisc.edu/~ghost/"
-source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.bz2
+url="http://www.ghostscript.com/"
+source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.xz
 	ghostscript-fPIC.patch
 	ghostscript-system-jasper.patch
 	libpng14.patch)
 options=('!libtool') # '!makeflags')
-md5sums=('526366f8cb4fda0d3d293597cc5b984b'
+md5sums=('5005d68f7395c2bfc4b05c1a60d9b6ba'
          '1a8fcacf0005214db823225c870f093d'
          '03e27cd02471ab3b642c344fa06b623e'
          'be94ee357986f7f63d1b470da5bdc99e')
@@ -57,6 +57,9 @@ build() {
 	cups_serverroot=${pkgdir}/etc/cups \
 	cups_serverbin=${pkgdir}/usr/lib/cups install soinstall
 
+  # install a missing doc files # http://bugs.archlinux.org/task/18023
+  install -m 644 ${srcdir}/ghostscript-${pkgver}/doc/{Ps2ps2.htm,gs-vms.hlp,gsdoc.el,pscet_status.txt} ${pkgdir}/usr/share/ghostscript/$pkgver/doc/
+  
   mkdir -p ${pkgdir}/usr/share/licenses/${pkgname}
   install -m644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/
 
