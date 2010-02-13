@@ -1,0 +1,36 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-control-center
+pkgver=2.29.90
+pkgrel=1
+pkgdesc="The Control Center for GNOME"
+arch=(i686 x86_64)
+depends=('metacity>=2.28.1' 'libxss' 'desktop-file-utils' 'gnome-settings-daemon>=2.29.90' 'libgnomekbd>=2.29.5' 'libcanberra>=0.21' 'sound-theme-freedesktop' 'libunique>=1.1.6' 'gnome-menus>=2.29.6' 'evolution-data-server>=2.29.90' 'librsvg>=2.26.0')
+makedepends=('gnome-doc-utils>=0.18.0' 'pkgconfig' 'intltool')
+url="http://www.gnome.org"
+groups=('gnome')
+replaces=('control-center')
+conflicts=('control-center')
+provides=('control-center')
+install=gnome-control-center.install
+license=('GPL')
+options=('!libtool' '!emptydirs')
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.29/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('d40ae44e131cae16ab375fbe06ee263955777a17af6ad9fc9af18ebcc42dad82')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static --enable-aboutme \
+      --disable-scrollkeeper --disable-update-mimedb || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-control-center-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+
+  # --disable-update-mimedb?
+  rm -f "${pkgdir}/usr/share/applications/mimeinfo.cache"
+}
