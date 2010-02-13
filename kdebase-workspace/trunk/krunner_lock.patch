@@ -1,0 +1,55 @@
+Index: krunner/lock/lockdlg.cc
+===================================================================
+--- krunner/lock/lockdlg.cc	(Revision 1089240)
++++ krunner/lock/lockdlg.cc	(Revision 1089241)
+@@ -85,7 +85,8 @@
+     : KDialog(parent, Qt::X11BypassWindowManagerHint),
+       mPlugin( plugin ),
+       mCapsLocked(-1),
+-      mUnlockingFailed(false)
++      mUnlockingFailed(false),
++      sNot(0)
+ {
+     QWidget* w = mainWidget();
+ 
+@@ -431,6 +432,8 @@
+ //
+ void PasswordDlg::gplugStart()
+ {
++    if (sNot)
++        return;
+     int sfd[2];
+     char fdbuf[16];
+ 
+@@ -461,6 +464,7 @@
+     sFd = sfd[0];
+     sNot = new QSocketNotifier(sFd, QSocketNotifier::Read, this);
+     connect(sNot, SIGNAL(activated(int)), SLOT(handleVerify()));
++    connect(sNot, SIGNAL(destroyed()), SLOT(slotNotifierDestroyed()));
+ }
+ 
+ void PasswordDlg::gplugChanged()
+@@ -647,6 +651,11 @@
+         KDisplayManager().switchVT( itm->vt );
+ }
+ 
++void PasswordDlg::slotNotifierDestroyed()
++{
++    sNot = 0;
++}
++
+ void PasswordDlg::capsLocked()
+ {
+     unsigned int lmask;
+Index: krunner/lock/lockdlg.h
+===================================================================
+--- krunner/lock/lockdlg.h	(Revision 1089240)
++++ krunner/lock/lockdlg.h	(Revision 1089241)
+@@ -63,6 +63,7 @@
+     void slotOK();
+     void slotActivity();
+     void handleVerify();
++    void slotNotifierDestroyed();
+ 
+ private:
+     void capsLocked();
