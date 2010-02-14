@@ -3,15 +3,15 @@
 
 pkgname=gvim
 _srcver=7.2
-_patchlevel=266
+_patchlevel=359
 pkgver=${_srcver}.${_patchlevel}
-pkgrel=2
+pkgrel=1
 pkgdesc="the vim text editor with advanced features enabled, such as a gui mode"
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 license=('custom:vim')
 url="http://www.vim.org"
 depends=("vim>=${pkgver}" 'python' 'libxt' 'desktop-file-utils' 'gtk2')
-makedepends=('pkgconfig' 'sed' 'perl')
+makedepends=('pkgconfig' 'sed' 'perl' 'curl')
 install=${pkgname}.install
 source=(ftp://ftp.vim.org/pub/vim/unix/vim-${_srcver}.tar.bz2 \
         ftp://ftp.vim.org/pub/vim/extra/vim-${_srcver}-extra.tar.gz \
@@ -19,7 +19,7 @@ source=(ftp://ftp.vim.org/pub/vim/unix/vim-${_srcver}.tar.bz2 \
         ${pkgname}.desktop fetch_patches.sh)
 md5sums=('f0901284b338e448bfd79ccca0041254' '35e04482f07c57221c9a751aaa3b8dac' \
          'd8884786979e0e520c112faf2e176f05' '2be104c0372dd6dae19cb7968c03cd4f' \
-         'df640c8196c480795fdda24c817e0f11')
+         '159d4d11ecaf85c06623a02c1f843d01')
 
 build()
 {
@@ -28,6 +28,7 @@ build()
   # pull in patches from vim.org (or the src cache alternatively)
   . ${srcdir}/fetch_patches.sh
   get_patches || return 1
+
   cd ${srcdir}/${_versiondir}
    # define the place for the global (g)vimrc file (set to /etc/vimrc)
   sed -i 's|^.*\(#define SYS_.*VIMRC_FILE.*"\) .*$|\1|' src/feature.h
@@ -36,8 +37,13 @@ build()
     --with-x=yes --disable-gpm --enable-gui=gtk2 \
     --enable-multibyte --enable-cscope --enable-netbeans \
     --enable-perlinterp --enable-pythoninterp --disable-rubyinterp
+
   make || return 1
-   # install everything first ...
+}
+
+package() {
+  _versiondir="vim"$(echo ${_srcver} | sed "s/\.//")
+  cd ${srcdir}/${_versiondir}
   make VIMRCLOC=/etc DESTDIR=${pkgdir} install
 
    # ... and clean up what vim already has for us
@@ -65,7 +71,7 @@ build()
   rm -rf ${pkgdir}/usr/share/vim
    # freedesktop links
   install -D -m644 ${srcdir}/${pkgname}.desktop \
-    ${startdir}/pkg/usr/share/applications/gvim.desktop
+    ${pkgdir}/usr/share/applications/gvim.desktop
   install -D -m644 ${srcdir}/${_versiondir}/runtime/vim48x48.png \
     ${pkgdir}/usr/share/pixmaps/gvim.png
 }
