@@ -1,0 +1,79 @@
+# $Id$
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor: <kleptophobiac@gmail.com>
+# Contributor: dorphell <dorphell@archlinux.org>
+
+pkgname=mythtv
+pkgver=23562
+pkgrel=2
+pkgdesc="A Homebrew PVR project"
+arch=('i686' 'x86_64')
+url="http://www.mythtv.org/"
+license=('GPL')
+depends=('mysql-clients' 'qt' 'lame' 'lirc-utils' 'ffmpeg' 'libxvmc' 'fribidi' 
+         'perl-soap-lite' 'perl-date-manip' 'perl-xml-sax' 'perl-math-round' 
+         'perl-net-upnp' 'perl-dbd-mysql' 'perl-time-hires' 'libavc1394' 'wget' 
+         'libiec61883' 'mysql-python' 'mesa' 'libxinerama' 'libxrandr' 'yasm')
+optdepends=('xmltv: to download tv listings')
+replaces=('mythtv-contrib')
+conflicts=('mythtv-contrib')
+backup=('etc/conf.d/mythbackend')
+install=mythtv.install
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz 
+        mythbackend 
+        archlinux.conf.d.mythbackend)
+md5sums=('e487de15bcf44214557ad3a1e8e9697d'
+         'feadcc9ad064d93d6dceab1efc0bd9ed'
+         'bb8e4033d82428d827570fae9ba15e6a')
+
+build() {
+  cd "${srcdir}/${pkgname}"
+
+  ARCH=${CARCH/_/-}
+  ./configure --prefix=/usr --cpu=${ARCH} \
+              --enable-mmx \
+              --enable-audio-oss \
+              --enable-audio-alsa \
+              --disable-audio-jack \
+              --disable-audio-pulse \
+              --disable-audio-arts \
+              --disable-altivec \
+              --disable-distcc \
+              --disable-ccache \
+              --enable-ffmpeg \
+              --enable-vdpau \
+              --enable-libfaad \
+              --enable-glx-procaddrarb \
+              --enable-dvb \
+              --enable-lirc \
+              --enable-joystick-menu \
+              --enable-v4l \
+              --enable-ivtv \
+              --enable-dvb \
+              --dvb-path=/usr/include \
+              --enable-xvmc \
+              --enable-xvmcw \
+              --enable-xvmc-pro \
+              --enable-xvmc-vld \
+              --enable-firewire \
+              --enable-fribidi \
+              --enable-opengl-vsync \
+              --enable-xrandr \
+              --enable-xv \
+              --enable-x11 \
+              --with-bindings=perl,python
+
+  qmake mythtv.pro
+  make all || return 1
+  # basic install
+  make INSTALL_ROOT="${pkgdir}" install || return 1
+  install -D -m0755 ${srcdir}/mythbackend "${pkgdir}/etc/rc.d/mythbackend" || return 1
+  # config file
+  install -D -m644 ${srcdir}/archlinux.conf.d.mythbackend "${pkgdir}/etc/conf.d/mythbackend" || return 1
+  # install contrib files
+  cp -a contrib/$i ${pkgdir}/usr/share/mythtv
+  # install database structure
+  cd database
+  cp -a mc.sql ${pkgdir}/usr/share/mythtv
+}
