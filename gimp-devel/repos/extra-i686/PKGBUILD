@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Woody Gilk <woody@archlinux.org>
+
+pkgname=gimp-devel
+pkgver=2.7.0
+pkgrel=3
+pkgdesc="GNU Image Manipulation Program (Development Version)"
+arch=('i686' 'x86_64')
+url="http://www.gimp.org/"
+license=('GPL')
+depends=('gtk2' 'lcms' 'libxpm' 'libwmf' 'libxmu' 'librsvg' 'libmng' 'dbus-glib' \
+         'libexif' 'pygtk' 'desktop-file-utils' 'gegl')
+makedepends=('gutenprint' 'intltool' 'libwebkit' 'gnome-python' 'poppler-glib' \
+             'pkgconfig' 'alsa-lib' 'libgnomeui' 'gtk-doc')
+optdepends=('gutenprint: for sophisticated printing only as gimp has built-in cups print support'
+            'libwebkit: for the help browser'
+	    'poppler-glib: for pdf support'
+            'hal: for Linux input event controller module'
+            'alsa-lib: for MIDI event controller module')
+options=('!libtool' '!makeflags')
+conflicts=('gimp')
+provides=("gimp=${pkgver}")
+install=gimp-devel.install
+source=(ftp://ftp.gimp.org/pub/gimp/v${pkgver%.*}/gimp-${pkgver}.tar.bz2 linux.gpl libpng-1.4.patch)
+md5sums=('bd9fb22079a547f1f302c219b1a29fcc' 'bb27bc214261d36484093e857f015f38'\
+         '211eccab51593526e852816e647f7da4')
+sha1sums=('15f3797e025ee23463149225b92af1bd67ed6fd3' '110ce9798173b19a662d086ed7b882b4729f06cf'\
+         '21c0fe284c39cc133ec977a48ec38220033020c5')
+
+build() {
+  cd "${srcdir}/gimp-${pkgver}"
+  patch -p1 < ../libpng-1.4.patch || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc \
+    --enable-mp --enable-gimp-console --enable-gimp-remote \
+    --enable-python --with-gif-compression=lzw \
+    --without-aa || return 1
+  make || return 1
+  make DESTDIR="${pkgdir}" install-strip || return 1
+
+  install -D -m644 "${srcdir}/linux.gpl" "${pkgdir}/usr/share/gimp/2.0/palettes/Linux.gpl" || return 1
+
+  ln -sf gimp-console-${pkgver%.*}.1.gz "${pkgdir}/usr/share/man/man1/gimp-console.1" || return 1
+  ln -sf gimp-remote-${pkgver%.*}.1.gz "${pkgdir}/usr/share/man/man1/gimp-remote.1" || return 1
+  ln -sf gimprc-${pkgver%.*}.5.gz "${pkgdir}/usr/share/man/man5/gimprc.5" || return 1
+  ln -sf gimptool-2.0.1.gz "${pkgdir}/usr/share/man/man1/gimptool.1" || return 1
+  ln -s gimp-${pkgver%.*}.1.gz "${pkgdir}/usr/share/man/man1/gimp.1" || return 1
+
+  ln -s gimp-${pkgver%.*} "${pkgdir}/usr/bin/gimp" || return 1
+  ln -s gimp-console-${pkgver%.*} "${pkgdir}/usr/bin/gimp-console" || return 1
+  ln -s gimp-remote-${pkgver%.*} "${pkgdir}/usr/bin/gimp-remote" || return 1
+  ln -s gimptool-2.0 "${pkgdir}/usr/bin/gimptool" || return 1
+}
