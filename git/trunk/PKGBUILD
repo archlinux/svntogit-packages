@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.6.6.1
+pkgver=1.7.0
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -22,6 +22,10 @@ source=("http://kernel.org/pub/software/scm/git/${pkgname}-${pkgver}.tar.bz2" \
 build() {
   cd $srcdir/$pkgname-$pkgver
   make prefix=/usr gitexecdir=/usr/lib/git-core || return 1
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
     INSTALLDIRS=vendor DESTDIR=${pkgdir} install || return 1
@@ -44,7 +48,7 @@ build() {
   rm -rf $pkgdir/usr/lib/perl5
 }
 
-md5sums=('9d254bfdae56c6fa124d8a1312a1b034'
-         '18cbc20056058ef4d336896f628fc3b8')
-sha256sums=('79c3049913a11b966b92406ec3ef6c7c5eb680cfa2a8b0c1abb167b1bfaf9769'
-            '8282a948e8d06d75cad38e91ef6ca99871f44021c5e2ddd1c50327259a808236')
+md5sums=('c7553b73e2156d187ece6ba936ae30ab'
+         '1bb3b0ab6c6129d61455b0e2e7104cc8')
+sha256sums=('a61e863944381c4f8231841f678f41f56b634bebca486a61005b35e5bcbb7c79'
+            '62f629db43b2b2f5b871977a300cba43c25f67c7a03decad4d364c021b7573b6')
