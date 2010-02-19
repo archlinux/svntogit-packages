@@ -1,0 +1,1258 @@
+From b496c63143e9a4ca02011582329bce2df99d9b7c Mon Sep 17 00:00:00 2001
+From: Luca Barbieri <luca@luca-barbieri.com>
+Date: Fri, 29 Jan 2010 08:53:24 +0000
+Subject: nouveau: interface changes for 0.0.16 DRM
+
+This commit encompasses the changes necessary to run on top of the 0.0.16
+nouveau interface, additional APIs to support the new features of the
+interface, as well as code from Luca Barbieri to improve the pushbuf
+interface, which just happens to break nouveau's libdrm ABI so was delayed
+until now.
+
+API changes as a result of 0.0.16 DRM interface:
+
+1. No more bo_pin()/bo_unpin(), these were only there for UMS and we no
+   longer support it.
+
+2. Any random nouveau_bo can be submitted to the GPU as a push buffer.
+
+3. Relocations can be applied on any nouveau_bo
+
+This patch changes the pushbuffer ABI to:
+
+1. No longer use/expose nouveau_pushbuffer. Everything is directly
+   in nouveau_channel. This saves the extra "pushbuf" pointer dereference.
+
+2. Use cur/end pointers instead of tracking the remaining size.
+   Pushing data now only needs to alter cur and not both cur and remaining.
+
+The goal is to make the *_RING macros faster and make the interface simpler
+and cleaner in the process.
+
+The *_RING APIs are unchanged, but those are inlined and the ABI is changed.
+
+Also, anything accessing pushbuf->remaining instead of using AVAIL_RING
+will need to be fixed.
+---
+diff --git a/include/drm/nouveau_drm.h b/include/drm/nouveau_drm.h
+index f745948..af13e46 100644
+--- a/include/drm/nouveau_drm.h
++++ b/include/drm/nouveau_drm.h
+@@ -25,13 +25,14 @@
+ #ifndef __NOUVEAU_DRM_H__
+ #define __NOUVEAU_DRM_H__
+ 
+-#define NOUVEAU_DRM_HEADER_PATCHLEVEL 15
++#define NOUVEAU_DRM_HEADER_PATCHLEVEL 16
+ 
+ struct drm_nouveau_channel_alloc {
+ 	uint32_t     fb_ctxdma_handle;
+ 	uint32_t     tt_ctxdma_handle;
+ 
+ 	int          channel;
++	uint32_t     pushbuf_domains;
+ 
+ 	/* Notifier memory */
+ 	uint32_t     notifier_handle;
+@@ -109,68 +110,58 @@ struct drm_nouveau_gem_new {
+ 	uint32_t align;
+ };
+ 
++#define NOUVEAU_GEM_MAX_BUFFERS 1024
++struct drm_nouveau_gem_pushbuf_bo_presumed {
++	uint32_t valid;
++	uint32_t domain;
++	uint64_t offset;
++};
++
+ struct drm_nouveau_gem_pushbuf_bo {
+ 	uint64_t user_priv;
+ 	uint32_t handle;
+ 	uint32_t read_domains;
+ 	uint32_t write_domains;
+ 	uint32_t valid_domains;
+-	uint32_t presumed_ok;
+-	uint32_t presumed_domain;
+-	uint64_t presumed_offset;
++	struct drm_nouveau_gem_pushbuf_bo_presumed presumed;
+ };
+ 
+ #define NOUVEAU_GEM_RELOC_LOW  (1 << 0)
+ #define NOUVEAU_GEM_RELOC_HIGH (1 << 1)
+ #define NOUVEAU_GEM_RELOC_OR   (1 << 2)
++#define NOUVEAU_GEM_MAX_RELOCS 1024
+ struct drm_nouveau_gem_pushbuf_reloc {
++	uint32_t reloc_bo_index;
++	uint32_t reloc_bo_offset;
+ 	uint32_t bo_index;
+-	uint32_t reloc_index;
+ 	uint32_t flags;
+ 	uint32_t data;
+ 	uint32_t vor;
+ 	uint32_t tor;
+ };
+ 
+-#define NOUVEAU_GEM_MAX_BUFFERS 1024
+-#define NOUVEAU_GEM_MAX_RELOCS 1024
++#define NOUVEAU_GEM_MAX_PUSH 64
++struct drm_nouveau_gem_pushbuf_push {
++	uint32_t bo_index;
++	uint32_t pad;
++	uint64_t offset;
++	uint64_t length;
++};
+ 
+ struct drm_nouveau_gem_pushbuf {
+ 	uint32_t channel;
+-	uint32_t nr_dwords;
+ 	uint32_t nr_buffers;
+-	uint32_t nr_relocs;
+-	uint64_t dwords;
+ 	uint64_t buffers;
+-	uint64_t relocs;
+-};
+-
+-struct drm_nouveau_gem_pushbuf_call {
+-	uint32_t channel;
+-	uint32_t handle;
+-	uint32_t offset;
+-	uint32_t nr_buffers;
+ 	uint32_t nr_relocs;
+-	uint32_t nr_dwords;
+-	uint64_t buffers;
++	uint32_t nr_push;
+ 	uint64_t relocs;
++	uint64_t push;
+ 	uint32_t suffix0;
+ 	uint32_t suffix1;
+-	/* below only accessed for CALL2 */
+ 	uint64_t vram_available;
+ 	uint64_t gart_available;
+ };
+ 
+-struct drm_nouveau_gem_pin {
+-	uint32_t handle;
+-	uint32_t domain;
+-	uint64_t offset;
+-};
+-
+-struct drm_nouveau_gem_unpin {
+-	uint32_t handle;
+-};
+-
+ #define NOUVEAU_GEM_CPU_PREP_NOWAIT                                  0x00000001
+ #define NOUVEAU_GEM_CPU_PREP_NOBLOCK                                 0x00000002
+ #define NOUVEAU_GEM_CPU_PREP_WRITE                                   0x00000004
+@@ -183,14 +174,6 @@ struct drm_nouveau_gem_cpu_fini {
+ 	uint32_t handle;
+ };
+ 
+-struct drm_nouveau_gem_tile {
+-	uint32_t handle;
+-	uint32_t offset;
+-	uint32_t size;
+-	uint32_t tile_mode;
+-	uint32_t tile_flags;
+-};
+-
+ enum nouveau_bus_type {
+ 	NV_AGP     = 0,
+ 	NV_PCI     = 1,
+@@ -200,22 +183,17 @@ enum nouveau_bus_type {
+ struct drm_nouveau_sarea {
+ };
+ 
+-#define DRM_NOUVEAU_CARD_INIT          0x00
+-#define DRM_NOUVEAU_GETPARAM           0x01
+-#define DRM_NOUVEAU_SETPARAM           0x02
+-#define DRM_NOUVEAU_CHANNEL_ALLOC      0x03
+-#define DRM_NOUVEAU_CHANNEL_FREE       0x04
+-#define DRM_NOUVEAU_GROBJ_ALLOC        0x05
+-#define DRM_NOUVEAU_NOTIFIEROBJ_ALLOC  0x06
+-#define DRM_NOUVEAU_GPUOBJ_FREE        0x07
++#define DRM_NOUVEAU_GETPARAM           0x00
++#define DRM_NOUVEAU_SETPARAM           0x01
++#define DRM_NOUVEAU_CHANNEL_ALLOC      0x02
++#define DRM_NOUVEAU_CHANNEL_FREE       0x03
++#define DRM_NOUVEAU_GROBJ_ALLOC        0x04
++#define DRM_NOUVEAU_NOTIFIEROBJ_ALLOC  0x05
++#define DRM_NOUVEAU_GPUOBJ_FREE        0x06
+ #define DRM_NOUVEAU_GEM_NEW            0x40
+ #define DRM_NOUVEAU_GEM_PUSHBUF        0x41
+-#define DRM_NOUVEAU_GEM_PUSHBUF_CALL   0x42
+-#define DRM_NOUVEAU_GEM_PIN            0x43 /* !KMS only */
+-#define DRM_NOUVEAU_GEM_UNPIN          0x44 /* !KMS only */
+-#define DRM_NOUVEAU_GEM_CPU_PREP       0x45
+-#define DRM_NOUVEAU_GEM_CPU_FINI       0x46
+-#define DRM_NOUVEAU_GEM_INFO           0x47
+-#define DRM_NOUVEAU_GEM_PUSHBUF_CALL2  0x48
++#define DRM_NOUVEAU_GEM_CPU_PREP       0x42
++#define DRM_NOUVEAU_GEM_CPU_FINI       0x43
++#define DRM_NOUVEAU_GEM_INFO           0x44
+ 
+ #endif /* __NOUVEAU_DRM_H__ */
+diff --git a/nouveau/Makefile.am b/nouveau/Makefile.am
+index 70bbbb2..5d759c5 100644
+--- a/nouveau/Makefile.am
++++ b/nouveau/Makefile.am
+@@ -18,7 +18,8 @@ libdrm_nouveau_la_SOURCES = \
+ 			    nouveau_notifier.c \
+ 			    nouveau_bo.c \
+ 			    nouveau_resource.c \
+-			    nouveau_private.h
++			    nouveau_private.h \
++			    nouveau_reloc.c
+ 
+ libdrm_nouveaucommonincludedir = ${includedir}/nouveau
+ libdrm_nouveaucommoninclude_HEADERS = \
+@@ -29,7 +30,8 @@ libdrm_nouveaucommoninclude_HEADERS = \
+ 				nouveau_pushbuf.h \
+ 				nouveau_bo.h \
+ 				nouveau_resource.h \
+-				nouveau_class.h
++				nouveau_class.h \
++				nouveau_reloc.h
+ 
+ 
+ libdrm_nouveauincludedir = ${includedir}/drm
+diff --git a/nouveau/nouveau_bo.c b/nouveau/nouveau_bo.c
+index 10cc8a6..4973636 100644
+--- a/nouveau/nouveau_bo.c
++++ b/nouveau/nouveau_bo.c
+@@ -201,14 +201,6 @@ nouveau_bo_new_tile(struct nouveau_device *dev, uint32_t flags, int align,
+ 			nouveau_bo_ref(NULL, (void *)nvbo);
+ 			return ret;
+ 		}
+-
+-		if (flags & NOUVEAU_BO_PIN) {
+-			ret = nouveau_bo_pin((void *)nvbo, nvbo->flags);
+-			if (ret) {
+-				nouveau_bo_ref(NULL, (void *)nvbo);
+-				return ret;
+-			}
+-		}
+ 	}
+ 
+ 	*bo = &nvbo->base;
+@@ -219,16 +211,7 @@ int
+ nouveau_bo_new(struct nouveau_device *dev, uint32_t flags, int align,
+ 	       int size, struct nouveau_bo **bo)
+ {
+-	uint32_t tile_flags = 0;
+-
+-	if (flags & NOUVEAU_BO_TILED) {
+-		if (flags & NOUVEAU_BO_ZTILE)
+-			tile_flags = 0x2800;
+-		else
+-			tile_flags = 0x7000;
+-	}
+-
+-	return nouveau_bo_new_tile(dev, flags, align, size, 0, tile_flags, bo);
++	return nouveau_bo_new_tile(dev, flags, align, size, 0, 0, bo);
+ }
+ 
+ int
+@@ -483,62 +466,6 @@ nouveau_bo_unmap(struct nouveau_bo *bo)
+ }
+ 
+ int
+-nouveau_bo_pin(struct nouveau_bo *bo, uint32_t flags)
+-{
+-	struct nouveau_device_priv *nvdev = nouveau_device(bo->device);
+-	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
+-	struct drm_nouveau_gem_pin req;
+-	int ret;
+-
+-	if (nvbo->pinned)
+-		return 0;
+-
+-	if (!nvbo->handle)
+-		return -EINVAL;
+-
+-	/* Now force it to stay put :) */
+-	req.handle = nvbo->handle;
+-	req.domain = 0;
+-	if (flags & NOUVEAU_BO_VRAM)
+-		req.domain |= NOUVEAU_GEM_DOMAIN_VRAM;
+-	if (flags & NOUVEAU_BO_GART)
+-		req.domain |= NOUVEAU_GEM_DOMAIN_GART;
+-
+-	ret = drmCommandWriteRead(nvdev->fd, DRM_NOUVEAU_GEM_PIN, &req,
+-				  sizeof(struct drm_nouveau_gem_pin));
+-	if (ret)
+-		return ret;
+-	nvbo->offset = req.offset;
+-	nvbo->domain = req.domain;
+-	nvbo->pinned = 1;
+-
+-	/* Fill in public nouveau_bo members */
+-	if (nvbo->domain & NOUVEAU_GEM_DOMAIN_VRAM)
+-		bo->flags = NOUVEAU_BO_VRAM;
+-	if (nvbo->domain & NOUVEAU_GEM_DOMAIN_GART)
+-		bo->flags = NOUVEAU_BO_GART;
+-	bo->offset = nvbo->offset;
+-
+-	return 0;
+-}
+-
+-void
+-nouveau_bo_unpin(struct nouveau_bo *bo)
+-{
+-	struct nouveau_device_priv *nvdev = nouveau_device(bo->device);
+-	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
+-	struct drm_nouveau_gem_unpin req;
+-
+-	if (!nvbo->pinned)
+-		return;
+-
+-	req.handle = nvbo->handle;
+-	drmCommandWrite(nvdev->fd, DRM_NOUVEAU_GEM_UNPIN, &req, sizeof(req));
+-
+-	nvbo->pinned = bo->offset = bo->flags = 0;
+-}
+-
+-int
+ nouveau_bo_busy(struct nouveau_bo *bo, uint32_t access)
+ {
+ 	return nouveau_bo_wait(bo, (access & NOUVEAU_BO_WR), 1, 1);
+@@ -565,7 +492,7 @@ nouveau_bo_pending(struct nouveau_bo *bo)
+ struct drm_nouveau_gem_pushbuf_bo *
+ nouveau_bo_emit_buffer(struct nouveau_channel *chan, struct nouveau_bo *bo)
+ {
+-	struct nouveau_pushbuf_priv *nvpb = nouveau_pushbuf(chan->pushbuf);
++	struct nouveau_pushbuf_priv *nvpb = &nouveau_channel(chan)->pb;
+ 	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
+ 	struct drm_nouveau_gem_pushbuf_bo *pbbo;
+ 	struct nouveau_bo *ref = NULL;
+@@ -607,8 +534,8 @@ nouveau_bo_emit_buffer(struct nouveau_channel *chan, struct nouveau_bo *bo)
+ 	pbbo->valid_domains = NOUVEAU_GEM_DOMAIN_VRAM | NOUVEAU_GEM_DOMAIN_GART;
+ 	pbbo->read_domains = 0;
+ 	pbbo->write_domains = 0;
+-	pbbo->presumed_domain = nvbo->domain;
+-	pbbo->presumed_offset = nvbo->offset;
+-	pbbo->presumed_ok = 1;
++	pbbo->presumed.domain = nvbo->domain;
++	pbbo->presumed.offset = nvbo->offset;
++	pbbo->presumed.valid = 1;
+ 	return pbbo;
+ }
+diff --git a/nouveau/nouveau_bo.h b/nouveau/nouveau_bo.h
+index fdad63e..1e77ab0 100644
+--- a/nouveau/nouveau_bo.h
++++ b/nouveau/nouveau_bo.h
+@@ -30,13 +30,9 @@
+ #define NOUVEAU_BO_WR     (1 << 3)
+ #define NOUVEAU_BO_RDWR   (NOUVEAU_BO_RD | NOUVEAU_BO_WR)
+ #define NOUVEAU_BO_MAP    (1 << 4)
+-#define NOUVEAU_BO_PIN    (1 << 5)
+ #define NOUVEAU_BO_LOW    (1 << 6)
+ #define NOUVEAU_BO_HIGH   (1 << 7)
+ #define NOUVEAU_BO_OR     (1 << 8)
+-#define NOUVEAU_BO_LOCAL  (1 << 9)
+-#define NOUVEAU_BO_TILED  (1 << 10)
+-#define NOUVEAU_BO_ZTILE  (1 << 11)
+ #define NOUVEAU_BO_INVAL  (1 << 12)
+ #define NOUVEAU_BO_NOSYNC (1 << 13)
+ #define NOUVEAU_BO_NOWAIT (1 << 14)
+@@ -52,10 +48,6 @@ struct nouveau_bo {
+ 
+ 	uint32_t tile_mode;
+ 	uint32_t tile_flags;
+-
+-	/* Available when buffer is pinned *only* */
+-	uint32_t flags;
+-	uint64_t offset;
+ };
+ 
+ int
+@@ -98,12 +90,6 @@ void
+ nouveau_bo_unmap(struct nouveau_bo *);
+ 
+ int
+-nouveau_bo_pin(struct nouveau_bo *, uint32_t flags);
+-
+-void
+-nouveau_bo_unpin(struct nouveau_bo *);
+-
+-int
+ nouveau_bo_busy(struct nouveau_bo *, uint32_t access);
+ 
+ uint32_t
+diff --git a/nouveau/nouveau_channel.h b/nouveau/nouveau_channel.h
+index 294f749..ddcf8e4 100644
+--- a/nouveau/nouveau_channel.h
++++ b/nouveau/nouveau_channel.h
+@@ -29,11 +29,12 @@ struct nouveau_subchannel {
+ };
+ 
+ struct nouveau_channel {
++	uint32_t *cur;
++	uint32_t *end;
++
+ 	struct nouveau_device *device;
+ 	int id;
+ 
+-	struct nouveau_pushbuf *pushbuf;
+-
+ 	struct nouveau_grobj *nullobj;
+ 	struct nouveau_grobj *vram;
+ 	struct nouveau_grobj *gart;
+diff --git a/nouveau/nouveau_device.c b/nouveau/nouveau_device.c
+index 0982d3b..c525391 100644
+--- a/nouveau/nouveau_device.c
++++ b/nouveau/nouveau_device.c
+@@ -26,7 +26,7 @@
+ 
+ #include "nouveau_private.h"
+ 
+-#if NOUVEAU_DRM_HEADER_PATCHLEVEL != 15
++#if NOUVEAU_DRM_HEADER_PATCHLEVEL != 16
+ #error nouveau_drm.h does not match expected patchlevel, update libdrm.
+ #endif
+ 
+@@ -54,12 +54,6 @@ nouveau_device_open_existing(struct nouveau_device **dev, int close,
+ 	nvdev->ctx = ctx;
+ 	nvdev->needs_close = close;
+ 
+-	ret = drmCommandNone(nvdev->fd, DRM_NOUVEAU_CARD_INIT);
+-	if (ret) {
+-		nouveau_device_close((void *)&nvdev);
+-		return ret;
+-	}
+-
+ 	ret = nouveau_device_get_param(&nvdev->base,
+ 				       NOUVEAU_GETPARAM_VM_VRAM_BASE, &value);
+ 	if (ret) {
+diff --git a/nouveau/nouveau_private.h b/nouveau/nouveau_private.h
+index 39758d1..c08fa38 100644
+--- a/nouveau/nouveau_private.h
++++ b/nouveau/nouveau_private.h
+@@ -35,14 +35,11 @@
+ #include "nouveau_bo.h"
+ #include "nouveau_resource.h"
+ #include "nouveau_pushbuf.h"
++#include "nouveau_reloc.h"
+ 
+ #define CALPB_BUFFERS 4
+ #define CALPB_BUFSZ   16384
+ struct nouveau_pushbuf_priv {
+-	struct nouveau_pushbuf base;
+-
+-	int no_aper_update;
+-	int use_cal;
+ 	uint32_t cal_suffix0;
+ 	uint32_t cal_suffix1;
+ 	struct nouveau_bo *buffer[CALPB_BUFFERS];
+@@ -50,15 +47,19 @@ struct nouveau_pushbuf_priv {
+ 	int current_offset;
+ 
+ 	unsigned *pushbuf;
+-	unsigned  size;
++	unsigned size;
+ 
+-	unsigned marker;
++	uint32_t *marker;
++	unsigned marker_offset;
+ 	unsigned marker_relocs;
++	unsigned marker_push;
+ 
+ 	struct drm_nouveau_gem_pushbuf_bo *buffers;
+ 	unsigned nr_buffers;
+ 	struct drm_nouveau_gem_pushbuf_reloc *relocs;
+ 	unsigned nr_relocs;
++	struct drm_nouveau_gem_pushbuf_push push[NOUVEAU_GEM_MAX_PUSH];
++	unsigned nr_push;
+ };
+ #define nouveau_pushbuf(n) ((struct nouveau_pushbuf_priv *)(n))
+ 
+diff --git a/nouveau/nouveau_pushbuf.c b/nouveau/nouveau_pushbuf.c
+index 7da3a47..28b8018 100644
+--- a/nouveau/nouveau_pushbuf.c
++++ b/nouveau/nouveau_pushbuf.c
+@@ -31,7 +31,7 @@
+ #define PB_MIN_USER_DWORDS  2048
+ 
+ static int
+-nouveau_pushbuf_space_call(struct nouveau_channel *chan, unsigned min)
++nouveau_pushbuf_space(struct nouveau_channel *chan, unsigned min)
+ {
+ 	struct nouveau_channel_priv *nvchan = nouveau_channel(chan);
+ 	struct nouveau_pushbuf_priv *nvpb = &nvchan->pb;
+@@ -41,8 +41,8 @@ nouveau_pushbuf_space_call(struct nouveau_channel *chan, unsigned min)
+ 	if (min < PB_MIN_USER_DWORDS)
+ 		min = PB_MIN_USER_DWORDS;
+ 
+-	nvpb->current_offset = nvpb->base.cur - nvpb->pushbuf;
+-	if (nvpb->current_offset + min + 2 <= nvpb->size)
++	nvpb->current_offset = chan->cur - nvpb->pushbuf;
++	if (chan->cur + min + 2 <= chan->end)
+ 		return 0;
+ 
+ 	nvpb->current++;
+@@ -58,38 +58,13 @@ nouveau_pushbuf_space_call(struct nouveau_channel *chan, unsigned min)
+ 	nvpb->pushbuf = bo->map;
+ 	nvpb->current_offset = 0;
+ 
+-	nvpb->base.channel = chan;
+-	nvpb->base.remaining = nvpb->size;
+-	nvpb->base.cur = nvpb->pushbuf;
++	chan->cur = nvpb->pushbuf;
++	chan->end = nvpb->pushbuf + nvpb->size;
+ 
+ 	nouveau_bo_unmap(bo);
+ 	return 0;
+ }
+ 
+-static int
+-nouveau_pushbuf_space(struct nouveau_channel *chan, unsigned min)
+-{
+-	struct nouveau_channel_priv *nvchan = nouveau_channel(chan);
+-	struct nouveau_pushbuf_priv *nvpb = &nvchan->pb;
+-
+-	if (nvpb->use_cal)
+-		return nouveau_pushbuf_space_call(chan, min);
+-
+-	if (nvpb->pushbuf) {
+-		free(nvpb->pushbuf);
+-		nvpb->pushbuf = NULL;
+-	}
+-
+-	nvpb->size = min < PB_MIN_USER_DWORDS ? PB_MIN_USER_DWORDS : min;
+-	nvpb->pushbuf = malloc(sizeof(uint32_t) * nvpb->size);
+-
+-	nvpb->base.channel = chan;
+-	nvpb->base.remaining = nvpb->size;
+-	nvpb->base.cur = nvpb->pushbuf;
+-
+-	return 0;
+-}
+-
+ static void
+ nouveau_pushbuf_fini_call(struct nouveau_channel *chan)
+ {
+@@ -99,46 +74,43 @@ nouveau_pushbuf_fini_call(struct nouveau_channel *chan)
+ 
+ 	for (i = 0; i < CALPB_BUFFERS; i++)
+ 		nouveau_bo_ref(NULL, &nvpb->buffer[i]);
+-	nvpb->use_cal = 0;
+ 	nvpb->pushbuf = NULL;
+ }
+ 
+-static void
++static int
+ nouveau_pushbuf_init_call(struct nouveau_channel *chan)
+ {
+-	struct drm_nouveau_gem_pushbuf_call req;
++	struct drm_nouveau_gem_pushbuf req;
+ 	struct nouveau_channel_priv *nvchan = nouveau_channel(chan);
+ 	struct nouveau_pushbuf_priv *nvpb = &nvchan->pb;
+ 	struct nouveau_device *dev = chan->device;
++	uint32_t flags = 0;
+ 	int i, ret;
+ 
++	if (nvchan->drm.pushbuf_domains & NOUVEAU_GEM_DOMAIN_GART)
++		flags |= NOUVEAU_BO_GART;
++	else
++		flags |= NOUVEAU_BO_VRAM;
++
+ 	req.channel = chan->id;
+-	req.handle = 0;
++	req.nr_push = 0;
+ 	ret = drmCommandWriteRead(nouveau_device(dev)->fd,
+-				  DRM_NOUVEAU_GEM_PUSHBUF_CALL2,
+-				  &req, sizeof(req));
+-	if (ret) {
+-		ret = drmCommandWriteRead(nouveau_device(dev)->fd,
+-					  DRM_NOUVEAU_GEM_PUSHBUF_CALL2,
+-					  &req, sizeof(req));
+-		if (ret)
+-			return;
+-
+-		nvpb->no_aper_update = 1;
+-	}
++				  DRM_NOUVEAU_GEM_PUSHBUF, &req, sizeof(req));
++	if (ret)
++		return ret;
+ 
+ 	for (i = 0; i < CALPB_BUFFERS; i++) {
+-		ret = nouveau_bo_new(dev, NOUVEAU_BO_GART | NOUVEAU_BO_MAP,
++		ret = nouveau_bo_new(dev, flags | NOUVEAU_BO_MAP,
+ 				     0, CALPB_BUFSZ, &nvpb->buffer[i]);
+ 		if (ret) {
+ 			nouveau_pushbuf_fini_call(chan);
+-			return;
++			return ret;
+ 		}
+ 	}
+ 
+-	nvpb->use_cal = 1;
+ 	nvpb->cal_suffix0 = req.suffix0;
+ 	nvpb->cal_suffix1 = req.suffix1;
++	return 0;
+ }
+ 
+ int
+@@ -148,25 +120,18 @@ nouveau_pushbuf_init(struct nouveau_channel *chan)
+ 	struct nouveau_pushbuf_priv *nvpb = &nvchan->pb;
+ 	int ret;
+ 
+-	nouveau_pushbuf_init_call(chan);
++	ret = nouveau_pushbuf_init_call(chan);
++	if (ret)
++		return ret;
+ 
+ 	ret = nouveau_pushbuf_space(chan, 0);
+-	if (ret) {
+-		if (nvpb->use_cal) {
+-			nouveau_pushbuf_fini_call(chan);
+-			ret = nouveau_pushbuf_space(chan, 0);
+-		}
+-
+-		if (ret)
+-			return ret;
+-	}
++	if (ret)
++		return ret;
+ 
+ 	nvpb->buffers = calloc(NOUVEAU_GEM_MAX_BUFFERS,
+ 			       sizeof(struct drm_nouveau_gem_pushbuf_bo));
+ 	nvpb->relocs = calloc(NOUVEAU_GEM_MAX_RELOCS,
+ 			      sizeof(struct drm_nouveau_gem_pushbuf_reloc));
+-
+-	chan->pushbuf = &nvpb->base;
+ 	return 0;
+ }
+ 
+@@ -180,92 +145,129 @@ nouveau_pushbuf_fini(struct nouveau_channel *chan)
+ 	free(nvpb->relocs);
+ }
+ 
++static int
++nouveau_pushbuf_bo_add(struct nouveau_channel *chan, struct nouveau_bo *bo,
++		       unsigned offset, unsigned length)
++{
++	struct nouveau_channel_priv *nvchan = nouveau_channel(chan);
++	struct nouveau_pushbuf_priv *nvpb = &nvchan->pb;
++	struct drm_nouveau_gem_pushbuf_push *p = &nvpb->push[nvpb->nr_push++];
++	struct drm_nouveau_gem_pushbuf_bo *pbbo;
++	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
++
++	pbbo = nouveau_bo_emit_buffer(chan, bo);
++	if (!pbbo)
++		return -ENOMEM;
++	pbbo->valid_domains &= nvchan->drm.pushbuf_domains;
++	pbbo->read_domains |= nvchan->drm.pushbuf_domains;
++	nvbo->pending_refcnt++;
++
++	p->bo_index = pbbo - nvpb->buffers;
++	p->offset = offset;
++	p->length = length;
++	return 0;
++}
++
++int
++nouveau_pushbuf_submit(struct nouveau_channel *chan, struct nouveau_bo *bo,
++		       unsigned offset, unsigned length)
++{
++	struct nouveau_pushbuf_priv *nvpb = &nouveau_channel(chan)->pb;
++	int ret, len;
++
++	if ((AVAIL_RING(chan) + nvpb->current_offset) != nvpb->size) {
++		if (nvpb->cal_suffix0 || nvpb->cal_suffix1) {
++			*(chan->cur++) = nvpb->cal_suffix0;
++			*(chan->cur++) = nvpb->cal_suffix1;
++		}
++
++		len = (chan->cur - nvpb->pushbuf) - nvpb->current_offset;
++
++		ret = nouveau_pushbuf_bo_add(chan, nvpb->buffer[nvpb->current],
++					     nvpb->current_offset * 4, len * 4);
++		if (ret)
++			return ret;
++
++		nvpb->current_offset += len;
++	}
++
++	return bo ? nouveau_pushbuf_bo_add(chan, bo, offset, length) : 0;
++}
++
++static void
++nouveau_pushbuf_bo_unref(struct nouveau_pushbuf_priv *nvpb, int index)
++{
++	struct drm_nouveau_gem_pushbuf_bo *pbbo = &nvpb->buffers[index];
++	struct nouveau_bo *bo = (void *)(unsigned long)pbbo->user_priv;
++	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
++
++	if (--nvbo->pending_refcnt)
++		return;
++
++	if (pbbo->presumed.valid == 0) {
++		nvbo->domain = pbbo->presumed.domain;
++		nvbo->offset = pbbo->presumed.offset;
++	}
++
++	nvbo->pending = NULL;
++	nouveau_bo_ref(NULL, &bo);
++
++	/* we only ever remove from the tail of the pending lists,
++	 * so this is safe.
++	 */
++	nvpb->nr_buffers--;
++}
++
+ int
+ nouveau_pushbuf_flush(struct nouveau_channel *chan, unsigned min)
+ {
+ 	struct nouveau_device_priv *nvdev = nouveau_device(chan->device);
+ 	struct nouveau_channel_priv *nvchan = nouveau_channel(chan);
+ 	struct nouveau_pushbuf_priv *nvpb = &nvchan->pb;
++	struct drm_nouveau_gem_pushbuf req;
+ 	unsigned i;
+ 	int ret;
+ 
+-	if (nvpb->base.remaining == nvpb->size)
++	ret = nouveau_pushbuf_submit(chan, NULL, 0, 0);
++	if (ret)
++		return ret;
++
++	if (!nvpb->nr_push)
+ 		return 0;
+ 
+-	if (nvpb->use_cal) {
+-		struct drm_nouveau_gem_pushbuf_call req;
+-
+-		*(nvpb->base.cur++) = nvpb->cal_suffix0;
+-		*(nvpb->base.cur++) = nvpb->cal_suffix1;
+-		if (nvpb->base.remaining > 2) /* space() will fixup if not */
+-			nvpb->base.remaining -= 2;
+-
+-restart_cal:
+-		req.channel = chan->id;
+-		req.handle = nvpb->buffer[nvpb->current]->handle;
+-		req.offset = nvpb->current_offset * 4;
+-		req.nr_buffers = nvpb->nr_buffers;
+-		req.buffers = (uint64_t)(unsigned long)nvpb->buffers;
+-		req.nr_relocs = nvpb->nr_relocs;
+-		req.relocs = (uint64_t)(unsigned long)nvpb->relocs;
+-		req.nr_dwords = (nvpb->base.cur - nvpb->pushbuf) -
+-				nvpb->current_offset;
+-		req.suffix0 = nvpb->cal_suffix0;
+-		req.suffix1 = nvpb->cal_suffix1;
+-		ret = drmCommandWriteRead(nvdev->fd, nvpb->no_aper_update ?
+-					  DRM_NOUVEAU_GEM_PUSHBUF_CALL :
+-					  DRM_NOUVEAU_GEM_PUSHBUF_CALL2,
++	req.channel = chan->id;
++	req.nr_push = nvpb->nr_push;
++	req.push = (uint64_t)(unsigned long)nvpb->push;
++	req.nr_buffers = nvpb->nr_buffers;
++	req.buffers = (uint64_t)(unsigned long)nvpb->buffers;
++	req.nr_relocs = nvpb->nr_relocs;
++	req.relocs = (uint64_t)(unsigned long)nvpb->relocs;
++	req.suffix0 = nvpb->cal_suffix0;
++	req.suffix1 = nvpb->cal_suffix1;
++
++	do {
++		ret = drmCommandWriteRead(nvdev->fd, DRM_NOUVEAU_GEM_PUSHBUF,
+ 					  &req, sizeof(req));
+-		if (ret == -EAGAIN)
+-			goto restart_cal;
+-		nvpb->cal_suffix0 = req.suffix0;
+-		nvpb->cal_suffix1 = req.suffix1;
+-		if (!nvpb->no_aper_update) {
+-			nvdev->base.vm_vram_size = req.vram_available;
+-			nvdev->base.vm_gart_size = req.gart_available;
+-		}
+-	} else {
+-		struct drm_nouveau_gem_pushbuf req;
+-
+-restart_push:
+-		req.channel = chan->id;
+-		req.nr_dwords = nvpb->size - nvpb->base.remaining;
+-		req.dwords = (uint64_t)(unsigned long)nvpb->pushbuf;
+-		req.nr_buffers = nvpb->nr_buffers;
+-		req.buffers = (uint64_t)(unsigned long)nvpb->buffers;
+-		req.nr_relocs = nvpb->nr_relocs;
+-		req.relocs = (uint64_t)(unsigned long)nvpb->relocs;
+-		ret = drmCommandWrite(nvdev->fd, DRM_NOUVEAU_GEM_PUSHBUF,
+-				      &req, sizeof(req));
+-		if (ret == -EAGAIN)
+-			goto restart_push;
+-	}
+-
++	} while (ret == -EAGAIN);
++	nvpb->cal_suffix0 = req.suffix0;
++	nvpb->cal_suffix1 = req.suffix1;
++	nvdev->base.vm_vram_size = req.vram_available;
++	nvdev->base.vm_gart_size = req.gart_available;
+ 
+ 	/* Update presumed offset/domain for any buffers that moved.
+ 	 * Dereference all buffers on validate list
+ 	 */
+ 	for (i = 0; i < nvpb->nr_relocs; i++) {
+-		struct drm_nouveau_gem_pushbuf_reloc *r = &nvpb->relocs[i];
+-		struct drm_nouveau_gem_pushbuf_bo *pbbo =
+-			&nvpb->buffers[r->bo_index];
+-		struct nouveau_bo *bo = (void *)(unsigned long)pbbo->user_priv;
+-		struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
+-
+-		if (--nvbo->pending_refcnt)
+-			continue;
+-
+-		if (pbbo->presumed_ok == 0) {
+-			nvbo->domain = pbbo->presumed_domain;
+-			nvbo->offset = pbbo->presumed_offset;
+-		}
+-
+-		nvbo->pending = NULL;
+-		nouveau_bo_ref(NULL, &bo);
++		nouveau_pushbuf_bo_unref(nvpb, nvpb->relocs[i].bo_index);
++		nouveau_pushbuf_bo_unref(nvpb, nvpb->relocs[i].reloc_bo_index);
+ 	}
+ 
++	for (i = 0; i < nvpb->nr_push; i++)
++		nouveau_pushbuf_bo_unref(nvpb, nvpb->push[i].bo_index);
++
+ 	nvpb->nr_buffers = 0;
+ 	nvpb->nr_relocs = 0;
++	nvpb->nr_push = 0;
+ 
+ 	/* Allocate space for next push buffer */
+ 	assert(!nouveau_pushbuf_space(chan, min));
+@@ -273,7 +275,7 @@ restart_push:
+ 	if (chan->flush_notify)
+ 		chan->flush_notify(chan);
+ 
+-	nvpb->marker = 0;
++	nvpb->marker = NULL;
+ 	return ret;
+ }
+ 
+@@ -281,7 +283,7 @@ int
+ nouveau_pushbuf_marker_emit(struct nouveau_channel *chan,
+ 			    unsigned wait_dwords, unsigned wait_relocs)
+ {
+-	struct nouveau_pushbuf_priv *nvpb = nouveau_pushbuf(chan->pushbuf);
++	struct nouveau_pushbuf_priv *nvpb = &nouveau_channel(chan)->pb;
+ 
+ 	if (AVAIL_RING(chan) < wait_dwords)
+ 		return nouveau_pushbuf_flush(chan, wait_dwords);
+@@ -289,7 +291,9 @@ nouveau_pushbuf_marker_emit(struct nouveau_channel *chan,
+ 	if (nvpb->nr_relocs + wait_relocs >= NOUVEAU_GEM_MAX_RELOCS)
+ 		return nouveau_pushbuf_flush(chan, wait_dwords);
+ 
+-	nvpb->marker = nvpb->base.cur - nvpb->pushbuf;
++	nvpb->marker = chan->cur;
++	nvpb->marker_offset = nvpb->current_offset;
++	nvpb->marker_push = nvpb->nr_push;
+ 	nvpb->marker_relocs = nvpb->nr_relocs;
+ 	return 0;
+ }
+@@ -297,7 +301,7 @@ nouveau_pushbuf_marker_emit(struct nouveau_channel *chan,
+ void
+ nouveau_pushbuf_marker_undo(struct nouveau_channel *chan)
+ {
+-	struct nouveau_pushbuf_priv *nvpb = nouveau_pushbuf(chan->pushbuf);
++	struct nouveau_pushbuf_priv *nvpb = &nouveau_channel(chan)->pb;
+ 	unsigned i;
+ 
+ 	if (!nvpb->marker)
+@@ -305,49 +309,19 @@ nouveau_pushbuf_marker_undo(struct nouveau_channel *chan)
+ 
+ 	/* undo any relocs/buffers added to the list since last marker */
+ 	for (i = nvpb->marker_relocs; i < nvpb->nr_relocs; i++) {
+-		struct drm_nouveau_gem_pushbuf_reloc *r = &nvpb->relocs[i];
+-		struct drm_nouveau_gem_pushbuf_bo *pbbo =
+-			&nvpb->buffers[r->bo_index];
+-		struct nouveau_bo *bo = (void *)(unsigned long)pbbo->user_priv;
+-		struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
+-
+-		if (--nvbo->pending_refcnt)
+-			continue;
+-
+-		nvbo->pending = NULL;
+-		nouveau_bo_ref(NULL, &bo);
+-		nvpb->nr_buffers--;
++		nouveau_pushbuf_bo_unref(nvpb, nvpb->relocs[i].bo_index);
++		nouveau_pushbuf_bo_unref(nvpb, nvpb->relocs[i].reloc_bo_index);
+ 	}
+ 	nvpb->nr_relocs = nvpb->marker_relocs;
+ 
+-	/* reset pushbuf back to last marker */
+-	nvpb->base.cur = nvpb->pushbuf + nvpb->marker;
+-	nvpb->base.remaining = nvpb->size - nvpb->marker;
+-	nvpb->marker = 0;
+-}
+-
+-static uint32_t
+-nouveau_pushbuf_calc_reloc(struct drm_nouveau_gem_pushbuf_bo *pbbo,
+-			   struct drm_nouveau_gem_pushbuf_reloc *r)
+-{
+-	uint32_t push = 0;
+-
+-	if (r->flags & NOUVEAU_GEM_RELOC_LOW)
+-		push = (pbbo->presumed_offset + r->data);
+-	else
+-	if (r->flags & NOUVEAU_GEM_RELOC_HIGH)
+-		push = (pbbo->presumed_offset + r->data) >> 32;
+-	else
+-		push = r->data;
+-
+-	if (r->flags & NOUVEAU_GEM_RELOC_OR) {
+-		if (pbbo->presumed_domain & NOUVEAU_GEM_DOMAIN_VRAM)
+-			push |= r->vor;
+-		else
+-			push |= r->tor;
+-	}
++	for (i = nvpb->marker_push; i < nvpb->nr_push; i++)
++		nouveau_pushbuf_bo_unref(nvpb, nvpb->push[i].bo_index);
++	nvpb->nr_push = nvpb->marker_push;
+ 
+-	return push;
++	/* reset pushbuf back to last marker */
++	chan->cur = nvpb->marker;
++	nvpb->current_offset = nvpb->marker_offset;
++	nvpb->marker = NULL;
+ }
+ 
+ int
+@@ -355,66 +329,15 @@ nouveau_pushbuf_emit_reloc(struct nouveau_channel *chan, void *ptr,
+ 			   struct nouveau_bo *bo, uint32_t data, uint32_t data2,
+ 			   uint32_t flags, uint32_t vor, uint32_t tor)
+ {
+-	struct nouveau_pushbuf_priv *nvpb = nouveau_pushbuf(chan->pushbuf);
+-	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
+-	struct drm_nouveau_gem_pushbuf_reloc *r;
+-	struct drm_nouveau_gem_pushbuf_bo *pbbo;
+-	uint32_t domains = 0;
+-
+-	if (nvpb->nr_relocs >= NOUVEAU_GEM_MAX_RELOCS) {
+-		fprintf(stderr, "too many relocs!!\n");
+-		return -ENOMEM;
+-	}
+-
+-	if (nvbo->user && (flags & NOUVEAU_BO_WR)) {
+-		fprintf(stderr, "write to user buffer!!\n");
+-		return -EINVAL;
+-	}
+-
+-	pbbo = nouveau_bo_emit_buffer(chan, bo);
+-	if (!pbbo) {
+-		fprintf(stderr, "buffer emit fail :(\n");
+-		return -ENOMEM;
+-	}
+-
+-	nvbo->pending_refcnt++;
+-
+-	if (flags & NOUVEAU_BO_VRAM)
+-		domains |= NOUVEAU_GEM_DOMAIN_VRAM;
+-	if (flags & NOUVEAU_BO_GART)
+-		domains |= NOUVEAU_GEM_DOMAIN_GART;
+-
+-	if (!(pbbo->valid_domains & domains)) {
+-		fprintf(stderr, "no valid domains remain!\n");
+-		return -EINVAL;
+-	}
+-	pbbo->valid_domains &= domains;
++	struct nouveau_pushbuf_priv *nvpb = &nouveau_channel(chan)->pb;
++	int ret;
+ 
+-	assert(flags & NOUVEAU_BO_RDWR);
+-	if (flags & NOUVEAU_BO_RD) {
+-		pbbo->read_domains |= domains;
+-	}
+-	if (flags & NOUVEAU_BO_WR) {
+-		pbbo->write_domains |= domains;
+-		nvbo->write_marker = 1;
+-	}
++	ret = nouveau_reloc_emit(chan, nvpb->buffer[nvpb->current],
++				 (char *)ptr - (char *)nvpb->pushbuf, ptr,
++				 bo, data, data2, flags, vor, tor);
++	if (ret)
++		return ret;
+ 
+-	r = nvpb->relocs + nvpb->nr_relocs++;
+-	r->bo_index = pbbo - nvpb->buffers;
+-	r->reloc_index = (uint32_t *)ptr - nvpb->pushbuf;
+-	r->flags = 0;
+-	if (flags & NOUVEAU_BO_LOW)
+-		r->flags |= NOUVEAU_GEM_RELOC_LOW;
+-	if (flags & NOUVEAU_BO_HIGH)
+-		r->flags |= NOUVEAU_GEM_RELOC_HIGH;
+-	if (flags & NOUVEAU_BO_OR)
+-		r->flags |= NOUVEAU_GEM_RELOC_OR;
+-	r->data = data;
+-	r->vor = vor;
+-	r->tor = tor;
+-
+-	*(uint32_t *)ptr = (flags & NOUVEAU_BO_DUMMY) ? 0 :
+-		nouveau_pushbuf_calc_reloc(pbbo, r);
+ 	return 0;
+ }
+ 
+diff --git a/nouveau/nouveau_pushbuf.h b/nouveau/nouveau_pushbuf.h
+index 46982af..52d13a0 100644
+--- a/nouveau/nouveau_pushbuf.h
++++ b/nouveau/nouveau_pushbuf.h
+@@ -29,13 +29,6 @@
+ #include "nouveau_bo.h"
+ #include "nouveau_grobj.h"
+ 
+-struct nouveau_pushbuf {
+-	struct nouveau_channel *channel;
+-
+-	unsigned remaining;
+-	uint32_t *cur;
+-};
+-
+ int
+ nouveau_pushbuf_flush(struct nouveau_channel *, unsigned min);
+ 
+@@ -51,6 +44,10 @@ nouveau_pushbuf_emit_reloc(struct nouveau_channel *, void *ptr,
+ 			   struct nouveau_bo *, uint32_t data, uint32_t data2,
+ 			   uint32_t flags, uint32_t vor, uint32_t tor);
+ 
++int
++nouveau_pushbuf_submit(struct nouveau_channel *chan, struct nouveau_bo *bo,
++		       unsigned offset, unsigned length);
++
+ /* Push buffer access macros */
+ static __inline__ int
+ MARK_RING(struct nouveau_channel *chan, unsigned dwords, unsigned relocs)
+@@ -67,14 +64,14 @@ MARK_UNDO(struct nouveau_channel *chan)
+ static __inline__ void
+ OUT_RING(struct nouveau_channel *chan, unsigned data)
+ {
+-	*(chan->pushbuf->cur++) = (data);
++	*(chan->cur++) = (data);
+ }
+ 
+ static __inline__ void
+ OUT_RINGp(struct nouveau_channel *chan, const void *data, unsigned size)
+ {
+-	memcpy(chan->pushbuf->cur, data, size * 4);
+-	chan->pushbuf->cur += size;
++	memcpy(chan->cur, data, size * 4);
++	chan->cur += size;
+ }
+ 
+ static __inline__ void
+@@ -88,13 +85,13 @@ OUT_RINGf(struct nouveau_channel *chan, float f)
+ static __inline__ unsigned
+ AVAIL_RING(struct nouveau_channel *chan)
+ {
+-	return chan->pushbuf->remaining;
++	return chan->end - chan->cur;
+ }
+ 
+ static __inline__ void
+ WAIT_RING(struct nouveau_channel *chan, unsigned size)
+ {
+-	if (chan->pushbuf->remaining < size)
++	if (chan->cur + size > chan->end)
+ 		nouveau_pushbuf_flush(chan, size);
+ }
+ 
+@@ -108,7 +105,6 @@ BEGIN_RING(struct nouveau_channel *chan, struct nouveau_grobj *gr,
+ 
+ 	WAIT_RING(chan, size + 1);
+ 	OUT_RING(chan, (gr->subc << 13) | (size << 18) | mthd);
+-	chan->pushbuf->remaining -= (size + 1);
+ }
+ 
+ /* non-incrementing BEGIN_RING */
+@@ -147,7 +143,7 @@ static __inline__ int
+ OUT_RELOC(struct nouveau_channel *chan, struct nouveau_bo *bo,
+ 	  unsigned data, unsigned flags, unsigned vor, unsigned tor)
+ {
+-	return nouveau_pushbuf_emit_reloc(chan, chan->pushbuf->cur++, bo,
++	return nouveau_pushbuf_emit_reloc(chan, chan->cur++, bo,
+ 					  data, 0, flags, vor, tor);
+ }
+ 
+@@ -156,7 +152,7 @@ OUT_RELOC2(struct nouveau_channel *chan, struct nouveau_bo *bo,
+ 	   unsigned data, unsigned data2, unsigned flags,
+ 	   unsigned vor, unsigned tor)
+ {
+-	return nouveau_pushbuf_emit_reloc(chan, chan->pushbuf->cur++, bo,
++	return nouveau_pushbuf_emit_reloc(chan, chan->cur++, bo,
+ 					  data, data2, flags, vor, tor);
+ }
+ 
+diff --git a/nouveau/nouveau_reloc.c b/nouveau/nouveau_reloc.c
+new file mode 100644
+index 0000000..301482b
+--- a/dev/null
++++ b/nouveau/nouveau_reloc.c
+@@ -0,0 +1,132 @@
++/*
++ * Copyright 2010 Nouveau Project
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
++ * OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++ * SOFTWARE.
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <assert.h>
++
++#include "nouveau_private.h"
++
++static uint32_t
++nouveau_reloc_calc(struct drm_nouveau_gem_pushbuf_bo *pbbo,
++		   struct drm_nouveau_gem_pushbuf_reloc *r)
++{
++	uint32_t push = 0;
++
++	if (r->flags & NOUVEAU_GEM_RELOC_LOW)
++		push = (pbbo->presumed.offset + r->data);
++	else
++	if (r->flags & NOUVEAU_GEM_RELOC_HIGH)
++		push = (pbbo->presumed.offset + r->data) >> 32;
++	else
++		push = r->data;
++
++	if (r->flags & NOUVEAU_GEM_RELOC_OR) {
++		if (pbbo->presumed.domain & NOUVEAU_GEM_DOMAIN_VRAM)
++			push |= r->vor;
++		else
++			push |= r->tor;
++	}
++
++	return push;
++}
++
++int
++nouveau_reloc_emit(struct nouveau_channel *chan, struct nouveau_bo *reloc_bo,
++		   uint32_t reloc_offset, uint32_t *reloc_ptr,
++		   struct nouveau_bo *bo, uint32_t data, uint32_t data2,
++		   uint32_t flags, uint32_t vor, uint32_t tor)
++{
++	struct nouveau_pushbuf_priv *nvpb = &nouveau_channel(chan)->pb;
++	struct nouveau_bo_priv *nvbo = nouveau_bo(bo);
++	struct drm_nouveau_gem_pushbuf_reloc *r;
++	struct drm_nouveau_gem_pushbuf_bo *pbbo, *rpbbo;
++	uint32_t domains = 0;
++
++	if (nvpb->nr_relocs >= NOUVEAU_GEM_MAX_RELOCS) {
++		fprintf(stderr, "too many relocs!!\n");
++		return -ENOMEM;
++	}
++
++	if (nvbo->user && (flags & NOUVEAU_BO_WR)) {
++		fprintf(stderr, "write to user buffer!!\n");
++		return -EINVAL;
++	}
++
++	rpbbo = nouveau_bo_emit_buffer(chan, reloc_bo);
++	if (!rpbbo)
++		return -ENOMEM;
++	nouveau_bo(reloc_bo)->pending_refcnt++;
++
++	pbbo = nouveau_bo_emit_buffer(chan, bo);
++	if (!pbbo) {
++		fprintf(stderr, "buffer emit fail :(\n");
++		return -ENOMEM;
++	}
++	nouveau_bo(bo)->pending_refcnt++;
++
++	if (flags & NOUVEAU_BO_VRAM)
++		domains |= NOUVEAU_GEM_DOMAIN_VRAM;
++	if (flags & NOUVEAU_BO_GART)
++		domains |= NOUVEAU_GEM_DOMAIN_GART;
++
++	if (!(pbbo->valid_domains & domains)) {
++		fprintf(stderr, "no valid domains remain!\n");
++		return -EINVAL;
++	}
++	pbbo->valid_domains &= domains;
++
++	assert(flags & NOUVEAU_BO_RDWR);
++	if (flags & NOUVEAU_BO_RD) {
++		pbbo->read_domains |= domains;
++	}
++	if (flags & NOUVEAU_BO_WR) {
++		pbbo->write_domains |= domains;
++		nvbo->write_marker = 1;
++	}
++
++	r = nvpb->relocs + nvpb->nr_relocs++;
++	r->reloc_bo_index = rpbbo - nvpb->buffers;
++	r->reloc_bo_offset = reloc_offset;
++	r->bo_index = pbbo - nvpb->buffers;
++	r->flags = 0;
++	if (flags & NOUVEAU_BO_LOW)
++		r->flags |= NOUVEAU_GEM_RELOC_LOW;
++	if (flags & NOUVEAU_BO_HIGH)
++		r->flags |= NOUVEAU_GEM_RELOC_HIGH;
++	if (flags & NOUVEAU_BO_OR)
++		r->flags |= NOUVEAU_GEM_RELOC_OR;
++	r->data = data;
++	r->vor = vor;
++	r->tor = tor;
++
++	if (reloc_ptr) {
++		if (flags & NOUVEAU_BO_DUMMY)
++			*reloc_ptr = 0;
++		else
++			*reloc_ptr = nouveau_reloc_calc(pbbo, r);
++	}
++
++	return 0;
++}
++
+diff --git a/nouveau/nouveau_reloc.h b/nouveau/nouveau_reloc.h
+new file mode 100644
+index 0000000..24ddb52
+--- a/dev/null
++++ b/nouveau/nouveau_reloc.h
+@@ -0,0 +1,32 @@
++/*
++ * Copyright 2010 Nouveau Project
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
++ * OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++ * SOFTWARE.
++ */
++
++#ifndef __NOUVEAU_RELOC_H__
++#define __NOUVEAU_RELOC_H__
++
++int
++nouveau_reloc_emit(struct nouveau_channel *chan, struct nouveau_bo *reloc_bo,
++		   uint32_t reloc_offset, uint32_t *reloc_ptr,
++		   struct nouveau_bo *bo, uint32_t data, uint32_t data2,
++		   uint32_t flags, uint32_t vor, uint32_t tor);
++
++#endif
+--
+cgit v0.8.3-6-g21f6
