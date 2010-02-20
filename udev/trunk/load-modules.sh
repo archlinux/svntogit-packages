@@ -74,7 +74,7 @@ if [ "$MOD_AUTOLOAD" = "yes" -o "$MOD_AUTOLOAD" = "YES" ]; then
       $MODPROBE $USEBLACKLIST ${mod}
     done
   else
-    $MODPROBE $1
+    $MODPROBE $USEBLACKLIST $1
   fi
 fi
 # vim: set et ts=4:
