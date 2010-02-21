@@ -1,0 +1,42 @@
+# $Id$
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+# Maintainer: tobias <tobias@archlinux.org>
+# Modifications made by: red_over_blue and neri
+
+pkgname=povray
+pkgver=3.6.1
+_majorver=3.6
+pkgrel=8
+pkgdesc="A script based raytracer for high-quality three-dimensional graphics"
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://povray.org"
+depends=('zlib' 'libjpeg' 'libtiff' 'libpng' 'libxpm')
+backup=('etc/povray.conf' 'etc/povray.ini')
+source=(ftp://ftp.povray.org/pub/povray/Official/Unix/$pkgname-$pkgver.tar.bz2 
+  libpng-1.4.patch povray-3.6.1-use-system-libpng.patch)
+md5sums=('b5789bb7eeaed0809c5c82d0efda571d' '043d88384956ac41322dee2bf15585cd'\
+         '36e21e100ef73d5d3fc0f72615cf381f')
+sha1sums=('1fab3ccbdedafbf77e3a66087709bbdf60bc643d' '6cfd98bd3c6990db43f2535aa168d7c38b56e2dd'\
+         '98333f7701ffd1803adc9b04d5d09beff2f34c27')
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+  patch -p1 < ../libpng-1.4.patch || return 1
+  patch -p1 < ../povray-3.6.1-use-system-libpng.patch || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man \
+    COMPILED_BY="ArchLinux" --disable-optimiz --enable-strip
+  make || return 1
+  make DESTDIR=${pkgdir} sysconfdir=${pkgdir}/etc install
+  
+  # correct the paths in the ini file
+  sed -i "s|/usr/local/share|/usr/share|g" ${pkgdir}/etc/$pkgname/$_majorver/povray.ini
+  
+  # install licenses
+  install -Dm 644 doc/povlegal.doc \
+    ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+  install -Dm 644 doc/distribution-license.txt \
+    ${pkgdir}/usr/share/licenses/${pkgname}/distribution-license.txt
+  install -Dm 644 doc/source-license.txt \
+    ${pkgdir}/usr/share/licenses/${pkgname}/source-license.txt
+}
