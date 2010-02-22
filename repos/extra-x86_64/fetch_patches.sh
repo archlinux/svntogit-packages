@@ -7,12 +7,11 @@ get_patches() {
   let _patchlevel=$_patchlevel+1
   _currpatch=$(cat MD5SUMS | wc -l)
   sed -i "${_patchlevel},\$d" MD5SUMS
-  cat MD5SUMS | awk '{ print $2 }' | sed -e \
-    "s|^|ftp://ftp.vim.org/pub/vim/patches/${_srcver}/|" | \
-    xargs -P 0 -r -n 1 wget -nv
+  rsync -avzcP "ftp.nluug.nl::Vim/patches/${_srcver}/${_srcver}.*" .
   md5sum -c MD5SUMS > /dev/null || return 1
+  > vim.full.patch.log
   for file in $(cat MD5SUMS | awk '{ print $2 }')
-    do patch -p0 < $file > vim.full.patch.log; done
+    do patch -d ${_versiondir} -p0 < $file >> vim.full.patch.log || return 1; done
 
   ########
 
