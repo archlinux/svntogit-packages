@@ -1,0 +1,99 @@
+# $Id$
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=filesystem
+pkgver=2010.02
+pkgrel=4
+pkgdesc="Base filesystem"
+arch=('any')
+license=('GPL')
+url="http://www.archlinux.org"
+groups=('base')
+install=filesystem.install
+#depends=('sh' 'coreutils')
+backup=(etc/fstab etc/crypttab etc/group etc/hosts etc/ld.so.conf etc/passwd
+        etc/shadow etc/gshadow etc/resolv.conf etc/motd etc/nsswitch.conf
+        etc/shells etc/host.conf etc/securetty etc/profile etc/issue)
+source=(group issue nsswitch.conf securetty host.conf ld.so.conf
+        passwd shadow fstab crypttab hosts motd resolv.conf shells
+        gshadow services protocols profile modprobe.d.usb-load-ehci-first)
+md5sums=('75c7e1770305e1f3b75c52785c137611'
+         '1bdc5dba66947d74866a5df8ce9ef3b1'
+         '13753e4e0964f3652b0cc60a28528bdf'
+         '933dee67c58d452334d342c294342910'
+         'f28150d4c0b22a017be51b9f7f9977ed'
+         '6e488ffecc8ba142c0cf7e2d7aeb832e'
+         '8a9042a2cedf6b6b47eb8973f14289cb'
+         '019e5c24f9befef395a28e7ef2e4e5b9'
+         '57c5cc9da249c3b06a70fd7efb8c34a5'
+         'e5d8323a4dbee7a6d0d2a19cbf4b819f'
+         '81b3cb42a6ddabc2ed2310511ee9c859'
+         'd41d8cd98f00b204e9800998ecf8427e'
+         '6f48288b6fcaf0065fcb7b0e525413e0'
+         '40dac0de4c6b99c8ca97effbd7527c84'
+         '5340b9287b71ffe9d4d99510bffe933f'
+         'f436d2e0ed02b7b73bd10c6693e95ac3'
+         '65d78e621ed69eed69f854c3ee2e5942'
+         'f7ba22b78c5d2b53f86227aa2447e7ea'
+         '8098ffd9fbf890468d3198277596b85a')
+
+build()
+{
+  cd ${pkgdir}
+  mkdir -p bin boot dev etc home lib mnt proc root sbin tmp usr var opt srv sys
+  chmod 555 proc
+  mkdir -p media/{fl,cd,dvd}
+  mkdir -p usr/{bin,include,lib,sbin,share/misc,src}
+
+  mkdir -p usr/share/man/man{1,2,3,4,5,6,7,8}
+  ln -s man3 ${pkgdir}/usr/share/man/man3x
+
+  # fhs compliance
+  mkdir -p usr/local/{bin,games,include,lib,man,sbin,share,src}
+  ln -s ../man ${pkgdir}/usr/local/share/man
+  mkdir -p var/{cache/man,local,lock,opt,run,spool/mail,tmp,games}
+  chmod 1777 var/lock
+  mkdir -p var/log/old
+  mkdir -p etc/{ld.so.conf.d,skel,profile.d}
+  mkdir -p lib/modules
+  mkdir -p var/lib/misc
+  (cd ${pkgdir}/var; ln -s spool/mail mail)
+
+  # vsftpd won't run with write perms on /srv/ftp
+  mkdir -p srv/ftp
+  chown root.ftp srv/ftp
+  chmod 555 srv/ftp
+
+  install -d -o root -g root -m 755 srv/http
+
+  chmod 1777 var/spool/mail tmp var/tmp
+  chmod 0750 root
+
+  #Allow setgid games to write scores:
+  chmod 775 ${pkgdir}/var/games
+  chown root:50 ${pkgdir}/var/games
+
+  cd ${srcdir}
+  cp fstab crypttab group host.conf hosts issue ld.so.conf motd nsswitch.conf \
+    passwd protocols resolv.conf securetty services shadow shells profile \
+    ${pkgdir}/etc/
+  install -m 600 ${srcdir}/gshadow ${pkgdir}/etc/gshadow
+  chmod 600 ${pkgdir}/etc/shadow
+  chmod 600 ${pkgdir}/etc/crypttab
+
+  # no version any more
+  #cat issue | sed "s/#VERSION#/${pkgver}/" >${pkgdir}/etc/issue
+
+  # re-add /etc/arch-release, some software uses it
+  # to check whether arch is running
+  touch ${pkgdir}/etc/arch-release
+  
+  # Add /etc/modprobe.d/
+  install -D -m644 ${srcdir}/modprobe.d.usb-load-ehci-first \
+    ${pkgdir}/etc/modprobe.d/usb-load-ehci-first.conf
+
+  # Prevent pacman from removing directory (FS#16886)
+  mkdir ${pkgdir}/var/empty
+  touch ${pkgdir}/var/empty/.keep
+}
