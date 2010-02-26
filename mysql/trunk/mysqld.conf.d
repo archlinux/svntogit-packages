@@ -1,1 +1,1 @@
-MYSQLD_ROOT="/var/lib/mysql"
+#MYSQLD_ROOT="/var/lib/mysql"
