@@ -6,21 +6,21 @@
 # Just uninstalling ImageMagick before build fails as it is used during the build processs
 
 pkgname=imagemagick
-pkgver=6.5.9.5
+pkgver=6.6.0.0
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr>=1.6.1' 'libtool' 'heimdal' 'bzip2' 'libxml2' 'jasper')
+depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool' 'heimdal' 'bzip2' 'libxml2' 'jasper')
 makedepends=('imagemagick')
 options=('!makeflags' '!docs')
-source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.bz2 \
-        libpng_mmx_patch_x86_64.patch add_delegate.patch perlmagick.rpath.patch)
-md5sums=('ee8f6c42f982fe785c5df8f89e6deb91' '069980fc2590c02aed86420996259302'\
-         '7f5851c4450b73d52df55c7e806cc316' 'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('31e4bfcdaed0569a0352cae5aaaaee0ffaed4df8' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
-         '19b40dcbc5bf8efb8ce7190fed17e2921de32ea5' '23405f80904b1de94ebd7bd6fe2a332471b8c283')
+source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
+        libpng_mmx_patch_x86_64.patch perlmagick.rpath.patch)
+md5sums=('f761490fc7120088ba6e7b6952717636' '069980fc2590c02aed86420996259302'\
+         'ff9974decbfe9846f8e347239d87e4eb')
+sha1sums=('7bfa3333a810c460950209cc9b0c86abd641ff0c' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
+         '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
   cd "${srcdir}/ImageMagick-${pkgver%.*}-${pkgver##*.}"
@@ -29,7 +29,6 @@ build() {
     patch -Np1 < ../libpng_mmx_patch_x86_64.patch || return 1
   fi
 
-  patch -p0 < ../add_delegate.patch || return 1
   patch -p0 < ../perlmagick.rpath.patch || return 1
 
  # When there is a soname bump, remove 'LIBS=-lMagickWand' from configure line and build/install. Then, readd 'LIBS=-lMagickWand' and build/install twice.
