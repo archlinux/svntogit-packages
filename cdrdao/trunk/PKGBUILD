@@ -5,7 +5,7 @@
 pkgbase=('cdrdao')
 pkgname=('cdrdao' 'gcdmaster')
 pkgver=1.2.3
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://cdrdao.sourceforge.net/"
@@ -26,6 +26,7 @@ build() {
   
   ./configure --prefix=/usr \
     --mandir=/usr/share/man \
+    --sysconfdir=/etc \
     --with-xdao --with-lame \
     --with-ogg-support --with-mp3-support || return 1
   make || return 1
@@ -36,18 +37,22 @@ package_cdrdao() {
   depends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao')
 
   cd ${srcdir}/${pkgbase}-${pkgver}
-  make DESTDIR=${pkgdir} install || return 1
+  for dir in trackdb utils paranoia dao
+  do
+      make -C "$dir" DESTDIR=${pkgdir} install || return 1
+  done
+
 }
 
 package_gcdmaster() {
-  pkgdesc="GUI frontend for creating audio CDs using cdrdao"  
-  depends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao' \
-	   'libsigc++2.0' 'gtkmm' 'libgnomeuimm')
-  provides=('cdrdao')
-  conflicts=('cdrdao')
- 
+  pkgdesc="GUI frontend for creating audio CDs using cdrdao"
+  depends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao' 'libsigc++2.0' 'gtkmm' 'libgnomeuimm' "cdrdao>=$pkgver")
+  install=gcdmaster.install
+
   cd ${srcdir}/${pkgbase}-${pkgver}
-  make DESTDIR=${pkgdir} install || return 1  
+  make -C xdao GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${pkgdir} install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/gcdmaster.schemas" --domain gcdmaster ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
 }
-
-
