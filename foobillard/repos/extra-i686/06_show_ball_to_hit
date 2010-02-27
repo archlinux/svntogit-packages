@@ -1,0 +1,255 @@
+Index: foobillard-3.0a/src/billard.c
+===================================================================
+--- foobillard-3.0a.orig/src/billard.c	2006-10-12 16:45:04.000000000 +0200
++++ foobillard-3.0a/src/billard.c	2006-10-12 16:45:23.000000000 +0200
+@@ -31,6 +31,8 @@
+ void * (*billard_malloc)( size_t size ) = malloc;
+ void (*billard_free)( void * ptr ) = free;
+ 
++SnookerState snooker_state={SN_PLAY_RED};
++
+ void setfunc_create_scene( void (*func)( BallsType * balls ) )
+ {
+     create_scene=func;
+Index: foobillard-3.0a/src/billard.h
+===================================================================
+--- foobillard-3.0a.orig/src/billard.h	2006-10-12 16:45:05.000000000 +0200
++++ foobillard-3.0a/src/billard.h	2006-10-12 16:45:23.000000000 +0200
+@@ -76,9 +76,30 @@
+ #define BALL_HALF 2
+ #define BALL_ANY  0
+ 
++typedef enum
++{
++   SN_PLAY_RED,
++   SN_PLAY_ANY_COLOR,
++   SN_PLAY_YELLOW,
++   SN_PLAY_GREEN,
++   SN_PLAY_BROWN,
++   SN_PLAY_BLUE,
++   SN_PLAY_PINK,
++   SN_PLAY_BLACK,
++   SN_DONE
++}
++SnookerBallToPlay;
++
++typedef struct
++{
++   SnookerBallToPlay to_play;
++}
++SnookerState;
++
+ #ifndef BILLARD_C
+ extern void (*create_scene)( BallsType * balls );
+ extern void (*create_walls)( BordersType * walls );
++extern SnookerState snooker_state;
+ #endif
+ 
+ void create_0hole_walls( BordersType * walls );   /* carambol */
+Index: foobillard-3.0a/src/billard3d.c
+===================================================================
+--- foobillard-3.0a.orig/src/billard3d.c	2006-10-12 16:45:08.000000000 +0200
++++ foobillard-3.0a/src/billard3d.c	2006-10-12 16:45:23.000000000 +0200
+@@ -829,6 +829,7 @@
+         player[act_player].place_cue_ball=1;
+         human_player_roster.player[0].cue_ball=0;   human_player_roster.player[1].cue_ball=0;
+         human_player_roster.player[act_player].place_cue_ball=1;
++        snooker_state.to_play=SN_PLAY_RED;
+     }
+ }
+ 
+@@ -1787,6 +1788,7 @@
+            /* score text */
+            for(i=0;i<2;i++){
+                char str[256];
++               char *color;
+                switch(gametype){
+                case GAME_8BALL: strcpy(str,"0"); break;
+                case GAME_9BALL:
+@@ -1805,7 +1807,44 @@
+                    sprintf( str, "%d", player[i].score );
+                    break;
+                case GAME_SNOOKER:
+-                   sprintf( str, "%c%03d  %s", (player[i].score<0)?'-':'+', abs(player[i].score), player[i].snooker_on_red ? "red":"col" );
++                   switch(snooker_state.to_play)
++                   {
++                   case SN_PLAY_RED:
++                       color="red";
++                       break;
++                   case SN_PLAY_ANY_COLOR:
++                       color="color";
++                       break;
++                   case SN_PLAY_YELLOW:
++                       color="yellow";
++                       break;
++                   case SN_PLAY_GREEN:
++                       color="green";
++                       break;
++                   case SN_PLAY_BROWN:
++                       color="brown";
++                       break;
++                   case SN_PLAY_BLUE:
++                       color="blue";
++                       break;
++                   case SN_PLAY_PINK:
++                       color="pink";
++                       break;
++                   case SN_PLAY_BLACK:
++                       color="black";
++                       break;
++                   case SN_DONE:
++                       color="";
++                       break;
++                   }
++                   if(i==act_player)
++                   {
++                       sprintf( str, "%.3d  %s", player[i].score, color);
++                   }
++                   else
++                   {
++                       sprintf( str, "%.3d", player[i].score);
++                   }
+                    break;
+                }
+                textObj_setText( player[i].score_text, str );
+Index: foobillard-3.0a/src/evaluate_move.c
+===================================================================
+--- foobillard-3.0a.orig/src/evaluate_move.c	2006-10-12 16:45:12.000000000 +0200
++++ foobillard-3.0a/src/evaluate_move.c	2006-10-12 16:45:23.000000000 +0200
+@@ -30,26 +30,6 @@
+ 
+ #define MAX(x,y) ((x)>(y)?(x):(y));
+ 
+-typedef enum
+-{
+-   SN_PLAY_RED,
+-   SN_PLAY_ANY_COLOR,
+-   SN_PLAY_YELLOW,
+-   SN_PLAY_GREEN,
+-   SN_PLAY_BROWN,
+-   SN_PLAY_BLUE,
+-   SN_PLAY_PINK,
+-   SN_PLAY_BLACK,
+-   SN_DONE
+-}
+-SnookerBallToPlay;
+-
+-typedef struct
+-{
+-   SnookerBallToPlay to_play;
+-}
+-SnookerState;
+-
+ 
+ void spot_snooker_ball(BallsType *balls,int nr);
+ 
+@@ -400,7 +380,6 @@
+ #define act_player (*pact_player)
+ #define IS_RED(x) ( x==1 || x>=8 )
+     int red_balls_are_in_game=0;
+-    static SnookerState st={SN_PLAY_RED};
+     int color_to_pot;
+     int i;
+     int act_score=0;
+@@ -409,7 +388,7 @@
+     int ball_out;
+     int other_player=(act_player==1)?0:1;
+     int b1hit = BM_get_1st_ball_hit();  if (b1hit>=8) b1hit=1;
+-    if(st.to_play==SN_DONE)
++    if(snooker_state.to_play==SN_DONE)
+     {
+         BM_reset_move_info();
+         return;
+@@ -417,7 +396,7 @@
+ 
+     if( player[act_player].place_cue_ball ) player[act_player].place_cue_ball=0;
+     printf("EVAL start\n");
+-    printf("EVAL to_play=%d\n",st.to_play);
++    printf("EVAL to_play=%d\n",snooker_state.to_play);
+     printf("EVAL b1hit=%d\n",b1hit);
+     for(i=0;i<pballs->nr;i++){
+         if( IS_RED(pballs->ball[i].nr) && pballs->ball[i].in_game ){
+@@ -436,7 +415,7 @@
+         textObj_setText(last_fault_text, "White ball is potted");
+     }
+ 
+-    switch(st.to_play)
++    switch(snooker_state.to_play)
+     {
+     case SN_PLAY_RED:
+         color_to_pot=1;
+@@ -476,7 +455,7 @@
+             if( BM_get_ball_out(i))
+                 spot_snooker_ball(pballs,i);
+         }
+-        st.to_play=SN_PLAY_ANY_COLOR;
++        snooker_state.to_play=SN_PLAY_ANY_COLOR;
+         break;
+     case SN_PLAY_ANY_COLOR:
+         if(b1hit==1)
+@@ -512,9 +491,9 @@
+             }
+         }
+         if(red_balls_are_in_game)
+-            st.to_play=SN_PLAY_RED;
++            snooker_state.to_play=SN_PLAY_RED;
+         else
+-            st.to_play=SN_PLAY_YELLOW;
++            snooker_state.to_play=SN_PLAY_YELLOW;
+ 
+         for(i=2;i<8;i++)
+         {
+@@ -528,7 +507,7 @@
+     case SN_PLAY_BLUE:
+     case SN_PLAY_PINK:
+     case SN_PLAY_BLACK:
+-        color_to_pot=st.to_play;
++        color_to_pot=snooker_state.to_play;
+         if(b1hit!=color_to_pot)
+         {
+             foul=1;
+@@ -562,9 +541,9 @@
+                 }
+             }
+         }
+-        if(!foul && act_score>0) st.to_play++;
++        if(!foul && act_score>0) snooker_state.to_play++;
+ 
+-        for(i=st.to_play;i<8;i++)
++        for(i=snooker_state.to_play;i<8;i++)
+         {
+             if( BM_get_ball_out(i))
+                 spot_snooker_ball(pballs,i);
+@@ -590,13 +569,13 @@
+         printf("EVAL next player\n");
+         if(red_balls_are_in_game)
+         {
+-            st.to_play=SN_PLAY_RED;
++            snooker_state.to_play=SN_PLAY_RED;
+         }
+         else
+         {
+-            if(st.to_play<=SN_PLAY_ANY_COLOR)
++            if(snooker_state.to_play<=SN_PLAY_ANY_COLOR)
+             {
+-                st.to_play=SN_PLAY_YELLOW;
++                snooker_state.to_play=SN_PLAY_YELLOW;
+             }
+         }
+         player[act_player].queue_view=*pqueue_view;
+@@ -605,11 +584,11 @@
+         *pqueue_view=player[act_player].queue_view;
+     }
+ 
+-    player[act_player].snooker_on_red=st.to_play==SN_PLAY_RED;
+-    player[act_player].snooker_next_color=st.to_play;
+-    printf("EVAL to_play=%d\n",st.to_play);
++    player[act_player].snooker_on_red=snooker_state.to_play==SN_PLAY_RED;
++    player[act_player].snooker_next_color=snooker_state.to_play;
++    printf("EVAL to_play=%d\n",snooker_state.to_play);
+ 
+-    if(st.to_play==SN_DONE)
++    if(snooker_state.to_play==SN_DONE)
+     {
+         int other_player;
+ 
