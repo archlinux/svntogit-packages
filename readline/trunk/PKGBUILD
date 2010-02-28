@@ -10,7 +10,6 @@ pkgdesc="GNU readline library"
 arch=(i686 x86_64)
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
 license=('GPL')
-groups=('base')
 depends=('glibc' 'ncurses')
 backup=("etc/inputrc")
 source=(http://ftp.gnu.org/gnu/readline/readline-6.1.tar.gz
