@@ -1,0 +1,3 @@
+#!/bin/sh
+# same as up...
+/sbin/route del $1
