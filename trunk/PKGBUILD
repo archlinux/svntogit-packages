@@ -1,4 +1,4 @@
-# $Id: PKGBUILD 563 2009-08-03 18:43:58Z jlichtblau $
+# $Id: $
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
 # Contributor: Angel 'angvp' Velasquez <angvp[at]archlinux.com.ve>
@@ -6,8 +6,8 @@
 # Contributor: Guillem Rieu <guillemr@gmx.net>
 
 pkgname=python-lxml
-pkgver=2.2.4
-pkgrel=2
+pkgver=2.2.5
+pkgrel=1
 pkgdesc="Python binding for the libxml2 and libxslt libraries"
 arch=('i686' 'x86_64')
 license=('BSD' 'GPL' 'custom')
@@ -17,7 +17,7 @@ optdepends=("beautiful-soup: support for parsing not well formed HTML")
 conflicts=('lxml')
 replaces=('lxml')
 source=(http://codespeak.net/lxml/lxml-$pkgver.tgz)
-md5sums=('077841e74ee728e7746b65d8483274be')
+md5sums=('2ce79c4162c25063f58975a9a1f63e27')
 
 build() {
   cd ${srcdir}/lxml-$pkgver
