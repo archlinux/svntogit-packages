@@ -1,0 +1,47 @@
+# $Id$
+# Contributor: Manolis Tzanidakis
+# Contributor: kevin <kevin@archlinux.org>
+# Maintainer: Thayer Williams <thayer@archlinux.org>
+
+pkgname=ifplugd
+pkgver=0.28
+pkgrel=7
+pkgdesc="A daemon which brings up/down network interfaces upon cable insertion/removal."
+arch=('i686' 'x86_64')
+url="http://0pointer.de/lennart/projects/ifplugd"
+license=('GPL2')
+depends=('libdaemon' 'bash')
+backup=('etc/ifplugd/ifplugd.conf' 'etc/ifplugd/ifplugd.action')
+options=('!makeflags')
+source=($url/${pkgname}-${pkgver}.tar.gz 'ifplugd' 'ifplugd.action' 'ifplugd-0.28-interface.patch' 'ifdown.01-route.sh' 'ifup.01-route.sh' 'ifup.02-ntpdate.sh')
+md5sums=('df6f4bab52f46ffd6eb1f5912d4ccee3' '70d66121ae5163348855236951e069a2'\
+         'e91a3d77d707ae79fbc10146848032dc' '54eb22844b5aeed161c0b80aa9008570'\
+	 'd6ce6c7bd481a0b3944c944c5b277c0b' 'c35f0a637911b747f8dc3bd3c6156a1b'\
+	 'f8690ee18a5ca72555585ee96826c2cf')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -p0 < ../ifplugd-0.28-interface.patch
+  ./configure --prefix=/usr --mandir=/usr/share/man --sysconfdir=/etc \
+      --with-initdir=/etc/rc.d --disable-xmltoman --disable-subversion --disable-lynx
+  /usr/bin/make || return 1
+  /usr/bin/make DESTDIR=${pkgdir} install
+
+  # replace INTERFACES with NET_IFS since AL already uses it in /etc/rc.conf
+  /bin/sed -i "s:INTERFACES:NET_IFS:g" \
+      ${pkgdir}/etc/ifplugd/ifplugd.conf || return 1
+
+  # replace the default init script & action files with ours.
+  #/bin/rm -rf $/pkgdir/etc/init.d
+  /bin/install -D -m755 ${srcdir}/ifplugd ${pkgdir}/etc/rc.d/ifplugd || return 1
+  /bin/install -D -m755 ${srcdir}/ifplugd.action \
+      ${pkgdir}/etc/ifplugd/ifplugd.action || return 1
+
+  /bin/install -Dm755 ${srcdir}/ifdown.01-route.sh \
+      ${pkgdir}/etc/ifplugd/ifdown.d/01-route.sh || return 1
+  /bin/install -Dm755 ${srcdir}/ifup.01-route.sh \
+      ${pkgdir}/etc/ifplugd/ifup.d/01-route.sh || return 1
+  /bin/install -Dm755 ${srcdir}/ifup.02-ntpdate.sh \
+      ${pkgdir}/etc/ifplugd/ifup.d/02-ntpdate.sh || return 1
+}
+
