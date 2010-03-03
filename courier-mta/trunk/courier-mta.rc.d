@@ -9,7 +9,7 @@
 
 case "$1" in
   start)
-    if [ ${AUTO_AUTHDAEMON="true"} ]; then
+    if [ $AUTO_AUTHDAEMON="true" ]; then
       /etc/rc.d/authdaemond start
       sleep ${AUTO_AUTHDAEMON_LAG}
     fi
@@ -40,7 +40,7 @@ case "$1" in
         stat_done
       fi
     done
-    if [ ${AUTO_AUTHDAEMON="true"} ]; then
+    if [ $AUTO_AUTHDAEMON="true" ]; then
       /etc/rc.d/authdaemond stop
     fi
     ;;
