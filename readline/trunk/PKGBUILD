@@ -3,7 +3,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=readline
-_patchlevel=001 #prepare for some patches
+_patchlevel=002 #prepare for some patches
 pkgver=6.1.$_patchlevel
 pkgrel=1
 pkgdesc="GNU readline library"
@@ -21,7 +21,8 @@ if [ $_patchlevel -gt 00 ]; then
 fi
 md5sums=('fc2f7e714fe792db1ce6ddc4c9fb4ef3'
          'e5fc955f56d9fa5beb871f3279b8fa8b'
-         'c642f2e84d820884b0bf9fd176bc6c3f')
+         'c642f2e84d820884b0bf9fd176bc6c3f'
+         '1a76781a1ea734e831588285db7ec9b1')
 
 build() {
   cd ${srcdir}/${pkgname}-6.1
@@ -52,6 +53,4 @@ build() {
   cd ${pkgdir}/usr/lib
   ln -sv /lib/libreadline.so .
   ln -sv /lib/libhistory.so .
-
-  rm -f ${pkgdir}/usr/share/info/dir
 }
