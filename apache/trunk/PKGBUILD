@@ -5,7 +5,6 @@
 pkgname=apache
 pkgver=2.2.14
 pkgrel=3
-_itkver=20090414-00
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('i686' 'x86_64')
 options=('!libtool')
@@ -18,13 +17,30 @@ backup=(etc/httpd/conf/httpd.conf
         etc/logrotate.d/httpd)
 depends=('openssl' 'zlib' 'apr-util' 'pcre')
 optdepends=('lynx: apachectl status')
+_itkurl=http://mpm-itk.sesse.net/apache2.2-mpm-itk-2.2.11-02
 source=(http://www.apache.org/dist/httpd/httpd-${pkgver}.tar.bz2
-        http://mpm-itk.sesse.net/apache2.2-mpm-itk-${_itkver}.patch
+        ${_itkurl}/02-rename-prefork-to-itk.patch
+        ${_itkurl}/03-add-mpm-to-build-system.patch
+        ${_itkurl}/04-correct-output-makefile-location.patch
+        ${_itkurl}/05-add-copyright.patch
+        ${_itkurl}/06-hook-just-after-merging-perdir-config.patch
+        ${_itkurl}/07-base-functionality.patch
+        ${_itkurl}/08-max-clients-per-vhost.patch
+        ${_itkurl}/09-capabilities.patch
+        ${_itkurl}/10-nice.patch
         httpd.logrotate
-	httpd
-	arch.layout)
+        httpd
+        arch.layout)
 md5sums=('a5226203aaf97e5b941c41a71c112704'
-         'e26cf8ad861e41877c0f0dda6e471ca9'
+         'db42cfcc18ae1c32aaaff2347e35b79d'
+         '131408ad4dc7b18547b4e062e7e495ab'
+         'ee488f391054d528547c3a372faa2aa7'
+         'b202944761b2f0516196488b12504236'
+         '78fa15f8ca3a284b7d71f942e24e47fb'
+         'd33e39350e987721d50e6fb8e164ab6b'
+         '9f7a8935f9cabc7b46d0052906634cef'
+         '1b28e3363e1b0d05b738a21e7ddd264f'
+         'd9667fcd2ffecc63e446edd4d6666731'
          'f4d627c64024c1b7b95efb5ffbaa625e'
          '9e001fbb082a08113e7f4bc431085c11'
          '3d659d41276ba3bfcb20c231eb254e0c')
@@ -40,12 +56,25 @@ build() {
 	cat "${srcdir}/arch.layout" >> config.layout
 
 	for mpm in prefork worker itk; do
-		if [ "$mpm" = "itk" ]; then
-			patch -Np1 -i "${srcdir}/apache2.2-mpm-itk-${_itkver}.patch" || return 1
+		if [ "${mpm}" = "itk" ]; then
+			mkdir -p server/mpm/experimental/itk
+			cp -r server/mpm/prefork/* server/mpm/experimental/itk/ || return 1
+			mv server/mpm/experimental/itk/prefork.c server/mpm/experimental/itk/itk.c || return 1
+
+			patch -Np1 -i "${srcdir}/02-rename-prefork-to-itk.patch" || return 1
+			patch -Np1 -i "${srcdir}/03-add-mpm-to-build-system.patch" || return 1
+			patch -Np1 -i "${srcdir}/04-correct-output-makefile-location.patch" || return 1
+			patch -Np1 -i "${srcdir}/05-add-copyright.patch" || return 1
+			patch -Np1 -i "${srcdir}/06-hook-just-after-merging-perdir-config.patch" || return 1
+			patch -Np1 -i "${srcdir}/07-base-functionality.patch" || return 1
+			patch -Np1 -i "${srcdir}/08-max-clients-per-vhost.patch" || return 1
+			patch -Np1 -i "${srcdir}/09-capabilities.patch" || return 1
+			patch -Np1 -i "${srcdir}/10-nice.patch" || return 1
+
 			autoconf || return 1
 		fi
-		mkdir build-$mpm
-		pushd build-$mpm
+		mkdir build-${mpm}
+		pushd build-${mpm}
 		../configure --enable-layout=Arch \
 			--enable-modules=all \
 			--enable-mods-shared=all \
@@ -68,7 +97,7 @@ build() {
 			--with-pcre=/usr \
 			--with-mpm=${mpm} || return 1
 		make || return 1
-		if [ "$mpm" = "prefork" ]; then
+		if [ "${mpm}" = "prefork" ]; then
 			make DESTDIR="${pkgdir}" install || return 1
 		else
 			install -m755 httpd "${pkgdir}/usr/sbin/httpd.${mpm}"
