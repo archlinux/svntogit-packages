@@ -1,0 +1,73 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+# source application-specific settings
+. /etc/conf.d/jack
+
+PID=$(pidof -o %PPID \jackd)
+
+case "$1" in
+	start)
+		stat_busy "Starting JACK Daemon"
+
+		[ "$(whoami)" != "root" -o -z "$JACK_USER" ] && stat_die
+		[ $JACK_PROMISCUOUS_SERVER -ne 1 -a ! -s $JACK_HOME/.jackdrc ] && stat_die
+
+		# create dummy user
+		if ! grep -w $JACK_USER /etc/passwd &> /dev/null; then
+			useradd -rlMN \
+			  -K SYS_UID_MAX=499 \
+			  -K SYS_GID_MAX=499 \
+			  -s /bin/bash \
+			  -G audio,video,network \
+			  -c $JACK_USER \
+			  -d / \
+			  $JACK_USER
+		fi
+
+		# bail if user is not part of important groups
+		for i in audio video network; do
+			groups $JACK_USER | grep -w $i &> /dev/null || stat_die
+		done
+
+		# run the command
+		[ -z "$PID" ] && \
+		  su - $JACK_USER -c "\jackd $JACK_PARAMS &> /dev/null &"
+
+		if [ ! -z "$PID" -o $? -gt 0 ]; then
+			stat_fail
+		else
+			if [ $JACK_PROMISCUOUS_SERVER -eq 1 ]; then
+				add_daemon jack-promiscuous
+				stat_done
+			else
+				add_daemon jack
+				stat_done
+			fi
+		fi
+		;;
+	stop)
+		stat_busy "Stopping JACK Daemon"
+		[ ! -z "$PID" ]  && kill $PID &> /dev/null
+		if [ $? -gt 0 ]; then
+			stat_fail
+		else
+			if ck_daemon jack-promiscuous; then
+				rm_daemon jack-promiscuous
+				stat_done
+			else
+				rm_daemon jack
+				stat_done
+			fi
+		fi
+		;;
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+		;;
+	*)
+		echo "usage: $0 {start|stop|restart}"
+esac
