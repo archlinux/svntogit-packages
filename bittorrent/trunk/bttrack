@@ -1,0 +1,43 @@
+#!/bin/bash
+# PID=`pidof -o %PPID /usr/bin/bittorrent-tracker --port 5000 --dfile /var/db/bt --bind 192.168.1.2 --allowed_dir /var/torrents`
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+PID=`pidof -o %PPID /usr/bin/python /usr/bin/bittorrent-tracker`
+
+case "$1" in
+	start)
+		stat_busy "Starting Bittorrent Tracker"
+		if [ -z "$PID" ]; then 
+			/usr/bin/python /usr/bin/bittorrent-tracker `sed 's/[#].*$//' /etc/bttrack.conf` >> /var/log/bttrack.log &
+			if [ $? -gt 0 ]; then
+				stat_fail
+			else
+				add_daemon bttrack
+				stat_done
+			fi
+		else
+			stat_fail
+		fi
+	;;
+	stop)
+		stat_busy "Stopping Bittorrent Tracker"
+		[ ! -z "$PID" ]  && kill $PID &> /dev/null
+		if [ $? -gt 0 ]; then
+			stat_fail
+		else
+			rm_daemon bttrack
+			stat_done
+		fi
+	;;
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+	;;
+	*)
+		echo "usage: $0 {start|stop|restart}"  
+esac
+
+# Author: Anthony Rossi
