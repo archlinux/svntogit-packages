@@ -9,8 +9,7 @@ case "$1" in
 		stat_busy "Starting vsftpd FTP Daemon"
 		if [ -z "$PID" ]; then 
 			/usr/sbin/vsftpd &
-			PID=`pidof -o %PPID /usr/sbin/vsftpd`
-			if [ -z $PID ]; then
+			if [ $? -gt 0 ]; then
 				stat_fail
 			else
 				add_daemon vsftpd
