@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: tobias [ tobias at archlinux org ]
+
+pkgname=vi
+pkgver=050325
+pkgrel=3
+pkgdesc='The original ex/vi text editor.'
+arch=('i686' 'x86_64')
+url='http://ex-vi.sourceforge.net/'
+license=('custom:ex')
+depends=('ncurses')
+groups=('base')
+options=(force strip !libtool emptydirs)
+source=(http://downloads.sourceforge.net/sourceforge/ex-vi/ex-${pkgver}.tar.bz2
+        navkeys.patch increase-tube.patch exrc.sample)
+md5sums=('e668595254233e4d96811083a3e4e2f3' 'aac133930047eafa4f28736cfaf976b3'
+         'e596e05a00a24187b576e389fa1de45d' 'd3b483c994d859232ce369b82a4b5668')
+
+build() {
+  cd ${srcdir}/ex-${pkgver} || return 1
+
+  # apply patches
+  patch -Np1 -i  ../navkeys.patch || return 1
+  patch -Np0 -i ../increase-tube.patch || return 1
+
+  # correct paths in manpages
+  sed -i -e 's/^\.B \/usr\/libexec/.B \/usr\/lib\/ex/' vi.1 \
+      || return 1
+  sed -i -e 's/^\.B \/var\/preserve$/.B \/var\/lib\/ex/' vi.1 \
+      || return 1
+
+  make PREFIX=/usr LIBEXECDIR=/usr/lib/ex PRESERVEDIR=/var/lib/ex \
+      'FEATURES=-DCHDIR -DFASTTAG -DUCVISUAL -DMB -DBIT8' TERMLIB=ncurses \
+      || return 1
+  make PREFIX=/usr LIBEXECDIR=/usr/lib/ex PRESERVEDIR=/var/lib/ex INSTALL=/bin/install \
+      "DESTDIR=$pkgdir" install || return 1
+
+  install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE \
+      || return 1
+}
