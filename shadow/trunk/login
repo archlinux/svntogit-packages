@@ -16,3 +16,6 @@ session		required	pam_motd.so
 session		required	pam_limits.so
 session		optional	pam_mail.so dir=/var/spool/mail standard
 session		optional	pam_lastlog.so
+# install consolekit and uncomment the line below
+#   to have ACL handle non-standard udev permissions
+#session		optional	pam_ck_connector.so
