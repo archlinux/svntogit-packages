@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# nicenesses range from -20 (most favorable scheduling) to 19 (least favorable)
+NICE=19
+
+# 0 for none, 1 for real time, 2 for best-effort, 3 for idle
+IONICE_CLASS=2
+
+# 0-7 (for IONICE_CLASS 1 and 2 only), 0=highest, 7=lowest
+IONICE_PRIORITY=7
+
+UPDATEMANDB="/usr/bin/mandb --quiet"
+
+# Update the "whatis" database
+#/usr/sbin/makewhatis -u -w
+
+# taken from Debian
+# man-db cron daily
+set -e
+
+if ! [ -d /var/cache/man ]; then
+    # Recover from deletion, per FHS.
+    mkdir -p /var/cache/man
+    chmod 755 /var/cache/man
+fi
+
+# regenerate man database
+
+if [ -x /usr/bin/nice ]; then
+  UPDATEMANDB="/usr/bin/nice -n ${NICE:-19} ${UPDATEMANDB}"
+fi
+
+if [ -x /usr/bin/ionice ]; then
+  UPDATEMANDB="/usr/bin/ionice -c ${IONICE_CLASS:-2} -n ${IONICE_PRIORITY:-7} ${UPDATEMANDB}"
+fi
+
+${UPDATEMANDB}
+
+exit 0
