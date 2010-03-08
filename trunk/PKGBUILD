@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=8.71
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -18,12 +18,14 @@ url="http://www.ghostscript.com/"
 source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.xz
 	ghostscript-fPIC.patch
 	ghostscript-system-jasper.patch
-	libpng14.patch)
+	libpng14.patch
+	ghostscript-pdf2dsc.patch)
 options=('!libtool') # '!makeflags')
 md5sums=('5005d68f7395c2bfc4b05c1a60d9b6ba'
          '1a8fcacf0005214db823225c870f093d'
          '03e27cd02471ab3b642c344fa06b623e'
-         'be94ee357986f7f63d1b470da5bdc99e')
+         'be94ee357986f7f63d1b470da5bdc99e'
+         'f88f3764fc11e3ae2a86b17d2502da2f')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
@@ -34,6 +36,9 @@ build() {
 
   # fix build with systems jasper
   patch -Np1 -i ${srcdir}/ghostscript-system-jasper.patch || return 1
+  
+  # fix PDF viewing with gv - from Fedora
+  patch -Np1 -i ${srcdir}/ghostscript-pdf2dsc.patch || return 1
 
   if [ "$CARCH" = "x86_64" ]; then
     patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch || return 1
