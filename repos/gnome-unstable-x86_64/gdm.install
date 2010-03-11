@@ -1,0 +1,44 @@
+pkgname=gdm
+
+post_install() {
+  getent group gdm >/dev/null 2>&1 || groupadd -g 120 gdm
+  if getent passwd gdm > /dev/null 2>&1; then
+    usr/sbin/usermod -d /var/lib/gdm -c 'Gnome Display Manager' -s /sbin/nologin gdm > /dev/null 2>&1
+  else
+    usr/sbin/useradd -c 'Gnome Display Manager' -u 120 -g gdm -d /var/lib/gdm -s /sbin/nologin gdm
+  fi
+  passwd -l gdm > /dev/null
+  chown root:gdm /var/lib/gdm > /dev/null
+  chown -R root:gdm /var/lib/gdm/.gconf.mandatory
+
+  gtk-update-icon-cache -q -t -f usr/share/icons/hicolor
+  gconfpkg --install ${pkgname}
+}
+
+pre_upgrade() {
+  if [ -f opt/gnome/etc/gdm/custom.conf ]; then
+     mkdir -p etc/gdm
+     sed -e 's|/opt/gnome/libexec|usr/lib/gdm|g' \
+         -e 's|/opt/gnome/etc|/etc|g' \
+         -e 's|/opt/gnome/|/usr/|g' \
+     opt/gnome/etc/gdm/custom.conf > etc/gdm/custom.conf
+     mv opt/gnome/etc/gdm/custom.conf opt/gnome/etc/gdm/custom.conf.pacsave
+  fi
+  pre_remove
+}
+
+pre_remove() {
+  if [ -f usr/share/gconf/schemas/${pkgname}.schemas ]; then
+    gconfpkg --uninstall ${pkgname}
+  fi
+}
+
+post_upgrade() {
+  post_install
+}
+
+post_remove() {
+  gtk-update-icon-cache -q -t -f usr/share/icons/hicolor
+  getent passwd gdm >/dev/null 2>&1 && userdel gdm
+  getent group gdm >/dev/null 2>&1 && groupdel gdm
+}
