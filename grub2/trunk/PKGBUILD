@@ -3,7 +3,7 @@
 # Contributor: dongiovanni <dongiovanni.archlinux.de>
 
 pkgname=grub2
-pkgver=1.97.2
+pkgver=1.98
 pkgrel=1
 pkgdesc="The GNU GRand Unified Bootloader"
 url="http://www.gnu.org/software/grub/"
@@ -14,20 +14,21 @@ optdepends=('ruby:usr/share/grub/genmk.rb script' 'libusb: /sbin/grub-emu')
 makedepends=('bdf-unifont' 'ruby')
 conflicts=('grub')
 provides=('grub')
-backup=('boot/grub/grub.cfg')
 install=${pkgname}.install
 source=(ftp://alpha.gnu.org/gnu/grub/grub-${pkgver}.tar.gz  
-	# use our own svn checkout so disable snapshot
-	#ftp://ftp.archlinux.org/sources/${pkgname}-${pkgver}.src.tar.bz2
-	'grub.cfg')  
-# don't install auto-install script. TODO: It needs a rewrite to work with grub2
-#	'install-grub')  
-md5sums=('db4d23fb8897523a7e484e974ae3d1c9'
-         '743215998a581a54ac77630f0db222ce')
+	'grubconfig.archlinux.patch')
+md5sums=('c0bcf60e524739bb64e3a2d4e3732a59'
+         '16a1d27f2e0e6bcb415e3f5b52ec2b78')
 
 build() {
-  cd $srcdir/grub-${pkgver}
+  cd $srcdir/grub-${pkgver}/util/grub.d
+
+  # modify scripts to detect Arch Linux kernels & set custom default colors
+  patch -Np3 -i ${srcdir}/grubconfig.archlinux.patch || return 1
+
+
   # run autogen.sh to create configure files
+  cd ../..
   ./autogen.sh
 
   # fix unifont.bdf location
@@ -39,9 +40,5 @@ build() {
 
   CFLAGS= make || return 1
   make DESTDIR=${pkgdir} install || return 1
-  
-  install -Dm644 ${srcdir}/grub.cfg $startdir/pkg/boot/grub/grub.cfg
-  #install -Dm755 ${srcdir}/install-grub $startdir/pkg/sbin/install-grub
 
 }
-
