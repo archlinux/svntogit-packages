@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: dongiovanni <dongiovanni.archlinux.de>
+
+pkgname=grub2
+pkgver=1.98
+pkgrel=1
+pkgdesc="The GNU GRand Unified Bootloader"
+url="http://www.gnu.org/software/grub/"
+arch=('i686' 'x86_64')
+license=('GPL3')
+depends=('sh' 'lzo2' 'freetype2')
+optdepends=('ruby:usr/share/grub/genmk.rb script' 'libusb: /sbin/grub-emu')
+makedepends=('bdf-unifont' 'ruby')
+conflicts=('grub')
+provides=('grub')
+install=${pkgname}.install
+source=(ftp://alpha.gnu.org/gnu/grub/grub-${pkgver}.tar.gz  
+	'grubconfig.archlinux.patch')
+md5sums=('c0bcf60e524739bb64e3a2d4e3732a59'
+         '16a1d27f2e0e6bcb415e3f5b52ec2b78')
+
+build() {
+  cd $srcdir/grub-${pkgver}/util/grub.d
+
+  # modify scripts to detect Arch Linux kernels & set custom default colors
+  patch -Np3 -i ${srcdir}/grubconfig.archlinux.patch || return 1
+
+
+  # run autogen.sh to create configure files
+  cd ../..
+  ./autogen.sh
+
+  # fix unifont.bdf location
+  sed -i 's|/usr/src/unifont.bdf|/usr/share/fonts/misc/unifont.bdf|' configure || return 1
+
+  CFLAGS= ./configure --prefix=/usr --enable-grub-mkfont --bindir=/bin \
+		--sbindir=/sbin --mandir=/usr/share/man \
+		--infodir=/usr/share/info --sysconfdir=/etc
+
+  CFLAGS= make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+
+}
