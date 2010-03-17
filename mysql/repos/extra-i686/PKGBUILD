@@ -1,0 +1,126 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgbase=mysql
+pkgname=('libmysqlclient' 'mysql-clients' 'mysql')
+pkgver=5.1.45
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.mysql.com/"
+makedepends=('tcp_wrappers' 'zlib' 'perl' 'openssl' 'libtool' 'patch')
+options=('!libtool')
+source=("http://ftp.gwdg.de/pub/misc/mysql/Downloads/MySQL-5.1/${pkgbase}-${pkgver}.tar.gz"
+        'mysqld' 'my.cnf' 'mysqld.conf.d'
+	'fix-charsets.patch')
+md5sums=('06b5deb3a13c7600c38ba65b9f7e42c4'
+         'a564aaf42e62da454f27b62b7eaf01d5'
+         '5b197896a429537fea7cbe52bbe440bc'
+         '0d1e778ddeeaedffa0e63dc3f6e51fc4'
+         '117c10003d0df905ce744d62d8c461d4')
+
+build() {
+  cd ${srcdir}/${pkgbase}-${pkgver}
+
+  # fix build with gcc 4.4
+  # see http://bugs.archlinux.org/task/15242
+  # and http://gcc.gnu.org/bugzilla/show_bug.cgi?id=38562
+  CFLAGS="-fPIC ${CFLAGS} -fno-strict-aliasing"
+  CXXFLAGS="-fPIC ${CXXFLAGS} -fno-strict-aliasing"
+
+  # fixed upstream
+  patch -Np1 -i ${srcdir}/fix-charsets.patch
+
+  ./configure --prefix=/usr \
+    --libexecdir=/usr/sbin \
+    --localstatedir=/var \
+    --sysconfdir=/etc/mysql \
+    --without-docs \
+    --without-readline \
+    --with-ssl \
+    --with-libwrap \
+    --with-charset=utf8 \
+    --with-collation=utf8_general_ci \
+    --with-extra-charsets=complex \
+    --with-embedded-server \
+    --with-unix-socket-path=/var/run/mysqld/mysqld.sock \
+    --enable-local-infile \
+    --with-plugins=partition,ftexample,archive,blackhole,federated,heap,innobase,innodb_plugin,ndbcluster
+  make || return 1
+
+  pushd libmysql
+    make link_sources get_password.lo || return 1
+  popd
+
+  pushd scripts
+    make mysql_config || return 1
+  popd
+}
+
+package_libmysqlclient(){
+  pkgdesc="MySQL client libraries"
+  depends=('openssl' 'zlib' 'gcc-libs' 'tcp_wrappers')
+  
+  cd ${srcdir}/${pkgbase}-${pkgver}
+  for dir in libmysql libmysql_r libmysqld; do
+    pushd ${dir} || return 1
+      make DESTDIR=${pkgdir} install
+    popd
+  done
+  
+  cd include
+  make DESTDIR=${pkgdir} install
+  # Copy missing includes
+  install -m644 *.h ${pkgdir}/usr/include/mysql
+
+  cd ../scripts
+  install -d ${pkgdir}/usr/bin
+  install -m755 mysql_config ${pkgdir}/usr/bin || return 1
+  
+  # create library symlinks in /usr/lib
+  ln -sf mysql/libmysqlclient.so.16 ${pkgdir}/usr/lib/libmysqlclient.so.16
+  ln -sf libmysqlclient.so.16 ${pkgdir}/usr/lib/libmysqlclient.so
+  ln -sf libmysqlclient.so.16 ${pkgdir}/usr/lib/libmysqlclient.so.1
+  ln -sf mysql/libmysqlclient_r.so.16  ${pkgdir}/usr/lib/libmysqlclient_r.so.16
+  ln -sf libmysqlclient_r.so.16 ${pkgdir}/usr/lib/libmysqlclient_r.so
+  ln -sf libmysqlclient_r.so.16 ${pkgdir}/usr/lib/libmysqlclient_r.so.1
+}
+
+package_mysql-clients(){
+  pkgdesc="MySQL client tools"
+  depends=('libmysqlclient')
+  
+  cd ${srcdir}/${pkgbase}-${pkgver}/client
+  make DESTDIR=${pkgdir} install
+
+  # provided by libmysqlclient
+  rm -rf ${pkgdir}/usr/lib/
+
+  # provided by mysql
+  rm -f ${pkgdir}/usr/bin/{mysql_upgrade,mysqlbinlog,mysqltest}
+}
+
+package_mysql(){
+  pkgdesc="A fast SQL database server"
+  backup=('etc/my.cnf' 'etc/mysql/my.cnf' 'etc/conf.d/mysqld')
+  install=mysql.install
+  depends=('mysql-clients')
+  optdepends=('perl-dbi' 'perl-dbd-mysql')
+
+  cd ${srcdir}/${pkgbase}-${pkgver}  
+  make DESTDIR=${pkgdir} install
+
+  rm -rf ${pkgdir}/usr/{mysql-test,sql-bench,lib,include}
+  install -Dm644 ${srcdir}/my.cnf ${pkgdir}/etc/mysql/my.cnf || return 1
+  install -Dm755 ${srcdir}/mysqld ${pkgdir}/etc/rc.d/mysqld || return 1
+  install -Dm644 ${srcdir}/mysqld.conf.d ${pkgdir}/etc/conf.d/mysqld || return 1
+
+  # provided by libmysqlclient
+  rm -f ${pkgdir}/usr/bin/{mysql_config,mysql_client_test_embedded,mysqltest_embedded}
+  rm -rf ${pkgdir}/usr/{include,lib}
+  
+  # provided by mysql-clients
+  rm -f ${pkgdir}/usr/bin/{mysql,mysqladmin,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap}
+}
