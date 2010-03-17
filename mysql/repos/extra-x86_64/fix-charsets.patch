@@ -1,0 +1,76 @@
+# 3362 Staale Smedseng	2010-02-26
+#      Bug #45058 init_available_charsets uses double checked locking
+#      
+#      A client doing multiple mysql_library_init() and
+#      mysql_library_end() calls over the lifetime of the process may
+#      experience lost character set data, potentially even a
+#      SIGSEGV.
+#      
+#      This patch reinstates the reloading of character set data when
+#      a mysql_library_init() is done after a mysql_library_end().
+#
+=== modified file 'include/my_sys.h'
+--- a/include/my_sys.h	2009-12-12 18:11:25 +0000
++++ b/include/my_sys.h	2010-02-26 14:30:14 +0000
+@@ -950,7 +950,7 @@ extern my_bool resolve_charset(const cha
+ extern my_bool resolve_collation(const char *cl_name,
+                                  CHARSET_INFO *default_cl,
+                                  CHARSET_INFO **cl);
+-
++extern void free_charsets(void);
+ extern char *get_charsets_dir(char *buf);
+ extern my_bool my_charset_same(CHARSET_INFO *cs1, CHARSET_INFO *cs2);
+ extern my_bool init_compiled_charsets(myf flags);
+
+=== modified file 'libmysql/libmysql.c'
+--- a/libmysql/libmysql.c	2009-12-18 18:44:24 +0000
++++ b/libmysql/libmysql.c	2010-02-26 14:30:14 +0000
+@@ -211,6 +211,7 @@ void STDCALL mysql_server_end()
+   }
+   else
+   {
++    free_charsets();
+     mysql_thread_end();
+   }
+ 
+
+=== modified file 'mysys/charset.c'
+--- a/mysys/charset.c	2009-12-15 09:48:29 +0000
++++ b/mysys/charset.c	2010-02-26 14:30:14 +0000
+@@ -427,6 +427,11 @@ static void init_available_charsets(void
+ }
+ 
+ 
++void free_charsets(void)
++{
++  charsets_initialized= MY_PTHREAD_ONCE_INIT;
++}
++
+ uint get_collation_number(const char *name)
+ {
+   my_pthread_once(&charsets_initialized, init_available_charsets);
+
+=== modified file 'mysys/my_init.c'
+--- a/mysys/my_init.c	2009-12-12 18:11:25 +0000
++++ b/mysys/my_init.c	2010-02-26 14:30:14 +0000
+@@ -165,6 +165,7 @@ void my_end(int infoflag)
+       my_print_open_files();
+     }
+   }
++  free_charsets();
+   my_error_unregister_all();
+   my_once_free();
+ 
+
+=== modified file 'sql/mysqld.cc'
+--- a/sql/mysqld.cc	2010-02-05 12:55:20 +0000
++++ b/sql/mysqld.cc	2010-02-26 14:30:14 +0000
+@@ -1287,6 +1287,7 @@ void clean_up(bool print_message)
+   lex_free();				/* Free some memory */
+   item_create_cleanup();
+   set_var_free();
++  free_charsets();
+   if (!opt_noacl)
+   {
+ #ifdef HAVE_DLOPEN
+
