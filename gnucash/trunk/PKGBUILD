@@ -4,7 +4,7 @@
 
 pkgname=gnucash
 pkgver=2.2.9
-pkgrel=5
+pkgrel=6
 pkgdesc="A personal and small-business financial-accounting application"
 arch=('i686' 'x86_64')
 url="http://www.gnucash.org"
@@ -18,22 +18,23 @@ optdepends=('evince: for print preview'
 options=('!libtool' '!makeflags')
 install=gnucash.install
 source=(http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.gz \
-        03_goffice_0-8_support.patch 03_disable_graphing_support.patch)
-md5sums=('570eee09a1ae83c9953ec60a7fc146ed' '57aaf609bb6fe4ed863bfddd03da505a'\
-         '87943fbebbcf88488369bf1d3651083f')
-sha1sums=('8f63c67fcceaae93ceb8827143cc6a470e3a096a' '71e16460ac5f8b277d0217244084bc0099529882'\
-         '8eb33bc06498cec34a0b4e86806d417210ca032a')
+        ${pkgname}-${pkgver}-goffice.patch)
+md5sums=('570eee09a1ae83c9953ec60a7fc146ed' 'cec6aab50fb139a12f9a0cf9d31e16b0')
+sha1sums=('8f63c67fcceaae93ceb8827143cc6a470e3a096a' '823d5b8ceaeda25793620d0ef3e676316924f7b1')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -p1 < ../03_goffice_0-8_support.patch || return 1
-  patch -p1 < ../03_disable_graphing_support.patch || return 1
-  ./configure --prefix=/usr --mandir=/usr/share/man \
-        --sysconfdir=/etc --libexecdir=/usr/lib --enable-ofx || return 1
-  make || return 1
-  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+	cd ${srcdir}/${pkgname}-${pkgver}
+	patch -p0 < ${srcdir}/${pkgname}-${pkgver}-goffice.patch || return 1
+	./configure --prefix=/usr --mandir=/usr/share/man \
+	    --sysconfdir=/etc --libexecdir=/usr/lib --enable-ofx || return 1
+	make || return 1
+}
 
-  install -d -m755 "${pkgdir}/usr/share/gconf/schemas"
-  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" "${pkgdir}"/etc/gconf/schemas/*.schemas || return 1
-  rm -f "${pkgdir}"/etc/gconf/schemas/*.schemas
+package() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+	make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=${pkgdir} install || return 1
+
+	install -dm755 ${pkgdir}/usr/share/gconf/schemas
+	gconf-merge-schema ${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+	rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
 }
