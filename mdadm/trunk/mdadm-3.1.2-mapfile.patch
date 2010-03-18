@@ -1,0 +1,40 @@
+commit b25462c1bee1a01c6aae3c215e040bfb2f1c2fb7
+Author: Doug Ledford <dledford@redhat.com>
+Date:   Tue Mar 16 23:00:11 2010 -0400
+
+    Create /dev/md in mapfile open like we do in mdopen if our ALT_RUN is
+    set to be /dev/md.  This keeps udev happy as it won't have to special
+    case our /dev/md directory needs.
+    
+    Signed-off-by: Doug Ledford <dledford@redhat.com>
+
+diff --git a/mapfile.c b/mapfile.c
+index 366ebe3..eed17c8 100644
+--- a/mapfile.c
++++ b/mapfile.c
+@@ -29,7 +29,7 @@
+  */
+ 
+ /* /var/run/mdadm.map is used to track arrays being created in --incremental
+- * more.  It particularly allows lookup from UUID to array device, but
++ * mode.  It particularly allows lookup from UUID to array device, but
+  * also allows the array device name to be easily found.
+  *
+  * The map file is line based with space separated fields.  The fields are:
+@@ -64,6 +64,16 @@ char *mapsmode[3] = { "r", "w", "w"};
+ FILE *open_map(int modenum, int *choice)
+ {
+ 	int i;
++	struct stat sbuf;
++
++	/* Special case...if ALT_RUN is selected to be /dev/md, then
++	 * because we would normally create /dev/md ourselves in order to
++	 * stuff array symlinks in there as needed, udev and friends
++	 * expect us to create our own tree.  So, do so.
++	 */
++	if (strcmp(ALT_RUN, "/dev/md") == 0 && stat(ALT_RUN, &sbuf) != 0)
++		mkdir(ALT_RUN, 0755);
++
+ 	for (i = 0 ; i < 3 ; i++) {
+ 		int fd = open(mapname[i][modenum], mapmode[modenum], 0600);
+ 		if (fd >= 0) {
