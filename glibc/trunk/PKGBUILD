@@ -2,19 +2,19 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Maintainer: Allan McRae <allan@archlinux.org>
 
-# toolchain build order: kernel-headers->glibc->binutils->gcc->binutils->glibc
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
 pkgver=2.11.1
-pkgrel=1
-_glibcdate=20091212
+pkgrel=2
+_glibcdate=20100318
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('kernel-headers>=2.6.32' 'tzdata')
+depends=('linux-api-headers>=2.6.33' 'tzdata')
 makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
 backup=(etc/locale.gen
@@ -26,7 +26,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         nscd
         locale.gen.txt
         locale-gen)    
-md5sums=('a3e7414c1eedb7a56cf095d1bb06250e'
+md5sums=('4b7f8ed5a0ea946bd40318855449b570'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          'b587ee3a70c9b3713099295609afde49'
