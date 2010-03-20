@@ -146,3 +146,5 @@ endif
 # NoFib settings
 NoFibWays =
 STRIP=:
+
+INTEGER_LIBRARY=integer-simple
