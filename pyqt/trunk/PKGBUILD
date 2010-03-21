@@ -4,9 +4,9 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.7.0
-_pkgver=4.7
-pkgrel=3
+pkgver=4.7.2
+_pkgver=4.7.2
+pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -17,17 +17,12 @@ optdepends=('phonon' 'python-opengl')
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=("http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz"
-	'fix-phonon-detection.patch')
-md5sums=('4882179ab4da128aaa8520f146afb955'
-         '364e2c96c6b2b1d98167b2c8b110d64c')
+source=("http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz")
+md5sums=('e7782e9146ec8aa0e76bcdb0ca5b9491')
 
 build() {
   cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
   
-  # already fixed upstream
-  patch -Np1 -i ${srcdir}/fix-phonon-detection.patch || return 1
-
   python configure.py --confirm-license \
     -b /usr/bin \
     -d /usr/lib/python2.6/site-packages \
