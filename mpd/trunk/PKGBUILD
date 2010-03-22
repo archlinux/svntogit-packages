@@ -4,7 +4,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.15.8
+pkgver=0.15.9
 pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
@@ -13,10 +13,10 @@ url="http://musicpd.org"
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl'
          'sqlite3' 'libsamplerate' 'libmms' 'wavpack' 'libmpcdec' 'avahi')
 makedepends=('pkgconfig')
-install=mpd.install
+install=${pkgname}.install
 source=(http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2
         'mpd')
-md5sums=('824e1ce46c0f468865d9e5e403cdaf5d'
+md5sums=('88f7bc0b17eac81d03b24929d12b8aa1'
          'b1fd15de359db08e4b9ae4b199640f0e')
 
 build() {
@@ -28,6 +28,10 @@ build() {
     --disable-sidplay \
     --disable-pulse || return 1
   make || return 1
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
   make DESTDIR=${pkgdir} install
 
   # set ours dirs in mpd.conf file
