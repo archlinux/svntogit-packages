@@ -2,7 +2,7 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=go-openoffice
-_GOver=3.2.0.8 # = post OOo 3.2.0 final bugfix
+_GOver=3.2.0.9 # = post OOo 3.2.0 final bugfix
 pkgver=${_GOver}
 pkgrel=1
 pkgdesc="OpenOffice.org - go-oo.org enhanced version of SUN's office suite"
@@ -14,8 +14,8 @@ url="http://go-oo.org/"
 install=${pkgname}.install
 depends=("curl>=7.19.6" "hunspell>=1.2.8" "python>=2.6.4" 'libwpd' 'redland>=1.0.10' 
          'libxaw' "neon>=0.28.6" "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'libxtst' 'lpsolve'
-	  'beanshell' 'saxon' 'vigra' 'hyphen' 'libmspack' 'libldap' 'gtk2'
-	 'hicolor-icon-theme' 'shared-mime-info' 'desktop-file-utils') #  'lucene' 'libmythes' 'libgraphite' 
+	  'beanshell' 'saxon' 'vigra' 'hyphen' 'libmspack' 'libldap' 'gtk2' 'lucene'
+	 'hicolor-icon-theme' 'shared-mime-info' 'desktop-file-utils') #   'libmythes' 'libgraphite' 
 optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
@@ -36,7 +36,7 @@ conflicts=('openoffice-base')
 _mirror="http://download.go-oo.org/"
 source=(${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
 	ArchLinux.patch
-	${pkgname}-${_ootag}.tar.gz
+	${pkgname}-${_ootag}.tar.xz
 	http://download.go-oo.org//DEV300/ooo-cli-prebuilt-3.2.tar.bz2
 	http://cairographics.org/releases//cairo-1.4.10.tar.gz
 	http://download.go-oo.org//SRC680/mdbtools-0.6pre1.tar.gz
@@ -50,7 +50,8 @@ source=(${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
 	http://download.go-oo.org//DEV300/ooo_oxygen_images-2009-06-17.tar.gz
 	http://download.go-oo.org/src//seamonkey-1.1.14.source.tar.gz
 	http://archive.apache.org/dist/ant/binaries/apache-ant-1.7.0-bin.tar.gz
-	buildfix_64bit_system_libjpeg.diff)
+	buildfix_64bit_system_libjpeg.diff
+	system-redland.patch)
 #options=('!distcc' '!ccache' '!makeflags')
 noextract=(ooo-cli-prebuilt-3.2.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar.gz extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll 
            scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz ooo_oxygen_images-2009-06-17.tar.gz)
@@ -63,11 +64,10 @@ mksource() {
 	tar -xvf ooo-build-${_GOver}.tar.gz
 	cd ooo-build-${_GOver}
 	./configure --quiet --with-distro=ArchLinux
-	./download # --all
-	pushd src; tar -cvzf ../../${pkgname}-${_ootag}.tar.gz clone; popd
+	./download --all
+	pushd src; tar -cvJf ../../${pkgname}-${_ootag}.tar.xz clone; popd
         popd
 }
-
 
 build() {
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
@@ -79,6 +79,9 @@ build() {
 
 	# our ArchLinux distribution patch until we go upstream
 	patch -Np0 -i ${srcdir}/ArchLinux.patch || return 1
+
+	# fix bugs with recent system redland
+	patch -Np1 -i ${srcdir}/system-redland.patch || return 1
 
 	# hotfixes not yet upstream
 #	cp ${srcdir}/*.diff ${srcdir}/ooo-build-${_GOver}/patches/hotfixes/
@@ -104,7 +107,7 @@ build() {
 		--prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
 		--with-docdir=/usr/share/doc/packages/"${pkgname}" \
 		--mandir=/usr/share/man \
-		--with-lang="" \
+		--with-lang="en-US" \
 		--with-dict=ALL\
 		--with-binsuffix=no \
 		--disable-ldap \
@@ -125,18 +128,17 @@ build() {
 		--with-ant-home="/usr/share/java/apache-ant"\
 		--with-system-saxon\
 		--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
+		--with-system-lucene\
+		--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
+		--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
 		--with-system-beanshell\
 		--with-system-vigra\
 		--with-system-altlinuxhyph\
 		--with-system-lpsolve\
 		$EXTRAOPTS || return 1
 
-#		--with-system-lucene\
-#		--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
-#		--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
 #		--with-system-mythes\
 #		--with-system-graphite\
-
 #		--with-tag=${_ootag}
 #		--enable-report-builder \
 #		--with-additional-sections="OOXMLExport"
@@ -144,6 +146,10 @@ build() {
 	unset MAKEFLAGS
 #	./download
 	LD_PRELOAD="" make  || return 1
+}
+
+package() {
+	cd ${srcdir}/ooo-build-${_GOver}
 	make DESTDIR=${pkgdir} install || return 1
 
        # install all built dictionaries from source tree
@@ -165,8 +171,8 @@ build() {
 	sed -i "s:\/bin\/mktemp:\/usr\/bin\/mktemp:" ${pkgdir}/usr/lib/go-openoffice/program/unopkg || return 1
 	
 	#fix http://bugs.archlinux.org/task/17656
-	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
-	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
-	find ${pkgdir} -perm 555 -exec ls -lh {} \;
-	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
+#	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
+#	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
+#	find ${pkgdir} -perm 555 -exec ls -lh {} \;
+#	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
