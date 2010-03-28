@@ -51,7 +51,8 @@ source=(${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
 	http://download.go-oo.org/src//seamonkey-1.1.14.source.tar.gz
 	http://archive.apache.org/dist/ant/binaries/apache-ant-1.7.0-bin.tar.gz
 	buildfix_64bit_system_libjpeg.diff
-	system-redland.patch)
+	system-redland.patch
+	localize-ooo.diff)
 #options=('!distcc' '!ccache' '!makeflags')
 noextract=(ooo-cli-prebuilt-3.2.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar.gz extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll 
            scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz ooo_oxygen_images-2009-06-17.tar.gz)
@@ -80,6 +81,9 @@ build() {
 	# our ArchLinux distribution patch until we go upstream
 	patch -Np0 -i ${srcdir}/ArchLinux.patch || return 1
 
+	# buildfix for broken language settings in build
+	patch -Np0 -i ${srcdir}/localize-ooo.diff || return 1
+
 	# fix bugs with recent system redland
 	patch -Np1 -i ${srcdir}/system-redland.patch || return 1
 
@@ -107,7 +111,7 @@ build() {
 		--prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
 		--with-docdir=/usr/share/doc/packages/"${pkgname}" \
 		--mandir=/usr/share/man \
-		--with-lang="en-US" \
+		--with-lang="" \
 		--with-dict=ALL\
 		--with-binsuffix=no \
 		--disable-ldap \
@@ -150,7 +154,7 @@ build() {
 
 package() {
 	cd ${srcdir}/ooo-build-${_GOver}
-	make DESTDIR=${pkgdir} install || return 1
+	LD_PRELOAD="" make DESTDIR=${pkgdir} install || return 1
 
        # install all built dictionaries from source tree
        pushd ${srcdir}/ooo-build-${_GOver}/build/${_ootag}/dictionaries/unxlng?6.pro/bin/
@@ -171,8 +175,8 @@ package() {
 	sed -i "s:\/bin\/mktemp:\/usr\/bin\/mktemp:" ${pkgdir}/usr/lib/go-openoffice/program/unopkg || return 1
 	
 	#fix http://bugs.archlinux.org/task/17656
-#	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
-#	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
-#	find ${pkgdir} -perm 555 -exec ls -lh {} \;
-#	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
+	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
+	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
+	find ${pkgdir} -perm 555 -exec ls -lh {} \;
+	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
