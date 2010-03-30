@@ -1,0 +1,42 @@
+# $Id$
+# Maintainer:  Jan de Groot <jan@archlinux.org>
+
+pkgname=gconf
+pkgver=2.28.1
+pkgrel=1
+pkgdesc="A configuration database system"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('orbit2>=2.14.17' 'gtk2>=2.20.0' 'libxml2>=2.7.7' 'polkit>=0.96' 'libldap>=2.4.18' 'dbus')
+makedepends=('pkgconfig' 'intltool' 'gtk-doc')
+options=('!libtool')
+install=gconf.install
+url="http://www.gnome.org"
+source=(http://ftp.gnome.org/pub/gnome/sources/GConf/2.28/GConf-${pkgver}.tar.bz2
+        gconf-merge-schema
+        gconfpkg
+        gconf-reload.patch
+        01_xml-gettext-domain.patch)
+md5sums=('27663faf0af4f6a6d534de9270f6d24a'
+         '240b473fa17b748fc9020caf372d936c'
+         'b745f04b4121d8724c002b14a4c110b6'
+         'cfcc8e15be7b8a48de4aa34336ff6090'
+         '1f9362976d71312bdb57c57fa031681d')
+
+build() {
+  cd "${srcdir}/GConf-${pkgver}"
+  # Patch from fedora - reloads gconf after installing schemas
+  patch -Np1 -i "${srcdir}/gconf-reload.patch" || return 1
+  # http://bugzilla.gnome.org/show_bug.cgi?id=568845
+  patch -Np1 -i "${srcdir}/01_xml-gettext-domain.patch" || return 1
+   
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --libexecdir=/usr/lib/GConf \
+      --disable-static --enable-defaults-service || return 1
+  make pkglibdir=/usr/lib/GConf || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+  install -m755 -d "${pkgdir}/etc/gconf/gconf.xml.system" || return 1
+  install -m755 "${srcdir}/gconf-merge-schema" "${pkgdir}/usr/bin/" || return 1
+  install -d -m755 "${pkgdir}/usr/sbin"
+  install -m755 "${srcdir}/gconfpkg" "${pkgdir}/usr/sbin/" || return 1
+}
