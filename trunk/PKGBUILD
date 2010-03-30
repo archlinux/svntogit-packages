@@ -1,25 +1,27 @@
 # $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
-# NOTE: To circumvent linking problems (FS#10574), this package must now be built the following way:
-# install old package, build new package, install new package, rebuild
-# Just uninstalling ImageMagick before build fails as it is used during the build processs
-
 pkgname=imagemagick
-pkgver=6.6.0.0
+pkgver=6.6.0.10
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('lcms' 'libwmf' 'librsvg' 'libxt' 'gcc-libs' 'ghostscript' 'openexr' 'libtool' 'heimdal' 'bzip2' 'libxml2' 'jasper')
-makedepends=('imagemagick')
+depends=('libtool' 'lcms' 'libxt' 'gcc-libs' 'bzip2')
+makedepends=('ghostscript' 'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper')
+optdepends=('ghostscript: for Ghostscript support' \
+            'openexr: for OpenEXR support' \
+            'libwmf: for WMF support' \
+            'librsvg: for SVG support' \
+            'libxml2: for XML support' \
+            'jasper: for JPEG-2000 support')
 options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         libpng_mmx_patch_x86_64.patch perlmagick.rpath.patch)
-md5sums=('f761490fc7120088ba6e7b6952717636' '069980fc2590c02aed86420996259302'\
+md5sums=('c7682e0711f2966f80b539f870d491ad' '069980fc2590c02aed86420996259302'\
          'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('7bfa3333a810c460950209cc9b0c86abd641ff0c' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
+sha1sums=('1232b5a62f9f6a6c837fd2af76457d891568f064' 'e42f3acbe85b6098af75c5cecc9a254baaa0482c'\
          '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
@@ -31,14 +33,12 @@ build() {
 
   patch -p0 < ../perlmagick.rpath.patch || return 1
 
- # When there is a soname bump, remove 'LIBS=-lMagickWand' from configure line and build/install. Then, readd 'LIBS=-lMagickWand' and build/install twice.
-   LIBS=-lMagickWand ./configure --prefix=/usr --without-modules --disable-static --enable-openmp \
+  ./configure --prefix=/usr --with-modules --disable-static --enable-openmp \
               --with-x --with-wmf --with-openexr --with-xml \
               --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
               --with-perl --with-perl-options="INSTALLDIRS=vendor" \
               --without-gvc --without-djvu --without-autotrace --with-jp2 \
               --without-jbig --without-fpx --without-dps || return 1
-
   make || return 1
   make DESTDIR="${pkgdir}" install || return 1
   install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
