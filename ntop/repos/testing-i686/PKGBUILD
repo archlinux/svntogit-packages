@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer:
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+
+pkgname=ntop
+pkgver=3.3.10
+pkgrel=3
+pkgdesc="A network traffic probe that shows the network usage"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.ntop.org"
+depends=('libevent' 'libpcap' 'gd' 'glib' 'libxml2' 'openssl' 'gdbm' 'rrdtool'
+	'pcre' 'geoip' 'lua')
+options=('!libtool' '!makeflags')
+install=${pkgname}.install
+source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        'ntop.confd' 'ntop.rcd')
+md5sums=('6e2ffa90d5f935c8f03d88a5dd19a866'
+         'b4ea63012f94c2988e767e78ac16a309'
+         '76acde24cc5f428ff862d7c0815feb14')
+
+build() {
+    # Thanks a lot for the fixes Gerardo
+
+    cd ${srcdir}/${pkgname}-${pkgver}
+    ./autogen.sh --prefix=/usr \
+      --sysconfdir=/etc \
+      --localstatedir=/var/lib \
+      --disable-snmp || return 1
+    make || return 1
+}
+
+package() {
+    cd ${srcdir}/${pkgname}-${pkgver}
+    make DESTDIR=${pkgdir} install-recursive || return 1
+
+    install -d -m755 --owner=nobody --group=nobody ${pkgdir}/var/lib/ntop || return 1
+
+    install -D -m755 ${srcdir}/ntop.rcd ${pkgdir}/etc/rc.d/ntop  || return 1
+    install -D -m644 ${srcdir}/ntop.confd ${pkgdir}/etc/conf.d/ntop || return 1
+
+    (
+        cd ${pkgdir}/usr/lib/ntop/plugins
+        for _plug in *.so; do
+            ln -sf ../../lib${_plug} ${_plug}
+        done
+    ) || return 1
+
+    install -dm755 --owner=nobody --group=nobody ${pkgdir}/var/lib/ntop/rrd || return 1
+}
