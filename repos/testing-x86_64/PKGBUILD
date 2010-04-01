@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: judd <jvinet@zeroflux.org>
+# Contributor: Mario Vazquez <mario_vazq@hotmail.com>
+pkgname=bind
+# Use a period and not a hyphen before the patch level for proper versioning.
+pkgver=9.7.0.P1
+_pkgver=9.7.0-P1
+pkgrel=2
+pkgdesc="Berkeley Internet Name Domain - named server"
+arch=(i686 x86_64)
+url="https://www.isc.org/software/bind/"
+license=('custom:ISC')
+backup=(etc/named.conf etc/logrotate.d/named etc/conf.d/named etc/rndc.key)
+depends=('openssl')
+provides=('dns-server')
+options=('!libtool')
+install=bind.install
+source=(http://ftp.isc.org/isc/bind9/${_pkgver}/${pkgname}-${_pkgver}.tar.gz
+	bind.so_bsdcompat.diff notools.patch named.conf localhost.zone 127.0.0.zone
+	named root.hint named.logrotate named.conf.d)
+
+build() {
+  export MAKEFLAGS="-j1"
+  cd ${srcdir}/${pkgname}-${_pkgver}
+  patch -Np0 -i ${srcdir}/bind.so_bsdcompat.diff || return 1
+  patch -Np1 -i ${srcdir}/notools.patch || return 1
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+              --with-libtool --enable-shared --disable-threads \
+              --with-openssl=yes --disable-linux-caps --without-libxml2
+  make || return 1
+  make DESTDIR=${pkgdir} install
+  install -D -m755 ../named ${pkgdir}/etc/rc.d/named
+  install -D -m640 ../named.conf ${pkgdir}/etc/named.conf
+  install -D -m600 ../127.0.0.zone ${pkgdir}/var/named/127.0.0.zone
+  install -D -m600 ../localhost.zone ${pkgdir}/var/named/localhost.zone
+  # wget --user=ftp ftp://ftp.rs.internic.net/domain/db.cache -O root.hint
+  install -D -m600 ../root.hint ${pkgdir}/var/named/root.hint
+  install -D -m600 ../named.logrotate ${pkgdir}/etc/logrotate.d/named
+  install -D -m644 ../named.conf.d ${pkgdir}/etc/conf.d/named
+  install -d -m755 ${pkgdir}/var/run/named
+  install -D -m644 COPYRIGHT ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+
+  # adjust ownerships (our named user will be uid/gid 40/40)
+  chmod 700 ${pkgdir}/var/named
+  chown root:40 ${pkgdir}/etc/named.conf
+  chown -R 40:40 ${pkgdir}/var/named
+  chown 40:40 ${pkgdir}/var/run/named
+}
+md5sums=('78e3e38c6252e41ded1afa1aeb183622'
+         '447d58721cfee0e1e377b46f7d50b327'
+         'e7f3c5c54f18c86f6716700e82f7e9fd'
+         'f58fa49a92df16534d31fcb6b0d1be1e'
+         'ab5beef0b41eb6376c7f1f4ee233172b'
+         'bdbdfe4990b0903984306dd14f98b951'
+         '750f283c7774ffe75cd215bce46b03cd'
+         '970e509181ce7626bc414f4c05abaf98'
+         '91b3463a181561deb845acc122713a2a'
+         '475fde63600d7d95980de991f02d6b6d')
