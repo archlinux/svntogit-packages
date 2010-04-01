@@ -1,0 +1,36 @@
+# $Id$
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+
+pkgname=ettercap
+pkgver=NG_0.7.3
+_origver=NG-0.7.3
+pkgrel=15
+pkgdesc="A network sniffer/interceptor/logger for ethernet LANs - console"
+arch=('i686' 'x86_64')
+url="http://ettercap.sourceforge.net/"
+license=('GPL')
+depends=('ncurses' 'openssl' 'libpcap>=1.0.0' 'zlib' 'pcre' 'libtool>=2.2.4' 'libnet')
+makedepends=('libnet')
+options=(!libtool)
+source=(http://downloads.sourceforge.net/$pkgname/$pkgname-$_origver.tar.gz
+	01_pointers_and_ints_dont_mix.diff)
+md5sums=('28fb15cd024162c55249888fe1b97820'
+         'ad235cd90aaa3e168575d06efac4d862')
+
+build() {
+  cd ${srcdir}/${pkgname}-${_origver}
+
+  export LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
+  patch -Np1 -i ${srcdir}/01_pointers_and_ints_dont_mix.diff || return 1
+
+  ./configure --prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man --enable-plugins \
+      --enable-https --disable-gtk
+  make || return 1
+  make DESTDIR=$pkgdir install || return 1
+  cd plug-ins
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+  chmod 755 ${pkgdir}/usr/lib/ettercap/*
+  chmod 755 ${pkgdir}/usr/bin/ettercap
+}
