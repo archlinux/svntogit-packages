@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
+# Contributer: Jason Chu <jchu@xentac.net>
+# Contributor: dorphell <dorphell@archlinux.org>
+
+pkgname=icecast
+pkgver=2.3.2
+pkgrel=3
+pkgdesc="Streaming audio over the Internet"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.icecast.org/"
+depends=('libxslt' 'libvorbis' 'curl' 'speex' 'libtheora')
+backup=('etc/icecast.xml'
+        'etc/logrotate.d/icecast')
+source=("http://downloads.us.xiph.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        'icecastd' 'icecast.logrotate')
+md5sums=('ff516b3ccd2bcc31e68f460cd316093f'
+         '2cf9bb562e764ff451ed557711883978'
+         '8fad3bf3283fa2bd651b71fdf505eae9')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var
+  make || return 1
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install || return 1
+
+  # install man-page
+  sed -i -e 's/icecast2/icecast/g' debian/icecast2.1
+  install -Dm644 debian/icecast2.1 \
+    ${pkgdir}/usr/share/man/man1/icecast.1 || return 1
+
+  # init file
+  install -Dm755 ${srcdir}/icecastd \
+    ${pkgdir}/etc/rc.d/icecast || return 1
+  # rotate the logs (taken from Fedora)
+  install -Dm644 ${srcdir}/icecast.logrotate \
+    ${pkgdir}/etc/logrotate.d/icecast || return 1
+  # install log dir
+  install -d ${pkgdir}/var/log/icecast || return 1
+}
