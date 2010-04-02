@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: Roman Kyrylych <roman@archlinux.org>
+
+pkgname=mail-notification
+pkgver=5.4
+pkgrel=4
+pkgdesc="Tray icon application that informs you if you have new mail"
+arch=('i686' 'x86_64')
+url="http://www.nongnu.org/mailnotify/"
+license=('GPL3' 'FDL')
+depends=('cyrus-sasl-plugins' 'gmime>=2.4.10' 'libnotify>=0.4.5' 'gnome-keyring>=2.28.0' 'hicolor-icon-theme' 'notification-daemon' 'libgnomeui>=2.24.2')
+makedepends=('gob2' 'intltool' 'evolution>=2.28.0' 'gnome-doc-utils>=0.18.0')
+options=('!libtool' '!emptydirs')
+install=mail-notification.install
+source=(http://savannah.nongnu.org/download/mailnotify/${pkgname}-${pkgver}.tar.bz2
+        dont-update-cache.patch
+        remove-ubuntu-special-case.patch
+        gmime-2.4.patch
+        evolution-gtkhtml.patch
+        evolution.patch)
+md5sums=('c8dc33a61251acb5474e56eab6b18f43'
+         '6007bc30e789dab0a8282038e0335eb9'
+         '9cadd61bbd9c324b2916ec980231e0f2'
+         '447cc20f035b9cf1a391027684ce1297'
+         '0be19731decffc2e64602b2abebabca4'
+         '46568640b7f97ab9ab7b54d49bee7e8e')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  patch -Np0 -i "${srcdir}/dont-update-cache.patch" || return 1
+  patch -Np0 -i "${srcdir}/remove-ubuntu-special-case.patch" || return 1
+  patch -Np1 -i "${srcdir}/gmime-2.4.patch" || return 1
+  patch -Np1 -i "${srcdir}/evolution-gtkhtml.patch" || return 1
+  patch -Np0 -i "${srcdir}/evolution.patch" || return 1
+
+  ./jb configure prefix=/usr sysconfdir=/etc \
+      localstatedir=/var destdir="${pkgdir}" \
+      gconf-schemas-dir=/etc/gconf/schemas install-gconf-schemas=yes \
+      cflags="${CFLAGS}" cppflags="${CXXFLAGS}" ldflags="${LDFLAGS}" \
+      library-mode=0755 || return 1
+  ./jb build || return 1
+  GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 ./jb install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema ${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas --domain mail-notification ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+} 
