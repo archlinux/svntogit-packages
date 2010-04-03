@@ -1,0 +1,650 @@
+From 5f4f67f579c9530af716573d6aaafc9cdb060e09 Mon Sep 17 00:00:00 2001
+From: Kristian Høgsberg <krh@bitplanet.net>
+Date: Tue, 12 Jan 2010 15:57:45 +0000
+Subject: vtebg: Cache backgrounds as cairo surfaces
+
+---
+diff --git a/src/vtebg.c b/src/vtebg.c
+index d9a5041..8767ea7 100644
+--- a/src/vtebg.c
++++ b/src/vtebg.c
+@@ -20,6 +20,7 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <gtk/gtk.h>
++#include <cairo-xlib.h>
+ #include "debug.h"
+ #include "marshal.h"
+ #include "vtebg.h"
+@@ -39,16 +40,14 @@ struct VteBgCacheItem {
+ 
+ 	PangoColor tint_color;
+ 	double saturation;
+-
+-	GdkPixmap *pixmap;
+-	GdkPixbuf *pixbuf;
++	cairo_surface_t *surface;
+ };
+ 
+ 
+-static GdkPixbuf *_vte_bg_resize_pixbuf(GdkPixbuf *pixbuf,
+-					gint min_width, gint min_height);
+ static void vte_bg_cache_item_free(struct VteBgCacheItem *item);
+ static void vte_bg_cache_prune_int(VteBg *bg, gboolean root);
++static const cairo_user_data_key_t item_surface_key;
++
+ 
+ #if 0
+ static const char *
+@@ -115,47 +114,66 @@ _vte_property_get_pixmaps(GdkWindow *window, GdkAtom atom,
+ 				(guchar**) pixmaps);
+ }
+ 
+-static GdkPixmap *
+-vte_bg_root_pixmap(VteBg *bg)
++static cairo_surface_t *
++vte_bg_root_surface(VteBg *bg)
+ {
+ 	GdkPixmap *pixmap;
+ 	GdkAtom prop_type;
+ 	int prop_size;
++	Window root;
+ 	XID *pixmaps;
++	int x, y;
++	unsigned int width, height, border_width, depth;
++	cairo_surface_t *surface = NULL;
++	Display *display;
++	Screen *screen;
+ 
+ 	pixmap = NULL;
+ 	pixmaps = NULL;
+ 	gdk_error_trap_push();
+-	if (_vte_property_get_pixmaps(bg->native->window, bg->native->atom,
++	if (!_vte_property_get_pixmaps(bg->native->window, bg->native->atom,
+ 				      &prop_type, &prop_size,
+-				      &pixmaps)) {
+-		if ((prop_type == GDK_TARGET_PIXMAP) &&
+-		    (prop_size >= (int)sizeof(XID) &&
+-		    (pixmaps != NULL))) {
+-			pixmap = gdk_pixmap_foreign_new_for_display(bg->native->display, pixmaps[0]);
+-			_VTE_DEBUG_IF(VTE_DEBUG_MISC|VTE_DEBUG_EVENTS) {
+-				gint pwidth, pheight;
+-				gdk_drawable_get_size(pixmap,
+-						&pwidth, &pheight);
+-				g_printerr("New background image %dx%d\n",
+-						pwidth, pheight);
+-			}
+-		}
+-		g_free(pixmaps);
++				      &pixmaps))
++		goto out;
++
++	if ((prop_type != GDK_TARGET_PIXMAP) ||
++	    (prop_size < (int)sizeof(XID) ||
++	     (pixmaps == NULL)))
++		goto out_pixmaps;
++		
++	if (!XGetGeometry (GDK_DISPLAY_XDISPLAY (bg->native->display),
++			   pixmaps[0], &root,
++			   &x, &y, &width, &height, &border_width, &depth))
++		goto out_pixmaps;
++
++	display = gdk_x11_display_get_xdisplay (bg->native->display);
++	screen = gdk_x11_screen_get_xscreen (bg->screen);
++	surface = cairo_xlib_surface_create (display,
++					     pixmaps[0],
++					     DefaultVisualOfScreen(screen),
++					     width, height);
++
++	_VTE_DEBUG_IF(VTE_DEBUG_MISC|VTE_DEBUG_EVENTS) {
++		g_printerr("New background image %dx%d\n", width, height);
+ 	}
++
++ out_pixmaps:
++	g_free(pixmaps);
++ out:
+ 	_vte_bg_display_sync(bg);
+ 	gdk_error_trap_pop();
+-	return pixmap;
++
++	return surface;
+ }
+ 
+ static void
+-vte_bg_set_root_pixmap(VteBg *bg, GdkPixmap *pixmap)
++vte_bg_set_root_surface(VteBg *bg, cairo_surface_t *surface)
+ {
+-	if (bg->root_pixmap != NULL) {
+-		g_object_unref(bg->root_pixmap);
++	if (bg->root_surface != NULL) {
++		cairo_surface_destroy (bg->root_surface);
+ 	}
+-	bg->root_pixmap = pixmap;
+-	vte_bg_cache_prune_int(bg, TRUE);
++	bg->root_surface = surface;
++	vte_bg_cache_prune_int (bg, TRUE);
+ 	g_signal_emit_by_name(bg, "root-pixmap-changed");
+ }
+ 
+@@ -165,15 +183,15 @@ vte_bg_root_filter(GdkXEvent *native, GdkEvent *event, gpointer data)
+ {
+ 	XEvent *xevent = (XEvent*) native;
+ 	VteBg *bg;
+-	GdkPixmap *pixmap;
++	cairo_surface_t *surface;
+ 
+ 	switch (xevent->type) {
+ 	case PropertyNotify:
+ 		bg = VTE_BG(data);
+ 		if ((xevent->xproperty.window == bg->native->native_window) &&
+ 		    (xevent->xproperty.atom == bg->native->native_atom)) {
+-			pixmap = vte_bg_root_pixmap(bg);
+-			vte_bg_set_root_pixmap(bg, pixmap);
++			surface = vte_bg_root_surface(bg);
++			vte_bg_set_root_surface(bg, surface);
+ 		}
+ 		break;
+ 	default:
+@@ -280,7 +298,7 @@ vte_bg_get_for_screen(GdkScreen *screen)
+ 		bg->screen = screen;
+ 		window = gdk_screen_get_root_window(screen);
+ 		bg->native = vte_bg_native_new(window);
+-		bg->root_pixmap = vte_bg_root_pixmap(bg);
++		bg->root_surface = vte_bg_root_surface(bg);
+ 		events = gdk_window_get_events(window);
+ 		events |= GDK_PROPERTY_CHANGE_MASK;
+ 		gdk_window_set_events(window, events);
+@@ -290,45 +308,6 @@ vte_bg_get_for_screen(GdkScreen *screen)
+ 	return bg;
+ }
+ 
+-/* Generate lookup tables for desaturating an image toward a given color.  The
+- * saturation value is a floating point number between 0 and 1. */
+-static void
+-_vte_bg_generate_desat_tables(const PangoColor *color, double saturation,
+-			      guchar red[256],
+-			      guchar green[256],
+-			      guchar blue[256])
+-{
+-	int i;
+-	/* Zero saturation -> exactly match the tinting color. */
+-	if (saturation == 0) {
+-		for (i = 0; i < 256; i++) {
+-			red[i] = color->red >> 8;
+-			green[i] = color->green >> 8;
+-			blue[i] = color->blue >> 8;
+-		}
+-		return;
+-	}
+-	/* 100% saturation -> exactly match the original color. */
+-	if (saturation == 1) {
+-		for (i = 0; i < 256; i++) {
+-			red[i] = green[i] = blue[i] = 1;
+-		}
+-		return;
+-	}
+-	/* 0-100% saturation -> weighted average */
+-	for (i = 0; i < 256; i++) {
+-		red[i] = CLAMP(((1.0 - saturation) * (color->red >> 8)) +
+-			       (saturation * i),
+-			       0, 255);
+-		green[i] = CLAMP(((1.0 - saturation) * (color->green >> 8)) +
+-				 (saturation * i),
+-				 0, 255);
+-		blue[i] = CLAMP(((1.0 - saturation) * (color->blue >> 8)) +
+-				(saturation * i),
+-				0, 255);
+-	}
+-}
+-
+ static gboolean
+ vte_bg_colors_equal(const PangoColor *a, const PangoColor *b)
+ {
+@@ -346,14 +325,10 @@ vte_bg_cache_item_free(struct VteBgCacheItem *item)
+ 				(gpointer*)(void*)&item->source_pixbuf);
+ 	}
+ 	g_free(item->source_file);
+-	if (item->pixmap != NULL) {
+-		g_object_remove_weak_pointer(G_OBJECT(item->pixmap),
+-				(gpointer*)(void*)&item->pixmap);
+-	}
+-	if (item->pixbuf != NULL) {
+-		g_object_remove_weak_pointer(G_OBJECT(item->pixbuf),
+-				(gpointer*)(void*)&item->pixbuf);
+-	}
++
++	if (item->surface != NULL)
++		cairo_surface_set_user_data (item->surface,
++					     &item_surface_key, NULL, NULL);
+ 
+ 	g_slice_free(struct VteBgCacheItem, item);
+ }
+@@ -365,12 +340,11 @@ vte_bg_cache_prune_int(VteBg *bg, gboolean root)
+ 	for (i = bg->pvt->cache; i != NULL; i = next) {
+ 		struct VteBgCacheItem *item = i->data;
+ 		next = g_list_next (i);
+-		/* Prune the item if either
+-		 * it is a "root pixmap" item and we want to prune them, or
+-		 * its pixmap and pixbuf fields are both NULL because whichever
+-		 * object it created has been destroyoed. */
++		/* Prune the item if either it is a "root pixmap" item and
++		 * we want to prune them, or its surface is NULL because
++		 * whichever object it created has been destroyed. */
+ 		if ((root && (item->source_type == VTE_BG_SOURCE_ROOT)) ||
+-		    ((item->pixmap == NULL) && (item->pixbuf == NULL))) {
++		    item->surface == NULL) {
+ 			vte_bg_cache_item_free (item);
+ 			bg->pvt->cache = g_list_delete_link(bg->pvt->cache, i);
+ 		}
+@@ -383,53 +357,11 @@ vte_bg_cache_prune(VteBg *bg)
+ 	vte_bg_cache_prune_int(bg, FALSE);
+ }
+ 
+-/**
+- * _vte_bg_resize_pixbuf:
+- * @pixmap: a #GdkPixbuf, or %NULL
+- * @min_width: the requested minimum_width
+- * @min_height: the requested minimum_height
+- *
+- * The background pixbuf may be tiled, and if it is tiled, it may be very, very
+- * small.  This function creates a pixbuf consisting of the passed-in pixbuf
+- * tiled to a usable size.
+- *
+- * Returns: a new #GdkPixbuf, unrefs @pixbuf.
+- */
+-static GdkPixbuf *
+-_vte_bg_resize_pixbuf(GdkPixbuf *pixbuf, gint min_width, gint min_height)
++static void item_surface_destroy_func(void *data)
+ {
+-	GdkPixbuf *tmp;
+-	gint src_width, src_height;
+-	gint dst_width, dst_height;
+-	gint x, y;
+-
+-	src_width = gdk_pixbuf_get_width(pixbuf);
+-	src_height = gdk_pixbuf_get_height(pixbuf);
+-	dst_width = (((min_width - 1) / src_width) + 1) * src_width;
+-	dst_height = (((min_height - 1) / src_height) + 1) * src_height;
+-	if ((dst_width == src_width) && (dst_height == src_height)) {
+-		return pixbuf;
+-	}
+-
+-	_vte_debug_print(VTE_DEBUG_MISC|VTE_DEBUG_EVENTS,
+-		"Resizing (root?) pixbuf from %dx%d to %dx%d\n",
+-			src_width, src_height, dst_width, dst_height);
+-
+-	tmp = gdk_pixbuf_new(gdk_pixbuf_get_colorspace(pixbuf),
+-			     gdk_pixbuf_get_has_alpha(pixbuf),
+-			     gdk_pixbuf_get_bits_per_sample(pixbuf),
+-			     dst_width, dst_height);
+-	for (y = 0; y < dst_height; y += src_height) {
+-		for (x = 0; x < dst_width; x += src_width) {
+-			gdk_pixbuf_copy_area(pixbuf,
+-					     0, 0, src_width, src_height,
+-					     tmp,
+-					     x, y);
+-		}
+-	}
++	struct VteBgCacheItem *item = data;
+ 
+-	g_object_unref(pixbuf);
+-	return tmp;
++	item->surface = NULL;
+ }
+ 
+ /* Add an item to the cache, instructing all of the objects therein to clear
+@@ -443,70 +375,23 @@ vte_bg_cache_add(VteBg *bg, struct VteBgCacheItem *item)
+ 		g_object_add_weak_pointer(G_OBJECT(item->source_pixbuf),
+ 					  (gpointer*)(void*)&item->source_pixbuf);
+ 	}
+-	if (item->pixbuf != NULL) {
+-		g_object_add_weak_pointer(G_OBJECT(item->pixbuf),
+-					  (gpointer*)(void*)&item->pixbuf);
+-	}
+-	if (item->pixmap != NULL) {
+-		g_object_add_weak_pointer(G_OBJECT(item->pixmap),
+-					  (gpointer*)(void*)&item->pixmap);
+-	}
+-}
+ 
+-/* Desaturate a pixbuf in the direction of a specified color. */
+-static void
+-vte_bg_desaturate_pixbuf(GdkPixbuf *pixbuf,
+-			 const PangoColor *tint, double saturation)
+-{
+-	guchar red[256], green[256], blue[256];
+-	long stride, width, height, channels, x, y;
+-	guchar *pixels;
+-
+-	_vte_bg_generate_desat_tables(tint, saturation, red, green, blue);
+-
+-	stride = gdk_pixbuf_get_rowstride(pixbuf);
+-	width = gdk_pixbuf_get_width(pixbuf);
+-	height = gdk_pixbuf_get_height(pixbuf);
+-	channels = gdk_pixbuf_get_n_channels(pixbuf);
+-
+-	for (y = 0; y < height; y++) {
+-		pixels = gdk_pixbuf_get_pixels(pixbuf) +
+-			 y * stride;
+-		for (x = 0; x < width * channels; x++) {
+-			switch(x % channels) {
+-			case 0:
+-				pixels[x] = red[pixels[x]];
+-				break;
+-			case 1:
+-				pixels[x] = green[pixels[x]];
+-				break;
+-			case 2:
+-				pixels[x] = blue[pixels[x]];
+-				break;
+-			default:
+-				break;
+-			}
+-		}
+-	}
++	cairo_surface_set_user_data (item->surface, &item_surface_key, item,
++				     item_surface_destroy_func);
+ }
+ 
+ /* Search for a match in the cache, and if found, return an object with an
+    additional ref. */
+-static gpointer
++static cairo_surface_t *
+ vte_bg_cache_search(VteBg *bg,
+ 		    enum VteBgSourceType source_type,
+ 		    const GdkPixbuf *source_pixbuf,
+ 		    const char *source_file,
+ 		    const PangoColor *tint,
+-		    double saturation,
+-		    GdkVisual *visual,
+-		    gboolean pixbuf,
+-		    gboolean pixmap)
++		    double saturation)
+ {
+ 	GList *i;
+ 
+-	g_assert((pixmap && !pixbuf) || (!pixmap && pixbuf));
+-
+ 	vte_bg_cache_prune(bg);
+ 	for (i = bg->pvt->cache; i != NULL; i = g_list_next(i)) {
+ 		struct VteBgCacheItem *item = i->data;
+@@ -530,33 +415,27 @@ vte_bg_cache_search(VteBg *bg,
+ 				g_assert_not_reached();
+ 				break;
+ 			}
+-			if (pixbuf && item->pixbuf != NULL) {
+-				return g_object_ref(item->pixbuf);
+-			}
+-			if (pixmap && item->pixmap != NULL &&
+-					gdk_drawable_get_visual (item->pixmap) == visual) {
+-				return g_object_ref(item->pixmap);
+-			}
++
++			return cairo_surface_reference(item->surface);
+ 		}
+ 	}
+ 	return NULL;
+ }
+ 
+-GdkPixmap *
+-vte_bg_get_pixmap(VteBg *bg,
+-		  enum VteBgSourceType source_type,
+-		  GdkPixbuf *source_pixbuf,
+-		  const char *source_file,
+-		  const PangoColor *tint,
+-		  double saturation,
+-		  GdkColormap *colormap)
++cairo_surface_t *
++vte_bg_get_surface(VteBg *bg,
++		   enum VteBgSourceType source_type,
++		   GdkPixbuf *source_pixbuf,
++		   const char *source_file,
++		   const PangoColor *tint,
++		   double saturation,
++		   cairo_surface_t *other)
+ {
+ 	struct VteBgCacheItem *item;
+-	gpointer cached;
+-	GdkColormap *rcolormap;
+-	GdkPixmap *pixmap;
+ 	GdkPixbuf *pixbuf;
+-	char *file;
++	cairo_surface_t *cached, *source;
++	cairo_t *cr;
++	int width, height;
+ 
+ 	if (source_type == VTE_BG_SOURCE_NONE) {
+ 		return NULL;
+@@ -564,9 +443,7 @@ vte_bg_get_pixmap(VteBg *bg,
+ 
+ 	cached = vte_bg_cache_search(bg, source_type,
+ 				     source_pixbuf, source_file,
+-				     tint, saturation,
+-				     gdk_colormap_get_visual (colormap),
+-				     FALSE, TRUE);
++				     tint, saturation);
+ 	if (cached != NULL) {
+ 		return cached;
+ 	}
+@@ -577,59 +454,19 @@ vte_bg_get_pixmap(VteBg *bg,
+ 	item->source_file = NULL;
+ 	item->tint_color = *tint;
+ 	item->saturation = saturation;
+-	item->pixmap = NULL;
+-	item->pixbuf = NULL;
++	source = NULL;
+ 	pixbuf = NULL;
+-	pixmap = NULL;
+-	file = NULL;
+ 
+ 	switch (source_type) {
+ 	case VTE_BG_SOURCE_ROOT:
+-		if (GDK_IS_PIXMAP(bg->root_pixmap)) {
+-			int width, height;
+-			/* Tell GTK+ that this foreign pixmap shares the
+-			 * root window's colormap. */
+-			rcolormap = gdk_drawable_get_colormap(gdk_screen_get_root_window(bg->screen));
+-			if (gdk_drawable_get_colormap(bg->root_pixmap) == NULL) {
+-				gdk_drawable_set_colormap(bg->root_pixmap,
+-							  rcolormap);
+-			}
+-
+-			/* Retrieve the pixmap's size. */
+-			gdk_error_trap_push();
+-			width = height = -1;
+-			gdk_drawable_get_size(bg->root_pixmap, &width, &height);
+-			_vte_bg_display_sync(bg);
+-			gdk_error_trap_pop();
+-
+-			/* If the pixmap gave us a valid size, retrieve its
+-			 * contents. */
+-			if ((width > 0) && (height > 0)) {
+-				gdk_error_trap_push();
+-				pixbuf = gdk_pixbuf_get_from_drawable(NULL,
+-								      bg->root_pixmap,
+-								      NULL,
+-								      0, 0,
+-								      0, 0,
+-								      width, height);
+-				_vte_bg_display_sync(bg);
+-				gdk_error_trap_pop();
+-			}
+-		}
+ 		break;
+ 	case VTE_BG_SOURCE_PIXBUF:
+-		if (GDK_IS_PIXBUF(source_pixbuf)) {
+-                        /* If we're going to modify the pixbuf below, make a copy first! */
+-                        if (saturation != 1.0) {
+-                                pixbuf = gdk_pixbuf_copy(source_pixbuf);
+-                        } else {
+-                                pixbuf = g_object_ref(source_pixbuf);
+-                        }
+-		}
++		item->source_pixbuf = g_object_ref (source_pixbuf);
++		pixbuf = g_object_ref (source_pixbuf);
+ 		break;
+ 	case VTE_BG_SOURCE_FILE:
+ 		if ((source_file != NULL) && (strlen(source_file) > 0)) {
+-			file = g_strdup(source_file);
++			item->source_file = g_strdup(source_file);
+ 			pixbuf = gdk_pixbuf_new_from_file(source_file, NULL);
+ 		}
+ 		break;
+@@ -638,35 +475,41 @@ vte_bg_get_pixmap(VteBg *bg,
+ 		break;
+ 	}
+ 
+-	item->source_pixbuf = source_pixbuf;
+-	if (G_IS_OBJECT(item->source_pixbuf)) {
+-		g_object_ref(item->source_pixbuf);
++	if (pixbuf) {
++		width = gdk_pixbuf_get_width(pixbuf);
++		height = gdk_pixbuf_get_height(pixbuf);
++	} else {
++		width = cairo_xlib_surface_get_width(bg->root_surface);
++		height = cairo_xlib_surface_get_height(bg->root_surface);
+ 	}
+-	item->source_file = file;
+ 
+-	if (GDK_IS_PIXBUF(pixbuf)) {
+-		if (saturation != 1.0) {
+-			vte_bg_desaturate_pixbuf(pixbuf, tint, saturation);
+-		}
++	item->surface =
++		cairo_surface_create_similar(other, CAIRO_CONTENT_COLOR_ALPHA,
++					     width, height);
++
++	cr = cairo_create (item->surface);
++	cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
++	if (pixbuf)
++		gdk_cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
++	else
++		cairo_set_source_surface (cr, bg->root_surface, 0, 0);
++	cairo_paint (cr);
++
++	if (saturation != 1.0) {
++		cairo_set_source_rgba (cr, 
++				       tint->red / 65535.,
++				       tint->green / 65535.,
++				       tint->blue / 65535.,
++				       saturation);
++		cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
++		cairo_paint (cr);
+ 	}
+-
+-	pixmap = NULL;
+-	if (GDK_IS_PIXBUF(pixbuf)) {
+-		/* If the image is smaller than 256x256 then tile it into a
+-		 * pixbuf that is at least this large.  This is done because
+-		 * tiling a 1x1 pixmap onto the screen using thousands of calls
+-		 * to XCopyArea is very slow. */
+-		pixbuf = _vte_bg_resize_pixbuf(pixbuf, 256, 256);
+-		gdk_pixbuf_render_pixmap_and_mask_for_colormap(pixbuf,
+-							       colormap,
+-							       &pixmap, NULL,
+-							       0);
+-		g_object_unref(pixbuf);
+-	}
+-
+-	item->pixmap = pixmap;
++	cairo_destroy (cr);
+ 
+ 	vte_bg_cache_add(bg, item);
+ 
+-	return item->pixmap;
++	if (pixbuf)
++		g_object_unref (pixbuf);
++
++	return item->surface;
+ }
+diff --git a/src/vtebg.h b/src/vtebg.h
+index 1a1e25d..19f5391 100644
+--- a/src/vtebg.h
++++ b/src/vtebg.h
+@@ -30,7 +30,7 @@ typedef struct _VteBg VteBg;
+ struct _VteBg {
+ 	GObject parent;
+ 	GdkScreen *screen;
+-	GdkPixmap *root_pixmap;
++	cairo_surface_t *root_surface;
+ 	struct VteBgNative *native;
+ 	struct VteBgPrivate *pvt;
+ };
+@@ -59,11 +59,14 @@ enum VteBgSourceType {
+ 	VTE_BG_SOURCE_FILE
+ };
+ 
+-GdkPixmap *vte_bg_get_pixmap(VteBg *bg, enum VteBgSourceType source_type,
+-			     GdkPixbuf *source_pixbuf,
+-			     const char *source_file,
+-			     const PangoColor *tint, double saturation,
+-			     GdkColormap *colormap);
++cairo_surface_t *
++vte_bg_get_surface(VteBg *bg,
++		   enum VteBgSourceType source_type,
++		   GdkPixbuf *source_pixbuf,
++		   const char *source_file,
++		   const PangoColor *tint,
++		   double saturation,
++		   cairo_surface_t *other);
+ 
+ G_END_DECLS
+ 
+diff --git a/src/vtedraw.c b/src/vtedraw.c
+index 70b6dd9..0e23408 100644
+--- a/src/vtedraw.c
++++ b/src/vtedraw.c
+@@ -887,40 +887,29 @@ _vte_draw_set_background_image (struct _vte_draw *draw,
+ 			        const PangoColor *color,
+ 			        double saturation)
+ {
+-	GdkPixmap *pixmap;
+ 	cairo_surface_t *surface;
+-	cairo_t *cr;
+ 
+ 	if (type != VTE_BG_SOURCE_NONE)
+ 		draw->requires_clear = TRUE;
+ 
+-	pixmap = vte_bg_get_pixmap (vte_bg_get_for_screen (gtk_widget_get_screen (draw->widget)),
+-				    type, pixbuf, filename,
+-				    color, saturation,
+-				    gtk_widget_get_colormap (draw->widget));
++	/* Need a valid draw->cr for cairo_get_target () */
++	_vte_draw_start (draw);
++
++	surface = vte_bg_get_surface (vte_bg_get_for_screen (gtk_widget_get_screen (draw->widget)),
++				     type, pixbuf, filename,
++				     color, saturation,
++				     cairo_get_target(draw->cr));
+ 
+-	if (!pixmap)
++	_vte_draw_end (draw);
++
++	if (!surface)
+ 		return;
+ 
+ 	if (draw->bg_pattern)
+ 		cairo_pattern_destroy (draw->bg_pattern);
+ 
+-	/* Ugh... We need to create a dummy cairo_t */
+-	surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 0, 0);
+-	cr = cairo_create (surface);
+-
+-	gdk_cairo_set_source_pixmap (cr, pixmap, 0, 0);
+-	draw->bg_pattern = cairo_pattern_reference (cairo_get_source (cr));
+-
+-	cairo_destroy (cr);
++	draw->bg_pattern = cairo_pattern_create_for_surface (surface);
+ 	cairo_surface_destroy (surface);
+-
+-	/* Transfer the pixmap ownership to the pattern */
+-	cairo_pattern_set_user_data (draw->bg_pattern,
+-				     (cairo_user_data_key_t *) draw,
+-				     pixmap,
+-				     (cairo_destroy_func_t) g_object_unref);
+-
+ 	cairo_pattern_set_extend (draw->bg_pattern, CAIRO_EXTEND_REPEAT);
+ }
+ 
+--
+cgit v0.8.3.1
