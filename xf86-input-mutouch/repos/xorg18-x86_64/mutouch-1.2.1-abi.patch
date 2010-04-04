@@ -1,0 +1,73 @@
+From db04a5333b545a0442b995bae47d2c5527a7459e Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Fri, 17 Jul 2009 14:18:51 +1000
+Subject: [PATCH] Cope with XINPUT ABI 7.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ src/xf86MuTouch.c |   25 ++++++++++++++++++++++---
+ 1 files changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/src/xf86MuTouch.c b/src/xf86MuTouch.c
+index 2d5cdb0..de319fc 100644
+--- a/src/xf86MuTouch.c
++++ b/src/xf86MuTouch.c
+@@ -749,6 +749,10 @@ xf86MuTControl(DeviceIntPtr	dev,
+   unsigned char		req[MuT_PACKET_SIZE];
+   unsigned char		reply[MuT_BUFFER_SIZE];
+   char			*id_string = DEVICE_ID(local->private_flags) == FINGER_ID ? "finger" : "stylus";
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
++  Atom btn_label;
++  Atom axis_labels[2] = { 0, 0 };
++#endif
+ 
+   switch(mode) {
+ 
+@@ -766,7 +770,11 @@ xf86MuTControl(DeviceIntPtr	dev,
+       /*
+        * Device reports button press for up to 1 button.
+        */
+-      if (InitButtonClassDeviceStruct(dev, 1, map) == FALSE) {
++      if (InitButtonClassDeviceStruct(dev, 1,
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
++				      &btn_label,
++#endif
++				      map) == FALSE) {
+ 	ErrorF("Unable to allocate ButtonClassDeviceStruct\n");
+ 	return !Success;
+       }
+@@ -779,6 +787,9 @@ xf86MuTControl(DeviceIntPtr	dev,
+        * screen to fit one meter.
+        */
+       if (InitValuatorClassDeviceStruct(dev, 2,
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
++				      axis_labels,
++#endif
+ #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 3
+ 					xf86GetMotionEvents,
+ #endif
+@@ -787,11 +798,19 @@ xf86MuTControl(DeviceIntPtr	dev,
+ 	return !Success;
+       }
+       else {
+-	InitValuatorAxisStruct(dev, 0, priv->min_x, priv->max_x,
++	InitValuatorAxisStruct(dev, 0,
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
++			       axis_labels[0],
++#endif
++			       priv->min_x, priv->max_x,
+ 			       9500,
+ 			       0     /* min_res */,
+ 			       9500  /* max_res */);
+-	InitValuatorAxisStruct(dev, 1, priv->min_y, priv->max_y,
++	InitValuatorAxisStruct(dev, 1,
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
++			       axis_labels[1],
++#endif
++			       priv->min_y, priv->max_y,
+ 			       10500,
+ 			       0     /* min_res */,
+ 			       10500 /* max_res */);
+-- 
+1.6.3.rc1.2.g0164.dirty
+
