@@ -2,31 +2,34 @@
 # Maintainer: Eric Belanger <eric@archlinux.org>
 
 pkgname=xine-ui
-pkgver=0.99.5
-pkgrel=6
+pkgver=0.99.6
+pkgrel=1
 pkgdesc="A free video player for Unix"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.xine-project.org"
-depends=('xine-lib' 'curl' 'libxtst' 'libxinerama' 'libxv' 'libpng' 'libxft' 'libsm' 'libxxf86vm' 'ncurses' 'readline' 'xdg-utils')
-makedepends=('lirc' 'libxt')
-optdepends=('lirc')
-options=('!emptydirs')
+depends=('xine-lib' 'curl' 'libxtst' 'libxinerama' 'libxv' 'libpng' 'libxft' 'libxxf86vm' 'readline' 'xdg-utils' 'shared-mime-info' 'hicolor-icon-theme' 'lirc-utils')
+makedepends=('libxt')
+options=('!emptydirs' !strip)
 install=xine-ui.install
-source=(http://downloads.sourceforge.net/sourceforge/xine/${pkgname}-${pkgver}.tar.gz libpng14.patch)
-md5sums=('e643cd1fcad4d98a5ae4eb877ce5087b' 'b533aa5a5847ecabad28cc15879e1966')
-sha1sums=('4f452516319f31cda01d08ea2779f195933af0bb' '67db0d243e4fe482456db5efe174eaf4c6c50de6')
+source=(http://downloads.sourceforge.net/sourceforge/xine/${pkgname}-${pkgver}.tar.xz \
+        lirc-check-a89347673097.patch lirc-makefile-a68dd15ff7ae.patch fix_lirc.diff)
+md5sums=('d468b4e7fe39ff19888261e1da9be914' '4f06f63f5fd55b08a648e5d63f881898'\
+         '9f5acaf14f3945aa2ce428631d09cd47' '0174bd096756b9c6f47e9b8b5ff6e145')
+sha1sums=('abbdb331898c14025ee6b132f63ab7d3c1b5b31e' 'b2df43ede3a9d1a34b80139704a4cbbc7295c584'\
+         '8bbd39f61de7b6991385457a4944b8ea104da88b' '2361df9ddad59c426b0f863414c6d527b463a38a')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -p1 < ../libpng14.patch || return 1
-  #add missing constant (defined in xine.h from xine-lib cvs)
-  echo '#define XINE_MSG_AUDIO_OUT_UNAVAILABLE 11' >> src/xitk/common.h || return 1
+  patch -p1 < "${srcdir}/lirc-check-a89347673097.patch" || return 1
+  patch -p1 < "${srcdir}/lirc-makefile-a68dd15ff7ae.patch" || return 1
+  patch -p1 < "${srcdir}/fix_lirc.diff" || return 1
+  autoconf || return 1
+
   ./configure --prefix=/usr --mandir=/usr/share/man \
-    --with-curses --with-x --enable-lirc --without-aalib || return 1
+    --with-x --enable-lirc --without-aalib --enable-debug || return 1
   make || return 1
   make DESTDIR="${pkgdir}" install || return 1
   install -d "${pkgdir}/usr/share/applications"
-  echo "Categories=Application;AudioVideo;" >> "${pkgdir}/usr/share/xine/desktop/xine.desktop" || return 1
   mv "${pkgdir}/usr/share/xine/desktop/xine.desktop" "${pkgdir}/usr/share/applications"
 }
