@@ -1,0 +1,85 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=xorg-server
+pkgver=1.8.0
+pkgrel=2
+pkgdesc="X.Org X servers"
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://xorg.freedesktop.org"
+depends=('libgl' 'libxfont>=1.4.1' 'libgcrypt>=1.4.5' 'udev>=151' 'libpciaccess>=0.10.9' 'libxv>=1.0.5' 'pixman>=0.18.0' 'xcursor-themes>=1.0.2' 'xkeyboard-config>=1.8' 'xorg-server-utils' 'xorg-fonts-misc' 'xbitmaps' 'diffutils' 'xf86-input-evdev>=2.3.2-2' 'inputproto>=2.0')
+makedepends=('libx11>=1.3.3' 'mesa>=7.8.1' 'xf86driproto>=2.1.0' 'xtrans>=1.2.5' 'libxkbfile>=1.0.6' 'randrproto>=1.3.1' 'renderproto>=0.11' 'xcmiscproto>=1.2.0' 'bigreqsproto>=1.1.0' 'resourceproto>=1.1.0' 'videoproto>=2.3.0' 'compositeproto>=0.4.1' 'scrnsaverproto>=1.2.0' 'xf86dgaproto>=2.1' 'libgl>=7.8.1' 'glproto>=1.4.11' 'xorg-util-macros>=1.6.1' 'xineramaproto>=1.2' 'recordproto')
+conflicts=('catalyst-utils<=9.2' 'xf86-input-calcomp' 'xf86-input-citron' 'xf86-input-digitaledge' 'xf86-input-dmc' 'xf86-input-dynapro' 'xf86-input-elo2300'
+	'xf86-input-jamstudio' 'xf86-input-magellan' 'xf86-input-magictouch' 'xf86-input-microtouch' 'xf86-input-palmax' 'xf86-input-spaceorb' 'xf86-input-summa' 'xf86-input-tek4957' 'xf86-input-ur98' 'xf86-video-vga' 'xf86-video-intel-legacy' 'nvidia-96xx-utils<96.43.14' 'nvidia-173xx-utils<173.14.21')
+options=('!libtool')
+provides=('x-server')
+groups=('xorg')
+install=xorg-server.install
+backup=('etc/X11/xorg.conf.d/10-evdev.conf' 'etc/X11/xorg.conf.d/10-quirks.conf')
+source=(${url}/releases/individual/xserver/${pkgname}-${pkgver}.tar.bz2
+        xorg-redhat-die-ugly-pattern-die-die-die.patch
+        xvfb-run
+        xvfb-run.1
+        10-evdev.conf
+        10-quirks.conf)
+md5sums=('7cec3a11890bb53f4a07854319360348'
+         '1a336eb22e27cbf443ec5a2ecddfa93c'
+         '52fd3effd80d7bc6c1660d4ecf23d31c'
+         '376c70308715cd2643f7bff936d9934b'
+         'e930e153d69968a795fe4e2ef5d9a5dc'
+         'd4f7dfc6be4ef4e2c6dd7632a9d88abe')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Get rid of the ugly pattern
+  patch -Np3 -i "${srcdir}/xorg-redhat-die-ugly-pattern-die-die-die.patch" || return  1
+
+  sed -i -e 's/\$(prefix)\/etc/\/etc/g' config/Makefile.* || return 1
+
+  ./configure --prefix=/usr \
+      --enable-ipv6 \
+      --enable-dri \
+      --disable-dmx \
+      --enable-xvfb \
+      --enable-xnest \
+      --enable-composite \
+      --enable-xcsecurity \
+      --enable-xorg \
+      --enable-xephyr \
+      --enable-glx-tls \
+      --enable-kdrive \
+      --enable-install-setuid \
+      --enable-config-udev \
+      --disable-config-dbus \
+      --enable-record \
+      --disable-xfbdev \
+      --disable-xfake \
+      --disable-static \
+      --sysconfdir=/etc/X11 \
+      --localstatedir=/var \
+      --with-default-font-path=/usr/share/fonts/misc,/usr/share/fonts/100dpi:unscaled,/usr/share/fonts/75dpi:unscaled,/usr/share/fonts/TTF,/usr/share/fonts/Type1 \
+      --with-xkb-path=/usr/share/X11/xkb \
+      --with-xkb-output=/var/lib/xkb \
+      --with-dri-driver-path=/usr/lib/xorg/modules/dri || return 1
+
+  make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 "${srcdir}/xvfb-run" "${pkgdir}/usr/bin/" || return 1
+  install -m644 "${srcdir}/xvfb-run.1" "${pkgdir}/usr/share/man/man1/" || return 1
+
+  rm -rf "${pkgdir}/var/log" || return 1
+
+  install -m755 -d "${pkgdir}/var/lib/xkb" || return 1
+
+  install -m644 "${srcdir}/10-evdev.conf" "${srcdir}/10-quirks.conf" "${pkgdir}/etc/X11/xorg.conf.d/" || return 1
+
+  # Needed for non-mesa drivers, libgl will restore it
+  mv "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so" \
+     "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.xorg" || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
+}
