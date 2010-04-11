@@ -1,0 +1,49 @@
+From: Christoph Hellwig <hch@lst.de>
+Date: Tue, 26 Jan 2010 13:49:08 +0000 (+0100)
+Subject: block: avoid creating too large iovecs in multiwrite_merge
+X-Git-Url: http://git.kernel.org/?p=virt%2Fkvm%2Fqemu-kvm.git;a=commitdiff_plain;h=e2a305fb13ff0f5cf6ff805555aaa90a5ed5954c
+
+block: avoid creating too large iovecs in multiwrite_merge
+
+If we go over the maximum number of iovecs support by syscall we get
+back EINVAL from the kernel which translate to I/O errors for the guest.
+
+Add a MAX_IOV defintion for platforms that don't have it.  For now we use
+the same 1024 define that's used on Linux and various other platforms,
+but until the windows block backend implements some kind of vectored I/O
+it doesn't matter.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+---
+
+diff --git a/block.c b/block.c
+index 9c106a8..1919d19 100644
+--- a/block.c
++++ b/block.c
+@@ -1691,6 +1691,10 @@ static int multiwrite_merge(BlockDriverState *bs, BlockRequest *reqs,
+             merge = bs->drv->bdrv_merge_requests(bs, &reqs[outidx], &reqs[i]);
+         }
+ 
++        if (reqs[outidx].qiov->niov + reqs[i].qiov->niov + 1 > IOV_MAX) {
++            merge = 0;
++        }
++
+         if (merge) {
+             size_t size;
+             QEMUIOVector *qiov = qemu_mallocz(sizeof(*qiov));
+diff --git a/qemu-common.h b/qemu-common.h
+index ae4f23b..b09f717 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -54,6 +54,10 @@ struct iovec {
+     void *iov_base;
+     size_t iov_len;
+ };
++/*
++ * Use the same value as Linux for now.
++ */
++#define IOV_MAX		1024
+ #else
+ #include <sys/uio.h>
+ #endif
