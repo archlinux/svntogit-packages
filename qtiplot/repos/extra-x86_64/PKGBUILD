@@ -1,0 +1,73 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: damir <damir.archlinux.org>
+# Contributor: Gergely Imreh <imrehg@gmail.com>
+
+pkgname=qtiplot
+pkgver=0.9.7.13
+pkgrel=1
+pkgdesc="Data analysis and scientific plotting - free clone of Origin"
+arch=('i686' 'x86_64')
+url="http://soft.proindependent.com/qtiplot.html"
+depends=('muparser>=1.32' 'gsl' 'pyqt' 'sip>=4.9.1' \
+         'boost>=1.41.0' 'libgl' 'shared-mime-info' 'mesa' 'liborigin2>=20090406')
+# build against qwtplot3d provided in the package ...
+# build against qwt provided in the package ...
+# as systemwide one doesn't provide all needed functions
+makedepends=('pkgconfig')
+license=('GPL2')
+install=${pkgname}.install
+source=(http://download.berlios.de/qtiplot/qtiplot-${pkgver}.tar.bz2
+        $pkgname.desktop
+        $pkgname.png
+        build.conf.archlinux
+        qwtplot3d_gcc.patch
+        qtiplot.xml
+	qtiplot-0.9.7.12-system-liborigin.patch)
+md5sums=('cca071f8160058e5b535776c4e7bede5'
+         '56bd53f4f1367c285086acb969f13348'
+         'ad8affbd6f0d5cbdcde46c923ee2668a'
+         'b5c16bb18f4d4034578fb3e7c31c3b65'
+         'ab02c436ec2c04b1838cb5517383b4eb'
+         '35683f3b32e1edcca0bb02c471d284e9'
+         'd3fe35e985f6a1f04ba0abeea51ba135')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -Np0 -i ${srcdir}/qtiplot-0.9.7.12-system-liborigin.patch || return 1
+  install -Dm644 ${srcdir}/build.conf.archlinux build.conf || return 1
+
+  # Make qwt
+  sed -i "s:elif:else:g" qtiplot/src/scripting/ScriptEdit.cpp
+  patch -Np1 -i ${srcdir}/qwtplot3d_gcc.patch || return 1
+  cd ./3rdparty/qwt
+  qmake || return 1
+  make || return 1
+
+  # Make qwtplot3d
+  cd ../qwtplot3d
+  qmake || return 1
+  make || return 1   
+
+  # Make qtiplot
+  cd ${srcdir}/${pkgname}-${pkgver}/${pkgname}
+  sed -i 's|/usr/local/|/usr/share/|' qtiplot.pro
+  sed -i 's#d_python_config_folder + "#"/usr/share/qtiplot#' src/core/ApplicationWindow.cpp
+
+  qmake qtiplot.pro QMAKESPEC=linux-g++ || return 1
+  make QTDIR=/usr/ QMAKESPEC=linux-g++ || return 1
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}/${pkgname}
+
+  INSTALL_ROOT=${pkgdir} make install || return 1
+
+  # make it nice:
+  install -D -m644 ${srcdir}/${pkgname}.png \
+  	${pkgdir}/usr/share/pixmaps/${pkgname}.png || return 1
+  install -D -m644 ${srcdir}/${pkgname}.desktop \
+  	${pkgdir}/usr/share/applications/${pkgname}.desktop || return 1
+  install -D -m644 ${srcdir}/${pkgname}.xml \
+        ${pkgdir}/usr/share/mime/packages/${pkgname}.xml || return 1
+}
