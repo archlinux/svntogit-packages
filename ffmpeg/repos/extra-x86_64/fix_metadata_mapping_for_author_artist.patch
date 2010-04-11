@@ -1,0 +1,137 @@
+Since revision 21587 the metadata table uses "artist" to store the
+eponymous field, but not all the (de)muxers were updated to map to that
+rather than the (previously used) "author".
+---
+ ffserver.c            |    2 +-
+ libavformat/aiffdec.c |    2 +-
+ libavformat/mov.c     |    2 +-
+ libavformat/movenc.c  |    6 +++---
+ libavformat/mp3.c     |    2 +-
+ libavformat/rm.c      |    2 +-
+ libavformat/rpl.c     |    2 +-
+ libavformat/vqf.c     |    2 +-
+ 8 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/ffserver.c b/ffserver.c
+index ab4fba6..911889f 100644
+--- a/ffserver.c
++++ b/ffserver.c
+@@ -2062,7 +2062,7 @@ static int http_prepare_data(HTTPContext *c)
+     switch(c->state) {
+     case HTTPSTATE_SEND_DATA_HEADER:
+         memset(&c->fmt_ctx, 0, sizeof(c->fmt_ctx));
+-        av_metadata_set(&c->fmt_ctx.metadata, "author"   ,c->stream->author);
++        av_metadata_set(&c->fmt_ctx.metadata, "artist"   ,c->stream->author);
+         av_metadata_set(&c->fmt_ctx.metadata, "comment"  ,c->stream->comment);
+         av_metadata_set(&c->fmt_ctx.metadata, "copyright",c->stream->copyright);
+         av_metadata_set(&c->fmt_ctx.metadata, "title"    ,c->stream->title);
+diff --git a/libavformat/aiffdec.c b/libavformat/aiffdec.c
+index a56bb09..04d7ae0 100644
+--- a/libavformat/aiffdec.c
++++ b/libavformat/aiffdec.c
+@@ -223,7 +223,7 @@ static int aiff_read_header(AVFormatContext *s,
+             get_meta(s, "title"    , size);
+             break;
+         case MKTAG('A', 'U', 'T', 'H'):     /* Author chunk */
+-            get_meta(s, "author"   , size);
++            get_meta(s, "artist"   , size);
+             break;
+         case MKTAG('(', 'c', ')', ' '):     /* Copyright chunk */
+             get_meta(s, "copyright", size);
+diff --git a/libavformat/mov.c b/libavformat/mov.c
+index c5e3ec0..1fff375 100644
+--- a/libavformat/mov.c
++++ b/libavformat/mov.c
+@@ -106,7 +106,7 @@ static int mov_read_udta_string(MOVContext *c, ByteIOContext *pb, MOVAtom atom)
+     switch (atom.type) {
+     case MKTAG(0xa9,'n','a','m'): key = "title";     break;
+     case MKTAG(0xa9,'a','u','t'):
+-    case MKTAG(0xa9,'A','R','T'): key = "author";    break;
++    case MKTAG(0xa9,'A','R','T'): key = "artist";    break;
+     case MKTAG(0xa9,'w','r','t'): key = "composer";  break;
+     case MKTAG( 'c','p','r','t'):
+     case MKTAG(0xa9,'c','p','y'): key = "copyright"; break;
+diff --git a/libavformat/movenc.c b/libavformat/movenc.c
+index ecabd8e..15dfa6c 100644
+--- a/libavformat/movenc.c
++++ b/libavformat/movenc.c
+@@ -1433,7 +1433,7 @@ static int mov_write_ilst_tag(ByteIOContext *pb, MOVMuxContext *mov,
+     put_be32(pb, 0); /* size */
+     put_tag(pb, "ilst");
+     mov_write_string_metadata(s, pb, "\251nam", "title"    , 1);
+-    mov_write_string_metadata(s, pb, "\251ART", "author"   , 1);
++    mov_write_string_metadata(s, pb, "\251ART", "artist"   , 1);
+     mov_write_string_metadata(s, pb, "aART", "album_artist", 1);
+     mov_write_string_metadata(s, pb, "\251wrt", "composer" , 1);
+     mov_write_string_metadata(s, pb, "\251alb", "album"    , 1);
+@@ -1535,7 +1535,7 @@ static int mov_write_udta_tag(ByteIOContext *pb, MOVMuxContext *mov,
+ 
+         if (mov->mode & MODE_3GP) {
+             mov_write_3gp_udta_tag(pb_buf, s, "titl", "title");
+-            mov_write_3gp_udta_tag(pb_buf, s, "auth", "author");
++            mov_write_3gp_udta_tag(pb_buf, s, "auth", "artist");
+             mov_write_3gp_udta_tag(pb_buf, s, "gnre", "genre");
+             mov_write_3gp_udta_tag(pb_buf, s, "dscp", "comment");
+             mov_write_3gp_udta_tag(pb_buf, s, "albm", "album");
+@@ -1543,7 +1543,7 @@ static int mov_write_udta_tag(ByteIOContext *pb, MOVMuxContext *mov,
+             mov_write_3gp_udta_tag(pb_buf, s, "yrrc", "date");
+         } else if (mov->mode == MODE_MOV) { // the title field breaks gtkpod with mp4 and my suspicion is that stuff is not valid in mp4
+             mov_write_string_metadata(s, pb_buf, "\251nam", "title"      , 0);
+-            mov_write_string_metadata(s, pb_buf, "\251aut", "author"     , 0);
++            mov_write_string_metadata(s, pb_buf, "\251aut", "artist"     , 0);
+             mov_write_string_metadata(s, pb_buf, "\251alb", "album"      , 0);
+             mov_write_string_metadata(s, pb_buf, "\251day", "date"       , 0);
+             mov_write_string_tag(pb_buf, "\251enc", LIBAVFORMAT_IDENT, 0, 0);
+diff --git a/libavformat/mp3.c b/libavformat/mp3.c
+index 4579773..1b5b5b2 100644
+--- a/libavformat/mp3.c
++++ b/libavformat/mp3.c
+@@ -213,7 +213,7 @@ static int id3v1_create_tag(AVFormatContext *s, uint8_t *buf)
+     buf[1] = 'A';
+     buf[2] = 'G';
+     count += id3v1_set_string(s, "title",   buf +  3, 30);
+-    count += id3v1_set_string(s, "author",  buf + 33, 30);
++    count += id3v1_set_string(s, "artist",  buf + 33, 30);
+     count += id3v1_set_string(s, "album",   buf + 63, 30);
+     count += id3v1_set_string(s, "date",    buf + 93,  4);
+     count += id3v1_set_string(s, "comment", buf + 97, 30);
+diff --git a/libavformat/rm.c b/libavformat/rm.c
+index 29a6e40..b6c5640 100644
+--- a/libavformat/rm.c
++++ b/libavformat/rm.c
+@@ -23,7 +23,7 @@
+ 
+ const char * const ff_rm_metadata[4] = {
+     "title",
+-    "author",
++    "artist",
+     "copyright",
+     "comment"
+ };
+diff --git a/libavformat/rpl.c b/libavformat/rpl.c
+index ad713ff..5b46f47 100644
+--- a/libavformat/rpl.c
++++ b/libavformat/rpl.c
+@@ -135,7 +135,7 @@ static int rpl_read_header(AVFormatContext *s, AVFormatParameters *ap)
+     error |= read_line(pb, line, sizeof(line));      // date/copyright
+     av_metadata_set(&s->metadata, "copyright", line);
+     error |= read_line(pb, line, sizeof(line));      // author and other
+-    av_metadata_set(&s->metadata, "author"   , line);
++    av_metadata_set(&s->metadata, "artist"   , line);
+ 
+     // video headers
+     vst = av_new_stream(s, 0);
+diff --git a/libavformat/vqf.c b/libavformat/vqf.c
+index 40fea47..e4b81a5 100644
+--- a/libavformat/vqf.c
++++ b/libavformat/vqf.c
+@@ -113,7 +113,7 @@ static int vqf_read_header(AVFormatContext *s, AVFormatParameters *ap)
+             add_metadata(s, "copyright", len, header_size);
+             break;
+         case MKTAG('A','U','T','H'):
+-            add_metadata(s, "author"   , len, header_size);
++            add_metadata(s, "artist"   , len, header_size);
+             break;
+         case MKTAG('A','L','B','M'):
+             add_metadata(s, "album"    , len, header_size);
+
