@@ -1,6 +1,7 @@
 # $Id$
-# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Eric Belanger <eric@archlinux.org>
 # Contributor: John Proctor <jproctor@prium.net>
+# Maintainer: Daniel J Griffiths <ghost1227@archlinux.us>
 
 pkgname=lesstif
 pkgver=0.95.2
@@ -19,24 +20,33 @@ sha1sums=('b894e544d529a235a6a665d48ca94a465f44a4e5' '5d7f38555417cb617d7d5b7e41
          '85412aba25058110db8da99da4a2c5ab44330467')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -p1 < ../040_fedora_XxxxProperty-64bit.diff || return 1
-  ./configure --prefix=/usr --mandir=/usr/share/man --docdir=/usr/share/doc \
-    --enable-production --enable-nonstandard-conversions --enable-editres \
-    --with-xdnd --enable-build-21 --disable-debug --enable-static || return 1
+	cd ${srcdir}/${pkgname}-${pkgver}
+	patch -p1 < ../040_fedora_XxxxProperty-64bit.diff || return 1
 
-# fix linkage against already installed version
-  perl -pi -e 's/^(hardcode_into_libs)=.*/$1=no/' libtool || return 1
+	./configure --prefix=/usr --mandir=/usr/share/man \
+	    --docdir=/usr/share/doc --enable-production \
+	    --enable-nonstandard-conversions --enable-editres \
+	    --with-xdnd --enable-build-21 --disable-debug \
+	    --enable-static || return 1
 
-  make || return 1
+	# fix linkage against already installed version
+	perl -pi -e 's/^(hardcode_into_libs)=.*/$1=no/' libtool || return 1
 
-# fix linkage against already installed version
-  for f in `find . -name \*.la -type f` ; do
-    perl -pi -e 's/^(relink_command=.*)/# $1/' $f || return 1
-  done
+	make || return 1
 
-  make -C lib/Mrm-2.1 || return 1
-  make -C lib/Mrm-2.1 DESTDIR="${pkgdir}" install || return 1
-  make appdir=/usr/share/X11/app-defaults rootdir=/usr/share/LessTif DESTDIR="${pkgdir}" install || return 1
-  install -D -m644 ../LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
+	# fix linkage against already installed version
+	for f in `find . -name \*.la -type f` ; do
+	    perl -pi -e 's/^(relink_command=.*)/# $1/' $f || return 1
+	done
+
+	make -C lib/Mrm-2.1 || return 1
+}
+
+package() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	make -C lib/Mrm-2.1 DESTDIR=${pkgdir} install || return 1
+	make appdir=/usr/share/X11/app-defaults rootdir=/usr/share/LessTif \
+	    DESTDIR=${pkgdir} install || return 1
+	install -Dm644 ../LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE || return 1
 }
