@@ -7,7 +7,7 @@
 
 pkgname=glibc
 pkgver=2.11.1
-pkgrel=2
+pkgrel=3
 _glibcdate=20100318
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -23,12 +23,14 @@ install=glibc.install
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
         glibc-2.10-dont-build-timezone.patch
         glibc-2.10-bz4781.patch
+        glibc-__i686.patch
         nscd
         locale.gen.txt
         locale-gen)    
 md5sums=('4b7f8ed5a0ea946bd40318855449b570'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
+         '40cd342e21f71f5e49e32622b25acc52'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -52,6 +54,10 @@ build() {
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=4781
   patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch || return 1
 
+  # http://sources.redhat.com/bugzilla/show_bug.cgi?id=411
+  # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
+  patch -Np1 -i ${srcdir}/glibc-__i686.patch || return 1
+
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
 
@@ -73,12 +79,16 @@ build() {
       --libdir=/usr/lib --without-gd
         
   make || return 1
+}
+
+package() {
+  cd ${srcdir}/glibc/glibc-build
   make install_root=${pkgdir} install || return 1
 
   # provided by kernel-headers
   rm ${pkgdir}/usr/include/scsi/scsi.h
 
-  rm ${pkgdir}/etc/ld.so.cache ${pkgdir}/etc/ld.so.conf ${pkgdir}/etc/localtime
+  rm ${pkgdir}/etc/ld.so.cache ${pkgdir}/etc/ld.so.conf
 
   install -dm755 ${pkgdir}/etc/rc.d
   install -dm755 ${pkgdir}/usr/sbin
