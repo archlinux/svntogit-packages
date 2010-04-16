@@ -300,7 +300,9 @@ sort -u /tmp/modules-plain >> /tmp/modules-stripped
 grep -v "ide/" /tmp/modules-stripped | grep -v "scsi/" | grep -v "fusion/" | grep -v "block/sx8" | grep -v "message/fusion" | \
 	grep -v  "block/cciss" | grep -v "block/cpqarray" | grep -v "block/DAC960" | grep -v "block/virtio" | grep -v "ata/" | \
 	grep -v "net/" | grep -v "pcmcia/" | grep -v "usb/" | \
-	grep -v "firewire" | grep -v "ieee1394/" | grep -v "usbhid/" | grep -v "staging/" | grep -v "wireless/" >> /tmp/modules-sorted
+	grep -v "firewire" | grep -v "ieee1394/" | grep -v "usbhid/" | grep -v "staging/" | grep -v "wireless/" | grep -v "virtio_pci" >> /tmp/modules-sorted
+# load virtio first!
+grep "virtio_pci" /tmp/modules-stripped  >> /tmp/modules-sorted
 # make a correct order for the modules, internal devices have priority!
 # only use old ide modules if boot parameter 'ide-legacy' is given
 if [ "$IDE_LEGACY" = "1" ]; then
@@ -308,8 +310,8 @@ if [ "$IDE_LEGACY" = "1" ]; then
 else
 	grep "ata/pata" /tmp/modules-stripped | grep -v "pata_acpi" >> /tmp/modules-sorted
 fi
-grep "scsi/" /tmp/modules-stripped | grep -v "sd_mod" | grep -v "sr_mod" | grep -v "/sg.ko" | grep -v "/st.ko" >> /tmp/modules-sorted
-grep "block/" /tmp/modules-stripped | grep -v "sx8" | grep -v "nbd" | grep -v "pktcdvd" | grep -v "floppy" >> /tmp/modules-sorted
+grep "scsi/" /tmp/modules-stripped  | grep -v "sd_mod" | grep -v "sr_mod" | grep -v "/sg.ko" | grep -v "/st.ko" >> /tmp/modules-sorted
+grep "block/" /tmp/modules-stripped | grep -v "virtio_blk" | grep -v "sx8" | grep -v "nbd" | grep -v "pktcdvd" | grep -v "floppy" >> /tmp/modules-sorted
 grep "fusion/" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "ata/"  /tmp/modules-stripped| grep -v "pata" | grep -v "ata_generic" | grep -v "libata" >> /tmp/modules-sorted
 grep "block/" /tmp/modules-stripped | grep "sx8" >> /tmp/modules-sorted
@@ -326,7 +328,8 @@ grep "usb/" /tmp/modules-stripped | grep -v "usb-storage" | grep -v "usbhid" | g
 grep "firewire/" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "ieee1394/" /tmp/modules-stripped >> /tmp/modules-sorted
 
-# add scsi device modules at the end
+# add scsi and virtio device modules at the end
+grep "virtio_blk" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "sd_mod" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "sr_mod" /tmp/modules-stripped >> /tmp/modules-sorted
 grep "/st.ko" /tmp/modules-stripped >> /tmp/modules-sorted
@@ -334,29 +337,6 @@ grep "/sg.ko" /tmp/modules-stripped >> /tmp/modules-sorted
 
 
 sed -ne "s#^insmod.*/\(.*\)\.ko.*#\1#p" /tmp/modules-sorted >> /tmp/moduleslist
-
-# blacklist framebuffer modules
-# not needed anymore since blacklist file!
-#for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*/*fb*); do
-#	BLACKLIST="$BLACKLIST $(basename $x .ko)"
-#done
-#for x in $(echo /lib/modules/$(uname -r)/kernel/drivers/video/*fb*); do
-#	BLACKLIST="$BLACKLIST $(basename $x .ko)"
-#done
-# delete modules that are blacklisted
-#BLACKLIST="${BLACKLIST} $(echo ${disablemodules} | sed 's|-|_|g' | sed 's|,| |g')"
-#for i in $BLACKLIST; do
-#	[ "$i" ] || continue
-#	sed -i -e "/^$i$/d" /tmp/moduleslist
-#	# since '-' and '_' are interchangeable, we have to cover both
-#	if [ "$(echo $i | grep '-')" ]; then
-#		i="$(echo $i | sed 's|-|_|g')"
-#		sed -i -e "/^$i$/d" /tmp/moduleslist
-#	elif [ "$(echo $i | grep '_')" ]; then
-#		i="$(echo $i | sed 's|_|-|g')"
-#		sed -i -e "/^$i$/d" /tmp/moduleslist
-#	fi
-#done
 
 listmods() {
 	key=$1 ; shift
@@ -425,7 +405,7 @@ while [ $# -gt 0 ]; do
 			showlist "ACPI   " $(listmods acpi/)
 			showlist "IDE    " $(listmods ide/ ide-)
 			showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix)
-			showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy)
+			showlist "SCSI   " $(listmods virtio/virtio_pci) $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy)
 			showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)
 			showlist "USB    " $(listmods usb/ usb/input)
 			showlist "FW     " $(listmods firewire/) $(listmods ieee1394/)
@@ -437,7 +417,7 @@ while [ $# -gt 0 ]; do
 			showlist "SOUND  " $(listmods pcspkr) $(listmods sound/)
 			showlist "STAGING" $(listmods staging/)
 			showlist "VIDEO  " $(listmods video/)
-			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/)
+			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio virtio/virtio_pci ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/)
 			;;
 
 		--show-modules-order)
@@ -448,7 +428,7 @@ while [ $# -gt 0 ]; do
 		--show-acpi)   showlist "ACPI   " $(listmods acpi/) ;;
 		--show-ide)    showlist "IDE    " $(listmods ide/ ide-) ;;
 		--show-pata)   showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) ;;
-		--show-scsi)   showlist "SCSI   " $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) ;;
+		--show-scsi)   showlist "SCSI   " $(listmods virtio/virtio_pci) $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) ;;
 		--show-sata)   showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) ;;
 		--show-usb)    showlist "USB    " $(listmods usb/ usb/input) ;;
 		--show-fw)     showlist "FW     " $(listmods firewire/) $(listmods ieee1394/) ;;
@@ -460,7 +440,7 @@ while [ $# -gt 0 ]; do
 		--show-sound)  showlist "SOUND  " $(listmods pcspkr) $(listmods sound/) ;;
 		--show-staging) showlist "STAGING" $(listmods staging/) ;;
 		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
-		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/) ;;
+		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio virtio/virtio_pci ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/) ;;
 		--filesystem)   FILESYSTEM="ext2 ext3 ext4 reiserfs xfs jfs vfat"
 				for i in $FILESYSTEM; do
 					 [ "$(grep $i /tmp/.blkid)" ] && FS="$FS $i"
@@ -468,7 +448,7 @@ while [ $# -gt 0 ]; do
 				MODULES_INITRAMFS="$MODULES_INITRAMFS $FS"
 				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
-		--hostcontroller)HOSTCONTROLLER="$(listmods ide/ ide-) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/  nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
+		--hostcontroller)HOSTCONTROLLER="$(listmods virtio/virtio_pci) $(listmods ide/ ide-) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/ virtio_blk nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $(listmods virtio_blk)"
 				 MODULES_INITRAMFS="$MODULES_INITRAMFS $HOSTCONTROLLER"
 				 showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				 ;;
