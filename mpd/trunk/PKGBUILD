@@ -5,7 +5,7 @@
 
 pkgname=mpd
 pkgver=0.15.9
-pkgrel=2
+pkgrel=3
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -14,10 +14,10 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl'
          'sqlite3' 'libsamplerate' 'libmms' 'wavpack' 'libmpcdec' 'avahi')
 makedepends=('pkgconfig')
 install=${pkgname}.install
-source=(http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2
+source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
         'mpd')
 md5sums=('88f7bc0b17eac81d03b24929d12b8aa1'
-         'b1fd15de359db08e4b9ae4b199640f0e')
+         '63b4320c8eb415c1ddc6e5fb5e272944')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
@@ -47,5 +47,5 @@ package() {
   install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example || return 1
 
   install -D ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd || return 1
-  install -d ${pkgdir}/var/lib/mpd/playlists ${pkgdir}/var/log/mpd ${pkgdir}/var/run/mpd
+  install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd} || return 1
 }
