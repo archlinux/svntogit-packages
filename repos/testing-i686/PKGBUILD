@@ -1,0 +1,40 @@
+# $Id$
+# Contributor: orelien <aurelien.foret@wanadoo.fr>
+# Maintainer:
+
+pkgname=rp-pppoe
+pkgver=3.10
+pkgrel=5
+pkgdesc="Roaring Penguin's Point-to-Point Protocol over Ethernet client"
+arch=('i686' 'x86_64')
+url="http://www.roaringpenguin.com/pppoe/"
+license=('GPL')
+groups=('base')
+depends=('ppp>=2.4.5' 'sh')
+options=('!makeflags')
+backup=(etc/ppp/pppoe.conf etc/ppp/firewall-standalone etc/ppp/firewall-masq etc/ppp/pppoe-server-options)
+source=(http://www.roaringpenguin.com/files/download/rp-pppoe-$pkgver.tar.gz adsl)
+install=rp-pppoe.install
+md5sums=('d58a13cc4185bca6121a606ff456dec0'
+         'adace1ad441aa88dcb3db52fb7f9c97f')
+
+build() {
+  cd $srcdir/$pkgname-$pkgver/src
+  ./configure --prefix=/usr --enable-plugin=/ppp-2.4.4
+  make || return 1
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver/src
+  make DESTDIR=$pkgdir install
+  
+  #moving .so files to /usr/lib according to FS#13876
+  mkdir -p ${pkgdir}/usr/lib/rp-pppoe
+  mv ${pkgdir}/etc/ppp/plugins/rp-pppoe.so ${pkgdir}/usr/lib/rp-pppoe/
+  #not necessary after moving the plugin
+  rm -rf ${pkgdir}/etc/ppp/plugins
+  #changing config to the new path
+  #sed -i 's/LINUX_PLUGIN=/LINUX_PLUGIN=\/usr\/lib\/rp-pppoe\/rp-pppoe.so/g' ${pkgdir}/etc/ppp/pppoe.conf
+  
+  install -Dm755 $srcdir/adsl $pkgdir/etc/rc.d/adsl
+}
