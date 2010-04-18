@@ -1,0 +1,47 @@
+# $Id$
+# Contributor: Eric Belanger <eric@archlinux.org>
+# Maintainer: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgname=proftpd
+pkgver=1.3.3
+pkgrel=5
+pkgdesc="A high-performance, scalable FTP server"
+arch=('i686' 'x86_64')
+url="http://www.proftpd.org"
+license=('GPL')
+depends=('glibc' 'pam' 'ncurses' 'libcap' 'libldap' 
+	 'libmysqlclient' 'postgresql-libs')
+backup=('etc/proftpd.conf' 'etc/conf.d/proftpd')
+source=(ftp://ftp.proftpd.org/distrib/source/${pkgname}-${pkgver}.tar.bz2
+	'proftpd'
+        'proftpd.logrotate'
+	'proftpd.conf.d')
+md5sums=('3951244f1940f0a40e8af142a9cf67fe'
+         '99f6f9a989e70e3fa50809fc2bbbbb0a'
+         'ddb09eb13131becdf0e081eef413116b'
+         '71d5932b0461c318ed68c2c0c2660736')
+
+build() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	./configure --prefix=/usr --mandir=/usr/share/man --disable-pam \
+	    --with-modules=mod_quotatab:mod_quotatab_file:mod_tls:mod_ldap:mod_sql:mod_sql_mysql:mod_sql_postgres \
+	    --sysconfdir=/etc --localstatedir=/var/run --enable-ctrls --enable-ipv6 \
+	    --with-includes=/usr/include/mysql:/usr/include/postgresql \
+	    --with-libraries=/usr/lib/mysql:/usr/lib/postgresql --enable-nls
+	make || return 1
+}
+
+package() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	make DESTDIR=${pkgdir} install
+	install -Dm644 ../proftpd.logrotate ${pkgdir}/etc/logrotate.d/proftpd
+	install -Dm644 ../proftpd.conf.d ${pkgdir}/etc/conf.d/proftpd
+	install -Dm755 ../proftpd ${pkgdir}/etc/rc.d/proftpd
+	install -Dm755 contrib/xferstats.holger-preiss \
+	   ${pkgdir}/usr/bin/ftpstats
+	cd ${pkgdir}/etc
+	sed -i 's|nogroup|nobody|g' proftpd.conf
+	rmdir ${pkgdir}/usr/libexec
+}
