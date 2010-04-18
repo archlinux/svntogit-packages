@@ -4,7 +4,7 @@
 
 pkgname=ncurses
 pkgver=5.7
-pkgrel=2.1
+pkgrel=3
 pkgdesc="System V Release 4.0 curses emulation library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/ncurses/"
@@ -14,12 +14,26 @@ source=(ftp://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz)
 md5sums=('cce05daf61a64501ef6cd8da1f727ec6')
 
 build() {
-  cd ${srcdir}/${pkgname}-${pkgver}
-
-  ./configure --prefix=/usr --mandir=/usr/share/man \
+  cd ${srcdir}/
+  mkdir ncurses{,w}-build
+  
+  cd ${srcdir}/ncursesw-build
+  ../${pkgname}-${pkgver}/configure --prefix=/usr --mandir=/usr/share/man \
      --with-shared --with-normal --without-debug --without-ada \
      --with-install-prefix=${pkgdir} --enable-widec 
   make || return 1
+
+  # libncurses.so.5 for external binary support 
+  cd ${srcdir}/ncurses-build
+  [ $CARCH = "x86_64" ] && CONFIGFLAG="--with-chtype=long"
+  ../${pkgname}-${pkgver}/configure --prefix=/usr \
+    --with-shared --with-normal --without-debug --without-ada \
+    --with-install-prefix=${pkgdir} $CONFIGFLAG
+  make || return 1
+}
+
+package() {
+  cd ${srcdir}/ncursesw-build
   make install
 
   # move libraries needed for boot to /lib (we call tput in initscripts)
@@ -46,13 +60,8 @@ build() {
   ln -sf libncursesw.a ${pkgdir}/usr/lib/libcursesw.a
   ln -sf libncurses.a ${pkgdir}/usr/lib/libcurses.a
 
-  # Install libncurses.so.5 for external binary support 
-  [ $CARCH = "x86_64" ] && CONFIGFLAG="--with-chtype=long"
-  ./configure --prefix=/usr \
-    --with-shared --with-normal --without-debug --without-ada \
-    --with-install-prefix=${pkgdir} $CONFIGFLAG
-  make || return 1
-  
+  # non-widec compatibility library
+  cd ${srcdir}/ncurses-build        
   install -Dm755 lib/libncurses.so.${pkgver} ${pkgdir}/usr/lib/libncurses.so.${pkgver}
   ln -sf libncurses.so.${pkgver} ${pkgdir}/usr/lib/libncurses.so.5
 
