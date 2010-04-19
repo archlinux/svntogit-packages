@@ -5,7 +5,7 @@
 
 pkgname=mpd
 pkgver=0.15.9
-pkgrel=4
+pkgrel=5
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -46,6 +46,6 @@ package() {
 
   install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example || return 1
 
-  install -D ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd || return 1
+  install -Dm755 ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd || return 1
   install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd} || return 1
 }
