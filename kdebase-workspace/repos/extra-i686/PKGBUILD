@@ -1,0 +1,78 @@
+# $Id: PKGBUILD 59826 2009-11-28 01:40:21Z andrea $
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=kdebase-workspace
+pkgver=4.4.2
+pkgrel=4
+pkgdesc="KDE Base Workspace"
+arch=('i686' 'x86_64')
+url='http://www.kde.org'
+license=('GPL' 'LGPL' 'FDL')
+groups=('kde')
+# note on libxdamage:
+# 	not detected by namcap because libgl depends on it
+#	but nvidia providing libgl does not depend on libxdamage
+depends=('polkit-kde' 'kdepimlibs' 'kdepim-runtime' 'kdebase-runtime' 'qimageblitz'
+         'libxxf86misc' 'libxcomposite' 'libxss' 'lm_sensors' 'libxklavier' 'libxft'
+         'libxdamage' 'xorg-utils' 'libxrandr')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'networkmanager' 'bluez' 'kdebindings-python'
+             'kdebindings-ruby')
+replaces=('kdmtheme' 'kde-common' 'guidance-power-manager' 'policykit-kde')
+conflicts=('kde-common' 'guidance-power-manager' 'policykit-kde')
+install='kdebase-workspace.install'
+backup=('usr/share/config/kdm/kdmrc'
+        'etc/pam.d/kde'
+        'etc/pam.d/kde-np'
+        'etc/pam.d/kscreensaver')
+source=("http://download.kde.org/stable/${pkgver}/src/${pkgname}-${pkgver}.tar.bz2"
+        'kdm-zsh-profile.patch' 'kdm' 'kde.pam' 'kde-np.pam' 'kscreensaver.pam'
+        'fixpath.patch' 'terminate-server.patch'
+        'kdebase-workspace-4.3.5-CVE-2010-0436.diff'
+	'fix-powerdevil-suspend.patch')
+md5sums=('6251e5d0060bd1529f90b9eaf5f84230'
+         '721e97031b62aee8914e8617e86f9235'
+         '363a36b63f84bac79959cfbefdb8309e'
+         '10a490653b002e6f9e7476ff9d37c011'
+         '552337fd9a3982d809ea16c7f0033d42'
+         '367a3538f54db71f108b34cfa31088ac'
+         '47a1f12673f66e62e2463efd7037a26a'
+         '814350c52c135d6f7bdada1e29223d38'
+         '68c1dfe76e80812e5e049bb599b3374e'
+	 '3e50fd1dd00c724e7b28599492a37054')
+
+build() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+	patch -p0 -i ${srcdir}/kdm-zsh-profile.patch || return 1
+	patch -p0 -i ${srcdir}/fixpath.patch || return 1
+	patch -p0 -i ${srcdir}/terminate-server.patch || return 1
+
+	# fixed in 4.4.3
+	patch -p0 -i ${srcdir}/kdebase-workspace-4.3.5-CVE-2010-0436.diff || return 1
+	patch -p5 -i ${srcdir}/fix-powerdevil-suspend.patch || return 1
+
+	cd ${srcdir}
+	mkdir build
+	cd build
+	cmake ../${pkgname}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_SKIP_RPATH=ON \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DWITH_Xmms=OFF \
+		-DWITH_Googlegadgets=OFF \
+		-DWITH_QEdje=OFF \
+		-DWITH_PolkitQt=OFF
+	make || return 1
+}
+
+package() {
+	cd $srcdir/build
+	make DESTDIR=$pkgdir install
+
+	install -D -m755 ${srcdir}/kdm ${pkgdir}/etc/rc.d/kdm
+	install -D -m644 ${srcdir}/kde.pam ${pkgdir}/etc/pam.d/kde
+	install -D -m644 ${srcdir}/kde-np.pam ${pkgdir}/etc/pam.d/kde-np
+	install -D -m644 ${srcdir}/kscreensaver.pam ${pkgdir}/etc/pam.d/kscreensaver
+	install -d -m755 ${pkgdir}/etc/X11/sessions/
+	ln -sf /usr/share/apps/kdm/sessions/kde{,-safe}.desktop ${pkgdir}/etc/X11/sessions/
+	install -d -m755 ${pkgdir}/etc/kde/{env,shutdown}
+}
