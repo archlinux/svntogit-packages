@@ -2,7 +2,7 @@
 # Maintainer: tobias [tobias [at] archlinux.org]
 pkgname=mutt
 pkgver=1.5.20
-pkgrel=3
+pkgrel=4
 pkgdesc="A small but very powerful text-based mail client"
 arch=(i686 x86_64)
 license=('GPL')
