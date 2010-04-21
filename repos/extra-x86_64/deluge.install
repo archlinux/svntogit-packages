@@ -1,0 +1,29 @@
+post_install() {
+  getent group deluge >/dev/null 2>&1 || usr/sbin/groupadd -g 125 deluge
+  if getent passwd deluge > /dev/null 2>&1; then
+      usr/sbin/usermod -c 'Deluge user' -d /srv/deluge -s /bin/false deluge > /dev/null 2>&1
+  else
+      usr/sbin/useradd -c 'Deluge user' -u 125 -g deluge -d /srv/deluge -s /bin/false deluge
+  fi
+  usr/bin/passwd -l deluge &>/dev/null
+
+  chown deluge.deluge srv/deluge -R
+  xdg-icon-resource forceupdate --theme hicolor &> /dev/null
+
+cat << _EOF
+>>> Deluge's daemon is running default with the "deluge" user. The default download directory is /srv/deluge/.
+    You can change the user by editing /etc/conf.d/deluged
+_EOF
+}
+
+post_upgrade() {
+  post_install $1
+}
+
+pre_remove() {
+  getent passwd deluge >/dev/null 2>&1 && userdel deluge
+  getent group deluge >/dev/null 2>&1 && groupdel deluge
+
+  xdg-icon-resource forceupdate --theme hicolor &> /dev/null
+}
+
