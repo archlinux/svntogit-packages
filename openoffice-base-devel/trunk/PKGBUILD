@@ -4,7 +4,7 @@
 
 pkgbase="openoffice-base-devel"
 pkgname=('openoffice-base-devel' 'openoffice-sdk-devel')
-_OO_milestone=DEV300_m76
+_OO_milestone=DEV300_m77
 pkgver=3.3_${_OO_milestone/DEV/dev}
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -17,7 +17,7 @@ makedepends=(# the real makedeps
 	     # from main OOo the deps
 	     "curl>=7.19.7" "hunspell>=1.2.8" "python>=2.6.4" 'libwpd' 'libxaw' "neon>=0.28.6"
              'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils'
-	     'beanshell' 'saxon' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'boost>=1.41.0' 'lucene') #'redland>=1.0.10-2' 'libmythes'
+	     'beanshell' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'boost>=1.41.0' 'lucene' 'junit') #'redland>=1.0.10-2' 'libmythes' 'saxon' 'cppunit' 
 source=(${pkgname}-${_OO_milestone}.tar.xz
 	http://tools.openoffice.org/unowinreg_prebuild/680/unowinreg.dll
 	startcenter.desktop
@@ -27,10 +27,13 @@ source=(${pkgname}-${_OO_milestone}.tar.xz
 	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
 	shellfix-buildbreaker-for-enable-lockdown.patch
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/sal-cpprt-gcc-4.5-workaround.diff
+	iFIXME-checkdeliver.diff
 	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
-                                                                       
-# see ftp://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build for upstream build instructions
+
+# see http://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build
 
 # source PKGBUILD && mksource
 mksource() {
@@ -62,11 +65,16 @@ build() {
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
 	patch -Np1 -i ${srcdir}/shellfix-buildbreaker-for-enable-lockdown.patch || return 1
+	# gcc4.5 fix
+	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff || return 1
+	patch -Np0 -i ${srcdir}/sal-cpprt-gcc-4.5-workaround.diff || return 1
+	# http://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/Patches/DEV300/iFIXME-checkdeliver.diff
+	patch -Np1 -i ${srcdir}/iFIXME-checkdeliver.diff || return 1
 	
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
 	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
-
+	
 	# remove the startup wizard
 	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff || return 1
 	# enables the default system-file-picker in case we have that built
@@ -77,7 +85,9 @@ build() {
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
-	 else EXTRAOPTS="--with-stlport --without-system-graphite"
+	  # http://qa.openoffice.org/issues/show_bug.cgi?id=109791
+  	  # --without-system-graphite"
+	 else EXTRAOPTS="--with-stlport"
 	fi
 
 	cd ${srcdir}/${_OO_milestone}
@@ -132,6 +142,8 @@ build() {
 	--without-nas\
 	--without-ppds\
 	--without-system-agg\
+	--without-system-cppunit\
+	--without-system-saxon\
 	--with-openldap\
 	--with-system-stdlibs\
 	--with-system-libs\
@@ -141,10 +153,10 @@ build() {
 	--with-system-headers\
 	--with-alloc=system\
 	--with-jdk-home=${JAVA_HOME}\
-	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
 	--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
 	--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
 	--with-use-shell=bash\
+	--with-external-tar=${SRCDEST}\
 	 $EXTRAOPTS || return 1
 
 # causes various issues, see http://qa.openoffice.org/issues/show_bug.cgi?id=90956
@@ -154,13 +166,17 @@ build() {
 #http://bugs.archlinux.org/task/18777
 #	--with-system-redland\  
 
+# see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
+#	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
 
-#	--without-system-lucene\
 #	--enable-layout\ /bin/bash: tralay: command not found ???
 #	--with-system-jfreereport
 #	--with-system-mythes\
 # we will need myspell dicts for --with-system-dicts --without-myspell-dicts
-#	--without-system-boost\
+
+	# get external source tarballs if needed
+#	export TARFILE_LOCATION=${SRCDEST}
+#	./fetch_tarballs.sh ooo.lst
 
 	# Setup environment for build
 	if [ "$CARCH" = "x86_64" ]; then
