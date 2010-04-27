@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Eduardo Romero <eduardo@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+
+pkgname=libgphoto2
+pkgver=2.4.9
+pkgrel=1
+pkgdesc="The core library of gphoto2, designed to allow access to digital camera by external programs."
+arch=(i686 x86_64)
+url="http://www.gphoto.org"
+license=(LGPL)
+depends=('libexif>=0.6.19' 'libjpeg>=8' 'libtool>=2.2.6b' 'libusb')
+install=libgphoto2.install
+options=('libtool')
+source=(http://downloads.sourceforge.net/gphoto/${pkgname}-${pkgver}.tar.gz)
+md5sums=('26e0d7cff6c6f0be453d7612309d80a6')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  udevscriptdir=/lib/udev ./configure --prefix=/usr --with-drivers=all --disable-static --disable-rpath || return 1
+  LD_PRELOAD="" make || return 1
+  make DESTDIR="${pkgdir}" install || return 1
+
+  rm -f ${pkgdir}/usr/lib/libgphoto2/${pkgver}/*.a
+  
+  install -m755 -d "${pkgdir}/usr/share/hal/fdi/information/20thirdparty"
+  install -m755 -d "${pkgdir}/lib/udev/rules.d"
+  LD_LIBRARY_PATH="${pkgdir}/usr/lib${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH" \
+  CAMLIBS="${pkgdir}/usr/lib/libgphoto2/${pkgver}" \
+      "${pkgdir}/usr/lib/libgphoto2/print-camera-list" hal-fdi > \
+      "${pkgdir}/usr/share/hal/fdi/information/20thirdparty/10-camera-libgphoto2.fdi" || return 1
+
+  LD_LIBRARY_PATH="${pkgdir}/usr/lib${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH" \
+  CAMLIBS="${pkgdir}/usr/lib/libgphoto2/${pkgver}" \
+      "${pkgdir}/usr/lib/libgphoto2/print-camera-list" udev-rules version 136 group camera mode 0660 > \
+      "${pkgdir}/lib/udev/rules.d/54-gphoto.rules" || return 1
+
+  # Remove recursive symlink
+  rm -f "${pkgdir}/usr/include/gphoto2/gphoto2" || return 1
+}
