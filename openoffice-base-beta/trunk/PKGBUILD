@@ -4,7 +4,7 @@
 
 pkgbase="openoffice-base-beta"
 pkgname=('openoffice-base-beta' 'openoffice-sdk-beta')
-_OO_milestone=OOO320_m15
+_OO_milestone=OOO320_m16
 pkgver=3.2.1_${_OO_milestone/OOO/ooo} # m12=3.2.0 RC5
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -13,12 +13,12 @@ url="http://www.openoffice.org"
 makedepends=(# the real makedeps
              'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst'
              'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2.2" 
-             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.7.1"
+             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
 	     # from main OOo the deps
 	     "curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
              'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils'
-	     'beanshell' 'saxon' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene' 'boost>=1.41.0')
-	     # libmythes 'redland>=1.0.10' 
+	     'beanshell' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene' 'boost>=1.41.0')
+	     # libmythes 'redland>=1.0.10' 'saxon' 
 source=(${pkgname}-${_OO_milestone}.tar.xz
 	http://tools.openoffice.org/unowinreg_prebuild/680/unowinreg.dll
 	startcenter.desktop
@@ -29,6 +29,11 @@ source=(${pkgname}-${_OO_milestone}.tar.xz
 	buildfix_FormulaMissingHeader.diff
 	buildfix_system_db48.diff
 	redland.patch
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/layout-parallel-build.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/build-fix-layout-numfmt.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/buildfix-svx-uiconfig-layout.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/buildfix-sw-uiconfig-layout.diff
 	openoffice-beta.profile)
 options=('!distcc' '!ccache' '!makeflags')
 
@@ -66,6 +71,15 @@ build() {
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_system_db48.diff || return 1
+	# fix for --enable-layout 
+	# /bin/bash: tralay: command not found
+	patch -Np0 -i ${srcdir}/layout-parallel-build.diff || return 1
+	patch -Np0 -i ${srcdir}/build-fix-layout-numfmt.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix-svx-uiconfig-layout.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix-sw-uiconfig-layout.diff || return 1
+
+	# gcc4.5 fix
+	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff || return 1
 	
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
@@ -86,18 +100,20 @@ build() {
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk || return 1
-	 else EXTRAOPTS="--with-stlport --without-system-graphite"
+	  # http://qa.openoffice.org/issues/show_bug.cgi?id=109791
+	  #  --without-system-graphite
+	 else EXTRAOPTS="--with-stlport"
 	fi
 
 	cd ${srcdir}/${_OO_milestone}
 
 	# needed to build the OO-SDK
 	mv ${srcdir}/unowinreg.dll external/unowinreg || return 1
-
 	# export C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
 	unset CXXFLAGS
+#	export ARCH_FLAGS="$CFLAGS" # causes errors
 
 	# Need to recreate the configure script because of patches
 	autoreconf -v || return 1
@@ -122,6 +138,7 @@ build() {
 	--enable-gtk\
 	--enable-graphite\
 	--enable-kde4\
+	--enable-layout\
 	--enable-ldap\
 	--enable-lockdown\
 	--enable-mediawiki\
@@ -141,7 +158,9 @@ build() {
 	--without-nas\
 	--without-ppds\
 	--without-system-agg\
-	--without-system-lucene\
+	--without-system-cppunit\
+	--without-system-redland\
+	--without-system-saxon\
 	--with-openldap\
 	--with-system-stdlibs\
 	--with-system-libs\
@@ -153,17 +172,27 @@ build() {
 	--with-jdk-home=${JAVA_HOME}\
 	--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
 	--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
-	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
 	--with-use-shell=bash\
 	 $EXTRAOPTS || return 1
 
-#	--with-system-redland\
-#	--enable-layout\ /bin/bash: tralay: command not found ???
-#	--with-system-jfreereport
-#	--with-system-mythes\
-#	we will need myspell dicts for --with-system-dicts --without-myspell-dicts
-#	--without-system-boost\
+# causes various issues, see http://qa.openoffice.org/issues/show_bug.cgi?id=90956
+#http://bugs.archlinux.org/task/18357
+#http://bugs.archlinux.org/task/18133
+#http://bugs.archlinux.org/task/18461
+#http://bugs.archlinux.org/task/18777
+#	--with-system-redland\  
 
+# see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
+#	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
+
+#	--enable-layout\ /bin/bash: tralay: command not found ???
+
+#	--with-system-jfreereport
+
+#	--with-system-mythes\
+
+#	we will need myspell dicts for --with-system-dicts --without-myspell-dicts
+	
 	# Setup environment for build
 	if [ "$CARCH" = "x86_64" ]; then
 	  source LinuxX86-64Env.Set.sh
@@ -183,7 +212,8 @@ package_openoffice-base-beta() {
  install=openoffice.install
  depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6" 'gtk2'
           'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils' 
-	  'beanshell' 'saxon' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene') # 'libmythes' 'redland' 
+	  'beanshell' 'saxon' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene')
+ # 'libmythes' 'redland' 
  optdepends=('java-runtime:	adds java support'
             'libcups:		adds printing support'
             'gconf:		adds additional gnome support'
