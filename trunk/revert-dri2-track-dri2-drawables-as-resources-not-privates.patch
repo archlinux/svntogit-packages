@@ -1,0 +1,309 @@
+From c394b17266301d363a9e234f58f8015f74e01307 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Tue, 27 Apr 2010 07:53:22 +0000
+Subject: Revert "DRI2: Track DRI2 drawables as resources, not privates"
+
+This change breaks GLX compositing managers.
+See Bug 27767 <https://bugs.freedesktop.org/show_bug.cgi?id=27767>
+
+This reverts commit 0c499f2ee4ae2b7dc424009abb336fc81a8a2853.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+diff --git a/glx/glxdri2.c b/glx/glxdri2.c
+index bde519a..edd29b0 100644
+--- a/glx/glxdri2.c
++++ b/glx/glxdri2.c
+@@ -105,6 +105,11 @@ __glXDRIdrawableDestroy(__GLXdrawable *drawable)
+     
+     (*core->destroyDrawable)(private->driDrawable);
+ 
++    /* If the X window was destroyed, the dri DestroyWindow hook will
++     * aready have taken care of this, so only call if pDraw isn't NULL. */
++    if (drawable->pDraw != NULL)
++	DRI2DestroyDrawable(drawable->pDraw);
++
+     __glXDrawableRelease(drawable);
+ 
+     xfree(private);
+diff --git a/hw/xfree86/dri2/dri2.c b/hw/xfree86/dri2/dri2.c
+index 63bef28..48618e1 100644
+--- a/hw/xfree86/dri2/dri2.c
++++ b/hw/xfree86/dri2/dri2.c
+@@ -45,14 +45,15 @@
+ 
+ #include "xf86.h"
+ 
+-static int           dri2ScreenPrivateKeyIndex;
++static int dri2ScreenPrivateKeyIndex;
+ static DevPrivateKey dri2ScreenPrivateKey = &dri2ScreenPrivateKeyIndex;
+-static RESTYPE       dri2DrawableRes;
+-
+-typedef struct _DRI2Screen *DRI2ScreenPtr;
++static int dri2WindowPrivateKeyIndex;
++static DevPrivateKey dri2WindowPrivateKey = &dri2WindowPrivateKeyIndex;
++static int dri2PixmapPrivateKeyIndex;
++static DevPrivateKey dri2PixmapPrivateKey = &dri2PixmapPrivateKeyIndex;
+ 
+ typedef struct _DRI2Drawable {
+-    DRI2ScreenPtr        dri2_screen;
++    unsigned int	 refCount;
+     int			 width;
+     int			 height;
+     DRI2BufferPtr	*buffers;
+@@ -66,8 +67,9 @@ typedef struct _DRI2Drawable {
+     int			 swap_limit; /* for N-buffering */
+ } DRI2DrawableRec, *DRI2DrawablePtr;
+ 
++typedef struct _DRI2Screen *DRI2ScreenPtr;
++
+ typedef struct _DRI2Screen {
+-    ScreenPtr			 screen;
+     unsigned int		 numDrivers;
+     const char			**driverNames;
+     const char			*deviceName;
+@@ -93,33 +95,43 @@ DRI2GetScreen(ScreenPtr pScreen)
+ static DRI2DrawablePtr
+ DRI2GetDrawable(DrawablePtr pDraw)
+ {
+-    DRI2DrawablePtr pPriv;
+-    int rc;
+- 
+-    rc = dixLookupResourceByType((pointer *) &pPriv, pDraw->id,
+-				 dri2DrawableRes, NULL, DixReadAccess);
+-    if (rc != Success)
++    WindowPtr		  pWin;
++    PixmapPtr		  pPixmap;
++
++    if (!pDraw)
+ 	return NULL;
+ 
+-    return pPriv;
++    if (pDraw->type == DRAWABLE_WINDOW)
++    {
++	pWin = (WindowPtr) pDraw;
++	return dixLookupPrivate(&pWin->devPrivates, dri2WindowPrivateKey);
++    }
++    else
++    {
++	pPixmap = (PixmapPtr) pDraw;
++	return dixLookupPrivate(&pPixmap->devPrivates, dri2PixmapPrivateKey);
++    }
+ }
+ 
+ int
+ DRI2CreateDrawable(DrawablePtr pDraw)
+ {
++    WindowPtr	    pWin;
++    PixmapPtr	    pPixmap;
+     DRI2DrawablePtr pPriv;
+-    int rc;
+ 
+-    rc = dixLookupResourceByType((pointer *) &pPriv, pDraw->id,
+-				 dri2DrawableRes, NULL, DixReadAccess);
+-    if (rc == Success || rc != BadValue)
+-	return rc;
++    pPriv = DRI2GetDrawable(pDraw);
++    if (pPriv != NULL)
++    {
++	pPriv->refCount++;
++	return Success;
++    }
+ 
+     pPriv = xalloc(sizeof *pPriv);
+     if (pPriv == NULL)
+ 	return BadAlloc;
+ 
+-    pPriv->dri2_screen = DRI2GetScreen(pDraw->pScreen);
++    pPriv->refCount = 1;
+     pPriv->width = pDraw->width;
+     pPriv->height = pDraw->height;
+     pPriv->buffers = NULL;
+@@ -132,30 +144,43 @@ DRI2CreateDrawable(DrawablePtr pDraw)
+     pPriv->last_swap_target = -1;
+     pPriv->swap_limit = 1; /* default to double buffering */
+ 
+-    if (!AddResource(pDraw->id, dri2DrawableRes, pPriv))
+-	return BadAlloc;
++    if (pDraw->type == DRAWABLE_WINDOW)
++    {
++	pWin = (WindowPtr) pDraw;
++	dixSetPrivate(&pWin->devPrivates, dri2WindowPrivateKey, pPriv);
++    }
++    else
++    {
++	pPixmap = (PixmapPtr) pDraw;
++	dixSetPrivate(&pPixmap->devPrivates, dri2PixmapPrivateKey, pPriv);
++    }
+ 
+     return Success;
+ }
+ 
+-static int DRI2DrawableGone(pointer p, XID id)
++static void
++DRI2FreeDrawable(DrawablePtr pDraw)
+ {
+-    DRI2DrawablePtr pPriv = p;
+-    DRI2ScreenPtr   ds = pPriv->dri2_screen;
+-    DrawablePtr     root;
+-    int i;
+-
+-    root = &WindowTable[ds->screen->myNum]->drawable;
+-    if (pPriv->buffers != NULL) {
+-	for (i = 0; i < pPriv->bufferCount; i++)
+-	    (*ds->DestroyBuffer)(root, pPriv->buffers[i]);
++    DRI2DrawablePtr pPriv;
++    WindowPtr  	    pWin;
++    PixmapPtr	    pPixmap;
+ 
+-	xfree(pPriv->buffers);
+-    }
++    pPriv = DRI2GetDrawable(pDraw);
++    if (pPriv == NULL)
++	return;
+ 
+     xfree(pPriv);
+ 
+-    return Success;
++    if (pDraw->type == DRAWABLE_WINDOW)
++    {
++	pWin = (WindowPtr) pDraw;
++	dixSetPrivate(&pWin->devPrivates, dri2WindowPrivateKey, NULL);
++    }
++    else
++    {
++	pPixmap = (PixmapPtr) pDraw;
++	dixSetPrivate(&pPixmap->devPrivates, dri2PixmapPrivateKey, NULL);
++    }
+ }
+ 
+ static int
+@@ -509,6 +534,13 @@ DRI2SwapComplete(ClientPtr client, DrawablePtr pDraw, int frame,
+ 	return;
+     }
+ 
++    if (pPriv->refCount == 0) {
++        xf86DrvMsg(pScreen->myNum, X_ERROR,
++		   "[DRI2] %s: bad drawable refcount\n", __func__);
++	DRI2FreeDrawable(pDraw);
++	return;
++    }
++
+     ust = ((CARD64)tv_sec * 1000000) + tv_usec;
+     if (swap_complete)
+ 	swap_complete(client, swap_data, type, ust, frame, pPriv->swap_count);
+@@ -721,6 +753,36 @@ DRI2WaitSBC(ClientPtr client, DrawablePtr pDraw, CARD64 target_sbc,
+     return Success;
+ }
+ 
++void
++DRI2DestroyDrawable(DrawablePtr pDraw)
++{
++    DRI2ScreenPtr   ds = DRI2GetScreen(pDraw->pScreen);
++    DRI2DrawablePtr pPriv;
++
++    pPriv = DRI2GetDrawable(pDraw);
++    if (pPriv == NULL)
++	return;
++
++    pPriv->refCount--;
++    if (pPriv->refCount > 0)
++	return;
++
++    if (pPriv->buffers != NULL) {
++	int i;
++
++	for (i = 0; i < pPriv->bufferCount; i++)
++	    (*ds->DestroyBuffer)(pDraw, pPriv->buffers[i]);
++
++	xfree(pPriv->buffers);
++    }
++
++    /* If the window is destroyed while we have a swap pending, don't
++     * actually free the priv yet.  We'll need it in the DRI2SwapComplete()
++     * callback and we'll free it there once we're done. */
++    if (!pPriv->swapsPending)
++	DRI2FreeDrawable(pDraw);
++}
++
+ Bool
+ DRI2Connect(ScreenPtr pScreen, unsigned int driverType, int *fd,
+ 	    const char **driverName, const char **deviceName)
+@@ -772,7 +834,6 @@ DRI2ScreenInit(ScreenPtr pScreen, DRI2InfoPtr info)
+     if (!ds)
+ 	return FALSE;
+ 
+-    ds->screen         = pScreen;
+     ds->fd	       = info->fd;
+     ds->deviceName     = info->deviceName;
+ 
+@@ -836,8 +897,6 @@ DRI2Setup(pointer module, pointer opts, int *errmaj, int *errmin)
+ {
+     static Bool setupDone = FALSE;
+ 
+-    dri2DrawableRes = CreateNewResourceType(DRI2DrawableGone, "DRI2Drawable");
+-
+     if (!setupDone)
+     {
+ 	setupDone = TRUE;
+diff --git a/hw/xfree86/dri2/dri2ext.c b/hw/xfree86/dri2/dri2ext.c
+index 1ac4a5f..bd92fd3 100644
+--- a/hw/xfree86/dri2/dri2ext.c
++++ b/hw/xfree86/dri2/dri2ext.c
+@@ -51,6 +51,7 @@
+ #include "xf86Module.h"
+ 
+ static ExtensionEntry	*dri2Extension;
++static RESTYPE		 dri2DrawableRes;
+ 
+ static Bool
+ validDrawable(ClientPtr client, XID drawable, Mask access_mode,
+@@ -171,6 +172,11 @@ ProcDRI2CreateDrawable(ClientPtr client)
+     if (status != Success)
+ 	return status;
+ 
++    if (!AddResource(stuff->drawable, dri2DrawableRes, pDrawable)) {
++	DRI2DestroyDrawable(pDrawable);
++	return BadAlloc;
++    }
++
+     return client->noClientException;
+ }
+ 
+@@ -186,6 +192,8 @@ ProcDRI2DestroyDrawable(ClientPtr client)
+ 		       &pDrawable, &status))
+ 	return status;
+ 
++    FreeResourceByType(stuff->drawable, dri2DrawableRes, FALSE);
++
+     return client->noClientException;
+ }
+ 
+@@ -612,11 +620,25 @@ SProcDRI2Dispatch (ClientPtr client)
+     }
+ }
+ 
++static int DRI2DrawableGone(pointer p, XID id)
++{
++    DrawablePtr pDrawable = p;
++
++    DRI2DestroyDrawable(pDrawable);
++
++    return Success;
++}
++
+ int DRI2EventBase;
+ 
+ static void
+ DRI2ExtensionInit(void)
+ {
++    dri2DrawableRes = CreateNewResourceType(DRI2DrawableGone, "DRI2Drawable");
++
++    if (!dri2DrawableRes)
++	return;
++
+     dri2Extension = AddExtension(DRI2_NAME,
+ 				 DRI2NumberEvents,
+ 				 DRI2NumberErrors,
+--
+cgit v0.8.3-6-g21f6
