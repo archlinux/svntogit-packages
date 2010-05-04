@@ -1,0 +1,58 @@
+# $Id: PKGBUILD 16363 2010-04-29 09:59:57Z ronald $
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: iKevin <kellwood at ameritech dot net>
+
+pkgname=umfpack
+pkgver=5.5.0
+_ufcfgver=3.5.0
+_amdver=2.2.1
+_cholmodver=1.7.1
+_colamdver=2.7.2
+_ccolamdver=2.7.2
+pkgrel=1
+pkgdesc="A multifrontal direct solver for unsymmetric linear systems (AMD/${_amdver}, UFConfig/${_ufcgfgver})"
+arch=('i686' 'x86_64')
+url="http://www.cise.ufl.edu/research/sparse/umfpack"
+license=('LGPL')
+makedepends=('lapack' 'blas')
+noextract=(CHOLMOD-${_cholmodver}.tar.gz
+	COLAMD-${_colamdver}.tar.gz
+	CCOLAMD-${_ccolamdver}.tar.gz)
+source=(http://www.cise.ufl.edu/research/sparse/umfpack/UMFPACK-$pkgver.tar.gz
+	http://www.cise.ufl.edu/research/sparse/UFconfig/UFconfig-${_ufcfgver}.tar.gz
+	http://www.cise.ufl.edu/research/sparse/amd/AMD-${_amdver}.tar.gz
+	http://www.cise.ufl.edu/research/sparse/cholmod/CHOLMOD-${_cholmodver}.tar.gz
+	http://www.cise.ufl.edu/research/sparse/colamd/COLAMD-${_colamdver}.tar.gz
+	http://www.cise.ufl.edu/research/sparse/ccolamd/CCOLAMD-${_ccolamdver}.tar.gz
+	UFconfig.mk)
+md5sums=('b3490d4f529fbcf4f415e60aa2680a15'
+         '4335ee565feec67e8ba9fc0f6a5e2504'
+         '25548053958c1c5810b17d077b8f37b9'
+         '9032c5724bee43ccd8f4546338a29fac'
+         '2b4e43c8ef33dacfade6d1ec49542ac1'
+         '79d813d5b54951060fc264172bfb5ca6'
+         'ce9731da58d58923a3cdc3fbef724c4e')
+
+build() {
+  cd "$srcdir/UMFPACK"
+  cp -rf "$srcdir/UFconfig/xerbla" .
+  cp -L ../UFconfig.mk $startdir/src/UFconfig
+  [ $CARCH == "x86_64" ] && sed -i 's#CFLAGS = -O3 -fexceptions#CFLAGS = -O3 -fexceptions -fPIC#' $srcdir/UFconfig/UFconfig.mk
+  make library || return 1
+  install -d "$pkgdir/usr/lib" "$pkgdir/usr/include"
+
+  install -D -m644 Lib/libumfpack.a "$pkgdir/usr/lib/libumfpack.a"
+  cp $startdir/src/UMFPACK/Include/*.h $startdir/pkg/usr/include
+
+  install -D -m644 "$srcdir/AMD/Lib/libamd.a" "$pkgdir/usr/lib/libamd.a"
+  cp $startdir/src/AMD/Include/*.h $startdir/pkg/usr/include
+
+  install -m644 "$srcdir/UFconfig/UFconfig.h" "$pkgdir/usr/include" || return 1
+
+  # Fix permissions
+  cd $startdir/pkg/usr/include
+  chmod oug+r *
+  cd $startdir/pkg/usr/lib
+  chmod oug+r *
+}
