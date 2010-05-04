@@ -38,6 +38,11 @@ package() {
   # more contrib stuff
   cp -a ./contrib $pkgdir/usr/share/git/ || return 1
 
+  # emacs interface
+  mkdir -p $pkgdir/usr/share/emacs/site-lisp
+  mv $pkgdir/usr/share/git/emacs $pkgdir/usr/share/emacs/site-lisp/git
+  rm $pkgdir/usr/share/emacs/site-lisp/git/.gitignore
+
   # how 'bout some manpages?
   for mansect in man1 man5 man7; do
     for manpage in $srcdir/$mansect/*; do
