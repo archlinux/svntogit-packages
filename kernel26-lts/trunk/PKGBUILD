@@ -4,8 +4,8 @@
 pkgbase=kernel26-lts
 pkgname=('kernel26-lts' 'kernel26-lts-headers') # Build stock -lts kernel
 _kernelname=${pkgname#kernel26}
-_basekernel=2.6.27
-pkgver=${_basekernel}.46
+_basekernel=2.6.32
+pkgver=${_basekernel}.12
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('GPL2')
@@ -15,18 +15,12 @@ source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
 	# the main kernel config files
         config config.x86_64
         # standard config files for mkinitcpio ramdisk
-        ${pkgname}.preset
-	# ext4 patches from Fedora
-	#http://cvs.fedoraproject.org/viewvc/rpms/kernel/F-10/?pathrev=kernel-2_6_27_29-170_2_79_fc10
-	linux-2.6.27-ext4-rename-ext4dev-to-ext4.patch
-	linux-2.6.27.9-ext4-cap-check-delay.patch)
-md5sums=('b3e78977aa79d3754cb7f8143d7ddabd'
-         '9ba438c8ab695b92fed5c170e257bebd'
-         '1d80e3f9eeef198d4e914c31e96b54c2'
-         '0fc7d1d87c855d74799cc7689186cb6e'
-         'a13338958d1b241f8dfd4c6014cad3d4'
-         '659953c9c437d311bf93eff505ef8e67'
-         '8cd12e9727d9221aacfa52ad9b9a42f9')
+        ${pkgname}.preset)
+md5sums=('260551284ac224c3a43c4adac7df4879'
+         '9d097d34648a1734b1a7f97c5d000f03'
+         '65ef30a48b0dbb44c0ab5be142aae967'
+         'aa1bfd047735e8e817e0b357f99ea9e2'
+         'a13338958d1b241f8dfd4c6014cad3d4')
 
 build() {
   cd ${srcdir}/linux-$_basekernel
@@ -34,10 +28,6 @@ build() {
      # add latest kernel stable patch
      patch -Np1 -i ${srcdir}/patch-$pkgver
    fi
-
-  # add full ext4 support
-  patch -Np1 -i ${srcdir}/linux-2.6.27-ext4-rename-ext4dev-to-ext4.patch || return 1
-  patch -Np1 -i ${srcdir}/linux-2.6.27.9-ext4-cap-check-delay.patch || return 1
 
   if [ "$CARCH" = "x86_64" ]; then
     cat ../config.x86_64 >./.config
@@ -51,6 +41,7 @@ build() {
   # this ensures our kernel version is always 2.6.XX-lts
   # this way, minor kernel updates will not break external modules
   sed -i 's|^EXTRAVERSION = .*$|EXTRAVERSION = |g' Makefile
+  # get kernel version
   make prepare
   # load configuration
   # Configure the kernel. Replace the line below with one of your choice.
@@ -62,7 +53,7 @@ build() {
   # stop here
   # this is useful to configure the kernel
   #msg "Stopping build"
-# return 1
+  # return 1
   ####################
   yes "" | make config
   # build!
@@ -72,7 +63,7 @@ build() {
 package_kernel26-lts() {
   pkgdesc="The Linux Kernel and modules - stable longtime supported kernel package suitable for servers"
   backup=(etc/mkinitcpio.d/${pkgname}.preset)
-  depends=('coreutils' 'kernel26-firmware>=2.6.27' 'module-init-tools' 'mkinitcpio>=0.5.20' 'udev-compat>=147')
+  depends=('coreutils' 'kernel26-firmware>=2.6.27' 'module-init-tools' 'mkinitcpio>=0.5.20')
   install=${pkgname}.install
 
   KARCH=x86
@@ -120,16 +111,20 @@ package_kernel26-lts-headers() {
     ${pkgdir}/usr/src/linux-${_kernver}/.config
   mkdir -p ${pkgdir}/usr/src/linux-${_kernver}/include
 
-  for i in acpi asm-{generic,x86} config linux math-emu media net pcmcia scsi sound video; do
+  for i in acpi asm-generic config generated linux math-emu media net pcmcia scsi sound trace video; do
     cp -a include/$i ${pkgdir}/usr/src/linux-${_kernver}/include/
   done
+
+  # copy arch includes for external modules
+  mkdir -p ${pkgdir}/usr/src/linux-${_kernver}/arch/x86
+  cp -a arch/x86/include ${pkgdir}/usr/src/linux-${_kernver}/arch/x86/
 
   # copy files necessary for later builds, like nvidia and vmware
   cp Module.symvers ${pkgdir}/usr/src/linux-${_kernver}
   cp -a scripts ${pkgdir}/usr/src/linux-${_kernver}
   # fix permissions on scripts dir
   chmod og-w -R ${pkgdir}/usr/src/linux-${_kernver}/scripts
-  #mkdir -p ${pkgdir}/usr/src/linux-${_kernver}/.tmp_versions
+  mkdir -p ${pkgdir}/usr/src/linux-${_kernver}/.tmp_versions
 
   mkdir -p ${pkgdir}/usr/src/linux-${_kernver}/arch/$KARCH/kernel
 
@@ -182,6 +177,11 @@ package_kernel26-lts-headers() {
   # in reference to:
   # http://bugs.archlinux.org/task/14568
   cp -a include/drm $pkgdir/usr/src/linux-${_kernver}/include/
+
+  # add headers for broadcom wl
+  # in reference to:
+  # http://bugs.archlinux.org/task/14568
+  cp -a include/trace $pkgdir/usr/src/linux-${_kernver}/include/
   
   # copy in Kconfig files
   for i in `find . -name "Kconfig*"`; do 
@@ -189,12 +189,8 @@ package_kernel26-lts-headers() {
     cp $i ${pkgdir}/usr/src/linux-${_kernver}/$i
   done
 
-  cd ${pkgdir}/usr/src/linux-${_kernver}/include && ln -s asm-$KARCH asm
-
   chown -R root.root ${pkgdir}/usr/src/linux-${_kernver}
   find ${pkgdir}/usr/src/linux-${_kernver} -type d -exec chmod 755 {} \;
-  cd ${pkgdir}/lib/modules/${_kernver} && \
-    (rm -f source build; ln -sf ../../../usr/src/linux-${_kernver} build)
 
   # remove unneeded architectures
   rm -rf ${pkgdir}/usr/src/linux-${_kernver}/arch/{alpha,arm,arm26,avr32,blackfin,cris,frv,h8300,ia64,m32r,m68k,m68knommu,mips,microblaze,mn10300,parisc,powerpc,ppc,s390,sh,sh64,sparc,sparc64,um,v850,xtensa}
