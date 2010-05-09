@@ -4,22 +4,37 @@
 
 pkgname=wxpython
 pkgver=2.8.10.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A wxWidgets GUI toolkit for Python"
 arch=('i686' 'x86_64')
 license=('custom:wxWindows')
 url="http://www.wxpython.org"
-depends=('wxgtk>=2.8.10.1' 'python>=2.6')
+depends=('wxgtk' 'python')
+makedepends=('mesa')
 source=(http://downloads.sourceforge.net/wxpython/wxPython-src-${pkgver}.tar.bz2 editra-ebmlib.diff)
 md5sums=('65d5ef166f23fe8b4c67f58df164f93e' '3d3cd0088207075b263ae7b624c17a64')
 sha1sums=('6598fbafd979a91f20100171fa23a91779f6dc62' '509676632f1122ab1309c3bd9feae4f78b337538')
 
 build() {
+  cd "${srcdir}/wxPython-src-${pkgver}"
+  sed -i -e 's:png_check_sig:png_sig_cmp:g' configure
+  ./configure --prefix=/usr --libdir=/usr/lib --with-gtk=2 --with-opengl --enable-unicode \
+    --enable-graphics_ctx --with-gnomeprint --disable-optimize --enable-mediactrl \
+    --with-libpng=sys --with-libxpm=sys --with-libjpeg=sys --with-libtiff=sys || return 1
+  
   cd "${srcdir}/wxPython-src-${pkgver}/wxPython"
   patch -p2 < "${srcdir}/editra-ebmlib.diff" || return 1
   python setup.py \
     WXPORT=gtk2 \
     UNICODE=1 \
-    build install --root="${pkgdir}" || return 1
+    build || return 1
+}
+
+package() {
+  cd "${srcdir}/wxPython-src-${pkgver}/wxPython"
+  python setup.py \
+    WXPORT=gtk2 \
+    UNICODE=1 \
+    install --root="${pkgdir}" || return 1
   install -D -m644 ../docs/licence.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
 }
