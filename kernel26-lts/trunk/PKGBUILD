@@ -6,7 +6,7 @@ pkgname=('kernel26-lts' 'kernel26-lts-headers') # Build stock -lts kernel
 _kernelname=${pkgname#kernel26}
 _basekernel=2.6.32
 pkgver=${_basekernel}.12
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('GPL2')
 url="http://www.kernel.org"
@@ -15,12 +15,16 @@ source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
 	# the main kernel config files
         config config.x86_64
         # standard config files for mkinitcpio ramdisk
-        ${pkgname}.preset)
+        ${pkgname}.preset
+	# fix for gcc4.5 - Without this patch, the kernel fails to boot very early when built with gcc 4.5.
+	# upstream fix: http://git.kernel.org/?p=linux/kernel/git/stable/linux-2.6.33.y.git;a=commit;h=89a724c83c09eb2d28df4dc150b6d17954f25d7b
+	gcc45.patch)
 md5sums=('260551284ac224c3a43c4adac7df4879'
          '9d097d34648a1734b1a7f97c5d000f03'
-         '65ef30a48b0dbb44c0ab5be142aae967'
-         'aa1bfd047735e8e817e0b357f99ea9e2'
-         'a13338958d1b241f8dfd4c6014cad3d4')
+         '8b8f963b6d9634045ed68dd3b67f056e'
+         '829f67374361f03635bf4ad2dc0a1db0'
+         'a13338958d1b241f8dfd4c6014cad3d4'
+         '657794e12367265505997bd29816eb54')
 
 build() {
   cd ${srcdir}/linux-$_basekernel
@@ -28,6 +32,9 @@ build() {
      # add latest kernel stable patch
      patch -Np1 -i ${srcdir}/patch-$pkgver
    fi
+
+  # fix booting not possible when built with gcc4.5
+  patch  -Np1 -i ${srcdir}/gcc45.patch || return 1
 
   if [ "$CARCH" = "x86_64" ]; then
     cat ../config.x86_64 >./.config
