@@ -1,0 +1,76 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=totem
+pkgname=('totem' 'totem-plugin')
+pkgver=2.30.2
+pkgrel=1
+url="http://www.hadess.net/totem.php3"
+arch=('i686' 'x86_64')
+license=('GPL2' 'custom')
+makedepends=('gstreamer0.10-base-plugins>=0.10.29' 'gstreamer0.10-good-plugins>=0.10.22' 'totem-plparser>=2.30.1' 'libxxf86vm' 'libxtst' 'desktop-file-utils' 'iso-codes>=3.10.1' 'libepc>=0.3.10' 'python>=2.6' 'libgdata>=0.6.4' 'nautilus>=2.30.1' 'xulrunner>=1.9.2' 'pkgconfig' 'bluez>=4.64' 'lirc-utils' 'gnome-doc-utils>=0.20.1' 'gnome-control-center>=2.30.1' 'intltool' 'pygtk>=2.16.0')
+
+options=('!libtool' '!emptydirs')
+source=(http://ftp.gnome.org/pub/gnome/sources/totem/2.30/${pkgbase}-${pkgver}.tar.bz2)
+sha256sums=('c50da5479c57b2791c3c1bfc05f815d5ee06082fcd1bacc49f4d88c11ed02b6d')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --libexecdir=/usr/lib/totem \
+      --localstatedir=/var --disable-static \
+      --enable-python --enable-nautilus \
+      --with-dbus --disable-scrollkeeper || return 1
+  make || return 1
+}
+
+package_totem() {
+  pkgdesc="A GNOME2 integrated movie player based on Gstreamer."
+  depends=('gstreamer0.10-base-plugins>=0.10.29' 'gstreamer0.10-good-plugins>=0.10.22' 'totem-plparser>=2.30.1' 'libxxf86vm' 'libxtst' 'desktop-file-utils' 'iso-codes>=3.10.1' 'python>=2.6' 'libunique>=1.1.6')
+  groups=('gnome-extra')
+  install=totem.install
+  optdepends=('gstreamer0.10-ugly-plugins: Extra media codecs'
+              'gstreamer0.10-bad-plugins: Extra media codecs'
+              'gstreamer0.10-ffmpeg: Extra media codecs'
+              'httplib2: BBC iPlayer plugin'
+              'python-feedparser: BBC iPlayer plugin'
+              'beautiful-soup: BBC iPlayer plugin'
+              'coherence: Coherence DLNA/UPnP Client plugin'
+              'dbus-python: D-Bus Service plugin'
+              'gromit: Gromit Annotations plugin'
+              'lirc-utils: Infrared Remote Control plugin'
+              'libepc: Publish Playlist plugin'
+              'pyxdg: Subtitle Downloader plugin'
+              'libgdata: YouTube Browser plugin')
+  conflicts=('totem-xine')
+  replaces=('totem-xine')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  rm -f ${pkgdir}/usr/share/totem/vanity.*
+  rm -f "${pkgdir}/usr/share/pixmaps/vanity.png"
+
+  rm -rf "${pkgdir}/usr/lib/mozilla"
+  rm -f "${pkgdir}/usr/lib/totem/totem-plugin-viewer" || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain totem ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/" || return 1
+}
+
+package_totem-plugin() {
+  pkgdesc="Totem mozilla/firefox plugin"
+  depends="totem=${pkgver}"
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/browser-plugin"
+  make plugindir=/usr/lib/mozilla/plugins \
+      xptdir=/usr/lib/mozilla/plugins \
+      DESTDIR="${pkgdir}" install || return 1
+
+  rm -rf "${pkgdir}/usr/share"
+}
+
