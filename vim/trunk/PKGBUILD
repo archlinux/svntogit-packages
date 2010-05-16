@@ -4,24 +4,26 @@
 
 pkgbase=vim
 pkgname=(vim gvim vim-runtime)
-_srcver=7.2
-__hgrev=2150
-pkgver=${_srcver}.${__hgrev}
+pkgver=7.2
+__hgrev=e12b9d992389
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('custom:vim')
 url="http://www.vim.org"
 makedepends=('gpm' 'perl' 'python' 'ruby' 'libxt' 'desktop-file-utils' 'gtk2'
              'gettext' 'pkgconfig' 'mercurial' 'rsync' 'sed')
+options=(force)
 source=(pythoncomplete.vim::http://www.vim.org/scripts/download_script.php\?src_id=10872
-        vimrc archlinux.vim gvim.desktop)
+        vimrc archlinux.vim gvim.desktop xz.patch)
 md5sums=('6e7adfbd5d26c1d161030ec203a7f243' 'e57777374891063b9ca48a1fe392ac05'
-         '10353a61aadc3f276692d0e17db1478e' '2be104c0372dd6dae19cb7968c03cd4f')
+         '10353a61aadc3f276692d0e17db1478e' '2be104c0372dd6dae19cb7968c03cd4f'
+         '634bea72f47b608634419724a12b2505')
 
 __hgroot='http://vim.googlecode.com/hg/'
 __hgrepo='vim'
+__hgbranch='default'
 
-_versiondir="vim${_srcver//./}"
+_versiondir="vim${pkgver//./}"
 
 ##### Build #####
 
@@ -31,11 +33,21 @@ build() {
   msg2 'Checking out source from Mercurial...'
 
   if [[ -d ${__hgrepo} ]]; then
-    ( cd ${__hgrepo}; hg pull; hg update -r ${__hgrev}) || return 1
+    cd ${__hgrepo}
+    hg pull -b ${__hgbranch}|| warning 'hg pull failed!'
+    hg update -r ${__hgrev} || return 1
   else
-    hg clone -u ${__hgrev} "${__hgroot}${__hgrepo}" ${__hgrepo} || return 1
+    hg clone -b ${__hgbranch} -u ${__hgrev} "${__hgroot}${__hgrepo}" ${__hgrepo} || return 1
+    cd ${__hgrepo}
   fi
 
+  if (( $(hg id -n) < $(hg id -nr ${__hgbranch}) )); then
+    warning 'You are not building the latest revision!'
+    warning "Consider updating __hgrev to $(hg id -r ${__hgbranch})."
+    sleep 10
+  fi
+
+  cd ..
   rm -rf vim-build gvim-build
   rsync -a --exclude='.hg/' ${__hgrepo}/ vim-build || return 1
 
@@ -78,7 +90,7 @@ build() {
 
 package_vim() {
   pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor'
-  depends=("vim-runtime=${pkgver}" 'gpm' 'perl')
+  depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'perl')
   conflicts=('gvim')
 
   cd ${srcdir}/vim-build
@@ -106,9 +118,9 @@ package_vim() {
 
 package_gvim() {
   pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor (with advanced features, such as a GUI)'
-  depends=("vim-runtime=${pkgver}" 'gpm' 'perl' 'python' 'ruby' 'libxt'
+  depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'perl' 'python' 'ruby' 'libxt'
            'desktop-file-utils' 'gtk2')
-  provides=("vim=${pkgver}")
+  provides=("vim=${pkgver}-${pkgrel}")
   conflicts=('vim')
   install=gvim.install
 
@@ -160,6 +172,10 @@ package_vim-runtime() {
     ${pkgdir}/usr/share/vim/vim72/filetype.vim
   sed -i "/find the end/,+3{s/changelog_date_entry_search/changelog_date_end_entry_search/}" \
     ${pkgdir}/usr/share/vim/vim72/ftplugin/changelog.vim
+
+  # patch runtime for better support of .*.xz files
+  cd ${pkgdir}/usr/share/vim
+  patch -p0 < ${srcdir}/xz.patch || return 1
 
   # make Aaron happy
   install -Dm644 ${srcdir}/pythoncomplete.vim \
