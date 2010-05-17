@@ -2,11 +2,11 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgbase="kernel26"
-pkgname=('kernel26' 'kernel26-firmware' 'kernel26-headers') # Build stock -ARCH kernel
+pkgname=('kernel26' 'kernel26-firmware' 'kernel26-headers' 'kernel26-manpages' 'kernel26-docs') # Build stock -ARCH kernel
 # pkgname=kernel26-custom       # Build kernel with a different name
 _kernelname=${pkgname#kernel26}
-_basekernel=2.6.33
-pkgver=${_basekernel}.4
+_basekernel=2.6.34
+pkgver=${_basekernel}
 pkgrel=1
 _patchname="patch-${pkgver}-${pkgrel}-ARCH"
 arch=(i686 x86_64)
@@ -18,10 +18,10 @@ source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
         config config.x86_64
         # standard config files for mkinitcpio ramdisk
         kernel26.preset)
-md5sums=('c3883760b18d50e8d78819c54d579b00'
-         '6c19b9295adbbf086a1a73a5c67595f8'
-         '2bc6c67ba53b61d0f37cacf519650990'
-         '4ace267fc2923eae7245838083752451'
+md5sums=('10eebcb0178fb4540e2165bfd7efc7ad'
+         '84c3297451b709a0ed97b40b2fca6fc5'
+         'd55c5895152a6ce686c397cac7495a5a'
+         '19bfea318a532c0e55cdccf5cccca870'
          '25584700a0a679542929c4bed31433b6')
 
 build() {
@@ -61,7 +61,7 @@ package_kernel26() {
   pkgdesc="The Linux Kernel and modules"
   groups=('base')
   backup=(etc/mkinitcpio.d/${pkgname}.preset)
-  depends=('coreutils' 'kernel26-firmware>=2.6.33' 'module-init-tools' 'mkinitcpio>=0.5.20')
+  depends=('coreutils' 'kernel26-firmware>=2.6.34' 'module-init-tools' 'mkinitcpio>=0.5.20')
   # pwc, ieee80211 and hostap-driver26 modules are included in kernel26 now
   # nforce package support was abandoned by nvidia, kernel modules should cover everything now.
   # kernel24 support is dropped since glibc24
@@ -69,7 +69,7 @@ package_kernel26() {
             'alsa-driver' 'ieee80211' 'hostap-driver26'
             'pwc' 'nforce' 'squashfs' 'unionfs' 'ivtv'
             'zd1211' 'kvm-modules' 'iwlwifi' 'rt2x00-cvs'
-            'gspcav1' 'atl2' 'wlan-ng26' 'rt2500')
+            'gspcav1' 'atl2' 'wlan-ng26' 'rt2500' 'nouveau-drm')
   install=kernel26.install
   optdepends=('crda: to set the correct wireless channels of your country')
 
@@ -207,4 +207,30 @@ package_kernel26-firmware() {
   cd ${srcdir}/linux-$_basekernel
   make firmware || return 1
   make INSTALL_MOD_PATH=${pkgdir} firmware_install || return 1
+}
+
+package_kernel26-manpages() {
+pkgdesc="Kernel hackers manual - Section 9 manpages that comes with the Linux kernel."
+
+cd ${srcdir}/linux-$_basekernel
+make mrproper
+make mandocs || return 1
+
+install -d ${pkgdir}/usr/share/man/man9/
+install ${srcdir}/linux-${pkgver}/Documentation/DocBook/man/*.9.gz \
+${pkgdir}/usr/share/man/man9/
+
+find ${pkgdir} -type f -exec chmod 644 {} \;
+}
+
+package_kernel26-docs() {
+pkgdesc="Kernel hackers manual - HTML documentation that comes with the Linux kernel."
+
+cd ${srcdir}/linux-$_basekernel
+mkdir -p $pkgdir/usr/src/linux-$pkgver-ARCH
+mv Documentation $pkgdir/usr/src/linux-$pkgver-ARCH
+find $pkgdir -type f -exec chmod 444 {} \;
+find $pkgdir -type d -exec chmod 755 {} \;
+# remove a file already in kernel26 package
+rm -f $pkgdir/usr/src/linux-$pkgver-ARCH/Documentation/DocBook/Makefile
 }
