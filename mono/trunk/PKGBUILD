@@ -4,7 +4,7 @@
 
 pkgname=mono
 pkgver=2.6.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Free implementation of the .NET platform including runtime and compiler"
 arch=(i686 x86_64)
 license=('GPL' 'LGPL2' 'MPL' 'custom:MITX11')
@@ -20,21 +20,27 @@ md5sums=('342a7ca3bea3cbec0c8ac48b9322fcb4'
          '8315e46c6a6e9625502521fc0ad1a322')
 
 build() {
-  mkdir -p ${startdir}/pkg/usr/share/licenses/$pkgname
+  cd ${srcdir}/${pkgname}-${pkgver}
   # build mono
-  cd ${startdir}/src/${pkgname}-${pkgver}
-
   ./configure --prefix=/usr --sysconfdir=/etc \
               --with-libgdiplus=installed \
 	      --with-moonlight=yes \
 	      --with-profile4=yes
   make || return 1
-  make DESTDIR=${startdir}/pkg install || return 1
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install || return 1
 
   # install daemons and pathes
-  mkdir -p ${startdir}/pkg/etc/rc.d
-  install -m755 ${startdir}/src/mono.rc.d $startdir/pkg/etc/rc.d/mono
+  mkdir -p ${pkgdir}/etc/rc.d
+  install -m755 ${srcdir}/mono.rc.d ${pkgdir}/etc/rc.d/mono
 
   #install license
-  install -m644 mcs/MIT.X11 ${startdir}/pkg/usr/share/licenses/$pkgname/
+  mkdir -p ${pkgdir}/usr/share/licenses/${pkgname}
+  install -m644 mcs/MIT.X11 ${pkgdir}/usr/share/licenses/${pkgname}/
+  
+  #fix .pc file to be able to request mono on what it depends, fixes #go-oo build
+  sed -i -e "s:#Requires:Requires:" ${pkgdir}/usr/lib/pkgconfig/mono.pc
 }
