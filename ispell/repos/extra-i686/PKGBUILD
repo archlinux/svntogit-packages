@@ -1,0 +1,60 @@
+# $Id$
+# Contributor: Eric Belanger <eric@archlinux.org>
+# Maintainer: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgname=ispell
+pkgver=3.3.02
+pkgrel=4
+pkgdesc="An interactive spell-checking program for Unix"
+arch=('i686' 'x86_64')
+url="http://ficus-www.cs.ucla.edu/geoff/ispell.html"
+license=('BSD')
+depends=('ncurses')
+options=('!makeflags')
+source=(http://fmg-www.cs.ucla.edu/geoff/tars/${pkgname}-${pkgver}.tar.gz 
+	license.txt getline.patch)
+md5sums=('12087d7555fc2b746425cd167af480fe' 'bf51b6181b9914dedc266ba970bb7319'
+	 '1dca21c5d56405fe592175c3dde2fda2')
+
+build() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	patch -p0 < ${srcdir}/getline.patch || return 1
+
+	sed -i 's/#undef USG/#define USG/' local.h.linux
+	sed -i 's|/usr/local|/usr|' local.h.linux
+	sed -i 's|/lib|/lib/ispell|' local.h.linux
+	cp local.h.linux local.h
+	make TMPDIR=/tmp all || return 1
+}
+
+package() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	# Installing binary tools
+	install -Dm755 buildhash ${pkgdir}/usr/bin/buildhash
+	install -Dm755 findaffix ${pkgdir}/usr/bin/findaffix
+	install -Dm755 icombine ${pkgdir}/usr/bin/icombine
+	install -Dm755 ijoin ${pkgdir}/usr/bin/ijoin
+	install -Dm755 ispell ${pkgdir}/usr/bin/ispell
+	install -Dm755 iwhich ${pkgdir}/usr/bin/iwhich
+	install -Dm755 munchlist ${pkgdir}/usr/bin/munchlist
+	install -Dm755 tryaffix ${pkgdir}/usr/bin/tryaffix
+
+	# Installing man pages
+	install -Dm644 ispell.1 ${pkgdir}/usr/share/man/man1/ispell.1
+	install -Dm644 ispell.5 ${pkgdir}/usr/share/man/man5/ispell.5
+
+	# Installing dictionnaries
+	install -d ${pkgdir}/usr/bin ${pkgdir}/usr/lib/ispell
+	install -m644 languages/american/americanmed.hash \
+	    ${pkgdir}/usr/lib/ispell/americanmed.hash
+	install -m644 languages/english/english.aff \
+	    ${pkgdir}/usr/lib/ispell/english.aff
+	ln -s americanmed.hash ${pkgdir}/usr/lib/ispell/american.hash
+	ln -s americanmed.hash ${pkgdir}/usr/lib/ispell/english.hash
+
+	# Installing license
+	install -Dm644 ${srcdir}/license.txt \
+	    ${pkgdir}/usr/share/licenses/${pkgname}/license.txt
+}
