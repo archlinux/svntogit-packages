@@ -1,0 +1,37 @@
+# $Id$
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+pkgname=mkinitcpio-busybox
+pkgver=1.16.1
+pkgrel=4
+pkgdesc="base initramfs tools"
+arch=('i686' 'x86_64')
+url="http://www.busybox.net/"
+license=('GPL')
+depends=('glibc')
+source=(http://busybox.net/downloads/busybox-${pkgver}.tar.bz2
+        config
+        loadfont-setfont-optional-psf2-font-support.patch)
+sha256sums=('6d45ec8e72ca85516c8669f81267e0fbe11881435983e32532a56b44651dd6c5'
+            'd629e936941c854e7aa5e1b564d74bde3a1d328f1e0dd30c86a958d2724685ce'
+            '624d21345cd869c174a3ae1b9cfe23a461ce8b463c7ac4c052726430890c4eb1')
+
+build() {
+  cd "${srcdir}/busybox-${pkgver}"
+
+  # Backport http://git.busybox.net/busybox/commit/?id=8ce1dc03c1b2b61e51527b987579c09c991cc4b2
+  # to busybox 1.16 to fix https://bugs.archlinux.org/task/19109
+  patch -p1 -i ../loadfont-setfont-optional-psf2-font-support.patch || return 1
+
+  unset CFLAGS CXXFLAGS
+  if [ ${CARCH} = "x86_64" ]; then
+    sed 's|^CONFIG_EXTRA_CFLAGS=.*|CONFIG_EXTRA_CFLAGS="-march=x86-64 -mtune=generic -Os -pipe -fno-strict-aliasing"|' "${srcdir}/config" > .config
+  else
+    sed 's|^CONFIG_EXTRA_CFLAGS=.*|CONFIG_EXTRA_CFLAGS="-march=i686 -mtune=generic -Os -pipe -fno-strict-aliasing"|' "${srcdir}/config" > .config
+  fi
+  make || return 1
+}
+
+package() {
+  install -D -m755 "${srcdir}/busybox-${pkgver}"/busybox "${pkgdir}/lib/initcpio/busybox"
+}
+# vim:set ts=2 sw=2 et:
