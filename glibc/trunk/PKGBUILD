@@ -6,15 +6,15 @@
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
-pkgver=2.11.1
-pkgrel=3
-_glibcdate=20100318
+pkgver=2.12
+pkgrel=1
+_glibcdate=20100521
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=2.6.33' 'tzdata')
+depends=('linux-api-headers>=2.6.34' 'tzdata')
 makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
 backup=(etc/locale.gen
@@ -27,7 +27,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         nscd
         locale.gen.txt
         locale-gen)    
-md5sums=('4b7f8ed5a0ea946bd40318855449b570'
+md5sums=('5c0e450103c1e2d008c34ac208910b99'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
@@ -36,11 +36,9 @@ md5sums=('4b7f8ed5a0ea946bd40318855449b570'
          '476e9113489f93b348b21e144b6a8fcf')
 
 mksource() {
-  mkdir glibc-${pkgver}_${_glibcdate}
-  cd glibc-${pkgver}_${_glibcdate}
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  git checkout -b glibc-2.11-arch origin/release/2.11/master
+  git checkout -b glibc-2.12-arch origin/release/2.12/master
   popd
   tar -cvjf glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
 }
@@ -49,14 +47,14 @@ build() {
   cd ${srcdir}/glibc
 
   # timezone data is in separate package (tzdata)
-  patch -Np1 -i ${srcdir}/glibc-2.10-dont-build-timezone.patch || return 1
+  patch -Np1 -i ${srcdir}/glibc-2.10-dont-build-timezone.patch
 
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=4781
-  patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch || return 1
+  patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch
 
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=411
   # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
-  patch -Np1 -i ${srcdir}/glibc-__i686.patch || return 1
+  patch -Np1 -i ${srcdir}/glibc-__i686.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -83,12 +81,12 @@ build() {
 
 package() {
   cd ${srcdir}/glibc/glibc-build
-  make install_root=${pkgdir} install || return 1
+  make install_root=${pkgdir} install
 
   # provided by kernel-headers
   rm ${pkgdir}/usr/include/scsi/scsi.h
 
-  rm ${pkgdir}/etc/ld.so.cache ${pkgdir}/etc/ld.so.conf
+  rm ${pkgdir}/etc/ld.so.conf
 
   install -dm755 ${pkgdir}/etc/rc.d
   install -dm755 ${pkgdir}/usr/sbin
@@ -97,7 +95,7 @@ package() {
   install -m755 ${srcdir}/nscd ${pkgdir}/etc/rc.d/nscd
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
 
-  sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf || return 1
+  sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
