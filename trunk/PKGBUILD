@@ -3,7 +3,7 @@
 # Maintainer: DAniel J Griffiths <ghost1227@archlinux.us>
 
 pkgname=imagemagick
-pkgver=6.6.1.10
+pkgver=6.6.2.0
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
@@ -22,12 +22,9 @@ options=('!makeflags' '!docs')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         libpng_mmx_patch_x86_64.patch 
 	perlmagick.rpath.patch)
-md5sums=('d82e1331362f99790548e3e94777eb81' 
+md5sums=('e145e9c47befaa9734926c45bd9d7572' 
 	 '069980fc2590c02aed86420996259302'
          'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('72c73c3392420e64c9f8574163cff2a03f353636' 
-	  'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
-          '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
 	cd ${srcdir}/ImageMagick-${pkgver%.*}-${pkgver##*.}
