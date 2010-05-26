@@ -1,0 +1,33 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Kritoke <kritoke@nospam.gmail.com>
+
+pkgname=f-spot
+pkgver=0.6.2
+pkgrel=1
+pkgdesc="A personal photo management program for GNOME"
+url="http://www.gnome.org/projects/f-spot/"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('mono>=2.6.4' 'gnome-sharp>=2.24.1' 'lcms>=1.18-3' 'libgphoto2>=2.4.9' 'ndesk-dbus-glib>=0.4.1' 'hicolor-icon-theme' 'mono-addins>=0.4')
+makedepends=('intltool' 'gnome-doc-utils>=0.20.0' 'gnome-screensaver>=2.30.0')
+options=('!libtool' '!makeflags' '!emptydirs')
+install=f-spot.install
+source=(http://ftp.gnome.org/pub/gnome/sources/f-spot/0.6/f-spot-${pkgver}.tar.bz2)
+sha256sums=('f7d836c114af9d7f50903cd79710f079b025f1f8b8495d9117b150d6e746c67e')
+
+build() {
+  export MONO_SHARED_DIR="${srcdir}/.wabi"
+  mkdir -p "${MONO_SHARED_DIR}"
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --disable-scrollkeeper || return 1
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain f-spot ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
