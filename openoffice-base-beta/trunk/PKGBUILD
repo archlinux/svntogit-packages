@@ -4,21 +4,23 @@
 
 pkgbase="openoffice-base-beta"
 pkgname=('openoffice-base-beta' 'openoffice-sdk-beta')
-_OO_milestone=OOO320_m17
-pkgver=3.2.1_${_OO_milestone/OOO/ooo} # m17=3.2.1 RC1
+_OO_milestone=OOO320_m18
+pkgver=3.2.1_${_OO_milestone/OOO/ooo} # m18=3.2.1 RC2
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.openoffice.org"
 makedepends=(# the real makedeps
-             'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2.2" 
+             'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst' 'boost>=1.41.0'
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2.2" 'unixodbc' 'nss' 'hsqldb-java' 
              'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
+	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes'
 	     # from main OOo the deps
 	     "curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
-             'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils'
-	     'beanshell' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene' 'boost>=1.41.0')
-	     # libmythes 'redland>=1.0.10' 'saxon' 
+	     'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	     'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	     'hicolor-icon-theme' 'desktop-file-utils' 'gtk2')
+	     # 'saxon' 
 source=(${pkgname}-${_OO_milestone}.tar.xz
 	http://tools.openoffice.org/unowinreg_prebuild/680/unowinreg.dll
 	startcenter.desktop
@@ -28,17 +30,10 @@ source=(${pkgname}-${_OO_milestone}.tar.xz
 	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
 	buildfix_system_db48.diff
-	redland.patch
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
-	# fixes for ---enable-layout
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/layout-parallel-build.diff
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/build-fix-layout-numfmt.diff
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/buildfix-svx-uiconfig-layout.diff
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/buildfix-sw-uiconfig-layout.diff
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/buildfix-toolkit-workben-layout.diff
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/tree/patches/dev300/layout-generate-localize-sdf.diff
-#	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/layout-localize-fix-sc.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/vcl-system-graphite-with-stlport.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/fix-system-mythes-for-mythes-1.2.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/redland-remove-patches.diff?h=ooo-build-3-2-1
 	openoffice-beta.profile)
 options=('!distcc' '!ccache' '!makeflags')
 
@@ -73,30 +68,19 @@ build() {
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_system_db48.diff || return 1
-	# fix for --enable-layout 
-	# /bin/bash: tralay: command not found
-#	patch -Np0 -i ${srcdir}/layout-parallel-build.diff || return 1
-#	patch -Np0 -i ${srcdir}/build-fix-layout-numfmt.diff || return 1
-#	patch -Np0 -i ${srcdir}/buildfix-svx-uiconfig-layout.diff || return 1
-#	patch -Np0 -i ${srcdir}/buildfix-sw-uiconfig-layout.diff || return 1
-#	patch -Np0 -i ${srcdir}/buildfix-toolkit-workben-layout.diff || return 1
-
-#	patch -Np0 -i ${srcdir}/layout-generate-localize-sdf.diff || return 1
-#	patch -Np0 -i ${srcdir}/layout-localize-fix-sc.diff || return 1
-	
-	# gcc4.5 fix
 	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff || return 1
+
+	# allow build with system mythes
+	patch -Np0 -i ${srcdir}/fix-system-mythes-for-mythes-1.2.diff || return 1
+	# allow build with system redland and cppunit
+	# should also workaround all known bugs with plain upstream redland
+	patch -Np0 -i ${srcdir}/redland-remove-patches.diff?h=ooo-build-3-2-1 || return 1	
 	# allow system graphite with stlport
 	patch -Np0 -i ${srcdir}/vcl-system-graphite-with-stlport.diff || return 1
 
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
 	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
-
-	# important bugfixes
-	# ...nothing :)
-	# http://www.openoffice.org/issues/show_bug.cgi?id=108911
-	patch -Np1 -i ${srcdir}/redland.patch || return 1
 
 	# remove the startup wizard
 	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff || return 1
@@ -108,8 +92,6 @@ build() {
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk || return 1
-	  # http://qa.openoffice.org/issues/show_bug.cgi?id=109791
-	  #  --without-system-graphite
 	 else EXTRAOPTS="--with-stlport"
 	fi
 
@@ -117,6 +99,7 @@ build() {
 
 	# needed to build the OO-SDK
 	mv ${srcdir}/unowinreg.dll external/unowinreg || return 1
+
 	# export C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
@@ -165,14 +148,16 @@ build() {
 	--without-nas\
 	--without-ppds\
 	--without-system-agg\
-	--without-system-cppunit\
-	--without-system-redland\
+	--with-system-cppunit\
+	--with-system-redland\
 	--without-system-saxon\
 	--with-openldap\
 	--with-system-stdlibs\
 	--with-system-libs\
 	--with-system-sane-header\
 	--with-system-mozilla=libxul\
+	--with-system-mythes\
+	--with-system-unixodbc-headers\
 	--with-system-xrender-headers\
 	--with-system-headers\
 	--with-alloc=system\
@@ -196,8 +181,6 @@ build() {
 
 #	--with-system-jfreereport
 
-#	--with-system-mythes\
-
 #	we will need myspell dicts for --with-system-dicts --without-myspell-dicts
 	
 	# Setup environment for build
@@ -217,17 +200,27 @@ package_openoffice-base-beta() {
 
  pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite - testing branch leading to next stable release"
  install=openoffice.install
- depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6" 'gtk2'
-          'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils' 
-	  'beanshell' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene')
- # 'libmythes' 'redland'  'saxon' 
+ depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
+          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
+	  # 'saxon' 
  optdepends=('java-runtime:	adds java support'
-            'libcups:		adds printing support'
-            'gconf:		adds additional gnome support'
-            'nss:		adds support for signed files/macros'
-            'pstoedit:		translates PostScript and PDF graphics into other vector formats'
-            'poppler:		for shipped pdfimport extension'
-	    'kdelibs:		for kde integration')
+             'libcups:		adds printing support'
+             'gconf:		adds additional gnome support'
+             'nss:		adds support for signed files/macros'
+             'pstoedit:		translates PostScript and PDF graphics into other vector formats'
+             'poppler:		for shipped pdfimport extension'
+             'kdelibs:		for kde integration'
+             'libmythes:	for use in thesaurus'
+             'hsqldb-java:	default database format for OpenOffice.org'
+             'beanshell:	interactive java -- good for prototyping /macros'
+             'vigra:		C++ computer vision library, usable in Basebmp'
+             'libmspack:	library for Microsoft compression formats for use in FontOOo'
+             'libldap:		to get profiles via ldap'
+             'lucene:		full-text search engine library for Java needed in the help section'
+             'sane:		for scanner access'
+             'unixodbc:		adds ODBC database support')
  backup=(usr/lib/openoffice-beta/program/sofficerc )
  provides=('openoffice-base' 'openoffice-en-US')
 
