@@ -5,7 +5,7 @@
 . /etc/rc.d/functions
 
 getPID() {
-   echo $(pgrep -u mysql mysqld);
+   echo $(pgrep -u mysql mysqld 2>/dev/null);
 }
 
 case "$1" in
@@ -43,14 +43,23 @@ case "$1" in
   stop)
     stat_busy "Stopping MySQL Server"
     if [ ! -z "$(getPID)" ]; then
+      timeo=30
       kill $(getPID) &> /dev/null
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
-      else
+      fi
+      while [ ! -z "$(getPID)" -a $timeo -gt 0 ]; do
+        sleep 1
+        let timeo=${timeo}-1
+      done
+      if [ -z "$(getPID)" ]; then
         rm -f /var/run/mysqld/mysqld.pid &>/dev/null
         rm_daemon mysqld
         stat_done
+      else
+        stat_fail
+        exit 1
       fi
     else
       stat_fail
@@ -60,7 +69,6 @@ case "$1" in
 
   restart)
     $0 stop
-    sleep 5
     $0 start
     ;;
   *)
