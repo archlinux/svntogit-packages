@@ -7,7 +7,7 @@
 
 pkgname=glibc
 pkgver=2.12
-pkgrel=1
+pkgrel=2
 _glibcdate=20100521
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -74,7 +74,7 @@ build() {
       --enable-kernel=2.6.18 --disable-profile \
       --with-headers=/usr/include --libexecdir=/usr/lib \
       --enable-bind-now --with-tls --with-__thread \
-      --libdir=/usr/lib --without-gd
+      --libdir=/usr/lib --without-gd --disable-multi-arch
         
   make || return 1
 }
