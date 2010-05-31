@@ -5,7 +5,7 @@ FETCH_WITH_INET6 = true
 FETCH_WITH_OPENSSL = true
 
 WARNINGS = -Wall -Wstrict-prototypes -Wsign-compare -Wchar-subscripts \
-	   -Wpointer-arith -Wcast-align -Wsign-compare
+	   -Wpointer-arith -Wcast-align
 CFLAGS   = -O2 -pipe -I. -fPIC $(WARNINGS) \
 	   -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES
 
