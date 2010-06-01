@@ -4,22 +4,24 @@
 
 pkgbase="openoffice-base-devel"
 pkgname=('openoffice-base-devel' 'openoffice-sdk-devel')
-_OO_milestone=DEV300_m77
+_OO_milestone=DEV300_m80
 pkgver=3.3_${_OO_milestone/DEV/dev}
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.openoffice.org"
 makedepends=(# the real makedeps
-             'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2-2" 
-             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=1.8"
+             'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst' 'boost>=1.41.0'
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2.2" 'unixodbc' 'nss' 'hsqldb-java' 
+             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
+	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes' 'junit'
 	     # from main OOo the deps
 	     "curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
-             'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils'
-	     'beanshell' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'boost>=1.41.0' 'lucene' 'junit')
-		 #'redland>=1.0.10-2' 'libmythes' 'saxon' 'cppunit' 
-source=(${pkgname}-${_OO_milestone}.tar.xz
+	     'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	     'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	     'hicolor-icon-theme' 'desktop-file-utils' 'gtk2')
+	     # 'saxon' 
+source=(${_OO_milestone}.tar.xz
 	http://tools.openoffice.org/unowinreg_prebuild/680/unowinreg.dll
 	startcenter.desktop
 	default-no-startup-wizard.diff
@@ -27,10 +29,10 @@ source=(${pkgname}-${_OO_milestone}.tar.xz
 	soffice-detect-mozilla-certificates.diff
 	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
-	shellfix-buildbreaker-for-enable-lockdown.patch
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/sal-cpprt-gcc-4.5-workaround.diff
-	iFIXME-checkdeliver.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/fix-system-mythes-for-mythes-1.2.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/redland-remove-patches.diff
 	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
 
@@ -41,12 +43,14 @@ mksource() {
         mkdir /tmp/$pkgname-source
         pushd /tmp/$pkgname-source
 	hg -v --time clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/DEV300 ${_OO_milestone}
-	tar -cvJf ${pkgname}-${_OO_milestone}.tar.xz ${_OO_milestone}/*
+	tar -cvJf ${_OO_milestone}.tar.xz ${_OO_milestone}/*
         popd
 }
 
 build() {
+
 	cd ${srcdir}/${_OO_milestone}
+	
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
 	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
@@ -65,13 +69,16 @@ build() {
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
-	patch -Np1 -i ${srcdir}/shellfix-buildbreaker-for-enable-lockdown.patch || return 1
 	# gcc4.5 fix
 	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff || return 1
 	patch -Np0 -i ${srcdir}/sal-cpprt-gcc-4.5-workaround.diff || return 1
-	# http://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/Patches/DEV300/iFIXME-checkdeliver.diff
-	patch -Np1 -i ${srcdir}/iFIXME-checkdeliver.diff || return 1
-	
+
+	# allow build with system mythes
+	patch -Np0 -i ${srcdir}/fix-system-mythes-for-mythes-1.2.diff || return 1
+	# allow build with system redland and cppunit
+	# should also workaround all known bugs with plain upstream redland
+#	patch -Np0 -i ${srcdir}/redland-remove-patches.diff || return 1	
+
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
 	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
@@ -86,8 +93,6 @@ build() {
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
-	  # http://qa.openoffice.org/issues/show_bug.cgi?id=109791
-  	  # --without-system-graphite"
 	 else EXTRAOPTS="--with-stlport"
 	fi
 
@@ -95,11 +100,11 @@ build() {
 
 	# needed to build the OO-SDK
 	mv ${srcdir}/unowinreg.dll external/unowinreg || return 1
+	
 	# export C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
 	unset CXXFLAGS
-#	export ARCH_FLAGS="$CFLAGS" # causes errors
 
 	# Need to recreate the configure script because of patches
 	autoreconf -v || return 1
@@ -143,13 +148,16 @@ build() {
 	--without-nas\
 	--without-ppds\
 	--without-system-agg\
-	--without-system-cppunit\
+	--with-system-cppunit\
+	--with-system-redland\
 	--without-system-saxon\
 	--with-openldap\
 	--with-system-stdlibs\
 	--with-system-libs\
 	--with-system-sane-header\
 	--with-system-mozilla=libxul\
+	--with-system-mythes\
+	--with-system-unixodbc-headers\
 	--with-system-xrender-headers\
 	--with-system-headers\
 	--with-alloc=system\
@@ -160,24 +168,16 @@ build() {
 	--with-external-tar=${SRCDEST}\
 	 $EXTRAOPTS || return 1
 
-# causes various issues, see http://qa.openoffice.org/issues/show_bug.cgi?id=90956
-#http://bugs.archlinux.org/task/18357
-#http://bugs.archlinux.org/task/18133
-#http://bugs.archlinux.org/task/18461
-#http://bugs.archlinux.org/task/18777
-#	--with-system-redland\  
-
 # see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
 #	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
 
 #	--enable-layout\ /bin/bash: tralay: command not found ???
 #	--with-system-jfreereport
-#	--with-system-mythes\
 # we will need myspell dicts for --with-system-dicts --without-myspell-dicts
 
 	# get external source tarballs if needed
-#	export TARFILE_LOCATION=${SRCDEST}
-#	./fetch_tarballs.sh ooo.lst
+	export TARFILE_LOCATION=${SRCDEST}
+	./fetch_tarballs.sh ooo.lst
 
 	# Setup environment for build
 	if [ "$CARCH" = "x86_64" ]; then
@@ -190,24 +190,33 @@ build() {
 
 	cd instsetoo_native
 	build.pl -P${SMP} ${MAXMODULESFLAG} ${MAXPROCESSESFLAG} --dlv_switch -link --all || return 1
-	cd ..
 }
 
 package_openoffice-base-devel() {
 
  pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite - developement branch"
  install=openoffice.install
- depends=("curl>=7.19.2" "hunspell>=1.2.8" "python>=2.6.2" 'libwpd' 'libxaw' "neon>=0.28.4"
-          'dbus-glib' "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'hicolor-icon-theme' 'desktop-file-utils' 'gtk2'
-	  'beanshell' 'saxon' 'vigra' 'libgraphite' 'hyphen' 'lpsolve' 'libmspack' 'libldap' 'lucene')
- # 'redland>=1.0.10-2' 'libmythes'
+ depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
+          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
+	  # 'saxon' 
  optdepends=('java-runtime:	adds java support'
-            'libcups:		adds printing support'
-            'gconf:		adds additional gnome support'
-            'nss:		adds support for signed files/macros'
-            'pstoedit:		translates PostScript and PDF graphics into other vector formats'
-            'poppler:		for shipped pdfimport extension'
-	    'kdelibs:		for kde integration')
+             'libcups:		adds printing support'
+             'gconf:		adds additional gnome support'
+             'nss:		adds support for signed files/macros'
+             'pstoedit:		translates PostScript and PDF graphics into other vector formats'
+             'poppler:		for shipped pdfimport extension'
+             'kdelibs:		for kde integration'
+             'libmythes:	for use in thesaurus'
+             'hsqldb-java:	default database format for OpenOffice.org'
+             'beanshell:	interactive java -- good for prototyping /macros'
+             'vigra:		C++ computer vision library, usable in Basebmp'
+             'libmspack:	library for Microsoft compression formats for use in FontOOo'
+             'libldap:		to get profiles via ldap'
+             'lucene:		full-text search engine library for Java needed in the help section'
+             'sane:		for scanner access'
+             'unixodbc:		adds ODBC database support')
  backup=(usr/lib/openoffice-dev/program/sofficerc )
  provides=('openoffice-base' 'openoffice-en-US')
 
