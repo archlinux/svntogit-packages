@@ -4,8 +4,8 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.15.9
-pkgrel=6
+pkgver=0.15.10
+pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -16,7 +16,7 @@ makedepends=('pkgconfig')
 install=${pkgname}.install
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
         'mpd')
-md5sums=('88f7bc0b17eac81d03b24929d12b8aa1'
+md5sums=('fb18fa3ed5ff7e3719536a6603098df5'
          '84583825d4a191aeb89f5709a3808118')
 
 build() {
@@ -32,7 +32,7 @@ build() {
 
 package() {
   cd ${srcdir}/${pkgname}-${pkgver}
-  make DESTDIR=${pkgdir} install
+  make DESTDIR=${pkgdir} install || return 1
 
   # set ours dirs in mpd.conf file
   sed -i 's|^music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
