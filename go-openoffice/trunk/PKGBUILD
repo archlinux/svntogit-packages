@@ -2,34 +2,46 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=go-openoffice
-_GOver=3.2.1.1 # = post OOo 3.2.0 final bugfix
+_GOver=3.2.1.3 # = final 3.2.1 != post OOo 3.2.1 final bugfix
 pkgver=${_GOver}
 pkgrel=1
 pkgdesc="OpenOffice.org - go-oo.org enhanced version of SUN's office suite"
 arch=('i686' 'x86_64')
 _go_tree="OOO320"
-_ootag=ooo320-m17 # m17 = OOo 3.2.1 RC1
+_ootag=ooo320-m19 # m18/m19 = OOo 3.2.1 RC
 license=('LGPL3')
 url="http://go-oo.org/"
 install=${pkgname}.install
-depends=("curl>=7.19.6" "hunspell>=1.2.8" "python>=2.6.4" 'libwpd'
-         'libxaw' "neon>=0.28.6" "icu>=4.2.1" 'hsqldb-java' 'libxslt' 'libxtst' 'lpsolve'
-	  'beanshell' 'saxon' 'vigra' 'hyphen' 'libmspack' 'libldap' 'gtk2' 'lucene' 'libgraphite' 'libmythes'
-	 'hicolor-icon-theme' 'shared-mime-info' 'desktop-file-utils') #    'redland>=1.0.10'
-optdepends=('java-runtime:	adds java support'
-            'libcups:		adds printing support'
-            'gconf:		adds additional gnome support'
-            'nss:		adds support for signed files/macros'
-            'pstoedit:		translates PostScript and PDF graphics into other vector formats'
-	    'poppler:		for the pdfimport extension'
-	    'mesa:		for the OGLTrans extension'
-	    'mono:		allows UNO automation with Mono'
-	    'gstreamer0.10-base:	+ some gstr-plugins to support multimedia content, e.g. in impress'
-            'kdelibs:		for kde integration')
-makedepends=('automake' 'autoconf' 'wget' 'bison' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl'
-	'pam' 'sane' 'perl-archive-zip' 'pkgconfig' 'unzip' 'zip' "xulrunner>=1.9.2-4" 'apache-ant' 'cairo' 
-	'gperf' 'libcups' 'pstoedit' 'gconf' "openjdk6>=1.5.2" 'unixodbc' 'mesa>=7.5' 'poppler>=0.10.7'
-	'gstreamer0.10-base>=0.10.26'  'mono>=2.6.1' 'kdelibs>=4.4.0' 'libjpeg' 'boost' 'git' 'rsync')
+makedepends=('bison' 'git' 'rsync' 'wget' 'automake' 'autoconf' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst' 'boost>=1.41.0'
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'zip' "xulrunner>=1.9.2.2" 'unixodbc' 'nss' 'hsqldb-java' 
+             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
+	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes'
+	     # for additional ooo-build features
+	     'mesa>=7.5' 'gstreamer0.10-base>=0.10.26'  'mono>=2.6.1') 
+	#'saxon'
+depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
+          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
+optdepends=('java-runtime:     adds java support'
+             'libcups:          adds printing support'
+             'gconf:            adds additional gnome support'
+             'nss:              adds support for signed files/macros'
+             'pstoedit:         translates PostScript and PDF graphics into other vector formats'
+             'poppler:          for shipped pdfimport extension'
+             'kdelibs:          for kde integration'
+             'libmythes:        for use in thesaurus'
+             'hsqldb-java:      default database format for OpenOffice.org'
+             'beanshell:        interactive java -- good for prototyping /macros'
+             'vigra:            C++ computer vision library, usable in Basebmp'
+             'libmspack:        library for Microsoft compression formats for use in FontOOo'
+             'libldap:          to get profiles via ldap'
+             'lucene:           full-text search engine library for Java needed in the help section'
+             'sane:             for scanner access'
+             'unixodbc:         adds ODBC database support'
+             'mesa:             for the OGLTrans extension'
+             'mono:             allows UNO automation with Mono'
+             'gstreamer0.10-base: + some gstr-plugins to support multimedia content, e.g. in impress')
 backup=(usr/lib/go-openoffice/program/sofficerc)
 provides=('openoffice-base')
 conflicts=('openoffice-base')
@@ -88,11 +100,10 @@ build() {
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
 	unset CXXFLAGS
-#	export ARCH_FLAGS="$CFLAGS"
 
 	if [ "$CARCH" = "x86_64" ]; then
 	      EXTRAOPTS="--without-stlport"
-	 else EXTRAOPTS="--with-stlport" --with-additional-sections="SystemGraphiteWithSTLport"
+	 else EXTRAOPTS="--with-stlport --with-additional-sections=SystemGraphiteWithSTLport"
 	fi
 
 #	autoreconf
@@ -107,37 +118,56 @@ build() {
 		--with-lang="" \
 		--with-dict=ALL\
 		--with-binsuffix=no \
-		--disable-ldap \
 		--enable-cairo\
+		--enable-crashdump\
+		--enable-evolution2\
+		--enable-graphite\
 		--disable-kde\
 		--enable-kde4\
+		--enable-ldap \
 		--enable-lockdown\
-		--with-system-boost\
-		--with-system-cairo\
-		--enable-crashdump\
-		--without-gpc\
 		--enable-opengl \
+		--enable-mediawiki\
 		--enable-minimizer \
-		--enable-presenter-console \
+		--enable-odk\
+		--enable-opengl\
 		--enable-pdfimport \
+		--enable-presenter-console \
+		--enable-report-builder\
 		--enable-wiki-publisher \
 		--enable-ogltrans \
+		--without-gpc\
+		--without-fonts\
+		--without-afms\
+		--without-gpc\
+		--without-nas\
+		--without-ppds\
+		--without-system-agg\
+		--without-system-libwps\
+		--without-system-libwpg\
+		--without-system-mdds\
+		--with-system-cppunit\
+		--with-system-redland\
+		--without-system-saxon\
+		--with-openldap\
 		--with-ant-home="/usr/share/java/apache-ant"\
-		--with-system-saxon\
-		--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
+		--with-system-boost\
+		--with-system-cairo\
+		--with-system-libs\
+		--with-system-mythes\
+		--with-system-unixodbc-headers\
+		--with-system-xrender-headers\
+		--with-system-headers\
+		--with-alloc=system\
 		--with-system-lucene\
 		--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
 		--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
-		--with-system-beanshell\
-		--with-system-vigra\
-		--with-system-altlinuxhyph\
-		--with-system-graphite\
-		--with-system-lpsolve\
-		--with-system-mythes\
-		--without-system-redland \
 		$EXTRAOPTS || return 1
 
-#		
+# see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
+#		--with-system-saxon\
+#		--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
+		
 #		--with-tag=${_ootag}
 #		--enable-report-builder \
 #		--with-additional-sections="OOXMLExport"
@@ -160,10 +190,11 @@ package() {
 
 	# install all other built extensions
 	pushd ${srcdir}/ooo-build-${_GOver}/build/${_ootag}/solver/320/unxlng?6.pro/bin/
-	install -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/pdfimport.oxt || return 1
-	install -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/wiki-publisher.oxt || return 1
-	install -m644 minimizer/sun-presentation-minimizer.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/sun-presentation-minimizer.oxt || return 1
-	install -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/presenter-screen.oxt || return 1
+         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/report-builder.oxt || return 1
+         install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/wiki-publisher.oxt || return 1
+         install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/presentation-minimizer.oxt || return 1
+         install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/presenter-screen.oxt || return 1
+         install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/"${pkgname}"/share/extension/install/pdfimport.oxt || return 1
 	popd
 	
 	# fix unopkg call for mktemp, #15410
