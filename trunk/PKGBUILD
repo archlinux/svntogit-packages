@@ -1,51 +1,82 @@
 # $Id$
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: damir <damir@archlinux.org>
 # Contributor: Jason Taylor <jftaylor21@gmail.com>
 
-pkgname=lapack
+pkgbase=lapack
+pkgname=('blas' 'lapack')
 pkgver=3.2.1
-pkgrel=1
-pkgdesc="Linear Algebra PACKage"
+pkgrel=2
 url="http://www.netlib.org/lapack"
+makedepends=('gcc-fortran')
 arch=('i686' 'x86_64')
 license=("custom")
-depends=('blas>=20070405-2')
-source=(http://www.netlib.org/${pkgname}/${pkgname}-${pkgver}.tgz
-	make.inc.archlinux blas-link.patch)
+source=(http://www.netlib.org/${pkgbase}/${pkgbase}-${pkgver}.tgz
+        lapack-3.1.1-make.inc.patch
+        Makefile.blas
+        Makefile.lapack
+        LICENSE.blas)
 md5sums=('a3202a4f9e2f15ffd05d15dab4ac7857'
-         'cc368c407e396227c473db5bac92cf02'
-         'd396697499466389f5bbea6b5ec9b489')
+         'cdfcb9d9b162c18d9acbf63c5579ea26'
+         'c7d3530faf06c817c5f41873adb5eecf'
+         '8743396d6a95657bfaf7cd339e7b5fe9'
+         '38b6acb8ed5691d25863319d30a8b365')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  install -d "${pkgdir}/usr/lib" || return 1
-  # install -d "${pkgdir}/usr/share/man/man1" || return 1
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  patch -Np1 -i "${srcdir}/lapack-3.1.1-make.inc.patch" || return 1
+  cp -f INSTALL/make.inc.gfortran make.inc
+  cp -f "${srcdir}/Makefile.blas" BLAS/SRC/Makefile
+  cp -f "${srcdir}/Makefile.lapack" SRC/Makefile
 
-  cp "${srcdir}/make.inc.archlinux" make.inc || return 1
-  
-  # fix blas linking FS#13093
-  patch -Np1 -i ${srcdir}/blas-link.patch || return 1
-   
-  # Build with Position Independent Code (PIC) FS#12464 (i686), required for x86_64
-  CFLAGS="${CFLAGS} -fPIC"
+  export FC=gfortran
 
+  pushd BLAS/SRC
   make clean
-  make lib OPTS="${CFLAGS}" NOOPT="${CFLAGS/-O?/-O0}" || return 1
-  install -m755 *.so* "${startdir}/pkg/usr/lib/" || return 1
-  ln -sf liblapack.so.3 "${pkgdir}/usr/lib/liblapack.so"
-  ln -sf libtmglib.so.3 "${pkgdir}/usr/lib/libtmglib.so"
+  FFLAGS="${CFLAGS/-O?/-O0}" make dcabs1.o || return 1
+  FFLAGS="${CFLAGS} -fPIC" CFLAGS="${CFLAGS} -fPIC" make shared || return 1
+  cp libblas.so.${pkgver} "${srcdir}/${pkgbase}-${pkgver}/"
+  popd
+  ln -s libblas.so.${pkgver} libblas.so
 
-  # upstream does not provide manpages for this release
-  # you can browse them online: http://www.netlib.org/lapack/explore-html/
+  pushd INSTALL
+  make clean
+  make NOOPT="${CFLAGS/-O?/-O0} -fPIC" OPTS="${CFLAGS} -fPIC" || return 1
+  popd
 
-  # Manpages
-  #for _file in manpages/man/manl/* manpages/blas/man/manl/*; do
-  #  install -m644 "${_file}" "${pkgdir}/usr/share/man/man1/$(basename ${_file} .l).1" || return 1
-  #done
-
-  # Install custom license
-  install -Dm644 ${srcdir}/${pkgname}-${pkgver}/LICENSE \
-	"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
+  pushd SRC
+  make clean
+  make FFLAGS="${CFLAGS} -fPIC" CFLAGS="${CFLAGS} -fPIC" shared || return 1
+  cp liblapack.so.${pkgver} "${srcdir}/${pkgbase}-${pkgver}/"
+  popd
 }
 
+package_blas() {
+  pkgdesc="Basic Linear Algebra Subprograms"
+  depends=('gcc-libs>=4.5.0')
+  options=('force')
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m755 "${srcdir}/${pkgbase}-${pkgver}/libblas.so.${pkgver}" \
+    "${pkgdir}/usr/lib/" || return 1
+  ln -sf libblas.so.${pkgver} "${pkgdir}/usr/lib/libblas.so"
+  ln -sf libblas.so.${pkgver} "${pkgdir}/usr/lib/libblas.so.3"
+  
+  install -m755 -d "${pkgdir}/usr/share/licenses/blas"
+  install -m644 "${srcdir}/LICENSE.blas" \
+    "${pkgdir}/usr/share/licenses/blas/LICENSE" || return 1
+}
+
+package_lapack() {
+  pkgdesc="Linear Algebra PACKage"
+  depends=("blas=${pkgver}")
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m755 "${srcdir}/${pkgbase}-${pkgver}/liblapack.so.${pkgver}" \
+    "${pkgdir}/usr/lib/" || return 1
+  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so"
+  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so.3"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/lapack"
+  install -m644 "${srcdir}/${pkgbase}-${pkgver}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/lapack/" || return 1
+}
