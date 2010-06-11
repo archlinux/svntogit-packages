@@ -1,0 +1,49 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=iptables
+pkgver=1.4.8
+pkgrel=1
+pkgdesc="A Linux kernel packet control tool"
+arch=('i686' 'x86_64')
+license=('GPL2')
+url="http://www.netfilter.org/"
+depends=('glibc' 'bash')
+options=('!libtool')
+source=(http://www.iptables.org/projects/iptables/files/${pkgname}-${pkgver}.tar.bz2 \
+        iptables ip6tables empty.rules simple_firewall.rules iptables.conf.d)
+backup=(etc/conf.d/iptables)
+sha1sums=('53d756938e6dc748364ca1e1952f28dd9daad6a4'
+          'd7540316581bb66c5594885882a14ba394e95098'
+          '70d70113e3a23f0fe99404c5536507a887a4ca5c'
+          '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
+          '9907f9e815592837abc7fa3264a401567b7606ab'
+          '1c52444ffbecc09f56bb325db49e924dd32f9213')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+
+  # http://bugs.archlinux.org/task/17046
+  sed -i '87 i libxt_RATEEST.so: libxt_RATEEST.oo' extensions/GNUmakefile.in
+  sed -i '88 i \\t${AM_VERBOSE_CCLD} ${CCLD} ${AM_LDFLAGS} -lm -shared ${LDFLAGS} -o $@ $<;\n' extensions/GNUmakefile.in
+
+ ./configure --prefix=/usr --with-kernel=usr/src/linux-$(uname -r) \
+	--libexecdir=/usr/lib/iptables --sysconfdir=/etc \
+	--with-xtlibdir=/usr/lib/iptables \
+	--enable-devel --enable-libipq
+
+  make || return 1
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+
+  make DESTDIR=${pkgdir} install || return 1
+
+  install -D -m755 ../iptables ${pkgdir}/etc/rc.d/iptables
+  install -D -m755 ../ip6tables ${pkgdir}/etc/rc.d/ip6tables
+  install -D -m644 ../empty.rules ${pkgdir}/etc/iptables/empty.rules
+  install -D -m644 ../simple_firewall.rules ${pkgdir}/etc/iptables/simple_firewall.rules
+  install -D -m644 ../iptables.conf.d ${pkgdir}/etc/conf.d/iptables
+}
