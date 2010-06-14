@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
+pkgname=iproute2
+pkgver=2.6.34
+pkgrel=2
+pkgdesc="IP Routing Utilities"
+arch=('i686' 'x86_64')
+license=('GPL2')
+url="http://www.linux-foundation.org/en/Net:Iproute2"
+depends=('linux-atm' 'perl')
+provides=('iproute')
+conflicts=('iproute')
+replaces=('iproute')
+options=('!makeflags')
+backup=('etc/iproute2/ematch_map' 'etc/iproute2/rt_dsfield' 'etc/iproute2/rt_protos' \
+	'etc/iproute2/rt_realms' 'etc/iproute2/rt_scopes' 'etc/iproute2/rt_tables')
+source=(http://devresources.linux-foundation.org/dev/iproute2/download/iproute2-${pkgver}.tar.bz2
+	'iproute2-fhs.patch' 'tc.patch')
+sha1sums=('b57f98e284c68a464b9c3e132d29760de6331688'
+          'ae7c4529555e1dce389fcedcbb7e0df5c726741a'
+          'de7ffa44922741c1239e1715e1d81d8f4e7b04e4')
+
+build() {
+  cd $srcdir/iproute2-${pkgver}
+  
+  # set correct fhs structure
+  patch -Np1 -i ${srcdir}/iproute2-fhs.patch || return 1
+  patch -Np0 -i ${srcdir}/tc.patch || return 1
+  ./configure || return 1
+  make || return 1
+}
+
+package() {
+  cd $srcdir/iproute2-${pkgver}
+
+  make DESTDIR=$pkgdir install || return 1
+
+  # libnetlink isn't installed, install it FS#19385
+  install -Dm644 include/libnetlink.h ${pkgdir}/usr/include/libnetlink.h || return 1
+  install -Dm644 lib/libnetlink.a ${pkgdir}/usr/lib/libnetlink.a || return 1
+}
+
