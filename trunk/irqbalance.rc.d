@@ -5,7 +5,7 @@ ONESHOT=0
 [ -f /etc/conf.d/irqbalance ] && . /etc/conf.d/irqbalance
 
 if [ "$ONESHOT" -ne 0 ]; then
-	ONESHOT_CMD="oneshot"
+	ONESHOT_CMD="--oneshot"
 fi
 
 . /etc/rc.conf
