@@ -15,8 +15,8 @@ backup=("etc/inputrc")
 source=(http://ftp.gnu.org/gnu/readline/readline-6.1.tar.gz
         inputrc)
 if [ $_patchlevel -gt 00 ]; then
-    for p in $(seq -w 01 $_patchlevel); do
-        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-6.1-patches/readline61-$p)
+    for (( p=1; p<=$_patchlevel; p++ )); do
+        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-6.1-patches/readline61-$(printf "%03d" $p))
     done
 fi
 md5sums=('fc2f7e714fe792db1ce6ddc4c9fb4ef3'
