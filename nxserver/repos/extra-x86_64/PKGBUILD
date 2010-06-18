@@ -1,0 +1,95 @@
+# $Id$
+# Maintainer Tobias Powalowski <tpowa@archlinux.org>
+# Contributed: eliott <eliott@solarblue.net>, Andre Naumann <anaumann@SPARCed.org>
+
+pkgname=nxserver
+pkgver=3.4.0
+pkgrel=4
+pkgdesc="NoMachine NX is the next-generation X compression and roundtrip suppression scheme."
+arch=(i686 x86_64)
+url="http://nomachine.com/"
+license=('GPL')
+depends=("nx-common>=$pkgver" 'libxaw' 'libxrender' 'libxp' 'gcc-libs' 'libjpeg>=8' \
+	 'libxpm' 'libpng>=1.4.0' 'libxdamage' 'libxrandr' 'libxcomposite' 'libxtst' 'freetype2')
+makedepends=('imake')
+source=(
+#X11 support programs and libraries
+http://64.34.161.181/download/$pkgver/sources/nx-X11-$pkgver-3.tar.gz
+http://64.34.161.181/download/$pkgver/sources/nxwin-$pkgver-5.tar.gz
+http://64.34.161.181/download/$pkgver/sources/nxauth-$pkgver-3.tar.gz
+http://64.34.161.181/download/$pkgver/sources/nxcomp-$pkgver-7.tar.gz
+#X11 Agent sources
+http://64.34.161.181/download/$pkgver/sources/nxagent-$pkgver-8.tar.gz
+http://64.34.161.181/download/$pkgver/sources/nxcompsh-$pkgver-2.tar.gz
+#Compression libs and proxy sources
+http://64.34.161.181/download/$pkgver/sources/nxproxy-$pkgver-2.tar.gz
+http://64.34.161.181/download/$pkgver/sources/nxcompext-$pkgver-1.tar.gz
+http://64.34.161.181/download/$pkgver/sources/nxcompshad-$pkgver-3.tar.gz
+#64bit fixes
+NXproto.h.64bit.diff
+# gcc 43 fix
+nxcompsh-gcc43.patch
+nxcompshad-gcc43.patch
+nx-gcc44.patch)
+options=(!libtool) 
+md5sums=('55630b5e20d360e977c8f7734fae1733'
+         '88538694d4a0dce157bec0dd8da9f9d3'
+         'bfb758edd51271b31aa6b902557fa0cc'
+         'cba926f2b855231a8fc3e0dabff52855'
+         '7d0c0ce7707a1ce9fe8f8d1c0a194266'
+         'f94501249ad7d4453524f88ef0cfb1ff'
+         '95ce93520d463a3d18cdd5d19c321e85'
+         '605a8e2a136f89477f0059a0d2af4582'
+         '15deba68e12e13b524a723b49e7ec813'
+         '58341ba70dfab92ff38570071fbbf88a'
+         'b6c279654dac421fc3dd1a27d66ff53c'
+         '01cea8bc5997ae2c3790cbcb7d624c86'
+         'c805442f1500d8d6de15ec224f63277e')
+
+build() {
+  cd $startdir/src
+  mkdir -p ${pkgdir}/opt/NX/bin
+  mkdir -p ${pkgdir}/opt/NX/lib
+  patch -Np0 -i ../nxcompsh-gcc43.patch || return 1
+  patch -Np0 -i ../nxcompshad-gcc43.patch || return 1
+#  patch -Np1 -i ../nx-gcc44.patch || return 1
+  
+  cd ${srcdir}/nxcomp
+  if [ "$CARCH" = "x86_64" ]; then
+    patch -Np1 -i ../NXproto.h.64bit.diff  || return 1
+  fi
+  ./configure --prefix=/opt/NX
+  make || return 1
+
+  cd ${srcdir}/nxcompshad
+  ./configure --prefix=/opt/NX
+  make || return 1
+  cp -a libXcompshad.so* ${pkgdir}/opt/NX/lib
+
+  cd ${srcdir}/nxcompsh
+  ./configure --prefix=/opt/NX
+  make || return 1
+  cp -a libXcompsh.so* ${pkgdir}/opt/NX/lib
+
+  cd ${srcdir}/nxproxy
+  ./configure --prefix=/opt/NX
+  make || return 1
+  make prefix=${pkgdir}/opt/NX install || return 1
+
+  cd ${srcdir}/nx-X11
+  make World || return 1
+  cp -a lib/X11/libX11.so* ${pkgdir}/opt/NX/lib
+  cp -a lib/Xext/libXext.so* ${pkgdir}/opt/NX/lib
+  cp -a lib/Xrender/libXrender.so* ${pkgdir}/opt/NX/lib
+  install -D -m755 programs/Xserver/nxagent ${pkgdir}/opt/NX/bin/nxagent
+  install -D -m755 programs/nxauth/nxauth ${pkgdir}/opt/NX/bin/nxauth
+
+  cd ${srcdir}/nxcompext 
+  ./configure --prefix=/opt/NX
+  make || return 1
+  cp -a libXcompext.so* ${pkgdir}/opt/NX/lib
+
+  # fix libXcompext linking
+  cd ${pkgdir}/opt/NX/lib
+  ln -s libXcompext.so.3 libXcompext.so.1
+}
