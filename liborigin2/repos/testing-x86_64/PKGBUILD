@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=liborigin2
+pkgver=20090406
+pkgrel=4
+pkgdesc="A library for reading OriginLab OPJ project files"
+url="http://soft.proindependent.com/liborigin2/"
+source=(http://download.berlios.de/qtiplot/${pkgname}-06042009.zip
+	liborigin.pro.archlinux
+        gcc45.patch)
+license=('GPL3')
+arch=('i686' 'x86_64')
+depends=('gcc-libs' 'boost-libs')
+makedepends=('doxygen' 'qt' 'boost')
+replaces=('liborigin')
+provides=('liborigin')
+md5sums=('b221b2e4d86a4a2b9136bc37944b64b8'
+         '4fe64e68ef0419926986d3cc1fc79bed'
+         '2fde6d1e7e94216e82d124c8500e05c5')
+
+build() {
+	cd ${srcdir}/${pkgname}-06042009
+        patch -Np0 -i ${srcdir}/gcc45.patch || return 1
+
+	install -Dm644 ${srcdir}/liborigin.pro.archlinux ./liborigin.pro || return 1
+
+	qmake liborigin.pro QMAKESPEC=linux-g++ || return 1
+  	make QTDIR=/usr/ QMAKESPEC=linux-g++ || return 1
+}
+
+package() {
+        cd ${srcdir}/${pkgname}-06042009
+
+  	INSTALL_ROOT=${pkgdir} make install || return 1
+
+        # install missing includes
+        install -Dm644 tree.hh ${pkgdir}/usr/include/liborigin2/tree.hh
+        for i in *.h; do
+          install -Dm644 ${i} ${pkgdir}/usr/include/liborigin2/${i}
+        done
+
+	 # create documentation
+        cd doc
+        doxygen
+
+	# install documentation manually
+	install -d ${pkgdir}/usr/share/doc/${pkgname}
+	cp -rf html/* ${pkgdir}/usr/share/doc/${pkgname}
+	chmod 755 ${pkgdir}/usr/share/doc/liborigin2/images
+	chmod 644 ${pkgdir}/usr/share/doc/liborigin2/images/origin_import.png
+}
