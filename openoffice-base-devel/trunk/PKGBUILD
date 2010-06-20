@@ -4,7 +4,7 @@
 
 pkgbase="openoffice-base-devel"
 pkgname=('openoffice-base-devel' 'openoffice-sdk-devel')
-_OO_milestone=DEV300_m82
+_OO_milestone=DEV300_m83
 pkgver=3.3_${_OO_milestone/DEV/dev}
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -14,7 +14,7 @@ makedepends=(# the real makedeps
              'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst' 'boost>=1.41.0'
              'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2.2" 'unixodbc' 'nss' 'hsqldb-java' 
              'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
-	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes' 'junit'
+	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes' 'junit' 'cppunit'
 	     # from main OOo the deps
 	     "curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
 	     'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
@@ -32,7 +32,7 @@ source=(${_OO_milestone}.tar.xz
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/sal-cpprt-gcc-4.5-workaround.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/fix-system-mythes-for-mythes-1.2.diff
-	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/redland-remove-patches.diff
+	cppunit_gcc45.diff
 	openoffice.profile)
 options=('!distcc' '!ccache' '!makeflags')
 
@@ -75,9 +75,6 @@ build() {
 
 	# allow build with system mythes
 	patch -Np0 -i ${srcdir}/fix-system-mythes-for-mythes-1.2.diff || return 1
-	# allow build with system redland and cppunit
-	# should also workaround all known bugs with plain upstream redland
-#	patch -Np0 -i ${srcdir}/redland-remove-patches.diff || return 1	
 
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
@@ -93,7 +90,9 @@ build() {
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
-	 else EXTRAOPTS="--with-stlport"
+	 else EXTRAOPTS="--with-stlport	--without-system-cppunit"
+	  # 	http://hg.services.openoffice.org/cws/sb122/raw-rev/f77b0e62cc92
+	  cp -v ${srcdir}/cppunit_gcc45.diff ${srcdir}/${_OO_milestone}/cppunit/ldflags.patch
 	fi
 
 	cd ${srcdir}/${_OO_milestone}
@@ -257,7 +256,7 @@ package_openoffice-base-devel() {
        
        # install extensions
        pushd ${srcdir}/${_OO_milestone}/solver/300/unxlng?6.pro/bin
-         install -D -m644 oracle-report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/oracle-report-builder.oxt || return 1
+         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/report-builder.oxt || return 1
 	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/wiki-publisher.oxt || return 1
 	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presentation-minimizer.oxt || return 1
 	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presenter-screen.oxt || return 1
