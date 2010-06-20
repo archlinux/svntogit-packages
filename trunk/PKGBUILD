@@ -7,8 +7,8 @@
 
 pkgname=glibc
 pkgver=2.12
-pkgrel=2
-_glibcdate=20100521
+pkgrel=3
+_glibcdate=20100620
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -19,6 +19,7 @@ makedepends=('gcc>=4.4')
 replaces=('glibc-xen')
 backup=(etc/locale.gen
         etc/nscd.conf)
+options=('!strip')
 install=glibc.install
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
         glibc-2.10-dont-build-timezone.patch
@@ -27,7 +28,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         nscd
         locale.gen.txt
         locale-gen)    
-md5sums=('5c0e450103c1e2d008c34ac208910b99'
+md5sums=('8857bfae3e0a659452ddd8f9d2606490'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
@@ -62,7 +63,7 @@ build() {
   mkdir glibc-build
   cd glibc-build
 
-  if [ "${CARCH}" = "i686" ]; then
+  if [[ ${CARCH} = "i686" ]]; then
     # Hack to fix NPTL issues with Xen, only required on 32bit platforms
     export CFLAGS="${CFLAGS} -mno-tls-direct-seg-refs"
   fi
@@ -76,7 +77,7 @@ build() {
       --enable-bind-now --with-tls --with-__thread \
       --libdir=/usr/lib --without-gd --disable-multi-arch
         
-  make || return 1
+  make
 }
 
 package() {
@@ -105,7 +106,7 @@ package() {
   cat ${srcdir}/glibc/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
   sed -i "s|^|#|g" ${pkgdir}/etc/locale.gen
 
-  if [ "${CARCH}" = "x86_64" ]; then
+  if [[ ${CARCH} = "x86_64" ]]; then
     # fix for the linker
     sed -i '/RTLDLIST/s%/ld-linux.so.2 /lib64%%' ${pkgdir}/usr/bin/ldd
     #Comply with multilib binaries, they look for the linker in /lib64
@@ -113,4 +114,24 @@ package() {
     cd ${pkgdir}/lib64
     ln -v -s ../lib/ld* .
   fi
+  
+  # manually strip files as stripping libpthread and libthread_db with
+  # the default $STRIP_SHARED breaks gdb
+
+  cd $pkgdir
+  strip $STRIP_BINARIES sbin/{ldconfig,sln} \
+                        usr/bin/{gencat,getconf,getent,iconv,locale} \
+                        usr/bin/{localedef,pcprofiledump,rpcgen,sprof} \
+                        usr/lib/getconf/* \
+                        usr/sbin/{iconvconfig,nscd,rpcinfo}
+  [[ $CARCH = "i686" ]] && strip $STRIP_BINARIES usr/bin/lddlibc4
+
+  strip $STRIP_STATIC usr/lib/*.a \
+                      lib/{libpthread-2.12,libthread_db-1.0}.so
+
+  strip $STRIP_SHARED lib/{ld,libanl,libBrokenLocale,libc,libcidn,libcrypt}-2.12.so \
+                      lib/libnss_{compat,dns,files,hesiod,nis,nisplus}-2.12.so \
+                      lib/{libdl,libm,libnsl,libresolv,librt,libutil}-2.12.so \
+                      lib/{libmemusage,libpcprofile,libSegFault}.so \
+                      usr/lib/{pt_chown,gconv/*.so}
 }
