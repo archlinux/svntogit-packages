@@ -3,26 +3,32 @@
 # Contributor: Geoffroy Carrier <geoffroy@archlinux.org>
 
 pkgname=bluez
-pkgver=4.65
+pkgver=4.66
 pkgrel=1
 pkgdesc="Libraries and tools for the Bluetooth protocol stack"
 url="http://www.bluez.org/"
 arch=('i686' 'x86_64')
 license=('GPL2')
 depends=('dbus-core')
-makedepends=('gstreamer0.10-base' 'alsa-lib' 'libusb' 'libnl')
-optdepends=('gstreamer0.10-base' 'alsa-lib' 'libusb' 'libnl' 'dbus-python')
+makedepends=('gstreamer0.10-base' 'libusb' 'libnl' 'libsndfile')
+optdepends=("gstreamer0.10-base: bluetooth GStreamer support"
+	"alsa-lib: Audio bluetooth devices support"
+	"dbus-python: to run bluez-simple-agent"
+	"libusb: USB adapters support"
+	"cups: CUPS backend"
+	"libnl: netlink plugin")
 conflicts=('bluez-libs' 'bluez-utils')
 provides=('bluez-libs' 'bluez-utils')
 replaces=('bluez-libs' 'bluez-utils')
 options=('!libtool')
-backup=(etc/bluetooth/{main,rfcomm,audio,network,input}.conf
+backup=(etc/bluetooth/{main,rfcomm,audio,network,input,serial}.conf
         etc/conf.d/bluetooth)
 source=("http://www.kernel.org/pub/linux/bluetooth/${pkgname}-${pkgver}.tar.bz2"
-        'bluetooth.conf.d' 'rc.bluetooth')
-md5sums=('8045fa05b16fae807a95532689eda9b4'
-         'd12be5b494525bb1ba6eac5c3983dd3e'
-         '4a2b3f9d94ee3233f051443f3523b1dd')
+        'bluetooth.conf.d'
+	'rc.bluetooth')
+md5sums=('74b5961098d1b507c77bc0553d5efaf5'
+         '8f60a5eb9d84b9c64c478d63e1c24b10'
+         'ca4c39eb4bb201bd2eacad01492cd735')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -32,38 +38,40 @@ build() {
         --localstatedir=/var \
         --libexecdir=/lib \
         --mandir=/usr/share/man \
-        --enable-gstreamer \
+	--enable-network \
+	--enable-serial \
+        --enable-input \
+	--enable-audio \
+        --enable-service \
+	--enable-gstreamer \
         --enable-alsa \
         --enable-usb \
         --enable-netlink \
         --enable-tools \
         --enable-bccmd \
-        --enable-hid2hci \
         --enable-dfutool \
-        --enable-hidd \
-        --enable-pand \
-        --enable-dund \
+	--enable-hidd \
+	--enable-pand \
+	--enable-dund \
         --enable-cups \
-        --enable-configfiles || return 1
-  make || return 1
+	--enable-udevrules \
+        --enable-configfiles
+  make
 }
 
 package() {
   cd ${srcdir}/${pkgname}-${pkgver}
-  make DESTDIR=${pkgdir} install || return 1
+  make DESTDIR=${pkgdir} install
 
-  install -Dm755 ${srcdir}/rc.bluetooth ${pkgdir}/etc/rc.d/bluetooth || return 1
+  install -Dm755 ${srcdir}/rc.bluetooth ${pkgdir}/etc/rc.d/bluetooth
   
   install -d ${pkgdir}/etc/bluetooth
-  install -m644 network/network.conf input/input.conf audio/audio.conf \
-    ${pkgdir}/etc/bluetooth/ || return 1
+  install -m644 network/network.conf \
+                input/input.conf \
+                audio/audio.conf \
+                serial/serial.conf \
+    ${pkgdir}/etc/bluetooth/
   
   install -Dm644 ${srcdir}/bluetooth.conf.d \
-    ${pkgdir}/etc/conf.d/bluetooth || return 1
-
-  install -Dm755 scripts/bluetooth_serial \
-    ${pkgdir}/lib/udev/bluetooth_serial || return 1
-
-  install -Dm755 test/simple-agent \
-    ${pkgdir}/usr/bin/bluez-simple-agent || return 1
+    ${pkgdir}/etc/conf.d/bluetooth
 }

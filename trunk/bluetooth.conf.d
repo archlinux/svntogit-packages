@@ -5,9 +5,6 @@
 # Run the bluetoothd daemon (default: true)
 #DAEMON_ENABLE="false"
 
-# Run hid2hci (default: false)
-#HID2HCI_ENABLE="true"
-
 # Run the sdp daemon (default: false)
 # If this is disabled, hcid's internal sdp daemon will be used
 #SDPD_ENABLE="true"
