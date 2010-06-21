@@ -1,0 +1,79 @@
+From 66b8e290bd0b767183cba583917907940b5b425a Mon Sep 17 00:00:00 2001
+From: Vincent Untz <vuntz@gnome.org>
+Date: Tue, 06 Oct 2009 10:47:52 +0000
+Subject: [panel] Fix crashes in various conditions with the new randr code
+
+If nothing had probed the randr screen resources before us and the X
+server is supporting randr 1.3, then we got no output, and therefore no
+monitor. The fix here is to actively probe for resources if we detect
+this case. See https://bugzilla.gnome.org/show_bug.cgi?id=597101
+
+Also, in some cases, all outputs appear disconnected. See
+https://bugzilla.novell.com/show_bug.cgi?id=543876
+
+To be completely on the safe side, if we get no monitor information from
+randr, even if it is successful, we fallback to the GTK+ method.
+---
+diff --git a/gnome-panel/panel-multiscreen.c b/gnome-panel/panel-multiscreen.c
+index 8a05221..4ed76ae 100644
+--- a/gnome-panel/panel-multiscreen.c
++++ b/gnome-panel/panel-multiscreen.c
+@@ -136,9 +136,17 @@ panel_multiscreen_get_randr_monitors_for_screen (GdkScreen     *screen,
+ 	xroot = GDK_WINDOW_XWINDOW (gdk_screen_get_root_window (screen));
+ 
+ #if (RANDR_MAJOR > 1 || (RANDR_MAJOR == 1 && RANDR_MINOR >= 3))
+-	if (have_randr_1_3)
++	if (have_randr_1_3) {
+ 		resources = XRRGetScreenResourcesCurrent (xdisplay, xroot);
+-	else
++		if (resources->noutput == 0) {
++			/* This might happen if nothing tried to get randr
++			 * resources from the server before, so we need an
++			 * active probe. See comment #27 in
++			 * https://bugzilla.gnome.org/show_bug.cgi?id=597101 */
++			XRRFreeScreenResources (resources);
++			resources = XRRGetScreenResources (xdisplay, xroot);
++		}
++	} else
+ 		resources = XRRGetScreenResources (xdisplay, xroot);
+ #else
+ 	resources = XRRGetScreenResources (xdisplay, xroot);
+@@ -205,6 +213,17 @@ panel_multiscreen_get_randr_monitors_for_screen (GdkScreen     *screen,
+ 		return FALSE;
+ 	}
+ 
++	if (geometries->len == 0) {
++		/* This can happen in at least one case:
++		 * https://bugzilla.novell.com/show_bug.cgi?id=543876 where all
++		 * monitors appear disconnected (possibly because the  screen
++		 * is behing a KVM switch) -- see comment #8.
++		 * There might be other cases too, so we stay on the safe side.
++		 */
++		g_array_free (geometries, TRUE);
++		return FALSE;
++	}
++
+ 	*monitors_ret = geometries->len;
+ 	*geometries_ret = (GdkRectangle *) g_array_free (geometries, FALSE);
+ 
+@@ -238,9 +257,15 @@ panel_multiscreen_get_raw_monitors_for_screen (GdkScreen     *screen,
+ 					       int           *monitors_ret,
+ 					       GdkRectangle **geometries_ret)
+ {
+-	if (panel_multiscreen_get_randr_monitors_for_screen (screen,
+-							     monitors_ret,
+-							     geometries_ret))
++	gboolean res;
++
++	*monitors_ret = 0;
++	*geometries_ret = NULL;
++
++	res = panel_multiscreen_get_randr_monitors_for_screen (screen,
++							       monitors_ret,
++							       geometries_ret);
++	if (res && *monitors_ret > 0)
+ 		return;
+ 
+ 	panel_multiscreen_get_gdk_monitors_for_screen (screen,
+--
+cgit v0.8.2
