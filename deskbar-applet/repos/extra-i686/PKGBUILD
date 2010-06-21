@@ -1,0 +1,34 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=deskbar-applet
+pkgver=2.30.1
+pkgrel=2
+pkgdesc="An all-in-one search bar for the GNOME panel"
+arch=(i686 x86_64)
+url="http://raphael.slinckx.net/deskbar/"
+license=('GPL')
+depends=('gnome-desktop>=2.30.0' 'gnome-python-desktop>=2.30.0' 'gnome-panel>=2.30.0' 'dbus-python>=0.83.0')
+makedepends=('evolution-data-server>=2.30.2.1' 'gettext' 'intltool' 'pkg-config' 'gnome-doc-utils>=0.20.1')
+options=('!libtool' '!emptydirs')
+groups=('gnome-extra')
+install=deskbar-applet.install
+source=(http://ftp.gnome.org/pub/GNOME/sources/deskbar-applet/2.30/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('0754e15db1b5295dbb7e4134bafe06ffad054cf09d8f3034b95b14a0af534a89')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed '/^modulesdir=/ s/@libdir@/@libexecdir@/' -i data/deskbar-applet.pc.in
+  LD_PRELOAD="" ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var \
+      --libexecdir=/usr/lib \
+      --disable-scrollkeeper \
+      --enable-evolution --disable-schemas-install || return 1
+
+  make || return 1
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain deskbar-applet ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
