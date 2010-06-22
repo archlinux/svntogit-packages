@@ -1,0 +1,38 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-settings-daemon
+pkgver=2.30.2
+pkgrel=1
+pkgdesc="The GNOME Settings daemon"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('libgnomekbd>=2.30.1' 'gnome-desktop>=2.30.2' 'libnotify>=0.4.5' 'libxxf86misc' 'gstreamer0.10-base>=0.10.29' 'hicolor-icon-theme')
+makedepends=('intltool' 'pkg-config')
+conflicts=('gnome-control-center<2.22.0')
+options=(!emptydirs !libtool)
+install=gnome-settings-daemon.install
+url="http://www.gnome.org"
+groups=('gnome')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.30/${pkgname}-${pkgver}.tar.bz2
+        gstreamer-volume-2.30.patch)
+sha256sums=('7cd22dab52f52900ee13a5bc0c1a186e91d33e77f5333c4622f84d85e4eb71f4'
+            '4b2a14c0e238f3cde71619b74f178544151bb319dee84b52133a254b85548582')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/gstreamer-volume-2.30.patch" || return 1
+  libtoolize --force
+  aclocal
+  autoconf
+  automake
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --libexecdir=/usr/bin --disable-static
+
+  make
+  make DESTDIR="${pkgdir}" GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install
+
+  install -d -m755 "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-settings-daemon ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
