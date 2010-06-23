@@ -7,7 +7,7 @@
 
 pkgname=glibc
 pkgver=2.12
-pkgrel=3
+pkgrel=4
 _glibcdate=20100620
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -115,8 +115,9 @@ package() {
     ln -v -s ../lib/ld* .
   fi
   
-  # manually strip files as stripping libpthread and libthread_db with
-  # the default $STRIP_SHARED breaks gdb
+  # manually strip files as stripping libpthread-*.so and libthread_db.so
+  # with the default $STRIP_SHARED breaks gdb and stripping ld-*.so breaks
+  # valgrind on x86_64
 
   cd $pkgdir
   strip $STRIP_BINARIES sbin/{ldconfig,sln} \
@@ -127,9 +128,9 @@ package() {
   [[ $CARCH = "i686" ]] && strip $STRIP_BINARIES usr/bin/lddlibc4
 
   strip $STRIP_STATIC usr/lib/*.a \
-                      lib/{libpthread-2.12,libthread_db-1.0}.so
+                      lib/{{ld,libpthread}-2.12,libthread_db-1.0}.so
 
-  strip $STRIP_SHARED lib/{ld,libanl,libBrokenLocale,libc,libcidn,libcrypt}-2.12.so \
+  strip $STRIP_SHARED lib/{libanl,libBrokenLocale,libc,libcidn,libcrypt}-2.12.so \
                       lib/libnss_{compat,dns,files,hesiod,nis,nisplus}-2.12.so \
                       lib/{libdl,libm,libnsl,libresolv,librt,libutil}-2.12.so \
                       lib/{libmemusage,libpcprofile,libSegFault}.so \
