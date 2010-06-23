@@ -3,38 +3,36 @@
 # Contributor: Jeffrey 'jf' Lim <jfs.world@gmail.com>
 
 pkgname=wmii
-pkgver=3.6
-pkgrel=4
-pkgdesc="Next generation WMI (Window Manager Improved 2)"
+pkgver=3.9.2
+pkgrel=1
+pkgdesc="A small, dynamic window manager for X11"
 arch=('i686' 'x86_64') 
 license=('MIT')
 url="http://wmii.suckless.org/"
-depends=('glibc' 'libx11' 'libixp' 'dmenu' 'libxt')
+depends=('libxft' 'libxrandr' 'libxinerama' 'dash')
 options=('!makeflags')
-source=(http://dl.suckless.org/${pkgname}/$pkgname-$pkgver.tar.gz
-        'libixp-api.patch'
-        'wmii.desktop')
-md5sums=('9d17a09871fada998b4d989d9318bbf5'
-         'ee1cf96b3e0b6068f44100b4bd80a215'
-         'dff79a4ae5303b8f332c4eea8fb1420f')
+source=(http://dl.suckless.org/${pkgname}/${pkgname}+ixp-${pkgver}.tbz
+	'fix-freetype-include.patch')
+md5sums=('3d480502b7b1e2a405d941df67f16bcf'
+	'97febd4a1df80aa4afbd126de1f36496')
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
-  patch -Np1 -i $srcdir/libixp-api.patch
+  cd ${srcdir}/${pkgname}+ixp-${pkgver}
 
-  sed -i \
-        -e "/^PREFIX/s|=.*|= ${pkgdir}/usr|" \
-		-e "/^ETC/s|=.*|= ${pkgdir}/etc|" \
-		-e "/^LIBDIR/s|=.*|= /usr/lib|" \
-		config.mk || return 1
+  patch -Np1 -i ${srcdir}/fix-freetype-include.patch
 
-  make -j1 || return 1
-  make -j1 DESTDIR=$pkgdir install
+  sed -i 's|PREFIX = /usr/local|PREFIX = /usr|' config.mk
+  sed -i 's|ETC = $(PREFIX)/etc|ETC = /etc|' config.mk
+  
+  export MAKEFLAGS="-j1"
+  make
+}
 
-  install -Dm644 $srcdir/wmii.desktop $pkgdir/usr/share/xsessions/wmii.desktop
+package() {
+  cd ${srcdir}/${pkgname}+ixp-${pkgver}
+  make DESTDIR=${pkgdir} install
 
-  install -Dm644 LICENSE $pkgdir/usr/share/licenses/wmii/LICENSE
+  install -Dm644 debian/file/wmii.desktop ${pkgdir}/usr/share/xsessions/${pkgname}.desktop
 
-  # Rid paths of temporary install directory.
-  sed -i -e "s|${pkgdir}||g" "${pkgdir}/usr/bin/wmiistartrc"
+  install -Dm644 LICENSE $pkgdir/usr/share/licenses/${pkgname}/LICENSE
 }
