@@ -1,0 +1,42 @@
+# $Id$
+# Maintainer : Thomas Baechler <thomas@archlinux.org>
+
+pkgname=nvidia
+pkgver=256.35
+_kernver='2.6.34-ARCH'
+pkgrel=1
+pkgdesc="NVIDIA drivers for kernel26."
+arch=('i686' 'x86_64')
+url="http://www.nvidia.com/"
+depends=('kernel26>=2.6.34' 'kernel26<2.6.35' "nvidia-utils=${pkgver}")
+makedepends=('kernel26-headers>=2.6.34' 'kernel26-headers<2.6.35')
+conflicts=('nvidia-96xx' 'nvidia-173xx')
+license=('custom')
+install=nvidia.install
+
+if [ "$CARCH" = "i686" ]; then
+	_arch='x86'
+	_pkg="NVIDIA-Linux-${_arch}-${pkgver}"
+	source=("ftp://download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
+	md5sums=('f6af8917a500de28396a438f3f548c88')
+elif [ "$CARCH" = "x86_64" ]; then
+	_arch='x86_64'
+	_pkg="NVIDIA-Linux-${_arch}-${pkgver}-no-compat32"
+	source=("ftp://download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
+	md5sums=('7b5924f14a4d2326b4d916efdb7852ff')
+fi
+
+build() {
+	cd $srcdir
+	sh ${_pkg}.run --extract-only
+	cd ${_pkg}/kernel
+ 	make SYSSRC=/lib/modules/${_kernver}/build module
+}
+
+package() {
+	install -D -m644 $srcdir/${_pkg}/kernel/nvidia.ko \
+		$pkgdir/lib/modules/${_kernver}/kernel/drivers/video/nvidia.ko
+        install -d -m755 $pkgdir/etc/modprobe.d
+        echo "blacklist nouveau" >> $pkgdir/etc/modprobe.d/nouveau_blacklist.conf
+	sed -i -e "s/KERNEL_VERSION='.*'/KERNEL_VERSION='${_kernver}'/" $startdir/nvidia.install
+}
