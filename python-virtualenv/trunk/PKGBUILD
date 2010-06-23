@@ -10,6 +10,7 @@ url="http://pypi.python.org/pypi/virtualenv"
 license=('MIT')
 depends=('python' 'setuptools')
 replaces=('virtualenv')
+conflicts=('virtualenv')
 source=("http://pypi.python.org/packages/source/v/virtualenv/virtualenv-$pkgver.tar.gz")
 md5sums=('74ded4025a56e538c1c8df6b9825a8b8')
 
