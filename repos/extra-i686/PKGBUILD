@@ -1,0 +1,62 @@
+# $Id$
+# Contributor: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Dale Blount <dale@archlinux.org>
+# Contributor: Anders Bostrom <anders.bostrom@home.se>
+pkgname=thunderbird
+pkgver=3.1
+pkgrel=2
+pkgdesc="Standalone Mail/News reader"
+arch=('i686' 'x86_64')
+license=('MPL' 'GPL')
+url="http://www.mozilla.org/projects/thunderbird"
+depends=('gtk2>=2.20.1' 'gcc-libs>=4.5' 'mozilla-common' 'nss>=3.12.3' 'libxt' 'shared-mime-info' 'alsa-lib>=1.0.23' 'dbus-glib>=0.82')
+makedepends=('zip' 'pkg-config' 'libgnomeui' 'python' 'libidl2' 'wireless_tools')
+optdepends=('libcanberra: for sound support')
+options=('!makeflags')
+source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}.source.tar.bz2
+        mozconfig
+        thunderbird.desktop
+        thunderbird-3.0-lang.patch
+        thunderbird-appversion.patch
+        thunderbird-shared-error.patch
+        thunderbird-preferences.patch
+        xulrunner-png14.patch)
+md5sums=('feb4d737d568066076879a09bd0d506e'
+         '44c6ce8e84c972c0a1795edd46d618cf'
+         '7a119d30341dca4eadecedd523404fdb'
+         '25b6fe16ac24cd5c852213e5c1adb272'
+         '48ffcdb877a69d383b7d354e330f7658'
+         '3dca714ee8054634e6dfdb059464dc42'
+         'fce17db6057c58a17ca1a02f31adef5a'
+         '989b15f6bc9e2e9233fe4c6b23f412b1')
+
+build() {
+  cd "${srcdir}/comm-1.9.2"
+  patch -Np1 -i "${srcdir}/thunderbird-3.0-lang.patch"
+  patch -Np1 -i "${srcdir}/thunderbird-appversion.patch"
+  patch -Np1 -i "${srcdir}/thunderbird-shared-error.patch"
+  patch -Np1 -i "${srcdir}/thunderbird-preferences.patch"
+  patch -Np0 -i "${srcdir}/xulrunner-png14.patch"
+
+  cp "${srcdir}/mozconfig" .mozconfig
+  unset CXXFLAGS
+  unset CFLAGS
+
+  export LDFLAGS="-Wl,-rpath,/usr/lib/thunderbird-3.1"
+
+  make -f client.mk build MOZ_MAKE_FLAGS="${MAKEFLAGS}"
+  make DESTDIR="${pkgdir}" install
+
+  rm -rf "${pkgdir}/usr/bin/defaults"
+
+  install -m755 -d "${pkgdir}/usr/share/applications"
+  install -m755 -d "${pkgdir}/usr/share/pixmaps"
+
+  install -m644 mail/branding/unofficial/mailicon48.png \
+  	"${pkgdir}/usr/share/pixmaps/thunderbird.png"
+
+  install -m644 "${srcdir}/thunderbird.desktop" \
+      "${pkgdir}/usr/share/applications/"
+
+  rm -f ${pkgdir}/usr/lib/pkgconfig/thunderbird-ns{s,pr}.pc
+}
