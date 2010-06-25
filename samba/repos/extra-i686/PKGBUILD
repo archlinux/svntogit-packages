@@ -1,0 +1,150 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+pkgbase=samba
+pkgname=('smbclient' 'samba')
+pkgver=3.5.4
+# We use the 'A' to fake out pacman's version comparators.  Samba chooses
+# to append 'a','b',etc to their subsequent releases, which pamcan
+# misconstrues as alpha, beta, etc.  Bad samba!
+_realver=3.5.4
+pkgrel=1
+arch=(i686 x86_64)
+url="http://www.samba.org"
+license=('GPL3')
+makedepends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' 'libcap>=2.16' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1' 'talloc' 'tdb')
+options=(!makeflags)
+source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
+        samba samba.logrotate 
+        swat.xinetd 
+        samba.pam 
+        samba.conf.d
+        fix-ipv6-mount.patch)
+### UNINSTALL dmapi package before building!!!
+
+build() {
+  cd ${srcdir}/${pkgbase}-${_realver}/source3
+  ./configure --prefix=/usr \
+              --libdir=/usr/lib/ \
+              --localstatedir=/var \
+              --with-configdir=/etc/samba \
+              --with-lockdir=/var/cache/samba \
+              --with-piddir=/var/run/samba \
+              --with-fhs \
+              --with-pam \
+              --with-pam_smbpass \
+              --with-pammodulesdir=/lib/security \
+              --with-ads \
+              --with-acl-support \
+              --with-cifsmount \
+              --with-libsmbclient \
+              --with-syslog \
+              --enable-external-libtalloc \
+              --disable-dnssd \
+              --disable-avahi \
+              --with-cifsumount \
+              --enable-external-libtdb
+  make || return 1
+}
+
+package_smbclient () {
+pkgdesc="Tools to access a server's filespace and printers via SMB"
+depends=('readline>=6.0.00' 'popt' 'libldap>=2.4.18-1' 'libcap>=2.16' 'heimdal>=1.2-1' 'db>=4.7' 'e2fsprogs' 'tdb' 'talloc')
+  cd ${srcdir}/${pkgbase}-${_realver}/source3
+  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/sbin ${pkgdir}/usr/lib
+  install -m755 bin/{smbclient,rpcclient,smbspool,smbtree,smbcacls,smbcquotas,smbget,net,nmblookup} ${pkgdir}/usr/bin/
+  install -m755 bin/{mount.cifs,umount.cifs} ${pkgdir}/sbin/
+  for i in libnetapi* libwbclient* libsmbclient*;do
+      cp  -a bin/${i}*.so* ${pkgdir}/usr/lib/
+  done
+  install -m755 script/smbtar ${pkgdir}/usr/bin/
+  mkdir -p ${pkgdir}/usr/lib/cups/backend
+  ln -sf /usr/bin/smbspool ${pkgdir}/usr/lib/cups/backend/smb
+  mkdir -p ${pkgdir}/usr/include
+  install -m644 include/libsmbclient.h ${pkgdir}/usr/include/
+  install -m644 lib/netapi/netapi.h ${pkgdir}/usr/include/
+  mkdir -p ${pkgdir}/usr/share/man/man{1,7,8}
+  for man in smbspool \
+      umount.cifs mount.cifs net; do
+      install -m644 ../docs/manpages/${man}.8 ${pkgdir}/usr/share/man/man8/
+  done
+  for man in rpcclient smbcacls smbclient smbcquotas smbget \
+      smbtree smbtar nmblookup; do
+      install -m644 ../docs/manpages/${man}.1 ${pkgdir}/usr/share/man/man1/
+  done
+  install -m644 ../docs/manpages/libsmbclient.7 ${pkgdir}/usr/share/man/man7/
+}
+
+package_samba () {
+pkgdesc="Tools to access a server's filespace and printers via SMB"
+backup=(etc/logrotate.d/samba 
+        etc/pam.d/samba 
+        etc/samba/smb.conf
+        etc/xinetd.d/swat
+        etc/conf.d/samba)
+depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap>=2.16' 'heimdal>=1.2-1' 'pam' 'fam' 'gnutls>=2.4.1' 'e2fsprogs' 'tdb' 'talloc')
+  cd ${srcdir}/samba-${_realver}/source3
+  mkdir -p ${pkgdir}/var/log/samba
+  mkdir -p ${pkgdir}/etc/samba/private
+  chmod 700 ${pkgdir}/etc/samba/private
+  make DESTDIR=${pkgdir} install || return 1
+  chmod 644 ${pkgdir}/usr/include/*.h
+  rm -rf ${pkgdir}/usr/var
+  (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
+  install -D -m755 ../../samba ${pkgdir}/etc/rc.d/samba
+  install -D -m644 ../../samba.conf.d ${pkgdir}/etc/conf.d/samba
+  mkdir -p ${pkgdir}/etc/samba
+  cat ../examples/smb.conf.default | \
+    sed 's|log file = .*$|log file = /var/log/samba/log.%m|g' >${pkgdir}/etc/samba/smb.conf.default
+  install -D -m644 ../../samba.logrotate ${pkgdir}/etc/logrotate.d/samba
+  install -D -m644 ../../swat.xinetd ${pkgdir}/etc/xinetd.d/swat
+  install -D -m644 ../../samba.pam ${pkgdir}/etc/pam.d/samba
+  # spool directory
+  install -d -m1777 ${pkgdir}/var/spool/samba
+  sed -i 's|/usr/spool/samba|/var/spool/samba|g' ${pkgdir}/etc/samba/smb.conf.default
+  # fix logrotate
+  sed -i -e 's|log.%m|%m.log|g' ${pkgdir}/etc/samba/smb.conf.default
+  # nsswitch libraries
+  install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_wins.so ${pkgdir}/lib/libnss_wins.so
+  ln -s libnss_wins.so ${pkgdir}/lib/libnss_wins.so.2
+  install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_winbind.so ${pkgdir}/lib/libnss_winbind.so
+  # remove conflict files of smbclient
+  for man in libsmbclient smbspool \
+      umount.cifs mount.cifs net; do
+      rm -f ${pkgdir}/usr/share/man/man8/${man}.8
+  done
+  for i in libnetapi* libwbclient* libsmbclient*;do
+      rm -f ${pkgdir}/usr/lib/$i
+  done
+  for bin in net \
+      nmblookup rpcclient smbcacls smbclient \
+      smbcquotas smbget smbspool smbtar smbtree; do
+      rm -f ${pkgdir}/usr/bin/$bin
+  done
+  rm -f ${pkgdir}/usr/include/netapi.h
+  for man in rpcclient smbcacls smbclient smbcquotas \
+      smbtree smbtar nmblookup smbget; do
+      rm -f ${pkgdir}/usr/share/man/man1/${man}.1
+  done
+  for man in tdbbackup tdbdump tdbtool; do
+      rm -f ${pkgdir}/usr/share/man/man8/${man}.8
+  done
+  rm -f ${pkgdir}/usr/share/man/man7/libsmbclient.7
+  rm -f ${pkgdir}/usr/include/libsmbclient.h
+  # copy ldap example
+  install -D -m644 ${srcdir}/samba-${_realver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
+}
+md5sums=('7c8d2a34b649380d5df838c3e030dbec'
+         'e93533fa2296c07c1f645dfdd373657f'
+         '5697da77590ec092cc8a883bae06093c'
+         'a4bbfa39fee95bba2e7ad6b535fae7e6'
+         '96f82c38f3f540b53f3e5144900acf17'
+         'f2f2e348acd1ccb566e95fa8a561b828'
+         'c6a38a8c8fa24979e6217aed533358ea')
+md5sums=('22c8c977eaa18be50f3878c6d0e0c2f0'
+         'e93533fa2296c07c1f645dfdd373657f'
+         '5697da77590ec092cc8a883bae06093c'
+         'a4bbfa39fee95bba2e7ad6b535fae7e6'
+         '96f82c38f3f540b53f3e5144900acf17'
+         'f2f2e348acd1ccb566e95fa8a561b828'
+         'c6a38a8c8fa24979e6217aed533358ea')
