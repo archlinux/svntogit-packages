@@ -1,69 +1,51 @@
 # $Id$
 # Maintainer: Giovanni Scafora <giovanni@archlinux.org>
 # Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+# Contributor: Martin Sandsmark <martin.sandsmark@kde.org>
 
 pkgbase=vlc
-pkgname=('vlc' 
+pkgname=('vlc'
          'vlc-plugin')
-pkgver=1.0.6
-pkgrel=8
+pkgver=1.1.0
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.videolan.org/vlc/"
 license=('GPL')
 makedepends=('a52dec' 'fluidsynth' 'libmtp' 'libdvbpsi' 'lirc-utils'
              'libdca' 'qt' 'libproxy' 'sdl_image' 'libdvdnav' 'mesa'
              'lua' 'libv4l' 'libcddb' 'smbclient' 'libmatroska' 'zvbi'
-             'taglib' 'sysfsutils' 'libmpcdec' 'hal' 'ffmpeg'
+             'taglib' 'sysfsutils' 'libmpcdec' 'ffmpeg'
              'libshout' 'libmad' 'fribidi' 'libmpeg2' 'libmodplug'
              'avahi' 'ttf-freefont' 'libxv' 'libass' 'xdg-utils' 'libxpm'
-             'xulrunner' 'pkgconfig' 'live-media' 'libnotify' 'libcdio')
-source=("http://download.videolan.org/pub/videolan/${pkgbase}/${pkgver}/${pkgbase}-${pkgver}.tar.bz2"
-	'libpng-1.4.patch'
-	'vlc-1.0.4-new-xulrunner.patch')
-md5sums=('246a3865ec037f8f5757ef6b973a80fc'
-         'b1961688a9be282a126bfa1cad4b28fa'
-         'b1fc5e2527ecc863b3665238d82ac2db')
+             'xulrunner' 'pkgconfig' 'live-media' 'libnotify' 'libcdio'
+             'flac' 'libtheora' 'alsa-lib' 'jack' 'kdelibs' 'udev'
+             'libraw1394' 'libdc1394' 'libavc1394' 'libva')
+
+source=("http://download.videolan.org/pub/videolan/${pkgbase}/${pkgver}/${pkgbase}-${pkgver}.tar.bz2")
+
+md5sums=('e2142957137b183a5ad0a4827c39f655')
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
 
-  patch -Np1 -i ${srcdir}/libpng-1.4.patch || return 1
-  #http://trac.videolan.org/vlc/ticket/3185
-  patch -Np1 -i ${srcdir}/vlc-1.0.4-new-xulrunner.patch || return 1
-
   sed -i -e 's:truetype/freefont:TTF:g' modules/misc/freetype.c
-  [ "${CARCH}" = "i686" ] && EXTRAFEATURES="--enable-loader --enable-live555 --with-live555-tree=/usr/lib/live"
-  [ "${CARCH}" = "x86_64" ] && EXTRAFEATURES="--enable-fast-install --enable-live555 --with-live555-tree=/usr/lib/live"
+  [ "${CARCH}" = "i686" ] && EXTRAFEATURES="--enable-loader"
+  [ "${CARCH}" = "x86_64" ] && EXTRAFEATURES=""
   ./configure --prefix=/usr \
-              --enable-libass \
-              --enable-dvdread \
-	      --enable-jack \
-              --enable-dvdnav \
               --disable-rpath \
-	      --enable-zvbi \
-              --enable-qt4 \
               --enable-faad \
-              --enable-alsa \
-              --enable-skins2 \
-              --enable-dvb \
               --enable-v4l \
-              --enable-theora \
-              --enable-flac \
               --enable-snapshot \
-              --enable-hal \
-              --enable-dbus \
-              --enable-ogg \
               --enable-dbus-control \
-              --enable-shared \
               --enable-nls \
               --enable-lirc \
-              --enable-shout \
               --enable-pvr \
               --enable-ncurses \
               --enable-mozilla \
-              --enable-release \
-              --program-suffix= \
-              --enable-realrtsp ${EXTRAFEATURES} || return 1
+              --with-live555-tree=/usr/lib/live \
+              --enable-realrtsp \
+              --with-kde4-solid=/usr \
+              ${EXTRAFEATURES} || return 1
   CFLAGS="-fPIC"
   make || return 1
 }
@@ -73,24 +55,26 @@ package_vlc() {
   depends=('a52dec' 'fluidsynth' 'libmtp' 'libdvbpsi' 'libcdio'
            'libdca' 'qt' 'libproxy' 'sdl_image' 'libdvdnav' 'mesa'
            'lua' 'libv4l' 'libcddb' 'smbclient' 'libmatroska' 'zvbi'
-           'taglib' 'sysfsutils' 'libmpcdec' 'hal' 'ffmpeg'
+           'taglib' 'sysfsutils' 'libmpcdec' 'ffmpeg'
            'libshout' 'libmad' 'fribidi' 'libmpeg2' 'libmodplug'
            'avahi' 'ttf-freefont' 'libxv' 'libass' 'xdg-utils')
   optdepends=('libnotify: for notification plugin' 
               'ncurses: for ncurses interface support'
               'libdvdcss: for decoding encrypted DVDs'
-              'lirc-utils: for lirc plugin')
+              'lirc-utils: for lirc plugin'
+              'kdelibs: KDE Solid hardware integration'
+              'libva: enable hardware accelerated decoding')
   options=('!libtool')
   install=vlc.install
   cd "${srcdir}/${pkgbase}-${pkgver}"
 
   make DESTDIR=${pkgdir}/ install || return 1
-  
+
   for res in 16 32 48 128; do
-    install -D -m644 ${srcdir}/vlc-${pkgver}/share/vlc${res}x${res}.png \
-		     ${pkgdir}/usr/share/icons/hicolor/${res}x${res}/apps/vlc.png || return 1
+    install -D -m644 ${srcdir}/vlc-${pkgver}/share/icons/${res}x${res}/vlc.png \
+        ${pkgdir}/usr/share/icons/hicolor/${res}x${res}/apps/vlc.png || return 1
   done
-  
+
   rm -rf ${pkgdir}/usr/lib/mozilla
 }
 
