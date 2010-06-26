@@ -1,5 +1,5 @@
 PKGNAME="texlive-langgreek"
-UPDMAP="/usr/share/texmf-config/web2c/updmap.cfg"
+UPDMAP="/etc/texmf/web2c/updmap.cfg"
 SYNCWITHTREES=''
 NEWMAPS=`mktemp`
 cat <<EOF > $NEWMAPS
@@ -17,15 +17,19 @@ pre_install() {
 
 post_install() {
 	echo    ">>> texlive: updating the filename database..."
-	texconfig-sys rehash
+	/usr/bin/mktexlsr
 	echo    ">>> texlive: updating the fontmap files with updmap..."
-	updmap-sys --quiet --nohash
+	/usr/bin/updmap-sys --quiet --nohash
 	echo    " done." 
 }
 
 
 pre_upgrade() {
-  OLDMAPS="/usr/share/texmf-var/arch/installedpkgs/$PKGNAME.maps"
+  if [[ "$2" == 200* ]]; then
+    OLDMAPS="/usr/share/texmf-var/arch/installedpkgs/$PKGNAME.maps"
+  else # >= 2010
+    OLDMAPS="/var/lib/texmf/arch/installedpkgs/$PKGNAME.maps"
+  fi
   if [ -f $OLDMAPS ] ; then
     MAPSDIFF=`mktemp`
     TOADD=`mktemp`
@@ -41,7 +45,7 @@ pre_upgrade() {
        cat $TOADD >> $UPDMAP
     fi
   else
-    echo "Warning: file $PKGNAME.maps not found" 
+    echo "Warning: file $OLDMAPS not found" 
     echo "(ignore the above if updating from TL2008 or from TL2009 in testing)"
     SYNCWITHTREES="--syncwithtrees"
   fi
@@ -50,9 +54,9 @@ pre_upgrade() {
 
 post_upgrade() {
 	echo    ">>> texlive: updating the filename database..."
-	texconfig-sys rehash
+	/usr/bin/mktexlsr
 	echo    ">>> texlive: updating the fontmap files with updmap..."
-	updmap-sys --quiet --nohash $SYNCWITHTREES
+	/usr/bin/updmap-sys --quiet --nohash $SYNCWITHTREES
 	echo    " done." 
 }
 
