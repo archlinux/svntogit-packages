@@ -5,12 +5,12 @@
 
 pkgname=mpd
 pkgver=0.15.10
-pkgrel=1
+pkgrel=2
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
-url="http://musicpd.org"
-depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl'
+url="http://mpd.wikia.com/wiki/Server"
+depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
          'sqlite3' 'libsamplerate' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag')
 makedepends=('pkgconfig')
 install=${pkgname}.install
@@ -26,13 +26,13 @@ build() {
     --enable-lastfm \
     --disable-cue \
     --disable-sidplay \
-    --disable-pulse || return 1
-  make || return 1
+    --disable-pulse
+  make
 }
 
 package() {
   cd ${srcdir}/${pkgname}-${pkgver}
-  make DESTDIR=${pkgdir} install || return 1
+  make DESTDIR=${pkgdir} install
 
   # set ours dirs in mpd.conf file
   sed -i 's|^music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
@@ -44,8 +44,8 @@ package() {
   sed -i 's|#state_file.*$|state_file "/var/lib/mpd/mpdstate"|1' doc/mpdconf.example
   sed -i 's|#user.*$|user "mpd"|1' doc/mpdconf.example
 
-  install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example || return 1
+  install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example
 
-  install -Dm755 ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd || return 1
-  install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd} || return 1
+  install -Dm755 ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd
+  install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd}
 }
