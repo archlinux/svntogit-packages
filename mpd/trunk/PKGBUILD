@@ -17,7 +17,7 @@ install=${pkgname}.install
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
         'mpd')
 md5sums=('fb18fa3ed5ff7e3719536a6603098df5'
-         '84583825d4a191aeb89f5709a3808118')
+         'e5669c2bff4031928531e52475addeb1')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
