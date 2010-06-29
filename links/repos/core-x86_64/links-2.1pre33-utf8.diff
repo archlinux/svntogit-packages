@@ -1,0 +1,614 @@
+commit 73d3150fcfcaeacf31a1887e26ea152c6979da09
+Author: Petr P√≠sa≈ô <petr.pisar@atlas.cz>
+Date:   Wed Feb 6 12:25:01 2008 +0100
+
+    UTF-8 terminal implementation for 2.1pre33
+
+diff --git a/charsets.c b/charsets.c
+index aaee836..477abf3 100644
+--- a/charsets.c
++++ b/charsets.c
+@@ -93,7 +93,7 @@ int strange_chars[32] = {
+ #define U_EQUAL(a, b) unicode_7b[a].x == (b)
+ #define U_ABOVE(a, b) unicode_7b[a].x > (b)
+ 
+-static inline unsigned char *u2cp(int u, int to, int fallback)
++unsigned char *u2cp(int u, int to, int fallback)
+ {
+ 	int j, s;
+ 	again:
+@@ -156,6 +156,22 @@ unsigned char *encode_utf_8(int u)
+ 	return utf_buffer;
+ }
+ 
++/* this slow and ugly code is used by the terminal utf_8_io */
++unsigned char *cp2utf_8(int from, int c)
++{
++	int j;
++
++	if (codepages[from].table == table_utf_8) return strings[c];
++	for (j = 0; codepages[from].table[j].c; j++) {
++		if (codepages[from].table[j].c == c)
++		{
++			return encode_utf_8(codepages[from].table[j].u);
++		}
++	}
++	if (c < 128) return strings[c];
++	return encode_utf_8(UCS_NO_CHAR);
++}
++
+ void add_utf_8(struct conv_table *ct, int u, unsigned char *str)
+ {
+ 	unsigned char *p = encode_utf_8(u);
+diff --git a/default.c b/default.c
+index 90a7bb9..741de31 100644
+--- a/default.c
++++ b/default.c
+@@ -757,6 +757,7 @@ void prog_wr(struct option *o, unsigned char **s, int *l)
+ 	}
+ }
+ 
++/* terminal NAME(str) MODE(0-3) M11_HACK(0-1) BLOCK_CURSOR.RESTRICT_852.COL(0-7) CHARSET(str) [ UTF_8_IO("utf-8") ]*/
+ unsigned char *term_rd(struct option *o, unsigned char *c)
+ {
+ 	struct term_spec *ts;
+@@ -767,6 +768,7 @@ unsigned char *term_rd(struct option *o, unsigned char *c)
+ 		mem_free(w);
+ 		goto end;
+ 	}
++        ts->utf_8_io = 0;
+ 	mem_free(w);
+ 	if (!(w = get_token(&c))) goto err;
+ 	if (strlen(w) != 1 || w[0] < '0' || w[0] > '4') goto err_f;
+@@ -787,6 +789,9 @@ unsigned char *term_rd(struct option *o, unsigned char *c)
+ 	if ((i = get_cp_index(w)) == -1 || is_cp_special(i)) goto err_f;
+ 	ts->charset = i;
+ 	mem_free(w);
++	if (!(w = get_token(&c))) goto end;
++	if (!(strcasecmp(w, "utf-8"))) ts->utf_8_io = 1;
++	mem_free(w);
+ 	end:
+ 	return NULL;
+ 	err_f:
+@@ -795,6 +800,7 @@ unsigned char *term_rd(struct option *o, unsigned char *c)
+ 	return "Error reading terminal specification";
+ }
+ 
++/* terminal2 NAME(str) MODE(0-3) M11_HACK(0-1) RESTRICT_852(0-1) COL(0-1) CHARSET(str) [ UTF_8_IO("utf-8") ]*/
+ unsigned char *term2_rd(struct option *o, unsigned char *c)
+ {
+ 	struct term_spec *ts;
+@@ -805,6 +811,7 @@ unsigned char *term2_rd(struct option *o, unsigned char *c)
+ 		mem_free(w);
+ 		goto end;
+ 	}
++        ts->utf_8_io = 0;
+ 	mem_free(w);
+ 	if (!(w = get_token(&c))) goto err;
+ 	if (strlen(w) != 1 || w[0] < '0' || w[0] > '3') goto err_f;
+@@ -826,6 +833,9 @@ unsigned char *term2_rd(struct option *o, unsigned char *c)
+ 	if ((i = get_cp_index(w)) == -1 || is_cp_special(i)) goto err_f;
+ 	ts->charset = i;
+ 	mem_free(w);
++	if (!(w = get_token(&c))) goto end;
++	if (!(strcasecmp(w, "utf-8"))) ts->utf_8_io = 1;
++	mem_free(w);
+ 	end:
+ 	return NULL;
+ 	err_f:
+@@ -848,6 +858,10 @@ void term_wr(struct option *o, unsigned char **s, int *l)
+ 		add_num_to_str(s, l, !!ts->col + !!ts->restrict_852 * 2 + !!ts->block_cursor * 4);
+ 		add_to_str(s, l, " ");
+ 		add_to_str(s, l, get_cp_mime_name(ts->charset));
++                if (ts->utf_8_io)
++                {
++                    add_to_str(s, l, " utf-8");
++                }
+ 	}
+ }
+ 
+diff --git a/intl/bahasa_indonesian.lng b/intl/bahasa_indonesian.lng
+index dbaa6a0..91a92c5 100644
+--- a/intl/bahasa_indonesian.lng
++++ b/intl/bahasa_indonesian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "C",
+ T_HK_COPY_URL_LOCATION, "C",
+ T_HK_BLOCK_URL, "B",
+ T_HK_BLOCK_LIST, "B",
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/belarusian.lng b/intl/belarusian.lng
+index 544b581..add87db 100644
+--- a/intl/belarusian.lng
++++ b/intl/belarusian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/brazilian_portuguese.lng b/intl/brazilian_portuguese.lng
+index ccac3d0..c519020 100644
+--- a/intl/brazilian_portuguese.lng
++++ b/intl/brazilian_portuguese.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/bulgarian.lng b/intl/bulgarian.lng
+index 6ec4690..e867697 100644
+--- a/intl/bulgarian.lng
++++ b/intl/bulgarian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/catalan.lng b/intl/catalan.lng
+index 083ad5c..712368a 100644
+--- a/intl/catalan.lng
++++ b/intl/catalan.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/croatian.lng b/intl/croatian.lng
+index 572d321..b5bc35c 100644
+--- a/intl/croatian.lng
++++ b/intl/croatian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/czech.lng b/intl/czech.lng
+index 8f42d17..d957f8c 100644
+--- a/intl/czech.lng
++++ b/intl/czech.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "C",
+ T_HK_COPY_URL_LOCATION, "C",
+ T_HK_BLOCK_URL, "B",
+ T_HK_BLOCK_LIST, "B",
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/danish.lng b/intl/danish.lng
+index bf801e0..1b6a497 100644
+--- a/intl/danish.lng
++++ b/intl/danish.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/dutch.lng b/intl/dutch.lng
+index c7311dd..89dc54d 100644
+--- a/intl/dutch.lng
++++ b/intl/dutch.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/english.lng b/intl/english.lng
+index e8a7838..42dde3e 100644
+--- a/intl/english.lng
++++ b/intl/english.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "C",
+ T_HK_COPY_URL_LOCATION, "C",
+ T_HK_BLOCK_URL, "B",
+ T_HK_BLOCK_LIST, "B",
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/estonian.lng b/intl/estonian.lng
+index 274c950..311aa14 100644
+--- a/intl/estonian.lng
++++ b/intl/estonian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/finnish.lng b/intl/finnish.lng
+index 6409c56..1bbedde 100644
+--- a/intl/finnish.lng
++++ b/intl/finnish.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "O",
+ T_HK_COPY_URL_LOCATION, "U",
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/french.lng b/intl/french.lng
+index 2f1d234..6d61c9f 100644
+--- a/intl/french.lng
++++ b/intl/french.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/galician.lng b/intl/galician.lng
+index 7bec173..6230728 100644
+--- a/intl/galician.lng
++++ b/intl/galician.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/german.lng b/intl/german.lng
+index 68e3daf..5b5f9b6 100644
+--- a/intl/german.lng
++++ b/intl/german.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "C",
+ T_HK_COPY_URL_LOCATION, "U",
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/greek.lng b/intl/greek.lng
+index e47d07a..261221b 100644
+--- a/intl/greek.lng
++++ b/intl/greek.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/hungarian.lng b/intl/hungarian.lng
+index 47b2adc..677103f 100644
+--- a/intl/hungarian.lng
++++ b/intl/hungarian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/icelandic.lng b/intl/icelandic.lng
+index 7a0c422..aa7f723 100644
+--- a/intl/icelandic.lng
++++ b/intl/icelandic.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/italian.lng b/intl/italian.lng
+index 2f2ab0d..44a0014 100644
+--- a/intl/italian.lng
++++ b/intl/italian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/lithuanian.lng b/intl/lithuanian.lng
+index 491a110..a0919e3 100644
+--- a/intl/lithuanian.lng
++++ b/intl/lithuanian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/norwegian.lng b/intl/norwegian.lng
+index c079514..3ed346f 100644
+--- a/intl/norwegian.lng
++++ b/intl/norwegian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "C",
+ T_HK_COPY_URL_LOCATION, "C",
+ T_HK_BLOCK_URL, "B",
+ T_HK_BLOCK_LIST, "B",
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/polish.lng b/intl/polish.lng
+index 69344d2..550d613 100644
+--- a/intl/polish.lng
++++ b/intl/polish.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/portuguese.lng b/intl/portuguese.lng
+index c529022..c86b5f0 100644
+--- a/intl/portuguese.lng
++++ b/intl/portuguese.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/romanian.lng b/intl/romanian.lng
+index 15e2417..48df463 100644
+--- a/intl/romanian.lng
++++ b/intl/romanian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/russian.lng b/intl/russian.lng
+index 6249ade..48d717b 100644
+--- a/intl/russian.lng
++++ b/intl/russian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/serbian.lng b/intl/serbian.lng
+index 96bf9ab..ca85503 100644
+--- a/intl/serbian.lng
++++ b/intl/serbian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, "‹",
+ T_HK_COPY_URL_LOCATION, "‚",
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/slovak.lng b/intl/slovak.lng
+index 8372b75..81d8c3c 100644
+--- a/intl/slovak.lng
++++ b/intl/slovak.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/swedish.lng b/intl/swedish.lng
+index 3d618a2..be9e21a 100644
+--- a/intl/swedish.lng
++++ b/intl/swedish.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/turkish.lng b/intl/turkish.lng
+index f2f9a26..1b0da61 100644
+--- a/intl/turkish.lng
++++ b/intl/turkish.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/ukrainian.lng b/intl/ukrainian.lng
+index 59ab3b9..51ba335 100644
+--- a/intl/ukrainian.lng
++++ b/intl/ukrainian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/intl/upper_sorbian.lng b/intl/upper_sorbian.lng
+index 9c3fd19..2890dd1 100644
+--- a/intl/upper_sorbian.lng
++++ b/intl/upper_sorbian.lng
+@@ -536,3 +536,4 @@ T_HK_COPY_LINK_LOCATION, NULL,
+ T_HK_COPY_URL_LOCATION, NULL,
+ T_HK_BLOCK_URL, NULL,
+ T_HK_BLOCK_LIST, NULL,
++T_UTF_8_IO, "UTF-8 I/O",
+diff --git a/links.h b/links.h
+index 7d4f3fc..a6a5c8a 100644
+--- a/links.h
++++ b/links.h
+@@ -1894,6 +1894,11 @@ struct terminal {
+ #ifdef G
+ 	struct graphics_device *dev;
+ #endif
++	struct {
++		int ucs;
++		int len;
++		int min;
++	} utf_8;
+ };
+ 
+ struct term_spec {
+@@ -1902,6 +1907,7 @@ struct term_spec {
+ 	unsigned char term[MAX_TERM_LEN];
+ 	int mode;
+ 	int m11_hack;
++	int utf_8_io;
+ 	int restrict_852;
+ 	int block_cursor;
+ 	int col;
+@@ -3472,6 +3478,9 @@ extern int gamma_bits;
+ 
+ /* charsets.c */
+ 
++/* UCS/Unicode replacement character */
++#define UCS_NO_CHAR 0xFFFD
++
+ #include "codepage.h"
+ 
+ extern int utf8_table;
+@@ -3495,6 +3504,8 @@ int is_cp_special(int);
+ void free_conv_table(void);
+ unsigned char *encode_utf_8(int);
+ int cp2u(unsigned char, int);
++unsigned char *cp2utf_8(int, int);
++unsigned char *u2cp(int, int, int);
+ 
+ unsigned char charset_upcase(unsigned char, int);
+ void charset_upcase_string(unsigned char **, int);
+diff --git a/menu.c b/menu.c
+index 70ae092..ecf8754 100644
+--- a/menu.c
++++ b/menu.c
+@@ -538,14 +538,14 @@ void terminal_options_ok(void *p)
+ 	cls_redraw_all_terminals();
+ }
+ 
+-unsigned char *td_labels[] = { TEXT(T_NO_FRAMES), TEXT(T_VT_100_FRAMES), TEXT(T_LINUX_OR_OS2_FRAMES), TEXT(T_KOI8R_FRAMES), TEXT(T_FREEBSD_FRAMES), TEXT(T_USE_11M), TEXT(T_RESTRICT_FRAMES_IN_CP850_852), TEXT(T_BLOCK_CURSOR), TEXT(T_COLOR), TEXT(T_BRAILLE_TERMINAL), NULL };
++unsigned char *td_labels[] = { TEXT(T_NO_FRAMES), TEXT(T_VT_100_FRAMES), TEXT(T_LINUX_OR_OS2_FRAMES), TEXT(T_KOI8R_FRAMES), TEXT(T_FREEBSD_FRAMES), TEXT(T_USE_11M), TEXT(T_RESTRICT_FRAMES_IN_CP850_852), TEXT(T_BLOCK_CURSOR), TEXT(T_COLOR), TEXT(T_BRAILLE_TERMINAL), TEXT(T_UTF_8_IO), NULL };
+ 
+ void terminal_options(struct terminal *term, void *xxx, struct session *ses)
+ {
+ 	struct dialog *d;
+ 	struct term_spec *ts = new_term_spec(term->term);
+ 	if (!ts) return;
+-	d = mem_calloc(sizeof(struct dialog) + 12 * sizeof(struct dialog_item));
++	d = mem_calloc(sizeof(struct dialog) + 14 * sizeof(struct dialog_item));
+ 	d->title = TEXT(T_TERMINAL_OPTIONS);
+ 	d->fn = checkbox_list_fn;
+ 	d->udata = td_labels;
+@@ -595,15 +595,19 @@ void terminal_options(struct terminal *term, void *xxx, struct session *ses)
+ 	d->items[9].gid = 0;
+ 	d->items[9].dlen = sizeof(int);
+ 	d->items[9].data = (void *)&ts->braille;
+-	d->items[10].type = D_BUTTON;
+-	d->items[10].gid = B_ENTER;
+-	d->items[10].fn = ok_dialog;
+-	d->items[10].text = TEXT(T_OK);
++	d->items[10].type = D_CHECKBOX;
++	d->items[10].gid = 0;
++	d->items[10].dlen = sizeof(int);
++	d->items[10].data = (void *)&ts->utf_8_io;	d->items[11].type = D_BUTTON;
+ 	d->items[11].type = D_BUTTON;
+-	d->items[11].gid = B_ESC;
+-	d->items[11].fn = cancel_dialog;
+-	d->items[11].text = TEXT(T_CANCEL);
+-	d->items[12].type = D_END;
++	d->items[11].gid = B_ENTER;
++	d->items[11].fn = ok_dialog;
++	d->items[11].text = TEXT(T_OK);
++	d->items[12].type = D_BUTTON;
++	d->items[12].gid = B_ESC;
++	d->items[12].fn = cancel_dialog;
++	d->items[12].text = TEXT(T_CANCEL);
++	d->items[13].type = D_END;
+ 	do_dialog(term, d, getml(d, NULL));
+ }
+ 
+diff --git a/terminal.c b/terminal.c
+index 19c181c..a46ca32 100644
+--- a/terminal.c
++++ b/terminal.c
+@@ -680,6 +680,25 @@ void t_mouse(struct graphics_device *dev, int x, int y, int b)
+ 
+ #endif
+ 
++static inline void term_send_event(struct terminal *term, struct event *ev)
++{
++	((struct window *)&term->windows)->next->handler(term->windows.next, ev, 0);
++}
++
++static inline void term_send_ucs(struct terminal *term, struct event *ev, int u)
++{
++	unsigned char *recoded;
++
++	if (u == 0xA0) u = ' ';
++	recoded = u2cp(u, term->spec->charset, 1);
++	if (! recoded) recoded = "*";
++	while (*recoded) {
++		ev->x = *recoded;
++		term_send_event(term, ev);
++		recoded ++;
++	}
++}
++
+ void in_term(struct terminal *term)
+ {
+ 	struct event *ev;
+@@ -739,7 +758,40 @@ void in_term(struct terminal *term)
+ 			goto send_redraw;
+ 		}
+ 		else if (ev->ev == EV_KBD && ev->x == KBD_CTRL_C) ((struct window *)(void *)&term->windows)->prev->handler(term->windows.prev, ev, 0);
+-		else ((struct window *)(void *)&term->windows)->next->handler(term->windows.next, ev, 0);
++		else if (ev->ev == EV_KBD) {
++			if (term->utf_8.len) {
++				if ((ev->x & 0xC0) == 0x80 && term->spec->utf_8_io) {
++					term->utf_8.ucs <<= 6;
++					term->utf_8.ucs |= ev->x & 0x3F;
++					if (! --term->utf_8.len) {
++						int u = term->utf_8.ucs;
++
++						if (u < term->utf_8.min) u = UCS_NO_CHAR;
++						term_send_ucs(term, ev, u);
++					}
++					goto mm;
++				} else {
++					term->utf_8.len = 0;
++					term_send_ucs(term, ev, UCS_NO_CHAR);
++				}
++			}
++			if (ev->x < 0x80 || ev->x > 0xFF || ! term->spec->utf_8_io) {
++				term_send_event(term, ev);
++				goto mm;
++			} else if ((ev->x & 0xC0) == 0xC0 && (ev->x & 0xFE) != 0xFE) {
++				int mask, len = 0, cov = 0x80;
++
++				for (mask = 0x80; ev->x & mask; mask >>= 1) {
++					len++;
++					term->utf_8.min = cov;
++					cov = 1 << (1 + 5 * len);
++				}
++				term->utf_8.len = len - 1;
++				term->utf_8.ucs = ev->x & (mask - 1);
++				goto mm;
++			}
++			term_send_ucs(term, ev, UCS_NO_CHAR);
++		} else term_send_event(term, ev);
+ 	}
+ 	if (ev->ev == EV_ABORT) {
+ 		destroy_terminal(term);
+@@ -759,6 +811,14 @@ static inline int getcompcode(int c)
+ 
+ unsigned char frame_dumb[48] =	"   ||||++||++++++--|-+||++--|-+----++++++++     ";
+ unsigned char frame_vt100[48] =	"aaaxuuukkuxkjjjkmvwtqnttmlvwtqnvvwwmmllnnjla    ";
++unsigned char frame_vt100_u[48] = {
++	177,177,177,179,180,180,180,191,
++	191,180,179,191,217,217,217,191,
++	192,193,194,195,196,197,195,195,
++	192,218,193,194,195,196,197,193,
++	193,194,194,192,192,218,218,197,
++	197,217,218,177, 32, 32, 32, 32
++};
+ unsigned char frame_koi[48] = {
+ 	144,145,146,129,135,178,180,167,
+ 	166,181,161,168,174,173,172,131,
+@@ -790,7 +850,7 @@ unsigned char frame_restrict[48] = {
+ 	unsigned char c = ch & 0xff;							\
+ 	unsigned char A = ch >> 8 & 0x7f;						\
+ 	if (s->mode == TERM_LINUX) {							\
+-		if (s->m11_hack) {							\
++		if (s->m11_hack && !s->utf_8_io) {					\
+ 			if ((int)(ch >> 15) != mode) {					\
+ 				if (!(mode = ch >> 15)) add_to_str(&a, &l, "\033[10m");	\
+ 				else add_to_str(&a, &l, "\033[11m");			\
+@@ -799,12 +859,14 @@ unsigned char frame_restrict[48] = {
+ 		if (s->restrict_852 && (ch >> 15) && c >= 176 && c < 224) {		\
+ 			if (frame_restrict[c - 176]) c = frame_restrict[c - 176];	\
+ 		}									\
+-	} else if (s->mode == TERM_VT100) {						\
++	} else if (s->mode == TERM_VT100 && !s->utf_8_io) {				\
+ 		if ((int)(ch >> 15) != mode) {						\
+ 			if (!(mode = ch >> 15)) add_to_str(&a, &l, "\017");		\
+ 			else add_to_str(&a, &l, "\016");				\
+ 		}									\
+ 		if (mode && c >= 176 && c < 224) c = frame_vt100[c - 176];		\
++	} else if (s->mode == TERM_VT100 && (ch >> 15) && c >= 176 && c < 224) {	\
++		c = frame_vt100_u[c - 176];						\
+ 	} else if (s->mode == TERM_KOI8 && (ch >> 15) && c >= 176 && c < 224) { c = frame_koi[c - 176];\
+ 	} else if (s->mode == TERM_FREEBSD && (ch >> 15) && c >= 176 && c < 224) { c = frame_freebsd[c - 176];\
+ 	} else if (s->mode == TERM_DUMB && (ch >> 15) && c >= 176 && c < 224) c = frame_dumb[c - 176];\
+@@ -825,7 +887,20 @@ unsigned char frame_restrict[48] = {
+ 		if (attrib & 0100) add_to_str(&a, &l, ";1");				\
+ 		add_to_str(&a, &l, "m");						\
+ 	}										\
+-	if (c >= ' ' && c != 127/* && c != 155*/) add_chr_to_str(&a, &l, c);		\
++	if (c >= ' ' && c != 127/* && c != 155*/) {					\
++		int charset = s->charset;						\
++											\
++		if (ch >> 15) {								\
++			int frames_charset = (s->mode == TERM_LINUX || s->mode == TERM_VT100) \
++						? get_cp_index("cp437")			\
++						: s->mode == TERM_KOI8			\
++						? get_cp_index("koi8-r")		\
++						: -1;					\
++			if (frames_charset != -1) charset = frames_charset;		\
++		}									\
++		if (s->utf_8_io) add_to_str(&a, &l, cp2utf_8(charset, c));		\
++		else add_chr_to_str(&a, &l, c);						\
++	}										\
+ 	else if (!c || c == 1) add_chr_to_str(&a, &l, ' ');				\
+ 	else add_chr_to_str(&a, &l, '.');						\
+ 	cx++;										\
