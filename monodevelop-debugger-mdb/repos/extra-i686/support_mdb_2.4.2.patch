@@ -1,0 +1,444 @@
+
+Index: monodevelop-debugger-mdb/Mono.Debugging.Backend.Mdb/IDebuggerServer.cs
+===================================================================
+--- monodevelop-debugger-mdb.orig/Mono.Debugging.Backend.Mdb/IDebuggerServer.cs	2009-07-01 09:23:09.000000000 +0100
++++ monodevelop-debugger-mdb/Mono.Debugging.Backend.Mdb/IDebuggerServer.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -32,6 +32,8 @@
+ {
+ 	public interface IDebuggerServer
+ 	{
++		string InitializeMdb (string mdbVersion);
++		
+ 		void Run (DebuggerStartInfo startInfo);
+ 
+ 		void Stop ();
+Index: monodevelop-debugger-mdb/Mono.Debugging.Backend.Mdb/MonoDebuggerSession.cs
+===================================================================
+--- monodevelop-debugger-mdb.orig/Mono.Debugging.Backend.Mdb/MonoDebuggerSession.cs	2009-07-01 09:23:18.000000000 +0100
++++ monodevelop-debugger-mdb/Mono.Debugging.Backend.Mdb/MonoDebuggerSession.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -37,11 +37,13 @@
+ 	public class MonoDebuggerSession: DebuggerSession
+ 	{
+ 		DebuggerController controller;
++		static string detectedMdbVersion;
+ 		
+ 		public void StartDebugger ()
+ 		{
+ 			controller = new DebuggerController (this, Frontend);
+ 			controller.StartDebugger ();
++			InitMdbVersion ();
+ 		}
+ 		
+ 		public override void Dispose ()
+@@ -54,6 +56,12 @@
+ 		{
+ 			controller.DebuggerServer.Run (startInfo);
+ 		}
++		
++		void InitMdbVersion ()
++		{
++			// Cache detected mdb versions, so version detection is done only once
++			detectedMdbVersion = controller.DebuggerServer.InitializeMdb (detectedMdbVersion);
++		}
+ 
+ 		protected override void OnAttachToProcess (int processId)
+ 		{
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/DebuggerServer.cs
+===================================================================
+--- monodevelop-debugger-mdb.orig/Mono.Debugging.Server.Mdb/DebuggerServer.cs	2009-07-01 09:24:51.000000000 +0100
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/DebuggerServer.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -39,6 +39,7 @@
+ 		Dictionary<int, ST.WaitCallback> breakUpdates = new Dictionary<int,ST.WaitCallback> ();
+ 		bool breakUpdateEventsQueued;
+ 		
++		MdbAdaptor mdbAdaptor;
+ 		AsyncEvaluationTracker asyncEvaluationTracker;
+ 		RuntimeInvokeManager invokeManager;
+ 
+@@ -51,6 +52,7 @@
+ 		public DebuggerServer (IDebuggerController dc)
+ 		{
+ 			this.controller = dc;
++			
+ 			MarshalByRefObject mbr = (MarshalByRefObject)controller;
+ 			ILease lease = mbr.GetLifetimeService() as ILease;
+ 			lease.Register(this);
+@@ -79,8 +81,18 @@
+ 			}
+ 		}
+ 
++		public MdbAdaptor MdbAdaptor {
++			get { return mdbAdaptor; }
++		}
++
+ 		#region IDebugger Members
+ 
++		public string InitializeMdb (string mdbVersion)
++		{
++			mdbAdaptor = MdbAdaptorFactory.CreateAdaptor (mdbVersion);
++			return mdbAdaptor.MdbVersion;
++		}
++
+ 		public void Run (DL.DebuggerStartInfo startInfo)
+ 		{
+ 			try {
+@@ -91,6 +103,7 @@
+ 
+ 				DebuggerConfiguration config = new DebuggerConfiguration ();
+ 				config.LoadConfiguration ();
++				mdbAdaptor.InitializeConfiguration (config);
+ 				debugger = new MD.Debugger (config);
+ 				
+ 				debugger.ModuleLoadedEvent += OnModuleLoadedEvent;
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/Makefile
+===================================================================
+--- monodevelop-debugger-mdb.orig/Mono.Debugging.Server.Mdb/Makefile	2009-07-01 09:24:35.000000000 +0100
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/Makefile	2009-07-01 09:25:21.000000000 +0100
+@@ -59,6 +59,8 @@
+ 	ICollectionAdaptor.cs \
+ 	IndexerValueReference.cs \
+ 	LiteralValueReference.cs \
++	MdbAdaptor.cs \
++	MdbAdaptorFactory.cs \
+ 	NamespaceValueReference.cs \
+ 	NRefactoryEvaluator.cs \
+ 	NullValueReference.cs \
+@@ -77,7 +79,9 @@
+ 
+ DATA_FILES = 
+ 
+-RESOURCES = 
++RESOURCES =  \
++	MdbAdaptor-2-0.cs \
++	MdbAdaptor-2-4-2.cs 
+ 
+ EXTRAS = \
+ 	ChangeLog 
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptor-2-0.cs
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptor-2-0.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -0,0 +1,40 @@
++// 
++// MdbAdaptor_2_0.cs
++//  
++// Author:
++//       Lluis Sanchez Gual <lluis@novell.com>
++// 
++// Copyright (c) 2009 Novell, Inc (http://www.novell.com)
++// 
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++// 
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++// 
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++
++using System;
++
++namespace DebuggerServer
++{
++	public class MdbAdaptor_2_0: MdbAdaptor
++	{
++		public override void AbortThread (Mono.Debugger.Thread thread, Mono.Debugger.RuntimeInvokeResult result)
++		{
++			result.Abort ();
++			result.CompletedEvent.WaitOne ();
++			thread.AbortInvocation ();
++		}
++	}
++}
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptor-2-4-2.cs
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptor-2-4-2.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -0,0 +1,51 @@
++// 
++// MdbAdaptor22.cs
++//  
++// Author:
++//       Lluis Sanchez Gual <lluis@novell.com>
++// 
++// Copyright (c) 2009 Novell, Inc (http://www.novell.com)
++// 
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++// 
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++// 
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++
++using System;
++using Mono.Debugger;
++
++namespace DebuggerServer
++{
++	public class MdbAdaptor_2_4_2: MdbAdaptor
++	{
++		public override void SetupXsp (DebuggerConfiguration config)
++		{
++			config.SetupXSP ();
++			config.StopOnManagedSignals = true;
++		}
++		
++		public override void InitializeConfiguration (Mono.Debugger.DebuggerConfiguration config)
++		{
++			base.InitializeConfiguration (config);
++			config.RedirectOutput = true;
++		}
++
++		public override void AbortThread (Mono.Debugger.Thread thread, Mono.Debugger.RuntimeInvokeResult result)
++		{
++			result.Abort ();
++		}
++	}
++}
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptor.cs
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptor.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -0,0 +1,62 @@
++// 
++// MdbAdaptor.cs
++//  
++// Author:
++//       Lluis Sanchez Gual <lluis@novell.com>
++// 
++// Copyright (c) 2009 Novell, Inc (http://www.novell.com)
++// 
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++// 
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++// 
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++
++using System;
++using MDB=Mono.Debugger;
++using Mono.Debugging.Backend.Mdb;
++
++namespace DebuggerServer
++{
++	public abstract class MdbAdaptor
++	{
++		public MdbAdaptor ()
++		{
++			MdbVersion = "2.0";
++		}
++		
++		public string MdbVersion { get; internal set; }
++		
++		public virtual void SetupXsp (MDB.DebuggerConfiguration config)
++		{
++			ThrowNotSupported ("ASP.NET debugging not supported");
++		}
++		
++		public virtual void InitializeBreakpoint (MDB.SourceBreakpoint bp)
++		{
++		}
++		
++		public virtual void InitializeConfiguration (MDB.DebuggerConfiguration config)
++		{
++		}
++		
++		public abstract void AbortThread (MDB.Thread thread, MDB.RuntimeInvokeResult result);
++		
++		public void ThrowNotSupported (string feature)
++		{
++			throw new InvalidOperationException (feature + ". You need to install a more recent Mono Debugger version.");
++		}
++	}
++}
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptorFactory.cs
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/MdbAdaptorFactory.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -0,0 +1,128 @@
++// 
++// MdbAdaptorFactory.cs
++//  
++// Author:
++//       Lluis Sanchez Gual <lluis@novell.com>
++// 
++// Copyright (c) 2009 Novell, Inc (http://www.novell.com)
++// 
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++// 
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++// 
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++
++using System;
++using System.Reflection;
++using System.Diagnostics;
++using System.IO;
++
++namespace DebuggerServer
++{
++	public static class MdbAdaptorFactory
++	{
++		// Bump this version number if any change is in MdbAdaptor or subclases
++		const int ApiVersion = 2;
++		
++		static readonly string[] supportedVersions = new string[] {"2-4-2", "2-0"};
++		
++		public static MdbAdaptor CreateAdaptor (string mdbVersion)
++		{
++			ProcessStartInfo pinfo = new ProcessStartInfo ();
++			pinfo.FileName = "gmcs";
++			
++			if (mdbVersion != null) {
++				MdbAdaptor mdb = TryCreateAdaptor (pinfo, mdbVersion);
++				if (mdb == null)
++					throw new InvalidOperationException ("Unsupported MDB version");
++				return mdb;
++			}
++			
++			foreach (string v in supportedVersions) {
++				MdbAdaptor mdb = TryCreateAdaptor (pinfo, v);
++				if (mdb != null)
++					return mdb;
++			}
++			throw new InvalidOperationException ("Unsupported MDB version");
++		}
++		
++		static MdbAdaptor TryCreateAdaptor (ProcessStartInfo pinfo, string versions)
++		{
++			string[] versionsArray = versions.Split ('|');
++			string version = versionsArray [0];
++			
++			string tmpPath = Path.GetTempPath ();
++			tmpPath = Path.Combine (tmpPath, "monodevelop-debugger-mdb");
++			if (!Directory.Exists (tmpPath))
++				Directory.CreateDirectory (tmpPath);
++			
++			string outFile = Path.Combine (tmpPath, "adaptor-" + ApiVersion + "--" + version + ".dll");
++			
++			string[] refAssemblies = new string [] {
++				typeof(MdbAdaptorFactory).Assembly.Location,
++				typeof(Mono.Debugger.Debugger).Assembly.Location,
++				typeof(Mono.Debugging.Client.DebuggerSession).Assembly.Location,
++				typeof(Mono.Debugging.Backend.Mdb.IDebuggerServer).Assembly.Location
++			};
++			
++			DateTime refsTime = DateTime.MinValue;
++			foreach (string rasm in refAssemblies) {
++				DateTime t = File.GetLastWriteTime (rasm);
++				if (t > refsTime)
++					refsTime = t;
++			}
++			
++			if (!File.Exists (outFile) || File.GetLastWriteTime (outFile) < refsTime) {
++				string args = "/t:library ";
++				args += "\"/out:" + outFile + "\" ";
++				foreach (string rasm in refAssemblies)
++					args += "\"/r:" + rasm + "\" ";
++				
++				// Write the source code for all required classes
++				foreach (string ver in versionsArray) {
++					Stream s = typeof(MdbAdaptorFactory).Assembly.GetManifestResourceStream ("MdbAdaptor-" + ver + ".cs");
++					StreamReader sr = new StreamReader (s);
++					string txt = sr.ReadToEnd ();
++					sr.Close ();
++					s.Close ();
++					
++					string csfile = Path.Combine (tmpPath, "adaptor-" + ver + ".cs");
++					File.WriteAllText (csfile, txt);
++					args += "\"" + csfile + "\" ";
++				}
++				
++				pinfo.Arguments = args;
++				Process proc = Process.Start (pinfo);
++				proc.WaitForExit ();
++				if (proc.ExitCode != 0)
++					return null;
++				Console.WriteLine ("Generated: " + outFile);
++			}
++			
++			Assembly asm = Assembly.LoadFrom (outFile);
++			Type at = asm.GetType ("DebuggerServer.MdbAdaptor_" + version.Replace ('-','_'));
++			if (at != null) {
++				try {
++					MdbAdaptor a = (MdbAdaptor) Activator.CreateInstance (at);
++					a.MdbVersion = version;
++					return a;
++				} catch {
++					// MDB version not really supported
++				}
++			}
++			return null;
++		}
++	}
++}
+Index: monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/RuntimeInvokeManager.cs
+===================================================================
+--- monodevelop-debugger-mdb.orig/Mono.Debugging.Server.Mdb/RuntimeInvokeManager.cs	2009-07-01 09:24:00.000000000 +0100
++++ monodevelop-debugger-mdb/Mono.Debugging.Server.Mdb/RuntimeInvokeManager.cs	2009-07-01 09:25:21.000000000 +0100
+@@ -52,9 +52,7 @@
+ 					lock (operationsToCancel) {
+ 						if (!aborted) {
+ 							aborted = true;
+-							res.Abort ();
+-							res.CompletedEvent.WaitOne ();
+-							ctx.Thread.AbortInvocation ();
++							Server.Instance.MdbAdaptor.AbortThread (ctx.Thread, res);
+ 							WaitToStop (ctx.Thread);
+ 						}
+ 					}
+@@ -73,9 +71,7 @@
+ 						}
+ 						else
+ 							aborted = true;
+-						res.Abort ();
+-						res.CompletedEvent.WaitOne ();
+-						ctx.Thread.AbortInvocation ();
++						Server.Instance.MdbAdaptor.AbortThread (ctx.Thread, res);
+ 						WaitToStop (ctx.Thread);
+ 						throw new TimeOutException ();
+ 					}
+
