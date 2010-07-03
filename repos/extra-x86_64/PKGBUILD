@@ -1,0 +1,37 @@
+# $Id$
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=recode
+pkgver=3.6
+pkgrel=5
+pkgdesc="Converts files between various character sets and usages"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/recode/recode.html"
+license=('GPL' 'LGPL')
+depends=('glibc' 'texinfo')
+options=('!libtool')
+install=recode.install
+source=(ftp://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz
+        http://ftp.de.debian.org/debian/pool/main/r/recode/recode_3.6-15.diff.gz
+        recode-3.6-as-if.patch recode-3.6-gettextfix.diff)
+md5sums=('be3f40ad2e93dae5cd5f628264bf1877'
+         '95ca772e367a7ef56d3f46d724b6f86e'
+         'fca7484ba332c8ad59eb02334883cd92'
+         'eb602e80a24b5448604bfebeacc55304')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -Np1 -i ${srcdir}/recode-3.6-as-if.patch
+  patch -Np1 -i ${srcdir}/recode-3.6-gettextfix.diff
+  patch -Np1 -i ${srcdir}/recode_3.6-15.diff
+  sed -i '1i#include <stdlib.h>' src/argmatch.c
+  rm -f acinclude.m4
+  autoreconf -fi
+  libtoolize
+  ./configure --prefix=/usr --mandir=/usr/share/man \
+    --infodir=/usr/share/info --without-included-gettext
+  make || return 1
+  make DESTDIR=${pkgdir} install || return 1
+  rm ${pkgdir}/usr/share/info/dir
+  gzip ${pkgdir}/usr/share/info/*
+}
