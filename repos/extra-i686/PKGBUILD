@@ -1,0 +1,83 @@
+# $Id$
+# Maintainer: Kevin Piche <kevin@archlinux.org>
+# Contributor: Jochem Kossen <j.kossen@home.nl>
+
+pkgname=netpbm
+pkgver=10.47.16
+pkgrel=1
+pkgdesc="A toolkit for manipulation of graphic images"
+arch=('i686' 'x86_64')
+license=('custom' 'BSD' 'GPL' 'LGPL')
+url="http://netpbm.sourceforge.net/"
+depends=('perl' 'libjpeg' 'libpng' 'libtiff' 'libxml2')
+makedepends=('python')
+options=('!makeflags')
+# Releases after 10.34 are available via SVN only.
+# Get stable tarball here: http://netpbm.sourceforge.net/release.html#tarball
+# get doc with: wget --recursive --relative -nH http://netpbm.sourceforge.net/doc/
+source=(ftp://ftp.archlinux.org/other/netpbm/${pkgname}-${pkgver}.tar.gz \
+        ftp://ftp.archlinux.org/other/netpbm/netpbm-doc-22Feb2009.tar.xz \
+        libpng-1.4.patch netpbm-CAN-2005-2471.patch \
+        netpbm-security-code.patch netpbm-security-scripts.patch)
+md5sums=('88efeeea3a678532556e826e23703ce9' '48efce0093c5f242bce3072958fe88c3'\
+         '6a8319e77f2d41881ee11c86b78c51d0' '07ee863e6f951250e8d0a08243c828c7'\
+         'fac4c9bedff9d90ac5a66e93d8c2eb33' 'cbb689129c82d16360d7f840b86789c7')
+sha1sums=('b72bfe4ba2a387cdc1bcbcd2d58b04c2353b6dfe' 'dfeba9f9a5fe987d64db0aadb5ca8c1b20fcead2'\
+         'ab2e67374871b8b6c0c8b69a24e3502e68487759' '456b76004622479f6ee81107c54b5211a1663a6a'\
+         '5af979e8fb7d3bbb7e731eed62326bb594bc91b3' '2ac31f714121e08e47af9337c6bbaab3cbfc5c75')
+
+build() {
+  cd "${srcdir}/stable"
+  patch -p1 < ../libpng-1.4.patch
+  patch -p1 < ../netpbm-CAN-2005-2471.patch
+  patch -p1 < ../netpbm-security-code.patch
+  patch -p1 < ../netpbm-security-scripts.patch
+
+  cp config.mk.in  config.mk
+  [ "${CARCH}" = 'x86_64' ] && echo 'CFLAGS_SHLIB = -fPIC' >> config.mk
+  echo "NETPBM_DOCURL = file://${srcdir}/doc" >> config.mk
+  echo 'TIFFLIB = libtiff.so' >> config.mk
+  echo 'JPEGLIB = libjpeg.so' >> config.mk
+  echo 'PNGLIB = libpng.so' >> config.mk
+  echo 'ZLIB = libz.so' >> config.mk
+ 
+  sed -i 's|PKGMANDIR = man|PKGMANDIR = share/man|' common.mk
+  sed -i 's|misc|share/netpbm|' common.mk
+  sed -i 's|/link|/lib|' lib/Makefile
+  sed -i 's|include/netpbm|include|' GNUmakefile lib/Makefile 
+  sed -i 's|install.manweb install.man|install.man|' GNUmakefile
+  sed -i '/MANUALS1 = $(BINARIES) $(SCRIPTS)/a\
+    MANUALS1 += bmptoppm faxformat gemtopbm jpegtopnm mrf netpbm pamtotiff pamx pgmedge \\\
+                pgmnorm pgmoil pgmslice pnmarith pnmcut pnmdepth pnmenlarge pnmfile \\\
+                pnminterp pnmnoraw pnmscale pnmsplit pnmtofits pnmtojpeg pnmtopnm pnmtops \\\
+                pnmtotiff pnmtotiffcmyk ppmnorm ppmsvgalib ppmtojpeg ppmtotga ppmtouil \\\
+                tifftopnm vidtoppm \
+    MANUALS3 += libnetpbm_image libnetpbm_ug libpbm libpgm libpm libpnm libppm libsystem libtmpfile \
+    MANUALS5 += extendedopacity pfm' common.mk
+
+  make
+
+  # Generating useful man pages with html doc
+  cd  "${srcdir}/doc"
+  make MAKEMAN="${srcdir}/stable/buildtools/makeman" USERGUIDE=. \
+    -f "${srcdir}/stable/buildtools/manpage.mk" manpages
+}
+
+package() {
+  cd "${srcdir}/stable"
+  make pkgdir="${pkgdir}/usr" install-run install-dev
+
+# Removing dummy man pages
+  rm "${pkgdir}"/usr/share/man/man{1,3,5}/*
+
+  cd  "${srcdir}/doc"
+  make MAKEMAN="${srcdir}/stable/buildtools/makeman" MANDIR="${pkgdir}/usr/share/man" \
+    -f "${srcdir}/stable/buildtools/manpage.mk" installman
+
+# Replace obsolete utility
+  echo -e '#!/bin/sh\npamditherbw $@ | pamtopnm\n' > "${pkgdir}/usr/bin/pgmtopbm"
+
+# Licensing.  Note that each program in the package has a separate license.
+  install -D -m644 "${srcdir}/stable/doc/copyright_summary" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/copyright_summary.txt"
+}
