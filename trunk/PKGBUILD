@@ -5,7 +5,7 @@
 
 pkgname=mpd
 pkgver=0.15.10
-pkgrel=2
+pkgrel=3
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -44,7 +44,7 @@ package() {
   sed -i 's|#state_file.*$|state_file "/var/lib/mpd/mpdstate"|1' doc/mpdconf.example
   sed -i 's|#user.*$|user "mpd"|1' doc/mpdconf.example
 
-  install -Dm644 doc/mpdconf.example ${pkgdir}/etc/mpd.conf.example
+  install -Dm644 doc/mpdconf.example ${pkgdir}/usr/share/mpd/mpd.conf.example
 
   install -Dm755 ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd
   install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd}
