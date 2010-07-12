@@ -1,0 +1,32 @@
+diff -ur grub-1.98.orig/util/grub.d/00_header.in grub-1.98/util/grub.d/00_header.in
+--- grub-1.98.orig/util/grub.d/00_header.in	2010-03-12 12:54:12.686589681 -0400
++++ grub-1.98/util/grub.d/00_header.in	2010-03-13 01:55:04.425437673 -0400
+@@ -108,6 +108,28 @@
+ 	&& is_path_readable_by_grub $GRUB_THEME; then
+     echo "Found theme: $GRUB_THEME" >&2
+     prepare_grub_to_access_device `${grub_probe} --target=device $GRUB_THEME` | sed -e "s/^/  /"
++    theme_dir=`dirname $GRUB_THEME`
++    old_reader="null"
++    # add any font dependency
++    for f in ${theme_dir}/*.pf2 ; do
++        if [ -e $f ] ; then
++            echo "  loadfont (\$root)`make_system_path_relative_to_its_root $f`"
++        fi
++    done 
++    # adding insmod dependencies for images
++    for f in ${theme_dir}/*.{jpg,jpeg,png,tga} ; do
++        if [ -e $f ] ; then
++            case $f in
++                *.png)         reader=png ;;
++                *.tga)         reader=tga ;;
++                *.jpg|*.jpeg)  reader=jpeg ;;
++            esac
++            if [ $old_reader != $reader ] ; then
++               echo "  insmod ${reader}"
++                old_reader=$reader
++            fi
++         fi
++    done 
+     cat << EOF
+   insmod gfxmenu
+   set theme=(\$root)`make_system_path_relative_to_its_root $GRUB_THEME`
