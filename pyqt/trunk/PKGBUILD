@@ -4,8 +4,7 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.7.3
-_pkgver=4.7.3
+pkgver=4.7.4
 pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
@@ -17,25 +16,25 @@ optdepends=('phonon' 'python-opengl')
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=("http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz")
-md5sums=('42fdda73f07810abba002af8a939ee50')
+source=("http://riverbankcomputing.com/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
+md5sums=('88e9f1bc467cccf424d2032e3470982c')
 
 build() {
-  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
   
   python configure.py --confirm-license \
     -b /usr/bin \
     -d /usr/lib/python2.6/site-packages \
-    -v /usr/share/sip || return 1
+    -v /usr/share/sip
 
   # Thanks Gerardo for the rpath fix
   find -name 'Makefile' | xargs sed -i 's|-Wl,-rpath,/usr/lib||g;s|-Wl,-rpath,.* ||g'
 
-  make || return 1
+  make
 }
 
 package(){
-  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
-  make DESTDIR=${pkgdir} INSTALL_ROOT=${pkgdir} install || return 1
+  make DESTDIR=${pkgdir} INSTALL_ROOT=${pkgdir} install
 }
