@@ -7,9 +7,9 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada')
 pkgver=4.5.0
-pkgrel=6
+pkgrel=7
 _snapshot=4.5-20100610
-_libstdcppmanver=20100312	# Note: check source directory name when updating this
+_libstdcppmanver=20100719	# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'custom')
@@ -18,19 +18,22 @@ makedepends=('binutils>=2.20.1' 'libmpc>=0.8.2-2' 'cloog-ppl>=0.15.8' 'libelf' '
 options=('!libtool' '!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++,fortran,objc,ada}-${pkgver}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-{core,g++,fortran,objc,ada}-${_snapshot}.tar.bz2
-	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-man.${_libstdcppmanver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-hash-style-both.patch
-	r160561.patch)
+	r160561.patch
+	r158095.patch)
 md5sums=('d0c6573f18e61d0a6c6fe742066346cd'
          '4c5369d27b8cb4c4e447553f064d0f16'
          '2c191ab600e600c774a65674c542e210'
          'a569128d6daf741b242e39f5c24debe4'
          'a7527896c33759ccc40bb82173f8f27f'
-         'f9a21b9dfc174f49a09ddaacfd3ac78f'
+         '226ae0c6364cfe2c1f7ac88d06088d5a'
          '4030ee1c08dd1e843c0225b772360e76'
          '6fd395bacbd7b6e47c7b74854b478363'
-         '79cb26e66eb2502171ef69438fa8666d')
+         '79cb26e66eb2502171ef69438fa8666d'
+         '982bb1e959f3a36d2e205dec1e5b31a1')
+
 
 if [ -n "${_snapshot}" ]; then
   _basedir="${srcdir}/gcc-${_snapshot}"
@@ -53,12 +56,15 @@ build() {
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 
   if [ "${CARCH}" = "x86_64" ]; then
-    patch -Np1 -i ../gcc_pure64.patch || return 1
+    patch -Np1 -i ../gcc_pure64.patch
   fi
-  patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch || return 1
+  patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch
 
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=44258
-  patch -Np1 -i ${srcdir}/r160561.patch || return 1
+  patch -Np1 -i ${srcdir}/r160561.patch
+
+  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=45008
+  patch -Np1 -i ${srcdir}/r158095.patch
 
   echo ${pkgver} > gcc/BASE-VER
 
@@ -71,7 +77,7 @@ build() {
       --with-system-zlib --with-ppl --with-cloog \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --mandir=/usr/share/man --infodir=/usr/share/info
-  make || return 1
+  make
 }
 
 package_gcc-libs()
@@ -112,7 +118,7 @@ package_gcc()
   cd ${_basedir}/build
   
   # much, much easier to install the lot and clean-up the mess
-  make -j1 DESTDIR=${pkgdir} install || return 1
+  make -j1 DESTDIR=${pkgdir} install
   rm $pkgdir/usr/bin/{*gfortran,gnat*}
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{ada{include,lib},finclude,include/objc}/*
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{cc1obj{,plus},f951,gnat1,libgfortranbegin.a}
@@ -158,7 +164,7 @@ EOF
 
   # install the libstdc++ man pages
   install -dm755 ${pkgdir}/usr/share/man/man3
-  install -m644 ${srcdir}/libstdc++-man.${_libstdcppmanver}/man3/* \
+  install -m644 ${srcdir}/libstdc++-api-${_libstdcppmanver}.man/man3/* \
     ${pkgdir}/usr/share/man/man3/
   # deal with conflicts...
   rm -f ${pkgdir}/usr/share/man/man3/{ctime,queue,random,regex,string}.3
