@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.1.1
+pkgver=1.7.2
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -13,6 +13,7 @@ makedepends=('python')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
             'perl-term-readkey: git svn'
+            'perl-net-smtp-ssl: git send-email TLS support'
             'subversion: git svn'
             'cvsps: git cvsimport')
 replaces=('git-core')
@@ -61,11 +62,11 @@ package() {
   install -D -m644 $srcdir/git-daemon.conf $pkgdir/etc/conf.d/git-daemon.conf
 }
 
-md5sums=('1b116a3e2ecce46a89e4272abf0de955'
-         'd56a2b79e76efa7b207335f562fbefbe'
+md5sums=('652f861ae161e48979ef834707e2dc4c'
+         '0ea16b997dea4aec1f2f3d9c6a74abb8'
          'd777ff1a239b3d810dcf5d89f9d894af'
          '9d065134210aa0dd3f2b40d12d915040')
-sha256sums=('f70c0fbb4445d3b638febbf33393adfc43d547926349c1df0a69f290a6b9c14a'
-            'ebb0732f5058dd365683b40ca6aa937a4bc31d971a6c73cde0176ae14e923af0'
+sha256sums=('d06ac99eff6228b5a8d0daee0b9f3e71194e4cc365a48441ff027e18e3dba1ba'
+            '5b6c6b401913fa018cae8a9578178ab233577fa6db118ba59e8563ab16ed9886'
             'd2741714a477029ca1ed63f8584040bcba6a53b2332028f9005feef4ae500113'
             '6e1475974fae315c55da344c0527923061ad7d9478d39396d147aea497f501b7')
