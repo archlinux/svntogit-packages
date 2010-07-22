@@ -3,7 +3,7 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=syslinux
-pkgver=4.01
+pkgver=4.02
 pkgrel=1
 arch=('i686' 'x86_64')
 pkgdesc="Collection of flexible boot loaders that boot from FAT, ext2/3/4 and btrfs filesystems, from CDs and via PXE"
@@ -15,13 +15,23 @@ optdepends=('perl-passwd-md5:  For md5pass'
             'mtools:           For mkdiskimage and syslinux'
            )
 makedepends=('nasm')
-source=(http://www.kernel.org/pub/linux/utils/boot/syslinux/$pkgname-${pkgver}.tar.bz2)
-sha256sums=('e3cd5cbb60469e1cd614727dda76cc0c68b882da31b0222a71ecbb51f5fa09f6')
+source=(http://www.kernel.org/pub/linux/utils/boot/syslinux/$pkgname-${pkgver}.tar.bz2
+        syslinux-dont-build-dos-windows-targets.patch)
+sha256sums=('95cfc459954c3b3660e3c03f8cf9553955affaa1348bd9aa3dca65fb5435337f'
+            '7e9301e37113d8bcddadc3a7d2fd6f3f433ef20ef6fa6df9fe9e256fa8868753')
 
 build() {
-  LDFLAGS=""
+  # Do not try to build syslinux with our default LDFLAGS, it will fail
+  unset LDFLAGS
   cd "$srcdir"/$pkgname-${pkgver}
-  sed -i -e 's#win32/syslinux.exe##g' Makefile
-  make || return 1
-  make SBINDIR="$pkgdir"/usr/sbin BINDIR="$pkgdir"/usr/bin INCDIR="$pkgdir"/usr/include MANDIR="$pkgdir"/usr/share/man AUXDIR="$pkgdir"/usr/lib/syslinux install
+  # Do not try to build the Windows or DOS installers
+  patch -p1 -i "$srcdir"/syslinux-dont-build-dos-windows-targets.patch
+  # Fix FHS manpage path
+  sed 's|/usr/man|/usr/share/man|g' -i MCONFIG
+  make
+}
+
+package() {
+  cd "$srcdir"/$pkgname-${pkgver}
+  make INSTALLROOT="$pkgdir" AUXDIR=/usr/lib/syslinux install
 }
