@@ -1,20 +1,22 @@
 # Maintainer: francois <francois.archlinux.org>
 
 pkgname=texlive-bin
-pkgver=2010.0
+pkgver=2010.1
 pkgrel=1
 pkgdesc="TeX Live binaries"
 license=('GPL')
 arch=('i686' 'x86_64')
-depends=('t1lib' 'gd' 'libgraphite' 'icu' 'poppler' 'libsigsegv')
+depends=('t1lib' 'gd' 'libgraphite' 'poppler' 'libsigsegv')
 makedepends=('perl' 'clisp' 'ffcall')
-provides=('lcdf-typetools' 'kpathsea' 'xindy')
+provides=('lcdf-typetools' 'kpathsea' 'xindy' 'pdfjam')
+conflicts=('pdfjam')
 options=('!makeflags' '!libtool')
 url='http://tug.org/texlive/'
 source=('texmf.cnf'
         'fix-fontforge-encoding.patch'
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20100623.tar.xz'
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20100623.tar.xz')
+        '09-texlive-fonts.conf'
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20100720.tar.xz'
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20100720.tar.xz')
 backup=(etc/texmf/web2c/texmf.cnf \
   etc/texmf/chktex/chktexrc \
 	etc/texmf/web2c/mktex.cnf \
@@ -53,13 +55,13 @@ build() {
      --datadir=$srcdir/inst/usr/share \
      --mandir=$srcdir/inst/usr/share/man \
      --disable-native-texlive-build \
-     --with-tex-banner="TeX Live 2010/Arch Linux" \
+     --with-banner-add="/Arch Linux" \
      --disable-multiplatform \
      --disable-dialog \
      --disable-psutils \
      --disable-t1utils \
+     --disable-bibtexu \
      --disable-xz \
-     --with-system-icu \
      --with-system-zlib \
      --with-system-pnglib \
      --with-system-ncurses \
@@ -99,12 +101,16 @@ package() {
    install -d -m755 $pkgdir/etc/texmf/tex/generic/config
    install -d -m755 $pkgdir/etc/texmf/ttf2pk
    install -d -m755 $pkgdir/etc/texmf/xdvi
+   install -d -m755 $pkgdir/etc/fonts/conf.avail
+   install -m644 $srcdir/09-texlive-fonts.conf $pkgdir/etc/fonts/conf.avail/ || return 1
    # replace upstream texmf.cnf with ours
    rm -f $pkgdir/usr/share/texmf/web2c/texmf.cnf
    install -m644 $srcdir/texmf.cnf $pkgdir/etc/texmf/web2c/texmf.cnf || return 1
    # since the location of texmf.cnf is hard-wired to be under /usr/share/texmf/web2c
    # we make a symlink from /etc/texmf/web2c/texmf.cnf to the latter
    ln -s /etc/texmf/web2c/texmf.cnf $pkgdir/usr/share/texmf/web2c/texmf.cnf || return 1
+   # fix location of TEXMFCACHE for luatools
+   sed -i 's#texlive2010#texlive#' $pkgdir/usr/share/texmf/web2c/texmfcnf.lua || return 1
    ## remove aleph from fmtutil.cnf
    sed -i -e '/aleph/d' $pkgdir/usr/share/texmf/web2c/fmtutil.cnf || return 1
    # move man files to /usr/share/man
@@ -116,8 +122,6 @@ package() {
    install -d -m755 $pkgdir/usr/share/info
    mv $pkgdir/usr/share/texmf/doc/info/*.info $pkgdir/usr/share/info/
    rm -rf $pkgdir/usr/share/texmf/doc/{man,info}
-   # move xindy modules to /usr/share/xindy
-   mv $pkgdir/usr/share/texmf/xindy $pkgdir/usr/share/
    # copy config files to $TEXMFCONFIG tree
    cp -a $pkgdir/usr/share/texmf/chktex/chktexrc \
      	$pkgdir/etc/texmf/chktex/
@@ -219,7 +223,9 @@ htxelatex \
 htxetex \
 mk4ht \
 ulqda \
-vpe"
+vpe \
+rungs \
+tlmgr"
    for s in $SYMLINKS_TO_REMOVE; do
      rm -f $pkgdir/usr/bin/$s
    done
@@ -228,5 +234,6 @@ vpe"
 
 md5sums=('f848bb8e2a87ceef49cfd0eac6b140c9'
          'bfb9716aa00c86c08cd31e5b32edeb98'
-         'e32fd2e192ec4cba148ed97c712d3c95'
-         '758c144a68b788343462e050ca461a2f')
+         '393a4bf67adc7ca5df2b386759d1a637'
+         '1cac8cf889fbb50b9f39042be49c8482'
+         '99cd8dd0b7c71b7cf0bb0f8c6fd49412')
