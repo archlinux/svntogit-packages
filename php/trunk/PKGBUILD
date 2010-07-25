@@ -5,6 +5,7 @@ pkgbase=php
 pkgname=('php'
          'php-cgi'
          'php-apache'
+         'php-fpm'
          'php-embed'
          'php-pear'
          'php-curl'
@@ -21,27 +22,26 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=5.3.2
-pkgrel=6
-_suhosinver=${pkgver}-0.9.9.1
+pkgver=5.3.3
+pkgrel=1
+_suhosinver=${pkgver}-0.9.10
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
 makedepends=('apache' 'imap' 'postgresql-libs' 'mysql' 'libldap' 'postfix'
              'sqlite3' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file'
              'libmcrypt' 'tidyhtml' 'aspell' 'libtool' 'gd'  'icu'
-             'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp')
+             'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'libevent')
 options=('!makeflags')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
         "http://download.suhosin.org/suhosin-patch-${_suhosinver}.patch.gz"
-        'php.ini.patch' 'apache.conf' 'db-configure.patch'
-        'mysqlnd_default_port.patch')
-md5sums=('46f500816125202c48a458d0133254a4'
-         '4647b05330862d6a1fc4469245cc6ade'
+        'php.ini.patch' 'apache.conf' 'rc.d.php-fpm' 'php-fpm.conf')
+md5sums=('21ceeeb232813c10283a5ca1b4c87b48'
+         'b66b27c43b1332400ef8982944c3b95b'
          'd6f94150f47047882c6716575e12e99b'
          '96ca078be6729b665be8a865535a97bf'
-         'e04e6a3abf327dd40ddb2b7dc21677c4'
-         'bcf06fcc3324f3443d8402008eb1c01f')
+         'ff8346d57f0bd67c7a383c1561dcd7c1'
+         '0ac88ff88ae951118201d6424eaa426a')
 
 build() {
 	# ldap-sasl does not compile with --as-needed
@@ -51,6 +51,7 @@ build() {
 	phpconfig="--srcdir=../${pkgbase}-${pkgver} \
 		--prefix=/usr \
 		--sysconfdir=/etc/php \
+		--localstatedir=/var \
 		--with-layout=GNU \
 		--with-config-file-path=/etc/php \
 		--with-config-file-scan-dir=/etc/php/conf.d \
@@ -88,7 +89,7 @@ build() {
 		--enable-zip=shared \
 		--with-bz2=shared \
 		--with-curl=shared \
-		--with-db4=shared \
+		--with-db4=/usr \
 		--with-enchant=shared,/usr \
 		--with-freetype-dir=shared,/usr \
 		--with-gd=shared,/usr \
@@ -136,18 +137,11 @@ build() {
 
 	cd ${srcdir}/${pkgbase}-${pkgver}
 
-	# avoid linking against old db version
-	patch -p0 -i ${srcdir}/db-configure.patch
-
 	# apply suhosin patch
 	patch -p1 -i ${srcdir}/suhosin-patch-${_suhosinver}.patch
 
 	# adjust paths
 	patch -p0 -i ${srcdir}/php.ini.patch
-
-	# fix http://bugs.php.net/51242
-	# remove for next upstream release
-	patch -p0 -i ${srcdir}/mysqlnd_default_port.patch
 
 	# php
 	mkdir ${srcdir}/build-php
@@ -165,8 +159,8 @@ build() {
 	cp -a ${srcdir}/build-php ${srcdir}/build-cgi
 	cd ${srcdir}/build-cgi
 	./configure ${phpconfig} \
-		--enable-cgi \
 		--disable-cli \
+		--enable-cgi \
 		${phpextensions}
 	make
 
@@ -174,8 +168,20 @@ build() {
 	cp -a ${srcdir}/build-php ${srcdir}/build-apache
 	cd ${srcdir}/build-apache
 	./configure ${phpconfig} \
-		--with-apxs2 \
 		--disable-cli \
+		--with-apxs2 \
+		${phpextensions}
+	make
+
+	# fpm
+	cp -a ${srcdir}/build-php ${srcdir}/build-fpm
+	cd ${srcdir}/build-fpm
+	./configure ${phpconfig} \
+		--disable-cli \
+		--enable-fpm \
+		--with-libevent-dir=/usr \
+		--with-fpm-user=http \
+		--with-fpm-group=http \
 		${phpextensions}
 	make
 
@@ -183,8 +189,8 @@ build() {
 	cp -a ${srcdir}/build-php ${srcdir}/build-embed
 	cd ${srcdir}/build-embed
 	./configure ${phpconfig} \
-		--enable-embed=shared \
 		--disable-cli \
+		--enable-embed=shared \
 		${phpextensions}
 	make
 
@@ -239,6 +245,18 @@ package_php-apache() {
 	install -D -m644 ${srcdir}/apache.conf ${pkgdir}/etc/httpd/conf/extra/php5_module.conf
 }
 
+package_php-fpm() {
+	pkgdesc='FastCGI Process Manager for PHP'
+	depends=('php' 'libevent')
+	backup=('etc/php/php-fpm.conf')
+
+	install -D -m755 ${srcdir}/build-fpm/sapi/fpm/php-fpm ${pkgdir}/usr/sbin/php-fpm
+	install -D -m644 ${srcdir}/build-fpm/sapi/fpm/php-fpm.1 ${pkgdir}/usr/share/man/man1/php-fpm.1
+	install -D -m644 ${srcdir}/php-fpm.conf ${pkgdir}/etc/php/php-fpm.conf
+	install -D -m755 ${srcdir}/rc.d.php-fpm ${pkgdir}/etc/rc.d/php-fpm
+	install -d -m755 ${pkgdir}/var/run/php-fpm
+}
+
 package_php-embed() {
 	pkgdesc='Embed SAPI for PHP'
 	depends=('php' 'pcre' 'libxml2')
@@ -250,7 +268,7 @@ package_php-embed() {
 package_php-pear() {
 	pkgdesc='PHP Extension and Application Repository'
 	depends=('php' 'bash')
-	backup=("etc/php/pear.conf")
+	backup=('etc/php/pear.conf')
 
 	cd ${srcdir}/build-pear
 	make install-pear INSTALL_ROOT=${pkgdir}
@@ -262,87 +280,87 @@ package_php-pear() {
 
 package_php-curl() {
 	depends=('php' 'curl')
-	pkgdesc="curl module for PHP"
+	pkgdesc='curl module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/curl.so ${pkgdir}/usr/lib/php/modules/curl.so
 }
 
 package_php-enchant() {
 	depends=('php' 'enchant')
-	pkgdesc="enchant module for PHP"
+	pkgdesc='enchant module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/enchant.so ${pkgdir}/usr/lib/php/modules/enchant.so
 }
 
 package_php-gd() {
 	depends=('php' 'gd')
-	pkgdesc="gd module for PHP"
+	pkgdesc='gd module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/gd.so ${pkgdir}/usr/lib/php/modules/gd.so
 }
 
 package_php-gmp() {
 	depends=('php' 'gmp')
-	pkgdesc="gmp module for PHP"
+	pkgdesc='gmp module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/gmp.so ${pkgdir}/usr/lib/php/modules/gmp.so
 }
 
 package_php-intl() {
 	depends=('php' 'icu')
-	pkgdesc="intl module for PHP"
+	pkgdesc='intl module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/intl.so ${pkgdir}/usr/lib/php/modules/intl.so
 }
 
 package_php-ldap() {
 	depends=('php' 'libldap')
-	pkgdesc="ldap module for PHP"
+	pkgdesc='ldap module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/ldap.so ${pkgdir}/usr/lib/php/modules/ldap.so
 }
 
 package_php-mcrypt() {
 	depends=('php' 'libmcrypt' 'libtool')
-	pkgdesc="mcrypt module for PHP"
+	pkgdesc='mcrypt module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/mcrypt.so ${pkgdir}/usr/lib/php/modules/mcrypt.so
 }
 
 package_php-odbc() {
 	depends=('php' 'unixodbc')
-	pkgdesc="ODBC modules for PHP"
+	pkgdesc='ODBC modules for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/odbc.so ${pkgdir}/usr/lib/php/modules/odbc.so
 	install -D -m755 ${srcdir}/build-php/modules/pdo_odbc.so ${pkgdir}/usr/lib/php/modules/pdo_odbc.so
 }
 
 package_php-pgsql() {
 	depends=('php' 'postgresql-libs')
-	pkgdesc="PostgreSQL modules for PHP"
+	pkgdesc='PostgreSQL modules for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/pgsql.so ${pkgdir}/usr/lib/php/modules/pgsql.so
 	install -D -m755 ${srcdir}/build-php/modules/pdo_pgsql.so ${pkgdir}/usr/lib/php/modules/pdo_pgsql.so
 }
 
 package_php-pspell() {
 	depends=('php' 'aspell')
-	pkgdesc="pspell module for PHP"
+	pkgdesc='pspell module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/pspell.so ${pkgdir}/usr/lib/php/modules/pspell.so
 }
 
 package_php-snmp() {
 	depends=('php' 'net-snmp')
-	pkgdesc="snmp module for PHP"
+	pkgdesc='snmp module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/snmp.so ${pkgdir}/usr/lib/php/modules/snmp.so
 }
 
 package_php-sqlite() {
 	depends=('php' 'sqlite3')
-	pkgdesc="sqlite3 module for PHP"
+	pkgdesc='sqlite3 module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/sqlite3.so ${pkgdir}/usr/lib/php/modules/sqlite3.so
 	install -D -m755 ${srcdir}/build-php/modules/pdo_sqlite.so ${pkgdir}/usr/lib/php/modules/pdo_sqlite.so
 }
 
 package_php-tidy() {
 	depends=('php' 'tidyhtml')
-	pkgdesc="tidy module for PHP"
+	pkgdesc='tidy module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/tidy.so ${pkgdir}/usr/lib/php/modules/tidy.so
 }
 
 package_php-xsl() {
 	depends=('php' 'libxslt')
-	pkgdesc="xsl module for PHP"
+	pkgdesc='xsl module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/xsl.so ${pkgdir}/usr/lib/php/modules/xsl.so
 }
