@@ -1,0 +1,506 @@
+diff --git a/intel/intel_bufmgr_gem.c b/intel/intel_bufmgr_gem.c
+index a8e072d..3446390 100644
+--- a/intel/intel_bufmgr_gem.c
++++ b/intel/intel_bufmgr_gem.c
+@@ -93,6 +93,7 @@ typedef struct _drm_intel_bufmgr_gem {
+ 	/** Array of lists of cached gem objects of power-of-two sizes */
+ 	struct drm_intel_gem_bo_bucket cache_bucket[14 * 4];
+ 	int num_buckets;
++	time_t time;
+ 
+ 	uint64_t gtt_size;
+ 	int available_fences;
+@@ -132,6 +133,7 @@ struct _drm_intel_bo_gem {
+ 	 */
+ 	uint32_t tiling_mode;
+ 	uint32_t swizzle_mode;
++	unsigned long stride;
+ 
+ 	time_t free_time;
+ 
+@@ -200,8 +202,9 @@ drm_intel_gem_bo_get_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+ 			    uint32_t * swizzle_mode);
+ 
+ static int
+-drm_intel_gem_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+-			    uint32_t stride);
++drm_intel_gem_bo_set_tiling_internal(drm_intel_bo *bo,
++				     uint32_t tiling_mode,
++				     uint32_t stride);
+ 
+ static void drm_intel_gem_bo_unreference_locked_timed(drm_intel_bo *bo,
+ 						      time_t time);
+@@ -251,7 +254,7 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
+  */
+ static unsigned long
+ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
+-			    unsigned long pitch, uint32_t tiling_mode)
++			    unsigned long pitch, uint32_t *tiling_mode)
+ {
+ 	unsigned long tile_width;
+ 	unsigned long i;
+@@ -259,10 +262,10 @@ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
+ 	/* If untiled, then just align it so that we can do rendering
+ 	 * to it with the 3D engine.
+ 	 */
+-	if (tiling_mode == I915_TILING_NONE)
++	if (*tiling_mode == I915_TILING_NONE)
+ 		return ALIGN(pitch, 64);
+ 
+-	if (tiling_mode == I915_TILING_X)
++	if (*tiling_mode == I915_TILING_X)
+ 		tile_width = 512;
+ 	else
+ 		tile_width = 128;
+@@ -271,6 +274,14 @@ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
+ 	if (bufmgr_gem->gen >= 4)
+ 		return ROUND_UP_TO(pitch, tile_width);
+ 
++	/* The older hardware has a maximum pitch of 8192 with tiled
++	 * surfaces, so fallback to untiled if it's too large.
++	 */
++	if (pitch > 8192) {
++		*tiling_mode = I915_TILING_NONE;
++		return ALIGN(pitch, 64);
++	}
++
+ 	/* Pre-965 needs power of two tile width */
+ 	for (i = tile_width; i < pitch; i <<= 1)
+ 		;
+@@ -549,7 +560,9 @@ static drm_intel_bo *
+ drm_intel_gem_bo_alloc_internal(drm_intel_bufmgr *bufmgr,
+ 				const char *name,
+ 				unsigned long size,
+-				unsigned long flags)
++				unsigned long flags,
++				uint32_t tiling_mode,
++				unsigned long stride)
+ {
+ 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
+ 	drm_intel_bo_gem *bo_gem;
+@@ -615,6 +628,13 @@ retry:
+ 								    bucket);
+ 				goto retry;
+ 			}
++
++			if (drm_intel_gem_bo_set_tiling_internal(&bo_gem->bo,
++								 tiling_mode,
++								 stride)) {
++				drm_intel_gem_bo_free(&bo_gem->bo);
++				goto retry;
++			}
+ 		}
+ 	}
+ 	pthread_mutex_unlock(&bufmgr_gem->lock);
+@@ -642,6 +662,17 @@ retry:
+ 			return NULL;
+ 		}
+ 		bo_gem->bo.bufmgr = bufmgr;
++
++		bo_gem->tiling_mode = I915_TILING_NONE;
++		bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
++		bo_gem->stride = 0;
++
++		if (drm_intel_gem_bo_set_tiling_internal(&bo_gem->bo,
++							 tiling_mode,
++							 stride)) {
++		    drm_intel_gem_bo_free(&bo_gem->bo);
++		    return NULL;
++		}
+ 	}
+ 
+ 	bo_gem->name = name;
+@@ -650,8 +681,6 @@ retry:
+ 	bo_gem->reloc_tree_fences = 0;
+ 	bo_gem->used_as_reloc_target = 0;
+ 	bo_gem->has_error = 0;
+-	bo_gem->tiling_mode = I915_TILING_NONE;
+-	bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
+ 	bo_gem->reusable = 1;
+ 
+ 	drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem);
+@@ -669,7 +698,8 @@ drm_intel_gem_bo_alloc_for_render(drm_intel_bufmgr *bufmgr,
+ 				  unsigned int alignment)
+ {
+ 	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size,
+-					       BO_ALLOC_FOR_RENDER);
++					       BO_ALLOC_FOR_RENDER,
++					       I915_TILING_NONE, 0);
+ }
+ 
+ static drm_intel_bo *
+@@ -678,7 +708,8 @@ drm_intel_gem_bo_alloc(drm_intel_bufmgr *bufmgr,
+ 		       unsigned long size,
+ 		       unsigned int alignment)
+ {
+-	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, 0);
++	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, 0,
++					       I915_TILING_NONE, 0);
+ }
+ 
+ static drm_intel_bo *
+@@ -687,10 +718,8 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
+ 			     unsigned long *pitch, unsigned long flags)
+ {
+ 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+-	drm_intel_bo *bo;
+ 	unsigned long size, stride;
+ 	uint32_t tiling;
+-	int ret;
+ 
+ 	do {
+ 		unsigned long aligned_y;
+@@ -717,24 +746,17 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
+ 			aligned_y = ALIGN(y, 32);
+ 
+ 		stride = x * cpp;
+-		stride = drm_intel_gem_bo_tile_pitch(bufmgr_gem, stride, tiling);
++		stride = drm_intel_gem_bo_tile_pitch(bufmgr_gem, stride, tiling_mode);
+ 		size = stride * aligned_y;
+ 		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
+ 	} while (*tiling_mode != tiling);
+-
+-	bo = drm_intel_gem_bo_alloc_internal(bufmgr, name, size, flags);
+-	if (!bo)
+-		return NULL;
+-
+-	ret = drm_intel_gem_bo_set_tiling(bo, tiling_mode, stride);
+-	if (ret != 0) {
+-		drm_intel_gem_bo_unreference(bo);
+-		return NULL;
+-	}
+-
+ 	*pitch = stride;
+ 
+-	return bo;
++	if (tiling == I915_TILING_NONE)
++		stride = 0;
++
++	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, flags,
++					       tiling, stride);
+ }
+ 
+ /**
+@@ -791,6 +813,7 @@ drm_intel_bo_gem_create_from_name(drm_intel_bufmgr *bufmgr,
+ 	}
+ 	bo_gem->tiling_mode = get_tiling.tiling_mode;
+ 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
++	/* XXX stride is unknown */
+ 	drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem);
+ 
+ 	DBG("bo_create_from_handle: %d (%s)\n", handle, bo_gem->name);
+@@ -829,6 +852,9 @@ drm_intel_gem_cleanup_bo_cache(drm_intel_bufmgr_gem *bufmgr_gem, time_t time)
+ {
+ 	int i;
+ 
++	if (bufmgr_gem->time == time)
++		return;
++
+ 	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
+ 		struct drm_intel_gem_bo_bucket *bucket =
+ 		    &bufmgr_gem->cache_bucket[i];
+@@ -846,6 +872,8 @@ drm_intel_gem_cleanup_bo_cache(drm_intel_bufmgr_gem *bufmgr_gem, time_t time)
+ 			drm_intel_gem_bo_free(&bo_gem->bo);
+ 		}
+ 	}
++
++	bufmgr_gem->time = time;
+ }
+ 
+ static void
+@@ -854,7 +882,6 @@ drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
+ 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+ 	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+ 	struct drm_intel_gem_bo_bucket *bucket;
+-	uint32_t tiling_mode;
+ 	int i;
+ 
+ 	/* Unreference all the target buffers */
+@@ -883,9 +910,7 @@ drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
+ 
+ 	bucket = drm_intel_gem_bo_bucket_for_size(bufmgr_gem, bo->size);
+ 	/* Put the buffer into our internal cache for reuse if we can. */
+-	tiling_mode = I915_TILING_NONE;
+ 	if (bufmgr_gem->bo_reuse && bo_gem->reusable && bucket != NULL &&
+-	    drm_intel_gem_bo_set_tiling(bo, &tiling_mode, 0) == 0 &&
+ 	    drm_intel_gem_bo_madvise_internal(bufmgr_gem, bo_gem,
+ 					      I915_MADV_DONTNEED)) {
+ 		bo_gem->free_time = time;
+@@ -894,8 +919,6 @@ drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
+ 		bo_gem->validate_index = -1;
+ 
+ 		DRMLISTADDTAIL(&bo_gem->head, &bucket->head);
+-
+-		drm_intel_gem_cleanup_bo_cache(bufmgr_gem, time);
+ 	} else {
+ 		drm_intel_gem_bo_free(bo);
+ 	}
+@@ -925,6 +948,7 @@ static void drm_intel_gem_bo_unreference(drm_intel_bo *bo)
+ 
+ 		pthread_mutex_lock(&bufmgr_gem->lock);
+ 		drm_intel_gem_bo_unreference_final(bo, time.tv_sec);
++		drm_intel_gem_cleanup_bo_cache(bufmgr_gem, time.tv_sec);
+ 		pthread_mutex_unlock(&bufmgr_gem->lock);
+ 	}
+ }
+@@ -982,12 +1006,9 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
+ 			    &set_domain);
+ 	} while (ret == -1 && errno == EINTR);
+ 	if (ret != 0) {
+-		ret = -errno;
+ 		fprintf(stderr, "%s:%d: Error setting to CPU domain %d: %s\n",
+ 			__FILE__, __LINE__, bo_gem->gem_handle,
+ 			strerror(errno));
+-		pthread_mutex_unlock(&bufmgr_gem->lock);
+-		return ret;
+ 	}
+ 
+ 	pthread_mutex_unlock(&bufmgr_gem->lock);
+@@ -1062,9 +1083,7 @@ int drm_intel_gem_bo_map_gtt(drm_intel_bo *bo)
+ 			    DRM_IOCTL_I915_GEM_SET_DOMAIN,
+ 			    &set_domain);
+ 	} while (ret == -1 && errno == EINTR);
+-
+ 	if (ret != 0) {
+-		ret = -errno;
+ 		fprintf(stderr, "%s:%d: Error setting domain %d: %s\n",
+ 			__FILE__, __LINE__, bo_gem->gem_handle,
+ 			strerror(errno));
+@@ -1072,7 +1091,7 @@ int drm_intel_gem_bo_map_gtt(drm_intel_bo *bo)
+ 
+ 	pthread_mutex_unlock(&bufmgr_gem->lock);
+ 
+-	return ret;
++	return 0;
+ }
+ 
+ int drm_intel_gem_bo_unmap_gtt(drm_intel_bo *bo)
+@@ -1587,7 +1606,7 @@ drm_intel_gem_bo_mrb_exec2(drm_intel_bo *bo, int used,
+ 
+ 	if (ret != 0) {
+ 		ret = -errno;
+-		if (ret == -ENOMEM) {
++		if (ret == -ENOSPC) {
+ 			fprintf(stderr,
+ 				"Execbuffer fails to pin. "
+ 				"Estimate: %u. Actual: %u. Available: %u\n",
+@@ -1671,34 +1690,56 @@ drm_intel_gem_bo_unpin(drm_intel_bo *bo)
+ }
+ 
+ static int
+-drm_intel_gem_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+-			    uint32_t stride)
++drm_intel_gem_bo_set_tiling_internal(drm_intel_bo *bo,
++				     uint32_t tiling_mode,
++				     uint32_t stride)
+ {
+ 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+ 	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+ 	struct drm_i915_gem_set_tiling set_tiling;
+ 	int ret;
+ 
+-	if (bo_gem->global_name == 0 && *tiling_mode == bo_gem->tiling_mode)
++	if (bo_gem->global_name == 0 &&
++	    tiling_mode == bo_gem->tiling_mode &&
++	    stride == bo_gem->stride)
+ 		return 0;
+ 
+ 	memset(&set_tiling, 0, sizeof(set_tiling));
+-	set_tiling.handle = bo_gem->gem_handle;
+-
+ 	do {
+-		set_tiling.tiling_mode = *tiling_mode;
++		set_tiling.handle = bo_gem->gem_handle;
++		set_tiling.tiling_mode = tiling_mode;
+ 		set_tiling.stride = stride;
+ 
+ 		ret = ioctl(bufmgr_gem->fd,
+ 			    DRM_IOCTL_I915_GEM_SET_TILING,
+ 			    &set_tiling);
+ 	} while (ret == -1 && errno == EINTR);
+-	if (ret == 0) {
+-		bo_gem->tiling_mode = set_tiling.tiling_mode;
+-		bo_gem->swizzle_mode = set_tiling.swizzle_mode;
++	if (ret == -1)
++		return -errno;
++
++	bo_gem->tiling_mode = set_tiling.tiling_mode;
++	bo_gem->swizzle_mode = set_tiling.swizzle_mode;
++	bo_gem->stride = set_tiling.stride;
++	return 0;
++}
++
++static int
++drm_intel_gem_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
++			    uint32_t stride)
++{
++	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
++	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
++	int ret;
++
++	/* Linear buffers have no stride. By ensuring that we only ever use
++	 * stride 0 with linear buffers, we simplify our code.
++	 */
++	if (*tiling_mode == I915_TILING_NONE)
++		stride = 0;
++
++	ret = drm_intel_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
++	if (ret == 0)
+ 		drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem);
+-	} else
+-		ret = -errno;
+ 
+ 	*tiling_mode = bo_gem->tiling_mode;
+ 	return ret;
+diff --git a/xf86drmMode.c b/xf86drmMode.c
+index f330e6f..ecb1fd5 100644
+--- a/xf86drmMode.c
++++ b/xf86drmMode.c
+@@ -52,6 +52,12 @@
+ #define U642VOID(x) ((void *)(unsigned long)(x))
+ #define VOID2U64(x) ((uint64_t)(unsigned long)(x))
+ 
++static inline DRM_IOCTL(int fd, int cmd, void *arg)
++{
++	int ret = drmIoctl(fd, cmd, arg);
++	return ret < 0 ? -errno : ret;
++}
++
+ /*
+  * Util functions
+  */
+@@ -242,7 +248,7 @@ int drmModeAddFB(int fd, uint32_t width, uint32_t height, uint8_t depth,
+ 	f.depth  = depth;
+ 	f.handle = bo_handle;
+ 
+-	if ((ret = drmIoctl(fd, DRM_IOCTL_MODE_ADDFB, &f)))
++	if ((ret = DRM_IOCTL(fd, DRM_IOCTL_MODE_ADDFB, &f)))
+ 		return ret;
+ 
+ 	*buf_id = f.fb_id;
+@@ -251,7 +257,7 @@ int drmModeAddFB(int fd, uint32_t width, uint32_t height, uint8_t depth,
+ 
+ int drmModeRmFB(int fd, uint32_t bufferId)
+ {
+-	return drmIoctl(fd, DRM_IOCTL_MODE_RMFB, &bufferId);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_RMFB, &bufferId);
+ 
+ 
+ }
+@@ -289,7 +295,7 @@ int drmModeDirtyFB(int fd, uint32_t bufferId,
+ 	dirty.clips_ptr = VOID2U64(clips);
+ 	dirty.num_clips = num_clips;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_DIRTYFB, &dirty);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_DIRTYFB, &dirty);
+ }
+ 
+ 
+@@ -344,7 +350,7 @@ int drmModeSetCrtc(int fd, uint32_t crtcId, uint32_t bufferId,
+ 	} else
+ 	  crtc.mode_valid = 0;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_SETCRTC, &crtc);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_SETCRTC, &crtc);
+ }
+ 
+ /*
+@@ -361,7 +367,7 @@ int drmModeSetCursor(int fd, uint32_t crtcId, uint32_t bo_handle, uint32_t width
+ 	arg.height = height;
+ 	arg.handle = bo_handle;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_CURSOR, &arg);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_CURSOR, &arg);
+ }
+ 
+ int drmModeMoveCursor(int fd, uint32_t crtcId, int x, int y)
+@@ -373,7 +379,7 @@ int drmModeMoveCursor(int fd, uint32_t crtcId, int x, int y)
+ 	arg.x = x;
+ 	arg.y = y;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_CURSOR, &arg);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_CURSOR, &arg);
+ }
+ 
+ /*
+@@ -510,7 +516,7 @@ int drmModeAttachMode(int fd, uint32_t connector_id, drmModeModeInfoPtr mode_inf
+ 	memcpy(&res.mode, mode_info, sizeof(struct drm_mode_modeinfo));
+ 	res.connector_id = connector_id;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_ATTACHMODE, &res);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_ATTACHMODE, &res);
+ }
+ 
+ int drmModeDetachMode(int fd, uint32_t connector_id, drmModeModeInfoPtr mode_info)
+@@ -520,7 +526,7 @@ int drmModeDetachMode(int fd, uint32_t connector_id, drmModeModeInfoPtr mode_inf
+ 	memcpy(&res.mode, mode_info, sizeof(struct drm_mode_modeinfo));
+ 	res.connector_id = connector_id;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_DETACHMODE, &res);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_DETACHMODE, &res);
+ }
+ 
+ 
+@@ -637,16 +643,12 @@ int drmModeConnectorSetProperty(int fd, uint32_t connector_id, uint32_t property
+ 			     uint64_t value)
+ {
+ 	struct drm_mode_connector_set_property osp;
+-	int ret;
+ 
+ 	osp.connector_id = connector_id;
+ 	osp.prop_id = property_id;
+ 	osp.value = value;
+ 
+-	if ((ret = drmIoctl(fd, DRM_IOCTL_MODE_SETPROPERTY, &osp)))
+-		return ret;
+-
+-	return 0;
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_SETPROPERTY, &osp);
+ }
+ 
+ /*
+@@ -715,7 +717,6 @@ int drmCheckModesettingSupported(const char *busid)
+ int drmModeCrtcGetGamma(int fd, uint32_t crtc_id, uint32_t size,
+ 			uint16_t *red, uint16_t *green, uint16_t *blue)
+ {
+-	int ret;
+ 	struct drm_mode_crtc_lut l;
+ 
+ 	l.crtc_id = crtc_id;
+@@ -724,16 +725,12 @@ int drmModeCrtcGetGamma(int fd, uint32_t crtc_id, uint32_t size,
+ 	l.green = VOID2U64(green);
+ 	l.blue = VOID2U64(blue);
+ 
+-	if ((ret = drmIoctl(fd, DRM_IOCTL_MODE_GETGAMMA, &l)))
+-		return ret;
+-
+-	return 0;
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_GETGAMMA, &l);
+ }
+ 
+ int drmModeCrtcSetGamma(int fd, uint32_t crtc_id, uint32_t size,
+ 			uint16_t *red, uint16_t *green, uint16_t *blue)
+ {
+-	int ret;
+ 	struct drm_mode_crtc_lut l;
+ 
+ 	l.crtc_id = crtc_id;
+@@ -742,10 +739,7 @@ int drmModeCrtcSetGamma(int fd, uint32_t crtc_id, uint32_t size,
+ 	l.green = VOID2U64(green);
+ 	l.blue = VOID2U64(blue);
+ 
+-	if ((ret = drmIoctl(fd, DRM_IOCTL_MODE_SETGAMMA, &l)))
+-		return ret;
+-
+-	return 0;
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_SETGAMMA, &l);
+ }
+ 
+ int drmHandleEvent(int fd, drmEventContextPtr evctx)
+@@ -810,5 +804,5 @@ int drmModePageFlip(int fd, uint32_t crtc_id, uint32_t fb_id,
+ 	flip.flags = flags;
+ 	flip.reserved = 0;
+ 
+-	return drmIoctl(fd, DRM_IOCTL_MODE_PAGE_FLIP, &flip);
++	return DRM_IOCTL(fd, DRM_IOCTL_MODE_PAGE_FLIP, &flip);
+ }
