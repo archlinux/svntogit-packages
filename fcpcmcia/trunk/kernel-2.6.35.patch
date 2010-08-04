@@ -100,3 +100,82 @@
  } /* cs_attach */
  
  /*======================================================================
+--- fcpcmcia_cs.c~	2010-08-04 22:01:27.123336123 +0200
++++ fcpcmcia_cs.c	2010-08-04 22:01:27.150002183 +0200
+@@ -146,9 +146,6 @@
+     p_dev->io.Attributes1 = IO_DATA_PATH_WIDTH_8;
+     p_dev->io.NumPorts2 = 0;
+ 
+-    /* Interrupt setup */
+-    p_dev->irq.Attributes = IRQ_TYPE_DYNAMIC_SHARING;
+-
+ #if defined (PCMCIA_IRQ_INFO2)
+     p_dev->irq.IRQInfo1 = IRQ_INFO2_VALID|IRQ_LEVEL_ID;
+     if (irq_list_count > 0) {
+@@ -214,7 +211,7 @@
+ 
+ static int cs_config(struct pcmcia_device *link)
+ {
+-    int i;
++    int i = -1;
+     char devname[128];
+ 
+     devname[0] = 0;
+@@ -228,8 +225,7 @@
+ 	/*
+ 	 * allocate an interrupt line
+ 	 */
+-	i = pcmcia_request_irq(link, &link->irq);
+-	if (i != 0) {
++	if (!link->irq) {
+             /* undo */
+             pcmcia_disable_device(link);
+ 	    break;
+@@ -259,7 +255,7 @@
+ 		"Failed to add AVM-%s-Controller at i/o %x, irq %d\n",
+ 		dev->node.dev_name, 
+ 		link->io.BasePort1, 
+-		link->irq.AssignedIRQ
++		link->irq
+ 	);
+ 	cs_release(link);
+ 	return -ENODEV;
+@@ -270,7 +266,7 @@
+ 	"Card driver for '%s' has been set up: i/o %x, irq %d\n", 
+ 	devname, 
+ 	link->io.BasePort1, 
+-	link->irq.AssignedIRQ
++	link->irq
+     );
+     return 0;
+ } /* cs_config */
+--- fcpcmcia_cs.c~	2010-08-04 22:04:40.550002169 +0200
++++ fcpcmcia_cs.c	2010-08-04 22:04:40.573335565 +0200
+@@ -250,7 +250,7 @@
+     }
+     NOTE("Ready to call card driver for '%s'...\n", devname);
+ 
+-    if ((i = fcpcmcia_addcard(link->io.BasePort1, link->irq.AssignedIRQ)) < 0) {
++    if ((i = fcpcmcia_addcard(link->io.BasePort1, link->irq)) < 0) {
+         ERROR(
+ 		"Failed to add AVM-%s-Controller at i/o %x, irq %d\n",
+ 		dev->node.dev_name, 
+@@ -281,7 +281,7 @@
+ 
+ static void cs_release(struct pcmcia_device *link)
+ {
+-    fcpcmcia_delcard(link->io.BasePort1, link->irq.AssignedIRQ);
++    fcpcmcia_delcard(link->io.BasePort1, link->irq);
+ 
+     pcmcia_disable_device(link);
+ } /* cs_release */
+--- fcpcmcia_cs.c~	2010-08-04 22:22:29.090002845 +0200
++++ fcpcmcia_cs.c	2010-08-04 22:22:29.113335966 +0200
+@@ -253,7 +253,6 @@
+     if ((i = fcpcmcia_addcard(link->io.BasePort1, link->irq)) < 0) {
+         ERROR(
+ 		"Failed to add AVM-%s-Controller at i/o %x, irq %d\n",
+-		dev->node.dev_name, 
+ 		link->io.BasePort1, 
+ 		link->irq
+ 	);
