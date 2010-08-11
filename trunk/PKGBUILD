@@ -6,9 +6,9 @@
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
-pkgver=2.12
-pkgrel=4
-_glibcdate=20100620
+pkgver=2.12.1
+pkgrel=1
+_glibcdate=20100811
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -21,14 +21,14 @@ backup=(etc/locale.gen
         etc/nscd.conf)
 options=('!strip')
 install=glibc.install
-source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.bz2
+source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.xz
         glibc-2.10-dont-build-timezone.patch
         glibc-2.10-bz4781.patch
         glibc-__i686.patch
         nscd
         locale.gen.txt
         locale-gen)    
-md5sums=('8857bfae3e0a659452ddd8f9d2606490'
+md5sums=('3f0d64de5a9fc5614d8acc0f1d5846ed'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
@@ -41,7 +41,7 @@ mksource() {
   pushd glibc
   git checkout -b glibc-2.12-arch origin/release/2.12/master
   popd
-  tar -cvjf glibc-${pkgver}_${_glibcdate}.tar.bz2 glibc/*
+  tar -cvJf glibc-${pkgver}_${_glibcdate}.tar.xz glibc/*
 }
 
 build() {
@@ -128,11 +128,11 @@ package() {
   [[ $CARCH = "i686" ]] && strip $STRIP_BINARIES usr/bin/lddlibc4
 
   strip $STRIP_STATIC usr/lib/*.a \
-                      lib/{{ld,libpthread}-2.12,libthread_db-1.0}.so
+                      lib/{{ld,libpthread}-${pkgver},libthread_db-1.0}.so
 
-  strip $STRIP_SHARED lib/{libanl,libBrokenLocale,libc,libcidn,libcrypt}-2.12.so \
-                      lib/libnss_{compat,dns,files,hesiod,nis,nisplus}-2.12.so \
-                      lib/{libdl,libm,libnsl,libresolv,librt,libutil}-2.12.so \
+  strip $STRIP_SHARED lib/{libanl,libBrokenLocale,libc,libcidn,libcrypt}-${pkgver}.so \
+                      lib/libnss_{compat,dns,files,hesiod,nis,nisplus}-${pkgver}.so \
+                      lib/{libdl,libm,libnsl,libresolv,librt,libutil}-${pkgver}.so \
                       lib/{libmemusage,libpcprofile,libSegFault}.so \
                       usr/lib/{pt_chown,gconv/*.so}
 }
