@@ -4,7 +4,7 @@
 pkgbase="cups"
 pkgname=('libcups' 'cups')
 pkgver=1.4.4
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.cups.org/"
@@ -12,10 +12,12 @@ makedepends=('libtiff>=3.9.2-2' 'libpng>=1.4.0'  'acl' 'openslp' 'pam' 'xdg-util
              'xinetd' 'gzip' 'autoconf' 'php' 'libusb' 'dbus-core' 'avahi'  'hicolor-icon-theme')
 source=(ftp://ftp.easysw.com/pub/cups/${pkgver}/cups-${pkgver}-source.tar.bz2
 	cups-avahi.patch
+	http://www.cups.org/strfiles/3595/str3595.patch
         cups cups.logrotate cups.pam)
 #options=('!emptydirs')
 md5sums=('8776403ad60fea9e85eab9c04d88560d'
          'fce500e3e6e244f5b77fe8eaad87e022'
+         '0dd7329fc956d63a72085553171d62a2'
          '5c85b7d8d2ddd02c2c64955cebbf55ea'
          'f861b18f4446c43918c8643dcbbd7f6d'
          '96f82c38f3f540b53f3e5144900acf17')
@@ -24,6 +26,10 @@ build() {
   cd ${srcdir}/${pkgbase}-${pkgver}
   # Avahi support in the dnssd backend. patch from Fedora
   patch -Np1 -i ${srcdir}/cups-avahi.patch || return 1
+  
+  # fix  Brother HL-1440 failing with msg "Unable to write 8192 bytes to printer!" (http://bugs.archlinux.org/task/18167)
+  patch -Np0 -i ${srcdir}/str3595.patch || return 1
+  
   # Rebuild configure script for --enable-avahi.
   aclocal -I config-scripts
   autoconf -I config-scripts
@@ -82,6 +88,9 @@ optdepends=('php: for included phpcups.so module')
   # fix perms on /var/spool and /etc
   chmod 755 ${pkgdir}/var/spool
   chmod 755 ${pkgdir}/etc
+  
+  # serial backend needs to run as root (http://bugs.archlinux.org/task/20396)
+  chmod 700 ${pkgdir}/usr/lib/cups/backend/serial
 
   # install ssl directory where to store the certs, solves some samba issues
   install -dm700 -g lp ${pkgdir}/etc/cups/ssl
