@@ -4,30 +4,42 @@
 
 pkgname=gdb
 pkgver=7.1
-pkgrel=2
+pkgrel=3
 pkgdesc="The GNU Debugger"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/gdb/"
 license=('GPL3')
-depends=('ncurses' 'expat' 'python')
+depends=('ncurses' 'expat' 'python2')
 makedepends=('texinfo')
 backup=('etc/gdb/gdbinit')
 options=('!libtool')
 install=gdb.install
 source=(http://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.bz2
-        tui-no-gdbarch.patch)
+        tui-no-gdbarch.patch
+        gdb-python-2.7.patch)
 md5sums=('21dce610476c054687b52770d2ddc657'
-         'e2f3f6cb11d72e3727ed4f7c49ea395f')
+         'e2f3f6cb11d72e3727ed4f7c49ea395f'
+         'eae41a42d44edaf8bfd464e5b227583e')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
   patch -Np1 -i $srcdir/tui-no-gdbarch.patch
   
+  # python-2.7 compatibility
+  patch -Np1 -i $srcdir/gdb-python-2.7.patch
+  
+  # ppl-0.11 compatibility
+  sed -i "/ppl_minor_version=/s#10#11#" configure
+  
   ./configure --prefix=/usr --disable-nls \
     --with-system-readline \
     --with-system-gdbinit=/etc/gdb/gdbinit
-  make || return 1
-  make DESTDIR=${pkgdir} install || return 1
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install
 
   # install "custom" system gdbinit
   install -dm755 $pkgdir/etc/gdb
