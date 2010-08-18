@@ -1,0 +1,31 @@
+## arg 1:  the new package version
+post_install() {
+  # Make sure the group and user "mailman" exists on this system and has the correct values
+  if grep -q "^mailman:" /etc/group &> /dev/null ; then
+    groupmod -g 80 -n mailman mailman &> /dev/null
+  else
+    groupadd -g 80 mailman &> /dev/null
+  fi
+  
+  if grep -q "^mailman:" /etc/passwd 2> /dev/null ; then
+    usermod -s /sbin/nologin -c "GNU Mailing List Manager" -d /usr/lib/mailman -u 80 -g mailman mailman &> /dev/null
+  else
+    useradd -s /sbin/nologin -c "GNU Mailing List Manager" -d /usr/lib/mailman -u 80 -g mailman -M -r mailman &> /dev/null
+  fi 
+
+  # check file permissions
+#  cd /usr/lib/mailman && bin/check_perms -f  > /dev/null 2>&1     # -f applies fixes we should solve in the PKGBUILD
+  cd /usr/lib/mailman && bin/check_perms > /dev/null
+}
+
+## arg 1:  the new package version
+## arg 2:  the old package version
+post_upgrade() {
+  post_install $1
+}
+
+## arg 1:  the old package version
+pre_remove() {
+  userdel mailman &>/dev/null
+  groupdel mailman &>/dev/null || /bin/true
+}
