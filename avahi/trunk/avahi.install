@@ -1,42 +1,21 @@
 post_install() {
-  echo -n "adding avahi system group... "
-  groupadd -g 84 avahi && echo "done."
-  echo -n "adding avahi system user... "
-  useradd -c "Avahi daemon" -u 84 -d / -g avahi -s /bin/false avahi \
-    && echo "done."
-  passwd -l avahi &>/dev/null
+  getent group avahi &>/dev/null || groupadd -r -g 84 avahi >/dev/null
+  getent passwd avahi &>/dev/null || useradd -r -u 84 -g avahi -d / -s /bin/false -c avahi avahi >/dev/null
 
-  post_upgrade
-  cat << 'EOM'
+  cat <<EOF
 ==> The following daemons may be added to DAEMONS in /etc/rc.conf:
- -> avahi-daemon   - the mdns responder, you probably want this.
-                     dbus needs to be running when you start it.
- -> avahi-dnsconfd - daemon used for peer-to-peer automatic dns
-                     configuration on dhcp-less networks.
+==> avahi-daemon: the mdns responder, you probably want this.
+==>               dbus needs to be running when you start it.
+==> avahi-dnsconfd: daemon used for peer-to-peer automatic dns
+==>                 configuration on dhcp-less networks.
 
 ==> To use some of the client applications you will have to install python.
- -> In addition, pygtk is required for the graphical ones and
-    twisted-web for avahi-bookmarks.
-
-EOM
-}
-
-post_upgrade() {
-  true
-}
-
-pre_remove() {
-  # pre_remove gets called whenever post_remove is defined.
-  true
+==> In addition, pygtk is required for the graphical ones and
+==> twisted for avahi-bookmarks.
+EOF
 }
 
 post_remove() {
-  # post_remove doesn't start at a newline like the other post_* functions,
-  # so we'll have to make one for ourselves.
-  echo -n -e "\nremoving avahi system user... "
-  userdel avahi && echo "done."
+  getent passwd avahi &>/dev/null && userdel avahi >/dev/null
+  getent group avahi &>/dev/null && groupdel avahi >/dev/null
 }
-
-op=$1
-shift
-$op $*
