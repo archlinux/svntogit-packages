@@ -5,43 +5,47 @@
 pkgbase=abiword
 pkgname=('abiword' 'abiword-plugins')
 pkgver=2.8.6
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.abisource.com"
-makedepends=('pkgconfig' 'fribidi' 'enchant' 'librsvg' 'wv' 'libgsf-gnome' 'aiksaurus'
-	'gtkmathview' 'libsoup' 'link-grammar' 'libwpd' 'psiconv' 'libxslt' 'asio' 'loudmouth')
+makedepends=('pkgconfig' 'asio' 'boost' 'fribidi' 'goffice' 'libwmf' 'wv' 'link-grammar' 'gtkmathview' 'aiksaurus' 'libxslt' 'enchant' 'libots' 'libwpg' 'librsvg' 'loudmouth' 'libsoup')
 options=('!makeflags' '!libtool')
-source=("http://www.abisource.com/downloads/${pkgname}/${pkgver}/source/${pkgbase}-${pkgver}.tar.gz")
+source=("http://www.abisource.com/downloads/${pkgbase}/${pkgver}/source/${pkgbase}-${pkgver}.tar.gz")
 sha1sums=('998f69d038000b3fc027d4259548f02d67c8d0df')
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
-
-  ./configure --prefix=/usr \
-              --enable-plugins || return 1
-  make || return 1
+  ./configure --prefix=/usr --enable-clipart --enable-templates --enable-collab-backend-xmpp --enable-collab-backend-tcp --enable-collab-backend-service --disable-collab-backend-sugar --enable-plugins --without-gnomevfs --with-gio --with-goffice --disable-static --with-psiconv-config=/nothere
+  make
 }
 
 package_abiword() {
   pkgdesc="A fully-featured word processor"
-  depends=('fribidi' 'enchant' 'librsvg' 'wv' 'libgsf-gnome')
+  depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant')
+  optdepends=('abiword-plugins')
+  conflicts=("abiword-plugins<${pkgver}-${pkgrel}")
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
-  make DESTDIR="${pkgdir}" install || return 1
-
-  # Remove plugin directory provided by abiword-plugins
-  rm -rf ${pkgdir}/usr/lib/abiword-2.8/plugins
+  sed -i plugins/Makefile \
+      -e 's/ collab / /' \
+      -e 's/ wpg / /' \
+      -e 's/ wmf / /' \
+      -e 's/ grammar / /' \
+      -e 's/ mathview / /' \
+      -e 's/ aiksaurus / /' \
+      -e 's/ latex / /' \
+      -e 's/ ots / /' \
+      -e 's/ wordperfect / /'
+  make DESTDIR="${pkgdir}" install
 }
 
 package_abiword-plugins() {
-  pkgdesc="Various plugins for Abiword"
-  depends=("abiword>=${pkgver}" 'aiksaurus' 'gtkmathview' 'libsoup' 'link-grammar'
-	'libwpd' 'psiconv' 'libxslt' 'asio' 'loudmouth')
+  pkgdesc="Additional plugins for Abiword"
+  depends=("abiword=${pkgver}-${pkgrel}" 'loudmouth' 'libwpg' 'libwmf' 'link-grammar' 'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots')
 
   cd "${srcdir}/${pkgbase}-${pkgver}/plugins"
-  make DESTDIR="${pkgdir}" install || return 1
-
-  # Remove files conflicting with abiword package
-  rm -rf ${pkgdir}/usr/share
+  for dir in collab wpg wmf grammar mathview aiksaurus latex ots wordperfect; do
+    make -C ${dir} DESTDIR="${pkgdir}" install
+  done
 }
