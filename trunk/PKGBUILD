@@ -16,7 +16,8 @@ source=('texmf.cnf'
         'fix-fontforge-encoding.patch'
         '09-texlive-fonts.conf'
         'ftp://ftp.archlinux.org/other/texlive/texlive-bin-source-20100720.tar.xz'
-        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20100720.tar.xz')
+        'ftp://ftp.archlinux.org/other/texlive/texlive-bin-texmf-20100720.tar.xz'
+	'http://foundry.supelec.fr/gf/download/frsrelease/380/1531/luatex-beta-0.61.0.tar.bz2')
 backup=(etc/texmf/web2c/texmf.cnf \
   etc/texmf/chktex/chktexrc \
 	etc/texmf/web2c/mktex.cnf \
@@ -40,6 +41,51 @@ build() {
    cd $srcdir
    # this patch removes spurious error message with locale "xx_YY.utf8"
    patch -p0 -i fix-fontforge-encoding.patch || return 1
+
+   cd luatex-beta-0.61.0
+   patch -p0 -i ../fix-fontforge-encoding.patch
+   mkdir build
+   cd build
+   ../source/configure --prefix=/usr -C \
+     --disable-native-texlive-build \
+     --with-banner-add="/Arch Linux" \
+    --enable-cxx-runtime-hack \
+    --disable-all-pkgs \
+    --disable-dump-share \
+    --disable-ptex \
+    --enable-luatex  \
+    --without-system-ptexenc \
+    --with-system-graphite \
+    --without-system-icu \
+    --without-system-kpathsea \
+    --with-system-freetype2 \
+    --without-system-xpdf \
+    --with-freetype2-libdir=/usr/lib \
+    --with-freetype2-include=/usr/include/freetype2 \
+    --with-system-gd \
+    --with-system-libpng \
+    --without-system-teckit \
+    --with-system-zlib \
+    --with-system-t1lib \
+    --disable-shared \
+    --disable-largefile \
+    --disable-ipc \
+    --without-mf-x-toolkit \
+    --without-x
+   make
+   make -C libs/zziplib
+   make -C libs/obsdcompat
+   make -C libs/xpdf
+   make -C texk/kpathsea
+   make -C texk/web2c luatex
+
+   ## install luatex binary
+   install -d -m755 $pkgdir/usr/bin
+   install -m755 texk/web2c/luatex $pkgdir/usr/bin/
+   cd $pkgdir/usr/bin
+   /bin/ln -s luatex texlua
+
+   cd "$srcdir"
 
    #############################################################
    ### configure
@@ -75,6 +121,7 @@ build() {
      --with-xdvi-x-toolkit=xaw \
      --disable-dump-share \
      --disable-aleph \
+     --disable-luatex \
      --with-clisp-runtime=default \
      --enable-xindy --disable-xindy-rules --disable-xindy-docs || return 1
    #############################################################
@@ -167,7 +214,7 @@ package() {
    make prefix=$srcdir/inst/usr texmf=$pkgdir/usr/share/texmf install || return 1
 
    # restore install location of bin/lib/include
-   mv -f $srcdir/inst/usr/bin $pkgdir/usr/bin || return 1
+   mv -f $srcdir/inst/usr/bin/* $pkgdir/usr/bin/ || return 1
    mv -f $srcdir/inst/usr/lib $pkgdir/usr/lib || return 1
    mv -f $srcdir/inst/usr/include $pkgdir/usr/include || return 1
    # add symlinks to manpages since they are not included in the original texmf tree
@@ -237,4 +284,5 @@ md5sums=('626f900fb59f036d6fea95f08c74b00b'
          'bfb9716aa00c86c08cd31e5b32edeb98'
          '393a4bf67adc7ca5df2b386759d1a637'
          '1cac8cf889fbb50b9f39042be49c8482'
-         '99cd8dd0b7c71b7cf0bb0f8c6fd49412')
+         '99cd8dd0b7c71b7cf0bb0f8c6fd49412'
+	 'f66c9454f093bb44adc1afb6c6765589')
