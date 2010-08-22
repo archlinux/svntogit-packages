@@ -2,25 +2,37 @@
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=uim
-pkgver=1.5.7
+pkgver=1.6.0
 pkgrel=1
-pkgdesc="Multilingual input method library"
+pkgdesc='Multilingual input method library'
 arch=('i686' 'x86_64')
-url="http://code.google.com/p/uim/"
+url='http://code.google.com/p/uim/'
 license=('custom')
 depends=('m17n-lib' 'ncurses' 'gtk2')
-makedepends=('gnome-panel' 'pkgconfig' 'gettext' 'intltool')
+makedepends=('pkg-config' 'gettext' 'intltool' 'gnome-panel')
 optdepends=('gnome-panel: for using the GNOME applet')
 options=('!libtool')
 install=uim.install
-source=(http://uim.googlecode.com/files/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('b84a43fb92d7ceb4bd801a76120c2a71')
-sha1sums=('fbea2590286ddc857a7824d8544cb08842f4299f')
+source=("http://uim.googlecode.com/files/${pkgname}-${pkgver}.tar.bz2"
+        'uim-home.patch')
+sha1sums=('d27f2ca8136da0702c82f0522911d06b2b8f8ea7'
+          'dbcf90f3ea246c5723d715e0935072baa9364cd2')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure --prefix=/usr --libexecdir=/usr/lib/uim || return 1
-  make || return 1
-  make DESTDIR="${pkgdir}" install || return 1
+
+  # makechrootpkg runs build() as "nobody", which has HOME=/
+  # However, UIM's make needs $HOME to be writable.
+  patch -p0 < ../uim-home.patch
+  export HOME="`pwd`"
+
+  ./configure --prefix=/usr --libexecdir=/usr/lib/uim
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
   install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
 }
+
