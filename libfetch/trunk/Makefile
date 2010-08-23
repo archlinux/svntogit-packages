@@ -42,18 +42,17 @@ E = @/bin/echo
 Q = @
 
 all: libfetch.so libfetch.a
-	$(E) "  built with:  " $(CFLAGS)
 .PHONY: all
 
 %.o: %.c $(INCS) $(GEN)
 	$(E) "  compile   " $@
 	$(Q) $(CC) $(CFLAGS) -c $<
 
-ftperr.h: ftp.errors
+ftperr.h: ftp.errors Makefile errlist.sh
 	$(E) "  generate  " $@
 	$(Q) ./errlist.sh ftp_errlist FTP ftp.errors > $@
 
-httperr.h: http.errors
+httperr.h: http.errors Makefile errlist.sh
 	$(E) "  generate  " $@
 	$(Q) ./errlist.sh http_errlist HTTP http.errors > $@
 
@@ -61,12 +60,14 @@ libfetch.so: $(GEN) $(INCS) $(OBJS)
 	$(E) "  build     " $@
 	$(Q) rm -f $@
 	$(Q) $(LD) $(LDFLAGS) *.o -shared -o $@
+	$(E) "  built with:  " $(CFLAGS)
 
 libfetch.a: $(GEN) $(INCS) $(OBJS)
 	$(E) "  build     " $@
 	$(Q) rm -f $@
 	$(Q) $(AR) rcs $@ *.o
 	$(Q) $(RANLIB) $@
+	$(E) "  built with:  " $(CFLAGS)
 
 clean:
 	$(E) "  clean     "
