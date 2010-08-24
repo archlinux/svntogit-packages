@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=xorg-server
-pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-common')
+pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-common' 'xorg-server-devel')
 pkgver=1.9.0
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -10,8 +10,6 @@ license=('custom')
 url="http://xorg.freedesktop.org"
 makedepends=('pixman' 'libx11' 'mesa' 'libgl' 'xf86driproto' 'xcmiscproto' 'xtrans' 'bigreqsproto' 'randrproto' 'inputproto' 'fontsproto' 'videoproto' 'compositeproto' 'recordproto' 'scrnsaverproto' 'resourceproto' 'xineramaproto' 'libxkbfile' 'libxfont' 'renderproto' 'libpciaccess' 'libxv' 'xf86dgaproto' 'libxmu' 'libxrender' 'libxi' 'dmxproto' 'libxaw' 'libdmx' 'libxtst' 'libxres')
 options=('!libtool')
-provides=('x-server')
-groups=('xorg')
 source=(${url}/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2
         xorg-redhat-die-ugly-pattern-die-die-die.patch
         xvfb-run
@@ -65,6 +63,7 @@ build() {
 package_xorg-server-common() {
   pkgdesc="Xorg server common files"
   depends=('xkeyboard-config' 'xorg-xkb-utils' 'xorg-fonts-misc')
+
   cd "${srcdir}/${pkgbase}-${pkgver}"
   install -m755 -d "${pkgdir}/usr/share/licenses/xorg-server-common"
   install -m644 COPYING "${pkgdir}/usr/share/licenses/xorg-server-common"
@@ -74,21 +73,23 @@ package_xorg-server-common() {
   install -m755 -d "${pkgdir}/usr/share/man/man1"
   install -m644 doc/Xserver.1 "${pkgdir}/usr/share/man/man1/"
 
-  install -m755 -d "${pkgdir}/usr/lib/Xorg"
-  install -m644 dix/protocol.txt "${pkgdir}/usr/lib/Xorg/"
+  install -m755 -d "${pkgdir}/usr/lib/xorg"
+  install -m644 dix/protocol.txt "${pkgdir}/usr/lib/xorg/"
 }
 
 package_xorg-server() {
   pkgdesc="Xorg X server"
   depends=(libxdmcp libxfont udev libpciaccess libdrm pixman libgcrypt libxau xorg-server-common xf86-input-evdev)
   backup=('etc/X11/xorg.conf.d/10-evdev.conf' 'etc/X11/xorg.conf.d/10-quirks.conf')
+  provides=('x-server')
+  groups=('xorg')
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
   make DESTDIR="${pkgdir}" install
 
   install -m755 -d "${pkgdir}/etc/X11"
   mv "${pkgdir}/usr/share/X11/xorg.conf.d" "${pkgdir}/etc/X11/"
-  install -m644 "${srcdir}/10-quirks.conf" "${pkgdir}/etc/X11/"
+  install -m644 "${srcdir}/10-quirks.conf" "${pkgdir}/etc/X11/xorg.conf.d/"
 
   rmdir "${pkgdir}/usr/share/X11"
 
@@ -99,10 +100,14 @@ package_xorg-server() {
   rm -rf "${pkgdir}/var"
 
   rm -f "${pkgdir}/usr/share/man/man1/Xserver.1"
-  rm -f "${pkgdir}/usr/lib/X11/protocol.txt"
+  rm -f "${pkgdir}/usr/lib/xorg/protocol.txt"
 
   install -m755 -d "${pkgdir}/usr/share/licenses/xorg-server"
   ln -sf ../xorg-server-common/COPYING "${pkgdir}/usr/share/licenses/xorg-server/COPYING"
+
+  rm -rf "${pkgdir}/usr/lib/pkgconfig"
+  rm -rf "${pkgdir}/usr/include"
+  rm -rf "${pkgdir}/usr/share/aclocal"
 }
 
 package_xorg-server-xephyr() {
@@ -150,4 +155,22 @@ package_xorg-server-xdmx() {
 
   install -m755 -d "${pkgdir}/usr/share/licenses/xorg-server-xdmx"
   ln -sf ../xorg-server-common/COPYING "${pkgdir}/usr/share/licenses/xorg-server-xdmx/COPYING"
+}
+
+package_xorg-server-devel() {
+  pkgdesc="Development files for the X.Org X server"
+  depends=(xproto randrproto renderproto xextproto inputproto kbproto fontsproto videoproto dri2proto xineramaproto xorg-util-macros pixman libpciaccess)
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  rm -rf "${pkgdir}/usr/bin"
+  rm -rf "${pkgdir}/usr/share/man"
+  rm -rf "${pkgdir}/usr/share/doc"
+  rm -rf "${pkgdir}/usr/share/X11"
+  rm -rf "${pkgdir}/usr/lib/xorg"
+  rm -rf "${pkgdir}/var"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/xorg-server-devel"
+  ln -sf ../xorg-server-common/COPYING "${pkgdir}/usr/share/licenses/xorg-server-devel/COPYING"
 }
