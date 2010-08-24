@@ -1,17 +1,33 @@
 # arg 1:  the new package version
 post_install() {
-    if [ -z "`grep '^dovecot:' /etc/group`" ]; then
-	groupadd -g 76 dovecot >& /dev/null
-    fi
-    if [ -z "`grep '^dovenull:' /etc/group`" ]; then
-	groupadd -g 74 dovenull >& /dev/null
-    fi
-    if [ -z "`grep '^dovecot:' /etc/passwd`" ]; then
-	useradd -u 76 -d /var/run/dovecot/login -g dovecot -s /bin/false dovecot
-    fi
-    if [ -z "`grep '^dovenull:' /etc/passwd`" ]; then
-    	useradd -u 74 -d /var/run/dovenull/login -g dovecot -s /bin/false dovenull    
-    fi
+
+  # Make sure the group and user "dovecot"+"dovenull exists on this system and have the correct values
+
+  # dovecot
+  if grep -q "^dovecot:" /etc/group &> /dev/null ; then
+    groupmod -g 76 -n dovecot dovecot &> /dev/null
+  else
+    groupadd -g 76 dovecot &> /dev/null
+  fi
+
+  if grep -q "^dovecot:" /etc/passwd 2> /dev/null ; then
+    usermod -s /sbin/nologin -c "Dovecot user" -d /var/run/dovecot/login -u 76 -g dovecot dovecot &> /dev/null
+  else
+    useradd -s /sbin/nologin -c "Dovecot user" -d /var/run/dovecot/login -u 76 -g dovecot -M -r dovecot &> /dev/null
+  fi 
+
+  # dovenull
+  if grep -q "^dovenull:" /etc/group &> /dev/null ; then
+    groupmod -g 74 -n dovenull dovenull &> /dev/null
+  else
+    groupadd -g 74 dovenull &> /dev/null
+  fi
+
+  if grep -q "^dovenull:" /etc/passwd 2> /dev/null ; then
+    usermod -s /sbin/nologin -c "Dovecot user for completely untrustworthy processes" -d /var/run/dovecot/login -u 74 -g dovenull dovenull &> /dev/null
+  else
+    useradd -s /sbin/nologin -c "Dovecot user for completely untrustworthy processes" -d /var/run/dovecot/login -u 74 -g dovenull -M -r dovenull &> /dev/null
+  fi 
 }
 
 # arg 1:  the new package version
@@ -32,6 +48,6 @@ post_upgrade() {
 pre_remove() {
     userdel dovecot &> /dev/null
     userdel dovenull &> /dev/null
-    groupdel dovecot &> /dev/null
-    groupdel dovenull &> /dev/null
+    groupdel dovecot &> /dev/null || /bin/true
+    groupdel dovenull &> /dev/null || /bin/true
 }
