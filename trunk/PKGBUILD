@@ -4,12 +4,12 @@
 
 pkgname=xscreensaver
 pkgver=5.11
-pkgrel=1
+pkgrel=2
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
 url="http://www.jwz.org/xscreensaver/"
 license=('BSD')
-depends=('libxxf86misc' 'libglade' 'mesa' 'pam' 'xorg-res-utils')
+depends=('libglade' 'mesa' 'pam' 'xorg-res-utils')
 makedepends=('bc')
 backup=('etc/pam.d/xscreensaver')
 source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz \
@@ -21,19 +21,19 @@ sha1sums=('8cc46c4e80124fba0890fa9e37e3b4ff87c6a8cf' '65c2933380267475f2c4560bc2
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -Np0 -i "${srcdir}/add-electricsheep.diff" || return 1
+  patch -Np0 -i "${srcdir}/add-electricsheep.diff"
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     --libexecdir=/usr/lib --with-x-app-defaults=/usr/share/X11/app-defaults \
-    --with-pam --without-motif --with-gtk --without-gnome --with-xml --with-gl \
-    --without-gle --with-xpm --with-pixbuf --with-jpeg || return 1
-  make || return 1
+    --with-pam --without-motif --with-gtk --with-gl \
+    --without-gle --with-xpm --with-pixbuf --with-jpeg
+  make
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  make install_prefix="${pkgdir}" install || return 1
-  install -D -m644 ../LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" || return 1
-  install -D -m644 ../xscreensaver.pam "${pkgdir}/etc/pam.d/xscreensaver" || return 1
-  chmod 755 "${pkgdir}/usr/bin/xscreensaver" || return 1
-  echo "NotShowIn=KDE;GNOME;" >> "${pkgdir}/usr/share/applications/xscreensaver-properties.desktop" || return 1
+  make install_prefix="${pkgdir}" install
+  install -D -m644 ../LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -D -m644 ../xscreensaver.pam "${pkgdir}/etc/pam.d/xscreensaver"
+  chmod 755 "${pkgdir}/usr/bin/xscreensaver"
+  echo "NotShowIn=KDE;GNOME;" >> "${pkgdir}/usr/share/applications/xscreensaver-properties.desktop"
 }
