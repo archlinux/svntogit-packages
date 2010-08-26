@@ -1,7 +1,16 @@
 diff --git a/Makefile b/Makefile
-index 84d0038..e9c7970 100644
+index 84d0038..63fdf87 100644
 --- a/Makefile
 +++ b/Makefile
+@@ -180,7 +180,7 @@ ultrix-gcc:
+ 
+ # Rules for making release tarballs
+ 
+-VERSION=7.8.2
++VERSION=7.8.3
+ DIRECTORY = Mesa-$(VERSION)
+ LIB_NAME = MesaLib-$(VERSION)
+ DEMO_NAME = MesaDemos-$(VERSION)
 @@ -285,9 +285,6 @@ MAIN_FILES = \
  	$(DIRECTORY)/src/mesa/x86-64/*.[chS]				\
  	$(DIRECTORY)/src/mesa/x86-64/Makefile				\
@@ -106,6 +115,25 @@ index e711634..e15371f 100644
              ;;
          xorg)
              PKG_CHECK_MODULES([LIBDRM_XORG], [libdrm >= $LIBDRM_XORG_REQUIRED])
+diff --git a/docs/news.html b/docs/news.html
+index 92e2a18..01e2834 100644
+--- a/docs/news.html
++++ b/docs/news.html
+@@ -11,6 +11,14 @@
+ <H1>News</H1>
+ 
+ 
++<h2>TBD, 2010</h2>
++
++<p>
++<a href="relnotes-7.8.3.html">Mesa 7.8.3</a> is released.  This is a bug-fix
++release collecting fixes since the 7.8.2 release.
++</p>
++
++
+ <h2>June 16, 2010</h2>
+ 
+ <p>
 diff --git a/docs/relnotes-7.8.2.html b/docs/relnotes-7.8.2.html
 index 4d7758d..1393b2e 100644
 --- a/docs/relnotes-7.8.2.html
@@ -120,10 +148,10 @@ index 4d7758d..1393b2e 100644
  </html>
 diff --git a/docs/relnotes-7.8.3.html b/docs/relnotes-7.8.3.html
 new file mode 100644
-index 0000000..dcb2c14
+index 0000000..1e9f433
 --- /dev/null
 +++ b/docs/relnotes-7.8.3.html
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,89 @@
 +<HTML>
 +
 +<TITLE>Mesa Release Notes</TITLE>
@@ -179,9 +207,12 @@ index 0000000..dcb2c14
 +<ul>
 +<li>Fix unsupported FB with D24S8 (bug 
 +    <a href="https://bugs.freedesktop.org/show_bug.cgi?id=23670">29116</a>)</li>
++<li>Fix ReadPixels crash when reading depth/stencil from an FBO</li>
 +<li>Fixed a bug rendering to 16-bit buffers using swrast.</li>
 +<li>Fixed a state tracker/TGSI bug that caused crashes when using Windows'
 +    memory debugging features.</li>
++<li>Fixed an issue rendering to 32-bit channels with swrast (bug
++    <a href="https://bugs.freedesktop.org/show_bug.cgi?id=29487">29487</a>)</li>
 +<li>GLSL: fix indirect <TT>gl_TextureMatrix</TT> addressing (bug
 +    <a href="https://bugs.freedesktop.org/show_bug.cgi?id=28967">28967</a>)</li>
 +<li>GLSL: fix for bug
@@ -210,6 +241,18 @@ index 0000000..dcb2c14
 +
 +</body>
 +</html>
+diff --git a/docs/relnotes.html b/docs/relnotes.html
+index 39b02b8..46f6469 100644
+--- a/docs/relnotes.html
++++ b/docs/relnotes.html
+@@ -13,6 +13,7 @@ The release notes summarize what's new or changed in each Mesa release.
+ </p>
+ 
+ <UL>
++<LI><A HREF="relnotes-7.8.3.html">7.8.3 release notes</A>
+ <LI><A HREF="relnotes-7.8.2.html">7.8.2 release notes</A>
+ <LI><A HREF="relnotes-7.8.1.html">7.8.1 release notes</A>
+ <LI><A HREF="relnotes-7.8.html">7.8 release notes</A>
 diff --git a/include/GL/gl_mangle.h b/include/GL/gl_mangle.h
 index 43d2e89..15589d8 100644
 --- a/include/GL/gl_mangle.h
@@ -1949,10 +1992,18 @@ index ff37fd3..caa55d2 100644
  	} else {
  		/* Image hasn't been uploaded to a miptree yet */
 diff --git a/src/mesa/drivers/osmesa/osmesa.c b/src/mesa/drivers/osmesa/osmesa.c
-index e376f12..bba68eb 100644
+index e376f12..c5e874b 100644
 --- a/src/mesa/drivers/osmesa/osmesa.c
 +++ b/src/mesa/drivers/osmesa/osmesa.c
-@@ -1329,6 +1329,7 @@ OSMesaMakeCurrent( OSMesaContext osmesa, void *buffer, GLenum type,
+@@ -1061,7 +1061,6 @@ OSMesaCreateContextExt( GLenum format, GLint depthBits, GLint stencilBits,
+    struct dd_function_table functions;
+    GLint rind, gind, bind, aind;
+    GLint redBits = 0, greenBits = 0, blueBits = 0, alphaBits =0;
+-   GLenum type = CHAN_TYPE;
+ 
+    rind = gind = bind = aind = 0;
+    if (format==OSMESA_RGBA) {
+@@ -1329,6 +1328,7 @@ OSMesaMakeCurrent( OSMesaContext osmesa, void *buffer, GLenum type,
      * size.
      */
     osmesa->rb = new_osmesa_renderbuffer(&osmesa->mesa, osmesa->format, type);
@@ -2097,6 +2148,21 @@ index 964ba13..df09c12 100644
  	 out = make_ureg( PROGRAM_OUTPUT, FRAG_RESULT_COLOR );
        else {
  	 out = make_ureg( PROGRAM_OUTPUT, FRAG_RESULT_DATA0 + i );
+diff --git a/src/mesa/main/version.h b/src/mesa/main/version.h
+index 9955be2..af4e69f 100644
+--- a/src/mesa/main/version.h
++++ b/src/mesa/main/version.h
+@@ -34,8 +34,8 @@
+ /* Mesa version */
+ #define MESA_MAJOR 7
+ #define MESA_MINOR 8
+-#define MESA_PATCH 2
+-#define MESA_VERSION_STRING "7.8.2"
++#define MESA_PATCH 3
++#define MESA_VERSION_STRING "7.8.3"
+ 
+ /* To make version comparison easy */
+ #define MESA_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 diff --git a/src/mesa/shader/slang/slang_builtin.c b/src/mesa/shader/slang/slang_builtin.c
 index 791e751..f265285 100644
 --- a/src/mesa/shader/slang/slang_builtin.c
@@ -2247,6 +2313,31 @@ index 00e9d1d..df5674d 100644
        fb->_Status = GL_FRAMEBUFFER_UNSUPPORTED_EXT;
        return;
     }
+diff --git a/src/mesa/state_tracker/st_cb_readpixels.c b/src/mesa/state_tracker/st_cb_readpixels.c
+index 952d9ce..7ff10d4 100644
+--- a/src/mesa/state_tracker/st_cb_readpixels.c
++++ b/src/mesa/state_tracker/st_cb_readpixels.c
+@@ -69,6 +69,10 @@ st_read_stencil_pixels(GLcontext *ctx, GLint x, GLint y,
+    ubyte *stmap;
+    GLint j;
+ 
++   if (strb->Base.Wrapped) {
++      strb = st_renderbuffer(strb->Base.Wrapped);
++   }
++
+    if (st_fb_orientation(ctx->DrawBuffer) == Y_0_TOP) {
+       y = ctx->DrawBuffer->Height - y - height;
+    }
+@@ -366,6 +370,9 @@ st_readpixels(GLcontext *ctx, GLint x, GLint y, GLsizei width, GLsizei height,
+    }
+    else if (format == GL_DEPTH_COMPONENT) {
+       strb = st_renderbuffer(ctx->ReadBuffer->_DepthBuffer);
++      if (strb->Base.Wrapped) {
++         strb = st_renderbuffer(strb->Base.Wrapped);
++      }
+    }
+    else {
+       /* Read color buffer */
 diff --git a/src/mesa/state_tracker/st_mesa_to_tgsi.c b/src/mesa/state_tracker/st_mesa_to_tgsi.c
 index d7ef57e..d08af62 100644
 --- a/src/mesa/state_tracker/st_mesa_to_tgsi.c
@@ -2266,6 +2357,44 @@ index d7ef57e..d08af62 100644
  
     t->inputs[t->inputMapping[FRAG_ATTRIB_WPOS]] = ureg_src(wpos_temp);
  }
+diff --git a/src/mesa/swrast/s_span.c b/src/mesa/swrast/s_span.c
+index 687c8eb..32d4f52 100644
+--- a/src/mesa/swrast/s_span.c
++++ b/src/mesa/swrast/s_span.c
+@@ -971,6 +971,10 @@ shade_texture_span(GLcontext *ctx, SWspan *span)
+       if (span->primitive == GL_BITMAP && span->array->ChanType != GL_FLOAT) {
+          convert_color_type(span, GL_FLOAT, 0);
+       }
++      else {
++         span->array->rgba = (void *) span->array->attribs[FRAG_ATTRIB_COL0];
++      }
++
+       if (span->primitive != GL_POINT ||
+ 	  (span->interpMask & SPAN_RGBA) ||
+ 	  ctx->Point.PointSprite) {
+@@ -1222,9 +1226,22 @@ _swrast_write_rgba_span( GLcontext *ctx, SWspan *span)
+             GLchan rgbaSave[MAX_WIDTH][4];
+             const GLuint fragOutput = multiFragOutputs ? buf : 0;
+ 
++            /* set span->array->rgba to colors for render buffer's datatype */
+             if (rb->DataType != span->array->ChanType || fragOutput > 0) {
+                convert_color_type(span, rb->DataType, fragOutput);
+             }
++            else {
++               if (rb->DataType == GL_UNSIGNED_BYTE) {
++                  span->array->rgba = span->array->rgba8;
++               }
++               else if (rb->DataType == GL_UNSIGNED_SHORT) {
++                  span->array->rgba = (void *) span->array->rgba16;
++               }
++               else {
++                  span->array->rgba = (void *)
++                     span->array->attribs[FRAG_ATTRIB_COL0];
++               }
++            }
+ 
+             if (!multiFragOutputs && numBuffers > 1) {
+                /* save colors for second, third renderbuffer writes */
 diff --git a/src/mesa/swrast_setup/ss_context.c b/src/mesa/swrast_setup/ss_context.c
 index ebd1574..0fcb7c7 100644
 --- a/src/mesa/swrast_setup/ss_context.c
