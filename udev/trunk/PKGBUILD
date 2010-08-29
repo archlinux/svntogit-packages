@@ -6,7 +6,7 @@
 pkgbase="udev"
 pkgname=('udev' 'udev-compat')
 pkgver=161
-pkgrel=1
+pkgrel=2
 arch=(i686 x86_64)
 url="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
 license=('GPL')
@@ -15,13 +15,15 @@ groups=('base')
 options=(!makeflags !libtool)
 makedepends=('glibc' 'coreutils' 'util-linux' 'libusb' 'glib2' 'kernel26' 'gperf' 'libxslt' 'gobject-introspection')
 source=(http://www.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.tar.bz2
-        81-arch.rules load-modules.sh cdsymlinks.sh
-        arch-udev-rules.patch)
+        80-drivers.rules 
+        81-arch.rules 
+        load-modules.sh 
+        cdsymlinks.sh)
 md5sums=('95b6a0ffc9913f3e8021c65f51eb4f88'
+         '4427855146513a4703ab5c7eb8a0156e'
          'f17c99779173ddc79f866cf3a5de5e68'
          'f91fddc67609b45b244a624977c4247b'
-         '2e808ee78d237c478b57af2a68d43769'
-         '70198227b7bbe3852e1cd2299693af66')
+         '2e808ee78d237c478b57af2a68d43769')
 
 build() {
   cd $srcdir/$pkgname-$pkgver
@@ -49,6 +51,8 @@ package_udev() {
   mv $pkgdir/lib/pkgconfig $pkgdir/usr/lib
   # Fix ConsoleKit path
   mv $pkgdir/lib/ConsoleKit $pkgdir/usr/lib
+  # Replace original 80-drivers.rules with custom one.
+  install -D -m644 $srcdir/80-drivers.rules $pkgdir/lib/udev/rules.d/80-drivers.rules
   # Install our rule for permissions and symlinks
   install -D -m644 $srcdir/81-arch.rules $pkgdir/lib/udev/rules.d/81-arch.rules
   # install our module loading subsystem
@@ -57,11 +61,6 @@ package_udev() {
   install -D -m755 $srcdir/cdsymlinks.sh $pkgdir/lib/udev/cdsymlinks.sh
   # disable error logging to prevent startup failures printed to vc on boot
   sed -i -e 's|udev_log="err"|udev_log="0"|g' $pkgdir/etc/udev/udev.conf
-  # fix standard udev rules to fit to arch
-  cd $pkgdir/lib/udev/rules.d/
-  patch -Np1 -i $srcdir/arch-udev-rules.patch
-  # remove .orig files
-  rm -f $pkgdir/lib/udev/rules.d/*.orig
   # disable persistent cdromsymlinks and network by default 
   # and move it to /etc/udev/rules.d
   mv $pkgdir/lib/udev/rules.d/75-persistent-net-generator.rules \
@@ -102,9 +101,11 @@ package_udev() {
   # /dev/ppp
   mknod -m 0600 ${pkgdir}/lib/udev/devices/ppp c 108 0
 
-  # Replace dialout group in rules with uucp group
+  # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   for i in $pkgdir/lib/udev/rules.d/*.rules; do
-    sed -i -e 's#GROUP="dialout"#GROUP="uucp"#g' $i
+    sed -i -e 's#GROUP="dialout"#GROUP="uucp"#g;
+               s#GROUP="tape"#GROUP="storage"#g;
+               s#GROUP="cdrom"#GROUP="optical"#g' $i
   done
 
   mv "${pkgdir}/lib/girepository-1.0" "${pkgdir}/usr/lib/"
