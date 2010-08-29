@@ -35,7 +35,7 @@ start() {
 
 	local PID=$(get_pid)
 	if [ -z "$PID" ]; then
-		nohup /usr/sbin/lighttpd-angel -D -f /etc/lighttpd/lighttpd.conf >/var/log/lighttpd/lighttpd-angel.log 2>&1 &
+		nohup /usr/sbin/lighttpd-angel -D -f /etc/lighttpd/lighttpd.conf >>/var/log/lighttpd/lighttpd-angel.log 2>&1 &
 		if [ $? -gt 0 ]; then
 			stat_fail
 			exit 1
