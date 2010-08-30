@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # Copyright (c) 2005, Giovanni Bajo
 # Copyright (c) 2004-2005, Awarix, Inc.
