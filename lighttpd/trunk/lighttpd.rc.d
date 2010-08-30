@@ -11,41 +11,63 @@ get_pid_file() {
 get_pid() {
 	local pid_file=$(get_pid_file)
 	local pid=$(pidof -o %PPID lighttpd-angel)
+	# only needed when updating from 1.4.26
+	# TODO: remove in future versions
+	local old_pid=$(pidof -o %PPID lighttpd)
 	if [ -r "${pid_file}" ]; then
 		cat "${pid_file}"
 	elif [ -n "${pid}" ]; then
 		echo "${pid}"
+	elif [ -n "${old_pid}" ]; then
+		echo "${old_pid}"
 	else
 		echo ''
 	fi
 }
 
 test_config() {
+	stat_busy 'Checking configuration'
+	if [ $(id -u) -ne 0 ]; then
+		stat_append '(This script must be run as root)'
+		stat_die
+	fi
+
+	if [ ! -r /etc/lighttpd/lighttpd.conf ]; then
+		stat_append '(/etc/lighttpd/lighttpd.conf not found)'
+		stat_die
+	fi
+
+	local d
+	for d in /var/{run,log,cache}/lighttpd; do
+		if [ ! -d $d ]; then
+			stat_append "(directory $d not found)"
+			stat_die
+		fi
+	done
+
 	/usr/sbin/lighttpd -t -f /etc/lighttpd/lighttpd.conf >/dev/null 2>&1
 	if [ $? -gt 0 ]; then
-		stat_append ' (error in lighttpd.conf)'
-		stat_fail
-		exit 1
+		stat_append '(error in /etc/lighttpd/lighttpd.conf)'
+		stat_die
 	fi
+
+	stat_done
 }
 
 start() {
 	stat_busy 'Starting lighttpd'
-	test_config
 
 	local PID=$(get_pid)
 	if [ -z "$PID" ]; then
 		nohup /usr/sbin/lighttpd-angel -D -f /etc/lighttpd/lighttpd.conf >>/var/log/lighttpd/lighttpd-angel.log 2>&1 &
 		if [ $? -gt 0 ]; then
-			stat_fail
-			exit 1
+			stat_die
 		else
 			add_daemon lighttpd
 			stat_done
 		fi
 	else
-		stat_fail
-		exit 1
+		stat_die
 	fi
 }
 
@@ -54,8 +76,7 @@ stop() {
 	local PID=$(get_pid)
 	[ -n "$PID" ] && kill $PID &> /dev/null
 	if [ $? -gt 0 ]; then
-		stat_fail
-		exit 1
+		stat_die
 	else
 		local pid_file=$(get_pid_file)
 		[ -f "${pid_file}" ] && rm -f "${pid_file}"
@@ -66,12 +87,10 @@ stop() {
 
 reload() {
 	stat_busy 'Reloading lighttpd'
-	test_config
 	local PID=$(get_pid)
 	[ -n "$PID" ] && kill -HUP $PID &> /dev/null
 	if [ $? -gt 0 ]; then
-		stat_fail
-		exit 1
+		stat_die
 	else
 		stat_done
 	fi
@@ -80,23 +99,24 @@ reload() {
 
 case "$1" in
 	start)
+		test_config
 		start
 		;;
 	stop)
+		test_config
 		stop
 		;;
 	reload)
+		test_config
 		reload
 		;;
 	restart)
-		stat_busy 'Checking lighttpd.conf'
 		test_config
-		stat_done
 		stop
 		start
 		;;
 	status)
-		stat_busy 'Checking lighttpd status';
+		stat_busy 'Checking lighttpd status'
 		ck_status lighttpd
 		;;
 	*)
