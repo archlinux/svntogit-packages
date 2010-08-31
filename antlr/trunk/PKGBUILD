@@ -1,30 +1,52 @@
-# $Id$
+# $Id $
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: George Giorgidze <giorgidze (at) gmail.com>
+# Contributor: Stefan Husmann <stefan-husmann@t-online.de>
 
-pkgname=antlr
+pkgbase=antlr
+pkgname=('antlr' 'python-antlr')
 pkgver=2.7.7
-pkgrel=1
-pkgdesc="ANother Tool for Language Recognition, (formerly PCCTS) is a language tool that provides a framework for constructing recognizers, compilers, and translators from grammatical descriptions containing C++ or Java actions"
-arch=(i686 x86_64)
+pkgrel=7
+arch=('any')
 url="http://www.antlr.org/"
-depends=('gcc-gcj')
-makedepends=('eclipse-ecj' 'fastjar' 'python')
-source=(http://www.antlr2.org/download/${pkgname}-${pkgver}.tar.gz
-	antlr)
-md5sums=('01cc9a2a454dd33dcd8c856ec89af090' 'a8b60d69af679f0c55602ded8816d1cc')
+license=('custom')
+makedepends=('java-environment' 'python')
+source=("http://www.antlr2.org/download/${pkgbase}-${pkgver}.tar.gz"
+	'runantlr.sh'
+	'gcc4.4.patch')
+md5sums=('01cc9a2a454dd33dcd8c856ec89af090'
+	'5210a7d580014a043a2daaa402364588'
+	'8574c93f40e6477e83c29f9b07de49da')
 
 build() {
-  cd ${startdir}/src/${pkgname}-${pkgver}
-  unset BOOTCLASSPATH
-  JAVA=/usr/bin/gij JAVAC=/usr/bin/ecj ./configure --prefix=/usr --disable-csharp
-  make || return 1
-  pushd lib/cpp
-  make prefix=${startdir}/pkg/usr install
-  popd
-  pushd lib/python
-  python setup.py install --root=${startdir}/pkg
-  popd
-  mkdir -p ${startdir}/pkg/usr/share/java
-  mkdir -p ${startdir}/pkg/usr/bin
-  install -m644 antlr/antlr.jar ${startdir}/pkg/usr/share/java/
-  install -m755 ${startdir}/src/antlr ${startdir}/pkg/usr/bin
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  patch -Np0 -i ${srcdir}/gcc4.4.patch
+
+  ./configure --prefix=/usr \
+    --disable-examples \
+    --disable-csharp
+  make
+}
+
+package_antlr() {
+  pkgdesc="ANother Tool for Language Recognition, (formerly PCCTS) is a language tool that provides a framework for constructing recognizers, compilers, and translators from grammatical descriptions containing C++ or Java actions"
+  depends=('java-runtime')
+
+  cd ${srcdir}/${pkgbase}-${pkgver}/lib/cpp
+  make prefix="${pkgdir}/usr" install
+
+  install -Dm644 ${srcdir}/${pkgbase}-${pkgver}/antlr/antlr.jar \
+    "${pkgdir}/usr/share/java/antlr.jar"
+  install -Dm755 ${srcdir}/runantlr.sh ${pkgdir}/usr/bin/runantlr
+  install -Dm644 ${srcdir}/${pkgbase}-${pkgver}/LICENSE.txt \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+package_python-antlr() {
+  pkgdesc="ANother Tool for Language Recognition, (formerly PCCTS) is a language tool that provides a framework for constructing recognizers, compilers, and translators from grammatical descriptions containing C++ or Java actions (Python version)"
+  depends=('antlr')
+
+  cd ${srcdir}/${pkgbase}-${pkgver}/lib/python
+  python setup.py install --root="${pkgdir}"
 }
