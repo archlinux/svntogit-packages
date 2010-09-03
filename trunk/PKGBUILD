@@ -7,12 +7,12 @@
 
 pkgname=python-lxml
 pkgver=2.2.7
-pkgrel=1
+pkgrel=2
 pkgdesc="Python binding for the libxml2 and libxslt libraries"
 arch=('i686' 'x86_64')
 license=('BSD' 'GPL' 'custom')
 url="http://codespeak.net/lxml"
-depends=('python' 'libxslt')
+depends=('python2' 'libxslt')
 optdepends=("beautiful-soup: support for parsing not well formed HTML")
 conflicts=('lxml')
 replaces=('lxml')
@@ -22,7 +22,7 @@ md5sums=('c1da56b823fdc00804938d2b788dbfd0')
 package() {
   cd ${srcdir}/lxml-$pkgver
 
-  python setup.py install --root=${pkgdir}
+  python2 setup.py install --root=${pkgdir}
 
   install -D -m644 LICENSES.txt ${pkgdir}/usr/share/licenses/$pkgname/LICENSE
   install -D -m644 doc/licenses/BSD.txt ${pkgdir}/usr/share/licenses/$pkgname/BSD.txt
