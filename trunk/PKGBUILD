@@ -1,29 +1,33 @@
+## $Id$
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 # Maintainer: tobias [ tobias at archlinux org ]
 # Maintainer: Daniel J Griffiths <ghost1227@archlinux.us>
 
 pkgbase=vim
 pkgname=(vim gvim vim-runtime)
-pkgver=7.2
-__hgrev=e12b9d992389
-pkgrel=2
+_topver=7.3
+_patchlevel=3
+pkgver=${_topver}.${_patchlevel}
+__hgrev=073ff46fe3
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('custom:vim')
 url="http://www.vim.org"
-makedepends=('gpm' 'perl' 'python2' 'ruby' 'libxt' 'desktop-file-utils' 'gtk2'
+makedepends=('gpm' 'perl' 'python' 'ruby' 'libxt' 'desktop-file-utils' 'gtk2'
              'gettext' 'pkgconfig' 'mercurial' 'rsync' 'sed')
 options=(force)
 source=(pythoncomplete.vim::http://www.vim.org/scripts/download_script.php\?src_id=10872
-        vimrc archlinux.vim gvim.desktop xz.patch)
-md5sums=('6e7adfbd5d26c1d161030ec203a7f243' 'e57777374891063b9ca48a1fe392ac05'
-         '10353a61aadc3f276692d0e17db1478e' '2be104c0372dd6dae19cb7968c03cd4f'
-         '634bea72f47b608634419724a12b2505')
+        vimrc archlinux.vim gvim.desktop)
+md5sums=('6e7adfbd5d26c1d161030ec203a7f243'
+         'e57777374891063b9ca48a1fe392ac05'
+         '10353a61aadc3f276692d0e17db1478e'
+         '2be104c0372dd6dae19cb7968c03cd4f')
 
 __hgroot='http://vim.googlecode.com/hg/'
 __hgrepo='vim'
 __hgbranch='default'
 
-_versiondir="vim${pkgver//./}"
+_versiondir="vim${_topver//./}"
 
 ##### Build #####
 
@@ -35,9 +39,9 @@ build() {
   if [[ -d ${__hgrepo} ]]; then
     cd ${__hgrepo}
     hg pull -b ${__hgbranch}|| warning 'hg pull failed!'
-    hg update -r ${__hgrev} || return 1
+    hg update -r ${__hgrev}
   else
-    hg clone -b ${__hgbranch} -u ${__hgrev} "${__hgroot}${__hgrepo}" ${__hgrepo} || return 1
+    hg clone -b ${__hgbranch} -u ${__hgrev} "${__hgroot}${__hgrepo}" ${__hgrepo}
     cd ${__hgrepo}
   fi
 
@@ -49,23 +53,23 @@ build() {
 
   cd ..
   rm -rf vim-build gvim-build
-  rsync -a --exclude='.hg/' ${__hgrepo}/ vim-build || return 1
+  rsync -a --exclude='.hg/' ${__hgrepo}/ vim-build
 
   msg2 'Patching...'
 
   # define the place for the global (g)vimrc file (set to /etc/vimrc)
   sed -i 's|^.*\(#define SYS_.*VIMRC_FILE.*"\) .*$|\1|' \
-    vim-build/src/feature.h || return 1
+    vim-build/src/feature.h
   sed -i 's|^.*\(#define VIMRC_FILE.*"\) .*$|\1|' \
-    vim-build/src/feature.h || return 1
+    vim-build/src/feature.h
   # fix python name
-  sed -i -e 's|vi_cv_path_python, python|vi_cv_path_python, python2|' \
-    vim-build/src/configure.in
-  (cd vim-build/src && autoconf)
+#  sed -i -e 's|vi_cv_path_python, python|vi_cv_path_python, python2|' \
+#    vim-build/src/configure.in
+#  (cd vim-build/src && autoconf)
 
   msg2 'Building...'
 
-  cp -a vim-build gvim-build || return 1
+  cp -a vim-build gvim-build
 
   cd ${srcdir}/vim-build
 
@@ -74,9 +78,9 @@ build() {
     --with-features=big --enable-gpm --enable-acl --with-x=no \
     --disable-gui --enable-multibyte --enable-cscope \
     --disable-netbeans --enable-perlinterp --disable-pythoninterp \
-    --disable-rubyinterp || return 1
+    --disable-rubyinterp
 
-  make || return 1
+  make
 
   cd ${srcdir}/gvim-build
 
@@ -85,9 +89,9 @@ build() {
     --with-features=big --enable-gpm --enable-acl --with-x=yes \
     --enable-gui=gtk2 --enable-multibyte --enable-cscope \
     --enable-netbeans --enable-perlinterp --enable-pythoninterp \
-    --enable-rubyinterp || return 1
+    --enable-rubyinterp
 
-  make || return 1
+  make
 }
 
 ##### Packaging #####
@@ -98,7 +102,7 @@ package_vim() {
   conflicts=('gvim')
 
   cd ${srcdir}/vim-build
-  make -j1 VIMRCLOC=/etc DESTDIR=${pkgdir} install || return 1
+  make -j1 VIMRCLOC=/etc DESTDIR=${pkgdir} install
 
   # provided by (n)vi in core
   rm ${pkgdir}/usr/bin/{ex,view}
@@ -122,14 +126,14 @@ package_vim() {
 
 package_gvim() {
   pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor (with advanced features, such as a GUI)'
-  depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'perl' 'python2' 'ruby' 'libxt'
+  depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'perl' 'python' 'ruby' 'libxt'
            'desktop-file-utils' 'gtk2')
   provides=("vim=${pkgver}-${pkgrel}")
   conflicts=('vim')
   install=gvim.install
 
   cd ${srcdir}/gvim-build
-  make -j1 VIMRCLOC=/etc DESTDIR=${pkgdir} install || return 1
+  make -j1 VIMRCLOC=/etc DESTDIR=${pkgdir} install
 
   # provided by (n)vi in core
   rm ${pkgdir}/usr/bin/{ex,view}
@@ -165,25 +169,21 @@ package_vim-runtime() {
 
   # Don't forget logtalk.dict
   install -Dm644 ${srcdir}/gvim-build/runtime/ftplugin/logtalk.dict \
-    ${pkgdir}/usr/share/vim/${_versiondir}/ftplugin/logtalk.dict || return 1
+    ${pkgdir}/usr/share/vim/${_versiondir}/ftplugin/logtalk.dict
 
   # fix FS#17216
   sed -i 's|messages,/var|messages,/var/log/messages.log,/var|' \
-    ${pkgdir}/usr/share/vim/vim72/filetype.vim
+    ${pkgdir}/usr/share/vim/${_versiondir}/filetype.vim
 
   # patch filetype.vim for better handling of pacman related files
   sed -i "s/rpmsave/pacsave/;s/rpmnew/pacnew/;s/,\*\.ebuild/\0,PKGBUILD*,*.install/" \
-    ${pkgdir}/usr/share/vim/vim72/filetype.vim
+    ${pkgdir}/usr/share/vim/${_versiondir}/filetype.vim
   sed -i "/find the end/,+3{s/changelog_date_entry_search/changelog_date_end_entry_search/}" \
-    ${pkgdir}/usr/share/vim/vim72/ftplugin/changelog.vim
-
-  # patch runtime for better support of .*.xz files
-  cd ${pkgdir}/usr/share/vim
-  patch -p0 < ${srcdir}/xz.patch || return 1
+    ${pkgdir}/usr/share/vim/${_versiondir}/ftplugin/changelog.vim
 
   # make Aaron happy
   install -Dm644 ${srcdir}/pythoncomplete.vim \
-    ${pkgdir}/usr/share/vim/vim72/autoload/pythoncomplete.vim
+    ${pkgdir}/usr/share/vim/${_versiondir}/autoload/pythoncomplete.vim
   
   # rc files
   install -Dm644 ${srcdir}/vimrc ${pkgdir}/etc/vimrc
