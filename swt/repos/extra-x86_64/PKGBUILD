@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
+pkgname=swt
+pkgver=3.6
+pkgrel=1
+pkgdesc="An open source widget toolkit for Java"
+_date=201006080911
+arch=(i686 x86_64)
+url="http://www.eclipse.org/swt/"
+license=('EPL')
+depends=('java-runtime>=6' 'gtk2>=2.20.1' 'libxtst')
+optdepends=('libgnomeui' 'xulrunner' 'mesa')
+makedepends=('openjdk6' 'libxtst' 'mesa' 'libgnomeui' 'xulrunner>=1.9.1' 'unzip' 'pkgconfig' 'apache-ant')
+source=(http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-x86.zip
+        http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-x86_64.zip
+        build-swt.xml)
+md5sums=('514206a4b9e27ac66cb7876157c3e74f'
+         '244f63edc7e609c7ac7f4bd1d7e0298a'
+         'f5e548bc26a0f1f3c18131be76face40')
+if [ "${CARCH}" = "i686" ]; then
+  source=(http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-x86.zip
+          build-swt.xml)
+  noextract=(swt-${pkgver}-gtk-linux-x86.zip)
+  md5sums=('514206a4b9e27ac66cb7876157c3e74f'
+           'f5e548bc26a0f1f3c18131be76face40')
+fi
+if [ "${CARCH}" = "x86_64" ]; then
+  source=(http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-x86_64.zip
+          build-swt.xml)
+  md5sums=('244f63edc7e609c7ac7f4bd1d7e0298a'
+           'f5e548bc26a0f1f3c18131be76face40')
+  noextract=(swt-${pkgver}-gtk-linux-x86_64.zip)
+fi
+
+build() {
+  cd "${srcdir}"
+  . /etc/profile.d/openjdk6.sh
+  . /etc/profile.d/apache-ant.sh
+  unzip -jqo ${srcdir}/swt-${pkgver}-gtk-linux-*.zip "*src.zip"
+  unzip -qo src.zip
+  rm -rf about_files
+  mkdir src
+  mv org src/
+  cp build-swt.xml build.xml || return 1
+
+  [ "${CARCH}" = "x86_64" ] && export SWT_PTR_CFLAGS=-DSWT_PTR_SIZE_64
+
+  make -f make_linux.mak make_awt || return 1
+  make -f make_linux.mak make_swt || return 1
+  make -f make_linux.mak make_atk || return 1
+  make -f make_linux.mak make_gnome || return 1
+  export MOZILLA_INCLUDES="`pkg-config --cflags libxul`"
+  export MOZILLA_LIBS="-Wl,-R`pkg-config libxul --variable=libdir` `pkg-config libxul --libs`"
+  export XULRUNNER_INCLUDES="${MOZILLA_INCLUDES}"
+  export XULRUNNER_LIBS="${MOZILLA_LIBS}"
+  make -f make_linux.mak make_mozilla || return 1
+  make -f make_linux.mak make_xulrunner || return 1
+
+  make -f make_linux.mak make_cairo || return 1
+  make -f make_linux.mak make_glx || return 1
+ 
+  ant compile || return 1
+  cp version.txt build/version.txt
+  cp src/org/eclipse/swt/internal/SWTMessages.properties build/org/eclipse/swt/internal/
+
+  ant jar || return 1
+
+  install -m755 -d "${pkgdir}/usr/share/java"
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m644 swt.jar "${pkgdir}/usr/share/java/" || return 1
+  install -m755 *.so "${pkgdir}/usr/lib/" || return 1
+}
