@@ -4,12 +4,12 @@
 
 pkgname=wicd
 pkgver=1.7.0
-pkgrel=4
+pkgrel=5
 pkgdesc="New and alternative wireless/wired network management utility"
-arch=('i686' 'x86_64')
+arch=(any)
 url="http://wicd.sourceforge.net/"
 license=('GPL2')
-depends=('python' 'dbus-python' 'pygtk' 'dhcpcd' 'wpa_supplicant' 'wireless_tools' 'ethtool' 'shared-mime-info' 'python-urwid' 'consolekit')
+depends=('python2' 'dbus-python' 'pygtk' 'dhcpcd' 'wpa_supplicant' 'wireless_tools' 'ethtool' 'shared-mime-info' 'python-urwid' 'consolekit')
 optdepends=('hicolor-icon-theme'
             'gksu:		needed to access some preferences in gtk interface'
             'notification-daemon: needed if you want notifications'
@@ -31,10 +31,16 @@ md5sums=('003d2e67240989db55934553437ba32a'
 
 build() {
   cd $srcdir/$pkgname-$pkgver
-  patch -p0 <$srcdir/wicd-scripts-execution.patch || return 1
-  python setup.py configure --no-install-init --resume=/usr/share/wicd/scripts/ \
-                            --suspend=/usr/share/wicd/scripts/ --verbose
-  python setup.py install --root=$pkgdir
+  patch -p0 <$srcdir/wicd-scripts-execution.patch
+  find . -type f -exec sed -i 's@#!/usr.*python@#!/usr/bin/python2@' {} \;
+  export PYTHON=python2
+  python2 setup.py configure --no-install-init --resume=/usr/share/wicd/scripts/ \
+                            --suspend=/usr/share/wicd/scripts/ --verbose --python=/usr/bin/python2
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver
+  python2 setup.py install --root=$pkgdir
 
   # Add custom rc.d script
   install -Dm755 $srcdir/wicd-daemon $pkgdir/etc/rc.d/wicd
@@ -42,9 +48,9 @@ build() {
 
   cd build/lib/wicd
   for i in *.py; do
-    install -Dm 755 $i $startdir/pkg/usr/lib/wicd/$i
+    install -Dm 755 $i $pkgdir/usr/lib/wicd/$i
   done
   
-  rm -rf  ${startdir}/pkg/usr/share/autostart
+  rm -rf $pkgdir/usr/share/autostart
 }
 
