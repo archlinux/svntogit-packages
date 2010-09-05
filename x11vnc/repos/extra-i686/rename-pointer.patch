@@ -1,0 +1,243 @@
+diff -aur x11vnc-0.9.11/x11vnc/connections.c x11vnc-0.9.11/x11vnc/connections.c
+--- x11vnc-0.9.11/x11vnc/connections.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/connections.c	2010-09-05 20:21:12.280010750 +0200
+@@ -3145,7 +3145,7 @@
+ 		return;
+ 	}
+ 	rfbLog("pmove: x y: %d %d\n", x, y);
+-	pointer(0, x, y, NULL);
++	do_pointer(0, x, y, NULL);
+ 	X_LOCK;
+ 	XFlush_wr(dpy);
+ 	X_UNLOCK;
+diff -aur x11vnc-0.9.11/x11vnc/keyboard.c x11vnc-0.9.11/x11vnc/keyboard.c
+--- x11vnc-0.9.11/x11vnc/keyboard.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/keyboard.c	2010-09-05 20:21:12.280010750 +0200
+@@ -2898,9 +2898,9 @@
+ 			t[1] = '\0';
+ 			if (sscanf(t, "%d", &butt) == 1) {
+ 				mask = 1<<(butt-1);
+-				pointer(mask, x, y, client);
++				do_pointer(mask, x, y, client);
+ 				mask = 0;
+-				pointer(mask, x, y, client);
++				do_pointer(mask, x, y, client);
+ 			}
+ 			b++;
+ 		}
+diff -aur x11vnc-0.9.11/x11vnc/pointer.c x11vnc-0.9.11/x11vnc/pointer.c
+--- x11vnc-0.9.11/x11vnc/pointer.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/pointer.c	2010-09-05 20:21:12.283344016 +0200
+@@ -54,7 +54,7 @@
+ 
+ void initialize_pointer_map(char *pointer_remap);
+ void do_button_mask_change(int mask, int button);
+-void pointer(int mask, int x, int y, rfbClientPtr client);
++void do_pointer(int mask, int x, int y, rfbClientPtr client);
+ void initialize_pipeinput(void);
+ int check_pipeinput(void);
+ void update_x11_pointer_position(int x, int y);
+@@ -408,7 +408,7 @@
+ 				continue;
+ 			}
+ 			if (debug_pointer) {
+-				rfbLog("pointer(): sending button %d"
++				rfbLog("do_pointer(): sending button %d"
+ 				    " %s (event %d)\n", mb, bmask
+ 				    ? "down" : "up", k+1);
+ 			}
+@@ -427,7 +427,7 @@
+ 			if (debug_pointer && dpy) {
+ 				char *str = XKeysymToString(XKeycodeToKeysym(
+                                     dpy, key, 0));
+-				rfbLog("pointer(): sending button %d "
++				rfbLog("do_pointer(): sending button %d "
+ 				    "down as keycode 0x%x (event %d)\n",
+ 				    i+1, key, k+1);
+ 				rfbLog("           down=%d up=%d keysym: "
+@@ -560,7 +560,7 @@
+ 	for (i=0; i < MAX_BUTTONS; i++) {
+ 	    if ( (button_mask & (1<<i)) != (mask & (1<<i)) ) {
+ 		if (debug_pointer) {
+-			rfbLog("pointer(): mask change: mask: 0x%x -> "
++			rfbLog("do_pointer(): mask change: mask: 0x%x -> "
+ 			    "0x%x button: %d\n", button_mask, mask,i+1);
+ 		}
+ 		do_button_mask_change(mask, i+1);	/* button # is i+1 */
+@@ -659,7 +659,7 @@
+  * This may queue pointer events rather than sending them immediately
+  * to the X server. (see update_x11_pointer*())
+  */
+-void pointer(int mask, int x, int y, rfbClientPtr client) {
++void do_pointer(int mask, int x, int y, rfbClientPtr client) {
+ 	allowed_input_t input;
+ 	int sent = 0, buffer_it = 0;
+ 	double now;
+@@ -689,7 +689,7 @@
+ 		dt = tnow - last_pointer;
+ 		last_pointer = tnow;
+ 		if (show_motion) {
+-			rfbLog("# pointer(mask: 0x%x, x:%4d, y:%4d) "
++			rfbLog("# do_pointer(mask: 0x%x, x:%4d, y:%4d) "
+ 			    "dx: %3d dy: %3d dt: %.4f t: %.4f\n", mask, x, y,
+ 			    x - last_x, y - last_y, dt, tnow);
+ 		}
+@@ -780,7 +780,7 @@
+ 			}
+ 			if (! ok) {
+ 				if (debug_pointer) {
+-				    rfbLog("pointer(): blackout_ptr skipping "
++				    rfbLog("do_pointer(): blackout_ptr skipping "
+ 					"x=%d y=%d in rectangle %d,%d %d,%d\n", x, y,
+ 					blackr[b].x1, blackr[b].y1,
+ 					blackr[b].x2, blackr[b].y2);
+@@ -851,7 +851,7 @@
+ 					ev[i][2] = -1;
+ 				}
+ 				if (debug_pointer) {
+-					rfbLog("pointer(): deferring event %d"
++					rfbLog("do_pointer(): deferring event %d"
+ 					    " %.4f\n", i, tmr - x11vnc_start);
+ 				}
+ 				POINTER_UNLOCK;
+@@ -874,7 +874,7 @@
+ 				}
+ 			}
+ 			if (debug_pointer) {
+-				rfbLog("pointer(): sending event %d %.4f\n",
++				rfbLog("do_pointer(): sending event %d %.4f\n",
+ 				    i+1, dnowx());
+ 			}
+ 			if (ev[i][1] >= 0) {
+@@ -894,7 +894,7 @@
+ 		    if (dpy) {	/* raw_fb hack */
+ 			if (mask < 0) {
+ 				if (debug_pointer) {
+-					rfbLog("pointer(): calling XFlush "
++					rfbLog("do_pointer(): calling XFlush "
+ 					    "%.4f\n", dnowx());
+ 				}
+ 				X_LOCK;
+@@ -911,7 +911,7 @@
+ 	}
+ 	if (mask < 0) {		/* -1 just means flush the event queue */
+ 		if (debug_pointer) {
+-			rfbLog("pointer(): flush only.  %.4f\n",
++			rfbLog("do_pointer(): flush only.  %.4f\n",
+ 			    dnowx());
+ 		}
+ 		INPUT_UNLOCK;
+@@ -944,7 +944,7 @@
+ 		X_UNLOCK;
+ 	} else if (buffer_it) {
+ 		if (debug_pointer) {
+-			rfbLog("pointer(): calling XFlush+"
++			rfbLog("do_pointer(): calling XFlush+"
+ 			    "%.4f\n", dnowx());
+ 		}
+ 		X_LOCK;
+diff -aur x11vnc-0.9.11/x11vnc/pointer.h x11vnc-0.9.11/x11vnc/pointer.h
+--- x11vnc-0.9.11/x11vnc/pointer.h	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/pointer.h	2010-09-05 20:21:12.283344016 +0200
+@@ -39,7 +39,7 @@
+ 
+ extern void initialize_pointer_map(char *pointer_remap);
+ extern void do_button_mask_change(int mask, int button);
+-extern void pointer(int mask, int x, int y, rfbClientPtr client);
++extern void do_pointer(int mask, int x, int y, rfbClientPtr client);
+ extern int check_pipeinput(void);
+ extern void initialize_pipeinput(void);
+ extern void update_x11_pointer_position(int x, int y);
+diff -aur x11vnc-0.9.11/x11vnc/remote.c x11vnc-0.9.11/x11vnc/remote.c
+--- x11vnc-0.9.11/x11vnc/remote.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/remote.c	2010-09-05 20:21:12.286677328 +0200
+@@ -4444,9 +4444,9 @@
+ 		p += strlen("ptr:");
+ 		rfbLog("remote_cmd: insert pointer event: %s\n", p);
+ 		if (sscanf(p, "%d,%d,%d", &x, &y, &m) == 3) {
+-			pointer(m, x, y, NULL);
++			do_pointer(m, x, y, NULL);
+ 		} else if (sscanf(p, "%d,%d", &x, &y) == 2) {
+-			pointer(m, x, y, NULL);
++			do_pointer(m, x, y, NULL);
+ 		} else {
+ 			rfbLog("remote_cmd: bad ptr:x,y,mask\n");
+ 		}
+@@ -4611,7 +4611,7 @@
+ 		} else if (strstr(res, "GRAB_FAIL") && try < max_tries) {
+ 			rfbLog("bcx_xattach: failed grab check for '%s': %s.  Retrying[%d]...\n", p, res, try);
+ 			free(res);
+-			pointer(0, dpy_x/2 + try, dpy_y/2 + try, NULL);
++			do_pointer(0, dpy_x/2 + try, dpy_y/2 + try, NULL);
+ #if !NO_X11
+ 			X_LOCK;
+ 			XFlush_wr(dpy);
+diff -aur x11vnc-0.9.11/x11vnc/scan.c x11vnc-0.9.11/x11vnc/scan.c
+--- x11vnc-0.9.11/x11vnc/scan.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/scan.c	2010-09-05 20:21:12.290010696 +0200
+@@ -3550,7 +3550,7 @@
+ 			fb_copy_in_progress = 0;
+ 			SCAN_FATAL(cs);
+ 			if (use_threads && pointer_mode != 1) {
+-				pointer(-1, 0, 0, NULL);
++				do_pointer(-1, 0, 0, NULL);
+ 			}
+ 			nap_check(tile_count);
+ 			return tile_count;
+@@ -3637,7 +3637,7 @@
+ 		 * tell the pointer handler it can process any queued
+ 		 * pointer events:
+ 		 */
+-		pointer(-1, 0, 0, NULL);
++		do_pointer(-1, 0, 0, NULL);
+ 	}
+ 
+ 	if (blackouts) {
+diff -aur x11vnc-0.9.11/x11vnc/screen.c x11vnc-0.9.11/x11vnc/screen.c
+--- x11vnc-0.9.11/x11vnc/screen.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/screen.c	2010-09-05 20:21:12.290010696 +0200
+@@ -3616,7 +3616,7 @@
+ 	/* event callbacks: */
+ 	screen->newClientHook = new_client;
+ 	screen->kbdAddEvent = keyboard;
+-	screen->ptrAddEvent = pointer;
++	screen->ptrAddEvent = do_pointer;
+ 	screen->setXCutText = xcut_receive;
+ 	screen->setTranslateFunction = set_xlate_wrapper;
+ 
+diff -aur x11vnc-0.9.11/x11vnc/userinput.c x11vnc-0.9.11/x11vnc/userinput.c
+--- x11vnc-0.9.11/x11vnc/userinput.c	2010-07-23 05:34:45.000000000 +0200
++++ x11vnc-0.9.11/x11vnc/userinput.c	2010-09-05 20:21:12.293344124 +0200
+@@ -3008,12 +3008,12 @@
+ 	pointer_queued_sent = 0;
+ 	last_x = cursor_x;
+ 	last_y = cursor_y;
+-	pointer(-1, 0, 0, NULL);
++	do_pointer(-1, 0, 0, NULL);
+ 	pointer_flush_delay = 0.0;
+ 
+ 	if (xrecording && pointer_queued_sent && button_mask_save &&
+ 	    (last_x != cursor_x || last_y != cursor_y) ) {
+-if (db) fprintf(stderr, "  pointer() push yields events on: ret=%d\n", ret);
++if (db) fprintf(stderr, "  do_pointer() push yields events on: ret=%d\n", ret);
+ 		if (ret == 2) {
+ if (db) fprintf(stderr, "  we decide to send ret=3\n");
+ 			want_back_in = 1;
+@@ -4509,7 +4509,7 @@
+ 	}
+ 
+ 	/*
+-	 * pointer() should have snapped the stacking list for us, if
++	 * do_pointer() should have snapped the stacking list for us, if
+ 	 * not, do it now (if the XFakeButtonEvent has been flushed by
+ 	 * now the stacking order may be incorrect).
+ 	 */
+@@ -4565,7 +4565,7 @@
+ 	/* -threads support for check_wireframe() is rough... crash? */
+ 	if (use_threads) {
+ 		/* purge any stored up pointer events: */
+-		pointer(-1, 0, 0, NULL);
++		do_pointer(-1, 0, 0, NULL);
+ 	}
+ 
+ 	if (cursor_noshape_updates_clients(screen)) {
