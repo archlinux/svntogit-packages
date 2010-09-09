@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+# Contributor: lydgate
+
+pkgname=mlocate
+pkgver=0.23
+pkgrel=1
+pkgdesc="Faster merging drop-in for slocate"
+arch=('i686' 'x86_64')
+url="http://carolina.mff.cuni.cz/~trmac/blog/mlocate"
+license=('GPL')
+conflicts=('slocate')
+provides=('slocate')
+replaces=('slocate')
+depends=('glibc' 'coreutils' 'sh')
+backup=('etc/updatedb.conf'
+        'etc/cron.daily/updatedb')
+install=mlocate.install
+source=(https://fedorahosted.org/releases/m/l/mlocate/mlocate-$pkgver.tar.xz
+	updatedb.conf
+	updatedb.cron.daily)
+md5sums=('554bcc30dad935834a5ae7b2aa98d460'
+         'b1fac5fbe8ddbc77f2a917ca733e47a3'
+         'cde5da81bebad2de556ef2e43d895e13')
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+
+  # Build!
+  sed -i '/^groupname /s/mlocate/locate/' Makefile.in
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var/lib
+  make
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver
+  
+  # Set up a default updatedb.conf and a daily cronjob
+  install -Dm644 ../updatedb.conf $pkgdir/etc/updatedb.conf
+  install -Dm744 ../updatedb.cron.daily $pkgdir/etc/cron.daily/updatedb
+
+  # Install Mlocate
+  make DESTDIR=$pkgdir install
+
+  ln -sv locate $pkgdir/usr/bin/slocate
+  chgrp -v 21 $pkgdir/usr/bin/locate
+  chmod -v 2755 $pkgdir/usr/bin/locate
+
+  install -dm755 $pkgdir/var/lib
+  install -d -m750 -g21 $pkgdir/var/lib/locate
+}
