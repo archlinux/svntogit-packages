@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgstatsver=1.0
+pkgstatsver='2.0'
 showonly=false
 
 usage() {
@@ -17,7 +17,7 @@ usage() {
 }
 
 while getopts 'vdhs' option; do
-	case $option in
+	case ${option} in
 		v)	echo "pkgstats, version ${pkgstatsver}"; exit 0;;
 		d)	debug='-v';;
 		s)	showonly=true;;
@@ -25,24 +25,28 @@ while getopts 'vdhs' option; do
 	esac
 done
 
-pkglist=$(mktemp --tmpdir pkglist.XXXXXX)
-echo 'Creating package list...'
-pacman -Qq > ${pkglist}
+echo 'Collecting data...'
+pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
+pacman -Qq > "${pkglist}"
+arch="$(uname -m)"
+mirror="$(pacman -Sdp extra/pkgstats 2>/dev/null | sed -E 's#(.*/)extra/os/.*#\1#')"
 
-if $showonly; then
+if ${showonly}; then
 	echo 'packages='
-	cat ${pkglist}
+	cat  "${pkglist}"
 	echo ''
-	echo "arch=$(uname -m)"
+	echo "arch=${arch}"
 	echo "pkgstatsver=${pkgstatsver}"
+	echo "mirror=${mirror}"
 else
 	echo 'Submitting data...'
 	curl ${debug} -f -H 'Expect: ' \
 		--data-urlencode "packages@${pkglist}" \
-		--data-urlencode "arch=$(uname -m)" \
+		--data-urlencode "arch=${arch}" \
 		--data-urlencode "pkgstatsver=${pkgstatsver}" \
+		--data-urlencode "mirror=${mirror}" \
 		'https://www.archlinux.de/?page=PostPackageList' \
 		|| echo 'Sorry, package list could not be sent.'
 fi
 
-rm -f ${pkglist}
+rm -f "${pkglist}"
