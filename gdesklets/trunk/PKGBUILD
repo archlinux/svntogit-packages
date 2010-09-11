@@ -3,33 +3,38 @@
 # Maintainer: Roman Kyrylych <roman@archlinux.org>
 
 pkgname=gdesklets
-pkgver=0.36.1
+pkgver=0.36.2
 pkgrel=1
-pkgdesc="gDesklets provides an advanced architecture for desktop applets."
+pkgdesc="An advanced architecture for desktop applets"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://gdesklets.de/"
-depends=('libgtop>=2.14.8-2' 'librsvg>=2.16.0' 'libgnomeui>=2.18.1-2'
-         'gnome-python>=2.18.0' 'gconf>=2.18.0.1-4' 'desktop-file-utils')
-makedepends=('perlxml' 'swig')
+depends=('libgtop' 'librsvg' 'libgnomeui' 'gnome-python' 'gconf' 'desktop-file-utils' 'shared-mime-info')
+makedepends=('perlxml' 'intltool' 'swig')
 options=('!libtool' '!makeflags')
 install=gdesklets.install
-source=(http://gdesklets.zencomputer.ca/gDesklets/gDesklets-$pkgver.tar.bz2
-        no-import-overide.patch)
-md5sums=('425625a63280c15d084d92317720d8d5' '9190f9c8406e3c5ad5c0ab2bd95b71ff')
+source=(http://gdesklets.de/files/gdesklets-$pkgver.tar.bz2)
+md5sums=('c64e7017fa60746746de203d1b532045')
+sha1sums=('56742080aa04c27548b8856b6e6aca8861a0d9b5')
 
 build() {
-  cd $srcdir/gDesklets-$pkgver
-  patch -Np1 -i $srcdir/no-import-overide.patch
-  
+  cd "$srcdir/gDesklets-$pkgver"
+  sed -i 's/python -c/$PYTHON -c/' configure
+  sed -i 's|#! /usr/bin/env python|#! /usr/bin/env python2|' \
+    gdesklets gdesklets-shell gdesklets-daemon ctrlinfo gdesklets-logview test-control.py
+  sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' contrib/gdesklets-migration-tool
+  sed -i 's|python|python2|' shell/plugins/PackageInstaller/__init__.py
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
-  make || return 1
+  make
+}
 
+package() {
+  cd "$srcdir/gDesklets-$pkgver"
   make UPDATE_MIME_DATABASE=/bin/true UPDATE_DESKTOP_DATABASE=/bin/true \
-    GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR=$pkgdir install
+    GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="$pkgdir" install
 
-  mkdir -p $pkgdir/usr/share/gconf/schemas
-  gconf-merge-schema $pkgdir/usr/share/gconf/schemas/$pkgname.schemas \
-    $pkgdir/etc/gconf/schemas/*.schemas
-  rm -f $pkgdir/etc/gconf/schemas/*.schemas
+  mkdir -p "$pkgdir/usr/share/gconf/schemas"
+  gconf-merge-schema "$pkgdir/usr/share/gconf/schemas/$pkgname.schemas" \
+    "$pkgdir"/etc/gconf/schemas/*.schemas
+  rm -f "$pkgdir"/etc/gconf/schemas/*.schemas
 }
