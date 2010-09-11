@@ -1,0 +1,42 @@
+# $Id$
+# Maintainer:  Jan de Groot <jan@archlinux.org>
+
+pkgname=gconf
+pkgver=2.31.91
+pkgrel=1
+pkgdesc="A configuration database system"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('orbit2>=2.14.18' 'gtk2>=2.21.7' 'libxml2>=2.7.7' 'polkit>=0.96' 'libldap>=2.4.18' 'dbus')
+makedepends=('pkgconfig' 'intltool' 'gtk-doc' 'gobject-introspection')
+options=('!libtool')
+install=gconf.install
+url="http://www.gnome.org"
+source=(http://ftp.gnome.org/pub/gnome/sources/GConf/2.31/GConf-${pkgver}.tar.bz2
+        gconf-merge-schema
+        gconfpkg
+        gconf-reload.patch
+        01_xml-gettext-domain.patch)
+sha256sums=('e351ddf84a63dcc6c89e7c58d72071a00f78f2c5ea91f0e7bd4ba364ae319cdb'
+            'ee6b6e6f4975dad13a8c45f1c1f0547a99373bdecdcd6604bfc12965c328a028'
+            'bf1928718caa5df2b9e54a13cfd0f15a8fe0e09e86b84385ce023616a114e898'
+            '567b78d8b4b4bbcb77c5f134d57bc503c34867fcc6341c0b01716bcaa4a21694'
+            'c883dec2b96978874a53700cfe7f26f24f8296767203e970bc6402b4b9945eb8')
+
+build() {
+  cd "${srcdir}/GConf-${pkgver}"
+  # Patch from fedora - reloads gconf after installing schemas
+  patch -Np1 -i "${srcdir}/gconf-reload.patch"
+  # http://bugzilla.gnome.org/show_bug.cgi?id=568845
+  patch -Np1 -i "${srcdir}/01_xml-gettext-domain.patch"
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --libexecdir=/usr/lib/GConf \
+      --disable-static --enable-defaults-service
+  make pkglibdir=/usr/lib/GConf
+  make DESTDIR="${pkgdir}" install
+  install -m755 -d "${pkgdir}/etc/gconf/gconf.xml.system"
+  install -m755 "${srcdir}/gconf-merge-schema" "${pkgdir}/usr/bin/"
+  install -d -m755 "${pkgdir}/usr/sbin"
+  install -m755 "${srcdir}/gconfpkg" "${pkgdir}/usr/sbin/"
+}
