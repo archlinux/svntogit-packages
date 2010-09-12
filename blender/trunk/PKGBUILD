@@ -14,34 +14,40 @@
 cvs=false
 
 pkgname=blender
-pkgver=2.49a
+pkgver=2.49b
 pkgrel=1
 pkgdesc="A fully integrated 3D graphics creation suite"
-arch=(i686 x86_64)
-license=(GPL)
-url="http://blender3d.org"
-depends=('libjpeg' 'libpng' 'openexr' 'sdl' 'python>=2.6' 'desktop-file-utils' \
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.blender.org"
+depends=('libjpeg' 'libpng' 'openexr' 'sdl' 'python2' 'desktop-file-utils' \
          'gettext' 'libxi' 'libxmu' 'mesa' 'freetype2' 'openal')
 makedepends=('freeglut' 'libtiff' 'librsvg' 'yasm' 'csv')
 options=('!makeflags')
 install=blender.install
 source=($pkgname.desktop $pkgname.svg)
 if [ ! $cvs -o $cvs = false ]; then
-  source=(${source[@]} http://download.blender.org/source/$pkgname-$pkgver.tar.gz)
   makedepends=('freeglut' 'libtiff' 'librsvg' 'yasm')
+  source=(${source[@]} http://download.blender.org/source/$pkgname-$pkgver.tar.gz)
+  md5sums=('b5b9720b9430b1f5e2aa0b2df533fed8'
+         '0e53299444ff5570639c8f59372bc98c'
+         '718eef6a4ff377989e829b92a886cc5b')
+  sha1sums=('9ae82b5df21b4803f981e3df4a256b4be7137273'
+          '1e5452f56f590d5ce1af8c174113f0e639714c0c'
+          '43f71e7de4efe79c518d45f4b5a04e03c28d5fc5')
 fi
 
 build() {
   if [ $cvs = true ]; then
-    cd $srcdir/
+    cd "$srcdir/"
     #cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender login
-    cvs -z3 -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender checkout $pkgname || return 1
+    cvs -z3 -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender checkout $pkgname
     _cvsrel=$pkgname-$(echo $pkgver | sed 's/\./-/')-release
-    cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender update -r $_cvsrel || return 1
+    cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender update -r $_cvsrel
     find $pkgname/{bin,release/scripts} -name 'CVS' -exec rm -rf {} \; 2> /dev/null
     cd $pkgname
   else
-    cd $srcdir/$pkgname-$pkgver
+    cd "$srcdir/$pkgname-$pkgver"
   fi
 
  rm -f user-def.mk
@@ -59,7 +65,7 @@ build() {
    # does not work for Arch64
    #[ "$CARCH" = "i686" ] && sed -i 's|^\(DIRS.*\)$|\1 ode|' extern/Makefile
    # make the nan_makefiles happy
-  export NAN_PYTHON_VERSION=2.6
+  export NAN_PYTHON_VERSION=2.7
   export INTERNATIONAL=true
   export WITH_FREETYPE2=true
   export NAN_FREETYPE=/usr
@@ -89,48 +95,49 @@ build() {
   export NAN_DEBUG=-O
  ###########################################################################
  # build
-  make || return 1
+  LDFLAGS="-Wl,--hash-style=gnu"
+  make
  ###########################################################################
 }
 
 package() {
   if [ $cvs = true ]; then
-    cd $srcdir/$pkgname
+    cd "$srcdir/$pkgname"
   else
-    cd $srcdir/$pkgname-$pkgver
+    cd "$srcdir/$pkgname-$pkgver"
   fi
 
-#mkdir -p $pkgdir/usr/share/
   cd obj/linux-glibc2*/bin
 
 # common part
 
- mkdir -p $pkgdir/usr/share/
+ mkdir -p "$pkgdir/usr/share/"
 
  # install binaries
- install -Dm755 blender $pkgdir/usr/bin/blender
- install -Dm755 blenderplayer $pkgdir/usr/bin/blenderplayer
+ install -Dm755 blender "$pkgdir/usr/bin/blender"
+ install -Dm755 blenderplayer "$pkgdir/usr/bin/blenderplayer"
 
  # install internationalization support
  cd ../../../bin/.blender
  install -D -m644 .Blanguages \
-   $pkgdir/usr/share/$pkgname/.Blanguages
+   "$pkgdir/usr/share/$pkgname/.Blanguages"
  install -D -m644 .bfont.ttf \
-   $pkgdir/usr/share/$pkgname/.bfont.ttf
+   "$pkgdir/usr/share/$pkgname/.bfont.ttf"
 
- cp -R locale $pkgdir/usr/share/
+ cp -R locale "$pkgdir/usr/share/"
 
  # install scripts
  cd ../../release/
- cp -R scripts $pkgdir/usr/share/$pkgname/
+ cp -R scripts "$pkgdir/usr/share/$pkgname/"
+sed -i 's|#!/usr/bin/python|#!/usr/bin/python2|' "$pkgdir/usr/share/blender/scripts/bpymodules/blend2renderinfo.py"
 
  # install all additional stuff
  # install a freedesktop.org compliant menu entry
- install -Dm644 $srcdir/$pkgname.desktop $pkgdir/usr/share/applications/$pkgname.desktop
+ install -Dm644 "$srcdir/$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
  # install some freedesktop.org compatibility
- install -D -m644 $srcdir/$pkgname.svg $pkgdir/usr/share/pixmaps/$pkgname.svg
+ install -D -m644 "$srcdir/$pkgname.svg" "$pkgdir/usr/share/pixmaps/$pkgname.svg"
  # finally we render a png as fallback for not svg aware menu applications
  # Attention: always make sure you check the dimensions of the source-svg,
- # you can read the dimensions via inkscapes export funktion
- rsvg -w 64 -h 64 -f png $pkgdir/usr/share/pixmaps/$pkgname.svg $pkgdir/usr/share/pixmaps/$pkgname.png
+ # you can read the dimensions via inkscape's export function
+ rsvg -w 64 -h 64 -f png "$pkgdir/usr/share/pixmaps/$pkgname.svg" "$pkgdir/usr/share/pixmaps/$pkgname.png"
 }
