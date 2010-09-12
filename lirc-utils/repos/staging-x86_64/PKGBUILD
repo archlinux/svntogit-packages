@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer:
+# Contributor: Paul Mattal <paul@archlinux.org>
+
+pkgname=lirc-utils
+pkgver=0.8.6
+pkgrel=5
+pkgdesc="Linux Infrared Remote Control utils"
+arch=('i686' 'x86_64')
+url="http://www.lirc.org/"
+license=('GPL')
+_kernver=2.6.35-ARCH
+depends=('alsa-lib' 'libusb' 'libx11' 'libsm' 'python2' 'libftdi')
+makedepends=('help2man' 'kernel26-headers')
+replaces=('lirc+pctv')
+backup=('etc/conf.d/lircd.conf' 'etc/conf.d/irexec.conf')
+options=('!libtool' '!makeflags')
+source=("http://downloads.sourceforge.net/lirc/lirc-${pkgver}.tar.bz2"
+	lircd lircmd lirc.logrotate lircd.conf irexec.conf irexecd
+	'kernel-2.6.33.patch' 'kernel-2.6.35.patch')
+md5sums=('4ca24da6f5e7c2dcea74878c27a4a3f7' '680ea3732ab367c0b24a5acb566d5446'\
+         '85f7fdac55e5256967241864049bf5e9' '3deb02604b37811d41816e9b4385fcc3'\
+         '5b1f8c9cd788a39a6283f93302ce5c6e' 'f0c0ac930326168035f0c8e24357ae55'\
+         '618ca4f666341d6ade8c616ce59f4d1b' 'f029698154cf32bc51e5e69879d53a12'\
+         '5523b495eb76632bbba48b93f090f167')
+sha1sums=('199aad7381e785945e4634f9a002e5ac35bf8930' '9f2e47d79d35b5cf28525e5764cc386afa418d2c'\
+         '0e24c882337ca7fcb9adfa728361bd23f934c290' '4342b004eb53d51fcbb9af2cf136bb4990874608'\
+         '2a555514b55f1d5b40218fd453b30aba46ed53c2' '78cfda2160a537e1fafd4b0783db22704cc5476d'\
+         '548c75fc69c8fb85beec26dc74aa89a50e6c1fb4' '37708bd655746479bbaa4364855ff1e80f3c7625'\
+         '98fb3f1341bcd568cdc0abd3e5e1e669bd4ed940')
+
+build() {
+	cd "${srcdir}/lirc-${pkgver}"
+	patch -Np0 -i "${srcdir}/kernel-2.6.33.patch"
+	patch -Np1 -i "${srcdir}/kernel-2.6.35.patch"
+
+	# Disabling lirc_gpio driver as it does no longer work Kernel 2.6.22+
+	sed -i -e "s:lirc_gpio\.o::" drivers/lirc_gpio/Makefile.am
+
+	autoreconf
+	libtoolize
+
+	./configure --enable-sandboxed \
+	  --prefix=/usr \
+	  --with-driver=all \
+	  --with-kerneldir=/usr/src/linux-${_kernver} \
+	  --with-moduledir=/lib/modules/${_kernver}/kernel/drivers/misc \
+	  --with-transmitter
+	# disable parallel and bt829
+        # because of incompatibility with smp systems
+        sed -i -e "s:lirc_parallel::" -e "s:lirc_bt829::" \
+		Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
+
+	make
+}
+
+package() {
+	cd "${srcdir}/lirc-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+	install -d "${pkgdir}/usr/share/lirc" "${pkgdir}/etc/rc.d"
+	cp "${srcdir}"/{lircd,lircmd,irexecd} "${pkgdir}/etc/rc.d"
+	cp -rp remotes "${pkgdir}/usr/share/lirc"
+	chmod -R go-w "${pkgdir}/usr/share/lirc/"
+
+	# install the logrotate config
+    	install -Dm644 "${srcdir}/lirc.logrotate" "${pkgdir}/etc/logrotate.d/lirc"
+    
+	# install conf.d file
+	install -Dm644 "${srcdir}/lircd.conf" "${pkgdir}/etc/conf.d/lircd.conf"
+
+	# install conf.d file
+        install -Dm644 "${srcdir}/irexec.conf" "${pkgdir}/etc/conf.d/irexec.conf"
+
+	install -d "${pkgdir}/etc/lirc"
+
+	# remove built modules
+	rm -r "${pkgdir}/lib/"
+}
