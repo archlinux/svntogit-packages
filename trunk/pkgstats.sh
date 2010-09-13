@@ -1,7 +1,9 @@
 #!/bin/bash
 
-pkgstatsver='2.0'
+pkgstatsver='2.1'
 showonly=false
+quiet=false
+option='-q -s -S'
 
 usage() {
 	echo "usage: ${0} [option]"
@@ -11,21 +13,24 @@ usage() {
 	echo '	-h	show this help'
 	echo '	-s	show what information would be sent'
 	echo '		(but do not send anything)'
+	echo '  -q	be quiet except on errors'
 	echo ''
-	echo 'pkgstats sends a list of all installed packages and'
-	echo 'the architecture you are using to the Arch Linux project.'
+	echo 'pkgstats sends a list of all installed packages,'
+	echo 'the architecture and the mirror you are using'
+	echo 'to the Arch Linux project.'
 }
 
-while getopts 'vdhs' option; do
-	case ${option} in
+while getopts 'vdhsq' parameter; do
+	case ${parameter} in
 		v)	echo "pkgstats, version ${pkgstatsver}"; exit 0;;
-		d)	debug='-v';;
+		d)	option="${option} --trace-ascii -";;
 		s)	showonly=true;;
-		*)	usage; exit 0;;
+		q)	quiet=true;;
+		*)	usage; exit 1;;
 	esac
 done
 
-echo 'Collecting data...'
+${quiet} || echo 'Collecting data...'
 pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
 pacman -Qq > "${pkglist}"
 arch="$(uname -m)"
@@ -38,15 +43,17 @@ if ${showonly}; then
 	echo "arch=${arch}"
 	echo "pkgstatsver=${pkgstatsver}"
 	echo "mirror=${mirror}"
+	echo "quiet=${quiet}"
 else
-	echo 'Submitting data...'
-	curl ${debug} -f -H 'Expect: ' \
+	${quiet} || echo 'Submitting data...'
+	curl ${option} -H 'Expect: ' \
+		-A "pkgstats/${pkgstatsver}" \
 		--data-urlencode "packages@${pkglist}" \
 		--data-urlencode "arch=${arch}" \
-		--data-urlencode "pkgstatsver=${pkgstatsver}" \
 		--data-urlencode "mirror=${mirror}" \
+		--data-urlencode "quiet=${quiet}" \
 		'https://www.archlinux.de/?page=PostPackageList' \
-		|| echo 'Sorry, package list could not be sent.'
+	|| echo 'Sorry, data could not be sent.' >&2
 fi
 
 rm -f "${pkglist}"
