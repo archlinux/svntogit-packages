@@ -4,7 +4,7 @@
 pkgbase=('postgresql')
 pkgname=('postgresql-libs' 'postgresql')
 pkgver=8.4.4
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.postgresql.org"
 license=('BSD')
@@ -61,6 +61,8 @@ package_postgresql-libs() {
     popd
   done
 
+  install -D -m644 doc/man1/pg_config.1 "${pkgdir}/usr/share/man/man1/pg_config.1"
+
   cd src/include
 
   mkdir -p "${pkgdir}"/usr/include/{libpq,postgresql/internal/libpq}
@@ -79,7 +81,6 @@ package_postgresql-libs() {
   install -m644 libpq/pqcomm.h "${pkgdir}/usr/include/postgresql/internal/libpq/"
 }
 
-
 package_postgresql() {
   pkgdesc="A sophisticated object-relational DBMS"
   backup=('etc/conf.d/postgresql' 'etc/pam.d/postgresql')
@@ -93,22 +94,24 @@ package_postgresql() {
 
   # install
   make DESTDIR="${pkgdir}" install
+  # we don't want this, it is in the -libs package
+  pushd src/bin/pg_config
+  make DESTDIR="${pkgdir}" uninstall
+  rm "${pkgdir}/usr/share/man/man1/pg_config.1"
+  popd
 
   # install license
   install -D -m644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE"
 
   # install contribs
   cd contrib
-  make DESTDIR="${pkgdir}" install;
+  make DESTDIR="${pkgdir}" install
 
   # clean up unneeded installed items
   rm -rf "${pkgdir}/usr/include/postgresql/internal"
   rm -rf "${pkgdir}/usr/include/libpq"
-  # the below line is expected to produce an error; fix this one day
-  #rm -f ${pkgdir}/usr/include/*
   find "${pkgdir}/usr/include" -maxdepth 1 -type f -execdir rm {} +
-  rm -f "${pkgdir}/usr/bin/pg_config"
-  
+
   # install launch script
   install -D -m755 "${srcdir}/postgresql" "${pkgdir}/etc/rc.d/postgresql"
 
