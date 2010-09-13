@@ -3,7 +3,7 @@
 pkgstatsver='2.1'
 showonly=false
 quiet=false
-option='-q -s -S'
+option='-q -s -S -4'
 
 usage() {
 	echo "usage: ${0} [option]"
