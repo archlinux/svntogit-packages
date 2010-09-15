@@ -2,7 +2,7 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=go-openoffice
-_GOver=3.2.1.3 # = final 3.2.1 != post OOo 3.2.1 final bugfix
+_GOver=3.2.1.4 # = final 3.2.1 != post OOo 3.2.1 final bugfix
 pkgver=${_GOver}
 pkgrel=1
 pkgdesc="OpenOffice.org - go-oo.org enhanced version of SUN's office suite"
@@ -12,17 +12,17 @@ _ootag=ooo320-m19 # m18/m19 = OOo 3.2.1 RC
 license=('LGPL3')
 url="http://go-oo.org/"
 install=${pkgname}.install
-makedepends=('bison' 'git' 'rsync' 'wget' 'automake' 'autoconf' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst' 'boost>=1.41.0'
-             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' 'zip' "xulrunner>=1.9.2.2" 'unixodbc' 'nss' 'hsqldb-java' 
-             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
-	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes'
+makedepends=('git' 'rsync' 'boost' 'sane' 'perl-archive-zip' 'zip' 'unzip' 'xulrunner' 'unixodbc' 'hsqldb-java'
+             'apache-ant' 'gperf' 'poppler' 'kdelibs' 'gconf' 'openjdk6' 'cppunit'
+	     'beanshell'  'vigra' 'libldap' 'lucene' 'libmythes' 'junit' 'libwpg'
 	     # for additional ooo-build features
 	     'mesa>=7.5' 'gstreamer0.10-base>=0.10.26'  'mono>=2.6.1') 
 	#'saxon'
 depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
           'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
-	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	  'redland' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
 	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
+	  #'saxon'
 optdepends=('java-runtime:     adds java support'
              'libcups:          adds printing support'
              'gconf:            adds additional gnome support'
@@ -35,6 +35,7 @@ optdepends=('java-runtime:     adds java support'
              'beanshell:        interactive java -- good for prototyping /macros'
              'vigra:            C++ computer vision library, usable in Basebmp'
              'libmspack:        library for Microsoft compression formats for use in FontOOo'
+	     'libwpg:		library for importing and converting Corel WordPerfect(tm) Graphics images'
              'libldap:          to get profiles via ldap'
              'lucene:           full-text search engine library for Java needed in the help section'
              'sane:             for scanner access'
@@ -67,12 +68,34 @@ source=(${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
 options=('!makeflags')
 noextract=(ooo-cli-prebuilt-3.2.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar.gz extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll 
            scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz ooo_oxygen_images-2009-06-17.tar.gz)
+md5sums=('d3908a2e1f13b0adfee33c45572d4de3'
+         'a77cc2fdff90146485e0b1f1398bb0d4'
+         'c6796b524226b26f7129554296a6f09c'
+         '59a19e76522c11142c55db71b0ca8c1a'
+         '5598a5e500ad922e37b159dee72fc993'
+         '246e8f38b2a1af1bcff60ee0da59300b'
+         '36f323a55ee83e9dc968e1b92569b62a'
+         '1948e39a68f12bfa0b7eb309c14d940c'
+         'e3a0b76dcd876f3d721ee7183729153d'
+         '04181e5ef82973eb349d3122a19d2274'
+         '64d66018897d759358f454010b6e75d2'
+         '799fc3b835a79adce8c88a3fee0150c1'
+         'db556b750bf3eac8481a4cc5e29e5af1'
+         '0b3ffc43231c525db1798495a6676902'
+         'a169ab152209200a7bad29a275cb0333'
+         'd721b0add40355d7049ec694b91eb332'
+         'cf8a6967f7de535ae257fa411c98eb88'
+         'b005c4cf9f8e586539ca98c9cfe9bb77')
 
 # source PKGBUILD && mksource
 mksource() {
+	source /etc/makepkg.conf && echo ${SRCDEST}
         mkdir /tmp/$pkgname-source
         pushd /tmp/$pkgname-source
-	wget ${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
+	if [ -e ${SRCDEST}/ooo-build-${_GOver}.tar.gz ]; then
+	      cp $SRCDEST/ooo-build-${_GOver}.tar.gz .
+	 else wget ${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
+	fi
 	tar -xvf ooo-build-${_GOver}.tar.gz
 	cd ooo-build-${_GOver}
 	./configure --quiet --with-distro=ArchLinux
@@ -127,26 +150,23 @@ build() {
 		--enable-ldap \
 		--enable-lockdown\
 		--enable-opengl \
-		--enable-mediawiki\
 		--enable-minimizer \
 		--enable-odk\
 		--enable-opengl\
 		--enable-pdfimport \
 		--enable-presenter-console \
+		--enable-presenter-extra-ui\
 		--enable-report-builder\
 		--enable-wiki-publisher \
 		--enable-ogltrans \
-		--without-gpc\
 		--without-fonts\
 		--without-afms\
-		--without-gpc\
-		--without-nas\
 		--without-ppds\
 		--without-system-agg\
 		--without-system-libwps\
-		--without-system-libwpg\
 		--without-system-mdds\
 		--with-system-cppunit\
+		--with-system-libwpg\
 		--with-system-redland\
 		--without-system-saxon\
 		--with-openldap\
