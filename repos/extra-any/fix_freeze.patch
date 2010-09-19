@@ -1,0 +1,73 @@
+diff --git a/deluge/ui/gtkui/connectionmanager.py b/deluge/ui/gtkui/connectionmanager.py
+index 554c570..3b9ddf4 100644
+--- a/deluge/ui/gtkui/connectionmanager.py
++++ b/deluge/ui/gtkui/connectionmanager.py
+@@ -99,12 +99,16 @@ class ConnectionManager(component.Component):
+ 
+         self.config = ConfigManager("hostlist.conf.1.2", DEFAULT_CONFIG)
+ 
++        self.running = False
++
+     # Component overrides
+     def start(self):
+         pass
+ 
+     def stop(self):
+-        pass
++        # Close this dialog when we are shutting down
++        if self.running:
++            self.connection_manager.response(gtk.RESPONSE_CLOSE)
+ 
+     def shutdown(self):
+         pass
+diff --git a/deluge/ui/gtkui/gtkui.py b/deluge/ui/gtkui/gtkui.py
+index 255622a..4856986 100644
+--- a/deluge/ui/gtkui/gtkui.py
++++ b/deluge/ui/gtkui/gtkui.py
+@@ -167,7 +167,7 @@ class GtkUI(object):
+             self.gnome_prog = gnome.init("Deluge", deluge.common.get_version())
+             self.gnome_client = gnome.ui.master_client()
+             def on_die(*args):
+-                gtk.main_quit()
++                reactor.stop()
+             self.gnome_client.connect("die", on_die)
+             log.debug("GNOME session 'die' handler registered!")
+         except Exception, e:
+@@ -180,7 +180,7 @@ class GtkUI(object):
+             def win_handler(ctrl_type):
+                 log.debug("ctrl_type: %s", ctrl_type)
+                 if ctrl_type in (CTRL_CLOSE_EVENT, CTRL_SHUTDOWN_EVENT):
+-                    gtk.main_quit()
++                    reactor.stop()
+                     return 1
+             SetConsoleCtrlHandler(win_handler)
+ 
+diff --git a/deluge/ui/gtkui/mainwindow.py b/deluge/ui/gtkui/mainwindow.py
+index ad33fd0..1153b1e 100644
+--- a/deluge/ui/gtkui/mainwindow.py
++++ b/deluge/ui/gtkui/mainwindow.py
+@@ -46,6 +46,7 @@ from deluge.ui.client import client
+ import deluge.component as component
+ from deluge.configmanager import ConfigManager
+ from deluge.ui.gtkui.ipcinterface import process_args
++from twisted.internet import reactor
+ 
+ import deluge.common
+ import common
+@@ -152,7 +153,7 @@ class MainWindow(component.Component):
+         return self.main_glade
+ 
+     def quit(self):
+-        gtk.main_quit()
++        reactor.stop()
+ 
+     def load_window_state(self):
+         x = self.config["window_x_pos"]
+@@ -238,7 +239,6 @@ class MainWindow(component.Component):
+ 
+     def on_newversionavailable_event(self, new_version):
+         if self.config["show_new_releases"]:
+-            from twisted.internet import reactor
+             from deluge.ui.gtkui.new_release_dialog import NewReleaseDialog
+             reactor.callLater(5.0, NewReleaseDialog().show, new_version)
+ 
