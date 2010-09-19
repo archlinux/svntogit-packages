@@ -1,1 +1,0 @@
-DELUGE_USER="deluge"
