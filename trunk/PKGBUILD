@@ -2,8 +2,8 @@
 # Contributor: Daniele Paolella <dp@mcrservice.it>
 
 pkgname=python-virtualenv
-pkgver=1.4.9
-pkgrel=2
+pkgver=1.5.1
+pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 arch=('any')
 url="http://pypi.python.org/pypi/virtualenv"
@@ -12,7 +12,8 @@ depends=('python2' 'setuptools')
 replaces=('virtualenv')
 conflicts=('virtualenv')
 source=("http://pypi.python.org/packages/source/v/virtualenv/virtualenv-$pkgver.tar.gz")
-md5sums=('c49067cab242b5ff8c7b681a5a99533a')
+md5sums=('3daa1f449d5d2ee03099484cecb1c2b7')
+sha256sums=('e2bbc4e80164e1ad83afba698559c2923f4bb7e61197b885c0a0befb29533438')
 
 build() {
   cd "$srcdir/virtualenv-$pkgver"
