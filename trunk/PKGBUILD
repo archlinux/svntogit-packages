@@ -3,14 +3,14 @@
 
 pkgname=pkgstats
 pkgver=2.1
-pkgrel=2
+pkgrel=3
 pkgdesc='submits a list of installed packages to the Arch Linux project'
 arch=('any')
 url='https://www.archlinux.de'
 license=('GPL')
 depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'cron')
 source=('pkgstats.sh' 'pkgstats.cron')
-md5sums=('72131cc784e667db6cbd1e999175bd63'
+md5sums=('45df3a655efab2f8d38dcbe21f1ff14a'
          'e86e6b9778303367f2e31f5c311da685')
 
 package() {

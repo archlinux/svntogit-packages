@@ -13,11 +13,13 @@ usage() {
 	echo '	-h	show this help'
 	echo '	-s	show what information would be sent'
 	echo '		(but do not send anything)'
-	echo '  -q	be quiet except on errors'
+	echo '	-q	be quiet except on errors'
 	echo ''
 	echo 'pkgstats sends a list of all installed packages,'
 	echo 'the architecture and the mirror you are using'
 	echo 'to the Arch Linux project.'
+	echo ''
+	echo 'Statistics are available at https://www.archlinux.de/?page=Statistics'
 }
 
 while getopts 'vdhsq' parameter; do
