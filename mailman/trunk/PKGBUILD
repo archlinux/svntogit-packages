@@ -3,12 +3,12 @@
 
 pkgname=mailman
 pkgver=2.1.13
-pkgrel=2
+pkgrel=3
 pkgdesc="Mailing list manager with built in web access"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.list.org/"
-depends=('python' 'smtp-server')
+depends=('python2' 'smtp-server')
 # 'Defaults.py' should not be changed by users; 'mm_cfg.py' should instead.
 backup=('usr/lib/mailman/Mailman/mm_cfg.py')
 install=$pkgname.install
@@ -25,17 +25,20 @@ md5sums=('3235323ccb3e0135c10b7c66a440390b'
 build() {
   cd $srcdir/$pkgname-$pkgver
 
+  # fix calls to /usr/bin/python
+  find . -name '*.py' | xargs sed -i 's@^#!.*python$@#!/usr/bin/python2@'
+
   # fix directory permissions to satisfy check_perms
   patch -Np1 -i ${srcdir}/mailman-2.1-build.patch
   
   # the mailman user and group are required to build (better to satisfy check_perms)
-  if [ ! `egrep '^mailman' /etc/passwd` ]; then
+  if ! egrep '^mailman' /etc/passwd; then
     msg "Adding user/group mailman (temporarily)"
     groupadd -g 80 mailman
     useradd -s /sbin/nologin -c "GNU Mailing List Manager" -d /usr/lib/mailman -u 80 -g mailman -M -r mailman
-    cleanup=1
+    export cleanup=1
   else
-    cleanup=0
+    export cleanup=0
   fi
 
   ./configure --without-permcheck \
@@ -43,7 +46,7 @@ build() {
               --with-var-prefix=/var/lib/mailman \
               --with-mail-gid=mailman \
 	      --with-username=mailman --with-groupname=mailman \
-              --with-cgi-gid=http
+              --with-cgi-gid=http --with-python=/usr/bin/python2
 
   make
 }
