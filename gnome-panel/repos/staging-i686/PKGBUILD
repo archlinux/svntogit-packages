@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gnome-panel
+pkgname=('gnome-panel' 'gnome-panel-bonobo')
+pkgver=2.32.0.2
+pkgrel=2
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.gnome.org"
+makedepends=('libwnck' 'gnome-menus' 'evolution-data-server' 'gnome-desktop' 'libgweather' 'librsvg' 'hicolor-icon-theme' 'libcanberra' 'libbonoboui' 'gnome-doc-utils' 'pkg-config' 'intltool' 'networkmanager' 'gobject-introspection')
+options=('!libtool' '!emptydirs')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/2.32/${pkgbase}-${pkgver}.tar.bz2)
+sha256sums=('0563feb33cea2e055ae83709aee3673978a4bea4a10ef4d05e00af1786709238')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --libexecdir=/usr/lib/gnome-panel \
+      --disable-scrollkeeper
+  make
+  sed -e 's/$(am__append_1)//' -i Makefile
+}
+
+package_gnome-panel() {
+  pkgdesc="The GNOME Panel"
+  depends=('gnome-menus>=2.30.4' 'gnome-desktop>=2.32.0' 'evolution-data-server>=2.32.0' 'librsvg>=2.31.0' 'libcanberra>=0.25' 'libwnck>=2.30.5' 'hicolor-icon-theme')
+  optdepends=('gnome-panel-bonobo: libbonoboui-based applet support')
+  groups=('gnome')
+  install=gnome-panel.install
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-panel-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
+
+package_gnome-panel-bonobo() {
+  pkgdesc="Modules for libbonoboui-based applet support for the GNOME Panel"
+  depends=('libbonoboui>=2.24.3' "gnome-panel=${pkgver}")
+  conflicts=('gnome-panel<2.31.92')
+  install=gnome-panel-bonobo.install
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make -C bonobo "${pkgdir}" DESTDIR="${pkgdir}" install
+}
