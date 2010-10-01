@@ -3,7 +3,7 @@
 
 pkgname=git
 pkgver=1.7.3.1
-pkgrel=1
+pkgrel=2
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
@@ -45,8 +45,9 @@ package() {
   cp -a ./contrib $pkgdir/usr/share/git/ || return 1
 
   # scripts are for python 2.x
-  find "$pkgdir" -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
-  sed -i 's|#!/usr/bin/python|#!/usr/bin/env python2|' "$pkgdir"/usr/lib/git-core/git-remote-testgit
+  sed -i 's|#![ ]*/usr/bin/env python|#!/usr/bin/env python2|' \
+    $(find "$pkgdir" -name '*.py') \
+    "$pkgdir"/usr/share/git/{fast-import/git-p4,gitview/gitview}
 
   # emacs interface
   mkdir -p $pkgdir/usr/share/emacs/site-lisp
