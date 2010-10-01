@@ -1,0 +1,39 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-applets
+pkgver=2.32.0
+pkgrel=2
+pkgdesc="GNOME Applets"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('gstreamer0.10-base-plugins>=0.10.30' 'gnome-panel>=2.31.92' 'libgtop>=2.28.1' 'gucharmap>=2.32.0' 'libnotify>=0.4.5' 'cpufrequtils')
+makedepends=('gnome-doc-utils>=0.20.1' 'pkgconfig' 'gnome-settings-daemon>=2.31.92' 'intltool' 'gnome-icon-theme>=2.31.0' 'gnome-python-desktop>=2.31.1' 'networkmanager>=0.8')
+optdepends=('python-gnomeapplet: invest-applet')
+options=(!emptydirs)
+url="http://www.gnome.org"
+groups=(gnome)
+install=gnome-applets.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.32/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('3b2611b3253ed5418f37c83d710918e93476a783637ddb4ef7e5eab7a83a4c1b')
+	
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --libexecdir=/usr/lib/gnome-applets \
+      --localstatedir=/var --disable-static \
+      --disable-scrollkeeper --enable-mixer-applet \
+      --disable-schemas-install
+  make
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+  rm -f ${pkgdir}/usr/lib/*.la
+
+  sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" \
+    $pkgdir/usr/bin/invest-chart \
+    $pkgdir/usr/lib/gnome-applets/invest-applet \
+    $pkgdir/usr/lib/python2.7/site-packages/invest/chart.py
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-applets-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
