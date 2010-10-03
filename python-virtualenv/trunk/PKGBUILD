@@ -3,7 +3,7 @@
 
 pkgname=python-virtualenv
 pkgver=1.5.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Virtual Python Environment builder"
 arch=('any')
 url="http://pypi.python.org/pypi/virtualenv"
@@ -19,5 +19,9 @@ build() {
   cd "$srcdir/virtualenv-$pkgver"
   python2 setup.py build
   python2 setup.py install --prefix=/usr --root="$pkgdir"
+  
+  sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" \
+    $pkgdir/usr/lib/python2.7/site-packages/virtualenv.py
+  
   install -D -m644 docs/license.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
