@@ -1,4 +1,4 @@
-# $Id $
+# $Id$
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
 # Contributor: Angel 'angvp' Velasquez <angvp[at]archlinux.com.ve>
@@ -22,7 +22,7 @@ md5sums=('d6c612d63a84d79440912a1b29d3b981')
 package() {
   cd ${srcdir}/lxml-$pkgver
 
-  python2 setup.py install --root=${pkgdir}
+  python2 setup.py install --root="${pkgdir}" --optimize=1
 
   install -D -m644 LICENSES.txt ${pkgdir}/usr/share/licenses/$pkgname/LICENSE
   install -D -m644 doc/licenses/BSD.txt ${pkgdir}/usr/share/licenses/$pkgname/BSD.txt
