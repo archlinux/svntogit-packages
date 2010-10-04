@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+# Contributer: Jason Chu <jason@archlinux.org>
+
+pkgname=python
+pkgver=3.1.2
+pkgrel=2
+_pybasever=3.1
+pkgdesc="Next generation of the python high-level scripting language"
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://www.python.org"
+depends=('expat' 'bzip2' 'gdbm' 'openssl' 'zlib')
+makedepends=('tk' 'sqlite3')
+optdepends=('tk: for tkinter')
+provides=('python3')
+replaces=('python3')
+options=('!makeflags')
+source=(http://www.python.org/ftp/python/${pkgver}/Python-${pkgver}.tar.bz2
+        python-internal-expat.patch)
+md5sums=('45350b51b58a46b029fb06c61257e350'
+         '993800dbcc0c4f199c1ceee998a06e71')
+
+build() {
+  cd ${srcdir}/Python-${pkgver}
+
+  patch -Np0 -i ${srcdir}/python-internal-expat.patch
+
+  export OPT="${CFLAGS}"
+  ./configure --prefix=/usr --enable-shared --with-threads --with-computed-gotos \
+              --enable-unicode --with-wide-unicode
+
+  make
+}
+
+package() {
+  cd ${srcdir}/Python-${pkgver}
+  make DESTDIR=${pkgdir} install
+
+  # why are these not done by default...
+  ln -sf python3 ${pkgdir}/usr/bin/python
+  ln -sf python3-config ${pkgdir}/usr/bin/python-config
+  ln -sf idle3 ${pkgdir}/usr/bin/idle
+  ln -sf pydoc3 ${pkgdir}/usr/bin/pydoc
+
+  # clean-up reference to build directory
+  sed -i "s#$srcdir/Python-${pkgver}:##" $pkgdir/usr/lib/python3.1/config/Makefile
+
+  # Fix conflicts with python2 - python2 version is newer...
+  rm ${pkgdir}/usr/bin/2to3
+
+  # license
+  install -Dm644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+}
