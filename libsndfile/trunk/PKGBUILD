@@ -1,9 +1,8 @@
 # $Id$
 # Maintainer: Eric Belanger <eric@archlinux.org>
-# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=libsndfile
-pkgver=1.0.21
+pkgver=1.0.22
 pkgrel=1
 pkgdesc="A C library for reading and writing files containing sampled sound"
 arch=('i686' 'x86_64')
@@ -13,8 +12,8 @@ depends=('alsa-lib' 'flac' 'libvorbis')
 options=('!libtool')
 changelog=ChangeLog
 source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz)
-md5sums=('880a40ec636ab2185b97f8927299b292')
-sha1sums=('136845a8bb5679e033f8f53fb98ddeb5ee8f1d97')
+md5sums=('79b6ee2c33c878448c67698e1bf85378')
+sha1sums=('2bf823dcacf8ee78c56b8a877672753ee24d9d3b')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
