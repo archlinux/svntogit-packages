@@ -4,23 +4,30 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.7.4
-pkgrel=3
+pkgver=4.7.7
+pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
 depends=('sip' 'qt' 'dbus-python')
-makedepends=('phonon' 'python-opengl')
-optdepends=('phonon' 'python-opengl' 'qscintilla')
+makedepends=('phonon' 'python-opengl' 'qt-assistant-compat')
+optdepends=('phonon: enable audio and video in PyQt applications'
+	'python-opengl: enable OpenGL 3D graphics in PyQt applications'
+	'qscintilla: QScintilla API'
+	'qt-assistant-compat: add PyQt online help in Qt Assistant')
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=("http://pyqwt.sourceforge.net/support/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('88e9f1bc467cccf424d2032e3470982c')
+source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
+	'fix-kdebindings-4.5.2.patch')
+md5sums=('b7b30ab25ee976407b37052f2f724bce'
+	'8484f787214d55d23bc3b790fc80b450')
 
 build() {
   cd ${srcdir}/PyQt-x11-gpl-${pkgver}
+
+  patch -Np0 -i ${srcdir}/fix-kdebindings-4.5.2.patch
   
   python2 configure.py \
     --confirm-license \
