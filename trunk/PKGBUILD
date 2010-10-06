@@ -7,8 +7,8 @@
 
 pkgname=glibc
 pkgver=2.12.1
-pkgrel=1
-_glibcdate=20100811
+pkgrel=2
+_glibcdate=20101007
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -25,13 +25,19 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.10-dont-build-timezone.patch
         glibc-2.10-bz4781.patch
         glibc-__i686.patch
+        glibc-2.12.1-make-3.82-compatibility.patch
+        glibc-2.12.1-static-shared-getpagesize.patch
+        glibc-2.12.1-but-I-am-an-i686.patch
         nscd
         locale.gen.txt
         locale-gen)    
-md5sums=('3f0d64de5a9fc5614d8acc0f1d5846ed'
+md5sums=('17189b123cebeb71cf7b7e7416b601a6'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
+         '1deecaa78c0909f7175732da2af796b5'
+         '3215ed6996e7ecdd35bc105937c6e0dc'
+         'de17165e3fa721c4e056dacfc9ee1e52'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -56,6 +62,16 @@ build() {
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=411
   # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
   patch -Np1 -i ${srcdir}/glibc-__i686.patch
+
+  # http://sourceware.org/git/?p=glibc.git;a=patch;h=32cf4069
+  patch -Np1 -i ${srcdir}/glibc-2.12.1-make-3.82-compatibility.patch
+
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=11929
+  patch -Np1 -i ${srcdir}/glibc-2.12.1-static-shared-getpagesize.patch
+  
+  # fedora "fix" for excess linker optimization on i686
+  # proper fix will be in binutils-2.21
+  patch -Np1 -i ${srcdir}/glibc-2.12.1-but-I-am-an-i686.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -108,7 +124,7 @@ package() {
 
   if [[ ${CARCH} = "x86_64" ]]; then
     # fix for the linker
-    sed -i '/RTLDLIST/s%/ld-linux.so.2 /lib64%%' ${pkgdir}/usr/bin/ldd
+    sed -i '/RTLDLIST/s%lib64%lib%' ${pkgdir}/usr/bin/ldd
     #Comply with multilib binaries, they look for the linker in /lib64
     mkdir ${pkgdir}/lib64
     cd ${pkgdir}/lib64
