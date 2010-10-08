@@ -2,8 +2,8 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=8.71
-pkgrel=3
+pkgver=9.00
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -17,34 +17,19 @@ provides=('ghostscript-lprng')
 url="http://www.ghostscript.com/"
 source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.xz
 	ghostscript-fPIC.patch
-	ghostscript-system-jasper.patch
-	libpng14.patch
-	ghostscript-pdf2dsc.patch
-	svn_r10890.patch)
+	ghostscript-system-jasper.patch)
 options=('!libtool' '!makeflags')
-md5sums=('5005d68f7395c2bfc4b05c1a60d9b6ba'
-         '1a8fcacf0005214db823225c870f093d'
-         '03e27cd02471ab3b642c344fa06b623e'
-         'be94ee357986f7f63d1b470da5bdc99e'
-         'f88f3764fc11e3ae2a86b17d2502da2f'
-         'fe0888a74d7870af234ad53a2f74380a')
+md5sums=('1ca5f245677f78f573e6490bdb40702f'
+         '766d44c47c693f96941b658e360c1277'
+         '03e27cd02471ab3b642c344fa06b623e')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
   # force it to use system-libs
   rm -rf jpeg libpng zlib jasper expat
 
-  patch -Np1 -i ${srcdir}/libpng14.patch || return 1
-
   # fix build with systems jasper
   patch -Np1 -i ${srcdir}/ghostscript-system-jasper.patch || return 1
-  
-  # fix PDF viewing with gv - from Fedora
-  patch -Np1 -i ${srcdir}/ghostscript-pdf2dsc.patch || return 1
-  
-  # fix segfaults - http://bugs.archlinux.org/task/18339
-  patch -Np1 -i ${srcdir}/svn_r10890.patch || return 1
-
 
   if [ "$CARCH" = "x86_64" ]; then
     patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch || return 1
