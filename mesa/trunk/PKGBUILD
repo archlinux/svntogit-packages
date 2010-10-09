@@ -1,44 +1,40 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
 pkgname=('mesa' 'libgl' 'ati-dri' 'intel-dri' 'unichrome-dri' 'mach64-dri' 'mga-dri' 'r128-dri' 'savage-dri' 'sis-dri' 'tdfx-dri' 'nouveau-dri')
-pkgver=7.8.2
-pkgrel=3
+pkgver=7.9
+pkgrel=1
 arch=(i686 x86_64)
-makedepends=('glproto>=1.4.12' 'pkgconfig' 'libdrm>=2.4.21' 'libxxf86vm>=1.1.0' 'libxdamage>=1.1.2' 'expat>=2.0.1' 'libx11>=1.3.5' 'libxt>=1.0.8' 'gcc-libs>=4.5' 'dri2proto=2.3' 'python')
+makedepends=('glproto>=1.4.12' 'pkgconfig' 'libdrm>=2.4.22' 'libxxf86vm>=1.1.0' 'libxdamage>=1.1.3' 'expat>=2.0.1' 'libx11>=1.3.5' 'libxt>=1.0.8' 
+             'gcc-libs>=4.5' 'dri2proto=2.3' 'python2' 'talloc' 'libxml2')
 url="http://mesa3d.sourceforge.net"
 license=('custom')
 source=(ftp://ftp.freedesktop.org/pub/mesa/${pkgver}/MesaLib-${pkgver}.tar.bz2
-        ftp://ftp.freedesktop.org/pub/mesa/${pkgver}/MesaDemos-${pkgver}.tar.bz2
         ftp://ftp.archlinux.org/other/mesa/gl-manpages-1.0.1.tar.bz2
-        mesa-7.8-git.patch
-        fix-glx1.3-crash-xorg19.patch
-        nouveau_class.h
         LICENSE)
-md5sums=('6be2d343a0089bfd395ce02aaf8adb57'
-         '757d9e2e06f48b1a52848be9b0307ced'
+md5sums=('82c740c49d572baa6da2b1a1eee90bca'
          '6ae05158e678f4594343f32c2ca50515'
-         '397c1249edcf03227697fef3f7129fe4'
-         'c36ad611208c802eebe85144055b4c56'
-         '850546127f5185959407a78b55f898d8'
          '5c65a0fe315dd347e09b1f2826a1df5a')
 
 build() {
+  # python2 build fixes
+  sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+         -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" $(find $srcdir -name '*.py')
+  sed -i -e "s|PYTHON2 = python|PYTHON2 = python2|" "${srcdir}/Mesa-${pkgver}"/configs/{default,autoconf.in}
+  sed -i -e "s|python|python2|" "${srcdir}/Mesa-${pkgver}"/src/gallium/auxiliary/Makefile
+
   cd "${srcdir}/Mesa-${pkgver}"
-  patch -Np1 -i "${srcdir}/mesa-7.8-git.patch"
-  patch -Np1 -i "${srcdir}/fix-glx1.3-crash-xorg19.patch"
-  cp "${srcdir}/nouveau_class.h" "src/gallium/drivers/nouveau/"
   ./configure --prefix=/usr \
     --with-dri-driverdir=/usr/lib/xorg/modules/dri \
-    --with-dri-drivers=swrast,radeon,r200,r300,r600,i810,i915,i965,unichrome,mach64,mga,r128,savage,sis,tdfx \
     --disable-egl \
-    --disable-gallium-intel \
+    --enable-gallium-radeon \
+    --enable-gallium-nouveau \
     --enable-glx-tls \
     --with-driver=dri \
     --enable-xcb \
     --with-state-trackers=dri,glx \
-    --enable-gallium-nouveau \
     --disable-glut
   make
 
@@ -48,7 +44,7 @@ build() {
 }
 
 package_libgl() {
-  depends=('libdrm>=2.4.21' 'libxxf86vm>=1.1.0' 'libxdamage>=1.1.2' 'expat>=2.0.1')
+  depends=('libdrm>=2.4.22' 'libxxf86vm>=1.1.0' 'libxdamage>=1.1.3' 'expat>=2.0.1')
   pkgdesc="Mesa 3-D graphics library and DRI software rasterizer"
 
   cd "${srcdir}/Mesa-${pkgver}"
@@ -66,13 +62,11 @@ package_libgl() {
 }
 
 package_mesa() {
-  depends=('libgl' 'libx11>=1.3.5' 'libxt>=1.0.8' 'gcc-libs>=4.5' 'dri2proto=2.3' 'libdrm>=2.4.20' 'glproto>=1.4.12')
+  depends=('libgl' 'libx11>=1.3.5' 'libxt>=1.0.8' 'gcc-libs>=4.5' 'dri2proto=2.3' 'libdrm>=2.4.22' 'glproto>=1.4.12')
   pkgdesc="Mesa 3-D graphics libraries and include files"
 
   cd "${srcdir}/Mesa-${pkgver}"
   make DESTDIR="${pkgdir}" install
-  install -m755 -d "${pkgdir}/usr/bin"
-  install -m755 progs/xdemos/glx{gears,info} "${pkgdir}/usr/bin/"
 
   rm -f "${pkgdir}/usr/lib/libGL.so"*
   rm -rf "${pkgdir}/usr/lib/xorg"
@@ -89,13 +83,16 @@ package_mesa() {
 
 package_ati-dri() {
   depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for AMD/ATI Radeon"
+  pkgdesc="Mesa DRI + Gallium3D r300 drivers for AMD/ATI Radeon"
   conflicts=('xf86-video-ati<6.9.0-6')
 
   cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
   make -C radeon DESTDIR="${pkgdir}" install
   make -C r200 DESTDIR="${pkgdir}" install
-  make -C r300 DESTDIR="${pkgdir}" install
+  # classic mesa driver for R300 r300_dri.so
+# make -C r300 DESTDIR="${pkgdir}" install  <------- depricated
+  # gallium3D driver for R300 r300_dri.so
+  make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-r300 DESTDIR="${pkgdir}" install
   make -C r600 DESTDIR="${pkgdir}" install
 }
 
@@ -173,8 +170,12 @@ package_tdfx-dri() {
 
 package_nouveau-dri() {
   depends=("libgl=${pkgver}")
-  pkgdesc="Mesa Gallium3D DRI drivers for Nouveau - highly experimental/unsupported"
+  pkgdesc="Mesa classic DRI + Gallium3D drivers for Nouveau"
 
-  cd "${srcdir}/Mesa-${pkgver}/src/gallium/winsys/drm/nouveau/dri"
-  make DESTDIR="${pkgdir}" install
+  cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+  # classic mesa driver for nv10 , nv20 nouveau_vieux_dri.so
+  make -C nouveau DESTDIR="${pkgdir}" install
+  # gallium3D driver for nv30 - nv40 - nv50 nouveau_dri.so
+  make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-nouveau DESTDIR="${pkgdir}" install
 }
+
