@@ -1,0 +1,51 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+#Contributor: kiefer <jorgelmadrid@gmail.com>
+#Based on lxdm-git by phillipe
+
+pkgname=lxdm
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="Lightweight Display Manager (part of LXDE)"
+arch=('i686' 'x86_64')
+url="http://sourceforge.net/projects/lxdm/"
+license=('GPL')
+groups=('lxde')
+conflicts=('lxdm-git')
+depends=('gtk2' 'xorg-server' 'consolekit')
+makedepends=('intltool')
+install=${pkgname}.install
+backup=('etc/lxdm/lxdm.conf') # 'etc/lxdm/xinitrc')
+source=(http://downloads.sourceforge.net/project/lxdm/lxdm%20${pkgver}/$pkgname-$pkgver.tar.gz
+	Xsession.patch lxdm.patch lxdm-pam.patch lxdm-daemon)
+md5sums=('1d0688e088edab7c3c563263eb2f9654'
+         '9bdf95adb74d81d4b6b6176fb1142090'
+         'baed9055e8825a5511712bc095197519'
+         'b20fe3c8487a039050986d60e45233a9'
+         '705f394052fdd0dec22e95321d170de0')
+
+build() {
+  	cd $srcdir/$pkgname-$pkgver
+    	./configure --sysconfdir=/etc --prefix=/usr --libexecdir=/usr/lib/lxdm
+	make
+  	
+	patch -Np0 < ../lxdm.patch
+	patch -Np0 < ../Xsession.patch
+}
+
+
+package() {
+  	cd $srcdir/$pkgname-$pkgver
+  	make DESTDIR="${pkgdir}" install || return 1
+
+	install -m644 ${srcdir}/lxdm-pam.patch ${pkgdir}/etc/pam.d/lxdm || return 1
+	install -Dm755 ${srcdir}/lxdm-daemon ${pkgdir}/etc/rc.d/lxdm || return 1
+	
+	# these files are not in the package, but should be owned by lxdm - taken from Fedora pkg
+#	touch ${pkgdir}/etc/lxdm/xinitrc
+	mkdir -p ${pkgdir}/var/run/lxdm
+	mkdir -p ${pkgdir}/var/lib/lxdm
+#	touch ${pkgdir}/var/lib/lxdm/lxdm.conf
+	
+	# fix the greeter location
+	sed -i -e "s/libexec/lib\/lxdm/" ${pkgdir}/etc/lxdm/lxdm.conf
+}
