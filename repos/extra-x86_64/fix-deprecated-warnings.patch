@@ -1,0 +1,41 @@
+Index: core/polkitqt1-authority.cpp
+===================================================================
+--- core/polkitqt1-authority.cpp	(revision 1183413)
++++ core/polkitqt1-authority.cpp	(working copy)
+@@ -177,12 +177,17 @@
+     m_revokeTemporaryAuthorizationsCancellable = g_cancellable_new();
+     m_revokeTemporaryAuthorizationCancellable = g_cancellable_new();
+ 
++    GError *gerror = NULL;
+     if (pkAuthority == NULL) {
+-        pkAuthority = polkit_authority_get();
++        pkAuthority = polkit_authority_get_sync(NULL, &gerror);
++        if (gerror != NULL) {
++            setError(E_GetAuthority, gerror->message);
++            g_error_free(gerror);
++            return;
++        }
+     }
+ 
+     if (pkAuthority == NULL) {
+-        (E_GetAuthority);
+         return;
+     }
+ 
+Index: agent/polkitqt1-agent-listener.cpp
+===================================================================
+--- agent/polkitqt1-agent-listener.cpp	(revision 1183413)
++++ agent/polkitqt1-agent-listener.cpp	(working copy)
+@@ -73,9 +73,11 @@
+ {
+     GError *error = NULL;
+ 
+-    bool r = polkit_agent_register_listener(d->listener,
++    bool r = polkit_agent_listener_register(d->listener,
++                                            POLKIT_AGENT_REGISTER_FLAGS_NONE,
+                                             subject->subject(),
+                                             objectPath.toAscii().data(),
++                                            NULL,
+                                             &error);
+     if (error != NULL) {
+         qWarning() << QString("Cannot register authentication agent: %1").arg(error->message);
