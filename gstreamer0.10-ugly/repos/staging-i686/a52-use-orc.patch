@@ -1,0 +1,147 @@
+From 359260bd5b2ab88d36364954e94450f9e8718ca2 Mon Sep 17 00:00:00 2001
+From: Sebastian Dröge <sebastian.droege@collabora.co.uk>
+Date: Mon, 14 Jun 2010 12:34:25 +0000
+Subject: a52dec: Use orc for CPU feature detection and don't check for liboil
+
+---
+diff --git a/configure.ac b/configure.ac
+index 109b376..93d74f8 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -152,12 +152,7 @@ dnl *** checks for dependency libraries ***
+ 
+ dnl GLib is required
+ AG_GST_GLIB_CHECK([2.18])
+-
+-dnl liboil is required
+-PKG_CHECK_MODULES(LIBOIL, liboil-0.3 >= 0.3.14, HAVE_LIBOIL=yes, HAVE_LIBOIL=no)
+-if test "x$HAVE_LIBOIL" != "xyes"; then
+-  AC_ERROR([liboil-0.3.14 or later is required])
+-fi
++ORC_CHECK([0.4.5])
+ 
+ dnl checks for gstreamer
+ dnl uninstalled is selected preferentially -- see pkg-config(1)
+@@ -542,3 +537,5 @@ sed \
+ AC_OUTPUT
+ 
+ AG_GST_OUTPUT_PLUGINS
++
++ORC_OUTPUT
+diff --git a/ext/a52dec/Makefile.am b/ext/a52dec/Makefile.am
+index 5d8365e..d572236 100644
+--- a/ext/a52dec/Makefile.am
++++ b/ext/a52dec/Makefile.am
+@@ -4,12 +4,12 @@ libgsta52dec_la_SOURCES = gsta52dec.c
+ libgsta52dec_la_CFLAGS = \
+ 	$(GST_PLUGINS_BASE_CFLAGS) \
+ 	$(GST_CFLAGS) \
+-	$(LIBOIL_CFLAGS) \
++	$(ORC_CFLAGS) \
+ 	$(A52DEC_CFLAGS)
+ libgsta52dec_la_LIBADD = \
+ 	$(GST_PLUGINS_BASE_LIBS) \
+ 	-lgstaudio-$(GST_MAJORMINOR) \
+-	$(LIBOIL_LIBS) \
++	$(ORC_LIBS) \
+ 	$(A52DEC_LIBS)
+ libgsta52dec_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
+ libgsta52dec_la_LIBTOOLFLAGS = --tag=disable-static
+diff --git a/ext/a52dec/gsta52dec.c b/ext/a52dec/gsta52dec.c
+index 7d032e4..ba62777 100644
+--- a/ext/a52dec/gsta52dec.c
++++ b/ext/a52dec/gsta52dec.c
+@@ -49,9 +49,9 @@
+ #include <a52dec/mm_accel.h>
+ #include "gsta52dec.h"
+ 
+-#include <liboil/liboil.h>
+-#include <liboil/liboilcpu.h>
+-#include <liboil/liboilfunction.h>
++#if HAVE_ORC
++#include <orc/orc.h>
++#endif
+ 
+ #ifdef LIBA52_DOUBLE
+ #define SAMPLE_WIDTH 64
+@@ -185,8 +185,6 @@ gst_a52dec_class_init (GstA52DecClass * klass)
+   g_object_class_install_property (G_OBJECT_CLASS (klass), ARG_LFE,
+       g_param_spec_boolean ("lfe", "LFE", "LFE", TRUE, G_PARAM_READWRITE));
+ 
+-  oil_init ();
+-
+   /* If no CPU instruction based acceleration is available, end up using the
+    * generic software djbfft based one when available in the used liba52 */
+ #ifdef MM_ACCEL_DJBFFT
+@@ -194,13 +192,21 @@ gst_a52dec_class_init (GstA52DecClass * klass)
+ #else
+   klass->a52_cpuflags = 0;
+ #endif
+-  cpuflags = oil_cpu_get_flags ();
+-  if (cpuflags & OIL_IMPL_FLAG_MMX)
++
++#if HAVE_ORC
++  cpuflags = orc_target_get_default_flags (orc_target_get_by_name ("mmx"));
++
++  if (cpuflags & ORC_TARGET_MMX_MMX)
+     klass->a52_cpuflags |= MM_ACCEL_X86_MMX;
+-  if (cpuflags & OIL_IMPL_FLAG_3DNOW)
++  if (cpuflags & ORC_TARGET_MMX_3DNOW)
+     klass->a52_cpuflags |= MM_ACCEL_X86_3DNOW;
+-  if (cpuflags & OIL_IMPL_FLAG_MMXEXT)
++  if (cpuflags & ORC_TARGET_MMX_MMXEXT)
+     klass->a52_cpuflags |= MM_ACCEL_X86_MMXEXT;
++#else
++  cpuflags = 0;
++#endif
++
++  g_print ("%p\n", orc_target_get_by_name ("mmx"));
+ 
+   GST_LOG ("CPU flags: a52=%08x, liboil=%08x", klass->a52_cpuflags, cpuflags);
+ }
+--
+cgit v0.8.3-6-g21f6
+From 21d90d5539e42c4d5216a407dcb88cf136a595dd Mon Sep 17 00:00:00 2001
+From: Sebastian Dröge <sebastian.droege@collabora.co.uk>
+Date: Mon, 14 Jun 2010 12:34:56 +0000
+Subject: a52dec: Remove debug printf...
+
+---
+diff --git a/ext/a52dec/gsta52dec.c b/ext/a52dec/gsta52dec.c
+index ba62777..6d8cd19 100644
+--- a/ext/a52dec/gsta52dec.c
++++ b/ext/a52dec/gsta52dec.c
+@@ -206,8 +206,6 @@ gst_a52dec_class_init (GstA52DecClass * klass)
+   cpuflags = 0;
+ #endif
+ 
+-  g_print ("%p\n", orc_target_get_by_name ("mmx"));
+-
+   GST_LOG ("CPU flags: a52=%08x, liboil=%08x", klass->a52_cpuflags, cpuflags);
+ }
+ 
+--
+cgit v0.8.3-6-g21f6
+From e0cd55c80549e35576eb601624435cfd277472ca Mon Sep 17 00:00:00 2001
+From: Sebastian Dröge <sebastian.droege@collabora.co.uk>
+Date: Mon, 14 Jun 2010 13:33:14 +0000
+Subject: a52dec: Call orc_init() before trying to get target flags
+
+---
+diff --git a/ext/a52dec/gsta52dec.c b/ext/a52dec/gsta52dec.c
+index 6d8cd19..baebb5e 100644
+--- a/ext/a52dec/gsta52dec.c
++++ b/ext/a52dec/gsta52dec.c
+@@ -975,6 +975,10 @@ gst_a52dec_get_property (GObject * object, guint prop_id, GValue * value,
+ static gboolean
+ plugin_init (GstPlugin * plugin)
+ {
++#if HAVE_ORC
++  orc_init ();
++#endif
++
+   /* ensure GstAudioChannelPosition type is registered */
+   if (!gst_audio_channel_position_get_type ())
+     return FALSE;
+--
+cgit v0.8.3-6-g21f6
