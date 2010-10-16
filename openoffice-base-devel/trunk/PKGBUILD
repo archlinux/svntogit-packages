@@ -15,9 +15,9 @@ makedepends=(# the real makedeps
              'apache-ant' 'gperf' 'poppler' 'kdelibs' 'gconf' 'openjdk6' 'cppunit'
 	     'beanshell'  'vigra' 'libldap' 'lucene' 'libmythes' 'junit'
              # from main OOo the deps
-             "curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
+             "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
              'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
-             'redland' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
+             'redland>=1.0.11.99' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
              'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
     	     # 'saxon' 
 _additional_source_url=http://hg.services.openoffice.org/binaries
@@ -29,10 +29,9 @@ source=(${_OO_milestone}.tar.xz
 	soffice-detect-mozilla-certificates.diff
 	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
-	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
+	http://www.openoffice.org/nonav/issues/showattachment.cgi/72052/configure.set-redland-cflags.patch
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/sal-cpprt-gcc-4.5-workaround.diff
 	cppunit_gcc45.diff
-	http://www.openoffice.org/nonav/issues/showattachment.cgi/70985/vcl.empty-library_path.patch
 	openoffice.profile
 	${_additional_source_url}/63ddc5116488985e820075e65fbe6aa4-openssl-0.9.8o.tar.gz
 	${_additional_source_url}/09357cc74975b01714e00c5899ea1881-pixman-0.12.0.tar.gz
@@ -117,10 +116,9 @@ md5sums=('afc3ed1ace37c728b6533cc8d73af695'
          '1dc7480a04f572ad136d35923a2af66d'
          'c8e82b4d2324fe62ad8c6e29213e80b5'
          '863a3ab2c17a3d11b8fa3ec321986366'
-         'e666e8cea0ef557a8bce41c58dd16408'
+         '283e7ac83bafd04eaeaffe9ad51e5f6e'
          'cf01fa2669f828864146842e040e3cf8'
          'bb5ada95f7b11a5cac5d669f7ae8baaa'
-         '82cde15d8639288e751e0abea37af673'
          '9fbee64a4a39e33a646c750d4978f48f'
          '63ddc5116488985e820075e65fbe6aa4'
          '09357cc74975b01714e00c5899ea1881'
@@ -229,11 +227,11 @@ build() {
 	# build fixes
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff
+	# http://www.openoffice.org/issues/show_bug.cgi?id=114999
+	patch -Np1 -i ${srcdir}/configure.set-redland-cflags.patch
+	
 	# gcc4.5 fix
-#	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff
 	patch -Np0 -i ${srcdir}/sal-cpprt-gcc-4.5-workaround.diff
-	# buildfix for http://www.openoffice.org/issues/show_bug.cgi?id=113773, http://www.openoffice.org/issues/show_bug.cgi?id=113632
-#	patch -Np1 -i ${srcdir}/vcl.empty-library_path.patch
 	
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
@@ -284,7 +282,7 @@ build() {
 	--enable-cups\
 	--enable-dbus\
 	--enable-evolution2\
-	--enable-gio\
+	--disable-gio\
 	--enable-gtk\
 	--enable-graphite\
 	--enable-kde4\
@@ -352,9 +350,9 @@ package_openoffice-base-devel() {
 
  pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite - developement branch"
  install=openoffice.install
- depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
+ depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
           'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
-	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	  'redland>=1.0.11.99' 'libgraphite' 'hyphen' 'lpsolve'
 	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
 	  # 'saxon' 
  optdepends=('java-runtime:	adds java support'
@@ -373,7 +371,6 @@ package_openoffice-base-devel() {
              'lucene:		full-text search engine library for Java needed in the help section'
              'sane:		for scanner access'
              'unixodbc:		adds ODBC database support')
-# backup=(usr/lib/openoffice-dev/program/sofficerc etc/profile.d/openoffice-devel.sh)
  backup=(usr/lib/openoffice.org3-dev/program/sofficerc etc/profile.d/openoffice-devel.sh)
  provides=('openoffice-base' 'openoffice-en-US')
 
@@ -390,42 +387,20 @@ package_openoffice-base-devel() {
 	mv ${pkgdir}/opt/* ${pkgdir}/usr/lib/
 	rmdir ${pkgdir}/opt
 
-        ## Step 1 
-#        cd ${pkgdir}/usr/lib/openoffice.org
-#        mv ure/ basis3.4/
-#        cd basis3.4
-#        rm ure-link && mv ure ure-link
-#        ## Step 2
-#        cd ${pkgdir}/usr/lib/
-#        mv openoffice.org/basis3.4/ openoffice.org3/
-#        cd openoffice.org3/
-#        rm basis-link && mv basis3.4 basis-link
-        ## Step 3        
-#        cd ${pkgdir}/usr/lib/
-#        rmdir ${pkgdir}/usr/lib/openoffice.org
-#        mv openoffice.org3 openoffice
-
        # install all built dictionaries from source tree
        pushd ${srcdir}/${_OO_milestone}/dictionaries/unxlng?6.pro/bin
        for i in `ls -1 dict-??.oxt`; do
-#         install -D -m644 $i ${pkgdir}/usr/lib/openoffice/share/extension/install/$i
          install -D -m644 $i ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/$i
        done
        popd
        
        # install extensions
        pushd ${srcdir}/${_OO_milestone}/solver/300/unxlng?6.pro/bin
-#         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/report-builder.oxt
-#	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/wiki-publisher.oxt
-#	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presentation-minimizer.oxt
-#	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presenter-screen.oxt
-#	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/pdfimport.oxt
          install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/report-builder.oxt
 	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/wiki-publisher.oxt
 	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presentation-minimizer.oxt
 	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presenter-screen.oxt
 	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/pdfimport.oxt
-
        popd
 
 
@@ -434,7 +409,6 @@ package_openoffice-base-devel() {
 	mkdir -p ${pkgdir}/usr/share/icons/{hicolor,locolor}
                
 	# install shortcuts
-#	mv ${pkgdir}/usr/lib/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
 	mv ${pkgdir}/usr/lib/openoffice.org3/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
 	# add startcenter desktop file
 	install -D -m644 ${srcdir}/startcenter.desktop ${pkgdir}/usr/share/applications/startcenter.desktop
