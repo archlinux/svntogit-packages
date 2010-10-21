@@ -1,0 +1,138 @@
+From 24dc214f55e7c7c17d888d0ccf94cd3625767462 Mon Sep 17 00:00:00 2001
+From: Michael Biebl <biebl@debian.org>
+Date: Sun, 19 Sep 2010 22:45:16 +0000
+Subject: linux: Check for VT_WAITEVENT ioctl during runtime
+
+Since 2782cc8d4950effbc4407455e72bd4750cef6e11 ConsoleKit fails, if it
+has been compiled on a linux kernel >= 2.6.32 but is run with an older
+kernel. Check for VT_WAITEVENT ioctl during runtime and fallback to the
+old behaviour of creating a thread for every possible vt.
+---
+diff --git a/src/ck-vt-monitor.c b/src/ck-vt-monitor.c
+index 369c63e..9310341 100644
+--- a/src/ck-vt-monitor.c
++++ b/src/ck-vt-monitor.c
+@@ -27,6 +27,7 @@
+ #include <string.h>
+ #include <errno.h>
+ #include <signal.h>
++#include <sys/ioctl.h>
+ 
+ #include <glib.h>
+ #include <glib/gi18n.h>
+@@ -311,6 +312,34 @@ schedule_process_queue (CkVtMonitor *vt_monitor)
+         G_UNLOCK (schedule_lock);
+ }
+ 
++#ifdef VT_WAITEVENT
++static gboolean
++vt_waitevent_supported (int fd)
++{
++        static int supported = -1;
++        int res;
++
++        if (supported >= 0)
++                return supported;
++
++        res = ioctl(fd, VT_WAITEVENT, NULL);
++
++        if (res == ERROR) {
++                if (errno == EINVAL) {
++                        g_debug ("VT_WAITEVENT not supported on this system");
++                        supported = FALSE;
++                        return FALSE;
++                } else if (errno == EFAULT) {
++                        g_debug ("VT_WAITEVENT supported on this system");
++                        supported = TRUE;
++                        return TRUE;
++                }
++        }
++        g_debug ("Unexpected result for VT_WAITEVENT check, returning FALSE");
++        return FALSE;
++}
++#endif
++
+ static void *
+ vt_thread_start (ThreadData *data)
+ {
+@@ -322,6 +351,9 @@ vt_thread_start (ThreadData *data)
+         num = data->num;
+ 
+ #ifdef VT_WAITEVENT
++        if (!vt_waitevent_supported(vt_monitor->priv->vfd))
++                goto no_waitevent;
++
+         for (;;) {
+                 res = ck_wait_for_console_switch (vt_monitor->priv->vfd, &num);
+                 if (! res) {
+@@ -340,7 +372,10 @@ vt_thread_start (ThreadData *data)
+                         schedule_process_queue (vt_monitor);
+                 }
+         }
+-#else
++        goto out;
++#endif
++
++no_waitevent:
+         res = ck_wait_for_active_console_num (vt_monitor->priv->vfd, num);
+         if (! res) {
+                 /* FIXME: what do we do if it fails? */
+@@ -357,8 +392,8 @@ vt_thread_start (ThreadData *data)
+                 /* schedule processing of queue */
+                 schedule_process_queue (vt_monitor);
+         }
+-#endif
+ 
++out:
+         G_LOCK (hash_lock);
+         if (vt_monitor->priv->vt_thread_hash != NULL) {
+                 g_hash_table_remove (vt_monitor->priv->vt_thread_hash, GUINT_TO_POINTER (num));
+@@ -418,19 +453,24 @@ vt_add_watches (CkVtMonitor *vt_monitor)
+         sigaction (SIGPOLL, &act, NULL);
+ 
+         ioctl (vt_monitor->priv->vfd, I_SETSIG, S_MSG);
+-#elif defined (VT_WAITEVENT)
++#else
++        guint  max_consoles;
++        int    i;
++        gint32 current_num;
+         gpointer id;
+ 
++#if defined (VT_WAITEVENT)
++        if (!vt_waitevent_supported(vt_monitor->priv->vfd))
++                goto no_waitevent;
++
+         G_LOCK (hash_lock);
+         id = GINT_TO_POINTER (1);
+         if (g_hash_table_lookup (vt_monitor->priv->vt_thread_hash, id) == NULL)
+                 vt_add_watch_unlocked (vt_monitor, 1);
+-        G_UNLOCK (hash_lock);
+-#else
+-        guint  max_consoles;
+-        int    i;
+-        gint32 current_num;
++        goto out;
++#endif
+ 
++no_waitevent:
+         G_LOCK (hash_lock);
+ 
+         current_num = vt_monitor->priv->active_num;
+@@ -442,7 +482,6 @@ vt_add_watches (CkVtMonitor *vt_monitor)
+         }
+ 
+         for (i = 1; i < max_consoles; i++) {
+-                gpointer id;
+ 
+                 /* don't wait on the active vc */
+                 if (i == current_num) {
+@@ -457,6 +496,7 @@ vt_add_watches (CkVtMonitor *vt_monitor)
+                 }
+         }
+ 
++out:
+         G_UNLOCK (hash_lock);
+ #endif
+ }
+--
+cgit v0.8.3-6-g21f6
