@@ -15,6 +15,7 @@ pkgname=('php'
          'php-intl'
          'php-ldap'
          'php-mcrypt'
+	 'php-mssql'
          'php-odbc'
          'php-pgsql'
          'php-pspell'
@@ -23,25 +24,27 @@ pkgname=('php'
          'php-tidy'
          'php-xsl')
 pkgver=5.3.3
-pkgrel=2
+pkgrel=3
 _suhosinver=${pkgver}-0.9.10
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
 makedepends=('apache' 'imap' 'postgresql-libs' 'mysql' 'libldap' 'postfix'
-             'sqlite3' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file'
+             'sqlite3' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file' 'freetds'
              'libmcrypt' 'tidyhtml' 'aspell' 'libtool' 'libpng' 'libjpeg' 'icu'
              'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'libevent' 'freetype2')
 options=('!makeflags')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
         "http://download.suhosin.org/suhosin-patch-${_suhosinver}.patch.gz"
-        'php.ini.patch' 'apache.conf' 'rc.d.php-fpm' 'php-fpm.conf')
+        'php.ini.patch' 'apache.conf' 'rc.d.php-fpm' 'php-fpm.conf'
+        'db4-test.patch')
 md5sums=('21ceeeb232813c10283a5ca1b4c87b48'
          'b66b27c43b1332400ef8982944c3b95b'
          'd6f94150f47047882c6716575e12e99b'
          '96ca078be6729b665be8a865535a97bf'
          'ff8346d57f0bd67c7a383c1561dcd7c1'
-         '0ac88ff88ae951118201d6424eaa426a')
+         '0ac88ff88ae951118201d6424eaa426a'
+         'e4e28c3b785975a09b6b7b2d3631faf6')
 
 build() {
 	# ldap-sasl does not compile with --as-needed
@@ -105,6 +108,7 @@ build() {
 		--with-ldap-sasl \
 		--with-mcrypt=shared \
 		--with-mhash \
+		--with-mssql=shared \
 		--with-mysql-sock=/var/run/mysqld/mysqld.sock \
 		--with-mysql=shared,mysqlnd \
 		--with-mysqli=shared,mysqlnd \
@@ -136,6 +140,9 @@ build() {
 	export PEAR_INSTALLDIR
 
 	cd ${srcdir}/${pkgbase}-${pkgver}
+
+	# Fix configure test which assumes db=4.x
+	patch -p0 -i ${srcdir}/db4-test.patch
 
 	# apply suhosin patch
 	patch -p1 -i ${srcdir}/suhosin-patch-${_suhosinver}.patch
@@ -226,7 +233,7 @@ package_php() {
 	# remove static modules
 	rm -f ${pkgdir}/usr/lib/php/modules/*.a
 	# remove modules provided by sub packages
-	rm -f ${pkgdir}/usr/lib/php/modules/{curl,enchant,gd,gmp,intl,ldap,mcrypt,odbc,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
+	rm -f ${pkgdir}/usr/lib/php/modules/{curl,enchant,gd,gmp,intl,ldap,mcrypt,mssql,odbc,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
 }
 
 package_php-cgi() {
@@ -318,6 +325,12 @@ package_php-mcrypt() {
 	depends=('php' 'libmcrypt' 'libtool')
 	pkgdesc='mcrypt module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/mcrypt.so ${pkgdir}/usr/lib/php/modules/mcrypt.so
+}
+
+package_php-mssql() {
+	depends=('php' 'freetds')
+	pkgdesc='mssql module for PHP'
+	install -D -m755 ${srcdir}/build-php/modules/mssql.so ${pkgdir}/usr/lib/php/modules/mssql.so
 }
 
 package_php-odbc() {
