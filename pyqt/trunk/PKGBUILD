@@ -4,8 +4,9 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.7.7
-pkgrel=2
+pkgver=4.8.0
+_pkgver=4.8
+pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -19,16 +20,12 @@ optdepends=('phonon: enable audio and video in PyQt applications'
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
-	'fix-kdebindings-4.5.2.patch')
-md5sums=('b7b30ab25ee976407b37052f2f724bce'
-	'8484f787214d55d23bc3b790fc80b450')
+source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz")
+md5sums=('003d195498eb42ca2daf7615fa01488d')
 
 build() {
-  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
 
-  patch -Np0 -i ${srcdir}/fix-kdebindings-4.5.2.patch
-  
   python2 configure.py \
     --confirm-license \
     -v /usr/share/sip \
@@ -41,7 +38,7 @@ build() {
 }
 
 package(){
-  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 }
