@@ -24,6 +24,7 @@ fi
 
 # Load shell specific profile settings
 test -f "/etc/profile.$shell" &&  . "/etc/profile.$shell"
+unset shell
 
 #Set our umask
 umask 022
