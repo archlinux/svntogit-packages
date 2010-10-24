@@ -1,0 +1,93 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+ 
+pkgbase="foomatic"
+pkgname=('foomatic-db' 'foomatic-filters' 'foomatic-db-engine' 'foomatic-db-nonfree')
+arch=('i686' 'x86_64') # needs to be changed  in the subpackages when makepkg will support it
+_snapdate=20101024
+_relver=4.0.5
+pkgver=${_relver}_${_snapdate}
+pkgrel=1
+makedepends=('cups>=1.4.2' 'perl' 'libxml2' 'enscript' 'perl' 'net-snmp' 'bash')
+source=(http://www.linuxprinting.org/download/foomatic/$pkgbase-{filters,db-engine}-${_relver}.tar.gz
+        http://www.linuxprinting.org/download/foomatic/$pkgbase-db-4.0-${_snapdate}.tar.gz
+        http://www.linuxprinting.org/download/foomatic/$pkgbase-db-nonfree-${_snapdate}.tar.gz)
+url="http://www.linuxprinting.org/foomatic.html"
+options=('force' '!emptydirs')
+md5sums=('fd99dac3a36807a47ffa4f9eb15c1b07'
+         '0893a4a9705ffd7305bc50cbb951daf9'
+         'f801fab0b210cc61f217bede1963cd0e'
+         'f51e447404b32949057307a1bc4d1b5e')
+
+build() {
+ /bin/true
+}
+
+package_foomatic-db() {
+
+ pkgdesc="Foomatic - The collected knowledge about printers, drivers, and driver options in XML files, used by foomatic-db-engine to generate PPD files."
+# arch=('any')
+ license=('GPL' 'custom')
+ depends=('perl' 'libxml2')
+ replaces=('foomatic-db-ppd' 'foomatic-db-hpijs')
+ conflicts=('foomatic-db-ppd' 'foomatic-db-hpijs')
+ provides=('foomatic-db-hpijs')
+
+   cd ${srcdir}/${pkgname}-${_snapdate}
+   ./configure --prefix=/usr
+   make DESTDIR=${pkgdir} install || return 1
+   install -v -Dm644 ${srcdir}/${pkgname}-${_snapdate}/COPYING ${pkgdir}/usr/share/licenses/${pkgname}/COPYING || return 1
+}
+
+package_foomatic-filters() {
+
+ pkgdesc="Foomatic - Filter scripts used by the printer spoolers to convert the incoming PostScript data into the printer's native format."
+# arch=('i686' 'x86_64')
+ license=('GPL')
+ backup=(etc/foomatic/filter.conf)
+ depends=('glibc')
+ optdepends=('perl:      for the "beh" Backend End Handler used by cups'
+            'net-snmp:  certain (mostly HP) printers need it to work')
+
+#   cd ${srcdir}/${pkgname}-${pkgver}
+   cd ${srcdir}/foomatic-filters-${_relver}
+   ./configure --prefix=/usr --sysconfdir=/etc
+   make || return 1
+   make DESTDIR=${pkgdir} install || return 1
+}
+
+package_foomatic-db-engine() {
+
+ pkgdesc="Foomatic - Foomatic's database engine generates PPD files from the data in Foomatic's XML database. It also contains scripts to directly generate print queues and handle jobs."
+# arch=(i686 x86_64)
+ license=('GPL')
+ depends=('perl' 'libxml2' 'foomatic-filters' 'bash')
+
+#   cd ${srcdir}/${pkgname}-${pkgver}
+   cd ${srcdir}/foomatic-db-engine-${_relver}
+    ./configure --prefix=/usr
+   make || return 1
+   eval `perl -V:archname`
+   make DESTDIR=${pkgdir} \
+        INSTALLARCHLIB=/usr/lib/perl5/vendor_perl/ \
+        INSTALLSITELIB=/usr/lib/perl5/vendor_perl/ \
+        INSTALLSITEARCH=/usr/lib/perl5/vendor_perl/ install || return 1
+   /usr/bin/find ${pkgdir} -name '.packlist' -delete
+   # fix permissions
+   chmod 755 ${pkgdir}/usr/lib{,/perl5,/perl5/vendor_perl}
+}
+
+package_foomatic-db-nonfree() {
+
+ pkgdesc="Foomatic - database extension consisting of manufacturer-supplied PPD files released under non-free licenses"
+# arch=('any')
+ license=('custom')
+ depends=('perl' 'libxml2' "foomatic-db-engine" 'foomatic-db')
+
+#   cd ${srcdir}/${pkgname}-${_snapdate}
+   cd ${srcdir}/foomatic-db-nonfree-${_snapdate}
+   ./configure --prefix=/usr
+   make DESTDIR=${pkgdir} install || return 1
+#   install -Dm644 COPYING ${pkgdir}/usr/share/licenses/${pkgname}/COPYING || return 1
+   install -Dm644 COPYING ${pkgdir}/usr/share/licenses/foomatic-db-nonfree/COPYING || return 1
+}
