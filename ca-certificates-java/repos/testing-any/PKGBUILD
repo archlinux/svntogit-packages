@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=ca-certificates-java
+pkgver=20100412
+pkgrel=1
+pkgdesc='Common CA certificates (JKS keystore)'
+arch=('any')
+url='http://packages.qa.debian.org/c/ca-certificates-java.html'
+license=('GPL')
+depends=('ca-certificates' 'nss')
+makedepends=('openjdk6')
+install='ca-certificates-java.install'
+source=("http://ftp.debian.org/debian/pool/main/c/${pkgname}/${pkgname}_${pkgver}.tar.gz"
+        'jks-keystore.hook.patch' 'init-jks-keystore')
+md5sums=('16a5d04148d17923a4d838214dd9b867'
+         'e2009af18d0c61d067117ca982dee97f'
+         '82dcec93bb328ae68db33c8177fb3858')
+
+build() {
+	cd ${srcdir}
+
+	patch -p0 -i ${srcdir}/jks-keystore.hook.patch ${pkgname}-${pkgver}/debian/jks-keystore.hook
+
+	mkdir build
+	cd build
+
+	for crt in $(find /usr/share/ca-certificates -name '*.crt' -printf '%P '); do
+		alias=$(basename $crt .crt | tr A-Z a-z | tr -cs a-z0-9 _)
+		alias=${alias%*_}
+		echo "IMPORT: $crt, alias=$alias"
+		if keytool -importcert -trustcacerts -keystore cacerts \
+			-storepass 'changeit' -noprompt \
+			-alias "$alias" -file "/usr/share/ca-certificates/$crt" > keytool.log 2>&1; then
+				cat keytool.log
+		elif keytool -importcert -trustcacerts -keystore cacerts \
+			-providerClass sun.security.pkcs11.SunPKCS11 \
+			-providerArg '/usr/lib/jvm/java-6-openjdk/jre/lib/security/nss.cfg' \
+			-storepass 'changeit' -noprompt \
+			-alias "$alias" -file "/usr/share/ca-certificates/$crt" > keytool.log 2>&1; then
+				cat keytool.log
+		elif grep -q 'Signature not available' keytool.log; then
+				echo "IGNORED IMPORT: $crt, alias=$alias"
+				cat keytool.log
+		else
+				cat keytool.log
+				false
+		fi
+	done
+}
+
+package() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	install -d -m755 ${pkgdir}/etc/ssl/certs/java
+	install -D -m755 debian/jks-keystore.hook ${pkgdir}/etc/ca-certificates/update.d/jks-keystore
+	install -D -m644 ${srcdir}/build/cacerts ${pkgdir}/usr/share/ca-certificates-java/cacerts
+	install -D -m600 debian/default ${pkgdir}/etc/default/cacerts
+	install -D -m755 ${srcdir}/init-jks-keystore ${pkgdir}/usr/sbin/init-jks-keystore
+}
