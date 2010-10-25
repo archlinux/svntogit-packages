@@ -7,8 +7,8 @@
 
 pkgname=glibc
 pkgver=2.12.1
-pkgrel=2
-_glibcdate=20101007
+pkgrel=3
+_glibcdate=20101025
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -28,16 +28,22 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.1-make-3.82-compatibility.patch
         glibc-2.12.1-static-shared-getpagesize.patch
         glibc-2.12.1-but-I-am-an-i686.patch
+        glibc-2.12.1-fix-IPTOS_CLASS-definition.patch
+        glibc-2.12.1-never-expand-origin-when-privileged.patch
+        glibc-2.12.1-require-suid-on-audit.patch
         nscd
         locale.gen.txt
         locale-gen)    
-md5sums=('17189b123cebeb71cf7b7e7416b601a6'
+md5sums=('b12192eff7306f2a6e919641b847e7cf'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
          '1deecaa78c0909f7175732da2af796b5'
          '3215ed6996e7ecdd35bc105937c6e0dc'
          'de17165e3fa721c4e056dacfc9ee1e52'
+         'fdc0908c9971fcf9b32e1185954b6eeb'
+         'e154dbe21d4e24968ab257ffd9c106f2'
+         'bbc99319ad78fe9eb1ac217efc770ac6'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -72,6 +78,17 @@ build() {
   # fedora "fix" for excess linker optimization on i686
   # proper fix will be in binutils-2.21
   patch -Np1 -i ${srcdir}/glibc-2.12.1-but-I-am-an-i686.patch
+
+  # http://www.exploit-db.com/exploits/15274/
+  # http://sourceware.org/git/?p=glibc.git;a=patch;h=2232b90f (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.12.1-never-expand-origin-when-privileged.patch
+
+  # http://www.exploit-db.com/exploits/15304/
+  # http://sourceware.org/git/?p=glibc.git;a=patch;h=8e9f92e9
+  patch -Np1 -i ${srcdir}/glibc-2.12.1-require-suid-on-audit.patch
+
+  # http://sources.redhat.com/git/?p=glibc.git;a=patch;h=15bac72b
+  patch -Np1 -i ${srcdir}/glibc-2.12.1-fix-IPTOS_CLASS-definition.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
