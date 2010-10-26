@@ -7,7 +7,7 @@
 
 pkgname=glibc
 pkgver=2.12.1
-pkgrel=3
+pkgrel=4
 _glibcdate=20101025
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -33,13 +33,13 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.1-require-suid-on-audit.patch
         nscd
         locale.gen.txt
-        locale-gen)    
+        locale-gen)
 md5sums=('b12192eff7306f2a6e919641b847e7cf'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
          '1deecaa78c0909f7175732da2af796b5'
-         '3215ed6996e7ecdd35bc105937c6e0dc'
+         'a3ac6f318d680347bb6e2805d42b73b2'
          'de17165e3fa721c4e056dacfc9ee1e52'
          'fdc0908c9971fcf9b32e1185954b6eeb'
          'e154dbe21d4e24968ab257ffd9c106f2'
@@ -73,6 +73,7 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-2.12.1-make-3.82-compatibility.patch
 
   # http://sourceware.org/bugzilla/show_bug.cgi?id=11929
+  # using Fedora "fix" as patch in that bug report causes breakages...
   patch -Np1 -i ${srcdir}/glibc-2.12.1-static-shared-getpagesize.patch
   
   # fedora "fix" for excess linker optimization on i686
