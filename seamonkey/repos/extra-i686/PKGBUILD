@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=seamonkey
+pkgver=2.0.10
+pkgrel=1
+pkgdesc="SeaMonkey internet suite"
+arch=('i686' 'x86_64')
+license=('MPL')
+depends=('gtk2>=2.22.0' 'mozilla-common>=1.3' 'nss>=3.12.8' 'libxt' 'gcc-libs>=4.5' 'alsa-lib' 'dbus-glib>=0.86')
+makedepends=('zip' 'pkg-config' 'libgnomeui>=2.24.2' 'python2' 'libidl2' 'autoconf2.13')
+replaces=('mozilla')
+url="http://www.mozilla.org/projects/seamonkey"
+source=(http://releases.mozilla.org/pub/mozilla.org/${pkgname}/releases/${pkgver}/source/${pkgname}-${pkgver}.source.tar.bz2
+        mozconfig
+        seamonkey.desktop
+        seamonkey-appversion.patch
+        seamonkey-2.0-lang.patch
+        python27.patch)
+md5sums=('08771818ede4a30c50500328b16c6f85'
+         '4978159e4921892e34dcd7e9804f0437'
+         '448848e65efcbf1b2be2873b66b6cd48'
+         'a4275fc48361c80f676e96fdb28bd74e'
+         '25b6fe16ac24cd5c852213e5c1adb272'
+         '47e57931d65c71baafcf0e4f9160e876')
+
+build() {
+  cd "${srcdir}/comm-1.9.1"
+  patch -Np1 -i "${srcdir}/seamonkey-appversion.patch"
+  patch -Np1 -i "${srcdir}/seamonkey-2.0-lang.patch"
+  patch -Np0 -i "${srcdir}/python27.patch"
+
+  cp "${srcdir}/mozconfig" .mozconfig
+  unset CFLAGS
+  unset CXXFLAGS
+
+  export LDFLAGS="-Wl,-rpath,/usr/lib/seamonkey-2.0"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="${MAKEFLAGS}"
+  make -j1 DESTDIR="${pkgdir}" install
+
+  install -m755 -d "${pkgdir}/usr/share/applications"
+  install -m755 -d "${pkgdir}/usr/share/pixmaps"
+  install -m644 "${srcdir}/comm-1.9.1/suite/branding/icons/gtk/seamonkey.png" \
+                "${pkgdir}/usr/share/pixmaps/"
+  install -m644 "${srcdir}/seamonkey.desktop" "${pkgdir}/usr/share/applications/"
+
+  rm -f "${pkgdir}/usr/lib/pkgconfig/"seamonkey-ns{s,pr}.pc
+}
