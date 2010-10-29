@@ -6,7 +6,7 @@
 pkgname=pyqt
 pkgver=4.8.0
 _pkgver=4.8
-pkgrel=2
+pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -17,13 +17,16 @@ optdepends=('phonon: enable audio and video in PyQt applications'
 	'python-opengl: enable OpenGL 3D graphics in PyQt applications'
 	'qscintilla: QScintilla API'
 	'qt-assistant-compat: add PyQt online help in Qt Assistant')
+provides=('pyqt4')
+replaces=('pyqt4')
+conflicts=('pyqt4')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz")
 md5sums=('003d195498eb42ca2daf7615fa01488d')
 
 build() {
   cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
 
-  python configure.py \
+  python2 configure.py \
     --confirm-license \
     -v /usr/share/sip \
     --qsci-api
