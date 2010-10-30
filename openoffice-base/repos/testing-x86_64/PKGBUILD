@@ -1,0 +1,382 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Hussam Al-Tayeb <ht990332@gmail.com>
+
+pkgbase="openoffice-base"
+pkgname=('openoffice-base' 'openoffice-sdk')
+_OO_milestone=OOO320_m19
+pkgver=3.2.1 # m18/m19=3.2.1 RC2 = final
+pkgrel=3
+arch=('i686' 'x86_64')
+license=('LGPL3')
+url="http://www.openoffice.org"
+makedepends=(# the real makedeps
+             'bison' 'mercurial' 'automake' 'findutils' 'flex' 'gawk' 'gcc-libs' 'libart-lgpl' 'libxtst' 'boost>=1.41.0'
+             'pam' 'sane' 'zip' 'perl-archive-zip' 'pkgconfig' 'unzip' "xulrunner>=1.9.2.2" 'unixodbc' 'nss' 'hsqldb-java' 
+             'apache-ant>=1.8.0' 'cairo' 'gperf' 'libcups' 'poppler' 'kdelibs' 'pstoedit' 'gconf' "openjdk6>=6.b17_1.8"
+	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes'
+	     # from main OOo the deps
+	     "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
+	     'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	     'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	     'hicolor-icon-theme' 'desktop-file-utils' 'gtk2')
+	     # 'saxon' 
+source=(ftp://ftp.archlinux.org/other/openoffice/${_OO_milestone}.tar.xz
+	http://tools.openoffice.org/unowinreg_prebuild/680/unowinreg.dll
+	startcenter.desktop
+	default-no-startup-wizard.diff
+	default-system-fpicker.diff
+	soffice-detect-mozilla-certificates.diff
+	buildfix-gcc44.diff
+	buildfix_FormulaMissingHeader.diff
+	buildfix_system_db51.diff
+	http://www.openoffice.org/nonav/issues/showattachment.cgi/72052/configure.set-redland-cflags.patch
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/vcl-system-graphite-with-stlport.diff
+	http://cgit.freedesktop.org/libreoffice/build/plain/patches/dev300/fix-system-mythes-for-mythes-1.2.diff?h=ooo-build-3-2-1
+	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/redland-remove-patches.diff?h=ooo-build-3-2-1
+	openoffice.profile)
+options=('!distcc' '!ccache' '!makeflags')
+md5sums=('74d11db8100701bd08c97e93f12da021'
+         'e3a0b76dcd876f3d721ee7183729153d'
+         '63209bbc64c901ef105455bda0282f45'
+         '71f136a31e296a04ab68932a31dd533e'
+         '6c596129fb48316226ce3adfd3a4c86d'
+         '1dc7480a04f572ad136d35923a2af66d'
+         'c8e82b4d2324fe62ad8c6e29213e80b5'
+         '863a3ab2c17a3d11b8fa3ec321986366'
+         'e4516cc1caa176d77f3cc513cfcf99e1'
+         '283e7ac83bafd04eaeaffe9ad51e5f6e'
+         'e666e8cea0ef557a8bce41c58dd16408'
+         'c6abfe517a7002a18880e0e209145167'
+         '4798e0d5329cd11f4c7c303ad5d0ff6f'
+         '754c85fdd5bb122396e6989a9b403f48'
+         '2e8c89d4bfda9b5ccd3b118c87eff62a')
+
+# source PKGBUILD && mksource
+mksource() {
+	mkdir /tmp/$pkgname-source
+	pushd /tmp/$pkgname-source
+	hg -v clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/OOO320 ${_OO_milestone}
+	tar -cvJf ${_OO_milestone}.tar.xz ${_OO_milestone}/*
+	popd
+}
+
+build() {
+
+	cd ${srcdir}/${_OO_milestone}
+
+	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
+	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
+	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
+	JAVAHOME=${JAVA_HOME}
+	[ -z "${MOZ_PLUGIN_PATH}" ] && . /etc/profile.d/mozilla-common.sh
+	[ -z "${ANT_HOME}" ] && . /etc/profile.d/apache-ant.sh
+	
+	# some speedups
+	export SMP="6"
+	MAXMODULESFLAG="-P${SMP}"
+	MAXPROCESSESFLAG="-P${SMP}"
+	export nodep=true
+	export NO_HIDS=true
+
+	# build fixes
+	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix_system_db51.diff || return 1
+	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff || return 1
+	# http://www.openoffice.org/issues/show_bug.cgi?id=114999
+	patch -Np1 -i ${srcdir}/configure.set-redland-cflags.patch
+	
+	# allow build with system mythes
+	patch -Np0 -i ${srcdir}/fix-system-mythes-for-mythes-1.2.diff?h=ooo-build-3-2-1 || return 1
+	# allow build with system redland and cppunit
+	# should also workaround all known bugs with plain upstream redland
+	patch -Np0 -i ${srcdir}/redland-remove-patches.diff?h=ooo-build-3-2-1 || return 1	
+	# allow system graphite with stlport
+	patch -Np0 -i ${srcdir}/vcl-system-graphite-with-stlport.diff || return 1
+
+	# allows soffice to find the user's firefox profile so that it can read
+	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
+	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
+
+	# important bugfixes
+	# ...nothing :)
+
+	# remove the startup wizard
+	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff || return 1
+	# enables the default system-file-picker in case we have that built
+	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
+
+	if [ "$CARCH" = "x86_64" ]; then
+          EXTRAOPTS="--without-stlport"
+          # fix to build with SUN jdk/jre and OpenJDK
+          # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
+	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk || return 1
+	 else EXTRAOPTS="--with-stlport"
+	fi
+
+	cd ${srcdir}/${_OO_milestone}
+
+	# needed to build the OO-SDK
+	mv ${srcdir}/unowinreg.dll external/unowinreg || return 1
+
+	# export C(XX)FLAGS
+	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
+	unset CFLAGS
+	unset CXXFLAGS
+
+	# Need to recreate the configure script because of patches
+	autoreconf -v || return 1
+
+	# python2 fix
+	sed -i -e "s:for am_cv_pathless_PYTHON in python:for am_cv_pathless_PYTHON in python2.7:" configure
+	
+	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
+	--with-vendor="ArchLinux"\
+	--prefix=/usr --exec-prefix=/usr\
+	--with-lang="en-US"\
+	--with-dict=ALL\
+	--disable-gnome-vfs\
+	--disable-qadevooo\
+	--disable-reportdesign\
+	--disable-systray\
+	--disable-mathmldtd\
+	--enable-binfilter\
+	--enable-cairo\
+	--enable-crashdump=yes\
+	--enable-cups\
+	--enable-dbus\
+	--enable-evolution2\
+	--enable-gio\
+	--enable-gtk\
+	--enable-graphite\
+	--enable-kde4\
+	--enable-ldap\
+	--enable-lockdown\
+	--enable-mediawiki\
+	--enable-minimizer\
+	--enable-odk\
+	--enable-opengl\
+	--enable-pdfimport\
+	--enable-presenter-console\
+	--enable-report-builder\
+	--enable-vba\
+	--enable-verbose\
+	--enable-wiki-publisher\
+	--with-package-format=native\
+	--without-fonts\
+	--without-afms\
+	--without-gpc\
+	--without-nas\
+	--without-ppds\
+	--without-system-agg\
+	--with-system-cppunit\
+	--with-system-redland\
+	--without-system-saxon\
+	--with-openldap\
+	--with-system-stdlibs\
+	--with-system-libs\
+	--with-system-sane-header\
+	--with-system-mozilla=libxul\
+	--with-system-mythes\
+	--with-system-unixodbc-headers\
+	--with-system-xrender-headers\
+	--with-system-headers\
+	--with-alloc=system\
+	--with-jdk-home=${JAVA_HOME}\
+	--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
+	--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
+	--with-use-shell=bash\
+	 $EXTRAOPTS || return 1
+
+#	--enable-layout\ /bin/bash: tralay: command not found ???
+#	--with-system-jfreereport
+#	we will need myspell dicts for --with-system-dicts --without-myspell-dicts
+# see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
+#	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
+
+	# Setup environment for build
+	if [ "$CARCH" = "x86_64" ]; then
+	  source LinuxX86-64Env.Set.sh
+	 else source LinuxX86Env.Set.sh
+	fi
+
+	# Build dmake utility
+	./bootstrap || return 1
+
+	cd instsetoo_native
+	build.pl -P${SMP} ${MAXMODULESFLAG} ${MAXPROCESSESFLAG} --dlv_switch -link --all || return 1
+}
+
+package_openoffice-base() {
+
+ pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
+ install=openoffice.install
+ depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
+          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
+	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
+	  # 'saxon' 
+ optdepends=('java-runtime:     adds java support'
+             'libcups:          adds printing support'
+             'gconf:            adds additional gnome support'
+             'nss:              adds support for signed files/macros'
+             'pstoedit:         translates PostScript and PDF graphics into other vector formats'
+             'poppler:          for shipped pdfimport extension'
+             'kdelibs:          for kde integration'
+             'libmythes:        for use in thesaurus'
+             'hsqldb-java:      default database format for OpenOffice.org'
+             'beanshell:        interactive java -- good for prototyping /macros'
+             'vigra:            C++ computer vision library, usable in Basebmp'
+             'libmspack:        library for Microsoft compression formats for use in FontOOo'
+             'libldap:          to get profiles via ldap'
+             'lucene:           full-text search engine library for Java needed in the help section'
+             'sane:             for scanner access'
+             'unixodbc:         adds ODBC database support')
+ backup=(usr/lib/openoffice/program/sofficerc etc/profile.d/openoffice.sh)
+ provides=('openoffice-base' 'openoffice-en-US')
+
+
+	cd ${srcdir}/${_OO_milestone}
+
+	# install binaries
+	if [ "$CARCH" = "x86_64" ]; then
+	        cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
+	 else 	cp -R instsetoo_native/unxlngi6.pro/OpenOffice/native/install/en-US/linux-2.6-intel/buildroot/* ${pkgdir}/
+	fi
+
+	# move all to /usr/lib
+	mkdir -p ${pkgdir}/usr/lib
+	mv ${pkgdir}/opt/* ${pkgdir}/usr/lib/
+	rmdir ${pkgdir}/opt
+	
+        ## Step 1 
+        cd ${pkgdir}/usr/lib/openoffice.org || return 1
+        mv ure/ basis3.2/ || return 1
+        cd basis3.2 || return 1
+        rm ure-link && mv ure ure-link || return 1
+        ## Step 2
+        cd ${pkgdir}/usr/lib/ || return 1
+        mv openoffice.org/basis3.2/ openoffice.org3/ || return 1
+        cd openoffice.org3/ || return 1
+        rm basis-link && mv basis3.2 basis-link || return 1
+        ## Step 3        
+        cd ${pkgdir}/usr/lib/ || return 1
+        rmdir ${pkgdir}/usr/lib/openoffice.org || return 1
+        mv openoffice.org3 openoffice || return 1
+
+	# install all built dictionaries from source tree
+        pushd ${srcdir}/${_OO_milestone}/dictionaries/unxlng?6.pro/bin
+	for i in `ls -1 dict-??.oxt`; do
+	  install -D -m644 $i ${pkgdir}/usr/lib/openoffice/share/extension/install/$i || return 1
+	done
+	popd
+	
+	# install extensions
+       pushd ${srcdir}/${_OO_milestone}/solver/320/unxlng?6.pro/bin
+         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/report-builder.oxt || return 1
+	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/wiki-publisher.oxt || return 1
+	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presentation-minimizer.oxt || return 1
+	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presenter-screen.oxt || return 1
+	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/pdfimport.oxt || return 1
+       popd
+	
+	# prepare filesystem entries
+	mkdir -p ${pkgdir}/usr/{bin,share/applications}
+	mkdir -p ${pkgdir}/usr/share/icons/{hicolor,locolor}
+
+	# install shortcuts
+	mv ${pkgdir}/usr/lib/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
+	# add startcenter desktop file
+	install -D -m644 ${srcdir}/startcenter.desktop ${pkgdir}/usr/share/applications/startcenter.desktop || return 1
+
+	cd ${pkgdir}/usr/share/applications
+	sed -i -e 's|Exec=openoffice.org3|Exec=/usr/bin/soffice|g' *.desktop || return 1
+	sed -i -e 's|Exec=/usr/bin/soffice-printeradmin|Exec=/usr/bin/spadmin|g' printeradmin.desktop || return 1
+	# fix exec commands in shortcuts for Xfce menu
+	sed -i -e 's|base %U|base|g' base.desktop || return 1
+	sed -i -e 's|calc %U|calc|g' calc.desktop || return 1
+	sed -i -e 's|draw %U|draw|g' draw.desktop || return 1
+	sed -i -e 's|impress %U|impress|g' impress.desktop || return 1
+	sed -i -e 's|math %U|math|g' math.desktop || return 1
+	sed -i -e 's|writer %U|writer|g' writer.desktop || return 1
+	# remove quickstarter, we disabled it above
+	rm -rf ${pkgdir}/usr/share/applications/qstart.desktop
+	# fix icons in desktop files
+	sed -i -e 's|Icon=openofficeorg3-|Icon=|g' *.desktop
+
+	# install icons
+	cd ${srcdir}/${_OO_milestone}/sysui/desktop/icons
+	cp -a -v hicolor/*x* ${pkgdir}/usr/share/icons/hicolor
+	cp -a -v locolor/*x* ${pkgdir}/usr/share/icons/locolor
+
+	# just in case icon calc is used by calculator :)
+	find ${pkgdir}/usr/share/icons -type d -name apps -exec mv {}/calc.png  {}/ooocalc.png \;
+	sed -i -e 's|Icon=calc|Icon=ooocalc|g' ${pkgdir}/usr/share/applications/calc.desktop # already done above
+
+	# fix ownership and permissions
+	chown root.root -R ${pkgdir}/
+	chmod +rX -R ${pkgdir}/usr
+
+	# set desktop variable to force gtk/gnome vcl usage
+	install -m755 -d ${pkgdir}/etc/profile.d
+	install -m755 ${srcdir}/openoffice.profile ${pkgdir}/etc/profile.d/openoffice.sh || return 1
+
+        # make symlinks
+        cd ${pkgdir}/usr/bin
+        ln -s /usr/lib/openoffice/program/soffice soffice
+        ln -s /usr/lib/openoffice/program/spadmin spadmin
+
+	# link the mozilla-plugin
+	mkdir -p ${pkgdir}/usr/lib/mozilla/plugins/
+	cd ${pkgdir}/usr/lib/mozilla/plugins/
+	ln -v -s /usr/lib/openoffice/program/libnpsoplugin.so .
+}
+
+package_openoffice-sdk() {
+
+ pkgdesc="OpenOffice.org SDK - development files"
+ depends=('openoffice-base')
+
+	cd ${srcdir}/${_OO_milestone}
+
+	# install SDK
+	if [ "$CARCH" = "x86_64" ]; then
+			cp -R instsetoo_native/unxlngx6.pro/OpenOffice_SDK/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
+	 else 	cp -R instsetoo_native/unxlngi6.pro/OpenOffice_SDK/native/install/en-US/linux-2.6-intel/buildroot/* ${pkgdir}/
+	fi
+
+	# move all to /usr/lib
+	mkdir -p ${pkgdir}/usr/lib
+	mv ${pkgdir}/opt/* ${pkgdir}/usr/lib/
+	rmdir ${pkgdir}/opt
+
+	cd ${pkgdir}/usr/lib/openoffice.org/basis3.2/sdk
+	
+	for file in setsdkenv_unix.csh setsdkenv_unix.sh ; do
+        sed -e "s,@OO_SDK_NAME@,sdk," \
+            -e "s,@OO_SDK_HOME@,/usr/lib/openoffice/basis-link/sdk," \
+            -e "s,@OFFICE_HOME@,/usr/lib/openoffice," \
+            -e "s,@OFFICE_BASE_HOME@,/usr/lib/openoffice/basis-link," \
+            -e "s,@OO_SDK_URE_HOME@,/usr/lib/openoffice/basis-link/ure-link," \
+            -e "s,@OO_SDK_MAKE_HOME@,/usr/bin," \
+            -e "s,@OO_SDK_ZIP_HOME@,/usr/bin," \
+            -e "s,@OO_SDK_CPP_HOME@,/usr/bin," \
+            -e "s,@OO_SDK_CC_55_OR_HIGHER@,," \
+            -e "s,@OO_SDK_JAVA_HOME@,\$JAVA_HOME," \
+            -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
+            -e "s,@SDK_AUTO_DEPLOYMENT@,NO," \
+            $file.in > $file
+        chmod 755 $file
+	done
+
+	cd ${pkgdir}/usr/lib/ || return 1
+	mv openoffice.org openoffice || return 1
+
+ 	cd ${pkgdir}/usr/lib/openoffice/ || return 1
+	mv basis3.2 basis-link || return 1
+
+	# fix ownership and permissions
+	chown root.root -R ${pkgdir}/
+}
