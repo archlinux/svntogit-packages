@@ -5,32 +5,33 @@
 pkgbase=kdebindings
 pkgname=('kdebindings-csharp'
          'kdebindings-python'
+         'kdebindings-ruby'
          'kdebindings-smoke')
-pkgver=4.5.2
-pkgrel=8
+pkgver=4.5.3
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://www.kde.org'
 license=('GPL' 'LGPL')
 makedepends=('pkgconfig' 'cmake' 'automoc4' 'pyqt' 'kdepim-runtime' 'mono'
-	'kdegraphics-okular' 'qwt' 'docbook-xsl' 'boost' 'qscintilla')
+	'kdegraphics-okular' 'qwt' 'docbook-xsl' 'boost' 'qscintilla' 'ruby')
 source=("http://download.kde.org/stable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2"
 	'fix-pyqt4-build.patch'
-	'fix-generator-segfaults.patch'
-	'mono-2.8.patch')
-sha1sums=('108fd6e3dbb341adc0e90487d1b681534968f1d2'
-	'36b52d147fee24a65c756baaad00e3d1ac081d3d'
-	'c0045f5b57fb62e6b0a9443548938f93af501b9d'
-	'9fdcab702f4e0ac8adec40a4a97208f18d5b826a')
+	'fix-ruby-bindings.patch')
+sha1sums=('60be241397a7c79bf87f7b388c619e7026701904'
+          '36b52d147fee24a65c756baaad00e3d1ac081d3d'
+          '2ef4d19581ce1365162cef6516f335efa391b62c')
 
 build() {
 	cd ${srcdir}/${pkgbase}-${pkgver}
 
 	patch -Np0 -i ${srcdir}/fix-pyqt4-build.patch
-	
-	# Already fixed in 4.5.3
-	patch -Np4 -i ${srcdir}/fix-generator-segfaults.patch
-	patch -Np3 -i ${srcdir}/mono-2.8.patch
+	patch -Np3 -i ${srcdir}/fix-ruby-bindings.patch
 
+	# fix ruby
+	for f in `find ruby -name CMakeLists.txt`; do
+	  sed -i "s|\${RUBY_INCLUDE_PATH}|\${RUBY_INCLUDE_PATH} /usr/include/ruby-1.9.1/${_ARCHITECTURE}-linux|" "${f}"
+	done
+	
 	export MONO_SHARED_DIR="${srcdir}/build/.mono"
 	mkdir -p "$MONO_SHARED_DIR"
 	cd ${srcdir}/build
@@ -40,7 +41,6 @@ build() {
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-DBUILD_falcon=OFF \
 		-DBUILD_java=OFF \
-		-DBUILD_ruby=OFF \
 		-DBUILD_php=OFF \
 		-DWITH_PolkitQt=OFF
 	make
@@ -63,6 +63,13 @@ package_kdebindings-python() {
 
 	# Use the python2 executable
 	find "${pkgdir}" -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
+}
+
+package_kdebindings-ruby() {
+	pkgdesc='KDE Bindings for ruby'
+	depends=('kdebindings-smoke' 'ruby')
+	cd $srcdir/build/ruby
+	make DESTDIR=$pkgdir install
 }
 
 package_kdebindings-smoke() {
