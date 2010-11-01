@@ -1,0 +1,475 @@
+--- drivers/lirc_dev/lirc_dev.h	2009/03/15 09:34:00	1.37 lirc-0_8_6
++++ drivers/lirc_dev/lirc_dev.h	2009/12/28 15:21:17	1.38
+@@ -4,7 +4,7 @@
+  * (L) by Artur Lipowski <alipowski@interia.pl>
+  *        This code is licensed under GNU GPL
+  *
+- * $Id: lirc_dev.h,v 1.37 2009/03/15 09:34:00 lirc Exp $
++ * $Id: lirc_dev.h,v 1.38 2009/12/28 15:21:17 jarodwilson Exp $
+  *
+  */
+ 
+@@ -30,14 +30,19 @@
+ 
+ struct lirc_buffer {
+ 	wait_queue_head_t wait_poll;
+-	spinlock_t lock;
++	spinlock_t fifo_lock;
+ 	unsigned int chunk_size;
+ 	unsigned int size; /* in chunks */
+ 	/* Using chunks instead of bytes pretends to simplify boundary checking
+ 	 * And should allow for some performance fine tunning later */
+ #ifdef LIRC_HAVE_KFIFO
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ 	struct kfifo *fifo;
+ #else
++	struct kfifo fifo;
++	u8 fifo_initialized;
++#endif
++#else
+ 	unsigned int fill; /* in chunks */
+ 	int head, tail;    /* in chunks */
+ 	unsigned char *data;
+@@ -47,12 +52,12 @@
+ static inline void lirc_buffer_lock(struct lirc_buffer *buf,
+ 				    unsigned long *flags)
+ {
+-	spin_lock_irqsave(&buf->lock, *flags);
++	spin_lock_irqsave(&buf->fifo_lock, *flags);
+ }
+ static inline void lirc_buffer_unlock(struct lirc_buffer *buf,
+ 				      unsigned long *flags)
+ {
+-	spin_unlock_irqrestore(&buf->lock, *flags);
++	spin_unlock_irqrestore(&buf->fifo_lock, *flags);
+ }
+ static inline void _lirc_buffer_clear(struct lirc_buffer *buf)
+ {
+@@ -63,11 +68,20 @@
+ #endif
+ static inline void lirc_buffer_clear(struct lirc_buffer *buf)
+ {
++	unsigned long flags;
++
+ #ifdef LIRC_HAVE_KFIFO
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ 	if (buf->fifo)
+ 		kfifo_reset(buf->fifo);
+ #else
+-	unsigned long flags;
++	if (buf->fifo_initialized) {
++		spin_lock_irqsave(&buf->fifo_lock, flags);
++		kfifo_reset(&buf->fifo);
++		spin_unlock_irqrestore(&buf->fifo_lock, flags);
++	}
++#endif
++#else
+ 	lirc_buffer_lock(buf, &flags);
+ 	_lirc_buffer_clear(buf);
+ 	lirc_buffer_unlock(buf, &flags);
+@@ -77,31 +91,47 @@
+ 				    unsigned int chunk_size,
+ 				    unsigned int size)
+ {
++	int ret = 0;
++
+ 	init_waitqueue_head(&buf->wait_poll);
+-	spin_lock_init(&buf->lock);
++	spin_lock_init(&buf->fifo_lock);
+ #ifndef LIRC_HAVE_KFIFO
+ 	_lirc_buffer_clear(buf);
+ #endif
+ 	buf->chunk_size = chunk_size;
+ 	buf->size = size;
+ #ifdef LIRC_HAVE_KFIFO
+-	buf->fifo = kfifo_alloc(size*chunk_size, GFP_KERNEL, &buf->lock);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
++	buf->fifo = kfifo_alloc(size*chunk_size, GFP_KERNEL, &buf->fifo_lock);
+ 	if (!buf->fifo)
+ 		return -ENOMEM;
+ #else
++	ret = kfifo_alloc(&buf->fifo, size * chunk_size, GFP_KERNEL);
++	if (ret == 0)
++		buf->fifo_initialized = 1;
++#endif
++#else
+ 	buf->data = kmalloc(size*chunk_size, GFP_KERNEL);
+ 	if (buf->data == NULL)
+ 		return -ENOMEM;
+ 	memset(buf->data, 0, size*chunk_size);
+ #endif
+-	return 0;
++
++	return ret;
+ }
+ static inline void lirc_buffer_free(struct lirc_buffer *buf)
+ {
+ #ifdef LIRC_HAVE_KFIFO
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ 	if (buf->fifo)
+ 		kfifo_free(buf->fifo);
+ #else
++	if (buf->fifo_initialized) {
++		kfifo_free(&buf->fifo);
++		buf->fifo_initialized = 0;
++	}
++#endif
++#else
+ 	kfree(buf->data);
+ 	buf->data = NULL;
+ 	buf->head = 0;
+@@ -111,6 +141,25 @@
+ 	buf->size = 0;
+ #endif
+ }
++
++#ifdef LIRC_HAVE_KFIFO
++static inline int lirc_buffer_len(struct lirc_buffer *buf)
++{
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
++	return kfifo_len(buf->fifo);
++#else
++	int len;
++	unsigned long flags;
++
++	spin_lock_irqsave(&buf->fifo_lock, flags);
++	len = kfifo_len(&buf->fifo);
++	spin_unlock_irqrestore(&buf->fifo_lock, flags);
++
++	return len;
++#endif
++}
++#endif
++
+ #ifndef LIRC_HAVE_KFIFO
+ static inline int  _lirc_buffer_full(struct lirc_buffer *buf)
+ {
+@@ -120,7 +169,7 @@
+ static inline int  lirc_buffer_full(struct lirc_buffer *buf)
+ {
+ #ifdef LIRC_HAVE_KFIFO
+-	return kfifo_len(buf->fifo) == buf->size * buf->chunk_size;
++	return lirc_buffer_len(buf) == buf->size * buf->chunk_size;
+ #else
+ 	unsigned long flags;
+ 	int ret;
+@@ -139,7 +188,7 @@
+ static inline int  lirc_buffer_empty(struct lirc_buffer *buf)
+ {
+ #ifdef LIRC_HAVE_KFIFO
+-	return !kfifo_len(buf->fifo);
++	return !lirc_buffer_len(buf);
+ #else
+ 	unsigned long flags;
+ 	int ret;
+@@ -158,7 +207,7 @@
+ static inline int  lirc_buffer_available(struct lirc_buffer *buf)
+ {
+ #ifdef LIRC_HAVE_KFIFO
+-	return buf->size - (kfifo_len(buf->fifo) / buf->chunk_size);
++	return buf->size - (lirc_buffer_len(buf) / buf->chunk_size);
+ #else
+ 	unsigned long flags;
+ 	int ret;
+@@ -177,21 +226,30 @@
+ 	buf->fill -= 1;
+ }
+ #endif
+-static inline void lirc_buffer_read(struct lirc_buffer *buf,
+-				    unsigned char *dest)
++static inline unsigned int lirc_buffer_read(struct lirc_buffer *buf,
++					    unsigned char *dest)
+ {
++	unsigned int ret = 0;
++
+ #ifdef LIRC_HAVE_KFIFO
+-	if (kfifo_len(buf->fifo) >= buf->chunk_size)
+-		kfifo_get(buf->fifo, dest, buf->chunk_size);
++	if (lirc_buffer_len(buf) >= buf->chunk_size)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
++		ret = kfifo_get(buf->fifo, dest, buf->chunk_size);
++#else
++		ret = kfifo_out_locked(&buf->fifo, dest, buf->chunk_size,
++				       &buf->fifo_lock);
++#endif
+ #else
+ 	unsigned long flags;
+ 	lirc_buffer_lock(buf, &flags);
+ 	_lirc_buffer_read_1(buf, dest);
+ 	lirc_buffer_unlock(buf, &flags);
+ #endif
++
++	return ret;
+ }
+ #ifndef LIRC_HAVE_KFIFO
+-static inline void _lirc_buffer_write_1(struct lirc_buffer *buf,
++static inline  _lirc_buffer_write_1(struct lirc_buffer *buf,
+ 				      unsigned char *orig)
+ {
+ 	memcpy(&buf->data[buf->tail*buf->chunk_size], orig, buf->chunk_size);
+@@ -199,17 +257,26 @@
+ 	buf->fill++;
+ }
+ #endif
+-static inline void lirc_buffer_write(struct lirc_buffer *buf,
+-				     unsigned char *orig)
++static inline unsigned int lirc_buffer_write(struct lirc_buffer *buf,
++					     unsigned char *orig)
+ {
++	unsigned int ret = 0;
++
+ #ifdef LIRC_HAVE_KFIFO
+-	kfifo_put(buf->fifo, orig, buf->chunk_size);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
++	ret = kfifo_put(buf->fifo, orig, buf->chunk_size);
++#else
++	ret = kfifo_in_locked(&buf->fifo, orig, buf->chunk_size,
++			      &buf->fifo_lock);
++#endif
+ #else
+ 	unsigned long flags;
+ 	lirc_buffer_lock(buf, &flags);
+ 	_lirc_buffer_write_1(buf, orig);
+ 	lirc_buffer_unlock(buf, &flags);
+ #endif
++
++	return ret;
+ }
+ #ifndef LIRC_HAVE_KFIFO
+ static inline void _lirc_buffer_write_n(struct lirc_buffer *buf,
+@@ -234,17 +301,26 @@
+ 	buf->fill += count;
+ }
+ #endif
+-static inline void lirc_buffer_write_n(struct lirc_buffer *buf,
+-				       unsigned char *orig, int count)
++static inline unsigned int lirc_buffer_write_n(struct lirc_buffer *buf,
++					       unsigned char *orig, int count)
+ {
++	unsigned int ret = 0;
++
+ #ifdef LIRC_HAVE_KFIFO
+-	kfifo_put(buf->fifo, orig, count * buf->chunk_size);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
++	ret = kfifo_put(buf->fifo, orig, count * buf->chunk_size);
++#else
++	ret = kfifo_in_locked(&buf->fifo, orig, count * buf->chunk_size,
++			      &buf->fifo_lock);
++#endif
+ #else
+ 	unsigned long flags;
+ 	lirc_buffer_lock(buf, &flags);
+ 	_lirc_buffer_write_n(buf, orig, count);
+ 	lirc_buffer_unlock(buf, &flags);
+ #endif
++
++	return ret;
+ }
+ 
+ struct lirc_driver {
+--- drivers/lirc_dev/lirc_dev.c.old	2009-08-31 12:57:55.000000000 -0400
++++ drivers/lirc_dev/lirc_dev.c	2010-03-07 01:40:17.000000000 -0500
+@@ -32,7 +32,11 @@
+ #error "**********************************************************"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/module.h>
+ #include <linux/kernel.h>
+ #include <linux/sched.h>
+--- drivers/lirc_sir/lirc_sir.c.old	2009-07-09 18:24:23.000000000 -0400
++++ drivers/lirc_sir/lirc_sir.c	2010-03-07 01:40:17.000000000 -0500
+@@ -45,7 +45,11 @@
+ # include <config.h>
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #if !defined(CONFIG_SERIAL_MODULE)
+ #if !defined(LIRC_ON_SA1100)
+ #warning "******************************************"
+--- drivers/lirc_serial/lirc_serial.c.old	2009-03-15 05:34:00.000000000 -0400
++++ drivers/lirc_serial/lirc_serial.c	2010-03-07 01:40:17.000000000 -0500
+@@ -60,7 +60,11 @@
+ #error "**********************************************************"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ 
+ #if defined(CONFIG_SERIAL) || defined(CONFIG_SERIAL_8250)
+ #warning "******************************************"
+--- drivers/lirc_bt829/lirc_bt829.c.old	2009-03-09 14:54:17.000000000 -0400
++++ drivers/lirc_bt829/lirc_bt829.c	2010-03-07 01:40:17.000000000 -0500
+@@ -22,7 +22,11 @@
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 4, 0)
+ #error "This driver needs kernel version 2.4.0 or higher"
+ #endif
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+ #include <linux/threads.h>
+--- drivers/lirc_sasem/lirc_sasem.c.old	2009-02-28 05:27:10.000000000 -0500
++++ drivers/lirc_sasem/lirc_sasem.c	2010-03-07 01:40:17.000000000 -0500
+@@ -41,7 +41,11 @@
+ #error "*** Sorry, this driver requires kernel version 2.4.22 or higher"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ 
+ #include <linux/errno.h>
+ #include <linux/init.h>
+--- drivers/lirc_igorplugusb/lirc_igorplugusb.c.old	2009-08-02 05:54:10.000000000 -0400
++++ drivers/lirc_igorplugusb/lirc_igorplugusb.c	2010-03-07 01:40:17.000000000 -0500
+@@ -47,7 +47,11 @@
+ #error "*******************************************************"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/module.h>
+ #include <linux/kernel.h>
+ #include <linux/kmod.h>
+--- drivers/lirc_imon/lirc_imon.c.old	2009-09-11 00:56:18.000000000 -0400
++++ drivers/lirc_imon/lirc_imon.c	2010-03-07 01:40:17.000000000 -0500
+@@ -30,7 +30,11 @@
+ #error "*** Sorry, this driver requires a 2.6 kernel"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ 
+ #include <linux/errno.h>
+ #include <linux/init.h>
+--- drivers/lirc_it87/lirc_it87.c.old	2009-06-01 08:21:31.000000000 -0400
++++ drivers/lirc_it87/lirc_it87.c	2010-03-07 01:40:17.000000000 -0500
+@@ -36,7 +36,11 @@
+ 
+ #include <linux/version.h>
+ #include <linux/module.h>
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/sched.h>
+ #include <linux/errno.h>
+ #include <linux/signal.h>
+--- drivers/lirc_streamzap/lirc_streamzap.c.old	2009-03-15 05:34:00.000000000 -0400
++++ drivers/lirc_streamzap/lirc_streamzap.c	2010-03-07 01:40:17.000000000 -0500
+@@ -35,7 +35,11 @@
+ #error "Sorry, this driver needs kernel version 2.4.0 or higher"
+ #error "*******************************************************"
+ #endif
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/kernel.h>
+ #include <linux/errno.h>
+ #include <linux/init.h>
+--- drivers/lirc_atiusb/lirc_atiusb.c.old	2009-03-10 20:21:46.000000000 -0400
++++ drivers/lirc_atiusb/lirc_atiusb.c	2010-03-07 01:40:17.000000000 -0500
+@@ -43,7 +43,11 @@
+ #error "*******************************************************"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ 
+ #include <linux/kernel.h>
+ #include <linux/errno.h>
+--- drivers/lirc_parallel/lirc_parallel.c.old	2009-03-08 15:22:28.000000000 -0400
++++ drivers/lirc_parallel/lirc_parallel.c	2010-03-07 01:40:17.000000000 -0500
+@@ -34,7 +34,11 @@
+ #error "**********************************************************"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #ifdef CONFIG_SMP
+ #error "--- Sorry, this driver is not SMP safe. ---"
+ #endif
+@@ -43,7 +47,11 @@
+ #include <linux/sched.h>
+ #include <linux/errno.h>
+ #include <linux/signal.h>
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/fs.h>
+ #include <linux/kernel.h>
+ #include <linux/ioport.h>
+--- drivers/lirc_wpc8769l/lirc_wpc8769l.c.old	2009-03-15 05:34:01.000000000 -0400
++++ drivers/lirc_wpc8769l/lirc_wpc8769l.c	2010-03-07 01:40:17.000000000 -0500
+@@ -37,7 +37,11 @@
+ #error "**********************************************************"
+ #endif
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ 
+ #include <linux/module.h>
+ #include <linux/errno.h>
+--- drivers/lirc_mceusb/lirc_mceusb.c.old	2009-09-02 10:04:02.000000000 -0400
++++ drivers/lirc_mceusb/lirc_mceusb.c	2010-03-07 01:40:17.000000000 -0500
+@@ -52,7 +52,11 @@
+ #error "Sorry, this driver needs kernel version 2.6.5 or higher"
+ #error "*******************************************************"
+ #endif
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+ #include <linux/autoconf.h>
++#else
++#include <generated/autoconf.h>
++#endif
+ #include <linux/kernel.h>
+ #include <linux/errno.h>
+ #include <linux/init.h>
+--- drivers/lirc_i2c/lirc_i2c.c	2009/08/30 16:59:53	1.70
++++ drivers/lirc_i2c/lirc_i2c.c	2009/12/15 05:37:00	1.71
+@@ -399,8 +399,8 @@
+ 		.name	= "i2c ir driver",
+ 	},
+ #endif
+-	.id		= I2C_DRIVERID_EXP3, /* FIXME */
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)
++	.id		= I2C_DRIVERID_EXP3, /* FIXME */
+ 	.attach_adapter	= ir_probe,
+ 	.detach_client	= ir_remove,
+ #else
