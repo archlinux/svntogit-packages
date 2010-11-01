@@ -4,8 +4,7 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=pyqt
-pkgver=4.8.0
-_pkgver=4.8
+pkgver=4.8.1
 pkgrel=1
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
@@ -20,11 +19,11 @@ optdepends=('phonon: enable audio and video in PyQt applications'
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${_pkgver}.tar.gz")
-md5sums=('003d195498eb42ca2daf7615fa01488d')
+source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
+md5sums=('1cac8f5d715c414f9cb2751b0e84cc07')
 
 build() {
-  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
 
   python2 configure.py \
     --confirm-license \
@@ -38,7 +37,7 @@ build() {
 }
 
 package(){
-  cd ${srcdir}/PyQt-x11-gpl-${_pkgver}
+  cd ${srcdir}/PyQt-x11-gpl-${pkgver}
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 }
