@@ -76,7 +76,7 @@ stop() {
 	local PID=$(get_pid)
 	[ -n "$PID" ] && kill $PID &> /dev/null
 	if [ $? -gt 0 ]; then
-		stat_die
+		stat_fail
 	else
 		local pid_file=$(get_pid_file)
 		[ -f "${pid_file}" ] && rm -f "${pid_file}"
@@ -113,6 +113,9 @@ case "$1" in
 	restart)
 		test_config
 		stop
+		while [ -n "$(get_pid)" ]; do
+			sleep 1
+		done
 		start
 		;;
 	status)
