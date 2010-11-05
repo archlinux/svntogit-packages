@@ -6,11 +6,11 @@
 
 pkgname=gpsd
 pkgver=2.95
-pkgrel=4
+pkgrel=5
 pkgdesc="GPS daemon and library to support USB/serial GPS devices"
 arch=('i686' 'x86_64')
 url="http://gpsd.berlios.de"
-license=('GPL')
+license=('BSD')
 depends=('lesstif' 'libxaw' 'python2' 'pth' 'libusb1' 'qt')
 optdepends=('php: generate a PHP status page for your GPS'
             'php-gd: image support for the PHP status page')
@@ -19,15 +19,22 @@ backup=('etc/conf.d/gpsd'
 options=('!libtool')
 install="${pkgname}.install"
 source=("http://download.berlios.de/${pkgname}/${pkgname}-${pkgver}.tar.gz"
-        'gpsd')
+        'gpsd' 'LICENSE')
 md5sums=('12535a9ed9fecf9ea2c5bdc9840da5ae'
-         'f929322fc4670543fcb36dafc7bb9e03')
+         'f929322fc4670543fcb36dafc7bb9e03'
+         'd217a23f408e91c94359447735bc1800')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
   # install python to the same DESTDIR given make
   sed -i 's|--prefix=${prefix} # --root=$(DESTDIR)|--prefix=${prefix} --root=$(DESTDIR)|' Makefile.am Makefile.in
+
+  # fix python 2.7 path
+  sed -i 's|/usr/bin/python|/usr/bin/python2|' gpsd.hotplug{,.wrapper}
+  sed -i 's|/usr/bin/python2.6|/usr/bin/python2|' valgrind-audit
+  sed -i 's|/usr/bin/env python|/usr/bin/env python2|' gpscat \
+    gpsfake gpsprof xgps xgpsspeed gps/gps.py
   
   PYTHON=/usr/bin/python2 ./configure --prefix=/usr
   make
@@ -56,6 +63,5 @@ package() {
 
   install -D -m755 "${srcdir}/gpsd" "$pkgdir/etc/rc.d/gpsd"
 
-  # fix python 2.7 path
-  find "$pkgdir" -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
+  install -D -m644 "${srcdir}/LICENSE" ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
 }
