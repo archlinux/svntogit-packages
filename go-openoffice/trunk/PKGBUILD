@@ -4,7 +4,7 @@
 pkgname=go-openoffice
 _GOver=3.2.1.6 # = final 3.2.1 != post OOo 3.2.1 final bugfix
 pkgver=${_GOver}
-pkgrel=1
+pkgrel=2
 pkgdesc="OpenOffice.org - go-oo.org enhanced version of SUN's office suite"
 arch=('i686' 'x86_64')
 _go_tree="OOO320"
@@ -16,7 +16,7 @@ makedepends=('git' 'rsync' 'boost' 'sane' 'perl-archive-zip' 'zip' 'unzip' 'xulr
              'apache-ant' 'gperf' 'poppler' 'kdelibs' 'gconf' 'openjdk6' 'cppunit'
 	     'beanshell'  'vigra' 'libldap' 'lucene' 'libmythes' 'junit' 'libwpg'
 	     # for additional ooo-build features
-	     'mesa>=7.5' 'gstreamer0.10-base>=0.10.26'  'mono>=2.6.1') 
+	     'mesa>=7.5' 'gstreamer0.10-base>=0.10.26') #  'mono>=2.6.1'
 	#'saxon'
 depends=("curl>=7.20.0" "hunspell>=1.2.8" "python>=2.6.5" 'libwpd' 'libxaw' "neon>=0.28.6"
           'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
@@ -41,8 +41,8 @@ optdepends=('java-runtime:     adds java support'
              'sane:             for scanner access'
              'unixodbc:         adds ODBC database support'
              'mesa:             for the OGLTrans extension'
-             'mono:             allows UNO automation with Mono'
              'gstreamer0.10-base: + some gstr-plugins to support multimedia content, e.g. in impress')
+	     #             'mono:             allows UNO automation with Mono'
 backup=(usr/lib/go-openoffice/program/sofficerc)
 provides=('openoffice-base')
 conflicts=('openoffice-base')
@@ -64,7 +64,9 @@ source=(${_mirror}/${_go_tree}/ooo-build-${_GOver}.tar.gz
 	http://download.go-oo.org/src/seamonkey-1.1.14.source.tar.gz
 	http://archive.apache.org/dist/ant/binaries/apache-ant-1.7.0-bin.tar.gz
 	http://multidimalgorithm.googlecode.com/files//mdds_0.3.0.tar.bz2
-	buildfix_64bit_system_libjpeg.diff)
+	buildfix_64bit_system_libjpeg.diff
+	buildfix_system_db51.diff
+	configure.set-redland-cflags.diff)
 options=('!makeflags')
 noextract=(ooo-cli-prebuilt-3.2.tar.bz2 cairo-1.4.10.tar.gz mdbtools-0.6pre1.tar.gz extras-3.tar.bz2 biblio.tar.bz2 unowinreg.dll 
            scsolver.2008-10-30.tar.bz2 libwpd-0.8.14.tar.gz libwps-0.1.2.tar.gz libwpg-0.1.3.tar.gz ooo_oxygen_images-2009-06-17.tar.gz)
@@ -85,7 +87,9 @@ md5sums=('0cf39b92f364e6d496061c254d66ba0d'
          'a169ab152209200a7bad29a275cb0333'
          'd721b0add40355d7049ec694b91eb332'
          'cf8a6967f7de535ae257fa411c98eb88'
-         'b005c4cf9f8e586539ca98c9cfe9bb77')
+         'b005c4cf9f8e586539ca98c9cfe9bb77'
+	 'ea43d5605160b571d6208f2380fc5c2d'
+         '992e28f227a78a532cba2d22152ab3b3')
 
 # source PKGBUILD && mksource
 mksource() {
@@ -117,12 +121,19 @@ build() {
 
 	# hotfixes not yet upstream
 #	cp ${srcdir}/*.diff ${srcdir}/ooo-build-${_GOver}/patches/hotfixes/
-	cp ${srcdir}/buildfix_64bit_system_libjpeg.diff ${srcdir}/ooo-build-${_GOver}/patches/hotfixes/
+	cp ${srcdir}/{buildfix_64bit_system_libjpeg.diff,buildfix_system_db51.diff,configure.set-redland-cflags.diff} ${srcdir}/ooo-build-${_GOver}/patches/hotfixes/
+
 
 	# export C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
 	unset CFLAGS
 	unset CXXFLAGS
+
+	# python2 fix
+	export PYTHON=python2
+	sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+	       -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
+	  $(find $srcdir -name '*.py')
 
 	if [ "$CARCH" = "x86_64" ]; then
 	      EXTRAOPTS="--without-stlport"
@@ -147,6 +158,7 @@ build() {
 		--enable-graphite\
 		--disable-gio\
 		--disable-kde\
+		--disable-mono\
 		--enable-kde4\
 		--enable-ldap \
 		--enable-lockdown\
