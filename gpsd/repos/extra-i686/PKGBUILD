@@ -1,0 +1,67 @@
+# $Id: PKGBUILD 24866 2010-08-29 07:19:22Z spupykin $
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: dibblethewrecker dibblethewrecker.at.jiwe.dot.org
+# Contributor: Giacomo Rizzo <alt@free-os.it>
+
+pkgname=gpsd
+pkgver=2.95
+pkgrel=5
+pkgdesc="GPS daemon and library to support USB/serial GPS devices"
+arch=('i686' 'x86_64')
+url="http://gpsd.berlios.de"
+license=('BSD')
+depends=('lesstif' 'libxaw' 'python2' 'pth' 'libusb1' 'qt')
+optdepends=('php: generate a PHP status page for your GPS'
+            'php-gd: image support for the PHP status page')
+backup=('etc/conf.d/gpsd'
+        'etc/udev/rules.d/99-gpsd-usb.rules')
+options=('!libtool')
+install="${pkgname}.install"
+source=("http://download.berlios.de/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        'gpsd' 'LICENSE')
+md5sums=('12535a9ed9fecf9ea2c5bdc9840da5ae'
+         'f929322fc4670543fcb36dafc7bb9e03'
+         'd217a23f408e91c94359447735bc1800')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # install python to the same DESTDIR given make
+  sed -i 's|--prefix=${prefix} # --root=$(DESTDIR)|--prefix=${prefix} --root=$(DESTDIR)|' Makefile.am Makefile.in
+
+  # fix python 2.7 path
+  sed -i 's|/usr/bin/python|/usr/bin/python2|' gpsd.hotplug{,.wrapper}
+  sed -i 's|/usr/bin/python2.6|/usr/bin/python2|' valgrind-audit
+  sed -i 's|/usr/bin/env python|/usr/bin/env python2|' gpscat \
+    gpsfake gpsprof xgps xgpsspeed gps/gps.py
+  
+  PYTHON=/usr/bin/python2 ./configure --prefix=/usr
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  # Our own udev-install since the Makefile uses absolute paths
+  # Original file names are [mostly] unmodified: useful to match process name in case of error
+  # Following the switch from hotplug to udev helper scripts now live in /lib/udev/ instead of /etc/hotplug/
+  sed -i 's|GPSD_OPTIONS=""|GPSD_OPTIONS="-P /var/run/gpsd.pid"|' packaging/deb/etc_default_gpsd
+  sed -i 's|"/var/run/gpsd.sock"|"/var/run/gpsd/gpsd.sock"|' packaging/deb/etc_default_gpsd
+  install -D -m644 "packaging/deb/etc_default_gpsd" "${pkgdir}/etc/conf.d/gpsd"
+
+  sed -i 's|Id: gpsd.rules|Id: 99-gpsd-usb.rules|' gpsd.rules
+  install -D -m644 "gpsd.rules" "${pkgdir}/etc/udev/rules.d/99-gpsd-usb.rules"
+
+  sed -i 's|/etc/default/gpsd|/etc/conf.d/gpsd|' gpsd.hotplug.wrapper
+  install -D -m755 gpsd.hotplug.wrapper "${pkgdir}/lib/udev/gpsd.hotplug.wrapper"
+
+  # Patch a path bug. Check to see if fixed in ensuing releases
+  sed -i 's|gpsdcmd = "gpsd %s|gpsdcmd = "/usr/sbin/gpsd %s|' gpsd.hotplug
+  install -D -m755 gpsd.hotplug "${pkgdir}/lib/udev/gpsd.hotplug"
+
+  install -D -m755 "${srcdir}/gpsd" "$pkgdir/etc/rc.d/gpsd"
+
+  install -D -m644 "${srcdir}/LICENSE" ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+}
