@@ -1,17 +1,21 @@
-# Set path to perl scripts.
-# Remove the perlbin dirs in the next release.
+# Set path to perl scriptdirs if they exist
+# https://wiki.archlinux.org/index.php/Perl_Policy#Binaries_and_Scripts
+# Added /usr/bin/*_perl dirs for scripts
+# Remove /usr/lib/perl5/*_perl/bin in next release
 
-# Add dirs to path if they exist.
+[ -d /usr/bin/site_perl ] &&
+		PATH=$PATH:/usr/bin/site_perl
 [ -d /usr/lib/perl5/site_perl/bin ] &&
 		PATH=$PATH:/usr/lib/perl5/site_perl/bin
-[ -d /usr/bin/perlbin/site ] &&
-		PATH=$PATH:/usr/bin/perlbin/site
+
+[ -d /usr/bin/vendor_perl ] &&
+		PATH=$PATH:/usr/bin/vendor_perl
 [ -d /usr/lib/perl5/vendor_perl/bin ] &&
 		PATH=$PATH:/usr/lib/perl5/vendor_perl/bin
-[ -d /usr/bin/perlbin/vendor ] &&
-		PATH=$PATH:/usr/bin/perlbin/vendor
-[ -d /usr/lib/perl5/core_perl/bin ] &&
-		PATH=$PATH:/usr/lib/perl5/core_perl/bin
+
+[ -d /usr/bin/core_perl ] &&
+		PATH=$PATH:/usr/bin/core_perl
+
 export PATH
 
 # If you have modules in non-standard directories you can add them here.
