@@ -1,0 +1,50 @@
+# $Id$
+# Contributor: FUBAR <mrfubar@gmail.com>
+# Contributor: simo <simo@archlinux.org>
+# Contributor: Jeff 'codemac' Mickey <jeff@archlinux.org>
+# Maintainer: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgname=bitlbee
+pkgver=3.0
+pkgrel=1
+pkgdesc="An IRC to IM gateway. Supports MSN, ICQ, Jabber, Yahoo!, and AIM"
+arch=('i686' 'x86_64')
+url="http://www.bitlbee.org/" 
+license=('GPL')
+depends=('gnutls' 'glib2')
+optdepends=('xinetd: to run bitlbee through xinetd')
+install=${pkgname}.install
+backup=(etc/bitlbee/bitlbee.conf etc/bitlbee/motd.txt etc/xinetd.d/bitlbee)
+source=(http://get.bitlbee.org/src/${pkgname}-${pkgver}.tar.gz
+	'bitlbee.xinetd'
+	'bitlbee.rcd')
+md5sums=('455fc8070d758c2bb3442ef4c709ad69'
+         '81e576369e31377f5217e636b00874b1'
+         '8cf7500982838f5273ee025eeabfa7fb')
+
+build() { 
+	cd ${srcdir}/${pkgname}-${pkgver}
+	
+	./configure --prefix=/usr \
+		--ssl=gnutls \
+		--etcdir=/etc/bitlbee \
+		--pidfile=/var/run/bitlbee/bitlbee.pid \
+		--ipcsocket=/var/run/bitlbee/bitlbee.sock || return 1
+	make || return 1
+}
+
+package() {
+	cd ${srcdir}/${pkgname}-${pkgver}
+
+	install -dm755 ${pkgdir}/var/lib
+	install -o65 -g65 -dm0770 ${pkgdir}/var/lib/bitlbee
+	install -dm755 ${pkgdir}/var/run
+	install -o65 -g65 -dm755 ${pkgdir}/var/run/bitlbee
+	install -Dm644 ${srcdir}/bitlbee.xinetd \
+		${pkgdir}/etc/xinetd.d/bitlbee
+	install -Dm755 ${srcdir}/bitlbee.rcd \
+		${pkgdir}/etc/rc.d/bitlbee || return 1
+	make DESTDIR=${pkgdir} install || return 1
+	make DESTDIR=${pkgdir} install-etc || return 1
+	make DESTDIR=${pkgdir} install-dev || return 1
+}
