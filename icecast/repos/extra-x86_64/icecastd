@@ -1,0 +1,67 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+getPID() {
+   echo $(pgrep -u nobody icecast 2>/dev/null);
+}
+
+case "$1" in
+  start)
+    stat_busy "Starting Icecast Server"
+    if [ -z "$(getPID)" ]; then
+      /usr/bin/icecast -b -c /etc/icecast.xml &>/dev/null
+      timeo=30
+      while [ $timeo -gt 0 ]; do
+        [ ! -z  "$(getPID)" ] && break
+        sleep 1
+        let timeo=${timeo}-1
+      done
+      if [ $timeo -eq 0 ]; then
+        stat_fail
+        exit 1
+      else
+        add_daemon icecast
+        stat_done
+      fi
+    else
+       stat_fail
+       exit 1
+    fi
+    ;;
+
+  stop)
+    stat_busy "Stopping Icecast Server"
+    if [ ! -z "$(getPID)" ]; then
+      timeo=30
+      kill $(getPID) &> /dev/null
+      if [ $? -gt 0 ]; then
+        stat_fail
+        exit 1
+      fi
+      while [ ! -z "$(getPID)" -a $timeo -gt 0 ]; do
+        sleep 1
+        let timeo=${timeo}-1
+      done
+      if [ -z "$(getPID)" ]; then
+        rm_daemon icecast
+        stat_done
+      else
+        stat_fail
+        exit 1
+      fi
+    else
+      stat_done
+      exit 1
+    fi
+    ;;
+
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"  
+esac
+exit 0
