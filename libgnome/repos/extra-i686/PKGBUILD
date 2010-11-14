@@ -1,0 +1,48 @@
+# $Id$ 
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=libgnome
+pkgname=('libgnome' 'libgnome-data')
+pkgver=2.32.0
+pkgrel=2
+arch=('i686' 'x86_64')
+license=('LGPL')
+makedepends=('intltool' 'gnome-vfs>=2.24.3' 'libbonobo>=2.32.0' 'gconf>=2.32.0' 'gvfs>=1.6.6' 'libcanberra>=0.25')
+options=('!libtool' '!emptydirs')
+url="http://www.gnome.org"
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/2.32/${pkgbase}-${pkgver}.tar.bz2)
+sha256sums=('d65e49bf075eb2b3efebec38ceb409693154d18396365765da1a71630bc3dd02')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static --disable-esd
+  make
+}
+
+package_libgnome() {
+    pkgdesc="Common libraries for GNOME"
+    depends=("libgnome-data=${pkgver}" 'gnome-vfs>=2.24.3' 'libbonobo>=2.32.0' 'gconf>=2.32.0' 'gvfs>=1.6.6' 'libcanberra>=0.25')
+
+    cd "${srcdir}/${pkgbase}-${pkgver}"
+
+    make -C libgnome DESTDIR="${pkgdir}" install
+    make -C monikers DESTDIR="${pkgdir}" install
+}
+
+package_libgnome-data() {
+   pkgdesc="Common data from libgnome"
+   install=libgnome.install
+
+   cd "${srcdir}/${pkgbase}-${pkgver}"
+
+   for dir in doc gnome-data po schemas
+   do
+       make -C $dir GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+   done
+
+   install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+   gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain libgnome-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas
+   rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
