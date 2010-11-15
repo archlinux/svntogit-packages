@@ -1,6 +1,6 @@
 # Arguments for alsactl
-# example: ALSA_ARGS="--file /var/run/alsa-state"
-ALSA_ARGS=""
+# example: ALSA_ARGS="--file /var/lib/alsa/asound.state"
+ALSA_ARGS="--file /var/lib/alsa/asound.state"
 
 # Enables powersaving mode for AC97 and hda_intel audio chips.
 # Set to 1 to enable powersaving.
