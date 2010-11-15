@@ -1,5 +1,5 @@
 PKGNAME="texlive-science"
-UPDMAP="/etc/texmf/web2c/updmap.cfg"
+UPDMAP="etc/texmf/web2c/updmap.cfg"
 SYNCWITHTREES=''
 NEWMAPS=`mktemp`
 cat <<EOF > $NEWMAPS
@@ -12,15 +12,25 @@ pre_install() {
 
 post_install() {
 	echo    ">>> texlive: updating the filename database..."
-	/usr/bin/mktexlsr
+	usr/bin/mktexlsr
 	echo    ">>> texlive: updating the fontmap files with updmap..."
-	/usr/bin/updmap-sys --quiet --nohash
+	usr/bin/updmap-sys --quiet --nohash
 	echo    " done." 
 }
 
 
 pre_upgrade() {
-  OLDMAPS="/usr/share/texmf-var/arch/installedpkgs/$PKGNAME.maps"
+  if [[ "$2" == 200* ]]; then
+    OLDMAPS="usr/share/texmf-var/arch/installedpkgs/$PKGNAME.maps"
+    echo "Info: copying previous updmap.cfg from /usr/share/texmf-config/web2c/"
+    echo "      to /etc/texmf/web2c/ (and keeping new one as updmap.cfg.pacnew)"
+    mv etc/texmf/web2c/updmap.cfg etc/texmf/web2c/updmap.cfg.pacnew 
+    cp usr/share/texmf-config/web2c/updmap.cfg.pacsave etc/texmf/web2c/updmap.cfg
+  else
+    # $2 >= 2010
+    OLDMAPS="var/lib/texmf/arch/installedpkgs/$PKGNAME.maps"
+  fi
+
   if [ -f $OLDMAPS ] ; then
     MAPSDIFF=`mktemp`
     TOADD=`mktemp`
@@ -37,7 +47,6 @@ pre_upgrade() {
     fi
   else
     echo "Warning: file $OLDMAPS not found" 
-    echo "(ignore the above if updating from TL2008 or from TL2009 in testing)"
     SYNCWITHTREES="--syncwithtrees"
   fi
 }
@@ -45,9 +54,9 @@ pre_upgrade() {
 
 post_upgrade() {
 	echo    ">>> texlive: updating the filename database..."
-	/usr/bin/mktexlsr
+	usr/bin/mktexlsr
 	echo    ">>> texlive: updating the fontmap files with updmap..."
-	/usr/bin/updmap-sys --quiet --nohash $SYNCWITHTREES
+	usr/bin/updmap-sys --quiet --nohash $SYNCWITHTREES
 	echo    " done." 
 }
 
