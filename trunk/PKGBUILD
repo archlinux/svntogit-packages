@@ -4,25 +4,30 @@
 
 pkgname=ncurses
 pkgver=5.7
-pkgrel=3
+pkgrel=4
 pkgdesc="System V Release 4.0 curses emulation library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/ncurses/"
 license=('MIT')
 depends=('glibc')
-source=(ftp://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz)
-md5sums=('cce05daf61a64501ef6cd8da1f727ec6')
+source=(ftp://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz
+        set_field_buffer.patch)
+md5sums=('cce05daf61a64501ef6cd8da1f727ec6'
+         '04c8d6d95140a29d72c0eb685a2eeffd')
 
 build() {
   cd ${srcdir}/
   mkdir ncurses{,w}-build
-  
+
+  # http://permalink.gmane.org/gmane.comp.lib.ncurses.bugs/3559
+  patch -Np1 -i ${srcdir}/set_field_buffer.patch
+
   cd ${srcdir}/ncursesw-build
   ../${pkgname}-${pkgver}/configure --prefix=/usr --mandir=/usr/share/man \
      --with-shared --with-normal --without-debug --without-ada \
      --with-install-prefix=${pkgdir} --enable-widec 
   # add --enable-ext-colors with next soname bump
-  make || return 1
+  make
 
   # libncurses.so.5 for external binary support 
   cd ${srcdir}/ncurses-build
@@ -30,7 +35,7 @@ build() {
   ../${pkgname}-${pkgver}/configure --prefix=/usr \
     --with-shared --with-normal --without-debug --without-ada \
     --with-install-prefix=${pkgdir} $CONFIGFLAG
-  make || return 1
+  make
 }
 
 package() {
@@ -43,10 +48,10 @@ package() {
   ln -sf ../../lib/libncursesw.so.5 ${pkgdir}/usr/lib/libncursesw.so
 
   # Fool packages looking to link to non-wide-character ncurses libraries
-  for lib in curses ncurses form panel menu ; do \
-    rm -f ${pkgdir}/usr/lib/lib${lib}.so ; \
-    echo "INPUT(-l${lib}w)" >${pkgdir}/usr/lib/lib${lib}.so ; \
-    ln -sf lib${lib}w.a ${pkgdir}/usr/lib/lib${lib}.a ; \
+  for lib in curses ncurses form panel menu; do
+    rm -f ${pkgdir}/usr/lib/lib${lib}.so
+    echo "INPUT(-l${lib}w)" >${pkgdir}/usr/lib/lib${lib}.so
+    ln -sf lib${lib}w.a ${pkgdir}/usr/lib/lib${lib}.a
   done
   ln -sf libncurses++w.a ${pkgdir}/usr/lib/libncurses++.a
 
