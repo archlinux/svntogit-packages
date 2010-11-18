@@ -1,4 +1,4 @@
-# 
+#
 # /etc/profile
 #
 # This file is intended to be used for ALL common
@@ -30,7 +30,7 @@ unset shell
 umask 022
 
 # Set our default path
-PATH="/bin:/usr/bin:/sbin:/usr/sbin"
+PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 export PATH
 
 # Load profiles from /etc/profile.d
