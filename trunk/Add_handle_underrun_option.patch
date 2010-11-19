@@ -1,0 +1,86 @@
+From: Takashi Iwai <tiwai@suse.de>
+Date: Fri, 9 Jul 2010 12:05:03 +0000 (+0200)
+Subject: pulse: Add handle_underrun option
+X-Git-Url: http://git.alsa-project.org/?p=alsa-plugins.git;a=commitdiff_plain;h=c20d516e229620129ee20175d8fee8511cc3a4bd
+
+pulse: Add handle_underrun option
+
+Added a config option "handle_underrun" to specify whether pulse plugin
+handles the underrun reported from PA.  The default value is now set to
+false, i.e. it will ignore underruns in PA (for good reasons below).
+You can take back to the old behavior by setting handle_underrun true.
+
+The original idea was brought by David Henningsson <diwic@ubuntu.com>,
+while this patch is simplified and makes the behavior configurable.
+
+The reasons for avoiding underruns (cited from David's original patch):
+
+ Reporting underruns to ALSA seems to do more bad than good, for these reasons:
+ * If pulseaudio gets an underrun, the normal way to end that underrun is to
+   feed it with more buffers. This is different from the ALSA way of dealing
+   with underruns, which requires hardware buffer pointers to be reset.
+ * In addition, underrun signals are delivered asynchronously from pulseaudio.
+   This means that there might be more buffers on the way to pulseaudio when
+   the underrun is reported, making the underrun obsolete. Unfortunately,
+   there is currently no known way to determine whether this is the case or
+   not.
+
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+---
+
+diff --git a/pulse/pcm_pulse.c b/pulse/pcm_pulse.c
+index b322898..2df0a80 100644
+--- a/pulse/pcm_pulse.c
++++ b/pulse/pcm_pulse.c
+@@ -39,6 +39,7 @@ typedef struct snd_pcm_pulse {
+ 	size_t last_size;
+ 	size_t ptr;
+ 	int underrun;
++	int handle_underrun;
+ 
+ 	size_t offset;
+ 
+@@ -696,8 +697,9 @@ static int pulse_prepare(snd_pcm_ioplug_t * io)
+ 	if (io->stream == SND_PCM_STREAM_PLAYBACK) {
+ 		pa_stream_set_write_callback(pcm->stream,
+ 					     stream_request_cb, pcm);
+-		pa_stream_set_underflow_callback(pcm->stream,
+-						 stream_underrun_cb, pcm);
++		if (pcm->handle_underrun)
++			pa_stream_set_underflow_callback(pcm->stream,
++							 stream_underrun_cb, pcm);
+ 		r = pa_stream_connect_playback(pcm->stream, pcm->device,
+ 					       &pcm->buffer_attr,
+ 					       PA_STREAM_AUTO_TIMING_UPDATE |
+@@ -980,6 +982,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(pulse)
+ 	snd_config_iterator_t i, next;
+ 	const char *server = NULL;
+ 	const char *device = NULL;
++	int handle_underrun = 0;
+ 	int err;
+ 	snd_pcm_pulse_t *pcm;
+ 
+@@ -1005,6 +1008,14 @@ SND_PCM_PLUGIN_DEFINE_FUNC(pulse)
+ 			}
+ 			continue;
+ 		}
++		if (strcmp(id, "handle_underrun") == 0) {
++			if ((err = snd_config_get_bool(n)) < 0) {
++				SNDERR("Invalid value for %s", id);
++				return -EINVAL;
++			}
++			handle_underrun = err;
++			continue;
++		}
+ 		SNDERR("Unknown field %s", id);
+ 		return -EINVAL;
+ 	}
+@@ -1028,6 +1039,8 @@ SND_PCM_PLUGIN_DEFINE_FUNC(pulse)
+ 		goto error;
+ 	}
+ 
++	pcm->handle_underrun = handle_underrun;
++
+ 	err = pulse_connect(pcm->p, server);
+ 	if (err < 0)
+ 		goto error;
