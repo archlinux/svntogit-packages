@@ -3,7 +3,7 @@
 
 pkgname=zlib
 pkgver=1.2.5
-pkgrel=2
+pkgrel=3
 pkgdesc='Compression library implementing the deflate compression method found in gzip and PKZIP'
 arch=('i686' 'x86_64')
 license=('custom')
@@ -19,15 +19,16 @@ build() {
 	cd ${srcdir}/zlib-$pkgver
 	# see http://bugs.archlinux.org/task/19280
 	patch -p1 -i ${srcdir}/zlib-1.2.5-lfs-decls.patch || return 1
-	export CFLAGS="${CFLAGS/-O2/-O3} -DUNALIGNED_OK"
+	# work around gcc bug; see https://bugs.archlinux.org/task/20647
+	export CFLAGS="${CFLAGS/-O2/-O3} -fno-tree-vectorize -DUNALIGNED_OK"
 	./configure --prefix=/usr
-	make || return 1
+	make
 
 	grep -A 24 '^  Copyright' zlib.h > LICENSE
 }
 
 package() {
 	cd ${srcdir}/zlib-$pkgver
-	make install DESTDIR=${pkgdir} || return 1
+	make install DESTDIR=${pkgdir}
 	install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/zlib/LICENSE
 }
