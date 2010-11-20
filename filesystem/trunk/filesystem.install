@@ -1,78 +1,59 @@
-# arg 1:  the new package version
 post_install() {
-  [ -f var/log/lastlog ] ||  : >var/log/lastlog
-  [ -f var/log/wtmp ]    ||  : >var/log/wtmp
-  [ -f var/run/utmp ]    ||  : >var/run/utmp
-  [ -f var/log/btmp ]    || (: >var/log/btmp && bin/chmod 600 var/log/btmp)
-  # workaround for bug #7194
-  # readded due to bug #9465
-  # please do not remove!
-  chmod 1777 var/spool/mail tmp var/tmp var/lock
+	[ -f var/log/lastlog ] ||  : >var/log/lastlog
+	[ -f var/log/wtmp ]    ||  : >var/log/wtmp
+	[ -f var/run/utmp ]    ||  : >var/run/utmp
+	[ -f var/log/btmp ]    || (: >var/log/btmp && bin/chmod 600 var/log/btmp)
+	# workaround for bug #7194
+	# readded due to bug #9465
+	# please do not remove!
+	bin/chmod 1777 var/spool/mail tmp var/tmp var/lock
 }
 
-# arg 1:  the new package version
-# arg 2:  the old package version
+# args: <group> [options]
+_addgroup() {
+	if ! bin/grep -q "^$1:" etc/group; then
+		usr/sbin/groupadd ${@} >/dev/null
+	fi
+}
+
+# args: <group> [options]
+_adduser() {
+	if ! bin/grep -q "^$1:" etc/passwd; then
+		usr/sbin/useradd ${@} >/dev/null
+	fi
+}
+
 post_upgrade() {
-  post_install $1
-  if [ ! "`grep '^optical:' etc/group`" ]; then
-    echo "adding new groups: audio optical"
-    usr/sbin/groupadd -g 92 audio   >/dev/null
-    usr/sbin/groupadd -g 93 optical >/dev/null
-  fi
-  if [ ! "`grep '^video:' etc/group`" ]; then
-    echo "adding new groups: video floppy storage"
-    usr/sbin/groupadd -g 91 video   >/dev/null
-    usr/sbin/groupadd -g 94 floppy  >/dev/null
-    usr/sbin/groupadd -g 95 storage >/dev/null
-  fi
-  if [ ! "`grep '^log:' etc/group`" ]; then
-    echo "adding new group: log"
-    usr/sbin/groupadd -g 19 log     >/dev/null
-  fi
-  if [ ! "`grep '^power:' etc/group`" ]; then
-    echo "adding new group: power"
-    usr/sbin/groupadd -g 98 power   >/dev/null
-  fi
-  if [ ! "`grep '^network:' etc/group`" ]; then
-    echo "adding new group: network"
-    usr/sbin/groupadd -g 90 network >/dev/null
-  fi
-  if [ ! "`grep '^games:' etc/group`" ]; then
-    echo "adding new group: games"
-    usr/sbin/groupadd -g 50 games >/dev/null
-  fi
-  if [ ! "`grep '^uucp:' etc/group`" ]; then
-    echo "adding new group: uucp"
-    usr/sbin/groupadd -g 14 uucp >/dev/null
-  fi
-  if [ ! "`grep '^http:' etc/group`" ]; then
-    echo "adding new group: http"
-    usr/sbin/groupadd -g 33 http >/dev/null
-  fi
-  if [ ! "`grep '^http:' etc/passwd`" ]; then
-    echo "adding new user http"
-    usr/sbin/useradd -u 33 -d /srv/http -g http -s /bin/false http >/dev/null
-  fi
-  if [ ! "`grep '^scanner:' etc/group`" ]; then
-    echo "adding new group: scanner"
-    usr/sbin/groupadd -g 96 scanner >/dev/null
-  fi
-  if [ ! "`grep '^rfkill:' etc/group`" ]; then
-    echo "adding new group: rfkill"
-    usr/sbin/groupadd -g 24 rfkill >/dev/null
-  fi
-  # sync gshadow to group (fixes FS#19869
-  if [ ! "`grep '^rfkill:' etc/gshadow`" ]; then
-    usr/sbin/grpconv >/dev/null
-  fi
+	post_install
 
-  grep -q '^include /etc/ld.so.conf.d/\*.conf$' etc/ld.so.conf \
-    || echo 'include /etc/ld.so.conf.d/*.conf' >> etc/ld.so.conf
+	_addgroup optical -g 93
+	_addgroup audio   -g 92
+	_addgroup video   -g 91
+	_addgroup floppy  -g 94
+	_addgroup storage -g 95
+	_addgroup log     -g 19
+	_addgroup power   -g 98
+	_addgroup network -g 90
+	_addgroup games   -g 50
+	_addgroup uucp    -g 14
+	_addgroup http    -g 33
+	_adduser  http    -u 33 -d /srv/http -g http -s /bin/false http
+	_addgroup scanner -g 96
+	_addgroup rfkill  -g 24
 
-  # set "Last password change" > 0; otherwise su $user wont work
-  for user in bin daemon mail ftp http nobody; do
-    if LANG=C chage -l ${user} | grep -q 'password must be changed'; then
-      chage -d 14871 ${user}
-    fi
-  done
+	# sync gshadow to group (fixes FS#19869
+	if ! bin/grep -q '^rfkill:' etc/gshadow; then
+		usr/sbin/grpconv >/dev/null
+	fi
+
+	if ! bin/grep -q '^include /etc/ld.so.conf.d/\*.conf$' etc/ld.so.conf; then
+		bin/echo 'include /etc/ld.so.conf.d/*.conf' >> etc/ld.so.conf
+	fi
+
+	# set "Last password change" > 0; otherwise su $user wont work
+	for user in bin daemon mail ftp http nobody; do
+		if LANG=C usr/bin/chage -l ${user} | bin/grep -q 'password must be changed'; then
+			usr/bin/chage -d 14871 ${user}
+		fi
+	done
 }
