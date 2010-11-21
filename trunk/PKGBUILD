@@ -1,32 +1,36 @@
 # $Id$
-# Maintainer: 
+# Maintainer:
 
 pkgname=findutils
-pkgver=4.4.2
-pkgrel=2
+pkgver=4.5.9
+pkgrel=1
 pkgdesc="GNU utilities to locate files"
 arch=('i686' 'x86_64')
 license=('GPL3')
 groups=('base')
 depends=('glibc' 'sh')
 url="http://www.gnu.org/software/findutils"
-source=(ftp://ftp.gnu.org/pub/gnu/findutils/findutils-$pkgver.tar.gz)
+source=(ftp://alpha.gnu.org/gnu/findutils/${pkgname}-${pkgver}.tar.gz findutils-4.5.9-execdir.patch)
 install=findutils.install
-md5sums=('351cc4adb07d54877fa15f75fb77d39f')
+sha1sums=('7bfaadeb7a93c1bd959a360ecb0971a63ff43677'
+          '0c44872ea89b85c509c780b8096a23f1c2db96fe')
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Fix some bugs in handling of -execdir, including upstream commit 443487e
+  # and the proposed fix for https://savannah.gnu.org/bugs/index.php?29949
+  patch -Np1 -i ../findutils-4.5.9-execdir.patch
+
+  # Don't build or install locate because we use mlocate,
+  # which is a secure version of locate.
+  sed -i '/^SUBDIRS/s/locate//' Makefile.in
+
   ./configure --prefix=/usr
-  make || return 1
+  make
 }
 
 package() {
-  cd $srcdir/$pkgname-$pkgver
+  cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR=$pkgdir install
-  rm -rf $pkgdir/usr/{libexec,var}
-
-  # remove locate utils (we use mlocate instead)
-  rm -f $pkgdir/usr/bin/{locate,updatedb}
-  rm -f $pkgdir/usr/share/man/man1/{updatedb.1,locate.1}
-  rm -f $pkgdir/usr/share/man/man5/locatedb.5
 }

@@ -1,0 +1,106 @@
+ ChangeLog                                    |   18 ++++++++++++++++++
+ NEWS                                         |    4 ++++
+ find/pred.c                                  |   10 ++++------
+ find/testsuite/find.gnu/execdir-multiple.exp |    1 +
+ lib/dircallback.c                            |    7 ++++++-
+ 5 files changed, 33 insertions(+), 7 deletions(-)
+
+diff --git a/ChangeLog b/ChangeLog
+index ba12e93..e2451c4 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,21 @@
++2010-05-24  Kamil Dudka  <kdudka@redhat.com>
++
++	Fix Savannah bug #29949, -execdir does not change working directory
++	* find/pred.c (record_exec_dir): Do not throw the execdir when not
++	working in the cumulative mode.
++	* find/testsuite/find.gnu/execdir-multiple.exp: Add a test-case for
++	the bug #29949.
++	* NEWS: Mention this bugfix.
++
++2010-05-07  Kamil Dudka  <kdudka@redhat.com>
++
++	* lib/dircallback.c (run_in_dir): Make sure that if the callback
++	doesn't get run, the return value is nonzero.  Make sure that if
++	the directory save/restore fails, we don't overwrite errno with a
++	random value (and hence report some unrelated and nonexistent
++	error, instead of the real problem).  Restore the previous current
++	directory.
++
+ 2010-04-29  James Youngman  <jay@gnu.org>
+ 
+ 	Prepare for the release of findutils version 4.5.9.
+diff --git a/NEWS b/NEWS
+index e27a834..cae1eab 100644
+--- a/NEWS
++++ b/NEWS
+@@ -1,5 +1,9 @@
+ GNU findutils NEWS - User visible changes.      -*- outline -*- (allout)
+ 
++** Bug Fixes
++
++#29949: find -execdir does not change working directory
++
+ * Major changes in release 4.5.9, 2010-04-29
+ 
+ ** Bug Fixes
+diff --git a/find/pred.c b/find/pred.c
+index 6eeaa42..0efb55f 100644
+--- a/find/pred.c
++++ b/find/pred.c
+@@ -528,13 +528,11 @@ initialise_wd_for_exec (struct exec_val *execp, int cwd_fd, const char *dir)
+ static bool
+ record_exec_dir (struct exec_val *execp)
+ {
+-  if (!execp->wd_for_exec)
++  /* working directory not already known, so must be a *dir variant,
++     and this must be the first arg we added.   However, this may
++     be -execdir foo {} \; (i.e. not multiple).  */
++  if (!execp->state.todo)
+     {
+-      /* working directory not already known, so must be a *dir variant,
+-	 and this must be the first arg we added.   However, this may
+-	 be -execdir foo {} \; (i.e. not multiple).  */
+-      assert (!execp->state.todo);
+-
+       /* Record the WD. If we're using -L or fts chooses to do so for
+ 	 any other reason, state.cwd_dir_fd may in fact not be the
+ 	 directory containing the target file.  When this happens,
+diff --git a/find/testsuite/find.gnu/execdir-multiple.exp b/find/testsuite/find.gnu/execdir-multiple.exp
+index 6d4bd66..495b93b 100644
+--- a/find/testsuite/find.gnu/execdir-multiple.exp
++++ b/find/testsuite/find.gnu/execdir-multiple.exp
+@@ -49,6 +49,7 @@ if { [ safe_path ] } {
+     }
+ 
+     set SKIP_OLD 1
++    find_start p {tmp -type f -empty -execdir sh ./runme \{\} \; } ""
+     find_start p {tmp -type f -empty -execdir sh ./runme  \{\} + } ""
+     set SKIP_OLD 0
+     exec rm -rf tmp
+diff --git a/lib/dircallback.c b/lib/dircallback.c
+index 8497bee..c1e4088 100644
+--- a/lib/dircallback.c
++++ b/lib/dircallback.c
+@@ -37,7 +37,8 @@ int
+ run_in_dir (const struct saved_cwd *there,
+ 	    int (*callback)(void*), void *usercontext)
+ {
+-  int err, saved_errno;
++  int err = -1;
++  int saved_errno = 0;
+   struct saved_cwd here;
+   if (0 == save_cwd (&here))
+     {
+@@ -50,6 +51,10 @@ run_in_dir (const struct saved_cwd *there,
+ 	{
+ 	  openat_restore_fail (errno);
+ 	}
++
++      if (restore_cwd (&here) != 0)
++	openat_restore_fail (errno);
++
+       free_cwd (&here);
+     }
+   else
