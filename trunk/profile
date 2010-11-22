@@ -16,7 +16,7 @@ if test -d /etc/profile.d/; then
 fi
 
 # Source global bash config
-if test "$PS1" -a "$BASH" -a -r /etc/bash.bashrc; then
+if test "$PS1" && test "$BASH" && test -r /etc/bash.bashrc; then
 	. /etc/bash.bashrc
 fi
 
