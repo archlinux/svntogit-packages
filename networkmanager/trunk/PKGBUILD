@@ -7,14 +7,19 @@
 
 pkgname=networkmanager
 pkgver=0.8.2
-pkgrel=4
+pkgrel=5
 pkgdesc="Network Management daemon"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.gnome.org/projects/NetworkManager/"
-depends=('dbus-glib' 'dhcpcd' 'iproute2' 'iptables' 'libnl' 'nss' 'ppp' 'polkit' 'udev' 'wireless_tools' 'wpa_supplicant')
-makedepends=('intltool')
-optdepends=('modemmanager: for modem management service')
+depends=('dbus-glib' 'iproute2' 'libnl' 'nss' 'polkit' 'udev' 'wireless_tools' 'wpa_supplicant' 'ppp')
+makedepends=('intltool' 'autoconf' 'dhclient' 'dhcpcd' 'iptables')
+optdepends=('modemmanager: for modem management service'
+            'dhcpcd: DHCP client support'
+            'dhclient: DHCP/DHCPv6 client support'
+            'iptables: Connection sharing'
+            'dnsmasq: Connection sharing'
+            'bluez: Bluetooth support')
 options=('!libtool')
 backup=('etc/NetworkManager/nm-system-settings.conf')
 source=(http://ftp.gnome.org/pub/gnome/sources/NetworkManager/0.8/NetworkManager-${pkgver}.tar.bz2
@@ -34,15 +39,26 @@ build() {
 
   autoreconf -fi
 
-  ./configure --prefix=/usr --sysconfdir=/etc \
-      --with-distro=arch --localstatedir=/var \
-      --libexecdir=/usr/lib/networkmanager \
-      --disable-static --with-dhcpcd=/sbin/dhcpcd \
-      --with-crypto=nss --with-iptables=/usr/sbin/iptables \
-      --enable-more-warnings=no
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib/networkmanager \
+    --with-crypto=nss \
+    --with-distro=arch \
+    --with-dhclient=/usr/sbin/dhclient \
+    --with-dhcpcd=/sbin/dhcpcd \
+    --with-iptables=/usr/sbin/iptables \
+    --disable-static \
+    --enable-more-warnings=no
 
   make
+}
+
+package() {
+  cd "${srcdir}/NetworkManager-${pkgver}"
   make DESTDIR="${pkgdir}" install
+
   install -m644 "${srcdir}/nm-system-settings.conf" "${pkgdir}/etc/NetworkManager/"
   install -m 0755 test/.libs/nm-online "${pkgdir}/usr/bin/"
 }
