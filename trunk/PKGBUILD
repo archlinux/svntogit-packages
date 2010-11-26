@@ -112,6 +112,9 @@ build() {
       --libdir=/usr/lib --without-gd --disable-multi-arch
         
   make
+
+  # some errors are expected - manually check log files
+  make -k check || true
 }
 
 package() {
