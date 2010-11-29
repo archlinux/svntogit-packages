@@ -5,13 +5,14 @@
 
 pkgname=mpd
 pkgver=0.15.15
-pkgrel=1
+pkgrel=2
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://mpd.wikia.com/wiki/Server"
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
-         'sqlite3' 'libsamplerate' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag')
+         'sqlite3' 'libsamplerate' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag'
+         'libpulse')
 makedepends=('pkgconfig')
 install=${pkgname}.install
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
@@ -26,7 +27,7 @@ build() {
     --enable-lastfm \
     --disable-cue \
     --disable-sidplay \
-    --disable-pulse
+    --enable-pulse
   make
 }
 
