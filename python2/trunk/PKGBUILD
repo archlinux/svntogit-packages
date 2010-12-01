@@ -3,8 +3,8 @@
 # Contributer: Jason Chu <jason@archlinux.org>
 
 pkgname=python2
-pkgver=2.7
-pkgrel=3
+pkgver=2.7.1
+pkgrel=1
 _pybasever=2.7
 pkgdesc="A high-level scripting language"
 arch=('i686' 'x86_64')
@@ -17,32 +17,40 @@ conflicts=('python<3')
 options=('!makeflags')
 source=(http://www.python.org/ftp/python/${pkgver}/Python-${pkgver}.tar.bz2
         python-2.7-db51.diff)
-md5sums=('0e8c9ec32abf5b732bea7d91b38c3339'
+md5sums=('aa27bc25725137ba155910bd8e5ddc4f'
          'd9b8161568ce17a305c1b71e61ccd4b5')
 
 build() {
-  cd ${srcdir}/Python-${pkgver}
+  cd "${srcdir}/Python-${pkgver}"
 
-  patch -Np1 -i $srcdir/python-2.7-db51.diff
+  patch -Np1 -i ../python-2.7-db51.diff
+
+  # Ensure that we are using the system copy of various libraries (expat, zlib and libffi),
+  # rather than copies shipped in the tarball
+  rm -r Modules/expat
+  rm -r Modules/zlib
+  rm -r Modules/_ctypes/{darwin,libffi}*
+  sed -i "s/self.use_system_libffi = False/self.use_system_libffi = True/g" setup.py
 
   export OPT="${CFLAGS}"
-  ./configure --prefix=/usr --enable-shared --with-threads \
-              --enable-unicode=ucs4 --with-system-expat
+  export CPPFLAGS+="`pkg-config --cflags-only-I libffi`"
+  ./configure --prefix=/usr --enable-shared --with-threads --enable-ipv6 \
+              --enable-unicode=ucs4 --with-system-expat --with-system-ffi
 
   make
 }
 
 package() {
-  cd ${srcdir}/Python-${pkgver}
+  cd "${srcdir}/Python-${pkgver}"
   make DESTDIR=${pkgdir} altinstall
 
-  ln -sf python${_pybasever} $pkgdir/usr/bin/python2
-  ln -sf python${_pybasever}-config $pkgdir/usr/bin/python2-config
+  ln -sf python${_pybasever} ${pkgdir}/usr/bin/python2
+  ln -sf python${_pybasever}-config ${pkgdir}/usr/bin/python2-config
 
   ln -sf ../../libpython${_pybasever}.so \
     ${pkgdir}/usr/lib/python${_pybasever}/config/libpython${_pybasever}.so
 
-  mv $pkgdir/usr/bin/smtpd.py $pkgdir/usr/lib/python${_pybasever}/
+  mv ${pkgdir}/usr/bin/smtpd.py $pkgdir/usr/lib/python${_pybasever}/
 
   # some useful "stuff"
   install -dm755 ${pkgdir}/usr/lib/python${_pybasever}/Tools/{i18n,scripts}
@@ -52,16 +60,16 @@ package() {
     ${pkgdir}/usr/lib/python${_pybasever}/Tools/scripts/
 
   # fix conflicts with python
-  mv $pkgdir/usr/bin/idle{,2}
-  mv $pkgdir/usr/bin/pydoc{,2}
+  mv ${pkgdir}/usr/bin/idle{,2}
+  mv ${pkgdir}/usr/bin/pydoc{,2}
 
   # clean up #!s
-  find $pkgdir/usr/lib/python2.7/ -name '*.py' | \
+  find ${pkgdir}/usr/lib/python2.7/ -name '*.py' | \
     xargs sed -i "s|#[ ]*![ ]*/usr/bin/env python$|#!/usr/bin/env python2|"
 
   # clean-up reference to build directory
-  sed -i "s#$srcdir/Python-${pkgver}:##" \
-    $pkgdir/usr/lib/python${_pybasever}/config/Makefile
+  sed -i "s#${srcdir}/Python-${pkgver}:##" \
+    ${pkgdir}/usr/lib/python${_pybasever}/config/Makefile
 
   # license
   install -Dm644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
