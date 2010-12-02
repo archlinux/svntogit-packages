@@ -3,7 +3,7 @@
 # Contributor: Gregor Ibic <gregor.ibic@intelicom.si>
 
 pkgname=clamav
-pkgver=0.96.4
+pkgver=0.96.5
 pkgrel=1
 pkgdesc='Anti-virus toolkit for Unix'
 arch=('i686' 'x86_64')
@@ -16,15 +16,18 @@ url='http://www.clamav.net/'
 source=("http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz"
         'clamav'
         'clamav.confd'
-        'clamav.logrotate')
+        'clamav.logrotate'
+        'config.patch')
 
-sha1sums=('ffff540b330f3d33c9ff9e8d551763b4e0028d72'
+sha1sums=('a7253e30d40e0c03964a60ed589b356a115b26c5'
           '7f15f0b13a1c11235bc99ef0add01efd8a442f07'
           'cb116cdab49a810381a515cbcfb6a6c148547f07'
-          'be3310d2b41a68ce06e33c84ab68ffe59fdce104')
+          'be3310d2b41a68ce06e33c84ab68ffe59fdce104'
+          '701a61571788d10ff7af01597785835c6bfea918')
 
 build() {
 	cd "$srcdir/$pkgname-$pkgver"
+	patch -p1 < ../config.patch
 	./configure --prefix=/usr --sysconfdir=/etc/clamav \
 		--with-dbdir=/var/lib/clamav --disable-clamav
 	make
@@ -42,18 +45,6 @@ package() {
 	install -D -m644 ../clamav.logrotate "$pkgdir/etc/logrotate.d/clamav"
 	install -D -m644 ../clamav.confd "$pkgdir/etc/conf.d/clamav"
 	install -D -m755 ../clamav "$pkgdir/etc/rc.d/clamav"
-
-	sed -i -e "s:\#LogFile /tmp/clamd.log:LogFile /var/log/clamav/clamd.log:" \
-		-e "s:\#PidFile /var/run/clamd.pid:PidFile /var/run/clamav/clamd.pid:" \
-		-e "s:\#User clamav:User clamav:" \
-		-e "s:\#LogTime:LogTime:" \
-		-e "s:\#TemporaryDirectory /var/tmp:TemporaryDirectory /tmp:" \
-		-e "s:\#LocalSocket /tmp/clamd.socket:LocalSocket /var/lib/clamav/clamd.sock:" \
-		"$pkgdir/etc/clamav/clamd.conf"
-
-	sed -i -e "s:\#UpdateLogFile /var/log/freshclam.log:UpdateLogFile /var/log/clamav/freshclam.log:" \
-		-e "s:\#NotifyClamd /path/to/clamd.conf$:NotifyClamd /etc/clamav/clamd.conf:" \
-		"$pkgdir/etc/clamav/freshclam.conf"
 
 	# un-distribute databases to require freshclam
 	rm "$pkgdir"/var/lib/clamav/*.cvd
