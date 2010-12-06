@@ -6,7 +6,7 @@ pkgbase="openoffice-base"
 pkgname=('openoffice-base' 'openoffice-sdk')
 _OO_milestone=OOO320_m19
 pkgver=3.2.1 # m18/m19=3.2.1 RC2 = final
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.openoffice.org"
@@ -17,7 +17,7 @@ makedepends=(# the real makedeps
 	     'beanshell' 'vigra' 'libmspack' 'libldap' 'lucene'  'libmythes'
 	     # from main OOo the deps
 	     "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
-	     'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+	     'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.6" 'libxslt'
 	     'redland' 'libgraphite' 'hyphen' 'lpsolve'
 	     'hicolor-icon-theme' 'desktop-file-utils' 'gtk2')
 	     # 'saxon' 
@@ -30,6 +30,7 @@ source=(ftp://ftp.archlinux.org/other/openoffice/${_OO_milestone}.tar.xz
 	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
 	buildfix_system_db51.diff
+	libx11.diff
 	http://www.openoffice.org/nonav/issues/showattachment.cgi/72052/configure.set-redland-cflags.patch
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/cppu-lbnames-enable-gcc-4.5.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/vcl-system-graphite-with-stlport.diff
@@ -46,6 +47,7 @@ md5sums=('74d11db8100701bd08c97e93f12da021'
          'c8e82b4d2324fe62ad8c6e29213e80b5'
          '863a3ab2c17a3d11b8fa3ec321986366'
          'e4516cc1caa176d77f3cc513cfcf99e1'
+         'ad01b65e677334e0764ad31f24aee428'
          '283e7ac83bafd04eaeaffe9ad51e5f6e'
          'e666e8cea0ef557a8bce41c58dd16408'
          'c6abfe517a7002a18880e0e209145167'
@@ -81,45 +83,47 @@ build() {
 	export NO_HIDS=true
 
 	# build fixes
-	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff || return 1
-	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff || return 1
-	patch -Np0 -i ${srcdir}/buildfix_system_db51.diff || return 1
-	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff || return 1
+	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff 
+	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff 
+	patch -Np0 -i ${srcdir}/buildfix_system_db51.diff 
+	patch -Np0 -i ${srcdir}/cppu-lbnames-enable-gcc-4.5.diff 
 	# http://www.openoffice.org/issues/show_bug.cgi?id=114999
 	patch -Np1 -i ${srcdir}/configure.set-redland-cflags.patch
+	# fix new libx11 headers - see http://www.openoffice.org/issues/show_bug.cgi?id=115871 | https://bugs.gentoo.org/show_bug.cgi?id=344993
+	patch -Np0 -i ${srcdir}/libx11.diff
 	
 	# allow build with system mythes
-	patch -Np0 -i ${srcdir}/fix-system-mythes-for-mythes-1.2.diff?h=ooo-build-3-2-1 || return 1
+	patch -Np0 -i ${srcdir}/fix-system-mythes-for-mythes-1.2.diff?h=ooo-build-3-2-1 
 	# allow build with system redland and cppunit
 	# should also workaround all known bugs with plain upstream redland
-	patch -Np0 -i ${srcdir}/redland-remove-patches.diff?h=ooo-build-3-2-1 || return 1	
+	patch -Np0 -i ${srcdir}/redland-remove-patches.diff?h=ooo-build-3-2-1 	
 	# allow system graphite with stlport
-	patch -Np0 -i ${srcdir}/vcl-system-graphite-with-stlport.diff || return 1
+	patch -Np0 -i ${srcdir}/vcl-system-graphite-with-stlport.diff 
 
 	# allows soffice to find the user's firefox profile so that it can read
 	# its digital certificates. Nss stores digital certificates in your mozilla firefox profile. 
-	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff || return 1
+	patch -Np0 -i ${srcdir}/soffice-detect-mozilla-certificates.diff 
 
 	# important bugfixes
 	# ...nothing :)
 
 	# remove the startup wizard
-	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff || return 1
+	patch -Np0 -i ${srcdir}/default-no-startup-wizard.diff 
 	# enables the default system-file-picker in case we have that built
-	patch -Np0 -i ${srcdir}/default-system-fpicker.diff || return 1
+	patch -Np0 -i ${srcdir}/default-system-fpicker.diff 
 
 	if [ "$CARCH" = "x86_64" ]; then
           EXTRAOPTS="--without-stlport"
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
-	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk || return 1
+	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk 
 	 else EXTRAOPTS="--with-stlport"
 	fi
 
 	cd ${srcdir}/${_OO_milestone}
 
 	# needed to build the OO-SDK
-	mv ${srcdir}/unowinreg.dll external/unowinreg || return 1
+	mv ${srcdir}/unowinreg.dll external/unowinreg 
 
 	# export C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
@@ -127,7 +131,7 @@ build() {
 	unset CXXFLAGS
 
 	# Need to recreate the configure script because of patches
-	autoreconf -v || return 1
+	autoreconf -v 
 
 	# python2 fix
 	sed -i -e "s:for am_cv_pathless_PYTHON in python:for am_cv_pathless_PYTHON in python2.7:" configure
@@ -188,7 +192,7 @@ build() {
 	--with-lucene-core-jar=/usr/share/java/lucene-core.jar\
 	--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
 	--with-use-shell=bash\
-	 $EXTRAOPTS || return 1
+	 $EXTRAOPTS 
 
 #	--enable-layout\ /bin/bash: tralay: command not found ???
 #	--with-system-jfreereport
@@ -203,10 +207,10 @@ build() {
 	fi
 
 	# Build dmake utility
-	./bootstrap || return 1
+	./bootstrap 
 
 	cd instsetoo_native
-	build.pl -P${SMP} ${MAXMODULESFLAG} ${MAXPROCESSESFLAG} --dlv_switch -link --all || return 1
+	build.pl -P${SMP} ${MAXMODULESFLAG} ${MAXPROCESSESFLAG} --dlv_switch -link --all 
 }
 
 package_openoffice-base() {
@@ -214,7 +218,7 @@ package_openoffice-base() {
  pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite"
  install=openoffice.install
  depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
-          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.2.1" 'libxslt'
+          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.6" 'libxslt'
 	  'redland' 'libgraphite' 'hyphen' 'lpsolve'
 	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
 	  # 'saxon' 
@@ -252,34 +256,34 @@ package_openoffice-base() {
 	rmdir ${pkgdir}/opt
 	
         ## Step 1 
-        cd ${pkgdir}/usr/lib/openoffice.org || return 1
-        mv ure/ basis3.2/ || return 1
-        cd basis3.2 || return 1
-        rm ure-link && mv ure ure-link || return 1
+        cd ${pkgdir}/usr/lib/openoffice.org 
+        mv ure/ basis3.2/ 
+        cd basis3.2 
+        rm ure-link && mv ure ure-link 
         ## Step 2
-        cd ${pkgdir}/usr/lib/ || return 1
-        mv openoffice.org/basis3.2/ openoffice.org3/ || return 1
-        cd openoffice.org3/ || return 1
-        rm basis-link && mv basis3.2 basis-link || return 1
+        cd ${pkgdir}/usr/lib/ 
+        mv openoffice.org/basis3.2/ openoffice.org3/ 
+        cd openoffice.org3/ 
+        rm basis-link && mv basis3.2 basis-link 
         ## Step 3        
-        cd ${pkgdir}/usr/lib/ || return 1
-        rmdir ${pkgdir}/usr/lib/openoffice.org || return 1
-        mv openoffice.org3 openoffice || return 1
+        cd ${pkgdir}/usr/lib/ 
+        rmdir ${pkgdir}/usr/lib/openoffice.org 
+        mv openoffice.org3 openoffice 
 
 	# install all built dictionaries from source tree
         pushd ${srcdir}/${_OO_milestone}/dictionaries/unxlng?6.pro/bin
 	for i in `ls -1 dict-??.oxt`; do
-	  install -D -m644 $i ${pkgdir}/usr/lib/openoffice/share/extension/install/$i || return 1
+	  install -D -m644 $i ${pkgdir}/usr/lib/openoffice/share/extension/install/$i 
 	done
 	popd
 	
 	# install extensions
        pushd ${srcdir}/${_OO_milestone}/solver/320/unxlng?6.pro/bin
-         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/report-builder.oxt || return 1
-	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/wiki-publisher.oxt || return 1
-	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presentation-minimizer.oxt || return 1
-	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presenter-screen.oxt || return 1
-	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/pdfimport.oxt || return 1
+         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/report-builder.oxt 
+	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/wiki-publisher.oxt 
+	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presentation-minimizer.oxt 
+	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/presenter-screen.oxt 
+	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice/share/extension/install/pdfimport.oxt 
        popd
 	
 	# prepare filesystem entries
@@ -289,18 +293,18 @@ package_openoffice-base() {
 	# install shortcuts
 	mv ${pkgdir}/usr/lib/openoffice/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
 	# add startcenter desktop file
-	install -D -m644 ${srcdir}/startcenter.desktop ${pkgdir}/usr/share/applications/startcenter.desktop || return 1
+	install -D -m644 ${srcdir}/startcenter.desktop ${pkgdir}/usr/share/applications/startcenter.desktop 
 
 	cd ${pkgdir}/usr/share/applications
-	sed -i -e 's|Exec=openoffice.org3|Exec=/usr/bin/soffice|g' *.desktop || return 1
-	sed -i -e 's|Exec=/usr/bin/soffice-printeradmin|Exec=/usr/bin/spadmin|g' printeradmin.desktop || return 1
+	sed -i -e 's|Exec=openoffice.org3|Exec=/usr/bin/soffice|g' *.desktop 
+	sed -i -e 's|Exec=/usr/bin/soffice-printeradmin|Exec=/usr/bin/spadmin|g' printeradmin.desktop 
 	# fix exec commands in shortcuts for Xfce menu
-	sed -i -e 's|base %U|base|g' base.desktop || return 1
-	sed -i -e 's|calc %U|calc|g' calc.desktop || return 1
-	sed -i -e 's|draw %U|draw|g' draw.desktop || return 1
-	sed -i -e 's|impress %U|impress|g' impress.desktop || return 1
-	sed -i -e 's|math %U|math|g' math.desktop || return 1
-	sed -i -e 's|writer %U|writer|g' writer.desktop || return 1
+	sed -i -e 's|base %U|base|g' base.desktop 
+	sed -i -e 's|calc %U|calc|g' calc.desktop 
+	sed -i -e 's|draw %U|draw|g' draw.desktop 
+	sed -i -e 's|impress %U|impress|g' impress.desktop 
+	sed -i -e 's|math %U|math|g' math.desktop 
+	sed -i -e 's|writer %U|writer|g' writer.desktop 
 	# remove quickstarter, we disabled it above
 	rm -rf ${pkgdir}/usr/share/applications/qstart.desktop
 	# fix icons in desktop files
@@ -321,7 +325,7 @@ package_openoffice-base() {
 
 	# set desktop variable to force gtk/gnome vcl usage
 	install -m755 -d ${pkgdir}/etc/profile.d
-	install -m755 ${srcdir}/openoffice.profile ${pkgdir}/etc/profile.d/openoffice.sh || return 1
+	install -m755 ${srcdir}/openoffice.profile ${pkgdir}/etc/profile.d/openoffice.sh 
 
         # make symlinks
         cd ${pkgdir}/usr/bin
@@ -371,11 +375,11 @@ package_openoffice-sdk() {
         chmod 755 $file
 	done
 
-	cd ${pkgdir}/usr/lib/ || return 1
-	mv openoffice.org openoffice || return 1
+	cd ${pkgdir}/usr/lib/ 
+	mv openoffice.org openoffice 
 
- 	cd ${pkgdir}/usr/lib/openoffice/ || return 1
-	mv basis3.2 basis-link || return 1
+ 	cd ${pkgdir}/usr/lib/openoffice/ 
+	mv basis3.2 basis-link 
 
 	# fix ownership and permissions
 	chown root.root -R ${pkgdir}/
