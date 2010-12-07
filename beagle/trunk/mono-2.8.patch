@@ -1,0 +1,152 @@
+Patch to enable compilation against mono-2.8
+
+* Mono-2.8 uses mono-2.pc instead of mono.pc for setting cflags and libs.
+* Mono-2.8 disables direct access to struct MonoType fields; use accessors
+instead (mono_type_get_type and mono_field_get_flags have been present in
+the API since at least mono-1.2, so we do not need any version ifdefs).
+* Cast FSpot.MetadataStore to IEnumerable in foreach() to prevent CS1640
+errors (non-unique enumeration of the type) with mono-2.8's gmcs.
+
+diff -ru beagle-0.3.9-orig/configure.in beagle-0.3.9/configure.in
+--- beagle-0.3.9-orig/configure.in	2010-10-16 01:30:03.807825004 -0400
++++ beagle-0.3.9/configure.in	2010-10-16 01:30:10.385825003 -0400
+@@ -59,11 +59,20 @@
+ 	AC_MSG_ERROR([You need to install the Mono gmcs compiler])
+ fi
+ 
+-AC_MSG_CHECKING([for mono.pc])
+-if test -z `$PKG_CONFIG --variable=prefix mono`; then
+-  AC_MSG_ERROR([missing the mono.pc file, usually found in the mono-devel package])
++# mono-2.8 and higher uses mono-2.pc instead of mono.pc for cflags and libs
++AC_MSG_CHECKING([for mono-2.pc])
++if test -z `$PKG_CONFIG --variable=prefix mono-2`; then
++  AC_MSG_RESULT([not found])
++  AC_MSG_CHECKING([for mono.pc])
++  if test -z `$PKG_CONFIG --variable=prefix mono`; then
++    AC_MSG_ERROR([missing the mono.pc file, usually found in the mono-devel package])
++  else
++    AC_MSG_RESULT([found])
++    mono_pc=mono
++  fi
+ else
+   AC_MSG_RESULT([found])
++  mono_pc=mono-2
+ fi
+ 
+ BEAGLE_DEFINES=""
+@@ -71,10 +80,10 @@
+ # check that we have the require version of mono
+ 
+ # Temporary: check for mono-1.9
+-PKG_CHECK_MODULES(MONO, mono >= 1.9, mono_1_9=yes, mono_1_9=no) 
++PKG_CHECK_MODULES(MONO, $mono_pc >= 1.9, mono_1_9=yes, mono_1_9=no) 
+ if test "x$mono_1_9" = "xno"; then
+ 	AC_MSG_RESULT([missing mono >= 1.9. Searching for mono >= 1.2.4])
+-	PKG_CHECK_MODULES(MONO, mono >= $MONO_REQUIRED) 
++	PKG_CHECK_MODULES(MONO, $mono_pc >= $MONO_REQUIRED) 
+ else
+ 	AC_MSG_RESULT([found mono >= 1.9])
+ 	BEAGLE_DEFINES="$BEAGLE_DEFINES -define:MONO_1_9"
+@@ -84,7 +93,7 @@
+ needed_dlls="Mono.Data.Sqlite Mono.Posix System.Data System.Web ICSharpCode.SharpZipLib"
+ for i in $needed_dlls; do
+   AC_MSG_CHECKING([for $i.dll])
+-  if test ! -e `$PKG_CONFIG --variable=prefix mono`/lib/mono/2.0/$i.dll; then
++  if test ! -e `$PKG_CONFIG --variable=prefix $mono_pc`/lib/mono/2.0/$i.dll; then
+     AC_MSG_ERROR([missing required mono DLL: $i.dll])
+   else
+     AC_MSG_RESULT([found])
+@@ -195,7 +204,7 @@
+ if test "x$enable_google" = "xyes"; then
+   i="System.Security"
+   AC_MSG_CHECKING([for $i.dll (needed by Google backends)])
+-  if test ! -e `$PKG_CONFIG --variable=prefix mono`/lib/mono/2.0/$i.dll; then
++  if test ! -e `$PKG_CONFIG --variable=prefix $mono_pc`/lib/mono/2.0/$i.dll; then
+     AC_MSG_ERROR([missing required mono DLL: $i.dll])
+   else
+     AC_MSG_RESULT([found])
+@@ -560,7 +569,7 @@
+ if test "x$enable_qt" != "xno" -a "x$has_qyoto" = "xno"; then
+ 	i="qt-dotnet"
+ 	AC_MSG_CHECKING([for $i.dll])
+-	if test ! -e `$PKG_CONFIG --variable=prefix mono`/lib/mono/2.0/$i.dll; then
++	if test ! -e `$PKG_CONFIG --variable=prefix $mono_pc`/lib/mono/2.0/$i.dll; then
+ 		AC_MSG_ERROR([missing required mono DLL: $i.dll])
+ 	else
+ 		AC_MSG_RESULT([found])
+Only in beagle-0.3.9: configure.in.orig
+diff -ru beagle-0.3.9-orig/Filters/FilterImage.cs beagle-0.3.9/Filters/FilterImage.cs
+--- beagle-0.3.9-orig/Filters/FilterImage.cs	2008-04-13 15:24:13.000000000 -0400
++++ beagle-0.3.9/Filters/FilterImage.cs	2010-10-16 02:08:10.755825005 -0400
+@@ -141,7 +141,7 @@
+ 			Resource rights_anon = null;
+ 			Resource title_anon = null;
+ 
+-			foreach (Statement stmt in xmp.Store) {
++			foreach (Statement stmt in (IEnumerable)xmp.Store) {
+ 				if (stmt.Predicate == MetadataStore.Namespaces.Resolve ("dc:subject")) {
+ 					//Console.WriteLine ("found subject");
+ 					subject_anon = stmt.Object;
+@@ -163,7 +163,7 @@
+ 				}
+ 			}
+ 			
+-			foreach (Statement stmt in xmp.Store) {
++			foreach (Statement stmt in (IEnumerable)xmp.Store) {
+ 				if (stmt.Subject == subject_anon && 
+ 				    stmt.Predicate != MetadataStore.Namespaces.Resolve ("rdf:type")) {
+ 					AddProperty (Beagle.Property.New ("dc:subject", ((Literal)stmt.Object).Value));
+diff -ru beagle-0.3.9-orig/Filters/FilterPdf.cs beagle-0.3.9/Filters/FilterPdf.cs
+--- beagle-0.3.9-orig/Filters/FilterPdf.cs	2008-04-13 15:31:18.000000000 -0400
++++ beagle-0.3.9/Filters/FilterPdf.cs	2010-10-16 02:22:09.528825003 -0400
+@@ -8,6 +8,7 @@
+ //
+ 
+ using System;
++using System.Collections;
+ using System.IO;
+ using System.Diagnostics;
+ 
+@@ -220,7 +221,7 @@
+ 			Resource rights_anon = null;
+ 			Resource title_anon = null;
+ 
+-			foreach (Statement stmt in xmp.Store) {
++			foreach (Statement stmt in (IEnumerable)xmp.Store) {
+ 				if (stmt.Predicate == MetadataStore.Namespaces.Resolve ("dc:subject")) {
+ 					//Console.WriteLine ("found subject");
+ 					subject_anon = stmt.Object;
+@@ -239,7 +240,7 @@
+ 				}
+ 			}
+ 			
+-			foreach (Statement stmt in xmp.Store) {
++			foreach (Statement stmt in (IEnumerable)xmp.Store) {
+ 				if (stmt.Subject == subject_anon && 
+ 				    stmt.Predicate != MetadataStore.Namespaces.Resolve ("rdf:type")) {
+ 					AddProperty (Beagle.Property.New ("dc:subject", ((Literal)stmt.Object).Value));
+diff -ru beagle-0.3.9-orig/glue/mono-glue.c beagle-0.3.9/glue/mono-glue.c
+--- beagle-0.3.9-orig/glue/mono-glue.c	2007-11-26 20:50:05.000000000 -0500
++++ beagle-0.3.9/glue/mono-glue.c	2010-10-16 01:04:19.839825010 -0400
+@@ -79,18 +79,18 @@
+         type = mono_class_get_type (klass);
+ 
+         /* This is an array, so drill down into it */
+-        if (type->type == MONO_TYPE_SZARRAY)
++        if (mono_type_get_type (type) == MONO_TYPE_SZARRAY)
+                 total += memory_usage_array ((MonoArray *) obj, visited);
+ 
+         while ((field = mono_class_get_fields (klass, &iter)) != NULL) {
+                 MonoType *ftype = mono_field_get_type (field);
+                 gpointer value;
+ 
+-                if ((ftype->attrs & (FIELD_ATTRIBUTE_STATIC | FIELD_ATTRIBUTE_HAS_FIELD_RVA)) != 0)
++                if ((mono_field_get_flags (field) & (FIELD_ATTRIBUTE_STATIC | FIELD_ATTRIBUTE_HAS_FIELD_RVA)) != 0)
+                         continue;
+ 
+                 /* FIXME: There are probably other types we need to drill down into */
+-                switch (ftype->type) {
++                switch (mono_type_get_type (ftype)) {
+ 
+                 case MONO_TYPE_CLASS:
+                 case MONO_TYPE_OBJECT:
