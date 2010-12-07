@@ -1,0 +1,59 @@
+# $Id$
+# Maintainer: Daniel J Griffiths <ghost1227@archlinux.us>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: dorphell <dorphell@archlinux.org>
+
+pkgbase=('cdrdao')
+pkgname=('cdrdao' 'gcdmaster')
+pkgver=1.2.3
+pkgrel=5
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://cdrdao.sourceforge.net/"
+makedepends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao' 'libgnomeuimm')
+source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2
+        cdrdao-1.2.3-autoconf-update.patch
+        cdrdao-1.2.3-k3b.patch
+        cdrdao-1.2.3-stat.patch)
+md5sums=('8d15ba6280bb7ba2f4d6be31d28b3c0c'
+         '8e53dfc174f7c0882194caa05e68b85e'
+         '696f6ca01e1eeb9b6a5be88e535d9398'
+         '0fce05542ebad283f36fa1c4d62992a0')
+
+build() {
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+  
+	patch -Np1 -i "${srcdir}/cdrdao-1.2.3-autoconf-update.patch"
+	patch -Np1 -i "${srcdir}/cdrdao-1.2.3-k3b.patch"
+  patch -Np1 -i "${srcdir}/cdrdao-1.2.3-stat.patch"
+  
+	./configure --prefix=/usr \
+	   --mandir=/usr/share/man \
+	   --sysconfdir=/etc \
+	   --with-xdao --with-lame \
+	   --with-ogg-support --with-mp3-support
+	make
+}
+
+package_cdrdao() {
+	pkgdesc='Records audio/data CD-Rs in disk-at-once (DAO) mode'
+	depends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao')
+
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+	for dir in trackdb utils paranoia dao
+	do
+	     make -C ${dir} DESTDIR="${pkgdir}" install
+	done
+}
+
+package_gcdmaster() {
+	pkgdesc='GUI frontend for creating audio CDs using cdrdao'
+	depends=('libgnomeuimm' "cdrdao=${pkgver}")
+	install=gcdmaster.install
+
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+	make -C xdao GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+
+  mv "${pkgdir}/etc/gconf" "${pkgdir}/usr/share/"
+  rmdir "${pkgdir}/etc"
+}
