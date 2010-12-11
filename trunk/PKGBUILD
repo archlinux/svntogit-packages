@@ -23,28 +23,26 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=5.3.3
-pkgrel=4
-_suhosinver=${pkgver}-0.9.10
+pkgver=5.3.4
+pkgrel=1
+#_suhosinver=${pkgver}-0.9.10
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
 makedepends=('apache' 'imap' 'postgresql-libs' 'mysql' 'libldap' 'postfix'
              'sqlite3' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file' 'freetds'
              'libmcrypt' 'tidyhtml' 'aspell' 'libtool' 'libpng' 'libjpeg' 'icu'
-             'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'libevent' 'freetype2')
+             'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'freetype2')
 options=('!makeflags')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
-        "http://download.suhosin.org/suhosin-patch-${_suhosinver}.patch.gz"
-        'php.ini.patch' 'apache.conf' 'rc.d.php-fpm' 'php-fpm.conf'
-        'db4-test.patch')
-md5sums=('21ceeeb232813c10283a5ca1b4c87b48'
-         'b66b27c43b1332400ef8982944c3b95b'
-         'd6f94150f47047882c6716575e12e99b'
+#        "http://download.suhosin.org/suhosin-patch-${_suhosinver}.patch.gz"
+        'php.ini.patch' 'apache.conf' 'rc.d.php-fpm' 'php-fpm.conf.in.patch')
+md5sums=('2c069d8f690933e3bf6a8741ed818150'
+#         'b66b27c43b1332400ef8982944c3b95b'
+         'd36c4d1b9d33c1025521e23260f1dc29'
          '96ca078be6729b665be8a865535a97bf'
          'ff8346d57f0bd67c7a383c1561dcd7c1'
-         '0ac88ff88ae951118201d6424eaa426a'
-         'e4e28c3b785975a09b6b7b2d3631faf6')
+         'd50ff349da08110a7cc8c691ce2d0423')
 
 build() {
 	# ldap-sasl does not compile with --as-needed
@@ -141,14 +139,12 @@ build() {
 
 	cd ${srcdir}/${pkgbase}-${pkgver}
 
-	# Fix configure test which assumes db=4.x
-	patch -p0 -i ${srcdir}/db4-test.patch
-
 	# apply suhosin patch
-	patch -p1 -i ${srcdir}/suhosin-patch-${_suhosinver}.patch
+	#patch -p1 -i ${srcdir}/suhosin-patch-${_suhosinver}.patch
 
 	# adjust paths
 	patch -p0 -i ${srcdir}/php.ini.patch
+	patch -p0 -i ${srcdir}/php-fpm.conf.in.patch
 
 	# php
 	mkdir ${srcdir}/build-php
@@ -186,7 +182,6 @@ build() {
 	./configure ${phpconfig} \
 		--disable-cli \
 		--enable-fpm \
-		--with-libevent-dir=/usr \
 		--with-fpm-user=http \
 		--with-fpm-group=http \
 		${phpextensions}
@@ -224,8 +219,6 @@ package_php() {
 	cd ${srcdir}/build-php
 	make INSTALL_ROOT=${pkgdir} install
 	install -d -m755 ${pkgdir}/usr/share/pear
-	# fix broken link
-	ln -sf phar.phar $pkgdir/usr/bin/phar
 	# install php.ini
 	install -D -m644 ${srcdir}/${pkgbase}-${pkgver}/php.ini-production ${pkgdir}/etc/php/php.ini
 	install -d -m755 ${pkgdir}/etc/php/conf.d/
@@ -254,14 +247,15 @@ package_php-apache() {
 
 package_php-fpm() {
 	pkgdesc='FastCGI Process Manager for PHP'
-	depends=('php' 'libevent')
+	depends=('php')
 	backup=('etc/php/php-fpm.conf')
 
 	install -D -m755 ${srcdir}/build-fpm/sapi/fpm/php-fpm ${pkgdir}/usr/sbin/php-fpm
-	install -D -m644 ${srcdir}/build-fpm/sapi/fpm/php-fpm.1 ${pkgdir}/usr/share/man/man1/php-fpm.1
-	install -D -m644 ${srcdir}/php-fpm.conf ${pkgdir}/etc/php/php-fpm.conf
+	install -D -m644 ${srcdir}/build-fpm/sapi/fpm/php-fpm.8 ${pkgdir}/usr/share/man/man8/php-fpm.8
+	install -D -m755 ${srcdir}/build-fpm/sapi/fpm/php-fpm.conf ${pkgdir}/etc/php/php-fpm.conf
 	install -D -m755 ${srcdir}/rc.d.php-fpm ${pkgdir}/etc/rc.d/php-fpm
 	install -d -m755 ${pkgdir}/var/run/php-fpm
+	install -d -m755 ${pkgdir}/etc/php/fpm.d
 }
 
 package_php-embed() {
