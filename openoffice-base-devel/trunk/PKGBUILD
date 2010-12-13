@@ -15,11 +15,11 @@ makedepends=(# the real makedeps
              'apache-ant' 'gperf' 'poppler' 'kdelibs' 'gconf' 'openjdk6' 'cppunit'
 	     'beanshell'  'vigra' 'libldap' 'lucene' 'libmythes' 'junit'
              # from main OOo the deps
-             "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
+             "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
              'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.6" 'libxslt'
              'redland>=1.0.11.99' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
              'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
-	     #'libwpd' - currently broken since libwpd 0.9 bump
+	     #'libwpd' - currently broken since libwpd 0.9 bump - http://www.openoffice.org/issues/show_bug.cgi?id=116036
     	     # 'saxon' 
 _additional_source_url=http://hg.services.openoffice.org/binaries
 source=(${_OO_milestone}.tar.xz
@@ -203,16 +203,16 @@ md5sums=('886500d83ddbb7774c1b3117bbf18b34'
 
 # source PKGBUILD && mksource
 mksource() {
-        mkdir /tmp/$pkgname-source
-        pushd /tmp/$pkgname-source
-	hg -v --time clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/DEV300 ${_OO_milestone}
+	mkdir /tmp/$pkgname-source
+	pushd /tmp/$pkgname-source
+	hg -v clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/DEV300 ${_OO_milestone}
 	tar -cvJf ${_OO_milestone}.tar.xz ${_OO_milestone}/*
-        popd
+	popd
 }
 
 build() {
 	cd ${srcdir}/${_OO_milestone}
-	
+
 	# just to make sure that it will detect the desired JDK/JVM - we want openjdk6
 	unset J2REDIR; unset J2SDKDIR; unset JAVA_HOME; unset CLASSPATH
 	[ -z "${JAVA_HOME}" ] && . /etc/profile.d/openjdk6.sh
@@ -221,7 +221,7 @@ build() {
 	[ -z "${ANT_HOME}" ] && . /etc/profile.d/apache-ant.sh
 	
 	# some speedups
-	export SMP="5"
+	export SMP="6"
 #	export SMP="1"
 	MAXMODULESFLAG="-P${SMP}"
 	MAXPROCESSESFLAG="-P${SMP}"
@@ -232,7 +232,7 @@ build() {
 	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff
 	# libwpd 0.9.0 fix
-	sed -i "s:libwpd-0.8:libwpd-0.9:g" configure.in
+#	sed -i "s:libwpd-0.8:libwpd-0.9:g" configure.in
 	# fix new libx11 headers - see http://www.openoffice.org/issues/show_bug.cgi?id=115871 | https://bugs.gentoo.org/show_bug.cgi?id=344993
 	patch -Np0 -i ${srcdir}/libx11.diff
 	
@@ -253,7 +253,7 @@ build() {
           # fix to build with SUN jdk/jre and OpenJDK
           # http://qa.openoffice.org/issues/show_bug.cgi?id=74749
 	  sed -i "s:lib64\/libjpeg.so:lib\/libjpeg.so:g" ${srcdir}/${_OO_milestone}/solenv/inc/libs.mk
-	 else EXTRAOPTS="--with-stlport	--without-system-cppunit"
+	 else EXTRAOPTS="--with-stlport --without-system-cppunit"
 	  # 	http://hg.services.openoffice.org/cws/sb122/raw-rev/f77b0e62cc92
 	  cp -v ${srcdir}/cppunit_gcc45.diff ${srcdir}/${_OO_milestone}/cppunit/ldflags.patch
 	fi
@@ -272,7 +272,7 @@ build() {
 	export PYTHON=python2
 
 	# Need to recreate the configure script because of patches
-	autoreconf -v
+	autoconf
 
 	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
 	--with-vendor="ArchLinux"\
@@ -310,7 +310,7 @@ build() {
 	--without-ppds\
 	--without-system-agg\
 	--without-system-mdds\
-	--with-system-libpwd\
+	--without-system-libwpd\
 	--with-system-cppunit\
 	--with-system-redland\
 	--without-system-saxon\
@@ -327,7 +327,6 @@ build() {
 	--with-external-tar=${SRCDEST}\
 	 $EXTRAOPTS
 
-#	--without-system-libwpd\
 # see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
 #	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
 
@@ -358,9 +357,9 @@ package_openoffice-base-devel() {
 
  pkgdesc="OpenOffice.org - a free multiplatform and multilingual office suite - developement branch"
  install=openoffice.install
- depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd' 'libxaw' "neon>=0.28.6"
+ depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
           'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.6" 'libxslt'
-	  'redland>=1.0.11.99' 'libgraphite' 'hyphen' 'lpsolve'
+	  'redland>=1.0.11.99' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
 	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
 	  # 'libwpd'
 	  # 'saxon' 
