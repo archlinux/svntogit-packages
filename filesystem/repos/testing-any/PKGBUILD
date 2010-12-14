@@ -1,0 +1,94 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=filesystem
+pkgver=2010.12
+pkgrel=1
+pkgdesc='Base filesystem'
+arch=('any')
+license=('GPL')
+url='http://www.archlinux.org'
+groups=('base')
+install='filesystem.install'
+depends=('iana-etc' 'bash' 'coreutils')
+backup=('etc/fstab' 'etc/crypttab' 'etc/group' 'etc/hosts' 'etc/ld.so.conf' 'etc/passwd'
+        'etc/shadow' 'etc/gshadow' 'etc/resolv.conf' 'etc/motd' 'etc/nsswitch.conf'
+        'etc/shells' 'etc/host.conf' 'etc/securetty' 'etc/profile' 'etc/issue')
+source=('group' 'issue' 'nsswitch.conf' 'securetty' 'host.conf' 'ld.so.conf'
+        'passwd' 'shadow' 'fstab' 'crypttab' 'hosts' 'motd' 'resolv.conf' 'shells'
+        'gshadow' 'profile' 'modprobe.d.usb-load-ehci-first')
+md5sums=('75c7e1770305e1f3b75c52785c137611'
+         '1bdc5dba66947d74866a5df8ce9ef3b1'
+         '13753e4e0964f3652b0cc60a28528bdf'
+         '4c4540eeb748bf1f71d631b8c1dcf0b3'
+         'f28150d4c0b22a017be51b9f7f9977ed'
+         '6e488ffecc8ba142c0cf7e2d7aeb832e'
+         '8a9042a2cedf6b6b47eb8973f14289cb'
+         'b8355d9d2782f424f4cedcf682651be0'
+         'ef40305da5803ca69d22e428ffc2ab9b'
+         'e5d8323a4dbee7a6d0d2a19cbf4b819f'
+         '7bc65f234dfb6abf24e7c3b03e86f4ff'
+         'd41d8cd98f00b204e9800998ecf8427e'
+         '6f48288b6fcaf0065fcb7b0e525413e0'
+         '40dac0de4c6b99c8ca97effbd7527c84'
+         '59768b5f4080b96b67bcde5f66984ad5'
+         '51ac5c337236235bf8fe85a9b07b6db1'
+         '8098ffd9fbf890468d3198277596b85a')
+
+package() {
+	cd ${srcdir}
+
+	#
+	# setup root filesystem
+	#
+	for d in bin boot dev etc home lib/modules media mnt sbin usr var opt srv/http sys; do
+		install -d -m755 ${pkgdir}/${d}
+	done
+	install -d -m555 ${pkgdir}/proc
+	install -d -m0750 ${pkgdir}/root
+	install -d -m1777 ${pkgdir}/tmp
+	# vsftpd won't run with write perms on /srv/ftp
+	install -d -m555 -g ftp ${pkgdir}/srv/ftp
+
+	# setup /etc
+	install -d ${pkgdir}/etc/{ld.so.conf.d,skel,profile.d}
+	for f in fstab group host.conf hosts issue ld.so.conf motd nsswitch.conf passwd resolv.conf securetty shells profile; do
+		install -m644 ${srcdir}/${f} ${pkgdir}/etc/
+	done
+	for f in gshadow shadow crypttab; do
+		install -m600 ${srcdir}/${f} ${pkgdir}/etc/
+	done
+	touch ${pkgdir}/etc/arch-release
+	install -D -m644 ${srcdir}/modprobe.d.usb-load-ehci-first ${pkgdir}/etc/modprobe.d/usb-load-ehci-first.conf
+
+	# setup /var
+	for d in cache/man local opt run log/old lib/misc empty; do
+		install -d -m755 ${pkgdir}/var/${d}
+	done
+	install -d -m1777 ${pkgdir}/var/{lock,tmp,spool/mail}
+	# allow setgid games to write scores
+	install -d -m775 -g games ${pkgdir}/var/games
+	ln -s spool/mail ${pkgdir}/var/mail
+	# prevent pacman from removing directory (FS#16886)
+	touch ${pkgdir}/var/empty/.keep
+
+
+	#
+	# setup /usr hierarchy
+	#
+	for d in bin include lib sbin share/misc src; do
+		install -d -m755 ${pkgdir}/usr/${d}
+	done
+	for d in $(seq 8); do
+		install -d -m755 ${pkgdir}/usr/share/man/man${d}
+	done
+
+
+	#
+	# setup /usr/local hierarchy
+	#
+	for d in bin etc games include lib man sbin share src; do
+		install -d -m755 ${pkgdir}/usr/local/${d}
+	done
+	ln -s ../man ${pkgdir}/usr/local/share/man
+}
