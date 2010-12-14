@@ -1,0 +1,371 @@
+Index: kget/transfer-plugins/bittorrent/bttransferfactory.cpp
+===================================================================
+--- kget/transfer-plugins/bittorrent/bttransferfactory.cpp	(revision 1205225)
++++ kget/transfer-plugins/bittorrent/bttransferfactory.cpp	(revision 1205226)
+@@ -15,10 +15,13 @@
+ #include "btdatasource.h"
+ #include "bttransferhandler.h"
+ #include "btdetailswidget.h"
++#include "btjobtracker.h"
+ #include "advanceddetails/btadvanceddetailswidget.h"
+ 
+ #include <kdebug.h>
+ #include <util/functions.h>
++#include <version.h>
++#include <torrent/job.h>
+ 
+ KGET_EXPORT_PLUGIN(BTTransferFactory)
+ 
+@@ -30,6 +33,9 @@
+         kError(5001) << "Failed to initialize libktorrent";
+         KGet::showNotification(0, "error", i18n("Cannot initialize libktorrent. Torrent support might not work."));
+     }
++#if LIBKTORRENT_VERSION >= 0x010100
++    bt::Job::setJobTracker(new BTJobTracker(this));
++#endif
+ }
+ 
+ BTTransferFactory::~BTTransferFactory()
+Index: kget/transfer-plugins/bittorrent/bttransferhandler.cpp
+===================================================================
+--- kget/transfer-plugins/bittorrent/bttransferhandler.cpp	(revision 1205225)
++++ kget/transfer-plugins/bittorrent/bttransferhandler.cpp	(revision 1205226)
+@@ -69,23 +69,32 @@
+ 
+ void BTTransferHandler::createScanDlg()
+ {
++    kDebug() << "Create a scan dialog";
+     if (!torrentControl())
+         return;
+     kDebug(5001);
++#if LIBKTORRENT_VERSION < 0x010100
+     if (scanDlg)
+     {
+         scanDlg->stop();
+         scanDlg->close();
+     }
++#endif
+ 
+-    scanDlg = new kt::ScanDlg(false, 0);
++#if LIBKTORRENT_VERSION >= 0x010100
++kDebug() << "Our version.h";
++    m_transfer->torrentControl()->startDataCheck(this);//TODO: Maybe start/stop it
++#else
++    scanDlg = new kt::ScanDlg(0);
+     scanDlg->show();
+     scanDlg->execute(torrentControl(), false);
+     connect(scanDlg, SIGNAL(finished(int)), SLOT(removeScanDlg()));
++#endif
+ }
+-
++#if LIBKTORRENT_VERSION < 0x010100
+ void BTTransferHandler::removeScanDlg()
+ {
+     kDebug(5001);
+     scanDlg = 0;
+ }
++#endif
+Index: kget/transfer-plugins/bittorrent/scandlg.cpp
+===================================================================
+--- kget/transfer-plugins/bittorrent/scandlg.cpp	(revision 1205225)
++++ kget/transfer-plugins/bittorrent/scandlg.cpp	(revision 1205226)
+@@ -26,14 +26,94 @@
+ #include <util/error.h>
+ #include <util/log.h>
+ #include <interfaces/torrentinterface.h>
+-
+ using namespace bt;
+ 
+ namespace kt
+ {
+-	ScanDlg::ScanDlg(bool auto_import,QWidget* parent) 
+-		: KDialog(parent),bt::DataCheckerListener(auto_import),mutex(QMutex::Recursive)
++#if LIBKTORRENT_VERSION >= 0x010100
++	ScanDlg::ScanDlg(KJob *job, QWidget* parent)
++    : KDialog(parent), m_job(static_cast<Job*>(job))
++    {
++        setButtons(KDialog::None);
++        Ui::ScanDlgBase ui;
++        QWidget *widget = new QWidget(this);
++        ui.setupUi(widget);
++        setMainWidget(widget);
++        m_torrent_label = ui.torrent_label;
++        m_chunks_found = ui.chunks_found;
++        m_chunks_failed = ui.chunks_failed;
++        m_chunks_downloaded = ui.chunks_downloaded;
++        m_chunks_not_downloaded = ui.chunks_not_downloaded;
++        m_progress = ui.progress;
++        m_cancel = ui.cancel;
++        m_cancel->setGuiItem(KStandardGuiItem::cancel());
++        connect(m_cancel,SIGNAL(clicked()),this,SLOT(reject()));
++        m_progress->setMaximum(100);
++        m_progress->setValue(0);
++        connect(m_job, SIGNAL(description(KJob *, QString, QPair<QString, QString >, QPair< QString, QString >)),
++                       SLOT(description(KJob *, QString, QPair<QString, QString >, QPair< QString, QString >)));
++        connect(m_job, SIGNAL(result(KJob *)),
++                       SLOT(result(KJob *)));
++        connect(m_job, SIGNAL(percent(KJob *, unsigned long)),
++                       SLOT(percent(KJob *, unsigned long)));
++    }
++    ScanDlg::~ScanDlg()
++    {
++    }
++     
++	void ScanDlg::closeEvent(QCloseEvent* )
+ 	{
++        if (m_job) {
++            m_job->kill(false);
++            m_job = 0;
++        }
++		else
++		        accept();
++	}
++
++	void ScanDlg::reject()
++	{
++		if (m_job) {
++			m_job->kill(false);
++            m_job = 0;
++        }
++		KDialog::reject();
++		deleteLater();
++	}
++
++	void ScanDlg::accept()
++	{
++		KDialog::accept();
++		deleteLater();
++	}
++
++	void ScanDlg::description(KJob *job, const QString &title, const QPair<QString, QString > &field1, const QPair< QString, QString > &field2)
++	{
++		m_chunks_found->setText(field1.first);
++		m_chunks_failed->setText(field1.second);
++		m_chunks_downloaded->setText(field1.first);
++		m_chunks_not_downloaded->setText(field2.second);
++	}
++	
++	void ScanDlg::result(KJob *job)
++	{
++        if (job->error() && job->error() != KIO::ERR_USER_CANCELED) {
++            KMessageBox::error(0,i18n("Error scanning data: %1",job->errorString()));
++        }
++	    m_job = 0;
++        m_progress->setValue(100);
++        disconnect(m_cancel,SIGNAL(clicked()),this,SLOT(reject()));
++        connect(m_cancel,SIGNAL(clicked()),this,SLOT(accept()));
++	}
++	
++	void ScanDlg::percent(KJob *job, unsigned long percent)
++	{
++	        m_progress->setValue(percent);
++	}
++#else
++	ScanDlg::ScanDlg(QWidget* parent) 
++		: KDialog(parent),bt::DataCheckerListener(false),mutex(QMutex::Recursive)
++	{
+ 		setButtons(KDialog::None);
+ 		Ui::ScanDlgBase ui;
+ 		QWidget *widget = new QWidget(this);
+@@ -203,6 +283,7 @@
+ 		m_chunks_downloaded->setText(QString::number(num_downloaded));
+ 		m_chunks_not_downloaded->setText(QString::number(num_not_downloaded));
+ 	}
++#endif
+ }
+ 
+ #include "scandlg.moc"
+Index: kget/transfer-plugins/bittorrent/btjobtracker.cpp
+===================================================================
+--- kget/transfer-plugins/bittorrent/btjobtracker.cpp	(revision 0)
++++ kget/transfer-plugins/bittorrent/btjobtracker.cpp	(revision 1205226)
+@@ -0,0 +1,41 @@
++/* This file is part of the KDE project
++
++   Copyright (C) 2010 Lukas Appelhans <l.appelhans@gmx.de>
++
++   This program is free software; you can redistribute it and/or
++   modify it under the terms of the GNU General Public
++   License as published by the Free Software Foundation; either
++   version 2 of the License, or (at your option) any later version.
++*/
++#include "btjobtracker.h"
++
++#include <KDebug>
++
++#if LIBKTORRENT_VERSION >= 0x010100
++#include <torrent/job.h>
++#include <torrent/torrentcontrol.h>
++#include "scandlg.h"
++BTJobTracker::BTJobTracker(QObject * parent)
++  : KJobTrackerInterface(parent)
++{
++
++}
++BTJobTracker::~BTJobTracker()
++{
++}
++
++void BTJobTracker::registerJob(KJob * job)
++{
++    kDebug() << "Register job";
++    bt::Job * j = static_cast<bt::Job*>(job);
++    if (j->torrentStatus() == bt::CHECKING_DATA) {
++        kDebug() << "It's checkin data";
++        kt::ScanDlg *scanDlg = new kt::ScanDlg(job, 0);
++        scanDlg->show();
++    }
++}
++
++void BTJobTracker::unregisterJob(KJob * job)
++{
++}
++#endif
+Index: kget/transfer-plugins/bittorrent/bttransferhandler.h
+===================================================================
+--- kget/transfer-plugins/bittorrent/bttransferhandler.h	(revision 1205225)
++++ kget/transfer-plugins/bittorrent/bttransferhandler.h	(revision 1205226)
+@@ -14,6 +14,7 @@
+ #include "bttransfer.h"
+ #include "core/transferhandler.h"
+ #include <torrent/torrentcontrol.h>
++#include <version.h>
+ 
+ class Scheduler;
+ 
+@@ -44,7 +45,7 @@
+         bool ready() const                              {return m_transfer->ready();}
+ 
+         void addTracker(QString url)                    {m_transfer->addTracker(url);}
+-	kt::Monitor* torrentMonitor() const;
++        kt::Monitor* torrentMonitor() const;
+ 
+     public slots:
+         void createAdvancedDetails();
+@@ -52,7 +53,9 @@
+ 
+     private slots:
+         void removeAdvancedDetails();
++#if LIBKTORRENT_VERSION < 0x010100
+         void removeScanDlg();
++#endif
+ 
+     private:
+         BTTransfer * m_transfer;
+Index: kget/transfer-plugins/bittorrent/scandlg.h
+===================================================================
+--- kget/transfer-plugins/bittorrent/scandlg.h	(revision 1205225)
++++ kget/transfer-plugins/bittorrent/scandlg.h	(revision 1205226)
+@@ -24,7 +24,12 @@
+ #include <QTimer>
+ #include <QMutex>
+ #include <KDialog>
++#include <version.h>
++#if LIBKTORRENT_VERSION >= 0x010100
++#include <torrent/job.h>
++#else
+ #include <datachecker/datacheckerlistener.h>
++#endif
+ #include "ui_scandlg.h"
+ 
+ namespace bt
+@@ -36,11 +41,43 @@
+ {
+ 	class TorrentInterface;
+ 
++#if LIBKTORRENT_VERSION >= 0x010100
++	class ScanDlg : public KDialog
++	{
++		Q_OBJECT
++	public:
++		ScanDlg(KJob *job, QWidget* parent);
++		virtual ~ScanDlg();
++
++	protected:
++		/// Handle the close event
++		virtual void closeEvent(QCloseEvent* e);
++     
++	protected slots:
++		virtual void reject();
++		virtual void accept();
++		
++	private slots:
++	        void description(KJob *job, const QString &title, const QPair<QString, QString > &field1, const QPair< QString, QString > &field2);
++		void result(KJob *job);
++		void percent(KJob *job, unsigned long percent);
++
++	private:
++		bt::Job * m_job;
++		QProgressBar *m_progress;
++		KPushButton *m_cancel;
++		QLabel *m_torrent_label;
++		QLabel *m_chunks_failed;
++		QLabel *m_chunks_found;
++		QLabel *m_chunks_not_downloaded;
++		QLabel *m_chunks_downloaded;
++	};
++#else
+ 	class ScanDlg : public KDialog,public bt::DataCheckerListener
+ 	{
+ 		Q_OBJECT
+ 	public:
+-		ScanDlg(bool auto_import,QWidget* parent);
++		ScanDlg(QWidget* parent);
+ 		virtual ~ScanDlg();
+ 
+ 		/// Starts the scan threadvent(QC
+@@ -91,6 +128,7 @@
+ 		QLabel *m_chunks_not_downloaded;
+ 		QLabel *m_chunks_downloaded;
+ 	};
++#endif
+ }
+ 
+ #endif
+Index: kget/transfer-plugins/bittorrent/btjobtracker.h
+===================================================================
+--- kget/transfer-plugins/bittorrent/btjobtracker.h	(revision 0)
++++ kget/transfer-plugins/bittorrent/btjobtracker.h	(revision 1205226)
+@@ -0,0 +1,30 @@
++/* This file is part of the KDE project
++
++   Copyright (C) 2010 Lukas Appelhans <l.appelhans@gmx.de>
++
++   This program is free software; you can redistribute it and/or
++   modify it under the terms of the GNU General Public
++   License as published by the Free Software Foundation; either
++   version 2 of the License, or (at your option) any later version.
++*/
++#ifndef BTJOBTRACKER_H
++#define BTJOBTRACKER_H
++
++#include <version.h>
++
++#if LIBKTORRENT_VERSION >= 0x010100
++#include <kjobtrackerinterface.h>
++
++class BTJobTracker : public KJobTrackerInterface
++{
++    Q_OBJECT
++    public:
++        BTJobTracker(QObject * parent);
++        ~BTJobTracker();
++        
++        void registerJob(KJob * job);
++        void unregisterJob(KJob * job);
++};
++#endif
++
++#endif
+Index: kget/transfer-plugins/bittorrent/CMakeLists.txt
+===================================================================
+--- kget/transfer-plugins/bittorrent/CMakeLists.txt	(revision 1205225)
++++ kget/transfer-plugins/bittorrent/CMakeLists.txt	(revision 1205226)
+@@ -10,6 +10,7 @@
+     bttransferhandler.cpp
+     btdetailswidget.cpp
+     scandlg.cpp
++    btjobtracker.cpp
+     #btdatasource.cpp
+     #btchunkselector.cpp
+     #btcache.cpp
