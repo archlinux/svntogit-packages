@@ -1,22 +1,20 @@
 # $Id$
-# Maintainer: Jan de Groot <jgc@archlinux.org>
 # Maintainer: Allan McRae <allan@archlinux.org>
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
-pkgver=2.12.1
-pkgrel=4
-_glibcdate=20101025
+pkgver=2.12.2
+pkgrel=1
+_glibcdate=20101214
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=2.6.34' 'tzdata')
+depends=('linux-api-headers>=2.6.36.2' 'tzdata')
 makedepends=('gcc>=4.4')
-replaces=('glibc-xen')
 backup=(etc/locale.gen
         etc/nscd.conf)
 options=('!strip')
@@ -25,25 +23,17 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.10-dont-build-timezone.patch
         glibc-2.10-bz4781.patch
         glibc-__i686.patch
-        glibc-2.12.1-make-3.82-compatibility.patch
         glibc-2.12.1-static-shared-getpagesize.patch
-        glibc-2.12.1-but-I-am-an-i686.patch
-        glibc-2.12.1-fix-IPTOS_CLASS-definition.patch
-        glibc-2.12.1-never-expand-origin-when-privileged.patch
-        glibc-2.12.1-require-suid-on-audit.patch
+        glibc-2.12.2-ignore-origin-of-privileged-program.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('b12192eff7306f2a6e919641b847e7cf'
+md5sums=('e2d03fb95c9f838177284192dea063dc'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
-         '1deecaa78c0909f7175732da2af796b5'
          'a3ac6f318d680347bb6e2805d42b73b2'
-         'de17165e3fa721c4e056dacfc9ee1e52'
-         'fdc0908c9971fcf9b32e1185954b6eeb'
-         'e154dbe21d4e24968ab257ffd9c106f2'
-         'bbc99319ad78fe9eb1ac217efc770ac6'
+         'b042647ea7d6f22ad319e12e796bd13e'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -51,7 +41,7 @@ md5sums=('b12192eff7306f2a6e919641b847e7cf'
 mksource() {
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  git checkout -b glibc-2.12-arch origin/release/2.12/master
+  git checkout -b glibc-2.12-arch origin/release/2.12/master || return 1
   popd
   tar -cvJf glibc-${pkgver}_${_glibcdate}.tar.xz glibc/*
 }
@@ -69,31 +59,18 @@ build() {
   # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
   patch -Np1 -i ${srcdir}/glibc-__i686.patch
 
-  # http://sourceware.org/git/?p=glibc.git;a=patch;h=32cf4069
-  patch -Np1 -i ${srcdir}/glibc-2.12.1-make-3.82-compatibility.patch
-
   # http://sourceware.org/bugzilla/show_bug.cgi?id=11929
   # using Fedora "fix" as patch in that bug report causes breakages...
   patch -Np1 -i ${srcdir}/glibc-2.12.1-static-shared-getpagesize.patch
-  
-  # fedora "fix" for excess linker optimization on i686
-  # proper fix will be in binutils-2.21
-  patch -Np1 -i ${srcdir}/glibc-2.12.1-but-I-am-an-i686.patch
 
   # http://www.exploit-db.com/exploits/15274/
-  # http://sourceware.org/git/?p=glibc.git;a=patch;h=2232b90f (only fedora branch...)
-  patch -Np1 -i ${srcdir}/glibc-2.12.1-never-expand-origin-when-privileged.patch
-
-  # http://www.exploit-db.com/exploits/15304/
-  # http://sourceware.org/git/?p=glibc.git;a=patch;h=8e9f92e9
-  patch -Np1 -i ${srcdir}/glibc-2.12.1-require-suid-on-audit.patch
-
-  # http://sources.redhat.com/git/?p=glibc.git;a=patch;h=15bac72b
-  patch -Np1 -i ${srcdir}/glibc-2.12.1-fix-IPTOS_CLASS-definition.patch
+  # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09 (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileded-program.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
 
+  cd ${srcdir}
   mkdir glibc-build
   cd glibc-build
 
@@ -104,12 +81,15 @@ build() {
 
   echo "slibdir=/lib" >> configparms
 
-  ../configure --prefix=/usr \
-      --enable-add-ons=nptl,libidn --without-cvs \
-      --enable-kernel=2.6.18 --disable-profile \
-      --with-headers=/usr/include --libexecdir=/usr/lib \
-      --enable-bind-now --with-tls --with-__thread \
-      --libdir=/usr/lib --without-gd --disable-multi-arch
+  ${srcdir}/glibc/configure --prefix=/usr \
+      --libdir=/usr/lib --libexecdir=/usr/lib \
+      --with-headers=/usr/include \
+      --enable-add-ons=nptl,libidn \
+      --enable-kernel=2.6.27 \
+      --with-tls --with-__thread \
+      --enable-bind-now --without-gd \
+      --without-cvs --disable-profile \
+      --disable-multi-arch
         
   make
 
@@ -118,13 +98,10 @@ build() {
 }
 
 package() {
-  cd ${srcdir}/glibc/glibc-build
+  cd ${srcdir}/glibc-build
   make install_root=${pkgdir} install
 
-  # provided by kernel-headers
-  rm ${pkgdir}/usr/include/scsi/scsi.h
-
-  rm ${pkgdir}/etc/ld.so.conf
+  rm ${pkgdir}/etc/ld.so.{cache,conf}
 
   install -dm755 ${pkgdir}/etc/rc.d
   install -dm755 ${pkgdir}/usr/sbin
@@ -132,6 +109,7 @@ package() {
   install -m644 ${srcdir}/glibc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
   install -m755 ${srcdir}/nscd ${pkgdir}/etc/rc.d/nscd
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
+  install -m755 ${srcdir}/glibc/posix/gai.conf ${pkgdir}/etc/gai.conf
 
   sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
 
@@ -146,7 +124,7 @@ package() {
   if [[ ${CARCH} = "x86_64" ]]; then
     # fix for the linker
     sed -i '/RTLDLIST/s%lib64%lib%' ${pkgdir}/usr/bin/ldd
-    #Comply with multilib binaries, they look for the linker in /lib64
+    # Comply with multilib binaries, they look for the linker in /lib64
     mkdir ${pkgdir}/lib64
     cd ${pkgdir}/lib64
     ln -v -s ../lib/ld* .
