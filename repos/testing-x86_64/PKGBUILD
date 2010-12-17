@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
+
+pkgname=binutils
+pkgver=2.21
+pkgrel=1
+_date=20101216
+pkgdesc="A set of programs to assemble and manipulate binary and object files"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/binutils/"
+license=('GPL')
+groups=('base')
+depends=('glibc>=2.12.1-5' 'zlib')
+makedepends=('dejagnu')
+options=('!libtool' '!distcc' '!ccache')
+install=binutils.install
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2)
+md5sums=('96a95d028ee86ca4347576c51d1ea1d4')
+
+mksource() {
+  mkdir ${pkgname}-${_date}
+  cd ${pkgname}-${_date}
+  export _TAG=binutils-2_21-branch
+  export 'CVSROOT=:pserver:anoncvs@sourceware.org:/cvs/src'
+  cvs -z9 co -r $_TAG binutils || return 1
+  mv src binutils
+  tar -cvjf ../binutils-${pkgver}_${_date}.tar.bz2 binutils/*
+}
+
+build() {
+  cd ${srcdir}
+  mkdir binutils-build && cd binutils-build
+
+  [[ $CARCH == "x86_64" ]] && CONFIGFLAG="--enable-64-bit-bfd --disable-multilib"
+
+  ${srcdir}/binutils/configure --prefix=/usr \
+    --enable-ld=default --enable-gold \
+    --enable-shared $CONFIGFLAG
+
+  # This checks the host environment and makes sure all the necessary tools are available to compile Binutils.
+  make configure-host
+
+  make tooldir=${pkgdir}/usr
+
+  # do not abort on errors - manually check log files
+  make -k -j1 check || true
+}
+
+package() {
+  cd ${srcdir}/binutils-build
+  make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
+  
+  # Add some useful headers
+  install -m644 ${srcdir}/binutils/include/libiberty.h ${pkgdir}/usr/include
+  install -m644 ${srcdir}/binutils/include/demangle.h ${pkgdir}/usr/include
+
+  # Rebuild libiberty.a with -fPIC
+  make -C libiberty clean
+  make CFLAGS="$CFLAGS -fPIC" -C libiberty
+  install -m644 libiberty/libiberty.a ${pkgdir}/usr/lib
+
+  # Rebuild libbfd.a with -fPIC
+  make -C bfd clean
+  # hidden visability prevent 3rd party shared libraries exporting bfd non-stable API
+  make CFLAGS="$CFLAGS -fPIC -fvisibility=hidden" -C bfd
+  install -m644 bfd/libbfd.a ${pkgdir}/usr/lib
+
+  # Remove Windows/Novell specific man pages
+  rm -f ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
+
+  # Remove these symlinks, they are not ABI stable.
+  # Programs should compile static to the .a file.
+  rm -f ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
+  echo "INPUT ( /usr/lib/libbfd.a -liberty -lz )" >${pkgdir}/usr/lib/libbfd.so
+  echo "INPUT ( /usr/lib/libopcodes.a -lbfd )" >${pkgdir}/usr/lib/libopcodes.so
+}
