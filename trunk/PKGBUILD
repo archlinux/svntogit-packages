@@ -65,7 +65,7 @@ build() {
 
   # http://www.exploit-db.com/exploits/15274/
   # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09 (only fedora branch...)
-  patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileded-program.patch
+  patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileged-program.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
