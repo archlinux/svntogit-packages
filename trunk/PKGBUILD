@@ -4,57 +4,57 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 
 pkgname=binutils
-pkgver=2.20.1
-pkgrel=4
-_date=20100521
+pkgver=2.21
+pkgrel=1
+_date=20101216
 pkgdesc="A set of programs to assemble and manipulate binary and object files"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/binutils/"
 license=('GPL')
 groups=('base')
-depends=('glibc>=2.12-1' 'zlib')
+depends=('glibc>=2.12.1-5' 'zlib')
 makedepends=('dejagnu')
 options=('!libtool' '!distcc' '!ccache')
 install=binutils.install
 source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2)
-md5sums=('67053ffd8582e646e171fccd55b2f0f6')
+md5sums=('e2a1c34fb236d755206520bd76469740')
 
 mksource() {
   mkdir ${pkgname}-${_date}
   cd ${pkgname}-${_date}
-  export _TAG=binutils-2_20-branch
+  export _TAG=binutils-2_21-branch
   export 'CVSROOT=:pserver:anoncvs@sourceware.org:/cvs/src'
   cvs -z9 co -r $_TAG binutils || return 1
-  cd src && tar -cvjf ../../binutils-${pkgver}_${_date}.tar.bz2 *
+  mv src binutils
+  tar -cvjf ../binutils-${pkgver}_${_date}.tar.bz2 binutils/*
 }
 
 build() {
   cd ${srcdir}
-  mkdir build && cd build
+  mkdir binutils-build && cd binutils-build
 
-  CC="gcc -L`pwd`/bfd/.libs/"
-  if [ "${CARCH}" = "x86_64" ]; then
-    ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --enable-shared --enable-64-bit-bfd --disable-multilib 
-  else
-    ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --enable-shared
-  fi
-  # fix man files install path
-  sed -i -e "s:mandir \= \/usr\/share:mandir \= ${pkgdir}\/usr\/share:" ${srcdir}/build/Makefile
-  # fix info files install path
-  sed -i -e "s:infodir \= \/usr\/share:infodir \= ${pkgdir}\/usr\/share:" ${srcdir}/build/Makefile 
+  [[ $CARCH == "x86_64" ]] && CONFIGFLAG="--enable-64-bit-bfd --disable-multilib"
+
+  ${srcdir}/binutils/configure --prefix=/usr \
+    --enable-ld=default --enable-gold \
+    --enable-shared $CONFIGFLAG
 
   # This checks the host environment and makes sure all the necessary tools are available to compile Binutils.
   make configure-host
 
   make tooldir=${pkgdir}/usr
-  make check
+
+  # do not abort on errors - manually check log files
+  make -k -j1 check || true
 }
 
 package() {
-  cd ${srcdir}/build
+  cd ${srcdir}/binutils-build
   make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
-  install -m644 ${srcdir}/include/libiberty.h ${pkgdir}/usr/include
-  install -m644 ${srcdir}/include/demangle.h ${pkgdir}/usr/include
+  
+  # Add some useful headers
+  install -m644 ${srcdir}/binutils/include/libiberty.h ${pkgdir}/usr/include
+  install -m644 ${srcdir}/binutils/include/demangle.h ${pkgdir}/usr/include
 
   # Rebuild libiberty.a with -fPIC
   make -C libiberty clean
@@ -67,9 +67,10 @@ package() {
   make CFLAGS="$CFLAGS -fPIC -fvisibility=hidden" -C bfd
   install -m644 bfd/libbfd.a ${pkgdir}/usr/lib
 
+  # Remove Windows/Novell specific man pages
   rm -f ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
 
-  # Remove these symlinks, with binutils prereleases they are not ABI stable.
+  # Remove these symlinks, they are not ABI stable.
   # Programs should compile static to the .a file.
   rm -f ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
   echo "INPUT ( /usr/lib/libbfd.a -liberty -lz )" >${pkgdir}/usr/lib/libbfd.so
