@@ -1,0 +1,98 @@
+# $Id$
+# Maintainer: Jan "heftig" Steffens <jan.steffens@gmail.com>
+# Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
+# Contributor: Corrado Primier <bardo@aur.archlinux.org>
+# Contributor: William Rea <sillywilly@gmail.com>
+
+pkgbase=pulseaudio
+pkgname=(pulseaudio libpulse)
+pkgver=0.9.22
+pkgrel=2
+arch=(i686 x86_64)
+url="http://pulseaudio.org/"
+license=(GPL LGPL)
+makedepends=(libasyncns libcap attr libxtst libsm tcp_wrappers libsndfile
+             libtool rtkit speex libsamplerate tdb udev dbus-core xcb-util
+             avahi bluez gconf intltool jack lirc-utils pkgconfig openssl)
+options=(!emptydirs !libtool !makeflags)
+source=("http://0pointer.de/lennart/projects/$pkgbase/$pkgbase-$pkgver.tar.gz"
+        $pkgbase.xinit)
+md5sums=('ca85ab470669b05e100861654cf5eb3c'
+         'eb1cfae28eb2e4d3fdbe45a90e4318ab')
+
+build() {
+  cd "$srcdir/$pkgbase-$pkgver"
+
+  # Don't break circular dependency between libpulse and libpulsecommon
+  LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
+
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/lib \
+    --localstatedir=/var \
+    --with-database=tdb \
+    --disable-hal \
+    --disable-rpath \
+    --disable-default-build-tests
+
+  make
+}
+
+package_pulseaudio() {
+  pkgdesc="A featureful, general-purpose sound server"
+  depends=("libpulse=$pkgver-$pkgrel" rtkit libtool speex libsamplerate tdb
+           udev)
+  optdepends=('avahi: zeroconf support'
+              'bluez: bluetooth support'
+              'gconf: configuration through gconf'
+              'jack: jack support'
+              'lirc-utils: infra-red support'
+              'openssl: RAOP support')
+  backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
+  install=pulseaudio.install
+  cd "$srcdir/$pkgbase-$pkgver"
+  make DESTDIR="$pkgdir" install
+
+  # Lower resample quality
+  sed -e '/resample-method/iresample-method=speex-float-0' \
+      -i "$pkgdir/etc/pulse/daemon.conf"
+
+  # Disable cork-request module, can result in e.g. media players unpausing
+  # when there's a Skype call incoming
+  sed -e 's|/usr/bin/pactl load-module module-x11-cork-request|#&|' \
+      -i "$pkgdir/usr/bin/start-$pkgbase-x11"
+
+  # Make module-console-kit optional
+  sed -e $'/module-console-kit/{i.nofail\n;a.fail\n;}' \
+      -i "$pkgdir/etc/pulse/default.pa"
+
+  install -Dm755 "$srcdir/$pkgbase.xinit" "$pkgdir/etc/X11/xinit/xinitrc.d/$pkgbase"
+
+  rm "$pkgdir/etc/dbus-1/system.d/$pkgbase-system.conf"
+
+### Split libpulse
+
+  mkdir -p "$srcdir"/libpulse/{etc/pulse,usr/{lib,share/{man/man5,vala/vapi}}}
+
+  mv {"$pkgdir","$srcdir/libpulse"}/etc/pulse/client.conf
+
+  mv "$pkgdir"/usr/lib/libpulse{,dsp,-simple,-browse,-mainloop-glib}.so* \
+     "$pkgdir"/usr/lib/libpulsecommon-*.so \
+     "$srcdir/libpulse/usr/lib"
+
+  mv {"$pkgdir","$srcdir/libpulse"}/usr/lib/pkgconfig
+  mv {"$pkgdir","$srcdir/libpulse"}/usr/include
+
+  mv {"$pkgdir","$srcdir/libpulse"}/usr/share/man/man5/pulse-client.conf.5
+  mv {"$pkgdir","$srcdir/libpulse"}/usr/share/vala/vapi/libpulse.vapi
+}
+
+package_libpulse() {
+  pkgdesc="A featureful, general-purpose sound server (client library)"
+  depends=(tcp_wrappers dbus-core xcb-util libasyncns libcap libxtst libsm
+           libsndfile)
+  optdepends=('alsa-plugins: ALSA support'
+              'avahi: zeroconf support')
+  backup=(etc/pulse/client.conf)
+  mv "$srcdir"/libpulse/* "$pkgdir"
+}
