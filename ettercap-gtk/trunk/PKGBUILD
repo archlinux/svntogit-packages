@@ -1,31 +1,44 @@
 # $Id$
-# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 # Maintainer: Hugo Doria <hugo@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=ettercap-gtk
 pkgver=NG_0.7.3
 _origname=ettercap
 _origver=NG-0.7.3
-pkgrel=7
+pkgrel=8
 pkgdesc="A network sniffer/interceptor/logger for ethernet LANs - GTK"
 arch=('i686' 'x86_64')
 url="http://ettercap.sourceforge.net/"
 license=('GPL')
-# Other deps are included by ettercap.
-depends=("ettercap" 'gtk2' 'libtool')
+depends=('ettercap' 'gtk2' 'libtool')
 makedepends=('libnet')
-options=(!libtool)
-source=(http://downloads.sourceforge.net/sourceforge/${_origname}/${_origname}-${_origver}.tar.gz 
-        ettercap.desktop)
-md5sums=('28fb15cd024162c55249888fe1b97820' '6ef18fdd114297d4ed9e5104d309f071')
+options=('!libtool')
+source=(http://downloads.sourceforge.net/${_origname}/${_origname}-${_origver}.tar.gz 
+        'ettercap.desktop'
+        'fix-segmentation-fault.patch')
+md5sums=('28fb15cd024162c55249888fe1b97820'
+        '6ef18fdd114297d4ed9e5104d309f071'
+        'e9cc99f13fd23edaba6cddffc4d0ef34')
 
 build() {
-  cd ${srcdir}/${_origname}-${_origver} || return 1
+  cd ${srcdir}/${_origname}-${_origver}
   unset LDFLAGS
-  ./configure --prefix=/usr --sysconfdir=/etc --enable-plugins --enable-https
-  make || return 1
-  install -D ${srcdir}/${_origname}-${_origver}/src/ettercap \
-             ${pkgdir}/usr/bin/ettercap-gtk || return 1
-  install -D ${srcdir}/ettercap.desktop \
-             ${pkgdir}/usr/share/applications/ettercap.desktop || return 1
+
+  # FS#21628
+  patch -Np1 -i ${srcdir}/fix-segmentation-fault.patch
+
+  libtoolize --force --copy
+  aclocal
+  autoconf
+  ./configure --prefix=/usr --sysconfdir=/etc --enable-plugins
+  sed -i 's/LTDL_SHLIB_EXT/\".so\"/' src/ec_plugins.c
+  make
+}
+
+package() {
+  install -Dm755 ${srcdir}/${_origname}-${_origver}/src/ettercap \
+    ${pkgdir}/usr/bin/ettercap-gtk
+  install -Dm644 ${srcdir}/ettercap.desktop \
+    ${pkgdir}/usr/share/applications/ettercap.desktop
 }
