@@ -5,73 +5,75 @@
 
 pkgbase=mysql
 pkgname=('libmysqlclient' 'mysql-clients' 'mysql')
-pkgver=5.1.51
+pkgver=5.5.8
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.mysql.com/"
-makedepends=('tcp_wrappers' 'zlib' 'perl' 'openssl' 'libtool' 'patch')
+makedepends=('cmake' 'openssl' 'tcp_wrappers')
 options=('!libtool')
-source=("http://ftp.gwdg.de/pub/misc/mysql/Downloads/MySQL-5.1/${pkgbase}-${pkgver}.tar.gz"
+source=("http://ftp.gwdg.de/pub/misc/mysql/Downloads/MySQL-5.5/${pkgbase}-${pkgver}.tar.gz"
         'mysqld'
-        'my.cnf'
-        'skip-abi-check.patch')
-md5sums=('c12bf24493688c51c6cff5e8c6563830'
+        'my.cnf')
+md5sums=('42e866302b61f5e213afd33e04677017'
          '2234207625baa29b2ff7d7b4f088abce'
-         '0337741fa9afbe57939993636081a827'
-         'a97e574945e19de3908575b956241026')
+         '69336edb8a16294b18eaec22fee7ea68')
 
 build() {
-  cd "${srcdir}/${pkgbase}-${pkgver}"
-  patch -Np0 -i "${srcdir}/skip-abi-check.patch"
+  cd "${srcdir}"
+  mkdir build
+  cd build
+
   # CFLAGS/CXXFLAGS as suggested upstream
   CFLAGS="-fPIC ${CFLAGS} -fno-strict-aliasing -DBIG_JOINS=1 -fomit-frame-pointer" \
   CXXFLAGS="-fPIC ${CXXFLAGS} -fno-strict-aliasing -DBIG_JOINS=1 -felide-constructors -fno-rtti" \
-  ./configure --prefix=/usr \
-    --libexecdir=/usr/sbin \
-    --localstatedir=/var \
-    --sysconfdir=/etc/mysql \
-    --without-docs \
-    --without-readline \
-    --with-ssl \
-    --with-libwrap \
-    --with-charset=utf8 \
-    --with-collation=utf8_general_ci \
-    --with-extra-charsets=complex \
-    --with-embedded-server \
-    --with-unix-socket-path=/var/run/mysqld/mysqld.sock \
-    --enable-local-infile \
-    --with-plugins=partition,ftexample,archive,blackhole,federated,heap,innobase,innodb_plugin,ndbcluster
+
+  cmake ../${pkgbase}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DMYSQL_DATADIR=/var/lib/mysql \
+    -DINSTALL_INFODIR=/usr/share/mysql/docs \
+    -DINSTALL_MANDIR=/usr/share/man \
+    -DINSTALL_SCRIPTDIR=/usr/bin \
+    -DINSTALL_DOCREADMEDIR=/usr/share/mysql \
+    -DINSTALL_SUPPORTFILESDIR=/usr/share/mysql \
+    -DWITH_READLINE=OFF \
+    -DWITH_SSL=system \
+    -DWITH_LIBWRAP=ON \
+    -DDEFAULT_CHARSET=utf8 \
+    -DDEFAULT_COLLATION=utf8_general_ci \
+    -DWITH_EXTRA_CHARSETS=complex \
+    -DWITH_EMBEDDED_SERVER=ON \
+    -DMYSQL_UNIX_ADDR=/var/run/mysqld/mysqld.sock \
+    -DENABLED_LOCAL_INFILE=ON \
+    -DWITH_PARTITION_STORAGE_ENGINE=1 \
+    -DWITH_EXAMPLE_STORAGE_ENGINE=1 \
+    -DWITH_ARCHIVE_STORAGE_ENGINE=1 \
+    -DWITH_BLACKHOLE_STORAGE_ENGINE=1 \
+    -DWITH_FEDERATED_STORAGE_ENGINE=1 \
+    -DWITH_INNOBASE_STORAGE_ENGINE=1
+
   make
 }
 
 package_libmysqlclient(){
   pkgdesc="MySQL client libraries"
-  depends=('openssl' 'zlib' 'gcc-libs' 'tcp_wrappers')
+  depends=('openssl' 'gcc-libs' 'tcp_wrappers')
   
-  cd "${srcdir}/${pkgbase}-${pkgver}"
-  for dir in include libmysql libmysql_r libmysqld; do
+  cd "${srcdir}"/build
+  for dir in include libmysql libmysqld libservices; do
     make -C ${dir} DESTDIR="${pkgdir}" install
   done
-  install -m644 include/*.h "${pkgdir}/usr/include/mysql/"
 
   install -d "${pkgdir}/usr/bin"
   install -m755 scripts/mysql_config "${pkgdir}/usr/bin/"
-  
-  # create library symlinks in /usr/lib
-  ln -sf mysql/libmysqlclient.so.16 ${pkgdir}/usr/lib/libmysqlclient.so.16
-  ln -sf libmysqlclient.so.16 ${pkgdir}/usr/lib/libmysqlclient.so
-  ln -sf libmysqlclient.so.16 ${pkgdir}/usr/lib/libmysqlclient.so.1
-  ln -sf mysql/libmysqlclient_r.so.16  ${pkgdir}/usr/lib/libmysqlclient_r.so.16
-  ln -sf libmysqlclient_r.so.16 ${pkgdir}/usr/lib/libmysqlclient_r.so
-  ln -sf libmysqlclient_r.so.16 ${pkgdir}/usr/lib/libmysqlclient_r.so.1
 }
 
 package_mysql-clients(){
   pkgdesc="MySQL client tools"
   depends=('libmysqlclient')
   
-  cd "${srcdir}/${pkgbase}-${pkgver}/client"
+  cd "${srcdir}"/build/client
   make DESTDIR="${pkgdir}" install
 
   # provided by libmysqlclient
@@ -83,12 +85,12 @@ package_mysql-clients(){
 
 package_mysql(){
   pkgdesc="A fast SQL database server"
-  backup=('etc/my.cnf' 'etc/mysql/my.cnf')
+  backup=('etc/mysql/my.cnf')
   install=mysql.install
   depends=('mysql-clients')
   optdepends=('perl-dbi' 'perl-dbd-mysql')
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}"/build
   make DESTDIR=${pkgdir} install
 
   install -Dm644 ${srcdir}/my.cnf ${pkgdir}/etc/mysql/my.cnf
@@ -96,9 +98,10 @@ package_mysql(){
 
   # provided by libmysqlclient
   rm -f ${pkgdir}/usr/bin/{mysql_config,mysql_client_test_embedded,mysqltest_embedded}
-  rm -f ${pkgdir}/usr/lib/mysql/libmysqlclient*
-  rm -f ${pkgdir}/usr/lib/mysql/libmysqld.a
-  rm -f ${pkgdir}/usr/include/mysql/*.h
+  rm -f ${pkgdir}/usr/lib/libmysqlclient*
+  rm -f ${pkgdir}/usr/lib/libmysqld.a
+  rm -f ${pkgdir}/usr/lib/libmysqlservices.a
+  rm -rf ${pkgdir}/usr/include/
   
   # provided by mysql-clients
   rm -f ${pkgdir}/usr/bin/{mysql,mysqladmin,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap}
@@ -106,4 +109,10 @@ package_mysql(){
   # not needed
   rm -rf ${pkgdir}/usr/{mysql-test,sql-bench}
   rm -f ${pkgdir}/usr/lib/mysql/plugin/*.a
+
+  # These shouldn't be here
+  rm -rf ${pkgdir}/usr/docs
+  install -d ${pkgdir}/var/lib/mysql
+  mv ${pkgdir}/usr/data/* ${pkgdir}/var/lib/mysql/
+  chmod -R 700 ${pkgdir}/var/lib/mysql/
 }
