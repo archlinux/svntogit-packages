@@ -1,0 +1,60 @@
+# $Id: PKGBUILD 46926 2009-07-22 04:56:17Z pierre $
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Douglas Soares de Andrade <dsa@aur.archlinux.org>
+# Contributor: Michal Krenek <mikos@sg1.cz>
+# Contributor: DaNiMoTh <jjdanimoth.aur@gmail.com>
+
+pkgbase=qscintilla
+pkgname=(qscintilla python-qscintilla)
+pkgver=2.4.6
+pkgrel=1
+license=('GPL')
+arch=('i686' 'x86_64')
+url="http://www.riverbankcomputing.co.uk/software/qscintilla/intro"
+makedepends=('pyqt')
+source=(http://riverbankcomputing.com/static/Downloads/QScintilla2/QScintilla-gpl-${pkgver}.tar.gz
+        configure.py-objdir-support.diff)
+md5sums=('424a89736b900e6ca5bc6d929cdafaf8'
+         '8cf9c06252e2f11ab00e62848e322fd3')
+
+
+build() {
+    cd $srcdir/QScintilla-gpl-$pkgver
+    patch -Np1 -i "${srcdir}/configure.py-objdir-support.diff"
+
+    cd Qt4
+    qmake qscintilla.pro
+    make
+    
+    cd ../designer-Qt4
+    qmake designer.pro INCLUDEPATH+=../Qt4 QMAKE_LIBDIR+=../Qt4
+    make
+
+    cd ../Python
+    python2 configure.py -n ../Qt4/ -o ../Qt4 -c -p 4
+    make
+}
+
+package_qscintilla() {
+    pkgdesc="A port to Qt4 of Neil Hodgson's Scintilla C++ editor class"
+    provides=('qscintilla2')
+    conflicts=('qscintilla2')
+    replaces=('qscintilla2')
+    depends=('qt')
+
+    cd ${srcdir}/QScintilla-gpl-${pkgver}/Qt4
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    cd ${srcdir}/QScintilla-gpl-${pkgver}/designer-Qt4
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+}
+
+package_python-qscintilla() {
+    pkgdesc="Python bindings for QScintilla2"
+    conflicts=('python-qscintilla2')
+    replaces=('python-qscintilla2')
+    depends=('qscintilla' 'pyqt')
+
+    cd "${srcdir}/QScintilla-gpl-${pkgver}/Python"
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+}
