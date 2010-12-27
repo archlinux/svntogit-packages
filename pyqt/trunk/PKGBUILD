@@ -5,7 +5,7 @@
 
 pkgname=pyqt
 pkgver=4.8.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A set of Python bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -19,11 +19,16 @@ optdepends=('phonon: enable audio and video in PyQt applications'
 provides=('pyqt4')
 replaces=('pyqt4')
 conflicts=('pyqt4')
-source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('142a32f126f205a2bd77f6a9910f5333')
+source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
+        'fix-stackedwidget-bug.patch')
+md5sums=('142a32f126f205a2bd77f6a9910f5333'
+        '42cfd44a8ec063cce3e328ddb9892565')
 
 build() {
   cd ${srcdir}/PyQt-x11-gpl-${pkgver}
+
+  # Already fixed upstream
+  patch -Np1 -i ${srcdir}/fix-stackedwidget-bug.patch
 
   python2 configure.py \
     --confirm-license \
