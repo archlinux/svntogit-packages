@@ -1,0 +1,119 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=kdenetwork
+pkgname=('kdenetwork-filesharing'
+         'kdenetwork-kdnssd'
+         'kdenetwork-kget'
+         'kdenetwork-kopete'
+         'kdenetwork-kppp'
+         'kdenetwork-krdc'
+         'kdenetwork-krfb')
+pkgver=4.5.90
+pkgrel=2
+arch=('i686' 'x86_64')
+url='http://www.kde.org'
+license=('GPL' 'LGPL' 'FDL')
+groups=('kde' 'kdenetwork')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'boost' 'speex' 'ortp' 'libotr'
+	'qca-ossl' 'kdebase-workspace' 'kdebase-lib' 'libvncserver' 'libmsn'
+	'ppp' 'v4l-utils' 'libidn' 'rdesktop' 'qimageblitz' 'libxdamage' 'libgadu'
+	'telepathy-qt4' 'docbook-xsl' 'libktorrent' 'kwebkitpart')
+source=("http://download.kde.org/unstable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2"
+        'libktorrent1.0.5.patch')
+sha1sums=('3b744e52b884d46c4237f27f260ad65ff4dd5973'
+        'ef4e5a9b9ceb3eb235b7dce391bbde543386f31a')
+
+build() {
+    # Already fixed upstream
+	cd ${srcdir}/${pkgbase}-${pkgver}
+    patch -Np0 -i ${srcdir}/libktorrent1.0.5.patch
+
+    cd ${srcdir}
+	mkdir build
+	cd build
+	cmake ../${pkgbase}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_SKIP_RPATH=ON \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DMOZPLUGIN_INSTALL_DIR=/usr/lib/mozilla/plugins/ \
+        -DWITH_Xmms=OFF \
+		-DWITH_LibMeanwhile=OFF
+	make
+}
+
+package_kdenetwork-filesharing() {
+	pkgdesc='Konqueror properties dialog plugin to share a directory with the local network'
+	depends=('kdelibs' 'smbclient')
+	install='kdenetwork.install'
+	cd $srcdir/build/filesharing
+	make DESTDIR=$pkgdir install
+}
+
+package_kdenetwork-kdnssd() {
+	pkgdesc='Monitors the network for DNS-SD services'
+	depends=('kdelibs')
+	cd $srcdir/build/kdnssd
+	make DESTDIR=$pkgdir install
+}
+
+package_kdenetwork-kget() {
+	pkgdesc='Download Manager'
+	depends=('kdebase-workspace' 'kdebase-lib' 'libktorrent' 'kwebkitpart')
+	optdepends=('python2: YouTube plugin')
+	url="http://kde.org/applications/internet/kget/"
+	install='kdenetwork.install'
+	cd $srcdir/build/kget
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/kget
+	make DESTDIR=$pkgdir install
+
+        # Use the python2 executable
+        find ${pkgdir} -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
+}
+
+package_kdenetwork-kopete() {
+	pkgdesc='Instant Messenger'
+	depends=('kdebase-runtime' 'kdepimlibs' 'qca-ossl' 'libotr' 'libmsn'
+	         'libidn' 'qimageblitz' 'v4l-utils' 'libgadu')
+	url="http://kde.org/applications/internet/kopete/"
+	install='kdenetwork.install'
+	cd $srcdir/build/kopete
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/kopete
+	make DESTDIR=$pkgdir install
+}
+
+package_kdenetwork-kppp() {
+	pkgdesc='Internet Dial-Up Tool'
+	depends=('kdebase-runtime' 'ppp')
+	url="http://kde.org/applications/internet/kppp/"
+	install='kdenetwork.install'
+	cd $srcdir/build/kppp
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/kppp
+	make DESTDIR=$pkgdir install
+}
+
+package_kdenetwork-krdc() {
+	pkgdesc='Remote Desktop Client'
+	depends=('kdebase-runtime' 'libvncserver' 'rdesktop' 'telepathy-qt4')
+	url="http://kde.org/applications/internet/krdc/"
+	cd $srcdir/build/krdc
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/krdc
+	make DESTDIR=$pkgdir install
+}
+
+package_kdenetwork-krfb() {
+	pkgdesc='Desktop Sharing'
+	# note on libxdamage:
+	#       not detected by namcap because libgl depends on it
+	#       but nvidia providing libgl does not depend on libxdamage
+	depends=('kdebase-runtime' 'libvncserver' 'libxdamage')
+	cd $srcdir/build/krfb
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/krfb
+	make DESTDIR=$pkgdir install
+}
