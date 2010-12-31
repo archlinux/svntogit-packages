@@ -109,7 +109,7 @@ package() {
   install -m644 ${srcdir}/glibc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
   install -m755 ${srcdir}/nscd ${pkgdir}/etc/rc.d/nscd
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
-  install -m755 ${srcdir}/glibc/posix/gai.conf ${pkgdir}/etc/gai.conf
+  install -m644 ${srcdir}/glibc/posix/gai.conf ${pkgdir}/etc/gai.conf
 
   sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
 
