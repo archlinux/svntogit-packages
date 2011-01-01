@@ -1,0 +1,39 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Kritoke <kritoke@nospam.gmail.com>
+# Contributor: György Balló <ballogy@freestart.hu>
+
+pkgname=f-spot
+pkgver=0.8.2
+pkgrel=1
+pkgdesc="A personal photo management program for GNOME"
+url="http://www.gnome.org/projects/f-spot/"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('mono-addins>=0.3' 'gnome-sharp>=2.8' 'ndesk-dbus-glib>=0.3.0' 'lcms>=1.12' 'gnome-keyring-sharp' 'flickrnet' 'libgphoto2' 'desktop-file-utils' 'hicolor-icon-theme' 'xdg-utils')
+makedepends=('intltool>=0.35.0' 'gnome-doc-utils>=0.17.3' 'gnome-screensaver>=2.30.0')
+options=('!libtool')
+install=$pkgname.install
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/${pkgname}-${pkgver}.tar.bz2
+        mono-2.8.patch)
+sha256sums=('24448d3431a95a9faa0aa975554414eb638f918811507177e9d69d11d417873a'
+            '4e7d2f1909870b842bbbe087f4381f325d5281d2deae0d32ba5713ee66d52b65')
+
+build() {
+  export MONO_SHARED_DIR="${srcdir}/.wabi"
+  mkdir -p "${MONO_SHARED_DIR}"
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/mono-2.8.patch"
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+              --disable-static --disable-scrollkeeper --disable-schemas-install --enable-release \
+              --with-vendor-build-id=ArchLinux
+  make
+  make DESTDIR=${pkgdir} install
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain f-spot ${pkgdir}/etc/gconf/schemas/*.schemas || return 1
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
+
