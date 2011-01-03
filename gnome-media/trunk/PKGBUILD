@@ -4,7 +4,7 @@
 pkgbase=gnome-media
 pkgname=(gnome-media gnome-media-pulse)
 pkgver=2.32.0
-pkgrel=2
+pkgrel=3
 pkgdesc="GNOME Media Tools"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -14,21 +14,24 @@ url="http://www.gnome.org"
 groups=('gnome')
 options=('!libtool' '!emptydirs')
 install=gnome-media.install
-source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/2.32/${pkgbase}-${pkgver}.tar.bz2)
-sha256sums=('2b0ad4decd75406398f46e82a170e53bcbc6e1bdc3363f03a07b00f59c2fe5e6')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/2.32/${pkgbase}-${pkgver}.tar.bz2
+        gnome_volume_control_fix_channel_bars.patch)
+sha256sums=('2b0ad4decd75406398f46e82a170e53bcbc6e1bdc3363f03a07b00f59c2fe5e6'
+            '51e59fb42114d70118f4b750a06a33e0e40b0a03ed6509dc1348c641cc274d74' )
 
 build() {
-  cd "$srcdir"
-  cp -a "$pkgbase-$pkgver"{,-pulse}
+  cd "${srcdir}"
+  patch -Np0 -i "${srcdir}/gnome_volume_control_fix_channel_bars.patch"
+  cp -a "${pkgbase}-${pkgver}"{,-pulse}
 
-  cd "$pkgbase-$pkgver"
+  cd "${pkgbase}-${pkgver}"
   ./configure --prefix=/usr --sysconfdir=/etc \
       --libexecdir=/usr/lib/gnome-media \
       --localstatedir=/var --disable-static \
       --disable-scrollkeeper --disable-pulseaudio
   make
 
-  cd "$srcdir/$pkgbase-$pkgver-pulse"
+  cd "${srcdir}/${pkgbase}-${pkgver}-pulse"
   ./configure --prefix=/usr --sysconfdir=/etc \
       --libexecdir=/usr/lib/gnome-media \
       --localstatedir=/var --disable-static \
@@ -41,7 +44,7 @@ _commonpackage() {
   install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
   gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgbase}.schemas" --domain gnome-media-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas
   rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
-  
+
   # remove it from Xfce menu that ships its own thingy
   echo "NotShowIn=XFCE" >> ${pkgdir}/usr/share/applications/gnome-volume-control.desktop
 }
@@ -56,7 +59,7 @@ package_gnome-media-pulse() {
   depends+=(libpulse)
   groups=(pulseaudio-gnome)
   conflicts=(gnome-media)
-  provides=("gnome-media=$pkgver-$pkgrel")
+  provides=("gnome-media=${pkgver}-${pkgrel}")
 
   cd "${srcdir}/${pkgbase}-${pkgver}-pulse"
   _commonpackage
@@ -64,5 +67,5 @@ package_gnome-media-pulse() {
   # Install missing icon
   install -Dm644 \
     gst-mixer/icons/16x16/status/audio-input-microphone-muted.png \
-    "$pkgdir/usr/share/icons/hicolor/16x16/status/audio-input-microphone-muted.png"
+    "${pkgdir}/usr/share/icons/hicolor/16x16/status/audio-input-microphone-muted.png"
 }
