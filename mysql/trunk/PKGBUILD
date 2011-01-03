@@ -6,7 +6,7 @@
 pkgbase=mysql
 pkgname=('libmysqlclient' 'mysql-clients' 'mysql')
 pkgver=5.5.8
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.mysql.com/"
@@ -78,20 +78,27 @@ package_libmysqlclient(){
 
   install -d "${pkgdir}/usr/bin"
   install -m755 scripts/mysql_config "${pkgdir}/usr/bin/"
+  install -d "${pkgdir}/usr/share/man/man1"
+  for man in mysql_config mysql_client_test_embedded mysqltest_embedded; do
+    install -m644 "${srcdir}/${pkgbase}-${pkgver}/man/$man.1" "${pkgdir}/usr/share/man/man1/$man.1"
+  done
 }
 
 package_mysql-clients(){
   pkgdesc="MySQL client tools"
   depends=('libmysqlclient')
   
-  cd "${srcdir}"/build/client
-  make DESTDIR="${pkgdir}" install
+  cd "${srcdir}"/build
+  make -C client DESTDIR="${pkgdir}" install
 
-  # provided by libmysqlclient
-  rm -rf "${pkgdir}/usr/lib/"
+  # install man pages
+  install -d "${pkgdir}/usr/share/man/man1"
+  for man in mysql mysqladmin mysqlcheck mysqldump mysqlimport mysqlshow mysqlslap; do
+    install -m644 "${srcdir}/${pkgbase}-${pkgver}/man/$man.1" "${pkgdir}/usr/share/man/man1/$man.1"
+  done
 
   # provided by mysql
-  rm -f "${pkgdir}"/usr/bin/{mysql_upgrade,mysqlbinlog,mysqltest}
+  rm "${pkgdir}"/usr/bin/{mysql_upgrade,mysqlbinlog,mysqltest}
 }
 
 package_mysql(){
@@ -108,20 +115,22 @@ package_mysql(){
   install -Dm755 ${srcdir}/mysqld ${pkgdir}/etc/rc.d/mysqld
 
   # provided by libmysqlclient
-  rm -f ${pkgdir}/usr/bin/{mysql_config,mysql_client_test_embedded,mysqltest_embedded}
-  rm -rf ${pkgdir}/usr/lib/
-  rm -rf ${pkgdir}/usr/include/
+  rm ${pkgdir}/usr/bin/{mysql_config,mysql_client_test_embedded,mysqltest_embedded}
+  rm -r ${pkgdir}/usr/lib/
+  rm -r ${pkgdir}/usr/include/
+  rm ${pkgdir}/usr/share/man/man1/{mysql_config,mysql_client_test_embedded,mysqltest_embedded}.1
   
   # provided by mysql-clients
-  rm -f ${pkgdir}/usr/bin/{mysql,mysqladmin,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap}
+  rm ${pkgdir}/usr/bin/{mysql,mysqladmin,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap}
+  rm ${pkgdir}/usr/share/man/man1/{mysql,mysqladmin,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap}.1
 
   # not needed
-  rm -rf ${pkgdir}/usr/{mysql-test,sql-bench}
+  rm -r ${pkgdir}/usr/{mysql-test,sql-bench}
 
   # These shouldn't be here
-  rm -rf ${pkgdir}/usr/docs
+  rm -r ${pkgdir}/usr/docs
   install -d ${pkgdir}/var/lib/mysql
-  cp -rf ${pkgdir}/usr/data/* ${pkgdir}/var/lib/mysql/
+  cp -r ${pkgdir}/usr/data/* ${pkgdir}/var/lib/mysql/
   chmod -R 700 ${pkgdir}/var/lib/mysql
-  rm -rf ${pkgdir}/usr/data
+  rm -r ${pkgdir}/usr/data
 }
