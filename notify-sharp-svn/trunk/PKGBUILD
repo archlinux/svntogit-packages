@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+# Contributor: Jorge Mokross <mokross@gmail.com>
+
+pkgname=notify-sharp-svn
+pkgver=3032
+pkgrel=3
+pkgdesc="C# bindings for desktop notification"
+url="http://www.galago-project.org"
+license=('GPL')
+arch=('any')
+depends=('gtk-sharp-2' 'ndesk-dbus-glib') 
+makedepends=('subversion' 'pkgconfig')
+provides=('notify-sharp')
+conflicts=('notify-sharp')
+
+_svntrunk='http://svn.galago-project.org/trunk/notify-sharp'
+_svnmod='notify-sharp'
+
+build() {
+  cd "$srcdir"
+
+  if [ -d $_svnmod/.svn ]; then
+    (cd $_svnmod && svn up -r $pkgver)
+  else
+    svn co $_svntrunk --config-dir ./ -r $pkgver $_svnmod
+  fi
+
+  msg2 "SVN checkout done or server timeout"
+
+  rm -rf $_svnmod-build
+  svn export $_svnmod $_svnmod-build
+  cd $_svnmod-build
+
+  msg2 "Starting make..."
+
+  export MONO_SHARED_DIR="$srcdir/.wabi"
+  mkdir -p "$MONO_SHARED_DIR"
+
+  aclocal
+  autoconf
+  automake -a -c
+  ./configure --prefix=/usr --disable-docs --disable-static
+  make
+}
+
+package() {
+  cd "$srcdir/$_svnmod-build"
+  make DESTDIR="$pkgdir" install
+}
