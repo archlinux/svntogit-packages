@@ -21,4 +21,3 @@ case ${TERM} in
 esac
 
 [ -r /etc/bash_completion   ] && . /etc/bash_completion
-[ -r /etc/bash.bashrc.local ] && . /etc/bash.bashrc.local
