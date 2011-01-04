@@ -15,17 +15,15 @@ PS2='> '
 PS3='> '
 PS4='+ '
 
-export PS1 PS2 PS3 PS4
-
-if test "$TERM" = "xterm" -o \
-        "$TERM" = "xterm-color" -o \
-        "$TERM" = "xterm-256color" -o \
-        "$TERM" = "rxvt" -o \
-        "$TERM" = "rxvt-unicode" -o \
-        "$TERM" = "xterm-xfree86"; then
-    PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME%%.*}:${PWD/$HOME/~}\007"'
-    export PROMPT_COMMAND
-fi
+case ${TERM} in
+  xterm*|rxvt*|Eterm|aterm|kterm|gnome*)
+    PROMPT_COMMAND=${PROMPT_COMMAND:+$PROMPT_COMMAND; }'printf "\033]0;%s@%s:%s\007" "${USER}" "${HOSTNAME%%.*}" "${PWD/#$HOME/~}"'
+                                                        
+    ;;
+  screen)
+    PROMPT_COMMAND=${PROMPT_COMMAND:+$PROMPT_COMMAND; }'printf "\033_%s@%s:%s\033\\" "${USER}" "${HOSTNAME%%.*}" "${PWD/#$HOME/~}"'
+    ;;
+esac
 
 [ -r /etc/bash_completion   ] && . /etc/bash_completion
 [ -r /etc/bash.bashrc.local ] && . /etc/bash.bashrc.local
