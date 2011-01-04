@@ -1,14 +1,9 @@
 #
 # /etc/bash.bashrc
 #
-# This file is the systemwide bashrc file. While most of the
-# environment is preserved when running an interactive shell
-# the PS[1-4] variables, aliases and functions are reset.
-#
-# When running a non-login shell, apply the following settings:
-# - Prompt defaults (PS[1-4], PROMPT_COMMAND)
-# - bash_completion if it exists
-# - source /etc/bash.bashrc.local
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
 
 PS1='[\u@\h \W]\$ '
 PS2='> '
