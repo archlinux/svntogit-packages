@@ -1,0 +1,43 @@
+# $Id$
+# Maintainer:
+# Contributor: Juergen Hoetzel <juergen@archlinux.org>
+
+pkgname=bittorrent
+pkgver=5.2.2
+pkgrel=4
+pkgdesc="A tool for copying files from one machine to another."
+arch=('any')
+url="http://www.bittorrent.com"
+install=${pkgname}.install
+depends=('twisted' 'pycrypto')
+backup=('etc/bttrack.conf')
+license=('custom')
+source=("http://download.bittorrent.com/dl/archive/BitTorrent-${pkgver}.tar.gz"
+        'bttrack' 'bttrack.conf')
+md5sums=('d8891cfa4c6bb796c8e948eace7694bc'
+        'b05f82b3a8e7fd8e7451064a9ae84ad2'
+        '29b1f592615d0a0fcf6099bd619bbd9c')
+
+package() {
+  cd $srcdir/BitTorrent-$pkgver
+  # the setup script wants to write something in $HOME...
+  export HOME=$srcdir
+  python2 ./setup.py install --root=$pkgdir
+
+  # fix python name
+  sed -e 's|#!/usr/bin/env python|#!/usr/bin/env python2|' \
+            -i "${pkgdir}"/usr/lib/python2.7/site-packages/*/*.py
+
+  # remove broken wx interface
+  rm $pkgdir/usr/bin/{bittorrent,maketorrent}
+  rm -rf $pkgdir/usr/lib/python2.7/site-packages/BitTorrent/GUI_wx
+  rm -rf $pkgdir/usr/share/pixmaps
+
+  # install custom license
+  install -Dm644 $srcdir/BitTorrent-$pkgver/LICENSE.txt \
+    $pkgdir/usr/share/licenses/$pkgname/LICENSE
+
+  # install bttrack rc.d script and configuration file
+  install -D -m644 $srcdir/bttrack.conf $pkgdir/etc/bttrack.conf
+  install -D -m755 $srcdir/bttrack $pkgdir/etc/rc.d/bttrack
+}
