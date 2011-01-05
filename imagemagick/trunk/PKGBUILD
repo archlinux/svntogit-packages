@@ -3,14 +3,14 @@
 # Maintainer: DAniel J Griffiths <ghost1227@archlinux.us>
 
 pkgname=imagemagick
-pkgver=6.6.4.10
+pkgver=6.6.6.10
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
 depends=('libtool' 'lcms' 'libxt' 'gcc-libs' 'bzip2' 'freetype2' 'fontconfig' 'libxext')
-makedepends=('ghostscript>=9.00' 'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper')
+makedepends=('ghostscript>=9.00' 'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'libpng')
 optdepends=('ghostscript: for Ghostscript support' 
             'openexr: for OpenEXR support' 
             'libwmf: for WMF support' 
@@ -21,7 +21,7 @@ options=('!makeflags' '!docs' 'force')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         libpng_mmx_patch_x86_64.patch 
 	perlmagick.rpath.patch)
-md5sums=('1ba4e01f17fe0030f41645739d973e38'
+md5sums=('59e2da8333ef645ade5f490c270651a1'
          '069980fc2590c02aed86420996259302'
          'ff9974decbfe9846f8e347239d87e4eb')
 
