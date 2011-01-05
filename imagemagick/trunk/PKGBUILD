@@ -4,7 +4,7 @@
 
 pkgname=imagemagick
 pkgver=6.6.6.10
-pkgrel=1
+pkgrel=2
 pkgdesc="An image viewing/manipulation program"
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
