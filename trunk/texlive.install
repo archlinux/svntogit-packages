@@ -1,66 +1,19 @@
 PKGNAME="texlive-core"
-UPDMAP="/etc/texmf/web2c/updmap.cfg"
+UPDMAP="etc/texmf/web2c/updmap.cfg"
 SYNCWITHTREES=''
-NEWMAPS=`mktemp`
-cat <<EOF > $NEWMAPS
-Map euler.map
-Map charter.map
-Map fpls.map
-Map l7x-urwvn.map
-Map lm.map
-Map marvosym.map
-Map pazo.map
-Map pxfonts.map
-Map qag.map
-Map qbk.map
-Map qcr.map
-Map qcs.map
-Map qhv.map
-Map qpl.map
-Map qtm.map
-Map qzc.map
-Map tabvar.map
-Map txfonts.map
-Map utopia.map
-Map zpeu.map
-MixedMap ccpl.map
-MixedMap cm-super-t1.map
-MixedMap cm-super-t2a.map
-MixedMap cm-super-t2b.map
-MixedMap cm-super-t2c.map
-MixedMap cm-super-ts1.map
-MixedMap cm-super-x2.map
-MixedMap cm.map
-MixedMap cmextra.map
-MixedMap cmtext-bsr-interpolated.map
-MixedMap csother.map
-MixedMap cstext.map
-MixedMap cyrillic.map
-MixedMap eurosym.map
-MixedMap latxfont.map
-MixedMap mflogo.map
-MixedMap plother.map
-MixedMap pltext.map
-MixedMap rsfs.map
-MixedMap stmaryrd.map
-MixedMap symbols.map
-MixedMap tipa.map
-MixedMap wasy.map
-MixedMap yhmath.map
-EOF
-
-pre_install() {
-	cat $NEWMAPS >> $UPDMAP
-}
+OLDMAPSSAVE=`mktemp`
+NEWMAPS="var/lib/texmf/arch/installedpkgs/$PKGNAME.maps"
 
 post_install() {
-	echo    ">>> texlive: updating the filename database..."
-	/usr/bin/mktexlsr
-	echo    ">>> texlive: updating the fontmap files with updmap..."
-	/usr/bin/updmap-sys --quiet --nohash
-	echo    " done." 
+  echo    ">>> texlive: updating updmap.cfg with new map files..."
+  cat "$NEWMAPS" >> $UPDMAP
+  echo    ">>> texlive: updating the filename database..."
+  usr/bin/mktexlsr
+  echo    ">>> texlive: updating the fontmap files with updmap..."
+  usr/bin/updmap-sys --quiet --nohash
+  echo    " done." 
   echo -n   "creating all formats..."
-  /usr/bin/fmtutil-sys --all 1>/dev/null
+  usr/bin/fmtutil-sys --all 1>/dev/null
   echo      " done." 
   echo      " (logs are under /var/lib/texmf/web2c/<engine>/<formatname>.log)"
   echo    "NB: To setup ConTeXt and the lua(la)tex font db,"
@@ -69,19 +22,30 @@ post_install() {
 
 pre_upgrade() {
   if [[ "$2" == 200* ]]; then
-    OLDMAPS="/usr/share/texmf-var/arch/installedpkgs/$PKGNAME.maps"
+    OLDMAPS="usr/share/texmf-var/arch/installedpkgs/$PKGNAME.maps"
     echo "Info: copying previous updmap.cfg from /usr/share/texmf-config/web2c/"
     echo "      to /etc/texmf/web2c/ (and keeping new one as updmap.cfg.pacnew)"
-    mv /etc/texmf/web2c/updmap.cfg /etc/texmf/web2c/updmap.cfg.pacnew 
-    cp /usr/share/texmf-config/web2c/updmap.cfg.pacsave /etc/texmf/web2c/updmap.cfg
+    mv etc/texmf/web2c/updmap.cfg /etc/texmf/web2c/updmap.cfg.pacnew 
+    cp usr/share/texmf-config/web2c/updmap.cfg.pacsave etc/texmf/web2c/updmap.cfg
   else
     # $2 >= 2010
-    OLDMAPS="/var/lib/texmf/arch/installedpkgs/$PKGNAME.maps"
+    OLDMAPS="var/lib/texmf/arch/installedpkgs/$PKGNAME.maps"
   fi
   if [ -f $OLDMAPS ] ; then
+    # temporarily saving old maps file
+    cp "$OLDMAPS" "$OLDMAPSSAVE"
+  else
+    echo "Warning: file $OLDMAPS not found" 
+    SYNCWITHTREES="--syncwithtrees"
+  fi
+}
+
+post_upgrade() {
+  echo    ">>> texlive: updating updmap.cfg with new map files..."
+  if [ -f "$OLDMAPSSAVE" ] ; then
     MAPSDIFF=`mktemp`
     TOADD=`mktemp`
-    diff -B -w $OLDMAPS $NEWMAPS | sed 's/\s\+/ /g' > $MAPSDIFF
+    diff -B -w $OLDMAPSSAVE $NEWMAPS | sed 's/\s\+/ /g' > $MAPSDIFF
     TOREMOVE=`cat $MAPSDIFF | egrep '^<' | cut -d' ' -f3`
     cat $MAPSDIFF | egrep '^>' | sed 's/^> //' > $TOADD
     if [ "x$TOREMOVE" != "x" ]; then
@@ -92,20 +56,14 @@ pre_upgrade() {
     if [ -s $TOADD ]; then
        cat $TOADD >> $UPDMAP
     fi
-  else
-    echo "Warning: file $OLDMAPS not found" 
-    SYNCWITHTREES="--syncwithtrees"
   fi
-}
-
-post_upgrade() {
-	echo    ">>> texlive: updating the filename database..."
-	/usr/bin/mktexlsr
-	echo    ">>> texlive: updating the fontmap files with updmap..."
-	/usr/bin/updmap-sys --quiet --nohash $SYNCWITHTREES
-	echo    " done." 
+  echo    ">>> texlive: updating the filename database..."
+  usr/bin/mktexlsr
+  echo    ">>> texlive: updating the fontmap files with updmap..."
+  usr/bin/updmap-sys --quiet --nohash $SYNCWITHTREES
+  echo    " done." 
   echo    ">>> texlive: recreating all formats..."
-  /usr/bin/fmtutil-sys --all 1>/dev/null
+  usr/bin/fmtutil-sys --all 1>/dev/null
   echo      " done." 
   echo      " (logs are under /var/lib/texmf/web2c/<engine>/<formatname>.log)"
   echo    "NB: To setup ConTeXt and the lua(la)tex font db,"
