@@ -1,0 +1,57 @@
+From 396b11b840f84e8bff62f3c361d0b592e77ee703 Mon Sep 17 00:00:00 2001
+From: Werner Lemberg <wl@gnu.org>
+Date: Thu, 09 Dec 2010 22:16:18 +0000
+Subject: [cff] Allow `hlineto' and `vlineto' without arguments.
+
+We simply ignore such instructions.  This is invalid, but it doesn't
+harm; and indeed, there exist such subsetted fonts in PDFs.
+
+Reported by Albert Astals Cid <aacid@kde.org>.
+
+* src/cff/cffgload.c (cff_decoder_parse_charstrings)
+[cff_op_hlineto]: Ignore instruction if there aren't any arguments
+on the stack.
+---
+diff --git a/ChangeLog b/ChangeLog
+index b7aea52..579ae62 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,16 @@
++2010-12-09  Werner Lemberg  <wl@gnu.org>
++
++	[cff] Allow `hlineto' and `vlineto' without arguments.
++
++	We simply ignore such instructions.  This is invalid, but it doesn't
++	harm; and indeed, there exist such subsetted fonts in PDFs.
++
++	Reported by Albert Astals Cid <aacid@kde.org>.
++
++	* src/cff/cffgload.c (cff_decoder_parse_charstrings)
++	[cff_op_hlineto]: Ignore instruction if there aren't any arguments
++	on the stack.
++
+ 2010-11-28  Werner Lemberg  <wl@gnu.org>
+ 
+ 	* Version 2.4.4 released.
+diff --git a/src/cff/cffgload.c b/src/cff/cffgload.c
+index e99ee70..99c5b0c 100644
+--- a/src/cff/cffgload.c
++++ b/src/cff/cffgload.c
+@@ -1438,9 +1438,14 @@
+             FT_TRACE4(( op == cff_op_hlineto ? " hlineto\n"
+                                              : " vlineto\n" ));
+ 
+-            if ( num_args < 1 )
++            if ( num_args < 0 )
+               goto Stack_Underflow;
+ 
++            /* there exist subsetted fonts (found in PDFs) */
++            /* which call `hlineto' without arguments      */
++            if ( num_args == 0 )
++              break;
++
+             if ( cff_builder_start_point ( builder, x, y ) ||
+                  check_points( builder, num_args )         )
+               goto Fail;
+--
+cgit v0.8.3.2
