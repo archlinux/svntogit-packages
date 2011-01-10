@@ -3,32 +3,45 @@
 # Contributor: David Moore <davidm@sjsoft.com>
 
 pkgname=slib
-pkgver=3b1
+pkgver=3b3
 pkgrel=1
 pkgdesc="A library providing functions for Scheme implementations"
-arch=(i686 x86_64)
-url="http://swissnet.ai.mit.edu/~jaffer/SLIB.html"
-options=('!libtool' 'emptydirs')
-license=("custom")
-#Only guile support for now. In the future we need to determine how to generate
-#the catalog files via makedepends - see slib.install
-depends=('guile')
-source=(http://swiss.csail.mit.edu/ftpdir/scm/$pkgname-$pkgver.zip)
+arch=(any)
+url="http://people.csail.mit.edu/jaffer/SLIB.html"
+license=('custom')
+depends=('guile' 'sh' 'texinfo')
+options=('emptydirs')
 install=slib.install
-md5sums=('9622df4aba2fde24eeb4456d97c5add1')
+source=(http://groups.csail.mit.edu/mac/ftpdir/scm/${pkgname}-${pkgver}.tar.gz)
+md5sums=('11626eef380de4f56d3082514559beb6')
 
 build() {
-  cd $startdir/src/
-  [ -d $pkgname ] || bsdtar -x $pkgname-$pkgver.zip
-  cd $pkgname
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -r -i "s,/usr/(local/)?lib/slib,/usr/share/slib,g" *.init
+  install -m755 -d "${pkgdir}/usr/share/slib"
+  install -m644 *.scm *.init *.xyz *.txt *.dat *.ps "${pkgdir}/usr/share/slib/"
+  install -m755 -d "${pkgdir}/usr/share/info"
+  install -m644 slib.info "${pkgdir}/usr/share/info/"
 
-  sed -i 's|SCHEME_LIBRARY_PATH=\$(DESTDIR)|SCHEME_LIBRARY_PATH=|' Makefile
-  make prefix=/usr/ man1dir=/usr/share/man/man1 \
-    DESTDIR=$startdir/pkg install || return 1
+  install -m755 -d "${pkgdir}/usr/bin"
+  cat << _EOF > "${pkgdir}/usr/bin/slib"
+#!/bin/sh
+SCHEME_LIBRARY_PATH=/usr/share/slib/
+export SCHEME_LIBRARY_PATH
+VERSION=${pkgver}
+S48_VICINITY="/usr/share/scheme48/"
+export S48_VICINITY
+_EOF
 
-  install -D -m644 $startdir/src/slib/COPYING \
-     $startdir/pkg/usr/share/licenses/$pkgname/COPYING
+  cat slib.sh >> "${pkgdir}/usr/bin/slib"
+  chmod 755 "${pkgdir}/usr/bin/slib"
 
-  mkdir -p $startdir/pkg/usr/share/guile/site/
-  ln -s /usr/lib/slib $startdir/pkg/usr/share/guile/site/
+  install -m755 -d "${pkgdir}/usr/share/man/man1"
+  install -m644 slib.1 "${pkgdir}/usr/share/man/man1/"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/$pkgname/"
+
+  install -m755 -d "${pkgdir}/usr/share/guile/site/"
+  ln -s /usr/share/slib "${pkgdir}/usr/share/guile/site/"
 }
