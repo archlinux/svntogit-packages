@@ -13,9 +13,7 @@ makedepends=('phonon' 'qt-assistant-compat')
 optdepends=('phonon: enable audio and video in PyQt applications'
 	'qscintilla: QScintilla API'
 	'qt-assistant-compat: add PyQt online help in Qt Assistant')
-provides=('pyqt4')
-replaces=('pyqt4')
-conflicts=('pyqt4')
+conflicts=('python2-qt')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
         'fix-stackedwidget-bug.patch')
 md5sums=('142a32f126f205a2bd77f6a9910f5333'
