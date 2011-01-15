@@ -5,9 +5,9 @@ pkgbase="libreoffice"
 pkgname=('libreoffice' 'libreoffice-sdk' 'libreoffice-extension-nlpsolver' 'libreoffice-extension-pdfimport' 'libreoffice-extension-presentation-minimizer' 'libreoffice-extension-presenter-screen' 
          'libreoffice-extension-report-builder' 'libreoffice-extension-wiki-publisher' 'libreoffice-extension-ct2n' 'libreoffice-extension-hunart' 'libreoffice-extension-numbertext'
 	 'libreoffice-extension-oooblogger' 'libreoffice-extension-typo' 'libreoffice-extension-watch-window' 'libreoffice-extension-diagram')
-_LOver=3.3.0.3 # = 3.3-RC3
+_LOver=3.3.0.3 # = 3.3.0-RC3
 pkgver=${_LOver}
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 _LO_tree="3.3"
 _OFFICEUPD="330"
@@ -261,7 +261,7 @@ build() {
 	patch -Np0 -i ${srcdir}/ArchLinux.patch || return 1
 
 	# hotfixes not yet upstream
-#	cp ${srcdir}/*.diff ${srcdir}/${pkgbase}-build-${_LOver}/patches/hotfixes/
+	# cp ${srcdir}/*.diff ${srcdir}/${pkgbase}-build-${_LOver}/patches/hotfixes/
 	cp ${srcdir}/buildfix_64bit_system_libjpeg.diff ${srcdir}/${pkgbase}-build-${_LOver}/patches/hotfixes/
 
 	# export C(XX)FLAGS
@@ -273,6 +273,10 @@ build() {
 	export PYTHON=python2
 	# mono2.8 hack
 #	sed -i -e "s/mkbundle2/mkbundle/g" patches/mono/*.diff || return 1
+
+	# fix dekstop menu entries
+	sed -i -e "s/Exec=oo/Exec=lo/g" desktop/*.desktop.in.in
+	sed -i -e "s/TryExec=oo/TryExec=lo/g" desktop/*.desktop.in.in
 	
 	# http://wiki.documentfoundation.org/Development/How_to_build/Configure_options
 
@@ -288,12 +292,13 @@ build() {
 		--without-git \
 		--with-srcdir=${srcdir} \
 		--with-max-jobs=${MAKEFLAGS/-j/} \
-		--with-installed-${pkgbase}-dirname="${pkgbase}" \
+		--with-installed-ooo-dirname="${pkgbase}" \
 		--prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
 		--with-docdir=/usr/share/doc/packages/"${pkgbase}" \
 		--mandir=/usr/share/man \
 		--with-lang="" \
 		--with-binsuffix=no \
+		--with-unix-wrapper="libreoffice" \
 		--enable-cairo\
 		--enable-crashdump\
 		--enable-evolution2\
@@ -414,9 +419,10 @@ package_libreoffice() {
              'mesa:             for the OGLTrans extension'
              'gstreamer0.10-base: + some gstr-plugins to support multimedia content, e.g. in impress')
 #             'mono:             allows UNO automation with Mono'
- backup=(usr/lib/ooo-3.3/program/sofficerc)
- provides=('openoffice-base' 'go-openoffice')
- conflicts=('openoffice-base' 'go-openoffice')
+# backup=(usr/lib/ooo-3.3/program/sofficerc)
+ backup=(usr/lib/libreoffice/program/sofficerc)
+ provides=('go-openoffice') #'openoffice-base' 
+ conflicts=('go-openoffice') #'openoffice-base' 
  replaces=('go-openoffice')
 
 	cd ${srcdir}/${pkgbase}-build-${_LOver}
@@ -430,30 +436,30 @@ package_libreoffice() {
 	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 	
 	# split out extensions
-	mv ${pkgdir}/usr/lib/ooo-3.3/share/extensions ${srcdir}/extensions-install
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
-	install -m644 ${srcdir}/extensions-install/package.txt ${pkgdir}/usr/lib/ooo-3.3/share/extensions/
+	mv ${pkgdir}/usr/lib/libreoffice/share/extensions ${srcdir}/extensions-install
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
+	install -m644 ${srcdir}/extensions-install/package.txt ${pkgdir}/usr/lib/libreoffice/share/extensions/
 
 	# move SDK to separated package
-	mkdir -p ${srcdir}/sdk-install/usr/lib/ooo-3.3/basis3.3/sdk
+	mkdir -p ${srcdir}/sdk-install/usr/lib/libreoffice/basis3.3/sdk
 #	mv ${pkgdir}/usr/lib/ooo-3.3/basis3.3/sdk ${srcdir}/sdk-install/usr/lib/ooo-3.3/basis3.3/sdk
-	mv ${pkgdir}/usr/lib/ooo-3.3/basis3.3/sdk ${srcdir}/sdk-install/usr/lib/ooo-3.3/basis3.3/
+	mv ${pkgdir}/usr/lib/libreoffice/basis3.3/sdk ${srcdir}/sdk-install/usr/lib/libreoffice/basis3.3/
 
 	mkdir -p ${srcdir}/sdk-install/usr/share/doc/packages/libreoffice/sdk
 #	mv ${pkgdir}/usr/share/doc/packages/libreoffice/sdk ${srcdir}/sdk-install/usr/share/doc/packages/libreoffice/sdk
 	mv ${pkgdir}/usr/share/doc/packages/libreoffice/sdk ${srcdir}/sdk-install/usr/share/doc/packages/libreoffice/
 
-	mkdir -p ${srcdir}/sdk-install/usr/share/ooo-3.3/sdk
+	mkdir -p ${srcdir}/sdk-install/usr/share/libreoffice/sdk
 #	mv ${pkgdir}/usr/share/ooo-3.3/sdk ${srcdir}/sdk-install/usr/share/ooo-3.3/sdk
-	mv ${pkgdir}/usr/share/ooo-3.3/sdk ${srcdir}/sdk-install/usr/share/ooo-3.3/
+	mv ${pkgdir}/usr/share/libreoffice/sdk ${srcdir}/sdk-install/usr/share/libreoffice/
 
-	mkdir -p ${srcdir}/sdk-install/usr/share/idl/ooo-3.3
+	mkdir -p ${srcdir}/sdk-install/usr/share/idl/libreoffice
 #	mv ${pkgdir}/usr/share/idl/ooo-3.3 ${srcdir}/sdk-install/usr/share/idl/ooo-3.3
-	mv ${pkgdir}/usr/share/idl/ooo-3.3 ${srcdir}/sdk-install/usr/share/idl/
+	mv ${pkgdir}/usr/share/idl/libreoffice ${srcdir}/sdk-install/usr/share/idl/
 
-	mkdir -p ${srcdir}/sdk-install/usr/include/ooo-3.3
+	mkdir -p ${srcdir}/sdk-install/usr/include/libreoffice
 #	mv ${pkgdir}/usr/include/ooo-3.3 ${srcdir}/sdk-install/usr/include/ooo-3.3
-	mv ${pkgdir}/usr/include/ooo-3.3 ${srcdir}/sdk-install/usr/include/
+	mv ${pkgdir}/usr/include/libreoffice ${srcdir}/sdk-install/usr/include/
 }
 
 package_libreoffice-sdk() {
@@ -464,21 +470,21 @@ package_libreoffice-sdk() {
 	cd ${srcdir}/sdk-install
 	cp -r * ${pkgdir}
 
-	cd ${pkgdir}/usr/lib/ooo-3.3/basis3.3/sdk
+	cd ${pkgdir}/usr/lib/libreoffice/basis3.3/sdk
 	for file in setsdkenv_unix.csh setsdkenv_unix.sh ; do
-          sed -e "s,@OO_SDK_NAME@,sdk," \
-              -e "s,@OO_SDK_HOME@,%{sdkinstdir}," \
-              -e "s,@OFFICE_HOME@,%{baseinstdir}," \
-              -e "s,@OFFICE_BASE_HOME@,%{basisinstdir}," \
-              -e "s,@OO_SDK_URE_HOME@,%{ureinstdir}," \
-              -e "s,@OO_SDK_MAKE_HOME@,/usr/bin," \
-              -e "s,@OO_SDK_ZIP_HOME@,/usr/bin," \
-              -e "s,@OO_SDK_CPP_HOME@,/usr/bin," \
-              -e "s,@OO_SDK_CC_55_OR_HIGHER@,," \
-              -e "s,@OO_SDK_JAVA_HOME@,$JAVA_HOME," \
-              -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
-              -e "s,@SDK_AUTO_DEPLOYMENT@,NO," \
-              $file.in > $file
+#          sed -e "s,@OO_SDK_NAME@,sdk," \
+#              -e "s,@OO_SDK_HOME@,%{sdkinstdir}," \
+#              -e "s,@OFFICE_HOME@,%{baseinstdir}," \
+#              -e "s,@OFFICE_BASE_HOME@,%{basisinstdir}," \
+#              -e "s,@OO_SDK_URE_HOME@,%{ureinstdir}," \
+#              -e "s,@OO_SDK_MAKE_HOME@,/usr/bin," \
+#              -e "s,@OO_SDK_ZIP_HOME@,/usr/bin," \
+#              -e "s,@OO_SDK_CPP_HOME@,/usr/bin," \
+#              -e "s,@OO_SDK_CC_55_OR_HIGHER@,," \
+#              -e "s,@OO_SDK_JAVA_HOME@,$JAVA_HOME," \
+#              -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
+#              -e "s,@SDK_AUTO_DEPLOYMENT@,NO," \
+ #             $file.in > $file
           chmod 755 $file
 	done
 	#fix permissions
@@ -492,9 +498,9 @@ package_libreoffice-extension-nlpsolver() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/NLPSolver.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/NLPSolver.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/nlpsolver
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/NLPSolver.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/nlpsolver
 }
 
 package_libreoffice-extension-pdfimport() {
@@ -503,9 +509,9 @@ package_libreoffice-extension-pdfimport() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/pdfimport/pdfimport.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/pdfimport/pdfimport.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/pdfimport
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/pdfimport/pdfimport.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/pdfimport
 }
 
 package_libreoffice-extension-presentation-minimizer() {
@@ -514,9 +520,9 @@ package_libreoffice-extension-presentation-minimizer() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/presentation-minimizer.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/presentation-minimizer.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/presentation-minimizer
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/presentation-minimizer.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presentation-minimizer
 }
 
 package_libreoffice-extension-presenter-screen() {
@@ -525,9 +531,9 @@ package_libreoffice-extension-presenter-screen() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/presenter/presenter-screen.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/presenter/presenter-screen.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/presenter-screen
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/presenter/presenter-screen.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presenter-screen
 }
 
 package_libreoffice-extension-report-builder() {
@@ -537,9 +543,9 @@ package_libreoffice-extension-report-builder() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/report-builder.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/report-builder.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/report-builder
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/report-builder.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/report-builder
 }
 
 package_libreoffice-extension-wiki-publisher() {
@@ -549,9 +555,9 @@ package_libreoffice-extension-wiki-publisher() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/wiki-publisher
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/wiki-publisher
 }
 
 package_libreoffice-extension-ct2n() {
@@ -561,9 +567,9 @@ package_libreoffice-extension-ct2n() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/ConvertTextToNumber-1.3.2.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/ConvertTextToNumber-1.3.2.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/ct2n
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/ConvertTextToNumber-1.3.2.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/ct2n
 }
 
 package_libreoffice-extension-hunart() {
@@ -573,9 +579,9 @@ package_libreoffice-extension-hunart() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/hunart.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/hunart.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/hunart
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/hunart.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/hunart
 }
 
 package_libreoffice-extension-numbertext() {
@@ -585,9 +591,9 @@ package_libreoffice-extension-numbertext() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/numbertext.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/numbertext.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/numbertext
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/numbertext.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/numbertext
 }
 
 package_libreoffice-extension-oooblogger() {
@@ -597,9 +603,9 @@ package_libreoffice-extension-oooblogger() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/oooblogger-0.1.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/oooblogger.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/oooblogger
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/oooblogger.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/oooblogger
 }
 
 package_libreoffice-extension-typo() {
@@ -609,9 +615,9 @@ package_libreoffice-extension-typo() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/typo.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/typo.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/typo
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/typo.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/typo
 }
 
 package_libreoffice-extension-watch-window() {
@@ -621,9 +627,9 @@ package_libreoffice-extension-watch-window() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/WatchWindow.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/WatchWindow.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/watch-window
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/WatchWindow.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/watch-window
 }
 
 package_libreoffice-extension-diagram() {
@@ -633,7 +639,7 @@ package_libreoffice-extension-diagram() {
  depends=('libreoffice')
  groups=('libreoffice-extensions')
 
-	install -dm755 ${pkgdir}/usr/lib/ooo-3.3/share/extensions
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 #	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/Diagram.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/${pkgname}
-	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/Diagram.oxt -d ${pkgdir}/usr/lib/ooo-3.3/share/extensions/diagram
+	unzip ${srcdir}/${pkgbase}-build-${_LOver}/build/libreoffice-${pkgver}/solver/${_OFFICEUPD}/unxlng*/bin/Diagram.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/diagram
 }
