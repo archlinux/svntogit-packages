@@ -1,0 +1,344 @@
+From bc937fc4ff6715e9bee939041fa02be0755d7d58 Mon Sep 17 00:00:00 2001
+From: Guy Harris <guy@alum.mit.edu>
+Date: Sat, 13 Nov 2010 17:42:47 -0800
+Subject: [PATCH] Add support for libnl 2.x, adapted from a newer version of the iw command.
+
+---
+ config.h.in  |    3 ++
+ configure    |  108 +++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ configure.in |   40 ++++++++++++++++++----
+ pcap-linux.c |   58 ++++++++++++++++++++++++-------
+ 4 files changed, 184 insertions(+), 25 deletions(-)
+
+diff --git a/config.h.in b/config.h.in
+index f988e8f..3b9ce3c 100644
+--- a/config.h.in
++++ b/config.h.in
+@@ -52,6 +52,9 @@
+ /* if libnl exists */
+ #undef HAVE_LIBNL
+ 
++/* if libnl exists and is version 2.x */
++#undef HAVE_LIBNL_2_x
++
+ /* Define to 1 if you have the <limits.h> header file. */
+ #undef HAVE_LIMITS_H
+ 
+diff --git a/configure b/configure
+index c99c1ab..7338dee 100755
+--- a/configure
++++ b/configure
+@@ -7340,7 +7340,93 @@ fi
+ 
+ 
+ 	if test x$with_libnl != xno ; then
+-		{ echo "$as_me:$LINENO: checking for nl_handle_alloc in -lnl" >&5
++		#
++		# Try libnl 2.x first.
++		#
++		{ echo "$as_me:$LINENO: checking for nl_socket_alloc in -lnl" >&5
++echo $ECHO_N "checking for nl_socket_alloc in -lnl... $ECHO_C" >&6; }
++if test "${ac_cv_lib_nl_nl_socket_alloc+set}" = set; then
++  echo $ECHO_N "(cached) $ECHO_C" >&6
++else
++  ac_check_lib_save_LIBS=$LIBS
++LIBS="-lnl  $LIBS"
++cat >conftest.$ac_ext <<_ACEOF
++/* confdefs.h.  */
++_ACEOF
++cat confdefs.h >>conftest.$ac_ext
++cat >>conftest.$ac_ext <<_ACEOF
++/* end confdefs.h.  */
++
++/* Override any GCC internal prototype to avoid an error.
++   Use char because int might match the return type of a GCC
++   builtin and then its argument prototype would still apply.  */
++#ifdef __cplusplus
++extern "C"
++#endif
++char nl_socket_alloc ();
++int
++main ()
++{
++return nl_socket_alloc ();
++  ;
++  return 0;
++}
++_ACEOF
++rm -f conftest.$ac_objext conftest$ac_exeext
++if { (ac_try="$ac_link"
++case "(($ac_try" in
++  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
++  *) ac_try_echo=$ac_try;;
++esac
++eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
++  (eval "$ac_link") 2>conftest.er1
++  ac_status=$?
++  grep -v '^ *+' conftest.er1 >conftest.err
++  rm -f conftest.er1
++  cat conftest.err >&5
++  echo "$as_me:$LINENO: \$? = $ac_status" >&5
++  (exit $ac_status); } && {
++	 test -z "$ac_c_werror_flag" ||
++	 test ! -s conftest.err
++       } && test -s conftest$ac_exeext &&
++       $as_test_x conftest$ac_exeext; then
++  ac_cv_lib_nl_nl_socket_alloc=yes
++else
++  echo "$as_me: failed program was:" >&5
++sed 's/^/| /' conftest.$ac_ext >&5
++
++	ac_cv_lib_nl_nl_socket_alloc=no
++fi
++
++rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
++      conftest$ac_exeext conftest.$ac_ext
++LIBS=$ac_check_lib_save_LIBS
++fi
++{ echo "$as_me:$LINENO: result: $ac_cv_lib_nl_nl_socket_alloc" >&5
++echo "${ECHO_T}$ac_cv_lib_nl_nl_socket_alloc" >&6; }
++if test $ac_cv_lib_nl_nl_socket_alloc = yes; then
++
++			#
++			# Yes, we have libnl 2.x.
++			#
++			LIBS="-lnl-genl -lnl $LIBS"
++
++cat >>confdefs.h <<\_ACEOF
++#define HAVE_LIBNL 1
++_ACEOF
++
++
++cat >>confdefs.h <<\_ACEOF
++#define HAVE_LIBNL_2_x 1
++_ACEOF
++
++
++else
++
++			#
++			# No, we don't; do we have libnl 1.x?
++			#
++			{ echo "$as_me:$LINENO: checking for nl_handle_alloc in -lnl" >&5
+ echo $ECHO_N "checking for nl_handle_alloc in -lnl... $ECHO_C" >&6; }
+ if test "${ac_cv_lib_nl_nl_handle_alloc+set}" = set; then
+   echo $ECHO_N "(cached) $ECHO_C" >&6
+@@ -7402,18 +7488,30 @@ fi
+ { echo "$as_me:$LINENO: result: $ac_cv_lib_nl_nl_handle_alloc" >&5
+ echo "${ECHO_T}$ac_cv_lib_nl_nl_handle_alloc" >&6; }
+ if test $ac_cv_lib_nl_nl_handle_alloc = yes; then
+-  LIBS="-lnl $LIBS"
++
++				#
++				# Yes.
++				#
++				LIBS="-lnl $LIBS"
+ 
+ cat >>confdefs.h <<\_ACEOF
+ #define HAVE_LIBNL 1
+ _ACEOF
+ 
++
+ else
+-  if test x$with_libnl = xyes ; then
+-				{ { echo "$as_me:$LINENO: error: libnl support requested but libnl not found" >&5
++
++				#
++				# No, we don't have libnl at all.
++				#
++				if test x$with_libnl = xyes ; then
++					{ { echo "$as_me:$LINENO: error: libnl support requested but libnl not found" >&5
+ echo "$as_me: error: libnl support requested but libnl not found" >&2;}
+    { (exit 1); exit 1; }; }
+-			fi
++				fi
++
++fi
++
+ 
+ fi
+ 
+diff --git a/configure.in b/configure.in
+index 16eadf9..ef801ed 100644
+--- a/configure.in
++++ b/configure.in
+@@ -445,13 +445,39 @@ linux)
+ 		with_libnl=$withval,,)
+ 
+ 	if test x$with_libnl != xno ; then
+-		AC_CHECK_LIB(nl, nl_handle_alloc,
+-			LIBS="-lnl $LIBS"
+-			AC_DEFINE(HAVE_LIBNL,1,[if libnl exists]),
+-			if test x$with_libnl = xyes ; then
+-				AC_MSG_ERROR([libnl support requested but libnl not found])
+-			fi
+-		)
++		#
++		# Try libnl 2.x first.
++		#
++		AC_CHECK_LIB(nl, nl_socket_alloc,
++		[
++			#
++			# Yes, we have libnl 2.x.
++			#
++			LIBS="-lnl-genl -lnl $LIBS"
++			AC_DEFINE(HAVE_LIBNL,1,[if libnl exists])
++			AC_DEFINE(HAVE_LIBNL_2_x,1,[if libnl exists and is version 2.x])
++		],
++		[
++			#
++			# No, we don't; do we have libnl 1.x?
++			#
++			AC_CHECK_LIB(nl, nl_handle_alloc,
++			[
++				#
++				# Yes.
++				#
++				LIBS="-lnl $LIBS"
++				AC_DEFINE(HAVE_LIBNL,1,[if libnl exists])
++			],
++			[
++				#
++				# No, we don't have libnl at all.
++				#
++				if test x$with_libnl = xyes ; then
++					AC_MSG_ERROR([libnl support requested but libnl not found])
++				fi
++			])
++		])
+ 	fi
+ 
+ 	AC_LBL_TPACKET_STATS
+diff --git a/pcap-linux.c b/pcap-linux.c
+index f8b3f10..deabbc4 100644
+--- a/pcap-linux.c
++++ b/pcap-linux.c
+@@ -527,8 +527,37 @@ get_mac80211_phydev(pcap_t *handle, const char *device, char *phydev_path,
+ 	return 1;
+ }
+ 
++#ifndef HAVE_LIBNL_2_x
++/* libnl 2.x compatibility code */
++
++#define nl_sock nl_handle
++
++static inline struct nl_handle *
++nl_socket_alloc(void)
++{
++	return nl_handle_alloc();
++}
++
++static inline void
++nl_socket_free(struct nl_handle *h)
++{
++	nl_handle_destroy(h);
++}
++
++static inline int
++__genl_ctrl_alloc_cache(struct nl_handle *h, struct nl_cache **cache)
++{
++	struct nl_cache *tmp = genl_ctrl_alloc_cache(h);
++	if (!tmp)
++		return -ENOMEM;
++	*cache = tmp;
++	return 0;
++}
++#define genl_ctrl_alloc_cache __genl_ctrl_alloc_cache
++#endif /* !HAVE_LIBNL_2_x */
++
+ struct nl80211_state {
+-	struct nl_handle *nl_handle;
++	struct nl_sock *nl_sock;
+ 	struct nl_cache *nl_cache;
+ 	struct genl_family *nl80211;
+ };
+@@ -536,23 +565,26 @@ struct nl80211_state {
+ static int
+ nl80211_init(pcap_t *handle, struct nl80211_state *state, const char *device)
+ {
+-	state->nl_handle = nl_handle_alloc();
+-	if (!state->nl_handle) {
++	int err;
++
++	state->nl_sock = nl_socket_alloc();
++	if (!state->nl_sock) {
+ 		snprintf(handle->errbuf, PCAP_ERRBUF_SIZE,
+ 		    "%s: failed to allocate netlink handle", device);
+ 		return PCAP_ERROR;
+ 	}
+ 
+-	if (genl_connect(state->nl_handle)) {
++	if (genl_connect(state->nl_sock)) {
+ 		snprintf(handle->errbuf, PCAP_ERRBUF_SIZE,
+ 		    "%s: failed to connect to generic netlink", device);
+ 		goto out_handle_destroy;
+ 	}
+ 
+-	state->nl_cache = genl_ctrl_alloc_cache(state->nl_handle);
+-	if (!state->nl_cache) {
++	err = genl_ctrl_alloc_cache(state->nl_sock, &state->nl_cache);
++	if (err < 0) {
+ 		snprintf(handle->errbuf, PCAP_ERRBUF_SIZE,
+-		    "%s: failed to allocate generic netlink cache", device);
++		    "%s: failed to allocate generic netlink cache: %s",
++		    device, strerror(-err));
+ 		goto out_handle_destroy;
+ 	}
+ 
+@@ -568,7 +600,7 @@ nl80211_init(pcap_t *handle, struct nl80211_state *state, const char *device)
+ out_cache_free:
+ 	nl_cache_free(state->nl_cache);
+ out_handle_destroy:
+-	nl_handle_destroy(state->nl_handle);
++	nl_socket_free(state->nl_sock);
+ 	return PCAP_ERROR;
+ }
+ 
+@@ -577,7 +609,7 @@ nl80211_cleanup(struct nl80211_state *state)
+ {
+ 	genl_family_put(state->nl80211);
+ 	nl_cache_free(state->nl_cache);
+-	nl_handle_destroy(state->nl_handle);
++	nl_socket_free(state->nl_sock);
+ }
+ 
+ static int
+@@ -605,7 +637,7 @@ add_mon_if(pcap_t *handle, int sock_fd, struct nl80211_state *state,
+ 	NLA_PUT_STRING(msg, NL80211_ATTR_IFNAME, mondevice);
+ 	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, NL80211_IFTYPE_MONITOR);
+ 
+-	err = nl_send_auto_complete(state->nl_handle, msg);
++	err = nl_send_auto_complete(state->nl_sock, msg);
+ 	if (err < 0) {
+ 		if (err == -ENFILE) {
+ 			/*
+@@ -626,7 +658,7 @@ add_mon_if(pcap_t *handle, int sock_fd, struct nl80211_state *state,
+ 			return PCAP_ERROR;
+ 		}
+ 	}
+-	err = nl_wait_for_ack(state->nl_handle);
++	err = nl_wait_for_ack(state->nl_sock);
+ 	if (err < 0) {
+ 		if (err == -ENFILE) {
+ 			/*
+@@ -685,7 +717,7 @@ del_mon_if(pcap_t *handle, int sock_fd, struct nl80211_state *state,
+ 		    0, NL80211_CMD_DEL_INTERFACE, 0);
+ 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
+ 
+-	err = nl_send_auto_complete(state->nl_handle, msg);
++	err = nl_send_auto_complete(state->nl_sock, msg);
+ 	if (err < 0) {
+ 		if (err == -ENFILE) {
+ 			/*
+@@ -706,7 +738,7 @@ del_mon_if(pcap_t *handle, int sock_fd, struct nl80211_state *state,
+ 			return PCAP_ERROR;
+ 		}
+ 	}
+-	err = nl_wait_for_ack(state->nl_handle);
++	err = nl_wait_for_ack(state->nl_sock);
+ 	if (err < 0) {
+ 		if (err == -ENFILE) {
+ 			/*
+-- 
+1.7.3.5
+
