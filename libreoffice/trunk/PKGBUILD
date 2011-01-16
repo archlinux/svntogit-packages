@@ -298,7 +298,6 @@ build() {
 		--mandir=/usr/share/man \
 		--with-lang="" \
 		--with-binsuffix=no \
-		--with-unix-wrapper="libreoffice" \
 		--enable-cairo\
 		--enable-crashdump\
 		--enable-evolution2\
@@ -357,6 +356,10 @@ build() {
 		--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
 		$EXTRAOPTS || return 1
 
+#	seems no more needed
+#		--with-unix-wrapper="libreoffice" \
+
+#	not yet supported
 #		--enable-ext-presenter-minimizer \
 #		--enable-ext-pdfimport \
 #		--enable-ext-presenter-console \
@@ -371,7 +374,6 @@ build() {
 #		--enable-ext-typo \
 #		--enable-ext-watch-window \
 #		--enable-ext-diagram \
-
 
 # see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
 #		--with-system-saxon\
@@ -419,8 +421,9 @@ package_libreoffice() {
              'mesa:             for the OGLTrans extension'
              'gstreamer0.10-base: + some gstr-plugins to support multimedia content, e.g. in impress')
 #             'mono:             allows UNO automation with Mono'
-# backup=(usr/lib/ooo-3.3/program/sofficerc)
- backup=(usr/lib/libreoffice/program/sofficerc)
+ backup=(etc/libreoffice/sofficerc
+         etc/libreoffice/bootstraprc
+         etc/libreoffice/psprint.conf)
  provides=('go-openoffice') #'openoffice-base' 
  conflicts=('go-openoffice') #'openoffice-base' 
  replaces=('go-openoffice')
@@ -429,6 +432,25 @@ package_libreoffice() {
 	#bin/ooinstall <path-to-install>
 	LD_PRELOAD="" make DESTDIR=${pkgdir} install
 
+	# move sysui desktop files into place we want to use - javafilter and qstarter, but not unneeded printeradmin
+	cp ${pkgdir}/usr/lib/libreoffice/share/xdg/javafilter.desktop ${pkgdir}/usr/share/applications/
+	cp ${pkgdir}/usr/lib/libreoffice/share/xdg/qstart.desktop ${pkgdir}/usr/share/applications/
+	# remove version in menu entry and make it visible
+	sed -i -e "s/3.3 Quickstarter/Quickstarter/g" ${pkgdir}/usr/share/applications/qstart.desktop
+	sed -i -e "/NoDisplay=true/d" ${pkgdir}/usr/share/applications/qstart.desktop
+	# remove unneeded .desktop files from vanilla sysui
+	rm -rf ${pkgdir}/usr/lib/libreoffice/share/xdg
+
+	# put configuration files into place
+	install -dm755 ${pkgdir}/etc/libreoffice
+	install -m644 ${pkgdir}/usr/lib/libreoffice/program/{bootstraprc,sofficerc} ${pkgdir}/etc/libreoffice/
+	install -m644 ${pkgdir}/usr/lib/libreoffice/basis3.3/share/psprint/psprint.conf ${pkgdir}/etc/libreoffice/
+	# install dummy links to make them found by LibO
+	cd ${pkgdir}/usr/lib/libreoffice/program/
+	ln -vsf /etc/libreoffice/{bootstraprc,sofficerc} .
+	cd ${pkgdir}/usr/lib/libreoffice/basis3.3/share/psprint/
+	ln -vsf /etc/libreoffice/psprint.conf .
+ 
 	#fix http://bugs.archlinux.org/task/17656
 	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
 	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
@@ -442,23 +464,18 @@ package_libreoffice() {
 
 	# move SDK to separated package
 	mkdir -p ${srcdir}/sdk-install/usr/lib/libreoffice/basis3.3/sdk
-#	mv ${pkgdir}/usr/lib/ooo-3.3/basis3.3/sdk ${srcdir}/sdk-install/usr/lib/ooo-3.3/basis3.3/sdk
 	mv ${pkgdir}/usr/lib/libreoffice/basis3.3/sdk ${srcdir}/sdk-install/usr/lib/libreoffice/basis3.3/
 
 	mkdir -p ${srcdir}/sdk-install/usr/share/doc/packages/libreoffice/sdk
-#	mv ${pkgdir}/usr/share/doc/packages/libreoffice/sdk ${srcdir}/sdk-install/usr/share/doc/packages/libreoffice/sdk
 	mv ${pkgdir}/usr/share/doc/packages/libreoffice/sdk ${srcdir}/sdk-install/usr/share/doc/packages/libreoffice/
 
 	mkdir -p ${srcdir}/sdk-install/usr/share/libreoffice/sdk
-#	mv ${pkgdir}/usr/share/ooo-3.3/sdk ${srcdir}/sdk-install/usr/share/ooo-3.3/sdk
 	mv ${pkgdir}/usr/share/libreoffice/sdk ${srcdir}/sdk-install/usr/share/libreoffice/
 
 	mkdir -p ${srcdir}/sdk-install/usr/share/idl/libreoffice
-#	mv ${pkgdir}/usr/share/idl/ooo-3.3 ${srcdir}/sdk-install/usr/share/idl/ooo-3.3
 	mv ${pkgdir}/usr/share/idl/libreoffice ${srcdir}/sdk-install/usr/share/idl/
 
 	mkdir -p ${srcdir}/sdk-install/usr/include/libreoffice
-#	mv ${pkgdir}/usr/include/ooo-3.3 ${srcdir}/sdk-install/usr/include/ooo-3.3
 	mv ${pkgdir}/usr/include/libreoffice ${srcdir}/sdk-install/usr/include/
 }
 
