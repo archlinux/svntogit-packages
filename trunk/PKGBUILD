@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.12.2
-pkgrel=1
+pkgrel=2
 _glibcdate=20101214
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -66,6 +66,11 @@ build() {
   # http://www.exploit-db.com/exploits/15274/
   # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09 (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileged-program.patch
+
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=12403
+  if [[ $CARCH == "x86_64" ]]; then
+    sed -i '/__ASSUME_PRIVATE_FUTEX/d'  $srcdir/glibc/sysdeps/unix/sysv/linux/kernel-features.h
+  fi
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
