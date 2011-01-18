@@ -31,10 +31,16 @@ build() {
 }
 
 package_pyqt(){
-  depends=""
+  depends=()
   pkgdesc="Python bindings common files"
 
   cd ${srcdir}/PyQt-x11-gpl-${pkgver}
+  install -Dm755 pylupdate/pylupdate4 ${pkgdir}/usr/bin/pylupdate4
+  install -Dm755 pyrcc/pyrcc4 ${pkgdir}/usr/bin/pyrcc4
+  install -Dm755 pyuic/pyuic4 ${pkgdir}/usr/bin/pyuic4
+  install -Dm755 designer/libpythonplugin.so \
+    ${pkgdir}/usr/lib/qt/plugins/designer/libpythonplugin.so
+  install -Dm644 PyQt4.api ${pkgdir}/usr/share/qt/qsci/api/python/PyQt4.api
 }
 
 package_python-qt(){
