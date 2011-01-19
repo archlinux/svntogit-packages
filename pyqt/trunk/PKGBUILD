@@ -31,7 +31,7 @@ build() {
 }
 
 package_pyqt(){
-  depends=()
+  depends=('qt')
   pkgdesc="Python bindings common files"
 
   cd ${srcdir}/PyQt-x11-gpl-${pkgver}
@@ -45,7 +45,7 @@ package_pyqt(){
 
 package_python-qt(){
   pkgdesc="A set of Python 3 bindings for the Qt toolkit"
-  depends=('pyqt' 'python-sip' 'qt')
+  depends=('pyqt' 'python-sip')
   optdepends=('phonon: enable audio and video in PyQt applications'
 	'qscintilla: QScintilla API'
 	'qt-assistant-compat: add PyQt online help in Qt Assistant')
