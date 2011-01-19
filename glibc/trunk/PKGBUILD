@@ -5,15 +5,15 @@
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
-pkgver=2.12.2
-pkgrel=2
-_glibcdate=20101214
+pkgver=2.13
+pkgrel=1
+_glibcdate=20110117
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=2.6.36.2' 'tzdata')
+depends=('linux-api-headers>=2.6.37' 'tzdata')
 makedepends=('gcc>=4.4')
 backup=(etc/locale.gen
         etc/nscd.conf)
@@ -28,7 +28,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('e2d03fb95c9f838177284192dea063dc'
+md5sums=('b7b17d9c6b5b71b5e5322e04ca63c190'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
@@ -41,7 +41,9 @@ md5sums=('e2d03fb95c9f838177284192dea063dc'
 mksource() {
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  git checkout -b glibc-2.12-arch origin/release/2.12/master || return 1
+  # glibc-2.13 has been tagged but not branched yet
+  git checkout -b glibc-2.13-arch origin/master || return 1
+  #git checkout -b glibc-2.13-arch origin/release/2.13/master || return 1
   popd
   tar -cvJf glibc-${pkgver}_${_glibcdate}.tar.xz glibc/*
 }
