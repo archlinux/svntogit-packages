@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: damir <damir.archlinux.org>
+# Contributor: Gergely Imreh <imrehg@gmail.com>
+
+pkgname=qtiplot
+pkgver=0.9.8.2
+pkgrel=4
+pkgdesc="Data analysis and scientific plotting - free clone of Origin"
+arch=('i686' 'x86_64')
+url="http://soft.proindependent.com/qtiplot.html"
+depends=('muparser' 'gsl' 'python2-qt' 'boost-libs' 'shared-mime-info' 'mesa' 'liborigin2' 'qt-assistant-compat')
+# build against qwtplot3d provided in the package ...
+# build against qwt provided in the package ...
+# as systemwide one doesn't provide all needed functions
+makedepends=('pkgconfig' 'boost')
+license=('GPL2')
+install=${pkgname}.install
+source=(http://download.berlios.de/qtiplot/qtiplot-${pkgver}.tar.bz2
+        $pkgname.desktop
+        $pkgname.png
+        build.conf.archlinux
+        qwtplot3d_gcc.patch
+        qtiplot.xml
+	qtiplot-0.9.7.14-system-liborigin.patch
+	gentoo-fix-origin-build-failure.patch)
+md5sums=('e8335a8760e8c2ac044607d5a4bb80ca'
+         '56bd53f4f1367c285086acb969f13348'
+         'ad8affbd6f0d5cbdcde46c923ee2668a'
+         '95e52ef9c417c8a8dbc1901fe4c0c801'
+         'ab02c436ec2c04b1838cb5517383b4eb'
+         '35683f3b32e1edcca0bb02c471d284e9'
+         'fa7cfc5ba60d28f264ad53869d31fcc8'
+         '642cb38c6579b51b86834c8640130b6f')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -Np0 -i ${srcdir}/qtiplot-0.9.7.14-system-liborigin.patch
+  patch -Np0 -i ${srcdir}/gentoo-fix-origin-build-failure.patch 
+  install -Dm644 ${srcdir}/build.conf.archlinux build.conf
+
+  # Make qwt
+  sed -i "s:elif:else:g" qtiplot/src/scripting/ScriptEdit.cpp
+  patch -Np1 -i ${srcdir}/qwtplot3d_gcc.patch
+  cd ./3rdparty/qwt
+  qmake
+  make
+
+  # Make qwtplot3d
+  cd ../qwtplot3d
+  qmake
+  make
+
+  # Make qtiplot
+  cd ${srcdir}/${pkgname}-${pkgver}/${pkgname}
+
+  # fix stuff
+  sed -i 's|/usr/local/|/usr/share/|' qtiplot.pro
+  sed -i 's|<QAssistantClient>|<QtAssistant/qassistantclient.h>|' src/core/ApplicationWindow.cpp
+  sed -i 's#d_python_config_folder + "#"/usr/share/qtiplot#' src/core/ApplicationWindow.cpp
+
+  qmake qtiplot.pro QMAKESPEC=linux-g++
+  make QTDIR=/usr/ QMAKESPEC=linux-g++
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}/${pkgname}
+
+  INSTALL_ROOT=${pkgdir} make install
+
+  # make it nice:
+  install -D -m644 ${srcdir}/${pkgname}.png \
+  	${pkgdir}/usr/share/pixmaps/${pkgname}.png
+  install -D -m644 ${srcdir}/${pkgname}.desktop \
+  	${pkgdir}/usr/share/applications/${pkgname}.desktop
+  install -D -m644 ${srcdir}/${pkgname}.xml \
+        ${pkgdir}/usr/share/mime/packages/${pkgname}.xml
+}
