@@ -5,12 +5,12 @@
 
 pkgname=python2-qt
 pkgver=4.8.2
-pkgrel=2
+pkgrel=3
 pkgdesc="A set of Python 2 bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
-depends=('python2-sip' 'qt' 'dbus-python')
+depends=('pyqt' 'python2-sip' 'qt' 'dbus-python')
 makedepends=('phonon' 'python-opengl' 'qt-assistant-compat')
 optdepends=('phonon: enable audio and video in PyQt applications'
 	'python-opengl: enable OpenGL 3D graphics in PyQt applications'
