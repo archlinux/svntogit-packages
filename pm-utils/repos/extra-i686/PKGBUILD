@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Thayer Williams <thayer@archlinux.org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
+
+pkgname=pm-utils
+pkgver=1.4.1
+pkgrel=2
+pkgdesc="Utilities and scripts for suspend and hibernate power management"
+arch=('i686' 'x86_64')
+url="http://pm-utils.freedesktop.org"
+license=('GPL')
+depends=('bash' 'procps' 'pm-quirks')
+optdepends=('upower')
+makedepends=('xmlto' 'docbook-xml' 'docbook-xsl')
+source=(http://pm-utils.freedesktop.org/releases/${pkgname}-${pkgver}.tar.gz
+        pm-utils-1.4.1-init-logfile-append.patch
+        11netcfg)
+md5sums=('1742a556089c36c3a89eb1b957da5a60'
+         '358cbfe1686922e2d81f22fa034ba58a'
+         '9839687c8787d99fd4ff36aa3238c27b')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/pm-utils-1.4.1-init-logfile-append.patch"
+  ./configure --prefix=/usr \
+      --sysconfdir=/etc \
+      --localstatedir=/var
+  make
+  make DESTDIR="${pkgdir}" install
+
+  # install additional hooks
+  install -m755 "${srcdir}/11netcfg" "${pkgdir}/usr/lib/pm-utils/sleep.d/"
+
+  # nm >=0.8.2 has native udev suspend/resume support
+  rm -f "${pkgdir}/usr/lib/pm-utils/sleep.d/55NetworkManager"
+  
+  # Do not mess with powersaving options when user switches to battery
+  rm -f "${pkgdir}"/usr/lib/pm-utils/power.d/*
+}
