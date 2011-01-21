@@ -13,7 +13,7 @@ license=('GPL')
 depends=('qt' 'python2-sip' 'dbus-python')
 makedepends=('phonon' 'python-opengl' 'qt-assistant-compat')
 optdepends=('phonon: enable audio and video in PyQt applications'
-	'python-pengl: enable OpenGL 3D graphics in PyQt applications'
+	'python-opengl: enable OpenGL 3D graphics in PyQt applications'
 	'qscintilla: QScintilla API'
 	'qt-assistant-compat: add PyQt online help in Qt Assistant')
 replaces=('pyqt')
