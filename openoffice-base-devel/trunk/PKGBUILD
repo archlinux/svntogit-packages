@@ -4,7 +4,7 @@
 
 pkgbase="openoffice-base-devel"
 pkgname=('openoffice-base-devel' 'openoffice-sdk-devel')
-_OO_milestone=DEV300_m95
+_OO_milestone=DEV300_m98
 pkgver=3.4_${_OO_milestone/DEV/dev}
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -28,7 +28,6 @@ source=(${_OO_milestone}.tar.xz
 	default-no-startup-wizard.diff
 	default-system-fpicker.diff
 	soffice-detect-mozilla-certificates.diff
-	buildfix-gcc44.diff
 	buildfix_FormulaMissingHeader.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/sal-cpprt-gcc-4.5-workaround.diff
 	cppunit_gcc45.diff
@@ -86,7 +85,7 @@ source=(${_OO_milestone}.tar.xz
 	${_additional_source_url}/ca66e26082cab8bb817185a116db809b-redland-1.0.8.tar.gz
 	${_additional_source_url}/cd5997284f4ba1e8dde5d1e5869fc342-libwpd-0.8.8.tar.gz
 	${_additional_source_url}/d0b5af6e408b8d2958f3d83b5244f5e8-hyphen-2.4.tar.gz
-	${_additional_source_url}/3404ab6b1792ae5f16bbd603bd1e1d03-libformula-1.1.7.zip
+	${_additional_source_url}/d1a3205871c3c52e8a50c9f18510ae12-libformula.zip
 	${_additional_source_url}/d35724900f6a4105550293686688bbb3-silgraphite-2.3.1.tar.gz
 	${_additional_source_url}/d4c4d91ab3a8e52a2e69d48d34ef4df4-core.zip
 	${_additional_source_url}/d70951c80dabecc2892c919ff5d07172-db-4.7.25.NC-custom.tar.gz
@@ -110,13 +109,12 @@ source=(${_OO_milestone}.tar.xz
 	${_additional_source_url}/cf8a6967f7de535ae257fa411c98eb88-mdds_0.3.0.tar.bz2
 	${_additional_source_url}/ba2930200c9f019c2d93a8c88c651a0f-flow-engine-0.9.4.zip)
 options=('!distcc' '!ccache' '!makeflags')
-md5sums=('886500d83ddbb7774c1b3117bbf18b34'
+md5sums=('6f79df8abccdabab2a3a38f5e78037f2'
          'e3a0b76dcd876f3d721ee7183729153d'
          '09094988c7bfaa90e5d014523d558ebb'
          '71f136a31e296a04ab68932a31dd533e'
          'c1d61e74909812122ddb1003b7a6d801'
          '1dc7480a04f572ad136d35923a2af66d'
-         'c8e82b4d2324fe62ad8c6e29213e80b5'
          '863a3ab2c17a3d11b8fa3ec321986366'
          'cf01fa2669f828864146842e040e3cf8'
          'bb5ada95f7b11a5cac5d669f7ae8baaa'
@@ -174,7 +172,7 @@ md5sums=('886500d83ddbb7774c1b3117bbf18b34'
          'ca66e26082cab8bb817185a116db809b'
          'cd5997284f4ba1e8dde5d1e5869fc342'
          'd0b5af6e408b8d2958f3d83b5244f5e8'
-         '3404ab6b1792ae5f16bbd603bd1e1d03'
+         'd1a3205871c3c52e8a50c9f18510ae12'
          'd35724900f6a4105550293686688bbb3'
          'd4c4d91ab3a8e52a2e69d48d34ef4df4'
          'd70951c80dabecc2892c919ff5d07172'
@@ -198,15 +196,19 @@ md5sums=('886500d83ddbb7774c1b3117bbf18b34'
          'cf8a6967f7de535ae257fa411c98eb88'
          'ba2930200c9f019c2d93a8c88c651a0f')
 
-
 # see http://ftp.linux.cz/pub/localization/OpenOffice.org/devel/build/build
 
-# source PKGBUILD && mksource
+# source PKGBUILD && time mksource
 mksource() {
 	mkdir /tmp/$pkgname-source
 	pushd /tmp/$pkgname-source
-	hg -v clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/DEV300 ${_OO_milestone}
-	tar -cvJf ${_OO_milestone}.tar.xz ${_OO_milestone}/*
+	time hg -v clone -r ${_OO_milestone} http://hg.services.openoffice.org/hg/DEV300 ${_OO_milestone}
+	# use parallel compression if possible
+	if [ -x /usr/bin/7z ]; then
+	  bsdtar -cf - ${_OO_milestone}/* | 7z a -txz -si ${_OO_milestone}.tar.xz
+	else
+	  tar -cvJf ${_OO_milestone}.tar.xz ${_OO_milestone}/*
+	fi
 	popd
 }
 
@@ -229,7 +231,6 @@ build() {
 	export NO_HIDS=true
 
 	# build fixes
-	patch -Np0 -i ${srcdir}/buildfix-gcc44.diff
 	patch -Np0 -i ${srcdir}/buildfix_FormulaMissingHeader.diff
 	# libwpd 0.9.0 fix
 #	sed -i "s:libwpd-0.8:libwpd-0.9:g" configure.in
@@ -276,13 +277,14 @@ build() {
 
 	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
 	--with-vendor="ArchLinux"\
+	--with-unix-wrapper="openoffice" \
+	--with-binsuffix="devel" \
 	--prefix=/usr --exec-prefix=/usr\
 	--with-lang="en-US"\
-	--with-dict=ALL\
 	--disable-gnome-vfs\
 	--disable-systray\
 	--disable-mathmldtd\
-	--enable-binfilter\
+	--disable-binfilter\
 	--enable-cairo\
 	--enable-crashdump=yes\
 	--enable-cups\
@@ -294,20 +296,19 @@ build() {
 	--enable-kde4\
 	--enable-ldap\
 	--enable-lockdown\
-	--enable-minimizer\
 	--enable-odk\
 	--enable-opengl\
-	--enable-pdfimport\
-	--enable-presenter-console\
-	--enable-presenter-extra-ui\
-	--enable-report-builder\
 	--enable-vba\
 	--enable-verbose\
-	--enable-wiki-publisher\
 	--with-package-format=native\
 	--without-fonts\
 	--without-afms\
 	--without-ppds\
+	--without-myspell-dicts \
+	--with-system-dicts \
+	--with-external-dict-dir=/usr/share/hunspell \
+	--with-external-hyph-dir=/usr/share/hyphen \
+	--with-external-thes-dir=/usr/share/mythes \
 	--without-system-agg\
 	--without-system-mdds\
 	--without-system-libwpd\
@@ -327,12 +328,22 @@ build() {
 	--with-external-tar=${SRCDEST}\
 	 $EXTRAOPTS
 
+
+	#disable extensions for build speedup and less pkg size
+#	--enable-minimizer\
+#	--enable-pdfimport\
+#	--enable-presenter-console\
+#	--enable-presenter-extra-ui\
+#	--enable-report-builder\
+#	--enable-wiki-publisher\
+
+# --enable-binfilter
+
 # see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
 #	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
 
 #	--enable-layout\ /bin/bash: tralay: command not found ???
 #	--with-system-jfreereport
-# we will need myspell dicts for --with-system-dicts --without-myspell-dicts
 
 	# get external source tarballs if needed
 	export TARFILE_LOCATION=${SRCDEST}
@@ -368,7 +379,7 @@ package_openoffice-base-devel() {
              'gconf:		adds additional gnome support'
              'nss:		adds support for signed files/macros'
              'pstoedit:		translates PostScript and PDF graphics into other vector formats'
-             'poppler:		for shipped pdfimport extension'
+            # 'poppler:		for shipped pdfimport extension'
              'kdelibs:		for kde integration'
              'libmythes:	for use in thesaurus'
              'hsqldb-java:	default database format for OpenOffice.org'
@@ -395,21 +406,14 @@ package_openoffice-base-devel() {
 	mv ${pkgdir}/opt/* ${pkgdir}/usr/lib/
 	rmdir ${pkgdir}/opt
 
-       # install all built dictionaries from source tree
-       pushd ${srcdir}/${_OO_milestone}/dictionaries/unxlng?6.pro/bin
-       for i in `ls -1 dict-??.oxt`; do
-         install -D -m644 $i ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/$i
-       done
-       popd
-       
        # install extensions
-       pushd ${srcdir}/${_OO_milestone}/solver/300/unxlng?6.pro/bin
-         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/report-builder.oxt
-	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/wiki-publisher.oxt
-	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presentation-minimizer.oxt
-	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presenter-screen.oxt
-	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/pdfimport.oxt
-       popd
+#       pushd ${srcdir}/${_OO_milestone}/solver/300/unxlng?6.pro/bin
+#         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/report-builder.oxt
+#	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/wiki-publisher.oxt
+#	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presentation-minimizer.oxt
+#	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presenter-screen.oxt
+#	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/pdfimport.oxt
+#       popd
 
 
 	# prepare filesystem entries
