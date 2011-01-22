@@ -1,62 +1,79 @@
 # $Id$
 # Maintainer: judd <jvinet@zeroflux.org>
 # Contributor: Mario Vazquez <mario_vazq@hotmail.com>
+
 pkgname=bind
-# Use a period and not a hyphen before the patch level for proper versioning.
-pkgver=9.7.2.P2
-_pkgver=9.7.2-P2
+pkgver=9.7.2.P3
+_pkgver=9.7.2-P3
 pkgrel=1
-pkgdesc="Berkeley Internet Name Domain - named server"
-arch=(i686 x86_64)
-url="https://www.isc.org/software/bind/"
+pkgdesc='Berkeley Internet Name Daemon (BIND) is the reference implementation of the Domain Name System (DNS) protocols'
+arch=('i686' 'x86_64')
+url='http://www.isc.org/software/bind/'
 license=('custom:ISC')
-backup=(etc/named.conf etc/logrotate.d/named etc/conf.d/named etc/rndc.key)
-depends=('openssl')
 provides=('dns-server')
+backup=('etc/logrotate.d/named'
+        'etc/conf.d/named'
+        'etc/named.conf'
+        'etc/rndc.key')
+depends=('openssl')
+makedepends=('libxml2')
+optdepends=('libxml2: statistics-channels')
 options=('!libtool')
-install=bind.install
-source=(http://ftp.isc.org/isc/bind9/${_pkgver}/${pkgname}-${_pkgver}.tar.gz
-	bind.so_bsdcompat.diff notools.patch named.conf localhost.zone 127.0.0.zone
-	named root.hint named.logrotate named.conf.d)
+source=("http://ftp.isc.org/isc/bind9/${_pkgver}/${pkgname}-${_pkgver}.tar.gz"
+        'ftp://ftp.rs.internic.net/domain/db.cache'
+        'so_bsdcompat.patch'
+        'notools.patch'
+        'named'
+        'named.conf'
+        'named.conf.d'
+        'named.logrotate'
+        'localhost.zone'
+        '127.0.0.zone')
+sha1sums=('ca621a23e79298b4da14a3884690edbccda410d4'
+          'ee52947062c1582858187716b776afa3613608fb'
+          '2f737f4e81186447ac2ef370fa8dcea0b3abec31'
+          '5277cf4d6fbc5728c55b51c77c9347d28393fb7c'
+          '02b0e20a542663d27af4faa4d2e397ae2764276e'
+          '5ca7a5f2a132548a090a045a2df3acea6b35d9eb'
+          '7848edbfb9a848843f57c11c02b0289eefd42d00'
+          '9ffb5c3f72390a517aeae557e32349d5d278cb63'
+          '76a0d4cd1b913db177a5a375bebc47e5956866ec'
+          '53be0f1437ebe595240d8dbdd819939582b97fb9')
+
+install=install
 
 build() {
-  export MAKEFLAGS="-j1"
-  cd ${srcdir}/${pkgname}-${_pkgver}
-  patch -Np0 -i ${srcdir}/bind.so_bsdcompat.diff
-  patch -Np1 -i ${srcdir}/notools.patch
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-              --with-libtool --enable-shared --disable-threads \
-              --with-openssl=yes --disable-linux-caps --without-libxml2
-  make
-  make DESTDIR=${pkgdir} install
-  install -D -m755 ../named ${pkgdir}/etc/rc.d/named
-  install -D -m640 ../named.conf ${pkgdir}/etc/named.conf
-  install -D -m600 ../127.0.0.zone ${pkgdir}/var/named/127.0.0.zone
-  install -D -m600 ../localhost.zone ${pkgdir}/var/named/localhost.zone
-  # wget --user=ftp ftp://ftp.rs.internic.net/domain/db.cache -O root.hint
-  install -D -m600 ../root.hint ${pkgdir}/var/named/root.hint
-  install -D -m600 ../named.logrotate ${pkgdir}/etc/logrotate.d/named
-  install -D -m644 ../named.conf.d ${pkgdir}/etc/conf.d/named
-  install -d -m755 ${pkgdir}/var/run/named
-  install -D -m644 COPYRIGHT ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+	export MAKEFLAGS="-j1"
 
-  # adjust ownerships (our named user will be uid/gid 40/40)
-  chmod 700 ${pkgdir}/var/named
-  chown root:40 ${pkgdir}/etc/named.conf
-  chown -R 40:40 ${pkgdir}/var/named
-  chown 40:40 ${pkgdir}/var/run/named
+	patch -p1 -i "${srcdir}"/so_bsdcompat.patch
+	patch -p1 -i "${srcdir}"/notools.patch
 
-  # documentation
-  mkdir -p ${pkgdir}/usr/share/doc/bind
-  cp  ./doc/arm/*.html ${pkgdir}/usr/share/doc/bind/
+	./configure \
+		--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--with-libtool --enable-shared --disable-linux-caps \
+		--with-openssl=yes --with-libxml2=yes
+	make
 }
-md5sums=('e74de6ec9c2cd27576794c873bd85f4a'
-         '447d58721cfee0e1e377b46f7d50b327'
-         'e7f3c5c54f18c86f6716700e82f7e9fd'
-         'f58fa49a92df16534d31fcb6b0d1be1e'
-         'ab5beef0b41eb6376c7f1f4ee233172b'
-         'bdbdfe4990b0903984306dd14f98b951'
-         '750f283c7774ffe75cd215bce46b03cd'
-         '970e509181ce7626bc414f4c05abaf98'
-         '91b3463a181561deb845acc122713a2a'
-         '475fde63600d7d95980de991f02d6b6d')
+
+package() {
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+
+	make DESTDIR="${pkgdir}" install
+
+	install -D -m755 ../named "${pkgdir}"/etc/rc.d/named
+	install -D -m640 ../named.conf "${pkgdir}"/etc/named.conf
+	install -D -m644 ../named.conf.d "${pkgdir}"/etc/conf.d/named
+	install -D -m600 ../named.logrotate "${pkgdir}"/etc/logrotate.d/named
+
+	install -D -m600 ../db.cache "${pkgdir}"/var/named/root.hint
+	install -D -m600 ../127.0.0.zone "${pkgdir}"/var/named/127.0.0.zone
+	install -D -m600 ../localhost.zone "${pkgdir}"/var/named/localhost.zone
+
+	install -d -m755 "${pkgdir}"/var/run/named
+	install -D -m644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+	# documentation
+	install -d "${pkgdir}"/usr/share/doc/bind
+	install ./doc/arm/*.html "${pkgdir}"/usr/share/doc/bind/
+}
