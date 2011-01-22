@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=9.00
-pkgrel=2
+pkgrel=3
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -15,12 +15,14 @@ url="http://www.ghostscript.com/"
 source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.xz
 	ghostscript-fPIC.patch
 	ghostscript-system-jasper.patch
-	svn_rev11948.diff)
+	svn_rev11948.diff
+	ghostscript-gdevcups-691733.patch)
 options=('!libtool' '!makeflags')
 md5sums=('1ca5f245677f78f573e6490bdb40702f'
          '766d44c47c693f96941b658e360c1277'
          '03e27cd02471ab3b642c344fa06b623e'
-         '78f2b9c2d6a5a60891b2d8b593a15b00')
+         '78f2b9c2d6a5a60891b2d8b593a15b00'
+         'e459d4cf897bdb54fefbba9d57bd2fa2')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
@@ -36,6 +38,9 @@ build() {
 
   # part of https://bugs.archlinux.org/task/22006 - http://bugs.ghostscript.com/show_bug.cgi?id=691831
   patch -Np2 -i ${srcdir}/svn_rev11948.diff
+  # upstream fix for http://bugs.ghostscript.com/show_bug.cgi?id=691733 / part of https://bugs.archlinux.org/task/21388
+  # patch taken from Fedora RawHide master
+  patch -Np1 -i ${srcdir}/ghostscript-gdevcups-691733.patch
   
   ./autogen.sh
   ./configure --prefix=/usr \
