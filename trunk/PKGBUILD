@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=9.00
-pkgrel=3
+pkgrel=4
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -16,13 +16,15 @@ source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.xz
 	ghostscript-fPIC.patch
 	ghostscript-system-jasper.patch
 	svn_rev11948.diff
-	ghostscript-gdevcups-691733.patch)
+	ghostscript-gdevcups-691733.patch
+	gs_bug691759and691760.diff)
 options=('!libtool' '!makeflags')
 md5sums=('1ca5f245677f78f573e6490bdb40702f'
          '766d44c47c693f96941b658e360c1277'
          '03e27cd02471ab3b642c344fa06b623e'
          '78f2b9c2d6a5a60891b2d8b593a15b00'
-         'e459d4cf897bdb54fefbba9d57bd2fa2')
+         'e459d4cf897bdb54fefbba9d57bd2fa2'
+         '21841b0ea5bd67cf4b68ba64c5d5755b')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
@@ -41,6 +43,8 @@ build() {
   # upstream fix for http://bugs.ghostscript.com/show_bug.cgi?id=691733 / part of https://bugs.archlinux.org/task/21388
   # patch taken from Fedora RawHide master
   patch -Np1 -i ${srcdir}/ghostscript-gdevcups-691733.patch
+  # patch for http://bugs.ghostscript.com/show_bug.cgi?id=691760 and http://bugs.ghostscript.com/show_bug.cgi?id=691759 / part of https://bugs.archlinux.org/task/21388
+  patch -Np2 -i ${srcdir}/gs_bug691759and691760.diff
   
   ./autogen.sh
   ./configure --prefix=/usr \
