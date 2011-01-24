@@ -1,0 +1,252 @@
+Index: powerdevil/daemon/powerdevilaction.cpp
+===================================================================
+--- powerdevil/daemon/powerdevilaction.cpp	(revision 1216707)
++++ powerdevil/daemon/powerdevilaction.cpp	(revision 1216708)
+@@ -85,7 +85,7 @@
+ void Action::trigger(const QVariantMap& args)
+ {
+     if (args.contains("Explicit") && args["Explicit"].toBool()) {
+-        // The action was explicitely triggered by the user, hence any policy check is bypassed.
++        // The action was explicitly triggered by the user, hence any policy check is bypassed.
+         triggerImpl(args);
+     } else {
+         // The action was taken automatically: let's check if we have the rights to do that
+Index: powerdevil/daemon/actions/bundled/handlebuttoneventsconfig.cpp
+===================================================================
+--- powerdevil/daemon/actions/bundled/handlebuttoneventsconfig.cpp	(revision 1216707)
++++ powerdevil/daemon/actions/bundled/handlebuttoneventsconfig.cpp	(revision 1216708)
+@@ -19,6 +19,8 @@
+ 
+ #include "handlebuttoneventsconfig.h"
+ 
++#include "suspendsession.h"
++
+ #include <Solid/PowerManagement>
+ 
+ #include <KLocalizedString>
+@@ -72,19 +74,19 @@
+         QSet< Solid::PowerManagement::SleepState > methods = Solid::PowerManagement::supportedSleepStates();
+ 
+         foreach (KComboBox *box, boxes) {
+-            box->addItem(KIcon("dialog-cancel"), i18n("Do nothing"), (uint)0);
++            box->addItem(KIcon("dialog-cancel"), i18n("Do nothing"), (uint)SuspendSession::None);
+             if (methods.contains(Solid::PowerManagement::SuspendState)) {
+-                box->addItem(KIcon("system-suspend"), i18n("Sleep"), (uint)1);
++                box->addItem(KIcon("system-suspend"), i18n("Sleep"), (uint)SuspendSession::ToRamMode);
+             }
+             if (methods.contains(Solid::PowerManagement::HibernateState)) {
+-                box->addItem(KIcon("system-suspend-hibernate"), i18n("Hibernate"), (uint)2);
++                box->addItem(KIcon("system-suspend-hibernate"), i18n("Hibernate"), (uint)SuspendSession::ToDiskMode);
+             }
+-            box->addItem(KIcon("system-shutdown"), i18n("Shutdown"), (uint)3);
+-            box->addItem(KIcon("system-lock-screen"), i18n("Lock screen"), (uint)4);
++            box->addItem(KIcon("system-shutdown"), i18n("Shutdown"), (uint)SuspendSession::ShutdownMode);
++            box->addItem(KIcon("system-lock-screen"), i18n("Lock screen"), (uint)SuspendSession::LockScreenMode);
+             if (box != m_lidCloseCombo) {
+-                box->addItem(KIcon("system-log-out"), i18n("Prompt log out dialog"), (uint)5);
++                box->addItem(KIcon("system-log-out"), i18n("Prompt log out dialog"), (uint)SuspendSession::LogoutDialogMode);
+             }
+-            box->addItem(KIcon("preferences-desktop-screensaver"), i18n("Turn off screen"), (uint)6);
++            box->addItem(KIcon("preferences-desktop-screensaver"), i18n("Turn off screen"), (uint)SuspendSession::TurnOffScreenMode);
+         }
+     }
+ 
+Index: powerdevil/daemon/actions/bundled/handlebuttonevents.cpp
+===================================================================
+--- powerdevil/daemon/actions/bundled/handlebuttonevents.cpp	(revision 1216707)
++++ powerdevil/daemon/actions/bundled/handlebuttonevents.cpp	(revision 1216708)
+@@ -19,6 +19,8 @@
+ 
+ #include "handlebuttonevents.h"
+ 
++#include "suspendsession.h"
++
+ #include <powerdevilactionpool.h>
+ 
+ #include <KConfigGroup>
+@@ -87,33 +89,13 @@
+ void HandleButtonEvents::processAction(uint action)
+ {
+     // Basically, we simply trigger other actions :)
+-    switch (action) {
+-        case 1:
+-            // Sleep
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(1));
+-            break;
+-        case 2:
+-            // Hibernate
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(2));
+-            break;
+-        case 3:
+-            // Turn off PC
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(8));
+-            break;
+-        case 4:
+-            // Lock
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(32));
+-            break;
+-        case 5:
+-            // Shutdown dialog
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(16));
+-            break;
+-        case 6:
++    switch ((SuspendSession::Mode)action) {
++        case SuspendSession::TurnOffScreenMode:
+             // Turn off screen
+             triggerAction("DPMSControl", qVariantFromValue< QString >("TurnOff"));
+             break;
+         default:
+-            // Do nothing
++            triggerAction("SuspendSession", qVariantFromValue< uint >(action));
+             break;
+     }
+ }
+@@ -134,23 +116,7 @@
+ {
+     // For now, let's just accept the phantomatic "32" button.
+     if (args["Button"].toInt() == 32) {
+-        switch (args["Button"].toUInt()) {
+-        case 1:
+-            // Sleep
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(1)); // To RAM
+-            break;
+-        case 2:
+-            // Hibernate
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(2)); // To disk
+-            break;
+-        case 3:
+-            // Turn off PC
+-            triggerAction("SuspendSession", qVariantFromValue< uint >(8)); // Shutdown
+-            break;
+-        default:
+-            // Do nothing
+-            break;
+-        }
++        triggerAction("SuspendSession", args["Button"]);
+     }
+ }
+ 
+Index: powerdevil/daemon/actions/bundled/suspendsession.h
+===================================================================
+--- powerdevil/daemon/actions/bundled/suspendsession.h	(revision 1216707)
++++ powerdevil/daemon/actions/bundled/suspendsession.h	(revision 1216708)
+@@ -41,7 +41,8 @@
+         SuspendHybridMode = 4,
+         ShutdownMode = 8,
+         LogoutDialogMode = 16,
+-        LockScreenMode = 32
++        LockScreenMode = 32,
++        TurnOffScreenMode = 64
+     };
+ 
+     explicit SuspendSession(QObject *parent);
+Index: powerdevil/kcmodule/global/GeneralPage.cpp
+===================================================================
+--- powerdevil/kcmodule/global/GeneralPage.cpp	(revision 1216707)
++++ powerdevil/kcmodule/global/GeneralPage.cpp	(revision 1216708)
+@@ -105,7 +105,7 @@
+     if (methods.contains(Solid::PowerManagement::HibernateState)) {
+         BatteryCriticalCombo->addItem(KIcon("system-suspend-hibernate"), i18n("Hibernate"), 2);
+     }
+-    BatteryCriticalCombo->addItem(KIcon("system-shutdown"), i18n("Shutdown"), 3);
++    BatteryCriticalCombo->addItem(KIcon("system-shutdown"), i18n("Shutdown"), 8);
+ 
+     notificationsButton->setIcon(KIcon("preferences-desktop-notification"));
+ 
+Index: powerdevil/daemon/powerdevilprofilegenerator.cpp
+===================================================================
+--- powerdevil/daemon/powerdevilprofilegenerator.cpp	(revision 1216708)
++++ powerdevil/daemon/powerdevilprofilegenerator.cpp	(revision 1216709)
+@@ -260,24 +260,16 @@
+             runScript.writeEntry< uint >("scriptPhase", 0);
+         }
+         // SuspendSession
+-        if (oldGroup.readEntry< int >("idleAction", 0) > 0) {
++        if (oldGroup.readEntry< uint >("idleAction", 0) > 0) {
+             KConfigGroup suspendSession(&newGroup, "SuspendSession");
+             suspendSession.writeEntry< uint >("idleTime", oldGroup.readEntry< int >("idleTime", 30) * 60 * 1000);
+-            if (!methods.contains(Solid::PowerManagement::SuspendState)) {
+-                suspendSession.writeEntry< uint >("suspendType", 2);
+-            } else {
+-                suspendSession.writeEntry< uint >("suspendType", 1);
+-            }
++            suspendSession.writeEntry< uint >("suspendType", upgradeOldAction(oldGroup.readEntry< uint >("idleAction", 0)));
+         }
+         // Buttons
+-        if (oldGroup.readEntry< int >("powerButtonAction", 0) > 0 || oldGroup.readEntry< int >("lidAction", 0) > 0) {
+-            KConfigGroup suspendSession(&newGroup, "SuspendSession");
+-            suspendSession.writeEntry< uint >("idleTime", oldGroup.readEntry< int >("idleTime", 30) * 60 * 1000);
+-            if (!methods.contains(Solid::PowerManagement::SuspendState)) {
+-                suspendSession.writeEntry< uint >("suspendType", 2);
+-            } else {
+-                suspendSession.writeEntry< uint >("suspendType", 1);
+-            }
++        if (oldGroup.readEntry< uint >("powerButtonAction", 0) > 0 || oldGroup.readEntry< uint >("lidAction", 0) > 0) {
++            KConfigGroup handleButtons(&newGroup, "HandleButtonEvents");
++            handleButtons.writeEntry< uint >("powerButtonAction", upgradeOldAction(oldGroup.readEntry< uint >("powerButtonAction", 0)));
++            handleButtons.writeEntry< uint >("lidAction", upgradeOldAction(oldGroup.readEntry< uint >("lidAction", 0)));
+         }
+     }
+ 
+@@ -301,4 +293,25 @@
+     }
+ }
+ 
++uint ProfileGenerator::upgradeOldAction(uint oldAction)
++{
++    switch ((OldIdleAction)oldAction) {
++        case Standby:
++        case S2Ram:
++            return ToRamMode;
++        case S2Disk:
++            return ToDiskMode;
++        case Shutdown:
++            return ShutdownMode;
++        case Lock:
++            return LockScreenMode;
++        case ShutdownDialog:
++            return LogoutDialogMode;
++        case TurnOffScreen:
++            return TurnOffScreenMode;
++        default:
++            return 0;
++    }
+ }
++
++}
+Index: powerdevil/daemon/powerdevilprofilegenerator.h
+===================================================================
+--- powerdevil/daemon/powerdevilprofilegenerator.h	(revision 1216708)
++++ powerdevil/daemon/powerdevilprofilegenerator.h	(revision 1216709)
+@@ -31,8 +31,31 @@
+         ResultUpgraded = 2
+     };
+ 
++    enum OldIdleAction {
++        None = 0,
++        Standby = 1,
++        S2Ram = 2,
++        S2Disk = 4,
++        Shutdown = 8,
++        Lock = 16,
++        ShutdownDialog = 32,
++        TurnOffScreen = 64
++    };
++
++    enum NewMode {
++        NoneMode = 0,
++        ToRamMode = 1,
++        ToDiskMode = 2,
++        SuspendHybridMode = 4,
++        ShutdownMode = 8,
++        LogoutDialogMode = 16,
++        LockScreenMode = 32,
++        TurnOffScreenMode = 64
++    };
++
+     GeneratorResult generateProfiles(bool tryUpgrade = false);
+     void upgradeProfiles();
++    unsigned int upgradeOldAction(unsigned int actionId);
+ }
+ 
+ }
