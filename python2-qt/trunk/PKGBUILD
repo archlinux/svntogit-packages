@@ -4,8 +4,8 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgname=python2-qt
-pkgver=4.8.2
-pkgrel=4
+pkgver=4.8.3
+pkgrel=1
 pkgdesc="A set of Python 2 bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -17,16 +17,11 @@ optdepends=('phonon: enable audio and video in PyQt applications'
 	'qscintilla: QScintilla API'
 	'qt-assistant-compat: add PyQt online help in Qt Assistant')
 replaces=('pyqt')
-source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
-        'fix-stackedwidget-bug.patch')
-md5sums=('142a32f126f205a2bd77f6a9910f5333'
-        '42cfd44a8ec063cce3e328ddb9892565')
+source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
+md5sums=('d54fd1c37a74864faf42709c8102f254')
 
 build() {
   cd "${srcdir}/PyQt-x11-gpl-${pkgver}"
-
-  # Already fixed upstream
-  patch -Np1 -i "${srcdir}/fix-stackedwidget-bug.patch"
 
   python2 configure.py \
     --confirm-license \
