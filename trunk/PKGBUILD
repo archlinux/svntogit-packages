@@ -3,7 +3,7 @@
 # Contributor: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=iputils
-pkgver=20100418
+pkgver=20101006
 _traceroutever=1.4a12
 pkgrel=1
 pkgdesc="IP Configuration Utilities (and Ping)"
@@ -11,60 +11,55 @@ arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.linuxfoundation.org/en/Net:Iputils"
 groups=('base')
-depends=('glibc')
-makedepends=('opensp' 'libxslt' 'docbook-xsl')
+depends=('glibc' 'openssl' 'sysfsutils')
 conflicts=('netkit-base' 'arping' 'netkit-tftpd' 'traceroute')
 replaces=('netkit-base' 'traceroute')
 source=(http://www.skbuff.net/${pkgname}/${pkgname}-s${pkgver}.tar.bz2
         ftp://ftp.ee.lbl.gov/traceroute-${_traceroutever}.tar.gz
-        'permission-fix.patch')
+        'permission-fix.patch'
+        'iputils-s20101006-manpages.patch')
 options=('!makeflags')
-md5sums=('df6b0062118cdc5c62e3c810f831e976'
+md5sums=('a36c25e9ec17e48be514dc0485e7376c'
          '964d599ef696efccdeebe7721cd4828d'
-         '66109966cad06e425bb12a78bab85b70')
+         '66109966cad06e425bb12a78bab85b70'
+         'd02dffac6f16e841921a9fc73bd2d3bd')
 
 build() {
   #build iptuils
-  cd ${srcdir}/${pkgname}-s${pkgver}
-  make KERNEL_INCLUDE=/usr/include # for i686
-
-  msg ":: building docs"
-  # good god, these docs are a pain
-  # special thanks to  Michael(tm) Smith <mike@w3.org> - http://people.w3.org/mike/
-  # from #docbook on freenode.org for figuring this out
-  cd doc
-  for file in *.sgml; do
-      xf=${file/.sgml/.xml}
-      osx -xlower -xno-nl-in-tag $file > $xf
-      sed -i "s|<refname>\(.*\), \(.*\)</refname>|<refname>\1</refname>, <refname>\2</refname>|g" $xf
-      xsltproc /usr/share/xml/docbook/xsl-stylesheets-1.76.1/manpages/docbook.xsl $xf
-  done
+  cd "${srcdir}/${pkgname}-s${pkgver}"
+  
+  # Doc fails to build (see FS#20251)
+  # As a temporary workaround, we use these man pages from Fedora & LFS
+  patch -Np1 -i ../iputils-s20101006-manpages.patch
+  make
 
   # build traceroute
   # this is combined in this package because it's awkward as a separate package
-  cd ${srcdir}/traceroute-${_traceroutever}
+  cd "${srcdir}/traceroute-${_traceroutever}"
   patch -Np1 -i ../permission-fix.patch
   ./configure --prefix=/usr \
-    --sbindir=/bin \
-    --mandir=/usr/share/man
+              --sbindir=/bin \
+              --mandir=/usr/share/man
   make CFLAGS="${CFLAGS} -Ilinux-include/"
 }
 
 package() {
-  cd ${srcdir}/${pkgname}-s${pkgver}
+  cd "${srcdir}/${pkgname}-s${pkgver}"
   for i in arping clockdiff rarpd rdisc tftpd tracepath tracepath6; do
-    install -D -m755 $i ${pkgdir}/usr/sbin/$i
+    install -D -m755 $i "${pkgdir}/usr/sbin/$i"
   done
   for i in ping ping6 traceroute6; do
-    install -D -m4755 $i ${pkgdir}/bin/$i
+    install -D -m4755 $i "${pkgdir}/bin/$i"
   done
  
-  cd doc
-  install -d ${pkgdir}/usr/share/man/man8
-  install -m644 arping.8 clockdiff.8 ping.8 ping6.8 rarpd.8 rdisc.8 \
-    tftpd.8 tracepath.8 tracepath6.8 traceroute6.8 \
-    ${pkgdir}/usr/share/man/man8/
+  install -dm755 "${pkgdir}/usr/share/man/man8"
+  install -m644 doc/{arping,clockdiff,ping,rarpd,rdisc,tftpd,tracepath,traceroute6}.8 \
+    "${pkgdir}/usr/share/man/man8/"
 
-  cd ${srcdir}/traceroute-${_traceroutever}
-  make DESTDIR=${pkgdir} install install-man
+  cd "${pkgdir}/usr/share/man/man8"
+  ln -sf ping.8.gz  ping6.8.gz
+  ln -sf tracepath.8.gz tracepath6.8.gz
+
+  cd "${srcdir}/traceroute-${_traceroutever}"
+  make DESTDIR="${pkgdir}" install install-man
 }
