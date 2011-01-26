@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Paul Mattal <paul@archlinux.org>
+
+pkgname=lirc
+pkgver=0.9.0.pre1
+pkgrel=4
+_kernver=2.6.37-ARCH
+pkgdesc="Linux Infrared Remote Control kernel modules for stock arch kernel"
+arch=('i686' 'x86_64')
+url="http://www.lirc.org/"
+license=('GPL')
+depends=('lirc-utils' 'kernel26>=2.6.37' 'kernel26<2.6.38')
+makedepends=('help2man' 'kernel26-headers>=2.6.37' 'kernel26-headers<2.6.38')
+replaces=('lirc+pctv')
+options=('!makeflags')
+install=$pkgname.install
+source=(http://www.lirc.org/software/snapshots/lirc-0.9.0-pre1.tar.bz2
+        #"http://prdownloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
+        )
+md5sums=('13ba59178adee4e6be8a9a1966ab3133')
+
+build() {
+	# configure
+	cd ${srcdir}/lirc-0.9.0-pre1
+	./configure --enable-sandboxed --prefix=/usr \
+		--with-driver=all --with-kerneldir=/usr/src/linux-${_kernver}/ \
+		--with-moduledir=/lib/modules/${_kernver}/kernel/drivers/misc \
+	        --with-transmitter
+
+	# disable parallel and bt829
+        # because of incompatibility with smp systems
+        sed -i -e "s:lirc_parallel::" -e "s:lirc_bt829::" \
+		Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
+	# lirc_i2c  lirc_igorplugusb  lirc_imon  lirc_it87  lirc_ite8709
+        # lirc_sasem  lirc_serial  lirc_sir lirc_ttusbir lirc_zilog
+        # because part of kernel 2.6.36 staging tree
+        sed -i -e "s:lirc_i2c::" -e "s:lirc_igorplugusb::" -e "s:lirc_imon::" \
+		-e "s:lirc_it87::" -e "s:lirc_ite8709::" -e "s:lirc_sasem::" \
+		-e "s:lirc_serial::" -e "s:lirc_sir::" -e "s:lirc_ttusbir::" \
+		-e "s:lirc_zilog::" Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
+	# disable lirc_gpio due to brokeness of kernel 2.6.23
+	sed -i -e "s:lirc_gpio::" \
+		Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
+
+	# build
+	cd drivers
+	make
+}
+
+package() {
+        cd ${srcdir}/lirc-0.9.0-pre1/drivers
+	make DESTDIR=${pkgdir} install
+
+	# set the kernel we've built for inside the install script
+	sed -i -e "s/KERNEL_VERSION=.*/KERNEL_VERSION=${_kernver}/g" \
+		${startdir}/lirc.install
+}
