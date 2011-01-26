@@ -1,0 +1,74 @@
+--- fcpcmcia_cs.c~	2010-10-25 22:10:05.546667655 +0200
++++ fcpcmcia_cs.c	2010-10-25 22:10:15.926667655 +0200
+@@ -26,7 +26,6 @@
+ #include <asm/io.h>
+ #include <asm/system.h>
+ 
+-#include <pcmcia/cs_types.h>
+ #include <pcmcia/cs.h>
+ #include <pcmcia/cistpl.h>
+ #include <pcmcia/ciscode.h>
+--- fcpcmcia_cs.c~	2010-11-01 10:57:33.946670710 +0100
++++ fcpcmcia_cs.c	2010-11-01 10:57:33.980004044 +0100
+@@ -141,9 +141,8 @@
+     NOTE("Attaching device...\n");
+ 
+     /* The io structure describes IO port mapping */
+-    p_dev->io.NumPorts1 = 16;
+-    p_dev->io.Attributes1 = IO_DATA_PATH_WIDTH_8;
+-    p_dev->io.NumPorts2 = 0;
++    p_dev->resource[0]->end = 16;
++    p_dev->resource[0]->flags |= IO_DATA_PATH_WIDTH_8;
+ 
+ #if defined (PCMCIA_IRQ_INFO2)
+     p_dev->irq.IRQInfo1 = IRQ_INFO2_VALID|IRQ_LEVEL_ID;
+@@ -199,13 +198,9 @@
+        if (cf->io.nwin <= 0)
+                return -ENODEV;
+ 
+-       p_dev->io.BasePort1 = cf->io.win[0].base;
+-       p_dev->io.NumPorts1 = cf->io.win[0].len;
+-       p_dev->io.NumPorts2 = 0;
+-       printk(KERN_INFO "fcpcmcia_cs: testing i/o %#x-%#x\n",
+-              p_dev->io.BasePort1,
+-              p_dev->io.BasePort1+p_dev->io.NumPorts1-1);
+-       return pcmcia_request_io(p_dev, &p_dev->io);
++       p_dev->resource[0]->start = cf->io.win[0].base;
++       p_dev->resource[0]->end = cf->io.win[0].len;
++       return pcmcia_request_io(p_dev);
+  }
+ 
+ static int cs_config(struct pcmcia_device *link)
+@@ -249,10 +244,10 @@
+     }
+     NOTE("Ready to call card driver for '%s'...\n", devname);
+ 
+-    if ((i = fcpcmcia_addcard(link->io.BasePort1, link->irq)) < 0) {
++    if ((i = fcpcmcia_addcard(link->resource[0]->start, link->irq)) < 0) {
+         ERROR(
+ 		"Failed to add AVM-%s-Controller at i/o %x, irq %d\n",
+-		link->io.BasePort1, 
++		(unsigned int) link->resource[0]->start,
+ 		link->irq
+ 	);
+ 	cs_release(link);
+@@ -279,7 +274,7 @@
+ 
+ static void cs_release(struct pcmcia_device *link)
+ {
+-    fcpcmcia_delcard(link->io.BasePort1, link->irq);
++    fcpcmcia_delcard(link->resource[0]->start, link->irq);
+ 
+     pcmcia_disable_device(link);
+ } /* cs_release */
+--- fcpcmcia_cs.c~	2010-11-01 11:07:48.023337378 +0100
++++ fcpcmcia_cs.c	2010-11-01 11:07:48.053337378 +0100
+@@ -258,7 +258,7 @@
+     NOTE(
+ 	"Card driver for '%s' has been set up: i/o %x, irq %d\n", 
+ 	devname, 
+-	link->io.BasePort1, 
++	(unsigned int) link->resource[0]->start,
+ 	link->irq
+     );
+     return 0;
