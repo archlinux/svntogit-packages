@@ -7,7 +7,6 @@ pkgname=('kdesdk-cervisia'
          'kdesdk-dolphin-plugins'
          'kdesdk-kapptemplate'
          'kdesdk-kate'
-         'kdesdk-kbugbuster'
          'kdesdk-kcachegrind'
          'kdesdk-kdeaccounts-plugin'
          'kdesdk-kdepalettes'
@@ -19,26 +18,30 @@ pkgname=('kdesdk-cervisia'
          'kdesdk-kstartperf'
          'kdesdk-kuiviewer'
          'kdesdk-lokalize'
+         'kdesdk-okteta'
          'kdesdk-poxml'
          'kdesdk-scripts'
          'kdesdk-strigi-analyzer'
          'kdesdk-umbrello')
-pkgver=4.5.5
+pkgver=4.6.0
 pkgrel=1
 arch=('i686' 'x86_64')
 url='http://www.kde.org'
 license=('GPL' 'LGPL' 'FDL')
 groups=('kde' 'kdesdk')
 makedepends=('pkgconfig' 'cmake' 'automoc4' 'boost' 'kdepim-runtime' 'subversion'
-	'kdebindings-python' 'docbook-xsl' 'antlr2' 'kdebase-konqueror')
-source=("http://download.kde.org/stable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2"
-	'fix-antlr2-executable.patch')
-sha1sums=('278c63099bdcd06cb8b60c1e179c3befede2cd33'
-          'dc2caaa29bebb49b496bd12eec4e5718e9af0c8f')
+        'docbook-xsl' 'antlr2' 'kdebase-konqueror')
+source=("http://download.kde.org/stable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2")
+sha1sums=('af8d67b1823f72b759ac604a1be15d8ec91b2b2c')
 
 build() {
 	cd ${srcdir}/${pkgbase}-${pkgver}
-	patch -Np1 -i ${srcdir}/fix-antlr2-executable.patch
+
+	# Fix python2 path
+	patch -Np1 -i ${srcdir}/fix-python2-path.patch
+	sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+		-e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
+		$(find . -name '*.py')
 
 	cd ${srcdir}
 	mkdir build
@@ -65,7 +68,9 @@ package_kdesdk-dolphin-plugins() {
 	pkgdesc='Extra Dolphin plugins'
 	depends=('kdebase-dolphin' 'subversion' 'git' 'kdesdk-kompare')
 	install='kdesdk.install'
-	cd $srcdir/build/dolphin-plugins
+	cd $srcdir/build/dolphin-plugins/git
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/dolphin-plugins/svn
 	make DESTDIR=$pkgdir install
 }
 
@@ -91,15 +96,6 @@ package_kdesdk-kate() {
 	make DESTDIR=$pkgdir install
 }
 
-package_kdesdk-kbugbuster() {
-	pkgdesc='KDE Bug Management'
-	depends=('kdepim-runtime')
-	url="http://kde.org/applications/development/kbugbuster/"
-	install='kdesdk.install'
-	cd $srcdir/build/kbugbuster
-	make DESTDIR=$pkgdir install
-}
-
 package_kdesdk-kcachegrind() {
 	pkgdesc='Visualization of Performance Profiling Data'
 	depends=('kdebase-runtime' 'python2')
@@ -110,9 +106,6 @@ package_kdesdk-kcachegrind() {
 	make DESTDIR=$pkgdir install
 	cd $srcdir/build/doc/kcachegrind
 	make DESTDIR=$pkgdir install
-
-	# Use the python2 executable
-	sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' ${pkgdir}/usr/bin/hotshot2calltree
 }
 
 package_kdesdk-kdeaccounts-plugin() {
@@ -196,9 +189,19 @@ package_kdesdk-lokalize() {
 	make DESTDIR=$pkgdir install
 	cd $srcdir/build/doc/lokalize
 	make DESTDIR=$pkgdir install
+}
 
-	# Use the python2 executable
-	find ${pkgdir} -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
+package_kdesdk-okteta() {
+	pkgdesc='Hex Editor'
+	depends=('kdebase-runtime')
+	replaces=('kdeutils-okteta')
+	conflicts=('kdeutils-okteta')
+	url="http://kde.org/applications/utilities/okteta"
+	install='kdesdk-okteta.install'
+	cd $srcdir/build/okteta
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/okteta
+	make DESTDIR=$pkgdir install
 }
 
 package_kdesdk-poxml() {
@@ -217,10 +220,6 @@ package_kdesdk-scripts() {
 	make DESTDIR=$pkgdir install
 	cd $srcdir/build/doc/scripts
 	make DESTDIR=$pkgdir install
-
-	# Use the python2 executable
-	find ${pkgdir} -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
-	sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' ${pkgdir}/usr/bin/kde_generate_export_header
 }
 
 package_kdesdk-strigi-analyzer() {
