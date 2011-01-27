@@ -31,6 +31,7 @@ source=(${_OO_milestone}.tar.xz
 	buildfix_FormulaMissingHeader.diff
 	http://cgit.freedesktop.org/ooo-build/ooo-build/plain/patches/dev300/sal-cpprt-gcc-4.5-workaround.diff
 	cppunit_gcc45.diff
+	KDESalGraphics_buildfix.diff
 	libx11.diff
 	openoffice.profile
 	${_additional_source_url}/63ddc5116488985e820075e65fbe6aa4-openssl-0.9.8o.tar.gz
@@ -108,18 +109,19 @@ source=(${_OO_milestone}.tar.xz
 	${_additional_source_url}/067201ea8b126597670b5eff72e1f66c-mythes-1.2.0.tar.gz
 	${_additional_source_url}/cf8a6967f7de535ae257fa411c98eb88-mdds_0.3.0.tar.bz2
 	${_additional_source_url}/ba2930200c9f019c2d93a8c88c651a0f-flow-engine-0.9.4.zip)
-options=('!distcc' '!ccache' '!makeflags')
+options=('!distcc' '!ccache')
 md5sums=('6f79df8abccdabab2a3a38f5e78037f2'
          'e3a0b76dcd876f3d721ee7183729153d'
-         '09094988c7bfaa90e5d014523d558ebb'
+         'e1cbc51a71749066200b282d89f698f9'
          '71f136a31e296a04ab68932a31dd533e'
          'c1d61e74909812122ddb1003b7a6d801'
          '1dc7480a04f572ad136d35923a2af66d'
          '863a3ab2c17a3d11b8fa3ec321986366'
          'cf01fa2669f828864146842e040e3cf8'
          'bb5ada95f7b11a5cac5d669f7ae8baaa'
+         '45e0746ccff33614b35fe56906d7eae4'
          'ad01b65e677334e0764ad31f24aee428'
-         '9fbee64a4a39e33a646c750d4978f48f'
+         '749ea5f5d878baeb64cc6674e6225599'
          '63ddc5116488985e820075e65fbe6aa4'
          '09357cc74975b01714e00c5899ea1881'
          '0b49ede71c21c0599b0cc19b353a6cb3'
@@ -223,7 +225,9 @@ build() {
 	[ -z "${ANT_HOME}" ] && . /etc/profile.d/apache-ant.sh
 	
 	# some speedups
-	export SMP="6"
+	echo ${MAKEFLAGS}
+	export SMP=${MAKEFLAGS/-j/}; echo ${SMP}
+	export SMP="16"
 #	export SMP="1"
 	MAXMODULESFLAG="-P${SMP}"
 	MAXPROCESSESFLAG="-P${SMP}"
@@ -236,6 +240,8 @@ build() {
 #	sed -i "s:libwpd-0.8:libwpd-0.9:g" configure.in
 	# fix new libx11 headers - see http://www.openoffice.org/issues/show_bug.cgi?id=115871 | https://bugs.gentoo.org/show_bug.cgi?id=344993
 	patch -Np0 -i ${srcdir}/libx11.diff
+	# http://www.openoffice.org/issues/show_bug.cgi?id=116562
+	patch -Np1 -i ${srcdir}/KDESalGraphics_buildfix.diff
 	
 	# gcc4.5 fix
 	patch -Np0 -i ${srcdir}/sal-cpprt-gcc-4.5-workaround.diff
@@ -277,9 +283,8 @@ build() {
 
 	./configure --with-build-version="${pkgver} ArchLinux build-${pkgrel} (${_OO_milestone})" \
 	--with-vendor="ArchLinux"\
-	--with-unix-wrapper="openoffice" \
-	--with-binsuffix="devel" \
 	--prefix=/usr --exec-prefix=/usr\
+	--with-unix-wrapper="openoffice-devel" \
 	--with-lang="en-US"\
 	--disable-gnome-vfs\
 	--disable-systray\
@@ -328,29 +333,15 @@ build() {
 	--with-external-tar=${SRCDEST}\
 	 $EXTRAOPTS
 
-
-	#disable extensions for build speedup and less pkg size
-#	--enable-minimizer\
-#	--enable-pdfimport\
-#	--enable-presenter-console\
-#	--enable-presenter-extra-ui\
-#	--enable-report-builder\
-#	--enable-wiki-publisher\
-
-# --enable-binfilter
-
 # see http://qa.openoffice.org/issues/show_bug.cgi?id=110136
 #	--with-saxon-jar=/usr/share/java/saxon/saxon9he.jar\
-
-#	--enable-layout\ /bin/bash: tralay: command not found ???
-#	--with-system-jfreereport
 
 	# get external source tarballs if needed
 	export TARFILE_LOCATION=${SRCDEST}
 	./fetch_tarballs.sh ooo.lst
 	# remove tmp source dir or makechrootpkg would fail to copy back the sources
 	rmdir ${SRCDEST}/tmp
-	
+
 	# Setup environment for build
 	if [ "$CARCH" = "x86_64" ]; then
 	  source LinuxX86-64Env.Set.sh
@@ -370,7 +361,7 @@ package_openoffice-base-devel() {
  install=openoffice.install
  depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
           'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.6" 'libxslt'
-	  'redland>=1.0.11.99' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
+	  'redland' 'libgraphite' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'
 	  'hicolor-icon-theme' 'desktop-file-utils' 'gtk2') # keep gtk2 for install script
 	  # 'libwpd'
 	  # 'saxon' 
@@ -390,11 +381,12 @@ package_openoffice-base-devel() {
              'lucene:		full-text search engine library for Java needed in the help section'
              'sane:		for scanner access'
              'unixodbc:		adds ODBC database support')
- backup=(usr/lib/openoffice.org3-dev/program/sofficerc etc/profile.d/openoffice-devel.sh)
+ backup=(usr/lib/openoffice.org3-devel/program/sofficerc etc/profile.d/openoffice-devel.sh)
  provides=('openoffice-base' 'openoffice-en-US')
 
 
 	cd ${srcdir}/${_OO_milestone}
+
 	# install binaries
 	if [ "$CARCH" = "x86_64" ]; then
                 cp -R instsetoo_native/unxlngx6.pro/OpenOffice/native/install/en-US/linux-2.6-x86_64/buildroot/* ${pkgdir}/
@@ -406,35 +398,18 @@ package_openoffice-base-devel() {
 	mv ${pkgdir}/opt/* ${pkgdir}/usr/lib/
 	rmdir ${pkgdir}/opt
 
-       # install extensions
-#       pushd ${srcdir}/${_OO_milestone}/solver/300/unxlng?6.pro/bin
-#         install -D -m644 report-builder.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/report-builder.oxt
-#	 install -D -m644 swext/wiki-publisher.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/wiki-publisher.oxt
-#	 install -D -m644 minimizer/presentation-minimizer.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presentation-minimizer.oxt
-#	 install -D -m644 presenter/presenter-screen.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/presenter-screen.oxt
-#	 install -D -m644 pdfimport/pdfimport.oxt ${pkgdir}/usr/lib/openoffice.org3/share/extension/install/pdfimport.oxt
-#       popd
-
-
 	# prepare filesystem entries
 	mkdir -p ${pkgdir}/usr/{bin,share/applications}
 	mkdir -p ${pkgdir}/usr/share/icons/{hicolor,locolor}
-               
+
 	# install shortcuts
 	mv ${pkgdir}/usr/lib/openoffice.org3/share/xdg/*.desktop  ${pkgdir}/usr/share/applications
-	# add startcenter desktop file
+	# add startcenter desktop file - compare to the one in sysui/desktop/menus/
 	install -D -m644 ${srcdir}/startcenter.desktop ${pkgdir}/usr/share/applications/startcenter.desktop
 
 	cd ${pkgdir}/usr/share/applications
 	sed -i -e 's|Exec=openoffice.org3|Exec=/usr/bin/soffice|g' *.desktop
 	sed -i -e 's|Exec=/usr/bin/soffice-printeradmin|Exec=/usr/bin/spadmin|g' printeradmin.desktop
-	# fix exec commands in shortcuts for Xfce menu
-	sed -i -e 's|base %U|base|g' base.desktop
-	sed -i -e 's|calc %U|calc|g' calc.desktop
-	sed -i -e 's|draw %U|draw|g' draw.desktop
-	sed -i -e 's|impress %U|impress|g' impress.desktop
-	sed -i -e 's|math %U|math|g' math.desktop
-	sed -i -e 's|writer %U|writer|g' writer.desktop
 	# remove quickstarter, we disabled it above
 	rm -rf ${pkgdir}/usr/share/applications/qstart.desktop
 	# fix icons in desktop files
@@ -453,44 +428,45 @@ package_openoffice-base-devel() {
 	chown root.root -R ${pkgdir}/
 	chmod +rX -R ${pkgdir}/usr
 
-	## Develize it!
-	cd ${pkgdir}/usr/lib/
-	mv openoffice.org openoffice.org-dev
-	mv openoffice.org3 openoffice.org3-dev
-	# fix link
-	ln -sf /usr/lib/openoffice.org-dev/basis3.4 ${pkgdir}/usr/lib/openoffice.org3-dev/basis-link
-	ln -s /usr/lib/openoffice.org3-dev/program/soffice.bin ${pkgdir}/usr/lib/openoffice.org3-dev/program/soffice-dev.bin
+	# set desktop variable to force gtk/gnome vcl usage
+	install -m755 -d ${pkgdir}/etc/profile.d
+	install -m755 ${srcdir}/openoffice.profile ${pkgdir}/etc/profile.d/openoffice-devel.sh
 
-	sed -i -e 's|Exec=/usr/bin/soffice|Exec=/usr/bin/soffice-dev|g' ${pkgdir}/usr/share/applications/*.desktop
-	sed -i -e 's|Exec=/usr/bin/spadmin|Exec=/usr/bin/spadmin-dev|g' ${pkgdir}/usr/share/applications/printeradmin.desktop
-
+        # make symlinks
 	cd ${pkgdir}/usr/bin
-	rm -f soffice spadmin
-	ln -sf /usr/lib/openoffice.org3-dev/program/soffice soffice-dev
-	ln -sf /usr/lib/openoffice.org3-dev/program/spadmin spadmin-dev
-	ln -sf /usr/lib/openoffice.org3-dev/program/unopkg unopkg-dev
-	
-	cd ${pkgdir}/usr/share/applications/
-	for desktopz in *.desktop
-	   do mv $desktopz Dev-$desktopz
-	done
-	
-	for i in `find ${pkgdir}/usr/share/icons -name '*.png'`  ; do  mv $i `dirname $i`/dev-`basename $i` ; done ;
-	
-	cd ${pkgdir}/usr/share/applications/
-	sed -i -e 's|Icon=|Icon=dev-|g' ${pkgdir}/usr/share/applications/*.desktop
-	sed -i -e 's|OpenOffice\.org\ 3\.4|OpenOffice\.org\ devel|g' ${pkgdir}/usr/share/applications/*.desktop
-
-	ln -vsf /usr/lib/openoffice.org3-dev/program/soffice.bin soffice-dev.bin
-	
-       # set desktop variable to force gtk/gnome vcl usage
-       install -m755 -d ${pkgdir}/etc/profile.d
-       install -m755 ${srcdir}/openoffice.profile ${pkgdir}/etc/profile.d/openoffice-devel.sh
+#	rm -f soffice spadmin
+	ln -sf /usr/lib/openoffice.org3-devel/program/soffice openoffice-devel
+	ln -sf /usr/lib/openoffice.org3-devel/program/spadmin spadmin-devel
+	ln -sf /usr/lib/openoffice.org3-devel/program/unopkg unopkg-devel
 
 	# link the mozilla-plugin
 	mkdir -p ${pkgdir}/usr/lib/mozilla/plugins/
-	ln -vs /usr/lib/openoffice.org3-dev/program/libnpsoplugin.so  ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so
-	mv ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin.so ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-dev.so
+	ln -vs /usr/lib/openoffice.org3-devel/program/libnpsoplugin.so  ${pkgdir}/usr/lib/mozilla/plugins/libnpsoplugin-devel.so
+
+	# make it not conflict with LibreOffice and the stable/beta/devel branches	
+	cd ${pkgdir}/usr/share/applications/
+	for desktopz in *.desktop
+	   do mv $desktopz openoffice-devel-$desktopz
+	done
+
+	## Develize it!
+	cd ${pkgdir}/usr/lib/
+	mv openoffice.org openoffice.org-devel
+	mv openoffice.org3 openoffice.org3-devel
+	# fix links
+	ln -sf /usr/lib/openoffice.org-devel/basis3.4 ${pkgdir}/usr/lib/openoffice.org3-devel/basis-link
+	ln -s /usr/lib/openoffice.org3-devel/program/soffice.bin ${pkgdir}/usr/lib/openoffice.org3-devel/program/soffice-dev.bin
+	sed -i -e 's|Exec=/usr/bin/spadmin|Exec=/usr/bin/spadmin-devel|g' ${pkgdir}/usr/share/applications/openoffice-devel-printeradmin.desktop
+
+	for i in `find ${pkgdir}/usr/share/icons -name '*.png'`  ; do  mv $i `dirname $i`/devel-`basename $i` ; done ;
+	
+	cd ${pkgdir}/usr/share/applications/
+	sed -i -e 's|Icon=|Icon=devel-|g' ${pkgdir}/usr/share/applications/*.desktop
+	sed -i -e 's|OpenOffice\.org\ 3\.4|OpenOffice\.org\ devel|g' ${pkgdir}/usr/share/applications/*.desktop
+
+
+	# fix for unixwrapper usage
+	ln -vs /usr/lib/openoffice.org3-devel/program/soffice.bin ${pkgdir}/usr/lib/openoffice.org3-devel/program/openoffice-devel.bin
 }
 
 package_openoffice-sdk-devel() {
@@ -515,10 +491,10 @@ package_openoffice-sdk-devel() {
 	
 	for file in setsdkenv_unix.csh setsdkenv_unix.sh ; do
         sed -e "s,@OO_SDK_NAME@,sdk," \
-            -e "s,@OO_SDK_HOME@,/usr/lib/openoffice-dev/basis-link/sdk," \
-            -e "s,@OFFICE_HOME@,/usr/lib/openoffice-dev," \
-            -e "s,@OFFICE_BASE_HOME@,/usr/lib/openoffice-dev/basis-link," \
-            -e "s,@OO_SDK_URE_HOME@,/usr/lib/openoffice-dev/basis-link/ure-link," \
+            -e "s,@OO_SDK_HOME@,/usr/lib/openoffice.org3-devel/basis-link/sdk," \
+            -e "s,@OFFICE_HOME@,/usr/lib/openoffice.org-devel," \
+            -e "s,@OFFICE_BASE_HOME@,/usr/lib/openoffice.org3-devel/basis-link," \
+            -e "s,@OO_SDK_URE_HOME@,/usr/lib/openoffice.org3-devel/basis-link/ure-link," \
             -e "s,@OO_SDK_MAKE_HOME@,/usr/bin," \
             -e "s,@OO_SDK_ZIP_HOME@,/usr/bin," \
             -e "s,@OO_SDK_CPP_HOME@,/usr/bin," \
@@ -537,5 +513,5 @@ package_openoffice-sdk-devel() {
 	
 	## Develize it!
 	cd ${pkgdir}/usr/lib/
-	mv openoffice.org openoffice.org-dev
+	mv openoffice.org openoffice.org-devel
 }
