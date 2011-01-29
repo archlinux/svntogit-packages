@@ -1,0 +1,1600 @@
+From 437264ccabf6f292725c1bf01ba865b7944db318 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=A9r=C3=B4me=20Guelfucci?= <jeromeg@xfce.org>
+Date: Thu, 27 Jan 2011 14:53:15 +0100
+Subject: [PATCH] Make the plugin compatible with Xfce 4.8 (bug #6965, bug #7189).
+
+Based on an initial patch by Nick Schermer which did not apply anymore.
+Also added back scrolling and animation option lost with this patch.
+
+Removed encoding key from desktop file..
+---
+ panel-plugin/Makefile.am           |   18 +-
+ panel-plugin/weather-config.c      |   18 +-
+ panel-plugin/weather-data.c        |    2 +-
+ panel-plugin/weather-http.c        |   18 +-
+ panel-plugin/weather-icon.c        |    8 +-
+ panel-plugin/weather-parsers.c     |   40 ++--
+ panel-plugin/weather-scrollbox.c   |  545 +++++++++---------------------------
+ panel-plugin/weather-scrollbox.h   |   24 +-
+ panel-plugin/weather-search.c      |   26 +-
+ panel-plugin/weather-summary.c     |   20 +-
+ panel-plugin/weather-translate.c   |    4 +-
+ panel-plugin/weather.c             |   64 ++---
+ panel-plugin/weather.desktop.in.in |    2 -
+ panel-plugin/weather.h             |    2 +-
+ 14 files changed, 248 insertions(+), 543 deletions(-)
+
+diff --git a/panel-plugin/Makefile.am b/panel-plugin/Makefile.am
+index 7b6df26..9b201f5 100644
+--- a/panel-plugin/Makefile.am
++++ b/panel-plugin/Makefile.am
+@@ -1,14 +1,14 @@
+ INCLUDES =								\
+-        -I$(top_srcdir)                                         	\
++  -I$(top_srcdir)                                         	\
+ 	-DTHEMESDIR=\"$(datadir)/xfce4/weather/icons\" 			\
+ 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\"				\
+ 	-DG_LOG_DOMAIN=\"weather\"
+ 
+-plugindir = $(libexecdir)/xfce4/panel-plugins
+-
+ plugin_PROGRAMS =							\
+ 	xfce4-weather-plugin
+ 
++plugindir = $(libexecdir)/xfce4/panel-plugins
++
+ xfce4_weather_plugin_SOURCES =						\
+ 	weather.c							\
+ 	weather.h							\
+@@ -34,18 +34,18 @@ xfce4_weather_plugin_SOURCES =						\
+ xfce4_weather_plugin_CFLAGS =						\
+ 	$(LIBXFCE4PANEL_CFLAGS)						\
+ 	$(LIBXFCEGUI4_CFLAGS)						\
+-        $(LIBXFCE4UTIL_CFLAGS)                                   	\
+-        $(GTK_CFLAGS)                                            	\
++	$(LIBXFCE4UTIL_CFLAGS)                                   	\
++	$(GTK_CFLAGS)                                            	\
+ 	$(LIBXML_CFLAGS)
+ 
+ xfce4_weather_plugin_LDADD =						\
+-        $(LIBXFCE4PANEL_LIBS)						\
+-        $(LIBXFCE4UTIL_LIBS)                                     	\
++	$(LIBXFCE4PANEL_LIBS)						\
++	$(LIBXFCE4UTIL_LIBS)                                     	\
+ 	$(LIBXFCEGUI4_LIBS)						\
+-        $(GTK_LIBS)                                              	\
++	$(GTK_LIBS)                                              	\
+ 	$(LIBXML_LIBS)							\
+ 	$(LIBRESOLV)
+-	
++
+ desktopdir = $(datadir)/xfce4/panel-plugins
+ desktop_in_in_files = weather.desktop.in.in
+ desktop_in_files = $(desktop_in_in_files:.desktop.in.in=.desktop.in)
+diff --git a/panel-plugin/weather-config.c b/panel-plugin/weather-config.c
+index 74b4745..d0c86fd 100644
+--- a/panel-plugin/weather-config.c
++++ b/panel-plugin/weather-config.c
+@@ -1,5 +1,5 @@
+ /*  Copyright (c) 2003-2007 Xfce Development Team
+- * 
++ *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -214,7 +214,7 @@ apply_options (xfceweather_dialog *dialog)
+   	GTK_TOGGLE_BUTTON(dialog->chk_animate_transition));
+ 
+   gtk_scrollbox_set_animate(GTK_SCROLLBOX(data->scrollbox), data->animation_transitions);
+-  
++
+   if (!gtk_toggle_button_get_active
+       (GTK_TOGGLE_BUTTON (dialog->chk_proxy_use)))
+     data->proxy_fromenv = FALSE;
+@@ -276,7 +276,7 @@ option_i (datas opt)
+ static void auto_locate_cb(const gchar *loc_name, const gchar *loc_code, gpointer user_data)
+ {
+   xfceweather_dialog *dialog = (xfceweather_dialog *) user_data;
+-  
++
+   if (loc_code && loc_name) {
+     gtk_entry_set_text (GTK_ENTRY (dialog->txt_loc_code), loc_code);
+     gtk_label_set_text (GTK_LABEL (dialog->txt_loc_name), loc_name);
+@@ -342,7 +342,7 @@ create_config_dialog (xfceweather_data *data,
+   sg = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+   sg_buttons = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+ 
+-  dialog = panel_slice_new0 (xfceweather_dialog);
++  dialog = g_slice_new0 (xfceweather_dialog);
+ 
+   dialog->wd = (xfceweather_data *) data;
+   dialog->dialog = gtk_widget_get_toplevel (vbox);
+@@ -376,10 +376,10 @@ create_config_dialog (xfceweather_data *data,
+ 
+   gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
+   gtk_misc_set_alignment (GTK_MISC (dialog->txt_loc_name), 0, 0.5);
+-  
++
+ #if GTK_CHECK_VERSION(2,12,0)
+   gtk_label_set_ellipsize (GTK_LABEL(dialog->txt_loc_name), PANGO_ELLIPSIZE_END);
+-#endif  
++#endif
+   if (dialog->wd->location_code != NULL)
+     gtk_entry_set_text (GTK_ENTRY (dialog->txt_loc_code),
+                         dialog->wd->location_code);
+@@ -387,9 +387,9 @@ create_config_dialog (xfceweather_data *data,
+   if (dialog->wd->location_name != NULL)
+     gtk_label_set_text (GTK_LABEL (dialog->txt_loc_name),
+                         dialog->wd->location_name);
+-  else if (dialog->wd->weatherdata && 
++  else if (dialog->wd->weatherdata &&
+            get_data (dialog->wd->weatherdata, DNAM) != NULL &&
+-	   strlen (get_data (dialog->wd->weatherdata, DNAM)) > 1)  
++	   strlen (get_data (dialog->wd->weatherdata, DNAM)) > 1)
+     gtk_label_set_text (GTK_LABEL (dialog->txt_loc_name),
+                         get_data (dialog->wd->weatherdata, DNAM));
+   else
+@@ -543,7 +543,7 @@ create_config_dialog (xfceweather_data *data,
+                     G_CALLBACK (cb_deloption), dialog);
+ 
+ 
+-  
++
+   dialog->chk_animate_transition =
+     gtk_check_button_new_with_label (_("Animate transitions between labels"));
+   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON
+diff --git a/panel-plugin/weather-data.c b/panel-plugin/weather-data.c
+index e72b995..9c36d07 100644
+--- a/panel-plugin/weather-data.c
++++ b/panel-plugin/weather-data.c
+@@ -30,7 +30,7 @@
+ #define DATAS_DAYF  0x0300
+ #define DATAS_LNK   0x0400
+ 
+-#define EMPTY_STRING "-"
++#define EMPTY_STRING "99"
+ #define CHK_NULL(str) (str ? str : EMPTY_STRING);
+ 
+ static const gchar *
+diff --git a/panel-plugin/weather-http.c b/panel-plugin/weather-http.c
+index 30917de..96758fa 100644
+--- a/panel-plugin/weather-http.c
++++ b/panel-plugin/weather-http.c
+@@ -39,7 +39,7 @@
+ #include <glib.h>
+ #include <gtk/gtk.h>
+ #include <libxfce4util/libxfce4util.h>
+-#include <libxfce4panel/xfce-panel-macros.h>
++#include <libxfce4panel/libxfce4panel.h>
+ 
+ #include "weather-http.h"
+ 
+@@ -149,7 +149,7 @@ weather_http_receive_data_idle (gpointer user_data)
+   gchar              *request;
+   fd_set              fds;
+   struct timeval      select_timeout;
+-  
++
+   struct addrinfo     h, *r, *a;
+   gchar      	     *port = NULL;
+   gint                err;
+@@ -183,12 +183,12 @@ weather_http_receive_data_idle (gpointer user_data)
+   h.ai_family = AF_UNSPEC;
+   h.ai_socktype = SOCK_STREAM;
+   h.ai_protocol = IPPROTO_TCP;
+-  
++
+   if (connection->proxy_port)
+   	port = g_strdup_printf("%d", connection->proxy_port);
+   else
+   	port = g_strdup("80");
+-  
++
+   err = getaddrinfo(connection->proxy_host ? connection->proxy_host : connection->hostname,
+   		port, &h, &r);
+ 
+@@ -214,7 +214,7 @@ weather_http_receive_data_idle (gpointer user_data)
+     return FALSE;
+ 
+   /* open the socket */
+-  
++
+   for (a = r; a != NULL; a = a->ai_next) {
+     connection->fd = socket (a->ai_family, a->ai_socktype, a->ai_protocol);
+     if (connection->fd < 0) {
+@@ -232,7 +232,7 @@ weather_http_receive_data_idle (gpointer user_data)
+ #endif
+     if (m == 0)
+       break;
+-    else 
++    else
+       err = errno;
+ 
+     if (weather_http_receive_data_check (connection, timeout))
+@@ -271,7 +271,7 @@ weather_http_receive_data_idle (gpointer user_data)
+     request = g_strdup_printf ("GET %s HTTP/1.1\r\n"
+     				"Host: %s\r\n"
+ 				"Connection: close\r\n"
+-				"\r\n", 
++				"\r\n",
+ 				connection->url, connection->hostname);
+ 
+   /* send the request */
+@@ -481,7 +481,7 @@ weather_http_receive_data_destroyed (gpointer user_data)
+   g_free (connection->proxy_host);
+ 
+   /* cleanup */
+-  panel_slice_free (WeatherConnection, connection);
++  g_slice_free (WeatherConnection, connection);
+ }
+ 
+ 
+@@ -497,7 +497,7 @@ weather_http_receive_data (const gchar  *hostname,
+   WeatherConnection *connection;
+ 
+   /* create slice */
+-  connection = panel_slice_new0 (WeatherConnection);
++  connection = g_slice_new0 (WeatherConnection);
+ 
+   /* set connection properties */
+   connection->hostname = g_strdup (hostname);
+diff --git a/panel-plugin/weather-icon.c b/panel-plugin/weather-icon.c
+index f403e86..669e71d 100644
+--- a/panel-plugin/weather-icon.c
++++ b/panel-plugin/weather-icon.c
+@@ -38,10 +38,16 @@ get_icon (const gchar *number,
+   GdkPixbuf *image = NULL;
+   gchar     *filename;
+ 
++  if (number == NULL || strcmp (number, "-") == 0)
++    number = "99";
++
+   filename = g_strdup_printf ("%s" G_DIR_SEPARATOR_S "%s" G_DIR_SEPARATOR_S "%s.png",
+                               THEMESDIR, DEFAULT_W_THEME, number);
+ 
+-  image = gdk_pixbuf_new_from_file_at_scale (filename, size, size, TRUE, NULL);
++  if (size == -1)
++    image = gdk_pixbuf_new_from_file (filename, NULL);
++  else
++    image = gdk_pixbuf_new_from_file_at_scale (filename, size, size, TRUE, NULL);
+ 
+   if (G_UNLIKELY (!image)) {
+     g_warning ("Unable to open image: %s", filename);
+diff --git a/panel-plugin/weather-parsers.c b/panel-plugin/weather-parsers.c
+index b0cccfd..1493153 100644
+--- a/panel-plugin/weather-parsers.c
++++ b/panel-plugin/weather-parsers.c
+@@ -1,5 +1,5 @@
+ /*  Copyright (c) 2003-2007 Xfce Development Team
+- * 
++ *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -20,7 +20,7 @@
+ #endif
+ 
+ #include "weather-parsers.h"
+-#include <libxfce4panel/xfce-panel-macros.h>
++#include <libxfce4panel/libxfce4panel.h>
+ 
+ 
+ 
+@@ -36,7 +36,7 @@ parse_weather (xmlNode *cur_node)
+       return NULL;
+     }
+ 
+-  if ((ret = panel_slice_new0 (xml_weather)) == NULL)
++  if ((ret = g_slice_new0 (xml_weather)) == NULL)
+     return NULL;
+ 
+   for (cur_node = cur_node->children; cur_node; cur_node = cur_node->next)
+@@ -78,7 +78,7 @@ parse_loc (xmlNode *cur_node)
+ {
+   xml_loc *ret;
+ 
+-  if ((ret = panel_slice_new0 (xml_loc)) == NULL)
++  if ((ret = g_slice_new0 (xml_loc)) == NULL)
+     return NULL;
+ 
+ 
+@@ -103,7 +103,7 @@ parse_lnk (xmlNode *cur_node)
+ {
+   xml_lnk *ret;
+   int i = 0;
+-  if ((ret = panel_slice_new0 (xml_lnk)) == NULL)
++  if ((ret = g_slice_new0 (xml_lnk)) == NULL)
+     return NULL;
+ 
+ 
+@@ -136,7 +136,7 @@ parse_uv (xmlNode *cur_node)
+ {
+   xml_uv *ret;
+ 
+-  if ((ret = panel_slice_new0 (xml_uv)) == NULL)
++  if ((ret = g_slice_new0 (xml_uv)) == NULL)
+     return NULL;
+ 
+   for (cur_node = cur_node->children; cur_node; cur_node = cur_node->next)
+@@ -160,7 +160,7 @@ parse_bar (xmlNode *cur_node)
+ {
+   xml_bar *ret;
+ 
+-  if ((ret = panel_slice_new0 (xml_bar)) == NULL)
++  if ((ret = g_slice_new0 (xml_bar)) == NULL)
+     return NULL;
+ 
+   for (cur_node = cur_node->children; cur_node; cur_node = cur_node->next)
+@@ -184,7 +184,7 @@ parse_wind (xmlNode *cur_node)
+ {
+   xml_wind *ret;
+ 
+-  if ((ret = panel_slice_new0 (xml_wind)) == NULL)
++  if ((ret = g_slice_new0 (xml_wind)) == NULL)
+     return NULL;
+ 
+   for (cur_node = cur_node->children; cur_node; cur_node = cur_node->next)
+@@ -212,7 +212,7 @@ parse_cc (xmlNode *cur_node)
+ {
+   xml_cc *ret;
+ 
+-  if ((ret = panel_slice_new0 (xml_cc)) == NULL)
++  if ((ret = g_slice_new0 (xml_cc)) == NULL)
+     return NULL;
+ 
+   for (cur_node = cur_node->children; cur_node; cur_node = cur_node->next)
+@@ -256,7 +256,7 @@ parse_part (xmlNode *cur_node)
+ {
+   xml_part *ret;
+ 
+-  if ((ret = panel_slice_new0 (xml_part)) == NULL)
++  if ((ret = g_slice_new0 (xml_part)) == NULL)
+     return NULL;
+ 
+   for (cur_node = cur_node->children; cur_node; cur_node = cur_node->next)
+@@ -287,7 +287,7 @@ parse_dayf (xmlNode *cur_node)
+   xml_dayf *ret;
+   gchar    *value;
+ 
+-  if ((ret = panel_slice_new0 (xml_dayf)) == NULL)
++  if ((ret = g_slice_new0 (xml_dayf)) == NULL)
+     return NULL;
+ 
+   ret->day = (gchar *) xmlGetProp (cur_node, (const xmlChar *) "t");
+@@ -332,7 +332,7 @@ xml_uv_free (xml_uv * data)
+   g_free (data->i);
+   g_free (data->t);
+ 
+-  panel_slice_free (xml_uv, data);
++  g_slice_free (xml_uv, data);
+ }
+ 
+ 
+@@ -345,7 +345,7 @@ xml_wind_free (xml_wind * data)
+   g_free (data->d);
+   g_free (data->t);
+ 
+-  panel_slice_free (xml_wind, data);
++  g_slice_free (xml_wind, data);
+ }
+ 
+ 
+@@ -356,7 +356,7 @@ xml_bar_free (xml_bar * data)
+   g_free (data->r);
+   g_free (data->d);
+ 
+-  panel_slice_free (xml_bar, data);
++  g_slice_free (xml_bar, data);
+ }
+ 
+ 
+@@ -383,7 +383,7 @@ xml_cc_free (xml_cc * data)
+   if (data->bar)
+     xml_bar_free (data->bar);
+ 
+-  panel_slice_free (xml_cc, data);
++  g_slice_free (xml_cc, data);
+ }
+ 
+ 
+@@ -395,7 +395,7 @@ xml_loc_free (xml_loc *data)
+   g_free (data->sunr);
+   g_free (data->suns);
+ 
+-  panel_slice_free (xml_loc, data);
++  g_slice_free (xml_loc, data);
+ }
+ 
+ static void
+@@ -406,7 +406,7 @@ xml_lnk_free (xml_lnk *data)
+     g_free (data->lnk[i]);
+     g_free (data->lnk_txt[i]);
+   }
+-  panel_slice_free (xml_lnk, data);
++  g_slice_free (xml_lnk, data);
+ }
+ 
+ static void
+@@ -423,7 +423,7 @@ xml_part_free (xml_part *data)
+   if (data->wind)
+     xml_wind_free (data->wind);
+ 
+-  panel_slice_free (xml_part, data);
++  g_slice_free (xml_part, data);
+ }
+ 
+ 
+@@ -445,7 +445,7 @@ xml_dayf_free (xml_dayf *data)
+   if (data->part[1])
+     xml_part_free (data->part[1]);
+ 
+-  panel_slice_free (xml_dayf, data);
++  g_slice_free (xml_dayf, data);
+ }
+ 
+ 
+@@ -475,5 +475,5 @@ xml_weather_free (xml_weather *data)
+         }
+     }
+ 
+-  panel_slice_free (xml_weather, data);
++  g_slice_free (xml_weather, data);
+ }
+diff --git a/panel-plugin/weather-scrollbox.c b/panel-plugin/weather-scrollbox.c
+index 90862f6..380105b 100644
+--- a/panel-plugin/weather-scrollbox.c
++++ b/panel-plugin/weather-scrollbox.c
+@@ -23,443 +23,227 @@
+ 
+ #include <glib.h>
+ #include <gtk/gtk.h>
+-#include <libxfce4panel/xfce-panel-macros.h>
++#include <libxfce4panel/libxfce4panel.h>
+ 
+ #include "weather-scrollbox.h"
+ #define LABEL_REFRESH 3000
+ #define LABEL_SPEED   25
+ 
++static void gtk_scrollbox_finalize (GObject *object);
++static void gtk_scrollbox_size_request (GtkWidget *widget, GtkRequisition *requisition);
++static gboolean gtk_scrollbox_expose_event (GtkWidget *widget, GdkEventExpose *event);
++static gboolean gtk_scrollbox_fade_out (gpointer user_data);
+ 
++G_DEFINE_TYPE (GtkScrollbox, gtk_scrollbox, GTK_TYPE_DRAWING_AREA)
+ 
+-typedef struct
+-{
+-  gchar      *msg;
+-  GdkPixmap *pixmap;
+-}
+-Label;
+-
+-enum
++static void
++gtk_scrollbox_class_init (GtkScrollboxClass *klass)
+ {
+-  GTK_SCROLLBOX_ENABLECB = 1
+-};
+-
++  GObjectClass   *gobject_class;
++  GtkWidgetClass *widget_class;
+ 
++  gobject_class = G_OBJECT_CLASS (klass);
++  gobject_class->finalize = gtk_scrollbox_finalize;
+ 
+-static GObjectClass *parent_class;
+-static gboolean      start_draw_down (GtkScrollbox * self);
+-static void          start_draw_up (GtkScrollbox * self);
+-static void          stop_callback (GtkScrollbox * self);
+-static GdkPixmap    *make_pixmap (GtkScrollbox *, gchar *);
++  widget_class = GTK_WIDGET_CLASS (klass);
++  widget_class->size_request = gtk_scrollbox_size_request;
++  widget_class->expose_event = gtk_scrollbox_expose_event;
++  //widget_class->style_changed = gtk_scrollbox_style_changed;
++}
+ 
+ 
+ 
+ static void
+-free_label (Label *lbl)
++gtk_scrollbox_init (GtkScrollbox *self)
+ {
+-  if (lbl->pixmap)
+-    g_object_unref (G_OBJECT (lbl->pixmap));
+-  if (lbl->msg)
+-    g_free (lbl->msg);
++  GTK_WIDGET_SET_FLAGS (self, GTK_NO_WINDOW);
+ 
+-  panel_slice_free (Label, lbl);
++  self->labels = NULL;
++  self->timeout_id = 0;
++  self->offset = 0;
++  self->active = NULL;
+ }
+ 
+ 
+ 
+-static gboolean
+-draw_up (GtkScrollbox *self)
++static void
++gtk_scrollbox_finalize (GObject *object)
+ {
+-  GdkRectangle update_rect = { 0, 0,
+-                               GTK_WIDGET (self)->allocation.width,
+-                               GTK_WIDGET (self)->allocation.height
+-                             };
++  GtkScrollbox *self = GTK_SCROLLBOX (object);
+ 
+-  if (self->draw_offset == 0)
+-    {
+-      self->draw_timeout = g_timeout_add (LABEL_REFRESH,
+-                                          (GSourceFunc) start_draw_down,
+-                                          self);
++  /* stop running timeout */
++  if (self->timeout_id != 0)
++    g_source_remove (self->timeout_id);
+ 
+-      return FALSE;
+-    }
+-  else
+-    self->draw_offset++;
++  /* free all the labels */
++  g_slist_foreach (self->labels, (GFunc) g_object_unref, NULL);
++  g_slist_free (self->labels);
+ 
+-  gtk_widget_draw (GTK_WIDGET (self), &update_rect);
+-
+-  return TRUE;
++  G_OBJECT_CLASS (gtk_scrollbox_parent_class)->finalize (object);
+ }
+ 
+ 
+ 
+-static gboolean
+-draw_down (GtkScrollbox *self)
++static void
++gtk_scrollbox_size_request (GtkWidget      *widget,
++                            GtkRequisition *requisition)
+ {
+-  GdkRectangle update_rect = { 0, 0,
+-                               GTK_WIDGET (self)->allocation.width,
+-                               GTK_WIDGET (self)->allocation.height
+-                             };
++  GtkScrollbox   *self = GTK_SCROLLBOX (widget);
++  GSList         *li;
++  PangoLayout    *layout;
++  PangoRectangle  logical_rect;
++  gint            width, height;
++
++  requisition->width = 0;
++  requisition->height = 0;
+ 
+-  if (self->draw_offset == self->draw_maxoffset)
++  for (li = self->labels; li != NULL; li = li->next)
+     {
+-      self->draw_timeout = 0;
+-      start_draw_up (self);
++      layout = PANGO_LAYOUT (li->data);
++      pango_layout_get_extents (layout, NULL, &logical_rect);
++      width = PANGO_PIXELS (logical_rect.width);
++      height = PANGO_PIXELS (logical_rect.height);
+ 
+-      return FALSE;
++      requisition->width = MAX (width, requisition->width);
++      requisition->height = MAX (height, requisition->height);
+     }
+-  else
+-    self->draw_offset--;
+-
+-  gtk_widget_draw (GTK_WIDGET (self), &update_rect);
+-
+-  return TRUE;
+ }
+ 
+ 
+ 
+-static void
+-start_draw_up (GtkScrollbox *self)
++gtk_scrollbox_expose_event (GtkWidget      *widget,
++                            GdkEventExpose *event)
+ {
+-  gint           width, height;
+-  Label         *lbl;
+-  static size_t  i = 0;
+-  GdkRectangle   update_rect = { 0, 0,
+-                                 GTK_WIDGET (self)->allocation.width,
+-                                 GTK_WIDGET (self)->allocation.height
+-                               };
+-
+-  if (self->labels->len == 0)
+-    return;
+-
+-  if (i >= self->labels->len)
+-    i = 0;
+-
+-  lbl = (Label *) g_ptr_array_index (self->labels, i);
+-  self->pixmap = lbl->pixmap;
++  GtkScrollbox   *self =  GTK_SCROLLBOX (widget);
++  PangoLayout    *layout;
++  gint            width, height;
++  PangoRectangle  logical_rect;
+ 
+-  /* If we failed to create a proper pixmap, try again now */
+-  if (!lbl->pixmap)
++  if (self->active != NULL)
+     {
+-      lbl->pixmap = make_pixmap (self, lbl->msg);
+-      if (!lbl->pixmap)
+-        {
+-          /* Still no pixmap. We need to restart the timer */
+-          if (self->draw_timeout)
+-            stop_callback (self);
+-          self->draw_timeout =
+-            g_timeout_add (LABEL_SPEED, (GSourceFunc) start_draw_up, self);
+-          return;
+-        }
+-    }
+-
+-  if (self->labels->len == 1)
+-    {
+-      self->pixmap = lbl->pixmap;
+-      self->draw_offset = 0;
++      layout = PANGO_LAYOUT (self->active->data);
++      pango_layout_get_extents (layout, NULL, &logical_rect);
++      width = PANGO_PIXELS (logical_rect.width);
++      height = PANGO_PIXELS (logical_rect.height);
++
++      gtk_paint_layout (widget->style,
++                        widget->window,
++                        GTK_WIDGET_STATE (widget),
++                        TRUE, &event->area,
++                        widget, "GtkScrollbox",
++                        widget->allocation.x + (widget->allocation.width - width) / 2,
++                        widget->allocation.y + (widget->allocation.height - height) / 2 + (self->animate ? self->offset : 0),
++                        layout);
+ 
+-      gtk_widget_draw (GTK_WIDGET (self), &update_rect);
+-      return;
+     }
+ 
+-  gdk_drawable_get_size (GDK_DRAWABLE (self->pixmap), &width, &height);
+-  self->draw_middle = self->draw_maxmiddle - width / 2;
+-
+-  self->draw_timeout =
+-    g_timeout_add (LABEL_SPEED, (GSourceFunc) draw_up, self);
+-
+-  i++;
++  return FALSE;
+ }
+ 
+ 
+ 
+ static gboolean
+-start_draw_down (GtkScrollbox *self)
++gtk_scrollbox_sleep (gpointer user_data)
+ {
+-  self->draw_timeout =
+-    g_timeout_add (LABEL_SPEED, (GSourceFunc) draw_down, self);
++  GtkScrollbox *self = GTK_SCROLLBOX (user_data);
++
++  self->timeout_id = g_timeout_add (LABEL_SPEED, gtk_scrollbox_fade_out, self);
+ 
+   return FALSE;
+ }
+ 
+ 
+ 
+-static void
+-stop_callback (GtkScrollbox *self)
++static gboolean
++gtk_scrollbox_fade_in (gpointer user_data)
+ {
+-  if (self->draw_timeout == 0)
+-    return;
++  GtkScrollbox *self = GTK_SCROLLBOX (user_data);
+ 
+-  g_source_remove (self->draw_timeout);
+-  self->draw_timeout = 0;
+-}
++  /* decrease counter */
++  self->offset--;
+ 
++  gtk_widget_queue_draw (GTK_WIDGET (self));
+ 
++  if (self->offset > 0)
++    return TRUE;
+ 
+-static void
+-start_callback (GtkScrollbox *self)
+-{
+-  if (self->draw_timeout)
+-    stop_callback (self);
++  self->timeout_id = g_timeout_add (LABEL_REFRESH, gtk_scrollbox_sleep, self);
+ 
+-  start_draw_up (self);
++  return FALSE;
+ }
+ 
+ 
+ 
+-static GdkPixmap *
+-make_pixmap (GtkScrollbox *self,
+-             gchar        *value)
++static gboolean
++gtk_scrollbox_fade_out (gpointer user_data)
+ {
+-  GdkWindow      *rootwin;
+-  PangoLayout    *pl;
+-  gint            width, height, middle;
+-  GdkPixmap      *pixmap;
+-  GtkRequisition  widgsize = { 0, };
+-  GtkWidget      *widget = (GtkWidget *) self;
+-
+-
+-  /* If we can't draw yet, don't do anything to avoid screwing things */
+-  if (!GDK_IS_GC (widget->style->bg_gc[0]))
+-    return NULL;
+-
+-  rootwin = gtk_widget_get_root_window (widget);
+-
+-  pl = gtk_widget_create_pango_layout (widget, NULL);
+-  pango_layout_set_markup (pl, value, -1);
+-
+-  pango_layout_get_pixel_size (pl, &width, &height);
+-
+-  pixmap = gdk_pixmap_new (GDK_DRAWABLE (rootwin), width, height, -1);
+-
+-  gdk_draw_rectangle (GDK_DRAWABLE (pixmap),
+-                      widget->style->bg_gc[0], TRUE, 0, 0, width, height);
+-
+-  gdk_draw_layout (GDK_DRAWABLE (pixmap), widget->style->fg_gc[0], 0, 0, pl);
+-
+-  g_object_unref (G_OBJECT (pl));
+-
+-  gtk_widget_size_request (widget, &widgsize);
+-
+-  if (width <= widgsize.width)
+-    width = widgsize.width;
+-
+-  if (height <= widgsize.height)
+-    height = widgsize.height;
+-  else
+-    self->draw_maxoffset = -height;
+-
+-  if (width != widgsize.width || height != widgsize.height)
+-    gtk_widget_set_size_request (widget, width, height);
+-
+-  middle = width / 2;
+-  if (self->draw_maxmiddle < middle)
+-    self->draw_maxmiddle = middle;
+-
+-  return pixmap;
+-}
++  GtkScrollbox *self = GTK_SCROLLBOX (user_data);
+ 
++  /* increase counter */
++  self->offset++;
+ 
++  gtk_widget_queue_draw (GTK_WIDGET (self));
+ 
+-void
+-gtk_scrollbox_set_label (GtkScrollbox *self,
+-                         gint          n,
+-                         gchar        *value)
+-{
+-  gboolean   append = TRUE;
+-  GdkPixmap *newpixmap;
+-  Label     *newlbl, *lbl;
++  if (self->offset < GTK_WIDGET (self)->allocation.height)
++    return TRUE;
+ 
+-  if (n != -1)
+-    append = FALSE;
+-
+-  if (!append)
++  if (self->active != NULL)
+     {
+-      lbl = (Label *) g_ptr_array_index (self->labels, n);
+-
+-      if (lbl)
+-        free_label (lbl);
++      if (self->active->next != NULL)
++        self->active = self->active->next;
++      else
++        self->active = self->labels;
+ 
+-      newlbl = lbl;
++      self->timeout_id = g_timeout_add (LABEL_SPEED,
++                                        gtk_scrollbox_fade_in, self);
+     }
+-  else
+-    {
+-      newlbl = panel_slice_new0 (Label);
+-      g_ptr_array_add (self->labels, newlbl);
+-    }
+-
+-  newpixmap = make_pixmap (self, value);
+ 
+-  newlbl->pixmap = newpixmap;
+-  newlbl->msg = g_strdup (value);
++  return FALSE;
+ }
+ 
+ 
+ 
+ static void
+-gtk_scrollbox_set_property (GObject      *object,
+-                            guint         property_id,
+-                            const GValue *value,
+-                            GParamSpec   *pspec)
++gtk_scrollbox_start_fade (GtkScrollbox *self)
+ {
+-  GtkScrollbox *self = (GtkScrollbox *) object;
+-  gboolean      realvalue;
+-
+-  switch (property_id)
++  if (self->timeout_id != 0)
+     {
+-    case GTK_SCROLLBOX_ENABLECB:
+-      {
+-        realvalue = g_value_get_boolean (value);
+-
+-        if (!realvalue && self->draw_timeout)
+-          stop_callback (self);
+-        else if (realvalue && !self->draw_timeout)
+-          start_callback (self);
+-
+-        break;
+-      }
+-    default:
+-      /* We don't have any other property... */
+-      g_assert (FALSE);
+-
+-      break;
++      g_source_remove (self->timeout_id);
++      self->timeout_id = 0;
+     }
+-}
+-
+-
+-
+-static void
+-gtk_scrollbox_get_property (GObject    *object,
+-                            guint       property_id,
+-                            GValue     *value,
+-                            GParamSpec *pspec)
+-{
+-  return;
+-}
+ 
++  self->active = self->labels;
+ 
+-
+-static void
+-gtk_scrollbox_finalize (GObject *gobject)
+-{
+-  GtkScrollbox *self = (GtkScrollbox *) gobject;
+-  guint         i;
+-  Label        *lbl;
+-
+-  if (self->draw_timeout)
++  if (g_slist_length (self->labels) > 1)
+     {
+-      g_source_remove (self->draw_timeout);
+-      self->draw_timeout = 0;
+-    }
+-
+-  if (self->labels->len > 0)
+-    {
+-      for (i = 0; i < self->labels->len; i++)
+-        {
+-          lbl = (Label *) g_ptr_array_index (self->labels, i);
+-
+-          if (lbl->pixmap)
+-            g_object_unref (G_OBJECT (lbl->pixmap));
+-
+-          g_free (lbl->msg);
+-        }
+-      g_ptr_array_free (self->labels, TRUE);
++      self->offset = GTK_WIDGET (self)->allocation.height;
++      self->timeout_id = g_timeout_add (25, gtk_scrollbox_fade_in,
++                                        self);
+     }
+-
+-  G_OBJECT_CLASS (parent_class)->finalize (gobject);
+-}
+-
+-
+-
+-static void
+-redraw_labels (GtkWidget *widget,
+-               GtkStyle  *previous_style)
+-{
+-  GtkScrollbox *self = GTK_SCROLLBOX (widget);
+-  guint         i;
+-  GdkPixmap    *newpixmap;
+-  Label        *lbl;
+-
+-  if (self->labels->len < 1)
+-    return;
+-
+-  stop_callback (self);
+-
+-  gtk_widget_set_size_request (GTK_WIDGET (self), 0, 0);
+-  self->draw_middle = 0;
+-  self->draw_maxmiddle = 0;
+-
+-  for (i = 0; i < self->labels->len; i++)
++  else
+     {
+-      lbl = (Label *) g_ptr_array_index (self->labels, i);
+-
+-      if (!lbl->msg)
+-        continue;
+-
+-      newpixmap = make_pixmap (self, lbl->msg);
+-
+-      if (lbl->pixmap)
+-        g_object_unref (G_OBJECT (lbl->pixmap));
+-
+-      lbl->pixmap = newpixmap;
++      self->offset = 0;
+     }
+-
+-  start_callback (self);
+-
+ }
+ 
+ 
+ 
+-static void
+-gtk_scrollbox_instance_init (GTypeInstance *instance,
+-                             gpointer       g_class)
+-{
+-  GtkScrollbox *self = (GtkScrollbox *) instance;
+-
+-  self->draw_timeout = 0;
+-  self->labels = g_ptr_array_new ();
+-  self->pixmap = NULL;
+-
+-  g_signal_connect (G_OBJECT (self), "style-set",
+-                    G_CALLBACK (redraw_labels), NULL);
+-}
+-
+-
+-
+-static gboolean
+-gtk_scrollbox_expose (GtkWidget      *widget,
+-                      GdkEventExpose *event)
+-{
+-  GtkScrollbox *self = (GtkScrollbox *) widget;
+-
+-  if (self->pixmap)
+-    gdk_draw_drawable (widget->window,
+-                       widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+-                       self->pixmap,
+-                       0, (self->animate ? self->draw_offset : 0),
+-                       self->draw_middle, 0,
+-                       widget->allocation.width, widget->allocation.height);
+-
+-  return FALSE;
+-}
+-
+-
+ void
+-gtk_scrollbox_next_label(GtkScrollbox *self)
++gtk_scrollbox_set_label (GtkScrollbox *self,
++                         gint          position,
++                         gchar        *markup)
+ {
+-  stop_callback (self);
+-  start_draw_down (self);
+-}
++  PangoLayout *layout;
+ 
+-void
+-gtk_scrollbox_enablecb (GtkScrollbox *self,
+-                        gboolean      enable)
+-{
+-  GValue val = { 0, };
+ 
+-  g_value_init (&val, G_TYPE_BOOLEAN);
+-  g_value_set_boolean (&val, enable);
++  g_return_if_fail (GTK_IS_SCROLLBOX (self));
++
++  layout = gtk_widget_create_pango_layout (GTK_WIDGET (self), NULL);
++  pango_layout_set_markup (layout, markup, -1);
++  self->labels = g_slist_insert (self->labels, layout, position);
++  gtk_widget_queue_resize (GTK_WIDGET (self));
+ 
+-  g_object_set_property (G_OBJECT (self), "enablecb", &val);
++  gtk_scrollbox_start_fade (self);
+ }
+ 
+ 
+@@ -467,91 +251,38 @@ gtk_scrollbox_enablecb (GtkScrollbox *self,
+ GtkWidget *
+ gtk_scrollbox_new (void)
+ {
+-  return GTK_WIDGET (g_object_new (GTK_TYPE_SCROLLBOX, NULL));
++  return g_object_new (GTK_TYPE_SCROLLBOX, NULL);
+ }
+ 
+ 
+ 
+-static void
+-gtk_scrollbox_class_init (gpointer g_class,
+-                          gpointer g_class_data)
++void
++gtk_scrollbox_clear (GtkScrollbox *self)
+ {
++  g_return_if_fail (GTK_IS_SCROLLBOX (self));
+ 
+-  GObjectClass   *gobject_class = G_OBJECT_CLASS (g_class);
+-  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (g_class);
+-  GParamSpec     *scrollbox_param_spec;
+-
+-  parent_class = g_type_class_peek_parent (g_class);
+-
+-  gobject_class->set_property = gtk_scrollbox_set_property;
+-  gobject_class->get_property = gtk_scrollbox_get_property;
+-
+-  scrollbox_param_spec = g_param_spec_boolean ("enablecb",
+-                                               "Enable callback",
+-                                               "Enable or disable the callback",
+-                                               FALSE, G_PARAM_READWRITE);
+-  g_object_class_install_property (gobject_class,
+-                                   GTK_SCROLLBOX_ENABLECB,
+-                                   scrollbox_param_spec);
++  g_slist_foreach (self->labels, (GFunc) g_object_unref, NULL);
++  g_slist_free (self->labels);
++  self->labels = NULL;
+ 
+-  widget_class->expose_event = gtk_scrollbox_expose;
+-  gobject_class->finalize = gtk_scrollbox_finalize;
++  gtk_widget_queue_resize (GTK_WIDGET (self));
+ }
+ 
+ 
+ 
+-GType
+-gtk_scrollbox_get_type (void)
++void gtk_scrollbox_set_animate(GtkScrollbox *self, gboolean animate)
+ {
+-  static GType type = 0;
+-
+-  if (type == 0)
+-    {
+-
+-      static const GTypeInfo info = {
+-        sizeof (GtkScrollboxClass),
+-        NULL,                        /* base_init      */
+-        NULL,                        /* base_finalize  */
+-        gtk_scrollbox_class_init,    /* class_init     */
+-        NULL,                        /* class_finalize */
+-        NULL,                        /* class_data     */
+-        sizeof (GtkScrollbox),
+-        0,                           /* n_preallocs    */
+-        gtk_scrollbox_instance_init, /* instance_init  */
+-        NULL
+-      };
+-
+-      type = g_type_register_static (GTK_TYPE_DRAWING_AREA,
+-                                     "GtkScrollbox", &info, 0);
+-    }
+-
+-  return type;
++  self->animate = animate;
+ }
+ 
+ 
+ 
+-void
+-gtk_scrollbox_clear (GtkScrollbox *self)
++void gtk_scrollbox_next_label(GtkScrollbox *self)
+ {
+-  Label *lbl;
+-
+-  stop_callback (self);
+-
+-  while (self->labels->len > 0)
++  if (self->active->next != NULL)
+     {
+-      lbl = (Label *) g_ptr_array_index (self->labels, 0);
+-      free_label (lbl);
++      self->active = self->active->next;
+ 
+-      g_ptr_array_remove_index (self->labels, 0);
++      gtk_widget_queue_resize (GTK_WIDGET (self));
+     }
+-
+-  self->pixmap = NULL;
+-  gtk_widget_set_size_request (GTK_WIDGET (self), 0, 0);
+-  self->draw_middle = 0;
+-  self->draw_maxmiddle = 0;
+-}
+-
+-void gtk_scrollbox_set_animate(GtkScrollbox *self, gboolean animate)
+-{ 
+-  self->animate = animate;
+ }
+diff --git a/panel-plugin/weather-scrollbox.h b/panel-plugin/weather-scrollbox.h
+index 153b5d5..cfacfd1 100644
+--- a/panel-plugin/weather-scrollbox.h
++++ b/panel-plugin/weather-scrollbox.h
+@@ -1,5 +1,5 @@
+ /*  Copyright (c) 2003-2007 Xfce Development Team
+- * 
++ *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -34,30 +34,24 @@ typedef struct _GtkScrollboxClass GtkScrollboxClass;
+ 
+ struct _GtkScrollbox
+ {
+-  GtkDrawingArea  parent;
+-
+-  GPtrArray      *labels;
++  GtkDrawingArea  __parent__;
+ 
+-  gint            draw_offset;
+-  gint            draw_maxoffset;
+-  gint            draw_middle;
+-  gint            draw_maxmiddle;
+-  gint            draw_timeout;
+-  gboolean        animate;
+-  GdkPixmap      *pixmap;
++  GSList *labels;
++  guint timeout_id;
++  gint offset;
++  GSList *active;
++  gboolean animate;
+ };
+ 
+ struct _GtkScrollboxClass
+ {
+-  GtkDrawingAreaClass parent;
++  GtkDrawingAreaClass __parent__;
+ };
+ 
+-void gtk_scrollbox_set_label (GtkScrollbox * self, gint n, gchar * value);
++void gtk_scrollbox_set_label (GtkScrollbox * self, gint position, gchar *markup);
+ 
+ GtkWidget *gtk_scrollbox_new (void);
+ 
+-void gtk_scrollbox_enablecb (GtkScrollbox * self, gboolean enable);
+-
+ void gtk_scrollbox_clear (GtkScrollbox * self);
+ 
+ void gtk_scrollbox_set_animate(GtkScrollbox *self, gboolean animate);
+diff --git a/panel-plugin/weather-search.c b/panel-plugin/weather-search.c
+index 403dbcb..d764116 100644
+--- a/panel-plugin/weather-search.c
++++ b/panel-plugin/weather-search.c
+@@ -138,7 +138,7 @@ cb_searchdone (gboolean  succeed,
+       gtk_dialog_set_response_sensitive(GTK_DIALOG(dialog->dialog), GTK_RESPONSE_ACCEPT, TRUE);
+     }
+   }
+-  
++
+ gtk_tree_view_column_set_title(dialog->column, _("Results"));
+   return;
+ }
+@@ -165,7 +165,7 @@ search_cb (GtkWidget *widget,
+       return;
+     }
+   }
+-  
++
+   g_free(dialog->last_search);
+   dialog->last_search = g_strdup(str);
+ 
+@@ -211,7 +211,7 @@ create_search_dialog (GtkWindow *parent,
+   search_dialog     *dialog;
+   GtkWidget         *dialog_vbox, *dialog_action;
+ 
+-  dialog = panel_slice_new0 (search_dialog);
++  dialog = g_slice_new0 (search_dialog);
+ 
+   dialog->proxy_host = proxy_host;
+   dialog->proxy_port = proxy_port;
+@@ -242,7 +242,7 @@ create_search_dialog (GtkWindow *parent,
+   gtk_container_set_border_width (GTK_CONTAINER (vbox), 6);
+   gtk_box_pack_start (GTK_BOX (dialog_vbox), vbox,
+                       TRUE, TRUE, 0);
+-  
++
+   xfce_titled_dialog_set_subtitle (XFCE_TITLED_DIALOG (dialog->dialog),
+ 				   _("Enter a city name or zip code"));
+ 
+@@ -251,7 +251,7 @@ create_search_dialog (GtkWindow *parent,
+ 
+   dialog->search_entry = gtk_entry_new ();
+   gtk_box_pack_start (GTK_BOX (hbox), dialog->search_entry, TRUE, TRUE, 0);
+-  
++
+   g_signal_connect (G_OBJECT (dialog->search_entry), "activate",
+                     G_CALLBACK (search_cb), dialog);
+ 
+@@ -327,7 +327,7 @@ free_search_dialog (search_dialog * dialog)
+ 
+   gtk_widget_destroy (dialog->dialog);
+ 
+-  panel_slice_free (search_dialog, dialog);
++  g_slice_free (search_dialog, dialog);
+ }
+ 
+ typedef struct {
+@@ -335,7 +335,7 @@ typedef struct {
+   gint proxy_port;
+   void (*cb)(const gchar *loc_name, const gchar *loc_code, gpointer user_data);
+   gpointer user_data;
+-} 
++}
+ geolocation_data;
+ 
+ static void
+@@ -397,7 +397,7 @@ cb_geo_searchdone (gboolean  succeed,
+             }
+         }
+     }
+-  
++
+   g_free(data);
+   xmlFreeDoc (doc);
+ }
+@@ -457,7 +457,7 @@ cb_geolocation (gboolean  succeed,
+             }
+         }
+     }
+-  
++
+   if (country_code && region && !strcmp(country_code, "US")) {
+     g_free(country);
+     country = region;
+@@ -465,7 +465,7 @@ cb_geolocation (gboolean  succeed,
+   }
+   g_free(country_code);
+   g_free(region);
+-  
++
+   xmlFreeDoc (doc);
+ 
+   if (city && country) {
+@@ -473,7 +473,7 @@ cb_geolocation (gboolean  succeed,
+      gchar *url, *sane_str;
+      g_free(city);
+      g_free(country);
+-     
++
+      if ((sane_str = sanitize_str (full_loc)) == NULL) {
+        data->cb(NULL, NULL, data->user_data);
+        g_free(data);
+@@ -481,7 +481,7 @@ cb_geolocation (gboolean  succeed,
+        return;
+      }
+      g_free(full_loc);
+-     
++
+      url = g_strdup_printf ("/search/search?where=%s", sane_str);
+      g_free (sane_str);
+ 
+@@ -500,7 +500,7 @@ void weather_search_by_ip(
+ 	gpointer user_data)
+ {
+   geolocation_data *data;
+-  
++
+   if (!gui_cb)
+     return;
+ 
+diff --git a/panel-plugin/weather-summary.c b/panel-plugin/weather-summary.c
+index 8acc819..36eeb14 100644
+--- a/panel-plugin/weather-summary.c
++++ b/panel-plugin/weather-summary.c
+@@ -55,7 +55,7 @@ static gboolean lnk_clicked (GtkTextTag *tag, GObject *obj,
+                                                                 &iter, "\n", -1);\
+ 					 g_object_set_data_full(G_OBJECT(lnk_tag), "url", g_strdup(url), g_free); \
+ 					 g_signal_connect(G_OBJECT(lnk_tag), "event", \
+-						G_CALLBACK(lnk_clicked), NULL); 
++						G_CALLBACK(lnk_clicked), NULL);
+ 
+ 
+ 
+@@ -74,7 +74,7 @@ static gboolean lnk_clicked (GtkTextTag *tag, GObject *obj,
+   } else if (event->type == GDK_LEAVE_NOTIFY) {
+      gdk_window_set_cursor(gtk_text_view_get_window(GTK_TEXT_VIEW(obj),
+ 				GTK_TEXT_WINDOW_TEXT), NULL);
+-  } 
++  }
+   return FALSE;
+ }
+ 
+@@ -103,7 +103,7 @@ static gboolean view_motion_notify(GtkWidget *widget,
+     GSList *tags;
+     GSList *cur;
+ 
+-    gtk_text_view_window_to_buffer_coords(GTK_TEXT_VIEW(view), 
++    gtk_text_view_window_to_buffer_coords(GTK_TEXT_VIEW(view),
+     						GTK_TEXT_WINDOW_WIDGET,
+     						event->x, event->y, &bx, &by);
+     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(view),
+@@ -154,7 +154,7 @@ static void view_scrolled_cb (GtkAdjustment *adj, GtkWidget *view)
+     gtk_text_view_buffer_to_window_coords(
+ 			GTK_TEXT_VIEW(view),
+ 			GTK_TEXT_WINDOW_TEXT, x1, y1, &x, &y);
+-    gtk_text_view_move_child(GTK_TEXT_VIEW(view), 
++    gtk_text_view_move_child(GTK_TEXT_VIEW(view),
+ 			weather_channel_evt, x, y);
+   }
+ }
+@@ -211,17 +211,17 @@ static GtkWidget *weather_summary_get_logo(xfceweather_data *data)
+ 	GtkWidget *image = gtk_image_new();
+ 	GdkPixbuf *pixbuf = NULL;
+ 	gchar *path = get_logo_path();
+-	
++
+ 	pixbuf = gdk_pixbuf_new_from_file(path, NULL);
+ 	g_free(path);
+ 	if (pixbuf == NULL) {
+-		weather_http_receive_data ("xoap.weather.com", "/web/common/twc/logos/web_73x55.jpg", 
++		weather_http_receive_data ("xoap.weather.com", "/web/common/twc/logos/web_73x55.jpg",
+ 			data->proxy_host, data->proxy_port, logo_fetched, image);
+ 	} else {
+ 		gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
+ 		g_object_unref(pixbuf);
+ 	}
+-	
++
+ 	return image;
+ }
+ 
+@@ -355,13 +355,13 @@ create_summary_tab (xfceweather_data *data)
+ 		   G_CALLBACK(view_motion_notify), view);
+   g_signal_connect(G_OBJECT(view), "leave-notify-event",
+ 		   G_CALLBACK(view_leave_notify), view);
+-		   
++
+   weather_channel_icon = weather_summary_get_logo(data);
+ 
+   if (weather_channel_icon) {
+     weather_channel_evt = gtk_event_box_new();
+     gtk_container_add(GTK_CONTAINER(weather_channel_evt), weather_channel_icon);
+-    gtk_text_view_add_child_in_window(GTK_TEXT_VIEW(view), weather_channel_evt, 
++    gtk_text_view_add_child_in_window(GTK_TEXT_VIEW(view), weather_channel_evt,
+                                       GTK_TEXT_WINDOW_TEXT, 0, 0);
+     gtk_widget_show_all(weather_channel_evt);
+     adj = gtk_scrolled_window_get_vadjustment(
+@@ -611,7 +611,7 @@ create_summary_window (xfceweather_data *data)
+   window = xfce_titled_dialog_new_with_buttons (_("Weather Update"),
+                                                 NULL,
+                                                 GTK_DIALOG_NO_SEPARATOR,
+-                                                GTK_STOCK_ABOUT, 
++                                                GTK_STOCK_ABOUT,
+ 						GTK_RESPONSE_HELP,
+                                                 GTK_STOCK_CLOSE,
+                                                 GTK_RESPONSE_ACCEPT, NULL);
+diff --git a/panel-plugin/weather-translate.c b/panel-plugin/weather-translate.c
+index 0a083a2..bcaf63a 100644
+--- a/panel-plugin/weather-translate.c
++++ b/panel-plugin/weather-translate.c
+@@ -1,5 +1,5 @@
+ /*  Copyright (c) 2003-2007 Xfce Development Team
+- * 
++ *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -309,7 +309,7 @@ translate_lsup (const gchar *lsup)
+   gint        size = 0, i = 0;
+   gchar      **lsup_split;
+   int          len;
+-  
++
+   if (lsup == NULL || strlen (lsup) == 0)
+     return NULL;
+ 
+diff --git a/panel-plugin/weather.c b/panel-plugin/weather.c
+index da0534d..9d873d1 100644
+--- a/panel-plugin/weather.c
++++ b/panel-plugin/weather.c
+@@ -213,7 +213,6 @@ static void
+ set_icon_error (xfceweather_data *data)
+ {
+   GdkPixbuf   *icon;
+-  gint         height;
+   gint         size;
+   gchar       *str;
+   const gchar *txtsize;
+@@ -243,16 +242,9 @@ set_icon_error (xfceweather_data *data)
+   gtk_scrollbox_set_label (GTK_SCROLLBOX (data->scrollbox), -1, str);
+   g_free (str);
+ 
+-  gtk_scrollbox_enablecb  (GTK_SCROLLBOX (data->scrollbox), TRUE);
+-
+-  gtk_widget_get_size_request (data->scrollbox, NULL, &height);
+-
+-  if (data->orientation == GTK_ORIENTATION_VERTICAL)
+-    icon = get_icon ("99", data->size - height - 2);
+-  else
+-    icon = get_icon ("99", data->size);
+-
+-  gtk_image_set_from_pixbuf (GTK_IMAGE (data->iconimage), icon);
++  icon = get_icon ("99", -1);
++  xfce_scaled_image_set_from_pixbuf (XFCE_SCALED_IMAGE (data->iconimage),
++                                     icon);
+ 
+   if (G_LIKELY (icon))
+     g_object_unref (G_OBJECT (icon));
+@@ -272,7 +264,6 @@ set_icon_current (xfceweather_data *data)
+   GdkPixbuf      *icon = NULL;
+   datas           opt;
+   gchar          *str;
+-  gint            size, height;
+ 
+   for (i = 0; i < data->labels->len; i++)
+     {
+@@ -285,24 +276,9 @@ set_icon_current (xfceweather_data *data)
+       g_free (str);
+     }
+ 
+-  gtk_scrollbox_enablecb (GTK_SCROLLBOX (data->scrollbox), TRUE);
+-
+-  if (i == 0)
+-    {
+-      size = data->size;
+-    }
+-  else
+-    {
+-      gtk_widget_get_size_request (data->scrollbox, NULL, &height);
+-      if (data->orientation == GTK_ORIENTATION_VERTICAL)
+-        size = data->size - height - 2;
+-      else
+-        size = data->size;
+-    }
+-
+-  icon = get_icon (get_data (data->weatherdata, WICON), size);
+-
+-  gtk_image_set_from_pixbuf (GTK_IMAGE (data->iconimage), icon);
++  icon = get_icon (get_data (data->weatherdata, WICON), -1);
++  xfce_scaled_image_set_from_pixbuf (XFCE_SCALED_IMAGE (data->iconimage),
++                                     icon);
+ 
+   if (G_LIKELY (icon))
+     g_object_unref (G_OBJECT (icon));
+@@ -504,7 +480,7 @@ xfceweather_read_config (XfcePanelPlugin  *plugin,
+       data->proxy_port = data->saved_proxy_port;
+     }
+ 
+-  data->animation_transitions = xfce_rc_read_bool_entry (rc, 
++  data->animation_transitions = xfce_rc_read_bool_entry (rc,
+   		"animation_transitions", TRUE);
+ 
+   gtk_scrollbox_set_animate(GTK_SCROLLBOX(data->scrollbox), data->animation_transitions);
+@@ -702,7 +678,7 @@ xfceweather_dialog_response (GtkWidget          *dlg,
+ 
+       gtk_widget_destroy (dlg);
+       gtk_list_store_clear (dialog->mdl_xmloption);
+-      panel_slice_free (xfceweather_dialog, dialog);
++      g_slice_free (xfceweather_dialog, dialog);
+ 
+       xfce_panel_plugin_unblock_menu (data->plugin);
+       xfceweather_write_config (data->plugin, data);
+@@ -755,17 +731,17 @@ static gboolean weather_get_tooltip_cb (GtkWidget        *widget,
+ 					gint              y,
+ 					gboolean          keyboard_mode,
+ 					GtkTooltip       *tooltip,
+-					xfceweather_data *data) 
++					xfceweather_data *data)
+ {
+   GdkPixbuf *icon;
+   gchar *markup_text;
+-  
++
+   if (data->weatherdata == NULL) {
+     gtk_tooltip_set_text (tooltip, _("Cannot update weather data"));
+   } else {
+     markup_text = g_markup_printf_escaped(
+   	  "<b>%s</b>\n"
+-	  "%s", 
++	  "%s",
+ 	  get_data (data->weatherdata, DNAM),
+ 	  translate_desc (get_data (data->weatherdata, TRANS))
+ 	  );
+@@ -775,7 +751,7 @@ static gboolean weather_get_tooltip_cb (GtkWidget        *widget,
+   icon = get_icon (get_data (data->weatherdata, WICON), 32);
+   gtk_tooltip_set_icon (tooltip, icon);
+   g_object_unref (G_OBJECT(icon));
+-  
++
+   return TRUE;
+ }
+ 
+@@ -783,7 +759,7 @@ static gboolean weather_get_tooltip_cb (GtkWidget        *widget,
+ static xfceweather_data *
+ xfceweather_create_control (XfcePanelPlugin *plugin)
+ {
+-  xfceweather_data *data = panel_slice_new0 (xfceweather_data);
++  xfceweather_data *data = g_slice_new0 (xfceweather_data);
+   GtkWidget        *refresh, *mi;
+   datas             lbl;
+   GdkPixbuf        *icon = NULL;
+@@ -797,8 +773,8 @@ xfceweather_create_control (XfcePanelPlugin *plugin)
+ #endif
+   data->scrollbox = gtk_scrollbox_new ();
+ 
+-  icon = get_icon ("99", 16);
+-  data->iconimage = gtk_image_new_from_pixbuf (icon);
++  icon = get_icon ("99", -1);
++  data->iconimage = xfce_scaled_image_new_from_pixbuf (icon);
+ 
+   if (G_LIKELY (icon))
+     g_object_unref (G_OBJECT (icon));
+@@ -808,8 +784,8 @@ xfceweather_create_control (XfcePanelPlugin *plugin)
+   data->vbox_center_scrollbox = gtk_vbox_new(FALSE, 0);
+   data->top_hbox = gtk_hbox_new (FALSE, 0);
+   gtk_misc_set_alignment (GTK_MISC (data->iconimage), 1, 0.5);
+-  gtk_box_pack_start (GTK_BOX (data->top_hbox), data->iconimage, TRUE, FALSE, 0);
+-  gtk_box_pack_start (GTK_BOX (data->vbox_center_scrollbox), data->scrollbox, TRUE, FALSE, 0);
++  gtk_box_pack_start (GTK_BOX (data->top_hbox), data->iconimage, TRUE, TRUE, 0);
++  gtk_box_pack_start (GTK_BOX (data->vbox_center_scrollbox), data->scrollbox, FALSE, TRUE, 0);
+   gtk_box_pack_start (GTK_BOX (data->top_hbox), data->vbox_center_scrollbox, TRUE, FALSE, 0);
+ 
+   data->top_vbox = gtk_vbox_new (FALSE, 0);
+@@ -822,7 +798,7 @@ xfceweather_create_control (XfcePanelPlugin *plugin)
+ 
+ #if GTK_CHECK_VERSION(2,12,0)
+   g_object_set (G_OBJECT(data->tooltipbox), "has-tooltip", TRUE, NULL);
+-  g_signal_connect(G_OBJECT(data->tooltipbox), "query-tooltip", 
++  g_signal_connect(G_OBJECT(data->tooltipbox), "query-tooltip",
+ 		   G_CALLBACK(weather_get_tooltip_cb),
+ 		  data);
+ #endif
+@@ -909,7 +885,7 @@ xfceweather_free (XfcePanelPlugin  *plugin,
+   /* Free Array */
+   g_array_free (data->labels, TRUE);
+ 
+-  panel_slice_free (xfceweather_data, data);
++  g_slice_free (xfceweather_data, data);
+ }
+ 
+ 
+@@ -952,7 +928,7 @@ xfceweather_set_orientation (XfcePanelPlugin  *panel,
+   g_object_unref(G_OBJECT(data->vbox_center_scrollbox));
+ 
+   gtk_scrollbox_clear (GTK_SCROLLBOX (data->scrollbox));
+-  
++
+   if (data->weatherdata)
+     set_icon_current (data);
+   else
+diff --git a/panel-plugin/weather.desktop.in.in b/panel-plugin/weather.desktop.in.in
+index c4c7b23..6c39f68 100644
+--- a/panel-plugin/weather.desktop.in.in
++++ b/panel-plugin/weather.desktop.in.in
+@@ -1,8 +1,6 @@
+ [Xfce Panel]
+ Type=X-XFCE-PanelPlugin
+-Encoding=UTF-8
+ _Name=Weather Update
+ _Comment=Show current weather conditions
+ Icon=xfce4-weather
+ X-XFCE-Exec=@libexecdir@/xfce4/panel-plugins/xfce4-weather-plugin
+-
+diff --git a/panel-plugin/weather.h b/panel-plugin/weather.h
+index 579e5a2..4837208 100644
+--- a/panel-plugin/weather.h
++++ b/panel-plugin/weather.h
+@@ -18,7 +18,7 @@
+ #ifndef __WEATHER_H__
+ #define __WEATHER_H__
+ 
+-#include <libxfce4panel/xfce-panel-plugin.h>
++#include <libxfce4panel/libxfce4panel.h>
+ #include <libxfce4util/libxfce4util.h>
+ #define PLUGIN_WEBSITE   "http://goodies.xfce.org/projects/panel-plugins/xfce4-weather-plugin"
+ #define PARTNER_ID       "1121946239"
+-- 
+1.7.3.5
+
