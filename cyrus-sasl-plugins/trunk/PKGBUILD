@@ -3,21 +3,25 @@
 
 pkgname=cyrus-sasl-plugins
 pkgver=2.1.23
-pkgrel=2
+pkgrel=3
 pkgdesc="Cyrus Simple Authentication Service Layer (SASL) library"
 arch=('i686' 'x86_64')
 url="http://cyrusimap.web.cmu.edu/"
 license=('custom')
-depends=('postgresql-libs>=8.4.1' 'heimdal>=1.2-1' 'libldap>2.4' 'libmysqlclient')
+depends=('postgresql-libs>=8.4.1' 'heimdal>=1.2-1' 'libldap>2.4' 'libmysqlclient>=5.5.8')
 source=(ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/cyrus-sasl-${pkgver}.tar.gz
-        cyrus-sasl-2.1.22-gcc44.patch)
+        cyrus-sasl-2.1.22-gcc44.patch
+	cyrus-sasl-2.1.23-db5-fix.patch)
 md5sums=('2eb0e48106f0e9cd8001e654f267ecbc'
-         '5deb4d67b53ecba20c7887fc8fdebee1')
+         '5deb4d67b53ecba20c7887fc8fdebee1'
+         '3ae4347705141145f31cf786c38ea9ef')
+options=('!libtool')
 
 build() {
   cd ${srcdir}/cyrus-sasl-${pkgver}
-  patch -Np1 -i $srcdir/cyrus-sasl-2.1.22-gcc44.patch || return 1
-
+  patch -Np1 -i $srcdir/cyrus-sasl-2.1.22-gcc44.patch
+  # from http://bugs.gentoo.org/show_bug.cgi?id=319935
+  patch -Np0 -i ${srcdir}/cyrus-sasl-2.1.23-db5-fix.patch
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
@@ -34,8 +38,12 @@ build() {
   cd sasldb
   make
   cd ../plugins
-  make || return 1
-  make DESTDIR=${pkgdir} install || return 1
+  make
+}
+
+package () {
+  cd ${srcdir}/cyrus-sasl-${pkgver}/plugins
+  make DESTDIR=${pkgdir} install
   
   install -Dm644 ../COPYING ${pkgdir}/usr/share/licenses/${pkgname}/COPYING
 
