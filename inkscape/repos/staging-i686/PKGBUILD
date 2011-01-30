@@ -1,0 +1,49 @@
+# $Id$
+# Maintainer: tobias <tobias@archlinux.org>
+# Contributor: Tobias Kieslich <tobias@justdreams.de>
+
+pkgname=inkscape
+pkgver=0.48.0
+pkgrel=5
+pkgdesc='Vector graphics editor using the SVG file format'
+url='http://inkscape.sourceforge.net/'
+arch=('i686' 'x86_64')
+license=('GPL' 'LGPL')
+makedepends=('boost' 'pkg-config' 'intltool')
+depends=('gc' 'gtkmm' 'poppler-glib' 'pyxml' 'libxslt' 'gsl' 'popt' 'python2'
+         'gtkspell' 'imagemagick' 'desktop-file-utils' 'hicolor-icon-theme')
+optdepends=('python-numpy: some extensions'
+            'python-lxml: some extensions and filters')
+options=('!libtool')
+install=inkscape.install
+source=("http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+	inkscape-0.48.0-poppler.patch)
+md5sums=('bb94543b813157d83281657a89465d46'
+         'fa6eae3c40bf4560ee8ab7cb843b19da')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  # patch for poppler from Fedora
+  patch -Np1 -i ${srcdir}/inkscape-0.48.0-poppler.patch
+  ./configure --prefix=/usr \
+    --with-python \
+    --with-perl \
+    --without-gnome-vfs \
+    --with-xft \
+    --enable-lcms \
+    --enable-poppler-cairo \
+    --disable-dependency-tracking
+
+  sed -i 's|/usr/bin/python\>|/usr/bin/python2|g' cxxtest/*.py
+  sed -i 's|/usr/bin/env python\>|/usr/bin/env python2|g' share/*/{test/,}*.py
+  sed -i 's|"python" },|"python2" },|g' src/extension/implementation/script.cpp
+  sed -i 's|\<python -c |python2 -c|g' share/extensions/uniconv*.py
+  sed -i 's|"python"|"python2"|g' src/main.cpp
+
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+}
