@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Thayer Williams <thayer@archlinux.org>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+# Contributor: Hugo Ideler <hugoideler@dse.nl>
+
+pkgname=slim
+pkgver=1.3.2
+pkgrel=2
+pkgdesc='Desktop-independent graphical login manager for X11'
+arch=('i686' 'x86_64')
+url='http://slim.berlios.de/'
+license=('GPL2')
+depends=('pam' 'libxmu' 'libpng' 'libjpeg' 'libxft')
+backup=('etc/slim.conf' 'etc/logrotate.d/slim' 'etc/pam.d/slim')
+install=slim.install
+source=("http://download.berlios.de/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        'slim'
+        'slim.logrotate'
+        'slim.pam'
+        'gcc44.patch'
+        'tty-slowness.patch'
+        'restart.patch'
+	'no-host.patch')
+sha1sums=('e421d5487732c8317f8f591906661e014b036358'
+          '6fe0ba83509af634bce47be34e30995965bffc79'
+          'b969cc902c1d9915a5609141a652c77b2732407b'
+          'aff213af9ade7fe05db54fcd9a193e3dcb002aa9'
+          '51121d451116c768d0fc027ff1ea70aaaef036e7'
+          '213fefe8533c845ea8c40585b6a8097820d5e5d2'
+          '2d526bc0c498bf307ee50e2d22b4f53ffa0c4435'
+          'b86eddd083fb9f6259e46c735f55ebe76c655bd3')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  
+  sed -i -e 's/png12/png14/g' Makefile
+  patch -p1 -i  ../gcc44.patch
+
+  patch -p1 -i ../tty-slowness.patch # fix sluggish tty after slim start
+  patch -p1 -i ../restart.patch # restart X server if killed
+  patch -p1 -i ../no-host.patch # do not set PAM host
+
+  make USE_PAM=1
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make DESTDIR="${pkgdir}" MANDIR=/usr/share/man install
+
+  install -D -m755 ../slim "${pkgdir}/etc/rc.d/slim"
+  install -D -m644 ../slim.logrotate "${pkgdir}/etc/logrotate.d/slim"
+  install -D -m644 ../slim.pam "${pkgdir}/etc/pam.d/slim"
+
+  # Provide sane defaults
+  sed -i 's|#xserver_arguments.*|xserver_arguments   -nolisten tcp vt07|' "${pkgdir}/etc/slim.conf"
+  sed -i 's|/var/run/slim.lock|/var/lock/slim.lock|' "${pkgdir}/etc/slim.conf"
+}
