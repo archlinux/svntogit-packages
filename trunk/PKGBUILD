@@ -16,6 +16,9 @@ md5sums=('f6124dbaef16650f46df5125d8ed7407'
          '58e305aa0d27d59f543d9cfddc6e175a')
 
 build() {
+  _javaver=6
+  _jvmdir=/usr/lib/jvm/java-${_javaver}-openjdk
+
   cd "$srcdir/$pkgname-$pkgver"
   patch -Np0 -i $srcdir/fix-man-location.patch
   autoreconf -v
@@ -29,6 +32,15 @@ package_icedtea-web() {
   pkgdesc="provides a Free Software web browser plugin running applets written in the Java programming language and an implementation of Java Web Start, originally based on the NetX project"
   depends=('openjdk6' 'gtk2')
 
+  if [ "${CARCH}" = "x86_64" ]; then
+    _arch=amd64
+  else
+    _arch=i586
+  fi
+
+  _javaver=6
+  _jvmdir=/usr/lib/jvm/java-${_javaver}-openjdk
+
   cd "$srcdir/$pkgname-$pkgver"
   make DESTDIR="$pkgdir" install
   # Install desktop files.
@@ -37,17 +49,34 @@ package_icedtea-web() {
   install -m644 {javaws,itweb-settings}.desktop ${pkgdir}/usr/share/applications
   # remove splitted doc files
   rm -vrf ${pkgdir}/usr/share/doc
+
+  # link binaries into /usr/bin + jre/bin
+  install -m755 -d ${pkgdir}/usr/bin
+  pushd ${pkgdir}/${_jvmdir}/bin
+  for file in *; do
+    ln -sf ${_jvmdir}/bin/${file} ${pkgdir}/usr/bin
+    ln -sf ${_jvmdir}/bin/${file} ${pkgdir}/${_jvmdir}/jre/bin
+  done
+  popd
+
+  # link the mozilla-plugin - test it here http://www.java.com/en/download/help/testvm.xml
+  install -m755 -d ${pkgdir}/usr/lib/mozilla/plugins/
+  ln -sf ${_jvmdir}/jre/lib/${_arch/i586/i386}/IcedTeaPlugin.so ${pkgdir}/usr/lib/mozilla/plugins/
 }
 
 package_icedtea-web-doc() {
 
   pkgdesc="icedtea-web browser plugin + Java WebStart - documentation files"
 
+  _javaver=6
+  _jvmdir=/usr/lib/jvm/java-${_javaver}-openjdk
+
   cd "$srcdir/$pkgname-$pkgver"
-  install -m755 -d $pkgdir/usr/lib/jvm/java-6-openjdk/jre/lib
+  install -m755 -d $pkgdir/${_jvmdir}/jre/lib
   make DESTDIR="$pkgdir" install-data-local
   # remove javaws about and man page
   rm -vrf ${pkgdir}/usr/lib
   rm -vrf ${pkgdir}/usr/share/man
 }
 
+# plugin test here http://www.java.com/en/download/help/testvm.xml
