@@ -1,0 +1,84 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+# Contributor: Jason Taylor <jftaylor21@gmail.com>
+
+pkgbase=lapack
+pkgname=('blas' 'lapack')
+pkgver=3.3.0
+pkgrel=2
+url="http://www.netlib.org/lapack"
+makedepends=('gcc-fortran')
+arch=('i686' 'x86_64')
+license=("custom")
+source=(http://www.netlib.org/${pkgbase}/${pkgbase}-${pkgver}.tgz
+        lapack-3.1.1-make.inc.patch
+        Makefile.blas
+        Makefile.lapack
+        LICENSE.blas)
+md5sums=('84213fca70936cc5f1b59a7b1bf71697'
+         'cdfcb9d9b162c18d9acbf63c5579ea26'
+         '748440ae656402241d053dadb14425ee'
+         'aa359e9b7cc717fb1230cfbb4e1d206b'
+         '38b6acb8ed5691d25863319d30a8b365')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  patch -Np1 -i "${srcdir}/lapack-3.1.1-make.inc.patch"
+  cp -f INSTALL/make.inc.gfortran make.inc
+  cp -f "${srcdir}/Makefile.blas" BLAS/SRC/Makefile
+  cp -f "${srcdir}/Makefile.lapack" SRC/Makefile
+
+  export FC=gfortran
+
+  pushd BLAS/SRC
+  make clean
+  FFLAGS="${CFLAGS/-O?/-O0}" make dcabs1.o
+  FFLAGS="${CFLAGS} -fPIC" CFLAGS="${CFLAGS} -fPIC" make shared
+  cp libblas.so.${pkgver} "${srcdir}/${pkgbase}-${pkgver}/"
+  popd
+  ln -s libblas.so.${pkgver} libblas.so
+
+  pushd INSTALL
+  make clean
+  make NOOPT="${CFLAGS/-O?/-O0} -fPIC" OPTS="${CFLAGS} -fPIC"
+  popd
+  # make sure no files with '_', *vxx.o *vfx.o and *2.O as defined in *ASRC
+  #  are in OBJS
+  pushd SRC
+  make clean
+  
+  make FFLAGS="${CFLAGS} -fPIC" CFLAGS="${CFLAGS} -fPIC" shared
+  cp liblapack.so.${pkgver} "${srcdir}/${pkgbase}-${pkgver}/"
+  popd
+}
+
+package_blas() {
+  pkgdesc="Basic Linear Algebra Subprograms"
+  depends=('gcc-libs')
+  options=('force')
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m755 "${srcdir}/${pkgbase}-${pkgver}/libblas.so.${pkgver}" \
+    "${pkgdir}/usr/lib/"
+  ln -sf libblas.so.${pkgver} "${pkgdir}/usr/lib/libblas.so"
+  ln -sf libblas.so.${pkgver} "${pkgdir}/usr/lib/libblas.so.3"
+  
+  install -m755 -d "${pkgdir}/usr/share/licenses/blas"
+  install -m644 "${srcdir}/LICENSE.blas" \
+    "${pkgdir}/usr/share/licenses/blas/LICENSE"
+}
+
+package_lapack() {
+  pkgdesc="Linear Algebra PACKage"
+  depends=("blas=${pkgver}")
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m755 "${srcdir}/${pkgbase}-${pkgver}/liblapack.so.${pkgver}" \
+    "${pkgdir}/usr/lib/"
+  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so"
+  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so.3"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/lapack"
+  install -m644 "${srcdir}/${pkgbase}-${pkgver}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/lapack/"
+}
