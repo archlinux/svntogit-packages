@@ -6,8 +6,8 @@
 
 pkgname=glibc
 pkgver=2.13
-pkgrel=1
-_glibcdate=20110117
+pkgrel=2
+_glibcdate=20110203
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -28,7 +28,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('b7b17d9c6b5b71b5e5322e04ca63c190'
+md5sums=('b023a3e46fe7fb38dc47eae7c3d87226'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
@@ -41,9 +41,7 @@ md5sums=('b7b17d9c6b5b71b5e5322e04ca63c190'
 mksource() {
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  # glibc-2.13 has been tagged but not branched yet
-  git checkout -b glibc-2.13-arch origin/master || return 1
-  #git checkout -b glibc-2.13-arch origin/release/2.13/master || return 1
+  git checkout -b glibc-2.13-arch origin/release/2.13/master
   popd
   tar -cvJf glibc-${pkgver}_${_glibcdate}.tar.xz glibc/*
 }
