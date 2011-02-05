@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: tobias <tobias@archlinux.org>
+# Contributor: Tobias Kieslich <tobias@justdreams.de>
+
+pkgname=dcraw
+pkgver=9.06
+pkgrel=1
+pkgdesc="A command line based converter for digicams raw output"
+arch=('i686' 'x86_64')
+url="http://www.cybercom.net/~dcoffin/dcraw/"
+license=('custom')
+depends=('lcms')
+source=(http://www.cybercom.net/~dcoffin/dcraw/archive/${pkgname}-${pkgver}.tar.gz
+        license.txt)
+md5sums=('22921c24c697bbe43c1010f463176921' '110b4604a6dacd5537339c4082e9e12a')
+sha1sums=('7bd7b2283cf1ad1cb1591d0f69fd6831689b20b0' '502c8f0ac7434d48f5dcb2eefe7599627cb69454')
+
+build() {
+  cd "${srcdir}/${pkgname}"
+  gcc ${CFLAGS} -O3 -o dcraw dcraw.c -lm -ljpeg -llcms -DLOCALEDIR=\"/usr/share/locale/\"
+}
+
+package() {
+  cd "${srcdir}/${pkgname}"
+  install -Dm755 dcraw "${pkgdir}"/usr/bin/dcraw
+  install -Dm644 dcraw.1 "${pkgdir}"/usr/share/man/man1/dcraw.1
+  
+  for langchar in \
+    fr.latin1 it.latin1 de.latin1 pt.latin1 es.latin1 sv.latin1 \
+    ca.latin1 da.latin1 cs.latin2 hu.latin2 pl.latin2 eo.latin3 ru.koi8-r \
+    zh_TW.big5 zh_CN.gb2312
+  do
+    lang=$(echo $langchar | cut -d. -f1)
+    char=$(echo $langchar | cut -d. -f2-)
+    mkdir -p -m 755 "${pkgdir}"/usr/share/man/$lang/man1
+    iconv -f utf-8 -t $char dcraw_$lang.1 > "${pkgdir}"/usr/share/man/$lang/man1/dcraw.1
+    mkdir -p -m 755 "${pkgdir}"/usr/share/man/$lang.UTF-8/man1
+    cp dcraw_$lang.1 "${pkgdir}"/usr/share/man/$lang.UTF-8/man1/dcraw.1
+    mkdir -p -m 755 "${pkgdir}"/usr/share/locale/$lang/LC_MESSAGES
+    msgfmt -o "${pkgdir}"/usr/share/locale/$lang/LC_MESSAGES/dcraw.mo dcraw_$lang.po
+  done
+
+# dcraw_nl.1 is missing
+  langchar=nl.latin1
+  lang=$(echo $langchar | cut -d. -f1)
+  char=$(echo $langchar | cut -d. -f2-)
+  mkdir -p -m 755 "${pkgdir}"/usr/share/locale/$lang/LC_MESSAGES
+  msgfmt -o "${pkgdir}"/usr/share/locale/$lang/LC_MESSAGES/dcraw.mo dcraw_$lang.po
+
+  install -Dm644 "${srcdir}/license.txt" "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
+}
