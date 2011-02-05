@@ -1,0 +1,66 @@
+Index: hspell-1.0/Makefile.in
+===================================================================
+--- hspell-1.0.orig/Makefile.in
++++ hspell-1.0/Makefile.in
+@@ -51,7 +51,7 @@ LDFLAGS=@LDFLAGS@
+ 
+ # Our TARGETS variable chooses what to compile. Some things are
+ # optionally compiled depending on --enable-* paramters to configure.
+-TARGETS = @TARGETS@
++TARGETS = @TARGETS@ libhspell.a
+ all: $(TARGETS)
+ 
+ # SEDCMD controls on whether objective-kinuyim - about 130,000 rare verb
+@@ -76,7 +76,8 @@ clean:
+ 	      hebrew.wgz.lingsizes.tmp dmask.c install.js \
+ 	      spell-he.xpi he.dic he.aff README-he.txt \
+ 	      README_he_IL.txt he_IL.dic he_IL.aff he_IL.zip \
+-	      specfilter.o specfilter
++	      specfilter.o specfilter \
++	      libhspell.so.0 libhspell.so *.lo
+ 	rm -f hebeng/install.js hebeng/heb-eng.aff hebeng/heb-eng.dic \
+ 	      hebeng/README-he.txt hebeng/README-en-US.txt \
+ 	      hebeng/spell-heb-eng.xpi
+@@ -113,6 +114,9 @@ install: all
+ 	test -d $(DESTDIR)$(LIBDIR) || mkdir -m 755 -p $(DESTDIR)$(LIBDIR)
+ 	cp libhspell.a $(DESTDIR)$(LIBDIR)/
+ 	chmod 644 $(DESTDIR)$(LIBDIR)/libhspell.a
++	cp libhspell.so.0 $(DESTDIR)$(LIBDIR)/
++	chmod 755 $(DESTDIR)$(LIBDIR)/libhspell.so.0
++	ln -sf libhspell.so.0 $(DESTDIR)$(LIBDIR)/libhspell.so
+ 	test -d $(DESTDIR)$(INCLUDEDIR) || mkdir -m 755 -p $(DESTDIR)$(INCLUDEDIR)
+ 	cp hspell.h linginfo.h $(DESTDIR)$(INCLUDEDIR)/
+ 	chmod 644 $(DESTDIR)$(INCLUDEDIR)/hspell.h $(DESTDIR)$(INCLUDEDIR)/linginfo.h
+@@ -166,19 +170,30 @@ libhspell.a: dict_radix.o gimatria.o cor
+ 	ar cr $@ $^
+ 	-ranlib $@
+ 
+-$(HSPELL_EXECUTABLE): hspell.o tclHash.o libhspell.a
+-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(HSPELL_EXECUTABLE) hspell.o tclHash.o libhspell.a $(LIBS)
++EXTRAOBJECTSPIC=$(EXTRAOBJECTS:.o=.lo)
++
++%.lo: %.c
++	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(DEFS) -fPIC -DPIC -o $@ $<
++
++libhspell.so.0: dict_radix.lo gimatria.lo corlist.lo libhspell.lo $(EXTRAOBJECTSPIC)
++	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ -shared -Wl,-soname,libhspell.so.0 $^ -lz
++	ln -sf libhspell.so.0 libhspell.so
++
++$(HSPELL_EXECUTABLE): hspell.o tclHash.o libhspell.so.0
++	$(CC) $(CFLAGS) $(LDFLAGS) -o $(HSPELL_EXECUTABLE) hspell.o tclHash.o libhspell.so.0 $(LIBS)
+ 
+ # remember to update this dependency list once in a while...
+ libhspell.o dict_radix.o find_sizes.o: dict_radix.h
+ dict_radix.o linginfo.o: gzbuffered.h
+ libhspell.o mk_he_affix.o: prefixes.c
++libhspell.lo mk_he_affix.lo: prefixes.c
+ hspell.o: hash.h tclHash.h
+ tclHash.o: tclHash.h
+ corlist.o gimatria.o hspell.o libhspell.o: hspell.h
+ hspell.o libhspell.o linginfo.o: linginfo.h hspell.h
+ linginfo.o: dmask.c
+ specfilter.o: prefixes.c
++specfilter.lo: prefixes.c
+ 
+ prefixes.c: genprefixes.pl PrefixBits.pl
+ 	$(PERL) -w ./genprefixes.pl >prefixes.c
