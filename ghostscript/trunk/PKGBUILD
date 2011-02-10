@@ -2,8 +2,8 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=9.00
-pkgrel=4
+pkgver=9.01
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -12,14 +12,14 @@ makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
-source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.xz
+source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.bz2
 	ghostscript-fPIC.patch
 	ghostscript-system-jasper.patch
 	svn_rev11948.diff
 	ghostscript-gdevcups-691733.patch
 	gs_bug691759and691760.diff)
 options=('!libtool' '!makeflags')
-md5sums=('1ca5f245677f78f573e6490bdb40702f'
+md5sums=('9824d6a21ad8b4a831f67601959f1181'
          '766d44c47c693f96941b658e360c1277'
          '03e27cd02471ab3b642c344fa06b623e'
          '78f2b9c2d6a5a60891b2d8b593a15b00'
@@ -32,21 +32,21 @@ build() {
   rm -rf jpeg libpng zlib jasper expat tiff
 
   # fix build with systems jasper
-  patch -Np1 -i ${srcdir}/ghostscript-system-jasper.patch
+#  patch -Np1 -i ${srcdir}/ghostscript-system-jasper.patch
 
-  if [ "$CARCH" = "x86_64" ]; then
-    patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch
-  fi
+#  if [ "$CARCH" = "x86_64" ]; then
+#    patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch
+#  fi
 
   # part of https://bugs.archlinux.org/task/22006 - http://bugs.ghostscript.com/show_bug.cgi?id=691831
-  patch -Np2 -i ${srcdir}/svn_rev11948.diff
+#  patch -Np2 -i ${srcdir}/svn_rev11948.diff
   # upstream fix for http://bugs.ghostscript.com/show_bug.cgi?id=691733 / part of https://bugs.archlinux.org/task/21388
   # patch taken from Fedora RawHide master
-  patch -Np1 -i ${srcdir}/ghostscript-gdevcups-691733.patch
+#  patch -Np1 -i ${srcdir}/ghostscript-gdevcups-691733.patch
   # patch for http://bugs.ghostscript.com/show_bug.cgi?id=691760 and http://bugs.ghostscript.com/show_bug.cgi?id=691759 / part of https://bugs.archlinux.org/task/21388
-  patch -Np2 -i ${srcdir}/gs_bug691759and691760.diff
+#  patch -Np2 -i ${srcdir}/gs_bug691759and691760.diff
   
-  ./autogen.sh
+#  ./autogen.sh
   ./configure --prefix=/usr \
 	--enable-dynamic \
 	--with-ijs \
