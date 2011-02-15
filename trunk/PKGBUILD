@@ -3,30 +3,29 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=readline
-_patchlevel=002 #prepare for some patches
-pkgver=6.1.$_patchlevel
-pkgrel=2
+_basever=6.2
+_patchlevel=000 #prepare for some patches
+pkgver=$_basever  #.$_patchlevel
+pkgrel=1
 pkgdesc="GNU readline library"
 arch=('i686' 'x86_64')
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
 license=('GPL')
 depends=('glibc' 'ncurses')
 backup=('etc/inputrc')
-source=(http://ftp.gnu.org/gnu/readline/readline-6.1.tar.gz
+source=(http://ftp.gnu.org/gnu/readline/readline-$_basever.tar.gz
         inputrc)
 if [ $_patchlevel -gt 00 ]; then
     for (( p=1; p<=$((10#${_patchlevel})); p++ )); do
-        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-6.1-patches/readline61-$(printf "%03d" $p))
+        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-$_basever-patches/readline61-$(printf "%03d" $p))
     done
 fi
-md5sums=('fc2f7e714fe792db1ce6ddc4c9fb4ef3'
-         '58d54966c1191db45973cb3191ac621a'
-         'c642f2e84d820884b0bf9fd176bc6c3f'
-         '1a76781a1ea734e831588285db7ec9b1')
+md5sums=('67948acb2ca081f23359d0256e9a271c'
+         '58d54966c1191db45973cb3191ac621a')
 
 build() {
-  cd ${srcdir}/${pkgname}-6.1
-  for p in ../readline61-*; do
+  cd ${srcdir}/${pkgname}-$_basever
+  for p in ../readline${_basever//./}-*; do
     [ -e "$p" ] || continue
     msg "applying patch ${p}"
     patch -Np0 -i ${p}
@@ -38,13 +37,12 @@ build() {
   # build with -fPIC for x86_64 (FS#15634)
   [ $CARCH == "x86_64" ] && CFLAGS="$CFLAGS -fPIC"
 
-  ./configure --prefix=/usr --libdir=/lib \
-        --mandir=/usr/share/man --infodir=/usr/share/info
+  ./configure --prefix=/usr --libdir=/lib
   make SHLIB_LIBS=-lncurses
 }
 
 package() {
-  cd ${srcdir}/${pkgname}-6.1
+  cd ${srcdir}/${pkgname}-$_basever
   make DESTDIR=${pkgdir} install
   
   install -Dm644 ${srcdir}/inputrc ${pkgdir}/etc/inputrc
