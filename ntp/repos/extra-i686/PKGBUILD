@@ -1,0 +1,75 @@
+# $Id$
+# Maintainer: kevin <kevin@archlinux.org>
+
+pkgname=ntp
+pkgver=4.2.6.p3
+_realver=4.2.6p3
+pkgrel=1
+pkgdesc="NTP (Network Time Protocol) tries to keep servers in sync"
+arch=(i686 x86_64)
+license=('custom')
+url="http://www.ntp.org/"
+depends=('openssl' 'readline' 'libcap')
+makedepends=('perl-html-parser')
+backup=('etc/ntp.conf' 'etc/conf.d/ntp-client.conf')
+options=('!emptydirs')
+changelog=changelog
+source=(http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${_realver}.tar.gz
+	ntp-4.2.4-html2man.patch
+	ntp.conf
+	ntp-client.conf
+	ntpd
+	ntpdate)
+md5sums=('59876a9009b098ff59767ee45a88ebd2' '1b04e888717bb31479a6087632981723'
+         '398a7f270f6ae083f47f86eb8b557a75' '58997d6cf4846d80e35a01b855376a33'
+         '46118a8ec2c4f5bbfafd730af21b7c03' '486c0d16bb67cf26b4e64abddc50a573')
+
+build() {
+  cd "$srcdir/$pkgname-$_realver"
+  # fix man page generation
+  patch -Np1 -i ../ntp-4.2.4-html2man.patch
+  # configure
+  export LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
+  # 4.2.6p3: aclocal too old, regenerate
+  rm -f aclocal.m4
+  libtoolize --copy --force
+  ac_cv_header_dns_sd_h=0 ./configure --prefix=/usr --mandir=/usr/share/man --enable-linux-caps
+  # build
+  make
+}
+
+package() {
+  cd "$srcdir/$pkgname-$_realver"
+
+  # install
+  make DESTDIR="$pkgdir" install
+
+  # install conf files
+  mkdir -p "$pkgdir/usr/share/ntp"
+  install -D -m644 conf/* "${pkgdir}/usr/share/ntp"
+
+  # install launch scripts 
+  mkdir -p "$pkgdir/etc/rc.d"
+  install -D -m755 ${srcdir}/{ntpd,ntpdate} "$pkgdir/etc/rc.d"
+
+  # install man pages
+  cd html
+  ../scripts/html2man
+  sed -i 's/^[\t\ ]*$//;/./,/^$/!d' man/man*/*.[58]
+  install -d "$pkgdir"/usr/share/man/man{5,8}
+  install -m644 man/man5/* "$pkgdir/usr/share/man/man5/"
+  install -m644 man/man8/* "$pkgdir/usr/share/man/man8/"
+  mv "$pkgdir/usr/share/man/man8/ntpd.8" "$pkgdir/usr/share/man/man8/ntp-ntpd.8"
+  cd ..
+
+  # install sample configs
+  install -D -m644 "$srcdir/ntp.conf" "$pkgdir/etc/ntp.conf"
+  install -D -m644 "$srcdir/ntp-client.conf" \
+  	"$pkgdir/etc/conf.d/ntp-client.conf"
+
+  # create /var/lib/ntp
+  mkdir -p "$pkgdir/var/lib/ntp"
+  touch "$pkgdir/var/lib/ntp/.placeholder"
+
+  install -Dm644 "$srcdir/$pkgname-$_realver/COPYRIGHT" "$pkgdir/usr/share/licenses/$pkgname/COPYRIGHT"
+}
