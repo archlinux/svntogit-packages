@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.13
-pkgrel=3
+pkgrel=4
 _glibcdate=20110117
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -25,6 +25,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-__i686.patch
         glibc-2.12.1-static-shared-getpagesize.patch
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
+        glibc-2.13-prelink.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -34,6 +35,7 @@ md5sums=('b7b17d9c6b5b71b5e5322e04ca63c190'
          '40cd342e21f71f5e49e32622b25acc52'
          'a3ac6f318d680347bb6e2805d42b73b2'
          'b042647ea7d6f22ad319e12e796bd13e'
+         '24dfab6fd244f3773523412588ecc52c'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -66,6 +68,10 @@ build() {
   # http://www.exploit-db.com/exploits/15274/
   # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09 (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileged-program.patch
+
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=12489
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=25b3aada (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.13-prelink.patch
 
   # http://sourceware.org/bugzilla/show_bug.cgi?id=12403
   if [[ $CARCH == "x86_64" ]]; then
