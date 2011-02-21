@@ -3,7 +3,7 @@
 
 pkgname=python-qt
 pkgver=4.8.3
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
