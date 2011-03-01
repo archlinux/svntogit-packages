@@ -4,8 +4,8 @@
 
 pkgname=readline
 _basever=6.2
-_patchlevel=000 #prepare for some patches
-pkgver=$_basever  #.$_patchlevel
+_patchlevel=001 #prepare for some patches
+pkgver=$_basever.$_patchlevel
 pkgrel=1
 pkgdesc="GNU readline library"
 arch=('i686' 'x86_64')
@@ -17,11 +17,12 @@ source=(http://ftp.gnu.org/gnu/readline/readline-$_basever.tar.gz
         inputrc)
 if [ $_patchlevel -gt 00 ]; then
     for (( p=1; p<=$((10#${_patchlevel})); p++ )); do
-        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-$_basever-patches/readline61-$(printf "%03d" $p))
+        source=(${source[@]} http://ftp.gnu.org/gnu/readline/readline-$_basever-patches/readline${_basever//./}-$(printf "%03d" $p))
     done
 fi
 md5sums=('67948acb2ca081f23359d0256e9a271c'
-         '58d54966c1191db45973cb3191ac621a')
+         '58d54966c1191db45973cb3191ac621a'
+         '83287d52a482f790dfb30ec0a8746669')
 
 build() {
   cd ${srcdir}/${pkgname}-$_basever
