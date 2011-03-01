@@ -1,0 +1,403 @@
+From: Jan Lepper <dehtris@yahoo.de>
+Date: Thu, 27 Jan 2011 08:54:29 +0000
+Subject: add support for .xz archives - thanks to Val Gor, Grigorios Bouzakis
+X-Git-Url: http://quickgit.kde.org/?p=krusader.git&amp;a=commitdiff&amp;h=a2db0b0fb5f58d0d648a362f75e3948f49cc87fc
+---
+add support for .xz archives - thanks to Val Gor, Grigorios Bouzakis
+---
+
+
+--- a/krArc/krarc.cpp
++++ b/krArc/krarc.cpp
+@@ -423,7 +423,7 @@ void kio_krarcProtocol::get(const KUrl& 
+         if (mt)
+             emit mimeType(mt->name());
+         proc << getCmd << getPath(arcFile->url());
+-        if (arcType != "gzip" && arcType != "bzip2" && arcType != "lzma") proc << localeEncodedString(file);
++        if (arcType != "gzip" && arcType != "bzip2" && arcType != "lzma" && arcType != "xz") proc << localeEncodedString(file);
+         connect(&proc, SIGNAL(newOutputData(KProcess *, QByteArray &)),
+                 this, SLOT(receivedData(KProcess *, QByteArray &)));
+         proc.setMerge(false);
+@@ -440,7 +440,7 @@ void kio_krarcProtocol::get(const KUrl& 
+     proc.waitForFinished();
+ 
+     if (!extArcReady && !decompressToFile) {
+-        if (proc.exitStatus() != QProcess::NormalExit || !checkStatus(proc.exitCode()) || (arcType != "bzip2" && arcType != "lzma" && expectedSize != decompressedLen)) {
++        if (proc.exitStatus() != QProcess::NormalExit || !checkStatus(proc.exitCode()) || (arcType != "bzip2" && arcType != "lzma" && arcType != "xz" && expectedSize != decompressedLen)) {
+             if (encrypted && tries) {
+                 invalidatePassword();
+                 get(url, tries - 1);
+@@ -827,6 +827,8 @@ bool kio_krarcProtocol::setArcFile(const
+         arcType = "gzip";
+     else if (arcType == "tlz")
+         arcType = "lzma";
++    else if (arcType == "txz")
++        arcType = "xz";
+ 
+     if (arcType.isEmpty()) {
+         arcType = arcFile->mimetype();
+@@ -861,7 +863,7 @@ bool kio_krarcProtocol::initDirDict(cons
+         return false;
+     }
+ 
+-    if (arcType != "bzip2" && arcType != "lzma") {
++    if (arcType != "bzip2" && arcType != "lzma" && arcType != "xz") {
+         if (arcType == "rpm") {
+             proc << listCmd << arcPath;
+             proc.setStandardOutputFile(temp.fileName());
+@@ -896,7 +898,7 @@ bool kio_krarcProtocol::initDirDict(cons
+ 
+     root->append(entry);
+ 
+-    if (arcType == "bzip2" || arcType == "lzma") {
++    if (arcType == "bzip2" || arcType == "lzma" || arcType == "xz") {
+         KRDEBUG("Got me here...");
+         parseLine(0, "");
+         return true;
+@@ -1207,6 +1209,14 @@ void kio_krarcProtocol::parseLine(int li
+         mode = arcFile->mode();
+         size = arcFile->size();
+     }
++    if (arcType == "xz") {
++        fullName = arcFile->name();
++        if (fullName.endsWith(QLatin1String("xz"))) {
++            fullName.truncate(fullName.length() - 3);
++        }
++        mode = arcFile->mode();
++        size = arcFile->size();
++    }
+     if (arcType == "bzip2") {
+         // There is no way to list bzip2 files, so we take our information from
+         // the archive itself...
+@@ -1460,6 +1470,13 @@ bool kio_krarcProtocol::initArcParameter
+         copyCmd = QStringList();
+         delCmd  = QStringList();
+         putCmd  = QStringList();
++    } else if (arcType == "xz") {
++        cmd     = fullPathName("xz");
++        listCmd << fullPathName("xz");
++        getCmd  << fullPathName("xz") << "-dc";
++        copyCmd = QStringList();
++        delCmd  = QStringList();
++        putCmd  = QStringList();
+     } else if (arcType == "arj") {
+         cmd     = fullPathName("arj");
+         listCmd << fullPathName("arj") << "v" << "-y" << "-v";
+@@ -1544,7 +1561,7 @@ bool kio_krarcProtocol::checkStatus(int 
+         return exitCode == 0 || exitCode == 1;
+     else if (arcType == "ace" || arcType == "bzip2" || arcType == "lha" || arcType == "rpm" || arcType == "arj")
+         return exitCode == 0;
+-    else if (arcType == "gzip" || arcType == "lzma")
++    else if (arcType == "gzip" || arcType == "lzma" || arcType == "xz")
+         return exitCode == 0 || exitCode == 2;
+     else
+         return exitCode == 0;
+@@ -1566,7 +1583,8 @@ QString kio_krarcProtocol::detectArchive
+         {"bzip2", 0, "\x42\x5a\x68\x39\x31" },
+         {"gzip", 0, "\x1f\x8b"},
+         {"deb",  0, "!<arch>\ndebian-binary   " },
+-        {"7z",   0, "7z\xbc\xaf\x27\x1c" }
++        {"7z",   0, "7z\xbc\xaf\x27\x1c" }/*,
++        {"xz",   0, "\xfd\x37\x7a\x58\x5a\x00"}*/
+     };
+     static int autoDetectElems = sizeof(autoDetectParams) / sizeof(AutoDetectParams);
+ 
+@@ -1714,6 +1732,14 @@ QString kio_krarcProtocol::detectArchive
+         return "lzma";
+     }
+ 
++    if (fileName.endsWith(QLatin1String(".tar.xz")) ||
++            fileName.endsWith(QLatin1String(".txz"))) {
++        return "txz";
++    }
++    if (fileName.endsWith(QLatin1String(".xz"))) {
++        return "xz";
++    }
++    
+     return QString();
+ }
+ 
+
+--- a/krusader/Dialogs/packgui.cpp
++++ b/krusader/Dialogs/packgui.cpp
+@@ -68,6 +68,7 @@ PackGUI::PackGUI(QString defaultName, QS
+     if (PS("tar") && PS("gzip")) typeData->addItem("tar.gz");
+     if (PS("tar") && PS("bzip2")) typeData->addItem("tar.bz2");
+     if (PS("tar") && PS("lzma")) typeData->addItem("tar.lzma");
++    if (PS("tar") && PS("xz")) typeData->addItem("tar.xz");
+     if (PS("zip")) typeData->addItem("zip");
+     if (PS("rar")) typeData->addItem("rar");
+     if (PS("lha")) typeData->addItem("lha");
+
+--- a/krusader/Konfigurator/kgarchives.cpp
++++ b/krusader/Konfigurator/kgarchives.cpp
+@@ -62,6 +62,7 @@ KgArchives::KgArchives(bool first, QWidg
+     {{"Archives", "Do Tar",   _DoTar,   i18n("Tar"),   false,  ""},
+         {"Archives", "Do GZip",  _DoGZip,  i18n("GZip"),  false,  ""},
+         {"Archives", "Do LZMA",  _DoLZMA,  i18n("LZMA"),  false,  ""},
++        {"Archives", "Do XZ",    _DoXZ,    i18n("XZ"),    false,  ""},
+         {"Archives", "Do BZip2", _DoBZip2, i18n("BZip2"), false,  ""},
+         {"Archives", "Do UnZip", _DoUnZip, i18n("Zip"),   false,  ""},
+         {"Archives", "Do UnRar", _DoUnRar, i18n("Rar"),   false,  ""},
+@@ -73,7 +74,7 @@ KgArchives::KgArchives(bool first, QWidg
+         {"Archives", "Do 7z",    _Do7z,    i18n("7zip"),  false,  ""}
+     };
+ 
+-    cbs = createCheckBoxGroup(3, 0, packers, 12, generalGrp);
++    cbs = createCheckBoxGroup(3, 0, packers, 13, generalGrp);
+     generalGrid->addWidget(cbs, 1, 0);
+ 
+     addLabel(generalGrid, 2, 0, i18n("The archives that are \"grayed out\" were unavailable on your\n"
+@@ -148,6 +149,7 @@ void KgArchives::disableNonExistingPacke
+     cbs->find("Do GZip")->setEnabled(PS("gzip"));
+     cbs->find("Do BZip2")->setEnabled(PS("bzip2"));
+     cbs->find("Do LZMA")->setEnabled(PS("lzma"));
++    cbs->find("Do XZ")->setEnabled(PS("xz"));
+     cbs->find("Do UnZip")->setEnabled(PS("unzip"));
+     cbs->find("Do Lha")->setEnabled(PS("lha"));
+     cbs->find("Do RPM")->setEnabled(PS("rpm") || PS("cpio"));
+
+--- a/krusader/Konfigurator/kgdependencies.cpp
++++ b/krusader/Konfigurator/kgdependencies.cpp
+@@ -100,6 +100,7 @@ KgDependencies::KgDependencies(bool firs
+     addApplication("unrar", archGrid1, 12, packers_tab, PAGE_PACKERS);
+     addApplication("unzip", archGrid1, 13, packers_tab, PAGE_PACKERS);
+     addApplication("zip",   archGrid1, 14, packers_tab, PAGE_PACKERS);
++    addApplication("xz",    archGrid1, 15, packers_tab, PAGE_PACKERS);
+ 
+     //  ---------------------------- CHECKSUM TAB -------------------------------------
+     QWidget *checksum_tab = new QWidget(tabWidget);
+
+--- a/krusader/Konfigurator/kggeneral.cpp
++++ b/krusader/Konfigurator/kggeneral.cpp
+@@ -193,6 +193,7 @@ void KgGeneral::createExtensionsTab()
+     defaultAtomicExtensions += ".tar.gz";
+     defaultAtomicExtensions += ".tar.bz2";
+     defaultAtomicExtensions += ".tar.lzma";
++    defaultAtomicExtensions += ".tar.xz";
+     defaultAtomicExtensions += ".moc.cpp";
+ 
+     listBox = createListBox("Look&Feel", "Atomic Extensions",
+
+--- a/krusader/Konfigurator/kgprotocols.cpp
++++ b/krusader/Konfigurator/kgprotocols.cpp
+@@ -51,12 +51,14 @@ QString KgProtocols::defaultKrarcMimes =
+         "application/x-gzip,application/x-jar,"
+         "application/x-lha,application/x-lha-compressed,"
+         "application/x-rar,application/x-rar-compressed,"
++        "application/x-xz,"
+         "application/x-rpm,application/zip,"
+         "application/x-zip,application/x-zip-compressed";
+ QString KgProtocols::defaultTarMimes   = "application/x-tar,application/x-tarz,"
+         "application/x-bzip-compressed-tar,"
+         "application/x-compressed-tar,"
+-        "application/x-tbz,application/x-tgz";
++        "application/x-tbz,application/x-tgz,"
++        "application/x-xz-compressed-tar";
+ 
+ KgProtocols::KgProtocols(bool first, QWidget* parent) :
+         KonfiguratorPage(first, parent)
+
+--- a/krusader/Konfigurator/krresulttable.cpp
++++ b/krusader/Konfigurator/krresulttable.cpp
+@@ -102,6 +102,7 @@ KrArchiverResultTable::KrArchiverResultT
+     Archiver* gzip  = new Archiver("gzip",  "http://www.gnu.org",      PS("gzip"),  true,  true);
+     Archiver* bzip2 = new Archiver("bzip2", "http://www.gnu.org",      PS("bzip2"), true,  true);
+     Archiver* lzma  = new Archiver("lzma",  "http://tukaani.org/lzma", PS("lzma"),  true,  true);
++    Archiver* xz    = new Archiver("xz",    "http://tukaani.org/xz",   PS("xz"),    true,  true);
+     Archiver* lha   = new Archiver("lha",   "http://www.gnu.org",      PS("lha"),   true,  true);
+     Archiver* zip   = new Archiver("zip",   "http://www.info-zip.org", PS("zip"),   true,  false);
+     Archiver* unzip = new Archiver("unzip", "http://www.info-zip.org", PS("unzip"), false, true);
+@@ -139,6 +140,7 @@ KrArchiverResultTable::KrArchiverResultT
+     addRow(gzip, _grid);
+     addRow(bzip2, _grid);
+     addRow(lzma, _grid);
++    addRow(xz, _grid);
+     addRow(lha, _grid);
+     addRow(zip, _grid);
+     addRow(unzip, _grid);
+@@ -155,6 +157,7 @@ KrArchiverResultTable::KrArchiverResultT
+     delete gzip;
+     delete bzip2;
+     delete lzma;
++    delete xz;
+     delete lha;
+     delete zip;
+     delete unzip;
+
+--- a/krusader/Panel/krview.cpp
++++ b/krusader/Panel/krview.cpp
+@@ -367,6 +367,7 @@ void KrView::initProperties()
+     defaultAtomicExtensions += ".tar.gz";
+     defaultAtomicExtensions += ".tar.bz2";
+     defaultAtomicExtensions += ".tar.lzma";
++    defaultAtomicExtensions += ".tar.xz";
+     defaultAtomicExtensions += ".moc.cpp";
+     QStringList atomicExtensions = grpSvr.readEntry("Atomic Extensions", defaultAtomicExtensions);
+     for (QStringList::iterator i = atomicExtensions.begin(); i != atomicExtensions.end();) {
+
+--- a/krusader/VFS/krarchandler.cpp
++++ b/krusader/VFS/krarchandler.cpp
+@@ -85,7 +85,7 @@ public:
+ };
+ #endif
+ 
+-static QStringList arcProtocols = QString("tar;bzip;bzip2;lzma;gzip;krarc;zip").split(';');
++static QStringList arcProtocols = QString("tar;bzip;bzip2;lzma;xz;gzip;krarc;zip").split(';');
+ 
+ KWallet::Wallet * KRarcHandler::wallet = 0;
+ 
+@@ -98,6 +98,7 @@ QStringList KRarcHandler::supportedPacke
+     if (KrServices::cmdExist("gzip")) packers.append("gzip");
+     if (KrServices::cmdExist("bzip2")) packers.append("bzip2");
+     if (KrServices::cmdExist("lzma")) packers.append("lzma");
++    if (KrServices::cmdExist("xz")) packers.append("xz");
+     if (KrServices::cmdExist("unzip")) packers.append("unzip");
+     if (KrServices::cmdExist("zip")) packers.append("zip");
+     if (KrServices::cmdExist("lha")) packers.append("lha");
+@@ -134,6 +135,8 @@ bool KRarcHandler::arcSupported(QString 
+         return true;
+     else if (type == "-tlz" && lst.contains("tar"))
+         return true;
++    else if (type == "-txz" && lst.contains("tar"))
++        return true;
+     else if (type == "tarz" && lst.contains("tar"))
+         return true;
+     else if (type == "gzip" && lst.contains("gzip"))
+@@ -142,6 +145,8 @@ bool KRarcHandler::arcSupported(QString 
+         return true;
+     else if (type == "lzma" && lst.contains("lzma"))
+         return true;
++    else if (type == "-xz" && lst.contains("xz"))
++        return true;
+     else if (type == "-lha" && lst.contains("lha"))
+         return true;
+     else if (type == "-ace" && lst.contains("unace"))
+@@ -173,6 +178,7 @@ bool KRarcHandler::arcHandled(QString ty
+             (type == "-tar" && group.readEntry("Do Tar" , _DoTar)) ||
+             (type == "-tbz" && group.readEntry("Do BZip2", _DoBZip2)) ||
+             (type == "-tlz" && group.readEntry("Do LZMA", _DoLZMA)) ||
++            (type == "-txz" && group.readEntry("Do XZ", _DoXZ)) ||
+             (type == "gzip" && group.readEntry("Do GZip" , _DoGZip)) ||
+             (type == "zip2" && group.readEntry("Do BZip2", _DoBZip2)) ||
+             (type == "-zip" && group.readEntry("Do UnZip", _DoUnZip)) ||
+@@ -198,7 +204,7 @@ long KRarcHandler::arcFileCount(QString 
+     if (!arcSupported(type)) return 0;
+ 
+     // bzip an gzip archive contains only one file
+-    if (type == "zip2" || type == "gzip" || type == "lzma") return 1L;
++    if (type == "zip2" || type == "gzip" || type == "lzma" || type == "-xz") return 1L;
+ 
+     // set the right lister to do the job
+     QStringList lister;
+@@ -209,6 +215,7 @@ long KRarcHandler::arcFileCount(QString 
+     else if (type == "tarz") lister << KrServices::fullPathName("tar") << "-tvzf";
+     else if (type == "-tbz") lister << KrServices::fullPathName("tar") << "-tjvf";
+     else if (type == "-tlz") lister << KrServices::fullPathName("tar") << "--lzma" << "-tvf";
++    else if (type == "-txz") lister << KrServices::fullPathName("tar") << "--xz" << "-tvf";
+     else if (type == "-lha") lister << KrServices::fullPathName("lha") << "l";
+     else if (type == "-rar") lister << KrServices::fullPathName(KrServices::cmdExist("rar") ? "rar" : "unrar") << "l" << "-v";
+     else if (type == "-ace") lister << KrServices::fullPathName("unace") << "l";
+@@ -293,9 +300,11 @@ bool KRarcHandler::unpack(QString archiv
+     else if (type == "tarz") packer << KrServices::fullPathName("tar") << "-xvzf";
+     else if (type == "-tbz") packer << KrServices::fullPathName("tar") << "-xjvf";
+     else if (type == "-tlz") packer << KrServices::fullPathName("tar") << "--lzma" << "-xvf";
++    else if (type == "-txz") packer << KrServices::fullPathName("tar") << "--xz" << "-xvf";
+     else if (type == "gzip") packer << KrServices::fullPathName("gzip") << "-cd";
+     else if (type == "zip2") packer << KrServices::fullPathName("bzip2") << "-cdk";
+     else if (type == "lzma") packer << KrServices::fullPathName("lzma") << "-cdk";
++    else if (type == "-xz")  packer << KrServices::fullPathName("xz") << "-cdk";
+     else if (type == "-lha") packer << KrServices::fullPathName("lha") << "xf";
+     else if (type == "-rar") packer << KrServices::fullPathName(KrServices::cmdExist("rar") ? "rar" : "unrar") << "-y" << "x";
+     else if (type == "-ace") packer << KrServices::fullPathName("unace") << "x";
+@@ -351,7 +360,7 @@ bool KRarcHandler::unpack(QString archiv
+     // unpack the files
+     KrLinecountingProcess proc;
+     proc << packer << archive;
+-    if (type == "zip2" || type == "gzip" || type == "lzma") {
++    if (type == "zip2" || type == "gzip" || type == "lzma" || type == "-xz") {
+         QString arcname = archive.mid(archive.lastIndexOf("/") + 1);
+         if (arcname.contains(".")) arcname = arcname.left(arcname.lastIndexOf("."));
+         proc.setStandardOutputFile(dest + '/' + arcname);
+@@ -407,9 +416,11 @@ bool KRarcHandler::test(QString archive,
+     else if (type == "tarz") packer << KrServices::fullPathName("tar") << "-tvzf";
+     else if (type == "-tbz") packer << KrServices::fullPathName("tar") << "-tjvf";
+     else if (type == "-tlz") packer << KrServices::fullPathName("tar") << "--lzma" << "-tvf";
++    else if (type == "-txz") packer << KrServices::fullPathName("tar") << "--xz" << "-tvf";
+     else if (type == "gzip") packer << KrServices::fullPathName("gzip") << "-tv";
+     else if (type == "zip2") packer << KrServices::fullPathName("bzip2") << "-tv";
+     else if (type == "lzma") packer << KrServices::fullPathName("lzma") << "-tv";
++    else if (type == "-xz")  packer << KrServices::fullPathName("xz") << "-tv";
+     else if (type == "-rar") packer << KrServices::fullPathName(KrServices::cmdExist("rar") ? "rar" : "unrar") << "t";
+     else if (type == "-ace") packer << KrServices::fullPathName("unace") << "t";
+     else if (type == "-lha") packer << KrServices::fullPathName("lha") << "t";
+@@ -474,6 +485,8 @@ bool KRarcHandler::pack(QStringList file
+         packer << KrServices::fullPathName("tar") << "-cvjf"; type = "-tbz";
+     } else if (type == "tar.lzma") {
+         packer << KrServices::fullPathName("tar") << "--lzma" << "-cvf"; type = "-tlz";
++    } else if (type == "tar.xz") {
++        packer << KrServices::fullPathName("tar") << "--xz" << "-cvf"; type = "-txz";
+     } else if (type == "rar") {
+         packer << KrServices::fullPathName("rar") << "-r" << "a"; type = "-rar";
+     } else if (type == "lha") {
+@@ -673,6 +686,10 @@ QString KRarcHandler::getType(bool &encr
+         result = "-7z";
+     }
+ 
++    if (result.endsWith(QLatin1String("-xz"))) {
++        result = "-xz";
++    }
++
+     return result.right(4);
+ }
+ 
+@@ -683,9 +700,9 @@ bool KRarcHandler::checkStatus(QString t
+         return exitCode == 0 || exitCode == 1;
+     else if (type == "-ace" || type == "zip2" || type == "-lha" || type == "-rpm" || type == "cpio" ||
+              type == "-tar" || type == "tarz" || type == "-tbz" || type == "-tgz" || type == "-arj" ||
+-             type == "-deb" || type == "-tlz")
++             type == "-deb" || type == "-tlz" || type == "-txz")
+         return exitCode == 0;
+-    else if (type == "gzip" || type == "lzma")
++    else if (type == "gzip" || type == "lzma" || type == "-xz")
+         return exitCode == 0 || exitCode == 2;
+     else
+         return exitCode == 0;
+@@ -707,7 +724,8 @@ QString KRarcHandler::detectArchive(bool
+         {"bzip2", 0, "\x42\x5a\x68\x39\x31" },
+         {"gzip", 0, "\x1f\x8b"},
+         {"deb",  0, "!<arch>\ndebian-binary   " },
+-        {"7z",   0, "7z\xbc\xaf\x27\x1c" }
++        {"7z",   0, "7z\xbc\xaf\x27\x1c" }/*,
++        {"xz",   0, "\xfd\x37\x7a\x58\x5a\x00"}*/
+     };
+     static int autoDetectElems = sizeof(autoDetectParams) / sizeof(AutoDetectParams);
+ 
+@@ -839,6 +857,14 @@ QString KRarcHandler::detectArchive(bool
+         return "lzma";
+     }
+ 
++    if (fileName.endsWith(QLatin1String(".tar.xz")) ||
++            fileName.endsWith(QLatin1String(".txz"))) {
++        return "txz";
++    }
++    if (fileName.endsWith(QLatin1String(".xz"))) {
++        return "xz";
++    }
++
+     return QString();
+ }
+ 
+
+--- a/krusader/defaults.h
++++ b/krusader/defaults.h
+@@ -181,6 +181,8 @@
+ #define _DoBZip2       true
+ // Do LZMA ///////////
+ #define _DoLZMA       true
++// Do XZ ///////////
++#define _DoXZ         true
+ // Do Rar /////////////
+ #define _DoRar         true
+ // Do UnRar ///////////
+
