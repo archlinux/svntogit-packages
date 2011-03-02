@@ -1,0 +1,47 @@
+From: FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>
+Date: Fri, 25 Feb 2011 22:44:16 +0000 (-0800)
+Subject: swiotlb: fix wrong panic
+X-Git-Tag: v2.6.32.30~9
+X-Git-Url: http://git.kernel.org/?p=linux%2Fkernel%2Fgit%2Flongterm%2Flinux-2.6.32.y.git;a=commitdiff_plain;h=484d82b6e2e4239ba7a722e0c532e9aff64be51a
+
+swiotlb: fix wrong panic
+
+commit fba99fa38b023224680308a482e12a0eca87e4e1 upstream.
+
+swiotlb's map_page wrongly calls panic() when it can't find a buffer fit
+for device's dma mask.  It should return an error instead.
+
+Devices with an odd dma mask (i.e.  under 4G) like b44 network card hit
+this bug (the system crashes):
+
+   http://marc.info/?l=linux-kernel&m=129648943830106&w=2
+
+If swiotlb returns an error, b44 driver can use the own bouncing
+mechanism.
+
+Reported-by: Chuck Ebbert <cebbert@redhat.com>
+Signed-off-by: FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>
+Tested-by: Arkadiusz Miskiewicz <arekm@maven.pl>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Greg Kroah-Hartman <gregkh@suse.de>
+---
+
+diff --git a/lib/swiotlb.c b/lib/swiotlb.c
+index ac25cd2..7740ee8 100644
+--- a/lib/swiotlb.c
++++ b/lib/swiotlb.c
+@@ -631,8 +631,10 @@ dma_addr_t swiotlb_map_page(struct device *dev, struct page *page,
+ 	/*
+ 	 * Ensure that the address returned is DMA'ble
+ 	 */
+-	if (!dma_capable(dev, dev_addr, size))
+-		panic("map_single: bounce buffer is not DMA'ble");
++	if (!dma_capable(dev, dev_addr, size)) {
++		swiotlb_tbl_unmap_single(dev, map, size, dir);
++		dev_addr = swiotlb_virt_to_bus(dev, io_tlb_overflow_buffer);
++	}
+ 
+ 	return dev_addr;
+ }
+
