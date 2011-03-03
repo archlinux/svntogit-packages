@@ -1,0 +1,42 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-games
+pkgver=2.91.90
+pkgrel=1
+pkgdesc="Some Games for GNOME"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('libsm' 'gconf' 'guile' 'desktop-file-utils' 'libcanberra'
+         'clutter-gtk' 'hicolor-icon-theme' 'librsvg')
+makedepends=('gnome-doc-utils' 'intltool' 'gobject-introspection')
+provides=('glchess')
+conflicts=('glchess')
+options=('!emptydirs' '!libtool')
+install=gnome-games.install
+url="http://www.gnome.org"
+groups=('gnome-extra')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('118a9639947fd92687dc5c9998b987eb643b58f339f9c4ffe2c2815d2dfa9677')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  PYTHON=/usr/bin/python2 ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-scrollkeeper \
+      --disable-static \
+      --with-scores-user=root --with-scores-group=games \
+      --enable-introspection=yes
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -j1 GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+
+  # Remove all scores, we generate them from postinstall
+  rm -rf "${pkgdir}/var"
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-games ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
