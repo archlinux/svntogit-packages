@@ -1,0 +1,70 @@
+# $Id: PKGBUILD 107102 2011-01-21 11:16:03Z andrea $
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=kdebindings
+pkgname=('kdebindings-csharp'
+         'kdebindings-python'
+         'kdebindings-ruby'
+         'kdebindings-smoke')
+pkgver=4.6.1
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://www.kde.org'
+license=('GPL' 'LGPL')
+makedepends=('pkgconfig' 'cmake' 'automoc4' 'python2-qt' 'kdepim-runtime' 'mono'
+	'kdegraphics-okular' 'qwt' 'docbook-xsl' 'boost' 'qscintilla' 'ruby')
+source=("http://download.kde.org/stable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2")
+sha1sums=('1a71e656df19a4b132546242aa344778554693ff')
+
+build() {
+	export MONO_SHARED_DIR="${srcdir}/build/.mono"
+	mkdir -p "$MONO_SHARED_DIR"
+	cd ${srcdir}/build
+
+	cmake ../${pkgbase}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+        -DRUBY_SITE_LIB_DIR="/usr/lib/ruby/site_ruby/1.9.1" \
+        -DRUBY_SITE_ARCH_DIR="/usr/lib/ruby/site_ruby/1.9.1/${CARCH}-linux" \
+		-DBUILD_falcon=OFF \
+		-DBUILD_java=OFF \
+		-DBUILD_php=OFF \
+		-DWITH_PolkitQt=OFF
+	make
+}
+
+package_kdebindings-csharp() {
+	pkgdesc='KDE bindings for mono'
+	depends=('kdebindings-smoke' 'mono')
+	export MONO_SHARED_DIR="${srcdir}/build/.mono"
+	mkdir -p "$MONO_SHARED_DIR"
+	cd $srcdir/build/csharp
+	make DESTDIR=$pkgdir install
+}
+
+package_kdebindings-python() {
+	pkgdesc='KDE bindings for python'
+	depends=('kdepim-runtime' 'python2-qt' 'qscintilla')
+	cd $srcdir/build/python
+	make DESTDIR=$pkgdir install
+
+	# Use the python2 executable
+	find "${pkgdir}" -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
+}
+
+package_kdebindings-ruby() {
+	pkgdesc='KDE Bindings for ruby'
+	depends=('kdebindings-smoke' 'ruby')
+	cd $srcdir/build/ruby
+	make DESTDIR=$pkgdir install
+}
+
+package_kdebindings-smoke() {
+	pkgdesc='Language independent library for Qt and KDE bindings'
+	depends=('qscintilla' 'kdegraphics-okular' 'kdepim-runtime')
+	cd $srcdir/build/smoke
+	make DESTDIR=$pkgdir install
+    cd $srcdir/build/generator/smokebase
+    make DESTDIR=$pkgdir install
+}
