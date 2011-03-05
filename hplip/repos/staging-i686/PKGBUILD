@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer : Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Morgan LEFIEUX <comete@archlinuxfr.org>
+
+pkgname=hplip
+pkgver=3.11.1
+pkgrel=2
+pkgdesc="Drivers for HP DeskJet, OfficeJet, Photosmart, Business Inkjet and some LaserJet"
+arch=('i686' 'x86_64')
+url="http://hplipopensource.com"
+license=('GPL')
+makedepends=('python2-qt' 'pygobject' 'pkgconfig' 'sane' 'rpcbind' 'cups')
+depends=('python2' 'ghostscript>=8.64-6' 'foomatic-db' 'foomatic-db-engine'
+	'libcups>=1.3.10-3' 'net-snmp>=5.6.1' 'libusb-compat')
+optdepends=('cups: for printing support'
+            'dbus-python: for dbus support'
+            'sane: for scanner support'
+            'rpcbind: for network support'
+            'python2-qt: for running hp-toolbox'
+            'pygobject: for running hp-toolbox')
+replaces=('hpijs')
+options=('!libtool')
+install=hplip.install
+source=(http://downloads.sourceforge.net/${pkgname}/$pkgname-$pkgver.tar.gz)
+md5sums=('86f63a00c911313206fef6a147f7faad')
+sha1sums=('6b06567373cadc7dff48134c6b58f90a4d72582a')
+
+build() {
+ cd "$srcdir/$pkgname-$pkgver"
+ find . -type f -exec sed -i 's~^#.*env python~#!/usr/bin/env python2~' {} +
+ ./configure --prefix=/usr \
+             --enable-qt4 \
+             --enable-foomatic-rip-hplip-install \
+             --enable-foomatic-ppd-install \
+             --enable-hpcups-install \
+             --enable-cups-drv-install \
+             --enable-hpijs-install \
+             --enable-foomatic-drv-install \
+             --enable-pp-build \
+             --enable-udev-acl-rules
+
+ make
+}
+
+package() {
+ cd "$srcdir/$pkgname-$pkgver"
+ make DESTDIR="$pkgdir/" install
+
+ rm -rf "$pkgdir/etc/sane.d"
+ # remove autostart of hp-daemon
+ rm -r "$pkgdir/etc/xdg"
+ # move udev rules to /lib/udev/rules.d
+ mkdir -p "$pkgdir/lib/udev/rules.d"
+ mv "$pkgdir"/etc/udev/rules.d/* "$pkgdir/lib/udev/rules.d/"
+ rm -r "$pkgdir/etc/udev"
+ # remove lp user, it's not used on archlinux
+ sed -i 's|OWNER="lp", ||g' "$pkgdir/lib/udev/rules.d/40-hplip.rules"
+ # fix sysfs rules
+ sed -i -e "s|SYSFS|ATTRS|g" -e "s|sysfs|attrs|g" "$pkgdir/lib/udev/rules.d/56-hpmud_support.rules"
+}
