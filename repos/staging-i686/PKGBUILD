@@ -1,0 +1,42 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Dale Blount <dale@archlinux.org>
+
+pkgname=net-snmp
+pkgver=5.6.1
+pkgrel=1
+pkgdesc="A suite of applications used to implement SNMP v1, SNMP v2c and SNMP v3 using both IPv4 and IPv6"
+arch=('i686' 'x86_64')
+url="http://www.net-snmp.org/"
+license=('custom')
+depends=('openssl' 'tcp_wrappers' 'libnl')
+makedepends=('setuptools')
+optdepends=('perl-term-readkey: for snmpcheck application' 
+            'perl-tk: for snmpcheck and tkmib applications'
+	    'python2: for the python modules')
+provides=('ucd-snmp')
+options=('!libtool' '!makeflags' '!emptydirs')
+source=("http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+	'snmpd.rc')
+md5sums=('b4e30ead5783b0bb1d280172c6095ea4' '9f0d13676ba1fae1eb7eb178edd85b43')
+sha1sums=('45bbf1295253d5379a5d1efd918593160387fd00' '2c679b564a2c319d9ce2714a9776aa0e6d89c60a')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -i -e "s:\(install --basedir=\$\$dir\):\1 --root='${pkgdir}':" Makefile.in
+  ./configure --prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man \
+    --enable-ucd-snmp-compatibility --enable-ipv6 --with-libwrap --with-python-modules \
+    --with-default-snmp-version="3" --with-sys-contact="root@localhost" \
+    --with-sys-location="Unknown" --with-logfile="/var/log/snmpd.log" \
+    --with-mib-modules="host misc/ipfwacc ucd-snmp/diskio tunnel ucd-snmp/dlmod" \
+    --with-persistent-directory="/var/net-snmp" \
+    PYTHONPROG=/usr/bin/python2
+  make NETSNMP_DONT_CHECK_VERSION=1 LDFLAGS+="-Wl,-rpath -Wl,/usr/lib/perl5/core_perl/CORE"
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" INSTALL_PREFIX="${pkgdir}" INSTALLDIRS=vendor install
+  install -D -m755 "${srcdir}/snmpd.rc" "${pkgdir}/etc/rc.d/snmpd"
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
+}
