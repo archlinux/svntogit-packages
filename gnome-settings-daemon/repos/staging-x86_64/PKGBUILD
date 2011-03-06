@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gnome-settings-daemon
+pkgname=(gnome-settings-daemon gnome-settings-daemon-pulse)
+pkgver=2.32.1
+pkgrel=3
+pkgdesc="The GNOME Settings daemon"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('libgnomekbd>=2.32.0' 'gnome-desktop>=2.32.0' 'libnotify>=0.7.1' 'hicolor-icon-theme' 'libgnome-data')
+makedepends=('intltool' 'libpulse' 'gstreamer0.10-base>=0.10.30' 'libcanberra')
+options=('!emptydirs' '!libtool')
+install=gnome-settings-daemon.install
+url="http://www.gnome.org"
+groups=('gnome')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/2.32/${pkgbase}-${pkgver}.tar.bz2
+        gstreamer-volume-2.30.patch
+        gnome-settings-daemon-2.32.1-libnotify-0.7.patch)
+sha256sums=('0074b3fec3ad6e3ab91a05dc20906b06101ea8bca0cd2caf394a5cc141b05e86'
+            '4b2a14c0e238f3cde71619b74f178544151bb319dee84b52133a254b85548582'
+            'da836e61ddaea8b3a90692951296a28c4533e1e117412a0602f6c76e564e837d')
+
+build() {
+  cd "$srcdir"
+  cp -a "$pkgbase-$pkgver"{,-pulse}
+  
+  cd "$pkgbase-$pkgver"
+  patch -Np0 -i "${srcdir}/gnome-settings-daemon-2.32.1-libnotify-0.7.patch"
+  patch -Np1 -i "${srcdir}/gstreamer-volume-2.30.patch"
+  libtoolize --force
+  aclocal
+  autoconf
+  automake
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --libexecdir=/usr/bin --disable-static --disable-pulse --enable-gstreamer
+  make
+
+  cd "$srcdir/$pkgbase-$pkgver-pulse"
+  patch -Np0 -i "${srcdir}/gnome-settings-daemon-2.32.1-libnotify-0.7.patch"
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --libexecdir=/usr/bin --disable-static --enable-pulse
+  make
+}
+
+_commonpackage() {
+  make DESTDIR="${pkgdir}" GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install
+
+  install -d -m755 "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgbase}.schemas" --domain gnome-settings-daemon ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
+
+package_gnome-settings-daemon() {
+  depends+=(gstreamer0.10-base)
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  _commonpackage
+}
+
+package_gnome-settings-daemon-pulse() {
+  pkgdesc+=" with PulseAudio support"
+  depends+=(libpulse libcanberra)
+  groups=(pulseaudio-gnome)
+  conflicts=(gnome-settings-daemon)
+  provides=("gnome-settings-daemon=$pkgver-$pkgrel")
+
+  cd "${srcdir}/${pkgbase}-${pkgver}-pulse"
+  _commonpackage
+}
