@@ -1,0 +1,41 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=epiphany
+pkgver=2.30.6
+pkgrel=3
+install=epiphany.install
+pkgdesc="A GNOME2 web browser based on the WebKit rendering engine."
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('libwebkit>=1.2.4' 'iso-codes>=3.10.1' 'desktop-file-utils' 'libxslt>=1.1.24' 'libnotify>=0.7.1' 'avahi>=0.6.27' 'libsoup-gnome>=2.32.0' 'nss>=3.12.8' 'ca-certificates' 'gconf>=2.32.0' 'gobject-introspection>=0.9.8' 'dbus-glib')
+makedepends=('gnome-doc-utils>=0.20.1' 'pkgconfig' 'networkmanager' 'intltool' 'startup-notification' 'gnome-common' 'gtk-doc')
+options=('!libtool' '!emptydirs')
+groups=('gnome')
+url="http://www.gnome.org/projects/epiphany/"
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/2.30/${pkgname}-${pkgver}.tar.bz2
+        fix-introspection.patch
+        epiphany-2.30.6-libnotify-0.7.patch
+        add-dbus-glib.patch)
+sha256sums=('278a5c00ce07e6a3ea440d289de22dbec3ebec4ded4ff3b4c48b580f469c2dcc'
+            'fed862407db7d971aa759168f889e68e914c4e6d80d7768f3db549bc36bd8dbf'
+            'c1a59a9df78db07c2cf23d47d881d8d4edf6e55af3d655f8ec9870adf9255390'
+            '6a0d826767eeed02300b612e16af99a8f3840ce1f754d437a1ddd8da9d254e95')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/fix-introspection.patch"
+  patch -Np1 -i "${srcdir}/add-dbus-glib.patch"
+  patch -Np0 -i "${srcdir}/epiphany-2.30.6-libnotify-0.7.patch"
+  ./autogen.sh
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var \
+      --disable-scrollkeeper \
+      --enable-network-manager
+  make
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain epiphany ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
