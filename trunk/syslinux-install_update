@@ -151,8 +151,8 @@ getBoot() {
 
     # Use DATA from findmnt see rc.sysint for more info
     if [[ -f /proc/self/mountinfo ]]; then
-        read rootdev rootfs < <(findmnt -run -o SOURCE,FSTYPE "$CHROOT/")
-        read bootdev bootfs < <(findmnt -run -o SOURCE,FSTYPE "$CHROOT/boot")
+        read rootdev rootfs < <(findmnt -run -t noautofs -o SOURCE,FSTYPE "$CHROOT/")
+        read bootdev bootfs < <(findmnt -run -t noautofs -o SOURCE,FSTYPE "$CHROOT/boot")
     else
         echo "Could not find /proc/self/mountinfo"
         echo "Are you running a kernel greater than 2.6.24?"
@@ -294,9 +294,6 @@ install_mbr() {
 }
 
 _install() {
-    # Find which device contains /boot
-    get_boot_devices
-
     # Copy files to /boot
     for file in "${com32_files[@]}"; do
         # Symlink files even if links exist
@@ -331,10 +328,6 @@ _install() {
     fi
 
     touch "$CHROOT/$autoupdate_file"
-
-    [[ $SET_ACTIVE ]] && set_active
-
-    [[ $MBR ]] && install_mbr
 }
 
 update() {
@@ -401,7 +394,12 @@ while getopts "c:uihmas" opt; do
             SET_ACTIVE="True"
             ;;
         s)
-            AUTOUPDATE="True"
+            # If AUTOUPDATE_FILE does not exist exit the script
+            if [[ -f $autoupdate_file ]]; then
+                UPDATE="True"
+            else
+                exit 0
+            fi
             ;;
         *)
             usage
@@ -410,42 +408,49 @@ while getopts "c:uihmas" opt; do
     esac
 done
 
+# Display Usage Information if both Install and Update are passed
 if [[ $INSTALL && $UPDATE ]]; then
     usage
     exit 1
 fi
 
+# If a chroot dir is path set variables to reflect chroot
 if [[ "$CHROOT" ]]; then
     libpath="$CHROOT$libpath"
     bootpath="$CHROOT$bootpath"
     extlinux="$CHROOT$extlinux"
 fi
 
-[[ "$AUTOUPDATE" && -f $autoupdate_file ]] && UPDATE="True"
-
+# Exit if no /boot path exists
 if ( f=("$bootpath"/*); (( ! ${#f[@]} )) ); then
     echo "Error: $bootpath is empty!"
     echo "Is /boot mounted?"
     exit 1
 fi
 
-getBoot
+# Get the boot device if any of these options are passed
+if [[ $INSTALL || $UPDATE || $SET_ACTIVE || $MBR ]]; then
+    getBoot
+fi
 
-#UPDATE is the only function that does not need boot_devices
-[[ $UPDATE ]] && update
-
-# Install will take care of executing get_boot_devices, set_active, and install_mbr
-# Otherwise accept other combonations
+# Install or Update
 if [[ $INSTALL ]]; then
-    _install
-    exit 0
-elif [[ $SET_ACTIVE ]] || [[ $MBR ]]; then
+    _install || exit
+elif [[ $UPDATE ]]; then
+    update || exit
+fi
+
+
+# SET_ACTIVE and MBR
+if [[ $SET_ACTIVE ]] || [[ $MBR ]]; then
     get_boot_devices
+
     if [[ $SET_ACTIVE ]]; then
-        set_active || exit $?
+        set_active || exit
     fi
+
     if [[ $MBR ]]; then
-        install_mbr || exit $?
+        install_mbr || exit
     fi
 fi
 
