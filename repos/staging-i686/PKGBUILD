@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=liferea
+pkgver=1.6.5
+pkgrel=2
+pkgdesc="A desktop news aggregator for online news feeds and weblogs"
+arch=('i686' 'x86_64')
+url="http://liferea.sourceforge.net/"
+license=('GPL')
+depends=('gconf' 'libwebkit' 'libxslt' 'libglade' 'sqlite3' 'hicolor-icon-theme')
+makedepends=('pkg-config' 'intltool' 'lua' 'libnotify')
+optdepends=('lua: for lua scripting support'
+            'libnotify: for notification support')
+options=('!libtool' '!emptydirs')
+install=liferea.install
+source=(http://downloads.sourceforge.net/sourceforge/liferea/liferea-${pkgver}.tar.gz)
+md5sums=('b5a2c0803eec5d0aff0b9ca4114eaf16')
+sha1sums=('f24dbd0e81c5a8309f0d19853211fc02ff818477')
+
+build() {
+  cd "${srcdir}/liferea-${pkgver}"
+
+  sed -i 's/notify_notification_new (node_get_title(node_p), labelText_now_p, NULL, NULL);/notify_notification_new (node_get_title(node_p), labelText_now_p, NULL);/' src/notification/libnotify.c
+  sed -i 's/notify_notification_new ( _("Feed Update"), labelSummary_p, NULL, NULL);/notify_notification_new ( _("Feed Update"), labelSummary_p, NULL);/' src/notification/libnotify.c
+  sed -i 's|notify_notification_attach_to_status_icon|//notify_notification_attach_to_status_icon|' src/notification/libnotify.c
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-schemas-install --disable-nm
+  make
+}
+
+package() {
+  cd "${srcdir}/liferea-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  
+  install -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" "${pkgdir}"/etc/gconf/schemas/*.schemas
+  rm -f "${pkgdir}"/etc/gconf/schemas/*.schemas
+}
