@@ -1,0 +1,98 @@
+# $Id$
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+# Contributor: Martin Sandsmark <martin.sandsmark@kde.org>
+
+pkgbase=vlc
+pkgname=('vlc' 'vlc-plugin')
+pkgver=1.1.7
+pkgrel=5
+arch=('i686' 'x86_64')
+url="http://www.videolan.org/vlc/"
+license=('GPL')
+makedepends=('a52dec' 'fluidsynth' 'libmtp' 'libdvbpsi' 'lirc-utils'
+             'libdca' 'qt' 'libproxy' 'sdl_image' 'libdvdnav' 'mesa'
+             'lua' 'v4l-utils' 'libcddb' 'smbclient' 'libmatroska' 'zvbi'
+             'taglib' 'sysfsutils' 'libmpcdec' 'ffmpeg' 'faad2'
+             'libshout' 'libmad' 'fribidi' 'libmpeg2' 'libmodplug'
+             'avahi' 'ttf-freefont' 'libxv' 'libass' 'xdg-utils' 'libxpm'
+             'xulrunner' 'pkgconfig' 'live-media' 'libnotify' 'libcdio'
+             'flac' 'libtheora' 'alsa-lib' 'jack' 'kdelibs' 'udev'
+             'libraw1394' 'libdc1394' 'libavc1394' 'libva' 'libpulse')
+options=('!libtool')
+source=("http://download.videolan.org/pub/videolan/${pkgbase}/${pkgver}/${pkgbase}-${pkgver}.tar.bz2"
+        vlc-1.1.7-libmatroska.patch
+        vlc-libnotify-0.7.patch)
+md5sums=('932ce1fa4afa54b56ac0ccc0655667b6'
+         'd03b0a4f3d2a0ece5c0a9e1a2919dec0'
+         '122ae89daed6ebfe6e95455506ee0a1e')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  patch -Np1 -i "${srcdir}/vlc-1.1.7-libmatroska.patch"
+  patch -Np1 -i "${srcdir}/vlc-libnotify-0.7.patch"
+  sed -i -e 's:truetype/freefont:TTF:g' modules/misc/freetype.c
+  ./configure --prefix=/usr \
+              --disable-rpath \
+              --enable-faad \
+              --enable-v4l \
+              --enable-snapshot \
+              --enable-dbus-control \
+              --enable-nls \
+              --enable-lirc \
+              --enable-pvr \
+              --enable-ncurses \
+              --enable-mozilla \
+              --with-live555-tree=/usr/lib/live \
+              --enable-realrtsp
+  make
+}
+
+package_vlc() {
+  pkgdesc="A multi-platform MPEG, VCD/DVD, and DivX player"
+  depends=('a52dec' 'fluidsynth' 'libmtp' 'libdvbpsi' 'libcdio'
+           'libdca' 'qt' 'libproxy' 'sdl_image' 'libdvdnav' 'mesa'
+           'lua' 'v4l-utils' 'libcddb' 'smbclient' 'libmatroska' 'zvbi'
+           'taglib' 'sysfsutils' 'libmpcdec' 'ffmpeg' 'faad2'
+           'libshout' 'libmad' 'fribidi' 'libmpeg2' 'libmodplug'
+           'ttf-freefont' 'libxv' 'libass' 'xdg-utils' 'desktop-file-utils')
+  optdepends=('avahi: for service discovery using bonjour protocol'
+              'libnotify: for notification plugin'
+              'ncurses: for ncurses interface support'
+              'libdvdcss: for decoding encrypted DVDs'
+              'lirc-utils: for lirc plugin'
+              'libavc1394: for devices using the 1394ta AV/C'
+              'libdc1394: for IEEE 1394 plugin'
+              'kdelibs: KDE Solid hardware integration'
+              'vdpau-video: VDPAU backend for VA API (for GPU acceleration on Nvidia cards)'
+              'libpulse: PulseAudio support')
+  options=('!libtool')
+  conflicts=('vlc-pulse-plugin')
+  replaces=('vlc-pulse-plugin')
+  install=vlc.install
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  make DESTDIR=${pkgdir}/ install
+
+  for res in 16 32 48 128; do
+    install -D -m644 ${srcdir}/vlc-${pkgver}/share/icons/${res}x${res}/vlc.png \
+        ${pkgdir}/usr/share/icons/hicolor/${res}x${res}/apps/vlc.png
+  done
+
+  rm -rf ${pkgdir}/usr/lib/mozilla
+}
+
+package_vlc-plugin() {
+  pkgdesc="VLC mozilla browser plugin"
+  depends=("${pkgbase}=${pkgver}" 'nspr' 'xulrunner' 'libxpm')
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  #for linking against libvlc
+  make -C src DESTDIR="${pkgdir}" install-libLTLIBRARIES
+
+  make -C projects/mozilla DESTDIR=${pkgdir}/ install
+
+  #clean up libvlc
+  make -C src DESTDIR="${pkgdir}" uninstall-libLTLIBRARIES
+}
