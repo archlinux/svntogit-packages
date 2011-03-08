@@ -1,0 +1,79 @@
+# $Id$
+# Maintainer: judd <jvinet@zeroflux.org>
+# Contributor: Mario Vazquez <mario_vazq@hotmail.com>
+
+pkgname=bind
+
+# Use a period and not a hyphen before the patch level for proper versioning.
+pkgver=9.8.0
+_pkgver=9.8.0
+pkgrel=1
+
+pkgdesc='Berkeley Internet Name Daemon (BIND) is the reference implementation of the Domain Name System (DNS) protocols'
+arch=('i686' 'x86_64')
+url='http://www.isc.org/software/bind/'
+license=('custom:ISC')
+provides=('dns-server')
+backup=('etc/logrotate.d/named'
+        'etc/conf.d/named'
+        'etc/named.conf'
+        'etc/rndc.key')
+depends=('openssl' 'libxml2')
+options=('!makeflags' '!libtool')
+source=("http://ftp.isc.org/isc/bind9/${_pkgver}/${pkgname}-${_pkgver}.tar.gz"
+        'ftp://ftp.rs.internic.net/domain/db.cache'
+        'so_bsdcompat.patch'
+        'notools.patch'
+        'named'
+        'named.conf'
+        'named.conf.d'
+        'named.logrotate'
+        'localhost.zone'
+        '127.0.0.zone')
+sha1sums=('33019694ef3119d9daa1e8ff5117a6688e188528'
+          'ee52947062c1582858187716b776afa3613608fb'
+          '2f737f4e81186447ac2ef370fa8dcea0b3abec31'
+          '5277cf4d6fbc5728c55b51c77c9347d28393fb7c'
+          '02b0e20a542663d27af4faa4d2e397ae2764276e'
+          '5ca7a5f2a132548a090a045a2df3acea6b35d9eb'
+          '7848edbfb9a848843f57c11c02b0289eefd42d00'
+          '9ffb5c3f72390a517aeae557e32349d5d278cb63'
+          '76a0d4cd1b913db177a5a375bebc47e5956866ec'
+          '53be0f1437ebe595240d8dbdd819939582b97fb9')
+
+install=install
+
+build() {
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+
+	patch -p1 -i "${srcdir}"/so_bsdcompat.patch
+	patch -p1 -i "${srcdir}"/notools.patch
+
+	./configure \
+		--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--with-libtool --enable-static=no --disable-linux-caps \
+		--with-openssl=yes --with-libxml2=yes
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+
+	make DESTDIR="${pkgdir}" install
+
+	install -D -m644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+	install -d "${pkgdir}"/usr/share/doc/bind
+	install ./doc/arm/*.html "${pkgdir}"/usr/share/doc/bind/
+
+	install -D -m755 ../named "${pkgdir}"/etc/rc.d/named
+	install -D -m644 ../named.conf.d "${pkgdir}"/etc/conf.d/named
+	install -D -m600 ../named.logrotate "${pkgdir}"/etc/logrotate.d/named
+	install -D -m640 -o  0 -g 40 ../named.conf "${pkgdir}"/etc/named.conf
+
+	install -d -m750 -o  0 -g 40 "${pkgdir}"/var/named
+	install -d -m755 -o 40 -g 40 "${pkgdir}"/var/run/named
+	install    -m640 -o  0 -g 40 ../db.cache "${pkgdir}"/var/named/root.hint
+	install    -m640 -o  0 -g 40 ../127.0.0.zone "${pkgdir}"/var/named/
+	install    -m640 -o  0 -g 40 ../localhost.zone "${pkgdir}"/var/named/
+}
