@@ -1,0 +1,75 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=pygobject
+pkgname=(pygobject py3gobject pygobject-devel)
+pkgver=2.28.0
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('LGPL')
+depends=('glib2' 'gobject-introspection')
+makedepends=(python{,2}{,-cairo})
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/${pkgver%.*}/${pkgbase}-${pkgver}.tar.bz2)
+options=('!libtool')
+url="http://www.pygtk.org/"
+sha256sums=('12b3c6516c803e3cada4585bd45456897c8e02a7b390dfd05683b93c50ec66ba')
+
+build() {
+  cd "${srcdir}"
+  cp -a "${pkgbase}-${pkgver}" python2-build
+  mkdir devel
+
+  (
+    cd python2-build
+    export PYTHON=/usr/bin/python2
+    ./configure --prefix=/usr
+    make
+  )
+
+  (
+    cd "${pkgbase}-${pkgver}"
+    ./configure --prefix=/usr
+    make
+  )
+}
+
+package_pygobject() {
+  pkgdesc="Python 2 bindings for GObject"
+  depends+=(python2{,-cairo})
+
+  cd "${srcdir}/python2-build"
+  make DESTDIR="${pkgdir}" install
+
+  find "$pkgdir"/usr/share/pygobject -name '*.py' | \
+    xargs sed -i "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|"
+
+  # Split devel stuff
+  mv "$pkgdir"/usr/{bin,include,lib/pkgconfig,share/{gtk-doc,pygobject/{2.0/codegen,xsl}}} \
+    "$srcdir/devel/"
+}
+
+package_py3gobject() {
+  pkgdesc="Python 3 bindings for GObject"
+  depends+=(python{,-cairo})
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  # Delete devel stuff
+  rm -r "$pkgdir"/usr/{bin,include,lib/pkgconfig,share/{gtk-doc,pygobject/{2.0/codegen,xsl}}}
+}
+
+package_pygobject-devel() {
+  pkgdesc="Development files for the pygobject bindings"
+  depends=(python2)
+
+  cd "${srcdir}/devel"
+  mkdir -p "$pkgdir"/usr/{include,lib,share/pygobject/2.0}
+
+  mv bin       "$pkgdir/usr/"
+  mv include   "$pkgdir/usr/"
+  mv pkgconfig "$pkgdir/usr/lib/"
+  mv gtk-doc   "$pkgdir/usr/share/"
+  mv codegen   "$pkgdir/usr/share/pygobject/2.0/"
+  mv xsl       "$pkgdir/usr/share/pygobject/"
+}
