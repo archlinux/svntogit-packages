@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=evince
+pkgver=2.32.0
+pkgrel=8
+pkgdesc="Simply a document viewer"
+url="http://projects.gnome.org/evince/"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('libspectre>=0.2.6' 'gsfonts' 'poppler-glib>=0.16.3' 'libdjvu>=3.5.22' 'gnome-icon-theme>=2.31.0' 't1lib' 'libgnome-keyring>=2.32.0' 'desktop-file-utils' 'gconf' 'dconf')
+## gconf still needed
+## https://bugzilla.gnome.org/show_bug.cgi?id=628945
+makedepends=('gnome-doc-utils>=0.20.1' 'nautilus>=2.32.0' 'pkgconfig' 'texlive-bin' 'intltool' 'gobject-introspection' 'gnome-common' 'gtk-doc')
+optdepends=('texlive-bin: DVI support')
+replaces=('gpdf')
+groups=('gnome-extra')
+install=evince.install
+options=('!libtool' '!emptydirs')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/2.32/${pkgname}-${pkgver}.tar.bz2
+        update_to_poppler_api.patch
+        security_issues_in_dvi-backend.patch)
+sha256sums=('2a4c91ae38f8b5028cebb91b9da9ddc50ea8ae3f3d429df89ba351da2d787ff7'
+            '2990c789c8cfd50e46f4dfa7a2406499b3ee26f4db9840c8b9a6e1dee40f61f4'
+            '49d1ed8adc734a005d4d8fdc1912bb115d97f734071d64bcae0aae60f2b5626a')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/update_to_poppler_api.patch"
+  patch -Np1 -i "${srcdir}/security_issues_in_dvi-backend.patch"
+
+  ./autogen.sh
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --libexecdir=/usr/lib/evince \
+      --disable-static --enable-nautilus \
+      --enable-pdf --enable-tiff \
+      --enable-djvu --enable-dvi \
+      --enable-t1lib --enable-pixbuf \
+      --enable-comics --enable-impress \
+      --enable-introspection \
+      --disable-scrollkeeper \
+      --disable-schemas-compile
+  make
+  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain evince ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+
+}
