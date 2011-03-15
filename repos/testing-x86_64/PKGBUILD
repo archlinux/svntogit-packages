@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
+pkgname=syslog-ng
+pkgver=3.2.2
+pkgrel=2
+pkgdesc="Next-generation syslogd with advanced networking and filtering capabilities"
+arch=('i686' 'x86_64')
+license=('GPL2')
+groups=('base')
+url="http://www.balabit.com/network-security/syslog-ng/"
+depends=('glib2' 'eventlog' 'tcp_wrappers' 'openssl' 'libcap')
+makedepends=('flex' 'pkg-config')
+optdepends=('logrotate: for rotating log files')
+provides=('logger')
+options=('!libtool')
+backup=('etc/syslog-ng/modules.conf' 'etc/syslog-ng/scl.conf' 'etc/syslog-ng/syslog-ng.conf' 'etc/logrotate.d/syslog-ng')
+source=(http://www.balabit.com/downloads/files/syslog-ng/sources/${pkgver}/source/${pkgname}_${pkgver}.tar.gz
+        syslog-ng.conf
+        syslog-ng.logrotate
+        syslog-ng.rc
+        cap_syslog.patch)
+md5sums=('ed8ebe559d52a63fb61e3e2db566643f' '344dddfff946300f5576b13a7e8ea19f'\
+         '735636090be4582885974542d2a75855' 'b90f8f1ba0433e5a1518ac30f882560a')
+sha1sums=('3a340f8e72b460cc0bc1ec1d4c86b74678912dd6' 'b9eb8c61f7cccda543fc5c97fe1d40a8d15e713f'\
+         'ac997b25d7d8e69e66782d3771a0e12aff55ae7f' '253e59f4182fba46aea56bebc4b79a199fae32bc')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    # fix #22555 for kernels >=2.6.38
+    patch -Np1 -i ../cap_syslog.patch 
+    ./configure --prefix=/usr --sysconfdir=/etc/syslog-ng \
+                --libexecdir=/usr/lib --localstatedir=/var/lib/syslog-ng \
+                --enable-tcp-wrapper \
+                --with-pidfile-dir=/var/run \
+                --disable-spoof-source
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make DESTDIR="$pkgdir" install
+    install -dm755 "$pkgdir/var/lib/syslog-ng" "$pkgdir/etc/syslog-ng/patterndb.d"
+    install -Dm644 "$srcdir/syslog-ng.conf" "$pkgdir/etc/syslog-ng/syslog-ng.conf"
+    install -Dm644 "$srcdir/syslog-ng.logrotate" "$pkgdir/etc/logrotate.d/syslog-ng"
+    install -Dm755 "$srcdir/syslog-ng.rc" "$pkgdir/etc/rc.d/syslog-ng"
+}
+md5sums=('ed8ebe559d52a63fb61e3e2db566643f'
+         '344dddfff946300f5576b13a7e8ea19f'
+         '735636090be4582885974542d2a75855'
+         'b90f8f1ba0433e5a1518ac30f882560a'
+         '46e5dcff71f820d497898331a3f608fe')
+sha1sums=('3a340f8e72b460cc0bc1ec1d4c86b74678912dd6'
+          'b9eb8c61f7cccda543fc5c97fe1d40a8d15e713f'
+          'ac997b25d7d8e69e66782d3771a0e12aff55ae7f'
+          '253e59f4182fba46aea56bebc4b79a199fae32bc'
+          'f093a09626a528d23f0f2aeece018cab15a735a9')
