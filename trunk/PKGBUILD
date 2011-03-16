@@ -7,7 +7,7 @@
 
 pkgname=p7zip
 pkgver=9.20
-pkgrel=1
+pkgrel=2
 pkgdesc='Command-line version of the 7zip compressed file archiver'
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -35,6 +35,7 @@ package() {
 		DEST_MAN="${pkgdir}/usr/share/man" \
 		DEST_SHARE_DOC="http://www.bugaco.com/7zip"
 
+	cp -r bin/Codecs "$pkgdir"/usr/lib/p7zip/
 	install -m555 bin/7z.so ${pkgdir}/usr/lib/p7zip/
 	sed "s|${pkgdir}/usr|/usr|g" -i "${pkgdir}"/usr/bin/7z{,a,r}
 	install -Dm755 contrib/VirtualFileSystemForMidnightCommander/u7z "${pkgdir}"/usr/lib/mc/extfs.d/u7z
