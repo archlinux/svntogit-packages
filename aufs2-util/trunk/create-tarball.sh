@@ -1,5 +1,5 @@
 #!/bin/sh
-GITSNAPSHOT=20110124
+GITSNAPSHOT=20110314
 # aufs2 (no -xx) for the latest -rc version.
 git clone http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-util.git aufs2-util.git
 cd aufs2-util.git
