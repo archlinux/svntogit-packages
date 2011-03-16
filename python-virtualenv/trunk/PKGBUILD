@@ -2,8 +2,8 @@
 # Contributor: Daniele Paolella <dp@mcrservice.it>
 
 pkgname=python-virtualenv
-pkgver=1.5.1
-pkgrel=2
+pkgver=1.5.2
+pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 arch=('any')
 url="http://pypi.python.org/pypi/virtualenv"
@@ -11,9 +11,8 @@ license=('MIT')
 depends=('python2' 'setuptools')
 replaces=('virtualenv')
 conflicts=('virtualenv')
-source=("http://pypi.python.org/packages/source/v/virtualenv/virtualenv-$pkgver.tar.gz")
-md5sums=('3daa1f449d5d2ee03099484cecb1c2b7')
-sha256sums=('e2bbc4e80164e1ad83afba698559c2923f4bb7e61197b885c0a0befb29533438')
+source=("http://pypi.python.org/packages/source/v/virtualenv/virtualenv-$pkgver.tar.gz"
+        LICENSE.txt)
 
 build() {
   cd "$srcdir/virtualenv-$pkgver"
@@ -23,5 +22,11 @@ build() {
   sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" \
     $pkgdir/usr/lib/python2.7/site-packages/virtualenv.py
   
-  install -D -m644 docs/license.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -D -m644 "$srcdir/LICENSE.txt" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
+
+md5sums=('fbcefbd8520bb64bc24a560c6019a73c'
+         '4409588baf5837a2ce0215dc08b30305')
+sha256sums=('54b2e9c4fcb5d30e6d0a35b938f0d962412b38433921de33a476b203e72834d7'
+            '941229fb2bd6273917359d557e69ad10cda2901c7288781ca23baae9b7b8848a')
