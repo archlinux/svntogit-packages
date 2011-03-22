@@ -1,0 +1,54 @@
+# $Id$
+# Contributor: Jakub Schmidtke <sjakub@gmail.com>
+
+pkgname=firefox
+pkgver=4.0
+pkgrel=1
+_xulver=2.0
+pkgdesc="Standalone web browser from mozilla.org"
+arch=('i686' 'x86_64')
+license=('MPL' 'GPL' 'LGPL')
+depends=("xulrunner=${_xulver}" 'desktop-file-utils')
+makedepends=('zip' 'pkg-config' 'diffutils' 'python2' 'wireless_tools' 'yasm' 'mesa')
+install=firefox.install
+url="http://www.mozilla.org/projects/firefox"
+source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${pkgver}/source/firefox-${pkgver}.source.tar.bz2
+        mozconfig
+        firefox.desktop
+        firefox-safe.desktop
+        mozilla-firefox-1.0-lang.patch
+        firefox-version.patch)
+md5sums=('3468a2c463b4fc2788ba621e4b511c30'
+         'd9292af4bb513d0bb811984f077cb77c'
+         'bdeb0380c7fae30dd0ead6d2d3bc5873'
+         '6f38a5899034b7786cb1f75ad42032b8'
+         'bd5db57c23c72a02a489592644f18995'
+         'cea73894617d0e12362db294864fb87f')
+
+build() {
+  cd "${srcdir}/mozilla-2.0"
+  patch -Np1 -i "${srcdir}/mozilla-firefox-1.0-lang.patch"
+  patch -Np1 -i "${srcdir}/firefox-version.patch"
+
+  cp "${srcdir}/mozconfig" .mozconfig
+  unset CFLAGS
+  unset CXXFLAGS
+
+  export LDFLAGS="-Wl,-rpath,/usr/lib/firefox-4.0"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="${MAKEFLAGS}"
+}
+
+package() {
+  cd "${srcdir}/mozilla-2.0"
+  make -j1 -f client.mk DESTDIR="${pkgdir}" install
+
+  install -m755 -d ${pkgdir}/usr/share/applications
+
+  for i in 16x16 22x22 24x24 32x32 48x48 256x256; do
+      install -d "$pkgdir/usr/share/icons/hicolor/$i/apps"
+      cp other-licenses/branding/firefox/default${i/x*/}.png "$pkgdir/usr/share/icons/hicolor/$i/apps/firefox.png"
+  done
+  install -m644 ${srcdir}/firefox.desktop ${pkgdir}/usr/share/applications/
+  install -m644 ${srcdir}/firefox-safe.desktop ${pkgdir}/usr/share/applications/
+}
