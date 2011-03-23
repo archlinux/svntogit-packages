@@ -1,8 +1,8 @@
 # $Id$
-# Maintainer: Eric Belanger <eric@archlinux.org>
+# Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=libsndfile
-pkgver=1.0.23
+pkgver=1.0.24
 pkgrel=1
 pkgdesc="A C library for reading and writing files containing sampled sound"
 arch=('i686' 'x86_64')
@@ -10,10 +10,9 @@ url="http://www.mega-nerd.com/libsndfile"
 license=('LGPL')
 depends=('alsa-lib' 'flac' 'libvorbis')
 options=('!libtool')
-changelog=ChangeLog
 source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz)
-md5sums=('d0e22b5ff2ef945615db33960376d733')
-sha1sums=('dee36861b503fe7754f0131364523f45720a0914')
+md5sums=('8f823c30c1d8d44830db6ab845d6679e')
+sha1sums=('ade2dad272b52f61bb58aca3a4004b28549ee0f8')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
