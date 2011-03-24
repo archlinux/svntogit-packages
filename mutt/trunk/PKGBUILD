@@ -1,14 +1,15 @@
 # $Id$
-# Maintainer: tobias [tobias [at] archlinux.org]
+# Contributor: tobias [tobias [at] archlinux.org]
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=mutt
 pkgver=1.5.21
-pkgrel=2
+pkgrel=3
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 arch=('i686' 'x86_64')
 license=('GPL')
-depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types')
+depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'heimdal')
 source=("ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz")
 sha1sums=('a8475f2618ce5d5d33bff85c0affdf21ab1d76b9')
 
@@ -26,6 +27,7 @@ build() {
 		--enable-hcache \
 		--with-curses=/usr \
 		--with-regex \
+		--with-gss=/usr \
 		--with-ssl=/usr \
 		--with-sasl \
 		--with-idn \
