@@ -8,7 +8,7 @@ pkgver=3.5.8
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
 _realver=3.5.8
-pkgrel=1
+pkgrel=2
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
@@ -42,7 +42,6 @@ build() {
               --enable-external-libtalloc \
               --disable-dnssd \
               --disable-avahi \
-              --with-cifsumount \
               --with-shared-modules=idmap_ad,idmap_adex,idmap_rid,idmap_hash \
               --enable-external-libtdb
   make || return 1
@@ -50,11 +49,10 @@ build() {
 
 package_smbclient () {
 pkgdesc="Tools to access a server's filespace and printers via SMB"
-depends=('readline>=6.0.00' 'popt' 'libldap>=2.4.18-1' 'libcap>=2.16' 'heimdal>=1.2-1' 'db>=4.7' 'e2fsprogs' 'tdb' 'talloc')
+depends=('readline>=6.0.00' 'popt' 'libldap>=2.4.18-1' 'cifs-utils' 'libcap>=2.16' 'heimdal>=1.2-1' 'db>=4.7' 'e2fsprogs' 'tdb' 'talloc')
   cd ${srcdir}/${pkgbase}-${_realver}/source3
-  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/sbin ${pkgdir}/usr/lib
+  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/usr/lib
   install -m755 bin/{smbclient,rpcclient,smbspool,smbtree,smbcacls,smbcquotas,smbget,net,nmblookup} ${pkgdir}/usr/bin/
-  install -m755 bin/{mount.cifs,umount.cifs} ${pkgdir}/sbin/
   for i in libnetapi* libwbclient* libsmbclient*;do
       cp  -a bin/${i}*.so* ${pkgdir}/usr/lib/
   done
@@ -64,11 +62,7 @@ depends=('readline>=6.0.00' 'popt' 'libldap>=2.4.18-1' 'libcap>=2.16' 'heimdal>=
   mkdir -p ${pkgdir}/usr/include
   install -m644 include/libsmbclient.h ${pkgdir}/usr/include/
   install -m644 lib/netapi/netapi.h ${pkgdir}/usr/include/
-  mkdir -p ${pkgdir}/usr/share/man/man{1,7,8}
-  for man in smbspool \
-      umount.cifs mount.cifs net; do
-      install -m644 ../docs/manpages/${man}.8 ${pkgdir}/usr/share/man/man8/
-  done
+  mkdir -p ${pkgdir}/usr/share/man/man{1,7}
   for man in rpcclient smbcacls smbclient smbcquotas smbget \
       smbtree smbtar nmblookup; do
       install -m644 ../docs/manpages/${man}.1 ${pkgdir}/usr/share/man/man1/
@@ -88,7 +82,7 @@ depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap
   mkdir -p ${pkgdir}/var/log/samba
   mkdir -p ${pkgdir}/etc/samba/private
   chmod 700 ${pkgdir}/etc/samba/private
-  make DESTDIR=${pkgdir} install || return 1
+  make DESTDIR=${pkgdir} install 
   chmod 644 ${pkgdir}/usr/include/*.h
   rm -rf ${pkgdir}/usr/var
   (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
@@ -111,7 +105,7 @@ depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap
   install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_winbind.so ${pkgdir}/lib/libnss_winbind.so
   # remove conflict files of smbclient
   for man in libsmbclient smbspool \
-      umount.cifs mount.cifs net; do
+      mount.cifs net cifs.upcall; do
       rm -f ${pkgdir}/usr/share/man/man8/${man}.8
   done
   for i in libnetapi* libwbclient* libsmbclient*;do
@@ -122,6 +116,7 @@ depends=('db>=4.7' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap
       smbcquotas smbget smbspool smbtar smbtree; do
       rm -f ${pkgdir}/usr/bin/$bin
   done
+  rm -f ${pkgdir}/usr/sbin/cifs.upcall
   rm -f ${pkgdir}/usr/include/netapi.h
   for man in rpcclient smbcacls smbclient smbcquotas \
       smbtree smbtar nmblookup smbget; do
