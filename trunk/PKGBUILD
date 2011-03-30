@@ -2,7 +2,7 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=9.01
+pkgver=9.02
 pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
@@ -12,41 +12,16 @@ makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
-source=(http://ghostscript.com/releases/ghostscript-${pkgver}.tar.bz2
-	ghostscript-fPIC.patch
-	ghostscript-system-jasper.patch
-	svn_rev11948.diff
-	ghostscript-gdevcups-691733.patch
-	gs_bug691759and691760.diff)
+source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!libtool' '!makeflags')
-md5sums=('9824d6a21ad8b4a831f67601959f1181'
-         '766d44c47c693f96941b658e360c1277'
-         '03e27cd02471ab3b642c344fa06b623e'
-         '78f2b9c2d6a5a60891b2d8b593a15b00'
-         'e459d4cf897bdb54fefbba9d57bd2fa2'
-         '21841b0ea5bd67cf4b68ba64c5d5755b')
+md5sums=('f67151444bd56a7904579fc75a083dd6')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
+
   # force it to use system-libs
   rm -rf jpeg libpng zlib jasper expat tiff
 
-  # fix build with systems jasper
-#  patch -Np1 -i ${srcdir}/ghostscript-system-jasper.patch
-
-#  if [ "$CARCH" = "x86_64" ]; then
-#    patch -Np1 -i ${srcdir}/ghostscript-fPIC.patch
-#  fi
-
-  # part of https://bugs.archlinux.org/task/22006 - http://bugs.ghostscript.com/show_bug.cgi?id=691831
-#  patch -Np2 -i ${srcdir}/svn_rev11948.diff
-  # upstream fix for http://bugs.ghostscript.com/show_bug.cgi?id=691733 / part of https://bugs.archlinux.org/task/21388
-  # patch taken from Fedora RawHide master
-#  patch -Np1 -i ${srcdir}/ghostscript-gdevcups-691733.patch
-  # patch for http://bugs.ghostscript.com/show_bug.cgi?id=691760 and http://bugs.ghostscript.com/show_bug.cgi?id=691759 / part of https://bugs.archlinux.org/task/21388
-#  patch -Np2 -i ${srcdir}/gs_bug691759and691760.diff
-  
-#  ./autogen.sh
   ./configure --prefix=/usr \
 	--enable-dynamic \
 	--with-ijs \
