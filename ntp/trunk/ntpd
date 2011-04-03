@@ -4,21 +4,19 @@
 . /etc/rc.d/functions
 . /etc/conf.d/ntp-client.conf
 
-getPID() {
-   echo $(pidof -o %PPID /usr/bin/ntpd);
-}
+PIDFILE="/var/run/ntpd/ntpd.pid"
+PID=$(cat $PIDFILE 2> /dev/null)
 
 case "$1" in
   start)
     stat_busy "Starting NTP Daemon"
     [ ! -d /var/run/ntpd ] && install -d /var/run/ntpd &>/dev/null
-    if [ -z "$(getPID)" ]; then 
-       /usr/bin/ntpd $NTPD_ARGS &>/dev/null &
+    if [ -z "$PID" ]; then 
+       /usr/bin/ntpd $NTPD_ARGS -p /var/run/ntpd/ntpd.pid &>/dev/null
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
       else
-        echo $(getPID) > /var/run/ntpd/ntpd.pid
         add_daemon ntpd
         stat_done
       fi
@@ -29,13 +27,13 @@ case "$1" in
     ;;
   stop)
     stat_busy "Stopping NTP Daemon"
-    if [ ! -z "$(getPID)" ]; then
-      kill $(getPID) &> /dev/null
+    if [ -n "$PID" ]; then
+      kill $PID &> /dev/null
       if [ $? -gt 0 ]; then
         stat_fail
         exit 1
       else
-        rm -f /var/run/ntpd/ntpd.pid &>/dev/null
+        rm $PIDFILE &>/dev/null
         rm_daemon ntpd
         stat_done
       fi
