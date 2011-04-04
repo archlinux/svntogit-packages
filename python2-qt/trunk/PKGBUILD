@@ -6,7 +6,7 @@
 pkgname=python2-qt
 pkgver=4.8.3
 pkgrel=1
-pkgdesc="A set of Python 2 bindings for the Qt toolkit"
+pkgdesc="PyQt: A set of Python 2 bindings for the Qt toolkit"
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
