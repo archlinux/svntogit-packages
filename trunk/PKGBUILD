@@ -1,7 +1,7 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xkeyboard-config
-pkgver=2.1
+pkgver=2.2
 pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
@@ -13,14 +13,15 @@ provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
 source=(http://xorg.freedesktop.org/releases/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
-sha1sums=('4e96e0704b2a17b291f98b2240611390e7a99f9e')
+sha1sums=('442c1803f5a7beb0fa16801d6c0a2bebc05472c1')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   ./configure --prefix=/usr \
       --with-xkb-base=/usr/share/X11/xkb \
       --with-xkb-rules-symlink=xorg \
-      --enable-compat-rules=yes
+      --enable-compat-rules=yes \
+      --disable-runtime-deps
   make
   make DESTDIR="${pkgdir}" install
   rm -f "${pkgdir}/usr/share/X11/xkb/compiled"
