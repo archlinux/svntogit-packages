@@ -1,60 +1,89 @@
 # $Id$
 # Maintainer: Paul Mattal <paul@archlinux.org>
 
-pkgname=lirc
-pkgver=0.9.0.pre1
-pkgrel=6
-_kernver=2.6.38-ARCH
-pkgdesc="Linux Infrared Remote Control kernel modules for stock arch kernel"
+pkgbase=lirc
+pkgname=('lirc' 'lirc-utils')
+pkgver=0.9.0
+pkgrel=1
+_kernver=2.6.37-ARCH
 arch=('i686' 'x86_64')
 url="http://www.lirc.org/"
 license=('GPL')
-depends=('lirc-utils' 'kernel26>=2.6.38' 'kernel26<2.6.39')
-makedepends=('help2man' 'kernel26-headers>=2.6.38' 'kernel26-headers<2.6.39')
-replaces=('lirc+pctv')
-options=('!makeflags')
-install=$pkgname.install
-source=(http://www.lirc.org/software/snapshots/lirc-0.9.0-pre1.tar.bz2
-        #"http://prdownloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
-        )
-options=(!strip)
-md5sums=('13ba59178adee4e6be8a9a1966ab3133')
+makedepends=('help2man' 'kernel26-headers>=2.6.37' 'kernel26-headers<2.6.38' 'alsa-lib' 'libx11' 'libftdi' 'libirman' 'python' 'namcap')
+options=('!makeflags' '!strip')
+source=(http://prdownloads.sourceforge.net/${pkgbase}/${pkgbase}-${pkgver}.tar.bz2
+	lircd lircmd lirc.logrotate lircd.conf irexec.conf irexecd)
+md5sums=('b232aef26f23fe33ea8305d276637086'
+         '8d0e238dc0eda95e340fe570605da492'
+         '85f7fdac55e5256967241864049bf5e9'
+         '3deb02604b37811d41816e9b4385fcc3'
+         '5b1f8c9cd788a39a6283f93302ce5c6e'
+         'f0c0ac930326168035f0c8e24357ae55'
+         '69d099e6deedfa3c1ee2b6e82d9b8bfb')
 
 build() {
-	# configure
-	cd ${srcdir}/lirc-0.9.0-pre1
-	./configure --enable-sandboxed --prefix=/usr \
-		--with-driver=all --with-kerneldir=/usr/src/linux-${_kernver}/ \
-		--with-moduledir=/lib/modules/${_kernver}/kernel/drivers/misc \
-	        --with-transmitter
+  cd "${srcdir}/lirc-${pkgver}"
 
-	# disable parallel and bt829
-        # because of incompatibility with smp systems
-        sed -i -e "s:lirc_parallel::" -e "s:lirc_bt829::" \
-		Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
-	# lirc_i2c  lirc_igorplugusb  lirc_imon  lirc_it87  lirc_ite8709
-        # lirc_sasem  lirc_serial  lirc_sir lirc_ttusbir lirc_zilog
-        # because part of kernel 2.6.36 staging tree
-        sed -i -e "s:lirc_i2c::" -e "s:lirc_igorplugusb::" -e "s:lirc_imon::" \
-		-e "s:lirc_it87::" -e "s:lirc_ite8709::" -e "s:lirc_sasem::" \
-		-e "s:lirc_serial::" -e "s:lirc_sir::" -e "s:lirc_ttusbir::" \
-		-e "s:lirc_zilog::" Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
-	# disable lirc_gpio due to brokeness of kernel 2.6.23
-	sed -i -e "s:lirc_gpio::" \
-		Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
+  sed -i '/AC_PATH_XTRA/d' configure.ac
+  sed -e 's/@X_CFLAGS@//g' \
+      -e 's/@X_LIBS@//g' \
+      -e 's/@X_PRE_LIBS@//g' \
+      -e 's/@X_EXTRA_LIBS@//g' -i Makefile.am tools/Makefile.am
+  libtoolize
+  autoreconf
 
-	# build
-	cd drivers
-	make
+  PYTHON=python2 ./configure --enable-sandboxed --prefix=/usr \
+      --with-driver=all --with-kerneldir=/usr/src/linux-${_kernver}/ \
+      --with-moduledir=/lib/modules/${_kernver}/kernel/drivers/misc \
+      --with-transmitter
+
+  # Remove drivers already in kernel
+  sed -e "s:lirc_dev::" -e "s:lirc_bt829::" -e "s:lirc_igorplugusb::" \
+      -e "s:lirc_imon::" -e "s:lirc_parallel::" -e "s:lirc_sasem::" \
+      -e "s:lirc_serial::" -e "s:lirc_sir::" -e "s:lirc_ttusbir::" \
+      -i Makefile drivers/Makefile drivers/*/Makefile tools/Makefile 
+  make
 }
 
-package() {
-        cd ${srcdir}/lirc-0.9.0-pre1/drivers
-	make DESTDIR=${pkgdir} install
+package_lirc() {
+  pkgdesc="Linux Infrared Remote Control kernel modules for stock arch kernel"
+  depends=('lirc-utils' 'kernel26>=2.6.37' 'kernel26<2.6.38')
+  replaces=('lirc+pctv')
+  install=lirc.install
 
-	# set the kernel we've built for inside the install script
-	sed -i -e "s/KERNEL_VERSION=.*/KERNEL_VERSION=${_kernver}/g" \
-		${startdir}/lirc.install
-        # gzip -9 modules
-        find "$pkgdir" -name '*.ko' -exec gzip -9 {} \;
+  cd "${srcdir}/lirc-${pkgver}/drivers"
+  make DESTDIR="${pkgdir}" install
+
+  # set the kernel we've built for inside the install script
+  sed -i -e "s/KERNEL_VERSION=.*/KERNEL_VERSION=${_kernver}/g" "${startdir}/lirc.install"
+  # gzip -9 modules
+  find "${pkgdir}" -name '*.ko' -exec gzip -9 {} \;
+}
+
+package_lirc-utils() {
+  pkgdesc="Linux Infrared Remote Control utils"
+  depends=('alsa-lib' 'libx11' 'libftdi' 'libirman')
+  optdepends=('python2: pronto2lirc utility')
+  options=('strip' '!libtool')
+
+  cd "${srcdir}/lirc-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  install -d "${pkgdir}/usr/share/lirc" "${pkgdir}/etc/rc.d"
+  cp "${srcdir}"/{lircd,lircmd,irexecd} "${pkgdir}/etc/rc.d"
+  cp -rp remotes "${pkgdir}/usr/share/lirc"
+  chmod -R go-w "${pkgdir}/usr/share/lirc/"
+
+  # install the logrotate config
+  install -Dm644 "${srcdir}/lirc.logrotate" "${pkgdir}/etc/logrotate.d/lirc"
+    
+  # install conf.d file
+  install -Dm644 "${srcdir}/lircd.conf" "${pkgdir}/etc/conf.d/lircd.conf"
+
+  # install conf.d file
+  install -Dm644 "${srcdir}/irexec.conf" "${pkgdir}/etc/conf.d/irexec.conf"
+
+  install -d "${pkgdir}/etc/lirc"
+  
+  # remove built modules
+  rm -r "${pkgdir}/lib/"
 }
