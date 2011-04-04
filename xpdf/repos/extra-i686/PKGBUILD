@@ -1,0 +1,74 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: tobias <tobias@archlinux.org>
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+
+pkgname=xpdf
+_srcver=3.02
+_patchlevel=pl6
+pkgver=${_srcver}_${_patchlevel}
+pkgrel=1
+pkgdesc="A viewer for Portable Document Format (PDF) files"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('lesstif' 'gsfonts' 'libxt' 'desktop-file-utils')
+optdepends=('poppler: pdf tools that used to be included in xpdf')
+backup=('etc/xpdfrc')
+url="http://www.foolabs.com/xpdf/"
+install=${pkgname}.install
+source=(ftp://ftp.foolabs.com/pub/${pkgname}/${pkgname}-${_srcver}.tar.gz
+        ftp://ftp.foolabs.com/pub/${pkgname}/${pkgname}-${_srcver}pl1.patch
+        ftp://ftp.foolabs.com/pub/${pkgname}/${pkgname}-${_srcver}pl2.patch
+        ftp://ftp.foolabs.com/pub/${pkgname}/${pkgname}-${_srcver}pl3.patch
+        ftp://ftp.foolabs.com/pub/${pkgname}/${pkgname}-${_srcver}pl4.patch
+        ftp://ftp.foolabs.com/pub/${pkgname}/${pkgname}-${_srcver}pl5.patch
+        xpdf-3.00-xfont.patch
+        xpdf.desktop)
+md5sums=('599dc4cc65a07ee868cf92a667a913d2'
+         '877118786dfe27d1b7aa5a6759cc6e45'
+         '3a5cb165ae66781e0b21e6219ae06795'
+         '581963ede0fb5715e1a69f01b5b8ce63'
+         '70b752716798dd341a4bf890df5f6fdc'
+         '504902ca5e9d66c67eed03636ec6b163'
+         '6490de55687e0d2389212c1b5bbcf916'
+         '93b9df5ebef3bc56133236ef3f176bb7')
+
+build() {
+  cd "${srcdir}/${pkgname}-${_srcver}"
+
+  patch -Np1 -i "${srcdir}/${pkgname}-${_srcver}pl1.patch"
+  patch -Np1 -i "${srcdir}/${pkgname}-${_srcver}pl2.patch"
+  patch -Np1 -i "${srcdir}/${pkgname}-${_srcver}pl3.patch"
+  patch -Np1 -i "${srcdir}/${pkgname}-${_srcver}pl4.patch"
+  patch -Np1 -i "${srcdir}/${pkgname}-${_srcver}pl5.patch"
+  patch -Np1 -i "${srcdir}/xpdf-3.00-xfont.patch"
+  sed -i 's:/usr/share/fonts/type1/gsfonts:/usr/share/fonts/Type1:' xpdf/GlobalParams.cc
+
+  ./configure                                                  \
+    --prefix=/usr                                              \
+    --sysconfdir=/etc                                          \
+    --mandir=/usr/share/man                                    \
+    --enable-multithreaded                                     \
+    --enable-wordlist                                          \
+    --with-freetype2-library=/usr/lib                          \
+    --with-freetype2-includes=/usr/include/freetype2           \
+    --x-includes=/usr/include                                  \
+    --with-Xm-library=/usr/lib                                 \
+    --with-Xm-includes=/usr/include
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${_srcver}"
+  make DESTDIR="${pkgdir}" install
+
+  # remove some libs and manpages provided by poppler now
+  for tool in pdffonts pdfimages pdfinfo pdftoppm pdftops pdftotext ; do
+    rm -f "${pkgdir}/usr/bin/${tool}"
+    rm -f "${pkgdir}/usr/share/man/man1/${tool}.1"
+  done
+  install -m755 -d ${pkgdir}/usr/share/applications
+  install -m644 "${srcdir}/xpdf.desktop" "${pkgdir}/usr/share/applications/"
+  install -m755 -d ${pkgdir}/usr/share/pixmaps
+  install -m644 xpdf/xpdfIcon.xpm ${pkgdir}/usr/share/pixmaps/xpdf.xpm
+}
