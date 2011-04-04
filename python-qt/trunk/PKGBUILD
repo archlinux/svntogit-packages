@@ -7,7 +7,7 @@ pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
-pkgdesc="A set of Python 3 bindings for the Qt toolkit"
+pkgdesc="PyQt: A set of Python 3 bindings for the Qt toolkit"
 depends=('python2-qt' 'python-sip')
 optdepends=('phonon: enable audio and video in PyQt applications'
 	'qscintilla: QScintilla API'
