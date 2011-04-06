@@ -1,0 +1,87 @@
+commit cfa404b7188e4c26bddbc9579728f6d25f8cd214
+Author: Stephen Kelly <steveire@gmail.com>
+Date:   Tue Apr 5 11:09:43 2011 +0200
+
+    Start kdepim 4.4 asynchronously if built against 4.6.
+    
+    The synchronous mechanism doesn't have enough time to start
+    before it reports failure.
+
+diff --git a/kaddressbook/main.cpp b/kaddressbook/main.cpp
+index 4c8ca42..200f8ec 100644
+--- a/kaddressbook/main.cpp
++++ b/kaddressbook/main.cpp
+@@ -49,11 +49,13 @@ int main( int argc, char **argv )
+   MainWindow *window = new MainWindow;
+   window->show();
+ 
++#if !KDE_IS_VERSION(4,6,0)
+   if ( !Akonadi::Control::start( window ) ) {
+     //TODO: add message box after string freeze
+     kWarning() << "Unable to start Akonadi server, exit application";
+     return 1;
+   }
++#endif
+ 
+   return app.exec();
+ }
+diff --git a/kmail/kmmainwidget.cpp b/kmail/kmmainwidget.cpp
+index a31973a..10b14e4 100644
+--- a/kmail/kmmainwidget.cpp
++++ b/kmail/kmmainwidget.cpp
+@@ -165,6 +165,9 @@ using KMail::TemplateParser;
+ 
+ #include <errno.h> // ugh
+ 
++#include <akonadi/control.h>
++#include <akonadi/servermanager.h>
++
+ #include "kmmainwidget.moc"
+ 
+ K_GLOBAL_STATIC( KMMainWidget::PtrList, theMainWidgetList )
+@@ -186,6 +189,10 @@ KMMainWidget::KMMainWidget( QWidget *parent, KXMLGUIClient *aGUIClient,
+     mVacationIndicatorActive( false ),
+     mGoToFirstUnreadMessageInSelectedFolder( false )
+ {
++#if KDE_IS_VERSION(4,6,0)
++  Akonadi::Control::widgetNeedsAkonadi(this);
++  Akonadi::ServerManager::start();
++#endif
+   // must be the first line of the constructor:
+   mStartupDone = false;
+   mWasEverShown = false;
+diff --git a/kmail/main.cpp b/kmail/main.cpp
+index f39ca5f..c2dd1c3 100644
+--- a/kmail/main.cpp
++++ b/kmail/main.cpp
+@@ -145,12 +145,14 @@ int main(int argc, char *argv[])
+   app.setEventLoopReached();
+   app.delayedInstanceCreation();
+ 
++#if !KDE_IS_VERSION(4,6,0)
+   // Start Akonadi
+   if ( !Akonadi::Control::start( kmkernel->getKMMainWidget() ) ) {
+     //TODO: add message box after string freeze
+     kWarning() << "Unable to start Akonadi server, exit application";
+     return 1;
+   }
++#endif
+ 
+   // Go!
+   int ret = qApp->exec();
+diff --git a/kontact/src/main.cpp b/kontact/src/main.cpp
+index 356aa57..cb4a235 100644
+--- a/kontact/src/main.cpp
++++ b/kontact/src/main.cpp
+@@ -199,9 +199,11 @@ int main( int argc, char **argv )
+ 
+   KontactApp app;
+ 
++#if !KDE_IS_VERSION(4,6,0)
+   // KDE 4.4: do akonadi startup before creating any window, since creating
+   // the window loads kmail. In 4.5 we'll do this startup async instead.
+   Akonadi::Control::start( 0 );
++#endif
+ 
+   // Qt doesn't treat the system tray as a window, and therefore Qt would quit
+   // the event loop when an error message is clicked away while Kontact is in the
