@@ -1,0 +1,220 @@
+diff -up networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.cpp.blah networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.cpp
+--- networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.cpp.blah	2011-03-22 20:06:02.769311181 -0500
++++ networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.cpp	2011-03-22 20:08:03.199805593 -0500
+@@ -57,6 +57,9 @@ public:
+     QHash<QUuid, QDBusObjectPath> uuidToPath;
+ };
+ 
++#define NM_DBUS_SERVICE_USER_SETTINGS     "org.freedesktop.NetworkManagerUserSettings"
++#define NM_DBUS_SERVICE_SYSTEM_SETTINGS   "org.freedesktop.NetworkManagerSystemSettings"
++
+ const QString NMDBusSettingsService::SERVICE_USER_SETTINGS = QLatin1String(NM_DBUS_SERVICE_USER_SETTINGS);
+ const QString NMDBusSettingsService::SERVICE_SYSTEM_SETTINGS = QLatin1String(NM_DBUS_SERVICE_SYSTEM_SETTINGS);
+ 
+diff -up networkmanagement-0.9/settings/config/manageconnectionwidget.cpp.blah networkmanagement-0.9/settings/config/manageconnectionwidget.cpp
+--- networkmanagement-0.9/settings/config/manageconnectionwidget.cpp.blah	2011-03-22 20:07:03.879547198 -0500
++++ networkmanagement-0.9/settings/config/manageconnectionwidget.cpp	2011-03-22 20:07:58.302866812 -0500
+@@ -55,6 +55,9 @@ along with this program.  If not, see <h
+ #define ConnectionTypeRole 1066
+ #define ConnectionLastUsedRole 1848
+ 
++#define NM_DBUS_SERVICE_USER_SETTINGS     "org.freedesktop.NetworkManagerUserSettings"
++#define NM_DBUS_SERVICE_SYSTEM_SETTINGS   "org.freedesktop.NetworkManagerSystemSettings"
++
+ K_PLUGIN_FACTORY( ManageConnectionWidgetFactory, registerPlugin<ManageConnectionWidget>();)
+ K_EXPORT_PLUGIN( ManageConnectionWidgetFactory( "kcm_networkmanagement", "libknetworkmanager" ) )
+ 
+diff -up networkmanagement-0.9/backends/NetworkManager/settings/gsmdbus.cpp.foo networkmanagement-0.9/backends/NetworkManager/settings/gsmdbus.cpp
+--- networkmanagement-0.9/backends/NetworkManager/settings/gsmdbus.cpp.foo	2011-03-22 20:00:12.443690853 -0500
++++ networkmanagement-0.9/backends/NetworkManager/settings/gsmdbus.cpp	2011-03-22 20:01:10.360966787 -0500
+@@ -35,7 +35,7 @@ void GsmDbus::fromMap(const QVariantMap 
+   if (map.contains(QLatin1String(NM_SETTING_GSM_NETWORK_TYPE))) {
+     setting->setNetworktype(map.value(QLatin1String(NM_SETTING_GSM_NETWORK_TYPE)).value<int>());
+   } else {
+-      setting->setNetworktype(NM_GSM_NETWORK_ANY);
++      setting->setNetworktype(NM_SETTING_GSM_NETWORK_TYPE_ANY);
+   }
+   if (map.contains("band")) {
+     setting->setBand(map.value("band").value<int>());
+@@ -62,7 +62,7 @@ QVariantMap GsmDbus::toMap()
+       map.insert("apn", setting->apn());
+   if (!setting->networkid().isEmpty())
+       map.insert(QLatin1String(NM_SETTING_GSM_NETWORK_ID), setting->networkid());
+-  if (setting->networktype() != NM_GSM_NETWORK_ANY) {
++  if (setting->networktype() != NM_SETTING_GSM_NETWORK_TYPE_ANY) {
+       map.insert(QLatin1String(NM_SETTING_GSM_NETWORK_TYPE), setting->networktype());
+   }
+ 
+diff -up networkmanagement-0.9/backends/NetworkManager/busconnection.h.nm-compat networkmanagement-0.9/backends/NetworkManager/busconnection.h
+--- networkmanagement-0.9/backends/NetworkManager/busconnection.h.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/backends/NetworkManager/busconnection.h	2011-03-22 21:45:47.432492595 -0500
+@@ -51,9 +51,9 @@ namespace Knm
+ class BusConnection : public QObject
+ {
+     Q_OBJECT
+-    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManagerSettings.Connection")
++    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManager.Settings.Connection")
+     // Can QtDbus handle multiple interfaces being provided by one object like this?
+-    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManagerSettings.Connection.Secrets")
++    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManager.Settings.Connection.Secrets")
+ 
+     public:
+         /**
+diff -up networkmanagement-0.9/backends/NetworkManager/exportedconnection.h.nm-compat networkmanagement-0.9/backends/NetworkManager/exportedconnection.h
+--- networkmanagement-0.9/backends/NetworkManager/exportedconnection.h.nm-compat	2011-03-22 21:49:45.233519674 -0500
++++ networkmanagement-0.9/backends/NetworkManager/exportedconnection.h	2011-03-22 21:49:53.455416886 -0500
+@@ -30,9 +30,9 @@ class QVariant;
+ class ConnectionAdaptor: public QDBusAbstractAdaptor
+ {
+     Q_OBJECT
+-    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManagerSettings.Connection")
++    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManager.Settings.Connection")
+     Q_CLASSINFO("D-Bus Introspection", ""
+-"  <interface name=\"org.freedesktop.NetworkManagerSettings.Connection\">\n"
++"  <interface name=\"org.freedesktop.NetworkManager.Settings.Connection\">\n"
+ "    <method name=\"Update\">\n"
+ "      <annotation value=\"impl_exported_connection_update\" name=\"org.freedesktop.DBus.GLib.CSymbol\"/>\n"
+ "      <annotation value=\"\" name=\"org.freedesktop.DBus.GLib.Async\"/>\n"
+diff -up networkmanagement-0.9/backends/NetworkManager/exportedconnectionsecrets.h.nm-compat networkmanagement-0.9/backends/NetworkManager/exportedconnectionsecrets.h
+--- networkmanagement-0.9/backends/NetworkManager/exportedconnectionsecrets.h.nm-compat	2011-03-22 21:50:31.390942626 -0500
++++ networkmanagement-0.9/backends/NetworkManager/exportedconnectionsecrets.h	2011-03-22 21:50:38.994847564 -0500
+@@ -30,9 +30,9 @@ class QVariant;
+ class SecretsAdaptor: public QDBusAbstractAdaptor
+ {
+     Q_OBJECT
+-    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManagerSettings.Connection.Secrets")
++    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManager.Settings.Connection.Secrets")
+     Q_CLASSINFO("D-Bus Introspection", ""
+-"  <interface name=\"org.freedesktop.NetworkManagerSettings.Connection.Secrets\">\n"
++"  <interface name=\"org.freedesktop.NetworkManager.Settings.Connection.Secrets\">\n"
+ "    <method name=\"GetSecrets\">\n"
+ "      <annotation value=\"impl_exported_connection_get_secrets\" name=\"org.freedesktop.DBus.GLib.CSymbol\"/>\n"
+ "      <annotation value=\"\" name=\"org.freedesktop.DBus.GLib.Async\"/>\n"
+diff -up networkmanagement-0.9/backends/NetworkManager/introspection/nm-active-connection.xml.nm-compat networkmanagement-0.9/backends/NetworkManager/introspection/nm-active-connection.xml
+--- networkmanagement-0.9/backends/NetworkManager/introspection/nm-active-connection.xml.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/backends/NetworkManager/introspection/nm-active-connection.xml	2011-03-22 21:45:47.433492583 -0500
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="UTF-8" ?>
+ 
+ <node name="/" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+-  <interface name="org.freedesktop.NetworkManager.Connection.Active">
++  <interface name="org.freedesktop.NetworkManagerCompat.Connection.Active">
+     <property name="ServiceName" type="s" access="read">
+       <tp:docstring>The D-Bus service name providing this connection.</tp:docstring>
+     </property>
+diff -up networkmanagement-0.9/backends/NetworkManager/introspection/nm-connection-secrets.xml.nm-compat networkmanagement-0.9/backends/NetworkManager/introspection/nm-connection-secrets.xml
+--- networkmanagement-0.9/backends/NetworkManager/introspection/nm-connection-secrets.xml.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/backends/NetworkManager/introspection/nm-connection-secrets.xml	2011-03-22 21:45:47.432492595 -0500
+@@ -2,7 +2,7 @@
+ 
+ <node name="/" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+ 
+-    <interface name="org.freedesktop.NetworkManagerSettings.Connection.Secrets">
++    <interface name="org.freedesktop.NetworkManager.Settings.Connection.Secrets">
+         <tp:docstring>
+             Secrets have a separate interface so that they can be locked down.
+         </tp:docstring>
+diff -up networkmanagement-0.9/backends/NetworkManager/introspection/nm-exported-connection.xml.nm-compat networkmanagement-0.9/backends/NetworkManager/introspection/nm-exported-connection.xml
+--- networkmanagement-0.9/backends/NetworkManager/introspection/nm-exported-connection.xml.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/backends/NetworkManager/introspection/nm-exported-connection.xml	2011-03-22 21:45:47.433492583 -0500
+@@ -2,7 +2,7 @@
+ 
+ <node name="/" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+ 
+-    <interface name="org.freedesktop.NetworkManagerSettings.Connection">
++    <interface name="org.freedesktop.NetworkManager.Settings.Connection">
+         <tp:docstring>
+             Represents a single network connection configuration.
+         </tp:docstring>
+diff -up networkmanagement-0.9/backends/NetworkManager/introspection/nm-settings.xml.nm-compat networkmanagement-0.9/backends/NetworkManager/introspection/nm-settings.xml
+--- networkmanagement-0.9/backends/NetworkManager/introspection/nm-settings.xml.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/backends/NetworkManager/introspection/nm-settings.xml	2011-03-22 21:45:47.433492583 -0500
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="UTF-8" ?>
+ 
+ <node name="/" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+-  <interface name="org.freedesktop.NetworkManagerSettings">
++  <interface name="org.freedesktop.NetworkManager.Settings">
+     <tp:docstring>
+       The NetworkManagerSettings interface is provided by the service which provides connections to NetworkManager.
+     </tp:docstring>
+diff -up networkmanagement-0.9/backends/NetworkManager/introspection/nm-vpn-connection.xml.nm-compat networkmanagement-0.9/backends/NetworkManager/introspection/nm-vpn-connection.xml
+--- networkmanagement-0.9/backends/NetworkManager/introspection/nm-vpn-connection.xml.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/backends/NetworkManager/introspection/nm-vpn-connection.xml	2011-03-22 21:45:47.434492571 -0500
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="UTF-8" ?>
+ 
+ <node name="/" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+-  <interface name="org.freedesktop.NetworkManager.VPN.Connection">
++  <interface name="org.freedesktop.NetworkManagerCompat.VPN.Connection">
+     <tp:docstring>
+       Represents an active connection to a Virtual Private Network.
+     </tp:docstring>
+diff -up networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.h.nm-compat networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.h
+--- networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.h.nm-compat	2011-03-22 21:47:20.410330209 -0500
++++ networkmanagement-0.9/backends/NetworkManager/nmdbussettingsservice.h	2011-03-22 21:47:25.547265991 -0500
+@@ -43,7 +43,7 @@ class NMDBusSettingsServicePrivate;
+ class KNM_EXPORT NMDBusSettingsService : public QObject, public ActivatableObserver, public ConnectionHandler
+ {
+ Q_OBJECT
+-Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManagerSettings")
++Q_CLASSINFO("D-Bus Interface", "org.freedesktop.NetworkManager.Settings")
+ 
+ public:
+     enum ServiceStatus { Available, AlreadyRunning, AccessDenied, UnknownError };
+diff -up networkmanagement-0.9/backends/NetworkManager/nm-exported-connectioninterface.h.nm-compat networkmanagement-0.9/backends/NetworkManager/nm-exported-connectioninterface.h
+--- networkmanagement-0.9/backends/NetworkManager/nm-exported-connectioninterface.h.nm-compat	2011-03-22 21:51:16.724375881 -0500
++++ networkmanagement-0.9/backends/NetworkManager/nm-exported-connectioninterface.h	2011-03-22 21:51:22.869299057 -0500
+@@ -29,7 +29,7 @@ class OrgFreedesktopNetworkManagerSettin
+     Q_OBJECT
+ public:
+     static inline const char *staticInterfaceName()
+-    { return "org.freedesktop.NetworkManagerSettings.Connection"; }
++    { return "org.freedesktop.NetworkManager.Settings.Connection"; }
+ 
+ public:
+     OrgFreedesktopNetworkManagerSettingsConnectionInterface(const QString &service, const QString &path, const QDBusConnection &connection, QObject *parent = 0);
+diff -up networkmanagement-0.9/backends/NetworkManager/nm-settingsinterface.h.nm-compat networkmanagement-0.9/backends/NetworkManager/nm-settingsinterface.h
+--- networkmanagement-0.9/backends/NetworkManager/nm-settingsinterface.h.nm-compat	2011-03-22 21:46:35.953885990 -0500
++++ networkmanagement-0.9/backends/NetworkManager/nm-settingsinterface.h	2011-03-22 21:46:48.942723611 -0500
+@@ -29,7 +29,7 @@ class OrgFreedesktopNetworkManagerSettin
+     Q_OBJECT
+ public:
+     static inline const char *staticInterfaceName()
+-    { return "org.freedesktop.NetworkManagerSettings"; }
++    { return "org.freedesktop.NetworkManager.Settings"; }
+ 
+ public:
+     OrgFreedesktopNetworkManagerSettingsInterface(const QString &service, const QString &path, const QDBusConnection &connection, QObject *parent = 0);
+diff -up networkmanagement-0.9/NetworkManager-kde4.conf.nm-compat networkmanagement-0.9/NetworkManager-kde4.conf
+--- networkmanagement-0.9/NetworkManager-kde4.conf.nm-compat	2011-02-21 14:25:52.000000000 -0600
++++ networkmanagement-0.9/NetworkManager-kde4.conf	2011-03-22 21:45:47.434492571 -0500
+@@ -14,23 +14,23 @@
+                 <allow own="org.freedesktop.NetworkManagerUserSettings"/>
+ 
+                 <allow send_destination="org.freedesktop.NetworkManagerUserSettings"
+-                       send_interface="org.freedesktop.NetworkManagerSettings"/>
++                       send_interface="org.freedesktop.NetworkManager.Settings"/>
+ 
+                 <allow send_destination="org.freedesktop.NetworkManagerUserSettings"
+-                       send_interface="org.freedesktop.NetworkManagerSettings.Connection"/>
++                       send_interface="org.freedesktop.NetworkManager.Settings.Connection"/>
+ 
+                 <!-- Only root can get secrets -->
+                 <allow send_destination="org.freedesktop.NetworkManagerUserSettings"
+-                       send_interface="org.freedesktop.NetworkManagerSettings.Connection.Secrets"/>
++                       send_interface="org.freedesktop.NetworkManager.Settings.Connection.Secrets"/>
+         </policy>
+         <policy at_console="true">
+                 <allow own="org.freedesktop.NetworkManagerUserSettings"/>
+ 
+                 <allow send_destination="org.freedesktop.NetworkManagerUserSettings"
+-                       send_interface="org.freedesktop.NetworkManagerSettings"/>
++                       send_interface="org.freedesktop.NetworkManager.Settings"/>
+ 
+                 <allow send_destination="org.freedesktop.NetworkManagerUserSettings"
+-                       send_interface="org.freedesktop.NetworkManagerSettings.Connection"/>
++                       send_interface="org.freedesktop.NetworkManager.Settings.Connection"/>
+         </policy>
+         <policy context="default">
+                 <allow send_destination="org.freedesktop.NetworkManagerUserSettings"
