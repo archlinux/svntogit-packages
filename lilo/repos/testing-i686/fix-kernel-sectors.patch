@@ -1,0 +1,129 @@
+From: Joachim Wiedorn <ad_debian@joonet.de>
+Date: Sat, 9 Apr 2011 10:18:56 +0000 (+0200)
+Subject: Enlarge maximum number of SETUPSECS to 63
+X-Git-Url: https://alioth.debian.org/plugins/scmgit/cgi-bin/gitweb.cgi?p=lilo%2Flilo.git;a=commitdiff_plain;h=5600dbd0049699c3847bfa15eb0bfc745f76d407;hp=f6517ffe8bd6e518f41aa5c35a6b64b05240fb05
+
+Enlarge maximum number of SETUPSECS to 63
+---
+
+diff --git a/CHANGELOG b/CHANGELOG
+index 10ae76d..58d2ed0 100644
+--- a/CHANGELOG
++++ b/CHANGELOG
+@@ -12,6 +12,8 @@ Changes for version 23.2 (unreleased) - Joachim Wiedorn
+     - Save errno for second command.     (src/device.c)
+     - Fix missleading error message.     (src/geometry.c)
+     - Remove obsolete OS/2 code.   (src/boot.c, src/temp.c)
++    - Enlarge maximum number of sectors (MAX_SETUPSECS) for
++        kernel setup code to 63.   (src/bootsect.S, src/lilo.h)
+ 
+   General
+   -------
+diff --git a/COPYING b/COPYING
+index af53737..0586be0 100644
+--- a/COPYING
++++ b/COPYING
+@@ -2,7 +2,7 @@ LInux LOader (LILO) program code, documentation, and auxiliary programs:
+ 
+ Copyright 1992-1998 Werner Almesberger
+ Copyright 1999-2007 John Coffman
+-Copyright 2009-2010 Joachim Wiedorn
++Copyright 2009-2011 Joachim Wiedorn
+ All rights reserved.
+ 
+ 
+diff --git a/src/bootsect.S b/src/bootsect.S
+index 77e5b45..4b38aaa 100644
+--- a/src/bootsect.S
++++ b/src/bootsect.S
+@@ -1,9 +1,11 @@
+ !
+-!	bootsect.s		Copyright (C) 1991, 1992 Linus Torvalds
++!	bootsect.s
++!	Copyright (C) 1991, 1992 Linus Torvalds
++!
+ !	modified by Drew Eckhardt
+ !	modified by Bruce Evans (bde)
+-!	modified by John Coffman for LILO disk.b diagnostic (27-Mar-2000)
+-!							    (09-Mar-2001)
++!	modified by John Coffman (2000, 2001)
++!	modified by Joachim Wiedorn (2011)
+ !
+ !
+ ! bootsect.s is loaded at 0x7c00 by the bios-startup routines, and moves
+@@ -36,7 +38,7 @@ BOOTSEG   = 0x07C0			! original address of boot-sector
+ INITSEG   = 0x9000			! we move boot here - out of the way
+ SETUPSEG  = INITSEG+0x20		! setup starts here
+ SYSSEG    = 0x1000			! system loaded at 0x10000 (65536).
+-MAX_SETUPSECS = 31			! same as  lilo.h
++MAX_SETUPSECS = 63			! same as  lilo.h   (for kernel >= 2.4.0)
+ STK_SIZE  = MAX_SETUPSECS*512+512	! 0x4000
+ 
+ #ifndef SIZEKRNL
+diff --git a/src/lilo.c b/src/lilo.c
+index bbd48ff..236102a 100644
+--- a/src/lilo.c
++++ b/src/lilo.c
+@@ -2,7 +2,7 @@
+  * 
+  * Copyright 1992-1998 Werner Almesberger
+  * Copyright 1999-2007 John Coffman
+- * Copyright 2009-2010 Joachim Wiedorn
++ * Copyright 2009-2011 Joachim Wiedorn
+  * All rights reserved.
+  * 
+  * Licensed under the terms contained in the file 'COPYING'
+@@ -825,7 +825,7 @@ fprintf(errstd,"REBOOT=\"%s\"\n", reboot_arg);
+ 	}
+ 	printf("\n * Copyright (C) 1992-1998 Werner Almesberger  (until v20)\n"
+ 			" * Copyright (C) 1999-2007 John Coffman  (until v22)\n"
+-			" * Copyright (C) 2009-2010 Joachim Wiedorn  (since v23)\n"
++			" * Copyright (C) 2009-2011 Joachim Wiedorn  (since v23)\n"
+ 			"This program comes with ABSOLUTELY NO WARRANTY. This is free software \n"
+ 			"distributed under the BSD License (3-clause). Details can be found in \n"
+ 			"the file COPYING, which is distributed with this software.\n"
+diff --git a/src/lilo.h b/src/lilo.h
+index 1f1ef7d..86d87ca 100644
+--- a/src/lilo.h
++++ b/src/lilo.h
+@@ -1,14 +1,13 @@
+ /* lilo.h  -  LILO constants
+-
+-Copyright 1992-1998 Werner Almesberger.
+-Copyright 1999-2006 John Coffman.
+-All rights reserved.
+-
+-Licensed under the terms contained in the file 'COPYING' in the 
+-source directory.
+-
+-*/
+-
++ * 
++ * Copyright 1992-1998 Werner Almesberger
++ * Copyright 1999-2006 John Coffman
++ * Copyright 2009-2011 Joachim Wiedorn
++ * All rights reserved.
++ * 
++ * Licensed under the terms contained in the file 'COPYING'
++ * in the source directory.
++ */
+ 
+ /* This file is also included by the boot loader assembler code. Put
+    everything that isn't legal C syntax or isn't swallowed by the
+@@ -253,12 +252,11 @@ source directory.
+ #define STAGE_FLAG_MENU	0x0200	/* boot loader supports menu interface */
+ #define STAGE_FLAG_BMP4	0x0400	/* boot loader supports 640x480x4 bitmaps */
+ 
+-#define SETUPSECS	4	/* nr of setup sectors */
+-#define VSS_NUM		497	/* address where variable setup size is
+-				   stored */
++#define VSS_NUM		497	/* address where variable setup size is stored */
+ #define VGA_SET		506	/* address of initial kernel VGA mode */
+-#define MAX_SETUPSECS	31	/* maximum number of sectors in kernel
+-				   setup code (+ bootsect) */
++#define SETUPSECS	4	/* default number of setup sectors */
++#define MAX_SETUPSECS	63	/* maximum number of sectors in kernel
++				   setup code (+ bootsect)  (for kernel >= 2.4.0) */
+ #define MAX_KERNEL_SECS	1024	/* absolute maximum kernel size */
+ #define SPECIAL_SECTORS	2	/* special sectors (don't compact) at beginning
+ 				   of map sections */
