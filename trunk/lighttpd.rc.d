@@ -5,7 +5,7 @@
 
 
 get_pid_file() {
-	/usr/sbin/lighttpd -p -f /etc/lighttpd/lighttpd.conf 2>/dev/null | grep server.pid-file | cut -d= -f2
+	/usr/sbin/lighttpd -p -f /etc/lighttpd/lighttpd.conf 2>/dev/null | grep server.pid-file | sed -E 's/.*"(.+)"/\1/'
 }
 
 get_pid() {
@@ -37,18 +37,15 @@ test_config() {
 		stat_die
 	fi
 
-	local d
-	for d in /var/{run,log,cache}/lighttpd; do
-		if [ ! -d $d ]; then
-			stat_append "(directory $d not found)"
-			stat_die
-		fi
-	done
-
 	/usr/sbin/lighttpd -t -f /etc/lighttpd/lighttpd.conf >/dev/null 2>&1
 	if [ $? -gt 0 ]; then
 		stat_append '(error in /etc/lighttpd/lighttpd.conf)'
 		stat_die
+	fi
+
+	local piddir=$(dirname "$(get_pid_file)")
+	if [ ! -d "{$piddir}" ]; then
+		install -d -m755 -o http -g http "${piddir}"
 	fi
 
 	stat_done
