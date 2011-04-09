@@ -6,9 +6,7 @@
 
 wait_for_pid () {
 	try=0
-
 	while test $try -lt 35 ; do
-
 		case "$1" in
 			'created')
 			if [ -f "$2" ] ; then
@@ -16,7 +14,6 @@ wait_for_pid () {
 				break
 			fi
 			;;
-
 			'removed')
 			if [ ! -f "$2" ] ; then
 				try=''
@@ -28,15 +25,38 @@ wait_for_pid () {
 		stat_append '.'
 		try=`expr $try + 1`
 		sleep 1
-
 	done
-
 }
 
-[ -d /var/run/php-fpm ] || install -d -m755 /var/run/php-fpm
+test_config() {
+	stat_busy 'Checking configuration'
+	if [ $(id -u) -ne 0 ]; then
+		stat_append '(This script must be run as root)'
+		stat_die
+	fi
+
+	if [ ! -r /etc/php/php-fpm.conf ]; then
+		stat_append '(/etc/php/php-fpm.conf not found)'
+		stat_die
+	fi
+
+	local test=$(/usr/sbin/php-fpm -t 2>&1)
+	if [ $? -gt 0 ]; then
+		stat_append '(error in /etc/php/php-fpm.conf)'
+		stat_die
+	elif echo $test | grep -qi 'error'; then
+		stat_append '(error in /etc/php/php.ini)'
+		stat_die
+	fi
+
+	[ -d /var/run/php-fpm ] || install -d -m755 /var/run/php-fpm
+
+	stat_done
+}
 
 case "$1" in
 	start)
+		test_config
 		stat_busy 'Starting php-fpm'
 
 		/usr/sbin/php-fpm
@@ -58,6 +78,7 @@ case "$1" in
 	;;
 
 	stop)
+		test_config
 		stat_busy 'Gracefully shutting down php-fpm'
 
 		if [ ! -r /var/run/php-fpm/php-fpm.pid ] ; then
@@ -105,6 +126,7 @@ case "$1" in
 	;;
 
 	reload)
+		test_config
 		stat_busy 'Reload service php-fpm'
 
 		if [ ! -r /var/run/php-fpm/php-fpm.pid ] ; then
