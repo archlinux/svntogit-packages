@@ -3,29 +3,43 @@
 
 pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-common' 'xorg-server-devel')
-pkgver=1.10.0.901
+pkgver=1.10.0.902
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('custom')
 url="http://xorg.freedesktop.org"
-makedepends=('pixman' 'libx11' 'mesa' 'libgl' 'xf86driproto' 'xcmiscproto' 'xtrans' 'bigreqsproto' 'randrproto' 'inputproto' 'fontsproto' 'videoproto' 'compositeproto' 'recordproto' 'scrnsaverproto' 'resourceproto' 'xineramaproto' 'libxkbfile' 'libxfont' 'renderproto' 'libpciaccess' 'libxv' 'xf86dgaproto' 'libxmu' 'libxrender' 'libxi' 'dmxproto' 'libxaw' 'libdmx' 'libxtst' 'libxres' 'xorg-xkbcomp')
+makedepends=('pixman' 'libx11' 'mesa' 'libgl' 'xf86driproto' 'xcmiscproto' 'xtrans' 'bigreqsproto' 'randrproto' 'inputproto' 'fontsproto' 'videoproto' 'compositeproto' 'recordproto' 'scrnsaverproto' 'resourceproto' 'xineramaproto' 'libxkbfile' 'libxfont' 'renderproto' 'libpciaccess' 'libxv' 'xf86dgaproto' 'libxmu' 'libxrender' 'libxi' 'dmxproto' 'libxaw' 'libdmx' 'libxtst' 'libxres' 'xorg-xkbcomp' 'xorg-util-macros' 'xorg-font-util')
 options=('!libtool')
 source=(${url}/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2
+        bg-none-revert.patch
+        glx-pixmap-crash.patch
+        xserver-1.10-pointer-barriers.patch
         xorg-redhat-die-ugly-pattern-die-die-die.patch
         xvfb-run
         xvfb-run.1
         10-quirks.conf)
-md5sums=('d750cf5f6342b548b7ac2be56e9d1841'
-         '1a336eb22e27cbf443ec5a2ecddfa93c'
-         '52fd3effd80d7bc6c1660d4ecf23d31c'
-         '376c70308715cd2643f7bff936d9934b'
-         'd4f7dfc6be4ef4e2c6dd7632a9d88abe')
+sha1sums=('7d44c57735c321fefd2b58f8917f51a95a829886'
+          '629c6d8d52126eab81ee1b72a9e4209535f8cb81'
+          '19e7164dcf9814ad64231b50a46f651b0e68a27a'
+          '1b95e91384a57d966428c7db98ed06f4cc562f91'
+          '0efcdf61bde3c0cd813072b94e2b30ab922775b9'
+          'c94f742d3f9cabf958ae58e4015d9dd185aabedc'
+          '6838fc00ef4618c924a77e0fb03c05346080908a'
+          '993798f3d22ad672d769dae5f48d1fa068d5578f')
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
   # Get rid of the ugly pattern
   patch -Np3 -i "${srcdir}/xorg-redhat-die-ugly-pattern-die-die-die.patch"
 
+  # Add pointer barrier support, patch from Fedora
+  patch -Np1 -i "${srcdir}/xserver-1.10-pointer-barriers.patch"
+
+  # Patches from ~ajax/xserver xserver-next branch
+  patch -Np1 -i "${srcdir}/bg-none-revert.patch"
+  patch -Np1 -i "${srcdir}/glx-pixmap-crash.patch"
+
+  autoreconf
   ./configure --prefix=/usr \
       --enable-ipv6 \
       --enable-dri \
@@ -49,7 +63,7 @@ build() {
       --localstatedir=/var \
       --with-xkb-path=/usr/share/X11/xkb \
       --with-xkb-output=/var/lib/xkb \
-      --with-fontrootdir=/usr/share/fonts #       --with-dri-driver-path=/usr/lib/xorg/modules/dri \
+      --with-fontrootdir=/usr/share/fonts
   make
 
   sed -e 's/^DMX_SUBDIRS =.*/DMX_SUBDIRS =/' \
