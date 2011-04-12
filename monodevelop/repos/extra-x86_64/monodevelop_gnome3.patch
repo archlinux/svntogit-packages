@@ -1,0 +1,101 @@
+diff --git a/src/addins/MonoDevelop.GtkCore/libstetic/wrapper/Object.cs b/src/addins/MonoDevelop.GtkCore/libstetic/wrapper/Object.cs
+index 4d8954c..e1a1937 100644
+--- a/src/addins/MonoDevelop.GtkCore/libstetic/wrapper/Object.cs
++++ b/src/addins/MonoDevelop.GtkCore/libstetic/wrapper/Object.cs
+@@ -1,5 +1,6 @@
+ using System;
+ using System.Collections;
++using System.Collections.Generic;
+ 
+ namespace Stetic.Wrapper {
+ 	public abstract class Object : Stetic.ObjectWrapper {
+@@ -11,17 +12,32 @@ namespace Stetic.Wrapper {
+ 			((GLib.Object)Wrapped).RemoveNotification (NotifyHandler);
+ 			base.Dispose ();
+ 		}
+-
++		
++		IEnumerable<string> GladePropertyNames {
++			get {
++				foreach (ItemGroup group in ClassDescriptor.ItemGroups) {
++					foreach (ItemDescriptor item in group) {
++						TypedPropertyDescriptor prop = item as TypedPropertyDescriptor;
++						if (prop != null && !string.IsNullOrEmpty (prop.GladeName)) {
++							yield return prop.GladeName;
++						}
++					}
++				}
++			}
++		}
++		
+ 		internal protected override void OnDesignerAttach (IDesignArea designer)
+ 		{
+ 			base.OnDesignerAttach (designer);
+-			((GLib.Object)Wrapped).AddNotification (NotifyHandler);
++			foreach (string property in GladePropertyNames)
++				((GLib.Object)Wrapped).AddNotification (property, NotifyHandler);
+ 		}
+ 		
+ 		internal protected override void OnDesignerDetach (IDesignArea designer)
+ 		{
+ 			base.OnDesignerDetach (designer);
+-			((GLib.Object)Wrapped).RemoveNotification (NotifyHandler);
++			foreach (string property in GladePropertyNames)
++				((GLib.Object)Wrapped).RemoveNotification (property, NotifyHandler);
+ 		}
+ 		
+ 		public static Object Lookup (GLib.Object obj)
+
+diff --git a/src/core/MonoDevelop.Ide/MonoDevelop.Components.Commands/CommandManager.cs b/src/core/MonoDevelop.Ide/MonoDevelop.Components.Commands/CommandManager.cs
+index 89f04b5..75d7b17 100644
+--- a/src/core/MonoDevelop.Ide/MonoDevelop.Components.Commands/CommandManager.cs
++++ b/src/core/MonoDevelop.Ide/MonoDevelop.Components.Commands/CommandManager.cs
+@@ -1540,22 +1540,39 @@ namespace MonoDevelop.Components.Commands
+ 	internal class ToolbarTracker
+ 	{
+ 		Gtk.IconSize lastSize;
+-		
++		 
+ 		public void Track (Gtk.Toolbar toolbar)
+ 		{
+ 			lastSize = toolbar.IconSize;
+-			toolbar.AddNotification (OnToolbarPropChanged);
++			toolbar.AddNotification ("icon-size", IconSizeChanged);
++			toolbar.OrientationChanged += HandleToolbarOrientationChanged;
++			toolbar.StyleChanged += HandleToolbarStyleChanged;
++			
+ 			toolbar.Destroyed += delegate {
+-				toolbar.RemoveNotification (OnToolbarPropChanged);
++				toolbar.StyleChanged -= HandleToolbarStyleChanged;
++				toolbar.OrientationChanged -= HandleToolbarOrientationChanged;
++				toolbar.RemoveNotification ("icon-size", IconSizeChanged);
+ 			};
+ 		}
+-		
+-		void OnToolbarPropChanged (object ob, GLib.NotifyArgs args)
++
++		void HandleToolbarStyleChanged (object o, Gtk.StyleChangedArgs args)
+ 		{
+-			Gtk.Toolbar t = (Gtk.Toolbar) ob;
+-			if (lastSize != t.IconSize || args.Property == "orientation" || args.Property == "toolbar-style")
++			Gtk.Toolbar t = (Gtk.Toolbar) o;
++			if (lastSize != t.IconSize)
+ 				UpdateCustomItems (t);
+-			lastSize = t.IconSize;
++		}
++
++		void HandleToolbarOrientationChanged (object o, Gtk.OrientationChangedArgs args)
++		{
++			Gtk.Toolbar t = (Gtk.Toolbar) o;
++			if (lastSize != t.IconSize)
++				UpdateCustomItems (t);
++		}
++
++		void IconSizeChanged (object o, GLib.NotifyArgs args)
++		{
++			this.lastSize = ((Gtk.Toolbar) o).IconSize;
++			UpdateCustomItems ((Gtk.Toolbar) o);
+ 		}
+ 		
+ 		void UpdateCustomItems (Gtk.Toolbar t)
+
