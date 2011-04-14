@@ -5,20 +5,21 @@ pkgbase=dhcp
 pkgname=('dhcp' 'dhclient')
 
 # separate patch levels with a period to maintain proper versioning.
-pkgver=4.2.0.2
-_pkgver=4.2.0-P2
+pkgver=4.2.1.1
+_pkgver=4.2.1-P1
 
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('custom:isc-dhcp')
 url="https://www.isc.org/software/dhcp"
 source=(http://ftp.isc.org/isc/${pkgbase}/${pkgbase}-${_pkgver}.tar.gz
-        dhcpd dhcp.conf.d
+        dhcp4 dhcp6 dhcp
         dhcp-4.1.1-missing-ipv6-not-fatal.patch
         dhclient-script-pathFixes.patch)
-md5sums=('a98f4ce3ca651e7e28a5a1ae6398689e'
-         'df22cffa7d7415ece7bb025b7bf774dd'
-         '49da3192e5c885e3c7d02f447c2dea5e'
+md5sums=('22e6f1eff6d5cfe2621a06cc62ba5b70'
+         'c49b1497837ba56c54e401a66e1bab9b'
+         '12c2f3ae47ed23eb698eb7f1bfd80f20'
+         '8f357e46e1efcbb746f38737a3f977a2'
          'fd64aeb4f399dcc41ea43089a3811094'
          'ddcc5cd576ec631ade6c4da21952b50b')
 
@@ -33,11 +34,13 @@ build() {
 
   ./configure --prefix=/usr --sysconfdir=/etc \
       --with-srv-lease-file=/var/state/dhcp/dhcpd.leases \
-      --with-srv6-lease-file=/var/state/dhcp/dhcpd6.leases
+      --with-srv6-lease-file=/var/state/dhcp/dhcpd6.leases \
+      --with-cli-lease-file=/var/state/dhclient/dhclient.leases \
+      --with-cli6-lease-file=/var/state/dhclient/dhclient6.leases
 
   make
 
-  patch -i ${srcdir}/dhclient-script-pathFixes.patch client/scripts/linux
+  patch -i ${srcdir}/dhclient-script-pathFixes.patch client/scripts/linux || return 1
 }
 
 package_dhcp(){
@@ -49,8 +52,9 @@ package_dhcp(){
   cd ${srcdir}/${pkgbase}-${_pkgver}
   make DESTDIR=${pkgdir} install
 
-  install -D -m755 ${srcdir}/dhcpd ${pkgdir}/etc/rc.d/dhcpd
-  install -D -m644 ${srcdir}/dhcp.conf.d ${pkgdir}/etc/conf.d/${pkgbase}
+  install -D -m755 ${srcdir}/dhcp4 ${pkgdir}/etc/rc.d/dhcp4
+  install -D -m755 ${srcdir}/dhcp6 ${pkgdir}/etc/rc.d/dhcp6
+  install -D -m644 ${srcdir}/dhcp ${pkgdir}/etc/conf.d/${pkgbase}
   mkdir -p ${pkgdir}/var/state/dhcp
 
   # Remove dhclient
@@ -62,16 +66,15 @@ package_dhcp(){
 
 package_dhclient(){
   pkgdesc="dhclient is standalone client from the dhcp package"
-  depends=('bash')
+  depends=('bash' 'iproute2')
 
   cd ${srcdir}/${pkgbase}-${_pkgver}
   make -C client DESTDIR=${pkgdir} install
 
   # move dhclient.conf to dhclient.conf.example
   mv ${pkgdir}/etc/dhclient.conf{,.example}
-
-  # directory needed for leasefiles
-  mkdir -p ${pkgdir}/var/lib/dhclient
+  
+  mkdir -p ${pkgdir}/var/state/dhclient
 
   # install dhclient linux script
   install -m755 -D client/scripts/linux ${pkgdir}/sbin/dhclient-script
