@@ -1,0 +1,43 @@
+Index: kdeedu-4.5.5/marble/src/plugins/positionprovider/gpsd/GpsdConnection.cpp
+===================================================================
+--- kdeedu-4.5.5.orig/marble/src/plugins/positionprovider/gpsd/GpsdConnection.cpp
++++ kdeedu-4.5.5/marble/src/plugins/positionprovider/gpsd/GpsdConnection.cpp
+@@ -18,6 +18,9 @@ using namespace Marble;
+ 
+ GpsdConnection::GpsdConnection( QObject* parent )
+     : QObject( parent ),
++#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
++      m_gpsd("localhost", DEFAULT_GPSD_PORT),
++#endif
+       m_timer( 0 )
+ {
+     connect( &m_timer, SIGNAL( timeout() ), this, SLOT( update() ) );
+@@ -26,7 +29,11 @@ GpsdConnection::GpsdConnection( QObject*
+ void GpsdConnection::initialize()
+ {
+     m_timer.stop();
++#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
++    gps_data_t* data;
++#else
+     gps_data_t* data = m_gpsd.open();
++#endif
+     if ( data ) {
+         m_status = PositionProviderStatusAcquiring;
+         emit statusChanged( m_status );
+@@ -73,8 +80,16 @@ void GpsdConnection::initialize()
+ void GpsdConnection::update()
+ {
+ #if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 3 ) && defined( PACKET_SET )
++#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
++    if ( m_gpsd.waiting(0) ) {
++#else
+     if ( m_gpsd.waiting() ) {
++#endif
++#if defined( GPSD_API_MAJOR_VERSION ) && ( GPSD_API_MAJOR_VERSION >= 5 )
++        gps_data_t* data = m_gpsd.read();
++#else
+         gps_data_t* data = m_gpsd.poll();
++#endif
+         if ( data && data->set & PACKET_SET ) {
+             emit gpsdInfo( *data );
+         }
