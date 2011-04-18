@@ -1,0 +1,75 @@
+From 82ecc85d9ed0fc05931fb6d6893eda567a3c443f Mon Sep 17 00:00:00 2001
+From: Daniel Stenberg <daniel@haxx.se>
+Date: Mon, 18 Apr 2011 09:03:12 +0200
+Subject: [PATCH] curl-config: fix --version
+
+curl-config --version didn't output the correct version string (bug
+introduced in commit 0355e33b5f7b234cf3), and unfortunately the test
+case 1022 that was supposed to check for this was broken.
+
+This change fixes the test to detect this problem and it fixes the
+output.
+
+Bug: http://curl.haxx.se/bug/view.cgi?id=3288727
+---
+ curl-config.in            |    4 ++--
+ tests/libtest/test1022.pl |   17 +++++++++++++----
+ 2 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/curl-config.in b/curl-config.in
+index 27b9f7f..0232803 100644
+--- a/curl-config.in
++++ b/curl-config.in
+@@ -6,7 +6,7 @@
+ #                            | (__| |_| |  _ <| |___
+ #                             \___|\___/|_| \_\_____|
+ #
+-# Copyright (C) 2001 - 2010, Daniel Stenberg, <daniel@haxx.se>, et al.
++# Copyright (C) 2001 - 2011, Daniel Stenberg, <daniel@haxx.se>, et al.
+ #
+ # This software is licensed as described in the file COPYING, which
+ # you should have received as part of this distribution. The terms
+@@ -94,7 +94,7 @@ while test $# -gt 0; do
+ 	;;
+ 
+     --version)
+-	echo libcurl @VERSION@
++	echo libcurl @CURLVERSION@
+ 	exit 0
+ 	;;
+ 
+diff --git a/tests/libtest/test1022.pl b/tests/libtest/test1022.pl
+index 60eee38..7fac00e 100755
+--- a/tests/libtest/test1022.pl
++++ b/tests/libtest/test1022.pl
+@@ -22,14 +22,23 @@ my $curlconfigversion;
+ open(CURLCONFIG, "sh $ARGV[0] --$what|") || die "Can't get curl-config --$what list\n";
+ $_ = <CURLCONFIG>;
+ chomp;
++my $filever=$_;
+ if ( $what eq "version" ) {
+-    /^libcurl ([\.\d]+(-DEV)?)$/ ;
+-    $curlconfigversion = $1;
++    if($filever =~ /^libcurl ([\.\d]+(-DEV)?)$/) {
++        $curlconfigversion = $1;
++    }
++    else {
++        $curlconfigversion = "illegal value";
++    }
+ }
+ else {
+     # Convert hex version to decimal for comparison's sake
+-    /^(..)(..)(..)$/ ;
+-    $curlconfigversion = hex($1) . "." . hex($2) . "." . hex($3);
++    if($filever =~ /^(..)(..)(..)$/) {
++        $curlconfigversion = hex($1) . "." . hex($2) . "." . hex($3);
++    }
++    else {
++        $curlconfigversion = "illegal value";
++    }
+ 
+     # Strip off the -DEV from the curl version if it's there
+     $version =~ s/-DEV$//;
+-- 
+1.7.4.4
+
