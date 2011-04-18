@@ -2,43 +2,34 @@
 # Contributor: John Sowiak <john@archlinux.org>
 # Maintainer: tobias <tobias@archlinux.org>
 
-# TODO:
-# - consider switching to scons when it is better supported
-
 # Apparently, the blender guys refuse to release source tarballs for
 # intermediate releases that deal mainly with binaries but incorporate tiny
 # minor changes from cvs. Since I'm sick and tired of the urges of users that
 # look for release numbers only we make a messy PKGBUILD that can checkout cvs
 # tags if necessary.
-#cvs=true
-cvs=false
+#_cvs=true
+_cvs=false
 
 pkgname=blender
-pkgver=2.49b
-pkgrel=2
+pkgver=2.57
+pkgrel=1
 pkgdesc="A fully integrated 3D graphics creation suite"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.blender.org"
-depends=('libjpeg' 'libpng' 'openexr' 'sdl' 'python2' 'desktop-file-utils' \
-         'gettext' 'libxi' 'libxmu' 'mesa' 'freetype2' 'openal')
-makedepends=('freeglut' 'libtiff' 'librsvg' 'yasm' 'csv')
-options=('!makeflags')
+depends=('libjpeg' 'libpng' 'openjpeg' 'libtiff' 'openexr' 'sdl' 'python' 'desktop-file-utils' \
+         'shared-mime-info' 'hicolor-icon-theme' 'xdg-utils' 'gettext' 'libxi' 'libxmu' 'mesa' \
+         'freetype2' 'openal' 'libsndfile' 'libsamplerate' 'ffmpeg')
+makedepends=('cmake' 'cvs')
 install=blender.install
-source=($pkgname.desktop $pkgname.svg)
-if [ ! $cvs -o $cvs = false ]; then
-  makedepends=('freeglut' 'libtiff' 'librsvg' 'yasm')
-  source=(${source[@]} http://download.blender.org/source/$pkgname-$pkgver.tar.gz)
-  md5sums=('b5b9720b9430b1f5e2aa0b2df533fed8'
-         '0e53299444ff5570639c8f59372bc98c'
-         '718eef6a4ff377989e829b92a886cc5b')
-  sha1sums=('9ae82b5df21b4803f981e3df4a256b4be7137273'
-          '1e5452f56f590d5ce1af8c174113f0e639714c0c'
-          '43f71e7de4efe79c518d45f4b5a04e03c28d5fc5')
+if [ ! $_cvs -o $_cvs = false ]; then
+  makedepends=('cmake')
+  source=(http://download.blender.org/source/$pkgname-$pkgver.tar.gz)
+  md5sums=('e6cb5523323a71c070051e6fe6efe497')
 fi
 
 build() {
-  if [ $cvs = true ]; then
+  if [ $_cvs = true ]; then
     cd "$srcdir/"
     #cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender login
     cvs -z3 -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender checkout $pkgname
@@ -50,94 +41,41 @@ build() {
     cd "$srcdir/$pkgname-$pkgver"
   fi
 
- rm -f user-def.mk
+  mkdir build
+  cd build
 
- ##########################################################################
- # tweak the makefiles to prepare build for ArchLinux
-   # disable static binaries and enable blenderplayer binary
-  sed -i "s|^.*\(BINTARGETS += blenderstatic\)|    #\1|g" source/Makefile
-  sed -i "s|^#\(.*BINTARGETS += blenderplayer\)|\1|g" source/Makefile
-  # link freetype and openal dynamically
-  sed -i 's|LOPTS)|LOPTS) -lfreetype -lopenal|g' source/Makefile
-  sed -i 's|COMLIB.*libfreetype\.a|#\0|g' source/Makefile
-  sed -i 's|NAN_SND_LIBS.*libopenal\.a|#\0|g' source/Makefile
-   # make ode (alternative physics engine)
-   # does not work for Arch64
-   #[ "$CARCH" = "i686" ] && sed -i 's|^\(DIRS.*\)$|\1 ode|' extern/Makefile
-   # make the nan_makefiles happy
-  export NAN_PYTHON_VERSION=2.7
-  export INTERNATIONAL=true
-  export WITH_FREETYPE2=true
-  export NAN_FREETYPE=/usr
-  export WITH_ICONV=true
+  cmake .. \
+    -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+    -DCMAKE_BUILD_TYPE:STRING=Release \
+    -DWITH_INSTALL_PORTABLE:BOOL=OFF \
+    -DWITH_PYTHON_INSTALL:BOOL=OFF \
+    -DWITH_OPENCOLLADA:BOOL=OFF \
+    -DWITH_GAMEENGINE:BOOL=ON \
+    -DWITH_PLAYER:BOOL=ON \
+    -DPYTHON_VERSION:STRING=3.2 \
+    -DPYTHON_LIBPATH:STRING=/usr/lib \
+    -DPYTHON_LIBRARY:STRING=python3.2mu \
+    -DPYTHON_INCLUDE_DIRS:STRING=/usr/include/python3.2mu
 
-  export NAN_NO_PLUGIN=true
-
-  export NAN_OPENAL=/usr
-  export NAN_FMOD=/usr
-  export NAN_JPEG=/usr
-  export NAN_PNG=/usr
-  export WITH_OPENEXR=true
-  export NAN_OPENEXR=/usr
-  export NAN_ODE=/usr
-  export NAN_OPENEXR_LIBS=$(pkg-config --libs-only-l OpenEXR)
-
-  export NAN_SDL=/usr
-  export NAN_ZLIB=/usr
-  export NAN_MESA=/usr
-
-  export NAN_USE_BULLET=true
-  export NAN_USE_FFMPEG_CONFIG=true
-  export WITH_BF_VERSE=true
-  export WITH_VERSE=true
-  export WITH_BF_OPENMP=true
-  # there is an issue with a file
-  export NAN_DEBUG=-O
- ###########################################################################
- # build
-  LDFLAGS="-Wl,--hash-style=gnu"
-  make
- ###########################################################################
+  make $MAKEFLAGS
 }
 
 package() {
-  if [ $cvs = true ]; then
+  if [ $_cvs = true ]; then
     cd "$srcdir/$pkgname"
   else
     cd "$srcdir/$pkgname-$pkgver"
   fi
 
-  cd obj/linux-glibc2*/bin
+  cd build
+  make DESTDIR="${pkgdir}" install
+  python -m compileall "${pkgdir}/usr/share/blender"
 
-# common part
+  for i in 128 16 192 22 32 48 64 96 ; do
+    install -D -m644 ../release/freedesktop/icons/${i}x${i}/blender.png \
+      "${pkgdir}/usr/share/icons/hicolor/${i}x${i}/apps/blender.png"
+  done
 
- mkdir -p "$pkgdir/usr/share/"
-
- # install binaries
- install -Dm755 blender "$pkgdir/usr/bin/blender"
- install -Dm755 blenderplayer "$pkgdir/usr/bin/blenderplayer"
-
- # install internationalization support
- cd ../../../bin/.blender
- install -D -m644 .Blanguages \
-   "$pkgdir/usr/share/$pkgname/.Blanguages"
- install -D -m644 .bfont.ttf \
-   "$pkgdir/usr/share/$pkgname/.bfont.ttf"
-
- cp -R locale "$pkgdir/usr/share/"
-
- # install scripts
- cd ../../release/
- cp -R scripts "$pkgdir/usr/share/$pkgname/"
-sed -i 's|#!/usr/bin/python|#!/usr/bin/python2|' "$pkgdir/usr/share/blender/scripts/bpymodules/blend2renderinfo.py"
-
- # install all additional stuff
- # install a freedesktop.org compliant menu entry
- install -Dm644 "$srcdir/$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
- # install some freedesktop.org compatibility
- install -D -m644 "$srcdir/$pkgname.svg" "$pkgdir/usr/share/pixmaps/$pkgname.svg"
- # finally we render a png as fallback for not svg aware menu applications
- # Attention: always make sure you check the dimensions of the source-svg,
- # you can read the dimensions via inkscape's export function
- rsvg -w 64 -h 64 -f png "$pkgdir/usr/share/pixmaps/$pkgname.svg" "$pkgdir/usr/share/pixmaps/$pkgname.png"
+  install -D -m644 ../release/freedesktop/icons/scalable/blender.svg \
+    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/blender.svg"
 }
