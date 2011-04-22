@@ -1,0 +1,48 @@
+# $Id:$
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+# Contributor: Xavier Chantry <shiningxc@gmail.com>
+
+pkgname=libfetch
+pkgver=2.33
+pkgrel=3
+pkgdesc="URL based download library"
+arch=('i686' 'x86_64')
+license=('BSD')
+depends=('openssl>=1.0.0')
+url="http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/net/libfetch/"
+source=(Makefile
+        ftp://ftp.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz
+        fetch-handle-temp-redirect.patch)
+md5sums=('7dffdd5a81bb32084a2f45e61f70dcf9'
+         'a176b94f7f30344ef8a71c047ca2136b'
+         '2ee40d7e7d76c39ae5500d89075ef8a6')
+
+# keep an upgrade path for older installations
+PKGEXT='.pkg.tar.gz'
+
+# source PKGBUILD && mksource
+mksource() {
+  export CVSROOT=:pserver:anoncvs@anoncvs.NetBSD.org:/cvsroot
+  D=pkgsrc/net/libfetch
+  [ -d "$D" ] && cvs up "$D" || cvs co "$D"
+  pushd "$D"
+  dirname=$(sed -n 's/DISTNAME=.*\(libfetch-.*$\)/\1/p' Makefile)
+  cp -r files $dirname
+  tar -czv --exclude=CVS -f ../../../$dirname.tar.gz $dirname
+  rm -r $dirname
+  popd
+}
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+  cp $srcdir/Makefile .
+  make || return 1
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver
+  make DESTDIR=$pkgdir install
+  licdir=$pkgdir/usr/share/licenses/libfetch/
+  mkdir -p $licdir
+  sed -n -e '/Copyright (c)/,/SUCH DAMAGE\./p' common.c | cut -c '4-' > $licdir/LICENSE
+}
