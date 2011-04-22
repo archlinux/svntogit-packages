@@ -1,5 +1,5 @@
 diff --git a/util/grub-mkconfig.in b/util/grub-mkconfig.in
-index b041a38..6f31dce 100644
+index afc66f8..c80f7bf 100644
 --- a/util/grub-mkconfig.in
 +++ b/util/grub-mkconfig.in
 @@ -252,6 +252,8 @@ export GRUB_DEFAULT \
@@ -12,7 +12,7 @@ index b041a38..6f31dce 100644
    GRUB_SAVEDEFAULT \
    GRUB_BADRAM
 diff --git a/util/grub.d/00_header.in b/util/grub.d/00_header.in
-index 420b3f3..79fd4fb 100644
+index 9da1511..6251bca 100644
 --- a/util/grub.d/00_header.in
 +++ b/util/grub.d/00_header.in
 @@ -100,6 +100,14 @@ cat <<EOF
@@ -31,7 +31,7 @@ index 420b3f3..79fd4fb 100644
  gfxterm=0;
  for x in ${GRUB_TERMINAL_INPUT} ${GRUB_TERMINAL_OUTPUT}; do
 diff --git a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
-index a09c3e6..cf12ea9 100644
+index 1dbcad9..7c22cc0 100644
 --- a/util/grub.d/10_linux.in
 +++ b/util/grub.d/10_linux.in
 @@ -31,8 +31,8 @@ CLASS="--class gnu-linux --class gnu --class os"
@@ -39,9 +39,9 @@ index a09c3e6..cf12ea9 100644
    OS=GNU/Linux
  else
 -  OS="${GRUB_DISTRIBUTOR} GNU/Linux"
--  CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr '[A-Z]' '[a-z]' | cut -d' ' -f1) ${CLASS}"
+-  CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr 'A-Z' 'a-z' | cut -d' ' -f1) ${CLASS}"
 +  OS="${GRUB_DISTRIBUTOR}"
-+  CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr '[A-Z]' '[a-z]' | tr -d ' ') ${CLASS}"
++  CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr 'A-Z' 'a-z' | tr -d ' ') ${CLASS}"
  fi
  
  # loop-AES arranges things so that /dev/loop/X can be our root device, but
@@ -53,17 +53,22 @@ index a09c3e6..cf12ea9 100644
 +  LINUX_ROOT_DEVICE="/dev/disk/by-uuid/${GRUB_DEVICE_UUID}"
  fi
  
- linux_entry ()
-@@ -111,7 +111,7 @@ EOF
- EOF
- }
+ if [ "x`${grub_probe} --device ${GRUB_DEVICE} --target=fs 2>/dev/null || true`" = xbtrfs ]; then
+@@ -121,11 +121,11 @@ EOF
  
--list=`for i in /boot/vmlinuz-* /boot/vmlinux-* /vmlinuz-* /vmlinux-* ; do
-+list=`for i in /boot/vmlinuz* /boot/vmlinux* /vmlinuz* /vmlinux* ; do
-         if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
-       done`
- prepare_boot_cache=
-@@ -123,14 +123,12 @@ while [ "x$list" != "x" ] ; do
+ case x`uname -m` in
+     xi?86 | xx86_64)
+-	list=`for i in /boot/vmlinuz-* /vmlinuz-* /boot/kernel-* ; do
++	list=`for i in /boot/vmlinuz* /vmlinuz* /boot/kernel-* ; do
+                   if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
+               done` ;;
+     *) 
+-	list=`for i in /boot/vmlinuz-* /boot/vmlinux-* /vmlinuz-* /vmlinux-* /boot/kernel-* ; do
++	list=`for i in /boot/vmlinuz* /boot/vmlinux* /vmlinuz* /vmlinux* /boot/kernel-* ; do
+                   if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
+ 	     done` ;;
+ esac
+@@ -139,16 +139,19 @@ while [ "x$list" != "x" ] ; do
    dirname=`dirname $linux`
    rel_dirname=`make_system_path_relative_to_its_root $dirname`
    version=`echo $basename | sed -e "s,^[^0-9]*-,,g"`
@@ -73,15 +78,19 @@ index a09c3e6..cf12ea9 100644
    linux_root_device_thisversion="${LINUX_ROOT_DEVICE}"
  
    initrd=
--  for i in "initrd.img-${version}" "initrd-${version}.img" \
--	   "initrd-${version}" "initramfs-${version}.img" \
--	   "initrd.img-${alt_version}" "initrd-${alt_version}.img" \
--	   "initrd-${alt_version}" "initramfs-${alt_version}.img"; do
-+  for i in "${base_init}.img"; do
++
+   for i in "initrd.img-${version}" "initrd-${version}.img" \
+ 	   "initrd-${version}" "initramfs-${version}.img" \
+ 	   "initrd.img-${alt_version}" "initrd-${alt_version}.img" \
+ 	   "initrd-${alt_version}" "initramfs-${alt_version}.img" \
+ 	   "initramfs-genkernel-${version}" \
+-	   "initramfs-genkernel-${alt_version}"; do
++	   "initramfs-genkernel-${alt_version}" \
++	   "${basename/vmlinuz/kernel}.img"; do
      if test -e "${dirname}/${i}" ; then
        initrd="$i"
        break
-@@ -155,6 +153,9 @@ while [ "x$list" != "x" ] ; do
+@@ -178,6 +181,9 @@ while [ "x$list" != "x" ] ; do
  
    linux_entry "${OS}" "${version}" false \
        "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
