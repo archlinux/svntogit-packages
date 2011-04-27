@@ -10,7 +10,7 @@ PID=$(pidof -o %PPID /usr/sbin/crond)
 case "$1" in
 start)
 	stat_busy "Starting $name daemon"
-	[[ -z "$PID" ]] && /usr/sbin/crond $CROND_ARGS &>/dev/null \
+	[[ -z "$PID" ]] && /usr/sbin/crond $CRONDARGS &>/dev/null \
 	&& { add_daemon $name; stat_done; } \
 	|| { stat_fail; exit 1; }
 	;;
