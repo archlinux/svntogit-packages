@@ -44,7 +44,7 @@ test_config() {
 	fi
 
 	local piddir=$(dirname "$(get_pid_file)")
-	if [ ! -d "{$piddir}" ]; then
+	if [ ! -d "${piddir}" ]; then
 		install -d -m755 -o http -g http "${piddir}"
 	fi
 
