@@ -1,0 +1,126 @@
+diff --git a/src/kdc/dispatch.c b/src/kdc/dispatch.c
+index 63ff3b3..b4a90bb 100644
+--- a/src/kdc/dispatch.c
++++ b/src/kdc/dispatch.c
+@@ -115,7 +115,8 @@ dispatch(void *cb, struct sockaddr *local_saddr, const krb5_fulladdr *from,
+         kdc_insert_lookaside(pkt, *response);
+ #endif
+ 
+-    if (is_tcp == 0 && (*response)->length > max_dgram_reply_size) {
++    if (is_tcp == 0 && *response != NULL &&
++        (*response)->length > max_dgram_reply_size) {
+     too_big_for_udp:
+         krb5_free_data(kdc_context, *response);
+         retval = make_too_big_error(response);
+diff --git a/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap.h b/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap.h
+index d677bb2..a356907 100644
+--- a/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap.h
++++ b/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap.h
+@@ -102,14 +102,18 @@ extern void prepend_err_str (krb5_context ctx, const char *s, krb5_error_code er
+ #define LDAP_SEARCH(base, scope, filter, attrs)   LDAP_SEARCH_1(base, scope, filter, attrs, CHECK_STATUS)
+ 
+ #define LDAP_SEARCH_1(base, scope, filter, attrs, status_check)         \
+-    do {                                                                \
+-        st = ldap_search_ext_s(ld, base, scope, filter, attrs, 0, NULL, NULL, &timelimit, LDAP_NO_LIMIT, &result); \
+-        if (translate_ldap_error(st, OP_SEARCH) == KRB5_KDB_ACCESS_ERROR) { \
+-            tempst = krb5_ldap_rebind(ldap_context, &ldap_server_handle); \
+-            if (ldap_server_handle)                                     \
+-                ld = ldap_server_handle->ldap_handle;                   \
+-        }                                                               \
+-    }while (translate_ldap_error(st, OP_SEARCH) == KRB5_KDB_ACCESS_ERROR && tempst == 0); \
++    tempst = 0;                                                         \
++    st = ldap_search_ext_s(ld, base, scope, filter, attrs, 0, NULL,     \
++                           NULL, &timelimit, LDAP_NO_LIMIT, &result);   \
++    if (translate_ldap_error(st, OP_SEARCH) == KRB5_KDB_ACCESS_ERROR) { \
++        tempst = krb5_ldap_rebind(ldap_context, &ldap_server_handle);   \
++        if (ldap_server_handle)                                         \
++            ld = ldap_server_handle->ldap_handle;                       \
++        if (tempst == 0)                                                \
++            st = ldap_search_ext_s(ld, base, scope, filter, attrs, 0,   \
++                                   NULL, NULL, &timelimit,              \
++                                   LDAP_NO_LIMIT, &result);             \
++    }                                                                   \
+                                                                         \
+     if (status_check != IGNORE_STATUS) {                                \
+         if (tempst != 0) {                                              \
+diff --git a/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap_conn.c b/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap_conn.c
+index 82b0333..84e80ee 100644
+--- a/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap_conn.c
++++ b/src/plugins/kdb/ldap/libkdb_ldap/kdb_ldap_conn.c
+@@ -302,6 +302,7 @@ krb5_ldap_rebind(krb5_ldap_context *ldap_context,
+ {
+     krb5_ldap_server_handle     *handle = *ldap_server_handle;
+ 
++    ldap_unbind_ext_s(handle->ldap_handle, NULL, NULL);
+     if ((ldap_initialize(&handle->ldap_handle, handle->server_info->server_name) != LDAP_SUCCESS)
+         || (krb5_ldap_bind(ldap_context, handle) != LDAP_SUCCESS))
+         return krb5_ldap_request_next_handle_from_pool(ldap_context, ldap_server_handle);
+diff --git a/src/plugins/kdb/ldap/libkdb_ldap/ldap_misc.c b/src/plugins/kdb/ldap/libkdb_ldap/ldap_misc.c
+index 86fa4d1..0f49c86 100644
+--- a/src/plugins/kdb/ldap/libkdb_ldap/ldap_misc.c
++++ b/src/plugins/kdb/ldap/libkdb_ldap/ldap_misc.c
+@@ -487,12 +487,11 @@ is_principal_in_realm(krb5_ldap_context *ldap_context,
+      * portion, then the first portion of the principal name SHOULD be
+      * "krbtgt".  All this check is done in the immediate block.
+      */
+-    if (searchfor->length == 2)
+-        if ((strncasecmp(searchfor->data[0].data, "krbtgt",
+-                         FIND_MAX(searchfor->data[0].length, strlen("krbtgt"))) == 0) &&
+-            (strncasecmp(searchfor->data[1].data, defrealm,
+-                         FIND_MAX(searchfor->data[1].length, defrealmlen)) == 0))
++    if (searchfor->length == 2) {
++        if (data_eq_string(searchfor->data[0], "krbtgt") &&
++            data_eq_string(searchfor->data[1], defrealm))
+             return 0;
++    }
+ 
+     /* first check the length, if they are not equal, then they are not same */
+     if (strlen(defrealm) != searchfor->realm.length)
+diff --git a/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c b/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c
+index 140db1a..552e39a 100644
+--- a/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c
++++ b/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c
+@@ -78,10 +78,10 @@ krb5_error_code
+ krb5_ldap_get_principal(krb5_context context, krb5_const_principal searchfor,
+                         unsigned int flags, krb5_db_entry **entry_ptr)
+ {
+-    char                        *user=NULL, *filter=NULL, **subtree=NULL;
++    char                        *user=NULL, *filter=NULL, *filtuser=NULL;
+     unsigned int                tree=0, ntrees=1, princlen=0;
+     krb5_error_code             tempst=0, st=0;
+-    char                        **values=NULL, *cname=NULL;
++    char                        **values=NULL, **subtree=NULL, *cname=NULL;
+     LDAP                        *ld=NULL;
+     LDAPMessage                 *result=NULL, *ent=NULL;
+     krb5_ldap_context           *ldap_context=NULL;
+@@ -115,12 +115,18 @@ krb5_ldap_get_principal(krb5_context context, krb5_const_principal searchfor,
+     if ((st=krb5_ldap_unparse_principal_name(user)) != 0)
+         goto cleanup;
+ 
+-    princlen = strlen(FILTER) + strlen(user) + 2 + 1;      /* 2 for closing brackets */
++    filtuser = ldap_filter_correct(user);
++    if (filtuser == NULL) {
++        st = ENOMEM;
++        goto cleanup;
++    }
++
++    princlen = strlen(FILTER) + strlen(filtuser) + 2 + 1;  /* 2 for closing brackets */
+     if ((filter = malloc(princlen)) == NULL) {
+         st = ENOMEM;
+         goto cleanup;
+     }
+-    snprintf(filter, princlen, FILTER"%s))", user);
++    snprintf(filter, princlen, FILTER"%s))", filtuser);
+ 
+     if ((st = krb5_get_subtree_info(ldap_context, &subtree, &ntrees)) != 0)
+         goto cleanup;
+@@ -207,6 +213,9 @@ cleanup:
+     if (user)
+         free(user);
+ 
++    if (filtuser)
++        free(filtuser);
++
+     if (cname)
+         free(cname);
+ 
