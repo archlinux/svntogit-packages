@@ -4,15 +4,17 @@
 
 # Apparently, the blender guys refuse to release source tarballs for
 # intermediate releases that deal mainly with binaries but incorporate tiny
-# minor changes from cvs. Since I'm sick and tired of the urges of users that
-# look for release numbers only we make a messy PKGBUILD that can checkout cvs
-# tags if necessary.
-#_cvs=true
-_cvs=false
+# minor changes from svn. Since I'm sick and tired of the urges of users that
+# look for release numbers only we make a messy PKGBUILD that can checkout svn
+# release if necessary.
+
+_svn=true
+#_svn=false
 
 pkgname=blender
-pkgver=2.57
+pkgver=2.57b
 pkgrel=1
+epoch=1
 pkgdesc="A fully integrated 3D graphics creation suite"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -20,27 +22,31 @@ url="http://www.blender.org"
 depends=('libjpeg' 'libpng' 'openjpeg' 'libtiff' 'openexr' 'sdl' 'python' 'desktop-file-utils' \
          'shared-mime-info' 'hicolor-icon-theme' 'xdg-utils' 'gettext' 'libxi' 'libxmu' 'mesa' \
          'freetype2' 'openal' 'libsndfile' 'libsamplerate' 'ffmpeg')
-makedepends=('cmake' 'cvs')
+makedepends=('cmake') # 'subversion'
 install=blender.install
-if [ ! $_cvs -o $_cvs = false ]; then
-  makedepends=('cmake')
+if [ $_svn = false ]; then
   source=(http://download.blender.org/source/$pkgname-$pkgver.tar.gz)
   md5sums=('e6cb5523323a71c070051e6fe6efe497')
+else
+  source=(ftp://ftp.archlinux.org/other/${pkgname}/$pkgname-$pkgver.tar.xz)
+  md5sums=('59e344d4ec48750a86e4ef079c3acbfc')
 fi
 
-build() {
-  if [ $_cvs = true ]; then
-    cd "$srcdir/"
-    #cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender login
-    cvs -z3 -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender checkout $pkgname
-    _cvsrel=$pkgname-$(echo $pkgver | sed 's/\./-/')-release
-    cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/bf-blender update -r $_cvsrel
-    find $pkgname/{bin,release/scripts} -name 'CVS' -exec rm -rf {} \; 2> /dev/null
-    cd $pkgname
-  else
-    cd "$srcdir/$pkgname-$pkgver"
-  fi
+# source PKGBUILD && mksource
+mksource() {
+  _svnver=36339
+  _svntrunk="https://svn.blender.org/svnroot/bf-blender/trunk/blender"
+  _svnmod="$pkgname-$pkgver"
+  mkdir ${pkgname}-$pkgver
+  pushd ${pkgname}-$pkgver
+  svn co $_svntrunk --config-dir ./ -r $_svnver $_svnmod
+  find . -depth -type d -name .svn -exec rm -rf {} \;
+  tar -cJf ../${pkgname}-$pkgver.tar.xz ${pkgname}-$pkgver/*
+  popd
+}
 
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
   mkdir build
   cd build
 
@@ -58,24 +64,23 @@ build() {
     -DPYTHON_INCLUDE_DIRS:STRING=/usr/include/python3.2mu
 
   make $MAKEFLAGS
+
+  cp -rf "$srcdir"/${pkgname}-$pkgver/release/plugins/* \
+    "$srcdir"/${pkgname}-$pkgver/source/blender/blenpluginapi/
+  cd "$srcdir"/${pkgname}-$pkgver/source/blender/blenpluginapi
+  chmod 755 bmake
+  make
 }
 
 package() {
-  if [ $_cvs = true ]; then
-    cd "$srcdir/$pkgname"
-  else
-    cd "$srcdir/$pkgname-$pkgver"
-  fi
-
-  cd build
+  cd "$srcdir/$pkgname-$pkgver/build"
   make DESTDIR="${pkgdir}" install
   python -m compileall "${pkgdir}/usr/share/blender"
 
-  for i in 128 16 192 22 32 48 64 96 ; do
-    install -D -m644 ../release/freedesktop/icons/${i}x${i}/blender.png \
-      "${pkgdir}/usr/share/icons/hicolor/${i}x${i}/apps/blender.png"
-  done
-
-  install -D -m644 ../release/freedesktop/icons/scalable/blender.svg \
-    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/blender.svg"
+# install plugins
+  install -d -m755 "$pkgdir"/usr/share/blender/${pkgver%[a-z]}/plugins/{sequence,texture}
+  cp "$srcdir"/${pkgname}-$pkgver/source/blender/blenpluginapi/sequence/*.so \
+    "$pkgdir"/usr/share/blender/${pkgver%[a-z]}/plugins/sequence/
+  cp "$srcdir"/${pkgname}-$pkgver/source/blender/blenpluginapi/texture/*.so \
+    "$pkgdir"/usr/share/blender/${pkgver%[a-z]}/plugins/texture/
 }
