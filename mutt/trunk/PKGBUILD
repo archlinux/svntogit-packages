@@ -4,13 +4,13 @@
 
 pkgname=mutt
 pkgver=1.5.21
-pkgrel=4
+pkgrel=5
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 license=('GPL')
 backup=('etc/Muttrc')
 arch=('i686' 'x86_64')
-depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'heimdal')
+depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb5')
 source=("ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz")
 sha1sums=('a8475f2618ce5d5d33bff85c0affdf21ab1d76b9')
 
