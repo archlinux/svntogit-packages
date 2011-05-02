@@ -19,7 +19,7 @@ build() {
   cd "${srcdir}"
   cp -r PyQt-x11-gpl-${pkgver} Py2Qt-x11-gpl-${pkgver}
 
-  cd PyQt-x11-gpl-${pkgver}
+  cd "${srcdir}/PyQt-x11-gpl-${pkgver}"
   python configure.py \
     --confirm-license \
     --qsci-api
@@ -30,7 +30,7 @@ build() {
   make
 
   ### Python2 version ###
-  cd Py2Qt-x11-gpl-${pkgver}
+  cd "${srcdir}/Py2Qt-x11-gpl-${pkgver}"
   python2 configure.py \
     --confirm-license \
     -v /usr/share/sip \
