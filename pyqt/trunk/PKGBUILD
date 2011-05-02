@@ -4,7 +4,7 @@
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgbase=pyqt
-pkgname=('pyqt' 'python2-qt')
+pkgname=('pyqt' 'python2-pyqt')
 pkgver=4.8.4
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -56,13 +56,15 @@ package_pyqt(){
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 }
 
-package_python2-qt(){
+package_python2-pyqt(){
   pkgdesc="PyQt: A set of Python2 bindings for the Qt toolkit"
   depends=('pyqt' 'python2-sip' 'dbus-python')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'python-opengl: enable OpenGL 3D graphics in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
+  replaces=('python2-qt')
+  provides=('python2-qt')
 
   cd "${srcdir}/Py2Qt-x11-gpl-${pkgver}"
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
