@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=libcanberra
+pkgname=(libcanberra libcanberra-pulse libcanberra-gstreamer)
+pkgver=0.28
+pkgrel=1
+pkgdesc="A small and lightweight implementation of the XDG Sound Theme Specification"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('libvorbis' 'libtool' 'alsa-lib' 'tdb')
+makedepends=('gtk-doc' 'libpulse' 'gstreamer0.10' 'gtk2' 'gtk3')
+options=(!emptydirs)
+url=http://0pointer.de/lennart/projects/libcanberra
+source=(http://0pointer.de/lennart/projects/${pkgbase}/${pkgbase}-${pkgver}.tar.gz
+        libcanberra-gtk-module.sh)
+md5sums=('c198b4811598c4c161ff505e4531b02c'
+         '21141257a1be80f3bc329829ff13b314')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  ./configure --sysconfdir=/etc --prefix=/usr --localstatedir=/var \
+      --disable-static --with-builtin=dso --enable-null --disable-oss \
+      --enable-alsa --enable-gstreamer --enable-pulse \
+      --with-systemdsystemunitdir=/lib/systemd/system
+  make
+}
+
+package_libcanberra() {
+  install=libcanberra.install
+  optdepends=("$pkgbase-pulse: PulseAudio driver"
+              "$pkgbase-gstreamer: GStreamer driver")
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make -j1 DESTDIR="${pkgdir}" install
+  rm -f "${pkgdir}"/usr/lib/libcanberra-gtk*.la
+  rm -f "${pkgdir}"/usr/lib/gtk-{2,3}.0/modules/*.la
+  
+  install -d "${pkgdir}/usr/share/gconf" 
+  mv "${pkgdir}/etc/gconf/schemas" "${pkgdir}/usr/share/gconf/"
+
+  install -D "${srcdir}/libcanberra-gtk-module.sh" \
+    "${pkgdir}/etc/X11/xinit/xinitrc.d/40-libcanberra-gtk-module"
+
+  # Split plugins
+  for _p in pulse gstreamer; do
+    mkdir $_p-plugin
+    mv "${pkgdir}"/usr/lib/${pkgbase}-${pkgver}/${pkgbase}-$_p.* $_p-plugin
+  done
+}
+
+package_libcanberra-pulse() {
+  pkgdesc="PulseAudio plugin for libcanberra"
+  depends=("$pkgbase=$pkgver-$pkgrel" 'libpulse')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  mkdir -p "${pkgdir}/usr/lib/${pkgbase}-${pkgver}"
+  mv pulse-plugin/* "${pkgdir}/usr/lib/${pkgbase}-${pkgver}" 
+}
+
+package_libcanberra-gstreamer() {
+  pkgdesc="GStreamer plugin for libcanberra"
+  depends=("$pkgbase=$pkgver-$pkgrel" 'gstreamer0.10')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  mkdir -p "${pkgdir}/usr/lib/${pkgbase}-${pkgver}"
+  mv gstreamer-plugin/* "${pkgdir}/usr/lib/${pkgbase}-${pkgver}" 
+}
