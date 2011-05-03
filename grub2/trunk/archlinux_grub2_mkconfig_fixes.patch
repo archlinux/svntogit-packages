@@ -1,21 +1,7 @@
-diff --git a/util/grub-mkconfig.in b/util/grub-mkconfig.in
-index afc66f8..c80f7bf 100644
---- a/util/grub-mkconfig.in
-+++ b/util/grub-mkconfig.in
-@@ -252,6 +252,8 @@ export GRUB_DEFAULT \
-   GRUB_THEME \
-   GRUB_GFXPAYLOAD_LINUX \
-   GRUB_DISABLE_OS_PROBER \
-+  GRUB_COLOR_NORMAL \
-+  GRUB_COLOR_HIGHLIGHT \
-   GRUB_INIT_TUNE \
-   GRUB_SAVEDEFAULT \
-   GRUB_BADRAM
-diff --git a/util/grub.d/00_header.in b/util/grub.d/00_header.in
-index 9da1511..6251bca 100644
---- a/util/grub.d/00_header.in
-+++ b/util/grub.d/00_header.in
-@@ -100,6 +100,14 @@ cat <<EOF
+diff -Nur a/util/grub.d/00_header.in b/util/grub.d/00_header.in
+--- a/util/grub.d/00_header.in	2011-04-06 13:14:27.000000000 +0200
++++ b/util/grub.d/00_header.in	2011-04-26 09:23:02.371574484 +0200
+@@ -100,6 +100,14 @@
  
  EOF
  
@@ -30,11 +16,10 @@ index 9da1511..6251bca 100644
  serial=0;
  gfxterm=0;
  for x in ${GRUB_TERMINAL_INPUT} ${GRUB_TERMINAL_OUTPUT}; do
-diff --git a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
-index 1dbcad9..7c22cc0 100644
---- a/util/grub.d/10_linux.in
-+++ b/util/grub.d/10_linux.in
-@@ -31,8 +31,8 @@ CLASS="--class gnu-linux --class gnu --class os"
+diff -Nur a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
+--- a/util/grub.d/10_linux.in	2011-04-18 23:18:49.000000000 +0200
++++ b/util/grub.d/10_linux.in	2011-04-26 10:16:54.397538449 +0200
+@@ -31,8 +31,8 @@
  if [ "x${GRUB_DISTRIBUTOR}" = "x" ] ; then
    OS=GNU/Linux
  else
@@ -45,7 +30,7 @@ index 1dbcad9..7c22cc0 100644
  fi
  
  # loop-AES arranges things so that /dev/loop/X can be our root device, but
-@@ -48,7 +48,7 @@ if [ "x${GRUB_DEVICE_UUID}" = "x" ] || [ "x${GRUB_DISABLE_LINUX_UUID}" = "xtrue"
+@@ -48,7 +48,7 @@
      || uses_abstraction "${GRUB_DEVICE}" lvm; then
    LINUX_ROOT_DEVICE=${GRUB_DEVICE}
  else
@@ -54,7 +39,18 @@ index 1dbcad9..7c22cc0 100644
  fi
  
  if [ "x`${grub_probe} --device ${GRUB_DEVICE} --target=fs 2>/dev/null || true`" = xbtrfs ]; then
-@@ -121,11 +121,11 @@ EOF
+@@ -65,7 +65,9 @@
+   version="$2"
+   recovery="$3"
+   args="$4"
+-  if ${recovery} ; then
++  if [ -n "$5" ] ; then
++    title="$(gettext_quoted "%s, with Linux %s") $5"
++  elif ${recovery} ; then
+     title="$(gettext_quoted "%s, with Linux %s (recovery mode)")"
+   else
+     title="$(gettext_quoted "%s, with Linux %s")"
+@@ -121,11 +123,11 @@
  
  case x`uname -m` in
      xi?86 | xx86_64)
@@ -68,19 +64,7 @@ index 1dbcad9..7c22cc0 100644
                    if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
  	     done` ;;
  esac
-@@ -139,16 +139,19 @@ while [ "x$list" != "x" ] ; do
-   dirname=`dirname $linux`
-   rel_dirname=`make_system_path_relative_to_its_root $dirname`
-   version=`echo $basename | sed -e "s,^[^0-9]*-,,g"`
--  alt_version=`echo $version | sed -e "s,\.old$,,g"`
-+  base_init=`echo $basename | sed -e "s,vmlinuz,kernel,g"`
-+  alt_version="${base_init}-fallback"
-   linux_root_device_thisversion="${LINUX_ROOT_DEVICE}"
- 
-   initrd=
-+
-   for i in "initrd.img-${version}" "initrd-${version}.img" \
- 	   "initrd-${version}" "initramfs-${version}.img" \
+@@ -148,7 +150,8 @@
  	   "initrd.img-${alt_version}" "initrd-${alt_version}.img" \
  	   "initrd-${alt_version}" "initramfs-${alt_version}.img" \
  	   "initramfs-genkernel-${version}" \
@@ -90,13 +74,27 @@ index 1dbcad9..7c22cc0 100644
      if test -e "${dirname}/${i}" ; then
        initrd="$i"
        break
-@@ -178,6 +181,9 @@ while [ "x$list" != "x" ] ; do
+@@ -178,6 +181,11 @@
  
    linux_entry "${OS}" "${version}" false \
        "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
-+  initrd="${alt_version}.img"
-+  linux_entry "${OS}" "${version} Fallback" false \
-+      "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
++  if test -e "${dirname}/${basename/vmlinuz/kernel}-fallback.img"; then
++    initrd="${basename/vmlinuz/kernel}-fallback.img"
++    linux_entry "${OS}" "${version}" true \
++	"${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}" Fallback
++  fi
    if [ "x${GRUB_DISABLE_RECOVERY}" != "xtrue" ]; then
      linux_entry "${OS}" "${version}" true \
  	"single ${GRUB_CMDLINE_LINUX}"
+diff -Nur a/util/grub-mkconfig.in b/util/grub-mkconfig.in
+--- a/util/grub-mkconfig.in	2011-04-06 17:45:53.000000000 +0200
++++ b/util/grub-mkconfig.in	2011-04-26 09:23:02.371574484 +0200
+@@ -252,6 +252,8 @@
+   GRUB_THEME \
+   GRUB_GFXPAYLOAD_LINUX \
+   GRUB_DISABLE_OS_PROBER \
++  GRUB_COLOR_NORMAL \
++  GRUB_COLOR_HIGHLIGHT \
+   GRUB_INIT_TUNE \
+   GRUB_SAVEDEFAULT \
+   GRUB_BADRAM
