@@ -1,0 +1,38 @@
+From 5755582444ad0ba79e661ab3173cc38e9e588d83 Mon Sep 17 00:00:00 2001
+From: Nick Bowler <nbowler@draconx.ca>
+Date: Thu, 11 Nov 2010 01:49:41 +0000
+Subject: xcb_auth: Fix memory leak in _xcb_get_auth_info.
+
+If the initial get_peer_sock_name(getpeername ...) succeeds, the
+pointer to allocated memory is overwritten by the later call to
+get_peer_sock_name(getsockname ...).  Fix that up by freeing
+the allocated memory before overwriting the pointer.
+
+Signed-off-by: Nick Bowler <nbowler@draconx.ca>
+Signed-off-by: Julien Danjou <julien@danjou.info>
+---
+diff --git a/src/xcb_auth.c b/src/xcb_auth.c
+index 1af27fc..4839b78 100644
+--- a/src/xcb_auth.c
++++ b/src/xcb_auth.c
+@@ -327,10 +327,15 @@ int _xcb_get_auth_info(int fd, xcb_auth_info_t *info, int display)
+     if (!info->namelen)
+         goto no_auth;   /* out of memory */
+ 
+-    if (!gotsockname && (sockname = get_peer_sock_name(getsockname, fd)) == NULL)
++    if (!gotsockname)
+     {
+-        free(info->name);
+-        goto no_auth;   /* can only authenticate sockets */
++        free(sockname);
++
++        if ((sockname = get_peer_sock_name(getsockname, fd)) == NULL)
++        {
++            free(info->name);
++            goto no_auth;   /* can only authenticate sockets */
++        }
+     }
+ 
+     ret = compute_auth(info, authptr, sockname);
+--
+cgit v0.8.3-6-g21f6
