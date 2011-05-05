@@ -1,0 +1,814 @@
+From d0780d16224d7bb2ad183542337c48324fdd2185 Mon Sep 17 00:00:00 2001
+From: Giovanni Campagna <gcampagna@src.gnome.org>
+Date: Wed, 06 Apr 2011 16:11:23 +0000
+Subject: NetworkMenu: keep wirelesss networks in predictable order
+
+Adds a function that compares wireless networks and keeps them sorted
+at all times. Order is: first already configured connections, then
+first secure networks, then alphabtic. Also, the appearance of a new access
+point no longer causes the whole menu to be rebuilt (but it still linear
+searches for the position, I guess that could be skipped), which caused
+the addition of more code for tracking the active access point.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=646580
+---
+(limited to 'js/ui/status/network.js')
+
+diff --git a/js/ui/status/network.js b/js/ui/status/network.js
+index 6fa5642..49cb3f0 100644
+--- a/js/ui/status/network.js
++++ b/js/ui/status/network.js
+@@ -42,6 +42,10 @@ const NM80211Mode = NetworkManager['80211Mode'];
+ const NM80211ApFlags = NetworkManager['80211ApFlags'];
+ const NM80211ApSecurityFlags = NetworkManager['80211ApSecurityFlags'];
+ 
++// number of wireless networks that should be visible
++// (the remaining are placed into More...)
++const NUM_VISIBLE_NETWORKS = 5;
++
+ function macToArray(string) {
+     return string.split(':').map(function(el) {
+         return parseInt(el, 16);
+@@ -1036,6 +1040,7 @@ NMDeviceWireless.prototype = {
+                         item: null,
+                         accessPoints: [ ap ]
+                       };
++                obj.ssidText = NetworkManager.utils_ssid_to_utf8(obj.ssid);
+                 this._networks.push(obj);
+             }
+ 
+@@ -1048,6 +1053,14 @@ NMDeviceWireless.prototype = {
+                 }
+             }
+         }
++        if (this.device.active_access_point) {
++            this._activeNetwork = this._networks[this._findNetwork(this.device.active_access_point)];
++        } else {
++            this._activeNetwork = null;
++        }
++        this._networks.sort(this._networkSortFunction);
++
++        this._apChangedId = device.connect('notify::active-access-point', Lang.bind(this, this._activeApChanged));
+         this._apAddedId = device.connect('access-point-added', Lang.bind(this, this._accessPointAdded));
+         this._apRemovedId = device.connect('access-point-removed', Lang.bind(this, this._accessPointRemoved));
+ 
+@@ -1055,8 +1068,13 @@ NMDeviceWireless.prototype = {
+     },
+ 
+     destroy: function() {
+-        if (this._apAddedId) {
++        if (this._apChangedId) {
+             // see above for this HACK
++            GObject.Object.prototype.disconnect.call(this.device, this._apChangedId);
++            this._apChangedId = 0;
++        }
++
++        if (this._apAddedId) {
+             GObject.Object.prototype.disconnect.call(this.device, this._apAddedId);
+             this._apAddedId = 0;
+         }
+@@ -1122,6 +1140,19 @@ NMDeviceWireless.prototype = {
+         }
+     },
+ 
++    _activeApChanged: function() {
++        this._activeNetwork = null;
++
++        let activeAp = this.device.active_access_point;
++
++        if (activeAp) {
++            let pos = this._findNetwork(activeAp);
++            this._activeNetwork = this._networks[pos];
++        }
++
++        // we don't refresh the view here, setActiveConnection will
++    },
++
+     _getApSecurityType: function(accessPoint) {
+         if (accessPoint._secType)
+             return accessPoint._secType;
+@@ -1151,6 +1182,32 @@ NMDeviceWireless.prototype = {
+         return type;
+     },
+ 
++    _networkSortFunction: function(one, two) {
++        let oneHasConnection = one.connections.length != 0;
++        let twoHasConnection = two.connections.length != 0;
++
++        // place known connections first
++        // (-1 = good order, 1 = wrong order)
++        if (oneHasConnection && !twoHasConnection)
++            return -1;
++        else if (!oneHasConnection && twoHasConnection)
++            return 1;
++
++        let oneHasSecurity = one.security != NMAccessPointSecurity.NONE;
++        let twoHasSecurity = two.security != NMAccessPointSecurity.NONE;
++
++        // place secure connections first
++        // (we treat WEP/WPA/WPA2 the same as there is no way to
++        // take them apart from the UI)
++        if (oneHasSecurity && !twoHasSecurity)
++            return -1;
++        else if (!oneHasSecurity && twoHasSecurity)
++            return 1;
++
++        // sort alphabetically
++        return GLib.utf8_collate(one.ssidText, two.ssidText);
++    },
++
+     _networkCompare: function(network, accessPoint) {
+         if (!ssidCompare(network.ssid, accessPoint.get_ssid()))
+             return false;
+@@ -1173,6 +1230,8 @@ NMDeviceWireless.prototype = {
+     _accessPointAdded: function(device, accessPoint) {
+         let pos = this._findNetwork(accessPoint);
+         let apObj;
++        let needsupdate = false;
++
+         if (pos != -1) {
+             apObj = this._networks[pos];
+             if (apObj.accessPoints.indexOf(accessPoint) != -1) {
+@@ -1181,6 +1240,8 @@ NMDeviceWireless.prototype = {
+             }
+ 
+             apObj.accessPoints.push(accessPoint);
++            if (apObj.item)
++                apObj.item.updateAccessPoints(apObj.accessPoints);
+         } else {
+             apObj = { ssid: accessPoint.get_ssid(),
+                       mode: accessPoint.mode,
+@@ -1189,7 +1250,8 @@ NMDeviceWireless.prototype = {
+                       item: null,
+                       accessPoints: [ accessPoint ]
+                     };
+-            this._networks.push(apObj);
++            apObj.ssidText = NetworkManager.utils_ssid_to_utf8(apObj.ssid);
++            needsupdate = true;
+         }
+ 
+         // check if this enables new connections for this group
+@@ -1198,12 +1260,44 @@ NMDeviceWireless.prototype = {
+             if (this._connectionValidForAP(connection, accessPoint) &&
+                 apObj.connections.indexOf(connection) == -1) {
+                 apObj.connections.push(connection);
++
++                // this potentially changes the order
++                needsupdate = true;
+             }
+         }
+ 
+-        // update everything
+-        this._clearSection();
+-        this._createSection();
++        if (needsupdate) {
++            if (apObj.item)
++                apObj.item.destroy();
++
++            if (pos != -1)
++                this._networks.splice(pos, 1);
++
++            if (this._networks.length == 0) {
++                // only network in the list
++                this._networks.push(apObj);
++                this._clearSection();
++                this._createSection();
++                return;
++            }
++
++            // skip networks that should appear earlier
++            let menuPos = 0;
++            for (pos = 0;
++                 pos < this._networks.length &&
++                 this._networkSortFunction(this._networks[i], apObj) < 0; ++pos) {
++                if (this._networks[pos] != this._activeNetwork)
++                    menuPos++;
++            }
++
++            // (re-)add the network
++            this._networks.splice(pos, 0, apObj);
++
++            if (this._shouldShowConnectionList()) {
++                menuPos += (this._activeConnectionItem ? 1 : 0);
++                this._createNetworkItem(apObj, menuPos);
++            }
++        }
+     },
+ 
+     _accessPointRemoved: function(device, accessPoint) {
+@@ -1315,6 +1409,12 @@ NMDeviceWireless.prototype = {
+                     // remove the connection from the access point group
+                     connections.splice(k);
+                     anyauto = connections.length == 0;
++
++                    if (anyauto) {
++                        // this potentially changes the sorting order
++                        forceupdate = true;
++                        break;
++                    }
+                     if (apObj.item) {
+                         if (apObj.item instanceof PopupMenu.PopupSubMenuMenuItem) {
+                             let items = apObj.item.menu.getMenuItems();
+@@ -1340,6 +1440,7 @@ NMDeviceWireless.prototype = {
+         }
+ 
+         if (forceupdate || anyauto) {
++            this._networks.sort(this._networkSortFunction);
+             this._clearSection();
+             this._createSection();
+         }
+@@ -1355,42 +1456,24 @@ NMDeviceWireless.prototype = {
+         this._connections.push(obj);
+ 
+         // find an appropriate access point
+-        let any = false, forceupdate = false;
++        let forceupdate = false;
+         for (let i = 0; i < this._networks.length; i++) {
+             let apObj = this._networks[i];
+ 
+             // Check if connection is valid for any of these access points
+-            let any = false;
+             for (let k = 0; k < apObj.accessPoints.length; k++) {
+                 let ap = apObj.accessPoints[k];
+                 if (this._connectionValidForAP(connection, ap)) {
+                     apObj.connections.push(connection);
+-                    any = true;
++                    // this potentially changes the sorting order
++                    forceupdate = true;
+                     break;
+                 }
+             }
+-
+-            if (any && this._shouldShowConnectionList()) {
+-                // we need to show this connection
+-                if (apObj.item && apObj.item.menu) {
+-                    // We're already showing the submenu for this access point
+-                    apObj.item.menu.addMenuItem(this._createAPItem(connection, apObj, true));
+-                } else {
+-                    if (apObj.item)
+-                        apObj.item.destroy();
+-                    if (apObj.connections.length == 1) {
+-                        apObj.item = this._createAPItem(connection, apObj, false);
+-                        this.section.addMenuItem(apObj.item);
+-                    } else {
+-                        apObj.item = null;
+-                        // we need to force an update to create the submenu
+-                        forceupdate = true;
+-                    }
+-                }
+-            }
+         }
+ 
+         if (forceupdate) {
++            this._networks.sort(this._networkSortFunction);
+             this._clearSection();
+             this._createSection();
+         }
+@@ -1473,6 +1556,37 @@ NMDeviceWireless.prototype = {
+         return connection;
+     },
+ 
++    _createNetworkItem: function(apObj, position) {
++        if(apObj.connections.length > 0) {
++            if (apObj.connections.length == 1)
++                apObj.item = this._createAPItem(apObj.connections[0], apObj, false);
++            else {
++                let title = apObj.ssidText;
++                apObj.item = new PopupMenu.PopupSubMenuMenuItem(title);
++                apObj.item._apObj = apObj;
++                for (let i = 0; i < apObj.connections.length; i++)
++                    apObj.item.menu.addMenuItem(this._createAPItem(apObj.connections[i], apObj, true));
++            }
++        } else {
++            apObj.item = new NMNetworkMenuItem(apObj.accessPoints);
++            apObj.item._apObj = apObj;
++            apObj.item.connect('activate', Lang.bind(this, function() {
++                let connection = this._createAutomaticConnection(apObj);
++                let accessPoints = sortAccessPoints(apObj.accessPoints);
++                this._client.add_and_activate_connection(connection, this.device, accessPoints[0].dbus_path, null)
++            }));
++        }
++        if (position < NUM_VISIBLE_NETWORKS)
++            this.section.addMenuItem(apObj.item);
++        else {
++            if (!this._overflowItem) {
++                this._overflowItem = new PopupMenu.PopupSubMenuMenuItem(_("More..."));
++                this.section.addMenuItem(this._overflowItem);
++            }
++            this._overflowItem.menu.addMenuItem(apObj.item, position - NUM_VISIBLE_NETWORKS);
++        }
++    },
++
+     _createSection: function() {
+         if (!this._shouldShowConnectionList())
+             return;
+@@ -1482,47 +1596,14 @@ NMDeviceWireless.prototype = {
+             this.section.addMenuItem(this._activeConnectionItem);
+         }
+ 
+-        let activeAp = this.device.active_access_point;
+-        let activeApSsid = activeAp ? activeAp.get_ssid() : null;
+-
+-        // we want five access points in the menu, including the active one
+-        let numItems = this._activeConnection ? 4 : 5;
++        let activeOffset = this._activeConnectionItem ? 1 : 0;
+ 
+         for(let j = 0; j < this._networks.length; j++) {
+             let apObj = this._networks[j];
+-            if(activeAp && ssidCompare(apObj.ssid, activeApSsid))
++            if (apObj == this._activeNetwork)
+                 continue;
+ 
+-            let menuItem;
+-            if(apObj.connections.length > 0) {
+-                if (apObj.connections.length == 1)
+-                    apObj.item = this._createAPItem(apObj.connections[0], apObj, false);
+-                else {
+-                    let title = NetworkManager.utils_ssid_to_utf8(apObj.ssid) || _("<unknown>");
+-                    apObj.item = new PopupMenu.PopupSubMenuMenuItem(title);
+-                    apObj.item._apObj = apObj;
+-                    for (let i = 0; i < apObj.connections.length; i++)
+-                        apObj.item.menu.addMenuItem(this._createAPItem(apObj.connections[i], apObj, true));
+-                }
+-            } else {
+-                apObj.item = new NMNetworkMenuItem(apObj.accessPoints);
+-                apObj.item._apObj = apObj;
+-                apObj.item.connect('activate', Lang.bind(this, function() {
+-                    let connection = this._createAutomaticConnection(apObj);
+-                    let accessPoints = sortAccessPoints(apObj.accessPoints);
+-                    this._client.add_and_activate_connection(connection, this.device, accessPoints[0].dbus_path, null)
+-                }));
+-            }
+-
+-            if (j < numItems)
+-                this.section.addMenuItem(apObj.item);
+-            else {
+-                if (!this._overflowItem) {
+-                    this._overflowItem = new PopupMenu.PopupSubMenuMenuItem(_("More..."));
+-                    this.section.addMenuItem(this._overflowItem);
+-                }
+-                this._overflowItem.menu.addMenuItem(apObj.item);
+-            }
++            this._createNetworkItem(apObj, j + activeOffset);
+         }
+     },
+ };
+--
+cgit v0.9
+From 42a5531f1588ae3063e7d8ff7642e9f81c13afbd Mon Sep 17 00:00:00 2001
+From: Dan Winship <danw@gnome.org>
+Date: Wed, 27 Apr 2011 13:05:39 +0000
+Subject: network: fix a variable name
+
+---
+(limited to 'js/ui/status/network.js')
+
+diff --git a/js/ui/status/network.js b/js/ui/status/network.js
+index 49cb3f0..d56c0b1 100644
+--- a/js/ui/status/network.js
++++ b/js/ui/status/network.js
+@@ -1285,7 +1285,7 @@ NMDeviceWireless.prototype = {
+             let menuPos = 0;
+             for (pos = 0;
+                  pos < this._networks.length &&
+-                 this._networkSortFunction(this._networks[i], apObj) < 0; ++pos) {
++                 this._networkSortFunction(this._networks[pos], apObj) < 0; ++pos) {
+                 if (this._networks[pos] != this._activeNetwork)
+                     menuPos++;
+             }
+--
+cgit v0.9
+From c31109800b3267df433841bff08c9383a5d669cb Mon Sep 17 00:00:00 2001
+From: Dan Williams <dcbw@redhat.com>
+Date: Mon, 25 Apr 2011 22:13:12 +0000
+Subject: network: simplify connection sorting by using libnm-glib functions
+
+Instead of rolling our own code, use new libnm-glib functions to do
+the same thing.  Requires libnm-glib as of
+779215c742bbe29a2c66202ec7e2e6d43edeb8ff (which will be part of 0.9).
+
+Fixes https://bugzilla.gnome.org/show_bug.cgi?id=648648
+---
+(limited to 'js/ui/status/network.js')
+
+diff --git a/js/ui/status/network.js b/js/ui/status/network.js
+index d56c0b1..bf8e272 100644
+--- a/js/ui/status/network.js
++++ b/js/ui/status/network.js
+@@ -505,7 +505,7 @@ NMDevice.prototype = {
+     },
+ 
+     connectionValid: function(connection) {
+-        throw new TypeError('Invoking pure virtual function NMDevice.connectionValid');
++        return this.device.connection_valid(connection);
+     },
+ 
+     setEnabled: function(enabled) {
+@@ -723,17 +723,6 @@ NMDeviceWired.prototype = {
+         NMDevice.prototype._init.call(this, client, device, connections);
+     },
+ 
+-    connectionValid: function(connection) {
+-        if (connection._type != NetworkManager.SETTING_WIRED_SETTING_NAME)
+-            return false;
+-
+-        let ethernetSettings = connection.get_setting_by_name(NetworkManager.SETTING_WIRED_SETTING_NAME);
+-        let fixedMac = ethernetSettings.get_mac_address();
+-        if (fixedMac)
+-            return macCompare(fixedMac, macToArray(this.device.perm_hw_address));
+-        return true;
+-    },
+-
+     _createSection: function() {
+         NMDevice.prototype._createSection.call(this);
+ 
+@@ -876,10 +865,6 @@ NMDeviceModem.prototype = {
+         NMDevice.prototype._clearSection.call(this);
+     },
+ 
+-    connectionValid: function(connection) {
+-        return connection._type == this._connectionType;
+-    },
+-
+     _createAutomaticConnection: function() {
+         // FIXME: we need to summon the mobile wizard here
+         // or NM will not have the necessary parameters to complete the connection
+@@ -913,18 +898,6 @@ NMDeviceBluetooth.prototype = {
+         NMDevice.prototype._init.call(this, client, device, connections);
+     },
+ 
+-    connectionValid: function(connection) {
+-        if (connection._type != NetworkManager.SETTING_BLUETOOTH_SETTING_NAME)
+-            return false;
+-
+-        let bluetoothSettings = connection.get_setting_by_name(NetworkManager.SETTING_BLUETOOTH_SETTING_NAME);
+-        let fixedBdaddr = bluetoothSettings.get_bdaddr();
+-        if (fixedBdaddr)
+-            return macCompare(fixedBdaddr, macToArray(this.device.hw_address));
+-
+-        return true;
+-    },
+-
+     _createAutomaticConnection: function() {
+         let connection = new NetworkManager.Connection;
+         connection._uuid = NetworkManager.utils_uuid_generate();
+@@ -1047,7 +1020,7 @@ NMDeviceWireless.prototype = {
+             // Check if some connection is valid for this AP
+             for (let j = 0; j < validConnections.length; j++) {
+                 let connection = validConnections[j];
+-                if (this._connectionValidForAP(connection, ap) &&
++                if (ap.connection_valid(connection) &&
+                     obj.connections.indexOf(connection) == -1) {
+                     obj.connections.push(connection);
+                 }
+@@ -1121,7 +1094,7 @@ NMDeviceWireless.prototype = {
+         if (best) {
+             for (let i = 0; i < bestApObj.accessPoints.length; i++) {
+                 let ap = bestApObj.accessPoints[i];
+-                if (this._connectionValidForAP(best, ap)) {
++                if (ap.connection_valid(best)) {
+                     this._client.activate_connection(best, this.device, ap.dbus_path, null);
+                     break;
+                 }
+@@ -1257,7 +1230,7 @@ NMDeviceWireless.prototype = {
+         // check if this enables new connections for this group
+         for (let i = 0; i < this._connections.length; i++) {
+             let connection = this._connections[i].connection;
+-            if (this._connectionValidForAP(connection, accessPoint) &&
++            if (accessPoint.connection_valid(connection) &&
+                 apObj.connections.indexOf(connection) == -1) {
+                 apObj.connections.push(connection);
+ 
+@@ -1337,7 +1310,7 @@ NMDeviceWireless.prototype = {
+         item.connect('activate', Lang.bind(this, function() {
+             let accessPoints = sortAccessPoints(accessPointObj.accessPoints);
+             for (let i = 0; i < accessPoints.length; i++) {
+-                if (this._connectionValidForAP(connection, accessPoints[i])) {
++                if (accessPoints[i].connection_valid(connection)) {
+                     this._client.activate_connection(connection, this.device, accessPoints[i].dbus_path, null);
+                     break;
+                 }
+@@ -1346,40 +1319,6 @@ NMDeviceWireless.prototype = {
+         return item;
+     },
+ 
+-    connectionValid: function(connection) {
+-        if (connection._type != NetworkManager.SETTING_WIRELESS_SETTING_NAME)
+-            return false;
+-
+-        let wirelessSettings = connection.get_setting_by_name(NetworkManager.SETTING_WIRELESS_SETTING_NAME);
+-        let wirelessSecuritySettings = connection.get_setting_by_name(NetworkManager.SETTING_WIRELESS_SECURITY_SETTING_NAME);
+-
+-        let fixedMac = wirelessSettings.get_mac_address();
+-        if (fixedMac && !macCompare(fixedMac, macToArray(this.device.perm_hw_address)))
+-            return false;
+-
+-        if (wirelessSecuritySettings &&
+-            wirelessSecuritySettings.key_mgmt != 'none' &&
+-            wirelessSecuritySettings.key_mgmt != 'ieee8021x') {
+-            let capabilities = this.device.wireless_capabilities;
+-            if (!(capabilities & NetworkManager.DeviceWifiCapabilities.WPA) ||
+-                !(capabilities & NetworkManager.DeviceWifiCapabilities.CIPHER_TKIP))
+-                return false;
+-            if (wirelessSecuritySettings.get_num_protos() == 1 &&
+-                wirelessSecuritySettings.get_proto(0) == 'rsn' &&
+-                !(capabilities & NetworkManager.DeviceWifiCapabilities.RSN))
+-                return false;
+-            if (wirelessSecuritySettings.get_num_pairwise() == 1 &&
+-                wirelessSecuritySettings.get_pairwise(0) == 'ccmp' &&
+-                !(capabilities & NetworkManager.DeviceWifiCapabilities.CIPHER_CCMP))
+-                return false;
+-            if (wirelessSecuritySettings.get_num_groups() == 1 &&
+-                wirelessSecuritySettings.get_group(0) == 'ccmp' &&
+-                !(capabilities & NetworkManager.DeviceWifiCapabilities.CIPHER_CCMP))
+-                return false;
+-        }
+-        return true;
+-    },
+-
+     _clearSection: function() {
+         NMDevice.prototype._clearSection.call(this);
+ 
+@@ -1463,7 +1402,7 @@ NMDeviceWireless.prototype = {
+             // Check if connection is valid for any of these access points
+             for (let k = 0; k < apObj.accessPoints.length; k++) {
+                 let ap = apObj.accessPoints[k];
+-                if (this._connectionValidForAP(connection, ap)) {
++                if (ap.connection_valid(connection)) {
+                     apObj.connections.push(connection);
+                     // this potentially changes the sorting order
+                     forceupdate = true;
+@@ -1479,37 +1418,6 @@ NMDeviceWireless.prototype = {
+         }
+     },
+ 
+-    _connectionValidForAP: function(connection, ap) {
+-        // copied and adapted from nm-applet
+-        let wirelessSettings = connection.get_setting_by_name(NetworkManager.SETTING_WIRELESS_SETTING_NAME);
+-        if (!ssidCompare(wirelessSettings.get_ssid(), ap.get_ssid()))
+-            return false;
+-
+-        let wirelessSecuritySettings = connection.get_setting_by_name(NetworkManager.SETTING_WIRELESS_SECURITY_SETTING_NAME);
+-
+-        let fixedBssid = wirelessSettings.get_bssid();
+-        if (fixedBssid && !macCompare(fixedBssid, macToArray(ap.hw_address)))
+-            return false;
+-
+-        let fixedBand = wirelessSettings.band;
+-        if (fixedBand) {
+-            let freq = ap.frequency;
+-            if (fixedBand == 'a' && (freq < 4915 || freq > 5825))
+-                return false;
+-            if (fixedBand == 'bg' && (freq < 2412 || freq > 2484))
+-                return false;
+-        }
+-
+-        let fixedChannel = wirelessSettings.channel;
+-        if (fixedChannel && fixedChannel != NetworkManager.utils_wifi_freq_to_channel(ap.frequency))
+-            return false;
+-
+-        if (!wirelessSecuritySettings)
+-            return true;
+-
+-        return wirelessSettings.ap_security_compatible(wirelessSecuritySettings, ap.flags, ap.wpa_flags, ap.rsn_flags, ap.mode);
+-    },
+-
+     _createActiveConnectionItem: function() {
+         let activeAp = this.device.active_access_point;
+         let icon, title;
+--
+cgit v0.9
+From 101a07a3d79223cc153a6c65f22acd76cbae4818 Mon Sep 17 00:00:00 2001
+From: Dan Williams <dcbw@redhat.com>
+Date: Tue, 03 May 2011 17:21:45 +0000
+Subject: network: fix handling of AP flags and enhance for 802.1x
+
+All WPA APs were getting set as WPA2 due to the check for privacy;
+WPA/WPA2 APs *must* set the Privacy bit according to the standard,
+so we'd never end up in the case for NMAccessPointSecurity.WPA.
+
+Fix that, and also add flags for WPA[2] Enterprise which we'll
+use a bit later for the first-time connect case for 802.1x enabled
+access points.
+---
+(limited to 'js/ui/status/network.js')
+
+diff --git a/js/ui/status/network.js b/js/ui/status/network.js
+index bf8e272..6f0cdac 100644
+--- a/js/ui/status/network.js
++++ b/js/ui/status/network.js
+@@ -33,8 +33,10 @@ const NMAccessPointSecurity = {
+     UNKNOWN: 0,
+     NONE: 1,
+     WEP: 2,
+-    WPA: 3,
+-    WPA2: 4
++    WPA_PSK: 3,
++    WPA2_PSK: 4,
++    WPA_ENT: 5,
++    WPA2_ENT: 6
+ };
+ 
+ // small optimization, to avoid using [] all the time
+@@ -1129,26 +1131,28 @@ NMDeviceWireless.prototype = {
+     _getApSecurityType: function(accessPoint) {
+         if (accessPoint._secType)
+             return accessPoint._secType;
+-        // XXX: have this checked by someone familiar with IEEE 802.1x
+ 
+         let flags = accessPoint.flags;
+         let wpa_flags = accessPoint.wpa_flags;
+         let rsn_flags = accessPoint.rsn_flags;
+         let type;
+-        if (  !(flags & NM80211ApFlags.PRIVACY)
+-	      && (wpa_flags == NM80211ApSecurityFlags.NONE)
+-	      && (rsn_flags == NM80211ApSecurityFlags.NONE))
+-	    type = NMAccessPointSecurity.NONE;
+-        else if (   (flags & NM80211ApFlags.PRIVACY)
+-	            && (wpa_flags == NM80211ApSecurityFlags.NONE)
+-	            && (rsn_flags == NM80211ApSecurityFlags.NONE))
+-	    type = NMAccessPointSecurity.WEP;
+-        else if (   !(flags & NM80211ApFlags.PRIVACY)
+-	        &&  (wpa_flags != NM80211ApSecurity.NONE)
+-	        &&  (rsn_flags != NM80211ApSecurity.NONE))
+-	    type = NMAccessPointSecurity.WPA;
+-        else
+-            type = NMAccessPointSecurity.WPA2;
++        if (rsn_flags != NM80211ApSecurityFlags.NONE) {
++            /* RSN check first so that WPA+WPA2 APs are treated as RSN/WPA2 */
++            if (rsn_flags & NM80211ApSecurityFlags.KEY_MGMT_802_1X)
++	        type = NMAccessPointSecurity.WPA2_ENT;
++	    else if (rsn_flags & NM80211ApSecurityFlags.KEY_MGMT_PSK)
++	        type = NMAccessPointSecurity.WPA2_PSK;
++        } else if (wpa_flags != NM80211ApSecurityFlags.NONE) {
++            if (wpa_flags & NM80211ApSecurityFlags.KEY_MGMT_802_1X)
++                type = NMAccessPointSecurity.WPA_ENT;
++            else if (wpa_flags & NM80211ApSecurityFlags.KEY_MGMT_PSK)
++	        type = NMAccessPointSecurity.WPA_PSK;
++        } else {
++            if (flags & NM80211ApFlags.PRIVACY)
++                type = NMAccessPointSecurity.WEP;
++            else
++                type = NMAccessPointSecurity.NONE;
++        }
+ 
+         // cache the found value to avoid checking flags all the time
+         accessPoint._secType = type;
+--
+cgit v0.9
+From ae0652d13fc2d7caa3d64f2b87d174253cae5901 Mon Sep 17 00:00:00 2001
+From: Dan Williams <dcbw@redhat.com>
+Date: Tue, 03 May 2011 18:31:45 +0000
+Subject: network: fix initial connections to WPA[2] Enterprise APs
+
+Call out to nm-applet to do the dirty work since the dialog of
+doom is pretty complicated and we don't have a JS equivalent
+of it for now.
+
+Fixes https://bugzilla.gnome.org/show_bug.cgi?id=648171
+---
+(limited to 'js/ui/status/network.js')
+
+diff --git a/js/ui/status/network.js b/js/ui/status/network.js
+index 6f0cdac..ca4facf 100644
+--- a/js/ui/status/network.js
++++ b/js/ui/status/network.js
+@@ -48,6 +48,16 @@ const NM80211ApSecurityFlags = NetworkManager['80211ApSecurityFlags'];
+ // (the remaining are placed into More...)
+ const NUM_VISIBLE_NETWORKS = 5;
+ 
++const NMAppletHelperInterface = {
++    name: 'org.gnome.network_manager_applet',
++    methods: [
++        { name: 'ConnectToHiddenNetwork', inSignature: '', outSignature: '' },
++        { name: 'CreateWifiNetwork', inSignature: '', outSignature: '' },
++        { name: 'ConnectTo8021xNetwork', inSignature: 'oo', outSignature: '' }
++    ],
++};
++const NMAppletProxy = DBus.makeProxyClass(NMAppletHelperInterface);
++
+ function macToArray(string) {
+     return string.split(':').map(function(el) {
+         return parseInt(el, 16);
+@@ -991,6 +1001,10 @@ NMDeviceWireless.prototype = {
+         this._overflowItem = null;
+         this._networks = [ ];
+ 
++        this._applet_proxy = new NMAppletProxy(DBus.session,
++                                               'org.gnome.network_manager_applet',
++                                               '/org/gnome/network_manager_applet');
++
+         // breaking the layers with this, but cannot call
+         // this.connectionValid until I have a device
+         this.device = device;
+@@ -1483,9 +1497,20 @@ NMDeviceWireless.prototype = {
+             apObj.item = new NMNetworkMenuItem(apObj.accessPoints);
+             apObj.item._apObj = apObj;
+             apObj.item.connect('activate', Lang.bind(this, function() {
+-                let connection = this._createAutomaticConnection(apObj);
+                 let accessPoints = sortAccessPoints(apObj.accessPoints);
+-                this._client.add_and_activate_connection(connection, this.device, accessPoints[0].dbus_path, null)
++                if (   (accessPoints[0]._secType == NMAccessPointSecurity.WPA2_ENT)
++                    || (accessPoints[0]._secType == NMAccessPointSecurity.WPA_ENT)) {
++                    // 802.1x-enabled APs get handled by nm-applet for now...
++                    this._applet_proxy.ConnectTo8021xNetworkRemote(this.device.get_path(),
++                                                                   accessPoints[0].dbus_path,
++                                                                   Lang.bind(this, function(results, err) {
++                                                                       if (err)
++                                                                           log(err);
++                                                                   }));
++                } else {
++                    let connection = this._createAutomaticConnection(apObj);
++                    this._client.add_and_activate_connection(connection, this.device, accessPoints[0].dbus_path, null)
++                }
+             }));
+         }
+         if (position < NUM_VISIBLE_NETWORKS)
+--
+cgit v0.9
+From 5090a4ccce87643081138272fb8a2fe687f1ed0a Mon Sep 17 00:00:00 2001
+From: Dan Williams <dcbw@redhat.com>
+Date: Tue, 03 May 2011 19:48:10 +0000
+Subject: network: request that nm-applet show the mobile broadband wizard
+
+Use nm-applet 0.8.999 API to call the mobile broadband wizard and
+activate the new connection.
+
+Fixes https://bugzilla.gnome.org/show_bug.cgi?id=649318
+---
+(limited to 'js/ui/status/network.js')
+
+diff --git a/js/ui/status/network.js b/js/ui/status/network.js
+index ca4facf..756b27f 100644
+--- a/js/ui/status/network.js
++++ b/js/ui/status/network.js
+@@ -53,7 +53,8 @@ const NMAppletHelperInterface = {
+     methods: [
+         { name: 'ConnectToHiddenNetwork', inSignature: '', outSignature: '' },
+         { name: 'CreateWifiNetwork', inSignature: '', outSignature: '' },
+-        { name: 'ConnectTo8021xNetwork', inSignature: 'oo', outSignature: '' }
++        { name: 'ConnectTo8021xNetwork', inSignature: 'oo', outSignature: '' },
++        { name: 'ConnectTo3gNetwork', inSignature: 'o', outSignature: '' }
+     ],
+ };
+ const NMAppletProxy = DBus.makeProxyClass(NMAppletHelperInterface);
+@@ -440,7 +441,8 @@ NMDevice.prototype = {
+             this._client.activate_connection(this._connections[0].connection, this.device, null, null);
+         } else if (this._autoConnectionName) {
+             let connection = this._createAutomaticConnection();
+-            this._client.add_and_activate_connection(connection, this.device, null, null);
++            if (connection)
++                this._client.add_and_activate_connection(connection, this.device, null, null);
+         }
+     },
+ 
+@@ -620,7 +622,8 @@ NMDevice.prototype = {
+             this._autoConnectionItem = new PopupMenu.PopupMenuItem(this._autoConnectionName);
+             this._autoConnectionItem.connect('activate', Lang.bind(this, function() {
+                 let connection = this._createAutomaticConnection();
+-                this._client.add_and_activate_connection(connection, this.device, null, null);
++                if (connection)
++                    this._client.add_and_activate_connection(connection, this.device, null, null);
+             }));
+             this.section.addMenuItem(this._autoConnectionItem);
+         }
+@@ -777,6 +780,10 @@ NMDeviceModem.prototype = {
+         this.mobileDevice = null;
+         this._connectionType = 'ppp';
+ 
++        this._applet_proxy = new NMAppletProxy(DBus.session,
++                                               'org.gnome.network_manager_applet',
++                                               '/org/gnome/network_manager_applet');
++
+         this._capabilities = device.current_capabilities;
+         if (this._capabilities & NetworkManager.DeviceModemCapabilities.GSM_UMTS) {
+             is_wwan = true;
+@@ -878,19 +885,13 @@ NMDeviceModem.prototype = {
+     },
+ 
+     _createAutomaticConnection: function() {
+-        // FIXME: we need to summon the mobile wizard here
+-        // or NM will not have the necessary parameters to complete the connection
+-        // pending a DBus method on nm-applet
+-
+-        let connection = new NetworkManager.Connection;
+-        connection._uuid = NetworkManager.utils_uuid_generate();
+-        connection.add_setting(new NetworkManager.SettingConnection({
+-            uuid: connection._uuid,
+-            id: this._autoConnectionName,
+-            type: this._connectionType,
+-            autoconnect: false
+-        }));
+-        return connection;
++        // Mobile wizard is handled by nm-applet for now...
++        this._applet_proxy.ConnectTo3gNetworkRemote(this.device.get_path(),
++                                                    Lang.bind(this, function(results, err) {
++                                                        if (err)
++                                                            log(err);
++                                                    }));
++        return null;
+     }
+ };
+ 
+--
+cgit v0.9
