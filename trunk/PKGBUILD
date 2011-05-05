@@ -3,7 +3,7 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.6.9.4
+pkgver=6.6.9.8
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
@@ -12,24 +12,18 @@ depends=('libtool' 'lcms' 'libxt' 'gcc-libs' 'bzip2' 'xz' 'freetype2' 'fontconfi
          'libxext' 'libjpeg-turbo')
 makedepends=('ghostscript' 'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'libpng')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
-        libpng_mmx_patch_x86_64.patch perlmagick.rpath.patch)
-md5sums=('e9355aa38daa1d2c42d7e37108bc0dfa'
-         '069980fc2590c02aed86420996259302'
+        perlmagick.rpath.patch)
+md5sums=('8cd5fe2bc5a29b38c24a6f9576518319'
          'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('e3cbf6d61bf29ec8be6796c89b04f10495a6e52d'
-          'e42f3acbe85b6098af75c5cecc9a254baaa0482c'
+sha1sums=('f5fb5844934e23bffbd0ab2a36ea4914eab0dcd0'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
   cd "${srcdir}"/ImageMagick-${pkgver%.*}-${pkgver##*.}
 
-  if [ "${CARCH}" = 'x86_64' ]; then
-    patch -Np1 -i ../libpng_mmx_patch_x86_64.patch
-  fi
-
-  patch -Np0 -i ../perlmagick.rpath.patch
   sed '/AC_PATH_XTRA/d' -i configure.ac
   autoreconf
+  patch -Np0 -i ../perlmagick.rpath.patch
 
   ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
     --enable-openmp --with-wmf --with-openexr --with-xml \
@@ -62,10 +56,11 @@ package_imagemagick() {
           'etc/ImageMagick/type-dejavu.xml'
           'etc/ImageMagick/type-ghostscript.xml'
           'etc/ImageMagick/type-windows.xml')
-  options=('!makeflags' '!docs')
+  options=('!makeflags' '!docs' 'libtool')
 
   cd "${srcdir}"/ImageMagick-${pkgver%.*}-${pkgver##*.}
   make DESTDIR="${pkgdir}" install
+  chmod 755 "${pkgdir}/usr/lib/perl5/vendor_perl/auto/Image/Magick/Magick.so" 
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/imagemagick/LICENSE"
   install -Dm644 NOTICE "${pkgdir}/usr/share/licenses/imagemagick/NOTICE"
 
