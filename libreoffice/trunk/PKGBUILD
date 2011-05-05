@@ -6,7 +6,7 @@ pkgname=('libreoffice' 'libreoffice-sdk' 'libreoffice-extension-nlpsolver' 'libr
          'libreoffice-extension-report-builder' 'libreoffice-extension-wiki-publisher' 'libreoffice-extension-ct2n')
 _LOver=3.3.99.3
 pkgver=3.4beta3
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 #_LO_tree="3.4"
 _OFFICEUPD="300"
@@ -329,35 +329,47 @@ package_libreoffice() {
 	
 	# workaround broken make $DESTDIR install :(
 #	install -dm755 ${pkgdir}/usr/lib/libreoffice
-	install -dm755 ${pkgdir}/usr/share/applications
 #	mv instsetoo_native/unxlngx6.pro/LibreOffice/native/install/LibO_3.4.0beta3_Linux_x86-64_install_en-US/linux-2.6-x86_64/buildroot/opt/libreoffice/* ${pkgdir}/usr/lib/libreoffice
 #	chmod -R +w ${pkgdir}/usr/lib/libreoffice
 	
 	# fix missing desktop integration
 	install -dm755 ${pkgdir}/usr/bin
-	cd ${pkgdir}/usr/bin
-	ln -vsf /usr/lib/libreoffice/program/soffice ./libreoffice
-	ln -vsf /usr/lib/libreoffice/program/soffice ./soffice
-	ln -vsf /usr/lib/libreoffice/program/sbase ./lobase
-	ln -vsf /usr/lib/libreoffice/program/scalc ./localc
-	ln -vsf /usr/lib/libreoffice/program/sdraw ./lodraw
-	ln -vsf /usr/lib/libreoffice/program/simpress ./loimpress
-	ln -vsf /usr/lib/libreoffice/program/smath ./lomath
-	ln -vsf /usr/lib/libreoffice/program/swriter ./lowriter
-	ln -vsf /usr/lib/libreoffice/program/unopkg ./unopkg
+	pushd ${pkgdir}/usr/bin
+	ln -vs /usr/lib/libreoffice/program/soffice ./libreoffice
+	ln -vs /usr/lib/libreoffice/program/soffice ./soffice
+	ln -vs /usr/lib/libreoffice/program/sbase ./lobase
+	ln -vs /usr/lib/libreoffice/program/scalc ./localc
+	ln -vs /usr/lib/libreoffice/program/sdraw ./lodraw
+	ln -vs /usr/lib/libreoffice/program/simpress ./loimpress
+	ln -vs /usr/lib/libreoffice/program/smath ./lomath
+	ln -vs /usr/lib/libreoffice/program/swriter ./lowriter
+	ln -vs /usr/lib/libreoffice/program/unopkg ./unopkg
+	popd
 	
 	# move sysui desktop files into place we want to use - javafilter and qstarter, but not unneeded printeradmin
-#	cp ${pkgdir}/usr/lib/libreoffice/share/xdg/javafilter.desktop ${pkgdir}/usr/share/applications/
+	install -dm755 ${pkgdir}/usr/share/{applications,icons,mime/packages,pixmaps}
+	rm ${pkgdir}/usr/lib/libreoffice/share/xdg/printeradmin.desktop
 	cp ${pkgdir}/usr/lib/libreoffice/share/xdg/*.desktop ${pkgdir}/usr/share/applications/
-	rm ${pkgdir}/usr/share/applications/printeradmin.desktop
 #	sed -i -e "s/Exec=oo/Exec=so/g" ${pkgdir}/usr/share/applications/javafilter.desktop # https://bugs.archlinux.org/task/23361
-#	cp ${pkgdir}/usr/lib/libreoffice/share/xdg/qstart.desktop ${pkgdir}/usr/share/applications/
 	# remove version in menu entry and make it visible
 #	sed -i -e "s/3.4 Quickstarter/Quickstarter/g" ${pkgdir}/usr/share/applications/qstart.desktop
 	sed -i -e "s/3.4//g" ${pkgdir}/usr/share/applications/*.desktop
 	sed -i -e "/NoDisplay=true/d" ${pkgdir}/usr/share/applications/qstart.desktop
-	# remove unneeded .desktop files from vanilla sysui
+	echo "Icon=startcenter" >> ${pkgdir}/usr/share/applications/qstart.desktop
+	# remove unneeded .desktop files
 	rm -rf ${pkgdir}/usr/lib/libreoffice/share/xdg
+	
+	# add missing icon files
+	cp -R ${srcdir}/build/sysui/desktop/icons/{hi,lo}color ${pkgdir}/usr/share/icons/
+	pushd ${pkgdir}/usr/share/pixmaps
+	  for i in base calc draw impress main math printeradmin startcenter writer; do
+	    ln -vs /usr/share/icons/hicolor/48x48/apps/$i.png .
+	  done
+	popd
+	sed -i -e 's/Icon=libreoffice-/Icon=/' ${pkgdir}/usr/share/applications/*.desktop
+
+	# add missing mimetype file
+	install -m644 ${srcdir}/build/sysui/unxlngx6.pro/misc/libreoffice/openoffice.org.xml ${pkgdir}/usr/share/mime/packages/libreoffice.xml
 
 	# put configuration files into place
 	install -dm755 ${pkgdir}/etc/libreoffice
@@ -370,7 +382,7 @@ package_libreoffice() {
 	ln -vsf /etc/libreoffice/psprint.conf .
  
 	#fix http://bugs.archlinux.org/task/17656
-	find ${pkgdir} -perm 444 -exec ls -lh {} \; 
+	find ${pkgdir} -perm 444 -exec ls -lh {} \;
 	find ${pkgdir} -perm 444 -exec chmod 644 {} \;
 	find ${pkgdir} -perm 555 -exec ls -lh {} \;
 	find ${pkgdir} -perm 555 -exec chmod 755 {} \;
@@ -429,7 +441,7 @@ package_libreoffice-extension-nlpsolver() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/NLPSolver.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/nlpsolver
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/NLPSolver.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/nlpsolver
 }
 
 package_libreoffice-extension-pdfimport() {
@@ -439,7 +451,7 @@ package_libreoffice-extension-pdfimport() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/pdfimport/pdfimport.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/pdfimport
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/pdfimport/pdfimport.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/pdfimport
 }
 
 package_libreoffice-extension-presentation-minimizer() {
@@ -449,7 +461,7 @@ package_libreoffice-extension-presentation-minimizer() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/presentation-minimizer.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presentation-minimizer
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/presentation-minimizer.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presentation-minimizer
 }
 
 package_libreoffice-extension-presenter-screen() {
@@ -459,7 +471,7 @@ package_libreoffice-extension-presenter-screen() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/presenter/presenter-screen.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presenter-screen
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/presenter/presenter-screen.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presenter-screen
 }
 
 package_libreoffice-extension-report-builder() {
@@ -470,7 +482,7 @@ package_libreoffice-extension-report-builder() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/report-builder.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/report-builder
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/report-builder.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/report-builder
 }
 
 package_libreoffice-extension-wiki-publisher() {
@@ -481,7 +493,7 @@ package_libreoffice-extension-wiki-publisher() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/wiki-publisher
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/wiki-publisher
 }
 
 package_libreoffice-extension-ct2n() {
@@ -492,5 +504,5 @@ package_libreoffice-extension-ct2n() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/ConvertTextToNumber.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/ct2n
+	unzip -q ${srcdir}/build/solver/${_OFFICEUPD}/unxlng*/bin/ConvertTextToNumber.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/ct2n
 }
