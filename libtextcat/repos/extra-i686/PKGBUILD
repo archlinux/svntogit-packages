@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+# Contributor: William Rea <sillywilly@gmail.com>
+# Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgname=libtextcat
+pkgver=2.2
+pkgrel=8
+pkgdesc="Library that implements N-gram-based text categorization"
+arch=('i686' 'x86_64')
+url="http://software.wise-guys.nl/libtextcat/"
+license=('BSD')
+depends=('glibc')
+options=(!libtool)
+source=(http://software.wise-guys.nl/download/${pkgname}-${pkgver}.tar.gz
+	# from http://hg.services.openoffice.org/hg/DEV300/raw-file/tip/libtextcat/data/new_fingerprints/fpdb.conf
+	fpdb.conf
+	libtextcat-2.2-exportapi.patch
+	libtextcat-2.2-OOo.patch)
+md5sums=('128cfc86ed5953e57fe0f5ae98b62c2e'
+         'f4fafe97d3aa184f5476e4918dba045d'
+         '4c46fcb825ec13e9f7ae3728f5f4c834'
+         '1d5f1026392365c58f7a7406e923f886')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -Np1 -i ${srcdir}/libtextcat-2.2-exportapi.patch
+  patch -Np1 -i ${srcdir}/libtextcat-2.2-OOo.patch
+  autoreconf -fi
+  ./configure --prefix=/usr \
+    --disable-static
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install
+#  install -D -m644 src/textcat.h ${pkgdir}/usr/include/textcat.h
+  
+  install -dm755 ${pkgdir}/usr/share/libtextcat/{LM,ShortTexts}
+  install -m644 ${srcdir}/fpdb.conf ${pkgdir}/usr/share/libtextcat
+  install -m644 langclass/conf.txt ${pkgdir}/usr/share/libtextcat
+  install -m644 langclass/LM/*.lm ${pkgdir}/usr/share/libtextcat/LM
+  install -m644 langclass/ShortTexts/*.txt ${pkgdir}/usr/share/libtextcat/ShortTexts
+
+  install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+  sed -i 's|LM|/usr/share/libtextcat/LM|' ${pkgdir}/usr/share/libtextcat/conf.txt
+}
+
