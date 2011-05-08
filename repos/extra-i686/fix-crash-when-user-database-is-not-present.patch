@@ -1,0 +1,29 @@
+From c80896f5644ec0a07822047dd7e899da63b42e89 Mon Sep 17 00:00:00 2001
+From: Ryan Lortie <desrt@desrt.ca>
+Date: Sun, 08 May 2011 12:08:38 +0000
+Subject: Fix crash when user database is not present
+
+If we fail to open the database in the user's home directory then the
+variable will be NULL.  The refactor of the read function for lockdown
+support missed this check, resulting in a rather dramatic crash on fresh
+accounts.
+---
+diff --git a/engine/dconf-engine.c b/engine/dconf-engine.c
+index ec99116..087d780 100644
+--- a/engine/dconf-engine.c
++++ b/engine/dconf-engine.c
+@@ -452,7 +452,11 @@ dconf_engine_read_internal (DConfEngine  *engine,
+       break;
+ 
+   while (i < limit && value == NULL)
+-    value = gvdb_table_get_value (engine->gvdbs[i++], key);
++    {
++      if (engine->gvdbs[i] != NULL)
++        value = gvdb_table_get_value (engine->gvdbs[i], key);
++      i++;
++    }
+ 
+   g_static_mutex_unlock (&engine->lock);
+ 
+--
+cgit v0.9
