@@ -1,0 +1,52 @@
+From c975740f9228b2c53d79ac08ad704fca5f1c5b6e Mon Sep 17 00:00:00 2001
+From: Colin Walters <walters@verbum.org>
+Date: Wed, 11 May 2011 15:21:18 +0000
+Subject: st-private: Correct fix for memory leak
+
+The previous fix in 72f9f482d was wrong; we need to keep around
+the buffer until cairo is done with the pattern.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=649497
+---
+diff --git a/src/st/st-private.c b/src/st/st-private.c
+index 51798a1..21ca09a 100644
+--- a/src/st/st-private.c
++++ b/src/st/st-private.c
+@@ -667,6 +667,7 @@ cairo_pattern_t *
+ _st_create_shadow_cairo_pattern (StShadow        *shadow_spec,
+                                  cairo_pattern_t *src_pattern)
+ {
++  static cairo_user_data_key_t shadow_pattern_user_data;
+   cairo_t *cr;
+   cairo_surface_t *src_surface;
+   cairo_surface_t *surface_in;
+@@ -728,6 +729,8 @@ _st_create_shadow_cairo_pattern (StShadow        *shadow_spec,
+                                                      width_out,
+                                                      height_out,
+                                                      rowstride_out);
++  cairo_surface_set_user_data (surface_out, &shadow_pattern_user_data,
++                               pixels_out, (cairo_destroy_func_t) g_free);
+ 
+   dst_pattern = cairo_pattern_create_for_surface (surface_out);
+   cairo_surface_destroy (surface_out);
+@@ -745,8 +748,7 @@ _st_create_shadow_cairo_pattern (StShadow        *shadow_spec,
+                               (width_out - width_in) / 2.0,
+                               (height_out - height_in) / 2.0);
+       cairo_pattern_set_matrix (dst_pattern, &shadow_matrix);
+-
+-      goto out;
++      return dst_pattern;
+     }
+ 
+   /* Read all the code from the cairo_pattern_set_matrix call
+@@ -784,8 +786,6 @@ _st_create_shadow_cairo_pattern (StShadow        *shadow_spec,
+ 
+   cairo_pattern_set_matrix (dst_pattern, &shadow_matrix);
+ 
+- out:
+-  g_free (pixels_out);
+   return dst_pattern;
+ }
+ 
+--
+cgit v0.9
