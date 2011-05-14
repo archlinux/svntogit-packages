@@ -1,0 +1,84 @@
+From f53edda83ebcfd7015c3f35196d6cbd7bc2d8369 Mon Sep 17 00:00:00 2001
+From: Karel Zak <kzak@redhat.com>
+Date: Wed, 11 May 2011 16:57:27 +0200
+Subject: [PATCH] mount: -a segfaults when 4th field is omitted (mount
+ options)
+
+ # echo 'tmpd /tmp/x tmpfs' >> /etc/fstab
+ # mkdir /tmp/x
+ # mount -a
+ segfault
+
+Reported-by: Mike Frysinger <vapier@gentoo.org>
+Signed-off-by: Karel Zak <kzak@redhat.com>
+---
+ mount/mount.c        |    8 +++++---
+ mount/mount_mntent.c |    5 +++--
+ mount/sundries.c     |    2 ++
+ 3 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/mount/mount.c b/mount/mount.c
+index ba71149..29963c2 100644
+--- a/mount/mount.c
++++ b/mount/mount.c
+@@ -1163,7 +1163,9 @@ is_mounted_same_loopfile(const char *node0, const char *loopfile, unsigned long
+ 			res = loopfile_used_with((char *) mnt->m.mnt_fsname,
+ 					loopfile, offset);
+ 
+-		else if ((p = strstr(mnt->m.mnt_opts, "loop="))) {
++		else if (mnt->m.mnt_opts &&
++			 (p = strstr(mnt->m.mnt_opts, "loop=")))
++		{
+ 			char *dev = xstrdup(p+5);
+ 			if ((p = strchr(dev, ',')))
+ 				*p = '\0';
+@@ -2052,8 +2054,8 @@ is_fstab_entry_mounted(struct mntentchn *mc, int verbose)
+ 		goto yes;
+ 
+ 	/* extra care for loop devices */
+-	if ((strstr(mc->m.mnt_opts, "loop=") ||
+-	     (stat(mc->m.mnt_fsname, &st) == 0 && S_ISREG(st.st_mode)))) {
++	if ((mc->m.mnt_opts && strstr(mc->m.mnt_opts, "loop=")) ||
++	    (stat(mc->m.mnt_fsname, &st) == 0 && S_ISREG(st.st_mode))) {
+ 
+ 		char *p = get_option_value(mc->m.mnt_opts, "offset=");
+ 		uintmax_t offset = 0;
+diff --git a/mount/mount_mntent.c b/mount/mount_mntent.c
+index d90def3..f42c0ad 100644
+--- a/mount/mount_mntent.c
++++ b/mount/mount_mntent.c
+@@ -70,7 +70,7 @@ my_addmntent (mntFILE *mfp, struct my_mntent *mnt) {
+ 	m1 = mangle(mnt->mnt_fsname);
+ 	m2 = mangle(mnt->mnt_dir);
+ 	m3 = mangle(mnt->mnt_type);
+-	m4 = mangle(mnt->mnt_opts);
++	m4 = mnt->mnt_opts ? mangle(mnt->mnt_opts) : "rw";
+ 
+ 	res = fprintf (mfp->mntent_fp, "%s %s %s %s %d %d\n",
+ 		       m1, m2, m3, m4, mnt->mnt_freq, mnt->mnt_passno);
+@@ -78,7 +78,8 @@ my_addmntent (mntFILE *mfp, struct my_mntent *mnt) {
+ 	free(m1);
+ 	free(m2);
+ 	free(m3);
+-	free(m4);
++	if (mnt->mnt_opts)
++		free(m4);
+ 	return (res < 0) ? 1 : 0;
+ }
+ 
+diff --git a/mount/sundries.c b/mount/sundries.c
+index ae4501a..2dec37f 100644
+--- a/mount/sundries.c
++++ b/mount/sundries.c
+@@ -217,6 +217,8 @@ matching_opts (const char *options, const char *test_opts) {
+ 
+      if (test_opts == NULL)
+ 	  return 1;
++     if (options == NULL)
++	  options = "";
+ 
+      len = strlen(test_opts);
+      q = alloca(len+1);
+-- 
+1.7.5.1
+
