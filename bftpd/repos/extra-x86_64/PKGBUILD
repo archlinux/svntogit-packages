@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=bftpd
+pkgver=3.4
+pkgrel=1
+pkgdesc="Small, easy-to-configure FTP server"
+arch=(i686 x86_64)
+url="http://bftpd.sourceforge.net/"
+license=('GPL')
+depends=('glibc' 'pam')
+install=bftpd.install
+backup=(etc/bftpd.conf
+        etc/logrotate.d/bftpd
+        etc/pam.d/bftpd
+        etc/xinetd.d/bftpd)
+source=(http://downloads.sourceforge.net/sourceforge/bftpd/bftpd-$pkgver.tar.gz
+        bftpd.rc
+        bftpd.logrotate
+        bftpd.pam
+        bftpd.xinetd)
+md5sums=('dcee04b5fad8c918e86c49712424fcdd'
+         '56a1bf7738a6db2b2cff89e611f4f11a'
+         '853680dad0df39d0b4d2fb43d4be430a'
+         '96f82c38f3f540b53f3e5144900acf17'
+         'ff70fd962666f4d74749a1c68167a966')
+
+build() {
+  cd "${srcdir}"/$pkgname
+  # The bftpd author keeps screwing up the release tarballs
+  rm -f config.{cache,status}
+  ./configure --prefix=/usr --enable-pam --mandir=/usr/share/man
+  make
+}
+
+package() {
+  cd "${srcdir}"/$pkgname
+  install -d -m755 "${pkgdir}"/usr/{sbin,share/man/man8}
+  install -d -m755 "${pkgdir}"/var/log
+  install -D -m644 "${srcdir}"/bftpd.logrotate "${pkgdir}"/etc/logrotate.d/bftpd
+  install -D -m755 "${srcdir}"/bftpd.rc "${pkgdir}"/etc/rc.d/bftpd
+  make DESTDIR="${pkgdir}" install
+  # Remove log file and /var/run from the package
+  rm -f "${pkgdir}"/var/log/bftpd.log
+  rmdir "${pkgdir}"/var/{run/bftpd,run,log,}
+  # Install PAM file
+  mkdir -p "${pkgdir}"/etc/pam.d
+  cp "${srcdir}"/bftpd.pam "${pkgdir}"/etc/pam.d/bftpd
+  # Install xinetd file
+  install -D -m644 "${srcdir}"/bftpd.xinetd "${pkgdir}"/etc/xinetd.d/bftpd
+  # Fix default in config file
+  sed 's|#ROOTDIR="/path/for/anonymous/user"|# bftpd interprets ROOTDIR="%h" (the default), as ROOTDIR="/" for the anonymous user, override it\n  ROOTDIR="/srv/ftp"|' -i "${pkgdir}"/etc/bftpd.conf
+}
