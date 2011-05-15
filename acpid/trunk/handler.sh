@@ -26,7 +26,7 @@ case "$1" in
         ;;
     ac_adapter)
         case "$2" in
-            AC)
+            AC|ACAD|ADP0)
                 case "$4" in
                     00000000)
                         echo -n $minspeed >$setspeed
