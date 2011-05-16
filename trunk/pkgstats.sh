@@ -36,7 +36,7 @@ ${quiet} || echo 'Collecting data...'
 pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
 pacman -Qq > "${pkglist}"
 arch="$(uname -m)"
-mirror="$(pacman -Sdp extra/pkgstats 2>/dev/null | sed -E 's#(.*/)extra/os/.*#\1#;s#(.*://).*@#\1#')"
+mirror="$(pacman -Sddp extra/pkgstats 2>/dev/null | sed -E 's#(.*/)extra/os/.*#\1#;s#(.*://).*@#\1#')"
 
 if ${showonly}; then
 	echo 'packages='
