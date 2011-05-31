@@ -14,8 +14,8 @@ case "$1" in
     button/power)
         #echo "PowerButton pressed!">/dev/tty5
         case "$2" in
-            PWRF)   logger "PowerButton pressed: $2" ;;
-            *)      logger "ACPI action undefined: $2" ;;
+            PBTN|PWRF)  logger "PowerButton pressed: $2" ;;
+            *)          logger "ACPI action undefined: $2" ;;
         esac
         ;;
     button/sleep)
