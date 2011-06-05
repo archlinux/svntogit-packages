@@ -19,6 +19,7 @@ install="texlive.install"
 source=('texmf.cnf'
         'fix-fontforge-encoding.patch'
         '09-texlive-fonts.conf'
+        'archlinux-build.patch'
         'http://mirrors.kernel.org/archlinux/other/texlive/texlive-bin-source-20110531.tar.xz'
         'http://mirrors.kernel.org/archlinux/other/texlive/texlive-bin-texmf-20110531.tar.xz'
         "http://foundry.supelec.fr/gf/download/frsrelease/392/1730/luatex-beta-${_luatex_ver}.tar.bz2"
@@ -37,9 +38,10 @@ backup=(etc/texmf/web2c/texmf.cnf \
 	etc/texmf/dvipdfm/config/config \
 	etc/texmf/xdvi/XDvi)
 
-md5sums=('626f900fb59f036d6fea95f08c74b00b'
+md5sums=('ff30d6813babd2e41c414365eea9c147'
          'bfb9716aa00c86c08cd31e5b32edeb98'
          '393a4bf67adc7ca5df2b386759d1a637'
+         '94ef5571a54262790ab64d6d044dd10c'
          'cd31edd460cdc3224281ccb30a4ea38d'
          'd6338f70c6b8acde6509076ead4b9f13'
          'c9348d4381170204b1a1b0440d8b6918')
@@ -92,10 +94,14 @@ build() {
    cd "$srcdir"
    # this patch removes spurious error message with locale "xx_YY.utf8"
    patch -p0 -i fix-fontforge-encoding.patch
-
    #############################################################
    ### configure
    cd source
+   patch -Np1 -i ${srcdir}/archlinux-build.patch
+   for _dir in texk/tetex texk/texlive texk/tex4htk \
+       utils/ps2eps utils/chktex utils/psutils utils/xindy; do
+       (cd ${_dir} && automake) || true
+   done
    ## prevent compiling Xdvi with libXp
    sed -i~ 's|-lXp ||' texk/xdvik/configure
    test ! -d Work && mkdir Work
@@ -103,9 +109,9 @@ build() {
    echo "--> Initial configuration..."
    # we use temporary prefix to avoid messing the existing $pkgdir/usr/share/texmf tree
    ../configure --prefix=/usr -C \
-     --datarootdir=$srcdir/inst/usr/share \
-     --datadir=$srcdir/inst/usr/share \
-     --mandir=$srcdir/inst/usr/share/man \
+     --datarootdir=/usr/share \
+     --datadir=/usr/share \
+     --mandir=/usr/share/man \
      --disable-native-texlive-build \
      --with-banner-add="/Arch Linux" \
      --disable-multiplatform \
@@ -219,17 +225,8 @@ package() {
    echo "--> Proceeding with make install ..."
    echo "-------------------------------------------------------"
    cd Work
-   make prefix=$srcdir/inst/usr texmf=$pkgdir/usr/share/texmf install
-
-   # restore install location of bin/lib/include
-   mv -f $srcdir/inst/usr/bin $pkgdir/usr/bin
-   mv -f $srcdir/inst/usr/lib $pkgdir/usr/lib
-   mv -f $srcdir/inst/usr/include $pkgdir/usr/include
-   # add symlinks to manpages since they are not included in the original texmf tree
-   for m in $srcdir/inst/usr/share/man/man1/*; do
-     bm=$(basename $m)
-     test -f $pkgdir/usr/share/man/man1/$bm || mv -f $m $pkgdir/usr/share/man/man1/
-   done
+   make DESTDIR=${pkgdir} texmf=$pkgdir/usr/share/texmf install
+   rm -rf ${pkgdir}/usr/{texmf,texmf-dist}
 
    ## install luatex binary
    install -m755 $srcdir/luatex-beta-${_luatex_ver}/build/texk/web2c/luatex $pkgdir/usr/bin/
@@ -237,19 +234,9 @@ package() {
    /bin/ln -s luatex texlua
    /bin/ln -s luatex texluac
 
-   # symlinks in $pkgdir/usr/bin are incorrect
-   echo "--> Fixing symlinks for scripts ..."
-   for f in $pkgdir/usr/bin/* ; do
-	   if [ -L $f ]; then
-		   target=`ls -l "$f" | sed 's/^.\+ -> //'`
-		   if [[ "$target" == ..* ]]; then
-			   newtarget=`echo $target | sed -e 's#../#/usr/share/#'`
-			   rm -f $f
-			   ln -s $newtarget $f
-			   test -f $pkgdir/$newtarget && chmod a+x $pkgdir/$newtarget
-		   fi
-	   fi
-   done
+   ## install Perl libraries
+   mkdir -p $pkgdir/usr/share/tlpkg/TeXLive
+   install -m644 ${srcdir}/source/utils/biber/TeXLive/*.pm $pkgdir/usr/share/tlpkg/TeXLive
 
    # create symlinks for formats 
    echo "--> Create symlinks for TeX formats ..."
@@ -302,7 +289,9 @@ purifyeps
 repstopdf
 rpdfcrop
 showglyphs
+sty2dtx
 texcount
+texdef
 texdiff
 texdirflatten
 texloganalyser
@@ -323,16 +312,18 @@ ps4pdf \
 splitindex \
 svn-multi \
 vpe"
+   _music_scripts="musixtex musixflx"
    _pictures_scripts="cachepic epspdf epspdftk fig4latex mathspic"
    _pstricks_scripts="pst2pdf"
    _science_scripts="ulqda"
    for s in \
         ${_bibtexextra_scripts} \
-        ${_core_scripts} \
+        ${_core_scripts}       \
         ${_htmlxml_scripts}    \
         ${_langextra_scripts}  \
         ${_langgreek_scripts}  \
         ${_latexextra_scripts} \
+        ${_music_scripts}      \
         ${_pictures_scripts}   \
         ${_pstricks_scripts}   \
         ${_science_scripts}    \
