@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=libwebkit
+pkgname=(libwebkit libwebkit3)
+pkgver=1.4.1
+pkgrel=1
+pkgdesc="An opensource web content engine"
+arch=('i686' 'x86_64')
+url="http://webkitgtk.org/"
+license=('custom')
+depends=('libxt' 'libxslt' 'sqlite3' 'icu' 'gstreamer0.10-base' 'libsoup' 'enchant')
+makedepends=('gperf' 'gtk-doc' 'gobject-introspection' 'python2' 'gtk2' 'gtk3')
+options=('!libtool')
+install=libwebkit.install
+source=(http://webkitgtk.org/webkit-${pkgver}.tar.gz
+        replace-switch-with-given-when.patch)
+md5sums=('c1a4f732a77d6f8197437b50678d3dbc'
+         '3ba708a26b7af0e1e853867966fe14f7')
+
+build() {
+  cd "${srcdir}/webkit-${pkgver}"
+  patch -Np1 -i "${srcdir}/replace-switch-with-given-when.patch"
+  mkdir build-gtk{2,3}
+
+  ( cd build-gtk2 && _build --with-gtk=2.0 )
+  ( cd build-gtk3 && _build --with-gtk=3.0 )
+}
+
+_build() {
+  PYTHON=/usr/bin/python2 ../configure --prefix=/usr \
+    --enable-introspection \
+    --with-font-backend=freetype --enable-gtk-doc \
+    --with-unicode-backend=icu \
+    --enable-spellcheck "$@"
+  make all stamp-po
+}
+
+package_libwebkit() {
+  pkgdesc+=" (for GTK2)"
+  depends+=(gtk2)
+  provides=('webkitgtk-svn')
+  conflicts=('webkitgtk-svn')
+  replaces=('webkitgtk-svn')
+
+  cd "$srcdir/webkit-$pkgver/build-gtk2"
+  make DESTDIR="${pkgdir}" install
+  install -Dm644 ../Source/WebKit/LICENSE "${pkgdir}/usr/share/licenses/libwebkit/LICENSE"
+}
+
+package_libwebkit3() {
+  pkgdesc+=" (for GTK3)"
+  depends+=(gtk3)
+
+  cd "${srcdir}/webkit-${pkgver}/build-gtk3"
+  make DESTDIR="${pkgdir}" install
+  install -Dm644 ../Source/WebKit/LICENSE "${pkgdir}/usr/share/licenses/libwebkit3/LICENSE"
+}
