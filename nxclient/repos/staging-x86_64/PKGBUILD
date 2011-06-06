@@ -1,0 +1,61 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+#Contributed: eliott <eliott@solarblue.net>, Andre Naumann <anaumann@SPARCed.org> 
+
+pkgname=nxclient
+pkgver=3.5.0.6
+pkgrel=1
+pkgdesc="Nomachine's closed source client for NX servers"
+arch=(i686 x86_64)
+url="http://nomachine.com"
+makedepends=('rpmextract')
+license=('custom:nomachine')
+depends=('nx-common>=3.5.0' 'libxext' 'libxft' 'xorg-xauth')
+optdepends=('cups: for printing support')
+[ "$CARCH" = "x86_64" ] && source=(http://64.34.161.181/download/3.5.0/Linux/$pkgname-3.5.0-6.x86_64.rpm nomachine.key)
+[ "$CARCH" = "x86_64" ] && md5sums=('5ee75d9185158f5057989bd91cdb4aa0' 'cb5df74aff5160eab9cd4313019ae228')
+[ "$CARCH" = "i686" ] && source=(http://64.34.161.181/download/3.5.0/Linux/$pkgname-3.5.0-6.i386.rpm nomachine.key)
+[ "$CARCH" = "i686" ] &&  md5sums=('9e1c2894b94b1643a4d3a7badc8e78e4' 'cb5df74aff5160eab9cd4313019ae228')
+install=nxclient.install
+
+build() {
+  cd ${srcdir}/
+  rpmextract.sh *.rpm
+  sed -i -e 's,/usr/NX,/opt/NX,g' etc/profile.d/nx.sh etc/profile.d/nx.csh
+  sed -i -e 's,/usr/NX/,/opt/NX/,g' ${srcdir}/usr/NX/share/applnk/network/*.desktop
+}
+
+package() {
+  mkdir -p ${pkgdir}/opt
+  cd ${srcdir}/usr
+  install -D -m 755 ${srcdir}/etc/profile.d/nx.sh ${pkgdir}/etc/profile.d/nx.sh 
+  install -D -m 755 ${srcdir}/etc/profile.d/nx.csh ${pkgdir}/etc/profile.d/nx.csh 
+  install -D -m 644 ${srcdir}/usr/NX/share/applnk/network/nxclient-wizard.desktop ${pkgdir}/usr/share/applications/nxclient-wizard.desktop
+  install -D -m 644 ${srcdir}/usr/NX/share/applnk/network/nxclient.desktop ${pkgdir}/usr/share/applications/nxclient.desktop
+  install -D -m 644 ${srcdir}/usr/NX/share/applnk/network/nxclient-admin.desktop ${pkgdir}/usr/share/applications/nxclient-admin.desktop
+  rm -r ${srcdir}/usr/NX/share/applnk
+
+  # remove libs that come in system and are provided by nx-common
+  rm ${srcdir}/usr/NX/lib/{libXcomp.*,libXcompsh.*,libcrypto.*,libjpeg.*,libz.*}
+  ### HACK: fix libpng linking until nomachine fixes upstream! - shouldn't be needed, why not /opt/NX/lib ?
+  mkdir -p ${pkgdir}/usr/NX/lib/
+  cp -a NX/lib/libpng* ${pkgdir}/usr/NX/lib/
+  rm -r NX/lib
+
+  # provided by nx-common
+  rm NX/bin/nxssh 
+  rm NX/bin/nxesd # esd support has been fully dropped
+ 
+  # provide default key file later
+  rm NX/share/keys/server.id_dsa.key
+
+  # move files to /opt
+  cp -a NX ${pkgdir}/opt
+
+  # add default key file
+  install -D -m 644 ${srcdir}/nomachine.key ${pkgdir}/opt/NX/share/keys/server.id_dsa.key
+
+  # add license file
+  mkdir -p ${pkgdir}/usr/share/licenses/nxclient
+  mv ${pkgdir}/opt/NX/share/documents/client/license-info ${pkgdir}/usr/share/licenses/nxclient/LICENSE
+}
