@@ -5,15 +5,15 @@
 # NOTE: valgrind requires rebuilt with each new glibc version
 
 pkgname=glibc
-pkgver=2.13
-pkgrel=5
-_glibcdate=20110117
+pkgver=2.14
+pkgrel=1
+_glibcdate=20110605
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=2.6.37' 'tzdata')
+depends=('linux-api-headers>=2.6.39' 'tzdata')
 makedepends=('gcc>=4.4')
 backup=(etc/locale.gen
         etc/nscd.conf)
@@ -25,19 +25,19 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-__i686.patch
         glibc-2.12.1-static-shared-getpagesize.patch
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
-        glibc-2.13-prelink.patch
         glibc-2.13-futex.patch
+        glibc-2.14-libdl-crash.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('b7b17d9c6b5b71b5e5322e04ca63c190'
+md5sums=('a96742599fc8a99e52b9e344f39a1000'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
          'a3ac6f318d680347bb6e2805d42b73b2'
          'b042647ea7d6f22ad319e12e796bd13e'
-         '24dfab6fd244f3773523412588ecc52c'
          '7d0154b7e17ea218c9fa953599d24cc4'
+         'cea62cc6b903d222c5f26e05a3c0e0e6'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -45,7 +45,8 @@ md5sums=('b7b17d9c6b5b71b5e5322e04ca63c190'
 mksource() {
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  git checkout -b glibc-2.13-arch origin/release/2.13/master
+  git checkout -b glibc-2.14-arch origin/master
+  # git checkout -b glibc-2.14-arch origin/release/2.14/master
   popd
   tar -cvJf glibc-${pkgver}_${_glibcdate}.tar.xz glibc/*
 }
@@ -71,12 +72,12 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09 (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileged-program.patch
 
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=12489
-  # http://sourceware.org/git/?p=glibc.git;a=commit;h=25b3aada (only fedora branch...)
-  patch -Np1 -i ${srcdir}/glibc-2.13-prelink.patch
-
   # http://sourceware.org/bugzilla/show_bug.cgi?id=12403
   patch -Np1 -i ${srcdir}/glibc-2.13-futex.patch
+
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9 (only fedora branch...)
+  # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
+  patch -Np1 -i ${srcdir}/glibc-2.14-fix-memory-leak.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -154,7 +155,7 @@ package() {
                         usr/bin/{gencat,getconf,getent,iconv,locale} \
                         usr/bin/{localedef,pcprofiledump,rpcgen,sprof} \
                         usr/lib/getconf/* \
-                        usr/sbin/{iconvconfig,nscd,rpcinfo}
+                        usr/sbin/{iconvconfig,nscd}
   [[ $CARCH = "i686" ]] && strip $STRIP_BINARIES usr/bin/lddlibc4
 
   strip $STRIP_STATIC usr/lib/*.a \
@@ -165,4 +166,7 @@ package() {
                       lib/{libdl,libm,libnsl,libresolv,librt,libutil}-${pkgver}.so \
                       lib/{libmemusage,libpcprofile,libSegFault}.so \
                       usr/lib/{pt_chown,gconv/*.so}
+
+# add usr/lib/audit/sotruss-lib.so, usr/bin/sotruss
+
 }
