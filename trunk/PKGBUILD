@@ -77,7 +77,7 @@ build() {
 
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9 (only fedora branch...)
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
-  patch -Np1 -i ${srcdir}/glibc-2.14-fix-memory-leak.patch
+  patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
