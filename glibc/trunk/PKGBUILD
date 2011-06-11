@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.14
-pkgrel=1
+pkgrel=2
 _glibcdate=20110605
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -27,6 +27,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.13-futex.patch
         glibc-2.14-libdl-crash.patch
+        glibc-2.14-revert-4462fad3.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -38,6 +39,7 @@ md5sums=('a96742599fc8a99e52b9e344f39a1000'
          'b042647ea7d6f22ad319e12e796bd13e'
          '7d0154b7e17ea218c9fa953599d24cc4'
          'cea62cc6b903d222c5f26e05a3c0e0e6'
+         '46e56492cccb1c9172ed3a235cf43c6c'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -78,6 +80,10 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9 (only fedora branch...)
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
   patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
+
+  # revert fix for http://sourceware.org/bugzilla/show_bug.cgi?id=12684
+  # as it causes crashes  (FS#24615)
+  patch -Np1 -i ${srcdir}/glibc-2.14-revert-4462fad3.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -165,8 +171,5 @@ package() {
                       lib/libnss_{compat,dns,files,hesiod,nis,nisplus}-${pkgver}.so \
                       lib/{libdl,libm,libnsl,libresolv,librt,libutil}-${pkgver}.so \
                       lib/{libmemusage,libpcprofile,libSegFault}.so \
-                      usr/lib/{pt_chown,gconv/*.so}
-
-# add usr/lib/audit/sotruss-lib.so, usr/bin/sotruss
-
+                      usr/lib/{pt_chown,{audit,gconv}/*.so}
 }
