@@ -59,6 +59,7 @@ usage () {
 	echo "    --usbhost              show usb hostcontroller MODULES"
 	echo "    --modules              show all detected MODULES"
 	echo "    --modules-not-loaded   show all detected MODULES but not actually loaded"
+	echo "    --blacklist            activates blacklisting for net,sound and usbhost"
 	echo ""
 	exit 1
 }
@@ -116,6 +117,9 @@ fi
 
 # vmware switch
 [ "$(echo $* | grep '\-hooks')" ] && HOOKS=1
+
+# blacklist switch
+[ "$(echo $* | grep '\-blacklist')" ] && BLACKLIST=1
 
 ADVANCED=""
 # root device check
@@ -257,11 +261,7 @@ if [ "$(find /sys/devices -noleaf -name 'id' | grep /pnp)" ]; then
 		[ "$devid" ] || continue
 	
 		modprobe -i --set-version=$KERNEL_VERSION --show-depends pnp:d${devid} >> /tmp/modules-plain 2>/dev/null
-	
 		[ "$devid" = "PNP0800" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends pcspkr >> /tmp/modules-plain  2>/dev/null
-		[ "$devid" = "PNP0b00" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends rtc_proc >> /tmp/modules-plain  2>/dev/null
-		[ "$devid" = "PNP0b00" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends rtc_sysfs >> /tmp/modules-plain 2>/dev/null
-		[ "$devid" = "PNP0b00" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends rtc_dev >> /tmp/modules-plain 2>/dev/null
 		[ "$devid" = "PNP0510" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends irtty-sir >> /tmp/modules-plain 2>/dev/null
 		[ "$devid" = "PNP0511" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends irtty-sir >> /tmp/modules-plain 2>/dev/null
 		[ "$devid" = "PNPb02f" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends analog >> /tmp/modules-plain 2>/dev/null
@@ -290,14 +290,6 @@ fi
 if [ "$(grep 'parport' /tmp/modules-plain)" ]; then
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends lp >> /tmp/modules-plain 2>/dev/null
 	modprobe -i --set-version=$KERNEL_VERSION --show-depends ppdev >> /tmp/modules-plain 2>/dev/null
-fi
-
-# Sound OSS compat modules
-if [ "$(grep 'snd-pcm' /tmp/modules-plain)" ]; then
-	modprobe -i --set-version=$KERNEL_VERSION --show-depends snd-pcm-oss >> /tmp/modules-plain 2>/dev/null
-fi
-if [ "$(grep 'snd-seq' /tmp/modules-plain)" ]; then
-	modprobe -i --set-version=$KERNEL_VERSION --show-depends snd-seq-oss >> /tmp/modules-plain 2>/dev/null
 fi
 
 sort -u /tmp/modules-plain >> /tmp/modules-stripped
@@ -502,44 +494,65 @@ while [ $# -gt 0 ]; do
 				;;
 		--net)  if [ "$(showlist2 "MODULES"  \($(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) \) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g' | grep '8139cp')" ] ; then
 				if [ "$(dmesg | grep 'use 8139too')" ]; then
-					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
-					MODULES_EXPORTED="$(echo $MODULES_EXPORTED | sed -e 's/8139cp//g')"
-					BLACKLIST_UDEV="!8139cp"
-					for i in $MODULES_EXPORTED; do
-						BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+					NET_EXPORTED="$(echo $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) | sed -e 's/8139cp//g')"
+					MODULES_EXPORTED="$MODULES_EXPORTED $NET_EXPORTED"
+					BLACKLIST_UDEV="8139cp"
+					for i in $NET_EXPORTED; do
+						BLACKLIST_UDEV="$BLACKLIST_UDEV $i"
 					done
-					showlist2 "MODULES"  \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\  /(/g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+					showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\  /(/g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				else
-					MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
-					MODULES_EXPORTED="$(echo $MODULES_EXPORTED | sed -e 's/8139too//g')"
-					BLACKLIST_UDEV="!8139too"
-					for i in $MODULES_EXPORTED; do
-						BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+					NET_EXPORTED="$(echo $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/) | sed -e 's/8139too//g')"
+					MODULES_EXPORTED="$MODULES_EXPORTED $NET_EXPORTED"
+					BLACKLIST_UDEV="8139too"
+					for i in $NET_EXPORTED; do
+						BLACKLIST_UDEV="$BLACKLIST_UDEV $i"
 					done
-					showlist2 "MODULES"  \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\  /(/g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+					showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\  /(/g' -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 				fi
 			else
-				MODULES_EXPORTED="$MODULES_EXPORTED $(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
+				NET_EXPORTED="$(listmods drivers/net/ irda ppp_generic slhc) $(listmods drivers/usb/net/) $(listmods drivers/staging/)"
+				MODULES_EXPORTED="$MODULES_EXPORTED $NET_EXPORTED" 
 				BLACKLIST_UDEV=""
-				for i in $MODULES_EXPORTED; do
-					BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+				for i in $NET_EXPORTED; do
+					BLACKLIST_UDEV="$BLACKLIST_UDEV $i"
 				done
-				showlist2 "MODULES"  \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+				showlist2 "MODULES"  \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			fi
+                        : >/tmp/blacklist_net.conf
+			if [ "$BLACKLIST" = "1" ]; then	
+				for i in $BLACKLIST_UDEV; do
+					echo "blacklist $i" >> /tmp/blacklist_net.conf
+				done
+                        fi
 			;;
-		--sound) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods pcspkr) $(listmods sound/)"
+		--sound) SOUND_EXPORTED="$(listmods pcspkr) $(listmods sound/)"
+			 MODULES_EXPORTED="$MODULES_EXPORTED $SOUND_EXPORTED"
 			 BLACKLIST_UDEV=""
-			 for i in $MODULES_EXPORTED; do
-				BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
+			 for i in $SOUND_EXPORTED; do
+				BLACKLIST_UDEV="$BLACKLIST_UDEV $i"
 			 done
-			 showlist2 "MODULES" \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+			 showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+                         : >/tmp/blacklist_sound.conf
+			 if [ "$BLACKLIST" = "1" ]; then	
+			 	for i in $BLACKLIST_UDEV; do
+			 		echo "blacklist $i" >> /tmp/blacklist_sound.conf
+			 	done
+                         fi
 			 ;;
-		--usbhost) MODULES_EXPORTED="$MODULES_EXPORTED $(listmods xhci-hcd) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
-			 BLACKLIST_UDEV=""
-			 for i in $MODULES_EXPORTED; do
-				BLACKLIST_UDEV="$BLACKLIST_UDEV !$i"
-			 done
-			 showlist2 "MODULES" \($BLACKLIST_UDEV $MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+		--usbhost)  USBHOST_EXPORTED="$(listmods xhci-hcd) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd)"
+			    MODULES_EXPORTED="$MODULES_EXPORTED $USBHOST_EXPORTED"
+			    BLACKLIST_UDEV=""
+			    for i in $USBHOST_EXPORTED; do
+				    BLACKLIST_UDEV="$BLACKLIST_UDEV $i"
+			    done
+			    showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
+			    : >/tmp/blacklist_usbhost.conf
+			    if [ "$BLACKLIST" = "1" ]; then	
+				  for i in $BLACKLIST_UDEV; do
+			 		echo "blacklist $i" >> /tmp/blacklist_usbhost.conf
+				  done
+			    fi
 			 ;;
 		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
