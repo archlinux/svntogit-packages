@@ -1,0 +1,97 @@
+# $Id$
+# Maintainer: Daniel Isenmann <daniel@archlinux.org>
+# Contributor: Rashif "Don Ray" Rahman <rayrashif@gmail.com>
+
+pkgbase=wicd
+pkgname=('wicd' 'wicd-gtk')
+pkgver=1.7.0
+pkgrel=10
+arch=(any)
+url="http://wicd.sourceforge.net/"
+license=('GPL2')
+conflicts=('wicd-svn')
+install=wicd.install
+source=(http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz
+        wicd-daemon
+        wicd.desktop
+        wicd-scripts-execution.patch
+      	deepcopy+python27-fixes.patch)
+makedepends=('python2')
+options=('emptydirs')
+md5sums=('003d2e67240989db55934553437ba32a'
+         'f40e5f59998d0829707a7c9976afa8f8'
+         '326df163a5732d38741371baa4fce9e5'
+         'f4c377a25aa077cb76955124adfcc03f'
+         '1b7ec95efcb8dc0fe48111da19b395b6')
+
+build() {
+  cd $srcdir/$pkgbase-$pkgver
+  patch -p0 <$srcdir/wicd-scripts-execution.patch
+  patch -p1 -i $srcdir/deepcopy+python27-fixes.patch
+  find . -type f -exec sed -i 's@#!/usr.*python@#!/usr/bin/python2@' {} \;
+  export PYTHON=python2
+  python2 setup.py configure --no-install-init \
+														 --resume=/usr/share/wicd/scripts/ \
+                             --suspend=/usr/share/wicd/scripts/ \
+                             --verbose \
+                             --python=/usr/bin/python2
+}
+
+package_wicd() {
+  pkgdesc="Wired and wireless network manager for Linux"
+  depends=('python2' 'dbus-python' 'dhcpcd' 'wpa_supplicant' 'wireless_tools'
+           'net-tools' 'ethtool' 'shared-mime-info' 'python-urwid' 'pygobject')
+  optdepends=('python-wpactrl:	needed if you want to use the new experimental ioctrl backend'
+      	    'python-iwscan:	needed if you want to use the new experimental ioctrl backend'
+            'wicd-gtk: needed if you want the GTK interface')
+  backup=('etc/wicd/encryption/templates/active')
+  install=wicd.install  
+
+  cd $srcdir/$pkgbase-$pkgver
+  python2 setup.py install --optimize=1 --root=$pkgdir
+
+  # Add custom rc.d script
+  install -Dm755 $srcdir/wicd-daemon $pkgdir/etc/rc.d/wicd
+  #install -Dm644 $srcdir/wicd.desktop $pkgdir/usr/share/applications/wicd.desktop
+
+  cd build/lib/wicd
+  for i in *.py; do
+    install -Dm 755 $i $pkgdir/usr/lib/wicd/$i
+  done
+  
+  rm -rf $pkgdir/usr/share/autostart
+
+  #deleting the GTK stuff
+  rm -rf $pkgdir/etc/xdg
+  rm -f $pkgdir/usr/bin/{wicd-client,wicd-gtk}
+  rm -rf $pkgdir/usr/share/{applications,icons,pixmaps}
+  rm -rf $pkgdir/usr/share/wicd/gtk  
+}
+
+package_wicd-gtk() {
+  pkgdesc="Wired and wireless network manager for Linux - GTK client"
+  depends=('wicd' 'pygtk')
+  optdepends=('gksu: needed to access some preferences in gtk interface'
+              'notification-daemon: needed if you want notifications'
+              'python-notify:	needed if you want notifications'
+              'hicolor-icon-theme')
+
+  cd $srcdir/$pkgbase-$pkgver
+  python2 setup.py install --optimize=1 --root=$pkgdir
+
+  install -Dm644 $srcdir/wicd.desktop $pkgdir/usr/share/applications/wicd.desktop
+
+  cd build/lib/wicd
+  for i in *.py; do
+    install -Dm 755 $i $pkgdir/usr/lib/wicd/$i
+  done
+  
+  #deleting the core dirs which exists in wicd
+  rm -rf $pkgdir/etc/{wicd,dbus-1,rc.d}
+  rm -rf $pkgdir/usr/{lib,sbin}
+  rm -rf $pkgdir/usr/share/{man,doc,locale,wicd/curses,wicd/daemon,wicd/backends,wicd/scripts,wicd/cli}
+  rm -rf $pkgdir/var
+  rm -f $pkgdir/usr/bin/{wicd-curses,wicd-cli}
+
+  rm -rf $pkgdir/usr/share/autostart
+}
