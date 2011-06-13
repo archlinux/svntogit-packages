@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=5.8p2
-pkgrel=6
+pkgrel=7
 pkgdesc='Free version of the SSH connectivity tools'
 arch=('i686' 'x86_64')
 license=('custom:BSD')
@@ -13,10 +13,12 @@ url='http://www.openssh.org/portable.html'
 backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
 depends=('tcp_wrappers' 'krb5' 'openssl' 'libedit')
 source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"
+        'authfile.c.patch'
         'sshd.confd'
         'sshd.pam'
         'sshd')
 sha1sums=('64798328d310e4f06c9f01228107520adbc8b3e5'
+          '3669cb5ca6149f69015df5ce8e60b82c540eb0a4'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
           '660092c57bde28bed82078f74011f95fc51c2293'
           '6b7f8ebf0c1cc37137a7d9a53447ac8a0ee6a2b5')
@@ -24,11 +26,24 @@ sha1sums=('64798328d310e4f06c9f01228107520adbc8b3e5'
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 
-	./configure --prefix=/usr --libexecdir=/usr/lib/ssh \
-		--sysconfdir=/etc/ssh --with-tcp-wrappers --with-privsep-user=nobody \
-		--with-md5-passwords --with-pam --with-mantype=man --mandir=/usr/share/man \
-		--with-xauth=/usr/bin/xauth --with-kerberos5=/usr --with-ssl-engine \
-		--with-libedit=/usr/lib --disable-strip # stripping is done by makepkg
+	patch -p1 -i ../authfile.c.patch # fix FS#24693 using http://anoncvs.mindrot.org/index.cgi/openssh/authfile.c?revision=1.95
+
+	./configure \
+		--prefix=/usr \
+		--libexecdir=/usr/lib/ssh \
+		--sysconfdir=/etc/ssh \
+		--with-tcp-wrappers \
+		--with-privsep-user=nobody \
+		--with-md5-passwords \
+		--with-pam \
+		--with-mantype=man \
+		--mandir=/usr/share/man \
+		--with-xauth=/usr/bin/xauth \
+		--with-kerberos5=/usr \
+		--with-ssl-engine \
+		--with-libedit=/usr/lib \
+		--disable-strip # stripping is done by makepkg
+
 	make
 }
 
@@ -52,5 +67,5 @@ package() {
 	# PAM is a common, standard feature to have
 	sed -i	-e '/^#ChallengeResponseAuthentication yes$/c ChallengeResponseAuthentication no' \
 		-e '/^#UsePAM no$/c UsePAM yes' \
-		"$pkgdir"/etc/ssh/sshd_config
+		"${pkgdir}"/etc/ssh/sshd_config
 }
