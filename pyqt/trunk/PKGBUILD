@@ -6,7 +6,7 @@
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
 pkgver=4.8.4
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
