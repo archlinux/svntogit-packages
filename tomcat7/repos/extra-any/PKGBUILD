@@ -1,0 +1,79 @@
+# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
+pkgname=tomcat7
+pkgver=7.0.16
+pkgrel=1
+pkgdesc="Servlet-3.0/JSP-2.2 Container"
+arch=('any')
+url='http://tomcat.apache.org/'
+license=('APACHE')
+depends=('java-runtime>=6' 'java-jsvc' 'eclipse-ecj')
+makedepends=('java-environment>=6' 'apache-ant>=1.8' 'java-commons-daemon')
+optdepends=('tomcat-native: to allow optimal performance in production environments')
+backup=(etc/tomcat7/catalina.policy
+        etc/tomcat7/catalina.properties
+        etc/tomcat7/context.xml
+        etc/tomcat7/logging.properties
+        etc/tomcat7/server.xml
+        etc/tomcat7/tomcat-users.xml
+        etc/tomcat7/web.xml)
+install=tomcat7.install
+source=(http://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/src/apache-tomcat-${pkgver}-src.tar.gz
+        tomcat7.conf.d
+        tomcat7
+        tomcat7.install)
+
+noextract=(dbcp-${pkgver}.jar)
+md5sums=('71740312baa57ebe4d9ffef2b5d7b10d'
+         '13eb5570b4d7dcbbe8b8372575c010c9'
+         '70eabcf5bbfa0978e738d95c64abb7a7'
+         '1be39071bd27781c352b2d73b765e29d')
+
+build() {
+  cd "${srcdir}/apache-tomcat-${pkgver}-src"
+
+  . /etc/profile.d/apache-ant.sh
+  ant \
+    -Dbase.path=${srcdir}/DOWN_LIBS \
+    -Dcommons-daemon.jar=/usr/share/java/commons-daemon.jar \
+    -Djdt.jar=/usr/share/java/eclipse-ecj.jar
+}
+
+package() {
+  cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build"
+
+  # Tomcat general files
+  install -dm755 ${pkgdir}/usr/share/{,java/}${pkgname}
+  # commons-daemon and tomcat-natives are packaged on their own
+  rm bin/{*.bat,commons-daemon*,tomcat-native.tar.gz}
+  cp -r bin ${pkgdir}/usr/share/${pkgname}
+
+  # eclipse-ecj is packaged on its own
+  rm lib/eclipse-ecj.jar
+  install lib/* ${pkgdir}/usr/share/java/${pkgname}
+  ln -s /usr/share/java/${pkgname} ${pkgdir}/usr/share/${pkgname}/lib
+
+  # 66=tomcat / 19=log
+  install -dm775 -o 66 -g 19 ${pkgdir}/var/log/${pkgname}
+  ln -s /var/log/${pkgname} ${pkgdir}/usr/share/${pkgname}/logs
+  touch ${pkgdir}/var/log/${pkgname}/catalina.{out,err}
+  chgrp 19 ${pkgdir}/var/log/${pkgname}/catalina.{out,err}
+
+  install -dm770 ${pkgdir}/etc/${pkgname}
+  install -m660 conf/* ${pkgdir}/etc/${pkgname}
+  ln -s /etc/${pkgname} ${pkgdir}/usr/share/${pkgname}/conf
+
+  install -dm775 ${pkgdir}/var/lib/${pkgname}
+  cp -r webapps ${pkgdir}/var/lib/${pkgname}
+  chown -R 66:66 ${pkgdir}/var/lib/${pkgname}
+  ln -s /var/lib/${pkgname}/webapps ${pkgdir}/usr/share/${pkgname}/webapps
+
+  install -dm1777 ${pkgdir}/var/tmp
+  install -dm755 -o 66 -g 66 ${pkgdir}/var/tmp/${pkgname}/{temp,work}
+  ln -s /var/tmp/${pkgname}/temp ${pkgdir}/usr/share/${pkgname}/temp
+  ln -s /var/tmp/${pkgname}/work ${pkgdir}/usr/share/${pkgname}/work
+
+  # Arch scripts
+  install -Dm644 ${srcdir}/tomcat7.conf.d ${pkgdir}/etc/conf.d/${pkgname}
+  install -Dm755 ${srcdir}/tomcat7 ${pkgdir}/etc/rc.d/${pkgname}
+}
+
