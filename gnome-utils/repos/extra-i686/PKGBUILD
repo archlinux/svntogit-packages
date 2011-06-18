@@ -1,0 +1,41 @@
+#  $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-utils
+pkgver=3.0.1
+pkgrel=2
+pkgdesc="Common GNOME utilities for viewing disk usage, logs and fonts, taking screenshots, managing dictionaries and searching files"
+arch=(i686 x86_64)
+license=('GPL')
+depends=('libgtop' 'libcanberra' 'libsm' 'gconf' 'gsettings-desktop-schemas' 'hicolor-icon-theme' 'desktop-file-utils')
+makedepends=('gnome-doc-utils' 'pkgconfig' 'intltool')
+options=('!libtool' '!emptydirs')
+url="http://www.gnome.org"
+groups=('gnome-extra')
+install=gnome-utils.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('7debe9ca4ba8b8852f67c1a359c613dbfa10e10abfaa2235261cbc2520daf218')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+    ./configure --prefix=/usr --sysconfdir=/etc \
+        --libexecdir=/usr/lib/gnome-utils \
+        --localstatedir=/var --disable-static \
+        --disable-scrollkeeper \
+        --disable-schemas-compile \
+        --disable-schemas-install
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain gnome-utils-2.0 ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+
+  # remove it also from Xfce menu that ships its own thingy
+  sed -i -e "s/NotShowIn\=KDE\;/NotShowIn\=KDE\;XFCE\;/" ${pkgdir}/usr/share/applications/gnome-dictionary.desktop
+  sed -i -e "s/NotShowIn\=KDE\;/NotShowIn\=KDE\;XFCE\;/" ${pkgdir}/usr/share/applications/gnome-screenshot.desktop
+}
