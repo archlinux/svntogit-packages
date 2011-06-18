@@ -6,8 +6,8 @@
 
 pkgname=glibc
 pkgver=2.14
-pkgrel=2
-_glibcdate=20110605
+pkgrel=3
+_glibcdate=20110617
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -27,11 +27,13 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.13-futex.patch
         glibc-2.14-libdl-crash.patch
-        glibc-2.14-revert-4462fad3.patch
+        glibc-2.14-fix-resolver-crash-typo.patch
+        glibc-2.14-reexport-rpc-interface.patch
+        glibc-2.14-reinstall-nis-rpc-headers.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('a96742599fc8a99e52b9e344f39a1000'
+md5sums=('e441d745609d93c907b72548ba646dad'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
@@ -39,16 +41,18 @@ md5sums=('a96742599fc8a99e52b9e344f39a1000'
          'b042647ea7d6f22ad319e12e796bd13e'
          '7d0154b7e17ea218c9fa953599d24cc4'
          'cea62cc6b903d222c5f26e05a3c0e0e6'
-         '46e56492cccb1c9172ed3a235cf43c6c'
+         '73bfaafe25b93f357cf6a3b5eeb70e1b'
+         'c5de2a946215d647c8af5432ec4b0da0'
+         '55febbb72139ac7b65757df085024b83'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
+
 mksource() {
   git clone git://sourceware.org/git/glibc.git
   pushd glibc
-  git checkout -b glibc-2.14-arch origin/master
-  # git checkout -b glibc-2.14-arch origin/release/2.14/master
+  git checkout -b glibc-2.14-arch origin/release/2.14/master
   popd
   tar -cvJf glibc-${pkgver}_${_glibcdate}.tar.xz glibc/*
 }
@@ -81,9 +85,14 @@ build() {
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
   patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
 
-  # revert fix for http://sourceware.org/bugzilla/show_bug.cgi?id=12684
-  # as it causes crashes  (FS#24615)
-  patch -Np1 -i ${srcdir}/glibc-2.14-revert-4462fad3.patch
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=57912a71 (FS#24615)
+  patch -Np1 -i ${srcdir}/glibc-2.14-fix-resolver-crash-typo.patch
+
+  # re-export RPC interface until libtirpc is ready as a replacement
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873 (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.14-reexport-rpc-interface.patch
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3 (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -123,7 +132,7 @@ package() {
   cd ${srcdir}/glibc-build
   make install_root=${pkgdir} install
 
-  rm ${pkgdir}/etc/ld.so.{cache,conf}
+  rm -f ${pkgdir}/etc/ld.so.{cache,conf}
 
   install -dm755 ${pkgdir}/etc/rc.d
   install -dm755 ${pkgdir}/usr/sbin
