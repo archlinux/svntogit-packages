@@ -1,0 +1,75 @@
+# $Id$
+# Contributor: Jakub Schmidtke <sjakub@gmail.com>
+
+pkgname=firefox
+pkgver=5.0
+pkgrel=1
+pkgdesc="Standalone web browser from mozilla.org"
+arch=('i686' 'x86_64')
+license=('MPL' 'GPL' 'LGPL')
+depends=('gtk2' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss>=3.12.10' 'libxt'
+         'libxrender' 'hunspell' 'startup-notification' 'mime-types' 'dbus-glib'
+         'alsa-lib' 'libevent' 'sqlite3>=3.7.4' 'libnotify' 'desktop-file-utils'
+         'libvpx' 'lcms' 'nspr>=4.8.8' 'libevent' 'libpng' 'cairo')
+makedepends=('zip' 'pkg-config' 'diffutils' 'python2' 'wireless_tools'
+             'yasm' 'mesa' 'autoconf2.13' 'gconf' 'xorg-server-xvfb')
+url="http://www.mozilla.org/projects/firefox"
+install=firefox.install
+source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${pkgver}/source/firefox-${pkgver}.source.tar.bz2
+        mozconfig firefox.desktop mozilla-firefox-1.0-lang.patch)
+md5sums=('9f64a01e86a5d424e12a8e3305c5debe'
+         '5eb9abbd2591ee337981024008d93988'
+         'bdeb0380c7fae30dd0ead6d2d3bc5873'
+         'bd5db57c23c72a02a489592644f18995')
+
+build() {
+  cd "$srcdir/mozilla-release"
+
+  cp "$srcdir/mozconfig" .mozconfig
+  patch -Np1 -i "$srcdir/mozilla-firefox-1.0-lang.patch"
+
+  # Kill @PRE_RELEASE_SUFFIX@ from browser.xul because it
+  # gets set to \177 for an unknown reason
+  sed -i 's/@PRE_RELEASE_SUFFIX@//g' \
+    browser/base/content/browser.xul
+
+  ## Don't generate startup cache. Unbreaks make install
+  sed -i 's/^GENERATE_CACHE .*/GENERATE_CACHE = true/' \
+    toolkit/mozapps/installer/packager.mk
+
+  export LDFLAGS="-Wl,-rpath,/usr/lib/firefox-$pkgver -Wl,-O1,--sort-common,--hash-style=gnu,--as-needed"
+  export PYTHON="/usr/bin/python2"
+
+  # PGO
+  sed -i '/^NO_PROFILE_GUIDED_OPTIMIZE = 1$/d' \
+    memory/jemalloc/Makefile.in
+  echo 'LDFLAGS += -lX11 -lXrender' \
+    >> layout/build/Makefile.in
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS"
+  LD_PRELOAD="" /usr/bin/Xvfb -nolisten tcp -extension GLX :99 &
+  LD_PRELOAD="" DISPLAY=:99 make -j1 -f client.mk profiledbuild MOZ_MAKE_FLAGS="$MAKEFLAGS"
+  kill $! || true
+}
+
+package() {
+  cd "$srcdir/mozilla-release"
+  make -j1 -f client.mk DESTDIR="$pkgdir" install
+
+  for i in 16x16 22x22 24x24 32x32 48x48 256x256; do
+      install -Dm644 other-licenses/branding/firefox/default${i/x*/}.png \
+        "$pkgdir/usr/share/icons/hicolor/$i/apps/firefox.png"
+  done
+
+  install -Dm644 "$srcdir/firefox.desktop" \
+    "$pkgdir/usr/share/applications/firefox.desktop"
+
+  # Remove included dictionaries, add symlink to system myspell path
+  # Note: this will cause file conflicts when users have installed dictionaries in the old location
+  rm -rf "${pkgdir}/usr/lib/firefox-$pkgver/dictionaries"
+  ln -sf /usr/share/myspell/dicts \
+    "${pkgdir}/usr/lib/firefox-$pkgver/dictionaries"
+
+  # We don't want the development stuff
+  rm -r "$pkgdir"/usr/{include,lib/firefox-devel-$pkgver,share/idl}
+}
