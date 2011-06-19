@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+pkgname=seamonkey
+pkgver=2.1
+pkgrel=1
+pkgdesc="SeaMonkey internet suite"
+arch=('i686' 'x86_64')
+license=('MPL')
+depends=('gtk2' 'mozilla-common' 'hunspell' 'libxt' 'startup-notification' 'alsa-lib' 'dbus-glib' 'libnotify' 'desktop-file-utils')
+makedepends=('zip' 'pkg-config'  'python2' 'libidl2' 'yasm' 'wireless_tools' 'mesa')
+install=$pkgname.install
+url="http://www.mozilla.org/projects/seamonkey"
+options=(!buildflags)
+source=(http://releases.mozilla.org/pub/mozilla.org/${pkgname}/releases/${pkgver}/source/${pkgname}-${pkgver}.source.tar.bz2
+        mozconfig
+        seamonkey.desktop
+        seamonkey-appversion.patch
+        seamonkey-2.0-lang.patch)
+md5sums=('336d75d8891950a2aca253b7f64cada9'
+         '7100aebd5590f7a9681dd06383a29ab1'
+         '6119a2254716752c9d08e366f8d4c048'
+         '41afe51e9cc56c35bb877743b790f3f6'
+         '25b6fe16ac24cd5c852213e5c1adb272')
+
+build() {
+  cd "${srcdir}/comm-2.0"
+  patch -Np1 -i "${srcdir}/seamonkey-appversion.patch"
+  patch -Np1 -i "${srcdir}/seamonkey-2.0-lang.patch"
+
+  cp "${srcdir}/mozconfig" .mozconfig
+  export CXXFLAGS="-fpermissive"
+  export LDFLAGS="-Wl,-rpath,/usr/lib/seamonkey-2.1"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="${MAKEFLAGS}"
+}
+
+package() {
+  cd "${srcdir}/comm-2.0"
+
+  make -j1 -f client.mk DESTDIR="${pkgdir}" install
+
+  #Remove included dictionaries, add symlink to system myspell path.
+  #Note: this will cause file conflicts when users have installed dictionaries in the old location
+  rm -rf "${pkgdir}/usr/lib/seamonkey-2.1/dictionaries"
+  ln -sf /usr/share/myspell/dicts "${pkgdir}/usr/lib/seamonkey-2.1/dictionaries"
+
+  install -m755 -d "${pkgdir}/usr/share/applications"
+  install -m755 -d "${pkgdir}/usr/share/pixmaps"
+  install -m644 suite/branding/nightly/icons/gtk/seamonkey.png \
+                "${pkgdir}/usr/share/pixmaps/"
+  install -m644 "${srcdir}/seamonkey.desktop" "${pkgdir}/usr/share/applications/"
+
+  rm -f "${pkgdir}/usr/lib/pkgconfig/"seamonkey-ns{s,pr}.pc
+}
