@@ -1,0 +1,2883 @@
+Index: RELEASE
+===================================================================
+--- RELEASE	(.../tags/1.4.5)	(revision 4208)
++++ RELEASE	(.../branches/1.4-stable)	(revision 4208)
+@@ -1 +1 @@
+-1.4.5
++svn-trunk
+Index: plugins/node.d.freebsd/coretemp.in
+===================================================================
+--- plugins/node.d.freebsd/coretemp.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.freebsd/coretemp.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -75,7 +75,7 @@
+ 	reqcpus
+ 	for cpu in $cpus ; do
+ 		echo -n "CPU$cpu.value "
+-		sysctl -n dev.cpu.$cpu.temperature
++		sysctl -n dev.cpu.$cpu.temperature | tr -d C
+ 	done
+ }
+ 
+Index: plugins/node.d.freebsd/if_.in
+===================================================================
+--- plugins/node.d.freebsd/if_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.freebsd/if_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -49,13 +49,15 @@
+ 	echo 'graph_category network'
+ 	echo "graph_info This graph shows the traffic of the $INTERFACE network interface. Please note that the traffic is shown in bits per second, not bytes. IMPORTANT: Since the data source for this plugin use 32bit counters, this plugin is really unreliable and unsuitable for most 100Mb (or faster) interfaces, where bursts are expected to exceed 50Mbps. This means that this plugin is unsuitable for most production environments."
+ 	echo 'rbytes.label received'
+-        echo 'rbytes.type COUNTER'
++        echo 'rbytes.type DERIVE'
+         echo 'rbytes.graph no'
+         echo 'rbytes.cdef rbytes,8,*'
++	echo 'rbytes.min 0'
+         echo 'obytes.label bps'
+-	echo 'obytes.type COUNTER'
++	echo 'obytes.type DERIVE'
+ 	echo 'obytes.negative rbytes'
+ 	echo 'obytes.cdef obytes,8,*'
++	echo 'obytes.min 0'
+ 	echo "obytes.info Traffic sent (+) and received (-) on the $INTERFACE network interface."
+ 	exit 0
+ fi
+Index: plugins/node.d.linux/nfs_client.in
+===================================================================
+--- plugins/node.d.linux/nfs_client.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/nfs_client.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -31,7 +31,7 @@
+ proc="getattr setattr lookup access readlink read write create mkdir symlink mknod remove rmdir rename link readdir readdirplus fsstat fsinfo pathconf commit"
+ 
+ if [ "$1" = "autoconf" ]; then
+-	if [ -x "$NFS" ]; then
++	if [ -f "$NFS" ]; then
+ 		echo yes
+ 		exit 0
+ 	else
+Index: plugins/node.d.linux/if_.in
+===================================================================
+--- plugins/node.d.linux/if_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/if_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -133,6 +133,13 @@
+ 	    ;;
+     esac
+ 
++    # sysfs can report the speed if the driver supports it
++    SYSFS="$(cat /sys/class/net/$INTERFACE/speed 2>/dev/null)"
++    # If it can't, it fails on I/O, so we check cat's return value
++    if [ $? -eq 0 -a "$SPEED" = "U" -a -n "$SYSFS" ]; then
++        SPEED="$SYSFS"
++    fi
++
+     case $SPEED in
+ 	U) echo "up.info Traffic of the $INTERFACE interface. Unable to determine interface speed.  Please install ethtool, wireless-tools (or mii-tool), whatever is appropriate for the interface."
+ 	   return;;
+@@ -179,13 +186,15 @@
+ 	echo 'graph_category network'
+ 	echo "graph_info This graph shows the traffic of the $INTERFACE network interface. Please note that the traffic is shown in bits per second, not bytes. IMPORTANT: On 32 bit systems the data source for this plugin uses 32bit counters, which makes the plugin unreliable and unsuitable for most 100Mb (or faster) interfaces, where traffic is expected to exceed 50Mbps over a 5 minute period.  This means that this plugin is unsuitable for most 32 bit production environments. To avoid this problem, use the ip_ plugin instead.  There should be no problems on 64 bit systems running 64 bit kernels."
+ 	echo 'down.label received'
+-        echo 'down.type COUNTER'
++        echo 'down.type DERIVE'
+         echo 'down.graph no'
+         echo 'down.cdef down,8,*'
++	echo 'down.min 0'
+         echo 'up.label bps'
+-	echo 'up.type COUNTER'
++	echo 'up.type DERIVE'
+ 	echo 'up.negative down'
+ 	echo 'up.cdef up,8,*'
++	echo 'up.min 0'
+ 	print_warning down
+ 	print_warning up
+ 	print_critical down
+Index: plugins/node.d.linux/ip_.in
+===================================================================
+--- plugins/node.d.linux/ip_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/ip_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -1,4 +1,4 @@
+-#!@@GOODSH@@
++#!@@BASH@@
+ # -*- sh -*-
+ 
+ : << =cut
+Index: plugins/node.d.linux/memory.in
+===================================================================
+--- plugins/node.d.linux/memory.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/memory.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -9,6 +9,20 @@
+ 
+ No configuration
+ 
++=head2 Warning and Critical Values
++
++Warning and critical values can be passed in environment variables as byte
++values or they can be percentages using a % sign and the value will be
++calculated dynamically by the plugin. Thus, to warn on swap at 50% the
++configuration is:
++
++	[memory]
++	env.swap_warning 50%
++
++Note that swap is calculated against the total swap amount (SwapTotal), and all
++other fields are calculated against the total amount of memory (MemTotal).
++
++
+ =head1 AUTHORS
+ 
+ Original Author: Jimmy Olsen
+@@ -173,7 +187,15 @@
+ 	print "inact_clean.info Memory not currently used.\n";
+     }
+     for my $field qw(apps buffers swap cached free slab swap_cache page_tables vmalloc_used committed mapped active active_anon active_cache inactive inact_dirty inact_laundry inact_clean) {
+-        print_thresholds($field);
++    	my ($warning, $critical) = get_thresholds($field);
++	my $total = $mems{MemTotal};
++	$total = $mems{SwapTotal} if($field eq "swap");
++
++	$warning = adjust_threshold($warning, $total);
++	$critical = adjust_threshold($critical, $total);
++
++	print "$field.warning $warning\n" if defined $warning;
++	print "$field.critical $critical\n" if defined $critical;
+     }
+     exit 0;
+ }
+Index: plugins/node.d.linux/selinux_avcstat.in
+===================================================================
+--- plugins/node.d.linux/selinux_avcstat.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/selinux_avcstat.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -31,7 +31,7 @@
+         echo 'graph_args -l 0 --base 1000'
+         echo 'graph_vlabel AVC operations'
+         echo 'graph_category system'
+-        echo 'graph_order lookups hits misses allocations reclaims frees lookups'
++        echo 'graph_order lookups hits misses allocations reclaims frees'
+ 
+         echo 'lookups.label lookups'
+         echo 'lookups.type DERIVE'
+@@ -85,21 +85,22 @@
+ fi
+ 
+ if [ -r $AVCSTATS ]; then
+-    awk ' NR > 1 {
+-        lookups += $1;
+-        hits += $2;
+-        misses += $3;
+-        allocations += $4;
+-        reclaims += $5;
+-        frees += $6;
+-    } END {
+-        print "lookups.value " lookups;
+-        print "hits.value " hits;
+-        print "misses.value " misses;
+-        print "allocations.value " allocations;
+-        print "reclaims.value " reclaims;
+-        print "frees.value " frees;
+-    } ' < $AVCSTATS
++    { read
++      while read lookups hits misses allocations reclaims frees; do
++        LOOKUPS=$(($LOOKUPS + $lookups))
++        HITS=$(($HITS + $hits))
++        MISSES=$(($MISSES + $misses))
++        ALLOCATIONS=$(($ALLOCATIONS + $allocations))
++        RECLAIMS=$(($RECLAIMS + $reclaims))
++        FREES=$(($FREES + $frees))
++      done
++    } < $AVCSTATS
++    echo "lookups.value $LOOKUPS"
++    echo "hits.value $HITS"
++    echo "misses.value $MISSES"
++    echo "allocations.value $ALLOCATIONS"
++    echo "reclaims.value $RECLAIMS"
++    echo "frees.value $FREES"
+ else
+     echo "lookups.value U"
+     echo "hits.value U"
+Index: plugins/node.d.linux/fw_conntrack.in
+===================================================================
+--- plugins/node.d.linux/fw_conntrack.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/fw_conntrack.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -107,9 +107,9 @@
+ total.graph no
+ EOF
+         if [ -f /proc/sys/net/ipv4/ip_conntrack_max ] ; then
+-            read MAX </proc/sys/net/ipv4/ip_conntrack_max
++            MAX=$(cat /proc/sys/net/ipv4/ip_conntrack_max)
+         elif [ -f /proc/sys/net/ipv4/netfilter/ip_conntrack_max ]; then
+-             read MAX < /proc/sys/net/ipv4/netfilter/ip_conntrack_max
++            MAX=$(cat /proc/sys/net/ipv4/netfilter/ip_conntrack_max)
+         fi
+         if [ -n "$MAX" ]; then
+ 	    echo total.warning `expr $MAX \* 8 / 10`
+Index: plugins/node.d.linux/bonding_err_.in
+===================================================================
+--- plugins/node.d.linux/bonding_err_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/bonding_err_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -47,6 +47,9 @@
+ 
+ EOF
+ 
++# Source plugin library functions
++. $MUNIN_LIBDIR/plugins/plugin.sh
++
+ PROCDIR="/proc/net/bonding"
+ MYSELF=$(basename $0)
+ FILENAME="bonding_err_"
+@@ -75,10 +78,11 @@
+     echo "graph_category Network"
+     echo "graph_args --base 1000 -l 0"
+     grep "^Slave Interface:" ${PROCDIR}/${BONDINGIF} | while read a b if; do
+-      echo "if_${if}.label ${if}"
+-      echo "if_${if}.type DERIVE"
+-      echo "if_${if}.min 0"
+-      echo "if_${if}.warning 0"
++      fieldname=$(clean_fieldname "$if")
++      echo "if_${fieldname}.label ${if}"
++      echo "if_${fieldname}.type DERIVE"
++      echo "if_${fieldname}.min 0"
++      echo "if_${fieldname}.warning 0"
+     done
+   fi
+   exit 0
+@@ -91,8 +95,10 @@
+ 
+ BONDINGIF=$(echo $MYSELF | sed "s/^$FILENAME//")
+ grep "^Slave Interface:" ${PROCDIR}/${BONDINGIF} | while read a b if; do
+-  # echo "if_${if}.label ${if}"
+-  echo -n "if_${if}.value "
++  fieldname=$(clean_fieldname "$if")
++  echo -n "if_${fieldname}.value "
+   grep -A 2 "^Slave Interface: ${if}" ${PROCDIR}/${BONDINGIF} | grep "Link Failure Count:" | cut -d " " -f 4
+ done
+ 
++
++# vim: syntax=sh ts=2 et
+Index: plugins/node.d.linux/cpu.in
+===================================================================
+--- plugins/node.d.linux/cpu.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/cpu.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -158,8 +158,7 @@
+ 	echo 'idle.info Idle CPU time'
+ 
+ 	for field in system user nice idle; do
+-		print_warning "$field"
+-		print_critical "$field"
++		print_adjusted_thresholds "$field" "$graphlimit"
+ 	done
+ 
+ 	if [ "$scaleto100" = "yes" ]; then
+@@ -191,8 +190,7 @@
+ 			echo "softirq.cdef softirq,$NCPU,/"
+ 		fi
+ 		for field in iowait irq softirq; do
+-			print_warning "$field"
+-			print_critical "$field"
++			print_adjusted_thresholds "$field" "$graphlimit"
+ 		done
+ 	fi
+ 
+@@ -207,8 +205,7 @@
+                         echo "steal.cdef steal,$NCPU,/"
+ 		fi
+ 		for field in steal; do
+-			print_warning "$field"
+-			print_critical "$field"
++			print_adjusted_thresholds "$field" "$graphlimit"
+ 		done
+ 	fi
+ 	exit 0
+Index: plugins/node.d.linux/df.in
+===================================================================
+--- plugins/node.d.linux/df.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/df.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -12,7 +12,7 @@
+ =head1 CONFIGURATION
+ 
+ The plugin excludes per default the following special, read-only or
+-dynamically allocating file systems from graphing: 
++dynamically allocating file systems from graphing:
+ 
+   none unknown iso9660 squashfs udf romfs ramfs
+ 
+@@ -35,8 +35,26 @@
+     env._dev_sda2_warning 98
+     env._dev_sda2_critical 99
+ 
+-=head1 USAGE 
++Devices can be explicitly included or excluded based on their mountpoint or
++device name using the include_re and exclude_re environment variables.  These
++environment variables are parsed as whitespace separated regular expressions.
++For example, if you wish to ignore the filesystem on /dev/sda2 and all
++filesystems mounted under /var except /var/tmp, these rules would achieve this:
+ 
++    env.include_re ^/var/tmp$
++    env.exclude_re /dev/sda2 ^/var/
++
++Please note that these expressions are tried against both mountpoints and
++device names, therefore broad matches could potentially filter out desired
++devices.  Anchoring is also useful for avoiding false positives (as seen in the
++example), but not strictly necessary.  Testing with munin-run is always a good
++idea.
++
++Also note that a mountpoint that is excluded by filesystem type but included by
++RE will not be included.
++
++=head1 USAGE
++
+ Link this plugin to @@CONFDIR@@/plugins/ and restart the munin-node.
+ 
+ =head1 MAGIC MARKERS
+@@ -69,74 +87,83 @@
+ # For these devices use the mount point, the device is useless
+ my %usemntpt = ( tmpfs => 1, none => 1, udev => 1 );
+ 
+-my $exclude=$ENV{'exclude'} || 'none unknown iso9660 squashfs udf romfs ramfs debugfs simfs';
+-my $dfopts = "-P -l ".join(' -x ',('',split('\s+',$exclude)));
++my $exclude = $ENV{'exclude'} || 'none unknown iso9660 squashfs udf romfs ramfs debugfs simfs';
++my $dfopts  = "-P -l ".join(' -x ',('',split('\s+',$exclude)));
+ 
+-sub print_values() {
++my $mode = ($ARGV[0] or "print");
+ 
+-    # Read from df
+-    open (DF,"df $dfopts |") or die "Could not open pipe from df, $!";
+-    <DF>; # Skip the header
+-    while (<DF>) {
+-	chomp;
+-	next if /\/\//; # Ignore lines containing //? Samba?
+-	
+-	# Parse the output
+-	my ($name,undef,$used,$avail,undef,$mountpt,undef)=split(/\s+/,$_,7);
++# Compile REs from env
++my @include_re;
++if (defined $ENV{include_re}) {
++    foreach my $re (split m{\s+}, $ENV{include_re}) {
++        push @include_re, qr/$re/;
++    }
++}
++my @exclude_re;
++if (defined $ENV{exclude_re}) {
++    foreach my $re (split m{\s+}, $ENV{exclude_re}) {
++        push @exclude_re, qr/$re/;
++    }
++}
+ 
+-	$name = $mountpt if defined($usemntpt{$name}) && $usemntpt{$name};
++sub skip {
++    my $name = shift;
++    my $mountpt = shift;
+ 
+-	$name=clean_fieldname($name);
++    foreach my $re (@include_re) {
++        return 0 if ($name =~ $re or $mountpt =~ $re);
++    }
+ 
+-	my $ps = 0;
++    foreach my $re (@exclude_re) {
++        return 1 if ($name =~ $re or $mountpt =~ $re);
++    }
+ 
+-	$ps = ( $used / ($used+$avail) ) * 100 if $used;
+-
+-	print $name, ".value ", $ps, "\n";
+-    }
+-    close DF;
+-    die "Error executing df. Exit code $?\n" if $?;
++    return 0;
+ }
+ 
+-if ( defined($ARGV[0]) and $ARGV[0] eq "autoconf" ) {
+-    if (`@@PERL@@ $0` eq "" ) {
+-	print "no\n";
+-	exit 0;
++if ($mode eq 'autoconf' ) {
++    if (`@@PERL@@ $0` eq '' ) {
++        print "no (no devices to monitor)\n";
+     } else {
+-	print "yes\n";
+-	exit 0;
++        print "yes\n";
+     }
++    exit 0;
+ }
+ 
+-if ( defined($ARGV[0]) and $ARGV[0] eq "config" ) {
++if ($mode eq 'config' ) {
+     # The headers
+     print "graph_title Disk usage in percent\n";
+     print "graph_args --upper-limit 100 -l 0\n";
+     print "graph_vlabel %\n";
+     print "graph_scale no\n";
+     print "graph_category disk\n";
+-    
+-    # Read from df
+-    open (DF,"df $dfopts |") or die "Unable to open pipe from df: $!";
+-    <DF>; # Skip the header
+-    while (<DF>) {
+-	next if /\/\//;
+-	
+-	# Parse the output
+-	my ($name,undef,undef,undef,$ps,$mountpt,undef)=split(/\s+/,$_,7);
++}
+ 
+-	$name = $mountpt if defined($usemntpt{$name}) && $usemntpt{$name};
++# Read from df
++open (DF,"df $dfopts 2>/dev/null |") or die "Unable to open pipe from df: $!";
++<DF>; # Skip the header
++while (<DF>) {
++    next if m{//};
+ 
+-	$name=clean_fieldname($name);
++    # Parse the output
++    my ($name, undef, $used, $avail, undef, $mountpt, undef) = split(/\s+/, $_, 7);
+ 
+-	# Create and print labels
+-	print $name, ".label ", $mountpt, "\n";
++    next if skip($name, $mountpt);
+ 
+-	print_thresholds($name,undef,undef,92,98);
++    # Calculate percentage used
++    my $ps = 0;
++    $ps = ($used / ($used+$avail)) * 100 if $used;
++
++    $name = $mountpt if defined($usemntpt{$name}) && $usemntpt{$name};
++    $name = clean_fieldname($name);
++
++    if($mode eq 'config') {
++        print $name, ".label ", $mountpt, "\n";
++        print_thresholds($name,undef,undef,92,98);
++    } else {
++        print $name, ".value ", $ps, "\n";
+     }
+-    close DF;
+-    die "Error executing df. Exit code $?\n" if $?;
+-    exit 0;
+ }
++close DF;
+ 
+-print_values();
++# vim: ft=perl : sw=4 : ts=4 : et
+Index: plugins/node.d.linux/df_inode.in
+===================================================================
+--- plugins/node.d.linux/df_inode.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.linux/df_inode.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -1,23 +1,76 @@
+-#!@@PERL@@
+-# -*- perl -*-
++#!@@PERL@@ -w
++# -*-  perl -*-
+ 
+ =head1 NAME
+ 
+-df_inode - Plugin to monitor inode-usage. 
++df_inode - Munin plugin to monitor inode usage
+ 
++=head1 APPLICABLE SYSTEMS
++
++Every Linux system with df installed.
++
+ =head1 CONFIGURATION
+ 
+-This configuration snipplet is an example with the default configuration:
++The plugin excludes per default the following special, read-only or
++dynamically allocating file systems from graphing:
+ 
++  none unknown iso9660 squashfs udf romfs ramfs
++
++To change this set the environment variable "exclude" with a list of
++space separated fs types.  The environment variables "warning" and
++"critical" sets the percentage from which Munin starts to warn about
++the disk usage.
++
++This configuration snipplet is an example with the defaults:
++
+   [df_inode]
+     env.exclude none unknown iso9660 squashfs udf romfs ramfs debugfs
+     env.warning 92
+     env.critical 98
+ 
+-=head1 NOTES
++Put it in a file in @@CONFDIR@@/plugin-conf.d/ and restart the munin-node.
+ 
+-Rewrite based on original shell-based version
++You may specify filesystem specific warning and critical levels:
+ 
++    env._dev_sda2_warning 98
++    env._dev_sda2_critical 99
++
++Devices can be explicitly included or excluded based on their mountpoint or
++device name using the include_re and exclude_re environment variables.  These
++environment variables are parsed as whitespace separated regular expressions.
++For example, if you wish to ignore the filesystem on /dev/sda2 and all
++filesystems mounted under /var except /var/tmp, these rules would achieve this:
++
++    env.include_re ^/var/tmp$
++    env.exclude_re /dev/sda2 ^/var/
++
++Please note that these expressions are tried against both mountpoints and
++device names, therefore broad matches could potentially filter out desired
++devices.  Anchoring is also useful for avoiding false positives (as seen in the
++example), but not strictly necessary.  Testing with munin-run is always a good
++idea.
++
++Also note that a mountpoint that is excluded by filesystem type but included by
++RE will not be included.
++
++=head1 USAGE
++
++Link this plugin to @@CONFDIR@@/plugins/ and restart the munin-node.
++
++=head1 MAGIC MARKERS
++
++  #%# family=auto
++  #%# capabilities=autoconf
++
++=head1 BUGS
++
++Uses device names instead of mount points to identify mounted
++filesystems.
++
++=head1 VERSION
++
++  $Id$
++
+ =head1 AUTHOR
+ 
+ Ingvar Hagelund
+@@ -26,11 +79,6 @@
+ 
+ GPLv2
+ 
+-=head1 MAGIC MARKERS
+-
+- #%# family=auto
+- #%# capabilities=autoconf
+-
+ =cut
+ 
+ use strict;
+@@ -39,75 +87,83 @@
+ # For these devices use the mount point, the device is useless
+ my %usemntpt = ( tmpfs => 1, none => 1, udev => 1 );
+ 
+-my $exclude=$ENV{'exclude'} || 'none unknown iso9660 squashfs udf romfs ramfs vfat debugfs simfs';
+-my $dfopts = "-P -l -i ".join(' -x ',('',split('\s+',$exclude)));
++my $exclude = $ENV{'exclude'} || 'none unknown iso9660 squashfs udf romfs ramfs vfat debugfs simfs';
++my $dfopts  = "-P -l -i ".join(' -x ',('',split('\s+',$exclude)));
+ 
+-sub print_values() {
++my $mode = ($ARGV[0] or "print");
+ 
+-    # Read from df
+-    open (DF,"df $dfopts |") or die "Could not open pipe from df: $!";
+-    <DF>; # Skip the header
+-    while (<DF>) {
+-	next if /\/\//;
+-	
+-	# Parse the output
+-	if ( /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\S+)/ ) {
+-	    my $ps=$5;
++# Compile REs from env
++my @include_re;
++if (defined $ENV{include_re}) {
++    foreach my $re (split m{\s+}, $ENV{include_re}) {
++        push @include_re, qr/$re/;
++    }
++}
++my @exclude_re;
++if (defined $ENV{exclude_re}) {
++    foreach my $re (split m{\s+}, $ENV{exclude_re}) {
++        push @exclude_re, qr/$re/;
++    }
++}
+ 
+-	    my $name = $1;
+-	    $name = $6 if defined($usemntpt{$name}) && $usemntpt{$name};
+-	    $name=clean_fieldname($name);
++sub skip {
++    my $name = shift;
++    my $mountpt = shift;
+ 
+-	    $ps =~ s/\%//;
++    foreach my $re (@include_re) {
++        return 0 if ($name =~ $re or $mountpt =~ $re);
++    }
+ 
+-	    print $name .  ".value  " . $ps . "\n";
+-	}
++    foreach my $re (@exclude_re) {
++        return 1 if ($name =~ $re or $mountpt =~ $re);
+     }
+-    close DF;
+-    die "Error executing df. Exit code $?\n" if $?;
++
++    return 0;
+ }
+ 
+-if ( $ARGV[0] eq "autoconf" ) {
+-  if (`@@PERL@@ $0` eq "" ) {
+-    print "no\n";
++if ($mode eq 'autoconf' ) {
++    if (`@@PERL@@ $0` eq '' ) {
++        print "no (no devices to monitor)\n";
++    } else {
++        print "yes\n";
++    }
+     exit 0;
+-  } else {
+-    print "yes\n";
+-    exit 0;
+-  }
+ }
+ 
+-if ( $ARGV[0] eq "config" ) {
+-
++if ($mode eq 'config' ) {
+     # The headers
+     print "graph_title Inode usage in percent\n";
+     print "graph_args --upper-limit 100 -l 0\n";
+     print "graph_vlabel %\n";
+     print "graph_scale no\n";
+     print "graph_category disk\n";
++}
+ 
+-    # Read from df
+-    open (DF,"df $dfopts |") or die "Unable to open pipe from df: $!";
+-    <DF>; # Skip the header
+-    while (<DF>) {
+-	next if /\/\//;
+-	
+-	# Parse the output
+-	if ( /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/ ) {
+-	    my $dir=$6;
++# Read from df
++open (DF,"df $dfopts 2>/dev/null |") or die "Unable to open pipe from df: $!";
++<DF>; # Skip the header
++while (<DF>) {
++    next if m{//};
+ 
+-	    my $name = $1;
+-	    $name = $dir if defined($usemntpt{$name}) && $usemntpt{$name};
+-	    $name=clean_fieldname($name);
++    # Parse the output
++    my ($name, undef, $used, $avail, undef, $mountpt, undef) = split(/\s+/, $_, 7);
+ 
+-	    # Create and print labels
+-	    print "$name.label $dir\n";
+-	    print_thresholds($name,undef,undef,92,98);
+-	}
++    next if skip($name, $mountpt);
++
++    # Calculate percentage used
++    my $ps = 0;
++    $ps = ($used / ($used+$avail)) * 100 if $used;
++
++    $name = $mountpt if defined($usemntpt{$name}) && $usemntpt{$name};
++    $name = clean_fieldname($name);
++
++    if($mode eq 'config') {
++        print $name, ".label ", $mountpt, "\n";
++        print_thresholds($name,undef,undef,92,98);
++    } else {
++        print $name, ".value ", $ps, "\n";
+     }
+-    close DF;
+-    die "Error executing df. Exit code $?\n" if $?;
+-    exit 0;
+ }
++close DF;
+ 
+-print_values();
++# vim: ft=perl : sw=4 : ts=4 : et
+Index: plugins/node.d.netbsd/if_.in
+===================================================================
+--- plugins/node.d.netbsd/if_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.netbsd/if_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -61,14 +61,16 @@
+ 	echo "graph_info This graph shows the traffic of the $INTERFACE network interface. Please note that the traffic is shown in bits per second, not bytes."
+ 
+ 	echo 'rbytes.label received'
+-        echo 'rbytes.type COUNTER'
++        echo 'rbytes.type DERIVE'
+         echo 'rbytes.graph no'
+         echo 'rbytes.cdef rbytes,8,*'
++	echo 'rbytes.min 0'
+ 
+         echo 'obytes.label bps'
+-	echo 'obytes.type COUNTER'
++	echo 'obytes.type DERIVE'
+ 	echo 'obytes.negative rbytes'
+ 	echo 'obytes.cdef obytes,8,*'
++	echo 'obytes.min 0'
+ 	echo "obytes.info Traffic sent (+) and received (-) on the $INTERFACE network interface."
+ 	exit 0
+ fi;
+Index: plugins/lib/Munin/Plugin.pm
+===================================================================
+--- plugins/lib/Munin/Plugin.pm	(.../tags/1.4.5)	(revision 4208)
++++ plugins/lib/Munin/Plugin.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -60,7 +60,7 @@
+ our @EXPORT = qw(
+         clean_fieldname
+         set_state_name save_state restore_state
+-        get_thresholds print_thresholds
++        get_thresholds print_thresholds adjust_threshold
+         tail_open tail_close
+         scaleNumber
+         need_multigraph
+@@ -370,7 +370,23 @@
+     print "$field.critical $critical\n" if defined($critical);
+ }
+ 
++=head3 adjust_threshold($threshold, $base)
+ 
++If $threshold contains % signs, return a new threshold with adjusted values for
++these percentages against $base.
++
++=cut
++
++sub adjust_threshold {
++    my ($threshold, $base) = @_;
++
++    return undef if(!defined $threshold or !defined $base);
++
++    $threshold =~ s!(\d+\.?\d*)%!$1*$base/100!eg;
++
++    return $threshold;
++}
++
+ =head3 ($file_handle,$rotated) = tail_open($file_name, $position)
+ 
+ Open the file and seek to the given position.  If this position
+Index: plugins/lib/Munin/Plugin/Pgsql.pm
+===================================================================
+--- plugins/lib/Munin/Plugin/Pgsql.pm	(.../tags/1.4.5)	(revision 4208)
++++ plugins/lib/Munin/Plugin/Pgsql.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -223,7 +223,13 @@
+ 
+     $self->ensure_version();
+ 
+-    print "graph_title $self->{title}\n";
++    my $w = $self->wildcard_parameter();
++    if ($w) {
++      print "graph_title $self->{title} ($w)\n";
++    }
++    else {
++      print "graph_title $self->{title}\n";
++    }
+     print "graph_vlabel $self->{vlabel}\n";
+     print "graph_category PostgreSQL\n";
+     print "graph_info $self->{info}\n";
+@@ -257,7 +263,7 @@
+ sub Autoconf {
+     my ($self) = @_;
+ 
+-    if (!$self->connect(1)) {
++    if (!$self->connect(1, 1)) {
+         print "no ($self->{connecterror})\n";
+         return 1;
+     }
+@@ -280,7 +286,7 @@
+ sub Suggest {
+     my ($self) = @_;
+ 
+-    if (!$self->connect(1)) {
++    if (!$self->connect(1, 1)) {
+         return 0;
+     }
+ 
+@@ -345,9 +351,9 @@
+ 
+ # Internal useful functions
+ sub connect() {
+-    my ($self, $noexit) = @_;
++    my ($self, $noexit, $nowildcard) = @_;
+ 
+-    my $r = $self->_connect();
++    my $r = $self->_connect($nowildcard);
+     return 1 if ($r);         # connect successful
+     return 0 if ($noexit);    # indicate failure but don't exit
+     print "Failed to connect to database: $self->{connecterror}\n";
+@@ -355,7 +361,7 @@
+ }
+ 
+ sub _connect() {
+-    my ($self) = @_;
++    my ($self, $nowildcard) = @_;
+ 
+     return 1 if ($self->{dbh});
+ 
+@@ -367,7 +373,7 @@
+         # All other connection parameters are controlled by the libpq environment
+         # variables.
+         my $dbname = "template1";
+-        $dbname = $self->wildcard_parameter(0) if ($self->{paramdatabase});
++        $dbname = $self->wildcard_parameter(0) if ($self->{paramdatabase} && !defined($nowildcard));
+         $self->{dbh} = DBI->connect("DBI:Pg:dbname=$dbname");
+         unless ($self->{dbh}) {
+             $self->{connecterror} = "$DBI::errstr";
+Index: plugins/lib/Munin/Plugin/SNMP.pm
+===================================================================
+--- plugins/lib/Munin/Plugin/SNMP.pm	(.../tags/1.4.5)	(revision 4208)
++++ plugins/lib/Munin/Plugin/SNMP.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -477,7 +477,7 @@
+ 
+         my $response = $handle->get_request($oid);
+ 
+-        if (!defined $response->{$oid} or $handle->error_status) {
++        if (!defined $response->{$oid} or $handle->error_status or $response->{$oid} eq 'noSuchObject') {
+             print STDERR "# Error getting $oid: ",$handle->error(),"\n"
+                 if $DEBUG;
+             return;
+Index: plugins/node.d/snort_traffic.in
+===================================================================
+--- plugins/node.d/snort_traffic.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snort_traffic.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -78,11 +78,11 @@
+         echo 'graph_vlabel Mbits / second'
+         echo 'graph_scale no'
+         echo 'traffic.label Mbits/second'
+-	if [ -n $warning ]; then
+-		echo 'traffic.warning $warning'
++	if [ -n "$warning" ]; then
++		echo "traffic.warning $warning"
+ 	fi
+-	if [ -n $critical ]; then
+-		echo 'traffic.critical $critical'
++	if [ -n "$critical" ]; then
++		echo "traffic.critical $critical"
+ 	fi
+         echo 'traffic.info Traffic in Mbites per second'
+         echo 'graph_category Snort'
+Index: plugins/node.d/bind9.in
+===================================================================
+--- plugins/node.d/bind9.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/bind9.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -31,14 +31,19 @@
+ =cut
+ 
+ use strict;
++use Munin::Common::Defaults; 
+ 
+ my $QUERYLOG = $ENV{logfile} || '/var/log/bind9/query.log';
+-my $STATEFILE= $ENV{MUNIN_PLUGSTATE}.'/bind9.state';
++my $STATEFILE= $Munin::Common::Defaults::MUNIN_PLUGSTATE.'/bind9.state';
+ my $OTHER=0;
+ my %IN;
+ 
+ sub get_state {
+-    open(Q,"< $STATEFILE") or die;
++    if (! -f $STATEFILE) {
++        open(Q, ">", $STATEFILE);
++        close(Q);
++    }
++    open(Q,"< $STATEFILE") or die ("Cannot open state file");
+     while (<Q>) {
+         chomp;
+         my ($q,$n) = split(/\s+/,$_,2);
+Index: plugins/node.d/varnish_.in
+===================================================================
+--- plugins/node.d/varnish_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/varnish_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -287,7 +287,7 @@
+ 				'type' => 'GAUGE',
+ 				'label' => 'Number of object heads',
+ 				'info' => 'Each object head can have one '
+-					. 'or more ojbect attached, '
++					. 'or more object attached, '
+ 					. 'typically based on the Vary: header'
+ 			}
+ 		}
+Index: plugins/node.d/snmp__df.in
+===================================================================
+--- plugins/node.d/snmp__df.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snmp__df.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -146,7 +146,9 @@
+ 
+ my $stor_id;
+ 
+-if (defined $partitions{""})
++my $foundpartitions = keys %partitions;
++
++if ($foundpartitions == 0 or defined $partitions{""})
+ { # Oh bugger. Some (or all) mountpoints were undeterminable. The backup
+   # solution is to just graph everything that claims to be a FixedDisk,
+   # without checking if it's removable etc
+@@ -170,6 +172,20 @@
+ 	$stor_id   = get_by_regex ($session, $hrStorageDesc, '(^'.join('$|^',keys(%partitions)).'$)');
+ }
+ 
++foreach my $storage (keys %$stor_id)
++{
++    $partitions{$stor_id->{$storage}}{storage} = $storage;
++    $partitions{$stor_id->{$storage}}{size}    = get_single ($session, $hrStorageSize . $storage);
++    if ($partitions{$stor_id->{$storage}}{size} == 0) {
++      delete $stor_id->{$storage} ;
++    }
++}
++
++foreach my $part (keys %partitions)
++{
++    if ($partitions{$part}{size} == 0) { delete $partitions{$part} ; }
++}
++
+ if (defined $ARGV[0] and $ARGV[0] eq "config")
+ {
+ 	print "host_name $host\n" unless $host eq 'localhost';
+@@ -193,8 +209,6 @@
+ 
+ foreach my $storage (keys %$stor_id)
+ {
+-    $partitions{$stor_id->{$storage}}{storage} = $storage;
+-    $partitions{$stor_id->{$storage}}{size}    = get_single ($session, $hrStorageSize . $storage);
+     $partitions{$stor_id->{$storage}}{used}    = get_single ($session, $hrStorageUsed . $storage);
+ }
+ 
+Index: plugins/node.d/bind9_rndc.in
+===================================================================
+--- plugins/node.d/bind9_rndc.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/bind9_rndc.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -63,7 +63,7 @@
+ # check to see if we're running bind 9.6
+ if ( open VERSION, "$rndc 2>&1 |" ) {
+     while ( my $line = <VERSION> ) {
+-	if ( $line =~ m/^Version:\s+9\.(\d+)\./o ) {
++	if ( $line =~ m/^Version:\s+9\.(\d+)\D/o ) {
+ 	    $version96 = 1 if $1 >= 6;
+ 	}
+     }
+Index: plugins/node.d/snort_bytes_pkt.in
+===================================================================
+--- plugins/node.d/snort_bytes_pkt.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snort_bytes_pkt.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -78,11 +78,11 @@
+         echo 'graph_vlabel KBytes / pkt'
+         echo 'graph_scale no'
+         echo 'bytes_pkt.label KBytes/pkt'
+-	if [ -n $warning ]; then
+-		echo 'bytes_pkt.warning $warning'
++	if [ -n "$warning" ]; then
++		echo "bytes_pkt.warning $warning"
+ 	fi
+-	if [ -n $critical ]; then
+-		echo 'bytes_pkt.critical $critical'
++	if [ -n "$critical" ]; then
++		echo "bytes_pkt.critical $critical"
+ 	fi
+         echo 'bytes_pkt.info Average size per packet'
+         echo 'graph_category Snort'
+Index: plugins/node.d/snort_alerts.in
+===================================================================
+--- plugins/node.d/snort_alerts.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snort_alerts.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -78,11 +78,11 @@
+         echo 'graph_vlabel Alerts / second'
+         echo 'graph_scale no'
+         echo 'alerts.label Alerts/second'
+-	if [ -n $warning ]; then
+-		echo 'alerts.warning $warning'
++	if [ -n "$warning" ]; then
++		echo "alerts.warning $warning"
+ 	fi
+-	if [ -n $critical ]; then
+-		echo 'alerts.critical $critical'
++	if [ -n "$critical" ]; then
++		echo "alerts.critical $critical"
+ 	fi
+         echo 'alerts.info The number of alerts per second'
+         echo 'graph_category Snort'
+Index: plugins/node.d/exim_mailstats.in
+===================================================================
+--- plugins/node.d/exim_mailstats.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/exim_mailstats.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -106,8 +106,8 @@
+ 
+     my ($LOGFILE, $rotated) = tail_open($fname, $start);
+ 
+-    if ($rotated) {
+-        # Reset everything if the log has been rotated
++    if ($rotated || $received eq 'U') {
++        # Reset everything if the log has been rotated or we've just initialised
+         $pos = $received = $completed = $rejected = 0;
+     }
+ 
+Index: plugins/node.d/multigraph_tester.in
+===================================================================
+--- plugins/node.d/multigraph_tester.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/multigraph_tester.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!@@BASH@@
+ 
+ #%# family=test
+ #%# capabilities=autoconf
+Index: plugins/node.d/mysql_.in
+===================================================================
+--- plugins/node.d/mysql_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/mysql_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -35,7 +35,16 @@
+     env.mysqluser root
+     env.mysqlpassword geheim
+ 
++Warning and critical values can be set via the environment in the usual way.
++For example:
+ 
++  [mysql_replication]
++    env.slave_io_running_warning 0.5
++    env.slave_sql_running_warning 0.5
++    env.seconds_behind_master_warning 300
++    env.seconds_behind_master_critical 600
++
++
+ =head1 DEPENDENCIES
+ 
+ =over
+@@ -69,9 +78,10 @@
+ 
+ =item mysql_replication
+ 
+-slave_running and slave_stopped creates an alterning color under the
+-seconds_behind_master line. It will have the color of slave_running
+-when the SQL thread runs and the color of slave_stopped otherwise.
++slave_io_running and slave_sql_running both translate the "Yes" values to 0 and
++anything else to 1 for their respective fields in the "SHOW SLAVE STATUS" output.
++This can be used to warn on slave failure if the warning and critical values
++are set as seen in a previous section.
+ 
+ =back
+ 
+@@ -117,6 +127,8 @@
+ 		  # think the tiny performance boost is worth the
+ 		  # debugging effort.
+ 
++use Munin::Plugin;
++
+ my $has_cache;
+ 
+ BEGIN {
+@@ -283,7 +295,8 @@
+ 	{name => 'Open_files',       label => 'Open files'},
+ 	{name => 'Open_tables',      label => 'Open tables'},
+ 	{name => 'Opened_tables',    label => 'Opened tables',
+-				     type  => 'GAUGE'},
++				     type  => 'DERIVE',
++	                             min   => 0},
+     ],
+ };
+ 
+@@ -567,10 +580,10 @@
+ 	},
+     },
+     data_sources => [
+-	{name => 'slave_running',              label => 'Slave Running',
++	{name => 'slave_io_running',           label => 'Slave IO Running',
+ 					       type  => 'GAUGE',
+ 					       draw  => 'AREA'},
+-	{name => 'slave_stopped',              label => 'Slave Stopped',
++	{name => 'slave_sql_running',          label => 'Slave SQL Running',
+ 					       type  => 'GAUGE',
+ 					       draw  => 'AREA'},
+ 	{name => 'Slave_retried_transactions', label => 'Retried Transactions'},
+@@ -837,6 +850,7 @@
+ 	    }
+ 	    $i++;
+ 	}
++	print_thresholds(clean_fieldname($ds->{name}));
+     }
+ 
+     return 0;
+@@ -996,13 +1010,13 @@
+     # this problem.)
+     $data->{seconds_behind_master} ||= 0;
+ 
+-    # Scale slave_running and slave_stopped relative to the slave lag.
+-    $data->{slave_running} = ($data->{slave_sql_running} eq 'Yes')
+-	    ? $data->{seconds_behind_master} : 0;
+-    $data->{slave_stopped} = ($data->{slave_sql_running} eq 'Yes')
+-	    ? 0 : $data->{seconds_behind_master};
++    # Track these two fields so we can trigger warnings if the slave stops
++    # running
++    $data->{slave_sql_running} = ($data->{slave_sql_running} eq 'Yes')
++	    ? 0 : 1;
++    $data->{slave_io_running} = ($data->{slave_io_running} eq 'Yes')
++	    ? 0 : 1;
+ 
+-
+ }
+ 
+ 
+@@ -1021,25 +1035,6 @@
+ 	: Math::BigInt->new("0x$x");
+ }
+ 
+-#
+-# Can't use variable names longer than 19 characters:
+-# http://munin.projects.linpro.no/wiki/notes_on_datasource_names
+-#
+-sub clean_fieldname {
+-    my $name = shift;
+-
+-    # Replace a sequence of illegal leading chars with a single _
+-    $name =~ s/^[^A-Za-z_]+/_/;
+-    # Replace remaining illegals with _
+-    $name =~ s/[^A-Za-z0-9_]/_/g;
+-
+-    # And use only the last 19 chars
+-    $name = substr($name,-19);
+-
+-    return $name;
+-}
+-
+-
+ #---------------------------------------------------------------------
+ #  P A R S E   'SHOW ENGINE INNODB STATUS'   O U T P U T
+ #---------------------------------------------------------------------
+@@ -1103,7 +1098,7 @@
+ my $innodb_bigint_rx = qr{([[a-fA-F\d]+)(?: (\d+))?};
+ 
+ 
+-sub match_dashes { return m/\G-+\n/gc; }
++sub match_dashes { return m/\G-+\n(?!-)/gc;}
+ 
+ 
+ sub skip_line    { return m/\G.*\n/gc; }
+Index: plugins/node.d/snmp__if_multi.in
+===================================================================
+--- plugins/node.d/snmp__if_multi.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snmp__if_multi.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -577,12 +577,13 @@
+     print "multigraph if_errors\n";
+     print "graph_title $host interface errors\n";
+     print "graph_order recv send\n";
++    print "graph_scale no\n";
+     print "graph_args --base 1000\n";
+     print "graph_vlabel errors in (-) / out (+) per \${graph_period}\n";
+     print "graph_category network\n";
+     print "graph_info This graph shows the total errors for $host\n";
+ 
+-    print "send.info Errors in outgoing/incomming traffic on $host\n";
++    print "send.info Errors in outgoing/incoming traffic on $host\n";
+     print "recv.label recv\n";
+     print "recv.type DERIVE\n";
+     print "recv.graph no\n";
+@@ -681,16 +682,17 @@
+     print "graph_title Interface $alias errors\n";
+     print "graph_order recv send\n";
+     print "graph_args --base 1000\n";
++    print "graph_scale no\n";
+     print "graph_vlabel errors in (-) / out (+) per \${graph_period}\n";
+     print "graph_category network\n";
+     print "graph_info This graph shows errors for the \"$alias\" network interface.$extrainfo\n";
+-    print "send.info Errors in outgoing/incomming traffic on this interface.\n";
++    print "send.info Errors in outgoing/incoming traffic on this interface.\n";
+     print "recv.label recv\n";
+     print "recv.type DERIVE\n";
+     print "recv.graph no\n";
+     print "recv.min 0\n";
+     print "recv.warning 1\n";
+-    print "send.label bps\n";
++    print "send.label errors\n";
+     print "send.type DERIVE\n";
+     print "send.negative recv\n";
+     print "send.min 0\n";
+@@ -715,10 +717,10 @@
+ 	# interfaces with a "fishy" status.  That is a possible bug.
+ 	# Or a feature.  We'll see.
+ 
+-	$in += $response = $snmpinfo->{$if}->{ifHCInOctets} ||
++	$in += $snmpinfoX->{$if}->{ifHCInOctets} ||
+ 	  $snmpinfo->{$if}->{ifInOctets};
+ 
+-	$out += $snmpinfo->{$if}->{ifHCOutOctets} ||
++	$out += $snmpinfoX->{$if}->{ifHCOutOctets} ||
+ 	  $snmpinfo->{$if}->{ifOutOctets};
+ 
+ 	$inerr += ( $snmpinfo->{$if}->{ifInErrors} || 0 ) +
+@@ -760,7 +762,7 @@
+ 	goto if_errors;
+     }
+ 
+-    if (defined ($response = $snmpinfo->{$if}->{ifHCInOctets} ||
++    if (defined ($response = $snmpinfoX->{$if}->{ifHCInOctets} ||
+ 		 $snmpinfo->{$if}->{ifInOctets})) {
+ 	print "recv.value ", $response, "\n";
+     } else {
+@@ -768,7 +770,7 @@
+ 	print "recv.value U\n";
+    }
+ 
+-    if (defined ($response = $snmpinfo->{$if}->{ifHCOutOctets} ||
++    if (defined ($response = $snmpinfoX->{$if}->{ifHCOutOctets} ||
+ 		 $snmpinfo->{$if}->{ifOutOctets})) {
+ 	print "send.value ", $response, "\n";
+     } else {
+Index: plugins/node.d/snort_pattern_match.in
+===================================================================
+--- plugins/node.d/snort_pattern_match.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snort_pattern_match.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -79,11 +79,11 @@
+         echo 'graph_vlabel % percent'
+         echo 'graph_scale no'
+         echo 'pattmatch.label % percent'
+-	if [ -n $warning ]; then
+-		echo 'pattmatch.warning $warning'
++	if [ -n "$warning" ]; then
++		echo "pattmatch.warning $warning"
+ 	fi
+-	if [ -n $critical ]; then
+-		echo 'pattmatch.critical $critical'
++	if [ -n "$critical" ]; then
++		echo "pattmatch.critical $critical"
+ 	fi
+         echo 'pattmatch.info The percent of data received that Snort processes in pattern matching'
+         echo 'graph_category Snort'
+Index: plugins/node.d/snmp__df_ram.in
+===================================================================
+--- plugins/node.d/snmp__df_ram.in	(.../tags/1.4.5)	(revision 0)
++++ plugins/node.d/snmp__df_ram.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -0,0 +1,274 @@
++#!@@PERL@@ -w
++# -*- perl -*-
++
++=head1 NAME
++
++snmp__df_ram - Plugin to check ram/flash usage of a remote host via SNMP
++
++=head1 CONFIGURATION
++
++The following environment variables are used
++
++ host      - SNMP hostname to probe (default undef)
++ port      - SNMP port to use (default 161)
++ community - SNMP community string (default "public")
++ interface - (default undef)
++
++=head1 AUTHOR
++
++=encoding UTF-8
++
++Copyright (C) 2011 Erik Inge Bolsø, Redpill Linpro AS for OSL
++
++Based on snmp__df (C) 2004 Jimmy Olsen 
++
++=head1 LICENSE
++
++This program is free software; you can redistribute it and/or
++modify it under the terms of the GNU General Public License
++as published by the Free Software Foundation; version 2 dated June,
++1991.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++
++=head1 MAGIC MARKERS
++
++ #%# family=snmpauto
++ #%# capabilities=snmpconf
++
++=cut
++
++use strict;
++use Net::SNMP;
++
++my $DEBUG = 0;
++my $MAXLABEL = 20;
++
++my $host      = $ENV{host}      || undef;
++my $port      = $ENV{port}      || 161;
++my $community = $ENV{community} || "public";
++
++my $response;
++
++if (defined $ARGV[0] and $ARGV[0] eq "snmpconf")
++{
++	print "index   1.3.6.1.2.1.25.2.3.1.1.\n";
++	print "require 1.3.6.1.2.1.25.2.3.1.2. 1.3.6.1.2.1.25.2.1.(1|2|3|9)\n"; # Type=Other/Ram/VirtualMemory/FlashMemory
++	print "require 1.3.6.1.2.1.25.2.3.1.5. [1-9]\n"; # Size > 0
++	exit 0;
++}
++
++if ($0 =~ /^(?:|.*\/)snmp_([^_]+)_df_ram$/)
++{
++	$host  = $1;
++	if ($host =~ /^([^:]+):(\d+)$/)
++	{
++		$host = $1;
++		$port = $2;
++	}
++}
++elsif (!defined($host))
++{
++	print "# Debug: $0 -- $1\n" if $DEBUG;
++	die "# Error: couldn't understand what I'm supposed to monitor.";
++}
++
++# Disk level
++my $hrDeviceType           = "1.3.6.1.2.1.25.3.2.1.2."; # Should be iso.3.6.1.2.1.25.3.1.6 (DiskStorage)
++my $hrDiskStorageRemoveble = "1.3.6.1.2.1.25.3.6.1.3."; # Should be false (2).
++                                                        # Windows reports 0.
++my $hrDiskStorageCapacity  = "1.3.6.1.2.1.25.3.6.1.4."; # Should be more than 0
++
++# Partition level
++my $hrPartitionFSIndex     = "1.3.6.1.2.1.25.3.7.1.5."; # Should be more than 0
++my $hrFSMountPoint         = "1.3.6.1.2.1.25.3.8.1.2."; # Used to look up filesystem
++
++# Filesystem level
++my $hrStorageType          = "1.3.6.1.2.1.25.2.3.1.2."; # Backup for hrFS*
++my $hrStorageDesc          = "1.3.6.1.2.1.25.2.3.1.3."; # Used as key from partitions
++my $hrStorageSize          = "1.3.6.1.2.1.25.2.3.1.5."; # Data point 1
++my $hrStorageUsed          = "1.3.6.1.2.1.25.2.3.1.6."; # Data point 2
++
++
++my ($session, $error) = Net::SNMP->session(
++		-hostname  => $host,
++		-community => $community,
++		-port      => $port
++	);
++
++if (!defined ($session))
++{
++	die "Croaking: $error";
++}
++
++# First we want to find the harddisks...
++my $correct_capacity  = get_by_regex ($session, $hrDiskStorageCapacity, "[1-9]");
++my $correct_type      = get_by_regex ($session, $hrDeviceType, "^1.3.6.1.2.1.25.3.1.6\$");
++my $correct_removable = get_by_regex ($session, $hrDiskStorageRemoveble, "^(0|2)\$");
++
++my @keep = ();
++
++foreach my $id (keys %$correct_capacity)
++{
++	if (exists $correct_type->{$id} and 
++	    exists $correct_removable->{$id})
++	{
++	    push (@keep, $id);
++	}
++}
++
++print "# Kept: ", join (',', @keep), "\n" if $DEBUG;
++
++# Then we take a look at the partitions...
++
++my %partitions;
++
++foreach my $kept (@keep) # For each disk...
++{
++    my $parts = get_by_regex ($session, $hrPartitionFSIndex . "$kept.", "[1-9]");
++
++    foreach my $partition (keys %$parts)
++    {
++	my $mp = get_single ($session, $hrFSMountPoint . $partition);
++	$partitions{$mp}{partition} = $partition;
++	print "# Added partition \"$mp\" as $partition...\n" if $DEBUG
++    }
++}
++
++my $stor_id;
++
++my $foundpartitions = keys %partitions;
++
++if ($foundpartitions == 0 or defined $partitions{""})
++{ # Oh bugger. Some (or all) mountpoints were undeterminable. The backup
++  # solution is to just graph everything that claims to be Other/Ram/VirtualMemory/FlashMemory,
++  # without checking if it's removable etc
++
++    	print "# Unable to map mountpoints from filesystems to storages. Bugger.\n" if $DEBUG;
++	$stor_id = get_by_regex ($session, $hrStorageType, "1.3.6.1.2.1.25.2.1.(1|2|3|9)");
++	%partitions = ();
++
++	foreach my $id (keys %$stor_id)
++	{
++		my $part = get_single ($session, $hrStorageDesc . $id);
++		my $spart = $part;
++		$spart =~ s/:\\ Label:.*/:/;
++		$partitions{$spart}{storage} = $id;
++		$partitions{$spart}{extinfo} = $part;
++		$stor_id->{$id} = $spart;
++	}
++} else 
++{ # Get the ones we're sure about
++
++	$stor_id   = get_by_regex ($session, $hrStorageDesc, '(^'.join('$|^',keys(%partitions)).'$)');
++}
++
++if (defined $ARGV[0] and $ARGV[0] eq "config")
++{
++	print "host_name $host\n" unless $host eq 'localhost';
++	print "graph_title Memory usage (in %)\n";
++	print "graph_args --upper-limit 100 -l 0\n";
++	print "graph_vlabel %\n";
++	print "graph_category system\n";
++	print "graph_info This graph shows memory usage in percent.\n";
++
++	foreach my $part (keys %partitions)
++	{
++		print (&get_name_by_mp ($part), ".label ");
++		print (length($part)<=$MAXLABEL ? $part : "...".substr($part,-($MAXLABEL-3)));
++		print ("\n");
++		print (&get_name_by_mp ($part), ".warning 92\n");
++		print (&get_name_by_mp ($part), ".critical 98\n");
++		print (&get_name_by_mp ($part), ".info Usage for ". ($partitions{$part}{extinfo}||$part)."\n");
++	}
++	exit 0;
++}
++
++foreach my $storage (keys %$stor_id)
++{
++    $partitions{$stor_id->{$storage}}{storage} = $storage;
++    $partitions{$stor_id->{$storage}}{size}    = get_single ($session, $hrStorageSize . $storage);
++    $partitions{$stor_id->{$storage}}{used}    = get_single ($session, $hrStorageUsed . $storage);
++}
++
++foreach my $part (keys %partitions)
++{
++    print (&get_name_by_mp ($part), ".value ", ($partitions{$part}{used}*100/$partitions{$part}{size}), "\n");
++}
++
++sub get_single
++{
++	my $handle = shift;
++	my $oid    = shift;
++
++	print "# Getting single $oid..." if $DEBUG;
++
++	$response = $handle->get_request ($oid);
++
++	if (!defined $response->{$oid})
++	{
++	    print "undef\n" if $DEBUG;
++	    return undef;
++	}
++	else
++	{
++	    print "\"$response->{$oid}\"\n" if $DEBUG;
++	    return $response->{$oid};
++	}
++}
++
++sub get_by_regex
++{
++	my $handle = shift;
++	my $oid    = shift;
++	my $regex  = shift;
++	my $result = {};
++	my $num    = 0;
++	my $ret    = $oid . "0";
++	my $response;
++
++	print "# Starting browse of $oid...\n" if $DEBUG;
++
++	while (1)
++	{
++		if ($num == 0)
++		{
++			print "# Checking for $ret...\n" if $DEBUG;
++			$response = $handle->get_request ($ret);
++		}
++		if ($num or !defined $response)
++		{
++			print "# Checking for sibling of $ret...\n" if $DEBUG;
++			$response = $handle->get_next_request ($ret);
++		}
++		if (!$response)
++		{
++			return undef;
++		}
++		my @keys = keys %$response;
++		$ret = $keys[0];
++		print "# Analyzing $ret (compared to $oid)...\n" if $DEBUG;
++		last unless ($ret =~ /^$oid/);
++		$num++;
++		next unless ($response->{$ret} =~ /$regex/);
++		@keys = split (/\./, $ret);
++		$result->{$keys[-1]} = $response->{$ret};;
++		print "# Index $num: ", $keys[-1], " (", $response->{$ret}, ")\n" if $DEBUG;
++	};
++	return $result;
++}
++
++sub get_name_by_mp
++{
++    my $mp = shift;
++    $mp =~ s/[^a-z0-9_]/_/gi;
++    $mp =~ tr/A-Z/a-z/;
++    return "p" . $mp;
++}
+
+Property changes on: plugins/node.d/snmp__df_ram.in
+___________________________________________________________________
+Added: svn:executable
+   + *
+
+Index: plugins/node.d/postgres_locks_.in
+===================================================================
+--- plugins/node.d/postgres_locks_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/postgres_locks_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -60,15 +60,36 @@
+ use Munin::Plugin::Pgsql;
+ 
+ my $pg = Munin::Plugin::Pgsql->new(
+-    basename => 'postgres_locks_',
+-    title    => 'PostgreSQL locks',
+-    info     => 'PostgreSQL locks',
+-    vlabel   => 'Locks',
+-    basequery =>
+-        "SELECT lower(mode),count(*) FROM pg_locks WHERE database IS NOT NULL %%FILTER%% GROUP BY lower(mode) ORDER BY 1",
+-    wildcardfilter =>
+-        "AND database=(SELECT oid FROM pg_database WHERE datname=?)",
+-    configquery => [
++    basename  => 'postgres_locks_',
++    title     => 'PostgreSQL locks',
++    info      => 'PostgreSQL locks',
++    vlabel    => 'Locks',
++    basequery => [
++        "SELECT tmp.mode,COALESCE(count,0) FROM
++          (VALUES ('accesssharelock'),('rowsharelock'),('rowexclusivelock'),('shareupdateexclusivelock'),('sharelock'),('sharerowexclusivelock'),('exclusivelock'),('accessexclusivelock')) AS tmp(mode)
++         LEFT JOIN
++          (SELECT lower(mode) AS mode,count(*) AS count
++           FROM pg_locks WHERE database IS NOT NULL %%FILTER%%
++           GROUP BY lower(mode)
++          ) AS tmp2
++         ON tmp.mode=tmp2.mode ORDER BY 1", [
++            8.1,
++            "SELECT tmp.mode,COALESCE(count,0) FROM
++             (SELECT 'accesssharelock' AS mode UNION ALL SELECT 'rowsharelock'
++              UNION ALL SELECT 'rowexclusivelock' UNION ALL SELECT 'shareupdateexclusivelock'
++              UNION ALL SELECT 'sharelock' UNION ALL SELECT 'sharerowexclusivelock'
++              UNION ALL SELECT 'exclusivelock' UNION ALL SELECT 'accessexclusivelock'
++            ) AS tmp
++            LEFT JOIN
++             (SELECT lower(mode) AS mode,count(*) AS count
++              FROM pg_locks WHERE database IS NOT NULL %%FILTER%%
++              GROUP BY lower(mode)
++             ) AS tmp2
++           ON tmp.mode=tmp2.mode ORDER BY 1"
++        ],
++    ],
++    wildcardfilter => "AND database=(SELECT oid FROM pg_database WHERE datname=?)",
++    configquery    => [
+         "VALUES
+          ('accesssharelock','AccessShareLock','Used by read only queries'),
+          ('rowsharelock','RowShareLock','Used by SELECT FOR SHARE and SELECT FOR UPDATE queries'),
+@@ -77,8 +98,7 @@
+          ('sharelock','ShareLock','Used by CREATE INDEX queries'),
+          ('sharerowexclusivelock','ShareRowExclusiveLock','Only issued explicitly from applications'),
+          ('exclusivelock','ExclusiveLock','Infrequently issued on system tables, or by applications'),
+-         ('accessexclusivelock','AccessExclusiveLock','Used by ALTER TABLE, DROP TABLE, TRUNCATE, REINDEX, CLUSTER and VACUUM FULL queries')",
+-        [
++         ('accessexclusivelock','AccessExclusiveLock','Used by ALTER TABLE, DROP TABLE, TRUNCATE, REINDEX, CLUSTER and VACUUM FULL queries')", [
+             8.1,
+             "SELECT 'accesssharelock','AccessShareLock','Used by read only queries' UNION ALL
+             SELECT 'rowsharelock','RowShareLock','Used by SELECT FOR SHARE and SELECT FOR UPDATE queries' UNION ALL
+@@ -90,10 +110,9 @@
+             SELECT 'accessexclusivelock','AccessExclusiveLock','Used by ALTER TABLE, DROP TABLE, TRUNCATE, REINDEX, CLUSTER and VACUUM FULL queries'"
+         ]
+     ],
+-    suggestquery =>
+-        "SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate AND NOT datname='postgres' UNION ALL SELECT 'ALL' ORDER BY 1 LIMIT 10",
+-    graphdraw => 'AREA',
+-    stack     => 1,
++    suggestquery => "SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate AND NOT datname='postgres' UNION ALL SELECT 'ALL' ORDER BY 1 LIMIT 10",
++    graphdraw    => 'AREA',
++    stack        => 1,
+ );
+ 
+ $pg->Process();
+Index: plugins/node.d/snort_pkts.in
+===================================================================
+--- plugins/node.d/snort_pkts.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snort_pkts.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -79,11 +79,11 @@
+         echo 'graph_vlabel Packets / second'
+         echo 'graph_scale no'
+         echo 'pktsec.label Packets/second'
+-	if [ -n $warning ]; then
+-		echo 'pktsec.warning $warning'
++	if [ -n "$warning" ]; then
++		echo "pktsec.warning $warning"
+ 	fi
+-	if [ -n $critical ]; then
+-		echo 'pktsec.critical $critical'
++	if [ -n "$critical" ]; then
++		echo "pktsec.critical $critical"
+ 	fi
+         echo 'pktsec.info The number of packets per second'
+         echo 'graph_category Snort'
+Index: plugins/node.d/slapd_.in
+===================================================================
+--- plugins/node.d/slapd_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/slapd_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -37,7 +37,7 @@
+ # Change these to reflect your LDAP ACL. The given DN must have
+ # read access to the Monitor branch.
+ my $basedn = "cn=Monitor";
+-my $server = "localhost";
++my $server = ($ENV{'server'} || 'localhost');
+ my $userdn = ($ENV{'binddn'} || '');
+ my $userpw = ($ENV{'bindpw'} || '');
+ 
+@@ -149,10 +149,21 @@
+           print "$name.type GAUGE\n";
+         }
+     } elsif ($action =~ /^operations(?:_diff)?$/) {
+-        my $ldap = Net::LDAP->new ($server) or die "$@";
+-        $ldap->bind ($userdn, password => $userpw) or die "$@";
++        my $ldap = Net::LDAP->new ($server)
++            or die "Failed to connect to server $server: $@";
++        my $mesg;
++        if ($userdn ne '') {
++          $mesg = $ldap->bind ($userdn, password => $userpw)
++              or die "Failed to bind with $userdn: $@";
++        } else {
++          $mesg = $ldap->bind
++              or die "Failed to bind anonymously: $@";
++        }
++        if ($mesg->code) {
++          die "Failed to bind: " . $mesg->error;
++        }
+         my $searchdn = $ops{$action}->{'search'} . "," . $basedn;
+-        my $mesg =
++        $mesg =
+             $ldap->search (
+                            base   => $searchdn,
+                            scope  => 'one',
+@@ -179,6 +190,8 @@
+                 print "$name.warning 1\n";
+             }            
+         }
++
++        $ldap->unbind;
+     } else {
+         print "$action.label $ops{$action}->{'label'}\n";
+         print "$action.type DERIVE\n";
+@@ -196,10 +209,34 @@
+ 
+         # Check for LDAP version 3
+         my $ldap = Net::LDAP->new ($server, version => 3)
+-            or do { print "no (Needs LDAPv3)\n"; exit 0; };
+-        $ldap->bind ($userdn, password => $userpw)
+-            or do { print "no (Can't log in, check env file)\n"; exit 0; };
++            or do { print "no ($@)\n"; exit 0; };
+ 
++        my $mesg;
++        if ($userdn ne '') {
++          $mesg = $ldap->bind ($userdn, password => $userpw)
++            or do { print "no ($@)\n"; exit 0; };
++        } else {
++          $mesg = $ldap->bind
++            or do { print "no ($@)\n"; exit 0; };
++        }
++        if ($mesg->code) {
++          print "no (" . $mesg->error . ")\n";
++          exit 0;
++        }
++
++        $mesg =
++            $ldap->search (
++                           base   => $basedn,
++                           scope  => 'one',
++                           filter => '(objectClass=monitorServer)',
++                           attrs  => 'cn',
++                           );
++        if ($mesg->code) {
++          print "no (" . $mesg->error . ")\n";
++          exit 0;
++        }
++        print "yes\n";
++        exit 0;
+     } elsif ($ARGV[0] eq "config") {
+         if ($0 =~ /slapd_([\w\d_]+)$/) {
+             my $action = $1;
+@@ -225,9 +262,18 @@
+ 
+ # Net::LDAP variant
+ my $ldap = Net::LDAP->new ($server, version => 3)
+-    or die "$@";
+-$ldap->bind ($userdn,password => $userpw)
+-    or die "$@";
++    or die "Failed to connect to server $server: $@";
++my $mesg;
++if ($userdn ne '') {
++  $mesg = $ldap->bind ($userdn, password => $userpw)
++      or die "Failed to bind with $userdn: $@";
++} else {
++  $mesg = $ldap->bind
++      or die "Failed to bind anonymously: $@";
++}
++if ($mesg->code) {
++  die "Failed to bind: " . $mesg->error;
++}
+ 
+ my $searchdn = $ops{$action}->{'search'} . "," . $basedn;
+ my $searchattrs;
+@@ -250,7 +296,7 @@
+   $scope = $ops{$action}->{'scope'};
+ }
+ 
+-my $mesg =
++$mesg =
+     $ldap->search (
+                    base   => $searchdn,
+                    scope  => $scope,
+Index: plugins/node.d/snort_drop_rate.in
+===================================================================
+--- plugins/node.d/snort_drop_rate.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/snort_drop_rate.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -78,11 +78,11 @@
+         echo 'graph_vlabel % percent'
+         echo 'graph_scale no'
+         echo 'droprate.label % percent'
+-	if [ -n $warning ]; then
+-		echo 'droprate.warning $warning'
++	if [ -n "$warning" ]; then
++		echo "droprate.warning $warning"
+ 	fi
+-	if [ -n $critical ]; then
+-		echo 'droprate.critical $critical'
++	if [ -n "$critical" ]; then
++		echo "droprate.critical $critical"
+ 	fi
+         echo 'droprate.info Packet drop rate in %'
+         echo 'graph_category Snort'
+Index: plugins/node.d/lpstat.in
+===================================================================
+--- plugins/node.d/lpstat.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d/lpstat.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -46,6 +46,9 @@
+ my $n_jobs;
+ my @exclude;  # Should take this from environment.
+ 
++# Force C output from lpstat
++$ENV{'LC_MESSAGES'} = "C";
++
+ # This is a dumb-down.  Should take hostname(s) from environment or
+ # as wildcard plugin.
+ my $host = '127.0.0.1';
+Index: plugins/node.d.hp-ux/if_.in
+===================================================================
+--- plugins/node.d.hp-ux/if_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.hp-ux/if_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -59,15 +59,15 @@
+     echo 'graph_vlabel bits per ${graph_period} in (-) / out (+)'
+     echo 'graph_category network'
+     echo 'inbound.label received'
+-    echo 'inbound.type COUNTER'
+-    echo 'inbound.max 2000000000'
++    echo 'inbound.type DERIVE'
+     echo 'inbound.graph no'
+     echo 'inbound.cdef inbound,8,*'
++    echo 'inbound.min 0'
+     echo 'outbound.label bps'
+-    echo 'outbound.type COUNTER'
++    echo 'outbound.type DERIVE'
+     echo 'outbound.negative inbound'
+     echo 'outbound.cdef outbound,8,*'
+-    echo 'outbound.max 2000000000'
++    echo 'outbound.min 0'
+     exit 0
+ fi
+ 
+Index: plugins/node.d.darwin/if_.in
+===================================================================
+--- plugins/node.d.darwin/if_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.darwin/if_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -153,13 +153,15 @@
+ 	echo 'graph_category network'
+ 	echo "graph_info This graph shows the traffic of the $INTERFACE network interface. Please note that the traffic is shown in bits per second, not bytes. IMPORTANT: Since the data source for this plugin use 32bit counters, this plugin is really unreliable and unsuitable for most 100Mb (or faster) interfaces, where bursts are expected to exceed 50Mbps. This means that this plugin is unsuitable for most production environments. To avoid this problem, use the ip_ plugin instead."
+ 	echo 'down.label received'
+-        echo 'down.type COUNTER'
++        echo 'down.type DERIVE'
+         echo 'down.graph no'
+         echo 'down.cdef down,8,*'
++	echo 'down.min 0'
+         echo 'up.label bps'
+-	echo 'up.type COUNTER'
++	echo 'up.type DERIVE'
+ 	echo 'up.negative down'
+ 	echo 'up.cdef up,8,*'
++	echo 'up.min 0'
+ 
+ 	findspeed
+ 
+Index: plugins/node.d.darwin/load.in
+===================================================================
+--- plugins/node.d.darwin/load.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.darwin/load.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -93,5 +93,5 @@
+ # real work - i.e. display the data. Almost always this will be
+ # "value" subfield for every data field.
+ 
+-echo -n "load.value "
++printf "load.value "
+ uptime  | sed -e 's/^.*load averages: [^ ]* //' -e 's/ [^ ]*$//'
+Index: plugins/plugin.sh.in
+===================================================================
+--- plugins/plugin.sh.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/plugin.sh.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -68,7 +68,72 @@
+ 	fi
+ }
+ 
++# adjust_threshold() takes a threshold string and a base value in, and returns
++# the threshold string adjusted for percentages if percent sizes are present.
++# If not, the threshold is left unchanged.
++# Usage:
++# 	adjust_threshold "50%:50%" 200 
++# Returns:
++#	100:100
++#
++adjust_threshold () {
+ 
++	if [ -n "$1" -a -n "$2" ]; then
++		echo "$1" | awk "BEGIN { FS=\":\"; OFS=\":\" }
++		\$1 ~ /.*%/ {\$1 = $2 * substr(\$1, 0, length(\$1) - 1) / 100}
++		\$2 ~ /.*%/ {\$2 = $2 * substr(\$2, 0, length(\$2) - 1) / 100}
++	
++		{ print }"
++	fi
++
++}
++
++# print_thresholds() takes three arguments. The first is the field name, the
++# second is the default environment variable for warnings (see the second
++# argument to get_warning), and the third is the default environment variable
++# for criticals (see the second argument to get_critical).
++#
++# This is a convenience function for plugins that don't need to do anything
++# special for warnings vs criticals.
++#
++# Usage:
++#	warning='20' critical='40' print_thresholds user
++# Returns:
++#	user.warning 20
++#	user.critical 40
++
++print_thresholds() {
++	print_warning $1 $2
++	print_critical $1 $3
++}
++
++# print_adjusted_thresholds() takes four arguments.  The first is the field
++# name, the second is the base value (see the second argument to
++# adjust_threshold), the third is the default environment variable for
++# warnings (see the second argument to get_warning), and the fourth is the
++# default environment variable for criticals (see the second argument to
++# get_critical).
++#
++# Usage:
++#	warning=20% critical=40% print_adjusted_thresholds "user" 800
++# Returns:
++#	user.warning 160
++#	user.critical 320
++#	
++print_adjusted_thresholds () {
++	tempthresh=$(get_warning $1 $3)
++	if [ -n "$tempthresh" ]; then
++		echo "$1.warning $(adjust_threshold "$tempthresh" "$2")"
++	fi
++	tempthresh=$(get_critical $1 $4)
++	if [ -n "$tempthresh" ]; then
++		echo "$1.critical $(adjust_threshold "$tempthresh" "$2")"
++	fi
++	unset tempthresh
++}
++
++
++
+ is_multigraph () {
+     # Multigraph feature is available in Munin 1.4.0 and later.
+     # But it also needs support on the node to stay perfectly
+Index: plugins/node.d.sunos/cpu.in
+===================================================================
+--- plugins/node.d.sunos/cpu.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.sunos/cpu.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -58,29 +58,25 @@
+ 	echo 'system.type DERIVE'
+ 	echo 'system.min 0'
+ 	echo "system.max $cpumax"
+-	print_warning system
+-	print_critical system
++	print_adjusted_thresholds system "$graphlimit"
+ 	echo 'user.label user'
+ 	echo 'user.draw STACK'
+ 	echo 'user.type DERIVE'
+ 	echo 'user.min 0'
+ 	echo "user.max $cpumax"
+-	print_warning user
+-	print_critical user
++	print_adjusted_thresholds user "$graphlimit"
+ 	echo "waitio.max $cpumax"
+ 	echo 'waitio.label waitio'
+ 	echo 'waitio.draw STACK'
+ 	echo 'waitio.type DERIVE'
+ 	echo 'waitio.min 0'
+-	print_warning waitio
+-	print_critical waitio
++	print_adjusted_thresholds waitio "$graphlimit"
+ 	echo 'idle.label idle'
+ 	echo 'idle.draw STACK'
+ 	echo 'idle.type DERIVE'
+ 	echo 'idle.min 0'
+ 	echo "idle.max $cpumax"
+-	print_warning idle
+-	print_critical idle
++	print_adjusted_thresholds idle "$graphlimit"
+ 	if [ "$scaleto100" = "yes" ]; then
+ 		echo "system.cdef system,$ncpu,/"
+ 		echo "user.cdef user,$ncpu,/"
+Index: plugins/node.d.sunos/df.in
+===================================================================
+--- plugins/node.d.sunos/df.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.sunos/df.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -20,6 +20,12 @@
+ the munin label (shown in the plugin display page) and append _warning
+ or _critical respectively to get the (environment variable) name.
+ 
++To limit the monitored filesystems, configure the "only" environment variable.
++For example, to only monitor /, one would add to plugin-conf.d:
++
++  [df*]
++    env.only /
++
+ =back
+ 
+ =head1 AUTHOR
+@@ -51,7 +57,7 @@
+ 
+ if [ "$1" = "config" ]; then
+ 
+-    echo 'graph_title Filesystem usage (bytes in %)'
++    echo 'graph_title Filesystem usage (in %)'
+     echo 'graph_args --upper-limit 100'
+     echo 'graph_category disk'
+     echo 'graph_scale no'
+@@ -61,7 +67,7 @@
+     # device name.  Since the plugin already changed names this
+     # should be ok.
+ 
+-    $DF -k -l | $TAIL +2 | while read dev size used avail pct mnt; do
++    $DF -k -l $only | $TAIL +2 | while read dev size used avail pct mnt; do
+ 
+ 	case $dev:$mnt in
+ 	    /usr/lib*|ctfs:*|objfs:*|mnttab:*|sharefs:*|*:/cdrom/*|*:/media/*) continue;;
+@@ -75,7 +81,7 @@
+     exit 0
+ fi
+ 
+-$DF -k -l | $TAIL +2 | while read dev size used avail pct mnt; do
++$DF -k -l $only | $TAIL +2 | while read dev size used avail pct mnt; do
+ 	case $dev:$mnt in
+ 	    /usr/lib*|ctfs:*|objfs:*|mnttab:*|sharefs:*|*:/cdrom/*|*:/media/*) continue;;
+ 	    swap:*) name=$(clean_fieldname $mnt);;
+Index: plugins/node.d.sunos/if_.in
+===================================================================
+--- plugins/node.d.sunos/if_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.sunos/if_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -56,7 +56,7 @@
+ 
+ if [ "$1" = "suggest" ]; then
+ 	if [ -x /usr/bin/kstat ]; then
+-		kstat -m link -p -s '/^rbytes$/' | awk -F: '{ print $3 }'
++		kstat -p -m '/^(?!unix)/' -n '/^(?!mac$)/' -s rbytes64 | awk -F: '{ print $3 }'
+ 		exit 0
+ 	else
+ 		exit 1
+@@ -71,24 +71,21 @@
+ 	echo 'graph_vlabel bits per ${graph_period} in (-) / out (+)'
+ 	echo 'graph_category network'
+ 	echo 'rbytes.label received'
+-        echo 'rbytes.type COUNTER'
+-        echo 'rbytes.max 2000000000'
+-        echo 'rbytes.graph no'
+-        echo 'rbytes.cdef rbytes,8,*'
++	echo 'rbytes.type DERIVE'
++	echo 'rbytes.graph no'
++	echo 'rbytes.cdef rbytes,8,*'
++	echo 'rbytes.min 0'
+ 	print_warning rbytes
+ 	print_critical rbytes
+-        echo 'obytes.label bps'
+-	echo 'obytes.type COUNTER'
++	echo 'obytes.label bps'
++	echo 'obytes.type DERIVE'
+ 	echo 'obytes.negative rbytes'
+ 	echo 'obytes.cdef obytes,8,*'
+-        echo 'obytes.max 2000000000'
++	echo 'obytes.min 0'
+ 	print_warning obytes
+ 	print_critical obytes
+ 	exit 0
+ fi;
+ 
+-kstat -p -n $INTERFACE -m link -s '/^[ro]bytes$/' | awk -F: '
+-{
+-	split($4, four, "\t")
+-	print four[1] ".value", four[2]
+-}'
++kstat -p -m '/^(?!unix)/' -n $INTERFACE -s '*bytes64' | sed \
++	's/.*\(.bytes\)64./\1.value /'
+Index: plugins/node.d.sunos/if_err_.in
+===================================================================
+--- plugins/node.d.sunos/if_err_.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.sunos/if_err_.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -56,7 +56,7 @@
+ 
+ if [ "$1" = "suggest" ]; then
+ 	if [ -x /usr/bin/kstat ]; then
+-		kstat -m link -p -s '/^ierrors$/' | awk -F: '{ print $3 }'
++		kstat -p -m '/^(?!unix)/' -n '/^(?!mac$)/' -s ierrors | awk -F: '{ print $3 }'
+ 		exit 0
+ 	else
+ 		exit 1
+@@ -88,7 +88,7 @@
+ 	exit 0
+ fi;
+ 
+-kstat -p -n $INTERFACE -m link -s '/^([io]errors|collisions)$/' | awk -F: '
++kstat -p -m '/^(?!unix)/' -n $INTERFACE -s '/^([io]errors|collisions)$/' | awk -F: '
+ {
+ 	split($4, four, "\t")
+ 	print four[1] ".value", four[2]
+Index: plugins/node.d.sunos/df_inode.in
+===================================================================
+--- plugins/node.d.sunos/df_inode.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.sunos/df_inode.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -20,6 +20,13 @@
+ the munin label (shown in the plugin display page) and append _warning
+ or _critical respectively to get the (environment variable) name.
+ 
++To limit the monitored filesystems, configure the "only" environment variable.
++For example, to only monitor /, one would add to plugin-conf.d:
++
++  [df*]
++    env.only /
++
++
+ =back
+ 
+ =head1 AUTHOR
+@@ -45,11 +52,11 @@
+ critical=${critical:-98}
+ 
+ # Figure out correct way to invoke df and what output to use
+-if $DF -P -l -i >/dev/null 2>&1; then
+-	DF="$DF -P -l -i"
++if $DF -P -l -i $only >/dev/null 2>&1; then
++	DF="$DF -P -l -i $only"
+ 	FSNAME=6
+ else
+-	DF="$DF -oi 2>/dev/null"
++	DF="$DF -oi $only 2>/dev/null"
+ 	FSNAME=5
+ 	PCNT=4
+ fi
+@@ -62,7 +69,7 @@
+ 
+ if [ "$1" = "config" ]; then
+ 
+-    echo 'graph_title Filesystem usage (inodes in %)'
++    echo 'graph_title Inode usage (in %)'
+     echo 'graph_args --upper-limit 100'
+     echo 'graph_category disk'
+     echo 'graph_scale no'
+Index: plugins/node.d.sunos/memory.in
+===================================================================
+--- plugins/node.d.sunos/memory.in	(.../tags/1.4.5)	(revision 4208)
++++ plugins/node.d.sunos/memory.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -74,8 +74,8 @@
+ fi
+ 
+ if [ "$1" = "config" ]; then
+-        echo "graph_title Memory usage (in MB)"
+-		echo 'graph_category system'
++  echo "graph_title Memory usage (in MB)"
++	echo 'graph_category system'
+ 	echo "real.label Physical mem"
+ 	echo "used.label Mem used"
+ 	echo "swapt.label Total swap"
+@@ -105,15 +105,17 @@
+ }
+ /^Memory/ {
+   real  = scale($2);
+-  free  = scale($4);
+-  swapu = scale($6);
+-  swapf = scale($10);
++  free  = scale($5);
++  swapt = scale($8);
++  swapf = scale($11);
+ 
+   memused = real - free
+-  swaptot = swapu + swapf
++  swapu = swapt - swapf
+ 
+   print "real.value", real
+   print "used.value", memused
+-  print "swapt.value", swaptot
++  print "swapt.value", swapt
+   print "swapu.value", swapu
+ }'
++
++# vim: syntax=sh ts=2 et
+Index: node/munin-node.conf.in
+===================================================================
+--- node/munin-node.conf.in	(.../tags/1.4.5)	(revision 4208)
++++ node/munin-node.conf.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -35,11 +35,13 @@
+ 
+ allow ^127\.0\.0\.1$
+ 
+-# If you have installed the Net::CIDR perl module, you can use
+-# multiple cidr_allow and cidr_deny address/mask patterns.  A
+-# connecting client must match any cidr_allow, and not match any
+-# cidr_deny.  Example:
+-
++# If you have installed the Net::CIDR perl module, you can use one or more
++# cidr_allow and cidr_deny address/mask patterns.  A connecting client must
++# match any cidr_allow, and not match any cidr_deny.  Note that a netmask
++# *must* be provided, even if it's /32
++#
++# Example:
++#
+ # cidr_allow 127.0.0.1/32
+ # cidr_allow 192.0.2.0/24
+ # cidr_deny  192.0.2.42/32
+Index: node/doc/munin-node.conf.pod
+===================================================================
+--- node/doc/munin-node.conf.pod	(.../tags/1.4.5)	(revision 4208)
++++ node/doc/munin-node.conf.pod	(.../branches/1.4-stable)	(revision 4208)
+@@ -27,6 +27,17 @@
+ 
+       allow ^127\.0\.0\.1$
+ 
++=item B<< cidr_allow NETWORK/MASK >>
++
++An alternative to C<allow RE>.  This allows the access list to be specified in
++CIDR format.  For instance, C<cidr_allow 192.0.2.0/24> would allow connections
++from any IP from 192.0.2.1 to 192.0.2.254.
++
++And C<cidr_allow 127.0.0.1/32> is the equivalent to the example above.  Note
++that the netmask B<must> be provided, even though it's just C</32>.
++
++This option requires that the C<Net::CIDR> perl module be installed.
++
+ =item B<< host IP >>
+ 
+ The IP number of the interface munin-node should listen on.  By
+Index: node/lib/Munin/Node/Server.pm
+===================================================================
+--- node/lib/Munin/Node/Server.pm	(.../tags/1.4.5)	(revision 4208)
++++ node/lib/Munin/Node/Server.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -132,12 +132,21 @@
+ 
+     _net_write($session, "# munin node at $config->{fqdn}\n");
+ 
++    my $line = '<no command received yet>';
++
+     # catch and report any system errors in a clean way.
+     eval {
+         $timed_out = !do_with_timeout($config->{'timeout'}, sub {
+-            while (defined (my $line = _net_read($session))) {
++            while (defined ($line = _net_read($session))) {
+                 chomp $line;
+-                _process_command_line($session, $line) or last;
++                if (! _process_command_line($session, $line)) {
++		    $line = "<finished '$line', ending input loop>";
++		    last;
++		}
++		$line = "<waiting for input from master, previous was '$line'>";
++		# Reset timeout to wait a reasonable time for input from the master
++		# Misfeature: Plugin timeout and input timeout becomes identical.
++		reset_timeout();
+             }
+         });
+     };
+@@ -147,7 +156,7 @@
+     }
+ 
+     if ($timed_out) {
+-        logger("Connection timed out");
++        logger("Node side timeout while processing: '$line'");
+     }
+ 
+     return;
+@@ -171,7 +180,7 @@
+ 
+     logger ("DEBUG: Running command \"$_\".") if $config->{DEBUG};
+     if (/^list\s*([0-9a-zA-Z\.\-]+)?/i) {
+-        _list_services($session, $1);
++        _list_services($session, lc($1));
+     }
+     elsif (/^cap\s?(.*)/i) {
+         _negotiate_session_capabilities($session, $1);
+Index: node/sbin/munin-node
+===================================================================
+--- node/sbin/munin-node	(.../tags/1.4.5)	(revision 4208)
++++ node/sbin/munin-node	(.../branches/1.4-stable)	(revision 4208)
+@@ -99,7 +99,6 @@
+     Munin::Node::Server->run(
+        syslog_ident => 'munin-node',
+        conf_file    => $conffile,
+-       pid_file     => "$Munin::Common::Defaults::MUNIN_STATEDIR/munin-node.pid"
+     );
+ 
+     return 0;
+Index: dists/sunos/README
+===================================================================
+--- dists/sunos/README	(.../tags/1.4.5)	(revision 4208)
++++ dists/sunos/README	(.../branches/1.4-stable)	(revision 4208)
+@@ -1 +1 @@
+-See also resources/solaris-init.d_munin-node for a init.d script
++See also resources/solaris-smf/ for SMF manifest and startup script
+Index: ChangeLog
+===================================================================
+--- ChangeLog	(.../tags/1.4.5)	(revision 4208)
++++ ChangeLog	(.../branches/1.4-stable)	(revision 4208)
+@@ -17,15 +17,15 @@
+ * Apply r3451 from trunk: ligne: use the local $DEBUG to toggle debug output, 
+   rather than the one in 'main' package. 
+ * Backport r3444: ligne: fix warnings when running under certain versions of
++  perl, caused by exporting an undefined variable to the environment. 
++  Thanks to Aleksandar Lazic (al4711) for the patch. 
+ * Typo in SNMPv3 code fixes ticket #911
+ * Backport r3546 to r3554 from trunk (fix for #912, and more extensive test 
++  coverage for Munin::Plugin::SNMP). 
+ * Fix ticket #928. Adding missing max_cgi_graph_jobs directive to the 
+   %legal hash 
+-  coverage for Munin::Plugin::SNMP). 
+-* Remove trailing whitespace from 1.4-stable/node directory, as in trunk. 
++* Remove trailing whitespace from 1.4-stable/node directory, as in trunk 
+ * Ignore the sandbox and Module::Build-generated content, as in trunk
+-  perl, caused by exporting an undefined variable to the environment. 
+-  Thanks to Aleksandar Lazic (al4711) for the patch. 
+ * Backport r3439: ligne: and add a newline to the error message when there was
+   a plugin exec failure. 
+ * Backport r3434: ligne: set Net::Server's syslog_ident parameter, so log 
+@@ -41,7 +41,7 @@
+   Thanks to claudius for the patch. fixes ticket #889
+ * snmp_netstat: tidy and document
+ * snmp_netstat: Fix bug where snmp_netstat undercounts the number
+-   of connections
++  of connections
+ * uptime: graph should not scale, as it makes it hard to read after 1000
+   days of uptime 
+ * postgres_users: Usernames fetched from pg_stat_activity need to be
+Index: common/lib/Munin/Common/Config.pm
+===================================================================
+--- common/lib/Munin/Common/Config.pm	(.../tags/1.4.5)	(revision 4208)
++++ common/lib/Munin/Common/Config.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -37,7 +37,8 @@
+ 	"cdef_name", "graphable", "process", "realname",
+ 	"onlynullcdef", "group_order", "pipe", "pipe_command",
+ 	"unknown_limit", "num_unknowns", "dropdownlimit",
+-	"max_graph_jobs", "max_cgi_graph_jobs", "munin_cgi_graph_jobs" );
++	"max_graph_jobs", "max_cgi_graph_jobs", "munin_cgi_graph_jobs",
++        "max_html_jobs", );
+ 
+ my %bools = map { $_ => 1} qw(yes no true false on off 1 0);
+ 
+Index: common/lib/Munin/Common/TLS.pm
+===================================================================
+--- common/lib/Munin/Common/TLS.pm	(.../tags/1.4.5)	(revision 4208)
++++ common/lib/Munin/Common/TLS.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -369,20 +369,16 @@
+     croak "Tried to do an encrypted read, but a TLS session is not started" 
+         unless $self->session_started();
+ 
+-    local $_;
+-
+-    eval { $_ = Net::SSLeay::read($self->{tls_session}); };
++    my $read = Net::SSLeay::read($self->{tls_session});
+     my $err = &Net::SSLeay::print_errs("");
+     if (defined $err and length $err) {
+         $self->{logger}("[TLS] Warning in read: $err");
+-        return;
++        return undef;
+     }
+-    $self->{logger}("DEBUG: < $_") if $self->{DEBUG};
++    undef $read if($read eq ''); # returning '' signals EOF
+ 
+-    if($_ eq '') { undef $_; } #returning '' signals EOF
+-
+-
+-    return $_;
++    $self->{logger}("DEBUG: < $read") if $self->{DEBUG} && defined $read;
++    return $read;
+ }
+ 
+ 
+@@ -394,7 +390,7 @@
+ 
+     $self->{logger}("DEBUG: > $text") if $self->{DEBUG};
+ 
+-    eval { Net::SSLeay::write($self->{tls_session}, $text); };
++    Net::SSLeay::write($self->{tls_session}, $text);
+     my $err = &Net::SSLeay::print_errs("");
+     if (defined $err and length $err) {
+         $self->{logger}("[TLS] Warning in write: $err");
+Index: master/lib/Munin/Master/Config.pm
+===================================================================
+--- master/lib/Munin/Master/Config.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/Config.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -148,7 +148,7 @@
+ 		local_address    => 0,
+ 		logdir           => $Munin::Common::Defaults::MUNIN_LOGDIR,
+ 		max_processes    => $MAXINT,
+-		rundir           => '/tmp',
++		rundir           => $Munin::Common::Defaults::MUNIN_STATEDIR,
+ 		timeout          => 180,
+ 		tls              => 'disabled',
+ 		tls_ca_certificate => "$Munin::Common::Defaults::MUNIN_CONFDIR/cacert.pem",
+Index: master/lib/Munin/Master/Node.pm
+===================================================================
+--- master/lib/Munin/Master/Node.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/Node.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -91,7 +91,8 @@
+ 
+     # TLS should only be attempted if explicitly enabled. The default
+     # value is therefore "disabled" (and not "auto" as before).
+-    my $tls_requirement = $config->{tls};
++    my $tls_requirement = exists $self->{configref}->{tls} ?
++                                   $self->{configref}->{tls} : $config->{tls};
+     DEBUG "TLS set to \"$tls_requirement\".";
+     return if $tls_requirement eq 'disabled';
+     my $logger = Log::Log4perl->get_logger("Munin::Master");
+@@ -478,22 +479,14 @@
+ 
+ sub _node_read {
+     my ($self) = @_;
+-    my @array = (); 
++    my @array = ();
+ 
+-    my $timed_out = !do_with_timeout($self->{io_timeout}, sub {
+-        while (1) {
+-            my $line = $self->{tls} && $self->{tls}->session_started()
+-                ? $self->{tls}->read()
+-                : readline $self->{socket};
+-            last unless defined $line;
+-            last if $line =~ /^\.\n$/;
+-            chomp $line;
+-            push @array, $line;
+-        }
+-    });
+-    if ($timed_out) {
+-        LOGCROAK "[FATAL] Socket read timed out to ".$self->{host}.": $@\n";
++    my $line = $self->_node_read_single();
++    while($line ne ".") {
++        push @array, $line;
++        $line = $self->_node_read_single();
+     }
++
+     DEBUG "[DEBUG] Reading from socket: \"".(join ("\\n",@array))."\".";
+     return @array;
+ }
+Index: master/lib/Munin/Master/ProcessManager.pm
+===================================================================
+--- master/lib/Munin/Master/ProcessManager.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/ProcessManager.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -107,7 +107,7 @@
+     my ($self) = @_;
+ 
+     while (@{$self->{workers}}) {
+-        DEBUG "[DEBUG] Active workers: " . scalar %{$self->{active_workers}};
++        DEBUG "[DEBUG] Active workers: " . (scalar keys %{$self->{active_workers}}) . "/" . $self->{max_concurrent};
+         last if scalar keys %{$self->{active_workers}} == $self->{max_concurrent};
+ 	# Here we just start'em, check results in _collect_results
+         $self->_start_next_worker();
+@@ -140,7 +140,7 @@
+ sub _collect_results {
+     my ($self, $sock) = @_;
+ 
+-    while (%{$self->{result_queue}}) {
++    while (%{$self->{result_queue}} || @{$self->{workers}}) {
+ 
+         do {
+             $self->_vet_finished_workers();
+@@ -148,7 +148,7 @@
+         } while (!%{$self->{result_queue}} && @{$self->{workers}});
+ 
+         my $worker_sock;
+-	DEBUG "[DEBUG] Active workers: " . scalar %{$self->{active_workers}};
++	DEBUG "[DEBUG] Active workers: " . (scalar keys %{$self->{active_workers}}) . "/" . $self->{max_concurrent};
+ 
+ 	if (not %{$self->{active_workers}}) {
+ 	    # Nothing left do do
+@@ -168,7 +168,7 @@
+ 		    . " failed.  This could be due to network problems/firewalled munin-node. Remaining workers: "
+ 		    . join(", ", keys %{$self->{result_queue}});
+ 	    } else {
+-		WARN "[WARNING] Call to accept timed out.  Remaining workers: " . join(", ", keys %{$self->{result_queue}});
++		INFO "[INFO] Remaining workers: " . join(", ", keys %{$self->{result_queue}});
+ 	    }
+ 	    next;
+         } # if timed_out
+Index: master/lib/Munin/Master/UpdateWorker.pm
+===================================================================
+--- master/lib/Munin/Master/UpdateWorker.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/UpdateWorker.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -423,7 +423,7 @@
+     my ($self, $rrd_file, $service, $ds_name, $ds_config) = @_;
+ 
+     INFO "[INFO] creating rrd-file for $service->$ds_name: '$rrd_file'";
+-    mkpath(dirname($rrd_file), {mode => oct(777)});
++    munin_mkdir_p(dirname($rrd_file), oct(777));
+     my @args = (
+         $rrd_file,
+         sprintf('DS:42:%s:600:%s:%s', 
+Index: master/lib/Munin/Master/GraphOld.pm
+===================================================================
+--- master/lib/Munin/Master/GraphOld.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/GraphOld.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -642,6 +642,7 @@
+ 
+     # Make my graphs
+     my $sname        = munin_get_node_name($service);
++    my $skeypath     = munin_get_keypath($service);
+     my $service_time = Time::HiRes::time;
+     my $lastupdate   = 0;
+     my $now          = time;
+@@ -1286,7 +1287,7 @@
+     } # if graph_sums
+ 
+     $service_time = sprintf("%.2f", (Time::HiRes::time - $service_time));
+-    INFO "Graphed service : $sname ($service_time sec * 4)";
++    INFO "[INFO] Graphed service $skeypath ($service_time sec)";
+     print $STATS "GS|$service_time\n" unless $skip_stats;
+ 
+     foreach (@added) {
+Index: master/lib/Munin/Master/LimitsOld.pm
+===================================================================
+--- master/lib/Munin/Master/LimitsOld.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/LimitsOld.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -250,7 +250,7 @@
+     my $parent     = munin_get_parent($group);
+     my $name       = get_notify_name($group);
+ 
+-    if (defined $parent and munin_get_node_name($parent) ne "root") {
++    if (defined $parent and munin_get_node_name($parent) ne "#%#root") {
+ 	return (get_full_group_path($parent) . " :: " . $name);
+     } else {
+ 	return $name;
+@@ -480,30 +480,36 @@
+     if (defined $crit and $crit =~ /^\s*([-+\d.]*):([-+\d.]*)\s*$/) {
+         $critical[0] = $1 if length $1;
+         $critical[1] = $2 if length $2;
+-        DEBUG "[DEBUG] processing critical: $name -> $critical[0] : $critical[1]";
+     }
+     elsif (defined $crit and $crit =~ /^\s*([-+\d.]+)\s*$/) {
+-        $critical[1] = $1 if defined $1;
+-        DEBUG "[DEBUG] processing critical: $name -> : $critical[1]";
++        $critical[1] = $1;
+     }
+     elsif (defined $crit) {
+         @critical = (0, 0);
+-        DEBUG "[DEBUG] processing critical: $name -> $critical[0] : $critical[1]";
+     }
++    if(defined $crit) {
++        DEBUG "[DEBUG] processing critical: $name -> "
++                . (defined $critical[0]? $critical[0] : "")
++                .  " : "
++                . (defined $critical[1]? $critical[1] : "");
++    }   
+ 
+     if (defined $warn and $warn =~ /^\s*([-+\d.]*):([-+\d.]*)\s*$/) {
+         $warning[0] = $1 if length $1;
+         $warning[1] = $2 if length $2;
+-        DEBUG "[DEBUG] processing warning: $name -> $warning[0] : $warning[1]";
+     }
+     elsif (defined $warn and $warn =~ /^\s*([-+\d.]+)\s*$/) {
+-        $warning[1] = $1 if defined $1;
+-        DEBUG "[DEBUG] processing warning: $name -> : $warning[1]";
++        $warning[1] = $1;
+     }
+     elsif (defined $warn) {
+         @warning = (0, 0);
+-        DEBUG "[DEBUG] processing warning: $name -> $warning[0] : $warning[1]";
+     }
++    if(defined $warn) {
++        DEBUG "[DEBUG] processing warning: $name -> "
++                . (defined $warning[0]? $warning[0] : "")
++                .  " : "
++                . (defined $warning[1]? $warning[1] : "");
++    }
+ 
+     if ($unknown_limit =~ /^\s*(\d+)\s*$/) {
+         $unknown_limit = $1 if defined $1;
+@@ -700,6 +706,8 @@
+         }
+         DEBUG "[DEBUG] sending message: \"$txt\"";
+         print $pipe $txt, "\n" if (defined $pipe);
++        DEBUG "[DEBUG] explicitely closing pipe as suggested by schamane on #732";
++        close $pipe if (defined $pipe);
+         $contactobj->{"num_messages"}
+             = 1 + munin_get($contactobj, "num_messages", 0);   # $num_messages++
+     }
+@@ -712,12 +720,18 @@
+     my @res  = ();
+ 
+ 
+-    while (length($text)) {
++    while (defined($text) && length($text)) {
+         if ($text =~ /^([^\$]+|)(?:\$(\{.*)|)$/) {
+             push @res, $1;
+             $text = $2;
+         }
++
+         my @a = extract_bracketed($text, '{}');
++        if(!defined $a[0]) {
++            $text = $a[1];
++            next;
++        }
++
+         if ($a[0] =~ /^\{var:(\S+)\}$/) {
+             $a[0] = munin_get($hash, $1, "");
+         }
+@@ -761,8 +775,8 @@
+             my $t     = $3;
+             my $res   = "";
+             my $field = munin_get($hash, $f, 0);
+-            my $check = ($field ne "0" and length($field));
+-            $check = (!length($field) or $field eq "0") if $n;
++            my $check = (defined $field and $field ne "0" and length($field));
++            $check = (!$check) if $n;
+ 
+             if ($check) {
+                 $res .= message_expand($hash, $t);
+Index: master/lib/Munin/Master/Utils.pm
+===================================================================
+--- master/lib/Munin/Master/Utils.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/Utils.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -48,6 +48,7 @@
+ 	   'munin_get_picture_filename',
+ 	   'munin_get_html_filename',
+ 	   'munin_get_filename',
++	   'munin_get_keypath',
+ 	   'munin_graph_column_headers',
+ 	   'munin_get_max_label_length',
+ 	   'munin_get_field_order',
+@@ -277,7 +278,7 @@
+     $config->{'htmldir'}       ||= $Munin::Common::Defaults::MUNIN_HTMLDIR;
+     $config->{'spooldir'}      ||= $Munin::Common::Defaults::MUNIN_SSPOOLDIR;
+     $config->{'#%#parent'}     = undef;
+-    $config->{'#%#name'}       = "root";
++    $config->{'#%#name'}       = "#%#root";
+ 
+     return ($config);
+ }
+@@ -920,7 +921,7 @@
+ 	# Not sure when a #%#name node can go missing
+ 	my $name = $i->{'#%#name'} || '*BUG*';
+ 	goto gotoparent if $name eq '*BUG*';
+-	last if $name eq 'root';
++	last if $name eq '#%#root';
+ 	if ($host) {
+ 	    # Into group land now
+ 	    unshift(@group,$name);
+@@ -928,6 +929,7 @@
+ 	    # In service land, working towards host.
+ 	    # If i or my parent has a graph_title we're still working with services
+ 	    if (defined $i->{'#%#parent'}{graph_title} or defined $i->{graph_title}) {
++		$name =~ s/-/_/g; # can't handle dashes in service or below
+ 		unshift(@service,$name);
+ 	    } else {
+ 		$host = 1;
+@@ -1331,7 +1333,7 @@
+     my ($dirname, $umask) = @_;
+ 
+     eval {
+-        mkpath($dirname, {mode => $umask});
++        mkpath($dirname, 0, $umask);
+     };
+     return if $EVAL_ERROR;
+     return 1;
+Index: master/lib/Munin/Master/HTMLOld.pm
+===================================================================
+--- master/lib/Munin/Master/HTMLOld.pm	(.../tags/1.4.5)	(revision 4208)
++++ master/lib/Munin/Master/HTMLOld.pm	(.../branches/1.4-stable)	(revision 4208)
+@@ -89,8 +89,11 @@
+ my $htmldir;
+ 
+ my $do_dump = 0;
+-my $do_fork = 0; # No effect in this program.
++my $do_fork = 1;
++my $max_running=6;
++my $running=0;
+ 
++
+ sub html_startup {
+ 
+     my ($args) = @_;
+@@ -122,6 +125,8 @@
+     $tmpldir = $config->{tmpldir};
+     $htmldir = $config->{htmldir};
+ 
++    $max_running = &munin_get($config, "max_html_jobs", $max_running);
++
+     %comparisontemplates = instanciate_comparison_templates($tmpldir);
+ 
+     copy_web_resources($tmpldir, $htmldir);
+@@ -162,14 +167,11 @@
+     # Preparing the group tree...
+     my $groups = get_group_tree($config);
+ 
+-    
+-
+     if (!defined($groups) or scalar(%{$groups} eq '0')) {
+ 	LOGCROAK "[FATAL] There is nothing to do here, since there are no nodes with any plugins.  Please refer to http://munin-monitoring.org/wiki/FAQ_no_graphs";
+     };
+ 	
+-
+-    if (defined $groups->{"name"} and $groups->{"name"} eq "root") {
++    if (defined $groups->{"name"} and $groups->{"name"} eq "#%#root") {
+         $groups = $groups->{"groups"};    # root->groups
+     }
+ 
+@@ -181,8 +183,6 @@
+ 	exit 0;
+     }
+ 
+-    
+-
+     generate_group_templates($groups);
+ 
+     emit_main_index($groups,$timestamp);
+@@ -509,7 +509,7 @@
+         my $peername = munin_get_node_name($peer);
+         next
+             if $peername eq "contact"
+-                and munin_get_node_name($parent) eq "root";
++                and munin_get_node_name($parent) eq "#%#root";
+         if ($peername eq $me) {
+             unshift @$ret, {"name" => $peername, "link" => undef};
+         }
+@@ -823,6 +823,54 @@
+ }
+ 
+ 
++sub fork_and_work {
++    my ($work) = @_;
++
++    if (!$do_fork) {
++
++        # We're not forking.  Do work and return.
++        DEBUG "[DEBUG] Doing work synchrnonously";
++        &$work;
++        return;
++    }
++
++    # Make sure we don't fork too much
++    while ($running >= $max_running) {
++        DEBUG
++            "[DEBUG] Too many forks ($running/$max_running), wait for something to get done";
++        look_for_child("block");
++        --$running;
++    }
++
++    my $pid = fork();
++
++    if (!defined $pid) {
++        ERROR "[ERROR] fork failed: $!";
++        die "fork failed: $!";
++    }
++
++    if ($pid == 0) {
++
++        # This block does the real work.  Since we're forking exit
++        # afterwards.
++
++        &$work;
++
++        # See?!
++
++        exit 0;
++
++    }
++    else {
++        ++$running;
++        DEBUG "[DEBUG] Forked: $pid. Now running $running/$max_running";
++        while ($running and look_for_child()) {
++            --$running;
++        }
++    }
++}
++
++
+ sub generate_group_templates {
+     my $arr = shift || return;
+     return unless ref($arr) eq "ARRAY";
+@@ -836,7 +884,7 @@
+             
+             if (defined $key->{'ngroups'} and $key->{'ngroups'}) {
+                 # WTF: $key->{'groups'} = $key->{'groups'};
+-                generate_group_templates($key->{'groups'});
++                fork_and_work(sub {generate_group_templates($key->{'groups'})});
+ 
+                 emit_group_template($key);
+                 
+Index: master/_bin/munin-fastcgi-graph.in
+===================================================================
+--- master/_bin/munin-fastcgi-graph.in	(.../tags/1.4.5)	(revision 4208)
++++ master/_bin/munin-fastcgi-graph.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -98,7 +98,7 @@
+     # At this time the file exists.  But may be old.  Or not.
+ 
+     my @stats         = stat ($filename);
+-    my $last_modified = strftime ("%a, %d %b %Y %H:%M:%S %Z", localtime ($stats[9]));
++    my $last_modified = strftime ("%a, %d %b %Y %H:%M:%S GMT", gmtime ($stats[9]));
+     # "Expires" has to use last modified time as base:
+     my $expires       = strftime ("%a, %d %b %Y %H:%M:%S GMT", 
+ 				  gmtime($stats[9]+($period{$scale}-($stats[9]%$period{$scale}))));
+@@ -116,7 +116,7 @@
+ 
+   draw:  
+     @stats           = stat ($filename) unless @stats;
+-    $last_modified   = strftime ("%a, %d %b %Y %H:%M:%S %Z", localtime ($stats[9])) unless defined($last_modified);
++    $last_modified   = strftime ("%a, %d %b %Y %H:%M:%S GMT", gmtime ($stats[9])) unless defined($last_modified);
+     # "Expires" has to use last modified time as base:
+     $expires         = strftime ("%a, %d %b %Y %H:%M:%S GMT", 
+ 				 gmtime($stats[9]+($period{$scale}-($stats[9]%$period{$scale})))) unless defined ($expires);
+Index: master/_bin/munin-cgi-graph.in
+===================================================================
+--- master/_bin/munin-cgi-graph.in	(.../tags/1.4.5)	(revision 4208)
++++ master/_bin/munin-cgi-graph.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -88,7 +88,7 @@
+ # At this time the file exists.  But may be old.  Or not.
+ 
+ my @stats         = stat ($filename);
+-my $last_modified = strftime ("%a, %d %b %Y %H:%M:%S %Z", localtime ($stats[9]));
++my $last_modified = strftime ("%a, %d %b %Y %H:%M:%S GMT", gmtime ($stats[9]));
+ # "Expires" has to use last modified time as base:
+ my $expires       = strftime ("%a, %d %b %Y %H:%M:%S GMT", 
+ 			      gmtime($stats[9]+($period{$scale}-($stats[9]%$period{$scale}))));
+@@ -108,7 +108,7 @@
+ 
+     @stats = stat ($filename) unless @stats;
+ 
+-$last_modified = strftime ("%a, %d %b %Y %H:%M:%S %Z", localtime ($stats[9]))
++$last_modified = strftime ("%a, %d %b %Y %H:%M:%S GMT", gmtime ($stats[9]))
+     unless defined($last_modified); 
+ 
+ $expires       = strftime ("%a, %d %b %Y %H:%M:%S GMT", 
+Index: resources/solaris-init.d_munin-node.in
+===================================================================
+--- resources/solaris-init.d_munin-node.in	(.../tags/1.4.5)	(revision 4208)
++++ resources/solaris-init.d_munin-node.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -1,27 +0,0 @@
+-#!/sbin/sh
+-#
+-prog="munin-node"
+-path="@@SBINDIR@@"
+-
+-/usr/bin/mkdir -p @@STATEDIR@@
+-
+-case "$1" in
+-'restart')
+-        #stop the daemon, then fall through to the start
+-        /usr/bin/pkill -x $prog 
+-       	$path/$prog 
+-	;;
+-'start')
+-       	$path/$prog 
+-	;;
+-
+-'stop')
+-       	/usr/bin/pkill -x $prog 
+-        ;;
+-
+-*)
+-        echo "Usage: $0 { start | stop | restart }"
+-        exit 1
+-        ;;
+-esac
+-exit 0
+Index: resources/solaris-smf/munin-node.xml.in
+===================================================================
+--- resources/solaris-smf/munin-node.xml.in	(.../tags/1.4.5)	(revision 0)
++++ resources/solaris-smf/munin-node.xml.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -0,0 +1,69 @@
++<?xml version='1.0'?>
++<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
++
++<!--
++
++   Solaris SMF method for site/munin-node
++
++   2010-06-02 Stig Sandbeck Mathisen <ssm@fnord.no>
++   
++   Usage
++   =====
++   
++   Copy the munin-node script to /lib/svc/method/, and
++   make it executale
++   
++   Copy the munin-node.xml manifest to /var/svc/manifest/site/, and
++   then run:
++   
++   # svccfg import /var/svc/manifest/site/munin-node.xml
++
++   Check
++   =====
++
++   Check the status of your running munin-node with:
++
++   # svcs site/munin-node
++     
++  -->
++
++<service_bundle type='manifest' name='export'>
++  <service name='site/munin-node' type='service' version='0'>
++
++    <create_default_instance enabled='true'/>
++    <single_instance/>
++
++    <dependency name='fs' grouping='require_all' restart_on='refresh' type='service'>
++      <service_fmri value='svc:/system/filesystem/local'/>
++    </dependency>
++
++    <dependency name='net' grouping='require_all' restart_on='refresh' type='service'>
++      <service_fmri value='svc:/milestone/network'/>
++    </dependency>
++
++    <dependency name='config' grouping='require_all' restart_on='none' type='path'>
++      <service_fmri value='file://localhost@@CONFDIR@@/munin-node.conf'/>
++    </dependency>
++
++    <exec_method name='start' type='method' exec='/lib/svc/method/munin-node start' timeout_seconds='30'>
++      <method_context>
++        <method_credential user='root' group='root'/>
++      </method_context>
++    </exec_method>
++
++    <exec_method name='stop' type='method' exec=':kill' timeout_seconds='30'/>
++
++    <stability value='Unstable'/>
++
++    <template>
++      <common_name>
++        <loctext xml:lang='C'>munin-node</loctext>
++      </common_name>
++      <documentation>
++        <manpage title='munin-node' section='1' manpath='@@MANDIR@@'/>
++        <doc_link name='Munin Documentation' uri='http://munin-monitoring.org/wiki/Documentation'/>
++      </documentation>
++    </template>
++
++  </service>
++</service_bundle>
+Index: resources/solaris-smf/munin-node.in
+===================================================================
+--- resources/solaris-smf/munin-node.in	(.../tags/1.4.5)	(revision 0)
++++ resources/solaris-smf/munin-node.in	(.../branches/1.4-stable)	(revision 4208)
+@@ -0,0 +1,7 @@
++#!/bin/sh
++
++# Setup
++install -d -u munin -g munin @@STATEDIR@@
++
++# Main
++exec @@SBINDIR@@/munin-node
