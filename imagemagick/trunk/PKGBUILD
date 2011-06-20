@@ -3,7 +3,7 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.7.0.2
+pkgver=6.7.0.8
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
@@ -13,9 +13,9 @@ depends=('libtool' 'lcms' 'libxt' 'gcc-libs' 'bzip2' 'xz' 'freetype2' 'fontconfi
 makedepends=('ghostscript' 'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'libpng')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
-md5sums=('23a53b96b8e75c3ffd8cbbbfc1041b2f'
+md5sums=('67d8631c20fc9a2409343c02b159407d'
          'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('ff8e666d58a27af1ce3ab2c5408d10c233a4d809'
+sha1sums=('03b8534d16aee3efc5496817f804d21964be79ad'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
@@ -25,7 +25,7 @@ build() {
   autoreconf
   patch -Np0 -i ../perlmagick.rpath.patch
 
-  ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
+  LIBS="$LIBS -L/usr/lib/perl5/core_perl/CORE -lperl" ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
     --enable-openmp --with-wmf --with-openexr --with-xml \
     --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
     --with-perl --with-perl-options="INSTALLDIRS=vendor" \
