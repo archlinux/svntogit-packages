@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.14
-pkgrel=3
+pkgrel=4
 _glibcdate=20110617
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -27,7 +27,8 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.13-futex.patch
         glibc-2.14-libdl-crash.patch
-        glibc-2.14-fix-resolver-crash-typo.patch
+        #glibc-2.14-fix-resolver-crash-typo.patch
+        glibc-2.14-revert-4462fad3.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
         nscd
@@ -41,7 +42,7 @@ md5sums=('e441d745609d93c907b72548ba646dad'
          'b042647ea7d6f22ad319e12e796bd13e'
          '7d0154b7e17ea218c9fa953599d24cc4'
          'cea62cc6b903d222c5f26e05a3c0e0e6'
-         '73bfaafe25b93f357cf6a3b5eeb70e1b'
+         '46e56492cccb1c9172ed3a235cf43c6c'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
          'b587ee3a70c9b3713099295609afde49'
@@ -85,8 +86,11 @@ build() {
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
   patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
 
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=57912a71 (FS#24615)
-  patch -Np1 -i ${srcdir}/glibc-2.14-fix-resolver-crash-typo.patch
+  # This fixes the main segfault but not the assert fail (FS#24615)
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=57912a71 
+  #patch -Np1 -i ${srcdir}/glibc-2.14-fix-resolver-crash-typo.patch
+  # resort to reverting the bad commit completely for the moment
+  patch -Np1 -i ${srcdir}/glibc-2.14-revert-4462fad3.patch
 
   # re-export RPC interface until libtirpc is ready as a replacement
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873 (only fedora branch...)
