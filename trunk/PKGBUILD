@@ -6,7 +6,7 @@
 
 pkgname=mpd
 pkgver=0.16.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -16,10 +16,13 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'libpulse')
 makedepends=('pkgconfig' 'doxygen')
 install=${pkgname}.install
+changelog=ChangeLog
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
-        'mpd')
+        'mpd' 
+        'mpd-0.16.3_ffmpeg_sigsegv.patch')
 md5sums=('6e708c02b0e8c288aec855eecf441a5a'
-         'e5669c2bff4031928531e52475addeb1')
+         'e5669c2bff4031928531e52475addeb1'
+         '9a730957e213c62339e9335971e4b85e')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
@@ -32,6 +35,7 @@ build() {
     --disable-libwrap \
     --disable-cue \
     --disable-sidplay 
+  patch -Np1 -i $srcdir/mpd-0.16.3_ffmpeg_sigsegv.patch
   make
 }
 
