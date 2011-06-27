@@ -6,13 +6,15 @@ pkgname=readline
 _basever=6.2
 _patchlevel=001 #prepare for some patches
 pkgver=$_basever.$_patchlevel
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU readline library"
 arch=('i686' 'x86_64')
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
 license=('GPL')
 depends=('glibc' 'ncurses')
 backup=('etc/inputrc')
+options=('!emptydirs')
+install=readline.install
 source=(http://ftp.gnu.org/gnu/readline/readline-$_basever.tar.gz
         inputrc)
 if [ $_patchlevel -gt 00 ]; then
