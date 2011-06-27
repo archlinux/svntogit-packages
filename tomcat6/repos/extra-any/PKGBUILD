@@ -1,0 +1,86 @@
+# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
+pkgname=tomcat6
+pkgver=6.0.32
+pkgrel=2
+pkgdesc="Servlet-2.5/JSP-2.1 Container"
+arch=('any')
+url='http://tomcat.apache.org/'
+license=('APACHE')
+depends=('java-runtime>=5' 'java-jsvc' 'eclipse-ecj')
+makedepends=('java-environment>=5' 'apache-ant>=1.6' 'java-commons-daemon')
+optdepends=('tomcat-native: to allow optimal performance in production environments')
+backup=(etc/tomcat6/catalina.policy
+        etc/tomcat6/catalina.properties
+        etc/tomcat6/context.xml
+        etc/tomcat6/logging.properties
+        etc/tomcat6/server.xml
+        etc/tomcat6/tomcat-users.xml
+        etc/tomcat6/web.xml
+        etc/conf.d/tomcat6)
+install=tomcat6.install
+source=(http://archive.apache.org/dist/tomcat/tomcat-6/v${pkgver}/src/apache-tomcat-${pkgver}-src.tar.gz
+        http://tomcat.apache.org/dev/dist/m2-repository/org/apache/tomcat/dbcp/${pkgver}/dbcp-${pkgver}.jar
+        tomcat6.conf.d
+        tomcat6
+        tomcat6.install)
+
+noextract=(dbcp-${pkgver}.jar)
+md5sums=('19a1eaa9c9938b520d3c360d8cf4af22'
+         'c5b7101dbe6ed66624db6eca70d7873a'
+         '84e819ababbc8e1ac5c325d8af7febf8'
+         '50de34665d96f8e12d0a0d3d9a15fc1a'
+         '1be39071bd27781c352b2d73b765e29d')
+
+build() {
+  cd "${srcdir}/apache-tomcat-${pkgver}-src"
+
+  . /etc/profile.d/apache-ant.sh
+  ant download deploy\
+    -Dbase.path=${srcdir}/DOWN_LIBS \
+    -Dcommons-daemon.jar=/usr/share/java/commons-daemon.jar \
+    -Djdt.jar=/usr/share/java/eclipse-ecj.jar
+}
+
+package() {
+  cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build"
+
+  # Tomcat general files
+  install -dm755 ${pkgdir}/usr/share/{,java/}${pkgname}
+  # commons-daemon and tomcat-natives are packaged on their own
+  rm bin/{*.bat,commons-daemon*,tomcat-native.tar.gz}
+  cp -r bin ${pkgdir}/usr/share/${pkgname}
+
+  # eclipse-ecj is packaged on its own
+  rm lib/eclipse-ecj.jar
+  install lib/* ${pkgdir}/usr/share/java/${pkgname}
+  install "${srcdir}/dbcp-${pkgver}.jar" \
+          ${pkgdir}/usr/share/java/${pkgname}/tomcat-dbcp-${pkgver}.jar
+  ln -s tomcat-dbcp-${pkgver}.jar \
+        ${pkgdir}/usr/share/java/${pkgname}/tomcat-dbcp.jar
+  ln -s /usr/share/java/${pkgname} ${pkgdir}/usr/share/${pkgname}/lib
+
+  # 66=tomcat / 19=log
+  install -dm775 -o 66 -g 19 ${pkgdir}/var/log/${pkgname}
+  ln -s /var/log/${pkgname} ${pkgdir}/usr/share/${pkgname}/logs
+  touch ${pkgdir}/var/log/${pkgname}/catalina.{out,err}
+  chgrp 19 ${pkgdir}/var/log/${pkgname}/catalina.{out,err}
+
+  install -dm770 ${pkgdir}/etc/${pkgname}
+  install -m660 conf/* ${pkgdir}/etc/${pkgname}
+  ln -s /etc/${pkgname} ${pkgdir}/usr/share/${pkgname}/conf
+
+  install -dm775 ${pkgdir}/var/lib/${pkgname}
+  cp -r webapps ${pkgdir}/var/lib/${pkgname}
+  chown -R 66:66 ${pkgdir}/var/lib/${pkgname}
+  ln -s /var/lib/${pkgname}/webapps ${pkgdir}/usr/share/${pkgname}/webapps
+
+  install -dm1777 ${pkgdir}/var/tmp
+  install -dm755 -o 66 -g 66 ${pkgdir}/var/tmp/${pkgname}/{temp,work}
+  ln -s /var/tmp/${pkgname}/temp ${pkgdir}/usr/share/${pkgname}/temp
+  ln -s /var/tmp/${pkgname}/work ${pkgdir}/usr/share/${pkgname}/work
+
+  # Arch scripts
+  install -Dm644 ${srcdir}/${pkgname}.conf.d ${pkgdir}/etc/conf.d/${pkgname}
+  install -Dm755 ${srcdir}/${pkgname} ${pkgdir}/etc/rc.d/${pkgname}
+}
+
