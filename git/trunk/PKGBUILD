@@ -2,13 +2,13 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.5.4
+pkgver=1.7.6
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
 license=('GPL2')
-depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.12.2')
+depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.14.0')
 makedepends=('python2' 'emacs')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
@@ -47,7 +47,7 @@ package() {
     INSTALLDIRS=vendor DESTDIR="$pkgdir" install 
 
   # bash completion
-  mkdir -p $pkgdir/etc/bash_completion.d/
+  mkdir -p "$pkgdir"/etc/bash_completion.d/
   install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/etc/bash_completion.d/git 
   # more contrib stuff
   cp -a ./contrib $pkgdir/usr/share/git/ 
@@ -75,11 +75,11 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-md5sums=('4985b774db84d3bbcc2b8d90952552a3'
-         '7a74ef1c64395a07301359a8707c828a'
+md5sums=('9e0a438eb71e89eedb61f89470ed32a0'
+         'a017935cf9e90d9f056b6547c318fd15'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
          '2e42bf97779a1c6411d89043334c9e78')
-sha256sums=('fed9a6c7d07b063cfba9e3eb40fbd0d8120785225289fcf2fb56bee18dffd5ee'
-            '87d612195426fedfe4ee5274d9903e8f85aa16c410b4a3ba41610c23ed9211d7'
+sha256sums=('778795cece63cd758192378f3a999870cea290181b3a4c9de573c77192561082'
+            'a0ffd7e16997262ef741db5e2dd8eabf44b6767cf1a213753c7d8a268b4553ad'
             '2e0a50bdaf8f387a499895e1c204bff78244eaa72b78187c8a84ef40c0b82598'
             'e8bfe29d8393d2b87517c4dd56ea834b213aa00bf3d7fcde4ead3457cadbbc68')
