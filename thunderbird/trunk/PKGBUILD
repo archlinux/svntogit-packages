@@ -3,73 +3,58 @@
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributor: Anders Bostrom <anders.bostrom@home.se>
 pkgname=thunderbird
-pkgver=3.1.11
+pkgver=5.0
 pkgrel=1
 pkgdesc="Standalone Mail/News reader"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL')
 url="http://www.mozilla.org/projects/thunderbird"
-depends=('gtk2' 'gcc-libs' 'mozilla-common' 'nss' 'libxt' 'shared-mime-info' 'alsa-lib' 'dbus-glib' 'hunspell' 'sqlite3>=3.7.4' 'desktop-file-utils' 'libnotify')
-makedepends=('zip' 'pkg-config' 'python2' 'libidl2' 'wireless_tools' 'autoconf2.13')
+depends=('gtk2' 'gcc-libs' 'mozilla-common' 'nss' 'libxt' 'shared-mime-info' 'alsa-lib' 'dbus-glib' 'hunspell' 'sqlite3>=3.7.4' 'desktop-file-utils' 'libnotify' 'libevent')
+makedepends=('zip' 'pkg-config' 'python2' 'libidl2' 'wireless_tools' 'gconf' 'yasm' 'mesa')
 optdepends=('libcanberra: for sound support')
+options=(!buildflags)
 install=thunderbird.install
 source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/${pkgver}/source/thunderbird-${pkgver}.source.tar.bz2
         mozconfig
         thunderbird.desktop
         thunderbird-3.0-lang.patch
-        thunderbird-appversion.patch
-        thunderbird-shared-error.patch
-        xulrunner-png14.patch
-        python2.7.patch
-        gcc46.patch)
-md5sums=('25833b3f90925d96285630d22c85cd5c'
-         'ac1edd41e214742421c7f917948a9ad6'
+        thunderbird-appversion.patch)
+md5sums=('0bbacea54b4b8fc4ff20e73b3278c1ba'
+         'b8fd97ab4bfb2e4538b1e1340d70f915'
          'af3e5b344d2edf1c7d61bb0a5a96de9a'
          '25b6fe16ac24cd5c852213e5c1adb272'
-         '48ffcdb877a69d383b7d354e330f7658'
-         '3dca714ee8054634e6dfdb059464dc42'
-         '989b15f6bc9e2e9233fe4c6b23f412b1'
-         '78a4d0c920cbb8ec6a9a36974cd775ef'
-         'a2bced1791fb8eca978d31b129f92a28')
+         'be5f6aea50eeefae234bfc0f30e2f0ec')
 
 build() {
-  cd "${srcdir}/comm-1.9.2"
+  cd "${srcdir}/comm-miramar"
   patch -Np1 -i "${srcdir}/thunderbird-3.0-lang.patch"
   patch -Np1 -i "${srcdir}/thunderbird-appversion.patch"
-  patch -Np1 -i "${srcdir}/thunderbird-shared-error.patch"
-  patch -Np1 -i "${srcdir}/gcc46.patch"
-  patch -Np0 -i "${srcdir}/xulrunner-png14.patch"
-  patch -Np0 -i "${srcdir}/python2.7.patch"
 
   cp "${srcdir}/mozconfig" .mozconfig
-  unset CXXFLAGS
-  unset CFLAGS
 
   export CXXFLAGS="-fpermissive"
-  export LDFLAGS="-Wl,-rpath,/usr/lib/thunderbird-3.1"
+  export LDFLAGS="-Wl,-rpath,/usr/lib/thunderbird-5.0 -Wl,-O1,--sort-common,--hash-style=gnu,--as-needed"
+  export PYTHON="/usr/bin/python2"
 
-  make -j1 -f client.mk build MOZ_MAKE_FLAGS="${MAKEFLAGS}"
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS"
 }
 
 package() {
-  cd "${srcdir}/comm-1.9.2"
-  make -j1 DESTDIR="${pkgdir}" install
-
-  #Remove included dictionaries, add symlink to system myspell path.
-  #Note: this will cause file conflicts when users have installed dictionaries in the old location
-  rm -rf "${pkgdir}/usr/lib/thunderbird-3.1/dictionaries"
-  ln -sf /usr/share/myspell/dicts "${pkgdir}/usr/lib/thunderbird-3.1/dictionaries"
-
-  rm -rf "${pkgdir}/usr/bin/defaults"
-
-  install -m755 -d "${pkgdir}/usr/share/applications"
+  cd "${srcdir}/comm-miramar"
+  make -j1 -f client.mk DESTDIR="${pkgdir}" install
 
   for i in 16x16 22x22 24x24 32x32 48x48 256x256; do
-      install -d "$pkgdir/usr/share/icons/hicolor/$i/apps"
-      cp other-licenses/branding/thunderbird/mailicon${i/x*/}.png "$pkgdir/usr/share/icons/hicolor/$i/apps/thunderbird.png"
+      install -Dm644 other-licenses/branding/thunderbird/mailicon${i/x*/}.png \
+          "$pkgdir/usr/share/icons/hicolor/$i/apps/thunderbird.png"
   done
 
-  install -m644 "${srcdir}/thunderbird.desktop" "${pkgdir}/usr/share/applications/"
+  install -Dm644 "${srcdir}/thunderbird.desktop" \
+      "${pkgdir}/usr/share/applications/thunderbird.desktop"
 
-  rm -f ${pkgdir}/usr/lib/pkgconfig/thunderbird-ns{s,pr}.pc
+  rm -rf "${pkgdir}/usr/lib/thunderbird-5.0/dictionaries"
+  ln -sf /usr/share/myspell/dicts "${pkgdir}/usr/lib/thunderbird-5.0/dictionaries"
+
+  # We don't want the development stuff
+  rm -r "$pkgdir"/usr/{include,lib/thunderbird-devel-$pkgver,share/idl}
 }
+
