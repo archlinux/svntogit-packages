@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+# Contributor: Jason Taylor <jftaylor21@gmail.com>
+
+pkgname=lapack
+pkgver=3.3.1
+pkgrel=2
+url="http://www.netlib.org/lapack"
+pkgdesc="Linear Algebra PACKage"
+makedepends=('gcc-fortran')
+depends=("blas=${pkgver}")
+arch=('i686' 'x86_64')
+license=("custom")
+source=(http://www.netlib.org/${pkgname}/${pkgname}-${pkgver}.tgz
+        lapack-3.1.1-make.inc.patch
+        Makefile.lapack)
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/lapack-3.1.1-make.inc.patch"
+  cp -f INSTALL/make.inc.gfortran make.inc
+  cp -f "${srcdir}/Makefile.lapack" SRC/Makefile
+
+  export FC=gfortran
+
+  pushd INSTALL
+  make clean
+  make NOOPT="${CFLAGS/-O?/-O0} -fPIC" OPTS="${CFLAGS} -fPIC"
+  popd
+  # make sure no files with '_', *vxx.o *vfx.o and *2.O as defined in *ASRC
+  #  are in OBJS
+  pushd SRC
+  make clean
+  
+  make FFLAGS="${CFLAGS} -fPIC" CFLAGS="${CFLAGS} -fPIC" shared
+  cp liblapack.so.${pkgver} "${srcdir}/${pkgname}-${pkgver}/"
+  popd
+}
+
+package() {
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m755 "${srcdir}/${pkgname}-${pkgver}/liblapack.so.${pkgver}" \
+    "${pkgdir}/usr/lib/"
+  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so"
+  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so.3"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/lapack"
+  install -m644 "${srcdir}/${pkgname}-${pkgver}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/lapack/"
+}
+
+sha1sums=('3ce437e05f0e9a3c8148ec41922f6efeef0ebdac'
+          '71bf7696f1c841339163e82d863dd62e484eb1cf'
+          '128a258fde1b923c0b0b958a8a8ae8aa7657e44b'
+          '2491a151a37f0162b25fc4e4e9a8ac444b574a76')
+sha1sums=('3ce437e05f0e9a3c8148ec41922f6efeef0ebdac'
+          '71bf7696f1c841339163e82d863dd62e484eb1cf'
+          'bbc51c4204cfc6a8aed1a0b61dc39f57ce801e6d')
