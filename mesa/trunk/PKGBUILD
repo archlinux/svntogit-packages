@@ -9,45 +9,34 @@ _git=true
 #_git=false
 
 if [ "${_git}" = "true" ]; then
-    pkgver=7.10.99.git20110706
+    #pkgver=7.10.99.git20110709
+    pkgver=7.11rc1
   else
-    pkgver=7.10.3
+    pkgver=7.11rc1
 fi
-pkgrel=2
+pkgrel=1
 arch=('i686' 'x86_64')
-makedepends=('glproto>=1.4.12' 'pkgconfig' 'libdrm>=2.4.25' 'libxxf86vm>=1.1.1' 'libxdamage>=1.1.3' 'expat>=2.0.1' 'libx11>=1.4.3' 'libxt>=1.1.1' 
-             'gcc-libs>=4.5' 'dri2proto>=2.6' 'python2' 'libxml2' 'imake' 'llvm')
+makedepends=('glproto>=1.4.14' 'libdrm>=2.4.26' 'libxxf86vm>=1.1.1' 'libxdamage>=1.1.3' 'expat>=2.0.1' 'libx11>=1.4.3' 'libxt>=1.1.1' 
+             'gcc-libs>=4.6.1' 'dri2proto>=2.6' 'python2' 'libxml2' 'imake' 'llvm')
 url="http://mesa3d.sourceforge.net"
 license=('custom')
-source=(LICENSE gnome-shell-shader-fix.patch nouveau-fix-header.patch)
+source=(LICENSE)
 if [ "${_git}" = "true" ]; then
 	# mesa git shot from 7.11 branch - see for state: http://cgit.freedesktop.org/mesa/mesa/commit/?h=7.11&id=1ae00c5960af83bea9545a18a1754bad83d5cbd0
-	source=(${source[@]} 'ftp://ftp.archlinux.org/other/mesa/mesa-1ae00c5960af83bea9545a18a1754bad83d5cbd0.tar.bz2')
+	#source=(${source[@]} 'ftp://ftp.archlinux.org/other/mesa/mesa-1ae00c5960af83bea9545a18a1754bad83d5cbd0.tar.bz2')
+	source=(${source[@]} "MesaLib-${pkgver}.zip"::"http://cgit.freedesktop.org/mesa/mesa/snapshot/mesa-b033f050fd5179b051181a0a4b6d94110624d25c.tar.bz2")
   else
-	source=(${source[@]} "ftp://ftp.freedesktop.org/pub/mesa/${pkgver}/MesaLib-${pkgver}.zip"
+	source=(${source[@]} "ftp://ftp.freedesktop.org/pub/mesa/${pkgver/rc1/}/MesaLib-${pkgver/rc/-rc}.zip"
 )
 fi
 md5sums=('5c65a0fe315dd347e09b1f2826a1df5a'
-         '3ec78f340f9387abd7a37b195e764cbf'
-         '67c87b77cc2236b52a3b47dad3fbb5d4'
-         '6d655a2573037838844019275dce66af')
+         '2246d97eb0cfb1f6d2bf8a54b533d07f')
 
 build() {
+    cd ${srcdir}/?esa-*   
+
 if [ "${_git}" = "true" ]; then
-    cd ${srcdir}/mesa-*   
     autoreconf -vfi
-  else
-    cd "${srcdir}/Mesa-${pkgver}" 
-fi
-
-if [ "${_git}" != "true" ]; then
-#backport from master to fix gnome-shell shader
-#https://bugs.freedesktop.org/show_bug.cgi?id=35714
-patch -Np1 -i "${srcdir}/gnome-shell-shader-fix.patch"
-patch -Np1 -i "${srcdir}/nouveau-fix-header.patch"
-fi
-
-if [ "${_git}" = "true" ]; then
     ./autogen.sh --prefix=/usr \
     --with-dri-driverdir=/usr/lib/xorg/modules/dri \
     --with-gallium-drivers=r300,r600,nouveau,swrast \
@@ -67,35 +56,31 @@ if [ "${_git}" = "true" ]; then
     #--enable-shared-glapi EXPERIMENTAL. Enable shared glapi for OpenGL[default=no]
     
   else
+      autoreconf -vfi
     ./configure --prefix=/usr \
     --with-dri-driverdir=/usr/lib/xorg/modules/dri \
-    --enable-gallium-radeon \
-    --enable-gallium-r600 \
-    --enable-gallium-nouveau \
-    --enable-gallium-swrast \
+    --with-gallium-drivers=r300,r600,nouveau,swrast \
+    --enable-gallium-llvm \
+    --enable-gallium-egl \
     --enable-glx-tls \
     --with-driver=dri \
     --enable-xcb \
-    --with-state-trackers=dri,glx \
     --disable-glut \
     --enable-gles1 \
     --enable-gles2 \
     --enable-egl \
-    --disable-gallium-egl
+    --enable-texture-float \
+    --enable-shared-dricore
 fi
 
   make
 }
 
 package_libgl() {
-  depends=('libdrm>=2.4.25' 'libxxf86vm>=1.1.1' 'libxdamage>=1.1.3' 'expat>=2.0.1')
+  depends=('libdrm>=2.4.26' 'libxxf86vm>=1.1.1' 'libxdamage>=1.1.3' 'expat>=2.0.1')
   pkgdesc="Mesa 3-D graphics library and DRI software rasterizer"
 
-if [ "${_git}" = "true" ]; then
-    cd ${srcdir}/mesa-*   
-  else
-    cd "${srcdir}/Mesa-${pkgver}" 
-fi
+  cd ${srcdir}/?esa-*   
   install -m755 -d "${pkgdir}/usr/lib"
   install -m755 -d "${pkgdir}/usr/lib/xorg/modules/extensions"
 
@@ -109,7 +94,7 @@ fi
 if [ "${_git}" = "true" ]; then
     make -C ${srcdir}/mesa-*/src/gallium/targets/dri-swrast DESTDIR="${pkgdir}" install
   else
-    make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-swrast DESTDIR="${pkgdir}" install
+    make -C ${srcdir}/Mesa-${pkgver/rc/-rc}/src/gallium/targets/dri-swrast DESTDIR="${pkgdir}" install
 fi
   ln -s swrastg_dri.so "${pkgdir}/usr/lib/xorg/modules/dri/swrast_dri.so"
   ln -s libglx.xorg "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so"
@@ -125,7 +110,7 @@ package_libgles() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*   
   else
-    cd "${srcdir}/Mesa-${pkgver}" 
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}" 
 fi
   install -m755 -d "${pkgdir}/usr/lib"
   install -m755 -d "${pkgdir}/usr/lib/pkgconfig"
@@ -149,10 +134,10 @@ package_libegl() {
 
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*  
-    make -C src/gallium/targets/egl-static DESTDIR="${pkgdir}" install
   else
-    cd "${srcdir}/Mesa-${pkgver}" 
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}" 
 fi
+  make -C src/gallium/targets/egl-static DESTDIR="${pkgdir}" install
   install -m755 -d "${pkgdir}/usr/lib"
   install -m755 -d "${pkgdir}/usr/lib/pkgconfig"
   install -m755 -d "${pkgdir}/usr/include"
@@ -163,10 +148,10 @@ fi
   install -m755 -d "${pkgdir}/usr/share/doc"
   install -m755 -d "${pkgdir}/usr/share/doc/libegl"
   bin/minstall lib/libEGL.so* "${pkgdir}/usr/lib/"
-if [ "${_git}" != "true" ]; then
+#if [ "${_git}" != "true" ]; then
   install -m755 -d "${pkgdir}/usr/lib/egl"
   bin/minstall lib/egl/* "${pkgdir}/usr/lib/egl/"
-fi
+#fi
   bin/minstall src/egl/main/egl.pc "${pkgdir}/usr/lib/pkgconfig/"
   bin/minstall include/EGL/* "${pkgdir}/usr/include/EGL/"
   bin/minstall include/KHR/khrplatform.h "${pkgdir}/usr/include/KHR/"
@@ -177,14 +162,14 @@ fi
 }
 
 package_mesa() {
-  depends=('libgl' 'libx11>=1.4.3' 'libxt>=1.1.1' 'gcc-libs>=4.5' 'dri2proto>=2.6' 'libdrm>=2.4.25' 'glproto>=1.4.12')
+  depends=('libgl' 'libx11>=1.4.3' 'libxt>=1.1.1' 'gcc-libs>=4.6' 'dri2proto>=2.6' 'libdrm>=2.4.26' 'glproto>=1.4.14')
   optdepends=('opengl-man-pages: for the OpenGL API man pages')
   pkgdesc="Mesa 3-D graphics libraries and include files"
 
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*   
   else
-    cd "${srcdir}/Mesa-${pkgver}" 
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}" 
 fi
   make DESTDIR="${pkgdir}" install
 
@@ -212,7 +197,7 @@ package_ati-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C radeon DESTDIR="${pkgdir}" install
   make -C r200 DESTDIR="${pkgdir}" install
@@ -226,7 +211,6 @@ if [ "${_git}" = "true" ]; then
     make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-r300 DESTDIR="${pkgdir}" install
     make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-r600 DESTDIR="${pkgdir}" install
 fi
-  #make -C r600 DESTDIR="${pkgdir}" install
 }
 
 package_intel-dri() {
@@ -236,7 +220,7 @@ package_intel-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C i810 DESTDIR="${pkgdir}" install
   make -C i915 DESTDIR="${pkgdir}" install
@@ -250,7 +234,7 @@ package_unichrome-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C unichrome DESTDIR="${pkgdir}" install
 }
@@ -276,7 +260,7 @@ package_mga-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C mga DESTDIR="${pkgdir}" install
 }
@@ -289,7 +273,7 @@ package_r128-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C r128 DESTDIR="${pkgdir}" install
 }
@@ -315,7 +299,7 @@ package_sis-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C sis DESTDIR="${pkgdir}" install
 }
@@ -328,7 +312,7 @@ package_tdfx-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
   make -C tdfx DESTDIR="${pkgdir}" install
 }
@@ -340,7 +324,7 @@ package_nouveau-dri() {
 if [ "${_git}" = "true" ]; then
     cd ${srcdir}/mesa-*/src/mesa/drivers/dri
   else
-    cd "${srcdir}/Mesa-${pkgver}/src/mesa/drivers/dri"
+    cd "${srcdir}/Mesa-${pkgver/rc/-rc}/src/mesa/drivers/dri"
 fi
 
   # classic mesa driver for nv10 , nv20 nouveau_vieux_dri.so
@@ -350,7 +334,7 @@ fi
 if [ "${_git}" = "true" ]; then
     make -C ${srcdir}/mesa-*/src/gallium/targets/dri-nouveau DESTDIR="${pkgdir}" install
   else
-    make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-nouveau DESTDIR="${pkgdir}" install
+    make -C ${srcdir}/Mesa-${pkgver/rc/-rc}/src/gallium/targets/dri-nouveau DESTDIR="${pkgdir}" install
 fi
 }
 
