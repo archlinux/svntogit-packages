@@ -3,62 +3,38 @@
 # Contributor: tobias [tobias.justdreams.de]
 
 pkgname=cinepaint
-_srcver=0.22-1
-pkgver=${_srcver/-/.}
-pkgrel=8
-pkgdesc="Sophisticated graphics manipulation programm supporting >8bit pictures"
+pkgver=0.25.0
+pkgrel=1
+pkgdesc="Sophisticated graphics manipulation programm supporting > 8bit pictures"
 arch=('i686' 'x86_64')
 license=('LGPL' 'GPL' 'MIT')
 url="http://www.cinepaint.org"
-depends=('gtk2>=2.18.6' 'openexr>=1.6.1' 'lcms>=1.18' 'libxpm>=3.5.7' 'fltk' 
-         'desktop-file-utils' 'ftgl>=2.1.3rc5')
+depends=('gtk2' 'openexr' 'lcms' 'libxpm' 'fltk' 'ftgl' 'desktop-file-utils')
 makedepends=('python2' 'gutenprint')
 optdepends=('python2: for python plug-ins' 'gutenprint: for print plug-ins')
 options=('!libtool')
 install=cinepaint.install
-source=(http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${_srcver}.tar.gz
-        LICENSE
-        cinepaint-0.22.1-gcc43.patch
-        cinepaint-0.22.1-multiple_parameters_named.patch
-        cinepaint-0.22.1-ambiguousawake.patch
-	cinepaint-0.22-gcc44.patch)
-md5sums=('f360587240db6b6d2f0bfd94c420c492'
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.xz
+        LICENSE cinepaint-0.22-gcc44.patch)
+md5sums=('6ac099e3bc543e2460dfbffa7411d477'
          '169085743f667c250ea2e4022efecf5f'
-         'f05e17a16d0018e5301aff0e1fa597b0'
-         '0876510a5ce3d581ebdde7e18199c09f'
-         '4586aa153a0d3cac36120afc1f95a880'
          '368e820c27f525e3569d43388f1c119a')
 
 build() {
-  cd "${srcdir}/${pkgname}-${_srcver}"
- # FIXES
-  patch -Np1 -i "${srcdir}/cinepaint-0.22.1-gcc43.patch"
-  patch -Np1 -i "${srcdir}/cinepaint-0.22-gcc44.patch"
-  patch -Np1 -i "${srcdir}/cinepaint-0.22.1-multiple_parameters_named.patch"
-  patch -Np0 -i "${srcdir}/cinepaint-0.22.1-ambiguousawake.patch"
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -p1 -i "${srcdir}/cinepaint-0.22-gcc44.patch"
   find plug-ins/pygimp -type f -exec sed -i 's#env python#env python2#' {} +
-  find plug-ins/print -type f -exec  sed -i "s:gutenprintui/gutenprintui:gutenprintui2/gutenprintui:" {} \;
-  sed -i 's|Fl/Fl_File_Chooser.H|FL/Fl_File_Chooser.H|' lib/fl_i18n/fl_i18n.cxx
-  sed -i 's|Fl/Fl_Widget.H|FL/Fl_Widget.H|' plug-ins/icc_examin/icc_examin/icc_helfer.h
-  sed -i 's|Fl/Fl.H|FL/Fl.H|' plug-ins/icc_examin/icc_examin/icc_helfer_fltk.cpp
-  sed -i 's|Fl/Fl_File_Chooser.H|FL/Fl_File_Chooser.H|' plug-ins/icc_examin/icc_examin/fl_i18n/fl_i18n.cxx
+  sed -i 's|$(LDFLAGS) -o|$(LDFLAGS) $(GTK_LIBS) -o|' lib/Makefile.in
 
-  # Fix insecure rpath
-  sed '/-rpath/d' -i plug-ins/icc_examin/icc_examin/configure
-
- # build
-  ./configure --prefix=/usr --mandir=/usr/share/man \
-    --enable-gtk2 --enable-pygimp \
-    --with-python=/usr/bin/python2
- # FIXES
-  sed -i 's/^\(X_LIBS.*\)$/\1 -lpthread/' plug-ins/openexr/Makefile
+  ./configure --prefix=/usr --libdir=/usr/lib --mandir=/usr/share/man \
+    --enable-gtk2 --enable-pygimp --with-python=/usr/bin/python2
   make
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${_srcver}"
+  cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
-  sed -i -e "s|-I$srcdir/cinepaint-0.22-1||" -e "s|-I$srcdir/cinepaint-0.22-1/lib||" -e "/libcinepaint.la/d" \
-    -e "s|$srcdir/cinepaint-0.22-1/lib/.libs/\$dlname||" "${pkgdir}/usr/bin/cinepainttool"
+  sed -i -e "s|-I$srcdir/cinepaint-$pkgver||" -e "s|-I$srcdir/cinepaint-$pkgver/lib||" -e "/libcinepaint.la/d" \
+    -e "s|$srcdir/cinepaint-$pkgver/lib/.libs/\$dlname||" "${pkgdir}/usr/bin/cinepainttool"
   install -D -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
