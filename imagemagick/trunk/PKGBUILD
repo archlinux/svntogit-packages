@@ -3,19 +3,18 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.7.0.8
+pkgver=6.7.1.0
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
-depends=('libtool' 'lcms' 'libxt' 'gcc-libs' 'bzip2' 'xz' 'freetype2' 'fontconfig' \
-         'libxext' 'libjpeg-turbo')
+depends=('libtool' 'lcms2' 'libxt' 'bzip2' 'xz' 'fontconfig' 'libxext' 'libjpeg-turbo')
 makedepends=('ghostscript' 'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'libpng')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
-md5sums=('67d8631c20fc9a2409343c02b159407d'
+md5sums=('2c420f9316e15624490efac7ce6eb4ae'
          'ff9974decbfe9846f8e347239d87e4eb')
-sha1sums=('03b8534d16aee3efc5496817f804d21964be79ad'
+sha1sums=('6570b9f994ae58e047d3a3ad84b1bfdf2e749159'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
@@ -25,12 +24,13 @@ build() {
   autoreconf
   patch -Np0 -i ../perlmagick.rpath.patch
 
-  LIBS="$LIBS -L/usr/lib/perl5/core_perl/CORE -lperl" ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
-    --enable-openmp --with-wmf --with-openexr --with-xml \
+  LIBS="$LIBS -L/usr/lib/perl5/core_perl/CORE -lperl" \
+    ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
+    --enable-openmp --with-wmf --with-openexr --with-xml --with-lcms2 --with-jp2 \
     --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
     --with-perl --with-perl-options="INSTALLDIRS=vendor" \
-    --without-gvc --without-djvu --without-autotrace --with-jp2 \
-    --without-jbig --without-fpx --without-dps --without-fftw
+    --without-gvc --without-djvu --without-autotrace --without-webp \
+    --without-jbig --without-fpx --without-dps --without-fftw --without-lqr
   make
 }
 
