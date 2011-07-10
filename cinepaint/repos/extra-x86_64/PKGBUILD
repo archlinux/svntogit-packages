@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: tobias [tobias.archlinux.org]
+# Contributor: tobias [tobias.justdreams.de]
+
+pkgname=cinepaint
+pkgver=0.25.0
+pkgrel=1
+pkgdesc="Sophisticated graphics manipulation programm supporting > 8bit pictures"
+arch=('i686' 'x86_64')
+license=('LGPL' 'GPL' 'MIT')
+url="http://www.cinepaint.org"
+depends=('gtk2' 'openexr' 'lcms' 'libxpm' 'fltk' 'ftgl' 'desktop-file-utils')
+makedepends=('python2' 'gutenprint')
+optdepends=('python2: for python plug-ins' 'gutenprint: for print plug-ins')
+options=('!libtool')
+install=cinepaint.install
+source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.xz
+        LICENSE cinepaint-0.22-gcc44.patch)
+md5sums=('6ac099e3bc543e2460dfbffa7411d477'
+         '169085743f667c250ea2e4022efecf5f'
+         '368e820c27f525e3569d43388f1c119a')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -p1 -i "${srcdir}/cinepaint-0.22-gcc44.patch"
+  find plug-ins/pygimp -type f -exec sed -i 's#env python#env python2#' {} +
+  sed -i 's|$(LDFLAGS) -o|$(LDFLAGS) $(GTK_LIBS) -o|' lib/Makefile.in
+
+  ./configure --prefix=/usr --libdir=/usr/lib --mandir=/usr/share/man \
+    --enable-gtk2 --enable-pygimp --with-python=/usr/bin/python2
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  sed -i -e "s|-I$srcdir/cinepaint-$pkgver||" -e "s|-I$srcdir/cinepaint-$pkgver/lib||" -e "/libcinepaint.la/d" \
+    -e "s|$srcdir/cinepaint-$pkgver/lib/.libs/\$dlname||" "${pkgdir}/usr/bin/cinepainttool"
+  install -D -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
