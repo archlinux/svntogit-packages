@@ -1,0 +1,47 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Alexander Baldeck <alexander@archlinux.org>
+pkgname=xulrunner
+pkgver=5.0
+_ffoxver=5.0
+pkgrel=1
+pkgdesc="Mozilla Runtime Environment"
+arch=('i686' 'x86_64')
+license=('MPL' 'GPL' 'LGPL')
+depends=('gtk2' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss' 'libxt' 'libxrender' 'hunspell' 'startup-notification' 'mime-types' 'dbus-glib' 'alsa-lib' 'libevent' 'sqlite3>=3.7.4' 'libnotify')
+makedepends=('zip' 'pkg-config' 'diffutils' 'python2' 'wireless_tools' 'yasm' 'mesa' 'gconf')
+url="http://wiki.mozilla.org/XUL:Xul_Runner"
+source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${_ffoxver}/source/firefox-${_ffoxver}.source.tar.bz2
+        mozconfig
+        mozilla-pkgconfig.patch)
+options=('!emptydirs' '!buildflags')
+replaces=('xulrunner-oss')
+build() {
+  cd "${srcdir}/mozilla-release"
+  cp "${srcdir}/mozconfig" .mozconfig
+
+  #fix libdir/sdkdir - fedora
+  patch -Np1 -i "${srcdir}/mozilla-pkgconfig.patch"
+
+  export CXXFLAGS="-fpermissive"
+  export LDFLAGS="-Wl,-rpath,/usr/lib/xulrunner-${pkgver} -Wl,-O1,--sort-common,--hash-style=gnu,--as-needed"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS"
+}
+
+package() {
+  cd "${srcdir}/mozilla-release"
+  make -j1 -f client.mk DESTDIR="${pkgdir}" install
+
+  #Remove included dictionaries, add symlink to system myspell path.
+  #Note: this will cause file conflicts when users have installed dictionaries in the old location
+  rm -rf "${pkgdir}/usr/lib/xulrunner-5.0/dictionaries"
+  ln -sf /usr/share/myspell/dicts "${pkgdir}/usr/lib/xulrunner-5.0/dictionaries"
+
+  # add xulrunner library path to ld.so.conf
+  install -d ${pkgdir}/etc/ld.so.conf.d
+  echo "/usr/lib/xulrunner-${pkgver}" > ${pkgdir}/etc/ld.so.conf.d/xulrunner.conf
+}
+md5sums=('9f64a01e86a5d424e12a8e3305c5debe'
+         '2358a2ddd35bcdd62ff42442dfe548d9'
+         '639ea80e823543dd415b90c0ee804186')
