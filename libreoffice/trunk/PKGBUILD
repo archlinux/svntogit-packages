@@ -13,6 +13,7 @@ pkgname=('libreoffice-common'
 	'libreoffice-sdk'
 	'libreoffice-sdk-doc'
 	'libreoffice-writer'
+	'libreoffice-en-US'
 	#'libreoffice-extension-barcode' # 
 	'libreoffice-extension-diagram'
 	'libreoffice-extension-google-docs'
@@ -201,7 +202,6 @@ md5sums=('5829f1003eb730948327142137057815'
          'bc228237108cab7745897a9f466b6d39'
          'eee273f501ff45dc5f1365e78c6d57c0'
          '43b145db28e6c0d73578ae6fd35e510d')
-         #'f8a8fdcc58f50560fbc266e28efdbbfe')
 
 build() {
 
@@ -269,7 +269,6 @@ build() {
 		--with-external-tar="${srcdir}/ext_sources" \
 		--prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
 		--with-install-dirname="${pkgbase}" --libdir=/usr/lib --mandir=/usr/share/man \
-		--with-lang="" \
 		--disable-verbose \
 		--enable-cairo\
 		--enable-crashdump \
@@ -339,6 +338,7 @@ build() {
 		--with-lucene-analyzers-jar=/usr/share/java/lucene-analyzers.jar\
 		$EXTRAOPTS || return 1
 
+		#--with-lang="en-US" \ <- makes it fail with a stupid error msg, see remove it at all to get en-US integrated. maybe later switch to "ALL"
 #--enable-split-opt-features Split file lists for some optional features, .e.g. pyuno, testtool
 
 #--with-system-graphite --enable-graohite ?
@@ -354,12 +354,9 @@ build() {
 	make
 	
 	# fake installation to create split file lists
-#	ls -lhaR file-lists* || /bin/true
 	mkdir $srcdir/fakeinstall
 	#make DESTDIR=${srcdir}/fakeinstall distro-pack-install
 	yes | make DESTDIR=${srcdir}/fakeinstall distro-pack-install
-#	ls -lhaR file-lists* || /bin/true
-#return 1
 }
 
 #check() {
@@ -371,13 +368,14 @@ package_libreoffice-common() {
 
  pkgdesc="common files for LibreOffice - a productivity suite that is compatible with other major office suites"
  install=${pkgbase}.install
- depends=('libreoffice-langpack' "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
-          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'libxslt'
+ depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
+          'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'libxslt' "icu>=4.6"
           'redland' 'hyphen' 'gcc-libs' 'sh' 'libtextcat' #'libgraphite'
           'hicolor-icon-theme' 'desktop-file-utils' 'shared-mime-info' 'gtk2') # keep gtk2 for install script 
 	  #'java-runtime' 
           #'saxon'
- optdepends=('java-runtime:     adds java support'
+ optdepends=('libreoffice-langpack: additional language support'
+             'java-runtime:     adds java support'
              'libcups:          adds printing support'
              'gconf:            adds additional gnome support'
              'nss:              adds support for signed files/macros'
@@ -660,7 +658,7 @@ package_libreoffice-sdk() {
         -e "s,@OO_SDK_CC_55_OR_HIGHER@,," \
         -e "s,@OO_SDK_JAVA_HOME@,\$J2SDKDIR," \
         -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
-        -e "s,@SDK_AUTO_DEPLOYMENT@,NO," setsdkenv_unix.{csh,sh}.in
+        -e "s,@SDK_AUTO_DEPLOYMENT@,NO," ${pkgdir}/usr/lib/libreoffice/basis3.4/sdk/setsdkenv_unix.{csh,sh}.in
 
  #fix http://bugs.archlinux.org/task/17656
  find ${pkgdir} -perm 444 -exec ls -lh {} \;
@@ -690,7 +688,7 @@ package_libreoffice-sdk-doc() {
  done
 
  #fix permissions
- find examples -type f -exec chmod -x {} \;
+ find ${pkgdir}/usr/lib/libreoffice/basis3.4/sdk/examples -type f -exec chmod -x {} \;
  
  #fix http://bugs.archlinux.org/task/17656
  find ${pkgdir} -perm 444 -exec ls -lh {} \;
@@ -701,8 +699,8 @@ package_libreoffice-sdk-doc() {
 
 package_libreoffice-writer() {
  pkgdesc="Word Processor Applicationfor LibreOffice."
- depends=('libreoffice-common' 'libwpd>=0.9.2' 'libwps' "icu>=4.6" 'libxml2')
- optdepends=()
+ depends=('libreoffice-common' 'libwpd>=0.9.2' 'libwps' 'libxml2')
+ optdepends=('libwpg:           library for importing and converting Corel WordPerfect(tm) Graphics images')
  backup=()
  groups=('libreoffice')
 
@@ -724,6 +722,34 @@ package_libreoffice-writer() {
  find ${pkgdir} -perm 444 -exec chmod 644 {} \;
  find ${pkgdir} -perm 555 -exec ls -lh {} \;
  find ${pkgdir} -perm 555 -exec chmod 755 {} \;
+}
+
+package_libreoffice-en-US() {
+  pkgdesc="English (US) language pack for LibreOffice"
+  provides=('openoffice-en-US' 'libreoffice-langpack')
+  replaces=(openoffice-en-US)
+  conflicts=(openoffice-en-US)
+
+#  cd "${srcdir}"/LibO_${_dirver}_Linux_x86_langpack-rpm_en-US/RPMS
+#  mkdir -p "${pkgdir}"/usr/lib/libreoffice
+#  cp -R opt/libreoffice3.4/* "${pkgdir}"/usr/lib/libreoffice
+#  chown root:root -R "${pkgdir}"/usr/lib/libreoffice
+
+ # install all remaining files into the pkg from fakeinstall dir
+ for file in `find $srcdir/fakeinstall`; do
+   dirname=`dirname $file`
+   # check if directory has been already been created - some are missing like manpages
+   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
+   # mv file from fakeinstall to pkgdir
+   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
+ done
+ 
+ #fix http://bugs.archlinux.org/task/17656
+ find ${pkgdir} -perm 444 -exec ls -lh {} \;
+ find ${pkgdir} -perm 444 -exec chmod 644 {} \;
+ find ${pkgdir} -perm 555 -exec ls -lh {} \;
+ find ${pkgdir} -perm 555 -exec chmod 755 {} \;
+
 }
 
 package_libreoffice-extension-barcode() {
