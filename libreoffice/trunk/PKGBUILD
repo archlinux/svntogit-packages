@@ -102,8 +102,12 @@ source=(${_mirror}/${pkgbase}-{artwork,base,bootstrap,calc,components,extensions
 	http://ooo.itc.hu/oxygenoffice/download/libreoffice/b7b2d0e04e142f26dd96119c80757d1f-oooblogger_0.1.oxt
 	buildfix_boost.diff
 	buildfix_ct2n.diff
-	vbahelper.visibility.patch)
-	#0001-fix-configure-without-the-optional-translations-modu.patch)
+	vbahelper.visibility.patch
+	0001-distro-install-desktop-integration-work-with-normal-.patch
+	0002-distro-install-desktop-integration-do-not-pack-libre.patch
+	0003-distro-install-fix-en-US-only-installation.patch
+	0004-distro-install-desktop-integration-put-PREFIXDIR-bin.patch
+	scp2-more-reasonable-file-access-rights.diff)
 noextract=(185d60944ea767075d27247c3162b3bc-unowinreg.dll
 	b4cae0700aa1c2aef7eb7f345365e6f1-translate-toolkit-1.8.1.tar.bz2
 	7a0dcb3fe1e8c7229ab4fb868b7325e6-mdds_0.5.2.tar.bz2
@@ -201,7 +205,12 @@ md5sums=('5829f1003eb730948327142137057815'
          'b7b2d0e04e142f26dd96119c80757d1f'
          'bc228237108cab7745897a9f466b6d39'
          'eee273f501ff45dc5f1365e78c6d57c0'
-         '43b145db28e6c0d73578ae6fd35e510d')
+         '43b145db28e6c0d73578ae6fd35e510d'
+         '43b0f998073fadfe73960998f69e91cd'
+         '0f9ab66f54f21708034322819f5e660d'
+         '0762b379aec0b1ad73c488d383283875'
+         '274c7d476383d2499e703c938824a78c'
+         '37638431e7e40baf2e47966ebb9bc0e9')
 
 build() {
 
@@ -230,7 +239,11 @@ build() {
 	patch -Np1 -i ${srcdir}/buildfix_boost.diff
 	patch -Np1 -i ${srcdir}/buildfix_ct2n.diff
 	patch -Np0 -i ${srcdir}/vbahelper.visibility.patch
-	#patch -Np1 -i ${srcdir}/0001-fix-configure-without-the-optional-translations-modu.patch
+	patch -Np1 -i ${srcdir}/0001-distro-install-desktop-integration-work-with-normal-.patch
+	patch -Np1 -i ${srcdir}/0002-distro-install-desktop-integration-do-not-pack-libre.patch
+	patch -Np1 -i ${srcdir}/0003-distro-install-fix-en-US-only-installation.patch
+	patch -Np1 -i ${srcdir}/0004-distro-install-desktop-integration-put-PREFIXDIR-bin.patch
+	patch -Np0 -i ${srcdir}/scp2-more-reasonable-file-access-rights.diff
 	
 	# unset C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
@@ -258,7 +271,8 @@ build() {
 #	      sed -i '/fields-table-formula.diff/d' patches/dev300/apply || return 1
 #	fi
 
-#	autoconf -v -f
+	# needed for 0003-distro-install-fix-en-US-only-installation.patch
+	autoconf -v -f
 
 	# non-SMP test build
 #	export MAKEFLAGS="-j1"
@@ -270,6 +284,7 @@ build() {
 		--prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
 		--with-install-dirname="${pkgbase}" --libdir=/usr/lib --mandir=/usr/share/man \
 		--disable-verbose \
+		--with-lang="" \
 		--enable-cairo\
 		--enable-crashdump \
 		--enable-dbus \
@@ -355,8 +370,8 @@ build() {
 	
 	# fake installation to create split file lists
 	mkdir $srcdir/fakeinstall
-	#make DESTDIR=${srcdir}/fakeinstall distro-pack-install
-	yes | make DESTDIR=${srcdir}/fakeinstall distro-pack-install
+	make DESTDIR=${srcdir}/fakeinstall distro-pack-install
+	#yes | make DESTDIR=${srcdir}/fakeinstall distro-pack-install
 }
 
 #check() {
@@ -368,7 +383,7 @@ package_libreoffice-common() {
 
  pkgdesc="common files for LibreOffice - a productivity suite that is compatible with other major office suites"
  install=${pkgbase}.install
- depends=("curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
+ depends=('libreoffice-langpack' "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libxaw' "neon>=0.28.6"
           'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'libxslt' "icu>=4.6"
           'redland' 'hyphen' 'gcc-libs' 'sh' 'libtextcat' #'libgraphite'
           'hicolor-icon-theme' 'desktop-file-utils' 'shared-mime-info' 'gtk2') # keep gtk2 for install script 
@@ -401,7 +416,7 @@ package_libreoffice-common() {
  replaces=('go-openoffice' 'openoffice-base' 'libreoffice')
 
  # remove base.desktop file that belongs to the LibO-base pkg
- sed -i '/\/usr\/share\/applications\/libreoffice\-base\.desktop/d' ${srcdir}/build/file-lists/common_list.txt
+# sed -i '/\/usr\/share\/applications\/libreoffice\-base\.desktop/d' ${srcdir}/build/file-lists/common_list.txt
 
  # create directories from *list.txt file
  for directory in `grep ^%dir ${srcdir}/build/file-lists/common_list.txt`; do
@@ -456,12 +471,6 @@ package_libreoffice-base() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-calc() {
@@ -483,12 +492,6 @@ package_libreoffice-calc() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-draw() {
@@ -510,12 +513,6 @@ package_libreoffice-draw() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-gnome() {
@@ -537,12 +534,6 @@ package_libreoffice-gnome() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-impress() {
@@ -564,12 +555,6 @@ package_libreoffice-impress() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-kde4() {
@@ -591,12 +576,6 @@ package_libreoffice-kde4() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-math() {
@@ -618,12 +597,6 @@ package_libreoffice-math() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-sdk() {
@@ -659,12 +632,6 @@ package_libreoffice-sdk() {
         -e "s,@OO_SDK_JAVA_HOME@,\$J2SDKDIR," \
         -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
         -e "s,@SDK_AUTO_DEPLOYMENT@,NO," ${pkgdir}/usr/lib/libreoffice/basis3.4/sdk/setsdkenv_unix.{csh,sh}.in
-
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-sdk-doc() {
@@ -689,12 +656,6 @@ package_libreoffice-sdk-doc() {
 
  #fix permissions
  find ${pkgdir}/usr/lib/libreoffice/basis3.4/sdk/examples -type f -exec chmod -x {} \;
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-writer() {
@@ -716,12 +677,6 @@ package_libreoffice-writer() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
 }
 
 package_libreoffice-en-US() {
@@ -730,26 +685,18 @@ package_libreoffice-en-US() {
   replaces=(openoffice-en-US)
   conflicts=(openoffice-en-US)
 
-#  cd "${srcdir}"/LibO_${_dirver}_Linux_x86_langpack-rpm_en-US/RPMS
-#  mkdir -p "${pkgdir}"/usr/lib/libreoffice
-#  cp -R opt/libreoffice3.4/* "${pkgdir}"/usr/lib/libreoffice
-#  chown root:root -R "${pkgdir}"/usr/lib/libreoffice
-
- # install all remaining files into the pkg from fakeinstall dir
- for file in `find $srcdir/fakeinstall`; do
+ # create directories from *list.txt file
+ for directory in `grep ^%dir ${srcdir}/build/file-lists/lang_en_US_list.txt`; do
+   install -dm755 ${pkgdir}/${directory/\%dir/}
+ done
+ # install files into the pkg from fakeinstall dir
+ for file in `grep -v ^%dir $srcdir/build/file-lists/lang_en_US_list.txt`; do
    dirname=`dirname $file`
    # check if directory has been already been created - some are missing like manpages
    [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
- 
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
-
 }
 
 package_libreoffice-extension-barcode() {
