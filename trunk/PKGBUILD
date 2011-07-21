@@ -4,7 +4,7 @@
 pkgbase=openldap
 pkgname=('libldap' 'openldap')
 pkgver=2.4.26
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.openldap.org/"
 license=('custom')
@@ -12,7 +12,7 @@ makedepends=('groff' 'libfetch' 'e2fsprogs' 'libtool' 'util-linux' 'libsasl')
 source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/${pkgbase}-${pkgver}.tgz
         slapd slapd.default ntlm.patch)
 md5sums=('f36f3086031dd56ae94f722ffae8df5e'
-         '378cd1ca051db3f72252c2d1f80fa409'
+         '7ea596cc1d6cbcfe1deea29ec66ab317'
          '6be69f6b7e522cb64cce8703da81ed32'
          '4258ddbef923d1f29f2843bc050f8c56')
 
@@ -20,9 +20,9 @@ build() {
   cd "${srcdir}"/${pkgbase}-${pkgver}
   patch -Np1 -i "${srcdir}"/ntlm.patch
   sed -i 's|-m 644 $(LIBRARY)|-m 755 $(LIBRARY)|' libraries/{liblber,libldap,libldap_r}/Makefile.in
-  sed -i 's|#define LDAPI_SOCK LDAP_RUNDIR LDAP_DIRSEP "run" LDAP_DIRSEP "ldapi"|#define LDAPI_SOCK LDAP_DIRSEP "run" LDAP_DIRSEP "ldapi"|' include/ldap_defaults.h
-  sed -i 's|%LOCALSTATEDIR%/run|/run|' servers/slapd/slapd.conf
-  sed -i 's|-$(MKDIR) $(DESTDIR)$(localstatedir)/run||' servers/slapd/Makefile.in
+  sed -i 's|#define LDAPI_SOCK LDAP_RUNDIR LDAP_DIRSEP "run" LDAP_DIRSEP "ldapi"|#define LDAPI_SOCK LDAP_DIRSEP "run" LDAP_DIRSEP "openldap" LDAP_DIRSEP "ldapi"|' include/ldap_defaults.h
+  sed -i 's|%LOCALSTATEDIR%/run|/run/openldap|' servers/slapd/slapd.conf
+  sed -i 's|-$(MKDIR) $(DESTDIR)$(localstatedir)/run|-$(MKDIR) $(DESTDIR)/run/openldap|' servers/slapd/Makefile.in
 
   LDFLAGS="$LDFLAGS -L\"${pkgdir}\"/libldap/usr/lib" 
   ./configure --prefix=/usr --mandir=/usr/share/man --libexecdir=/usr/lib \
@@ -69,6 +69,7 @@ package_openldap() {
   depends=("libldap>=${pkgver}" 'libtool' 'util-linux')
   backup=('etc/openldap/slapd.conf' 'etc/conf.d/slapd')
   options=('!libtool' 'emptydirs')
+  install=openldap.install
 
   cd "${srcdir}"/${pkgbase}-${pkgver}
   for dir in clients servers doc/man/man{1,5,8} ; do
@@ -84,7 +85,17 @@ package_openldap() {
   ln -s ../lib/slapd "${pkgdir}"/usr/sbin/slapd
 
   install -dm700 "${pkgdir}"/var/lib/openldap
+  chown -R 439:439 "${pkgdir}"/var/lib/openldap
+
+  install -dm755 "${pkgdir}"/run/openldap
+  chown 439:439 "${pkgdir}"/run/openldap
+
+  chown root:439 "${pkgdir}"/etc/openldap/{slapd.conf,DB_CONFIG.example}
+  chmod 640 "${pkgdir}"/etc/openldap/{slapd.conf,DB_CONFIG.example}
+
   install -dm700 "${pkgdir}"/etc/openldap/slapd.d
+  chown 439:439 "${pkgdir}"/etc/openldap/slapd.d
+
   install -Dm755 "${srcdir}"/slapd "${pkgdir}"/etc/rc.d/slapd
   install -Dm644 "${srcdir}"/slapd.default "${pkgdir}"/etc/conf.d/slapd
   install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
