@@ -36,37 +36,13 @@ case "$1" in
 		if ! ck_daemon iptables; then
 			fail=0
 			for table in $(cat /proc/net/ip_tables_names); do
-				iptables -t $table -F &>/dev/null && \
-					iptables -t $table -X &>/dev/null && \
-					iptables -t $table -Z &>/dev/null
+				iptables-restore < /var/lib/iptables/empty-$table.rules
 				[ $? -gt 0 ] && fail=1
 			done
 			if [ $fail -gt 0 ]; then
 				stat_fail
 			else
 				rm_daemon iptables
-				# reset policies
-				for table in filter nat mangle raw; do
-					if grep -qw $table /proc/net/ip_tables_names; then
-						iptables -t $table -P OUTPUT ACCEPT
-					fi
-				done
-				for table in filter mangle; do
-					if grep -qw $table /proc/net/ip_tables_names; then
-						iptables -t $table -P INPUT ACCEPT
-						iptables -t $table -P FORWARD ACCEPT
-					fi
-				done
-				for table in nat mangle raw; do
-					if grep -qw $table /proc/net/ip_tables_names; then
-						iptables -t $table -P PREROUTING ACCEPT
-					fi
-				done
-				for table in nat mangle; do
-					if grep -qw $table /proc/net/ip_tables_names; then
-						iptables -t $table -P POSTROUTING ACCEPT
-					fi
-				done
 				stat_done
 			fi
 		else
@@ -75,7 +51,6 @@ case "$1" in
 		;;
 	restart)
 		$0 stop
-		sleep 2
 		$0 start
 		;;
 	save)
