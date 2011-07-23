@@ -12,7 +12,7 @@
 case "$1" in
 	start)
 		if [ ! -f "$IP6TABLES_CONF" ]; then
-			echo "Cannot load iptables rules: $IP6TABLES_CONF is missing!" >&2
+			echo "Cannot load ip6tables rules: $IP6TABLES_CONF is missing!" >&2
 			exit 1
 		fi
 		stat_busy "Starting IP6 Tables"
@@ -37,37 +37,13 @@ case "$1" in
 		if ! ck_daemon ip6tables; then
 			fail=0
 			for table in $(cat /proc/net/ip6_tables_names); do
-				ip6tables -t $table -F &>/dev/null && \
-					ip6tables -t $table -X &>/dev/null && \
-					ip6tables -t $table -Z &>/dev/null
+				ip6tables-restore < /var/lib/iptables/empty-$table.rules
 				[ $? -gt 0 ] && fail=1
 			done
 			if [ $fail -gt 0 ]; then
 				stat_fail
 			else
 				rm_daemon ip6tables
-				# reset policies
-				for table in filter mangle raw; do
-					if grep -qw $table /proc/net/ip6_tables_names; then
-						ip6tables -t $table -P OUTPUT ACCEPT
-					fi
-				done
-				for table in filter mangle; do
-					if grep -qw $table /proc/net/ip6_tables_names; then
-						ip6tables -t $table -P INPUT ACCEPT
-						ip6tables -t $table -P FORWARD ACCEPT
-					fi
-				done
-				for table in mangle raw; do
-					if grep -qw $table /proc/net/ip6_tables_names; then
-						ip6tables -t $table -P PREROUTING ACCEPT
-					fi
-				done
-				for table in mangle; do
-					if grep -qw $table /proc/net/ip6_tables_names; then
-						ip6tables -t $table -P POSTROUTING ACCEPT
-					fi
-				done
 				stat_done
 			fi
 		else
@@ -76,7 +52,6 @@ case "$1" in
 		;;
 	restart)
 		$0 stop
-		sleep 2
 		$0 start
 		;;
 	save)
