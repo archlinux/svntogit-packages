@@ -1,8 +1,8 @@
 # $Id$
-# Maintainer: judd <jvinet@zeroflux.org>
+
 pkgname=imap
-pkgver=2007e
-pkgrel=2
+pkgver=2007f
+pkgrel=1
 pkgdesc="An IMAP/POP server"
 arch=('i686' 'x86_64')
 license=('APACHE')
@@ -13,21 +13,17 @@ conflicts=('courier-mta' 'courier-imap')
 source=("ftp://ftp.cac.washington.edu/imap/${pkgname}-${pkgver}.tar.gz"
         'imap' 'ipop2' 'ipop3')
 backup=(etc/xinetd.d/{imap,ipop2,ipop3} etc/ssl/certs/{imapd,ipop3d}.pem)
-md5sums=('7903800dc2604000016de070e0c55840'
+md5sums=('2126fd125ea26b73b20f01fcd5940369'
          'e77dedb80c2fec9bf2ef784ed5f976fb'
-	 'cc3eba6453242aa0b1bc8881160b2136'
-	 '0a5e27183a9b7e8ec5f6703125371e0a')
-
+         'cc3eba6453242aa0b1bc8881160b2136'
+         '0a5e27183a9b7e8ec5f6703125371e0a')
 
 build() {
-  # fix Makefile
-  cd $srcdir/$pkgname-$pkgver/src/osdep/unix
-  cp Makefile Makefile.orig
   sed \
     -e "s:-g -fno-omit-frame-pointer -O6:\${CFLAGS}:" \
     -e "s:SSLDIR=/usr/local/ssl:SSLDIR=/usr:" \
     -e "s:SSLCERTS=\$(SSLDIR)/certs:SSLCERTS=/etc/ssl/certs:" \
-    < Makefile.orig > Makefile
+    -i $srcdir/$pkgname-$pkgver/src/osdep/unix/Makefile
 
   cd $srcdir/$pkgname-$pkgver
   # NOTE: if you wish to enforce SSL, use SSLTYPE=unix.nopwd
@@ -36,11 +32,33 @@ build() {
          yes "y" | make lnp SPECIALAUTHENTICATORS=ssl SSLTYPE=unix EXTRACFLAGS="${CFLAGS} -fPIC" || return 1
     else yes "y" | make lnp SPECIALAUTHENTICATORS=ssl SSLTYPE=unix || return 1
   fi
+
+  # create ssl certs for secure imap
+  for i in imapd ipop3d; do
+    PEM1=$srcdir/pem1
+    PEM2=$srcdir/pem2
+    /usr/bin/openssl req -newkey rsa:1024 -keyout $PEM1 \
+      -nodes -x509 -days 365 -out  $PEM2 << EOF
+--
+SomeState
+SomeCity
+SomeOrganization
+SomeOrganizationalUnit
+localhost.localdomain
+root@localhost.localdomain
+EOF
+
+    cat $PEM1 >  ${i}.pem
+    echo ""    >> ${i}.pem
+    cat $PEM2 >> ${i}.pem
+    rm $PEM1 $PEM2
+    umask 022
+  done
 }
 
 package() {
   cd $srcdir/$pkgname-$pkgver
-  mkdir -p $pkgdir/usr/sbin
+  install -d $pkgdir/usr/sbin
   install -D -m755 imapd/imapd $pkgdir/usr/sbin/imapd
   install -D -m755 ipopd/ipop2d $pkgdir/usr/sbin/ipop2d
   install -D -m755 ipopd/ipop3d $pkgdir/usr/sbin/ipop3d
@@ -51,30 +69,7 @@ package() {
   install -D -m644 c-client/c-client.a $pkgdir/usr/lib/c-client.a
   ln -sf c-client.a $pkgdir/usr/lib/libc-client.a
 
-  # create ssl certs for secure imap
-  for i in imapd ipop3d; do
-    umask 077
-    PEM1=`/usr/bin/mktemp /tmp/openssl.XXXXXX`
-    PEM2=`/usr/bin/mktemp /tmp/openssl.XXXXXX`
-    /usr/bin/openssl req -newkey rsa:1024 -keyout $$PEM1 \
-      -nodes -x509 -days 365 -out  $$PEM2 << EOF
---
-SomeState
-SomeCity
-SomeOrganization
-SomeOrganizationalUnit
-localhost.localdomain
-root@localhost.localdomain
-EOF
-
-    cat $$PEM1 >  ${i}.pem
-    echo ""    >> ${i}.pem
-    cat $$PEM2 >> ${i}.pem
-    rm $$PEM1 $$PEM2
-    umask 022
-  done
-
-  # install 'em
+  # install certs
   install -D -m600 imapd.pem $pkgdir/etc/ssl/certs/imapd.pem
   install -D -m600 ipop3d.pem $pkgdir/etc/ssl/certs/ipop3d.pem
 
