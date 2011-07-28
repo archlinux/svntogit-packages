@@ -3,7 +3,7 @@
 
 pkgname=krb5
 pkgver=1.9.1
-pkgrel=2
+pkgrel=3
 pkgdesc="The Kerberos network authentication system"
 arch=('i686' 'x86_64')
 url="http://web.mit.edu/kerberos/"
@@ -16,15 +16,27 @@ conflicts=('heimdal')
 backup=('etc/krb5.conf' 'var/lib/krb5kdc/kdc.conf')
 source=(http://web.mit.edu/kerberos/dist/${pkgname}/1.9/${pkgname}-${pkgver}-signed.tar
         krb5-kadmind
-        krb5-kdc)
+        krb5-kdc
+        krb5-1.9.1-config-script.patch)
 sha1sums=('e23a1795a237521493da9cf3443ac8b98a90c066'
           '2aa229369079ed1bbb201a1ef72c47bf143f4dbe'
-          '77d2312ecd8bf12a6e72cc8fd871a8ac93b23393')
+          '77d2312ecd8bf12a6e72cc8fd871a8ac93b23393'
+          '8d1ec8bdb39fec230caace112d1a41ad792f7d97')
 options=('!emptydirs')
 
 build() {
    tar zxvf ${pkgname}-${pkgver}.tar.gz
    cd "${srcdir}/${pkgname}-${pkgver}/src"
+
+   # - Make krb5-config suppress CFLAGS output when called with --libs
+   #   cf https://bugzilla.redhat.com/show_bug.cgi?id=544391
+   #      http://pkgs.fedoraproject.org/gitweb/?p=krb5.git;a=blob;f=krb5-1.7-buildconf.patch
+   #
+   # - Omit extra libraries because their interfaces are not exposed to applications
+   #   by libkrb5, unless do_deps is set to 1, which indicates that the caller
+   #   wants the whole list.
+   #   cf http://pkgs.fedoraproject.org/gitweb/?p=krb5.git;a=blob;f=krb5-1.7-nodeplibs.patch
+   patch -Np2 -i ${srcdir}/krb5-1.9.1-config-script.patch
 
    export CFLAGS+=" -fPIC -fno-strict-aliasing -fstack-protector-all"
    export CPPFLAGS+=" -I/usr/include/et"
