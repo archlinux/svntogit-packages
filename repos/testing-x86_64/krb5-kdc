@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# general config
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+PID=`pidof -o %PPID /usr/sbin/krb5kdc`
+case "$1" in
+    start)
+        stat_busy "Starting Kerberos Authentication"
+        if [ -z "$PID" ]; then
+           /usr/sbin/krb5kdc
+        fi
+        if [ ! -z "$PID" -o $? -gt 0 ]; then
+            stat_fail
+        else
+            add_daemon krb5-kdc
+            stat_done
+        fi
+        ;;
+    stop)
+        stat_busy "Stopping Kerberos Authentication"
+	    [ ! -z "$PID" ] && kill $PID &> /dev/null
+        if [ $? -gt 0 ]; then
+            stat_fail
+        else
+            rm_daemon krb5-kdc
+            stat_done
+        fi
+        ;;
+    restart)
+        $0 stop
+	sleep 1
+        $0 start
+        ;;
+    *)
+        echo "usage: $0 {start|stop|restart}"
+	;;
+esac
+exit 0
