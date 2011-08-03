@@ -1,1 +1,1 @@
-SASLAUTHD_OPTS="-m /var/run/saslauthd -a pam"
+SASLAUTHD_OPTS="-a pam"
