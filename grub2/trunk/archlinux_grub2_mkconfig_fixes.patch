@@ -1,6 +1,6 @@
 diff -Nur a/util/grub.d/00_header.in b/util/grub.d/00_header.in
 --- a/util/grub.d/00_header.in	2011-04-06 13:14:27.000000000 +0200
-+++ b/util/grub.d/00_header.in	2011-04-26 09:23:02.371574484 +0200
++++ b/util/grub.d/00_header.in	2011-08-01 15:19:57.919100452 +0200
 @@ -100,6 +100,14 @@
  
  EOF
@@ -17,8 +17,8 @@ diff -Nur a/util/grub.d/00_header.in b/util/grub.d/00_header.in
  gfxterm=0;
  for x in ${GRUB_TERMINAL_INPUT} ${GRUB_TERMINAL_OUTPUT}; do
 diff -Nur a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
---- a/util/grub.d/10_linux.in	2011-04-18 23:18:49.000000000 +0200
-+++ b/util/grub.d/10_linux.in	2011-04-26 10:16:54.397538449 +0200
+--- a/util/grub.d/10_linux.in	2011-05-14 22:36:49.000000000 +0200
++++ b/util/grub.d/10_linux.in	2011-08-01 15:56:53.324779083 +0200
 @@ -31,8 +31,8 @@
  if [ "x${GRUB_DISTRIBUTOR}" = "x" ] ; then
    OS=GNU/Linux
@@ -30,15 +30,6 @@ diff -Nur a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
  fi
  
  # loop-AES arranges things so that /dev/loop/X can be our root device, but
-@@ -48,7 +48,7 @@
-     || uses_abstraction "${GRUB_DEVICE}" lvm; then
-   LINUX_ROOT_DEVICE=${GRUB_DEVICE}
- else
--  LINUX_ROOT_DEVICE=UUID=${GRUB_DEVICE_UUID}
-+  LINUX_ROOT_DEVICE="/dev/disk/by-uuid/${GRUB_DEVICE_UUID}"
- fi
- 
- if [ "x`${grub_probe} --device ${GRUB_DEVICE} --target=fs 2>/dev/null || true`" = xbtrfs ]; then
 @@ -65,7 +65,9 @@
    version="$2"
    recovery="$3"
@@ -50,21 +41,16 @@ diff -Nur a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
      title="$(gettext_quoted "%s, with Linux %s (recovery mode)")"
    else
      title="$(gettext_quoted "%s, with Linux %s")"
-@@ -121,11 +123,11 @@
+@@ -132,7 +134,7 @@
  
  case x`uname -m` in
      xi?86 | xx86_64)
 -	list=`for i in /boot/vmlinuz-* /vmlinuz-* /boot/kernel-* ; do
-+	list=`for i in /boot/vmlinuz* /vmlinuz* /boot/kernel-* ; do
++	list=`for i in /boot/vmlinuz-* /vmlinuz-* /boot/kernel-* /boot/vmlinuz26-* ; do
                    if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
                done` ;;
      *) 
--	list=`for i in /boot/vmlinuz-* /boot/vmlinux-* /vmlinuz-* /vmlinux-* /boot/kernel-* ; do
-+	list=`for i in /boot/vmlinuz* /boot/vmlinux* /vmlinuz* /vmlinux* /boot/kernel-* ; do
-                   if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
- 	     done` ;;
- esac
-@@ -148,7 +150,8 @@
+@@ -160,7 +162,8 @@
  	   "initrd.img-${alt_version}" "initrd-${alt_version}.img" \
  	   "initrd-${alt_version}" "initramfs-${alt_version}.img" \
  	   "initramfs-genkernel-${version}" \
@@ -74,21 +60,25 @@ diff -Nur a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
      if test -e "${dirname}/${i}" ; then
        initrd="$i"
        break
-@@ -178,6 +181,11 @@
+@@ -190,6 +193,15 @@
  
    linux_entry "${OS}" "${version}" false \
        "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
-+  if test -e "${dirname}/${basename/vmlinuz/kernel}-fallback.img"; then
-+    initrd="${basename/vmlinuz/kernel}-fallback.img"
-+    linux_entry "${OS}" "${version}" true \
-+	"${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}" Fallback
-+  fi
++  for i in "initramfs-${version}-fallback.img" \
++	   "${basename/vmlinuz/kernel}-fallback.img"; do
++    if test -e "${dirname}/${i}"; then
++      initrd="$i"
++      linux_entry "${OS}" "${version}" true \
++	  "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}" Fallback
++      break
++    fi
++  done
    if [ "x${GRUB_DISABLE_RECOVERY}" != "xtrue" ]; then
      linux_entry "${OS}" "${version}" true \
  	"single ${GRUB_CMDLINE_LINUX}"
 diff -Nur a/util/grub-mkconfig.in b/util/grub-mkconfig.in
 --- a/util/grub-mkconfig.in	2011-04-06 17:45:53.000000000 +0200
-+++ b/util/grub-mkconfig.in	2011-04-26 09:23:02.371574484 +0200
++++ b/util/grub-mkconfig.in	2011-08-01 15:20:49.256867648 +0200
 @@ -252,6 +252,8 @@
    GRUB_THEME \
    GRUB_GFXPAYLOAD_LINUX \
