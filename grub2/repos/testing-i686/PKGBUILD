@@ -1,0 +1,203 @@
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Keshav P R <skodabenz at rocketmail dot com>
+
+# The src pkg includes grub2_bzr_export.sh to create newer grub-extras snapshots. Modify the paths in it accordingly.
+
+# _grub2_rev=3238
+
+_grub2_lua_ver=20
+_grub2_gpxe_ver=12
+_grub2_ntldr_ver=17
+_grub2_915_ver=7
+
+pkgname=('grub2-common' 'grub2-bios' 'grub2-efi-i386')
+pkgbase="grub2"
+pkgver='1.99'
+pkgrel=4
+url="http://www.gnu.org/software/grub/"
+arch=('i686' 'x86_64')
+license=('GPL3')
+epoch=1
+makedepends=('bdf-unifont' 'python2' 'xz' 'autogen' 'texinfo' 'help2man' 'gettext' 'device-mapper')
+options=(strip purge docs zipman !emptydirs)
+
+#	"http://alpha.gnu.org/gnu/grub/grub-${pkgver}.tar.xz"
+source=("ftp://ftp.gnu.org/gnu/grub/grub-1.99.tar.xz"
+	"ftp://ftp.archlinux.org/other/grub2/grub2_extras_lua_r${_grub2_lua_ver}.tar.xz"
+	"ftp://ftp.archlinux.org/other/grub2/grub2_extras_gpxe_r${_grub2_gpxe_ver}.tar.xz"
+	"ftp://ftp.archlinux.org/other/grub2/grub2_extras_ntldr-img_r${_grub2_ntldr_ver}.tar.xz"
+	"ftp://ftp.archlinux.org/other/grub2/grub2_extras_915resolution_r${_grub2_915_ver}.tar.xz"
+	'archlinux_grub2_mkconfig_fixes.patch'
+	'grub.default'
+	'grub.cfg'
+	'20_memtest86+'
+	'grub2_bzr_export.sh')
+
+noextract=("grub2_extras_lua_r${_grub2_lua_ver}.tar.xz"
+	"grub2_extras_gpxe_r${_grub2_gpxe_ver}.tar.xz"
+	"grub2_extras_ntldr-img_r${_grub2_ntldr_ver}.tar.xz"
+	"grub2_extras_915resolution_r${_grub2_915_ver}.tar.xz")
+
+sha1sums=('a5ae9558f30ce7757a76aa130088b053a87e2fb6'
+          '9f2dbf7a3faab24ca92266400aa513fecd3895c8'
+          'b04994c005910b4bf123f034b30109d5c8d6fd86'
+          'e0c1a97770cc23226cf4535c029ef50b17f67974'
+          '8bcaed545956bb33581e1b97ac96a2c3717ec793'
+          'b7e5510c7b171e9c4dbddb42bbf54ce5ee86e2de'
+          'e1477db3700b27b5e5ad3d8fa43028555204759b'
+          '8948d89537c12a4202df7c001e65a77030bbe5a3'
+          '82a27eca5277218cf57c6c5767e0b17a72f62229'
+          'beb31419045db70fee7401aa6448c220a491e2a3')
+
+build() {
+	# set architecture dependent variables
+	if [ "${CARCH}" = "x86_64" ] ; then
+		_EFIEMU="--enable-efiemu"
+	else
+		_EFIEMU="--disable-efiemu"
+	fi
+	_HOST="${CARCH}"
+
+	build_grub2-common_and_bios
+	build_grub2-efi
+}
+
+build_grub2-common_and_bios() {
+	# copy the source for building the common/bios package
+	cp -r ${srcdir}/grub-${pkgver} ${srcdir}/grub2_bios-${pkgver}
+  
+	## Apply Archlinux specific fixes to enable grub2-mkconfig detect Arch kernels and initramfs
+	cd ${srcdir}/grub2_bios-${pkgver}
+	patch -Np1 -i ${srcdir}/archlinux_grub2_mkconfig_fixes.patch
+
+	# add the grub-extra sources
+	export GRUB_CONTRIB=${srcdir}/grub2_bios-${pkgver}/grub2-extras/  
+	install -d ${srcdir}/grub2_bios-${pkgver}/grub2-extras 
+	bsdtar xf ${srcdir}/grub2_extras_lua_r${_grub2_lua_ver}.tar.xz \
+		-C ${srcdir}/grub2_bios-${pkgver}/grub2-extras
+	bsdtar xf ${srcdir}/grub2_extras_gpxe_r${_grub2_gpxe_ver}.tar.xz \
+		-C ${srcdir}/grub2_bios-${pkgver}/grub2-extras
+	bsdtar xf ${srcdir}/grub2_extras_ntldr-img_r${_grub2_ntldr_ver}.tar.xz \
+		-C ${srcdir}/grub2_bios-${pkgver}/grub2-extras
+	bsdtar xf ${srcdir}/grub2_extras_915resolution_r${_grub2_915_ver}.tar.xz \
+		-C ${srcdir}/grub2_bios-${pkgver}/grub2-extras
+  
+	## Need to use python2
+	sed -i 's|python|python2|' ${srcdir}/grub2_bios-${pkgver}/autogen.sh
+
+	# start the actual build process
+	cd ${srcdir}/grub2_bios-${pkgver}
+	./autogen.sh
+  
+	## fix unifont.bdf location so grub-mkfont can create *.pf2 files
+	sed -i 's|/usr/share/fonts/unifont|/usr/share/fonts/misc|' ${srcdir}/grub2_bios-${pkgver}/configure
+  
+#	mkdir ${srcdir}/grub2_bios-${pkgver}/BUILD_BIOS
+#	cd ${srcdir}/grub2_bios-${pkgver}/BUILD_BIOS
+  
+	CFLAGS="" ./configure \
+		--with-platform=pc --enable-mm-debug \
+		${_EFIEMU} --host=${CARCH}-unknown-linux-gnu \
+		--enable-grub-mkfont --prefix=/usr \
+		--bindir=/bin --sbindir=/sbin \
+		--mandir=/usr/share/man --infodir=/usr/share/info \
+		--sysconfdir=/etc --enable-nls \
+		--program-transform-name=s,grub,grub,
+	CFLAGS="" make 
+}
+
+build_grub2-efi() {
+	# copy the source for building the efi package
+	cp -r ${srcdir}/grub-${pkgver} ${srcdir}/grub2_efi-${pkgver}
+
+	# add the grub-extra sources
+	export GRUB_CONTRIB=${srcdir}/grub2_efi-${pkgver}/grub2-extras/  
+	install -d ${srcdir}/grub2_efi-${pkgver}/grub2-extras  
+	bsdtar xf ${srcdir}/grub2_extras_lua_r${_grub2_lua_ver}.tar.xz \
+		-C ${srcdir}/grub2_efi-${pkgver}/grub2-extras
+	bsdtar xf ${srcdir}/grub2_extras_gpxe_r${_grub2_gpxe_ver}.tar.xz \
+		-C ${srcdir}/grub2_efi-${pkgver}/grub2-extras
+  
+	## Need to use python2
+	sed -i 's|python|python2|' ${srcdir}/grub2_efi-${pkgver}/autogen.sh
+	
+	# start the actual build process
+	cd ${srcdir}/grub2_efi-${pkgver}
+	./autogen.sh
+
+	CFLAGS="" ./configure \
+		--with-platform=efi --target=i386 \
+		--enable-mm-debug --disable-efiemu \
+		--host=${CARCH}-unknown-linux-gnu \
+		--prefix=/usr --bindir=/bin \
+		--sbindir=/sbin --mandir=/usr/share/man \
+		--infodir=/usr/share/info --sysconfdir=/etc \
+		--enable-nls --program-transform-name=s,grub,grub,
+	CFLAGS="" make 
+}
+
+package_grub2-common() {
+	pkgdesc="The GNU GRand Unified Bootloader version 2 - Files common for all platforms"
+	install="grub2.install"
+	depends=('xz' 'freetype2' 'device-mapper' 'gettext' 'texinfo')
+	conflicts=('grub')
+	backup=('boot/grub/grub.cfg' 'etc/default/grub' 'etc/grub.d/40_custom')
+	cd ${srcdir}/grub2_bios-${pkgver}
+	make DESTDIR=${pkgdir} install
+  
+	install -Dm755 ${pkgdir}/sbin/grub-install ${pkgdir}/sbin/grub_bios-install
+	install -Dm755 ${pkgdir}/sbin/grub-install ${pkgdir}/sbin/grub_efi_x86_64-install
+	install -Dm755 ${pkgdir}/sbin/grub-install ${pkgdir}/sbin/grub_efi_i386-install
+    
+	sed -i "s|^\(target_cpu\)=.*|\1=i386|; \
+		s|^\(platform\)=.*|\1=pc|" \
+		${pkgdir}/sbin/grub_bios-install
+
+	sed -i "s|^\(target_cpu\)=.*|\1=x86_64|; \
+		s|^\(platform\)=.*|\1=efi|" \
+		${pkgdir}/sbin/grub_efi_x86_64-install
+
+	sed -i "s|^\(target_cpu\)=.*|\1=i386|; \
+		s|^\(platform\)=.*|\1=efi|" \
+		${pkgdir}/sbin/grub_efi_i386-install
+  
+	## install extra /etc/grub.d/ files
+	install -Dm755 ${srcdir}/20_memtest86+ ${pkgdir}/etc/grub.d/20_memtest86+
+    
+	## install /etc/default/grub (used by grub-mkconfig)
+	install -Dm644 ${srcdir}/grub.default ${pkgdir}/etc/default/grub
+
+	## install grub.cfg (needed so it doesn't get removed on upgrading because it was previously here)
+	install -Dm644 ${srcdir}/grub.cfg ${pkgdir}/boot/grub/grub.cfg
+
+	# remove platform specific files
+	rm -rf ${pkgdir}/usr/lib/grub/i386-pc/
+}
+
+package_grub2-bios() {
+	pkgdesc="The GNU GRand Unified Bootloader version 2 - Built for PC BIOS"
+	depends=(grub2-common=${epoch}:${pkgver})
+	replaces=('grub2')
+	provides=('grub2')
+  
+	cd ${srcdir}/grub2_bios-${pkgver}
+	make DESTDIR=${pkgdir} install 
+
+	## remove non platform-specific files
+	rm -rf ${pkgdir}/{boot,bin,sbin,etc,usr/share}
+	rm ${pkgdir}/usr/lib/grub/{grub-mkconfig_lib,update-grub_lib}
+}
+
+package_grub2-efi-i386() {
+
+	pkgdesc="The GNU GRand Unified Bootloader version 2 - i386 UEFI version"
+	depends=("grub2-common=${epoch}:${pkgver}" 'dosfstools' 'efibootmgr')
+	optdepends=('mtools')
+  
+	cd ${srcdir}/grub2_efi-${pkgver}
+	make DESTDIR=${pkgdir} install 
+
+	## remove non platform-specific files
+        rm -rf ${pkgdir}/{boot,bin,sbin,etc,usr/share}
+        rm ${pkgdir}/usr/lib/grub/{grub-mkconfig_lib,update-grub_lib}
+}
