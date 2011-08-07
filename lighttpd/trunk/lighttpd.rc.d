@@ -4,24 +4,13 @@
 . /etc/rc.d/functions
 
 
-get_pid_file() {
-	/usr/sbin/lighttpd -p -f /etc/lighttpd/lighttpd.conf 2>/dev/null | grep server.pid-file | sed -E 's/.*"(.+)"/\1/'
-}
+pid_file='/var/run/lighttpd/lighttpd-angel.pid'
 
 get_pid() {
-	local pid_file=$(get_pid_file)
-	local pid=$(pidof -o %PPID lighttpd-angel)
-	# only needed when updating from 1.4.26
-	# TODO: remove in future versions
-	local old_pid=$(pidof -o %PPID lighttpd)
 	if [ -r "${pid_file}" ]; then
 		cat "${pid_file}"
-	elif [ -n "${pid}" ]; then
-		echo "${pid}"
-	elif [ -n "${old_pid}" ]; then
-		echo "${old_pid}"
 	else
-		echo ''
+		pgrep -f /usr/sbin/lighttpd-angel
 	fi
 }
 
@@ -43,7 +32,7 @@ test_config() {
 		stat_die
 	fi
 
-	local piddir=$(dirname "$(get_pid_file)")
+	local piddir=$(dirname "${pid_file}")
 	if [ ! -d "${piddir}" ]; then
 		install -d -m755 -o http -g http "${piddir}"
 	fi
@@ -60,6 +49,7 @@ start() {
 		if [ $? -gt 0 ]; then
 			stat_die
 		else
+			echo $! > "${pid_file}"
 			add_daemon lighttpd
 			stat_done
 		fi
@@ -75,7 +65,19 @@ stop() {
 	if [ $? -gt 0 ]; then
 		stat_fail
 	else
-		local pid_file=$(get_pid_file)
+		[ -f "${pid_file}" ] && rm -f "${pid_file}"
+		rm_daemon lighttpd
+		stat_done
+	fi
+}
+
+gracefull-stop() {
+	stat_busy 'Stopping lighttpd gracefully'
+	local PID=$(get_pid)
+	[ -n "$PID" ] && kill -INT $PID &> /dev/null
+	if [ $? -gt 0 ]; then
+		stat_fail
+	else
 		[ -f "${pid_file}" ] && rm -f "${pid_file}"
 		rm_daemon lighttpd
 		stat_done
@@ -103,6 +105,10 @@ case "$1" in
 		test_config
 		stop
 		;;
+	gracefull-stop)
+		test_config
+		stop
+		;;
 	reload)
 		test_config
 		reload
@@ -120,7 +126,7 @@ case "$1" in
 		ck_status lighttpd
 		;;
 	*)
-	echo "usage: $0 {start|stop|reload|restart|status}"
+	echo "usage: $0 {start|stop|gracefull-stop|reload|restart|status}"
 esac
 
 exit 0
