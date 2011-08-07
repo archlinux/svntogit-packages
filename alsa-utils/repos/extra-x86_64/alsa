@@ -1,0 +1,62 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/conf.d/alsa
+. /etc/rc.d/functions
+
+case "$1" in
+  start)
+    stat_busy "Restoring ALSA Levels"
+    if [[ ! -e /var/lib/alsa/asound.state ]]; then
+      /usr/sbin/alsactl $ALSA_ARGS store || { stat_fail; exit 1; }
+    fi
+    if /usr/sbin/alsactl $ALSA_ARGS restore; then
+      stat_done
+      add_daemon alsa
+    else
+      stat_fail
+      exit 1
+    fi
+
+    POWERSAVE=${POWERSAVE:-0}
+    if [[ -e /sys/module/snd_ac97_codec/parameters/power_save ]] \
+	  && (( $POWERSAVE )); then
+      echo $POWERSAVE > /sys/module/snd_ac97_codec/parameters/power_save
+      [[ -c /dev/dsp ]] && echo 1 > /dev/dsp
+    fi
+    if [[ -e /sys/module/snd_hda_intel/parameters/power_save ]] \
+	  && (( $POWERSAVE )); then
+      echo $POWERSAVE > /sys/module/snd_hda_intel/parameters/power_save
+      [[ -c /dev/dsp ]] && echo 1 > /dev/dsp
+    fi
+    ;;
+  stop)
+    SAVE_VOLUME=${SAVE_VOLUME:-yes}
+    if [[ "$SAVE_VOLUME" = "yes" ]]; then
+      stat_busy "Saving ALSA Levels"
+      /usr/sbin/alsactl $ALSA_ARGS store || { stat_fail; exit 1; }
+    else
+      stat_busy "Stopping ALSA"
+    fi
+    if [ "$MUTE_VOLUME" == "yes" ]; then
+      /usr/bin/amixer -q set Master 0 mute || { stat_fail; exit 1; }
+    fi
+    stat_done
+    rm_daemon alsa
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  force-restart)
+    stat_busy "Trying to TERM or KILL processes that are blocking ALSA..."
+    FILES="$(ls -1 /dev/snd/* | grep -vi control)"
+    fuser -k -SIGTERM $FILES
+    fuser -k $FILES
+    stat_done
+    $0 restart
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart|force-restart}"
+esac
