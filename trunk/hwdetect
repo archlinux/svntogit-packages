@@ -52,13 +52,12 @@ usage () {
 	echo "    --nfs                  add net to HOOKS="
 	echo "    --btrfs                add btrfs to HOOKS="
 	echo ""
-	echo "    --net                  generate /tmp/network_persistent.rules for udev use"
+	echo "  For persistent sound and network files use:"
+	echo "    --net                  generate /tmp/network_persistent.rules"
+	echo "    --sound                generate /tmp/sound_persistent.conf"
 	echo ""
-	echo "  For /etc/rc.conf use:"
-	echo "    --sound                show sound MODULES"
 	echo "    --modules              show all detected MODULES"
 	echo "    --modules-not-loaded   show all detected MODULES but not actually loaded"
-	echo "    --blacklist            activates blacklisting for net and sound"
 	echo ""
 	exit 1
 }
@@ -113,9 +112,6 @@ fi
 
 # hooks switch
 [ "$(echo $* | grep '\-hooks')" ] && HOOKS=1
-
-# blacklist switch
-[ "$(echo $* | grep '\-blacklist')" ] && BLACKLIST=1
 
 ADVANCED=""
 # root device check
@@ -494,19 +490,12 @@ while [ $# -gt 0 ]; do
 			done
 
 			;;
-		--sound) SOUND_EXPORTED="$(listmods pcspkr) $(listmods sound/)"
-			 MODULES_EXPORTED="$MODULES_EXPORTED $SOUND_EXPORTED"
-			 BLACKLIST_UDEV=""
-			 for i in $SOUND_EXPORTED; do
-				BLACKLIST_UDEV="$BLACKLIST_UDEV $i"
+		--sound) : >/tmp/sound_persistent.conf
+			 SOUND_EXPORTED=""
+			 for i in $(cat /proc/asound/modules | cut -d ' ' -f 3); do
+				SOUND_EXPORTED="$SOUND_EXPORTED $i"
 			 done
-			 showlist2 "MODULES" \($MODULES_EXPORTED\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
-                         : >/tmp/blacklist_sound.conf
-			 if [ "$BLACKLIST" = "1" ]; then	
-			 	for i in $BLACKLIST_UDEV; do
-			 		echo "blacklist $i" >> /tmp/blacklist_sound.conf
-			 	done
-                         fi
+			 ! [[ "$SOUND_EXPORTED" = "" ]] && echo "options snd slots=$(echo $SOUND_EXPORTED | sed -e 's# #,#g' -e 's#^,##g')" >> /tmp/sound_persistent.conf
 			 ;;
 		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
