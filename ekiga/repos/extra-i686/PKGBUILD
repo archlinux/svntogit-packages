@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Tom K <tomk@runbox.com>
+
+pkgname=ekiga
+pkgver=3.3.1
+pkgrel=2
+pkgdesc="VOIP/Videoconferencing app with full SIP and H.323 support (GnomeMeeting expanded and renamed)"
+url="http://www.ekiga.org"
+license=(GPL)
+arch=(i686 x86_64)
+depends=('opal' 'boost-libs' 'libxv' 'libnotify' 'hicolor-icon-theme' 'avahi' 'gtk2' 'gconf')
+makedepends=('intltool' 'gnome-doc-utils' 'evolution-data-server' 'boost' 'gnome-common')
+optdepends=('evolution-data-server: Evolution integration')
+options=(!emptydirs)
+groups=('gnome-extra')
+install=ekiga.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz
+        fix-generation-po.patch)
+sha256sums=('4776834810f213a93cd6c307108c505970fe22e4803935134dd9f6b0bc834e06'
+            'b87a3a044253f96631dd13453034e14ce4698a9106acf39e5816b8776d0de529')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/fix-generation-po.patch"
+  autoreconf -fi
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-schemas-install \
+      --disable-scrollkeeper --enable-dbus
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install
+
+  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain ekiga ${pkgdir}/etc/gconf/schemas/*.schemas
+  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
