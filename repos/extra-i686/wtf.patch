@@ -1,0 +1,93 @@
+diff -aur old/extras/panel/scim_panel_gtk.cpp new/extras/panel/scim_panel_gtk.cpp
+--- old/extras/panel/scim_panel_gtk.cpp	2011-08-04 13:21:29.000000000 -0700
++++ new/extras/panel/scim_panel_gtk.cpp	2011-08-07 16:11:12.977663776 -0700
+@@ -479,12 +479,12 @@
+ 
+ static bool               _should_exit                 = false;
+ 
++static bool               _panel_is_on                 = false;
+ 
+-static struct timeval     _last_menu_deactivate_time = {0, 0};
++static GThread           *_panel_agent_thread          = 0;
++
++static PanelAgent        *_panel_agent                 = 0;
+ 
+-// client repository
+-static PropertyRepository            _frontend_property_repository;
+-static HelperPropertyRepository      _helper_property_repository;
+ static std::vector<String> _factory_menu_uuids;
+ 
+ static std::list<String>  _recent_factory_uuids;
+@@ -1187,16 +1187,16 @@
+ 
+     GtkRequisition ws;
+     gint pos_x, pos_y;
++
++    gtk_widget_size_request (_toolbar_window, &ws);
++
++    pos_x = _config->read (String (SCIM_CONFIG_PANEL_GTK_TOOLBAR_POS_X),
+                            workarea_x + workarea_width - ws.width);
+     pos_y = _config->read (String (SCIM_CONFIG_PANEL_GTK_TOOLBAR_POS_Y),
+                            workarea_y + workarea_height - ws.height);
+     if (pos_x == -1 && pos_y == -1) {
+         pos_x = workarea_x + workarea_width  - ws.width;
+         pos_y = workarea_y + workarea_height - ws.height;
+-                           workarea_y + workarea_height - ws.height);
+-    if (pos_x == -1 && pos_y == -1) {
+-        pos_x = workarea_x + workarea_width  - ws.width;
+-        pos_y = workarea_y + workarea_height - ws.height;
+     }
+ 
+     if (_toolbar_auto_snap) {
+@@ -1215,6 +1215,10 @@
+     else if (pos_y < 0)
+         pos_y = 0;
+ 
++    if (_toolbar_window_x != pos_x || _toolbar_window_y != pos_y || force) {
++        gtk_window_move (GTK_WINDOW (_toolbar_window), pos_x, pos_y);
++        _toolbar_window_x = pos_x;
++        _toolbar_window_y = pos_y;
+     }
+ }
+ 
+@@ -1227,9 +1231,9 @@
+ #endif
+     return gdk_screen_width ();
+ }
+-        return gdk_screen_get_width (_current_screen);
+-#endif
+-    return gdk_screen_width ();
++
++static int
++ui_screen_height (void)
+ {
+ #if GDK_MULTIHEAD_SAFE
+     if (_current_screen)
+@@ -1237,10 +1241,6 @@
+ #endif
+     return gdk_screen_height ();
+ }
+-        return gdk_screen_get_height (_current_screen);
+-#endif
+-    return gdk_screen_height ();
+-}
+ 
+ static void
+ ui_get_workarea (int &x, int &y, int &width, int &height)
+@@ -1929,11 +1929,11 @@
+     static gulong motion_handler;
+     GdkCursor *cursor;
+ 
+-        if (!_config.null () &&
+-            (_toolbar_window_x != pos_x || _toolbar_window_y != pos_y)) {
+-            _config->write (
+-                SCIM_CONFIG_PANEL_GTK_TOOLBAR_POS_X, pos_x);
+-            _config->write (
++    if (click_type == 0 && event->button <= 1) {
++        if (_toolbar_window_draging)
++            return FALSE;
++
++        // Connection pointer motion handler to this window.
+         motion_handler = g_signal_connect (G_OBJECT (window), "motion-notify-event",
+                                            G_CALLBACK (ui_toolbar_window_motion_cb),
+                                            NULL);
