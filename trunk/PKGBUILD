@@ -3,21 +3,23 @@
 
 pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-common' 'xorg-server-devel')
-pkgver=1.10.3
-pkgrel=2
+pkgver=1.10.3.901
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('custom')
 url="http://xorg.freedesktop.org"
 makedepends=('pixman' 'libx11' 'mesa' 'libgl' 'xf86driproto' 'xcmiscproto' 'xtrans' 'bigreqsproto' 'randrproto' 'inputproto' 'fontsproto' 'videoproto' 'compositeproto' 'recordproto' 'scrnsaverproto' 'resourceproto' 'xineramaproto' 'libxkbfile' 'libxfont' 'renderproto' 'libpciaccess' 'libxv' 'xf86dgaproto' 'libxmu' 'libxrender' 'libxi' 'dmxproto' 'libxaw' 'libdmx' 'libxtst' 'libxres' 'xorg-xkbcomp' 'xorg-util-macros' 'xorg-font-util')
 options=('!libtool')
 source=(${url}/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2
+        randr-compare-all-the-bytes-in-rrpostpendingproperties.patch
         bg-none-revert.patch
         xserver-1.10-pointer-barriers.patch
         autoconfig-nvidia.patch
         xvfb-run
         xvfb-run.1
         10-quirks.conf)
-sha1sums=('1699be5c0edeca553cfa3ee6caa228483465136b'
+sha1sums=('c7b0d4a29adf91baeae4783841303ccf8ba285e2'
+          '571f2925f2f3d1b5cdbb2e5a676205fcea256198'
           '629c6d8d52126eab81ee1b72a9e4209535f8cb81'
           '1b95e91384a57d966428c7db98ed06f4cc562f91'
           'f9328fd7bc931bb02c8909ecfcef35403de33782'
@@ -27,15 +29,14 @@ sha1sums=('1699be5c0edeca553cfa3ee6caa228483465136b'
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
+  # Upstream post-release commit
+  patch -Np1 -i "${srcdir}/randr-compare-all-the-bytes-in-rrpostpendingproperties.patch"
 
   # Add pointer barrier support, patch from Fedora
   patch -Np1 -i "${srcdir}/xserver-1.10-pointer-barriers.patch"
 
   # Patches from ~ajax/xserver xserver-next branch
   patch -Np1 -i "${srcdir}/bg-none-revert.patch"
-
-  # Upstream fixes from 1.10 branch
-  #patch -Np1 -i "${srcdir}/git-fixes.patch"
 
   # Use nouveau/nv/nvidia drivers for nvidia devices
   patch -Np1 -i "${srcdir}/autoconfig-nvidia.patch"
@@ -67,6 +68,7 @@ build() {
       --with-fontrootdir=/usr/share/fonts
   make
 
+  # Disable subdirs for make install rule to make splitting easier
   sed -e 's/^DMX_SUBDIRS =.*/DMX_SUBDIRS =/' \
       -e 's/^XVFB_SUBDIRS =.*/XVFB_SUBDIRS =/' \
       -e 's/^XNEST_SUBDIRS =.*/XNEST_SUBDIRS = /' \
