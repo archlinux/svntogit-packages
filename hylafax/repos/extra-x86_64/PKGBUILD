@@ -1,0 +1,65 @@
+# $Id$
+# Maintainer: Paul Mattal <paul@archlinux.org>
+pkgname=hylafax
+pkgver=6.0.5
+pkgrel=2
+pkgdesc="Fax Server"
+arch=('i686' 'x86_64')
+install='hylafax.install'
+license=('custom')
+depends=('libtiff' 'pam' 'ghostscript')
+makedepends=('smtp-server')
+url="http://www.hylafax.org/"
+backup=(var/spool/hylafax/bin/{faxrcvd,notify}
+	usr/lib/fax/{faxcover.ps,hfaxd.conf,pagesizes,typerules}
+	var/spool/hylafax/etc/hosts.hfaxd) 
+source=(ftp://ftp.hylafax.org/source/${pkgname}-${pkgver}.tar.gz 
+        hylafax 
+        hylafax.cron.daily 
+        config.local
+        configure-6.0.5.patch)
+
+# build as root for successful build!
+build() {
+  uucp_created=0
+  if ! grep 'uucp' /etc/passwd > /dev/null; then
+    uucp_created=1
+    groupadd -g 14 uucp &>/dev/null
+    useradd -u 10 -g uucp -d '/' -s /bin/false uucp &>/dev/null
+    useradd -u 69 -g daemon -d '/' -s /bin/false fax &>/dev/null
+  fi
+  mkdir -p $pkgdir/usr/{bin,lib/fax,sbin,share/ghostscript/fonts}
+  mkdir -p $pkgdir/var/{spool/hylafax,lock}
+  cd $srcdir/${pkgname}-${pkgver}
+
+  cp ../config.local .
+  # fix compiling
+  patch -Np0 -i ../configure-6.0.5.patch
+  ./configure --nointeractive --with-OPTIMIZER="${CFLAGS}"
+  make
+}
+
+package () {
+  cd $srcdir/${pkgname}-${pkgver}
+  make ROOT=$pkgdir install
+  install -D -m 755 $srcdir/hylafax $pkgdir/etc/rc.d/hylafax
+  install -D -m 744 $srcdir/hylafax.cron.daily $pkgdir/etc/cron.daily/hylafax
+  # remove group if created
+  if [ $uucp_created -eq 1 ]; then
+    userdel uucp &>/dev/null
+    groupdel uucp &>/dev/null
+    userdel fax &>/dev/null
+  fi
+  # add missing awk file for notify-4.1 script
+  install -D -m 755 $srcdir/${pkgname}-${pkgver}/util/notify.awk \
+  	$pkgdir/var/spool/hylafax/bin/notify.awk
+  # fix permission on /var/lock
+  chmod 1777 $pkgdir/var/lock
+
+  install -D -m644 COPYRIGHT $startdir/pkg/usr/share/licenses/$pkgname/COPYRIGHT
+}
+md5sums=('eb9ac942354ad708e20e4583cec6615f'
+         '6602288a405324d8c8e3c5eac2bf19fd'
+         '52beffe7dc296b4f9ce9fd0387f7804e'
+         '0d2ce24d918226a852539aebf57d3f4a'
+         '51d9f639bb76e5e39cdc8e2ac07e208d')
