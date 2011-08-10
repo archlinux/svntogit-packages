@@ -2,8 +2,8 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=9.02
-pkgrel=2
+pkgver=9.04
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -14,7 +14,7 @@ optdepends=('texlive-core:      needed for dvipdf'
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!libtool' '!makeflags')
-md5sums=('f67151444bd56a7904579fc75a083dd6')
+md5sums=('9f6899e821ab6d78ab2c856f10fa3023')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
