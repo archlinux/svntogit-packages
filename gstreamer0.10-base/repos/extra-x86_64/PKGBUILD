@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=('gstreamer0.10-base')
+pkgname=('gstreamer0.10-base' 'gstreamer0.10-base-plugins')
+pkgver=0.10.35
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('LGPL')
+makedepends=('pkgconfig' 'gstreamer0.10>=0.10.35' 'orc' 'libxv' 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis' 'libtheora' 'pango' 'gobject-introspection')
+options=(!libtool !emptydirs)
+url="http://gstreamer.freedesktop.org/"
+source=(${url}/src/gst-plugins-base/gst-plugins-base-${pkgver}.tar.bz2
+        oggstream-fix-crashes-with-0-byte-vorbis-packets.patch
+        theoradec-segfault-on-0-byte-ogg_packet-in-_chain_reverse.patch)
+sha256sums=('cd24f01bb5258a1f400bc4f2c212bb7cee9ee23c9ffb80d537a24ef366d17103'
+            '2e9d001dbe0ed598c8e86b0081c6ecdf28a1a6b45ffafc639f5cf52fdf0d467f'
+            '8da16aed8c098251903208cc7ac233b7a9df3f024f78c6970e71f3c2e2bdaa17')
+
+build() {
+  cd "${srcdir}/gst-plugins-base-${pkgver}"
+  
+  patch -Np1 -i "${srcdir}/oggstream-fix-crashes-with-0-byte-vorbis-packets.patch"
+  patch -Np1 -i "${srcdir}/theoradec-segfault-on-0-byte-ogg_packet-in-_chain_reverse.patch"
+
+  sed -i '/AC_PATH_XTRA/d' configure.ac
+  autoreconf
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --enable-experimental --disable-gnome_vfs \
+    --with-package-name="GStreamer Base Plugins (Archlinux)" \
+    --with-package-origin="http://www.archlinux.org/"
+
+  make || return 1
+  sed -e 's/^SUBDIRS_EXT =.*/SUBDIRS_EXT =/' -i Makefile
+}
+
+package_gstreamer0.10-base() {
+  pkgdesc="GStreamer Multimedia Framework Base plugin libraries"
+  depends=('gstreamer0.10>=0.10.35' 'orc' 'libxv')
+
+  cd "${srcdir}/gst-plugins-base-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+}
+
+package_gstreamer0.10-base-plugins() {
+  pkgdesc="GStreamer Multimedia Framework Base Plugins (gst-plugins-base)"
+  depends=("gstreamer0.10-base=${pkgver}" 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis' 'libtheora' 'pango')
+  replaces=('gstreamer0.10-alsa' 'gstreamer0.10-theora' 'gstreamer0.10-libvisual' 'gstreamer0.10-pango' 'gstreamer0.10-cdparanoia' 'gstreamer0.10-vorbis' 'gstreamer0.10-ogg')
+  conflicts=('gstreamer0.10-alsa' 'gstreamer0.10-theora' 'gstreamer0.10-libvisual' 'gstreamer0.10-pango' 'gstreamer0.10-cdparanoia' 'gstreamer0.10-vorbis' 'gstreamer0.10-ogg')
+  groups=('gstreamer0.10-plugins')
+
+  cd "${srcdir}/gst-plugins-base-${pkgver}"
+  make -C gst-libs DESTDIR="${pkgdir}" install
+  make -C ext DESTDIR="${pkgdir}" install
+  make -C gst-libs DESTDIR="${pkgdir}" uninstall
+}
