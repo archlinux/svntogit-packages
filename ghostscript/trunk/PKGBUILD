@@ -3,11 +3,11 @@
 
 pkgname=ghostscript
 pkgver=9.04
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
-depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff')
+depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff' 'lcms')
 makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
@@ -20,7 +20,7 @@ build() {
   cd ${srcdir}/ghostscript-${pkgver}
 
   # force it to use system-libs
-  rm -rf jpeg libpng zlib jasper expat tiff
+  rm -rf jpeg libpng zlib jasper expat tiff lcms
 
   ./configure --prefix=/usr \
 	--enable-dynamic \
@@ -30,6 +30,7 @@ build() {
 	--with-x \
 	--with-drivers=ALL\
 	--with-fontpath=/usr/share/fonts/Type1:/usr/share/fonts \
+	--with-install-cups \
 	--disable-compile-inits # needed for linking with system-zlib
   make || return 1
   
