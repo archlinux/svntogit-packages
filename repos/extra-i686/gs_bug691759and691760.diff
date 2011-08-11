@@ -1,0 +1,215 @@
+Modified: trunk/gs/base/gdevnfwd.c
+===================================================================
+--- trunk/gs/base/gdevnfwd.c	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gdevnfwd.c	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -1117,3 +1117,29 @@
+ {
+     return 0;
+ }
++
++bool
++fwd_uses_fwd_cmap_procs(gx_device * dev) 
++{
++    const gx_cm_color_map_procs *pprocs;
++
++    pprocs = dev_proc(dev, get_color_mapping_procs)(dev);
++    if (pprocs == &FwdDevice_cm_map_procs) {
++        return true;
++    }
++    return false;
++}
++
++const gx_cm_color_map_procs*
++fwd_get_target_cmap_procs(gx_device * dev)
++{
++    const gx_cm_color_map_procs *pprocs;
++    gx_device_forward * const fdev = (gx_device_forward *)dev;
++    gx_device * const tdev = fdev->target;
++
++    pprocs = dev_proc(tdev, get_color_mapping_procs(tdev));
++    while (pprocs == &FwdDevice_cm_map_procs) {
++        pprocs = fwd_get_target_cmap_procs(tdev);
++    }
++    return pprocs;
++}
+\ No newline at end of file
+
+Modified: trunk/gs/base/gdevp14.c
+===================================================================
+--- trunk/gs/base/gdevp14.c	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gdevp14.c	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -900,7 +900,11 @@
+                         nos->parent_color_info_procs->num_components, 1,
+                                   false, false, true, tos->planestride, 
+                                   tos->rowstride, num_rows, num_cols);
+-                    /* Transform the data */
++                    /* Transform the data. Since the pdf14 device should be
++                       using RGB, CMYK or Gray buffers, this transform 
++                       does not need to worry about the cmap procs of 
++                       the target device.  Those are handled when we do
++                       the pdf14 put image operation */
+                     gscms_transform_color_buffer(icc_link, &input_buff_desc, 
+                                         &output_buff_desc, tos->data, 
+                                         new_data_buf);
+
+Modified: trunk/gs/base/gxcmap.c
+===================================================================
+--- trunk/gs/base/gxcmap.c	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gxcmap.c	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -31,6 +31,7 @@
+ #include "gsicc_manage.h"
+ #include "gdevdevn.h"
+ #include "gsicc_cache.h"
++#include "gscms.h"
+ 
+ /* Structure descriptor */
+ public_st_device_color();
+@@ -1744,3 +1745,37 @@
+ 
+     }
+ }
++
++bool
++gx_device_uses_std_cmap_procs(gx_device * dev) 
++{
++    const gx_cm_color_map_procs *pprocs;
++
++    if (dev->device_icc_profile != NULL) {
++        pprocs = dev_proc(dev, get_color_mapping_procs)(dev);
++        /* Check if they are forwarding procs */
++        if (fwd_uses_fwd_cmap_procs(dev)) {
++            pprocs = fwd_get_target_cmap_procs(dev);
++        } 
++        switch(dev->device_icc_profile->data_cs) {
++            case gsGRAY:
++                if (pprocs == &DeviceGray_procs) {
++                    return true;
++                }
++                break;
++            case gsRGB:	
++                if (pprocs == &DeviceRGB_procs) {
++                    return true;
++                }
++                break;
++            case gsCMYK:
++                if (pprocs == &DeviceCMYK_procs) {
++                    return true;
++                }
++                break;
++            default:
++                break;
++        }
++    } 
++    return false;
++}
+
+Modified: trunk/gs/base/gxcmap.h
+===================================================================
+--- trunk/gs/base/gxcmap.h	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gxcmap.h	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -284,5 +284,11 @@
+  * [0,1]
+  */
+ frac gx_unit_frac(float fvalue);
++/* Determine if the device is using the standard color mapping procs.  In
++   such a case, we can make use of the faster icc color conversions for 
++   images */
++bool gx_device_uses_std_cmap_procs(gx_device * dev);
++bool fwd_uses_fwd_cmap_procs(gx_device * dev);
++const gx_cm_color_map_procs* fwd_get_target_cmap_procs(gx_device * dev);
+ 
+ #endif /* gxcmap_INCLUDED */
+
+Modified: trunk/gs/base/gxi12bit.c
+===================================================================
+--- trunk/gs/base/gxi12bit.c	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gxi12bit.c	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -113,6 +113,8 @@
+ irender_proc_t
+ gs_image_class_2_fracs(gx_image_enum * penum)
+ {
++    bool std_cmap_procs;
++
+     if (penum->bps > 8) {
+ 	if (penum->use_mask_color) {
+ 	    /* Convert color mask values to fracs. */
+@@ -122,9 +124,14 @@
+ 		penum->mask_color.values[i] =
+ 		    bits2frac(penum->mask_color.values[i], 12);
+ 	}
++        /* If the device has some unique color mapping procs due to its color space,
++           then we will need to use those and go through pixel by pixel instead
++           of blasting through buffers.  This is true for example with many of 
++           the color spaces for CUPs */
++        std_cmap_procs = gx_device_uses_std_cmap_procs(penum->dev);
+         if ( (gs_color_space_get_index(penum->pcs) == gs_color_space_index_DeviceN &&
+             penum->pcs->cmm_icc_profile_data == NULL) || penum->use_mask_color || 
+-            penum->bps != 16 || 
++            penum->bps != 16 || !std_cmap_procs ||
+             gs_color_space_get_index(penum->pcs) == gs_color_space_index_DevicePixel) { 
+             /* DevicePixel color space used in mask from 3x type.  Basically
+                a simple color space that just is scaled to the device bit 
+
+Modified: trunk/gs/base/gxicolor.c
+===================================================================
+--- trunk/gs/base/gxicolor.c	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gxicolor.c	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -97,6 +97,8 @@
+ irender_proc_t
+ gs_image_class_4_color(gx_image_enum * penum)
+ {
++    bool std_cmap_procs;
++
+     if (penum->use_mask_color) {
+ 	/*
+ 	 * Scale the mask colors to match the scaling of each sample to
+@@ -128,8 +130,14 @@
+ 	penum->mask_color.mask = 0;
+ 	penum->mask_color.test = ~0;
+     }
++    /* If the device has some unique color mapping procs due to its color space,
++       then we will need to use those and go through pixel by pixel instead
++       of blasting through buffers.  This is true for example with many of 
++       the color spaces for CUPs */
++    std_cmap_procs = gx_device_uses_std_cmap_procs(penum->dev);
+     if ( (gs_color_space_get_index(penum->pcs) == gs_color_space_index_DeviceN &&
+-        penum->pcs->cmm_icc_profile_data == NULL) || penum->use_mask_color ) {
++        penum->pcs->cmm_icc_profile_data == NULL) || penum->use_mask_color ||
++        !std_cmap_procs) {
+         return &image_render_color_DeviceN;
+     } else {
+         /* Set up the link now */
+
+Modified: trunk/gs/base/gxiscale.c
+===================================================================
+--- trunk/gs/base/gxiscale.c	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/gxiscale.c	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -104,6 +104,13 @@
+         != penum->dev->color_info.num_components) {
+         use_icc = false;
+     }
++    /* If the device has some unique color mapping procs due to its color space,
++       then we will need to use those and go through pixel by pixel instead
++       of blasting through buffers.  This is true for example with many of 
++       the color spaces for CUPs */
++    if(!gx_device_uses_std_cmap_procs(penum->dev)) {
++        use_icc = false;
++    }
+ /*
+  * USE_CONSERVATIVE_INTERPOLATION_RULES is normally NOT defined since
+  * the MITCHELL digital filter seems OK as long as we are going out to
+
+Modified: trunk/gs/base/lib.mak
+===================================================================
+--- trunk/gs/base/lib.mak	2011-01-06 23:48:14 UTC (rev 12004)
++++ trunk/gs/base/lib.mak	2011-01-07 04:49:42 UTC (rev 12005)
+@@ -602,7 +602,7 @@
+  $(gxalpha_h) $(gxcspace_h) $(gxfarith_h) $(gxfrac_h)\
+  $(gxdcconv_h) $(gxdevice_h) $(gxcmap_h) $(gsnamecl_h) $(gxlum_h)\
+  $(gzstate_h) $(gxdither_h) $(gxcdevn_h) $(string__h)\
+- $(gsicc_manage_h) $(gdevdevn_h) $(gsicc_cache_h)
++ $(gsicc_manage_h) $(gdevdevn_h) $(gsicc_cache_h) $(gscms_h)
+ 	$(GLCC) $(GLO_)gxcmap.$(OBJ) $(C_) $(GLSRC)gxcmap.c
+ 
+ $(GLOBJ)gxcpath.$(OBJ) : $(GLSRC)gxcpath.c $(GXERR)\
+
