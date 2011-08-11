@@ -5,7 +5,7 @@
 
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
-pkgver=4.8.4
+pkgver=4.8.5
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
@@ -13,7 +13,7 @@ license=('GPL')
 makedepends=('qt' 'python-sip' 'dbus-python' 'python2-sip' 'phonon'
              'python-opengl' 'qt-assistant-compat')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('97c5dc1042feb5b3fe20baabad055af1')
+md5sums=('0e4264bb912edfbda319bb236ac84407')
 
 build() {
   cd "${srcdir}"
