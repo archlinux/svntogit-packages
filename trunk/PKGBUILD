@@ -3,11 +3,11 @@
 
 pkgname=ghostscript
 pkgver=9.04
-pkgrel=2
+pkgrel=3
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
-depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff' 'lcms')
+depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff') # 'lcms' 'lcms2') # move in libpaper from community?
 makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
@@ -20,7 +20,7 @@ build() {
   cd ${srcdir}/ghostscript-${pkgver}
 
   # force it to use system-libs
-  rm -rf jpeg libpng zlib jasper expat tiff lcms
+  rm -rf jpeg libpng zlib jasper expat tiff freetype #lcms lcms2 # system lcms2 would not be used. lcms breaks color printing https://bugs.archlinux.org/task/25519
 
   ./configure --prefix=/usr \
 	--enable-dynamic \
@@ -31,8 +31,11 @@ build() {
 	--with-drivers=ALL\
 	--with-fontpath=/usr/share/fonts/Type1:/usr/share/fonts \
 	--with-install-cups \
-	--disable-compile-inits # needed for linking with system-zlib
-  make || return 1
+	--enable-fontconfig \
+	--enable-freetype \
+	--without-luratech \
+	--disable-compile-inits #--help # needed for linking with system-zlib
+  make
   
   # Build IJS
   cd ${srcdir}/ghostscript-${pkgver}/ijs
