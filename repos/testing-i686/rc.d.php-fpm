@@ -1,0 +1,158 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+
+wait_for_pid () {
+	try=0
+	while test $try -lt 35 ; do
+		case "$1" in
+			'created')
+			if [ -f "$2" ] ; then
+				try=''
+				break
+			fi
+			;;
+			'removed')
+			if [ ! -f "$2" ] ; then
+				try=''
+				break
+			fi
+			;;
+		esac
+
+		stat_append '.'
+		try=`expr $try + 1`
+		sleep 1
+	done
+}
+
+test_config() {
+	stat_busy 'Checking configuration'
+	if [ $(id -u) -ne 0 ]; then
+		stat_append '(This script must be run as root)'
+		stat_die
+	fi
+
+	if [ ! -r /etc/php/php-fpm.conf ]; then
+		stat_append '(/etc/php/php-fpm.conf not found)'
+		stat_die
+	fi
+
+	local test=$(/usr/sbin/php-fpm -t 2>&1)
+	if [ $? -gt 0 ]; then
+		stat_append '(error in /etc/php/php-fpm.conf)'
+		stat_die
+	elif echo $test | grep -qi 'error'; then
+		stat_append '(error in /etc/php/php.ini)'
+		stat_die
+	fi
+
+	[ -d /var/run/php-fpm ] || install -d -m755 /var/run/php-fpm
+
+	stat_done
+}
+
+case "$1" in
+	start)
+		test_config
+		stat_busy 'Starting php-fpm'
+
+		/usr/sbin/php-fpm
+
+		if [ "$?" != 0 ] ; then
+			stat_fail
+			exit 1
+		fi
+
+		wait_for_pid created /var/run/php-fpm/php-fpm.pid
+
+		if [ -n "$try" ] ; then
+			stat_fail
+			exit 1
+		else
+			add_daemon php-fpm
+			stat_done
+		fi
+	;;
+
+	stop)
+		test_config
+		stat_busy 'Gracefully shutting down php-fpm'
+
+		if [ ! -r /var/run/php-fpm/php-fpm.pid ] ; then
+			stat_fail
+			exit 1
+		fi
+
+		kill -QUIT `cat /var/run/php-fpm/php-fpm.pid`
+
+		wait_for_pid removed /var/run/php-fpm.pid
+
+		if [ -n "$try" ] ; then
+			stat_fail
+			exit 1
+		else
+			rm_daemon php-fpm
+			stat_done
+		fi
+	;;
+
+	force-quit)
+		stat_busy 'Terminating php-fpm'
+
+		if [ ! -r /var/run/php-fpm/php-fpm.pid ] ; then
+			stat_fail
+			exit 1
+		fi
+
+		kill -TERM `cat /var/run/php-fpm/php-fpm.pid`
+
+		wait_for_pid removed /var/run/php-fpm/php-fpm.pid
+
+		if [ -n "$try" ] ; then
+			stat_fail
+			exit 1
+		else
+			rm_daemon php-fpm
+			stat_done
+		fi
+	;;
+
+	restart)
+		$0 stop
+		$0 start
+	;;
+
+	reload)
+		test_config
+		stat_busy 'Reload service php-fpm'
+
+		if [ ! -r /var/run/php-fpm/php-fpm.pid ] ; then
+			stat_fail
+			exit 1
+		fi
+
+		kill -USR2 `cat /var/run/php-fpm/php-fpm.pid`
+		stat_done
+	;;
+
+	logrotate)
+		stat_busy 'Reopen php-fpm log'
+
+		if [ ! -r /var/run/php-fpm/php-fpm.pid ] ; then
+			stat_fail
+			exit 1
+		fi
+
+		kill -USR1 `cat /var/run/php-fpm/php-fpm.pid`
+		stat_done
+	;;
+
+	*)
+		echo "usage: $0 {start|stop|force-quit|restart|reload|logrotate}"
+		exit 1
+	;;
+
+esac
