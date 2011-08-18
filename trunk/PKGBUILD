@@ -7,7 +7,6 @@ pkgname=('php'
          'php-apache'
          'php-fpm'
          'php-embed'
-         'php-pear'
          'php-curl'
          'php-enchant'
          'php-gd'
@@ -23,33 +22,26 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=5.3.6
-pkgrel=5
-_suhosinver=${pkgver}-0.9.10
+pkgver=5.3.7
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
-makedepends=('apache' 'imap' 'postgresql-libs' 'mysql' 'libldap' 'postfix'
+makedepends=('apache' 'imap' 'postgresql-libs' 'libldap' 'postfix'
              'sqlite3' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file' 'freetds'
              'libmcrypt' 'tidyhtml' 'aspell' 'libtool' 'libpng' 'libjpeg' 'icu'
              'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'freetype2')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
-        "suhosin-patch-${_suhosinver}.patch.gz"
         'php.ini.patch' 'apache.conf' 'rc.d.php-fpm' 'php-fpm.conf.in.patch'
         'logrotate.d.php-fpm')
-md5sums=('2286f5a82a6e8397955a0025c1c2ad98'
-         'fff1a38877142f3ae6036dbe5a85d0a6'
+md5sums=('2d47d003c96de4e88863ff38da61af33'
          '39eaa70d276fc3d45d6bcf6cd5ae1106'
          'dec2cbaad64e3abf4f0ec70e1de4e8e9'
          'b01be5f816988fcee7e78225836e5e27'
-         'd50ff349da08110a7cc8c691ce2d0423'
+         '09005dabd90c48ddd392b3dbf05f8a82'
          '07c4e412909ac65a44ec90e7a2c4bade')
 
 build() {
-	# ldap-sasl does not compile with --as-needed
-	export LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
-	export LDFLAGS="${LDFLAGS//,--as-needed}"
-
 	phpconfig="--srcdir=../${pkgbase}-${pkgver} \
 		--prefix=/usr \
 		--sysconfdir=/etc/php \
@@ -140,9 +132,6 @@ build() {
 
 	cd ${srcdir}/${pkgbase}-${pkgver}
 
-	# apply suhosin patch
-	patch -p1 -i ${srcdir}/suhosin-patch-${_suhosinver}.patch
-
 	# adjust paths
 	patch -p0 -i ${srcdir}/php.ini.patch
 	patch -p0 -i ${srcdir}/php-fpm.conf.in.patch
@@ -194,17 +183,6 @@ build() {
 	./configure ${phpconfig} \
 		--disable-cli \
 		--enable-embed=shared \
-		${phpextensions}
-	make
-
-	# pear
-	cp -a ${srcdir}/build-php ${srcdir}/build-pear
-	cd ${srcdir}/build-pear
-	./configure ${phpconfig} \
-		--disable-cgi \
-		--with-readline \
-		--enable-pcntl \
-		--with-pear \
 		${phpextensions}
 	make
 }
@@ -270,19 +248,6 @@ package_php-embed() {
 
 	install -D -m755 ${srcdir}/build-embed/libs/libphp5.so ${pkgdir}/usr/lib/libphp5.so
 	install -D -m644 ${srcdir}/${pkgbase}-${pkgver}/sapi/embed/php_embed.h ${pkgdir}/usr/include/php/sapi/embed/php_embed.h
-}
-
-package_php-pear() {
-	pkgdesc='PHP Extension and Application Repository'
-	depends=('php' 'bash')
-	backup=('etc/php/pear.conf')
-
-	cd ${srcdir}/build-pear
-	make -j1 install-pear INSTALL_ROOT=${pkgdir}
-	local i
-	while read i; do
-		[ ! -e "$i" ] || rm -rf "$i"
-	done < <(find ${pkgdir} -name '.*')
 }
 
 package_php-curl() {
