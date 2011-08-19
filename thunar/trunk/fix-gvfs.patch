@@ -1,0 +1,148 @@
+--- a/thunar/thunar-shortcuts-model.c
++++ b/thunar/thunar-shortcuts-model.c
+@@ -1,25 +1,23 @@
+-/* vi:set et ai sw=2 sts=2 ts=2: */
++/* $Id$ */
+ /*-
+  * Copyright (c) 2005-2006 Benedikt Meurer <benny@xfce.org>
+- * Copyright (c) 2009-2011 Jannis Pohlmann <jannis@xfce.org>
++ * Copyright (c) 2009 Jannis Pohlmann <jannis@xfce.org>
+  *
+- * This program is free software; you can redistribute it and/or 
+- * modify it under the terms of the GNU General Public License as
+- * published by the Free Software Foundation; either version 2 of 
+- * the License, or (at your option) any later version.
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation; either version 2 of the License, or (at your option)
++ * any later version.
+  *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+- * GNU General Public License for more details.
++ * This program is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++ * more details.
+  *
+- * You should have received a copy of the GNU General Public 
+- * License along with this program; if not, write to the Free 
+- * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+- * Boston, MA 02110-1301, USA.
++ * You should have received a copy of the GNU General Public License along with
++ * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
++ * Place, Suite 330, Boston, MA  02111-1307  USA
+  */
+ 
+-
+ #ifdef HAVE_CONFIG_H
+ #include <config.h>
+ #endif
+@@ -219,84 +217,6 @@ thunar_shortcuts_model_drag_source_init (GtkTreeDragSourceIface *iface)
+ 
+ 
+ 
+-static gboolean
+-thunar_shortcuts_model_add_network_idle (gpointer user_data)
+-{
+-  ThunarShortcutsModel *model = THUNAR_SHORTCUTS_MODEL (user_data);
+-  ThunarShortcut       *shortcut = NULL;
+-  GtkTreePath          *path;
+-  GtkTreeIter           iter;
+-  ThunarFile           *file = NULL;
+-  GVolume              *volume = NULL;
+-  gboolean              have_iter = FALSE;
+-  gboolean              is_separator = FALSE;
+-  gboolean              position_found = FALSE;
+-  GFile                *location = NULL;
+-
+-  /* append the network icon if browsing the network is supported */
+-  if (thunar_g_vfs_is_uri_scheme_supported ("network"))
+-    {
+-      /* load the network root file */
+-      location = g_file_new_for_uri ("network://");
+-      file = thunar_file_get (location, NULL);
+-      g_object_unref (location);
+-
+-      /* create the shortcut */
+-      shortcut = g_slice_new0 (ThunarShortcut);
+-      shortcut->type = THUNAR_SHORTCUT_SYSTEM_DEFINED;
+-      shortcut->file = file;
+-
+-      /* iterate over all rows in the model in order to find the 
+-       * first one with a volume or a separator */
+-      have_iter = gtk_tree_model_get_iter_first (GTK_TREE_MODEL (model), &iter);
+-      while (have_iter && !position_found)
+-        {
+-          /* read volume and separator flag from the current row */
+-          gtk_tree_model_get (GTK_TREE_MODEL (model), &iter,
+-                              THUNAR_SHORTCUTS_MODEL_COLUMN_VOLUME, &volume,
+-                              THUNAR_SHORTCUTS_MODEL_COLUMN_SEPARATOR, &is_separator,
+-                              -1);
+-
+-          /* check if a volume row was found */
+-          if (volume != NULL)
+-            {
+-              /* stop searching */
+-              position_found = TRUE;
+-
+-              /* release the volume */
+-              g_object_unref (volume);
+-            }
+-          else if (is_separator)
+-            {
+-              /* stop searching */
+-              position_found = TRUE;
+-            }
+-          else
+-            {
+-              /* advance to the next row */
+-              have_iter = gtk_tree_model_iter_next (GTK_TREE_MODEL (model), &iter);
+-            }
+-        }
+-
+-      /* we always have a volume or separator row */
+-      g_assert (position_found);
+-
+-      /* get the path of the iter */
+-      path = gtk_tree_model_get_path (GTK_TREE_MODEL (model), &iter);
+-
+-      /* append the shortcut to the list */
+-      thunar_shortcuts_model_add_shortcut (model, shortcut, path);
+-
+-      /* release the path */
+-      gtk_tree_path_free (path);
+-    }
+-
+-  /* remove this idle handler */
+-  return FALSE;
+-}
+-
+-
+-
+ static void
+ thunar_shortcuts_model_init (ThunarShortcutsModel *model)
+ {
+@@ -339,6 +259,10 @@ thunar_shortcuts_model_init (ThunarShortcutsModel *model)
+   /* append the root file system */
+   system_paths = g_list_append (system_paths, thunar_g_file_new_for_root ());
+ 
++  /* append the network icon if browsing the network is supported */
++  if (thunar_g_vfs_is_uri_scheme_supported ("network"))
++    system_paths = g_list_append (system_paths, g_file_new_for_uri ("network://"));
++
+   /* will be used to append the shortcuts to the list */
+   path = gtk_tree_path_new_from_indices (0, -1);
+ 
+@@ -416,9 +340,6 @@ thunar_shortcuts_model_init (ThunarShortcutsModel *model)
+   g_object_unref (bookmarks);
+   g_object_unref (home);
+   gtk_tree_path_free (path);
+-
+-  /* add the network item (and other slow items) in an idle handler */
+-  g_idle_add_full (G_PRIORITY_LOW, thunar_shortcuts_model_add_network_idle, model, NULL);
+ }
+ 
+
+ 
