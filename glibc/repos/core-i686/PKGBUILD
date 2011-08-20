@@ -6,15 +6,15 @@
 
 pkgname=glibc
 pkgver=2.14
-pkgrel=4
+pkgrel=5
 _glibcdate=20110617
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=2.6.39' 'tzdata')
-makedepends=('gcc>=4.4')
+depends=('linux-api-headers>=3.0' 'tzdata')
+makedepends=('gcc>=4.6')
 backup=(etc/locale.gen
         etc/nscd.conf)
 options=('!strip')
@@ -112,6 +112,10 @@ build() {
 
   echo "slibdir=/lib" >> configparms
 
+  # remove hardening options from CFLAGS for building libraries
+  CFLAGS=${CFLAGS/-fstack-protector/}
+  CFLAGS=${CFLAGS/-D_FORTIFY_SOURCE=2/}
+
   ${srcdir}/glibc/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --with-headers=/usr/include \
@@ -121,8 +125,19 @@ build() {
       --enable-bind-now --without-gd \
       --without-cvs --disable-profile \
       --disable-multi-arch
-        
+
+  # build libraries with hardening disabled
+  echo "build-programs=no" >> configparms
   make
+  
+  # re-enable hardening for programs
+  sed -i "s#=no#=yes#" configparms
+  echo "CC += -fstack-protector -D_FORTIFY_SOURCE=2" >> configparms
+  echo "CXX += -fstack-protector -D_FORTIFY_SOURCE=2" >> configparms
+  make
+
+  # remove harding in preparation to run test-suite
+  sed -i '2,4d' configparms
 }
 
 check() {
