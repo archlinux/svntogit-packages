@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.6.1
-pkgrel=2
+pkgrel=3
 #_snapshot=4.6-20110603
 _libstdcppmanver=20110201		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
@@ -65,6 +65,14 @@ build() {
       --enable-plugin --with-plugin-ld=ld.gold \
       --disable-multilib --disable-libstdcxx-pch \
       --enable-checking=release
+  make
+  
+  # rebuild libssp without -fstack-protector and -D_FORTIFY_SOURCE=2
+  # adjusting Makefile.in prior to build still results in these leaking through (yay libtool...)
+  cd $CHOST/libssp
+  sed -i -e "s#-fstack-protector#-fno-stack-protector#" \
+         -e "s#-D_FORTIFY_SOURCE=2#-U_FORTIFY_SOURCE#" Makefile
+  make clean
   make
 }
 
