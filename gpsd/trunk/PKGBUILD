@@ -6,7 +6,7 @@
 
 pkgname=gpsd
 pkgver=3.0
-pkgrel=1
+pkgrel=2
 pkgdesc="GPS daemon and library to support USB/serial GPS devices"
 arch=('i686' 'x86_64')
 url="http://gpsd.berlios.de"
@@ -19,9 +19,10 @@ backup=('etc/conf.d/gpsd' 'lib/udev/rules.d/99-gpsd-usb.rules')
 options=('!libtool' '!buildflags')
 install="${pkgname}.install"
 source=("http://download.berlios.de/${pkgname}/${pkgname}-${pkgver}.tar.gz"
-        'gpsd')
+        'gpsd' 'gpsd.conf.d')
 md5sums=('c63d41a26868e9bdd48d9e311a9cc42c'
-         'e287d4b34a4eb1da27f12533ae9b6dd5')
+         'ffa9325cb53bf900b76d064b03ff71b7'
+         '5ebad060285f400fd202aef8fd5ed2a9')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -43,15 +44,13 @@ build() {
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
+  # Fix man pages path (FS#21715)
+  sed -i 's|.so gps.1|.so man1/gps.1|' cgps.1 lcdgps.1 xgps.1 xgpsspeed.1
+
   export DESTDIR="${pkgdir}"
   scons install
 
-  # Our own udev-install since the Makefile uses absolute paths
-  # Original file names are [mostly] unmodified: useful to match process name in case of error
-  # Following the switch from hotplug to udev helper scripts now live in /lib/udev/ instead of /etc/hotplug/
-  sed -i 's|GPSD_OPTIONS=""|GPSD_OPTIONS="-P /var/run/gpsd/gpsd.pid"|' packaging/deb/etc_default_gpsd
-  sed -i 's|"/var/run/gpsd.sock"|"/var/run/gpsd/gpsd.sock"|' packaging/deb/etc_default_gpsd
-  install -D -m644 "packaging/deb/etc_default_gpsd" "${pkgdir}/etc/conf.d/gpsd"
+  install -D -m644 "${srcdir}/gpsd.conf.d" "${pkgdir}/etc/conf.d/gpsd"
 
   install -D -m644 "gpsd.rules" "${pkgdir}/lib/udev/rules.d/99-gpsd-usb.rules"
 
@@ -74,5 +73,3 @@ package() {
 
   install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
-md5sums=('c63d41a26868e9bdd48d9e311a9cc42c'
-         '0d5879df32833ca67a5491ce1ff98dcc')
