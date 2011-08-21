@@ -1,30 +1,31 @@
 # $Id$
-# Maintainer: Eric Belanger <eric@archlinux.org>
+# Maintainer: 
 # Contributor: Dale Blount <dale@archlinux.org>
 
 pkgname=net-snmp
 pkgver=5.6.1
-pkgrel=3
+pkgrel=4
 pkgdesc="A suite of applications used to implement SNMP v1, SNMP v2c and SNMP v3 using both IPv4 and IPv6"
 arch=('i686' 'x86_64')
 url="http://www.net-snmp.org/"
 license=('custom')
 depends=('openssl' 'libnl')
-makedepends=('setuptools')
+makedepends=('python2-distribute')
 optdepends=('perl-term-readkey: for snmpcheck application' 
             'perl-tk: for snmpcheck and tkmib applications'
             'python2: for the python modules')
 provides=('ucd-snmp')
 options=('!libtool' '!makeflags' '!emptydirs')
-source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz"
-        'snmpd.rc')
+source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz
+        snmpd.confd snmpd.rc)
 md5sums=('b4e30ead5783b0bb1d280172c6095ea4'
-         '9f0d13676ba1fae1eb7eb178edd85b43')
+         '37bc5db8707004fe284c202437c6aa7d'
+         'edab44a12f76045e41340d433a79dcec')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   sed -i -e "s:\(install --basedir=\$\$dir\):\1 --root='${pkgdir}':" Makefile.in
-  ./configure --prefix=/usr \
+  PYTHONPROG=/usr/bin/python2 ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --mandir=/usr/share/man \
     --enable-ucd-snmp-compatibility \
@@ -35,14 +36,14 @@ build() {
     --with-sys-location="Unknown" \
     --with-logfile="/var/log/snmpd.log" \
     --with-mib-modules="host misc/ipfwacc ucd-snmp/diskio tunnel ucd-snmp/dlmod" \
-    --with-persistent-directory="/var/net-snmp" \
-    PYTHONPROG=/usr/bin/python2
-  make NETSNMP_DONT_CHECK_VERSION=1 LDFLAGS+="-Wl,-rpath -Wl,/usr/lib/perl5/core_perl/CORE"
+    --with-persistent-directory="/var/net-snmp"
+  make NETSNMP_DONT_CHECK_VERSION=1
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" INSTALL_PREFIX="${pkgdir}" INSTALLDIRS=vendor install
   install -D -m755 "${srcdir}/snmpd.rc" "${pkgdir}/etc/rc.d/snmpd"
+  install -D -m644 "${srcdir}/snmpd.confd" "${pkgdir}/etc/conf.d/snmpd"
   install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
