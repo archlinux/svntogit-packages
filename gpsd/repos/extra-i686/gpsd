@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 . /etc/rc.conf
 . /etc/rc.d/functions
@@ -6,29 +6,30 @@
 
 NAME=gpsd
 DAEMON=/usr/sbin/$NAME
-PID=$(pidof -o %PPID /usr/sbin/gpsd)
+PIDFILE=/var/run/$NAME/$NAME.pid
+PID=$(cat $PIDFILE 2>/dev/null)
 
 case "$1" in
    start)
-	stat_busy "Starting gpsd"
-	[ ! -d /var/run/gpsd ] && install -d /var/run/gpsd
-	[ -z "$PID" ] && "$DAEMON" ${GPSD_OPTIONS} -F ${GPSD_SOCKET} ${DEVICES}
+	stat_busy "Starting $NAME"
+	[ ! -d /var/run/$NAME ] && install -d /var/run/$NAME
+	[ -z "$PID" ] && "$DAEMON" -P $PIDFILE -F /var/run/$NAME/$NAME.sock ${GPSD_OPTIONS} ${DEVICES}
 	if [ $? -gt 0 ]; then
 		stat_fail
 	else
-		add_daemon gpsd
+		add_daemon $NAME
 		stat_done
 	fi
    ;;
    stop)
-	stat_busy "Stopping gpsd"
+	stat_busy "Stopping $NAME"
 	[ ! -z "$PID" ]  && kill $PID &> /dev/null
 	if [ $? -gt 0 ]; then
 		stat_fail
 	else
-	rm -f /var/run/$PID.pid &>/dev/null
-	rm_daemon gpsd
-	stat_done
+	    rm -f $PIDFILE &>/dev/null
+	    rm_daemon $NAME
+	    stat_done
 	fi
    ;;
 
