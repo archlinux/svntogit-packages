@@ -3,24 +3,29 @@
 
 pkgname=ghostscript
 pkgver=9.04
-pkgrel=3
+pkgrel=4
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
-depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff') # 'lcms' 'lcms2') # move in libpaper from community?
+depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff' 'lcms') # 'lcms2' won't get used) # move in libpaper from community?
 makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
-source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
+source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2
+	ghostscript-cups-rgbw.patch)
 options=('!libtool' '!makeflags')
-md5sums=('9f6899e821ab6d78ab2c856f10fa3023')
+md5sums=('9f6899e821ab6d78ab2c856f10fa3023'
+         '7c1477e1cadd9c451ea8d6ec3fbbc670')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
+  
+  # fix broken color printing https://bugs.archlinux.org/task/25519
+  patch -Np1 -i ${srcdir}/ghostscript-cups-rgbw.patch
 
   # force it to use system-libs
-  rm -rf jpeg libpng zlib jasper expat tiff freetype #lcms lcms2 # system lcms2 would not be used. lcms breaks color printing https://bugs.archlinux.org/task/25519
+  rm -rf jpeg libpng zlib jasper expat tiff freetype lcms
 
   ./configure --prefix=/usr \
 	--enable-dynamic \
