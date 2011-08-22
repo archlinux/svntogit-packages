@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=9.04
-pkgrel=4
+pkgrel=5
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -16,7 +16,7 @@ source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2
 	ghostscript-cups-rgbw.patch)
 options=('!libtool' '!makeflags')
 md5sums=('9f6899e821ab6d78ab2c856f10fa3023'
-         '7c1477e1cadd9c451ea8d6ec3fbbc670')
+         'bc56eb8c5fef0ecf964f6b3e9b7e65ae')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
