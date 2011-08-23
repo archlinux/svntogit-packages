@@ -4,7 +4,7 @@
 pkgname=xulrunner
 pkgver=6.0
 _ffoxver=6.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Mozilla Runtime Environment"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL' 'LGPL')
@@ -13,15 +13,23 @@ makedepends=('zip' 'pkg-config' 'diffutils' 'python2' 'wireless_tools' 'yasm' 'm
 url="http://wiki.mozilla.org/XUL:Xul_Runner"
 source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${_ffoxver}/source/firefox-${_ffoxver}.source.tar.bz2
         mozconfig
-        mozilla-pkgconfig.patch)
+        mozilla-pkgconfig.patch
+        moz-639554.patch)
 options=('!emptydirs' '!buildflags')
 replaces=('xulrunner-oss')
+md5sums=('1840185865a1a8975df4a3db59080ddc'
+         '2358a2ddd35bcdd62ff42442dfe548d9'
+         '639ea80e823543dd415b90c0ee804186'
+         '96d3c1790a56f8e6df88e327adccf3bf')
+
 build() {
   cd "${srcdir}/mozilla-release"
   cp "${srcdir}/mozconfig" .mozconfig
 
   #fix libdir/sdkdir - fedora
   patch -Np1 -i "${srcdir}/mozilla-pkgconfig.patch"
+  #upstream fixes
+  patch -Np1 -i "${srcdir}/moz-639554.patch"
 
   export LDFLAGS="-Wl,-rpath,/usr/lib/xulrunner-${pkgver} -Wl,-O1,--sort-common,--hash-style=gnu,--as-needed"
 
@@ -40,7 +48,8 @@ package() {
   # add xulrunner library path to ld.so.conf
   install -d ${pkgdir}/etc/ld.so.conf.d
   echo "/usr/lib/xulrunner-${pkgver}" > ${pkgdir}/etc/ld.so.conf.d/xulrunner.conf
+
+  #wtf mozilla!
+  chmod +x "${pkgdir}/usr/lib/xulrunner-devel-6.0/sdk/bin/xpt.py"
+  sed -i 's|!/usr/bin/env python|!/usr/bin/env python2|' "${pkgdir}/usr/lib/xulrunner-devel-6.0/sdk/bin/xpt.py"
 }
-md5sums=('1840185865a1a8975df4a3db59080ddc'
-         '2358a2ddd35bcdd62ff42442dfe548d9'
-         '639ea80e823543dd415b90c0ee804186')
