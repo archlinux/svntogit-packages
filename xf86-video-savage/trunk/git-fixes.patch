@@ -1,0 +1,1076 @@
+diff --git a/src/savage_accel.c b/src/savage_accel.c
+index 73c2d90..24e0a22 100644
+--- a/src/savage_accel.c
++++ b/src/savage_accel.c
+@@ -1257,6 +1257,7 @@ void SavageSetGBD_2000(ScrnInfoPtr pScrn)
+     OUTREG8(SEQ_DATA_REG,byte);
+ }
+ 
++#if 0
+ static
+ void SavageRestoreAccelState(ScrnInfoPtr pScrn)
+ {
+@@ -1266,6 +1267,7 @@ void SavageRestoreAccelState(ScrnInfoPtr pScrn)
+ 
+     return;
+ }
++#endif
+ 
+ /* Acceleration init function, sets up pointers to our accelerated functions */
+ 
+@@ -1278,7 +1280,6 @@ SavageInitAccel(ScreenPtr pScreen)
+ #ifdef XF86DRI
+     if (psav->directRenderingEnabled) {
+         SAVAGEDRIServerPrivatePtr pSAVAGEDRIServer = psav->DRIServerInfo;
+-        BoxRec MemBox;
+         int cpp = pScrn->bitsPerPixel / 8;
+         int widthBytes = psav->lDelta;
+         int bufferSize = ((pScrn->virtualY * widthBytes + SAVAGE_BUFFER_ALIGN)
+diff --git a/src/savage_cursor.c b/src/savage_cursor.c
+index 1af2449..6364293 100644
+--- a/src/savage_cursor.c
++++ b/src/savage_cursor.c
+@@ -67,8 +67,8 @@ static void SavageSetCursorColors(ScrnInfoPtr pScrn, int bg, int fg);
+ #define waitHSync(n) { \
+                        int num = n; \
+                        while (num--) { \
+-			 while ((inStatus1()) & 0x01){};\
+-                         while (!(inStatus1()) & 0x01){};\
++			 while (inStatus1() & 0x01){};\
++                         while (!(inStatus1() & 0x01)){};\
+                         } \
+                       } 
+ #define MAX_CURS 64
+@@ -79,6 +79,7 @@ static void SavageSetCursorColors(ScrnInfoPtr pScrn, int bg, int fg);
+  * the HW cursor position.
+  */
+ 
++#if 0
+ static Bool
+ SavageUseHWCursor(ScreenPtr pScr, CursorPtr pCurs)
+ {
+@@ -94,6 +95,7 @@ SavageUseHWCursor(ScreenPtr pScr, CursorPtr pCurs)
+     }
+     return TRUE;
+ }
++#endif
+ 
+ Bool 
+ SavageHWCursorInit(ScreenPtr pScreen)
+diff --git a/src/savage_dga.c b/src/savage_dga.c
+index eb1c5d2..1c4d884 100644
+--- a/src/savage_dga.c
++++ b/src/savage_dga.c
+@@ -107,15 +107,15 @@ SavageSetupDGAMode(
+ 	otherPitch = secondPitch ? secondPitch : pMode->HDisplay;
+ 
+ 	if(pMode->HDisplay != otherPitch) {
+-	    newmodes = xrealloc(modes, (*num + 2) * sizeof(DGAModeRec));
++	    newmodes = realloc(modes, (*num + 2) * sizeof(DGAModeRec));
+ 	    oneMore = TRUE;
+ 	} else {
+-	    newmodes = xrealloc(modes, (*num + 1) * sizeof(DGAModeRec));
++	    newmodes = realloc(modes, (*num + 1) * sizeof(DGAModeRec));
+ 	    oneMore = FALSE;
+ 	}
+ 
+ 	if(!newmodes) {
+-	   xfree(modes);
++	   free(modes);
+ 	   return NULL;
+ 	}
+ 	modes = newmodes;
+@@ -390,7 +390,7 @@ Savage_OpenFramebuffer(
+     SavagePtr psav = SAVPTR(pScrn);
+ 
+     *name = NULL;	 /* no special device */
+-    *mem = (unsigned char*)psav->FbRegion.base;
++    *mem = (unsigned char*)(uintptr_t) psav->FbRegion.base;
+     *size = psav->videoRambytes;
+     *offset = 0;
+     *flags = DGA_NEED_ROOT;
+diff --git a/src/savage_dri.c b/src/savage_dri.c
+index 190e8ee..69563bd 100644
+--- a/src/savage_dri.c
++++ b/src/savage_dri.c
+@@ -105,24 +105,24 @@ static Bool SAVAGEInitVisualConfigs( ScreenPtr pScreen )
+    case 16:
+       numConfigs = 8;
+ 
+-      pConfigs = (__GLXvisualConfig*)xcalloc( sizeof(__GLXvisualConfig),
++      pConfigs = (__GLXvisualConfig*)calloc( sizeof(__GLXvisualConfig),
+ 						numConfigs );
+       if ( !pConfigs ) {
+ 	 return FALSE;
+       }
+ 
+-      pSAVAGEConfigs = (SAVAGEConfigPrivPtr)xcalloc( sizeof(SAVAGEConfigPrivRec),
++      pSAVAGEConfigs = (SAVAGEConfigPrivPtr)calloc( sizeof(SAVAGEConfigPrivRec),
+ 						 numConfigs );
+       if ( !pSAVAGEConfigs ) {
+-	 xfree( pConfigs );
++	 free( pConfigs );
+ 	 return FALSE;
+       }
+ 
+-      pSAVAGEConfigPtrs = (SAVAGEConfigPrivPtr*)xcalloc( sizeof(SAVAGEConfigPrivPtr),
++      pSAVAGEConfigPtrs = (SAVAGEConfigPrivPtr*)calloc( sizeof(SAVAGEConfigPrivPtr),
+ 						     numConfigs );
+       if ( !pSAVAGEConfigPtrs ) {
+-	 xfree( pConfigs );
+-	 xfree( pSAVAGEConfigs );
++	 free( pConfigs );
++	 free( pSAVAGEConfigs );
+ 	 return FALSE;
+       }
+ 
+@@ -201,24 +201,24 @@ static Bool SAVAGEInitVisualConfigs( ScreenPtr pScreen )
+    case 32:
+       numConfigs = 8;
+ 
+-      pConfigs = (__GLXvisualConfig*)xcalloc( sizeof(__GLXvisualConfig),
++      pConfigs = (__GLXvisualConfig*)calloc( sizeof(__GLXvisualConfig),
+ 						numConfigs );
+       if ( !pConfigs ) {
+ 	 return FALSE;
+       }
+ 
+-      pSAVAGEConfigs = (SAVAGEConfigPrivPtr)xcalloc( sizeof(SAVAGEConfigPrivRec),
++      pSAVAGEConfigs = (SAVAGEConfigPrivPtr)calloc( sizeof(SAVAGEConfigPrivRec),
+ 						 numConfigs );
+       if ( !pSAVAGEConfigs ) {
+-	 xfree( pConfigs );
++	 free( pConfigs );
+ 	 return FALSE;
+       }
+ 
+-      pSAVAGEConfigPtrs = (SAVAGEConfigPrivPtr*)xcalloc( sizeof(SAVAGEConfigPrivPtr),
++      pSAVAGEConfigPtrs = (SAVAGEConfigPrivPtr*)calloc( sizeof(SAVAGEConfigPrivPtr),
+ 						     numConfigs );
+       if ( !pSAVAGEConfigPtrs ) {
+-	 xfree( pConfigs );
+-	 xfree( pSAVAGEConfigs );
++	 free( pConfigs );
++	 free( pSAVAGEConfigs );
+ 	 return FALSE;
+       }
+ 
+@@ -386,7 +386,7 @@ static void SAVAGEBlockHandler( int screenNum, pointer blockData,
+    psav->pDRIInfo->wrap.BlockHandler = SAVAGEBlockHandler;
+ }
+ 
+-void SAVAGESelectBuffer( ScrnInfoPtr pScrn, int which )
++static void SAVAGESelectBuffer( ScrnInfoPtr pScrn, int which )
+ {
+    SavagePtr psav = SAVPTR(pScrn);
+    SAVAGEDRIServerPrivatePtr pSAVAGEDRIServer = psav->DRIServerInfo;
+@@ -426,29 +426,11 @@ static unsigned int mylog2( unsigned int n )
+    return log2;
+ }
+ 
+-static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
++static Bool SAVAGESetAgpMode(SavagePtr psav, ScreenPtr pScreen)
+ {
+-   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+-   SavagePtr psav = SAVPTR(pScrn);
+-   SAVAGEDRIServerPrivatePtr pSAVAGEDRIServer = psav->DRIServerInfo;
+-   unsigned long mode;
+-   unsigned int vendor, device;
+-   unsigned int offset;
+-   int ret;
+-
+-   if (psav->agpSize < 2) psav->agpSize = 2; /* at least 2MB for DMA buffers */
+-
+-   pSAVAGEDRIServer->agp.size = psav->agpSize * 1024 * 1024;
+-   pSAVAGEDRIServer->agp.offset = pSAVAGEDRIServer->agp.size; /* ? */
+-
+-   if ( drmAgpAcquire( psav->drmFD ) < 0 ) {
+-      xf86DrvMsg( pScreen->myNum, X_ERROR, "[agp] AGP not available\n" );
+-      return FALSE;
+-   }
+-
+-   mode   = drmAgpGetMode( psav->drmFD );        /* Default mode */
+-   vendor = drmAgpVendorId( psav->drmFD );
+-   device = drmAgpDeviceId( psav->drmFD );
++   unsigned long mode = drmAgpGetMode( psav->drmFD );    /* Default mode */
++   unsigned int vendor = drmAgpVendorId( psav->drmFD );
++   unsigned int device = drmAgpDeviceId( psav->drmFD );
+ 
+    mode &= ~SAVAGE_AGP_MODE_MASK;
+ 
+@@ -462,8 +444,6 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+       mode |= SAVAGE_AGP_1X_MODE;
+    }
+ 
+-   /*   mode |= SAVAGE_AGP_1X_MODE;*/
+-
+    xf86DrvMsg( pScreen->myNum, X_INFO,
+ 	       "[agp] Mode 0x%08lx [AGP 0x%04x/0x%04x; Card 0x%04x/0x%04x]\n",
+ 	       mode, vendor, device,
+@@ -473,6 +453,32 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+    if ( drmAgpEnable( psav->drmFD, mode ) < 0 ) {
+       xf86DrvMsg( pScreen->myNum, X_ERROR, "[agp] AGP not enabled\n" );
+       drmAgpRelease( psav->drmFD );
++      return FALSE;
++   }
++
++   return TRUE;
++}
++
++static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
++{
++   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
++   SavagePtr psav = SAVPTR(pScrn);
++   SAVAGEDRIServerPrivatePtr pSAVAGEDRIServer = psav->DRIServerInfo;
++   unsigned int offset;
++   int ret;
++
++   if (psav->agpSize < 2)
++      psav->agpSize = 2; /* at least 2MB for DMA buffers */
++
++   pSAVAGEDRIServer->agp.size = psav->agpSize * 1024 * 1024;
++   pSAVAGEDRIServer->agp.offset = pSAVAGEDRIServer->agp.size; /* ? */
++
++   if ( drmAgpAcquire( psav->drmFD ) < 0 ) {
++      xf86DrvMsg( pScreen->myNum, X_ERROR, "[agp] AGP not available\n" );
++      return FALSE;
++   }
++
++   if (!SAVAGESetAgpMode(psav, pScreen)) {
+       pSAVAGEDRIServer->agp.handle = 0; /* indicate that AGP init failed */
+       return FALSE;
+    }
+@@ -487,7 +493,8 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+    }
+    xf86DrvMsg( pScreen->myNum, X_INFO,
+ 	       "[agp] %d kB allocated with handle 0x%08lx\n",
+-	       pSAVAGEDRIServer->agp.size/1024, pSAVAGEDRIServer->agp.handle );
++	       pSAVAGEDRIServer->agp.size/1024,
++	       (unsigned long)pSAVAGEDRIServer->agp.handle );
+ 
+    if ( drmAgpBind( psav->drmFD, pSAVAGEDRIServer->agp.handle, 0 ) < 0 ) {
+       xf86DrvMsg( pScreen->myNum, X_ERROR, "[agp] Could not bind memory\n" );
+@@ -547,7 +554,7 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+ 	   }
+ 	   xf86DrvMsg( pScreen->myNum, X_INFO,
+ 		       "[agp] command DMA handle = 0x%08lx\n",
+-		       pSAVAGEDRIServer->cmdDma.handle );
++		       (unsigned long)pSAVAGEDRIServer->cmdDma.handle );
+ 	   /* not needed in the server
+ 	   if ( drmMap( psav->drmFD,
+ 			pSAVAGEDRIServer->cmdDma.handle,
+@@ -573,7 +580,7 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+ 	   }
+ 	   xf86DrvMsg( pScreen->myNum, X_INFO,
+ 		       "[agp] DMA buffers handle = 0x%08lx\n",
+-		       pSAVAGEDRIServer->buffers.handle );
++		       (unsigned long)pSAVAGEDRIServer->buffers.handle );
+ 	   /* not needed in the server
+ 	   if ( drmMap( psav->drmFD,
+ 			pSAVAGEDRIServer->buffers.handle,
+@@ -605,7 +612,7 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+        } else {
+ 	    xf86DrvMsg( pScreen->myNum, X_INFO,
+ 	       "[agp] agpXVideo handle = 0x%08lx\n",
+-	       pSAVAGEDRIServer->agpXVideo.handle );
++	       (unsigned long)pSAVAGEDRIServer->agpXVideo.handle );
+        }
+    }
+ 
+@@ -623,7 +630,7 @@ static Bool SAVAGEDRIAgpInit(ScreenPtr pScreen)
+    /*   pSAVAGEDRIServer->agp_offset=pSAVAGEDRIServer->agpTexture.size;*/
+    xf86DrvMsg( pScreen->myNum, X_INFO,
+ 	       "[agp] agpTextures handle = 0x%08lx\n",
+-	       pSAVAGEDRIServer->agpTextures.handle );
++	       (unsigned long)pSAVAGEDRIServer->agpTextures.handle );
+ 
+    /* not needed in the server
+    if ( drmMap( psav->drmFD,
+@@ -675,7 +682,7 @@ static Bool SAVAGEDRIMapInit( ScreenPtr pScreen )
+    
+    xf86DrvMsg( pScreen->myNum, X_INFO,
+ 	       "[drm] aperture handle = 0x%08lx\n",
+-	       pSAVAGEDRIServer->aperture.handle );
++	       (unsigned long)pSAVAGEDRIServer->aperture.handle );
+ 
+    /*if(drmMap(psav->drmFD,
+           pSAVAGEDRIServer->registers.handle,
+@@ -700,7 +707,7 @@ static Bool SAVAGEDRIMapInit( ScreenPtr pScreen )
+        } else
+ 	   xf86DrvMsg( pScreen->myNum, X_INFO,
+ 		       "[drm] PCI command DMA handle = 0x%08lx\n",
+-		       pSAVAGEDRIServer->cmdDma.handle );
++		       (unsigned long)pSAVAGEDRIServer->cmdDma.handle );
+    }
+ 
+    /* Enable ShadowStatus by default for direct rendering. */
+@@ -724,7 +731,7 @@ static Bool SAVAGEDRIMapInit( ScreenPtr pScreen )
+        }
+        xf86DrvMsg( pScreen->myNum, X_INFO,
+ 		   "[drm] Status handle = 0x%08lx\n",
+-		   pSAVAGEDRIServer->status.handle );
++		   (unsigned long)pSAVAGEDRIServer->status.handle );
+ 
+        if ( drmMap( psav->drmFD,
+ 		    pSAVAGEDRIServer->status.handle,
+@@ -906,7 +913,7 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen )
+    if (xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
+       pDRIInfo->busIdString = DRICreatePCIBusID(psav->PciInfo);
+    } else {
+-      pDRIInfo->busIdString            = xalloc(64);
++      pDRIInfo->busIdString            = malloc(64);
+       sprintf(pDRIInfo->busIdString,
+               "PCI:%d:%d:%d",
+               psav->PciInfo->bus,
+@@ -921,7 +928,7 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen )
+    pDRIInfo->ddxDriverMinorVersion = SAVAGE_VERSION_MINOR;
+    pDRIInfo->ddxDriverPatchVersion = SAVAGE_PATCHLEVEL;
+ 
+-   pDRIInfo->frameBufferPhysicalAddress = (pointer) psav->FbRegion.base;
++   pDRIInfo->frameBufferPhysicalAddress = (pointer)(uintptr_t) psav->FbRegion.base;
+    pDRIInfo->frameBufferSize = psav->videoRambytes;
+    pDRIInfo->frameBufferStride = pScrn->displayWidth*(pScrn->bitsPerPixel/8);
+    pDRIInfo->ddxDrawableTableEntry = SAVAGE_MAX_DRAWABLES;
+@@ -960,7 +967,7 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen )
+ 
+    pDRIInfo->SAREASize = SAREA_MAX;
+ 
+-   pSAVAGEDRI = (SAVAGEDRIPtr)xcalloc( sizeof(SAVAGEDRIRec), 1 );
++   pSAVAGEDRI = (SAVAGEDRIPtr)calloc( sizeof(SAVAGEDRIRec), 1 );
+    if ( !pSAVAGEDRI ) {
+       DRIDestroyInfoRec( psav->pDRIInfo );
+       psav->pDRIInfo = 0;
+@@ -970,9 +977,9 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen )
+    }
+ 
+    pSAVAGEDRIServer = (SAVAGEDRIServerPrivatePtr)
+-      xcalloc( sizeof(SAVAGEDRIServerPrivateRec), 1 );
++      calloc( sizeof(SAVAGEDRIServerPrivateRec), 1 );
+    if ( !pSAVAGEDRIServer ) {
+-      xfree( pSAVAGEDRI );
++      free( pSAVAGEDRI );
+       DRIDestroyInfoRec( psav->pDRIInfo );
+       psav->pDRIInfo = 0;
+       xf86DrvMsg( pScrn->scrnIndex, X_ERROR,
+@@ -998,9 +1005,9 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen )
+    pDRIInfo->bufferRequests = DRI_ALL_WINDOWS;
+ 
+    if ( !DRIScreenInit( pScreen, pDRIInfo, &psav->drmFD ) ) {
+-      xfree( pSAVAGEDRIServer );
++      free( pSAVAGEDRIServer );
+       psav->DRIServerInfo = 0;
+-      xfree( pDRIInfo->devPrivate );
++      free( pDRIInfo->devPrivate );
+       pDRIInfo->devPrivate = 0;
+       DRIDestroyInfoRec( psav->pDRIInfo );
+       psav->pDRIInfo = 0;
+@@ -1077,6 +1084,49 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen )
+    return TRUE;
+ }
+ 
++static void SAVAGEDRISetupTiledSurfaceRegs( SavagePtr psav )
++{
++      SAVAGEDRIPtr pSAVAGEDRI = (SAVAGEDRIPtr)psav->pDRIInfo->devPrivate;
++      unsigned int value = 0;
++      
++      OUTREG(0x850C,(INREG(0x850C) | 0x00008000)); /* AGD: I don't think this does anything on 3D/MX/IX */
++						   /* maybe savage4 too... */
++      /* we don't use Y range flag,so comment it */
++      /*
++        if(pSAVAGEDRI->width <= 1024)
++            value |= (1<<29);
++      */
++      if ((psav->Chipset == S3_SAVAGE_MX) /* 3D/MX/IX seem to set up the tile stride differently */
++	|| (psav->Chipset == S3_SAVAGE3D)) {
++      	    if(pSAVAGEDRI->cpp == 2)
++      	    {
++         	value |=  ((psav->lDelta / 4) >> 5) << 24;
++         	value |= 2<<30;
++      	    } else {
++         	value |=  ((psav->lDelta / 4) >> 5) << 24;
++         	value |= 3<<30;
++      	    }
++
++	    OUTREG(TILED_SURFACE_REGISTER_0, value|(pSAVAGEDRI->frontOffset) ); /* front */ 
++	    OUTREG(TILED_SURFACE_REGISTER_1, value|(pSAVAGEDRI->backOffset) ); /* back  */
++	    OUTREG(TILED_SURFACE_REGISTER_2, value|(pSAVAGEDRI->depthOffset) ); /* depth */
++      } else {
++	    int offset_shift = 5;
++      	    if(pSAVAGEDRI->cpp == 2)
++      	    {
++         	value |=  (((pSAVAGEDRI->width + 0x3F) & 0xFFC0) >> 6) << 20;
++         	value |= 2<<30;
++      	    } else {
++         	value |=  (((pSAVAGEDRI->width + 0x1F) & 0xFFE0) >> 5) << 20;
++         	value |= 3<<30;
++      	    }
++	    if (psav->Chipset == S3_SUPERSAVAGE) /* supersavages have a different shift */
++		offset_shift = 6;
++	    OUTREG(TILED_SURFACE_REGISTER_0, value|(pSAVAGEDRI->frontOffset >> offset_shift) ); /* front */
++	    OUTREG(TILED_SURFACE_REGISTER_1, value|(pSAVAGEDRI->backOffset >> offset_shift) ); /* back  */
++	    OUTREG(TILED_SURFACE_REGISTER_2, value|(pSAVAGEDRI->depthOffset >> offset_shift) ); /* depth */
++      }
++}
+ 
+ Bool SAVAGEDRIFinishScreenInit( ScreenPtr pScreen )
+ {
+@@ -1148,48 +1198,6 @@ Bool SAVAGEDRIFinishScreenInit( ScreenPtr pScreen )
+    pSAVAGEDRI->apertureHandle	= pSAVAGEDRIServer->aperture.handle;
+    pSAVAGEDRI->apertureSize	= pSAVAGEDRIServer->aperture.size;
+    pSAVAGEDRI->aperturePitch    = psav->ulAperturePitch;
+-
+-   {
+-      unsigned int value = 0;
+-      
+-      OUTREG(0x850C,(INREG(0x850C) | 0x00008000)); /* AGD: I don't think this does anything on 3D/MX/IX */
+-						   /* maybe savage4 too... */
+-      /* we don't use Y range flag,so comment it */
+-      /*
+-        if(pSAVAGEDRI->width <= 1024)
+-            value |= (1<<29);
+-      */
+-      if ((psav->Chipset == S3_SAVAGE_MX) /* 3D/MX/IX seem to set up the tile stride differently */
+-	|| (psav->Chipset == S3_SAVAGE3D)) {
+-      	    if(pSAVAGEDRI->cpp == 2)
+-      	    {
+-         	value |=  ((psav->lDelta / 4) >> 5) << 24;
+-         	value |= 2<<30;
+-      	    } else {
+-         	value |=  ((psav->lDelta / 4) >> 5) << 24;
+-         	value |= 3<<30;
+-      	    }
+-
+-	    OUTREG(TILED_SURFACE_REGISTER_0, value|(pSAVAGEDRI->frontOffset) ); /* front */ 
+-	    OUTREG(TILED_SURFACE_REGISTER_1, value|(pSAVAGEDRI->backOffset) ); /* back  */
+-	    OUTREG(TILED_SURFACE_REGISTER_2, value|(pSAVAGEDRI->depthOffset) ); /* depth */
+-      } else {
+-	    int offset_shift = 5;
+-      	    if(pSAVAGEDRI->cpp == 2)
+-      	    {
+-         	value |=  (((pSAVAGEDRI->width + 0x3F) & 0xFFC0) >> 6) << 20;
+-         	value |= 2<<30;
+-      	    } else {
+-         	value |=  (((pSAVAGEDRI->width + 0x1F) & 0xFFE0) >> 5) << 20;
+-         	value |= 3<<30;
+-      	    }
+-	    if (psav->Chipset == S3_SUPERSAVAGE) /* supersavages have a different shift */
+-		offset_shift = 6;
+-	    OUTREG(TILED_SURFACE_REGISTER_0, value|(pSAVAGEDRI->frontOffset >> offset_shift) ); /* front */
+-	    OUTREG(TILED_SURFACE_REGISTER_1, value|(pSAVAGEDRI->backOffset >> offset_shift) ); /* back  */
+-	    OUTREG(TILED_SURFACE_REGISTER_2, value|(pSAVAGEDRI->depthOffset >> offset_shift) ); /* depth */
+-      }
+-   }
+    
+    pSAVAGEDRI->statusHandle	= pSAVAGEDRIServer->status.handle;
+    pSAVAGEDRI->statusSize	= pSAVAGEDRIServer->status.size;
+@@ -1216,29 +1224,29 @@ Bool SAVAGEDRIFinishScreenInit( ScreenPtr pScreen )
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	textureSize:0x%08x\n",pSAVAGEDRIServer->textureSize);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	logTextureGranularity:0x%08x\n",pSAVAGEDRIServer->logTextureGranularity);
+ 
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agp:handle:0x%08lx\n",pSAVAGEDRIServer->agp.handle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agp:handle:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->agp.handle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agp:offset:0x%08x\n",pSAVAGEDRIServer->agp.offset);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agp:size:0x%08x\n",pSAVAGEDRIServer->agp.size);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agp:map:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->agp.map);
+    
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	registers:handle:0x%08lx\n",pSAVAGEDRIServer->registers.handle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	registers:handle:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->registers.handle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	registers:offset:0x%08x\n",pSAVAGEDRIServer->registers.offset);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	registers:size:0x%08x\n",pSAVAGEDRIServer->registers.size);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	registers:map:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->registers.map);
+    
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	status:handle:0x%08lx\n",pSAVAGEDRIServer->status.handle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	status:handle:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->status.handle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	status:offset:0x%08x\n",pSAVAGEDRIServer->status.offset);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	status:size:0x%08x\n",pSAVAGEDRIServer->status.size);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	status:map:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->status.map);
+    
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextures:handle:0x%08lx\n",pSAVAGEDRIServer->agpTextures.handle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextures:handle:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->agpTextures.handle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextures:offset:0x%08x\n",pSAVAGEDRIServer->agpTextures.offset);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextures:size:0x%08x\n",pSAVAGEDRIServer->agpTextures.size);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	apgTextures:map:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->agpTextures.map);
+ 
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	logAgpTextureGranularity:0x%08x\n",pSAVAGEDRIServer->logAgpTextureGranularity); 
+ 
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	cmdDma:handle:0x%08lx\n",pSAVAGEDRIServer->cmdDma.handle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	cmdDma:handle:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->cmdDma.handle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	cmdDma:offset:0x%08x\n",pSAVAGEDRIServer->cmdDma.offset);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	cmdDma:size:0x%08x\n",pSAVAGEDRIServer->cmdDma.size);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	cmdDma:map:0x%08lx\n",(unsigned long)pSAVAGEDRIServer->cmdDma.map);
+@@ -1268,22 +1276,38 @@ Bool SAVAGEDRIFinishScreenInit( ScreenPtr pScreen )
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	textureSize:0x%08x\n",pSAVAGEDRI->textureSize );
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	logTextureGranularity:0x%08x\n",pSAVAGEDRI->logTextureGranularity );
+    
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextureHandle:0x%08lx\n",pSAVAGEDRI->agpTextureHandle );
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextureHandle:0x%08lx\n",(unsigned long)pSAVAGEDRI->agpTextureHandle );
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	agpTextureSize:0x%08x\n",pSAVAGEDRI->agpTextureSize );
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	logAgpTextureGranularity:0x%08x\n",pSAVAGEDRI->logAgpTextureGranularity );
+ 
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	apertureHandle:0x%08lx\n",pSAVAGEDRI->apertureHandle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	apertureHandle:0x%08lx\n",(unsigned long)pSAVAGEDRI->apertureHandle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	apertureSize:0x%08x\n",pSAVAGEDRI->apertureSize);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	aperturePitch:0x%08x\n",pSAVAGEDRI->aperturePitch);
+ 
+-   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	statusHandle:0x%08lx\n",pSAVAGEDRI->statusHandle);
++   xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	statusHandle:0x%08lx\n",(unsigned long)pSAVAGEDRI->statusHandle);
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	statusSize:0x%08x\n",pSAVAGEDRI->statusSize);
+ 
+    xf86DrvMsg( pScrn->scrnIndex, X_INFO, "[junkers]	sarea_priv_offset:0x%08x\n",pSAVAGEDRI->sarea_priv_offset);
+     
++   SAVAGEDRISetupTiledSurfaceRegs( psav );
+    return TRUE;
+ }
+ 
++void SAVAGEDRIResume(ScreenPtr pScreen)
++{
++   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
++   SavagePtr psav = SAVPTR(pScrn);
++   SAVAGESAREAPrivPtr pSAREAPriv =
++			(SAVAGESAREAPrivPtr)DRIGetSAREAPrivate(pScreen);
++
++   if (!psav->IsPCI) {
++	SAVAGESetAgpMode(psav, pScreen);
++   }
++   SAVAGEDRISetupTiledSurfaceRegs(psav);
++   /* Assume that 3D state was clobbered, invalidate it by
++    * changing ctxOwner in the sarea. */
++   pSAREAPriv->ctxOwner = DRIGetContext(pScreen);
++}
+ 
+ void SAVAGEDRICloseScreen( ScreenPtr pScreen )
+ {
+@@ -1361,21 +1385,21 @@ void SAVAGEDRICloseScreen( ScreenPtr pScreen )
+ 
+    if ( psav->pDRIInfo ) {
+       if ( psav->pDRIInfo->devPrivate ) {
+-	 xfree( psav->pDRIInfo->devPrivate );
++	 free( psav->pDRIInfo->devPrivate );
+ 	 psav->pDRIInfo->devPrivate = 0;
+       }
+       DRIDestroyInfoRec( psav->pDRIInfo );
+       psav->pDRIInfo = 0;
+    }
+    if ( psav->DRIServerInfo ) {
+-      xfree( psav->DRIServerInfo );
++      free( psav->DRIServerInfo );
+       psav->DRIServerInfo = 0;
+    }
+    if ( psav->pVisualConfigs ) {
+-      xfree( psav->pVisualConfigs );
++      free( psav->pVisualConfigs );
+    }
+    if ( psav->pVisualConfigsPriv ) {
+-      xfree( psav->pVisualConfigsPriv );
++      free( psav->pVisualConfigsPriv );
+    }
+ }
+ 
+@@ -1454,7 +1478,7 @@ SAVAGEDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
+     pboxNew1 = 0;
+     pptNew1 = 0;
+     pboxNew2 = 0;
+-    pboxNew2 = 0;
++    pptNew2 = 0;
+     pptSrc = &ptOldOrg;
+ 
+     dx = pParent->drawable.x - ptOldOrg.x;
+@@ -1466,11 +1490,11 @@ SAVAGEDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
+ 
+         if (nbox>1) {
+ 	    /* Keep ordering in each band, reverse order of bands */
+-	    pboxNew1 = xalloc(sizeof(BoxRec)*nbox);
++	    pboxNew1 = malloc(sizeof(BoxRec)*nbox);
+ 	    if (!pboxNew1) return;
+-	    pptNew1 = xalloc(sizeof(DDXPointRec)*nbox);
++	    pptNew1 = malloc(sizeof(DDXPointRec)*nbox);
+ 	    if (!pptNew1) {
+-	        xfree(pboxNew1);
++	        free(pboxNew1);
+ 	        return;
+ 	    }
+ 	    pboxBase = pboxNext = pbox+nbox-1;
+@@ -1501,14 +1525,14 @@ SAVAGEDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
+ 
+         if (nbox > 1) {
+ 	    /*reverse orderof rects in each band */
+-	    pboxNew2 = xalloc(sizeof(BoxRec)*nbox);
+-	    pptNew2 = xalloc(sizeof(DDXPointRec)*nbox);
++	    pboxNew2 = malloc(sizeof(BoxRec)*nbox);
++	    pptNew2 = malloc(sizeof(DDXPointRec)*nbox);
+ 	    if (!pboxNew2 || !pptNew2) {
+-	        if (pptNew2) xfree(pptNew2);
+-	        if (pboxNew2) xfree(pboxNew2);
++	        if (pptNew2) free(pptNew2);
++	        if (pboxNew2) free(pboxNew2);
+ 	        if (pboxNew1) {
+-		    xfree(pptNew1);
+-		    xfree(pboxNew1);
++		    free(pptNew1);
++		    free(pboxNew1);
+ 		}
+ 	       return;
+ 	    }
+@@ -1563,12 +1587,12 @@ SAVAGEDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
+     SAVAGESelectBuffer(pScrn, SAVAGE_FRONT);
+ 
+     if (pboxNew2) {
+-        xfree(pptNew2);
+-        xfree(pboxNew2);
++        free(pptNew2);
++        free(pboxNew2);
+     }
+     if (pboxNew1) {
+-        xfree(pptNew1);
+-        xfree(pboxNew1);
++        free(pptNew1);
++        free(pboxNew1);
+     }
+ 
+     BCI_SEND(0xc0020000); /* wait for 2D idle */
+diff --git a/src/savage_driver.c b/src/savage_driver.c
+index 1cb91f6..2b47c1d 100644
+--- a/src/savage_driver.c
++++ b/src/savage_driver.c
+@@ -648,11 +648,11 @@ static Bool SavageGetRec(ScrnInfoPtr pScrn)
+ 
+ static void SavageFreeRec(ScrnInfoPtr pScrn)
+ {
+-    TRACE(( "SavageFreeRec(%x)\n", pScrn->driverPrivate ));
++    TRACE(( "SavageFreeRec(%p)\n", pScrn->driverPrivate ));
+     if (!pScrn->driverPrivate)
+ 	return;
+     SavageUnmapMem(pScrn, 1);
+-    xfree(pScrn->driverPrivate);
++    free(pScrn->driverPrivate);
+     pScrn->driverPrivate = NULL;
+ }
+ 
+@@ -761,7 +761,7 @@ static Bool SavageProbe(DriverPtr drv, int flags)
+ 	return FALSE;
+     if (xf86GetPciVideoInfo() == NULL) {
+         if (devSections)
+-	    xfree(devSections);
++	    free(devSections);
+         return FALSE;
+     }
+ 
+@@ -770,7 +770,7 @@ static Bool SavageProbe(DriverPtr drv, int flags)
+ 				    devSections, numDevSections, drv,
+ 				    &usedChips);
+     if (devSections)
+-	xfree(devSections);
++	free(devSections);
+     devSections = NULL;
+     if (numUsed <= 0)
+ 	return FALSE;
+@@ -850,11 +850,11 @@ static Bool SavageProbe(DriverPtr drv, int flags)
+ 		    pSavageEnt->HasSecondary = TRUE;
+ 		}
+ 	    }
+-	    xfree(pEnt);
++	    free(pEnt);
+ 	}
+ 
+ 
+-    xfree(usedChips);
++    free(usedChips);
+     return foundScreen;
+ }
+ 
+@@ -1060,7 +1060,7 @@ static void SavageGetPanelInfo(ScrnInfoPtr pScrn)
+ 	    if (!pScrn->monitor->maxPixClock)
+ 		pScrn->monitor->maxPixClock = native->Clock;
+ 
+-	    xfree(native);
++	    free(native);
+ 	} while (0);
+ 
+ 	if( psav->LCDClock > 0.0 )
+@@ -1196,7 +1196,7 @@ static Bool SavagePreInit(ScrnInfoPtr pScrn, int flags)
+     if (pScrn->depth == 8)
+ 	pScrn->rgbBits = 8;
+ 
+-    if (!(psav->Options = xalloc(sizeof(SavageOptions))))
++    if (!(psav->Options = malloc(sizeof(SavageOptions))))
+ 	return FALSE;
+     memcpy(psav->Options, SavageOptions, sizeof(SavageOptions));
+     xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, psav->Options);
+@@ -1398,7 +1398,7 @@ static Bool SavagePreInit(ScrnInfoPtr pScrn, int flags)
+     pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
+ #ifndef XSERVER_LIBPCIACCESS
+     if (pEnt->resources) {
+-	xfree(pEnt);
++	free(pEnt);
+ 	SavageFreeRec(pScrn);
+ 	return FALSE;
+     }
+@@ -1449,7 +1449,7 @@ static Bool SavagePreInit(ScrnInfoPtr pScrn, int flags)
+     if (pEnt->device->videoRam != 0)
+     	pScrn->videoRam = pEnt->device->videoRam;
+ 
+-    xfree(pEnt);
++    free(pEnt);
+ 
+ #ifndef XSERVER_LIBPCIACCESS
+     psav->PciTag = pciTag(psav->PciInfo->bus, psav->PciInfo->device,
+@@ -2200,9 +2200,8 @@ static Bool SavageEnterVT(int scrnIndex, int flags)
+ {
+     ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+ #ifdef XF86DRI
+-    SavagePtr psav= SAVPTR(pScrn);
++    SavagePtr psav = SAVPTR(pScrn);
+     ScreenPtr pScreen;
+-    SAVAGESAREAPrivPtr pSAREAPriv;
+ #endif
+ 
+     TRACE(("SavageEnterVT(%d)\n", flags));
+@@ -2213,10 +2212,7 @@ static Bool SavageEnterVT(int scrnIndex, int flags)
+ #ifdef XF86DRI
+     if (psav->directRenderingEnabled) {
+         pScreen = screenInfo.screens[scrnIndex];
+-	pSAREAPriv = (SAVAGESAREAPrivPtr)DRIGetSAREAPrivate(pScreen);
+-	/* Assume that 3D state was clobbered, invalidate it by
+-	 * changing ctxOwner in the sarea. */
+-	pSAREAPriv->ctxOwner = DRIGetContext(pScreen);
++        SAVAGEDRIResume(pScreen);
+         DRIUnlock(pScreen);
+         psav->LockHeld = 0;
+     }
+@@ -2565,7 +2561,7 @@ static void SavageWriteMode(ScrnInfoPtr pScrn, vgaRegPtr vgaSavePtr,
+ 			(restore->refresh >= 75)
+ 		    )
+ 		    {
+-			if( cr6d && LCD_ACTIVE )
++			if( cr6d & LCD_ACTIVE )
+ 			    cr79 = 0x05;
+ 			else
+ 			    cr79 = 0x08;
+@@ -2582,7 +2578,7 @@ static void SavageWriteMode(ScrnInfoPtr pScrn, vgaRegPtr vgaSavePtr,
+  */
+ 		    if( pScrn->displayWidth == 1024 )
+ 		    {
+-			if( cr6d && LCD_ACTIVE )
++			if( cr6d & LCD_ACTIVE )
+ 			    cr79 = 0x08;
+ 			else
+ 			    cr79 = 0x0e;
+@@ -3061,7 +3057,7 @@ static void SavageUnmapMem(ScrnInfoPtr pScrn, int All)
+ {
+     SavagePtr psav = SAVPTR(pScrn);
+ 
+-    TRACE(("SavageUnmapMem(%x,%x)\n", psav->MapBase, psav->FBBase));
++    TRACE(("SavageUnmapMem(%p,%p)\n", psav->MapBase, psav->FBBase));
+ 
+     if (psav->PrimaryVidMapped) {
+         vgaHWUnmapMem(pScrn);
+@@ -3552,7 +3548,7 @@ static int SavageInternalScreenInit(int scrnIndex, ScreenPtr pScreen)
+   
+     if(psav->shadowFB) {
+ 	psav->ShadowPitch = BitmapBytePad(pScrn->bitsPerPixel * width);
+-	psav->ShadowPtr = xalloc(psav->ShadowPitch * height);
++	psav->ShadowPtr = malloc(psav->ShadowPitch * height);
+ 	displayWidth = psav->ShadowPitch / (pScrn->bitsPerPixel >> 3);
+ 	FBStart = psav->ShadowPtr;
+     } else {
+@@ -3665,7 +3661,7 @@ static Bool SavageModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
+     vgaCRIndex = vgaIOBase + 4;
+     vgaCRReg = vgaIOBase + 5;
+ 
+-    TRACE(("SavageModeInit(%dx%d, %dHz)\n", 
++    TRACE(("SavageModeInit(%dx%d, %dkHz)\n", 
+ 	mode->HDisplay, mode->VDisplay, mode->Clock));
+     
+ #if 0
+@@ -4001,7 +3997,7 @@ static Bool SavageCloseScreen(int scrnIndex, ScreenPtr pScreen)
+     }
+ 
+     if( psav->DGAModes ) {
+-	xfree( psav->DGAModes );
++	free( psav->DGAModes );
+ 	psav->DGAModes = NULL;
+ 	psav->numDGAModes = 0;
+     }
+@@ -4063,7 +4059,7 @@ SavageDoAdjustFrame(ScrnInfoPtr pScrn, int x, int y, int crtc2)
+     SavagePtr psav = SAVPTR(pScrn);
+     int address=0,top=0,left=0,tile_height,tile_size;
+     
+-    TRACE(("SavageDoAdjustFrame(%d,%d,%x)\n", x, y, flags));
++    TRACE(("SavageDoAdjustFrame(%d,%d,%d)\n", x, y, crtc2));
+ 
+     if (psav->Chipset == S3_SAVAGE2000) {
+         tile_height = TILEHEIGHT_2000; /* 32 */
+@@ -4295,7 +4291,7 @@ void SavageLoadPaletteSavage4(ScrnInfoPtr pScrn, int numColors, int *indicies,
+     VerticalRetraceWait();
+ 
+     for (i=0; i<numColors; i++) {
+-          if (!(inStatus1()) & 0x08)
++          if (!(inStatus1() & 0x08))
+   	    VerticalRetraceWait(); 
+ 	index = indicies[i];
+ 	VGAOUT8(0x3c8, index);
+diff --git a/src/savage_driver.h b/src/savage_driver.h
+index 9c0ba58..1737362 100644
+--- a/src/savage_driver.h
++++ b/src/savage_driver.h
+@@ -559,20 +559,7 @@ Bool SAVAGEDRIScreenInit( ScreenPtr pScreen );
+ Bool SAVAGEInitMC(ScreenPtr pScreen);
+ void SAVAGEDRICloseScreen( ScreenPtr pScreen );
+ Bool SAVAGEDRIFinishScreenInit( ScreenPtr pScreen );
+-
+-Bool SAVAGELockUpdate( ScrnInfoPtr pScrn, drmLockFlags flags );
+-
+-#if 0
+-void SAVAGEGetQuiescence( ScrnInfoPtr pScrn );
+-void SAVAGEGetQuiescenceShared( ScrnInfoPtr pScrn );
+-#endif
+-
+-void SAVAGESelectBuffer(ScrnInfoPtr pScrn, int which);
+-
+-#if 0
+-Bool SAVAGECleanupDma(ScrnInfoPtr pScrn);
+-Bool SAVAGEInitDma(ScrnInfoPtr pScrn, int prim_size);
+-#endif
++void SAVAGEDRIResume( ScreenPtr pScreen );
+ 
+ #define SAVAGE_AGP_1X_MODE		0x01
+ #define SAVAGE_AGP_2X_MODE		0x02
+diff --git a/src/savage_exa.c b/src/savage_exa.c
+index 8411298..4fe43e5 100644
+--- a/src/savage_exa.c
++++ b/src/savage_exa.c
+@@ -542,7 +542,7 @@ SavageUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int
+ 
+ 	if (4 * dwords <= queue) {
+ 	    /* WARNING: breaking BCI_PTR abstraction here */
+-	    memcpy(bci_ptr, srcp, 4 * dwords);
++	    memcpy((CARD32 *)bci_ptr, srcp, 4 * dwords);
+ 	    bci_ptr += dwords;
+ 	    queue -= 4 * dwords;
+ 	} else {
+@@ -567,7 +567,6 @@ SavageUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int
+ Bool
+ SavageDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch)
+ {
+-    ScrnInfoPtr pScrn = xf86Screens[pSrc->drawable.pScreen->myNum];
+     unsigned char *src = pSrc->devPrivate.ptr;
+     int	src_pitch = exaGetPixmapPitch(pSrc);
+     int	bpp = pSrc->drawable.bitsPerPixel;
+diff --git a/src/savage_hwmc.c b/src/savage_hwmc.c
+index abfe805..905ef87 100644
+--- a/src/savage_hwmc.c
++++ b/src/savage_hwmc.c
+@@ -224,7 +224,7 @@ Bool SAVAGEInitMC(ScreenPtr pScreen)
+  *  Set *num_priv to the number of 32bit words that make up the size of
+  *  of the data that priv will point to.
+  *
+- *  *priv = (long *) xcalloc (elements, sizeof(element))
++ *  *priv = (long *) calloc (elements, sizeof(element))
+  *  *num_priv = (elements * sizeof(element)) >> 2;
+  *
+  **************************************************************************/
+@@ -253,7 +253,7 @@ int SAVAGEXvMCCreateContext (ScrnInfoPtr pScrn, XvMCContextPtr pContext,
+     return BadAlloc;
+   }
+ 
+-  *priv = xcalloc(1,sizeof(SAVAGEXvMCCreateContextRec));
++  *priv = calloc(1,sizeof(SAVAGEXvMCCreateContextRec));
+   contextRec = (SAVAGEXvMCCreateContextRec *)*priv;
+ 
+   if(!*priv) {
+@@ -266,7 +266,7 @@ int SAVAGEXvMCCreateContext (ScrnInfoPtr pScrn, XvMCContextPtr pContext,
+   if(drmCreateContext(pSAVAGE->drmFD, &(contextRec->drmcontext) ) < 0) {
+     xf86DrvMsg(X_ERROR, pScrn->scrnIndex,
+         "SAVAGEXvMCCreateContext: Unable to create DRMContext!\n");
+-    xfree(*priv);
++    free(*priv);
+     return(BadAlloc);
+   }
+ 
+@@ -310,7 +310,7 @@ int SAVAGEXvMCCreateSurface (ScrnInfoPtr pScrn, XvMCSurfacePtr pSurf,
+   /* This size is used for flip, mixer, subpicture and palette buffers*/
+   unsigned int offset = ((786*576*2 + 2048)*5 + 2048) & 0xfffff800; 
+ 
+-  *priv = (long *)xcalloc(2,sizeof(long));
++  *priv = (long *)calloc(2,sizeof(long));
+ 
+   if(!*priv) {
+     xf86DrvMsg(X_ERROR, pScrn->scrnIndex,
+@@ -340,7 +340,7 @@ int SAVAGEXvMCCreateSubpicture (ScrnInfoPtr pScrn, XvMCSubpicturePtr pSubp,
+   SavagePtr pSAVAGE = SAVPTR(pScrn);
+   int i;
+ 
+-  *priv = (long *)xcalloc(1,sizeof(long));
++  *priv = (long *)calloc(1,sizeof(long));
+ 
+   if(!*priv) {
+     xf86DrvMsg(X_ERROR, pScrn->scrnIndex,
+diff --git a/src/savage_vbe.c b/src/savage_vbe.c
+index afbaa8f..d24da24 100644
+--- a/src/savage_vbe.c
++++ b/src/savage_vbe.c
+@@ -229,13 +229,13 @@ SavageFreeBIOSModeTable( SavagePtr psav, SavageModeTablePtr* ppTable )
+     {
+ 	if( pMode->RefreshRate )
+ 	{
+-	    xfree( pMode->RefreshRate );
++	    free( pMode->RefreshRate );
+ 	    pMode->RefreshRate = NULL;
+ 	}
+ 	pMode++;
+     }
+ 
+-    xfree( *ppTable );
++    free( *ppTable );
+ }
+ 
+ 
+@@ -246,7 +246,7 @@ SavageGetBIOSModeTable( SavagePtr psav, int iDepth )
+     SavageModeTablePtr pTable;
+ 
+     pTable = (SavageModeTablePtr) 
+-	xcalloc( 1, sizeof(SavageModeTableRec) + 
++	calloc( 1, sizeof(SavageModeTableRec) + 
+ 		    (nModes-1) * sizeof(SavageModeEntry) );
+     if( pTable ) {
+ 	pTable->NumModes = nModes;
+@@ -346,7 +346,7 @@ SavageGetBIOSModes(
+ 			if( s3vModeTable->RefreshRate )
+ 			{
+ 			    s3vModeTable->RefreshRate = (unsigned char *)
+-				xrealloc( 
++				realloc( 
+ 				    s3vModeTable->RefreshRate,
+ 				    (iRefresh+8) * sizeof(unsigned char)
+ 				);
+@@ -354,7 +354,7 @@ SavageGetBIOSModes(
+ 			else
+ 			{
+ 			    s3vModeTable->RefreshRate = (unsigned char *)
+-				xcalloc( 
++				calloc( 
+ 				    sizeof(unsigned char),
+ 				    (iRefresh+8)
+ 				);
+diff --git a/src/savage_video.c b/src/savage_video.c
+index 3b991e8..9f860c7 100644
+--- a/src/savage_video.c
++++ b/src/savage_video.c
+@@ -384,7 +384,7 @@ void SavageInitVideo(ScreenPtr pScreen)
+             adaptors = &newAdaptor;
+         } else {
+             newAdaptors =  /* need to free this someplace */
+-        	xalloc((num_adaptors + 1) * sizeof(XF86VideoAdaptorPtr*));
++        	malloc((num_adaptors + 1) * sizeof(XF86VideoAdaptorPtr*));
+             if(newAdaptors) {
+         	memcpy(newAdaptors, adaptors, num_adaptors * 
+         				sizeof(XF86VideoAdaptorPtr));
+@@ -399,7 +399,7 @@ void SavageInitVideo(ScreenPtr pScreen)
+         xf86XVScreenInit(pScreen, adaptors, num_adaptors);
+ 
+     if(newAdaptors)
+-	xfree(newAdaptors);
++	free(newAdaptors);
+ 
+     if( newAdaptor )
+     {
+@@ -884,7 +884,7 @@ SavageSetupImageVideo(ScreenPtr pScreen)
+ 
+     xf86ErrorFVerb(XVTRACE,"SavageSetupImageVideo\n");
+ 
+-    if(!(adapt = xcalloc(1, sizeof(XF86VideoAdaptorRec) +
++    if(!(adapt = calloc(1, sizeof(XF86VideoAdaptorRec) +
+ 			    sizeof(SavagePortPrivRec) +
+ 			    sizeof(DevUnion))))
+ 	return NULL;
+@@ -1038,7 +1038,6 @@ SavageStopVideo(ScrnInfoPtr pScrn, pointer data, Bool shutdown)
+ {
+     SavagePortPrivPtr pPriv = (SavagePortPrivPtr)data;
+     SavagePtr psav = SAVPTR(pScrn);
+-    ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
+ 
+     xf86ErrorFVerb(XVTRACE,"SavageStopVideo\n");
+ 
+@@ -1214,7 +1213,6 @@ SavageCopyPlanarDataBCI(
+     unsigned long offsetV = offsetY +  srcPitch * h;
+     unsigned long offsetU = offsetV +  srcPitch2 * (h>>1);
+     unsigned long dstOffset  = (unsigned long)dst - (unsigned long)psav->FBBase;
+-    int i;
+     unsigned char memType;
+     
+     BCI_GET_PTR;
+@@ -1975,7 +1973,6 @@ SavagePutImage(
+        upload to framebuffer (slower) */
+ #ifdef XF86DRI
+     if (!pPriv->tried_agp && !psav->IsPCI && psav->drmFD > 0 && psav->DRIServerInfo != NULL) {
+-        int ret;
+ 	SAVAGEDRIServerPrivatePtr pSAVAGEDRIServer = psav->DRIServerInfo;
+         
+ 	pPriv->tried_agp = TRUE;
+@@ -2003,8 +2000,8 @@ SavagePutImage(
+ 	    /* This situation is expected if AGPforXv is disabled, otherwise report. */
+ 	    if (pSAVAGEDRIServer->agpXVideo.size > 0) {
+ 		xf86DrvMsg( pScreen->myNum, X_ERROR,
+-		    "[agp] XVideo: not enough space in buffer (got %ld bytes, required %ld bytes).\n", 
+-	    	    pSAVAGEDRIServer->agpXVideo.size, max(new_size, planarFrameSize));
++		    "[agp] XVideo: not enough space in buffer (got %ld bytes, required %d bytes).\n", 
++	    	    (long int)pSAVAGEDRIServer->agpXVideo.size, max(new_size, planarFrameSize));
+ 	    }
+ 	    pPriv->agpBufferMap = NULL;
+ 	    pPriv->agpBufferOffset = 0;
+@@ -2208,18 +2205,18 @@ SavageAllocateSurface(
+     surface->width = w;
+     surface->height = h;
+ 
+-    if(!(surface->pitches = xalloc(sizeof(int)))) {
++    if(!(surface->pitches = malloc(sizeof(int)))) {
+ 	SavageFreeMemory(pScrn, surface_memory);
+ 	return BadAlloc;
+     }
+-    if(!(surface->offsets = xalloc(sizeof(int)))) {
+-	xfree(surface->pitches);
++    if(!(surface->offsets = malloc(sizeof(int)))) {
++	free(surface->pitches);
+ 	SavageFreeMemory(pScrn, surface_memory);
+ 	return BadAlloc;
+     }
+-    if(!(pPriv = xalloc(sizeof(OffscreenPrivRec)))) {
+-	xfree(surface->pitches);
+-	xfree(surface->offsets);
++    if(!(pPriv = malloc(sizeof(OffscreenPrivRec)))) {
++	free(surface->pitches);
++	free(surface->offsets);
+ 	SavageFreeMemory(pScrn, surface_memory);
+ 	return BadAlloc;
+     }
+@@ -2264,9 +2261,9 @@ SavageFreeSurface(
+     if(pPriv->isOn)
+ 	SavageStopSurface(surface);
+     SavageFreeMemory(pScrn, pPriv->surface_memory);
+-    xfree(surface->pitches);
+-    xfree(surface->offsets);
+-    xfree(surface->devPrivate.ptr);
++    free(surface->pitches);
++    free(surface->offsets);
++    free(surface->devPrivate.ptr);
+ 
+     return Success;
+ }
+@@ -2335,7 +2332,7 @@ SavageDisplaySurface(
+ 	     surface->width, surface->height, surface->pitches[0],
+ 	     x1, y1, x2, y2, &dstBox, src_w, src_h, drw_w, drw_h);
+ 
+-    xf86XVFillKeyHelper(pScrn->pScreen, portPriv->colorKey, clipBoxes);
++    xf86XVFillKeyHelper(pScreen, portPriv->colorKey, clipBoxes);
+ 
+     pPriv->isOn = TRUE;
+ #if 0
+@@ -2359,7 +2356,7 @@ SavageInitOffscreenImages(ScreenPtr pScreen)
+ 
+     /* need to free this someplace */
+     if (!psav->offscreenImages) {
+-	if(!(offscreenImages = xalloc(sizeof(XF86OffscreenImageRec))))
++	if(!(offscreenImages = malloc(sizeof(XF86OffscreenImageRec))))
+ 	    return;
+ 	psav->offscreenImages = offscreenImages;
+     } else {
