@@ -2,13 +2,13 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.6
+pkgver=1.7.6.1
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
 license=('GPL2')
-depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.14.0')
+depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.14.0' 'openssl' 'pcre')
 makedepends=('python2' 'emacs')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
@@ -32,7 +32,9 @@ build() {
   export PYTHON_PATH='/usr/bin/python2'
   cd "$srcdir/$pkgname-$pkgver"
   make prefix=/usr gitexecdir=/usr/lib/git-core \
-    CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS"
+    CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+    USE_LIBPCRE=1 \
+    NO_CROSS_DIRECTORY_HARDLINKS=1
 
   cd contrib/emacs
   make prefix=/usr
@@ -43,6 +45,7 @@ package() {
   cd "$srcdir/$pkgname-$pkgver"
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+    USE_LIBPCRE=1 \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
     INSTALLDIRS=vendor DESTDIR="$pkgdir" install 
 
@@ -75,11 +78,11 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-md5sums=('9e0a438eb71e89eedb61f89470ed32a0'
-         'a017935cf9e90d9f056b6547c318fd15'
+md5sums=('d1e00772cc9dc6c571999feb9e8771ab'
+         'cae559424a62507cb2c15252d85a158e'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
          '2e42bf97779a1c6411d89043334c9e78')
-sha256sums=('778795cece63cd758192378f3a999870cea290181b3a4c9de573c77192561082'
-            'a0ffd7e16997262ef741db5e2dd8eabf44b6767cf1a213753c7d8a268b4553ad'
+sha256sums=('856d4197ef7172938b0b44e55174c7d7ddfaf5e844e04960322c49eda9f3a246'
+            'faece1418e72d90ed9ee65e59fe89489e504db9b76e8325a2505e8fb61598a44'
             '2e0a50bdaf8f387a499895e1c204bff78244eaa72b78187c8a84ef40c0b82598'
             'e8bfe29d8393d2b87517c4dd56ea834b213aa00bf3d7fcde4ead3457cadbbc68')
