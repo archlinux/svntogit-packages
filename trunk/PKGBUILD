@@ -8,7 +8,7 @@ pkgver=3.6.0
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
 _realver=3.6.0
-pkgrel=2
+pkgrel=3
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
@@ -27,14 +27,20 @@ build() {
   cd ${srcdir}/${pkgbase}-${_realver}/source3
   sed -i "s/env python/env python2/g" ../buildtools/bin/waf 
   ./autogen-waf.sh
+  # everything needs to be specified :/
   ../buildtools/bin/waf configure --prefix=/usr \
+              --with-privatedir=/etc/samba/private \
               --libdir=/usr/lib/ \
               --with-modulesdir=/usr/lib/samba \
               --with-swatdir=/usr/share/samba/swat \
               --localstatedir=/var \
               --with-configdir=/etc/samba \
               --with-lockdir=/var/cache/samba \
+              --with-cachedir=/var/cache/samba \
+              --with-statedir=/var/cache/samba \
               --with-piddir=/var/run/samba \
+              --with-logfilebase=/var/log/samba \
+              --sysconfdir=/etc \
               --with-pam \
               --with-pam_smbpass \
               --with-pammodulesdir=/lib/security \
@@ -46,6 +52,8 @@ build() {
               --disable-rpath \
               --disable-rpath-private-install \
               --disable-rpath-install
+  #fix the shitty build system!
+   sed -i -e 's#/etc/smb.conf#/etc/samba/smb.conf#g' bin/default/source3/include/config.h
   ../buildtools/bin/waf build ${MAKEFLAGS} 
 }
 
@@ -56,7 +64,7 @@ depends=('readline' 'popt' 'libldap' 'cifs-utils' 'libcap' 'krb5' 'db' 'e2fsprog
   mkdir -p ${pkgdir}/usr/bin ${pkgdir}/usr/lib
   install -m755 bin/{smbclient,rpcclient,smbspool,smbtree,smbcacls,smbcquotas,smbget,net,nmblookup} ${pkgdir}/usr/bin/
   for i in libreplace.so libsmbregistry.so libsecurity.so librpccommon.so libdcerpc-samba.so libpassdb.so libLIBCLI_SPOOLSS.so libprinting_migrate.so libsamba3core.so libndr-samba.so libsamba-util-common.so libads.so libtdb-wrap.so libaddns.so libcliauth.so; do
-    install -m644 -D bin/shared/private/$i ${pkgdir}/usr/lib/samba/$i
+    install -m644 -D bin/shared/private/$i ${pkgdir}/usr/lib/$i
   done
   for i in libsmbconf libnetapi libwbclient libsmbclient; do
     install -m644 -D bin/shared/$i.so.0  ${pkgdir}/usr/lib/$i.so.0
@@ -70,8 +78,8 @@ depends=('readline' 'popt' 'libldap' 'cifs-utils' 'libcap' 'krb5' 'db' 'e2fsprog
     ln -sf /usr/lib/$i.so.0.0.1 ${pkgdir}/usr/lib/$i.so.0
     ln -sf /usr/lib/$i.so.0.0.1 ${pkgdir}/usr/lib/$i.so
   done
-  install -m644 -D bin/shared/private/libtevent.so.0 ${pkgdir}/usr/lib/samba/libtevent.so.0.9.11
-  ln -sf /usr/lib/samba/libtevent.so.0.9.11  ${pkgdir}/usr/lib/samba/libtevent.so.0
+  install -m644 -D bin/shared/private/libtevent.so.0 ${pkgdir}/usr/lib/libtevent.so.0.9.11
+  ln -sf /usr/lib/samba/libtevent.so.0.9.11  ${pkgdir}/usr/lib/libtevent.so.0
   install -m755 script/smbtar ${pkgdir}/usr/bin/
   mkdir -p ${pkgdir}/usr/lib/cups/backend
   ln -sf /usr/bin/smbspool ${pkgdir}/usr/lib/cups/backend/smb
@@ -98,10 +106,9 @@ optdepends=('python2: for python bindings')
   cd ${srcdir}/samba-${_realver}/source3
   mkdir -p ${pkgdir}/etc/samba/private
   chmod 700 ${pkgdir}/etc/samba/private
-  make DESTDIR=${pkgdir} install
+  ../buildtools/bin/waf install --destdir=${pkgdir}
   chmod 644 ${pkgdir}/usr/include/*.h
   rm -rf ${pkgdir}/usr/var
-  #(cd script; cp installbin.sh i; cat i | sed s/\/sbin\/// > installbin.sh)
   install -D -m755 ${startdir}/samba ${pkgdir}/etc/rc.d/samba
   install -D -m644 ${startdir}/samba.conf.d ${pkgdir}/etc/conf.d/samba
   mkdir -p ${pkgdir}/etc/samba
@@ -123,6 +130,7 @@ optdepends=('python2: for python bindings')
   for i in libreplace.so libsmbregistry.so libsecurity.so librpccommon.so libdcerpc-samba.so libpassdb.so libLIBCLI_SPOOLSS.so libprinting_migrate.so libsamba3core.so libndr-samba.so libsamba-util-common.so libads.so libtdb-wrap.so libaddns.so libcliauth.so libtevent.so.0.9.11 libtevent.so.0; do
       rm -f ${pkgdir}/usr/lib/samba/$i
   done
+  mv ${pkgdir}/usr/lib/samba/*.so ${pkgdir}/usr/lib
   for i in libndr-krb5pac.* libsmbconf.*  libndr-standard.* libndr.* libnetapi.* libwbclient.* libsmbclient.*; do
       rm -f ${pkgdir}/usr/lib/$i
   done
