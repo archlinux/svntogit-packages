@@ -3,7 +3,7 @@
 #
 
 # Path to kernel, default to stock arch kernel
-KPATH="/boot/vmlinuz26"
+KPATH="/boot/vmlinuz-linux"
 
 # Root partition
 # The default attempts to autodetect
@@ -13,4 +13,4 @@ ROOTPART="$(awk '/^[ \t]*[^#]/ { if ($2 == "/") { print $1; }}' /etc/fstab)"
 KPARAM="ro"
 
 # Path to initrd image, default to stock arch kernel
-INITRD="/boot/kernel26.img"
+INITRD="/boot/initramfs-linux.img"
