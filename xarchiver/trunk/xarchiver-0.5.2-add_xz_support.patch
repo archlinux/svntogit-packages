@@ -1,0 +1,309 @@
+diff -Nur xarchiver-0.5.2.orig/src/add_dialog.c xarchiver-0.5.2/src/add_dialog.c
+--- xarchiver-0.5.2.orig/src/add_dialog.c	2008-11-10 04:41:31.000000000 -0600
++++ xarchiver-0.5.2/src/add_dialog.c	2009-11-30 13:17:54.983349491 -0600
+@@ -209,7 +209,7 @@
+ 	else
+ 		gtk_widget_set_size_request (add_dialog->dialog1,530,420);
+ 
+-	if (archive->type == XARCHIVETYPE_BZIP2 || archive->type == XARCHIVETYPE_GZIP || archive->type == XARCHIVETYPE_LZMA || archive->type == XARCHIVETYPE_LZOP)
++	if (archive->type == XARCHIVETYPE_BZIP2 || archive->type == XARCHIVETYPE_GZIP || archive->type == XARCHIVETYPE_LZMA || archive->type == XARCHIVETYPE_XZ || archive->type == XARCHIVETYPE_LZOP)
+ 		gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(add_dialog->filechooserwidget1),FALSE);
+ 	else
+ 		gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(add_dialog->filechooserwidget1),TRUE);
+@@ -222,7 +222,7 @@
+ 	else
+ 		gtk_widget_set_sensitive(add_dialog->store_path,TRUE);
+ 	/* 7z doesn't appear to let the user chooses if storing full paths */
+-	if (archive->type == XARCHIVETYPE_7ZIP || archive->type == XARCHIVETYPE_LZOP || archive->type == XARCHIVETYPE_BZIP2 || archive->type == XARCHIVETYPE_GZIP || archive->type == XARCHIVETYPE_LZMA)
++	if (archive->type == XARCHIVETYPE_7ZIP || archive->type == XARCHIVETYPE_LZOP || archive->type == XARCHIVETYPE_BZIP2 || archive->type == XARCHIVETYPE_GZIP || archive->type == XARCHIVETYPE_LZMA || archive->type == XARCHIVETYPE_XZ )
+  	{
+  		flag = FALSE;
+ 	}
+@@ -244,7 +244,7 @@
+ 		flag = TRUE;
+ 	gtk_widget_set_sensitive(add_dialog->solid_archive,flag);
+ 	
+-	if (archive->type != XARCHIVETYPE_TAR && archive->type != XARCHIVETYPE_TAR_GZ && archive->type != XARCHIVETYPE_TAR_LZMA && archive->type != XARCHIVETYPE_TAR_BZ2 && archive->type != XARCHIVETYPE_TAR_LZOP)
++	if (archive->type != XARCHIVETYPE_TAR && archive->type != XARCHIVETYPE_TAR_GZ && archive->type != XARCHIVETYPE_TAR_LZMA && archive->type != XARCHIVETYPE_TAR_XZ && archive->type != XARCHIVETYPE_TAR_BZ2 && archive->type != XARCHIVETYPE_TAR_LZOP)
+ 	{
+ 		flag = TRUE;
+ 		if (archive->type == XARCHIVETYPE_7ZIP)
+@@ -306,7 +306,7 @@
+ 		g_signal_connect (G_OBJECT (add_dialog->compression_value),"value-changed",G_CALLBACK (fix_adjustment_value), NULL);
+ 	gtk_tooltips_set_tip (add_dialog->option_tooltip,add_dialog->compression_scale, compression_msg, NULL );
+ 
+-	if (archive->type == XARCHIVETYPE_TAR || archive->type == XARCHIVETYPE_TAR_GZ || archive->type == XARCHIVETYPE_TAR_LZMA || archive->type == XARCHIVETYPE_TAR_BZ2 || archive->type == XARCHIVETYPE_TAR_LZOP)
++	if (archive->type == XARCHIVETYPE_TAR || archive->type == XARCHIVETYPE_TAR_GZ || archive->type == XARCHIVETYPE_TAR_LZMA || archive->type == XARCHIVETYPE_TAR_XZ || archive->type == XARCHIVETYPE_TAR_BZ2 || archive->type == XARCHIVETYPE_TAR_LZOP)
+ 		flag = FALSE;
+ 	else
+ 		flag = TRUE;
+diff -Nur xarchiver-0.5.2.orig/src/archive.h xarchiver-0.5.2/src/archive.h
+--- xarchiver-0.5.2.orig/src/archive.h	2008-11-07 02:49:41.000000000 -0600
++++ xarchiver-0.5.2/src/archive.h	2009-11-30 13:17:54.984326164 -0600
+@@ -30,6 +30,7 @@
+ 	XARCHIVETYPE_BZIP2,
+ 	XARCHIVETYPE_GZIP,
+ 	XARCHIVETYPE_LZMA,
++	XARCHIVETYPE_XZ,
+ 	XARCHIVETYPE_LZOP,
+ 	XARCHIVETYPE_RAR,
+ 	XARCHIVETYPE_RPM,
+@@ -37,6 +38,7 @@
+ 	XARCHIVETYPE_TAR_BZ2,
+ 	XARCHIVETYPE_TAR_GZ,
+ 	XARCHIVETYPE_TAR_LZMA,
++	XARCHIVETYPE_TAR_XZ,
+ 	XARCHIVETYPE_TAR_LZOP,
+ 	XARCHIVETYPE_ZIP,
+ 	XARCHIVETYPE_LHA,
+diff -Nur xarchiver-0.5.2.orig/src/bzip2.c xarchiver-0.5.2/src/bzip2.c
+--- xarchiver-0.5.2.orig/src/bzip2.c	2008-11-10 05:17:48.000000000 -0600
++++ xarchiver-0.5.2/src/bzip2.c	2009-11-30 13:17:54.984326164 -0600
+@@ -54,6 +54,15 @@
+ 		archive->extract = 	extract[archive->type];
+ 		xa_open_tar_compressed_file(archive);
+ 	}
++	else if (g_str_has_suffix(archive->escaped_path,".tar.xz") || g_str_has_suffix (archive->escaped_path,".txz"))
++	{
++		archive->type = XARCHIVETYPE_TAR_XZ;
++		archive->format = "TAR.XZ";
++		archive->delete =	delete[archive->type];
++		archive->add = 		add[archive->type];
++		archive->extract = 	extract[archive->type];
++		xa_open_tar_compressed_file(archive);
++	}
+ 	else if (g_str_has_suffix(archive->escaped_path,".tar.lzop") ||
+ 		g_str_has_suffix (archive->escaped_path,".tzo") ||
+ 		g_str_has_suffix(archive->escaped_path,".tar.lzo"))
+@@ -85,6 +94,12 @@
+ 			executable = "lzma ";
+ 			len = 5;
+ 		}
++		else if (archive->type == XARCHIVETYPE_XZ)
++		{
++			archive->format = "XZ";
++			executable = "xz ";
++			len = 5;
++		}
+ 		else if (archive->type == XARCHIVETYPE_LZOP)
+ 		{
+ 			archive->format = "LZOP";
+@@ -163,6 +178,8 @@
+ 		command = g_strconcat(tar," tfjv ",archive->escaped_path,NULL);
+ 	else if (archive->type == XARCHIVETYPE_TAR_LZMA)
+ 		command = g_strconcat(tar," tv --use-compress-program=lzma -f ",archive->escaped_path,NULL);
++	else if (archive->type == XARCHIVETYPE_TAR_XZ)
++		command = g_strconcat(tar," tv --use-compress-program=xz -f ",archive->escaped_path,NULL);
+ 	else if (archive->type == XARCHIVETYPE_TAR_LZOP)
+ 		command = g_strconcat(tar," tv --use-compress-program=lzop -f ",archive->escaped_path,NULL);
+ 	/* else fail? */
+@@ -205,6 +222,11 @@
+ 		executable = "lzma ";
+ 		len = 5;
+ 	}
++	else if (archive->type == XARCHIVETYPE_XZ)
++	{
++		executable = "xz ";
++		len = 5;
++	}
+ 	else if (archive->type == XARCHIVETYPE_LZOP)
+ 	{
+ 		executable = "lzop ";
+diff -Nur xarchiver-0.5.2.orig/src/extract_dialog.c xarchiver-0.5.2/src/extract_dialog.c
+--- xarchiver-0.5.2.orig/src/extract_dialog.c	2008-11-10 04:28:11.000000000 -0600
++++ xarchiver-0.5.2/src/extract_dialog.c	2009-11-30 13:17:54.985326653 -0600
+@@ -815,6 +815,11 @@
+ 		archive->type = XARCHIVETYPE_TAR_LZMA;
+ 		archive->extract = 	extract[XARCHIVETYPE_TAR_LZMA];
+ 	}
++	else if (g_str_has_suffix(archive->escaped_path,".tar.xz")|| g_str_has_suffix (archive->escaped_path,".txz"))
++	{
++		archive->type = XARCHIVETYPE_TAR_XZ;
++		archive->extract = 	extract[XARCHIVETYPE_TAR_XZ];
++	}
+ 	else if (g_str_has_suffix(archive->escaped_path,".tar.lzop") ||
+ 			g_str_has_suffix (archive->escaped_path,".tzo") ||
+ 			g_str_has_suffix(archive->escaped_path,".tar.lzo"))
+diff -Nur xarchiver-0.5.2.orig/src/main.c xarchiver-0.5.2/src/main.c
+--- xarchiver-0.5.2.orig/src/main.c	2008-11-10 05:21:43.000000000 -0600
++++ xarchiver-0.5.2/src/main.c	2009-11-30 13:17:54.986351656 -0600
+@@ -296,9 +296,10 @@
+ 	open_archive[XARCHIVETYPE_BZIP2]  = &xa_open_bzip2_lzma;
+ 	open_archive[XARCHIVETYPE_GZIP]  = &xa_open_gzip;
+ 	open_archive[XARCHIVETYPE_LZMA]  = &xa_open_bzip2_lzma;
++	open_archive[XARCHIVETYPE_XZ]  = &xa_open_bzip2_lzma;
+ 	open_archive[XARCHIVETYPE_RAR]  = &xa_open_rar;
+ 	open_archive[XARCHIVETYPE_RPM]  = &xa_open_rpm;
+-	open_archive[XARCHIVETYPE_TAR]  = open_archive[XARCHIVETYPE_TAR_BZ2] = open_archive[XARCHIVETYPE_TAR_GZ] = open_archive[XARCHIVETYPE_TAR_LZMA] = open_archive[XARCHIVETYPE_TAR_LZOP] = &xa_open_tar;
++	open_archive[XARCHIVETYPE_TAR]  = open_archive[XARCHIVETYPE_TAR_BZ2] = open_archive[XARCHIVETYPE_TAR_GZ] = open_archive[XARCHIVETYPE_TAR_LZMA] = open_archive[XARCHIVETYPE_TAR_XZ] = open_archive[XARCHIVETYPE_TAR_LZOP] = &xa_open_tar;
+ 	open_archive[XARCHIVETYPE_ZIP] = &xa_open_zip;
+ 	open_archive[XARCHIVETYPE_LHA] = &xa_open_lha;
+ 	open_archive[XARCHIVETYPE_LZOP] = &xa_open_bzip2_lzma;
+@@ -310,6 +311,7 @@
+ 	delete[XARCHIVETYPE_BZIP2]  = 0;
+ 	delete[XARCHIVETYPE_GZIP]  = 0;
+ 	delete[XARCHIVETYPE_LZMA]  = 0;
++	delete[XARCHIVETYPE_XZ]  = 0;
+ 	delete[XARCHIVETYPE_RAR]  = &xa_rar_delete;
+ 	delete[XARCHIVETYPE_RPM]  = 0;
+ 	delete[XARCHIVETYPE_TAR]  = delete[XARCHIVETYPE_TAR_BZ2] = delete[XARCHIVETYPE_TAR_GZ] = delete[XARCHIVETYPE_TAR_LZMA] = delete[XARCHIVETYPE_TAR_LZOP] = &xa_tar_delete;
+@@ -325,7 +327,7 @@
+ 	add[XARCHIVETYPE_BZIP2]  = add[XARCHIVETYPE_GZIP] = add[XARCHIVETYPE_LZMA] = &xa_tar_add;
+ 	add[XARCHIVETYPE_RAR]  = &xa_rar_add;
+ 	add[XARCHIVETYPE_RPM]  = 0;
+-	add[XARCHIVETYPE_TAR]  = add[XARCHIVETYPE_TAR_BZ2] = add[XARCHIVETYPE_TAR_GZ] = add[XARCHIVETYPE_TAR_LZMA] = add[XARCHIVETYPE_TAR_LZOP] = &xa_tar_add;
++	add[XARCHIVETYPE_TAR]  = add[XARCHIVETYPE_TAR_BZ2] = add[XARCHIVETYPE_TAR_GZ] = add[XARCHIVETYPE_TAR_LZMA] = add[XARCHIVETYPE_TAR_XZ] = add[XARCHIVETYPE_TAR_LZOP] = &xa_tar_add;
+ 	add[XARCHIVETYPE_ZIP] = &xa_zip_add;
+ 	add[XARCHIVETYPE_LHA] = &xa_lha_add;
+ 	add[XARCHIVETYPE_LZOP] = &xa_tar_add;
+@@ -337,7 +339,7 @@
+ 	extract[XARCHIVETYPE_BZIP2]  = extract[XARCHIVETYPE_GZIP] = extract[XARCHIVETYPE_LZMA] = &xa_tar_extract;
+ 	extract[XARCHIVETYPE_RAR]  = &xa_rar_extract;
+ 	extract[XARCHIVETYPE_RPM]  = &xa_rpm_extract;
+-	extract[XARCHIVETYPE_TAR]  = extract[XARCHIVETYPE_TAR_BZ2] = extract[XARCHIVETYPE_TAR_GZ] = extract[XARCHIVETYPE_TAR_LZMA] = extract[XARCHIVETYPE_TAR_LZOP] = &xa_tar_extract;
++	extract[XARCHIVETYPE_TAR]  = extract[XARCHIVETYPE_TAR_BZ2] = extract[XARCHIVETYPE_TAR_GZ] = extract[XARCHIVETYPE_TAR_LZMA] = extract[XARCHIVETYPE_TAR_XZ] = extract[XARCHIVETYPE_TAR_LZOP] = &xa_tar_extract;
+ 	extract[XARCHIVETYPE_ZIP] = &xa_zip_extract;
+ 	extract[XARCHIVETYPE_LHA] = &xa_lha_extract;
+ 	extract[XARCHIVETYPE_LZOP] = &xa_tar_extract;
+@@ -348,7 +350,7 @@
+ 	test[XARCHIVETYPE_DEB]  = test[XARCHIVETYPE_BZIP2] = test[XARCHIVETYPE_GZIP] = test[XARCHIVETYPE_LZMA] = 0;
+ 	test[XARCHIVETYPE_RAR]  = &xa_rar_test;
+ 	test[XARCHIVETYPE_RPM]  = 0;
+-	test[XARCHIVETYPE_TAR]  = test[XARCHIVETYPE_TAR_BZ2] = test[XARCHIVETYPE_TAR_GZ] = test[XARCHIVETYPE_TAR_LZMA] = test[XARCHIVETYPE_TAR_LZOP] = 0;
++	test[XARCHIVETYPE_TAR]  = test[XARCHIVETYPE_TAR_BZ2] = test[XARCHIVETYPE_TAR_GZ] = test[XARCHIVETYPE_TAR_LZMA] = test[XARCHIVETYPE_TAR_XZ] = test[XARCHIVETYPE_TAR_LZOP] = 0;
+ 	test[XARCHIVETYPE_ZIP] = &xa_zip_test;
+ 	test[XARCHIVETYPE_LHA] = &xa_lha_test;
+ 	test[XARCHIVETYPE_LZOP] = 0;
+@@ -392,6 +394,14 @@
+ 		g_free (absolute_path);
+ 	}
+ 
++	absolute_path = g_find_program_in_path("xz");
++	if ( absolute_path )
++	{
++		ArchiveType = g_list_append(ArchiveType, "xz");
++		ArchiveSuffix = g_list_append(ArchiveSuffix, "*.xz");
++		g_free (absolute_path);
++	}
++
+ 	absolute_path = g_find_program_in_path("lzop");
+ 	if ( absolute_path )
+ 	{
+@@ -460,6 +470,11 @@
+ 			ArchiveType = g_list_append(ArchiveType, "tar.lzma");
+ 			ArchiveSuffix = g_list_append(ArchiveSuffix, "*.tlz");
+ 		}
++		if ( g_list_find ( ArchiveType , "xz") )
++		{
++			ArchiveType = g_list_append(ArchiveType, "tar.xz");
++			ArchiveSuffix = g_list_append(ArchiveSuffix, "*.txz");
++		}
+ 		if ( g_list_find ( ArchiveType , "lzo") )
+ 		{
+ 			ArchiveType = g_list_append(ArchiveType, "tar.lzo");
+@@ -528,6 +543,8 @@
+ 		archive->type = XARCHIVETYPE_TAR_GZ;
+ 	else if ( g_str_has_suffix ( archive->escaped_path , ".tar.lzma") || g_str_has_suffix ( archive->escaped_path , ".tlz") )
+ 		archive->type = XARCHIVETYPE_TAR_LZMA;
++	else if ( g_str_has_suffix ( archive->escaped_path , ".tar.xz") || g_str_has_suffix ( archive->escaped_path , ".txz") )
++		archive->type = XARCHIVETYPE_TAR_XZ;
+ 	else if ( g_str_has_suffix ( archive->escaped_path , ".tar.lzo") ||
+ 		g_str_has_suffix ( archive->escaped_path , ".tzo") ||
+ 		g_str_has_suffix ( archive->escaped_path , ".tar.lzop"))
+diff -Nur xarchiver-0.5.2.orig/src/new_dialog.c xarchiver-0.5.2/src/new_dialog.c
+--- xarchiver-0.5.2.orig/src/new_dialog.c	2008-11-11 02:28:46.000000000 -0600
++++ xarchiver-0.5.2/src/new_dialog.c	2009-11-30 13:17:54.987349701 -0600
+@@ -202,6 +202,8 @@
+ 			type = XARCHIVETYPE_GZIP;
+ 		else if (strcmp ( ComboArchiveType,"lzma") == 0)
+ 			type = XARCHIVETYPE_LZMA;
++		else if (strcmp ( ComboArchiveType,"xz") == 0)
++			type = XARCHIVETYPE_XZ;
+ 		else if (strcmp ( ComboArchiveType,"lzo") == 0)
+ 			type = XARCHIVETYPE_LZOP;
+ 		else if (strcmp ( ComboArchiveType,"rar") == 0)
+@@ -214,6 +216,8 @@
+ 			type = XARCHIVETYPE_TAR_GZ;
+ 		else if (strcmp ( ComboArchiveType,"tar.lzma") == 0)
+ 			type = XARCHIVETYPE_TAR_LZMA;
++		else if (strcmp ( ComboArchiveType,"tar.xz") == 0)
++			type = XARCHIVETYPE_TAR_XZ;
+ 		else if (strcmp ( ComboArchiveType,"tar.lzo") == 0)
+ 			type = XARCHIVETYPE_TAR_LZOP;
+ 		else if (strcmp ( ComboArchiveType,"jar") == 0 || strcmp ( ComboArchiveType,"zip") == 0 )
+diff -Nur xarchiver-0.5.2.orig/src/tar.c xarchiver-0.5.2/src/tar.c
+--- xarchiver-0.5.2.orig/src/tar.c	2008-11-10 04:28:34.000000000 -0600
++++ xarchiver-0.5.2/src/tar.c	2009-11-30 13:19:34.037344951 -0600
+@@ -242,6 +242,17 @@
+ 									files->str , NULL );
+ 		break;
+ 		
++		case XARCHIVETYPE_TAR_XZ:
++		if ( g_file_test ( archive->escaped_path , G_FILE_TEST_EXISTS ) )
++			xa_add_delete_bzip2_gzip_lzma_compressed_tar (files,archive,1);
++		else
++			command = g_strconcat (tar, " ",
++									archive->add_recurse ? "" : "--no-recursion ",
++									archive->remove_files ? "--remove-files " : "",
++									"--use-compress-program=xz -cvvf ",archive->escaped_path,
++									files->str , NULL );
++		break;
++		
+ 		case XARCHIVETYPE_TAR_LZOP:
+ 		if ( g_file_test ( archive->escaped_path , G_FILE_TEST_EXISTS ) )
+ 			xa_add_delete_bzip2_gzip_lzma_compressed_tar (files,archive,1);
+@@ -449,6 +460,10 @@
+ 			executable = "lzma -f ";
+ 			filename = "dummy.lzma";
+ 		break;
++		case XARCHIVETYPE_TAR_XZ:
++			executable = "xz -f ";
++			filename = "dummy.xz";
++		break;
+ 		case XARCHIVETYPE_TAR_LZOP:
+ 			executable = "lzop -f ";
+ 			filename = "dummy.lzo";
+diff -Nur xarchiver-0.5.2.orig/src/window.c xarchiver-0.5.2/src/window.c
+--- xarchiver-0.5.2.orig/src/window.c	2008-11-11 02:31:45.000000000 -0600
++++ xarchiver-0.5.2/src/window.c	2009-11-30 13:17:54.990326583 -0600
+@@ -1125,6 +1125,8 @@
+ 		xx = XARCHIVETYPE_GZIP;
+ 	else if (memcmp ( magic,"\x5d\x00\x00\x80",4) == 0)
+ 		xx = XARCHIVETYPE_LZMA;
++	else if (memcmp ( magic,"\xFD7zXZ\x00\0x00",3) == 0 || memcmp ( magic, "\xFD7zXZ\x00\0x10",3) == 0)
++		xx = XARCHIVETYPE_XZ;
+ 	else if (memcmp ( magic,"\211LZO",4) == 0)
+ 		xx = XARCHIVETYPE_LZOP;
+ 	else if (memcmp ( magic,"\xed\xab\xee\xdb",4) == 0)
+@@ -1462,6 +1464,7 @@
+ 		case XARCHIVETYPE_GZIP:
+ 		case XARCHIVETYPE_BZIP2:
+ 		case XARCHIVETYPE_LZMA:
++		case XARCHIVETYPE_XZ:
+ 		case XARCHIVETYPE_LZOP:
+ 		case XARCHIVETYPE_RPM:
+ 		pos = 3;
+@@ -1481,6 +1484,7 @@
+ 		case XARCHIVETYPE_TAR_GZ:
+ 		case XARCHIVETYPE_TAR_BZ2:
+ 		case XARCHIVETYPE_TAR_LZMA:
++		case XARCHIVETYPE_TAR_XZ:
+ 		case XARCHIVETYPE_TAR_LZOP:
+ 		case XARCHIVETYPE_TAR:
+ 		case XARCHIVETYPE_ZIP:
+@@ -1525,6 +1529,7 @@
+ 		case XARCHIVETYPE_GZIP:
+ 		case XARCHIVETYPE_BZIP2:
+ 		case XARCHIVETYPE_LZMA:
++		case XARCHIVETYPE_XZ:
+ 		case XARCHIVETYPE_LZOP:
+ 		case XARCHIVETYPE_RPM:
+ 		pos = 3;
+@@ -1544,6 +1549,7 @@
+ 		case XARCHIVETYPE_TAR_GZ:
+ 		case XARCHIVETYPE_TAR_BZ2:
+ 		case XARCHIVETYPE_TAR_LZMA:
++		case XARCHIVETYPE_TAR_XZ:
+ 		case XARCHIVETYPE_TAR_LZOP:
+ 		case XARCHIVETYPE_TAR:
+ 		case XARCHIVETYPE_ZIP:
