@@ -6,9 +6,9 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.6.1
-pkgrel=3
-#_snapshot=4.6-20110603
-_libstdcppmanver=20110201		# Note: check source directory name when updating this
+pkgrel=4
+_snapshot=4.6-20110819
+_libstdcppmanver=20110814		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -16,13 +16,13 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.21-9' 'libmpc' 'cloog' 'ppl' 'gcc-ada')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-hash-style-both.patch)
-md5sums=('c57a9170c677bf795bdc04ed796ca491'
-         '1e9fd2eaf0ee47ea64e82c48998f1999'
+md5sums=('b14d22730f9085eab7fd927039e68d28'
+         'ce920d2550ff7e042b9f091d27764d8f'
          '4030ee1c08dd1e843c0225b772360e76'
          '4df25b623799b148a0703eaeec8fdf3f')
 
@@ -63,16 +63,8 @@ build() {
       --with-ppl --enable-cloog-backend=isl \
       --enable-lto --enable-gold --enable-ld=default \
       --enable-plugin --with-plugin-ld=ld.gold \
-      --disable-multilib --disable-libstdcxx-pch \
+      --disable-multilib --disable-libssp --disable-libstdcxx-pch \
       --enable-checking=release
-  make
-  
-  # rebuild libssp without -fstack-protector and -D_FORTIFY_SOURCE=2
-  # adjusting Makefile.in prior to build still results in these leaking through (yay libtool...)
-  cd $CHOST/libssp
-  sed -i -e "s#-fstack-protector#-fno-stack-protector#" \
-         -e "s#-D_FORTIFY_SOURCE=2#-U_FORTIFY_SOURCE#" Makefile
-  make clean
   make
 }
 
@@ -97,7 +89,7 @@ package_gcc-libs()
 
   cd gcc-build
   make -j1 -C $CHOST/libgcc DESTDIR=${pkgdir} install-shared
-  for lib in libmudflap libgomp libssp libstdc++-v3/src; do
+  for lib in libmudflap libgomp libstdc++-v3/src; do
     make -j1 -C $CHOST/$lib DESTDIR=${pkgdir} install-toolexeclibLTLIBRARIES
   done
   make -j1 -C $CHOST/libstdc++-v3/po DESTDIR=${pkgdir} install
