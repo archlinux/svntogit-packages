@@ -1,40 +1,43 @@
 # $Id$
-# Maintainer: Paul Mattal <paul@archlinux.org>
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Paul Mattal <paul@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=dnsmasq
-pkgver=2.57
+pkgver=2.58
 pkgrel=1
 pkgdesc="Lightweight, easy to configure DNS forwarder and DHCP server"
 url="http://www.thekelleys.org.uk/dnsmasq/doc.html"
 arch=('i686' 'x86_64')
 license=('GPL')
-depends=('glibc' 'bash')
+depends=('glibc' 'bash' 'dbus-core')
 makedepends=('libcap>=2.16')
 backup=('etc/dnsmasq.conf')
 install=
 source=("http://www.thekelleys.org.uk/$pkgname/$pkgname-$pkgver.tar.gz" 
         'rc.dnsmasq')
-md5sums=('d10faeb409717eae94718d7716ca63a4' 'e956eee1ec24212a3254d2b168187495')
+md5sums=('14c5c81debb324adc261db971730f4c6'
+         'e956eee1ec24212a3254d2b168187495')
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
+  cd "$srcdir/$pkgname-$pkgver"
 
-  # Build
-  make || return 1
+  # link against dbus
+  echo '#define HAVE_DBUS' >> src/config.h
 
-  # Install
-  install -d $pkgdir/etc/rc.d || return 1
-  make PREFIX=/usr DESTDIR=$pkgdir install || return 1
+  make
+}
 
-  install -D -m755 \
-    $srcdir/rc.dnsmasq $pkgdir/etc/rc.d/dnsmasq || return 1
-  install -D -m644 \
-    dnsmasq.conf.example $pkgdir/etc/dnsmasq.conf || return 1
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
 
-  # Make the Required Directories for DHCP Server Default Directories
-  install -d $pkgdir/var/db || return 1
-  install -d $pkgdir/var/lib/misc || return 1
+  make PREFIX=/usr DESTDIR="$pkgdir" install
+
+  install -dm755 "$pkgdir"/var/{db,lib/misc}
+  install -Dm755 "$srcdir"/rc.dnsmasq "$pkgdir"/etc/rc.d/dnsmasq
+  install -Dm644 "dbus/dnsmasq.conf" "$pkgdir"/etc/dbus-1/system.d/dnsmasq.conf
+  install -Dm644 "dnsmasq.conf.example" "$pkgdir"/etc/dnsmasq.conf
+  install -Dm644 "contrib/systemd/dnsmasq.service" "$pkgdir"/lib/systemd/system/dnsmasq.service
 }
 
 # vim: ts=2 sw=2 et ft=sh
