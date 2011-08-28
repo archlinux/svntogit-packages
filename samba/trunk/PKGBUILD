@@ -8,12 +8,11 @@ pkgver=3.6.0
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
 _realver=3.6.0
-pkgrel=6
+pkgrel=7
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
-makedepends=('db' 'popt' 'libcups' 'acl' 'libldap' 'libcap' 'krb5' 'pam'
-'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb' 'python2')
+makedepends=('db' 'popt' 'libcups' 'acl' 'libldap' 'libcap' 'krb5' 'pam' 'fam' 'gnutls>=2.4.1' 'talloc' 'tdb')
 options=(!makeflags)
 source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
         samba samba.logrotate
@@ -25,37 +24,27 @@ source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
 
 build() {
   cd ${srcdir}/${pkgbase}-${_realver}/source3
-  sed -i "s/env python/env python2/g" ../buildtools/bin/waf 
-  ./autogen-waf.sh
-  # everything needs to be specified :/
-  ../buildtools/bin/waf configure --prefix=/usr \
-              --with-privatedir=/etc/samba/private \
+  ./configure --prefix=/usr \
               --libdir=/usr/lib/ \
-              --with-modulesdir=/usr/lib/samba \
-              --with-swatdir=/usr/share/samba/swat \
               --localstatedir=/var \
               --with-configdir=/etc/samba \
               --with-lockdir=/var/cache/samba \
-              --with-cachedir=/var/cache/samba \
-              --with-statedir=/var/cache/samba \
               --with-piddir=/var/run/samba \
-              --with-logfilebase=/var/log/samba \
-              --sysconfdir=/etc \
-              --with-dnsupdate \
+              --with-fhs \
               --with-pam \
               --with-pam_smbpass \
               --with-pammodulesdir=/lib/security \
               --with-ads \
               --with-acl-support \
+              --with-cifsmount \
+              --with-libsmbclient \
               --with-syslog \
+              --enable-external-libtalloc \
+              --disable-dnssd \
               --disable-avahi \
-              --with-shared-modules=idmap_ad,idmap_adex,idmap_rid,idmap_hash,idmap_tdb2 \
-              --disable-rpath \
-              --disable-rpath-private-install \
-              --disable-rpath-install
-  #fix the shitty build system!
-   sed -i -e 's#/etc/smb.conf#/etc/samba/smb.conf#g' bin/default/source3/include/config.h
-  ../buildtools/bin/waf build ${MAKEFLAGS} 
+              --with-shared-modules=idmap_ad,idmap_adex,idmap_rid,idmap_hash \
+              --enable-external-libtdb
+  make
 }
 
 package_smbclient () {
@@ -64,23 +53,9 @@ depends=('readline' 'popt' 'libldap' 'cifs-utils' 'libcap' 'krb5' 'db' 'e2fsprog
   cd ${srcdir}/${pkgbase}-${_realver}/source3
   mkdir -p ${pkgdir}/usr/bin ${pkgdir}/usr/lib
   install -m755 bin/{smbclient,rpcclient,smbspool,smbtree,smbcacls,smbcquotas,smbget,net,nmblookup} ${pkgdir}/usr/bin/
-  for i in libreplace.so libsmbregistry.so libsecurity.so librpccommon.so libdcerpc-samba.so libpassdb.so libLIBCLI_SPOOLSS.so libprinting_migrate.so libsamba3core.so libndr-samba.so libsamba-util-common.so libads.so libtdb-wrap.so libaddns.so libcliauth.so libwinbind-client.so; do
-    install -m644 -D bin/shared/private/$i ${pkgdir}/usr/lib/$i
+  for i in libnetapi* libwbclient* libsmbclient*;do
+      cp  -a bin/${i}*.so* ${pkgdir}/usr/lib/
   done
-  for i in libsmbconf libnetapi libwbclient libsmbclient; do
-    install -m644 -D bin/shared/$i.so.0  ${pkgdir}/usr/lib/$i.so.0
-    ln -sf /usr/lib/$i.so.0  ${pkgdir}/usr/lib/$i.so
-  done
-  mkdir ${pkgdir}/usr/lib/libsmb
-  ln -sf /usr/lib/libsmbclient.so.0  ${pkgdir}/usr/lib/libsmb/libsmbclient.so.0
-  ln -sf /usr/lib/libsmbclient.so.0  ${pkgdir}/usr/lib/libsmb/libsmbclient.so
-  for i in libndr-krb5pac libndr-standard libndr; do
-    install -m644 -D bin/shared/$i.so.0 ${pkgdir}/usr/lib/$i.so.0.0.1
-    ln -sf /usr/lib/$i.so.0.0.1 ${pkgdir}/usr/lib/$i.so.0
-    ln -sf /usr/lib/$i.so.0.0.1 ${pkgdir}/usr/lib/$i.so
-  done
-  install -m644 -D bin/shared/private/libtevent.so.0 ${pkgdir}/usr/lib/libtevent.so.0.9.11
-  ln -sf /usr/lib/libtevent.so.0.9.11  ${pkgdir}/usr/lib/libtevent.so.0
   install -m755 script/smbtar ${pkgdir}/usr/bin/
   mkdir -p ${pkgdir}/usr/lib/cups/backend
   ln -sf /usr/bin/smbspool ${pkgdir}/usr/lib/cups/backend/smb
@@ -102,56 +77,37 @@ backup=(etc/logrotate.d/samba
         etc/samba/smb.conf
         etc/xinetd.d/swat
         etc/conf.d/samba)
-depends=('db' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap' 'krb5' 'pam' 'gamin' 'gnutls' 'e2fsprogs' 'tdb' 'talloc')
-optdepends=('python2: for python bindings')
+depends=('db' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap' 'krb5' 'pam' 'fam' 'gnutls' 'e2fsprogs' 'tdb' 'talloc')
   cd ${srcdir}/samba-${_realver}/source3
-  ../buildtools/bin/waf install --destdir=${pkgdir}
-  # fix permission on include files
-  chmod 644 ${pkgdir}/usr/include/*.h
-  # remove wrong var directory
-  rm -rf ${pkgdir}/usr/var
-  # create missing directories
   mkdir -p ${pkgdir}/etc/samba/private
   chmod 700 ${pkgdir}/etc/samba/private
-  mkdir -p ${pkgdir}/var/{lib,cache}/samba
-  mkdir -p ${pkgdir}/var/nmbd
-  mkdir -p ${pkgdir}/lib/security
+  make DESTDIR=${pkgdir} install
+  chmod 644 ${pkgdir}/usr/include/*.h
+  rm -rf ${pkgdir}/usr/var
+  (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
+  install -D -m755 ../../samba ${pkgdir}/etc/rc.d/samba
+  install -D -m644 ../../samba.conf.d ${pkgdir}/etc/conf.d/samba
   mkdir -p ${pkgdir}/etc/samba
-  # install config files
-  install -D -m755 ${startdir}/samba ${pkgdir}/etc/rc.d/samba
-  install -D -m644 ${startdir}/samba.conf.d ${pkgdir}/etc/conf.d/samba
   cat ../examples/smb.conf.default | \
     sed 's|log file = .*$|log file = /var/log/samba/log.%m|g' >${pkgdir}/etc/samba/smb.conf.default
-  install -D -m644 ${startdir}/samba.logrotate ${pkgdir}/etc/logrotate.d/samba
-  install -D -m644 ${startdir}/swat.xinetd ${pkgdir}/etc/xinetd.d/swat
-  install -D -m644 ${startdir}/samba.pam ${pkgdir}/etc/pam.d/samba
+  install -D -m644 ../../samba.logrotate ${pkgdir}/etc/logrotate.d/samba
+  install -D -m644 ../../swat.xinetd ${pkgdir}/etc/xinetd.d/swat
+  install -D -m644 ../../samba.pam ${pkgdir}/etc/pam.d/samba
   # spool directory
   install -d -m1777 ${pkgdir}/var/spool/samba
   sed -i 's|/usr/spool/samba|/var/spool/samba|g' ${pkgdir}/etc/samba/smb.conf.default
   # fix logrotate
   sed -i -e 's|log.%m|%m.log|g' ${pkgdir}/etc/samba/smb.conf.default
-  # run various install scripts
-  script/./installman.sh ${pkgdir}/usr/share/man . C
-  script/./installmo.sh ${pkgdir}/usr/share locale .
-  script/./installdat.sh ${pkgdir}/usr/lib samba .
-  chmod 755 script/./installmsg.sh
-  script/./installmsg.sh ${pkgdir}/usr/lib samba .
-  script/./installswat.sh ${pkgdir}/usr/share/samba swat .
+  # nsswitch libraries
+  install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_wins.so ${pkgdir}/lib/libnss_wins.so
+  ln -s libnss_wins.so ${pkgdir}/lib/libnss_wins.so.2
+  install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_winbind.so ${pkgdir}/lib/libnss_winbind.so
   # remove conflict files of smbclient
   for man in libsmbclient smbspool \
       mount.cifs net cifs.upcall; do
       rm -f ${pkgdir}/usr/share/man/man8/${man}.8
   done
-  for i in libreplace.so libsmbregistry.so libsecurity.so librpccommon.so libdcerpc-samba.so libpassdb.so libLIBCLI_SPOOLSS.so libprinting_migrate.so libsamba3core.so libndr-samba.so libsamba-util-common.so libads.so libtdb-wrap.so libaddns.so libcliauth.so libtevent.so.0.9.11 libtevent.so.0 libwinbind-client.so; do
-      rm -f ${pkgdir}/usr/lib/samba/$i
-  done
-  # move libs to correct place
-  mv ${pkgdir}/usr/lib/pam*.so ${pkgdir}/lib/security
-  mv ${pkgdir}/usr/lib/libnss* ${pkgdir}/lib/
-  ln -sf /lib/libnss_wins.so.2 ${pkgdir}/lib/libnss_wins.so
-  ln -sf /lib/libnss_winbind.so.2 ${pkgdir}/lib/libnss_winbind.so
-  mv ${pkgdir}/usr/lib/samba/*.so ${pkgdir}/usr/lib
-  for i in libndr-krb5pac.* libsmbconf.*  libndr-standard.* libndr.* libnetapi.* libwbclient.* libsmbclient.*; do
+  for i in libnetapi* libwbclient* libsmbclient*;do
       rm -f ${pkgdir}/usr/lib/$i
   done
   for bin in net \
@@ -159,7 +115,6 @@ optdepends=('python2: for python bindings')
       smbcquotas smbget smbspool smbtar smbtree; do
       rm -f ${pkgdir}/usr/bin/$bin
   done
-  rm -r ${pkgdir}/usr/lib/libsmb
   rm -f ${pkgdir}/usr/sbin/cifs.upcall
   rm -f ${pkgdir}/usr/include/netapi.h
   for man in rpcclient smbcacls smbclient smbcquotas \
@@ -174,10 +129,10 @@ optdepends=('python2: for python bindings')
   # copy ldap example
   install -D -m644 ${srcdir}/samba-${_realver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
 }
-md5sums=(e297e0ea7923c7de8d7c1d8fd0ec0a05
-         a3da19515a234c703876cf850c44e996
-         5697da77590ec092cc8a883bae06093c
-         a4bbfa39fee95bba2e7ad6b535fae7e6
-         96f82c38f3f540b53f3e5144900acf17
-         f2f2e348acd1ccb566e95fa8a561b828
-         c6a38a8c8fa24979e6217aed533358ea)
+md5sums=('e297e0ea7923c7de8d7c1d8fd0ec0a05'
+         'a3da19515a234c703876cf850c44e996'
+         '5697da77590ec092cc8a883bae06093c'
+         'a4bbfa39fee95bba2e7ad6b535fae7e6'
+         '96f82c38f3f540b53f3e5144900acf17'
+         'f2f2e348acd1ccb566e95fa8a561b828'
+         'c6a38a8c8fa24979e6217aed533358ea')
