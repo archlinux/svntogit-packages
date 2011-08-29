@@ -7,6 +7,7 @@ pkgname=('php'
          'php-apache'
          'php-fpm'
          'php-embed'
+         'php-pear'
          'php-curl'
          'php-enchant'
          'php-gd'
@@ -24,7 +25,7 @@ pkgname=('php'
          'php-xsl')
 pkgver=5.3.8
 _suhosinver=5.3.7-0.9.10
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
@@ -191,6 +192,17 @@ build() {
 		--enable-embed=shared \
 		${phpextensions}
 	make
+
+	# pear
+	cp -a ${srcdir}/build-php ${srcdir}/build-pear
+	cd ${srcdir}/build-pear
+	./configure ${phpconfig} \
+		--disable-cgi \
+		--with-readline \
+		--enable-pcntl \
+		--with-pear \
+		${phpextensions}
+	make
 }
 
 # check() {
@@ -254,6 +266,19 @@ package_php-embed() {
 
 	install -D -m755 ${srcdir}/build-embed/libs/libphp5.so ${pkgdir}/usr/lib/libphp5.so
 	install -D -m644 ${srcdir}/${pkgbase}-${pkgver}/sapi/embed/php_embed.h ${pkgdir}/usr/include/php/sapi/embed/php_embed.h
+}
+
+package_php-pear() {
+	pkgdesc='PHP Extension and Application Repository'
+	depends=('php' 'bash')
+	backup=('etc/php/pear.conf')
+
+	cd ${srcdir}/build-pear
+	make -j1 install-pear INSTALL_ROOT=${pkgdir}
+	local i
+	while read i; do
+		[ ! -e "$i" ] || rm -rf "$i"
+	done < <(find ${pkgdir} -name '.*')
 }
 
 package_php-curl() {
