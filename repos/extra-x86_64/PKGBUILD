@@ -8,22 +8,18 @@ pkgname=bind
 # Use a period and not a hyphen before the patch level for proper versioning.
 pkgver=9.8.0.P4
 _pkgver=9.8.0-P4
-pkgrel=1
+pkgrel=2
 
-pkgdesc='Berkeley Internet Name Daemon (BIND) is the reference implementation of the Domain Name System (DNS) protocols'
-arch=('i686' 'x86_64')
+pkgdesc='Berkeley Internet Name Daemon is the reference implementation of the DNS protocols'
 url='http://www.isc.org/software/bind/'
 license=('custom:ISC')
-provides=('dns-server')
-backup=('etc/logrotate.d/named'
-        'etc/conf.d/named'
-        'etc/named.conf')
+arch=('i686' 'x86_64')
 depends=('openssl' 'krb5' 'libxml2')
 options=('!makeflags' '!libtool')
-source=("http://ftp.isc.org/isc/bind9/${_pkgver}/${pkgname}-${_pkgver}.tar.gz"
+source=("http://ftp.isc.org/isc/bind9/${_pkgver}/bind-${_pkgver}.tar.gz"
         'root.hint::ftp://ftp.rs.internic.net/domain/db.cache'
         'so_bsdcompat.patch'
-        'notools.patch'
+        'remove-tools.patch'
         'named'
         'named.conf'
         'named.conf.d'
@@ -33,7 +29,7 @@ source=("http://ftp.isc.org/isc/bind9/${_pkgver}/${pkgname}-${_pkgver}.tar.gz"
 sha1sums=('969864200c1516a8bea54266de60f316d79182b4'
           'cbdecd1ea8e7b612b33b63d66bc57273795d1f54'
           'b433ba99f23e3db305f8ce293fe4ce6d1b8d4cfb'
-          '17444f9d759a4bde7688bdaa304dac57a138e4c1'
+          '18f477f510df31e6c6f547ee2d5fc46e973479bf'
           '46232e9db243c6c05e170a1781d7a7f413be5d03'
           '5ca7a5f2a132548a090a045a2df3acea6b35d9eb'
           '7848edbfb9a848843f57c11c02b0289eefd42d00'
@@ -41,13 +37,18 @@ sha1sums=('969864200c1516a8bea54266de60f316d79182b4'
           '76a0d4cd1b913db177a5a375bebc47e5956866ec'
           '53be0f1437ebe595240d8dbdd819939582b97fb9')
 
+provides=('dns-server')
+
 install=install
+backup=('etc/logrotate.d/named'
+        'etc/conf.d/named'
+        'etc/named.conf')
 
 build() {
-	cd "${srcdir}/${pkgname}-${_pkgver}"
+	cd "${srcdir}/bind-${_pkgver}"
 
+	patch -p1 -i ../remove-tools.patch
 	patch -p1 -i ../so_bsdcompat.patch
-	patch -p1 -i ../notools.patch
 
 	./configure \
 		--prefix=/usr \
@@ -65,14 +66,15 @@ build() {
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${_pkgver}"
+	cd "${srcdir}/bind-${_pkgver}"
+
+	install -Dm644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
 	make DESTDIR="${pkgdir}" install
 
 	rmdir "${pkgdir}/var/run"
 	install -d "${pkgdir}"/usr/share/doc/bind
 	install doc/arm/*.html "${pkgdir}"/usr/share/doc/bind/
-	install -D -m644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
 	install -D -m755 ../named "${pkgdir}"/etc/rc.d/named
 	install -D -m644 ../named.conf.d "${pkgdir}"/etc/conf.d/named
