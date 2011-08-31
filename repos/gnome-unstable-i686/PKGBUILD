@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Jan de Groot  <jgc@archlinux.org>
+
+pkgname=libgweather
+pkgver=3.1.3
+pkgrel=1
+pkgdesc="Provides access to weather information from the net"
+arch=('i686' 'x86_64')
+license=('LGPL')
+depends=('gconf' 'libsoup-gnome' 'gnome-icon-theme')
+makedepends=('pkgconfig' 'intltool' 'gtk-doc' 'gobject-introspection' 'gnome-common')
+options=('!libtool' '!emptydirs')
+url="http://www.gnome.org/"
+install=libgweather.install
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz
+        gettext-not-xml.patch)
+sha256sums=('e711f3e9f41a7b574afcaa442959e827a05b0105d925b5938ac54204b28ab308'
+            '5b6bf182294b8974a89492237d98b60678b83efcf31de8a0ca1bebd90f3356a3')
+
+build() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    patch -Np1 -i "${srcdir}/gettext-not-xml.patch"
+    gtkdocize
+    autoreconf -fi
+
+    ./configure --prefix=/usr --sysconfdir=/etc \
+        --localstatedir=/var --disable-static \
+        --enable-locations-compression
+    make
+}
+
+package() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+    make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+
+    install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
+    gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain libgweather ${pkgdir}/etc/gconf/schemas/*.schemas
+    rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+}
