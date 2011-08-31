@@ -1,8 +1,9 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
+
 pkgname=nss
 pkgver=3.12.11
-pkgrel=1
+pkgrel=3
 pkgdesc="Mozilla Network Security Services"
 arch=(i686 x86_64)
 url="http://www.mozilla.org/projects/security/pki/nss/"
@@ -16,43 +17,46 @@ source=(ftp://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/s
         nss-no-rpath.patch
         nss.pc.in
         nss-config.in
+        distrust-diginotar.patch
         add_spi+cacert_ca_certs.patch
         ssl-renegotiate-transitional.patch)
 md5sums=('ca0ca058380be200cf247ea2496b5352'
          'e5c97db0c884d5f4cfda21e562dc9bba'
          'c547b030c57fe1ed8b77c73bf52b3ded'
          '46bee81908f1e5b26d6a7a2e14c64d9f'
-         '7f39c19b1dfd62d7db7d8bf19f156fed'
+         'bbd7d8a8e2f6ffc8b3e5f6614e5f3ccf'
+         'f8690c4cfef46b2796026581db15b4ea'
          'd83c7b61abb7e9f8f7bcd157183d1ade')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}-${pkgver}/mozilla"
+  # Distrust DigiNotar root CA - backported from CVS (https://bugzilla.mozilla.org/show_bug.cgi?id=682927)
+  patch -Np0 -i "${srcdir}/distrust-diginotar.patch"
   # Adds the SPI Inc. and CAcert.org CA certificates - patch from Debian
-  patch -Np1 -i "${srcdir}/add_spi+cacert_ca_certs.patch"
+  patch -Np2 -i "${srcdir}/add_spi+cacert_ca_certs.patch"
   # Adds transitional SSL renegotiate support - patch from Debian
-  patch -Np1 -i "${srcdir}/ssl-renegotiate-transitional.patch"
+  patch -Np2 -i "${srcdir}/ssl-renegotiate-transitional.patch"
   # Removes rpath
-  patch -Np0 -i "${srcdir}/nss-no-rpath.patch"
+  patch -Np2 -i "${srcdir}/nss-no-rpath.patch"
 
-  cd mozilla/security/nss/lib/ckfw/builtins
-  make generate
+  # Respect LDFLAGS
+  sed -e 's/\$(MKSHLIB) -o/\$(MKSHLIB) \$(LDFLAGS) -o/g' \
+      -i security/coreconf/rules.mk
 
   cd "${srcdir}/${pkgname}-${pkgver}"
-  unset CFLAGS
-  unset CXXFLAGS
   export BUILD_OPT=1
   export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
   export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
   export NSS_USE_SYSTEM_SQLITE=1
   export NSPR_INCLUDE_DIR=`pkg-config --cflags-only-I nspr | sed 's/-I//'`
   export NSPR_LIB_DIR=`pkg-config --libs-only-L nspr | sed 's/-L.//'`
+  export XCFLAGS="${CFLAGS}"
 
   [ "$CARCH" = "x86_64" ] && export USE_64=1
 
   make -j 1 -C mozilla/security/coreconf
   make -j 1 -C mozilla/security/dbm
   make -j 1 -C mozilla/security/nss
-
 }
 
 package() {
@@ -100,3 +104,17 @@ package() {
 
   install -m644 mozilla/dist/public/nss/*.h "${pkgdir}/usr/include/nss/"
 }
+md5sums=('ca0ca058380be200cf247ea2496b5352'
+         'e5c97db0c884d5f4cfda21e562dc9bba'
+         'c547b030c57fe1ed8b77c73bf52b3ded'
+         '46bee81908f1e5b26d6a7a2e14c64d9f'
+         'bbd7d8a8e2f6ffc8b3e5f6614e5f3ccf'
+         'f8690c4cfef46b2796026581db15b4ea'
+         'd83c7b61abb7e9f8f7bcd157183d1ade')
+md5sums=('ca0ca058380be200cf247ea2496b5352'
+         'e5c97db0c884d5f4cfda21e562dc9bba'
+         'c547b030c57fe1ed8b77c73bf52b3ded'
+         '46bee81908f1e5b26d6a7a2e14c64d9f'
+         'bbd7d8a8e2f6ffc8b3e5f6614e5f3ccf'
+         'ba2357c5b9881bfd7d54b037954ba0ff'
+         'd83c7b61abb7e9f8f7bcd157183d1ade')
