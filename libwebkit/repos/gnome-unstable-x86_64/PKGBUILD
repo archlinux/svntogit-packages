@@ -1,0 +1,55 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=libwebkit
+pkgname=(libwebkit libwebkit3)
+pkgver=1.5.2
+pkgrel=1
+pkgdesc="An opensource web content engine"
+arch=('i686' 'x86_64')
+url="http://webkitgtk.org/"
+license=('custom')
+depends=('libxt' 'libxslt' 'sqlite3' 'icu' 'gstreamer0.10-base' 'libsoup' 'enchant')
+makedepends=('gperf' 'gtk-doc' 'gobject-introspection' 'python2' 'gtk2' 'gtk3' 'namcap')
+options=('!libtool' '!emptydirs')
+install=libwebkit.install
+source=(http://webkitgtk.org/webkit-${pkgver}.tar.gz)
+md5sums=('92e512b8222d107b71beccf88a045e09')
+
+build() {
+  cd "${srcdir}/webkit-${pkgver}"
+  mkdir build-gtk{2,3}
+
+  ( cd build-gtk2 && _build --with-gtk=2.0 )
+  ( cd build-gtk3 && _build --with-gtk=3.0 )
+}
+
+_build() {
+  PYTHON=/usr/bin/python2 ../configure --prefix=/usr \
+    --enable-introspection \
+    --with-font-backend=freetype --enable-gtk-doc \
+    --with-unicode-backend=icu \
+    --enable-spellcheck "$@"
+  make all stamp-po
+}
+
+package_libwebkit() {
+  pkgdesc+=" (for GTK2)"
+  depends+=(gtk2)
+  provides=('webkitgtk-svn')
+  conflicts=('webkitgtk-svn')
+  replaces=('webkitgtk-svn')
+
+  cd "$srcdir/webkit-$pkgver/build-gtk2"
+  make DESTDIR="${pkgdir}" install
+  install -Dm644 ../Source/WebKit/LICENSE "${pkgdir}/usr/share/licenses/libwebkit/LICENSE"
+}
+
+package_libwebkit3() {
+  pkgdesc+=" (for GTK3)"
+  depends+=(gtk3)
+
+  cd "${srcdir}/webkit-${pkgver}/build-gtk3"
+  make DESTDIR="${pkgdir}" install
+  install -Dm644 ../Source/WebKit/LICENSE "${pkgdir}/usr/share/licenses/libwebkit3/LICENSE"
+}
