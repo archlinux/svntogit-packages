@@ -15,7 +15,8 @@ license=('GPL' 'LGPL')
 groups=('base')
 depends=('linux-api-headers>=3.0' 'tzdata')
 makedepends=('gcc>=4.6')
-backup=(etc/locale.gen
+backup=(etc/gai.conf
+        etc/locale.gen
         etc/nscd.conf)
 options=('!strip')
 install=glibc.install
