@@ -1,0 +1,87 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=pygobject2
+pkgname=(python-gobject2 python2-gobject2 pygobject2-devel)
+pkgver=2.28.6
+pkgrel=2
+arch=('i686' 'x86_64')
+url="http://www.pygtk.org/"
+license=('LGPL')
+depends=('glib2' 'pygobject2-devel')
+makedepends=(python python2 'namcap')
+source=(http://ftp.gnome.org/pub/gnome/sources/pygobject/${pkgver%.*}/pygobject-${pkgver}.tar.xz
+        python3-fix-build.patch
+        python3-fix-maketrans.patch)
+options=('!libtool')
+sha256sums=('fb8a1d4f665130a125011659bd347c7339c944232163dbb9a34fd0686577adb8'
+            'feafd4664f8455edf0bf8407ac45e219bb550df806ce0d601baae951e8c188ca'
+            '4bff9adcea13a824c45d14ec501c927df47d23c22507a2456d8b5ec885924c0a')
+
+build() {
+  cd "${srcdir}"
+  cp -a "pygobject-${pkgver}" python2-build
+  mkdir devel
+
+  (
+    cd python2-build
+    export PYTHON=/usr/bin/python2
+    ./configure --prefix=/usr --disable-introspection
+    make
+  )
+
+  (
+    cd "pygobject-${pkgver}"
+    #patches available in 2.28 branch but unreleased.
+    patch -Np1 -i "${srcdir}/python3-fix-build.patch"
+    patch -Np1 -i "${srcdir}/python3-fix-maketrans.patch"
+
+    ./configure --prefix=/usr --disable-introspection
+    make
+  )
+}
+
+package_python-gobject2() {
+  pkgdesc="Python 3 bindings for GObject2"
+  replaces=('py3gobject')
+  provides=("py3gobject=$pkgver")
+
+  cd "${srcdir}/pygobject-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  # Delete devel stuff
+  rm -r "$pkgdir"/usr/{bin,include,lib/pkgconfig,share/{gtk-doc,pygobject/{2.0/codegen,xsl}}}
+}
+
+package_python2-gobject2() {
+  pkgdesc="Python 2 bindings for GObject2"
+  replaces=('pygobject')
+  provides=("pygobject=$pkgver")
+
+  cd "${srcdir}/python2-build"
+  make DESTDIR="${pkgdir}" install
+
+  find "$pkgdir"/usr/share/pygobject -name '*.py' | \
+    xargs sed -i "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|"
+
+  # Split devel stuff
+  mv "$pkgdir"/usr/{bin,include,lib/pkgconfig,share/{gtk-doc,pygobject/{2.0/codegen,xsl}}} \
+    "$srcdir/devel/"
+}
+
+package_pygobject2-devel() {
+  pkgdesc="Development files for the pygobject bindings"
+  depends=('python2')
+  replaces=('pygobject-devel')
+  provides=('pygobject-devel')
+
+  cd "${srcdir}/devel"
+  mkdir -p "$pkgdir"/usr/{include,lib,share/pygobject/2.0}
+
+  mv bin       "$pkgdir/usr/"
+  mv include   "$pkgdir/usr/"
+  mv pkgconfig "$pkgdir/usr/lib/"
+  mv gtk-doc   "$pkgdir/usr/share/"
+  mv codegen   "$pkgdir/usr/share/pygobject/2.0/"
+  mv xsl       "$pkgdir/usr/share/pygobject/"
+}
