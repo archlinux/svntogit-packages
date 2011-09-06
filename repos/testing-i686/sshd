@@ -1,0 +1,45 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+. /etc/conf.d/sshd
+
+PIDFILE=/var/run/sshd.pid
+PID=$(cat $PIDFILE 2>/dev/null)
+if ! readlink -q /proc/$PID/exe | grep -q '^/usr/sbin/sshd'; then
+	PID=
+	rm $PIDFILE 2>/dev/null
+fi
+
+case "$1" in
+	start)
+		stat_busy 'Starting Secure Shell Daemon'
+		/usr/bin/ssh-keygen -A
+		[[ -d /var/empty ]] || mkdir -p /var/empty
+		[[ -z $PID ]] && /usr/sbin/sshd $SSHD_ARGS
+		if [[ $? -gt 0 ]]; then
+			stat_fail
+		else
+			add_daemon sshd
+			stat_done
+		fi
+		;;
+	stop)
+		stat_busy 'Stopping Secure Shell Daemon'
+		[[ ! -z $PID ]] && kill $PID &> /dev/null
+		if [[ $? -gt 0 ]]; then
+			stat_fail
+		else
+			rm_daemon sshd
+			stat_done
+		fi
+		;;
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+		;;
+	*)
+		echo "usage: $0 {start|stop|restart}"
+esac
+exit 0
