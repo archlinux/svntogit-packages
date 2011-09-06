@@ -2,37 +2,27 @@
 # Maintainer:
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
-pkgname=ettercap
-pkgver=NG_0.7.3
-_origver=NG-0.7.3
-pkgrel=18
-pkgdesc="A network sniffer/interceptor/logger for ethernet LANs - console"
+pkgbase=ettercap
+pkgname=('ettercap' 'ettercap-gtk')
+pkgver=NG_0.7.4.1
+_origver=${pkgver/_/-}
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://ettercap.sourceforge.net/"
 license=('GPL')
-depends=('ncurses' 'openssl' 'libpcap' 'zlib' 'pcre' 'libtool' 'libnet')
-makedepends=('libnet' 'pkgconfig')
-backup=('etc/etter.conf')
-options=(!libtool)
-source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${_origver}.tar.gz"
-        01_pointers_and_ints_dont_mix.diff
-        ettercap-NG-0.7.3_dns_support_on_x86_64.patch)
-md5sums=('28fb15cd024162c55249888fe1b97820'
-         'c8f2b004f69ac3522ffebb530478b324'
-         'd44f80292afcefdc13cba9a30c6391d6')
+depends=('ncurses' 'openssl' 'libpcap' 'zlib' 'pcre' 'libtool' 'libnet'
+         'pkgconfig' 'gtk2')
+source=("http://drizztbsd.github.com/${pkgbase}/dist/${pkgbase}-${_origver}.tar.gz"
+        'ettercap.desktop')
+md5sums=('c6ae5f86361a85a8e193051f594a74fa'
+         '6fb03d9c890430d3afa84466bb01781b')
 
 build() {
-  cd ${srcdir}/${pkgname}-${_origver}
-  unset LDFLAGS
+  cd "${srcdir}"
+  
+  cp -r ${pkgbase}-${_origver} ${pkgbase}-${_origver}-gtk
 
-  libtoolize --force --copy
-  aclocal
-  autoconf
-
-  patch -Np1 -i ${srcdir}/01_pointers_and_ints_dont_mix.diff
-
-  [ "$CARCH" = "x86_64" ] && patch -Np1 -i ${srcdir}/ettercap-NG-0.7.3_dns_support_on_x86_64.patch
-
+  cd ${pkgbase}-${_origver}
   ./configure --prefix=/usr \
               --sysconfdir=/etc \
               --mandir=/usr/share/man \
@@ -40,12 +30,37 @@ build() {
               --enable-plugins \
               --enable-https \
               --disable-gtk
-  sed -i 's/LTDL_SHLIB_EXT/\".so\"/' src/ec_plugins.c
+  make
+
+  cd ../${pkgbase}-${_origver}-gtk
+  ./configure --prefix=/usr \
+              --sysconfdir=/etc \
+              --mandir=/usr/share/man \
+              --datarootdir=/usr/share \
+              --enable-plugins \
+              --enable-https
   make
 }
 
-package() {
-  cd ${srcdir}/${pkgname}-${_origver}
+package_ettercap() {
+  pkgdesc="A network sniffer/interceptor/logger for ethernet LANs - console"
+  depends=('ncurses' 'openssl' 'libpcap' 'zlib' 'pcre' 'libtool' 'libnet')
+  backup=('etc/etter.conf')
+  options=('!libtool')
 
-  make DESTDIR=${pkgdir} install
+  cd "${srcdir}"/${pkgbase}-${_origver}
+  make DESTDIR="${pkgdir}" install
+}
+
+package_ettercap-gtk() {
+  pkgdesc="A network sniffer/interceptor/logger for ethernet LANs - GTK"
+  depends=('ettercap' 'gtk2' 'gksu')
+  install=ettercap-gtk.install
+
+  cd "${srcdir}"/${pkgbase}-${_origver}-gtk
+  install -Dm755 src/ettercap "${pkgdir}"/usr/bin/ettercap-gtk
+  install -Dm644 "${srcdir}"/ettercap.desktop \
+    "${pkgdir}"/usr/share/applications/ettercap.desktop
+  install -Dm644 desktop/ettercap.xpm \
+    "${pkgdir}"/usr/share/pixmaps/ettercap.xpm
 }
