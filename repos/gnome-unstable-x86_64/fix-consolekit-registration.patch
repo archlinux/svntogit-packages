@@ -1,0 +1,98 @@
+From 984038d2df357750f49658ad0c5bfe0d2e812ffd Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Tue, 06 Sep 2011 15:41:07 +0000
+Subject: daemon: fix consolekit registration
+
+ioni pointed out on IRC, that since commit
+647cad5bf59a4ff3776ba1ae5cda6b1aaaa1cfb2
+
+the greeter session isn't getting fully registered
+with consolekit and so udev acls weren't being
+properly applied.
+
+This commit passes the tty to the worker process
+so that it can be used for registration.
+
+It also passes hostname, merely for completeness.
+---
+diff --git a/daemon/gdm-session-direct.c b/daemon/gdm-session-direct.c
+index 1d5c16a..c25bc9b 100644
+--- a/daemon/gdm-session-direct.c
++++ b/daemon/gdm-session-direct.c
+@@ -1401,6 +1401,8 @@ do_introspect (DBusConnection *connection,
+                                "    <signal name=\"SetupForProgram\">\n"
+                                "      <arg name=\"service_name\" type=\"s\"/>\n"
+                                "      <arg name=\"x11_display_name\" type=\"s\"/>\n"
++                               "      <arg name=\"display_device\" type=\"s\"/>\n"
++                               "      <arg name=\"hostname\" type=\"s\"/>\n"
+                                "      <arg name=\"x11_authority_file\" type=\"s\"/>\n"
+                                "      <arg name=\"log_file\" type=\"s\"/>\n"
+                                "    </signal>\n"
+@@ -2052,6 +2054,8 @@ send_setup_for_program (GdmSessionDirect *session,
+         DBusMessage    *message;
+         DBusMessageIter iter;
+         const char     *display_name;
++        const char     *display_device;
++        const char     *display_hostname;
+         const char     *display_x11_authority_file;
+         GdmSessionConversation *conversation;
+ 
+@@ -2062,6 +2066,16 @@ send_setup_for_program (GdmSessionDirect *session,
+         } else {
+                 display_name = "";
+         }
++        if (session->priv->display_hostname != NULL) {
++                display_hostname = session->priv->display_hostname;
++        } else {
++                display_hostname = "";
++        }
++        if (session->priv->display_device != NULL) {
++                display_device = session->priv->display_device;
++        } else {
++                display_device = "";
++        }
+         if (session->priv->display_x11_authority_file != NULL) {
+                 display_x11_authority_file = session->priv->display_x11_authority_file;
+         } else {
+@@ -2077,6 +2091,8 @@ send_setup_for_program (GdmSessionDirect *session,
+         dbus_message_iter_init_append (message, &iter);
+         dbus_message_iter_append_basic (&iter, DBUS_TYPE_STRING, &service_name);
+         dbus_message_iter_append_basic (&iter, DBUS_TYPE_STRING, &display_name);
++        dbus_message_iter_append_basic (&iter, DBUS_TYPE_STRING, &display_device);
++        dbus_message_iter_append_basic (&iter, DBUS_TYPE_STRING, &display_hostname);
+         dbus_message_iter_append_basic (&iter, DBUS_TYPE_STRING, &display_x11_authority_file);
+         dbus_message_iter_append_basic (&iter, DBUS_TYPE_STRING, &log_file);
+ 
+diff --git a/daemon/gdm-session-worker.c b/daemon/gdm-session-worker.c
+index 2b46ca8..c402e6c 100644
+--- a/daemon/gdm-session-worker.c
++++ b/daemon/gdm-session-worker.c
+@@ -2597,6 +2597,8 @@ on_setup_for_program (GdmSessionWorker *worker,
+         DBusError   error;
+         char *service;
+         char *x11_display_name;
++        char *console;
++        char *hostname;
+         char *x11_authority_file;
+         char *log_file;
+         dbus_bool_t res;
+@@ -2611,6 +2613,8 @@ on_setup_for_program (GdmSessionWorker *worker,
+                                      &error,
+                                      DBUS_TYPE_STRING, &service,
+                                      DBUS_TYPE_STRING, &x11_display_name,
++                                     DBUS_TYPE_STRING, &console,
++                                     DBUS_TYPE_STRING, &hostname,
+                                      DBUS_TYPE_STRING, &x11_authority_file,
+                                      DBUS_TYPE_STRING, &log_file,
+                                      DBUS_TYPE_INVALID);
+@@ -2621,6 +2625,8 @@ on_setup_for_program (GdmSessionWorker *worker,
+                 worker->priv->service = g_strdup (service);
+                 worker->priv->username = g_strdup (GDM_USERNAME);
+                 worker->priv->x11_display_name = g_strdup (x11_display_name);
++                worker->priv->hostname = g_strdup (hostname);
++                worker->priv->display_device = g_strdup (console);
+                 worker->priv->x11_authority_file = g_strdup (x11_authority_file);
+                 worker->priv->log_file = g_strdup (log_file);
+                 worker->priv->is_program_session = TRUE;
+--
+cgit v0.9.0.2
