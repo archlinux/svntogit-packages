@@ -6,8 +6,8 @@
 
 pkgname=glibc
 pkgver=2.14
-pkgrel=5
-_glibcdate=20110617
+pkgrel=6
+_glibcdate=20110908
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -27,23 +27,24 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.1-static-shared-getpagesize.patch
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.13-futex.patch
+        glibc-2.13-dlclose-search-reset.patch
         glibc-2.14-libdl-crash.patch
-        #glibc-2.14-fix-resolver-crash-typo.patch
-        glibc-2.14-revert-4462fad3.patch
+        glibc-2.14-avoid-assertion-on-empty-dns-answer.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('e441d745609d93c907b72548ba646dad'
+md5sums=('069069eb9100cc7affd7ad884cb3c3e9'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
          'a3ac6f318d680347bb6e2805d42b73b2'
          'b042647ea7d6f22ad319e12e796bd13e'
          '7d0154b7e17ea218c9fa953599d24cc4'
+         '22d09c58718fb3d1d31c3a6c14ca6886'
          'cea62cc6b903d222c5f26e05a3c0e0e6'
-         '46e56492cccb1c9172ed3a235cf43c6c'
+         '13728807283f111e5d9d38cf38e0a461'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
          'b587ee3a70c9b3713099295609afde49'
@@ -83,15 +84,17 @@ build() {
   # http://sourceware.org/bugzilla/show_bug.cgi?id=12403
   patch -Np1 -i ${srcdir}/glibc-2.13-futex.patch
 
+  # https://bugzilla.redhat.com/show_bug.cgi?id=593675
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=2f811bf8 (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.13-dlclose-search-reset.patch
+
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9 (only fedora branch...)
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
   patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
 
-  # This fixes the main segfault but not the assert fail (FS#24615)
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=57912a71 
-  #patch -Np1 -i ${srcdir}/glibc-2.14-fix-resolver-crash-typo.patch
-  # resort to reverting the bad commit completely for the moment
-  patch -Np1 -i ${srcdir}/glibc-2.14-revert-4462fad3.patch
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=032c0ee3 (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.14-avoid-assertion-on-empty-dns-answer.patch
 
   # re-export RPC interface until libtirpc is ready as a replacement
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873 (only fedora branch...)
