@@ -3,38 +3,27 @@
 # Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
-pkgname=tracker
+pkgbase=tracker
+pkgname=(tracker libtracker-sparql)
 pkgver=0.12.0
-pkgrel=2
-pkgdesc="Powerful object database, tag/metadata database, search tool and indexer"
+_tver=${pkgver%.*}
+pkgrel=3
+pkgdesc="All-in-one indexer, search tool and metadata database"
 arch=('i686' 'x86_64')
 license=('GPL')
-depends=('libgee' 'libgnome-keyring' 'upower' 'libexif' 'exempi' 'poppler-glib'
-         'libgsf' 'icu' 'enca' 'xdg-utils' 'networkmanager')
-makedepends=('gobject-introspection' 'intltool' 'giflib' 'gstreamer0.10-base'
-             'totem-plparser' 'evolution' 'taglib' 'nautilus' 'gnome-panel'
-             'firefox' 'thunderbird' 'libvorbis' 'flac' 'vala')
-optdepends=('giflib: extractor for GIF data'
-            'gstreamer0.10-base: video extractor'
-            'totem-plparser: playlist support'
-            'evolution: Evolution email data miner'
-            'taglib: writeback for audio files'
-            'nautilus: nautilus-extension'
-            'libvorbis: Vorbis metadata extractor'
-            'flac: FLAC metadata extractor'
-            'firefox: Firefox data miner extension'
-            'thunderbird: Thunderbird data miner extension'
-            'gnome-panel: tracker-search-bar')
-provides=('libtracker')
+makedepends=('libgee' 'libgnome-keyring' 'upower' 'libexif' 'exempi'
+             'poppler-glib' 'libgsf' 'icu' 'enca' 'xdg-utils'
+             'networkmanager' 'gobject-introspection' 'intltool' 'giflib'
+             'gstreamer0.10-base' 'totem-plparser' 'evolution' 'taglib'
+             'nautilus' 'gnome-panel' 'firefox' 'thunderbird' 'libvorbis'
+             'flac' 'vala')
 url="http://www.gnome.org"
-groups=('gnome-extra')
 options=('!libtool' '!emptydirs')
-install=tracker.install
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz)
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/$_tver/$pkgbase-$pkgver.tar.xz)
 sha256sums=('6819b5fbbcaa14ac004759e4b25962f8ef36f2c4b37908a32fcf6d7a22e5b261')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgbase-$pkgver"
 
   _ffdir=/usr/lib/firefox-6.0.2/extensions
   _tbdir=/usr/lib/thunderbird-6.0.2/extensions
@@ -56,7 +45,50 @@ build() {
   make
 }
 
-package() {
-  cd "$srcdir/$pkgname-$pkgver"
+package_tracker() {
+  depends=("libtracker-sparql=$pkgver-$pkgrel" 'libgee' 'libgnome-keyring'
+           'upower' 'libexif' 'exempi' 'poppler-glib' 'libgsf' 'enca'
+           'xdg-utils' 'networkmanager')
+  optdepends=('giflib: extractor for GIF data'
+              'gstreamer0.10-base: video extractor'
+              'totem-plparser: playlist support'
+              'evolution: Evolution email data miner'
+              'firefox: Firefox data miner'
+              'thunderbird: Thunderbird data miner'
+              'nautilus: nautilus-extension'
+              'libvorbis: Vorbis metadata extractor'
+              'flac: FLAC metadata extractor'
+              'taglib: writeback for audio files'
+              'gnome-panel: tracker-search-bar')
+  groups=('gnome-extra')
+  install=tracker.install
+
+  cd "$srcdir/$pkgbase-$pkgver"
   make DESTDIR="$pkgdir" install
+
+### Split libtracker-sparql
+
+  mkdir -p "$srcdir"/sparql/usr/{include,lib}/tracker-$_tver
+  mkdir -p "$srcdir"/sparql/usr/lib/{girepository-1.0,pkgconfig}
+  mkdir -p "$srcdir"/sparql/usr/share/{gir-1.0,vala/vapi}
+
+  mv "$pkgdir"/usr/lib/libtracker-sparql-* "$srcdir/sparql/usr/lib"
+
+  mv "$pkgdir"/usr/lib/tracker-$_tver/*.so* \
+    "$srcdir/sparql/usr/lib/tracker-$_tver"
+
+  mv "$pkgdir"/usr/share/vala/vapi/tracker-sparql-* \
+    "$srcdir/sparql/usr/share/vala/vapi"
+
+  mv {"$pkgdir","$srcdir/sparql"}/usr/include/tracker-$_tver/libtracker-sparql
+  mv {"$pkgdir","$srcdir/sparql"}/usr/lib/girepository-1.0/Tracker-$_tver.typelib
+  mv {"$pkgdir","$srcdir/sparql"}/usr/lib/pkgconfig/tracker-sparql-$_tver.pc
+  mv {"$pkgdir","$srcdir/sparql"}/usr/share/gir-1.0/Tracker-$_tver.gir
+}
+
+package_libtracker-sparql() {
+  pkgdesc="$pkgdesc (SPARQL library)"
+  depends=('sqlite3' 'icu' 'glib2' 'libffi' 'pcre' 'util-linux')
+
+  mv "$srcdir"/sparql/* "$pkgdir"
 }
