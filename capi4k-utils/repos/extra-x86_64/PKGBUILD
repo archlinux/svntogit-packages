@@ -3,21 +3,21 @@
 
 pkgname=capi4k-utils
 pkgver=050718
-pkgrel=7
+pkgrel=8
 pkgdesc="capi utils for isdn cards"
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 license=('GPL2')
 url="ftp://ftp.in-berlin.de/pub/capi4linux/"
 makedepends=('ppp')
 depends=('glibc' 'bash')
-backup=(etc/capi.conf)
-source=(ftp://ftp.in-berlin.de/pub/capi4linux/capi4k-utils-2005-07-18.tar.gz 
-        ppp-2.4.4.patch 
-        config 
-        capi.conf 
-        capiinit.rc
-        capi-compile.patch)
-options=(!libtool)
+backup=('etc/capi.conf')
+source=('ftp://ftp.in-berlin.de/pub/capi4linux/capi4k-utils-2005-07-18.tar.gz'
+        'ppp-2.4.4.patch'
+        'config'
+        'capi.conf'
+        'capiinit.rc'
+        'capi-compile.patch')
+options=('!libtool')
 md5sums=('c745759b6b3d64e19763727176648cdf'
          'c5416b8b1b76a82c4bcaad76140369e1'
          '146aa9e06588511c447d7e81dafec86a'
@@ -27,24 +27,28 @@ md5sums=('c745759b6b3d64e19763727176648cdf'
 
 build() {
   cd $srcdir/$pkgname
-  patch -Np1 -i ../ppp-2.4.4.patch || return 1
+  patch -Np1 -i ../ppp-2.4.4.patch
   # fix compiling with gcc 4.2
-  patch -Np1 -i ../capi-compile.patch || return 1
+  patch -Np1 -i ../capi-compile.patch
   cp ../config .config
   # fix pppd plugin
-  sed -i -e 's/2.3.11 2.4.0 2.4.1 2.4.1b1 2.4.1b2 2.4.2b3 2.4.2 2.4.3/2.4.4/g' $startdir/src/$pkgname/pppdcapiplugin/Makefile
+  sed -i -e 's/2.3.11 2.4.0 2.4.1 2.4.1b1 2.4.1b2 2.4.2b3 2.4.2 2.4.3/2.4.4/g' $srcdir/$pkgname/pppdcapiplugin/Makefile
   # patch all Makefile.* and Rules.make to use our CFLAGS
   sed -i -e "s:^\(CFLAGS.*\)-O2:\1${CFLAGS}:g" */Makefile.* */Rules.make
   # Arch64 fix from Gentoo
   # patch capi20/Makefile.* to use -fPIC for shared library
-  [ "$CARCH" = "x86_64" ] &&  (sed -i -e "s:^\(CFLAGS.*\):\1 -fPIC:g" capi20/Makefile.* || return 1)
+  [ "$CARCH" = "x86_64" ] &&  (sed -i -e "s:^\(CFLAGS.*\):\1 -fPIC:g" capi20/Makefile.*)
   cd capi20
   aclocal
   libtoolize --copy --force
   cd $srcdir/$pkgname
-  make subconfig || return 1
-  make || return 1
-  make DESTDIR=$pkgdir install || return 1
+  make subconfig
+  make
+}
+
+package() {
+  cd $srcdir/$pkgname
+  make DESTDIR=$pkgdir install
   install -m755 -D $srcdir/capiinit.rc $pkgdir/etc/rc.d/capiinit
   install -m644 $srcdir/capi.conf $pkgdir/etc
   cd $pkgdir/usr/lib
