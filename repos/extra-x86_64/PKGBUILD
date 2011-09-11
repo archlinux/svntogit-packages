@@ -8,10 +8,8 @@ pkgname=('php'
          'php-fpm'
          'php-embed'
          'php-pear'
-         'php-curl'
          'php-enchant'
          'php-gd'
-         'php-gmp'
          'php-intl'
          'php-ldap'
          'php-mcrypt'
@@ -25,13 +23,13 @@ pkgname=('php'
          'php-xsl')
 pkgver=5.3.8
 _suhosinver=5.3.7-0.9.10
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
 makedepends=('apache' 'imap' 'postgresql-libs' 'libldap' 'postfix'
              'sqlite3' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file' 'freetds'
-             'libmcrypt' 'tidyhtml' 'aspell' 'libtool' 'libpng' 'libjpeg' 'icu'
+             'libmcrypt' 'tidyhtml' 'aspell' 'libltdl' 'libpng' 'libjpeg' 'icu'
              'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'freetype2')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
         "http://download.suhosin.org/suhosin-patch-${_suhosinver}.patch.gz"
@@ -39,7 +37,7 @@ source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
         'logrotate.d.php-fpm')
 md5sums=('704cd414a0565d905e1074ffdc1fadfb'
          '08582e502fed8221c6577042ca45ddb8'
-         '39eaa70d276fc3d45d6bcf6cd5ae1106'
+         '65606c606df97a0760dfe5aaf9893afc'
          'dec2cbaad64e3abf4f0ec70e1de4e8e9'
          'b01be5f816988fcee7e78225836e5e27'
          '09005dabd90c48ddd392b3dbf05f8a82'
@@ -212,10 +210,10 @@ build() {
 
 package_php() {
 	pkgdesc='An HTML-embedded scripting language'
-	depends=('pcre' 'libxml2' 'bzip2' 'openssl')
-	replaces=('php-fileinfo')
-	provides=('php-fileinfo')
-	conflicts=('php-fileinfo')
+	depends=('pcre' 'libxml2' 'bzip2' 'curl')
+	replaces=('php-fileinfo' 'php-gmp' 'php-curl')
+	provides=('php-fileinfo' 'php-gmp' 'php-curl')
+	conflicts=('php-fileinfo' 'php-gmp' 'php-curl')
 	backup=('etc/php/php.ini')
 
 	cd ${srcdir}/build-php
@@ -228,19 +226,21 @@ package_php() {
 	# remove static modules
 	rm -f ${pkgdir}/usr/lib/php/modules/*.a
 	# remove modules provided by sub packages
-	rm -f ${pkgdir}/usr/lib/php/modules/{curl,enchant,gd,gmp,intl,ldap,mcrypt,mssql,odbc,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
+	rm -f ${pkgdir}/usr/lib/php/modules/{enchant,gd,intl,ldap,mcrypt,mssql,odbc,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
+	# remove empty directory
+	rmdir ${pkgdir}/usr/include/php/include
 }
 
 package_php-cgi() {
 	pkgdesc='CGI and FCGI SAPI for PHP'
-	depends=('php' 'pcre' 'libxml2')
+	depends=('php')
 
 	install -D -m755 ${srcdir}/build-cgi/sapi/cgi/php-cgi ${pkgdir}/usr/bin/php-cgi
 }
 
 package_php-apache() {
 	pkgdesc='Apache SAPI for PHP'
-	depends=('php' 'apache' 'pcre' 'libxml2')
+	depends=('php' 'apache')
 	backup=('etc/httpd/conf/extra/php5_module.conf')
 
 	install -D -m755 ${srcdir}/build-apache/libs/libphp5.so ${pkgdir}/usr/lib/httpd/modules/libphp5.so
@@ -262,7 +262,7 @@ package_php-fpm() {
 
 package_php-embed() {
 	pkgdesc='Embed SAPI for PHP'
-	depends=('php' 'pcre' 'libxml2')
+	depends=('php')
 
 	install -D -m755 ${srcdir}/build-embed/libs/libphp5.so ${pkgdir}/usr/lib/libphp5.so
 	install -D -m644 ${srcdir}/${pkgbase}-${pkgver}/sapi/embed/php_embed.h ${pkgdir}/usr/include/php/sapi/embed/php_embed.h
@@ -270,7 +270,7 @@ package_php-embed() {
 
 package_php-pear() {
 	pkgdesc='PHP Extension and Application Repository'
-	depends=('php' 'bash')
+	depends=('php')
 	backup=('etc/php/pear.conf')
 
 	cd ${srcdir}/build-pear
@@ -279,12 +279,6 @@ package_php-pear() {
 	while read i; do
 		[ ! -e "$i" ] || rm -rf "$i"
 	done < <(find ${pkgdir} -name '.*')
-}
-
-package_php-curl() {
-	depends=('php' 'curl')
-	pkgdesc='curl module for PHP'
-	install -D -m755 ${srcdir}/build-php/modules/curl.so ${pkgdir}/usr/lib/php/modules/curl.so
 }
 
 package_php-enchant() {
@@ -297,12 +291,6 @@ package_php-gd() {
 	depends=('php' 'libpng' 'libjpeg' 'freetype2')
 	pkgdesc='gd module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/gd.so ${pkgdir}/usr/lib/php/modules/gd.so
-}
-
-package_php-gmp() {
-	depends=('php' 'gmp')
-	pkgdesc='gmp module for PHP'
-	install -D -m755 ${srcdir}/build-php/modules/gmp.so ${pkgdir}/usr/lib/php/modules/gmp.so
 }
 
 package_php-intl() {
@@ -318,7 +306,7 @@ package_php-ldap() {
 }
 
 package_php-mcrypt() {
-	depends=('php' 'libmcrypt' 'libtool')
+	depends=('php' 'libmcrypt' 'libltdl')
 	pkgdesc='mcrypt module for PHP'
 	install -D -m755 ${srcdir}/build-php/modules/mcrypt.so ${pkgdir}/usr/lib/php/modules/mcrypt.so
 }
