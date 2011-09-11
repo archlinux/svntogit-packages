@@ -2,35 +2,52 @@
 
 . /etc/rc.conf
 . /etc/rc.d/functions
+. /etc/conf.d/dnsmasq
 
-PID=`pidof -o %PPID /usr/sbin/dnsmasq`
-case "$1" in
+pidfile=/run/dnsmasq.pid
+if [[ -r $pidfile ]]; then
+  read -r PID < "$pidfile"
+  if [[ ! -d /proc/$PID ]]; then
+    # stale pidfile
+    unset PID
+    rm -f "$pidfile"
+  fi
+fi
+
+case $1 in
   start)
     stat_busy "Starting DNS/DHCP daemon"
-    [ -z "$PID" ] && /usr/sbin/dnsmasq
-    if [ $? -gt 0 ] ; then
-      stat_fail
+    if [[ -z $PID ]] && /usr/sbin/dnsmasq --test &&
+        /usr/sbin/dnsmasq "--user=${DNSMASQ_USER:-nobody}" \
+                          "--pid-file=$pidfile" \
+                          "${DNSMASQ_OPTS[@]}"; then
+      add_daemon dnsmasq
+      stat_done
     else
-      add_daemon dnsmasq                     # create the 'state' dir
-      stat_done 
+      stat_fail
     fi
     ;;
   stop)
     stat_busy "Stopping DNS/DHCP daemon"
-    [ "$PID" ] && kill $PID &> /dev/null
-    if [ $? -gt 0 ]; then
-      stat_fail
-    else
-      rm_daemon dnsmasq                      # remove the 'state' dir
+    if [[ $PID ]] && kill "$PID" &> /dev/null; then
+      # dnsmasq doesn't clean up after itself
+      rm -f "$pidfile"
+      rm_daemon dnsmasq
       stat_done
+    else
+      stat_fail
     fi
     ;;
   restart)
     $0 stop
-    sleep 5
+    sleep 1
     $0 start
     ;;
+  checkconfig)
+    # diagnostics will be printed, with zero/non-zero exit
+    /usr/sbin/dnsmasq --test
+    ;;
   *)
-    echo "usage: $0 {start|stop|restart}"
+    echo "usage: $0 <start|stop|restart|checkconfig>"
 esac
-exit 0
+
