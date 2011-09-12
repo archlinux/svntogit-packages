@@ -1,0 +1,64 @@
+commit c8e45b10c32679bf070af5b7ad9a22b91eb9a02c
+Author: Sergio Martins <iamsergio@gmail.com>
+Date:   Mon Sep 12 13:48:33 2011 +0100
+
+    Fix crash on agent_launcher exit.
+    
+    Don't unload plugins here. They will be unloaded on application exit,
+    so it's redundant.
+    
+    Seems they are being unloaded too early, before QThreadStorage
+    cleanup occurs:
+    
+    ==18802== Invalid read of size 8
+    ==18802==    at 0x53178AE: QThreadStorage<QFontCache*>::deleteData(void*) (in
+    /data/installation/qt/qt-4.7/lib/libQtGui.so.4.7.1)
+    ==18802==    by 0x5E8F8CF: QThreadStorageData::set(void*)
+    (qthreadstorage.cpp:165)
+    ==18802==    by 0x5317940: void
+    qThreadStorage_setLocalData<QFontCache>(QThreadStorageData&, QFontCache**)
+    (qthreadstorage.h:92)
+    ==18802==    by 0x53165BA:
+    QThreadStorage<QFontCache*>::setLocalData(QFontCache*) (qthreadstorage.h:148)
+    ==18802==    by 0x531407A: QFontCache::cleanup() (qfont.cpp:2632)
+    ==18802==    by 0x5406536: QFont::cleanup() (qfont_x11.cpp:182)
+    ==18802==    by 0x5104E35: qt_cleanup() (qapplication_x11.cpp:2647)
+    ==18802==    by 0x50603B2: QApplication::~QApplication()
+    (qapplication.cpp:1172)
+    ==18802==    by 0x41B1F6: main (agentlauncher.cpp:28)
+    ==18802==  Address 0x11a090b0 is not stack'd, malloc'd or (recently) free'd
+    
+    CCBUG: 261788
+
+diff --git a/agentserver/agentpluginloader.cpp b/agentserver/agentpluginloader.cpp
+index 2d62d3b..456a124 100644
+--- a/agentserver/agentpluginloader.cpp
++++ b/agentserver/agentpluginloader.cpp
+@@ -25,13 +25,8 @@ using namespace Akonadi;
+ 
+ AgentPluginLoader::~AgentPluginLoader()
+ {
+-  QHash<QString, QPluginLoader*>::iterator it = m_pluginLoaders.begin();
+-  while ( it != m_pluginLoaders.end() ) {
+-    it.value()->unload();
+-    ++it;
+-  }
+-
+   qDeleteAll( m_pluginLoaders );
++  m_pluginLoaders.clear();
+ }
+ 
+ QPluginLoader *AgentPluginLoader::load( const QString &pluginName )
+diff --git a/agentserver/agentpluginloader.h b/agentserver/agentpluginloader.h
+index 77f5de9..c8c815f 100644
+--- a/agentserver/agentpluginloader.h
++++ b/agentserver/agentpluginloader.h
+@@ -26,7 +26,7 @@ class AgentPluginLoader
+ {
+   public:
+     /**
+-      Unloads and deletes all instantiated QPluginLoaders.
++      Deletes all instantiated QPluginLoaders.
+      */
+     ~AgentPluginLoader();
+ 
