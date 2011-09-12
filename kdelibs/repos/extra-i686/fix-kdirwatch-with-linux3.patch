@@ -1,0 +1,56 @@
+From: Alex Fiestas <afiestas@kde.org>
+Date: Fri, 09 Sep 2011 16:54:23 +0000
+Subject: Fix KDirWatch when using Kernel 3.0
+X-Git-Url: http://quickgit.kde.org/?p=kdelibs.git&amp;a=commitdiff&amp;h=7df5a79fb9f09e4a4a80cd541cc478b5fa6df00f
+---
+Fix KDirWatch when using Kernel 3.0
+
+To know INotify is available in the kernel we are checking for a
+kernel newer than 2.6.14, that's all allright but the problem is
+that the Kernel version format has changed  and now we can't be sure
+that it is going to be formed by 3 numbers.
+Basically we where checking for:
+
+%d.%d.%d and now it can be %d.%d as it is with 3.0
+
+This patch what does is check if the kernel is 2.6, if it is then
+it proceed with the version checking.
+
+CCMAIL: dfaure@kde.org
+---
+
+
+--- a/kdecore/io/kdirwatch.cpp
++++ b/kdecore/io/kdirwatch.cpp
+@@ -210,16 +210,24 @@ KDirWatchPrivate::KDirWatchPrivate()
+   {
+     struct utsname uts;
+     int major, minor, patch;
+-    if (uname(&uts) < 0)
+-      supports_inotify = false; // *shrug*
+-    else if (sscanf(uts.release, "%d.%d.%d", &major, &minor, &patch) != 3)
+-      supports_inotify = false; // *shrug*
+-    else if( major * 1000000 + minor * 1000 + patch < 2006014 ) { // <2.6.14
+-      kDebug(7001) << "Can't use INotify, Linux kernel too old";
++    if (uname(&uts) < 0) {
+       supports_inotify = false;
++      kDebug(7001) << "Unable to get uname";
++    } else if (sscanf(uts.release, "%d.%d", &major, &minor) != 2) {
++      supports_inotify = false;
++      kDebug(7001) << "The version is malformed: " << uts.release;
++    } else if(major == 2 && minor == 6) { // If it is 2.6 check further...
++      if (sscanf(uts.release, "%d.%d.%d", &major, &minor, &patch) != 3) {
++        supports_inotify = false;
++        kDebug() << "Detected 2.6 kernel but can't know more: " << uts.release;
++      } else if (major * 1000000 + minor * 1000 + patch < 2006014 ){
++        supports_inotify = false;
++        kDebug(7001) << "Can't use INotify, Linux kernel too old " << uts.release;
++      }
+     }
+   }
+ 
++  kDebug() << "INotify available: " << supports_inotify;
+   if ( supports_inotify ) {
+     availableMethods << "INotify";
+     fcntl(m_inotify_fd, F_SETFD, FD_CLOEXEC);
+
