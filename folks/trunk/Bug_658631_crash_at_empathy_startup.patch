@@ -1,0 +1,41 @@
+From 1f85f89051e63b05e271b418687c242a83e2f296 Mon Sep 17 00:00:00 2001
+From: Philip Withnall <philip@tecnocode.co.uk>
+Date: Mon, 12 Sep 2011 22:09:10 +0000
+Subject: Bug 658631 — crash at empathy startup
+
+In the case that a persona is removed and the individual containing that
+persona is replaced by a different non-null individual which doesn't contain
+that persona (because it's been removed), we need to set the persona's
+individual pointer to null rather than the replacement individual.
+
+This stops us tripping the assertion in the setter for Persona.individual.
+
+Closes: bgo#658631
+---
+diff --git a/folks/individual.vala b/folks/individual.vala
+index 3b6c12b..59548ee 100644
+--- a/folks/individual.vala
++++ b/folks/individual.vala
+@@ -1510,7 +1510,19 @@ public class Folks.Individual : Object,
+        * aggregator's rewritten, it would be nice to fix this. */
+       if (persona.individual == this)
+         {
+-          persona.individual = replacement_individual;
++          /* It may be the case that the persona's being removed from the
++           * individual (i.e. the replacement individual is non-null, but
++           * doesn't contain this persona). In this case, we need to set the
++           * persona's individual to null. */
++          if (replacement_individual != null &&
++              persona in replacement_individual.personas)
++            {
++              persona.individual = replacement_individual;
++            }
++          else
++            {
++              persona.individual = null;
++            }
+         }
+     }
+ 
+--
+cgit v0.9.0.2
