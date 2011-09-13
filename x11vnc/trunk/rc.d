@@ -8,8 +8,8 @@ PID=$(pidof -o %PPID /usr/bin/x11vnc)
 case "$1" in
   start)
     stat_busy "Starting x11vnc"
-    [ -z "$PID" ] && /usr/bin/x11vnc $X11VNC_ARGS &> /dev/null &
-    if [ $? -gt 0 ]; then
+    [[ -z "$PID" ]] && /usr/bin/x11vnc $X11VNC_ARGS &> /dev/null &
+    if [[ $? -gt 0 ]]; then
       stat_fail
     else
       add_daemon x11vnc
@@ -18,8 +18,8 @@ case "$1" in
     ;;
   stop)
     stat_busy "Stopping x11vnc"
-    [ ! -z "$PID" ]  && kill $PID &> /dev/null
-    if [ $? -gt 0 ]; then
+    [[ ! -z "$PID" ]]  && kill $PID &> /dev/null
+    if [[ $? -gt 0 ]]; then
       stat_fail
     else
       rm_daemon x11vnc
