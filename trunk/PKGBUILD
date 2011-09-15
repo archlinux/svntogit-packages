@@ -3,50 +3,36 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=9.0.4
-pkgrel=4
+pkgver=9.1.0
+_majorver=${pkgver%.*}
+pkgrel=1
 arch=('i686' 'x86_64')
-url="http://www.postgresql.org"
+url="http://www.postgresql.org/"
 license=('custom:PostgreSQL')
-makedepends=('libxml2' 'python2' 'perl')
-source=(ftp://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2 \
-        postgresql postgresql.confd build.patch postgresql.pam postgresql.logrotate
-        perl-5.14-fix.patch)
-install=postgresql.install
+makedepends=('libxml2' 'python2' 'perl' 'openssl>=1.0.0')
+source=(ftp://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
+        postgresql postgresql.confd postgresql.pam postgresql.logrotate)
 
 build() {
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/postgresql-${pkgver}"
 
-  # patch to remove regress/test make target (won't build with it present)
-  patch -Np1 -i ../build.patch
-  # fix for perl 5.14
-  patch -Np1 -i ../perl-5.14-fix.patch
-
-  # configure
-  ./configure --prefix=/usr --mandir=/usr/share/man --with-libxml \
-  --with-openssl --with-perl \
+  ./configure --prefix=/usr --mandir=/usr/share/man \
+  --datadir=/usr/share/postgresql \
+  --with-libxml --with-openssl --with-perl \
   --with-python PYTHON=/usr/bin/python2 --with-pam \
   --with-system-tzdata=/usr/share/zoneinfo --enable-nls \
-  --datadir=/usr/share/postgresql --enable-thread-safety
+  --enable-thread-safety
 
-  sed -i -e '/interfaces/d' src/Makefile
-
-  # build
   make world
-
-  # build libs
-  for dir in src/interfaces src/bin/pg_config; do
-    pushd ${dir}
-    make
-    popd
-  done
 }
 
 package_postgresql-libs() {
   pkgdesc="Libraries for use with PostgreSQL"
   depends=('openssl>=1.0.0')
+  provides=('postgresql-client')
+  conflicts=('postgresql-client')
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/postgresql-${pkgver}"
 
   # install license
   install -D -m644 COPYRIGHT "${pkgdir}/usr/share/licenses/postgresql-libs/LICENSE"
@@ -82,7 +68,7 @@ package_postgresql-docs() {
   pkgdesc="HTML documentation for PostgreSQL"
   options=(docs)
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/postgresql-${pkgver}"
 
   # install license
   install -D -m644 COPYRIGHT "${pkgdir}/usr/share/licenses/postgresql-docs/LICENSE"
@@ -94,13 +80,13 @@ package_postgresql-docs() {
 package_postgresql() {
   pkgdesc="A sophisticated object-relational DBMS"
   backup=('etc/conf.d/postgresql' 'etc/pam.d/postgresql' 'etc/logrotate.d/postgresql')
-  depends=("postgresql-libs>=${pkgver}" 'libxml2' 'readline>=6.0')
+  depends=("postgresql-libs>=${pkgver}" 'libxml2' 'readline>=6.0' 'openssl>=1.0.0')
   optdepends=('python2: for PL/Python support'
-              'perl: for PL/Perl support')
-  provides=('postgresql-client')
-  conflicts=('postgresql-client')
+              'perl: for PL/Perl support'
+              'postgresql-old-upgrade: upgrade from previous major version using pg_upgrade')
+  install=postgresql.install
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/postgresql-${pkgver}"
 
   # install
   make DESTDIR="${pkgdir}" install
@@ -132,10 +118,8 @@ package_postgresql() {
     "${pkgdir}/etc/logrotate.d/postgresql"
 }
 
-md5sums=('80390514d568a7af5ab61db1cda27e29'
-         'eacf91f987d230f2dc2d040618ea1817'
-         'd63a05943cf0a2726aa2070f3033c569'
-         '4d74f4227dc5e12bf95b3490758d86c9'
+md5sums=('0497b9da1d7c380c340a9a87ba5500fe'
+         '2bc5ca8d850d48fb3bb8a6d69832b6f9'
+         'bcde874133a2e07d160fb8f0b48bb842'
          '96f82c38f3f540b53f3e5144900acf17'
-         'd28e443f9f65a5712c52018b84e27137'
-         '6606e4279d91fc617b5c4dae0d76c603')
+         'd28e443f9f65a5712c52018b84e27137')
