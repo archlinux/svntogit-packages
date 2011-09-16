@@ -1,0 +1,59 @@
+2 changesets to fix FS#26020
+
+# HG changeset patch
+# User Ryan C. Gordon <icculus@icculus.org>
+# Date 1315711279 14400
+# Node ID 739ad55fe50d77a2ce84d6e3d59e97c550719d0d
+# Parent  32558685a9042e79cb773c37c09349b0a5ff5d72
+Disabled MMX blitters on GCC. They break the build on tons of machines now.
+
+diff -r 32558685a904 -r 739ad55fe50d src/video/SDL_RLEaccel.c
+--- a/src/video/SDL_RLEaccel.c  Sat Sep 10 19:37:20 2011 -0400
++++ b/src/video/SDL_RLEaccel.c  Sat Sep 10 23:21:19 2011 -0400
+@@ -91,7 +91,8 @@
+ #include "SDL_blit.h"
+ #include "SDL_RLEaccel_c.h"
+ 
+-#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__)) && SDL_ASSEMBLY_ROUTINES
++/* Force MMX to 0; this blows up on almost every major compiler now. --ryan. */
++#if 0 && defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__)) && SDL_ASSEMBLY_ROUTINES
+ #define MMX_ASMBLIT
+ #endif
+ 
+diff -r 32558685a904 -r 739ad55fe50d src/video/SDL_blit_A.c
+--- a/src/video/SDL_blit_A.c    Sat Sep 10 19:37:20 2011 -0400
++++ b/src/video/SDL_blit_A.c    Sat Sep 10 23:21:19 2011 -0400
+@@ -32,7 +32,8 @@
+ 
+ #if SDL_ASSEMBLY_ROUTINES
+ #  if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+-#    define MMX_ASMBLIT 1
++     /* forced MMX to 0...it breaks on most compilers now.  --ryan. */
++#    define MMX_ASMBLIT 0
+ #    define GCC_ASMBLIT 1
+ #  elif defined(_MSC_VER) && defined(_M_IX86)
+ #    if (_MSC_VER <= 1200)  
+
+# HG changeset patch
+# User Ryan C. Gordon <icculus@icculus.org>
+# Date 1315939378 14400
+# Node ID 867c4c3604b79a810cf8ff16590001d9ef9c2824
+# Parent  614c2583703af89b3197f4fef73174ddc903eccf
+Turned off the rest of the MMX code in SDL_blit_A.c.
+
+It also seems to blow up everywhere.
+
+Fixes Bugzilla #1278.
+
+diff -r 614c2583703a -r 867c4c3604b7 src/video/SDL_blit_A.c
+--- a/src/video/SDL_blit_A.c    Mon Sep 12 00:29:18 2011 -0400
++++ b/src/video/SDL_blit_A.c    Tue Sep 13 14:42:58 2011 -0400
+@@ -34,7 +34,7 @@
+ #  if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+      /* forced MMX to 0...it breaks on most compilers now.  --ryan. */
+ #    define MMX_ASMBLIT 0
+-#    define GCC_ASMBLIT 1
++#    define GCC_ASMBLIT 0
+ #  elif defined(_MSC_VER) && defined(_M_IX86)
+ #    if (_MSC_VER <= 1200)  
+ #      include <malloc.h>   
