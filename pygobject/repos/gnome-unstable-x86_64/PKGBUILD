@@ -2,28 +2,25 @@
 # Maintainer: Ionut Biru <ibiru@archlinux.org>
 
 pkgbase=pygobject
-pkgname=(python-gobject python2-gobject)
-pkgver=2.90.3
-pkgrel=3
+pkgname=(python-gobject python2-gobject pygobject-devel)
+pkgver=2.90.4
+pkgrel=1
 arch=('i686' 'x86_64')
 url="https://live.gnome.org/PyGObject"
 license=('LGPL')
-depends=('glib2' 'gobject-introspection')
+depends=('glib2' 'gobject-introspection' )
 makedepends=(python python2 python-cairo python2-cairo)
-source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/${pkgver%.*}/${pkgbase}-${pkgver}.tar.xz
-        documentation-location.patch)
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/${pkgver%.*}/${pkgbase}-${pkgver}.tar.xz)
 options=('!libtool')
-sha256sums=('8e14f8db0780ad26a8ce6583da30313463ca40519b35f5cda8780f02bd6ddca4'
-            '6174cdeea99e134168ef8235251d9c3802200ee75dc63f86144de75f864e1344')
+sha256sums=('8407b6997181bbca4783798e21d7d63ca41708a6c05a3b08c953d64e7b97b2a1')
 
 build() {
   cd "${srcdir}"
   cp -a "${pkgbase}-${pkgver}" python2-build
+  mkdir devel
 
   (
     cd python2-build
-    patch -Np1 -i ${srcdir}/documentation-location.patch
-    autoreconf -fi
     export PYTHON=/usr/bin/python2
     ./configure --prefix=/usr
     make
@@ -31,8 +28,6 @@ build() {
 
   (
     cd "${pkgbase}-${pkgver}"
-    patch -Np1 -i ${srcdir}/documentation-location.patch
-    autoreconf -fi
     ./configure --prefix=/usr
     make
   )
@@ -40,19 +35,26 @@ build() {
 
 package_python-gobject() {
   pkgdesc="Python 3 bindings for GObject"
-  depends+=('python' 'python-cairo')
+  depends+=('python' 'python-cairo' "pygobject-devel=${pkgver}")
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
   make DESTDIR="${pkgdir}" install
-  rm -rf "${pkgdir}/usr/lib/python3.2/site-packages/gtk-2.0/"
+  rm -r "${pkgdir}"/usr/{include,lib/pkgconfig}
 }
 
 package_python2-gobject() {
   pkgdesc="Python 2 bindings for GObject"
-  depends+=('python2' 'python2-cairo')
-  conflicts=('python-gobject')
+  depends+=('python2' 'python2-cairo' "pygobject-devel=${pkgver}")
 
   cd "${srcdir}/python2-build"
   make DESTDIR="${pkgdir}" install
-  rm -rf "${pkgdir}/usr/lib/python2.7/site-packages/gtk-2.0/"
+  mv "${pkgdir}"/usr/{include,lib/pkgconfig} "${srcdir}/devel"
+}
+
+package_pygobject-devel() {
+  pkgdesc="Development files for the pygobject bindings"
+  cd "${srcdir}/devel"
+  mkdir -p "${pkgdir}"/usr/{include,lib}
+  mv include "${pkgdir}/usr/"
+  mv pkgconfig "${pkgdir}/usr/lib/"
 }
