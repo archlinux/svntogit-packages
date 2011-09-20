@@ -2,7 +2,8 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.6.1
+pkgver=1.7.6.3
+_manver=1.7.6.1
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -22,8 +23,9 @@ optdepends=('tk: gitk and git gui'
 replaces=('git-core')
 provides=('git-core')
 backup=('etc/conf.d/git-daemon.conf')
-source=("http://kernel.org/pub/software/scm/git/${pkgname}-${pkgver}.tar.bz2" \
-        "http://kernel.org/pub/software/scm/git/git-manpages-${pkgver}.tar.bz2"
+#source=("http://kernel.org/pub/software/scm/git/${pkgname}-${pkgver}.tar.bz2"
+source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
+        "http://kernel.org/pub/software/scm/git/git-manpages-$_manver.tar.bz2"
         git-daemon
         git-daemon.conf)
 changelog=ChangeLog
@@ -78,11 +80,11 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-md5sums=('d1e00772cc9dc6c571999feb9e8771ab'
+md5sums=('c8f9390f970079495085d343671d6646'
          'cae559424a62507cb2c15252d85a158e'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
          '2e42bf97779a1c6411d89043334c9e78')
-sha256sums=('856d4197ef7172938b0b44e55174c7d7ddfaf5e844e04960322c49eda9f3a246'
+sha256sums=('b8c7642f7e2b6638c442c0d3f907d197023b8c9a35cb03681643ed7ec619eff8'
             'faece1418e72d90ed9ee65e59fe89489e504db9b76e8325a2505e8fb61598a44'
             '2e0a50bdaf8f387a499895e1c204bff78244eaa72b78187c8a84ef40c0b82598'
             'e8bfe29d8393d2b87517c4dd56ea834b213aa00bf3d7fcde4ead3457cadbbc68')
