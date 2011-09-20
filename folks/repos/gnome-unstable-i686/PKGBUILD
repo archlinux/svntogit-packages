@@ -1,21 +1,22 @@
 # $Id$
 # Maintainer: Ionut Biru <ibiru@archlinux.org>
 
-pkgname=folks
+pkgbase=folks
+pkgname=(folks folks-tracker)
 pkgver=0.6.3
-pkgrel=1
-pkgdesc="Library to aggregates people into metacontacts "
+pkgrel=2
+pkgdesc="Library to aggregates people into metacontacts"
 arch=(i686 x86_64)
 url="http://telepathy.freedesktop.org/wiki/Folks"
 license=('LGPL2.1')
 depends=('telepathy-glib' 'libgee' 'libxml2' 'evolution-data-server' 'libsocialweb')
 makedepends=('gobject-introspection' 'vala' 'intltool' 'libtracker-sparql')
-options=('!libtool')
-source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/0.6/${pkgname}-${pkgver}.tar.xz)
+options=('!libtool' '!emptydirs')
+source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgbase}/0.6/${pkgbase}-${pkgver}.tar.xz)
 sha256sums=('e21810966f300b31e8cd51cca9851606213345eb933584997b49326c43b46e1b')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgbase-$pkgver"
 
   # Change tracker version
   grep -lr sparql-0.10 . | xargs sed -i 's/sparql-0.10/sparql-0.12/g'
@@ -24,9 +25,25 @@ build() {
   make
 }
 
-package() {
-  cd "$srcdir/$pkgname-$pkgver"
+package_folks() {
+  optdepends=('folks-tracker: Tracker backend')
+
+  cd "$srcdir/$pkgbase-$pkgver"
   make DESTDIR="$pkgdir" install
+
+### Split folks-tracker
+  cd "$pkgdir"
+  find . -name '*tracker*' \! -type d | while IFS= read -r _file; do
+    mkdir -p "$srcdir/folks-tracker/${_file%/*}"
+    mv "$_file" "$srcdir/folks-tracker/$_file"
+  done
+}
+
+package_folks-tracker() {
+  pkgdesc="Tracker backend for folks"
+  depends=('folks' 'tracker')
+
+  mv "$srcdir"/folks-tracker/* "$pkgdir"
 }
 
 # vim:set ts=2 sw=2 et:
