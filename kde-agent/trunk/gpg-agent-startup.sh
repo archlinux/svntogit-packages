@@ -8,7 +8,7 @@ if [ -x "${GPG_AGENT}" ] ; then
   GPG_AGENT_INFO_FILE=${HOME}/.gpg-agent-info
   if [ -f "${GPG_AGENT_INFO_FILE}" ]; then
     GPG_AGENT_PID=`cat ${GPG_AGENT_INFO_FILE} | cut -f2 -d:`
-    GPG_PID_NAME=`ps -p ${GPG_AGENT_PID} -o comm=`
+    GPG_PID_NAME=`cat /proc/${GPG_AGENT_PID}/comm`
     if [ ! "x${GPG_PID_NAME}" = "xgpg-agent" ]; then
       rm -f "${GPG_AGENT_INFO_FILE}" 2>&1 >/dev/null
     else
@@ -21,8 +21,8 @@ if [ -x "${GPG_AGENT}" ] ; then
   fi
 
   if [ -f "${GPG_AGENT_INFO_FILE}" ]; then
-    eval "$(cat \"${GPG_AGENT_INFO_FILE}\")"
-    eval "$(cut -d= -f 1 < \"${GPG_AGENT_INFO_FILE}\" | xargs echo export)"
+    eval "$(cat "${GPG_AGENT_INFO_FILE}")"
+    eval "$(cut -d= -f 1 "${GPG_AGENT_INFO_FILE}" | xargs echo export)"
     export GPG_TTY=$(tty)
   else
     eval "$(${GPG_AGENT} -s --daemon --pinentry-program /usr/bin/pinentry-qt4 --write-env-file)"
