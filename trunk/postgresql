@@ -7,70 +7,66 @@
 # Default PGROOT if it wasn't defined in the conf.d file
 PGROOT=${PGROOT:-/var/lib/postgres}
 PGLOG=${PGLOG:-/var/log/postgresql.log}
-PG_CTL="/usr/bin/pg_ctl -D \"$PGROOT/data\" -l \"$PGLOG\" -s -w"
-if [ -n "$PGOPTS" ]; then
-    PG_CTL="$PG_CTL -o \"$PGOPTS\""
-fi
+PGCTL_BIN=/usr/bin/pg_ctl
+PGCTL_ARGS=(-D "$PGROOT/data" -l "$PGLOG" -s -w)
+[[ $PGOPTS ]] && PGCTL_ARGS+=(-o "$PGOPTS")
 
 postgres_init() {
     # initialization
-    if [ ! -d "$PGROOT/data" ]; then
+    if [[ ! -d "$PGROOT/data" ]]; then
         mkdir -p "$PGROOT/data" && chown -R postgres:postgres "$PGROOT"
-        su - postgres -c "/usr/bin/initdb $INITOPTS -D \"$PGROOT/data\""
+        su - postgres -c "/usr/bin/initdb $INITOPTS -D '$PGROOT/data'"
     fi
-    if [ ! -e "$PGLOG" ]; then
+    if [[ ! -e "$PGLOG" ]]; then
         touch "$PGLOG"
         chown postgres "$PGLOG"
     fi
 }
 
-case "$1" in
+do_postgres() {
+  su - postgres -c "'$PGCTL_BIN' $(printf '%q ' "${PGCTL_ARGS[@]}") $@"
+}
+
+case $1 in
   start)
     postgres_init
     stat_busy "Starting PostgreSQL"
-    su - postgres -c \
-     "$PG_CTL start"
-    if [ $? -gt 0 ]; then
-      stat_fail
-      exit 1
-    else
+    if do_postgres start; then
       add_daemon postgresql
       stat_done
+    else
+      stat_fail
+      exit 1
     fi
     ;;
   stop)
     stat_busy "Stopping PostgreSQL"
-    su - postgres -c \
-      "$PG_CTL stop -m fast"
-    if [ $? -gt 0 ]; then
-      stat_fail
-    else
+    if do_postgres stop -m fast; then
       rm_daemon postgresql
       stat_done
+    else
+      stat_fail
+      exit 1
     fi
     ;;
   reload)
     stat_busy "Reloading PostgreSQL"
-    su - postgres -c \
-      "$PG_CTL reload"
-    if [ $? -gt 0 ]; then
+    if do_postgres reload; then
+      stat_done
+    else
       stat_fail
       exit 1
-    else
-      stat_done
     fi
     ;;
   restart)
-        postgres_init
+    postgres_init
     stat_busy "Restarting PostgreSQL"
-    su - postgres -c \
-      "$PG_CTL restart -m fast"
-    if [ $? -gt 0 ]; then
-      stat_fail
-      exit 1
-    else
+    if do_postgres restart -m fast; then
       add_daemon postgresql
       stat_done
+    else
+      stat_fail
+      exit 1
     fi
     ;;
   status)
@@ -78,6 +74,6 @@ case "$1" in
     ck_status postgresql
     ;;
   *)
-    echo "usage: $0 {start|stop|reload|restart|status}"  
+    echo "usage: $0 {start|stop|reload|restart|status}"
+    exit 1
 esac
-exit 0
