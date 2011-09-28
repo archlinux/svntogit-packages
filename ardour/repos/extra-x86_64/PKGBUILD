@@ -8,65 +8,45 @@
 # for fixed dependencies speaking in terms of versions
 
 pkgname=ardour
-pkgver=2.8.11
-pkgrel=6
+pkgver=2.8.12
+pkgrel=1
 pkgdesc="A multichannel hard disk recorder and digital audio workstation"
 arch=('i686' 'x86_64')
 url="http://ardour.org/"
 license=('GPL')
-depends=('liblrdf>=0.4.0-8' 'liblo' 'aubio' 'libusb-compat'
-         'libgnomecanvasmm' 'soundtouch' 'slv2>=0.6.6-6')
-         # -rubberband -libgnomecanvas(+libgnomecanvasmm)
+depends=('liblrdf>=0.4.0-8' 'liblo' 'libusb-compat'
+         'libgnomecanvas' 'aubio' 'slv2>=0.6.6-6')
+         # -libgnomecanvas(+libgnomecanvasmm)
          # +soundtouch (these +/- changes are for SYSLIBS)
          # liblrdf versioned for https://bugs.archlinux.org/task/25005
          # slv2 versioned for https://bugs.archlinux.org/task/25060
-makedepends=('scons' 'boost' 'pkg-config' 'cwiid')
+makedepends=('scons' 'boost' 'cwiid')
 optdepends=('cwiid: Wiimote support')
 changelog=${pkgname}.changelog
 source=(ftp://ftp.archlinux.org/other/ardour/${pkgname}-${pkgver}.tar.bz2
-        ${pkgname}.desktop
-        gcc46.patch
-        raptor2.patch)
-md5sums=('f451a8d0abc133a1700c3932e07a5612'
-         '8aeaf433ebf781733db48e5a16b0c4da'
-         'd709add59911d099c813162448e4db99'
-         'a26a9bec0968fa0630c70f70c54f67de')
+        ${pkgname}.desktop)
+md5sums=('7c031892f53aeacf08a750fc320c79c5'
+         '8aeaf433ebf781733db48e5a16b0c4da')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  # gcc 4.6 compatibility
-  # http://tracker.ardour.org/view.php?id=3771
-  patch -Np1 -i "$srcdir/gcc46.patch"
-
-  # raptor2 compatibility
-  # https://bugs.archlinux.org/task/25060
-  # http://tracker.ardour.org/view.php?id=4179
-  patch -Np0 -i "$srcdir/raptor2.patch"
-
   sed -i '/-O3/d' SConstruct
 
-  # use syslibs until internal sigc++ issue w/ latest gcc (?) resolves
-  # TODO: report upstream
-  scons ${MAKEFLAGS} ARCH="${CFLAGS}" \
+  scons ${MAKEFLAGS} ARCH="${CFLAGS} -O3" \
                      PREFIX="/usr" \
                      DIST_LIBDIR="lib" \
                      FREEDESKTOP=0 \
                      FREESOUND=1 \
                      WIIMOTE=1 \
-                     SYSLIBS=1 \
+                     SYSLIBS=0 \
                      DESTDIR="${pkgdir}"
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  scons PREFIX="/usr" \
-        FREEDESKTOP=0 \
-        FREESOUND=1 \
-        WIIMOTE=1 \
-        SYSLIBS=1 \
-        DESTDIR="${pkgdir}" install
+  scons DESTDIR="${pkgdir}" install
 
   # install some freedesktop.org compatibility
   install -Dm644 "${srcdir}/${pkgname}.desktop" \
