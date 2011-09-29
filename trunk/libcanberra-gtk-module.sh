@@ -1,7 +1,7 @@
 #!/bin/sh
 
-case "$SESSION" in
-  GNOME)
+case "$DESKTOP_SESSION" in
+  gnome)
     # Done by gnome-settings-daemon
     ;;
   *)
