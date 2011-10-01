@@ -6,25 +6,25 @@
 
 pkgbase=pulseaudio
 pkgname=(pulseaudio libpulse)
-pkgver=0.9.23
-pkgrel=1
+pkgver=1.0
+pkgrel=2
 arch=(i686 x86_64)
 url="http://pulseaudio.org/"
 license=(GPL LGPL)
-makedepends=(libasyncns libcap attr libxtst libsm libsndfile libtool rtkit
-             speex libsamplerate tdb udev dbus-core xcb-util avahi bluez
-             gconf intltool jack lirc-utils openssl)
+makedepends=(libasyncns libcap attr libxtst libsm libsamplerate libtool rtkit
+             speex tdb udev dbus-core xcb-util avahi bluez gconf intltool jack
+             lirc-utils openssl fftw orc json-c)
 options=(!emptydirs !libtool !makeflags)
-source=("http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.gz"
-        $pkgbase.xinit)
-md5sums=('7391205a337d1e04a9ff38025f684034'
-         'eb1cfae28eb2e4d3fdbe45a90e4318ab')
+source=(http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.xz
+        $pkgbase.xinit version-number.patch)
+sha256sums=('e63464f8a0975446e2b4cfe768b615a66735c8d092b2366d2bdc7a2a04a249be'
+            'a0db6cdc74fbf0ca10e2343c08e1e228f109221c6c0ff91b0bfade5c4bdf03cf'
+            '6b067ae9e8da703510fb24eae8ee53f3a7b6a90bcf88941ee50997ad679a4530')
 
 build() {
   cd "$srcdir/$pkgbase-$pkgver"
 
-  # Don't break circular dependency between libpulse and libpulsecommon
-  LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
+  patch -Np1 -i "$srcdir/version-number.patch"
 
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
@@ -41,14 +41,14 @@ build() {
 
 package_pulseaudio() {
   pkgdesc="A featureful, general-purpose sound server"
-  depends=("libpulse=$pkgver-$pkgrel" rtkit libtool speex libsamplerate tdb
-           udev)
+  depends=("libpulse=$pkgver-$pkgrel" rtkit libtool speex tdb udev fftw orc)
   optdepends=('avahi: zeroconf support'
               'bluez: bluetooth support'
-              'gconf: configuration through gconf'
+              'gconf: configuration through gconf (paprefs)'
               'jack: jack support'
               'lirc-utils: infra-red support'
-              'openssl: RAOP support')
+              'openssl: RAOP support'
+              'python2-pyqt: Equalizer GUI (qpaeq)')
   backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
   install=pulseaudio.install
   cd "$srcdir/$pkgbase-$pkgver"
@@ -61,23 +61,27 @@ package_pulseaudio() {
   # Disable cork-request module, can result in e.g. media players unpausing
   # when there's a Skype call incoming
   sed -e 's|/usr/bin/pactl load-module module-x11-cork-request|#&|' \
-      -i "$pkgdir/usr/bin/start-$pkgbase-x11"
+      -i "$pkgdir/usr/bin/start-pulseaudio-x11"
 
-  # Make module-console-kit optional
+  # Make some modules optional
   sed -e $'/load-module module-console-kit/{i.nofail\n;a.fail\n;}' \
+      -e $'/load-module module-jackdbus-detect/{i.nofail\n;a.fail\n;}' \
       -i "$pkgdir/etc/pulse/default.pa"
 
-  install -Dm755 "$srcdir/$pkgbase.xinit" "$pkgdir/etc/X11/xinit/xinitrc.d/$pkgbase"
+  # Python fix
+  sed -i '1s:python$:&2:' "$pkgdir/usr/bin/qpaeq"
 
-  rm "$pkgdir/etc/dbus-1/system.d/$pkgbase-system.conf"
+  install -Dm755 "$srcdir/pulseaudio.xinit" "$pkgdir/etc/X11/xinit/xinitrc.d/pulseaudio"
+
+  rm "$pkgdir/etc/dbus-1/system.d/pulseaudio-system.conf"
 
 ### Split libpulse
 
-  mkdir -p "$srcdir"/libpulse/{etc/pulse,usr/{lib,share/{man/man5,vala/vapi}}}
+  mkdir -p "$srcdir"/libpulse/{etc/pulse,usr/{lib,share/man/man5}}
 
   mv {"$pkgdir","$srcdir/libpulse"}/etc/pulse/client.conf
 
-  mv "$pkgdir"/usr/lib/libpulse{,dsp,-simple,-browse,-mainloop-glib}.so* \
+  mv "$pkgdir"/usr/lib/libpulse{,dsp,-simple,-mainloop-glib}.so* \
      "$pkgdir"/usr/lib/libpulsecommon-*.so \
      "$srcdir/libpulse/usr/lib"
 
@@ -85,12 +89,12 @@ package_pulseaudio() {
   mv {"$pkgdir","$srcdir/libpulse"}/usr/include
 
   mv {"$pkgdir","$srcdir/libpulse"}/usr/share/man/man5/pulse-client.conf.5
-  mv {"$pkgdir","$srcdir/libpulse"}/usr/share/vala/vapi/libpulse.vapi
+  mv {"$pkgdir","$srcdir/libpulse"}/usr/share/vala
 }
 
 package_libpulse() {
   pkgdesc="A featureful, general-purpose sound server (client library)"
-  depends=(dbus-core xcb-util libasyncns libcap libxtst libsm libsndfile)
+  depends=(dbus-core xcb-util libasyncns libcap libxtst libsm libsamplerate json-c)
   optdepends=('alsa-plugins: ALSA support'
               'avahi: zeroconf support')
   backup=(etc/pulse/client.conf)
