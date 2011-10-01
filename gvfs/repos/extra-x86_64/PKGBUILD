@@ -2,18 +2,18 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gvfs
-pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-gphoto2' 'gvfs-obexftp')
-pkgver=1.8.2
-pkgrel=1
+pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-obexftp')
+pkgver=1.10.0
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('LGPL')
 makedepends=('libsoup-gnome' 'libcdio' 'fuse' 'bluez' 'smbclient' 'libgphoto2'
-             'libarchive' 'gnome-disk-utility' 'pkgconfig' 'intltool'
-             'libimobiledevice')
+             'libarchive' 'libgdu' 'pkgconfig' 'intltool'
+             'libimobiledevice' 'avahi' 'dconf')
 url="http://www.gnome.org"
 options=(!libtool)
-source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/${pkgver%.*}/${pkgbase}-${pkgver}.tar.bz2)
-sha256sums=('0895ac8f6d416e1b15433b6b6b68eb119c6e8b04fdb66db665d684355ef89345')
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/${pkgver%.*}/${pkgbase}-${pkgver}.tar.xz)
+sha256sums=('50970f9f9052ecb6ab83860b366c718994bf618695010c11e1391ca886f71db8')
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
@@ -26,11 +26,12 @@ build() {
 
 package_gvfs() {
   pkgdesc="Userspace virtual filesystem implemented as a pluggable module for gio"
-  depends=('libsoup-gnome' 'gnome-disk-utility' 'libcdio' 'fuse' 'libarchive')
+  depends=('libsoup-gnome' 'libgdu' 'libcdio' 'fuse' 'libarchive' 'avahi' 'dconf')
   optdepends=('gvfs-afc: AFC (mobile devices) support'
               'gvfs-smb: SMB/CIFS (Windows client) support'
               'gvfs-gphoto2: gphoto2 (PTP camera/MTP media player) support'
-              'gvfs-obexftp: ObexFTP (bluetooth) support')
+              'gvfs-obexftp: ObexFTP (bluetooth) support'
+              'gvfs-afp: Apple Filing Protocol (AFP) support')
   install=gvfs.install
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
@@ -40,8 +41,8 @@ package_gvfs() {
   make DESTDIR="${pkgdir}" install
 
   cd "${pkgdir}"
-  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,gphoto2,obexftp}
-  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,gphoto2,obexftp}.mount
+  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp}
+  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp}.mount
   rm usr/share/glib-2.0/schemas/org.gnome.system.smb.gschema.xml
   rm usr/share/GConf/gsettings/gvfs-smb.convert
 }
@@ -98,4 +99,17 @@ package_gvfs-obexftp() {
   cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
   install -D .libs/gvfsd-obexftp "${pkgdir}/usr/lib/gvfs/gvfsd-obexftp"
   install -Dm644 obexftp.mount "${pkgdir}/usr/share/gvfs/mounts/obexftp.mount"
+}
+
+package_gvfs-afp() {
+  pkgdesc="Apple Filing Protocol (AFP) backend for gvfs"
+  depends=("gvfs=${pkgver}")
+  install=gvfs-module.install
+  install -m755 -d "${pkgdir}/usr/lib/gvfs"
+  install -m755 -d "${pkgdir}/usr/share/gvfs/mounts"
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
+  install -m755 .libs/gvfsd-afp{,-browse} "${pkgdir}/usr/lib/gvfs/"
+  install -m644 afp{,-browse}.mount "${pkgdir}/usr/share/gvfs/mounts/"
+
 }
