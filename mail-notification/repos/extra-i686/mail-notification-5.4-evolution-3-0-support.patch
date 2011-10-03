@@ -28,6 +28,18 @@
  #include <mail/em-event.h>
  #include <mail/mail-tools.h>
  #include "mn-evolution.h"
+@@ -240,7 +241,11 @@
+ 					       EMEventTargetFolder *folder)
+ {
+   if (evo_server)
++#if EDS_CHECK_VERSION(3,1,0)
++    mn_evolution_server_folder_changed(evo_server, e_mail_folder_uri_build(folder->store, folder->folder_name));
++#else
+     mn_evolution_server_folder_changed(evo_server, folder->uri);
++#endif
+ }
+ 
+ void
 @@ -249,10 +250,16 @@
  {
    if (evo_server)
@@ -38,7 +50,7 @@
 +#else
 +      char *url = mail_tools_folder_to_url(message->folder);
 +#endif
- 
+
 -      url = mail_tools_folder_to_url(message->folder);
        mn_evolution_server_message_reading(evo_server, url);
 +
@@ -68,3 +80,43 @@
  	if (folder)
  	  self_cache_folder(uri, folder);
  	else
+@@ -677,7 +681,12 @@
+     folder = self_lookup_folder(folder_uri, err);
+     if (folder)
+       {
++#if EDS_CHECK_VERSION(3,1,0)
++	*ret = g_strdup(camel_folder_get_display_name(folder));
++#else
+ 	*ret = g_strdup(camel_folder_get_name(folder));
++#endif
++
+ #if EDS_CHECK_VERSION(2,31,0)
+ 	g_object_unref(folder);
+ #else
+@@ -725,8 +734,12 @@
+ 	shell = e_shell_get_default ();
+ 	shell_backend = e_shell_get_backend_by_name (shell, "mail");
+ 
+-	browser = e_mail_browser_new (shell_backend);
++	browser = e_mail_browser_new (E_MAIL_BACKEND(shell_backend));
++#if EDS_CHECK_VERSION(3,1,0)
++	e_mail_reader_set_folder (E_MAIL_READER (browser), folder);
++#else
+ 	e_mail_reader_set_folder (E_MAIL_READER (browser), folder, folder_uri);
++#endif
+ 	e_mail_reader_set_message (E_MAIL_READER (browser), message_uid);
+ 	gtk_widget_show (browser);
+ #else
+--- build/src/mn-evolution-folder-tree-server.c.orig	2011-06-17 22:01:49.226886994 +0200
++++ build/src/mn-evolution-folder-tree-server.c	2011-06-18 00:34:23.046889847 +0200
+@@ -444,7 +444,9 @@
+ {
+ #line 61 "src/mn-evolution-folder-tree-server.gob"
+ 	
+-#if EDS_CHECK_VERSION(2,91,0)
++#if EDS_CHECK_VERSION(3,1,0)
++    selfp->tree = em_folder_tree_new(NULL, NULL);
++#elif EDS_CHECK_VERSION(2,91,0)
+     selfp->session = e_mail_session_new();
+     selfp->tree = em_folder_tree_new(selfp->session);
+ #elif EDS_CHECK_VERSION(2,29,0)

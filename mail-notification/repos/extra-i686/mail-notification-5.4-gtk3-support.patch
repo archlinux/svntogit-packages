@@ -20,7 +20,7 @@
 +  jb_require_packages("GNOME", "gnome", "glib-2.0 >= 2.14 gthread-2.0 gconf-2.0 >= 2.4.0 gtk+-3.0 libgnome-2.0 >= 2.14.0 gnome-vfs-2.0 libxml-2.0 libnotify >= 0.4.1");
    jb_require_packages("D-Bus", "dbus", "dbus-glib-1");
  
-   jb_check_packages_for_options("GMime", "gmime", "gmime-2.4",
+   jb_check_packages_for_options("GMime", "gmime", "gmime-2.6",
 --- build/src/mn-file-chooser-button.c.orig	2011-02-02 23:38:01.503049512 +0100
 +++ build/src/mn-file-chooser-button.c	2011-02-02 23:38:16.988222034 +0100
 @@ -358,7 +358,7 @@
@@ -545,7 +545,7 @@
 +    int y;
 +
 +    gtk_widget_get_allocation(widget, &allocation);
-+    y = allocation.y;
++    y = 0;
  
 -    if (! GTK_WIDGET_DRAWABLE(widget))
 +    if (! gtk_widget_is_drawable(widget))
@@ -557,7 +557,7 @@
  	Row *row = g_ptr_array_index(selfp->rows, i);
  	int j;
 -	int x = widget->allocation.x;
-+	int x = allocation.x;
++	int x = 0;
  	int column = 0;
  
  	MN_ARRAY_FOREACH(j, row->cells)
@@ -587,6 +587,20 @@
  #line 109 "mn-tooltips.c"
  #line 308 "src/mn-tooltips.gob"
  static void mn_tooltips_draw_tips (MNTooltips * self);
+@@ -422,7 +422,13 @@
+ 	
+     if (! selfp->window)
+       {
++	GtkStyleContext *ctx;
++
+ 	selfp->window = gtk_window_new(GTK_WINDOW_POPUP);
++
++	ctx = gtk_widget_get_style_context(GTK_WIDGET(selfp->window));
++	gtk_style_context_add_class(ctx, "tooltip");
++
+ 	self_update_screen(self, TRUE);
+ 	gtk_widget_set_app_paintable(selfp->window, TRUE);
+ 	gtk_window_set_resizable(GTK_WINDOW(selfp->window), FALSE);
 @@ -430,7 +430,7 @@
  	gtk_container_set_border_width(GTK_CONTAINER(selfp->window), selfp->border_width);
  
@@ -614,23 +628,32 @@
  {
  #line 600 "mn-tooltips.c"
  #define __GOB_FUNCTION__ "MN:Tooltips::paint_window"
-@@ -608,13 +608,12 @@
+@@ -608,18 +608,13 @@
  	
      GtkRequisition req;
  
 -    gtk_widget_size_request(selfp->window, &req);
 -    gtk_paint_flat_box(selfp->window->style,
 -		       selfp->window->window,
-+    gtk_widget_size_request(GTK_WIDGET(selfp), &req);
-+    gtk_paint_flat_box(gtk_widget_get_style(GTK_WIDGET(selfp)),
-+		       cr,
- 		       GTK_STATE_NORMAL,
- 		       GTK_SHADOW_OUT,
- 		       NULL,
+-		       GTK_STATE_NORMAL,
+-		       GTK_SHADOW_OUT,
+-		       NULL,
 -		       selfp->window,
- 		       "tooltip",
- 		       0,
- 		       0,
+-		       "tooltip",
+-		       0,
+-		       0,
+-		       req.width,
+-		       req.height);
++    gtk_widget_size_request(GTK_WIDGET(selfp->window), &req);
++    gtk_render_background(gtk_widget_get_style_context(GTK_WIDGET(selfp->window)),
++                                                       cr,
++                                                       0,
++                                                       0,
++                                                       req.width,
++                                                       req.height);
+ 
+     return FALSE;
+   }}
 @@ -651,10 +650,11 @@
      gint monitor_num, px, py;
      GdkRectangle monitor;
@@ -1380,3 +1403,14 @@
  #include "mn-util.h"
  #include "mn-conf.h"
  #include "mn-shell.h"
+--- data/mail-notification.desktop.in.orig	2011-07-08 13:46:52.327548264 +0200
++++ data/mail-notification.desktop.in	2011-07-08 13:47:00.732704467 +0200
+@@ -5,7 +5,7 @@
+ _Comment=Get notified when new mail arrives
+ Type=Application
+ Categories=GNOME;GTK;Network;Email;
+-Exec=mail-notification --sm-disable
++Exec=mail-notification
+ Terminal=false
+ StartupNotify=true
+ X-GNOME-DocPath=mail-notification/mail-notification.xml
