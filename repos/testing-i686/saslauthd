@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# source application-specific settings
+[ -f /etc/conf.d/saslauthd ] && . /etc/conf.d/saslauthd
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+DAEMON_NAME="saslauthd"
+SASLAUTHD_BIN=/usr/sbin/saslauthd
+SASLAUTHD_RUN=/var/run/saslauthd
+SASLAUTHD_PID=$SASLAUTHD_RUN/saslauthd.pid
+
+case "$1" in
+  start)
+    stat_busy "Starting $DAEMON_NAME"
+    [ ! -d /var/run/saslauthd ] && install -d /var/run/saslauthd
+    if $SASLAUTHD_BIN $SASLAUTHD_OPTS >/dev/null; then
+      add_daemon $DAEMON_NAME
+      stat_done
+    else
+      stat_fail
+      exit 1
+    fi
+    ;;
+
+  stop)
+    stat_busy "Stopping $DAEMON_NAME"
+    [ -f $SASLAUTHD_PID ] && kill `cat $SASLAUTHD_PID` &>/dev/null
+    if [ $? -gt 0 ]; then
+      stat_fail
+      exit 1
+    else
+      rm_daemon $DAEMON_NAME
+      stat_done
+    fi
+    ;;
+
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+
+  *)
+    echo "usage: $0 {start|stop|restart}"  
+esac
+exit 0
+# vim: ts=2 sw=2 et ft=sh
