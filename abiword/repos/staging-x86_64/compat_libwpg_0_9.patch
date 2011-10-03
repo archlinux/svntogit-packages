@@ -1,0 +1,371 @@
+diff -Nur abiword-2.8.6.orig//plugin-configure.m4 abiword-2.8.6/plugin-configure.m4
+--- abiword-2.8.6.orig//plugin-configure.m4	2010-06-13 14:17:27.000000000 -0700
++++ abiword-2.8.6/plugin-configure.m4	2010-12-06 13:59:43.083048588 -0800
+@@ -794,7 +794,7 @@
+ AC_SUBST([OPENXML_LIBS])
+ 
+ 
+-wpg_pkgs="$gsf_req libwpg-0.1 >= 0.1.0 libwpd-0.8 >= 0.8.0"
++wpg_pkgs="$gsf_req libwpg-0.2 >= 0.2.0 libwpd-0.9 >= 0.9.0 libwpd-stream-0.9 >= 0.9.0"
+ wpg_deps="no"
+ 
+ if test "$enable_wpg" != ""; then
+@@ -1497,8 +1497,8 @@
+ AC_SUBST([EML_LIBS])
+ 
+ 
+-wordperfect_pkgs="libwpd-0.8 >= 0.8.0 $gsf_req"
+-wordperfect_wps_pkgs='libwps-0.1 >= 0.1.0'
++wordperfect_pkgs="libwpg-0.2 >= 0.2.0 libwpd-0.9 >= 0.9.0 libwpd-stream-0.9 >= 0.9.0 $gsf_req"
++wordperfect_wps_pkgs='libwps-0.2 >= 0.1.0'
+ wordperfect_deps="no"
+ 
+ WORDPERFECT_CFLAGS=
+diff -Nur abiword-2.8.6.orig//plugins/wordperfect/plugin.m4 abiword-2.8.6/plugins/wordperfect/plugin.m4
+--- abiword-2.8.6.orig//plugins/wordperfect/plugin.m4	2010-05-30 07:50:46.000000000 -0700
++++ abiword-2.8.6/plugins/wordperfect/plugin.m4	2010-12-06 13:59:53.929715254 -0800
+@@ -1,6 +1,6 @@
+ 
+-wordperfect_pkgs="libwpd-0.8 >= 0.8.0 $gsf_req"
+-wordperfect_wps_pkgs='libwps-0.1 >= 0.1.0'
++wordperfect_pkgs="libwpg-0.2 >= 0.2.0 libwpd-0.9 >= 0.9.0 libwpd-stream-0.9 >= 0.9.0 $gsf_req"
++wordperfect_wps_pkgs='libwps-0.2 >= 0.1.0'
+ wordperfect_deps="no"
+ 
+ WORDPERFECT_CFLAGS=
+diff -Nur abiword-2.8.6.orig//plugins/wordperfect/xp/ie_imp_WordPerfect.cpp abiword-2.8.6/plugins/wordperfect/xp/ie_imp_WordPerfect.cpp
+--- abiword-2.8.6.orig//plugins/wordperfect/xp/ie_imp_WordPerfect.cpp	2010-02-06 13:06:11.000000000 -0800
++++ abiword-2.8.6/plugins/wordperfect/xp/ie_imp_WordPerfect.cpp	2010-12-06 13:59:53.926381921 -0800
+@@ -60,7 +60,7 @@
+ 
+ // Stream class
+ 
+-#include <libwpd/WPXStream.h>
++#include <libwpd-stream/libwpd-stream.h>
+ 
+ #include <gsf/gsf-input.h>
+ #include <gsf/gsf-infile.h>
+@@ -70,12 +70,7 @@
+ #include <libwps/libwps.h>
+ #endif
+ 
+-class AbiWordperfectInputStream :
+-#ifdef HAVE_LIBWPS
+-	public WPSInputStream
+-#else
+-    public WPXInputStream
+-#endif
++class AbiWordperfectInputStream : public WPXInputStream
+ {
+ public:
+ 	AbiWordperfectInputStream(GsfInput *input);
+@@ -86,7 +81,7 @@
+ 
+ 	virtual WPXInputStream * getDocumentOLEStream(const char * name);
+ 
+-	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead);
++	virtual const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
+ 	virtual int seek(long offset, WPX_SEEK_TYPE seekType);
+ 	virtual long tell();
+ 	virtual bool atEOS();
+@@ -98,11 +93,7 @@
+ };
+ 
+ AbiWordperfectInputStream::AbiWordperfectInputStream(GsfInput *input) :
+-#ifdef HAVE_LIBWPS
+-	WPSInputStream(),
+-#else
+-	WPXInputStream(true),
+-#endif
++	WPXInputStream(),
+ 	m_input(input),
+ 	m_ole(NULL)
+ {
+@@ -117,9 +108,9 @@
+ 	g_object_unref(G_OBJECT(m_input));
+ }
+ 
+-const uint8_t * AbiWordperfectInputStream::read(size_t numBytes, size_t &numBytesRead)
++const unsigned char * AbiWordperfectInputStream::read(unsigned long numBytes, unsigned long &numBytesRead)
+ {
+-	const uint8_t *buf = gsf_input_read(m_input, numBytes, NULL);
++	const unsigned char *buf = gsf_input_read(m_input, numBytes, NULL);
+ 
+ 	if (buf == NULL)
+ 		numBytesRead = 0;
+@@ -256,19 +247,12 @@
+ {
+ 	AbiWordperfectInputStream gsfInput(input);
+ 
+-	WPDConfidence confidence = WPDocument::isFileFormatSupported(&gsfInput, true);
++	WPDConfidence confidence = WPDocument::isFileFormatSupported(&gsfInput);
+ 
+ 	switch (confidence)
+ 	{
+ 		case WPD_CONFIDENCE_NONE:
+-		// libwpd > 0.7.1 reports POOR if the text file is plain text (that _could_ be a WP4x document)
+-		// however, we'll let the text importer handle such cases
+-		case WPD_CONFIDENCE_POOR: 
+ 			return UT_CONFIDENCE_ZILCH;
+-		case WPD_CONFIDENCE_LIKELY:
+-			return UT_CONFIDENCE_SOSO;
+-		case WPD_CONFIDENCE_GOOD:
+-			return UT_CONFIDENCE_GOOD;
+ 		case WPD_CONFIDENCE_EXCELLENT:
+ 			return UT_CONFIDENCE_PERFECT;
+ 		default:
+@@ -328,7 +312,7 @@
+ UT_Error IE_Imp_WordPerfect::_loadFile(GsfInput * input)
+ {
+ 	AbiWordperfectInputStream gsfInput(input);
+-	WPDResult error = WPDocument::parse(&gsfInput, static_cast<WPXHLListenerImpl *>(this));
++	WPDResult error = WPDocument::parse(&gsfInput, static_cast<WPXDocumentInterface *>(this), NULL);
+ 
+ 	if (error != WPD_OK)
+ 	{
+@@ -381,9 +365,9 @@
+ 	float marginLeft = 1.0f, marginRight = 1.0f;
+ 
+ 	if (propList["fo:margin-left"])
+-		marginLeft = propList["fo:margin-left"]->getFloat();
++		marginLeft = propList["fo:margin-left"]->getDouble();
+ 	if (propList["fo:margin-right"])
+-		marginRight = propList["fo:margin-right"]->getFloat();
++		marginRight = propList["fo:margin-right"]->getDouble();
+ 
+ 	if (marginLeft != m_leftPageMargin || marginRight != m_rightPageMargin /* || */
+ 		/* marginTop != m_marginBottom || marginBottom != m_marginBottom */ )
+@@ -456,15 +440,15 @@
+ 	float marginTop = 0.0f, marginBottom = 0.0f;
+ 	float marginLeft = 0.0f, marginRight = 0.0f, textIndent = 0.0f;
+ 	if (propList["fo:margin-top"])
+-	    marginTop = propList["fo:margin-top"]->getFloat();
++	    marginTop = propList["fo:margin-top"]->getDouble();
+ 	if (propList["fo:margin-bottom"])
+-	    marginBottom = propList["fo:margin-bottom"]->getFloat();
++	    marginBottom = propList["fo:margin-bottom"]->getDouble();
+ 	if (propList["fo:margin-left"])
+-	    marginLeft = propList["fo:margin-left"]->getFloat();
++	    marginLeft = propList["fo:margin-left"]->getDouble();
+ 	if (propList["fo:margin-right"])
+-	    marginRight = propList["fo:margin-right"]->getFloat();
++	    marginRight = propList["fo:margin-right"]->getDouble();
+ 	if (propList["fo:text-indent"])
+-	    textIndent = propList["fo:text-indent"]->getFloat();
++	    textIndent = propList["fo:text-indent"]->getDouble();
+ 
+ 	m_topMargin = marginTop;
+ 	m_bottomMargin = marginBottom;
+@@ -487,7 +471,7 @@
+ 
+ 	float lineSpacing = 1.0f;
+ 	if (propList["fo:line-height"])
+-		lineSpacing = propList["fo:line-height"]->getFloat();
++		lineSpacing = propList["fo:line-height"]->getDouble();
+ 	
+ 	UT_String tmpBuffer;
+ 	UT_String_sprintf(tmpBuffer, "; margin-top:%.4fin; margin-bottom:%.4fin; margin-left:%.4fin; margin-right:%.4fin; text-indent:%.4fin; line-height:%.4f",
+@@ -504,7 +488,7 @@
+ 			propBuffer += tmpBuffer;
+ 			if (i()["style:position"])
+ 			{
+-				UT_String_sprintf(tmpBuffer, "%.4fin", i()["style:position"]->getFloat());
++				UT_String_sprintf(tmpBuffer, "%.4fin", i()["style:position"]->getDouble());
+ 				propBuffer += tmpBuffer;
+ 			}
+ 
+@@ -640,9 +624,9 @@
+ 
+ 	// TODO: support spaceAfter
+ 	if (propList["fo:margin-left"])
+-		marginLeft = propList["fo:margin-left"]->getFloat();
++		marginLeft = propList["fo:margin-left"]->getDouble();
+ 	if (propList["fo:margin-right"])
+-		marginRight = propList["fo:margin-right"]->getFloat();
++		marginRight = propList["fo:margin-right"]->getDouble();
+ 
+ 	if (marginLeft != m_leftSectionMargin || marginRight != m_rightSectionMargin || m_sectionColumnsCount != columnsCount)
+ 		m_bSectionChanged = true;
+@@ -709,9 +693,9 @@
+ 	if (propList["style:num-format"])
+ 		listType = propList["style:num-format"]->getStr().cstr()[0];
+ 	if (propList["text:space-before"])
+-		listLeftOffset = propList["text:space-before"]->getFloat();
++		listLeftOffset = propList["text:space-before"]->getDouble();
+ 	if (propList["text:min-label-width"])
+-		listMinLabelWidth = propList["text:min-label-width"]->getFloat();
++		listMinLabelWidth = propList["text:min-label-width"]->getDouble();
+ 
+ 	if (!m_pCurrentListDefinition || 
+ 		m_pCurrentListDefinition->getOutlineHash() != listID ||
+@@ -749,9 +733,9 @@
+ 	if (propList["libwpd:level"])
+ 		level = propList["libwpd:level"]->getInt();
+ 	if (propList["text:space-before"])
+-		listLeftOffset = propList["text:space-before"]->getFloat();
++		listLeftOffset = propList["text:space-before"]->getDouble();
+ 	if (propList["text:min-label-width"])
+-		listMinLabelWidth = propList["text:min-label-width"]->getFloat();
++		listMinLabelWidth = propList["text:min-label-width"]->getDouble();
+ 
+ 	if (!m_pCurrentListDefinition || m_pCurrentListDefinition->getOutlineHash() != listID)
+ 	{
+@@ -871,10 +855,10 @@
+ 
+ 	UT_String_sprintf(tempBuffer, "margin-left:%.4fin; ", m_pCurrentListDefinition->getListLeftOffset(m_iCurrentListLevel)
+ 					+ m_pCurrentListDefinition->getListMinLabelWidth(m_iCurrentListLevel)
+-					- (propList["fo:text-indent"] ? propList["fo:text-indent"]->getFloat() : 0.0f));
++					- (propList["fo:text-indent"] ? propList["fo:text-indent"]->getDouble() : 0.0f));
+ 	propBuffer += tempBuffer;
+ 	UT_String_sprintf(tempBuffer, "text-indent:%.4fin", - m_pCurrentListDefinition->getListMinLabelWidth(m_iCurrentListLevel)
+-					+ (propList["fo:text-indent"] ? propList["fo:text-indent"]->getFloat() : 0.0f));
++					+ (propList["fo:text-indent"] ? propList["fo:text-indent"]->getDouble() : 0.0f));
+ 	propBuffer += tempBuffer;
+ 
+ 	listAttribs[attribsCount++] = PT_PROPS_ATTRIBUTE_NAME;
+@@ -1263,7 +1247,7 @@
+     virtual UT_Error _loadFile(GsfInput * input)
+ 	{
+ 		AbiWordperfectInputStream gsfInput(input);
+-		WPSResult error = WPSDocument::parse(&gsfInput, static_cast<WPXHLListenerImpl *>(this));
++		WPSResult error = WPSDocument::parse(&gsfInput, static_cast<WPXDocumentInterface *>(this));
+ 
+ 		if (error != WPS_OK)
+ 			{
+@@ -1302,18 +1286,12 @@
+ {
+ 	AbiWordperfectInputStream gsfInput(input);
+ 
+-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&gsfInput, true);
++	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&gsfInput);
+ 
+ 	switch (confidence)
+ 	{
+ 		case WPS_CONFIDENCE_NONE:
+ 			return UT_CONFIDENCE_ZILCH;
+-		case WPS_CONFIDENCE_POOR: 
+-			return UT_CONFIDENCE_POOR;
+-		case WPS_CONFIDENCE_LIKELY:
+-			return UT_CONFIDENCE_SOSO;
+-		case WPS_CONFIDENCE_GOOD:
+-			return UT_CONFIDENCE_GOOD;
+ 		case WPS_CONFIDENCE_EXCELLENT:
+ 			return UT_CONFIDENCE_PERFECT;
+ 		default:
+diff -Nur abiword-2.8.6.orig//plugins/wordperfect/xp/ie_imp_WordPerfect.h abiword-2.8.6/plugins/wordperfect/xp/ie_imp_WordPerfect.h
+--- abiword-2.8.6.orig//plugins/wordperfect/xp/ie_imp_WordPerfect.h	2009-06-19 01:55:49.000000000 -0700
++++ abiword-2.8.6/plugins/wordperfect/xp/ie_imp_WordPerfect.h	2010-12-06 13:59:53.929715254 -0800
+@@ -30,13 +30,7 @@
+ #define IE_IMP_WP_H
+ 
+ #include <stdio.h>
+-#ifdef _WIN32
+-#define POINT WPX_POINT
+-#endif
+ #include <libwpd/libwpd.h>
+-#ifdef _WIN32
+-#undef POINT
+-#endif
+ #include "ie_imp.h"
+ #include "ut_string.h"
+ #include "ut_string_class.h"
+@@ -98,7 +92,7 @@
+ 					IE_Imp ** ppie);
+ };
+ 
+-class IE_Imp_WordPerfect : public IE_Imp, public WPXHLListenerImpl
++class IE_Imp_WordPerfect : public IE_Imp, public WPXDocumentInterface
+ {
+ public:
+     IE_Imp_WordPerfect(PD_Document * pDocument);
+@@ -154,6 +148,21 @@
+     virtual void insertCoveredTableCell(const WPXPropertyList & /*propList*/) {}
+     virtual void closeTable();
+ 
++    virtual void definePageStyle(const WPXPropertyList&) {}
++    virtual void defineParagraphStyle(const WPXPropertyList&, const WPXPropertyListVector&) {}
++    virtual void defineCharacterStyle(const WPXPropertyList&) {}
++    virtual void defineSectionStyle(const WPXPropertyList&, const WPXPropertyListVector&) {}
++    virtual void insertSpace() {}
++    virtual void insertField(const WPXString&, const WPXPropertyList&) {}
++    virtual void openComment(const WPXPropertyList&) {}
++    virtual void closeComment() {}
++    virtual void openTextBox(const WPXPropertyList&) {}
++    virtual void closeTextBox() {}
++    virtual void openFrame(const WPXPropertyList&) {}
++    virtual void closeFrame() {}
++    virtual void insertBinaryObject(const WPXPropertyList&, const WPXBinaryData&) {}
++    virtual void insertEquation(const WPXPropertyList&, const WPXString&) {}
++
+     
+ protected:
+ 	virtual UT_Error _loadFile(GsfInput * input);
+diff -Nur abiword-2.8.6.orig//plugins/wpg/plugin.m4 abiword-2.8.6/plugins/wpg/plugin.m4
+--- abiword-2.8.6.orig//plugins/wpg/plugin.m4	2010-05-30 07:50:46.000000000 -0700
++++ abiword-2.8.6/plugins/wpg/plugin.m4	2010-12-06 13:59:53.929715254 -0800
+@@ -1,5 +1,5 @@
+ 
+-wpg_pkgs="$gsf_req libwpg-0.1 >= 0.1.0 libwpd-0.8 >= 0.8.0"
++wpg_pkgs="$gsf_req libwpg-0.2 >= 0.2.0 libwpd-0.9 >= 0.9.0 libwpd-stream-0.9 >= 0.9.0"
+ wpg_deps="no"
+ 
+ if test "$enable_wpg" != ""; then
+diff -Nur abiword-2.8.6.orig//plugins/wpg/xp/ie_impGraphic_WPG.cpp abiword-2.8.6/plugins/wpg/xp/ie_impGraphic_WPG.cpp
+--- abiword-2.8.6.orig//plugins/wpg/xp/ie_impGraphic_WPG.cpp	2008-08-15 14:52:32.000000000 -0700
++++ abiword-2.8.6/plugins/wpg/xp/ie_impGraphic_WPG.cpp	2010-12-06 13:59:53.923048588 -0800
+@@ -31,11 +31,10 @@
+ #include <gsf/gsf-input-memory.h>
+ #include <gsf/gsf-input-stdio.h>
+ #include <gsf/gsf-infile-msole.h>
+-#include <libwpd/WPXStream.h>
++#include <libwpd-stream/libwpd-stream.h>
+ #include "xap_Module.h"
+ 
+ using libwpg::WPGraphics;
+-using libwpg::WPGString;
+ 
+ ABI_PLUGIN_DECLARE("WPG")
+ 
+@@ -48,7 +47,7 @@
+ 	virtual bool isOLEStream();
+ 	virtual WPXInputStream * getDocumentOLEStream();
+ 	virtual WPXInputStream * getDocumentOLEStream(const char * name);
+-	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead);
++	virtual const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
+ 	virtual int seek(long offset, WPX_SEEK_TYPE seekType);
+ 	virtual long tell();
+ 	virtual bool atEOS();
+@@ -60,7 +59,7 @@
+ };
+ 
+ AbiWordPerfectGraphicsInputStream::AbiWordPerfectGraphicsInputStream(GsfInput *input) :
+-	WPXInputStream(true),
++	WPXInputStream(),
+ 	m_input(input),
+ 	m_ole(NULL)
+ {
+@@ -75,9 +74,9 @@
+ 	g_object_unref(G_OBJECT(m_input));
+ }
+ 
+-const uint8_t * AbiWordPerfectGraphicsInputStream::read(size_t numBytes, size_t &numBytesRead)
++const unsigned char * AbiWordPerfectGraphicsInputStream::read(unsigned long numBytes, unsigned long &numBytesRead)
+ {
+-	const uint8_t *buf = gsf_input_read(m_input, numBytes, NULL);
++	const unsigned char *buf = gsf_input_read(m_input, numBytes, NULL);
+ 
+ 	if (buf == NULL)
+ 		numBytesRead = 0;
+@@ -245,10 +244,10 @@
+ UT_Error IE_Imp_WordPerfectGraphics::importGraphic(GsfInput *input, FG_Graphic **ppfg)
+ {
+ 	AbiWordPerfectGraphicsInputStream gsfInput(input);
+-	WPGString svgOutput;
++	WPXString svgOutput;
+ 	if (WPGraphics::generateSVG(&gsfInput, svgOutput))
+ 	{
+-		GsfInput * svgInput = gsf_input_memory_new((const guint8*)svgOutput.cstr(), svgOutput.length(), false);
++		GsfInput * svgInput = gsf_input_memory_new((const guint8*)svgOutput.cstr(), svgOutput.len(), false);
+ 		UT_Error result = IE_ImpGraphic::loadGraphic(svgInput, IE_ImpGraphic::fileTypeForSuffix(".svg"), ppfg);
+ 		g_object_unref(svgInput);
+ 		return result;
