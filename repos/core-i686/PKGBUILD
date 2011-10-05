@@ -7,7 +7,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.0
-pkgver=${_basekernel}.4
+pkgver=${_basekernel}.6
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -15,7 +15,8 @@ license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl')
 options=('!strip')
 source=("ftp://ftp.kernel.org/pub/linux/kernel/v3.0/linux-${_basekernel}.tar.bz2"
-        "ftp://ftp.kernel.org/pub/linux/kernel/v3.0/patch-${pkgver}.gz"
+        #"ftp://ftp.kernel.org/pub/linux/kernel/v3.0/patch-${pkgver}.gz"
+        "ftp://ftp.archlinux.org/other/linux/patch-${pkgver}.gz"
         # the main kernel config files
         'config' 'config.x86_64'
         # standard config files for mkinitcpio ramdisk
@@ -23,9 +24,9 @@ source=("ftp://ftp.kernel.org/pub/linux/kernel/v3.0/linux-${_basekernel}.tar.bz2
         'fix-i915.patch'
         'change-default-console-loglevel.patch')
 md5sums=('398e95866794def22b12dfbc15ce89c0'
-         'd9f025a0d5fc5dc94d99d8e81291b939'
-         'fc6aae0fb4d70feff92ec762d29dee45'
-         'fd5a1712ddea696eee5255de2d854218'
+         '792f01cc8874d03a84e47fd0e7065df8'
+         '3565fb177244f965ba04bd116c6e33ab'
+         '14f0e5ef7b5111e5ed1d93479bb3fa29'
          'eb14dcfd80c00852ef81ded6e826826a'
          '263725f20c0b9eb9c353040792d644e5'
          '9d3c56a4b999c8bfbd4018089a62f662')
@@ -280,3 +281,4 @@ package_linux-docs() {
   # remove a file already in linux package
   rm -f "${pkgdir}/usr/src/linux-${_kernver}/Documentation/DocBook/Makefile"
 }
+
