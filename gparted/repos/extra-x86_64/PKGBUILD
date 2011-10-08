@@ -1,27 +1,30 @@
 # $Id$
 # Maintainer: Giovanni Scafora <giovanni@archlinux.org>
 # Contributor: Andrew Simmons <andrew.simmons@gmail.com>
+# Contributor: György Balló <ballogy@freestart.hu>
 
 pkgname=gparted
 pkgver=0.9.1
-pkgrel=2
+pkgrel=3
 pkgdesc="A Partition Magic clone, frontend to GNU Parted"
 arch=('i686' 'x86_64')
 url="http://gparted.sourceforge.net"
 license=('GPL')
 depends=('parted' 'gtkmm' 'libsigc++')
-makedepends=('intltool' 'pkgconfig' 'gnome-doc-utils')
+makedepends=('intltool' 'pkg-config' 'gnome-doc-utils')
 optdepends=('dosfstools: for FAT16 and FAT32 partitions'
             'jfsutils: for jfs partitions'
             'ntfsprogs: for ntfs partitions'
             'reiserfsprogs: for reiser partitions'
             'xfsprogs: for xfs partitions'
-            'gksu: to run gparted directly from menu'
+            'polkit: to run gparted directly from menu'
             'gpart: for recovering corrupt partition tables'
             'mtools')
 install=gparted.install
-source=("http://downloads.sourceforge.net/project/${pkgname}/${pkgname}/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.bz2")
-md5sums=('f35785099994c7c9b7b2e842840f8b72')
+source=("http://downloads.sourceforge.net/project/${pkgname}/${pkgname}/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.bz2"
+        'org.archlinux.pkexec.gparted.policy')
+md5sums=('f35785099994c7c9b7b2e842840f8b72'
+         '27c264cfad8fa413d75954dda7a2dd50')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -34,5 +37,16 @@ package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
   make DESTDIR="${pkgdir}" install
-  sed -i -e "s:Exec= /usr/sbin:Exec=gksu /usr/sbin:g" ${pkgdir}/usr/share/applications/gparted.desktop
+
+  # Install policy file
+  install -Dm644 "${srcdir}/org.archlinux.pkexec.gparted.policy" "${pkgdir}/usr/share/polkit-1/actions/org.archlinux.pkexec.gparted.policy"
+
+  # Install launcher script
+  mkdir -p ${pkgdir}/usr/bin
+  echo '#!/bin/sh' > ${pkgdir}/usr/bin/gparted-pkexec
+  echo 'pkexec "/usr/sbin/gparted" "$@"' >> ${pkgdir}/usr/bin/gparted-pkexec
+  chmod 755 ${pkgdir}/usr/bin/gparted-pkexec
+
+  # Modify desktop file
+  sed -i -e "s/Exec=.*/Exec=gparted-pkexec/" ${pkgdir}/usr/share/applications/gparted.desktop
 }
