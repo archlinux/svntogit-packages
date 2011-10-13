@@ -1,0 +1,57 @@
+_addgroup() {
+  # _addgroup $GROUPNAME $GID
+  [ ${#@} -ne 2 ] && return 1
+
+  echo -n "  > Checking if '$1' group exists..."
+  if ! getent group $1 > /dev/null; then
+    echo "no"
+    echo "  > Add '$1' group"
+    echo -n "    >> checking if GID is in use..."
+		# no other package or user is supposed to use this gid
+		# delete the group and re-add it at the end without static gid
+		if getent group $2 > /dev/null; then
+      echo "yes"
+			firstgroup=$(getent group $2 | sed 's/:.*//')
+      firstusers=$(getent group $2 | sed 's/.*://')
+      echo "    >> delete group '$firstgroup'"
+			groupdel $firstgroup
+    else
+      echo "no"
+		fi
+
+    echo "    >> add our group with proper GID"
+		groupadd -g $2 $1
+
+		if [ -n "$firstgroup" ]; then
+      echo "    >> restore group '$firstgroup' with dynamic GID"
+      groupadd $firstgroup
+      [ -n "$firstusers" ] && gpasswd -M $firstusers $firstgroup
+    fi
+  else
+    echo "yes (all good)"
+  fi
+}
+
+post_install() {
+  _addgroup realtime 112
+  echo
+  echo "  * You must be part of the 'realtime' group to use RT scheduling"
+  echo "  * You don't need an 'RT kernel' to use RT scheduling"
+  echo "  * If you don't need RT start jack with '--no-realtime'"
+  echo "  * If you don't record or sequence audio you don't need RT"
+}
+
+post_upgrade() {
+  _addgroup realtime 112
+  echo
+  echo "  * You must be part of the 'realtime' group to use RT scheduling"
+  echo "  * Configuring RT through limits.conf has been deprecated"
+  echo "  * See /etc/security/limits.d/99-realtime.conf instead"
+}
+
+post_remove() {
+	[ "$(getent group realtime | cut -d ':' -f 3)" = '112' ] && \
+		groupdel realtime || true
+}
+
+# vim:set ts=2 sw=2 et:
