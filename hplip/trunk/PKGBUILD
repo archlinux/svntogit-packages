@@ -3,15 +3,15 @@
 # Contributor: Morgan LEFIEUX <comete@archlinuxfr.org>
 
 pkgname=hplip
-pkgver=3.11.7
-pkgrel=2
+pkgver=3.11.10
+pkgrel=1
 pkgdesc="Drivers for HP DeskJet, OfficeJet, Photosmart, Business Inkjet and some LaserJet"
 arch=('i686' 'x86_64')
 url="http://hplipopensource.com"
 license=('GPL')
-makedepends=('python2-qt' 'python2-gobject2' 'pkg-config' 'sane' 'rpcbind' 'cups')
 depends=('python2' 'ghostscript>=8.64-6' 'foomatic-db' 'foomatic-db-engine'
-	'libcups>=1.3.10-3' 'net-snmp>=5.7.1' 'libusb-compat')
+	 'net-snmp>=5.7.1')
+makedepends=('python2-qt' 'python2-gobject2' 'sane' 'rpcbind' 'cups')
 optdepends=('cups: for printing support'
             'dbus-python: for dbus support'
             'sane: for scanner support'
@@ -24,17 +24,20 @@ optdepends=('cups: for printing support'
 replaces=('hpijs')
 options=('!libtool')
 install=hplip.install
-source=(http://downloads.sourceforge.net/${pkgname}/$pkgname-$pkgver.tar.gz{,.asc}
-        hplip-cups-1.5.0-compatibility.patch)
-md5sums=('5cb89a00b0c680d8bf9bf4b4f1f863b1'
-         'f4422ee0dc842e1a53b75c24f468d65c'
-         'a767000ce920e9f7f6a5b0a8e4392ef9')
+source=(http://downloads.sourceforge.net/${pkgname}/$pkgname-$pkgver.tar.gz{,.asc})
+md5sums=('6143f30f3b6905ef22105176a3b80db0'
+         '396bbd8c5cc92aa8295e5bcb508692f3')
 
 build() {
  cd "$srcdir/$pkgname-$pkgver"
- patch -p1 -i "$srcdir/hplip-cups-1.5.0-compatibility.patch"
  export PYTHON=python2
  find . -type f -exec sed -i 's~^#.*env python~#!/usr/bin/env python2~' {} +
+ sed -i '1s|#!/usr/bin/python|#!/usr/bin/python2|' base/magic.py
+ # fix sysfs rules
+ sed -i -e "s|SYSFS|ATTR|g" \
+        -e "s|sysfs|attr|g" \
+   data/rules/56-hpmud_support.rules
+
  ./configure --prefix=/usr \
              --enable-qt4 \
              --enable-foomatic-rip-hplip-install \
@@ -51,21 +54,7 @@ build() {
 
 package() {
  cd "$srcdir/$pkgname-$pkgver"
- make DESTDIR="$pkgdir/" install
-
- rm -rf "$pkgdir/etc/sane.d"
- # remove autostart of hp-daemon
- rm -r "$pkgdir/etc/xdg"
- # move udev rules to /lib/udev/rules.d
- mkdir -p "$pkgdir/lib/udev/rules.d"
- mv "$pkgdir"/etc/udev/rules.d/* "$pkgdir/lib/udev/rules.d/"
- rm -r "$pkgdir/etc/udev"
- # remove lp user, it's not used on archlinux
- sed -i 's|OWNER="lp", ||g' "$pkgdir/lib/udev/rules.d/40-hplip.rules"
- # fix sysfs rules
- sed -i -e "s|SYSFS|ATTR|g" \
-        -e "s|sysfs|attr|g" \
-        -e 's|"bin/sh|"/bin/sh|g' \
-   "$pkgdir/lib/udev/rules.d/56-hpmud_support.rules"
+ make rulesdir=/lib/udev/rules.d  DESTDIR="$pkgdir/" install
+ # remove config provided by sane and autostart of hp-daemon
+ rm -rf "$pkgdir"/etc/{sane.d,xdg}
 }
-
