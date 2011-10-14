@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer : Rémy Oudompheng <remy@archlinux.org>
+# Contributor: Morgan LEFIEUX <comete@archlinuxfr.org>
+
+pkgname=hplip
+pkgver=3.11.10
+pkgrel=1
+pkgdesc="Drivers for HP DeskJet, OfficeJet, Photosmart, Business Inkjet and some LaserJet"
+arch=('i686' 'x86_64')
+url="http://hplipopensource.com"
+license=('GPL')
+depends=('python2' 'ghostscript>=8.64-6' 'foomatic-db' 'foomatic-db-engine'
+	 'net-snmp>=5.7.1')
+makedepends=('python2-qt' 'python2-gobject2' 'sane' 'rpcbind' 'cups')
+optdepends=('cups: for printing support'
+            'dbus-python: for dbus support'
+            'sane: for scanner support'
+            'python-imaging: for commandline scanning support'
+            'python-notify: for Desktop notification support'
+            'rpcbind: for network support'
+            'python2-qt: for running hp-toolbox'
+            'python2-gobject2: for running hp-toolbox'
+            'hplip-plugin: binary blobs for specific devices')
+replaces=('hpijs')
+options=('!libtool')
+install=hplip.install
+source=(http://downloads.sourceforge.net/${pkgname}/$pkgname-$pkgver.tar.gz{,.asc})
+md5sums=('6143f30f3b6905ef22105176a3b80db0'
+         '396bbd8c5cc92aa8295e5bcb508692f3')
+
+build() {
+ cd "$srcdir/$pkgname-$pkgver"
+ export PYTHON=python2
+ find . -type f -exec sed -i 's~^#.*env python~#!/usr/bin/env python2~' {} +
+ sed -i '1s|#!/usr/bin/python|#!/usr/bin/python2|' base/magic.py
+ # fix sysfs rules
+ sed -i -e "s|SYSFS|ATTR|g" \
+        -e "s|sysfs|attr|g" \
+   data/rules/56-hpmud_support.rules
+
+ ./configure --prefix=/usr \
+             --enable-qt4 \
+             --enable-foomatic-rip-hplip-install \
+             --enable-foomatic-ppd-install \
+             --enable-hpcups-install \
+             --enable-cups-drv-install \
+             --enable-hpijs-install \
+             --enable-foomatic-drv-install \
+             --enable-pp-build \
+             --enable-udev-acl-rules
+
+ make
+}
+
+package() {
+ cd "$srcdir/$pkgname-$pkgver"
+ make rulesdir=/lib/udev/rules.d  DESTDIR="$pkgdir/" install
+ # remove config provided by sane and autostart of hp-daemon
+ rm -rf "$pkgdir"/etc/{sane.d,xdg}
+}
