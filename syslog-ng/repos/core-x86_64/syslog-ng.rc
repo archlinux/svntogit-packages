@@ -4,51 +4,55 @@
 . /etc/rc.d/functions
 
 checkconfig() {
-    syslog-ng -s -f /etc/syslog-ng/syslog-ng.conf
-    if [ $? -gt 0 ]; then
-	stat_busy "Configuration error. Please fix your config file (/etc/syslog-ng/syslog-ng.conf)."
-	stat_fail
-        exit 0
-    fi
+  if ! syslog-ng -s -f /etc/syslog-ng/syslog-ng.conf; then
+    stat_fail
+    exit 1
+  fi
 }
 
-PID=`pidof -o %PPID /usr/sbin/syslog-ng`
-case "$1" in
+pidfile=/run/syslog-ng.pid
+if [[ -r $pidfile ]]; then
+  read -r PID < "$pidfile"
+  if [[ $PID && ! -d /proc/$PID ]]; then
+    # stale pidfile
+    unset PID
+    rm -f "$pidfile"
+  fi
+fi
+
+case $1 in
   start)
     stat_busy "Starting Syslog-NG"
     checkconfig
-    [ -z "$PID" ] && /usr/sbin/syslog-ng
-    if [ $? -gt 0 ]; then
-      stat_fail
-    else
+    if [[ -z $PID ]] && /usr/sbin/syslog-ng; then
       add_daemon syslog-ng
       stat_done
+    else
+      stat_fail
+      exit 1
     fi
     ;;
   stop)
     stat_busy "Stopping Syslog-NG"
-    [ ! -z "$PID" ] && kill $PID &> /dev/null
-    if [ $? -gt 0 ]; then
-      stat_fail
-    else
-      rm -f /var/run/syslog-ng.pid
-#     Removing stale syslog-ng.persist file. Its new location, as of 2.0.6-1, is /var/lib/syslog-ng/
-      rm -f /var/syslog-ng.persist
+    if [[ $PID ]] && kill $PID &>/dev/null; then
       rm_daemon syslog-ng
       stat_done
+    else
+      stat_fail
+      exit 1
     fi
     ;;
   reload)
     stat_busy "Reloading Syslog-NG configuration and re-opening log files"
-    if [ -z "$PID" ]; then
+    if [[ -z $PID ]]; then
       stat_fail
     else
       checkconfig
-      kill -HUP $PID &> /dev/null
-      if [ $? -gt 0 ]; then
-        stat_fail
-      else
+      if kill -HUP $PID &>/dev/null; then
         stat_done
+      else
+        stat_fail
+        exit 1
       fi
     fi
     ;;
@@ -58,6 +62,5 @@ case "$1" in
     $0 start
     ;;
   *)
-    echo "usage: $0 {start|stop|restart|reload}"  
+    echo "usage: $0 {start|stop|restart|reload}"
 esac
-exit 0
