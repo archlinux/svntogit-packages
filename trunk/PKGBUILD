@@ -5,13 +5,14 @@
 
 pkgname=openssh
 pkgver=5.9p1
-pkgrel=3
+pkgrel=4
 pkgdesc='Free version of the SSH connectivity tools'
 arch=('i686' 'x86_64')
 license=('custom:BSD')
 url='http://www.openssh.org/portable.html'
 backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
 depends=('krb5' 'openssl' 'libedit')
+optdepends=('x11-ssh-askpass: input passphrase in X without a terminal')
 source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"
         'sshd.confd'
         'sshd.pam'
