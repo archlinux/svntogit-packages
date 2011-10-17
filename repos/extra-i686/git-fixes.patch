@@ -1,0 +1,444 @@
+diff --git a/COPYING b/COPYING
+index 22b4b13..f101fb8 100644
+--- a/COPYING
++++ b/COPYING
+@@ -1,4 +1,5 @@
+ Copyright (c) 2000 by Conectiva S.A. (http://www.conectiva.com)
++Copyright 2008 Red Hat, Inc.
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of this software and associated documentation files (the "Software"),
+diff --git a/configure.ac b/configure.ac
+index ff4713d..2e4f542 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -20,45 +20,44 @@
+ #
+ # Process this file with autoconf to produce a configure script
+ 
+-AC_PREREQ(2.57)
++# Initialize Autoconf
++AC_PREREQ([2.60])
+ AC_INIT([xf86-video-vesa],
+-        2.3.0,
++        [2.3.0],
+         [https://bugs.freedesktop.org/enter_bug.cgi?product=xorg],
+-        xf86-video-vesa)
+-
++        [xf86-video-vesa])
+ AC_CONFIG_SRCDIR([Makefile.am])
+-AM_CONFIG_HEADER([config.h])
++AC_CONFIG_HEADERS([config.h])
+ AC_CONFIG_AUX_DIR(.)
+ 
++# Initialize Automake
+ AM_INIT_AUTOMAKE([foreign dist-bzip2])
+-
+ AM_MAINTAINER_MODE
+ 
+-# Require xorg-macros: XORG_DEFAULT_OPTIONS
++# Require X.Org macros 1.8 or later for MAN_SUBSTS set by XORG_MANPAGE_SECTIONS
+ m4_ifndef([XORG_MACROS_VERSION],
+-          [m4_fatal([must install xorg-macros 1.3 or later before running autoconf/autogen])])
+-XORG_MACROS_VERSION(1.3)
++          [m4_fatal([must install xorg-macros 1.8 or later before running autoconf/autogen])])
++XORG_MACROS_VERSION(1.8)
+ XORG_DEFAULT_OPTIONS
+ 
+-# Checks for programs.
++# Initialize libtool
+ AC_DISABLE_STATIC
+ AC_PROG_LIBTOOL
+-AC_PROG_CC
+ 
+ AH_TOP([#include "xorg-server.h"])
+ 
++# Define a configure option for an alternate module directory
+ AC_ARG_WITH(xorg-module-dir, [  --with-xorg-module-dir=DIR ],
+                              [ moduledir="$withval" ],
+                              [ moduledir="$libdir/xorg/modules" ])
+ AC_SUBST(moduledir)
+ 
+-
+-# Checks for extensions
++# Store the list of server defined optional extensions in REQUIRED_MODULES
+ XORG_DRIVER_CHECK_EXT(RANDR, randrproto)
+ XORG_DRIVER_CHECK_EXT(RENDER, renderproto)
+ XORG_DRIVER_CHECK_EXT(DPMSExtension, xextproto)
+ 
+-# Checks for pkg-config packages
++# Obtain compiler/linker options for the driver dependencies
+ PKG_CHECK_MODULES(XORG, xorg-server >= 1.0.99.901 xproto fontsproto $REQUIRED_MODULES)
+ PKG_CHECK_MODULES(XEXT, [xextproto >= 7.0.99.1],
+                   HAVE_XEXTPROTO_71="yes"; AC_DEFINE(HAVE_XEXTPROTO_71, 1, [xextproto 7.1 available]),
+@@ -93,21 +92,14 @@ if test "x$XSERVER_LIBPCIACCESS" = xyes; then
+ fi
+ AM_CONDITIONAL(XSERVER_LIBPCIACCESS, test "x$XSERVER_LIBPCIACCESS" = xyes)
+ 
+-CFLAGS="$CFLAGS $XORG_CFLAGS "' -I$(top_srcdir)/src'
+-INCLUDES="$XORG_INCS "'-I$(top_srcdir)/src'
+-AC_SUBST([CFLAGS])
+-AC_SUBST([INCLUDES])
+-
+ # Checks for libraries.
+ 
+-# Checks for header files.
+-AC_HEADER_STDC
+-
+ DRIVER_NAME=vesa
+ AC_SUBST([DRIVER_NAME])
+ 
+-AC_OUTPUT([
+-	Makefile
+-	src/Makefile
+-	man/Makefile
++AC_CONFIG_FILES([
++                Makefile
++                src/Makefile
++                man/Makefile
+ ])
++AC_OUTPUT
+diff --git a/man/Makefile.am b/man/Makefile.am
+index f0eb29b..b3688ce 100644
+--- a/man/Makefile.am
++++ b/man/Makefile.am
+@@ -1,27 +1,24 @@
+ #
+ # Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+-# 
+-# Permission to use, copy, modify, distribute, and sell this software and its
+-# documentation for any purpose is hereby granted without fee, provided that
+-# the above copyright notice appear in all copies and that both that
+-# copyright notice and this permission notice appear in supporting
+-# documentation.
+-# 
+-# The above copyright notice and this permission notice shall be included
+-# in all copies or substantial portions of the Software.
+-# 
+-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+-# IN NO EVENT SHALL THE OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR
+-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+-# OTHER DEALINGS IN THE SOFTWARE.
+-# 
+-# Except as contained in this notice, the name of the copyright holders shall
+-# not be used in advertising or otherwise to promote the sale, use or
+-# other dealings in this Software without prior written authorization
+-# from the copyright holders.
++#
++# Permission is hereby granted, free of charge, to any person obtaining a
++# copy of this software and associated documentation files (the "Software"),
++# to deal in the Software without restriction, including without limitation
++# the rights to use, copy, modify, merge, publish, distribute, sublicense,
++# and/or sell copies of the Software, and to permit persons to whom the
++# Software is furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice (including the next
++# paragraph) shall be included in all copies or substantial portions of the
++# Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++# DEALINGS IN THE SOFTWARE.
+ # 
+ 
+ drivermandir = $(DRIVER_MAN_DIR)
+@@ -34,25 +31,11 @@ EXTRA_DIST = @DRIVER_NAME@.man
+ 
+ CLEANFILES = $(driverman_DATA)
+ 
+-SED = sed
+ 
+-# Strings to replace in man pages
+-XORGRELSTRING = @PACKAGE_STRING@
+-  XORGMANNAME = X Version 11
++# String replacements in MAN_SUBSTS now come from xorg-macros.m4 via configure
+ 
+-MAN_SUBSTS = \
+-	-e 's|__vendorversion__|"$(XORGRELSTRING)" "$(XORGMANNAME)"|' \
+-	-e 's|__xorgversion__|"$(XORGRELSTRING)" "$(XORGMANNAME)"|' \
+-	-e 's|__xservername__|Xorg|g' \
+-	-e 's|__xconfigfile__|xorg.conf|g' \
+-	-e 's|__projectroot__|$(prefix)|g' \
+-	-e 's|__appmansuffix__|$(APP_MAN_SUFFIX)|g' \
+-	-e 's|__drivermansuffix__|$(DRIVER_MAN_SUFFIX)|g' \
+-	-e 's|__adminmansuffix__|$(ADMIN_MAN_SUFFIX)|g' \
+-	-e 's|__miscmansuffix__|$(MISC_MAN_SUFFIX)|g' \
+-	-e 's|__filemansuffix__|$(FILE_MAN_SUFFIX)|g'
+ 
+ SUFFIXES = .$(DRIVER_MAN_SUFFIX) .man
+ 
+ .man.$(DRIVER_MAN_SUFFIX):
+-	sed $(MAN_SUBSTS) < $< > $@
++	$(AM_V_GEN)$(SED) $(MAN_SUBSTS) < $< > $@
+diff --git a/man/vesa.man b/man/vesa.man
+index 19cb766..ce4b369 100644
+--- a/man/vesa.man
++++ b/man/vesa.man
+@@ -1,4 +1,3 @@
+-.\" $XFree86: xc/programs/Xserver/hw/xfree86/drivers/vesa/vesa.man,v 1.2 2001/01/27 18:20:56 dawes Exp $ 
+ .\" shorthand for double quote that works everywhere.
+ .ds q \N'34'
+ .TH VESA __drivermansuffix__ __vendorversion__
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 88da8a2..dc702f0 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -24,6 +24,9 @@
+ # -avoid-version prevents gratuitous .0.0.0 version numbers on the end
+ # _ladir passes a dummy rpath to libtool so the thing will actually link
+ # TODO: -nostdlib/-Bstatic/-lgcc platform magic, not installing the .a, etc.
++
++AM_CFLAGS = $(XORG_CFLAGS) $(PCIACCESS_CFLAGS)
++
+ vesa_drv_la_LTLIBRARIES = vesa_drv.la
+ vesa_drv_la_LDFLAGS = -module -avoid-version
+ vesa_drv_ladir = @moduledir@/drivers
+diff --git a/src/vesa.c b/src/vesa.c
+index 034a019..61d3550 100644
+--- a/src/vesa.c
++++ b/src/vesa.c
+@@ -281,7 +281,7 @@ static VESAPtr
+ VESAGetRec(ScrnInfoPtr pScrn)
+ {
+     if (!pScrn->driverPrivate)
+-	pScrn->driverPrivate = xcalloc(sizeof(VESARec), 1);
++	pScrn->driverPrivate = calloc(sizeof(VESARec), 1);
+ 
+     return ((VESAPtr)pScrn->driverPrivate);
+ }
+@@ -296,7 +296,7 @@ VESASetModeParameters(vbeInfoPtr pVbe, DisplayModePtr vbemode,
+ 
+     data = (VbeModeInfoData *)vbemode->Private;
+ 
+-    data->block = xcalloc(sizeof(VbeCRTCInfoBlock), 1);
++    data->block = calloc(sizeof(VbeCRTCInfoBlock), 1);
+     data->block->HorizontalTotal = ddcmode->HTotal;
+     data->block->HorizontalSyncStart = ddcmode->HSyncStart;
+     data->block->HorizontalSyncEnd = ddcmode->HSyncEnd;
+@@ -317,6 +317,30 @@ VESASetModeParameters(vbeInfoPtr pVbe, DisplayModePtr vbemode,
+ 				(double)(ddcmode->HTotal * ddcmode->VTotal));
+ }
+ 
++/*
++ * Despite that VBE gives you pixel granularity for mode sizes, some BIOSes
++ * think they can only give sizes in multiples of character cells; and
++ * indeed, the reference CVT and GTF formulae only give results where
++ * (h % 8) == 0.  Whatever, let's just try to cope.  What we're looking for
++ * here is cases where the display says 1366x768 and the BIOS says 1360x768.
++ */
++static Bool
++vesaModesCloseEnough(DisplayModePtr edid, DisplayModePtr vbe)
++{
++    if (!(edid->type & M_T_DRIVER))
++	return FALSE;
++
++    /* never seen a height granularity... */
++    if (edid->VDisplay != vbe->VDisplay)
++	return FALSE;
++
++    if (edid->HDisplay >= vbe->HDisplay &&
++	(edid->HDisplay & ~7) == (vbe->HDisplay & ~7))
++	return TRUE;
++
++    return FALSE;
++}
++
+ static ModeStatus
+ VESAValidMode(int scrn, DisplayModePtr p, Bool flag, int pass)
+ {
+@@ -358,9 +382,7 @@ VESAValidMode(int scrn, DisplayModePtr p, Bool flag, int pass)
+ 	 */
+ 	if (pScrn->monitor->DDC) {
+ 	    for (mode = pScrn->monitor->Modes; mode; mode = mode->next) {
+-		if (mode->type & M_T_DRIVER && 
+-			mode->HDisplay == p->HDisplay &&
+-			mode->VDisplay == p->VDisplay) {
++		if (vesaModesCloseEnough(mode, p)) {
+ 		    if (xf86CheckModeForMonitor(mode, mon) == MODE_OK) {
+ 			found = 1;
+ 			break;
+@@ -391,7 +413,8 @@ VESAValidMode(int scrn, DisplayModePtr p, Bool flag, int pass)
+     for (v = mon->vrefresh[0].lo; v <= mon->vrefresh[0].hi; v++) {
+ 	mode = xf86GTFMode(p->HDisplay, p->VDisplay, v, 0, 0);
+ 	ret = xf86CheckModeForMonitor(mode, mon);
+-	xfree(mode);
++	free(mode->name);
++	free(mode);
+ 	if (ret == MODE_OK)
+ 	    break;
+     }
+@@ -431,8 +454,14 @@ VESAPciProbe(DriverPtr drv, int entity_num, struct pci_device *dev,
+     pScrn = xf86ConfigPciEntity(NULL, 0, entity_num, NULL, 
+ 				NULL, NULL, NULL, NULL, NULL);
+     if (pScrn != NULL) {
+-	VESAPtr pVesa = VESAGetRec(pScrn);
++	VESAPtr pVesa;
++
++	if (pci_device_has_kernel_driver(dev)) {
++	    ErrorF("vesa: Ignoring device with a bound kernel driver\n");
++	    return FALSE;
++	}
+ 
++	pVesa = VESAGetRec(pScrn);
+ 	VESAInitScrn(pScrn);
+ 	pVesa->pciInfo = dev;
+     }
+@@ -480,7 +509,7 @@ VESAProbe(DriverPtr drv, int flags)
+ 		    }
+ 		}
+ 	    }
+-	    xfree(usedChips);
++	    free(usedChips);
+ 	}
+     }
+ #endif
+@@ -503,11 +532,11 @@ VESAProbe(DriverPtr drv, int flags)
+ 		foundScreen = TRUE;
+ 	    }
+ 	}
+-	xfree(usedChips);
++	free(usedChips);
+     }
+ #endif
+ 
+-    xfree(devSections);
++    free(devSections);
+ 
+     return (foundScreen);
+ }
+@@ -554,9 +583,9 @@ VESAFreeRec(ScrnInfoPtr pScrn)
+ 		VbeModeInfoData *data = (VbeModeInfoData*)mode->Private;
+ 
+ 		if (data->block)
+-		    xfree(data->block);
++		    free(data->block);
+ 
+-		xfree(data);
++		free(data);
+ 
+ 		mode->Private = NULL;
+ 	    }
+@@ -564,12 +593,12 @@ VESAFreeRec(ScrnInfoPtr pScrn)
+ 	} while (mode && mode != pScrn->modes);
+     }
+ #endif
+-    xfree(pVesa->monitor);
+-    xfree(pVesa->vbeInfo);
+-    xfree(pVesa->pal);
+-    xfree(pVesa->savedPal);
+-    xfree(pVesa->fonts);
+-    xfree(pScrn->driverPrivate);
++    free(pVesa->monitor);
++    free(pVesa->vbeInfo);
++    free(pVesa->pal);
++    free(pVesa->savedPal);
++    free(pVesa->fonts);
++    free(pScrn->driverPrivate);
+     pScrn->driverPrivate = NULL;
+ }
+ 
+@@ -712,7 +741,7 @@ VESAPreInit(ScrnInfoPtr pScrn, int flags)
+     else {
+ 	void *panelid = VBEReadPanelID(pVesa->pVbe);
+ 	VBEInterpretPanelID(pScrn->scrnIndex, panelid);
+-	xfree(panelid);
++	free(panelid);
+     }
+ #endif
+ 
+@@ -805,7 +834,7 @@ VESAPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+     /* options */
+     xf86CollectOptions(pScrn, NULL);
+-    if (!(pVesa->Options = xalloc(sizeof(VESAOptions)))) {
++    if (!(pVesa->Options = malloc(sizeof(VESAOptions)))) {
+         vbeFree(pVesa->pVbe);
+ 	return FALSE;
+     }
+@@ -940,7 +969,7 @@ VESAScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ 	pScrn->bitsPerPixel = 8;
+ 
+     if (pVesa->shadowFB) {
+-	pVesa->shadow = xcalloc(1, pScrn->displayWidth * pScrn->virtualY *
++	pVesa->shadow = calloc(1, pScrn->displayWidth * pScrn->virtualY *
+ 				   ((pScrn->bitsPerPixel + 7) / 8));
+ 	if (!pVesa->shadow) {
+ 	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+@@ -1119,10 +1148,10 @@ VESACloseScreen(int scrnIndex, ScreenPtr pScreen)
+     }
+     if (pVesa->shadowFB && pVesa->shadow) {
+ 	shadowRemove(pScreen, pScreen->GetScreenPixmap(pScreen));
+-	xfree(pVesa->shadow);
++	free(pVesa->shadow);
+     }
+     if (pVesa->pDGAMode) {
+-	xfree(pVesa->pDGAMode);
++	free(pVesa->pDGAMode);
+ 	pVesa->pDGAMode = NULL;
+ 	pVesa->nDGAMode = 0;
+     }
+@@ -1180,7 +1209,7 @@ VESASetMode(ScrnInfoPtr pScrn, DisplayModePtr pMode)
+ 	     * Free it as it will not be any longer useful
+ 	     */
+ 	    xf86ErrorF(", mode set without customized refresh.\n");
+-	    xfree(data->block);
++	    free(data->block);
+ 	    data->block = NULL;
+ 	    data->mode &= ~(1 << 11);
+ 	}
+@@ -1315,7 +1344,7 @@ VESALoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
+     int base;
+ 
+     if (pVesa->pal == NULL)
+-	pVesa->pal = xcalloc(1, sizeof(CARD32) * 256);
++	pVesa->pal = calloc(1, sizeof(CARD32) * 256);
+ 
+     for (i = 0, base = idx = indices[i]; i < numColors; i++, idx++) {
+ 	int j = indices[i];
+@@ -1414,7 +1443,7 @@ SaveFonts(ScrnInfoPtr pScrn)
+     if (attr10 & 0x01)
+ 	return;
+ 
+-    pVesa->fonts = xalloc(16384);
++    pVesa->fonts = malloc(16384);
+ 
+     /* save the registers that are needed here */
+     miscOut = ReadMiscOut();
+@@ -1622,7 +1651,7 @@ VESASaveRestore(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function)
+ 		&& function == MODE_SAVE) {
+ 	        /* don't rely on the memory not being touched */
+ 	        if (pVesa->pstate == NULL)
+-		    pVesa->pstate = xalloc(pVesa->stateSize);
++		    pVesa->pstate = malloc(pVesa->stateSize);
+ 		memcpy(pVesa->pstate, pVesa->state, pVesa->stateSize);
+ 	    }
+ 	}
+@@ -1737,7 +1766,7 @@ VESADGAAddModes(ScrnInfoPtr pScrn)
+     DGAModePtr pDGAMode;
+ 
+     do {
+-	pDGAMode = xrealloc(pVesa->pDGAMode,
++	pDGAMode = realloc(pVesa->pDGAMode,
+ 			    (pVesa->nDGAMode + 1) * sizeof(DGAModeRec));
+ 	if (!pDGAMode)
+ 	    break;
+diff --git a/src/vesa.h b/src/vesa.h
+index 4656e4c..89245b9 100644
+--- a/src/vesa.h
++++ b/src/vesa.h
+@@ -25,8 +25,6 @@
+  * Conectiva Linux.
+  *
+  * Authors: Paulo César Pereira de Andrade <pcpa@conectiva.com.br>
+- *
+- * $XFree86: xc/programs/Xserver/hw/xfree86/drivers/vesa/vesa.h,v 1.12 2002/08/06 13:46:27 dawes Exp $
+  */
+ 
+ #ifndef _VESA_H_
