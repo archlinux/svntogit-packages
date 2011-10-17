@@ -1,0 +1,113 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gvfs
+pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-obexftp')
+pkgver=1.10.1
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('LGPL')
+makedepends=('libsoup-gnome' 'libcdio' 'fuse' 'bluez' 'smbclient' 'libgphoto2' 'libarchive' 'libgdu' 'pkgconfig' 'intltool' 'libimobiledevice' 'avahi' 'dconf')
+url="http://www.gnome.org"
+options=(!libtool)
+source=(http://ftp.gnome.org/pub/gnome/sources/${pkgbase}/${pkgver%.*}/${pkgbase}-${pkgver}.tar.xz)
+sha256sums=('cd30facee5ad6cd0fafc5337bbf7c06a0bff3936f9ff2ae31519b301efcc9288')
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --libexecdir=/usr/lib/gvfs \
+      --with-bash-completion-dir=/etc/bash_completion.d
+  make
+}
+
+package_gvfs() {
+  pkgdesc="Userspace virtual filesystem implemented as a pluggable module for gio"
+  depends=('libsoup-gnome' 'libgdu' 'libcdio' 'fuse' 'libarchive' 'avahi' 'dconf')
+  optdepends=('gvfs-afc: AFC (mobile devices) support'
+              'gvfs-smb: SMB/CIFS (Windows client) support'
+              'gvfs-gphoto2: gphoto2 (PTP camera/MTP media player) support'
+              'gvfs-obexftp: ObexFTP (bluetooth) support'
+              'gvfs-afp: Apple Filing Protocol (AFP) support')
+  install=gvfs.install
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  sed -e 's/^am__append_3/#am__append_3/' \
+      -e 's/^am__append_4/#am__append_4/' \
+      -i monitor/Makefile
+  make DESTDIR="${pkgdir}" install
+
+  cd "${pkgdir}"
+  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp}
+  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp}.mount
+  rm usr/share/glib-2.0/schemas/org.gnome.system.smb.gschema.xml
+  rm usr/share/GConf/gsettings/gvfs-smb.convert
+}
+
+package_gvfs-smb() {
+  pkgdesc="SMB/CIFS (Windows client) backend for gvfs"
+  depends=("gvfs=${pkgver}" 'smbclient' 'libgnome-keyring')
+  install=gvfs-smb.install
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
+  install -m755 -d "${pkgdir}/usr/lib/gvfs"
+  install -m755 -d "${pkgdir}/usr/share/gvfs/mounts"
+
+  install -m755 .libs/gvfsd-smb{,-browse} "${pkgdir}/usr/lib/gvfs/"
+  install -m644 smb{,-browse}.mount "${pkgdir}/usr/share/gvfs/mounts/"
+
+  install -Dm644 org.gnome.system.smb.gschema.xml \
+    "${pkgdir}/usr/share/glib-2.0/schemas/org.gnome.system.smb.gschema.xml"
+  install -Dm644 gvfs-smb.convert \
+    "${pkgdir}/usr/share/GConf/gsettings/gvfs-smb.convert"
+}
+
+package_gvfs-afc() {
+  pkgdesc="AFC (mobile devices) backend for gvfs"
+  depends=("gvfs=${pkgver}" 'libimobiledevice')
+  install=gvfs-module.install
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
+  install -D .libs/gvfsd-afc "${pkgdir}/usr/lib/gvfs/gvfsd-afc"
+  install -Dm644 afc.mount "${pkgdir}/usr/share/gvfs/mounts/afc.mount"
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/monitor/afc"
+  make DESTDIR="${pkgdir}" install
+}
+
+package_gvfs-gphoto2() {
+  pkgdesc="gphoto2 (PTP camera/MTP media player) backend for gvfs"
+  depends=("gvfs=${pkgver}" 'dbus-core' 'libgphoto2' 'udev')
+  install=gvfs-module.install
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
+  install -D .libs/gvfsd-gphoto2 "${pkgdir}/usr/lib/gvfs/gvfsd-gphoto2"
+  install -Dm644 gphoto2.mount "${pkgdir}/usr/share/gvfs/mounts/gphoto2.mount"
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/monitor/gphoto2"
+  make DESTDIR="${pkgdir}" install
+}
+
+package_gvfs-obexftp() {
+  pkgdesc="ObexFTP (bluetooth) backend for gvfs"
+  depends=("gvfs=${pkgver}" 'dbus-glib' 'bluez' 'obex-data-server')
+  install=gvfs-module.install
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
+  install -D .libs/gvfsd-obexftp "${pkgdir}/usr/lib/gvfs/gvfsd-obexftp"
+  install -Dm644 obexftp.mount "${pkgdir}/usr/share/gvfs/mounts/obexftp.mount"
+}
+
+package_gvfs-afp() {
+  pkgdesc="Apple Filing Protocol (AFP) backend for gvfs"
+  depends=("gvfs=${pkgver}")
+  install=gvfs-module.install
+  install -m755 -d "${pkgdir}/usr/lib/gvfs"
+  install -m755 -d "${pkgdir}/usr/share/gvfs/mounts"
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/daemon"
+  install -m755 .libs/gvfsd-afp{,-browse} "${pkgdir}/usr/lib/gvfs/"
+  install -m644 afp{,-browse}.mount "${pkgdir}/usr/share/gvfs/mounts/"
+
+}
