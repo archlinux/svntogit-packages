@@ -4,6 +4,17 @@
 . /etc/rc.d/functions
 . /etc/conf.d/dnsmasq
 
+checkconfig() {
+  local testout
+
+  if ! testout=$(/usr/sbin/dnsmasq --test 2>&1); then
+    echo "$testout"
+    return 1
+  fi
+
+  return 0
+}
+
 pidfile=/run/dnsmasq.pid
 if [[ -r $pidfile ]]; then
   read -r PID < "$pidfile"
@@ -17,7 +28,7 @@ fi
 case $1 in
   start)
     stat_busy "Starting DNS/DHCP daemon"
-    if [[ -z $PID ]] && /usr/sbin/dnsmasq --test &&
+    if [[ -z $PID ]] && checkconfig &&
         /usr/sbin/dnsmasq "--user=${DNSMASQ_USER:-nobody}" \
                           "--pid-file=$pidfile" \
                           "${DNSMASQ_OPTS[@]}"; then
