@@ -1,0 +1,162 @@
+Index: src/common/xmpp/dispatcher_nb.py
+===================================================================
+--- src/common/xmpp/dispatcher_nb.py	(revision 13139)
++++ src/common/xmpp/dispatcher_nb.py	(revision 13242)
+@@ -22,4 +22,5 @@
+ 
+ import simplexml, sys, locale
++import re
+ from xml.parsers.expat import ExpatError
+ from plugin import PlugIn
+@@ -93,4 +94,22 @@
+         # Let the dispatcher know if there is support for stream management
+         self.sm = None
++
++        # \ufddo -> \ufdef range
++        c = u'\ufdd0'
++        r = c.encode('utf8')
++        while (c < u'\ufdef'):
++            c = unichr(ord(c) + 1)
++            r += '|' + c.encode('utf8')
++
++        # \ufffe-\uffff, \u1fffe-\u1ffff, ..., \u10fffe-\u10ffff
++        c = u'\ufffe'
++        r += '|' + c.encode('utf8')
++        r += '|' + unichr(ord(c) + 1).encode('utf8')
++        while (c < u'\U0010fffe'):
++            c = unichr(ord(c) + 0x10000)
++            r += '|' + c.encode('utf8')
++            r += '|' + unichr(ord(c) + 1).encode('utf8')
++
++        self.invalid_chars_re = re.compile(r)
+ 
+     def getAnID(self):
+@@ -194,4 +213,5 @@
+         # Is this intended?
+         # also look at transports start_disconnect()
++        data = re.sub(self.invalid_chars_re, u'\ufffd'.encode('utf-8'), data)
+         for handler in self._cycleHandlers:
+             handler(self)
+Index: src/common/connection_handlers.py
+===================================================================
+--- src/common/connection_handlers.py	(revision 13172)
++++ src/common/connection_handlers.py	(revision 13243)
+@@ -978,4 +978,6 @@
+                 def decrypt_thread(encmsg, keyID, obj):
+                     decmsg = self.gpg.decrypt(encmsg, keyID)
++                    decmsg = self.connection.Dispatcher.replace_non_character(
++                        decmsg)
+                     # \x00 chars are not allowed in C (so in GTK)
+                     obj.msgtxt = helpers.decode_string(decmsg.replace('\x00',
+Index: src/common/stanza_session.py
+===================================================================
+--- src/common/stanza_session.py	(revision 13172)
++++ src/common/stanza_session.py	(revision 13243)
+@@ -493,4 +493,7 @@
+             stanza.addChild(node=child)
+ 
++        # replace non-character unicode
++        stranza = self.conn.connection.Dispatcher.replace_non_character(stanza)
++
+         return stanza
+ 
+Index: src/common/xmpp/dispatcher_nb.py
+===================================================================
+--- src/common/xmpp/dispatcher_nb.py	(revision 13242)
++++ src/common/xmpp/dispatcher_nb.py	(revision 13243)
+@@ -198,4 +198,7 @@
+                     % (tag, ns))
+ 
++    def replace_non_character(self, data):
++        return re.sub(self.invalid_chars_re, u'\ufffd'.encode('utf-8'), data)
++
+     def ProcessNonBlocking(self, data):
+         """
+@@ -213,5 +216,5 @@
+         # Is this intended?
+         # also look at transports start_disconnect()
+-        data = re.sub(self.invalid_chars_re, u'\ufffd'.encode('utf-8'), data)
++        data = self.replace_non_character(data)
+         for handler in self._cycleHandlers:
+             handler(self)
+Index: src/common/xmpp/dispatcher_nb.py
+===================================================================
+--- src/common/xmpp/dispatcher_nb.py	(revision 13139)
++++ src/common/xmpp/dispatcher_nb.py	(revision 13242)
+@@ -22,4 +22,5 @@
+ 
+ import simplexml, sys, locale
++import re
+ from xml.parsers.expat import ExpatError
+ from plugin import PlugIn
+@@ -93,4 +94,22 @@
+         # Let the dispatcher know if there is support for stream management
+         self.sm = None
++
++        # \ufddo -> \ufdef range
++        c = u'\ufdd0'
++        r = c.encode('utf8')
++        while (c < u'\ufdef'):
++            c = unichr(ord(c) + 1)
++            r += '|' + c.encode('utf8')
++
++        # \ufffe-\uffff, \u1fffe-\u1ffff, ..., \u10fffe-\u10ffff
++        c = u'\ufffe'
++        r += '|' + c.encode('utf8')
++        r += '|' + unichr(ord(c) + 1).encode('utf8')
++        while (c < u'\U0010fffe'):
++            c = unichr(ord(c) + 0x10000)
++            r += '|' + c.encode('utf8')
++            r += '|' + unichr(ord(c) + 1).encode('utf8')
++
++        self.invalid_chars_re = re.compile(r)
+ 
+     def getAnID(self):
+@@ -194,4 +213,5 @@
+         # Is this intended?
+         # also look at transports start_disconnect()
++        data = re.sub(self.invalid_chars_re, u'\ufffd'.encode('utf-8'), data)
+         for handler in self._cycleHandlers:
+             handler(self)
+Index: src/common/connection_handlers.py
+===================================================================
+--- src/common/connection_handlers.py	(revision 13182)
++++ src/common/connection_handlers.py	(revision 13251)
+@@ -979,4 +979,6 @@
+                 def decrypt_thread(encmsg, keyID, obj):
+                     decmsg = self.gpg.decrypt(encmsg, keyID)
++                    decmsg = self.connection.Dispatcher.replace_non_character(
++                        decmsg)
+                     # \x00 chars are not allowed in C (so in GTK)
+                     obj.msgtxt = helpers.decode_string(decmsg.replace('\x00',
+Index: src/common/stanza_session.py
+===================================================================
+--- src/common/stanza_session.py	(revision 13172)
++++ src/common/stanza_session.py	(revision 13243)
+@@ -493,4 +493,7 @@
+             stanza.addChild(node=child)
+ 
++        # replace non-character unicode
++        stranza = self.conn.connection.Dispatcher.replace_non_character(stanza)
++
+         return stanza
+ 
+Index: src/common/xmpp/dispatcher_nb.py
+===================================================================
+--- src/common/xmpp/dispatcher_nb.py	(revision 13242)
++++ src/common/xmpp/dispatcher_nb.py	(revision 13243)
+@@ -198,4 +198,7 @@
+                     % (tag, ns))
+ 
++    def replace_non_character(self, data):
++        return re.sub(self.invalid_chars_re, u'\ufffd'.encode('utf-8'), data)
++
+     def ProcessNonBlocking(self, data):
+         """
+@@ -213,5 +216,5 @@
+         # Is this intended?
+         # also look at transports start_disconnect()
+-        data = re.sub(self.invalid_chars_re, u'\ufffd'.encode('utf-8'), data)
++        data = self.replace_non_character(data)
+         for handler in self._cycleHandlers:
+             handler(self)
