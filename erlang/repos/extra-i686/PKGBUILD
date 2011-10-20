@@ -1,16 +1,17 @@
 # $Id$
-# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
 # Maintainer: Vesa Kaihlavirta <vesa@archlinux.org>
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+# Contributor: Tom Burdick <thomas.burdick@wrightwoodtech.com>
 
 pkgname=erlang
-pkgver=R14B
-pkgrel=2
+pkgver=R14B04
+pkgrel=1
 pkgdesc="A small concurrent functional programming language developed by Ericsson."
 arch=(i686 x86_64)
 url="http://www.erlang.org/index.html"
 license=('custom')
 depends=('ncurses' 'glibc')
-makedepends=('java-environment' 'perl' 'openssl' 'wxgtk' 'unixodbc')
+makedepends=('java-environment' 'perl' 'openssl' 'wxgtk' 'unixodbc' 'mesa')
 optdepends=('wxgtk: for wx support' 'unixodbc: database')
 
 options=('!makeflags')
@@ -22,14 +23,11 @@ build() {
   ERTSVERSION=$(sed -n 's/^VSN[ ]*=[ ]*\([0-9.]\)/\1/p' < erts/vsn.mk)
   ERLINTERFACEVERSION=$(sed -n 's/^EI_VSN[ ]*=[ ]*\([0-9.]\)/\1/p' < lib/erl_interface/vsn.mk)
 
-  # fix for #17001
-  sed -i 's|WX_LIBS=`$WX_CONFIG_WITH_ARGS --libs`|WX_LIBS="`$WX_CONFIG_WITH_ARGS --libs` -lGLU"|' lib/wx/configure || return 1
+  sed -i '/SSL_DYNAMIC_ONLY=/s:no:yes:' erts/configure
 
-  sed -i '/SSL_DYNAMIC_ONLY=/s:no:yes:' erts/configure || return 1
-
-  CFLAGS="${CFLAGS} -fno-strict-aliasing" ./configure --enable-ethread-pre-pentium4-compatibility enable_ethread_pre_pentium4_compatibilit=yes --prefix=/usr --enable-smp-support --enable-threads || return 1
-  make || return 1
-  make INSTALL_PREFIX="$pkgdir" install || return 1
+  CFLAGS="${CFLAGS} -fno-strict-aliasing" ./configure --prefix=/usr --enable-smp-support --enable-threads -enable-native-libs
+  make
+  make INSTALL_PREFIX="$pkgdir" install
 
 # fix prefix
   cd "$pkgdir"
@@ -37,22 +35,22 @@ build() {
       usr/lib/erlang/bin/start \
       usr/lib/erlang/erts-${ERTSVERSION}/bin/erl \
       usr/lib/erlang/erts-${ERTSVERSION}/bin/start \
-      usr/lib/erlang/releases/RELEASES ;do 
-    sed -i "s#$pkgdir##" $i || return 1
+      usr/lib/erlang/releases/RELEASES ;do
+    sed -i "s#$pkgdir##" $i
   done
 
 # fix symlinks
   cd "$pkgdir/usr/lib/erlang/bin"
-  ln -sf ../erts-${ERTSVERSION}/bin/epmd 
+  ln -sf ../erts-${ERTSVERSION}/bin/epmd
 
   cd "$pkgdir/usr/bin"
   for file in *; do
-    ln -sfv ../lib/erlang/bin/$file || return 1
+    ln -sfv ../lib/erlang/bin/$file
   done
 
-  ln -s ../lib/erlang/lib/erl_interface-${ERLINTERFACEVERSION}/bin/erl_call "$pkgdir/usr/bin/erl_call" || return 1
+  ln -s ../lib/erlang/lib/erl_interface-${ERLINTERFACEVERSION}/bin/erl_call "$pkgdir/usr/bin/erl_call"
 
-# install documentation 
+# install documentation
   install -d "$pkgdir/usr/share/doc/erlang"
   install -D -m644 "$srcdir"/{COPYRIGHT,PR.template,README} "$pkgdir/usr/share/doc/erlang"
   cp -r "$srcdir/man" "$pkgdir/usr/lib/erlang"
@@ -60,5 +58,5 @@ build() {
   install -Dm644 "$srcdir/otp_src_${pkgver/./-}/EPLICENCE" "$pkgdir/usr/share/licenses/$pkgname/EPLICENCE"
 
 }
-md5sums=('5292a04556d17ad528d570e02357dfbb'
-         '011530a24fbcc194be9bd01f779325a2')
+md5sums=('4b469729f103f52702bfb1fb24529dc0'
+         'f31e72518daae4007f595c0b224dd59f')
