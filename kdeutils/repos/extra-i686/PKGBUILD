@@ -17,7 +17,7 @@ pkgname=('kdeutils-ark'
          'kdeutils-superkaramba'
          'kdeutils-sweeper')
 pkgver=4.7.2
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url='http://www.kde.org'
 license=('GPL' 'LGPL' 'FDL')
@@ -25,17 +25,31 @@ groups=('kde' 'kdeutils')
 makedepends=('pkgconfig' 'cmake' 'automoc4' 'kdebase-lib' 'kdebase-workspace'
 	'kdebindings-python' 'system-config-printer-common' 'libarchive' 'qimageblitz'
 	'qjson')
-source=("http://download.kde.org/stable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2")
-sha1sums=('52ce9b6b5f2c20475f46b6f7378ca4c530df37b4')
+source=("http://download.kde.org/stable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2"
+        'CVE-2011-2725.patch')
+sha1sums=('52ce9b6b5f2c20475f46b6f7378ca4c530df37b4'
+          'bc7428edb6851b4f3dc772bc88ace576379e93f2')
 
 build() {
-	cd ${srcdir}
+    cd "${srcdir}"/${pkgbase}-${pkgver}/ark
+    patch -p1 -i "${srcdir}"/CVE-2011-2725.patch
+
+    # Use Python2
+    cd "${srcdir}"/${pkgbase}-${pkgver}
+    sed -i 's|/usr/bin/python|/usr/bin/python2|' \
+      kcharselect/kcharselect-generate-datafile.py \
+      superkaramba/examples/richtext/rtext.py
+    sed -i 's|/usr/bin/env python|/usr/bin/env python2|' \
+      printer-applet/{authconn,debug,monitor,printer-applet,statereason}.py
+
+	cd "${srcdir}"
 	mkdir build
 	cd build
 	cmake ../${pkgbase}-${pkgver} \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_SKIP_RPATH=ON \
-		-DCMAKE_INSTALL_PREFIX=/usr
+		-DCMAKE_INSTALL_PREFIX=/usr \
+        -DPYTHON_EXECUTABLE=/usr/bin/python2
 	make
 }
 
@@ -159,9 +173,6 @@ package_kdeutils-printer-applet() {
 	make DESTDIR=$pkgdir install
 	cd $srcdir/build/printer-applet/doc
 	make DESTDIR=$pkgdir install
-
-    # Use the python2 executable
-    find "${pkgdir}" -name '*.py' | xargs sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|'
 }
 
 package_kdeutils-superkaramba() {
