@@ -6,12 +6,12 @@
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
 pkgver=4.8.5
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
 makedepends=('qt' 'python-sip' 'dbus-python' 'python2-sip' 'phonon'
-             'python-opengl' 'qt-assistant-compat')
+             'python-opengl' 'qt-assistant-compat' 'qtwebkit')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
 md5sums=('0e4264bb912edfbda319bb236ac84407')
 
@@ -44,7 +44,7 @@ build() {
 
 package_pyqt(){
   pkgdesc="A set of Python bindings for the Qt toolkit"
-  depends=('qt' 'python-sip')
+  depends=('qt' 'python-sip' 'qtwebkit')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
