@@ -1,0 +1,91 @@
+diff -ur watchdog-5.9.orig/src/watchdog.c watchdog-5.9/src/watchdog.c
+--- watchdog-5.9.orig/src/watchdog.c	2010-06-16 15:45:51.000000000 +0200
++++ watchdog-5.9/src/watchdog.c	2011-10-23 15:51:58.631689778 +0200
+@@ -636,7 +636,7 @@
+ 
+     /* allocate some memory to store a filename, this is needed later on even
+      * if the system runs out of memory */
+-    filename_buf = (char*)malloc(max(strlen(logdir) + sizeof("/repair-bin.stdout") + 1, strlen("/proc//oom_adj") + sizeof(int) * CHAR_BIT * 10 / 3 + 1));
++    filename_buf = (char*)malloc(max(strlen(logdir) + sizeof("/repair-bin.stdout") + 1, strlen("/proc//oom_score_adj") + sizeof(int) * CHAR_BIT * 10 / 3 + 1));
+     if (!filename_buf) {
+ 	error(progname);
+         exit(1);
+@@ -886,11 +886,19 @@
+ #endif
+ 
+     /* tell oom killer to not kill this process */
+-    sprintf(filename_buf, "/proc/%d/oom_adj", pid);
++    sprintf(filename_buf, "/proc/%d/oom_score_adj", pid);
+     fp = fopen(filename_buf, "w");
+     if (fp != NULL) {
+-	fprintf(fp, "-17\n");
+-	(void) fclose(fp);
++        fprintf(fp, "-1000\n");
++        (void) fclose(fp);
++    }
++    else {
++        sprintf(filename_buf, "/proc/%d/oom_adj", pid);
++        fp = fopen(filename_buf, "w");
++        if (fp != NULL) {
++            fprintf(fp, "-17\n");
++            (void) fclose(fp);
++        }
+     }
+ 
+     /* main loop: update after <tint> seconds */
+diff -ur watchdog-5.9.orig/src/wd_keepalive.c watchdog-5.9/src/wd_keepalive.c
+--- watchdog-5.9.orig/src/wd_keepalive.c	2010-06-16 15:45:49.000000000 +0200
++++ watchdog-5.9/src/wd_keepalive.c	2011-10-23 15:50:43.061563281 +0200
+@@ -212,7 +212,7 @@
+     FILE *fp;
+     char *configfile = CONFIG_FILENAME;
+     char *filename_buf;
+-    pid_t child_pid;
++    pid_t pid, child_pid;
+     int count = 0;
+     int c;
+     /* allow all options watchdog understands too */
+@@ -284,7 +284,7 @@
+ 
+     /* allocate some memory to store a filename, this is needed later on even
+      * if the system runs out of memory */
+-    filename_buf = (char*)malloc(strlen("/proc//oom_adj") + sizeof(int) * CHAR_BIT * 10 / 3 + 1);
++    filename_buf = (char*)malloc(strlen("/proc//oom_score_adj") + sizeof(int) * CHAR_BIT * 10 / 3 + 1);
+     if (!filename_buf) {
+         error(progname);
+         exit(1);
+@@ -363,9 +363,10 @@
+ #endif
+ 
+     /* tuck my process id away */
++    pid = getpid();
+     fp = fopen(KA_PIDFILE, "w");
+     if ( fp != NULL ) {
+-        fprintf(fp, "%d\n", getpid());
++        fprintf(fp, "%d\n", pid);
+         (void) fclose(fp);
+     }
+ 
+@@ -403,12 +404,20 @@
+ #endif
+ 
+     /* tell oom killer to not kill this process */
+-    sprintf(filename_buf, "/proc/%d/oom_adj", getpid());
++    sprintf(filename_buf, "/proc/%d/oom_score_adj", pid);
+     fp = fopen(filename_buf, "w");
+     if (fp != NULL) {
+-        fprintf(fp, "-17\n");
++        fprintf(fp, "-1000\n");
+         (void) fclose(fp);
+     }
++    else {
++        sprintf(filename_buf, "/proc/%d/oom_adj", pid);
++        fp = fopen(filename_buf, "w");
++        if (fp != NULL) {
++            fprintf(fp, "-17\n");
++            (void) fclose(fp);
++        }
++    }
+ 
+     /* main loop: update after <tint> seconds */
+     while ( _running ) {
