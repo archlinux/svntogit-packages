@@ -5,7 +5,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.16.4
+pkgver=0.16.5
 pkgrel=1
 pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
 arch=('i686' 'x86_64')
@@ -17,13 +17,14 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
 makedepends=('pkgconfig' 'doxygen')
 install=${pkgname}.install
 changelog=ChangeLog
-source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
+source=("http://downloads.sourceforge.net/musicpd/$pkgname-$pkgver.tar.bz2"
 'mpd') 
-md5sums=('ddac46eb7d976c5cc6f9bac9e4e100f1'
+md5sums=('f7564cff12035f6a1112cce770655df7'
          'e5669c2bff4031928531e52475addeb1')
 
 build() {
-  cd ${srcdir}/${pkgname}-${pkgver}
+  cd "$srcdir/$pkgname-$pkgver"
+
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --enable-lastfm \
@@ -32,15 +33,18 @@ build() {
     --enable-documentation \
     --disable-libwrap \
     --disable-cue \
-    --disable-sidplay 
+    --disable-sidplay \
+    --with-systemdsystemunitdir=/lib/systemd/system
+
   make
 }
 
 package() {
-  cd ${srcdir}/${pkgname}-${pkgver}
-  make DESTDIR=${pkgdir} install
+  cd "$srcdir/$pkgname-$pkgver"
 
-  # set ours dirs in mpd.conf file
+  make DESTDIR="$pkgdir" install
+
+  # set our dirs in mpd.conf file
   sed -i 's|^music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
   sed -i 's|playlist_directory.*$|playlist_directory "/var/lib/mpd/playlists"|1' doc/mpdconf.example
   sed -i 's|db_file.*$|db_file "/var/lib/mpd/mpd.db"|1' doc/mpdconf.example
@@ -50,8 +54,8 @@ package() {
   sed -i 's|#state_file.*$|state_file "/var/lib/mpd/mpdstate"|1' doc/mpdconf.example
   sed -i 's|#user.*$|user "mpd"|1' doc/mpdconf.example
 
-  install -Dm644 doc/mpdconf.example ${pkgdir}/usr/share/mpd/mpd.conf.example
+  install -Dm644 "doc/mpdconf.example" "$pkgdir/usr/share/mpd/mpd.conf.example"
 
-  install -Dm755 ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd
-  install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd}
+  install -Dm755 "$srcdir/mpd" "$pkgdir/etc/rc.d/mpd"
+  install -d "$pkgdir"/var/{lib/mpd/playlists,log/mpd}
 }
