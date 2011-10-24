@@ -1,288 +1,56 @@
-From bd6ea85209e5ab80375d4ec9994d10a89fd1374a Mon Sep 17 00:00:00 2001
-From: Jamey Sharp <jamey@minilop.net>
-Date: Wed, 15 Sep 2010 01:35:21 +0000
-Subject: Fix pixmap double-frees on error paths.
+From f80d23357874db19bc124dee70239fb182977883 Mon Sep 17 00:00:00 2001
+From: Matthieu Herrb <matthieu.herrb@laas.fr>
+Date: Mon, 17 Oct 2011 20:26:12 +0000
+Subject: Fix CVE-2011-4028: File disclosure vulnerability.
 
-If AddResource fails, it will automatically free the object that was
-passed to it by calling the appropriate deleteFunc; and of course
-FreeResource also calls the deleteFunc. In both cases it's wrong to call
-the destroy hook manually.
+use O_NOFOLLOW to open the existing lock file, so symbolic links
+aren't followed, thus avoid revealing if it point to an existing
+file.
 
-Commit by Jamey Sharp and Josh Triplett.
-
-Signed-off-by: Jamey Sharp <jamey@minilop.net>
-Signed-off-by: Josh Triplett <josh@joshtriplett.org>
-Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
-Reviewed-by: Aaron Plattner <aplattner@nvidia.com>
-(cherry picked from commit 0f380a5005f800572773cd4667ce43c7459cc467)
+Signed-off-by: Matthieu Herrb <matthieu.herrb@laas.fr>
+Reviewed-by: Alan Coopersmith <alan.coopersmith@oracle.com>
+(cherry picked from commit 6ba44b91e37622ef8c146d8f2ac92d708a18ed34)
 ---
-diff --git a/Xext/shm.c b/Xext/shm.c
-index b08af82..4141a8f 100644
---- a/Xext/shm.c
-+++ b/Xext/shm.c
-@@ -991,7 +991,6 @@ CreatePmap:
- 	    pMap->drawable.serialNumber = NEXT_SERIAL_NUMBER;
- 	    pMap->drawable.id = newPix->info[j].id;
- 	    if (!AddResource(newPix->info[j].id, RT_PIXMAP, (pointer)pMap)) {
--		(*pScreen->DestroyPixmap)(pMap);
- 		result = BadAlloc;
- 		break;
- 	    }
-@@ -1002,10 +1001,8 @@ CreatePmap:
-     }
- 
-     if(result == BadAlloc) {
--	while(j--) {
--	    (*pScreen->DestroyPixmap)(pMap);
-+	while(j--)
- 	    FreeResource(newPix->info[j].id, RT_NONE);
--	}
- 	free(newPix);
-     } else 
- 	AddResource(stuff->pid, XRT_PIXMAP, newPix);
-@@ -1110,7 +1107,6 @@ CreatePmap:
- 	{
- 	    return Success;
- 	}
--	pDraw->pScreen->DestroyPixmap(pMap);
-     }
-     return BadAlloc;
- }
-diff --git a/dix/dispatch.c b/dix/dispatch.c
-index 192c8c3..f8200b1 100644
---- a/dix/dispatch.c
-+++ b/dix/dispatch.c
-@@ -1419,7 +1419,6 @@ CreatePmap:
- 	}
- 	if (AddResource(stuff->pid, RT_PIXMAP, (pointer)pMap))
- 	    return Success;
--	(*pDraw->pScreen->DestroyPixmap)(pMap);
-     }
-     return BadAlloc;
- }
+diff --git a/os/utils.c b/os/utils.c
+index 36cb46f..9e0acb6 100644
+--- a/os/utils.c
++++ b/os/utils.c
+@@ -316,7 +316,7 @@ LockServer(void)
+       /*
+        * Read the pid from the existing file
+        */
+-      lfd = open(LockFile, O_RDONLY);
++      lfd = open(LockFile, O_RDONLY|O_NOFOLLOW);
+       if (lfd < 0) {
+         unlink(tmp);
+         FatalError("Can't read lock file %s\n", LockFile);
 --
 cgit v0.9.0.2-2-gbebe
-From 347f5610ca023fb31485aa19c20607af8bf9c834 Mon Sep 17 00:00:00 2001
-From: Carlos Garnacho <carlosg@gnome.org>
-Date: Tue, 30 Aug 2011 22:46:52 +0000
-Subject: Xi: Fix passive XI2 ungrabs on XIAll[Master]Devices
+From 12f65819ffb04103f170ecd7e281348de618fc4c Mon Sep 17 00:00:00 2001
+From: Matthieu Herrb <matthieu.herrb@laas.fr>
+Date: Mon, 17 Oct 2011 20:27:35 +0000
+Subject: Fix CVE-2011-4029: File permission change vulnerability.
 
-The corresponding DeviceIntPtr wasn't being gotten properly,
-resulting in BadDevice from dixLookupDevice().
+Use fchmod() to change permissions of the lock file instead
+of chmod(), thus avoid the race that can be exploited to set
+a symbolic link to any file or directory in the system.
 
-Signed-off-by: Carlos Garnacho <carlosg@gnome.org>
-Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
-Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-(cherry picked from commit f52d5cd374563544dafe29587411f345e31bbdf8)
+Signed-off-by: Matthieu Herrb <matthieu.herrb@laas.fr>
+Reviewed-by: Alan Coopersmith <alan.coopersmith@oracle.com>
+(cherry picked from commit b67581cf825940fdf52bf2e0af4330e695d724a4)
 ---
-diff --git a/Xi/xipassivegrab.c b/Xi/xipassivegrab.c
-index ae43433..5cdd8ac 100644
---- a/Xi/xipassivegrab.c
-+++ b/Xi/xipassivegrab.c
-@@ -261,9 +261,16 @@ ProcXIPassiveUngrabDevice(ClientPtr client)
-     REQUEST(xXIPassiveUngrabDeviceReq);
-     REQUEST_AT_LEAST_SIZE(xXIPassiveUngrabDeviceReq);
+diff --git a/os/utils.c b/os/utils.c
+index 9e0acb6..d9aa65e 100644
+--- a/os/utils.c
++++ b/os/utils.c
+@@ -295,7 +295,7 @@ LockServer(void)
+     FatalError("Could not create lock file in %s\n", tmp);
+   (void) sprintf(pid_str, "%10ld\n", (long)getpid());
+   (void) write(lfd, pid_str, 11);
+-  (void) chmod(tmp, 0444);
++  (void) fchmod(lfd, 0444);
+   (void) close(lfd);
  
--    rc = dixLookupDevice(&dev, stuff->deviceid, client, DixGrabAccess);
--    if (rc != Success)
--	return rc;
-+    if (stuff->deviceid == XIAllDevices)
-+        dev = inputInfo.all_devices;
-+    else if (stuff->deviceid == XIAllMasterDevices)
-+        dev = inputInfo.all_master_devices;
-+    else
-+    {
-+        rc = dixLookupDevice(&dev, stuff->deviceid, client, DixGrabAccess);
-+        if (rc != Success)
-+	    return rc;
-+    }
- 
-     if (stuff->grab_type != XIGrabtypeButton &&
-         stuff->grab_type != XIGrabtypeKeycode &&
---
-cgit v0.9.0.2-2-gbebe
-From e9ae33316012ffe9acfeeb7303ab3392c2ca2a2b Mon Sep 17 00:00:00 2001
-From: Sam Spilsbury <sam.spilsbury@canonical.com>
-Date: Wed, 14 Sep 2011 01:58:34 +0000
-Subject: Remove the SendEvent bit (0x80) before doing range checks on event type.
-
-Some extension libraries may set this bit before converting the event to
-wire protocol and as such range checking the event will cause an invalid
-BadValue error to result. As the documentation suggests the the bit
-should be "forced on", remove it before doing range checks and continue
-to force it on in the server.
-
-Reviewed-by: Jamey Sharp <jamey@minilop.net>
-Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-(cherry picked from commit 2d2dce558d24eeea0eb011ec9ebaa6c5c2273c39)
----
-diff --git a/dix/events.c b/dix/events.c
-index 8a4c6b9..9e58edb 100644
---- a/dix/events.c
-+++ b/dix/events.c
-@@ -5224,6 +5224,8 @@ CloseDownEvents(void)
-     InputEventList = NULL;
- }
- 
-+#define SEND_EVENT_BIT 0x80
-+
- /**
-  * Server-side protocol handling for SendEvent request.
-  *
-@@ -5241,6 +5243,16 @@ ProcSendEvent(ClientPtr client)
- 
-     REQUEST_SIZE_MATCH(xSendEventReq);
- 
-+    /* libXext and other extension libraries may set the bit indicating
-+     * that this event came from a SendEvent request so remove it
-+     * since otherwise the event type may fail the range checks
-+     * and cause an invalid BadValue error to be returned.
-+     *
-+     * This is safe to do since we later add the SendEvent bit (0x80)
-+     * back in once we send the event to the client */
-+
-+    stuff->event.u.u.type &= ~(SEND_EVENT_BIT);
-+
-     /* The client's event type must be a core event type or one defined by an
- 	extension. */
- 
-@@ -5298,7 +5310,7 @@ ProcSendEvent(ClientPtr client)
- 	client->errorValue = stuff->propagate;
- 	return BadValue;
-     }
--    stuff->event.u.u.type |= 0x80;
-+    stuff->event.u.u.type |= SEND_EVENT_BIT;
-     if (stuff->propagate)
-     {
- 	for (;pWin; pWin = pWin->parent)
---
-cgit v0.9.0.2-2-gbebe
-From b45e22675364915c32560c26404cf30d77ab68aa Mon Sep 17 00:00:00 2001
-From: Alan Hourihane <alanh@vmware.com>
-Date: Wed, 05 Oct 2011 02:42:46 +0000
-Subject: dixfonts: Don't overwrite local c variable until new_closure is safely initialized.
-
-Signed-off-by: Alan Hourihane <alanh@vmware.com>
-Reviewed-by: Jeremy Huddleston <jeremyhu@apple.com>
-(cherry picked from commit 7a33c5b934382b5554f41ab1502514e91c9bc52e)
----
-diff --git a/dix/dixfonts.c b/dix/dixfonts.c
-index fbac124..d2bcb84 100644
---- a/dix/dixfonts.c
-+++ b/dix/dixfonts.c
-@@ -1302,31 +1302,30 @@ doPolyText(ClientPtr client, PTclosurePtr c)
- 			goto bail;
- 		    }
- 		    *new_closure = *c;
--		    c = new_closure;
- 
--		    len = c->endReq - c->pElt;
--		    c->data = malloc(len);
--		    if (!c->data)
-+		    len = new_closure->endReq - new_closure->pElt;
-+		    new_closure->data = malloc(len);
-+		    if (!new_closure->data)
- 		    {
--			free(c);
-+			free(new_closure);
- 			err = BadAlloc;
- 			goto bail;
- 		    }
--		    memmove(c->data, c->pElt, len);
--		    c->pElt = c->data;
--		    c->endReq = c->pElt + len;
-+		    memmove(new_closure->data, new_closure->pElt, len);
-+		    new_closure->pElt = new_closure->data;
-+		    new_closure->endReq = new_closure->pElt + len;
- 
- 		    /* Step 2 */
- 
--		    pGC = GetScratchGC(c->pGC->depth, c->pGC->pScreen);
-+		    pGC = GetScratchGC(new_closure->pGC->depth, new_closure->pGC->pScreen);
- 		    if (!pGC)
- 		    {
--			free(c->data);
--			free(c);
-+			free(new_closure->data);
-+			free(new_closure);
- 			err = BadAlloc;
- 			goto bail;
- 		    }
--		    if ((err = CopyGC(c->pGC, pGC, GCFunction |
-+		    if ((err = CopyGC(new_closure->pGC, pGC, GCFunction |
- 				      GCPlaneMask | GCForeground |
- 				      GCBackground | GCFillStyle |
- 				      GCTile | GCStipple |
-@@ -1337,15 +1336,16 @@ doPolyText(ClientPtr client, PTclosurePtr c)
- 				      Success)
- 		    {
- 			FreeScratchGC(pGC);
--			free(c->data);
--			free(c);
-+			free(new_closure->data);
-+			free(new_closure);
- 			err = BadAlloc;
- 			goto bail;
- 		    }
-+		    c = new_closure;
- 		    origGC = c->pGC;
- 		    c->pGC = pGC;
- 		    ValidateGC(c->pDraw, c->pGC);
--		    
-+
- 		    ClientSleep(client, (ClientSleepProcPtr)doPolyText, c);
- 
- 		    /* Set up to perform steps 3 and 4 */
---
-cgit v0.9.0.2-2-gbebe
-From bec15eb73a17fb47963ff6b747ea504f7dc05deb Mon Sep 17 00:00:00 2001
-From: Kirill Elagin <kirelagin@gmail.com>
-Date: Tue, 04 Oct 2011 19:02:20 +0000
-Subject: Fix server crash due to invalid images
-
-See https://bugs.freedesktop.org/show_bug.cgi?id=39383
-
-Signed-off-by: Kirill Elagin <kirelagin@gmail.com>
-Reviewed-by: Jeremy Huddleston <jeremyhu@apple.com>
-(cherry picked from commit 53611213396479abfdce0f7752681572e0d26d78)
----
-diff --git a/fb/fbpict.c b/fb/fbpict.c
-index d1fd0cb..57c93fd 100644
---- a/fb/fbpict.c
-+++ b/fb/fbpict.c
-@@ -163,7 +163,9 @@ create_bits_picture (PicturePtr pict,
- 	(pixman_format_code_t)pict->format,
- 	pixmap->drawable.width, pixmap->drawable.height,
- 	(uint32_t *)bits, stride * sizeof (FbStride));
--    
-+
-+    if (!image)
-+	return NULL;
-     
- #ifdef FB_ACCESS_WRAPPER
- #if FB_SHIFT==5
---
-cgit v0.9.0.2-2-gbebe
-From 65469f5ea98074ab27ce0a2d482157b9d5c2cbc7 Mon Sep 17 00:00:00 2001
-From: vdb@picaros.org <vdb@picaros.org>
-Date: Sat, 17 Sep 2011 16:55:47 +0000
-Subject: Fix a rare memory leak
-
-Signed-off-by: Servaas Vandenberghe <vdb@picaros.org>
-Reviewed-by: Jeremy Huddleston <jeremyhu@apple.com>
-(cherry picked from commit e4cddf509e1729e8ff40354275b65455111ad2bd)
----
-diff --git a/hw/xfree86/modes/xf86Crtc.c b/hw/xfree86/modes/xf86Crtc.c
-index c2814d4..3fae039 100644
---- a/hw/xfree86/modes/xf86Crtc.c
-+++ b/hw/xfree86/modes/xf86Crtc.c
-@@ -133,6 +133,7 @@ xf86CrtcCreate (ScrnInfoPtr		scrn,
- 	crtcs = malloc((xf86_config->num_crtc + 1) * sizeof (xf86CrtcPtr));
-     if (!crtcs)
-     {
-+	free(crtc->gamma_red);
- 	free(crtc);
- 	return NULL;
-     }
+   /*
 --
 cgit v0.9.0.2-2-gbebe
