@@ -2,12 +2,12 @@
 # Maintainer: Allan McRae <allan@archlinux.org>
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
-# NOTE: valgrind requires rebuilt with each new glibc version
+# NOTE: valgrind requires rebuilt with each major glibc version
 
 pkgname=glibc
-pkgver=2.14
-pkgrel=6
-_glibcdate=20110908
+pkgver=2.14.1
+pkgrel=1
+_glibcdate=20111025
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -27,24 +27,22 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.12.1-static-shared-getpagesize.patch
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.13-futex.patch
-        glibc-2.13-dlclose-search-reset.patch
         glibc-2.14-libdl-crash.patch
-        glibc-2.14-avoid-assertion-on-empty-dns-answer.patch
+        glibc-2.14-revert-4768ae77.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
         nscd
         locale.gen.txt
         locale-gen)
-md5sums=('069069eb9100cc7affd7ad884cb3c3e9'
+md5sums=('c52a15134dfa9f2c94f2ccd4cb155cf1'
          '4dadb9203b69a3210d53514bb46f41c3'
          '0c5540efc51c0b93996c51b57a8540ae'
          '40cd342e21f71f5e49e32622b25acc52'
          'a3ac6f318d680347bb6e2805d42b73b2'
          'b042647ea7d6f22ad319e12e796bd13e'
          '7d0154b7e17ea218c9fa953599d24cc4'
-         '22d09c58718fb3d1d31c3a6c14ca6886'
-         'cea62cc6b903d222c5f26e05a3c0e0e6'
-         '13728807283f111e5d9d38cf38e0a461'
+         '6970bcfeb3bf88913436d5112d16f588'
+         '7da8c554a3b591c7401d7023b1928afc'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
          'b587ee3a70c9b3713099295609afde49'
@@ -84,17 +82,16 @@ build() {
   # http://sourceware.org/bugzilla/show_bug.cgi?id=12403
   patch -Np1 -i ${srcdir}/glibc-2.13-futex.patch
 
-  # https://bugzilla.redhat.com/show_bug.cgi?id=593675
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=2f811bf8 (only fedora branch...)
-  patch -Np1 -i ${srcdir}/glibc-2.13-dlclose-search-reset.patch
-
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9 (only fedora branch...)
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
   patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
 
+  # Revert commit causing issues with crappy DNS servers...
+  # Will be removed when workaround becomes annoying to maintain - USE A BETTER DNS SERVER!
+  # Note that both these patches do not fix the issue completely:
   # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=032c0ee3 (only fedora branch...)
-  patch -Np1 -i ${srcdir}/glibc-2.14-avoid-assertion-on-empty-dns-answer.patch
+  patch -Np1 -i ${srcdir}/glibc-2.14-revert-4768ae77.patch
 
   # re-export RPC interface until libtirpc is ready as a replacement
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873 (only fedora branch...)
@@ -128,7 +125,7 @@ build() {
       --with-tls --with-__thread \
       --enable-bind-now --without-gd \
       --without-cvs --disable-profile \
-      --disable-multi-arch
+      --enable-multi-arch
 
   # build libraries with hardening disabled
   echo "build-programs=no" >> configparms
