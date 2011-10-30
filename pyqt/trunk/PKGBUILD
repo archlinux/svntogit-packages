@@ -1,19 +1,20 @@
 # $Id$
-# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Maintainer:
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
-pkgver=4.8.5
-pkgrel=2
+pkgver=4.8.6
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
 makedepends=('qt' 'python-sip' 'dbus-python' 'python2-sip' 'phonon'
-             'python-opengl' 'qt-assistant-compat' 'qtwebkit')
+             'python-opengl' 'qt-assistant-compat')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('0e4264bb912edfbda319bb236ac84407')
+md5sums=('9bfd7b08b8e438b83cc50d5c58191f97')
 
 build() {
   cd "${srcdir}"
