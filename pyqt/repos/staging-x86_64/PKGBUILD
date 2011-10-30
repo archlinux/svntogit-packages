@@ -45,7 +45,7 @@ build() {
 
 package_pyqt(){
   pkgdesc="A set of Python bindings for the Qt toolkit"
-  depends=('qt' 'python-sip' 'qtwebkit')
+  depends=('qt' 'python-sip')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
