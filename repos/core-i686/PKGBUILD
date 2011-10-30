@@ -5,9 +5,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.6.1
-pkgrel=4
-_snapshot=4.6-20110819
+pkgver=4.6.2
+pkgrel=1
+#_snapshot=4.6-20110819
 _libstdcppmanver=20110814		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -16,12 +16,12 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.21-9' 'libmpc' 'cloog' 'ppl' 'gcc-ada')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-hash-style-both.patch)
-md5sums=('b14d22730f9085eab7fd927039e68d28'
+md5sums=('028115c4fbfb6cfd75d6369f4a90d87e'
          'ce920d2550ff7e042b9f091d27764d8f'
          '4030ee1c08dd1e843c0225b772360e76'
          '4df25b623799b148a0703eaeec8fdf3f')
