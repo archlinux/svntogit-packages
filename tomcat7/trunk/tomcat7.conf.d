@@ -1,6 +1,6 @@
 # The JAVA_HOME of the JVM for Tomcat to use
 # (compulsory to enable tomcat to start at boot)
-TOMCAT_JAVA_HOME=/usr/lib/jvm/java-6-openjdk
+TOMCAT_JAVA_HOME=/usr/lib/jvm/java-7-openjdk
 
 # Tomcat home directory
 CATALINA_HOME=/usr/share/tomcat7

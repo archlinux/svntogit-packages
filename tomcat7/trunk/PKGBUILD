@@ -1,44 +1,85 @@
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
-pkgname=tomcat7
+pkgbase=tomcat7
+pkgname=('java-servlet3.0-tomcat' 'java-jsp2.2-tomcat' 'tomcat7')
 pkgver=7.0.22
-pkgrel=1
-pkgdesc="Servlet-3.0/JSP-2.2 Container"
+pkgrel=2
 arch=('any')
 url='http://tomcat.apache.org/'
 license=('APACHE')
-depends=('java-runtime>=6' 'java-jsvc' 'eclipse-ecj')
-makedepends=('java-environment>=6' 'apache-ant>=1.8' 'java-commons-daemon')
-optdepends=('tomcat-native: to allow optimal performance in production environments')
-backup=(etc/tomcat7/catalina.policy
-        etc/tomcat7/catalina.properties
-        etc/tomcat7/context.xml
-        etc/tomcat7/logging.properties
-        etc/tomcat7/server.xml
-        etc/tomcat7/tomcat-users.xml
-        etc/tomcat7/web.xml
-        etc/conf.d/tomcat7)
-install=tomcat7.install
+# Does not build with JDK7. Same issue as with cassandra:
+# https://issues.apache.org/jira/browse/CASSANDRA-3275
+#makedepends=('java-environment>=6' 'apache-ant>=1.8' 'java-commons-daemon' 'eclipse-ecj')
+makedepends=('java-environment=6' 'apache-ant>=1.8' 'java-commons-daemon' 'eclipse-ecj')
 source=(http://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/src/apache-tomcat-${pkgver}-src.tar.gz
+        http://www.apache.org/dist/commons/dbcp/binaries/commons-dbcp-1.4-bin.tar.gz
         tomcat7.conf.d
         tomcat7
         tomcat7.install)
 
 md5sums=('878bc216d86ce803f3bbc65fd40eb96c'
-         '0fa46eae1746d6cd564905bfb0072776'
+         'bd272e9611b0d880fd02493377d4691b'
+         'eea5573b0acd985bb8b630a20719db76'
          '361a41c02930a4e43245ab7379a617e9'
          '6c5b4ed6d71b227f305b751c349fa31b')
+
+_servletver=3.0
+_jspver=2.2
 
 build() {
   cd "${srcdir}/apache-tomcat-${pkgver}-src"
 
   . /etc/profile.d/apache-ant.sh
-  ant \
+  ant deploy \
     -Dbase.path=${srcdir}/DOWN_LIBS \
     -Dcommons-daemon.jar=/usr/share/java/commons-daemon.jar \
-    -Djdt.jar=/usr/share/java/eclipse-ecj.jar
+    -Djdt.jar=/usr/share/java/eclipse-ecj.jar \
+    -Dtomcat-dbcp.jar=${srcdir}/commons-dbcp-1.4/commons-dbcp-1.4.jar \
+    -Dtomcat-dbcp-src.jar=${srcdir}/commons-dbcp-1.4/commons-dbcp-1.4-sources.jar
 }
 
-package() {
+#TODO add test "ant test"
+
+package_java-servlet3.0-tomcat() {
+  pkgdesc="Servlet 3.0 java library implementation by Apache Tomcat"
+  depends=('java-environment>=5')
+
+  cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build/lib"
+
+  install -dm755 ${pkgdir}/usr/share/java/servlet${_servletver}-tomcat
+  install -m644 servlet-api.jar \
+                ${pkgdir}/usr/share/java/servlet${_servletver}-tomcat/servlet-api-${_servletver}.jar
+  ln -s servlet${_servletver}-tomcat/servlet-api-${_servletver}.jar \
+        ${pkgdir}/usr/share/java/servlet-api.jar
+}
+
+package_java-jsp2.2-tomcat() {
+  pkgdesc="JSP 2.2 java library implementation by Apache Tomcat"
+  depends=('java-environment>=5')
+
+  cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build/lib"
+
+  install -dm755 ${pkgdir}/usr/share/java/jsp${_jspver}-tomcat
+  for j in el-api jsp-api; do
+    install -m644 ${j}.jar \
+                  ${pkgdir}/usr/share/java/jsp${_jspver}-tomcat/${j}-${_jspver}.jar
+    ln -s jsp${_jspver}-tomcat/${j}-${_jspver}.jar ${pkgdir}/usr/share/java/${j}.jar
+  done
+}
+
+package_tomcat7() {
+  pkgdesc="Servlet-3.0/JSP-2.2 Container"
+  depends=('java-runtime>=6' 'java-jsvc' 'java-servlet3.0-tomcat' 'java-jsp2.2-tomcat' 'eclipse-ecj')
+  optdepends=('tomcat-native: to allow optimal performance in production environments')
+  backup=(etc/tomcat7/catalina.policy
+          etc/tomcat7/catalina.properties
+          etc/tomcat7/context.xml
+          etc/tomcat7/logging.properties
+          etc/tomcat7/server.xml
+          etc/tomcat7/tomcat-users.xml
+          etc/tomcat7/web.xml
+          etc/conf.d/tomcat7)
+  install=tomcat7.install
+
   cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build"
 
   # Tomcat general files
@@ -49,7 +90,18 @@ package() {
 
   # eclipse-ecj is packaged on its own
   rm lib/eclipse-ecj.jar
-  install lib/* ${pkgdir}/usr/share/java/${pkgname}
+  install -m644 lib/* ${pkgdir}/usr/share/java/${pkgname}
+
+  # Provided by previous packages
+  rm ${pkgdir}/usr/share/java/${pkgname}/servlet-api.jar
+  ln -s /usr/share/java/servlet${_servletver}-tomcat/servlet-api-${_servletver}.jar \
+        ${pkgdir}/usr/share/java/${pkgname}/servlet-api.jar
+
+  for j in el-api jsp-api; do
+    rm ${pkgdir}/usr/share/java/${pkgname}/${j}.jar
+    ln -s /usr/share/java/jsp${_jspver}-tomcat/${j}-${_jspver}.jar \
+          ${pkgdir}/usr/share/java/${pkgname}/${j}.jar
+  done
   ln -s /usr/share/java/${pkgname} ${pkgdir}/usr/share/${pkgname}/lib
 
   # 66=tomcat / 19=log
@@ -77,4 +129,3 @@ package() {
   install -Dm644 ${srcdir}/${pkgname}.conf.d ${pkgdir}/etc/conf.d/${pkgname}
   install -Dm755 ${srcdir}/${pkgname} ${pkgdir}/etc/rc.d/${pkgname}
 }
-
