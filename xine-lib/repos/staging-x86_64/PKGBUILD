@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=xine-lib
+pkgver=1.1.19
+pkgrel=6
+pkgdesc="A multimedia playback engine"
+arch=('i686' 'x86_64')
+url="http://www.xine-project.org"
+license=('LGPL' 'GPL')
+depends=('libxvmc' 'flac' 'ffmpeg' 'libxinerama' 'libmodplug')
+makedepends=('wavpack' 'faad2' 'libmng' 'imagemagick' 'smbclient' 'mesa'
+             'v4l-utils' 'vcdimager' 'jack' 'gdk-pixbuf2' 'libpulse' 'speex' 'aalib')
+optdepends=('imagemagick: for using the imagemagick plugin' \
+            'smbclient: for using the smb plugin' \
+            'jack: for using the jack plugin' \
+            'vcdimager: for using the vcd plugin' \
+            'gdk-pixbuf2: for using the gdk-pixbuf plugin' \
+            'mesa: for using the opengl plugin' \
+            'libpulse: for using the pulseaudio plugin' \
+            'speex: for using the speex plugin' \
+            'v4l-utils: for using the v4l plugin' \
+            'wavpack: for using the wavpack plugin' \
+            'faad2: for using the faad plugin' \
+            'libmng: for using the mng plugin' \
+            'aalib: for using the aalib plugin')
+options=('!libtool')
+source=(http://downloads.sourceforge.net/sourceforge/xine/${pkgname}-${pkgver}.tar.xz
+        xine-lib-1.1.1-configure-no-mcpu-march.patch xine-lib-1.1.19-xvmc.patch
+        xine-lib-1.1.19-ffmpeg.patch)
+sha1sums=('f65f762d2e16adf04b9d715c91ee0bc02c322a7d'
+          '121a8358d7919b2e51067412373f52848290338a'
+          '920bf27e6e3523dfe4cc9c802ff713e9688a3f34'
+          'd70f14c3dbb59b65c581575fa1fe13aeeb38f1b1')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -p0 -i "${srcdir}/xine-lib-1.1.1-configure-no-mcpu-march.patch"
+  patch -p0 -i "${srcdir}/xine-lib-1.1.19-xvmc.patch"
+  patch -p1 -i "${srcdir}/xine-lib-1.1.19-ffmpeg.patch"
+  sed -i 's|linux/videodev.h|libv4l1-videodev.h|' \
+    configure.ac src/input/input_v4l.c src/video_out/video_out_syncfb.h
+
+  libtoolize --force --copy
+  aclocal -I m4
+  autoconf
+  automake --add-missing
+
+  ./configure --prefix=/usr --with-wavpack --with-external-ffmpeg --with-external-libfaad
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+}
