@@ -1,0 +1,87 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgbase="sqlite3"
+pkgname=('sqlite3' 'sqlite3-tcl' 'sqlite3-doc') 
+_amalgamationver=3070900
+_amalgamationver2=${_amalgamationver/00/}
+_docver=${_amalgamationver}	#3070700
+pkgver=${_amalgamationver2//0/.}
+pkgrel=1
+pkgdesc="A C library that implements an SQL database engine"
+arch=('i686' 'x86_64')
+license=('custom')
+url="http://www.sqlite.org/"
+makedepends=('tcl' 'readline>=6.0.00')
+source=( # tarball containing the amalgamation for SQLite 3.7.5 together with a configure script and makefile for building it; includes now also the Tcl Extension Architecture (TEA)
+	http://www.sqlite.org/sqlite-autoconf-$_amalgamationver.tar.gz
+	#http://www.sqlite.org/sqlite-doc-${_amalgamationver}.zip
+	http://www.sqlite.org/sqlite-doc-${_docver}.zip
+	license.txt)
+options=('!libtool' '!emptydirs')
+md5sums=('dce303524736fe89a76b8ed29d566352'
+         'c48c231dd43d3b74f1d00c36424d87f4'
+         'c1cdbc5544034d9012e421e75a5e4890')
+
+build() {
+  export CFLAGS="$CFLAGS -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_SECURE_DELETE"
+
+  # build sqlite
+  cd "$srcdir"/sqlite-autoconf-$_amalgamationver
+  ./configure --prefix=/usr \
+	--disable-static
+  make
+  
+  # build the tcl extension    
+  cd "$srcdir"/sqlite-autoconf-$_amalgamationver/tea
+  ./configure --prefix=/usr \
+	--with-system-sqlite
+  make
+
+}
+
+package_sqlite3() {
+ 
+ pkgdesc="A C library that implements an SQL database engine"
+ depends=('readline>=6.0.00')
+ conflicts=('sqlite')
+ replaces=('sqlite')
+ 
+  cd ${srcdir}/sqlite-autoconf-$_amalgamationver
+  make DESTDIR=${pkgdir} install
+  
+  # license
+  install -D -m644 ${srcdir}/license.txt ${pkgdir}/usr/share/licenses/${pkgname}/license.txt
+}
+
+package_sqlite3-tcl() {
+ 
+ pkgdesc="sqlite3 Tcl Extension Architecture (TEA)"
+ depends=('sqlite3>=3.7.5')
+
+  cd ${srcdir}/sqlite-autoconf-$_amalgamationver/tea
+  make DESTDIR=${pkgdir} install
+}
+
+package_sqlite3-doc() {
+ pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
+ #arch=('any') - not yet supported
+
+  #cd ${srcdir}/sqlite-doc-${_amalgamationver}
+  cd ${srcdir}/sqlite-doc-${_docver}
+  mkdir -p ${pkgdir}/usr/share/doc/${pkgbase}
+  cp -R *  ${pkgdir}/usr/share/doc/${pkgbase}/
+  
+  # fix permissions and remove obsolete files; https://bugs.archlinux.org/task/24605
+  find ${pkgdir} -type f -perm 755 -exec ls -lha {} \;
+  find ${pkgdir} -type f -perm 755 -exec chmod 644 {} \;
+
+  find ${pkgdir} -type f -name '*~' -exec ls -lha {} \;
+  find ${pkgdir} -type d -name '*~' -exec ls -lha {} \;
+  find ${pkgdir} -name '*~' -exec rm -f {} \;
+
+  find ${pkgdir} -type f -name '.~*' -exec ls -lha {} \; # /build/pkg/sqlite3-doc/usr/share/doc/sqlite3/images/fileformat/.~lock.indexpage.odg#
+  find ${pkgdir} -type d -name '.~*' -exec ls -lha {} \;
+  find ${pkgdir} -name '.~*' -exec rm -f {} \;
+}
