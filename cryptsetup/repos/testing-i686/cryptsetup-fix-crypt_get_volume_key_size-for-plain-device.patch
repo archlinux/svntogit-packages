@@ -1,0 +1,94 @@
+Index: ChangeLog
+===================================================================
+--- ChangeLog	(Revision 664)
++++ ChangeLog	(Revision 665)
+@@ -1,3 +1,6 @@
++2011-10-27  Milan Broz  <mbroz@redhat.com>
++	* Fix crypt_get_volume_key_size() for plain device.
++
+ 2011-10-25  Milan Broz  <mbroz@redhat.com>
+ 	* Print informative message in isLuks only in verbose mode.
+ 	* Version 1.4.0.
+Index: tests/api-test.c
+===================================================================
+--- tests/api-test.c	(Revision 664)
++++ tests/api-test.c	(Revision 665)
+@@ -660,6 +660,11 @@
+ 
+ 	FAIL_(crypt_init_by_name_and_header(&cd, CDEVICE_1, H_DEVICE),"can't init plain device by header device");
+ 	OK_(crypt_init_by_name(&cd, CDEVICE_1));
++	OK_(strcmp(cipher_mode,crypt_get_cipher_mode(cd)));
++	OK_(strcmp(cipher,crypt_get_cipher(cd)));
++	EQ_((int)key_size, crypt_get_volume_key_size(cd));
++	EQ_(params.skip, crypt_get_iv_offset(cd));
++	EQ_(params.offset, crypt_get_data_offset(cd));
+ 	OK_(crypt_deactivate(cd, CDEVICE_1));
+ 	crypt_free(cd);
+ 
+Index: lib/setup.c
+===================================================================
+--- lib/setup.c	(Revision 664)
++++ lib/setup.c	(Revision 665)
+@@ -56,6 +56,7 @@
+ 	char *plain_cipher;
+ 	char *plain_cipher_mode;
+ 	char *plain_uuid;
++	unsigned int plain_key_size;
+ 
+ 	/* used in CRYPT_LOOPAES */
+ 	struct crypt_params_loopaes loopaes_hdr;
+@@ -677,6 +678,7 @@
+ 		(*cd)->plain_hdr.hash = NULL; /* no way to get this */
+ 		(*cd)->plain_hdr.offset = dmd.offset;
+ 		(*cd)->plain_hdr.skip = dmd.iv_offset;
++		(*cd)->plain_key_size = dmd.vk->keylength;
+ 
+ 		r = crypt_parse_name_and_mode(dmd.cipher, cipher, NULL, cipher_mode);
+ 		if (!r) {
+@@ -754,6 +756,7 @@
+ 		return -EINVAL;
+ 	}
+ 
++	cd->plain_key_size = volume_key_size;
+ 	cd->volume_key = crypt_alloc_volume_key(volume_key_size, NULL);
+ 	if (!cd->volume_key)
+ 		return -ENOMEM;
+@@ -1516,7 +1519,7 @@
+ 		}
+ 
+ 		r = process_key(cd, cd->plain_hdr.hash,
+-				cd->volume_key->keylength,
++				cd->plain_key_size,
+ 				passphrase, passphrase_size, &vk);
+ 		if (r < 0)
+ 			goto out;
+@@ -1586,7 +1589,7 @@
+ 			goto out;
+ 
+ 		r = process_key(cd, cd->plain_hdr.hash,
+-				cd->volume_key->keylength,
++				cd->plain_key_size,
+ 				passphrase_read, passphrase_size_read, &vk);
+ 		if (r < 0)
+ 			goto out;
+@@ -1658,8 +1661,7 @@
+ 		if (!name)
+ 			return -EINVAL;
+ 
+-		if (!volume_key || !volume_key_size || !cd->volume_key ||
+-			volume_key_size != cd->volume_key->keylength) {
++		if (!volume_key || !volume_key_size || volume_key_size != cd->plain_key_size) {
+ 			log_err(cd, _("Incorrect volume key specified for plain device.\n"));
+ 			return -EINVAL;
+ 		}
+@@ -1976,8 +1978,8 @@
+ 
+ int crypt_get_volume_key_size(struct crypt_device *cd)
+ {
+-	if (isPLAIN(cd->type) && cd->volume_key)
+-		return cd->volume_key->keylength;
++	if (isPLAIN(cd->type))
++		return cd->plain_key_size;
+ 
+ 	if (isLUKS(cd->type))
+ 		return cd->hdr.keyBytes;
