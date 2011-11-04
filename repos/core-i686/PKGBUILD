@@ -7,12 +7,13 @@
 
 pkgname=curl
 pkgver=7.22.0
-pkgrel=1
+pkgrel=4
 pkgdesc="An URL retrival utility and library"
 arch=('i686' 'x86_64')
 url="http://curl.haxx.se"
 license=('MIT')
-depends=('zlib' 'openssl' 'bash' 'ca-certificates' 'libssh2')
+depends=('ca-certificates' 'libssh2' 'openssl' 'zlib')
+makedepends=('perl-libwww')
 options=('!libtool')
 source=("http://curl.haxx.se/download/$pkgname-$pkgver.tar.gz"{,.asc}
         curlbuild.h)
@@ -20,11 +21,11 @@ md5sums=('e8c36126d21c893f085aca233906b5cc'
          '1b061c348b63ea3e90c3f2c3af6a08d6'
          '751bd433ede935c8fae727377625a8ae')
 
-
-case $(cpp <<<'__SIZEOF_POINTER__' | sed '/^#/d') in
+ptrsize=$(cpp <<<'__SIZEOF_POINTER__' | sed '/^#/d')
+case $ptrsize in
   8) _curlbuild=curlbuild-64.h ;;
   4) _curlbuild=curlbuild-32.h ;;
-  *) error "unsupported architecture: %s" "$CARCH"
+  *) error "unknown pointer size for architecture: %s bytes" "$ptrsize"
     exit 1
     ;;
 esac
@@ -33,18 +34,18 @@ build() {
   cd "$srcdir/$pkgname-$pkgver"
 
   ./configure \
-      --with-random=/dev/urandom \
       --prefix=/usr \
       --mandir=/usr/share/man \
       --disable-dependency-tracking \
-      --enable-ipv6 \
-      --disable-ldaps \
       --disable-ldap \
+      --disable-ldaps \
+      --enable-ipv6 \
       --enable-manual \
       --enable-versioned-symbols \
-      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+      --enable-threaded-resolver \
       --without-libidn \
-      --enable-threaded-resolver
+      --with-random=/dev/urandom \
+      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
   make
 }
 
@@ -53,7 +54,10 @@ package() {
 
   make DESTDIR="$pkgdir" install
 
+  # license
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+
+  # devel
   install -Dm644 docs/libcurl/libcurl.m4 "$pkgdir/usr/share/aclocal/libcurl.m4"
   mv "$pkgdir/usr/include/curl/curlbuild.h" "$pkgdir/usr/include/curl/$_curlbuild"
   install -m644 "$srcdir/curlbuild.h" "$pkgdir/usr/include/curl/curlbuild.h"
