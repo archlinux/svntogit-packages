@@ -1,0 +1,95 @@
+diff -urN miro-4.0.old/linux/miro-segmenter.c miro-4.0/linux/miro-segmenter.c
+--- miro-4.0.old/linux/miro-segmenter.c	2011-05-25 15:58:21.000000000 +0200
++++ miro-4.0/linux/miro-segmenter.c	2011-05-25 16:09:41.000000000 +0200
+@@ -60,7 +60,7 @@
+     }
+ 
+     switch (input_codec_context->codec_type) {
+-        case CODEC_TYPE_AUDIO:
++        case AVMEDIA_TYPE_AUDIO:
+             output_codec_context->channel_layout = input_codec_context->channel_layout;
+             output_codec_context->sample_rate = input_codec_context->sample_rate;
+             output_codec_context->channels = input_codec_context->channels;
+@@ -72,7 +72,7 @@
+                 output_codec_context->block_align = input_codec_context->block_align;
+             }
+             break;
+-        case CODEC_TYPE_VIDEO:
++        case AVMEDIA_TYPE_VIDEO:
+             output_codec_context->pix_fmt = input_codec_context->pix_fmt;
+             output_codec_context->width = input_codec_context->width;
+             output_codec_context->height = input_codec_context->height;
+@@ -154,7 +154,7 @@
+         exit(1);
+     }
+ 
+-    ofmt = guess_format("mpegts", NULL, NULL);
++    ofmt = av_guess_format("mpegts", NULL, NULL);
+     if (!ofmt) {
+         fprintf(stderr, "Could not find MPEG-TS muxer\n");
+         exit(1);
+@@ -174,12 +174,12 @@
+ 
+     for (i = 0; i < ic->nb_streams && (video_index < 0 || audio_index < 0); i++) {
+         switch (ic->streams[i]->codec->codec_type) {
+-            case CODEC_TYPE_VIDEO:
++            case AVMEDIA_TYPE_VIDEO:
+                 video_index = i;
+                 ic->streams[i]->discard = AVDISCARD_NONE;
+                 video_st = add_output_stream(oc, ic->streams[i]);
+                 break;
+-            case CODEC_TYPE_AUDIO:
++            case AVMEDIA_TYPE_AUDIO:
+                 audio_index = i;
+                 ic->streams[i]->discard = AVDISCARD_NONE;
+                 audio_st = add_output_stream(oc, ic->streams[i]);
+@@ -195,7 +195,7 @@
+         exit(1);
+     }
+ 
+-    dump_format(oc, 0, input, 1);
++    av_dump_format(oc, 0, input, 1);
+ 
+     if (video_st) {
+         codec = avcodec_find_decoder(video_st->codec->codec_id);
+@@ -208,7 +208,7 @@
+         }
+     }
+ 
+-    if (url_fopen(&oc->pb, output_filename, URL_WRONLY) < 0) {
++    if (avio_open(&oc->pb, output_filename, URL_WRONLY) < 0) {
+         fprintf(stderr, "Could not open '%s'\n", output_filename);
+         exit(1);
+     }
+@@ -234,7 +234,7 @@
+             break;
+         }
+ 
+-        if (packet.stream_index == video_index && (packet.flags & PKT_FLAG_KEY)) {
++        if (packet.stream_index == video_index && (packet.flags & AV_PKT_FLAG_KEY)) {
+             segment_time = (double)video_st->pts.val * video_st->time_base.num / video_st->time_base.den;
+         }
+         else if (video_index < 0) {
+@@ -245,10 +245,10 @@
+         }
+ 
+         if (segment_time - prev_segment_time >= segment_duration) {
+-            put_flush_packet(oc->pb);
+-            url_fclose(oc->pb);
++            avio_flush(oc->pb);
++            avio_close(oc->pb);
+ 
+-            if (url_fopen(&oc->pb, output_filename, URL_WRONLY) < 0) {
++            if (avio_open(&oc->pb, output_filename, URL_WRONLY) < 0) {
+                 fprintf(stderr, "Could not open '%s'\n", output_filename);
+                 break;
+             }
+@@ -278,7 +278,7 @@
+         av_freep(&oc->streams[i]);
+     }
+ 
+-    url_fclose(oc->pb);
++    avio_close(oc->pb);
+     av_free(oc);
+ 
+     return 0;
