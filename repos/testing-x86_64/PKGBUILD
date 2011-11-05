@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=wpa_supplicant
+pkgver=0.7.3
+pkgrel=4
+pkgdesc="A utility providing key negotiation for WPA wireless networks"
+url="http://hostap.epitest.fi/wpa_supplicant"
+arch=('i686' 'x86_64')
+depends=('openssl' 'dbus-core>=1.2.4' 'readline>=6.0' 'libnl')
+optdepends=('wpa_supplicant_gui: wpa_gui program')
+license=('GPL')
+groups=('base')
+backup=('etc/wpa_supplicant.conf')
+source=(http://hostap.epitest.fi/releases/wpa_supplicant-$pkgver.tar.gz
+        config dbus.patch)
+sha256sums=('d0cd50caa85346ccc376dcda5ed3c258eef19a93b3cade39d25760118ad59443'
+            '6a0837f18e5ff179ccd6954f7952dfc2e6aa69f353194ee4cb29c1ed2ef68c5d'
+            '13effa9ed6a1bb940ffc056a3eabcf64c8cc057069eca5cc1822b98ed769812a')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}/${pkgname}"
+  # Required by NetworkManager 0.8.995
+  patch -Np2 -i "$srcdir/dbus.patch"
+  cp "${srcdir}/config" ./.config
+  sed -i 's@/usr/local@$(PREFIX)@g' Makefile
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}/${pkgname}"
+  make PREFIX=/usr DESTDIR="${pkgdir}" install
+  install -m755 -d "${pkgdir}/etc"
+  install -m644 wpa_supplicant.conf "${pkgdir}/etc/wpa_supplicant.conf"
+  install -d -m755 "${pkgdir}/usr/share/man/man"{5,8}
+  install -m644 doc/docbook/*.5 "${pkgdir}/usr/share/man/man5/"
+  install -m644 doc/docbook/*.8 "${pkgdir}/usr/share/man/man8/"
+  rm -f "${pkgdir}/usr/share/man/man8/wpa_"{priv,gui}.8
+
+  install -m755 -d "${pkgdir}/usr/share/dbus-1/system-services"
+  install -m644 dbus/{fi.epitest.hostap.WPASupplicant.service,fi.w1.wpa_supplicant1.service} "${pkgdir}/usr/share/dbus-1/system-services/"
+  sed -e 's/sbin/usr\/sbin/' -i "${pkgdir}/usr/share/dbus-1/system-services/"*.service
+  install -m755 -d "${pkgdir}/etc/dbus-1/system.d"
+  install -m644 dbus/dbus-wpa_supplicant.conf "${pkgdir}/etc/dbus-1/system.d/wpa_supplicant.conf"
+}
