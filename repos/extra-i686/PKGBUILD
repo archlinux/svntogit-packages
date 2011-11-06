@@ -1,78 +1,61 @@
 # $Id$
-# Maintainer: kevin <kevin@archlinux.org>
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: kevin <kevin@archlinux.org>
 
 pkgname=ntp
-pkgver=4.2.6.p3
-_realver=4.2.6p3
-pkgrel=3
-pkgdesc="NTP (Network Time Protocol) tries to keep servers in sync"
-arch=(i686 x86_64)
+pkgver=4.2.6.p4
+_realver=4.2.6p4
+pkgrel=2
+pkgdesc='Network Time Protocol reference implementation'
+url='http://www.ntp.org/'
 license=('custom')
-url="http://www.ntp.org/"
+arch=('i686' 'x86_64')
 depends=('openssl' 'readline' 'libcap')
 makedepends=('perl-html-parser')
-backup=('etc/ntp.conf' 'etc/conf.d/ntp-client.conf')
-options=('!emptydirs')
-changelog=changelog
-source=(http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${_realver}.tar.gz
-	ntp-4.2.4-html2man.patch
-	ntp.conf
-	ntp-client.conf
-	ntpd
-	ntpdate)
-md5sums=('59876a9009b098ff59767ee45a88ebd2' '1b04e888717bb31479a6087632981723'
-         '398a7f270f6ae083f47f86eb8b557a75' '58997d6cf4846d80e35a01b855376a33'
-         'bf20804e75656609e808ca21b53ea4aa' '99b49d763e5866f4f81c48d922c80b93')
+backup=('etc/ntp.conf' 'etc/conf.d/ntpd.conf')
+source=("http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${_realver}.tar.gz"
+        'ntpd'
+        'ntpdate'
+        'ntp.conf'
+        'ntpd.conf')
+sha1sums=('b53c4565c5d1c37494584d4fb826f82ffea285cf'
+          '97b41b8bc34f259f4e525ab2e58707c9724e72e2'
+          '63572457586379aa6bf75b6e899e71d651e643f4'
+          '6d2d234afb1db2dcb940747a62f70217246a3d13'
+          '6cfcb7bbd34499b30e31dffca2f3e1a036010271')
+
+install=install
 
 build() {
-  cd "$srcdir/$pkgname-$_realver"
-  # fix man page generation
-  patch -Np1 -i ../ntp-4.2.4-html2man.patch
-  # configure
-  export LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
-  # 4.2.6p3: aclocal too old, regenerate
-  rm -f aclocal.m4
-  libtoolize --copy --force
-  ac_cv_header_dns_sd_h=0 ./configure --prefix=/usr \
-    --mandir=/usr/share/man \
-    --enable-linux-caps
-  # build
-  make
+	cd "${srcdir}/${pkgname}-${_realver}"
+
+	./configure --prefix=/usr \
+		--mandir=/usr/share/man \
+		--enable-linux-caps \
+
+	make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$_realver"
+	cd "${srcdir}/${pkgname}-$_realver"
 
-  # install
-  make DESTDIR="$pkgdir" install
+	make DESTDIR="${pkgdir}" install
 
-  # install conf files
-  install -d "$pkgdir/usr/share/ntp"
-  install -D -m644 conf/* "${pkgdir}/usr/share/ntp"
+	install -Dm755 ../ntpd "${pkgdir}"/etc/rc.d/ntpd
+	install -Dm755 ../ntpdate "${pkgdir}"/etc/rc.d/ntpdate
+	install -Dm644 ../ntp.conf "${pkgdir}"/etc/ntp.conf
+	install -Dm644 ../ntpd.conf "${pkgdir}"/etc/conf.d/ntpd.conf
 
-  # install launch scripts 
-  install -d "$pkgdir/etc/rc.d"
-  install -D -m755 ${srcdir}/{ntpd,ntpdate} "$pkgdir/etc/rc.d"
+	cd html
+	../scripts/html2man
+	install -d "${pkgdir}"/usr/share/man
+	mv man/man* "${pkgdir}"/usr/share/man
+	mv "${pkgdir}/usr/share/man/man8/ntpd.8" "${pkgdir}/usr/share/man/man8/ntp-ntpd.8" # we should ditch openntpd
+	cd ..
 
-  # install man pages
-  cd html
-  ../scripts/html2man
-  sed -i 's/^[\t\ ]*$//;/./,/^$/!d' man/man*/*.[58]
-  install -d "$pkgdir"/usr/share/man/man{5,8}
-  install -m644 man/man5/* "$pkgdir/usr/share/man/man5/"
-  install -m644 man/man8/* "$pkgdir/usr/share/man/man8/"
-  mv "$pkgdir/usr/share/man/man8/ntpd.8" "$pkgdir/usr/share/man/man8/ntp-ntpd.8"
-  cd ..
+	rmdir "${pkgdir}"/usr/{lib,sbin}
+	install -d "${pkgdir}/var/lib/ntp"
+	install -Dm644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
-  # install sample configs
-  install -D -m644 "$srcdir/ntp.conf" "$pkgdir/etc/ntp.conf"
-  install -D -m644 "$srcdir/ntp-client.conf" \
-  	"$pkgdir/etc/conf.d/ntp-client.conf"
-
-  # create /var/lib/ntp
-  install -d "$pkgdir/var/lib/ntp"
-  touch "$pkgdir/var/lib/ntp/.placeholder"
-
-  install -Dm644 "$srcdir/$pkgname-$_realver/COPYRIGHT" \
-    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+	touch "${pkgdir}"/var/lib/ntp/.placeholder
 }
