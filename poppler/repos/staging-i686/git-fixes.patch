@@ -1,0 +1,107 @@
+From e4a2adb02969e872e37e408ced4c39131c6751ea Mon Sep 17 00:00:00 2001
+From: Carlos Garcia Campos <carlosgc@gnome.org>
+Date: Sun, 30 Oct 2011 15:02:19 +0000
+Subject: pdftocairo: Make sure beginDocument() is always called
+
+This fixes a crash when rendering only odd/even pages in a printing
+format.
+---
+diff --git a/utils/pdftocairo.cc b/utils/pdftocairo.cc
+index e458ee5..1b67c90 100644
+--- a/utils/pdftocairo.cc
++++ b/utils/pdftocairo.cc
+@@ -903,6 +903,10 @@ int main(int argc, char *argv[]) {
+     lastPage = firstPage;
+   }
+ 
++  // Make sure firstPage is always used so that beginDocument() is called
++  if ((printOnlyEven && pg % 2 == 0) || (printOnlyOdd && pg % 2 == 1))
++    firstPage++;
++
+   cairoOut = new CairoOutputDev();
+   cairoOut->startDoc(doc->getXRef(), doc->getCatalog());
+   if (sz != 0)
+--
+cgit v0.9.0.2-2-gbebe
+From 61b1556d1c62bf090b2eadf93e4e7d0aff7b8015 Mon Sep 17 00:00:00 2001
+From: Carlos Garcia Campos <carlosgc@gnome.org>
+Date: Sun, 30 Oct 2011 15:08:46 +0000
+Subject: pdftocairo: Use fisrtPage instead of uninitialized pg variable
+
+This fixes an error in my previous commit.
+---
+diff --git a/utils/pdftocairo.cc b/utils/pdftocairo.cc
+index 1b67c90..d0d1ec6 100644
+--- a/utils/pdftocairo.cc
++++ b/utils/pdftocairo.cc
+@@ -904,7 +904,7 @@ int main(int argc, char *argv[]) {
+   }
+ 
+   // Make sure firstPage is always used so that beginDocument() is called
+-  if ((printOnlyEven && pg % 2 == 0) || (printOnlyOdd && pg % 2 == 1))
++  if ((printOnlyEven && firstPage % 2 == 0) || (printOnlyOdd && firstPage % 2 == 1))
+     firstPage++;
+ 
+   cairoOut = new CairoOutputDev();
+--
+cgit v0.9.0.2-2-gbebe
+From ebf7fbc74da10d1bc423d33b26e30166870642e4 Mon Sep 17 00:00:00 2001
+From: Rex Dieter <rdieter@math.unl.edu>
+Date: Tue, 01 Nov 2011 08:40:53 +0000
+Subject: Fix pkg-config files
+
+We were using $FOO_REQUIRED instead of @FOO_REQUIRED@
+---
+diff --git a/configure.ac b/configure.ac
+index 3a120ca..c4f5b92 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -409,6 +409,7 @@ if test x$enable_cairo_output = xyes; then
+   POPPLER_GLIB_DISABLE_SINGLE_INCLUDES=""
+ 
+   GLIB_REQUIRED=2.18
++  AC_SUBST(GLIB_REQUIRED)
+   AC_ARG_ENABLE(poppler-glib,
+ 	        AC_HELP_STRING([--disable-poppler-glib],
+ 		               [Don't compile poppler glib wrapper.]),
+diff --git a/poppler-glib-uninstalled.pc.in b/poppler-glib-uninstalled.pc.in
+index 55a2278..5fcb6f2 100644
+--- a/poppler-glib-uninstalled.pc.in
++++ b/poppler-glib-uninstalled.pc.in
+@@ -1,7 +1,7 @@
+ Name: poppler-glib
+ Description: GLib wrapper for poppler - uninstalled
+ Version: @VERSION@
+-Requires: glib-2.0 >= $GLIB_REQUIRED gobject-2.0 >= $GLIB_REQUIRED cairo >= $CAIRO_VERSION
++Requires: glib-2.0 >= @GLIB_REQUIRED@ gobject-2.0 >= @GLIB_REQUIRED@ cairo >= @CAIRO_VERSION@
+ 
+ Libs: ${pc_top_builddir}/${pcfiledir}/glib/libpoppler-glib.la
+ Cflags: -I${pc_top_builddir}/${pcfiledir}/glib
+diff --git a/poppler-glib.pc.cmake b/poppler-glib.pc.cmake
+index 3264ed6..e15e669 100644
+--- a/poppler-glib.pc.cmake
++++ b/poppler-glib.pc.cmake
+@@ -6,7 +6,7 @@ includedir=${prefix}/include
+ Name: poppler-glib
+ Description: GLib wrapper for poppler
+ Version: @POPPLER_VERSION@
+-Requires: glib-2.0 >= $GLIB_REQUIRED gobject-2.0 >= $GLIB_REQUIRED cairo >= $CAIRO_VERSION
++Requires: glib-2.0 >= @GLIB_REQUIRED@ gobject-2.0 >= @GLIB_REQUIRED@ cairo >= @CAIRO_VERSION@
+ @PC_REQUIRES_PRIVATE@
+ 
+ Libs: -L${libdir} -lpoppler-glib
+diff --git a/poppler-glib.pc.in b/poppler-glib.pc.in
+index 04d9bb9..9ba8978 100644
+--- a/poppler-glib.pc.in
++++ b/poppler-glib.pc.in
+@@ -6,7 +6,7 @@ includedir=@includedir@
+ Name: poppler-glib
+ Description: GLib wrapper for poppler
+ Version: @VERSION@
+-Requires: glib-2.0 >= $GLIB_REQUIRED gobject-2.0 >= $GLIB_REQUIRED cairo >= $CAIRO_VERSION
++Requires: glib-2.0 >= @GLIB_REQUIRED@ gobject-2.0 >= @GLIB_REQUIRED@ cairo >= @CAIRO_VERSION@
+ @PC_REQUIRES_PRIVATE@
+ 
+ Libs: -L${libdir} -lpoppler-glib
+--
+cgit v0.9.0.2-2-gbebe
