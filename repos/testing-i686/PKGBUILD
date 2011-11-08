@@ -1,0 +1,59 @@
+# $Id$
+# Contributor: Alexander Baldeck <alexander@archlinux.org>
+# Contributor: Dale Blount <dale@archlinux.org>
+# Contributor: Anders Bostrom <anders.bostrom@home.se>
+
+pkgname=thunderbird
+pkgver=8.0
+pkgrel=1
+pkgdesc="Standalone Mail/News reader"
+arch=('i686' 'x86_64')
+license=('MPL' 'GPL')
+url="http://www.mozilla.org/thunderbird/"
+depends=('alsa-lib' 'dbus-glib' 'desktop-file-utils' 'gtk2' 'hicolor-icon-theme' 'hunspell' 'libevent' 'libnotify' 'libvpx' 'libxt' 'mime-types' 'mozilla-common' 'nss' 'sqlite3' 'startup-notification')
+makedepends=('unzip' 'zip' 'pkg-config' 'python2' 'libidl2' 'wireless_tools' 'yasm' 'mesa')
+optdepends=('libcanberra: for sound support')
+install=thunderbird.install
+source=(ftp://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/$pkgver/source/thunderbird-$pkgver.source.tar.bz2
+        mozconfig
+        thunderbird.desktop
+        thunderbird-3.0-lang.patch
+        thunderbird-install-dir.patch)
+md5sums=('332f60036aebdce7dec6ee2b1af4941d'
+         'ca98c2bf1017b33e19dae22fdcef2e73'
+         'af3e5b344d2edf1c7d61bb0a5a96de9a'
+         '25b6fe16ac24cd5c852213e5c1adb272'
+         'aea906acf72c43dd82ead2fabcc1c6db')
+
+build() {
+  cd "$srcdir/comm-release"
+  patch -Np1 -i "$srcdir/thunderbird-3.0-lang.patch"
+  patch -Np1 -i "$srcdir/thunderbird-install-dir.patch"
+
+  cp "$srcdir/mozconfig" .mozconfig
+
+  export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/thunderbird"
+  export PYTHON="/usr/bin/python2"
+
+  make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS"
+}
+
+package() {
+  cd "$srcdir/comm-release"
+  make -j1 -f client.mk DESTDIR="$pkgdir" install
+
+  for i in 16x16 22x22 24x24 32x32 48x48 256x256; do
+      install -Dm644 other-licenses/branding/thunderbird/mailicon${i/x*/}.png \
+          "$pkgdir/usr/share/icons/hicolor/$i/apps/thunderbird.png"
+  done
+
+  install -Dm644 "$srcdir/thunderbird.desktop" \
+      "$pkgdir/usr/share/applications/thunderbird.desktop"
+
+  rm -rf "$pkgdir"/usr/lib/thunderbird/{dictionaries,hyphenation}
+  ln -sf /usr/share/hunspell "$pkgdir/usr/lib/thunderbird/dictionaries"
+  ln -sf /usr/share/hyphen "$pkgdir/usr/lib/thunderbird/hyphenation"
+
+  # We don't want the development stuff
+  rm -r "$pkgdir"/usr/{include,lib/thunderbird-devel,share/idl}
+}
