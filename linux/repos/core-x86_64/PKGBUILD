@@ -6,41 +6,81 @@ pkgbase=linux
 pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
-_basekernel=3.0
-pkgver=${_basekernel}.7
-pkgrel=1
+_basekernel=3.1
+pkgver=${_basekernel}
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl')
 options=('!strip')
-source=("ftp://ftp.kernel.org/pub/linux/kernel/v3.0/linux-${_basekernel}.tar.bz2"
-        #"ftp://ftp.kernel.org/pub/linux/kernel/v3.0/patch-${pkgver}.gz"
-        "ftp://ftp.archlinux.org/other/linux/patch-${pkgver}.gz"
+source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-${pkgver}.tar.xz"
+        #"http://www.kernel.org/pub/linux/kernel/v3.x/patch-${pkgver}.xz"
         # the main kernel config files
         'config' 'config.x86_64'
         # standard config files for mkinitcpio ramdisk
         "${pkgname}.preset"
-        'fix-i915.patch'
-        'change-default-console-loglevel.patch')
-md5sums=('398e95866794def22b12dfbc15ce89c0'
-         '9d003f28c02ed5625693693cd9f6004b'
-         'f62665b212eb32309e0fd11b9b1c5b67'
-         '272092c6fb09dd503a4d70d26dbcd214'
+        'change-default-console-loglevel.patch'
+        'i915-fix-ghost-tv-output.patch'
+        'i915-fix-incorrect-error-message.patch'
+        'iwlagn-fix-NULL-pointer-dereference.patch'
+        'dib0700-fix.patch'
+        'usb-add-reset-resume-quirk-for-several-webcams.patch'
+        'md-raid10-fix-bug-when-activating-a-hot-spare.patch')
+md5sums=('edbdc798f23ae0f8045c82f6fa22c536'
+         'b88bbe3ed780441dbe1e385f4beae1e4'
+         '08774980ad31da185e7f7379596b9001'
          'eb14dcfd80c00852ef81ded6e826826a'
+         '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5'
-         '9d3c56a4b999c8bfbd4018089a62f662')
+         'a50c9076012cb2dda49952dc6ec3e9c1'
+         '61a6be40e8e1e9eae5f23f241e7a0779'
+         '442334d777475e2a37db92d199672a28'
+         '52d41fa61e80277ace2b994412a0c856'
+         'de12ec5c342f945a95b2f12c2b85e6bf')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
 
-  patch -p1 -i "${srcdir}/patch-${pkgver}"
+  # add upstream patch
+  #patch -p1 -i "${srcdir}/patch-${pkgver}"
 
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
 
-  # fix #19234 i1915 display size
-  patch -Np1 -i "${srcdir}/fix-i915.patch"
+  # Some chips detect a ghost TV output
+  # mailing list discussion: http://lists.freedesktop.org/archives/intel-gfx/2011-April/010371.html
+  # Arch Linux bug report: FS#19234
+  #
+  # It is unclear why this patch wasn't merged upstream, it was accepted,
+  # then dropped because the reasoning was unclear. However, it is clearly
+  # needed.
+  patch -Np1 -i "${srcdir}/i915-fix-ghost-tv-output.patch"
+
+  # In 3.1.0, a DRM_DEBUG message is falsely declared as DRM_ERROR. This
+  # worries users, as this message is displayed even at loglevel 4. Fix
+  # this.
+  patch -Np1 -i "${srcdir}/i915-fix-incorrect-error-message.patch"
+
+  # iwlagn has a critical bug that hangs the system on 3.1.0. A patch
+  # was posted, but didn't make it into the tree in time.
+  # http://marc.info/?l=linux-wireless&m=131840748927629&w=2
+  # FS#26674
+  patch -Np1 -i "${srcdir}/iwlagn-fix-NULL-pointer-dereference.patch"
+
+  # Fix dib0700 driver
+  # http://git.linuxtv.org/pb/media_tree.git/shortlog/refs/heads/for_v3.0
+  # FS#25939
+  patch -Np1 -i "${srcdir}/dib0700-fix.patch"
+
+  # Add the USB_QUIRK_RESET_RESUME for several webcams
+  # FS#26528
+  patch -Np1 -i "${srcdir}/usb-add-reset-resume-quirk-for-several-webcams.patch"
+
+  # Fix RAID10 hot spare activation (critical)
+  # https://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git;a=blob_plain;f=queue-3.1/md-raid10-fix-bug-when-activating-a-hot-spare.patch;h=880849db5b7089b523f72c4d67a473e5330037fc;hb=HEAD
+  # FS#26767
+  patch -Np1 -i "${srcdir}/md-raid10-fix-bug-when-activating-a-hot-spare.patch"
 
   # set DEFAULT_CONSOLE_LOGLEVEL to 4 (same value as the 'quiet' kernel param)
   # remove this when a Kconfig knob is made available by upstream
@@ -57,11 +97,8 @@ build() {
     sed -i "s|CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"${_kernelname}\"|g" ./.config
   fi
 
-  # remove the sublevel from Makefile
-  # this ensures our kernel version is always 3.X-ARCH
-  # this way, minor kernel updates will not break external modules
-  # we need to change this soon, see FS#16702
-  sed -ri 's|^(SUBLEVEL =).*|\1|' Makefile
+  # set extraversion to pkgrel
+  sed -ri "s|^(EXTRAVERSION =).*|\1 -${pkgrel}|" Makefile
 
   # get kernel version
   make prepare
@@ -130,8 +167,13 @@ package_linux() {
   rm -f "${pkgdir}"/lib/modules/${_kernver}/{source,build}
   # remove the firmware
   rm -rf "${pkgdir}/lib/firmware"
-  # gzip -9 all modules to safe 100MB of space
+  # gzip -9 all modules to save 100MB of space
   find "${pkgdir}" -name '*.ko' -exec gzip -9 {} \;
+  # make room for external modules
+  ln -s "../extramodules-${_basekernel}${_kernelname:--ARCH}" "${pkgdir}/lib/modules/${_kernver}/extramodules"
+  # add real version for building modules and running depmod from post_install/upgrade
+  mkdir -p "${pkgdir}/lib/modules/extramodules-${_basekernel}${_kernelname:--ARCH}"
+  echo "${_kernver}" > "${pkgdir}/lib/modules/extramodules-${_basekernel}${_kernelname:--ARCH}/version"
 }
 
 package_linux-headers() {
@@ -274,7 +316,7 @@ package_linux-docs() {
   cd "${srcdir}/linux-${_basekernel}"
 
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}"
-  mv Documentation "${pkgdir}/usr/src/linux-${_kernver}"
+  cp -al Documentation "${pkgdir}/usr/src/linux-${_kernver}"
   find "${pkgdir}" -type f -exec chmod 444 {} \;
   find "${pkgdir}" -type d -exec chmod 755 {} \;
 
