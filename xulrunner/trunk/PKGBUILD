@@ -2,45 +2,44 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Alexander Baldeck <alexander@archlinux.org>
 pkgname=xulrunner
-pkgver=7.0
-_ffoxver=7.0
+pkgver=8.0
+_ffoxver=8.0
 pkgrel=1
 pkgdesc="Mozilla Runtime Environment"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL' 'LGPL')
-depends=('gtk2' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss' 'libxt' 'libxrender' 'hunspell' 'startup-notification' 'mime-types' 'dbus-glib' 'alsa-lib' 'libevent' 'sqlite3>=3.7.4' 'libnotify')
-makedepends=('zip' 'pkg-config' 'diffutils' 'python2' 'wireless_tools' 'yasm' 'mesa')
+depends=('gtk2' 'gcc-libs' 'libidl2' 'mozilla-common' 'nss' 'libxt' 'libxrender' 'hunspell' 'startup-notification' 'mime-types' 'dbus-glib' 'alsa-lib' 'libevent' 'sqlite3>=3.7.4' 'libnotify' 'libvpx')
+makedepends=('zip' 'unzip' 'pkg-config' 'diffutils' 'python2' 'wireless_tools' 'yasm' 'mesa')
 url="http://wiki.mozilla.org/XUL:Xul_Runner"
 source=(http://releases.mozilla.org/pub/mozilla.org/firefox/releases/${_ffoxver}/source/firefox-${_ffoxver}.source.tar.bz2
         mozconfig
         mozilla-pkgconfig.patch)
-options=('!emptydirs' '!buildflags')
+options=('!emptydirs')
 replaces=('xulrunner-oss')
-md5sums=('673a015a23e3fefa18d80db68c8b9fc1'
-         '108a53313284908cc3afe5e29a7557e9'
+md5sums=('9395a5be13da119bd8d53c3225e5d17c'
+         '8dfb78c5bd0581c8cf4753813132bf0b'
          '639ea80e823543dd415b90c0ee804186')
 
 build() {
-  cd "${srcdir}/mozilla-release"
-  cp "${srcdir}/mozconfig" .mozconfig
+  cd "$srcdir/mozilla-release"
+  cp "$srcdir/mozconfig" .mozconfig
 
   #fix libdir/sdkdir - fedora
-  patch -Np1 -i "${srcdir}/mozilla-pkgconfig.patch"
+  patch -Np1 -i "$srcdir/mozilla-pkgconfig.patch"
 
-  export LDFLAGS="-Wl,-rpath,/usr/lib/xulrunner-${pkgver} -Wl,-O1,--sort-common,--hash-style=gnu,--as-needed"
+  export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/xulrunner"
 
   make -j1 -f client.mk build MOZ_MAKE_FLAGS="$MAKEFLAGS"
 }
 
 package() {
-  cd "${srcdir}/mozilla-release"
-  make -j1 -f client.mk DESTDIR="${pkgdir}" install
+  cd "$srcdir/mozilla-release"
+  make -j1 -f client.mk DESTDIR="$pkgdir" install
 
   # add xulrunner library path to ld.so.conf
-  install -d ${pkgdir}/etc/ld.so.conf.d
-  echo "/usr/lib/xulrunner-${pkgver}" > ${pkgdir}/etc/ld.so.conf.d/xulrunner.conf
+  install -d $pkgdir/etc/ld.so.conf.d
+  echo "/usr/lib/xulrunner" > $pkgdir/etc/ld.so.conf.d/xulrunner.conf
 
-  #wtf mozilla!
   chmod +x "${pkgdir}/usr/lib/xulrunner-devel-$pkgver/sdk/bin/xpt.py"
-  sed -i 's|!/usr/bin/env python|!/usr/bin/env python2|' "${pkgdir}/usr/lib/xulrunner-devel-$pkgver/sdk/bin/xpt.py"
+  sed -i 's|!/usr/bin/env python|!/usr/bin/env python2|' "$pkgdir/usr/lib/xulrunner-devel-$pkgver/sdk/bin/xpt.py"
 }
