@@ -1,29 +1,27 @@
---- bitlbee-3.0.3.old/protocols/msn/soap.h      2011-06-12 08:53:51.000000000 -0300
-+++ bitlbee-3.0.3/protocols/msn/soap.h  2011-11-09 21:35:56.000000000 -0200
-@@ -115,7 +115,7 @@ int msn_soapq_flush( struct im_connectio
-                "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
-                "<wsp:AppliesTo>" \
-                    "<wsa:EndpointReference>" \
--                       "<wsa:Address>contacts.msn.com</wsa:Address>" \
-+                       "<wsa:Address>local-bay.contacts.msn.com</wsa:Address>" \
-                    "</wsa:EndpointReference>" \
-                "</wsp:AppliesTo>" \
-                "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI\"></wsse:PolicyReference>" \
-@@ -198,7 +198,7 @@ int msn_soap_oim_send_queue( struct im_c
-   "</soap:Body>" \
- "</soap:Envelope>"
- 
--#define SOAP_MEMLIST_URL "http://contacts.msn.com/abservice/SharingService.asmx"
-+#define SOAP_MEMLIST_URL "http://local-bay.contacts.msn.com/abservice/SharingService.asmx"
- #define SOAP_MEMLIST_ACTION "http://www.msn.com/webservices/AddressBook/FindMembership"
- 
- #define SOAP_MEMLIST_PAYLOAD \
-@@ -233,7 +233,7 @@ int msn_soap_memlist_request( struct im_
- int msn_soap_memlist_edit( struct im_connection *ic, const char *handle, gboolean add, int list );
- 
- 
--#define SOAP_ADDRESSBOOK_URL "http://contacts.msn.com/abservice/abservice.asmx"
-+#define SOAP_ADDRESSBOOK_URL "http://local-bay.contacts.msn.com/abservice/abservice.asmx"
- #define SOAP_ADDRESSBOOK_ACTION "http://www.msn.com/webservices/AddressBook/ABFindAll"
- 
- #define SOAP_ADDRESSBOOK_PAYLOAD \
+Index: devel/lib/http_client.c
+===================================================================
+--- devel/lib/http_client.c	(revision devel,783)
++++ devel/lib/http_client.c	(revision devel,824)
+@@ -314,5 +314,5 @@
+ 	}
+ 	
+-	if( ( req->status_code == 301 || req->status_code == 302 ) && req->redir_ttl-- > 0 )
++	if( ( req->status_code >= 301 && req->status_code <= 303 ) && req->redir_ttl-- > 0 )
+ 	{
+ 		char *loc, *new_request, *new_host;
+@@ -375,8 +375,11 @@
+ 			   going to use strcat(), whether you like it or not. :-) */
+ 			
+-			sprintf( new_request, "GET %s HTTP/1.0", url->file );
+-			
+-			s = strstr( req->request, "\r\n" );
+-			if( s == NULL )
++			*s = 0;
++			sprintf( new_request, "%s %s HTTP/1.0\r\nHost: %s",
++			         req->status_code == 303 || req->request[0] == 'G' ? "GET" : "POST", url->file, url->host );
++			*s = ' ';
++			
++			if( !( ( s = strstr( req->request, "\r\nHost: " ) ) &&
++			       ( s = strstr( s + strlen( "\r\nHost: " ), "\r\n" ) ) ) )
+ 			{
+ 				req->status_string = g_strdup( "Error while rebuilding request string" );
