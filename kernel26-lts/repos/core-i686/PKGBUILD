@@ -5,22 +5,22 @@ pkgbase=kernel26-lts
 pkgname=('kernel26-lts' 'kernel26-lts-headers') # Build stock -lts kernel 
 _kernelname=${pkgname#kernel26}
 _basekernel=2.6.32
-pkgver=${_basekernel}.46
+pkgver=${_basekernel}.48
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('GPL2')
 url="http://www.kernel.org"
 source=(ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$_basekernel.tar.bz2
-        ftp://ftp.kernel.org/pub/linux/kernel/v2.6/longterm/v2.6.32/patch-$pkgver.bz2
+        ftp://ftp.kernel.org/pub/linux/kernel/v2.6/longterm/patch-$pkgver.bz2
 	# the main kernel config files
         config config.x86_64
         # standard config files for mkinitcpio ramdisk
         ${pkgname}.preset)
 options=(!strip)
 md5sums=('260551284ac224c3a43c4adac7df4879'
-         '1b630a58fd4f179e9f255331f147ed33'
-         '463b4db10710c17200a584067f7151a0'
-         '9990806b3bf3cec6f8bd419249903613'
+         '1031515858a61f14118418792d73d59c'
+         '25ef924aa12c38c222df99ae2c186625'
+         '710d6a8a31aa38f6a673e74ed1c15b0a'
          '2cbfeb3e2a18d45f82f613e97fc23355')
 
 build() {
@@ -38,10 +38,10 @@ build() {
   if [ "${_kernelname}" != "" ]; then
     sed -i "s|CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"${_kernelname}\"|g" ./.config
   fi
-  # remove the extraversion from Makefile
-  # this ensures our kernel version is always 2.6.XX-lts
-  # this way, minor kernel updates will not break external modules
-  sed -i 's|^EXTRAVERSION = .*$|EXTRAVERSION = |g' Makefile
+  # set extraversion to pkgrel
+  sed -ri "s|^(EXTRAVERSION =).*|\1 ${pkgver#$_basekernel}-${pkgrel}|" Makefile
+
+
   # get kernel version
   make prepare
   # load configuration
@@ -96,8 +96,13 @@ package_kernel26-lts() {
   rm -f ${pkgdir}/lib/modules/${_kernver}/{source,build}
   # remove the firmware
   rm -rf ${pkgdir}/lib/firmware
-  # gzip -9 all modules to safe 100MB of space
+  # gzip -9 all modules to save 100MB of space
   find "$pkgdir" -name '*.ko' -exec gzip -9 {} \;
+  # make room for external modules
+  ln -s "../extramodules-${_basekernel}${_kernelname:--ARCH}" "${pkgdir}/lib/modules/${_kernver}/extramodules"
+  # add real version for building the kernel
+  mkdir -p "${pkgdir}/lib/modules/extramodules-${_basekernel}${_kernelname:--ARCH}"
+  echo "${_kernver}" > "${pkgdir}/lib/modules/extramodules-${_basekernel}${_kernelname:--ARCH}/version"
 }
 
 package_kernel26-lts-headers() {
