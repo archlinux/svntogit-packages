@@ -1,0 +1,241 @@
+From patchwork Tue Nov  8 18:22:13 2011
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Save major/minor opcodes in ClientRec for RecordAReply
+Date: Tue, 08 Nov 2011 18:22:13 -0000
+From: Keith Packard <keithp@keithp.com>
+X-Patchwork-Id: 7866
+Message-Id: <1320776533-3120-1-git-send-email-keithp@keithp.com>
+To: xorg-devel@lists.freedesktop.org
+
+The record extension needs the major and minor opcodes in the reply
+hook, but the request buffer may have been freed by the time the hook
+is invoked. Saving the request major and minor codes as the request is
+executed avoids fetching from the defunct request buffer.
+
+This patch also eliminates the public MinorOpcodeOfRequest function,
+making it static to dispatch. Usages of that function have been
+replaced with direct access to the new ClientRec field.
+
+Signed-off-by: Keith Packard <keithp@keithp.com>
+Reviewed-by: Rami Ylimäki <rami.ylimaki@vincit.fi>
+
+---
+Here's what I was thinking of to fix this -- just record the major and
+minor opcodes of the request in the ClientRec during Dispatch and then
+using those fields in RecordAReply instead of fetching the discarded
+request buffer.
+
+This is entirely untested; I don't know how to make the old code break.
+
+ Xext/security.c       |    4 +---
+ Xext/xselinux_hooks.c |    4 ++--
+ dix/dispatch.c        |   31 ++++++++++++++++++++++---------
+ dix/extension.c       |   14 --------------
+ include/dixstruct.h   |    1 +
+ include/extension.h   |    2 --
+ record/record.c       |    8 +++-----
+ 7 files changed, 29 insertions(+), 35 deletions(-)
+
+[ fedora: technically this is an ABI breaker since it's changing ClientRec,
+  but hopefully not in a way that matters.  If it does matter, easiest thing
+  to do is have Record add a hook for XaceHookDispatch. - ajax ]
+
+diff --git a/Xext/security.c b/Xext/security.c
+index 08d8158..b0d82ab 100644
+--- a/Xext/security.c
++++ b/Xext/security.c
+@@ -148,9 +148,7 @@ SecurityLabelInitial(void)
+ static _X_INLINE const char *
+ SecurityLookupRequestName(ClientPtr client)
+ {
+-    int major = ((xReq *)client->requestBuffer)->reqType;
+-    int minor = MinorOpcodeOfRequest(client);
+-    return LookupRequestName(major, minor);
++    return LookupRequestName(client->majorOp, client->minorOp);
+ }
+ 
+ 
+diff --git a/Xext/xselinux_hooks.c b/Xext/xselinux_hooks.c
+index f1d8e5d..0d4c9ab 100644
+--- a/Xext/xselinux_hooks.c
++++ b/Xext/xselinux_hooks.c
+@@ -263,8 +263,8 @@ SELinuxAudit(void *auditdata,
+     if (client) {
+ 	REQUEST(xReq);
+ 	if (stuff) {
+-	    major = stuff->reqType;
+-	    minor = MinorOpcodeOfRequest(client);
++	    major = client->majorOp;
++	    minor = client->minorOp;
+ 	}
+     }
+     if (audit->id)
+diff --git a/dix/dispatch.c b/dix/dispatch.c
+index 6e33615..3600acd 100644
+--- a/dix/dispatch.c
++++ b/dix/dispatch.c
+@@ -337,7 +337,20 @@ DisableLimitedSchedulingLatency(void)
+ 	SmartScheduleLatencyLimited = 0;
+ }
+ 
+-#define MAJOROP ((xReq *)client->requestBuffer)->reqType
++static inline unsigned short
++MinorOpcodeOfRequest(ClientPtr client)
++{
++    unsigned char major;
++    ExtensionEntry *ext;
++
++    major = ((xReq *)client->requestBuffer)->reqType;
++    if (major < EXTENSION_BASE)
++	return 0;
++    ext = GetExtensionEntry(major);
++    if (!ext)
++	return 0;
++    return ext->MinorOpcode (client);
++}
+ 
+ void
+ Dispatch(void)
+@@ -419,21 +432,23 @@ Dispatch(void)
+ 	        }
+ 
+ 		client->sequence++;
++		client->majorOp = ((xReq *)client->requestBuffer)->reqType;
++		client->minorOp = MinorOpcodeOfRequest(client);
+ #ifdef XSERVER_DTRACE
+-		XSERVER_REQUEST_START(LookupMajorName(MAJOROP), MAJOROP,
++		XSERVER_REQUEST_START(LookupMajorName(client->majorOp), client->majorOp,
+ 			      ((xReq *)client->requestBuffer)->length,
+ 			      client->index, client->requestBuffer);
+ #endif
+ 		if (result > (maxBigRequestSize << 2))
+ 		    result = BadLength;
+ 		else {
+-		    result = XaceHookDispatch(client, MAJOROP);
++		    result = XaceHookDispatch(client, client->majorOp);
+ 		    if (result == Success)
+-			result = (* client->requestVector[MAJOROP])(client);
++			result = (* client->requestVector[client->majorOp])(client);
+ 		    XaceHookAuditEnd(client, result);
+ 		}
+ #ifdef XSERVER_DTRACE
+-		XSERVER_REQUEST_DONE(LookupMajorName(MAJOROP), MAJOROP,
++		XSERVER_REQUEST_DONE(LookupMajorName(client->majorOp), client->majorOp,
+ 			      client->sequence, client->index, result);
+ #endif
+ 
+@@ -444,8 +459,8 @@ Dispatch(void)
+ 		}
+ 		else if (result != Success)
+ 		{
+-		    SendErrorToClient(client, MAJOROP,
+-				      MinorOpcodeOfRequest(client),
++		    SendErrorToClient(client, client->majorOp,
++				      client->minorOp,
+ 				      client->errorValue, result);
+ 		    break;
+ 		}
+@@ -466,8 +481,6 @@ Dispatch(void)
+     SmartScheduleLatencyLimited = 0;
+ }
+ 
+-#undef MAJOROP
+-
+ static int  VendorRelease = VENDOR_RELEASE;
+ static char *VendorString = VENDOR_NAME;
+ 
+diff --git a/dix/extension.c b/dix/extension.c
+index c7bbac5..b677cdb 100644
+--- a/dix/extension.c
++++ b/dix/extension.c
+@@ -228,20 +228,6 @@ StandardMinorOpcode(ClientPtr client)
+     return ((xReq *)client->requestBuffer)->data;
+ }
+ 
+-unsigned short
+-MinorOpcodeOfRequest(ClientPtr client)
+-{
+-    unsigned char major;
+-
+-    major = ((xReq *)client->requestBuffer)->reqType;
+-    if (major < EXTENSION_BASE)
+-	return 0;
+-    major -= EXTENSION_BASE;
+-    if (major >= NumExtensions)
+-	return 0;
+-    return (*extensions[major]->MinorOpcode)(client);
+-}
+-
+ void
+ CloseDownExtensions(void)
+ {
+diff --git a/include/dixstruct.h b/include/dixstruct.h
+index 6cc9614..0a85f40 100644
+--- a/include/dixstruct.h
++++ b/include/dixstruct.h
+@@ -122,6 +122,7 @@ typedef struct _Client {
+     
+     DeviceIntPtr clientPtr;
+     ClientIdPtr  clientIds;
++    unsigned short majorOp, minorOp;
+ }           ClientRec;
+ 
+ /*
+diff --git a/include/extension.h b/include/extension.h
+index 29a11c3..9249951 100644
+--- a/include/extension.h
++++ b/include/extension.h
+@@ -52,8 +52,6 @@ _XFUNCPROTOBEGIN
+ 
+ extern _X_EXPORT unsigned short StandardMinorOpcode(ClientPtr /*client*/);
+ 
+-extern _X_EXPORT unsigned short MinorOpcodeOfRequest(ClientPtr /*client*/);
+-
+ extern _X_EXPORT Bool EnableDisableExtension(char *name, Bool enable);
+ 
+ extern _X_EXPORT void EnableDisableExtensionError(char *name, Bool enable);
+diff --git a/record/record.c b/record/record.c
+index 68311ac..4a0fe23 100644
+--- a/record/record.c
++++ b/record/record.c
+@@ -546,7 +546,7 @@ RecordARequest(ClientPtr client)
+ 	    }
+ 	    else /* extension, check minor opcode */
+ 	    {
+-		int minorop = MinorOpcodeOfRequest(client);
++		int minorop = client->minorOp;
+ 		int numMinOpInfo;
+ 		RecordMinorOpPtr pMinorOpInfo = pRCAP->pRequestMinOpInfo;
+ 
+@@ -603,12 +603,9 @@ RecordAReply(CallbackListPtr *pcbl, pointer nulldata, pointer calldata)
+     RecordContextPtr pContext;
+     RecordClientsAndProtocolPtr pRCAP;
+     int eci;
+-    int majorop;
+     ReplyInfoRec *pri = (ReplyInfoRec *)calldata;
+     ClientPtr client = pri->client;
+-    REQUEST(xReq);
+ 
+-    majorop = stuff->reqType;
+     for (eci = 0; eci < numEnabledContexts; eci++)
+     {
+ 	pContext = ppAllContexts[eci];
+@@ -616,6 +613,7 @@ RecordAReply(CallbackListPtr *pcbl, pointer nulldata, pointer calldata)
+ 					  NULL);
+ 	if (pRCAP)
+ 	{
++	    int majorop = client->majorOp;
+ 	    if (pContext->continuedReply)
+ 	    {
+ 		RecordAProtocolElement(pContext, client, XRecordFromServer,
+@@ -635,7 +633,7 @@ RecordAReply(CallbackListPtr *pcbl, pointer nulldata, pointer calldata)
+ 		}
+ 		else /* extension, check minor opcode */
+ 		{
+-		    int minorop = MinorOpcodeOfRequest(client);
++		    int minorop = client->minorOp;
+ 		    int numMinOpInfo;
+ 		    RecordMinorOpPtr pMinorOpInfo = pRCAP->pReplyMinOpInfo;
+ 		    		    assert (pMinorOpInfo);
