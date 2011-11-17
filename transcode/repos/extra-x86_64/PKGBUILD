@@ -5,59 +5,39 @@
 
 pkgname=transcode
 _sripver=0.3-4
-pkgver=1.1.5
-pkgrel=7
+pkgver=1.1.6
+pkgrel=1
 pkgdesc="A video/DVD ripper and encoder for the terminal/console"
 arch=('i686' 'x86_64')
 url="http://tcforge.berlios.de/"
 license=('GPL')
 depends=('gawk' 'imagemagick' 'lzo2' 'libdvdread' 'ffmpeg' 'mjpegtools'
 	 'libmpeg2' 'libxaw' 'libxml2' 'libxv' 'a52dec')
-makedepends=('nasm')
-options=('!libtool' '!makeflags')
-source=(http://download2.berlios.de/tcforge/${pkgname}-${pkgver}.tar.bz2
+makedepends=('nasm' 'v4l-utils')
+options=('!libtool')
+source=(https://bitbucket.org/france/transcode-tcforge/downloads/${pkgname}-${pkgver}.tar.bz2
 	http://downloads.sourceforge.net/sourceforge/subtitleripper/subtitleripper-${_sripver}.tgz
-	transcode-1.1.5-jpeg-7.patch  transcode-1.1.5-mpa.patch transcode-1.1.5-ffmpeg.patch)
-sha1sums=('48c36e06ca0cd1cdc1a9c6a241e231f896eefd26'
+        subtitleripper-0.3.4-linkingorder.patch subtitleripper-0.3.4-respect-ldflags.patch)
+sha1sums=('e176622b2c2834b006cda3c368ab521407d375c4'
           'd93ff3578dd5f722c8f4ef16bc0903eec5781a0d'
-          '9e380c00a3b31725dc3ec483fa7bf5e3d8a8a977'
-          '6f45d9167c3aa15a83cb29545749f55eb1f1e5a2'
-          '2d3bb4486394ee55540e772f134e193874e5c2b4')
+          'fa05aa1770d9350d90b7cf315aa7c4a1fd921ac7'
+          '591943a33235342a66c3df0625a164a1479c09ae')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -p0 < ../transcode-1.1.5-jpeg-7.patch
-  patch -p1 < ../transcode-1.1.5-mpa.patch
-  patch -p1 < ../transcode-1.1.5-ffmpeg.patch
-
- # building from here
+  sed -i 's|linux/videodev.h|libv4l1-videodev.h|' configure 
   ./configure --prefix=/usr \
-    --enable-sse=no --enable-sse2=no --enable-altivec=no --enable-mmx \
+    --disable-sse --disable-sse2 --disable-altivec --enable-mmx \
     --enable-lame --enable-ogg --enable-vorbis --enable-theora \
     --enable-libdv --enable-libxml2 --enable-v4l \
     --enable-imagemagick --enable-libjpeg --enable-lzo --enable-mjpegtools \
     --enable-sdl --enable-freetype2 --enable-a52 --enable-libpostproc \
-    --enable-xvid --enable-x264 --enable-alsa \
-    --enable-libmpeg2 --enable-libmpeg2convert \
-    --with-libxml2-prefix=/usr \
-    --with-mjpegtools-prefix=/usr \
-    --with-imagemagick-prefix=/usr \
-    --with-libdv-includes=/usr \
-    --with-libpostproc-includes=/usr/include/libpostproc \
-    --with-ogg-prefix=/usr \
-    --with-lame-libs=/usr \
-    --with-lzo-libs=/usr/lib \
-    --with-libavcodec-prefix=/usr \
-    --with-libavcodec-includes=/usr/include \
-    --with-libavcodec-libs=/usr/lib
-
+    --enable-xvid --enable-x264 --enable-alsa --enable-libmpeg2 --enable-libmpeg2convert
   make
- ##############################################################################
- # this imports the latest subtitleripper sources and replaces the internal
-  mkdir contrib
-  mv "${srcdir}/subtitleripper" contrib/subrip
- # removes dependency on libppm, make it dependend on netpbm just failed, argh...
-  cd contrib/subrip
+
+  cd "${srcdir}/subtitleripper"
+  patch -p1 -i "${srcdir}/subtitleripper-0.3.4-linkingorder.patch"
+  patch -p1 -i "${srcdir}/subtitleripper-0.3.4-respect-ldflags.patch"
   sed -e 's|^\(.*lppm.*\)$|#\1|' \
       -e 's|^\(.*D_HAVE_LIB_PPM.*\)$|#\1|' \
       -e 's/DEFINES :=/DEFINES = -DHAVE_GETLINE/' \
@@ -69,7 +49,7 @@ package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
 
-  cd contrib/subrip
+  cd "${srcdir}/subtitleripper"
   install -m 755 pgm2txt "${pkgdir}/usr/bin/"
   install -m 755 srttool "${pkgdir}/usr/bin/"
   install -m 755 subtitle2pgm "${pkgdir}/usr/bin/"
