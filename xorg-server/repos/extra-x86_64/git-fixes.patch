@@ -115,3 +115,47 @@ index 31ed505..dce3f84 100644
      miSetPixmapDepths ();
 --
 cgit v0.9.0.2-2-gbebe
+From 34bb83b9df20ff63dbb147ed661f39efb8bae8e4 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 24 Oct 2011 02:00:32 +0000
+Subject: dix: block signals when closing all devices
+
+When closing down all devices, we manually unset master for all attached
+devices, but the device's sprite info still points to the master's sprite
+info. This leaves us a window where the master is freed already but the
+device isn't yet. A signal during that window causes dereference of the
+already freed spriteInfo in mieqEnqueue's EnqueueScreen macro.
+
+Simply block signals when removing all devices. It's not like we're really
+worrying about high-responsive input at this stage.
+
+https://bugzilla.redhat.com/show_bug.cgi?id=737031
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Julien Cristau <jcristau@debian.org>
+(cherry picked from commit d7c44a7c9760449bef263413ad3b20f19b1dc95a)
+---
+diff --git a/dix/devices.c b/dix/devices.c
+index 0ccf252..cbdd4ea 100644
+--- a/dix/devices.c
++++ b/dix/devices.c
+@@ -982,6 +982,8 @@ CloseDownDevices(void)
+ {
+     DeviceIntPtr dev;
+ 
++    OsBlockSignals();
++
+     /* Float all SDs before closing them. Note that at this point resources
+      * (e.g. cursors) have been freed already, so we can't just call
+      * AttachDevice(NULL, dev, NULL). Instead, we have to forcibly set master
+@@ -1004,6 +1006,8 @@ CloseDownDevices(void)
+     inputInfo.keyboard = NULL;
+     inputInfo.pointer = NULL;
+     XkbDeleteRulesDflts();
++
++    OsReleaseSignals();
+ }
+ 
+ /**
+--
+cgit v0.9.0.2-2-gbebe
