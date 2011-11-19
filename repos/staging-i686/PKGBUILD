@@ -1,0 +1,67 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=lighttpd
+pkgver=1.4.29
+pkgrel=3
+pkgdesc='a secure, fast, compliant and very flexible web-server'
+license=('custom')
+arch=('i686' 'x86_64')
+url="http://www.lighttpd.net/"
+depends=('pcre' 'bzip2' 'libldap' 'util-linux')
+makedepends=('fcgi' 'libmysqlclient' 'lua' 'libxml2' 'e2fsprogs' 'sqlite3' 'gdbm' 'pkgconfig')
+optdepends=('libxml2: mod_webdav'
+            'lua: mod_cml/mod_magnet'
+            'libmysqlclient: mod_mysql_vhost'
+            'sqlite3: mod_webdav')
+backup=('etc/lighttpd/lighttpd.conf' 'etc/logrotate.d/lighttpd')
+options=('!libtool' 'emptydirs')
+source=("http://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-${pkgver}.tar.bz2"
+        "http://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-${pkgver}.tar.bz2.asc"
+        'lighttpd.rc.d' 'lighttpd.logrotate.d' 'lighttpd.conf')
+md5sums=('e6e67b09986cb504db630b5a86b2dd76'
+         'de2afb4ed6a088fd7fa5f13c387a08f0'
+         '268386e71f5748dc1d887b9a0ab65589'
+         '913e2157fa78d990c32146f387d44c2b'
+         'acdaa94299e6299cb5085e6d88babeca')
+
+build() {
+	cd $srcdir/$pkgname-$pkgver
+
+	./configure --prefix=/usr \
+		--libexecdir=/usr/lib/lighttpd/modules \
+		--sysconfdir=/etc/lighttpd \
+		--with-mysql \
+		--with-ldap \
+		--with-attr \
+		--with-openssl \
+		--with-kerberos5 \
+		--without-fam \
+		--with-webdav-props \
+		--with-webdav-locks \
+		--with-gdbm \
+		--with-memcache \
+		--with-lua
+	make
+}
+
+check() {
+	cd $srcdir/$pkgname-$pkgver
+	make check
+}
+
+package() {
+	cd $srcdir/$pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+
+	install -D -m755 $srcdir/lighttpd.rc.d $pkgdir/etc/rc.d/lighttpd
+	install -D -m644 $srcdir/lighttpd.logrotate.d $pkgdir/etc/logrotate.d/lighttpd
+	install -D -m644 $srcdir/lighttpd.conf $pkgdir/etc/lighttpd/lighttpd.conf
+	install -d -m755 -o http -g http $pkgdir/var/{log,cache}/lighttpd/
+
+	pushd doc/config >/dev/null
+	find . -type f ! -name 'Makefile*' -exec install -D -m644 {} ${pkgdir}/usr/share/doc/lighttpd/config/{} \;
+	popd >/dev/null
+
+	install -D -m644 COPYING $pkgdir/usr/share/licenses/$pkgname/COPYING
+}
