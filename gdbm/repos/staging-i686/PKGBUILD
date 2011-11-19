@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=gdbm
+pkgver=1.10
+pkgrel=1
+pkgdesc="GNU database library"
+url="http://www.gnu.org/software/gdbm/gdbm.html"
+license=('GPL')
+arch=('i686' 'x86_64')
+depends=('glibc' 'sh')
+source=(ftp://ftp.gnu.org/gnu/gdbm/${pkgname}-${pkgver}.tar.gz
+        gdbm-1.10-zeroheaders.patch)
+options=('!libtool' '!makeflags')
+install=gdbm.install
+md5sums=('88770493c2559dc80b561293e39d3570'
+         'ac255b10452005237836cd2d3a470733')
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Prevent gdbm from storing uninitialized memory content
+  # to database files. This patch improves security, as the
+  # uninitialized memory might contain sensitive informations
+  # from other applications.
+  # https://bugzilla.redhat.com/show_bug.cgi?id=4457
+  # http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=208927
+  patch -Np1 -i ../gdbm-1.10-zeroheaders.patch
+
+  ./configure --prefix=/usr \
+              --mandir=/usr/share/man \
+              --infodir=/usr/share/info \
+              --enable-libgdbm-compat
+
+  make prefix=/usr
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make prefix="${pkgdir}"/usr \
+       manprefix="${pkgdir}"/usr/share/man \
+       man3dir="${pkgdir}"/usr/share/man/man3 \
+       infodir="${pkgdir}"/usr/share/info \
+       install
+  
+  # create symlinks for compatibility
+  install -dm755 "${pkgdir}"/usr/include/gdbm
+  ln -sf ../gdbm.h "${pkgdir}"/usr/include/gdbm/gdbm.h
+  ln -sf ../ndbm.h "${pkgdir}"/usr/include/gdbm/ndbm.h
+  ln -sf ../dbm.h  "${pkgdir}"/usr/include/gdbm/dbm.h
+}
