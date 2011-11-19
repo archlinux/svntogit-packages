@@ -1,0 +1,100 @@
+# $Id$
+# Maintainer: Paul Mattal <paul@archlinux.org>
+# Contributor: Jason Chu <jason@archlinux.org>
+
+pkgname=subversion
+pkgver=1.6.17
+pkgrel=7
+pkgdesc="A Modern Concurrent Version Control System"
+arch=('i686' 'x86_64')
+license=('apache' 'bsd')
+depends=('neon' 'apr-util' 'sqlite3')
+optdepends=('libgnome-keyring' 'kdeutils-kwallet' 'bash-completion: for svn bash completion')
+makedepends=('krb5' 'apache' 'python2' 'perl' 'swig' 'ruby' 'java-runtime' 'java-environment'
+             'autoconf' 'db' 'e2fsprogs' 'libgnome-keyring' 'kdelibs')
+backup=('etc/xinetd.d/svn' 'etc/conf.d/svnserve')
+url="http://subversion.apache.org/"
+provides=('svn')
+options=('!makeflags' '!libtool')
+source=(http://subversion.tigris.org/downloads/$pkgname-$pkgver.tar.bz2
+        svnserve svn svnserve.conf svnmerge.py
+        subversion.rpath.fix.patch
+        subversion.suppress.deprecation.warnings.patch
+        subversion-perl-bindings.patch)
+md5sums=('81e5dc5beee4b3fc025ac70c0b6caa14'
+         'a2b029e8385007ffb99b437b30521c90'
+         'a0db6dd43af33952739b6ec089852630'
+         'c459e299192552f61578f3438abf0664'
+         'a6371baeda7e224504629ecdda2749b4'
+         '6b4340ba9d8845cd8497e013ae01be3f'
+         '1166f3b7413d7e7450299b3525680bbe'
+         '0591aa39837931161b4d61ff35c7b147')
+
+build() {
+   cd "${srcdir}/${pkgname}-${pkgver}"
+
+   export PYTHON=/usr/bin/python2
+
+   # apply patches
+   patch -Np0 -i ../subversion.rpath.fix.patch
+   patch -Np1 -i ../subversion.suppress.deprecation.warnings.patch
+   patch -Np1 -i ../subversion-perl-bindings.patch
+
+   # configure
+   autoreconf
+   ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
+               --with-zlib=/usr --with-neon=/usr --with-apxs \
+               --with-sqlite=/usr --with-berkeley-db=:/usr/include/:/usr/lib:db-5.2 \
+               --enable-javahl --with-gnome-keyring --with-kwallet
+
+   # build
+   (make external-all && make LT_LDFLAGS="-L$Fdestdir/usr/lib" local-all )
+}
+
+#check() {
+#   cd "${srcdir}/${pkgname}-${pkgver}"
+#   export LANG=C LC_ALL=C
+#   make check check-swig-pl check-swig-py CLEANUP=yes
+#}
+
+package() {
+   cd "${srcdir}/${pkgname}-${pkgver}"
+
+   # install
+   export LD_LIBRARY_PATH=${pkgdir}/usr/lib:$LD_LIBRARY_PATH
+   make DESTDIR=${pkgdir} install
+
+   make DESTDIR=${pkgdir} swig-py
+   make install-swig-py DESTDIR=${pkgdir}
+
+   install -d ${pkgdir}/usr/lib/python2.7
+   mv ${pkgdir}/usr/lib/svn-python/ ${pkgdir}/usr/lib/python2.7/site-packages
+
+   install -d ${pkgdir}/usr/share/subversion
+   install -d -m 755 tools/hook-scripts ${pkgdir}/usr/share/subversion/
+   rm -f ${pkgdir}/usr/share/subversion/hook-scripts/*.in
+
+   make DESTDIR=${pkgdir} swig-pl
+   make install-swig-pl DESTDIR=${pkgdir} INSTALLDIRS=vendor
+   rm -f ${pkgdir}/usr/lib/perl5/vendor_perl/auto/SVN/_Core/.packlist
+   rm -rf ${pkgdir}/usr/lib/perl5/core_perl
+
+   make DESTDIR=${pkgdir} swig-rb
+   make install-swig-rb DESTDIR=${pkgdir}
+
+   make DESTDIR=${pkgdir} javahl
+   make DESTDIR=${pkgdir} install-javahl
+
+   install -d ${pkgdir}/etc/{rc.d,xinetd.d,conf.d}
+
+   install -m 755 ${srcdir}/svnserve ${pkgdir}/etc/rc.d
+   install -m 644 ${srcdir}/svn ${pkgdir}/etc/xinetd.d
+   install -m 644 ${srcdir}/svnserve.conf ${pkgdir}/etc/conf.d/svnserve
+   install -m 755 ${srcdir}/svnmerge.py ${pkgdir}/usr/bin/svnmerge
+   install -D -m 644 ${srcdir}/subversion-$pkgver/COPYING \
+               ${pkgdir}/usr/share/licenses/$pkgname/LICENSE
+
+   # bash completion
+   install -Dm 644 ${srcdir}/${pkgname}-${pkgver}/tools/client-side/bash_completion \
+               ${pkgdir}/etc/bash_completion.d/subversion
+}
