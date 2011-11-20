@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Sergej Pupykin <sergej@aur.archlinux.org>
+
+pkgname=man-db
+pkgver=2.6.0.2
+pkgrel=3
+pkgdesc="A utility for reading man pages"
+arch=('i686' 'x86_64')
+url="http://www.nongnu.org/man-db/"
+license=('GPL' 'LGPL')
+groups=('base')
+depends=( 'bash' 'gdbm' 'zlib' 'groff' 'libpipeline')
+optdepends=('less' 'gzip')
+backup=('etc/man_db.conf'
+	'etc/cron.daily/man-db')
+conflicts=('man')
+provides=('man')
+replaces=('man')
+install=${pkgname}.install
+source=(http://savannah.nongnu.org/download/man-db/$pkgname-$pkgver.tar.gz
+	1361_1360.diff
+	#http://launchpad.net/man-db/main/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz
+        convert-mans man-db.cron.daily)
+options=('!libtool')
+md5sums=('2b41c96efec032d2b74ccbf2e401f93e'
+         '08b76b1f924c5493a280b79fc0aebde4'
+         '2b7662a7d5b33fe91f9f3e034361a2f6'
+         'd30c39ae47560304471b5461719e0f03')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  # https://bugs.archlinux.org/task/18722
+  patch -Np0 -i $srcdir/1361_1360.diff
+  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib \
+	--with-db=gdbm --disable-setuid --enable-mandirs=GNU \
+	--with-sections="1 n l 8 3 0 2 5 4 9 6 7"
+  make
+}
+
+check() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install
+
+  # part of groff pkg
+  rm -f ${pkgdir}/usr/bin/zsoelim
+
+  # script from LFS to convert manpages, see
+  # http://www.linuxfromscratch.org/lfs/view/6.4/chapter06/man-db.html
+  install -D -m755 ${srcdir}/convert-mans  ${pkgdir}/usr/bin/convert-mans 
+
+  #install whatis cron script
+  install -D -m744 ${srcdir}/man-db.cron.daily ${pkgdir}/etc/cron.daily/man-db
+}
+
