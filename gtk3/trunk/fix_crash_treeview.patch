@@ -1,0 +1,55 @@
+From 456b19a35adbdc4b098e6da020c3a87cb62ae7f4 Mon Sep 17 00:00:00 2001
+From: Benjamin Otte <otte@redhat.com>
+Date: Thu, 10 Nov 2011 15:52:44 +0000
+Subject: a11y: Fix gcc warning
+
+---
+diff --git a/gtk/a11y/gtktreeviewaccessible.c b/gtk/a11y/gtktreeviewaccessible.c
+index 663bb51..b2ca9ba 100644
+--- a/gtk/a11y/gtktreeviewaccessible.c
++++ b/gtk/a11y/gtktreeviewaccessible.c
+@@ -238,7 +238,7 @@ gtk_tree_view_accessible_initialize (AtkObject *obj,
+   accessible->n_children_deleted = 0;
+ 
+   accessible->cell_info_by_index = g_hash_table_new_full (g_int_hash,
+-      g_int_equal, NULL, cell_info_free);
++      g_int_equal, NULL, (GDestroyNotify) cell_info_free);
+ 
+   widget = GTK_WIDGET (data);
+   tree_view = GTK_TREE_VIEW (widget);
+--
+cgit v0.9.0.2
+From b25621173734ad1c9cee83802f7ac32ab7df20e7 Mon Sep 17 00:00:00 2001
+From: Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
+Date: Wed, 09 Nov 2011 13:32:32 +0000
+Subject: gtktreeviewaccessible: use a value_destroy_func with the cell_info_by_index hash
+
+This ensures that we don't leak any GtkTreeViewAccessibleCellInfo when
+re-inserting a new one with the same key.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=663694
+---
+diff --git a/gtk/a11y/gtktreeviewaccessible.c b/gtk/a11y/gtktreeviewaccessible.c
+index 046e253..4ad323c 100644
+--- a/gtk/a11y/gtktreeviewaccessible.c
++++ b/gtk/a11y/gtktreeviewaccessible.c
+@@ -237,7 +237,8 @@ gtk_tree_view_accessible_initialize (AtkObject *obj,
+   accessible->idle_expand_path = NULL;
+   accessible->n_children_deleted = 0;
+ 
+-  accessible->cell_info_by_index = g_hash_table_new (g_int_hash, g_int_equal);
++  accessible->cell_info_by_index = g_hash_table_new_full (g_int_hash,
++      g_int_equal, NULL, cell_info_free);
+ 
+   widget = GTK_WIDGET (data);
+   tree_view = GTK_TREE_VIEW (widget);
+@@ -2845,7 +2846,6 @@ garbage_collect_cell_data (gpointer data)
+     {
+       if (!cell_info->in_use)
+         {
+-          cell_info_free (cell_info);
+           g_hash_table_iter_remove (&iter);
+         }
+     }
+--
+cgit v0.9.0.2
