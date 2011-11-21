@@ -1,0 +1,75 @@
+# $Id$
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+
+pkgname=avahi
+pkgver=0.6.30
+pkgrel=6
+pkgdesc='A multicast/unicast DNS-SD framework'
+arch=('i686' 'x86_64')
+url='http://www.avahi.org/'
+license=('LGPL')
+depends=('expat' 'libdaemon' 'glib2' 'dbus' 'libcap' 'gdbm')
+optdepends=('gtk3: avahi-discover-standalone, bshell, bssh, bvnc'
+            'gtk2: gtk2 bindings'
+            'qt3: qt3 bindings'
+            'qt: qt bindings'
+            'pygtk: avahi-bookmarks, avahi-discover'
+            'twisted: avahi-bookmarks'
+            'mono: mono bindings'
+            'dbus-python: avahi-discover'
+            'nss-mdns: NSS support for mDNS')
+makedepends=('qt' 'qt3' 'pygtk' 'mono' 'intltool' 'dbus-python'
+             'gtk-sharp-2' 'gobject-introspection' 'gtk3')
+backup=(etc/avahi/avahi-daemon.conf etc/avahi/services/{sftp-,}ssh.service)
+install=install
+conflicts=('howl' 'mdnsresponder')
+provides=('howl' 'mdnsresponder')
+replaces=('howl' 'mdnsresponder')
+options=('!libtool')
+source=("http://www.avahi.org/download/avahi-${pkgver}.tar.gz"
+        'gnome-nettool.png'
+        'rc.d.patch')
+sha1sums=('5b77443537600a00770e4c77e3c443eeb5861d06'
+          'cf56387c88aed246b9f435efc182ef44de4d52f3'
+          '625ad7c131c0c1c383caeddef18fc7a32d8f3ab9')
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	sed -i 's/netdev/network/g' avahi-daemon/avahi-dbus.conf
+	patch -p1 -i "../rc.d.patch"
+
+	# pygtk requires python2; make it explicit in case other python are installed: FS#21865
+	PYTHON=python2 \
+	PKG_CONFIG_PATH=/opt/qt/lib/pkgconfig \
+		./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--disable-static \
+		--disable-monodoc \
+		--disable-doxygen-doc \
+		--disable-xmltoman \
+		--enable-compat-libdns_sd \
+		--enable-compat-howl \
+		--with-distro=archlinux \
+		--with-avahi-priv-access-group=network \
+		--with-autoipd-user=avahi \
+		--with-autoipd-group=avahi \
+		--with-systemdsystemunitdir=/lib/systemd/system # See FS#20999
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+	install -D -m 644 ../gnome-nettool.png "${pkgdir}"/usr/share/pixmaps/gnome-nettool.png
+
+	cd "${pkgdir}"
+	sed -i '1c #!/usr/bin/python2' usr/bin/avahi-{bookmarks,discover}
+	# howl and mdnsresponder compatability
+	(cd usr/include; ln -s avahi-compat-libdns_sd/dns_sd.h dns_sd.h; ln -s avahi-compat-howl howl)
+	(cd usr/lib/pkgconfig; ln -s avahi-compat-howl.pc howl.pc)
+}
