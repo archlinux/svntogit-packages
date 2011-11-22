@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=syslog-ng
+pkgver=3.3.2
+pkgrel=2
+pkgdesc="Next-generation syslogd with advanced networking and filtering capabilities"
+arch=('i686' 'x86_64')
+license=('GPL2')
+groups=('base')
+url="http://www.balabit.com/network-security/syslog-ng/"
+depends=('glib2' 'eventlog' 'openssl' 'libcap' 'awk')
+makedepends=('flex' 'pkg-config')
+optdepends=('logrotate: for rotating log files')
+provides=('logger')
+options=('!libtool')
+backup=('etc/syslog-ng/modules.conf' 'etc/syslog-ng/scl.conf' \
+        'etc/syslog-ng/syslog-ng.conf' 'etc/logrotate.d/syslog-ng')
+source=("http://www.balabit.com/downloads/files/syslog-ng/sources/$pkgver/source/${pkgname}_$pkgver.tar.gz"
+        syslog-ng.conf
+        syslog-ng.logrotate
+        syslog-ng.rc)
+sha1sums=('a7cfc987cdd584e357e253d2794bad1159776638'
+          '98074e0facfc6ef036202662cc86d04b38a2c142'
+          '949128fe3d7f77a7aab99048061f885bc758000c'
+          'a6ad26912b5bcbe1b47b003309945d733613b98f')
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc/syslog-ng \
+    --libexecdir=/usr/lib \
+    --localstatedir=/var/lib/syslog-ng \
+    --with-pidfile-dir=/run \
+    --disable-spoof-source \
+    --enable-systemd \
+    --with-systemdsystemunitdir=/lib/systemd/system
+
+  make
+}
+
+package() {
+  make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
+
+  install -dm755 "$pkgdir/var/lib/syslog-ng" "$pkgdir/etc/syslog-ng/patterndb.d"
+  install -Dm644 "$srcdir/syslog-ng.conf" "$pkgdir/etc/syslog-ng/syslog-ng.conf"
+  install -Dm644 "$srcdir/syslog-ng.logrotate" "$pkgdir/etc/logrotate.d/syslog-ng"
+  install -Dm755 "$srcdir/syslog-ng.rc" "$pkgdir/etc/rc.d/syslog-ng"
+}
