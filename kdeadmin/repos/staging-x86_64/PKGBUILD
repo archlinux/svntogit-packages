@@ -1,0 +1,80 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=kdeadmin
+pkgname=('kdeadmin-kcron'
+         'kdeadmin-ksystemlog'
+         'kdeadmin-kuser'
+         'kdeadmin-system-config-printer-kde')
+pkgver=4.7.80
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://www.kde.org'
+license=('GPL' 'LGPL' 'FDL')
+groups=('kde' 'kdeadmin')
+makedepends=('cmake' 'automoc4' 'kdebindings-python' 'system-config-printer-common')
+source=("http://download.kde.org/unstable/${pkgver}/src/${pkgbase}-${pkgver}.tar.bz2"
+        'syslog-path.patch')
+sha1sums=('3e06dff48271e78eec67bcda644476bcf0efa554'
+          '20095ce6e0f3e5b6800a7c6e52de6fddba62c031')
+
+build() {
+	cd ${srcdir}/${pkgbase}-${pkgver}
+	patch -p1 -i ${srcdir}/syslog-path.patch
+
+	cd ${srcdir}
+	mkdir build
+	cd build
+	cmake ../${pkgbase}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_SKIP_RPATH=ON \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DBUILD_strigi-analyzer=OFF \
+        -DPYTHON_EXECUTABLE=/usr/bin/python2
+	make
+}
+
+package_kdeadmin-kcron() {
+	pkgdesc='Configure and schedule tasks'
+	depends=('kdelibs')
+	cd $srcdir/build/kcron
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/kcron
+	make DESTDIR=$pkgdir install
+}
+
+package_kdeadmin-ksystemlog() {
+	pkgdesc='System log viewer tool'
+	depends=('kdebase-runtime')
+	url="http://kde.org/applications/system/ksystemlog/"
+	cd $srcdir/build/ksystemlog
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/ksystemlog
+	make DESTDIR=$pkgdir install
+}
+
+package_kdeadmin-kuser() {
+	pkgdesc='User Manager'
+	depends=('kdepim-runtime')
+	url="http://kde.org/applications/system/kuser/"
+	install='kdeadmin.install'
+	cd $srcdir/build/kuser
+	make DESTDIR=$pkgdir install
+	cd $srcdir/build/doc/kuser
+	make DESTDIR=$pkgdir install
+}
+
+package_kdeadmin-system-config-printer-kde() {
+	pkgdesc='Configure local and remote Printers'
+	depends=('kdebindings-python' 'system-config-printer-common' 'python2-pyqt')
+	url="http://kde.org/applications/system/printerapplet/"
+	cd $srcdir/build/system-config-printer-kde
+	make DESTDIR=$pkgdir install
+
+        # Use the python2 executable
+        sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' \
+          "${pkgdir}"/usr/share/apps/system-config-printer-kde/{system-config-printer-kde,authconn}.py
+        sed -i 's|#!/usr/bin/python|#!/usr/bin/python2|' \
+          "${pkgdir}"/usr/share/apps/system-config-printer-kde/pysmb.py
+}
