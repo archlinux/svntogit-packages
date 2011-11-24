@@ -1,9 +1,6 @@
 #!/bin/sh
 # Default acpi script that takes an entry for all actions
 
-# NOTE: This is a 2.6-centric script.  If you use 2.4.x, you'll have to
-#       modify it to not use /sys
-
 minspeed=`cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq`
 maxspeed=`cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq`
 setspeed="/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed"
@@ -57,8 +54,16 @@ case "$1" in
         esac
         ;;
     button/lid)
-        #echo "LID switched!">/dev/tty5
-        ;;
+       	case "$3" in
+	    close)
+		#echo "LID closed!">/dev/tty5
+		;;
+	    open)
+		#echo "LID opened!">/dev/tty5
+        	;;
+	esac
+	;;
+
     *)
         logger "ACPI group/action undefined: $1 / $2"
         ;;
