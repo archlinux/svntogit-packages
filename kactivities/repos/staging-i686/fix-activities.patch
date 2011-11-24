@@ -1,0 +1,156 @@
+--- kactivities-4.7.80/service/ActivityManager.cpp~	2011-11-24 16:05:52.777981854 +0000
++++ kactivities-4.7.80/service/ActivityManager.cpp	2011-11-24 16:06:32.721637122 +0000
+@@ -75,14 +75,14 @@
+             QHash < WId, SharedInfo::WindowData > & _windows,
+             QHash < KUrl, SharedInfo::ResourceData > & _resources
+         )
+-    : haveSessions(false),
+-    config("activitymanagerrc"),
+-    windows(_windows),
+-    resources(_resources),
++    : config("activitymanagerrc"),
++      windows(_windows),
++      resources(_resources),
+ #ifdef HAVE_NEPOMUK
+-    m_nepomukInitCalled(false),
++      m_nepomukInitCalled(false),
+ #endif
+-    q(parent)
++      q(parent),
++      ksmserverInterface(0)
+ {
+     // Initializing config
+     connect(&configSyncTimer, SIGNAL(timeout()),
+@@ -116,20 +116,26 @@
+             this, SLOT(activeWindowChanged(WId)));
+ 
+     //listen to ksmserver for starting/stopping
++    QDBusServiceWatcher *watcher = new QDBusServiceWatcher("org.kde.ksmserver",
++                                                           QDBusConnection::sessionBus(),
++                                                           QDBusServiceWatcher::WatchForRegistration);
++    connect(watcher, SIGNAL(serviceRegistered(QString)), this, SLOT(sessionServiceRegistered()));
++    sessionServiceRegistered();
++}
++
++void ActivityManagerPrivate::sessionServiceRegistered()
++{
++    delete ksmserverInterface;
+     ksmserverInterface = new QDBusInterface("org.kde.ksmserver", "/KSMServer", "org.kde.KSMServerInterface");
+     if (ksmserverInterface->isValid()) {
+         ksmserverInterface->setParent(this);
+         connect(ksmserverInterface, SIGNAL(subSessionOpened()), this, SLOT(startCompleted()));
+         connect(ksmserverInterface, SIGNAL(subSessionClosed()), this, SLOT(stopCompleted()));
+         connect(ksmserverInterface, SIGNAL(subSessionCloseCanceled()), this, SLOT(stopCancelled())); //spelling fail :)
+-        haveSessions = true;
+     } else {
+-        kDebug() << "couldn't connect to ksmserver! session stuff won't work";
+-        //note: in theory it's nice to try again later
+-        //but in practice, ksmserver is either there or it isn't (killing it logs you out)
+-        //so in this case there's no point. :)
+-        ksmserverInterface->deleteLater();
++        delete ksmserverInterface;
+         ksmserverInterface = 0;
++        kDebug() << "couldn't connect to ksmserver! session stuff won't work";
+     }
+ }
+ 
+@@ -519,26 +525,24 @@
+ {
+     bool called = false;
+     // start the starting :)
+-    if (haveSessions) {
+-        QDBusInterface kwin("org.kde.kwin", "/KWin", "org.kde.KWin");
+-        if (kwin.isValid()) {
+-            QDBusMessage reply = kwin.call("startActivity", id);
+-            if (reply.type() == QDBusMessage::ErrorMessage) {
+-                kDebug() << "dbus error:" << reply.errorMessage();
++    QDBusInterface kwin("org.kde.kwin", "/KWin", "org.kde.KWin");
++    if (kwin.isValid()) {
++        QDBusMessage reply = kwin.call("startActivity", id);
++        if (reply.type() == QDBusMessage::ErrorMessage) {
++            kDebug() << "dbus error:" << reply.errorMessage();
++        } else {
++            QList<QVariant> ret = reply.arguments();
++            if (ret.length() == 1 && ret.first().toBool()) {
++                called = true;
+             } else {
+-                QList<QVariant> ret = reply.arguments();
+-                if (ret.length() == 1 && ret.first().toBool()) {
+-                    called = true;
+-                } else {
+-                    kDebug() << "call returned false; probably ksmserver is busy";
+-                    setActivityState(transitioningActivity, ActivityManager::Stopped);
+-                    transitioningActivity.clear();
+-                    return; //assume we're mid-logout and just don't touch anything
+-                }
++                kDebug() << "call returned false; probably ksmserver is busy";
++                setActivityState(transitioningActivity, ActivityManager::Stopped);
++                transitioningActivity.clear();
++                return; //assume we're mid-logout and just don't touch anything
+             }
+-        } else {
+-            kDebug() << "couldn't get kwin interface";
+         }
++    } else {
++        kDebug() << "couldn't get kwin interface";
+     }
+ 
+     if (!called) {
+@@ -585,25 +589,23 @@
+ {
+     bool called = false;
+     // start the stopping :)
+-    if (haveSessions) {
+-        QDBusInterface kwin("org.kde.kwin", "/KWin", "org.kde.KWin");
+-        if (kwin.isValid()) {
+-            QDBusMessage reply = kwin.call("stopActivity", id);
+-            if (reply.type() == QDBusMessage::ErrorMessage) {
+-                kDebug() << "dbus error:" << reply.errorMessage();
++    QDBusInterface kwin("org.kde.kwin", "/KWin", "org.kde.KWin");
++    if (kwin.isValid()) {
++        QDBusMessage reply = kwin.call("stopActivity", id);
++        if (reply.type() == QDBusMessage::ErrorMessage) {
++            kDebug() << "dbus error:" << reply.errorMessage();
++        } else {
++            QList<QVariant> ret = reply.arguments();
++            if (ret.length() == 1 && ret.first().toBool()) {
++                called = true;
+             } else {
+-                QList<QVariant> ret = reply.arguments();
+-                if (ret.length() == 1 && ret.first().toBool()) {
+-                    called = true;
+-                } else {
+-                    kDebug() << "call returned false; probably ksmserver is busy";
+-                    stopCancelled();
+-                    return; //assume we're mid-logout and just don't touch anything
+-                }
++                kDebug() << "call returned false; probably ksmserver is busy";
++                stopCancelled();
++                return; //assume we're mid-logout and just don't touch anything
+             }
+-        } else {
+-            kDebug() << "couldn't get kwin interface";
+         }
++    } else {
++        kDebug() << "couldn't get kwin interface";
+     }
+ 
+     if (!called) {
+--- kactivities-4.7.80/service/ActivityManager_p.h~	2011-11-24 16:06:01.618054620 +0000
++++ kactivities-4.7.80/service/ActivityManager_p.h	2011-11-24 16:06:32.721637122 +0000
+@@ -68,7 +68,6 @@
+ 
+     //opening/closing activity (ksmserver can only handle one at a time)
+     QString transitioningActivity;
+-    bool haveSessions; //whether ksmserver's available
+ 
+     // Configuration
+     QTimer configSyncTimer;
+@@ -106,6 +105,7 @@
+ 
+     void backstoreAvailable();
+     void syncActivitiesWithNepomuk();
++    void sessionServiceRegistered();
+ 
+ private:
+     ActivityManager * const q;
