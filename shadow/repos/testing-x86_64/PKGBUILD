@@ -1,0 +1,106 @@
+# $Id$
+# Maintainer: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=shadow
+pkgver=4.1.4.3
+pkgrel=3
+pkgdesc="Password and account management tool suite with support for shadow files and PAM"
+arch=('i686' 'x86_64')
+url='http://pkg-shadow.alioth.debian.org/'
+license=('BSD')
+groups=('base')
+depends=('bash' 'pam' 'acl')
+backup=(etc/login.defs
+        etc/pam.d/{chage,login,passwd,shadow,useradd,usermod,userdel}
+        etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
+        etc/pam.d/{chfn,chgpasswd,groupmems,chsh}
+        etc/default/useradd)
+options=('!libtool')
+install=shadow.install
+#http://pkg-shadow.alioth.debian.org/releases/shadow-$pkgver.tar.bz2
+# shadow 4.1.4.3 is just shadow 4.1.4.2 with shadow_CVE-2011-0721.patch applied
+source=(ftp://ftp.archlinux.org/other/shadow/shadow_4.1.4.2+svn3283.orig.tar.gz
+        adduser chgpasswd chpasswd defaults.pam login login.defs newusers
+        passwd shadow.cron.daily useradd.defaults LICENSE
+        xstrdup.patch shadow_CVE-2011-0721.patch shadow-strncpy-usage.patch
+        shadow-add-missing-include.patch)
+sha1sums=('8b704b8f07718e329205f23d457c3121c0f3679e'
+          '78ec184a499f9708adcfcf0b7a3b22a60bf39f91'
+          '4ad0e059406a305c8640ed30d93c2a1f62c2f4ad'
+          '0db3819326f45d2c75042aca4315737cca39edc4'
+          '0e56fed7fc93572c6bf0d8f3b099166558bb46f1'
+          '895aad07c192b288b457e19dd7b8c55841b4ad22'
+          'e5cab2118ecb1e61874cde842d7d04d1003f35cb'
+          '12427b1ca92a9b85ca8202239f0d9f50198b818f'
+          '611be25d91c3f8f307c7fe2485d5f781e5dee75f'
+          '5d83ba7e11c765c951867cbe00b0ae7ff57148fa'
+          '9ae93de5987dd0ae428f0cc1a5a5a5cd53583f19'
+          '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
+          '6010fffeed1fc6673ad9875492e1193b1a847b53'
+          '6bfe6528391eb38d338beacedd620407877b637d'
+          '9db9e62ad173f31e1039121c0124cf60826ffd7e'
+          '0697a21f7519de30821da7772677035652df4ad2')
+
+build() {
+  cd "$srcdir/$pkgname-4.1.4.2+svn3283"
+
+  #Ugh, force this to build shared libraries, for god's sake
+  sed -i "s/noinst_LTLIBRARIES/lib_LTLIBRARIES/g" lib/Makefile.am
+  libtoolize
+  autoreconf
+  export LDFLAGS="$LDFLAGS -lcrypt"
+
+  patch -p1 -i "$srcdir/xstrdup.patch"
+  patch -p1 -i "$srcdir/shadow_CVE-2011-0721.patch"
+  patch -p1 -i "$srcdir/shadow-strncpy-usage.patch"
+  patch -p1 -i "$srcdir/shadow-add-missing-include.patch"
+
+  # supress etc/pam.d/*, we provide our own
+  sed -i '/^SUBDIRS/s/pam.d//' etc/Makefile.in
+
+  ./configure \
+    --prefix=/usr --libdir=/lib \
+    --mandir=/usr/share/man --sysconfdir=/etc \
+    --enable-shared --disable-static \
+    --with-libpam --without-selinux
+  make
+}
+
+package() {
+  cd "$srcdir/$pkgname-4.1.4.2+svn3283"
+  make DESTDIR="$pkgdir" install
+
+  # license
+  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/shadow/LICENSE"
+
+  # interactive useradd
+  install -Dm755 "$srcdir/adduser" "$pkgdir/usr/sbin/adduser"
+
+  # useradd defaults
+  install -Dm644 "$srcdir/useradd.defaults" "$pkgdir/etc/default/useradd"
+
+  # cron job
+  install -Dm744 "$srcdir/shadow.cron.daily" "$pkgdir/etc/cron.daily/shadow"
+
+  # login.defs
+  install -Dm644 "$srcdir/login.defs" "$pkgdir/etc/login.defs"
+
+  # PAM config - custom
+  install -Dm644 "$srcdir/login" "$pkgdir/etc/pam.d/login"
+  install -Dm644 "$srcdir/passwd" "$pkgdir/etc/pam.d/passwd"
+  install -Dm644 "$srcdir/chgpasswd" "$pkgdir/etc/pam.d/chgpasswd"
+  install -Dm644 "$srcdir/chpasswd" "$pkgdir/etc/pam.d/chpasswd"
+  install -Dm644 "$srcdir/newusers" "$pkgdir/etc/pam.d/newusers"
+  # PAM config - from tarball
+  install -Dm644 etc/pam.d/groupmems "$pkgdir/etc/pam.d/groupmems"
+
+  # we use the 'useradd' PAM file for other similar utilities
+  for file in chage chfn chsh groupadd groupdel groupmod shadow \
+      useradd usermod userdel; do
+    install -Dm644 "$srcdir/defaults.pam" "$pkgdir/etc/pam.d/$file"
+  done
+
+  # Remove su - using su from coreutils instead
+  rm "$pkgdir/bin/su"
+  find "$pkgdir/usr/share/man" -name 'su.1' -delete
+}
