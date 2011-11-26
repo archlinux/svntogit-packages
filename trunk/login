@@ -18,3 +18,4 @@ session		optional	pam_mail.so dir=/var/spool/mail standard
 session		optional	pam_lastlog.so
 session		optional	pam_loginuid.so
 -session	optional	pam_ck_connector.so nox11
+-session	optional	pam_systemd.so
