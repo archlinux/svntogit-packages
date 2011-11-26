@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=5.9p1
-pkgrel=4
+pkgrel=5
 pkgdesc='Free version of the SSH connectivity tools'
 arch=('i686' 'x86_64')
 license=('custom:BSD')
@@ -19,7 +19,7 @@ source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}
         'sshd')
 sha1sums=('ac4e0055421e9543f0af5da607a72cf5922dcc56'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
-          '07fecd5880b1c4fdd8c94ddb2e89ddce88effdc1'
+          '3413909fd45a28701c92e6e5b59c6b65346ddb0f'
           '21fa88de6cc1c7912e71655f50896ba17991a1c2')
 
 build() {
