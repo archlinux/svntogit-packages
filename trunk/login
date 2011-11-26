@@ -9,7 +9,7 @@ account		required	pam_access.so
 account		required	pam_time.so
 account		required	pam_unix.so
 #password	required	pam_cracklib.so difok=2 minlen=8 dcredit=2 ocredit=2 retry=3
-#password	required	pam_unix.so md5 shadow use_authtok
+#password	required	pam_unix.so sha512 shadow use_authtok
 session		required	pam_unix.so
 session		required	pam_env.so
 session		required	pam_motd.so
