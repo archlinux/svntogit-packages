@@ -1,0 +1,114 @@
+diff -Naur f-spot-0.8.2.orig/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrExport.cs f-spot-0.8.2/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrExport.cs
+--- f-spot-0.8.2.orig/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrExport.cs	2010-12-19 14:34:42.000000000 +0100
++++ f-spot-0.8.2/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrExport.cs	2011-11-28 14:23:08.000000000 +0100
+@@ -124,9 +124,9 @@
+ 					do_export_flickr.Sensitive = true;
+ 					auth_flickr.Sensitive = true;
+ 					auth_label.Text = System.String.Format (Catalog.GetString ("Welcome {0} you are connected to {1}"),
+-										auth.User.Username,
++										auth.User.UserName,
+ 										current_service.Name);
+-					auth_flickr.Label = String.Format (Catalog.GetString ("Sign in as a different user"), auth.User.Username);
++					auth_flickr.Label = String.Format (Catalog.GetString ("Sign in as a different user"), auth.User.UserName);
+ 					used_bandwidth.Visible = !fr.Connection.PeopleGetUploadStatus().IsPro &&
+ 									fr.Connection.PeopleGetUploadStatus().BandwidthMax > 0;
+ 					if (used_bandwidth.Visible) {
+@@ -326,7 +326,7 @@
+ 				progress_dialog.ProgressText = String.Format (Catalog.GetString ("Waiting for response {0} of {1}"),
+ 									      photo_index, selection.Count);
+ 			}
+-			progress_dialog.Fraction = (photo_index - 1.0 + (args.Bytes / (double) info.Length)) / (double) selection.Count;
++			progress_dialog.Fraction = (photo_index - 1.0 + (args.BytesSent / (double) info.Length)) / (double) selection.Count;
+ 		}
+ 
+ 		private class DateComparer : IComparer
+@@ -370,7 +370,7 @@
+ 						App.Instance.Database.Exports.Create ((photo as FSpot.Photo).Id,
+ 									      (photo as FSpot.Photo).DefaultVersionId,
+ 									      ExportStore.FlickrExportType,
+-									      auth.User.UserId + ":" + auth.User.Username + ":" + current_service.Name + ":" + id);
++									      auth.User.UserId + ":" + auth.User.UserName + ":" + current_service.Name + ":" + id);
+ 
+ 				} catch (System.Exception e) {
+ 					progress_dialog.Message = String.Format (Catalog.GetString ("Error Uploading To {0}: {1}"),
+@@ -393,7 +393,7 @@
+ 			if (open && ids.Count != 0) {
+ 				string view_url;
+ 				if (current_service.Name == "Zooomr.com")
+-					view_url = string.Format ("http://www.{0}/photos/{1}/", current_service.Name, auth.User.Username);
++					view_url = string.Format ("http://www.{0}/photos/{1}/", current_service.Name, auth.User.UserName);
+ 				else {
+ 					view_url = string.Format ("http://www.{0}/tools/uploader_edit.gne?ids", current_service.Name);
+ 					bool first = true;
+diff -Naur f-spot-0.8.2.orig/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrRemote.cs f-spot-0.8.2/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrRemote.cs
+--- f-spot-0.8.2.orig/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrRemote.cs	2010-12-19 14:34:42.000000000 +0100
++++ f-spot-0.8.2/src/Extensions/Exporters/FSpot.Exporters.Flickr/FSpot.Exporters.Flickr/FlickrRemote.cs	2011-11-28 15:42:01.000000000 +0100
+@@ -22,7 +22,7 @@
+ 
+ namespace FSpot.Exporters.Flickr {
+ public class FlickrRemote {
+-	public static Licenses    licenses;
++	public static LicenseCollection    licenses;
+ 	private string            frob;
+ 	private string            token;
+ 	private Auth              auth;
+@@ -62,28 +62,30 @@
+ 		get { return flickr; }
+ 	}
+ 
+-	public License[] GetLicenses ()
++	public LicenseCollection GetLicenses ()
+ 	{
+ 		// Licenses won't change normally in a user session
+ 		if (licenses == null) {
+ 			try {
+ 				licenses = flickr.PhotosLicensesGetInfo();
+ 			} catch (FlickrNet.FlickrApiException e ) {
+-				Log.Error (e.Code + ": " + e.Verbose );
++				Log.Error (e.Code + ": " + e.OriginalMessage );
+ 				return null;
+ 			}
+ 		}
+-		return licenses.LicenseCollection;
++		return licenses;
+ 	}
+ 
+ 	public ArrayList Search (string[] tags, int licenseId)
+ 	{
+ 		ArrayList photos_url = new ArrayList ();
+ 		// Photos photos = flickr.PhotosSearchText (tags, licenseId);
+-		Photos photos = flickr.PhotosSearch (tags);
++		PhotoSearchOptions options = new PhotoSearchOptions ();
++		options.Tags = string.Join(",", tags);
++		PhotoCollection photos = flickr.PhotosSearch (options);
+ 
+ 		if (photos != null) {
+-			foreach (FlickrNet.Photo photo in photos.PhotoCollection) {
++			foreach (FlickrNet.Photo photo in photos) {
+ 				photos_url.Add (photo.ThumbnailUrl);
+ 			}
+ 		}
+@@ -94,10 +96,12 @@
+ 	public ArrayList Search (string tags, int licenseId)
+ 	{
+ 		ArrayList photos_url = new ArrayList ();
+-		Photos photos = flickr.PhotosSearchText (tags, licenseId);
++		PhotoSearchOptions options = new PhotoSearchOptions ();
++		options.Tags = tags;
++		PhotoCollection photos = flickr.PhotosSearch (options);
+ 
+ 		if (photos != null) {
+-			foreach (FlickrNet.Photo photo in photos.PhotoCollection) {
++			foreach (FlickrNet.Photo photo in photos) {
+ 				photos_url.Add (photo.ThumbnailUrl);
+ 			}
+ 		}
+@@ -126,7 +130,7 @@
+ 
+ 				return auth;
+ 			} catch (FlickrNet.FlickrApiException ex) {
+-				Log.Error ("Problems logging in to Flickr - " + ex.Verbose);
++				Log.Error ("Problems logging in to Flickr - " + ex.OriginalMessage);
+ 				return null;
+ 			}
+ 		}
