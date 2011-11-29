@@ -5,7 +5,7 @@
 # Contributor: francois <francois.archlinux.org> 
 pkgname=perl
 pkgver=5.14.2
-pkgrel=2
+pkgrel=4
 pkgdesc="A highly capable, feature-rich programming language"
 arch=(i686 x86_64)
 license=('GPL' 'PerlArtistic')
@@ -36,6 +36,10 @@ build() {
     # for i686
     arch_opts=""
   fi
+
+  # remove rpath FS#27173
+  sed -i 's#xxx="-Wl,-rpath,$shrpdir"##' Configure
+
   ./Configure -des -Dusethreads -Duseshrplib -Doptimize="${CFLAGS}" \
     -Dprefix=/usr -Dinstallprefix=${pkgdir}/usr -Dvendorprefix=/usr \
     -Dprivlib=/usr/share/perl5/core_perl \
@@ -53,6 +57,12 @@ build() {
   patch -Np1 -i $srcdir/0001-Append-CFLAGS-and-LDFLAGS-to-their-Config.pm-counter.patch
   make
 }
+
+check() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make test
+}
+
 package() {
   # hack to work around makepkg running the subshell in check_sanity()
   new_provides=($(cd "$srcdir/perl-$pkgver"; LD_PRELOAD=./libperl.so ./perl -Ilib "$srcdir/provides.pl" .))
