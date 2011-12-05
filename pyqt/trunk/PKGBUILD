@@ -44,21 +44,21 @@ build() {
 }
 
 package_pyqt(){
-  pkgdesc="A set of Python bindings for the Qt toolkit"
+  pkgdesc="A set of Python 3.x bindings for the Qt toolkit"
   depends=('qt' 'python-sip')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
   replaces=('python-qt')
   provides=('python-qt')
-  
+
   cd "${srcdir}/PyQt-x11-gpl-${pkgver}"
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 }
 
 package_python2-pyqt(){
-  pkgdesc="PyQt: A set of Python2 bindings for the Qt toolkit"
+  pkgdesc="A set of Python 2.x bindings for the Qt toolkit"
   depends=('pyqt' 'python2-sip' 'dbus-python')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'python-opengl: enable OpenGL 3D graphics in PyQt applications'
