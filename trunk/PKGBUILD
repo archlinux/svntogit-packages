@@ -10,39 +10,34 @@
 # Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
 
 pkgname=('llvm' 'llvm-ocaml' 'clang' 'clang-analyzer')
-pkgver=2.9
-_gcc_ver=4.6.2
-pkgrel=7
+pkgver=3.0
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
-makedepends=('gcc-libs' 'libffi' 'python2' 'ocaml' "gcc=$_gcc_ver")
-source=(http://llvm.org/releases/$pkgver/$pkgname-$pkgver.tgz
-        http://llvm.org/releases/$pkgver/clang-$pkgver.tgz
-        ftp://ftp.archlinux.org/other/community/clang/gcc-headers-4.5.2.tar.xz
+makedepends=('libffi' 'python2' 'ocaml')
+source=(http://llvm.org/releases/$pkgver/$pkgname-$pkgver.tar.gz
+        http://llvm.org/releases/$pkgver/clang-$pkgver.tar.gz
         clang-plugin-loader-registry.patch
         cindexer-clang-path.patch
-        clang-toolchains-gcc-versions.patch
         clang-pure64.patch
         enable-lto.patch
-        bug-9869-operator-h-c++0x.patch)
-sha256sums=('661236cfa17428b48cfa9cbb9909f7569c64b8ecd219fd91dbc00e3b557b3779'
-            '70c41f3f782a71cbaa7bc8d6ea29fce4263ad3e8558dfecc6dc11cdef17909df'
-            '12cf0bfb128cd8bd2a308c3c03cf0e607aa47bd87d9a58b422b96bd387e476c1'
+        fix-gold-lto-linking.patch)
+sha256sums=('519eb11d3499ce99c6ffdb8718651fc91425ed7690eac91c8d6853474f7c0477'
+            'b64e72da356d7c3428cfd7ac620d49ec042c84eaee13c26024879f555f4e126d'
             'a0a4494f2a692789670be37fd390906dcaa37b1824f740bdaaea21182f2f3a9c'
             '3074df5322900e087377a8e03a02115463ccc0011c25917c2f06df11facd9b92'
-            '7c05788c02697f0cd05f7c74fe65b460530c0748851313eb950c5d4d17a8115a'
-            '5bba4964d0d832c9e97308beb45244ff6ed4e16ed3f9f771babe571f1b82fa33'
-            '1a308679edf3078b8f0c33c94d4e6d0c0db6d3baad91babce08bf5370aa052ef'
-            '1c37346b0f412556dc979fd510585f3e20d2d45319ec095dbdec37a582d590c7')
+            '288a82fbff17bc554f5863734246500e637882af33ee8511019d5e0d6cd20524'
+            'cf8922a932e1859f3783bef2af8ac1e90ce96f8eec79928392327b71b3d7cb89'
+            '24d275cdf170f53844bc7174b065fb51b6ddbb9642ced34702cde1f0f74d9192')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgname-$pkgver.src"
 
   # At the present, clang must reside inside the LLVM source code tree to build
   # See http://llvm.org/bugs/show_bug.cgi?id=4840
   rm -rf tools/clang
-  cp -r "$srcdir/clang-$pkgver" tools/clang
+  cp -r "$srcdir/clang-$pkgver.src" tools/clang
 
   # Fix symbolic links from OCaml bindings to LLVM libraries
   sed -i 's:\$(PROJ_libdir):/usr/lib/llvm:' bindings/ocaml/Makefile.ocaml
@@ -63,11 +58,8 @@ build() {
   # Fix clang path in CIndexer.cpp (https://bugs.archlinux.org/task/22799)
   patch -d tools/clang -Np0 -i "$srcdir/cindexer-clang-path.patch"
 
-  # Add GCC 4.6.1 to GccVersions (FS#23631)
-  patch -d tools/clang -Np1 -i "$srcdir/clang-toolchains-gcc-versions.patch"
-
   if [[ $CARCH == x86_64 ]]; then
-    # Adjust lib paths
+    # Adjust linker path
     patch -d tools/clang -Np0 -i "$srcdir/clang-pure64.patch"
   fi
 
@@ -75,9 +67,8 @@ build() {
   # Use gold instead of default linker, and always use the plugin
   patch -d tools/clang -Np0 -i "$srcdir/enable-lto.patch"
 
-  # Fix upstream bug #9869:
-  #   Operator.h incompatibility with GCC 4.6 in C++0x mode
-  patch -Np2 -i "$srcdir/bug-9869-operator-h-c++0x.patch"
+  # Fix libLTO.so location in gold plugin
+  patch -Np1 -i "$srcdir/fix-gold-lto-linking.patch"
 
   # Apply strip option to configure
   _optimized_switch="enable"
@@ -86,20 +77,8 @@ build() {
   # Include location of libffi headers in CPPFLAGS
   export CPPFLAGS="$CPPFLAGS $(pkg-config --cflags libffi)"
 
-  # TODO: Uncomment when clang works with GCC 4.6+
-  #_cxx_headers="/usr/include/c++/$_gcc_ver"
-  #if [[ ! -d $_cxx_headers ]]; then
-  #  error "Couldn't find the C++ headers, PKGBUILD needs fixing!"
-  #  return 1
-  #fi
-  _cxx_headers="/usr/include/c++/clang-$pkgver"
-
-  _32bit_headers=""
-  if [[ $CARCH == x86_64 ]]; then
-    # Important for multilib
-    _32bit_headers="32"
-  fi
-
+  # Force the use of GCC instead of clang
+  CC=gcc CXX=g++ \
   ./configure \
     --prefix=/usr \
     --libdir=/usr/lib/llvm \
@@ -111,9 +90,6 @@ build() {
     --disable-debug-runtime \
     --disable-assertions \
     --with-binutils-include=/usr/include \
-    --with-cxx-include-root=$_cxx_headers \
-    --with-cxx-include-arch=$CHOST \
-    --with-cxx-include-32bit-dir=$_32bit_headers \
     --$_optimized_switch-optimized
 
   make REQUIRES_RTTI=1
@@ -123,11 +99,13 @@ package_llvm() {
   pkgdesc="Low Level Virtual Machine"
   depends=('perl' 'libffi')
 
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgname-$pkgver.src"
 
   # We move the clang directory out of the tree so it won't get installed and
   # then we bring it back in for the clang package
   mv tools/clang "$srcdir"
+  # Copy missing file into the expected location
+  cp bindings/ocaml/llvm/META.llvm bindings/ocaml/llvm/Release/
   # -j1 is due to race conditions during the installation of the OCaml bindings
   make -j1 DESTDIR="$pkgdir" install
   mv "$srcdir/clang" tools
@@ -148,9 +126,6 @@ package_llvm() {
   # Get rid of example Hello transformation
   rm "$pkgdir"/usr/lib/llvm/*LLVMHello.*
 
-  # Symlink the gold plugin where clang expects it
-  ln -s llvm/LLVMgold.so "$pkgdir/usr/lib/LLVMgold.so"
-
   # Add ld.so.conf.d entry
   install -d "$pkgdir/etc/ld.so.conf.d"
   echo /usr/lib/llvm >"$pkgdir/etc/ld.so.conf.d/llvm.conf"
@@ -162,7 +137,7 @@ package_llvm-ocaml() {
   pkgdesc="OCaml bindings for LLVM"
   depends=("llvm=$pkgver-$pkgrel" 'ocaml')
 
-  cd "$srcdir/llvm-$pkgver"
+  cd "$srcdir/llvm-$pkgver.src"
 
   install -d "$pkgdir"/{usr/lib,usr/share/doc/llvm}
   cp -r "$srcdir/ocaml" "$pkgdir/usr/lib"
@@ -177,15 +152,13 @@ package_llvm-ocaml() {
 package_clang() {
   pkgdesc="C language family frontend for LLVM"
   url="http://clang.llvm.org/"
-  # It looks like clang still needs GCC to assemble and link object files
-  # See http://old.nabble.com/%22clang--v%22-shows-a-GCC-call-td28378453.html
-  depends=("llvm=$pkgver-$pkgrel" "gcc=$_gcc_ver")
+  depends=("llvm=$pkgver-$pkgrel" 'gcc')
 
   # Fix installation path for clang docs
   sed -i 's:$(PROJ_prefix)/share/doc/llvm:$(PROJ_prefix)/share/doc/clang:' \
-    "$srcdir/llvm-$pkgver/Makefile.config"
+    "$srcdir/llvm-$pkgver.src/Makefile.config"
 
-  cd "$srcdir/llvm-$pkgver/tools/clang"
+  cd "$srcdir/llvm-$pkgver.src/tools/clang"
   make DESTDIR="$pkgdir" install
 
   # Fix permissions of static libs
@@ -193,12 +166,7 @@ package_clang() {
 
   # Revert the path change in case we want to do a repackage later
   sed -i 's:$(PROJ_prefix)/share/doc/clang:$(PROJ_prefix)/share/doc/llvm:' \
-    "$srcdir/llvm-$pkgver/Makefile.config"
-
-  # Install old libstdc++ headers. Contains combined headers from
-  # gcc 4.5.2-6-i686 and gcc-multilib-4.5.2-6-x86_64
-  install -d "$pkgdir/usr/include/c++"
-  cp -rd "$srcdir/gcc-headers-4.5.2" "$pkgdir/usr/include/c++/clang-$pkgver"
+    "$srcdir/llvm-$pkgver.src/Makefile.config"
 
   install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/clang/LICENSE"
 }
@@ -208,7 +176,7 @@ package_clang-analyzer() {
   url="http://clang-analyzer.llvm.org/"
   depends=("clang=$pkgver-$pkgrel" 'python2')
 
-  cd "$srcdir/llvm-$pkgver/tools/clang"
+  cd "$srcdir/llvm-$pkgver.src/tools/clang"
 
   install -d "$pkgdir"/usr/{bin,lib/clang-analyzer}
   for _tool in scan-{build,view}; do
