@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=libdrm
+pkgver=2.4.28
+pkgrel=1
+pkgdesc="Userspace interface to kernel DRM services"
+arch=(i686 x86_64)
+license=('custom')
+depends=('glibc' 'libpciaccess')
+makedepends=('cairo')
+options=('!libtool')
+url="http://dri.freedesktop.org/"
+source=(http://dri.freedesktop.org/${pkgname}/${pkgname}-${pkgver}.tar.bz2
+        no-pthread-stubs.patch
+        COPYING
+	git_fixes.diff 
+	#missing files from http://cgit.freedesktop.org/mesa/drm/snapshot/drm-902ee661f1864aaf8325621085f6a1b5a6a3673a.tar.bz2 - https://bugs.freedesktop.org/show_bug.cgi?id=43538
+	rbo.h list.h)
+md5sums=('6488f64119c6439fa4038e9cd7b30b67'
+         'c722c8406507b7e3a8da7a3030d1d9cf'
+         'ba65e71c481b94ef0fb6c23c7f21ffa1'
+         '671b87f9670e709e54a19cd292c6330d'
+         '073846ea43fb4d6130062c1897d92e40'
+         'ce867d3331862c2b87d1a37461b42dbe')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -Np1 -i "${srcdir}/no-pthread-stubs.patch"
+
+  # add a missing file in the release tarball
+  patch -Np1 -i ${srcdir}/git_fixes.diff
+  cp ${srcdir}/{rbo,list}.h "${srcdir}/${pkgname}-${pkgver}"/tests/radeon/
+  
+  #libtoolize --force
+  autoreconf --force --install
+  ./configure --prefix=/usr \
+      --enable-udev \
+      --enable-intel \
+      --enable-radeon \
+      --enable-vmwgfx-experimental-api \
+      --enable-nouveau-experimental-api
+  make
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -k check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 "${srcdir}/COPYING" "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
