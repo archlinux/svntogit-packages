@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.14.1
-pkgrel=3
+pkgrel=4
 _glibcdate=20111025
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -46,7 +46,7 @@ md5sums=('c52a15134dfa9f2c94f2ccd4cb155cf1'
          '7da8c554a3b591c7401d7023b1928afc'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
-         '1c5fe2ad0120a40432d429f958d18965'
+         '178779bfaa1418c709f31c25eb3d8a3e'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
