@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.14.1
-pkgrel=2
+pkgrel=3
 _glibcdate=20111025
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -31,6 +31,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.14-revert-4768ae77.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
+        glibc-2.14.1-tzfile-overflow.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -45,10 +46,10 @@ md5sums=('c52a15134dfa9f2c94f2ccd4cb155cf1'
          '7da8c554a3b591c7401d7023b1928afc'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
+         '1c5fe2ad0120a40432d429f958d18965'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
-
 
 mksource() {
   git clone git://sourceware.org/git/glibc.git
@@ -98,6 +99,10 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-2.14-reexport-rpc-interface.patch
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3 (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
+
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13506
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=97ac2654
+  patch -Np1 -i ${srcdir}/glibc-2.14.1-tzfile-overflow.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -181,9 +186,12 @@ package() {
     ln -v -s ../lib/ld* .
   fi
   
-  # manually strip files as stripping libpthread-*.so and libthread_db.so
-  # with the default $STRIP_SHARED breaks gdb and stripping ld-*.so breaks
-  # valgrind on x86_64
+  # Do not strip the following files for improved debugging support
+  # ("improved" as in not breaking gdb and valgrind...):
+  #   ld-${pkgver}.so
+  #   libc-${pkgver}.so
+  #   libpthread-${pkgver}.so
+  #   libthread_db-1.0.so
 
   cd $pkgdir
   strip $STRIP_BINARIES sbin/{ldconfig,sln} \
@@ -193,10 +201,9 @@ package() {
                         usr/sbin/{iconvconfig,nscd}
   [[ $CARCH = "i686" ]] && strip $STRIP_BINARIES usr/bin/lddlibc4
 
-  strip $STRIP_STATIC usr/lib/*.a \
-                      lib/{{ld,libpthread}-${pkgver},libthread_db-1.0}.so
+  strip $STRIP_STATIC usr/lib/*.a
 
-  strip $STRIP_SHARED lib/{libanl,libBrokenLocale,libc,libcidn,libcrypt}-${pkgver}.so \
+  strip $STRIP_SHARED lib/{libanl,libBrokenLocale,libcidn,libcrypt}-${pkgver}.so \
                       lib/libnss_{compat,dns,files,hesiod,nis,nisplus}-${pkgver}.so \
                       lib/{libdl,libm,libnsl,libresolv,librt,libutil}-${pkgver}.so \
                       lib/{libmemusage,libpcprofile,libSegFault}.so \
