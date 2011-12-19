@@ -1,107 +1,110 @@
-From e4a2adb02969e872e37e408ced4c39131c6751ea Mon Sep 17 00:00:00 2001
-From: Carlos Garcia Campos <carlosgc@gnome.org>
-Date: Sun, 30 Oct 2011 15:02:19 +0000
-Subject: pdftocairo: Make sure beginDocument() is always called
+From 74f4299e8f9e2d204979479f6579dd784db678a4 Mon Sep 17 00:00:00 2001
+From: Albert Astals Cid <aacid@kde.org>
+Date: Sun, 04 Dec 2011 16:29:45 +0000
+Subject: Do not fail if we are trying to save a file with Encrypt but that we have not modified at all
 
-This fixes a crash when rendering only odd/even pages in a printing
-format.
+Fixes KDE bug #288045
+(cherry picked from commit 63c942a45227ef28fb94ef4765171d9812fffafa)
 ---
-diff --git a/utils/pdftocairo.cc b/utils/pdftocairo.cc
-index e458ee5..1b67c90 100644
---- a/utils/pdftocairo.cc
-+++ b/utils/pdftocairo.cc
-@@ -903,6 +903,10 @@ int main(int argc, char *argv[]) {
-     lastPage = firstPage;
-   }
+diff --git a/poppler/PDFDoc.cc b/poppler/PDFDoc.cc
+index 01d2759..2758206 100644
+--- a/poppler/PDFDoc.cc
++++ b/poppler/PDFDoc.cc
+@@ -707,35 +707,44 @@ int PDFDoc::saveAs(GooString *name, PDFWriteMode mode) {
  
-+  // Make sure firstPage is always used so that beginDocument() is called
-+  if ((printOnlyEven && pg % 2 == 0) || (printOnlyOdd && pg % 2 == 1))
-+    firstPage++;
+ int PDFDoc::saveAs(OutStream *outStr, PDFWriteMode mode) {
+ 
+-  // we don't support files with Encrypt at the moment
++  // find if we have updated objects
++  GBool updated = gFalse;
++  for(int i=0; i<xref->getNumObjects(); i++) {
++    if (xref->getEntry(i)->updated) {
++      updated = gTrue;
++      break;
++    }
++  }
 +
-   cairoOut = new CairoOutputDev();
-   cairoOut->startDoc(doc->getXRef(), doc->getCatalog());
-   if (sz != 0)
---
-cgit v0.9.0.2-2-gbebe
-From 61b1556d1c62bf090b2eadf93e4e7d0aff7b8015 Mon Sep 17 00:00:00 2001
-From: Carlos Garcia Campos <carlosgc@gnome.org>
-Date: Sun, 30 Oct 2011 15:08:46 +0000
-Subject: pdftocairo: Use fisrtPage instead of uninitialized pg variable
-
-This fixes an error in my previous commit.
----
-diff --git a/utils/pdftocairo.cc b/utils/pdftocairo.cc
-index 1b67c90..d0d1ec6 100644
---- a/utils/pdftocairo.cc
-+++ b/utils/pdftocairo.cc
-@@ -904,7 +904,7 @@ int main(int argc, char *argv[]) {
++  // we don't support rewriting files with Encrypt at the moment
+   Object obj;
+   xref->getTrailerDict()->getDict()->lookupNF("Encrypt", &obj);
+   if (!obj.isNull())
+   {
+     obj.free();
+-    return errEncrypted;
++    if (!updated && mode == writeStandard) {
++      // simply copy the original file
++      saveWithoutChangesAs (outStr);
++    } else {
++      return errEncrypted;
++    }
+   }
+-  obj.free();
++  else
++  {
++    obj.free();
+ 
+-  if (mode == writeForceRewrite) {
+-    saveCompleteRewrite(outStr);
+-  } else if (mode == writeForceIncremental) {
+-    saveIncrementalUpdate(outStr); 
+-  } else { // let poppler decide
+-    // find if we have updated objects
+-    GBool updated = gFalse;
+-    for(int i=0; i<xref->getNumObjects(); i++) {
+-      if (xref->getEntry(i)->updated) {
+-        updated = gTrue;
+-        break;
++    if (mode == writeForceRewrite) {
++      saveCompleteRewrite(outStr);
++    } else if (mode == writeForceIncremental) {
++      saveIncrementalUpdate(outStr); 
++    } else { // let poppler decide
++      if(updated) { 
++        saveIncrementalUpdate(outStr);
++      } else {
++        // simply copy the original file
++        saveWithoutChangesAs (outStr);
+       }
+     }
+-    if(updated) { 
+-      saveIncrementalUpdate(outStr);
+-    } else {
+-      // simply copy the original file
+-      saveWithoutChangesAs (outStr);
+-    }
    }
  
-   // Make sure firstPage is always used so that beginDocument() is called
--  if ((printOnlyEven && pg % 2 == 0) || (printOnlyOdd && pg % 2 == 1))
-+  if ((printOnlyEven && firstPage % 2 == 0) || (printOnlyOdd && firstPage % 2 == 1))
-     firstPage++;
- 
-   cairoOut = new CairoOutputDev();
+   return errNone;
 --
 cgit v0.9.0.2-2-gbebe
-From ebf7fbc74da10d1bc423d33b26e30166870642e4 Mon Sep 17 00:00:00 2001
-From: Rex Dieter <rdieter@math.unl.edu>
-Date: Tue, 01 Nov 2011 08:40:53 +0000
-Subject: Fix pkg-config files
+From 03544e2f602319f0b381f5f357e14cc2cc77d2c1 Mon Sep 17 00:00:00 2001
+From: Albert Astals Cid <aacid@kde.org>
+Date: Tue, 06 Dec 2011 22:21:15 +0000
+Subject: include strings.h as we use memcpy
 
-We were using $FOO_REQUIRED instead of @FOO_REQUIRED@
+Fixes bug 43558
+(cherry picked from commit 388d72ac27ae98fe3a1ebd21760f2b0fa0249a9b)
 ---
-diff --git a/configure.ac b/configure.ac
-index 3a120ca..c4f5b92 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -409,6 +409,7 @@ if test x$enable_cairo_output = xyes; then
-   POPPLER_GLIB_DISABLE_SINGLE_INCLUDES=""
+diff --git a/goo/PNGWriter.cc b/goo/PNGWriter.cc
+index f88c3a7..1fb8cab 100644
+--- a/goo/PNGWriter.cc
++++ b/goo/PNGWriter.cc
+@@ -6,7 +6,7 @@
+ //
+ // Copyright (C) 2009 Warren Toomey <wkt@tuhs.org>
+ // Copyright (C) 2009 Shen Liang <shenzhuxi@gmail.com>
+-// Copyright (C) 2009 Albert Astals Cid <aacid@kde.org>
++// Copyright (C) 2009, 2011 Albert Astals Cid <aacid@kde.org>
+ // Copyright (C) 2009 Stefan Thomas <thomas@eload24.com>
+ // Copyright (C) 2010, 2011 Adrian Johnson <ajohnson@redneon.com>
+ // Copyright (C) 2011 Thomas Klausner <wiz@danbala.tuwien.ac.at>
+@@ -19,6 +19,7 @@
  
-   GLIB_REQUIRED=2.18
-+  AC_SUBST(GLIB_REQUIRED)
-   AC_ARG_ENABLE(poppler-glib,
- 	        AC_HELP_STRING([--disable-poppler-glib],
- 		               [Don't compile poppler glib wrapper.]),
-diff --git a/poppler-glib-uninstalled.pc.in b/poppler-glib-uninstalled.pc.in
-index 55a2278..5fcb6f2 100644
---- a/poppler-glib-uninstalled.pc.in
-+++ b/poppler-glib-uninstalled.pc.in
-@@ -1,7 +1,7 @@
- Name: poppler-glib
- Description: GLib wrapper for poppler - uninstalled
- Version: @VERSION@
--Requires: glib-2.0 >= $GLIB_REQUIRED gobject-2.0 >= $GLIB_REQUIRED cairo >= $CAIRO_VERSION
-+Requires: glib-2.0 >= @GLIB_REQUIRED@ gobject-2.0 >= @GLIB_REQUIRED@ cairo >= @CAIRO_VERSION@
+ #include <zlib.h>
+ #include <stdlib.h>
++#include <string.h>
  
- Libs: ${pc_top_builddir}/${pcfiledir}/glib/libpoppler-glib.la
- Cflags: -I${pc_top_builddir}/${pcfiledir}/glib
-diff --git a/poppler-glib.pc.cmake b/poppler-glib.pc.cmake
-index 3264ed6..e15e669 100644
---- a/poppler-glib.pc.cmake
-+++ b/poppler-glib.pc.cmake
-@@ -6,7 +6,7 @@ includedir=${prefix}/include
- Name: poppler-glib
- Description: GLib wrapper for poppler
- Version: @POPPLER_VERSION@
--Requires: glib-2.0 >= $GLIB_REQUIRED gobject-2.0 >= $GLIB_REQUIRED cairo >= $CAIRO_VERSION
-+Requires: glib-2.0 >= @GLIB_REQUIRED@ gobject-2.0 >= @GLIB_REQUIRED@ cairo >= @CAIRO_VERSION@
- @PC_REQUIRES_PRIVATE@
- 
- Libs: -L${libdir} -lpoppler-glib
-diff --git a/poppler-glib.pc.in b/poppler-glib.pc.in
-index 04d9bb9..9ba8978 100644
---- a/poppler-glib.pc.in
-+++ b/poppler-glib.pc.in
-@@ -6,7 +6,7 @@ includedir=@includedir@
- Name: poppler-glib
- Description: GLib wrapper for poppler
- Version: @VERSION@
--Requires: glib-2.0 >= $GLIB_REQUIRED gobject-2.0 >= $GLIB_REQUIRED cairo >= $CAIRO_VERSION
-+Requires: glib-2.0 >= @GLIB_REQUIRED@ gobject-2.0 >= @GLIB_REQUIRED@ cairo >= @CAIRO_VERSION@
- @PC_REQUIRES_PRIVATE@
- 
- Libs: -L${libdir} -lpoppler-glib
+ #include "poppler/Error.h"
+ #include "goo/gmem.h"
 --
 cgit v0.9.0.2-2-gbebe
