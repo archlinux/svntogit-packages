@@ -25,6 +25,6 @@
 #RFCOMM_CONFIG="/etc/bluetooth/rfcomm.conf"
 
 # Options for hidd, dund and pand (default: none)
-#HIDD_OPTIONS=""
+HIDD_OPTIONS="--server"
 #DUND_OPTIONS=""
 #PAND_OPTIONS=""
