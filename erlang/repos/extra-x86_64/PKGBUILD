@@ -5,28 +5,39 @@
 
 pkgname=erlang
 pkgver=R14B04
-pkgrel=1
+pkgrel=2
 pkgdesc="A small concurrent functional programming language developed by Ericsson."
 arch=(i686 x86_64)
 url="http://www.erlang.org/index.html"
 license=('custom')
 depends=('ncurses' 'glibc')
-makedepends=('java-environment' 'perl' 'openssl' 'wxgtk' 'unixodbc' 'mesa')
+makedepends=('java-environment' 'perl' 'openssl' 'wxgtk' 'unixodbc>=2.3.1' 'mesa')
 optdepends=('wxgtk: for wx support' 'unixodbc: database')
 
 options=('!makeflags')
 source=(http://www.erlang.org/download/otp_src_${pkgver/./-}.tar.gz
 	http://www.erlang.org/download/otp_doc_man_${pkgver/./-}.tar.gz)
+md5sums=('4b469729f103f52702bfb1fb24529dc0'
+         'f31e72518daae4007f595c0b224dd59f')
+
+# please check these deps reported by namcap when you do the next build:
+#erlang E: Dependency java-environment detected and not included (found class files usr/lib/erlang/lib/jinterface-1.5.4/priv/OtpErlang.jar, usr/lib/erlang/lib/ic-4.2.27/priv/ic.jar)
+#erlang E: Dependency mesa detected and not included (libraries ['usr/lib/libGLU.so.1'] needed in files ['usr/lib/erlang/lib/wx-0.99/priv/erl_gl.so'])
+
 
 build() {
   cd "$srcdir/otp_src_${pkgver/./-}"
-  ERTSVERSION=$(sed -n 's/^VSN[ ]*=[ ]*\([0-9.]\)/\1/p' < erts/vsn.mk)
-  ERLINTERFACEVERSION=$(sed -n 's/^EI_VSN[ ]*=[ ]*\([0-9.]\)/\1/p' < lib/erl_interface/vsn.mk)
+  export ERTSVERSION=$(sed -n 's/^VSN[ ]*=[ ]*\([0-9.]\)/\1/p' < erts/vsn.mk)
+  export ERLINTERFACEVERSION=$(sed -n 's/^EI_VSN[ ]*=[ ]*\([0-9.]\)/\1/p' < lib/erl_interface/vsn.mk)
 
   sed -i '/SSL_DYNAMIC_ONLY=/s:no:yes:' erts/configure
 
   CFLAGS="${CFLAGS} -fno-strict-aliasing" ./configure --prefix=/usr --enable-smp-support --enable-threads -enable-native-libs
   make
+}
+
+package() {
+  cd "$srcdir/otp_src_${pkgver/./-}"
   make INSTALL_PREFIX="$pkgdir" install
 
 # fix prefix
@@ -58,5 +69,3 @@ build() {
   install -Dm644 "$srcdir/otp_src_${pkgver/./-}/EPLICENCE" "$pkgdir/usr/share/licenses/$pkgname/EPLICENCE"
 
 }
-md5sums=('4b469729f103f52702bfb1fb24529dc0'
-         'f31e72518daae4007f595c0b224dd59f')
