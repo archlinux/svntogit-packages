@@ -7,17 +7,22 @@
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
 pkgver=4.9
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
 makedepends=('qt' 'python-sip' 'dbus-python' 'python2-sip' 'phonon'
              'python-opengl' 'qt-assistant-compat' 'qtwebkit')
-source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('61619500d09d87b6c2a25bd3ea994504')
+source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
+        'fix-qthelp-build.patch')
+md5sums=('61619500d09d87b6c2a25bd3ea994504'
+         '356a453331a33c507b1baba4a9771764')
 
 build() {
   cd "${srcdir}"
+
+  patch -p0 -i "${srcdir}"/fix-qthelp-build.patch
+
   cp -r PyQt-x11-gpl-${pkgver} Py2Qt-x11-gpl-${pkgver}
 
   cd "${srcdir}/PyQt-x11-gpl-${pkgver}"
