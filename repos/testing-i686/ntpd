@@ -1,0 +1,47 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+. /etc/conf.d/ntpd.conf
+
+unset PID
+PIDFILE='/run/ntpd.pid'
+
+if [[ -r ${PIDFILE} ]]; then
+	read -r PID <"${PIDFILE}"
+	if [[ -n ${PID} && ! -d /proc/${PID} ]]; then
+		rm -f "${PIDFILE}"
+		unset PID
+	fi
+fi
+
+case "$1" in
+	start)
+		stat_busy "Starting NTP Daemon"
+		if [[ -z ${PID} ]] && /usr/bin/ntpd ${NTPD_ARGS} -p "${PIDFILE}" &>/dev/null; then 
+			add_daemon ntpd
+			stat_done
+		else
+			stat_fail
+			exit 1
+		fi
+		;;
+	stop)
+		stat_busy "Stopping NTP Daemon"
+		if [[ -n ${PID} ]] && kill "${PID}" &>/dev/null; then
+			rm ${PIDFILE}
+			rm_daemon ntpd
+			stat_done
+		else
+			stat_fail
+			exit 1
+		fi
+		;;
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+		;;
+	*)
+		echo "usage: $0 {start|stop|restart}"
+esac
