@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=1
+pkgrel=2
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -29,6 +29,8 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.14-revert-4768ae77.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
+        glibc-2.15-lddebug-scopes.patch
+        glibc-2.15-revert-c5a0802a.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -41,6 +43,8 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '7da8c554a3b591c7401d7023b1928afc'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
+         '3c219ddfb619b6df903cac4cc42c611d'
+         '7ae3e426251ae33e73dbad71f9c91378'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -87,6 +91,14 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-2.14-reexport-rpc-interface.patch
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3 (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
+
+  # propriety nvidia crash - https://bugzilla.redhat.com/show_bug.cgi?id=737223 
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=0c95ab64  (only fedora branch...)
+  patch -Np1 -i ${srcdir}/glibc-2.15-lddebug-scopes.patch
+
+  # revert commit c5a0802a - causes various hangs
+  # https://bugzilla.redhat.com/show_bug.cgi?id=769421
+  patch -Np1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
