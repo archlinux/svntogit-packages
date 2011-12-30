@@ -8,13 +8,13 @@ pkgbase=pulseaudio
 pkgname=(pulseaudio libpulse)
 pkgdesc="A featureful, general-purpose sound server"
 pkgver=1.1
-pkgrel=1
+pkgrel=2
 arch=(i686 x86_64)
 url="http://pulseaudio.org/"
 license=(GPL LGPL)
 makedepends=(libasyncns libcap attr libxtst libsm libsamplerate libtool rtkit
              speex tdb udev dbus-core avahi bluez gconf intltool jack
-             lirc-utils openssl fftw orc json-c)
+             lirc-utils openssl fftw orc json-c gtk2)
 options=(!emptydirs !libtool)
 source=(http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.xz
         $pkgbase.xinit)
@@ -34,6 +34,9 @@ build() {
     --disable-rpath \
     --disable-default-build-tests
 
+  # fight unused direct deps
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
   make
 }
 
@@ -51,7 +54,7 @@ package_pulseaudio() {
   install=pulseaudio.install
 
   cd "$srcdir/$pkgbase-$pkgver"
-  make -j1 DESTDIR="$pkgdir" install 
+  make -j1 DESTDIR="$pkgdir" install
 
   # Lower resample quality, saves CPU
   sed -e '/resample-method/iresample-method=speex-float-0' \
@@ -62,9 +65,8 @@ package_pulseaudio() {
   sed -e 's|/usr/bin/pactl load-module module-x11-cork-request|#&|' \
       -i "$pkgdir/usr/bin/start-pulseaudio-x11"
 
-  # Make some modules optional
+  # Make ConsoleKit optional
   sed -e $'/load-module module-console-kit/{i.nofail\n;a.fail\n;}' \
-      -e '/load-module module-jackdbus-detect/s/^/#/' \
       -i "$pkgdir/etc/pulse/default.pa"
 
   # Python fix
@@ -97,5 +99,6 @@ package_libpulse() {
   optdepends=('alsa-plugins: ALSA support'
               'avahi: zeroconf support')
   backup=(etc/pulse/client.conf)
+
   mv "$srcdir"/libpulse/* "$pkgdir"
 }
