@@ -4,6 +4,27 @@
 . /etc/rc.d/functions
 . /etc/conf.d/varnish
 
+reload_vcl() {
+  local activecfg newcfg
+
+  if [[ -z $VARNISH_CFG ]]; then
+    printf '==> ERROR: VARNISH_CFG is undefined in /etc/conf.d/varnish!\n'
+    return 1
+  fi
+
+  activecfg=$(varnishadm -T localhost:6082 "vcl.list" | awk '/active/{ print $3 }')
+  if [[ -z $activecfg ]]; then
+    printf '==> ERROR: No active VCL found!\n'
+    return 1
+  fi
+
+  printf -v newcfg 'vcl-%(%s)T' -1
+
+  varnishadm -T localhost:6082 "vcl.load $newcfg $VARNISH_CFG" &&
+  varnishadm -T localhost:6082 "vcl.use $newcfg" &&
+  varnishadm -T localhost:6082 "vcl.discard $activecfg" || return 1
+}
+
 pidfile=/run/varnish.pid
 if [[ -r $pidfile ]]; then
   read -r PID < "$pidfile"
@@ -39,6 +60,10 @@ case "$1" in
     $0 stop
     sleep 1
     $0 start
+    ;;
+  reload)
+    stat_busy "Recompiling and Reloading VCL"
+    reload_vcl && stat_done || stat_fail
     ;;
   *)
     echo "usage: $0 {start|stop|restart}"
