@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=2
+pkgrel=3
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -31,6 +31,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.14-reinstall-nis-rpc-headers.patch
         glibc-2.15-lddebug-scopes.patch
         glibc-2.15-revert-c5a0802a.patch
+        glibc-2.15-math64crash.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -45,6 +46,7 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '55febbb72139ac7b65757df085024b83'
          '3c219ddfb619b6df903cac4cc42c611d'
          '7ae3e426251ae33e73dbad71f9c91378'
+         'dc7550e659ddd685bd78a930d15a01f2'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -99,6 +101,10 @@ build() {
   # revert commit c5a0802a - causes various hangs
   # https://bugzilla.redhat.com/show_bug.cgi?id=769421
   patch -Np1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
+
+  # revert optimized math routines that can cause crashes (FS#27736, FS#27743)
+  # obviously not a real fix...
+  patch -Np1 -i ${srcdir}/glibc-2.15-math64crash.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
