@@ -5,8 +5,8 @@
 
 pkgname=binutils
 pkgver=2.22
-pkgrel=2
-_date=20111201
+pkgrel=4
+_date=20111227
 pkgdesc="A set of programs to assemble and manipulate binary and object files"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/binutils/"
@@ -17,7 +17,7 @@ checkdepends=('dejagnu')
 options=('!libtool' '!distcc' '!ccache')
 install=binutils.install
 source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2)
-md5sums=('77c15027ac112c65fd5f73ca91b0651c')
+md5sums=('c2377089c15bb1a1bfaeca8d0e59dd4d')
 
 mksource() {
   mkdir ${pkgname}-${_date}
@@ -44,6 +44,17 @@ build() {
   make configure-host
 
   make tooldir=${pkgdir}/usr
+
+  # Rebuild libiberty.a with -fPIC
+  cp -a libiberty libiberty-pic
+  make -C libiberty-pic clean
+  make CFLAGS="$CFLAGS -fPIC" -C libiberty-pic
+
+  # Rebuild libbfd.a with -fPIC
+  # hidden visability prevent 3rd party shared libraries exporting bfd non-stable API
+  cp -a bfd bfd-pic
+  make -C bfd-pic clean
+  make CFLAGS="$CFLAGS -fPIC -fvisibility=hidden" -C bfd-pic
 }
 
 check() {
@@ -61,16 +72,9 @@ package() {
   install -m644 ${srcdir}/binutils/include/libiberty.h ${pkgdir}/usr/include
   install -m644 ${srcdir}/binutils/include/demangle.h ${pkgdir}/usr/include
 
-  # Rebuild libiberty.a with -fPIC
-  make -C libiberty clean
-  make CFLAGS="$CFLAGS -fPIC" -C libiberty
-  install -m644 libiberty/libiberty.a ${pkgdir}/usr/lib
-
-  # Rebuild libbfd.a with -fPIC
-  make -C bfd clean
-  # hidden visability prevent 3rd party shared libraries exporting bfd non-stable API
-  make CFLAGS="$CFLAGS -fPIC -fvisibility=hidden" -C bfd
-  install -m644 bfd/libbfd.a ${pkgdir}/usr/lib
+  # install libraries rebuilt with -fPIC
+  install -m644 libiberty-pic/libiberty.a ${pkgdir}/usr/lib
+  install -m644 bfd-pic/libbfd.a ${pkgdir}/usr/lib
 
   # Remove Windows/Novell specific man pages
   rm -f ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
