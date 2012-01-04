@@ -6,9 +6,9 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.6.2
-pkgrel=3
-_snapshot=4.6-20111125
-_libstdcppmanver=20110814		# Note: check source directory name when updating this
+pkgrel=5
+_snapshot=4.6-20111223
+_libstdcppmanver=20111215		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -18,15 +18,13 @@ checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-man.${_libstdcppmanver}.tar.bz2
 	gcc_pure64.patch
-	gcc-hash-style-both.patch
-	gcc-pr49720.patch)
-md5sums=('922b0ee688669c188d237bbd21d42d07'
-         'ce920d2550ff7e042b9f091d27764d8f'
+	gcc-hash-style-both.patch)
+md5sums=('4755b9f6ac0abecbaa2097ed9738406a'
+         '450772ce32daed97d7383199f8797f33'
          '4030ee1c08dd1e843c0225b772360e76'
-         '4df25b623799b148a0703eaeec8fdf3f'
-         'f9d7e5b792c59175f3da3f8421447512')
+         '4df25b623799b148a0703eaeec8fdf3f')
 
 if [ -n "${_snapshot}" ]; then
   _basedir="${srcdir}/gcc-${_snapshot}"
@@ -47,9 +45,6 @@ build() {
     patch -Np1 -i ${srcdir}/gcc_pure64.patch
   fi
   patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch
-
-  # fix compiler segfault in binutils testsuite
-  patch -Np1 -i ${srcdir}/gcc-pr49720.patch
 
   echo ${pkgver} > gcc/BASE-VER
 
@@ -180,7 +175,7 @@ EOF
 
   # install the libstdc++ man pages
   install -dm755 ${pkgdir}/usr/share/man/man3
-  install -m644 ${srcdir}/man/man3/* ${pkgdir}/usr/share/man/man3/
+  install -m644 ${srcdir}/man3/* ${pkgdir}/usr/share/man/man3/
 
   # Install Runtime Library Exception
   install -Dm644 ${_basedir}/COPYING.RUNTIME \
