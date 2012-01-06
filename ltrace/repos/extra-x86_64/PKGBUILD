@@ -1,28 +1,39 @@
 # $Id$
-# Maintainer:
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
 # Contributor: Aaron Griffin <aaron@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=ltrace
-pkgver=0.5.3
-pkgrel=2
-pkgdesc="A debugging program which runs a specified command until it exits"
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="Tracks runtime library calls in dynamically linked programs"
 arch=('i686' 'x86_64')
-url="http://packages.debian.org/sid/ltrace"
+url="http://ltrace.alioth.debian.org/"
 license=('GPL')
-depends=('glibc' 'elfutils')
+depends=('elfutils')
 backup=('etc/ltrace.conf')
-source=(http://ftp.debian.org/debian/pool/main/l/ltrace/${pkgname}_${pkgver}.orig.tar.gz)
-md5sums=('3fa7fe715ab879db08bd06d1d59fd90f')
+source=(http://dev.archlinux.org/~foutrelis/sources/ltrace/$pkgname-$pkgver.tar.xz
+        fix-crash-on-int3-after-symcall.patch)
+sha256sums=('13e4a66aa1f2ad23fd4ddd7faa79c52a68f210155eeb6490ce421f2a07fa0706'
+            'ef2c33c94b5cbfc552e5e734ac5627918ace918f48db5d3f29f1c0dcb1732d04')
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
-  sed -i 's|/usr/bin/install|/bin/install|' configure
-  ./configure --prefix=/usr --sysconfdir=/etc
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # Fix FS#27250: SIGSEGV due to int3 right after a call instruction
+  patch -Np1 -i "$srcdir/fix-crash-on-int3-after-symcall.patch"
+
+  ./autogen.sh
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc
   make
 }
 
 package(){
-  cd ${srcdir}/${pkgname}-${pkgver}
-  make DESTDIR=${pkgdir} install
+  cd "$srcdir/$pkgname-$pkgver"
+
+  make DESTDIR="$pkgdir" install
 }
+
+# vim:set ts=2 sw=2 et:
