@@ -1,8 +1,10 @@
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Guillaume ALAUX <guillaume@archlinux.org>
 
-pkgname=('jre7-openjdk' 'jdk7-openjdk' 'openjdk7-src')
+pkgname=('jre7-openjdk-headless' 'jre7-openjdk' 'jdk7-openjdk' 'openjdk7-src') 
+ # ToDo -demo -doc packages, see Debian file lists http://packages.debian.org/source/wheezy/openjdk-7
 pkgbase=java7-openjdk
 _java_ver=7
 _openjdk_build=b147
@@ -19,23 +21,29 @@ _JDK_CHANGESET=2054526dd141
 _LANGTOOLS_CHANGESET=9b85f1265346
 _OPENJDK_CHANGESET=0a76e5390e68
 
+_bootstrap=0 # 0/1 for quick build or full bootstrap
+
 pkgver=${_java_ver}.${_openjdk_build}_${_icedtea_ver}
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url="http://icedtea.classpath.org"
 license=('custom')
-makedepends=('libcups' 'libxp' 'libxtst' 'libxi' 'libxt' 'libxslt' 'freetype2' #'eclipse-ecj' only for bootstrapping
-             'alsa-lib' 'xalan-java' 'glib2' 'gtk2' 'apache-ant>=1.6.5' 'giflib'
-             'libjpeg>=6b' 'zlib' 'rhino' 'libpulse>=0.9.11' 'zip' 'unzip' 'cpio' 'lcms2')
-source=( #ftp://ftp.archlinux.org/other/$pkgname/icedtea7-${_date}-hg.tar.xz
-        http://icedtea.classpath.org/download/source/icedtea-${_icedtea_ver}.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/archive/${_OPENJDK_CHANGESET}.tar.gz			# openjdk.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/corba/archive/${_CORBA_CHANGESET}.tar.gz		# corba.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/jaxp/archive/${_JAXP_CHANGESET}.tar.gz			# jaxp.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/jaxws/archive/${_JAXWS_CHANGESET}.tar.gz		# jaxws.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/jdk/archive/${_JDK_CHANGESET}.tar.gz			# jdk.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/langtools/archive/${_LANGTOOLS_CHANGESET}.tar.gz        # langtools.tar.gz
-        http://icedtea.classpath.org/hg/icedtea7-forest/hotspot/archive/${_HOTSPOT_CHANGESET}.tar.gz	        # hotspot.tar.gz
+options=('!emptydirs')
+makedepends=('jdk7-openjdk' 'libxp' 'libxslt' 
+             'alsa-lib' 'apache-ant>=1.8.1' 'giflib'
+             'rhino' 'libpulse>=0.9.11' 'zip' 'unzip' 'cpio' 'fastjar') # fastjar`?
+[ "$_bootstrap" = "1" ] && makedepends=(${makedepends[@]} 'eclipse-ecj')
+
+_url=http://icedtea.classpath.org/hg/release/icedtea7-forest-2.0/archive
+#_url=http://icedtea.classpath.org/hg/icedtea7-forest/archive
+source=(http://icedtea.classpath.org/download/source/icedtea-${_icedtea_ver}.tar.gz
+        ${_url}/${_OPENJDK_CHANGESET}.tar.gz						# openjdk.tar.gz
+        ${_url}/${_CORBA_CHANGESET}.tar.gz						# corba.tar.gz
+        ${_url}/${_JAXP_CHANGESET}.tar.gz						# jaxp.tar.gz
+        ${_url}/${_JAXWS_CHANGESET}.tar.gz						# jaxws.tar.gz
+        ${_url}/${_JDK_CHANGESET}.tar.gz						# jdk.tar.gz
+        ${_url}/${_LANGTOOLS_CHANGESET}.tar.gz						# langtools.tar.gz
+        ${_url}/${_HOTSPOT_CHANGESET}.tar.gz						# hotspot.tar.gz
         fontconfig-paths.diff
         fix_corba_cmds_path.diff
         openjdk7_fix_jdk_cmds_path.diff
@@ -44,8 +52,7 @@ source=( #ftp://ftp.archlinux.org/other/$pkgname/icedtea7-${_date}-hg.tar.xz
         jdk7-openjdk.profile.csh
         jre7-openjdk.profile
         jre7-openjdk.profile.csh
-        jconsole.desktop
-        policytool.desktop)
+	glibc2_15.diff)
 
 #http://www.java.net/download/openjdk/jdk${_java_ver}/promoted/${_openjdk_build}/openjdk-${_java_ver}-fcs-src-${_openjdk_build}-${_openjdk_date}.zip
 
@@ -72,45 +79,41 @@ md5sums=('752721a037a625001fad7a5fc2013f60'
          'cdabafad0ec413d9a983888bf445a443'
          '612b0fec7e0943c37a6de77c43622007'
          '62443459da0cb28181feb260dc0e5ce7'
-         '8e346f19a69b11b8dc4fcd8ea9d9d8f1'
-         'b6357228d29836504a90abe006d86e56')
+         'a4293acadff03bdccbc9b412ad288549')
 
-# source PKGBUILD && mksource
-#makedepends+=('mercurial')
-mksource() {
-  mkdir /tmp/icedtea7-${_date}
-  pushd /tmp/icedtea7-${_date}
-  hg -v clone http://icedtea.classpath.org/hg/icedtea7
-  rm -rf icedtea7/.hg*
-  tar -cvJf /tmp/icedtea7-${_date}/icedtea7-${_date}-hg.tar.xz *
-  popd
-}
-
+  _jvmdir=/usr/lib/jvm/java-7-openjdk
+  
+  [ "$CARCH" = "x86_64" ] && _JARCH=amd64
+  [ "$CARCH" = "i686" ] && _JARCH=i386
+  
 build() {
   cd "${srcdir}/icedtea-${_icedtea_ver}"
 
-  unset JAVA_HOME
-  unset CLASSPATH
+  unset JAVA_HOME JDK_HOME CLASSPATH JAVAC JAVACFLAGS
+  
   # default is to build with first found java-environment found in our repos - is jdk7-openjdk
   [ -f /etc/profile.d/jdk.sh ] && . /etc/profile.d/jdk.sh
   
-  unset MAKEFLAGS
+  unset MAKEFLAGS # parallel build is currently broken 
   export ALT_PARALLEL_COMPILE_JOBS="${MAKEFLAGS/-j}"
   export HOTSPOT_BUILD_JOBS="${ALT_PARALLEL_COMPILE_JOBS}"
 
   . /etc/profile.d/apache-ant.sh
 
   cp ${srcdir}/*.diff ${srcdir}/icedtea-${_icedtea_ver}/patches
-  export DISTRIBUTION_PATCHES="patches/fontconfig-paths.diff patches/fix_corba_cmds_path.diff patches/openjdk7_fix_jdk_cmds_path.diff patches/openjdk7_nonreparenting-wm.diff"
+  export DISTRIBUTION_PATCHES="patches/fontconfig-paths.diff patches/fix_corba_cmds_path.diff patches/openjdk7_fix_jdk_cmds_path.diff patches/openjdk7_nonreparenting-wm.diff patches/glibc2_15.diff"
 
-  # Bootstrap IcedTea with ecj and a GNU Classpath-based JDK:
-#  autoreconf --force --install
+  if [ "$_bootstrap" = "1" ]; then
+     BOOTSTRAPOPT="--enable-bootstrap --with-ecj-jar=/usr/share/java/ecj.jar"
+   else 
+     BOOTSTRAPOPT="--disable-bootstrap"
+  fi
 
   ./configure \
-        --disable-bootstrap \
+	$BOOTSTRAPOPT \
         --with-parallel-jobs="${MAKEFLAGS/-j}" \
         --disable-tests \
-        --with-pkgversion=ArchLinux-${pkgver}-${pkgrel}-${CARCH} \
+        --with-pkgversion="ArchLinux build ${pkgver}-${pkgrel}-${CARCH}" \
         --with-jdk-home=${JAVA_HOME} \
         --with-openjdk-src-zip=${srcdir}/${_OPENJDK_CHANGESET}.tar.gz \
         --with-hotspot-src-zip=${srcdir}/${_HOTSPOT_CHANGESET}.tar.gz \
@@ -120,12 +123,11 @@ build() {
         --with-jdk-src-zip=${srcdir}/${_JDK_CHANGESET}.tar.gz \
         --with-langtools-src-zip=${srcdir}/${_LANGTOOLS_CHANGESET}.tar.gz \
         --enable-pulse-java \
+        --enable-nss \
+        --with-rhino
+	#--help
 
-#        --with-rhino #--help
-
-#     --enable-systemtap      Enable inclusion of SystemTap trace support
-#     --enable-nss            Enable inclusion of NSS security provider
-#     --with-abs-install-dir  The absolute path where the j2sdk-image dir will be installed
+#     --enable-systemtap      Enable inclusion of SystemTap trace support - needs systemtab from AUR + --with-abs-install-dir=/usr/lib/jvm/java-7-openjdk The absolute path where the j2sdk-image dir will be installed
   
   make
 }
@@ -135,33 +137,49 @@ check() {
   make -k check
 }
 
-package_jre7-openjdk() {
-  pkgdesc="Free Java environment based on OpenJDK 7.0 with IcedTea7 replacing binary plugs - runtime environment"
-  depends=('gcc-libs' 'hicolor-icon-theme' 'ca-certificates-java' 'libxtst' 'libcups' 'gtk2' 'lcms2'
-           'libxt' 'nss' 'libjpeg' 'freetype2' 'libxrender' 'libpng' 'gsettings-desktop-schemas')
-  optdepends=('icedtea-web-java7: web browser plugin + Java Web Start'
-             'alsa-lib: for sound'
-             'giflib: for gif format support'
-             'libpulse: for advanced sound')
+package_jre7-openjdk-headless() {
+  pkgdesc="Free Java environment based on OpenJDK 7.0 with IcedTea7 replacing binary plugs - Minimal Java runtime - needed for executing non GUI Java programs"
+  depends=('libjpeg-turbo' 'lcms2' 'nss'
+           'ca-certificates-java' 'rhino')
+  optdepends=('libcups: needed for Java Mauve support - libmawt.so'
+              'fontconfig: needed for Java Mauve support - libmawt.so')
   provides=('java-runtime=7')
   conflicts=('java-runtime')
-#  replaces=('openjdk6') # once we remove openjdk6 pkg from the repos
-  backup=(etc/profile.d/jre.sh etc/profile.d/jre.csh)
-  install=jre7-openjdk.install
-
-  _jvmdir=/usr/lib/jvm/java-7-openjdk
+  #  replaces=('openjdk6') # once we remove openjdk6 pkg from the repos
+  backup=(etc/profile.d/jre.sh
+          etc/profile.d/jre.csh
+          etc/java-7-openjdk/calendars.properties
+	  etc/java-7-openjdk/content-types.properties
+          etc/java-7-openjdk/cursors/cursors.properties
+          etc/java-7-openjdk/flavormap.properties
+          etc/java-7-openjdk/fontconfig.bfc
+	  etc/java-7-openjdk/fontconfig.properties
+          etc/java-7-openjdk/jvm.cfg
+          etc/java-7-openjdk/logging.properties
+          etc/java-7-openjdk/management/jmxremote.access
+          etc/java-7-openjdk/management/jmxremote.password
+          etc/java-7-openjdk/management/management.properties
+          etc/java-7-openjdk/management/snmp.acl
+          etc/java-7-openjdk/net.properties
+          etc/java-7-openjdk/psfont.properties.ja
+          etc/java-7-openjdk/psfontj2d.properties
+          etc/java-7-openjdk/security/java.policy
+          etc/java-7-openjdk/security/java.security
+          etc/java-7-openjdk/security/nss.cfg
+          etc/java-7-openjdk/sound.properties
+          etc/java-7-openjdk/tz.properties)
+  install=jre7-openjdk-headless.install
 
   cd "${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image/jre"
 
+  mv lib/fontconfig.Ubuntu.properties.src lib/fontconfig.properties
+  mv lib/fontconfig.Ubuntu.bfc lib/fontconfig.bfc
+  rm -f lib/fontconfig.*.bfc
+  rm -f lib/fontconfig.*.properties.src 
+  rm -f lib/fontconfig.properties.src
+
   install -d -m755 ${pkgdir}/${_jvmdir}/jre/
   cp -a bin lib ${pkgdir}/${_jvmdir}/jre
-
-  mv ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.Ubuntu.properties.src \
-     ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.properties.src
-  mv ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.Ubuntu.bfc \
-     ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.bfc
-  rm -f ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.*.bfc
-  rm -f ${pkgdir}/${_jvmdir}/jre/lib/fontconfig.*.properties.src
 
   # Install man pages
   pushd ../../j2re-image/man
@@ -170,12 +188,22 @@ package_jre7-openjdk() {
   install -m644 ja_JP.UTF-8/man1/*.1 ${pkgdir}/usr/share/man/ja/man1
   popd
 
-  # Install icons and menu entries
-  for s in 16 24 32 48 ; do
-    install -m755 -d ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/
-    install -m644 ../../../openjdk/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
-                  ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/java.png
+  # more files that belong to the desktop package
+  mkdir ${srcdir}/tmp-desktop-jre
+  for file in \
+	"/usr/lib/jvm/java-7-openjdk/jre/bin/policytool" \
+	"/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/libjsoundalsa.so" \
+	"/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/libpulse-java.so" \
+	"/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/libsplashscreen.so" \
+	"/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/xawt/libmawt.so" \
+	"/usr/share/man/ja/man1/policytool.1" \
+	"/usr/share/man/man1/policytool.1"; do
+     dirname=`dirname $file`
+     install -dm755 ${srcdir}/tmp-desktop-jre/$dirname || /bin/true
+     # mv file from fakeinstall to pkgdir
+     mv ${pkgdir}/$file ${srcdir}/tmp-desktop-jre$file
   done
+  rmdir ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/xawt
 
   # Link binaries into /usr/bin
   pushd ${pkgdir}/${_jvmdir}/jre/bin
@@ -191,13 +219,76 @@ package_jre7-openjdk() {
 
   # Set some variables
   install -m755 -d ${pkgdir}/etc/profile.d/
-  install -m755 ${srcdir}/${pkgname}.profile ${pkgdir}/etc/profile.d/jre.sh
-  install -m755 ${srcdir}/${pkgname}.profile.csh ${pkgdir}/etc/profile.d/jre.csh
+  install -m755 ${srcdir}/jre7-openjdk.profile ${pkgdir}/etc/profile.d/jre.sh
+  install -m755 ${srcdir}/jre7-openjdk.profile.csh ${pkgdir}/etc/profile.d/jre.csh
 
   # Install license
   install -m755 -d ${pkgdir}/usr/share/licenses/${pkgbase}/
   install -m644 ASSEMBLY_EXCEPTION LICENSE THIRD_PARTY_README \
                  ${pkgdir}/usr/share/licenses/${pkgbase}
+		 
+  # Put some more files under backup control
+  install -m755 -d ${pkgdir}/etc/java-7-openjdk/
+  install -m644 ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/*.properties* ${pkgdir}/etc/java-7-openjdk/
+  # install dummy links to make them found by JAVA
+  cd ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/
+  for file in `ls ${pkgdir}/etc/java-7-openjdk/*.properties*`; do
+    ln -vsf /etc/java-7-openjdk/`basename $file` .
+  done
+  # some more
+  install -m755 -d ${pkgdir}/etc/java-7-openjdk/{cursors,management,security}
+  install -m644 ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/images/cursors/cursors.properties ${pkgdir}/etc/java-7-openjdk/cursors/
+  pushd ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/images/cursors/
+    ln -vsf /etc/java-7-openjdk/cursors/cursors.properties .
+  popd
+  mv ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/management/jmxremote.password.template ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/management/jmxremote.password
+  mv ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/management/snmp.acl.template ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/management/snmp.acl
+  install -m644 ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/management/{management.properties,jmxremote.access,jmxremote.password,snmp.acl} ${pkgdir}/etc/java-7-openjdk/management/
+  pushd ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/management
+    ln -vsf /etc/java-7-openjdk/management/{management.properties,jmxremote.access,jmxremote.password,snmp.acl} .
+  popd
+  install -m644 ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/security/{java.policy,java.security,nss.cfg} ${pkgdir}/etc/java-7-openjdk/security/
+  pushd ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/security
+    ln -vsf /etc/java-7-openjdk/security/{java.policy,java.security,nss.cfg} .
+  popd
+  install -m644 ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/fontconfig.bfc ${pkgdir}/etc/java-7-openjdk/
+  install -m644 ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/jvm.cfg ${pkgdir}/etc/java-7-openjdk/
+  pushd ${pkgdir}/usr/lib/jvm/java-7-openjdk/jre/lib/${_JARCH}/
+     ln -vsf /etc/java-7-openjdk/jvm.cfg .
+  popd
+}
+	 
+package_jre7-openjdk() {
+  pkgdesc="Free Java environment based on OpenJDK 7.0 with IcedTea7 replacing binary plugs -Full Java runtime environment - needed for executing Java GUI and Webstart programs"
+  depends=('jre7-openjdk-headless' 'xdg-utils' 'hicolor-icon-theme')
+  optdepends=('icedtea-web-java7: web browser plugin + Java Web Start'
+             'alsa-lib: for basic sound support'
+             'giflib: for gif format support'
+             'libpulse: for advanced sound support'
+	     'gtk2: for the Gtk+ look and feel - desktop usage')
+  install=jre7-openjdk.install
+
+  mv ${srcdir}/tmp-desktop-jre/* ${pkgdir}
+  # Link binaries into /usr/bin
+  pushd ${pkgdir}/${_jvmdir}/jre/bin
+  install -m755 -d ${pkgdir}/usr/bin/
+  for file in *; do
+    ln -sf ${_jvmdir}/jre/bin/${file} ${pkgdir}/usr/bin
+  done
+  popd
+  
+  cd "${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image/jre"
+
+  # Install icons and menu entries
+  for s in 16 24 32 48 ; do
+    install -m755 -d ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/
+    install -m644 ../../../openjdk/jdk/src/solaris/classes/sun/awt/X11/java-icon${s}.png \
+                  ${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/java.png
+  done
+  
+  # Install desktop files.
+  install -m755 -d ${pkgdir}/usr/share/applications
+  install -m644 ${srcdir}/icedtea-${_icedtea_ver}/{jconsole,policytool}.desktop ${pkgdir}/usr/share/applications
 }
 
 package_jdk7-openjdk() {
@@ -207,8 +298,6 @@ package_jdk7-openjdk() {
   conflicts=('java-environment')
   #  replaces=('openjdk6')
   backup=(etc/profile.d/jdk.sh etc/profile.d/jdk.csh)
-
-  _jvmdir=/usr/lib/jvm/java-7-openjdk
 
   cd "${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image"
 
@@ -242,10 +331,6 @@ package_jdk7-openjdk() {
 
   # Handling 'java-rmi.cgi' separately
   install -m755 -D bin/java-rmi.cgi ${pkgdir}/${_jvmdir}/bin/java-rmi.cgi
-
-  # Desktop files
-  install -m755 -d ${pkgdir}/usr/share/applications/
-  install -m644 ${srcdir}/{jconsole,policytool}.desktop ${pkgdir}/usr/share/applications/
 
   # Set some variables
   install -m755 -d ${pkgdir}/etc/profile.d/
