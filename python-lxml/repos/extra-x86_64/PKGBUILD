@@ -6,18 +6,19 @@
 # Contributor: Guillem Rieu <guillemr@gmx.net>
 
 pkgname=python-lxml
-pkgver=2.3.2
+pkgver=2.3.3
 pkgrel=1
 pkgdesc="Python binding for the libxml2 and libxslt libraries"
 arch=('i686' 'x86_64')
-license=('BSD' 'GPL' 'custom')
+license=('BSD' 'custom')
 url="http://lxml.de/"
 depends=('python2' 'libxslt')
 optdepends=('python-beautifulsoup: support for parsing not well formed HTML')
 conflicts=('lxml')
 replaces=('lxml')
-source=("http://codespeak.net/lxml/lxml-${pkgver}.tgz")
-md5sums=('50ed3706da4665c40600fd6e2a7d1159')
+source=(http://pypi.python.org/packages/source/l/lxml/lxml-${pkgver}.tar.gz{,.asc})
+md5sums=('a7825793c69d004f388ec6600bad7a6f'
+         '5c4b1a05f6e46a4dd7ebed8b5ad9e32e')
 
 check() {
   cd "${srcdir}"/lxml-$pkgver
