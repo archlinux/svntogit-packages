@@ -7,7 +7,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.1
-pkgver=${_basekernel}.8
+pkgver=${_basekernel}.9
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -22,15 +22,17 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.1.tar.xz"
         "${pkgname}.preset"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
-        'i915-fix-incorrect-error-message.patch')
+        'i915-fix-incorrect-error-message.patch'
+        'i915-gpu-finish.patch')
 md5sums=('edbdc798f23ae0f8045c82f6fa22c536'
-         '503acb7689ec96446f5774d6c86c1207'
+         '61494c09959f4185f703bfd68c7fb970'
          'f7b6cd7fb0a7ecc3840a59ce6e8cb9f3'
          '73d256a815013286fd02536d541e7b2f'
          'eb14dcfd80c00852ef81ded6e826826a'
          '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5'
-         'a50c9076012cb2dda49952dc6ec3e9c1')
+         'a50c9076012cb2dda49952dc6ec3e9c1'
+         '4cd79aa147825837dc8bc9f6b736c0a0')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -40,6 +42,10 @@ build() {
 
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
+
+  # fix FS#27883
+  # drm/i915: Only clear the GPU domains upon a successful finish
+  patch -Np1 -i "${srcdir}/i915-gpu-finish.patch"
 
   # Some chips detect a ghost TV output
   # mailing list discussion: http://lists.freedesktop.org/archives/intel-gfx/2011-April/010371.html
