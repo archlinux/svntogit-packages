@@ -3,13 +3,13 @@
 
 pkgname=systemd
 pkgver=38
-pkgrel=1
+pkgrel=2
 pkgdesc="Session and Startup manager"
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2')
-depends=('dbus-core' 'kbd' 'libcap' 'util-linux>=2.19' 'udev>=172' 'xz')
-makedepends=('acl' 'gperf' 'cryptsetup' 'intltool' 'linux-api-headers')
+depends=('acl' 'dbus-core' 'kbd' 'libcap' 'util-linux>=2.19' 'udev>=172' 'xz')
+makedepends=('gperf' 'cryptsetup' 'intltool' 'linux-api-headers')
 optdepends=('cryptsetup: required for encrypted block devices'
             'dbus-python: systemd-analyze'
             'initscripts: legacy support for hostname and vconsole setup'
@@ -28,9 +28,13 @@ backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
         etc/systemd/systemd-logind.conf)
 install=systemd.install
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
-        "os-release")
+        "os-release"
+        '0001-tmpfiles-fix-parsing-of-proc-net-unix-on-32Bit-machi.patch'
+        '0001-units-make-sure-syslog-socket-goes-away-early-during.patch')
 md5sums=('68c66dce5a28c0efd7c210af5d11efed'
-         '752636def0db3c03f121f8b4f44a63cd')
+         '752636def0db3c03f121f8b4f44a63cd'
+         '07437e70be65ef14fd4f13c5ec5bd1fe'
+         'c567ce597f68c07b9bc5b7e835f80f7d')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -40,13 +44,14 @@ build() {
   sed -i -e '/^Environ.*LANG/s/^/#/' \
          -e '/^ExecStart/s/agetty/& -8/' units/getty@.service.m4
 
+  patch -Np1 < "$srcdir/0001-tmpfiles-fix-parsing-of-proc-net-unix-on-32Bit-machi.patch"
+  patch -Np1 < "$srcdir/0001-units-make-sure-syslog-socket-goes-away-early-during.patch"
 
   ./configure --sysconfdir=/etc \
               --libexecdir=/usr/lib \
               --libdir=/usr/lib \
               --localstatedir=/var \
-              --with-rootprefix= \
-              --with-rootlibdir=/lib
+              --with-rootprefix=
 
   make
 
