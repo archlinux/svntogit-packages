@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ## For actual repos
 
@@ -9,65 +9,67 @@
 
 ## For launchpad mirror
 
-# bzr branch lp:~skodabenz/grub/grub2-extras-lua lua
-# bzr branch lp:~skodabenz/grub/grub2-extras-gpxe gpxe
-# bzr branch lp:~skodabenz/grub/grub2-extras-ntldr-img ntldr-img
-# bzr branch lp:~skodabenz/grub/grub2-extras-915resolution 915resolution
+# bzr branch lp:~the-ridikulus-rat/grub/grub2-extras-lua lua
+# bzr branch lp:~the-ridikulus-rat/grub/grub2-extras-gpxe gpxe
+# bzr branch lp:~the-ridikulus-rat/grub/grub2-extras-ntldr-img ntldr-img
+# bzr branch lp:~the-ridikulus-rat/grub/grub2-extras-915resolution 915resolution
 
 ## grub-extras zfs is integrated into grub2 bzr main repo and is no longer needed separately.
 
-wd=${PWD}/
-output_dir=${wd}/
+_WD="${PWD}/"
+_OUTPUT_DIR="${_WD}/"
 
-grub2_bzr_dir=${wd}/grub2_BZR/
-grub2_bzr_exp_dir=${wd}/grub2_experimental_BZR/
-grub2_extras_dir=${wd}/grub2_extras_BZR/
+_ACTUAL_PKGVER="1.99"
 
-main_snapshot() {
+_GRUB2_BZR_REPO_DIR="${_WD}/grub2_BZR/"
+_GRUB2_BZR_EXP_REPO_DIR="${_WD}/grub2_experimental_BZR/"
+_GRUB2_EXTRAS_REPOS_DIR="${_WD}/grub2_extras_BZR/"
+
+_MAIN_SNAPSHOT() {
 	
-	cd ${grub2_bzr_dir}/
+	cd "${_GRUB2_BZR_REPO_DIR}/"
 	echo
 	
-	revnum=$(bzr revno ${grub2_bzr_dir})
-	bzr export --root=grub2 --format=tar ${output_dir}/grub2_r${revnum}.tar
+	_REVNUM="$(bzr revno ${_GRUB2_BZR_REPO_DIR})"
+	bzr export --root="grub-${_ACTUAL_PKGVER}" --format="tar" "${_OUTPUT_DIR}/grub2_r${_REVNUM}.tar"
 	echo
 	
-	cd ${output_dir}/
+	cd "${_OUTPUT_DIR}/"
 	
-	xz -9 ${output_dir}/grub2_r${revnum}.tar
+	xz -9 "${_OUTPUT_DIR}/grub2_r${_REVNUM}.tar"
 	echo
 	
 }
 
-exp_snapshot() {
+_EXP_SNAPSHOT() {
 	
-	cd ${grub2_bzr_exp_dir}/
+	cd "${_GRUB2_BZR_EXP_REPO_DIR}/"
 	echo
 	
-	revnum=$(bzr revno ${grub2_bzr_exp_dir})
-	bzr export --root=grub2_exp --format=tar ${output_dir}/grub2_exp_r${revnum}.tar
+	_REVNUM="$(bzr revno ${_GRUB2_BZR_EXP_REPO_DIR})"
+	bzr export --root="grub-${_ACTUAL_PKGVER}" --format="tar" "${_OUTPUT_DIR}/grub2_exp_r${_REVNUM}.tar"
 	echo
 	
-	cd ${output_dir}/
+	cd "${_OUTPUT_DIR}/"
 	
-	xz -9 ${output_dir}/grub2_exp_r${revnum}.tar
+	xz -9 "${_OUTPUT_DIR}/grub2_exp_r${_REVNUM}.tar"
 	echo
 	
 }
 
-extras_snapshot() {
+_EXTRAS_SNAPSHOT() {
 	
-	cd ${grub2_extras_dir}/${grub2_extras_name}/
+	cd "${_GRUB2_EXTRAS_REPOS_DIR}/${_GRUB2_EXTRAS_NAME}/"
 	echo
 	
-	revnum=$(bzr revno ${grub2_extras_dir}/${grub2_extras_name})
-	bzr export --root=${grub2_extras_name} --format=tar ${output_dir}/grub2_extras_${grub2_extras_name}_r${revnum}.tar
+	_REVNUM="$(bzr revno ${_GRUB2_EXTRAS_REPOS_DIR}/${_GRUB2_EXTRAS_NAME})"
+	bzr export --root="${_GRUB2_EXTRAS_NAME}" --format=tar "${_OUTPUT_DIR}/grub2_extras_${_GRUB2_EXTRAS_NAME}_r${_REVNUM}.tar"
 	echo
 	
-	cd ${output_dir}/
+	cd "${_OUTPUT_DIR}/"
 	echo
 	
-	xz -9 ${output_dir}/grub2_extras_${grub2_extras_name}_r${revnum}.tar
+	xz -9 "${_OUTPUT_DIR}/grub2_extras_${_GRUB2_EXTRAS_NAME}_r${_REVNUM}.tar"
 	echo
 	
 }
@@ -76,28 +78,36 @@ echo
 
 set -x -e
 
-# main_snapshot
+echo
 
-# exp_snapshot
+_MAIN_SNAPSHOT
 
-grub2_extras_name="lua"
-extras_snapshot
+echo
 
-grub2_extras_name="gpxe"
-extras_snapshot
+# _EXP_SNAPSHOT
 
-grub2_extras_name="ntldr-img"
-extras_snapshot
+echo
 
-grub2_extras_name="915resolution"
-extras_snapshot
+_GRUB2_EXTRAS_NAME="lua"
+_EXTRAS_SNAPSHOT
+
+_GRUB2_EXTRAS_NAME="gpxe"
+_EXTRAS_SNAPSHOT
+
+_GRUB2_EXTRAS_NAME="ntldr-img"
+_EXTRAS_SNAPSHOT
+
+_GRUB2_EXTRAS_NAME="915resolution"
+_EXTRAS_SNAPSHOT
+
+echo
 
 set +x +e
 
 echo
 
-unset wd
-unset output_dir
-unset grub2_bzr_dir
-unset grub2_extras_dir
-unset grub2_extras_name
+unset _WD
+unset _OUTPUT_DIR
+unset _GRUB2_BZR_REPO_DIR
+unset _GRUB2_EXTRAS_REPOS_DIR
+unset _GRUB2_EXTRAS_NAME
