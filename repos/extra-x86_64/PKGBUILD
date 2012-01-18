@@ -3,13 +3,15 @@
 
 pkgname=xscreensaver
 pkgver=5.15
-pkgrel=2
+pkgrel=3
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
 url="http://www.jwz.org/xscreensaver/"
 license=('BSD')
-depends=('libxxf86vm' 'libglade' 'mesa' 'pam' 'xorg-appres' 'libxmu' 'perl-libwww')
-makedepends=('bc')
+depends=('libxxf86vm' 'libglade' 'mesa' 'pam' 'xorg-appres' 'libxmu' \
+         'perl-libwww' 'perl-http-message')
+makedepends=('bc' 'libxpm' 'gdm')
+optdepends=('gdm: for login manager support')
 backup=('etc/pam.d/xscreensaver')
 source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz \
         add-electricsheep.diff xscreensaver.pam LICENSE)
@@ -20,10 +22,10 @@ sha1sums=('b5ce7caa19f4d57c3bac83377a36dddbe7095052'
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -Np0 -i "${srcdir}/add-electricsheep.diff"
+  patch -p0 -i "${srcdir}/add-electricsheep.diff"
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     --libexecdir=/usr/lib --with-x-app-defaults=/usr/share/X11/app-defaults \
-    --with-pam --without-motif --with-gtk --with-gl \
+    --with-pam --with-login-manager --with-gtk --with-gl \
     --without-gle --with-pixbuf --with-jpeg
   make
 }
