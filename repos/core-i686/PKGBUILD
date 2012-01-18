@@ -6,15 +6,15 @@ pkgbase=linux
 pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
-_basekernel=3.1
-pkgver=${_basekernel}.9
-pkgrel=2
+_basekernel=3.2
+pkgver=${_basekernel}.1
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl')
 options=('!strip')
-source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.1.tar.xz"
+source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.2.tar.xz"
         "http://www.kernel.org/pub/linux/kernel/v3.x/patch-${pkgver}.xz"
         # the main kernel config files
         'config' 'config.x86_64'
@@ -22,16 +22,14 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.1.tar.xz"
         "${pkgname}.preset"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
-        'i915-fix-incorrect-error-message.patch'
         'i915-gpu-finish.patch')
-md5sums=('edbdc798f23ae0f8045c82f6fa22c536'
-         '61494c09959f4185f703bfd68c7fb970'
-         'f7b6cd7fb0a7ecc3840a59ce6e8cb9f3'
-         '73d256a815013286fd02536d541e7b2f'
+md5sums=('364066fa18767ec0ae5f4e4abcf9dc51'
+         '62ac6ac9b870162f693ecf5e8606423a'
+         'cbd469a1ba0bc8caa765caa42d429ea9'
+         '875b121a32a619e0ee262c541f330427'
          'eb14dcfd80c00852ef81ded6e826826a'
          '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5'
-         'a50c9076012cb2dda49952dc6ec3e9c1'
          '4cd79aa147825837dc8bc9f6b736c0a0')
 
 build() {
@@ -55,11 +53,6 @@ build() {
   # then dropped because the reasoning was unclear. However, it is clearly
   # needed.
   patch -Np1 -i "${srcdir}/i915-fix-ghost-tv-output.patch"
-
-  # In 3.1.1, a DRM_DEBUG message is falsely declared as DRM_ERROR. This
-  # worries users, as this message is displayed even at loglevel 4. Fix
-  # this.
-  patch -Np1 -i "${srcdir}/i915-fix-incorrect-error-message.patch"
 
   # set DEFAULT_CONSOLE_LOGLEVEL to 4 (same value as the 'quiet' kernel param)
   # remove this when a Kconfig knob is made available by upstream
