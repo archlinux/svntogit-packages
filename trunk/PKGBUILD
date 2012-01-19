@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 pkgname=xkeyboard-config
 pkgver=2.4.1
-pkgrel=2
+pkgrel=3
 pkgdesc="X keyboard configuration files"
 arch=(any)
 license=('custom')
@@ -20,6 +20,15 @@ sha256sums=('f048bdd6e3d71c621b5a47a7ee72d691eda1922e0e07808b157b292e0c857a0a'
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   patch -Np1 -i "${srcdir}/git-fixes.patch"
+
+  # remove debugging bindings from default mappings
+  find symbols -type f -exec sed \
+      -e 's/XF86_Ungrab/NoSymbol/g' \
+      -e 's/XF86_ClearGrab/NoSymbol/g' \
+      -e 's/XF86_LogWindowTree/NoSymbol/g' \
+      -e 's/XF86_LogGrabInfo/NoSymbol/g' \
+      -i {} +
+
   ./configure --prefix=/usr \
       --with-xkb-base=/usr/share/X11/xkb \
       --with-xkb-rules-symlink=xorg \
