@@ -1,0 +1,3156 @@
+Description: Avahi support
+Bug: http://www.cups.org/str.php?L3066
+Author: Tim Waugh
+Origin: git clone http://twaugh.fedorapeople.org/cups-avahi.git (Aug 11, 2011)
+
+--- a/backend/dnssd.c
++++ b/backend/dnssd.c
+@@ -15,14 +15,21 @@
+  *
+  * Contents:
+  *
++ *   next_txt_record()       - Get next TXT record from a cups_txt_records_t.
++ *   parse_txt_record_pair() - Read key/value pair in cups_txt_records_t.
+  *   main()                  - Browse for printers.
+  *   browse_callback()       - Browse devices.
+  *   browse_local_callback() - Browse local devices.
+  *   compare_devices()       - Compare two devices.
+  *   exec_backend()          - Execute the backend that corresponds to the
+  *                             resolved service name.
++ *   device_type()           - Get DNS-SD type enumeration from string.
+  *   get_device()            - Create or update a device.
+  *   query_callback()        - Process query data.
++ *   avahi_client_callback() - Avahi client callback function.
++ *   avahi_query_callback()  - Avahi query callback function.
++ *   avahi_browse_callback() - Avahi browse callback function.
++ *   find_device()           - Find a device from its name and domain.
+  *   sigterm_handler()       - Handle termination signals...
+  *   unquote()               - Unquote a name string.
+  */
+@@ -33,7 +40,18 @@
+ 
+ #include "backend-private.h"
+ #include <cups/array.h>
+-#include <dns_sd.h>
++#ifdef HAVE_DNSSD
++#  include <dns_sd.h>
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++#  include <avahi-client/client.h>
++#  include <avahi-client/lookup.h>
++#  include <avahi-common/simple-watch.h>
++#  include <avahi-common/domain.h>
++#  include <avahi-common/error.h>
++#  include <avahi-common/malloc.h>
++#define kDNSServiceMaxDomainName AVAHI_DOMAIN_NAME_MAX
++#endif /* HAVE_AVAHI */
+ 
+ 
+ /*
+@@ -53,7 +71,12 @@
+ 
+ typedef struct
+ {
++#ifdef HAVE_DNSSD
+   DNSServiceRef	ref;			/* Service reference for resolve */
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  int		resolved;		/* Did we resolve the device? */
++#endif /* HAVE_AVAHI */
+   char		*name,			/* Service name */
+ 		*domain,		/* Domain name */
+ 		*fullName,		/* Full name */
+@@ -65,6 +88,20 @@
+ 		sent;			/* Did we list the device? */
+ } cups_device_t;
+ 
++typedef struct
++{
++  char key[256];
++  char value[256];
++
++#ifdef HAVE_DNSSD
++  const uint8_t *data;
++  const uint8_t *datanext;
++  const uint8_t *dataend;
++#else /* HAVE_AVAHI */
++  AvahiStringList *txt;
++#endif /* HAVE_DNSSD */
++} cups_txt_records_t;
++
+ 
+ /*
+  * Local globals...
+@@ -78,6 +115,7 @@
+  * Local functions...
+  */
+ 
++#ifdef HAVE_DNSSD
+ static void		browse_callback(DNSServiceRef sdRef,
+ 			                DNSServiceFlags flags,
+ 				        uint32_t interfaceIndex,
+@@ -93,12 +131,6 @@
+ 					      const char *regtype,
+ 					      const char *replyDomain,
+ 					      void *context);
+-static int		compare_devices(cups_device_t *a, cups_device_t *b);
+-static void		exec_backend(char **argv);
+-static cups_device_t	*get_device(cups_array_t *devices,
+-			            const char *serviceName,
+-			            const char *regtype,
+-				    const char *replyDomain);
+ static void		query_callback(DNSServiceRef sdRef,
+ 			               DNSServiceFlags flags,
+ 				       uint32_t interfaceIndex,
+@@ -107,9 +139,118 @@
+ 				       uint16_t rrclass, uint16_t rdlen,
+ 				       const void *rdata, uint32_t ttl,
+ 				       void *context);
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++static void		avahi_client_callback (AvahiClient *client,
++					       AvahiClientState state,
++					       void *context);
++static void		avahi_browse_callback (AvahiServiceBrowser *browser,
++					       AvahiIfIndex interface,
++					       AvahiProtocol protocol,
++					       AvahiBrowserEvent event,
++					       const char *serviceName,
++					       const char *regtype,
++					       const char *replyDomain,
++					       AvahiLookupResultFlags flags,
++					       void *context);
++#endif /* HAVE_AVAHI */
++
++static cups_device_t *	find_device (cups_array_t *devices,
++				     cups_txt_records_t *txt,
++				     cups_device_t *dkey);
++static int		compare_devices(cups_device_t *a, cups_device_t *b);
++static void		exec_backend(char **argv);
++static cups_device_t	*get_device(cups_array_t *devices,
++			            const char *serviceName,
++			            const char *regtype,
++				    const char *replyDomain);
+ static void		sigterm_handler(int sig);
+ static void		unquote(char *dst, const char *src, size_t dstsize);
+ 
++#ifdef HAVE_AVAHI
++static AvahiSimplePoll *simple_poll = NULL;
++static int avahi_got_callback;
++#endif /* HAVE_AVAHI */
++
++
++/*
++ * 'next_txt_record()' - Get next TXT record from a cups_txt_records_t.
++ */
++
++static cups_txt_records_t *
++next_txt_record (cups_txt_records_t *txt)
++{
++#ifdef HAVE_DNSSD
++  txt->data = txt->datanext;
++#else /* HAVE_AVAHI */
++  txt->txt = avahi_string_list_get_next (txt->txt);
++  if (txt->txt == NULL)
++    return NULL;
++#endif /* HAVE_DNSSD */
++
++  return txt;
++}
++
++
++/*
++ * 'parse_txt_record_pair()' - Read key/value pair in cups_txt_records_t.
++ */
++
++static int
++parse_txt_record_pair (cups_txt_records_t *txt)
++{
++#ifdef HAVE_DNSSD
++  uint8_t	datalen;
++  uint8_t	*data = txt->data;
++  char		*ptr;
++
++ /*
++  * Read a key/value pair starting with an 8-bit length.  Since the
++  * length is 8 bits and the size of the key/value buffers is 256, we
++  * don't need to check for overflow...
++  */
++
++  datalen = *data++;
++  if (!datalen || (data + datalen) >= txt->dataend)
++    return NULL;
++  txt->datanext = data + datalen;
++
++  for (ptr = txt->key; data < txt->datanext && *data != '='; data ++)
++    *ptr++ = *data;
++  *ptr = '\0';
++
++  if (data < txt->datanext && *data == '=')
++  {
++    data++;
++
++    if (data < datanext)
++      memcpy (txt->value, data, txt->datanext - data);
++    value[txt->datanext - data] = '\0';
++  }
++  else
++    return 1;
++#else /* HAVE_AVAHI */
++  char *key, *value;
++  size_t len;
++  avahi_string_list_get_pair (txt->txt, &key, &value, &len);
++  if (len > sizeof (txt->value) - 1)
++    len = sizeof (txt->value) - 1;
++
++  memcpy (txt->value, value, len);
++  txt->value[len] = '\0';
++  len = strlen (key);
++  if (len > sizeof (txt->key) - 1)
++    len = sizeof (txt->key) - 1;
++
++  memcpy (txt->key, key, len);
++  txt->key[len] = '\0';
++  avahi_free (key);
++  avahi_free (value);
++#endif /* HAVE_AVAHI */
++
++  return 0;
++}
++
+ 
+ /*
+  * 'main()' - Browse for printers.
+@@ -120,6 +261,13 @@
+      char *argv[])			/* I - Command-line arguments */
+ {
+   const char	*name;			/* Backend name */
++  cups_array_t	*devices;		/* Device array */
++  cups_device_t	*device;		/* Current device */
++  char		uriName[1024];		/* Unquoted fullName for URI */
++#ifdef HAVE_DNSSD
++  int		fd;			/* Main file descriptor */
++  fd_set	input;			/* Input set for select() */
++  struct timeval timeout;		/* Timeout for select() */
+   DNSServiceRef	main_ref,		/* Main service reference */
+ 		fax_ipp_ref,		/* IPP fax service reference */
+ 		ipp_ref,		/* IPP service reference */
+@@ -133,12 +281,11 @@
+ 		pdl_datastream_ref,	/* AppSocket service reference */
+ 		printer_ref,		/* LPD service reference */
+ 		riousbprint_ref;	/* Remote IO service reference */
+-  int		fd;			/* Main file descriptor */
+-  fd_set	input;			/* Input set for select() */
+-  struct timeval timeout;		/* Timeout for select() */
+-  cups_array_t	*devices;		/* Device array */
+-  cups_device_t	*device;		/* Current device */
+-  char		uriName[1024];		/* Unquoted fullName for URI */
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  AvahiClient	*client;
++  int		error;
++#endif /* HAVE_AVAHI */
+ #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
+   struct sigaction action;		/* Actions for POSIX signals */
+ #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+@@ -198,6 +345,49 @@
+   * Browse for different kinds of printers...
+   */
+ 
++#ifdef HAVE_AVAHI
++  if ((simple_poll = avahi_simple_poll_new ()) == NULL)
++  {
++    perror ("ERROR: Unable to create avahi simple poll object");
++    return (1);
++  }
++
++  client = avahi_client_new (avahi_simple_poll_get (simple_poll),
++			     0, avahi_client_callback, NULL, &error);
++  if (!client)
++  {
++    perror ("DEBUG: Unable to create avahi client");
++    return (0);
++  }
++
++  avahi_service_browser_new (client, AVAHI_IF_UNSPEC,
++			     AVAHI_PROTO_UNSPEC,
++			     "_fax-ipp._tcp", NULL, 0,
++			     avahi_browse_callback, devices);
++  avahi_service_browser_new (client, AVAHI_IF_UNSPEC,
++			     AVAHI_PROTO_UNSPEC,
++			     "_ipp._tcp", NULL, 0,
++			     avahi_browse_callback, devices);
++  avahi_service_browser_new (client, AVAHI_IF_UNSPEC,
++			     AVAHI_PROTO_UNSPEC,
++			     "_ipp-tls._tcp", NULL, 0,
++			     avahi_browse_callback, devices);
++  avahi_service_browser_new (client, AVAHI_IF_UNSPEC,
++			     AVAHI_PROTO_UNSPEC,
++			     "_pdl-datastream._tcp",
++			     NULL, 0,
++			     avahi_browse_callback,
++			     devices);
++  avahi_service_browser_new (client, AVAHI_IF_UNSPEC,
++			     AVAHI_PROTO_UNSPEC,
++			     "_printer._tcp", NULL, 0,
++			     avahi_browse_callback, devices);
++  avahi_service_browser_new (client, AVAHI_IF_UNSPEC,
++			     AVAHI_PROTO_UNSPEC,
++			     "_riousbprint._tcp", NULL, 0,
++			     avahi_browse_callback, devices);
++#endif /* HAVE_AVAHI */
++#ifdef HAVE_DNSSD
+   if (DNSServiceCreateConnection(&main_ref) != kDNSServiceErr_NoError)
+   {
+     perror("ERROR: Unable to create service connection");
+@@ -258,6 +448,7 @@
+   riousbprint_ref = main_ref;
+   DNSServiceBrowse(&riousbprint_ref, kDNSServiceFlagsShareConnection, 0,
+                    "_riousbprint._tcp", NULL, browse_callback, devices);
++#endif /* HAVE_DNSSD */
+ 
+  /*
+   * Loop until we are killed...
+@@ -265,6 +456,9 @@
+ 
+   while (!job_canceled)
+   {
++    int announce = 0;
++
++#ifdef HAVE_DNSSD
+     FD_ZERO(&input);
+     FD_SET(fd, &input);
+ 
+@@ -284,11 +478,35 @@
+     }
+     else
+     {
++      announce = 1;
++    }
++#else /* HAVE_AVAHI */
++    int r;
++    avahi_got_callback = 0;
++    r = avahi_simple_poll_iterate (simple_poll, 1);
++    if (r != 0 && r != EINTR)
++    {
++     /*
++      * We've been told to exit the loop.  Perhaps the connection to
++      * avahi failed.
++      */
++
++      break;
++    }
++
++    if (avahi_got_callback)
++      announce = 1;
++#endif /* HAVE_DNSSD */
++
++    if (announce)
++    {
+      /*
+       * Announce any devices we've found...
+       */
+ 
++#ifdef HAVE_DNSSD
+       DNSServiceErrorType status;	/* DNS query status */
++#endif /* HAVE_DNSSD */
+       cups_device_t *best;		/* Best matching device */
+       char	device_uri[1024];	/* Device URI */
+       int	count;			/* Number of queries */
+@@ -302,6 +520,7 @@
+         if (device->sent)
+ 	  sent ++;
+ 
++#ifdef HAVE_DNSSD
+         if (device->ref)
+ 	  count ++;
+ 
+@@ -333,14 +552,23 @@
+ 	      count ++;
+           }
+ 	}
+-	else if (!device->sent)
++	else
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++	if (!device->resolved)
++	  continue;
++        else
++#endif /* HAVE_AVAHI */
++	if (!device->sent)
+ 	{
++#ifdef HAVE_DNSSD
+ 	 /*
+ 	  * Got the TXT records, now report the device...
+ 	  */
+ 
+ 	  DNSServiceRefDeallocate(device->ref);
+ 	  device->ref = 0;
++#endif /* HAVE_DNSSD */
+ 
+           if (!best)
+ 	    best = device;
+@@ -401,6 +629,7 @@
+ }
+ 
+ 
++#ifdef HAVE_DNSSD
+ /*
+  * 'browse_callback()' - Browse devices.
+  */
+@@ -489,6 +718,7 @@
+ 	  device->fullName);
+   device->sent = 1;
+ }
++#endif /* HAVE_DNSSD */
+ 
+ 
+ /*
+@@ -569,6 +799,41 @@
+ 
+ 
+ /*
++ * 'device_type()' - Get DNS-SD type enumeration from string.
++ */
++
++static int
++device_type (const char *regtype)
++{
++#ifdef HAVE_AVAHI
++  if (!strcmp(regtype, "_ipp._tcp"))
++    return (CUPS_DEVICE_IPP);
++  else if (!strcmp(regtype, "_ipps._tcp") ||
++	   !strcmp(regtype, "_ipp-tls._tcp"))
++    return (CUPS_DEVICE_IPPS);
++  else if (!strcmp(regtype, "_fax-ipp._tcp"))
++    return (CUPS_DEVICE_FAX_IPP);
++  else if (!strcmp(regtype, "_printer._tcp"))
++    return (CUPS_DEVICE_PDL_DATASTREAM);
++#else
++  if (!strcmp(regtype, "_ipp._tcp."))
++    return (CUPS_DEVICE_IPP);
++  else if (!strcmp(regtype, "_ipps._tcp.") ||
++	   !strcmp(regtype, "_ipp-tls._tcp."))
++    return (CUPS_DEVICE_IPPS);
++  else if (!strcmp(regtype, "_fax-ipp._tcp."))
++    return (CUPS_DEVICE_FAX_IPP);
++  else if (!strcmp(regtype, "_printer._tcp."))
++    return (CUPS_DEVICE_PRINTER);
++  else if (!strcmp(regtype, "_pdl-datastream._tcp."))
++    return (CUPS_DEVICE_PDL_DATASTREAM);
++#endif /* HAVE_AVAHI */
++
++  return (CUPS_DEVICE_RIOUSBPRINT);
++}
++
++
++/*
+  * 'get_device()' - Create or update a device.
+  */
+ 
+@@ -589,20 +854,7 @@
+   */
+ 
+   key.name = (char *)serviceName;
+-
+-  if (!strcmp(regtype, "_ipp._tcp."))
+-    key.type = CUPS_DEVICE_IPP;
+-  else if (!strcmp(regtype, "_ipps._tcp.") ||
+-	   !strcmp(regtype, "_ipp-tls._tcp."))
+-    key.type = CUPS_DEVICE_IPPS;
+-  else if (!strcmp(regtype, "_fax-ipp._tcp."))
+-    key.type = CUPS_DEVICE_FAX_IPP;
+-  else if (!strcmp(regtype, "_printer._tcp."))
+-    key.type = CUPS_DEVICE_PRINTER;
+-  else if (!strcmp(regtype, "_pdl-datastream._tcp."))
+-    key.type = CUPS_DEVICE_PDL_DATASTREAM;
+-  else
+-    key.type = CUPS_DEVICE_RIOUSBPRINT;
++  key.type = device_type (regtype);
+ 
+   for (device = cupsArrayFind(devices, &key);
+        device;
+@@ -622,8 +874,14 @@
+         free(device->domain);
+ 	device->domain = strdup(replyDomain);
+ 
++#ifdef HAVE_DNSSD
+ 	DNSServiceConstructFullName(fullName, device->name, regtype,
+ 	                            replyDomain);
++#else /* HAVE_AVAHI */
++	avahi_service_name_join (fullName, kDNSServiceMaxDomainName,
++				 serviceName, regtype, replyDomain);
++#endif /* HAVE_DNSSD */
++
+ 	free(device->fullName);
+ 	device->fullName = strdup(fullName);
+       }
+@@ -643,6 +901,9 @@
+   device->domain   = strdup(replyDomain);
+   device->type     = key.type;
+   device->priority = 50;
++#ifdef HAVE_AVAHI
++  device->resolved = 0;
++#endif /* HAVE_AVAHI */
+ 
+   cupsArrayAdd(devices, device);
+ 
+@@ -650,13 +911,20 @@
+   * Set the "full name" of this service, which is used for queries...
+   */
+ 
++#ifdef HAVE_DNSSD
+   DNSServiceConstructFullName(fullName, serviceName, regtype, replyDomain);
++#else /* HAVE_AVAHI */
++  avahi_service_name_join (fullName, kDNSServiceMaxDomainName,
++			   serviceName, regtype, replyDomain);
++#endif /* HAVE_DNSSD */
++
+   device->fullName = strdup(fullName);
+ 
+   return (device);
+ }
+ 
+ 
++#ifdef HAVE_DNSSD
+ /*
+  * 'query_callback()' - Process query data.
+  */
+@@ -680,7 +948,7 @@
+ 		*ptr;			/* Pointer into string */
+   cups_device_t	dkey,			/* Search key */
+ 		*device;		/* Device */
+-
++  cups_txt_records_t txt;
+ 
+   fprintf(stderr, "DEBUG2: query_callback(sdRef=%p, flags=%x, "
+                   "interfaceIndex=%d, errorCode=%d, fullName=\"%s\", "
+@@ -714,94 +982,233 @@
+   if ((ptr = strstr(name, "._")) != NULL)
+     *ptr = '\0';
+ 
+-  if (strstr(fullName, "_ipp._tcp."))
+-    dkey.type = CUPS_DEVICE_IPP;
+-  else if (strstr(fullName, "_ipps._tcp.") ||
+-           strstr(fullName, "_ipp-tls._tcp."))
+-    dkey.type = CUPS_DEVICE_IPPS;
+-  else if (strstr(fullName, "_fax-ipp._tcp."))
+-    dkey.type = CUPS_DEVICE_FAX_IPP;
+-  else if (strstr(fullName, "_printer._tcp."))
+-    dkey.type = CUPS_DEVICE_PRINTER;
+-  else if (strstr(fullName, "_pdl-datastream._tcp."))
+-    dkey.type = CUPS_DEVICE_PDL_DATASTREAM;
++  dkey.type = device_type (fullName);
++
++  txt.data = rdata;
++  txt.dataend = rdata + rdlen;
++  device = find_device ((cups_array_t *) context, &txt, &dkey);
++  if (!device)
++    fprintf(stderr, "DEBUG: Ignoring TXT record for \"%s\"...\n", fullName);
++}
++#endif /* HAVE_DNSSD */
++
++
++#ifdef HAVE_AVAHI
++/*
++ * 'avahi_client_callback()' - Avahi client callback function.
++ */
++
++static void
++avahi_client_callback(AvahiClient *client,
++		      AvahiClientState state,
++		      void *context)
++{
++ /*
++  * If the connection drops, quit.
++  */
++
++  if (state == AVAHI_CLIENT_FAILURE)
++  {
++    fprintf (stderr, "ERROR: Avahi connection failed\n");
++    avahi_simple_poll_quit (simple_poll);
++  }
++}
++
++
++/*
++ * 'avahi_query_callback()' - Avahi query callback function.
++ */
++
++static void
++avahi_query_callback(AvahiServiceResolver *resolver,
++		     AvahiIfIndex interface,
++		     AvahiProtocol protocol,
++		     AvahiResolverEvent event,
++		     const char *name,
++		     const char *type,
++		     const char *domain,
++		     const char *host_name,
++		     const AvahiAddress *address,
++		     uint16_t port,
++		     AvahiStringList *txt,
++		     AvahiLookupResultFlags flags,
++		     void *context)
++{
++  AvahiClient		*client;
++  cups_device_t		key,
++			*device;
++  char			uqname[1024],
++			*ptr;
++  cups_txt_records_t	txtr;
++
++  client = avahi_service_resolver_get_client (resolver);
++  if (event != AVAHI_RESOLVER_FOUND)
++  {
++    if (event == AVAHI_RESOLVER_FAILURE)
++    {
++      fprintf (stderr, "ERROR: %s\n",
++	       avahi_strerror (avahi_client_errno (client)));
++    }
++
++    avahi_service_resolver_free (resolver);
++    return;
++  }
++
++ /*
++  * Set search key for device.
++  */
++
++  key.name = uqname;
++  unquote (uqname, name, sizeof (uqname));
++  if ((ptr = strstr(name, "._")) != NULL)
++    *ptr = '\0';
++
++  key.domain = (char *) domain;
++  key.type = device_type (type);
++
++ /*
++  * Find the device and the the TXT information.
++  */
++
++  txtr.txt = txt;
++  device = find_device ((cups_array_t *) context, &txtr, &key);
++  if (device)
++  {
++   /*
++    * Let the main loop know to announce the device.
++    */
++
++    device->resolved = 1;
++    avahi_got_callback = 1;
++  }
+   else
+-    dkey.type = CUPS_DEVICE_RIOUSBPRINT;
++    fprintf (stderr, "DEBUG: Ignoring TXT record for \"%s\"...\n", name);
++
++  avahi_service_resolver_free (resolver);
++}
++
++
++/*
++ * 'avahi_browse_callback()' - Avahi browse callback function.
++ */
++
++static void
++avahi_browse_callback(AvahiServiceBrowser *browser,
++		      AvahiIfIndex interface,
++		      AvahiProtocol protocol,
++		      AvahiBrowserEvent event,
++		      const char *name,
++		      const char *type,
++		      const char *domain,
++		      AvahiLookupResultFlags flags,
++		      void *context)
++{
++  AvahiClient *client = avahi_service_browser_get_client (browser);
++
++  switch (event)
++  {
++  case AVAHI_BROWSER_FAILURE:
++    fprintf (stderr, "ERROR: %s\n",
++	     avahi_strerror (avahi_client_errno (client)));
++    avahi_simple_poll_quit (simple_poll);
++    return;
++
++  case AVAHI_BROWSER_NEW:
++   /*
++    * This object is new on the network.
++    */
++
++    if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
++    {
++     /*
++      * This comes from the local machine so ignore it.
++      */
++
++      fprintf (stderr, "DEBUG: ignoring local service %s\n", name);
++    }
++    else
++    {
++     /*
++      * Create a device entry for it if it doesn't yet exist.
++      */
++
++      get_device ((cups_array_t *)context, name, type, domain);
++
++     /*
++      * Now look for a TXT entry.
++      */
++
++      if (avahi_service_resolver_new (client, interface, protocol,
++				      name, type, domain,
++				      AVAHI_PROTO_UNSPEC, 0,
++				      avahi_query_callback, context) == NULL)
++      {
++	fprintf (stderr, "ERROR: failed to resolve service %s: %s\n",
++		 name, avahi_strerror (avahi_client_errno (client)));
++      }
++    }
++
++    break;
++
++  case AVAHI_BROWSER_REMOVE:
++  case AVAHI_BROWSER_ALL_FOR_NOW:
++  case AVAHI_BROWSER_CACHE_EXHAUSTED:
++    break;
++  }
++}
++#endif /* HAVE_AVAHI */
++
+ 
+-  for (device = cupsArrayFind(devices, &dkey);
++/*
++ * 'find_device()' - Find a device from its name and domain.
++ */
++
++static cups_device_t *
++find_device (cups_array_t *devices,
++	     cups_txt_records_t *txt,
++	     cups_device_t *dkey)
++{
++  cups_device_t	*device;
++  char		*ptr;
++
++  for (device = cupsArrayFind(devices, dkey);
+        device;
+        device = cupsArrayNext(devices))
+   {
+-    if (_cups_strcasecmp(device->name, dkey.name) ||
+-        _cups_strcasecmp(device->domain, dkey.domain))
++    if (_cups_strcasecmp(device->name, dkey->name) ||
++        _cups_strcasecmp(device->domain, dkey->domain))
+     {
+       device = NULL;
+       break;
+     }
+-    else if (device->type == dkey.type)
++    else if (device->type == dkey->type)
+     {
+      /*
+       * Found it, pull out the priority and make and model from the TXT
+       * record and save it...
+       */
+ 
+-      const uint8_t	*data,		/* Pointer into data */
+-			*datanext,	/* Next key/value pair */
+-			*dataend;	/* End of entire TXT record */
+-      uint8_t		datalen;	/* Length of current key/value pair */
+-      char		key[256],	/* Key string */
+-			value[256],	/* Value string */
+-			make_and_model[512],
++      char		make_and_model[512],
+ 				      	/* Manufacturer and model */
+ 			model[256],	/* Model */
+-			device_id[2048];/* 1284 device ID */
+-
++			device_id[2048]; /* 1284 device ID */
+ 
+       device_id[0]      = '\0';
+       make_and_model[0] = '\0';
+ 
+       strcpy(model, "Unknown");
+ 
+-      for (data = rdata, dataend = data + rdlen;
+-           data < dataend;
+-           data = datanext)
++      for (;;)
+       {
+-       /*
+-        * Read a key/value pair starting with an 8-bit length.  Since the
+-	* length is 8 bits and the size of the key/value buffers is 256, we
+-	* don't need to check for overflow...
+-	*/
+-
+-        datalen = *data++;
+-
+-        if (!datalen || (data + datalen) >= dataend)
+-	  break;
+-
+-        datanext = data + datalen;
+-
+-        for (ptr = key; data < datanext && *data != '='; data ++)
+-	  *ptr++ = *data;
+-	*ptr = '\0';
++	char *key;
++	char *value;
+ 
+-	if (data < datanext && *data == '=')
+-	{
+-	  data ++;
+-
+-	  if (data < datanext)
+-	    memcpy(value, data, datanext - data);
+-	  value[datanext - data] = '\0';
++	if (parse_txt_record_pair (txt))
++	  goto next;
+ 
+-	  fprintf(stderr, "DEBUG2: query_callback: \"%s=%s\".\n",
+-	          key, value);
+-	}
+-	else
+-	{
+-	  fprintf(stderr, "DEBUG2: query_callback: \"%s\" with no value.\n",
+-	          key);
+-	  continue;
+-	}
+-
+-        if (!_cups_strncasecmp(key, "usb_", 4))
++	key = txt->key;
++	value = txt->value;
++        if (!strncasecmp(key, "usb_", 4))
+ 	{
+ 	 /*
+ 	  * Add USB device ID information...
+@@ -856,6 +1263,10 @@
+ 	  if (device->type == CUPS_DEVICE_PRINTER)
+ 	    device->sent = 1;
+ 	}
++
++      next:
++	if (next_txt_record (txt) == NULL)
++	  break;
+       }
+ 
+       if (device->device_id)
+@@ -905,11 +1316,9 @@
+     }
+   }
+ 
+-  if (!device)
+-    fprintf(stderr, "DEBUG: Ignoring TXT record for \"%s\"...\n", fullName);
++  return device;
+ }
+ 
+-
+ /*
+  * 'sigterm_handler()' - Handle termination signals...
+  */
+--- a/config-scripts/cups-dnssd.m4
++++ b/config-scripts/cups-dnssd.m4
+@@ -23,6 +23,21 @@
+ DNSSDLIBS=""
+ DNSSD_BACKEND=""
+ 
++AC_ARG_ENABLE(avahi, [  --enable-avahi          turn on DNS Service Discovery support, default=no],
++	      [if test x$enable_avahi = xyes; then
++		       AC_MSG_CHECKING(for Avahi)
++		       if $PKGCONFIG --exists avahi-client; then
++			       AC_MSG_RESULT(yes)
++			       CFLAGS="$CFLAGS `$PKGCONFIG --cflags avahi-client`"
++			       DNSSDLIBS="`$PKGCONFIG --libs avahi-client`"
++			       DNSSD_BACKEND="dnssd"
++			       AC_DEFINE(HAVE_AVAHI)
++			       enable_dnssd=no
++		       else
++			       AC_MSG_RESULT(no)
++		       fi
++	       fi])
++
+ if test x$enable_dnssd != xno; then
+ 	AC_CHECK_HEADER(dns_sd.h, [
+ 		case "$uname" in
+--- a/config.h.in
++++ b/config.h.in
+@@ -390,6 +390,13 @@
+ 
+ 
+ /*
++ * Do we have Avahi for DNS Service Discovery?
++ */
++
++#undef HAVE_AVAHI
++
++
++/*
+  * Do we have <sys/ioctl.h>?
+  */
+ 
+--- a/cups/http-support.c
++++ b/cups/http-support.c
+@@ -43,6 +43,10 @@
+  *   http_copy_decode()   - Copy and decode a URI.
+  *   http_copy_encode()   - Copy and encode a URI.
+  *   http_resolve_cb()    - Build a device URI for the given service name.
++ *   avahi_resolve_uri_client_cb()
++ *                        - Avahi client callback for resolving URI.
++ *   avahi_resolve_uri_resolver_cb()
++ *                        - Avahi resolver callback for resolving URI.
+  */
+ 
+ /*
+@@ -60,6 +64,11 @@
+ #    include <sys/select.h>
+ #  endif /* WIN32 */
+ #endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++#  include <avahi-client/client.h>
++#  include <avahi-client/lookup.h>
++#  include <avahi-common/simple-watch.h>
++#endif /* HAVE_AVAHI */
+ 
+ 
+ /*
+@@ -127,6 +136,24 @@
+ 					void *context);
+ #endif /* HAVE_DNSSD */
+ 
++#ifdef HAVE_AVAHI
++static void	avahi_resolve_uri_client_cb(AvahiClient *client,
++					    AvahiClientState state,
++					    void *simple_poll);
++static void	avahi_resolve_uri_resolver_cb(AvahiServiceResolver *resolver,
++					      AvahiIfIndex interface,
++					      AvahiProtocol protocol,
++					      AvahiResolverEvent event,
++					      const char *name,
++					      const char *type,
++					      const char *domain,
++					      const char *host_name,
++					      const AvahiAddress *address,
++					      uint16_t port,
++					      AvahiStringList *txt,
++					      AvahiLookupResultFlags flags,
++					      void *context);
++#endif /* HAVE_AVAHI */
+ 
+ /*
+  * 'httpAssembleURI()' - Assemble a uniform resource identifier from its
+@@ -1431,6 +1458,9 @@
+ 
+   if (strstr(hostname, "._tcp"))
+   {
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
++    char		*regtype,	/* Pointer to type in hostname */
++			*domain;	/* Pointer to domain in hostname */
+ #ifdef HAVE_DNSSD
+ #  ifdef WIN32
+ #    pragma comment(lib, "dnssd.lib")
+@@ -1449,6 +1479,17 @@
+     fd_set		input_set;	/* Input set for select() */
+     struct timeval	stimeout;	/* Timeout value for select() */
+ #endif /* HAVE_POLL */
++#else /* HAVE_AVAHI */
++    AvahiSimplePoll	*simple_poll;
++    AvahiClient		*client;
++    int			error;
++    struct
++    {
++      AvahiSimplePoll	*poll;
++      _http_uribuf_t	uribuf;
++    } user_data;
++#endif /* HAVE_DNSSD */
++
+ 
+     if (options & _HTTP_RESOLVE_STDERR)
+       fprintf(stderr, "DEBUG: Resolving \"%s\"...\n", hostname);
+@@ -1485,9 +1526,16 @@
+     if (domain)
+       *domain++ = '\0';
+ 
++#ifdef HAVE_DNSSD
+     uribuf.buffer   = resolved_uri;
+     uribuf.bufsize  = resolved_size;
+     uribuf.options  = options;
++#else
++    user_data.uribuf.buffer = resolved_uri;
++    user_data.uribuf.bufsize = resolved_size;
++    user_data.uribuf.options = options;
++#endif
++
+     resolved_uri[0] = '\0';
+ 
+     DEBUG_printf(("6_httpResolveURI: Resolving hostname=\"%s\", regtype=\"%s\", "
+@@ -1501,6 +1549,7 @@
+ 
+     uri = NULL;
+ 
++#ifdef HAVE_DNSSD
+     if (DNSServiceCreateConnection(&ref) == kDNSServiceErr_NoError)
+     {
+       localref = ref;
+@@ -1608,6 +1657,36 @@
+ 
+       DNSServiceRefDeallocate(ref);
+     }
++#else /* HAVE_AVAHI */
++    if ((simple_poll = avahi_simple_poll_new ()) != NULL)
++    {
++      if ((client = avahi_client_new (avahi_simple_poll_get (simple_poll),
++				      0, avahi_resolve_uri_client_cb,
++				      &simple_poll, &error)) != NULL)
++      {
++	user_data.poll = simple_poll;
++	if (avahi_service_resolver_new (client, AVAHI_IF_UNSPEC,
++					AVAHI_PROTO_UNSPEC, hostname,
++					regtype, domain, AVAHI_PROTO_UNSPEC, 0,
++					avahi_resolve_uri_resolver_cb,
++					&user_data) != NULL)
++	{
++	  avahi_simple_poll_loop (simple_poll);
++
++	 /*
++	  * Collect the result.
++	  */
++
++	  if (resolved_uri[0])
++	    uri = resolved_uri;
++	}
++
++	avahi_client_free (client);
++      }
++
++      avahi_simple_poll_free (simple_poll);
++    }
++#endif /* HAVE_DNSSD */
+ 
+     if (options & _HTTP_RESOLVE_STDERR)
+     {
+@@ -1619,13 +1698,13 @@
+       fputs("STATE: -connecting-to-device,offline-report\n", stderr);
+     }
+ 
+-#else
++#else /* HAVE_DNSSD || HAVE_AVAHI */
+    /*
+     * No DNS-SD support...
+     */
+ 
+     uri = NULL;
+-#endif /* HAVE_DNSSD */
++#endif /* HAVE_DNSSD || HAVE_AVAHI */
+ 
+     if ((options & _HTTP_RESOLVE_STDERR) && !uri)
+       _cupsLangPrintFilter(stderr, "ERROR", _("Unable to find printer."));
+@@ -1895,6 +1974,116 @@
+ #endif /* HAVE_DNSSD */
+ 
+ 
++#ifdef HAVE_AVAHI
++/*
++ * 'avahi_resolve_uri_client_cb()' - Avahi client callback for resolving URI.
++ */
++
++static void
++avahi_resolve_uri_client_cb (AvahiClient *client,
++			     AvahiClientState state,
++			     void *simple_poll)
++{
++  DEBUG_printf(("avahi_resolve_uri_client_callback(client=%p, state=%d, "
++		"simple_poll=%p)\n", client, state, simple_poll));
++
++  /*
++   * If the connection drops, quit.
++   */
++
++  if (state == AVAHI_CLIENT_FAILURE)
++    avahi_simple_poll_quit (simple_poll);
++}
++
++
++/*
++ * 'avahi_resolve_uri_resolver_cb()' - Avahi resolver callback for resolving
++ *                                     URI.
++ */
++
++static void
++avahi_resolve_uri_resolver_cb (AvahiServiceResolver *resolver,
++			       AvahiIfIndex interface,
++			       AvahiProtocol protocol,
++			       AvahiResolverEvent event,
++			       const char *name,
++			       const char *type,
++			       const char *domain,
++			       const char *host_name,
++			       const AvahiAddress *address,
++			       uint16_t port,
++			       AvahiStringList *txt,
++			       AvahiLookupResultFlags flags,
++			       void *context)
++{
++  const char		*scheme;	/* URI scheme */
++  char			rp[256];	/* Remote printer */
++  AvahiStringList	*pair;
++  char			*value;
++  size_t		valueLen = 0;
++  char			addr[AVAHI_ADDRESS_STR_MAX];
++  struct
++  {
++    AvahiSimplePoll	*poll;
++    _http_uribuf_t	uribuf;
++  }		*poll_uribuf = context;
++
++  DEBUG_printf(("avahi_resolve_uri_resolver_callback(resolver=%p, "
++		"interface=%d, protocol=%d, event=%d, name=\"%s\", "
++		"type=\"%s\", domain=\"%s\", host_name=\"%s\", address=%p, "
++		"port=%d, txt=%p, flags=%d, context=%p)\n",
++		resolver, interface, protocol, event, name, type, domain,
++		host_name, address, port, txt, flags, context));
++
++  if (event != AVAHI_RESOLVER_FOUND)
++  {
++    avahi_service_resolver_free (resolver);
++    avahi_simple_poll_quit (poll_uribuf->poll);
++    return;
++  }
++
++ /*
++  * Figure out the scheme from the full name...
++  */
++
++  if (strstr(type, "_ipp."))
++    scheme = "ipp";
++  else if (strstr(type, "_printer."))
++    scheme = "lpd";
++  else if (strstr(type, "_pdl-datastream."))
++    scheme = "socket";
++  else
++    scheme = "riousbprint";
++
++ /*
++  * Extract the "remote printer key from the TXT record...
++  */
++
++  if ((pair = avahi_string_list_find (txt, "rp")) != NULL)
++  {
++    avahi_string_list_get_pair (pair, NULL, &value, &valueLen);
++    rp[0] = '/';
++    memcpy (rp + 1, value, valueLen);
++    rp[valueLen + 1] = '\0';
++  }
++  else
++    rp[0] = '\0';
++
++ /*
++  * Assemble the final device URI...
++  */
++
++  avahi_address_snprint (addr, AVAHI_ADDRESS_STR_MAX, address);
++  httpAssembleURI(HTTP_URI_CODING_ALL, poll_uribuf->uribuf.buffer,
++		  poll_uribuf->uribuf.bufsize, scheme, NULL,
++		  addr, port, rp);
++  DEBUG_printf(("avahi_resolve_uri_resolver_callback: Resolved URI is \"%s\"\n",
++		poll_uribuf->uribuf.buffer));
++  avahi_simple_poll_quit (poll_uribuf->poll);
++}
++#endif /* HAVE_AVAHI */
++
++
+ /*
+  * End of "$Id: http-support.c 9820 2011-06-10 22:06:26Z mike $".
+  */
+--- a/scheduler/Makefile
++++ b/scheduler/Makefile
+@@ -17,6 +17,7 @@
+ 
+ CUPSDOBJS =	\
+ 		auth.o \
++		avahi.o \
+ 		banners.o \
+ 		cert.o \
+ 		classes.o \
+@@ -39,7 +40,8 @@
+ 		server.o \
+ 		statbuf.o \
+ 		subscriptions.o \
+-		sysman.o
++		sysman.o \
++		timeout.o
+ LIBOBJS =	\
+ 		filter.o \
+ 		mime.o \
+--- /dev/null
++++ b/scheduler/avahi.c
+@@ -0,0 +1,445 @@
++/*
++ * "$Id$"
++ *
++ *   Avahi poll implementation for the CUPS scheduler.
++ *
++ *   Copyright (C) 2010 Red Hat, Inc.
++ *   Authors:
++ *    Tim Waugh <twaugh@redhat.com>
++ *
++ *   Distribution and use rights are outlined in the file "LICENSE.txt"
++ *   "LICENSE" which should have been included with this file.  If this
++ *   file is missing or damaged, see the license at "http://www.cups.org/".
++ *
++ * Contents:
++ *
++ *   watch_read_cb         - Read callback for file descriptor
++ *   watch_write_cb        - Write callback for file descriptor
++ *   watched_fd_add_select() - Call cupsdAddSelect() as needed
++ *   watch_new()           - Create a new file descriptor watch
++ *   watch_free()          - Free a file descriptor watch
++ *   watch_update()        - Update watched events for a file descriptor
++ *   watch_get_events()    - Get events that happened for a file descriptor
++ *   timeout_cb()          - Run a timed Avahi callback
++ *   timeout_new()         - Set a wakeup time
++ *   timeout_update()      - Update the expiration time for a timeout
++ *   timeout_free()        - Free a timeout
++ *   compare_watched_fds() - Compare watched file descriptors for array sorting
++ *   compare_timeouts()    - Compare timeouts for array sorting
++ *   avahi_cups_poll_new() - Create a new Avahi main loop object for CUPS
++ *   avahi_cups_poll_free() - Free an Avahi main loop object for CUPS
++ *   avahi_cups_poll_get() - Get the abstract poll API structure
++ */
++
++#include <config.h>
++
++#ifdef HAVE_AVAHI /* Applies to entire file... */
++
++/*
++ * Include necessary headers...
++ */
++
++#include "cupsd.h"
++
++#if defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
++#  include <malloc.h>
++#endif /* HAVE_MALLOC_H && HAVE_MALLINFO */
++
++#ifdef HAVE_AVAHI
++#  include <avahi-common/timeval.h>
++#endif /* HAVE_AVAHI */
++
++
++typedef struct
++{
++  AvahiCupsPoll *cups_poll;
++
++  int fd;
++  AvahiWatchEvent occurred;
++  cups_array_t *watches;
++} cupsd_watched_fd_t;
++
++struct AvahiWatch
++{
++  cupsd_watched_fd_t *watched_fd;
++
++  AvahiWatchEvent events;
++  AvahiWatchCallback callback;
++  void *userdata;
++};
++
++struct AvahiTimeout
++{
++  AvahiCupsPoll *cups_poll;
++  AvahiTimeoutCallback callback;
++  void *userdata;
++  cupsd_timeout_t *cupsd_timeout;
++};
++
++/*
++ * Local functions...
++ */
++
++static AvahiWatch *	watch_new(const AvahiPoll *api,
++				  int fd,
++				  AvahiWatchEvent events,
++				  AvahiWatchCallback callback,
++				  void *userdata);
++static void		watch_free(AvahiWatch *watch);
++static void		watch_update(AvahiWatch *watch,
++				     AvahiWatchEvent events);
++static AvahiWatchEvent	watch_get_events(AvahiWatch *watch);
++static int		compare_watches(AvahiWatch *p0,
++					AvahiWatch *p1);
++
++
++/*
++ * 'watch_read_cb' - Read callback for file descriptor
++ */
++
++static void
++watch_read_cb (void *userdata)
++{
++  AvahiWatch *watch;
++  cupsd_watched_fd_t *watched_fd = userdata;
++  watched_fd->occurred |= AVAHI_WATCH_IN;
++  for (watch = (AvahiWatch *)cupsArrayFirst(watched_fd->watches);
++       watch;
++       watch = (AvahiWatch *)cupsArrayNext(watched_fd->watches)) {
++    if (watch->events & watched_fd->occurred) {
++      (watch->callback) (watch, watched_fd->fd,
++			 AVAHI_WATCH_IN, watch->userdata);
++      watched_fd->occurred &= ~AVAHI_WATCH_IN;
++      break;
++    }
++  }
++}
++
++
++/*
++ * 'watch_write_cb' - Write callback for file descriptor
++ */
++
++static void
++watch_write_cb (void *userdata)
++{
++  AvahiWatch *watch;
++  cupsd_watched_fd_t *watched_fd = userdata;
++  watched_fd->occurred |= AVAHI_WATCH_OUT;
++  for (watch = (AvahiWatch *)cupsArrayFirst(watched_fd->watches);
++       watch;
++       watch = (AvahiWatch *)cupsArrayNext(watched_fd->watches)) {
++    if (watch->events & watched_fd->occurred) {
++      (watch->callback) (watch, watched_fd->fd,
++			 AVAHI_WATCH_OUT, watch->userdata);
++      watched_fd->occurred &= ~AVAHI_WATCH_OUT;
++      break;
++    }
++  }
++}
++
++
++/*
++ * 'watched_fd_add_select' - Call cupsdAddSelect() as needed
++ */
++
++static int						/* O - Watches? */
++watched_fd_add_select (cupsd_watched_fd_t *watched_fd)
++{
++  AvahiWatch *watch;
++  cupsd_selfunc_t read_cb = NULL, write_cb = NULL;
++
++  for (watch = (AvahiWatch *)cupsArrayFirst(watched_fd->watches);
++       watch;
++       watch = (AvahiWatch *)cupsArrayNext(watched_fd->watches)) {
++    if (watch->events & (AVAHI_WATCH_IN |
++			     AVAHI_WATCH_ERR |
++			     AVAHI_WATCH_HUP)) {
++      read_cb = (cupsd_selfunc_t)watch_read_cb;
++      if (write_cb != NULL)
++	break;
++    }
++
++    if (watch->events & AVAHI_WATCH_OUT) {
++      write_cb = (cupsd_selfunc_t)watch_write_cb;
++      if (read_cb != NULL)
++	break;
++    }
++  }
++
++  if (read_cb || write_cb)
++    cupsdAddSelect (watched_fd->fd, read_cb, write_cb, watched_fd);
++  else
++    cupsdRemoveSelect (watched_fd->fd);
++
++  return (read_cb || write_cb);
++}
++
++/*
++ * 'watch_new' - Create a new file descriptor watch
++ */
++
++static AvahiWatch *
++watch_new (const AvahiPoll *api,
++	   int fd,
++	   AvahiWatchEvent events,
++	   AvahiWatchCallback callback,
++	   void *userdata)
++{
++  cupsd_watched_fd_t key, *watched_fd;
++  AvahiCupsPoll *cups_poll = api->userdata;
++  AvahiWatch *watch = malloc(sizeof(AvahiWatch));
++  if (watch == NULL)
++    return (NULL);
++
++  watch->events = events;
++  watch->callback = callback;
++  watch->userdata = userdata;
++
++  key.fd = fd;
++  watched_fd = cupsArrayFind (cups_poll->watched_fds, &key);
++  if (watched_fd == NULL) {
++    watched_fd = malloc(sizeof(cupsd_watched_fd_t));
++    if (watched_fd == NULL) {
++      free (watch);
++      return (NULL);
++    }
++
++    watched_fd->fd = fd;
++    watched_fd->occurred = 0;
++    watched_fd->cups_poll = cups_poll;
++    watched_fd->watches = cupsArrayNew ((cups_array_func_t)compare_watches,
++					NULL);
++  }
++
++  watch->watched_fd = watched_fd;
++  cupsArrayAdd(watched_fd->watches, watch);
++  watched_fd_add_select (watched_fd);
++  return (watch);
++}
++
++
++/*
++ * 'watch_free' - Free a file descriptor watch
++ */
++
++static void
++watch_free (AvahiWatch *watch)
++{
++  cupsd_watched_fd_t *watched_fd = watch->watched_fd;
++  AvahiCupsPoll *cups_poll = watched_fd->cups_poll;
++
++  cupsArrayRemove (watched_fd->watches, watch);
++  free (watch);
++
++  if (!watched_fd_add_select (watched_fd)) {
++    /* No more watches */
++    cupsArrayRemove (cups_poll->watched_fds, watched_fd);
++    free (watched_fd);
++  }
++}
++
++
++/*
++ * 'watch_update' - Update watched events for a file descriptor
++ */
++
++static void
++watch_update (AvahiWatch *watch,
++	      AvahiWatchEvent events)
++{
++  watch->events = events;
++  watched_fd_add_select (watch->watched_fd);
++}
++
++
++/*
++ * 'watch_get_events' - Get events that happened for a file descriptor
++ */
++
++static AvahiWatchEvent
++watch_get_events (AvahiWatch *watch)
++{
++  return (watch->watched_fd->occurred);
++}
++
++
++/*
++ * 'compare_watches' - Compare watches for array sorting
++ */
++
++static int
++compare_watches (AvahiWatch *p0,
++		 AvahiWatch *p1)
++{
++  if (p0->watched_fd->fd < p1->watched_fd->fd)
++    return (-1);
++
++  return ((p0->watched_fd->fd == p1->watched_fd->fd) ? 0 : 1);
++}
++
++
++/*
++ * 'timeout_cb()' - Run a timed Avahi callback
++ */
++
++static void
++timeout_cb (cupsd_timeout_t *cupsd_timeout, void *userdata)
++{
++  AvahiTimeout *timeout = userdata;
++  (timeout->callback) (timeout, timeout->userdata);
++}
++
++
++/*
++ * 'timeout_new' - Set a wakeup time
++ */
++
++static AvahiTimeout *
++timeout_new (const AvahiPoll *api,
++	     const struct timeval *tv,
++	     AvahiTimeoutCallback callback,
++	     void *userdata)
++{
++  AvahiTimeout *timeout;
++  AvahiCupsPoll *cups_poll = api->userdata;
++
++  timeout = malloc(sizeof(AvahiTimeout));
++  if (timeout == NULL)
++    return (NULL);
++
++  timeout->cups_poll = cups_poll;
++  timeout->callback = callback;
++  timeout->userdata = userdata;
++  timeout->cupsd_timeout = cupsdAddTimeout (tv,
++					    (cupsd_timeoutfunc_t)timeout_cb,
++					    timeout);
++  cupsArrayAdd (cups_poll->timeouts, timeout);
++  return (timeout);
++}
++
++
++/*
++ * 'timeout_update' - Update the expiration time for a timeout
++ */
++
++static void
++timeout_update (AvahiTimeout *timeout,
++		const struct timeval *tv)
++{
++  cupsdUpdateTimeout (timeout->cupsd_timeout, tv);
++}
++
++
++/*
++ * ' timeout_free' - Free a timeout
++ */
++
++static void
++timeout_free (AvahiTimeout *timeout)
++{
++  cupsArrayRemove (timeout->cups_poll->timeouts, timeout);
++  cupsdRemoveTimeout (timeout->cupsd_timeout);
++  free (timeout);
++}
++
++
++/*
++ * 'compare_watched_fds' - Compare watched file descriptors for array sorting
++ */
++static int
++compare_watched_fds(cupsd_watched_fd_t *p0,
++		    cupsd_watched_fd_t *p1)
++{
++  if (p0->fd != p1->fd)
++    return (p0->fd < p1->fd ? -1 : 1);
++
++  if (p0 == p1)
++    return (0);
++
++  return (p0 < p1 ? -1 : 1);
++}
++
++
++/*
++ * 'compare_timeouts' - Compare timeouts for array sorting
++ */
++static int
++compare_timeouts(AvahiTimeout *p0,
++		 AvahiTimeout *p1)
++{
++ /*
++  * Just compare pointers to make it a stable sort.
++  */
++
++  if (p0->cupsd_timeout < p1->cupsd_timeout)
++    return (-1);
++  return ((p0->cupsd_timeout == p1->cupsd_timeout) ? 0 : 1);
++}
++
++
++/*
++ * 'avahi_cups_poll_new' - Create a new Avahi main loop object for CUPS
++ */
++
++AvahiCupsPoll *
++avahi_cups_poll_new (void)
++{
++  AvahiCupsPoll *cups_poll = malloc(sizeof(AvahiCupsPoll));
++  if (cups_poll == NULL)
++    return (NULL);
++
++  cups_poll->watched_fds = cupsArrayNew ((cups_array_func_t)compare_watched_fds,
++					 NULL);
++  cups_poll->timeouts = cupsArrayNew ((cups_array_func_t)compare_timeouts,
++				      NULL);
++
++  cups_poll->api.userdata = cups_poll;
++  cups_poll->api.watch_new = watch_new;
++  cups_poll->api.watch_free = watch_free;
++  cups_poll->api.watch_update = watch_update;
++  cups_poll->api.watch_get_events = watch_get_events;
++
++  cups_poll->api.timeout_new = timeout_new;
++  cups_poll->api.timeout_update = timeout_update;
++  cups_poll->api.timeout_free = timeout_free;
++
++  return (cups_poll);
++}
++
++
++/*
++ * 'avahi_cups_poll_free' - Free an Avahi main loop object for CUPS
++ */
++void
++avahi_cups_poll_free (AvahiCupsPoll *cups_poll)
++{
++  cupsd_watched_fd_t *watched_fd;
++
++  for (watched_fd = (cupsd_watched_fd_t*)cupsArrayFirst(cups_poll->watched_fds);
++       watched_fd;
++       watched_fd = (cupsd_watched_fd_t*)cupsArrayNext(cups_poll->watched_fds)){
++    cupsArrayClear (watched_fd->watches);
++  }
++
++  cupsArrayClear (cups_poll->watched_fds);
++  cupsArrayClear (cups_poll->timeouts);
++}
++
++
++/*
++ * 'avahi_cups_poll_get' - Get the abstract poll API structure
++ */
++
++const AvahiPoll *
++avahi_cups_poll_get (AvahiCupsPoll *cups_poll)
++{
++  return (&cups_poll->api);
++}
++
++
++#endif /* HAVE_AVAHI ... from top of file */
++
++/*
++ * End of "$Id$".
++ */
+--- /dev/null
++++ b/scheduler/avahi.h
+@@ -0,0 +1,49 @@
++/*
++ * "$Id$"
++ *
++ *   Avahi poll implementation for the CUPS scheduler.
++ *
++ *   Copyright (C) 2010 Red Hat, Inc.
++ *   Authors:
++ *    Tim Waugh <twaugh@redhat.com>
++ *
++ *   Distribution and use rights are outlined in the file "LICENSE.txt"
++ *   which should have been included with this file.  If this file is
++ *   file is missing or damaged, see the license at "http://www.cups.org/".
++ */
++
++#include <config.h>
++
++#ifdef HAVE_AVAHI
++#  include <avahi-client/client.h>
++#  include <avahi-client/publish.h>
++#endif /* HAVE_AVAHI */
++
++#ifdef HAVE_AUTHORIZATION_H
++#  include <Security/Authorization.h>
++#endif /* HAVE_AUTHORIZATION_H */
++
++
++#ifdef HAVE_AVAHI
++typedef struct
++{
++    AvahiPoll api;
++    cups_array_t *watched_fds;
++    cups_array_t *timeouts;
++} AvahiCupsPoll;
++#endif /* HAVE_AVAHI */
++
++/*
++ * Prototypes...
++ */
++
++#ifdef HAVE_AVAHI
++extern AvahiCupsPoll *	avahi_cups_poll_new(void);
++extern void		avahi_cups_poll_free(AvahiCupsPoll *cups_poll);
++extern const AvahiPoll *avahi_cups_poll_get(AvahiCupsPoll *cups_poll);
++#endif /* HAVE_AVAHI */
++
++
++/*
++ * End of "$Id$".
++ */
+--- a/scheduler/cupsd.h
++++ b/scheduler/cupsd.h
+@@ -140,6 +140,15 @@
+ 
+ typedef void (*cupsd_selfunc_t)(void *data);
+ 
++#ifdef HAVE_AVAHI
++/*
++ * Timeout callback function type...
++ */
++
++typedef struct _cupsd_timeout_s cupsd_timeout_t;
++typedef void (*cupsd_timeoutfunc_t)(cupsd_timeout_t *timeout, void *data);
++#endif /* HAVE_AVAHI */
++
+ 
+ /*
+  * Globals...
+@@ -173,6 +182,11 @@
+ 					/* Running from launchd */
+ #endif /* HAVE_LAUNCH_H */
+ 
++#ifdef HAVE_AVAHI
++VAR cups_array_t *Timeouts;		/* Timed callbacks for main loop */
++#endif /* HAVE_AVAHI */
++
++
+ 
+ /*
+  * Prototypes...
+@@ -242,6 +256,20 @@
+ extern void		cupsdStartServer(void);
+ extern void		cupsdStopServer(void);
+ 
++#ifdef HAVE_AVAHI
++extern void     cupsdInitTimeouts(void);
++extern cupsd_timeout_t *cupsdAddTimeout (const struct timeval *tv,
++					 cupsd_timeoutfunc_t cb,
++					 void *data);
++extern cupsd_timeout_t *cupsdNextTimeout (long *delay);
++extern void     cupsdRunTimeout (cupsd_timeout_t *timeout);
++extern void     cupsdUpdateTimeout (cupsd_timeout_t *timeout,
++				    const struct timeval *tv);
++extern void     cupsdRemoveTimeout (cupsd_timeout_t *timeout);
++#endif /* HAVE_AVAHI */
++
++extern int	cupsdRemoveFile(const char *filename);
++
+ 
+ /*
+  * End of "$Id: cupsd.h 9766 2011-05-11 22:17:34Z mike $".
+--- a/scheduler/main.c
++++ b/scheduler/main.c
+@@ -122,6 +122,10 @@
+   cupsd_listener_t	*lis;		/* Current listener */
+   time_t		current_time,	/* Current time */
+ 			activity,	/* Client activity timer */
++#ifdef HAVE_AVAHI
++			avahi_client_time, /* Time for next Avahi client
++					      check */
++#endif /* HAVE_AVAHI */
+ 			browse_time,	/* Next browse send time */
+ 			senddoc_time,	/* Send-Document time */
+ 			expire_time,	/* Subscription expire time */
+@@ -148,6 +152,10 @@
+   int			launchd_idle_exit;
+ 					/* Idle exit on select timeout? */
+ #endif	/* HAVE_LAUNCHD */
++#ifdef HAVE_AVAHI
++  cupsd_timeout_t	*tmo;		/* Next scheduled timed callback */
++  long			tmo_delay;	/* Time before it must be called */
++#endif /* HAVE_AVAHI */
+ 
+ 
+ #ifdef HAVE_GETEUID
+@@ -527,6 +535,14 @@
+ 
+   httpInitialize();
+ 
++#ifdef HAVE_AVAHI
++ /*
++  * Initialize timed callback structures.
++  */
++
++  cupsdInitTimeouts();
++#endif /* HAVE_AVAHI */
++
+   cupsdStartServer();
+ 
+  /*
+@@ -657,6 +673,9 @@
+   */
+ 
+   current_time  = time(NULL);
++#ifdef HAVE_AVAHI
++  avahi_client_time = current_time;
++#endif /* HAVE_AVAHI */
+   browse_time   = current_time;
+   event_time    = current_time;
+   expire_time   = current_time;
+@@ -871,6 +890,26 @@
+     }
+ #endif /* __APPLE__ */
+ 
++#ifdef HAVE_AVAHI
++   /*
++    * If a timed callback is due, run it.
++    */
++
++    tmo = cupsdNextTimeout (&tmo_delay);
++    if (tmo && tmo_delay == 0)
++      cupsdRunTimeout (tmo);
++
++   /*
++    * Try to restart the Avahi client every 10 seconds if needed...
++    */
++
++    if ((current_time - avahi_client_time) >= 10)
++    {
++      avahi_client_time = current_time;
++      cupsdStartAvahiClient();
++    }
++#endif /* HAVE_AVAHI */
++
+ #ifndef __APPLE__
+    /*
+     * Update the network interfaces once a minute...
+@@ -1815,6 +1854,10 @@
+   cupsd_job_t		*job;		/* Job information */
+   cupsd_subscription_t	*sub;		/* Subscription information */
+   const char		*why;		/* Debugging aid */
++#ifdef HAVE_AVAHI
++  cupsd_timeout_t	*tmo;		/* Timed callback */
++  long			tmo_delay;	/* Seconds before calling it */
++#endif /* HAVE_AVAHI */
+ 
+ 
+  /*
+@@ -1857,6 +1900,19 @@
+   }
+ #endif /* __APPLE__ */
+ 
++#ifdef HAVE_AVAHI
++ /*
++  * See if there are any scheduled timed callbacks to run.
++  */
++
++  tmo = cupsdNextTimeout (&tmo_delay);
++  if (tmo)
++  {
++    timeout = tmo_delay;
++    why = "run a timed callback";
++  }
++#endif /* HAVE_AVAHI */
++
+  /*
+   * Check whether we are accepting new connections...
+   */
+--- /dev/null
++++ b/scheduler/timeout.c
+@@ -0,0 +1,195 @@
++/*
++ * "$Id$"
++ *
++ *   Timeout functions for the Common UNIX Printing System (CUPS).
++ *
++ *   Copyright (C) 2010 Red Hat, Inc.
++ *   Authors:
++ *     Tim Waugh <twaugh@redhat.com>
++ *
++ *   Distribution and use rights are outlined in the file "LICENSE.txt"
++ *   which should have been included with this file.  If this file is
++ *   file is missing or damaged, see the license at "http://www.cups.org/".
++ *
++ * Contents:
++ *
++ *   cupsdInitTimeouts()  - Initialise timeout structure.
++ *   cupsdAddTimeout()    - Add a timed callback.
++ *   cupsdNextTimeout()   - Find the next enabled timed callback.
++ *   cupsdUpdateTimeout() - Adjust the time of a timed callback or disable it.
++ *   cupsdRemoveTimeout() - Discard a timed callback.
++ *   compare_timeouts()   - Compare timed callbacks for array sorting.
++ */
++
++#include <config.h>
++
++#ifdef HAVE_AVAHI /* Applies to entire file... */
++
++/*
++ * Include necessary headers...
++ */
++
++#include "cupsd.h"
++
++#if defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
++#  include <malloc.h>
++#endif /* HAVE_MALLOC_H && HAVE_MALLINFO */
++
++#ifdef HAVE_AVAHI
++#  include <avahi-common/timeval.h>
++#endif /* HAVE_AVAHI */
++
++
++struct _cupsd_timeout_s
++{
++  struct timeval when;
++  int enabled;
++  cupsd_timeoutfunc_t callback;
++  void *data;
++};
++
++/*
++ * Local functions...
++ */
++
++/*
++ * 'compare_timeouts()' - Compare timed callbacks for array sorting.
++ */
++
++static int
++compare_timeouts (cupsd_timeout_t *p0, cupsd_timeout_t *p1)
++{
++  if (!p0->enabled || !p1->enabled)
++  {
++    if (!p0->enabled && !p1->enabled)
++      return (0);
++
++    return (p0->enabled ? -1 : 1);
++  }
++
++  return (avahi_timeval_compare (&p0->when, &p1->when));
++}
++
++
++/*
++ * 'cupsdInitTimeouts()' - Initialise timeout structures.
++ */
++
++void
++cupsdInitTimeouts(void)
++{
++  Timeouts = cupsArrayNew ((cups_array_func_t)compare_timeouts, NULL);
++}
++
++
++/*
++ * 'cupsdAddTimeout()' - Add a timed callback.
++ */
++
++cupsd_timeout_t *				/* O - Timeout handle */
++cupsdAddTimeout(const struct timeval *tv,	/* I - Absolute time */
++		cupsd_timeoutfunc_t cb,		/* I - Callback function */
++		void *data)			/* I - User data */
++{
++  cupsd_timeout_t *timeout;
++
++  timeout = malloc (sizeof(cupsd_timeout_t));
++  if (timeout != NULL)
++  {
++    timeout->enabled = (tv != NULL);
++    if (tv)
++    {
++      timeout->when.tv_sec = tv->tv_sec;
++      timeout->when.tv_usec = tv->tv_usec;
++    }
++
++    timeout->callback = cb;
++    timeout->data = data;
++    cupsArrayAdd (Timeouts, timeout);
++  }
++
++  return timeout;
++}
++
++
++/*
++ * 'cupsdNextTimeout()' - Find the next enabled timed callback.
++ */
++
++cupsd_timeout_t *		/* O - Next enabled timeout or NULL */
++cupsdNextTimeout(long *delay)	/* O - Seconds before scheduled */
++{
++  cupsd_timeout_t *first = cupsArrayFirst (Timeouts);
++  struct timeval curtime;
++
++  if (first && !first->enabled)
++    first = NULL;
++
++  if (first && delay)
++  {
++    gettimeofday (&curtime, NULL);
++    if (avahi_timeval_compare (&curtime, &first->when) > 0)
++    {
++      *delay = 0;
++    } else {
++      *delay = 1 + first->when.tv_sec - curtime.tv_sec;
++      if (first->when.tv_usec < curtime.tv_usec)
++	(*delay)--;
++    }
++  }
++
++  return (first);
++}
++
++
++/*
++ * 'cupsdRunTimeout()' - Run a timed callback.
++ */
++
++void
++cupsdRunTimeout(cupsd_timeout_t *timeout)	/* I - Timeout */
++{
++  if (!timeout)
++    return;
++  timeout->enabled = 0;
++  if (!timeout->callback)
++    return;
++  timeout->callback (timeout, timeout->data);
++}
++
++/*
++ * 'cupsdUpdateTimeout()' - Adjust the time of a timed callback or disable it.
++ */
++
++void
++cupsdUpdateTimeout(cupsd_timeout_t *timeout,	/* I - Timeout */
++		   const struct timeval *tv)	/* I - Absolute time or NULL */
++{
++  cupsArrayRemove (Timeouts, timeout);
++  timeout->enabled = (tv != NULL);
++  if (tv)
++  {
++    timeout->when.tv_sec = tv->tv_sec;
++    timeout->when.tv_usec = tv->tv_usec;
++  }
++  cupsArrayAdd (Timeouts, timeout);
++}
++
++
++/*
++ * 'cupsdRemoveTimeout()' - Discard a timed callback.
++ */
++
++void
++cupsdRemoveTimeout(cupsd_timeout_t *timeout)	/* I - Timeout */
++{
++  cupsArrayRemove (Timeouts, timeout);
++  free (timeout);
++}
++
++
++#endif /* HAVE_AVAHI ... from top of file */
++
++/*
++ * End of "$Id$".
++ */
+--- a/cgi-bin/admin.c
++++ b/cgi-bin/admin.c
+@@ -1643,7 +1643,7 @@
+       else
+ 	local_protocols[0] = '\0';
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+       if (cgiGetVariable("BROWSE_LOCAL_DNSSD"))
+       {
+ 	if (local_protocols[0])
+@@ -1651,7 +1651,7 @@
+ 	else
+ 	  strcat(local_protocols, "dnssd");
+       }
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ #ifdef HAVE_LDAP
+       if (cgiGetVariable("BROWSE_LOCAL_LDAP"))
+@@ -2718,9 +2718,9 @@
+ #endif /* HAVE_GSSAPI */
+   cgiSetVariable("KERBEROS", "");
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   cgiSetVariable("HAVE_DNSSD", "1");
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ #ifdef HAVE_LDAP
+   cgiSetVariable("HAVE_LDAP", "1");
+--- a/scheduler/client.c
++++ b/scheduler/client.c
+@@ -4987,7 +4987,7 @@
+ 	    !strncmp(host, "[::1]:", 6));
+   }
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+  /*
+   * Check if the hostname is something.local (Bonjour); if so, allow it.
+   */
+@@ -4996,7 +4996,7 @@
+       (!_cups_strcasecmp(end, ".local") || !_cups_strncasecmp(end, ".local:", 7) ||
+        !_cups_strcasecmp(end, ".local.") || !_cups_strncasecmp(end, ".local.:", 8)))
+     return (1);
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+  /*
+   * Check if the hostname is an IP address...
+--- a/scheduler/dirsvc.c
++++ b/scheduler/dirsvc.c
+@@ -27,6 +27,7 @@
+  *   ldap_connect()             - Start new LDAP connection
+  *   ldap_reconnect()           - Reconnect to LDAP Server
+  *   ldap_disconnect()          - Disconnect from LDAP Server
++ *   cupsdStartAvahiClient()    - Start an Avahi client if needed
+  *   cupsdStartBrowsing()       - Start sending and receiving broadcast
+  *                                information.
+  *   cupsdStartPolling()        - Start polling servers as needed.
+@@ -45,6 +46,8 @@
+  *                                printer.
+  *   dnssdPackTxtRecord()       - Pack an array of key/value pairs into the TXT
+  *                                record format.
++ *   avahiPackTxtRecord()       - Pack an array of key/value pairs into an
++ *                                AvahiStringList.
+  *   dnssdRegisterCallback()    - DNSServiceRegister callback.
+  *   dnssdRegisterPrinter()     - Start sending broadcast information for a
+  *                                printer or update the broadcast contents.
+@@ -83,6 +86,7 @@
+  */
+ 
+ #include "cupsd.h"
++#include <assert.h>
+ #include <grp.h>
+ 
+ #ifdef HAVE_DNSSD
+@@ -97,6 +101,17 @@
+ #    endif /* HAVE_SYSTEMCONFIGURATION */
+ #  endif /* __APPLE__ */
+ #endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++#  include <avahi-common/domain.h>
++#endif /* HAVE_AVAHI */
++
++
++#ifdef HAVE_DNSSD
++typedef char *cupsd_txt_record_t;
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++typedef AvahiStringList *cupsd_txt_record_t;
++#endif /* HAVE_AVAHI */
+ 
+ 
+ /*
+@@ -159,27 +174,39 @@
+ static void	update_smb(int onoff);
+ 
+ 
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
++static cupsd_txt_record_t dnssdBuildTxtRecord(int *txt_len, cupsd_printer_t *p,
++					      int for_lpd);
++static int	dnssdComparePrinters(cupsd_printer_t *a, cupsd_printer_t *b);
++static void	dnssdDeregisterPrinter(cupsd_printer_t *p);
++static void	dnssdRegisterPrinter(cupsd_printer_t *p);
++static void	dnssdStop(void);
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
++
+ #ifdef HAVE_DNSSD
+ #  ifdef HAVE_COREFOUNDATION
+ static void	dnssdAddAlias(const void *key, const void *value,
+ 		              void *context);
+ #  endif /* HAVE_COREFOUNDATION */
+-static char	*dnssdBuildTxtRecord(int *txt_len, cupsd_printer_t *p,
+-		                     int for_lpd);
+-static int	dnssdComparePrinters(cupsd_printer_t *a, cupsd_printer_t *b);
+-static void	dnssdDeregisterPrinter(cupsd_printer_t *p);
+-static char	*dnssdPackTxtRecord(int *txt_len, char *keyvalue[][2],
+-		                    int count);
+ static void	dnssdRegisterCallback(DNSServiceRef sdRef,
+ 		                      DNSServiceFlags flags,
+ 				      DNSServiceErrorType errorCode,
+ 				      const char *name, const char *regtype,
+ 				      const char *domain, void *context);
+-static void	dnssdRegisterPrinter(cupsd_printer_t *p);
+-static void	dnssdStop(void);
+ static void	dnssdUpdate(void);
+ #endif /* HAVE_DNSSD */
+ 
++#ifdef HAVE_AVAHI
++static AvahiStringList *avahiPackTxtRecord(char *keyvalue[][2],
++					   int count);
++static void	avahi_entry_group_cb (AvahiEntryGroup *group,
++				      AvahiEntryGroupState state,
++				      void *userdata);
++static void	avahi_client_cb (AvahiClient *client,
++				 AvahiClientState state,
++				 void *userdata);
++#endif /* HAVE_AVAHI */
++
+ #ifdef HAVE_LDAP
+ static const char * const ldap_attrs[] =/* CUPS LDAP attributes */
+ 		{
+@@ -283,10 +310,10 @@
+     ldap_dereg_printer(p);
+ #endif /* HAVE_LDAP */
+ 
+-#ifdef HAVE_DNSSD
+-  if (removeit && (BrowseLocalProtocols & BROWSE_DNSSD) && DNSSDRef)
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
++  if (removeit && (BrowseLocalProtocols & BROWSE_DNSSD))
+     dnssdDeregisterPrinter(p);
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ }
+ 
+ 
+@@ -702,10 +729,10 @@
+     slpRegisterPrinter(p); */
+ #endif /* HAVE_LIBSLP */
+ 
+-#ifdef HAVE_DNSSD
+-  if ((BrowseLocalProtocols & BROWSE_DNSSD) && DNSSDRef)
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
++  if ((BrowseLocalProtocols & BROWSE_DNSSD))
+     dnssdRegisterPrinter(p);
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ }
+ 
+ 
+@@ -1419,6 +1446,27 @@
+ #endif /* HAVE_LDAP */
+ 
+ 
++#ifdef HAVE_AVAHI
++/*
++ * 'cupsdStartAvahiClient()' - Start an Avahi client if needed
++ */
++
++void
++cupsdStartAvahiClient(void)
++{
++  if (!AvahiCupsClient && !AvahiCupsClientConnecting)
++  {
++    if (!AvahiCupsPollHandle)
++      AvahiCupsPollHandle = avahi_cups_poll_new ();
++
++    if (AvahiCupsPollHandle)
++      avahi_client_new (avahi_cups_poll_get (AvahiCupsPollHandle),
++			AVAHI_CLIENT_NO_FAIL, avahi_client_cb, NULL, NULL);
++  }
++}
++#endif /* HAVE_AVAHI */
++
++  
+ /*
+  * 'cupsdStartBrowsing()' - Start sending and receiving broadcast information.
+  */
+@@ -1542,13 +1590,16 @@
+   else
+     BrowseSocket = -1;
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   if ((BrowseLocalProtocols | BrowseRemoteProtocols) & BROWSE_DNSSD)
+   {
++#ifdef HAVE_DNSSD
+     DNSServiceErrorType error;		/* Error from service creation */
++#endif /* HAVE_DNSSD */
+     cupsd_listener_t	*lis;		/* Current listening socket */
+ 
+ 
++#ifdef HAVE_DNSSD
+    /*
+     * First create a "master" connection for all registrations...
+     */
+@@ -1573,6 +1624,7 @@
+       fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+ 
+       cupsdAddSelect(fd, (cupsd_selfunc_t)dnssdUpdate, NULL, NULL);
++#endif /* HAVE_DNSSD */
+ 
+      /*
+       * Then get the port we use for registrations.  If we are not listening
+@@ -1606,9 +1658,16 @@
+       */
+ 
+       cupsdUpdateDNSSDName();
++
++#ifdef HAVE_AVAHI
++      cupsdStartAvahiClient ();
++#endif /* HAVE_AVAHI */
++
++#ifdef HAVE_DNSSD
+     }
+-  }
+ #endif /* HAVE_DNSSD */
++  }
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ #ifdef HAVE_LIBSLP
+   if ((BrowseLocalProtocols | BrowseRemoteProtocols) & BROWSE_SLP)
+@@ -1834,10 +1893,10 @@
+     BrowseSocket = -1;
+   }
+ 
+-#ifdef HAVE_DNSSD
+-  if ((BrowseLocalProtocols & BROWSE_DNSSD) && DNSSDRef)
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
++  if ((BrowseLocalProtocols & BROWSE_DNSSD))
+     dnssdStop();
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ #ifdef HAVE_LIBSLP
+   if (((BrowseLocalProtocols | BrowseRemoteProtocols) & BROWSE_SLP) &&
+@@ -1902,7 +1961,7 @@
+ }
+ 
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+ /*
+  * 'cupsdUpdateDNSSDName()' - Update the computer name we use for browsing...
+  */
+@@ -1910,8 +1969,14 @@
+ void
+ cupsdUpdateDNSSDName(void)
+ {
++#ifdef HAVE_DNSSD
+   DNSServiceErrorType error;		/* Error from service creation */
+   char		webif[1024];		/* Web interface share name */
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  int		ret;			/* Error from service creation */
++  char		webif[AVAHI_LABEL_MAX];	/* Web interface share name */
++#endif /* HAVE_AVAHI */
+ #  ifdef HAVE_SYSTEMCONFIGURATION
+   SCDynamicStoreRef sc;			/* Context for dynamic store */
+   CFDictionaryRef btmm;			/* Back-to-My-Mac domains */
+@@ -2042,6 +2107,7 @@
+     else
+       strlcpy(webif, "CUPS Web Interface", sizeof(webif));
+ 
++#ifdef HAVE_DNSSD
+     if (WebIFRef)
+       DNSServiceRefDeallocate(WebIFRef);
+ 
+@@ -2054,9 +2120,45 @@
+ 				    NULL)) != kDNSServiceErr_NoError)
+       cupsdLogMessage(CUPSD_LOG_ERROR,
+ 		      "DNS-SD web interface registration failed: %d", error);
++#endif /* HAVE_DNSSD */
++
++#ifdef HAVE_AVAHI
++    if (!AvahiCupsClient)
++     /*
++      * Client not yet running.
++      */
++      return;
++
++    if (AvahiWebIFGroup)
++      avahi_entry_group_reset (AvahiWebIFGroup);
++    else
++      AvahiWebIFGroup = avahi_entry_group_new (AvahiCupsClient,
++					       avahi_entry_group_cb,
++					       NULL);
++
++    if (AvahiWebIFGroup)
++    {
++      ret = avahi_entry_group_add_service (AvahiWebIFGroup,
++					   AVAHI_IF_UNSPEC,
++					   AVAHI_PROTO_UNSPEC,
++					   0, /* flags */
++					   webif, /* name */
++					   "_http._tcp", /* type */
++					   NULL, /* domain */
++					   NULL, /* host */
++					   DNSSDPort, /* port */
++					   "path=/", NULL);
++      if (ret == 0)
++	ret = avahi_entry_group_commit (AvahiWebIFGroup);
++
++      if (ret != 0)
++	cupsdLogMessage (CUPSD_LOG_ERROR,
++			 "Avahi web interface registration failed: %d", ret);
++    }
++#endif /* HAVE_AVAHI */
+   }
+ }
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ 
+ #ifdef HAVE_LDAP
+@@ -2334,13 +2436,15 @@
+                     "Bad Back to My Mac domain in dynamic store!");
+ }
+ #  endif /* HAVE_COREFOUNDATION */
++#endif /* HAVE_DNSSD */
+ 
+ 
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+ /*
+  * 'dnssdBuildTxtRecord()' - Build a TXT record from printer info.
+  */
+ 
+-static char *				/* O - TXT record */
++static cupsd_txt_record_t		/* O - TXT record */
+ dnssdBuildTxtRecord(
+     int             *txt_len,		/* O - TXT record length */
+     cupsd_printer_t *p,			/* I - Printer information */
+@@ -2379,7 +2483,12 @@
+   keyvalue[i  ][0] = "ty";
+   keyvalue[i++][1] = p->make_model ? p->make_model : "Unknown";
+ 
+-  snprintf(admin_hostname, sizeof(admin_hostname), "%s.local.", DNSSDHostName);
++  snprintf(admin_hostname, sizeof(admin_hostname),
++	   "%s.local"
++#ifdef HAVE_DNSSD
++	   "." /* terminating dot no good for Avahi */
++#endif /* HAVE_DNSSD */
++	   , DNSSDHostName);
+   httpAssembleURIf(HTTP_URI_CODING_ALL, adminurl_str, sizeof(adminurl_str),
+                    "http", NULL, admin_hostname, DNSSDPort, "/%s/%s",
+ 		   (p->type & CUPS_PRINTER_CLASS) ? "classes" : "printers",
+@@ -2462,7 +2571,12 @@
+   * Then pack them into a proper txt record...
+   */
+ 
++#ifdef HAVE_DNSSD
+   return (dnssdPackTxtRecord(txt_len, keyvalue, i));
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  return (avahiPackTxtRecord(keyvalue, i));
++#endif /* HAVE_AVAHI */
+ }
+ 
+ 
+@@ -2474,7 +2588,16 @@
+ dnssdComparePrinters(cupsd_printer_t *a,/* I - First printer */
+                      cupsd_printer_t *b)/* I - Second printer */
+ {
+-  return (_cups_strcasecmp(a->reg_name, b->reg_name));
++  if (!a->reg_name)
++    if (!b->reg_name)
++      return 0;
++    else
++      return -1;
++  else
++    if (!b->reg_name)
++      return 1;
++    else
++      return (_cups_strcasecmp(a->reg_name, b->reg_name));
+ }
+ 
+ 
+@@ -2489,6 +2612,10 @@
+ {
+   cupsdLogMessage(CUPSD_LOG_DEBUG2, "dnssdDeregisterPrinter(%s)", p->name);
+ 
++#ifdef HAVE_DNSSD
++  if (!DNSSDRef)
++    return;
++
+  /*
+   * Closing the socket deregisters the service
+   */
+@@ -2524,6 +2651,24 @@
+     free(p->printer_txt);
+     p->printer_txt = NULL;
+   }
++#endif /* HAVE_DNSSD */
++
++#ifdef HAVE_AVAHI
++  if (p->avahi_group)
++    {
++      avahi_entry_group_reset (p->avahi_group);
++      avahi_entry_group_free (p->avahi_group);
++      p->avahi_group = NULL;
++
++      if (p->ipp_txt)
++	avahi_string_list_free (p->ipp_txt);
++
++      if (p->printer_txt)
++	avahi_string_list_free (p->printer_txt);
++
++      p->ipp_txt = p->printer_txt = NULL;
++    }
++#endif /* HAVE_AVAHI */
+ 
+  /*
+   * Remove the printer from the array of DNS-SD printers, then clear the
+@@ -2533,8 +2678,10 @@
+   cupsArrayRemove(DNSSDPrinters, p);
+   cupsdClearString(&p->reg_name);
+ }
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ 
++#ifdef HAVE_DNSSD
+ /*
+  * 'dnssdPackTxtRecord()' - Pack an array of key/value pairs into the
+  *                          TXT record format.
+@@ -2644,8 +2791,10 @@
+     LastEvent |= CUPSD_EVENT_PRINTER_MODIFIED;
+   }
+ }
++#endif /* HAVE_DNSSD */
+ 
+ 
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+ /*
+  * 'dnssdRegisterPrinter()' - Start sending broadcast information for a printer
+  *		              or update the broadcast contents.
+@@ -2654,20 +2803,40 @@
+ static void
+ dnssdRegisterPrinter(cupsd_printer_t *p)/* I - Printer */
+ {
++#ifdef HAVE_DNSSD
+   DNSServiceErrorType	se;		/* dnssd errors */
+   char			*ipp_txt,	/* IPP TXT record buffer */
+ 			*printer_txt,	/* LPD TXT record buffer */
+-			name[1024],	/* Service name */
+-			*nameptr;	/* Pointer into name */
++			name[1024];	/* Service name */
+   int			ipp_len,	/* IPP TXT record length */
+ 			printer_len,	/* LPD TXT record length */
+ 			printer_port;	/* LPD port number */
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  int			ret;		/* Error code */
++  AvahiStringList	*ipp_txt,	/* IPP TXT record */
++			*printer_txt;	/* LPD TXT record */
++  char			name[AVAHI_LABEL_MAX],	/* Service name */
++			fullsubtype[AVAHI_LABEL_MAX]; /* Full subtype */
++  char			*regtype_copy,	/* Writeable copy of reg type */
++			*subtype,	/* Current service sub type */
++			*nextsubtype;	/* Next service sub type */
++#endif /* HAVE_AVAHI */
++  char			*nameptr;	/* Pointer into name */
+   const char		*regtype;	/* Registration type */
+ 
+ 
++#ifdef HAVE_DNSSD
++  if (!DNSSDRef)
++    return;
++
+   cupsdLogMessage(CUPSD_LOG_DEBUG2, "dnssdRegisterPrinter(%s) %s", p->name,
+                   !p->ipp_ref ? "new" : "update");
+-
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  cupsdLogMessage(CUPSD_LOG_DEBUG2, "dnssdRegisterPrinter(%s) %s", p->name,
++		  !p->avahi_group ? "new" : "update");
++#endif /* HAVE_AVAHI */
+  /*
+   * If per-printer sharing was just disabled make sure we're not
+   * registered before returning.
+@@ -2686,12 +2855,36 @@
+   if (p->info && strlen(p->info) > 0)
+   {
+     if (DNSSDComputerName)
+-      snprintf(name, sizeof(name), "%s @ %s", p->info, DNSSDComputerName);
++    {
++     /*
++      * Make sure there is room for at least 15 characters of
++      * DNSSDComputerName.
++      */
++
++      assert(sizeof(name) >= 15 + 4);
++      nameptr = name + strlcpy(name, p->info,
++			       sizeof(name) - 4 -
++			       strnlen(DNSSDComputerName, 15));
++      nameptr += strlcpy(nameptr, " @ ", sizeof(name) - (nameptr - name));
++      strlcpy(nameptr, DNSSDComputerName, sizeof(name) - (nameptr - name));
++    }
+     else
+       strlcpy(name, p->info, sizeof(name));
+   }
+   else if (DNSSDComputerName)
+-    snprintf(name, sizeof(name), "%s @ %s", p->name, DNSSDComputerName);
++  {
++   /*
++    * Make sure there is room for at least 15 characters of
++    * DNSSDComputerName.
++    */
++
++    assert(sizeof(name) >= 15 + 4);
++    nameptr = name + strlcpy(name, p->info,
++			     sizeof(name) - 4 -
++			     strnlen(DNSSDComputerName, 15));
++    nameptr += strlcpy(nameptr, " @ ", sizeof(name) - (nameptr - name));
++    strlcpy(nameptr, DNSSDComputerName, sizeof(name) - (nameptr - name));
++  }
+   else
+     strlcpy(name, p->name, sizeof(name));
+ 
+@@ -2712,6 +2905,7 @@
+   * Register IPP and (optionally) LPD...
+   */
+ 
++#ifdef HAVE_DNSSD
+   ipp_len = 0;				/* anti-compiler-warning-code */
+   ipp_txt = dnssdBuildTxtRecord(&ipp_len, p, 0);
+ 
+@@ -2884,6 +3078,209 @@
+ 
+   if (printer_txt)
+     free(printer_txt);
++#endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  if (!AvahiCupsClient)
++   /*
++    * Client not running yet.  The client callback will call us again later.
++    */
++    return;
++
++  ipp_txt = dnssdBuildTxtRecord(NULL, p, 0);
++  printer_txt = dnssdBuildTxtRecord(NULL, p, 1);
++  regtype = (p->type & CUPS_PRINTER_FAX) ? "_fax-ipp._tcp" : DNSSDRegType;
++
++  if (p->avahi_group && p->ipp_txt && ipp_txt &&
++      !avahi_string_list_equal (p->ipp_txt, ipp_txt))
++  {
++   /*
++    * Update the existing registration...
++    */
++
++    avahi_string_list_free (p->ipp_txt);
++
++    if (p->printer_txt)
++      avahi_string_list_free (p->printer_txt);
++
++   /*
++    * Update the service group entry.
++    */
++
++    regtype_copy = strdup (regtype);
++    subtype = strchr (regtype_copy, ',');
++    if (subtype)
++      *subtype = '\0';
++
++    cupsdLogMessage (CUPSD_LOG_DEBUG,
++		     "Updating TXT record for %s (%s)", name, regtype_copy);
++    ret = avahi_entry_group_update_service_txt_strlst (p->avahi_group,
++						       AVAHI_IF_UNSPEC,
++						       AVAHI_PROTO_UNSPEC,
++						       0, name,
++						       regtype_copy,
++						       NULL, ipp_txt);
++    free (regtype_copy);
++
++    if (ret < 0)
++      goto update_failed;
++
++    p->ipp_txt = ipp_txt;
++    ipp_txt = NULL;
++
++    if (BrowseLocalProtocols & BROWSE_LPD)
++    {
++      ret = avahi_entry_group_update_service_txt_strlst (p->avahi_group,
++							 AVAHI_IF_UNSPEC,
++							 AVAHI_PROTO_UNSPEC,
++							 0, name,
++							 "_printer._tcp", NULL,
++							 printer_txt);
++      if (ret < 0)
++	goto update_failed;
++
++      p->printer_txt = printer_txt;
++      printer_txt = NULL;
++    }
++
++    ret = avahi_entry_group_commit (p->avahi_group);
++    if (ret < 0)
++    {
++    update_failed:
++      cupsdLogMessage (CUPSD_LOG_ERROR,
++		       "Failed to update TXT record for %s: %d",
++		       name, ret);
++      avahi_entry_group_reset (p->avahi_group);
++      avahi_entry_group_free (p->avahi_group);
++      p->avahi_group = NULL;
++      ipp_txt = p->ipp_txt;
++      p->ipp_txt = NULL;
++    }
++  }
++
++  if (!p->avahi_group)
++  {
++   /*
++    * Initial registration.  Use the _fax subtype for fax queues...
++    */
++
++    p->avahi_group = avahi_entry_group_new (AvahiCupsClient,
++					    avahi_entry_group_cb,
++					    p);
++
++    cupsdLogMessage(CUPSD_LOG_DEBUG,
++		    "Registering Avahi printer %s with name \"%s\" and "
++		    "type \"%s\"", p->name, name, regtype);
++
++    if (!p->avahi_group)
++    {
++      ret = 0;
++      goto add_failed;
++    }
++
++   /*
++    * Add each service type (DNSSDRegType may contain several,
++    * separated by commas).
++    */
++
++    subtype = regtype_copy = strdup (regtype);
++    while (subtype && *subtype)
++    {
++      nextsubtype = strchr (subtype, ',');
++      if (nextsubtype)
++	*nextsubtype++ = '\0';
++
++      if (subtype == regtype_copy)
++      {
++       /*
++	* Main type entry.
++	*/
++
++	cupsdLogMessage (CUPSD_LOG_DEBUG,
++			 "Adding TXT record for %s (%s)", name, regtype_copy);
++	ret = avahi_entry_group_add_service_strlst (p->avahi_group,
++						    AVAHI_IF_UNSPEC,
++						    AVAHI_PROTO_UNSPEC,
++						    0, name, regtype_copy,
++						    NULL, NULL,
++						    DNSSDPort,
++						    ipp_txt);
++      }
++      else
++      {
++       /*
++	* Sub-type entry.
++	*/
++
++	snprintf (fullsubtype, sizeof(fullsubtype),
++		  "%s._sub.%s", subtype, regtype_copy);
++	cupsdLogMessage (CUPSD_LOG_DEBUG,
++			 "Adding TXT record for %s (%s)", name, fullsubtype);
++	ret = avahi_entry_group_add_service_subtype (p->avahi_group,
++						     AVAHI_IF_UNSPEC,
++						     AVAHI_PROTO_UNSPEC,
++						     0, name,
++						     regtype_copy,
++						     NULL, fullsubtype);
++      }
++
++      if (ret < 0)
++      {
++	free (regtype_copy);
++	goto add_failed;
++      }
++
++      subtype = nextsubtype;
++    }
++
++    free (regtype_copy);
++    p->ipp_txt = ipp_txt;
++    ipp_txt = NULL;
++
++    if (BrowseLocalProtocols & BROWSE_LPD)
++    {
++      cupsdLogMessage(CUPSD_LOG_DEBUG,
++		      "Registering Avahi printer %s with name \"%s\" and "
++		      "type \"_printer._tcp\"", p->name, name);
++
++      ret = avahi_entry_group_add_service_strlst (p->avahi_group,
++						  AVAHI_IF_UNSPEC,
++						  AVAHI_PROTO_UNSPEC,
++						  0, name,
++						  "_printer._tcp", NULL, NULL,
++						  515,
++						  printer_txt);
++      if (ret < 0)
++	goto add_failed;
++
++      p->printer_txt = printer_txt;
++      printer_txt = NULL;
++    }
++
++    ret = avahi_entry_group_commit (p->avahi_group);
++
++    if (ret < 0)
++    {
++    add_failed:
++      cupsdLogMessage (CUPSD_LOG_ERROR,
++		       "Failed to add Avahi entry for %s: %d",
++		       name, ret);
++      if (p->avahi_group)
++      {
++	avahi_entry_group_reset (p->avahi_group);
++	avahi_entry_group_free (p->avahi_group);
++	p->avahi_group = NULL;
++      }
++      ipp_txt = p->ipp_txt;
++      p->ipp_txt = NULL;
++    }
++  }
++
++  if (ipp_txt)
++    avahi_string_list_free (ipp_txt);
++
++  if (printer_txt)
++    avahi_string_list_free (printer_txt);
++#endif /* HAVE_AVAHI */
+ }
+ 
+ 
+@@ -2896,6 +3293,10 @@
+ {
+   cupsd_printer_t	*p;		/* Current printer */
+ 
++#ifdef HAVE_DNSSD
++  if (!DNSSDRef)
++    return;
++#endif /* HAVE_DNSSD */
+ 
+  /*
+   * De-register the individual printers
+@@ -2906,6 +3307,7 @@
+        p = (cupsd_printer_t *)cupsArrayNext(Printers))
+     dnssdDeregisterPrinter(p);
+ 
++#ifdef HAVE_DNSSD
+  /*
+   * Shutdown the rest of the service refs...
+   */
+@@ -2926,14 +3328,17 @@
+ 
+   DNSServiceRefDeallocate(DNSSDRef);
+   DNSSDRef = NULL;
++#endif /* HAVE_DNSSD */
+ 
+   cupsArrayDelete(DNSSDPrinters);
+   DNSSDPrinters = NULL;
+ 
+   DNSSDPort = 0;
+ }
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+ 
++#ifdef HAVE_DNSSD
+ /*
+  * 'dnssdUpdate()' - Handle DNS-SD queries.
+  */
+@@ -2955,6 +3360,147 @@
+ #endif /* HAVE_DNSSD */
+ 
+ 
++#ifdef HAVE_AVAHI
++/*
++ * 'avahiPackTxtRecord()' - Pack an array of key/value pairs into an
++ *                          AvahiStringList.
++ */
++
++static AvahiStringList *		/* O - new string list */
++avahiPackTxtRecord(char *keyvalue[][2],	/* I - Table of key value pairs */
++		   int count)		/* I - Number of items in table */
++{
++  AvahiStringList *strlst = NULL;
++  char **elements;
++  size_t len;
++  int i = 0;
++
++  elements = malloc ((1 + count) * sizeof (char *));
++  if (!elements)
++    goto cleanup;
++
++  for (i = 0; i < count; i++)
++    {
++      len = (1 + strlen (keyvalue[i][0]) +
++	     (keyvalue[i][1] ? 1 + strlen (keyvalue[i][1]) : 1));
++      elements[i] = malloc (len * sizeof (char));
++      if (!elements[i])
++	goto cleanup;
++
++      snprintf (elements[i], len, "%s=%s", keyvalue[i][0], keyvalue[i][1]);
++    }
++
++  strlst = avahi_string_list_new_from_array ((const char **) elements, count);
++
++cleanup:
++  while (--i >= 0)
++    free (elements[i]);
++
++  free (elements);
++  return (strlst);
++}
++
++
++/*
++ * 'avahi_entry_group_cb()' - Avahi entry group callback function.
++ */
++static void
++avahi_entry_group_cb (AvahiEntryGroup *group,
++		      AvahiEntryGroupState state,
++		      void *userdata)
++{
++  char *name;
++
++  if (userdata)
++    name = ((cupsd_printer_t *) userdata)->reg_name;
++  else
++    name = "CUPS web interface";
++
++  switch (state)
++  {
++  case AVAHI_ENTRY_GROUP_UNCOMMITED:
++  case AVAHI_ENTRY_GROUP_REGISTERING:
++    break;
++
++  case AVAHI_ENTRY_GROUP_ESTABLISHED:
++    cupsdLogMessage (CUPSD_LOG_DEBUG,
++		     "Avahi entry group established for %s", name);
++    break;
++
++  default:
++    cupsdLogMessage (CUPSD_LOG_DEBUG,
++		     "Avahi entry group %s has state %d",
++		     name, state);
++    break;
++  }
++}
++
++
++/*
++ * 'avahi_client_cb()' - Avahi client callback function.
++ */
++static void
++avahi_client_cb (AvahiClient *client,
++		 AvahiClientState state,
++		 void *userdata)
++{
++  cupsd_printer_t *printer;
++  switch (state)
++  {
++  case AVAHI_CLIENT_S_RUNNING:
++   /*
++    * Avahi client started successfully.
++    */
++    AvahiCupsClient = client;
++    AvahiCupsClientConnecting = 0;
++    cupsdLogMessage (CUPSD_LOG_DEBUG, "Avahi client started");
++
++    cupsdUpdateDNSSDName ();
++
++    for (printer = (cupsd_printer_t *)cupsArrayFirst(Printers);
++	 printer;
++	 printer = (cupsd_printer_t *)cupsArrayNext(Printers))
++      if (Browsing && (BrowseLocalProtocols & BROWSE_DNSSD) &&
++	  (!(printer->type & (CUPS_PRINTER_REMOTE | CUPS_PRINTER_IMPLICIT |
++			      CUPS_PRINTER_SCANNER))) && printer->shared)
++	dnssdRegisterPrinter (printer);
++
++    break;
++
++  case AVAHI_CLIENT_CONNECTING:
++   /*
++    * No Avahi daemon, client is waiting.
++    */
++    AvahiCupsClientConnecting = 1;
++    cupsdLogMessage (CUPSD_LOG_DEBUG, "Avahi client connecting");
++    break;
++
++  case AVAHI_CLIENT_FAILURE:
++   /*
++    * Avahi client failed, close it to allow a clean restart.
++    */
++    cupsdLogMessage (CUPSD_LOG_ERROR,
++		     "Avahi client failed, "
++		     "closing client to allow a clean restart");
++
++    for (printer = (cupsd_printer_t *)cupsArrayFirst(Printers);
++	 printer;
++	 printer = (cupsd_printer_t *)cupsArrayNext(Printers))
++      dnssdDeregisterPrinter (printer);
++
++    avahi_client_free(client);
++    AvahiCupsClientConnecting = 0;
++    AvahiCupsClient = NULL;
++
++    break;
++
++  default:
++    cupsdLogMessage (CUPSD_LOG_DEBUG, "Avahi client state: %d", state);
++  }
++}
++#endif /* HAVE_AVAHI */
++
++
+ /*
+  * 'get_auth_info_required()' - Get the auth-info-required value to advertise.
+  */
+--- a/scheduler/dirsvc.h
++++ b/scheduler/dirsvc.h
+@@ -31,6 +31,10 @@
+ #  endif /* HAVE_LDAP_SSL_H */
+ #endif /* HAVE_LDAP */
+ 
++#ifdef HAVE_AVAHI
++#  include <avahi-client/publish.h>
++#endif /* HAVE_AVAHI */
++
+ /*
+  * Browse protocols...
+  */
+@@ -131,19 +135,22 @@
+ VAR cupsd_statbuf_t	*PollStatusBuffer VALUE(NULL);
+ 					/* Status buffer for pollers */
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+ VAR char		*DNSSDComputerName VALUE(NULL),
+ 					/* Computer/server name */
+ 			*DNSSDHostName	VALUE(NULL),
+ 					/* Hostname */
+ 			*DNSSDRegType VALUE(NULL);
+ 					/* Bonjour registration type */
+-VAR cups_array_t	*DNSSDAlias	VALUE(NULL);
+-					/* List of dynamic ServerAlias's */
+ VAR int			DNSSDPort	VALUE(0);
+ 					/* Port number to register */
+ VAR cups_array_t	*DNSSDPrinters	VALUE(NULL);
+ 					/* Printers we have registered */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
++
++#ifdef HAVE_DNSSD
++VAR cups_array_t	*DNSSDAlias	VALUE(NULL);
++					/* List of dynamic ServerAlias's */
+ VAR DNSServiceRef	DNSSDRef	VALUE(NULL),
+ 					/* Master DNS-SD service reference */
+ 			WebIFRef	VALUE(NULL),
+@@ -152,6 +159,17 @@
+ 					/* Remote printer browse reference */
+ #endif /* HAVE_DNSSD */
+ 
++#ifdef HAVE_AVAHI
++VAR AvahiCupsPoll	*AvahiCupsPollHandle	VALUE(NULL);
++					/* AvahiCupsPoll object */
++VAR AvahiClient		*AvahiCupsClient	VALUE(NULL);
++					/* AvahiClient object */
++VAR int			AvahiCupsClientConnecting	VALUE(0);
++					/* Is AvahiClient object connecting? */
++VAR AvahiEntryGroup	*AvahiWebIFGroup	VALUE(NULL);
++					/* Web interface entry group */
++#endif /* HAVE_AVAHI */
++
+ #ifdef HAVE_LIBSLP
+ VAR SLPHandle		BrowseSLPHandle	VALUE(NULL);
+ 					/* SLP API handle */
+@@ -195,13 +213,14 @@
+ extern void	cupsdRestartPolling(void);
+ extern void	cupsdSaveRemoteCache(void);
+ extern void	cupsdSendBrowseList(void);
++extern void	cupsdStartAvahiClient(void);
+ extern void	cupsdStartBrowsing(void);
+ extern void	cupsdStartPolling(void);
+ extern void	cupsdStopBrowsing(void);
+ extern void	cupsdStopPolling(void);
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+ extern void	cupsdUpdateDNSSDName(void);
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ #ifdef HAVE_LDAP
+ extern void	cupsdUpdateLDAPBrowse(void);
+ #endif /* HAVE_LDAP */
+--- a/scheduler/ipp.c
++++ b/scheduler/ipp.c
+@@ -6087,7 +6087,7 @@
+     ippAddDate(con->response, IPP_TAG_PRINTER, "printer-current-time",
+                ippTimeToDate(curtime));
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   if (!ra || cupsArrayFind(ra, "printer-dns-sd-name"))
+   {
+     if (printer->reg_name)
+@@ -6097,7 +6097,7 @@
+       ippAddInteger(con->response, IPP_TAG_PRINTER, IPP_TAG_NOVALUE,
+                    "printer-dns-sd-name", 0);
+   }
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+   if (!ra || cupsArrayFind(ra, "printer-error-policy"))
+     ippAddString(con->response, IPP_TAG_PRINTER, IPP_TAG_NAME,
+--- a/scheduler/printers.c
++++ b/scheduler/printers.c
+@@ -883,9 +883,9 @@
+   cupsdClearString(&p->alert);
+   cupsdClearString(&p->alert_description);
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   cupsdClearString(&p->pdl);
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ 
+   cupsArrayDelete(p->filetypes);
+ 
+@@ -3765,7 +3765,7 @@
+     attr->values[i].string.text = _cupsStrAlloc(mimetype);
+   }
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   {
+     char		pdl[1024];	/* Buffer to build pdl list */
+     mime_filter_t	*filter;	/* MIME filter looping var */
+@@ -3821,7 +3821,7 @@
+ 
+     cupsdSetString(&p->pdl, pdl);
+   }
+-#endif /* HAVE_DNSSD */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
+ }
+ 
+ 
+--- a/scheduler/printers.h
++++ b/scheduler/printers.h
+@@ -16,6 +16,9 @@
+ #ifdef HAVE_DNSSD
+ #  include <dns_sd.h>
+ #endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++#  include "avahi.h"
++#endif /* HAVE_AVAHI */
+ #include <cups/pwg-private.h>
+ 
+ 
+@@ -95,16 +98,23 @@
+   time_t	marker_time;		/* Last time marker attributes were updated */
+   _ppd_cache_t	*pc;			/* PPD cache and mapping data */
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   char		*reg_name,		/* Name used for service registration */
+-		*pdl,			/* pdl value for TXT record */
+-		*ipp_txt,		/* IPP TXT record contents */
++		*pdl;			/* pdl value for TXT record */
++#endif /* defined(HAVE_DNSSD) || defined(HAVE_AVAHI) */
++#ifdef HAVE_DNSSD
++  char		*ipp_txt,		/* IPP TXT record contents */
+ 		*printer_txt;		/* LPD TXT record contents */
+   int		ipp_len,		/* IPP TXT record length */
+ 		printer_len;		/* LPD TXT record length */
+   DNSServiceRef	ipp_ref,		/* Reference for _ipp._tcp,_cups */
+ 		printer_ref;		/* Reference for _printer._tcp */
+ #endif /* HAVE_DNSSD */
++#ifdef HAVE_AVAHI
++  AvahiStringList *ipp_txt,		/* IPP TXT record */
++		*printer_txt;		/* LPD TXT record */
++  AvahiEntryGroup *avahi_group;		/* Avahi entry group */
++#endif /* HAVE_AVAHI */
+ };
+ 
+ 
+--- a/scheduler/conf.c
++++ b/scheduler/conf.c
+@@ -650,7 +650,7 @@
+   Browsing                 = CUPS_DEFAULT_BROWSING;
+   DefaultShared            = CUPS_DEFAULT_DEFAULT_SHARED;
+ 
+-#ifdef HAVE_DNSSD
++#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+   cupsdSetString(&DNSSDRegType, "_ipp._tcp,_cups");
+ #endif /* HAVE_DNSSD */
+ 
