@@ -6,8 +6,8 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.6.2
-pkgrel=5
-_snapshot=4.6-20111223
+pkgrel=6
+_snapshot=4.6-20120120
 _libstdcppmanver=20111215		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -21,7 +21,7 @@ source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-man.${_libstdcppmanver}.tar.bz2
 	gcc_pure64.patch
 	gcc-hash-style-both.patch)
-md5sums=('4755b9f6ac0abecbaa2097ed9738406a'
+md5sums=('f7ca5d9f7a07216577f81318b7cf56ef'
          '450772ce32daed97d7383199f8797f33'
          '4030ee1c08dd1e843c0225b772360e76'
          '4df25b623799b148a0703eaeec8fdf3f')
@@ -59,11 +59,12 @@ build() {
       --enable-shared --enable-threads=posix \
       --with-system-zlib --enable-__cxa_atexit \
       --disable-libunwind-exceptions --enable-clocale=gnu \
+      --disable-libstdcxx-pch --enable-libstdcxx-time \
       --enable-gnu-unique-object --enable-linker-build-id \
       --with-ppl --enable-cloog-backend=isl \
       --enable-lto --enable-gold --enable-ld=default \
       --enable-plugin --with-plugin-ld=ld.gold \
-      --disable-multilib --disable-libssp --disable-libstdcxx-pch \
+      --disable-multilib --disable-libssp \
       --enable-checking=release
   make
 }
@@ -143,6 +144,11 @@ package_gcc()
   # install gengtype for plugin support
   install -m755 gcc/build/gengtype $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/
   install -m644 gcc/gtype.state $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/
+
+  # plugin headers are all over the place at the moment...
+  for i in common objc pragma pretty-print; do
+    ln -sf ../c-$i.h $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/plugin/include/c-family/c-$i.h
+  done
 
   # POSIX conformance launcher scripts for c89 and c99
   cat > $pkgdir/usr/bin/c89 <<"EOF"
