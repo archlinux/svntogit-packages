@@ -1,0 +1,142 @@
+From c532604b137cae2e2814280778f914e4cd0460d1 Mon Sep 17 00:00:00 2001
+From: Daniel Stenberg <daniel@haxx.se>
+Date: Sun, 20 Nov 2011 23:33:46 +0100
+Subject: [PATCH] -J -O: use -O name if no Content-Disposition header comes!
+
+A regression between 7.22.0 and 7.23.0 -- downloading a file with the
+flags -O and -J results in the content being written to stdout if and
+only if there was no Content-Disposition header in the http response. If
+there is a C-D header with a filename attribute, the output is correctly
+written.
+
+Reported by: Dave Reisner
+Bug: http://curl.haxx.se/mail/archive-2011-11/0030.html
+---
+ src/tool_cb_hdr.c      |    3 +-
+ src/tool_operate.c     |   59 ++++++++++++++++++++++----------------------
+ src/tool_operhlp.c     |   18 +++++++++++++
+ tests/data/Makefile.am |    2 +-
+ tests/data/test1210    |   63 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 112 insertions(+), 33 deletions(-)
+ create mode 100644 tests/data/test1210
+
+diff --git a/src/tool_cb_hdr.c b/src/tool_cb_hdr.c
+index fb24b45..dea7338 100644
+--- a/src/tool_cb_hdr.c
++++ b/src/tool_cb_hdr.c
+@@ -66,8 +66,7 @@ size_t tool_header_cb(void *ptr, size_t size, size_t nmemb, void *userdata)
+   }
+ #endif
+ 
+-  if(!outs->filename && (cb > 20) &&
+-    checkprefix("Content-disposition:", str)) {
++  if((cb > 20) && checkprefix("Content-disposition:", str)) {
+     const char *p = str + 20;
+ 
+     /* look for the 'filename=' parameter
+diff --git a/src/tool_operate.c b/src/tool_operate.c
+index 7ab815f..1e88120 100644
+--- a/src/tool_operate.c
++++ b/src/tool_operate.c
+@@ -576,41 +576,40 @@ int operate(struct Configurable *config, int argc, argv_item_t argv[])
+ 
+           if((urlnode->flags & GETOUT_USEREMOTE)
+              && config->content_disposition) {
+-            /* Our header callback sets the filename */
++            /* Our header callback MIGHT set the filename */
+             DEBUGASSERT(!outs.filename);
+           }
+-          else {
+-            if(config->resume_from_current) {
+-              /* We're told to continue from where we are now. Get the size
+-                 of the file as it is now and open it for append instead */
+-              struct_stat fileinfo;
+-              /* VMS -- Danger, the filesize is only valid for stream files */
+-              if(0 == stat(outfile, &fileinfo))
+-                /* set offset to current file size: */
+-                config->resume_from = fileinfo.st_size;
+-              else
+-                /* let offset be 0 */
+-                config->resume_from = 0;
+-            }
+ 
+-            if(config->resume_from) {
+-              /* open file for output: */
+-              FILE *file = fopen(outfile, config->resume_from?"ab":"wb");
+-              if(!file) {
+-                helpf(config->errors, "Can't open '%s'!\n", outfile);
+-                res = CURLE_WRITE_ERROR;
+-                goto quit_urls;
+-              }
+-              outs.fopened = TRUE;
+-              outs.stream = file;
+-              outs.init = config->resume_from;
+-            }
+-            else {
+-              outs.stream = NULL; /* open when needed */
++          if(config->resume_from_current) {
++            /* We're told to continue from where we are now. Get the size
++               of the file as it is now and open it for append instead */
++            struct_stat fileinfo;
++            /* VMS -- Danger, the filesize is only valid for stream files */
++            if(0 == stat(outfile, &fileinfo))
++              /* set offset to current file size: */
++              config->resume_from = fileinfo.st_size;
++            else
++              /* let offset be 0 */
++              config->resume_from = 0;
++          }
++
++          if(config->resume_from) {
++            /* open file for output: */
++            FILE *file = fopen(outfile, config->resume_from?"ab":"wb");
++            if(!file) {
++              helpf(config->errors, "Can't open '%s'!\n", outfile);
++              res = CURLE_WRITE_ERROR;
++              goto quit_urls;
+             }
+-            outs.filename = outfile;
+-            outs.s_isreg = TRUE;
++            outs.fopened = TRUE;
++            outs.stream = file;
++            outs.init = config->resume_from;
++          }
++          else {
++            outs.stream = NULL; /* open when needed */
+           }
++          outs.filename = outfile;
++          outs.s_isreg = TRUE;
+         }
+ 
+         if(uploadfile && !stdin_upload(uploadfile)) {
+diff --git a/src/tool_operhlp.c b/src/tool_operhlp.c
+index 808d2d5..4c1697b 100644
+--- a/src/tool_operhlp.c
++++ b/src/tool_operhlp.c
+@@ -178,6 +178,24 @@ CURLcode get_url_file_name(char **filename, const char *url)
+         return CURLE_OUT_OF_MEMORY;
+     }
+   }
++
++  /* in case we built debug enabled, we allow an environment variable
++   * named CURL_TESTDIR to prefix the given file name to put it into a
++   * specific directory
++   */
++#ifdef DEBUGBUILD
++  {
++    char *tdir = curlx_getenv("CURL_TESTDIR");
++    if(tdir) {
++      char buffer[512]; /* suitably large */
++      snprintf(buffer, sizeof(buffer), "%s/%s", tdir, *filename);
++      Curl_safefree(*filename);
++      *filename = strdup(buffer); /* clone the buffer */
++      curl_free(tdir);
++    }
++  }
++#endif
++
+   return CURLE_OK;
+ }
+ 
+-- 
+1.7.7.3
