@@ -4,21 +4,26 @@
 pkgbase=openldap
 pkgname=('libldap' 'openldap')
 pkgver=2.4.28
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.openldap.org/"
 license=('custom')
-makedepends=('libfetch' 'libltdl' 'libsasl' 'e2fsprogs' 'util-linux')
+makedepends=('libltdl' 'libsasl' 'e2fsprogs' 'util-linux')
 source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/${pkgbase}-${pkgver}.tgz
-        slapd slapd.default ntlm.patch)
+        slapd slapd.default
+        ntlm.patch
+        mutex-end-of-struct-sigsegv.patch)
 sha1sums=('d888beae1723002a5a2ff5509d3040df40885774'
           'bd1ea19256d3d467f1f803e0f4046ef50f17628f'
           'd89b8a533045123f1ab46c9c430cf132d58a20a4'
-          'e4afd9f1c810ef4c4cd8fe1101dfe5887f2b7eef')
+          'e4afd9f1c810ef4c4cd8fe1101dfe5887f2b7eef'
+          '7ca90dbe53c4207a2dee976359b8c6663e582d00')
 
 build() {
   cd "${srcdir}"/${pkgbase}-${pkgver}
   patch -Np1 -i "${srcdir}"/ntlm.patch
+  patch -Np1 -i "${srcdir}"/mutex-end-of-struct-sigsegv.patch
+
   sed -i 's|-m 644 $(LIBRARY)|-m 755 $(LIBRARY)|' libraries/{liblber,libldap,libldap_r}/Makefile.in
   sed -i 's|#define LDAPI_SOCK LDAP_RUNDIR LDAP_DIRSEP "run" LDAP_DIRSEP "ldapi"|#define LDAPI_SOCK LDAP_DIRSEP "run" LDAP_DIRSEP "openldap" LDAP_DIRSEP "ldapi"|' include/ldap_defaults.h
   sed -i 's|%LOCALSTATEDIR%/run|/run/openldap|' servers/slapd/slapd.conf
@@ -30,7 +35,8 @@ build() {
     --enable-ipv6 --enable-syslog --enable-local \
     --enable-bdb --enable-hdb \
     --enable-crypt --enable-dynamic \
-    --with-threads  --disable-wrappers \
+    --with-threads --disable-wrappers \
+    --without-fetch \
     --enable-spasswd --with-cyrus-sasl \
     --enable-overlays=mod --enable-modules=yes
   make
@@ -43,7 +49,7 @@ check() {
 
 package_libldap() {
   pkgdesc="Lightweight Directory Access Protocol (LDAP) client libraries"
-  depends=('libsasl' 'libfetch' 'e2fsprogs')
+  depends=('libsasl' 'e2fsprogs')
   backup=('etc/openldap/ldap.conf')
   options=('!libtool')
 
