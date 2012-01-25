@@ -1,0 +1,165 @@
+Index: libarchive/archive_read_support_format_zip.c
+===================================================================
+--- libarchive/archive_read_support_format_zip.c	(revision 4189)
++++ libarchive/archive_read_support_format_zip.c	(revision 4190)
+@@ -217,14 +217,13 @@
+ }
+ 
+ /*
+- * TODO: This is a performance sink because it forces
+- * the read core to drop buffered data from the start
+- * of file, which will then have to be re-read again
+- * if this bidder loses.
++ * TODO: This is a performance sink because it forces the read core to
++ * drop buffered data from the start of file, which will then have to
++ * be re-read again if this bidder loses.
+  *
+- * Consider passing in the winning bid value to subsequent
+- * bidders so that this bidder in particular can avoid
+- * seeking if it knows it's going to lose anyway.
++ * We workaround this a little by passing in the best bid so far so
++ * that later bidders can do nothing if they know they'll never
++ * outbid.  But we can certainly do better...
+  */
+ static int
+ archive_read_format_zip_seekable_bid(struct archive_read *a, int best_bid)
+@@ -311,19 +310,29 @@
+ 		external_attributes = archive_le32dec(p + 38);
+ 		zip_entry->local_header_offset = archive_le32dec(p + 42);
+ 
++		/* If we can't guess the mode, leave it zero here;
++		   when we read the local file header we might get
++		   more information. */
++		zip_entry->mode = 0;
+ 		if (zip_entry->system == 3) {
+ 			zip_entry->mode = external_attributes >> 16;
+-		} else {
+-			zip_entry->mode = AE_IFREG | 0777;
+ 		}
+ 
+-		/* Do we need to parse filename here? */
+-		/* Or can we wait until we read the local header? */
++		/* We don't read the filename until we get to the
++		   local file header.  Reading it here would speed up
++		   table-of-contents operations (removing the need to
++		   find and read local file header to get the
++		   filename) at the cost of requiring a lot of extra
++		   space. */
++		/* We don't read the extra block here.  We assume it
++		   will be duplicated at the local file header. */
+ 		__archive_read_consume(a,
+ 		    46 + filename_length + extra_length + comment_length);
+ 	}
+ 
+-	/* TODO: Sort zip entries. */
++	/* TODO: Sort zip entries by file offset so that we
++	   can optimize get_next_header() to use skip instead of
++	   seek. */
+ 
+ 	return ARCHIVE_OK;
+ }
+@@ -434,6 +443,11 @@
+ 			return (30);
+ 	}
+ 
++	/* TODO: It's worth looking ahead a little bit for a valid
++	 * PK signature.  In particular, that would make it possible
++	 * to read some UUEncoded SFX files or SFX files coming from
++	 * a network socket. */
++
+ 	return (0);
+ }
+ 
+Index: libarchive/test/test_compat_zip_6.zip.uu
+===================================================================
+--- libarchive/test/test_compat_zip_6.zip.uu	(revision 0)
++++ libarchive/test/test_compat_zip_6.zip.uu	(revision 4190)
+@@ -0,0 +1,10 @@
++begin 755 test_compat_zip_6.zip
++M4$L#!`H``````'@3-T`````````````````6````3F5W($9O;&1E<B].97<@
++M1F]L9&5R+U!+`P0*``````!\$S=`%4-8OPL````+````*P```$YE=R!&;VQD
++M97(O3F5W($9O;&1E<B].97<@5&5X="!$;V-U;65N="YT>'1S;VUE('1E>'0-
++M"E!+`0(4"PH``````'@3-T`````````````````6````````````$```````
++M``!.97<@1F]L9&5R+TYE=R!&;VQD97(O4$L!`A0+"@``````?!,W0!5#6+\+
++M````"P```"L``````````0`@````-````$YE=R!&;VQD97(O3F5W($9O;&1E
++M<B].97<@5&5X="!$;V-U;65N="YT>'102P4&``````(``@"=````B```````
++`
++end
+Index: libarchive/test/test_compat_zip.c
+===================================================================
+--- libarchive/test/test_compat_zip.c	(revision 4189)
++++ libarchive/test/test_compat_zip.c	(revision 4190)
+@@ -348,6 +348,53 @@
+ 	free(p);
+ }
+ 
++/*
++ * Issue 225: Errors extracting MSDOS Zip archives with directories.
++ */
++static void
++compat_zip_6_verify(struct archive *a)
++{
++	struct archive_entry *ae;
++
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
++	assertEqualString("New Folder/New Folder/", archive_entry_pathname(ae));
++	assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
++	assertEqualInt(1327314468, archive_entry_mtime(ae));
++	assertEqualInt(0, archive_entry_size(ae));
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
++	assertEqualString("New Folder/New Folder/New Text Document.txt", archive_entry_pathname(ae));
++	assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
++	assertEqualInt(1327314476, archive_entry_mtime(ae));
++	assertEqualInt(11, archive_entry_size(ae));
++	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
++}
++
++static void
++test_compat_zip_6(void)
++{
++	const char *refname = "test_compat_zip_6.zip";
++	struct archive *a;
++	void *p;
++	size_t s;
++
++	extract_reference_file(refname);
++	p = slurpfile(&s, refname);
++
++	assert((a = archive_read_new()) != NULL);
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
++	assertEqualIntA(a, ARCHIVE_OK, read_open_memory_seek(a, p, s, 7));
++	compat_zip_6_verify(a);
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
++
++	assert((a = archive_read_new()) != NULL);
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
++	assertEqualIntA(a, ARCHIVE_OK, read_open_memory(a, p, s, 7));
++	compat_zip_6_verify(a);
++	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
++}
++
+ DEFINE_TEST(test_compat_zip)
+ {
+ 	test_compat_zip_1();
+@@ -355,6 +402,7 @@
+ 	test_compat_zip_3();
+ 	test_compat_zip_4();
+ 	test_compat_zip_5();
++	test_compat_zip_6();
+ }
+ 
+ 
+Index: Makefile.am
+===================================================================
+--- Makefile.am	(revision 4189)
++++ Makefile.am	(revision 4190)
+@@ -462,6 +462,7 @@
+ 	libarchive/test/test_compat_zip_3.zip.uu			\
+ 	libarchive/test/test_compat_zip_4.zip.uu			\
+ 	libarchive/test/test_compat_zip_5.zip.uu			\
++	libarchive/test/test_compat_zip_6.zip.uu			\
+ 	libarchive/test/test_fuzz_1.iso.Z.uu				\
+ 	libarchive/test/test_fuzz.cab.uu				\
+ 	libarchive/test/test_fuzz.lzh.uu				\
