@@ -142,7 +142,7 @@ build() {
       --with-tls --with-__thread \
       --enable-bind-now --without-gd \
       --without-cvs --disable-profile \
-      --enable-multi-arch      
+      --enable-multi-arch
 
   # build libraries with hardening disabled
   echo "build-programs=no" >> configparms
