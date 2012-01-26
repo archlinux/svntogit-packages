@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=3
+pkgrel=4
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -29,9 +29,10 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.14-revert-4768ae77.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
+        glibc-2.15-regex.patch
         glibc-2.15-lddebug-scopes.patch
         glibc-2.15-revert-c5a0802a.patch
-        glibc-2.15-math64crash.patch
+        glibc-2.15-strcmp-disable-avx.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -44,9 +45,10 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '7da8c554a3b591c7401d7023b1928afc'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
+         'b3526cbd5e29773560dba725db99af5a'
          '3c219ddfb619b6df903cac4cc42c611d'
          '7ae3e426251ae33e73dbad71f9c91378'
-         'dc7550e659ddd685bd78a930d15a01f2'
+         '7a44dd821835e4984aa75ad44fad3baf'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -94,6 +96,10 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3 (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
 
+  # Fix up regcomp/regexec
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=2ba92745
+  patch -Np1 -i ${srcdir}/glibc-2.15-regex.patch
+
   # propriety nvidia crash - https://bugzilla.redhat.com/show_bug.cgi?id=737223 
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=0c95ab64  (only fedora branch...)
   patch -Np1 -i ${srcdir}/glibc-2.15-lddebug-scopes.patch
@@ -102,9 +108,13 @@ build() {
   # https://bugzilla.redhat.com/show_bug.cgi?id=769421
   patch -Np1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
 
-  # revert optimized math routines that can cause crashes (FS#27736, FS#27743)
-  # obviously not a real fix...
-  patch -Np1 -i ${srcdir}/glibc-2.15-math64crash.patch
+  # Disable AVX in strcmp as this breaks Xen
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13583
+  patch -Np1 -i ${srcdir}/glibc-2.15-strcmp-disable-avx.patch
+
+  # "revert" optimized math routines that can cause crashes (FS#27736, FS#27743)
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13618
+  rm sysdeps/x86_64/fpu/multiarch/*
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -132,7 +142,7 @@ build() {
       --with-tls --with-__thread \
       --enable-bind-now --without-gd \
       --without-cvs --disable-profile \
-      --enable-multi-arch
+      --enable-multi-arch      
 
   # build libraries with hardening disabled
   echo "build-programs=no" >> configparms
