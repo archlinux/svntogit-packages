@@ -7,8 +7,8 @@ pkgname=('linux-lts' 'linux-lts-headers') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.0
-pkgver=${_basekernel}.17
-pkgrel=2
+pkgver=${_basekernel}.18
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -21,26 +21,20 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.0.tar.xz"
         # standard config files for mkinitcpio ramdisk
         "${pkgname}.preset"
         'change-default-console-loglevel.patch'
-        'i915-fix-ghost-tv-output.patch'
-        'CVE-2012-0056.patch')
+        'i915-fix-ghost-tv-output.patch')
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         'e86da20888dfcd19b94f5d518329ca25'
+         '0aa3ef9fc671a4912c36206f2498dc96'
          '516780158b2dcf6791edc062674a1e7a'
          '5fee953e4746c31eb7ce8890ce2d24de'
          '21a33df5fba2da2f56e447fb171f02c0'
          '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         '31bf249684838cbe024419da94ed5111')
+         '263725f20c0b9eb9c353040792d644e5')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
 
   # add upstream patch
   patch -p1 -i "${srcdir}/patch-${pkgver}"
-
-  # patch for CVE-2012-0056
-  # see http://blog.zx2c4.com/749 for details
-  patch -p1 -i "${srcdir}/CVE-2012-0056.patch"
 
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
