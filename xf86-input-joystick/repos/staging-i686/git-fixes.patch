@@ -1,0 +1,399 @@
+From 204dcb86368b011824fc5006f87b9e394d03a394 Mon Sep 17 00:00:00 2001
+From: Terry Lambert <tlambert@chromium.org>
+Date: Sat, 16 Jul 2011 00:23:22 +0000
+Subject: Return proper default for unknown values in pInfo->device_control.
+
+Signed-off-by: Terry Lambert <tlambert@chromium.org>
+Reviewed-by: Stephane Marchesin <marcheu@chromium.org>
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+diff --git a/src/jstk.c b/src/jstk.c
+index ec6b79a..6db0e7c 100644
+--- a/src/jstk.c
++++ b/src/jstk.c
+@@ -419,8 +419,7 @@ jstkDeviceControlProc(DeviceIntPtr       pJstk,
+ 
+     default:
+         ErrorF("unsupported mode=%d\n", what);
+-        return !Success;
+-        break;
++        return BadValue;
+     } /* switch (what) */
+     return Success;
+ }
+diff --git a/src/jstk_key.c b/src/jstk_key.c
+index 3c471ce..d699dcd 100644
+--- a/src/jstk_key.c
++++ b/src/jstk_key.c
+@@ -169,6 +169,8 @@ jstkKeyboardDeviceControlProc(DeviceIntPtr       dev,
+         DBG(2, ErrorF("jstkKeyboardDeviceControlProc what=DEVICE_CLOSE\n"));
+         dev->public.on = FALSE;
+         break;
++    default:
++        return BadValue;
+     }
+ 
+     return Success;
+--
+cgit v0.9.0.2-2-gbebe
+From b3b62328cf3f36c20c54a298f8a921e6eef42c4d Mon Sep 17 00:00:00 2001
+From: Devin J. Pohly <djpohly+xorg@gmail.com>
+Date: Sat, 03 Sep 2011 23:00:07 +0000
+Subject: unify capitalization of joystick properties
+
+the axis keys high/low properties were inconsistently capitalized,
+leading to potential confusion as to why one works but not the other.
+
+Signed-off-by: Devin J. Pohly <djpohly+xorg@gmail.com>
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+diff --git a/include/joystick-properties.h b/include/joystick-properties.h
+index 49ef800..36f4082 100644
+--- a/include/joystick-properties.h
++++ b/include/joystick-properties.h
+@@ -99,7 +99,7 @@ typedef enum _JSTK_MAPPING {
+ 
+ /** Scancodes for axis in high position */
+ /* 8 bit, 4 per axis */
+-#define JSTK_PROP_AXIS_KEYS_HIGH "Axis keys (high)"
++#define JSTK_PROP_AXIS_KEYS_HIGH "Axis Keys (high)"
+ 
+ /** Set the mapping of each button to
+     none, x, y, zx, zy, button, key, speed_multiply,
+--
+cgit v0.9.0.2-2-gbebe
+From b607c4ebeea4122694f02ba87f06e4cdb23114f1 Mon Sep 17 00:00:00 2001
+From: Sascha Hlusiak <saschahlusiak@arcor.de>
+Date: Sat, 15 Oct 2011 22:47:52 +0000
+Subject: label buttons and axes
+
+Buttons are labeled "Button %d", starting with 0 and representing the button in X _after_ mapping.
+Mapping can be changed while running so the labels will be constant.
+
+Axes are labeled "Axis %d", starting with 1, representing the _physical_ axis that reports the valuator
+data. The raw valuators can't be dynamically mapped, the first two valuators always are labeled "Rel X"
+and "Rel Y", representing the aggregated post-calculation data from all axes.
+
+Signed-off-by: Sascha Hlusiak <saschahlusiak@arcor.de>
+---
+diff --git a/man/joystick.man b/man/joystick.man
+index da92ceb..b401de5 100644
+--- a/man/joystick.man
++++ b/man/joystick.man
+@@ -140,7 +140,11 @@ Neither
+ .B mode
+ nor
+ .B axis
+-needs to be set to generate extra valuator events.
++needs to be set to generate extra valuator events. The axis will be labelled according to it's physical axis number, beginning with 
++.I 1
++, i.e.
++.I \*qAxis 1\*q
++for the first axis (being the 3rd valuator).
+ Default: not set.
+ .TP 7
+ .BI "\*qaxis="[<factor>]<axis> \*q
+@@ -318,6 +322,28 @@ and the second and fourth axis to the arrow keys
+ The keys for the first two axes will be generated in an interval according to the value of the axis. The autorepeat speed of the first axis will be half the speed of that of the second axis.
+ The keys for the third and fourth axis are generated once when the axis moves out of the deadzone and when it moves back into the deadzone. X.Org will autorepeat those keys according to current keyboard settings.
+ 
++.SH "XI2 Events"
++If you only care about raw events instead of using the joystick as a mouse replacement, don't forget to unmap and add valuators to all axes and map the remaining buttons:
++
++.nf
++.BI "  Option  \*qMapAxis1\*q      \*q" "mode=none valuator" \*q
++.BI "  Option  \*qMapAxis2\*q      \*q" "mode=none valuator" \*q
++.BI "  Option  \*qMapAxis3\*q      \*q" "mode=none valuator" \*q
++.BI "  Option  \*qMapAxis4\*q      \*q" "mode=none valuator" \*q
++\ \ ...
++.BI "  Option  \*qMapButton1\*q      \*q" "button=1" \*q
++.BI "  Option  \*qMapButton2\*q      \*q" "button=2" \*q
++.BI "  Option  \*qMapButton3\*q      \*q" "button=3" \*q
++.BI "  Option  \*qMapButton4\*q      \*q" "button=4" \*q
++.BI "  Option  \*qMapButton5\*q      \*q" "button=5" \*q
++\ \ ...
++.fi
++
++You might also want to set the device "floating" to stop it from reporting core events:
++.nf
++.BI "  Option  \*qFloating\*q      \*q" "true" \*q
++.fi
++
+ .SH "NOTES"
+ Configuration through
+ .I InputClass
+diff --git a/src/jstk.c b/src/jstk.c
+index 6db0e7c..772683f 100644
+--- a/src/jstk.c
++++ b/src/jstk.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2007-2009 by Sascha Hlusiak. <saschahlusiak@freedesktop.org>     
++ * Copyright 2007-2011 by Sascha Hlusiak. <saschahlusiak@freedesktop.org>     
+  * Copyright 1995-1999 by Frederic Lepied, France. <Lepied@XFree86.org>       
+  *                                                                            
+  * Permission to use, copy, modify, distribute, and sell this software and its
+@@ -21,7 +21,6 @@
+  * PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+ #endif
+@@ -300,6 +299,7 @@ jstkDeviceControlProc(DeviceIntPtr       pJstk,
+     switch (what) {
+     case DEVICE_INIT: {
+         int m;
++        char str[32];
+         CARD8 buttonmap[BUTTONMAP_SIZE+1];
+         DBG(1, ErrorF("jstkDeviceControlProc what=INIT\n"));
+         /* Probe device and return if error */
+@@ -312,11 +312,14 @@ jstkDeviceControlProc(DeviceIntPtr       pJstk,
+         }
+ 
+         for (m=0; m<=BUTTONMAP_SIZE; m++) {
++            sprintf(str, "Button %d", m);
++
+             buttonmap[m] = m;
+-	}
++            btn_labels[m] = MakeAtom(str, strlen(str), TRUE);
++        }
++
++
+ 
+-            
+-            
+         if (InitButtonClassDeviceStruct(pJstk, BUTTONMAP_SIZE, 
+             btn_labels,
+             buttonmap) == FALSE) {
+@@ -331,7 +334,9 @@ jstkDeviceControlProc(DeviceIntPtr       pJstk,
+             if (priv->axis[i].valuator != -1)
+         {
+             DBG(3, ErrorF("Axis %d will be valuator %d\n", i, m));
++            sprintf(str, "Axis %d", i + 1);
+             priv->axis[i].valuator = m++;
++            axes_labels[i] = MakeAtom(str, strlen(str), TRUE);
+         }
+ 
+         if (InitValuatorClassDeviceStruct(pJstk, m, axes_labels,
+@@ -719,7 +724,6 @@ static XF86ModuleVersionInfo jstkVersionRec =
+                    /* a tool */
+ };
+ 
+-
+ /*
+  ***************************************************************************
+  *
+@@ -732,3 +736,6 @@ _X_EXPORT XF86ModuleData joystickModuleData = {
+     jstkDriverPlug,
+     jstkDriverUnplug
+ };
++
++/* vim: set filetype=c.doxygen ts=4 et: */
++
+--
+cgit v0.9.0.2-2-gbebe
+From e0193debf8f5a72b0a06977d5dea3365ad9cafbe Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 31 Oct 2011 04:27:22 +0000
+Subject: Fix option type for option duplication
+
+xf86OptionListDuplicate() duplicates an XF86Option list, not an InputOption
+list.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Jeremy Huddleston <jeremyhu@apple.com>
+---
+diff --git a/src/jstk_key.c b/src/jstk_key.c
+index d699dcd..e842941 100644
+--- a/src/jstk_key.c
++++ b/src/jstk_key.c
+@@ -253,26 +253,26 @@ jstkKeyboardHotplug(InputInfoPtr pInfo, int flags)
+     int rc;
+     char name[512] = {0};
+     InputAttributes *attrs = NULL;
+-    InputOption *options;
+     InputOption *iopts = NULL, *tmp;
+     DeviceIntPtr dev;
++    XF86OptionPtr opts;
+ 
+     /* duplicate option list, append to name */
+-    options = xf86OptionListDuplicate(pInfo->options);
++    opts = xf86OptionListDuplicate(pInfo->options);
+     strcpy(name, pInfo->name);
+     strcat(name, " (keys)");
+-    options = xf86ReplaceStrOption(options, "Name", name);
+-    options = xf86ReplaceStrOption(options, "_source", "_driver/joystick");
++    opts = xf86ReplaceStrOption(opts, "Name", name);
++    opts = xf86ReplaceStrOption(opts, "_source", "_driver/joystick");
+ 
+-    while(options)
++    while(opts)
+     {
+         tmp = calloc(1, sizeof(InputOption));
+ 
+-        tmp->key = xf86OptionName(options);
+-        tmp->value = xf86OptionValue(options);
++        tmp->key = xf86OptionName(opts);
++        tmp->value = xf86OptionValue(opts);
+         tmp->next = iopts;
+         iopts = tmp;
+-        options = xf86NextOption(options);
++        opts = xf86NextOption(opts);
+     }
+ 
+     /* duplicate attribute list */
+--
+cgit v0.9.0.2-2-gbebe
+From 7ccf3a75292d71104c976bf6afb389cccaac1a7d Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 31 Oct 2011 04:33:08 +0000
+Subject: Deal with opaque input option types.
+
+ABI 14 made the InputOption type opaque, move the existing code to ifdefs
+and use the new function calls otherwise.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Jeremy Huddleston <jeremyhu@apple.com>
+Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
+---
+diff --git a/src/jstk_key.c b/src/jstk_key.c
+index e842941..a71275a 100644
+--- a/src/jstk_key.c
++++ b/src/jstk_key.c
+@@ -247,13 +247,46 @@ int jstkKeyboardPreInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
+     return Success;
+ }
+ 
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 14
++static InputOption*
++input_option_new(InputOption* list, char *key, char *value)
++{
++    InputOption *tmp;
++
++    tmp = calloc(1, sizeof(*tmp));
++    tmp->key = key;
++    tmp->value = value;
++    tmp->next = list;
++
++    return tmp;
++}
++
++static void
++input_option_free_list(InputOption **list)
++{
++    InputOption *iopts = *list;
++
++    while(iopts)
++    {
++        InputOption *tmp = iopts->next;
++        free(iopts->key);
++        free(iopts->value);
++        free(iopts);
++        iopts = tmp;
++    }
++
++    *list = NULL;
++}
++
++#endif
++
+ InputInfoPtr
+ jstkKeyboardHotplug(InputInfoPtr pInfo, int flags)
+ {
+     int rc;
+     char name[512] = {0};
+     InputAttributes *attrs = NULL;
+-    InputOption *iopts = NULL, *tmp;
++    InputOption *iopts = NULL;
+     DeviceIntPtr dev;
+     XF86OptionPtr opts;
+ 
+@@ -266,12 +299,9 @@ jstkKeyboardHotplug(InputInfoPtr pInfo, int flags)
+ 
+     while(opts)
+     {
+-        tmp = calloc(1, sizeof(InputOption));
+-
+-        tmp->key = xf86OptionName(opts);
+-        tmp->value = xf86OptionValue(opts);
+-        tmp->next = iopts;
+-        iopts = tmp;
++        iopts = input_option_new(iopts,
++                                 xf86OptionName(opts),
++                                 xf86OptionValue(opts));
+         opts = xf86NextOption(opts);
+     }
+ 
+@@ -280,14 +310,7 @@ jstkKeyboardHotplug(InputInfoPtr pInfo, int flags)
+ 
+     rc = NewInputDeviceRequest(iopts, attrs, &dev);
+ 
+-    while(iopts)
+-    {
+-        tmp = iopts->next;
+-        free(iopts->key);
+-        free(iopts->value);
+-        free(iopts);
+-        iopts = tmp;
+-    }
++    input_option_free_list(&iopts);
+ 
+     FreeInputAttributes(attrs);
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From 411c1838456c055d3f911c54ed58bb11a6bf0da3 Mon Sep 17 00:00:00 2001
+From: Sascha Hlusiak <saschahlusiak@arcor.de>
+Date: Sun, 13 Nov 2011 17:04:25 +0000
+Subject: man: valuators are not added automatically
+
+---
+diff --git a/man/joystick.man b/man/joystick.man
+index b401de5..9f38ceb 100644
+--- a/man/joystick.man
++++ b/man/joystick.man
+@@ -129,9 +129,6 @@ can be one of:
+ 
+ .B none, relative, accelerated, absolute
+ 
+-Every axis which's mode is not
+-.B none
+-will be reported as an additional valuator.
+ .TP 7
+ .B \*qvaluator\*q
+ Send extra valuator events for this axis. The valuators will be numbered ascending, starting with 2 (valuator 0 and 1 are reserved for pointer movement). The range of the valuators is always 
+--
+cgit v0.9.0.2-2-gbebe
+From b217fabdef1714ed4898e08de4c2a6b9cc8d4f0f Mon Sep 17 00:00:00 2001
+From: Sascha Hlusiak <saschahlusiak@arcor.de>
+Date: Sun, 13 Nov 2011 19:36:07 +0000
+Subject: Copy pInfo->driver to option list to fix hotplugging of keyboard device
+
+udev does copy the Driver line to the list of options, but when manually
+specifying the driver in xorg.conf, the option "Driver" is unset. Because we
+do hotplug a sub-device from within the core device, we need the "Driver"
+option to be present in the list.
+
+This should fix archlinux bug #23577:
+  https://bugs.archlinux.org/task/23577
+
+Thanks to Malek for coming up with a fix.
+
+Signed-off-by: Sascha Hlusiak <contact@saschahlusiak.de>
+---
+diff --git a/src/jstk_key.c b/src/jstk_key.c
+index a71275a..241b15d 100644
+--- a/src/jstk_key.c
++++ b/src/jstk_key.c
+@@ -296,6 +296,7 @@ jstkKeyboardHotplug(InputInfoPtr pInfo, int flags)
+     strcat(name, " (keys)");
+     opts = xf86ReplaceStrOption(opts, "Name", name);
+     opts = xf86ReplaceStrOption(opts, "_source", "_driver/joystick");
++    opts = xf86AddNewOption(opts, "Driver", pInfo->driver);
+ 
+     while(opts)
+     {
+--
+cgit v0.9.0.2-2-gbebe
