@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=4
+pkgrel=5
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -32,7 +32,11 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-regex.patch
         glibc-2.15-lddebug-scopes.patch
         glibc-2.15-revert-c5a0802a.patch
-        glibc-2.15-strcmp-disable-avx.patch
+        glibc-2.15-scanf.patch
+        glibc-2.15-ifunc.patch
+        glibc-2.15-avx.patch
+        glibc-2.15-gb18030.patch
+        glibc-2.15-revert-netlink-cache.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -48,10 +52,15 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          'b3526cbd5e29773560dba725db99af5a'
          '3c219ddfb619b6df903cac4cc42c611d'
          '7ae3e426251ae33e73dbad71f9c91378'
-         '7a44dd821835e4984aa75ad44fad3baf'
+         '39353f53168f4a7509ba5fe0d9f218b8'
+         '136eb969f5d6bb6f5155f72a1a7cf23e'
+         '41ae047ac88e8f6f547c70b0a0bc3b72'
+         'c4cd34f20ccd37817f6c1374bd4ee68e'
+         '6771b0b2bb8aa3870a259fd2f46c424f'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
+
 
 mksource() {
   git clone git://sourceware.org/git/glibc.git
@@ -76,24 +85,24 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-__i686.patch
 
   # http://www.exploit-db.com/exploits/15274/
-  # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09 (only fedora branch...)
+  # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09  (fedora branch)
   patch -Np1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileged-program.patch
 
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9 (only fedora branch...)
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9  (fedora branch)
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
   patch -Np1 -i ${srcdir}/glibc-2.14-libdl-crash.patch
 
   # Revert commit causing issues with crappy DNS servers...
   # Will be removed when workaround becomes annoying to maintain - USE A BETTER DNS SERVER!
-  # Note that both these patches appear not to fix the issue completely:
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=032c0ee3 (only fedora branch...)
+  # Note that both these patches appear not to fix the issue completely (but rebuilds may fix):
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13013  (used by opensuse)
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=032c0ee3  (fedora branch)
   patch -Np1 -i ${srcdir}/glibc-2.14-revert-4768ae77.patch
 
   # re-export RPC interface until libtirpc is ready as a replacement
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873 (only fedora branch...)
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873  (fedora branch)
   patch -Np1 -i ${srcdir}/glibc-2.14-reexport-rpc-interface.patch
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3 (only fedora branch...)
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3  (fedora branch)
   patch -Np1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
 
   # Fix up regcomp/regexec
@@ -101,20 +110,36 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-2.15-regex.patch
 
   # propriety nvidia crash - https://bugzilla.redhat.com/show_bug.cgi?id=737223 
-  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=0c95ab64  (only fedora branch...)
+  # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=0c95ab64  (fedora branch)
   patch -Np1 -i ${srcdir}/glibc-2.15-lddebug-scopes.patch
 
   # revert commit c5a0802a - causes various hangs
   # https://bugzilla.redhat.com/show_bug.cgi?id=769421
   patch -Np1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
 
-  # Disable AVX in strcmp as this breaks Xen
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13583
-  patch -Np1 -i ${srcdir}/glibc-2.15-strcmp-disable-avx.patch
+  # fix realloc usage in vfscanf
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=20b38e03
+  patch -Np1 -i ${srcdir}/glibc-2.15-scanf.patch
 
-  # "revert" optimized math routines that can cause crashes (FS#27736, FS#27743)
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13618
-  rm sysdeps/x86_64/fpu/multiarch/*
+  # fix ifunc relocations
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=6ee65ed6
+  patch -Np1 -i ${srcdir}/glibc-2.15-ifunc.patch
+        
+  # fix AVX detection
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=afc5ed09
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=08cf777f
+  patch -Np1 -i ${srcdir}/glibc-2.15-avx.patch
+
+  # fix GB18030 charmap
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=11837
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=2a57bd79  (fedora branch)
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=3d828a61  (fedora branch)
+  patch -Np1 -i ${srcdir}/glibc-2.15-gb18030.patch
+
+  # fix crash in __nscd_get_mapping if nscd not running
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13594
+  # reverts commit 3a2c0242 and other necessary following changes...
+  patch -Np1 -i ${srcdir}/glibc-2.15-revert-netlink-cache.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -138,7 +163,7 @@ build() {
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --with-headers=/usr/include \
       --enable-add-ons=nptl,libidn \
-      --enable-kernel=2.6.27 \
+      --enable-kernel=2.6.32 \
       --with-tls --with-__thread \
       --enable-bind-now --without-gd \
       --without-cvs --disable-profile \
