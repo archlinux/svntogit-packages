@@ -3,30 +3,34 @@
 
 pkgname=ghostscript
 pkgver=9.04
-pkgrel=5
+pkgrel=6
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
-depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng' 'libjpeg' 'libtiff' 'lcms') # 'lcms2' won't get used) # move in libpaper from community?
+depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg' 'libtiff>=4.0.0' 'lcms') # 'lcms2' won't get used) # move in libpaper from community?
 makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2
-	ghostscript-cups-rgbw.patch)
+	ghostscript-cups-rgbw.patch
+	ghostscript-gpl-9.04-freetype-underlinking.patch)
 options=('!libtool' '!makeflags')
 md5sums=('9f6899e821ab6d78ab2c856f10fa3023'
-         'bc56eb8c5fef0ecf964f6b3e9b7e65ae')
+         'bc56eb8c5fef0ecf964f6b3e9b7e65ae'
+         'a1928c3e4459dcfee0aaa4b38fadba57')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
   
   # fix broken color printing https://bugs.archlinux.org/task/25519
   patch -Np1 -i ${srcdir}/ghostscript-cups-rgbw.patch
-
+  # fix a linking issue
+  patch -Np1 -i ${srcdir}/ghostscript-gpl-9.04-freetype-underlinking.patch
+  
   # force it to use system-libs
-  rm -rf jpeg libpng zlib jasper expat tiff freetype lcms
-
+  rm -rf jpeg libpng zlib jasper expat tiff lcms freetype 
+  
   ./configure --prefix=/usr \
 	--enable-dynamic \
 	--with-ijs \
@@ -41,7 +45,7 @@ build() {
 	--without-luratech \
 	--disable-compile-inits #--help # needed for linking with system-zlib
   make
-  
+
   # Build IJS
   cd ${srcdir}/ghostscript-${pkgver}/ijs
   ./autogen.sh
