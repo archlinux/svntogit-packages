@@ -1,0 +1,35 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+. /etc/conf.d/ypbind
+. /etc/conf.d/nisdomainname
+
+name=ypbind
+PID=$(pidof -o %PPID /usr/sbin/ypbind)
+
+case "$1" in
+start)
+	stat_busy "Starting $name daemon"
+	[[ -n $NISDOMAINNAME ]] && /usr/bin/domainname "$NISDOMAINNAME" &>/dev/null
+	[[ -z "$PID" ]] && /usr/sbin/ypbind $YPBIND_ARGS &>/dev/null \
+	&& { add_daemon $name; stat_done; } \
+	|| { stat_fail; exit 1; }
+	;;
+stop)
+	stat_busy "Stopping $name daemon"
+	[[ -n "$PID" ]] && kill $PID &>/dev/null \
+	&& { rm_daemon $name; stat_done; } \
+	|| { stat_fail; exit 1; }
+	;;
+restart)
+	$0 stop
+	sleep 1
+	$0 start
+	;;
+*)
+	echo "usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac
