@@ -1,0 +1,61 @@
+# $Id$
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+
+pkgbase=lvm2
+pkgname=('lvm2' 'device-mapper')
+pkgver=2.02.90
+pkgrel=1
+arch=('i686' 'x86_64')
+url="http://sourceware.org/lvm2/"
+license=('GPL2' 'LGPL2.1')
+groups=('base')
+source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${pkgver}.tgz{,.asc}
+        lvm2_install
+        lvm2_hook
+        11-dm-initramfs.rules)
+sha1sums=('de37e533e5f3af6a18c1acadd7a07ae06150d7d6'
+          '61c4b46dff520f9c178062930ea9f169019f57e6'
+          '7f108b2f2056eb050fc898bf5190ecf9145aed8a'
+          '7d63aa838703c9f986531a78164b556f765f5cce'
+          'f6a554eea9557c3c236df2943bb6e7e723945c41')
+
+build() {
+  cd "${srcdir}/LVM2.${pkgver}"
+  sed -i 's|/usr/bin/tr|/bin/tr|' scripts/lvmdump.sh
+  unset LDFLAGS
+  ./configure --prefix= --sysconfdir=/etc --localstatedir=/var --datarootdir=/usr/share \
+    --includedir=/usr/include --with-usrlibdir=/usr/lib \
+    --enable-pkgconfig --enable-readline --enable-dmeventd --enable-cmdlib --enable-applib \
+    --with-udevdir=/lib/udev/rules.d/ --enable-udev_sync --enable-udev_rules
+  make
+}
+
+package_device-mapper() {
+  pkgdesc="Device mapper userspace library and tools"
+  url="http://sourceware.org/dm/"
+  depends=('glibc' 'udev')
+
+  cd "${srcdir}/LVM2.${pkgver}"
+  make DESTDIR="${pkgdir}" install_device-mapper
+  # extra udev rule for device-mapper in initramfs
+  install -D -m644 "${srcdir}/11-dm-initramfs.rules" "${pkgdir}/lib/initcpio/udev/11-dm-initramfs.rules"
+}
+
+package_lvm2() {
+  pkgdesc="Logical Volume Manager 2 utilities"
+  depends=('bash' "device-mapper>=${pkgver}" 'udev' 'readline')
+  conflicts=('lvm' 'mkinitcpio<0.7')
+  backup=('etc/lvm/lvm.conf')
+  options=('!makeflags')
+
+  cd "${srcdir}/LVM2.${pkgver}"
+  make DESTDIR="${pkgdir}" install_lvm2
+  # install applib
+  make -C liblvm DESTDIR="${pkgdir}" install
+  # /etc directories
+  install -d "${pkgdir}"/etc/lvm/{archive,backup}
+  # mkinitcpio hook
+  install -D -m644 "${srcdir}/lvm2_hook" "${pkgdir}/lib/initcpio/hooks/lvm2"
+  install -D -m644 "${srcdir}/lvm2_install" "${pkgdir}/lib/initcpio/install/lvm2"
+}
