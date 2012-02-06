@@ -1,0 +1,33 @@
+post_install() {
+	getent group postdrop &>/dev/null || groupadd -g 75 postdrop >/dev/null
+	getent group postfix  &>/dev/null || groupadd -g 73 postfix  >/dev/null
+	getent passwd postfix &>/dev/null || useradd -u 73 -d /var/spool/postfix -g postfix -s /bin/false postfix >/dev/null
+
+	cd var/spool/postfix
+	chown postfix active bounce corrupt defer deferred flush hold incoming private public maildrop trace saved
+	chgrp postdrop public maildrop
+	cd ../../../usr/sbin
+	chgrp postdrop postqueue postdrop
+	chmod g+s postqueue postdrop
+	cd ../..
+	chown postfix var/lib/postfix
+
+	newaliases
+}
+
+post_upgrade() {
+	post_install
+
+	if [ `vercmp $2 2.9.0` = -1 ]; then cat <<EOF
+
+==> You must now run "postfix reload" due to inter-daemon protocol change.
+
+EOF
+	fi
+}
+
+pre_remove() {
+	getent passwd postfix &>/dev/null && userdel  postfix  >/dev/null
+	getent group postfix  &>/dev/null && groupdel postfix  >/dev/null
+	getent group postdrop &>/dev/null && groupdel postdrop >/dev/null
+}
