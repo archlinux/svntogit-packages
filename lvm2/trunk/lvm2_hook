@@ -4,17 +4,17 @@ run_hook ()
     /sbin/modprobe -q dm-mod >/dev/null 2>&1
     if [ -e "/sys/class/misc/device-mapper" ]; then
         if [ ! -e "/dev/mapper/control" ]; then
+            local major minor
+            IFS=: read major minor < /sys/class/misc/device-mapper/dev
             mkdir /dev/mapper
-            mknod "/dev/mapper/control" c $(cat /sys/class/misc/device-mapper/dev | sed 's|:| |')
+            mknod "/dev/mapper/control" c ${major} ${minor}
         fi
 
         # If the lvmwait= parameter has been specified on the command line
         # wait for the device(s) before trying to activate the volume group(s)
-        if [ -n "${lvmwait}" ]; then
-            for pvdev in $(echo ${lvmwait} | sed 's|,| |g'); do
-                poll_device ${pvdev} ${rootdelay}
-            done
-        fi
+        for pvdev in ${lvmwait//,/ }; do
+            poll_device ${pvdev} ${rootdelay}
+        done
 
         [ "${quiet}" = "y" ] && LVMQUIET=">/dev/null"
 
