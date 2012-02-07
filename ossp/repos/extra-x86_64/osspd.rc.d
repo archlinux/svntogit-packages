@@ -19,7 +19,7 @@ case "$1" in
   start)
     stat_busy "Starting OSS userspace bridge"
     if [ -z "$PID" ]; then 
-      /sbin/modprobe cuse &>/dev/null
+      /sbin/modprobe -a cuse snd-seq-oss &>/dev/null
       /sbin/udevadm settle --quiet
       /usr/sbin/osspd --dsp-slave="$DSP_SLAVE"
     fi
