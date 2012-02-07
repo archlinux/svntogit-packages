@@ -3,7 +3,7 @@
 
 pkgname=libsndfile
 pkgver=1.0.25
-pkgrel=1
+pkgrel=2
 pkgdesc="A C library for reading and writing files containing sampled sound"
 arch=('i686' 'x86_64')
 url="http://www.mega-nerd.com/libsndfile"
