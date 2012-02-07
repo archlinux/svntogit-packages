@@ -4,28 +4,39 @@
 
 pkgname=libxslt
 pkgver=1.1.26
-pkgrel=2
+pkgrel=3
 pkgdesc="XML stylesheet transformation library"
 arch=('i686' 'x86_64')
 url="http://xmlsoft.org/XSLT/"
 license=('custom')
-depends=('libxml2>=2.7.7' 'libgcrypt>=1.4.6')
+depends=('libxml2' 'libgcrypt')
 makedepends=('python2')
+checkdepends=('docbook-xml')
 options=('!libtool')
-source=(ftp://xmlsoft.org/libxslt/${pkgname}-${pkgver}.tar.gz)
-md5sums=('e61d0364a30146aaa3001296f853b2b9')
+source=(ftp://xmlsoft.org/libxslt/${pkgname}-${pkgver}.tar.gz
+        CVE-2011-1202.patch)
+md5sums=('e61d0364a30146aaa3001296f853b2b9'
+         'ce9744943575efaa6b5501668899b753')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure --prefix=/usr --with-python=/usr/bin/python2.7
+  patch -Np1 -i "${srcdir}/CVE-2011-1202.patch"
+  sed -e 's|/usr/bin/python -u|/usr/bin/python2 -u|g' -e 's|/usr/bin/python$|/usr/bin/python2|g' -i python/tests/*.py
+  ./configure --prefix=/usr --with-python=/usr/bin/python2
   make
-  make DESTDIR="${pkgdir}" install
+}
 
-  for f in pyxsltproc.py extfunc.py exslt.py extelem.py basic.py; do
-      sed -e 's|#!/usr/bin/python|#!/usr/bin/python2|' \
-          -i ${pkgdir}/usr/share/doc/libxslt-python-1.1.26/examples/${f}
-  done
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
 
   install -d "${pkgdir}/usr/share/licenses/${pkgname}"
   install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/"
+
+  rm -f "${pkgdir}"/usr/lib/python*/site-packages/*.a
 }
