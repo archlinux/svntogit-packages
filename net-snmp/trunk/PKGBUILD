@@ -4,7 +4,7 @@
 
 pkgname=net-snmp
 pkgver=5.7.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A suite of applications used to implement SNMP v1, SNMP v2c and SNMP v3 using both IPv4 and IPv6"
 arch=('i686' 'x86_64')
 url="http://www.net-snmp.org/"
@@ -18,14 +18,20 @@ provides=('ucd-snmp')
 backup=('etc/conf.d/snmpd')
 options=('!libtool' '!makeflags' '!emptydirs')
 source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.asc}
-        snmpd.confd snmpd.rc)
+        snmpd.confd snmpd.rc libnl32.patch)
 sha1sums=('ddb82ce1112ef0642869d3c8d7c7e585f151849a'
           '2bdc2839ce09d7daa608cd54687fa8beb47ed907'
           'cf811da9e57bbca34d8e2a3c358bb3bfc0c2b33b'
-          '90600c0141eed10d6e3ca3ccc97ad8dda15c2112')
+          '90600c0141eed10d6e3ca3ccc97ad8dda15c2112'
+          '74a9848b95f63378eb1753fc309d2b74de5afb0f')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # http://sourceforge.net/tracker/index.php?func=detail&aid=3250304&group_id=12694&atid=112694
+  patch -Np1 -i "$srcdir/libnl32.patch"
+  autoreconf -f -i
+
   sed -i -e "s:\(install --basedir=\$\$dir\):\1 --root='${pkgdir}':" Makefile.in
   PYTHONPROG=/usr/bin/python2 ./configure --prefix=/usr \
     --sysconfdir=/etc \
@@ -38,7 +44,8 @@ build() {
     --with-sys-location="Unknown" \
     --with-logfile="/var/log/snmpd.log" \
     --with-mib-modules="host misc/ipfwacc ucd-snmp/diskio tunnel ucd-snmp/dlmod" \
-    --with-persistent-directory="/var/net-snmp"
+    --with-persistent-directory="/var/net-snmp" \
+    --disable-static
   make NETSNMP_DONT_CHECK_VERSION=1
 }
 
