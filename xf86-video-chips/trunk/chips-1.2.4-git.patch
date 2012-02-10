@@ -1,17 +1,17 @@
-From e4bd864898fd276a62dac05cdfff394e98434f02 Mon Sep 17 00:00:00 2001
-From: Dave Airlie <airlied@redhat.com>
-Date: Tue, 29 Mar 2011 03:53:31 +0000
-Subject: chips: gut the overlay 8/16 support from driver.
-
-This driver is for chips that were bought by Intel in 1997,
-this feature means maintaining a lot of code in the X server
-for little gain.
-
-Drop it like its hot.
-
-Signed-off-by: Dave Airlie <airlied@redhat.com>
-Reviewed-by: Adam Jackson <ajax@redhat.com>
----
+diff --git a/configure.ac b/configure.ac
+index 225e516..c0ed508 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -44,9 +44,6 @@ XORG_DEFAULT_OPTIONS
+ AC_DISABLE_STATIC
+ AC_PROG_LIBTOOL
+ 
+-# Checks for programs.
+-AM_PROG_CC_C_O
+-
+ AH_TOP([#include "xorg-server.h"])
+ 
+ # Define a configure option for an alternate module directory
 diff --git a/man/chips.man b/man/chips.man
 index 740af38..0c022ee 100644
 --- a/man/chips.man
@@ -134,10 +134,47 @@ index 3920b0a..4b5776a 100644
  	ctSETSRCADDR(srcaddr);
  	ctSETHEIGHTWIDTHGO(h, bytesPerLine);
 diff --git a/src/ct_driver.c b/src/ct_driver.c
-index 6624b79..08df050 100644
+index 6624b79..a2e5c94 100644
 --- a/src/ct_driver.c
 +++ b/src/ct_driver.c
-@@ -1639,55 +1639,15 @@ chipsPreInitHiQV(ScrnInfoPtr pScrn, int flags)
+@@ -949,7 +949,7 @@ CHIPSProbe(DriverPtr drv, int flags)
+ 		}
+ 
+ 	    }
+-	    xfree(usedChips);
++	    free(usedChips);
+ 	}
+     }
+ 
+@@ -981,12 +981,12 @@ CHIPSProbe(DriverPtr drv, int flags)
+ 		pScrn->ValidMode     = CHIPSValidMode;
+ 		foundScreen = TRUE;
+ 	    }
+-	    xfree(usedChips);
++	    free(usedChips);
+ 	}
+     }
+ #endif
+     
+-    xfree(devSections);
++    free(devSections);
+     return foundScreen;
+ }
+ #endif
+@@ -1446,7 +1446,12 @@ chipsPreInitHiQV(ScrnInfoPtr pScrn, int flags)
+ 
+     hwp = VGAHWPTR(pScrn);
+     vgaHWGetIOBase(hwp);
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
+     cPtr->PIOBase = hwp->PIOOffset;
++#else
++    cPtr->PIOBase = 0;
++#endif
++
+     /*
+      * Must allow ensure that storage for the 2nd set of vga registers is
+      * allocated for dual channel cards
+@@ -1639,55 +1644,15 @@ chipsPreInitHiQV(ScrnInfoPtr pScrn, int flags)
  	}
      }
      
@@ -198,7 +235,7 @@ index 6624b79..08df050 100644
      }
  
      if (cPtr->Flags & ChipsShadowFB) {
-@@ -2335,28 +2295,16 @@ chipsPreInitHiQV(ScrnInfoPtr pScrn, int flags)
+@@ -2335,28 +2300,16 @@ chipsPreInitHiQV(ScrnInfoPtr pScrn, int flags)
      /* and 32bits on the others. Thus multiply by a suitable factor      */  
      if (cPtr->Flags & Chips64BitMemory) {
  	if (cPtr->FrameBufferSize && (cPtr->PanelType & ChipsLCD))
@@ -227,7 +264,7 @@ index 6624b79..08df050 100644
  		cPtr->MaxClock = min(cPtr->MaxClock, 
  			     MemClk->Clk * 4 * 0.7 / bytesPerPixel);
      }
-@@ -3736,8 +3684,7 @@ CHIPSEnterVT(int scrnIndex, int flags)
+@@ -3736,8 +3689,7 @@ CHIPSEnterVT(int scrnIndex, int flags)
      /* Should we re-save the text mode on each VT enter? */
      if(!chipsModeInit(pScrn, pScrn->currentMode))
        return FALSE;
@@ -237,7 +274,7 @@ index 6624b79..08df050 100644
  	&& (cPtr->Flags & ChipsLinearSupport)) 
          CHIPSResetVideo(pScrn); 
  
-@@ -3788,8 +3735,7 @@ chipsLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
+@@ -3788,8 +3740,7 @@ chipsLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
      int i, index, shift ;
      CHIPSEntPtr cPtrEnt;    
  
@@ -247,7 +284,7 @@ index 6624b79..08df050 100644
  
      if (cPtr->UseDualChannel) {
          cPtrEnt = xf86GetEntityPrivate(pScrn->entityList[0],
-@@ -3895,18 +3841,6 @@ chipsLoadPalette16(ScrnInfoPtr pScrn, int numColors, int *indices,
+@@ -3895,18 +3846,6 @@ chipsLoadPalette16(ScrnInfoPtr pScrn, int numColors, int *indices,
      hwp->disablePalette(hwp);
  }
  
@@ -266,7 +303,7 @@ index 6624b79..08df050 100644
  /* Mandatory */
  static Bool
  CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
-@@ -3947,22 +3881,6 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -3947,22 +3886,6 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
      if (!chipsMapMem(pScrn))
  	return FALSE;
  
@@ -289,7 +326,7 @@ index 6624b79..08df050 100644
      /* Setup the MMIO register access functions if need */
      if (cPtr->UseFullMMIO && cPtr->MMIOBaseVGA) {
  	CHIPSSetMmioExtFuncs(cPtr);
-@@ -4035,18 +3953,10 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -4035,18 +3958,10 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
      miClearVisualTypes();
  
      /* Setup the visuals we support. */
@@ -310,7 +347,7 @@ index 6624b79..08df050 100644
      miSetPixmapDepths ();
  
      /*
-@@ -4090,13 +4000,6 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -4090,13 +4005,6 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
  	break;
  #endif
      case 16:
@@ -324,7 +361,16 @@ index 6624b79..08df050 100644
      default:
  	ret = fbScreenInit(pScreen, FBStart,
   		        width,height,
-@@ -4244,9 +4147,6 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -4223,7 +4131,7 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ 	}
+ 	if (!miInitializeBanking(pScreen, pScrn->virtualX, pScrn->virtualY,
+ 				 pScrn->displayWidth, pBankInfo)) {
+-	    xfree(pBankInfo);
++	    free(pBankInfo);
+ 	    pBankInfo = NULL;
+ 	    return FALSE;
+ 	}
+@@ -4244,9 +4152,6 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
  	if (pScrn->bitsPerPixel < 8)
  	    freespace = allocatebase - pScrn->displayWidth * 
  		    pScrn->virtualY / 2;
@@ -334,7 +380,7 @@ index 6624b79..08df050 100644
  	else	
  	    freespace = allocatebase - pScrn->displayWidth * 
  		    pScrn->virtualY * (pScrn->bitsPerPixel >> 3);
-@@ -4369,9 +4269,7 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -4369,9 +4274,7 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
  	    AvailFBArea.y2 = cAcl->CacheEnd /
  		(pScrn->displayWidth * (pScrn->bitsPerPixel >> 3));
  
@@ -345,7 +391,7 @@ index 6624b79..08df050 100644
  	}
  	if (cPtr->Flags & ChipsAccelSupport) {
  	    if (IS_HiQV(cPtr)) {
-@@ -4425,16 +4323,10 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -4425,16 +4328,10 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
      if (!miCreateDefColormap(pScreen))
  	return FALSE;
      
@@ -364,7 +410,7 @@ index 6624b79..08df050 100644
      
  #ifndef XSERVER_LIBPCIACCESS
      racflag = RAC_COLORMAP;
-@@ -4448,8 +4340,7 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -4448,8 +4345,7 @@ CHIPSScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
  	xf86SetSilkenMouse(pScreen);
  #endif
  
@@ -374,7 +420,7 @@ index 6624b79..08df050 100644
  	    && (cPtr->Flags & ChipsLinearSupport)) {
  	    CHIPSInitVideo(pScreen);
      }
-@@ -4522,10 +4413,7 @@ CHIPSAdjustFrame(int scrnIndex, int x, int y, int flags)
+@@ -4522,10 +4418,7 @@ CHIPSAdjustFrame(int scrnIndex, int x, int y, int flags)
  	Base >>= 3;
  	break;
      case 16:
@@ -386,7 +432,7 @@ index 6624b79..08df050 100644
  	break;
      case 24:
  	if (!IS_HiQV(cPtr))
-@@ -4581,14 +4469,6 @@ CHIPSAdjustFrame(int scrnIndex, int x, int y, int flags)
+@@ -4581,14 +4474,6 @@ CHIPSAdjustFrame(int scrnIndex, int x, int y, int flags)
  	cPtr->writeMSS(cPtr, hwp, MSS);
      }
  
@@ -401,7 +447,7 @@ index 6624b79..08df050 100644
  }
  
  /* Mandatory */
-@@ -4652,13 +4532,6 @@ CHIPSValidMode(int scrnIndex, DisplayModePtr mode, Bool verbose, int flags)
+@@ -4652,13 +4537,6 @@ CHIPSValidMode(int scrnIndex, DisplayModePtr mode, Bool verbose, int flags)
      ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
      CHIPSPtr cPtr = CHIPSPTR(pScrn);
  
@@ -415,7 +461,7 @@ index 6624b79..08df050 100644
      /* The tests here need to be expanded */
      if ((mode->Flags & V_INTERLACE) && (cPtr->PanelType & ChipsLCD))
  	return MODE_NO_INTERLACE;
-@@ -5544,12 +5417,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5544,12 +5422,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
      } else {
  	ChipsStd->Attribute[0x10] = 0x01;   /* mode */
      }
@@ -429,7 +475,7 @@ index 6624b79..08df050 100644
      ChipsStd->Attribute[0x12] = 0x0F;   /* enable all color planes */
      ChipsStd->Attribute[0x13] = 0x00;   /* horiz pixel panning 0 */
  
-@@ -5558,8 +5426,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5558,8 +5431,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
      /* set virtual screen width */
      tmp = pScrn->displayWidth >> 3;
      if (pScrn->bitsPerPixel == 16) {
@@ -439,7 +485,7 @@ index 6624b79..08df050 100644
      } else if (pScrn->bitsPerPixel == 24) {
  	tmp += tmp << 1;
      } else if (pScrn->bitsPerPixel == 32) {
-@@ -5688,8 +5555,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5688,8 +5560,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
  
      /* centering/stretching */
      if (!xf86ReturnOptValBool(cPtr->Options, OPTION_SUSPEND_HACK, FALSE)) {
@@ -449,7 +495,7 @@ index 6624b79..08df050 100644
  	    ChipsNew->FR[0x40] &= 0xDF;    /* Disable Horizontal stretching */
  	    ChipsNew->FR[0x48] &= 0xFB;    /* Disable vertical stretching */
  	    ChipsNew->XR[0xA0] = 0x10;     /* Disable cursor stretching */
-@@ -5709,8 +5575,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5709,8 +5580,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
  	}
      }
  
@@ -459,7 +505,7 @@ index 6624b79..08df050 100644
  	ChipsNew->FR[0x40] |= 0x3;    /* Enable Horizontal centering */
  	ChipsNew->FR[0x48] |= 0x3;    /* Enable Vertical centering */
      } else {
-@@ -5723,8 +5588,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5723,8 +5593,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
  	ChipsNew->XR[0x82] |=0x02;
  
      /* software mode flag */
@@ -469,7 +515,7 @@ index 6624b79..08df050 100644
  	min(mode->CrtcHDisplay, cPtr->PanelSize.HDisplay) :
  	mode->CrtcHDisplay, mode->CrtcVDisplay);
  #ifdef DEBUG
-@@ -5762,7 +5626,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5762,7 +5631,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
      	}
      }	    
      /* bpp depend */
@@ -478,7 +524,7 @@ index 6624b79..08df050 100644
  	ChipsNew->XR[0x81] = (ChipsNew->XR[0x81] & 0xF0) | 0x4;
  	if (cPtr->Flags & ChipsGammaSupport)
  	    ChipsNew->XR[0x82] |= 0x0C;
-@@ -5915,60 +5779,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
+@@ -5915,60 +5784,7 @@ chipsModeInitHiQV(ScrnInfoPtr pScrn, DisplayModePtr mode)
      /* Turn off multimedia by default as it degrades performance */
      ChipsNew->XR[0xD0] &= 0x0f;	 
      
@@ -540,7 +586,7 @@ index 6624b79..08df050 100644
  #if 0   /* if we do this even though video isn't playing we kill performance */
  	ChipsNew->XR[0xD0] |= 0x10;	/* Force the Multimedia engine on */
  #endif
-@@ -6877,8 +6688,7 @@ chipsRestoreExtendedRegs(ScrnInfoPtr pScrn, CHIPSRegPtr Regs)
+@@ -6877,8 +6693,7 @@ chipsRestoreExtendedRegs(ScrnInfoPtr pScrn, CHIPSRegPtr Regs)
  	}
  
  	/* Set SAR04 multimedia register correctly */
@@ -551,7 +597,7 @@ index 6624b79..08df050 100644
  	    cPtr->writeXR(cPtr, 0x4E, 0x04);
  	    if (cPtr->readXR(cPtr, 0x4F) != Regs->XR[0x4F])
 diff --git a/src/ct_driver.h b/src/ct_driver.h
-index d8ce228..10a24d4 100644
+index d8ce228..9033867 100644
 --- a/src/ct_driver.h
 +++ b/src/ct_driver.h
 @@ -114,7 +114,6 @@ typedef struct {
@@ -562,6 +608,22 @@ index d8ce228..10a24d4 100644
  #define ChipsUseNewFB		0x00008000
  
  /* Architecture type flags */
+@@ -272,11 +271,13 @@ typedef struct {
+ 
+ typedef struct _CHIPSRec {
+     pciVideoPtr		PciInfo;
++#ifndef XSERVER_LIBPCIACCESS
+     PCITAG		PciTag;
++#endif
+     int			Chipset;
+     EntityInfoPtr       pEnt;
+-    IOADDRESS		PIOBase;
+-    CARD32		IOAddress;
++    unsigned long	PIOBase;
++    unsigned long	IOAddress;
+     unsigned long	FbAddress;
+     unsigned int	IOBase;
+     unsigned char *	FbBase;
 diff --git a/src/ct_video.c b/src/ct_video.c
 index a68acb9..c9e5bb4 100644
 --- a/src/ct_video.c
@@ -576,5 +638,275 @@ index a68acb9..c9e5bb4 100644
  	newAdaptor = CHIPSSetupImageVideo(pScreen);
  	CHIPSInitOffscreenImages(pScreen);
      }
---
-cgit v0.9.0.2-2-gbebe
+diff --git a/util/dRegs.c b/util/dRegs.c
+index b7edc8f..0d2f0cb 100644
+--- a/util/dRegs.c
++++ b/util/dRegs.c
+@@ -1,63 +1,8 @@
+-
+-
+-
+-
+-
+-
+-#ifdef __NetBSD__
+-#  include <sys/types.h>
+-#  include <machine/pio.h>
+-#  include <machine/sysarch.h>
+-#else
+-#  if defined(SVR4) && defined(i386)
+-#    include <sys/types.h>
+-#    ifdef NCR
+-       /* broken NCR <sys/sysi86.h> */
+-#      define __STDC
+-#      include <sys/sysi86.h>
+-#      undef __STDC
+-#    else
+-#      include <sys/sysi86.h>
+-#    endif
+-#    ifdef SVR4
+-#      if !defined(sun)
+-#        include <sys/seg.h>
+-#      endif
+-#    endif
+-#    include <sys/v86.h>
+-#    if defined(sun)
+-#      include <sys/psw.h>
+-#    endif
+-#  endif
+-#  include "AsmMacros.h"
+-#endif /* NetBSD */
+-
+ #include <unistd.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ 
+-#ifdef __NetBSD__
+-#  define SET_IOPL() i386_iopl(3)
+-#  define RESET_IOPL() i386_iopl(0)
+-#else
+-#  if defined(SVR4) && defined(i386)
+-#    ifndef SI86IOPL
+-#      define SET_IOPL() sysi86(SI86V86,V86SC_IOPL,PS_IOPL)
+-#      define RESET_IOPL() sysi86(SI86V86,V86SC_IOPL,0)
+-#    else
+-#      define SET_IOPL() sysi86(SI86IOPL,3)
+-#      define RESET_IOPL() sysi86(SI86IOPL,0)
+-#    endif
+-#  else
+-#    ifdef linux
+-#      define SET_IOPL() iopl(3)
+-#      define RESET_IOPL() iopl(0)
+-#    else
+-#      define SET_IOPL() (void)0
+-#      define RESET_IOPL() (void)0
+-#    endif
+-#  endif
+-#endif
++#include "iopl.h"
+ 
+ int main(void)
+ {
+diff --git a/util/iopl.h b/util/iopl.h
+new file mode 100644
+index 0000000..e08207c
+--- /dev/null
++++ b/util/iopl.h
+@@ -0,0 +1,60 @@
++#ifdef __NetBSD__
++#  include <sys/types.h>
++#  include <machine/pio.h>
++#  include <machine/sysarch.h>
++#else
++#  if defined(__linux__)
++/* Can't because <sys/iopl.h> provides conflicting inb, outb, etc
++ * #    include <sys/io.h>
++ */
++int iopl(int level);
++#  endif
++#  if defined(SVR4) && defined(i386)
++#    include <sys/types.h>
++#    ifdef NCR
++       /* broken NCR <sys/sysi86.h> */
++#      define __STDC
++#      include <sys/sysi86.h>
++#      undef __STDC
++#    else
++#      include <sys/sysi86.h>
++#    endif
++#    ifdef SVR4
++#      if !defined(sun)
++#        include <sys/seg.h>
++#      endif
++#    endif
++#    include <sys/v86.h>
++#    if defined(sun)
++#      include <sys/psw.h>
++#    endif
++#  endif
++#  include "AsmMacros.h"
++#endif /* NetBSD */
++
++#include <unistd.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#ifdef __NetBSD__
++#  define SET_IOPL() i386_iopl(3)
++#  define RESET_IOPL() i386_iopl(0)
++#else
++#  if defined(SVR4) && defined(i386)
++#    ifndef SI86IOPL
++#      define SET_IOPL() sysi86(SI86V86,V86SC_IOPL,PS_IOPL)
++#      define RESET_IOPL() sysi86(SI86V86,V86SC_IOPL,0)
++#    else
++#      define SET_IOPL() sysi86(SI86IOPL,3)
++#      define RESET_IOPL() sysi86(SI86IOPL,0)
++#    endif
++#  else
++#    ifdef linux
++#      define SET_IOPL() iopl(3)
++#      define RESET_IOPL() iopl(0)
++#    else
++#      define SET_IOPL() (void)0
++#      define RESET_IOPL() (void)0
++#    endif
++#  endif
++#endif
+diff --git a/util/mRegs.c b/util/mRegs.c
+index f359738..843d01d 100644
+--- a/util/mRegs.c
++++ b/util/mRegs.c
+@@ -1,63 +1,8 @@
+-
+-
+-
+-
+-
+-
+-#ifdef __NetBSD__
+-#  include <sys/types.h>
+-#  include <machine/pio.h>
+-#  include <machine/sysarch.h>
+-#else
+-#  if defined(SVR4) && defined(i386)
+-#    include <sys/types.h>
+-#    ifdef NCR
+-       /* broken NCR <sys/sysi86.h> */
+-#      define __STDC
+-#      include <sys/sysi86.h>
+-#      undef __STDC
+-#    else
+-#      include <sys/sysi86.h>
+-#    endif
+-#    ifdef SVR4
+-#      if !defined(sun)
+-#        include <sys/seg.h>
+-#      endif
+-#    endif
+-#    include <sys/v86.h>
+-#    if defined(sun)
+-#      include <sys/psw.h>
+-#    endif
+-#  endif
+-#  include "AsmMacros.h"
+-#endif /* NetBSD */
+-
+ #include <unistd.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ 
+-#ifdef __NetBSD__
+-#  define SET_IOPL() i386_iopl(3)
+-#  define RESET_IOPL() i386_iopl(0)
+-#else
+-#  if defined(SVR4) && defined(i386)
+-#    ifndef SI86IOPL
+-#      define SET_IOPL() sysi86(SI86V86,V86SC_IOPL,PS_IOPL)
+-#      define RESET_IOPL() sysi86(SI86V86,V86SC_IOPL,0)
+-#    else
+-#      define SET_IOPL() sysi86(SI86IOPL,3)
+-#      define RESET_IOPL() sysi86(SI86IOPL,0)
+-#    endif
+-#  else
+-#    ifdef linux
+-#      define SET_IOPL() iopl(3)
+-#      define RESET_IOPL() iopl(0)
+-#    else
+-#      define SET_IOPL() (void)0
+-#      define RESET_IOPL() (void)0
+-#    endif
+-#  endif
+-#endif
++#include "iopl.h"
+ 
+ int hex2int(char* str);
+ 
+diff --git a/util/modClock.c b/util/modClock.c
+index 89a291a..45af19b 100644
+--- a/util/modClock.c
++++ b/util/modClock.c
+@@ -1,61 +1,12 @@
+-
+-#ifdef __NetBSD__
+-#  include <sys/types.h>
+-#  include <machine/pio.h>
+-#  include <machine/sysarch.h>
+-#else
+-#  if defined(SVR4) && defined(i386)
+-#    include <sys/types.h>
+-#    ifdef NCR
+-       /* broken NCR <sys/sysi86.h> */
+-#      define __STDC
+-#      include <sys/sysi86.h>
+-#      undef __STDC
+-#    else
+-#      include <sys/sysi86.h>
+-#    endif
+-#    ifdef SVR4
+-#      if !defined(sun)
+-#        include <sys/seg.h>
+-#      endif
+-#    endif
+-#    include <sys/v86.h>
+-#    if defined(sun)
+-#      include <sys/psw.h>
+-#    endif
+-#  endif
+-#  include "AsmMacros.h"
+-#endif /* NetBSD */
+-
+ #include <unistd.h>
+ #include <stdio.h>
+ #include <stdlib.h>
++
+ #ifndef Lynx
+ #include <fnmatch.h>
+ #endif
+ 
+-#ifdef __NetBSD__
+-#  define SET_IOPL() i386_iopl(3)
+-#  define RESET_IOPL() i386_iopl(0)
+-#else
+-#  if defined(SVR4) && defined(i386)
+-#    ifndef SI86IOPL
+-#      define SET_IOPL() sysi86(SI86V86,V86SC_IOPL,PS_IOPL)
+-#      define RESET_IOPL() sysi86(SI86V86,V86SC_IOPL,0)
+-#    else
+-#      define SET_IOPL() sysi86(SI86IOPL,3)
+-#      define RESET_IOPL() sysi86(SI86IOPL,0)
+-#    endif
+-#  else
+-#    ifdef linux
+-#      define SET_IOPL() iopl(3)
+-#      define RESET_IOPL() iopl(0)
+-#    else
+-#      define SET_IOPL() (void)0
+-#      define RESET_IOPL() (void)0
+-#    endif
+-#  endif
+-#endif
++#include "iopl.h"
+ 
+ #define tolerance 0.01 /* +/- 1% */
+ 
