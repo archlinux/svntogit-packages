@@ -1,0 +1,173 @@
+diff --git a/man/i128.man b/man/i128.man
+index 920d2ab..a8e2e54 100644
+--- a/man/i128.man
++++ b/man/i128.man
+@@ -1,4 +1,3 @@
+-.\" $XFree86: xc/programs/Xserver/hw/xfree86/drivers/i128/i128.man,v 1.2 2001/01/27 18:20:48 dawes Exp $ 
+ .\" shorthand for double quote that works everywhere.
+ .ds q \N'34'
+ .TH I128 __drivermansuffix__ __vendorversion__
+diff --git a/src/i128_driver.c b/src/i128_driver.c
+index 903a3a8..92f9d58 100644
+--- a/src/i128_driver.c
++++ b/src/i128_driver.c
+@@ -304,13 +304,13 @@ I128Probe(DriverPtr drv, int flags)
+ 			numDevSections, drv, &usedChips);
+ 
+     /* Free it since we don't need that list after this */
+-    xfree(devSections);
++    free(devSections);
+ 
+     if (numUsed <= 0)
+ 	return FALSE;
+ 
+     if (flags & PROBE_DETECT) {
+-	xfree(usedChips);
++	free(usedChips);
+ 	return FALSE;
+     }
+ 
+@@ -340,7 +340,7 @@ I128Probe(DriverPtr drv, int flags)
+ 	foundScreen = TRUE;
+     }
+ 
+-    xfree(usedChips);
++    free(usedChips);
+ 
+     return foundScreen;
+ }
+@@ -446,7 +446,7 @@ I128PreInit(ScrnInfoPtr pScrn, int flags)
+     int i;
+     ClockRangePtr clockRanges;
+     MessageType from;
+-    IOADDRESS iobase;
++    unsigned long iobase;
+     char *ramdac = NULL;
+     CARD32 tmpl, tmph, tmp;
+     unsigned char n, m, p, mdc, df;
+@@ -558,7 +558,7 @@ I128PreInit(ScrnInfoPtr pScrn, int flags)
+     xf86CollectOptions(pScrn, NULL);
+ 
+     /* Process the options */
+-    if (!(pI128->Options = xalloc(sizeof(I128Options))))
++    if (!(pI128->Options = malloc(sizeof(I128Options))))
+ 	return FALSE;
+     memcpy(pI128->Options, I128Options, sizeof(I128Options));
+     xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, pI128->Options);
+@@ -650,7 +650,10 @@ I128PreInit(ScrnInfoPtr pScrn, int flags)
+         xf86DrvMsg(pScrn->scrnIndex, from, "Subsystem Vendor: \"%x\"\n",
+     	    PCI_SUB_VENDOR_ID(pI128->PciInfo));
+ 
+-    iobase = (PCI_REGION_BASE(pI128->PciInfo, 5, REGION_IO) & 0xFFFFFF00) + hwp->PIOOffset;
++    iobase = (PCI_REGION_BASE(pI128->PciInfo, 5, REGION_IO) & 0xFFFFFF00);
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++    iobase += hwp->PIOOffset;
++#endif
+     pI128->RegRec.iobase = iobase;
+ 
+     pI128->io.rbase_g = inl(iobase)        & 0xFFFFFF00;
+@@ -1157,7 +1160,7 @@ I128FreeRec(ScrnInfoPtr pScrn)
+ {
+     if (pScrn->driverPrivate == NULL)
+ 	return;
+-    xfree(pScrn->driverPrivate);
++    free(pScrn->driverPrivate);
+     pScrn->driverPrivate = NULL;
+ }
+ 
+@@ -1704,12 +1707,12 @@ I128CloseScreen(int scrnIndex, ScreenPtr pScreen)
+ 	XAADestroyInfoRec(pI128->XaaInfoRec);
+     if (pI128->ExaDriver) {
+         exaDriverFini(pScreen);
+-        xfree(pI128->ExaDriver);
++        free(pI128->ExaDriver);
+     }
+     if (pI128->CursorInfoRec)
+     	xf86DestroyCursorInfoRec(pI128->CursorInfoRec);
+     if (pI128->DGAModes)
+-    	xfree(pI128->DGAModes);
++    	free(pI128->DGAModes);
+     pScrn->vtSema = FALSE;
+ 
+     pScreen->CloseScreen = pI128->CloseScreen;
+@@ -1804,7 +1807,7 @@ I128DDC1Read(ScrnInfoPtr pScrn)
+   I128Ptr pI128 = I128PTR(pScrn);
+   unsigned char val;
+   unsigned long tmp, ddc;
+-  IOADDRESS iobase;
++  unsigned long iobase;
+ 
+   iobase = pI128->RegRec.iobase;
+   ddc = inl(iobase + 0x2C);
+@@ -1839,7 +1842,7 @@ I128I2CGetBits(I2CBusPtr b, int *clock, int *data)
+ {
+   I128Ptr pI128 = I128PTR(xf86Screens[b->scrnIndex]);
+   unsigned long ddc;
+-  IOADDRESS iobase;
++  unsigned long iobase;
+ #if 0
+   static int lastclock = -1, lastdata = -1;
+ #endif
+@@ -1867,7 +1870,7 @@ I128I2CPutBits(I2CBusPtr b, int clock, int data)
+   unsigned char drv, val;
+   unsigned long ddc;
+   unsigned long tmp;
+-  IOADDRESS iobase;
++  unsigned long iobase;
+ 
+   iobase = pI128->RegRec.iobase;
+   ddc = inl(iobase + 0x2C);
+@@ -1889,7 +1892,7 @@ I128I2CInit(ScrnInfoPtr pScrn)
+ {       
+     I128Ptr pI128 = I128PTR(pScrn);
+     I2CBusPtr I2CPtr;
+-    IOADDRESS iobase;
++    unsigned long iobase;
+     unsigned long soft_sw, ddc;
+      
+     I2CPtr = xf86CreateI2CBusRec();
+@@ -2102,7 +2105,7 @@ void
+ I128DumpActiveRegisters(ScrnInfoPtr pScrn)
+ {
+     I128Ptr pI128 = I128PTR(pScrn);
+-    IOADDRESS iobase;
++    unsigned long iobase;
+     unsigned long rbase_g, rbase_w, rbase_a, rbase_b, rbase_i, rbase_e;
+     unsigned long id, config1, config2, sgram, soft_sw, ddc, vga_ctl;
+     volatile CARD32 *vrba, *vrbg, *vrbw;
+diff --git a/src/i128dga.c b/src/i128dga.c
+index 48823aa..8bc2fcb 100644
+--- a/src/i128dga.c
++++ b/src/i128dga.c
+@@ -59,15 +59,15 @@ I128DGAInit(ScreenPtr pScreen)
+    while(pMode) {
+ 
+ 	if(0 /*pScrn->displayWidth != pMode->HDisplay*/) {
+-	    newmodes = xrealloc(modes, (num + 2) * sizeof(DGAModeRec));
++	    newmodes = realloc(modes, (num + 2) * sizeof(DGAModeRec));
+ 	    oneMore = TRUE;
+ 	} else {
+-	    newmodes = xrealloc(modes, (num + 1) * sizeof(DGAModeRec));
++	    newmodes = realloc(modes, (num + 1) * sizeof(DGAModeRec));
+ 	    oneMore = FALSE;
+ 	}
+ 
+ 	if(!newmodes) {
+-	   xfree(modes);
++	   free(modes);
+ 	   return FALSE;
+ 	}
+ 	modes = newmodes;
+diff --git a/src/i128reg.h b/src/i128reg.h
+index 56b9c33..a72b525 100644
+--- a/src/i128reg.h
++++ b/src/i128reg.h
+@@ -75,7 +75,7 @@ struct i128mem {
+ 
+ /* save the registers needed for restoration in this structure */
+ typedef struct {
+-	IOADDRESS iobase;		/* saved only for iobase indexing    */
++	unsigned long iobase;		/* saved only for iobase indexing    */
+ 	CARD32 config1;			/* iobase+0x1C register              */
+ 	CARD32 config2;			/* iobase+0x20 register              */
+ 	CARD32 sgram;			/* iobase+0x24 register              */
