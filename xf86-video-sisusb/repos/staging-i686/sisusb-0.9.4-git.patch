@@ -1,0 +1,794 @@
+diff --git a/configure.ac b/configure.ac
+index 86c6ac5..725d6cb 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -20,49 +20,48 @@
+ #
+ # Process this file with autoconf to produce a configure script
+ 
+-AC_PREREQ(2.57)
++# Initialize Autoconf
++AC_PREREQ([2.60])
+ AC_INIT([xf86-video-sisusb],
+-        0.9.4,
++        [0.9.4],
+         [https://bugs.freedesktop.org/enter_bug.cgi?product=xorg],
+-        xf86-video-sisusb)
+-
++        [xf86-video-sisusb])
+ AC_CONFIG_SRCDIR([Makefile.am])
+-AM_CONFIG_HEADER([config.h])
++AC_CONFIG_HEADERS([config.h])
+ AC_CONFIG_AUX_DIR(.)
+ 
++# Initialize Automake
+ AM_INIT_AUTOMAKE([foreign dist-bzip2])
+-
+ AM_MAINTAINER_MODE
+ 
+-# Require xorg-macros: XORG_DEFAULT_OPTIONS
++# Require X.Org macros 1.8 or later for MAN_SUBSTS set by XORG_MANPAGE_SECTIONS
+ m4_ifndef([XORG_MACROS_VERSION],
+-          [m4_fatal([must install xorg-macros 1.3 or later before running autoconf/autogen])])
+-XORG_MACROS_VERSION(1.3)
++          [m4_fatal([must install xorg-macros 1.8 or later before running autoconf/autogen])])
++XORG_MACROS_VERSION(1.8)
+ XORG_DEFAULT_OPTIONS
+ 
+-# Checks for programs.
++# Initialize libtool
+ AC_DISABLE_STATIC
+ AC_PROG_LIBTOOL
+-AC_PROG_CC
+-XORG_PROG_RAWCPP
+ 
+ AH_TOP([#include "xorg-server.h"])
+ 
++# Define a configure option for an alternate module directory
+ AC_ARG_WITH(xorg-module-dir,
+-            AC_HELP_STRING([--with-xorg-module-dir=DIR],
++            AS_HELP_STRING([--with-xorg-module-dir=DIR],
+                            [Default xorg module directory [[default=$libdir/xorg/modules]]]),
+             [moduledir="$withval"],
+             [moduledir="$libdir/xorg/modules"])
+ 
+-# Checks for extensions
++# Store the list of server defined optional extensions in REQUIRED_MODULES
+ XORG_DRIVER_CHECK_EXT(XINERAMA, xineramaproto)
+ XORG_DRIVER_CHECK_EXT(RANDR, randrproto)
+ XORG_DRIVER_CHECK_EXT(RENDER, renderproto)
+ XORG_DRIVER_CHECK_EXT(XV, videoproto)
+ XORG_DRIVER_CHECK_EXT(DPMSExtension, xextproto)
+ 
+-# Checks for pkg-config packages
+-PKG_CHECK_MODULES(XORG, [xorg-server >= 1.0.99.901 xproto fontsproto $REQUIRED_MODULES])
++# Obtain compiler/linker options for the driver dependencies
++PKG_CHECK_MODULES(XORG, [xorg-server >= 1.0.99.901 xproto fontsproto pciaccess $REQUIRED_MODULES])
+ PKG_CHECK_MODULES(XEXT, [xextproto >= 7.0.99.1],
+                   HAVE_XEXTPROTO_71="yes"; AC_DEFINE(HAVE_XEXTPROTO_71, 1, [xextproto 7.1 available]),
+                   HAVE_XEXTPROTO_71="no")
+@@ -70,17 +69,14 @@ AM_CONDITIONAL(HAVE_XEXTPROTO_71, [ test "$HAVE_XEXTPROTO_71" = "yes" ])
+ 
+ # Checks for libraries.
+ 
+-# Checks for header files.
+-AC_HEADER_STDC
+-
+-AC_SUBST([XORG_CFLAGS])
+ AC_SUBST([moduledir])
+ 
+ DRIVER_NAME=sisusb
+ AC_SUBST([DRIVER_NAME])
+ 
+-AC_OUTPUT([
+-	Makefile
+-	src/Makefile
+-	man/Makefile
++AC_CONFIG_FILES([
++                Makefile
++                src/Makefile
++                man/Makefile
+ ])
++AC_OUTPUT
+diff --git a/man/Makefile.am b/man/Makefile.am
+index 1b26ac2..9ceb36f 100644
+--- a/man/Makefile.am
++++ b/man/Makefile.am
+@@ -31,39 +31,9 @@ EXTRA_DIST = @DRIVER_NAME@.man
+ 
+ CLEANFILES = $(driverman_DATA)
+ 
+-SED = sed
+-
+-# Strings to replace in man pages
+-XORGRELSTRING = @PACKAGE_STRING@
+-  XORGMANNAME = X Version 11
+-
+-MANDEFS =  \
+-	-D__vendorversion__="\"$(XORGRELSTRING)\" \"$(XORGMANNAME)\"" \
+-	-D__appmansuffix__=$(APP_MAN_SUFFIX) \
+-	-D__filemansuffix__=$(FILE_MAN_SUFFIX) \
+-	-D__libmansuffix__=$(LIB_MAN_SUFFIX) \
+-	-D__miscmansuffix__=$(MISC_MAN_SUFFIX) \
+-	-D__drivermansuffix__=$(DRIVER_MAN_SUFFIX) \
+-	-D__adminmansuffix__=$(ADMIN_MAN_SUFFIX) \
+-	-D__xconfigfile__=xorg.conf \
+-	-D__xservername__=Xorg
+-
+-# Translate XCOMM into pound sign with sed, rather than passing -DXCOMM=XCOMM
+-# to cpp, because that trick does not work on all ANSI C preprocessors.
+-# Delete line numbers from the cpp output (-P is not portable, I guess).
+-# Allow XCOMM to be preceded by whitespace and provide a means of generating
+-# output lines with trailing backslashes.
+-# Allow XHASH to always be substituted, even in cases where XCOMM isn't.
+-
+-CPP_SED_MAGIC = $(SED) -e '/^\#  *[0-9][0-9]*  *.*$$/d' \
+-                       -e '/^\#line  *[0-9][0-9]*  *.*$$/d' \
+-                       -e '/^[         ]*XCOMM$$/s/XCOMM/\#/' \
+-                       -e '/^[         ]*XCOMM[^a-zA-Z0-9_]/s/XCOMM/\#/' \
+-                       -e '/^[         ]*XHASH/s/XHASH/\#/' \
+-                       -e '/\@\@$$/s/\@\@$$/\\/'
+-
+ SUFFIXES = .$(DRIVER_MAN_SUFFIX) .man
+ 
++# String replacements in MAN_SUBSTS now come from xorg-macros.m4 via configure
+ .man.$(DRIVER_MAN_SUFFIX):
+-	$(RAWCPP) $(RAWCPPFLAGS) $(MANDEFS) $(EXTRAMANDEFS) < $< | $(CPP_SED_MAGIC) > $@
++	$(AM_V_GEN)$(SED) $(MAN_SUBSTS) < $< > $@
+ 
+diff --git a/man/sisusb.man b/man/sisusb.man
+index 7817cb5..6eafb8e 100644
+--- a/man/sisusb.man
++++ b/man/sisusb.man
+@@ -1,17 +1,5 @@
+-.\" $XFree86$
+-.\" $XdotOrg$
+ .\" shorthand for double quote that works everywhere.
+ .ds q \N'34'
+-#ifdef __xservername__
+-#define __myservername__ __xservername__
+-#else
+-#define __myservername__ XFree86
+-#endif
+-#ifdef __xconfigfile__
+-#define __myxconfigfile__ __xconfigfile__
+-#else
+-#define __myxconfigfile__ XF86Config
+-#endif
+ .TH SISUSB __drivermansuffix__ __vendorversion__
+ .SH NAME
+ sisusb \- SiS USB video driver
+@@ -25,7 +13,7 @@ sisusb \- SiS USB video driver
+ .fi
+ .SH DESCRIPTION
+ .B sisusb
+-is an __myservername__ driver for SiS (Silicon Integrated Systems) video chips that
++is an __xservername__ driver for SiS (Silicon Integrated Systems) video chips that
+ are connected via a Net2280-based USB dongle. The driver is not accelerated, but
+ provides support for colordepths of 8, 16 and 24 bpp as well as Render and other
+ extensions.
+@@ -39,7 +27,7 @@ driver supports USB video cards based on the following chipsets:
+ The SiS315E/PRO features two CRT controllers. However, in its USB version, only
+ the first output, referred to as "CRT1", is being used.
+ .SH CONFIGURATION DETAILS
+-Please refer to __myxconfigfile__(__filemansuffix__) for general configuration
++Please refer to __xconfigfile__(__filemansuffix__) for general configuration
+ details and to sis(__drivermansuffix__) for more information. This manpage only
+ covers a subset of the supported options.
+ .PP
+@@ -81,11 +69,7 @@ for device reconnection).
+ .SH "KNOWN BUGS"
+ none.
+ .SH "SEE ALSO"
+-#ifdef __xservername__
+ __xservername__(__appmansuffix__), __xconfigfile__(__filemansuffix__), Xserver(__appmansuffix__), X(__miscmansuffix__), sis(__drivermansuffix__)
+-#else
+-XFree86(1), XF86Config(__filemansuffix__), xf86config(1), Xserver(1), X(__miscmansuffix__), sis(__drivermansuffix__)
+-#endif
+ .PP
+ .B "http://www.winischhofer.at/linuxsisvga.shtml"
+ for more information and updates
+diff --git a/src/sisusb.h b/src/sisusb.h
+index b9992ac..82ed509 100644
+--- a/src/sisusb.h
++++ b/src/sisusb.h
+@@ -113,6 +113,14 @@
+ #include <X11/extensions/Xv.h>
+ #endif
+ 
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++#define _swapl(x, n) swapl(x,n)
++#define _swaps(x, n) swaps(x,n)
++#else
++#define _swapl(x, n) swapl(x)
++#define _swaps(x, n) swaps(x)
++#endif
++
+ /* Platform/architecture related definitions: */
+ 
+ #undef SIS_PC_PLATFORM
+@@ -141,7 +149,6 @@
+ #define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
+ 
+ /* Need that for SiSCtrl */
+-#define NEED_REPLIES		/* ? */
+ #define EXTENSION_PROC_ARGS void *
+ #include "extnsionst.h" 			/* required */
+ #include <X11/extensions/panoramiXproto.h>	/* required */
+@@ -732,7 +739,7 @@ typedef struct {
+     Bool		skipswitchcheck;
+     ULong		VBFlagsInit;
+     DisplayModePtr	currentModeLast;
+-    IOADDRESS		MyPIOOffset;
++    unsigned long		MyPIOOffset;
+ 
+     char		messagebuffer[64];
+     unsigned int	VGAMapSize;		/* SiSVGA stuff */
+diff --git a/src/sisusb_dac.c b/src/sisusb_dac.c
+index 5e3eb7f..b5c4dce 100644
+--- a/src/sisusb_dac.c
++++ b/src/sisusb_dac.c
+@@ -672,7 +672,7 @@ SiSUSBMemCopyToVideoRam(SISUSBPtr pSiSUSB, UChar *to, UChar *from, int size)
+    int num, retry = 3;
+    if(pSiSUSB->sisusbfatalerror) return;
+    do {
+-      lseek(pSiSUSB->sisusbdev, (int)to, SEEK_SET);
++      lseek(pSiSUSB->sisusbdev, (uintptr_t)to, SEEK_SET);
+       num = write(pSiSUSB->sisusbdev, from, size);
+    } while((num != size) && --retry);
+    if(!retry) SiSLostConnection(pSiSUSB);
+@@ -958,7 +958,7 @@ void sisclearvram(SISUSBPtr pSiSUSB, UChar *where, unsigned int howmuch)
+    if(pSiSUSB->sisusbfatalerror) return;
+    do {
+       x.operation = SUCMD_CLRSCR;
+-      x.data3 = (CARD32)where;
++      x.data3 = (CARD32)(uintptr_t)where;
+       x.data0 = (howmuch >> 16) & 0xff;
+       x.data1 = (howmuch >> 8) & 0xff;
+       x.data2 = howmuch & 0xff;
+@@ -990,7 +990,7 @@ void SIS_MMIO_OUT8(SISUSBPtr pSiSUSB, UChar *base, unsigned int offset, CARD8 va
+     int num, retry = 3;
+     if(pSiSUSB->sisusbfatalerror) return;
+     do {
+-       lseek(pSiSUSB->sisusbdev, (int)base + offset, SEEK_SET);
++       lseek(pSiSUSB->sisusbdev, (uintptr_t)base + offset, SEEK_SET);
+        num = write(pSiSUSB->sisusbdev, &val, 1);
+     } while((num != 1) && --retry);
+     if(!retry) SiSLostConnection(pSiSUSB);
+@@ -1002,7 +1002,7 @@ void SIS_MMIO_OUT16(SISUSBPtr pSiSUSB, UChar *base, unsigned int offset, CARD16
+     CARD16 buf = sisusb_cpu_to_le16(val);
+     if(pSiSUSB->sisusbfatalerror) return;
+     do {
+-       lseek(pSiSUSB->sisusbdev, (int)base + offset, SEEK_SET);
++       lseek(pSiSUSB->sisusbdev, (uintptr_t)base + offset, SEEK_SET);
+        num = write(pSiSUSB->sisusbdev, &buf, 2);
+     } while((num != 2) && --retry);
+     if(!retry) SiSLostConnection(pSiSUSB);
+@@ -1014,7 +1014,7 @@ void SIS_MMIO_OUT32(SISUSBPtr pSiSUSB, UChar *base, unsigned int offset, CARD32
+     CARD32 buf = sisusb_cpu_to_le32(val);
+     if(pSiSUSB->sisusbfatalerror) return;
+     do {
+-       lseek(pSiSUSB->sisusbdev, (int)base + offset, SEEK_SET);
++       lseek(pSiSUSB->sisusbdev, (uintptr_t)base + offset, SEEK_SET);
+        num = write(pSiSUSB->sisusbdev, &buf, 4);
+     } while((num != 4) && --retry);
+     if(!retry) SiSLostConnection(pSiSUSB);
+@@ -1026,7 +1026,7 @@ CARD8 SIS_MMIO_IN8(SISUSBPtr pSiSUSB, UChar *base, unsigned int offset)
+     CARD8 tmp;
+     if(pSiSUSB->sisusbfatalerror) return 0;
+     do {
+-       lseek(pSiSUSB->sisusbdev, (int)base + offset, SEEK_SET);
++       lseek(pSiSUSB->sisusbdev, (uintptr_t)base + offset, SEEK_SET);
+        num = read(pSiSUSB->sisusbdev, &tmp, 1);
+     } while((num != 1) && --retry);
+     if(!retry) SiSLostConnection(pSiSUSB);
+@@ -1039,7 +1039,7 @@ CARD16 SIS_MMIO_IN16(SISUSBPtr pSiSUSB, UChar *base, unsigned int offset)
+     CARD16 tmp;
+     if(pSiSUSB->sisusbfatalerror) return 0;
+     do {
+-       lseek(pSiSUSB->sisusbdev, (int)base + offset, SEEK_SET);
++       lseek(pSiSUSB->sisusbdev, (uintptr_t)base + offset, SEEK_SET);
+        num = read(pSiSUSB->sisusbdev, &tmp, 2);
+     } while((num != 2) && --retry);
+     if(!retry) SiSLostConnection(pSiSUSB);
+@@ -1052,7 +1052,7 @@ CARD32 SIS_MMIO_IN32(SISUSBPtr pSiSUSB, UChar *base, unsigned int offset)
+     CARD32 tmp;
+     if(pSiSUSB->sisusbfatalerror) return 0;
+     do {
+-       lseek(pSiSUSB->sisusbdev, (int)base + offset, SEEK_SET);
++       lseek(pSiSUSB->sisusbdev, (uintptr_t)base + offset, SEEK_SET);
+        num = read(pSiSUSB->sisusbdev, &tmp, 4);
+     } while((num != 4) && --retry);
+     if(!retry) SiSLostConnection(pSiSUSB);
+diff --git a/src/sisusb_driver.c b/src/sisusb_driver.c
+index 8ba2c33..032225c 100644
+--- a/src/sisusb_driver.c
++++ b/src/sisusb_driver.c
+@@ -186,12 +186,12 @@ SISUSBFreeRec(ScrnInfoPtr pScrn)
+     /* Just to make sure... */
+     if(!pSiSUSB) return;
+ 
+-    if(pSiSUSB->pstate) xfree(pSiSUSB->pstate);
++    if(pSiSUSB->pstate) free(pSiSUSB->pstate);
+     pSiSUSB->pstate = NULL;
+-    if(pSiSUSB->fonts) xfree(pSiSUSB->fonts);
++    if(pSiSUSB->fonts) free(pSiSUSB->fonts);
+     pSiSUSB->fonts = NULL;
+ 
+-    if(pSiSUSB->SiS_Pr) xfree(pSiSUSB->SiS_Pr);
++    if(pSiSUSB->SiS_Pr) free(pSiSUSB->SiS_Pr);
+     pSiSUSB->SiS_Pr = NULL;
+ 
+     if(pSiSUSB->sisusbdevopen) {
+@@ -200,12 +200,12 @@ SISUSBFreeRec(ScrnInfoPtr pScrn)
+     }
+ 
+     if(pScrn->chipset) {
+-       xfree(pScrn->chipset);
++       free(pScrn->chipset);
+        pScrn->chipset = NULL;
+     }
+ 
+     if(pScrn->driverPrivate) {
+-       xfree(pScrn->driverPrivate);
++       free(pScrn->driverPrivate);
+        pScrn->driverPrivate = NULL;
+     }
+ }
+@@ -217,14 +217,14 @@ SISUSBErrorLog(ScrnInfoPtr pScrn, const char *format, ...)
+     static const char *str = "**************************************************\n";
+ 
+     va_start(ap, format);
+-    xf86DrvMsg(pScrn->scrnIndex, X_ERROR, str);
++    xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "%s", str);
+     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+     	"                      ERROR:\n");
+     xf86VDrvMsgVerb(pScrn->scrnIndex, X_ERROR, 1, format, ap);
+     va_end(ap);
+     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+     	"                  END OF MESSAGE\n");
+-    xf86DrvMsg(pScrn->scrnIndex, X_ERROR, str);
++    xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "%s", str);
+ }
+ 
+ static int
+@@ -248,7 +248,7 @@ SiSUSBCheckForUSBDongle(char *filename, SISUSBPtr pSiSUSB, int *filehandle)
+ 
+     if((myfile = open(filename, O_RDWR, 0)) != -1) {
+        if(!ioctl(myfile, SISUSB_GET_CONFIG_SIZE, &sisusbinfosize)) {
+-	  if((mysisusbinfo = xalloc(sisusbinfosize))) {
++	  if((mysisusbinfo = malloc(sisusbinfosize))) {
+ 	     if(!ioctl(myfile, (SISUSB_GET_CONFIG | (sisusbinfosize << 16)), mysisusbinfo)) {
+ 		if(mysisusbinfo->sisusb_id == SISUSB_ID) {
+ 		   sisusbversion = (mysisusbinfo->sisusb_version  << 16) |
+@@ -280,7 +280,7 @@ SiSUSBCheckForUSBDongle(char *filename, SISUSBPtr pSiSUSB, int *filehandle)
+ 		   retval = mysisusbinfo->sisusb_minor;
+ 		}
+ 	     }
+-	     xfree(mysisusbinfo);
++	     free(mysisusbinfo);
+ 	     mysisusbinfo = NULL;
+ 	  }
+        }
+@@ -307,13 +307,13 @@ SiSUSBFindUSBDongle(GDevPtr dev, int *minorArray, int numDevSections, char **nam
+        }
+        if((p) && (*p) && (*p == '/')) {
+           gotdev = 1;
+-	  *nameptr = xalloc(strlen(p) + 1);
++	  *nameptr = malloc(strlen(p) + 1);
+           strcpy(*nameptr, p);
+ 	  retval = SiSUSBCheckForUSBDongle(*nameptr, NULL, NULL);
+        } else if((p) && (*p) && (sscanf(p, "%d", &i) == 1)) {
+           if(i >= 0 && i <= 31) {
+              gotdev = 1;
+-	     *nameptr = xalloc(32);
++	     *nameptr = malloc(32);
+              sprintf(*nameptr, "/dev/sisusbvga%d", i);
+              retval = SiSUSBCheckForUSBDongle(*nameptr, NULL, NULL);
+ 	     if(retval < 0) {
+@@ -324,7 +324,7 @@ SiSUSBFindUSBDongle(GDevPtr dev, int *minorArray, int numDevSections, char **nam
+        }
+     }
+     if(!gotdev) {
+-       *nameptr = xalloc(32);
++       *nameptr = malloc(32);
+        for(i = 0; i < 64; i++) {
+           if(i < 32) sprintf(*nameptr, "/dev/sisusbvga%d", i);
+ 	  else       sprintf(*nameptr, "/dev/usb/sisusbvga%d", i);
+@@ -338,7 +338,7 @@ SiSUSBFindUSBDongle(GDevPtr dev, int *minorArray, int numDevSections, char **nam
+     if(retval >= 0) {
+        xf86Msg(X_INFO, "Found SiSUSB dongle (node %s, minor %d)\n", *nameptr, retval);
+     } else if((*nameptr)) {
+-       xfree(*nameptr);
++       free(*nameptr);
+        *nameptr = NULL;
+     }
+ 
+@@ -401,14 +401,14 @@ SISUSBProbe(DriverPtr drv, int flags)
+      */
+ 
+     /* Allocate and initialize an array of ints for storing the minors */
+-    if(!(minorArray = (int *)xalloc(numDevSections * sizeof(int)))) {
++    if(!(minorArray = (int *)malloc(numDevSections * sizeof(int)))) {
+        return FALSE;
+     }
+     for(i = 0; i < numDevSections; i++) minorArray[i] = -1;
+ 
+     /* Allocate an array of char ptrs for storing the device node names */
+-    if(!(devnameArray = (char **)xalloc(numDevSections * sizeof(char *)))) {
+-       xfree(minorArray);
++    if(!(devnameArray = (char **)malloc(numDevSections * sizeof(char *)))) {
++       free(minorArray);
+        return FALSE;
+     }
+ 
+@@ -420,20 +420,20 @@ SISUSBProbe(DriverPtr drv, int flags)
+        if((myminor = SiSUSBFindUSBDongle(devSections[i], minorArray, numDevSections, &nameptr)) >= 0) {
+           if(!SiSUSBFindDuplicate(myminor, minorArray, numDevSections)) {
+ 	     minorArray[numUsed] = myminor;
+-	     devnameArray[numUsed] = xalloc(strlen(nameptr) + 1);
++	     devnameArray[numUsed] = malloc(strlen(nameptr) + 1);
+ 	     strcpy(devnameArray[numUsed], nameptr);
+              numUsed++;
+ 	  }
+-	  xfree(nameptr);
++	  free(nameptr);
+        }
+     }
+ 
+     /* Free the minor array, we don't need it anymore */
+-    xfree(minorArray);
++    free(minorArray);
+ 
+     if(numUsed <= 0) {
+-       xfree(devSections);
+-       xfree(devnameArray);
++       free(devSections);
++       free(devnameArray);
+        return FALSE;
+     }
+ 
+@@ -470,8 +470,8 @@ SISUSBProbe(DriverPtr drv, int flags)
+ 
+     }
+ 
+-    xfree(devSections);
+-    xfree(devnameArray);
++    free(devSections);
++    free(devnameArray);
+     return foundScreen;
+ }
+ 
+@@ -622,10 +622,10 @@ SISUSBCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
+    if(!(nramp = xf86GetGammaRampSize(pScreen))) return;
+ 
+    for(i=0; i<3; i++) {
+-      ramp[i] = (UShort *)xalloc(nramp * sizeof(UShort));
++      ramp[i] = (UShort *)malloc(nramp * sizeof(UShort));
+       if(!ramp[i]) {
+-         if(ramp[0]) { xfree(ramp[0]); ramp[0] = NULL; }
+-	 if(ramp[1]) { xfree(ramp[1]); ramp[1] = NULL; }
++         if(ramp[0]) { free(ramp[0]); ramp[0] = NULL; }
++	 if(ramp[1]) { free(ramp[1]); ramp[1] = NULL; }
+          return;
+       }
+    }
+@@ -685,9 +685,9 @@ SISUSBCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
+ 
+    xf86ChangeGammaRamp(pScreen, nramp, ramp[0], ramp[1], ramp[2]);
+ 
+-   xfree(ramp[0]);
+-   xfree(ramp[1]);
+-   xfree(ramp[2]);
++   free(ramp[0]);
++   free(ramp[1]);
++   free(ramp[2]);
+    ramp[0] = ramp[1] = ramp[2] = NULL;
+ }
+ #endif
+@@ -906,11 +906,11 @@ SISUSBPreInit(ScrnInfoPtr pScrn, int flags)
+ 	     Bool gotit = FALSE;
+ 
+ 	     if(!ioctl(fd, SISUSBFB_GET_INFO_SIZE, &sisfbinfosize)) {
+-		if((mysisfbinfo = xalloc(sisfbinfosize))) {
++		if((mysisfbinfo = malloc(sisfbinfosize))) {
+ 		   if(!ioctl(fd, (SISUSBFB_GET_INFO | (sisfbinfosize << 16)), mysisfbinfo)) {
+ 		      gotit = TRUE;
+ 		   } else {
+-		      xfree(mysisfbinfo);
++		      free(mysisfbinfo);
+ 		      mysisfbinfo = NULL;
+ 		   }
+ 		}
+@@ -944,7 +944,7 @@ SISUSBPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+ 		   }
+ 	        }
+-		xfree(mysisfbinfo);
++		free(mysisfbinfo);
+ 		mysisfbinfo = NULL;
+ 	     }
+ 	     close (fd);
+@@ -1147,7 +1147,7 @@ SISUSBPreInit(ScrnInfoPtr pScrn, int flags)
+ #endif
+ 
+     if(pSiSUSB->HWCursor) {
+-       if(!(pSiSUSB->USBCursorBuf = xcalloc(pSiSUSB->CursorSize * 4, 1))) pSiSUSB->HWCursor = FALSE;
++       if(!(pSiSUSB->USBCursorBuf = calloc(pSiSUSB->CursorSize * 4, 1))) pSiSUSB->HWCursor = FALSE;
+ 
+        pSiSUSB->availMem -= (pSiSUSB->CursorSize * 2);
+        if(pSiSUSB->OptUseColorCursor) pSiSUSB->availMem -= (pSiSUSB->CursorSize * 2);
+@@ -1456,8 +1456,8 @@ SISUSBMapMem(ScrnInfoPtr pScrn)
+ {
+     SISUSBPtr pSiSUSB = SISUSBPTR(pScrn);
+ 
+-    pSiSUSB->FbBase = (UChar *)pSiSUSB->FbAddress;
+-    pSiSUSB->IOBase = (UChar *)pSiSUSB->IOAddress;
++    pSiSUSB->FbBase = (UChar *)(uintptr_t)pSiSUSB->FbAddress;
++    pSiSUSB->IOBase = (UChar *)(uintptr_t)pSiSUSB->IOAddress;
+ 
+     return TRUE;
+ }
+@@ -1811,7 +1811,7 @@ SISUSBScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ 
+     if(pSiSUSB->ShadowFB) {
+        pSiSUSB->ShadowPitch = BitmapBytePad(pScrn->bitsPerPixel * displayWidth);
+-       pSiSUSB->ShadowPtr = xalloc(pSiSUSB->ShadowPitch * height);
++       pSiSUSB->ShadowPtr = malloc(pSiSUSB->ShadowPitch * height);
+        if(!(FBStart = pSiSUSB->ShadowPtr)) {
+           SISUSBSaveScreen(pScreen, SCREEN_SAVER_OFF);
+           SISUSBErrorLog(pScrn, "Failed to allocate shadow framebuffer\n");
+@@ -1820,7 +1820,7 @@ SISUSBScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ #if X_BYTE_ORDER == X_BIG_ENDIAN
+        if(pScrn->bitsPerPixel == 16) {
+           /* For 16bpp, we need to swap the bytes in the framebuffer */
+-          if(!(pSiSUSB->ShadowPtrSwap = xalloc(pSiSUSB->ShadowPitch * height))) {
++          if(!(pSiSUSB->ShadowPtrSwap = malloc(pSiSUSB->ShadowPitch * height))) {
+ 	     SISUSBSaveScreen(pScreen, SCREEN_SAVER_OFF);
+              SISUSBErrorLog(pScrn, "Failed to allocate swap buffer for shadow framebuffer\n");
+              return FALSE;
+@@ -2238,24 +2238,24 @@ SISUSBCloseScreen(int scrnIndex, ScreenPtr pScreen)
+     }
+ 
+     if(pSiSUSB->USBCursorBuf) {
+-       xfree(pSiSUSB->USBCursorBuf);
++       free(pSiSUSB->USBCursorBuf);
+        pSiSUSB->USBCursorBuf = NULL;
+     }
+ 
+     if(pSiSUSB->ShadowPtr) {
+-       xfree(pSiSUSB->ShadowPtr);
++       free(pSiSUSB->ShadowPtr);
+        pSiSUSB->ShadowPtr = NULL;
+     }
+ 
+ #if 0
+     if(pSiSUSB->PreAllocMem) {
+-       xfree(pSiSUSB->PreAllocMem);
++       free(pSiSUSB->PreAllocMem);
+        pSiSUSB->PreAllocMem = NULL;
+     }
+ #endif
+ 
+     if(pSiSUSB->adaptor) {
+-       xfree(pSiSUSB->adaptor);
++       free(pSiSUSB->adaptor);
+        pSiSUSB->adaptor = NULL;
+        pSiSUSB->ResetXv = pSiSUSB->ResetXvGamma = NULL;
+     }
+diff --git a/src/sisusb_init.c b/src/sisusb_init.c
+index ba44431..99ec519 100644
+--- a/src/sisusb_init.c
++++ b/src/sisusb_init.c
+@@ -1301,10 +1301,10 @@ SiSUSBBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN i
+ 	 }
+       }
+ 
+-      if(!(new = xalloc(sizeof(DisplayModeRec)))) return first;
++      if(!(new = malloc(sizeof(DisplayModeRec)))) return first;
+       memset(new, 0, sizeof(DisplayModeRec));
+-      if(!(new->name = xalloc(10))) {
+-      	 xfree(new);
++      if(!(new->name = malloc(10))) {
++      	 free(new);
+ 	 return first;
+       }
+       if(!first) first = new;
+diff --git a/src/sisusb_opt.c b/src/sisusb_opt.c
+index d4612b0..4d5cfa3 100644
+--- a/src/sisusb_opt.c
++++ b/src/sisusb_opt.c
+@@ -228,7 +228,7 @@ SiSUSBOptions(ScrnInfoPtr pScrn)
+     xf86CollectOptions(pScrn, NULL);
+ 
+     /* Process the options */
+-    if(!(pSiSUSB->Options = xalloc(sizeof(SISUSBOptions)))) return;
++    if(!(pSiSUSB->Options = malloc(sizeof(SISUSBOptions)))) return;
+ 
+     memcpy(pSiSUSB->Options, SISUSBOptions, sizeof(SISUSBOptions));
+ 
+diff --git a/src/sisusb_osdef.h b/src/sisusb_osdef.h
+index 2d938ad..500bffb 100644
+--- a/src/sisusb_osdef.h
++++ b/src/sisusb_osdef.h
+@@ -77,11 +77,11 @@
+ 
+ #define SIS315H
+ 
+-#define OutPortByte(p,v) outSISREG((IOADDRESS)(p),(CARD8)(v))
+-#define OutPortWord(p,v) outSISREGW((IOADDRESS)(p),(CARD16)(v))
+-#define OutPortLong(p,v) outSISREGL((IOADDRESS)(p),(CARD32)(v))
+-#define InPortByte(p)    inSISREG((IOADDRESS)(p))
+-#define InPortWord(p)    inSISREGW((IOADDRESS)(p))
+-#define InPortLong(p)    inSISREGL((IOADDRESS)(p))
++#define OutPortByte(p,v) outSISREG((unsigned long)(p),(CARD8)(v))
++#define OutPortWord(p,v) outSISREGW((unsigned long)(p),(CARD16)(v))
++#define OutPortLong(p,v) outSISREGL((unsigned long)(p),(CARD32)(v))
++#define InPortByte(p)    inSISREG((unsigned long)(p))
++#define InPortWord(p)    inSISREGW((unsigned long)(p))
++#define InPortLong(p)    inSISREGL((unsigned long)(p))
+ 
+ #endif  /* _SISUSB_OSDEF_H_ */
+diff --git a/src/sisusb_types.h b/src/sisusb_types.h
+index 04c7a7a..9fc6b41 100644
+--- a/src/sisusb_types.h
++++ b/src/sisusb_types.h
+@@ -51,6 +51,8 @@
+ #ifndef _VGATYPES_
+ #define _VGATYPES_
+ 
++#include <xf86Pci.h>
++
+ #ifndef FALSE
+ #define FALSE   0
+ #endif
+@@ -93,7 +95,7 @@ typedef unsigned char BOOLEAN;
+ 
+ #define SISIOMEMTYPE
+ 
+-typedef IOADDRESS SISIOADDRESS;
++typedef unsigned long SISIOADDRESS;
+ 
+ typedef enum _SIS_CHIP_TYPE {
+     SIS_VGALegacy = 0,
+diff --git a/src/sisusb_utility.c b/src/sisusb_utility.c
+index 8c03d63..a9c1ee1 100644
+--- a/src/sisusb_utility.c
++++ b/src/sisusb_utility.c
+@@ -34,8 +34,6 @@
+ #endif
+ 
+ #include "sisusb.h"
+-#define NEED_REPLIES
+-#define NEED_EVENTS
+ #include <X11/X.h>
+ #include "dixstruct.h"
+ 
+@@ -789,10 +787,10 @@ SiSUSBProcSiSCtrlQueryVersion(ClientPtr client)
+     rep.majorVersion = SISCTRL_MAJOR_VERSION;
+     rep.minorVersion = SISCTRL_MINOR_VERSION;
+     if(client->swapped) {
+-        swaps(&rep.sequenceNumber, n);
+-        swapl(&rep.length, n);
+-        swaps(&rep.majorVersion, n);
+-        swaps(&rep.minorVersion, n);
++        _swaps(&rep.sequenceNumber, n);
++        _swapl(&rep.length, n);
++        _swaps(&rep.majorVersion, n);
++        _swaps(&rep.minorVersion, n);
+     }
+     WriteToClient(client, sizeof(xSiSCtrlQueryVersionReply), (char *)&rep);
+     return (client->noClientException);
+@@ -834,15 +832,15 @@ SiSUSBProcSiSCtrlCommand(ClientPtr client)
+     rep.sequenceNumber = client->sequence;
+ 
+     if(client->swapped) {
+-       swaps(&rep.sequenceNumber, n);
+-       swapl(&rep.length, n);
+-       swapl(&rep.screen, n);
+-       swapl(&rep.sdc_id, n);
+-       swapl(&rep.sdc_command, n);
+-       swapl(&rep.sdc_result_header, n);
++       _swaps(&rep.sequenceNumber, n);
++       _swapl(&rep.length, n);
++       _swapl(&rep.screen, n);
++       _swapl(&rep.sdc_id, n);
++       _swapl(&rep.sdc_command, n);
++       _swapl(&rep.sdc_result_header, n);
+        for(i = 0; i < SDC_NUM_PARM_RESULT; i++) {
+-	  swapl(&rep.sdc_parm[i], n);
+-	  swapl(&rep.sdc_result[i], n);
++	  _swapl(&rep.sdc_parm[i], n);
++	  _swapl(&rep.sdc_result[i], n);
+        }
+     }
+     WriteToClient(client, sizeof(xSiSCtrlCommandReply), (char *)&rep);
+@@ -869,7 +867,7 @@ SiSUSBSProcSiSCtrlQueryVersion(ClientPtr client)
+ {
+     REQUEST(xSiSCtrlQueryVersionReq);
+     register int n;
+-    swaps(&stuff->length, n);
++    _swaps(&stuff->length, n);
+     REQUEST_SIZE_MATCH(xSiSCtrlQueryVersionReq);
+     return SiSUSBProcSiSCtrlQueryVersion(client);
+ }
+@@ -880,14 +878,14 @@ SiSUSBSProcSiSCtrlCommand(ClientPtr client)
+     REQUEST(xSiSCtrlCommandReq);
+     register int n;
+     int i;
+-    swaps(&stuff->length, n);
+-    swapl(&stuff->screen, n);
+-    swapl(&stuff->sdc_id, n);
+-    swapl(&stuff->sdc_command, n);
+-    swapl(&stuff->sdc_result_header, n);
++    _swaps(&stuff->length, n);
++    _swapl(&stuff->screen, n);
++    _swapl(&stuff->sdc_id, n);
++    _swapl(&stuff->sdc_command, n);
++    _swapl(&stuff->sdc_result_header, n);
+     for(i = 0; i < SDC_NUM_PARM_RESULT; i++) {
+-       swapl(&stuff->sdc_parm[i], n);
+-       swapl(&stuff->sdc_result[i], n);
++       _swapl(&stuff->sdc_parm[i], n);
++       _swapl(&stuff->sdc_result[i], n);
+     }
+     REQUEST_SIZE_MATCH(xSiSCtrlCommandReq);
+     return SiSUSBProcSiSCtrlCommand(client);
+@@ -911,7 +909,7 @@ SiSUSBCtrlResetProc(ExtensionEntry* extEntry)
+ {
+     /* Called by CloseDownExtensions() */
+     if(extEntry->extPrivate) {
+-       xfree(extEntry->extPrivate);
++       free(extEntry->extPrivate);
+        extEntry->extPrivate = NULL;
+     }
+ }
+@@ -928,7 +926,7 @@ SiSUSBCtrlExtInit(ScrnInfoPtr pScrn)
+ 
+    if(!(myext = CheckExtension(SISCTRL_PROTOCOL_NAME))) {
+ 
+-      if(!(myctrl = xcalloc(sizeof(xSiSCtrlScreenTable), 1)))
++      if(!(myctrl = calloc(sizeof(xSiSCtrlScreenTable), 1)))
+          return;
+ 
+       if(!(myext = AddExtension(SISCTRL_PROTOCOL_NAME, 0, 0,
+@@ -938,7 +936,7 @@ SiSUSBCtrlExtInit(ScrnInfoPtr pScrn)
+ 				StandardMinorOpcode))) {
+          xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+ 	 		"Failed to add SISCTRL extension\n");
+-	 xfree(myctrl);
++	 free(myctrl);
+ 	 return;
+       }
+ 
+diff --git a/src/sisusb_video.c b/src/sisusb_video.c
+index bc469b0..1dbf4f1 100644
+--- a/src/sisusb_video.c
++++ b/src/sisusb_video.c
+@@ -216,7 +216,7 @@ void SISUSBInitVideo(ScreenPtr pScreen)
+ 
+        if(newAdaptor) size++;
+ 
+-       newAdaptors = xalloc(size * sizeof(XF86VideoAdaptorPtr*));
++       newAdaptors = malloc(size * sizeof(XF86VideoAdaptorPtr*));
+        if(newAdaptors) {
+           if(num_adaptors) {
+              memcpy(newAdaptors, adaptors, num_adaptors * sizeof(XF86VideoAdaptorPtr));
+@@ -234,7 +234,7 @@ void SISUSBInitVideo(ScreenPtr pScreen)
+     }
+ 
+     if(newAdaptors) {
+-       xfree(newAdaptors);
++       free(newAdaptors);
+     }
+ }
+ 
+@@ -377,7 +377,7 @@ SISUSBSetupImageVideo(ScreenPtr pScreen)
+     XF86VideoAdaptorPtr adapt;
+     SISUSBPortPrivPtr pPriv;
+ 
+-    if(!(adapt = xcalloc(1, sizeof(XF86VideoAdaptorRec) +
++    if(!(adapt = calloc(1, sizeof(XF86VideoAdaptorRec) +
+                             sizeof(SISUSBPortPrivRec) +
+                             sizeof(DevUnion))))
+     	return NULL;
