@@ -1,0 +1,846 @@
+diff --git a/Makefile.am b/Makefile.am
+index aa89732..7bd8873 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -18,17 +18,18 @@
+ #  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ #  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ 
+-AUTOMAKE_OPTIONS = foreign
+ SUBDIRS = src man
++MAINTAINERCLEANFILES = ChangeLog INSTALL
+ 
+-EXTRA_DIST = README.multihead ChangeLog
++EXTRA_DIST = README.multihead
+ 
+-MAINTAINERCLEANFILES=ChangeLog
++.PHONY: ChangeLog INSTALL
+ 
+-.PHONY: ChangeLog
++INSTALL:
++	$(INSTALL_CMD)
+ 
+ ChangeLog:
+ 	$(CHANGELOG_CMD)
+ 
+-dist-hook: ChangeLog
++dist-hook: ChangeLog INSTALL
+ 
+diff --git a/configure.ac b/configure.ac
+index d205eb3..68c3eb3 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -20,47 +20,47 @@
+ #
+ # Process this file with autoconf to produce a configure script
+ 
+-AC_PREREQ(2.57)
++# Initialize Autoconf
++AC_PREREQ([2.60])
+ AC_INIT([xf86-video-cirrus],
+-        1.3.2,
++        [1.3.2],
+         [https://bugs.freedesktop.org/enter_bug.cgi?product=xorg],
+-        xf86-video-cirrus)
+-
++        [xf86-video-cirrus])
+ AC_CONFIG_SRCDIR([Makefile.am])
+-AM_CONFIG_HEADER([config.h])
++AC_CONFIG_HEADERS([config.h])
+ AC_CONFIG_AUX_DIR(.)
+ 
+-AM_INIT_AUTOMAKE([dist-bzip2])
+-
++# Initialize Automake
++AM_INIT_AUTOMAKE([foreign dist-bzip2])
+ AM_MAINTAINER_MODE
+ 
+-# Require xorg-macros: XORG_CWARNFLAGS, XORG_CHANGELOG
+-m4_ifndef([XORG_MACROS_VERSION], [AC_FATAL([must install xorg-macros 1.2 or later before running autoconf/autogen])])
+-XORG_MACROS_VERSION(1.2)
++# Require X.Org macros 1.8 or later for MAN_SUBSTS set by XORG_MANPAGE_SECTIONS
++m4_ifndef([XORG_MACROS_VERSION],
++          [m4_fatal([must install xorg-macros 1.8 or later before running autoconf/autogen])])
++XORG_MACROS_VERSION(1.8)
++XORG_DEFAULT_OPTIONS
+ 
+-# Checks for programs.
++# Initialize libtool
+ AC_DISABLE_STATIC
+ AC_PROG_LIBTOOL
+-AC_PROG_CC
+-XORG_CWARNFLAGS
+ 
+ AH_TOP([#include "xorg-server.h"])
+ 
++# Define a configure option for an alternate module directory
+ AC_ARG_WITH(xorg-module-dir,
+-            AC_HELP_STRING([--with-xorg-module-dir=DIR],
++            AS_HELP_STRING([--with-xorg-module-dir=DIR],
+                            [Default xorg module directory [[default=$libdir/xorg/modules]]]),
+             [moduledir="$withval"],
+             [moduledir="$libdir/xorg/modules"])
+ 
+-# Checks for extensions
++# Store the list of server defined optional extensions in REQUIRED_MODULES
+ XORG_DRIVER_CHECK_EXT(RANDR, randrproto)
+ XORG_DRIVER_CHECK_EXT(RENDER, renderproto)
+ XORG_DRIVER_CHECK_EXT(XV, videoproto)
+ XORG_DRIVER_CHECK_EXT(DPMSExtension, xextproto)
+ 
+-# Checks for pkg-config packages
++# Obtain compiler/linker options for the driver dependencies
+ PKG_CHECK_MODULES(XORG, [xorg-server >= 1.4 xproto fontsproto $REQUIRED_MODULES])
+-sdkdir=$(pkg-config --variable=sdkdir xorg-server)
+ 
+ # Checks for libraries.
+ SAVE_CPPFLAGS="$CPPFLAGS"
+@@ -78,21 +78,15 @@ if test "x$XSERVER_LIBPCIACCESS" = xyes; then
+ fi
+ AM_CONDITIONAL(XSERVER_LIBPCIACCESS, test "x$XSERVER_LIBPCIACCESS" = xyes)
+ 
+-# Checks for header files.
+-AC_HEADER_STDC
+ 
+-AC_SUBST([XORG_CFLAGS])
+ AC_SUBST([moduledir])
+ 
+ DRIVER_NAME=cirrus
+ AC_SUBST([DRIVER_NAME])
+ 
+-XORG_MANPAGE_SECTIONS
+-XORG_RELEASE_VERSION
+-XORG_CHANGELOG
+-
+-AC_OUTPUT([
+-	Makefile
+-	src/Makefile
+-	man/Makefile
++AC_CONFIG_FILES([
++                Makefile
++                src/Makefile
++                man/Makefile
+ ])
++AC_OUTPUT
+diff --git a/man/Makefile.am b/man/Makefile.am
+index f0eb29b..1ea26b3 100644
+--- a/man/Makefile.am
++++ b/man/Makefile.am
+@@ -1,28 +1,25 @@
+ #
+-# Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+-# 
+-# Permission to use, copy, modify, distribute, and sell this software and its
+-# documentation for any purpose is hereby granted without fee, provided that
+-# the above copyright notice appear in all copies and that both that
+-# copyright notice and this permission notice appear in supporting
+-# documentation.
+-# 
+-# The above copyright notice and this permission notice shall be included
+-# in all copies or substantial portions of the Software.
+-# 
+-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+-# IN NO EVENT SHALL THE OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR
+-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+-# OTHER DEALINGS IN THE SOFTWARE.
+-# 
+-# Except as contained in this notice, the name of the copyright holders shall
+-# not be used in advertising or otherwise to promote the sale, use or
+-# other dealings in this Software without prior written authorization
+-# from the copyright holders.
+-# 
++# Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
++#
++# Permission is hereby granted, free of charge, to any person obtaining a
++# copy of this software and associated documentation files (the "Software"),
++# to deal in the Software without restriction, including without limitation
++# the rights to use, copy, modify, merge, publish, distribute, sublicense,
++# and/or sell copies of the Software, and to permit persons to whom the
++# Software is furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice (including the next
++# paragraph) shall be included in all copies or substantial portions of the
++# Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++# DEALINGS IN THE SOFTWARE.
++#
+ 
+ drivermandir = $(DRIVER_MAN_DIR)
+ 
+@@ -34,25 +31,11 @@ EXTRA_DIST = @DRIVER_NAME@.man
+ 
+ CLEANFILES = $(driverman_DATA)
+ 
+-SED = sed
+ 
+-# Strings to replace in man pages
+-XORGRELSTRING = @PACKAGE_STRING@
+-  XORGMANNAME = X Version 11
++# String replacements in MAN_SUBSTS now come from xorg-macros.m4 via configure
+ 
+-MAN_SUBSTS = \
+-	-e 's|__vendorversion__|"$(XORGRELSTRING)" "$(XORGMANNAME)"|' \
+-	-e 's|__xorgversion__|"$(XORGRELSTRING)" "$(XORGMANNAME)"|' \
+-	-e 's|__xservername__|Xorg|g' \
+-	-e 's|__xconfigfile__|xorg.conf|g' \
+-	-e 's|__projectroot__|$(prefix)|g' \
+-	-e 's|__appmansuffix__|$(APP_MAN_SUFFIX)|g' \
+-	-e 's|__drivermansuffix__|$(DRIVER_MAN_SUFFIX)|g' \
+-	-e 's|__adminmansuffix__|$(ADMIN_MAN_SUFFIX)|g' \
+-	-e 's|__miscmansuffix__|$(MISC_MAN_SUFFIX)|g' \
+-	-e 's|__filemansuffix__|$(FILE_MAN_SUFFIX)|g'
+ 
+ SUFFIXES = .$(DRIVER_MAN_SUFFIX) .man
+ 
+ .man.$(DRIVER_MAN_SUFFIX):
+-	sed $(MAN_SUBSTS) < $< > $@
++	$(AM_V_GEN)$(SED) $(MAN_SUBSTS) < $< > $@
+diff --git a/man/cirrus.man b/man/cirrus.man
+index 009011e..af46248 100644
+--- a/man/cirrus.man
++++ b/man/cirrus.man
+@@ -1,4 +1,3 @@
+-.\" $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/cirrus.man,v 1.2 2001/01/27 18:20:47 dawes Exp $ 
+ .\" shorthand for double quote that works everywhere.
+ .ds q \N'34'
+ .TH CIRRUS __drivermansuffix__ __vendorversion__
+diff --git a/src/CirrusClk.c b/src/CirrusClk.c
+index a3590c9..6fd6270 100644
+--- a/src/CirrusClk.c
++++ b/src/CirrusClk.c
+@@ -1,5 +1,3 @@
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/CirrusClk.c,v 1.8 1998/12/06 06:08:28 dawes Exp $ */
+-
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+ #endif
+diff --git a/src/alp.h b/src/alp.h
+index 01c5301..a182d0c 100644
+--- a/src/alp.h
++++ b/src/alp.h
+@@ -1,5 +1,3 @@
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/alp.h,v 1.8 2001/10/01 13:44:05 eich Exp $ */
+-
+ /* (c) Itai Nahshon */
+ 
+ #ifndef ALP_H
+diff --git a/src/alp_driver.c b/src/alp_driver.c
+index fe81757..d3d8e4f 100644
+--- a/src/alp_driver.c
++++ b/src/alp_driver.c
+@@ -15,8 +15,6 @@
+ #include "config.h"
+ #endif
+ 
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/alp_driver.c,v 1.35 2003/11/03 05:11:09 tsi Exp $ */
+-
+ /* All drivers should typically include these */
+ #include "xf86.h"
+ #include "xf86_OSproc.h"
+@@ -29,6 +27,10 @@
+ /* Drivers for PCI hardware need this */
+ #include "xf86PciInfo.h"
+ 
++#ifndef PCI_CHIP_GD7556  /*  for old xf86PciInfo.h  */
++#define PCI_CHIP_GD7556            0x004C
++#endif
++
+ /* Drivers that need to access the PCI config space directly need this */
+ #include "xf86Pci.h"
+ 
+@@ -119,6 +121,11 @@ static void AlpOffscreenAccelInit(ScrnInfoPtr pScrn);
+ static void	AlpDisplayPowerManagementSet(ScrnInfoPtr pScrn,
+ 											int PowerManagementMode, int flags);
+ 
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++static void PC98CIRRUS755xEnable(ScrnInfoPtr pScrn);
++static void PC98CIRRUS755xDisable(ScrnInfoPtr pScrn);
++#endif
++
+ /*
+  * This is intentionally screen-independent.  It indicates the binding
+  * choice made in the first PreInit.
+@@ -153,6 +160,8 @@ static int gd5430_MaxClocks[] = {  85500,  85500,  50000,  28500,      0 };
+ static int gd5446_MaxClocks[] = { 135100, 135100,  85500,  85500,      0 };
+ static int gd5480_MaxClocks[] = { 135100, 200000, 200000, 135100, 135100 };
+ static int gd7548_MaxClocks[] = {  80100,  80100,  80100,  80100,  80100 };
++static int gd7555_MaxClocks[] = {  80100,  80100,  80100,  80100,  80100 };
++static int gd7556_MaxClocks[] = {  80100,  80100,  80100,  80100,  80100 };
+ 
+ #ifdef XFree86LOADER
+ 
+@@ -248,7 +257,7 @@ AlpFreeRec(ScrnInfoPtr pScrn)
+ {
+ 	if (pScrn->driverPrivate == NULL)
+ 		return;
+-	xfree(pScrn->driverPrivate);
++	free(pScrn->driverPrivate);
+ 	pScrn->driverPrivate = NULL;
+ }
+ 
+@@ -385,6 +394,11 @@ AlpCountRam(ScrnInfoPtr pScrn)
+ 			break;
+ 	}
+ 	break;
++
++    case PCI_CHIP_GD7555:
++    case PCI_CHIP_GD7556:
++	videoram = 2048;   /*  for PC-9821 La13 etc.  */
++	break;
+     }
+ 
+     /* UNMap the Alp memory and MMIO areas */
+@@ -407,6 +421,8 @@ GetAccelPitchValues(ScrnInfoPtr pScrn)
+ {
+ 	int *linePitches = NULL;
+ 	int i, n = 0;
++	int max_pitch;
++
+ 	CirPtr pCir = CIRPTR(pScrn);
+ 
+ 	/* XXX ajv - 512, 576, and 1536 may not be supported
+@@ -423,8 +439,21 @@ GetAccelPitchValues(ScrnInfoPtr pScrn)
+ 							1280, 1536, 1600, 1920, 2048, 0 };
+ #endif
+ 
++	switch (pCir->Chipset) {
++	case PCI_CHIP_GD5436:
++	case PCI_CHIP_GD5446:
++		max_pitch = 0x1ff << 3;
++		break;
++
++	default:
++		/* FIXME max_pitch for other chipsets? */
++		max_pitch = (pScrn->bitsPerPixel / 8) * 2048;
++		break;
++	}
++
+ 	for (i = 0; accelWidths[i] != 0; i++) {
+-		if (accelWidths[i] % pCir->Rounding == 0) {
++		if ((accelWidths[i] % pCir->Rounding == 0)
++		 && ((accelWidths[i] * pScrn->bitsPerPixel / 8) <= max_pitch)) {
+ 			n++;
+ 			linePitches = xnfrealloc(linePitches, n * sizeof(int));
+ 			linePitches[n - 1] = accelWidths[i];
+@@ -482,12 +511,17 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+ 	pCir = CIRPTR(pScrn);
+ 	pCir->pScrn = pScrn;
++
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
+ 	pCir->PIOReg = hwp->PIOOffset + 0x3CE;
++#else
++	pCir->PIOReg = 0x3CE;
++#endif
+ 
+ 	/* Get the entity, and make sure it is PCI. */
+ 	pCir->pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
+ 	if (pCir->pEnt->location.type != BUS_PCI) {
+-		xfree(pCir->pEnt);
++		free(pCir->pEnt);
+ 		return FALSE;
+ 	}
+ 
+@@ -498,7 +532,8 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 			      PCI_DEV_DEV(pCir->PciInfo),
+ 			      PCI_DEV_FUNC(pCir->PciInfo));
+ 
+-    if (xf86LoadSubModule(pScrn, "int10")) {
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++    if (!xf86IsPc98() && xf86LoadSubModule(pScrn, "int10")) {
+ 	xf86DrvMsg(pScrn->scrnIndex,X_INFO,"initializing int10\n");
+ 	pInt = xf86InitInt10(pCir->pEnt->index);
+ 	xf86FreeInt10(pInt);
+@@ -509,8 +544,8 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+ 	PCI_WRITE_LONG(pCir->PciInfo, PCI_REGION_BASE(pCir->PciInfo, 0, REGION_MEM), 0x10);
+ 	PCI_WRITE_LONG(pCir->PciInfo, PCI_REGION_BASE(pCir->PciInfo, 1, REGION_MEM), 0x14);
+-	
+     }
++#endif
+ 
+     /* Set pScrn->monitor */
+ 	pScrn->monitor = pScrn->confScreen->monitor;
+@@ -574,7 +609,7 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 	xf86CollectOptions(pScrn, NULL);
+ 
+ 	/* Process the options */
+-	if (!(pCir->Options = xalloc(sizeof(CirOptions))))
++	if (!(pCir->Options = malloc(sizeof(CirOptions))))
+ 		return FALSE;
+ 	memcpy(pCir->Options, CirOptions, sizeof(CirOptions));
+ 	xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, pCir->Options);
+@@ -589,6 +624,16 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+ 	from = X_DEFAULT;
+ 	pCir->HWCursor = FALSE;
++
++	switch (pCir->Chipset) {
++	case PCI_CHIP_GD7555:
++	case PCI_CHIP_GD7556:
++	  pCir->HWCursor = TRUE;
++	  break;
++	default:
++	  break;
++	}
++
+ 	if (xf86GetOptValBool(pCir->Options, OPTION_HW_CURSOR, &pCir->HWCursor))
+ 		from = X_CONFIG;
+ 
+@@ -863,10 +908,10 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 		case PCI_CHIP_GD5430:
+ 		case PCI_CHIP_GD5434_4:
+ 		case PCI_CHIP_GD5434_8:
+-		case PCI_CHIP_GD5436:
+ 	/*	case PCI_CHIP_GD5440: */
+ 			p = gd5430_MaxClocks;
+ 			break;
++		case PCI_CHIP_GD5436:
+ 		case PCI_CHIP_GD5446:
+ 			p = gd5446_MaxClocks;
+ 			break;
+@@ -876,6 +921,12 @@ AlpPreInit(ScrnInfoPtr pScrn, int flags)
+ 		case PCI_CHIP_GD7548:
+ 		        p = gd7548_MaxClocks;
+                         break;
++		case PCI_CHIP_GD7555:
++		        p = gd7555_MaxClocks;
++                        break;
++		case PCI_CHIP_GD7556:
++		        p = gd7556_MaxClocks;
++                        break;
+ 		}
+ 		if (!p)
+ 			return FALSE;
+@@ -1360,6 +1411,11 @@ AlpModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
+ 
+ 	vgaHWProtect(pScrn, FALSE);
+ 
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++	if (xf86IsPc98())
++		PC98CIRRUS755xEnable(pScrn);
++#endif
++
+ 	return TRUE;
+ }
+ 
+@@ -1489,7 +1545,7 @@ AlpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ 	
+ 	if(pCir->shadowFB) {
+ 	    pCir->ShadowPitch = BitmapBytePad(pScrn->bitsPerPixel * width);
+-	    pCir->ShadowPtr = xalloc(pCir->ShadowPitch * height);
++	    pCir->ShadowPtr = malloc(pCir->ShadowPitch * height);
+ 	    displayWidth = pCir->ShadowPitch / (pScrn->bitsPerPixel >> 3);
+ 	    FbBase = pCir->ShadowPtr;
+ 	} else {
+@@ -1782,6 +1838,11 @@ AlpLeaveVT(int scrnIndex, int flags)
+ 
+ 	AlpRestore(pScrn);
+ 	vgaHWLock(hwp);
++
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++	if (xf86IsPc98())
++		PC98CIRRUS755xDisable(pScrn);
++#endif
+ }
+ 
+ 
+@@ -1813,12 +1874,17 @@ AlpCloseScreen(int scrnIndex, ScreenPtr pScreen)
+ 		xf86DestroyCursorInfoRec(pCir->CursorInfoRec);
+ 	pCir->CursorInfoRec = NULL;
+ 	if (pCir->DGAModes)
+-		xfree(pCir->DGAModes);
++		free(pCir->DGAModes);
+ 	pCir->DGAnumModes = 0;
+ 	pCir->DGAModes = NULL;
+ 
+ 	pScrn->vtSema = FALSE;
+ 
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++	if (xf86IsPc98())
++		PC98CIRRUS755xDisable(pScrn);
++#endif
++
+ 	pScreen->CloseScreen = pCir->CloseScreen;
+ 	return (*pScreen->CloseScreen)(scrnIndex, pScreen);
+ }
+@@ -2081,3 +2147,53 @@ AlpOffscreenAccelInit(ScrnInfoPtr pScrn)
+ 		   box.y2 - pScrn->virtualY);
+     }
+ }
++
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
++static void
++PC98CIRRUS755xEnable(ScrnInfoPtr pScrn)  /*  enter_aile()  */
++{
++   unsigned int  index,data;
++   vgaHWPtr hwp = VGAHWPTR(pScrn);
++
++   outb(0xfac, 0x02);
++
++   outb(0x68, 0x0e);
++   outb(0x6a, 0x07);
++   outb(0x6a, 0x8f);
++   outb(0x6a, 0x06);
++
++   outw(VGA_SEQ_INDEX, 0x1206);         /*  unlock cirrus special  */
++
++   index = hwp->IOBase + VGA_CRTC_INDEX_OFFSET;
++   data  = hwp->IOBase + VGA_CRTC_DATA_OFFSET;
++   outb(index, 0x3c);
++   outb(data,  inb(data) & 0xef);
++   outb(index, 0x1a);
++   outb(data,  inb(data) & 0xf3);
++}
++
++static void
++PC98CIRRUS755xDisable(ScrnInfoPtr pScrn)  /*  leave_aile()  */
++{
++   unsigned int  index,data;
++   vgaHWPtr hwp = VGAHWPTR(pScrn);
++
++   outw(VGA_SEQ_INDEX, 0x1206);         /*  unlock cirrus special  */
++
++   index = hwp->IOBase + VGA_CRTC_INDEX_OFFSET;
++   data  = hwp->IOBase + VGA_CRTC_DATA_OFFSET;
++   outb(index, 0x3c);
++   outb(data,  0x71);
++   outb(index, 0x1a);
++   outb(data,  inb(data) | 0x0c);
++
++   outb(0xfac,0x00);
++
++   outb(0x68, 0x0f);
++   outb(0x6a, 0x07);
++   outb(0x6a, 0x8e);
++   outb(0x6a, 0x21);
++   outb(0x6a, 0x69);
++   outb(0x6a, 0x06);
++}
++#endif
+diff --git a/src/alp_hwcurs.c b/src/alp_hwcurs.c
+index 79dfce7..9891eb4 100644
+--- a/src/alp_hwcurs.c
++++ b/src/alp_hwcurs.c
+@@ -1,5 +1,3 @@
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/alp_hwcurs.c,v 1.4 2000/12/06 15:35:15 eich Exp $ */
+-
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+ #endif
+diff --git a/src/alp_i2c.c b/src/alp_i2c.c
+index 9e6ae67..7365215 100644
+--- a/src/alp_i2c.c
++++ b/src/alp_i2c.c
+@@ -4,8 +4,6 @@
+ #include "config.h"
+ #endif
+ 
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/alp_i2c.c,v 1.6 1999/02/28 11:19:38 dawes Exp $ */
+-
+ #include "xf86.h"
+ #include "xf86_OSproc.h"
+ #include "compiler.h"
+diff --git a/src/alp_xaa.c b/src/alp_xaa.c
+index 95741fc..7a96e1a 100644
+--- a/src/alp_xaa.c
++++ b/src/alp_xaa.c
+@@ -4,8 +4,6 @@
+ #include "config.h"
+ #endif
+ 
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/alp_xaa.c,v 1.7 2001/10/01 13:44:05 eich Exp $ */
+-
+ #include "xf86.h"
+ #include "xf86_OSproc.h"
+ #include "compiler.h"
+diff --git a/src/alp_xaam.c b/src/alp_xaam.c
+index 0193a43..3ecc7de 100644
+--- a/src/alp_xaam.c
++++ b/src/alp_xaam.c
+@@ -1,6 +1,5 @@
+ /* (c) Itai Nahshon */
+ /* #define DEBUG */
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/alp_xaam.c,v 1.7 2001/10/01 13:44:05 eich Exp $ */
+ 
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+diff --git a/src/cir.h b/src/cir.h
+index 904d9cc..861966d 100644
+--- a/src/cir.h
++++ b/src/cir.h
+@@ -1,5 +1,3 @@
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/cir.h,v 1.20 2002/01/04 21:26:54 tsi Exp $ */
+-
+ /* (c) Itai Nahshon */
+ 
+ #ifndef CIR_H
+@@ -23,7 +21,7 @@ typedef struct {
+ 	CARD32			properties;
+ 	pciVideoPtr		PciInfo;
+ 	PCITAG			PciTag;
+-	IOADDRESS		PIOReg;
++	unsigned long		PIOReg;
+     union {
+ 	struct lgRec		*lg;
+ 	struct alpRec		*alp;
+diff --git a/src/cir_dga.c b/src/cir_dga.c
+index bc98df6..f930231 100644
+--- a/src/cir_dga.c
++++ b/src/cir_dga.c
+@@ -1,4 +1,3 @@
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/cir_dga.c,v 1.5 2001/02/15 17:39:27 eich Exp $ */
+ /*
+  * Copyright 2000 by Egbert Eich
+  *
+@@ -83,9 +82,9 @@ CirDGAInit(ScreenPtr pScreen)
+   if (!pCir->DGAnumModes) {
+     pMode = firstMode = pScrn->modes;
+     while (pMode) {
+-      newmodes = xrealloc(modes, (num + 1) * sizeof (DGAModeRec));
++      newmodes = realloc(modes, (num + 1) * sizeof (DGAModeRec));
+       if (!newmodes) {
+-	xfree(modes);
++	free(modes);
+ 	return FALSE;
+       }
+       modes = newmodes;
+diff --git a/src/cir_driver.c b/src/cir_driver.c
+index 5466c48..7e470bb 100644
+--- a/src/cir_driver.c
++++ b/src/cir_driver.c
+@@ -15,8 +15,6 @@
+ #include "config.h"
+ #endif
+ 
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/cir_driver.c,v 1.67 2001/05/15 10:19:37 eich Exp $ */
+-
+ /* All drivers should typically include these */
+ #include "xf86.h"
+ #include "xf86_OSproc.h"
+@@ -29,6 +27,10 @@
+ /* Drivers for PCI hardware need this */
+ #include "xf86PciInfo.h"
+ 
++#ifndef PCI_CHIP_GD7556  /*  for old xf86PciInfo.h  */
++#define PCI_CHIP_GD7556            0x004C
++#endif
++
+ /* Drivers that need to access the PCI config space directly need this */
+ #include "xf86Pci.h"
+ 
+@@ -90,6 +92,8 @@ SymTabRec CIRChipsets[] = {
+ 	{ PCI_CHIP_GD5464BD,	"CL-GD5464BD" },
+ 	{ PCI_CHIP_GD5465,		"CL-GD5465" },
+ 	{ PCI_CHIP_GD7548,              "CL-GD7548" },
++	{ PCI_CHIP_GD7555,              "CL-GD7555" },
++	{ PCI_CHIP_GD7556,              "CL-GD7556" },
+ 	{-1,					NULL }
+ };
+ 
+@@ -107,6 +111,8 @@ _X_EXPORT PciChipsets CIRPciChipsets[] = {
+ 	{ PCI_CHIP_GD5464BD,PCI_CHIP_GD5464BD,	RES_SHARED_VGA },
+ 	{ PCI_CHIP_GD5465,	PCI_CHIP_GD5465,	RES_SHARED_VGA },
+ 	{ PCI_CHIP_GD7548,	PCI_CHIP_GD7548,	RES_SHARED_VGA },
++	{ PCI_CHIP_GD7555,	PCI_CHIP_GD7555,	RES_SHARED_VGA },
++	{ PCI_CHIP_GD7556,	PCI_CHIP_GD7556,	RES_SHARED_VGA },
+ 	{ -1,				-1,					RES_UNDEFINED}
+ };
+ 
+@@ -238,7 +244,7 @@ CIRProbe(DriverPtr drv, int flags)
+ 				    CIRChipsets, CIRPciChipsets, devSections,
+  				    numDevSections, drv, &usedChips);
+     /* Free it since we don't need that list after this */
+-    xfree(devSections);
++    free(devSections);
+     if (numUsed <= 0)
+  	return FALSE;
+     if (flags & PROBE_DETECT)
+@@ -280,7 +286,7 @@ CIRProbe(DriverPtr drv, int flags)
+  	    pScrn->Probe	 = NULL;
+  	}
+     }
+-    xfree(usedChips);
++    free(usedChips);
+      
+     return foundScreen;
+ }
+diff --git a/src/cir_pcirename.h b/src/cir_pcirename.h
+index f0f5cf8..669b8fe 100644
+--- a/src/cir_pcirename.h
++++ b/src/cir_pcirename.h
+@@ -34,6 +34,33 @@ enum region_type {
+     REGION_IO 
+ };
+ 
++#include "xf86Module.h"
++
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 12
++
++#if (defined(__alpha__) || defined(__ia64__)) && defined (linux)
++#define PCI_DOM_MASK    0x01fful
++#else
++#define PCI_DOM_MASK 0x0ffu
++#endif
++
++#ifndef PCI_DOM_MASK
++# define PCI_DOM_MASK 0x0ffu
++#endif
++#define PCI_DOMBUS_MASK (((PCI_DOM_MASK) << 8) | 0x0ffu)
++
++static inline uint32_t
++pciTag(int busnum, int devnum, int funcnum)
++{
++	uint32_t tag;
++	tag  = (busnum & (PCI_DOMBUS_MASK)) << 16;
++	tag |= (devnum & 0x00001fu) << 11;
++	tag |= (funcnum & 0x000007u) << 8;
++
++	return tag;
++}
++#endif /* GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 12 */
++
+ #ifndef XSERVER_LIBPCIACCESS
+ 
+ /* pciVideoPtr */
+diff --git a/src/cir_shadow.c b/src/cir_shadow.c
+index b89890a..0716a64 100644
+--- a/src/cir_shadow.c
++++ b/src/cir_shadow.c
+@@ -1,5 +1,3 @@
+-/* $XFree86: Exp $ */
+-
+ /*
+    Copyright (c) 1999,2000  The XFree86 Project Inc. 
+    based on code written by Mark Vojkovich <markv@valinux.com>
+diff --git a/src/lg.h b/src/lg.h
+index 9d91053..985f634 100644
+--- a/src/lg.h
++++ b/src/lg.h
+@@ -10,8 +10,6 @@
+  *  Inspired by cir.h
+  */
+ 
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/lg.h,v 1.12 2001/05/04 19:05:36 dawes Exp $ */
+-
+ #ifndef LG_H
+ #define LG_H
+ #define LG_DEBUG
+diff --git a/src/lg_driver.c b/src/lg_driver.c
+index cfc3e65..fc864f8 100644
+--- a/src/lg_driver.c
++++ b/src/lg_driver.c
+@@ -13,7 +13,6 @@
+  *	David Dawes, Andrew E. Mileski, Leonard N. Zubkoff,
+  *	Guy DESBIEF, Itai Nahshon.
+  */
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/lg_driver.c,v 1.49 2003/11/03 05:11:09 tsi Exp $ */
+ 
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+@@ -259,7 +258,7 @@ LgFreeRec(ScrnInfoPtr pScrn)
+ {
+ 	if (pScrn->driverPrivate == NULL)
+ 		return;
+-	xfree(pScrn->driverPrivate);
++	free(pScrn->driverPrivate);
+ 	pScrn->driverPrivate = NULL;
+ }
+ 
+@@ -373,7 +372,12 @@ LgPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+ 	pCir = CIRPTR(pScrn);
+ 	pCir->pScrn = pScrn;
++
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
+ 	pCir->PIOReg = hwp->PIOOffset + 0x3CE;
++#else
++	pCir->PIOReg = 0x3CE;
++#endif
+ 
+ 	/* Get the entity, and make sure it is PCI. */
+ 	pCir->pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
+@@ -454,7 +458,7 @@ LgPreInit(ScrnInfoPtr pScrn, int flags)
+ 	xf86CollectOptions(pScrn, NULL);
+ 
+ 	/* Process the options */
+-	if (!(pCir->Options = xalloc(sizeof(LgOptions))))
++	if (!(pCir->Options = malloc(sizeof(LgOptions))))
+ 		return FALSE;
+ 	memcpy(pCir->Options, LgOptions, sizeof(LgOptions));
+ 	xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, pCir->Options);
+@@ -1314,7 +1318,7 @@ LgScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ 	
+ 	if(pCir->shadowFB) {
+ 	    pCir->ShadowPitch = BitmapBytePad(pScrn->bitsPerPixel * width);
+-	    pCir->ShadowPtr = xalloc(pCir->ShadowPitch * height);
++	    pCir->ShadowPtr = malloc(pCir->ShadowPitch * height);
+ 	    displayWidth = pCir->ShadowPitch / (pScrn->bitsPerPixel >> 3);
+ 	    FbBase = pCir->ShadowPtr;
+ 	} else {
+@@ -1617,7 +1621,7 @@ LgCloseScreen(int scrnIndex, ScreenPtr pScreen)
+ 		xf86DestroyCursorInfoRec(pCir->CursorInfoRec);
+ 	pCir->CursorInfoRec = NULL;
+ 	if (pCir->DGAModes)
+-		xfree(pCir->DGAModes);
++		free(pCir->DGAModes);
+ 	pCir->DGAnumModes = 0;
+ 	pCir->DGAModes = NULL;
+ 
+diff --git a/src/lg_hwcurs.c b/src/lg_hwcurs.c
+index b41b79a..381db1c 100644
+--- a/src/lg_hwcurs.c
++++ b/src/lg_hwcurs.c
+@@ -10,7 +10,6 @@
+  * Much of this code is inspired by the HW cursor code from XFree86
+  * 3.3.3.
+  */
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/lg_hwcurs.c,v 1.4 2000/12/06 15:35:17 eich Exp $ */
+ 
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+diff --git a/src/lg_i2c.c b/src/lg_i2c.c
+index 05e083c..145cc2e 100644
+--- a/src/lg_i2c.c
++++ b/src/lg_i2c.c
+@@ -1,7 +1,5 @@
+ /* (c) Itai Nahshon */
+ 
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/lg_i2c.c,v 1.1 1998/11/15 04:30:25 dawes Exp $ */
+-
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+ #endif
+diff --git a/src/lg_xaa.c b/src/lg_xaa.c
+index fd8c70a..8bab365 100644
+--- a/src/lg_xaa.c
++++ b/src/lg_xaa.c
+@@ -10,7 +10,6 @@
+  * Much of this code is inspired by the XAA acceleration from XFree86
+  * 3.3.3, laguna_acl.c
+  */
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/lg_xaa.c,v 1.4 2000/12/06 15:35:17 eich Exp $ */
+ 
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+diff --git a/src/lg_xaa.h b/src/lg_xaa.h
+index 7359a49..162aa5d 100644
+--- a/src/lg_xaa.h
++++ b/src/lg_xaa.h
+@@ -13,7 +13,6 @@
+  * This header file draws much from the file cir_blitLG.h in version 3.3.3
+  * of XFree86.
+  */
+-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/cirrus/lg_xaa.h,v 1.3 2000/02/08 13:13:15 eich Exp $ */
+ 
+ /* This header file defines the necessary structures, contstants, and
+    variables for using the bitBLT engine on a Laguna family graphics
