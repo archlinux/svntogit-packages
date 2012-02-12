@@ -2,8 +2,8 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=9.04
-pkgrel=6
+pkgver=9.05
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('GPL3' 'custom')
@@ -12,25 +12,16 @@ makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
-source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2
-	ghostscript-cups-rgbw.patch
-	ghostscript-gpl-9.04-freetype-underlinking.patch)
+source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!libtool' '!makeflags')
-md5sums=('9f6899e821ab6d78ab2c856f10fa3023'
-         'bc56eb8c5fef0ecf964f6b3e9b7e65ae'
-         'a1928c3e4459dcfee0aaa4b38fadba57')
+md5sums=('8bcef1f33ddf8a4d12b2cf8da385c191')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
   
-  # fix broken color printing https://bugs.archlinux.org/task/25519
-  patch -Np1 -i ${srcdir}/ghostscript-cups-rgbw.patch
-  # fix a linking issue
-  patch -Np1 -i ${srcdir}/ghostscript-gpl-9.04-freetype-underlinking.patch
-  
   # force it to use system-libs
   rm -rf jpeg libpng zlib jasper expat tiff lcms freetype 
-  
+
   ./configure --prefix=/usr \
 	--enable-dynamic \
 	--with-ijs \
@@ -43,6 +34,7 @@ build() {
 	--enable-fontconfig \
 	--enable-freetype \
 	--without-luratech \
+	--with-system-libtiff \
 	--disable-compile-inits #--help # needed for linking with system-zlib
   make
 
