@@ -2,40 +2,31 @@
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
 
 pkgname=kmod
-pkgver=4
+pkgver=5
 pkgrel=2
 pkgdesc="Linux kernel module handling"
 arch=('i686' 'x86_64')
 url="http://git.profusion.mobi/cgit.cgi/kmod.git"
 license=('GPL2')
 depends=('glibc' 'zlib')
-makedepends=('docbook2x')
 options=('!libtool')
 provides=('module-init-tools=3.16')
 conflicts=('module-init-tools')
 replaces=('module-init-tools')
 source=("http://packages.profusion.mobi/$pkgname/$pkgname-$pkgver.tar.xz"
-        0001-partially-fix-parsing-of-alias-with-dots.patch
-        0002-libkmod-module-used-shared-code-in-module-creation.patch
-        0003-modprobe-handle-all-error-returns-from-init_module.patch
-        0004-modprobe-remove-0-refcnt-deps.patch
+        '0001-libkmod-module-probe-Fix-ignore-loaded-flag-not-bein.patch'
         "depmod-search.conf")
-md5sums=('e14450a066a48accd0af1995b3c0232d'
-         '5f497ab3466ee1a616b6e6c97b330706'
-         '23a9257a152862753ce4c4ee7287761a'
-         '3a57671b0f37b1203b207f35a4442ae3'
-         '1fe88eee9302104b179124ce6bfc55d2'
+md5sums=('b271c2ec54aba1c67bda63c8579d8c15'
+         '81545a1509b43008f85c03fb980f0e86'
          '4b8cbcbc54b9029c99fd730e257d4436')
 
 build() {
   cd "$pkgname-$pkgver"
 
-  patch -Np1 <"$srcdir/0001-partially-fix-parsing-of-alias-with-dots.patch"
-  patch -Np1 <"$srcdir/0002-libkmod-module-used-shared-code-in-module-creation.patch"
-  patch -Np1 <"$srcdir/0003-modprobe-handle-all-error-returns-from-init_module.patch"
-  patch -Np1 <"$srcdir/0004-modprobe-remove-0-refcnt-deps.patch"
+  # fix modprobe --show-depends failures on loaded modules
+  patch -Np1 <"$srcdir/0001-libkmod-module-probe-Fix-ignore-loaded-flag-not-bein.patch"
 
-  ./configure \
+  CFLAGS+=' -g -O0' ./configure \
     --sysconfdir=/etc \
     --with-rootprefix= \
     --with-zlib
@@ -50,16 +41,13 @@ check() {
 package() {
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
 
-  # binary directories
-  install -dm755 "$pkgdir"/{,s}bin
-
-  # configuration directories
-  install -dm755 "$pkgdir"/{etc,lib}/{depmod,modprobe}.d
+  # extra directories
+  install -dm755 "$pkgdir"/{etc,lib}/{depmod,modprobe}.d "$pkgdir/sbin"
 
   # add symlinks to kmod
-  ln -s /usr/bin/kmod "$pkgdir/bin/lsmod"
-  for tool in {ins,rm,dep}mod mod{info,probe}; do
-    ln -s ../usr/bin/kmod "$pkgdir/sbin/$tool"
+  ln -s ../usr/bin/kmod "$pkgdir/sbin/modprobe"
+  for tool in {dep,ins,ls,rm}mod modinfo; do
+    ln -s kmod "$pkgdir/usr/bin/$tool"
   done
 
   # install depmod.d file for search/ dir
