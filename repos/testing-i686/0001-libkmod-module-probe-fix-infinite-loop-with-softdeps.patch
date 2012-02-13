@@ -1,0 +1,39 @@
+From 8cd0f9e4f9f5c093136a7a2c0c2998b9dd203161 Mon Sep 17 00:00:00 2001
+From: Lucas De Marchi <lucas.demarchi@profusion.mobi>
+Date: Sat, 11 Feb 2012 19:45:29 -0200
+Subject: [PATCH] libkmod-module: probe: fix infinite loop with softdeps
+
+If a softdep depends on a module in the dependency list of the module
+being inserted, we would enter and infinite loop.
+
+Move the "mod->visited = true" assignment to the proper place, hoping it
+didn't break other use cases. This is a bug that comes and goes every
+now and then. Since we have a testsuite now, a test for this should be
+written.
+---
+ libkmod/libkmod-module.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/libkmod/libkmod-module.c b/libkmod/libkmod-module.c
+index b5eb7c9..835896f 100644
+--- a/libkmod/libkmod-module.c
++++ b/libkmod/libkmod-module.c
+@@ -1013,7 +1013,6 @@ static int __kmod_module_fill_softdep(struct kmod_module *mod,
+ 		goto fail;
+ 	}
+ 	*list = l;
+-	mod->visited = true;
+ 	mod->ignorecmd = (pre != NULL || post != NULL);
+ 
+ 	kmod_list_foreach(l, post) {
+@@ -1043,6 +1042,7 @@ static int __kmod_module_get_probe_list(struct kmod_module *mod,
+ 								mod->name);
+ 		return 0;
+ 	}
++	mod->visited = true;
+ 
+ 	dep = kmod_module_get_dependencies(mod);
+ 	kmod_list_foreach(l, dep) {
+-- 
+1.7.9
+
