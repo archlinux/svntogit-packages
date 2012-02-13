@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index 33c0d65..036a448 100644
+index 33c0d65..62ad933 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -20,54 +20,53 @@
@@ -83,6 +83,17 @@ index 33c0d65..036a448 100644
  if test "$DRI" != no; then
          AC_CHECK_FILE([${sdkdir}/dri.h],
                        [have_dri_h="yes"], [have_dri_h="no"])
+@@ -103,8 +99,8 @@ AC_MSG_RESULT([$DRI])
+ AM_CONDITIONAL(DRI, test x$DRI = xyes)
+ if test "$DRI" = yes; then
+         PKG_CHECK_MODULES(DRI, [libdrm >= 2.0 xf86driproto])
+-        AC_DEFINE(XF86DRI,1,[Enable DRI driver support])
+-        AC_DEFINE(XF86DRI_DEVEL,1,[Enable developmental DRI driver support])
++        AC_DEFINE(SISDRI,1,[Enable DRI driver support])
++        AC_DEFINE(SISDRI_DEVEL,1,[Enable developmental DRI driver support])
+ fi
+ 
+ # technically this should be a configure flag.  meh.
 @@ -118,20 +114,19 @@ AC_CHECK_DECL(XSERVER_LIBPCIACCESS,
  CPPFLAGS="$SAVE_CPPFLAGS"
  
@@ -299,7 +310,7 @@ index cd6b907..5776910 100644
  
  #endif /* XF86 */
 diff --git a/src/sis.h b/src/sis.h
-index 400b83f..9af31a5 100644
+index 400b83f..f2ca3a9 100644
 --- a/src/sis.h
 +++ b/src/sis.h
 @@ -86,6 +86,14 @@
@@ -317,7 +328,31 @@ index 400b83f..9af31a5 100644
  #define SIS_HaveDriverFuncs 0
  
  #undef SISISXORG6899900
-@@ -251,7 +259,6 @@
+@@ -173,7 +181,13 @@
+ 
+ #undef SISHAVEDRMWRITE
+ #undef SISNEWDRI
+-#ifdef XF86DRI
++
++/* if the server was built without DRI support, force-disable DRI */
++#ifndef XF86DRI
++#undef SISDRI
++#endif
++
++#ifdef SISDRI
+ #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,3,0)
+ #define SISHAVEDRMWRITE
+ #endif
+@@ -187,7 +201,7 @@
+ #include "dri.h"
+ #include "GL/glxint.h"
+ #include "sis_dri.h"
+-#endif /* XF86DRI */
++#endif /* SISDRI */
+ 
+ /* Configurable stuff: ------------------------------------- */
+ 
+@@ -251,7 +265,6 @@
  #endif
  
  /* Need that for SiSCtrl and Pseudo-Xinerama */
@@ -325,7 +360,16 @@ index 400b83f..9af31a5 100644
  #define EXTENSION_PROC_ARGS void *
  #include "extnsionst.h" 			/* required */
  #include <X11/extensions/panoramiXproto.h> 	/* required */
-@@ -971,7 +978,7 @@ typedef struct {
+@@ -805,7 +818,7 @@ typedef struct {
+     ScrnInfoPtr		pScrn_2;
+     UChar		*BIOS;
+     struct SiS_Private	*SiS_Pr;
+-#ifdef XF86DRI
++#ifdef SISDRI
+     SISAGPHTYPE		agpHandle;
+     ULong		agpAddr;
+     UChar		*agpBase;
+@@ -971,7 +984,7 @@ typedef struct {
      void 		*RealFbBase;	/* Real VRAM virtual linear address (for DHM and SiS76x UMA skipping) */
      CARD32		IOAddress;	/* MMIO physical address */
      void		*IOBase;	/* MMIO linear address */
@@ -334,7 +378,25 @@ index 400b83f..9af31a5 100644
  #ifdef __alpha__
      void		*IOBaseDense;	/* MMIO for Alpha platform */
  #endif
-@@ -1348,7 +1355,7 @@ typedef struct {
+@@ -1085,7 +1098,7 @@ typedef struct {
+     unsigned int	cmdQueueSize_div2;
+     unsigned int	cmdQueueSize_div4;
+     unsigned int	cmdQueueSize_4_3;
+-#ifdef XF86DRI
++#ifdef SISDRI
+     SISAGPHTYPE		agpHandle;
+     ULong		agpAddr;
+     UChar 		*agpBase;
+@@ -1144,7 +1157,7 @@ typedef struct {
+ 
+     /* DRI */
+     Bool		loadDRI;
+-#ifdef XF86DRI
++#ifdef SISDRI
+     Bool		directRenderingEnabled;
+     DRIInfoPtr 		pDRIInfo;
+     int			drmSubFD;
+@@ -1348,7 +1361,7 @@ typedef struct {
      Bool		skipswitchcheck;
      unsigned int	VBFlagsInit;
      DisplayModePtr	currentModeLast;
@@ -482,7 +544,7 @@ index 3a476a2..97ed951 100644
    }
  
 diff --git a/src/sis_driver.c b/src/sis_driver.c
-index d95b5f1..7ac9487 100644
+index d95b5f1..7a5be4e 100644
 --- a/src/sis_driver.c
 +++ b/src/sis_driver.c
 @@ -74,8 +74,7 @@
@@ -495,7 +557,17 @@ index d95b5f1..7ac9487 100644
  
  #include "globals.h"
  
-@@ -91,6 +90,26 @@
+@@ -86,11 +85,35 @@
+ #include <X11/extensions/dpms.h>
+ #endif
+ 
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 5
++#include <inputstr.h> /* for inputInfo */
++#endif
++
+ 
+-#ifdef XF86DRI
++#ifdef SISDRI
  #include "dri.h"
  #endif
  
@@ -522,7 +594,7 @@ index d95b5f1..7ac9487 100644
  /* Globals (yes, these ARE really required to be global) */
  
  #ifdef SISUSEDEVPORT
-@@ -299,9 +318,9 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -299,9 +322,9 @@ SISFreeRec(ScrnInfoPtr pScrn)
      pSiSEnt = pSiS->entityPrivate;
  #endif
  
@@ -534,7 +606,7 @@ index d95b5f1..7ac9487 100644
      pSiS->fonts = NULL;
  
  #ifdef SISDUALHEAD
-@@ -312,11 +331,11 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -312,11 +335,11 @@ SISFreeRec(ScrnInfoPtr pScrn)
  	   * and we need the BIOS image and SiS_Private for the first
  	   * head.
  	   */
@@ -549,7 +621,7 @@ index d95b5f1..7ac9487 100644
  	  pSiSEnt->RenderAccelArray = pSiS->RenderAccelArray = NULL;
  	  pSiSEnt->pScrn_1 = NULL;
         } else {
-@@ -327,21 +346,21 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -327,21 +350,21 @@ SISFreeRec(ScrnInfoPtr pScrn)
         }
      } else {
  #endif
@@ -577,7 +649,7 @@ index d95b5f1..7ac9487 100644
      pSiS->MetaModes = NULL;
      if(pSiS->CRT2pScrn) {
         if(pSiS->CRT2pScrn->modes) {
-@@ -353,10 +372,10 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -353,10 +376,10 @@ SISFreeRec(ScrnInfoPtr pScrn)
  	     while(pSiS->CRT2pScrn->monitor->Modes)
  	        xf86DeleteMode(&pSiS->CRT2pScrn->monitor->Modes, pSiS->CRT2pScrn->monitor->Modes);
  	  }
@@ -591,7 +663,7 @@ index d95b5f1..7ac9487 100644
         pSiS->CRT2pScrn = NULL;
      }
      if(pSiS->CRT1Modes) {
-@@ -366,8 +385,8 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -366,8 +389,8 @@ SISFreeRec(ScrnInfoPtr pScrn)
  	     do {
  	        DisplayModePtr p = pScrn->currentMode->next;
  	        if(pScrn->currentMode->Private)
@@ -602,7 +674,7 @@ index d95b5f1..7ac9487 100644
  	        pScrn->currentMode = p;
  	     } while(pScrn->currentMode != pScrn->modes);
  	  }
-@@ -380,7 +399,7 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -380,7 +403,7 @@ SISFreeRec(ScrnInfoPtr pScrn)
  #endif
      while(pSiS->SISVESAModeList) {
         sisModeInfoPtr mp = pSiS->SISVESAModeList->next;
@@ -611,7 +683,7 @@ index d95b5f1..7ac9487 100644
         pSiS->SISVESAModeList = mp;
      }
      if(pSiS->pVbe) vbeFree(pSiS->pVbe);
-@@ -392,7 +411,7 @@ SISFreeRec(ScrnInfoPtr pScrn)
+@@ -392,7 +415,7 @@ SISFreeRec(ScrnInfoPtr pScrn)
  
      if(pScrn->driverPrivate == NULL)
          return;
@@ -620,7 +692,7 @@ index d95b5f1..7ac9487 100644
      pScrn->driverPrivate = NULL;
  }
  
-@@ -501,7 +520,7 @@ SISProbe(DriverPtr drv, int flags)
+@@ -501,7 +524,7 @@ SISProbe(DriverPtr drv, int flags)
  			numDevSections, drv, &usedChipsXGI);
  
      /* Free it since we don't need that list after this */
@@ -629,7 +701,7 @@ index d95b5f1..7ac9487 100644
  
      numUsed = numUsedSiS + numUsedXGI;
  
-@@ -577,8 +596,8 @@ SISProbe(DriverPtr drv, int flags)
+@@ -577,8 +600,8 @@ SISProbe(DriverPtr drv, int flags)
  
      }
  
@@ -640,7 +712,7 @@ index d95b5f1..7ac9487 100644
  
      return foundScreen;
  }
-@@ -642,10 +661,10 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
+@@ -642,10 +665,10 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
     if(!(nramp = xf86GetGammaRampSize(pScreen))) return;
  
     for(i=0; i<3; i++) {
@@ -654,7 +726,7 @@ index d95b5f1..7ac9487 100644
  	 return;
        }
     }
-@@ -705,9 +724,9 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
+@@ -705,9 +728,9 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
  
     xf86ChangeGammaRamp(pScreen, nramp, ramp[0], ramp[1], ramp[2]);
  
@@ -667,7 +739,7 @@ index d95b5f1..7ac9487 100644
     ramp[0] = ramp[1] = ramp[2] = NULL;
  }
  #endif
-@@ -1135,10 +1154,10 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
+@@ -1135,10 +1158,10 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
      DisplayModePtr mode;
      int dx = 0,dy = 0;
  
@@ -681,7 +753,7 @@ index d95b5f1..7ac9487 100644
         return dest;
      }
      ((SiSMergedDisplayModePtr)mode->Private)->CRT1 = i;
-@@ -1223,8 +1242,8 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
+@@ -1223,8 +1246,8 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
  		"Skipped \"%s\" (%dx%d), not enough video RAM or beyond hardware specs\n",
  		mode->name, mode->HDisplay, mode->VDisplay);
@@ -692,7 +764,7 @@ index d95b5f1..7ac9487 100644
  
         return dest;
      }
-@@ -2131,10 +2150,10 @@ SiSProcXineramaQueryVersion(ClientPtr client)
+@@ -2131,10 +2154,10 @@ SiSProcXineramaQueryVersion(ClientPtr client)
      rep.majorVersion = SIS_XINERAMA_MAJOR_VERSION;
      rep.minorVersion = SIS_XINERAMA_MINOR_VERSION;
      if(client->swapped) {
@@ -707,7 +779,7 @@ index d95b5f1..7ac9487 100644
      }
      WriteToClient(client, sizeof(xPanoramiXQueryVersionReply), (char *)&rep);
      return (client->noClientException);
-@@ -2147,19 +2166,20 @@ SiSProcXineramaGetState(ClientPtr client)
+@@ -2147,19 +2170,20 @@ SiSProcXineramaGetState(ClientPtr client)
      WindowPtr			pWin;
      xPanoramiXGetStateReply	rep;
      register int		n;
@@ -733,7 +805,7 @@ index d95b5f1..7ac9487 100644
      }
      WriteToClient(client, sizeof(xPanoramiXGetStateReply), (char *)&rep);
      return client->noClientException;
-@@ -2172,19 +2192,20 @@ SiSProcXineramaGetScreenCount(ClientPtr client)
+@@ -2172,19 +2196,20 @@ SiSProcXineramaGetScreenCount(ClientPtr client)
      WindowPtr				pWin;
      xPanoramiXGetScreenCountReply	rep;
      register int			n;
@@ -759,7 +831,7 @@ index d95b5f1..7ac9487 100644
      }
      WriteToClient(client, sizeof(xPanoramiXGetScreenCountReply), (char *)&rep);
      return client->noClientException;
-@@ -2197,10 +2218,12 @@ SiSProcXineramaGetScreenSize(ClientPtr client)
+@@ -2197,10 +2222,12 @@ SiSProcXineramaGetScreenSize(ClientPtr client)
      WindowPtr				pWin;
      xPanoramiXGetScreenSizeReply	rep;
      register int			n;
@@ -774,7 +846,7 @@ index d95b5f1..7ac9487 100644
  
      rep.type = X_Reply;
      rep.length = 0;
-@@ -2208,10 +2231,10 @@ SiSProcXineramaGetScreenSize(ClientPtr client)
+@@ -2208,10 +2235,10 @@ SiSProcXineramaGetScreenSize(ClientPtr client)
      rep.width  = SiSXineramadataPtr[stuff->screen].width;
      rep.height = SiSXineramadataPtr[stuff->screen].height;
      if(client->swapped) {
@@ -789,7 +861,7 @@ index d95b5f1..7ac9487 100644
      }
      WriteToClient(client, sizeof(xPanoramiXGetScreenSizeReply), (char *)&rep);
      return client->noClientException;
-@@ -2230,9 +2253,9 @@ SiSProcXineramaIsActive(ClientPtr client)
+@@ -2230,9 +2257,9 @@ SiSProcXineramaIsActive(ClientPtr client)
      rep.state = !SiSnoPanoramiXExtension;
      if(client->swapped) {
  	register int n;
@@ -802,7 +874,7 @@ index d95b5f1..7ac9487 100644
      }
      WriteToClient(client, sizeof(xXineramaIsActiveReply), (char *) &rep);
      return client->noClientException;
-@@ -2251,9 +2274,9 @@ SiSProcXineramaQueryScreens(ClientPtr client)
+@@ -2251,9 +2278,9 @@ SiSProcXineramaQueryScreens(ClientPtr client)
      rep.length = rep.number * sz_XineramaScreenInfo >> 2;
      if(client->swapped) {
         register int n;
@@ -815,7 +887,7 @@ index d95b5f1..7ac9487 100644
      }
      WriteToClient(client, sizeof(xXineramaQueryScreensReply), (char *)&rep);
  
-@@ -2268,10 +2291,10 @@ SiSProcXineramaQueryScreens(ClientPtr client)
+@@ -2268,10 +2295,10 @@ SiSProcXineramaQueryScreens(ClientPtr client)
  	  scratch.height = SiSXineramadataPtr[i].height;
  	  if(client->swapped) {
  	     register int n;
@@ -830,7 +902,7 @@ index d95b5f1..7ac9487 100644
  	  }
  	  WriteToClient(client, sz_XineramaScreenInfo, (char *)&scratch);
         }
-@@ -2308,7 +2331,7 @@ SiSSProcXineramaQueryVersion (ClientPtr client)
+@@ -2308,7 +2335,7 @@ SiSSProcXineramaQueryVersion (ClientPtr client)
  {
      REQUEST(xPanoramiXQueryVersionReq);
      register int n;
@@ -839,7 +911,7 @@ index d95b5f1..7ac9487 100644
      REQUEST_SIZE_MATCH (xPanoramiXQueryVersionReq);
      return SiSProcXineramaQueryVersion(client);
  }
-@@ -2318,7 +2341,7 @@ SiSSProcXineramaGetState(ClientPtr client)
+@@ -2318,7 +2345,7 @@ SiSSProcXineramaGetState(ClientPtr client)
  {
      REQUEST(xPanoramiXGetStateReq);
      register int n;
@@ -848,7 +920,7 @@ index d95b5f1..7ac9487 100644
      REQUEST_SIZE_MATCH(xPanoramiXGetStateReq);
      return SiSProcXineramaGetState(client);
  }
-@@ -2328,7 +2351,7 @@ SiSSProcXineramaGetScreenCount(ClientPtr client)
+@@ -2328,7 +2355,7 @@ SiSSProcXineramaGetScreenCount(ClientPtr client)
  {
      REQUEST(xPanoramiXGetScreenCountReq);
      register int n;
@@ -857,7 +929,7 @@ index d95b5f1..7ac9487 100644
      REQUEST_SIZE_MATCH(xPanoramiXGetScreenCountReq);
      return SiSProcXineramaGetScreenCount(client);
  }
-@@ -2338,7 +2361,7 @@ SiSSProcXineramaGetScreenSize(ClientPtr client)
+@@ -2338,7 +2365,7 @@ SiSSProcXineramaGetScreenSize(ClientPtr client)
  {
      REQUEST(xPanoramiXGetScreenSizeReq);
      register int n;
@@ -866,7 +938,7 @@ index d95b5f1..7ac9487 100644
      REQUEST_SIZE_MATCH(xPanoramiXGetScreenSizeReq);
      return SiSProcXineramaGetScreenSize(client);
  }
-@@ -2348,7 +2371,7 @@ SiSSProcXineramaIsActive(ClientPtr client)
+@@ -2348,7 +2375,7 @@ SiSSProcXineramaIsActive(ClientPtr client)
  {
      REQUEST(xXineramaIsActiveReq);
      register int n;
@@ -875,7 +947,7 @@ index d95b5f1..7ac9487 100644
      REQUEST_SIZE_MATCH(xXineramaIsActiveReq);
      return SiSProcXineramaIsActive(client);
  }
-@@ -2358,7 +2381,7 @@ SiSSProcXineramaQueryScreens(ClientPtr client)
+@@ -2358,7 +2385,7 @@ SiSSProcXineramaQueryScreens(ClientPtr client)
  {
      REQUEST(xXineramaQueryScreensReq);
      register int n;
@@ -884,7 +956,7 @@ index d95b5f1..7ac9487 100644
      REQUEST_SIZE_MATCH(xXineramaQueryScreensReq);
      return SiSProcXineramaQueryScreens(client);
  }
-@@ -2389,7 +2412,7 @@ SiSXineramaResetProc(ExtensionEntry* extEntry)
+@@ -2389,7 +2416,7 @@ SiSXineramaResetProc(ExtensionEntry* extEntry)
  {
      /* Called by CloseDownExtensions() */
      if(SiSXineramadataPtr) {
@@ -893,7 +965,7 @@ index d95b5f1..7ac9487 100644
         SiSXineramadataPtr = NULL;
      }
  }
-@@ -2454,7 +2477,7 @@ SiSXineramaExtensionInit(ScrnInfoPtr pScrn)
+@@ -2454,7 +2481,7 @@ SiSXineramaExtensionInit(ScrnInfoPtr pScrn)
  	  if(!pSiS->XineramaExtEntry) break;
  
  	  if(!(SiSXineramadataPtr = (SiSXineramaData *)
@@ -902,7 +974,7 @@ index d95b5f1..7ac9487 100644
  
  	  SiSXineramaGeneration = serverGeneration;
  	  success = TRUE;
-@@ -2493,10 +2516,10 @@ SiSFreeCRT2Structs(SISPtr pSiS)
+@@ -2493,10 +2520,10 @@ SiSFreeCRT2Structs(SISPtr pSiS)
  	     while(pSiS->CRT2pScrn->monitor->Modes)
  		xf86DeleteMode(&pSiS->CRT2pScrn->monitor->Modes, pSiS->CRT2pScrn->monitor->Modes);
  	  }
@@ -916,7 +988,7 @@ index d95b5f1..7ac9487 100644
         pSiS->CRT2pScrn = NULL;
     }
  }
-@@ -2902,22 +2925,22 @@ SiS_CheckKernelFB(ScrnInfoPtr pScrn)
+@@ -2902,22 +2929,22 @@ SiS_CheckKernelFB(ScrnInfoPtr pScrn)
  	     Bool gotit = FALSE;
  
   	     if(!ioctl(fd, SISFB_GET_INFO_SIZE, &sisfbinfosize)) {
@@ -943,7 +1015,7 @@ index d95b5f1..7ac9487 100644
  		      mysisfbinfo = NULL;
  		   }
  		}
-@@ -3056,7 +3079,7 @@ SiS_CheckKernelFB(ScrnInfoPtr pScrn)
+@@ -3056,7 +3083,7 @@ SiS_CheckKernelFB(ScrnInfoPtr pScrn)
  		      }
  		   }
  	        }
@@ -952,7 +1024,7 @@ index d95b5f1..7ac9487 100644
  		mysisfbinfo = NULL;
  	     }
  	     close (fd);
-@@ -3216,7 +3239,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -3216,7 +3243,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
      pSiS->pInt = NULL;
  
      /* Save PCI Domain Base */
@@ -961,7 +1033,7 @@ index d95b5f1..7ac9487 100644
      pSiS->IODBase = 0;
  #else
      pSiS->IODBase = pScrn->domainIOBase;
-@@ -4078,7 +4101,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -4078,7 +4105,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
         }
  #endif
         if(!pSiS->BIOS) {
@@ -970,7 +1042,7 @@ index d95b5f1..7ac9487 100644
  	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
  		"Could not allocate memory for video BIOS image\n");
  	  } else {
-@@ -4173,7 +4196,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -4173,7 +4200,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
  	     } else {
  	        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
  			 "Could not find/read video BIOS\n");
@@ -979,7 +1051,7 @@ index d95b5f1..7ac9487 100644
  		pSiS->BIOS = NULL;
  	     }
            }
-@@ -5559,7 +5582,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -5559,7 +5586,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
      /* Do some MergedFB mode initialisation */
  #ifdef SISMERGED
      if(pSiS->MergedFB) {
@@ -988,7 +1060,7 @@ index d95b5f1..7ac9487 100644
         if(!pSiS->CRT2pScrn) {
            SISErrorLog(pScrn, "Failed to allocate memory for 2nd pScrn, %s\n", mergeddisstr);
  	  pSiS->MergedFB = FALSE;
-@@ -5592,7 +5615,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -5592,7 +5619,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
  		} else {
  		   SISErrorLog(pScrn, mergednocrt1, mergeddisstr);
  		}
@@ -997,7 +1069,7 @@ index d95b5f1..7ac9487 100644
  		pSiS->CRT2pScrn = NULL;
  		pSiS->MergedFB = FALSE;
  	     }
-@@ -5639,7 +5662,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -5639,7 +5666,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
  		} else {
  		   SISErrorLog(pScrn, mergednocrt2, mergeddisstr);
  		}
@@ -1006,7 +1078,7 @@ index d95b5f1..7ac9487 100644
  		pSiS->CRT2pScrn = NULL;
  		pSiS->MergedFB = FALSE;
  	     }
-@@ -6016,7 +6039,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -6016,7 +6043,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
  
  #ifdef SISMERGED
      if(pSiS->MergedFB) {
@@ -1015,7 +1087,7 @@ index d95b5f1..7ac9487 100644
         if(pSiS->CRT2pScrn->monitor) {
  	  DisplayModePtr tempm = NULL, currentm = NULL, newm = NULL;
  	  memcpy(pSiS->CRT2pScrn->monitor, pScrn->monitor, sizeof(MonRec));
-@@ -6025,10 +6048,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -6025,10 +6052,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
  	  pSiS->CRT2pScrn->monitor->id = (char *)crt2monname;
  	  tempm = pScrn->monitor->Modes;
  	  while(tempm) {
@@ -1029,7 +1101,7 @@ index d95b5f1..7ac9487 100644
  		break;
  	     }
  	     strcpy(newm->name, tempm->name);
-@@ -6070,7 +6093,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+@@ -6070,7 +6097,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
         } else {
  	  SISErrorLog(pScrn, "Failed to allocate memory for CRT2 monitor, %s.\n",
  	  		mergeddisstr);
@@ -1038,7 +1110,37 @@ index d95b5f1..7ac9487 100644
  	  pSiS->CRT2pScrn = NULL;
  	  pSiS->MergedFB = FALSE;
         }
-@@ -7454,7 +7477,7 @@ SISVESASaveRestore(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function)
+@@ -6835,8 +6862,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+ #ifdef SIS_USE_XAA
+        if(!pSiS->useEXA) {
+ 	  if (!xf86LoadSubModule(pScrn, "xaa")) {
+-	    SISErrorLog(pScrn, "Could not load xaa module\n");
+-	    goto my_error_1;
++	      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
++			 "Falling back to shadowfb\n");
++	      pSiS->NoAccel = 1;
++	      pSiS->ShadowFB = 1;
+ 	  }
+        }
+ #endif
+@@ -6855,7 +6884,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+ 	  }
+        }
+ #endif
+-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled\n");
+     }
+ 
+     /* Load shadowfb (if needed) */
+@@ -6867,7 +6895,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
+     }
+ 
+     /* Load the dri and glx modules if requested. */
+-#ifdef XF86DRI
++#ifdef SISDRI
+     if(pSiS->loadDRI) {
+        if(!xf86LoaderCheckSymbol("DRIScreenInit")) {
+ 	  if(xf86LoadSubModule(pScrn, "dri")) {
+@@ -7454,7 +7482,7 @@ SISVESASaveRestore(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function)
  	     (function == MODE_SAVE)) {
  	     /* don't rely on the memory not being touched */
  	     if(!pSiS->pstate) {
@@ -1047,7 +1149,7 @@ index d95b5f1..7ac9487 100644
  	     }
  	     memcpy(pSiS->pstate, pSiS->state, pSiS->stateSize);
  	  }
-@@ -8675,7 +8698,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -8675,7 +8703,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
  
      if(pSiS->ShadowFB) {
         pSiS->ShadowPitch = BitmapBytePad(pScrn->bitsPerPixel * width);
@@ -1056,7 +1158,16 @@ index d95b5f1..7ac9487 100644
         displayWidth = pSiS->ShadowPitch / (pScrn->bitsPerPixel >> 3);
         FBStart = pSiS->ShadowPtr;
      } else {
-@@ -8849,14 +8872,14 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+@@ -8703,7 +8731,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+ 
+     pSiS->cmdQueueLen = 0; /* Force an EngineIdle() at start */
+ 
+-#ifdef XF86DRI
++#ifdef SISDRI
+     if(pSiS->loadDRI) {
+ #ifdef SISDUALHEAD
+        /* No DRI in dual head mode */
+@@ -8849,14 +8877,14 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
  
  	  pSiS->CRT2ColNum = 1 << pScrn->rgbBits;
  
@@ -1074,7 +1185,67 @@ index d95b5f1..7ac9487 100644
  		pSiS->crt2gcolortable = NULL;
  		pSiS->CRT2SepGamma = FALSE;
  	     }
-@@ -9941,7 +9964,7 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
+@@ -9016,7 +9044,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+     }
+ #endif
+ 
+-#ifdef XF86DRI
++#ifdef SISDRI
+     if(pSiS->loadDRI) {
+        if(pSiS->directRenderingEnabled) {
+           /* Now that mi, drm and others have done their thing,
+@@ -9322,9 +9350,22 @@ SISMergedPointerMoved(int scrnIndex, int x, int y)
+ 	}
+      }
+      if(doit) {
+-	UpdateCurrentTime();
+ 	sigstate = xf86BlockSIGIO();
++#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 15
++        {
++            double dx = x, dy = y;
++            miPointerSetPosition(inputInfo.pointer, Absolute, &dx, &dy);
++            x = (int)dx;
++            y = (int)dy;
++        }
++#elif GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 13
++	miPointerSetPosition(inputInfo.pointer, Absolute, x, y);
++#elif GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 5
++	miPointerSetPosition(inputInfo.pointer, x, y);
++#else
++	UpdateCurrentTime();
+ 	miPointerAbsoluteCursor(x, y, currentTime.milliseconds);
++#endif
+ 	xf86UnblockSIGIO(sigstate);
+ 	return;
+      }
+@@ -9737,7 +9778,7 @@ SISEnterVT(int scrnIndex, int flags)
+ 
+     SISAdjustFrame(scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+ 
+-#ifdef XF86DRI
++#ifdef SISDRI
+     if(pSiS->directRenderingEnabled) {
+        DRIUnlock(screenInfo.screens[scrnIndex]);
+     }
+@@ -9763,7 +9804,7 @@ SISLeaveVT(int scrnIndex, int flags)
+ {
+     ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+     SISPtr pSiS = SISPTR(pScrn);
+-#ifdef XF86DRI
++#ifdef SISDRI
+     ScreenPtr pScreen;
+ 
+     if(pSiS->directRenderingEnabled) {
+@@ -9847,7 +9888,7 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
+        SiSCtrlExtUnregister(pSiS, pScrn->scrnIndex);
+     }
+ 
+-#ifdef XF86DRI
++#ifdef SISDRI
+     if(pSiS->directRenderingEnabled) {
+        SISDRICloseScreen(pScreen);
+        pSiS->directRenderingEnabled = FALSE;
+@@ -9941,7 +9982,7 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
      if(pSiS->useEXA) {
         if(pSiS->EXADriverPtr) {
            exaDriverFini(pScreen);
@@ -1083,7 +1254,7 @@ index d95b5f1..7ac9487 100644
            pSiS->EXADriverPtr = NULL;
            pSiS->exa_scratch = NULL;
         }
-@@ -9954,33 +9977,33 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
+@@ -9954,33 +9995,33 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
      }
  
      if(pSiS->ShadowPtr) {
@@ -1156,7 +1327,7 @@ index 6ad62e8..3634401 100644
      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
  	       "Using %s method for aligned data transfers %s video RAM\n",
 diff --git a/src/sis_opt.c b/src/sis_opt.c
-index 3517549..d39ff6e 100644
+index 3517549..3fa12c9 100644
 --- a/src/sis_opt.c
 +++ b/src/sis_opt.c
 @@ -448,7 +448,7 @@ SiSOptions(ScrnInfoPtr pScrn)
@@ -1168,6 +1339,15 @@ index 3517549..d39ff6e 100644
  
      memcpy(pSiS->Options, SISOptions, sizeof(SISOptions));
  
+@@ -480,7 +480,7 @@ SiSOptions(ScrnInfoPtr pScrn)
+ #endif
+     pSiS->ShadowFB = FALSE;
+     pSiS->loadDRI = FALSE;
+-#ifdef XF86DRI
++#ifdef SISDRI
+     pSiS->agpWantedPages = AGP_PAGES;
+ #endif
+     pSiS->VESA = -1;
 @@ -888,7 +888,7 @@ SiSOptions(ScrnInfoPtr pScrn)
  	  if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_CRT2POS))) {
  	     int result;
@@ -1200,6 +1380,15 @@ index 3517549..d39ff6e 100644
  	     if(pSiS->CRT2VRefresh) memcpy(pSiS->CRT2VRefresh, strptr, strlen(strptr) + 1);
  	  }
  	  if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_MERGEDDPI))) {
+@@ -2034,7 +2034,7 @@ SiSOptions(ScrnInfoPtr pScrn)
+        }
+     }
+ 
+-#ifdef XF86DRI
++#ifdef SISDRI
+     /* DRI */
+     from = X_DEFAULT;
+     if(xf86GetOptValBool(pSiS->Options, OPTION_DRI, &pSiS->loadDRI)) {
 diff --git a/src/sis_utility.c b/src/sis_utility.c
 index a9bcd2b..eda194f 100644
 --- a/src/sis_utility.c
@@ -1388,10 +1577,10 @@ index 7322efb..2006858 100644
                             sizeof(SISBPortPrivRec)))) {
        return NULL;
 diff --git a/src/sispcirename.h b/src/sispcirename.h
-index c4beac6..54cc07f 100644
+index c4beac6..a354ac4 100644
 --- a/src/sispcirename.h
 +++ b/src/sispcirename.h
-@@ -29,11 +29,35 @@
+@@ -29,11 +29,40 @@
  #ifndef SISPCIRENAME_H
  #define SISPCIRENAME_H
  
@@ -1402,6 +1591,10 @@ index c4beac6..54cc07f 100644
      REGION_IO 
  };
  
++#include "xf86Module.h"
++
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 12
++
 +#if (defined(__alpha__) || defined(__ia64__)) && defined (linux)
 +#define PCI_DOM_MASK    0x01fful
 +#else
@@ -1423,6 +1616,7 @@ index c4beac6..54cc07f 100644
 +
 +	return tag;
 +}
++#endif /* GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 12 */
 +
  #ifndef XSERVER_LIBPCIACCESS
  
