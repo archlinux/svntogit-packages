@@ -1,13 +1,12 @@
 # $Id$
-# Maintainer:
-# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
-pkgver=4.9
-pkgrel=2
+pkgver=4.9.1
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
@@ -15,14 +14,15 @@ makedepends=('qt' 'python-sip' 'dbus-python' 'python2-sip' 'phonon'
              'python-opengl' 'qt-assistant-compat' 'qtwebkit')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
         'fix-qthelp-build.patch')
-md5sums=('61619500d09d87b6c2a25bd3ea994504'
-         '356a453331a33c507b1baba4a9771764')
+md5sums=('7f495dc49f71e3bfb64bf942e0d8bb3c'
+         '6acfe0a5a00779f946c29d5fac647ce1')
 
 build() {
+  # Build QtHelp (FS#27665)
+  cd "${srcdir}"/PyQt-x11-gpl-${pkgver}
+  patch -p1 -i "${srcdir}"/fix-qthelp-build.patch
+
   cd "${srcdir}"
-
-  patch -p0 -i "${srcdir}"/fix-qthelp-build.patch
-
   cp -r PyQt-x11-gpl-${pkgver} Py2Qt-x11-gpl-${pkgver}
 
   cd "${srcdir}/PyQt-x11-gpl-${pkgver}"
