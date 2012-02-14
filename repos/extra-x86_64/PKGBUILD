@@ -2,8 +2,8 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.9
-pkgrel=2
+pkgver=1.7.9.1
+pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
@@ -22,8 +22,6 @@ optdepends=('tk: gitk and git gui'
 replaces=('git-core')
 provides=('git-core')
 backup=('etc/conf.d/git-daemon.conf')
-#source=("http://kernel.org/pub/software/scm/git/${pkgname}-${pkgver}.tar.bz2"
-#        "http://kernel.org/pub/software/scm/git/git-manpages-$pkgver.tar.bz2"
 source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
         "http://git-core.googlecode.com/files/git-manpages-$pkgver.tar.gz"
         git-daemon
@@ -80,7 +78,7 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-sha1sums=('ed51ef5ef250daaa6e98515cf2641820cd268d4c'
-          '1ca1fc430b2814f9e9cf82ec3bf7f2eaf5209b7a'
+sha1sums=('bd85327627f96c4e98071a4d1d32c30f210aa54a'
+          '8c6ee031b39da5c5e53f927952838796e0959ce9'
           'f2b41828bd912b72e2cb3e14677739c4f370de66'
           '149e2da1ecb48872ddb31c0945afeaad1f9653d7')
