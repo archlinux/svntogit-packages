@@ -7,7 +7,7 @@ pkgname=('linux-lts' 'linux-lts-headers') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.0
-pkgver=${_basekernel}.20
+pkgver=${_basekernel}.21
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -23,7 +23,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.0.tar.xz"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch')
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         '835235caea7c36d33381d519df2a27cf'
+         'ccb8bca83ee04f4d0d7e426cb50a623a'
          '516780158b2dcf6791edc062674a1e7a'
          '5fee953e4746c31eb7ce8890ce2d24de'
          '21a33df5fba2da2f56e447fb171f02c0'
