@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Contributor: Aaron Griffin <aaron@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=udev
+pkgver=181
+pkgrel=3
+pkgdesc="The userspace dev tools (udev)"
+depends=('util-linux' 'libusb-compat' 'glib2' 'kmod' 'pciutils' 'usbutils' 'pciutils')
+install=udev.install
+arch=(i686 x86_64)
+license=('GPL')
+makedepends=('gobject-introspection' 'gperf' 'libxslt' 'usbutils' 'kmod')
+source=(ftp://ftp.kernel.org/pub/linux/utils/kernel/hotplug/$pkgname-$pkgver.tar.xz
+	initcpio-hooks-udev
+	initcpio-install-udev
+	modprobe.nouevau.conf)
+url="http://git.kernel.org/?p=linux/hotplug/udev.git;a=summary"
+backup=(etc/udev/udev.conf)
+groups=('base')
+options=(!makeflags !libtool)
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+
+  ./configure --prefix=/usr \
+              --with-rootprefix= \
+              --sysconfdir=/etc \
+              --libdir=/usr/lib \
+              --libexecdir=/lib \
+              --with-systemdsystemunitdir=/lib/systemd/system \
+              --enable-udev_acl
+
+  make
+}
+  
+package() {
+  cd $srcdir/$pkgname-$pkgver
+  make DESTDIR=${pkgdir} install
+
+  # /dev/loop0 is created for convenience, to autoload the module if necessary
+  # this is no longer needed when util-linux-2.21 is released as /dev/loop-control
+  # will be used instead. Support for this will go away in a future version of udev
+  install -d -m755 ${pkgdir}/lib/udev/devices/
+  mknod ${pkgdir}/lib/udev/devices/loop0 b 7 0
+  chgrp disk ${pkgdir}/lib/udev/devices/loop0
+ 
+  # udevd moved, symlink to make life easy for restarting udevd manually
+  ln -s /lib/udev/udevd ${pkgdir}/usr/bin/udevd
+
+  # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
+  for i in $pkgdir/lib/udev/rules.d/*.rules; do
+    sed -i -e 's#GROUP="dialout"#GROUP="uucp"#g;
+               s#GROUP="tape"#GROUP="storage"#g;
+               s#GROUP="cdrom"#GROUP="optical"#g' $i
+  done
+
+  # nouveau still conflicts with some other standard kernel modules, should go away soon
+  install -D -m644 ../modprobe.nouevau.conf ${pkgdir}/lib/modprobe.d/nouveau.conf
+
+  # install the mkinitpcio hook
+  install -D -m644 ../initcpio-hooks-udev ${pkgdir}/lib/initcpio/hooks/udev
+  install -D -m644 ../initcpio-install-udev ${pkgdir}/lib/initcpio/install/udev
+}
+md5sums=('0d7af750702620a871b9f9b98d8ad859'
+         'a4dd853050bf2e0ae6b2e3d2c75499c2'
+         'ee0bfe91a20fff12cc25ab1d1e024853'
+         '633dabda1fbfa4b6fe4dab5452b40fed')
