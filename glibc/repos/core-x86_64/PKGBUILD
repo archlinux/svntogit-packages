@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=5
+pkgrel=6
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -35,8 +35,11 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-scanf.patch
         glibc-2.15-ifunc.patch
         glibc-2.15-avx.patch
+        glibc-2.15-strcasecmp-disable-avx.patch
         glibc-2.15-gb18030.patch
         glibc-2.15-revert-netlink-cache.patch
+        glibc-2.15-arena.patch
+        glibc-2.15-negative-result-cache.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -55,8 +58,11 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '39353f53168f4a7509ba5fe0d9f218b8'
          '136eb969f5d6bb6f5155f72a1a7cf23e'
          '41ae047ac88e8f6f547c70b0a0bc3b72'
+         'fccb89f6628f59752278e125c35941f8'
          'c4cd34f20ccd37817f6c1374bd4ee68e'
          '6771b0b2bb8aa3870a259fd2f46c424f'
+         'a9ffadcfd2d357f91fee0b861fd4a7c6'
+         '2c46b8e294de24c531f2253ff69aeef3'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -80,8 +86,9 @@ build() {
   # http://sources.redhat.com/bugzilla/show_bug.cgi?id=4781
   patch -Np1 -i ${srcdir}/glibc-2.10-bz4781.patch
 
-  # http://sources.redhat.com/bugzilla/show_bug.cgi?id=411
+  # Undefine __i686 for gcc <= 4.6
   # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
+  # fix in http://sourceware.org/git/?p=glibc.git;a=commit;h=d4a54ac6 requires additional backporting...
   patch -Np1 -i ${srcdir}/glibc-__i686.patch
 
   # http://www.exploit-db.com/exploits/15274/
@@ -115,6 +122,8 @@ build() {
 
   # revert commit c5a0802a - causes various hangs
   # https://bugzilla.redhat.com/show_bug.cgi?id=769421
+  # Note: fedora may have actual fix (not submitted upstream yet...)
+  # http://pkgs.fedoraproject.org/gitweb/?p=glibc.git;a=blob_plain;f=glibc-rh552960-2.patch
   patch -Np1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
 
   # fix realloc usage in vfscanf
@@ -129,6 +138,8 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=afc5ed09
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=08cf777f
   patch -Np1 -i ${srcdir}/glibc-2.15-avx.patch
+  # and "fix" strcasecmp
+  patch -Np1 -i ${srcdir}/glibc-2.15-strcasecmp-disable-avx.patch
 
   # fix GB18030 charmap
   # http://sourceware.org/bugzilla/show_bug.cgi?id=11837
@@ -137,9 +148,17 @@ build() {
   patch -Np1 -i ${srcdir}/glibc-2.15-gb18030.patch
 
   # fix crash in __nscd_get_mapping if nscd not running
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13594
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13594 (potential "fix" in comment)
   # reverts commit 3a2c0242 and other necessary following changes...
   patch -Np1 -i ${srcdir}/glibc-2.15-revert-netlink-cache.patch
+
+  # handle ARENA_TEST correctly
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=41b81892
+  patch -Np1 -i ${srcdir}/glibc-2.15-arena.patch
+
+  # Do not cache negative results in nscd if these are transient
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=3e1aa84e
+  patch -Np1 -i ${srcdir}/glibc-2.15-negative-result-cache.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
