@@ -44,4 +44,6 @@ package() {
 	make DESTDIR="${pkgdir}" install
 	install -d "${pkgdir}/usr/share/licenses/${pkgname}"
 	install -m644 ../conky/{COPYING,LICENSE}* "${pkgdir}/usr/share/licenses/${pkgname}"
+	install -Dm644 extras/vim/syntax/conkyrc.vim "${pkgdir}"/usr/share/vim/vimfiles/syntax/conkyrc.vim
+	install -Dm644 extras/vim/ftdetect/conkyrc.vim "${pkgdir}"/usr/share/vim/vimfiles/ftdetect/conkyrc.vim
 }
