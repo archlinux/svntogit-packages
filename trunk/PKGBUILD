@@ -8,7 +8,7 @@ pkgname=('linux-lts' 'linux-lts-headers') # Build stock -ARCH kernel
 _kernelname=${pkgname#linux}
 _basekernel=3.0
 pkgver=${_basekernel}.21
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -24,8 +24,8 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.0.tar.xz"
         'i915-fix-ghost-tv-output.patch')
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
          'ccb8bca83ee04f4d0d7e426cb50a623a'
-         '516780158b2dcf6791edc062674a1e7a'
-         '5fee953e4746c31eb7ce8890ce2d24de'
+         'bb2621878c5f9f32cc3c7da1e8e4a01b'
+         '2814ab5b626c10730433d8bc4938f50c'
          '21a33df5fba2da2f56e447fb171f02c0'
          '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5')
