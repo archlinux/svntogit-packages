@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Paul Mattal <paul@mattal.com>
+# Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>
+# Contributor: GARETTE Emmanuel <gnunux at laposte dot net>
+
+pkgname=dovecot
+pkgver=2.1.0
+pkgrel=1
+pkgdesc="An IMAP and POP3 server written with security primarily in mind"
+arch=('i686' 'x86_64')
+url="http://dovecot.org/"
+license=("LGPL")
+depends=('krb5' 'openssl' 'sqlite3>=3.7.5' 'libmysqlclient>=5.5.10'
+        'postgresql-libs>=9.0.3' 'bzip2' 'expat' 'curl')
+makedepends=('pam>=1.1.1' 'libcap>=2.19' 'libldap>=2.4.22')
+optdepends=('libldap: ldap plugin')
+provides=('imap-server' 'pop3-server')
+options=('!libtool')
+backup=(etc/dovecot/dovecot.conf
+	etc/dovecot/conf.d/{10-auth,10-director,10-logging,10-mail,10-master,10-ssl}.conf
+	etc/dovecot/conf.d/{15-lda,20-imap,20-lmtp,20-pop3}.conf
+	etc/dovecot/conf.d/{90-acl,90-plugin,90-quota}.conf
+	etc/dovecot/conf.d/auth-{checkpassword,deny,ldap,master,passwdfile,sql,static,system,vpopmail}.conf.ext
+	etc/ssl/dovecot-openssl.cnf)
+install=$pkgname.install
+source=(http://dovecot.org/releases/2.1/${pkgname}-${pkgver}.tar.gz{,.sig} dovecot.sh)
+md5sums=('32a52cc45bf099bbb537b46052d23014'
+         'e2d7783ebe0f10aee259c86c69bd0a46'
+         '587159e84e2da6f83d70b3c706ba87cc')
+
+build() {
+  cd ${srcdir}/$pkgname-$pkgver
+
+  # configure with openssl, mysql, and postgresql support
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+  	--libexecdir=/usr/lib  --with-moduledir=/usr/lib/dovecot/modules \
+	--disable-static \
+	--with-nss \
+	--with-pam \
+	--with-mysql \
+	--with-pgsql \
+	--with-sqlite \
+	--with-ssl=openssl --with-ssldir=/etc/dovecot/ssl \
+	--with-gssapi \
+	--with-ldap=plugin \
+	--with-zlib --with-bzlib \
+	--with-libcap \
+	--with-solr \
+	--with-docs
+  make
+}
+
+package() {
+  cd ${srcdir}/$pkgname-$pkgver
+  make DESTDIR=${pkgdir} install
+
+  # install the launch script
+  install -D -m755 ${srcdir}/$pkgname.sh ${pkgdir}/etc/rc.d/$pkgname
+
+  # install example conf files and ssl.conf
+  install -d -m755 ${pkgdir}/etc/dovecot/conf.d
+  install -m 644 ${pkgdir}/usr/share/doc/dovecot/example-config/conf.d/*.conf ${pkgdir}/etc/dovecot/conf.d
+  install -m 644 ${pkgdir}/usr/share/doc/dovecot/example-config/conf.d/*.conf.ext ${pkgdir}/etc/dovecot/conf.d
+  install -m 644 ${pkgdir}/usr/share/doc/dovecot/example-config/dovecot.conf ${pkgdir}/etc/dovecot/
+  install -d -m755 ${pkgdir}/etc/ssl
+  install -m 644  ${srcdir}/$pkgname-$pkgver/doc/dovecot-openssl.cnf ${pkgdir}/etc/ssl/
+
+  rm ${pkgdir}/etc/dovecot/README
+}
