@@ -3,9 +3,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
-#pkgname=('mesa' 'libgl' 'libglapi' 'libgles' 'libegl' 'khrplatform-devel' 'ati-dri' 'intel-dri' 'unichrome-dri' 'mach64-dri' 'mga-dri' 'r128-dri' 'savage-dri' 'sis-dri' 'tdfx-dri' 'nouveau-dri') # 'llvm-dri')
-# prepare 7.12/8.0
-pkgname=('mesa' 'libgl' 'libglapi' 'libgles' 'libegl' 'khrplatform-devel' 'ati-dri' 'intel-dri' 'nouveau-dri')
+pkgname=('mesa' 'libgl' 'osmesa' 'libglapi' 'libgles' 'libegl' 'khrplatform-devel' 'ati-dri' 'intel-dri' 'nouveau-dri')
 
 #_git=true
 _gitdate=20111031
@@ -15,7 +13,7 @@ if [ "${_git}" = "true" ]; then
     pkgver=7.10.99.git20110709
     #pkgver=7.11
   else
-    pkgver=8.0
+    pkgver=8.0.1
 fi
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -35,7 +33,7 @@ if [ "${_git}" = "true" ]; then
 )
 fi
 md5sums=('5c65a0fe315dd347e09b1f2826a1df5a'
-         '1a5668fe72651a670611164cefc703b2')
+         '24eeebf66971809d8f40775a379b36c9')
 
 build() {
     cd ${srcdir}/?esa-*
@@ -48,7 +46,9 @@ if [ "${_git}" = "true" ]; then
     --enable-gallium-llvm \
     --enable-gallium-egl --enable-shared-glapi\
     --enable-glx-tls \
-    --with-driver=dri \
+    --enable-dri \
+    --enable-glx \
+    --enable-osmesa \
     --enable-gles1 \
     --enable-gles2 \
     --enable-egl \
@@ -65,7 +65,9 @@ if [ "${_git}" = "true" ]; then
     --enable-gallium-llvm \
     --enable-gallium-egl --enable-shared-glapi\
     --enable-glx-tls \
-    --with-driver=dri \
+    --enable-dri \
+    --enable-glx \
+    --enable-osmesa \
     --enable-gles1 \
     --enable-gles2 \
     --enable-egl \
@@ -92,11 +94,18 @@ package_libgl() {
   cd src/mesa/drivers/dri
   make -C ${srcdir}/?esa-*/src/gallium/targets/dri-swrast DESTDIR="${pkgdir}" install
 
-#  ln -s swrastg_dri.so "${pkgdir}/usr/lib/xorg/modules/dri/swrast_dri.so" # gallium is now default so this is obsolete in 8.0
   ln -s libglx.xorg "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so"
 
   install -m755 -d "${pkgdir}/usr/share/licenses/libgl"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/libgl/"
+}
+
+package_osmesa() {
+  depends=('mesa')
+  optdepends=('opengl-man-pages: for the OpenGL API man pages')
+  pkgdesc="Mesa 3D off-screen rendering library"
+  
+  make -C ${srcdir}/?esa-*/src/mesa DESTDIR="${pkgdir}" install-osmesa
 }
 
 package_libglapi() {
@@ -211,64 +220,8 @@ package_intel-dri() {
   depends=("libgl=${pkgver}")
   pkgdesc="Mesa DRI drivers for Intel"
 
-#  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/i810 DESTDIR="${pkgdir}" install # dead in 8.0
   make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/i915 DESTDIR="${pkgdir}" install
   make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/i965 DESTDIR="${pkgdir}" install
-}
-
-package_unichrome-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for S3 Graphics/VIA Unichrome"
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/unichrome DESTDIR="${pkgdir}" install
-}
-
-package_mach64-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for ATI Mach64"
-  conflicts=('xf86-video-mach64<6.8.2')
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/mach64 DESTDIR="${pkgdir}" install
-}
-
-package_mga-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for Matrox"
-  conflicts=('xf86-video-mga<1.4.11')
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/mga DESTDIR="${pkgdir}" install
-}
-
-package_r128-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for ATI Rage128"
-  conflicts=('xf86-video-r128<6.8.1')
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/r128 DESTDIR="${pkgdir}" install
-}
-
-package_savage-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for S3 Sraphics/VIA Savage"
-  conflicts=('xf86-video-savage<2.3.1')
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/savage DESTDIR="${pkgdir}" install
-}
-
-package_sis-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for SiS"
-  conflicts=('xf86-video-sis<0.10.2')
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/sis DESTDIR="${pkgdir}" install
-}
-
-package_tdfx-dri() {
-  depends=("libgl=${pkgver}")
-  pkgdesc="Mesa DRI drivers for 3dfx"
-  conflicts=('xf86-video-tdfx<1.4.3')
-
-  make -C ${srcdir}/?esa-*/src/mesa/drivers/dri/tdfx DESTDIR="${pkgdir}" install
 }
 
 package_nouveau-dri() {
@@ -280,22 +233,3 @@ package_nouveau-dri() {
   # gallium3D driver for nv30 - nv40 - nv50 nouveau_dri.so
   make -C ${srcdir}/?esa-*/src/gallium/targets/dri-nouveau DESTDIR="${pkgdir}" install
 }
-
-#package_llvm-dri() {
-#  depends=("libgl=${pkgver}")
-#  pkgdesc="Mesa common LLVM support"
-
-#if [ "${_git}" = "true" ]; then
-#    cd ${srcdir}/mesa-*/src/gallium
-#  else
-#    cd "${srcdir}/Mesa-${pkgver}/src/gallium"
-#fi
-
-  # gallium llvmpipe
-#if [ "${_git}" = "true" ]; then
-#    make -C drivers/llvmpipe DESTDIR="${pkgdir}" install
-#    #make -C targets/dri-swrast DESTDIR="${pkgdir}" install
-#  else
-#    make -C ${srcdir}/Mesa-${pkgver}/src/gallium/targets/dri-nouveau DESTDIR="${pkgdir}" install
-#fi
-#}
