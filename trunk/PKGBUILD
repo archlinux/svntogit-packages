@@ -1,33 +1,16 @@
 # $Id$
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
 
-pkgname=systemd
+pkgbase=systemd
+pkgname=('systemd' 'libsystemd')
 pkgver=43
-pkgrel=2
-pkgdesc="Session and Startup manager"
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2')
-depends=('acl' 'dbus-core' 'kbd' 'kmod' 'libcap' 'util-linux' 'udev' 'xz')
-makedepends=('gperf' 'cryptsetup' 'docbook-xsl' 'intltool' 'libxslt' 'linux-api-headers')
-optdepends=('cryptsetup: required for encrypted block devices'
-            'dbus-python: systemd-analyze'
-            'initscripts: legacy support for hostname and vconsole setup'
-            'initscripts-systemd: native boot and initialization scripts'
-            'python2-cairo: systemd-analyze'
-            'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
-            'systemd-sysvcompat: symlink package to provide sysvinit binaries')
+makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gperf' 'intltool'
+             'kmod' 'libcap' 'libxslt' 'linux-api-headers' 'pam' 'udev' 'xz')
 options=('!libtool')
-backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
-        etc/dbus-1/system.d/org.freedesktop.hostname1.conf
-        etc/dbus-1/system.d/org.freedesktop.login1.conf
-        etc/dbus-1/system.d/org.freedesktop.locale1.conf
-        etc/dbus-1/system.d/org.freedesktop.timedate1.conf
-        etc/systemd/system.conf
-        etc/systemd/user.conf
-        etc/systemd/systemd-logind.conf
-        etc/systemd/systemd-journald.conf)
-install="$pkgname.install"
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         "os-release")
 md5sums=('446cc6db7625617af67e2d8e5f503a49'
@@ -36,53 +19,84 @@ md5sums=('446cc6db7625617af67e2d8e5f503a49'
 build() {
   cd "$pkgname-$pkgver"
 
-  # Don't unset locale in getty
-  # https://bugzilla.redhat.com/show_bug.cgi?id=663900
-  sed -i -e '/^Environ.*LANG/s/^/#/' \
-         -e '/^ExecStart/s/agetty/& -8/' units/getty@.service.m4
-
   ./configure --sysconfdir=/etc \
               --libexecdir=/usr/lib \
               --libdir=/usr/lib \
+              --with-pamlibdir=/lib/security \
               --localstatedir=/var \
               --with-rootprefix= \
-              --with-rootlibdir=/lib \
               --with-distro=arch
 
   make
-
-  # fix .so links in manpages
-  sed -i 's|\.so halt\.8|.so man8/systemd.halt.8|' man/{halt,poweroff}.8
-  sed -i 's|\.so systemd\.1|.so man1/systemd.1|' man/init.1
 }
 
-package() {
+package_systemd() {
+  pkgdesc="systemd and service manager"
+  depends=('acl' 'dbus' 'dbus-core' 'libsystemd' 'kbd' 'kmod' 'libcap' 'pam' 'util-linux' 'udev' 'xz')
+  optdepends=('cryptsetup: required for encrypted block devices'
+              'dbus-python: systemd-analyze'
+              'initscripts: legacy support for hostname and vconsole setup'
+              'initscripts-systemd: native boot and initialization scripts'
+              'python2-cairo: systemd-analyze'
+              'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
+              'systemd-sysvcompat: symlink package to provide sysvinit binaries')
+  backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
+          etc/dbus-1/system.d/org.freedesktop.hostname1.conf
+          etc/dbus-1/system.d/org.freedesktop.login1.conf
+          etc/dbus-1/system.d/org.freedesktop.locale1.conf
+          etc/dbus-1/system.d/org.freedesktop.timedate1.conf
+          etc/systemd/system.conf
+          etc/systemd/user.conf
+          etc/systemd/systemd-logind.conf
+          etc/systemd/systemd-journald.conf)
+  install="$pkgname.install"
+
   cd "$pkgname-$pkgver"
 
   make DESTDIR="$pkgdir" install
 
   install -Dm644 "$srcdir/os-release" "$pkgdir/etc/os-release"
-  printf "d /run/console 755 root root\n" > "$pkgdir/usr/lib/tmpfiles.d/console.conf"
+
+  printf "d /run/console 755 root root\n" >"$pkgdir/usr/lib/tmpfiles.d/console.conf"
+  chmod 644 "$pkgdir/usr/lib/tmpfiles.d/console.conf"
 
   # symlink to /bin/systemd for compat and sanity
-  ln -s ../lib/systemd/systemd "$pkgdir"/bin/systemd
+  ln -s ../lib/systemd/systemd "$pkgdir/bin/systemd"
 
-  # fix systemd-analyze for python2
+  # use python2 for systemd-analyze
   sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
-  # rename man pages to avoid conflicts with sysvinit and initscripts
-  cd "$pkgdir/usr/share/man"
-
-  # not building this with systemd
+  # didn't build this...
   rm -f "man1/systemadm.1"
 
+  # fix .so links in manpage stubs
+  find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
+      -exec sed -i '1s|^\.so \(.*\)\.\([[:digit:]]\+\)|.so man\2/\1.\2|' {} +
+
+  # rename man pages to avoid conflicts with sysvinit and initscripts
   manpages=(man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8
             man5/{hostname,{vconsole,locale}.conf}.5)
-
+  cd "$pkgdir/usr/share/man"
   for manpage in "${manpages[@]}"; do
     IFS='/' read section page <<< "$manpage"
     mv "$manpage" "$section/systemd.$page"
   done
+
+  ### split off libsystemd (libs, includes, pkgconfig, man3)
+  install -dm755 "$srcdir"/libsystemd/usr/{include,lib/pkgconfig,share/man}
+
+  cd "$srcdir"/libsystemd
+  mv "$pkgdir/usr/lib"/libsystemd-*.so* usr/lib
+  mv "$pkgdir/usr/include/systemd" usr/include
+  mv "$pkgdir/usr/lib/pkgconfig"/libsystemd-*.pc usr/lib/pkgconfig
+  mv "$pkgdir/usr/share/man/man3" usr/share/man
+}
+
+package_libsystemd() {
+  pkgdesc="systemd client libraries"
+  depends=('libcap' 'xz')
+
+  mv "$srcdir/libsystemd"/* "$pkgdir"
 }
 
 # vim: ft=sh syn=sh et
