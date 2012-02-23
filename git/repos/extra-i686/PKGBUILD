@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.9.1
+pkgver=1.7.9.2
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -34,10 +34,24 @@ build() {
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
-    NO_CROSS_DIRECTORY_HARDLINKS=1
+    NO_CROSS_DIRECTORY_HARDLINKS=1 \
+    all
 
   cd contrib/emacs
   make prefix=/usr
+}
+
+check() {
+  export PYTHON_PATH='/usr/bin/python2'
+  cd "$srcdir/$pkgname-$pkgver"
+  local jobs
+  jobs=$(expr "$MAKEFLAGS" : '.*\(-j[0-9]*\).*')
+  make prefix=/usr gitexecdir=/usr/lib/git-core \
+    CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
+    USE_LIBPCRE=1 \
+    NO_CROSS_DIRECTORY_HARDLINKS=1 \
+    NO_SVN_TESTS=y DEFAULT_TEST_TARGET=prove GIT_PROVE_OPTS="$jobs -Q" \
+    test
 }
 
 package() {
@@ -78,7 +92,7 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-sha1sums=('bd85327627f96c4e98071a4d1d32c30f210aa54a'
-          '8c6ee031b39da5c5e53f927952838796e0959ce9'
+sha1sums=('7aff1048480a8637de94e8d82744d312c0b5e060'
+          'd6992d899fb70e40983f94a2f96ad24b8ee93557'
           'f2b41828bd912b72e2cb3e14677739c4f370de66'
           '149e2da1ecb48872ddb31c0945afeaad1f9653d7')
