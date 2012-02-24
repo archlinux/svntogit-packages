@@ -7,14 +7,16 @@
 
 # Uncomment one of these to select a build profile below:
 
-# Full build with max optimisation (slow build)
+# Full build with max optimisation and everything enabled (very slow build)
 BuildFlavour = perf
 
-# Fastest build (libs unoptimised):
-#BuildFlavour = quickest
-
-# Fast build with optimised libraries:
+# Fast build with optimised libraries, no profiling (RECOMMENDED):
 #BuildFlavour = quick
+
+# Even faster build.  NOT RECOMMENDED: the libraries will be
+# completely unoptimised, so any code built with this compiler
+# (including stage2) will run very slowly:
+#BuildFlavour = quickest
 
 # Profile the stage2 compiler:
 #BuildFlavour = prof
@@ -24,6 +26,9 @@ BuildFlavour = perf
 
 # A development build, working on the stage 2 compiler:
 #BuildFlavour = devel2
+
+# An unregisterised, optimised build of ghc, for porting:
+#BuildFlavour = unreg
 
 GhcLibWays = v
 
@@ -37,7 +42,7 @@ SRC_HC_OPTS     = -O -H64m
 GhcStage1HcOpts = -O -fasm
 GhcStage2HcOpts = -O2 -fasm
 GhcHcOpts       = -Rghc-timing
-GhcLibHcOpts    = -O2 -XGenerics
+GhcLibHcOpts    = -O2
 GhcLibWays     += p
 
 ifeq "$(PlatformSupportsSharedLibs)" "YES"
@@ -112,6 +117,7 @@ HADDOCK_DOCS       = NO
 BUILD_DOCBOOK_HTML = NO
 BUILD_DOCBOOK_PS   = NO
 BUILD_DOCBOOK_PDF  = NO
+LAX_DEPENDENCIES   = NO
 
 endif
 
@@ -128,23 +134,42 @@ HADDOCK_DOCS       = NO
 BUILD_DOCBOOK_HTML = NO
 BUILD_DOCBOOK_PS   = NO
 BUILD_DOCBOOK_PDF  = NO
+LAX_DEPENDENCIES   = NO
+
+# After stage 1 and the libraries have been built, you can uncomment this line:
+
+# stage=2
+
+# Then stage 1 will not be touched by the build system, until
+# you comment the line again.  This is a useful trick for when you're
+# working on stage 2 and want to freeze stage 1 and the libraries for
+# a while.
+
+endif
+
+# -------- A Unregisterised build) -------------------------------------------
+
+ifeq "$(BuildFlavour)" "unreg"
+
+GhcUnregisterised    = YES
+GhcWithNativeCodeGen = NO
+
+SRC_HC_OPTS          = -O -H64m
+GhcStage1HcOpts      = -O
+GhcStage2HcOpts      = -O2
+GhcHcOpts            = -Rghc-timing
+GhcLibHcOpts         = -O2
+SplitObjs            = NO
+HADDOCK_DOCS         = NO
+BUILD_DOCBOOK_HTML   = NO
+BUILD_DOCBOOK_PS     = NO
+BUILD_DOCBOOK_PDF    = NO
 
 endif
 
 # -----------------------------------------------------------------------------
 # Other settings that might be useful
 
-# profiled RTS
-#GhcRtsCcOpts =  -pg -g
-
-# Optimised/profiled RTS
-#GhcRtsCcOpts = -O2 -pg
-
-#GhcRtsWithFrontPanel = YES
-#SRC_HC_OPTS += `gtk-config --libs`
-
 # NoFib settings
 NoFibWays =
-STRIP=:
-
-
+STRIP_CMD = :

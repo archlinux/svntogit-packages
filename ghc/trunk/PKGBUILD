@@ -6,37 +6,106 @@
 #   This implies that all libraries need to be rebuilt when ghc is rebuilt.
 #   Also, due to dependency loop problems, haskell-ghc-paths and haddock
 #   do not carry version dependencies. You will have to remember to build them too.
+
 pkgname=ghc
-pkgver=7.2.2
-pkgrel=2
-pkgdesc="The Glasgow Haskell Compiler"
-arch=(i686 x86_64)
-url="http://www.haskell.org/ghc/"
-license=("custom")
-depends=('perl' 'gmp>=5.0' gcc)
-makedepends=(ghc happy perl libxslt docbook-xsl)
-install=ghc.install
-groups=(haskell)
-source=("http://www.haskell.org/ghc/dist/$pkgver/ghc-$pkgver-src.tar.bz2"
-        build.mk)
+pkgver=7.4.1
+pkgrel=1
+pkgdesc='The Glasgow Haskell Compiler'
+arch=('i686' 'x86_64')
+url='http://www.haskell.org/ghc/'
+license=('custom')
+depends=('perl' 'gmp>=5.0' 'gcc')
+makedepends=('ghc' 'happy' 'perl' 'libxslt' 'docbook-xsl')
+checkdepends=('python2')
+install='ghc.install'
+groups=('haskell')
+provides=('haskell-array=0.4.0.0'
+          'haskell-base=4.5.0.0'
+          'haskell-binary=0.5.1.0'
+          'haskell-bin-package-db=0.0.0.0'
+          'haskell-bytestring=0.9.2.1'
+          'haskell-containers=0.4.2.1'
+          'haskell-deepseq=1.3.0.0'
+          'haskell-directory=1.1.0.2'
+          'haskell-extensible-exceptions=0.1.1.4'
+          'haskell-filepath=1.3.0.0'
+          'haskell-ghc-prim=0.2.0.0'
+          'haskell-haskell2010=1.1.0.1'
+          'haskell-haskell98=2.0.0.1'
+          'haskell-hoopl=3.8.7.3'
+          'haskell-hpc=0.5.1.1'
+          'haskell-integer-gmp=0.4.0.0'
+          'haskell-old-locale=1.0.0.4'
+          'haskell-old-time=1.1.0.0'
+          'haskell-pretty=1.1.1.0'
+          'haskell-process=1.1.0.1'
+          'haskell-template-haskell=2.7.0.0'
+          'haskell-time=1.4'
+          'haskell-unix=2.5.1.0'
+          'haskell-cabal=1.14.0'
+         )
+replaces=('haskell-array<0.4.0.0'
+          'haskell-base<4.5.0.0'
+          'haskell-binary<0.5.1.0'
+          'haskell-bin-package-db<0.0.0.0'
+          'haskell-bytestring<0.9.2.1'
+          'haskell-containers<0.4.2.1'
+          'haskell-deepseq<1.3.0.0'
+          'haskell-directory<1.1.0.2'
+          'haskell-extensible-exceptions<0.1.1.4'
+          'haskell-filepath<1.3.0.0'
+          'haskell-ghc-prim<0.2.0.0'
+          'haskell-haskell2010<1.1.0.1'
+          'haskell-haskell98<2.0.0.1'
+          'haskell-hoopl<3.8.7.3'
+          'haskell-hpc<0.5.1.1'
+          'haskell-integer-gmp<0.4.0.0'
+          'haskell-old-locale<1.0.0.4'
+          'haskell-old-time<1.1.0.0'
+          'haskell-pretty<1.1.1.0'
+          'haskell-process<1.1.0.1'
+          'haskell-template-haskell<2.7.0.0'
+          'haskell-time<1.4'
+          'haskell-unix<2.5.1.0'
+          'haskell-cabal<1.14.0'
+         )
+source=("http://www.haskell.org/ghc/dist/${pkgver}/ghc-${pkgver}-src.tar.bz2"
+        "http://www.haskell.org/ghc/dist/${pkgver}/ghc-${pkgver}-testsuite.tar.bz2"
+        'build.mk')
+md5sums=('5d86c420978b49cc60edea9bd4c36703'
+         '54bc9405c14c3226b6e3de3cd61e2777'
+         '82b67cdd24a2e434a4399f30f14b21a3')
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
+  cd ${pkgname}-${pkgver}
 
-  cp $srcdir/build.mk mk/build.mk
+  cp ${srcdir}/build.mk mk/build.mk
 
-  ./configure --prefix=/usr 
-  make -j1 
+  ./configure \
+    --prefix=/usr
+
+  make -j9
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+
+  # python2 rename
+  sed -e 's/PYTHON = python/&2/' -i testsuite/mk/boilerplate.mk
+  sed -e 's_#!/usr/bin/env python_&2_' -i testsuite/timeout/calibrate testsuite/timeout/timeout.py
+
+  # note: there is one test failure on i686 only: http://hackage.haskell.org/trac/ghc/ticket/5856
+  make THREADS=9 test
+  # might be some failures
+  #make fulltest
 }
 
 package() {
-  cd $srcdir/$pkgname-$pkgver
-  
-  make DESTDIR=$pkgdir install
+  cd ${pkgname}-${pkgver}
 
-  install -Dm644 LICENSE ${pkgdir}/usr/share/licenses/ghc/license
-  install -d $pkgdir/usr/share/haskell
+  make DESTDIR=${pkgdir} install
+
+  install -d ${pkgdir}/usr/share/licenses/ghc
+  install -m644 LICENSE \
+    ${pkgdir}/usr/share/licenses/ghc
 }
-
-md5sums=('fa19d9fe5049b7a1352b0b7c9880c141'
-         '5a3e0880c80b1dcecf779ff2e63a9c0d')
