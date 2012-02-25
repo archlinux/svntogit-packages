@@ -1,0 +1,92 @@
+commit ef1df7a42e7aa7b6bfb1dca5b86b303f71739fc4
+Author: Rion <rion4ik@gmail.com>
+Date:   Fri Dec 3 16:39:56 2010 +0500
+
+    Fixed changing affiliations list from muc config dialog
+
+diff --git a/src/mucaffiliationsview.cpp b/src/mucaffiliationsview.cpp
+index 8632c43..94adcec 100644
+--- a/src/mucaffiliationsview.cpp
++++ b/src/mucaffiliationsview.cpp
+@@ -33,30 +33,6 @@ MUCAffiliationsView::MUCAffiliationsView(QWidget* parent) : QTreeView(parent)
+ 	setDropIndicatorShown(true);
+ }
+ 
+-bool MUCAffiliationsView::addToCurrent(const QString& j)
+-{	
+-	QModelIndex index = currentIndex();
+-	if (!index.isValid())
+-		return false;
+-
+-	if (index.parent().isValid())
+-		index = index.parent();
+-		
+-	if (!index.parent().isValid()) {
+-		XMPP::Jid jid(j);
+-		if (!jid.isValid())
+-			return false;
+-
+-		// TODO: Check if the user is already in the list
+-		
+-		int row = model()->rowCount(index);
+-		model()->insertRows(row,1,index);
+-		model()->setData(model()->index(row,0,index),QVariant(jid.bare()));
+-		return true;
+-	}
+-	return false;
+-}
+-
+ void MUCAffiliationsView::removeCurrent()
+ {
+ 	QModelIndex index = currentIndex();
+diff --git a/src/mucaffiliationsview.h b/src/mucaffiliationsview.h
+index 11f1446..54ee0ff 100644
+--- a/src/mucaffiliationsview.h
++++ b/src/mucaffiliationsview.h
+@@ -32,7 +32,6 @@ public:
+ 
+ public slots:
+ 	void removeCurrent();
+-	bool addToCurrent(const QString&);
+ 
+ signals:
+ 	void addEnabled(bool);
+diff --git a/src/mucconfigdlg.cpp b/src/mucconfigdlg.cpp
+index a10f14e..dcf4a35 100644
+--- a/src/mucconfigdlg.cpp
++++ b/src/mucconfigdlg.cpp
+@@ -158,9 +158,31 @@ void MUCConfigDlg::add()
+ {
+ 	bool ok;
+ 	QString text = QInputDialog::getText(this, tr("Add affiliation"), tr("Enter the JID of the user:"), QLineEdit::Normal, "", &ok);
+-	if (ok) {
+-	   if (text.isEmpty() || !ui_.tv_affiliations->addToCurrent(text))
+-		   QMessageBox::critical(this, tr("Error"), tr("You have entered an invalid JID."));
++	if (ok && ui_.tv_affiliations->currentIndex().isValid()) {
++		if (!text.isEmpty()) {
++
++			QModelIndex index = affiliations_proxy_model_->mapToSource(ui_.tv_affiliations->currentIndex());
++
++			if (index.parent().isValid())
++				index = index.parent();
++
++			if (!index.parent().isValid()) {
++				XMPP::Jid jid(text);
++				if (jid.isValid()) {
++
++					// TODO: Check if the user is already in the list
++
++					int row = affiliations_model_->rowCount(index);
++					affiliations_model_->insertRows(row,1,index);
++					QModelIndex newIndex = affiliations_model_->index(row,0,index);
++					affiliations_model_->setData(newIndex, QVariant(jid.bare()));
++					ui_.tv_affiliations->setCurrentIndex(affiliations_proxy_model_->mapFromSource(newIndex));
++					return;
++				}
++			}
++		}
++
++		QMessageBox::critical(this, tr("Error"), tr("You have entered an invalid JID."));
+ 	}
+ }
+ 
