@@ -4,7 +4,7 @@
 
 pkgname=shadow
 pkgver=4.1.5
-pkgrel=3
+pkgrel=4
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('i686' 'x86_64')
 url='http://pkg-shadow.alioth.debian.org/'
@@ -33,7 +33,9 @@ source=("http://pkg-shadow.alioth.debian.org/releases/$pkgname-$pkgver.tar.bz2"{
         nscd-error-reporting.patch
         xstrdup.patch
         shadow-strncpy-usage.patch
-        shadow-add-missing-include.patch)
+        shadow-add-missing-include.patch
+        userdel-avoid-bad-mem-access.patch
+        write-utmp-wtmp-entries.patch)
 sha1sums=('3ab1ae0e30af36d04445314fcb5a079bdf05de41'
           '0a31aafceb948a91fe7370a6378cafd6fd883145'
           '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
@@ -50,7 +52,9 @@ sha1sums=('3ab1ae0e30af36d04445314fcb5a079bdf05de41'
           'ae6eebb842c433ac4022c493294a13ed68e06acc'
           '6010fffeed1fc6673ad9875492e1193b1a847b53'
           '21e12966a6befb25ec123b403cd9b5c492fe5b16'
-          '0697a21f7519de30821da7772677035652df4ad2')
+          '0697a21f7519de30821da7772677035652df4ad2'
+          'e1dd93d82c6eba76b5f17a9fefad4bbc513cff5b'
+          'bcef8558c9123b396d2d4df26c815a951f97a91a')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -61,10 +65,19 @@ build() {
   # link to glibc's crypt(3)
   LDFLAGS+=" -lcrypt"
 
+  # need to offer these upstream
   patch -Np1 <"$srcdir/xstrdup.patch"
   patch -Np1 <"$srcdir/shadow-strncpy-usage.patch"
+
+  # backports queued for 4.1.5.1
   patch -Np1 <"$srcdir/shadow-add-missing-include.patch"
   patch -Np1 <"$srcdir/nscd-error-reporting.patch"
+
+  # sent to ML
+  patch -Np0 <"$srcdir/userdel-avoid-bad-mem-access.patch"
+
+  # revert to fix FS#28543
+  patch -RNp1 <"$srcdir/write-utmp-wtmp-entries.patch"
 
   # supress etc/pam.d/*, we provide our own
   sed -i '/^SUBDIRS/s/pam.d//' etc/Makefile.in
