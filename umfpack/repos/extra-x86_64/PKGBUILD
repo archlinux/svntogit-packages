@@ -4,12 +4,12 @@
 # Contributor: iKevin <kellwood at ameritech dot net>
 
 pkgname=umfpack
-pkgver=5.5.0
-_ufcfgver=3.5.0
-_amdver=2.2.1
-_cholmodver=1.7.1
-_colamdver=2.7.2
-_ccolamdver=2.7.2
+pkgver=5.5.2
+_ufcfgver=3.7.0
+_amdver=2.2.3
+_cholmodver=1.7.4
+_colamdver=2.7.4
+_ccolamdver=2.7.4
 pkgrel=1
 pkgdesc="A multifrontal direct solver for unsymmetric linear systems (AMD/${_amdver}, UFConfig/${_ufcgfgver})"
 arch=('i686' 'x86_64')
@@ -24,35 +24,32 @@ source=(http://www.cise.ufl.edu/research/sparse/umfpack/UMFPACK-$pkgver.tar.gz
 	http://www.cise.ufl.edu/research/sparse/amd/AMD-${_amdver}.tar.gz
 	http://www.cise.ufl.edu/research/sparse/cholmod/CHOLMOD-${_cholmodver}.tar.gz
 	http://www.cise.ufl.edu/research/sparse/colamd/COLAMD-${_colamdver}.tar.gz
-	http://www.cise.ufl.edu/research/sparse/ccolamd/CCOLAMD-${_ccolamdver}.tar.gz
-	UFconfig.mk)
-md5sums=('b3490d4f529fbcf4f415e60aa2680a15'
-         '4335ee565feec67e8ba9fc0f6a5e2504'
-         '25548053958c1c5810b17d077b8f37b9'
-         '9032c5724bee43ccd8f4546338a29fac'
-         '2b4e43c8ef33dacfade6d1ec49542ac1'
-         '79d813d5b54951060fc264172bfb5ca6'
-         'ce9731da58d58923a3cdc3fbef724c4e')
+	http://www.cise.ufl.edu/research/sparse/ccolamd/CCOLAMD-${_ccolamdver}.tar.gz)
+md5sums=('07eaa6ae3de176e5b3681032c10c76be'
+         'ab8c355d683e8c5597a0824b32704c70'
+         '4d2a7db82406f880e7686fbd2df5a3bf'
+         'c2088078a86ca1a88e64037f80ae6540'
+         '186d692ab7211e79f9b727d8192635f7'
+         'bb55f6b4b9358160eaba1a57f863c65e')
 
 build() {
-  cd "$srcdir/UMFPACK"
-  cp -rf "$srcdir/UFconfig/xerbla" .
-  cp -L ../UFconfig.mk $startdir/src/UFconfig
-  [ $CARCH == "x86_64" ] && sed -i 's#CFLAGS = -O3 -fexceptions#CFLAGS = -O3 -fexceptions -fPIC#' $srcdir/UFconfig/UFconfig.mk
-  make library || return 1
-  install -d "$pkgdir/usr/lib" "$pkgdir/usr/include"
+  CFLAGS+=" -DNCHOLMOD"
+  cd "$srcdir"
+  cp -rf UFconfig/xerbla UMFPACK
+  make -C UMFPACK library
+  make -C AMD library  
+}
 
-  install -D -m644 Lib/libumfpack.a "$pkgdir/usr/lib/libumfpack.a"
-  cp $startdir/src/UMFPACK/Include/*.h $startdir/pkg/usr/include
+package() {
+  cd "$srcdir"
+  
+  install -dm755 "$pkgdir"/usr/{include,lib}
 
-  install -D -m644 "$srcdir/AMD/Lib/libamd.a" "$pkgdir/usr/lib/libamd.a"
-  cp $startdir/src/AMD/Include/*.h $startdir/pkg/usr/include
+  install -m644 $srcdir/UMFPACK/Lib/libumfpack.a "$pkgdir/usr/lib/"
+  install -m644 $srcdir/UMFPACK/Include/*.h $pkgdir/usr/include
 
-  install -m644 "$srcdir/UFconfig/UFconfig.h" "$pkgdir/usr/include" || return 1
+  install -m644 "$srcdir/AMD/Lib/libamd.a" "$pkgdir/usr/lib/"
+  install -m644 $srcdir/AMD/Include/*.h $pkgdir/usr/include
 
-  # Fix permissions
-  cd $startdir/pkg/usr/include
-  chmod oug+r *
-  cd $startdir/pkg/usr/lib
-  chmod oug+r *
+  install -m644 "$srcdir/UFconfig/UFconfig.h" "$pkgdir/usr/include"
 }
