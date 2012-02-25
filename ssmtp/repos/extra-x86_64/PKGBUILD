@@ -3,7 +3,7 @@
 
 pkgname=ssmtp
 pkgver=2.64
-pkgrel=2
+pkgrel=3
 pkgdesc="Extremely simple MTA to get mail off the system to a mailhub"
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -13,21 +13,29 @@ conflicts=('exim')
 provides=('smtp-forwarder')
 backup=('etc/ssmtp/ssmtp.conf' 'etc/ssmtp/revaliases')
 options=('!makeflags' '!emptydirs')
-source=(http://ftp.debian.org/debian/pool/main/s/ssmtp/${pkgname}_${pkgver}.orig.tar.bz2)
-md5sums=('65b4e0df4934a6cd08c506cabcbe584f')
+source=("http://ftp.debian.org/debian/pool/main/s/ssmtp/${pkgname}_${pkgver}.orig.tar.bz2"
+        'opessl_crypto.patch')
+md5sums=('65b4e0df4934a6cd08c506cabcbe584f'
+         'aeb4ed09a26eefea9a5f6ac755c4dff0')
 
 ## if you build in chroot, make sure the chroots fully qualified hostname is the same as in your real root system ##
 
 build() {
    cd "${srcdir}/${pkgname}-${pkgver}"
+   patch -p1 -i "${srcdir}/opessl_crypto.patch"
+   autoreconf
    ./configure --prefix=/usr \
-		--sysconfdir=/etc \
-                --mandir=/usr/share/man \
-		--enable-md5auth --enable-ssl || return 1
-   make || return 1
-   yes | make prefix="${pkgdir}/usr" mandir="${pkgdir}/usr/share/man/man8" etcdir="${pkgdir}/etc" install || return 1
+    --sysconfdir=/etc \
+    --mandir=/usr/share/man \
+    --enable-md5auth --enable-ssl
+   make
+}
 
-   install -D -m644 ssmtp.conf.5 "${pkgdir}/usr/share/man/man5/ssmtp.conf.5" || return 1
+package() {
+   cd "${srcdir}/${pkgname}-${pkgver}"
+   yes | make prefix="${pkgdir}/usr" mandir="${pkgdir}/usr/share/man/man8" etcdir="${pkgdir}/etc" install
+
+   install -D -m644 ssmtp.conf.5 "${pkgdir}/usr/share/man/man5/ssmtp.conf.5"
 
    ln -s ssmtp "${pkgdir}/usr/sbin/sendmail"
    ln -s ssmtp "${pkgdir}/usr/sbin/newaliases"
