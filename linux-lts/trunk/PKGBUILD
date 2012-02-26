@@ -21,14 +21,8 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.0.tar.xz"
         # standard config files for mkinitcpio ramdisk
         "${pkgname}.preset"
         'change-default-console-loglevel.patch'
-        'i915-fix-ghost-tv-output.patch')
-md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         '33197132ea106ea95dc6df731e7f8686'
-         'bb2621878c5f9f32cc3c7da1e8e4a01b'
-         '2814ab5b626c10730433d8bc4938f50c'
-         '21a33df5fba2da2f56e447fb171f02c0'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5')
+        'i915-fix-ghost-tv-output.patch'
+        'ext4-options.patch')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -52,6 +46,10 @@ build() {
   # remove this when a Kconfig knob is made available by upstream
   # (relevant patch sent upstream: https://lkml.org/lkml/2011/7/26/227)
   patch -Np1 -i "${srcdir}/change-default-console-loglevel.patch"
+
+  # fix ext4 module to mount ext3/2 correct
+  # https://bugs.archlinux.org/task/28653
+  patch -Np1 -i "${srcdir}/ext4-options.patch"
 
   if [ "${CARCH}" = "x86_64" ]; then
     cat "${srcdir}/config.x86_64" > ./.config
