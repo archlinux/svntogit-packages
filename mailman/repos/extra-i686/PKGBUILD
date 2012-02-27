@@ -3,12 +3,14 @@
 
 pkgname=mailman
 pkgver=2.1.14
-pkgrel=3
+pkgrel=4
 pkgdesc="Mailing list manager with built in web access"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.list.org/"
 depends=('python2' 'smtp-server')
+# we need to have the mailman user to build mailman
+makedepends=('mailman')
 # 'Defaults.py' should not be changed by users; 'mm_cfg.py' should instead.
 backup=('usr/lib/mailman/Mailman/mm_cfg.py')
 install=$pkgname.install
@@ -29,15 +31,13 @@ build() {
   # set some sane defaults before the configure script has a chance to screw them up
   sed -e 's/@MAILHOST@/localhost/g' \
       -e 's/@URLHOST@/localhost/g' \
-      -e 's/@MAILMAN_USER@/mailman/g' \
-      -e 's/@MAILMAN_GROUP@/mailman/g' \
       -i Mailman/Defaults.py.in
 
   ./configure --without-permcheck \
               --prefix=/usr/lib/mailman \
               --with-var-prefix=/var/lib/mailman \
-              --with-mail-gid=80 \
-              --with-username=80 --with-groupname=80 \
+              --with-mail-gid=mailman \
+              --with-username=mailman --with-groupname=mailman \
               --with-cgi-gid=http --with-python=/usr/bin/python2
   make
 }
@@ -60,8 +60,8 @@ package() {
   ln -sv /usr/lib/mailman/Mailman/mm_cfg.py ${pkgdir}/etc/${pkgname}/mm_cfg.py
 
   # fix some permissions to satisfy check_perms
-  chown -R 80:80 $pkgdir/{usr/lib/mailman,var/lib/mailman,etc/mailman/*}
-  chown http:80 ${pkgdir}/var/lib/mailman/archives/private
+  chown -R mailman:mailman $pkgdir/{usr/lib/mailman,var/lib/mailman,etc/mailman/*}
+  chown http:mailman ${pkgdir}/var/lib/mailman/archives/private
   chmod 2770 ${pkgdir}/var/lib/mailman/archives/private
   chmod 2755 ${pkgdir}/usr/lib/mailman/cgi-bin/* 
   chmod 2755 ${pkgdir}/usr/lib/mailman/mail/mailman
