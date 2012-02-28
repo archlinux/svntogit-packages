@@ -1,0 +1,377 @@
+
+# HG changeset patch
+# User Matt Mackall <mpm@selenic.com>
+# Date 1328911770 21600
+# Node ID a3dcc59054cac3a78d0d5e5402680b17a396d59e
+# Parent  d75aa756149bfd54b1f7f84b86072b3c1a50d683
+pull: backout change to return code
+
+This bit a number of people.
+
+diff --git a/mercurial/commands.py b/mercurial/commands.py
+--- a/mercurial/commands.py
++++ b/mercurial/commands.py
+@@ -4261,7 +4261,7 @@
+ 
+ def postincoming(ui, repo, modheads, optupdate, checkout):
+     if modheads == 0:
+-        return 1
++        return
+     if optupdate:
+         movemarkfrom = repo['.'].node()
+         try:
+@@ -4312,8 +4312,7 @@
+     If SOURCE is omitted, the 'default' path will be used.
+     See :hg:`help urls` for more information.
+ 
+-    Returns 0 on success, 1 if no changes found or an update had
+-    unresolved files.
++    Returns 0 on success, 1 if an update had unresolved files.
+     """
+     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
+     other = hg.peer(repo, opts, source)
+diff --git a/tests/test-bookmarks-pushpull.t b/tests/test-bookmarks-pushpull.t
+--- a/tests/test-bookmarks-pushpull.t
++++ b/tests/test-bookmarks-pushpull.t
+@@ -44,7 +44,6 @@
+   pulling from ../a
+   no changes found
+   importing bookmark X
+-  [1]
+   $ hg bookmark
+      X                         0:4e3505fd9583
+      Y                         0:4e3505fd9583
+@@ -185,7 +184,6 @@
+   no changes found
+   divergent bookmark X stored as X@1
+   importing bookmark Z
+-  [1]
+   $ hg clone http://localhost:$HGPORT/ cloned-bookmarks
+   requesting all changes
+   adding changesets
+diff --git a/tests/test-bundle.t b/tests/test-bundle.t
+--- a/tests/test-bundle.t
++++ b/tests/test-bundle.t
+@@ -85,7 +85,6 @@
+   pulling from ../full.hg
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Pull full.hg into empty (using --cwd)
+ 
+@@ -120,7 +119,6 @@
+   pulling from full.hg
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Pull full.hg into empty (using -R)
+ 
+@@ -128,7 +126,6 @@
+   pulling from full.hg
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Rollback empty
+ 
+diff --git a/tests/test-convert.t b/tests/test-convert.t
+--- a/tests/test-convert.t
++++ b/tests/test-convert.t
+@@ -293,7 +293,6 @@
+   pulling from ../a
+   searching for changes
+   no changes found
+-  [1]
+   $ touch bogusfile
+ 
+ should fail
+diff --git a/tests/test-hook.t b/tests/test-hook.t
+--- a/tests/test-hook.t
++++ b/tests/test-hook.t
+@@ -196,7 +196,6 @@
+   listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'} 
+   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'} 
+   importing bookmark bar
+-  [1]
+   $ cd ../a
+ 
+ test that prepushkey can prevent incoming keys
+diff --git a/tests/test-https.t b/tests/test-https.t
+--- a/tests/test-https.t
++++ b/tests/test-https.t
+@@ -160,7 +160,6 @@
+   pulling from https://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ mv copy-pull/.hg/hgrc.bu copy-pull/.hg/hgrc
+ 
+ cacert configured globally, also testing expansion of environment
+@@ -172,13 +171,11 @@
+   pulling from https://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ P=`pwd` hg -R copy-pull pull --insecure
+   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+   pulling from https://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+ 
+ cacert mismatch
+ 
+@@ -191,7 +188,6 @@
+   pulling from https://127.0.0.1:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
+   abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+   [255]
+@@ -200,7 +196,6 @@
+   pulling from https://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Test server cert which isn't valid yet
+ 
+@@ -260,7 +255,6 @@
+   pulling from https://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Test https with cacert and fingerprint through proxy
+ 
+@@ -268,12 +262,10 @@
+   pulling from https://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/
+   pulling from https://127.0.0.1:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Test https with cert problems through proxy
+ 
+diff --git a/tests/test-mq-qimport-fail-cleanup.t b/tests/test-mq-qimport-fail-cleanup.t
+--- a/tests/test-mq-qimport-fail-cleanup.t
++++ b/tests/test-mq-qimport-fail-cleanup.t
+@@ -34,7 +34,6 @@
+   b.patch
+ 
+   $ hg pull -q -r 0 . # update phase
+-  [1]
+   $ hg qimport -r 0
+   abort: revision 0 is not mutable
+   (see "hg help phases" for details)
+diff --git a/tests/test-pending.t b/tests/test-pending.t
+--- a/tests/test-pending.t
++++ b/tests/test-pending.t
+@@ -102,7 +102,6 @@
+   rollback completed
+   abort: pretxnchangegroup hook failed
+   pull 0000000000000000000000000000000000000000
+-  [1]
+ 
+ test external hook
+ 
+@@ -118,4 +117,3 @@
+   rollback completed
+   abort: pretxnchangegroup hook exited with status 1
+   pull 0000000000000000000000000000000000000000
+-  [1]
+diff --git a/tests/test-phases-exchange.t b/tests/test-phases-exchange.t
+--- a/tests/test-phases-exchange.t
++++ b/tests/test-phases-exchange.t
+@@ -136,7 +136,6 @@
+   pulling from ../alpha
+   searching for changes
+   no changes found
+-  [1]
+   $ hgph
+   o  4 public a-D - b555f63b6063
+   |
+@@ -344,7 +343,6 @@
+   pulling from ../alpha
+   searching for changes
+   no changes found
+-  [1]
+   $ hgph
+   @  6 public n-B - 145e75495359
+   |
+@@ -777,7 +775,6 @@
+   pulling from ../mu
+   searching for changes
+   no changes found
+-  [1]
+   $ hgph
+   @  11 draft A-secret - 435b5d83910c
+   |
+@@ -930,7 +927,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg phase f54f1bb90ff3
+   2: draft
+ 
+diff --git a/tests/test-pull-r.t b/tests/test-pull-r.t
+--- a/tests/test-pull-r.t
++++ b/tests/test-pull-r.t
+@@ -100,5 +100,4 @@
+ This used to abort: received changelog group is empty:
+ 
+   $ hg pull -qr 1 ../repo
+-  [1]
+ 
+diff --git a/tests/test-pull.t b/tests/test-pull.t
+--- a/tests/test-pull.t
++++ b/tests/test-pull.t
+@@ -48,7 +48,6 @@
+   pulling from http://foo@localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+ 
+   $ hg rollback --dry-run --verbose
+   repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
+@@ -78,7 +77,6 @@
+   [255]
+ 
+   $ hg pull -q file:../test
+-  [1]
+ 
+ It's tricky to make file:// URLs working on every platform with
+ regular shell commands.
+@@ -90,4 +88,3 @@
+ 
+   $ URL=`python -c "import os; print 'file://localhost' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
+   $ hg pull -q "$URL"
+-  [1]
+diff --git a/tests/test-ssh.t b/tests/test-ssh.t
+--- a/tests/test-ssh.t
++++ b/tests/test-ssh.t
+@@ -80,7 +80,6 @@
+   pulling from ssh://user@dummy/remote
+   searching for changes
+   no changes found
+-  [1]
+ 
+ local change
+ 
+@@ -199,7 +198,6 @@
+   no changes found
+   updating bookmark foo
+   importing bookmark foo
+-  [1]
+   $ hg book -d foo
+   $ hg push -B foo
+   pushing to ssh://user@dummy/remote
+diff --git a/tests/test-subrepo.t b/tests/test-subrepo.t
+--- a/tests/test-subrepo.t
++++ b/tests/test-subrepo.t
+@@ -580,7 +580,6 @@
+   cloning subrepo s from $TESTTMP/sub/repo/s (glob)
+   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+   $ hg -q -R repo2 pull -u
+-  [1]
+   $ echo 1 > repo2/s/a
+   $ hg -R repo2/s ci -m2
+   $ hg -q -R repo2/s push
+@@ -639,7 +638,6 @@
+   pulling from issue1852a
+   searching for changes
+   no changes found
+-  [1]
+ 
+ Try the same, but with pull -u
+ 
+diff --git a/tests/test-treediscovery-legacy.t b/tests/test-treediscovery-legacy.t
+--- a/tests/test-treediscovery-legacy.t
++++ b/tests/test-treediscovery-legacy.t
+@@ -48,7 +48,6 @@
+   $ hg pull -R empty1 $remote
+   pulling from http://localhost:$HGPORT/
+   no changes found
+-  [1]
+   $ hg push -R empty1 $remote
+   pushing to http://localhost:$HGPORT/
+   no changes found
+@@ -108,7 +107,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg push $remote
+   pushing to http://localhost:$HGPORT/
+   searching for changes
+@@ -233,7 +231,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg push $remote
+   pushing to http://localhost:$HGPORT/
+   searching for changes
+@@ -278,7 +275,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg push $remote
+   pushing to http://localhost:$HGPORT/
+   searching for changes
+diff --git a/tests/test-treediscovery.t b/tests/test-treediscovery.t
+--- a/tests/test-treediscovery.t
++++ b/tests/test-treediscovery.t
+@@ -42,7 +42,6 @@
+   $ hg pull -R empty1 $remote
+   pulling from http://localhost:$HGPORT/
+   no changes found
+-  [1]
+   $ hg push -R empty1 $remote
+   pushing to http://localhost:$HGPORT/
+   no changes found
+@@ -102,7 +101,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg push $remote
+   pushing to http://localhost:$HGPORT/
+   searching for changes
+@@ -221,7 +219,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg push $remote
+   pushing to http://localhost:$HGPORT/
+   searching for changes
+@@ -266,7 +263,6 @@
+   pulling from http://localhost:$HGPORT/
+   searching for changes
+   no changes found
+-  [1]
+   $ hg push $remote
+   pushing to http://localhost:$HGPORT/
+   searching for changes
+diff --git a/tests/test-url-rev.t b/tests/test-url-rev.t
+--- a/tests/test-url-rev.t
++++ b/tests/test-url-rev.t
+@@ -141,7 +141,6 @@
+ No new revs, no update:
+ 
+   $ hg pull -qu
+-  [1]
+ 
+   $ hg parents -q
+   0:1f0dee641bb7
+
