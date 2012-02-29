@@ -1,0 +1,48 @@
+From 772cce373f693096c2ae6f156306acf9e20c09e8 Mon Sep 17 00:00:00 2001
+From: Karel Zak <kzak@redhat.com>
+Date: Tue, 28 Feb 2012 00:02:30 +0100
+Subject: [PATCH] libmount: allow empty source for mount(2) syscall
+
+Addresses: https://bugzilla.redhat.com/show_bug.cgi?id=797438
+Signed-off-by: Karel Zak <kzak@redhat.com>
+---
+ libmount/src/context_mount.c |    4 +++-
+ sys-utils/mount.c            |    6 +++++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/libmount/src/context_mount.c b/libmount/src/context_mount.c
+index a0c5951..098243b 100644
+--- a/libmount/src/context_mount.c
++++ b/libmount/src/context_mount.c
+@@ -451,8 +451,10 @@ static int do_mount(struct libmnt_context *cxt, const char *try_type)
+ 	src = mnt_fs_get_srcpath(cxt->fs);
+ 	target = mnt_fs_get_target(cxt->fs);
+ 
+-	if (!src || !target)
++	if (!target)
+ 		return -EINVAL;
++	if (!src)
++		src = "none";
+ 
+ 	type = try_type ? : mnt_fs_get_fstype(cxt->fs);
+ 
+diff --git a/sys-utils/mount.c b/sys-utils/mount.c
+index 3fbac04..23abc91 100644
+--- a/sys-utils/mount.c
++++ b/sys-utils/mount.c
+@@ -347,7 +347,11 @@ try_readonly:
+ 			return MOUNT_EX_USAGE;
+ 		}
+ 
+-		if (src == NULL || tgt == NULL) {
++		/*
++		 * TODO: add mnt_context_fstab_applied() to check if we found
++		 *       target/source in the file.
++		 */
++		if (!tgt) {
+ 			if (mflags & MS_REMOUNT)
+ 				warnx(_("%s not mounted"), src ? src : tgt);
+ 			else
+-- 
+1.7.9.2
+

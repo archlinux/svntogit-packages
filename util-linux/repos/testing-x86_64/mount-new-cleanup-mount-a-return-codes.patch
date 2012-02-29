@@ -1,0 +1,101 @@
+From 16b73aae8cb73df2974fd75c2a42ec3b92535851 Mon Sep 17 00:00:00 2001
+From: Karel Zak <kzak@redhat.com>
+Date: Fri, 24 Feb 2012 23:03:22 +0100
+Subject: [PATCH 12/12] mount: (new) cleanup mount -a return codes
+
+New return codes:
+
+  0 : all mounted (or all ignored)
+ 64 : some mounted, some failed
+ 32 : all failed
+
+Note that already mounted or ignored (filtered out by -t or -O)
+filesystems don't affect the final return code.
+
+The original mount(8) returns 0 instead of 64, so the situation
+"some mounted, some failed" cannot be detected.
+
+Signed-off-by: Karel Zak <kzak@redhat.com>
+---
+ sys-utils/mount.8 |    4 ++++
+ sys-utils/mount.c |   23 +++++++++++++++++------
+ 2 files changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/sys-utils/mount.8 b/sys-utils/mount.8
+index f1cff74..d18881b 100644
+--- a/sys-utils/mount.8
++++ b/sys-utils/mount.8
+@@ -2759,6 +2759,10 @@ mount failure
+ .TP
+ .BR 64
+ some mount succeeded
++.RE
++
++The command mount -a returns 0 (all success), 32 (all failed) or 64 (some
++failed, some success).
+ 
+ .SH NOTES
+ The syntax of external mount helpers is:
+diff --git a/sys-utils/mount.c b/sys-utils/mount.c
+index 17991b0..3fbac04 100644
+--- a/sys-utils/mount.c
++++ b/sys-utils/mount.c
+@@ -182,6 +182,8 @@ static int mount_all(struct libmnt_context *cxt)
+ 	struct libmnt_fs *fs;
+ 	int mntrc, ignored, rc = MOUNT_EX_SUCCESS;
+ 
++	int nsucc = 0, nerrs = 0;
++
+ 	itr = mnt_new_iter(MNT_ITER_FORWARD);
+ 	if (!itr) {
+ 		warn(_("failed to initialize libmount iterator"));
+@@ -197,31 +199,40 @@ static int mount_all(struct libmnt_context *cxt)
+ 				printf(ignored == 1 ? _("%-25s: ignored\n") :
+ 						      _("%-25s: already mounted\n"),
+ 						tgt);
+-
+ 		} else if (mnt_context_is_fork(cxt)) {
+ 			if (mnt_context_is_verbose(cxt))
+ 				printf("%-25s: mount successfully forked\n", tgt);
+ 		} else {
+-			rc |= mk_exit_code(cxt, mntrc);
++			mk_exit_code(cxt, mntrc);	/* to print warnings */
+ 
+ 			if (mnt_context_get_status(cxt)) {
+-				rc |= MOUNT_EX_SOMEOK;
++				nsucc++;
+ 
+ 				if (mnt_context_is_verbose(cxt))
+ 					printf("%-25s: successfully mounted\n", tgt);
+-			}
++			} else
++				nerrs++;
+ 		}
+ 	}
+ 
+ 	if (mnt_context_is_parent(cxt)) {
+ 		/* wait for mount --fork children */
+-		int nerrs = 0, nchildren = 0;
++		int nchildren = 0;
++
++		nerrs = 0, nsucc = 0;
+ 
+ 		rc = mnt_context_wait_for_children(cxt, &nchildren, &nerrs);
+ 		if (!rc && nchildren)
+-			rc = nchildren == nerrs ? MOUNT_EX_FAIL : MOUNT_EX_SOMEOK;
++			nsucc = nchildren - nerrs;
+ 	}
+ 
++	if (nerrs == 0)
++		rc = MOUNT_EX_SUCCESS;		/* all success */
++	else if (nsucc == 0)
++		rc = MOUNT_EX_FAIL;		/* all failed */
++	else
++		rc = MOUNT_EX_SOMEOK;		/* some success, some failed */
++
+ 	mnt_free_iter(itr);
+ 	return rc;
+ }
+-- 
+1.7.9.2
+
