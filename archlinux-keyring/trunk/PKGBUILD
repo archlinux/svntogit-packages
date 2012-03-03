@@ -1,7 +1,7 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=archlinux-keyring
-pkgver=20120213
+pkgver=20120303
 pkgrel=1
 pkgdesc='Arch Linux PGP keyring'
 arch=('any')
@@ -10,8 +10,8 @@ license=('GPL')
 install="${pkgname}.install"
 source=("ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz"
         "ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz.sig")
-md5sums=('0bce827a30ddbea42b38cc24d1691ac5'
-         '27275509ea3ff9d0c24e6b0ba47878a8')
+md5sums=('42f09f33b110bec53a80dfb7e8d2bade'
+         '19528f9c64ff41c75f8e15e162bb95fb')
 
 package() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
