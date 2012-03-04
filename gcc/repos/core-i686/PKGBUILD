@@ -5,9 +5,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.6.2
-pkgrel=7
-_snapshot=4.6-20120120
+pkgver=4.6.3
+pkgrel=1
+#_snapshot=4.6-20120120
 _libstdcppmanver=20111215		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -16,13 +16,13 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.22' 'libmpc' 'cloog' 'ppl' 'gcc-ada')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-man.${_libstdcppmanver}.tar.bz2
 	gcc_pure64.patch
 	gcc-hash-style-both.patch
 	gcc-4.6.2-cloog-0.17.patch)
-md5sums=('f7ca5d9f7a07216577f81318b7cf56ef'
+md5sums=('773092fe5194353b02bb0110052a972e'
          '450772ce32daed97d7383199f8797f33'
          '4030ee1c08dd1e843c0225b772360e76'
          '4df25b623799b148a0703eaeec8fdf3f'
