@@ -1,0 +1,80 @@
+# $Id: PKGBUILD 136836 2011-09-02 07:59:01Z andyrtr $
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=icedtea-web-java7
+pkgname=('icedtea-web-java7' 'icedtea-web-java7-doc')
+pkgver=1.2
+pkgrel=1
+arch=('i686' 'x86_64')
+url="http://icedtea.classpath.org/wiki/IcedTea-Web"
+license=('GPL2')
+makedepends=('jdk7-openjdk' 'zip' 'gtk2' 'libxtst' 'npapi-sdk' 'rhino' 'junit')
+source=(http://icedtea.classpath.org/download/source/${pkgbase/-java7/}-$pkgver.tar.gz)
+sha256sums=('3f8d22b655df207409dd3451ba02907f61a12ac051e4df4d44bb5ed47c4f778d')
+
+_javaver=7
+_jvmdir=/usr/lib/jvm/java-${_javaver}-openjdk
+
+build() {
+  cd "${srcdir}"/icedtea-web*
+
+  . /etc/profile.d/jre.sh
+  . /etc/profile.d/jdk.sh
+
+  ./configure --prefix=${_jvmdir} \
+      --datarootdir=/usr/share \
+      --with-jdk-home=${_jvmdir}
+  make
+}
+
+check() {
+  cd "${srcdir}"/icedtea-web*
+  # as more tests have been added some are expectged to fail
+  # see http://mail.openjdk.java.net/pipermail/distro-pkg-dev/2012-March/017566.html
+  make -k check || /bin/true
+}
+
+
+package_icedtea-web-java7() {
+
+  pkgdesc="provides a Free Software web browser plugin running applets written in the Java programming language and an implementation of Java Web Start, originally based on the NetX project"
+  depends=('jre7-openjdk' 'gtk2' 'desktop-file-utils')
+  install=${pkgname}.install
+
+  cd "${srcdir}"/icedtea-web* #${pkgname}-${_date}"
+  # possible make target (see bottom of Makefile.am: install-exec-local install-data-local
+  make DESTDIR="${pkgdir}" install-exec-local install-data-local
+
+  # Install desktop files.
+  install -m755 -d ${pkgdir}/usr/share/{applications,pixmaps}
+  install -m644 javaws.png ${pkgdir}/usr/share/pixmaps
+  install -m644 {javaws,itweb-settings}.desktop ${pkgdir}/usr/share/applications
+  # remove splitted doc files
+  rm -rf ${pkgdir}/usr/share/doc
+
+  # link binaries into /usr/bin + jre/bin
+  install -m755 -d ${pkgdir}/usr/bin
+  install -m755 -d ${pkgdir}/${_jvmdir}/jre/bin
+  pushd ${pkgdir}/${_jvmdir}/bin
+  for file in *; do
+    ln -sf ${_jvmdir}/bin/${file} ${pkgdir}/usr/bin
+    ln -sf ${_jvmdir}/bin/${file} ${pkgdir}/${_jvmdir}/jre/bin
+  done
+  popd
+
+  # link the mozilla-plugin - test it here http://www.java.com/en/download/help/testvm.xml
+  install -m755 -d ${pkgdir}/usr/lib/mozilla/plugins/
+  ln -sf ${_jvmdir}/lib/IcedTeaPlugin.so ${pkgdir}/usr/lib/mozilla/plugins/
+}
+
+package_icedtea-web-java7-doc() {
+
+  pkgdesc="icedtea-web browser plugin + Java WebStart - documentation files"
+
+  cd "${srcdir}"/icedtea-web*
+  make DESTDIR="${pkgdir}" install-data-local
+  # remove javaws about and man page
+  rm -rf ${pkgdir}/usr/lib
+  rm -rf ${pkgdir}/usr/share/man
+  rm -rf ${pkgdir}/usr/share/icedtea-web # conflicting and unneeded file it seems
+}
