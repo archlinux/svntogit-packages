@@ -4,14 +4,13 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=dnsmasq
-pkgver=2.59
-pkgrel=2
+pkgver=2.60
+pkgrel=1
 pkgdesc="Lightweight, easy to configure DNS forwarder and DHCP server"
 url="http://www.thekelleys.org.uk/dnsmasq/doc.html"
 arch=('i686' 'x86_64')
 license=('GPL')
 depends=('glibc' 'dbus-core')
-makedepends=('libcap>=2.16')
 install=$pkgname.install
 backup=('etc/dnsmasq.conf'
         'etc/conf.d/dnsmasq')
@@ -19,24 +18,27 @@ source=("http://www.thekelleys.org.uk/$pkgname/$pkgname-$pkgver.tar.gz"
         'dnsmasq.confd'
         'rc.dnsmasq'
         'dnsmasq.service')
-md5sums=('b5757ef2d7b651748eeebb88af29d7d6'
+md5sums=('5a09908e02724d759ac60d9cafd27de8'
          '66479e99123faeab83ebaed709ef95b5'
          '9f180cc236808bbd02ca8652fd2e8217'
-         'f329d86f8ba1cd85f9b6ee59e0ce3791')
+         '631d8349acbed1b01d4e11d9f42fdb7d')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
-  # link against dbus
-  echo '#define HAVE_DBUS' >> src/config.h
+  # link against dbus. this ugliness is needed to ensure that the
+  # compile time opts report properly on startup. yuck.
+  sed -i '/^#ifdef DNSMASQ_COMPILE_OPTS/ {
+    i#define HAVE_DBUS
+  }' src/config.h
 
   make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
-  make PREFIX=/usr DESTDIR="$pkgdir" install
+  make BINDIR=/usr/bin PREFIX=/usr DESTDIR="$pkgdir" install
 
   install -Dm755 "$srcdir"/rc.dnsmasq "$pkgdir"/etc/rc.d/dnsmasq
   install -Dm644 "$srcdir"/dnsmasq.confd "$pkgdir/etc/conf.d/dnsmasq"
