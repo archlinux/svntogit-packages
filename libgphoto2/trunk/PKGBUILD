@@ -1,23 +1,26 @@
 # $Id$
-# Maintainer: Eduardo Romero <eduardo@archlinux.org>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Tom Gundersen <teg@jklm.no>
+# Contributor: Eduardo Romero <eduardo@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=libgphoto2
-pkgver=2.4.11
+pkgver=2.4.13
 pkgrel=1
 pkgdesc="The core library of gphoto2, designed to allow access to digital camera by external programs."
 arch=(i686 x86_64)
 url="http://www.gphoto.org"
 license=(LGPL)
-depends=('libexif' 'libjpeg>=8' 'gd' 'libltdl' 'libusb-compat')
+depends=('libexif' 'libjpeg>=8' 'gd' 'libltdl' 'libusb-compat' 'libusb')
 install=libgphoto2.install
 options=('libtool')
 source=(http://downloads.sourceforge.net/gphoto/${pkgname}-${pkgver}.tar.gz)
-md5sums=('a2230c31e320acb7ececd90bc02fe515')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  udevscriptdir=/lib/udev ./configure --prefix=/usr --with-drivers=all --disable-static --disable-rpath
+  ./configure \
+	--prefix=/usr \
+	--disable-rpath
   make
 }
 
@@ -25,14 +28,16 @@ package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
 
-  rm -f ${pkgdir}/usr/lib/libgphoto2/${pkgver}/*.a
+  # Remove unused udev helper
+  rm -rf "${pkgdir}/usr/lib/udev"
 
   install -m755 -d "${pkgdir}/lib/udev/rules.d"
   LD_LIBRARY_PATH="${pkgdir}/usr/lib${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH" \
   CAMLIBS="${pkgdir}/usr/lib/libgphoto2/${pkgver}" \
-      "${pkgdir}/usr/lib/libgphoto2/print-camera-list" udev-rules version 136 group camera mode 0660 > \
+      "${pkgdir}/usr/lib/libgphoto2/print-camera-list" udev-rules version 136 > \
       "${pkgdir}/lib/udev/rules.d/40-gphoto.rules"
 
   # Remove recursive symlink
   rm -f "${pkgdir}/usr/include/gphoto2/gphoto2"
 }
+md5sums=('7d8a1d3ae02069af381f07a0bb4bfc15')
