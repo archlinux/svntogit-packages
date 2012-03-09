@@ -4,18 +4,21 @@
 . /etc/rc.d/functions
 . /etc/conf.d/deluged
 
-[[ -f /var/run/deluge-web.pid ]] && PID=$(cat /var/run/deluge-web.pid)
-[[ -d /proc/$PID ]] || PID=
+PIDFILE=/run/deluge/deluge-web.pid
+WEB_OPTIONS="-f $WEB_OPTIONS"
+
+[[ -f $PIDFILE ]] && PID=$(<$PIDFILE)
+kill -0 $PID || PID=
 
 case "$1" in
   start)
     stat_busy "Starting Deluge WebUI"
-    [[ -z $PID ]] && su -l -s /bin/sh -c "/usr/bin/deluge-web -f >/dev/null" $DELUGE_USER
+    [[ -z $PID ]] && su -l -s /bin/sh -c "/usr/bin/deluge-web $WEB_OPTIONS >/dev/null" deluge
     if [ $? -gt 0 ]; then
       stat_fail
     else
       sleep 1
-      echo $(pgrep -u $DELUGE_USER deluge-web) > /var/run/deluge-web.pid
+      echo $(pgrep -u deluge deluge-web) > $PIDFILE
       add_daemon deluge-web
       stat_done
     fi
@@ -26,7 +29,7 @@ case "$1" in
     if [ $? -gt 0 ]; then
       stat_fail
     else
-      rm /var/run/deluge-web.pid
+      rm $PIDFILE
       rm_daemon deluge-web
       stat_done
     fi
