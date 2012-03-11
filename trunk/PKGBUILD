@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd')
 pkgver=43
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2')
@@ -12,12 +12,17 @@ makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gperf' 'intltool'
              'kmod' 'libcap' 'libxslt' 'linux-api-headers' 'pam' 'udev' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
-        "os-release")
+        "os-release" "cpp-compat.patch")
 md5sums=('446cc6db7625617af67e2d8e5f503a49'
-         '752636def0db3c03f121f8b4f44a63cd')
+         '752636def0db3c03f121f8b4f44a63cd'
+         '414968aa314ced0b0ab4b2207e46aa69')
 
 build() {
   cd "$pkgname-$pkgver"
+  
+  # Fix C++ compile error when including sd-login.h
+  # http://comments.gmane.org/gmane.comp.sysutils.systemd.devel/4514
+  patch -p1 -i ../cpp-compat.patch
 
   ./configure --sysconfdir=/etc \
               --libexecdir=/usr/lib \
@@ -67,7 +72,7 @@ package_systemd() {
   sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
   # didn't build this...
-  rm -f "man1/systemadm.1"
+  rm -f "$pkgdir/usr/share/man/man1/systemadm.1"
 
   # fix .so links in manpage stubs
   find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
@@ -83,13 +88,12 @@ package_systemd() {
   done
 
   ### split off libsystemd (libs, includes, pkgconfig, man3)
-  install -dm755 "$srcdir"/libsystemd/usr/{include,lib/pkgconfig,share/man}
+  install -dm755 "$srcdir"/libsystemd/usr/{include,lib/pkgconfig}
 
   cd "$srcdir"/libsystemd
   mv "$pkgdir/usr/lib"/libsystemd-*.so* usr/lib
   mv "$pkgdir/usr/include/systemd" usr/include
   mv "$pkgdir/usr/lib/pkgconfig"/libsystemd-*.pc usr/lib/pkgconfig
-  mv "$pkgdir/usr/share/man/man3" usr/share/man
 }
 
 package_libsystemd() {
