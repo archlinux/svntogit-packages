@@ -1,7 +1,18 @@
-diff -u -Nr gnome-control-center-3.3.91/configure.ac gnome-control-center-3.3.91-systemd-fallback/configure.ac
---- gnome-control-center-3.3.91/configure.ac	2012-03-05 20:30:32.000000000 +0100
-+++ gnome-control-center-3.3.91-systemd-fallback/configure.ac	2012-03-07 00:06:01.752988448 +0100
-@@ -56,7 +56,7 @@
+commit 9873a7536844f5c38c2a123be58175c2774e5dcc
+Author: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+Date:   Mon Mar 12 01:12:11 2012 +0100
+
+    Fallback to CK if systemd is not available
+    
+    Be nice to distributions where systemd is optional. This will select
+    the code path at runtime depending on whether the system was booted
+    using systemd.
+
+diff --git a/configure.ac b/configure.ac
+index aee97ac..867f061 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -56,7 +56,7 @@ AC_ARG_ENABLE([systemd],
                [with_systemd=$enableval],
                [with_systemd=no])
  if test "$with_systemd" = "yes" ; then
@@ -10,9 +21,10 @@ diff -u -Nr gnome-control-center-3.3.91/configure.ac gnome-control-center-3.3.91
    AC_DEFINE(HAVE_SYSTEMD, 1, [Define to 1 if systemd is available])
  else
    SYSTEMD=
-diff -u -Nr gnome-control-center-3.3.91/panels/user-accounts/um-user.c gnome-control-center-3.3.91-systemd-fallback/panels/user-accounts/um-user.c
---- gnome-control-center-3.3.91/panels/user-accounts/um-user.c	2012-03-05 15:04:55.000000000 +0100
-+++ gnome-control-center-3.3.91-systemd-fallback/panels/user-accounts/um-user.c	2012-03-07 00:13:13.002755560 +0100
+diff --git a/panels/user-accounts/um-user.c b/panels/user-accounts/um-user.c
+index f027754..5ebbe29 100644
+--- a/panels/user-accounts/um-user.c
++++ b/panels/user-accounts/um-user.c
 @@ -37,6 +37,11 @@
  
  #include <gio/gunixoutputstream.h>
@@ -25,7 +37,7 @@ diff -u -Nr gnome-control-center-3.3.91/panels/user-accounts/um-user.c gnome-con
  #include "um-user.h"
  #include "um-account-type.h"
  #include "um-utils.h"
-@@ -1003,57 +1008,50 @@
+@@ -1003,25 +1008,18 @@ um_user_set_password (UmUser      *user,
          }
  }
  
@@ -47,70 +59,19 @@ diff -u -Nr gnome-control-center-3.3.91/panels/user-accounts/um-user.c gnome-con
 +                int n_sessions;
  
 -#else
-+                n_sessions = sd_uid_get_sessions (um_user_get_uid (user), 0, NULL) > 0;
++                n_sessions = sd_uid_get_sessions (um_user_get_uid (user), 0, NULL);
  
 -gboolean
 -um_user_is_logged_in (UmUser *user)
 -{
--        GVariant *result;
--        GVariantIter *iter;
--        gint n_sessions;
--        GError *error = NULL;
 +                return n_sessions > 0;
-+        } else
++        }
 +#endif
-+        {
-+                GVariant *result;
-+                GVariantIter *iter;
-+                gint n_sessions;
-+                GError *error = NULL;
-+
-+                result = g_dbus_connection_call_sync (user->bus,
-+                                                      "org.freedesktop.ConsoleKit",
-+                                                      "/org/freedesktop/ConsoleKit/Manager",
-+                                                      "org.freedesktop.ConsoleKit.Manager",
-+                                                      "GetSessionsForUnixUser",
-+                                                      g_variant_new ("(u)", um_user_get_uid (user)),
-+                                                      G_VARIANT_TYPE ("(ao)"),
-+                                                      G_DBUS_CALL_FLAGS_NONE,
-+                                                      -1,
-+                                                      NULL,
-+                                                      &error);
-+                if (!result) {
-+                        g_warning ("GetSessionsForUnixUser failed: %s", error->message);
-+                        g_error_free (error);
-+                        return FALSE;
-+                }
-+          
-+                g_variant_get (result, "(ao)", &iter);
-+                n_sessions = g_variant_iter_n_children (iter);
-+                g_variant_iter_free (iter);
-+                g_variant_unref (result);
- 
--        result = g_dbus_connection_call_sync (user->bus,
--                                              "org.freedesktop.ConsoleKit",
--                                              "/org/freedesktop/ConsoleKit/Manager",
--                                              "org.freedesktop.ConsoleKit.Manager",
--                                              "GetSessionsForUnixUser",
--                                              g_variant_new ("(u)", um_user_get_uid (user)),
--                                              G_VARIANT_TYPE ("(ao)"),
--                                              G_DBUS_CALL_FLAGS_NONE,
--                                              -1,
--                                              NULL,
--                                              &error);
--        if (!result) {
--                g_warning ("GetSessionsForUnixUser failed: %s", error->message);
--                g_error_free (error);
--                return FALSE;
-+                return n_sessions > 0;
-         }
--  
--        g_variant_get (result, "(ao)", &iter);
--        n_sessions = g_variant_iter_n_children (iter);
--        g_variant_iter_free (iter);
--        g_variant_unref (result);
--
--        return n_sessions > 0;
+         GVariant *result;
+         GVariantIter *iter;
+         gint n_sessions;
+@@ -1052,8 +1050,6 @@ um_user_is_logged_in (UmUser *user)
+         return n_sessions > 0;
  }
  
 -#endif
