@@ -1,8 +1,8 @@
 diff --git a/util/grub-mkconfig.in b/util/grub-mkconfig.in
-index 859c2e8..c754dd7 100644
+index df3b733..65a7fff 100644
 --- a/util/grub-mkconfig.in
 +++ b/util/grub-mkconfig.in
-@@ -242,6 +242,8 @@ export GRUB_DEFAULT \
+@@ -213,6 +213,8 @@ export GRUB_DEFAULT \
    GRUB_THEME \
    GRUB_GFXPAYLOAD_LINUX \
    GRUB_DISABLE_OS_PROBER \
@@ -12,10 +12,10 @@ index 859c2e8..c754dd7 100644
    GRUB_SAVEDEFAULT \
    GRUB_ENABLE_CRYPTODISK \
 diff --git a/util/grub.d/00_header.in b/util/grub.d/00_header.in
-index d9bcc15..a93dcb7 100644
+index 765bfdc..b148558 100644
 --- a/util/grub.d/00_header.in
 +++ b/util/grub.d/00_header.in
-@@ -100,6 +100,14 @@ cat <<EOF
+@@ -115,6 +115,14 @@ cat <<EOF
  
  EOF
  
@@ -31,7 +31,7 @@ index d9bcc15..a93dcb7 100644
  gfxterm=0;
  for x in ${GRUB_TERMINAL_INPUT} ${GRUB_TERMINAL_OUTPUT}; do
 diff --git a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
-index bc738f2..a6ab326 100644
+index 8c75fab..62e87e1 100644
 --- a/util/grub.d/10_linux.in
 +++ b/util/grub.d/10_linux.in
 @@ -31,8 +31,8 @@ CLASS="--class gnu-linux --class gnu --class os"
@@ -53,29 +53,16 @@ index bc738f2..a6ab326 100644
 +  LINUX_ROOT_DEVICE="/dev/disk/by-uuid/${GRUB_DEVICE_UUID}"
  fi
  
- if [ "x`${grub_probe} --device ${GRUB_DEVICE} --target=fs 2>/dev/null || true`" = xbtrfs ]; then
-@@ -65,7 +65,9 @@ linux_entry ()
-   version="$2"
-   recovery="$3"
-   args="$4"
--  if ${recovery} ; then
-+  if [ -n "$5" ] ; then
-+    title="$(gettext_quoted "%s, with Linux %s") $5"
-+  elif ${recovery} ; then
-     title="$(gettext_quoted "%s, with Linux %s (recovery mode)")"
-   else
-     title="$(gettext_quoted "%s, with Linux %s")"
-@@ -113,7 +115,9 @@ EOF
+ GRUBFS="`${grub_probe} --device ${GRUB_DEVICE} --target=fs 2>/dev/null || true`"
+@@ -132,6 +132,7 @@ linux_entry ()
      fi
-     printf '%s\n' "${prepare_boot_cache}"
+     printf '%s\n' "${prepare_boot_cache}" | sed "s/^/$submenu_indentation/"
    fi
 +
    message="$(gettext_printf "Loading Linux %s ..." ${version})"
-+
-   cat << EOF
+   sed "s/^/$submenu_indentation/" << EOF
  	echo	'$message'
- 	linux	${rel_dirname}/${basename} root=${linux_root_device_thisversion} ro ${args}
-@@ -132,11 +136,11 @@ EOF
+@@ -152,11 +153,11 @@ EOF
  
  case x`uname -m` in
      xi?86 | xx86_64)
@@ -89,7 +76,7 @@ index bc738f2..a6ab326 100644
                    if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
  	     done` ;;
  esac
-@@ -151,16 +155,19 @@ while [ "x$list" != "x" ] ; do
+@@ -178,16 +179,19 @@ while [ "x$list" != "x" ] ; do
    dirname=`dirname $linux`
    rel_dirname=`make_system_path_relative_to_its_root $dirname`
    version=`echo $basename | sed -e "s,^[^0-9]*-,,g"`
@@ -111,20 +98,3 @@ index bc738f2..a6ab326 100644
      if test -e "${dirname}/${i}" ; then
        initrd="$i"
        break
-@@ -190,6 +197,16 @@ while [ "x$list" != "x" ] ; do
- 
-   linux_entry "${OS}" "${version}" false \
-       "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
-+  for i in "initramfs-${version}-fallback.img" \
-+	   "${basename/vmlinuz/initramfs}-fallback.img" "${basename/vmlinuz/kernel}-fallback.img"; do
-+    if test -e "${dirname}/${i}"; then
-+      initrd="$i"
-+      linux_entry "${OS}" "${version}" true \
-+	  "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}" Fallback
-+      break
-+    fi
-+  done
-+
-   if [ "x${GRUB_DISABLE_RECOVERY}" != "xtrue" ]; then
-     linux_entry "${OS}" "${version}" true \
- 	"single ${GRUB_CMDLINE_LINUX}"
