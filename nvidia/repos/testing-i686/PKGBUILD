@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer : Thomas Baechler <thomas@archlinux.org>
+
+pkgname=nvidia
+pkgver=295.20
+_extramodules=extramodules-3.3-ARCH
+_kernver="$(cat /lib/modules/${_extramodules}/version)"
+pkgrel=4
+pkgdesc="NVIDIA drivers for linux."
+arch=('i686' 'x86_64')
+url="http://www.nvidia.com/"
+depends=('linux>=3.3' 'linux<3.4' "nvidia-utils=${pkgver}")
+makedepends=('linux-headers>=3.3' 'linux-headers<3.4')
+conflicts=('nvidia-96xx' 'nvidia-173xx')
+license=('custom')
+install=nvidia.install
+options=(!strip)
+
+if [ "$CARCH" = "i686" ]; then
+    _arch='x86'
+    _pkg="NVIDIA-Linux-${_arch}-${pkgver}"
+    source=("ftp://download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
+    md5sums=('a6f702271da49930a17e28b5928fe75a')
+elif [ "$CARCH" = "x86_64" ]; then
+    _arch='x86_64'
+    _pkg="NVIDIA-Linux-${_arch}-${pkgver}-no-compat32"
+    source=("ftp://download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
+    md5sums=('79b05cffa482234833ae1c4bb40664c3')
+fi
+
+build() {
+    cd "${srcdir}"
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}/kernel"
+    # fix for 3.3 kernel
+    sed 's/CFLAGS="$CFLAGS -I$SOURCES\/arch\/x86\/include"/CFLAGS="$CFLAGS \
+                   -I$SOURCES\/arch\/x86\/include \
+                   -I$SOURCES\/arch\/x86\/include\/generated"/' -i conftest.sh
+    make SYSSRC=/lib/modules/"${_kernver}/build" module
+}
+
+package() {
+    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
+        "${pkgdir}/lib/modules/${_extramodules}/nvidia.ko"
+    install -d -m755 "${pkgdir}/lib/modprobe.d"
+    echo "blacklist nouveau" >> "${pkgdir}/lib/modprobe.d/nvidia.conf"
+    echo "blacklist nvidiafb" >> "${pkgdir}/lib/modprobe.d/nvidia.conf"
+    sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='${_extramodules}'/" "${startdir}/nvidia.install"
+    gzip "${pkgdir}/lib/modules/${_extramodules}/nvidia.ko"
+}
