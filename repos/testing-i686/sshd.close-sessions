@@ -1,0 +1,14 @@
+# Close sshd sessions before shutting down the network; see FS#17389.
+
+sshd_close_sessions () {
+	/etc/rc.d/sshd stop
+	stat_busy "Stopping Secure Shell Sessions"
+	for i in $(pgrep sshd); do
+		if readlink -q /proc/$i/exe &>/dev/null | grep -q '^/usr/sbin/sshd'; then
+			kill $i &>/dev/null
+		fi
+	done
+	stat_done
+}
+
+add_hook shutdown_start sshd_close_sessions
