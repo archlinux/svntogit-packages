@@ -7,7 +7,7 @@ pkgname=('linux-lts' 'linux-lts-headers') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.0
-pkgver=${_basekernel}.24
+pkgver=${_basekernel}.25
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -23,14 +23,6 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.0.tar.xz"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
         'ext4-options.patch')
-md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         'ad116043863047a949805f0b8b561238'
-         'af1a4eca058543f4c57b8eb14ec7d509'
-         '700e1cd2fa65771d5acda8bf44b6231a'
-         '21a33df5fba2da2f56e447fb171f02c0'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         'c8299cf750a84e12d60b372c8ca7e1e8')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -277,3 +269,11 @@ package_linux-lts-headers() {
   # remove unneeded architectures
   rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arm,arm26,avr32,blackfin,cris,frv,h8300,ia64,m32r,m68k,m68knommu,mips,microblaze,mn10300,parisc,powerpc,ppc,s390,sh,sh64,sparc,sparc64,um,v850,xtensa}
 }
+md5sums=('ecf932280e2441bdd992423ef3d55f8f'
+         'cbb2e7391ff653b9e74eaa366bb24b17'
+         '574d287d53459d801d6ec005c18ab13c'
+         'ea092d1d7117477e427d47d5b4c3e8af'
+         '21a33df5fba2da2f56e447fb171f02c0'
+         '9d3c56a4b999c8bfbd4018089a62f662'
+         '263725f20c0b9eb9c353040792d644e5'
+         'c8299cf750a84e12d60b372c8ca7e1e8')
