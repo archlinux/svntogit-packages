@@ -1,61 +1,64 @@
 # $Id$
-# Maintainer: Angel Velasquez <angvp@archlinux.org>
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Angel Velasquez <angvp@archlinux.org>
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
 pkgver=0.16.7
-pkgrel=1
-pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
-arch=('i686' 'x86_64')
+pkgrel=2
+pkgdesc='Flexible, powerful, server-side application for playing music'
+url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
-url="http://mpd.wikia.com/wiki/Server"
+arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
          'sqlite3' 'jack' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag'
          'libpulse')
-makedepends=('pkgconfig' 'doxygen')
-install=${pkgname}.install
-changelog=ChangeLog
-source=("http://downloads.sourceforge.net/musicpd/$pkgname-$pkgver.tar.bz2"
-'mpd') 
-md5sums=('3d0e7c36646e80386b32966bd4268e8d'
-         'e5669c2bff4031928531e52475addeb1')
+makedepends=('doxygen')
+source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
+        'rc.d') 
+sha1sums=('878f3ce82d4f00f6cbad63a625b2c0274c4a704a'
+          '3777bdb4fff4b7911be3b1242aabae9d2912ef18')
+
+install=install
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+	cd "${srcdir}/${pkgname}-${pkgver}"
 
-  ./configure --prefix=/usr \
-    --sysconfdir=/etc \
-    --enable-lastfm \
-    --enable-jack \
-    --enable-pulse \
-    --enable-documentation \
-    --disable-libwrap \
-    --disable-cue \
-    --disable-sidplay \
-    --with-systemdsystemunitdir=/lib/systemd/system
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--enable-lastfm \
+		--enable-jack \
+		--enable-pulse \
+		--enable-documentation \
+		--disable-libwrap \
+		--disable-cue \
+		--disable-sidplay \
+		--with-systemdsystemunitdir=/lib/systemd/system
 
-  make
+	make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+	cd "${srcdir}/${pkgname}-${pkgver}"
 
-  make DESTDIR="$pkgdir" install
+	make DESTDIR="${pkgdir}" install
 
-  # set our dirs in mpd.conf file
-  sed -i 's|^music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
-  sed -i 's|playlist_directory.*$|playlist_directory "/var/lib/mpd/playlists"|1' doc/mpdconf.example
-  sed -i 's|db_file.*$|db_file "/var/lib/mpd/mpd.db"|1' doc/mpdconf.example
-  sed -i 's|log_file.*$|log_file "/var/log/mpd/mpd.log"|1' doc/mpdconf.example
-  sed -i 's|error_file.*$|error_file "/var/log/mpd/mpd.error"|1' doc/mpdconf.example
-  sed -i 's|#pid_file.*$|pid_file "/var/run/mpd/mpd.pid"|1' doc/mpdconf.example
-  sed -i 's|#state_file.*$|state_file "/var/lib/mpd/mpdstate"|1' doc/mpdconf.example
-  sed -i 's|#user.*$|user "mpd"|1' doc/mpdconf.example
+	sed \
+		-e '/^#playlist_directory/c playlist_directory "/var/lib/mpd/playlists"' \
+		-e '/^#db_file/c db_file "/var/lib/mpd/mpd.db"' \
+		-e '/^#pid_file/c pid_file "/run/mpd/mpd.pid"' \
+		-e '/^#state_file/c state_file "/var/lib/mpd/mpdstate"' \
+		-e '/^#user/c user "mpd"' \
+		-i doc/mpdconf.example
 
-  install -Dm644 "doc/mpdconf.example" "$pkgdir/usr/share/mpd/mpd.conf.example"
+	install -Dm755 ../rc.d "${pkgdir}"/etc/rc.d/mpd
+	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
+	install -Dm644 doc/mpdconf.example "${pkgdir}"/usr/share/mpd/mpd.conf.example
 
-  install -Dm755 "$srcdir/mpd" "$pkgdir/etc/rc.d/mpd"
-  install -d "$pkgdir"/var/{lib/mpd/playlists,log/mpd}
+	cd "${pkgdir}"/usr/share/doc/mpd
+	tar cfJ api.tar.xz --remove-files api
+	rmdir developer protocol user
 }
