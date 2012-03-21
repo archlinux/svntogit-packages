@@ -31,60 +31,54 @@ index 765bfdc..b148558 100644
  gfxterm=0;
  for x in ${GRUB_TERMINAL_INPUT} ${GRUB_TERMINAL_OUTPUT}; do
 diff --git a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
-index 8c75fab..62e87e1 100644
+index 8c75fab..0e00d19 100644
 --- a/util/grub.d/10_linux.in
 +++ b/util/grub.d/10_linux.in
-@@ -31,8 +31,8 @@ CLASS="--class gnu-linux --class gnu --class os"
- if [ "x${GRUB_DISTRIBUTOR}" = "x" ] ; then
-   OS=GNU/Linux
- else
--  OS="${GRUB_DISTRIBUTOR} GNU/Linux"
--  CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr 'A-Z' 'a-z' | cut -d' ' -f1) ${CLASS}"
-+  OS="${GRUB_DISTRIBUTOR}"
-+  CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr 'A-Z' 'a-z' | tr -d ' ') ${CLASS}"
- fi
+@@ -87,6 +87,8 @@ linux_entry ()
+       case $type in
+ 	  recovery)
+ 	      title="$(gettext_printf "%s, with Linux %s (recovery mode)" "${os}" "${version}")" ;;
++	  fallback)
++	      title="$(gettext_printf "%s, with Linux %s (Fallback initramfs)" "${os}" "${version}")" ;;
+ 	  *)
+ 	      title="$(gettext_printf "%s, with Linux %s" "${os}" "${version}")" ;;
+       esac
+@@ -100,7 +102,7 @@ linux_entry ()
+   else
+       echo "menuentry '$(echo "$os" | grub_quote)' ${CLASS} \$menuentry_id_option 'gnulinux-simple-$boot_device_id' {" | sed "s/^/$submenu_indentation/"
+   fi      
+-  if [ x$type != xrecovery ] ; then
++  if [ x$type != xrecovery ] && [ x$type != xfallback ] ; then
+       save_default_entry | sed -e "s/^/\t/"
+   fi
  
- # loop-AES arranges things so that /dev/loop/X can be our root device, but
-@@ -48,7 +48,7 @@ if [ "x${GRUB_DEVICE_UUID}" = "x" ] || [ "x${GRUB_DISABLE_LINUX_UUID}" = "xtrue"
-     || uses_abstraction "${GRUB_DEVICE}" lvm; then
-   LINUX_ROOT_DEVICE=${GRUB_DEVICE}
- else
--  LINUX_ROOT_DEVICE=UUID=${GRUB_DEVICE_UUID}
-+  LINUX_ROOT_DEVICE="/dev/disk/by-uuid/${GRUB_DEVICE_UUID}"
- fi
- 
- GRUBFS="`${grub_probe} --device ${GRUB_DEVICE} --target=fs 2>/dev/null || true`"
-@@ -132,6 +132,7 @@ linux_entry ()
+@@ -132,7 +134,8 @@ linux_entry ()
      fi
      printf '%s\n' "${prepare_boot_cache}" | sed "s/^/$submenu_indentation/"
    fi
+-  message="$(gettext_printf "Loading Linux %s ..." ${version})"
 +
-   message="$(gettext_printf "Loading Linux %s ..." ${version})"
++  message="$(gettext_printf "Loading Linux %s ..." "${version}")"
    sed "s/^/$submenu_indentation/" << EOF
  	echo	'$message'
-@@ -152,11 +153,11 @@ EOF
- 
- case x`uname -m` in
-     xi?86 | xx86_64)
--	list=`for i in /boot/vmlinuz-* /vmlinuz-* /boot/kernel-* ; do
-+	list=`for i in /boot/vmlinuz-* /vmlinuz-* /boot/kernel-* /boot/vmlinuz26-* ; do
-                   if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
-               done` ;;
-     *) 
--	list=`for i in /boot/vmlinuz-* /boot/vmlinux-* /vmlinuz-* /vmlinux-* /boot/kernel-* ; do
-+	list=`for i in /boot/vmlinuz* /boot/vmlinux* /vmlinuz* /vmlinux* /boot/kernel-* ; do
-                   if grub_file_is_not_garbage "$i" ; then echo -n "$i " ; fi
- 	     done` ;;
- esac
-@@ -178,16 +179,19 @@ while [ "x$list" != "x" ] ; do
-   dirname=`dirname $linux`
-   rel_dirname=`make_system_path_relative_to_its_root $dirname`
-   version=`echo $basename | sed -e "s,^[^0-9]*-,,g"`
--  alt_version=`echo $version | sed -e "s,\.old$,,g"`
-+  base_init=`echo $basename | sed -e "s,vmlinuz,initramfs,g"`
-+  alt_version="${base_init}-fallback"
+ 	linux	${rel_dirname}/${basename} root=${linux_root_device_thisversion} ro ${args}
+@@ -181,13 +184,28 @@ while [ "x$list" != "x" ] ; do
+   alt_version=`echo $version | sed -e "s,\.old$,,g"`
    linux_root_device_thisversion="${LINUX_ROOT_DEVICE}"
  
++  if [[ "$(grep "Arch Linux" /etc/os-release)" ]]; then
++    if [[ "$(echo "${basename}" | grep "vmlinuz-linux")" ]]; then
++      version="$(echo "${basename}" | sed -e "s,vmlinuz-linux,,g")"
++      
++      if [[ "${version}" == "" ]]; then
++        version="core repo kernel"
++      else
++        version="$(echo "${version}" | sed -e "s,-,,g")"
++        version="${version} kernel"
++      fi
++    fi
++  fi
++  
    initrd=
 +
    for i in "initrd.img-${version}" "initrd-${version}.img" "initrd-${version}.gz" \
@@ -94,7 +88,53 @@ index 8c75fab..62e87e1 100644
  	   "initramfs-genkernel-${version}" \
 -	   "initramfs-genkernel-${alt_version}"; do
 +	   "initramfs-genkernel-${alt_version}" \
-+	   "${basename/vmlinuz/initramfs}.img" "${basename/vmlinuz/kernel}.img"; do
++	   "${basename/vmlinuz/initramfs}.img"; do
      if test -e "${dirname}/${i}" ; then
        initrd="$i"
        break
+@@ -215,6 +233,22 @@ while [ "x$list" != "x" ] ; do
+     linux_root_device_thisversion=${GRUB_DEVICE}
+   fi
+ 
++  if [[ "$(grep "Arch Linux" /etc/os-release)" ]]; then
++    is_first_entry="false"
++    
++    linux_entry "${OS}" "${version}" true \
++              "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
++    
++    for i in "${basename/vmlinuz/initramfs}-fallback.img" "initramfs-${version}-fallback.img" ; do
++      if test -e "${dirname}/${i}"; then
++        initrd="${i}"
++        linux_entry "${OS}" "${version}" fallback \
++                    "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
++        break
++      fi
++    done
++  fi
++
+   if [ "x$is_first_entry" = xtrue ]; then
+     linux_entry "${OS}" "${version}" simple \
+     "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
+@@ -228,8 +262,11 @@ while [ "x$list" != "x" ] ; do
+     echo "submenu '$(gettext_printf "Advanced options for %s" "${OS}" | grub_quote)' \$menuentry_id_option 'gnulinux-advanced-$boot_device_id' {"
+   fi
+ 
++  if [[ ! "$(grep "Arch Linux" /etc/os-release)" ]]; then
+   linux_entry "${OS}" "${version}" advanced \
+               "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
++  fi
++
+   if [ "x${GRUB_DISABLE_RECOVERY}" != "xtrue" ]; then
+     linux_entry "${OS}" "${version}" recovery \
+                 "single ${GRUB_CMDLINE_LINUX}"
+@@ -241,8 +278,10 @@ done
+ 
+ # If at least one kernel was found, then we need to
+ # add a closing '}' for the submenu command.
++if [[ ! "$(grep "Arch Linux" /etc/os-release)" ]]; then
+ if [ x"$is_first_entry" != xtrue ]; then
+   echo '}'
+ fi
++fi
+ 
+ echo "$title_correction_code"
