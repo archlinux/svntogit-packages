@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=5.9p1
-pkgrel=5
+pkgrel=8
 pkgdesc='Free version of the SSH connectivity tools'
 arch=('i686' 'x86_64')
 license=('custom:BSD')
@@ -14,10 +14,12 @@ backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/
 depends=('krb5' 'openssl' 'libedit')
 optdepends=('x11-ssh-askpass: input passphrase in X without a terminal')
 source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"
+        'sshd.close-sessions'
         'sshd.confd'
         'sshd.pam'
         'sshd')
 sha1sums=('ac4e0055421e9543f0af5da607a72cf5922dcc56'
+          '954bf1660aa32620c37034320877f4511b767ccb'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
           '3413909fd45a28701c92e6e5b59c6b65346ddb0f'
           '21fa88de6cc1c7912e71655f50896ba17991a1c2')
@@ -50,16 +52,15 @@ package() {
 	install -Dm644 ../sshd.pam "${pkgdir}"/etc/pam.d/sshd
 	install -Dm644 ../sshd.confd "${pkgdir}"/etc/conf.d/sshd
 	install -Dm644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENCE"
+	install -Dm755 ../sshd.close-sessions "${pkgdir}/etc/rc.d/functions.d/sshd-close-sessions" # FS#17389
 
 	rm "${pkgdir}"/usr/share/man/man1/slogin.1
 	ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1.gz
 
-	# additional contrib scripts that we like
 	install -Dm755 contrib/findssl.sh "${pkgdir}"/usr/bin/findssl.sh
 	install -Dm755 contrib/ssh-copy-id "${pkgdir}"/usr/bin/ssh-copy-id
 	install -Dm644 contrib/ssh-copy-id.1 "${pkgdir}"/usr/share/man/man1/ssh-copy-id.1
 
-	# PAM is a common, standard feature to have
 	sed \
 		-e '/^#ChallengeResponseAuthentication yes$/c ChallengeResponseAuthentication no' \
 		-e '/^#UsePAM no$/c UsePAM yes' \
