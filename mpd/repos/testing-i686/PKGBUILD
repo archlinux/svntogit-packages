@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.16.7
-pkgrel=2
+pkgrel=3
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
@@ -36,6 +36,7 @@ build() {
 		--disable-libwrap \
 		--disable-cue \
 		--disable-sidplay \
+		--disable-documentation \
 		--with-systemdsystemunitdir=/lib/systemd/system
 
 	make
@@ -57,8 +58,4 @@ package() {
 	install -Dm755 ../rc.d "${pkgdir}"/etc/rc.d/mpd
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
 	install -Dm644 doc/mpdconf.example "${pkgdir}"/usr/share/mpd/mpd.conf.example
-
-	cd "${pkgdir}"/usr/share/doc/mpd
-	tar cfJ api.tar.xz --remove-files api
-	rmdir developer protocol user
 }
