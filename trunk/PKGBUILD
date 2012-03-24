@@ -6,14 +6,14 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=7
+pkgrel=8
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=3.1.6' 'tzdata')
+depends=('linux-api-headers>=3.3' 'tzdata')
 makedepends=('gcc>=4.6')
 backup=(etc/gai.conf
         etc/locale.gen
@@ -21,7 +21,8 @@ backup=(etc/gai.conf
 options=('!strip')
 install=glibc.install
 source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.tar.xz
-        glibc-2.10-dont-build-timezone.patch
+        glibc-2.15-do-not-install-timezone-files.patch
+        glibc-2.15-do-not-install-timezone-files-2.patch
         glibc-__i686.patch
         glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.14-libdl-crash.patch
@@ -52,7 +53,8 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         locale.gen.txt
         locale-gen)
 md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
-         '4dadb9203b69a3210d53514bb46f41c3'
+         '7ef69c530a15106de93e4de2df2d393e'
+         'b6c619e5cf91829a15ce34dccef676d5'
          '40cd342e21f71f5e49e32622b25acc52'
          'e60e33591c9ec1447e4cddadcbb9cf3a'
          '6970bcfeb3bf88913436d5112d16f588'
@@ -73,7 +75,7 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '7a2998a04ebfcf8bf820540f490ce714'
          '0d77d20fa7fe2f87ad945cb9edb4d91d'
          'bfdefac3d705f41fbf84b1de1dc945af'
-         'dded423e264cdd178500f3e8ad62fe66'
+         '3443e89c1e98089cd6c3e3c23f0c3d85'
          '340deaa582a95ddde86edb624c3bfea0'
          '6bbac50e6ff82187654e6a0a7bd849e7'
          'c483504cf404ed0b44480af627813a97'
@@ -98,9 +100,12 @@ build() {
   cd ${srcdir}/glibc
 
   # timezone data is in separate package (tzdata)
-  patch -p1 -i ${srcdir}/glibc-2.10-dont-build-timezone.patch
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=482ff4da
+  patch -p1 -i ${srcdir}/glibc-2.15-do-not-install-timezone-files.patch
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=a458e7fe
+  patch -p1 -i ${srcdir}/glibc-2.15-do-not-install-timezone-files-2.patch
 
-  # undefine __i686 for gcc <= 4.6
+  # undefine __i686
   # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
   # fix in http://sourceware.org/git/?p=glibc.git;a=commit;h=d4a54ac6 requires additional backporting...
   patch -p1 -i ${srcdir}/glibc-__i686.patch
@@ -115,9 +120,9 @@ build() {
 
   # re-export RPC interface until libtirpc is ready as a replacement
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=acee4873  (fedora branch)
-  patch -Np1 -i ${srcdir}/glibc-2.14-reexport-rpc-interface.patch
+  patch -p1 -i ${srcdir}/glibc-2.14-reexport-rpc-interface.patch
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=bdd816a3  (fedora branch)
-  patch -Np1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
+  patch -p1 -i ${srcdir}/glibc-2.14-reinstall-nis-rpc-headers.patch
 
   # fix res_query assertion
   # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
@@ -125,25 +130,25 @@ build() {
 
   # fix up regcomp/regexec
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=2ba92745
-  patch -Np1 -i ${srcdir}/glibc-2.15-regex.patch
+  patch -p1 -i ${srcdir}/glibc-2.15-regex.patch
 
   # propriety nvidia crash - https://bugzilla.redhat.com/show_bug.cgi?id=737223 
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=0c95ab64  (fedora branch)
-  patch -Np1 -i ${srcdir}/glibc-2.15-lddebug-scopes.patch
+  patch -p1 -i ${srcdir}/glibc-2.15-lddebug-scopes.patch
 
   # revert commit c5a0802a - causes various hangs
   # https://bugzilla.redhat.com/show_bug.cgi?id=769421
   # Note: fedora may have actual fix (not submitted upstream yet...)
   # http://pkgs.fedoraproject.org/gitweb/?p=glibc.git;a=blob_plain;f=glibc-rh552960-2.patch
-  patch -Np1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
+  patch -p1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
 
   # fix realloc usage in vfscanf
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=20b38e03
-  patch -Np1 -i ${srcdir}/glibc-2.15-scanf.patch
+  patch -p1 -i ${srcdir}/glibc-2.15-scanf.patch
 
   # fix ifunc relocations
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=6ee65ed6
-  patch -Np1 -i ${srcdir}/glibc-2.15-ifunc.patch
+  patch -p1 -i ${srcdir}/glibc-2.15-ifunc.patch
         
   # fix AVX detection
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=afc5ed09
@@ -184,8 +189,7 @@ build() {
   patch -p1 -i ${srcdir}/glibc-2.15-feraiseexcept-plt.patch
 
   # vfprintf nargs overflow - CVE-2012-0864
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13656
-  # http://sourceware.org/ml/libc-alpha/2012-02/msg00328.html
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=7c1f4834
   patch -p1 -i ${srcdir}/glibc-2.15-vfprintf-nargs.patch
 
   # avoid out ouf bounds read in __libc_res_nquerydomain

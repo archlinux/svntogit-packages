@@ -97,7 +97,7 @@ index 0000000..13c66c0
 +#define TEST_FUNCTION do_test ()
 +#include "../test-skeleton.c"
 diff --git a/stdio-common/vfprintf.c b/stdio-common/vfprintf.c
-index 863cd5d..022e72b 100644
+index 863cd5d..c802e46 100644
 --- a/stdio-common/vfprintf.c
 +++ b/stdio-common/vfprintf.c
 @@ -235,6 +235,9 @@ vfprintf (FILE *s, const CHAR_T *format, va_list ap)
@@ -123,22 +123,26 @@ index 863cd5d..022e72b 100644
  
      /* Positional parameters refer to arguments directly.  This could
         also determine the maximum number of arguments.  Track the
-@@ -1698,13 +1702,33 @@ do_positional:
+@@ -1698,13 +1702,38 @@ do_positional:
  
      /* Determine the number of arguments the format string consumes.  */
      nargs = MAX (nargs, max_ref_arg);
++    /* Calculate total size needed to represent a single argument across
++       all three argument-related arrays.  */
 +    bytes_per_arg = sizeof (*args_value) + sizeof (*args_size)
 +                    + sizeof (*args_type);
 +
 +    /* Check for potential integer overflow.  */
-+    if (nargs > SIZE_MAX / bytes_per_arg)
++    if (__builtin_expect (nargs > SIZE_MAX / bytes_per_arg, 0))
 +      {
++         __set_errno (ERANGE);
 +         done = -1;
 +         goto all_done;
 +      }
  
-     /* Allocate memory for the argument descriptions.  */
+-    /* Allocate memory for the argument descriptions.  */
 -    args_type = alloca (nargs * sizeof (int));
++    /* Allocate memory for all three argument arrays.  */
 +    if (__libc_use_alloca (nargs * bytes_per_arg))
 +        args_value = alloca (nargs * bytes_per_arg);
 +    else
@@ -151,6 +155,8 @@ index 863cd5d..022e72b 100644
 +          }
 +      }
 +
++    /* Set up the remaining two arrays to each point past the end of the
++       prior array, since space for all three has been allocated now.  */
 +    args_size = &args_value[nargs].pa_int;
 +    args_type = &args_size[nargs];
      memset (args_type, s->_flags2 & _IO_FLAGS2_FORTIFY ? '\xff' : '\0',
@@ -161,7 +167,7 @@ index 863cd5d..022e72b 100644
  
      /* XXX Could do sanity check here: If any element in ARGS_TYPE is
         still zero after this loop, format is invalid.  For now we
-@@ -1973,8 +1997,8 @@ do_positional:
+@@ -1973,8 +2002,8 @@ do_positional:
    }
  
  all_done:
