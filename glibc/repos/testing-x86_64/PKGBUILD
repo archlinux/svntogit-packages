@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=8
+pkgrel=9
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -49,6 +49,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-non-signalling-comparisons.patch
         glibc-2.15-rintf-rounding.patch
         glibc-2.15-nearbyintf-rounding.patch
+        glibc-2.15-confstr-strdup.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -81,6 +82,7 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          'c483504cf404ed0b44480af627813a97'
          '1419d61fd1dbc6cdc48bb59da86fa66f'
          '7ff501435078b1a2622124fbeaafc921'
+         '41f94da2f8db856b091a2d670d68eee3'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -211,6 +213,9 @@ build() {
   # fix nearbyintf rounding
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=6cbeae47
   patch -p1 -i ${srcdir}/glibc-2.15-nearbyintf-rounding.patch
+
+  # fix varaible scope issue exposed with gcc-4.7 and -O2
+  patch -p1 -i ${srcdir}/glibc-2.15-confstr-strdup.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
