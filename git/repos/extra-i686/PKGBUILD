@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.9.4
+pkgver=1.7.9.5
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -64,8 +64,8 @@ package() {
     INSTALLDIRS=vendor DESTDIR="$pkgdir" install 
 
   # bash completion
-  mkdir -p "$pkgdir"/etc/bash_completion.d/
-  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/etc/bash_completion.d/git 
+  mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
+  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git 
   # more contrib stuff
   cp -a ./contrib $pkgdir/usr/share/git/ 
   # scripts are for python 2.x
@@ -92,7 +92,7 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-sha1sums=('05d2ff75ffd3356516d096f992b4fb3b8b6c0079'
-          '833dc143d2d296754d681c57b41a008ff433b225'
+sha1sums=('33f5a5b0b6c8f8addbbec0b042731c44fd79f90c'
+          '37a162c22127adc82ce9fb75aacddb6428c565da'
           'f2b41828bd912b72e2cb3e14677739c4f370de66'
           '149e2da1ecb48872ddb31c0945afeaad1f9653d7')
