@@ -31,7 +31,7 @@ index 765bfdc..b148558 100644
  gfxterm=0;
  for x in ${GRUB_TERMINAL_INPUT} ${GRUB_TERMINAL_OUTPUT}; do
 diff --git a/util/grub.d/10_linux.in b/util/grub.d/10_linux.in
-index 8c75fab..0e00d19 100644
+index 8c75fab..0d4a137 100644
 --- a/util/grub.d/10_linux.in
 +++ b/util/grub.d/10_linux.in
 @@ -87,6 +87,8 @@ linux_entry ()
@@ -62,24 +62,25 @@ index 8c75fab..0e00d19 100644
    sed "s/^/$submenu_indentation/" << EOF
  	echo	'$message'
  	linux	${rel_dirname}/${basename} root=${linux_root_device_thisversion} ro ${args}
-@@ -181,13 +184,28 @@ while [ "x$list" != "x" ] ; do
+@@ -181,13 +184,29 @@ while [ "x$list" != "x" ] ; do
    alt_version=`echo $version | sed -e "s,\.old$,,g"`
    linux_root_device_thisversion="${LINUX_ROOT_DEVICE}"
  
-+  if [[ "$(grep "Arch Linux" /etc/os-release)" ]]; then
-+    if [[ "$(echo "${basename}" | grep "vmlinuz-linux")" ]]; then
-+      version="$(echo "${basename}" | sed -e "s,vmlinuz-linux,,g")"
++  if test -e "/etc/arch-release" ; then
++    if echo "${basename}" | grep -q 'vmlinuz-linux' ; then
++      version="`echo "${basename}" | sed -e 's,vmlinuz-linux,,g'`"
 +      
-+      if [[ "${version}" == "" ]]; then
++      if [ "x${version}" = "x" ] ; then
 +        version="core repo kernel"
 +      else
-+        version="$(echo "${version}" | sed -e "s,-,,g")"
++        version="`echo "${version}" | sed -e 's,-,,g'`"
 +        version="${version} kernel"
 +      fi
 +    fi
 +  fi
 +  
    initrd=
++  initrd_arch="`echo "${basename}" | sed -e 's,vmlinuz,initramfs,g'`"
 +
    for i in "initrd.img-${version}" "initrd-${version}.img" "initrd-${version}.gz" \
  	   "initrd-${version}" "initramfs-${version}.img" \
@@ -88,22 +89,22 @@ index 8c75fab..0e00d19 100644
  	   "initramfs-genkernel-${version}" \
 -	   "initramfs-genkernel-${alt_version}"; do
 +	   "initramfs-genkernel-${alt_version}" \
-+	   "${basename/vmlinuz/initramfs}.img"; do
++	   "${initrd_arch}.img" ; do
      if test -e "${dirname}/${i}" ; then
        initrd="$i"
        break
-@@ -215,6 +233,22 @@ while [ "x$list" != "x" ] ; do
+@@ -215,6 +234,22 @@ while [ "x$list" != "x" ] ; do
      linux_root_device_thisversion=${GRUB_DEVICE}
    fi
  
-+  if [[ "$(grep "Arch Linux" /etc/os-release)" ]]; then
++  if test -e "/etc/arch-release" ; then
 +    is_first_entry="false"
 +    
 +    linux_entry "${OS}" "${version}" true \
 +              "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
 +    
-+    for i in "${basename/vmlinuz/initramfs}-fallback.img" "initramfs-${version}-fallback.img" ; do
-+      if test -e "${dirname}/${i}"; then
++    for i in "${initrd_arch}-fallback.img" "initramfs-${version}-fallback.img" ; do
++      if test -e "${dirname}/${i}" ; then
 +        initrd="${i}"
 +        linux_entry "${OS}" "${version}" fallback \
 +                    "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
@@ -115,11 +116,11 @@ index 8c75fab..0e00d19 100644
    if [ "x$is_first_entry" = xtrue ]; then
      linux_entry "${OS}" "${version}" simple \
      "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
-@@ -228,8 +262,11 @@ while [ "x$list" != "x" ] ; do
+@@ -228,8 +263,11 @@ while [ "x$list" != "x" ] ; do
      echo "submenu '$(gettext_printf "Advanced options for %s" "${OS}" | grub_quote)' \$menuentry_id_option 'gnulinux-advanced-$boot_device_id' {"
    fi
  
-+  if [[ ! "$(grep "Arch Linux" /etc/os-release)" ]]; then
++  if ! test -e "/etc/arch-release" ; then
    linux_entry "${OS}" "${version}" advanced \
                "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
 +  fi
@@ -127,11 +128,11 @@ index 8c75fab..0e00d19 100644
    if [ "x${GRUB_DISABLE_RECOVERY}" != "xtrue" ]; then
      linux_entry "${OS}" "${version}" recovery \
                  "single ${GRUB_CMDLINE_LINUX}"
-@@ -241,8 +278,10 @@ done
+@@ -241,8 +279,10 @@ done
  
  # If at least one kernel was found, then we need to
  # add a closing '}' for the submenu command.
-+if [[ ! "$(grep "Arch Linux" /etc/os-release)" ]]; then
++if ! test -e "/etc/arch-release" ; then
  if [ x"$is_first_entry" != xtrue ]; then
    echo '}'
  fi
