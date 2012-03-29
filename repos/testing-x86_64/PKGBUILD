@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=9
+pkgrel=10
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -49,14 +49,14 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-non-signalling-comparisons.patch
         glibc-2.15-rintf-rounding.patch
         glibc-2.15-nearbyintf-rounding.patch
-        glibc-2.15-confstr-strdup.patch
+        glibc-2.15-confstr-local-buffer-extent.patch
         nscd
         locale.gen.txt
         locale-gen)
 md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '7ef69c530a15106de93e4de2df2d393e'
          'b6c619e5cf91829a15ce34dccef676d5'
-         '40cd342e21f71f5e49e32622b25acc52'
+         'addfddd648a4bf832eb126aba944ebae'
          'e60e33591c9ec1447e4cddadcbb9cf3a'
          '6970bcfeb3bf88913436d5112d16f588'
          'c5de2a946215d647c8af5432ec4b0da0'
@@ -82,7 +82,7 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          'c483504cf404ed0b44480af627813a97'
          '1419d61fd1dbc6cdc48bb59da86fa66f'
          '7ff501435078b1a2622124fbeaafc921'
-         '41f94da2f8db856b091a2d670d68eee3'
+         '8d1023a51e0932681b46440d5f8551ee'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -108,8 +108,7 @@ build() {
   patch -p1 -i ${srcdir}/glibc-2.15-do-not-install-timezone-files-2.patch
 
   # undefine __i686
-  # http://sourceware.org/ml/libc-alpha/2009-07/msg00072.html
-  # fix in http://sourceware.org/git/?p=glibc.git;a=commit;h=d4a54ac6 requires additional backporting...
+  # http://sourceware.org/glibc/wiki/Release/2.15#Build_Failures
   patch -p1 -i ${srcdir}/glibc-__i686.patch
 
   # http://www.exploit-db.com/exploits/15274/
@@ -214,8 +213,10 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=6cbeae47
   patch -p1 -i ${srcdir}/glibc-2.15-nearbyintf-rounding.patch
 
-  # fix varaible scope issue exposed with gcc-4.7 and -O2
-  patch -p1 -i ${srcdir}/glibc-2.15-confstr-strdup.patch
+  # fix varaible scope issue in confstr
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=ac4c54f0
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=d6a403f9
+  patch -p1 -i ${srcdir}/glibc-2.15-confstr-local-buffer-extent.patch
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -226,6 +227,7 @@ build() {
 
   if [[ ${CARCH} = "i686" ]]; then
     # Hack to fix NPTL issues with Xen, only required on 32bit platforms
+    # TODO: make separate glibc-xen package for i686
     export CFLAGS="${CFLAGS} -mno-tls-direct-seg-refs"
   fi
 
