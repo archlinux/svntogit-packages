@@ -1,1 +1,0 @@
-/home/tobias/Arch/upload//spandsp-0.0.6pre20-1-i686.pkg.tar.xz.sig
