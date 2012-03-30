@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=util-linux
+pkgver=2.21.1
+pkgrel=1
+pkgdesc="Miscellaneous system utilities for Linux"
+url="http://www.kernel.org/pub/linux/utils/util-linux/"
+arch=('i686' 'x86_64')
+groups=('base')
+depends=('udev')
+conflicts=('util-linux-ng')
+provides=("util-linux-ng=${pkgver}")
+license=('GPL2')
+options=('!libtool')
+source=(ftp://ftp.kernel.org/pub/linux/utils/${pkgname}/v2.21/${pkgname}-${pkgver}.tar.xz)
+optdepends=('perl: for chkdupexe support')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # hardware clock
+  sed -e 's%etc/adjtime%var/lib/hwclock/adjtime%' -i include/pathnames.h
+
+  ./configure --prefix=/usr \
+              --libdir=/usr/lib \
+              --enable-write \
+              --enable-raw \
+              --disable-wall \
+              --enable-libmount-mount
+
+  make
+}
+
+check() {
+	make -C "$pkgname-$pkgver" check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make DESTDIR="${pkgdir}" install
+
+  cd "${pkgdir}"
+
+  install -dm755 var/lib/hwclock
+
+  # delete stray empty dir, fixed upstream
+  rm -r usr/share/man/ru
+}
+md5sums=('ad602dcd528f340b1329cfa6200d8f80')
