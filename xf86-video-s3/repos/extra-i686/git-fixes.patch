@@ -435,7 +435,7 @@ index 49b8a54..0875fc9 100644
          S3PortPrivPtr           portPrivate;
  
 diff --git a/src/s3_driver.c b/src/s3_driver.c
-index 29e343d..4519b33 100644
+index 29e343d..2011dfc 100644
 --- a/src/s3_driver.c
 +++ b/src/s3_driver.c
 @@ -309,6 +309,7 @@ static Bool S3PreInit(ScrnInfoPtr pScrn, int flags)
@@ -446,7 +446,15 @@ index 29e343d..4519b33 100644
  	rgb zeros = {0, 0, 0};
  	Gamma gzeros = {0.0, 0.0, 0.0};
  	int i, vgaCRIndex, vgaCRReg;
-@@ -436,7 +437,8 @@ static Bool S3PreInit(ScrnInfoPtr pScrn, int flags)
+@@ -325,6 +326,7 @@ static Bool S3PreInit(ScrnInfoPtr pScrn, int flags)
+                 return FALSE;
+         
+         hwp = VGAHWPTR(pScrn);
++	vgaHWSetStdFuncs(hwp);
+         vgaHWGetIOBase(hwp);
+         
+         pScrn->monitor = pScrn->confScreen->monitor;
+@@ -436,9 +438,19 @@ static Bool S3PreInit(ScrnInfoPtr pScrn, int flags)
  	}
  
  	if (xf86LoadSubModule(pScrn, "vbe")) {
@@ -455,4 +463,40 @@ index 29e343d..4519b33 100644
 +		vbeFree(pVBE);
  	}
  	
++	xf86LoadSubModule(pScrn, "fb");
++
++	if (!xf86LoadSubModule(pScrn, "xaa")) {
++		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
++			   "Falling back to shadowfb\n");
++		pS3->NoAccel = TRUE;
++		pS3->shadowFB = TRUE;
++	}
++
  	if (pS3->shadowFB) {
+ 		if (!xf86LoadSubModule(pScrn, "shadowfb")) {
+ 			S3FreeRec(pScrn);
+@@ -726,11 +738,6 @@ static Bool S3PreInit(ScrnInfoPtr pScrn, int flags)
+         xf86PrintModes(pScrn);
+         xf86SetDpi(pScrn, 0, 0);
+  
+-        xf86LoadSubModule(pScrn, "fb");
+-
+-	if (!xf86LoadSubModule(pScrn, "xaa"))
+-		return FALSE;
+-
+ 	return TRUE;
+ }
+ 
+diff --git a/src/s3_video.c b/src/s3_video.c
+index 3e88889..9a2d458 100644
+--- a/src/s3_video.c
++++ b/src/s3_video.c
+@@ -244,6 +244,8 @@ static XF86VideoAdaptorPtr S3SetupImageVideoOverlay(ScreenPtr pScreen)
+ 	XF86VideoAdaptorPtr adapt;
+ 
+ 	adapt = S3AllocAdaptor(pScrn);
++	if (adapt == NULL)
++		return NULL;
+ 
+     	adapt->type = XvWindowMask | XvInputMask | XvImageMask;
+     	adapt->flags = VIDEO_OVERLAID_IMAGES | VIDEO_CLIP_TO_VIEWPORT;
