@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.9.5
+pkgver=1.7.9.6
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -50,7 +50,10 @@ check() {
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
-    NO_SVN_TESTS=y DEFAULT_TEST_TARGET=prove GIT_PROVE_OPTS="$jobs -Q" \
+    NO_SVN_TESTS=y \
+    DEFAULT_TEST_TARGET=prove \
+    GIT_PROVE_OPTS="$jobs -Q" \
+    GIT_TEST_OPTS="--root=/dev/shm/" \
     test
 }
 
@@ -64,8 +67,12 @@ package() {
     INSTALLDIRS=vendor DESTDIR="$pkgdir" install 
 
   # bash completion
-  mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
-  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git 
+  # until this is fixed, no point in loading it dynamically:
+  # http://git.661346.n2.nabble.com/bash-completion-now-loads-completions-dynamically-so-git-ps1-is-not-defined-when-you-open-a-shell-td7415323.html
+  #mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
+  #install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git 
+  mkdir -p "$pkgdir"/etc/bash_completion.d/
+  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/etc/bash_completion.d/git 
   # more contrib stuff
   cp -a ./contrib $pkgdir/usr/share/git/ 
   # scripts are for python 2.x
@@ -92,7 +99,7 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-sha1sums=('33f5a5b0b6c8f8addbbec0b042731c44fd79f90c'
-          '37a162c22127adc82ce9fb75aacddb6428c565da'
+sha1sums=('71c5a5acdef77cd8d29a4ae5d4fe7f2889f495b5'
+          '43441aaa208b1f948f5a006e818a1a34dcda6740'
           'f2b41828bd912b72e2cb3e14677739c4f370de66'
           '149e2da1ecb48872ddb31c0945afeaad1f9653d7')
