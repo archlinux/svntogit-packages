@@ -7,7 +7,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.2
-pkgver=${_basekernel}.13
+pkgver=${_basekernel}.14
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -22,17 +22,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.2.tar.xz"
         "${pkgname}.preset"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
-        'i915-gpu-finish.patch'
         'ext4-options.patch')
-md5sums=('364066fa18767ec0ae5f4e4abcf9dc51'
-         '687632bb0ba65439198ac60f2c02a8f2'
-         'a6913ef2a39541f18bd610cbb8f360ea'
-         '2182f8e0de70498130f7d9d770092c73'
-         'eb14dcfd80c00852ef81ded6e826826a'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         '4cd79aa147825837dc8bc9f6b736c0a0'
-         'c8299cf750a84e12d60b372c8ca7e1e8')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -42,10 +32,6 @@ build() {
 
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
-
-  # fix FS#27883
-  # drm/i915: Only clear the GPU domains upon a successful finish
-  patch -Np1 -i "${srcdir}/i915-gpu-finish.patch"
 
   # Some chips detect a ghost TV output
   # mailing list discussion: http://lists.freedesktop.org/archives/intel-gfx/2011-April/010371.html
@@ -301,3 +287,20 @@ package_linux-docs() {
   # remove a file already in linux package
   rm -f "${pkgdir}/usr/src/linux-${_kernver}/Documentation/DocBook/Makefile"
 }
+md5sums=('364066fa18767ec0ae5f4e4abcf9dc51'
+         '687632bb0ba65439198ac60f2c02a8f2'
+         'a6913ef2a39541f18bd610cbb8f360ea'
+         '2182f8e0de70498130f7d9d770092c73'
+         'eb14dcfd80c00852ef81ded6e826826a'
+         '9d3c56a4b999c8bfbd4018089a62f662'
+         '263725f20c0b9eb9c353040792d644e5'
+         '4cd79aa147825837dc8bc9f6b736c0a0'
+         'c8299cf750a84e12d60b372c8ca7e1e8')
+md5sums=('364066fa18767ec0ae5f4e4abcf9dc51'
+         'd2f23478ba4f9d38a589c4579dd06c4a'
+         'a6913ef2a39541f18bd610cbb8f360ea'
+         '2182f8e0de70498130f7d9d770092c73'
+         'eb14dcfd80c00852ef81ded6e826826a'
+         '9d3c56a4b999c8bfbd4018089a62f662'
+         '263725f20c0b9eb9c353040792d644e5'
+         'c8299cf750a84e12d60b372c8ca7e1e8')
