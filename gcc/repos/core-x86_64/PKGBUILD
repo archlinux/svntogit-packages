@@ -5,10 +5,10 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.6.3
-pkgrel=1
-#_snapshot=4.6-20120120
-_libstdcppmanver=20111215		# Note: check source directory name when updating this
+pkgver=4.7.0
+pkgrel=3
+_snapshot=4.7-20120324
+_libstdcppmanver=20120307		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -16,17 +16,16 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.22' 'libmpc' 'cloog' 'ppl' 'gcc-ada')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-man.${_libstdcppmanver}.tar.bz2
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
-	gcc-hash-style-both.patch
-	gcc-4.6.2-cloog-0.17.patch)
-md5sums=('773092fe5194353b02bb0110052a972e'
-         '450772ce32daed97d7383199f8797f33'
-         '4030ee1c08dd1e843c0225b772360e76'
-         '4df25b623799b148a0703eaeec8fdf3f'
-         '6d9939a2e667376031679ac9f9c49263')
+	gcc-4.7.0-cloog-0.17.patch)
+md5sums=('947f9a70dcbb4baaf20b1e95b518048e'
+         '489d2f5311535800a120efd8d18db719'
+         'ced48436c1b3c981d721a829f1094de1'
+         '575f7d17b022e609447a590e481b18b5')
+
 
 if [ -n "${_snapshot}" ]; then
   _basedir="${srcdir}/gcc-${_snapshot}"
@@ -44,12 +43,11 @@ build() {
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 
   if [ "${CARCH}" = "x86_64" ]; then
-    patch -Np1 -i ${srcdir}/gcc_pure64.patch
+    patch -p1 -i ${srcdir}/gcc_pure64.patch
   fi
-  patch -Np0 -i ${srcdir}/gcc-hash-style-both.patch
 
   # compatibility with latest cloog
-  patch -Np1 -i ${srcdir}/gcc-4.6.2-cloog-0.17.patch
+  patch -p1 -i ${srcdir}/gcc-4.7.0-cloog-0.17.patch
 
   echo ${pkgver} > gcc/BASE-VER
 
@@ -69,7 +67,9 @@ build() {
       --with-ppl --enable-cloog-backend=isl \
       --enable-lto --enable-gold --enable-ld=default \
       --enable-plugin --with-plugin-ld=ld.gold \
+      --with-linker-hash-style=gnu \
       --disable-multilib --disable-libssp \
+      --disable-build-with-cxx --disable-build-poststage1-with-cxx \
       --enable-checking=release
   make
 }
@@ -90,23 +90,24 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.14')
+  depends=('glibc>=2.15')
   install=gcc-libs.install
 
   cd gcc-build
   make -j1 -C $CHOST/libgcc DESTDIR=${pkgdir} install-shared
-  for lib in libmudflap libgomp libstdc++-v3/src; do
+  for lib in libmudflap libgomp libstdc++-v3/src libitm; do
     make -j1 -C $CHOST/$lib DESTDIR=${pkgdir} install-toolexeclibLTLIBRARIES
   done
   make -j1 -C $CHOST/libstdc++-v3/po DESTDIR=${pkgdir} install
   make -j1 -C $CHOST/libgomp DESTDIR=${pkgdir} install-info
+  make -j1 -C $CHOST/libitm DESTDIR=${pkgdir} install-info
 
   make -j1 DESTDIR=${pkgdir} install-target-libquadmath  
   make -j1 DESTDIR=${pkgdir} install-target-libgfortran
   make -j1 DESTDIR=${pkgdir} install-target-libobjc
 
   # remove unnecessary files installed by install-target-{libquadmath,libgfortran,libobjc}
-  rm -rf ${pkgdir}/usr/lib/{gcc/,libgfortran.spec}
+  rm -r ${pkgdir}/usr/lib/{gcc/,libgfortran.spec}
 
   # remove static libraries
   find ${pkgdir} -name *.a -delete
@@ -125,35 +126,30 @@ package_gcc()
 
   cd gcc-build
   
-  # unfortunately it is much, much easier to install the lot and clean-up the mess...
   make -j1 DESTDIR=${pkgdir} install
+
+  install -d $pkgdir/usr/share/gdb/auto-load
+  mv $pkgdir/usr/{lib/libstdc++.so.6.0.17-gdb.py,share/gdb/auto-load}
+
+  # unfortunately it is much, much easier to install the lot and clean-up the mess...
   rm $pkgdir/usr/bin/{{$CHOST-,}gfortran,{$CHOST-,}gccgo,gnat*}
   rm $pkgdir/usr/lib/*.so*
   rm $pkgdir/usr/lib/lib{ffi,gfortran,go{,begin},objc,quadmath}.a
   rm $pkgdir/usr/lib/libgfortran.spec
   rm -r $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{ada{include,lib},finclude,include/objc}
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/include/{ffi{,target}.h,quadmath{,_weak}.h}
-  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{cc1obj{,plus},f951,gnat1,go1,libgfortranbegin.a}
+  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{cc1obj{,plus},f951,gnat1,go1}
+  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{libcaf_single,libgfortranbegin}.a
   rm -r $pkgdir/usr/lib/go
-  rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libgomp,libquadmath}.info
+  rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libgomp,libquadmath,libitm}.info
   rm $pkgdir/usr/share/locale/{de,fr}/LC_MESSAGES/libstdc++.mo
   rm $pkgdir/usr/share/man/man1/{gccgo,gfortran}.1
   rm $pkgdir/usr/share/man/man3/ffi*
 
   # many packages require these symlinks
   install -dm755 ${pkgdir}/lib
-  ln -sf /usr/bin/cpp ${pkgdir}/lib/cpp
-  ln -sf gcc ${pkgdir}/usr/bin/cc
-  ln -sf g++ ${pkgdir}/usr/bin/c++
-
-  # install gengtype for plugin support
-  install -m755 gcc/build/gengtype $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/
-  install -m644 gcc/gtype.state $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/
-
-  # plugin headers are all over the place at the moment...
-  for i in common objc pragma pretty-print; do
-    ln -sf ../c-$i.h $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/plugin/include/c-family/c-$i.h
-  done
+  ln -s /usr/bin/cpp ${pkgdir}/lib/cpp
+  ln -s gcc ${pkgdir}/usr/bin/cc
 
   # POSIX conformance launcher scripts for c89 and c99
   cat > $pkgdir/usr/bin/c89 <<"EOF"
@@ -186,7 +182,7 @@ EOF
 
   # install the libstdc++ man pages
   install -dm755 ${pkgdir}/usr/share/man/man3
-  install -m644 ${srcdir}/man3/* ${pkgdir}/usr/share/man/man3/
+  install -m644 ${srcdir}/man/man3/* ${pkgdir}/usr/share/man/man3/
 
   # Install Runtime Library Exception
   install -Dm644 ${_basedir}/COPYING.RUNTIME \
@@ -209,7 +205,9 @@ package_gcc-fortran()
   # remove libraries included in gcc-libs
   rm ${pkgdir}/usr/lib/lib{gfortran,quadmath}.so*
   rm ${pkgdir}/usr/share/info/libquadmath.info
-  
+
+  ln -s gfortran ${pkgdir}/usr/bin/f95
+
   # Install Runtime Library Exception
   install -Dm644 ${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-fortran/RUNTIME.LIBRARY.EXCEPTION
@@ -242,6 +240,8 @@ package_gcc-ada()
   cd gcc-build/gcc
   make -j1 DESTDIR=$pkgdir ada.install-{common,info}
   install -m755 gnat1 $pkgdir/usr/lib/gcc/$CHOST/$pkgver
+
+  ln -s gcc ${pkgdir}/usr/bin/gnatgcc
   
   # Install Runtime Library Exception
   install -Dm644 ${_basedir}/COPYING.RUNTIME \
