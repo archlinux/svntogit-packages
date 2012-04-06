@@ -37,7 +37,7 @@ build() {
 		--disable-cue \
 		--disable-sidplay \
 		--disable-documentation \
-		--with-systemdsystemunitdir=/lib/systemd/system
+		--with-systemdsystemunitdir=/usr/lib/systemd/system
 
 	make
 }
