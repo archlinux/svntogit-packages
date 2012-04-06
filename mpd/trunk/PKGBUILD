@@ -6,19 +6,19 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.16.7
-pkgrel=3
+pkgver=0.16.8
+pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
 arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
-         'sqlite3' 'jack' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag'
+         'sqlite' 'jack' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag'
          'libpulse')
 makedepends=('doxygen')
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
         'rc.d') 
-sha1sums=('878f3ce82d4f00f6cbad63a625b2c0274c4a704a'
+sha1sums=('977c80db8dc64e65c2bc523f69a9a7a71adca2b1'
           '3777bdb4fff4b7911be3b1242aabae9d2912ef18')
 
 install=install
