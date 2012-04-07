@@ -1,0 +1,80 @@
+From f2bdace5bb68d4f3162f886b27210762d8b115b8 Mon Sep 17 00:00:00 2001
+From: Tom Gundersen <teg@jklm.no>
+Date: Sat, 3 Mar 2012 12:28:15 +0100
+Subject: [PATCH 1/2] split /usr: always read config files from /lib/udev
+
+This means we don't need a flagday in order to move udev to use
+/usr/lib/udev/rules.d
+---
+ src/libudev.c |   25 ++++++++++++++++---------
+ 1 file changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/src/libudev.c b/src/libudev.c
+index be24329..754d713 100644
+--- a/src/libudev.c
++++ b/src/libudev.c
+@@ -43,8 +43,8 @@ struct udev {
+         void *userdata;
+         char *sys_path;
+         char *dev_path;
+-        char *rules_path[4];
+-        unsigned long long rules_path_ts[4];
++        char *rules_path[5];
++        unsigned long long rules_path_ts[5];
+         int rules_path_count;
+         char *run_path;
+         struct udev_list properties_list;
+@@ -255,21 +255,26 @@ UDEV_EXPORT struct udev *udev_new(void)
+                         goto err;
+ 
+         if (udev->rules_path[0] == NULL) {
+-                /* /usr/lib/udev -- system rules */
+-                udev->rules_path[0] = strdup(PKGLIBEXECDIR "/rules.d");
++                /* /lib/udev -- compat for system rules */
++                udev->rules_path[0] = strdup("/lib/udev/rules.d");
+                 if (!udev->rules_path[0])
++                       goto err;
++
++                /* /usr/lib/udev -- system rules */
++                udev->rules_path[1] = strdup(PKGLIBEXECDIR "/rules.d");
++                if (!udev->rules_path[1])
+                         goto err;
+ 
+                 /* /etc/udev -- local administration rules */
+-                udev->rules_path[1] = strdup(SYSCONFDIR "/udev/rules.d");
+-                if (!udev->rules_path[1])
++                udev->rules_path[2] = strdup(SYSCONFDIR "/udev/rules.d");
++                if (!udev->rules_path[2])
+                         goto err;
+ 
+                 /* /run/udev -- runtime rules */
+-                if (asprintf(&udev->rules_path[2], "%s/rules.d", udev->run_path) < 0)
++                if (asprintf(&udev->rules_path[3], "%s/rules.d", udev->run_path) < 0)
+                         goto err;
+ 
+-                udev->rules_path_count = 3;
++                udev->rules_path_count = 4;
+         }
+ 
+         dbg(udev, "context %p created\n", udev);
+@@ -278,7 +283,8 @@ UDEV_EXPORT struct udev *udev_new(void)
+         dbg(udev, "dev_path='%s'\n", udev->dev_path);
+         dbg(udev, "sys_path='%s'\n", udev->sys_path);
+         dbg(udev, "run_path='%s'\n", udev->run_path);
+-        dbg(udev, "rules_path='%s':'%s':'%s'\n", udev->rules_path[0], udev->rules_path[1], udev->rules_path[2]);
++        dbg(udev, "rules_path='%s':'%s':'%s':'%s'\n", udev->rules_path[0], udev->rules_path[1],
++              udev->rules_path[2], udev->rules_path[3]);
+         free(config_file);
+         return udev;
+ err:
+@@ -325,6 +331,7 @@ UDEV_EXPORT void udev_unref(struct udev *udev)
+         free(udev->rules_path[0]);
+         free(udev->rules_path[1]);
+         free(udev->rules_path[2]);
++        free(udev->rules_path[3]);
+         free(udev->run_path);
+         dbg(udev, "context %p released\n", udev);
+         free(udev);
+-- 
+1.7.9.5
+
