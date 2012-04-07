@@ -1,0 +1,574 @@
+From ede11b2954db19e3ca9d31cef7d04a7bf0e42ddc Mon Sep 17 00:00:00 2001
+From: Behdad Esfahbod <behdad@behdad.org>
+Date: Sun, 25 Mar 2012 18:37:14 +0000
+Subject: Fix math in comments
+
+---
+diff --git a/src/cairo-arc.c b/src/cairo-arc.c
+index dc07fee..6977e88 100644
+--- a/src/cairo-arc.c
++++ b/src/cairo-arc.c
+@@ -139,7 +139,7 @@ _arc_segments_needed (double	      angle,
+ 
+    From that paper, a very practical value of h is:
+ 
+-	h = 4/3 * tan(angle/4)
++	h = 4/3 * R * tan(angle/4)
+ 
+    This value does not give the spline with minimal error, but it does
+    provide a very good approximation, (6th-order convergence), and the
+--
+cgit v0.9.0.2-2-gbebe
+From fba21ef2a4c4eb343668267fda713aedbb6af2a4 Mon Sep 17 00:00:00 2001
+From: Henry (Yu) Song <hsong@sisa.samsung.com>
+Date: Tue, 27 Mar 2012 21:25:37 +0000
+Subject: gl: use font's antialias option to check whether it needs mask
+
+There is need to loop over number of glyphs to check wether the glyph
+image is a ARGB32 as the font's antialias option can be used for checking.
+If antialias is SUBPIXEL or BEST, the glyph surface will be ARGB32,
+otherwise it will be A8 format. Therefore we will only be using
+component-alpha at SUBPIXEL (or better) font quality and only then need
+a mask for multiple pass glyph composition.
+---
+diff --git a/src/cairo-gl-glyphs.c b/src/cairo-gl-glyphs.c
+index 832956f..9756ea4 100644
+--- a/src/cairo-gl-glyphs.c
++++ b/src/cairo-gl-glyphs.c
+@@ -427,23 +427,15 @@ _cairo_gl_composite_glyphs (void			*_dst,
+ 
+     TRACE ((stderr, "%s\n", __FUNCTION__));
+ 
+-    /* If any of the glyphs are component alpha, we have to go through a mask,
+-     * since only _cairo_gl_surface_composite() currently supports component
+-     * alpha.
++    /* If any of the glyphs require component alpha, we have to go through
++     * a mask, since only _cairo_gl_surface_composite() currently supports
++     * component alpha.
+      */
+-    if (!dst->base.is_clear && ! info->use_mask && op != CAIRO_OPERATOR_OVER) {
+-	for (i = 0; i < info->num_glyphs; i++) {
+-	    cairo_scaled_glyph_t *scaled_glyph;
+-
+-	    if (_cairo_scaled_glyph_lookup (info->font, info->glyphs[i].index,
+-					    CAIRO_SCALED_GLYPH_INFO_SURFACE,
+-					    &scaled_glyph) == CAIRO_INT_STATUS_SUCCESS &&
+-		scaled_glyph->surface->format == CAIRO_FORMAT_ARGB32)
+-	    {
+-		info->use_mask = TRUE;
+-		break;
+-	    }
+-	}
++    if (!dst->base.is_clear && ! info->use_mask && op != CAIRO_OPERATOR_OVER &&
++	(info->font->options.antialias == CAIRO_ANTIALIAS_SUBPIXEL ||
++	 info->font->options.antialias == CAIRO_ANTIALIAS_BEST))
++    {
++	info->use_mask = TRUE;
+     }
+ 
+     if (info->use_mask) {
+--
+cgit v0.9.0.2-2-gbebe
+From d304f0e57be8036719c3709e2419487326369105 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Wed, 28 Mar 2012 23:32:36 +0000
+Subject: composite-rectangles: Trim extents for SOURCE and CLEAR to the mask
+
+The SOURCE and CLEAR are the odd pair in Cairo's range of operators that
+are bound by the shape/mask, but are unbound by the source. This
+regularly leads to bugs as only track the bound/unbound rectangles and
+confuse the meaning when bound only by the mask.
+
+What is required is that the unbound extents in this case is only
+trimmed by the mask (the bounded extents are still the intersection of
+all).
+
+Fixes bug-source-cu
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/cairo-composite-rectangles.c b/src/cairo-composite-rectangles.c
+index 106571e..8c5cd5a 100644
+--- a/src/cairo-composite-rectangles.c
++++ b/src/cairo-composite-rectangles.c
+@@ -147,8 +147,12 @@ _cairo_composite_rectangles_intersect (cairo_composite_rectangles_t *extents,
+     if (! ret && extents->is_bounded & CAIRO_OPERATOR_BOUND_BY_MASK)
+ 	return CAIRO_INT_STATUS_NOTHING_TO_DO;
+ 
+-    if (extents->is_bounded == (CAIRO_OPERATOR_BOUND_BY_MASK | CAIRO_OPERATOR_BOUND_BY_SOURCE))
++    if (extents->is_bounded == (CAIRO_OPERATOR_BOUND_BY_MASK | CAIRO_OPERATOR_BOUND_BY_SOURCE)) {
+ 	extents->unbounded = extents->bounded;
++    } else if (extents->is_bounded & CAIRO_OPERATOR_BOUND_BY_MASK) {
++	if (!_cairo_rectangle_intersect (&extents->unbounded, &extents->mask))
++	    return CAIRO_INT_STATUS_NOTHING_TO_DO;
++    }
+ 
+     extents->clip = _cairo_clip_reduce_for_composite (clip, extents);
+     if (_cairo_clip_is_all_clipped (extents->clip))
+@@ -199,8 +203,12 @@ _cairo_composite_rectangles_intersect_source_extents (cairo_composite_rectangles
+ 	rect.height == extents->bounded.height)
+ 	return CAIRO_INT_STATUS_SUCCESS;
+ 
+-    if (extents->is_bounded == (CAIRO_OPERATOR_BOUND_BY_MASK | CAIRO_OPERATOR_BOUND_BY_SOURCE))
++    if (extents->is_bounded == (CAIRO_OPERATOR_BOUND_BY_MASK | CAIRO_OPERATOR_BOUND_BY_SOURCE)) {
+ 	extents->unbounded = extents->bounded;
++    } else if (extents->is_bounded & CAIRO_OPERATOR_BOUND_BY_MASK) {
++	if (!_cairo_rectangle_intersect (&extents->unbounded, &extents->mask))
++	    return CAIRO_INT_STATUS_NOTHING_TO_DO;
++    }
+ 
+     clip = extents->clip;
+     extents->clip = _cairo_clip_reduce_for_composite (clip, extents);
+@@ -253,8 +261,12 @@ _cairo_composite_rectangles_intersect_mask_extents (cairo_composite_rectangles_t
+ 	mask.height == extents->bounded.height)
+ 	return CAIRO_INT_STATUS_SUCCESS;
+ 
+-    if (extents->is_bounded == (CAIRO_OPERATOR_BOUND_BY_MASK | CAIRO_OPERATOR_BOUND_BY_SOURCE))
++    if (extents->is_bounded == (CAIRO_OPERATOR_BOUND_BY_MASK | CAIRO_OPERATOR_BOUND_BY_SOURCE)) {
+ 	extents->unbounded = extents->bounded;
++    } else if (extents->is_bounded & CAIRO_OPERATOR_BOUND_BY_MASK) {
++	if (!_cairo_rectangle_intersect (&extents->unbounded, &extents->mask))
++	    return CAIRO_INT_STATUS_NOTHING_TO_DO;
++    }
+ 
+     clip = extents->clip;
+     extents->clip = _cairo_clip_reduce_for_composite (clip, extents);
+--
+cgit v0.9.0.2-2-gbebe
+From af6e084dd78fcbb8ecce46c57f655f5e24343b8c Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Thu, 29 Mar 2012 13:48:24 +0000
+Subject: cairoint: Mark PDF surface as requiring the deflate stream output
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/cairoint.h b/src/cairoint.h
+index 9a8003e..9f20d51 100644
+--- a/src/cairoint.h
++++ b/src/cairoint.h
+@@ -73,7 +73,10 @@
+ #include "cairo-compiler-private.h"
+ #include "cairo-error-private.h"
+ 
+-#if CAIRO_HAS_PS_SURFACE || CAIRO_HAS_SCRIPT_SURFACE || CAIRO_HAS_XML_SURFACE
++#if CAIRO_HAS_PDF_SURFACE    || \
++    CAIRO_HAS_PS_SURFACE     || \
++    CAIRO_HAS_SCRIPT_SURFACE || \
++    CAIRO_HAS_XML_SURFACE
+ #define CAIRO_HAS_DEFLATE_STREAM 1
+ #endif
+ 
+@@ -84,7 +87,9 @@
+ #define CAIRO_HAS_FONT_SUBSET 1
+ #endif
+ 
+-#if CAIRO_HAS_PS_SURFACE || CAIRO_HAS_PDF_SURFACE || CAIRO_HAS_FONT_SUBSET
++#if CAIRO_HAS_PS_SURFACE  || \
++    CAIRO_HAS_PDF_SURFACE || \
++    CAIRO_HAS_FONT_SUBSET
+ #define CAIRO_HAS_PDF_OPERATORS 1
+ #endif
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From a965b0f95fdeb567f7ccb51f7c8c47735a61e2d9 Mon Sep 17 00:00:00 2001
+From: Henry (Yu) Song <hsong@sisa.samsung.com>
+Date: Thu, 29 Mar 2012 01:08:51 +0000
+Subject: gl: fix y-axis origin when map_to_image() for non texture GL surface
+
+We need to fix y-axis origin when map a GL surface to image surface for
+non-texture GL surface.
+
+Test cases: extended-blend-alpha-mask, extended-blend-mask.
+Although the image outputs is not right, but the image on the first grid
+(upper-left corner) is correct comparing to image output.
+---
+diff --git a/src/cairo-gl-surface.c b/src/cairo-gl-surface.c
+index 8bbf939..32ecf63 100644
+--- a/src/cairo-gl-surface.c
++++ b/src/cairo-gl-surface.c
+@@ -985,6 +985,7 @@ _cairo_gl_surface_map_to_image (void      *abstract_surface,
+     unsigned int cpp;
+     cairo_bool_t invert;
+     cairo_status_t status;
++    int y;
+ 
+     /* Want to use a switch statement here but the compiler gets whiny. */
+     if (surface->base.content == CAIRO_CONTENT_COLOR_ALPHA) {
+@@ -1065,7 +1066,12 @@ _cairo_gl_surface_map_to_image (void      *abstract_surface,
+ 	glPixelStorei (GL_PACK_ROW_LENGTH, image->stride / cpp);
+     if (invert)
+ 	glPixelStorei (GL_PACK_INVERT_MESA, 1);
+-    glReadPixels (extents->x, extents->y,
++
++    y = extents->y;
++    if (! _cairo_gl_surface_is_texture (surface))
++	y = surface->height - extents->y - extents->height;
++
++    glReadPixels (extents->x, y,
+ 		  extents->width, extents->height,
+ 		  format, type, image->data);
+     if (invert)
+--
+cgit v0.9.0.2-2-gbebe
+From c77112c5464d7ff21052527f82f4d729cc509291 Mon Sep 17 00:00:00 2001
+From: Uli Schlachter <psychon@znc.in>
+Date: Mon, 02 Apr 2012 18:43:00 +0000
+Subject: xcb: Fix SHM in _get_image()
+
+Commit 2283ab9 introduced a logic error. Instead of falling back to the non-SHM
+path when getting the image via SHM failed, we now did the fallback when getting
+the image via SHM worked (which means that the SHM operation was a waste of
+time).
+
+Signed-off-by: Uli Schlachter <psychon@znc.in>
+---
+diff --git a/src/cairo-xcb-surface.c b/src/cairo-xcb-surface.c
+index fff4f52..6bedbda 100644
+--- a/src/cairo-xcb-surface.c
++++ b/src/cairo-xcb-surface.c
+@@ -367,7 +367,7 @@ _get_image (cairo_xcb_surface_t		 *surface,
+     if (use_shm) {
+ 	image = _get_shm_image (surface, x, y, width, height);
+ 	if (image) {
+-	    if (image->status) {
++	    if (image->status == CAIRO_STATUS_SUCCESS) {
+ 		_cairo_xcb_connection_release (connection);
+ 		return image;
+ 	    }
+--
+cgit v0.9.0.2-2-gbebe
+From cc247c346b75353f16ab40ac74c54cdd9663d16b Mon Sep 17 00:00:00 2001
+From: Henry (Yu) Song <hsong@sisa.samsung.com>
+Date: Mon, 02 Apr 2012 21:29:47 +0000
+Subject: gl: Remove an unused variable
+
+---
+diff --git a/src/cairo-gl-gradient.c b/src/cairo-gl-gradient.c
+index b364b92..ce7c0dd 100644
+--- a/src/cairo-gl-gradient.c
++++ b/src/cairo-gl-gradient.c
+@@ -207,7 +207,6 @@ _cairo_gl_gradient_create (cairo_gl_context_t           *ctx,
+     cairo_status_t status;
+     int tex_width;
+     void *data;
+-    cairo_gl_dispatch_t *dispatch = &ctx->dispatch;
+ 
+     if ((unsigned int) ctx->max_texture_size / 2 <= n_stops)
+ 	return CAIRO_INT_STATUS_UNSUPPORTED;
+--
+cgit v0.9.0.2-2-gbebe
+From 7a262fd398c8a1f3c9052e8d9ec459e27ff91b4d Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Wed, 04 Apr 2012 10:23:09 +0000
+Subject: fix bug in _cairo_image_analyze_color
+
+---
+diff --git a/src/cairo-image-surface.c b/src/cairo-image-surface.c
+index 8208a15..e860e1b 100644
+--- a/src/cairo-image-surface.c
++++ b/src/cairo-image-surface.c
+@@ -1130,9 +1130,12 @@ _cairo_image_analyze_color (cairo_image_surface_t      *image)
+     if (image->color != CAIRO_IMAGE_UNKNOWN_COLOR)
+ 	return image->color;
+ 
+-    if (image->format == CAIRO_FORMAT_A1 || image->format == CAIRO_FORMAT_A8)
++    if (image->format == CAIRO_FORMAT_A1)
+ 	return image->color = CAIRO_IMAGE_IS_MONOCHROME;
+ 
++    if (image->format == CAIRO_FORMAT_A8)
++	return image->color = CAIRO_IMAGE_IS_GRAYSCALE;
++
+     if (image->format == CAIRO_FORMAT_ARGB32) {
+ 	image->color = CAIRO_IMAGE_IS_MONOCHROME;
+ 	for (y = 0; y < image->height; y++) {
+--
+cgit v0.9.0.2-2-gbebe
+From 70b2856ed3d31b41e69b3d82fb9c5c11c2b3d3d4 Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Thu, 05 Apr 2012 23:43:35 +0000
+Subject: type1-subset: use fallback font if glyph widths are calculated
+
+Bug 48349 has a pdf file with a Type 1 font where the glyph widths are
+of the form:
+
+34 9302 19 div hsbw
+---
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index 607ac8e..ba1008a 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -751,6 +751,9 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 	    command = *p++;
+ 	    switch (command) {
+ 		case TYPE1_CHARSTRING_COMMAND_HSBW:
++		     if (! last_op_was_integer)
++			  return CAIRO_INT_STATUS_UNSUPPORTED;
++
+ 		    font->glyphs[glyph].width = font->build_stack.stack[1]/font->base.units_per_em;
+ 		    font->build_stack.sp = 0;
+ 		    last_op_was_integer = FALSE;
+@@ -797,6 +800,9 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 			    break;
+ 
+ 			case TYPE1_CHARSTRING_COMMAND_SBW:
++			     if (! last_op_was_integer)
++				  return CAIRO_INT_STATUS_UNSUPPORTED;
++
+ 			    font->glyphs[glyph].width = font->build_stack.stack[2]/font->base.units_per_em;
+ 			    font->build_stack.sp = 0;
+ 			    last_op_was_integer = FALSE;
+--
+cgit v0.9.0.2-2-gbebe
+From a6d955fcc46ae2da8d6f3b2cadeae64c03066461 Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Thu, 05 Apr 2012 23:53:50 +0000
+Subject: fix indentation in cairo_type1_font_subset_parse_charstring
+
+---
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index ba1008a..ddef8ae 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -1,3 +1,4 @@
++/* -*- Mode: c; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 8; -*- */
+ /* cairo - a vector graphics library with display and print output
+  *
+  * Copyright © 2006 Red Hat, Inc
+@@ -750,86 +751,79 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+         if (*p < 32) {
+ 	    command = *p++;
+ 	    switch (command) {
+-		case TYPE1_CHARSTRING_COMMAND_HSBW:
+-		     if (! last_op_was_integer)
+-			  return CAIRO_INT_STATUS_UNSUPPORTED;
++	    case TYPE1_CHARSTRING_COMMAND_HSBW:
++		if (! last_op_was_integer)
++		    return CAIRO_INT_STATUS_UNSUPPORTED;
++
++		font->glyphs[glyph].width = font->build_stack.stack[1]/font->base.units_per_em;
++		font->build_stack.sp = 0;
++		last_op_was_integer = FALSE;
++		break;
++
++	    case TYPE1_CHARSTRING_COMMAND_CALLSUBR:
++		if (font->subset_subrs  &&
++		    last_op_was_integer &&
++		    font->build_stack.top_value >= 0    &&
++		    font->build_stack.top_value < font->num_subrs)
++		{
++		    subr_num = font->build_stack.top_value;
++		    font->subrs[subr_num].used = TRUE;
++		    last_op_was_integer = FALSE;
++		    status = cairo_type1_font_subset_parse_charstring (font,
++								       glyph,
++								       font->subrs[subr_num].subr_string,
++								       font->subrs[subr_num].subr_length);
++		} else {
++		    font->subset_subrs = FALSE;
++		}
++		break;
++
++	    case TYPE1_CHARSTRING_COMMAND_ESCAPE:
++		command = command << 8 | *p++;
++		switch (command) {
++		case TYPE1_CHARSTRING_COMMAND_SEAC:
++		    /* The seac command takes five integer arguments.  The
++		     * last two are glyph indices into the PS standard
++		     * encoding give the names of the glyphs that this
++		     * glyph is composed from.  All we need to do is to
++		     * make sure those glyphs are present in the subset
++		     * under their standard names. */
++		    status = use_standard_encoding_glyph (font, font->build_stack.stack[3]);
++		    if (unlikely (status))
++			return status;
++
++		    status = use_standard_encoding_glyph (font, font->build_stack.stack[4]);
++		    if (unlikely (status))
++			return status;
+ 
+-		    font->glyphs[glyph].width = font->build_stack.stack[1]/font->base.units_per_em;
+ 		    font->build_stack.sp = 0;
+ 		    last_op_was_integer = FALSE;
+ 		    break;
+ 
+-		case TYPE1_CHARSTRING_COMMAND_CALLSUBR:
+-		    if (font->subset_subrs  &&
+-			last_op_was_integer &&
+-			font->build_stack.top_value >= 0    &&
+-			font->build_stack.top_value < font->num_subrs)
+-		    {
+-			subr_num = font->build_stack.top_value;
+-			font->subrs[subr_num].used = TRUE;
+-			last_op_was_integer = FALSE;
+-			status = cairo_type1_font_subset_parse_charstring (font,
+-									   glyph,
+-									   font->subrs[subr_num].subr_string,
+-									   font->subrs[subr_num].subr_length);
+-		    } else {
+-			font->subset_subrs = FALSE;
+-		    }
++		case TYPE1_CHARSTRING_COMMAND_SBW:
++		    if (! last_op_was_integer)
++			return CAIRO_INT_STATUS_UNSUPPORTED;
++
++		    font->glyphs[glyph].width = font->build_stack.stack[2]/font->base.units_per_em;
++		    font->build_stack.sp = 0;
++		    last_op_was_integer = FALSE;
+ 		    break;
+ 
+-		case TYPE1_CHARSTRING_COMMAND_ESCAPE:
+-		    command = command << 8 | *p++;
+-		    switch (command) {
+-			case TYPE1_CHARSTRING_COMMAND_SEAC:
+-			    /* The seac command takes five integer arguments.  The
+-			     * last two are glyph indices into the PS standard
+-			     * encoding give the names of the glyphs that this
+-			     * glyph is composed from.  All we need to do is to
+-			     * make sure those glyphs are present in the subset
+-			     * under their standard names. */
+-			    status = use_standard_encoding_glyph (font, font->build_stack.stack[3]);
+-			    if (unlikely (status))
+-				return status;
+-
+-			    status = use_standard_encoding_glyph (font, font->build_stack.stack[4]);
+-			    if (unlikely (status))
+-				return status;
+-
+-			    font->build_stack.sp = 0;
+-			    last_op_was_integer = FALSE;
+-			    break;
+-
+-			case TYPE1_CHARSTRING_COMMAND_SBW:
+-			     if (! last_op_was_integer)
+-				  return CAIRO_INT_STATUS_UNSUPPORTED;
+-
+-			    font->glyphs[glyph].width = font->build_stack.stack[2]/font->base.units_per_em;
+-			    font->build_stack.sp = 0;
+-			    last_op_was_integer = FALSE;
+-			    break;
+-
+-			case TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR:
+-			    for (i = 0; i < font->build_stack.sp; i++)
+-				font->ps_stack.other_subr_args[i] = font->build_stack.stack[i];
+-			    font->ps_stack.num_other_subr_args = font->build_stack.sp;
+-			    font->ps_stack.cur_other_subr_arg = 0;
+-			    font->build_stack.sp = 0;
+-			    last_op_was_integer = FALSE;
+-			    break;
+-
+-			case TYPE1_CHARSTRING_COMMAND_POP:
+-			    if (font->ps_stack.num_other_subr_args > font->ps_stack.cur_other_subr_arg) {
+-				font->build_stack.top_value = font->ps_stack.other_subr_args[font->ps_stack.cur_other_subr_arg++];
+-				last_op_was_integer = TRUE;
+-			    } else {
+-				font->subset_subrs = FALSE;
+-			    }
+-			    break;
+-
+-			default:
+-			    font->build_stack.sp = 0;
+-			    last_op_was_integer = FALSE;
+-			    break;
++		case TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR:
++		    for (i = 0; i < font->build_stack.sp; i++)
++			font->ps_stack.other_subr_args[i] = font->build_stack.stack[i];
++		    font->ps_stack.num_other_subr_args = font->build_stack.sp;
++		    font->ps_stack.cur_other_subr_arg = 0;
++		    font->build_stack.sp = 0;
++		    last_op_was_integer = FALSE;
++		    break;
++
++		case TYPE1_CHARSTRING_COMMAND_POP:
++		    if (font->ps_stack.num_other_subr_args > font->ps_stack.cur_other_subr_arg) {
++			font->build_stack.top_value = font->ps_stack.other_subr_args[font->ps_stack.cur_other_subr_arg++];
++			last_op_was_integer = TRUE;
++		    } else {
++			font->subset_subrs = FALSE;
+ 		    }
+ 		    break;
+ 
+@@ -837,6 +831,13 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 		    font->build_stack.sp = 0;
+ 		    last_op_was_integer = FALSE;
+ 		    break;
++		}
++		break;
++
++	    default:
++		font->build_stack.sp = 0;
++		last_op_was_integer = FALSE;
++		break;
+ 	    }
+         } else {
+             /* integer argument */
+--
+cgit v0.9.0.2-2-gbebe
+From 8886220b5027296f5b3b95e9c2f93509108d3b9e Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Fri, 06 Apr 2012 00:13:53 +0000
+Subject: type1-subset: if font name is prefixed with a subset tag, strip it off
+
+---
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index ddef8ae..e507abe 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -381,6 +381,7 @@ cairo_type1_font_subset_get_fontname (cairo_type1_font_subset_t *font)
+ {
+     const char *start, *end, *segment_end;
+     char *s;
++    int i;
+ 
+     segment_end = font->header_segment + font->header_segment_size;
+     start = find_token (font->header_segment, segment_end, "/FontName");
+@@ -406,6 +407,16 @@ cairo_type1_font_subset_get_fontname (cairo_type1_font_subset_t *font)
+ 	return CAIRO_INT_STATUS_UNSUPPORTED;
+     }
+ 
++    /* If font name is prefixed with a subset tag, strip it off. */
++    if (strlen(start) > 7 && start[6] == '+') {
++	for (i = 0; i < 6; i++) {
++	    if (start[i] < 'A' || start[i] > 'Z')
++		break;
++	}
++	if (i == 6)
++	    start += 7;
++    }
++
+     font->base.base_font = strdup (start);
+     free (s);
+     if (unlikely (font->base.base_font == NULL))
+--
+cgit v0.9.0.2-2-gbebe
+From 8657ca10e34b0034602680b4304d47ecf90ccbfd Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Fri, 06 Apr 2012 11:50:40 +0000
+Subject: fix _cairo_pattern_get_ink_extents to work with snapshot recording surfaces
+
+It had caused pdf bbox sizes to regress to page size bboxes.
+---
+diff --git a/src/cairo-pattern.c b/src/cairo-pattern.c
+index 27ba004..5b3e177 100644
+--- a/src/cairo-pattern.c
++++ b/src/cairo-pattern.c
+@@ -37,6 +37,7 @@
+ #include "cairo-path-private.h"
+ #include "cairo-pattern-private.h"
+ #include "cairo-recording-surface-private.h"
++#include "cairo-surface-snapshot-private.h"
+ 
+ #include <float.h>
+ 
+@@ -3666,6 +3667,9 @@ _cairo_pattern_get_ink_extents (const cairo_pattern_t         *pattern,
+ 	    (const cairo_surface_pattern_t *) pattern;
+ 	cairo_surface_t *surface = surface_pattern->surface;
+ 
++	if (_cairo_surface_is_snapshot (surface))
++	    surface = _cairo_surface_snapshot_get_target (surface);
++
+ 	if (_cairo_surface_is_recording (surface)) {
+ 	    cairo_matrix_t imatrix;
+ 	    cairo_box_t box;
+--
+cgit v0.9.0.2-2-gbebe
