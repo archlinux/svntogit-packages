@@ -1,0 +1,146 @@
+diff -up Python-3.2.2/Doc/distutils/apiref.rst.issue11254 Python-3.2.2/Doc/distutils/apiref.rst
+--- Python-3.2.2/Doc/distutils/apiref.rst.issue11254	2011-09-03 12:16:38.000000000 -0400
++++ Python-3.2.2/Doc/distutils/apiref.rst	2011-10-10 17:01:23.167196855 -0400
+@@ -1204,9 +1204,9 @@ other utility module.
+ .. function:: byte_compile(py_files[, optimize=0, force=0, prefix=None, base_dir=None, verbose=1, dry_run=0, direct=None])
+ 
+    Byte-compile a collection of Python source files to either :file:`.pyc` or
+-   :file:`.pyo` files in the same directory.  *py_files* is a list of files to
+-   compile; any files that don't end in :file:`.py` are silently skipped.
+-   *optimize* must be one of the following:
++   :file:`.pyo` files in a :file:`__pycache__` subdirectory (see :pep:`3147`).
++   *py_files* is a list of files to compile; any files that don't end in
++   :file:`.py` are silently skipped.  *optimize* must be one of the following:
+ 
+    * ``0`` - don't optimize (generate :file:`.pyc`)
+    * ``1`` - normal optimization (like ``python -O``)
+@@ -1231,6 +1231,11 @@ other utility module.
+    is used by the script generated in indirect mode; unless you know what you're
+    doing, leave it set to ``None``.
+ 
++   .. versionchanged:: 3.2.3
++      Create ``.pyc`` or ``.pyo`` files with an :func:`import magic tag
++      <imp.get_tag>` in their name, in a :file:`__pycache__` subdirectory
++      instead of files without tag in the current directory.
++
+ 
+ .. function:: rfc822_escape(header)
+ 
+diff -up Python-3.2.2/Lib/distutils/tests/test_build_py.py.issue11254 Python-3.2.2/Lib/distutils/tests/test_build_py.py
+--- Python-3.2.2/Lib/distutils/tests/test_build_py.py.issue11254	2011-09-03 12:16:40.000000000 -0400
++++ Python-3.2.2/Lib/distutils/tests/test_build_py.py	2011-10-10 17:01:23.167196855 -0400
+@@ -3,6 +3,7 @@
+ import os
+ import sys
+ import io
++import imp
+ import unittest
+ 
+ from distutils.command.build_py import build_py
+@@ -57,13 +58,15 @@ class BuildPyTestCase(support.TempdirMan
+         self.assertEqual(len(cmd.get_outputs()), 3)
+         pkgdest = os.path.join(destination, "pkg")
+         files = os.listdir(pkgdest)
++        pycache_dir = os.path.join(pkgdest, "__pycache__")
+         self.assertIn("__init__.py", files)
+         self.assertIn("README.txt", files)
+-        # XXX even with -O, distutils writes pyc, not pyo; bug?
+         if sys.dont_write_bytecode:
+-            self.assertNotIn("__init__.pyc", files)
++            self.assertFalse(os.path.exists(pycache_dir))
+         else:
+-            self.assertIn("__init__.pyc", files)
++            # XXX even with -O, distutils writes pyc, not pyo; bug?
++            pyc_files = os.listdir(pycache_dir)
++            self.assertIn("__init__.%s.pyc" % imp.get_tag(), pyc_files)
+ 
+     def test_empty_package_dir(self):
+         # See SF 1668596/1720897.
+diff -up Python-3.2.2/Lib/distutils/tests/test_install_lib.py.issue11254 Python-3.2.2/Lib/distutils/tests/test_install_lib.py
+--- Python-3.2.2/Lib/distutils/tests/test_install_lib.py.issue11254	2011-09-03 12:16:40.000000000 -0400
++++ Python-3.2.2/Lib/distutils/tests/test_install_lib.py	2011-10-10 17:01:23.167196855 -0400
+@@ -1,6 +1,7 @@
+ """Tests for distutils.command.install_data."""
+ import sys
+ import os
++import imp
+ import unittest
+ 
+ from distutils.command.install_lib import install_lib
+@@ -32,18 +33,20 @@ class InstallLibTestCase(support.Tempdir
+         cmd.finalize_options()
+         self.assertEqual(cmd.optimize, 2)
+ 
+-    @unittest.skipUnless(not sys.dont_write_bytecode,
+-                         'byte-compile not supported')
++    @unittest.skipIf(sys.dont_write_bytecode, 'byte-compile disabled')
+     def test_byte_compile(self):
+         pkg_dir, dist = self.create_dist()
++        os.chdir(pkg_dir)
+         cmd = install_lib(dist)
+         cmd.compile = cmd.optimize = 1
+ 
+         f = os.path.join(pkg_dir, 'foo.py')
+         self.write_file(f, '# python file')
+         cmd.byte_compile([f])
+-        self.assertTrue(os.path.exists(os.path.join(pkg_dir, 'foo.pyc')))
+-        self.assertTrue(os.path.exists(os.path.join(pkg_dir, 'foo.pyo')))
++        pyc_file = imp.cache_from_source('foo.py')
++        pyo_file = imp.cache_from_source('foo.py', debug_override=False)
++        self.assertTrue(os.path.exists(pyc_file))
++        self.assertTrue(os.path.exists(pyo_file))
+ 
+     def test_get_outputs(self):
+         pkg_dir, dist = self.create_dist()
+diff -up Python-3.2.2/Lib/distutils/util.py.issue11254 Python-3.2.2/Lib/distutils/util.py
+--- Python-3.2.2/Lib/distutils/util.py.issue11254	2011-09-03 12:16:40.000000000 -0400
++++ Python-3.2.2/Lib/distutils/util.py	2011-10-10 17:01:23.172196793 -0400
+@@ -4,7 +4,11 @@ Miscellaneous utility functions -- anyth
+ one of the other *util.py modules.
+ """
+ 
+-import sys, os, string, re
++import os
++import re
++import imp
++import sys
++import string
+ from distutils.errors import DistutilsPlatformError
+ from distutils.dep_util import newer
+ from distutils.spawn import spawn
+@@ -415,9 +419,9 @@ def byte_compile (py_files,
+                   verbose=1, dry_run=0,
+                   direct=None):
+     """Byte-compile a collection of Python source files to either .pyc
+-    or .pyo files in the same directory.  'py_files' is a list of files
+-    to compile; any files that don't end in ".py" are silently skipped.
+-    'optimize' must be one of the following:
++    or .pyo files in a __pycache__ subdirectory.  'py_files' is a list
++    of files to compile; any files that don't end in ".py" are silently
++    skipped.  'optimize' must be one of the following:
+       0 - don't optimize (generate .pyc)
+       1 - normal optimization (like "python -O")
+       2 - extra optimization (like "python -OO")
+@@ -529,7 +533,10 @@ byte_compile(files, optimize=%r, force=%
+             # Terminology from the py_compile module:
+             #   cfile - byte-compiled file
+             #   dfile - purported source filename (same as 'file' by default)
+-            cfile = file + (__debug__ and "c" or "o")
++            if optimize >= 0:
++                cfile = imp.cache_from_source(file, debug_override=not optimize)
++            else:
++                cfile = imp.cache_from_source(file)
+             dfile = file
+             if prefix:
+                 if file[:len(prefix)] != prefix:
+diff -up Python-3.2.2/Misc/ACKS.issue11254 Python-3.2.2/Misc/ACKS
+--- Python-3.2.2/Misc/ACKS.issue11254	2011-09-03 12:16:45.000000000 -0400
++++ Python-3.2.2/Misc/ACKS	2011-10-10 17:01:23.168196842 -0400
+@@ -715,6 +715,7 @@ Pierre Quentel
+ Brian Quinlan
+ Anders Qvist
+ Burton Radons
++Jeff Ramnani
+ Brodie Rao
+ Antti Rasinen
+ Sridhar Ratnakumar
