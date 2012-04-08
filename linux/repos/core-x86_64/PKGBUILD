@@ -6,23 +6,33 @@ pkgbase=linux
 pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
-_basekernel=3.2
-pkgver=${_basekernel}.14
+_basekernel=3.3
+pkgver=${_basekernel}.1
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl')
 options=('!strip')
-source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.2.tar.xz"
+source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.3.tar.xz"
         "http://www.kernel.org/pub/linux/kernel/v3.x/patch-${pkgver}.xz"
         # the main kernel config files
         'config' 'config.x86_64'
         # standard config files for mkinitcpio ramdisk
         "${pkgname}.preset"
+        'fix-acerhdf-1810T-bios.patch'
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
         'ext4-options.patch')
+md5sums=('7133f5a2086a7d7ef97abac610c094f5'
+         '10771d657c5bf342bcfe66ed06653ecb'
+         '611384eca31001757d23a689f47fa318'
+         '81d48b91797c895fff5a36c17eae6320'
+         'eb14dcfd80c00852ef81ded6e826826a'
+         '38c1fd4a1f303f1f6c38e7f082727e2f'
+         '9d3c56a4b999c8bfbd4018089a62f662'
+         '263725f20c0b9eb9c353040792d644e5'
+         'bb7fd1aa23016c8057046b84fd4eb528')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -41,6 +51,11 @@ build() {
   # then dropped because the reasoning was unclear. However, it is clearly
   # needed.
   patch -Np1 -i "${srcdir}/i915-fix-ghost-tv-output.patch"
+
+  # Patch submitted upstream, waiting for inclusion:
+  # https://lkml.org/lkml/2012/2/19/51
+  # add support for latest bios of Acer 1810T acerhdf module
+  patch -Np1 -i "${srcdir}/fix-acerhdf-1810T-bios.patch"
 
   # set DEFAULT_CONSOLE_LOGLEVEL to 4 (same value as the 'quiet' kernel param)
   # remove this when a Kconfig knob is made available by upstream
@@ -162,7 +177,7 @@ package_linux-headers() {
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/include"
 
   for i in acpi asm-generic config crypto drm generated linux math-emu \
-    media net pcmcia scsi sound trace video xen; do
+    media mtd net pcmcia scsi sound trace video xen; do
     cp -a include/${i} "${pkgdir}/usr/src/linux-${_kernver}/include/"
   done
 
@@ -268,7 +283,7 @@ package_linux-headers() {
   done
 
   # remove unneeded architectures
-  rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arm,arm26,avr32,blackfin,cris,frv,h8300,ia64,m32r,m68k,m68knommu,mips,microblaze,mn10300,parisc,powerpc,ppc,s390,sh,sh64,sparc,sparc64,um,v850,xtensa}
+  rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arm,arm26,avr32,blackfin,c6x,cris,frv,h8300,hexagon,ia64,m32r,m68k,m68knommu,mips,microblaze,mn10300,openrisc,parisc,powerpc,ppc,s390,score,sh,sh64,sparc,sparc64,tile,unicore32,um,v850,xtensa}
 }
 
 package_linux-docs() {
@@ -287,20 +302,3 @@ package_linux-docs() {
   # remove a file already in linux package
   rm -f "${pkgdir}/usr/src/linux-${_kernver}/Documentation/DocBook/Makefile"
 }
-md5sums=('364066fa18767ec0ae5f4e4abcf9dc51'
-         '687632bb0ba65439198ac60f2c02a8f2'
-         'a6913ef2a39541f18bd610cbb8f360ea'
-         '2182f8e0de70498130f7d9d770092c73'
-         'eb14dcfd80c00852ef81ded6e826826a'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         '4cd79aa147825837dc8bc9f6b736c0a0'
-         'c8299cf750a84e12d60b372c8ca7e1e8')
-md5sums=('364066fa18767ec0ae5f4e4abcf9dc51'
-         'd2f23478ba4f9d38a589c4579dd06c4a'
-         'a6913ef2a39541f18bd610cbb8f360ea'
-         '2182f8e0de70498130f7d9d770092c73'
-         'eb14dcfd80c00852ef81ded6e826826a'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         'c8299cf750a84e12d60b372c8ca7e1e8')
