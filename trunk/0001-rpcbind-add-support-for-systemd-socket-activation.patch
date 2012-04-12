@@ -1,0 +1,271 @@
+From e0a37e07c5ea6557706cc0840802519b8b3fc563 Mon Sep 17 00:00:00 2001
+From: Tom Gundersen <teg@jklm.no>
+Date: Thu, 12 Apr 2012 13:30:28 +0200
+Subject: [PATCH] rpcbind: add support for systemd socket activation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Making rpcbind sockect activated will greatly simplify
+its integration in systemd systems. In essence, other services
+may now assume that rpcbind is always available, even during very
+early boot. This means that we no longer need to worry about any
+ordering dependencies.
+
+This is based on a patch originally posted by Lennart Poettering:
+<http://permalink.gmane.org/gmane.linux.nfs/33774>.
+
+That patch was not merged due to the lack of a shared library and
+as systemd was seen to be too Fedora specific.
+
+Systemd now provides a shared library, and it is shipped by defalt in
+OpenSUSE in addition to Fedora, and it is available in Debain, Gentoo,
+Arch, and others.
+
+This version of the patch has three changes from the original:
+
+ * It uses the shared library.
+ * It comes with unit files.
+ * It is rebased on top of master.
+
+A followup patch will sort out the indentation issues, as they are left in
+to make review simpler.
+
+Comments welcome.
+
+v2: correctly enable systemd code at compile time
+    handle the case where not all the required sockets were supplied
+    listen on udp/tcp port 111 in addition to /var/run/rpcbind.sock
+    do not daemonize
+v3: default to compile without systemd support when systemd is not
+    installed at compile time.
+
+Original-patch-by: Lennart Poettering <lennart@poettering.net>
+Cc: systemd-devel@lists.freedesktop.org
+Cc: Steve Dickson <steved@redhat.com>
+Cc: Chuck Lever <chuck.lever@oracle.com>
+Acked-by: Cristian Rodríguez <crrodriguez@opensuse.org>
+Signed-off-by: Tom Gundersen <teg@jklm.no>
+---
+ Makefile.am                |   15 ++++++++
+ configure.in               |   11 ++++++
+ src/rpcbind.c              |   81 ++++++++++++++++++++++++++++++++++++++++----
+ systemd/.gitignore         |    1 +
+ systemd/rpcbind.service.in |    9 +++++
+ systemd/rpcbind.socket     |   12 +++++++
+ 6 files changed, 123 insertions(+), 6 deletions(-)
+ create mode 100644 systemd/.gitignore
+ create mode 100644 systemd/rpcbind.service.in
+ create mode 100644 systemd/rpcbind.socket
+
+diff --git a/Makefile.am b/Makefile.am
+index 9fa608e..194b467 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -38,6 +38,21 @@ rpcbind_SOURCES = \
+ 	src/warmstart.c
+ rpcbind_LDADD = $(TIRPC_LIBS)
+ 
++if SYSTEMD
++AM_CPPFLAGS += $(SYSTEMD_CFLAGS) -DSYSTEMD
++
++rpcbind_LDADD += $(SYSTEMD_LIBS)
++
++systemd/rpcbind.service: systemd/rpcbind.service.in Makefile
++	sed -e 's,@bindir\@,$(bindir),g' \
++		< $< > $@ || rm $@
++
++systemdsystemunit_DATA = \
++	systemd/rpcbind.service \
++	systemd/rpcbind.socket
++
++endif
++
+ rpcinfo_SOURCES =       src/rpcinfo.c
+ rpcinfo_LDADD   =       $(TIRPC_LIBS)
+ 
+diff --git a/configure.in b/configure.in
+index 2b67720..e96cab2 100644
+--- a/configure.in
++++ b/configure.in
+@@ -29,6 +29,17 @@ AC_SUBST([rpcuser], [$with_rpcuser])
+  
+ PKG_CHECK_MODULES([TIRPC], [libtirpc])
+ 
++PKG_PROG_PKG_CONFIG
++AC_ARG_WITH([systemdsystemunitdir],
++  AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
++  [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
++  if test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno; then
++    AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
++    PKG_CHECK_MODULES([SYSTEMD], [libsystemd-daemon])
++  fi
++AM_CONDITIONAL(SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
++
++
+ AS_IF([test x$enable_libwrap = xyes], [
+ 	AC_CHECK_LIB([wrap], [hosts_access], ,
+ 		AC_MSG_ERROR([libwrap support requested but unable to find libwrap]))
+diff --git a/src/rpcbind.c b/src/rpcbind.c
+index 9a0504d..eba32ac 100644
+--- a/src/rpcbind.c
++++ b/src/rpcbind.c
+@@ -56,6 +56,9 @@
+ #include <netinet/in.h>
+ #endif
+ #include <arpa/inet.h>
++#ifdef SYSTEMD
++#include <systemd/sd-daemon.h>
++#endif
+ #include <fcntl.h>
+ #include <netdb.h>
+ #include <stdio.h>
+@@ -285,6 +288,7 @@ init_transport(struct netconfig *nconf)
+ 	u_int32_t host_addr[4];  /* IPv4 or IPv6 */
+ 	struct sockaddr_un sun;
+ 	mode_t oldmask;
++	int n = 0;
+         res = NULL;
+ 
+ 	if ((nconf->nc_semantics != NC_TPI_CLTS) &&
+@@ -304,6 +308,76 @@ init_transport(struct netconfig *nconf)
+ 	}
+ #endif
+ 
++	if (!__rpc_nconf2sockinfo(nconf, &si)) {
++		syslog(LOG_ERR, "cannot get information for %s",
++		    nconf->nc_netid);
++		return (1);
++	}
++
++#ifdef SYSTEMD
++	n = sd_listen_fds(0);
++	if (n < 0) {
++		syslog(LOG_ERR, "failed to acquire systemd scokets: %s", strerror(-n));
++		return 1;
++	}
++
++	/* Try to find if one of the systemd sockets we were given match
++	 * our netconfig structure. */
++
++	for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + n; fd++) {
++		struct __rpc_sockinfo si_other;
++		union {
++			struct sockaddr sa;
++			struct sockaddr_un un;
++			struct sockaddr_in in4;
++			struct sockaddr_in6 in6;
++			struct sockaddr_storage storage;
++		} sa;
++		socklen_t addrlen = sizeof(sa);
++
++		if (!__rpc_fd2sockinfo(fd, &si_other)) {
++			syslog(LOG_ERR, "cannot get information for fd %i", fd);
++			return 1;
++		}
++
++		if (si.si_af != si_other.si_af ||
++                    si.si_socktype != si_other.si_socktype ||
++                    si.si_proto != si_other.si_proto)
++			continue;
++
++		if (getsockname(fd, &sa.sa, &addrlen) < 0) {
++			syslog(LOG_ERR, "failed to query socket name: %s",
++                               strerror(errno));
++			goto error;
++		}
++
++		/* Copy the address */
++		taddr.addr.maxlen = taddr.addr.len = addrlen;
++		taddr.addr.buf = malloc(addrlen);
++		if (taddr.addr.buf == NULL) {
++			syslog(LOG_ERR,
++                               "cannot allocate memory for %s address",
++                               nconf->nc_netid);
++			goto error;
++		}
++		memcpy(taddr.addr.buf, &sa, addrlen);
++
++		my_xprt = (SVCXPRT *)svc_tli_create(fd, nconf, &taddr,
++                          RPC_MAXDATASIZE, RPC_MAXDATASIZE);
++		if (my_xprt == (SVCXPRT *)NULL) {
++			syslog(LOG_ERR, "%s: could not create service",
++                               nconf->nc_netid);
++			goto error;
++		}
++	}
++
++	/* if none of the systemd sockets matched, we set up the socket in
++	 * the normal way:
++	 */
++#endif
++
++	if(my_xprt == (SVCXPRT *)NULL) {
++
+ 	/*
+ 	 * XXX - using RPC library internal functions. For NC_TPI_CLTS
+ 	 * we call this later, for each socket we like to bind.
+@@ -316,12 +390,6 @@ init_transport(struct netconfig *nconf)
+ 		}
+ 	}
+ 
+-	if (!__rpc_nconf2sockinfo(nconf, &si)) {
+-		syslog(LOG_ERR, "cannot get information for %s",
+-		    nconf->nc_netid);
+-		return (1);
+-	}
+-
+ 	if ((strcmp(nconf->nc_netid, "local") == 0) ||
+ 	    (strcmp(nconf->nc_netid, "unix") == 0)) {
+ 		memset(&sun, 0, sizeof sun);
+@@ -558,6 +626,7 @@ init_transport(struct netconfig *nconf)
+ 			goto error;
+ 		}
+ 	}
++	}
+ 
+ #ifdef PORTMAP
+ 	/*
+diff --git a/systemd/.gitignore b/systemd/.gitignore
+new file mode 100644
+index 0000000..b7b4561
+--- /dev/null
++++ b/systemd/.gitignore
+@@ -0,0 +1 @@
++rpcbind.service
+diff --git a/systemd/rpcbind.service.in b/systemd/rpcbind.service.in
+new file mode 100644
+index 0000000..58ae5de
+--- /dev/null
++++ b/systemd/rpcbind.service.in
+@@ -0,0 +1,9 @@
++[Unit]
++Description=RPC Bind
++
++[Service]
++ExecStart=@bindir@/rpcbind -w -f
++
++[Install]
++WantedBy=multi-user.target
++Also=rpcbind.socket
+diff --git a/systemd/rpcbind.socket b/systemd/rpcbind.socket
+new file mode 100644
+index 0000000..ad5fd62
+--- /dev/null
++++ b/systemd/rpcbind.socket
+@@ -0,0 +1,12 @@
++[Unit]
++Description=RPCbind Server Activation Socket
++Wants=rpcbind.target
++Before=rpcbind.target
++
++[Socket]
++ListenStream=/var/run/rpcbind.sock
++ListenStream=111
++ListenDatagram=111
++
++[Install]
++WantedBy=sockets.target
+-- 
+1.7.10
+
