@@ -1,0 +1,80 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=nx
+pkgname=('libxcomp' 'nxproxy' 'nx-x11' 'nx-xcompext' 'nxagent')
+pkgver=3.5.0.12
+pkgrel=0.1
+arch=('i686' 'x86_64')
+url="http://wiki.x2go.org/"
+license=('GPL')
+makedepends=('libjpeg-turbo' 'libpng' 'bash' 'perl' # runtime dependencies from subpackages
+             'xproto' 'freetype2' 'libxaw' 'libxrender' 'libxp' 'libxpm' 'libxdamage' 'libxrandr' 'libxcomposite' 'libxtst' 'xorg-sessreg' # makedepends
+             )
+source=(http://code.x2go.org/releases/source/nx-libs/nx-libs_$pkgver-full.tar.gz
+        nx-x11.ld.so.conf.d)
+md5sums=('a2011e034a318016cf2260c30a567301'
+         'f2ec60c7e2d81bef2f7292d2b33681a6')
+
+build() {
+  cd "${srcdir}/nx-libs_$pkgver"
+  make CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --includedir=/usr/include"
+  # fake install
+  mkdir $srcdir/fakeinstall
+  make DESTDIR="$srcdir/fakeinstall" install
+}
+
+package_libxcomp() {
+  
+  pkgdesc="NX X compression library"
+  depends=('libjpeg-turbo' 'libpng' 'gcc-libs')
+	
+  cd "${srcdir}/fakeinstall"
+  install -dm755 ${pkgdir}/usr/lib/
+  cp -a ${srcdir}/fakeinstall/usr/lib/nx/libXcomp.so* ${pkgdir}/usr/lib
+}
+
+package_nxproxy() {
+
+  pkgdesc="NX proxy"
+  depends=('libxcomp')
+  
+  cd "${srcdir}/fakeinstall"
+  install -dm755 ${pkgdir}/usr/{bin,share/man/man1}
+  cp -a ${srcdir}/fakeinstall/usr/nxproxy ${pkgdir}/usr/bin
+  cp -a ${srcdir}/fakeinstall/usr/share/man/man1/nxproxy.1 ${pkgdir}/usr/share/man/man1
+}
+
+package_nx-xcompext() {
+  
+  pkgdesc="Xcompext/Xcompshad library for NX"
+  depends=('libxcomp')
+	
+  cd "${srcdir}/fakeinstall"
+  install -dm755 ${pkgdir}/usr/lib/
+  cp -a ${srcdir}/fakeinstall/usr/lib/nx/libXcompext.so* ${pkgdir}/usr/lib
+}
+
+package_nx-x11() {
+  
+  pkgdesc="NX-X11 lib for the NX framework"
+  depends=('zlib')
+	
+  cd "${srcdir}/fakeinstall"
+  install -dm755 ${pkgdir}/{etc/ld.so.conf.d,/usr/lib/nx}
+  cp -aR ${srcdir}/fakeinstall/usr/lib/NX3/lib*/nx/lib*.so* ${pkgdir}/usr/lib/nx
+  
+  install -m 644 "$srcdir/nx-x11.ld.so.conf.d" "$pkgdir/etc/ld.so.conf.d/nx.conf"
+}
+
+package_nxagent() {
+  
+  pkgdesc="NX X server based on Xnest"
+  depends=('nx-xcompext')
+	
+  cd "${srcdir}/fakeinstall"
+  install -dm755 ${pkgdir}/usr/{bin,lib/nx}
+  cp -a ${srcdir}/fakeinstall/usr/lib/NX3/bin/nxagent ${pkgdir}/usr/lib/nx
+  cd ${pkgdir}/usr/bin
+  ln -sv /usr/lib/nx/nxagent .
+}
