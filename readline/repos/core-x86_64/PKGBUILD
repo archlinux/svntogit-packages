@@ -6,7 +6,7 @@ pkgname=readline
 _basever=6.2
 _patchlevel=002 #prepare for some patches
 pkgver=$_basever.$_patchlevel
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU readline library"
 arch=('i686' 'x86_64')
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
@@ -43,7 +43,7 @@ build() {
   # build with -fPIC for x86_64 (FS#15634)
   [ $CARCH == "x86_64" ] && CFLAGS="$CFLAGS -fPIC"
 
-  ./configure --prefix=/usr --libdir=/lib
+  ./configure --prefix=/usr
   make SHLIB_LIBS=-lncurses
 }
 
@@ -52,13 +52,4 @@ package() {
   make DESTDIR=${pkgdir} install
   
   install -Dm644 ${srcdir}/inputrc ${pkgdir}/etc/inputrc
-
-  # FHS recommends only shared libs in /lib
-  install -dm755 $pkgdir/usr/lib
-  mv $pkgdir/lib/*.a $pkgdir/usr/lib
-
-  # to make the linker find the shared lib and fix compile issues
-  cd ${pkgdir}/usr/lib
-  ln -sv /lib/libreadline.so .
-  ln -sv /lib/libhistory.so .
 }
