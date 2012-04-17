@@ -6,8 +6,8 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.0
-pkgrel=4
-_snapshot=4.7-20120407
+pkgrel=5
+_snapshot=4.7-20120414
 _libstdcppmanver=20120307		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -21,7 +21,7 @@ source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-4.7.0-cloog-0.17.patch)
-md5sums=('e44a8484687ef52c02066d6434ecf42b'
+md5sums=('9f9d082b64753d5908690500251fc52e'
          '489d2f5311535800a120efd8d18db719'
          'ced48436c1b3c981d721a829f1094de1'
          '575f7d17b022e609447a590e481b18b5')
