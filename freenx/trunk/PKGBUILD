@@ -1,25 +1,34 @@
 # $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 #Contributed: eliott <eliott@solarblue.net>, Andre Naumann <anaumann@SPARCed.org> 
+
 pkgname=freenx
 pkgver=0.7.3
-pkgrel=10
+pkgrel=10.1
 pkgdesc="Free Software (GPL) Implementation of the NX Server"
 arch=(i686 x86_64)
 url="http://freenx.berlios.de"
 license=('GPL')
-depends=('nxserver' 'gnu-netcat' 'inetutils' 'openssh' 'expect' 'xorg-xauth' 'xorg-fonts-misc' 'coreutils' 'xorg-xmessage' 'xorg-xrdb' 'xorg-xpr' 'xorg-xset' 'xorg-sessreg')
-backup=(opt/NX/etc/node.conf)
+depends=('nx-common' 'nx-x11' 'nxagent' 'nxproxy' 'gnu-netcat' 'inetutils' 'openssh' 'expect' 'python'
+         'xorg-xauth' 'xorg-fonts-misc' 'coreutils' 'xorg-xmessage' 'xorg-xrdb' 'xorg-xpr' 'xorg-xset' 'xorg-sessreg')
+makedepends=('imake')
+options=('!makeflags')
+backup=(etc/nxserver/node.conf)
 install=freenx.install
 source=(http://download.berlios.de/freenx/$pkgname-server-$pkgver.tar.gz
         keymap.patch
         nxagent-startup.patch
         freenx-latest-svn.patch
         remove-dialog.patch)
+md5sums=('856f597e139018f7ed62713c9d6c9ed5'
+         'f0867659c925f6363fb2b7661f349248'
+         '30dc16d8e2093ff71d5834a169ad9d00'
+         '788f30322783cf2c2dc833e2e4d5e8ad'
+         'cae1773312506eeefe6a8de07c492bd8')
 
 build() {
   # patch and install nxserver
-  cd $startdir/src/$pkgname-server-$pkgver
+  cd $srcdir/$pkgname-server-$pkgver
   # add latest svn fixes
   patch -Np3 -i ../freenx-latest-svn.patch
   # patch from inside nx
@@ -31,7 +40,7 @@ build() {
   # remove broken dialog function
   patch -Np0 -i  ${srcdir}/remove-dialog.patch
   sed -i -e 's,authorized_keys2,authorized_keys,g' nxloadconfig
-  sed -i -e 's,/usr/NX,/opt/NX,g' nxloadconfig
+  sed -i -e 's,/usr/NX,/usr/lib/nx,g' nxloadconfig
   sed -i -e 's,netcat,nc,g' nxloadconfig
   sed -i -e 's/utmp/nx/g' nxsetup
   sed -i -e 's,/usr/X11R6/bin/xauth,/usr/bin/xauth,g' nxloadconfig
@@ -43,34 +52,29 @@ build() {
   sed -i -e 's,libXcomp.so,libXcomp.so.3,g' nxloadconfig
   sed -i -e 's,libXcompext.so,libXcompext.so.3,g' nxloadconfig
   sed -i -e 's,libXrender.so.1.2,libXrender.so.1.2.2:$APPLICATION_LIBRARY_PATH/libXcompsh.so.3:$APPLICATION_LIBRARY_PATH/libXcompshad.so.3,g' nxloadconfig
+  sed -i -e 's:NX_ETC_DIR\=$NX_DIR\/etc:NX_ETC_DIR=\/etc\/nxserver:g' nxloadconfig
+  sed -i -e 's:NX_SESS_DIR=$NX_DIR\/var\/db:NX_SESS_DIR=\/var\/lib\/nx\/db:g' nxloadconfig
+  sed -i -e 's:NX_HOME_DIR=$NX_DIR:NX_HOME_DIR=\/var\/lib\/nx:g' nxloadconfig
   # fix key generation
   sed -i -e 's,AUTOMATIC="no",AUTOMATIC="yes",g' nxsetup
+  #export DESTDIR="${pkgdir}" 
+  make
 }
 
 package() {
-  cd $startdir/src/$pkgname-server-$pkgver  
-  install -D -m755 nxnode $startdir/pkg/opt/NX/bin/nxnode
-  install -D -m755 nxserver $startdir/pkg/opt/NX/bin/nxserver
-  install -D -m755 nxsetup $startdir/pkg/opt/NX/bin/nxsetup
-  install -D -m755 nxkeygen $startdir/pkg/opt/NX/bin/nxkeygen
-  install -D -m755 nxnode-login $startdir/pkg/opt/NX/bin/nxnode-login
-  install -D -m755 nxloadconfig $startdir/pkg/opt/NX/bin/nxloadconfig
-  install -D -m755 nxdialog $startdir/pkg/opt/NX/bin/nxdialog
-  install -D -m755 nxviewer_helper $startdir/pkg/opt/NX/bin/nxviever_helper
-  install -D -m755 nxcups-gethost $startdir/pkg/opt/NX/bin/nxcups-gethost
-  install -D -m755 nxdesktop_helper $startdir/pkg/opt/NX/bin/nxdesktop_helper
-  # provided by nxclient!
-  #install -D -m755 nxprint $startdir/pkg/opt/NX/bin/nxprint
-  install -D -m755 node.conf.sample $startdir/pkg/opt/NX/etc/node.conf
-  # install nxhelper
-  cd nxserver-helper
-  make
-  install -D -m755 nxserver-helper $startdir/pkg/opt/NX/bin/nxserver-helper
+  cd $srcdir/$pkgname-server-$pkgver  
+
+  make install DESTDIR="${pkgdir}"
+
+  # create symlinks
+  install -dm755 ${pkgdir}/usr/bin
+  cd ${pkgdir}/usr/bin
+  for file in ${pkgdir}/usr/lib/nx/bin/*; do
+    ln -sv /usr/lib/nx/bin/`basename $file` .
+  done
+
+  mv $pkgdir/etc/nxserver/node.conf.sample $pkgdir/etc/nxserver/node.conf
+ 
   # create nxserver homedir
-  mkdir -m700 -p $startdir/pkg/opt/NX/home/nx
+  mkdir -m700 -p $pkgdir/var/lib/nxserver/{home/nx,db}
 }
-md5sums=('856f597e139018f7ed62713c9d6c9ed5'
-         'f0867659c925f6363fb2b7661f349248'
-         '30dc16d8e2093ff71d5834a169ad9d00'
-         '788f30322783cf2c2dc833e2e4d5e8ad'
-         'cae1773312506eeefe6a8de07c492bd8')
