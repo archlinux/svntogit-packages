@@ -9,6 +9,7 @@ usage () {
 	echo ""
 	echo "  Options:"
 	echo "    --kernel_version=      use kernel version (no autodetect)"
+	echo "    --kernel_directory=    use kernel module directory (no autodetect)"
 	echo "    --ide-legacy           use old ide modules instead of pata"
 	echo "    --load-modules         load all detected modules"
 	echo "    --unload-modules       unload all detected modules"
@@ -69,6 +70,9 @@ usage () {
 
 # setting kernel version
 case $1 in
+       --kernel_directory=*)
+	KERNEL_DIRECTORY="$(echo $1 | awk -F= '{print $2;}')"
+	;;
 	--kernel_version=*)
 	KERNEL_VERSION="$(echo $1 | awk -F= '{print $2;}')"
 	;;
@@ -242,11 +246,11 @@ if [ "$aliases" = "" ]; then
 fi
 
 # generate files for the different actions
-modprobe -i -a --set-version=$KERNEL_VERSION --show-depends $aliases >> /tmp/modules-plain 2>/dev/null
+modprobe -i -a --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends $aliases >> /tmp/modules-plain 2>/dev/null
 
 # fix ide cdrom detection on proliant 1600
 if [ "$(echo $aliases | grep 'pci:v00000E11d00000001sv00000000sd00000000bc06sc02i00')" ]; then
-	modprobe -i --set-version=$KERNEL_VERSION --show-depends ide-generic >> /tmp/modules-plain 2>/dev/null
+	modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends ide-generic >> /tmp/modules-plain 2>/dev/null
 fi
 
 # find PNP devices like parports, soundcards etc.
@@ -257,35 +261,35 @@ if [ "$(find /sys/devices -noleaf -name 'id' | grep /pnp)" ]; then
 		[ "$devid" ] || continue
 	
 		modprobe -i --set-version=$KERNEL_VERSION --show-depends pnp:d${devid} >> /tmp/modules-plain 2>/dev/null
-		[ "$devid" = "PNP0800" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends pcspkr >> /tmp/modules-plain  2>/dev/null
-		[ "$devid" = "PNP0510" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends irtty-sir >> /tmp/modules-plain 2>/dev/null
-		[ "$devid" = "PNP0511" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends irtty-sir >> /tmp/modules-plain 2>/dev/null
-		[ "$devid" = "PNPb02f" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends analog >> /tmp/modules-plain 2>/dev/null
+		[ "$devid" = "PNP0800" ] && modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends pcspkr >> /tmp/modules-plain  2>/dev/null
+		[ "$devid" = "PNP0510" ] && modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends irtty-sir >> /tmp/modules-plain 2>/dev/null
+		[ "$devid" = "PNP0511" ] && modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends irtty-sir >> /tmp/modules-plain 2>/dev/null
+		[ "$devid" = "PNPb02f" ] && modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends analog >> /tmp/modules-plain 2>/dev/null
 
 		# load ppp-generic if serial ports are detected for modems
-		[ "$devid" = "PNP0501" ] && modprobe -i --set-version=$KERNEL_VERSION --show-depends ppp-generic >> /tmp/modules-plain 2>/dev/null
+		[ "$devid" = "PNP0501" ] && modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends ppp-generic >> /tmp/modules-plain 2>/dev/null
 	done
 fi
 
 # SCSI disks/cdroms/tapes/generic devices
 if [ "$(find /sys/devices -noleaf -name 'type')" ]; then
 	for i in $(cat $(find /sys/devices -noleaf -name "type")); do
-		case $i in (4|5)       modprobe -i --set-version=$KERNEL_VERSION --show-depends sr_mod >> /tmp/modules-plain 2>/dev/null ;; esac
-		case $i in (2|3|6|8|9) modprobe -i --set-version=$KERNEL_VERSION --show-depends sg >> /tmp/modules-plain 2>/dev/null ;; esac
-		case $i in (0|7|14)    modprobe -i --set-version=$KERNEL_VERSION --show-depends sd_mod >> /tmp/modules-plain 2>/dev/null ;; esac
-		case $i in (1)         modprobe -i --set-version=$KERNEL_VERSION --show-depends st >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (4|5)       modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends sr_mod >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (2|3|6|8|9) modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends sg >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (0|7|14)    modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends sd_mod >> /tmp/modules-plain 2>/dev/null ;; esac
+		case $i in (1)         modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends st >> /tmp/modules-plain 2>/dev/null ;; esac
 	done
 fi
 
 # add Buslogic for vmware
 if [ "$VMWARE" = "1" ]; then
-	 modprobe -i --set-version=$KERNEL_VERSION --show-depends BusLogic >> /tmp/modules-plain 2>/dev/null
+	 modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends BusLogic >> /tmp/modules-plain 2>/dev/null
 fi
 
 # Parport modules
 if [ "$(grep 'parport' /tmp/modules-plain)" ]; then
-	modprobe -i --set-version=$KERNEL_VERSION --show-depends lp >> /tmp/modules-plain 2>/dev/null
-	modprobe -i --set-version=$KERNEL_VERSION --show-depends ppdev >> /tmp/modules-plain 2>/dev/null
+	modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends lp >> /tmp/modules-plain 2>/dev/null
+	modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends ppdev >> /tmp/modules-plain 2>/dev/null
 fi
 
 sort -u /tmp/modules-plain >> /tmp/modules-stripped
