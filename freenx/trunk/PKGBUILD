@@ -4,27 +4,32 @@
 
 pkgname=freenx
 pkgver=0.7.3
-pkgrel=10.1
+pkgrel=10.2
 pkgdesc="Free Software (GPL) Implementation of the NX Server"
 arch=(i686 x86_64)
 url="http://freenx.berlios.de"
 license=('GPL')
 depends=('nx-common' 'nx-x11' 'nxagent' 'nxproxy' 'gnu-netcat' 'inetutils' 'openssh' 'expect' 'python'
          'xorg-xauth' 'xorg-fonts-misc' 'coreutils' 'xorg-xmessage' 'xorg-xrdb' 'xorg-xpr' 'xorg-xset' 'xorg-sessreg')
+optdepends=('cups: adds printing support')
 makedepends=('imake')
 options=('!makeflags')
+conflicts=('nxserver')
+provides=('nxserver')
 backup=(etc/nxserver/node.conf)
 install=freenx.install
 source=(http://download.berlios.de/freenx/$pkgname-server-$pkgver.tar.gz
         keymap.patch
         nxagent-startup.patch
         freenx-latest-svn.patch
-        remove-dialog.patch)
+        remove-dialog.patch
+        freenx-server-0.7.3-nxipp.patch)
 md5sums=('856f597e139018f7ed62713c9d6c9ed5'
          'f0867659c925f6363fb2b7661f349248'
          '30dc16d8e2093ff71d5834a169ad9d00'
          '788f30322783cf2c2dc833e2e4d5e8ad'
-         'cae1773312506eeefe6a8de07c492bd8')
+         'cae1773312506eeefe6a8de07c492bd8'
+         'b3244c52a6bafc6d9b528eb4d4426e36')
 
 build() {
   # patch and install nxserver
@@ -37,6 +42,8 @@ build() {
   patch -Np0 -i ${srcdir}/keymap.patch 
   # patch nxagent startup to avoid login issues
   patch -Np0 -i ${srcdir}/nxagent-startup.patch
+  # check for cups existance and then symlinks the backend
+  patch -Np1 -i ${srcdir}/freenx-server-0.7.3-nxipp.patch
   # remove broken dialog function
   patch -Np0 -i  ${srcdir}/remove-dialog.patch
   sed -i -e 's,authorized_keys2,authorized_keys,g' nxloadconfig
@@ -53,11 +60,14 @@ build() {
   sed -i -e 's,libXcompext.so,libXcompext.so.3,g' nxloadconfig
   sed -i -e 's,libXrender.so.1.2,libXrender.so.1.2.2:$APPLICATION_LIBRARY_PATH/libXcompsh.so.3:$APPLICATION_LIBRARY_PATH/libXcompshad.so.3,g' nxloadconfig
   sed -i -e 's:NX_ETC_DIR\=$NX_DIR\/etc:NX_ETC_DIR=\/etc\/nxserver:g' nxloadconfig
-  sed -i -e 's:NX_SESS_DIR=$NX_DIR\/var\/db:NX_SESS_DIR=\/var\/lib\/nx\/db:g' nxloadconfig
-  sed -i -e 's:NX_HOME_DIR=$NX_DIR:NX_HOME_DIR=\/var\/lib\/nx:g' nxloadconfig
+  sed -i -e 's:NX_SESS_DIR=$NX_DIR\/var\/db:NX_SESS_DIR=\/var\/lib\/nxserver\/db:g' nxloadconfig
+  sed -i -e 's:NX_HOME_DIR=$NX_DIR:NX_HOME_DIR=\/var\/lib\/nxserver:g' nxloadconfig
+  sed -i -e 's:NOMACHINE_NX_HOME_DIR="/usr/lib/nx/home/nx":NOMACHINE_NX_HOME_DIR="/var/lib/nxserver/home/nx":g' nxloadconfig
+  sed -i -e 's:\/usr\/NX:\/usr\/lib\/nx:g' nxdialog
+
   # fix key generation
   sed -i -e 's,AUTOMATIC="no",AUTOMATIC="yes",g' nxsetup
-  #export DESTDIR="${pkgdir}" 
+
   make
 }
 
@@ -75,6 +85,11 @@ package() {
 
   mv $pkgdir/etc/nxserver/node.conf.sample $pkgdir/etc/nxserver/node.conf
  
-  # create nxserver homedir
+  # create some missing nxserver directories
   mkdir -m700 -p $pkgdir/var/lib/nxserver/{home/nx,db}
+  mkdir -m700 -p $pkgdir/usr/lib/nx/share
+
+  # remove files that are part of nxclient
+  rm -f  ${pkgdir}/usr/lib/nx/bin/nxprint
+  rm -f  ${pkgdir}/usr//bin/nxprint
 }
