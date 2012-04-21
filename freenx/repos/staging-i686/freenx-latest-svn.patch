@@ -1,0 +1,288 @@
+diff -ur freenx-server-0.7.3//ChangeLog ../trunk/freenx-server//ChangeLog
+--- freenx-server-0.7.3//ChangeLog	2008-08-22 02:44:43.000000000 +0200
++++ ../trunk/freenx-server//ChangeLog	2011-01-26 23:23:36.850005855 +0100
+@@ -1,3 +1,20 @@
++xx.11.2008 FreeNX 0.7.4
++	* Opened the 0.7.4 development.
++	* Fixed missing export of NX_ETC_DIR in Makefile,
++	  so node.conf.sample is installed correctly.
++	  (fabianx@bat.berlios.de)
++	* Fixed broken round-robin load balance algorithm.
++	  (fabianx@bat.berlios.de)
++	* Fixed --terminate|--suspend|--force-terminate for
++	  load balancing case.
++	  (fabianx@bat.berlios.de)
++	* Fixed --terminate|--suspend|--force-terminate for
++	  usermode case.
++	  (fabianx@bat.berlios.de)
++	* Fixed non-encrypted session mode. You might need to
++	  set EXTERNAL_PROXY_IP in node.conf.
++	  (fabianx@bat.berlios.de)
++
+ 18.08.2008 FreeNX 0.7.3 "Priscilla One Year Edition"
+ 	* Opened the 0.7.3 development.
+ 	* Added logging of failed authentication attempts
+diff -ur freenx-server-0.7.3//Makefile ../trunk/freenx-server//Makefile
+--- freenx-server-0.7.3//Makefile	2008-08-18 04:16:25.000000000 +0200
++++ ../trunk/freenx-server//Makefile	2011-01-26 23:23:36.856672521 +0100
+@@ -8,7 +8,7 @@
+ all:
+ 	cd nxviewer-passwd && xmkmf && make Makefiles && make depend
+ 	source nxloadconfig &&\
+-	export PATH_BIN PATH_LIB CUPS_BACKEND NX_VERSION &&\
++	export PATH_BIN PATH_LIB CUPS_BACKEND NX_VERSION NX_ETC_DIR &&\
+ 	for i in $(SUBDIRS) ; \
+ 	do\
+ 		echo "making" all "in $$i..."; \
+@@ -44,5 +44,5 @@
+ 
+ install:
+ 	source nxloadconfig &&\
+-	export PATH_BIN PATH_LIB CUPS_BACKEND NX_VERSION &&\
++	export PATH_BIN PATH_LIB CUPS_BACKEND NX_VERSION NX_ETC_DIR &&\
+ 	$(MAKE) nxenv_install
+diff -ur freenx-server-0.7.3//node.conf.sample ../trunk/freenx-server//node.conf.sample
+--- freenx-server-0.7.3//node.conf.sample	2008-08-22 02:44:43.000000000 +0200
++++ ../trunk/freenx-server//node.conf.sample	2011-01-26 23:23:36.850005855 +0100
+@@ -37,7 +37,7 @@
+ #
+ #           https://mail.kde.org/mailman/listinfo/freenx-knx
+ #
+-# SVN: $Id: node.conf.sample 580 2008-08-22 00:44:43Z fabianx $
++# SVN: $Id: node.conf.sample 613 2008-09-01 20:42:31Z fabianx $
+ 
+ #########################################################################
+ # General FreeNX directives
+@@ -47,6 +47,11 @@
+ # different than the default hostname (as returned by `hostname`)
+ #SERVER_NAME="$(hostname)"
+ 
++# The node ip which is used by NX Node in unecnrypted session mode.
++# Set it if you want to use a specific external ip or the autodetection
++# is not working.
++#EXTERNAL_PROXY_IP=""
++
+ # The port number where local 'sshd' is listening.
+ #SSHD_PORT=22
+ 
+diff -ur freenx-server-0.7.3//nxloadconfig ../trunk/freenx-server//nxloadconfig
+--- freenx-server-0.7.3//nxloadconfig	2008-08-22 02:44:43.000000000 +0200
++++ ../trunk/freenx-server//nxloadconfig	2011-01-26 23:23:36.856672521 +0100
+@@ -5,7 +5,7 @@
+ #
+ # License: GPL, version 2
+ #
+-# SVN: $Id: nxloadconfig 580 2008-08-22 00:44:43Z fabianx $
++# SVN: $Id: nxloadconfig 613 2008-09-01 20:42:31Z fabianx $
+ #
+ # ========================================================================
+ 
+@@ -52,7 +52,7 @@
+ # DO NOT TOUCH unless you REALLY know what you are doing
+ #########################################################################
+ 
+-NX_VERSION=3.2.0-73
++NX_VERSION=3.2.0-74-SVN
+ NX_LICENSE="OS (GPL, using backend: %BACKEND%)"
+ 
+ # Where can different nx components be found
+@@ -85,6 +85,7 @@
+ # General FreeNX directives
+ 
+ SERVER_NAME="$(hostname)"
++EXTERNAL_PROXY_IP=""
+ SSHD_PORT=22
+ 
+ # Authentication / Security directives
+diff -ur freenx-server-0.7.3//nxnode ../trunk/freenx-server//nxnode
+--- freenx-server-0.7.3//nxnode	2008-08-22 02:44:43.000000000 +0200
++++ ../trunk/freenx-server//nxnode	2011-01-26 23:23:36.853339188 +0100
+@@ -13,7 +13,7 @@
+ #
+ # License: GNU GPL, version 2
+ #
+-# SVN: $Id: nxnode 580 2008-08-22 00:44:43Z fabianx $
++# SVN: $Id: nxnode 613 2008-09-01 20:42:31Z fabianx $
+ #
+ # 21.06.2004: - Full reconnection support
+ 
+@@ -1184,6 +1184,17 @@
+ 		[ -z "$userip" -a "$host" = "127.0.0.1" ] && userip="127.0.0.1"
+ 		[ -z "$userip" ] && userip="*"
+ 	fi
++
++	# We need our own external IP
++	proxyip="$EXTERNAL_PROXY_IP"
++
++	if [ -z "$proxyip" -a -n "$host" ]
++	then
++		[ "$host" = "127.0.0.1" ] && host=$(hostname)
++		proxyip=$(ping -c1 "$host" | grep 'PING' | cut -d'(' -f2 | cut -d')' -f1)
++	fi
++	
++	[ -z "$proxyip" ] && proxyip="127.0.0.1"
+ 	
+ 	# ok, lets make the session dir first:
+ 	
+@@ -1316,7 +1327,7 @@
+ NX> 705 Session display: $display
+ NX> 703 Session type: $type
+ NX> 701 Proxy cookie: $proxy_cookie
+-NX> 702 Proxy IP: $userip
++NX> 702 Proxy IP: $proxyip
+ NX> 706 Agent cookie: $cookie
+ NX> 704 Session cache: $type
+ NX> 707 SSL tunneling: $ssl_tunnel
+diff -ur freenx-server-0.7.3//nxserver ../trunk/freenx-server//nxserver
+--- freenx-server-0.7.3//nxserver	2008-08-22 02:44:43.000000000 +0200
++++ ../trunk/freenx-server//nxserver	2011-01-26 23:23:36.856672521 +0100
+@@ -11,7 +11,7 @@
+ #
+ # License: GNU GPL, version 2
+ #
+-# SVN: $Id: nxserver 580 2008-08-22 00:44:43Z fabianx $
++# SVN: $Id: nxserver 612 2008-08-25 03:28:15Z fabianx $
+ #
+ 
+ # Read the config file
+@@ -1192,7 +1192,7 @@
+ 	# Lock held
+ 
+ 	SERVER_LB_NR=$(cat $NX_SESS_DIR/round-robin 2>/dev/null)
+-	let SERVER_LB_NR=(SERVER_LB_NR+1) % SERVER_LB_NR_OF_HOSTS
++	let SERVER_LB_NR=(SERVER_LB_NR+1)%SERVER_LB_NR_OF_HOSTS
+ 	echo $SERVER_LB_NR >$NX_SESS_DIR/round-robin
+ 
+ 	# Exit critical section
+@@ -1961,71 +1961,71 @@
+ 	session_history "$user" "$sessid"
+ }
+ 
+-cmd_terminate()
++cmd_execute()
+ {
+-	CMD_PARAMS=$(cmd_parse_3_params "$2")
+-	[ -z "$CMD_PARAMS" ] && exit 1
+-	for i in $CMD_PARAMS;
++	cmd_host="$1"
++	cmd_user="$2"
++	cmd_cmd="$3"
++
++	if [ "$ENABLE_USERMODE_AUTHENTICATION" = "1" ]
++	then
++		sh -c "$cmd_cmd"
++	elif [ "$cmd_host" = "127.0.0.1" -o "$cmd_host" = "localhost" ]
++	then
++		su - "$cmd_user" -c "$cmd_cmd"
++	else
++		ssh "$cmd_host" su - "$cmd_user" -c "'$cmd_cmd'"
++	fi
++}
++
++cmd_terminate_or_send()
++{
++	CMD="$1"
++
++	if [ "$CMD" = "--broadcast" ]
++	then
++		CMD_PARAMS=$(session_find_all)
++		[ -z "$CMD_PARAMS" ] && cmd_abort "Error: No running session could be found."
++	else
++		CMD_PARAMS=$(cmd_parse_3_params "$2")
++		[ -z "$CMD_PARAMS" ] && exit 1
++		shift
++	fi
++	shift
++
++	for i in $CMD_PARAMS
+ 	do
+ 			CMDLINE=$(session_get_cmdline $i)
+ 			cmd_sessionid=$(getparam sessionId)
++			cmd_display=$(getparam display)
+ 			cmd_user=$(getparam userName)
+ 			cmd_type=$(getparam type)
+ 			cmd_status=$(getparam status)
++			cmd_host=$(getparam host)
+ 
+ 			# is it a "good" session?
+-			case "$1" in 
++			case "$CMD" in 
+ 			--suspend)
+ 				if [ "$cmd_status" = "Running" ] && stringinstring "unix-" "$cmd_type"
+ 				then
+-					echo "sessionid=$cmd_sessionid" | su - "$cmd_user" -c "$PATH_BIN/nxnode --suspend"
++					echo "sessionid=$cmd_sessionid" | cmd_execute "$cmd_host" "$cmd_user" "$PATH_BIN/nxnode --suspend"
+ 				fi
+ 			;;
+ 			--terminate)
+-				echo "sessionid=$cmd_sessionid" | su - "$cmd_user" -c "$PATH_BIN/nxnode --terminate"
++				echo "sessionid=$cmd_sessionid" | cmd_execute "$cmd_host" "$cmd_user" "$PATH_BIN/nxnode --terminate"
+ 			;;
+ 			--force-terminate)
+-				echo "sessionid=$cmd_sessionid" | su - "$cmd_user" -c "$PATH_BIN/nxnode --terminate"
++				echo "sessionid=$cmd_sessionid" | cmd_execute "$cmd_host" "$cmd_user" "$PATH_BIN/nxnode --terminate"
+ 				session_close $cmd_sessionid
+ 			;;
+-			esac
+-	done
+-
+-}
+-
+-cmd_send()
+-{
+-	if [ "$1" = "--broadcast" ]
+-	then
+-	  CMD_PARAMS=$(session_find_all)
+-	  [ -z "$CMD_PARAMS" ] && cmd_abort "Error: No running session could be found."
+-	else
+-	  CMD_PARAMS=$(cmd_parse_3_params "$2")
+-	  [ -z "$CMD_PARAMS" ] && exit 1
+-	  shift
+-	fi
+-	shift
+-	for i in $CMD_PARAMS;
+-	do
+-			CMDLINE=$(session_get_cmdline $i)
+-			cmd_display=$(getparam display)
+-			cmd_user=$(getparam userName)
+-			cmd_type=$(getparam type)
+-			cmd_status=$(getparam status)
+-			cmd_host=$(getparam host)
+-
+-			# is it a "good" session?
+-			if [ "$cmd_status" = "Running" ] && stringinstring "unix-" "$cmd_type"
+-			then
+-				if [ "$cmd_host" = "127.0.0.1" -o "$cmd_host" = "localhost" ]
++			--send|--broadcast)
++				# is it a "good" session?
++				if [ "$cmd_status" = "Running" ] && stringinstring "unix-" "$cmd_type"
+ 				then
+-					su - "$cmd_user" -c "$PATH_BIN/nxdialog --dialog ok --caption \"NX Administrator Message\" --message \"$@\" -display \":$cmd_display\" &"
+-				else
+-					ssh $cmd_host su - "$cmd_user" -c "'$PATH_BIN/nxdialog --dialog ok --caption \"NX Administrator Message\" --message \"$@\" -display \":$cmd_display\" &'"
++					cmd_execute "$cmd_host" "$cmd_user" "$PATH_BIN/nxdialog --dialog ok --caption \"NX Administrator Message\" --message \"$@\" -display \":$cmd_display\" &"
+ 				fi
+-			fi
++			esac
+ 	done
+-	#nxnode_start --send "$CMD_PARAMS"
+ }
+ 
+ #
+@@ -2099,13 +2099,13 @@
+ 		cmd_history "$@"
+ 	;;
+ 	--terminate|--suspend|--force-terminate)
+-		cmd_terminate "$@"
++		cmd_terminate_or_send "$@"
+ 	;;
+ 	--cleanup)
+-		cmd_terminate "--force-terminate" "*"
++		cmd_terminate_or_send "--force-terminate" "*"
+ 	;;
+ 	--send|--broadcast)
+-		cmd_send "$@"
++		cmd_terminate_or_send "$@"
+ 	;;
+ 	*)
+ 		cmd_abort "Error: Function $CMD not implemented yet."
