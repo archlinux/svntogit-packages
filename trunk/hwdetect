@@ -68,18 +68,29 @@ usage () {
 [ "$1" = "--help" ] && usage
 [ "$1" = "-h" ]     && usage
 
-# setting kernel version
-case $1 in
-       --kernel_directory=*)
-	KERNEL_DIRECTORY="$(echo $1 | awk -F= '{print $2;}')"
-	;;
-	--kernel_version=*)
-	KERNEL_VERSION="$(echo $1 | awk -F= '{print $2;}')"
-	;;
-	--rootdevice=*)
-	ROOTDEVICE="$(echo $1 | awk -F= '{print $2;}')"
-	;;
-esac
+# setting parameters
+PARAMETER="$(echo $*)"
+parameter() {
+	while [ -n "$1" ]; do
+		case $1 in
+			--kernel_directory=*)
+			KERNEL_DIRECTORY="$(echo $1 | awk -F= '{print $2;}')"
+			;;
+			--kernel_version=*)
+			KERNEL_VERSION="$(echo $1 | awk -F= '{print $2;}')"
+			;;
+			--rootdevice=*)
+			ROOTDEVICE="$(echo $1 | awk -F= '{print $2;}')"
+			;;
+			-hooks-dir=*|--hooks-dir=*)
+			HOOKS_DIR="$(echo $1 | awk -F= '{print $2;}')"
+			;;
+		esac
+		shift
+	done
+}
+
+parameter $PARAMETER
 
 if [ "$KERNEL_VERSION" = "" ]; then
 	KERNEL_VERSION="$(uname -r)"
@@ -221,12 +232,6 @@ if ! [ "$ROOTDEVICE" = "" ]; then
 	fi
 fi
 
-# checking /sys
-if ! [ -d /sys/ ]; then
-	echo "/sys/ is not present -- mount /sys first" >&2
-	exit 1
-fi
-
 : >/tmp/modules-plain
 : >/tmp/modules-stripped
 : >/tmp/modules-sorted
@@ -234,16 +239,10 @@ fi
 : >/tmp/.blkid
 
 # generate blkid
-/sbin/blkid -c /dev/null -s TYPE > /tmp/.blkid
+blkid -c /dev/null -s TYPE > /tmp/.blkid
 
 # find pci aliases
 aliases=$(find /sys/ -noleaf -name modalias  -exec cat {} +)
-
-# check for empty aliases
-if [ "$aliases" = "" ]; then
-	echo "hwdetect aborted -- you need a kernel >= 2.6.12" >&2
-	exit 1
-fi
 
 # generate files for the different actions
 modprobe -i -a --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends $aliases >> /tmp/modules-plain 2>/dev/null
@@ -389,19 +388,12 @@ showlist4() {
 }
 
 # starting different actions
-while [ $# -gt 0 ]; do
+while [ -n "$*"  ]; do
 	case $1 in
-		-hooks-dir=*|--hooks-dir=*)
-			HOOKS_DIR="$(echo $1 | awk -F= '{print $2;}')"
-			 ;;
 		--load-modules)
 			# load all detected pci modules
 			for i in $(cat /tmp/moduleslist); do
-				if [ -e /lib/udev/load-modules.sh ]; then 
-					/lib/udev/load-modules.sh $i > /dev/null 2>&1
-				else
-					modprobe $i > /dev/null 2>&1
-				fi
+				modprobe $i > /dev/null 2>&1
 			done
 			;;
 
@@ -513,7 +505,7 @@ while [ $# -gt 0 ]; do
 			 ;;
 		--hooks) 
 			if [ "$HOOKS_DIR" = "" ]; then
-				HOOKS_DIR="/lib/initcpio/install"
+				HOOKS_DIR="/usr/lib/initcpio/install"
 			fi
 			START_HOOKS="base v86d udev keymap fsck autodetect ide pata scsi sata usb fw pcmcia net dmraid usbinput $ADVANCED btrfs filesystems shutdown"
 			# remove the ones that don't exist on the system
