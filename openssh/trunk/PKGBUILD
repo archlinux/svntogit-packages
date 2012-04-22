@@ -4,25 +4,26 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=5.9p1
-pkgrel=8
+pkgver=6.0p1
+pkgrel=1
 pkgdesc='Free version of the SSH connectivity tools'
-arch=('i686' 'x86_64')
-license=('custom:BSD')
 url='http://www.openssh.org/portable.html'
-backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
-depends=('krb5' 'openssl' 'libedit')
+license=('custom:BSD')
+arch=('i686' 'x86_64')
+depends=('krb5' 'openssl' 'libedit' 'ldns')
 optdepends=('x11-ssh-askpass: input passphrase in X without a terminal')
 source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"
         'sshd.close-sessions'
         'sshd.confd'
         'sshd.pam'
         'sshd')
-sha1sums=('ac4e0055421e9543f0af5da607a72cf5922dcc56'
+sha1sums=('f691e53ef83417031a2854b8b1b661c9c08e4422'
           '954bf1660aa32620c37034320877f4511b767ccb'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
           '3413909fd45a28701c92e6e5b59c6b65346ddb0f'
           '21fa88de6cc1c7912e71655f50896ba17991a1c2')
+
+backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
@@ -31,17 +32,25 @@ build() {
 		--prefix=/usr \
 		--libexecdir=/usr/lib/ssh \
 		--sysconfdir=/etc/ssh \
-		--with-privsep-user=nobody \
-		--with-md5-passwords \
-		--with-pam \
-		--with-mantype=man \
-		--with-xauth=/usr/bin/xauth \
-		--with-kerberos5=/usr \
+		--with-ldns \
+		--with-libedit \
 		--with-ssl-engine \
-		--with-libedit=/usr/lib \
-		--disable-strip # stripping is done by makepkg
+		--with-pam \
+		--with-privsep-user=nobody \
+		--with-kerberos5=/usr \
+		--with-xauth=/usr/bin/xauth \
+		--with-mantype=man \
+		--with-md5-passwords \
 
 	make
+}
+
+check() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	# The connect.sh test must be run by a user with a decent login shell;
+	# chroot builds use nobody with /bin/false.
+	make tests || true
 }
 
 package() {
