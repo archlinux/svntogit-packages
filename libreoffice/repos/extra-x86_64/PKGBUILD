@@ -19,8 +19,8 @@ pkgname=('libreoffice-common'
 	'libreoffice-extension-presenter-screen'
 	'libreoffice-extension-presentation-minimizer'
 	'libreoffice-extension-report-builder')
-_LOver=3.5.1.2
-pkgver=3.5.1
+_LOver=3.5.2.2
+pkgver=3.5.2
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('LGPL3')
@@ -33,7 +33,7 @@ makedepends=( # makedepends
               #'saxon' - currently broken 
              # the runtime dependencies
              "curl>=7.20.0" "hunspell>=1.2.8" "python2>=2.7" 'libwpd>=0.9.2' 'libwps' 'libxaw' "neon>=0.28.6"
-             'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' "icu>=4.6" 'libxslt' 'librsvg'
+             'pango' 'nspr' 'libjpeg' 'libxrandr' 'libgl' 'dbus-glib' 'libxslt' 'librsvg' "icu>=49.1" 
              'redland' 'hyphen' 'lpsolve' 'gcc-libs' 'sh'  'libtextcat' 'graphite' 
              'hicolor-icon-theme' 'desktop-file-utils' 'shared-mime-info' 'gtk2' 'orbit2' 'translate-toolkit' 'xdg-utils'
 	         'ttf-dejavu') # to satisfy regression tests
@@ -75,7 +75,8 @@ source=(${_mirror}/${pkgbase}-{core,help,translations}-${_LOver}.tar.xz
 	http://download.go-oo.org/extern/185d60944ea767075d27247c3162b3bc-unowinreg.dll
 	gmake_install.diff::http://cgit.freedesktop.org/libreoffice/core/patch/?id=1048d8fa4abd3e55a45dfb6884db808da1d72c9e
 	smp_buildfix.diff::http://cgit.freedesktop.org/libreoffice/core/patch/?id=cf23f57ae6bb7af689a45e0a850c3c2f67a8f810
-	buildfix_kde4fpicker.diff::http://cgit.freedesktop.org/libreoffice/core/patch/?id=ee67c55260ec7723c39606955ccdbd3e2934935a)
+	buildfix_icu49.diff
+	libreoffice-common.sh libreoffice-common.csh)
 noextract=(d28864eb2b59bb57b034c0d4662a3cee-libvisio-0.0.15.tar.bz2
 	18f577b374d60b3c760a3a3350407632-STLport-4.5.tar.gz
 	185d60944ea767075d27247c3162b3bc-unowinreg.dll
@@ -104,9 +105,9 @@ noextract=(d28864eb2b59bb57b034c0d4662a3cee-libvisio-0.0.15.tar.bz2
 	ace6ab49184e329db254e454a010f56d-libxml-1.1.7.zip
 	db60e4fde8dd6d6807523deb71ee34dc-liblayout-0.2.10.zip
 	ba2930200c9f019c2d93a8c88c651a0f-flow-engine-0.9.4.zip)
-md5sums=('1edf0d39a7a921f6415f6a6ec7b314b3'
-         '607b544cd7b38f9e6db6fe7da25007a7'
-         'a3fa7818bfab14a6cccec645193e9982'
+md5sums=('a21156d5657b8619a523ffdc5cc0003e'
+         '3c064a24191274fcd8fd466ce9d5dc42'
+         '17ebcd0d25e716d3905b1a905907fd67'
          '18f577b374d60b3c760a3a3350407632'
          'd28864eb2b59bb57b034c0d4662a3cee'
          '1f24ab1d39f4a51faf22244c94a6203f'
@@ -137,7 +138,9 @@ md5sums=('1edf0d39a7a921f6415f6a6ec7b314b3'
          '185d60944ea767075d27247c3162b3bc'
          '60ce5dc9bd098f95c2e621a930c98dd9'
          '661a52a02a31b3afbe4b3b3146061afd'
-         '15fe8b5d79fbdc0b6bc2b454086671e7')
+         '9734ea20c9f67e1b6e1c5a1247fbd3ff'
+         '32fcd844935434807e68d7bd06b94f09'
+         '06a45184aefe078c4314e002ba666b52')
 
 build() {
 
@@ -161,7 +164,7 @@ build() {
 	# one late fix to solve make distro-pack-install issue
 	patch -Np1 -i ${srcdir}/gmake_install.diff
 	patch -Np1 -i ${srcdir}/smp_buildfix.diff
-	patch -Np1 -i ${srcdir}/buildfix_kde4fpicker.diff
+	patch -Np0 -i ${srcdir}/buildfix_icu49.diff
 	
 	# unset C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
@@ -280,7 +283,7 @@ package_libreoffice-common() {
  pkgdesc="common files for LibreOffice - a productivity suite that is compatible with other major office suites"
  install=${pkgbase}.install
  depends=('libreoffice-langpack' "hunspell>=1.2.8" "python2>=2.7" "neon>=0.28.6"
-          'nspr' "icu>=4.6" 'libsm' 'redland' 'hyphen' 'graphite'
+          'nspr' 'libsm' 'redland' 'hyphen' 'graphite' "icu>=49.1" 
           'hicolor-icon-theme' 'desktop-file-utils' 'shared-mime-info' 'xdg-utils' 'orbit2')
           #'saxon'
  optdepends=('libreoffice-langpack: additional language support'
@@ -329,12 +332,15 @@ package_libreoffice-common() {
  ln -vsf /etc/libreoffice/{bootstraprc,sofficerc} .
  cd ${pkgdir}/usr/lib/libreoffice/share/psprint/
  ln -vsf /etc/libreoffice/psprint.conf .
-
- #fix http://bugs.archlinux.org/task/17656
- find ${pkgdir} -perm 444 -exec ls -lh {} \;
- find ${pkgdir} -perm 444 -exec chmod 644 {} \;
- find ${pkgdir} -perm 555 -exec ls -lh {} \;
- find ${pkgdir} -perm 555 -exec chmod 755 {} \;
+ 
+ # set python-uno PYTHON path
+ install -dm755 ${pkgdir}/etc/profile.d
+ install -m644 ${srcdir}/libreoffice-common.{sh,csh} ${pkgdir}/etc/profile.d/
+ 
+ # move bash-completion files to its new place
+ install -dm755 ${pkgdir}/usr/share/bash-completion/completions
+ mv ${pkgdir}/etc/bash_completion.d/libreoffice.sh ${pkgdir}/usr/share/bash-completion/completions/libreoffice.sh
+ rm -rf ${pkgdir}/etc/bash_completion.d
 }
 
 package_libreoffice-base() {
@@ -538,19 +544,9 @@ package_libreoffice-sdk() {
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
  
- # fix ArchLinux LibreOffice installation paths	
- sed -i -e "s,@OO_SDK_NAME@,libreoffice-sdk," \
-        -e "s,@OO_SDK_HOME@,/usr/lib/libreoffice/sdk," \
-        -e "s,@OFFICE_HOME@,/usr/lib/libreoffice," \
-        -e "s,@OFFICE_BASE_HOME@,/usr/lib/libreoffice," \
-        -e "s,@OO_SDK_URE_HOME@,/usr/lib/libreoffice/ure," \
-        -e "s,@OO_SDK_MAKE_HOME@,/usr/bin," \
-        -e "s,@OO_SDK_ZIP_HOME@,/usr/bin," \
-        -e "s,@OO_SDK_CPP_HOME@,/usr/bin," \
-        -e "s,@OO_SDK_CC_55_OR_HIGHER@,," \
-        -e "s,@OO_SDK_JAVA_HOME@,\$J2SDKDIR," \
-        -e "s,@OO_SDK_OUTPUT_DIR@,\$HOME," \
-        -e "s,@SDK_AUTO_DEPLOYMENT@,NO," ${pkgdir}/usr/lib/libreoffice/sdk/setsdkenv_unix.{csh,sh}.in
+  # fix environment path to keep compatibility with openjdk6 and openjdk7
+  #sed -i -e "s:\/usr\/lib\/jvm\/java-7-openjdk:\$J2SDKDIR:"          /usr/lib/libreoffice/sdk/setsdkenv_unix.{sh,csh}
+  sed -i -e "s:\/usr\/lib\/jvm\/java-7-openjdk:\$J2SDKDIR:" ${pkgdir}/usr/lib/libreoffice/sdk/setsdkenv_unix.{sh,csh}
 }
 
 package_libreoffice-sdk-doc() {
