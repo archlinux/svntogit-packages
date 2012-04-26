@@ -10,6 +10,7 @@ url="http://www.nongnu.org/mailnotify/"
 license=('GPL3' 'FDL')
 depends=('gmime' 'libnotify' 'gnome-keyring' 'hicolor-icon-theme' 'notification-daemon' 'libgnome')
 makedepends=('gob2' 'intltool' 'evolution' 'gnome-doc-utils' 'gtk2')
+optdepends=('evolution: for evolution plugin')
 options=('!libtool' '!emptydirs')
 install=mail-notification.install
 source=(http://savannah.nongnu.org/download/mailnotify-orig/${pkgname}-${pkgver}.tar.bz2
@@ -63,6 +64,11 @@ build() {
   patch -Np0 -i "${srcdir}/mail-notification-5.4-add-fallback-icon.patch"
   patch -Np1 -i "${srcdir}/mail-notification-5.4-gmime.patch"
   patch -Np1 -i "${srcdir}/mail-notification-5.4-libx11.patch"
+ 
+  sed -i 's|mail/e-mail-session.h|libemail-engine/e-mail-session.h|' \
+    build/src/mn-evolution-folder-tree-server-private.h build/src/mn-evolution-server.c
+  sed -i 's|mail/mail-tools.h|libemail-engine/mail-tools.h|' \
+    build/src/mn-evolution-server.c src/mn-evolution-plugin.c
 
   gtk-builder-convert ui/mailbox-properties-dialog.glade ui/mailbox-properties-dialog.ui
   gtk-builder-convert ui/properties-dialog.glade ui/properties-dialog.ui
@@ -70,9 +76,15 @@ build() {
   ./jb configure prefix=/usr sysconfdir=/etc \
       localstatedir=/var destdir="${pkgdir}" \
       gconf-schemas-dir=/etc/gconf/schemas install-gconf-schemas=no \
-      cflags="${CFLAGS}" cppflags="${CXXFLAGS}" ldflags="${LDFLAGS}" \
+      cflags="${CFLAGS} -I/usr/include/libsoup-2.4 -I/usr/include/gconf/2" \
+      cppflags="${CXXFLAGS}" ldflags="${LDFLAGS}" libs="-L/usr/lib/evolution/3.4 -levolution-mail" \
       library-mode=0755
   ./jb build
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
   GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 ./jb install
 
   rm -f "${pkgdir}/usr/share/mail-notification/"*.glade
@@ -80,6 +92,6 @@ build() {
   install -m644 ui/properties-dialog.ui "${pkgdir}/usr/share/mail-notification/"
 
   install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
-  gconf-merge-schema ${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas --domain mail-notification ${pkgdir}/etc/gconf/schemas/*.schemas
-  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain mail-notification "${pkgdir}"/etc/gconf/schemas/*.schemas
+  rm -f "${pkgdir}"/etc/gconf/schemas/*.schemas
 }
