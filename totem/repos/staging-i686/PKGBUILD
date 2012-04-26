@@ -1,0 +1,76 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=totem
+pkgname=('totem' 'totem-plugin')
+pkgver=3.4.1
+pkgrel=2
+pkgdesc="A GNOME3 integrated movie player based on Gstreamer."
+url="http://www.gnome.org"
+arch=('i686' 'x86_64')
+license=('GPL2' 'custom')
+depends=('gstreamer0.10-base-plugins' 'gstreamer0.10-good-plugins' 'totem-plparser' 'libxxf86vm'
+         'libxtst' 'desktop-file-utils' 'iso-codes' 'python2' 'libpeas' 'hicolor-icon-theme'
+         'gnome-icon-theme-symbolic' 'gsettings-desktop-schemas' 'dconf' 'clutter-gst'
+         'clutter-gtk' 'mx' 'python2-gobject' 'pylint')
+makedepends=('intltool' 'gtk-doc' 'nautilus' 'libgdata' 'lirc-utils'
+             'libepc' 'bluez' 'vala' 'grilo')
+options=('!libtool' '!emptydirs')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz
+        browser-plugins.ini)
+sha256sums=('eadf138068c2e31bf8fe31b3d63536cb0fe32f834fcf4fbfb453a3fff5eec7ef'
+            'a50a3bbf35f0535f7e8e20af1893446a2e5711015484f9ae6d1ff91af3b23c4e')
+
+build() {
+  cd "$pkgbase-$pkgver"
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/lib/totem \
+    --localstatedir=/var \
+    --disable-static \
+    --enable-python \
+    --enable-nautilus
+  make
+}
+
+package_totem() {
+  groups=('gnome-extra')
+  install=totem.install
+  optdepends=('gstreamer0.10-ugly-plugins: Extra media codecs'
+              'gstreamer0.10-bad-plugins: Extra media codecs'
+              'gstreamer0.10-ffmpeg: Extra media codecs'
+              'lirc-utils: Infrared Remote Control plugin'
+              'libepc: Publish Playlist plugin'
+              'libgdata: YouTube Browser plugin'
+              'bluez: Bemused plugin'
+              'grilo-plugins: Browse sidebar (remote media)'
+              'pyxdg: opensubtitles plugin')
+
+  cd "$pkgbase-$pkgver"
+  make DESTDIR="${pkgdir}" install
+
+  rm -r "$pkgdir/usr/lib/mozilla"
+  rm "$pkgdir/usr/lib/totem/totem-plugin-viewer"
+
+  sed -i "s|#!/usr/bin/python$|#!/usr/bin/python2|" \
+    $pkgdir/usr/lib/totem/{totem/totem-bugreport.py,plugins/iplayer/iplayer2.py}
+
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem/COPYING"
+}
+
+package_totem-plugin() {
+  pkgdesc="Totem plugin for web browsers"
+  depends=("totem=$pkgver")
+  backup=(etc/totem/browser-plugins.ini)
+
+  cd "$pkgbase-$pkgver"
+  make -C browser-plugin \
+    plugindir=/usr/lib/mozilla/plugins \
+    xptdir=/usr/lib/mozilla/plugins \
+    DESTDIR="$pkgdir" install
+  
+  install -Dm644 ../browser-plugins.ini "$pkgdir/etc/totem/browser-plugins.ini"
+
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem-plugin/COPYING"
+}
