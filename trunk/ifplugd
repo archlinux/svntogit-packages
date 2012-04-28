@@ -5,47 +5,65 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
+shopt -s extglob
+
 # env vars
-NAME=ifplugd
-CFG=/etc/ifplugd/ifplugd.conf
-IFPLUGD=/usr/sbin/ifplugd
-PID=`pidof -o %PPID $IFPLUGD`
+daemonname=ifplugd
+cfg=/etc/ifplugd/ifplugd.conf
+PID=$(pgrep -ox ifplugd)
 
 # source configuration file
-[ -f $CFG ] && . $CFG
+[[ -r $cfg ]] && . "$cfg"
 
 # discover interfaces to monitor
-# (replacing INTERFACES with NET_IFS, since AL
+# (replacing INTERFACES with net_ifs, since AL
 # already uses it in /etc/rc.conf)
-[ -z "$NET_IFS" ] && 
-  NET_IFS=$(sed -ne 's/.*\<\(eth[0-9]*\):.*/\1/p' /proc/net/dev)
+if [[ -z $net_ifs ]]; then 
+  net_ifs=(/sys/class/net/!(lo))
+  net_ifs=("${net_ifs[@]##*/}")
+fi
 
-case "$1" in
+case $1 in
   start)
-    stat_busy "Starting $NAME"
-    [ -z "$PID" ] && ( for IF in $NET_IFS ; do
-      A="`eval echo \$\{ARGS_${IF}\}`"
-      [ -z "$A" ] && A="$ARGS"
-      $IFPLUGD -i $IF $A
-      echo -n " $IF"
-    done )
-    if [ $? -gt 0 ]; then
+    stat_busy "Starting $daemonname"
+    if [[ $PID ]]; then
       stat_fail
+      exit 1
+    fi
+
+    for nic in "${net_ifs[@]}"; do
+      args=ARGS_$nic
+      [[ -z ${!args} ]] && args=$ARGS || args=${!args}
+      ifplugd -i "$nic" $args || (( ++err ))
+      printf ' %s' "$nic"
+    done
+    unset nic
+
+    if (( err )); then
+      stat_fail
+      exit 1
     else
-      add_daemon $NAME
+      add_daemon $daemonname
       stat_done
     fi
     ;;
   stop)
-    stat_busy "Stopping $NAME"
-    [ ! -z "$PID" ] && ( for IF in $NET_IFS ; do
-      $IFPLUGD -k -i $IF
-      echo -n " $IF"
-    done )
-    if [ $? -gt 0 ]; then
+    stat_busy "Stopping $daemonname"
+    if [[ -z $PID ]]; then
       stat_fail
+      exit 1
+    fi
+
+    for nic in "${net_ifs[@]}"; do
+      ifplugd -k -i "$nic" || (( ++err ))
+      printf ' %s' "$nic"
+    done
+
+    if (( err )); then
+      stat_fail
+      exit 1
     else
-      rm_daemon $NAME
+      rm_daemon $daemonname
       stat_done
     fi
     ;;
@@ -55,35 +73,43 @@ case "$1" in
     $0 start
     ;;
   status)
-    for IF in $NET_IFS; do
-      $IFPLUGD -c -i $IF
+    for nic in "${net_ifs[@]}"; do
+      ifplugd -c -i "$nic"
     done
+    unset nic
     ;;
   suspend)
-    stat_busy "Suspending $NAME"
-    for IF in $NET_IFS; do
-      $IFPLUGD -S -i $IF
-      echo -n " $IF"
-    done 
-    if [ $? -gt 0 ]; then
+    stat_busy "Suspending $daemonname"
+    for nic in "${net_ifs[@]}"; do
+      ifplugd -S -i $nic || (( ++err ))
+      printf ' %s' "$nic"
+    done
+    unset nic
+
+    if (( err )); then
       stat_fail
+      exit 1
     else
       stat_done
-    fi      
+    fi
     ;;
   resume)
-    stat_busy "Resuming $NAME"
-    for IF in $NET_IFS; do
-      $IFPLUGD -R -i $IF
-      echo -n " $IF"
+    stat_busy "Resuming $daemonname"
+
+    for nic in "${net_ifs[@]}"; do
+      ifplugd -R -i $nic || (( ++err ))
+      printf ' %s' "$nic"
     done
-    if [ $? -gt 0 ]; then
+    unset nic
+
+    if (( err )); then
       stat_fail
+      exit 1
     else
       stat_done
-    fi      
-    ;;  
+    fi
+    ;;
   *)
-    echo "usage: $0 {start|stop|restart|status|suspend|resume}"  
+    echo "usage: $0 {start|stop|restart|status|suspend|resume}"
 esac
 exit 0
