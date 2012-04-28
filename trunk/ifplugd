@@ -10,7 +10,7 @@ shopt -s extglob
 # env vars
 daemonname=ifplugd
 cfg=/etc/ifplugd/ifplugd.conf
-PID=$(pgrep -ox ifplugd)
+PID=$(pidof -o %PPID ifplugd)
 
 # source configuration file
 [[ -r $cfg ]] && . "$cfg"
@@ -18,24 +18,25 @@ PID=$(pgrep -ox ifplugd)
 # discover interfaces to monitor
 # (replacing INTERFACES with net_ifs, since AL
 # already uses it in /etc/rc.conf)
-if [[ -z $net_ifs ]]; then 
+if [[ -z $net_ifs ]]; then
   net_ifs=(/sys/class/net/!(lo))
   net_ifs=("${net_ifs[@]##*/}")
 fi
 
 case $1 in
   start)
-    stat_busy "Starting $daemonname"
-    if [[ $PID ]]; then
-      stat_fail
-      exit 1
-    fi
+    stat_busy "Starting $daemonname: ${net_ifs[*]}"
 
     for nic in "${net_ifs[@]}"; do
-      args=ARGS_$nic
-      [[ -z ${!args} ]] && args=$ARGS || args=${!args}
-      ifplugd -i "$nic" $args || (( ++err ))
-      printf ' %s' "$nic"
+      # only start if a PID doesn't already exist
+      if [[ ! -f /var/run/ifplugd.$nic.pid ]]; then
+        args=ARGS_$nic
+        [[ -z ${!args} ]] && args=$ARGS || args=${!args}
+        ifplugd -i "$nic" $args
+
+        # use presence of PID file to check for start success
+        [[ -f /var/run/ifplugd.$nic.pid ]] || (( ++err ))
+      fi
     done
     unset nic
 
@@ -48,15 +49,13 @@ case $1 in
     fi
     ;;
   stop)
-    stat_busy "Stopping $daemonname"
-    if [[ -z $PID ]]; then
-      stat_fail
-      exit 1
-    fi
+    stat_busy "Stopping $daemonname: ${net_ifs[*]}"
 
-    for nic in "${net_ifs[@]}"; do
+    for nic in /var/run/ifplugd.*.pid; do
+      [[ -f $nic ]] || { (( ++err )); break; }
+      nic=${nic%.pid}
+      nic=${nic##*.}
       ifplugd -k -i "$nic" || (( ++err ))
-      printf ' %s' "$nic"
     done
 
     if (( err )); then
@@ -79,10 +78,9 @@ case $1 in
     unset nic
     ;;
   suspend)
-    stat_busy "Suspending $daemonname"
+    stat_busy "Suspending $daemonname: ${net_ifs[*]}"
     for nic in "${net_ifs[@]}"; do
       ifplugd -S -i $nic || (( ++err ))
-      printf ' %s' "$nic"
     done
     unset nic
 
@@ -94,11 +92,10 @@ case $1 in
     fi
     ;;
   resume)
-    stat_busy "Resuming $daemonname"
+    stat_busy "Resuming $daemonname ${net_ifs[*]}"
 
     for nic in "${net_ifs[@]}"; do
       ifplugd -R -i $nic || (( ++err ))
-      printf ' %s' "$nic"
     done
     unset nic
 
