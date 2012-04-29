@@ -98,7 +98,7 @@ build() {
 
 package_linux-lts() {
   pkgdesc="The Linux Kernel and modules - stable longtime supported kernel package suitable for servers"
-  depends=('coreutils' 'linux-firmware' 'module-init-tools>=3.16' 'mkinitcpio>=0.7')
+  depends=('coreutils' 'linux-firmware' 'kmod' 'mkinitcpio>=0.7')
   optdepends=('crda: to set the correct wireless channels of your country')
   provides=('kernel26-lts')
   conflicts=('kernel26-lts')
