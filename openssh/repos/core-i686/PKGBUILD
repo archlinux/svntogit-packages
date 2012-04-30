@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=6.0p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -20,7 +20,7 @@ source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}
 sha1sums=('f691e53ef83417031a2854b8b1b661c9c08e4422'
           '954bf1660aa32620c37034320877f4511b767ccb'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
-          '3413909fd45a28701c92e6e5b59c6b65346ddb0f'
+          '659e3ee95c269014783ff8b318c6f50bf7496fbd'
           '21fa88de6cc1c7912e71655f50896ba17991a1c2')
 
 backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
