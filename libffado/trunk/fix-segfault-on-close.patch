@@ -1,0 +1,64 @@
+Index: /trunk/libffado/src/debugmodule/debugmodule.h
+===================================================================
+--- /trunk/libffado/src/debugmodule/debugmodule.h (revision 1763)
++++ /trunk/libffado/src/debugmodule/debugmodule.h (revision 1999)
+@@ -283,6 +283,10 @@
+ void hexDumpQuadlets( quadlet_t *data_start, unsigned int length );
+ 
++class DebugModuleManager;
++
+ class DebugModule {
+ public:
++    friend class DebugModuleManager;
++
+     enum {
+         eDL_Message      = DEBUG_LEVEL_MESSAGE,
+@@ -333,4 +337,5 @@
+     std::string   m_name;
+     debug_level_t m_level;
++    DebugModuleManager* m_manager;
+ };
+ 
+Index: /trunk/libffado/src/debugmodule/debugmodule.cpp
+===================================================================
+--- /trunk/libffado/src/debugmodule/debugmodule.cpp (revision 1763)
++++ /trunk/libffado/src/debugmodule/debugmodule.cpp (revision 1999)
+@@ -84,5 +84,6 @@
+ //              << endl;
+ //     }
+-    if ( !DebugModuleManager::instance()->unregisterModule( *this ) ) {
++
++    if (m_manager && !m_manager->unregisterModule( *this ) ) {
+         cerr << "Could not unregister DebugModule at DebugModuleManager"
+              << endl;
+@@ -263,12 +264,9 @@
+ DebugModuleManager::~DebugModuleManager()
+ {
+-    // cleanin up leftover modules
+-    for ( DebugModuleVectorIterator it = m_debugModules.begin();
+-          it != m_debugModules.end();
+-          ++it )
++    // cleaning up leftover modules
++    while (!m_debugModules.empty())
+     {
+-        fprintf(stderr,"Cleaning up leftover debug module: %s\n",(*it)->getName().c_str());
+-        m_debugModules.erase( it );
+-        delete *it;
++        DebugModule *mod = m_debugModules.back();
++        unregisterModule(*mod);
+     }
+ 
+@@ -455,4 +453,6 @@
+     } else {
+         m_debugModules.push_back( &debugModule );
++        if (debugModule.m_manager == NULL)
++                debugModule.m_manager = this;
+     }
+     return true;
+@@ -469,4 +469,6 @@
+         if ( *it == &debugModule ) {
+             m_debugModules.erase( it );
++            if (debugModule.m_manager == this)
++                debugModule.m_manager = NULL;
+             return true;
+         }
