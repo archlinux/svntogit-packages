@@ -3,7 +3,7 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.7.6.5
+pkgver=6.7.6.8
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
@@ -12,14 +12,14 @@ makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript' \
              'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
-sha1sums=('ecb6d2614ca8f44c1857ff28a88feb083403f7be'
+sha1sums=('eaf5a7f2316f8be3db9c2a37d2bb1056e9a0e03c'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
   cd "${srcdir}"/ImageMagick-${pkgver%.*}-${pkgver##*.}
 
   sed '/AC_PATH_XTRA/d' -i configure.ac
-  autoreconf
+  autoreconf --install
   patch -p0 -i ../perlmagick.rpath.patch
 
   ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
