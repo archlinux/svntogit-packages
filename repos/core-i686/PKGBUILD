@@ -8,7 +8,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 _kernelname=${pkgname#linux}
 _basekernel=3.3
 pkgver=${_basekernel}.4
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -106,7 +106,7 @@ build() {
 package_linux() {
   pkgdesc="The Linux Kernel and modules"
   groups=('base')
-  depends=('coreutils' 'linux-firmware' 'module-init-tools>=3.16' 'mkinitcpio>=0.7')
+  depends=('coreutils' 'linux-firmware' 'kmod' 'mkinitcpio>=0.7')
   optdepends=('crda: to set the correct wireless channels of your country')
   provides=('kernel26')
   conflicts=('kernel26')
