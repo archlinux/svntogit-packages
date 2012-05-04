@@ -4,7 +4,7 @@
 
 pkgname=pam
 pkgver=1.1.5
-pkgrel=2
+pkgrel=3
 pkgdesc="PAM (Pluggable Authentication Modules) library"
 arch=('i686' 'x86_64')
 license=('GPL2')
@@ -23,20 +23,24 @@ md5sums=('927ee5585bdec5256c75117e9348aa47'
 
 build() {
   cd $srcdir/Linux-PAM-$pkgver
-  ./configure --sysconfdir=/etc DESTDIR=$pkgdir --libdir=/lib
+  ./configure --libdir=/usr/lib
+  make
+
+  cd $srcdir/pam_unix2-2.6
+  ./configure --libdir=/usr/lib
   make
 }
 
 package() {
   cd $srcdir/Linux-PAM-$pkgver
-  make INSTALL=/bin/install DESTDIR=$pkgdir install
+  make DESTDIR=$pkgdir install
   install -D -m644 ../other $pkgdir/etc/pam.d/other
+
   # build pam_unix2 module
   # source ftp://ftp.suse.com/pub/people/kukuk/pam/pam_unix2
   cd $srcdir/pam_unix2-2.6
-  ./configure
-  make
   make DESTDIR=$pkgdir install
+
   # add the realtime permissions for audio users
   sed -i 's|# End of file||' $pkgdir/etc/security/limits.conf
   cat >>$pkgdir/etc/security/limits.conf <<_EOT
@@ -46,12 +50,14 @@ package() {
 @audio          -       nice           -10
 @audio          -       memlock         40000
 _EOT
+
   # fix some missing symlinks from old pam for compatibility
-  cd $pkgdir/lib/security
+  cd $pkgdir/usr/lib/security
   ln -s pam_unix.so pam_unix_acct.so
   ln -s pam_unix.so pam_unix_auth.so
   ln -s pam_unix.so pam_unix_passwd.so
   ln -s pam_unix.so pam_unix_session.so
+
   # set unix_chkpwd uid
   chmod +s $pkgdir/sbin/unix_chkpwd
 }
