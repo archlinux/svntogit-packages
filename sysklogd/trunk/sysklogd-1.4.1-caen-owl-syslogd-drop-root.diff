@@ -1,0 +1,117 @@
+diff -ur sysklogd-1.4.1-caen-owl-syslogd-bind/sysklogd.8 sysklogd-1.4.1/sysklogd.8
+--- sysklogd-1.4.1-caen-owl-syslogd-bind/sysklogd.8	Mon Oct  8 07:26:27 2001
++++ sysklogd-1.4.1/sysklogd.8	Mon Oct  8 07:30:31 2001
+@@ -32,6 +32,9 @@
+ .RB [ " \-s "
+ .I domainlist
+ ]
++.RB [ " \-u"
++.IB username
++]
+ .RB [ " \-v " ]
+ .LP
+ .SH DESCRIPTION
+@@ -159,6 +162,19 @@
+ is specified and the host logging resolves to satu.infodrom.north.de
+ no domain would be cut, you will have to specify two domains like:
+ .BR "\-s north.de:infodrom.north.de" .
++.TP
++.BI "\-u " "username"
++This causes the
++.B syslogd
++daemon to become the named user before starting up logging.
++
++Note that when this option is in use,
++.B syslogd
++will open all log files as root when the daemon is first started;
++however, after a
++.B SIGHUP
++the files will be reopened as the non-privileged user.  You should
++take this into account when deciding the ownership of the log files.
+ .TP
+ .B "\-v"
+ Print version and exit.
+diff -ur sysklogd-1.4.1-caen-owl-syslogd-bind/syslogd.c sysklogd-1.4.1/syslogd.c
+--- sysklogd-1.4.1-caen-owl-syslogd-bind/syslogd.c	Mon Oct  8 07:26:27 2001
++++ sysklogd-1.4.1/syslogd.c	Mon Oct  8 07:40:35 2001
+@@ -491,6 +491,10 @@
+ #include <arpa/nameser.h>
+ #include <arpa/inet.h>
+ #include <resolv.h>
++
++#include <pwd.h>
++#include <grp.h>
++
+ #ifndef TESTING
+ #include "pidfile.h"
+ #endif
+@@ -737,6 +741,7 @@
+ 				   intermediate host. */
+ 
+ char	*bind_addr = NULL;	/* bind UDP port to this interface only */
++char	*server_user = NULL;	/* user name to run server as */
+ 
+ extern	int errno;
+ 
+@@ -778,6 +783,21 @@
+ static int create_inet_socket();
+ #endif
+ 
++static int drop_root(void)
++{
++	struct passwd *pw;
++
++	if (!(pw = getpwnam(server_user))) return -1;
++
++	if (!pw->pw_uid) return -1;
++
++	if (initgroups(server_user, pw->pw_gid)) return -1;
++	if (setgid(pw->pw_gid)) return -1;
++	if (setuid(pw->pw_uid)) return -1;
++
++	return 0;
++}
++
+ int main(argc, argv)
+ 	int argc;
+ 	char **argv;
+@@ -831,7 +851,7 @@
+ 		funix[i]  = -1;
+ 	}
+ 
+-	while ((ch = getopt(argc, argv, "a:dhf:i:l:m:np:rs:v")) != EOF)
++	while ((ch = getopt(argc, argv, "a:dhf:i:l:m:np:rs:u:v")) != EOF)
+ 		switch((char)ch) {
+ 		case 'a':
+ 			if (nfunix < MAXFUNIX)
+@@ -884,6 +904,9 @@
+ 			}
+ 			StripDomains = crunch_list(optarg);
+ 			break;
++		case 'u':
++			server_user = optarg;
++			break;
+ 		case 'v':
+ 			printf("syslogd %s.%s\n", VERSION, PATCHLEVEL);
+ 			exit (0);
+@@ -1031,6 +1054,11 @@
+ 		kill (ppid, SIGTERM);
+ #endif
+ 
++	if (server_user && drop_root()) {
++		dprintf("syslogd: failed to drop root\n");
++		exit(1);
++	}
++
+ 	/* Main loop begins here. */
+ 	for (;;) {
+ 		int nfds;
+@@ -1185,7 +1213,7 @@
+ int usage()
+ {
+ 	fprintf(stderr, "usage: syslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+-		" [-s domainlist] [-f conffile] [-i IP address]\n");
++		" [-s domainlist] [-f conffile] [-i IP address] [-u username]\n");
+ 	exit(1);
+ }
+ 
