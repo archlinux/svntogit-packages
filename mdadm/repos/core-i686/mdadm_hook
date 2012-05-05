@@ -1,44 +1,49 @@
-# vim: set ft=sh:
-run_hook ()
-{
-    input="$(cat /proc/cmdline)"
-    mdconfig="/etc/mdadm.conf"
+#!/usr/bin/ash
+
+run_hook() {
+    local i= mdconfig=/etc/mdadm.conf
+
     # for partitionable raid, we need to load md_mod first!
     modprobe md_mod 2>/dev/null
-    # If md is specified on commandline, create config file from those parameters.
-    if [ "$(echo $input | grep "md=")" ]; then
-        #Create initial mdadm.conf
-        # scan all devices in /proc/partitions
-        echo DEVICE partitions > $mdconfig
-        for i in $input; do 
+
+    if [ -n "$md" ]; then
+        echo 'DEVICE partitions' >"$mdconfig"
+        for i in $(cat /proc/cmdline); do
             case $i in
-                # raid 
+                # raid
                 md=[0-9]*,/*)
-                    device="$(echo "$i" | sed -e 's|,/.*||g' -e 's|=||g')"
-                    array="$(echo $i | cut -d, -f2-)"
-                    echo "ARRAY /dev/$device devices=$array" >> $mdconfig
+                    device=${i%%,*}
+                    device=${device/=/}
+                    array=${i#*,}
+                    echo "ARRAY /dev/$device devices=$array"
                     ;;
                 # partitionable raid
                 md=d[0-9]*,/*)
-                    device="$(echo "$i" | sed -e 's|,/.*||g' -e 's|=|_|g')"
-                    array="$(echo $i | cut -d, -f2-)"
-                    echo "ARRAY /dev/$device devices=$array" >> $mdconfig
+                    device=${i%%,*}
+                    device=${device/=/_}
+                    array=${i#*,}
+                    echo "ARRAY /dev/$device devices=$array"
                     ;;
-                # raid UUID 
-                md=[0-9]*,[0-9,a-z]*)
-                    device="$(echo "$i" | sed -e 's|,.*||g' -e 's|=||g')"
-                    array="$(echo $i | cut -d, -f2-)"
-                    echo "ARRAY /dev/$device UUID=$array" >> $mdconfig
+                # raid UUID
+                md=[0-9]*,[0-9,a-fA-F]*)
+                    device=${i%%,*}
+                    device=${device/=/}
+                    array=${i#*,}
+                    echo "ARRAY /dev/$device UUID=$array"
                     ;;
                 # partitionable raid UUID
-                md=d[0-9]*,[0-9,a-z]*)
-                    device="$(echo "$i" | sed -e 's|,.*||g' -e 's|=|_|g')"
-                    array="$(echo $i | cut -d, -f2-)"
-                    echo "ARRAY /dev/$device UUID=$array" >> $mdconfig
+                md=d[0-9]*,[0-9,a-fA-F]*)
+                    device=${i%%,*}
+                    device=${device/=/_}
+                    array=${i#*,}
+                    echo "ARRAY /dev/$device UUID=$array"
                     ;;
-            esac 
-        done
+            esac
+        done >>"$mdconfig"
     fi
+
     # assemble everything
-    [ -e $mdconfig ] && /sbin/mdassemble
+    [ -s "$mdconfig" ] && /sbin/mdassemble
 }
+
+# vim: set ft=sh ts=4 sw=4 et:
