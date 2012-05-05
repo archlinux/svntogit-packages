@@ -1,0 +1,161 @@
+diff -Naur sysklogd-1.4.1-orig/klogd.8 sysklogd-1.4.1/klogd.8
+--- sysklogd-1.4.1-orig/klogd.8	2005-03-11 11:12:09.000000000 -0500
++++ sysklogd-1.4.1/klogd.8	2005-10-17 23:47:41.615009160 -0400
+@@ -18,6 +19,12 @@
+ .RB [ " \-f "
+ .I fname
+ ]
++.RB [ " \-u "
++.I username
++]
++.RB [ " \-j "
++.I chroot_dir
++]
+ .RB [ " \-iI " ]
+ .RB [ " \-n " ]
+ .RB [ " \-o " ]
+@@ -53,6 +60,20 @@
+ .BI "\-f " file
+ Log messages to the specified filename rather than to the syslog facility.
+ .TP
++.BI "\-u " username
++Tells klogd to become the specified user and drop root privileges before
++starting logging.
++.TP
++.BI "\-j " chroot_dir
++Tells klogd to
++.BR chroot (2)
++into this directory after initializing.
++This option is only valid if the \-u option is also used to run klogd
++without root privileges.
++Note that the use of this option will prevent \-i and \-I from working
++unless you set up the chroot directory in such a way that klogd can still
++read the kernel module symbols.
++.TP
+ .BI "\-i \-I"
+ Signal the currently executing klogd daemon.  Both of these switches control
+ the loading/reloading of symbol information.  The \-i switch signals the
+diff -Naur sysklogd-1.4.1-orig/klogd.c sysklogd-1.4.1/klogd.c
+--- sysklogd-1.4.1-orig/klogd.c	2004-04-29 09:29:03.000000000 -0400
++++ sysklogd-1.4.1/klogd.c	2005-10-17 23:46:05.200556847 -0400
+@@ -261,6 +261,8 @@
+ #include <stdarg.h>
+ #include <paths.h>
+ #include <stdlib.h>
++#include <pwd.h>
++#include <grp.h>
+ #include "klogd.h"
+ #include "ksyms.h"
+ #ifndef TESTING
+@@ -311,6 +313,9 @@
+ int debugging = 0;
+ int symbols_twice = 0;
+ 
++char *server_user = NULL;
++char *chroot_dir = NULL;
++int log_flags = 0;
+ 
+ /* Function prototypes. */
+ extern int ksyslog(int type, char *buf, int len);
+@@ -531,8 +536,9 @@
+ 	 * First do a stat to determine whether or not the proc based
+ 	 * file system is available to get kernel messages from.
+ 	 */
+-	if ( use_syscall ||
+-	    ((stat(_PATH_KLOG, &sb) < 0) && (errno == ENOENT)) )
++	if (!server_user &&
++	    (use_syscall ||
++	    ((stat(_PATH_KLOG, &sb) < 0) && (errno == ENOENT))))
+ 	{
+ 	  	/* Initialize kernel logging. */
+ 	  	ksyslog(1, NULL, 0);
+@@ -980,6 +986,27 @@
+ }
+ 
+ 
++static int drop_root(void)
++{
++	struct passwd *pw;
++
++	if (!(pw = getpwnam(server_user))) return -1;
++
++	if (!pw->pw_uid) return -1;
++
++	if (chroot_dir) {
++		if (chroot(chroot_dir)) return -1;
++		if (chdir("/")) return -1;
++	}
++
++	if (setgroups(0, NULL)) return -1;
++	if (setgid(pw->pw_gid)) return -1;
++	if (setuid(pw->pw_uid)) return -1;
++
++	return 0;
++}
++
++
+ int main(argc, argv)
+ 
+ 	int argc;
+@@ -997,7 +1024,7 @@
+ 	chdir ("/");
+ #endif
+ 	/* Parse the command-line. */
+-	while ((ch = getopt(argc, argv, "c:df:iIk:nopsvx2")) != EOF)
++	while ((ch = getopt(argc, argv, "c:df:u:j:iIk:nopsvx2")) != EOF)
+ 		switch((char)ch)
+ 		{
+ 		    case '2':		/* Print lines with symbols twice. */
+@@ -1019,6 +1046,10 @@
+ 		    case 'I':
+ 			SignalDaemon(SIGUSR2);
+ 			return(0);
++		    case 'j':		/* chroot 'j'ail */
++			chroot_dir = optarg;
++			log_flags |= LOG_NDELAY;
++			break;
+ 		    case 'k':		/* Kernel symbol file. */
+ 			symfile = optarg;
+ 			break;
+@@ -1034,6 +1065,9 @@
+ 		    case 's':		/* Use syscall interface. */
+ 			use_syscall = 1;
+ 			break;
++		    case 'u':		/* Run as this user */
++			server_user = optarg;
++			break;
+ 		    case 'v':
+ 			printf("klogd %s.%s\n", VERSION, PATCHLEVEL);
+ 			exit (1);
+@@ -1042,6 +1076,10 @@
+ 			break;
+ 		}
+ 
++	if (chroot_dir && !server_user) {
++		fputs("'-j' is only valid with '-u'", stderr);
++		exit(1);
++	}
+ 
+ 	/* Set console logging level. */
+ 	if ( log_level != (char *) 0 )
+@@ -1139,7 +1177,7 @@
+ 		}
+ 	}
+ 	else
+-		openlog("kernel", 0, LOG_KERN);
++		openlog("kernel", log_flags, LOG_KERN);
+ 
+ 
+ 	/* Handle one-shot logging. */
+@@ -1166,6 +1204,11 @@
+ 		InitMsyms();
+ 	}
+ 
++	if (server_user && drop_root()) {
++		syslog(LOG_ALERT, "klogd: failed to drop root");
++		Terminate();
++	}
++
+         /* The main loop. */
+ 	while (1)
+ 	{
