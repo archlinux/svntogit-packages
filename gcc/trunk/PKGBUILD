@@ -6,8 +6,8 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.0
-pkgrel=5
-_snapshot=4.7-20120414
+pkgrel=6
+_snapshot=4.7-20120505
 _libstdcppmanver=20120307		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -21,7 +21,7 @@ source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-4.7.0-cloog-0.17.patch)
-md5sums=('9f9d082b64753d5908690500251fc52e'
+md5sums=('8e2df3b9a755c9262db0df019cc3542e'
          '489d2f5311535800a120efd8d18db719'
          'ced48436c1b3c981d721a829f1094de1'
          '575f7d17b022e609447a590e481b18b5')
@@ -128,8 +128,8 @@ package_gcc()
   
   make -j1 DESTDIR=${pkgdir} install
 
-  install -d $pkgdir/usr/share/gdb/auto-load
-  mv $pkgdir/usr/{lib/libstdc++.so.6.0.17-gdb.py,share/gdb/auto-load}
+  install -d $pkgdir/usr/share/gdb/auto-load/usr/lib
+  mv $pkgdir{,/usr/share/gdb/auto-load}/usr/lib/libstdc++.so.6.0.17-gdb.py
 
   # unfortunately it is much, much easier to install the lot and clean-up the mess...
   rm $pkgdir/usr/bin/{{$CHOST-,}gfortran,{$CHOST-,}gccgo,gnat*}
