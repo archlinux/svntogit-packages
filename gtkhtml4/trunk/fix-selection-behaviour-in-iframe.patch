@@ -1,0 +1,35 @@
+From 9ec36544203d4c1b98aa843c2c3ff0a4f725da68 Mon Sep 17 00:00:00 2001
+From: Sam Thursfield <sam.thursfield@codethink.co.uk>
+Date: Thu, 03 May 2012 19:04:20 +0000
+Subject: Bug 672582 - Fix selection behavior inside <iframe>
+
+Since kinetic scrolling was introduced in Gtk+, GtkScrolledWindow
+has had its own GdkWindow. This means we need to use the allocation
+of the GtkScrolledWindow rather than its child GtkHTML widget when we
+want to translate pointer coordinates relative to the iframe, because
+a widget's GtkAllocation is relative to the parent GdkWindow.
+
+(cherry picked from commit 7b7b37745d2f46914be314e4d7aef7a575529345)
+---
+diff --git a/gtkhtml/gtkhtml.c b/gtkhtml/gtkhtml.c
+index 697b16e..6284855 100644
+--- a/gtkhtml/gtkhtml.c
++++ b/gtkhtml/gtkhtml.c
+@@ -1823,9 +1823,14 @@ shift_to_iframe_parent (GtkWidget *widget,
+                         gint *y)
+ {
+ 	while (GTK_HTML (widget)->iframe_parent) {
++		GtkWidget *scrolled_window;
+ 		GtkAllocation allocation;
+ 
+-		gtk_widget_get_allocation (widget, &allocation);
++		scrolled_window = gtk_widget_get_parent (widget);
++
++		g_return_val_if_fail (GTK_IS_SCROLLED_WINDOW (scrolled_window), widget);
++
++		gtk_widget_get_allocation (scrolled_window, &allocation);
+ 
+ 		if (x)
+ 			*x += allocation.x - GTK_HTML (widget)->engine->x_offset;
+--
+cgit v0.9.0.2
