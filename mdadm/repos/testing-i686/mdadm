@@ -1,0 +1,42 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+pidfile=/run/mdadm.pid
+if [[ -r $pidfile ]]; then
+  read -r PID <"$pidfile"
+  if [[ $PID && ! -d /proc/$PID ]]; then
+    # stale pidfile
+    unset PID
+    rm -f "$pidfile"
+  fi
+fi
+
+case $1 in
+  start)
+    stat_busy "Starting mdadm RAID Monitor"
+    if [[ -z $PID ]] && mdadm --monitor --scan -i "$pidfile" -f; then
+      add_daemon mdadm
+      stat_done
+    else
+      stat_fail
+    fi
+    ;;
+  stop)
+    stat_busy "Stopping mdadm RAID Monitor"
+    if [[ $PID ]] && kill "$PID" &>/dev/null; then
+      rm_daemon mdadm
+      stat_done
+    else
+      stat_fail
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"
+esac
