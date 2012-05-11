@@ -1,5 +1,5 @@
 # $Id$
-# Maintainer: Jan "heftig" Steffens <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
 # Contributor: Corrado Primier <bardo@aur.archlinux.org>
 # Contributor: William Rea <sillywilly@gmail.com>
@@ -7,22 +7,23 @@
 pkgbase=pulseaudio
 pkgname=(pulseaudio libpulse)
 pkgdesc="A featureful, general-purpose sound server"
-pkgver=1.1
-pkgrel=4
+pkgver=2.0
+pkgrel=1
 arch=(i686 x86_64)
-url="http://pulseaudio.org/"
+url="http://www.freedesktop.org/wiki/Software/PulseAudio"
 license=(GPL LGPL)
 makedepends=(libasyncns libcap attr libxtst libsm libsamplerate libtool rtkit
              speex tdb udev dbus-core avahi bluez gconf intltool jack
-             lirc-utils openssl fftw orc json-c gtk2)
+             lirc-utils openssl fftw orc json-c gtk2 webrtc-audio-processing
+             libsystemd)
 options=(!emptydirs !libtool)
 source=(http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.xz
-        $pkgbase.xinit)
-sha256sums=('6fe531136f6ebce2d35872a2d2c914278cdc5dcdd5eea516dc52c81f9001f5ee'
+        pulseaudio.xinit)
+sha256sums=('28b42edd42f4879a6884af5f0ec11801ac001eb7582881215b36649aa37e2061'
             'a0db6cdc74fbf0ca10e2343c08e1e228f109221c6c0ff91b0bfade5c4bdf03cf')
 
 build() {
-  cd "$srcdir/$pkgbase-$pkgver"
+  cd $pkgbase-$pkgver
 
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
@@ -43,7 +44,7 @@ build() {
 
 package_pulseaudio() {
   depends=("libpulse=$pkgver-$pkgrel" rtkit libltdl speex tdb udev fftw orc
-           libsamplerate)
+           libsamplerate webrtc-audio-processing libsystemd)
   optdepends=('avahi: zeroconf support'
               'bluez: bluetooth support'
               'gconf: configuration through gconf (paprefs)'
@@ -54,7 +55,7 @@ package_pulseaudio() {
   backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
   install=pulseaudio.install
 
-  cd "$srcdir/$pkgbase-$pkgver"
+  cd $pkgbase-$pkgver
   make -j1 DESTDIR="$pkgdir" install
 
   # Lower resample quality, saves CPU
@@ -79,15 +80,20 @@ package_pulseaudio() {
 
 ### Split libpulse
 
-  mkdir -p "$srcdir"/libpulse/{etc/pulse,usr/{lib,share/man/man5}}
+  mkdir -p "$srcdir"/libpulse/{etc/pulse,usr/{lib/pulseaudio,share/man/man5}}
 
   mv {"$pkgdir","$srcdir/libpulse"}/etc/pulse/client.conf
 
-  mv "$pkgdir"/usr/lib/libpulse{,dsp,-simple,-mainloop-glib}.so* \
-     "$pkgdir"/usr/lib/libpulsecommon-*.so \
+  mv "$pkgdir"/usr/lib/libpulse{,-simple,-mainloop-glib}.so* \
      "$srcdir/libpulse/usr/lib"
 
+  mv "$pkgdir"/usr/lib/pulseaudio/libpulsedsp.so \
+     "$pkgdir"/usr/lib/pulseaudio/libpulsecommon-*.so \
+     "$srcdir/libpulse/usr/lib/pulseaudio"
+
+  mv {"$pkgdir","$srcdir/libpulse"}/usr/lib/cmake
   mv {"$pkgdir","$srcdir/libpulse"}/usr/lib/pkgconfig
+
   mv {"$pkgdir","$srcdir/libpulse"}/usr/include
 
   mv {"$pkgdir","$srcdir/libpulse"}/usr/share/man/man5/pulse-client.conf.5
