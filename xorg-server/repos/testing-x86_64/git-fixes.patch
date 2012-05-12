@@ -1,0 +1,161 @@
+From 89626304ea1ad316c5b7145a40f09377148cff21 Mon Sep 17 00:00:00 2001
+From: Dave Airlie <airlied@redhat.com>
+Date: Thu, 20 Oct 2011 13:43:01 +0000
+Subject: xf86Crtc: handle no outputs with no modes harder.
+
+If you started an X server with no connected outputs, we pick a default
+1024x768 mode, however if you then ran an xvidmode using app against that
+server it would segfault the server due to not finding any valid modes.
+
+This was due to the no output mode set code, only adding the modes to the
+scrn->modes once, when something called randr 1.2 xf86SetScrnInfoModes would
+get called and remove all the modes and we'd end up with 0.
+
+This change fixes xf86SetScrnInfoModes to always report a scrn mode of at
+least 1024x768, and pushes the initial configuration to just call it instead
+of setting up the mode itself.
+
+Fixes: https://bugzilla.redhat.com/show_bug.cgi?id=746926
+
+I've seen other bugs like this on other distros so it might also actually fix them.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+Reviewed-by: Keith Packard <keithp@keithp.com>
+Signed-off-by: Keith Packard <keithp@keithp.com>
+(cherry picked from commit 17416e88dcfcc584fe5f87580d5d2b719b3521c3)
+---
+diff --git a/hw/xfree86/modes/xf86Crtc.c b/hw/xfree86/modes/xf86Crtc.c
+index d75cd77..8906806 100644
+--- a/hw/xfree86/modes/xf86Crtc.c
++++ b/hw/xfree86/modes/xf86Crtc.c
+@@ -1915,19 +1915,25 @@ xf86SetScrnInfoModes (ScrnInfoPtr scrn)
+ 		break;
+     }
+ 
+-    if (scrn->modes != NULL) {
+-	/* For some reason, scrn->modes is circular, unlike the other mode
+-	 * lists.  How great is that?
+-	 */
+-	for (last = scrn->modes; last && last->next; last = last->next)
+-	    ;
+-	last->next = scrn->modes;
+-	scrn->modes->prev = last;
+-	if (mode) {
+-	    while (scrn->modes != mode)
+-		scrn->modes = scrn->modes->next;
+-	}
++    if (!scrn->modes) {
++	scrn->modes = xf86ModesAdd(scrn->modes,
++				   xf86CVTMode(scrn->display->virtualX,
++					       scrn->display->virtualY,
++					       60, 0, 0));
++    }
++
++    /* For some reason, scrn->modes is circular, unlike the other mode
++     * lists.  How great is that?
++     */
++    for (last = scrn->modes; last && last->next; last = last->next)
++	;
++    last->next = scrn->modes;
++    scrn->modes->prev = last;
++    if (mode) {
++	while (scrn->modes != mode)
++	    scrn->modes = scrn->modes->next;
+     }
++
+     scrn->currentMode = scrn->modes;
+ #ifdef XFreeXDGA
+     if (scrn->pScreen)
+@@ -2529,16 +2535,7 @@ xf86InitialConfiguration (ScrnInfoPtr scrn, Bool canGrow)
+ 			      width, height);
+     }
+ 
+-    if (have_outputs) {
+-	/* Mirror output modes to scrn mode list */
+-	xf86SetScrnInfoModes (scrn);
+-    } else {
+-	/* Clear any existing modes from scrn->modes */
+-	while (scrn->modes != NULL)
+-	    xf86DeleteMode(&scrn->modes, scrn->modes);
+-	scrn->modes = xf86ModesAdd(scrn->modes,
+-				   xf86CVTMode(width, height, 60, 0, 0));
+-    }
++    xf86SetScrnInfoModes (scrn);
+ 
+     success = TRUE;
+  bailout:
+--
+cgit v0.9.0.2-2-gbebe
+From 97f2ae60fc0cc755abd8b88df826fcb1a20464fe Mon Sep 17 00:00:00 2001
+From: Christopher Yeleighton <giecrilj@stegny.2a.pl>
+Date: Tue, 25 Oct 2011 01:47:06 +0000
+Subject: Bug 38420: Xvfb crashes in miInitVisuals() when started with depth=2
+
+https://bugs.freedesktop.org/show_bug.cgi?id=38420
+
+Exit with fatal error message, not segfault.
+
+Signed-off-by: Alan Coopersmith <alan.coopersmith@oracle.com>
+Reviewed-by: Jeremy Huddleston <jeremyhu@apple.com>
+Signed-off-by: Keith Packard <keithp@keithp.com>
+(cherry picked from commit 7d50211ab57a35910d79fc3f67ae89aff91fa995)
+---
+diff --git a/hw/vfb/InitOutput.c b/hw/vfb/InitOutput.c
+index 31ed505..dce3f84 100644
+--- a/hw/vfb/InitOutput.c
++++ b/hw/vfb/InitOutput.c
+@@ -864,6 +864,8 @@ vfbScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
+ 				   (1 << DirectColor)),
+ 				  10, TrueColor, 0x3ff00000, 0x000ffc00, 0x000003ff);
+ 	break;
++    default:
++	return FALSE;
+     }
+ 
+     miSetPixmapDepths ();
+--
+cgit v0.9.0.2-2-gbebe
+From 34bb83b9df20ff63dbb147ed661f39efb8bae8e4 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 24 Oct 2011 02:00:32 +0000
+Subject: dix: block signals when closing all devices
+
+When closing down all devices, we manually unset master for all attached
+devices, but the device's sprite info still points to the master's sprite
+info. This leaves us a window where the master is freed already but the
+device isn't yet. A signal during that window causes dereference of the
+already freed spriteInfo in mieqEnqueue's EnqueueScreen macro.
+
+Simply block signals when removing all devices. It's not like we're really
+worrying about high-responsive input at this stage.
+
+https://bugzilla.redhat.com/show_bug.cgi?id=737031
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Julien Cristau <jcristau@debian.org>
+(cherry picked from commit d7c44a7c9760449bef263413ad3b20f19b1dc95a)
+---
+diff --git a/dix/devices.c b/dix/devices.c
+index 0ccf252..cbdd4ea 100644
+--- a/dix/devices.c
++++ b/dix/devices.c
+@@ -982,6 +982,8 @@ CloseDownDevices(void)
+ {
+     DeviceIntPtr dev;
+ 
++    OsBlockSignals();
++
+     /* Float all SDs before closing them. Note that at this point resources
+      * (e.g. cursors) have been freed already, so we can't just call
+      * AttachDevice(NULL, dev, NULL). Instead, we have to forcibly set master
+@@ -1004,6 +1006,8 @@ CloseDownDevices(void)
+     inputInfo.keyboard = NULL;
+     inputInfo.pointer = NULL;
+     XkbDeleteRulesDflts();
++
++    OsReleaseSignals();
+ }
+ 
+ /**
+--
+cgit v0.9.0.2-2-gbebe
