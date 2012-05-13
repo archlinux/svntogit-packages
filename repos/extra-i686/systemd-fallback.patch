@@ -1,0 +1,1571 @@
+diff -u -rN polkit-0.104/configure.ac polkit-0.104-systemd-fallback/configure.ac
+--- polkit-0.104/configure.ac	2012-01-03 17:25:49.000000000 +0100
++++ polkit-0.104-systemd-fallback/configure.ac	2012-03-06 15:45:55.275860194 +0100
+@@ -160,14 +160,14 @@
+               [enable_systemd=auto])
+ if test "$enable_systemd" != "no"; then
+   PKG_CHECK_MODULES(SYSTEMD,
+-                    [libsystemd-login],
++                    [libsystemd-login libsystemd-daemon],
+                     have_systemd=yes,
+                     have_systemd=no)
+   if test "$have_systemd" = "yes"; then
+     SESSION_TRACKING=systemd
+   else
+     if test "$enable_systemd" = "yes"; then
+-      AC_MSG_ERROR([systemd support requested but libsystemd-login1 library not found])
++      AC_MSG_ERROR([systemd support requested but systemd libraries not found])
+     fi
+   fi
+ fi
+diff -u -rN polkit-0.104/src/polkit/Makefile.am polkit-0.104-systemd-fallback/src/polkit/Makefile.am
+--- polkit-0.104/src/polkit/Makefile.am	2012-01-03 16:03:47.000000000 +0100
++++ polkit-0.104-systemd-fallback/src/polkit/Makefile.am	2012-03-06 15:19:25.108853325 +0100
+@@ -79,15 +79,8 @@
+ 	polkitimplicitauthorization.c		polkitimplicitauthorization.h		\
+ 	polkittemporaryauthorization.c		polkittemporaryauthorization.h		\
+ 	polkitpermission.c			polkitpermission.h			\
+-        $(NULL)
+-
+-if HAVE_SYSTEMD
+-libpolkit_gobject_1_la_SOURCES += \
+-	polkitunixsession-systemd.c		polkitunixsession.h
+-else
+-libpolkit_gobject_1_la_SOURCES += \
+ 	polkitunixsession.c			polkitunixsession.h
+-endif
++        $(NULL)
+ 
+ libpolkit_gobject_1_la_CFLAGS =                                        	\
+         -D_POLKIT_COMPILATION                                  		\
+diff -u -rN polkit-0.104/src/polkit/polkitunixsession.c polkit-0.104-systemd-fallback/src/polkit/polkitunixsession.c
+--- polkit-0.104/src/polkit/polkitunixsession.c	2011-10-18 19:02:27.000000000 +0200
++++ polkit-0.104-systemd-fallback/src/polkit/polkitunixsession.c	2012-03-06 15:17:29.829788021 +0100
+@@ -23,12 +23,18 @@
+ #  include "config.h"
+ #endif
+ 
++#include <stdlib.h>
+ #include <string.h>
+ #include "polkitunixsession.h"
+ #include "polkitsubject.h"
+ #include "polkiterror.h"
+ #include "polkitprivate.h"
+ 
++#ifdef HAVE_SYSTEMD
++#  include <systemd/sd-daemon.h>
++#  include <systemd/sd-login.h>
++#endif
++
+ /**
+  * SECTION:polkitunixsession
+  * @title: PolkitUnixSession
+@@ -364,34 +370,44 @@
+   PolkitUnixSession *session = POLKIT_UNIX_SESSION (subject);
+   GDBusConnection *connection;
+   GVariant *result;
+-  gboolean ret;
+-
+-  ret = FALSE;
++  gboolean ret = FALSE;
+ 
+-  connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, cancellable, error);
+-  if (connection == NULL)
+-    goto out;
+-
+-  result = g_dbus_connection_call_sync (connection,
+-                                        "org.freedesktop.ConsoleKit",           /* name */
+-                                        session->session_id,                    /* object path */
+-                                        "org.freedesktop.ConsoleKit.Session",   /* interface name */
+-                                        "GetUser",                              /* method */
+-                                        NULL, /* parameters */
+-                                        G_VARIANT_TYPE ("(u)"),
+-                                        G_DBUS_CALL_FLAGS_NONE,
+-                                        -1,
+-                                        cancellable,
+-                                        error);
+-  if (result == NULL)
+-    goto out;
++#ifdef HAVE_SYSTEMD
++  uid_t uid;
++  
++  if (sd_booted () > 0)
++    {
++      if (sd_session_get_uid (session->session_id, &uid) == 0)
++        ret = TRUE;
++    }
++  else
++#endif
++    {
++      connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, cancellable, error);
++      if (connection == NULL)
++        goto out;
++
++      result = g_dbus_connection_call_sync (connection,
++                                            "org.freedesktop.ConsoleKit",           /* name */
++                                            session->session_id,                    /* object path */
++                                            "org.freedesktop.ConsoleKit.Session",   /* interface name */
++                                            "GetUser",                              /* method */
++                                            NULL, /* parameters */
++                                            G_VARIANT_TYPE ("(u)"),
++                                            G_DBUS_CALL_FLAGS_NONE,
++                                            -1,
++                                            cancellable,
++                                            error);
++      if (result == NULL)
++        goto out;
+ 
+-  ret = TRUE;
+-  g_variant_unref (result);
++      ret = TRUE;
++      g_variant_unref (result);
+ 
+- out:
+-  if (connection != NULL)
+-    g_object_unref (connection);
++     out:
++      if (connection != NULL)
++        g_object_unref (connection);
++    }
+   return ret;
+ }
+ 
+@@ -470,12 +486,9 @@
+                                    GError       **error)
+ {
+   PolkitUnixSession *session = POLKIT_UNIX_SESSION (initable);
+-  GDBusConnection *connection;
++  GDBusConnection *connection = NULL;
+   GVariant *result;
+-  gboolean ret;
+-
+-  connection = NULL;
+-  ret = FALSE;
++  gboolean ret = FALSE;
+ 
+   if (session->session_id != NULL)
+     {
+@@ -484,33 +497,56 @@
+       goto out;
+     }
+ 
+-  connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, cancellable, error);
+-  if (connection == NULL)
+-    goto out;
++#ifdef HAVE_SYSTEMD
++  char *s;
++  
++  if (sd_booted () > 0)
++    {
++      if (sd_pid_get_session (session->pid, &s) == 0)
++        {
++          session->session_id = g_strdup (s);
++          free (s);
++          ret = TRUE;
++          goto out;
++        }
++      
++      g_set_error (error,
++                   POLKIT_ERROR,
++                   POLKIT_ERROR_FAILED,
++                   "No session for pid %d",
++                   (gint) session->pid);
++    }
++  else
++#endif
++    { 
++      connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, cancellable, error);
++      if (connection == NULL)
++        goto out;
++
++      result = g_dbus_connection_call_sync (connection,
++                                            "org.freedesktop.ConsoleKit",           /* name */
++                                            "/org/freedesktop/ConsoleKit/Manager",  /* object path */
++                                            "org.freedesktop.ConsoleKit.Manager",   /* interface name */
++                                            "GetSessionForUnixProcess",             /* method */
++                                            g_variant_new ("(u)", session->pid),    /* parameters */
++                                            G_VARIANT_TYPE ("(o)"),
++                                            G_DBUS_CALL_FLAGS_NONE,
++                                            -1,
++                                            cancellable,
++                                            error);
++      if (result == NULL)
++        goto out;
+ 
+-  result = g_dbus_connection_call_sync (connection,
+-                                        "org.freedesktop.ConsoleKit",           /* name */
+-                                        "/org/freedesktop/ConsoleKit/Manager",  /* object path */
+-                                        "org.freedesktop.ConsoleKit.Manager",   /* interface name */
+-                                        "GetSessionForUnixProcess",             /* method */
+-                                        g_variant_new ("(u)", session->pid),    /* parameters */
+-                                        G_VARIANT_TYPE ("(o)"),
+-                                        G_DBUS_CALL_FLAGS_NONE,
+-                                        -1,
+-                                        cancellable,
+-                                        error);
+-  if (result == NULL)
+-    goto out;
++      g_variant_get (result, "(o)", &session->session_id);
++      g_variant_unref (result);
+ 
+-  g_variant_get (result, "(o)", &session->session_id);
+-  g_variant_unref (result);
++      ret = TRUE;
++    }
+ 
+-  ret = TRUE;
+ 
+  out:
+   if (connection != NULL)
+     g_object_unref (connection);
+-
+   return ret;
+ }
+ 
+diff -u -rN polkit-0.104/src/polkit/polkitunixsession-systemd.c polkit-0.104-systemd-fallback/src/polkit/polkitunixsession-systemd.c
+--- polkit-0.104/src/polkit/polkitunixsession-systemd.c	2012-01-03 16:03:47.000000000 +0100
++++ polkit-0.104-systemd-fallback/src/polkit/polkitunixsession-systemd.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,481 +0,0 @@
+-/*
+- * Copyright (C) 2011 Red Hat, Inc.
+- *
+- * This library is free software; you can redistribute it and/or
+- * modify it under the terms of the GNU Lesser General Public
+- * License as published by the Free Software Foundation; either
+- * version 2 of the License, or (at your option) any later version.
+- *
+- * This library is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+- * Lesser General Public License for more details.
+- *
+- * You should have received a copy of the GNU Lesser General
+- * Public License along with this library; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+- * Boston, MA 02111-1307, USA.
+- *
+- * Author: Matthias Clasen
+- */
+-
+-#ifdef HAVE_CONFIG_H
+-#  include "config.h"
+-#endif
+-
+-#include <string.h>
+-#include "polkitunixsession.h"
+-#include "polkitsubject.h"
+-#include "polkiterror.h"
+-#include "polkitprivate.h"
+-
+-#include <systemd/sd-login.h>
+-
+-/**
+- * SECTION:polkitunixsession
+- * @title: PolkitUnixSession
+- * @short_description: Unix sessions
+- *
+- * An object that represents an user session.
+- *
+- * The session id is an opaque string obtained from ConsoleKit.
+- */
+-
+-/**
+- * PolkitUnixSession:
+- *
+- * The #PolkitUnixSession struct should not be accessed directly.
+- */
+-struct _PolkitUnixSession
+-{
+-  GObject parent_instance;
+-
+-  gchar *session_id;
+-
+-  gint pid;
+-};
+-
+-struct _PolkitUnixSessionClass
+-{
+-  GObjectClass parent_class;
+-};
+-
+-enum
+-{
+-  PROP_0,
+-  PROP_SESSION_ID,
+-  PROP_PID,
+-};
+-
+-static void subject_iface_init        (PolkitSubjectIface *subject_iface);
+-static void initable_iface_init       (GInitableIface *initable_iface);
+-static void async_initable_iface_init (GAsyncInitableIface *async_initable_iface);
+-
+-G_DEFINE_TYPE_WITH_CODE (PolkitUnixSession, polkit_unix_session, G_TYPE_OBJECT,
+-                         G_IMPLEMENT_INTERFACE (POLKIT_TYPE_SUBJECT, subject_iface_init)
+-                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init)
+-                         G_IMPLEMENT_INTERFACE (G_TYPE_ASYNC_INITABLE, async_initable_iface_init)
+-                         );
+-
+-static void
+-polkit_unix_session_init (PolkitUnixSession *session)
+-{
+-}
+-
+-static void
+-polkit_unix_session_finalize (GObject *object)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (object);
+-
+-  g_free (session->session_id);
+-
+-  if (G_OBJECT_CLASS (polkit_unix_session_parent_class)->finalize != NULL)
+-    G_OBJECT_CLASS (polkit_unix_session_parent_class)->finalize (object);
+-}
+-
+-static void
+-polkit_unix_session_get_property (GObject    *object,
+-                                  guint       prop_id,
+-                                  GValue     *value,
+-                                  GParamSpec *pspec)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (object);
+-
+-  switch (prop_id)
+-    {
+-    case PROP_SESSION_ID:
+-      g_value_set_string (value, session->session_id);
+-      break;
+-
+-    default:
+-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+-      break;
+-    }
+-}
+-
+-static void
+-polkit_unix_session_set_property (GObject      *object,
+-                                  guint         prop_id,
+-                                  const GValue *value,
+-                                  GParamSpec   *pspec)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (object);
+-
+-  switch (prop_id)
+-    {
+-    case PROP_SESSION_ID:
+-      polkit_unix_session_set_session_id (session, g_value_get_string (value));
+-      break;
+-
+-    case PROP_PID:
+-      session->pid = g_value_get_int (value);
+-      break;
+-
+-    default:
+-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+-      break;
+-    }
+-}
+-
+-static void
+-polkit_unix_session_class_init (PolkitUnixSessionClass *klass)
+-{
+-  GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+-
+-  gobject_class->finalize     = polkit_unix_session_finalize;
+-  gobject_class->get_property = polkit_unix_session_get_property;
+-  gobject_class->set_property = polkit_unix_session_set_property;
+-
+-  /**
+-   * PolkitUnixSession:session-id:
+-   *
+-   * The UNIX session id.
+-   */
+-  g_object_class_install_property (gobject_class,
+-                                   PROP_SESSION_ID,
+-                                   g_param_spec_string ("session-id",
+-                                                        "Session ID",
+-                                                        "The UNIX session ID",
+-                                                        NULL,
+-                                                        G_PARAM_CONSTRUCT |
+-                                                        G_PARAM_READWRITE |
+-                                                        G_PARAM_STATIC_NAME |
+-                                                        G_PARAM_STATIC_BLURB |
+-                                                        G_PARAM_STATIC_NICK));
+-
+-
+-  /**
+-   * PolkitUnixSession:pid:
+-   *
+-   * The UNIX process id to look up the session.
+-   */
+-  g_object_class_install_property (gobject_class,
+-                                   PROP_PID,
+-                                   g_param_spec_int ("pid",
+-                                                     "Process ID",
+-                                                     "Process ID to use for looking up the session",
+-                                                     0,
+-                                                     G_MAXINT,
+-                                                     0,
+-                                                     G_PARAM_CONSTRUCT_ONLY |
+-                                                     G_PARAM_WRITABLE |
+-                                                     G_PARAM_STATIC_NAME |
+-                                                     G_PARAM_STATIC_BLURB |
+-                                                     G_PARAM_STATIC_NICK));
+-
+-}
+-
+-/**
+- * polkit_unix_session_get_session_id:
+- * @session: A #PolkitUnixSession.
+- *
+- * Gets the session id for @session.
+- *
+- * Returns: The session id for @session. Do not free this string, it
+- * is owned by @session.
+- **/
+-const gchar *
+-polkit_unix_session_get_session_id (PolkitUnixSession *session)
+-{
+-  g_return_val_if_fail (POLKIT_IS_UNIX_SESSION (session), NULL);
+-  return session->session_id;
+-}
+-
+-/**
+- * polkit_unix_session_set_session_id:
+- * @session: A #PolkitUnixSession.
+- * @session_id: The session id.
+- *
+- * Sets the session id for @session to @session_id.
+- **/
+-void
+-polkit_unix_session_set_session_id (PolkitUnixSession *session,
+-                                    const gchar       *session_id)
+-{
+-  g_return_if_fail (POLKIT_IS_UNIX_SESSION (session));
+-  /*g_return_if_fail (session_id != NULL);*/
+-  g_free (session->session_id);
+-  session->session_id = g_strdup (session_id);
+-}
+-
+-/**
+- * polkit_unix_session_new:
+- * @session_id: The session id.
+- *
+- * Creates a new #PolkitUnixSession for @session_id.
+- *
+- * Returns: (transfer full): A #PolkitUnixSession. Free with g_object_unref().
+- **/
+-PolkitSubject *
+-polkit_unix_session_new (const gchar *session_id)
+-{
+-  return POLKIT_SUBJECT (g_object_new (POLKIT_TYPE_UNIX_SESSION,
+-                                       "session-id", session_id,
+-                                       NULL));
+-}
+-
+-/**
+- * polkit_unix_session_new_for_process:
+- * @pid: The process id of the process to get the session for.
+- * @cancellable: (allow-none): A #GCancellable or %NULL.
+- * @callback: A #GAsyncReadyCallback to call when the request is satisfied
+- * @user_data: The data to pass to @callback.
+- *
+- * Asynchronously creates a new #PolkitUnixSession object for the
+- * process with process id @pid.
+- *
+- * When the operation is finished, @callback will be invoked in the
+- * <link linkend="g-main-context-push-thread-default">thread-default
+- * main loop</link> of the thread you are calling this method
+- * from. You can then call
+- * polkit_unix_session_new_for_process_finish() to get the result of
+- * the operation.
+- *
+- * This method constructs the object asynchronously, for the synchronous and blocking version
+- * use polkit_unix_session_new_for_process_sync().
+- **/
+-void
+-polkit_unix_session_new_for_process (gint                pid,
+-                                     GCancellable       *cancellable,
+-                                     GAsyncReadyCallback callback,
+-                                     gpointer            user_data)
+-{
+-  g_async_initable_new_async (POLKIT_TYPE_UNIX_SESSION,
+-                              G_PRIORITY_DEFAULT,
+-                              cancellable,
+-                              callback,
+-                              user_data,
+-                              "pid", pid,
+-                              NULL);
+-}
+-
+-/**
+- * polkit_unix_session_new_for_process_finish:
+- * @res: A #GAsyncResult obtained from the #GAsyncReadyCallback passed to polkit_unix_session_new_for_process().
+- * @error: (allow-none): Return location for error.
+- *
+- * Finishes constructing a #PolkitSubject for a process id.
+- *
+- * Returns: (transfer full) (allow-none): A #PolkitUnixSession for the @pid passed to
+- *     polkit_unix_session_new_for_process() or %NULL if @error is
+- *     set. Free with g_object_unref().
+- **/
+-PolkitSubject *
+-polkit_unix_session_new_for_process_finish (GAsyncResult   *res,
+-                                            GError        **error)
+-{
+-  GObject *object;
+-  GObject *source_object;
+-
+-  source_object = g_async_result_get_source_object (res);
+-  g_assert (source_object != NULL);
+-
+-  object = g_async_initable_new_finish (G_ASYNC_INITABLE (source_object),
+-                                        res,
+-                                        error);
+-  g_object_unref (source_object);
+-
+-  if (object != NULL)
+-    return POLKIT_SUBJECT (object);
+-  else
+-    return NULL;
+-}
+-
+-
+-/**
+- * polkit_unix_session_new_for_process_sync:
+- * @pid: The process id of the process to get the session for.
+- * @cancellable: (allow-none): A #GCancellable or %NULL.
+- * @error: (allow-none): Return location for error.
+- *
+- * Creates a new #PolkitUnixSession for the process with process id @pid.
+- *
+- * This is a synchronous call - the calling thread is blocked until a
+- * reply is received. For the asynchronous version, see
+- * polkit_unix_session_new_for_process().
+- *
+- * Returns: (allow-none) (transfer full): A #PolkitUnixSession for
+- * @pid or %NULL if @error is set. Free with g_object_unref().
+- **/
+-PolkitSubject *
+-polkit_unix_session_new_for_process_sync (gint           pid,
+-                                          GCancellable  *cancellable,
+-                                          GError       **error)
+-{
+-  return POLKIT_SUBJECT (g_initable_new (POLKIT_TYPE_UNIX_SESSION,
+-                                         cancellable,
+-                                         error,
+-                                         "pid", pid,
+-                                         NULL));
+-}
+-
+-static guint
+-polkit_unix_session_hash (PolkitSubject *subject)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (subject);
+-
+-  return g_str_hash (session->session_id);
+-}
+-
+-static gboolean
+-polkit_unix_session_equal (PolkitSubject *a,
+-                           PolkitSubject *b)
+-{
+-  PolkitUnixSession *session_a;
+-  PolkitUnixSession *session_b;
+-
+-  session_a = POLKIT_UNIX_SESSION (a);
+-  session_b = POLKIT_UNIX_SESSION (b);
+-
+-  return g_strcmp0 (session_a->session_id, session_b->session_id) == 0;
+-}
+-
+-static gchar *
+-polkit_unix_session_to_string (PolkitSubject *subject)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (subject);
+-
+-  return g_strdup_printf ("unix-session:%s", session->session_id);
+-}
+-
+-static gboolean
+-polkit_unix_session_exists_sync (PolkitSubject   *subject,
+-                                    GCancellable    *cancellable,
+-                                    GError         **error)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (subject);
+-  gboolean ret;
+-  uid_t uid;
+-
+-  ret = FALSE;
+-
+-  if (!sd_session_get_uid (session->session_id, &uid))
+-    ret = FALSE;
+-
+-  return ret;
+-}
+-
+-static void
+-exists_in_thread_func (GSimpleAsyncResult *res,
+-                       GObject            *object,
+-                       GCancellable       *cancellable)
+-{
+-  GError *error;
+-  error = NULL;
+-  if (!polkit_unix_session_exists_sync (POLKIT_SUBJECT (object),
+-                                        cancellable,
+-                                        &error))
+-    {
+-      g_simple_async_result_set_from_error (res, error);
+-      g_error_free (error);
+-    }
+-}
+-
+-static void
+-polkit_unix_session_exists (PolkitSubject       *subject,
+-                            GCancellable        *cancellable,
+-                            GAsyncReadyCallback  callback,
+-                            gpointer             user_data)
+-{
+-  GSimpleAsyncResult *simple;
+-
+-  g_return_if_fail (POLKIT_IS_UNIX_SESSION (subject));
+-
+-  simple = g_simple_async_result_new (G_OBJECT (subject),
+-                                      callback,
+-                                      user_data,
+-                                      polkit_unix_session_exists);
+-  g_simple_async_result_run_in_thread (simple,
+-                                       exists_in_thread_func,
+-                                       G_PRIORITY_DEFAULT,
+-                                       cancellable);
+-  g_object_unref (simple);
+-}
+-
+-static gboolean
+-polkit_unix_session_exists_finish (PolkitSubject  *subject,
+-                                      GAsyncResult   *res,
+-                                      GError        **error)
+-{
+-  GSimpleAsyncResult *simple = G_SIMPLE_ASYNC_RESULT (res);
+-  gboolean ret;
+-
+-  g_warn_if_fail (g_simple_async_result_get_source_tag (simple) == polkit_unix_session_exists);
+-
+-  ret = FALSE;
+-
+-  if (g_simple_async_result_propagate_error (simple, error))
+-    goto out;
+-
+-  ret = g_simple_async_result_get_op_res_gboolean (simple);
+-
+- out:
+-  return ret;
+-}
+-
+-static void
+-subject_iface_init (PolkitSubjectIface *subject_iface)
+-{
+-  subject_iface->hash          = polkit_unix_session_hash;
+-  subject_iface->equal         = polkit_unix_session_equal;
+-  subject_iface->to_string     = polkit_unix_session_to_string;
+-  subject_iface->exists        = polkit_unix_session_exists;
+-  subject_iface->exists_finish = polkit_unix_session_exists_finish;
+-  subject_iface->exists_sync   = polkit_unix_session_exists_sync;
+-}
+-
+-static gboolean
+-polkit_unix_session_initable_init (GInitable     *initable,
+-                                   GCancellable  *cancellable,
+-                                   GError       **error)
+-{
+-  PolkitUnixSession *session = POLKIT_UNIX_SESSION (initable);
+-  gboolean ret;
+-
+-  ret = FALSE;
+-
+-  if (session->session_id != NULL)
+-    {
+-      /* already set, nothing to do */
+-      ret = TRUE;
+-      goto out;
+-    }
+-
+-  if (!sd_pid_get_session (session->pid, &session->session_id))
+-    ret = TRUE;
+-
+-out:
+-  return ret;
+-}
+-
+-static void
+-initable_iface_init (GInitableIface *initable_iface)
+-{
+-  initable_iface->init = polkit_unix_session_initable_init;
+-}
+-
+-static void
+-async_initable_iface_init (GAsyncInitableIface *async_initable_iface)
+-{
+-  /* use default implementation to run GInitable code in a thread */
+-}
+diff -u -rN polkit-0.104/src/polkitbackend/Makefile.am polkit-0.104-systemd-fallback/src/polkitbackend/Makefile.am
+--- polkit-0.104/src/polkitbackend/Makefile.am	2012-01-03 16:03:47.000000000 +0100
++++ polkit-0.104-systemd-fallback/src/polkitbackend/Makefile.am	2012-03-06 15:44:15.380014886 +0100
+@@ -41,15 +41,8 @@
+ 	polkitbackendconfigsource.h		polkitbackendconfigsource.c		\
+ 	polkitbackendactionlookup.h		polkitbackendactionlookup.c		\
+ 	polkitbackendlocalauthorizationstore.h	polkitbackendlocalauthorizationstore.c	\
+-        $(NULL)
+-
+-if HAVE_SYSTEMD
+-libpolkit_backend_1_la_SOURCES += \
+-	polkitbackendsessionmonitor.h		polkitbackendsessionmonitor-systemd.c
+-else
+-libpolkit_backend_1_la_SOURCES += \
+ 	polkitbackendsessionmonitor.h		polkitbackendsessionmonitor.c
+-endif
++        $(NULL)
+ 
+ libpolkit_backend_1_la_CFLAGS =                                        	\
+         -D_POLKIT_COMPILATION                                  		\
+diff -u -rN polkit-0.104/src/polkitbackend/polkitbackendsessionmonitor.c polkit-0.104-systemd-fallback/src/polkitbackend/polkitbackendsessionmonitor.c
+--- polkit-0.104/src/polkitbackend/polkitbackendsessionmonitor.c	2011-10-18 19:02:27.000000000 +0200
++++ polkit-0.104-systemd-fallback/src/polkitbackend/polkitbackendsessionmonitor.c	2012-03-06 15:43:49.353562242 +0100
+@@ -26,6 +26,12 @@
+ #include <string.h>
+ #include <glib/gstdio.h>
+ 
++#ifdef HAVE_SYSTEMD
++#  include <systemd/sd-daemon.h>
++#  include <systemd/sd-login.h>
++#  include <stdlib.h>
++#endif
++
+ #include <polkit/polkit.h>
+ #include "polkitbackendsessionmonitor.h"
+ 
+@@ -39,6 +45,88 @@
+  * The #PolkitBackendSessionMonitor class is a utility class to track and monitor sessions.
+  */
+ 
++#ifdef HAVE_SYSTEMD
++typedef struct
++{
++  GSource source;
++  GPollFD pollfd;
++  sd_login_monitor *monitor;
++} SdSource;
++
++static gboolean
++sd_source_prepare (GSource *source,
++                   gint    *timeout)
++{
++  *timeout = -1;
++  return FALSE;
++}
++
++static gboolean
++sd_source_check (GSource *source)
++{
++  SdSource *sd_source = (SdSource *)source;
++
++  return sd_source->pollfd.revents != 0;
++}
++
++static gboolean
++sd_source_dispatch (GSource     *source,
++                    GSourceFunc  callback,
++                    gpointer     user_data)
++
++{
++  SdSource *sd_source = (SdSource *)source;
++  gboolean ret;
++
++  g_warn_if_fail (callback != NULL);
++
++  ret = (*callback) (user_data);
++
++  sd_login_monitor_flush (sd_source->monitor);
++
++  return ret;
++}
++
++static void
++sd_source_finalize (GSource *source)
++{
++  SdSource *sd_source = (SdSource*)source;
++
++  sd_login_monitor_unref (sd_source->monitor);
++}
++
++static GSourceFuncs sd_source_funcs = {
++  sd_source_prepare,
++  sd_source_check,
++  sd_source_dispatch,
++  sd_source_finalize
++};
++
++static GSource *
++sd_source_new (void)
++{
++  GSource *source;
++  SdSource *sd_source;
++  int ret;
++
++  source = g_source_new (&sd_source_funcs, sizeof (SdSource));
++  sd_source = (SdSource *)source;
++
++  if ((ret = sd_login_monitor_new (NULL, &sd_source->monitor)) < 0)
++    {
++      g_printerr ("Error getting login monitor: %d", ret);
++    }
++  else
++    {
++      sd_source->pollfd.fd = sd_login_monitor_get_fd (sd_source->monitor);
++      sd_source->pollfd.events = G_IO_IN;
++      g_source_add_poll (source, &sd_source->pollfd);
++    }
++
++  return source;
++}
++#endif /* HAVE_SYSTEMD */
++
+ struct _PolkitBackendSessionMonitor
+ {
+   GObject parent_instance;
+@@ -48,6 +136,10 @@
+   GKeyFile *database;
+   GFileMonitor *database_monitor;
+   time_t database_mtime;
++  
++#ifdef HAVE_SYSTEMD
++  GSource *sd_source;
++#endif
+ };
+ 
+ struct _PolkitBackendSessionMonitorClass
+@@ -162,6 +254,18 @@
+   g_signal_emit (monitor, signals[CHANGED_SIGNAL], 0);
+ }
+ 
++#ifdef HAVE_SYSTEMD
++static gboolean
++sessions_changed (gpointer user_data)
++{
++  PolkitBackendSessionMonitor *monitor = POLKIT_BACKEND_SESSION_MONITOR (user_data);
++
++  g_signal_emit (monitor, signals[CHANGED_SIGNAL], 0);
++
++  return TRUE;
++}
++#endif
++
+ static void
+ polkit_backend_session_monitor_init (PolkitBackendSessionMonitor *monitor)
+ {
+@@ -176,31 +280,47 @@
+       g_error_free (error);
+     }
+ 
+-  error = NULL;
+-  if (!ensure_database (monitor, &error))
+-    {
+-      g_printerr ("Error loading " CKDB_PATH ": %s", error->message);
+-      g_error_free (error);
+-    }
++#ifdef HAVE_SYSTEMD
++  monitor->sd_source = NULL;
++  
++  if (sd_booted () > 0)
++    {
++      monitor->sd_source = sd_source_new ();
++      g_source_set_callback (monitor->sd_source, sessions_changed, monitor, NULL);
++      g_source_attach (monitor->sd_source, NULL);
+ 
+-  error = NULL;
+-  file = g_file_new_for_path (CKDB_PATH);
+-  monitor->database_monitor = g_file_monitor_file (file,
+-                                                   G_FILE_MONITOR_NONE,
+-                                                   NULL,
+-                                                   &error);
+-  g_object_unref (file);
+-  if (monitor->database_monitor == NULL)
+-    {
+-      g_printerr ("Error monitoring " CKDB_PATH ": %s", error->message);
+-      g_error_free (error);
++      monitor->database = NULL;
++      monitor->database_monitor = NULL;
+     }
+   else
++#endif
+     {
+-      g_signal_connect (monitor->database_monitor,
+-                        "changed",
+-                        G_CALLBACK (on_file_monitor_changed),
+-                        monitor);
++      error = NULL;
++      if (!ensure_database (monitor, &error))
++        {
++          g_printerr ("Error loading " CKDB_PATH ": %s", error->message);
++          g_error_free (error);
++        }
++
++      error = NULL;
++      file = g_file_new_for_path (CKDB_PATH);
++      monitor->database_monitor = g_file_monitor_file (file,
++                                                       G_FILE_MONITOR_NONE,
++                                                       NULL,
++                                                       &error);
++      g_object_unref (file);
++      if (monitor->database_monitor == NULL)
++        {
++          g_printerr ("Error monitoring " CKDB_PATH ": %s", error->message);
++          g_error_free (error);
++        }
++      else
++        {
++          g_signal_connect (monitor->database_monitor,
++                            "changed",
++                            G_CALLBACK (on_file_monitor_changed),
++                            monitor);
++        }
+     }
+ }
+ 
+@@ -212,6 +332,14 @@
+   if (monitor->system_bus != NULL)
+     g_object_unref (monitor->system_bus);
+ 
++#ifdef HAVE_SYSTEMD
++  if (monitor->sd_source != NULL)
++    {
++      g_source_destroy (monitor->sd_source);
++      g_source_unref (monitor->sd_source);
++    }
++#endif
++
+   if (monitor->database_monitor != NULL)
+     g_object_unref (monitor->database_monitor);
+ 
+@@ -328,22 +456,38 @@
+     }
+   else if (POLKIT_IS_UNIX_SESSION (subject))
+     {
+-      if (!ensure_database (monitor, error))
++#ifdef HAVE_SYSTEMD
++      if (monitor->sd_source != NULL)
+         {
+-          g_prefix_error (error, "Error getting user for session: Error ensuring CK database at " CKDB_PATH ": ");
+-          goto out;
++          if (sd_session_get_uid (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)), &uid) < 0)
++            {
++              g_set_error (error,
++                           POLKIT_ERROR,
++                           POLKIT_ERROR_FAILED,
++                           "Error getting uid for session");
++              goto out;
++            }
+         }
+-
+-      group = g_strdup_printf ("Session %s", polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)));
+-      local_error = NULL;
+-      uid = g_key_file_get_integer (monitor->database, group, "uid", &local_error);
+-      if (local_error != NULL)
++      else
++#endif
+         {
+-          g_propagate_prefixed_error (error, local_error, "Error getting uid using " CKDB_PATH ": ");
++          if (!ensure_database (monitor, error))
++            {
++              g_prefix_error (error, "Error getting user for session: Error ensuring CK database at " CKDB_PATH ": ");
++              goto out;
++            }
++
++          group = g_strdup_printf ("Session %s", polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)));
++          local_error = NULL;
++          uid = g_key_file_get_integer (monitor->database, group, "uid", &local_error);
++          if (local_error != NULL)
++            {
++              g_propagate_prefixed_error (error, local_error, "Error getting uid using " CKDB_PATH ": ");
++              g_free (group);
++              goto out;
++            }
+           g_free (group);
+-          goto out;
+         }
+-      g_free (group);
+ 
+       ret = polkit_unix_user_new (uid);
+     }
+@@ -373,29 +517,46 @@
+ 
+   if (POLKIT_IS_UNIX_PROCESS (subject))
+     {
+-      const gchar *session_id;
+-      GVariant *result;
+-      result = g_dbus_connection_call_sync (monitor->system_bus,
+-                                            "org.freedesktop.ConsoleKit",
+-                                            "/org/freedesktop/ConsoleKit/Manager",
+-                                            "org.freedesktop.ConsoleKit.Manager",
+-                                            "GetSessionForUnixProcess",
+-                                            g_variant_new ("(u)", polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject))),
+-                                            G_VARIANT_TYPE ("(o)"),
+-                                            G_DBUS_CALL_FLAGS_NONE,
+-                                            -1, /* timeout_msec */
+-                                            NULL, /* GCancellable */
+-                                            error);
+-      if (result == NULL)
+-        goto out;
+-      g_variant_get (result, "(&o)", &session_id);
+-      session = polkit_unix_session_new (session_id);
+-      g_variant_unref (result);
++#ifdef HAVE_SYSTEMD
++      if (monitor->sd_source != NULL)
++        {
++          gchar *session_id;
++          pid_t pid;
++
++          pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject));
++          if (sd_pid_get_session (pid, &session_id) < 0)
++            goto out;
++
++          session = polkit_unix_session_new (session_id);
++          free (session_id);
++        }
++      else
++#endif
++        {
++          const gchar *session_id;
++          GVariant *result;
++          result = g_dbus_connection_call_sync (monitor->system_bus,
++                                                "org.freedesktop.ConsoleKit",
++                                                "/org/freedesktop/ConsoleKit/Manager",
++                                                "org.freedesktop.ConsoleKit.Manager",
++                                                "GetSessionForUnixProcess",
++                                                g_variant_new ("(u)", polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject))),
++                                                G_VARIANT_TYPE ("(o)"),
++                                                G_DBUS_CALL_FLAGS_NONE,
++                                                -1, /* timeout_msec */
++                                                NULL, /* GCancellable */
++                                                error);
++          if (result == NULL)
++            goto out;
++          g_variant_get (result, "(&o)", &session_id);
++          session = polkit_unix_session_new (session_id);
++          g_variant_unref (result);
++        }
+     }
+   else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
+     {
+       guint32 pid;
+-      const gchar *session_id;
++      gchar *session_id;
+       GVariant *result;
+ 
+       result = g_dbus_connection_call_sync (monitor->system_bus,
+@@ -414,22 +575,35 @@
+       g_variant_get (result, "(u)", &pid);
+       g_variant_unref (result);
+ 
+-      result = g_dbus_connection_call_sync (monitor->system_bus,
+-                                            "org.freedesktop.ConsoleKit",
+-                                            "/org/freedesktop/ConsoleKit/Manager",
+-                                            "org.freedesktop.ConsoleKit.Manager",
+-                                            "GetSessionForUnixProcess",
+-                                            g_variant_new ("(u)", pid),
+-                                            G_VARIANT_TYPE ("(o)"),
+-                                            G_DBUS_CALL_FLAGS_NONE,
+-                                            -1, /* timeout_msec */
+-                                            NULL, /* GCancellable */
+-                                            error);
+-      if (result == NULL)
+-        goto out;
+-      g_variant_get (result, "(&o)", &session_id);
+-      session = polkit_unix_session_new (session_id);
+-      g_variant_unref (result);
++#ifdef HAVE_SYSTEMD
++      if (monitor->sd_source != NULL)
++        {
++          if (sd_pid_get_session (pid, &session_id) < 0)
++            goto out;
++
++          session = polkit_unix_session_new (session_id);
++          free (session_id);
++        }
++      else
++#endif
++        {
++          result = g_dbus_connection_call_sync (monitor->system_bus,
++                                                "org.freedesktop.ConsoleKit",
++                                                "/org/freedesktop/ConsoleKit/Manager",
++                                                "org.freedesktop.ConsoleKit.Manager",
++                                                "GetSessionForUnixProcess",
++                                                g_variant_new ("(u)", pid),
++                                                G_VARIANT_TYPE ("(o)"),
++                                                G_DBUS_CALL_FLAGS_NONE,
++                                                -1, /* timeout_msec */
++                                                NULL, /* GCancellable */
++                                                error);
++          if (result == NULL)
++            goto out;
++          g_variant_get (result, "(&o)", &session_id);
++          session = polkit_unix_session_new (session_id);
++          g_variant_unref (result);
++        }
+     }
+   else
+     {
+@@ -490,7 +664,22 @@
+ polkit_backend_session_monitor_is_session_local  (PolkitBackendSessionMonitor *monitor,
+                                                   PolkitSubject               *session)
+ {
+-  return get_boolean (monitor, session, "is_local");
++#ifdef HAVE_SYSTEMD
++  if (monitor->sd_source != NULL)
++    {
++      char *seat;
++
++      if (!sd_session_get_seat (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)), &seat))
++        {
++          free (seat);
++          return TRUE;
++        }
++
++      return FALSE;
++    }
++  else
++#endif
++    return get_boolean (monitor, session, "is_local");
+ }
+ 
+ 
+@@ -498,6 +687,11 @@
+ polkit_backend_session_monitor_is_session_active (PolkitBackendSessionMonitor *monitor,
+                                                   PolkitSubject               *session)
+ {
+-  return get_boolean (monitor, session, "is_active");
++#ifdef HAVE_SYSTEMD
++  if (monitor->sd_source != NULL)
++    return sd_session_is_active (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)));
++  else
++#endif
++    return get_boolean (monitor, session, "is_active");
+ }
+ 
+diff -u -rN polkit-0.104/src/polkitbackend/polkitbackendsessionmonitor-systemd.c polkit-0.104-systemd-fallback/src/polkitbackend/polkitbackendsessionmonitor-systemd.c
+--- polkit-0.104/src/polkitbackend/polkitbackendsessionmonitor-systemd.c	2012-01-03 16:03:47.000000000 +0100
++++ polkit-0.104-systemd-fallback/src/polkitbackend/polkitbackendsessionmonitor-systemd.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,414 +0,0 @@
+-/*
+- * Copyright (C) 2011 Red Hat, Inc.
+- *
+- * This library is free software; you can redistribute it and/or
+- * modify it under the terms of the GNU Lesser General Public
+- * License as published by the Free Software Foundation; either
+- * version 2 of the License, or (at your option) any later version.
+- *
+- * This library is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+- * Lesser General Public License for more details.
+- *
+- * You should have received a copy of the GNU Lesser General
+- * Public License along with this library; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+- * Boston, MA 02111-1307, USA.
+- *
+- * Author: Matthias Clasen
+- */
+-
+-#include "config.h"
+-#include <errno.h>
+-#include <pwd.h>
+-#include <grp.h>
+-#include <string.h>
+-#include <glib/gstdio.h>
+-#include <systemd/sd-login.h>
+-#include <stdlib.h>
+-
+-#include <polkit/polkit.h>
+-#include "polkitbackendsessionmonitor.h"
+-
+-/* <internal>
+- * SECTION:polkitbackendsessionmonitor
+- * @title: PolkitBackendSessionMonitor
+- * @short_description: Monitor sessions
+- *
+- * The #PolkitBackendSessionMonitor class is a utility class to track and monitor sessions.
+- */
+-
+-typedef struct
+-{
+-  GSource source;
+-  GPollFD pollfd;
+-  sd_login_monitor *monitor;
+-} SdSource;
+-
+-static gboolean
+-sd_source_prepare (GSource *source,
+-                   gint    *timeout)
+-{
+-  *timeout = -1;
+-  return FALSE;
+-}
+-
+-static gboolean
+-sd_source_check (GSource *source)
+-{
+-  SdSource *sd_source = (SdSource *)source;
+-
+-  return sd_source->pollfd.revents != 0;
+-}
+-
+-static gboolean
+-sd_source_dispatch (GSource     *source,
+-                    GSourceFunc  callback,
+-                    gpointer     user_data)
+-
+-{
+-  SdSource *sd_source = (SdSource *)source;
+-  gboolean ret;
+-
+-  g_warn_if_fail (callback != NULL);
+-
+-  ret = (*callback) (user_data);
+-
+-  sd_login_monitor_flush (sd_source->monitor);
+-
+-  return ret;
+-}
+-
+-static void
+-sd_source_finalize (GSource *source)
+-{
+-  SdSource *sd_source = (SdSource*)source;
+-
+-  sd_login_monitor_unref (sd_source->monitor);
+-}
+-
+-static GSourceFuncs sd_source_funcs = {
+-  sd_source_prepare,
+-  sd_source_check,
+-  sd_source_dispatch,
+-  sd_source_finalize
+-};
+-
+-static GSource *
+-sd_source_new (void)
+-{
+-  GSource *source;
+-  SdSource *sd_source;
+-  int ret;
+-
+-  source = g_source_new (&sd_source_funcs, sizeof (SdSource));
+-  sd_source = (SdSource *)source;
+-
+-  if ((ret = sd_login_monitor_new (NULL, &sd_source->monitor)) < 0)
+-    {
+-      g_printerr ("Error getting login monitor: %d", ret);
+-    }
+-  else
+-    {
+-      sd_source->pollfd.fd = sd_login_monitor_get_fd (sd_source->monitor);
+-      sd_source->pollfd.events = G_IO_IN;
+-      g_source_add_poll (source, &sd_source->pollfd);
+-    }
+-
+-  return source;
+-}
+-
+-struct _PolkitBackendSessionMonitor
+-{
+-  GObject parent_instance;
+-
+-  GDBusConnection *system_bus;
+-
+-  GSource *sd_source;
+-};
+-
+-struct _PolkitBackendSessionMonitorClass
+-{
+-  GObjectClass parent_class;
+-
+-  void (*changed) (PolkitBackendSessionMonitor *monitor);
+-};
+-
+-
+-enum
+-{
+-  CHANGED_SIGNAL,
+-  LAST_SIGNAL,
+-};
+-
+-static guint signals[LAST_SIGNAL] = {0};
+-
+-G_DEFINE_TYPE (PolkitBackendSessionMonitor, polkit_backend_session_monitor, G_TYPE_OBJECT);
+-
+-/* ---------------------------------------------------------------------------------------------------- */
+-
+-static gboolean
+-sessions_changed (gpointer user_data)
+-{
+-  PolkitBackendSessionMonitor *monitor = POLKIT_BACKEND_SESSION_MONITOR (user_data);
+-
+-  g_signal_emit (monitor, signals[CHANGED_SIGNAL], 0);
+-
+-  return TRUE;
+-}
+-
+-
+-static void
+-polkit_backend_session_monitor_init (PolkitBackendSessionMonitor *monitor)
+-{
+-  GError *error;
+-
+-  error = NULL;
+-  monitor->system_bus = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
+-  if (monitor->system_bus == NULL)
+-    {
+-      g_printerr ("Error getting system bus: %s", error->message);
+-      g_error_free (error);
+-    }
+-
+-  monitor->sd_source = sd_source_new ();
+-  g_source_set_callback (monitor->sd_source, sessions_changed, monitor, NULL);
+-  g_source_attach (monitor->sd_source, NULL);
+-}
+-
+-static void
+-polkit_backend_session_monitor_finalize (GObject *object)
+-{
+-  PolkitBackendSessionMonitor *monitor = POLKIT_BACKEND_SESSION_MONITOR (object);
+-
+-  if (monitor->system_bus != NULL)
+-    g_object_unref (monitor->system_bus);
+-
+-  if (monitor->sd_source != NULL)
+-    {
+-      g_source_destroy (monitor->sd_source);
+-      g_source_unref (monitor->sd_source);
+-    }
+-
+-  if (G_OBJECT_CLASS (polkit_backend_session_monitor_parent_class)->finalize != NULL)
+-    G_OBJECT_CLASS (polkit_backend_session_monitor_parent_class)->finalize (object);
+-}
+-
+-static void
+-polkit_backend_session_monitor_class_init (PolkitBackendSessionMonitorClass *klass)
+-{
+-  GObjectClass *gobject_class;
+-
+-  gobject_class = G_OBJECT_CLASS (klass);
+-
+-  gobject_class->finalize = polkit_backend_session_monitor_finalize;
+-
+-  /**
+-   * PolkitBackendSessionMonitor::changed:
+-   * @monitor: A #PolkitBackendSessionMonitor
+-   *
+-   * Emitted when something changes.
+-   */
+-  signals[CHANGED_SIGNAL] = g_signal_new ("changed",
+-                                          POLKIT_BACKEND_TYPE_SESSION_MONITOR,
+-                                          G_SIGNAL_RUN_LAST,
+-                                          G_STRUCT_OFFSET (PolkitBackendSessionMonitorClass, changed),
+-                                          NULL,                   /* accumulator      */
+-                                          NULL,                   /* accumulator data */
+-                                          g_cclosure_marshal_VOID__VOID,
+-                                          G_TYPE_NONE,
+-                                          0);
+-}
+-
+-PolkitBackendSessionMonitor *
+-polkit_backend_session_monitor_new (void)
+-{
+-  PolkitBackendSessionMonitor *monitor;
+-
+-  monitor = POLKIT_BACKEND_SESSION_MONITOR (g_object_new (POLKIT_BACKEND_TYPE_SESSION_MONITOR, NULL));
+-
+-  return monitor;
+-}
+-
+-/* ---------------------------------------------------------------------------------------------------- */
+-
+-GList *
+-polkit_backend_session_monitor_get_sessions (PolkitBackendSessionMonitor *monitor)
+-{
+-  /* TODO */
+-  return NULL;
+-}
+-
+-/* ---------------------------------------------------------------------------------------------------- */
+-
+-/**
+- * polkit_backend_session_monitor_get_user:
+- * @monitor: A #PolkitBackendSessionMonitor.
+- * @subject: A #PolkitSubject.
+- * @error: Return location for error.
+- *
+- * Gets the user corresponding to @subject or %NULL if no user exists.
+- *
+- * Returns: %NULL if @error is set otherwise a #PolkitUnixUser that should be freed with g_object_unref().
+- */
+-PolkitIdentity *
+-polkit_backend_session_monitor_get_user_for_subject (PolkitBackendSessionMonitor  *monitor,
+-                                                     PolkitSubject                *subject,
+-                                                     GError                      **error)
+-{
+-  PolkitIdentity *ret;
+-  guint32 uid;
+-
+-  ret = NULL;
+-
+-  if (POLKIT_IS_UNIX_PROCESS (subject))
+-    {
+-      uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (subject));
+-      if ((gint) uid == -1)
+-        {
+-          g_set_error (error,
+-                       POLKIT_ERROR,
+-                       POLKIT_ERROR_FAILED,
+-                       "Unix process subject does not have uid set");
+-          goto out;
+-        }
+-      ret = polkit_unix_user_new (uid);
+-    }
+-  else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
+-    {
+-      GVariant *result;
+-
+-      result = g_dbus_connection_call_sync (monitor->system_bus,
+-                                            "org.freedesktop.DBus",
+-                                            "/org/freedesktop/DBus",
+-                                            "org.freedesktop.DBus",
+-                                            "GetConnectionUnixUser",
+-                                            g_variant_new ("(s)", polkit_system_bus_name_get_name (POLKIT_SYSTEM_BUS_NAME (subject))),
+-                                            G_VARIANT_TYPE ("(u)"),
+-                                            G_DBUS_CALL_FLAGS_NONE,
+-                                            -1, /* timeout_msec */
+-                                            NULL, /* GCancellable */
+-                                            error);
+-      if (result == NULL)
+-        goto out;
+-      g_variant_get (result, "(u)", &uid);
+-      g_variant_unref (result);
+-
+-      ret = polkit_unix_user_new (uid);
+-    }
+-  else if (POLKIT_IS_UNIX_SESSION (subject))
+-    {
+-
+-      if (sd_session_get_uid (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)), &uid) < 0)
+-        {
+-          g_set_error (error,
+-                       POLKIT_ERROR,
+-                       POLKIT_ERROR_FAILED,
+-                       "Error getting uid for session");
+-          goto out;
+-        }
+-
+-      ret = polkit_unix_user_new (uid);
+-    }
+-
+- out:
+-  return ret;
+-}
+-
+-/**
+- * polkit_backend_session_monitor_get_session_for_subject:
+- * @monitor: A #PolkitBackendSessionMonitor.
+- * @subject: A #PolkitSubject.
+- * @error: Return location for error.
+- *
+- * Gets the session corresponding to @subject or %NULL if no session exists.
+- *
+- * Returns: %NULL if @error is set otherwise a #PolkitUnixSession that should be freed with g_object_unref().
+- */
+-PolkitSubject *
+-polkit_backend_session_monitor_get_session_for_subject (PolkitBackendSessionMonitor *monitor,
+-                                                        PolkitSubject               *subject,
+-                                                        GError                     **error)
+-{
+-  PolkitSubject *session;
+-
+-  session = NULL;
+-
+-  if (POLKIT_IS_UNIX_PROCESS (subject))
+-    {
+-      gchar *session_id;
+-      pid_t pid;
+-
+-      pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject));
+-      if (sd_pid_get_session (pid, &session_id) < 0)
+-        goto out;
+-
+-      session = polkit_unix_session_new (session_id);
+-      free (session_id);
+-    }
+-  else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
+-    {
+-      guint32 pid;
+-      gchar *session_id;
+-      GVariant *result;
+-
+-      result = g_dbus_connection_call_sync (monitor->system_bus,
+-                                            "org.freedesktop.DBus",
+-                                            "/org/freedesktop/DBus",
+-                                            "org.freedesktop.DBus",
+-                                            "GetConnectionUnixProcessID",
+-                                            g_variant_new ("(s)", polkit_system_bus_name_get_name (POLKIT_SYSTEM_BUS_NAME (subject))),
+-                                            G_VARIANT_TYPE ("(u)"),
+-                                            G_DBUS_CALL_FLAGS_NONE,
+-                                            -1, /* timeout_msec */
+-                                            NULL, /* GCancellable */
+-                                            error);
+-      if (result == NULL)
+-        goto out;
+-      g_variant_get (result, "(u)", &pid);
+-      g_variant_unref (result);
+-
+-      if (sd_pid_get_session (pid, &session_id) < 0)
+-        goto out;
+-
+-      session = polkit_unix_session_new (session_id);
+-      free (session_id);
+-    }
+-  else
+-    {
+-      g_set_error (error,
+-                   POLKIT_ERROR,
+-                   POLKIT_ERROR_NOT_SUPPORTED,
+-                   "Cannot get user for subject of type %s",
+-                   g_type_name (G_TYPE_FROM_INSTANCE (subject)));
+-    }
+-
+- out:
+-
+-  return session;
+-}
+-
+-gboolean
+-polkit_backend_session_monitor_is_session_local (PolkitBackendSessionMonitor *monitor,
+-                                                 PolkitSubject               *session)
+-{
+-  char *seat;
+-
+-  if (!sd_session_get_seat (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)), &seat))
+-    {
+-      free (seat);
+-      return TRUE;
+-    }
+-
+-  return FALSE;
+-}
+-
+-
+-gboolean
+-polkit_backend_session_monitor_is_session_active (PolkitBackendSessionMonitor *monitor,
+-                                                  PolkitSubject               *session)
+-{
+-  return sd_session_is_active (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)));
+-}
+-
