@@ -1,0 +1,135 @@
+From 21dd8a0600cbfac46723c7745b377fce94c8bdc3 Mon Sep 17 00:00:00 2001
+From: Torsten Schönfeld <kaffeetisch@gmx.de>
+Date: Sat, 31 Mar 2012 10:34:11 +0000
+Subject: Fix compiling and testing against older versions of cairo
+
+---
+(limited to 't/CairoPath.t')
+
+diff --git a/t/CairoPath.t b/t/CairoPath.t
+index e515172..770e464 100644
+--- a/t/CairoPath.t
++++ b/t/CairoPath.t
+@@ -11,11 +11,17 @@ use strict;
+ use warnings;
+ use Cairo;
+ 
+-use Test::More tests => 6;
++use Test::More;
+ 
+ use constant IMG_WIDTH => 256;
+ use constant IMG_HEIGHT => 256;
+ 
++if (Cairo::VERSION >= Cairo::VERSION_ENCODE (1, 4, 0)) {
++  plan tests => 6;
++} else {
++  plan skip_all => 'path behavior not predictable on cairo < 1.4';
++}
++
+ my $surf = Cairo::ImageSurface->create ('rgb24', IMG_WIDTH, IMG_HEIGHT);
+ my $cr = Cairo::Context->create ($surf);
+ 
+--
+cgit v0.9.0.2
+From a1cd2e45b4ee49a724ae5d7e854ad9829eebf00d Mon Sep 17 00:00:00 2001
+From: Torsten Schönfeld <kaffeetisch@gmx.de>
+Date: Sat, 07 Apr 2012 18:01:31 +0000
+Subject: Make t/CairoPath.t more robust
+
+The end of a path that took a round trip into cairo and back might differ
+for different versions of cairo.  Hence, compare only the beginning with
+the expected path.
+---
+diff --git a/t/CairoPath.t b/t/CairoPath.t
+index 770e464..27a3aad 100644
+--- a/t/CairoPath.t
++++ b/t/CairoPath.t
+@@ -11,17 +11,11 @@ use strict;
+ use warnings;
+ use Cairo;
+ 
+-use Test::More;
++use Test::More tests => 18;
+ 
+ use constant IMG_WIDTH => 256;
+ use constant IMG_HEIGHT => 256;
+ 
+-if (Cairo::VERSION >= Cairo::VERSION_ENCODE (1, 4, 0)) {
+-  plan tests => 6;
+-} else {
+-  plan skip_all => 'path behavior not predictable on cairo < 1.4';
+-}
+-
+ my $surf = Cairo::ImageSurface->create ('rgb24', IMG_WIDTH, IMG_HEIGHT);
+ my $cr = Cairo::Context->create ($surf);
+ 
+@@ -40,14 +34,7 @@ my $expected_path = [
+ ];
+ 
+ my $path = $cr->copy_path;
+-is_deeply ($path, $expected_path);
+-
+-sub paths_agree {
+-  my ($cr, $path, $expected_path) = @_;
+-  $cr->new_path;
+-  $cr->append_path ($path);
+-  is_deeply ($cr->copy_path, $expected_path);
+-}
++paths_agree ($path, $expected_path);
+ 
+ # Modifying single point values.
+ foreach ($path, $expected_path) {
+@@ -57,21 +44,21 @@ foreach ($path, $expected_path) {
+   $_->[2]{points}[2][0] = 99;
+   $_->[2]{points}[2][1] = 1010;
+ }
+-paths_agree ($cr, $path, $expected_path);
++path_round_trip_ok ($cr, $path, $expected_path);
+ 
+ # Modifying single points.
+ foreach ($path, $expected_path) {
+   $_->[1]{points}[0] = [333, 444];
+   $_->[2]{points}[2] = [77, 88];
+ }
+-paths_agree ($cr, $path, $expected_path);
++path_round_trip_ok ($cr, $path, $expected_path);
+ 
+ # Replacing all points.
+ foreach ($path, $expected_path) {
+   $_->[1]{points} = [[3333, 4444]];
+   $_->[2]{points} = [[55, 66], [77, 88], [99, 1010]];
+ }
+-paths_agree ($cr, $path, $expected_path);
++path_round_trip_ok ($cr, $path, $expected_path);
+ 
+ # Replacing and adding path segments.
+ my @cloned_path = @{$path};
+@@ -86,9 +73,24 @@ foreach (\@cloned_path, $expected_path) {
+     type => 'line-to',
+     points => [[23, 42]] };
+ }
+-paths_agree ($cr, \@cloned_path, $expected_path);
++path_round_trip_ok ($cr, \@cloned_path, $expected_path);
+ 
+ # Passing bare arrays into Cairo.
+ $cr->new_path;
+ $cr->append_path ($expected_path);
+-is_deeply ($cr->copy_path, $expected_path);
++paths_agree ($cr->copy_path, $expected_path);
++
++sub path_round_trip_ok {
++  my ($cr, $path, $expected_path) = @_;
++  $cr->new_path;
++  $cr->append_path ($path);
++  paths_agree ($cr->copy_path, $expected_path);
++}
++
++sub paths_agree {
++  my ($path, $expected_path) = @_;
++  # Only the first three entries seem to be reliable across cairo versions.
++  for (0..2) {
++    is_deeply ($path->[$_], $expected_path->[$_]);
++  }
++}
+--
+cgit v0.9.0.2
