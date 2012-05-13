@@ -1,1 +1,1 @@
-export PYTHONPATH="$PYTHONPATH:/usr/lib/libreoffice/program"
+#export PYTHONPATH="$PYTHONPATH:/usr/lib/libreoffice/program"
