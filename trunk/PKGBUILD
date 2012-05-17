@@ -3,8 +3,8 @@
 
 pkgbase="cups"
 pkgname=('libcups' 'cups')
-pkgver=1.5.2
-pkgrel=2
+pkgver=1.5.3
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.cups.org/"
@@ -18,21 +18,21 @@ source=(ftp://ftp.easysw.com/pub/cups/${pkgver}/cups-${pkgver}-source.tar.bz2
         cups-avahi-5-services.patch
         cups-no-export-ssllibs.patch
         cups-no-gcrypt.patch
+        cups-no-gzip-man.patch
         cups cups.logrotate cups.pam)
 #options=('!emptydirs')
-md5sums=('9471d2a7c920cfbb17133c32d2e6866f'
-         '8496c48a7ab5918ce546cfb72472def3'
-         '7df4c2e0a69bf072d7b7e96523df9dce'
-         '9a207c5d5189b1c2fc55907b7ed09372'
-         '5da4ba0837f9a685f146797fcfcd455e'
-         'fe782a8fd4351741120d485d476abe8a'
+md5sums=('e1ad15257aa6f162414ea3beae0c5df8'
+         '12c8af5bcd3b8f84240280b3dfaf9e89'
+         'cdc1322c8014297ae349e2db78a03c5a'
+         '1a5112f63958643f2888abc9418dbcac'
+         'c37d1bf1bb76acc3fe93362c80d91b7c'
+         '5d302860559960042f3b47a91b97c5fe'
          '9b8467a1e51d360096b70e2c3c081e6c'
          '3733c23e77eb503bd94cc368e02830dc'
+         'c9159ba1233902ba6ddbbe6885a46b72'
          '9657daa21760bb0b5fa3d8b51d5e01a1'
          'f861b18f4446c43918c8643dcbbd7f6d'
          '96f82c38f3f540b53f3e5144900acf17')
-
-# move client.conf man page for next update to the client pkg.
 
 build() {
   cd ${srcdir}/${pkgbase}-${pkgver}
@@ -48,6 +48,8 @@ build() {
   patch -Np1 -i "${srcdir}/cups-no-export-ssllibs.patch"
 
   patch -Np1 -i "${srcdir}/cups-no-gcrypt.patch"
+  # don't zip man pages in make install, let makepkg do that / Fedora
+  patch -Np1 -i ${srcdir}/cups-no-gzip-man.patch
   
   # Rebuild configure script for --enable-avahi.
   aclocal -I config-scripts
@@ -83,12 +85,23 @@ check() {
 package_libcups() {
 pkgdesc="The CUPS Printing System - client libraries and headers"
 depends=('gnutls>=2.8.3' 'libtiff>=4.0.0' 'libpng>=1.5.7' 'krb5' 'avahi')
+backup=(etc/cups/client.conf)
 
   cd ${srcdir}/${pkgbase}-${pkgver}
   make BUILDROOT=${pkgdir} install-headers install-libs
   # put this into the libs pkg to make other software find the libs(no pkg-config file included)
   mkdir -p ${pkgdir}/usr/bin
   install -m755 ${srcdir}/${pkgbase}-${pkgver}/cups-config ${pkgdir}/usr/bin/cups-config
+  
+  # install client.conf man page and config file
+  install -dm755 ${pkgdir}/usr/share/man/man5
+  #install -Dm644  ${srcdir}/${pkgbase}-${pkgver}/man/client.conf.5.gz ${pkgdir}/usr/share/man/man5/
+  install -Dm644  ${srcdir}/${pkgbase}-${pkgver}/man/client.conf.5 ${pkgdir}/usr/share/man/man5/
+  install -dm755 ${pkgdir}/etc/cups
+  touch ${pkgdir}/etc/cups/client.conf
+  echo "# see 'man client.conf'" >> ${pkgdir}/etc/cups/client.conf
+  echo "ServerName /var/run/cups/cups.sock #  alternative: ServerName hostname-or-ip-address[:port] of a remote server" >> ${pkgdir}/etc/cups/client.conf
+  chgrp lp ${pkgdir}/etc/cups/client.conf
 }
 
 package_cups() {
@@ -98,7 +111,6 @@ backup=(etc/cups/cupsd.conf
         etc/cups/snmp.conf
         etc/cups/printers.conf
         etc/cups/classes.conf
-        etc/cups/client.conf
         etc/cups/subscriptions.conf
         etc/dbus-1/system.d/cups.conf
         etc/logrotate.d/cups
@@ -141,15 +153,15 @@ optdepends=('php: for included phpcups.so module'
   # install some more configuration files that will get filled by cupsd
   touch ${pkgdir}/etc/cups/printers.conf
   touch ${pkgdir}/etc/cups/classes.conf
-  touch ${pkgdir}/etc/cups/client.conf
-  echo "# see 'man client.conf'" >> ${pkgdir}/etc/cups/client.conf
-  echo "ServerName /var/run/cups/cups.sock #  alternative: ServerName hostname-or-ip-address[:port] of a remote server" >> ${pkgdir}/etc/cups/client.conf
   touch ${pkgdir}/etc/cups/subscriptions.conf 
-  chgrp lp ${pkgdir}/etc/cups/{printers.conf,classes.conf,client.conf,subscriptions.conf}
+  chgrp lp ${pkgdir}/etc/cups/{printers.conf,classes.conf,subscriptions.conf}
   
   # fix .desktop file
   sed -i 's|^Exec=htmlview http://localhost:631/|Exec=xdg-open http://localhost:631/|g' ${pkgdir}/usr/share/applications/cups.desktop
   
   # compress some driver files, adopted from Fedora
   find ${pkgdir}/usr/share/cups/model -name "*.ppd" | xargs gzip -n9f
+  
+  # remove client.conf man page
+  rm -f ${pkgdir}/usr/share/man/man5/client.conf.5
 }
