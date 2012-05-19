@@ -18,10 +18,13 @@ pkgname=('libreoffice-common'
 	'libreoffice-extension-pdfimport'
 	'libreoffice-extension-presenter-screen'
 	'libreoffice-extension-presentation-minimizer'
-	'libreoffice-extension-report-builder')
+	'libreoffice-extension-report-builder'
+	'libreoffice-scripting-beanshell'
+	'libreoffice-scripting-javascript'
+	'libreoffice-extension-scripting-python') # svn up -r 142692 (last one with all extensions built
 _LOver=3.5.3.2
 pkgver=3.5.3
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.libreoffice.org/"
@@ -76,6 +79,7 @@ source=(${_mirror}/${pkgbase}-{core,help,translations}-${_LOver}.tar.xz
 	gmake_install.diff::http://cgit.freedesktop.org/libreoffice/core/patch/?id=1048d8fa4abd3e55a45dfb6884db808da1d72c9e
 	smp_buildfix.diff::http://cgit.freedesktop.org/libreoffice/core/patch/?id=cf23f57ae6bb7af689a45e0a850c3c2f67a8f810
 	poppler_buildfix.diff::http://cgit.freedesktop.org/libreoffice/core/patch/?id=ac68934592ec7d838cf5c22744be8d97aa4a1a47
+	fix_broken_hebrew_wordwrapping.diff
 	buildfix_icu49.diff
 	libreoffice-common.sh libreoffice-common.csh)
 noextract=(2fa6028324347860e684e75310818d43-libvisio-0.0.16.tar.bz2
@@ -140,6 +144,7 @@ md5sums=('d22cd79e7463ac4caf0a4b47d78a82ac'
          '60ce5dc9bd098f95c2e621a930c98dd9'
          '661a52a02a31b3afbe4b3b3146061afd'
          '72ba8d57cefdc25a6f1bc845edfd4d78'
+         '025d9b17d9eb90dc282c5c1289a666aa'
          '9734ea20c9f67e1b6e1c5a1247fbd3ff'
          'f0e72d0e1bc93a50a3aa9d31350b156c'
          '867c682b45f477f916786e00c45d7ab7')
@@ -166,8 +171,10 @@ build() {
 	# one late fix to solve make distro-pack-install issue
 	patch -Np1 -i ${srcdir}/gmake_install.diff
 	patch -Np1 -i ${srcdir}/smp_buildfix.diff
-	patch -Np0 -i ${srcdir}/buildfix_icu49.diff
+	#patch -Np0 -i ${srcdir}/buildfix_icu49.diff
 	patch -Np1 -i ${srcdir}/poppler_buildfix.diff
+	# https://bugs.archlinux.org/task/29854 based on 3.6/master patch http://cgit.freedesktop.org/libreoffice/core/patch/?id=20c24114143d6d38774b56a142fd4ae05094308e
+	patch -Np1 -i ${srcdir}/fix_broken_hebrew_wordwrapping.diff
 	
 	# unset C(XX)FLAGS
 	# http://www.openoffice.org/issues/show_bug.cgi?id=103205
@@ -213,6 +220,8 @@ build() {
 		--enable-mergelibs \
 		--enable-opengl \
 		--enable-odk\
+		--enable-ext-scripting-beanshell \
+		--enable-ext-scripting-javascript \
 		--disable-ext-mysql-connector \
 		--with-system-mysql \
 		--enable-librsvg=system \
@@ -284,7 +293,7 @@ build() {
 package_libreoffice-common() {
 
  pkgdesc="common files for LibreOffice - a productivity suite that is compatible with other major office suites"
- install=${pkgbase}.install
+ install=libreoffice-common.install
  depends=('libreoffice-langpack' "hunspell>=1.2.8" "python2>=2.7" "neon>=0.28.6"
           'nspr' 'libsm' 'redland' 'hyphen' 'graphite' "icu>=49.1" 
           'hicolor-icon-theme' 'desktop-file-utils' 'shared-mime-info' 'xdg-utils' 'orbit2')
@@ -348,6 +357,7 @@ package_libreoffice-common() {
 
 package_libreoffice-base() {
  pkgdesc="GUI Spreadsheet Applicationdatabase front-end for LibreOffice. Allows creation and management of databases through a GUI."
+ install=libreoffice-base.install
  depends=('libreoffice-common' 'hsqldb-java')
  optdepends=('libreoffice-postgresql-connector')
  backup=()
@@ -399,6 +409,7 @@ package_libreoffice-postgresql-connector() {
 
 package_libreoffice-calc() {
  pkgdesc="Spreadsheet application for LibreOffice."
+ install=libreoffice-calc.install
  depends=('libreoffice-common' 'lpsolve' )
  optdepends=()
  backup=()
@@ -421,6 +432,7 @@ package_libreoffice-calc() {
 
 package_libreoffice-draw() {
  pkgdesc="Drawing Application for LibreOffice."
+ install=libreoffice-draw.install
  depends=('libreoffice-common')
  optdepends=()
  backup=()
@@ -464,6 +476,7 @@ package_libreoffice-gnome() {
 
 package_libreoffice-impress() {
  pkgdesc="Presentation Application for LibreOffice."
+ install=libreoffice-impress.install
  depends=('libreoffice-common')
  optdepends=('mesa:             for the OGLTrans extension')
  backup=()
@@ -578,6 +591,7 @@ package_libreoffice-sdk-doc() {
 
 package_libreoffice-writer() {
  pkgdesc="Word Processor Applicationfor LibreOffice."
+ install=libreoffice-writer.install
  depends=('libreoffice-common' 'libwpd>=0.9.2' 'libwps' 'libxml2')
  optdepends=('libwpg:           library for importing and converting Corel WordPerfect(tm) Graphics images')
  backup=()
@@ -658,4 +672,36 @@ package_libreoffice-extension-report-builder() {
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
 	unzip -q ${srcdir}/libreoffice-core-$_LOver/solver/unxlng*/bin/report-builder.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/report-builder
+}
+
+package_libreoffice-scripting-beanshell() {
+
+ pkgdesc="LibreOffice extension - Enables support for scripts in BeanShell"
+ depends=('libreoffice-common' 'java-environment')
+ groups=('libreoffice-extensions')
+
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/program/{classes,services}
+	mv ${srcdir}/fakeinstall/usr/lib/libreoffice/program/classes/ScriptProviderForBeanShell.jar ${pkgdir}/usr/lib/libreoffice/program/classes/
+	mv ${srcdir}/fakeinstall/usr/lib/libreoffice/program/services/scriptproviderforbeanshell.rdb ${pkgdir}/usr/lib/libreoffice/program/services/
+}
+
+package_libreoffice-scripting-javascript() {
+
+ pkgdesc="LibreOffice extension - Enables support for scripts in JavaScript"
+ depends=('libreoffice-common' 'java-environment')
+ groups=('libreoffice-extensions')
+
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/program/{classes,services}
+	mv ${srcdir}/fakeinstall/usr/lib/libreoffice/program/classes/{js.jar,ScriptProviderForJavaScript.jar} ${pkgdir}/usr/lib/libreoffice/program/classes/
+	mv ${srcdir}/fakeinstall/usr/lib/libreoffice/program/services/scriptproviderforjavascript.rdb ${pkgdir}/usr/lib/libreoffice/program/services/
+}
+
+package_libreoffice-extension-scripting-python() {
+
+ pkgdesc="LibreOffice extension - Enables support for scripts in Python"
+ depends=('libreoffice-common' 'python2')
+ groups=('libreoffice-extensions')
+
+	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
+	unzip -q ${srcdir}/libreoffice-core-$_LOver/solver/unxlng*/bin/script-provider-for-python.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/script-provider-for-python
 }
