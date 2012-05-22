@@ -10,34 +10,27 @@
 # Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
 
 pkgname=('llvm' 'llvm-ocaml' 'clang' 'clang-analyzer')
-pkgver=3.0
-pkgrel=4
+pkgver=3.1
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
 makedepends=('libffi' 'python2' 'ocaml')
-source=(http://llvm.org/releases/$pkgver/$pkgname-$pkgver.tar.gz
-        http://llvm.org/releases/$pkgver/clang-$pkgver.tar.gz
+source=(http://llvm.org/releases/$pkgver/$pkgname-$pkgver.src.tar.gz
+        http://llvm.org/releases/$pkgver/clang-$pkgver.src.tar.gz
         clang-plugin-loader-registry.patch
         cindexer-clang-path.patch
         clang-pure64.patch
-        enable-lto.patch
-        fix-gold-lto-linking.patch)
-sha256sums=('519eb11d3499ce99c6ffdb8718651fc91425ed7690eac91c8d6853474f7c0477'
-            'b64e72da356d7c3428cfd7ac620d49ec042c84eaee13c26024879f555f4e126d'
+        enable-lto.patch)
+sha256sums=('1ea05135197b5400c1f88d00ff280d775ce778f8f9ea042e25a1e1e734a4b9ab'
+            'ff63e215dcd3e2838ffdea38502f8d35bab17e487f3c3799579961e452d5a786'
             'a0a4494f2a692789670be37fd390906dcaa37b1824f740bdaaea21182f2f3a9c'
             '3074df5322900e087377a8e03a02115463ccc0011c25917c2f06df11facd9b92'
             '288a82fbff17bc554f5863734246500e637882af33ee8511019d5e0d6cd20524'
-            'cf8922a932e1859f3783bef2af8ac1e90ce96f8eec79928392327b71b3d7cb89'
-            '24d275cdf170f53844bc7174b065fb51b6ddbb9642ced34702cde1f0f74d9192')
+            'f7145e203ffb4ce2c01976027f7840a9520e5341a9945f2459b6b11e5422d5b7')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver.src"
-
-  # Build without -ftree-pre as a workaround for clang segfaulting on x86_64
-  # https://bugzilla.redhat.com/show_bug.cgi?id=791365
-  CFLAGS+=' -fno-tree-pre'
-  CXXFLAGS+=' -fno-tree-pre'
 
   # At the present, clang must reside inside the LLVM source code tree to build
   # See http://llvm.org/bugs/show_bug.cgi?id=4840
@@ -52,6 +45,11 @@ build() {
          -e 's:\$(PROJ_prefix)/lib:$(PROJ_prefix)/lib/llvm:' \
          -e 's:\$(PROJ_prefix)/docs/llvm:$(PROJ_prefix)/share/doc/llvm:' \
     Makefile.config.in
+  sed -i '/ActiveLibDir = ActivePrefix/s:lib:lib/llvm:' \
+    tools/llvm-config/llvm-config.cpp
+  sed -i 's:LLVM_LIBDIR="${prefix}/lib":LLVM_LIBDIR="${prefix}/lib/llvm":' \
+    autoconf/configure.ac \
+    configure
 
   # Fix insecure rpath (http://bugs.archlinux.org/task/14017)
   sed -i 's:$(RPATH) -Wl,$(\(ToolDir\|LibDir\|ExmplDir\))::g' Makefile.rules
@@ -72,15 +70,17 @@ build() {
   # Use gold instead of default linker, and always use the plugin
   patch -d tools/clang -Np0 -i "$srcdir/enable-lto.patch"
 
-  # Fix libLTO.so location in gold plugin
-  patch -Np1 -i "$srcdir/fix-gold-lto-linking.patch"
-
   # Apply strip option to configure
   _optimized_switch="enable"
   [[ $(check_option strip) == n ]] && _optimized_switch="disable"
 
   # Include location of libffi headers in CPPFLAGS
   export CPPFLAGS="$CPPFLAGS $(pkg-config --cflags libffi)"
+
+  # Use Python 2
+  mkdir "$srcdir/python2-path"
+  ln -s /usr/bin/python2 "$srcdir/python2-path/python"
+  export PATH="$srcdir/python2-path:$PATH"
 
   # Force the use of GCC instead of clang
   CC=gcc CXX=g++ \
@@ -109,10 +109,6 @@ package_llvm() {
   # We move the clang directory out of the tree so it won't get installed and
   # then we bring it back in for the clang package
   mv tools/clang "$srcdir"
-
-  # Copy missing file into the expected location
-  [[ $(check_option strip) == y ]] && _build_type=Release || _build_type=Debug
-  cp bindings/ocaml/llvm/META.llvm bindings/ocaml/llvm/$_build_type/
 
   # -j1 is due to race conditions during the installation of the OCaml bindings
   make -j1 DESTDIR="$pkgdir" install
@@ -198,7 +194,9 @@ package_clang-analyzer() {
   done
 
   # Use Python 2
-  sed -i 's/env python$/&2/' \
+  sed -i \
+    -e 's|env python$|&2|' \
+    -e 's|/usr/bin/python$|&2|' \
     "$pkgdir/usr/lib/clang-analyzer/scan-view/scan-view" \
     "$pkgdir/usr/lib/clang-analyzer/scan-build/set-xcode-analyzer"
 
