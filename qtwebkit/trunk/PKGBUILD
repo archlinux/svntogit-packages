@@ -2,8 +2,8 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qtwebkit
-pkgver=2.2.1
-pkgrel=2
+pkgver=2.2.2
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://trac.webkit.org/wiki/QtWebKit'
 pkgdesc='An open source web browser engine (Qt port)'
@@ -11,39 +11,96 @@ license=('LGPL2.1' 'GPL3')
 depends=('qt' 'gstreamer0.10-base')
 makedepends=('python2' 'mesa' 'chrpath' 'gperf')
 conflicts=('qt<4.8')
-#source=("http://get.qt.nokia.com/${pkgname}/QtWebKit-${pkgver}.tar.gz"
-source=("ftp://ftp.archlinux.org/other/${pkgname}/QtWebKit-${pkgver}.tar.gz"
-        "ftp://ftp.archlinux.org/other/${pkgname}/qwebview-4.8.0.tar.bz2"
-        'python2-path.patch')
-sha1sums=('283fc116882157df0474af496be73bb9b34cb001'
-          '0e44b27a0f71aceb91a89a2c28ab6331126518d9'
-          'b0ef3d5596171e3900a685df9bcfac3068ad6330')
+_qtver=4.8.2
+source=("ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}-source.tar.gz"
+        "ftp://ftp.archlinux.org/other/${pkgname}/qwebview-${_qtver}.tar.xz"
+        'glibc.patch')
+sha1sums=('914d7cc099e5b6181c2d74fc7a74e1b4478b75a4'
+          '33c83272ed8110180ee6e7e3733e68cc513e2802'
+          '9e47ba5725a2ebd072b8bff31fa2f71aa83f0333')
 
 build() {
-  cd "${srcdir}"/QtWebKit-${pkgver}
+  cd "${srcdir}"/${pkgname}-${pkgver}-source
 
-  patch -p1 -i "${srcdir}"/python2-path.patch
+  patch -p1 -i "${srcdir}"/glibc.patch
 
-  cd Tools/Scripts
-  ./build-webkit --qt \
-    --prefix=/usr \
-    --makeargs="${MAKEFLAGS}" \
-    --release \
-    --3d-canvas
+  # move headers
+  mv include Source/
+
+  cd Source
+  qmake
+  cd ../
+
+  make -C Source
 
   # Build the QWebView plugin (FS#27914)
-  cd "${srcdir}"/QtWebKit-${pkgver}/qwebview-4.8.0/plugins/qwebview
+  cd "${srcdir}"/${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/qwebview
   qmake
   make
 }
 
 package() {
-  cd "${srcdir}"/QtWebKit-${pkgver}
-  make INSTALL_ROOT="${pkgdir}" -C WebKitBuild/Release install
+  cd "${srcdir}"/${pkgname}-${pkgver}-source
+  make INSTALL_ROOT="${pkgdir}" -C Source install
 
   # Fix RPATH
   chrpath -r /usr/lib/ "${pkgdir}"/usr/lib/qt/imports/QtWebKit/libqmlwebkitplugin.so
 
-  cd "${srcdir}"/QtWebKit-${pkgver}/qwebview-4.8.0/plugins/qwebview
+  cd "${srcdir}"/${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/qwebview
   make INSTALL_ROOT="${pkgdir}" install
+}
+
+_source() {
+  local _current_dir=$(pwd)
+  local _tmp=$(mktemp -d --tmpdir)
+
+  cd _tmp
+  git clone git://gitorious.org/+qtwebkit-developers/webkit/qtwebkit.git
+
+  # fetch the make-package.py script
+  git clone git://qt.gitorious.org/qtwebkit/tools.git
+
+  # create the qtwebkit tarball
+  cd qtwebkit
+  git checkout -b ${pkgname}-${pkgver} ${pkgname}-${pkgver}
+
+  sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' \
+    ../tools/make-package.py
+  python2 ../tools/make-package.py
+
+  mv ${pkgname}-${pkgver}-source.tar.gz ${_current_dir}/
+
+  cd ..
+  
+  # create the qwebview plugin tarball
+  mkdir qwebview-${_qtver}
+  cd qwebview-${_qtver}
+  wget http://releases.qt-project.org/qt4/source/qt-everywhere-opensource-src-${_qtver}.tar.gz
+  tar xf qt-everywhere-opensource-src-${_qtver}.tar.gz
+  mkdir -p ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/
+  cp -ra qt-everywhere-opensource-src-${_qtver}/tools/designer/src/plugins/qwebview \
+    ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/
+
+  cat > ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/plugins.pro <<"EOF"
+TEMPLATE = subdirs
+CONFIG += ordered
+
+REQUIRES = !CONFIG(static,shared|static)
+contains(QT_CONFIG, webkit): SUBDIRS += qwebview
+EOF
+
+  cat > $(_tmp)/header.txt <<"EOF"
+INCLUDEPATH += ../../../Source/include
+LIBS += -L../../../Source/lib
+
+EOF
+
+  cat $(_tmp)/header.txt qt-everywhere-opensource-src-${_qtver}/tools/designer/src/plugins/plugins.pri > \
+    ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/plugins.pri
+
+  tar cJf qwebview-${_qtver}.tar.xz ${pkgname}-${pkgver}-source
+
+  mv qwebview-${_qtver}.tar.xz ${_current_dir}/
+
+  rm -rf ${_tmp}
 }
