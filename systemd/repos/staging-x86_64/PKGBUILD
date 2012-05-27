@@ -3,7 +3,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'udev')
 pkgver=183
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -13,18 +13,24 @@ options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
+        'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
         'os-release')
 md5sums=('e1e5e0f376fa2a4cb4bc31a2161c09f2'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
+         'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
          '752636def0db3c03f121f8b4f44a63cd')
 
 build() {
   cd "$pkgname-$pkgver"
 
+  # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
+
+  # fix udev rules dir
+  sed -i 's/pkglibexecdir/udevlibexecdir/' src/udev/udev.pc.in
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -122,16 +128,16 @@ package_systemd() {
   ### split out udev
   rm -rf "$srcdir/_udev"
   install -dm755 \
-    "$srcdir"/_udev/etc/udev \
-    "$srcdir"/_udev/usr/bin \
-    "$srcdir"/_udev/usr/include \
-    "$srcdir"/_udev/usr/lib/{systemd/system,udev} \
-    "$srcdir"/_udev/usr/lib/systemd/system/{sysinit,sockets}.target.wants \
-    "$srcdir"/_udev/usr/lib/girepository-1.0 \
-    "$srcdir"/_udev/usr/{lib,share}/pkgconfig \
-    "$srcdir"/_udev/usr/share/gir-1.0 \
-    "$srcdir"/_udev/usr/share/gtk-doc/html/{g,lib}udev \
-    "$srcdir"/_udev/usr/share/man/man{7,8}
+      "$srcdir"/_udev/etc/udev \
+      "$srcdir"/_udev/usr/bin \
+      "$srcdir"/_udev/usr/include \
+      "$srcdir"/_udev/usr/lib/{systemd/system,udev} \
+      "$srcdir"/_udev/usr/lib/systemd/system/{sysinit,sockets}.target.wants \
+      "$srcdir"/_udev/usr/lib/girepository-1.0 \
+      "$srcdir"/_udev/usr/{lib,share}/pkgconfig \
+      "$srcdir"/_udev/usr/share/gir-1.0 \
+      "$srcdir"/_udev/usr/share/gtk-doc/html/{g,lib}udev \
+      "$srcdir"/_udev/usr/share/man/man{7,8}
 
   cd "$srcdir"/_udev
   mv "$pkgdir"/etc/udev etc
@@ -153,10 +159,16 @@ package_systemd() {
 
   ### split out systemd-tools
   rm -rf "$srcdir/_tools"
-  install -dm755 "$srcdir/_tools/usr/lib/systemd" "$srcdir/_tools/usr/bin" "$srcdir"/_tools/usr/share/man/man5
+  install -dm755 \
+      "$srcdir/_tools/usr/lib/systemd" \
+      "$srcdir/_tools/usr/bin" \
+      "$srcdir"/_tools/etc/{binfmt,modules-load,sysctl}.d \
+      "$srcdir"/_tools/usr/share/man/man{1,5}
+
   cd "$srcdir/_tools"
-  mv "$pkgdir"/usr/bin/systemd-tmpfiles usr/bin
-  mv "$pkgdir"/usr/lib/systemd/systemd-{binfmt,modules-load,random-seed,sysctl,vconsole-setup} usr/lib/systemd
+  mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
+  mv "$pkgdir"/usr/lib/systemd/systemd-{ac-power,binfmt,cryptsetup,modules-load,random-seed,remount-fs,reply-password,sysctl,timestamp,vconsole-setup} usr/lib/systemd
+  mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt}.1 usr/share/man/man1
   mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
   mv "$pkgdir"/usr/share/man/man5/systemd.vconsole.conf.5 usr/share/man/man5
 }
@@ -172,8 +184,10 @@ package_systemd-tools() {
   pkgdesc='standalone tools from systemd'
   url='http://www.freedesktop.org/wiki/Software/systemd'
   depends=('glibc' 'kmod')
+  conflicts=('systemd<183')
 
   mv "$srcdir/_tools/"* "$pkgdir"
+  install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
 }
 
 package_udev() {
