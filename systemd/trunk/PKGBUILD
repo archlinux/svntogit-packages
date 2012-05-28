@@ -1,9 +1,9 @@
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
 
 pkgbase=systemd
-pkgname=('systemd' 'libsystemd' 'systemd-tools' 'udev')
+pkgname=('systemd' 'libsystemd' 'systemd-tools')
 pkgver=183
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -52,8 +52,8 @@ build() {
 
 package_systemd() {
   pkgdesc="system and service manager"
-  depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kbd' 'kmod' 'libcap' 'pam' "systemd-tools=$pkgver"
-           'util-linux' "udev=$pkgver" 'xz')
+  depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kbd' 'kmod' 'libcap' 'pam'
+           "systemd-tools=$pkgver" 'util-linux' 'xz')
   optdepends=('cryptsetup: required for encrypted block devices'
               'dbus-python: systemd-analyze'
               'initscripts: legacy support for hostname and vconsole setup'
@@ -78,11 +78,6 @@ package_systemd() {
 
   install -Dm644 "$srcdir/os-release" "$pkgdir/etc/os-release"
   printf "d /run/console 0755 root root\n" > "$pkgdir/usr/lib/tmpfiles.d/console.conf"
-
-  # install external sd-{daemon,readahead} libraries
-  install -m644 -t "$pkgdir/usr/share/doc/systemd" \
-    src/systemd/sd-daemon.[ch] \
-    src/readahead/sd-readahead.[ch]
 
   install -dm755 "$pkgdir/bin"
   ln -s ../usr/lib/systemd/systemd "$pkgdir/bin/systemd"
@@ -125,21 +120,22 @@ package_systemd() {
   mv "$pkgdir/usr/include/systemd" usr/include
   mv "$pkgdir/usr/lib/pkgconfig"/libsystemd-*.pc usr/lib/pkgconfig
 
-  ### split out udev
-  rm -rf "$srcdir/_udev"
+  ### split out systemd-tools/udev
+  rm -rf "$srcdir/_tools"
   install -dm755 \
-      "$srcdir"/_udev/etc/udev \
-      "$srcdir"/_udev/usr/bin \
-      "$srcdir"/_udev/usr/include \
-      "$srcdir"/_udev/usr/lib/{systemd/system,udev} \
-      "$srcdir"/_udev/usr/lib/systemd/system/{sysinit,sockets}.target.wants \
-      "$srcdir"/_udev/usr/lib/girepository-1.0 \
-      "$srcdir"/_udev/usr/{lib,share}/pkgconfig \
-      "$srcdir"/_udev/usr/share/gir-1.0 \
-      "$srcdir"/_udev/usr/share/gtk-doc/html/{g,lib}udev \
-      "$srcdir"/_udev/usr/share/man/man{7,8}
+      "$srcdir"/_tools/etc/udev \
+      "$srcdir"/_tools/usr/bin \
+      "$srcdir"/_tools/usr/include \
+      "$srcdir"/_tools/usr/lib/{systemd/system,udev} \
+      "$srcdir"/_tools/usr/lib/systemd/system/{sysinit,sockets}.target.wants \
+      "$srcdir"/_tools/usr/lib/girepository-1.0 \
+      "$srcdir"/_tools/usr/{lib,share}/pkgconfig \
+      "$srcdir"/_tools/usr/share/gir-1.0 \
+      "$srcdir"/_tools/usr/share/gtk-doc/html/{g,lib}udev \
+      "$srcdir"/_tools/etc/{binfmt,modules-load,sysctl}.d \
+      "$srcdir"/_tools/usr/share/man/man{1,5,7,8}
 
-  cd "$srcdir"/_udev
+  cd "$srcdir/_tools"
   mv "$pkgdir"/etc/udev etc
   mv "$pkgdir"/usr/bin/udevadm usr/bin
   mv "$pkgdir"/usr/lib/pkgconfig/*udev*.pc usr/lib/pkgconfig
@@ -155,22 +151,12 @@ package_systemd() {
   mv "$pkgdir"/usr/share/gir-1.0 usr/share
   mv "$pkgdir"/usr/share/gtk-doc/html/{g,lib}udev usr/share/gtk-doc/html
   mv "$pkgdir"/usr/share/man/man7/udev.7 usr/share/man/man7
+  mv "$pkgdir"/usr/share/man/man5/systemd.vconsole.conf.5 usr/share/man/man5
   mv "$pkgdir"/usr/share/man/man8/{systemd-udevd,udevadm}.8 usr/share/man/man8
-
-  ### split out systemd-tools
-  rm -rf "$srcdir/_tools"
-  install -dm755 \
-      "$srcdir/_tools/usr/lib/systemd" \
-      "$srcdir/_tools/usr/bin" \
-      "$srcdir"/_tools/etc/{binfmt,modules-load,sysctl}.d \
-      "$srcdir"/_tools/usr/share/man/man{1,5}
-
-  cd "$srcdir/_tools"
-  mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
-  mv "$pkgdir"/usr/lib/systemd/systemd-{ac-power,binfmt,cryptsetup,modules-load,random-seed,remount-fs,reply-password,sysctl,timestamp,vconsole-setup} usr/lib/systemd
   mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt}.1 usr/share/man/man1
   mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
-  mv "$pkgdir"/usr/share/man/man5/systemd.vconsole.conf.5 usr/share/man/man5
+  mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
+  mv "$pkgdir"/usr/lib/systemd/systemd-{ac-power,binfmt,cryptsetup,modules-load,random-seed,remount-fs,reply-password,sysctl,timestamp,vconsole-setup} usr/lib/systemd
 }
 
 package_libsystemd() {
@@ -183,22 +169,13 @@ package_libsystemd() {
 package_systemd-tools() {
   pkgdesc='standalone tools from systemd'
   url='http://www.freedesktop.org/wiki/Software/systemd'
-  depends=('glibc' 'kmod')
-  conflicts=('systemd<183')
+  depends=('acl' 'bash' 'glibc' 'glib2' 'kmod' 'hwids' 'util-linux')
+  provides=("udev=$pkgver")
+  conflicts=('udev')
+  replaces=('udev')
+  install='systemd-tools.install'
 
   mv "$srcdir/_tools/"* "$pkgdir"
-  install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
-}
-
-package_udev() {
-  pkgdesc='userspace dev tools'
-  url='http://git.kernel.org/?p=linux/hotplug/udev.git;a=summary'
-  groups=('base')
-  depends=('acl' 'util-linux' 'glibc' 'glib2' 'kmod' 'hwids' 'bash')
-  backup=('etc/udev/udev.conf')
-  install='udev.install'
-
-  mv "$srcdir/_udev"/* "$pkgdir"
 
   # the path to udevadm is hardcoded in some places
   install -d "$pkgdir/sbin"
@@ -213,9 +190,10 @@ package_udev() {
           s#GROUP="tape"#GROUP="storage"#g;
           s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
 
-  # add mkinitcpio hooks for udev
+  # add mkinitcpio hooks
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
+  install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
 }
 
 # vim: ft=sh syn=sh et
