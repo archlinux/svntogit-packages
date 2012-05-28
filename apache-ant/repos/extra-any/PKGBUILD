@@ -2,53 +2,73 @@
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
 # Contributor: Andrew Wright <andreww@photism.org>
 # Contributor: Paul Mattal <paul@archlinux.org>
-
 pkgname=apache-ant
-pkgver=1.8.3
+pkgver=1.8.4
 pkgrel=1
 pkgdesc="A java-based build tool"
 arch=('any')
-license=('APACHE')
 url="http://ant.apache.org/"
+license=('APACHE')
 depends=('java-environment')
+makedepends=('java-environment' 'xalan-java' 'junit' 'apache-ant')
 optdepends=('junit: to jave junit on the classpath in javac tasks')
-source=(http://archive.apache.org/dist/ant/binaries/${pkgname}-${pkgver}-bin.tar.bz2
-        ${pkgname}.sh ${pkgname}.csh
-        ant_diagnostics.patch)
-md5sums=('f5959aff4ab061cac37ff1f84f3b874a'
-         '593ee6ebd9b8ec321534a028e686880f'
-         '475b684eb8202c09cbb51496cd8ee1e0'
-         'cbaab423be40a6e63f0fde901b91eb50')
+#http://apache.org/dist/ant/source/${pkgname}-${pkgver}-src.tar.bz2
+source=(http://apache.org/dist/ant/binaries/${pkgname}-${pkgver}-bin.tar.bz2
+        ${pkgname}.sh
+        ${pkgname}.csh)
+md5sums=('561838e665e5dc185dde9d220fce1336'
+         'dbfa1e8dd4bab2f5821f5abe50835c83'
+         'b3f67824043b6fb00667bb7a4007af42')
+
+_ant_home=/usr/share/${pkgname}
+
+#build() {
+#  cd "${srcdir}/${pkgname}-${pkgver}"
+
+#  ant -Ddest=optional -f fetch.xml
+
+#  ln -s /usr/share/java/junit.jar lib/optional/junit.jar
+#  ./bootstrap.sh
+
+#  mkdir ${srcdir}/.m2
+#  ./bootstrap/bin/ant -Ddest=optional -Ddest.dir=${srcdir}/.m2 -f fetch.xml
+#  ./bootstrap/bin/ant -f fetch.xml -nouserlib -Ddest=optional
+
+#  sh build.sh dist
+
+#  ant dist
+#}
 
 package() {
-  # install profile.d script
-  install -dm755 "${pkgdir}"/etc/profile.d
-  install -m755 "${srcdir}"/${pkgname}.{csh,sh} "${pkgdir}"/etc/profile.d/
+#  cd "${srcdir}/${pkgname}-${pkgver}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}-${pkgver}"
 
-  # Get the ANT_HOME env var
-  source "${srcdir}"/${pkgname}.sh
-
-  cd "${srcdir}"/${pkgname}-${pkgver}
-  install -dm755 "${pkgdir}"/${ANT_HOME}/{bin,lib}
-
-  install -m644 ./lib/*.jar "${pkgdir}"/${ANT_HOME}/lib
-  cp -Rp ./etc "${pkgdir}"/${ANT_HOME}
-
-  # Do not copy Windows .bat/.cmd files
+  install -dm755 ${pkgdir}/${_ant_home}/bin
+  cp -Rp etc ${pkgdir}/${_ant_home}
   find ./bin -type f -a ! -name \*.bat -a ! -name \*.cmd \
-    -exec install -m755 {} "${pkgdir}"/${ANT_HOME}/bin \;
+    -exec install -m755 {} ${pkgdir}/${_ant_home}/bin \;
 
-  # symlink to junit so it's on the javac build path for ant
-  # matches behavior on ubuntu 9 and makes sense for compatibility
+  install -dm755 ${pkgdir}/usr/bin
+  ln -s ${_ant_home}/bin/ant ${pkgdir}/usr/bin/ant
+
+  install -dm755 ${pkgdir}/usr/share/java/${pkgname}
+  install -m644 lib/*.jar ${pkgdir}/usr/share/java/${pkgname}
+  ln -s /usr/share/java/${pkgname} ${pkgdir}/${_ant_home}/lib
+
+  # Symlink to junit so it's on the javac build path
   # http://bugs.archlinux.org/task/15229
-  ln -sf /usr/share/java/junit.jar "${pkgdir}"/usr/share/java/apache-ant/lib/
+  # http://ant.apache.org/manual/install.html#optionalTasks
+  ln -sf ../junit.jar ${pkgdir}/usr/share/java/apache-ant/
 
   # fix python2 path
-  sed -i 's|/usr/bin/python|/usr/bin/python2|' "${pkgdir}"/usr/share/java/apache-ant/bin/runant.py
+  sed -i 's|/usr/bin/python|/usr/bin/python2|' ${pkgdir}${_ant_home}/bin/runant.py
 
-  # The license says the NOTICE file should be redistributed for derivative
-  # works, so lets supply it.
-  cd "${srcdir}"/${pkgname}-${pkgver} 
-  install -dm755 "${pkgdir}"/usr/share/licenses/${pkgname}
-  install -m644 LICENSE NOTICE "${pkgdir}"/usr/share/licenses/${pkgname}
+  # install profile.d script
+  install -dm755 ${pkgdir}/etc/profile.d
+  install -m755 "${srcdir}"/${pkgname}.{csh,sh} ${pkgdir}/etc/profile.d/
+
+  # License says NOTICE file should be redistributed for derivative works
+  cd ${srcdir}/${pkgname}-${pkgver}
+  install -dm755 ${pkgdir}/usr/share/licenses/${pkgname}
+  install -m644 LICENSE NOTICE ${pkgdir}/usr/share/licenses/${pkgname}
 }
