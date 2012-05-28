@@ -32,11 +32,6 @@ test_config() {
 		stat_die
 	fi
 
-	local piddir=$(dirname "${pid_file}")
-	if [ ! -d "${piddir}" ]; then
-		install -d -m755 -o http -g http "${piddir}"
-	fi
-
 	stat_done
 }
 
