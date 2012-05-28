@@ -3,7 +3,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools')
 pkgver=183
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -29,7 +29,7 @@ build() {
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
 
-  # fix udev rules dir
+  # fix udev rules dir (upstream 392f9c8404e42f7dd6e5b5adf488d87838515981)
   sed -i 's/pkglibexecdir/udevlibexecdir/' src/udev/udev.pc.in
 
   ./configure \
@@ -129,21 +129,22 @@ package_systemd() {
       "$srcdir"/_tools/usr/lib/{systemd/system,udev} \
       "$srcdir"/_tools/usr/lib/systemd/system/{sysinit,sockets}.target.wants \
       "$srcdir"/_tools/usr/lib/girepository-1.0 \
-      "$srcdir"/_tools/usr/{lib,share}/pkgconfig \
+      "$srcdir"/_tools/usr/share/pkgconfig \
       "$srcdir"/_tools/usr/share/gir-1.0 \
       "$srcdir"/_tools/usr/share/gtk-doc/html/{g,lib}udev \
-      "$srcdir"/_tools/etc/{binfmt,modules-load,sysctl}.d \
       "$srcdir"/_tools/usr/share/man/man{1,5,7,8}
 
   cd "$srcdir/_tools"
   mv "$pkgdir"/etc/udev etc
+  mv "$pkgdir"/etc/{binfmt,modules-load,sysctl,tmpfiles}.d etc
   mv "$pkgdir"/usr/bin/udevadm usr/bin
-  mv "$pkgdir"/usr/lib/pkgconfig/*udev*.pc usr/lib/pkgconfig
+  mv "$pkgdir"/usr/lib/pkgconfig usr/lib
   mv "$pkgdir"/usr/lib/systemd/systemd-udevd usr/lib/systemd
   mv "$pkgdir"/usr/lib/systemd/system/systemd-udev* usr/lib/systemd/system
   mv "$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/systemd-udev* usr/lib/systemd/system/sysinit.target.wants
   mv "$pkgdir"/usr/lib/systemd/system/sockets.target.wants/systemd-udev* usr/lib/systemd/system/sockets.target.wants
   mv "$pkgdir"/usr/lib/lib{,g}udev* usr/lib
+  mv "$pkgdir"/usr/lib/{binfmt,sysctl,modules-load,tmpfiles}.d usr/lib
   mv "$pkgdir"/usr/lib/udev usr/lib
   mv "$pkgdir"/usr/include/{libudev.h,gudev-1.0} usr/include
   mv "$pkgdir"/usr/lib/girepository-1.0 usr/lib
