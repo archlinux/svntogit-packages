@@ -87,10 +87,6 @@ package_systemd() {
   # fix systemd-analyze for python2
   sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
-  # fix .so links in manpage stubs
-  find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
-      -exec sed -i '1s|^\.so \(.*\)\.\([[:digit:]]\+\)|.so man\2/\1.\2|' {} +
-
   # move bash-completion and symlink for loginctl
   install -Dm644 "$pkgdir/etc/bash_completion.d/systemd-bash-completion.sh" \
     "$pkgdir/usr/share/bash-completion/completions/systemctl"
