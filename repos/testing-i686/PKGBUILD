@@ -3,7 +3,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools')
 pkgver=183
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -190,6 +190,9 @@ package_systemd-tools() {
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
           s#GROUP="tape"#GROUP="storage"#g;
           s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
+
+  # get rid of unneded lock directories
+  sed -ri '/\/run\/lock\/(subsys|lockdev)/d' "$pkgdir"/usr/lib/tmpfiles.d/legacy.conf
 
   # add mkinitcpio hooks
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
