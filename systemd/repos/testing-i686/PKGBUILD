@@ -1,9 +1,9 @@
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
 
 pkgbase=systemd
-pkgname=('systemd' 'libsystemd' 'systemd-tools')
+pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=183
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -15,13 +15,17 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
-        'os-release')
+        '0001-journald-ignore-messages-read-from-proc-kmsg-that-we.patch'
+        'os-release'
+        'locale.sh')
 md5sums=('e1e5e0f376fa2a4cb4bc31a2161c09f2'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         '752636def0db3c03f121f8b4f44a63cd')
+         '146d5e5cce55b1b7c6115aaf5ca7770a'
+         '752636def0db3c03f121f8b4f44a63cd'
+         'f15956945052bb911e5df81cf5e7e5dc')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -29,8 +33,14 @@ build() {
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
 
+  # fix busy loop in journal (upstream 6c3569e11aa1f658a9ef3f3c6efda4ae696e5aa8)
+  patch -Np1 <"$srcdir/0001-journald-ignore-messages-read-from-proc-kmsg-that-we.patch"
+
   # fix udev rules dir (upstream 392f9c8404e42f7dd6e5b5adf488d87838515981)
   sed -i 's/pkglibexecdir/udevlibexecdir/' src/udev/udev.pc.in
+
+  # fix bash completion (upstream 80d37ae7b9d2c471e89e018a8f1e7cab8cd53123)
+  sed -i 's/systemd-loginctl/loginctl/' bash-completion/systemd-bash-completion.sh
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -85,22 +95,6 @@ package_systemd() {
   # fix systemd-analyze for python2
   sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
-  # fix .so links in manpage stubs
-  find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
-      -exec sed -i '1s|^\.so \(.*\)\.\([[:digit:]]\+\)|.so man\2/\1.\2|' {} +
-
-  # rename man pages to avoid conflicts with sysvinit and initscripts
-  cd "$pkgdir/usr/share/man"
-
-  manpages=(man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8
-            man5/{hostname,{vconsole,locale}.conf}.5)
-
-  for manpage in "${manpages[@]}"; do
-    IFS='/' read section page <<< "$manpage"
-    mv "$manpage" "$section/systemd.$page"
-  done
-  sed -i '1s|/\([^/]\+\)|/systemd.\1|' "$pkgdir"/usr/share/man/man8/systemd.{poweroff,reboot}.8
-
   # move bash-completion and symlink for loginctl
   install -Dm644 "$pkgdir/etc/bash_completion.d/systemd-bash-completion.sh" \
     "$pkgdir/usr/share/bash-completion/completions/systemctl"
@@ -119,6 +113,12 @@ package_systemd() {
   mv "$pkgdir/usr/lib"/libsystemd-*.so* usr/lib
   mv "$pkgdir/usr/include/systemd" usr/include
   mv "$pkgdir/usr/lib/pkgconfig"/libsystemd-*.pc usr/lib/pkgconfig
+
+  ### split out manpages for sysvcompat
+  rm -rf "$srcdir/_sysvcompat"
+  install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
+  mv "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
+     "$srcdir"/_sysvcompat/usr/share/man/man8
 
   ### split out systemd-tools/udev
   rm -rf "$srcdir/_tools"
@@ -152,12 +152,28 @@ package_systemd() {
   mv "$pkgdir"/usr/share/gir-1.0 usr/share
   mv "$pkgdir"/usr/share/gtk-doc/html/{g,lib}udev usr/share/gtk-doc/html
   mv "$pkgdir"/usr/share/man/man7/udev.7 usr/share/man/man7
-  mv "$pkgdir"/usr/share/man/man5/systemd.vconsole.conf.5 usr/share/man/man5
   mv "$pkgdir"/usr/share/man/man8/{systemd-udevd,udevadm}.8 usr/share/man/man8
   mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt}.1 usr/share/man/man1
   mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
+  mv "$pkgdir"/usr/share/man/man5/{hostname,{vconsole,locale}.conf}.5 usr/share/man/man5
   mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
   mv "$pkgdir"/usr/lib/systemd/systemd-{ac-power,binfmt,cryptsetup,modules-load,random-seed,remount-fs,reply-password,sysctl,timestamp,vconsole-setup} usr/lib/systemd
+}
+
+package_systemd-sysvcompat() {
+  pkgdesc="sysvinit compat for systemd"
+  conflicts=('sysvinit' 'initscripts')
+
+  mv "$srcdir/_sysvcompat"/* "$pkgdir"
+
+  install -dm755 "$pkgdir/sbin"
+  for tool in runlevel reboot shutdown poweroff halt telinit; do
+    ln -s '/usr/bin/systemctl' "$pkgdir/sbin/$tool"
+  done
+
+  ln -s '../usr/lib/systemd/systemd' "$pkgdir/sbin/init"
+
+  install -Dm755 "$srcdir/locale.sh" "$pkgdir/etc/profile.d/locale.sh"
 }
 
 package_libsystemd() {
