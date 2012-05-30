@@ -15,6 +15,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
+        '0001-journald-ignore-messages-read-from-proc-kmsg-that-we.patch'
         'os-release'
         'locale.sh')
 md5sums=('e1e5e0f376fa2a4cb4bc31a2161c09f2'
@@ -22,6 +23,7 @@ md5sums=('e1e5e0f376fa2a4cb4bc31a2161c09f2'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
+         '146d5e5cce55b1b7c6115aaf5ca7770a'
          '752636def0db3c03f121f8b4f44a63cd'
          'f15956945052bb911e5df81cf5e7e5dc')
 
@@ -31,8 +33,14 @@ build() {
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
 
+  # fix busy loop in journal (upstream 6c3569e11aa1f658a9ef3f3c6efda4ae696e5aa8)
+  patch -Np1 <"$srcdir/0001-journald-ignore-messages-read-from-proc-kmsg-that-we.patch"
+
   # fix udev rules dir (upstream 392f9c8404e42f7dd6e5b5adf488d87838515981)
   sed -i 's/pkglibexecdir/udevlibexecdir/' src/udev/udev.pc.in
+
+  # fix bash completion (upstream 80d37ae7b9d2c471e89e018a8f1e7cab8cd53123)
+  sed -i 's/systemd-loginctl/loginctl/' bash-completion/systemd-bash-completion.sh
 
   ./configure \
       --libexecdir=/usr/lib \
