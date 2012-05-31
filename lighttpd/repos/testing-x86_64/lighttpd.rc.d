@@ -4,7 +4,7 @@
 . /etc/rc.d/functions
 
 
-pid_file='/var/run/lighttpd/lighttpd-angel.pid'
+pid_file='/run/lighttpd/lighttpd-angel.pid'
 
 get_pid() {
 	if [ -r "${pid_file}" ]; then
