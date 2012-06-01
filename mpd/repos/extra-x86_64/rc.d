@@ -3,8 +3,6 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-[[ -d /run/mpd ]] || install -d -g mpd -o mpd /run/mpd
-
 case "$1" in
 	start)
 		stat_busy 'Starting Music Player Daemon'
