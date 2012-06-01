@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.16.8
-pkgrel=2
+pkgrel=3
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
@@ -17,10 +17,13 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'libpulse')
 makedepends=('doxygen')
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
+        'tmpfiles.d'
         'rc.d') 
 sha1sums=('977c80db8dc64e65c2bc523f69a9a7a71adca2b1'
-          '3777bdb4fff4b7911be3b1242aabae9d2912ef18')
+          'f4d5922abb69abb739542d8e93f4dfd748acdad7'
+          '3470d489565f0ed479f1665dd2876f66acb5a585')
 
+backup=('etc/mpd.conf')
 install=install
 
 build() {
@@ -57,5 +60,6 @@ package() {
 
 	install -Dm755 ../rc.d "${pkgdir}"/etc/rc.d/mpd
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
-	install -Dm644 doc/mpdconf.example "${pkgdir}"/usr/share/mpd/mpd.conf.example
+	install -Dm644 doc/mpdconf.example "${pkgdir}"/etc/mpd.conf
+	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
 }
