@@ -1,9 +1,16 @@
 # provides.pl
 ##
 # Script for printing out a provides list of every CPAN distribution
-# that is bundled with perl.
+# that is bundled with perl. You can run it before building perl
+# or you can run it after building perl. Required modules are in core
+# for perl 5.13 and above.  It might be nice if this didn't require
+# HTTP::Tiny and maybe just used wget or curl.
 #
-# Justin Davis <jrcd83@gmail.com>
+# This script uses HTTP::Tiny to query Tatsuhiko Miyagawa's webapp at
+# cpanmetadb.plackperl.org to cross-reference module files to their
+# providing CPAN distribution. Thank you Miyagawa!
+#
+# - Justin "juster" Davis <jrcd83@gmail.com>
 
 use warnings 'FATAL' => 'all';
 use strict;
@@ -13,20 +20,25 @@ package Common;
 sub evalver
 {
     my ($path, $mod) = @_;
-    $mod ||= "";
 
     open my $fh, '<', $path or die "open $path: $!";
 
-    while (<$fh>) {
-        next unless /\s*(?:\$${mod}::|\$)VERSION\s*=\s*(.+)/;
-        my $ver = eval $1;
+    my $m = ($mod
+        ? qr/(?:\$${mod}::VERSION|\$VERSION)/
+        : qr/\$VERSION/);
+
+    while (my $ln = <$fh>) {
+        next unless $ln =~ /\s*$m\s*=\s*.+/;
+        chomp $ln;
+        my $ver = do { no strict; eval $ln };
         return $ver unless $@;
-        warn qq{$path:$. bad version string "$ver"\n};
+        die qq{$path:$. bad version string in "$ln"\n};
     }
 
     close $fh;
     return undef;
 }
+
 
 #-----------------------------------------------------------------------------
 
@@ -143,7 +155,7 @@ use File::stat;
 sub cpan_provider
 {
     my ($module) = @_;
-    my $url = "http://cpanmetadb.appspot.com/v1.0/package/$module";
+    my $url = "http://cpanmetadb.plackperl.org/v1.0/package/$module";
     my $http = HTTP::Tiny->new;
     my $resp = $http->get($url);
     return undef unless $resp->{'success'};
@@ -169,6 +181,7 @@ sub find
     my @modfiles;
     my $finder = sub {
         return unless /[.]pm\z/;
+        return if m{\Q$libdir\E[^/]+/t/}; # ignore testing modules
         push @modfiles, $_;
     };
     findfile({ 'no_chdir' => 1, 'wanted' => $finder }, $libdir);
@@ -194,7 +207,7 @@ sub find
         $mod =~ s{\A$libdir}{};
         $mod =~ s{/}{::}g;
 
-        my $ver = Common::evalver($path) || q{};
+        my $ver = Common::evalver($path, $mod) || q{};
         push @mods, [ $mod, $ver ];
     }
 
