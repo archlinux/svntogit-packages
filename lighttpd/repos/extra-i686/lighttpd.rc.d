@@ -4,7 +4,7 @@
 . /etc/rc.d/functions
 
 
-pid_file='/var/run/lighttpd/lighttpd-angel.pid'
+pid_file='/run/lighttpd/lighttpd-angel.pid'
 
 get_pid() {
 	if [ -r "${pid_file}" ]; then
@@ -30,11 +30,6 @@ test_config() {
 	if [ $? -gt 0 ]; then
 		stat_append '(error in /etc/lighttpd/lighttpd.conf)'
 		stat_die
-	fi
-
-	local piddir=$(dirname "${pid_file}")
-	if [ ! -d "${piddir}" ]; then
-		install -d -m755 -o http -g http "${piddir}"
 	fi
 
 	stat_done
