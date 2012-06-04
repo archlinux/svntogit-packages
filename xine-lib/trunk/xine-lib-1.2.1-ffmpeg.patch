@@ -1,0 +1,75 @@
+# HG changeset patch
+# User Edgar Hucek <ebsi4711@gmail.com>
+# Date 1327873178 -3600
+# Node ID 69983efb1c928e64cc1900579b98142cef0569c4
+# Parent  61f51ebc2659363e308bedb10b9fa4e71a60cedc
+fix compile against recent ffmpeg
+
+diff -r 61f51ebc2659 -r 69983efb1c92 src/combined/ffmpeg/ff_video_decoder.c
+--- a/src/combined/ffmpeg/ff_video_decoder.c	Sat Feb 04 18:52:01 2012 +0000
++++ b/src/combined/ffmpeg/ff_video_decoder.c	Sun Jan 29 22:39:38 2012 +0100
+@@ -130,7 +130,9 @@
+ 
+   yuv_planes_t      yuv;
+ 
++#ifdef AVPaletteControl
+   AVPaletteControl  palette_control;
++#endif
+ 
+ #ifdef LOG
+   enum PixelFormat  debug_fmt;
+@@ -218,7 +220,9 @@
+   /* We should really keep track of the ages of xine frames (see
+    * avcodec_default_get_buffer in libavcodec/utils.c)
+    * For the moment tell ffmpeg that every frame is new (age = bignumber) */
++#ifdef AVFRAMEAGE
+   av_frame->age = 256*256*256*64;
++#endif
+ 
+   av_frame->type= FF_BUFFER_TYPE_USER;
+ 
+@@ -1028,7 +1032,9 @@
+     memcpy(this->context->extradata, buf->decoder_info_ptr[2],
+       buf->decoder_info[2]);
+ 
+-  } else if (buf->decoder_info[1] == BUF_SPECIAL_PALETTE) {
++  }
++#ifdef AVPaletteControl
++  else if (buf->decoder_info[1] == BUF_SPECIAL_PALETTE) {
+     unsigned int i;
+ 
+     palette_entry_t *demuxer_palette;
+@@ -1047,7 +1053,9 @@
+     }
+     decoder_palette->palette_changed = 1;
+ 
+-  } else if (buf->decoder_info[1] == BUF_SPECIAL_RV_CHUNK_TABLE) {
++  }
++#endif
++  else if (buf->decoder_info[1] == BUF_SPECIAL_RV_CHUNK_TABLE) {
+     int i;
+ 
+     lprintf("BUF_SPECIAL_RV_CHUNK_TABLE\n");
+@@ -1794,7 +1802,9 @@
+   this->av_frame          = avcodec_alloc_frame();
+   this->context           = avcodec_alloc_context();
+   this->context->opaque   = this;
++#ifdef AVPaletteControl
+   this->context->palctrl  = NULL;
++#endif
+ 
+   this->decoder_ok        = 0;
+   this->decoder_init_mode = 1;
+diff -r 61f51ebc2659 -r 69983efb1c92 src/combined/ffmpeg/ffmpeg_compat.h
+--- a/src/combined/ffmpeg/ffmpeg_compat.h	Sat Feb 04 18:52:01 2012 +0000
++++ b/src/combined/ffmpeg/ffmpeg_compat.h	Sun Jan 29 22:39:38 2012 +0100
+@@ -91,5 +91,9 @@
+ #  define AVAUDIO 2
+ #endif
+ 
++/* AVFrame.age */
++#if !(LIBAVCODEC_VERSION_MAJOR >= 53 && LIBAVCODEC_VERSION_MAJOR >= 28 && LIBAVCODEC_VERSION_MICRO >= 1)
++#  define AVFRAMEAGE 1
++#endif
+ 
+ #endif /* XINE_AVCODEC_COMPAT_H */
