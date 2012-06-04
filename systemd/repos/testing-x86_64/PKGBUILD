@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
-pkgver=184
-pkgrel=3
+pkgver=185
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,16 +16,12 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
-        '0001-unit-name-never-create-a-unit-name-with-a-leading.patch'
-        '0001-0002-avoid-mangling-fstab-source-paths.patch'
         'locale.sh')
-md5sums=('6be0a2519fd42b988a1a2a56e5bd40c1'
-         '5f9a26b6ec86609dd3f01333aee6df7c'
+md5sums=('a7dbbf05986eb0d2c164ec8e570eb78f'
+         'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         '7d6adfe650f9e218af56d79069452202'
-         '4c220b076f167f01c1bd491226bad2d7'
          'f15956945052bb911e5df81cf5e7e5dc')
 
 build() {
@@ -33,21 +29,6 @@ build() {
 
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
-
-  # upstream commits:
-  #   ae5b21eaba2e716034b852c00fc68f98392a2eb7
-  #   7ff5404be1bad93cb8facbcae0bc78f77f9e067d
-  sed -i \
-    -e '1s|^#|#!|' \
-    -e 's|@pkglibexecdir@|/usr/lib/udev|' src/udev/keymap/keyboard-force-release.sh
-
-  # upstream commit 4b7126538c25268c79ff10d166920934f149a329
-  patch -Np1 < "$srcdir/0001-unit-name-never-create-a-unit-name-with-a-leading.patch"
-
-  # upstream commits:
-  #   2b71016a3c3d4c088e8edd170fe6eb8431fd71fa
-  #   ec6ceb18663940efb1963704923430be0e83f1f7
-  patch -Np1 < "$srcdir/0001-0002-avoid-mangling-fstab-source-paths.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
