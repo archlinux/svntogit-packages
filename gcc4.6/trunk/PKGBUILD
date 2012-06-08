@@ -4,12 +4,14 @@
 
 pkgname=gcc4.6
 pkgver=4.6.3
+_ver=${pkgver:0:3}
 pkgrel=1
-pkgdesc="The GNU Compiler Collection (${pkgver:0:3}; C and C++)"
+pkgdesc="The GNU Compiler Collection ($_ver; C and C++)"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
-depends=(gcc)
+depends=('glibc' 'binutils' 'gmp' 'mpfr' 'libmpc' 'ppl' 'isl' 'cloog')
+makedepends=('flex' 'bison')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
 source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
@@ -47,6 +49,7 @@ build() {
   ../gcc-$pkgver/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --mandir=/usr/share/man --infodir=/usr/share/info \
+      --datadir=/usr/share/gcc-$_ver \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-languages=c,c++,lto \
       --enable-shared --enable-threads=posix \
@@ -59,8 +62,9 @@ build() {
       --enable-plugin --with-plugin-ld=ld.gold \
       --disable-multilib --disable-libssp \
       --enable-checking=release \
-      --program-suffix=-${pkgver:0:3} \
+      --program-suffix=-$_ver \
       --enable-version-specific-runtime-libs
+
   make
 }
 
@@ -82,9 +86,10 @@ package()
   install -Dm644 gcc-$pkgver/COPYING.RUNTIME \
     $pkgdir/usr/share/licenses/$pkgname/RUNTIME.LIBRARY.EXCEPTION
 
-  # Remove files already in gcc
-  pacman -Qql gcc gcc-libs | while read; do
-    [[ $REPLY == */ ]] && continue
-    rm -fv "${pkgdir}${REPLY}" "${pkgdir}${REPLY%.gz}"
+  # deal with conflicting man and info pages
+  cd $pkgdir
+  rm usr/share/man/man7/{fsf-funding,gfdl,gpl}.7
+  for i in usr/share/info/*; do
+    mv $i ${i%.info}-$_ver.info
   done
 }
