@@ -7,7 +7,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.3
-pkgver=${_basekernel}.7
+pkgver=${_basekernel}.8
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -24,6 +24,15 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.3.tar.xz"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
         'ext4-options.patch')
+md5sums=('7133f5a2086a7d7ef97abac610c094f5'
+         'e1714b5136a7f4dab1b5d2d7f98e2891'
+         '264221e58d5019d74fd96a6733a1a0e6'
+         'b191af77a5a7c335cbf0b6f2a1abceac'
+         'eb14dcfd80c00852ef81ded6e826826a'
+         '38c1fd4a1f303f1f6c38e7f082727e2f'
+         '9d3c56a4b999c8bfbd4018089a62f662'
+         '263725f20c0b9eb9c353040792d644e5'
+         'bb7fd1aa23016c8057046b84fd4eb528')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -293,12 +302,3 @@ package_linux-docs() {
   # remove a file already in linux package
   rm -f "${pkgdir}/usr/src/linux-${_kernver}/Documentation/DocBook/Makefile"
 }
-md5sums=('7133f5a2086a7d7ef97abac610c094f5'
-         '622a3b43238559aeb778279969631260'
-         'a69f3228ec513be819e20f0e6625fef6'
-         '744c93715cbf8dfd31db5f7b216b954c'
-         'eb14dcfd80c00852ef81ded6e826826a'
-         '38c1fd4a1f303f1f6c38e7f082727e2f'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         'bb7fd1aa23016c8057046b84fd4eb528')
