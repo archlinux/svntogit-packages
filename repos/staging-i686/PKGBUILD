@@ -1,0 +1,64 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: kevin <kevin@archlinux.org>
+
+pkgname=ntp
+pkgver=4.2.6.p5
+_realver=4.2.6p5
+pkgrel=7
+pkgdesc='Network Time Protocol reference implementation'
+url='http://www.ntp.org/'
+license=('custom')
+arch=('i686' 'x86_64')
+makedepends=('perl-html-parser')
+depends=('openssl' 'readline' 'libcap')
+backup=('etc/ntp.conf' 'etc/conf.d/ntpd.conf')
+source=("http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${_realver}.tar.gz"
+        'ntpd'
+        'ntpdate'
+        'ntp.conf'
+        'ntpd.conf'
+        'logrotate.d'
+        'ntpd.service')
+sha1sums=('4a5353a4791b6f4315a66c28d504ec6c7926b192'
+          '4e324e625c1f080b5c028be5092aa71adbf9bd99'
+          '01394b8a952f5edc85d19df8335eeac3980320f4'
+          'eb1f63814b9adbd3d518e880fa3b38c375f0fe91'
+          '4537d1f58b299d463db5048129cb264511474b0b'
+          '4f76f7f9ffc8315ff9924f793f272d4f6939b816'
+          '81df5c4d51cb69bc29363625ff49e2bd388d1fa9')
+
+install=install
+
+build() {
+	cd "${srcdir}/${pkgname}-${_realver}"
+
+	./configure \
+		--prefix=/usr \
+		--mandir=/usr/share/man \
+		--enable-linuxcaps \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-$_realver"
+
+	make DESTDIR="${pkgdir}" install
+
+	rmdir "${pkgdir}"/usr/{lib,sbin}
+	install -d -o 87 "${pkgdir}"/var/lib/ntp
+	install -Dm755 ../ntpd "${pkgdir}"/etc/rc.d/ntpd
+	install -Dm755 ../ntpdate "${pkgdir}"/etc/rc.d/ntpdate
+	install -Dm644 ../ntp.conf "${pkgdir}"/etc/ntp.conf
+	install -Dm644 ../ntpd.conf "${pkgdir}"/etc/conf.d/ntpd.conf
+	install -Dm644 ../logrotate.d "${pkgdir}"/etc/logrotate.d/ntpd
+	install -Dm644 ../ntpd.service "${pkgdir}"/usr/lib/systemd/system/ntpd.service
+	install -Dm644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	
+	cd html
+	../scripts/html2man
+	install -d "${pkgdir}"/usr/share/man
+	mv man/man* "${pkgdir}"/usr/share/man
+	mv "${pkgdir}/usr/share/man/man8/ntpd.8" "${pkgdir}/usr/share/man/man8/ntp-ntpd.8" # we should ditch openntpd
+}
