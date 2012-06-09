@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=11
+pkgrel=12
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -50,7 +50,9 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-nearbyintf-rounding.patch
         glibc-2.15-confstr-local-buffer-extent.patch
         glibc-2.15-testsuite.patch
-        nscd
+        nscd.rcd
+        nscd.service
+        nscd.tmpfiles
         locale.gen.txt
         locale-gen)
 md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
@@ -83,9 +85,12 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '7ff501435078b1a2622124fbeaafc921'
          '8d1023a51e0932681b46440d5f8551ee'
          '6962c3fa29306bfbf6f0d22b19cb825d'
-         'b587ee3a70c9b3713099295609afde49'
+         '589d79041aa767a5179eaa4e2737dd3f'
+         'ad8a9af15ab7eeaa23dc7ee85024af9f'
+         'bccbe5619e75cf1d97312ec3681c605c'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
+
 
 mksource() {
   git clone git://sourceware.org/git/glibc.git
@@ -269,15 +274,17 @@ package() {
 
   rm -f ${pkgdir}/etc/ld.so.{cache,conf}
 
-  install -dm755 ${pkgdir}/etc/rc.d
-  install -dm755 ${pkgdir}/usr/sbin
-  install -dm755 ${pkgdir}/usr/lib/locale
+  install -dm755 ${pkgdir}/{etc/rc.d,usr/{sbin,lib/{,locale,systemd/system,tmpfiles.d}}}
+
   install -m644 ${srcdir}/glibc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
-  install -m755 ${srcdir}/nscd ${pkgdir}/etc/rc.d/nscd
-  install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
+  sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
+  install -m755 ${srcdir}/nscd.rcd ${pkgdir}/etc/rc.d/nscd
+  install -m644 ${srcdir}/nscd.service ${pkgdir}/usr/lib/systemd/system
+  install -m644 ${srcdir}/nscd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/nscd.conf
+
   install -m644 ${srcdir}/glibc/posix/gai.conf ${pkgdir}/etc/gai.conf
 
-  sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
+  install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
