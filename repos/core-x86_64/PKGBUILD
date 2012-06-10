@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.15
-pkgrel=10
+pkgrel=11
 _glibcdate=20111227
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -24,7 +24,6 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-do-not-install-timezone-files.patch
         glibc-2.15-do-not-install-timezone-files-2.patch
         glibc-__i686.patch
-        glibc-2.12.2-ignore-origin-of-privileged-program.patch
         glibc-2.14-libdl-crash.patch
         glibc-2.14-reexport-rpc-interface.patch
         glibc-2.14-reinstall-nis-rpc-headers.patch
@@ -36,7 +35,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-ifunc.patch
         glibc-2.15-avx.patch
         glibc-2.15-strcasecmp-disable-avx.patch
-        glibc-2.15-gb18030.patch
+        glibc-2.15-gb18030.patch.gz
         glibc-2.15-revert-netlink-cache.patch
         glibc-2.15-arena.patch
         glibc-2.15-negative-result-cache.patch
@@ -50,6 +49,7 @@ source=(ftp://ftp.archlinux.org/other/glibc/${pkgname}-${pkgver}_${_glibcdate}.t
         glibc-2.15-rintf-rounding.patch
         glibc-2.15-nearbyintf-rounding.patch
         glibc-2.15-confstr-local-buffer-extent.patch
+        glibc-2.15-testsuite.patch
         nscd
         locale.gen.txt
         locale-gen)
@@ -57,7 +57,6 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '7ef69c530a15106de93e4de2df2d393e'
          'b6c619e5cf91829a15ce34dccef676d5'
          'addfddd648a4bf832eb126aba944ebae'
-         'e60e33591c9ec1447e4cddadcbb9cf3a'
          '6970bcfeb3bf88913436d5112d16f588'
          'c5de2a946215d647c8af5432ec4b0da0'
          '55febbb72139ac7b65757df085024b83'
@@ -69,7 +68,7 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '3d844b53b2dbb7c996e39c7ad932f55d'
          '41ae047ac88e8f6f547c70b0a0bc3b72'
          'fccb89f6628f59752278e125c35941f8'
-         'c4cd34f20ccd37817f6c1374bd4ee68e'
+         '001a4044ac3d59aca6ee144eaca57ab2'
          '94b61302a7ca6c5764d013dc7738fcfe'
          'a9ffadcfd2d357f91fee0b861fd4a7c6'
          '2c46b8e294de24c531f2253ff69aeef3'
@@ -83,10 +82,10 @@ md5sums=('6ffdf5832192b92f98bdd125317c0dfc'
          '1419d61fd1dbc6cdc48bb59da86fa66f'
          '7ff501435078b1a2622124fbeaafc921'
          '8d1023a51e0932681b46440d5f8551ee'
+         '6962c3fa29306bfbf6f0d22b19cb825d'
          'b587ee3a70c9b3713099295609afde49'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
-
 
 mksource() {
   git clone git://sourceware.org/git/glibc.git
@@ -110,10 +109,6 @@ build() {
   # undefine __i686
   # http://sourceware.org/glibc/wiki/Release/2.15#Build_Failures
   patch -p1 -i ${srcdir}/glibc-__i686.patch
-
-  # http://www.exploit-db.com/exploits/15274/
-  # http://sourceware.org/git/?p=glibc.git;a=patch;h=d14e6b09  (fedora branch)
-  patch -p1 -i ${srcdir}/glibc-2.12.2-ignore-origin-of-privileged-program.patch
 
   # http://sourceware.org/git/?p=glibc.git;a=commitdiff;h=675155e9  (fedora branch)
   # http://sourceware.org/ml/libc-alpha/2011-06/msg00006.html
@@ -165,7 +160,7 @@ build() {
   patch -p1 -i ${srcdir}/glibc-2.15-gb18030.patch
 
   # fix crash in __nscd_get_mapping if nscd not running
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13594 (potential "fix" in comment)
+  # http://sourceware.org/bugzilla/show_bug.cgi?id=13594 (potential fix in comment)
   # reverts commit 3a2c0242 and other necessary following changes...
   patch -p1 -i ${srcdir}/glibc-2.15-revert-netlink-cache.patch
 
@@ -218,6 +213,10 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=d6a403f9
   patch -p1 -i ${srcdir}/glibc-2.15-confstr-local-buffer-extent.patch
 
+  # fix testsuite failures with --as-needed
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=d4c2917f
+  patch -p1 -i ${srcdir}/glibc-2.15-testsuite.patch
+
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
 
@@ -242,9 +241,7 @@ build() {
       --with-headers=/usr/include \
       --enable-add-ons=nptl,libidn \
       --enable-kernel=2.6.32 \
-      --with-tls --with-__thread \
-      --enable-bind-now --without-gd \
-      --without-cvs --disable-profile \
+      --enable-bind-now --disable-profile \
       --enable-multi-arch
 
   # build libraries with hardening disabled
@@ -252,7 +249,7 @@ build() {
   make
   
   # re-enable hardening for programs
-  sed -i "s#=no#=yes#" configparms
+  sed -i "/build-programs=/s#no#yes#" configparms
   echo "CC += -fstack-protector -D_FORTIFY_SOURCE=2" >> configparms
   echo "CXX += -fstack-protector -D_FORTIFY_SOURCE=2" >> configparms
   make
@@ -263,9 +260,7 @@ build() {
 
 check() {
   cd ${srcdir}/glibc-build
-
-  # some errors are expected - manually check log files
-  make -k check || true
+  make -k check
 }
 
 package() {
