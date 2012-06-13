@@ -6,12 +6,12 @@
 pkgbase=pyqt
 pkgname=('pyqt' 'python2-pyqt')
 pkgver=4.9.1
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
-makedepends=('qt' 'python-sip' 'dbus-python' 'python2-sip' 'phonon'
-             'python-opengl' 'qt-assistant-compat' 'qtwebkit')
+makedepends=('qt' 'python-sip' 'python-dbus' 'python2-sip' 'phonon'
+             'python-opengl' 'qt-assistant-compat' 'qtwebkit' 'python2-dbus')
 source=("http://riverbankcomputing.co.uk/static/Downloads/PyQt4/PyQt-x11-gpl-${pkgver}.tar.gz"
         'fix-qthelp-build.patch')
 md5sums=('7f495dc49f71e3bfb64bf942e0d8bb3c'
@@ -50,7 +50,7 @@ build() {
 
 package_pyqt(){
   pkgdesc="A set of Python 3.x bindings for the Qt toolkit"
-  depends=('qtwebkit' 'python-sip')
+  depends=('qtwebkit' 'python-sip' 'python-dbus')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
@@ -64,7 +64,7 @@ package_pyqt(){
 
 package_python2-pyqt(){
   pkgdesc="A set of Python 2.x bindings for the Qt toolkit"
-  depends=('pyqt' 'python2-sip' 'dbus-python')
+  depends=('pyqt' 'python2-sip' 'python2-dbus')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'python-opengl: enable OpenGL 3D graphics in PyQt applications'
               'qscintilla: QScintilla API'
