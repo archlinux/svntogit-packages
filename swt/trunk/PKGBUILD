@@ -1,75 +1,59 @@
 # $Id$
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
 pkgname=swt
-pkgver=3.7.1
+pkgver=3.7.2
 pkgrel=1
+_date=201202080800
 pkgdesc="An open source widget toolkit for Java"
-_date=201109091335
-arch=(i686 x86_64)
+arch=('i686' 'x86_64')
 url="http://www.eclipse.org/swt/"
 license=('EPL')
 depends=('java-runtime>=6' 'gtk2>=2.20.1' 'libxtst')
-#optdepends=('libgnomeui' 'xulrunner' 'mesa')
-#makedepends=('openjdk6' 'libxtst' 'mesa' 'libgnomeui' 'xulrunner>=1.9.1' 'unzip' 'pkgconfig' 'apache-ant')
-optdepends=('libgnomeui' 'mesa')
-makedepends=('openjdk6' 'libxtst' 'mesa' 'libgnomeui' 'unzip' 'pkgconfig' 'apache-ant')
+optdepends=('libgnomeui' 'mesa' 'libwebkit')
+makedepends=('java-environment' 'libxtst' 'mesa' 'libgnomeui' 'unzip' 'pkgconfig' 'libwebkit' 'apache-ant')
 if [ "${CARCH}" = "i686" ]; then
-  source=(http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-x86.zip
-          build-swt.xml)
-  noextract=(swt-${pkgver}-gtk-linux-x86.zip)
-  md5sums=('b7d6d24e2feb7489b0baa0ce941ea4d2'
+  _carch=x86
+  md5sums=('9a858b11e66de8af41786eaf09fc9ee2'
            'f5e548bc26a0f1f3c18131be76face40')
 fi
 if [ "${CARCH}" = "x86_64" ]; then
-  source=(http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-x86_64.zip
-          build-swt.xml)
-  md5sums=('8816631e7993a783a87e98ba39da7fa6'
+  _carch=x86_64
+  md5sums=('b16ab5c9d274b9488432ebeae6e4af5a'
            'f5e548bc26a0f1f3c18131be76face40')
-  noextract=(swt-${pkgver}-gtk-linux-x86_64.zip)
 fi
+source=(http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-${_carch}.zip
+        build-swt.xml)
+noextract=(swt-${pkgver}-gtk-linux-${_carch}.zip)
+# To test this pkg:
+# http://www.eclipse.org/swt/examples.php#standaloneOutsideEclipse
+# http://download.eclipse.org/eclipse/downloads/drops/R-${pkgver}-${_date}/swt-${pkgver}-gtk-linux-${_carch}.zip
 
 build() {
-  cd "${srcdir}"
-  . /etc/profile.d/openjdk6.sh
+  cd ${srcdir}
+  unzip -oq swt-${pkgver}-gtk-linux-${_carch}.zip src.zip
+  unzip -oq src.zip -d src
+
+  . /etc/profile.d/jdk.sh
   . /etc/profile.d/apache-ant.sh
-  unzip -jqo ${srcdir}/swt-${pkgver}-gtk-linux-*.zip "*src.zip"
-  unzip -qo src.zip
-  rm -rf about_files
-  mkdir src
-  mv org src/
-  cp build-swt.xml build.xml
 
-  [ "${CARCH}" = "x86_64" ] && export SWT_PTR_CFLAGS=-DJNI64
+  # Shared objects
+  cd src
+  ./build.sh
 
-  make -f make_linux.mak make_awt
-  make -f make_linux.mak make_swt
-  make -f make_linux.mak make_atk
-  make -f make_linux.mak make_gnome
-# "XULRunner >= 2.0 is not currently supported"
-#   https://bugs.eclipse.org/bugs/show_bug.cgi?id=327696
-#
-#  export MOZILLA_INCLUDES="`pkg-config --cflags libxul`"
-#  export MOZILLA_LIBS="-Wl,-R`pkg-config libxul --variable=libdir` `pkg-config libxul --libs`"
-#  export XULRUNNER_INCLUDES="${MOZILLA_INCLUDES}"
-#  export XULRUNNER_LIBS="${MOZILLA_LIBS}"
-#  make -f make_linux.mak make_mozilla
-#  make -f make_linux.mak make_xulrunner
-
-  make -f make_linux.mak make_cairo
-  make -f make_linux.mak make_glx
- 
-  ant compile
+  # SWT jar
+  ant -f ../build-swt.xml compile
 }
 
 package() {
-  cd "${srcdir}"
-  cp version.txt build/version.txt
-  cp src/org/eclipse/swt/internal/SWTMessages.properties build/org/eclipse/swt/internal/
+  cd ${srcdir}/src
 
-  ant jar
+  # Shared objects
+  export OUTPUT_DIR=${pkgdir}/usr/lib
+  install -dm755 ${OUTPUT_DIR} 
+  make -f make_linux.mak install
 
-  install -m755 -d "${pkgdir}/usr/share/java"
-  install -m755 -d "${pkgdir}/usr/lib"
-  install -m644 swt.jar "${pkgdir}/usr/share/java/"
-  install -m755 *.so "${pkgdir}/usr/lib/"
+  # SWT jar
+  ant -f ../build-swt.xml jar
+  install -Dm755 ../swt.jar ${pkgdir}/usr/share/java/swt-${pkgver}.jar
+  ln -s swt-${pkgver}.jar ${pkgdir}/usr/share/java/swt.jar
 }
