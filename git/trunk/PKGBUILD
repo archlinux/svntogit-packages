@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.10.4
+pkgver=1.7.11
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -78,7 +78,8 @@ package() {
   # scripts are for python 2.x
   sed -i 's|#![ ]*/usr/bin/env python|#!/usr/bin/env python2|' \
     $(find "$pkgdir" -name '*.py') \
-    "$pkgdir"/usr/share/git/{fast-import/git-p4,gitview/gitview}
+    "$pkgdir"/usr/lib/git-core/git-p4 \
+    "$pkgdir"/usr/share/git/gitview/gitview
 
   # emacs interface
   cd contrib/emacs
@@ -99,7 +100,7 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-sha1sums=('ddc305ab520246790faa72bbaab4b9bf5bcf23fa'
-          '0769f6ff48d89df908cfe2af85fb4072b4178746'
+sha1sums=('15abe2c5b6b7cf9b738e3fb57ab9234ae02a1e61'
+          '9f963243dfdbf5d77049e5fbb1e8e571effa4285'
           'f2b41828bd912b72e2cb3e14677739c4f370de66'
           '149e2da1ecb48872ddb31c0945afeaad1f9653d7')
