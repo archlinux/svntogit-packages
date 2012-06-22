@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=185
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,12 +16,16 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
+        '0001-vconsole-setup-enable-utf-8-mode-explicitly.patch'
+        '0001-udev-systemd-udev-settle.service-fix-After.patch'
         'locale.sh')
 md5sums=('a7dbbf05986eb0d2c164ec8e570eb78f'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
+         '83f51149ff9c4d75ea946e2b3cc61e53'
+         'b3e41e90beaff35c66ba1b4bc223430a'
          'f15956945052bb911e5df81cf5e7e5dc')
 
 build() {
@@ -29,6 +33,12 @@ build() {
 
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
+
+  # upstream commit d305a67b46644d6360ef557109384c831ee8e018
+  patch -Np1 <"$srcdir/0001-vconsole-setup-enable-utf-8-mode-explicitly.patch"
+
+  # upstream commit 8e8eb8fbafcaa841fa5393e396acde27b26edf2f
+  patch -Np1 <"$srcdir/0001-udev-systemd-udev-settle.service-fix-After.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -52,7 +62,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kmod' 'libcap' 'pam'
            "systemd-tools=$pkgver" 'util-linux' 'xz')
-  optdepends=('dbus-python: systemd-analyze'
+  optdepends=('python2-dbus: systemd-analyze'
               'initscripts: legacy support for hostname and vconsole setup'
               'initscripts-systemd: native boot and initialization scripts'
               'python2-cairo: systemd-analyze'
@@ -136,7 +146,7 @@ package_systemd() {
   mv "$pkgdir"/usr/share/gir-1.0 usr/share
   mv "$pkgdir"/usr/share/gtk-doc/html/{g,lib}udev usr/share/gtk-doc/html
   mv "$pkgdir"/usr/share/man/man7/udev.7 usr/share/man/man7
-  mv "$pkgdir"/usr/share/man/man8/{systemd-udevd,udevadm}.8 usr/share/man/man8
+  mv "$pkgdir"/usr/share/man/man8/{systemd-{tmpfiles,udevd},udevadm}.8 usr/share/man/man8
   mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt}.1 usr/share/man/man1
   mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
   mv "$pkgdir"/usr/share/man/man5/{hostname,{vconsole,locale}.conf}.5 usr/share/man/man5
@@ -185,15 +195,11 @@ package_systemd-tools() {
 
   # udevd is no longer udevd because systemd. why isn't udevadm now udevctl?
   ln -s ../lib/systemd/systemd-udevd "$pkgdir/usr/bin/udevd"
-  ln -s ../systemd/systemd-udevd  "$pkgdir/usr/lib/udev/udevd"
 
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
           s#GROUP="tape"#GROUP="storage"#g;
           s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
-
-  # get rid of unneded lock directories
-  sed -ri '/\/run\/lock\/(subsys|lockdev)/d' "$pkgdir"/usr/lib/tmpfiles.d/legacy.conf
 
   # add mkinitcpio hooks
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
