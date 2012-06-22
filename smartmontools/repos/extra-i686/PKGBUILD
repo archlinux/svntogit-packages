@@ -6,12 +6,12 @@
 
 pkgname=smartmontools
 pkgver=5.42
-pkgrel=3
+pkgrel=4
 pkgdesc="Control and monitor S.M.A.R.T. enabled ATA and SCSI Hard Drives"
 url="http://smartmontools.sourceforge.net"
 license=('GPL')
 arch=('i686' 'x86_64')
-depends=('gcc-libs' 'libcap-ng')
+depends=('gcc-libs' 'libcap-ng' 'bash')
 backup=('etc/smartd.conf'
         'etc/conf.d/smartd')
 source=("http://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.gz"
@@ -27,16 +27,20 @@ build() {
   ./configure --prefix=/usr \
               --sysconfdir=/etc \
               --enable-drivedb \
-              --with-libcap-ng=yes
+              --with-libcap-ng=yes \
+              --with-systemdsystemunitdir=/usr/lib/systemd/system
   make
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  make DESTDIR=${pkgdir}/ install
+  sed -i -e "s:sysconfig/smartmontools:conf.d/smartd:g" smartd.service
+  sed -i -e "s:smartd_opts:SMARTD_ARGS:g" smartd.service
+
+  make DESTDIR="${pkgdir}" install
 
   rm -rf ${pkgdir}/etc/rc.d
-  install -Dm755 ${srcdir}/smartd.rc ${pkgdir}/etc/rc.d/smartd
-  install -Dm644 ${srcdir}/smartd.conf ${pkgdir}/etc/conf.d/smartd
+  install -Dm755 ${srcdir}/smartd.rc "${pkgdir}/etc/rc.d/smartd"
+  install -Dm644 ${srcdir}/smartd.conf "${pkgdir}/etc/conf.d/smartd"
 }
