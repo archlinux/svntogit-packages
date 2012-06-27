@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=185
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -132,6 +132,7 @@ package_systemd() {
   mv "$pkgdir"/etc/udev etc
   mv "$pkgdir"/etc/{binfmt,modules-load,sysctl,tmpfiles}.d etc
   mv "$pkgdir"/usr/bin/udevadm usr/bin
+  mv "$pkgdir"/usr/bin/systemd-machine-id-setup usr/bin
   mv "$pkgdir"/usr/lib/pkgconfig usr/lib
   mv "$pkgdir"/usr/lib/systemd/systemd-udevd usr/lib/systemd
   mv "$pkgdir"/usr/lib/systemd/system/systemd-udev* usr/lib/systemd/system
@@ -147,7 +148,7 @@ package_systemd() {
   mv "$pkgdir"/usr/share/gtk-doc/html/{g,lib}udev usr/share/gtk-doc/html
   mv "$pkgdir"/usr/share/man/man7/udev.7 usr/share/man/man7
   mv "$pkgdir"/usr/share/man/man8/{systemd-{tmpfiles,udevd},udevadm}.8 usr/share/man/man8
-  mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt}.1 usr/share/man/man1
+  mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt,machine-id-setup}.1 usr/share/man/man1
   mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
   mv "$pkgdir"/usr/share/man/man5/{hostname,{vconsole,locale}.conf}.5 usr/share/man/man5
   mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
