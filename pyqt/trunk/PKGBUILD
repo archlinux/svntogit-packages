@@ -6,7 +6,7 @@
 pkgbase=pyqt
 pkgname=('pyqt-common' 'pyqt' 'python2-pyqt')
 pkgver=4.9.3
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
@@ -52,6 +52,8 @@ package_pyqt-common(){
   pkgdesc="Common PyQt files shared between pyqt and python2-pyqt"
   
   cd "${srcdir}/PyQt-x11-gpl-${pkgver}"
+  make -C pyrcc DESTDIR="${pkgdir}" install
+  make -C pylupdate DESTDIR="${pkgdir}" install
   make -C designer INSTALL_ROOT="${pkgdir}" install
   
   install -Dm644 PyQt4.api "${pkgdir}"/usr/share/qt/qsci/api/python/PyQt4.api
@@ -69,6 +71,7 @@ package_pyqt(){
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 
   # Provided by pyqt-common
+  rm "${pkgdir}"/usr/bin/{pylupdate4,pyrcc4}
   rm "${pkgdir}"/usr/lib/qt/plugins/designer/libpythonplugin.so
   rm "${pkgdir}"/usr/share/qt/qsci/api/python/PyQt4.api
 }
@@ -80,18 +83,16 @@ package_python2-pyqt(){
               'python-opengl: enable OpenGL 3D graphics in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
-  options=('!emptydirs')
 
   cd "${srcdir}/Py2Qt-x11-gpl-${pkgver}"
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 
   # Fix conflicts with pyqt
-  mv "${pkgdir}"/usr/bin/{,python2-}pylupdate4
-  mv "${pkgdir}"/usr/bin/{,python2-}pyrcc4
   mv "${pkgdir}"/usr/bin/{,python2-}pyuic4
   
   # Provided by pyqt-common
+  rm "${pkgdir}"/usr/bin/{pylupdate4,pyrcc4}
   rm "${pkgdir}"/usr/lib/qt/plugins/designer/libpythonplugin.so
   rm "${pkgdir}"/usr/share/qt/qsci/api/python/PyQt4.api
 }
