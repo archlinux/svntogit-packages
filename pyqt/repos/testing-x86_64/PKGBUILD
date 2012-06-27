@@ -6,7 +6,7 @@
 pkgbase=pyqt
 pkgname=('pyqt-common' 'pyqt' 'python2-pyqt')
 pkgver=4.9.3
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
@@ -83,6 +83,7 @@ package_python2-pyqt(){
               'python-opengl: enable OpenGL 3D graphics in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
+  provides=('python2-qt')
 
   cd "${srcdir}/Py2Qt-x11-gpl-${pkgver}"
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
