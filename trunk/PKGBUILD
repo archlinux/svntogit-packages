@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=185
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -64,7 +64,7 @@ package_systemd() {
            "systemd-tools=$pkgver" 'util-linux' 'xz')
   optdepends=('python2-dbus: systemd-analyze'
               'initscripts: legacy support for hostname and vconsole setup'
-              'initscripts-systemd: native boot and initialization scripts'
+              'initscripts-systemd: legacy generator for initialization scripts'
               'python2-cairo: systemd-analyze'
               'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries')
@@ -181,7 +181,7 @@ package_libsystemd() {
 package_systemd-tools() {
   pkgdesc='standalone tools from systemd'
   url='http://www.freedesktop.org/wiki/Software/systemd'
-  depends=('acl' 'bash' 'glibc' 'glib2' 'kmod' 'hwids' 'util-linux' 'kbd')
+  depends=('acl' 'bash' 'glibc' 'glib2' 'libsystemd' 'kmod' 'hwids' 'util-linux' 'kbd')
   optdepends=('cryptsetup: required for encrypted block devices')
   provides=("udev=$pkgver")
   conflicts=('udev')
