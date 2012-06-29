@@ -3,7 +3,7 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.7.7.7
+pkgver=6.7.7.10
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
@@ -12,7 +12,7 @@ makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript' \
              'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'liblqr')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
-sha1sums=('d45a936b59afa3bc484c0ea1b512f8fc026c14e4'
+sha1sums=('289e539f7fd40ca9b06f94a3348641abf0e56a1f'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
@@ -33,7 +33,7 @@ build() {
 
 check() {
   cd "${srcdir}"/ImageMagick-${pkgver%.*}-${pkgver##*.}
-#  make check
+  make check
 }
 
 package_imagemagick() {
