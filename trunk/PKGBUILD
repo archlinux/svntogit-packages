@@ -3,8 +3,8 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=shadow
-pkgver=4.1.5
-pkgrel=4
+pkgver=4.1.5.1
+pkgrel=1
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('i686' 'x86_64')
 url='http://pkg-shadow.alioth.debian.org/'
@@ -12,9 +12,9 @@ license=('BSD')
 groups=('base')
 depends=('bash' 'pam' 'acl')
 backup=(etc/login.defs
-        etc/pam.d/{chage,login,passwd,shadow,useradd,usermod,userdel}
+        etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
         etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
-        etc/pam.d/{chfn,chgpasswd,groupmems,chsh}
+        etc/pam.d/{chgpasswd,groupmems}
         etc/default/useradd)
 options=('!libtool')
 install='shadow.install'
@@ -24,37 +24,27 @@ source=("http://pkg-shadow.alioth.debian.org/releases/$pkgname-$pkgver.tar.bz2"{
         chgpasswd
         chpasswd
         defaults.pam
-        login
         login.defs
         newusers
         passwd
         shadow.cron.daily
         useradd.defaults
-        nscd-error-reporting.patch
         xstrdup.patch
-        shadow-strncpy-usage.patch
-        shadow-add-missing-include.patch
-        userdel-avoid-bad-mem-access.patch
-        write-utmp-wtmp-entries.patch)
-sha1sums=('3ab1ae0e30af36d04445314fcb5a079bdf05de41'
-          '0a31aafceb948a91fe7370a6378cafd6fd883145'
+        shadow-strncpy-usage.patch)
+sha1sums=('81f38720b953ef9c2c100c43d02dfe19cafd6c30'
+          '126570e2939bf3b57f28df5197ab9309747a6b5c'
           '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
           '78ec184a499f9708adcfcf0b7a3b22a60bf39f91'
           '4ad0e059406a305c8640ed30d93c2a1f62c2f4ad'
           '12427b1ca92a9b85ca8202239f0d9f50198b818f'
           '0e56fed7fc93572c6bf0d8f3b099166558bb46f1'
-          '895aad07c192b288b457e19dd7b8c55841b4ad22'
           'e5cab2118ecb1e61874cde842d7d04d1003f35cb'
           '12427b1ca92a9b85ca8202239f0d9f50198b818f'
           '611be25d91c3f8f307c7fe2485d5f781e5dee75f'
           '5d83ba7e11c765c951867cbe00b0ae7ff57148fa'
           '9ae93de5987dd0ae428f0cc1a5a5a5cd53583f19'
-          'ae6eebb842c433ac4022c493294a13ed68e06acc'
           '6010fffeed1fc6673ad9875492e1193b1a847b53'
-          '21e12966a6befb25ec123b403cd9b5c492fe5b16'
-          '0697a21f7519de30821da7772677035652df4ad2'
-          'e1dd93d82c6eba76b5f17a9fefad4bbc513cff5b'
-          'bcef8558c9123b396d2d4df26c815a951f97a91a')
+          '21e12966a6befb25ec123b403cd9b5c492fe5b16')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -68,16 +58,6 @@ build() {
   # need to offer these upstream
   patch -Np1 <"$srcdir/xstrdup.patch"
   patch -Np1 <"$srcdir/shadow-strncpy-usage.patch"
-
-  # backports queued for 4.1.5.1
-  patch -Np1 <"$srcdir/shadow-add-missing-include.patch"
-  patch -Np1 <"$srcdir/nscd-error-reporting.patch"
-
-  # sent to ML
-  patch -Np0 <"$srcdir/userdel-avoid-bad-mem-access.patch"
-
-  # revert to fix FS#28543
-  patch -RNp1 <"$srcdir/write-utmp-wtmp-entries.patch"
 
   # supress etc/pam.d/*, we provide our own
   sed -i '/^SUBDIRS/s/pam.d//' etc/Makefile.in
@@ -115,18 +95,37 @@ package() {
 
   # PAM config - custom
   install -dm755 "$pkgdir/etc/pam.d"
-  install -t "$pkgdir/etc/pam.d" -m644 "$srcdir"/{login,passwd,chgpasswd,chpasswd,newusers}
+  install -t "$pkgdir/etc/pam.d" -m644 "$srcdir"/{passwd,chgpasswd,chpasswd,newusers}
 
   # PAM config - from tarball
   install -Dm644 etc/pam.d/groupmems "$pkgdir/etc/pam.d/groupmems"
 
   # we use the 'useradd' PAM file for other similar utilities
-  for file in chage chfn chsh groupadd groupdel groupmod shadow \
+  for file in chage groupadd groupdel groupmod shadow \
       useradd usermod userdel; do
     install -Dm644 "$srcdir/defaults.pam" "$pkgdir/etc/pam.d/$file"
   done
 
-  # Remove su - using su from coreutils instead
-  rm "$pkgdir/bin/su"
-  find "$pkgdir/usr/share/man" -name 'su.1' -delete
+  # Remove utilities provided by util-linux
+  rm \
+      "$pkgdir"/usr/bin/{chsh,chfn,sg} \
+      "$pkgdir"/bin/{login,su} \
+      "$pkgdir"/usr/sbin/{vipw,vigr}
+
+  # but we keep newgrp, as sg is really an alias to it
+  mv "$pkgdir"/usr/bin/{newgrp,sg}
+
+  # ...and their many man pages
+  find "$pkgdir"/usr/share/man \
+      '(' -name 'chsh.1'  -o \
+          -name 'chfn.1'  -o \
+          -name 'su.1'    -o \
+          -name 'login.1' -o \
+          -name 'vipw.8'  -o \
+          -name 'vigr.8'  -o \
+          -name 'newgrp.1' ')' \
+      -delete
+  rmdir \
+      "$pkgdir"/usr/share/man/{fi,id,zh_TW}/man1 \
+      "$pkgdir"/usr/share/man/{fi,ko/man8}
 }
