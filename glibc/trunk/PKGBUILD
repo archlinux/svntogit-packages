@@ -38,7 +38,7 @@ md5sums=('80b181b02ab249524ec92822c0174cf7'
          '476e9113489f93b348b21e144b6a8fcf')
 
 build() {
-  cd ${srcdir}/glibc
+  cd ${srcdir}/${pkgname}-${pkgver}
 
   # fix res_query assertion
   # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
@@ -64,7 +64,7 @@ build() {
   CFLAGS=${CFLAGS/-fstack-protector/}
   CFLAGS=${CFLAGS/-D_FORTIFY_SOURCE=2/}
 
-  ${srcdir}/glibc/configure --prefix=/usr \
+  ${srcdir}/${pkgname}-${pkgver}/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --with-headers=/usr/include \
       --enable-add-ons=nptl,libidn \
@@ -105,22 +105,22 @@ package() {
 
   install -dm755 ${pkgdir}/{etc/rc.d,usr/{sbin,lib/{,locale,systemd/system,tmpfiles.d}}}
 
-  install -m644 ${srcdir}/glibc/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
+  install -m644 ${srcdir}/${pkgname}-${pkgver}/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
   sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
   install -m755 ${srcdir}/nscd.rcd ${pkgdir}/etc/rc.d/nscd
   install -m644 ${srcdir}/nscd.service ${pkgdir}/usr/lib/systemd/system
   install -m644 ${srcdir}/nscd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/nscd.conf
 
-  install -m644 ${srcdir}/glibc/posix/gai.conf ${pkgdir}/etc/gai.conf
+  install -m644 ${srcdir}/${pkgname}-${pkgver}/posix/gai.conf ${pkgdir}/etc/gai.conf
 
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
-  sed -i "s|/| |g" ${srcdir}/glibc/localedata/SUPPORTED
-  sed -i 's|\\| |g' ${srcdir}/glibc/localedata/SUPPORTED
-  sed -i "s|SUPPORTED-LOCALES=||" ${srcdir}/glibc/localedata/SUPPORTED
-  cat ${srcdir}/glibc/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
+  sed -i "s|/| |g" ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED
+  sed -i 's|\\| |g' ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED
+  sed -i "s|SUPPORTED-LOCALES=||" ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED
+  cat ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
   sed -i "s|^|#|g" ${pkgdir}/etc/locale.gen
 
   if [[ ${CARCH} = "x86_64" ]]; then
