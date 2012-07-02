@@ -13,7 +13,7 @@ url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
 depends=('linux-api-headers>=3.4' 'tzdata')
-makedepends=('gcc>=4.6')
+makedepends=('gcc>=4.7')
 backup=(etc/gai.conf
         etc/locale.gen
         etc/nscd.conf)
@@ -30,7 +30,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
 md5sums=('80b181b02ab249524ec92822c0174cf7'
          '2a1221a15575820751c325ef4d2fbb90'
          '31f415b41197d85d3bbee3d1eecd06a3'
-         '7ae3e426251ae33e73dbad71f9c91378'
+         '0a0383d50d63f1c02919fe9943b82014'
          '589d79041aa767a5179eaa4e2737dd3f'
          'ad8a9af15ab7eeaa23dc7ee85024af9f'
          'bccbe5619e75cf1d97312ec3681c605c'
@@ -117,19 +117,13 @@ package() {
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
-  sed -i "s|/| |g" ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED
-  sed -i 's|\\| |g' ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED
-  sed -i "s|SUPPORTED-LOCALES=||" ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED
-  cat ${srcdir}/${pkgname}-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
-  sed -i "s|^|#|g" ${pkgdir}/etc/locale.gen
+  sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
+    ${srcdir}/glibc-2.16.0/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
 
   if [[ ${CARCH} = "x86_64" ]]; then
-    # fix for the linker
+    # fix paths and compliance with binary blobs...
     sed -i '/RTLDLIST/s%lib64%lib%' ${pkgdir}/usr/bin/ldd
-    # Comply with multilib binaries, they look for the linker in /lib64
-    mkdir ${pkgdir}/lib64
-    cd ${pkgdir}/lib64
-    ln -v -s ../lib/ld* .
+    ln -s /lib ${pkgdir}/lib64
   fi
 
   # Do not strip the following files for improved debugging support
