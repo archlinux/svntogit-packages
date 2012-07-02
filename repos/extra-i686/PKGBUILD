@@ -3,7 +3,7 @@
 
 pkgname=('python-lxml' 'python2-lxml')
 pkgver=2.3.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Python binding for the libxml2 and libxslt libraries"
 arch=('i686' 'x86_64')
 license=('BSD' 'custom')
@@ -21,7 +21,7 @@ check() {
 
 package_python2-lxml() {
   depends=('python2' 'libxslt')
-  optdepends=('python-beautifulsoup: support for parsing not well formed HTML')
+  optdepends=('python2-beautifulsoup3: support for parsing not well formed HTML')
 
   cd "${srcdir}"/lxml-$pkgver
   python2 setup.py install --root="${pkgdir}" --optimize=1
