@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.1
-pkgrel=1
+pkgrel=3
 #_snapshot=4.7-20120505
 _libstdcppmanver=20120605		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
@@ -20,13 +20,11 @@ source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
-	gcc-4.7.0-cloog-0.17.patch
 	gcc-4.7.1-libada-pic.patch
 	gcc-4.7.1-libgo-write.patch)
 md5sums=('933e6f15f51c031060af64a9e14149ff'
          '767c62f9a047c4434f2345decf1d0819'
          'ced48436c1b3c981d721a829f1094de1'
-         '575f7d17b022e609447a590e481b18b5'
          '2acbc9d35cc9d72329dc71d6b1f162ef'
          'df82dd175ac566c8a6d46b11ac21f14c')
 
@@ -50,9 +48,6 @@ build() {
     patch -p1 -i ${srcdir}/gcc_pure64.patch
   fi
 
-  # compatibility with latest cloog
-  patch -p1 -i ${srcdir}/gcc-4.7.0-cloog-0.17.patch
-
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53679
   patch -p1 -i ${srcdir}/gcc-4.7.1-libgo-write.patch
   
@@ -75,6 +70,7 @@ build() {
       --disable-libstdcxx-pch --enable-libstdcxx-time \
       --enable-gnu-unique-object --enable-linker-build-id \
       --with-ppl --enable-cloog-backend=isl \
+      --disable-ppl-version-check --disable-cloog-version-check \
       --enable-lto --enable-gold --enable-ld=default \
       --enable-plugin --with-plugin-ld=ld.gold \
       --with-linker-hash-style=gnu \
@@ -157,8 +153,8 @@ package_gcc()
   rm $pkgdir/usr/share/man/man3/ffi*
 
   # many packages require these symlinks
-  install -dm755 ${pkgdir}/lib
-  ln -s /usr/bin/cpp ${pkgdir}/lib/cpp
+  #install -dm755 ${pkgdir}/lib
+  #ln -s /usr/bin/cpp ${pkgdir}/lib/cpp
   ln -s gcc ${pkgdir}/usr/bin/cc
 
   # POSIX conformance launcher scripts for c89 and c99
