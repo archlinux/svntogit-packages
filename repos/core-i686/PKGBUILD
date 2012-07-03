@@ -2,48 +2,55 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=wpa_supplicant
-pkgver=0.7.3
-pkgrel=5
+pkgver=1.0
+pkgrel=1
 pkgdesc="A utility providing key negotiation for WPA wireless networks"
 url="http://hostap.epitest.fi/wpa_supplicant"
 arch=('i686' 'x86_64')
-depends=('openssl' 'dbus-core>=1.2.4' 'readline>=6.0' 'libnl')
+depends=('openssl' 'dbus-core' 'readline' 'libnl')
 optdepends=('wpa_supplicant_gui: wpa_gui program')
 license=('GPL')
 groups=('base')
-backup=('etc/wpa_supplicant.conf')
-source=(http://hostap.epitest.fi/releases/wpa_supplicant-$pkgver.tar.gz
-        config dbus.patch hostap_allow-linking-with-libnl-3.2.patch)
-sha256sums=('d0cd50caa85346ccc376dcda5ed3c258eef19a93b3cade39d25760118ad59443'
-            'd00f306e53c22cc0d7352a0d4ed701fd77b9ff20e3a2422d81ac1fddcc11dff4'
-            '13effa9ed6a1bb940ffc056a3eabcf64c8cc057069eca5cc1822b98ed769812a'
-            'ac805bf6e5aaec733dfc2c333417e519239cd58663a6e1cb34a54fd0f2bcc3c5')
+backup=('etc/wpa_supplicant/wpa_supplicant.conf')
+source=("http://w1.fi/releases/${pkgname}-${pkgver}.tar.gz"
+	config hostap_allow-linking-with-libnl-3.2.patch)
+md5sums=('8650f6aa23646ef634402552d0669640'
+         '380d8d1fe24bccb2a2636cb2a6038c39'
+         '473fb6b77909ec5a50b6f4d91370e86b')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}-${pkgver}/"
+
+  # from fedora
   patch -Np1 -i "$srcdir/hostap_allow-linking-with-libnl-3.2.patch"
 
-  cd ${pkgname}
-  # Required by NetworkManager 0.8.995
-  patch -Np2 -i "$srcdir/dbus.patch"
+  cd "${pkgname}"
+
   cp "${srcdir}/config" ./.config
+
   sed -i 's@/usr/local@$(PREFIX)@g' Makefile
-  make
+
+  make PREFIX=/usr
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}/${pkgname}"
   make PREFIX=/usr DESTDIR="${pkgdir}" install
-  install -m755 -d "${pkgdir}/etc"
-  install -m644 wpa_supplicant.conf "${pkgdir}/etc/wpa_supplicant.conf"
+
+  install -d -m755 "${pkgdir}/etc/wpa_supplicant"
+  install -m644 wpa_supplicant.conf "${pkgdir}/etc/wpa_supplicant/wpa_supplicant.conf"
+
   install -d -m755 "${pkgdir}/usr/share/man/man"{5,8}
   install -m644 doc/docbook/*.5 "${pkgdir}/usr/share/man/man5/"
   install -m644 doc/docbook/*.8 "${pkgdir}/usr/share/man/man8/"
   rm -f "${pkgdir}/usr/share/man/man8/wpa_"{priv,gui}.8
 
-  install -m755 -d "${pkgdir}/usr/share/dbus-1/system-services"
+  install -d -m755 "${pkgdir}/usr/share/dbus-1/system-services"
   install -m644 dbus/{fi.epitest.hostap.WPASupplicant.service,fi.w1.wpa_supplicant1.service} "${pkgdir}/usr/share/dbus-1/system-services/"
-  sed -e 's/sbin/usr\/sbin/' -i "${pkgdir}/usr/share/dbus-1/system-services/"*.service
-  install -m755 -d "${pkgdir}/etc/dbus-1/system.d"
+
+  install -d -m755 "${pkgdir}/etc/dbus-1/system.d"
   install -m644 dbus/dbus-wpa_supplicant.conf "${pkgdir}/etc/dbus-1/system.d/wpa_supplicant.conf"
+
+  install -d -m755 "${pkgdir}/usr/lib/systemd/system"
+  install -m644 systemd/*.service "${pkgdir}/usr/lib/systemd/system/"
 }
