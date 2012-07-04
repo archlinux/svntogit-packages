@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=186
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -183,6 +183,9 @@ package_systemd-tools() {
 
   # udevd is no longer udevd because systemd. why isn't udevadm now udevctl?
   ln -s ../lib/systemd/systemd-udevd "$pkgdir/usr/bin/udevd"
+
+  # add back tmpfiles.d/legacy.conf
+  install -m644 "systemd-$pkgver/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
 
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
