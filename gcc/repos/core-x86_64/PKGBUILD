@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.1
-pkgrel=3
+pkgrel=4
 #_snapshot=4.7-20120505
 _libstdcppmanver=20120605		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
@@ -21,12 +21,14 @@ source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-4.7.1-libada-pic.patch
-	gcc-4.7.1-libgo-write.patch)
+	gcc-4.7.1-libgo-write.patch
+        gcc-4.7.1-libgo-mksysinfo.patch)
 md5sums=('933e6f15f51c031060af64a9e14149ff'
          '767c62f9a047c4434f2345decf1d0819'
          'ced48436c1b3c981d721a829f1094de1'
          '2acbc9d35cc9d72329dc71d6b1f162ef'
-         'df82dd175ac566c8a6d46b11ac21f14c')
+         'df82dd175ac566c8a6d46b11ac21f14c'
+         '8e847244dba042d0aa3297713edaf70c')
 
 
 if [ -n "${_snapshot}" ]; then
@@ -53,6 +55,9 @@ build() {
   
   # bug to file...
   patch -p1 -i ${srcdir}/gcc-4.7.1-libada-pic.patch
+
+  # http://gcc.gnu.org/ml/gcc-patches/2012-06/msg01946.html
+  patch -p0 -i ${srcdir}/gcc-4.7.1-libgo-mksysinfo.patch
 
   echo ${pkgver} > gcc/BASE-VER
 
@@ -96,7 +101,7 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.15')
+  depends=('glibc>=2.16')
   install=gcc-libs.install
 
   cd gcc-build
