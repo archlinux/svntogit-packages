@@ -35,11 +35,8 @@ build() {
 		--enable-lastfm \
 		--enable-jack \
 		--enable-pulse \
-		--enable-documentation \
-		--disable-libwrap \
 		--disable-cue \
 		--disable-sidplay \
-		--disable-documentation \
 		--with-systemdsystemunitdir=/usr/lib/systemd/system
 
 	make
