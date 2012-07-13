@@ -4,7 +4,7 @@
 
 pkgname=readline
 _basever=6.2
-_patchlevel=002 #prepare for some patches
+_patchlevel=003 #prepare for some patches
 pkgver=$_basever.$_patchlevel
 pkgrel=2
 pkgdesc="GNU readline library"
@@ -28,7 +28,9 @@ md5sums=('67948acb2ca081f23359d0256e9a271c'
          '83287d52a482f790dfb30ec0a8746669'
          '8e6a51e2e0e6e45a82752e3692c111ac'
          '0665020ea118e8434bd145fb71f452cc'
-         '285361ca6d48c51ae2428157e174e812')
+         '285361ca6d48c51ae2428157e174e812'
+         'c9d5d79718856e711667dede87cb7622'
+         '4437205bb1462f5f32e4812b8292c675')
 
 build() {
   cd ${srcdir}/${pkgname}-$_basever
