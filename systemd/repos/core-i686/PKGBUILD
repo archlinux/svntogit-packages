@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
-pkgver=185
-pkgrel=4
+pkgver=186
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,16 +16,12 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
-        '0001-vconsole-setup-enable-utf-8-mode-explicitly.patch'
-        '0001-udev-systemd-udev-settle.service-fix-After.patch'
         'locale.sh')
-md5sums=('a7dbbf05986eb0d2c164ec8e570eb78f'
+md5sums=('17eff1d31e6e49bf82e129fe57efd59b'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         '83f51149ff9c4d75ea946e2b3cc61e53'
-         'b3e41e90beaff35c66ba1b4bc223430a'
          'f15956945052bb911e5df81cf5e7e5dc')
 
 build() {
@@ -33,12 +29,6 @@ build() {
 
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
-
-  # upstream commit d305a67b46644d6360ef557109384c831ee8e018
-  patch -Np1 <"$srcdir/0001-vconsole-setup-enable-utf-8-mode-explicitly.patch"
-
-  # upstream commit 8e8eb8fbafcaa841fa5393e396acde27b26edf2f
-  patch -Np1 <"$srcdir/0001-udev-systemd-udev-settle.service-fix-After.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -62,10 +52,10 @@ package_systemd() {
   pkgdesc="system and service manager"
   depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kmod' 'libcap' 'pam'
            "systemd-tools=$pkgver" 'util-linux' 'xz')
-  optdepends=('python2-dbus: systemd-analyze'
+  optdepends=('python-dbus: systemd-analyze'
               'initscripts: legacy support for hostname and vconsole setup'
               'initscripts-systemd: legacy generator for initialization scripts'
-              'python2-cairo: systemd-analyze'
+              'python-cairo: systemd-analyze'
               'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
@@ -85,9 +75,6 @@ package_systemd() {
 
   install -dm755 "$pkgdir/bin"
   ln -s ../usr/lib/systemd/systemd "$pkgdir/bin/systemd"
-
-  # fix systemd-analyze for python2
-  sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
   # move bash-completion and symlink for loginctl
   install -Dm644 "$pkgdir/etc/bash_completion.d/systemd-bash-completion.sh" \
@@ -196,6 +183,9 @@ package_systemd-tools() {
 
   # udevd is no longer udevd because systemd. why isn't udevadm now udevctl?
   ln -s ../lib/systemd/systemd-udevd "$pkgdir/usr/bin/udevd"
+
+  # add back tmpfiles.d/legacy.conf
+  install -m644 "systemd-$pkgver/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
 
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
