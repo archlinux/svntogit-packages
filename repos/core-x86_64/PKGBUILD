@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.16.0
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -96,6 +96,8 @@ check() {
 package() {
   cd ${srcdir}/glibc-build
 
+  ln -s usr/lib ${pkgdir}/lib
+
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
 
@@ -123,7 +125,7 @@ package() {
   if [[ ${CARCH} = "x86_64" ]]; then
     # fix paths and compliance with binary blobs...
     sed -i '/RTLDLIST/s%lib64%lib%' ${pkgdir}/usr/bin/ldd
-    ln -s /lib ${pkgdir}/lib64
+    ln -s usr/lib ${pkgdir}/lib64
   fi
 
   # Do not strip the following files for improved debugging support
@@ -143,9 +145,9 @@ package() {
 
   strip $STRIP_STATIC usr/lib/*.a
 
-  strip $STRIP_SHARED lib/{libanl,libBrokenLocale,libcidn,libcrypt}-*.so \
-                      lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
-                      lib/{libdl,libm,libnsl,libresolv,librt,libutil}-*.so \
-                      lib/{libmemusage,libpcprofile,libSegFault}.so \
+  strip $STRIP_SHARED usr/lib/{libanl,libBrokenLocale,libcidn,libcrypt}-*.so \
+                      usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
+                      usr/lib/{libdl,libm,libnsl,libresolv,librt,libutil}-*.so \
+                      usr/lib/{libmemusage,libpcprofile,libSegFault}.so \
                       usr/lib/{pt_chown,{audit,gconv}/*.so}
 }
