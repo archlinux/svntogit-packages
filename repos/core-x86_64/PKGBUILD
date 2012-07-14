@@ -8,7 +8,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 _kernelname=${pkgname#linux}
 _basekernel=3.4
 pkgver=${_basekernel}.4
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -23,8 +23,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.4.tar.xz"
         'fix-acerhdf-1810T-bios.patch'
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
-        '3.4.4-fix-backlight-regression.patch'
-        '3.4.4-fix-gtx560ti-nouveau-regression.patch')
+	'3.4.4-fix-backlight-regression.patch')
 md5sums=('967f72983655e2479f951195953e8480'
          '58e6672d932d74d5e2b6811b9d37d67c'
          '3f2c307c8ffae67f60c13ef69af8364a'
@@ -33,8 +32,7 @@ md5sums=('967f72983655e2479f951195953e8480'
          '38c1fd4a1f303f1f6c38e7f082727e2f'
          '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5'
-         '80a46681386bb87813989faeb92bdd9a'
-         '827ffd855dc8b0c91577545c5804c19f')
+	 '80a46681386bb87813989faeb92bdd9a')
 
 build() {
   cd "${srcdir}/linux-${_basekernel}"
@@ -58,10 +56,6 @@ build() {
   # https://bugzilla.kernel.org/show_bug.cgi?id=43168
   patch -Np1 -i "${srcdir}/3.4.4-fix-backlight-regression.patch"
 
-  # fix nouveau regression
-  # Arch Linux bug report: FS#30417
-  patch -Np1 -i "${srcdir}/3.4.4-fix-gtx560ti-nouveau-regression.patch"
-
   # Patch submitted upstream, waiting for inclusion:
   # https://lkml.org/lkml/2012/2/19/51
   # add support for latest bios of Acer 1810T acerhdf module
@@ -84,6 +78,9 @@ build() {
 
   # set extraversion to pkgrel
   sed -ri "s|^(EXTRAVERSION =).*|\1 -${pkgrel}|" Makefile
+
+  # don't run depmod on 'make install'. We'll do this ourselves in packaging
+  sed -i '2iexit 0' scripts/depmod.sh
 
   # get kernel version
   make prepare
@@ -159,6 +156,12 @@ package_linux() {
   # add real version for building modules and running depmod from post_install/upgrade
   mkdir -p "${pkgdir}/lib/modules/extramodules-${_basekernel}${_kernelname:--ARCH}"
   echo "${_kernver}" > "${pkgdir}/lib/modules/extramodules-${_basekernel}${_kernelname:--ARCH}/version"
+
+  # move module tree /lib -> /usr/lib
+  mv "$pkgdir/lib" "$pkgdir/usr"
+
+  # Now we call depmod...
+  depmod -b "$pkgdir" -F System.map "$_kernver"
 }
 
 package_linux-headers() {
@@ -167,10 +170,10 @@ package_linux-headers() {
   conflicts=('kernel26-headers')
   replaces=('kernel26-headers')
 
-  mkdir -p "${pkgdir}/lib/modules/${_kernver}"
+  install -dm755 "${pkgdir}/usr/lib/modules/${_kernver}"
 
-  cd "${pkgdir}/lib/modules/${_kernver}"
-  ln -sf ../../../usr/src/linux-${_kernver} build
+  cd "${pkgdir}/usr/lib/modules/${_kernver}"
+  ln -sf ../../../src/linux-${_kernver} build
 
   cd "${srcdir}/linux-${_basekernel}"
   install -D -m644 Makefile \
