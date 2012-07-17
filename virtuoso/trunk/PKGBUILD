@@ -2,45 +2,60 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Massimiliano Torromeo <massimiliano DOT torromeo AT google mail service>
 
-pkgname=virtuoso
-pkgver=6.1.5.20120630
+pkgbase=virtuoso
+pkgname=('virtuoso' 'virtuoso-base')
+pkgver=6.1.5.20120717
 pkgrel=1
 arch=('i686' 'x86_64')
-pkgdesc='A scalable cross-platform server that combines SQL/RDF/XML Data Management with Web Application Server and Web Services Platform functionality'
 url='http://virtuoso.openlinksw.com/wiki/main/Main/'
 license=('GPL')
-depends=('libldap')
-makedepends=('bison' 'flex' 'gperf')
+makedepends=('libldap' 'bison' 'flex' 'gperf' 'net-tools' 'libxml2')
 options=('!libtool')
-source=("ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-opensource-${pkgver}.tar.gz")
-#source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-opensource-${pkgver}.tar.gz")
-md5sums=('1364679ffdbc6b0c16eadf6dee0e2676')
+source=("ftp://ftp.archlinux.org/other/${pkgbase}/${pkgbase}-opensource-${pkgver}.tar.gz")
+#source=("http://downloads.sourceforge.net/${pkgbase}/${pkgbase}-opensource-${pkgver}.tar.gz")
+md5sums=('bee8d6ad91e888bab8fdd177063ca084')
 
 build() {
-  cd ${srcdir}/${pkgname}-opensource-${pkgver}
+  cd ${srcdir}/${pkgbase}-opensource-${pkgver}
 
   ./autogen.sh
-  ./configure --prefix=/usr \
-    --localstatedir=/var \
-    --sysconfdir=/etc \
-    --disable-rendezvous \
-    --disable-hslookup \
-    --disable-all-vads
+  ./configure --with-layout=debian \
+    --program-transform-name='s/isql$$/isql-vt/;s/isqlw/isqlw-vt/' \
+    --with-readline
   make
 }
 
-package() {
+package_virtuoso-base() {
+  pkgdesc='A scalable cross-platform server of virtuoso (very minimal installation)'
+  depends=('libldap')
+
   # install server
-  cd ${srcdir}/${pkgname}-opensource-${pkgver}/binsrc/virtuoso
+  cd ${srcdir}/${pkgbase}-opensource-${pkgver}/binsrc/virtuoso
   make DESTDIR=${pkgdir} install
 
   # install driver
-  cd ${srcdir}/${pkgname}-opensource-${pkgver}/binsrc/driver
+  cd ${srcdir}/${pkgbase}-opensource-${pkgver}/binsrc/driver
   make DESTDIR=${pkgdir} install
 
-  # Install some useful tools; rename to avoid conflicts
+  # Install some useful tools; rename to avoid conflicts with unixodbc
   for bin in isql isqlw; do
-    install -Dm755 ${srcdir}/${pkgname}-opensource-${pkgver}/binsrc/tests/$bin \
+    install -Dm755 ${srcdir}/${pkgbase}-opensource-${pkgver}/binsrc/tests/$bin \
       ${pkgdir}/usr/bin/$bin-vt
   done
+}
+
+package_virtuoso() {
+  pkgdesc='A scalable cross-platform server that combines SQL/RDF/XML Data Management with Web Application Server and Web Services Platform functionality'
+  depends=('virtuoso-base' 'libxml2')
+
+  cd ${srcdir}/${pkgbase}-opensource-${pkgver}
+  make DESTDIR=${pkgdir} install
+
+  # remove conflicts with virtuoso-base
+  rm "${pkgdir}"/usr/bin/virtuoso-t
+  rm "${pkgdir}"/usr/lib/libvirtuoso-t.a
+  rm "${pkgdir}"/usr/lib/virtodbc.{a,so}
+  rm "${pkgdir}"/usr/lib/virtodbc_r.{a,so}
+  rm "${pkgdir}"/usr/lib/virtodbcu.{a,so}
+  rm "${pkgdir}"/usr/lib/virtodbcu_r.{a,so}
 }
