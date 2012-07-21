@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=187
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -52,10 +52,10 @@ package_systemd() {
   pkgdesc="system and service manager"
   depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kmod' 'libcap' 'pam'
            "systemd-tools=$pkgver" 'util-linux' 'xz')
-  optdepends=('python-dbus: systemd-analyze'
-              'initscripts: legacy support for hostname and vconsole setup'
+  optdepends=('initscripts: legacy support for hostname and vconsole setup'
               'initscripts-systemd: legacy generator for initialization scripts'
-              'python-cairo: systemd-analyze'
+              'python2-cairo: systemd-analyze'
+              'python2-dbus: systemd-analyze'
               'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
@@ -86,6 +86,10 @@ package_systemd() {
   # as a sane default
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
+
+  # fix systemd-analyze for python2. the 'plot' verb does not work
+  # with py3k due to a bug in python-cairo
+  sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
   ### split off libsystemd (libs, includes, pkgconfig, man3)
   rm -rf "$srcdir/_libsystemd"
@@ -137,7 +141,7 @@ package_systemd() {
   mv "$pkgdir"/usr/share/man/man8/{systemd-{tmpfiles,udevd},udevadm}.8 usr/share/man/man8
   mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt,machine-id-setup}.1 usr/share/man/man1
   mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
-  mv "$pkgdir"/usr/share/man/man5/{hostname,{vconsole,locale}.conf}.5 usr/share/man/man5
+  mv "$pkgdir"/usr/share/man/man5/{hostname,{vconsole,locale}.conf,crypttab}.5 usr/share/man/man5
   mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
   mv "$pkgdir"/usr/lib/systemd/systemd-{ac-power,binfmt,cryptsetup,modules-load,random-seed,remount-fs,reply-password,sysctl,timestamp,vconsole-setup} usr/lib/systemd
 }
