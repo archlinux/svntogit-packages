@@ -1,0 +1,83 @@
+# $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Giacomo Rizzo <alt@free-os.it>
+
+pkgname=gpsd
+pkgver=3.6
+pkgrel=2
+pkgdesc="GPS daemon and library to support USB/serial GPS devices"
+arch=('i686' 'x86_64')
+url="http://catb.org/gpsd/"
+license=('BSD')
+depends=('python2' 'libusb' 'bluez' 'desktop-file-utils')
+optdepends=('php: generate a PHP status page for your GPS'
+            'php-gd: image support for the PHP status page'
+            'pygtk: GUI frontends')
+makedepends=('scons' 'docbook-xsl' 'chrpath')
+backup=('etc/conf.d/gpsd')
+options=('!libtool')
+install="${pkgname}.install"
+source=("http://download.savannah.gnu.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.gz"{,.sig}
+        'gpsd' 'gpsd.conf.d')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # fix python 2.7 path
+  sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+    -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
+    $(find . -name '*.py')
+  sed -i 's|/usr/bin/env python|/usr/bin/env python2|' gegps \
+    gpscat gpsfake gpsprof xgps xgpsspeed
+
+  scons prefix=/usr \
+    systemd=yes \
+    libQgpsmm=no \
+    PYTHONPATH=/usr/bin/python2
+  scons build
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Fix man pages path (FS#21715)
+  sed -i 's|.so gps.1|.so man1/gps.1|' cgps.1 lcdgps.1 xgps.1 xgpsspeed.1
+
+  export DESTDIR="${pkgdir}"
+  scons install
+
+  install -D -m644 "${srcdir}/gpsd.conf.d" "${pkgdir}/etc/conf.d/gpsd"
+
+  sed -i 's|/lib/udev/gpsd|/usr/lib/udev/gpsd|' gpsd.rules
+
+  install -D -m644 "gpsd.rules" "${pkgdir}/usr/lib/udev/rules.d/99-gpsd-usb.rules"
+
+  sed -i 's|/etc/default/gpsd|/etc/conf.d/gpsd|' gpsd.hotplug
+  install -D -m755 gpsd.hotplug "${pkgdir}/usr/lib/udev/gpsd.hotplug"
+
+  # GPSD needs RPATH
+  chrpath -r /usr/lib/ "${pkgdir}"/usr/lib/libgps{,d}.so.20.0.0
+  chrpath -r /usr/lib/ "${pkgdir}"/usr/bin/{gpsdecode,gpsctl,gpspipe,gpxlogger,lcdgps}
+  chrpath -r /usr/lib/ "${pkgdir}"/usr/sbin/{gpsd,gpsdctl}
+  chrpath -r /usr/lib/ "${pkgdir}"/usr/lib/python2.7/site-packages/gps/{clienthelpers,packet}.so
+
+  install -D -m644 packaging/X11/xgps.desktop \
+    "${pkgdir}/usr/share/applications/xgps.desktop"
+  install -D -m644 packaging/X11/xgpsspeed.desktop \
+    "${pkgdir}/usr/share/applications/xgpsspeed.desktop"
+  install -D -m644 packaging/X11/gpsd-logo.png \
+    "${pkgdir}/usr/share/gpsd/gpsd-logo.png"
+
+  install -D -m755 "${srcdir}/gpsd" "${pkgdir}/etc/rc.d/gpsd"
+
+  install -D -m644 systemd/gpsd.service "${pkgdir}/usr/lib/systemd/system/gpsd.service"
+  install -D -m644 systemd/gpsd.socket "${pkgdir}/usr/lib/systemd/system/gpsd.socket"
+
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+md5sums=('064a5ad75593f8c3ea3fe85010647832'
+         '6473da46f6bad52d38f88670f84cd92b'
+         '6602d04bb037bc500424f00f24f58837'
+         '3e963df3f9f7ef3572ecc648ae829315')
