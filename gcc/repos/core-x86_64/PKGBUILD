@@ -6,8 +6,8 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.1
-pkgrel=4
-#_snapshot=4.7-20120505
+pkgrel=5
+_snapshot=4.7-20120721
 _libstdcppmanver=20120605		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -16,19 +16,17 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.22' 'libmpc' 'cloog' 'ppl' 'gcc-ada')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-4.7.1-libada-pic.patch
-	gcc-4.7.1-libgo-write.patch
-        gcc-4.7.1-libgo-mksysinfo.patch)
-md5sums=('933e6f15f51c031060af64a9e14149ff'
+	gcc-4.7.1-libgo-write.patch)
+md5sums=('a1a53fda426bc6809cede8e85bbaf2a3'
          '767c62f9a047c4434f2345decf1d0819'
          'ced48436c1b3c981d721a829f1094de1'
          '2acbc9d35cc9d72329dc71d6b1f162ef'
-         'df82dd175ac566c8a6d46b11ac21f14c'
-         '8e847244dba042d0aa3297713edaf70c')
+         'df82dd175ac566c8a6d46b11ac21f14c')
 
 
 if [ -n "${_snapshot}" ]; then
@@ -55,9 +53,6 @@ build() {
   
   # bug to file...
   patch -p1 -i ${srcdir}/gcc-4.7.1-libada-pic.patch
-
-  # http://gcc.gnu.org/ml/gcc-patches/2012-06/msg01946.html
-  patch -p0 -i ${srcdir}/gcc-4.7.1-libgo-mksysinfo.patch
 
   echo ${pkgver} > gcc/BASE-VER
 
@@ -158,8 +153,7 @@ package_gcc()
   rm $pkgdir/usr/share/man/man3/ffi*
 
   # many packages require these symlinks
-  #install -dm755 ${pkgdir}/lib
-  #ln -s /usr/bin/cpp ${pkgdir}/lib/cpp
+  ln -s /usr/bin/cpp ${pkgdir}/usr/lib/cpp
   ln -s gcc ${pkgdir}/usr/bin/cc
 
   # POSIX conformance launcher scripts for c89 and c99
