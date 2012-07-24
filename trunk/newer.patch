@@ -1,0 +1,133 @@
+diff -Naur old/Makefile new/Makefile
+--- old/Makefile	2008-03-06 05:02:40.000000000 +1100
++++ new/Makefile	2012-07-23 03:20:19.009174483 +1000
+@@ -42,11 +42,11 @@
+ 	    protocol-numbers.iana port-numbers.iana
+ 
+ protocol-numbers.iana:
+-	$(AWK) -f get.gawk -v file=protocol-numbers >protocol-numbers.iana
++	$(AWK) -f get.gawk -v file=protocol-numbers/protocol-numbers.xml >protocol-numbers.iana
+ 	rm -f protocol-numbers
+ 
+ port-numbers.iana:
+-	$(AWK) -f get.gawk -v file=port-numbers >port-numbers.iana
++	$(AWK) -f get.gawk -v file=service-names-port-numbers/service-names-port-numbers.xml >port-numbers.iana
+ 	rm -f port-numbers
+ 
+ protocol-numbers:
+diff -Naur old/get.gawk new/get.gawk
+--- old/get.gawk	2008-03-06 05:04:18.000000000 +1100
++++ new/get.gawk	2012-07-23 03:20:19.009174483 +1000
+@@ -26,7 +26,7 @@
+ 	NR++
+ 
+ 	if (in_content) { print }
+-	if (/^$/)       { in_content=1 }
++	if (/^\r?$/)    { in_content=1 }
+     }
+ 
+     printf "\n" >"/dev/stderr"
+diff -Naur old/protocols.gawk new/protocols.gawk
+--- old/protocols.gawk	2006-11-15 05:20:26.000000000 +1100
++++ new/protocols.gawk	2012-07-23 03:22:13.479330458 +1000
+@@ -1,32 +1,13 @@
+-#!/usr/bin/gawk --re-interval -f
+-# the above doesn't work (stupid kernel) but serves as documentation
+-
+-# Copyright (c) 2003-2004, 2006 Seth W. Klein <sk@sethwklein.net>
+-# Licensed under the Open Software License version 3.0
+-# See the file COPYING in the distribution tarball or
+-# http://www.opensource.org/licenses/osl-3.0.txt
++#!/usr/bin/awk -f
+ 
+ BEGIN {
+-    if (strip == "yes") {
+-	strip = 1
+-	format = "%s\t%s\t%s\n"
+-	header_printed = 1
+-    } else {
+-	strip = 0
+-	print "# See also: protocols(5)" \
+-	    ", http://www.sethwklein.net/projects/iana-etc/\n#"
+-	format = "%-12s %3s %-12s # %s\n"
+-	header_printed = 0
+-    }
++	print "# See the full IANA XML file at: /usr/share/iana-etc/protocol-numbers.iana\n"
++	FS="[<>]"
+ }
+-{ sub(/\r/, "") }
+-match($0, /^[ \t]+([0-9]+)[ \t]{1,5}([^ \t]+)(.*)/, f) {
+-    if ( ! header_printed) {
+-	printf format, "# protocol", "num", "aliases", "comments"
+-	header_printed = 1;
+-    }
+-    sub(/^[ \t]*/, "", f[3])
+-    printf format, tolower(f[2]), f[1], f[2], f[3]
+-    next
++
++{
++	if (/<record/) { v=n=0 }
++	if (/<value/) v=$3
++	if (/<name/ && !($3~/ /)) n=$3
++	if (/<\/record/ && (v || n=="HOPOPT") && n) printf "%-12s %3i %s\n", tolower(n),v,n
+ }
+-!strip { print "# " $0 }
+diff -Naur old/services.gawk new/services.gawk
+--- old/services.gawk	2008-03-06 04:51:45.000000000 +1100
++++ new/services.gawk	2012-07-23 03:22:32.272685489 +1000
+@@ -1,44 +1,15 @@
+-#!/usr/bin/gawk -f
+-
+-# Copyright (c) 2003-2004, 2006, 2008 Seth W. Klein <sk@sethwklein.net>
+-# Licensed under the Open Software License version 3.0
+-# See the file COPYING in the distribution tarball or
+-# http://www.opensource.org/licenses/osl-3.0.txt
++#!/usr/bin/awk -f
+ 
+ BEGIN {
+-    if (strip == "yes") {
+-	strip = 1
+-    } else {
+-	strip = 0
+-	print "# See also: services(5)" \
+-	    ", http://www.sethwklein.net/projects/iana-etc/\n#"
+-    }
+-    while (getline <"port-aliases") {
+-	sub(/#.*/, "")
+-	if (/^[ \t]*$/) { continue }
+-	#                  1:name         2:protocol     3:aliases
+-	match($0, /^[ \t]*([^ \t]+)[ \t]+([^ \t]+)[ \t]+(.*)$/, f)
+-	aliases[f[1] " " f[2]] = " " f[3]
+-    }
++	print "# See the full IANA XML file at: /usr/share/iana-etc/port-numbers.iana\n"
++	FS="[<>]"
+ }
+-{ sub(/\r/, "") }
+-#           1:name               2:ws    3:port  4:range     5:proto  6:comment
+-match($0, /(^[[:alnum:]][^ \t]+)([ \t]+)([0-9]+)(-[0-9]+)?\/([^ \t]+)(.*)/, f) \
+-&& f[3] != "0" {
+-# port 0 means unallocated, per port-numbers
+-    name = f[1]
+-    whitespace = f[2]
+-    port = f[3]
+-    protocol = f[5]
+-    comment = f[6]
+-    if (strip) {
+-	whitespace = "\t"
+-	comment = ""
+-    } else if (length(comment) > 0)
+-	sub(/^[ \t]*/, "&# ", comment)
+-    print name whitespace port "/" protocol aliases[name " " protocol] comment
+-    next
++
++{
++	if (/<record/) { n=u=p=c=0 }
++	if (/<name/ && !/\(/) n=$3
++	if (/<number/) u=$3
++	if (/<protocol/) p=$3
++	if (/Unassigned/ || /Reserved/ || /historic/) c=1
++	if (/<\/record/ && n && u && p && !c) printf "%-15s %5i/%s\n", n,u,p # services
+ }
+-# comment out, prettily
+-!/^#/ { sub(/^ /, "#") || sub(/^/, "# ") }
+-!strip { print }
