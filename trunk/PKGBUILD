@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=187
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -34,7 +34,6 @@ build() {
       --libexecdir=/usr/lib \
       --localstatedir=/var \
       --sysconfdir=/etc \
-      --enable-split-usr \
       --enable-introspection \
       --enable-gtk-doc \
       --disable-audit \
