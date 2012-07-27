@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=187
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,19 +16,22 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
-        'locale.sh')
+        'locale.sh'
+        'use-split-usr-path.patch')
 md5sums=('26606e3c84448800ef0b3ffd57e6e8b6'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         'f15956945052bb911e5df81cf5e7e5dc')
+         'f15956945052bb911e5df81cf5e7e5dc'
+         '482dba45a783f06c2239f1355f4ce72f')
 
 build() {
   cd "$pkgname-$pkgver"
 
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
+  patch -Np1 < "$srcdir/use-split-usr-path.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
