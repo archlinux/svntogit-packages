@@ -2,16 +2,16 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=pkgstats
-pkgver=2.1
-pkgrel=5
+pkgver=2.2
+pkgrel=1
 pkgdesc='submits a list of installed packages to the Arch Linux project'
 arch=('any')
 url='https://www.archlinux.de'
 license=('GPL')
-depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'cron')
+depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'cron' 'awk')
 source=('pkgstats.sh' 'pkgstats.cron')
 install='pkgstats.install'
-md5sums=('f63f0619b6ecd76f41de11561bf2fb1e'
+md5sums=('93ab636b7a02d89ecd852e28c7e2a07c'
          'e86e6b9778303367f2e31f5c311da685')
 
 package() {
