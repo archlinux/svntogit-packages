@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgstatsver='2.1'
+pkgstatsver='2.2'
 showonly=false
 quiet=false
 option='-q -s -S -4'
@@ -35,12 +35,19 @@ done
 ${quiet} || echo 'Collecting data...'
 pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
 pacman -Qq > "${pkglist}"
+moduleslist="$(mktemp --tmpdir modules.XXXXXX)"
+if [[ -f /proc/modules ]]; then
+	cat /proc/modules | awk '{ print $1 }' > "${moduleslist}"
+fi
 arch="$(uname -m)"
 mirror="$(pacman -Sddp extra/pkgstats 2>/dev/null | sed -E 's#(.*/)extra/os/.*#\1#;s#(.*://).*@#\1#')"
 
 if ${showonly}; then
 	echo 'packages='
 	cat  "${pkglist}"
+	echo ''
+	echo 'modules='
+	cat "${moduleslist}"
 	echo ''
 	echo "arch=${arch}"
 	echo "pkgstatsver=${pkgstatsver}"
@@ -51,6 +58,7 @@ else
 	curl ${option} -H 'Expect: ' \
 		-A "pkgstats/${pkgstatsver}" \
 		--data-urlencode "packages@${pkglist}" \
+		--data-urlencode "modules@${moduleslist}" \
 		--data-urlencode "arch=${arch}" \
 		--data-urlencode "mirror=${mirror}" \
 		--data-urlencode "quiet=${quiet}" \
