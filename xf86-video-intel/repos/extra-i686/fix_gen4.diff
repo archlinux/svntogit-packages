@@ -1,0 +1,142 @@
+From 73ddd8b0decee444a57f10a11f05deebba686649 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Fri, 27 Jul 2012 11:43:00 +0000
+Subject: sna/gen4: Further refinement to the GT allocation
+
+Still hunting for why gen4 fails utterly.
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/gen4_render.c b/src/sna/gen4_render.c
+index 25229e1..1a860bd 100644
+--- a/src/sna/gen4_render.c
++++ b/src/sna/gen4_render.c
+@@ -79,8 +79,8 @@
+ #define URB_CS_ENTRY_SIZE     1
+ #define URB_CS_ENTRIES	      0
+ 
+-#define URB_VS_ENTRY_SIZE     1	// each 512-bit row
+-#define URB_VS_ENTRIES	      32	// we needs at least 8 entries
++#define URB_VS_ENTRY_SIZE     1
++#define URB_VS_ENTRIES	      32
+ 
+ #define URB_GS_ENTRY_SIZE     0
+ #define URB_GS_ENTRIES	      0
+@@ -89,25 +89,24 @@
+ #define URB_CLIP_ENTRIES      0
+ 
+ #define URB_SF_ENTRY_SIZE     2
+-#define URB_SF_ENTRIES	      8
++#define URB_SF_ENTRIES	      64
+ 
+ /*
+  * this program computes dA/dx and dA/dy for the texture coordinates along
+  * with the base texture coordinate. It was extracted from the Mesa driver
+  */
+ 
+-#define SF_KERNEL_NUM_GRF  16
+-
+-#define PS_KERNEL_NUM_GRF   32
++#define SF_KERNEL_NUM_GRF 16
++#define PS_KERNEL_NUM_GRF 32
+ 
+ static const struct gt_info {
+ 	uint32_t max_sf_threads;
+ 	uint32_t max_wm_threads;
+ 	uint32_t urb_size;
+ } gen4_gt_info = {
+-	16, 32, 256,
++	24, 32, 256,
+ }, g4x_gt_info = {
+-	32, 50, 384,
++	24, 50, 384,
+ };
+ 
+ static const uint32_t sf_kernel[][4] = {
+@@ -1455,10 +1454,10 @@ gen4_emit_state(struct sna *sna,
+ 		const struct sna_composite_op *op,
+ 		uint16_t wm_binding_table)
+ {
++	gen4_emit_drawing_rectangle(sna, op);
+ 	gen4_emit_binding_table(sna, wm_binding_table);
+ 	gen4_emit_pipelined_pointers(sna, op, op->op, op->u.gen4.wm_kernel);
+ 	gen4_emit_vertex_elements(sna, op);
+-	gen4_emit_drawing_rectangle(sna, op);
+ 
+ 	if (kgem_bo_is_dirty(op->src.bo) || kgem_bo_is_dirty(op->mask.bo)) {
+ 		DBG(("%s: flushing dirty (%d, %d)\n", __FUNCTION__,
+--
+cgit v0.9.0.2-2-gbebe
+From fb385745a2347f8966765567e78229d67ddc8d60 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Fri, 27 Jul 2012 12:24:04 +0000
+Subject: sna/gen4: Move the common vertex_offset==0 check into the flush()
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/gen4_render.c b/src/sna/gen4_render.c
+index 1a860bd..58d4422 100644
+--- a/src/sna/gen4_render.c
++++ b/src/sna/gen4_render.c
+@@ -338,7 +338,8 @@ static void gen4_magic_ca_pass(struct sna *sna,
+ 
+ static void gen4_vertex_flush(struct sna *sna)
+ {
+-	assert(sna->render_state.gen4.vertex_offset);
++	if (sna->render_state.gen4.vertex_offset == 0)
++		return;
+ 
+ 	DBG(("%s[%x] = %d\n", __FUNCTION__,
+ 	     4*sna->render_state.gen4.vertex_offset,
+@@ -359,8 +360,7 @@ static int gen4_vertex_finish(struct sna *sna)
+ 
+ 	bo = sna->render.vbo;
+ 	if (bo) {
+-		if (sna->render_state.gen4.vertex_offset)
+-			gen4_vertex_flush(sna);
++		gen4_vertex_flush(sna);
+ 
+ 		for (i = 0; i < ARRAY_SIZE(sna->render.vertex_reloc); i++) {
+ 			if (sna->render.vertex_reloc[i]) {
+@@ -1783,8 +1783,7 @@ gen4_render_video(struct sna *sna,
+ 	}
+ 	priv->clear = false;
+ 
+-	if (sna->render_state.gen4.vertex_offset)
+-		gen4_vertex_flush(sna);
++	gen4_vertex_flush(sna);
+ 	return true;
+ }
+ 
+@@ -2693,8 +2692,7 @@ fastcall static void
+ gen4_render_composite_spans_done(struct sna *sna,
+ 				 const struct sna_composite_spans_op *op)
+ {
+-	if (sna->render_state.gen4.vertex_offset)
+-		gen4_vertex_flush(sna);
++	gen4_vertex_flush(sna);
+ 
+ 	DBG(("%s()\n", __FUNCTION__));
+ 
+@@ -3072,8 +3070,7 @@ gen4_render_copy_blt(struct sna *sna,
+ static void
+ gen4_render_copy_done(struct sna *sna, const struct sna_copy_op *op)
+ {
+-	if (sna->render_state.gen4.vertex_offset)
+-		gen4_vertex_flush(sna);
++	gen4_vertex_flush(sna);
+ }
+ 
+ static bool
+@@ -3366,8 +3363,7 @@ gen4_render_fill_op_boxes(struct sna *sna,
+ static void
+ gen4_render_fill_op_done(struct sna *sna, const struct sna_fill_op *op)
+ {
+-	if (sna->render_state.gen4.vertex_offset)
+-		gen4_vertex_flush(sna);
++	gen4_vertex_flush(sna);
+ 	kgem_bo_destroy(&sna->kgem, op->base.src.bo);
+ }
+ 
+--
+cgit v0.9.0.2-2-gbebe
