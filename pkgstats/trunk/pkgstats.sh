@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgstatsver='2.2'
+pkgstatsver='2.3'
 showonly=false
 quiet=false
 option='-q -s -S -4'
@@ -37,9 +37,18 @@ pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
 pacman -Qq > "${pkglist}"
 moduleslist="$(mktemp --tmpdir modules.XXXXXX)"
 if [[ -f /proc/modules ]]; then
-	cat /proc/modules | awk '{ print $1 }' > "${moduleslist}"
+	awk '{ print $1 }' /proc/modules > "${moduleslist}"
 fi
 arch="$(uname -m)"
+if [[ -f /proc/cpuinfo ]]; then
+	if grep -qE '^flags\s*:.*\slm\s' /proc/cpuinfo; then
+		cpuarch='x86_64'
+	else
+		cpuarch='i686'
+	fi
+else
+	cpuarch=''
+fi
 mirror="$(pacman -Sddp extra/pkgstats 2>/dev/null | sed -E 's#(.*/)extra/os/.*#\1#;s#(.*://).*@#\1#')"
 
 if ${showonly}; then
@@ -50,6 +59,7 @@ if ${showonly}; then
 	cat "${moduleslist}"
 	echo ''
 	echo "arch=${arch}"
+	echo "cpuarch=${cpuarch}"
 	echo "pkgstatsver=${pkgstatsver}"
 	echo "mirror=${mirror}"
 	echo "quiet=${quiet}"
@@ -60,6 +70,7 @@ else
 		--data-urlencode "packages@${pkglist}" \
 		--data-urlencode "modules@${moduleslist}" \
 		--data-urlencode "arch=${arch}" \
+		--data-urlencode "cpuarch=${cpuarch}" \
 		--data-urlencode "mirror=${mirror}" \
 		--data-urlencode "quiet=${quiet}" \
 		'https://www.archlinux.de/?page=PostPackageList' \
