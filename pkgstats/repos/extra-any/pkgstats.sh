@@ -34,8 +34,9 @@ done
 
 ${quiet} || echo 'Collecting data...'
 pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
-pacman -Qq > "${pkglist}"
 moduleslist="$(mktemp --tmpdir modules.XXXXXX)"
+trap 'rm -f "${pkglist}" "${moduleslist}"' EXIT
+pacman -Qq > "${pkglist}"
 if [[ -f /proc/modules ]]; then
 	awk '{ print $1 }' /proc/modules > "${moduleslist}"
 fi
@@ -76,5 +77,3 @@ else
 		'https://www.archlinux.de/?page=PostPackageList' \
 	|| echo 'Sorry, data could not be sent.' >&2
 fi
-
-rm -f "${pkglist}"
