@@ -2,16 +2,16 @@
 # Maintainer:
 
 pkgname=('python-lxml' 'python2-lxml')
-pkgver=2.3.4
-pkgrel=2
+pkgver=2.3.5
+pkgrel=1
 pkgdesc="Python binding for the libxml2 and libxslt libraries"
 arch=('i686' 'x86_64')
 license=('BSD' 'custom')
 url="http://lxml.de/"
 makedepends=('python2' 'python' 'libxslt')
 source=(http://pypi.python.org/packages/source/l/lxml/lxml-${pkgver}.tar.gz{,.asc})
-sha1sums=('90a226d8a2ee38de47fc3351445dab6df0e33a20'
-          '7962be7794d7f4c87d2fce0104c27990f48f1ce1')
+sha1sums=('4fec0ca5054a8d6220d3dc7230a5066850192848'
+          'd74ad6509a0048ea0e979985e12869f2e1126b78')
 
 check() {
   cd "${srcdir}"/lxml-$pkgver
