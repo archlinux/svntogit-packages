@@ -1,0 +1,97 @@
+# $Id$
+# Maintainer: Stéphane Gaudreault <stephane@archlinux.org>
+
+pkgname=krb5
+pkgver=1.10.2
+pkgrel=3
+pkgdesc="The Kerberos network authentication system"
+arch=('i686' 'x86_64')
+url="http://web.mit.edu/kerberos/"
+license=('custom')
+depends=('e2fsprogs' 'libldap' 'keyutils')
+makedepends=('perl')
+backup=('etc/krb5.conf' 'var/lib/krb5kdc/kdc.conf')
+source=(http://web.mit.edu/kerberos/dist/${pkgname}/1.10/${pkgname}-${pkgver}-signed.tar
+        krb5-1.10.1-gcc47.patch
+        krb5-kadmind
+        krb5-kadmind.service
+        krb5-kdc
+        krb5-kdc.service
+        krb5-kpropd
+        krb5-kpropd.service
+        krb5-kpropd@.service
+        krb5-kpropd.socket
+        MITKRB5-SA-2012-001.patch)
+sha1sums=('8b6e2c5bf0c65aacd368b3698add7888f2a7332d'
+          '78b759d566b1fdefd9bbcd06df14f07f12effe96'
+          '2aa229369079ed1bbb201a1ef72c47bf143f4dbe'
+          'a2a01e7077d9e89cda3457ea0e216debb3dc353c'
+          '77d2312ecd8bf12a6e72cc8fd871a8ac93b23393'
+          'f5e4fa073e11b0fcb4e3098a5d58a4f791ec841e'
+          '7f402078fa65bb9ff1beb6cbbbb017450df78560'
+          '614401dd4ac18e310153240bb26eb32ff1e8cf5b'
+          '023a8164f8ee7066ac814486a68bc605e79f6101'
+          'f3677d30dbbd7106c581379c2c6ebb1bf7738912'
+          '7b32dd24e68dc801efb8be280083e4d8067e392a')
+options=('!emptydirs')
+
+build() {
+   tar zxvf ${pkgname}-${pkgver}.tar.gz
+   cd "${srcdir}/${pkgname}-${pkgver}/src"
+
+   # With gcc47 : deltat.c:1694:12: error: 'yylval' may be used uninitialized
+   # in this function [-Werror=maybe-uninitialized]
+   # As this is generated code, just ignore the complaint.
+   patch -Np2 -i ../../krb5-1.10.1-gcc47.patch
+   rm lib/krb5/krb/deltat.c
+
+   # FS#25384
+   sed -i "/KRB5ROOT=/s/\/local//" util/ac_check_krb5.m4
+
+   # Fix KDC heap corruption and crash vulnerabilities
+   patch -Np2 -i ../../MITKRB5-SA-2012-001.patch
+
+   export CFLAGS+=" -fPIC -fno-strict-aliasing -fstack-protector-all"
+   export CPPFLAGS+=" -I/usr/include/et"
+   ./configure --prefix=/usr \
+               --mandir=/usr/share/man \
+               --localstatedir=/var/lib \
+               --enable-shared \
+               --with-system-et \
+               --with-system-ss \
+               --disable-rpath \
+               --without-tcl \
+               --enable-dns-for-realm \
+               --with-ldap \
+               --without-system-verto
+   make
+}
+
+package() {
+   cd "${srcdir}/${pkgname}-${pkgver}/src"
+   make DESTDIR="${pkgdir}" EXAMPLEDIR=/usr/share/doc/${pkgname}/examples install
+
+   # Fix FS#29889
+   install -m 644 plugins/kdb/ldap/libkdb_ldap/kerberos.{ldif,schema} "${pkgdir}"/usr/share/doc/${pkgname}/examples
+
+   # Sample KDC config file
+   install -dm 755 "${pkgdir}"/var/lib/krb5kdc
+   install -pm 644 config-files/kdc.conf "${pkgdir}"/var/lib/krb5kdc/kdc.conf
+
+   # Default configuration file
+   install -dm 755 "${pkgdir}"/etc
+   install -pm 644 config-files/krb5.conf "${pkgdir}"/etc/krb5.conf
+
+   install -dm 755 "${pkgdir}"/etc/rc.d
+   install -m 755 ../../krb5-{kdc,kadmind,kpropd} "${pkgdir}"/etc/rc.d
+
+   install -dm 755 "${pkgdir}"/usr/share/aclocal
+   install -m 644 util/ac_check_krb5.m4 "${pkgdir}"/usr/share/aclocal
+
+   install -Dm644 "${srcdir}"/${pkgname}-${pkgver}/NOTICE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+
+   # systemd stuff
+   install -dm 755 "${pkgdir}"/usr/lib/systemd/system
+   install -m 644 ../../krb5-{kadmind.service,kdc.service,kpropd.service,kpropd@.service,kpropd.socket} \
+      "${pkgdir}"/usr/lib/systemd/system
+}
