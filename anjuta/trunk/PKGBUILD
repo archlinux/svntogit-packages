@@ -2,33 +2,49 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 # Contributor: Harley Laue <losinggeneration@yahoo.com>
 
-pkgname=anjuta
-pkgver=3.4.1
+pkgbase=anjuta
+pkgname=('libanjuta' 'anjuta')
+pkgver=3.4.4
 pkgrel=1
 pkgdesc="GNOME Integrated Development Environment (IDE)"
 arch=('i686' 'x86_64')
 license=('GPL')
-depends=('vte3' 'gdl' 'autogen' 'devhelp' 'glade' 'libgda' 'subversion' 'gnome-icon-theme' 'vala' 'dconf')
-makedepends=('gnome-doc-utils' 'intltool' 'gobject-introspection')
+makedepends=('vte3' 'gdl' 'autogen' 'devhelp' 'glade' 'libgda' 'subversion' 'gnome-icon-theme' 'vala' 'dconf' 'gnome-doc-utils' 'intltool' 'gobject-introspection')
 url="http://www.anjuta.org/"
-install=anjuta.install
-source=(ftp://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz)
+source=(ftp://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz)
 options=('!libtool' '!emptydirs')
-sha256sums=('92edd96d7b7df178405cd229ff72d284c5499ad4496702f4efac7178e2d84369')
+sha256sums=('e97199a6b59bb25f0908018b141b3d6b2dbc23804b84b4be34be669f8556ef7a')
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgbase-$pkgver"
   PYTHON=/usr/bin/python2 ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-scrollkeeper
   make
 }
 
-package(){
-  cd "$pkgname-$pkgver"
+package_libanjuta(){
+  pkgdesc="Anjuta runtime library"
+  depends=('gdl')
+  conflicts=('anjuta<3.4.4')
+
+  cd "$pkgbase-$pkgver/libanjuta"
 
   # j1: Race during linking
   make -j1 DESTDIR="$pkgdir" install
+}
 
+package_anjuta(){
+  pkgdesc="GNOME Integrated Development Environment (IDE)"
+  depends=('libanjuta' 'vte3' 'autogen' 'devhelp' 'glade' 'libgda' 'subversion' 'gnome-icon-theme' 'vala' 'dconf')
+
+  install=anjuta.install
+
+  cd "$pkgbase-$pkgver"
+  make -j1 DESTDIR="$pkgdir" install
+
+  cd libanjuta
+  make -j1 DESTDIR="$pkgdir" uninstall
+  
   sed -i "1s|#!/usr/bin/python$|&2|" \
     $pkgdir/usr/share/anjuta/project/{pygtk,python}/src/main.py
 }
