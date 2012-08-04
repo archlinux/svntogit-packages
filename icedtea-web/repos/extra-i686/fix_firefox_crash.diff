@@ -1,0 +1,228 @@
+
+# HG changeset patch
+# User Adam Domurad <adomurad@redhat.com>
+# Date 1340899207 14400
+# Node ID a49edd57b1b332b431222b1c225189fe51676193
+# Parent  d65bd94e0ba9b7c8b9051c7d471b55c2c74ea3f4
+Fixes invalid plugin table error that sometimes occurs.
+The invalid plugin table error was happening when the API that was
+being compiled with had a larger size than that of the browser.
+The plugin now only checks if the minimal subset it uses exists.
+
+diff -r d65bd94e0ba9 -r a49edd57b1b3 plugin/icedteanp/IcedTeaNPPlugin.cc
+--- a/plugin/icedteanp/IcedTeaNPPlugin.cc	Fri Jun 08 13:44:25 2012 -0400
++++ b/plugin/icedteanp/IcedTeaNPPlugin.cc	Thu Jun 28 12:00:07 2012 -0400
+@@ -2022,105 +2022,48 @@
+   PLUGIN_DEBUG ("plugin_data_destroy return\n");
+ }
+ 
+-// FACTORY FUNCTIONS
+-
+-// Provides the browser with pointers to the plugin functions that we
+-// implement and initializes a local table with browser functions that
+-// we may wish to call.  Called once, after browser startup and before
+-// the first plugin instance is created.
+-// The field 'initialized' is set to true once this function has
+-// finished. If 'initialized' is already true at the beginning of
+-// this function, then it is evident that NP_Initialize has already
+-// been called. There is no need to call this function more than once and
+-// this workaround avoids any duplicate calls.
+-NPError
+-NP_Initialize (NPNetscapeFuncs* browserTable, NPPluginFuncs* pluginTable)
++static bool
++initialize_browser_functions(const NPNetscapeFuncs* browserTable)
+ {
+-  PLUGIN_DEBUG ("NP_Initialize\n");
+-
+-  if ((browserTable == NULL) || (pluginTable == NULL))
++#if MOZILLA_VERSION_COLLAPSED < 1090100
++#define NPNETSCAPEFUNCS_LAST_FIELD_USED (browserTable->pluginthreadasynccall)
++#else
++#define NPNETSCAPEFUNCS_LAST_FIELD_USED (browserTable->setvalueforurl)
++#endif
++
++  //Determine the size in bytes, as a difference of the address past the last used field
++  //And the browser table address
++  size_t usedSize = (char*)(1 + &NPNETSCAPEFUNCS_LAST_FIELD_USED) - (char*)browserTable;
++
++  // compare the reported size versus the size we required
++  if (browserTable->size < usedSize)
+   {
+-    PLUGIN_ERROR ("Browser or plugin function table is NULL.");
+-
+-    return NPERR_INVALID_FUNCTABLE_ERROR;
++    return false;
+   }
+ 
+-  // Ensure that the major version of the plugin API that the browser
+-  // expects is not more recent than the major version of the API that
+-  // we've implemented.
+-  if ((browserTable->version >> 8) > NP_VERSION_MAJOR)
+-    {
+-      PLUGIN_ERROR ("Incompatible version.");
+-
+-      return NPERR_INCOMPATIBLE_VERSION_ERROR;
+-    }
+-
+-  // Ensure that the plugin function table we've received is large
+-  // enough to store the number of functions that we may provide.
+-  if (pluginTable->size < sizeof (NPPluginFuncs))
+-    {
+-      PLUGIN_ERROR ("Invalid plugin function table.");
+-
+-      return NPERR_INVALID_FUNCTABLE_ERROR;
+-    }
+-
+-  // Ensure that the browser function table is large enough to store
+-  // the number of browser functions that we may use.
+-  if (browserTable->size < sizeof (NPNetscapeFuncs))
+-    {
+-      fprintf (stderr, "ERROR: Invalid browser function table. Some functionality may be restricted.\n");
+-    }
+-
+-  // Store in a local table the browser functions that we may use.
+-  browser_functions.size                    = browserTable->size;
+-  browser_functions.version                 = browserTable->version;
+-  browser_functions.geturlnotify            = browserTable->geturlnotify;
+-  browser_functions.geturl                  = browserTable->geturl;
+-  browser_functions.posturlnotify           = browserTable->posturlnotify;
+-  browser_functions.posturl                 = browserTable->posturl;
+-  browser_functions.requestread             = browserTable->requestread;
+-  browser_functions.newstream               = browserTable->newstream;
+-  browser_functions.write                   = browserTable->write;
+-  browser_functions.destroystream           = browserTable->destroystream;
+-  browser_functions.status                  = browserTable->status;
+-  browser_functions.uagent                  = browserTable->uagent;
+-  browser_functions.memalloc                = browserTable->memalloc;
+-  browser_functions.memfree                 = browserTable->memfree;
+-  browser_functions.memflush                = browserTable->memflush;
+-  browser_functions.reloadplugins           = browserTable->reloadplugins;
+-  browser_functions.getJavaEnv              = browserTable->getJavaEnv;
+-  browser_functions.getJavaPeer             = browserTable->getJavaPeer;
+-  browser_functions.getvalue                = browserTable->getvalue;
+-  browser_functions.setvalue                = browserTable->setvalue;
+-  browser_functions.invalidaterect          = browserTable->invalidaterect;
+-  browser_functions.invalidateregion        = browserTable->invalidateregion;
+-  browser_functions.forceredraw             = browserTable->forceredraw;
+-  browser_functions.getstringidentifier     = browserTable->getstringidentifier;
+-  browser_functions.getstringidentifiers    = browserTable->getstringidentifiers;
+-  browser_functions.getintidentifier        = browserTable->getintidentifier;
+-  browser_functions.identifierisstring      = browserTable->identifierisstring;
+-  browser_functions.utf8fromidentifier      = browserTable->utf8fromidentifier;
+-  browser_functions.intfromidentifier       = browserTable->intfromidentifier;
+-  browser_functions.createobject            = browserTable->createobject;
+-  browser_functions.retainobject            = browserTable->retainobject;
+-  browser_functions.releaseobject           = browserTable->releaseobject;
+-  browser_functions.invoke                  = browserTable->invoke;
+-  browser_functions.invokeDefault           = browserTable->invokeDefault;
+-  browser_functions.evaluate                = browserTable->evaluate;
+-  browser_functions.getproperty             = browserTable->getproperty;
+-  browser_functions.setproperty             = browserTable->setproperty;
+-  browser_functions.removeproperty          = browserTable->removeproperty;
+-  browser_functions.hasproperty             = browserTable->hasproperty;
+-  browser_functions.hasmethod               = browserTable->hasmethod;
+-  browser_functions.releasevariantvalue     = browserTable->releasevariantvalue;
+-  browser_functions.setexception            = browserTable->setexception;
+-  browser_functions.pluginthreadasynccall   = browserTable->pluginthreadasynccall;
+-#if MOZILLA_VERSION_COLLAPSED >= 1090100
+-  browser_functions.getvalueforurl          = browserTable->getvalueforurl;
+-  browser_functions.setvalueforurl          = browserTable->setvalueforurl;
+-#endif
+-
+-  // Return to the browser the plugin functions that we implement.
++  //Ensure any unused fields are NULL
++  memset(&browser_functions, 0, sizeof(NPNetscapeFuncs));
++  //Copy fields according to given size
++  memcpy(&browser_functions, browserTable, browserTable->size);
++
++  return true;
++}
++
++/* Set the plugin table to the correct contents, taking care not to write past
++ * the provided object space */
++static bool
++initialize_plugin_table(NPPluginFuncs* pluginTable)
++{
++#define NPPLUGINFUNCS_LAST_FIELD_USED (pluginTable->getvalue)
++
++  //Determine the size in bytes, as a difference of the address past the last used field
++  //And the browser table address
++  size_t usedSize = (char*)(1 + &NPPLUGINFUNCS_LAST_FIELD_USED) - (char*)pluginTable;
++
++  // compare the reported size versus the size we required
++  if (pluginTable->size < usedSize)
++    return false;
++
+   pluginTable->version = (NP_VERSION_MAJOR << 8) + NP_VERSION_MINOR;
+   pluginTable->size = sizeof (NPPluginFuncs);
+ 
+@@ -2150,6 +2093,68 @@
+   pluginTable->getvalue = NPP_GetValueProcPtr (ITNP_GetValue);
+ #endif
+ 
++  return true;
++}
++
++// FACTORY FUNCTIONS
++
++// Provides the browser with pointers to the plugin functions that we
++// implement and initializes a local table with browser functions that
++// we may wish to call.  Called once, after browser startup and before
++// the first plugin instance is created.
++// The field 'initialized' is set to true once this function has
++// finished. If 'initialized' is already true at the beginning of
++// this function, then it is evident that NP_Initialize has already
++// been called. There is no need to call this function more than once and
++// this workaround avoids any duplicate calls.
++NPError
++NP_Initialize (NPNetscapeFuncs* browserTable, NPPluginFuncs* pluginTable)
++{
++  PLUGIN_DEBUG ("NP_Initialize\n");
++
++  if ((browserTable == NULL) || (pluginTable == NULL))
++  {
++    PLUGIN_ERROR ("Browser or plugin function table is NULL.");
++
++    return NPERR_INVALID_FUNCTABLE_ERROR;
++  }
++
++  // Ensure that the major version of the plugin API that the browser
++  // expects is not more recent than the major version of the API that
++  // we've implemented.
++  if ((browserTable->version >> 8) > NP_VERSION_MAJOR)
++    {
++      PLUGIN_ERROR ("Incompatible version.");
++
++      return NPERR_INCOMPATIBLE_VERSION_ERROR;
++    }
++
++  // Copy into a global table (browser_functions) the browser functions that we may use.
++  // If the browser functions needed change, update NPNETSCAPEFUNCS_LAST_FIELD_USED
++  // within this function
++  bool browser_functions_supported = initialize_browser_functions(browserTable);
++
++  // Check if everything we rely on is supported
++  if ( !browser_functions_supported )
++  {
++	PLUGIN_ERROR ("Invalid browser function table.");
++
++	return NPERR_INVALID_FUNCTABLE_ERROR;
++  }
++
++  // Return to the browser the plugin functions that we implement.
++  // If the plugin functions needed change, update NPPLUGINFUNCS_LAST_FIELD_USED
++  // within this function
++  bool plugin_functions_supported = initialize_plugin_table(pluginTable);
++
++  // Check if everything we rely on is supported
++  if ( !plugin_functions_supported )
++  {
++    PLUGIN_ERROR ("Invalid plugin function table.");
++
++    return NPERR_INVALID_FUNCTABLE_ERROR;
++  }
++
+   // Re-setting the above tables multiple times is OK (as the 
+   // browser may change its function locations). However 
+   // anything beyond this point should only run once.
+
