@@ -1,0 +1,470 @@
+diff -u -Nr NetworkManager-0.9.3.995/configure.ac NetworkManager-0.9.3.995-systemd-fallback/configure.ac
+--- NetworkManager-0.9.3.995/configure.ac	2012-03-02 01:05:21.000000000 +0100
++++ NetworkManager-0.9.3.995-systemd-fallback/configure.ac	2012-03-06 16:55:58.294793902 +0100
+@@ -344,7 +344,7 @@
+ case $with_session_tracking in
+     ck|none) ;;
+     systemd)
+-        PKG_CHECK_MODULES(SYSTEMD, [libsystemd-login])
++        PKG_CHECK_MODULES(SYSTEMD, [libsystemd-daemon libsystemd-login])
+         ;;
+     *)
+ 	AC_MSG_ERROR(--with-session-tracking must be one of [none, ck, systemd])
+diff -u -Nr NetworkManager-0.9.3.995/src/nm-session-monitor-systemd.c NetworkManager-0.9.3.995-systemd-fallback/src/nm-session-monitor-systemd.c
+--- NetworkManager-0.9.3.995/src/nm-session-monitor-systemd.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager-0.9.3.995-systemd-fallback/src/nm-session-monitor-systemd.c	2012-03-06 16:55:01.285264295 +0100
+@@ -28,6 +28,10 @@
+ #include <glib/gstdio.h>
+ #include <systemd/sd-login.h>
+ #include <stdlib.h>
++#include <systemd/sd-daemon.h>
++#include <sys/stat.h>
++#include <gio/gio.h>
++#include "nm-logging.h"
+ 
+ #include "nm-session-utils.h"
+ #include "nm-session-monitor.h"
+@@ -107,10 +111,20 @@
+ 	return source;
+ }
+ 
++/********************************************************************/
++
++#define CKDB_PATH "/var/run/ConsoleKit/database"
++
+ struct _NMSessionMonitor {
+ 	GObject parent_instance;
+ 
+ 	GSource *sd_source;
++
++	GKeyFile *database;
++	GFileMonitor *database_monitor;
++	time_t database_mtime;
++	GHashTable *sessions_by_uid;
++	GHashTable *sessions_by_user;
+ };
+ 
+ struct _NMSessionMonitorClass {
+@@ -130,6 +144,215 @@
+ 
+ /* ---------------------------------------------------------------------------------------------------- */
+ 
++typedef struct {
++	char *user;
++	uid_t uid;
++	gboolean local;
++	gboolean active;
++} Session;
++
++static void
++session_free (Session *s)
++{
++	g_free (s->user);
++	memset (s, 0, sizeof (Session));
++	g_free (s);
++}
++
++static gboolean
++check_key (GKeyFile *keyfile, const char *group, const char *key, GError **error)
++{
++	if (g_key_file_has_key (keyfile, group, key, error))
++		return TRUE;
++
++	if (!error) {
++		g_set_error (error,
++			         NM_SESSION_MONITOR_ERROR,
++			         NM_SESSION_MONITOR_ERROR_MALFORMED_DATABASE,
++			         "ConsoleKit database " CKDB_PATH " group '%s' had no '%s' key",
++			         group, key);
++	}
++	return FALSE;
++}
++
++static Session *
++session_new (GKeyFile *keyfile, const char *group, GError **error)
++{
++	GError *local = NULL;
++	Session *s;
++	const char *uname = NULL;
++
++	s = g_new0 (Session, 1);
++	g_assert (s);
++
++	s->uid = G_MAXUINT; /* paranoia */
++	if (!check_key (keyfile, group, "uid", &local))
++		goto error;
++	s->uid = (uid_t) g_key_file_get_integer (keyfile, group, "uid", &local);
++	if (local)
++		goto error;
++
++	if (!check_key (keyfile, group, "is_active", &local))
++		goto error;
++	s->active = g_key_file_get_boolean (keyfile, group, "is_active", &local);
++	if (local)
++		goto error;
++
++	if (!check_key (keyfile, group, "is_local", &local))
++		goto error;
++	s->local = g_key_file_get_boolean (keyfile, group, "is_local", &local);
++	if (local)
++		goto error;
++
++	if (!nm_session_uid_to_user (s->uid, &uname, error))
++		return FALSE;
++	s->user = g_strdup (uname);
++
++	return s;
++
++error:
++	session_free (s);
++	g_propagate_error (error, local);
++	return NULL;
++}
++
++static void
++session_merge (Session *src, Session *dest)
++{
++	g_return_if_fail (src != NULL);
++	g_return_if_fail (dest != NULL);
++
++	g_warn_if_fail (g_strcmp0 (src->user, dest->user) == 0);
++	g_warn_if_fail (src->uid == dest->uid);
++
++	dest->local = (dest->local || src->local);
++	dest->active = (dest->active || src->active);
++}
++
++/********************************************************************/
++
++static void
++free_database (NMSessionMonitor *self)
++{
++	if (self->database != NULL) {
++		g_key_file_free (self->database);
++		self->database = NULL;
++	}
++
++	g_hash_table_remove_all (self->sessions_by_uid);
++	g_hash_table_remove_all (self->sessions_by_user);
++}
++
++static gboolean
++reload_database (NMSessionMonitor *self, GError **error)
++{
++	struct stat statbuf;
++	char **groups = NULL;
++	gsize len = 0, i;
++	Session *s;
++
++	free_database (self);
++
++	errno = 0;
++	if (stat (CKDB_PATH, &statbuf) != 0) {
++		g_set_error (error,
++		             NM_SESSION_MONITOR_ERROR,
++		             errno == ENOENT ? NM_SESSION_MONITOR_ERROR_NO_DATABASE : NM_SESSION_MONITOR_ERROR_IO_ERROR,
++		             "Error statting file " CKDB_PATH ": %s",
++		             strerror (errno));
++		goto error;
++	}
++	self->database_mtime = statbuf.st_mtime;
++
++	self->database = g_key_file_new ();
++	if (!g_key_file_load_from_file (self->database, CKDB_PATH, G_KEY_FILE_NONE, error))
++		goto error;
++
++	groups = g_key_file_get_groups (self->database, &len);
++	if (!groups) {
++		g_set_error_literal (error,
++		                     NM_SESSION_MONITOR_ERROR,
++		                     NM_SESSION_MONITOR_ERROR_IO_ERROR,
++		                     "Could not load groups from " CKDB_PATH "");
++		goto error;
++	}
++
++	for (i = 0; i < len; i++) {
++		Session *found;
++
++		if (!g_str_has_prefix (groups[i], "Session "))
++			continue;
++
++		s = session_new (self->database, groups[i], error);
++		if (!s)
++			goto error;
++
++		found = g_hash_table_lookup (self->sessions_by_user, (gpointer) s->user);
++		if (found) {
++			session_merge (s, found);
++			session_free (s);
++		} else {
++			/* Entirely new user */
++			g_hash_table_insert (self->sessions_by_user, (gpointer) s->user, s);
++			g_hash_table_insert (self->sessions_by_uid, GUINT_TO_POINTER (s->uid), s);
++		}
++	}
++
++	g_strfreev (groups);
++	return TRUE;
++
++error:
++	if (groups)
++		g_strfreev (groups);
++	free_database (self);
++	return FALSE;
++}
++
++static gboolean
++ensure_database (NMSessionMonitor *self, GError **error)
++{
++	gboolean ret = FALSE;
++
++	if (self->database != NULL) {
++		struct stat statbuf;
++
++		errno = 0;
++		if (stat (CKDB_PATH, &statbuf) != 0) {
++			g_set_error (error,
++			             NM_SESSION_MONITOR_ERROR,
++			             errno == ENOENT ? NM_SESSION_MONITOR_ERROR_NO_DATABASE : NM_SESSION_MONITOR_ERROR_IO_ERROR,
++			             "Error statting file " CKDB_PATH " to check timestamp: %s",
++			             strerror (errno));
++			goto out;
++		}
++
++		if (statbuf.st_mtime == self->database_mtime) {
++			ret = TRUE;
++			goto out;
++		}
++	}
++
++	ret = reload_database (self, error);
++
++out:
++	return ret;
++}
++
++static void
++on_file_monitor_changed (GFileMonitor *    file_monitor,
++                         GFile *           file,
++                         GFile *           other_file,
++                         GFileMonitorEvent event_type,
++                         gpointer          user_data)
++{
++	NMSessionMonitor *self = NM_SESSION_MONITOR (user_data);
++
++	/* throw away cache */
++	free_database (self);
++
++	g_signal_emit (self, signals[CHANGED_SIGNAL], 0);
++}
++
+ static gboolean
+ sessions_changed (gpointer user_data)
+ {
+@@ -143,9 +366,50 @@
+ static void
+ nm_session_monitor_init (NMSessionMonitor *monitor)
+ {
+-	monitor->sd_source = sd_source_new ();
+-	g_source_set_callback (monitor->sd_source, sessions_changed, monitor, NULL);
+-	g_source_attach (monitor->sd_source, NULL);
++	if (sd_booted () > 0) {
++		monitor->sd_source = sd_source_new ();
++		g_source_set_callback (monitor->sd_source, sessions_changed, monitor, NULL);
++		g_source_attach (monitor->sd_source, NULL);
++
++		monitor->database_monitor = NULL;
++		monitor->database = NULL;
++	} else {
++		monitor->sd_source = NULL;
++
++		GError *error = NULL;
++		GFile *file;
++
++		/* Sessions-by-user is responsible for destroying the Session objects */
++		monitor->sessions_by_user = g_hash_table_new_full (g_str_hash, g_str_equal,
++								NULL, (GDestroyNotify) session_free);
++		monitor->sessions_by_uid = g_hash_table_new (g_direct_hash, g_direct_equal);
++
++
++		error = NULL;
++		if (!ensure_database (monitor, &error)) {
++			/* Ignore the first error if the CK database isn't found yet */
++			if (g_error_matches (error,
++					     NM_SESSION_MONITOR_ERROR,
++					     NM_SESSION_MONITOR_ERROR_NO_DATABASE) == FALSE) {
++				nm_log_err (LOGD_CORE, "Error loading " CKDB_PATH ": %s", error->message);
++			}
++			g_error_free (error);
++		}
++
++		error = NULL;
++		file = g_file_new_for_path (CKDB_PATH);
++		monitor->database_monitor = g_file_monitor_file (file, G_FILE_MONITOR_NONE, NULL, &error);
++		g_object_unref (file);
++		if (monitor->database_monitor == NULL) {
++			nm_log_err (LOGD_CORE, "Error monitoring " CKDB_PATH ": %s", error->message);
++			g_error_free (error);
++		} else {
++			g_signal_connect (monitor->database_monitor,
++					  "changed",
++					  G_CALLBACK (on_file_monitor_changed),
++					  monitor);
++		}
++	}
+ }
+ 
+ static void
+@@ -158,6 +422,12 @@
+ 		g_source_unref (monitor->sd_source);
+ 	}
+ 
++	if (monitor->database_monitor != NULL)
++		g_object_unref (monitor->database_monitor);
++
++	if (monitor->database != NULL)
++		free_database (monitor);
++
+ 	if (G_OBJECT_CLASS (nm_session_monitor_parent_class)->finalize != NULL)
+ 		G_OBJECT_CLASS (nm_session_monitor_parent_class)->finalize (object);
+ }
+@@ -206,15 +476,36 @@
+                                      uid_t *out_uid,
+                                      GError **error)
+ {
+-	uid_t uid;
++	if (monitor->sd_source != NULL) {
++		uid_t uid;
+ 
+-	if (!nm_session_user_to_uid (username, &uid, error))
+-		return FALSE;
++		if (!nm_session_user_to_uid (username, &uid, error))
++			return FALSE;
+ 
+-	if (out_uid)
+-		*out_uid = uid;
++		if (out_uid)
++			*out_uid = uid;
+ 
+-	return nm_session_monitor_uid_has_session (monitor, uid, NULL, error);
++		return nm_session_monitor_uid_has_session (monitor, uid, NULL, error);
++	} else {
++		Session *s;
++
++		if (!ensure_database (monitor, error))
++			return FALSE;
++
++		s = g_hash_table_lookup (monitor->sessions_by_user, (gpointer) username);
++		if (!s) {
++			g_set_error (error,
++				     NM_SESSION_MONITOR_ERROR,
++				     NM_SESSION_MONITOR_ERROR_UNKNOWN_USER,
++				     "No session found for user '%s'",
++				     username);
++			return FALSE;
++		}
++
++		if (out_uid)
++			*out_uid = s->uid;
++		return TRUE;
++	}
+ }
+ 
+ gboolean
+@@ -222,12 +513,31 @@
+                                 const char *username,
+                                 GError **error)
+ {
+-	uid_t uid;
++	if (monitor->sd_source != NULL) {
++		uid_t uid;
+ 
+-	if (!nm_session_user_to_uid (username, &uid, error))
+-		return FALSE;
++		if (!nm_session_user_to_uid (username, &uid, error))
++			return FALSE;
++
++		return nm_session_monitor_uid_active (monitor, uid, error);
++	} else {
++		Session *s;
++
++		if (!ensure_database (monitor, error))
++			return FALSE;
++
++		s = g_hash_table_lookup (monitor->sessions_by_user, (gpointer) username);
++		if (!s) {
++			g_set_error (error,
++				     NM_SESSION_MONITOR_ERROR,
++				     NM_SESSION_MONITOR_ERROR_UNKNOWN_USER,
++				     "No session found for user '%s'",
++				     username);
++			return FALSE;
++		}
+ 
+-	return nm_session_monitor_uid_active (monitor, uid, error);
++		return s->active;
++	}
+ }
+ 
+ gboolean
+@@ -236,10 +546,31 @@
+                                     const char **out_user,
+                                     GError **error)
+ {
+-	if (!nm_session_uid_to_user (uid, out_user, error))
+-		return FALSE;
++	if (monitor->sd_source != NULL) {
++		if (!nm_session_uid_to_user (uid, out_user, error))
++			return FALSE;
+ 
+-	return sd_uid_get_sessions (uid, FALSE, NULL) > 0;
++		return sd_uid_get_sessions (uid, FALSE, NULL) > 0;
++	} else {
++		Session *s;
++
++		if (!ensure_database (monitor, error))
++			return FALSE;
++
++		s = g_hash_table_lookup (monitor->sessions_by_uid, GUINT_TO_POINTER (uid));
++		if (!s) {
++			g_set_error (error,
++				     NM_SESSION_MONITOR_ERROR,
++				     NM_SESSION_MONITOR_ERROR_UNKNOWN_USER,
++				     "No session found for uid %d",
++				     uid);
++			return FALSE;
++		}
++
++		if (out_user)
++			*out_user = s->user;
++		return TRUE;
++	}
+ }
+ 
+ gboolean
+@@ -247,5 +578,24 @@
+                                uid_t uid,
+                                GError **error)
+ {
+-	return sd_uid_get_sessions (uid, TRUE, NULL) > 0;
++	if (monitor->sd_source != NULL)
++		return sd_uid_get_sessions (uid, TRUE, NULL) > 0;
++	else {
++		Session *s;
++
++		if (!ensure_database (monitor, error))
++			return FALSE;
++
++		s = g_hash_table_lookup (monitor->sessions_by_uid, GUINT_TO_POINTER (uid));
++		if (!s) {
++			g_set_error (error,
++				     NM_SESSION_MONITOR_ERROR,
++				     NM_SESSION_MONITOR_ERROR_UNKNOWN_USER,
++				     "No session found for uid '%d'",
++				     uid);
++			return FALSE;
++		}
++
++		return s->active;
++	}
+ }
