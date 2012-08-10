@@ -1,0 +1,31 @@
+From 4bfa638d43c05e8db052cd55818765bb3575a405 Mon Sep 17 00:00:00 2001
+From: Dave Reisner <dreisner@archlinux.org>
+Date: Fri, 10 Aug 2012 11:02:03 -0400
+Subject: [PATCH] shutdown: recursively mark root as private before pivot
+
+Because root is now recursively marked as shared on bootup, we need to
+recursively mark root as private. This prevents a pivot_root failure on
+shutdown:
+
+  Cannot finalize remaining file systems and devices, giving up.
+  pivot failed: Invalid argument
+---
+ src/core/shutdown.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/shutdown.c b/src/core/shutdown.c
+index 105a604..0b7cbd8 100644
+--- a/src/core/shutdown.c
++++ b/src/core/shutdown.c
+@@ -109,7 +109,7 @@ static int pivot_to_new_root(void) {
+           It works for pivot_root, but the ref count for the root device
+           is not decreasing :-/
+         */
+-        if (mount(NULL, "/", NULL, MS_PRIVATE, NULL) < 0) {
++        if (mount(NULL, "/", NULL, MS_REC|MS_PRIVATE, NULL) < 0) {
+                 log_error("Failed to make \"/\" private mount %m");
+                 return -errno;
+         }
+-- 
+1.7.11.4
+

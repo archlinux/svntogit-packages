@@ -1,0 +1,73 @@
+From c516c8d17f77a1c761447f4c40c8dfffeda2e06d Mon Sep 17 00:00:00 2001
+From: Simon Peeters <peeters.simon@gmail.com>
+Date: Fri, 10 Aug 2012 17:32:19 +0200
+Subject: [PATCH] systemctl: fix issue with systemctl daemon-reexec
+
+---
+ src/shared/dbus-common.c  |  3 ++-
+ src/systemctl/systemctl.c | 11 ++++++++---
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/src/shared/dbus-common.c b/src/shared/dbus-common.c
+index 7f0dce5..da2dc2e 100644
+--- a/src/shared/dbus-common.c
++++ b/src/shared/dbus-common.c
+@@ -1287,7 +1287,8 @@ int bus_method_call_with_reply(DBusConnection *bus,
+         reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+         dbus_message_unref(m);
+         if (!reply) {
+-                log_error("Failed to issue method call: %s", bus_error_message(&error));
++                if (!return_error)
++                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                 if (bus_error_is_no_service(&error))
+                         r = -ENOENT;
+                 else if (dbus_error_has_name(&error, DBUS_ERROR_ACCESS_DENIED))
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index 2e0aaaa..13e0f91 100644
+--- a/src/systemctl/systemctl.c
++++ b/src/systemctl/systemctl.c
+@@ -1537,11 +1537,12 @@ static int start_unit_one(
+                         DBUS_TYPE_INVALID);
+         free(n);
+         if (r) {
+-                if (r == -ENOENT && arg_action != ACTION_SYSTEMCTL ) {
++                if (r == -ENOENT && arg_action != ACTION_SYSTEMCTL )
+                         /* There's always a fallback possible for
+                          * legacy actions. */
+                         r = -EADDRNOTAVAIL;
+-                }
++                else
++                        log_error("Failed to issue method call: %s", bus_error_message(error));
+                 goto finish;
+         }
+ 
+@@ -3143,6 +3144,7 @@ finish:
+ static int daemon_reload(DBusConnection *bus, char **args) {
+         int r;
+         const char *method;
++        DBusError error;
+ 
+         if (arg_action == ACTION_RELOAD)
+                 method = "Reload";
+@@ -3171,7 +3173,7 @@ static int daemon_reload(DBusConnection *bus, char **args) {
+                         "org.freedesktop.systemd1.Manager",
+                         method,
+                         NULL,
+-                        NULL,
++                        &error,
+                         DBUS_TYPE_INVALID);
+ 
+         if (r == -ENOENT && arg_action != ACTION_SYSTEMCTL)
+@@ -3182,6 +3184,9 @@ static int daemon_reload(DBusConnection *bus, char **args) {
+                 /* On reexecution, we expect a disconnect, not
+                  * a reply */
+                 r = 0;
++        else if (r)
++                log_error("Failed to issue method call: %s", bus_error_message(&error));
++        dbus_error_free(&error);
+ 
+         return r;
+ }
+-- 
+1.7.11.4
+
