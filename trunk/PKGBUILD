@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
 pkgver=188
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -17,6 +17,8 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
         'locale.sh'
+        0001-shutdown-recursively-mark-root-as-private-before-piv.patch
+        0001-systemctl-fix-issue-with-systemctl-daemon-reexec.patch
         'use-split-usr-path.patch')
 md5sums=('d89b42699695554949d072ef46c0dfc9'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
@@ -24,6 +26,8 @@ md5sums=('d89b42699695554949d072ef46c0dfc9'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
          'f15956945052bb911e5df81cf5e7e5dc'
+         '49d145ef3ca299025c085555314212b6'
+         'bccb994f4cfbd251b6c34d7d90a6ba0f'
          '482dba45a783f06c2239f1355f4ce72f')
 
 build() {
@@ -31,7 +35,15 @@ build() {
 
   # still waiting on ipw2x00 to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
-  patch -Np1 < "$srcdir/use-split-usr-path.patch"
+  patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  # http://bugs.archlinux.org/task/31089
+  # upstream c516c8d17f77a1c761447f4c40c8dfffeda2e06d
+  patch -Np1 <"$srcdir/0001-systemctl-fix-issue-with-systemctl-daemon-reexec.patch"
+
+  # http://bugs.archlinux.org/task/31092
+  # upstream 4bfa638d43c05e8db052cd55818765bb3575a405
+  patch -Np1 <"$srcdir/0001-shutdown-recursively-mark-root-as-private-before-piv.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
