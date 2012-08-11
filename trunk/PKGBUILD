@@ -6,13 +6,13 @@
 
 pkgname=glibc
 pkgver=2.16.0
-pkgrel=2
+pkgrel=3
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=3.4' 'tzdata')
+depends=('linux-api-headers>=3.5' 'tzdata')
 makedepends=('gcc>=4.7')
 backup=(etc/gai.conf
         etc/locale.gen
@@ -22,6 +22,7 @@ install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.15-fix-res_query-assert.patch
         glibc-2.15-revert-c5a0802a.patch
+        glibc-2.16-rpcgen-cpp-path.patch
         nscd.rcd
         nscd.service
         nscd.tmpfiles
@@ -31,6 +32,7 @@ md5sums=('80b181b02ab249524ec92822c0174cf7'
          '2a1221a15575820751c325ef4d2fbb90'
          '31f415b41197d85d3bbee3d1eecd06a3'
          '0a0383d50d63f1c02919fe9943b82014'
+         'ea6a43915474e8276e9361eed6a01280'
          '589d79041aa767a5179eaa4e2737dd3f'
          'ad8a9af15ab7eeaa23dc7ee85024af9f'
          'bccbe5619e75cf1d97312ec3681c605c'
@@ -47,6 +49,10 @@ build() {
   # revert commit c5a0802a - causes various hangs
   # https://bugzilla.redhat.com/show_bug.cgi?id=552960
   patch -p1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
+
+  # prevent need for /lib/cpp symlink
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=bf9b740a
+  patch -p1 -i ${srcdir}/glibc-2.16-rpcgen-cpp-path.patch
 
   cd ${srcdir}
   mkdir glibc-build
