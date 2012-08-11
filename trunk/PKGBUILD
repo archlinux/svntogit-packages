@@ -6,9 +6,9 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.1
-pkgrel=5
+pkgrel=6
 _snapshot=4.7-20120721
-_libstdcppmanver=20120605		# Note: check source directory name when updating this
+_libstdcppmanver=20120725		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -23,7 +23,7 @@ source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	gcc-4.7.1-libada-pic.patch
 	gcc-4.7.1-libgo-write.patch)
 md5sums=('a1a53fda426bc6809cede8e85bbaf2a3'
-         '767c62f9a047c4434f2345decf1d0819'
+         '79c4381f983b71868c02da3379e1e8a2'
          'ced48436c1b3c981d721a829f1094de1'
          '2acbc9d35cc9d72329dc71d6b1f162ef'
          'df82dd175ac566c8a6d46b11ac21f14c')
@@ -152,8 +152,7 @@ package_gcc()
   rm $pkgdir/usr/share/man/man1/{gccgo,gfortran}.1
   rm $pkgdir/usr/share/man/man3/ffi*
 
-  # many packages require these symlinks
-  ln -s /usr/bin/cpp ${pkgdir}/usr/lib/cpp
+  # many packages expect this symlinks
   ln -s gcc ${pkgdir}/usr/bin/cc
 
   # POSIX conformance launcher scripts for c89 and c99
