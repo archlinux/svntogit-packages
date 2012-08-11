@@ -54,6 +54,9 @@ build() {
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=bf9b740a
   patch -p1 -i ${srcdir}/glibc-2.16-rpcgen-cpp-path.patch
 
+  # ldconfig does not need to look in /usr/lib64 or /usr/libx32 on Arch Linux
+  sed -i "s#add_system_dir#do_not_add_system_dir#" sysdeps/unix/sysv/linux/x86_64/dl-cache.h
+
   cd ${srcdir}
   mkdir glibc-build
   cd glibc-build
@@ -64,7 +67,7 @@ build() {
     export CFLAGS="${CFLAGS} -mno-tls-direct-seg-refs"
   fi
 
-  echo "slibdir=/lib" >> configparms
+  echo "slibdir=/usr/lib" >> configparms
 
   # remove hardening options from CFLAGS for building libraries
   CFLAGS=${CFLAGS/-fstack-protector/}
@@ -102,14 +105,15 @@ check() {
 package() {
   cd ${srcdir}/glibc-build
 
-  ln -s usr/lib ${pkgdir}/lib
-
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
 
   make install_root=${pkgdir} install
 
   rm -f ${pkgdir}/etc/ld.so.{cache,conf}
+
+  # eventually this will move to the filesystem package
+  ln -s usr/lib ${pkgdir}/lib
 
   install -dm755 ${pkgdir}/{etc/rc.d,usr/{sbin,lib/{,locale,systemd/system,tmpfiles.d}}}
 
