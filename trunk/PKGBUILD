@@ -6,7 +6,7 @@ pkgbase=linux-lts           # Build stock -lts kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.0
 pkgver=3.0.40
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -21,16 +21,16 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
         'ext4-options.patch')
-
-_kernelname=${pkgbase#linux}
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
          '04f02b45faaf5760e83226b6d0652c78'
-         '21212e087a3773684cee515e520046e1'
-         '245a3f41b7dd5cce1f93294489c83212'
+         '4a1f362f9e99e6276d43ffef1e1ff5ea'
+         'a407fe1dec1a421a30556500a6f94723'
          '232b52576a62c7a333e9fe7a1e1ca359'
          '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5'
          'c8299cf750a84e12d60b372c8ca7e1e8')
+
+_kernelname=${pkgbase#linux}
 
 build() {
   cd "${srcdir}/${_srcname}"
