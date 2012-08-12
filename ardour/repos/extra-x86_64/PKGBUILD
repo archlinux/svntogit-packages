@@ -1,56 +1,63 @@
 # $Id$
-# Maintainer: tobias <tobias@archlinux.org>
 # Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: tobias <tobias@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 # ardour, liblrdf and raptor are heavily dependent on each other. Updating of
 # one package mostly will require an update of all the other packages. I vote
-# for fixed dependencies speaking in terms of versions
+# for fixed dependencies speaking in terms of versions -- tobias
+
+# SYSLIBS enabled, support still valid; see ardour 2.8.13 rel notes
 
 pkgname=ardour
-pkgver=2.8.12
-pkgrel=3
+pkgver=2.8.14
+pkgrel=1
 pkgdesc="A multichannel hard disk recorder and digital audio workstation"
 arch=('i686' 'x86_64')
 url="http://ardour.org/"
 license=('GPL')
-depends=('liblrdf>=0.4.0-8' 'liblo' 'libusb-compat'
-         'libgnomecanvas' 'aubio' 'slv2>=0.6.6-6')
+depends=('liblrdf' 'libusb-compat' 'liblo' 'soundtouch'
+         'aubio' 'lilv' 'suil' 'libgnomecanvasmm')
          # -libgnomecanvas(+libgnomecanvasmm)
-         # +soundtouch (these +/- changes are for SYSLIBS)
-         # liblrdf versioned for https://bugs.archlinux.org/task/25005
-         # slv2 versioned for https://bugs.archlinux.org/task/25060
+         # +soundtouch (these +/- changes are for SYSLIBS=1)
+         # cwiid removed for https://bugs.archlinux.org/task/28344
 makedepends=('scons' 'boost')
-changelog=${pkgname}.changelog
-source=(ftp://ftp.archlinux.org/other/ardour/${pkgname}-${pkgver}.tar.bz2
-        ${pkgname}.desktop)
-md5sums=('7c031892f53aeacf08a750fc320c79c5'
+changelog=$pkgname.changelog
+source=("ftp://ftp.archlinux.org/other/ardour/$pkgname-$pkgver.tar.bz2"
+        "$pkgname.desktop")
+md5sums=('c79219ba10735d0b061d53a84ae611a4'
          '8aeaf433ebf781733db48e5a16b0c4da')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "$srcdir/$pkgname-$pkgver"
 
   sed -i '/-O3/d' SConstruct
 
-  scons ${MAKEFLAGS} ARCH="${CFLAGS} -O3" \
-                     PREFIX="/usr" \
-                     DIST_LIBDIR="lib" \
-                     FREEDESKTOP=0 \
-                     FREESOUND=1 \
-                     SYSLIBS=0 \
-                     DESTDIR="${pkgdir}"
+  # work around boost linking error (see ardour3 svn r13081)
+  # thanks to Harry Harren for the heads-up
+  CFLAGS+=" -DBOOST_SYSTEM_NO_DEPRECATED"
+  CXXFLAGS+=" -DBOOST_SYSTEM_NO_DEPRECATED"
+  export CFLAGS CXXFLAGS
+
+  scons $MAKEFLAGS ARCH="$CFLAGS -O3" \
+                   PREFIX="/usr" \
+                   DIST_LIBDIR="lib" \
+                   FREEDESKTOP=0 \
+                   FREESOUND=1 \
+                   SYSLIBS=1 \
+                   DESTDIR="$pkgdir"
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "$srcdir/$pkgname-$pkgver"
 
-  scons DESTDIR="${pkgdir}" install
+  scons DESTDIR="$pkgdir" install
 
   # install some freedesktop.org compatibility
-  install -Dm644 "${srcdir}/${pkgname}.desktop" \
-    "${pkgdir}/usr/share/applications/${pkgname}.desktop"
+  install -Dm644 "$srcdir/$pkgname.desktop" \
+    "$pkgdir/usr/share/applications/$pkgname.desktop"
 
-  # TODO: tell upstream to do this
+  # upstream will not do this
   # install templates
   cp -r templates "$pkgdir/usr/share/ardour2/"
 }
