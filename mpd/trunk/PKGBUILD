@@ -6,8 +6,8 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.17
-pkgrel=2
+pkgver=0.17.1
+pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
@@ -19,7 +19,7 @@ makedepends=('doxygen')
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
         'tmpfiles.d'
         'rc.d') 
-sha1sums=('36201f32ca5729b62b0e6cbddb19ade20ee3f7d7'
+sha1sums=('11da36217d57d08010f309977a4a77cce6240f77'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '3470d489565f0ed479f1665dd2876f66acb5a585')
 
