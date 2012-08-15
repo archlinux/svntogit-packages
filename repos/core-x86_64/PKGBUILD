@@ -7,7 +7,7 @@ pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
 # pkgname=linux-custom       # Build kernel with a different name
 _kernelname=${pkgname#linux}
 _basekernel=3.4
-pkgver=${_basekernel}.8
+pkgver=${_basekernel}.9
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -25,7 +25,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.4.tar.xz"
         'i915-fix-ghost-tv-output.patch'
 	'3.4.4-fix-backlight-regression.patch')
 md5sums=('967f72983655e2479f951195953e8480'
-         'ac5a5a5d6679b1aca8780f4e539f0228'
+         'ffd1d2010b97fe45a62c9ce856ca224f'
          '3f2c307c8ffae67f60c13ef69af8364a'
          '18d9d09152bafffaef78f2aac07e7145'
          'eb14dcfd80c00852ef81ded6e826826a'
