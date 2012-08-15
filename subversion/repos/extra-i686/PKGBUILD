@@ -5,7 +5,7 @@
 
 pkgname=subversion
 pkgver=1.7.5
-pkgrel=2
+pkgrel=3
 pkgdesc="A Modern Concurrent Version Control System"
 arch=('i686' 'x86_64')
 license=('APACHE')
@@ -19,12 +19,21 @@ url="http://subversion.apache.org/"
 provides=('svn')
 options=('!makeflags' '!libtool' '!emptydirs')
 source=(http://apache.mirror.rafal.ca/subversion/$pkgname-$pkgver.tar.bz2{,.asc}
-        svnserve svn svnserve.conf subversion.rpath.fix.patch)
+        svnserve
+        svn
+        svnserve.conf
+        svnserve.tmpfiles
+        svnserve.service
+        subversion-1.7.5-kwallet-gcc47.patch        
+        subversion.rpath.fix.patch)
 sha1sums=('05c079762690d5ac1ccd2549742e7ef70fa45cf1'
           'b267cba19b4f56360657a5bf5b231950e027a45a'
           '64ba3e6ebafc08ac62f59d788f7a825fdce69573'
           '73b36c046c09cec2093354911c89e3ba8056af6c'
           'ad117bf3b2a838a9a678a93fd8db1a066ad46c41'
+          '00cc36e69077a8c45674ead6dd62a7647b3a3b6d'
+          '9f6790d842cf3e0228b007483a43e39a42724068'
+          'aa0d01e606de2ebc5eed9c533d218d37a217c50c'
           '3d1e28408a9abb42af2e531adc0d01ce21acfad6')
 
 build() {
@@ -33,6 +42,8 @@ build() {
 
    patch -p0 -i ../subversion.rpath.fix.patch
    sed -i 's|/usr/bin/env python|/usr/bin/env python2|' tools/hook-scripts/{,mailer/{,tests/}}*.py
+
+   patch -Np1 -i ../subversion-1.7.5-kwallet-gcc47.patch
 
    ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
                --with-zlib=/usr --with-neon=/usr --with-apxs \
@@ -60,15 +71,24 @@ package() {
      swig_pydir_extra=/usr/lib/python2.7/site-packages/svn \
      install install-swig-py install-swig-pl install-javahl # install-swig-rb
 
-   install -d "${pkgdir}"/usr/share/subversion
+   install -dm755 "${pkgdir}"/usr/share/subversion
    cp -a tools/hook-scripts "${pkgdir}"/usr/share/subversion/
    rm "${pkgdir}"/usr/share/subversion/hook-scripts/*.in
 
    rm "${pkgdir}"/usr/lib/perl5/vendor_perl/auto/SVN/_Core/.packlist
    rm -r "${pkgdir}"/usr/lib/perl5/core_perl
 
+   ## svnserve ...
+
+   # ... iniscript/xinetd
    install -D -m 755 "${srcdir}"/svnserve "${pkgdir}"/etc/rc.d/svnserve
    install -D -m 644 "${srcdir}"/svn "${pkgdir}"/etc/xinetd.d/svn
+
+   # ... systemd
+   install -D -m 644 "${srcdir}"/svnserve.service  "${pkgdir}"/usr/lib/systemd/system/svnserve.service
+   install -D -m 644 "${srcdir}"/svnserve.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/svnserve.conf
+
+   # ... common config
    install -D -m 644 "${srcdir}"/svnserve.conf "${pkgdir}"/etc/conf.d/svnserve
 
    install -Dm 644 tools/client-side/bash_completion \
