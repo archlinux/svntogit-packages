@@ -6,7 +6,7 @@
 
 pkgname=varnish
 pkgver=3.0.2
-pkgrel=5
+pkgrel=6
 pkgdesc="High-performance HTTP accelerator"
 arch=('i686' 'x86_64')
 url="http://www.varnish-cache.org/"
@@ -18,13 +18,17 @@ install=$pkgname.install
 options=('!libtool')
 source=("http://repo.varnish-cache.org/source/$pkgname-$pkgver.tar.gz"
         "$pkgname.conf.d"
-        "rc.$pkgname")
+        "rc.$pkgname"
+        varnish-vcl-reload
+        varnish.service)
 md5sums=('c8eae0aabbe66b6daabdf3a1f58cd47a'
          'edd1237d097d72173d9772754335890c'
-         '8366f51568c0bbb3d3891aa0cc724369')
+         '40b4c83b3ad225ed2f4bd7e677fe41a2'
+         '56be884f43b8b4c900a073d9282f124a'
+         '45cc1fd57aa2ffc22d6af62f9eedc842')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
   ./configure \
     --prefix=/usr \
@@ -35,11 +39,18 @@ build() {
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
 
-  make DESTDIR="$pkgdir" install
+  # reload helper
+  install -m755 "$srcdir/varnish-vcl-reload" "$pkgdir/usr/bin"
 
-  install -D -m755 "$srcdir/rc.$pkgname" "$pkgdir/etc/rc.d/$pkgname"
-  install -D -m644 "$srcdir/$pkgname.conf.d" "$pkgdir/etc/conf.d/$pkgname"
-  install -D -m644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  # sysvinit
+  install -Dm755 "$srcdir/rc.$pkgname" "$pkgdir/etc/rc.d/$pkgname"
+  install -Dm644 "$srcdir/$pkgname.conf.d" "$pkgdir/etc/conf.d/$pkgname"
+
+  # systemd
+  install -Dm644 "$srcdir/$pkgname.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+
+  # license
+  install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
