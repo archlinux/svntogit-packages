@@ -3,7 +3,7 @@
 
 pkgname=git
 pkgver=1.7.11.5
-pkgrel=1
+pkgrel=2
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
@@ -22,10 +22,13 @@ optdepends=('tk: gitk and git gui'
 replaces=('git-core')
 provides=('git-core')
 backup=('etc/conf.d/git-daemon.conf')
+install=git.install
 source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
         "http://git-core.googlecode.com/files/git-manpages-$pkgver.tar.gz"
         git-daemon
-        git-daemon.conf)
+        git-daemon.conf
+        git-daemon@.service
+        git-daemon.socket)
 changelog=ChangeLog
 
 build() {
@@ -98,9 +101,15 @@ package() {
   # git daemon script
   install -D -m755 "$srcdir"/git-daemon "$pkgdir"/etc/rc.d/git-daemon
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
+
+  # systemd stuff
+  install -D -m 644 "$srcdir"/git-daemon@.service "$pkgdir"/usr/lib/systemd/system/git-daemon@.service
+  install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
 md5sums=('9985d35c11531d546426ebefb327c847'
          'f08a5a60e57f00399bbd384cfd7791f3'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
-         '2e42bf97779a1c6411d89043334c9e78')
+         '2e42bf97779a1c6411d89043334c9e78'
+         '198ef9d9e79bd8d5868f95ed9f79cc34'
+         '779c00deb490291c6b477b8cc0161123')
