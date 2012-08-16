@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.11.4
+pkgver=1.7.11.5
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -100,7 +100,7 @@ package() {
   install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
 }
 
-md5sums=('21c7100cddee8579233a924111e829ab'
-         '397af842126a5099968238ab946580a5'
+md5sums=('9985d35c11531d546426ebefb327c847'
+         'f08a5a60e57f00399bbd384cfd7791f3'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
          '2e42bf97779a1c6411d89043334c9e78')
