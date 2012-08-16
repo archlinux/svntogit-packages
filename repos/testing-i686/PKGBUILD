@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Dale Blount <dale@archlinux.org>
+# Contributor: Manolis Tzanidakis
+pkgname=spamassassin
+pkgver=3.3.2
+pkgrel=4
+pkgdesc="A mail filter to identify spam."
+arch=('i686' 'x86_64')
+license=('APACHE')
+url="http://spamassassin.apache.org"
+depends=('openssl' 'zlib' 're2c' 'perl-net-dns' 'perl-io-socket-ssl'
+         'perl-libwww' 'perl-mail-spf' 'perl-http-message' 'perl-net-http'
+         'perl-io-socket-inet6' 'perl-mail-dkim' 'perl-crypt-ssleay')
+makedepends=('razor' 'perl-dbi') 
+optdepends=('razor: to identify collaborately-flagged spam')
+backup=('etc/conf.d/spamd' 
+        'etc/mail/spamassassin/local.cf'
+        'etc/mail/spamassassin/init.pre'
+        'etc/mail/spamassassin/v310.pre'
+        'etc/mail/spamassassin/v312.pre'
+        'etc/mail/spamassassin/v320.pre'
+        'etc/mail/spamassassin/v330.pre')
+install="${pkgname}.install"
+options=('!emptydirs')
+source=("http://mirrors.devlib.org/apache/${pkgname}/source/Mail-SpamAssassin-${pkgver}.tar.gz"
+        'spamd.conf.d' 'spamd' 'spamassassin.service')
+md5sums=('d1d62cc5c6eac57e88c4006d9633b81e'
+         'af501c6b0bb937a2775b747cc4b6d150'
+         '57545e6877503d897db21e9a2e8bd2b9'
+         '1c39572b79bc20c822387814050ee5c1')
+
+build() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+
+  # install module in vendor directories.
+  PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor \
+      CONTACT_ADDRESS=root@localhost ENABLE_SSL=yes PERL_TAINT=no
+  make 
+}
+
+check() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+
+  # SSLv2 is disabled by upstream so this test would fail
+  rm -rf t/spamd_ssl_v2.t
+
+  # parallel tests cause lots of failures; disable for now
+  #export HARNESS_OPTIONS="j$(echo $MAKEFLAGS | sed 's/.*-j\([0-9][0-9]*\).*/\1/')"
+
+  make test
+}
+
+package() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  install -D -m644 "${srcdir}/spamd.conf.d" "${pkgdir}/etc/conf.d/spamd"
+  install -D -m755 "${srcdir}/spamd" "${pkgdir}/etc/rc.d/spamd"
+  install -D -m644 "${srcdir}/spamassassin.service" "${pkgdir}/usr/lib/systemd/system/spamassassin.serivce"
+}
