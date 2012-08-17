@@ -1,0 +1,37 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=udisks
+pkgver=1.0.4
+pkgrel=5
+pkgdesc="Disk Management Service"
+arch=('i686' 'x86_64')
+url="http://www.freedesktop.org/wiki/Software/udisks"
+license=('GPL')
+depends=('udev' 'sg3_utils' 'glib2' 'dbus-glib' 'polkit' 'parted' 'device-mapper' 'libatasmart' 'lsof' 'eject')
+makedepends=('intltool' 'docbook-xsl')
+options=(!libtool)
+source=(http://hal.freedesktop.org/releases/${pkgname}-${pkgver}.tar.gz udisks.service)
+sha256sums=('854b89368733b9c3a577101b761ad5397ae75a05110c8698ac5b29de9a8bf8f5'
+            '0b9cbf41935feed3e4e2430fd4e06eb29864554dbb9f330c9d2a5fa2ef185131')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --libexecdir=/usr/lib/udisks --disable-static
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make profiledir=/usr/share/bash-completion/completions DESTDIR="${pkgdir}" install
+  chmod 644 "${pkgdir}/usr/share/bash-completion/completions/udisks-bash-completion.sh"
+
+  # move udev helpers and rules to /usr/lib
+  mv "${pkgdir}"/lib/udev "${pkgdir}"/usr/lib/
+  rm -r "${pkgdir}"/lib
+
+  install -Dm644 "$srcdir/udisks.service" "$pkgdir/usr/lib/systemd/system/udisks.service"
+  echo "SystemdService=udisks.service" \
+    >> "$pkgdir/usr/share/dbus-1/system-services/org.freedesktop.UDisks.service"
+}
