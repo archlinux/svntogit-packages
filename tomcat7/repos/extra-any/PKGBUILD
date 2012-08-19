@@ -1,24 +1,25 @@
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
 pkgbase=tomcat7
 pkgname=('java-servlet3.0-tomcat' 'java-jsp2.2-tomcat' 'tomcat7')
-pkgver=7.0.27
+pkgver=7.0.29
 pkgrel=1
 arch=('any')
 url='http://tomcat.apache.org/'
 license=('APACHE')
-# Does not build with JDK7. Same issue as with cassandra:
-# https://issues.apache.org/jira/browse/CASSANDRA-3275
-#makedepends=('java-environment>=6' 'apache-ant>=1.8' 'java-commons-daemon' 'eclipse-ecj')
-makedepends=('java-environment=6' 'apache-ant>=1.8' 'java-commons-daemon' 'eclipse-ecj')
+makedepends=('java-environment' 'apache-ant>=1.8' 'java-commons-daemon' 'eclipse-ecj')
 source=(http://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/src/apache-tomcat-${pkgver}-src.tar.gz
+        http://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/bin/apache-tomcat-${pkgver}.tar.gz
         tomcat7.conf.d
         tomcat7
-        tomcat7.install)
+        tomcat7.install
+        systemd.tomcat7.service)
 
-md5sums=('a7fa41d09ccc1dc324c35fdebebd2afe'
-         'eea5573b0acd985bb8b630a20719db76'
+md5sums=('16b9f637e5ca623cf87a2a1514c8978e'
+         '307076fa3827e19fa9b03f3ef7cf1f3f'
+         'f200548b6636bd5894b109474904952a'
          '361a41c02930a4e43245ab7379a617e9'
-         '6c5b4ed6d71b227f305b751c349fa31b')
+         '6c5b4ed6d71b227f305b751c349fa31b'
+         '579ecebdbfcd9358d55e6425ae16bdeb')
 
 _servletver=3.0
 _jspver=2.2
@@ -27,10 +28,12 @@ build() {
   cd "${srcdir}/apache-tomcat-${pkgver}-src"
 
   . /etc/profile.d/apache-ant.sh
+
   ant deploy \
     -Dbase.path=${srcdir}/DOWN_LIBS \
     -Dcommons-daemon.jar=/usr/share/java/commons-daemon.jar \
-    -Djdt.jar=/usr/share/java/eclipse-ecj.jar
+    -Djdt.jar=/usr/share/java/eclipse-ecj.jar \
+    -Dno.build.dbcp=true
 }
 
 #TODO add test "ant test"
@@ -88,7 +91,7 @@ package_tomcat7() {
   # eclipse-ecj is packaged on its own
   rm lib/eclipse-ecj.jar
   install -m644 lib/* ${pkgdir}/usr/share/java/${pkgname}
-  ln -s /usr/share/java/eclipse-ecj.jar ${pkgdir}/usr/share/java/${pkgname}/eclipse-ecj.jar
+  ln -s ../eclipse-ecj.jar ${pkgdir}/usr/share/java/${pkgname}/eclipse-ecj.jar
 
   # Provided by previous packages
   rm ${pkgdir}/usr/share/java/${pkgname}/servlet-api.jar
@@ -100,6 +103,12 @@ package_tomcat7() {
     ln -s /usr/share/java/jsp${_jspver}-tomcat/${j}-${_jspver}.jar \
           ${pkgdir}/usr/share/java/${pkgname}/${j}.jar
   done
+
+  install -m644 "${srcdir}/apache-tomcat-${pkgver}/lib/tomcat-dbcp.jar" \
+                ${pkgdir}/usr/share/java/${pkgname}/tomcat-dbcp-${pkgver}.jar
+  ln -s tomcat-dbcp-${pkgver}.jar \
+        ${pkgdir}/usr/share/java/${pkgname}/tomcat-dbcp.jar
+
   ln -s /usr/share/java/${pkgname} ${pkgdir}/usr/share/${pkgname}/lib
 
   # 66=tomcat / 19=log
@@ -126,4 +135,7 @@ package_tomcat7() {
   # Arch scripts
   install -Dm644 ${srcdir}/${pkgname}.conf.d ${pkgdir}/etc/conf.d/${pkgname}
   install -Dm755 ${srcdir}/${pkgname} ${pkgdir}/etc/rc.d/${pkgname}
+  install -Dm644 ${srcdir}/systemd.${pkgname}.service \
+                 ${pkgdir}/usr/lib/systemd/system/${pkgname}.service
 }
+
