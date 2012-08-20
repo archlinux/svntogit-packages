@@ -66,8 +66,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kmod' 'libcap' 'pam'
            "systemd-tools=$pkgver" 'util-linux' 'xz')
-  optdepends=('initscripts: legacy support for hostname and vconsole setup'
-              'initscripts-systemd: legacy generator for initialization scripts'
+  optdepends=('initscripts: legacy support for /etc/rc.conf'
               'python2-cairo: systemd-analyze'
               'python2-dbus: systemd-analyze'
               'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
@@ -102,7 +101,7 @@ package_systemd() {
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
   ### get rid of RPM macros
-  rm -r "$pkgdir/etc/rpm/macros.systemd"
+  rm -r "$pkgdir/etc/rpm"
 
   # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
   # https://pokersource.info/show_bug.cgi?id=50989
