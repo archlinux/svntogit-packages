@@ -2,8 +2,8 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.7.11.5
-pkgrel=2
+pkgver=1.7.12
+pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
@@ -29,7 +29,6 @@ source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
         git-daemon.conf
         git-daemon@.service
         git-daemon.socket)
-changelog=ChangeLog
 
 build() {
   export PYTHON_PATH='/usr/bin/python2'
@@ -49,6 +48,10 @@ check() {
   cd "$srcdir/$pkgname-$pkgver"
   local jobs
   jobs=$(expr "$MAKEFLAGS" : '.*\(-j[0-9]*\).*')
+  mkdir -p /dev/shm/git-test
+  # We used to use this, but silly git regressions:
+  #GIT_TEST_OPTS="--root=/dev/shm/" \
+  # http://comments.gmane.org/gmane.comp.version-control.git/202020
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
@@ -56,7 +59,7 @@ check() {
     NO_SVN_TESTS=y \
     DEFAULT_TEST_TARGET=prove \
     GIT_PROVE_OPTS="$jobs -Q" \
-    GIT_TEST_OPTS="--root=/dev/shm/" \
+    GIT_TEST_OPTS="--root=/dev/shm/git-test" \
     test
 }
 
@@ -70,14 +73,13 @@ package() {
     INSTALLDIRS=vendor DESTDIR="$pkgdir" install 
 
   # bash completion
-  # until this is fixed, no point in loading it dynamically:
-  # http://git.661346.n2.nabble.com/bash-completion-now-loads-completions-dynamically-so-git-ps1-is-not-defined-when-you-open-a-shell-td7415323.html
-  #mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
-  #install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git 
-  mkdir -p "$pkgdir"/etc/bash_completion.d/
-  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/etc/bash_completion.d/git 
+  mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
+  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git 
+  # fancy git prompt
+  mkdir -p "$pkgdir"/usr/share/git/
+  install -m644 ./contrib/completion/git-prompt.sh "$pkgdir"/usr/share/git/git-prompt.sh
   # more contrib stuff
-  cp -a ./contrib $pkgdir/usr/share/git/ 
+  cp -a ./contrib/* $pkgdir/usr/share/git/ 
   # scripts are for python 2.x
   sed -i 's|#![ ]*/usr/bin/env python|#!/usr/bin/env python2|' \
     $(find "$pkgdir" -name '*.py') \
@@ -107,9 +109,9 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('9985d35c11531d546426ebefb327c847'
-         'f08a5a60e57f00399bbd384cfd7791f3'
+md5sums=('ceb1a6b17a3e33bbc70eadf8fce5876c'
+         '0070ad185cfc29da545abe35ba8862e7'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
          '2e42bf97779a1c6411d89043334c9e78'
-         '198ef9d9e79bd8d5868f95ed9f79cc34'
-         '779c00deb490291c6b477b8cc0161123')
+         '042524f942785772d7bd52a1f02fe5ae'
+         'f67869315c2cc112e076f0c73f248002')
