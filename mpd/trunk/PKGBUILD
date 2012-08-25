@@ -35,7 +35,6 @@ build() {
 		--enable-lastfm \
 		--enable-jack \
 		--enable-pulse \
-		--disable-cue \
 		--disable-sidplay \
 		--with-systemdsystemunitdir=/usr/lib/systemd/system
 
