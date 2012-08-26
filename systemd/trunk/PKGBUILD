@@ -2,9 +2,9 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgbase=systemd
-pkgname=('systemd' 'libsystemd' 'systemd-tools' 'systemd-sysvcompat')
-pkgver=188
-pkgrel=2
+pkgname=('systemd' 'systemd-sysvcompat')
+pkgver=189
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -15,35 +15,25 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
-        '0001-Reinstate-TIMEOUT-handling.patch'
         'locale.sh'
-        0001-shutdown-recursively-mark-root-as-private-before-piv.patch
-        0001-systemctl-fix-issue-with-systemctl-daemon-reexec.patch
+        '0001-Reinstate-TIMEOUT-handling.patch'
         'use-split-usr-path.patch')
-md5sums=('d89b42699695554949d072ef46c0dfc9'
+md5sums=('ac2eb313f5dce79622f60aac56bca66d'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
-         '5543be25f205f853a21fa5ee68e03f0d'
          'f15956945052bb911e5df81cf5e7e5dc'
-         '49d145ef3ca299025c085555314212b6'
-         'bccb994f4cfbd251b6c34d7d90a6ba0f'
+         '5543be25f205f853a21fa5ee68e03f0d'
          '482dba45a783f06c2239f1355f4ce72f')
 
 build() {
   cd "$pkgname-$pkgver"
 
-  # still waiting on ipw2x00 to get fixed...
+  # still waiting on ipw2x00, et al to get fixed...
   patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
+
+  # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
-
-  # http://bugs.archlinux.org/task/31089
-  # upstream c516c8d17f77a1c761447f4c40c8dfffeda2e06d
-  patch -Np1 <"$srcdir/0001-systemctl-fix-issue-with-systemctl-daemon-reexec.patch"
-
-  # http://bugs.archlinux.org/task/31092
-  # upstream 4bfa638d43c05e8db052cd55818765bb3575a405
-  patch -Np1 <"$srcdir/0001-shutdown-recursively-mark-root-as-private-before-piv.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -53,24 +43,24 @@ build() {
       --enable-gtk-doc \
       --disable-audit \
       --disable-ima \
-      --with-pamlibdir=/usr/lib/security \
       --with-distro=arch \
       --with-usb-ids-path=/usr/share/hwdata/usb.ids \
-      --with-pci-ids-path=/usr/share/hwdata/pci.ids \
-      --with-firmware-path=/usr/lib/firmware/updates:/lib/firmware/updates:/usr/lib/firmware:/lib/firmware
+      --with-pci-ids-path=/usr/share/hwdata/pci.ids
 
   make
 }
 
 package_systemd() {
   pkgdesc="system and service manager"
-  depends=('acl' 'dbus-core' "libsystemd=$pkgver" 'kmod' 'libcap' 'pam'
-           "systemd-tools=$pkgver" 'util-linux' 'xz')
+  depends=('acl' 'bash' 'dbus-core' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'pam' 'util-linux' 'xz')
+  provides=("libsystemd=$pkgver" "systemd-tools=$pkgver" "udev=$pkgver")
+  replaces=('libsystemd' 'systemd-tools' 'udev')
+  conflicts=('libsystemd' 'systemd-tools' 'udev')
   optdepends=('initscripts: legacy support for /etc/rc.conf'
               'python2-cairo: systemd-analyze'
               'python2-dbus: systemd-analyze'
-              'systemd-arch-units: collection of native unit files for Arch daemon/init scripts'
-              'systemd-sysvcompat: symlink package to provide sysvinit binaries')
+              'systemd-sysvcompat: symlink package to provide sysvinit binaries'
+              'cryptsetup: required for encrypted block devices')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
           etc/dbus-1/system.d/org.freedesktop.hostname1.conf
           etc/dbus-1/system.d/org.freedesktop.login1.conf
@@ -79,7 +69,8 @@ package_systemd() {
           etc/systemd/system.conf
           etc/systemd/user.conf
           etc/systemd/logind.conf
-          etc/systemd/journald.conf)
+          etc/systemd/journald.conf
+          etc/udev/udev.conf)
   install="systemd.install"
 
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
@@ -100,103 +91,12 @@ package_systemd() {
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
-  ### get rid of RPM macros
+  # get rid of RPM macros
   rm -r "$pkgdir/etc/rpm"
 
   # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
   # https://pokersource.info/show_bug.cgi?id=50989
   sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
-
-  ### split off libsystemd (libs, includes, pkgconfig, man3)
-  rm -rf "$srcdir/_libsystemd"
-  install -dm755 "$srcdir"/_libsystemd/usr/{include,lib/pkgconfig}
-  cd "$srcdir"/_libsystemd
-  mv "$pkgdir/usr/lib"/libsystemd-*.so* usr/lib
-  mv "$pkgdir/usr/include/systemd" usr/include
-  mv "$pkgdir/usr/lib/pkgconfig"/libsystemd-*.pc usr/lib/pkgconfig
-
-  ### split out manpages for sysvcompat
-  rm -rf "$srcdir/_sysvcompat"
-  install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
-  mv "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
-     "$srcdir"/_sysvcompat/usr/share/man/man8
-
-  ### split out systemd-tools/udev
-  rm -rf "$srcdir/_tools"
-  install -dm755 \
-      "$srcdir"/_tools/etc/udev \
-      "$srcdir"/_tools/usr/bin \
-      "$srcdir"/_tools/usr/include \
-      "$srcdir"/_tools/usr/lib/udev \
-      "$srcdir"/_tools/usr/lib/systemd/system/{sysinit,sockets}.target.wants \
-      "$srcdir"/_tools/usr/lib/girepository-1.0 \
-      "$srcdir"/_tools/usr/share/pkgconfig \
-      "$srcdir"/_tools/usr/share/gir-1.0 \
-      "$srcdir"/_tools/usr/share/gtk-doc/html/{g,lib}udev \
-      "$srcdir"/_tools/usr/share/man/man{1,5,7,8}
-
-  cd "$srcdir/_tools"
-  mv "$pkgdir"/etc/udev etc
-  mv "$pkgdir"/etc/{binfmt,modules-load,sysctl,tmpfiles}.d etc
-  mv "$pkgdir"/usr/bin/udevadm usr/bin
-  mv "$pkgdir"/usr/bin/systemd-machine-id-setup usr/bin
-  mv "$pkgdir"/usr/lib/pkgconfig usr/lib
-  mv "$pkgdir"/usr/lib/systemd/systemd-udevd usr/lib/systemd
-  mv "$pkgdir"/usr/lib/systemd/system/systemd-udev* usr/lib/systemd/system
-  mv "$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/systemd-udev* usr/lib/systemd/system/sysinit.target.wants
-  mv "$pkgdir"/usr/lib/systemd/system/sockets.target.wants/systemd-udev* usr/lib/systemd/system/sockets.target.wants
-  mv "$pkgdir"/usr/lib/lib{,g}udev* usr/lib
-  mv "$pkgdir"/usr/lib/{binfmt,sysctl,modules-load,tmpfiles}.d usr/lib
-  mv "$pkgdir"/usr/lib/udev usr/lib
-  mv "$pkgdir"/usr/include/{libudev.h,gudev-1.0} usr/include
-  mv "$pkgdir"/usr/lib/girepository-1.0 usr/lib
-  mv "$pkgdir"/usr/share/pkgconfig/udev.pc usr/share/pkgconfig
-  mv "$pkgdir"/usr/share/gir-1.0 usr/share
-  mv "$pkgdir"/usr/share/gtk-doc/html/{g,lib}udev usr/share/gtk-doc/html
-  mv "$pkgdir"/usr/share/man/man7/udev.7 usr/share/man/man7
-  mv "$pkgdir"/usr/share/man/man8/{systemd-tmpfiles,udevadm}.8 usr/share/man/man8
-  mv "$pkgdir"/usr/share/man/man8/systemd-udevd{,.service,{-control,-kernel}.socket}.8 usr/share/man/man8
-  mv "$pkgdir"/usr/share/man/man1/systemd-{ask-password,delta,detect-virt,machine-id-setup}.1 usr/share/man/man1
-  mv "$pkgdir"/usr/share/man/man5/{binfmt,modules-load,sysctl,tmpfiles}.d.5 usr/share/man/man5
-  mv "$pkgdir"/usr/share/man/man5/{hostname,{vconsole,locale}.conf,crypttab}.5 usr/share/man/man5
-  mv "$pkgdir"/usr/bin/systemd-{ask-password,delta,detect-virt,tmpfiles,tty-ask-password-agent} usr/bin
-  mv "$pkgdir"/usr/lib/systemd/systemd-{ac-power,binfmt,cryptsetup,modules-load,random-seed,remount-fs,reply-password,sysctl,timestamp,vconsole-setup} usr/lib/systemd
-}
-
-package_systemd-sysvcompat() {
-  pkgdesc="sysvinit compat for systemd"
-  conflicts=('sysvinit' 'initscripts')
-
-  mv "$srcdir/_sysvcompat"/* "$pkgdir"
-
-  install -dm755 "$pkgdir/sbin"
-  for tool in runlevel reboot shutdown poweroff halt telinit; do
-    ln -s '/usr/bin/systemctl' "$pkgdir/sbin/$tool"
-  done
-
-  ln -s '../usr/lib/systemd/systemd' "$pkgdir/sbin/init"
-
-  install -Dm755 "$srcdir/locale.sh" "$pkgdir/etc/profile.d/locale.sh"
-}
-
-package_libsystemd() {
-  pkgdesc="systemd client libraries"
-  depends=('xz')
-
-  mv "$srcdir/_libsystemd"/* "$pkgdir"
-}
-
-package_systemd-tools() {
-  pkgdesc='standalone tools from systemd'
-  url='http://www.freedesktop.org/wiki/Software/systemd'
-  depends=('acl' 'bash' 'glibc' 'glib2' 'libsystemd' 'kmod' 'hwids' 'util-linux' 'kbd')
-  optdepends=('cryptsetup: required for encrypted block devices')
-  provides=("udev=$pkgver")
-  conflicts=('udev')
-  replaces=('udev')
-  install='systemd-tools.install'
-
-  mv "$srcdir/_tools/"* "$pkgdir"
 
   # the path to udevadm is hardcoded in some places
   install -d "$pkgdir/sbin"
@@ -219,8 +119,29 @@ package_systemd-tools() {
   install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
 
   # XXX: kill off coredump rule until the journal can recover coredumps
-  # this file needs to come back as part of systemd, not systemd-tools
   rm "$pkgdir/usr/lib/sysctl.d/coredump.conf"
+
+  ### split out manpages for sysvcompat
+  rm -rf "$srcdir/_sysvcompat"
+  install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
+  mv "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
+     "$srcdir"/_sysvcompat/usr/share/man/man8
+}
+
+package_systemd-sysvcompat() {
+  pkgdesc="sysvinit compat for systemd"
+  conflicts=('sysvinit' 'initscripts')
+
+  mv "$srcdir/_sysvcompat"/* "$pkgdir"
+
+  install -dm755 "$pkgdir/sbin"
+  for tool in runlevel reboot shutdown poweroff halt telinit; do
+    ln -s '/usr/bin/systemctl' "$pkgdir/sbin/$tool"
+  done
+
+  ln -s '../usr/lib/systemd/systemd' "$pkgdir/sbin/init"
+
+  install -Dm755 "$srcdir/locale.sh" "$pkgdir/etc/profile.d/locale.sh"
 }
 
 # vim: ft=sh syn=sh et
