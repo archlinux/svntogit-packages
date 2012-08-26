@@ -4,12 +4,13 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=189
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
-             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libxslt' 'linux-api-headers' 'pam' 'xz')
+             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt' 'libxslt' 'linux-api-headers'
+             'pam' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -52,7 +53,8 @@ build() {
 
 package_systemd() {
   pkgdesc="system and service manager"
-  depends=('acl' 'bash' 'dbus-core' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'pam' 'util-linux' 'xz')
+  depends=('acl' 'bash' 'dbus-core' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
+           'pam' 'util-linux' 'xz')
   provides=("libsystemd=$pkgver" "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('libsystemd' 'systemd-tools' 'udev')
   conflicts=('libsystemd' 'systemd-tools' 'udev')
