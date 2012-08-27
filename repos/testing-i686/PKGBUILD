@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=189
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,14 +16,12 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
-        'locale.sh'
         '0001-Reinstate-TIMEOUT-handling.patch'
         'use-split-usr-path.patch')
 md5sums=('ac2eb313f5dce79622f60aac56bca66d'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
-         'f15956945052bb911e5df81cf5e7e5dc'
          '5543be25f205f853a21fa5ee68e03f0d'
          '482dba45a783f06c2239f1355f4ce72f')
 
@@ -132,7 +130,7 @@ package_systemd() {
 
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
-  conflicts=('sysvinit' 'initscripts')
+  conflicts=('sysvinit')
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
@@ -142,8 +140,6 @@ package_systemd-sysvcompat() {
   done
 
   ln -s '../usr/lib/systemd/systemd' "$pkgdir/sbin/init"
-
-  install -Dm755 "$srcdir/locale.sh" "$pkgdir/etc/profile.d/locale.sh"
 }
 
 # vim: ft=sh syn=sh et
