@@ -1,0 +1,29 @@
+#!/bin/sh
+
+sd_booted() {
+  [ -e sys/fs/cgroup/systemd ]
+}
+
+post_install() {
+  # enable getty@tty1 by default, but don't track the file
+  systemctl enable getty@.service
+
+  systemd-machine-id-setup
+
+  echo ":: Append 'init=/bin/systemd' to your kernel command line in your"
+  echo "   bootloader to replace sysvinit with systemd"
+}
+
+post_upgrade() {
+  systemd-machine-id-setup
+
+  # getty@tty1.service is no longer enabled by default, but we don't want to break
+  # existing setups.
+  if [ "$(vercmp 183 "$2")" -eq 1 ]; then
+    # systemctl seems to be whiny on sysvinit. this will succeed unless something
+    # horrific happens, so just mask the error.
+    systemctl -q enable getty@.service || true
+  fi
+}
+
+# vim:set ts=2 sw=2 et:
