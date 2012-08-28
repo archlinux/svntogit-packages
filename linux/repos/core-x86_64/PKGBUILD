@@ -2,40 +2,40 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
-pkgbase=linux
-pkgname=('linux' 'linux-headers' 'linux-docs') # Build stock -ARCH kernel
-# pkgname=linux-custom       # Build kernel with a different name
-_kernelname=${pkgname#linux}
-_basekernel=3.4
-pkgver=${_basekernel}.9
+pkgbase=linux               # Build stock -ARCH kernel
+#pkgbase=linux-custom       # Build kernel with a different name
+_srcname=linux-3.5
+pkgver=3.5.3
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl')
 options=('!strip')
-source=("http://www.kernel.org/pub/linux/kernel/v3.x/linux-3.4.tar.xz"
+source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         "http://www.kernel.org/pub/linux/kernel/v3.x/patch-${pkgver}.xz"
         # the main kernel config files
         'config' 'config.x86_64'
         # standard config files for mkinitcpio ramdisk
-        "${pkgname}.preset"
-        'fix-acerhdf-1810T-bios.patch'
+        'linux.preset'
         'change-default-console-loglevel.patch'
-        'i915-fix-ghost-tv-output.patch'
-	'3.4.4-fix-backlight-regression.patch')
-md5sums=('967f72983655e2479f951195953e8480'
-         'ffd1d2010b97fe45a62c9ce856ca224f'
-         '3f2c307c8ffae67f60c13ef69af8364a'
-         '18d9d09152bafffaef78f2aac07e7145'
+        'alsa-powersave-3.5.x.patch'
+        'watchdog-3.5.x.patch'
+        'i915-i2c-crash-3.5.x.patch')
+md5sums=('24153eaaa81dedc9481ada8cd9c3b83d'
+         '01e0536109d2a06b1701b5051edfcea2'
+         '4eb50449b069bd699d92a290dce76d00'
+         '74c0ce9291ad8aaf26546fe85a1a7d18'
          'eb14dcfd80c00852ef81ded6e826826a'
-         '38c1fd4a1f303f1f6c38e7f082727e2f'
          '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         '80a46681386bb87813989faeb92bdd9a')
+         'c1d58e712112cf8f95e7831012a1e67a'
+         'ae13ed1e92bba07e9b17cf5c8d89683c'
+         'ff4a203dd52e4dfb5d60948bb667d06d')
+
+_kernelname=${pkgbase#linux}
 
 build() {
-  cd "${srcdir}/linux-${_basekernel}"
+  cd "${srcdir}/${_srcname}"
 
   # add upstream patch
   patch -p1 -i "${srcdir}/patch-${pkgver}"
@@ -43,23 +43,17 @@ build() {
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
 
-  # Some chips detect a ghost TV output
-  # mailing list discussion: http://lists.freedesktop.org/archives/intel-gfx/2011-April/010371.html
-  # Arch Linux bug report: FS#19234
-  #
-  # It is unclear why this patch wasn't merged upstream, it was accepted,
-  # then dropped because the reasoning was unclear. However, it is clearly
-  # needed.
-  patch -Np1 -i "${srcdir}/i915-fix-ghost-tv-output.patch"
+  # fix alsa powersave bug, probably fixed in 3.5.4
+  # https://bugs.archlinux.org/task/31255
+  patch -Np1 -i  "${srcdir}/alsa-powersave-3.5.x.patch"
 
-  # Fix backlight control on some laptops:
-  # https://bugzilla.kernel.org/show_bug.cgi?id=43168
-  patch -Np1 -i "${srcdir}/3.4.4-fix-backlight-regression.patch"
+  # fix broken watchdog
+  # https://bugzilla.kernel.org/show_bug.cgi?id=44991
+  patch -Np1 -i "${srcdir}/watchdog-3.5.x.patch"
 
-  # Patch submitted upstream, waiting for inclusion:
-  # https://lkml.org/lkml/2012/2/19/51
-  # add support for latest bios of Acer 1810T acerhdf module
-  patch -Np1 -i "${srcdir}/fix-acerhdf-1810T-bios.patch"
+  # fix i915 i2c crash
+  # https://bugzilla.kernel.org/show_bug.cgi?id=46381
+  patch -Np1 -i "${srcdir}/i915-i2c-crash-3.5.x.patch"
 
   # set DEFAULT_CONSOLE_LOGLEVEL to 4 (same value as the 'quiet' kernel param)
   # remove this when a Kconfig knob is made available by upstream
@@ -74,6 +68,7 @@ build() {
 
   if [ "${_kernelname}" != "" ]; then
     sed -i "s|CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"${_kernelname}\"|g" ./.config
+    sed -i "s|CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|" ./.config
   fi
 
   # set extraversion to pkgrel
@@ -93,57 +88,67 @@ build() {
   #make oldconfig # using old config from previous kernel version
   # ... or manually edit .config
 
+  # rewrite configuration
+  yes "" | make config >/dev/null
+
+  # save configuration for later reuse
+  if [ "${CARCH}" = "x86_64" ]; then
+    cat .config > "${startdir}/config.x86_64.last"
+  else
+    cat .config > "${startdir}/config.last"
+  fi
+
   ####################
   # stop here
   # this is useful to configure the kernel
-  #msg "Stopping build"
-  #return 1
+  #msg "Stopping build"; return 1
   ####################
 
-  yes "" | make config
-
   # build!
-  make ${MAKEFLAGS} bzImage modules
+  make ${MAKEFLAGS} LOCALVERSION= bzImage modules
 }
 
-package_linux() {
-  pkgdesc="The Linux Kernel and modules"
-  groups=('base')
+_package() {
+  pkgdesc="The ${pkgbase} kernel and modules"
+  [ "${pkgbase}" = "linux" ] && groups=('base')
   depends=('coreutils' 'linux-firmware' 'kmod' 'mkinitcpio>=0.7')
   optdepends=('crda: to set the correct wireless channels of your country')
-  provides=('kernel26')
-  conflicts=('kernel26')
-  replaces=('kernel26')
-  backup=("etc/mkinitcpio.d/${pkgname}.preset")
-  install=${pkgname}.install
+  provides=("kernel26${_kernelname}=${pkgver}")
+  conflicts=("kernel26${_kernelname}")
+  replaces=("kernel26${_kernelname}")
+  backup=("etc/mkinitcpio.d/${pkgbase}.preset")
+  install=linux.install
 
-  cd "${srcdir}/linux-${_basekernel}"
+  cd "${srcdir}/${_srcname}"
 
   KARCH=x86
 
   # get kernel version
-  _kernver="$(make kernelrelease)"
+  _kernver="$(make LOCALVERSION= kernelrelease)"
+  _basekernel=${_kernver%%-*}
+  _basekernel=${_basekernel%.*}
 
   mkdir -p "${pkgdir}"/{lib/modules,lib/firmware,boot}
-  make INSTALL_MOD_PATH="${pkgdir}" modules_install
-  cp arch/$KARCH/boot/bzImage "${pkgdir}/boot/vmlinuz-${pkgname}"
+  make LOCALVERSION= INSTALL_MOD_PATH="${pkgdir}" modules_install
+  cp arch/$KARCH/boot/bzImage "${pkgdir}/boot/vmlinuz-${pkgbase}"
 
   # add vmlinux
   install -D -m644 vmlinux "${pkgdir}/usr/src/linux-${_kernver}/vmlinux"
 
   # install fallback mkinitcpio.conf file and preset file for kernel
-  install -D -m644 "${srcdir}/${pkgname}.preset" "${pkgdir}/etc/mkinitcpio.d/${pkgname}.preset"
+  install -D -m644 "${srcdir}/linux.preset" "${pkgdir}/etc/mkinitcpio.d/${pkgbase}.preset"
 
   # set correct depmod command for install
   sed \
-    -e  "s/KERNEL_NAME=.*/KERNEL_NAME=${_kernelname}/g" \
-    -e  "s/KERNEL_VERSION=.*/KERNEL_VERSION=${_kernver}/g" \
-    -i "${startdir}/${pkgname}.install"
+    -e  "s/KERNEL_NAME=.*/KERNEL_NAME=${_kernelname}/" \
+    -e  "s/KERNEL_VERSION=.*/KERNEL_VERSION=${_kernver}/" \
+    -i "${startdir}/linux.install"
   sed \
-    -e "s|ALL_kver=.*|ALL_kver=\"/boot/vmlinuz-${pkgname}\"|g" \
-    -e "s|default_image=.*|default_image=\"/boot/initramfs-${pkgname}.img\"|g" \
-    -e "s|fallback_image=.*|fallback_image=\"/boot/initramfs-${pkgname}-fallback.img\"|g" \
-    -i "${pkgdir}/etc/mkinitcpio.d/${pkgname}.preset"
+    -e "1s|'linux.*'|'${pkgbase}'|" \
+    -e "s|ALL_kver=.*|ALL_kver=\"/boot/vmlinuz-${pkgbase}\"|" \
+    -e "s|default_image=.*|default_image=\"/boot/initramfs-${pkgbase}.img\"|" \
+    -e "s|fallback_image=.*|fallback_image=\"/boot/initramfs-${pkgbase}-fallback.img\"|" \
+    -i "${pkgdir}/etc/mkinitcpio.d/${pkgbase}.preset"
 
   # remove build and source links
   rm -f "${pkgdir}"/lib/modules/${_kernver}/{source,build}
@@ -164,18 +169,18 @@ package_linux() {
   depmod -b "$pkgdir" -F System.map "$_kernver"
 }
 
-package_linux-headers() {
-  pkgdesc="Header files and scripts for building modules for linux kernel"
-  provides=('kernel26-headers')
-  conflicts=('kernel26-headers')
-  replaces=('kernel26-headers')
+_package-headers() {
+  pkgdesc="Header files and scripts for building modules for ${pkgbase} kernel"
+  provides=("kernel26${_kernelname}-headers=${pkgver}")
+  conflicts=("kernel26${_kernelname}-headers")
+  replaces=("kernel26${_kernelname}-headers")
 
   install -dm755 "${pkgdir}/usr/lib/modules/${_kernver}"
 
   cd "${pkgdir}/usr/lib/modules/${_kernver}"
   ln -sf ../../../src/linux-${_kernver} build
 
-  cd "${srcdir}/linux-${_basekernel}"
+  cd "${srcdir}/${_srcname}"
   install -D -m644 Makefile \
     "${pkgdir}/usr/src/linux-${_kernver}/Makefile"
   install -D -m644 kernel/Makefile \
@@ -217,7 +222,7 @@ package_linux-headers() {
 
   cp drivers/media/video/*.h  "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video/"
 
-  for i in bt8xx cpia2 cx25840 cx88 em28xx et61x251 pwc saa7134 sn9c102; do
+  for i in bt8xx cpia2 cx25840 cx88 em28xx pwc saa7134 sn9c102; do
     mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video/${i}"
     cp -a drivers/media/video/${i}/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video/${i}"
   done
@@ -295,13 +300,13 @@ package_linux-headers() {
   rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arm,arm26,avr32,blackfin,c6x,cris,frv,h8300,hexagon,ia64,m32r,m68k,m68knommu,mips,microblaze,mn10300,openrisc,parisc,powerpc,ppc,s390,score,sh,sh64,sparc,sparc64,tile,unicore32,um,v850,xtensa}
 }
 
-package_linux-docs() {
-  pkgdesc="Kernel hackers manual - HTML documentation that comes with the Linux kernel."
-  provides=('kernel26-docs')
-  conflicts=('kernel26-docs')
-  replaces=('kernel26-docs')
+_package-docs() {
+  pkgdesc="Kernel hackers manual - HTML documentation that comes with the ${pkgbase} kernel"
+  provides=("kernel26${_kernelname}-docs=${pkgver}")
+  conflicts=("kernel26${_kernelname}-docs")
+  replaces=("kernel26${_kernelname}-docs")
 
-  cd "${srcdir}/linux-${_basekernel}"
+  cd "${srcdir}/${_srcname}"
 
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}"
   cp -al Documentation "${pkgdir}/usr/src/linux-${_kernver}"
@@ -311,3 +316,12 @@ package_linux-docs() {
   # remove a file already in linux package
   rm -f "${pkgdir}/usr/src/linux-${_kernver}/Documentation/DocBook/Makefile"
 }
+
+pkgname=("${pkgbase}" "${pkgbase}-headers" "${pkgbase}-docs")
+for _p in ${pkgname[@]}; do
+  eval "package_${_p}() {
+    _package${_p#${pkgbase}}
+  }"
+done
+
+# vim:set ts=8 sts=2 sw=2 et:
