@@ -5,27 +5,31 @@
 
 pkgname=ifplugd
 pkgver=0.28
-pkgrel=11
+pkgrel=12
 pkgdesc="A daemon which brings up/down network interfaces upon cable insertion/removal."
 arch=('i686' 'x86_64')
 url="http://0pointer.de/lennart/projects/ifplugd"
+install=ifplugd.install
 license=('GPL2')
-depends=('libdaemon' 'bash' 'net-tools')
-backup=('etc/ifplugd/ifplugd.conf' 'etc/ifplugd/ifplugd.action')
+depends=('libdaemon' 'bash')
+backup=('etc/ifplugd/ifplugd.conf')
 options=('!makeflags')
-source=($url/${pkgname}-${pkgver}.tar.gz 'ifplugd' 'ifplugd.action' 'ifplugd-0.28-interface.patch' 'ifdown.01-route.sh' 'ifup.01-route.sh' 'ifup.02-ntpdate.sh')
+source=($url/${pkgname}-${pkgver}.tar.gz
+        ifplugd-0.28-interface.patch
+        ifplugd
+        ifplugd-daemon
+        ifplugd.systemd)
 md5sums=('df6f4bab52f46ffd6eb1f5912d4ccee3'
-         '2281cd3eda9e3403857863e1a1bc00be'
-         '6f98767c4ea2cf0580f73ced81efd21a'
          '54eb22844b5aeed161c0b80aa9008570'
-         'd6ce6c7bd481a0b3944c944c5b277c0b'
-         'c35f0a637911b747f8dc3bd3c6156a1b'
-         'f8690ee18a5ca72555585ee96826c2cf')
+         '158bda9014eb35979af9b094feca5fe1'
+         'f2e8a37af52b79ee0e3c5bcc2470ce10 '
+         'cd97aad168c109e23824c1011165f94f')
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
   patch -p0 -i $srcdir/ifplugd-0.28-interface.patch
-  ./configure --prefix=/usr --mandir=/usr/share/man --sysconfdir=/etc \
+  sed 's|/var/run|/run|' -i src/ifplugd.c
+  ./configure --prefix=/usr --sbindir=/usr/bin --mandir=/usr/share/man --sysconfdir=/etc \
       --with-initdir=/etc/rc.d --disable-xmltoman --disable-subversion --disable-lynx
   make
 }
@@ -34,20 +38,11 @@ package() {
   cd ${srcdir}/${pkgname}-${pkgver}
   make DESTDIR=${pkgdir} install
 
-  # replace INTERFACES with NET_IFS since AL already uses it in /etc/rc.conf
-  sed -i "s:INTERFACES:NET_IFS:g" \
-      ${pkgdir}/etc/ifplugd/ifplugd.conf
-
   # replace the default init script & action files with ours.
   install -D -m755 ${srcdir}/ifplugd ${pkgdir}/etc/rc.d/ifplugd
-  install -D -m755 ${srcdir}/ifplugd.action \
-      ${pkgdir}/etc/ifplugd/ifplugd.action
-
-  install -Dm755 ${srcdir}/ifdown.01-route.sh \
-      ${pkgdir}/etc/ifplugd/ifdown.d/01-route.sh
-  install -Dm755 ${srcdir}/ifup.01-route.sh \
-      ${pkgdir}/etc/ifplugd/ifup.d/01-route.sh
-  install -Dm755 ${srcdir}/ifup.02-ntpdate.sh \
-      ${pkgdir}/etc/ifplugd/ifup.d/02-ntpdate.sh
+  install -D -m755 ${srcdir}/ifplugd-daemon ${pkgdir}/usr/bin/ifplugd-daemon
+  # remove default action script
+  rm -f ${pkgdir}/etc/ifplugd/ifplugd.action
+  # install systemd unit
+  install -D -m644 ${srcdir}/ifplugd.systemd ${pkgdir}/usr/lib/systemd/system/ifplugd@.service
 }
-
