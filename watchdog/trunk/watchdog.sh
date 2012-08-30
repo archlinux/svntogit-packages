@@ -3,7 +3,7 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-PID="$( cat /var/run/watchdog.pid 2>/dev/null )"
+PID="$( cat /run/watchdog.pid 2>/dev/null )"
 [ -r /etc/conf.d/watchdog ] && source /etc/conf.d/watchdog
 
 case "$1" in
@@ -31,7 +31,7 @@ case "$1" in
       stat_done
     fi
 
-    rm -f /var/run/watchdog.pid
+    rm -f /run/watchdog.pid
     ;;
   restart)
     $0 stop
