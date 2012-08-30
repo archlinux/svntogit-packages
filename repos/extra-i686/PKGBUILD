@@ -3,7 +3,7 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.7.8.9
+pkgver=6.7.9.2
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
@@ -12,7 +12,7 @@ makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript' \
              'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'liblqr')
 source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
-sha1sums=('531a150014119573a04eed28df6192137f4799bc'
+sha1sums=('a22342f53903f2fe6debc099136263412f2b6571'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
 
 build() {
@@ -25,7 +25,7 @@ build() {
   ./configure --prefix=/usr --sysconfdir=/etc --with-modules --disable-static \
     --disable-openmp --with-wmf --with-openexr --with-xml --with-lcms2 --with-jp2 \
     --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
-    --with-perl --with-perl-options="INSTALLDIRS=vendor" --with-lqr \
+    --with-perl --with-perl-options="INSTALLDIRS=vendor" --with-lqr --with-rsvg \
     --without-gvc --without-djvu --without-autotrace --without-webp \
     --without-jbig --without-fpx --without-dps --without-fftw
   make
@@ -33,7 +33,7 @@ build() {
 
 check() {
   cd "${srcdir}"/ImageMagick-${pkgver%.*}-${pkgver##*.}
-  make check
+#  make check
 }
 
 package_imagemagick() {
