@@ -5,7 +5,7 @@
 pkgbase=linux-lts           # Build stock -lts kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.0
-pkgver=3.0.41
+pkgver=3.0.42
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -22,7 +22,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'i915-fix-ghost-tv-output.patch'
         'ext4-options.patch')
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         'd69fa97ae3146f70b981e68ba730b9d3'
+         '960499b022c901b78d8dfee92edece8d'
          '4a1f362f9e99e6276d43ffef1e1ff5ea'
          'a407fe1dec1a421a30556500a6f94723'
          '232b52576a62c7a333e9fe7a1e1ca359'
