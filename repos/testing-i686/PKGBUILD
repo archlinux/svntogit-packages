@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=inetutils
+pkgver=1.9.1
+pkgrel=4
+pkgdesc="A collection of common network programs"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/inetutils/"
+license=('GPL3')
+groups=('base')
+depends=('readline' 'ncurses' 'pam')
+backup=('etc/conf.d/ftpd' 'etc/xinetd.d/telnet' 'etc/xinetd.d/talk' \
+        'etc/xinetd.d/rlogin' 'etc/xinetd.d/rsh')
+options=('!emptydirs')
+install=inetutils.install
+source=(http://ftp.gnu.org/gnu/inetutils/${pkgname}-${pkgver}.tar.gz{,.sig} \
+        ftpd.rc ftpd.conf telnet.xinetd talk.xinetd rlogin.xinetd rsh.xinetd \
+        ftpd.service dnsdomainname)
+sha1sums=('86b7eb11cfdaefb1d4e9bfc10620beaf8f09bc90'
+          'ff0aad9946a38915580b094dadf67e790e8a2f87'
+          '84dc802b5e57b5e04c847572225a3b9612017155'
+          '68a590083b45997dfdb80e666b2de762f494ba74'
+          'bfad98a4a62f1fff8779f076c6019ed07f9111af'
+          '27d99b910eec0fc26bd79ccc2c1de26608330298'
+          '81f10b3b688e3952f793b35bcef63b5bf257a92b'
+          '81f4a8da823cf0bb14284fc71ee6108849691eda'
+          'fb607dafe177f074e14891dd887ef9e9ab67a875'
+          'eb952b0b9c3e3d429d8e21b110249e495f0e0e63')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -i 's|_GL_WARN_ON_USE (gets|//_GL_WARN_ON_USE (gets|' lib/stdio.in.h
+  ./configure --prefix=/usr --libexec=/usr/sbin --localstatedir=/var \
+    --sysconfdir=/etc --mandir=/usr/share/man --infodir=/usr/share/info \
+    --without-wrap --with-pam \
+    --enable-ftp --enable-ftpd \
+    --enable-telnet --enable-telnetd \
+    --enable-talk --enable-talkd \
+    --enable-rlogin --enable-rlogind \
+    --enable-rsh --enable-rshd \
+    --enable-rcp --enable-hostname \
+    --disable-rexec --disable-rexecd \
+    --disable-tftp --disable-tftpd \
+    --disable-ping --disable-ping6 \
+    --disable-logger --disable-syslogd \
+    --disable-inetd --disable-whois \
+    --disable-uucpd --disable-ifconfig --disable-traceroute
+  make
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  install -d "${pkgdir}/bin"
+  ln -s /usr/bin/hostname "${pkgdir}/bin/hostname"
+  install -D -m755 "${srcdir}/dnsdomainname" "${pkgdir}/bin/dnsdomainname"
+  echo ".so man1/hostname.1" > "${pkgdir}/usr/share/man/man1/dnsdomainname.1"
+  install -D -m755 "${srcdir}/ftpd.rc" "${pkgdir}/etc/rc.d/ftpd"
+  install -D -m644 "${srcdir}/ftpd.conf" "${pkgdir}/etc/conf.d/ftpd"
+  install -D -m644 "${srcdir}/telnet.xinetd" "${pkgdir}/etc/xinetd.d/telnet"
+  install -D -m644 "${srcdir}/talk.xinetd" "${pkgdir}/etc/xinetd.d/talk"
+  install -D -m644 "${srcdir}/rlogin.xinetd" "${pkgdir}/etc/xinetd.d/rlogin"
+  install -D -m644 "${srcdir}/rsh.xinetd" "${pkgdir}/etc/xinetd.d/rsh"
+  install -D -m644 "${srcdir}/ftpd.service" "${pkgdir}/usr/lib/systemd/system/ftpd.service"
+}
