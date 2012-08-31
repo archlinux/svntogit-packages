@@ -1,0 +1,360 @@
+From 20c24114143d6d38774b56a142fd4ae05094308e Mon Sep 17 00:00:00 2001
+From: Caolán McNamara <caolanm@redhat.com>
+Date: Sun, 13 May 2012 21:41:30 +0000
+Subject: Resolves: fdo#49849 implement Unicode 6.1 hebrew line breaking rules
+
+i.e.  sync with svn diff -c 31071
+http://source.icu-project.org/repos/icu/icu/trunk/source/data/brkitr/line.txt
+
+Change-Id: I I I41b3d02f1a0da3b83a9684f29d466660d96254c6
+---
+diff --git a/i18npool/qa/cppunit/test_breakiterator.cxx b/i18npool/qa/cppunit/test_breakiterator.cxx
+index 14051d4..ffd590c 100644
+--- a/i18npool/qa/cppunit/test_breakiterator.cxx
++++ b/i18npool/qa/cppunit/test_breakiterator.cxx
+@@ -42,6 +42,7 @@
+ #include <unotest/bootstrapfixturebase.hxx>
+ 
+ #include <rtl/strbuf.hxx>
++#include <rtl/ustrbuf.hxx>
+ 
+ #include <string.h>
+ 
+@@ -58,6 +59,9 @@ public:
+     void testWeak();
+     void testAsian();
+     void testThai();
++#if TODO
++    void testNorthernThai();
++#endif
+ 
+     CPPUNIT_TEST_SUITE(TestBreakIterator);
+     CPPUNIT_TEST(testLineBreaking);
+@@ -71,6 +71,9 @@
+     CPPUNIT_TEST(testWeak);
+     CPPUNIT_TEST(testAsian);
+     CPPUNIT_TEST(testThai);
++#if TODO
++    CPPUNIT_TEST(testNorthernThai);
++#endif
+     CPPUNIT_TEST_SUITE_END();
+ 
+ private:
+@@ -80,28 +83,46 @@
+     uno::Reference<i18n::XBreakIterator> m_xBreak;
+ };
+ 
+-//See https://bugs.freedesktop.org/show_bug.cgi?id=31271 for motivation
+ void TestBreakIterator::testLineBreaking()
+ {
+-    ::rtl::OUString aTest1(RTL_CONSTASCII_USTRINGPARAM("(some text here)"));
+-
+     i18n::LineBreakHyphenationOptions aHyphOptions;
+     i18n::LineBreakUserOptions aUserOptions;
+     lang::Locale aLocale;
+ 
+-    aLocale.Language = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("en"));
+-    aLocale.Country = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("US"));
+-
++    //See https://bugs.freedesktop.org/show_bug.cgi?id=31271
+     {
+-        //Here we want the line break to leave text here) on the next line
+-        i18n::LineBreakResults aResult = m_xBreak->getLineBreak(aTest1, strlen("(some tex"), aLocale, 0, aHyphOptions, aUserOptions);
+-        CPPUNIT_ASSERT_MESSAGE("Expected a break at the the start of the word", aResult.breakIndex == 6);
++         ::rtl::OUString aTest(RTL_CONSTASCII_USTRINGPARAM("(some text here)"));
++
++        aLocale.Language = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("en"));
++        aLocale.Country = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("US"));
++
++        {
++            //Here we want the line break to leave text here) on the next line
++            i18n::LineBreakResults aResult = m_xBreak->getLineBreak(aTest, strlen("(some tex"), aLocale, 0, aHyphOptions, aUserOptions);
++            CPPUNIT_ASSERT_MESSAGE("Expected a break at the the start of the word", aResult.breakIndex == 6);
++        }
++
++        {
++            //Here we want the line break to leave "here)" on the next line
++            i18n::LineBreakResults aResult = m_xBreak->getLineBreak(aTest, strlen("(some text here"), aLocale, 0, aHyphOptions, aUserOptions);
++            CPPUNIT_ASSERT_MESSAGE("Expected a break at the the start of the word", aResult.breakIndex == 11);
++        }
+     }
+ 
++    //See https://bugs.freedesktop.org/show_bug.cgi?id=49849
+     {
+-        //Here we want the line break to leave "here)" on the next line
+-        i18n::LineBreakResults aResult = m_xBreak->getLineBreak(aTest1, strlen("(some text here"), aLocale, 0, aHyphOptions, aUserOptions);
+-        CPPUNIT_ASSERT_MESSAGE("Expected a break at the the start of the word", aResult.breakIndex == 11);
++        const sal_Unicode HEBREW1[] = { 0x05DE, 0x05D9, 0x05DC, 0x05D9, 0x5DD };
++        ::rtl::OUString aWord(HEBREW1, SAL_N_ELEMENTS(HEBREW1));
++        ::rtl::OUString aTest(rtl::OUStringBuffer(aWord).append(' ').append(aWord).makeStringAndClear());
++
++        aLocale.Language = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("he"));
++        aLocale.Country = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("IL"));
++
++        {
++            //Here we want the line break to happen at the whitespace
++            i18n::LineBreakResults aResult = m_xBreak->getLineBreak(aTest, aTest.getLength()-1, aLocale, 0, aHyphOptions, aUserOptions);
++            CPPUNIT_ASSERT_MESSAGE("Expected a break at the the start of the word", aResult.breakIndex == aWord.getLength()+1);
++        }
+     }
+ }
+ 
+@@ -295,27 +320,29 @@ void TestBreakIterator::testThai()
+     aLocale.Language = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("th"));
+     aLocale.Country = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("TH"));
+ 
+-    i18n::Boundary aBounds;
+-    {
+-        const sal_Unicode THAI1[] = { 0x0E01, 0x0E38, 0x0E2B, 0x0E25, 0x0E32, 0x0E1A };
+-        ::rtl::OUString aTest(THAI1, SAL_N_ELEMENTS(THAI1));
+-        aBounds = m_xBreak->getWordBoundary(aTest, 0, aLocale,
+-            i18n::WordType::DICTIONARY_WORD, true);
+-        CPPUNIT_ASSERT_MESSAGE("Should skip full word",
+-            aBounds.startPos == 0 && aBounds.endPos == aTest.getLength());
+-    }
++    const sal_Unicode THAI1[] = { 0x0E01, 0x0E38, 0x0E2B, 0x0E25, 0x0E32, 0x0E1A };
++    ::rtl::OUString aTest(THAI1, SAL_N_ELEMENTS(THAI1));
++    i18n::Boundary aBounds = m_xBreak->getWordBoundary(aTest, 0, aLocale,
++        i18n::WordType::DICTIONARY_WORD, true);
++    CPPUNIT_ASSERT_MESSAGE("Should skip full word",
++        aBounds.startPos == 0 && aBounds.endPos == aTest.getLength());
++}
+ 
+-#ifdef TODO
+-    {
+-        const sal_Unicode NORTHERN_THAI1[] = { 0x0E01, 0x0E38, 0x0E4A, 0x0E2B, 0x0E25, 0x0E32, 0x0E1A };
+-        ::rtl::OUString aTest(NORTHERN_THAI1, SAL_N_ELEMENTS(NORTHERN_THAI1));
+-        aBounds = m_xBreak->getWordBoundary(aTest, 0, aLocale,
+-            i18n::WordType::DICTIONARY_WORD, true);
+-        CPPUNIT_ASSERT_MESSAGE("Should skip full word",
+-            aBounds.startPos == 0 && aBounds.endPos == aTest.getLength());
+-    }
+-#endif
++#if TODO
++void TestBreakIterator::testNorthernThai()
++{
++    lang::Locale aLocale;
++    aLocale.Language = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("nod"));
++    aLocale.Country = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("TH"));
++
++    const sal_Unicode NORTHERN_THAI1[] = { 0x0E01, 0x0E38, 0x0E4A, 0x0E2B, 0x0E25, 0x0E32, 0x0E1A };
++    ::rtl::OUString aTest(NORTHERN_THAI1, SAL_N_ELEMENTS(NORTHERN_THAI1));
++    i18n::Boundary aBounds = m_xBreak->getWordBoundary(aTest, 0, aLocale,
++        i18n::WordType::DICTIONARY_WORD, true);
++    CPPUNIT_ASSERT_MESSAGE("Should skip full word",
++        aBounds.startPos == 0 && aBounds.endPos == aTest.getLength());
+ }
++#endif
+ 
+ void TestBreakIterator::setUp()
+ {
+diff --git a/i18npool/source/breakiterator/data/README b/i18npool/source/breakiterator/data/README
+new file mode 100644
+index 0000000..8d7598d
+--- a/dev/null
++++ b/i18npool/source/breakiterator/data/README
+@@ -0,0 +1,12 @@
++The originals of these come from svn checkout
++http://source.icu-project.org/repos/icu/icu/trunk/source/data/brkitr they no
++longer appear in the icu tarballs, but are in icu's svn
++
++At various stages these copies have been customized and are not horribly out of
++sync. It unclear which diffs from the base versions are deliberate and which
++are now accidental :-(
++
++We need to review the various issues referenced in the commits that caused
++custimizations and see if they're still relevant or not, write regression tests
++for them, if any are still relavant then apply the changes back on top of the
++latest versions.
+diff --git a/i18npool/source/breakiterator/data/line.txt b/i18npool/source/breakiterator/data/line.txt
+index cbabee6..91c8f3d 100644
+--- a/i18npool/source/breakiterator/data/line.txt
++++ b/i18npool/source/breakiterator/data/line.txt
+@@ -61,11 +61,13 @@ $BB = [:LineBreak =  Break_Before:];
+ $BK = [:LineBreak =  Mandatory_Break:];
+ $B2 = [:LineBreak =  Break_Both:];
+ $CB = [:LineBreak =  Contingent_Break:];
++$CJ = [:LineBreak =  Conditional_Japanese_Starter:];
+ $CL = [:LineBreak =  Close_Punctuation:] ;
+ $CM = [:LineBreak =  Combining_Mark:];
+ $CR = [:LineBreak =  Carriage_Return:];
+ $EX = [:LineBreak =  Exclamation:];
+ $GL = [:LineBreak =  Glue:];
++$HL = [:LineBreak =  Hebrew_Letter:];
+ $HY = [:LineBreak =  Hyphen:];
+ $H2 = [:LineBreak =  H2:];
+ $H3 = [:LineBreak =  H3:];
+@@ -77,7 +79,7 @@ $JV = [:LineBreak =  JV:];
+ $JT = [:LineBreak =  JT:];
+ $LF = [:LineBreak =  Line_Feed:];
+ $NL = [:LineBreak =  Next_Line:];
+-$NS = [:LineBreak =  Nonstarter:];
++$NS = [[:LineBreak =  Nonstarter:] $CJ];
+ $NU = [:LineBreak =  Numeric:];
+ $OP = [[:LineBreak =  Open_Punctuation:] - $DG];
+ $PO = [:LineBreak =  Postfix_Numeric:];
+@@ -118,6 +120,7 @@ $B2cm = $B2 $CM*;
+ $CLcm = $CL $CM*;
+ $EXcm = $EX $CM*;
+ $GLcm = $GL $CM*;
++$HLcm = $HL $CM*;
+ $HYcm = $HY $CM*;
+ $H2cm = $H2 $CM*;
+ $H3cm = $H3 $CM*;
+@@ -150,6 +153,7 @@ $B2 $CM+;
+ $CL $CM+;
+ $EX $CM+;
+ $GL $CM+;
++$HL $CM+;
+ $HY $CM+;
+ $H2 $CM+;
+ $H3 $CM+;
+@@ -186,7 +190,7 @@ $CANT_CM = [ $SP $BK $CR $LF $NL $ZW $CM];       # Bases that can't take CMs
+ #            so for this one case we need to manually list out longer sequences.
+ #
+ $AL_FOLLOW_NOCM = [$BK $CR $LF $NL $ZW $SP];
+-$AL_FOLLOW_CM   = [$CL $EX $IS $SY $WJ $GL $QU $BA $HY $NS $IN $NU $ALPlus $OP];
++$AL_FOLLOW_CM   = [$CL $EX $HL $IS $SY $WJ $GL $QU $BA $HY $NS $IN $NU $ALPlus $OP];
+ $AL_FOLLOW      = [$AL_FOLLOW_NOCM $AL_FOLLOW_CM];
+ 
+ 
+@@ -320,8 +324,13 @@ $LB20NonBreaks $CM* ($BAcm | $HYcm | $NScm);
+ $BBcm [^$CB];                                  #  $BB  x
+ $BBcm $LB20NonBreaks $CM*;
+ 
++# LB 21a Don't break after Hebrew + Hyphen
++#   HL (HY | BA) x
++#  
++$HLcm ($HYcm | $BAcm) [^$CB]?;
++
+ # LB 22
+-$ALcm    $INcm;
++($ALcm | $HLcm) $INcm;
+ $CM+     $INcm;     #  by rule 10, any otherwise unattached CM behaves as AL
+ $IDcm    $INcm;
+ $INcm    $INcm;
+@@ -331,16 +340,18 @@ $NUcm    $INcm;
+ # $LB 23
+ $IDcm  $POcm;
+ $ALcm  $NUcm;       # includes $LB19
++$HLcm  $NUcm;
+ $CM+   $NUcm;       # Rule 10, any otherwise unattached CM behaves as AL
+ $NUcm  $ALcm;
++$NUcm  $HLcm;
+ 
+ #
+ # LB 24
+ #
+ $PRcm $IDcm;
+ $ALcm $PRcm;
+-$PRcm $ALcm;
+-$POcm $ALcm;
++$PRcm ($ALcm | $HLcm);
++$POcm ($ALcm | $HLcm);
+ 
+ #
+ # LB 25   Numbers.
+@@ -361,8 +372,8 @@ $PRcm ($JLcm | $JVcm | $JTcm | $H2cm | $H3cm);
+ 
+ # LB 28   Do not break between alphabetics
+ #
+-$ALcm $ALcm;
+-$CM+ $ALcm;      # The $CM+ is from rule 10, and unattached CM is treated as AL
++($ALcm | $HLcm) ($ALcm | $HLcm);
++$CM+ ($ALcm | $HLcm);      # The $CM+ is from rule 10, an unattached CM is treated as AL
+ 
+ # LB 29
+ $IScm ($ALcm | $NUcm);
+@@ -371,11 +382,9 @@ $IScm ($ALcm | $NUcm);
+ # Rule 30   Do not break between letters, numbers or ordinary symbols
+ #           and opening or closing punctuation
+ #
+-($ALcm | $NUcm) $OPcm;
++($ALcm | $HLcm | $NUcm) $OPcm;
+ $CM+ $OPcm;
+-$CLcm ($ALcm | $NUcm);
+-
+-
++$CLcm ($ALcm | $HLcm | $NUcm);
+ 
+ #
+ #  Reverse Rules.
+@@ -391,6 +400,7 @@ $CM+ $B2;
+ $CM+ $CL;
+ $CM+ $EX;
+ $CM+ $GL;
++$CM+ $HL;
+ $CM+ $HY;
+ $CM+ $H2;
+ $CM+ $H3;
+@@ -544,24 +554,25 @@ $CM* ($BA | $HY | $NS) $CM* [$LB20NonBreaks-$CM];     #  . x (BA | HY | NS)
+ $CM* [$LB20NonBreaks-$CM] $CM* $BB;                   #  BB x .
+ [^$CB] $CM* $BB;                                      # 
+ 
+-
++# LB21a
++[^$CB] $CM* ($HY | $BA) $CM* $HL;
+ 
+ # LB 22
+-$CM* $IN $CM* $ALPlus;
++$CM* $IN $CM* ($ALPlus | $HL);
+ $CM* $IN $CM* $ID;
+ $CM* $IN $CM* $IN;
+ $CM* $IN $CM* $NU;
+ 
+ # LB 23
+ $CM* $PO $CM* $ID;
+-$CM* $NU $CM* $ALPlus;
+-$CM* $ALPlus $CM* $NU;
++$CM* $NU $CM* ($ALPlus | $HL);
++$CM* ($ALPlus | $HL) $CM* $NU;
+ 
+ # LB 24
+ $CM* $ID $CM* $PR;
+ $CM* $PR $CM* $ALPlus;
+-$CM* $ALPlus $CM* $PR;
+-$CM* $ALPlus $CM* $PO;
++$CM* ($ALPlus | $HL) $CM* $PR;
++$CM* ($ALPlus | $HL) $CM* $PO;
+ 
+ $CM* $ALPlus $CM* ($IS | $SY | $HY)+ / $SP;
+ $CM* $NU+ $CM* $HY+ / $SP;
+@@ -580,15 +591,14 @@ $CM* $PO $CM* ($H3 | $H2 | $JT | $JV | $JL);
+ $CM* ($H3 | $H2 | $JT | $JV | $JL) $CM* $PR;
+ 
+ # LB 28
+-$CM* $ALPlus $CM* $ALPlus;
+-
++$CM* ($ALPlus | $HL) $CM* ($ALPlus | $HL);
+ 
+ # LB 29
+ $CM* ($NU | $ALPlus) $CM* $IS+ [^$SP];
+ 
+ # LB 30
+-$CM* $OP $CM* ($NU | $ALPlus);
+-$CM* ($NU | $ALPlus) $CM* ($CL | $SY)+ [^$SP];
++$CM* $OP $CM* ($ALPlus | $HL | $NU);
++$CM* ($ALPlus | $HL | $NU) $CM* ($CL | $SY)+ [^$SP];
+ 
+ 
+ ## -------------------------------------------------
+@@ -609,6 +619,9 @@ $SP+ $CM* $QU;
+ $SP+ $CM* $CL;
+ $SP+ $CM* $B2;
+ 
++# LB 21
++$CM* ($HY | $BA) $CM* $HL;
++
+ # LB 18
+ ($CM* ($IS | $SY))+ $CM* $NU;
+ $CL $CM* ($NU | $IS | $SY);
+@@ -629,6 +642,6 @@ $dictionary $dictionary;
+ #  turn off rule chaining.  We don't want to move more
+ #  than necessary.
+ #
+-[$CM $OP $QU $CL $B2 $PR $HY $SP $dictionary]+ [^$CM $OP $QU $CL $B2 $PR $HY $dictionary];
++[$CM $OP $QU $CL $B2 $PR $HY $BA $SP $dictionary]+ [^$CM $OP $QU $CL $B2 $PR $HY $BA $dictionary];
+ $dictionary $dictionary;
+ 
+--
+cgit v0.9.0.2-2-gbebe
