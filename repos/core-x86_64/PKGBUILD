@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=189
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -131,6 +131,7 @@ package_systemd() {
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
   conflicts=('sysvinit')
+  depends=('sysvinit-tools')
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
