@@ -2,7 +2,7 @@
 pkgbase=tomcat6
 pkgname=('java-servlet2.5-tomcat' 'java-jsp2.1-tomcat' 'tomcat6')
 pkgver=6.0.35
-pkgrel=1
+pkgrel=2
 arch=('any')
 url='http://tomcat.apache.org/'
 license=('APACHE')
@@ -11,14 +11,15 @@ source=(http://archive.apache.org/dist/tomcat/tomcat-6/v${pkgver}/src/apache-tom
         http://archive.apache.org/dist/tomcat/tomcat-6/v${pkgver}/bin/apache-tomcat-${pkgver}.tar.gz
         tomcat6.conf.d
         tomcat6
-        tomcat6.install)
+        tomcat6.install
+        systemd.tomcat6.service)
 
-#noextract=(dbcp-${pkgver}.jar)
 md5sums=('4d44a7e7610a83ebe930a781257a8b1d'
          '171d255cd60894b29a41684ce0ff93a8'
-         '5a95b41d320aa455fe9cbf97a80b0953'
+         '8692b87cf2d003e6805c6de4409bc851'
          '8f2ccc09837577394441d29a03b0e667'
-         'afdb7edc5c7a7b5fa85ad110d021cad3')
+         'afdb7edc5c7a7b5fa85ad110d021cad3'
+         'fcb7a0e5a5dec517dda77ee430289f38')
 
 _servletver=2.5
 _jspver=2.1
@@ -28,14 +29,18 @@ build() {
   cd "${srcdir}/apache-tomcat-${pkgver}-src"
 
   . /etc/profile.d/apache-ant.sh
+
   ant download deploy\
     -Dbase.path=${srcdir}/DOWN_LIBS \
     -Dcommons-daemon.jar=/usr/share/java/commons-daemon.jar \
-    -Djdt.jar=/usr/share/java/eclipse-ecj.jar
+    -Djdt.jar=/usr/share/java/eclipse-ecj.jar \
+    -Dno.build.dbcp=true
 }
 
+#TODO add test "ant test"
+
 package_java-servlet2.5-tomcat() {
-  pkgdesc="Servlet ${_servletver} java library implementation by Apache Tomcat"
+  pkgdesc="Servlet 2.5 java library implementation by Apache Tomcat"
   depends=('java-environment>=5')
 
   cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build/lib"
@@ -87,7 +92,7 @@ package_tomcat6() {
   # eclipse-ecj is packaged on its own
   rm lib/eclipse-ecj.jar
   install -m644 lib/* ${pkgdir}/usr/share/java/${pkgname}
-  ln -s /usr/share/java/eclipse-ecj.jar ${pkgdir}/usr/share/java/${pkgname}/eclipse-ecj.jar
+  ln -s ../eclipse-ecj.jar ${pkgdir}/usr/share/java/${pkgname}/eclipse-ecj.jar
 
   # Provided by previous packages
   rm ${pkgdir}/usr/share/java/${pkgname}/servlet-api.jar
@@ -104,6 +109,7 @@ package_tomcat6() {
                 ${pkgdir}/usr/share/java/${pkgname}/tomcat-dbcp-${pkgver}.jar
   ln -s tomcat-dbcp-${pkgver}.jar \
         ${pkgdir}/usr/share/java/${pkgname}/tomcat-dbcp.jar
+
   ln -s /usr/share/java/${pkgname} ${pkgdir}/usr/share/${pkgname}/lib
 
   # 66=tomcat / 19=log
@@ -130,4 +136,7 @@ package_tomcat6() {
   # Arch scripts
   install -Dm644 ${srcdir}/${pkgname}.conf.d ${pkgdir}/etc/conf.d/${pkgname}
   install -Dm755 ${srcdir}/${pkgname} ${pkgdir}/etc/rc.d/${pkgname}
+  install -Dm644 ${srcdir}/systemd.${pkgname}.service \
+                 ${pkgdir}/usr/lib/systemd/system/${pkgname}.service
 }
+
