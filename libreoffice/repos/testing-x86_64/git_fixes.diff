@@ -1,0 +1,743 @@
+From 427529801dee122250e44d2311b34651db92bbdb Mon Sep 17 00:00:00 2001
+From: Stephan Bergmann <sbergman@redhat.com>
+Date: Tue, 21 Aug 2012 16:55:11 +0000
+Subject: Typo
+
+Change-Id: I41fd1463b6432818ee36e7f90e920a5fd98c7106
+(cherry picked from commit 1316cfe8a72f7c7bc2f5ad7644a2d4c54b77fc8b)
+
+Signed-off-by: Eike Rathke <erack@redhat.com>
+---
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index d929787..55ebaca 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -194,7 +194,7 @@ void removeTree(OUString const & url) {
+     osl::FileBase::RC rc = osl::Directory::remove(url);
+     SAL_WARN_IF(
+         rc != osl::FileBase::E_None, "desktop",
+-        "cannot remove directory " << url << ": " +rc);
++        "cannot remove directory " << url << ": " << +rc);
+         // at least on Windows XP removing some existing directories fails with
+         // osl::FileBase::E_ACCESS because they are read-only; but keeping those
+         // directories around should be harmless once they are empty
+--
+cgit v0.9.0.2-2-gbebe
+From b4f8acb41165a28b2db47acd3c6b624a4c507c54 Mon Sep 17 00:00:00 2001
+From: Stephan Bergmann <sbergman@redhat.com>
+Date: Fri, 24 Aug 2012 14:06:15 +0000
+Subject: Fix removeRdbFiles (caused extension update to fail)
+
+removeRdbFiles suffered from a confusion that ImplementationInfo.uri denotes the
+corresponding component (.so, .jar, etc.), but not the .rdb file.  So removing
+an .rdb file silently failed to remove the corresponding implementations, so re-
+installing a similar enough .rdb (as typically happens during extension update)
+would fail due to duplicate implementation names.
+
+Change-Id: I25d4ff72656c99a3af509eef09e89c18cfd0aabe
+Reviewed-on: https://gerrit.libreoffice.org/476
+Reviewed-by: Norbert Thiebaud <nthiebaud@gmail.com>
+Tested-by: Norbert Thiebaud <nthiebaud@gmail.com>
+---
+diff --git a/cppuhelper/source/defaultbootstrap.cxx b/cppuhelper/source/defaultbootstrap.cxx
+index c3bdba3..7fd1e4a 100644
+--- a/cppuhelper/source/defaultbootstrap.cxx
++++ b/cppuhelper/source/defaultbootstrap.cxx
+@@ -130,9 +130,10 @@ struct ImplementationInfo: private boost::noncopyable {
+         rtl::OUString const & theName, rtl::OUString const & theLoader,
+         rtl::OUString const & theUri, rtl::OUString const & thePrefix,
+         css::uno::Reference< css::uno::XComponentContext > const &
+-            theAlienContext):
++            theAlienContext,
++        rtl::OUString const & theRdbFile):
+         name(theName), loader(theLoader), uri(theUri), prefix(thePrefix),
+-        alienContext(theAlienContext)
++        alienContext(theAlienContext), rdbFile(theRdbFile)
+     {}
+ 
+     explicit ImplementationInfo(rtl::OUString const & theName): name(theName) {}
+@@ -142,6 +143,7 @@ struct ImplementationInfo: private boost::noncopyable {
+     rtl::OUString const uri;
+     rtl::OUString const prefix;
+     css::uno::Reference< css::uno::XComponentContext > const alienContext;
++    rtl::OUString const rdbFile;
+     std::vector< rtl::OUString > services;
+     std::vector< rtl::OUString > singletons;
+ };
+@@ -149,12 +151,12 @@ struct ImplementationInfo: private boost::noncopyable {
+ struct Implementation: private boost::noncopyable {
+     Implementation(
+         rtl::OUString const & name, rtl::OUString const & loader,
+-        rtl::OUString const & uri,
+-        rtl::OUString const & prefix = rtl::OUString(),
+-        css::uno::Reference< css::uno::XComponentContext > const &
+-            alienContext
+-                = css::uno::Reference< css::uno::XComponentContext >()):
+-        info(new ImplementationInfo(name, loader, uri, prefix, alienContext)),
++        rtl::OUString const & uri, rtl::OUString const & prefix,
++        css::uno::Reference< css::uno::XComponentContext > const & alienContext,
++        rtl::OUString const & rdbFile):
++        info(
++            new ImplementationInfo(
++                name, loader, uri, prefix, alienContext, rdbFile)),
+         loaded(false)
+     {}
+ 
+@@ -466,7 +468,7 @@ void Parser::handleImplementation() {
+     implementation_.reset(
+         new Implementation(
+             attrImplementation_, attrLoader_, attrUri_, attrPrefix_,
+-            alienContext_));
++            alienContext_, reader_.getUrl()));
+     if (!data_->namedImplementations.insert(
+             NamedImplementations::value_type(
+                 attrImplementation_, implementation_)).
+@@ -1502,7 +1504,9 @@ bool ServiceManager::readLegacyRdbFile(rtl::OUString const & uri) {
+         boost::shared_ptr< Implementation > impl(
+             new Implementation(
+                 name, readLegacyRdbString(uri, implKey, "UNO/ACTIVATOR"),
+-                readLegacyRdbString(uri, implKey, "UNO/LOCATION")));
++                readLegacyRdbString(uri, implKey, "UNO/LOCATION"),
++                rtl::OUString(),
++                css::uno::Reference< css::uno::XComponentContext >(), uri));
+         if (!data_.namedImplementations.insert(
+                 NamedImplementations::value_type(name, impl)).
+             second)
+@@ -1744,7 +1748,7 @@ void ServiceManager::removeRdbFiles(std::vector< rtl::OUString > const & uris) {
+                  j != data_.namedImplementations.end();)
+             {
+                 assert(j->second.get() != 0);
+-                if (j->second->info->uri == *i) {
++                if (j->second->info->rdbFile == *i) {
+                     clear.push_back(j->second);
+                     //TODO: The below leaves data_ in an inconsistent state upon
+                     // exceptions:
+--
+cgit v0.9.0.2-2-gbebe
+From 6d261e7aac12a876acb6496085e5329632595d39 Mon Sep 17 00:00:00 2001
+From: Stephan Bergmann <sbergman@redhat.com>
+Date: Fri, 24 Aug 2012 14:45:20 +0000
+Subject: fdo#53968 etc.: Fix more "doesn't start after upgrade" problems
+
+* fdo#53968 revealed that multiple soffice.bin instances can run removeTree in
+  parallel.  Therefore, demoted failures from exceptions to SAL_WARNs.  (And
+  keeping fingers crossed.)
+
+* a8cdce148c76c93c5d41820610d6e6ac175e03a7 "fdo#53655: Ignore failure to remove
+  directories (as happens on Windows XP)" was due to a forgotten
+  osl::Directory::close before calling osl::Directory::remove after all.
+
+* UserInstallations have been seen in the wild where no extensions were
+  installed per-user (any longer), but user/uno_packages/cache/registry/
+  com.sun.star.comp.deployment.component.PackageRegistryBackend/*.rdb files
+  contained data nevertheless.  To reliably clean out any old junk,
+  refreshBundledExtensionsDir has been extended to cleanExtensionsCache which in
+  tandem with an extended Desktop::SynchronizeExtensionRepositories now cleanly
+  re-installs all bundled, shared, and per-user extensions after a LO upgrade.
+
+Change-Id: Ic6b5b6c1945d76eb3a65b6cd4512a657b7a835a0
+Reviewed-on: https://gerrit.libreoffice.org/477
+Reviewed-by: Norbert Thiebaud <nthiebaud@gmail.com>
+Tested-by: Norbert Thiebaud <nthiebaud@gmail.com>
+---
+diff --git a/desktop/inc/app.hxx b/desktop/inc/app.hxx
+index 25b6352..c830b02 100644
+--- a/desktop/inc/app.hxx
++++ b/desktop/inc/app.hxx
+@@ -203,6 +203,7 @@ class Desktop : public Application
+ 
+         sal_Bool                        m_bMinimized;
+         sal_Bool                        m_bInvisible;
++        bool                            m_bCleanedExtensionCache;
+         bool                            m_bServicesRegistered;
+         sal_uInt16                          m_nAppEvents;
+         BootstrapError                  m_aBootstrapError;
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index 55ebaca..5fb653b 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -147,77 +147,81 @@ namespace {
+ 
+ void removeTree(OUString const & url) {
+     osl::Directory dir(url);
+-    switch (dir.open()) {
++    osl::FileBase::RC rc = dir.open();
++    switch (rc) {
+     case osl::FileBase::E_None:
+         break;
+     case osl::FileBase::E_NOENT:
+         return; //TODO: SAL_WARN if recursive
+     default:
+-        throw css::uno::RuntimeException(
+-            "cannot open directory " + url,
+-            css::uno::Reference< css::uno::XInterface >());
++        SAL_WARN("desktop", "cannot open directory " << url << ": " << +rc);
++        return;
+     }
+     for (;;) {
+         osl::DirectoryItem i;
+-        osl::FileBase::RC rc = dir.getNextItem(i, SAL_MAX_UINT32);
++        rc = dir.getNextItem(i, SAL_MAX_UINT32);
+         if (rc == osl::FileBase::E_NOENT) {
+             break;
+         }
+         if (rc != osl::FileBase::E_None) {
+-            throw css::uno::RuntimeException(
+-                ("cannot iterate directory " + url + ": "
+-                 + OUString::valueOf(static_cast< sal_Int32 >(rc))),
+-                css::uno::Reference< css::uno::XInterface >());
++            SAL_WARN(
++                "desktop","cannot iterate directory " << url << ": " << +rc);
++            break;
+         }
+         osl::FileStatus stat(
+             osl_FileStatus_Mask_Type | osl_FileStatus_Mask_FileName |
+             osl_FileStatus_Mask_FileURL);
+         rc = i.getFileStatus(stat);
+         if (rc != osl::FileBase::E_None) {
+-            throw css::uno::RuntimeException(
+-                ("cannot stat in directory " + url + ": "
+-                 + OUString::valueOf(static_cast< sal_Int32 >(rc))),
+-                css::uno::Reference< css::uno::XInterface >());
++            SAL_WARN(
++                "desktop", "cannot stat in directory " << url << ": " << +rc);
++            continue;
+         }
+         if (stat.getFileType() == osl::FileStatus::Directory) { //TODO: symlinks
+             removeTree(stat.getFileURL());
+         } else {
+             rc = osl::File::remove(stat.getFileURL());
+-            if (rc != osl::FileBase::E_None) {
+-                throw css::uno::RuntimeException(
+-                    ("cannot remove file " + stat.getFileURL() + ": "
+-                     + OUString::valueOf(static_cast< sal_Int32 >(rc))),
+-                    css::uno::Reference< css::uno::XInterface >());
+-            }
++            SAL_WARN_IF(
++                rc != osl::FileBase::E_None, "desktop",
++                "cannot remove file " << stat.getFileURL() << ": " << +rc);
+         }
+     }
+-    osl::FileBase::RC rc = osl::Directory::remove(url);
++    if (dir.isOpen()) {
++        rc = dir.close();
++        SAL_WARN_IF(
++            rc != osl::FileBase::E_None, "desktop",
++            "cannot close directory " << url << ": " << +rc);
++    }
++    rc = osl::Directory::remove(url);
+     SAL_WARN_IF(
+         rc != osl::FileBase::E_None, "desktop",
+         "cannot remove directory " << url << ": " << +rc);
+-        // at least on Windows XP removing some existing directories fails with
+-        // osl::FileBase::E_ACCESS because they are read-only; but keeping those
+-        // directories around should be harmless once they are empty
+ }
+ 
+-// Remove any existing UserInstallation's user/extensions/bundled cache
+-// remaining from old installations.  Apparently due to the old
+-// share/prereg/bundled mechanism (disabled since
+-// 5c47e5f63a79a9e72ec4a100786b1bbf65137ed4 "fdo#51252 Disable copying
+-// share/prereg/bundled to avoid startup crashes"), that cache could contain
+-// corrupted information (like a UNO component registered twice, which got
+-// changed from active to passive registration in one LO version, but the
+-// version of the corresponding bundled extension only incremented in a later LO
+-// version).  At least in theory, this function could be removed again once no
+-// UserInstallation can be poisoned by that old share/prereg/bundled mechanism
+-// any more.  (But then Desktop::SynchronizeExtensionRepositories might need to
+-// be revisited, see 2d2b19dea1ab401b1b4971ff5b12b87bb11fd666 "Force
+-// ExtensionManager resync when the implementation changes" which effectively
+-// got reverted again now.  Now, a mismatch between a UserInstallation's
+-// user/extensions/bundled and an installation's share/extensions will always be
+-// detected here and lead to a removal of user/extensions/bundled, so that
+-// Desktop::SynchronizeExtensionRepositories will then definitely resync
+-// share/extensions.)
++// Remove any existing UserInstallation's extensions cache data remaining from
++// old installations.  This addresses at least two problems:
++//
++// For one, apparently due to the old share/prereg/bundled mechanism (disabled
++// since 5c47e5f63a79a9e72ec4a100786b1bbf65137ed4 "fdo#51252 Disable copying
++// share/prereg/bundled to avoid startup crashes"), the user/extensions/bundled
++// cache could contain corrupted information (like a UNO component registered
++// twice, which got changed from active to passive registration in one LO
++// version, but the version of the corresponding bundled extension only
++// incremented in a later LO version).
++//
++// For another, UserInstallations have been seen in the wild where no extensions
++// were installed per-user (any longer), but user/uno_packages/cache/registry/
++// com.sun.star.comp.deployment.component.PackageRegistryBackend/*.rdb files
++// contained data nevertheless.
++//
++// When a LO upgrade is detected (i.e., no/ user/extensions/bundled/buildid or
++// one containing an old build ID), then user/extensions/bundled,
++// user/extensions/shared, and user/uno_packages/cache/registry/
++// com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc are
++// removed.  That should prevent any problems starting the service manager due
++// to old junk.  Later on in Desktop::SynchronizeExtensionRepositories, the
++// removed cache data is recreated.
++//
+ // As a special case, if you create a UserInstallation with LO >= 3.6.1, then
+ // run an old LO <= 3.5.x using share/prereg/bundled on the same
+ // UserInstallation (so that it partially overwrites user/extensions/bundled,
+@@ -230,33 +234,50 @@ void removeTree(OUString const & url) {
+ // <= 3.5.x messed with user/extensions/bundled in the meantime, then it would
+ // have rewritten the unorc (dropping the token), and LO >= 3.6.1 can detect
+ // that.
+-void refreshBundledExtensionsDir() {
++//
++// Multiple instances of soffice.bin can execute this code in parallel for a
++// single UserInstallation, as it is called before OfficeIPCThread is set up.
++// Therefore, any errors here only lead to SAL_WARNs.
++//
++// At least in theory, this function could be removed again once no
++// UserInstallation can be poisoned by old junk any more.
++bool cleanExtensionCache() {
+     OUString buildId(
+         "${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("version") ":buildid}");
+     rtl::Bootstrap::expandMacros(buildId); //TODO: detect failure
+-    OUString dir("$BUNDLED_EXTENSIONS_USER");
+-    rtl::Bootstrap::expandMacros(dir); //TODO: detect failure
+-    OUString url(dir + "/buildid");
+-    OUString nonPrereg(
+-        "${$BUNDLED_EXTENSIONS_USER/registry/"
+-        "com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc:"
+-        "LIBO_NON_PREREG_BUNDLED_EXTENSIONS}");
+-    rtl::Bootstrap::expandMacros(nonPrereg);
+-    if (nonPrereg == "TRUE") {
+-        osl::File f(url);
+-        switch (f.open(osl_File_OpenFlag_Read)) {
++    OUString extDir(
++        "${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("bootstrap")
++        ":UserInstallation}/user/extensions");
++    rtl::Bootstrap::expandMacros(extDir); //TODO: detect failure
++    OUString bundledDir = extDir + "/bundled";
++    OUString buildIdFile(bundledDir + "/buildid");
++    OUString bundledRcFile(
++        "$BUNDLED_EXTENSIONS_USER/registry/"
++        "com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc");
++    rtl::Bootstrap::expandMacros(bundledRcFile); //TODO: detect failure
++    rtl::Bootstrap bundledRc(bundledRcFile);
++    OUString nonPrereg;
++    if (bundledRc.getHandle() == 0
++        || (bundledRc.getFrom("LIBO_NON_PREREG_BUNDLED_EXTENSIONS", nonPrereg)
++            && nonPrereg == "TRUE"))
++    {
++        osl::File f(buildIdFile);
++        osl::FileBase::RC rc = f.open(osl_File_OpenFlag_Read);
++        switch (rc) {
+         case osl::FileBase::E_None:
+             {
+                 rtl::ByteSequence s1;
+-                osl::FileBase::RC rc = f.readLine(s1);
+-                if (f.close() != osl::FileBase::E_None) {
+-                    SAL_WARN(
+-                        "desktop", "cannot close " + url + " after reading");
+-                }
++                rc = f.readLine(s1);
++                osl::FileBase::RC rc2 = f.close();
++                SAL_WARN_IF(
++                    rc2 != osl::FileBase::E_None, "desktop",
++                    "cannot close " << buildIdFile << " after reading: "
++                        << +rc2);
+                 if (rc != osl::FileBase::E_None) {
+-                    throw css::uno::RuntimeException(
+-                        "cannot read from " + url,
+-                        css::uno::Reference< css::uno::XInterface >());
++                    SAL_WARN(
++                        "desktop",
++                        "cannot read from " << buildIdFile << ": " << +rc);
++                    break;
+                 }
+                 OUString s2(
+                     reinterpret_cast< char const * >(s1.getConstArray()),
+@@ -264,53 +285,56 @@ void refreshBundledExtensionsDir() {
+                     // using ISO 8859-1 avoids any and all conversion errors;
+                     // the content should only be a subset of ASCII, anyway
+                 if (s2 == buildId) {
+-                    return;
++                    return false;
+                 }
+                 break;
+             }
+         case osl::FileBase::E_NOENT:
+             break;
+         default:
+-            throw css::uno::RuntimeException(
+-                "cannot open " + url + " for reading",
+-                css::uno::Reference< css::uno::XInterface >());
++            SAL_WARN(
++                "desktop",
++                "cannot open " << buildIdFile << " for reading: " << +rc);
++            break;
+         }
+     }
+-    removeTree(dir);
+-    switch (osl::Directory::createPath(dir)) {
+-    case osl::FileBase::E_None:
+-    case osl::FileBase::E_EXIST:
+-        break;
+-    default:
+-        throw css::uno::RuntimeException(
+-            "cannot create path " + dir,
+-            css::uno::Reference< css::uno::XInterface >());
+-    }
+-    osl::File f(url);
+-    if (f.open(osl_File_OpenFlag_Write | osl_File_OpenFlag_Create) !=
+-        osl::FileBase::E_None)
+-    {
+-        throw css::uno::RuntimeException(
+-            "cannot open " + url + " for writing",
+-            css::uno::Reference< css::uno::XInterface >());
++    removeTree(extDir);
++    OUString userRcFile(
++        "$UNO_USER_PACKAGES_CACHE/registry/"
++        "com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc");
++    rtl::Bootstrap::expandMacros(userRcFile); //TODO: detect failure
++    osl::FileBase::RC rc = osl::File::remove(userRcFile);
++    SAL_WARN_IF(
++        rc != osl::FileBase::E_None && rc != osl::FileBase::E_NOENT, "desktop",
++        "cannot remove file " << userRcFile << ": " << +rc);
++    rc = osl::Directory::createPath(bundledDir);
++    SAL_WARN_IF(
++        rc != osl::FileBase::E_None && rc != osl::FileBase::E_EXIST, "desktop",
++        "cannot create path " << bundledDir << ": " << +rc);
++    osl::File f(buildIdFile);
++    rc = f.open(osl_File_OpenFlag_Write | osl_File_OpenFlag_Create);
++    if (rc != osl::FileBase::E_None) {
++        SAL_WARN(
++            "desktop",
++            "cannot open " << buildIdFile << " for writing: " << +rc);
++        return true;
+     }
+     rtl::OString buf(OUStringToOString(buildId, RTL_TEXTENCODING_UTF8));
+         // using UTF-8 avoids almost all conversion errors (and buildid
+         // containing single surrogate halves should never happen, anyway); the
+         // content should only be a subset of ASCII, anyway
+-    sal_uInt64 n;
+-    if (f.write(buf.getStr(), buf.getLength(), n) != osl::FileBase::E_None
+-        || n != static_cast< sal_uInt32 >(buf.getLength()))
+-    {
+-        throw css::uno::RuntimeException(
+-            "cannot write to " + url,
+-            css::uno::Reference< css::uno::XInterface >());
+-    }
+-    if (f.close() != osl::FileBase::E_None) {
+-        throw css::uno::RuntimeException(
+-            "cannot close " + url + " after writing",
+-            css::uno::Reference< css::uno::XInterface >());
+-    }
++    sal_uInt64 n = 0;
++    rc = f.write(buf.getStr(), buf.getLength(), n);
++    SAL_WARN_IF(
++        (rc != osl::FileBase::E_None
++         || n != static_cast< sal_uInt32 >(buf.getLength())),
++        "desktop",
++        "cannot write to " << buildIdFile << ": " << +rc << ", " << n);
++    rc = f.close();
++    SAL_WARN_IF(
++        rc != osl::FileBase::E_None, "desktop",
++        "cannot close " << buildIdFile << " after writing: " << +rc);
++    return true;
+ }
+ 
+ }
+@@ -538,7 +562,8 @@ rtl::OUString ReplaceStringHookProc( const rtl::OUString& rStr )
+ }
+ 
+ Desktop::Desktop()
+-: m_bServicesRegistered( false )
++: m_bCleanedExtensionCache( false )
++, m_bServicesRegistered( false )
+ , m_aBootstrapError( BE_OK )
+ {
+     RTL_LOGFILE_TRACE( "desktop (cd100003) ::Desktop::Desktop" );
+@@ -553,7 +578,7 @@ void Desktop::Init()
+     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::Init" );
+     SetBootstrapStatus(BS_OK);
+ 
+-    refreshBundledExtensionsDir();
++    m_bCleanedExtensionCache = cleanExtensionCache();
+ 
+     // We need to have service factory before going further, but see fdo#37195.
+     // Doing this will mmap common.rdb, making it not overwritable on windows,
+diff --git a/desktop/source/app/check_ext_deps.cxx b/desktop/source/app/check_ext_deps.cxx
+index dd01d9b..a6221a9 100644
+--- a/desktop/source/app/check_ext_deps.cxx
++++ b/desktop/source/app/check_ext_deps.cxx
+@@ -51,6 +51,7 @@
+ #include "com/sun/star/deployment/ExtensionManager.hpp"
+ #include "com/sun/star/deployment/LicenseException.hpp"
+ #include "com/sun/star/deployment/ui/LicenseDialog.hpp"
++#include <com/sun/star/task/OfficeRestartManager.hpp>
+ #include <com/sun/star/task/XJob.hpp>
+ #include <com/sun/star/task/XJobExecutor.hpp>
+ #include <com/sun/star/task/XInteractionApprove.hpp>
+@@ -77,12 +78,15 @@ class SilentCommandEnv
+                                       task::XInteractionHandler,
+                                       ucb::XProgressHandler >
+ {
++    uno::Reference<uno::XComponentContext> mxContext;
+     Desktop    *mpDesktop;
+     sal_Int32   mnLevel;
+     sal_Int32   mnProgress;
+ 
+ public:
+-             SilentCommandEnv( Desktop* pDesktop );
++    SilentCommandEnv(
++        uno::Reference<uno::XComponentContext> const & xContext,
++        Desktop* pDesktop );
+     virtual ~SilentCommandEnv();
+ 
+     // XCommandEnvironment
+@@ -105,12 +109,14 @@ public:
+ };
+ 
+ //-----------------------------------------------------------------------------
+-SilentCommandEnv::SilentCommandEnv( Desktop* pDesktop )
+-{
+-    mpDesktop = pDesktop;
+-    mnLevel = 0;
+-    mnProgress = 25;
+-}
++SilentCommandEnv::SilentCommandEnv(
++    uno::Reference<uno::XComponentContext> const & xContext,
++    Desktop* pDesktop ):
++    mxContext( xContext ),
++    mpDesktop( pDesktop ),
++    mnLevel( 0 ),
++    mnProgress( 25 )
++{}
+ 
+ //-----------------------------------------------------------------------------
+ SilentCommandEnv::~SilentCommandEnv()
+@@ -144,10 +150,9 @@ void SilentCommandEnv::handle( Reference< task::XInteractionRequest> const & xRe
+ 
+     if ( request >>= licExc )
+     {
+-        uno::Reference< uno::XComponentContext > xContext = comphelper_getProcessComponentContext();
+         uno::Reference< ui::dialogs::XExecutableDialog > xDialog(
+             deployment::ui::LicenseDialog::create(
+-            xContext, VCLUnoHelper::GetInterface( NULL ),
++            mxContext, VCLUnoHelper::GetInterface( NULL ),
+             licExc.ExtensionName, licExc.Text ) );
+         sal_Int16 res = xDialog->execute();
+         if ( res == ui::dialogs::ExecutableDialogResults::CANCEL )
+@@ -416,7 +421,20 @@ sal_Bool Desktop::CheckExtensionDependencies()
+ void Desktop::SynchronizeExtensionRepositories()
+ {
+     RTL_LOGFILE_CONTEXT(aLog,"desktop (jl) ::Desktop::SynchronizeExtensionRepositories");
+-    dp_misc::syncRepositories( new SilentCommandEnv( this ) );
++    uno::Reference< uno::XComponentContext > context(
++        comphelper_getProcessComponentContext());
++    uno::Reference< ucb::XCommandEnvironment > silent(
++        new SilentCommandEnv(context, this));
++    if (m_bCleanedExtensionCache) {
++        deployment::ExtensionManager::get(context)->reinstallDeployedExtensions(
++            true, "user", Reference<task::XAbortChannel>(), silent);
++        task::OfficeRestartManager::get(context)->requestRestart(
++            silent->getInteractionHandler());
++    } else {
++        // reinstallDeployedExtensions above already calls syncRepositories
++        // internally:
++        dp_misc::syncRepositories(m_bCleanedExtensionCache, silent);
++    }
+ }
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+diff --git a/desktop/source/deployment/gui/dp_gui_extensioncmdqueue.cxx b/desktop/source/deployment/gui/dp_gui_extensioncmdqueue.cxx
+index 29ded17..7795e309 100644
+--- a/desktop/source/deployment/gui/dp_gui_extensioncmdqueue.cxx
++++ b/desktop/source/deployment/gui/dp_gui_extensioncmdqueue.cxx
+@@ -1124,7 +1124,7 @@ void ExtensionCmdQueue::acceptLicense( const uno::Reference< deployment::XPackag
+ 
+ void ExtensionCmdQueue::syncRepositories( const uno::Reference< uno::XComponentContext > &xContext )
+ {
+-    dp_misc::syncRepositories( new ProgressCmdEnv( xContext, NULL, OUSTR("Extension Manager") ) );
++    dp_misc::syncRepositories( false, new ProgressCmdEnv( xContext, NULL, OUSTR("Extension Manager") ) );
+ }
+ 
+ void ExtensionCmdQueue::stop()
+diff --git a/desktop/source/deployment/inc/dp_misc.h b/desktop/source/deployment/inc/dp_misc.h
+index 29fd140..06e67aa 100644
+--- a/desktop/source/deployment/inc/dp_misc.h
++++ b/desktop/source/deployment/inc/dp_misc.h
+@@ -154,8 +154,10 @@ void TRACE(::rtl::OUString const & sText);
+     recently added or removed.
+ */
+ DESKTOP_DEPLOYMENTMISC_DLLPUBLIC
+-void syncRepositories(::com::sun::star::uno::Reference<
+-                      ::com::sun::star::ucb::XCommandEnvironment> const & xCmdEnv);
++void syncRepositories(
++    bool force,
++    ::com::sun::star::uno::Reference<
++        ::com::sun::star::ucb::XCommandEnvironment> const & xCmdEnv);
+ 
+ }
+ 
+diff --git a/desktop/source/deployment/manager/dp_extensionmanager.cxx b/desktop/source/deployment/manager/dp_extensionmanager.cxx
+index 68403f1..b3c21b4 100644
+--- a/desktop/source/deployment/manager/dp_extensionmanager.cxx
++++ b/desktop/source/deployment/manager/dp_extensionmanager.cxx
+@@ -1205,9 +1205,10 @@ uno::Sequence< uno::Sequence<Reference<deploy::XPackage> > >
+    }
+ }
+ 
+-//only to be called from unopkg!!!
++// Only to be called from unopkg or soffice bootstrap (with force=true in the
++// latter case):
+ void ExtensionManager::reinstallDeployedExtensions(
+-    OUString const & repository,
++    sal_Bool force, OUString const & repository,
+     Reference<task::XAbortChannel> const & xAbortChannel,
+     Reference<ucb::XCommandEnvironment> const & xCmdEnv )
+     throw (deploy::DeploymentException,
+@@ -1220,10 +1221,11 @@ void ExtensionManager::reinstallDeployedExtensions(
+             xPackageManager = getPackageManager(repository);
+ 
+         ::osl::MutexGuard guard(getMutex());
+-        xPackageManager->reinstallDeployedPackages(xAbortChannel, xCmdEnv);
++        xPackageManager->reinstallDeployedPackages(
++            force, xAbortChannel, xCmdEnv);
+         //We must sync here, otherwise we will get exceptions when extensions
+         //are removed.
+-        dp_misc::syncRepositories(xCmdEnv);
++        dp_misc::syncRepositories(force, xCmdEnv);
+         const uno::Sequence< Reference<deploy::XPackage> > extensions(
+             xPackageManager->getDeployedPackages(xAbortChannel, xCmdEnv));
+ 
+diff --git a/desktop/source/deployment/manager/dp_extensionmanager.hxx b/desktop/source/deployment/manager/dp_extensionmanager.hxx
+index 22e2d41..ec1edbc 100644
+--- a/desktop/source/deployment/manager/dp_extensionmanager.hxx
++++ b/desktop/source/deployment/manager/dp_extensionmanager.hxx
+@@ -182,7 +182,7 @@ public:
+             css::uno::RuntimeException);
+ 
+     virtual void SAL_CALL reinstallDeployedExtensions(
+-        ::rtl::OUString const & repository,
++        sal_Bool force, ::rtl::OUString const & repository,
+         css::uno::Reference< css::task::XAbortChannel> const & xAbortChannel,
+         css::uno::Reference< css::ucb::XCommandEnvironment> const & xCmdEnv )
+         throw (
+diff --git a/desktop/source/deployment/manager/dp_manager.cxx b/desktop/source/deployment/manager/dp_manager.cxx
+index 8a08320c..8e3d109 100644
+--- a/desktop/source/deployment/manager/dp_manager.cxx
++++ b/desktop/source/deployment/manager/dp_manager.cxx
+@@ -1164,14 +1164,14 @@ PackageManagerImpl::getDeployedPackages(
+ //ToDo: the function must not call registerPackage, do this in
+ //XExtensionManager.reinstallDeployedExtensions
+ void PackageManagerImpl::reinstallDeployedPackages(
+-    Reference<task::XAbortChannel> const &  /*xAbortChannel*/,
++    sal_Bool force, Reference<task::XAbortChannel> const &  /*xAbortChannel*/,
+     Reference<XCommandEnvironment> const & xCmdEnv_ )
+     throw (deployment::DeploymentException,
+            CommandFailedException, CommandAbortedException,
+            lang::IllegalArgumentException, RuntimeException)
+ {
+     check();
+-    if (office_is_running())
++    if (!force && office_is_running())
+         throw RuntimeException(
+             OUSTR("You must close any running Office process before "
+                   "reinstalling packages!"), static_cast<OWeakObject *>(this) );
+diff --git a/desktop/source/deployment/manager/dp_manager.h b/desktop/source/deployment/manager/dp_manager.h
+index 3b335d7..3c7f8d9 100644
+--- a/desktop/source/deployment/manager/dp_manager.h
++++ b/desktop/source/deployment/manager/dp_manager.h
+@@ -236,6 +236,7 @@ public:
+                css::uno::RuntimeException);
+ 
+     virtual void SAL_CALL reinstallDeployedPackages(
++        sal_Bool force,
+         css::uno::Reference<css::task::XAbortChannel> const & xAbortChannel,
+         css::uno::Reference<css::ucb::XCommandEnvironment> const & xCmdEnv )
+         throw (css::deployment::DeploymentException,
+diff --git a/desktop/source/deployment/misc/dp_misc.cxx b/desktop/source/deployment/misc/dp_misc.cxx
+index b225db6..9ed579f 100644
+--- a/desktop/source/deployment/misc/dp_misc.cxx
++++ b/desktop/source/deployment/misc/dp_misc.cxx
+@@ -591,7 +591,7 @@ void TRACE(::rtl::OString const & sText)
+ }
+ 
+ void syncRepositories(
+-    Reference<ucb::XCommandEnvironment> const & xCmdEnv)
++    bool force, Reference<ucb::XCommandEnvironment> const & xCmdEnv)
+ {
+     OUString sDisable;
+     ::rtl::Bootstrap::get( OUSTR( "DISABLE_EXTENSION_SYNCHRONIZATION" ), sDisable, OUString() );
+@@ -602,7 +602,8 @@ void syncRepositories(
+     //synchronize shared before bundled otherewise there are
+     //more revoke and registration calls.
+     sal_Bool bModified = false;
+-    if (needToSyncRepostitory(OUString(RTL_CONSTASCII_USTRINGPARAM("shared")))
++    if (force
++        || needToSyncRepostitory(OUString(RTL_CONSTASCII_USTRINGPARAM("shared")))
+         || needToSyncRepostitory(OUString(RTL_CONSTASCII_USTRINGPARAM("bundled"))))
+     {
+         xExtensionManager =
+diff --git a/desktop/source/pkgchk/unopkg/unopkg_app.cxx b/desktop/source/pkgchk/unopkg/unopkg_app.cxx
+index 43faed5..ef16ea1 100644
+--- a/desktop/source/pkgchk/unopkg/unopkg_app.cxx
++++ b/desktop/source/pkgchk/unopkg/unopkg_app.cxx
+@@ -392,7 +392,7 @@ extern "C" DESKTOP_DLLPUBLIC int unopkg_main()
+         //synching is done in XExtensionManager.reinstall
+         if (!subcmd_gui && ! subCommand.equals(OUSTR("reinstall"))
+             && ! dp_misc::office_is_running())
+-            dp_misc::syncRepositories(xCmdEnv);
++            dp_misc::syncRepositories(false, xCmdEnv);
+ 
+         if ( subcmd_add || subCommand == "remove" )
+         {
+@@ -436,7 +436,7 @@ extern "C" DESKTOP_DLLPUBLIC int unopkg_main()
+                      RTL_CONSTASCII_STRINGPARAM("reinstall") ))
+         {
+             xExtensionManager->reinstallDeployedExtensions(
+-                repository, Reference<task::XAbortChannel>(), xCmdEnv);
++                false, repository, Reference<task::XAbortChannel>(), xCmdEnv);
+         }
+         else if ( subCommand == "list" )
+         {
+diff --git a/offapi/com/sun/star/deployment/XExtensionManager.idl b/offapi/com/sun/star/deployment/XExtensionManager.idl
+index b68ab20..2912e45 100644
+--- a/offapi/com/sun/star/deployment/XExtensionManager.idl
++++ b/offapi/com/sun/star/deployment/XExtensionManager.idl
+@@ -260,6 +260,9 @@ interface XExtensionManager
+         <p>
+         Please use this in case of suspected cache inconsistencies only.
+         </p>
++        @param force
++               set to true when called during soffice bootstrap after cleaning
++               old extension cache
+         @param repositroy
+                the name of the repository
+         @param xAbortChannel
+@@ -268,6 +271,7 @@ interface XExtensionManager
+                command environment for error and progress handling
+     */
+     void reinstallDeployedExtensions(
++        [in] boolean force,
+         [in] string repository,
+         [in] com::sun::star::task::XAbortChannel xAbortChannel,
+         [in] com::sun::star::ucb::XCommandEnvironment xCmdEnv )
+diff --git a/offapi/com/sun/star/deployment/XPackageManager.idl b/offapi/com/sun/star/deployment/XPackageManager.idl
+index 12e7e0e..39ff04a 100644
+--- a/offapi/com/sun/star/deployment/XPackageManager.idl
++++ b/offapi/com/sun/star/deployment/XPackageManager.idl
+@@ -225,12 +225,16 @@ interface XPackageManager
+         Please use this in case of suspected cache inconsistencies only.
+         </p>
+ 
++        @param force
++               set to true when called during soffice bootstrap after cleaning
++               old extension cache
+         @param xAbortChannel
+                abort channel to asynchronously abort the adding process
+         @param xCmdEnv
+                command environment for error and progress handling
+     */
+     void reinstallDeployedPackages(
++        [in] boolean force,
+         [in] com::sun::star::task::XAbortChannel xAbortChannel,
+         [in] com::sun::star::ucb::XCommandEnvironment xCmdEnv )
+         raises (DeploymentException,
+--
+cgit v0.9.0.2-2-gbebe
