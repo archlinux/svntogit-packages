@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=6.1p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -27,8 +27,8 @@ sha1sums=('751c92c912310c3aa9cadc113e14458f843fc7b3'
           '954bf1660aa32620c37034320877f4511b767ccb'
           '6c71de2c2ca9622aa8e863acd94b135555e11125'
           'bd6eae36c7ef9efb7147778baad7858b81f2d660'
-          'f27617eeb694f4edd474638adf16733d8a793d85'
-          'a30fb5fda6d0143345bae47684edaffb8d0a92a7'
+          '1fd209980ee2fcdd7b219883e8add0f5ca63388a'
+          'b7acfce018efc111e7ce80dbe37b932caf7c2d53'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
           '659e3ee95c269014783ff8b318c6f50bf7496fbd'
           '1488d4ed33cf3037accf4b0e1c7a7e90b6a097c7')
