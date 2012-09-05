@@ -1,0 +1,55 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=fontconfig
+pkgver=2.10.1
+pkgrel=1
+pkgdesc="A library for configuring and customizing font access"
+arch=(i686 x86_64)
+url="http://www.fontconfig.org/release/"
+license=('custom')
+depends=('expat' 'freetype2')
+options=('!libtool')
+install=fontconfig.install
+source=(http://www.fontconfig.org/release/$pkgname-$pkgver.tar.gz
+        29-replace-bitmap-fonts.conf)
+md5sums=('c94e380eea42f2f23ca9537035ef1899'
+         'f6b67e8cc79197ed6abd4701911e83da')
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # make sure there's no rpath trouble and sane .so versioning - FC and Gentoo do this as well
+  libtoolize -f
+  autoreconf -f
+
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --with-templatedir=/etc/fonts/conf.avail \
+    --with-xmldir=/etc/fonts \
+    --localstatedir=/var \
+    --disable-static \
+    --with-default-fonts=/usr/share/fonts \
+    --with-add-fonts=/usr/share/fonts
+  make
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make -k check
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+
+  # not upstream, not in FC and not in Gentoo, let's drop it for testing - should be covered in 30-metric-aliases.conf
+  #install -m644 "$srcdir/29-replace-bitmap-fonts.conf" "$pkgdir/etc/fonts/conf.avail"
+
+  # we should keep upstream presettings and not leave them all up to the users decision - so FC and Gentoo do
+  #rm -f "$pkgdir"/etc/fonts/conf.d/*.conf
+
+  #Install license
+  install -m755 -d "$pkgdir/usr/share/licenses/$pkgname"
+  install -m644 COPYING "$pkgdir/usr/share/licenses/$pkgname"
+}
