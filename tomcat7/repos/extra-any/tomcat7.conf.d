@@ -1,4 +1,5 @@
-# Configuration file for Tomcat 7
+# Configuration file for Tomcat 7 when used with initscripts
+# This file is NOT used when starting tomcat with systemd
 # Have a look at /usr/share/tomcat7/bin/catalina.sh for a complete list of environment variables
 
 # The JAVA_HOME of the JVM for Tomcat to use
