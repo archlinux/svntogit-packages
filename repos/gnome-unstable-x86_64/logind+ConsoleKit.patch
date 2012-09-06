@@ -1,0 +1,638 @@
+From ba143769e17e4bbc1f2b0c88e735f993dfb3c873 Mon Sep 17 00:00:00 2001
+From: Tom Gundersen <teg@jklm.no>
+Date: Tue, 7 Aug 2012 21:06:18 +0200
+Subject: [PATCH] session tracking: always require consolekit
+
+Only systemd is now optional at compile-time, and if enabled we fallback to consolekit
+at runtime, if not booted with systemd.
+
+Bits-stolen-from: Jan Alexander Steffens <jan.steffens@gmail.com>
+Signed-off-by: Tom Gundersen <teg@jklm.no>
+---
+ configure.ac                                       |   6 +-
+ src/polkit/polkitunixsession-systemd.c             |  96 ++++++-
+ src/polkitbackend/polkitbackendjsauthority.c       |  10 +-
+ .../polkitbackendsessionmonitor-systemd.c          | 313 +++++++++++++++++++--
+ 4 files changed, 380 insertions(+), 45 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 7a0d938..1d1e4ba 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -163,15 +163,15 @@ AC_ARG_ENABLE([libsystemd-login],
+               [enable_libsystemd_login=auto])
+ if test "$enable_libsystemd_login" != "no"; then
+   PKG_CHECK_MODULES(LIBSYSTEMD_LOGIN,
+-                    [libsystemd-login],
++                    [libsystemd-login libsystemd-daemon],
+                     have_libsystemd_login=yes,
+                     have_libsystemd_login=no)
+   if test "$have_libsystemd_login" = "yes"; then
+-    SESSION_TRACKING=libsystemd-login
++    SESSION_TRACKING="libsystemd-login (with ConsoleKit runtime fallback)"
+     AC_DEFINE([HAVE_LIBSYSTEMD_LOGIN], 1, [Define to 1 if libsystemd-login is available])
+   else
+     if test "$enable_libsystemd_login" = "yes"; then
+-      AC_MSG_ERROR([libsystemd-login support requested but libsystemd-login library not found])
++      AC_MSG_ERROR([libsystemd-login support requested but systemd libraries not found])
+     fi
+   fi
+ fi
+diff --git a/src/polkit/polkitunixsession-systemd.c b/src/polkit/polkitunixsession-systemd.c
+index 8a8bf65..bb89044 100644
+--- a/src/polkit/polkitunixsession-systemd.c
++++ b/src/polkit/polkitunixsession-systemd.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (C) 2011 Red Hat, Inc.
++ * Copyright (C) 2008, 2011 Red Hat, Inc.
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -17,6 +17,7 @@
+  * Boston, MA 02111-1307, USA.
+  *
+  * Author: Matthias Clasen
++ * Author: David Zeuthen <davidz@redhat.com>
+  */
+ 
+ #ifdef HAVE_CONFIG_H
+@@ -31,6 +32,7 @@
+ #include "polkitprivate.h"
+ 
+ #include <systemd/sd-login.h>
++#include <systemd/sd-daemon.h>
+ 
+ /**
+  * SECTION:polkitunixsession
+@@ -367,9 +369,41 @@ polkit_unix_session_exists_sync (PolkitSubject   *subject,
+   PolkitUnixSession *session = POLKIT_UNIX_SESSION (subject);
+   gboolean ret = FALSE;
+   uid_t uid;
++  GDBusConnection *connection; /* consolekit */
++  GVariant *result; /* consolekit */
+ 
+-  if (sd_session_get_uid (session->session_id, &uid) == 0)
+-    ret = TRUE;
++  if (sd_booted())
++    {
++      if (sd_session_get_uid (session->session_id, &uid) == 0)
++      ret = TRUE;
++    }
++  else /* consolekit */
++    {
++      connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, cancellable, error);
++      if (connection == NULL)
++        goto out;
++
++      result = g_dbus_connection_call_sync (connection,
++                                            "org.freedesktop.ConsoleKit",           /* name */
++                                            session->session_id,                    /* object path */
++                                            "org.freedesktop.ConsoleKit.Session",   /* interface name */
++                                            "GetUser",                              /* method */
++                                            NULL, /* parameters */
++                                            G_VARIANT_TYPE ("(u)"),
++                                            G_DBUS_CALL_FLAGS_NONE,
++                                            -1,
++                                            cancellable,
++                                            error);
++      if (result == NULL)
++        goto out;
++
++      ret = TRUE;
++      g_variant_unref (result);
++
++     out:
++      if (connection != NULL)
++        g_object_unref (connection);
++    }
+ 
+   return ret;
+ }
+@@ -451,29 +485,61 @@ polkit_unix_session_initable_init (GInitable     *initable,
+   PolkitUnixSession *session = POLKIT_UNIX_SESSION (initable);
+   gboolean ret = FALSE;
+   char *s;
++  GDBusConnection *connection; /* consolekit */
++  GVariant *result; /* consolekit */
++  connection = NULL; /* consolekit */
+ 
+   if (session->session_id != NULL)
+     {
+       /* already set, nothing to do */
+-      ret = TRUE;
+-      goto out;
++      return TRUE;
+     }
+ 
+-  if (sd_pid_get_session (session->pid, &s) == 0)
++  if (sd_booted())
++    {
++      if (sd_pid_get_session (session->pid, &s) == 0)
++        {
++          session->session_id = g_strdup (s);
++          free (s);
++          return TRUE;
++        }
++
++      g_set_error (error,
++                   POLKIT_ERROR,
++                   POLKIT_ERROR_FAILED,
++                   "No session for pid %d",
++                  (gint) session->pid);
++    }
++  else /* consolekit */
+     {
+-      session->session_id = g_strdup (s);
+-      free (s);
++      connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, cancellable, error);
++      if (connection == NULL)
++        goto out;
++
++      result = g_dbus_connection_call_sync (connection,
++                                            "org.freedesktop.ConsoleKit",           /* name */
++                                            "/org/freedesktop/ConsoleKit/Manager",  /* object path */
++                                            "org.freedesktop.ConsoleKit.Manager",   /* interface name */
++                                            "GetSessionForUnixProcess",             /* method */
++                                            g_variant_new ("(u)", session->pid),    /* parameters */
++                                            G_VARIANT_TYPE ("(o)"),
++                                            G_DBUS_CALL_FLAGS_NONE,
++                                            -1,
++                                            cancellable,
++                                            error);
++      if (result == NULL)
++        goto out;
++
++      g_variant_get (result, "(o)", &session->session_id);
++      g_variant_unref (result);
++
+       ret = TRUE;
+-      goto out;
+     }
+ 
+-  g_set_error (error,
+-               POLKIT_ERROR,
+-               POLKIT_ERROR_FAILED,
+-               "No session for pid %d",
+-               (gint) session->pid);
++ out:
++  if (connection != NULL) /* consolekit */
++    g_object_unref (connection);
+ 
+-out:
+   return ret;
+ }
+ 
+diff --git a/src/polkitbackend/polkitbackendjsauthority.c b/src/polkitbackend/polkitbackendjsauthority.c
+index bdfaa73..ee38739 100644
+--- a/src/polkitbackend/polkitbackendjsauthority.c
++++ b/src/polkitbackend/polkitbackendjsauthority.c
+@@ -36,6 +36,7 @@
+ 
+ #ifdef HAVE_LIBSYSTEMD_LOGIN
+ #include <systemd/sd-login.h>
++#include <systemd/sd-daemon.h>
+ #endif /* HAVE_LIBSYSTEMD_LOGIN */
+ 
+ #include <jsapi.h>
+@@ -731,11 +732,14 @@ subject_to_jsval (PolkitBackendJsAuthority  *authority,
+     }
+ 
+ #ifdef HAVE_LIBSYSTEMD_LOGIN
+-  if (sd_pid_get_session (pid, &session_str) == 0)
++  if (sd_booted())
+     {
+-      if (sd_session_get_seat (session_str, &seat_str) == 0)
++      if (sd_pid_get_session (pid, &session_str) == 0)
+         {
+-          /* do nothing */
++          if (sd_session_get_seat (session_str, &seat_str) == 0)
++            {
++              /* do nothing */
++            }
+         }
+     }
+ #endif /* HAVE_LIBSYSTEMD_LOGIN */
+diff --git a/src/polkitbackend/polkitbackendsessionmonitor-systemd.c b/src/polkitbackend/polkitbackendsessionmonitor-systemd.c
+index 58593c3..5114dfa 100644
+--- a/src/polkitbackend/polkitbackendsessionmonitor-systemd.c
++++ b/src/polkitbackend/polkitbackendsessionmonitor-systemd.c
+@@ -26,11 +26,15 @@
+ #include <string.h>
+ #include <glib/gstdio.h>
+ #include <systemd/sd-login.h>
++#include <systemd/sd-daemon.h>
+ #include <stdlib.h>
+ 
+ #include <polkit/polkit.h>
+ #include "polkitbackendsessionmonitor.h"
+ 
++/* consolekit */
++#define CKDB_PATH "/var/run/ConsoleKit/database"
++
+ /* <internal>
+  * SECTION:polkitbackendsessionmonitor
+  * @title: PolkitBackendSessionMonitor
+@@ -126,6 +130,11 @@ struct _PolkitBackendSessionMonitor
+   GDBusConnection *system_bus;
+ 
+   GSource *sd_source;
++
++  /* consolekit */
++  GKeyFile *database;
++  GFileMonitor *database_monitor;
++  time_t database_mtime;
+ };
+ 
+ struct _PolkitBackendSessionMonitorClass
+@@ -148,6 +157,101 @@ G_DEFINE_TYPE (PolkitBackendSessionMonitor, polkit_backend_session_monitor, G_TY
+ 
+ /* ---------------------------------------------------------------------------------------------------- */
+ 
++/* consolekit */
++static gboolean
++reload_database (PolkitBackendSessionMonitor  *monitor,
++                 GError                      **error)
++{
++  gboolean ret;
++  struct stat statbuf;
++
++  ret = FALSE;
++
++  if (monitor->database != NULL)
++    {
++      g_key_file_free (monitor->database);
++      monitor->database = NULL;
++    }
++
++  if (stat (CKDB_PATH, &statbuf) != 0)
++    {
++      g_set_error (error,
++                   G_IO_ERROR,
++                   g_io_error_from_errno (errno),
++                   "Error statting file " CKDB_PATH ": %s",
++                   strerror (errno));
++      goto out;
++    }
++
++  monitor->database_mtime = statbuf.st_mtime;
++
++  monitor->database = g_key_file_new ();
++  if (!g_key_file_load_from_file (monitor->database,
++                                  CKDB_PATH,
++                                  G_KEY_FILE_NONE,
++                                  error))
++    {
++      goto out;
++    }
++
++  ret = TRUE;
++
++ out:
++  return ret;
++}
++
++static gboolean
++ensure_database (PolkitBackendSessionMonitor  *monitor,
++		                 GError                      **error)
++{
++  gboolean ret = FALSE;
++
++  if (monitor->database != NULL)
++    {
++      struct stat statbuf;
++
++      if (stat (CKDB_PATH, &statbuf) != 0)
++        {
++          g_set_error (error,
++                       G_IO_ERROR,
++                       g_io_error_from_errno (errno),
++                       "Error statting file " CKDB_PATH " to check timestamp: %s",
++                       strerror (errno));
++          goto out;
++        }
++      if (statbuf.st_mtime == monitor->database_mtime)
++        {
++          ret = TRUE;
++          goto out;
++        }
++    }
++
++  ret = reload_database (monitor, error);
++
++ out:
++  return ret;
++}
++
++static void
++on_file_monitor_changed (GFileMonitor     *file_monitor,
++                         GFile            *file,
++                         GFile            *other_file,
++                         GFileMonitorEvent event_type,
++                         gpointer          user_data)
++{
++  PolkitBackendSessionMonitor *monitor = POLKIT_BACKEND_SESSION_MONITOR (user_data);
++
++  /* throw away cache */
++  if (monitor->database != NULL)
++    {
++      g_key_file_free (monitor->database);
++      monitor->database = NULL;
++    }
++  g_signal_emit (monitor, signals[CHANGED_SIGNAL], 0);
++}
++
++/* consolekit - end */
++
+ static gboolean
+ sessions_changed (gpointer user_data)
+ {
+@@ -163,6 +267,7 @@ static void
+ polkit_backend_session_monitor_init (PolkitBackendSessionMonitor *monitor)
+ {
+   GError *error;
++  GFile *file; /* consolekit */
+ 
+   error = NULL;
+   monitor->system_bus = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
+@@ -172,9 +277,41 @@ polkit_backend_session_monitor_init (PolkitBackendSessionMonitor *monitor)
+       g_error_free (error);
+     }
+ 
+-  monitor->sd_source = sd_source_new ();
+-  g_source_set_callback (monitor->sd_source, sessions_changed, monitor, NULL);
+-  g_source_attach (monitor->sd_source, NULL);
++  if (sd_booted())
++    {
++      monitor->sd_source = sd_source_new ();
++      g_source_set_callback (monitor->sd_source, sessions_changed, monitor, NULL);
++      g_source_attach (monitor->sd_source, NULL);
++    }
++  else /* consolekit */
++    {
++      error = NULL;
++      if (!ensure_database (monitor, &error))
++        {
++          g_printerr ("Error loading " CKDB_PATH ": %s", error->message);
++          g_error_free (error);
++        }
++
++      error = NULL;
++      file = g_file_new_for_path (CKDB_PATH);
++      monitor->database_monitor = g_file_monitor_file (file,
++                                                       G_FILE_MONITOR_NONE,
++                                                       NULL,
++                                                       &error);
++      g_object_unref (file);
++      if (monitor->database_monitor == NULL)
++        {
++          g_printerr ("Error monitoring " CKDB_PATH ": %s", error->message);
++          g_error_free (error);
++        }
++      else
++        {
++          g_signal_connect (monitor->database_monitor,
++                            "changed",
++                            G_CALLBACK (on_file_monitor_changed),
++                            monitor);
++        }
++    }
+ }
+ 
+ static void
+@@ -191,6 +328,14 @@ polkit_backend_session_monitor_finalize (GObject *object)
+       g_source_unref (monitor->sd_source);
+     }
+ 
++  /* consolekit */
++  if (monitor->database_monitor != NULL)
++    g_object_unref (monitor->database_monitor);
++
++  if (monitor->database != NULL)
++    g_key_file_free (monitor->database);
++  /* consolekit - end */
++
+   if (G_OBJECT_CLASS (polkit_backend_session_monitor_parent_class)->finalize != NULL)
+     G_OBJECT_CLASS (polkit_backend_session_monitor_parent_class)->finalize (object);
+ }
+@@ -258,6 +403,8 @@ polkit_backend_session_monitor_get_user_for_subject (PolkitBackendSessionMonitor
+                                                      GError                      **error)
+ {
+   PolkitIdentity *ret;
++  GError *local_error; /* consolekit */
++  gchar *group; /* consolekit */
+   guint32 uid;
+ 
+   ret = NULL;
+@@ -300,16 +447,38 @@ polkit_backend_session_monitor_get_user_for_subject (PolkitBackendSessionMonitor
+   else if (POLKIT_IS_UNIX_SESSION (subject))
+     {
+ 
+-      if (sd_session_get_uid (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)), &uid) < 0)
++      if (sd_booted())
+         {
+-          g_set_error (error,
+-                       POLKIT_ERROR,
+-                       POLKIT_ERROR_FAILED,
+-                       "Error getting uid for session");
+-          goto out;
++          if (sd_session_get_uid (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)), &uid) < 0)
++            {
++              g_set_error (error,
++                           POLKIT_ERROR,
++                           POLKIT_ERROR_FAILED,
++                           "Error getting uid for session");
++              goto out;
++            }
++
++          ret = polkit_unix_user_new (uid);
++        }
++      else /* consolekit */
++        {
++          if (!ensure_database (monitor, error))
++            {
++              g_prefix_error (error, "Error getting user for session: Error ensuring CK database at " CKDB_PATH ": ");
++              goto out;
++            }
++
++         group = g_strdup_printf ("Session %s", polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (subject)));
++         local_error = NULL;
++         uid = g_key_file_get_integer (monitor->database, group, "uid", &local_error);
++         if (local_error != NULL)
++           {
++             g_propagate_prefixed_error (error, local_error, "Error getting uid using " CKDB_PATH ": ");
++             g_free (group);
++             goto out;
++           }
++         g_free (group);
+         }
+-
+-      ret = polkit_unix_user_new (uid);
+     }
+ 
+  out:
+@@ -337,20 +506,43 @@ polkit_backend_session_monitor_get_session_for_subject (PolkitBackendSessionMoni
+ 
+   if (POLKIT_IS_UNIX_PROCESS (subject))
+     {
+-      gchar *session_id;
+-      pid_t pid;
++      if (sd_booted())
++        {
++          gchar *session_id;
++          pid_t pid;
+ 
+-      pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject));
+-      if (sd_pid_get_session (pid, &session_id) < 0)
+-        goto out;
++          pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject));
++          if (sd_pid_get_session (pid, &session_id) < 0)
++          goto out;
+ 
+-      session = polkit_unix_session_new (session_id);
+-      free (session_id);
++          session = polkit_unix_session_new (session_id);
++          free (session_id);
++	}
++      else /* consolekit */
++        {
++          const gchar *session_id;
++          GVariant *result;
++          result = g_dbus_connection_call_sync (monitor->system_bus,
++                                                "org.freedesktop.ConsoleKit",
++                                                "/org/freedesktop/ConsoleKit/Manager",
++                                                "org.freedesktop.ConsoleKit.Manager",
++                                                "GetSessionForUnixProcess",
++                                                g_variant_new ("(u)", polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (subject))),
++                                                G_VARIANT_TYPE ("(o)"),
++                                                G_DBUS_CALL_FLAGS_NONE,
++                                                -1, /* timeout_msec */
++                                                NULL, /* GCancellable */
++                                                error);
++          if (result == NULL)
++            goto out;
++          g_variant_get (result, "(&o)", &session_id);
++          session = polkit_unix_session_new (session_id);
++          g_variant_unref (result);
++        }
+     }
+   else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
+     {
+       guint32 pid;
+-      gchar *session_id;
+       GVariant *result;
+ 
+       result = g_dbus_connection_call_sync (monitor->system_bus,
+@@ -369,11 +561,35 @@ polkit_backend_session_monitor_get_session_for_subject (PolkitBackendSessionMoni
+       g_variant_get (result, "(u)", &pid);
+       g_variant_unref (result);
+ 
+-      if (sd_pid_get_session (pid, &session_id) < 0)
+-        goto out;
++      if (sd_booted())
++        {
++          gchar *session_id;
++          if (sd_pid_get_session (pid, &session_id) < 0)
++            goto out;
+ 
+-      session = polkit_unix_session_new (session_id);
+-      free (session_id);
++          session = polkit_unix_session_new (session_id);
++          free (session_id);
++        }
++      else /* consolekit */
++        {
++          const gchar *session_id;
++          result = g_dbus_connection_call_sync (monitor->system_bus,
++                                                "org.freedesktop.ConsoleKit",
++                                                "/org/freedesktop/ConsoleKit/Manager",
++                                                "org.freedesktop.ConsoleKit.Manager",
++                                                "GetSessionForUnixProcess",
++                                                g_variant_new ("(u)", pid),
++                                                G_VARIANT_TYPE ("(o)"),
++                                                G_DBUS_CALL_FLAGS_NONE,
++                                               -1, /* timeout_msec */
++                                               NULL, /* GCancellable */
++                                               error);
++          if (result == NULL)
++            goto out;
++          g_variant_get (result, "(&o)", &session_id);
++          session = polkit_unix_session_new (session_id);
++          g_variant_unref (result);
++        }
+     }
+   else
+     {
+@@ -389,12 +605,58 @@ polkit_backend_session_monitor_get_session_for_subject (PolkitBackendSessionMoni
+   return session;
+ }
+ 
++static gboolean
++get_boolean (PolkitBackendSessionMonitor *monitor,
++             PolkitSubject               *session,
++             const gchar                 *key_name)
++{
++  gboolean ret;
++  gchar *group;
++  GError *error;
++
++  ret = FALSE;
++
++  group = g_strdup_printf ("Session %s", polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)));
++
++  error = NULL;
++  if (!ensure_database (monitor, &error))
++    {
++      g_printerr ("Error getting boolean `%s' in group `%s': Error ensuring CK database at " CKDB_PATH ": %s",
++                  key_name,
++                  group,
++                  error->message);
++      g_error_free (error);
++      goto out;
++    }
++
++  error = NULL;
++  ret = g_key_file_get_boolean (monitor->database, group, key_name, &error);
++  if (error != NULL)
++    {
++      g_printerr ("Error looking %s using " CKDB_PATH " for %s: %s\n",
++                  key_name,
++                  group,
++                  error->message);
++      g_error_free (error);
++      goto out;
++    }
++
++ out:
++  g_free (group);
++  return ret;
++}
++
+ gboolean
+ polkit_backend_session_monitor_is_session_local (PolkitBackendSessionMonitor *monitor,
+                                                  PolkitSubject               *session)
+ {
+   char *seat;
+ 
++  if (!sd_booted()) /* consolekit */
++    {
++      return get_boolean (monitor, session, "is_local");
++    }
++
+   if (!sd_session_get_seat (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)), &seat))
+     {
+       free (seat);
+@@ -409,6 +671,9 @@ gboolean
+ polkit_backend_session_monitor_is_session_active (PolkitBackendSessionMonitor *monitor,
+                                                   PolkitSubject               *session)
+ {
+-  return sd_session_is_active (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)));
++  if (sd_booted())
++    return sd_session_is_active (polkit_unix_session_get_session_id (POLKIT_UNIX_SESSION (session)));
++  else /* consolekit */
++    return get_boolean (monitor, session, "is_active");
+ }
+ 
+-- 
+1.7.11.4
+
