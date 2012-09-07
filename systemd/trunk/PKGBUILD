@@ -130,8 +130,13 @@ package_systemd() {
 
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
-  conflicts=('sysvinit')
+  conflicts=('sysvinit' 'initscripts')
   depends=('sysvinit-tools')
+
+  # the initscripts conflict here isn't actually needed, but in order to make
+  # this package remove both sysvinit and initscripts, the initscripts conflict
+  # is needed. There's no case in which you would ever want initscripts installed
+  # without sysvinit, and vice versa, as in both cases, they are unusable.
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
