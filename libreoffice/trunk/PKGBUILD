@@ -26,7 +26,7 @@ pkgname=('libreoffice-common'
 	'libreoffice-extension-nlpsolver') # svn up -r 142692 (last one with all extensions built)
 _LOver=3.6.2.1
 pkgver=3.6.2
-pkgrel=0.1
+pkgrel=0.3
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.libreoffice.org/"
@@ -80,6 +80,7 @@ source=(${_mirror}/${pkgbase}-{core,help,translations}-${_LOver}.tar.xz
 	${_additional_source_url}/0d2dcdfbf28d6208751b33057f5361f0-libcmis-0.2.3.tar.gz
 	${_additional_source_url}/ce5a1def34578b75959ac31210f031f6-libcdr-0.0.8.tar.bz2
 	${_additional_source_url2}/185d60944ea767075d27247c3162b3bc-unowinreg.dll
+	make-pyuno-work-with-system-wide-module-install.diff
 	buildfix.diff
 	libreoffice-common.sh libreoffice-common.csh)
 noextract=(94e7f271e38c976462558b4278590178-libvisio-0.0.19.tar.bz2
@@ -145,6 +146,7 @@ md5sums=('9c5f6e22ecc1c529d5cbd2bab6aa64c6'
          '0d2dcdfbf28d6208751b33057f5361f0'
          'ce5a1def34578b75959ac31210f031f6'
          '185d60944ea767075d27247c3162b3bc'
+         '97bf43dda273d79ff90c848ab53b0e3c'
          '234e91ac65945ce1ab1e3839780e90f7'
          'abcb1b0a7deaffe13ab3d7ca70becb49'
          '72790a4103da259a55cadd66db931d00')
@@ -169,6 +171,9 @@ build() {
 
 	# buildfixes & bugfixes
     patch -Np1 -i ${srcdir}/buildfix.diff	# leaves out a broken pdfimport test
+    
+    # fix not upstreamable pyuno paths - patch taken from Debian
+    patch -Np1 -i ${srcdir}/make-pyuno-work-with-system-wide-module-install.diff
     
 	#use the CFLAGS but remove the LibO overridden ones
 	for i in $CFLAGS; do
@@ -262,7 +267,7 @@ build() {
 	make
 	# fake installation to create split file lists
 	mkdir $srcdir/fakeinstall
-	make DESTDIR=${srcdir}/fakeinstall distro-pack-install
+	make DESTDIR=${srcdir}/fakeinstall distro-pack-install # -o build -o check
 }
 
 #check() {
@@ -368,27 +373,22 @@ package_libreoffice-postgresql-connector() {
  groups=('libreoffice')
  replaces=('libreoffice')
 
- # no file-list so far
- install -dm755 ${pkgdir}/usr/lib/libreoffice/program/services
- install -m644 ${srcdir}/fakeinstall/usr/lib/libreoffice/program/postgresql-sdbc.uno.so ${pkgdir}/usr/lib/libreoffice/program
- install -m644 ${srcdir}/fakeinstall/usr/lib/libreoffice/program/postgresql-sdbc-impl.uno.so ${pkgdir}/usr/lib/libreoffice/program
- install -m644 ${srcdir}/fakeinstall/usr/lib/libreoffice/program/postgresql-sdbc.ini ${pkgdir}/usr/lib/libreoffice/program
- install -m644 ${srcdir}/fakeinstall/usr/lib/libreoffice/program/services/postgresql-sdbc.rdb ${pkgdir}/usr/lib/libreoffice/program/services
- install -dm755 ${pkgdir}/usr/lib/libreoffice/share/registry
- install -m644 ${srcdir}/fakeinstall/usr/lib/libreoffice/share/registry/postgresqlsdbc.xcd ${pkgdir}/usr/lib/libreoffice/share/registry
+ # workaround double entries in the file list
+ mv ${srcdir}/libreoffice-core-$_LOver/file-lists/postgresql_list.txt ${srcdir}/libreoffice-core-$_LOver/file-lists/postgresql_list.txt.orig
+ sort ${srcdir}/libreoffice-core-$_LOver/file-lists/postgresql_list.txt.orig | uniq 1>& ${srcdir}/libreoffice-core-$_LOver/file-lists/postgresql_list.txt
  
  # create directories from *list.txt file
-# for directory in `grep ^%dir ${srcdir}/libreoffice-core-$_LOver/file-lists/postgresql_list.txt`; do
-#   install -dm755 ${pkgdir}/${directory/\%dir/}
-# done
+ for directory in `grep ^%dir ${srcdir}/libreoffice-core-$_LOver/file-lists/postgresql_list.txt`; do
+   install -dm755 ${pkgdir}/${directory/\%dir/}
+ done
  # install files into the pkg from fakeinstall dir
-# for file in `grep -v ^%dir $srcdir/libreoffice-core-$_LOver/file-lists/postgresql_list.txt`; do
-#   dirname=`dirname $file`
+ for file in `grep -v ^%dir $srcdir/libreoffice-core-$_LOver/file-lists/postgresql_list.txt`; do
+   dirname=`dirname $file`
    # check if directory has been already been created - some are missing like manpages
-#   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
+   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
    # mv file from fakeinstall to pkgdir
-#   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
-# done
+   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
+ done
 }
 
 package_libreoffice-calc() {
@@ -545,7 +545,6 @@ package_libreoffice-sdk() {
  done
  
   # fix environment path to keep compatibility with openjdk6 and openjdk7
-  #sed -i -e "s:\/usr\/lib\/jvm\/java-7-openjdk:\$J2SDKDIR:"          /usr/lib/libreoffice/sdk/setsdkenv_unix.{sh,csh}
   sed -i -e "s:\/usr\/lib\/jvm\/java-7-openjdk:\$J2SDKDIR:" ${pkgdir}/usr/lib/libreoffice/sdk/setsdkenv_unix.{sh,csh}
 }
 
