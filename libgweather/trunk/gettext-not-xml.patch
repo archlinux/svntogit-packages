@@ -1,19 +1,26 @@
-diff -Nur libgweather-3.4.0.orig/configure.ac libgweather-3.4.0/configure.ac
---- libgweather-3.4.0.orig/configure.ac	2012-03-08 20:49:21.497783149 +0000
-+++ libgweather-3.4.0/configure.ac	2012-03-08 20:59:21.082941563 +0000
-@@ -43,19 +43,16 @@
- LT_PREREQ([2.2.6])
+Description: Switch to using gettext to find localized names for locations, instead of shipping very large locale-specific XML files with lots of duplicate information.
+Author: ?
+
+only in patch2:
+unchanged:
+Index: libgweather-3.5.1/configure.ac
+===================================================================
+--- libgweather-3.5.1.orig/configure.ac	2012-06-25 03:23:11.000000000 +1200
++++ libgweather-3.5.1/configure.ac	2012-07-05 10:27:51.457384292 +1200
+@@ -46,6 +46,10 @@
  LT_INIT([dlopen win32-dll disable-static])
+ LT_LIB_M
  
 +dnl IT_PROG_INTLTOOL does this for us in the case of the po/ subdir, but we're on our own for po-locations
 +AC_OUTPUT_COMMANDS([sed -e "/POTFILES =/r po/POTFILES" po-locations/Makefile.in > po-locations/Makefile])
 +IT_PO_SUBDIR([po-locations])
 +
- IT_PROG_INTLTOOL([0.40.6])
  PKG_PROG_PKG_CONFIG([0.19])
  
  AC_PROG_CC
- AC_PATH_PROG(GCONFTOOL, gconftool-2)
+@@ -53,13 +57,6 @@
+ 
+ GLIB_GSETTINGS
  
 -AC_ARG_ENABLE(all-translations-in-one-xml,
 -        [AS_HELP_STRING([--enable-all-translations-in-one-xml],
@@ -25,7 +32,7 @@ diff -Nur libgweather-3.4.0.orig/configure.ac libgweather-3.4.0/configure.ac
  AC_ARG_ENABLE(locations-compression,
          [AS_HELP_STRING([--enable-locations-compression],
                          [Compress Locations.xml files])],
-@@ -178,7 +175,7 @@
+@@ -183,7 +180,7 @@
  Makefile
  doc/Makefile
  po/Makefile.in
@@ -34,7 +41,7 @@ diff -Nur libgweather-3.4.0.orig/configure.ac libgweather-3.4.0/configure.ac
  libgweather/Makefile
  libgweather/gweather-3.0.pc
  libgweather/gweather-3.0-uninstalled.pc
-@@ -187,12 +184,6 @@
+@@ -192,12 +189,6 @@
  ])
  AC_OUTPUT
  
@@ -47,17 +54,18 @@ diff -Nur libgweather-3.4.0.orig/configure.ac libgweather-3.4.0/configure.ac
  dnl ***************************************************************************
  dnl *** Display Summary                                                     ***
  dnl ***************************************************************************
-@@ -203,6 +194,4 @@
+@@ -208,6 +199,4 @@
  	Source code location:		${srcdir}
  	Compiler:			${CC}
  	Introspection support:          ${found_introspection}
 -	Locations.xml translations:	${LOCATIONS_XML_TRANSLATIONS}
 -	Locations.xml compression:	${enable_locations_compression}
  " >&2
-diff -Nur libgweather-3.4.0.orig/data/Makefile.am libgweather-3.4.0/data/Makefile.am
---- libgweather-3.4.0.orig/data/Makefile.am	2012-03-08 20:49:21.484449916 +0000
-+++ libgweather-3.4.0/data/Makefile.am	2012-03-08 21:00:28.359065326 +0000
-@@ -4,55 +4,23 @@
+Index: libgweather-3.5.1/data/Makefile.am
+===================================================================
+--- libgweather-3.5.1.orig/data/Makefile.am	2012-06-06 04:07:53.000000000 +1200
++++ libgweather-3.5.1/data/Makefile.am	2012-07-05 10:27:51.461384292 +1200
+@@ -4,61 +4,21 @@
  libgweatherlocationsdir = $(pkgdatadir)
  libgweatherlocations_in_files = Locations.xml.in
  
@@ -107,21 +115,28 @@ diff -Nur libgweather-3.4.0.orig/data/Makefile.am libgweather-3.4.0/data/Makefil
 -	if test "x$(COMPRESS_EXT)" = "x.gz"; then			\
 -		gzip --force Locations.xml;				\
 -	fi &&								\
-+$(LOCATIONS_STAMP): $(libgweatherlocations_in_files) Makefile
-+	LC_ALL=C $(INTLTOOL_MERGE) --multiple-output --xml-style --utf8 --cache=$(top_builddir)/po-locations/.intltool-merge-cache /dev/null $< $(libgweatherlocations_DATA)
-+	xmllint --noblanks -o Locations.xml C/$(libgweatherlocations_DATA)
-+	rm -f C/$(libgweatherlocations_DATA)
-+	test -d C && rmdir C
- 	touch $@
- 
+-	touch $@
+-
 -endif # USE_ONE_BIG_XML
 -
- ### Locations.xml.in rebuild
- rebuild-locations: locationdb.sqlite update-locations.py
- 	$(AM_V_GEN)($(srcdir)/update-locations.py > Locations.xml.in.new && mv Locations.xml.in.new Locations.xml.in) || rm -f Locations.xml.in.new
-diff -Nur libgweather-3.4.0.orig/libgweather/gweather-location.c libgweather-3.4.0/libgweather/gweather-location.c
---- libgweather-3.4.0.orig/libgweather/gweather-location.c	2012-03-08 20:49:21.487783240 +0000
-+++ libgweather-3.4.0/libgweather/gweather-location.c	2012-03-08 21:00:28.359065326 +0000
+-### Locations.xml.in rebuild
+-rebuild-locations: locationdb.sqlite update-locations.py
+-	$(AM_V_GEN)($(srcdir)/update-locations.py > Locations.xml.in.new && mv Locations.xml.in.new Locations.xml.in) || rm -f Locations.xml.in.new
+-
+-locationdb.sqlite: build-locationdb.pl major-cities.txt sources/nsd_cccc.txt sources/POP_PLACES.txt sources/US_CONCISE.txt sources/geonames_dd_dms_date_*.txt city-fixups.pl station-fixups.pl
+-	$(AM_V_GEN)$(srcdir)/build-locationdb.pl
++$(LOCATIONS_STAMP): $(libgweatherlocations_in_files) Makefile
++	LC_ALL=C $(INTLTOOL_MERGE) --multiple-output --xml-style --utf8 --cache=$(top_builddir)/po-locations/.intltool-merge-cache /dev/null $< $(libgweatherlocations_DATA)  && \
++	xmllint --noblanks -o Locations.xml C/$(libgweatherlocations_DATA) && \
++	rm -f C/$(libgweatherlocations_DATA) &&				\
++ 	touch $@
+ 
+ check:
+ 	xmllint --valid --noout $(top_srcdir)/data/Locations.xml.in
+Index: libgweather-3.5.1/libgweather/gweather-location.c
+===================================================================
+--- libgweather-3.5.1.orig/libgweather/gweather-location.c	2012-06-15 08:15:23.000000000 +1200
++++ libgweather-3.5.1/libgweather/gweather-location.c	2012-07-05 10:27:51.461384292 +1200
 @@ -22,11 +22,14 @@
  #include <config.h>
  #endif
@@ -137,7 +152,7 @@ diff -Nur libgweather-3.4.0.orig/libgweather/gweather-location.c libgweather-3.4
  
  #define GWEATHER_I_KNOW_THIS_IS_UNSTABLE
  #include "gweather-location.h"
-@@ -185,10 +188,20 @@
+@@ -157,10 +160,20 @@
  
  	tagname = (const char *) xmlTextReaderConstName (parser->xml);
  	if (!strcmp (tagname, "name") && !loc->name) {
@@ -160,9 +175,10 @@ diff -Nur libgweather-3.4.0.orig/libgweather/gweather-location.c libgweather-3.4
  	    xmlFree (value);
  	    normalized = g_utf8_normalize (loc->name, -1, G_NORMALIZE_ALL);
  	    loc->sort_name = g_utf8_casefold (normalized, -1);
-diff -Nur libgweather-3.4.0.orig/libgweather/gweather-timezone.c libgweather-3.4.0/libgweather/gweather-timezone.c
---- libgweather-3.4.0.orig/libgweather/gweather-timezone.c	2012-03-08 20:49:21.487783240 +0000
-+++ libgweather-3.4.0/libgweather/gweather-timezone.c	2012-03-08 21:00:28.359065326 +0000
+Index: libgweather-3.5.1/libgweather/gweather-timezone.c
+===================================================================
+--- libgweather-3.5.1.orig/libgweather/gweather-timezone.c	2011-11-16 01:03:32.000000000 +1300
++++ libgweather-3.5.1/libgweather/gweather-timezone.c	2012-07-05 10:27:51.461384292 +1200
 @@ -23,6 +23,7 @@
  #endif
  
@@ -219,9 +235,10 @@ diff -Nur libgweather-3.4.0.orig/libgweather/gweather-timezone.c libgweather-3.4
      if (name)
  	xmlFree (name);
  
-diff -Nur libgweather-3.4.0.orig/po-locations/LINGUAS libgweather-3.4.0/po-locations/LINGUAS
---- libgweather-3.4.0.orig/po-locations/LINGUAS	1970-01-01 00:00:00.000000000 +0000
-+++ libgweather-3.4.0/po-locations/LINGUAS	2012-03-08 21:00:28.359065326 +0000
+Index: libgweather-3.5.1/po-locations/LINGUAS
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ libgweather-3.5.1/po-locations/LINGUAS	2012-07-05 10:27:51.461384292 +1200
 @@ -0,0 +1,78 @@
 +ang
 +ar
@@ -301,9 +318,10 @@ diff -Nur libgweather-3.4.0.orig/po-locations/LINGUAS libgweather-3.4.0/po-locat
 +zh_CN
 +zh_HK
 +zh_TW
-diff -Nur libgweather-3.4.0.orig/po-locations/Makefile.in.in libgweather-3.4.0/po-locations/Makefile.in.in
---- libgweather-3.4.0.orig/po-locations/Makefile.in.in	1970-01-01 00:00:00.000000000 +0000
-+++ libgweather-3.4.0/po-locations/Makefile.in.in	2012-03-08 21:00:28.359065326 +0000
+Index: libgweather-3.5.1/po-locations/Makefile.in.in
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ libgweather-3.5.1/po-locations/Makefile.in.in	2012-07-05 10:27:51.461384292 +1200
 @@ -0,0 +1,217 @@
 +# Makefile for program source directory in GNU NLS utilities package.
 +# Copyright (C) 1995, 1996, 1997 by Ulrich Drepper <drepper@gnu.ai.mit.edu>
@@ -522,9 +540,10 @@ diff -Nur libgweather-3.4.0.orig/po-locations/Makefile.in.in libgweather-3.4.0/p
 +# Tell versions [3.59,3.63) of GNU make not to export all variables.
 +# Otherwise a system limit (for SysV at least) may be exceeded.
 +.NOEXPORT:
-diff -Nur libgweather-3.4.0.orig/po-locations/POTFILES.in libgweather-3.4.0/po-locations/POTFILES.in
---- libgweather-3.4.0.orig/po-locations/POTFILES.in	1970-01-01 00:00:00.000000000 +0000
-+++ libgweather-3.4.0/po-locations/POTFILES.in	2012-03-08 21:00:28.359065326 +0000
+Index: libgweather-3.5.1/po-locations/POTFILES.in
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ libgweather-3.5.1/po-locations/POTFILES.in	2012-07-05 10:27:51.461384292 +1200
 @@ -0,0 +1,4 @@
 +# This list should contain *only* data/Locations.xml.in.
 +# Everything else should be in POTFILES.skip.
