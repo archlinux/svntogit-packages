@@ -13,8 +13,7 @@ url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
 arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
-         'sqlite' 'jack' 'libmms' 'wavpack' 'libmpcdec' 'avahi' 'libid3tag'
-         'libpulse')
+         'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl')
 makedepends=('doxygen')
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
         'tmpfiles.d'
@@ -32,8 +31,9 @@ build() {
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
-		--enable-lastfm \
 		--enable-jack \
+		--enable-lastfm \
+		--enable-soundcloud \
 		--enable-pulse \
 		--disable-sidplay \
 		--with-systemdsystemunitdir=/usr/lib/systemd/system
