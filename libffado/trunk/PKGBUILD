@@ -4,62 +4,49 @@
 # Contributor: Jon Kristian Nilsen <jokr.nilsen@gmail.com>
 
 pkgname=libffado
-pkgver=2.0.1
-pkgrel=7
+pkgver=2.1.0
+pkgrel=1
 pkgdesc="Driver for FireWire audio devices"
 arch=('i686' 'x86_64')
 url="http://www.ffado.org/"
 license=('GPL')
-depends=('libiec61883' 'libavc1394' 'libsigc++'
-         'libxml++' 'alsa-lib' 'dbus')
-makedepends=('scons' 'python2-pyqt')
+depends=('libiec61883' 'libavc1394' 'dbus-c++'
+         'libxml++' 'alsa-lib' 'libsigc++' 'libconfig')
+makedepends=('scons' 'subversion' 'python2-pyqt')
 optdepends=('python2: ffado-diag'
             'python2-pyqt: mixer applet')
 provides=('ffado')
-source=("http://www.ffado.org/files/$pkgname-$pkgver.tar.gz"
-        "libffado-gcc47.patch" "fix-segfault-on-close.patch" '60-ffado.rules')
-md5sums=('786f31facd417e6207e429f50af0e15e'
-         '287bb3f506e31626c4b8f91f0e1d9407'
-         'ac9763cb2dc2f3eb4e1894e30645c6f1'
-         'f03a3e950801c4405b8934084651bca8')
+source=("http://www.ffado.org/files/$pkgname-$pkgver.tgz"
+        'python2-qt.patch')
+md5sums=('26bce2be0b9c1fa4e614f2f494edf388'
+         '10aa837f5521da213caa93e1ddc58c0e')
+
+_scons-conf() {
+  scons DEBUG=False \
+        PREFIX=/usr \
+        MANDIR=/usr/share/man \
+        UDEVDIR=/usr/lib/udev/rules.d \
+        COMPILE_FLAGS="$CFLAGS" $@
+}
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
 
-  patch -p1 -i "$srcdir"/libffado-gcc47.patch
-  patch -p3 -i "$srcdir"/fix-segfault-on-close.patch
-
-  # hack to use CFLAGS without optimising
-  sed -i 's/-O2//g' SConstruct
-
-  if [ "$CARCH" = "x86_64" ]; then
-    sed -i "s/-m64/-m64 $CFLAGS/g" SConstruct
-  else
-    sed -i "s/-m32/-m32 $CFLAGS/g" SConstruct
-  fi
-
   # python2 fix
-  sed -i 's:python $SOURCE:python2 $SOURCE:' SConstruct
-  sed -i 's:python support/tools:python2 support/tools:' \
-    support/tools/SConscript
+  patch -Np1 -i "$srcdir/python2-qt.patch"
 
-  scons PREFIX=/usr
+  # build!
+  if [ "$CARCH" = 'x86_64' ]; then
+    _scons-conf ENABLE_OPTIMIZATIONS=True
+  else
+    _scons-conf
+  fi
 }
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
 
   scons DESTDIR="$pkgdir" WILL_DEAL_WITH_XDG_MYSELF="True" install
-
-  # add audio device rules
-  # see https://bugs.archlinux.org/task/26342
-  install -Dm644 "$srcdir/60-ffado.rules" \
-    "$pkgdir/usr/lib/udev/rules.d/60-ffado.rules"
-
-  # python2 fix
-  for i in $(grep '^#!.*bin.*python' -R "$pkgdir" | sed 's/:.*//'); do
-    sed -i 's:^#!.*bin.*python:#!/usr/bin/python2:' "$i"
-  done
 
   # desktop files & icons
   install -Dm644 support/xdg/ffado.org-ffadomixer.desktop \
