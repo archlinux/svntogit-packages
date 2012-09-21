@@ -3,27 +3,29 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=189
-pkgrel=4
+pkgver=191
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt' 'libxslt' 'linux-api-headers'
-             'pam' 'xz')
+             'pam' 'quota-tools' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
+        '0001-journal-bring-mmap-cache-prototype-in-sync.patch'
         'use-split-usr-path.patch')
-md5sums=('ac2eb313f5dce79622f60aac56bca66d'
+md5sums=('a5e4bfaf900a9e2480827feaf58556cb'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         '482dba45a783f06c2239f1355f4ce72f')
+         'ab42d779d640c6f986f48d326b7f0555'
+         'fd5b5f04ab0a847373d357555129d4c0')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -33,6 +35,10 @@ build() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  # i686 build fail
+  # upstream commit: e2c8b07dcb50c2adf64cdfb22e4a496fc76576fb
+  patch -Np1 <"$srcdir/0001-journal-bring-mmap-cache-prototype-in-sync.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -60,7 +66,8 @@ package_systemd() {
               'python2-cairo: systemd-analyze'
               'python2-dbus: systemd-analyze'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
-              'cryptsetup: required for encrypted block devices')
+              'cryptsetup: required for encrypted block devices'
+              'quota-tools: kernel-level quota management')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
           etc/dbus-1/system.d/org.freedesktop.hostname1.conf
           etc/dbus-1/system.d/org.freedesktop.login1.conf
