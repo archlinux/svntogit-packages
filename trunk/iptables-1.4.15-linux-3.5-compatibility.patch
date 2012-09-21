@@ -1,0 +1,106 @@
+From a624e0a1b2d075253b599ababd4ea1351ef42b2a Mon Sep 17 00:00:00 2001
+From: Pablo Neira Ayuso <pablo@netfilter.org>
+Date: Fri, 3 Aug 2012 10:41:40 +0200
+Subject: [PATCH] include: add missing linux/netfilter_ipv4/ip_queue.h
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf8
+Content-Transfer-Encoding: 8bit
+
+This patch fixes compilation of libipq with headers from Linux
+kernel 3.5:
+
+ In file included from libipq.c:34:0:
+ ../include/libipq/libipq.h:33:43: fatal error: linux/netfilter_ipv4/ip_queue.h: No such file or directory
+
+ip_queue is gone since Linux kernel 3.5. However, you can still use
+new iptables versions with old Linux kernels. We have to keep libipq
+in this tree for a while (1.5-2 years should be OK).
+
+Reported-by: Arkadiusz MiÅkiewicz <arekm@maven.pl>
+Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
+---
+ include/linux/netfilter_ipv4/ip_queue.h |   72 +++++++++++++++++++++++++++++++
+ 1 files changed, 72 insertions(+), 0 deletions(-)
+ create mode 100644 include/linux/netfilter_ipv4/ip_queue.h
+
+diff --git a/include/linux/netfilter_ipv4/ip_queue.h b/include/linux/netfilter_ipv4/ip_queue.h
+new file mode 100644
+index 0000000..a03507f
+--- /dev/null
++++ b/include/linux/netfilter_ipv4/ip_queue.h
+@@ -0,0 +1,72 @@
++/*
++ * This is a module which is used for queueing IPv4 packets and
++ * communicating with userspace via netlink.
++ *
++ * (C) 2000 James Morris, this code is GPL.
++ */
++#ifndef _IP_QUEUE_H
++#define _IP_QUEUE_H
++
++#ifdef __KERNEL__
++#ifdef DEBUG_IPQ
++#define QDEBUG(x...) printk(KERN_DEBUG ## x)
++#else
++#define QDEBUG(x...)
++#endif  /* DEBUG_IPQ */
++#else
++#include <net/if.h>
++#endif	/* ! __KERNEL__ */
++
++/* Messages sent from kernel */
++typedef struct ipq_packet_msg {
++	unsigned long packet_id;	/* ID of queued packet */
++	unsigned long mark;		/* Netfilter mark value */
++	long timestamp_sec;		/* Packet arrival time (seconds) */
++	long timestamp_usec;		/* Packet arrvial time (+useconds) */
++	unsigned int hook;		/* Netfilter hook we rode in on */
++	char indev_name[IFNAMSIZ];	/* Name of incoming interface */
++	char outdev_name[IFNAMSIZ];	/* Name of outgoing interface */
++	__be16 hw_protocol;		/* Hardware protocol (network order) */
++	unsigned short hw_type;		/* Hardware type */
++	unsigned char hw_addrlen;	/* Hardware address length */
++	unsigned char hw_addr[8];	/* Hardware address */
++	size_t data_len;		/* Length of packet data */
++	unsigned char payload[0];	/* Optional packet data */
++} ipq_packet_msg_t;
++
++/* Messages sent from userspace */
++typedef struct ipq_mode_msg {
++	unsigned char value;		/* Requested mode */
++	size_t range;			/* Optional range of packet requested */
++} ipq_mode_msg_t;
++
++typedef struct ipq_verdict_msg {
++	unsigned int value;		/* Verdict to hand to netfilter */
++	unsigned long id;		/* Packet ID for this verdict */
++	size_t data_len;		/* Length of replacement data */
++	unsigned char payload[0];	/* Optional replacement packet */
++} ipq_verdict_msg_t;
++
++typedef struct ipq_peer_msg {
++	union {
++		ipq_verdict_msg_t verdict;
++		ipq_mode_msg_t mode;
++	} msg;
++} ipq_peer_msg_t;
++
++/* Packet delivery modes */
++enum {
++	IPQ_COPY_NONE,		/* Initial mode, packets are dropped */
++	IPQ_COPY_META,		/* Copy metadata */
++	IPQ_COPY_PACKET		/* Copy metadata + packet (range) */
++};
++#define IPQ_COPY_MAX IPQ_COPY_PACKET
++
++/* Types of messages */
++#define IPQM_BASE	0x10	/* standard netlink messages below this */
++#define IPQM_MODE	(IPQM_BASE + 1)		/* Mode request from peer */
++#define IPQM_VERDICT	(IPQM_BASE + 2)		/* Verdict from peer */ 
++#define IPQM_PACKET	(IPQM_BASE + 3)		/* Packet from kernel */
++#define IPQM_MAX	(IPQM_BASE + 4)
++
++#endif /*_IP_QUEUE_H*/
+-- 
+1.7.2.5
+
