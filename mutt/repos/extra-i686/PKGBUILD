@@ -4,7 +4,7 @@
 
 pkgname=mutt
 pkgver=1.5.21
-pkgrel=6
+pkgrel=7
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 license=('GPL')
@@ -12,13 +12,16 @@ backup=('etc/Muttrc')
 arch=('i686' 'x86_64')
 optdepends=('smtp-forwarder: to send mail')
 depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb5')
-source=("ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz")
-sha1sums=('a8475f2618ce5d5d33bff85c0affdf21ab1d76b9')
+source=("ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz"
+        '1a4c43138685.patch')
+sha1sums=('a8475f2618ce5d5d33bff85c0affdf21ab1d76b9'
+          '32dbcafe05e4a919fd00c6a1064c6ecd205e6eb1')
 
 install=install
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -i ../1a4c43138685.patch # FS#31536
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
