@@ -3,7 +3,7 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=191
+pkgver=192
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
@@ -11,20 +11,19 @@ license=('GPL2' 'LGPL2.1' 'MIT')
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt' 'libxslt' 'linux-api-headers'
              'pam' 'quota-tools' 'xz')
+checkdepends=('python')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
-        '0001-journal-bring-mmap-cache-prototype-in-sync.patch'
         'use-split-usr-path.patch')
-md5sums=('a5e4bfaf900a9e2480827feaf58556cb'
+md5sums=('e8692055923e87f7f9cb634d44314edb'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         'ab42d779d640c6f986f48d326b7f0555'
          'fd5b5f04ab0a847373d357555129d4c0')
 
 build() {
@@ -35,10 +34,6 @@ build() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
-
-  # i686 build fail
-  # upstream commit: e2c8b07dcb50c2adf64cdfb22e4a496fc76576fb
-  patch -Np1 <"$srcdir/0001-journal-bring-mmap-cache-prototype-in-sync.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -53,6 +48,10 @@ build() {
       --with-pci-ids-path=/usr/share/hwdata/pci.ids
 
   make
+}
+
+check() {
+  make -C "$pkgname-$pkgver" check
 }
 
 package_systemd() {
