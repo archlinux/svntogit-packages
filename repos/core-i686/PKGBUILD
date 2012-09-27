@@ -3,14 +3,15 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=189
-pkgrel=4
+pkgver=192
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt' 'libxslt' 'linux-api-headers'
-             'pam' 'xz')
+             'pam' 'quota-tools' 'xz')
+checkdepends=('python')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -18,12 +19,12 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
         'use-split-usr-path.patch')
-md5sums=('ac2eb313f5dce79622f60aac56bca66d'
+md5sums=('e8692055923e87f7f9cb634d44314edb'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
-         '482dba45a783f06c2239f1355f4ce72f')
+         'fd5b5f04ab0a847373d357555129d4c0')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -49,6 +50,10 @@ build() {
   make
 }
 
+check() {
+  make -C "$pkgname-$pkgver" check
+}
+
 package_systemd() {
   pkgdesc="system and service manager"
   depends=('acl' 'bash' 'dbus-core' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
@@ -60,7 +65,8 @@ package_systemd() {
               'python2-cairo: systemd-analyze'
               'python2-dbus: systemd-analyze'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
-              'cryptsetup: required for encrypted block devices')
+              'cryptsetup: required for encrypted block devices'
+              'quota-tools: kernel-level quota management')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
           etc/dbus-1/system.d/org.freedesktop.hostname1.conf
           etc/dbus-1/system.d/org.freedesktop.login1.conf
@@ -130,8 +136,13 @@ package_systemd() {
 
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
-  conflicts=('sysvinit')
+  conflicts=('sysvinit' 'initscripts')
   depends=('sysvinit-tools')
+
+  # the initscripts conflict here isn't actually needed, but in order to make
+  # this package remove both sysvinit and initscripts, the initscripts conflict
+  # is needed. There's no case in which you would ever want initscripts installed
+  # without sysvinit, and vice versa, as in both cases, they are unusable.
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
