@@ -1,0 +1,59 @@
+# $Id$
+# Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: galiyosha@gmail.com
+# Contributor: Jon Kristian Nilsen <jokr.nilsen@gmail.com>
+
+pkgname=libffado
+pkgver=2.1.0
+pkgrel=3
+pkgdesc="Driver for FireWire audio devices"
+arch=('i686' 'x86_64')
+url="http://www.ffado.org/"
+license=('GPL')
+depends=('libiec61883' 'libavc1394' 'dbus-c++'
+         'libxml++' 'alsa-lib' 'libsigc++' 'libconfig')
+makedepends=('scons' 'subversion' 'python2-pyqt')
+optdepends=('python2: ffado-diag'
+            'python2-pyqt: mixer applet')
+provides=('ffado')
+source=("http://www.ffado.org/files/$pkgname-$pkgver.tgz"
+        'python2-qt.patch')
+md5sums=('26bce2be0b9c1fa4e614f2f494edf388'
+         '10aa837f5521da213caa93e1ddc58c0e')
+
+_scons-conf() {
+  scons DEBUG=False \
+        PREFIX=/usr \
+        MANDIR=/usr/share/man \
+        UDEVDIR=/usr/lib/udev/rules.d \
+        COMPILE_FLAGS="$CFLAGS" $@
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # python2 fix
+  patch -Np1 -i "$srcdir/python2-qt.patch"
+
+  # build!
+  if [ "$CARCH" = 'x86_64' ]; then
+    _scons-conf ENABLE_OPTIMIZATIONS=True
+  else
+    _scons-conf
+  fi
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  scons DESTDIR="$pkgdir" WILL_DEAL_WITH_XDG_MYSELF="True" install
+
+  # desktop files & icons
+  install -Dm644 support/xdg/ffado.org-ffadomixer.desktop \
+    "$pkgdir/usr/share/applications/ffadomixer.desktop"
+
+  install -Dm644 support/xdg/hi64-apps-ffado.png \
+    "$pkgdir/usr/share/pixmaps/$pkgname.png"
+}
+
+# vim:set ts=2 sw=2 et:
