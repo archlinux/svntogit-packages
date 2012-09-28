@@ -1,0 +1,124 @@
+From 025d3ad4d5adeff00e97b6fafdf32d6d199d0baa Mon Sep 17 00:00:00 2001
+From: Jonathan Woithe <jwoithe@just42.net>
+Date: Tue, 13 Mar 2012 15:43:03 +1030
+Subject: [PATCH] Support setbufsize in firewire driver
+
+---
+ drivers/firewire/ffado_driver.c |   69 ++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 60 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/firewire/ffado_driver.c b/drivers/firewire/ffado_driver.c
+index a8ad1ea..6035af3 100644
+--- a/drivers/firewire/ffado_driver.c
++++ b/drivers/firewire/ffado_driver.c
+@@ -7,6 +7,7 @@
+  *   http://www.jackaudio.org
+  *
+  *   Copyright (C) 2005-2007 Pieter Palmers
++ *   Copyright (C) 2012 Jonathan Woithe
+  *
+  *   This program is free software; you can redistribute it and/or modify
+  *   it under the terms of the GNU General Public License as published by
+@@ -50,7 +51,10 @@
+ 
+ static int ffado_driver_stop (ffado_driver_t *driver);
+ 
++// Basic functionality requires API version 8.  If version 9 or later
++// is present the buffers can be resized at runtime.
+ #define FIREWIRE_REQUIRED_FFADO_API_VERSION 8
++#define FIREWIRE_REQUIRED_FFADO_API_VERSION_FOR_SETBUFSIZE 9
+ 
+ // enable verbose messages
+ static int g_verbose=0;
+@@ -675,24 +679,71 @@
+ static int
+ ffado_driver_bufsize (ffado_driver_t* driver, jack_nframes_t nframes)
+ {
+-	printError("Buffer size change requested but not supported!!!");
++	signed int chn;
++
++	// The speed of this function isn't critical; we can afford the
++	// time to check the FFADO API version.
++	if (ffado_get_api_version() < FIREWIRE_REQUIRED_FFADO_API_VERSION_FOR_SETBUFSIZE ||
++            ffado_streaming_set_period_size == NULL) {
++	        printError("unsupported on current version of FFADO; please upgrade FFADO");
++	        return -1;
++	}
+ 
+-	/*
+-	 driver->period_size = nframes;  
++	driver->period_size = nframes;
+ 	driver->period_usecs =
+ 		(jack_time_t) floor ((((float) nframes) / driver->sample_rate)
+ 				     * 1000000.0f);
+-	*/
+-	
++
++	// Reallocate the null and scratch buffers.
++	driver->nullbuffer = calloc(driver->period_size, sizeof(ffado_sample_t));
++	if(driver->nullbuffer == NULL) {
++		printError("could not allocate memory for null buffer");
++		return -1;
++	}
++	driver->scratchbuffer = calloc(driver->period_size, sizeof(ffado_sample_t));
++	if(driver->scratchbuffer == NULL) {
++		printError("could not allocate memory for scratch buffer");
++		return -1;
++	}
++
++	// MIDI buffers need reallocating
++	for (chn = 0; chn < driver->capture_nchannels; chn++) {
++		if(driver->capture_channels[chn].stream_type == ffado_stream_type_midi) {
++			// setup the midi buffer
++			if (driver->capture_channels[chn].midi_buffer != NULL)
++			        free(driver->capture_channels[chn].midi_buffer);
++			driver->capture_channels[chn].midi_buffer = calloc(driver->period_size, sizeof(uint32_t));
++		}
++	}
++	for (chn = 0; chn < driver->playback_nchannels; chn++) {
++		if(driver->playback_channels[chn].stream_type == ffado_stream_type_midi) {
++		        if (driver->playback_channels[chn].midi_buffer != NULL)
++		                free(driver->playback_channels[chn].midi_buffer);
++			driver->playback_channels[chn].midi_buffer = calloc(driver->period_size, sizeof(uint32_t));
++		}
++	}
++
++	// Notify FFADO of the period size change
++	if (ffado_streaming_set_period_size(driver->dev, nframes) != 0) {
++	        printError("could not alter FFADO device period size");
++	        return -1;
++	}
++
++	// This is needed to give the shadow variables a chance to
++	// properly update to the changes.
++	sleep(1);
++
+ 	/* tell the engine to change its buffer size */
+-#if 0
+ 	if (driver->engine->set_buffer_size (driver->engine, nframes)) {
+ 		jack_error ("FFADO: cannot set engine buffer size to %d (check MIDI)", nframes);
+ 		return -1;
+ 	}
+-#endif
+ 
+-	return -1; // unsupported
++	// Other drivers (eg: ALSA) don't seem to adjust latencies via
++	// jack_port_set_latency_range() from the bufsize() callback, so we
++	// won't either.  Is this right?
++
++        return 0;
+ }
+ 
+ typedef void (*JackDriverFinishFunction) (jack_driver_t *);
+@@ -704,7 +755,7 @@
+ {
+ 	ffado_driver_t *driver;
+ 
+-	if(ffado_get_api_version() != FIREWIRE_REQUIRED_FFADO_API_VERSION) {
++	if(ffado_get_api_version() < FIREWIRE_REQUIRED_FFADO_API_VERSION) {
+ 		printError("Incompatible libffado version! (%s)", ffado_get_version());
+ 		return NULL;
+ 	}
+-- 
+1.7.10
+
