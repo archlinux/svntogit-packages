@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Sebastien Binet <binet@farnsworth>
+pkgbase=python-distribute
+pkgname=('python-distribute' 'python2-distribute')
+pkgver=0.6.28
+pkgrel=2
+pkgdesc="Easily build and distribute Python packages"
+arch=('any')
+license=('PSF')
+url="http://pypi.python.org/pypi/distribute"
+makedepends=('python' 'python2')
+source=(http://pypi.python.org/packages/source/d/distribute/distribute-${pkgver}.tar.gz
+        distribute-python2_and_3.patch)
+sha1sums=('709bd97d46050d69865d4b588c7707768dfe6711'
+          '9c19c12edac507b0f76696d282b9831c4b653a7e')
+build() {
+   cd "${srcdir}"
+
+   pushd distribute-${pkgver}
+   patch -Np1 -i ../distribute-python2_and_3.patch
+   popd
+
+   cp -a distribute-${pkgver}{,-python2}
+
+   # Build python 3 module
+   cd distribute-${pkgver}
+   python setup.py build
+#   python setup.py test
+
+   # Build python 2 module
+   cd ../distribute-${pkgver}-python2
+
+   sed -i -e "s|^#\!.*/usr/bin/python|#!/usr/bin/python2|" setuptools/tests/test_resources.py
+
+   python2 setup.py build
+#   python2 setup.py test
+}
+
+package_python-distribute() {
+   depends=('python>=3.2')
+
+   cd "${srcdir}/distribute-${pkgver}"
+   python setup.py install --prefix=/usr --root="${pkgdir}" --optimize=1 --skip-build
+}
+
+package_python2-distribute() {
+   depends=('python2>=2.7')
+   provides=('setuptools')
+   conflicts=('setuptools')
+
+   cd "${srcdir}/distribute-${pkgver}-python2"
+   python2 setup.py install --prefix=/usr --root="${pkgdir}" --optimize=1 --skip-build
+}
