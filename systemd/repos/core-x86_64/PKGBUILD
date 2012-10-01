@@ -3,7 +3,7 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=192
+pkgver=193
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
@@ -18,12 +18,14 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-Reinstate-TIMEOUT-handling.patch'
+        '0001-tmpfiles-restore-previous-behavior-for-F-f.patch'
         'use-split-usr-path.patch')
-md5sums=('e8692055923e87f7f9cb634d44314edb'
+md5sums=('732a9de2b1d2a15cab639c987ff9e90e'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          '59e91c4d7a69b7bf12c86a9982e37ced'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
+         '1f435290db227c3a4f4396f86819227e'
          'fd5b5f04ab0a847373d357555129d4c0')
 
 build() {
@@ -34,6 +36,9 @@ build() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  # upstream commit 1845fdd967d3a4c06f895413505de3c2429955b0
+  patch -Np1 <"$srcdir/0001-tmpfiles-restore-previous-behavior-for-F-f.patch"
 
   ./configure \
       --libexecdir=/usr/lib \
