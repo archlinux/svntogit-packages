@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=193
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -21,7 +21,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'use-split-usr-path.patch')
 md5sums=('732a9de2b1d2a15cab639c987ff9e90e'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
-         '59e91c4d7a69b7bf12c86a9982e37ced'
+         'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
          '5543be25f205f853a21fa5ee68e03f0d'
          '1f435290db227c3a4f4396f86819227e'
@@ -140,13 +140,8 @@ package_systemd() {
 
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
-  conflicts=('sysvinit' 'initscripts')
+  conflicts=('sysvinit')
   depends=('sysvinit-tools')
-
-  # the initscripts conflict here isn't actually needed, but in order to make
-  # this package remove both sysvinit and initscripts, the initscripts conflict
-  # is needed. There's no case in which you would ever want initscripts installed
-  # without sysvinit, and vice versa, as in both cases, they are unusable.
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
