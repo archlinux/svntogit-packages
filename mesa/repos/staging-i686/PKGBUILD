@@ -6,7 +6,7 @@ pkgbase=mesa
 pkgname=('libglapi' 'libgl' 'mesa' 'osmesa' 'libgbm' 'libgles' 'libegl' 'khrplatform-devel' 'ati-dri' 'intel-dri' 'svga-dri' 'nouveau-dri')
 
 _git=true
-_gitdate=20121002
+_gitdate=20121005
 #_git=false
 
 if [ "${_git}" = "true" ]; then
@@ -22,26 +22,25 @@ url="http://mesa3d.sourceforge.net"
 license=('custom')
 options=('!libtool')
 source=(LICENSE
-        mesa-radeon-parallel-make.diff)
+        pthread_fix.diff)
 if [ "${_git}" = "true" ]; then
 	# mesa git shot from 9.0 branch - see for state: http://cgit.freedesktop.org/mesa/mesa/log/?h=9.0
 	#source=(${source[@]} 'ftp://ftp.archlinux.org/other/mesa/mesa-41d14eaf193c6b1eb87fe1998808a887f1c6c698.tar.gz')
-	source=(${source[@]} "MesaLib-git${_gitdate}.zip"::"http://cgit.freedesktop.org/mesa/mesa/snapshot/mesa-604cd6b966d060334fdaa11ae8444797d54d3142.tar.gz")
+	source=(${source[@]} "MesaLib-git${_gitdate}.zip"::"http://cgit.freedesktop.org/mesa/mesa/snapshot/mesa-542f6feda9bf18267dbd337943a5e871400d425a.tar.gz")
   else
 	source=(${source[@]} "ftp://ftp.freedesktop.org/pub/mesa/${pkgver}/MesaLib-${pkgver}.tar.bz2"
 	#source=(${source[@]} "ftp://ftp.freedesktop.org/pub/mesa/8.0/MesaLib-8.0-rc2.tar.bz2"
 )
 fi
 md5sums=('5c65a0fe315dd347e09b1f2826a1df5a'
-         '5dca6edbe6b636c59c2e64f77271f12a'
-         '71af5320af6873920384d245f103b892')
+         '03956ac54a44467678120f485b626633'
+         '52760839a596df5058fcbb63a2bb10da')
 
 build() {
     cd ${srcdir}/?esa-*
 
-    # fix parallel build - http://cgit.freedesktop.org/mesa/mesa/commit/src/gallium/drivers/radeon/Makefile?id=cebbdd4ac23725963207bf6f8fc7101150e6065f
-    # and the next commit - http://cgit.freedesktop.org/mesa/mesa/commit/?id=2baaa5c7eb21517f0197bfd91154e9b4886fbb1b
-    patch -Np1 -i ${srcdir}/mesa-radeon-parallel-make.diff
+    # build fix from master http://cgit.freedesktop.org/mesa/mesa/commit/?id=dd4fde8f674f5e3efa19e929f97de4ecfd82391b
+    patch -Np1 -i ${srcdir}/pthread_fix.diff
 
     COMMONOPTS="--prefix=/usr \
     --sysconfdir=/etc \
@@ -119,7 +118,8 @@ package_libgl() {
 }
 
 package_mesa() {
-  depends=('libgl' 'libx11>=1.5.0' 'libxt>=1.1.3' 'gcc-libs>=4.7.1-6') # check pkg/mesa/usr/lib/pkgconfig/gl.pc
+  # check also gl.pc
+  depends=('libgl' 'libx11>=1.5.0' 'libxext>=1.3.1' 'libxdamage' 'libxfixes' 'libxcb' 'libxxf86vm')
   optdepends=('opengl-man-pages: for the OpenGL API man pages')
   pkgdesc="Mesa 3-D graphics libraries and include files"
 
@@ -136,11 +136,17 @@ package_mesa() {
 }
 
 package_osmesa() {
-  depends=('gcc-libs')
+  depends=('libglapi' 'gcc-libs')
   optdepends=('opengl-man-pages: for the OpenGL API man pages')
   pkgdesc="Mesa 3D off-screen rendering library"
-  
+
+  # fix linking because of splitted package
+  make -C ${srcdir}/?esa-*/src/mapi/shared-glapi DESTDIR="${pkgdir}" install
+
   make -C ${srcdir}/?esa-*/src/mesa/drivers/osmesa DESTDIR="${pkgdir}" install
+
+  # fix linking because of splitted package - cleanup
+  make -C ${srcdir}/?esa-*/src/mapi/shared-glapi DESTDIR="${pkgdir}" uninstall
 
   install -m755 -d "${pkgdir}/usr/share/licenses/osmesa"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/osmesa/"
@@ -180,7 +186,8 @@ package_libgles() {
 }
 
 package_libegl() {
-  depends=('libxext' 'libxfixes' 'libgbm' 'khrplatform-devel')
+  # check also egl.pc
+  depends=('libx11' 'libxext' 'libxdamage' 'libxfixes' 'libxxf86vm' 'libxcb' 'libgbm' 'khrplatform-devel')
   pkgdesc="Mesa EGL libraries and headers"
 
   make -C ${srcdir}/?esa-*/src/gallium/targets/egl-static DESTDIR="${pkgdir}" install
