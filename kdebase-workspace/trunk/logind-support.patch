@@ -1,0 +1,66 @@
+From: Lukas Tinkl <lukas@kde.org>
+Date: Fri, 05 Oct 2012 09:57:13 +0000
+Subject: store the filedescriptor in a member variable
+X-Git-Url: http://quickgit.kde.org/?p=kde-workspace.git&amp;a=commitdiff&amp;h=a18b78d7da8cb8d627ad2e85f666bfcf1a2721e1
+---
+store the filedescriptor in a member variable
+
+make systemd-inhibit work as intended, PowerDevil now handles
+power/sleep/lid buttons as intended
+
+BUG: 307412
+---
+
+
+--- a/powerdevil/daemon/powerdevilpolicyagent.cpp
++++ b/powerdevil/daemon/powerdevilpolicyagent.cpp
+@@ -29,7 +29,6 @@
+ #include <QtDBus/QDBusPendingReply>
+ #include <QtDBus/QDBusConnectionInterface>
+ #include <QtDBus/QDBusServiceWatcher>
+-#include <QtDBus/QDBusUnixFileDescriptor>
+ 
+ #include <KGlobal>
+ #include <KDebug>
+@@ -225,6 +224,9 @@
+         onActiveSessionChanged(m_activeSessionPath);
+ 
+         // inhibit systemd handling of power/sleep/lid buttons
++        // http://www.freedesktop.org/wiki/Software/systemd/inhibit
++        kDebug() << "fd passing available:" << bool(managerIface.connection().connectionCapabilities() & QDBusConnection::UnixFileDescriptorPassing);
++
+         QVariantList args;
+         args << "handle-power-key:handle-suspend-key:handle-hibernate-key:handle-lid-switch"; // what
+         args << "PowerDevil"; // who
+@@ -232,8 +234,9 @@
+         args << "block"; // mode
+         QDBusPendingReply<QDBusUnixFileDescriptor> desc = managerIface.asyncCallWithArgumentList("Inhibit", args);
+         desc.waitForFinished();
+-        if (desc.isValid() && desc.value().isValid()) {
+-            kDebug() << "systemd powersave events handling inhibited";
++        if (desc.isValid()) {
++            m_systemdInhibitFd = desc.value();
++            kDebug() << "systemd powersave events handling inhibited, descriptor:" << m_systemdInhibitFd.fileDescriptor();
+         }
+         else
+             kWarning() << "failed to inhibit systemd powersave handling";
+
+--- a/powerdevil/daemon/powerdevilpolicyagent.h
++++ b/powerdevil/daemon/powerdevilpolicyagent.h
+@@ -27,6 +27,7 @@
+ #include <QtCore/QWeakPointer>
+ 
+ #include <QtDBus/QDBusContext>
++#include <QtDBus/QDBusUnixFileDescriptor>
+ 
+ #include <kdemacros.h>
+ 
+@@ -108,6 +109,7 @@
+     QString m_activeSessionPath;
+     QWeakPointer< QDBusInterface > m_sdSessionInterface;
+     QWeakPointer< QDBusInterface > m_sdSeatInterface;
++    QDBusUnixFileDescriptor m_systemdInhibitFd;
+ 
+     // ConsoleKit support
+     bool m_ckAvailable;
+
