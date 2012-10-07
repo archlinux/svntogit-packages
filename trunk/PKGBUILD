@@ -5,10 +5,10 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.7.1
-pkgrel=6
-_snapshot=4.7-20120721
-_libstdcppmanver=20120725		# Note: check source directory name when updating this
+pkgver=4.7.2
+pkgrel=1
+#_snapshot=4.7-20120721
+_libstdcppmanver=20120924		# Note: check source directory name when updating this
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -16,14 +16,14 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.22' 'libmpc' 'cloog' 'ppl' 'gcc-ada')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-	ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
 	ftp://gcc.gnu.org/pub/gcc/libstdc++/doxygen/libstdc++-api.${_libstdcppmanver}.man.tar.bz2
 	gcc_pure64.patch
 	gcc-4.7.1-libada-pic.patch
 	gcc-4.7.1-libgo-write.patch)
-md5sums=('a1a53fda426bc6809cede8e85bbaf2a3'
-         '79c4381f983b71868c02da3379e1e8a2'
+md5sums=('cc308a0891e778cfda7a151ab8a6e762'
+         '7f3d52515daafffb57c287f427381106'
          'ced48436c1b3c981d721a829f1094de1'
          '2acbc9d35cc9d72329dc71d6b1f162ef'
          'df82dd175ac566c8a6d46b11ac21f14c')
