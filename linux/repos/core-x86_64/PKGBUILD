@@ -5,7 +5,7 @@
 pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.5
-pkgver=3.5.5
+pkgver=3.5.6
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -23,7 +23,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'watchdog-3.5.x.patch'
         'i915-i2c-crash-3.5.x.patch')
 md5sums=('24153eaaa81dedc9481ada8cd9c3b83d'
-         '0d658ffcd548ab029c9a8d6c4d07e8e2'
+         'e9502f047c251db3b0c911e53344bad5'
          'd8a5518681a5f3272b10eb03fbc1a768'
          'e58f768d8467e1bbf32fd6c059b8b048'
          'eb14dcfd80c00852ef81ded6e826826a'
