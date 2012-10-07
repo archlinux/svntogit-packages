@@ -3,14 +3,14 @@
 
 pkgname=xscreensaver
 pkgver=5.19
-pkgrel=1
+pkgrel=2
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
 url="http://www.jwz.org/xscreensaver/"
 license=('BSD')
-depends=('libxxf86vm' 'libglade' 'mesa' 'xorg-appres' 'libxmu' \
+depends=('libxxf86vm' 'libglade' 'glu' 'xorg-appres' 'libxmu' \
          'perl-libwww' 'perl-http-message')
-makedepends=('bc' 'libxpm' 'gdm')
+makedepends=('bc' 'libxpm' 'gdm' 'mesa')
 optdepends=('gdm: for login manager support')
 backup=('etc/pam.d/xscreensaver')
 source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz \
