@@ -2,7 +2,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gnome-settings-daemon
-pkgver=3.6.0
+pkgver=3.6.1
 pkgrel=1
 pkgdesc="The GNOME Settings daemon"
 arch=('i686' 'x86_64')
@@ -14,11 +14,18 @@ options=('!emptydirs' '!libtool')
 install=gnome-settings-daemon.install
 url="http://www.gnome.org"
 groups=('gnome')
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz)
-sha256sums=('6d516a6b9779545568b480b36d69a965c20f3b7b53edbd306527f6bc2a6478f3')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz
+        0001-power-and-media-keys-Use-logind-for-suspending-and-r.patch)
+sha256sums=('1fe96e0709d7c618d90cc1bfcddc46eede3c2cdb305f5e7f4cb388d43dd5526a'
+            '3b72ba86321446e92a6fe32167ebd5edbdd66ab1f7d1eda8a7a3edf5c6d5e1eb')
 
 build() {
   cd $pkgname-$pkgver
+
+  # logind key handling FS#31801, patches from Fedora
+  patch -Np1 -i ../0001-power-and-media-keys-Use-logind-for-suspending-and-r.patch
+  aclocal
+  automake
 
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
       --libexecdir=/usr/lib/gnome-settings-daemon --disable-static \
@@ -33,4 +40,9 @@ build() {
 package() {
   cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
+
+  # Plugins that aren't installed still have schema references
+  # and cause gsettings errors - remove the references we're not using
+  sed -i '/org\.gnome\.settings-daemon\.plugins\.updates/d' \
+    "$pkgdir/usr/share/glib-2.0/schemas/org.gnome.settings-daemon.plugins.gschema.xml"
 }
