@@ -4,21 +4,50 @@
 pkgbase=nx
 pkgname=('libxcomp' 'nxproxy' 'nx-x11' 'nx-xcompext' 'nxagent' 'nx-headers')
 pkgver=3.5.0.15
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://wiki.x2go.org/"
 license=('GPL')
-options=('!makeflags')
+options=('!makeflags') # '!strip')
 makedepends=('libjpeg-turbo' 'libpng' 'bash' 'perl' # runtime dependencies from subpackages
              'xproto' 'freetype2' 'libxaw' 'libxrender' 'libxp' 'libxpm' 'libxdamage' 'libxrandr' 'libxcomposite' 'libxtst' 'xorg-sessreg' # makedepends
              )
 source=(http://code.x2go.org/releases/source/nx-libs/nx-libs-$pkgver-full.tar.gz
-        nx-x11.ld.so.conf.d)
+        nx-x11.ld.so.conf.d
+        nx-cflags.patch)
 md5sums=('d5b3dba1ecbd2989cd7ce20fee6683a0'
-         'f2ec60c7e2d81bef2f7292d2b33681a6')
+         'f2ec60c7e2d81bef2f7292d2b33681a6'
+         'd0c5b88aac0473e19699cf62d84b9d5f')
 
 build() {
   cd "${srcdir}/nx-libs-$pkgver"
+  
+  # debug flags
+#  export CFLAGS="-march=x86-64 -O1 -g -pipe"
+#  export CXXFLAGS="-march=x86-64 -O1 -g -pipe"
+
+
+  # Gentoo hacks to honor cflags
+  patch -Np0 -i ${srcdir}/nx-cflags.patch
+
+  # Run autoreconf in all neeed folders
+  for i in nxcomp nxcompext nxcompshad nxproxy; do
+     cd ${i}
+     autoreconf -vfi #${i}
+     cd ..
+  done
+  
+  # From xorg-x11-6.9.0-r3.ebuild
+  pushd "${srcdir}/nx-libs-$pkgver/nx-X11"
+
+  HOSTCONF="config/cf/host.def"
+  echo "#define OptimizedCDebugFlags ${CFLAGS} GccAliasingArgs" >> ${HOSTCONF}
+  echo "#define OptimizedCplusplusDebugFlags ${CXXFLAGS} GccAliasingArgs" >> ${HOSTCONF}
+  # Respect LDFLAGS
+  echo "#define ExtraLoadFlags ${LDFLAGS}" >> ${HOSTCONF}
+  echo "#define SharedLibraryLoadFlags -shared ${LDFLAGS}" >> ${HOSTCONF}
+  popd
+    
   make CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --includedir=/usr/include"
   # fake install
   mkdir $srcdir/fakeinstall
