@@ -135,8 +135,9 @@ package_systemd() {
 
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
+  groups=('base')
   conflicts=('sysvinit')
-  depends=('sysvinit-tools')
+  depends=('sysvinit-tools' 'systemd')
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
