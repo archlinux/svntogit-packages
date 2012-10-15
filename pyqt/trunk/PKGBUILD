@@ -6,13 +6,13 @@
 pkgbase=pyqt
 pkgname=('pyqt-common' 'pyqt' 'python2-pyqt')
 pkgver=4.9.5
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
 makedepends=('qt' 'python-sip' 'python-dbus' 'python2-sip' 'phonon'
              'python2-opengl' 'qt-assistant-compat' 'qtwebkit' 'python2-dbus')
-             source=("http://downloads.sourceforge.net/${pkgbase}/PyQt-x11-gpl-${pkgver}.tar.gz")
+source=("http://downloads.sourceforge.net/${pkgbase}/PyQt-x11-gpl-${pkgver}.tar.gz")
 md5sums=('e4cdd6619c63655f7510efb4df8462fb')
 
 build() {
@@ -47,7 +47,6 @@ package_pyqt-common(){
   cd PyQt-x11-gpl-${pkgver}
   make -C pyrcc DESTDIR="${pkgdir}" install
   make -C pylupdate DESTDIR="${pkgdir}" install
-  make -C designer INSTALL_ROOT="${pkgdir}" install
   
   install -Dm644 PyQt4.api "${pkgdir}"/usr/share/qt/qsci/api/python/PyQt4.api
 }
@@ -65,7 +64,6 @@ package_pyqt(){
 
   # Provided by pyqt-common
   rm "${pkgdir}"/usr/bin/{pylupdate4,pyrcc4}
-  rm "${pkgdir}"/usr/lib/qt/plugins/designer/libpythonplugin.so
   rm "${pkgdir}"/usr/share/qt/qsci/api/python/PyQt4.api
 }
 
@@ -85,7 +83,7 @@ package_python2-pyqt(){
   # Fix conflicts with pyqt
   mv "${pkgdir}"/usr/bin/{,python2-}pyuic4
   
-  # Provided by pyqt-common
+  # Provided by pyqt
   rm "${pkgdir}"/usr/bin/{pylupdate4,pyrcc4}
   rm "${pkgdir}"/usr/lib/qt/plugins/designer/libpythonplugin.so
   rm "${pkgdir}"/usr/share/qt/qsci/api/python/PyQt4.api
