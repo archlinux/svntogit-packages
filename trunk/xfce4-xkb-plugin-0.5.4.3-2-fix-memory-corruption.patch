@@ -1,0 +1,59 @@
+From ac73bc9de624d322b318c2eda0ace7f0bee97a64 Mon Sep 17 00:00:00 2001
+From: Igor Slepchin <igor.slepchin@gmail.com>
+Date: Thu, 19 Jul 2012 05:59:40 +0000
+Subject: Fix memory corruption.
+
+g_free(c) in the original code was freeing memory at the pointer
+that was incremented a few times since the allocation.
+
+This is similar to ubuntu bug #899290 and fedora bug 589898.
+---
+diff --git a/panel-plugin/xkb-util.c b/panel-plugin/xkb-util.c
+index d0d0230..324928f 100644
+--- a/panel-plugin/xkb-util.c
++++ b/panel-plugin/xkb-util.c
+@@ -66,11 +66,10 @@ xkb_util_get_layout_string (const gchar *group_name, const gchar *variant)
+ gchar*
+ xkb_util_normalize_group_name (const gchar* group_name)
+ {
+-    gchar *c;
++    const gchar *c;
+     gchar *result;
+     gint cut_length;
+     gint index_of_na = -1;
+-    gint index_tmp = -1;
+ 
+     if (!group_name)
+         return NULL;
+@@ -78,27 +77,19 @@ xkb_util_normalize_group_name (const gchar* group_name)
+     if (strlen (group_name) <= 3)
+         return g_strdup (group_name);
+ 
+-    c = g_strdup (group_name);
+-
+-    while (*c)
++    for (c = group_name; *c; c++)
+     {
+-        index_tmp++;
+-
+         if (!((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z')))
+         {
+-            index_of_na = index_tmp;
++            index_of_na = group_name - c;
+             break;
+         }
+-
+-        c++;
+     }
+ 
+     cut_length = (index_of_na != -1 && index_of_na <= 3) ? index_of_na : 3;
+ 
+     result = g_strndup (group_name, cut_length);
+ 
+-    g_free (c);
+-
+     return result;
+ }
+ 
+--
+cgit v0.9.0.3
