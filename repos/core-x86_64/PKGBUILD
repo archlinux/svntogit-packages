@@ -4,8 +4,8 @@
 
 pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
-_srcname=linux-3.5
-pkgver=3.5.6
+_srcname=linux-3.6
+pkgver=3.6.2
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -18,19 +18,13 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'config' 'config.x86_64'
         # standard config files for mkinitcpio ramdisk
         'linux.preset'
-        'change-default-console-loglevel.patch'
-        'alsa-powersave-3.5.x.patch'
-        'watchdog-3.5.x.patch'
-        'i915-i2c-crash-3.5.x.patch')
-md5sums=('24153eaaa81dedc9481ada8cd9c3b83d'
-         'e9502f047c251db3b0c911e53344bad5'
-         'd8a5518681a5f3272b10eb03fbc1a768'
-         'e58f768d8467e1bbf32fd6c059b8b048'
+        'change-default-console-loglevel.patch')
+md5sums=('1a1760420eac802c541a20ab51a093d1'
+         'ad1020c82a71ee1ef2416a0d12e724df'
+         '443f285744cb96401f9a631f542b9248'
+         '2793e97a9e98c501afd3e18d2e3b9762'
          'eb14dcfd80c00852ef81ded6e826826a'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         'c1d58e712112cf8f95e7831012a1e67a'
-         'ae13ed1e92bba07e9b17cf5c8d89683c'
-         'ff4a203dd52e4dfb5d60948bb667d06d')
+         '9d3c56a4b999c8bfbd4018089a62f662')
 
 _kernelname=${pkgbase#linux}
 
@@ -42,14 +36,6 @@ build() {
 
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
-
-  # fix broken watchdog
-  # https://bugzilla.kernel.org/show_bug.cgi?id=44991
-  patch -Np1 -i "${srcdir}/watchdog-3.5.x.patch"
-
-  # fix i915 i2c crash
-  # https://bugzilla.kernel.org/show_bug.cgi?id=46381
-  patch -Np1 -i "${srcdir}/i915-i2c-crash-3.5.x.patch"
 
   # set DEFAULT_CONSOLE_LOGLEVEL to 4 (same value as the 'quiet' kernel param)
   # remove this when a Kconfig knob is made available by upstream
