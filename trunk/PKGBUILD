@@ -10,7 +10,7 @@ url="http://www.imagemagick.org/"
 license=('custom')
 makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript' \
              'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'liblqr')
-source=(ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
+source=(ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
 sha1sums=('dc61335f931ea637e7bd2e711b520d221bfe464c'
           '23405f80904b1de94ebd7bd6fe2a332471b8c283')
