@@ -5,7 +5,7 @@
 
 pkgname=('python-urwid' 'python2-urwid')
 pkgver=1.0.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Urwid is a curses-based user interface library."
 license=('LGPL')
 arch=('i686' 'x86_64')
