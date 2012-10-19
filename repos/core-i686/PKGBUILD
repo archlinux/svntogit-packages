@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=194
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -61,6 +61,7 @@ package_systemd() {
   replaces=('libsystemd' 'systemd-tools' 'udev')
   conflicts=('libsystemd' 'systemd-tools' 'udev')
   optdepends=('initscripts: legacy support for /etc/rc.conf'
+              'python: systemd library bindings'
               'python2-cairo: systemd-analyze'
               'python2-dbus: systemd-analyze'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
@@ -131,6 +132,9 @@ package_systemd() {
   install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
   mv "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
      "$srcdir"/_sysvcompat/usr/share/man/man8
+
+  # create /var/log/journal. users can control the actual log destination via journald.conf
+  install -dm755 "$pkgdir/var/log/journal"
 }
 
 package_systemd-sysvcompat() {
