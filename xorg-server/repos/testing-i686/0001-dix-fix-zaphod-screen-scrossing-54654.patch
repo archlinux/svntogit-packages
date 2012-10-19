@@ -1,0 +1,42 @@
+From 29d84d5a7ca4cc12cce47de9313adeb8554fb894 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Thu, 18 Oct 2012 15:11:31 +1000
+Subject: [PATCH] dix: fix zaphod screen scrossing (#54654)
+
+POINTER_SCREEN coordinates are screen-relative. For a Zaphod setup, the
+coordinates after a screen crossing are already relative to the new screen's
+origin. Add that offset to the coordinates before re-setting.
+
+regression introduced by
+commit bafbd99080be49a17be97d2cc758fbe623369945
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed Aug 8 11:34:32 2012 +1000
+
+    dix: work around scaling issues during WarpPointer (#53037)
+
+X.Org Bug 54654 <http://bugs.freedesktop.org/show_bug.cgi?id=54654>
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ dix/getevents.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/dix/getevents.c b/dix/getevents.c
+index 71d83c4..8b4379d 100644
+--- a/dix/getevents.c
++++ b/dix/getevents.c
+@@ -1400,8 +1400,9 @@ fill_pointer_events(InternalEvent *events, DeviceIntPtr pDev, int type,
+        coordinates were.
+      */
+     if (flags & POINTER_SCREEN) {
+-        screenx = sx;
+-        screeny = sy;
++        scr = miPointerGetScreen(pDev);
++        screenx = sx + scr->x;
++        screeny = sy + scr->y;
+     }
+ 
+     scr = positionSprite(pDev, (flags & POINTER_ABSOLUTE) ? Absolute : Relative,
+-- 
+1.7.11.7
+
