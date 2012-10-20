@@ -90,6 +90,7 @@ package_systemd() {
   install -Dm644 "$pkgdir/etc/bash_completion.d/systemd-bash-completion.sh" \
     "$pkgdir/usr/share/bash-completion/completions/systemctl"
   ln -s systemctl "$pkgdir/usr/share/bash-completion/completions/loginctl"
+  ln -s systemctl "$pkgdir/usr/share/bash-completion/completions/journalctl"
   rm -rf "$pkgdir/etc/bash_completion.d"
 
   # don't write units to /etc by default -- we'll enable this on post_install
