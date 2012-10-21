@@ -1,0 +1,802 @@
+--- a/Makefile.am	2009-03-11 03:25:46.000000000 +0100
++++ b/Makefile.am	2012-06-14 20:33:10.641639573 +0200
+@@ -16,10 +16,8 @@
+ 	interface.c		\
+ 	callbacks.c		\
+ 	usbtree.c usbtree.h	\
+-	showmessage.c		\
+ 	usbparse.c usbparse.h	\
+ 	configure-dialog.c      \
+-	about-dialog.c		\
+ 	usbview_logo.xpm	\
+ 	usbview_logo.xcf	\
+ 	usb_icon.xpm		\
+--- a/callbacks.c	2008-06-25 23:03:13.000000000 +0200
++++ b/callbacks.c	2012-06-14 21:06:05.000523489 +0200
+@@ -23,13 +23,13 @@
+ #endif
+ 
+ #include <gtk/gtk.h>
+-
+ #include "usbtree.h"
++#include "usbview_logo.xpm"	/* logo */
+ 
+ 
+ void on_buttonClose_clicked (GtkButton *button, gpointer user_data)
+ {
+-	gtk_exit(0);
++	gtk_main_quit();
+ }
+ 
+ 
+@@ -55,7 +55,21 @@
+ 
+ void on_buttonAbout_clicked (GtkButton *button, gpointer user_data)
+ {
+-	about_dialog ();
++	GdkPixbuf *logo;
++	gchar *authors[] = { "Greg Kroah-Hartman <greg@kroah.com>", NULL };
++
++	logo = gdk_pixbuf_new_from_xpm_data ((const char **)usbview_logo_xpm);
++	gtk_show_about_dialog (GTK_WINDOW (windowMain),
++		"logo", logo,
++		"program-name", "usbview",
++		"version", VERSION,
++		"comments", "Display information on USB devices",
++		"website-label", "http://www.kroah.com/linux-usb/",
++		"website", "http://www.kroah.com/linux-usb/",
++		"copyright", "Copyright © 1999-2012",
++		"authors", authors,
++		NULL);
++	g_object_unref (logo);
+ }
+ 
+ 
+--- a/configure-dialog.c	2009-03-11 02:40:28.000000000 +0100
++++ b/configure-dialog.c	2012-06-14 21:06:05.000523489 +0200
+@@ -24,264 +24,78 @@
+ #endif
+ 
+ #include <gtk/gtk.h>
+-#include <stdio.h>
+-#include <stdlib.h>
+ #include <string.h>
+-#include <ctype.h>
+-
+ #include "usbtree.h"
+ #include "usbparse.h"
+ 
+-
+-
+-
+ static	GtkWidget	*fileEntry;
+-static	GtkWidget	*filew;
+-static	char		*sFilename;
+-
+-/* 
+- * Get the selected filename and print it to the console 
+- */
+-static void file_ok_sel (GtkWidget *w, GtkFileSelection *fs)
+-{
+-	const char *sTempFile;
+-
+-	/* --- Get the name --- */
+-	sTempFile = gtk_file_selection_get_filename (GTK_FILE_SELECTION (fs));
+-
+-	/* --- Allocate space and save it. --- */
+-	sFilename = malloc (sizeof (char) * (strlen (sTempFile) + 1));
+-	strcpy (sFilename, sTempFile);
+-
+-	/* --- Destroy the file selection --- */
+-	gtk_widget_destroy (filew);
+-}
+-
+-
+-static void file_cancel_sel (GtkWidget *w, GtkFileSelection *fs)
+-{
+-	/* --- Destroy the file selection --- */
+-	gtk_widget_destroy (filew);
+-}
+-
+-
+-/*
+- * DestroyDialog
+- *
+- * Destroy the dialog (obvious, eh?) but also remove the
+- * grab and close the modal. 
+- */
+-static int DestroyDialog (GtkWidget *widget, gpointer *data)
+-{
+-	gtk_grab_remove (widget);
+-	gtk_main_quit ();
+-	return(FALSE);
+-}
+-
+-
+-/*
+- * GetFilename 
+- */
+-static char *GetFilename (char *sTitle, char *initialFilename)
+-{
+-	sFilename = NULL;
+-
+-	/* --- Create a new file selection widget --- */
+-	filew = gtk_file_selection_new (sTitle);
+-
+-	/* --- If it's destroyed --- */
+-	gtk_signal_connect (GTK_OBJECT (filew), "destroy", (GtkSignalFunc) DestroyDialog, &filew);
+-
+-	/* --- Connect the ok_button to file_ok_sel function  --- */
+-	gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION (filew)->ok_button), "clicked", (GtkSignalFunc) file_ok_sel, filew );
+-
+-	/* --- Connect the cancel_button to destroy the widget  --- */
+-	gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION (filew)->cancel_button), "clicked", (GtkSignalFunc) file_cancel_sel, filew);
+-
+-	/* --- Lets set the filename --- */
+-	gtk_file_selection_set_filename (GTK_FILE_SELECTION(filew), initialFilename);
+-
+-	/* --- Turn off the file operation buttons --- */
+-	gtk_file_selection_hide_fileop_buttons (GTK_FILE_SELECTION(filew));
+-
+-	/* --- Of course, we show it --- */
+-	gtk_widget_show (filew);
+-
+-	/* --- Make sure we keep the focus --- */
+-	gtk_grab_add (filew);
+-
+-	gtk_main ();
+-
+-	return(sFilename);
+-}
+-
+-
+-static void ClearShowMessage (GtkWidget *widget, gpointer data)
+-{
+-	gtk_grab_remove (widget);
+-}
+-
+-static void CancelConfigureDialog (GtkWidget *widget, gpointer data)
+-{
+-	GtkWidget *dialogWidget = (GtkWidget *) data;
+-
+-	gtk_grab_remove (dialogWidget);
+-
+-	/* --- Close the widget --- */
+-	gtk_widget_destroy (dialogWidget);
+-}
+-
+-static void OkConfigureDialog (GtkWidget *widget, gpointer data)
+-{
+-	GtkWidget       *dialogWidget = (GtkWidget *) data;
+-	gchar           *editString;
+-
+-	editString = gtk_editable_get_chars (GTK_EDITABLE (fileEntry), 0, -1);
+-
+-	gtk_grab_remove (dialogWidget);
+-
+-	/* --- Close the widget --- */
+-	gtk_widget_destroy (dialogWidget);
+-
+-	strcpy (devicesFile, editString);
+-	g_free (editString);
+-	LoadUSBTree(0);
+-}
+-
+ 
+ static void fileSelectButtonClick (GtkWidget *widget, gpointer data)
+ {
+-	gchar   *newFilename;
++	GtkWidget *dialog;
++	gchar *filename;
+ 
+-	newFilename = GetFilename ("locate usbdevfs devices file", devicesFile);
+-
+-	if (newFilename != NULL) {
+-		gtk_entry_set_text (GTK_ENTRY (fileEntry), newFilename);
+-		gtk_widget_show (fileEntry);
+-		g_free (newFilename);
++	dialog = gtk_file_chooser_dialog_new (
++				"locate usbdevfs devices file",
++				GTK_WINDOW (windowMain),
++				GTK_FILE_CHOOSER_ACTION_OPEN,
++				GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
++				GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
++				NULL);
++
++	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
++	{
++		filename = gtk_file_chooser_get_filename(
++						GTK_FILE_CHOOSER (dialog));
++		gtk_entry_set_text (GTK_ENTRY (fileEntry), filename);
++		g_free (filename);
+ 	}
++			  
++	gtk_widget_destroy (dialog);
+ }
+ 
+-
+ void configure_dialog (void)
+ {
+-	GtkWidget *configDialog;
+-	GtkWidget *dialog_vbox2;
++	GtkWidget *dialog, *content_area;
+ 	GtkWidget *hbox1;
+ 	GtkWidget *label1;
+-	GtkWidget *label41;
+-	GtkWidget *label42;
+-	GtkWidget *label43;
+-	GtkWidget *vbox1;
+-	GtkWidget *dialog_action_area2;
+-	GtkWidget *hbuttonbox2;
+-	GtkWidget *okButton;
+-	GtkWidget *cancelButton;
+ 	GtkWidget *fileSelectButton;
++	gchar *editString;
++	gint result;
+ 
+-	configDialog = gtk_dialog_new ();
+-	gtk_object_set_data (GTK_OBJECT (configDialog), "configDialog", configDialog);
+-	gtk_window_set_title (GTK_WINDOW (configDialog), "USB View Configuration");
+-	gtk_window_set_policy (GTK_WINDOW (configDialog), TRUE, TRUE, FALSE);
+-
+-	dialog_vbox2 = GTK_DIALOG (configDialog)->vbox;
+-	gtk_object_set_data (GTK_OBJECT (configDialog), "dialog_vbox2", dialog_vbox2);
+-	gtk_widget_show (dialog_vbox2);
+-
+-	vbox1 = gtk_vbox_new (FALSE, 0);
+-	gtk_widget_ref (vbox1);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "vbox1", vbox1, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (vbox1);
+-	gtk_box_pack_start (GTK_BOX (dialog_vbox2), vbox1, TRUE, TRUE, 0);
+-
+-	label41 = gtk_label_new ("");
+-	gtk_widget_ref (label41);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "label41", label41, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (label41);
+-	gtk_box_pack_start (GTK_BOX (vbox1), label41, FALSE, FALSE, 0);
+-
+-	hbox1 = gtk_hbox_new (FALSE, 0);
+-	gtk_widget_ref (hbox1);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "hbox1", hbox1, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (hbox1);
+-//	gtk_box_pack_start (GTK_BOX (dialog_vbox2), hbox1, TRUE, TRUE, 0);
+-	gtk_box_pack_start (GTK_BOX (vbox1), hbox1, TRUE, TRUE, 0);
+-
+-	label42 = gtk_label_new ("");
+-	gtk_widget_ref (label42);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "label42", label42, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (label42);
+-	gtk_box_pack_start (GTK_BOX (vbox1), label42, FALSE, FALSE, 0);
+-
+-
+-	label1 = gtk_label_new ("  Location of usbdevfs devices file");
+-	gtk_widget_ref (label1);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "label1", label1, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (label1);
++	dialog = gtk_dialog_new_with_buttons (
++				"USB View Configuration",
++				GTK_WINDOW (windowMain),
++				GTK_DIALOG_DESTROY_WITH_PARENT,
++				GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
++				GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
++				NULL);
++
++	content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
++
++	hbox1 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
++	gtk_container_add (GTK_CONTAINER (content_area), hbox1);
++
++	label1 = gtk_label_new ("Location of usbdevfs devices file");
+ 	gtk_box_pack_start (GTK_BOX (hbox1), label1, FALSE, FALSE, 5);
+ 
+ 	fileEntry = gtk_entry_new ();
+-	gtk_widget_ref (fileEntry);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "fileEntry", fileEntry, (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_entry_set_text (GTK_ENTRY (fileEntry), devicesFile);
+-	gtk_widget_show (fileEntry);
+ 	gtk_box_pack_start (GTK_BOX (hbox1), fileEntry, TRUE, TRUE, 0);
+ 
+-	dialog_action_area2 = GTK_DIALOG (configDialog)->action_area;
+-	gtk_object_set_data (GTK_OBJECT (configDialog), "dialog_action_area2", dialog_action_area2);
+-	gtk_widget_show (dialog_action_area2);
+-	gtk_container_set_border_width (GTK_CONTAINER (dialog_action_area2), 1);
+-
+-	hbuttonbox2 = gtk_hbutton_box_new ();
+-	gtk_widget_ref (hbuttonbox2);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "hbuttonbox2", hbuttonbox2, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (hbuttonbox2);
+-	gtk_box_pack_start (GTK_BOX (dialog_action_area2), hbuttonbox2, TRUE, TRUE, 11);
+-
+-	okButton = gtk_button_new_with_label ("  OK  ");
+-	gtk_widget_ref (okButton);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "okButton", okButton, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (okButton);
+-	gtk_container_add (GTK_CONTAINER (hbuttonbox2), okButton);
+-	GTK_WIDGET_SET_FLAGS (okButton, GTK_CAN_DEFAULT);
+-
+-	cancelButton = gtk_button_new_with_label ("  Cancel  ");
+-	gtk_widget_ref (cancelButton);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "cancelButton", cancelButton, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (cancelButton);
+-	gtk_container_add (GTK_CONTAINER (hbuttonbox2), cancelButton);
+-	GTK_WIDGET_SET_FLAGS (cancelButton, GTK_CAN_DEFAULT);
+-
+ 	fileSelectButton = gtk_button_new_with_label ("...");
+-	gtk_widget_ref (fileSelectButton);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "fileSelectButton", fileSelectButton, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (fileSelectButton);
+-
++	g_signal_connect (G_OBJECT (fileSelectButton), "clicked",
++			  G_CALLBACK (fileSelectButtonClick), NULL);
+ 	gtk_box_pack_start (GTK_BOX (hbox1), fileSelectButton, TRUE, FALSE, 1);
+ 
+-	label43 = gtk_label_new ("    ");
+-	gtk_widget_ref (label43);
+-	gtk_object_set_data_full (GTK_OBJECT (configDialog), "label43", label43, (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (label43);
+-	gtk_box_pack_start (GTK_BOX (hbox1), label43, FALSE, FALSE, 0);
+-	
+-	gtk_signal_connect (GTK_OBJECT (okButton), "clicked", GTK_SIGNAL_FUNC (OkConfigureDialog), configDialog);
+-	gtk_signal_connect (GTK_OBJECT (cancelButton), "clicked", GTK_SIGNAL_FUNC (CancelConfigureDialog), configDialog);
+-	gtk_signal_connect (GTK_OBJECT (fileSelectButton), "clicked", GTK_SIGNAL_FUNC (fileSelectButtonClick), configDialog);
+-
+-	/* --- Default the "Ok" button --- */
+-	GTK_WIDGET_SET_FLAGS (okButton, GTK_CAN_DEFAULT);
+-	gtk_widget_grab_default (okButton);
+-
+-	gtk_signal_connect (GTK_OBJECT (configDialog), "destroy", GTK_SIGNAL_FUNC (ClearShowMessage), NULL);
+-
+-	/* --- Show the dialog --- */
+-	gtk_widget_show (configDialog);
+-
+-	/* --- Only this window can have actions done. --- */
+-	gtk_grab_add (configDialog);
+-
+-	return;
++	gtk_widget_show_all (dialog);
++	result = gtk_dialog_run(GTK_DIALOG (dialog));
++	if (result == GTK_RESPONSE_ACCEPT) {
++		editString = gtk_editable_get_chars (
++					GTK_EDITABLE (fileEntry), 0, -1);
++		strcpy (devicesFile, editString);
++		g_free (editString);
++		LoadUSBTree (0);
++	}
++	gtk_widget_destroy (dialog);
+ }
+-
+-
+--- a/configure.in	2007-10-23 02:03:36.000000000 +0200
++++ b/configure.in	2012-06-14 20:25:16.629667442 +0200
+@@ -1,7 +1,7 @@
+ dnl Process this file with autoconf to produce a configure script.
+ 
+ AC_INIT(configure.in)
+-AM_INIT_AUTOMAKE(usbview, 1.0)
++AM_INIT_AUTOMAKE(usbview, 1.1)
+ AM_CONFIG_HEADER(config.h)
+ 
+ # required versions of other packages
+@@ -12,33 +12,10 @@
+ AM_PROG_CC_STDC
+ AC_HEADER_STDC
+ 
+-PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.0.5)
++PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.0)
+ AC_SUBST(GTK_FLAGS)
+ AC_SUBST(GTK_LIBS)
+ 
+-
+-dnl Set PACKAGE_LOCALE_DIR in config.h.
+-if test "x${prefix}" = "xNONE"; then
+-  AC_DEFINE_UNQUOTED(PACKAGE_LOCALE_DIR, "${ac_default_prefix}/${DATADIRNAME}/locale")
+-else
+-  AC_DEFINE_UNQUOTED(PACKAGE_LOCALE_DIR, "${prefix}/${DATADIRNAME}/locale")
+-fi
+-
+-dnl Set PACKAGE_DATA_DIR in config.h.
+-if test "x${datadir}" = 'x${prefix}/share'; then
+-  if test "x${prefix}" = "xNONE"; then
+-    AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}")
+-  else
+-    AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${prefix}/share/${PACKAGE}")
+-  fi
+-else
+-  AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${datadir}/${PACKAGE}")
+-fi
+-
+-dnl Set PACKAGE_SOURCE_DIR in config.h.
+-packagesrcdir=`cd $srcdir && pwd`
+-AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}")
+-
+ dnl Use -Wall if we have gcc.
+ changequote(,)dnl
+ if test "x$GCC" = "xyes"; then
+--- a/interface.c	2009-03-11 03:11:47.000000000 +0100
++++ b/interface.c	2012-06-14 21:06:05.000523489 +0200
+@@ -32,15 +32,16 @@
+ #include "usb_icon.xpm"
+ 
+ GtkWidget *treeUSB;
++GtkTreeStore *treeStore;
+ GtkTextBuffer *textDescriptionBuffer;
+ GtkWidget *textDescriptionView;
++GtkWidget *windowMain;
+ 
+ int timer;
+ 
+ GtkWidget*
+ create_windowMain ()
+ {
+-	GtkWidget *windowMain;
+ 	GtkWidget *vbox1;
+ 	GtkWidget *hpaned1;
+ 	GtkWidget *scrolledwindow1;
+@@ -50,68 +51,61 @@
+ 	GtkWidget *buttonClose;
+ 	GtkWidget *buttonAbout;
+ 	GdkPixbuf *icon;
++	GtkCellRenderer *treeRenderer;
++	GtkTreeViewColumn *treeColumn;
+ 
+ 	windowMain = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+ 	gtk_widget_set_name (windowMain, "windowMain");
+-	gtk_object_set_data (GTK_OBJECT (windowMain), "windowMain", windowMain);
+ 	gtk_window_set_title (GTK_WINDOW (windowMain), "USB Viewer");
+-	gtk_window_set_default_size (GTK_WINDOW (windowMain), 500, 300);
++	gtk_window_set_default_size (GTK_WINDOW (windowMain), 600, 300);
+ 
+ 	icon = gdk_pixbuf_new_from_xpm_data((const char **)usb_icon_xpm);
+ 	gtk_window_set_icon(GTK_WINDOW(windowMain), icon);
+ 
+-	vbox1 = gtk_vbox_new (FALSE, 0);
++	vbox1 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+ 	gtk_widget_set_name (vbox1, "vbox1");
+-	gtk_widget_ref (vbox1);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "vbox1", vbox1,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (vbox1);
+ 	gtk_container_add (GTK_CONTAINER (windowMain), vbox1);
+ 
+-	hpaned1 = gtk_hpaned_new ();
++	hpaned1 = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+ 	gtk_widget_set_name (hpaned1, "hpaned1");
+-	gtk_widget_ref (hpaned1);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "hpaned1", hpaned1,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (hpaned1);
+ 	gtk_box_pack_start (GTK_BOX (vbox1), hpaned1, TRUE, TRUE, 0);
+-	gtk_paned_set_position (GTK_PANED (hpaned1), 200);
+ 
+-	treeUSB = gtk_ctree_new_with_titles (1, 0, NULL);
++	treeStore = gtk_tree_store_new (N_COLUMNS,
++				G_TYPE_STRING,	/* NAME_COLUMN */
++				G_TYPE_INT,	/* DEVICE_ADDR_COLUMN */
++				G_TYPE_STRING	/* COLOR_COLUMN */);
++	treeUSB = gtk_tree_view_new_with_model (GTK_TREE_MODEL (treeStore));
++	treeRenderer = gtk_cell_renderer_text_new ();
++	treeColumn = gtk_tree_view_column_new_with_attributes (
++					"USB devices",
++					treeRenderer,
++					"text", NAME_COLUMN,
++					"foreground", COLOR_COLUMN,
++					NULL);
++	gtk_tree_view_append_column (GTK_TREE_VIEW (treeUSB), treeColumn);
+ 	gtk_widget_set_name (treeUSB, "treeUSB");
+-	gtk_widget_ref (treeUSB);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "treeUSB", treeUSB,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (treeUSB);
+-	gtk_container_add (GTK_CONTAINER (hpaned1), treeUSB);
+-	gtk_widget_set_usize (treeUSB, 200, -2);
++	gtk_paned_pack1 (GTK_PANED (hpaned1), treeUSB, FALSE, FALSE);
+ 
+ 	scrolledwindow1 = gtk_scrolled_window_new (NULL, NULL);
+ 	gtk_widget_set_name (scrolledwindow1, "scrolledwindow1");
+-	gtk_widget_ref (scrolledwindow1);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "scrolledwindow1", scrolledwindow1,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+-	gtk_widget_show (scrolledwindow1);
+-	gtk_container_add (GTK_CONTAINER (hpaned1), scrolledwindow1);
+ 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolledwindow1), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
++	gtk_widget_show (scrolledwindow1);
++	gtk_paned_pack2 (GTK_PANED (hpaned1), scrolledwindow1, TRUE, FALSE);
+ 
+ 	textDescriptionBuffer = gtk_text_buffer_new(NULL);
+ 	//textDescription = gtk_text_new (NULL, NULL);
+ 	textDescriptionView = gtk_text_view_new_with_buffer(textDescriptionBuffer);
+ 	gtk_widget_set_name (textDescriptionView, "textDescription");
+-	gtk_widget_ref (textDescriptionView);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "textDescription", textDescriptionView,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_text_view_set_editable(GTK_TEXT_VIEW(textDescriptionView), FALSE);
+ 	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(textDescriptionView), FALSE);
+ 	gtk_widget_show (textDescriptionView);
+ 	gtk_container_add (GTK_CONTAINER (scrolledwindow1), textDescriptionView);
+ 
+-	hbuttonbox1 = gtk_hbutton_box_new ();
++	hbuttonbox1 = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
+ 	gtk_widget_set_name (hbuttonbox1, "hbuttonbox1");
+-	gtk_widget_ref (hbuttonbox1);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "hbuttonbox1", hbuttonbox1,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (hbuttonbox1);
+ 	gtk_box_pack_start (GTK_BOX (vbox1), hbuttonbox1, FALSE, FALSE, 5);
+ 	//gtk_button_box_set_spacing (GTK_BUTTON_BOX (hbuttonbox1), 10);
+@@ -120,58 +115,46 @@
+ 
+ 	buttonRefresh = gtk_button_new_from_stock(GTK_STOCK_REFRESH);
+ 	gtk_widget_set_name (buttonRefresh, "buttonRefresh");
+-	gtk_widget_ref (buttonRefresh);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "buttonRefresh", buttonRefresh,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (buttonRefresh);
+ 	gtk_container_add (GTK_CONTAINER (hbuttonbox1), buttonRefresh);
+ 	gtk_container_set_border_width (GTK_CONTAINER (buttonRefresh), 4);
+-	GTK_WIDGET_SET_FLAGS (buttonRefresh, GTK_CAN_DEFAULT);
++	gtk_widget_set_can_default (buttonRefresh, TRUE);
+ 
+ 	buttonConfigure = gtk_button_new_with_label ("Configure...");
+ 	gtk_widget_set_name (buttonConfigure, "buttonConfigure");
+-	gtk_widget_ref (buttonConfigure);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "buttonConfigure", buttonConfigure,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (buttonConfigure);
+ 	gtk_container_add (GTK_CONTAINER (hbuttonbox1), buttonConfigure);
+ 	gtk_container_set_border_width (GTK_CONTAINER (buttonConfigure), 4);
+-	GTK_WIDGET_SET_FLAGS (buttonConfigure, GTK_CAN_DEFAULT);
++	gtk_widget_set_can_default (buttonConfigure, TRUE);
+ 
+ 	buttonAbout = gtk_button_new_from_stock(GTK_STOCK_ABOUT);
+ 	gtk_widget_set_name (buttonAbout, "buttonAbout");
+-	gtk_widget_ref (buttonAbout);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "buttonAbout", buttonAbout,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (buttonAbout);
+ 	gtk_container_add (GTK_CONTAINER (hbuttonbox1), buttonAbout);
+ 	gtk_container_set_border_width (GTK_CONTAINER (buttonAbout), 4);
+-	GTK_WIDGET_SET_FLAGS (buttonAbout, GTK_CAN_DEFAULT);
++	gtk_widget_set_can_default (buttonAbout, TRUE);
+ 
+ 	buttonClose = gtk_button_new_from_stock(GTK_STOCK_QUIT);
+ 	gtk_widget_set_name (buttonClose, "buttonClose");
+-	gtk_widget_ref (buttonClose);
+-	gtk_object_set_data_full (GTK_OBJECT (windowMain), "buttonClose", buttonClose,
+-				  (GtkDestroyNotify) gtk_widget_unref);
+ 	gtk_widget_show (buttonClose);
+ 	gtk_container_add (GTK_CONTAINER (hbuttonbox1), buttonClose);
+ 	gtk_container_set_border_width (GTK_CONTAINER (buttonClose), 4);
+-	GTK_WIDGET_SET_FLAGS (buttonClose, GTK_CAN_DEFAULT);
++	gtk_widget_set_can_default (buttonClose, TRUE);
+ 
+-	gtk_signal_connect (GTK_OBJECT (windowMain), "delete_event",
+-			    GTK_SIGNAL_FUNC (on_window1_delete_event),
++	g_signal_connect (G_OBJECT (windowMain), "delete_event",
++			    G_CALLBACK (on_window1_delete_event),
+ 			    NULL);
+-	gtk_signal_connect (GTK_OBJECT (buttonRefresh), "clicked",
+-			    GTK_SIGNAL_FUNC (on_buttonRefresh_clicked),
++	g_signal_connect (G_OBJECT (buttonRefresh), "clicked",
++			    G_CALLBACK (on_buttonRefresh_clicked),
+ 			    NULL);
+-	gtk_signal_connect (GTK_OBJECT (buttonConfigure), "clicked",
+-			    GTK_SIGNAL_FUNC (on_buttonConfigure_clicked),
++	g_signal_connect (G_OBJECT (buttonConfigure), "clicked",
++			    G_CALLBACK (on_buttonConfigure_clicked),
+ 			    NULL);
+-	gtk_signal_connect (GTK_OBJECT (buttonAbout), "clicked",
+-			    GTK_SIGNAL_FUNC (on_buttonAbout_clicked),
++	g_signal_connect (G_OBJECT (buttonAbout), "clicked",
++			    G_CALLBACK (on_buttonAbout_clicked),
+ 			    NULL);
+-	gtk_signal_connect (GTK_OBJECT (buttonClose), "clicked",
+-			    GTK_SIGNAL_FUNC (on_buttonClose_clicked),
++	g_signal_connect (G_OBJECT (buttonClose), "clicked",
++			    G_CALLBACK (on_buttonClose_clicked),
+ 			    NULL);
+ 
+ 	/* create our timer */
+--- a/main.c	2008-06-25 23:03:27.000000000 +0200
++++ b/main.c	2012-06-14 21:06:05.000523489 +0200
+@@ -30,7 +30,6 @@
+ {
+ 	GtkWidget *window1;
+ 
+-	gtk_set_locale ();
+ 	gtk_init (&argc, &argv);
+ 
+ 	initialize_stuff();
+--- a/usbparse.h	2008-06-25 23:03:47.000000000 +0200
++++ b/usbparse.h	2012-06-14 21:06:05.000523489 +0200
+@@ -166,7 +166,7 @@
+ 	struct Device	*child[MAX_CHILDREN];
+ 	DeviceBandwidth	*bandwidth;
+ 	GtkWidget	*tree;
+-	GtkCTreeNode	*leaf;
++	GtkTreeIter	leaf;
+ } Device;
+ 
+ 
+--- a/usbtree.c	2012-06-14 21:08:11.672516042 +0200
++++ b/usbtree.c	2012-06-14 21:06:05.000523489 +0200
+@@ -45,7 +45,7 @@
+ 
+ 	/* blow away the tree if there is one */
+ 	if (rootDevice != NULL) {
+-		gtk_ctree_remove_node (GTK_CTREE(treeUSB), GTK_CTREE_NODE(rootDevice->leaf));
++		gtk_tree_store_clear (treeStore);
+ 	}
+ 
+ 	/* clean out the text box */
+@@ -208,32 +208,37 @@
+ }
+ 
+ 
+-void SelectItem (GtkWidget *widget, GtkCTreeNode *node, gint column, gpointer userData)
++void SelectItem (GtkTreeSelection *selection, gpointer userData)
+ {
+-	int     data;
+-	data = (int) gtk_ctree_node_get_row_data (GTK_CTREE (widget), node);
+-
+-	PopulateListBox ((int)data);
+-
+-	return;
++	GtkTreeIter iter;
++	GtkTreeModel *model;
++	gint deviceAddr;
++
++	if (gtk_tree_selection_get_selected (selection, &model, &iter)) {
++		gtk_tree_model_get (model, &iter,
++				DEVICE_ADDR_COLUMN, &deviceAddr,
++				-1);
++		PopulateListBox (deviceAddr);
++	}
+ }
+ 
+ 
+ static void DisplayDevice (Device *parent, Device *device)
+ {
+ 	int		i;
+-	gchar		*text[1];
+ 	int		configNum;
+ 	int		interfaceNum;
+ 	gboolean	driverAttached = TRUE;
++	gint		deviceAddr;
++	const gchar	*color = "black";
+ 
+ 	if (device == NULL)
+ 		return;
+ 
+ 	/* build this node */
+-	text[0] = device->name;
+-	device->leaf = gtk_ctree_insert_node (GTK_CTREE(treeUSB), parent->leaf, NULL, text, 1, NULL, NULL, NULL, NULL, FALSE, FALSE);
+-	gtk_ctree_node_set_row_data (GTK_CTREE(treeUSB), device->leaf, (gpointer)((device->deviceNumber<<8) | (device->busNumber)));
++	deviceAddr = (device->deviceNumber << 8) | device->busNumber;
++	gtk_tree_store_append (treeStore, &device->leaf,
++			       (device->level != 0) ? &parent->leaf : NULL);
+ 
+ 	/* determine if this device has drivers attached to all interfaces */
+ 	for (configNum = 0; configNum < MAX_CONFIGS; ++configNum) {
+@@ -252,15 +257,14 @@
+ 	}
+ 
+ 	/* change the color of this leaf if there are no drivers attached to it */
+-	if (driverAttached == FALSE) {
+-		GdkColor        red;
+-		 
+-		red.red = 56000;
+-		red.green = 0;
+-		red.blue = 0;
+-		red.pixel = 0;
+-		gtk_ctree_node_set_foreground (GTK_CTREE(treeUSB), device->leaf, &red);
+-	}
++	if (driverAttached == FALSE)
++		color = "red";
++
++	gtk_tree_store_set (treeStore, &device->leaf,
++			    NAME_COLUMN, device->name,
++			    DEVICE_ADDR_COLUMN, deviceAddr,
++			    COLOR_COLUMN, color,
++			    -1);
+ 
+ 	/* create all of the children's leafs */
+ 	for (i = 0; i < MAX_CHILDREN; ++i) {
+@@ -283,11 +287,16 @@
+ 
+ static void FileError (void)
+ {
+-	gchar *tempString = g_malloc0(strlen (verifyMessage) + strlen (devicesFile) + 50);
+-	sprintf (tempString, " Can not open the file %s \n\n%s", devicesFile, verifyMessage);
+-	ShowMessage ("USBView Error", tempString, FALSE);
+-	g_free (tempString);
+-	return;
++	GtkWidget *dialog;
++
++	dialog = gtk_message_dialog_new (
++				    GTK_WINDOW (windowMain),
++				    GTK_DIALOG_DESTROY_WITH_PARENT,
++				    GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
++				    "Can not open the file %s\n\n%s",
++				    devicesFile, verifyMessage);
++	gtk_dialog_run (GTK_DIALOG (dialog));
++	gtk_widget_destroy (dialog);
+ }
+ 
+ 
+@@ -328,10 +337,6 @@
+ 	int             finished;
+ 	int             i;
+ 
+-	if (MessageShown() == TRUE) {
+-		return;
+-	}
+-
+ 	/* if refresh is selected, then always do a refresh, otherwise look at the file first */
+ 	if (!refresh) {
+ 		if (!FileHasChanged()) {
+@@ -368,11 +373,5 @@
+ 	usb_name_devices ();
+ 
+-	/* set up our tree */
+-	gtk_ctree_set_line_style (GTK_CTREE(treeUSB), GTK_CTREE_LINES_DOTTED);
+-	gtk_ctree_set_expander_style (GTK_CTREE(treeUSB), GTK_CTREE_EXPANDER_SQUARE);
+-	gtk_ctree_set_indent (GTK_CTREE(treeUSB),10);
+-	gtk_clist_column_titles_passive (GTK_CLIST(treeUSB));
+-
+ 	/* build our tree */
+ 	for (i = 0; i < rootDevice->maxChildren; ++i) {
+ 		DisplayDevice (rootDevice, rootDevice->child[i]);
+@@ -380,11 +386,14 @@
+ 
+ 	gtk_widget_show (treeUSB);
+ 
+-	gtk_ctree_expand_recursive (GTK_CTREE(treeUSB), NULL);
++	gtk_tree_view_expand_all (GTK_TREE_VIEW (treeUSB));
+ 
+ 	/* hook up our callback function to this tree if we haven't yet */
+ 	if (!signal_connected) {
+-		gtk_signal_connect (GTK_OBJECT (treeUSB), "tree-select-row", GTK_SIGNAL_FUNC (SelectItem), NULL);
++		GtkTreeSelection *select;
++		select = gtk_tree_view_get_selection (GTK_TREE_VIEW (treeUSB));
++		g_signal_connect (G_OBJECT (select), "changed",
++				  G_CALLBACK (SelectItem), NULL);
+ 		signal_connected = TRUE;
+ 	}
+ 
+--- a/usbtree.h	2008-06-25 23:03:52.000000000 +0200
++++ b/usbtree.h	2012-06-14 21:06:05.000523489 +0200
+@@ -21,16 +21,24 @@
+ #ifndef __USB_TREE_H
+ #define __USB_TREE_H
+ 
++enum {
++	NAME_COLUMN,
++	DEVICE_ADDR_COLUMN,
++	COLOR_COLUMN,
++	N_COLUMNS
++};
++
+ extern gchar		devicesFile[1000];
++extern GtkTreeStore	*treeStore;
+ extern GtkWidget	*treeUSB;
+ extern GtkWidget	*textDescriptionView;
+ extern GtkTextBuffer	*textDescriptionBuffer;
++extern GtkWidget	*windowMain;
+ 
+ extern void	LoadUSBTree		(int refresh);
+ extern void	initialize_stuff	(void);
+ extern GtkWidget * create_windowMain	(void);
+ extern void	configure_dialog	(void);
+-extern void	about_dialog		(void);
+ 
+ extern void	on_buttonClose_clicked		(GtkButton *button, gpointer user_data);
+ extern gboolean	on_window1_delete_event		(GtkWidget *widget, GdkEvent *event, gpointer user_data);
+@@ -39,8 +47,4 @@
+ extern void	on_buttonAbout_clicked		(GtkButton *button, gpointer user_data);
+ extern gint	on_timer_timeout		(gpointer user_data);
+ 
+-extern void	ShowMessage	(gchar *title, gchar *message, gboolean centered);
+-extern gboolean	MessageShown	(void);
+-
+-
+ #endif	/* __USB_TREE_H */
