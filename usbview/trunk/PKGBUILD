@@ -4,22 +4,35 @@
 
 pkgname=usbview
 pkgver=1.1
-pkgrel=3
-pkgdesc="USB Viewer"
+pkgrel=4
+pkgdesc="Display the topology of devices on the USB bus"
 arch=('i686' 'x86_64')
 url="http://www.kroah.com/linux-usb/"
 license=('GPL')
-depends=('gtk2')
-makedepends=('pkg-config')
-source=("http://www.kroah.com/linux-usb/${pkgname}-${pkgver}.tar.gz")
-md5sums=('8bf5e66351156356f3ad07454123affa')
+depends=('gtk3' 'desktop-file-utils')
+makedepends=('pkg-config' 'gendesk')
+install=${pkgname}.install
+source=("http://www.kroah.com/linux-usb/${pkgname}-${pkgver}.tar.gz"
+        'usbview-1.1-gtk3-port.patch'
+        'usbview-1.1-missing-usbfs.patch')
+md5sums=('8bf5e66351156356f3ad07454123affa'
+         '578ed1099228f205b728ee2d46ed6f56'
+         '02e4313887423d0057a7f4f15b7f37d4')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}"
+  gendesk -n
+  sed -i "s:Application;:Application;System:g" "${srcdir}"/${pkgname}.desktop
 
+  cd "${pkgname}-${pkgver}"
+
+  patch -Np1 -i "${srcdir}/usbview-1.1-gtk3-port.patch"
+  patch -Np1 -i "${srcdir}/usbview-1.1-missing-usbfs.patch"
+
+  autoreconf
   ./configure --prefix=/usr \
               --sysconfdir=/etc \
-	      --localstatedir=/var
+              --localstatedir=/var
   make
 }
 
@@ -29,4 +42,10 @@ package() {
   make prefix="${pkgdir}/usr" \
        sysconfdir="${pkgdir}/etc" \
        localstatedir="${pkgdir}/var" install
+
+  install -Dm0644 "${srcdir}"/${pkgname}.desktop \
+    "${pkgdir}"/usr/share/applications/${pkgname}.desktop
+
+  install -Dm0644 "${srcdir}"/${pkgname}-${pkgver}/usb_icon.xpm \
+    "${pkgdir}"/usr/share/pixmaps/${pkgname}.xpm
 }
