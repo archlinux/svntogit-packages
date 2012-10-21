@@ -1,0 +1,55 @@
+From 2ec636049b95d0c51286253813b5b1a074472afc Mon Sep 17 00:00:00 2001
+From: Lionel Le Folgoc <lionel@lefolgoc.net>
+Date: Sun, 09 Sep 2012 09:50:19 +0000
+Subject: Xfsettingsd: Check service name of NameOwnerChanged (bug #9273).
+
+In some conditions, the dbus spawn of xfconf leads to the
+shutdown of xfsettingsd because it "thinks" another instance
+is taking over... After some debugging I found that it
+receives a NameOwnerChanged signal describing the launch
+of Xfconf (name=org.xfce.Xfconf, old=, new=:1.11 for example).
+
+(cherry picked from commit c17fe35e6f2ff673bab102e736a327fa7bcc1d73)
+---
+diff --git a/xfsettingsd/main.c b/xfsettingsd/main.c
+index 0f3a68d..55c4183 100644
+--- a/xfsettingsd/main.c
++++ b/xfsettingsd/main.c
+@@ -93,15 +93,29 @@ signal_handler (gint signum,
+ 
+ 
+ static DBusHandlerResult
+-dbus_connection_filter_func (DBusConnection     *connection,
+-                             DBusMessage        *message,
+-                             void               *user_data)
++dbus_connection_filter_func (DBusConnection *connection,
++                             DBusMessage    *message,
++                             void           *user_data)
+ {
++    gchar *name, *old, *new;
++
+     if (dbus_message_is_signal (message, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
+     {
+-        g_printerr (G_LOG_DOMAIN ": %s\n", "Another instance took over. Leaving...");
+-        gtk_main_quit ();
+-        return DBUS_HANDLER_RESULT_HANDLED;
++        /* double check if it is really org.xfce.SettingsDaemon
++         * being replaced, see bug 9273 */
++        if (dbus_message_get_args (message, NULL,
++                                   DBUS_TYPE_STRING, &name,
++                                   DBUS_TYPE_STRING, &old,
++                                   DBUS_TYPE_STRING, &new,
++                                   DBUS_TYPE_INVALID))
++        {
++            if (g_strcmp0 (name, XFSETTINGS_DBUS_NAME) == 0)
++            {
++                g_printerr (G_LOG_DOMAIN ": %s\n", "Another instance took over. Leaving...");
++                gtk_main_quit ();
++                return DBUS_HANDLER_RESULT_HANDLED;
++            }
++        }
+     }
+ 
+     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+--
+cgit v0.9.0.3
