@@ -5,7 +5,7 @@
 pkgbase=linux-lts           # Build stock -lts kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.0
-pkgver=3.0.46
+pkgver=3.0.47
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -20,15 +20,19 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'linux-lts.preset'
         'change-default-console-loglevel.patch'
         'i915-fix-ghost-tv-output.patch'
-        'ext4-options.patch')
+        'ext4-options.patch'
+        'module-symbol-waiting-3.0.patch'
+        'module-init-wait-3.0.patch')
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         '8dffb7415b134a5628c4cdbe9b8a3834'
+         'c198c3b3e5ffa605c3148855403a67e7'
          'edc668eef98c6795fbdbc7efd755d9bb'
          '6ec56de185c2a3a24e234ddc0915049a'
          '232b52576a62c7a333e9fe7a1e1ca359'
          '9d3c56a4b999c8bfbd4018089a62f662'
          '263725f20c0b9eb9c353040792d644e5'
-         'c8299cf750a84e12d60b372c8ca7e1e8')
+         'c8299cf750a84e12d60b372c8ca7e1e8'
+         '670931649c60fcb3ef2e0119ed532bd4'
+         '8a71abc4224f575008f974a099b5cf6f')
 
 _kernelname=${pkgbase#linux}
 
@@ -58,6 +62,11 @@ build() {
   # fix ext4 module to mount ext3/2 correct
   # https://bugs.archlinux.org/task/28653
   patch -Np1 -i "${srcdir}/ext4-options.patch"
+
+  # fix module initialisation
+  # https://bugs.archlinux.org/task/32122
+  patch -Np1 -i "${srcdir}/module-symbol-waiting-3.0.patch"
+  patch -Np1 -i "${srcdir}/module-init-wait-3.0.patch"
 
   if [ "${CARCH}" = "x86_64" ]; then
     cat "${srcdir}/config.x86_64" > ./.config
