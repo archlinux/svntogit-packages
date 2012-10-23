@@ -4,9 +4,8 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 
 pkgname=binutils
-pkgver=2.22
-pkgrel=10
-_date=20120323
+pkgver=2.23
+pkgrel=1
 pkgdesc="A set of programs to assemble and manipulate binary and object files"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/binutils/"
@@ -16,18 +15,9 @@ depends=('glibc>=2.16' 'zlib')
 checkdepends=('dejagnu')
 options=('!libtool' '!distcc' '!ccache')
 install=binutils.install
-source=(ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}_${_date}.tar.bz2)
-md5sums=('de2ac4298732827f8af706fc24020330')
-
-mksource() {
-  mkdir ${pkgname}-${_date}
-  cd ${pkgname}-${_date}
-  export _TAG=binutils-2_22-branch
-  export 'CVSROOT=:pserver:anoncvs@sourceware.org:/cvs/src'
-  cvs -z9 co -r $_TAG binutils || return 1
-  mv src binutils
-  tar -cvjf ../binutils-${pkgver}_${_date}.tar.bz2 binutils/*
-}
+source=(ftp://ftp.gnu.org/gnu/binutils/binutils-${pkgver}.tar.bz2{,.sig})
+md5sums=('6e6c85eb4468501051ae209c9e2a7ecc'
+         '46ca898c6c7ab8f35c676a965c7ce804')
 
 build() {
   cd ${srcdir}
@@ -35,7 +25,7 @@ build() {
 
   [[ $CARCH == "x86_64" ]] && CONFIGFLAG="--enable-64-bit-bfd --disable-multilib"
 
-  ${srcdir}/binutils/configure --prefix=/usr \
+  ${srcdir}/binutils-${pkgver}/configure --prefix=/usr \
     --with-lib-path=/usr/lib:/usr/local/lib \
     --enable-ld=default --enable-gold \
     --enable-plugins --enable-threads \
@@ -77,8 +67,8 @@ package() {
   make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
   
   # Add some useful headers
-  install -m644 ${srcdir}/binutils/include/libiberty.h ${pkgdir}/usr/include
-  install -m644 ${srcdir}/binutils/include/demangle.h ${pkgdir}/usr/include
+  install -m644 ${srcdir}/binutils-${pkgver}/include/libiberty.h ${pkgdir}/usr/include
+  install -m644 ${srcdir}/binutils-${pkgver}/include/demangle.h ${pkgdir}/usr/include
 
   # install libraries rebuilt with -fPIC
   install -m644 libiberty-pic/libiberty.a ${pkgdir}/usr/lib
@@ -86,11 +76,11 @@ package() {
   install -m644 opcodes/libopcodes.a ${pkgdir}/usr/lib
 
   # Remove Windows/Novell specific man pages
-  rm -f ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
+  rm ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
 
   # Remove these symlinks, they are not ABI stable.
   # Programs should compile static to the .a file.
-  rm -f ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
+  rm ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
   echo "INPUT ( /usr/lib/libbfd.a -liberty -lz )" >${pkgdir}/usr/lib/libbfd.so
   echo "INPUT ( /usr/lib/libopcodes.a -lbfd )" >${pkgdir}/usr/lib/libopcodes.so
 }
