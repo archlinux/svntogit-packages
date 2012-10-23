@@ -4,18 +4,28 @@ sd_booted() {
   [ -e sys/fs/cgroup/systemd ]
 }
 
+post_common() {
+  systemd-machine-id-setup
+
+  setcap cap_dac_override,cap_sys_ptrace+ep usr/bin/systemd-detect-virt
+
+  if sd_booted; then
+    systemctl --system daemon-reexec
+  fi
+}
+
 post_install() {
+  post_common
+
   # enable getty@tty1 by default, but don't track the file
   systemctl enable getty@.service
-
-  systemd-machine-id-setup
 
   echo ":: Append 'init=/bin/systemd' to your kernel command line in your"
   echo "   bootloader to replace sysvinit with systemd"
 }
 
 post_upgrade() {
-  systemd-machine-id-setup
+  post_common
 
   # getty@tty1.service is no longer enabled by default, but we don't want to break
   # existing setups.
