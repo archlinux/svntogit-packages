@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.16.0
-pkgrel=4
+pkgrel=5
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -21,10 +21,12 @@ options=('!strip')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.15-fix-res_query-assert.patch
-        glibc-2.15-revert-c5a0802a.patch
+        glibc-2.16-unlock-mutex.patch
         glibc-2.16-rpcgen-cpp-path.patch
         glibc-2.16-strncasecmp-segfault.patch
         glibc-2.16-strtod-overflow.patch
+        glibc-2.16-detect-fma.patch
+        glibc-2.16-glob-use-size_t.patch
         nscd.rcd
         nscd.service
         nscd.tmpfiles
@@ -33,15 +35,18 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
 md5sums=('80b181b02ab249524ec92822c0174cf7'
          '2a1221a15575820751c325ef4d2fbb90'
          '31f415b41197d85d3bbee3d1eecd06a3'
-         '0a0383d50d63f1c02919fe9943b82014'
+         '0afcd8c6020d61684aba63ed5f26bd91'
          'ea6a43915474e8276e9361eed6a01280'
          'f042d37cc8ca3459023431809039bc88'
          '61d322f7681a85d3293ada5c3ccc2c7e'
+         '2426f593bc43f5499c41d21b57ee0e30'
+         'a441353901992feda4b15a11a20140a1'
          '589d79041aa767a5179eaa4e2737dd3f'
          'ad8a9af15ab7eeaa23dc7ee85024af9f'
          'bccbe5619e75cf1d97312ec3681c605c'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
+
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
@@ -50,9 +55,9 @@ build() {
   # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
   patch -p1 -i ${srcdir}/glibc-2.15-fix-res_query-assert.patch
 
-  # revert commit c5a0802a - causes various hangs
-  # https://bugzilla.redhat.com/show_bug.cgi?id=552960
-  patch -p1 -i ${srcdir}/glibc-2.15-revert-c5a0802a.patch
+  # prevent hang by locked mutex
+  # http://sourceware.org/git/?p=glibc.git;a=patch;h=c30e8edf
+  patch -p1 -i ${srcdir}/glibc-2.16-unlock-mutex.patch
 
   # prevent need for /lib/cpp symlink
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=bf9b740a
@@ -65,6 +70,14 @@ build() {
   # strtod integer/buffer overflow
   # http://sourceware.org/git/?p=glibc.git;a=commit;h=da1f4319
   patch -p1 -i ${srcdir}/glibc-2.16-strtod-overflow.patch
+
+  # detect FMA supprt
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=a5cfcf08
+  patch -p1 -i ${srcdir}/glibc-2.16-detect-fma.patch
+  
+  # prevent overflow in globc
+  # http://sourceware.org/git/?p=glibc.git;a=commit;h=6c62f108
+  patch -p1 -i ${srcdir}/glibc-2.16-glob-use-size_t.patch
 
   # ldconfig does not need to look in /usr/lib64 or /usr/libx32 on Arch Linux
   sed -i "s#add_system_dir#do_not_add_system_dir#" sysdeps/unix/sysv/linux/x86_64/dl-cache.h
