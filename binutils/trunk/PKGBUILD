@@ -12,7 +12,7 @@ url="http://www.gnu.org/software/binutils/"
 license=('GPL')
 groups=('base-devel')
 depends=('glibc>=2.16' 'zlib')
-checkdepends=('dejagnu')
+checkdepends=('dejagnu' 'bc')
 options=('!libtool' '!distcc' '!ccache')
 install=binutils.install
 source=(ftp://ftp.gnu.org/gnu/binutils/binutils-${pkgver}.tar.bz2{,.sig})
@@ -23,13 +23,12 @@ build() {
   cd ${srcdir}
   mkdir binutils-build && cd binutils-build
 
-  [[ $CARCH == "x86_64" ]] && CONFIGFLAG="--enable-64-bit-bfd --disable-multilib"
-
   ${srcdir}/binutils-${pkgver}/configure --prefix=/usr \
     --with-lib-path=/usr/lib:/usr/local/lib \
+    --with-bugurl=https://bugs.archlinux.org/ \
     --enable-ld=default --enable-gold \
-    --enable-plugins --enable-threads \
-    --enable-shared $CONFIGFLAG
+    --enable-plugins --enable-threads --enable-shared \
+    --disable-werror --disable-multilib
 
   # check the host environment and makes sure all the necessary tools are available
   make configure-host
@@ -55,11 +54,10 @@ build() {
 
 check() {
   cd ${srcdir}/binutils-build
-
+  
+  # unset LDFLAGS as testsuite makes assumptions about which ones are active
   # do not abort on errors - manually check log files
-  # gold testsuite does not build with _FORTIFY_SOURCE (due to -O0 -Werror)
-  make CFLAGS="${CFLAGS/-D_FORTIFY_SOURCE=2/}" \
-       CXXFLAGS="${CXXFLAGS/-D_FORTIFY_SOURCE=2/}" -k check || true
+  make LDFLAGS="" -k check || true
 }
 
 package() {
