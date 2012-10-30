@@ -1,69 +1,58 @@
 # $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gdm
-pkgver=3.4.1
-pkgrel=3
-pkgdesc="Gnome Display Manager (a reimplementation of xdm)"
-arch=('i686' 'x86_64')
-license=('GPL')
+pkgver=3.6.1
+pkgrel=1
+pkgdesc="Gnome Display Manager"
+arch=(i686 x86_64)
+license=(GPL)
 url="http://www.gnome.org"
-backup=('etc/pam.d/gdm-autologin' 'etc/pam.d/gdm-fingerprint' 'etc/pam.d/gdm' 'etc/pam.d/gdm-password'
-        'etc/pam.d/gdm-smartcard' 'etc/pam.d/gdm-welcome' 'etc/gdm/custom.conf')
-groups=('gnome-extra')
+backup=(etc/pam.d/gdm-autologin etc/pam.d/gdm-fingerprint etc/pam.d/gdm-launch-environment
+        etc/pam.d/gdm-password etc/pam.d/gdm-smartcard etc/gdm/custom.conf)
+groups=(gnome)
 options=('!libtool')
-depends=('libcanberra' 'libxklavier' 'gnome-session' 'gnome-settings-daemon' 'metacity' 'upower' 'accountsservice' 'consolekit' 'xorg-xrdb' 'nss')
-makedepends=('intltool' 'gnome-doc-utils' 'xorg-server' 'gobject-introspection')
+depends=(libcanberra gnome-session gnome-settings-daemon metacity upower accountsservice systemd
+         xorg-xrdb nss polkit-gnome)
+makedepends=(itstool intltool gnome-doc-utils xorg-server gobject-introspection)
 optdepends=('gnome-shell: new login interface'
             'fprintd: fingerprint authentication')
 install=gdm.install
 source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz
-        fix_external_program_directories.patch
-        gdm-vt-allocation-hack.patch
-        gdm gdm.service
-        gdm-autologin.pam gdm-fingerprint.pam gdm.pam gdm-password.pam gdm-smartcard.pam gdm-welcome.pam)
-sha256sums=('6292968dff5fc89877b5e1aaa3c7d1484dd3ed2d4f388e935841d053439be665'
-            'f68600ccf80f475deb417d58ab3306c4a1ba4622688e2901996c8549c85a9ee6'
-            '3c8b588d4af08d94dc93bcd5e4c2a983c3f4fbbbe40833bceac2a1df4f1e8215'
-            '272c08d8e8b50bf424d0705ac864d4c18c47ec4f6893b1af732c2efbc86c9550'
-            'b7b91c682ff4c7cfb2d395c65abeca9dad8c0997b399dcf22abdf481c3e61349'
-            '6a8b286d1ffa04150b3cc401f64e6ddec778c7b65f5bfc831031b64345d7e6b2'
-            'dd50f5bd28807a16c5ebe89fc868b7c47fa571138498e879f2b1c9da1ad6eb84'
-            'f1dfa4d88288d4b0a631a68a51b46c2da537bee8fe5a99f9f288c8ff75a50b19'
-            '1a1e9b3f26de4eb9f45d1e9a0b5d0db902ca734461ba46b4bb620b0298bb98aa'
-            '844d5fae0df59241d34099a3d458289bd95707b2aae976627c663904294043d8'
-            '39bf3824cc505043dc3136356da16dab9df9f369f1077435a324be2ac16cf834')
+        fix_external_program_directories.patch)
+sha256sums=('aff69dde55e11b540145002c95cf966cd16376910283b385520431ced10c5031'
+            'a878680734e35c1d66252cbcfe678c3961b5ff0fa16302f8796a5e7e65ffe4a2')
 
 build() {
   cd "$pkgname-$pkgver"
   patch -Np1 -i "$srcdir/fix_external_program_directories.patch"
-  patch -Np1 -i "$srcdir/gdm-vt-allocation-hack.patch"
 
-  ./configure --prefix=/usr --sysconfdir=/etc \
-      --libexecdir=/usr/lib/gdm \
-      --localstatedir=/var \
-      --with-at-spi-registryd-directory=/usr/lib/at-spi2-core \
-      --disable-scrollkeeper \
-      --disable-static \
-      --without-tcp-wrappers \
-      --disable-schemas-compile \
-      --with-systemd=no
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/lib/gdm \
+    --localstatedir=/var \
+    --disable-static \
+    --disable-schemas-compile \
+    --with-at-spi-registryd-directory=/usr/lib/at-spi2-core \
+    --with-check-accelerated-directory=/usr/lib/gnome-session \
+    --with-authentication-agent-directory=/usr/lib/polkit-gnome \
+    --without-tcp-wrappers \
+    --without-console-kit \
+    --with-systemd \
+    --with-default-pam-config=exherbo
+
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
-  make
+
+  make -j1 # race condition building gdm-client.c, does not wait for gdm-client-glue.h
 }
 
 package() {
   cd "$pkgname-$pkgver"
   make DESTDIR="$pkgdir" install
 
-  for i in gdm-autologin.pam gdm-fingerprint.pam gdm.pam gdm-password.pam gdm-smartcard.pam gdm-welcome.pam;do
-      install -m644 "$srcdir/$i" "$pkgdir/etc/pam.d/${i%.pam}"
-  done
-
-  install -Dm755 "$srcdir/gdm" "$pkgdir/etc/rc.d/gdm"
-  install -Dm644 "$srcdir/gdm.service" "$pkgdir/usr/lib/systemd/system/gdm.service"
-
   chmod 1770 "$pkgdir/var/log/gdm"
   chmod 700 "$pkgdir/var/lib/gdm/.config/dconf"
-  rm -rf "$pkgdir/var/run" "$pkgdir/var/gdm"
+  rm -r "$pkgdir/var/run" "$pkgdir/var/gdm"
 }
