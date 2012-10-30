@@ -2,28 +2,36 @@
 # Maintainer: Jan de Groot  <jgc@archlinux.org>
 
 pkgname=libgweather
-pkgver=3.4.1
+pkgver=3.6.0
 pkgrel=1
 pkgdesc="Provides access to weather information from the net"
 arch=('i686' 'x86_64')
 license=('LGPL')
-depends=('gconf' 'libsoup-gnome' 'gnome-icon-theme')
+depends=('libsoup-gnome' 'gnome-icon-theme' 'gtk3')
 makedepends=('intltool' 'gtk-doc' 'gobject-introspection' 'gnome-common')
 options=('!libtool' '!emptydirs')
 url="http://www.gnome.org/"
 install=libgweather.install
 source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz
-        gettext-not-xml.patch)
-sha256sums=('ee9c4d09f33ae2b066dd1e696aa3e483a689cba6d63bcd388cc2ef95df9b1b60'
-            '3808da5c27bad1152eee824db2cead21de599af198eca017a18e1b0adb366330')
+        gettext-not-xml.patch
+        no_external_gettext.patch)
+sha256sums=('93c9ef9bba3feb559c02b860909915fa9ffc7c08b4789a825939236e3e84b676'
+            '40325e0b5464ebb75eaad3c9292c0bab7b15cfefb93011d9ccc0ab82635a9533'
+            'f07ac07a70ad4999c3acd5d5b82aabd8831e6a45beb9aaed239f212057ded672')
 
 build() {
     cd "$pkgname-$pkgver"
 
     patch -Np1 -i "$srcdir/gettext-not-xml.patch"
+    patch -Np1 -i "$srcdir/no_external_gettext.patch"
     gtkdocize
     autoreconf -fi
 
+    cd po
+     intltool-update --pot
+    cd ../po-locations
+    intltool-update --gettext-package libgweather-locations --pot
+    cd ..
     ./configure --prefix=/usr --sysconfdir=/etc \
         --localstatedir=/var --disable-static \
         --enable-locations-compression
@@ -33,8 +41,4 @@ build() {
 package() {
     cd "$pkgname-$pkgver"
     make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="$pkgdir" install
-
-    install -m755 -d "$pkgdir/usr/share/gconf/schemas"
-    gconf-merge-schema "$pkgdir/usr/share/gconf/schemas/$pkgname.schemas" --domain libgweather "$pkgdir"/etc/gconf/schemas/*.schemas
-    rm -f "$pkgdir"/etc/gconf/schemas/*.schemas
 }
