@@ -1,0 +1,934 @@
+From e43f53bf7f3d371116f31f22ab9754b08b5abe7f Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Mon, 22 Oct 2012 12:47:11 +0000
+Subject: version: Post release bump to 1.12.7
+
+---
+diff --git a/cairo-version.h b/cairo-version.h
+index dc89a19..c685909 100644
+--- a/cairo-version.h
++++ b/cairo-version.h
+@@ -3,6 +3,6 @@
+ 
+ #define CAIRO_VERSION_MAJOR 1
+ #define CAIRO_VERSION_MINOR 12
+-#define CAIRO_VERSION_MICRO 6
++#define CAIRO_VERSION_MICRO 7
+ 
+ #endif
+--
+cgit v0.9.0.2-2-gbebe
+From 00feb8ce530a472abbde445b52d9ae8c99ec97f0 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Fri, 26 Oct 2012 09:51:31 +0000
+Subject: xlib/shm: Sanity check that the server handles XSendEvent with ShmCompletion
+
+Uli Schlachter suggested it would be wiser to complement our blacklist
+of known broken X/libXext with an explicit roundtrip to check for a
+BadValue error return when we try to use XSendEvent.
+
+Suggested-by: Uli Schlachter <psychon@znc.in>
+Reported-by: Martin Husemann <martin@duskware.de>
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/cairo-xlib-surface-shm.c b/src/cairo-xlib-surface-shm.c
+index ec0d334..17594b1 100644
+--- a/src/cairo-xlib-surface-shm.c
++++ b/src/cairo-xlib-surface-shm.c
+@@ -1128,8 +1128,60 @@ _cairo_xlib_shm_surface_is_idle (cairo_surface_t *surface)
+     (((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
+ 
+ static cairo_bool_t
+-xorg_has_buggy_send_shm_completion_event(Display *dpy)
++has_broken_send_shm_event (cairo_xlib_display_t *display,
++			   cairo_xlib_shm_display_t *shm)
+ {
++    Display *dpy = display->display;
++    int (*old_handler) (Display *display, XErrorEvent *event);
++    XShmCompletionEvent ev;
++    XShmSegmentInfo info;
++
++    info.shmid = shmget (IPC_PRIVATE, 0x1000, IPC_CREAT | 0600);
++    if (info.shmid == -1)
++	return TRUE;
++
++    info.readOnly = FALSE;
++    info.shmaddr = shmat (info.shmid, NULL, 0);
++    if (info.shmaddr == (char *) -1) {
++	shmctl (info.shmid, IPC_RMID, NULL);
++	return TRUE;
++    }
++
++    ev.type = shm->event;
++    ev.drawable = shm->window;
++    ev.major_code = shm->opcode;
++    ev.minor_code = X_ShmPutImage;
++
++    ev.shmseg = info.shmid;
++    ev.offset = 0;
++
++    assert (CAIRO_MUTEX_IS_LOCKED (_cairo_xlib_display_mutex));
++    _x_error_occurred = FALSE;
++
++    XLockDisplay (dpy);
++    XSync (dpy, False);
++    old_handler = XSetErrorHandler (_check_error_handler);
++
++    XShmAttach (dpy, &info);
++    XSendEvent (dpy, ev.drawable, False, 0, (XEvent *)&ev);
++    XShmDetach (dpy, &info);
++
++    XSync (dpy, False);
++    XSetErrorHandler (old_handler);
++    XUnlockDisplay (dpy);
++
++    shmctl (info.shmid, IPC_RMID, NULL);
++    shmdt (info.shmaddr);
++
++    return _x_error_occurred;
++}
++
++static cairo_bool_t
++xorg_has_buggy_send_shm_completion_event(cairo_xlib_display_t *display,
++					 cairo_xlib_shm_display_t *shm)
++{
++    Display *dpy = display->display;
++
+     /* As libXext sets the SEND_EVENT bit in the ShmCompletionEvent,
+      * the Xserver may crash if it does not take care when processing
+      * the event type. For instance versions of Xorg prior to 1.11.1
+@@ -1141,8 +1193,12 @@ xorg_has_buggy_send_shm_completion_event(Display *dpy)
+      *
+      * Remove the SendEvent bit (0x80) before doing range checks on event type.
+      */
+-    return (strstr (ServerVendor (dpy), "X.Org") != NULL &&
+-	    VendorRelease (dpy) < XORG_VERSION_ENCODE(1,11,0,1));
++    if (strstr (ServerVendor (dpy), "X.Org") != NULL &&
++	VendorRelease (dpy) < XORG_VERSION_ENCODE(1,11,0,1))
++	return TRUE;
++
++    /* For everyone else check that no error is generated */
++    return has_broken_send_shm_event (display, shm);
+ }
+ 
+ void
+@@ -1162,6 +1218,15 @@ _cairo_xlib_display_init_shm (cairo_xlib_display_t *display)
+     if (unlikely (shm == NULL))
+ 	return;
+ 
++    codes = XInitExtension (display->display, SHMNAME);
++    if (codes == NULL) {
++	free (shm);
++	return;
++    }
++
++    shm->opcode = codes ->major_opcode;
++    shm->event = codes->first_event;
++
+     if (unlikely (_pqueue_init (&shm->info))) {
+ 	free (shm);
+ 	return;
+@@ -1177,16 +1242,12 @@ _cairo_xlib_display_init_shm (cairo_xlib_display_t *display)
+ 				 DefaultVisual (display->display, scr),
+ 				 CWOverrideRedirect, &attr);
+ 
+-    if (xorg_has_buggy_send_shm_completion_event(display->display))
++    if (xorg_has_buggy_send_shm_completion_event(display, shm))
+ 	has_pixmap = 0;
+ 
+     shm->has_pixmaps = has_pixmap ? MIN_PIXMAP_SIZE : 0;
+     cairo_list_init (&shm->pool);
+ 
+-    codes = XInitExtension (display->display, SHMNAME);
+-    shm->opcode = codes ->major_opcode;
+-    shm->event = codes->first_event;
+-
+     cairo_list_init (&shm->surfaces);
+ 
+     display->shm = shm;
+--
+cgit v0.9.0.2-2-gbebe
+From fdd2082f923012a1354be7086d03f78fb166695b Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Fri, 26 Oct 2012 09:51:31 +0000
+Subject: xlib: Check for both X.org and Xorg ServerVendors
+
+Martin Husemann reported that on his NetBSD machine the vendor was being
+reported as "The Xorg Foundation", a non-conformist separatist split of
+the Peoples' Liberation Army^W^W^W "The X.Org Foundation". Simply check
+for both during initialisation.
+
+Reported-by: Martin Husemann <martin@duskware.de>
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/cairo-xlib-display.c b/src/cairo-xlib-display.c
+index 67c0673..04c89b2 100644
+--- a/src/cairo-xlib-display.c
++++ b/src/cairo-xlib-display.c
+@@ -315,7 +315,7 @@ _cairo_xlib_device_create (Display *dpy)
+      *    safest to just blacklist all old-versioning-scheme X servers,
+      *    (just using VendorRelease < 70000000), as buggy_repeat=TRUE.
+      */
+-    if (strstr (ServerVendor (dpy), "X.Org") != NULL) {
++    if (_cairo_xlib_vendor_is_xorg (dpy)) {
+ 	if (VendorRelease (dpy) >= 60700000) {
+ 	    if (VendorRelease (dpy) < 70000000)
+ 		display->buggy_repeat = TRUE;
+diff --git a/src/cairo-xlib-private.h b/src/cairo-xlib-private.h
+index d2bd588..c328302 100644
+--- a/src/cairo-xlib-private.h
++++ b/src/cairo-xlib-private.h
+@@ -216,6 +216,13 @@ struct _cairo_xlib_proxy {
+     cairo_surface_t *owner;
+ };
+ 
++inline static cairo_bool_t
++_cairo_xlib_vendor_is_xorg (Display *dpy)
++{
++    const char *const vendor = ServerVendor (dpy);
++    return strstr (vendor, "X.Org") || strstr (vendor, "Xorg");
++}
++
+ cairo_private cairo_status_t
+ _cairo_xlib_surface_get_gc (cairo_xlib_display_t *display,
+                             cairo_xlib_surface_t *surface,
+diff --git a/src/cairo-xlib-surface-shm.c b/src/cairo-xlib-surface-shm.c
+index 17594b1..89f51a9 100644
+--- a/src/cairo-xlib-surface-shm.c
++++ b/src/cairo-xlib-surface-shm.c
+@@ -1193,7 +1193,7 @@ xorg_has_buggy_send_shm_completion_event(cairo_xlib_display_t *display,
+      *
+      * Remove the SendEvent bit (0x80) before doing range checks on event type.
+      */
+-    if (strstr (ServerVendor (dpy), "X.Org") != NULL &&
++    if (_cairo_xlib_vendor_is_xorg (dpy) &&
+ 	VendorRelease (dpy) < XORG_VERSION_ENCODE(1,11,0,1))
+ 	return TRUE;
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From d57e652f08f5ff7c334d01bc071962e6a131928f Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Fri, 26 Oct 2012 12:30:01 +0000
+Subject: type1-subset: parse all operators
+
+The PDF at bug 56265 contained a Type 1 font that used the "div"
+operator to compute the glyph width. As the "div" operator was
+not handled by the charstring parser this resulted in an incorrect
+glyph width in the PDF output.
+
+Fix this by upgrading the charstring parsing to handle all Type 1
+operators.
+---
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index 1bdb12b..c7f613a 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -137,13 +137,10 @@ typedef struct _cairo_type1_font_subset {
+     int hex_column;
+ 
+     struct {
+-	int stack[TYPE1_STACKSIZE], sp, top_value;
++	double stack[TYPE1_STACKSIZE];
++	int sp;
+     } build_stack;
+ 
+-    struct {
+-	int other_subr_args[TYPE1_STACKSIZE], num_other_subr_args, cur_other_subr_arg;
+-    } ps_stack;
+-
+ 
+ } cairo_type1_font_subset_t;
+ 
+@@ -742,15 +739,33 @@ use_standard_encoding_glyph (cairo_type1_font_subset_t *font, int index)
+     return CAIRO_INT_STATUS_UNSUPPORTED;
+ }
+ 
+-#define TYPE1_CHARSTRING_COMMAND_ESCAPE		0x0c
+-#define TYPE1_CHARSTRING_COMMAND_SEAC		0x0c06
+-#define TYPE1_CHARSTRING_COMMAND_SBW		0x0c07
+-#define TYPE1_CHARSTRING_COMMAND_HSBW		0x0d
+-#define TYPE1_CHARSTRING_COMMAND_CALLSUBR	0x0a
+-#define TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR  0x0c10
+-#define TYPE1_CHARSTRING_COMMAND_POP	        0x0c11
+-
+ 
++#define TYPE1_CHARSTRING_COMMAND_HSTEM		 0x01
++#define TYPE1_CHARSTRING_COMMAND_VSTEM		 0x03
++#define TYPE1_CHARSTRING_COMMAND_VMOVETO	 0x04
++#define TYPE1_CHARSTRING_COMMAND_RLINETO	 0x05
++#define TYPE1_CHARSTRING_COMMAND_HLINETO	 0x06
++#define TYPE1_CHARSTRING_COMMAND_VLINETO	 0x07
++#define TYPE1_CHARSTRING_COMMAND_RRCURVETO	 0x08
++#define TYPE1_CHARSTRING_COMMAND_CLOSEPATH	 0x09
++#define TYPE1_CHARSTRING_COMMAND_CALLSUBR	 0x0a
++#define TYPE1_CHARSTRING_COMMAND_RETURN		 0x0b
++#define TYPE1_CHARSTRING_COMMAND_ESCAPE		 0x0c
++#define TYPE1_CHARSTRING_COMMAND_HSBW		 0x0d
++#define TYPE1_CHARSTRING_COMMAND_ENDCHAR	 0x0e
++#define TYPE1_CHARSTRING_COMMAND_RMOVETO	 0x15
++#define TYPE1_CHARSTRING_COMMAND_HMOVETO	 0x16
++#define TYPE1_CHARSTRING_COMMAND_VHCURVETO	 0x1e
++#define TYPE1_CHARSTRING_COMMAND_HVCURVETO	 0x1f
++#define TYPE1_CHARSTRING_COMMAND_DOTSECTION	 0x0c00
++#define TYPE1_CHARSTRING_COMMAND_VSTEM3		 0x0c01
++#define TYPE1_CHARSTRING_COMMAND_HSTEM3		 0x0c02
++#define TYPE1_CHARSTRING_COMMAND_SEAC		 0x0c06
++#define TYPE1_CHARSTRING_COMMAND_SBW		 0x0c07
++#define TYPE1_CHARSTRING_COMMAND_DIV		 0x0c0c
++#define TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR   0x0c10
++#define TYPE1_CHARSTRING_COMMAND_POP	         0x0c11
++#define TYPE1_CHARSTRING_COMMAND_SETCURRENTPOINT 0x0c21
+ 
+ /* Get glyph width and look for seac operatorParse charstring */
+ static cairo_status_t
+@@ -765,7 +780,6 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+     const unsigned char *p;
+     cairo_bool_t last_op_was_integer;
+     int command;
+-    int subr_num, i;
+ 
+     charstring = malloc (encrypted_charstring_length);
+     if (unlikely (charstring == NULL))
+@@ -785,37 +799,60 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+         if (*p < 32) {
+ 	    command = *p++;
+ 	    switch (command) {
+-	    case TYPE1_CHARSTRING_COMMAND_HSBW:
+-		if (! last_op_was_integer)
+-		    return CAIRO_INT_STATUS_UNSUPPORTED;
+-
+-		font->glyphs[glyph].width = font->build_stack.stack[1]/font->base.units_per_em;
++	    case TYPE1_CHARSTRING_COMMAND_HSTEM:
++	    case TYPE1_CHARSTRING_COMMAND_VSTEM:
++	    case TYPE1_CHARSTRING_COMMAND_VMOVETO:
++	    case TYPE1_CHARSTRING_COMMAND_RLINETO:
++	    case TYPE1_CHARSTRING_COMMAND_HLINETO:
++	    case TYPE1_CHARSTRING_COMMAND_VLINETO:
++	    case TYPE1_CHARSTRING_COMMAND_RRCURVETO:
++	    case TYPE1_CHARSTRING_COMMAND_CLOSEPATH:
++	    case TYPE1_CHARSTRING_COMMAND_RMOVETO:
++	    case TYPE1_CHARSTRING_COMMAND_HMOVETO:
++	    case TYPE1_CHARSTRING_COMMAND_VHCURVETO:
++	    case TYPE1_CHARSTRING_COMMAND_HVCURVETO:
++	    case TYPE1_CHARSTRING_COMMAND_RETURN:
++	    case TYPE1_CHARSTRING_COMMAND_ENDCHAR:
++	    default:
+ 		font->build_stack.sp = 0;
+-		last_op_was_integer = FALSE;
+ 		break;
+ 
+ 	    case TYPE1_CHARSTRING_COMMAND_CALLSUBR:
+-		if (font->subset_subrs  &&
+-		    last_op_was_integer &&
+-		    font->build_stack.top_value >= 0    &&
+-		    font->build_stack.top_value < font->num_subrs)
+-		{
+-		    subr_num = font->build_stack.top_value;
+-		    font->build_stack.sp--;
+-		    font->subrs[subr_num].used = TRUE;
+-		    last_op_was_integer = FALSE;
+-		    status = cairo_type1_font_subset_parse_charstring (font,
+-								       glyph,
+-								       font->subrs[subr_num].subr_string,
+-								       font->subrs[subr_num].subr_length);
+-		} else {
+-		    font->subset_subrs = FALSE;
++		if (font->subset_subrs && font->build_stack.sp > 0) {
++		    int subr_num = font->build_stack.stack[--font->build_stack.sp];
++		    if (subr_num >= 0 && subr_num < font->num_subrs) {
++			font->subrs[subr_num].used = TRUE;
++			status = cairo_type1_font_subset_parse_charstring (
++			                                   font,
++							   glyph,
++							   font->subrs[subr_num].subr_string,
++							   font->subrs[subr_num].subr_length);
++			break;
++		    }
+ 		}
++		font->subset_subrs = FALSE;
++		break;
++
++	    case TYPE1_CHARSTRING_COMMAND_HSBW:
++		if (font->build_stack.sp < 2)
++		    return CAIRO_INT_STATUS_UNSUPPORTED;
++
++		font->glyphs[glyph].width = font->build_stack.stack[1]/font->base.units_per_em;
++		font->build_stack.sp = 0;
+ 		break;
+ 
+ 	    case TYPE1_CHARSTRING_COMMAND_ESCAPE:
+ 		command = command << 8 | *p++;
+ 		switch (command) {
++		case TYPE1_CHARSTRING_COMMAND_DOTSECTION:
++		case TYPE1_CHARSTRING_COMMAND_VSTEM3:
++		case TYPE1_CHARSTRING_COMMAND_HSTEM3:
++		case TYPE1_CHARSTRING_COMMAND_SETCURRENTPOINT:
++		case TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR:
++		default:
++		    font->build_stack.sp = 0;
++		    break;
++
+ 		case TYPE1_CHARSTRING_COMMAND_SEAC:
+ 		    /* The seac command takes five integer arguments.  The
+ 		     * last two are glyph indices into the PS standard
+@@ -823,6 +860,9 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 		     * glyph is composed from.  All we need to do is to
+ 		     * make sure those glyphs are present in the subset
+ 		     * under their standard names. */
++		    if (font->build_stack.sp < 5)
++			return CAIRO_INT_STATUS_UNSUPPORTED;
++
+ 		    status = use_standard_encoding_glyph (font, font->build_stack.stack[3]);
+ 		    if (unlikely (status))
+ 			return status;
+@@ -832,55 +872,49 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 			return status;
+ 
+ 		    font->build_stack.sp = 0;
+-		    last_op_was_integer = FALSE;
+ 		    break;
+ 
+ 		case TYPE1_CHARSTRING_COMMAND_SBW:
+-		    if (! last_op_was_integer)
++		    if (font->build_stack.sp < 4)
+ 			return CAIRO_INT_STATUS_UNSUPPORTED;
+ 
+ 		    font->glyphs[glyph].width = font->build_stack.stack[2]/font->base.units_per_em;
+ 		    font->build_stack.sp = 0;
+-		    last_op_was_integer = FALSE;
+-		    break;
+-
+-		case TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR:
+-		    for (i = 0; i < font->build_stack.sp; i++)
+-			font->ps_stack.other_subr_args[i] = font->build_stack.stack[i];
+-		    font->ps_stack.num_other_subr_args = font->build_stack.sp;
+-		    font->ps_stack.cur_other_subr_arg = 0;
+-		    font->build_stack.sp = 0;
+-		    last_op_was_integer = FALSE;
+ 		    break;
+ 
+-		case TYPE1_CHARSTRING_COMMAND_POP:
+-		    if (font->ps_stack.num_other_subr_args > font->ps_stack.cur_other_subr_arg) {
+-			font->build_stack.top_value = font->ps_stack.other_subr_args[font->ps_stack.cur_other_subr_arg++];
+-			last_op_was_integer = TRUE;
++		case TYPE1_CHARSTRING_COMMAND_DIV:
++		    if (font->build_stack.sp < 2) {
++			return CAIRO_INT_STATUS_UNSUPPORTED;
+ 		    } else {
+-			font->subset_subrs = FALSE;
++			double num1 = font->build_stack.stack[font->build_stack.sp - 2];
++			double num2 = font->build_stack.stack[font->build_stack.sp - 1];
++			font->build_stack.sp--;
++			if (num2 == 0.0)
++			    return CAIRO_INT_STATUS_UNSUPPORTED;
++
++			font->build_stack.stack[font->build_stack.sp - 1] = num1/num2;
+ 		    }
+ 		    break;
+ 
+-		default:
+-		    font->build_stack.sp = 0;
+-		    last_op_was_integer = FALSE;
++		case TYPE1_CHARSTRING_COMMAND_POP:
++		    if (font->build_stack.sp < TYPE1_STACKSIZE) {
++			/* use negative number to prevent it being used as a subr_num */
++			font->build_stack.stack[font->build_stack.sp++] = -1.0;
++		    }
+ 		    break;
+ 		}
+ 		break;
+-
+-	    default:
+-		font->build_stack.sp = 0;
+-		last_op_was_integer = FALSE;
+-		break;
+ 	    }
+-        } else {
++	} else {
+             /* integer argument */
+-	    p = cairo_type1_font_subset_decode_integer (p, &font->build_stack.top_value);
+-	    last_op_was_integer = TRUE;
+-	    if (font->build_stack.sp < TYPE1_STACKSIZE)
+-		font->build_stack.stack[font->build_stack.sp++] = font->build_stack.top_value;
+-        }
++	    if (font->build_stack.sp < TYPE1_STACKSIZE) {
++		int val;
++		p = cairo_type1_font_subset_decode_integer (p, &val);
++		font->build_stack.stack[font->build_stack.sp++] = val;
++	    } else {
++		return CAIRO_INT_STATUS_UNSUPPORTED;
++	    }
++	}
+     }
+ 
+     free (charstring);
+@@ -1321,7 +1355,6 @@ skip_subrs:
+     for (j = 0; j < font->num_glyphs; j++) {
+ 	glyph = font->subset_index_to_glyphs[j];
+ 	font->build_stack.sp = 0;
+-	font->ps_stack.num_other_subr_args = 0;
+ 	status = cairo_type1_font_subset_parse_charstring (font,
+ 							   glyph,
+ 							   font->glyphs[glyph].encrypted_charstring,
+--
+cgit v0.9.0.2-2-gbebe
+From f18199fcfb3b052c198041fc05156ae3d9e6aee7 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sun, 28 Oct 2012 10:04:12 +0000
+Subject: xlib/shm: Check for XShm headers
+
+Not all version of libXext ship the same set of headers, so play safe
+and check during configure that we have the headers we depend upon in
+the code.
+
+Reported-by: Sebastian Haas <sehaas@gmail.com>
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/configure.ac b/configure.ac
+index 7adbeb1..021ec8e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -105,6 +105,10 @@ CAIRO_ENABLE_SURFACE_BACKEND(xlib, Xlib, auto, [
+ 		  AC_MSG_RESULT(no),
+ 		  AC_MSG_RESULT(assuming no))
+       fi
++
++      AC_CHECK_HEADERS([X11/extensions/XShm.h X11/extensions/shmproto.h], [], [],
++		       [#include <X11/Xlibint.h>
++			#include <X11/Xproto.h>])
+ ])
+ 
+ CAIRO_ENABLE_SURFACE_BACKEND(xlib_xrender, Xlib Xrender, auto, [
+diff --git a/src/cairo-xlib-surface-shm.c b/src/cairo-xlib-surface-shm.c
+index 89f51a9..a3d4385 100644
+--- a/src/cairo-xlib-surface-shm.c
++++ b/src/cairo-xlib-surface-shm.c
+@@ -41,12 +41,105 @@
+ 
+ #include "cairo-xlib-private.h"
+ #include "cairo-xlib-surface-private.h"
+-#include "cairo-image-surface-private.h"
+-#include "cairo-mempool-private.h"
++
++#if !HAVE_X11_EXTENSIONS_XSHM_H || !HAVE_X11_EXTENSIONS_SHMPROTO_H
++void _cairo_xlib_display_init_shm (cairo_xlib_display_t *display) {}
++
++cairo_surface_t *
++_cairo_xlib_surface_get_shm (cairo_xlib_surface_t *surface,
++			     cairo_bool_t overwrite)
++{
++    return NULL;
++}
++
++cairo_int_status_t
++_cairo_xlib_surface_put_shm (cairo_xlib_surface_t *surface)
++{
++    ASSERT_NOT_REACHED;
++    return CAIRO_INT_STATUS_SUCCESS;
++}
++
++cairo_surface_t *
++_cairo_xlib_surface_create_shm (cairo_xlib_surface_t *other,
++				pixman_format_code_t format,
++				int width, int height)
++{
++    return NULL;
++}
++
++cairo_surface_t *
++_cairo_xlib_surface_create_shm__image (cairo_xlib_surface_t *surface,
++				       pixman_format_code_t format,
++				       int width, int height)
++{
++    return NULL;
++}
++
++cairo_surface_t *
++_cairo_xlib_surface_create_similar_shm (void *other,
++					cairo_format_t format,
++					int width, int height)
++{
++    return cairo_image_surface_create (format, width, height);
++}
++
++void
++_cairo_xlib_shm_surface_mark_active (cairo_surface_t *_shm)
++{
++    ASSERT_NOT_REACHED;
++}
++
++void
++_cairo_xlib_shm_surface_get_ximage (cairo_surface_t *surface,
++				    XImage *ximage)
++{
++    ASSERT_NOT_REACHED;
++}
++
++void *
++_cairo_xlib_shm_surface_get_obdata (cairo_surface_t *surface)
++{
++    ASSERT_NOT_REACHED;
++    return NULL;
++}
++
++Pixmap
++_cairo_xlib_shm_surface_get_pixmap (cairo_surface_t *surface)
++{
++    ASSERT_NOT_REACHED;
++    return 0;
++}
++
++XRenderPictFormat *
++_cairo_xlib_shm_surface_get_xrender_format (cairo_surface_t *surface)
++{
++    ASSERT_NOT_REACHED;
++    return NULL;
++}
++
++cairo_bool_t
++_cairo_xlib_shm_surface_is_active (cairo_surface_t *surface)
++{
++    ASSERT_NOT_REACHED;
++    return FALSE;
++}
++
++cairo_bool_t
++_cairo_xlib_shm_surface_is_idle (cairo_surface_t *surface)
++{
++    ASSERT_NOT_REACHED;
++    return TRUE;
++}
++
++void _cairo_xlib_display_fini_shm (cairo_xlib_display_t *display) {}
++
++#else
+ 
+ #include "cairo-damage-private.h"
+ #include "cairo-default-context-private.h"
++#include "cairo-image-surface-private.h"
+ #include "cairo-list-inline.h"
++#include "cairo-mempool-private.h"
+ 
+ #include <X11/Xlibint.h>
+ #include <X11/Xproto.h>
+@@ -1281,5 +1374,5 @@ _cairo_xlib_display_fini_shm (cairo_xlib_display_t *display)
+     free (shm);
+     display->shm = NULL;
+ }
+-
++#endif
+ #endif
+--
+cgit v0.9.0.2-2-gbebe
+From 0e2458697848cf8c89c9d57fa9b64f0ea7bd0877 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sun, 28 Oct 2012 10:08:39 +0000
+Subject: xlib/shm: Use shmstr.h instead of shmproto.h if available
+
+Before it was known as shmproto.h, the wire protocol definition was to
+be found in shmstr.h, so if we don't have the current version of libXext
+try to use the older includes.
+
+Reported-by: Sebastian Haas <sehaas@gmail.com>
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/configure.ac b/configure.ac
+index 021ec8e..f523284 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -106,7 +106,7 @@ CAIRO_ENABLE_SURFACE_BACKEND(xlib, Xlib, auto, [
+ 		  AC_MSG_RESULT(assuming no))
+       fi
+ 
+-      AC_CHECK_HEADERS([X11/extensions/XShm.h X11/extensions/shmproto.h], [], [],
++      AC_CHECK_HEADERS([X11/extensions/XShm.h X11/extensions/shmproto.h X11/extensions/shmstr.h], [], [],
+ 		       [#include <X11/Xlibint.h>
+ 			#include <X11/Xproto.h>])
+ ])
+diff --git a/src/cairo-xlib-surface-shm.c b/src/cairo-xlib-surface-shm.c
+index a3d4385..44e6284 100644
+--- a/src/cairo-xlib-surface-shm.c
++++ b/src/cairo-xlib-surface-shm.c
+@@ -42,7 +42,7 @@
+ #include "cairo-xlib-private.h"
+ #include "cairo-xlib-surface-private.h"
+ 
+-#if !HAVE_X11_EXTENSIONS_XSHM_H || !HAVE_X11_EXTENSIONS_SHMPROTO_H
++#if !HAVE_X11_EXTENSIONS_XSHM_H || !(HAVE_X11_EXTENSIONS_SHMPROTO_H || HAVE_X11_EXTENSIONS_SHMSTR_H)
+ void _cairo_xlib_display_init_shm (cairo_xlib_display_t *display) {}
+ 
+ cairo_surface_t *
+@@ -144,7 +144,11 @@ void _cairo_xlib_display_fini_shm (cairo_xlib_display_t *display) {}
+ #include <X11/Xlibint.h>
+ #include <X11/Xproto.h>
+ #include <X11/extensions/XShm.h>
++#if HAVE_X11_EXTENSIONS_SHMPROTO_H
+ #include <X11/extensions/shmproto.h>
++#elif HAVE_X11_EXTENSIONS_SHMSTR_H
++#include <X11/extensions/shmstr.h>
++#endif
+ #include <sys/ipc.h>
+ #include <sys/shm.h>
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From 5a6e1d680a5bf1c4091e74f999abd611abd92334 Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Sun, 28 Oct 2012 10:28:52 +0000
+Subject: type1-subset: restore correct callothersub behavior
+
+that was removed in d57e652f. Without this subsetting of subroutines
+won't work for some fonts.
+---
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index c7f613a..786055a 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -141,6 +141,11 @@ typedef struct _cairo_type1_font_subset {
+ 	int sp;
+     } build_stack;
+ 
++    struct {
++	int stack[TYPE1_STACKSIZE];
++	int sp;
++    } ps_stack;
++
+ 
+ } cairo_type1_font_subset_t;
+ 
+@@ -767,7 +772,9 @@ use_standard_encoding_glyph (cairo_type1_font_subset_t *font, int index)
+ #define TYPE1_CHARSTRING_COMMAND_POP	         0x0c11
+ #define TYPE1_CHARSTRING_COMMAND_SETCURRENTPOINT 0x0c21
+ 
+-/* Get glyph width and look for seac operatorParse charstring */
++/* Parse the charstring, including recursing into subroutines. Find
++ * the glyph width, subroutines called, and glyphs required by the
++ * SEAC operator. */
+ static cairo_status_t
+ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 					  int                        glyph,
+@@ -814,6 +821,7 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 	    case TYPE1_CHARSTRING_COMMAND_RETURN:
+ 	    case TYPE1_CHARSTRING_COMMAND_ENDCHAR:
+ 	    default:
++		/* stack clearing operator */
+ 		font->build_stack.sp = 0;
+ 		break;
+ 
+@@ -848,8 +856,8 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 		case TYPE1_CHARSTRING_COMMAND_VSTEM3:
+ 		case TYPE1_CHARSTRING_COMMAND_HSTEM3:
+ 		case TYPE1_CHARSTRING_COMMAND_SETCURRENTPOINT:
+-		case TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR:
+ 		default:
++		    /* stack clearing operator */
+ 		    font->build_stack.sp = 0;
+ 		    break;
+ 
+@@ -896,11 +904,25 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 		    }
+ 		    break;
+ 
++		case TYPE1_CHARSTRING_COMMAND_CALLOTHERSUBR:
++		    if (font->build_stack.sp < 1)
++			return CAIRO_INT_STATUS_UNSUPPORTED;
++
++		    font->build_stack.sp--;
++		    font->ps_stack.sp = 0;
++		    while (font->build_stack.sp)
++			font->ps_stack.stack[font->ps_stack.sp++] = font->build_stack.stack[--font->build_stack.sp];
++
++                    break;
++
+ 		case TYPE1_CHARSTRING_COMMAND_POP:
+-		    if (font->build_stack.sp < TYPE1_STACKSIZE) {
+-			/* use negative number to prevent it being used as a subr_num */
+-			font->build_stack.stack[font->build_stack.sp++] = -1.0;
+-		    }
++		    if (font->ps_stack.sp < 1)
++			return CAIRO_INT_STATUS_UNSUPPORTED;
++
++		    /* T1 spec states that if the interpreter does not
++		     * support executing the callothersub, the results
++		     * must be taken from the callothersub arguments. */
++		    font->build_stack.stack[font->build_stack.sp++] = font->ps_stack.stack[--font->ps_stack.sp];
+ 		    break;
+ 		}
+ 		break;
+@@ -1355,6 +1377,7 @@ skip_subrs:
+     for (j = 0; j < font->num_glyphs; j++) {
+ 	glyph = font->subset_index_to_glyphs[j];
+ 	font->build_stack.sp = 0;
++	font->ps_stack.sp = 0;
+ 	status = cairo_type1_font_subset_parse_charstring (font,
+ 							   glyph,
+ 							   font->glyphs[glyph].encrypted_charstring,
+--
+cgit v0.9.0.2-2-gbebe
+From 0c800dc3f64ee030df1cd0a6a1dcd6df71502dea Mon Sep 17 00:00:00 2001
+From: Adrian Johnson <ajohnson@redneon.com>
+Date: Tue, 30 Oct 2012 08:53:30 +0000
+Subject: type1-subset: ensure subroutine numnber is an integer
+
+---
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index 786055a..dff4a95 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -827,15 +827,18 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
+ 
+ 	    case TYPE1_CHARSTRING_COMMAND_CALLSUBR:
+ 		if (font->subset_subrs && font->build_stack.sp > 0) {
+-		    int subr_num = font->build_stack.stack[--font->build_stack.sp];
+-		    if (subr_num >= 0 && subr_num < font->num_subrs) {
+-			font->subrs[subr_num].used = TRUE;
+-			status = cairo_type1_font_subset_parse_charstring (
+-			                                   font,
+-							   glyph,
+-							   font->subrs[subr_num].subr_string,
+-							   font->subrs[subr_num].subr_length);
+-			break;
++		    double int_val;
++		    if (modf(font->build_stack.stack[--font->build_stack.sp], &int_val) == 0.0) {
++			int subr_num = int_val;
++			if (subr_num >= 0 && subr_num < font->num_subrs) {
++			    font->subrs[subr_num].used = TRUE;
++			    status = cairo_type1_font_subset_parse_charstring (
++				font,
++				glyph,
++				font->subrs[subr_num].subr_string,
++				font->subrs[subr_num].subr_length);
++			    break;
++			}
+ 		    }
+ 		}
+ 		font->subset_subrs = FALSE;
+--
+cgit v0.9.0.2-2-gbebe
+From 65176b7380f0d633da514be1febe16f17b99d876 Mon Sep 17 00:00:00 2001
+From: Kevin Tardif <kiyoka@gmail.com>
+Date: Tue, 30 Oct 2012 04:27:27 +0000
+Subject: type1-subset, cff-subset: Plugged 2 memory leaks
+
+- _cairo_type1_font_subset_fini doesn't free font->cleartext
+- _cairo_cff_font_create can exit without freeing font->font_name and/or
+  font->data; _cairo_cff_font_load_opentype_cff is called to allocate
+  font_name, then _cairo_cff_font_load_cff is called to allocate
+  font->data, then _cairo_cff_font_load_cff's return status is checked
+  and if it failed, it jumps to fail1. This can cause font_name to leak
+  since the fail1 target only frees the font variable. In addition,
+  _cairo_cff_font_load_cff can fail -after- allocating data, and then
+  data won't be freed either.
+
+Bug 56566
+---
+diff --git a/src/cairo-cff-subset.c b/src/cairo-cff-subset.c
+index e3040fc..bd8d5b5 100644
+--- a/src/cairo-cff-subset.c
++++ b/src/cairo-cff-subset.c
+@@ -2787,7 +2787,7 @@ _cairo_cff_font_create (cairo_scaled_font_subset_t  *scaled_font_subset,
+     if (backend->is_synthetic && backend->is_synthetic (scaled_font_subset->scaled_font))
+ 	return CAIRO_INT_STATUS_UNSUPPORTED;
+ 
+-    font = malloc (sizeof (cairo_cff_font_t));
++    font = calloc (1, sizeof (cairo_cff_font_t));
+     if (unlikely (font == NULL))
+         return _cairo_error (CAIRO_STATUS_NO_MEMORY);
+ 
+@@ -2862,11 +2862,11 @@ fail4:
+ fail3:
+     free (font->subset_font_name);
+ fail2:
+-    free (font->data);
+-    free (font->font_name);
+     free (font->ps_name);
+     _cairo_array_fini (&font->output);
+ fail1:
++    free (font->data);
++    free (font->font_name);
+     free (font);
+ 
+     return status;
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+index dff4a95..2ec56f1 100644
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
+@@ -1670,6 +1670,8 @@ _cairo_type1_font_subset_fini (cairo_type1_font_subset_t *font)
+ 
+     free (font->subset_index_to_glyphs);
+ 
++    free (font->cleartext);
++
+     return status;
+ }
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From 66625cb46c985321c46b79d2163a4d676d6700ba Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Tue, 30 Oct 2012 12:40:41 +0000
+Subject: xlib: Apply the image offsets to the destination rather the source
+
+So that we can specify the entire source surface as the region to copy
+and not introduce clipping errors.
+
+Fixes regression from
+commit c068691ff57c2f6cd750a54db17393c0e132cb00
+Author: Chris Wilson <chris@chris-wilson.co.uk>
+Date:   Fri Aug 17 21:33:54 2012 +0100
+
+    xlib/shm: Use an impromptu upload ShmSegment
+
+Reported-by: John Lindgren <john.lindgren@aol.com>
+Reported-by: Kalev Lember <kalevlember@gmail.com>
+Bugzilla: https://bugs.freedesktop.org/show_bug.cgi?id=56547
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/cairo-xlib-render-compositor.c b/src/cairo-xlib-render-compositor.c
+index e325382..74c43e9 100644
+--- a/src/cairo-xlib-render-compositor.c
++++ b/src/cairo-xlib-render-compositor.c
+@@ -179,22 +179,19 @@ copy_image_boxes (void *_dst,
+ 		int x2 = _cairo_fixed_integer_part (chunk->base[i].p2.x);
+ 		int y2 = _cairo_fixed_integer_part (chunk->base[i].p2.y);
+ 
+-		rects[j].x = x1;
+-		rects[j].y = y1;
+-		rects[j].width  = x2 - x1;
+-		rects[j].height = y2 - y1;
+-		j++;
++		if (x2 > x1 && y2 > y1) {
++		    rects[j].x = x1;
++		    rects[j].y = y1;
++		    rects[j].width  = x2 - x1;
++		    rects[j].height = y2 - y1;
++		    j++;
++		}
+ 	    }
+ 	}
+-	assert (j == boxes->num_boxes);
+ 
+ 	XSetClipRectangles (dst->dpy, gc, 0, 0, rects, j, Unsorted);
+-
+ 	XCopyArea (dst->dpy, src, dst->drawable, gc,
+-		   dx, dy,
+-		   image->width,  image->height,
+-		   0,      0);
+-
++		   0, 0, image->width, image->height, -dx, -dy);
+ 	XSetClipMask (dst->dpy, gc, None);
+ 
+ 	if (rects != stack_rects)
+@@ -337,7 +334,8 @@ draw_image_boxes (void *_dst,
+ 
+ 	    if (_cairo_xlib_shm_surface_get_pixmap (&image->base)) {
+ 		status = copy_image_boxes (dst, image, boxes, dx, dy);
+-		goto out;
++		if (status != CAIRO_INT_STATUS_UNSUPPORTED)
++		    goto out;
+ 	    }
+ 	}
+     }
+--
+cgit v0.9.0.2-2-gbebe
