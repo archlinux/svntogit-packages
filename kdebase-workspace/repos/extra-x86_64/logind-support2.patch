@@ -1,0 +1,124 @@
+commit 80e9e6e48ff5b84962f3a8543ee06bcd4f122623
+Author: Lukáš Tinkl <lukas@kde.org>
+Date:   Tue Oct 30 11:32:52 2012 +0100
+
+    move systemd inhibition initialization to a slot
+    
+    and call it on resume. It looks like the filedescriptor
+    goes away when you suspend so we need to recreate it.
+    
+    BUG: 307412
+
+diff --git a/powerdevil/daemon/powerdevilcore.cpp b/powerdevil/daemon/powerdevilcore.cpp
+index df79667..7f24cbb 100644
+--- a/powerdevil/daemon/powerdevilcore.cpp
++++ b/powerdevil/daemon/powerdevilcore.cpp
+@@ -127,8 +127,6 @@ void Core::onBackendReady()
+             this, SLOT(onAcAdapterStateChanged(PowerDevil::BackendInterface::AcAdapterState)));
+     connect(m_backend, SIGNAL(batteryRemainingTimeChanged(qulonglong)),
+             this, SLOT(onBatteryRemainingTimeChanged(qulonglong)));
+-    connect(m_backend, SIGNAL(resumeFromSuspend()),
+-            this, SLOT(onResumeFromSuspend()));
+     connect(KIdleTime::instance(), SIGNAL(timeoutReached(int,int)),
+             this, SLOT(onKIdleTimeoutReached(int,int)));
+     connect(KIdleTime::instance(), SIGNAL(resumingFromIdle()),
+@@ -139,6 +137,9 @@ void Core::onBackendReady()
+     // Set up the policy agent
+     PowerDevil::PolicyAgent::instance()->init();
+ 
++    connect(m_backend, SIGNAL(resumeFromSuspend()),
++            this, SLOT(onResumeFromSuspend()));
++
+     // Initialize the action pool, which will also load the needed startup actions.
+     PowerDevil::ActionPool::instance()->init(this);
+ 
+@@ -601,6 +602,7 @@ void Core::onResumeFromSuspend()
+                                              "/ScreenSaver",
+                                              QDBusConnection::sessionBus());
+     iface.SimulateUserActivity();
++    PowerDevil::PolicyAgent::instance()->setupSystemdInhibition();
+ 
+     emit resumingFromSuspend();
+ }
+diff --git a/powerdevil/daemon/powerdevilpolicyagent.cpp b/powerdevil/daemon/powerdevilpolicyagent.cpp
+index 70588db..0777846 100644
+--- a/powerdevil/daemon/powerdevilpolicyagent.cpp
++++ b/powerdevil/daemon/powerdevilpolicyagent.cpp
+@@ -88,6 +88,7 @@ PolicyAgent *PolicyAgent::instance()
+ PolicyAgent::PolicyAgent(QObject* parent)
+     : QObject(parent)
+     , m_sdAvailable(false)
++    , m_systemdInhibitFd(-1)
+     , m_ckAvailable(false)
+     , m_sessionIsBeingInterrupted(false)
+     , m_lastCookie(0)
+@@ -223,23 +224,7 @@ void PolicyAgent::onSessionHandlerRegistered(const QString & serviceName)
+ 
+         onActiveSessionChanged(m_activeSessionPath);
+ 
+-        // inhibit systemd handling of power/sleep/lid buttons
+-        // http://www.freedesktop.org/wiki/Software/systemd/inhibit
+-        kDebug() << "fd passing available:" << bool(managerIface.connection().connectionCapabilities() & QDBusConnection::UnixFileDescriptorPassing);
+-
+-        QVariantList args;
+-        args << "handle-power-key:handle-suspend-key:handle-hibernate-key:handle-lid-switch"; // what
+-        args << "PowerDevil"; // who
+-        args << "KDE handles power events"; // why
+-        args << "block"; // mode
+-        QDBusPendingReply<QDBusUnixFileDescriptor> desc = managerIface.asyncCallWithArgumentList("Inhibit", args);
+-        desc.waitForFinished();
+-        if (desc.isValid()) {
+-            m_systemdInhibitFd = desc.value();
+-            kDebug() << "systemd powersave events handling inhibited, descriptor:" << m_systemdInhibitFd.fileDescriptor();
+-        }
+-        else
+-            kWarning() << "failed to inhibit systemd powersave handling";
++        setupSystemdInhibition();
+ 
+         kDebug() << "systemd support initialized";
+     } else if (serviceName == CONSOLEKIT_SERVICE) {
+@@ -552,6 +537,31 @@ void PolicyAgent::releaseAllInhibitions()
+     }
+ }
+ 
++void PolicyAgent::setupSystemdInhibition()
++{
++    if (m_systemdInhibitFd.fileDescriptor() != -1)
++        return;
++
++    // inhibit systemd handling of power/sleep/lid buttons
++    // http://www.freedesktop.org/wiki/Software/systemd/inhibit
++    QDBusInterface managerIface(SYSTEMD_LOGIN1_SERVICE, SYSTEMD_LOGIN1_PATH, SYSTEMD_LOGIN1_MANAGER_IFACE, QDBusConnection::systemBus());
++    kDebug() << "fd passing available:" << bool(managerIface.connection().connectionCapabilities() & QDBusConnection::UnixFileDescriptorPassing);
++
++    QVariantList args;
++    args << "handle-power-key:handle-suspend-key:handle-hibernate-key:handle-lid-switch"; // what
++    args << "PowerDevil"; // who
++    args << "KDE handles power events"; // why
++    args << "block"; // mode
++    QDBusPendingReply<QDBusUnixFileDescriptor> desc = managerIface.asyncCallWithArgumentList("Inhibit", args);
++    desc.waitForFinished();
++    if (desc.isValid()) {
++        m_systemdInhibitFd = desc.value();
++        kDebug() << "systemd powersave events handling inhibited, descriptor:" << m_systemdInhibitFd.fileDescriptor();
++    }
++    else
++        kWarning() << "failed to inhibit systemd powersave handling";
++}
++
+ }
+ 
+ #include "powerdevilpolicyagent.moc"
+diff --git a/powerdevil/daemon/powerdevilpolicyagent.h b/powerdevil/daemon/powerdevilpolicyagent.h
+index a046497..f1e8c03 100644
+--- a/powerdevil/daemon/powerdevilpolicyagent.h
++++ b/powerdevil/daemon/powerdevilpolicyagent.h
+@@ -74,6 +74,8 @@ public:
+ 
+     RequiredPolicies unavailablePolicies();
+ 
++    void setupSystemdInhibition();
++
+ public Q_SLOTS:
+     // Exported slots
+     uint AddInhibition(uint types, const QString &appName, const QString &reason);
