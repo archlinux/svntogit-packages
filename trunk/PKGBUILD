@@ -5,7 +5,7 @@
 pkgbase=lvm2
 pkgname=('lvm2' 'device-mapper')
 pkgver=2.02.98
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://sourceware.org/lvm2/"
 license=('GPL2' 'LGPL2.1')
@@ -14,27 +14,35 @@ source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${pkgver}.tgz{,.asc}
         lvm2_install
         lvm2_hook
         11-dm-initramfs.rules
-        lvm.service
-	lvm-on-crypt.service
-        lvm2.conf)
+        lvm2.conf
+        dmeventd.service
+        dmeventd.socket
+        lvm2_monitoring.service
+        lvmetad.service
+        lvmetad.socket)
 sha1sums=('077425115b164c335a9930df745943e9ea666a8a'
           '4713c852fc668e6fbd36ff7c6b5675b10a95a0f8'
           '3e1680f9b76ce9150d08865d99db90fd15532271'
           'cedc9948123c870f9c5aa3357d0075b41a9c8135'
           'f6a554eea9557c3c236df2943bb6e7e723945c41'
-          'edce6b6e8d03f7cbad4bfff49fab01d618415be8'
-          '652fb58dd7676caa0515f0a06d537744e071c6cf'
-          'ccefad65fde3d50331a42b0e90a1539dc7c8b9e4')
+          'ccefad65fde3d50331a42b0e90a1539dc7c8b9e4'
+          '8bc78727dc3a15243eec72032688b5b65689bc5b'
+          '1d56f47a81350ae37ffbf61ee036fe31f4c5d504'
+          '2fa406422a99cc3adcdfe6d59f4836fd0e55b17f'
+          'd795ad9436f3504c638d0405c233bb8ad465527b'
+          '370f497c28754169e427c8419bceb73f1cf64757')
 
 build() {
   cd "${srcdir}/LVM2.${pkgver}"
   unset LDFLAGS
 
   ./configure --prefix=/ --sbindir=/sbin --sysconfdir=/etc --localstatedir=/var --datarootdir=/usr/share \
-    --includedir=/usr/include --with-usrlibdir=/usr/lib  --libdir=/usr/lib --with-udev-prefix=/usr \
-    --with-systemdsystemunitdir=/usr/lib/systemd/system --enable-pkgconfig --enable-readline \
-    --enable-dmeventd --enable-cmdlib --enable-applib --enable-udev_sync --enable-udev_rules  \
-    --with-default-locking-dir=/run/lock/lvm
+    --includedir=/usr/include --with-usrlibdir=/usr/lib --libdir=/usr/lib --with-udev-prefix=/usr \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system --with-default-pid-dir=/run \
+    --with-default-dm-run-dir=/run --with-default-run-dir=/run/lvm \
+    --enable-pkgconfig --enable-readline --enable-dmeventd --enable-cmdlib --enable-applib \
+    --enable-udev_sync --enable-udev_rules --with-default-locking-dir=/run/lock/lvm \
+    --enable-lvmetad
   make
 }
 
@@ -47,6 +55,11 @@ package_device-mapper() {
   make DESTDIR="${pkgdir}" install_device-mapper
   # extra udev rule for device-mapper in initramfs
   install -D -m644 "${srcdir}/11-dm-initramfs.rules" "${pkgdir}/usr/lib/initcpio/udev/11-dm-initramfs.rules"
+  # Install dmeventd socket and service
+  install -D -m644 "${srcdir}/dmeventd.service" "${pkgdir}/usr/lib/systemd/system/dmeventd.service"
+  install -D -m644 "${srcdir}/dmeventd.socket" "${pkgdir}/usr/lib/systemd/system/dmeventd.socket"
+  install -d -m755 "${pkgdir}/usr/lib/systemd/system/sockets.target.wants"
+  ln -sf /usr/lib/systemd/system/dmeventd.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/dmeventd.socket"
 }
 
 package_lvm2() {
@@ -66,7 +79,12 @@ package_lvm2() {
   install -D -m644 "${srcdir}/lvm2_hook" "${pkgdir}/usr/lib/initcpio/hooks/lvm2"
   install -D -m644 "${srcdir}/lvm2_install" "${pkgdir}/usr/lib/initcpio/install/lvm2"
   # systemd support
-  install -D -m644 "${srcdir}/lvm.service" "${pkgdir}/usr/lib/systemd/system/lvm.service"
-  install -D -m644 "${srcdir}/lvm-on-crypt.service" "${pkgdir}/usr/lib/systemd/system/lvm-on-crypt.service"
   install -D -m644 "${srcdir}/lvm2.conf" "${pkgdir}/usr/lib/tmpfiles.d/lvm2.conf"
+  install -D -m644 "${srcdir}/lvm2_monitoring.service" "${pkgdir}/usr/lib/systemd/system/lvm2_monitoring.service"
+  install -D -m644 "${srcdir}/lvmetad.service" "${pkgdir}/usr/lib/systemd/system/lvmetad.service"
+  install -D -m644 "${srcdir}/lvmetad.socket" "${pkgdir}/usr/lib/systemd/system/lvmetad.socket"
+  install -d -m755 "${pkgdir}/usr/lib/systemd/system/sockets.target.wants"
+  ln -sf /usr/lib/systemd/system/lvmetad.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/lvmetad.socket"
+  # enable lvmetad
+  sed 's|use_lvmetad = 0|use_lvmetad = 1|' -i "${pkgdir}/etc/lvm/lvm.conf"
 }
