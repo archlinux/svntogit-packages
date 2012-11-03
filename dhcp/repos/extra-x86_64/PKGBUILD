@@ -5,10 +5,10 @@ pkgbase=dhcp
 pkgname=('dhcp' 'dhclient')
 
 # separate patch levels with a period to maintain proper versioning.
-pkgver=4.2.4.1
-_pkgver=4.2.4-P1
+pkgver=4.2.4.2
+_pkgver=4.2.4-P2
 
-pkgrel=3
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('custom:isc-dhcp')
 url="https://www.isc.org/software/dhcp"
@@ -17,8 +17,8 @@ source=(ftp://ftp.isc.org/isc/${pkgbase}/${_pkgver}/${pkgbase}-${_pkgver}.tar.gz
         dhcp4 dhcp6 dhcp dhcpd4.service dhcpd6.service
         dhcp-4.1.1-missing-ipv6-not-fatal.patch
         dhclient-script-pathFixes.patch)
-md5sums=('0ca7181024651f6323951d5498c8020b'
-         '0dfe000dd88555ea06b282ae5e574d5f'
+md5sums=('fe36056f2d274fa4b82a5422f192e65f'
+         '1f20126efd33c34d52a4148db780921f'
          'c49b1497837ba56c54e401a66e1bab9b'
          '12c2f3ae47ed23eb698eb7f1bfd80f20'
          '8f357e46e1efcbb746f38737a3f977a2'
@@ -37,10 +37,10 @@ build() {
   patch -Np0 -i "${srcdir}/dhcp-4.1.1-missing-ipv6-not-fatal.patch"
 
   ./configure --prefix=/usr --sysconfdir=/etc \
-      --with-srv-lease-file=/var/state/dhcp/dhcpd.leases \
-      --with-srv6-lease-file=/var/state/dhcp/dhcpd6.leases \
-      --with-cli-lease-file=/var/state/dhclient/dhclient.leases \
-      --with-cli6-lease-file=/var/state/dhclient/dhclient6.leases
+      --with-srv-lease-file=/var/lib/dhcp/dhcpd.leases \
+      --with-srv6-lease-file=/var/lib/dhcp/dhcpd6.leases \
+      --with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
+      --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases
 
   make
 
@@ -59,12 +59,10 @@ package_dhcp(){
   install -D -m755 "${srcdir}/dhcp4" "${pkgdir}/etc/rc.d/dhcp4"
   install -D -m755 "${srcdir}/dhcp6" "${pkgdir}/etc/rc.d/dhcp6"
   install -D -m644 "${srcdir}/dhcp" "${pkgdir}/etc/conf.d/${pkgbase}"
-  install -d "${pkgdir}/var/state/dhcp"
+  install -d "${pkgdir}/var/lib/dhcp"
 
   install -D -m644 "${srcdir}/dhcpd4.service" "${pkgdir}/usr/lib/systemd/system/dhcpd4.service"
   install -D -m644 "${srcdir}/dhcpd6.service" "${pkgdir}/usr/lib/systemd/system/dhcpd6.service"
-  ln -s dhcpd4.service "${pkgdir}/usr/lib/systemd/system/dhcp4.service"
-  ln -s dhcpd6.service "${pkgdir}/usr/lib/systemd/system/dhcp6.service"
 
   # Remove dhclient
   make -C client DESTDIR="${pkgdir}" uninstall
@@ -83,7 +81,7 @@ package_dhclient(){
   # move dhclient.conf to dhclient.conf.example
   mv "${pkgdir}"/etc/dhclient.conf{,.example}
   
-  install -d "${pkgdir}/var/state/dhclient"
+  install -d "${pkgdir}/var/lib/dhclient"
 
   # install dhclient linux script
   install -m755 -D client/scripts/linux "${pkgdir}/sbin/dhclient-script"
