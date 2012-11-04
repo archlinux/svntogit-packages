@@ -9,15 +9,15 @@
 
 pkgname=bitlbee
 pkgver=3.0.6
-pkgrel=1
+pkgrel=2
 pkgdesc='Brings instant messaging (XMPP, MSN, Yahoo!, AIM, ICQ, Twitter) to IRC'
 url='http://www.bitlbee.org/'
 license=('GPL')
 arch=('i686' 'x86_64')
 depends=('openssl' 'glib2')
-makedepends=('asciidoc' 'libotr')
+makedepends=('asciidoc' 'libotr3')
 optdepends=('skype4py: to use skyped'
-            'libotr: for OTR encryption support'
+            'libotr3: for OTR encryption support'
             'xinetd: to run bitlbee through xinetd')
 source=("http://get.bitlbee.org/src/${pkgname}-${pkgver}.tar.gz"
         'xinetd'
@@ -32,28 +32,32 @@ backup=('etc/bitlbee/bitlbee.conf'
         'etc/xinetd.d/bitlbee')
 install=bitlbee.install
 
-build() { 
-	cd "$pkgname-$pkgver"
+build() {
+  cd "$pkgname-$pkgver"
 
-	./configure \
-		--prefix=/usr \
-		--etcdir=/etc/bitlbee \
-		--pidfile=/run/bitlbee/bitlbee.pid \
-		--ipcsocket=/run/bitlbee/bitlbee.sock \
-		--systemdsystemunitdir=/usr/lib/systemd/system \
-		--ssl=openssl \
-		--strip=0 \
-		--otr=plugin \
-		--skype=plugin
+  ./configure \
+    --prefix=/usr \
+    --etcdir=/etc/bitlbee \
+    --pidfile=/run/bitlbee/bitlbee.pid \
+    --ipcsocket=/run/bitlbee/bitlbee.sock \
+    --systemdsystemunitdir=/usr/lib/systemd/system \
+    --ssl=openssl \
+    --strip=0 \
+    --otr=plugin \
+    --skype=plugin
 
-	make
+  # hacky: build against libotr3
+  sed -i 's,^OTRFLAGS=.*,OTRFLAGS=-lotr3,' Makefile.settings
+  sed -i 's,#include.*libotr,&3,' otr.h
+
+  make
 }
 
 package() {
-	make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install{,-etc,-dev}
+  make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install{,-etc,-dev}
 
-	install -o65 -g65 -dm770 "$pkgdir/var/lib/bitlbee"
-	install -Dm644 "$srcdir/xinetd" "$pkgdir/etc/xinetd.d/bitlbee"
-	install -Dm755 "$srcdir/rc.d" "$pkgdir/etc/rc.d/bitlbee"
-	install -Dm644 "$srcdir/bitlbee.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/bitlbee.conf"
+  install -o65 -g65 -dm770 "$pkgdir/var/lib/bitlbee"
+  install -Dm644 "$srcdir/xinetd" "$pkgdir/etc/xinetd.d/bitlbee"
+  install -Dm755 "$srcdir/rc.d" "$pkgdir/etc/rc.d/bitlbee"
+  install -Dm644 "$srcdir/bitlbee.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/bitlbee.conf"
 }
