@@ -1,0 +1,100 @@
+# $Id$
+# Maintainer: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Paul Mattal <paul@archlinux.org>
+# Contributor: Jason Chu <jason@archlinux.org>
+
+pkgname=subversion
+pkgver=1.7.7
+pkgrel=2
+pkgdesc="A Modern Concurrent Version Control System"
+arch=('i686' 'x86_64')
+license=('APACHE')
+depends=('neon' 'apr-util' 'sqlite' 'file')
+optdepends=('libgnome-keyring' 'kdeutils-kwallet' 'bash-completion: for svn bash completion' \
+            'python2: for some hook scripts' 'java-environment') #'ruby: for some hook scripts')
+makedepends=('krb5' 'apache' 'python2' 'perl' 'swig' 'java-runtime' 'java-environment'
+             'autoconf' 'db' 'e2fsprogs' 'libgnome-keyring' 'kdelibs')
+backup=('etc/xinetd.d/svn' 'etc/conf.d/svnserve')
+url="http://subversion.apache.org/"
+provides=('svn')
+options=('!makeflags' '!libtool' '!emptydirs')
+install=${pkgname}.install
+source=(http://apache.mirror.rafal.ca/subversion/$pkgname-$pkgver.tar.bz2{,.asc}
+        svnserve
+        svn
+        svnserve.conf
+        svnserve.tmpfiles
+        svnserve.service
+        subversion-1.7.6-kwallet-gcc47.patch        
+        subversion.rpath.fix.patch)
+sha1sums=('c9fc0c5992eda36ba9affd93a15929e25958a951'
+          '3df83e46277f0f08868236a6b6e6c0f0d7ef9278'
+          '64ba3e6ebafc08ac62f59d788f7a825fdce69573'
+          '73b36c046c09cec2093354911c89e3ba8056af6c'
+          'ad117bf3b2a838a9a678a93fd8db1a066ad46c41'
+          '00cc36e69077a8c45674ead6dd62a7647b3a3b6d'
+          '9f6790d842cf3e0228b007483a43e39a42724068'
+          'aa0d01e606de2ebc5eed9c533d218d37a217c50c'
+          '3d1e28408a9abb42af2e531adc0d01ce21acfad6')
+
+build() {
+   cd "${srcdir}/${pkgname}-${pkgver}"
+   export PYTHON=/usr/bin/python2
+
+   patch -p0 -i ../subversion.rpath.fix.patch
+   sed -i 's|/usr/bin/env python|/usr/bin/env python2|' tools/hook-scripts/{,mailer/{,tests/}}*.py
+
+   patch -Np1 -i ../subversion-1.7.6-kwallet-gcc47.patch
+
+   ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
+               --with-zlib=/usr --with-neon=/usr --with-apxs \
+               --with-sqlite=/usr --with-berkeley-db=:/usr/include/:/usr/lib:db-5.3 \
+               --enable-javahl --with-gnome-keyring --with-kwallet
+
+   make external-all
+   make LT_LDFLAGS="-L$Fdestdir/usr/lib" local-all
+   make swig_pydir=/usr/lib/python2.7/site-packages/libsvn \
+     swig_pydir_extra=/usr/lib/python2.7/site-packages/svn swig-py swig-pl javahl #swig-rb
+}
+
+#check() {
+#   cd "${srcdir}/${pkgname}-${pkgver}"
+#   export LANG=C LC_ALL=C
+#   make check check-swig-pl check-swig-py check-javahl CLEANUP=yes # check-swig-rb
+#}
+
+package() {
+   cd "${srcdir}/${pkgname}-${pkgver}"
+
+   export LD_LIBRARY_PATH="${pkgdir}"/usr/lib:${LD_LIBRARY_PATH}
+   make DESTDIR="${pkgdir}" INSTALLDIRS=vendor \
+     swig_pydir=/usr/lib/python2.7/site-packages/libsvn \
+     swig_pydir_extra=/usr/lib/python2.7/site-packages/svn \
+     install install-swig-py install-swig-pl install-javahl #install-swig-rb
+
+   install -dm755 "${pkgdir}"/usr/share/subversion
+   cp -a tools/hook-scripts "${pkgdir}"/usr/share/subversion/
+   rm "${pkgdir}"/usr/share/subversion/hook-scripts/*.in
+
+   rm "${pkgdir}"/usr/lib/perl5/vendor_perl/auto/SVN/_Core/.packlist
+   rm -r "${pkgdir}"/usr/lib/perl5/core_perl
+
+   ## svnserve ...
+
+   # ... iniscript/xinetd
+   install -D -m 755 "${srcdir}"/svnserve "${pkgdir}"/etc/rc.d/svnserve
+   install -D -m 644 "${srcdir}"/svn "${pkgdir}"/etc/xinetd.d/svn
+
+   # ... systemd
+   install -D -m 644 "${srcdir}"/svnserve.service  "${pkgdir}"/usr/lib/systemd/system/svnserve.service
+   install -D -m 644 "${srcdir}"/svnserve.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/svnserve.conf
+
+   # ... common config
+   install -D -m 644 "${srcdir}"/svnserve.conf "${pkgdir}"/etc/conf.d/svnserve
+
+   install -Dm 644 tools/client-side/bash_completion \
+     "${pkgdir}"/usr/share/bash-completion/completions/subversion
+   for i in svn svnadmin svndumpfilter svnlook svnsync svnversion; do
+      ln -sf subversion "${pkgdir}"/usr/share/bash-completion/completions/${i}
+   done
+}
