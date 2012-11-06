@@ -1,0 +1,76 @@
+From 1780aab638aa39704be34fc214de39b4847a87b2 Mon Sep 17 00:00:00 2001
+From: Bastien Nocera <hadess@hadess.net>
+Date: Wed, 17 Oct 2012 19:02:50 +0200
+Subject: [PATCH] shell: Call XInitThreads() on X11 systems
+
+Otherwise bad things can happen with some plugins that expect
+mutexes to work, like the visualiser plugin and Clutter.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=686320
+---
+ configure.ac | 15 +++++++++++++++
+ shell/main.c | 12 ++++++++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 009c838..8a88d72 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -86,10 +86,25 @@ PKG_PROG_PKG_CONFIG
+ 
+ PKG_CHECK_MODULES(RB_CLIENT, glib-2.0 >= $GLIB_REQS gio-2.0 >= $GLIB_REQS gio-unix-2.0 >= $GLIB_REQS)
+ 
++dnl Always require libX11 for XInitThreads() on X11 systems
++X11_PKG=""
++gdk_targets=`$PKG_CONFIG --variable targets gdk-3.0`
++for target in $gdk_targets; do
++	case "$target" in
++		x11)
++			X11_PKG=x11
++			break
++			;;
++		*)
++			;;
++	esac
++done
++
+ dnl  note: gio-unix-2.0 is here for libmediaplayerid
+ PKG_CHECK_MODULES(RHYTHMBOX,				\
+ 		  gobject-introspection-1.0 >= $GOBJECT_INTROSPECTION_REQS \
+ 		  gtk+-3.0 >= $GTK_REQS			\
++		  $X11_PKG				\
+ 		  gdk-pixbuf-2.0 >= $GDK_PIXBUF_REQS	\
+ 		  glib-2.0 >= $GLIB_REQS		\
+ 		  gio-2.0 >= $GLIB_REQS			\
+diff --git a/shell/main.c b/shell/main.c
+index 3c0346d..696f3e9 100644
+--- a/shell/main.c
++++ b/shell/main.c
+@@ -34,6 +34,11 @@
+ #include <glib/gi18n.h>
+ #include <gtk/gtk.h>
+ 
++#ifdef GDK_WINDOWING_X11
++/* X11 headers */
++#include <X11/Xlib.h>
++#endif
++
+ #include <girepository.h>
+ 
+ #include "rb-shell.h"
+@@ -51,6 +56,13 @@ main (int argc, char **argv)
+ 	int new_argc;
+ 	char **new_argv;
+ 
++#ifdef GDK_WINDOWING_X11
++	if (XInitThreads () == 0) {
++		g_critical ("Initialising threading support failed.");
++		return 1;
++	}
++#endif
++
+ 	/* disable multidevice so clutter-gtk events work.
+ 	 * this needs to be done before gtk_open, so the visualizer
+ 	 * plugin can't do it.
+-- 
+1.7.12.1
