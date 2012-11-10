@@ -1,0 +1,55 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Tom Killian <tom.archlinux.org>
+# Contributor: Judd Vinet <jvinet.zeroflux.org>
+
+pkgname=dhcpcd
+pkgver=5.6.2
+pkgrel=2
+pkgdesc="RFC2131 compliant DHCP client daemon"
+url="http://roy.marples.name/projects/dhcpcd/"
+arch=('i686' 'x86_64')
+license=('BSD')
+groups=('base')
+depends=('glibc' 'sh')
+backup=('etc/conf.d/dhcpcd' 'etc/dhcpcd.conf')
+options=('emptydirs')  # We Need the Empty /var/lib/dhcpcd Directory
+source=("http://roy.marples.name/downloads/$pkgname/$pkgname-$pkgver.tar.bz2" \
+        'dhcpcd.conf.d' 'dhcpcd.service')
+sha1sums=('7127237b5594ba50642829e76033a04d1c6fd42e'
+          'b67b9ce6a2faaca75fea356966a16be2283b7db0'
+          'cf00c0046687a0c3274c2e7756334f86e3d2b485')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+
+  # configure variables
+  ./configure --libexecdir=/usr/lib/dhcpcd --dbdir=/var/lib/dhcpcd \
+	--rundir=/run
+
+  # Build
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install
+
+  # Create Binary Symlink
+  install -d ${pkgdir}/usr/sbin
+  ln -sf /sbin/dhcpcd ${pkgdir}/usr/sbin/dhcpcd
+
+  # Install Configuration File used in /etc/rc.d/network
+  install -D -m644 ../dhcpcd.conf.d $pkgdir/etc/conf.d/$pkgname
+
+  # Install License
+  install -d $pkgdir/usr/share/licenses/$pkgname
+  awk '{if(FNR<27)print $0}' ${srcdir}/${pkgname}-${pkgver}/configure.h \
+        >> ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+
+  # Set Options in /etc/dhcpcd.conf
+  echo noipv4ll >> ${pkgdir}/etc/dhcpcd.conf # Disable ip4vall
+
+  # install systemd files
+  install -Dm644 ${srcdir}/dhcpcd.service ${pkgdir}/usr/lib/systemd/system/dhcpcd@.service
+}
