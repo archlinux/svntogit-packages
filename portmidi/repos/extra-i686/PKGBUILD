@@ -1,0 +1,46 @@
+# $Id$
+# Maintainer: Lukas Fleischer <archlinux at cryptocrack dot de>
+# Contributor: SpepS <dreamspepser at yahoo dot it>
+# Contributor: Denis Martinez <deuns.martinez AT gmail DOT com>
+
+pkgname=portmidi
+pkgver=217
+pkgrel=3
+pkgdesc="Platform independent library for real-time MIDI input/output."
+arch=('i686' 'x86_64')
+url='http://portmedia.sourceforge.net/'
+license=('GPL')
+depends=('alsa-lib')
+makedepends=('cmake' 'java-environment')
+source=("http://downloads.sourceforge.net/project/portmedia/${pkgname}/${pkgver}/${pkgname}-src-${pkgver}.zip"
+        'portmidi-217-build-fix.patch')
+md5sums=('03f46fd3947e2ef4c8c465baaf832241'
+         '59cb428b29a33bab3bb5811cda479a9b')
+
+build() {
+  cd "${srcdir}/${pkgname}"
+
+  sed -i "s#/usr/local#/usr#" */CMakeLists.txt pm_python/setup.py
+  mkdir -p pm_java/Release
+
+  # build fix for "pm_java/CMakeLists.txt" (fixes FS#27118)
+  patch -p1 -i ../portmidi-217-build-fix.patch
+
+  cmake . -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=Release \
+    -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=Release \
+    -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=Release
+
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}"
+
+  make DESTDIR="${pkgdir}" install
+
+  # Fix missing symlink for libporttime.so (FS#21528).
+  mv "${pkgdir}/usr/lib/libportmidi_s.a" "${pkgdir}/usr/lib/libportmidi.a"
+  ln -s "/usr/lib/libportmidi.so" "${pkgdir}/usr/lib/libporttime.so"
+  ln -s "/usr/lib/libportmidi.a" "${pkgdir}/usr/lib/libporttime.a"
+}
