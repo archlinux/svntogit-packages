@@ -4,7 +4,7 @@
 pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-common' 'xorg-server-devel')
 pkgver=1.13.0
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 license=('custom')
 url="http://xorg.freedesktop.org"
@@ -19,26 +19,31 @@ source=(${url}/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2
         xvfb-run
         xvfb-run.1
         10-quirks.conf
-        0001-dix-fix-zaphod-screen-scrossing-54654.patch)
+        git-fixes.patch
+        use-pixman-glyph-cache.patch)
 sha256sums=('548b91cb01087ad4f892428e7ac4955251cf12393e86c70420436b33848ef28a'
             '66e25f76a7496c429e0aff4b0670f168719bb0ceaeb88c6f2272f2bf3ed21162'
             'd027776fac1f7675b0a9ee817502290b1c45f9c09b0f0a6bb058c35f92361e84'
             'ff0156309470fc1d378fd2e104338020a884295e285972cc88e250e031cc35b9'
             '2460adccd3362fefd4cdc5f1c70f332d7b578091fb9167bf88b5f91265bbd776'
             '94612f5c0d34a3b7152915c2e285c7b462e9d8e38d3539bd551a339498eac166'
-            '23861814b4283ca3fe43aae6e88ee82bcbae5713bf88eabeaef7beb94efe9707')
+            'd49e534b77ead809eb873a1a86cd47c791a8ddd10557bfa635197bba6bc00b71'
+            '7c1dacd30c46b01424c7c75974285cd348dafd0327eb3f211cbe446ad90dd308')
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
+
+  # Apply upstream fixes from server-1.13 branch
+  patch -Np1 -i "${srcdir}/git-fixes.patch"
+
+  # Use pixman 0.28.0 glyph cache - backported from git master
+  patch -Np1 -i "${srcdir}/use-pixman-glyph-cache.patch"
 
   # Use nouveau/nv/nvidia drivers for nvidia devices
   patch -Np1 -i "${srcdir}/autoconfig-nvidia.patch"
 
   # Use unofficial imedia SiS driver for supported SiS devices
   patch -Np0 -i "${srcdir}/autoconfig-sis.patch"
-
-  # https://bugs.archlinux.org/task/31959 / https://bugs.freedesktop.org/show_bug.cgi?id=54654
-  patch -Np1 -i ${srcdir}/0001-dix-fix-zaphod-screen-scrossing-54654.patch
 
   autoreconf -fi
   ./configure --prefix=/usr \
@@ -97,7 +102,7 @@ package_xorg-server-common() {
 
 package_xorg-server() {
   pkgdesc="Xorg X server"
-  depends=(libxdmcp libxfont libpciaccess libdrm pixman libgcrypt libxau xorg-server-common xf86-input-evdev)
+  depends=(libxdmcp libxfont libpciaccess libdrm 'pixman>=0.28.0' libgcrypt libxau xorg-server-common xf86-input-evdev)
   backup=('etc/X11/xorg.conf.d/10-evdev.conf' 'etc/X11/xorg.conf.d/10-quirks.conf')
   # see xorg-server-1.13.0/hw/xfree86/common/xf86Module.h for ABI versions - we provide major numbers that drivers can depend on
   provides=('X-ABI-VIDEODRV_VERSION=13' 'X-ABI-XINPUT_VERSION=18' 'X-ABI-EXTENSION_VERSION=7.0' 'x-server')
@@ -132,7 +137,7 @@ package_xorg-server() {
 
 package_xorg-server-xephyr() {
   pkgdesc="A nested X server that runs as an X application"
-  depends=(libxfont libgl libgcrypt libxv pixman xorg-server-common)
+  depends=(libxfont libgl libgcrypt libxv 'pixman>=0.28.0' xorg-server-common)
 
   cd "${srcdir}/${pkgbase}-${pkgver}/hw/kdrive"
   make DESTDIR="${pkgdir}" install
@@ -143,7 +148,7 @@ package_xorg-server-xephyr() {
 
 package_xorg-server-xvfb() {
   pkgdesc="Virtual framebuffer X server"
-  depends=(libxfont libxdmcp libxau libgcrypt pixman xorg-server-common)
+  depends=(libxfont libxdmcp libxau libgcrypt 'pixman>=0.28.0' xorg-server-common)
 
   cd "${srcdir}/${pkgbase}-${pkgver}/hw/vfb"
   make DESTDIR="${pkgdir}" install
@@ -157,7 +162,7 @@ package_xorg-server-xvfb() {
 
 package_xorg-server-xnest() {
   pkgdesc="A nested X server that runs as an X application"
-  depends=(libxfont libxext libgcrypt pixman xorg-server-common)
+  depends=(libxfont libxext libgcrypt 'pixman>=0.28.0' xorg-server-common)
 
   cd "${srcdir}/${pkgbase}-${pkgver}/hw/xnest"
   make DESTDIR="${pkgdir}" install
@@ -168,7 +173,7 @@ package_xorg-server-xnest() {
 
 package_xorg-server-xdmx() {
   pkgdesc="Distributed Multihead X Server and utilities"
-  depends=(libxfont libxi libgcrypt libxaw libxrender libdmx libxfixes pixman xorg-server-common)
+  depends=(libxfont libxi libgcrypt libxaw libxrender libdmx libxfixes 'pixman>=0.28.0' xorg-server-common)
 
   cd "${srcdir}/${pkgbase}-${pkgver}/hw/dmx"
   make DESTDIR="${pkgdir}" install
@@ -183,6 +188,8 @@ package_xorg-server-devel() {
            xproto randrproto renderproto xextproto inputproto kbproto 
            fontsproto pixman videoproto xf86driproto glproto 
            mesa dri2proto xineramaproto libpciaccess
+           # see FS#32146
+           resourceproto scrnsaverproto
            # not technically required but almost every Xorg pkg needs it to build
            xorg-util-macros)
 
