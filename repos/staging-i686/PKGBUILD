@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: kevin <kevin@archlinux.org>
+# Contributor: John Proctor <jproctor@prium.net>
+
+pkgname=graphviz
+pkgver=2.28.0
+pkgrel=11
+pkgdesc='Graph visualization software'
+url='http://www.graphviz.org/'
+license=('custom:EPL')
+arch=('i686' 'x86_64')
+depends=('libltdl' 'gd' 'librsvg' 'libxaw' 'ghostscript' 'pango' 'gts')
+makedepends=('swig' 'mono' 'guile' 'lua51' 'ocaml' 'perl' 'php' 'python2' 'r' 'ruby' 'tk' 'qt')
+optdepends=('mono: sharp bindings'
+            'guile: guile bindings'
+            'lua51: lua bindings'
+            'ocaml: ocaml bindings'
+            'perl: perl bindings'
+            'php: php bindings'
+            'python2: python bindings'
+            'r: r bindings'
+            'ruby: ruby bindings'
+            'tcl: tcl bindings'
+            'qt: gvedit')
+source=("${url}/pub/${pkgname}/stable/SOURCES/${pkgname}-${pkgver}.tar.gz"
+        'LICENSE')
+sha1sums=('4725d88a13e071ee22e632de551d4a55ca08ee7d'
+          'e78277e502c29abb74b9587a5dc951ec392554ea')
+
+options=('!libtool')
+install=install
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	sed \
+		-e '/"archdir"/s:$:+" '"$(echo -I/usr/include/ruby-1.9.1/{$CARCH-linux,ruby/backward,})"'":' \
+		-e '/CONFIG/s:site:vendor:' \
+		-i config/config_ruby.rb
+
+	sed '/LIBPOSTFIX="64"/d' -i configure
+	export PYTHON=python2
+	export LUA=lua5.1
+
+	./configure --prefix=/usr
+	make || sed '/caml_array_length/d' -i tclpkg/gv/gv_ocaml.cpp # swig goes wonky
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+
+	# cf. http://www.graphviz.org/License.php
+	install -Dm644 ../LICENSE "${pkgdir}"/usr/share/licenses/graphviz/LICENSE
+}
