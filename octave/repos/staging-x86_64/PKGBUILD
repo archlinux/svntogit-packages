@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor : shining <shiningxc.at.gmail.com>
+# Contributor : cyberdune <cyberdune@gmail.com>
+
+pkgname=octave
+pkgver=3.6.3
+pkgrel=1
+pkgdesc="A high-level language, primarily intended for numerical computations."
+arch=('i686' 'x86_64')
+url="http://www.octave.org"
+license=('GPL')
+depends=('fftw' 'curl' 'graphicsmagick' 'glpk' 'hdf5' 'qhull' 'fltk' 'suitesparse' 'arpack')
+makedepends=('gcc-fortran' 'texlive-core')
+optdepends=('texinfo: for help-support in octave'
+            'gnuplot: alternative plotting')
+source=(ftp://ftp.gnu.org/gnu/octave/octave-$pkgver.tar.bz2{,.sig}
+        octave-gethelp.patch)
+options=('!emptydirs')
+install=octave.install
+sha1sums=('e8bd0c0b33ab9714ddb524f2258546c3536f0628'
+          'de009a9e6803de6b831cbd836cbc85c291de8a3c'
+          'd39d54763ac86114029f8bc5d60763d2adce27bb')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # http://sources.gentoo.org/cgi-bin/viewvc.cgi/gentoo-x86/sci-mathematics/octave/files/octave-3.4.3-help.patch?view=log
+  patch -Np0 -i "${srcdir}/octave-gethelp.patch"
+
+  autoreconf -vfi
+
+  # http://www.nabble.com/Random-rounding-errors-td16010966.html
+  FFLAGS="-O -ffloat-store" \
+
+  ./configure --prefix=/usr --libexecdir=/usr/lib \
+  --enable-shared --disable-static \
+  --with-umfpack="-lumfpack -lsuitesparseconfig" # https://mailman.cae.wisc.edu/pipermail/help-octave/2012-September/053991.html
+
+  LANG=C make
+}
+
+package(){
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make DESTDIR="${pkgdir}" install
+
+  # add octave library path to ld.so.conf.d
+  install -d "${pkgdir}/etc/ld.so.conf.d"
+  echo "/usr/lib/${pkgname}/${pkgver}" > "${pkgdir}/etc/ld.so.conf.d/${pkgname}.conf"
+}
