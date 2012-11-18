@@ -4,53 +4,63 @@
 # Contributor: damir <damir@archlinux.org>
 # Contributor: Jason Taylor <jftaylor21@gmail.com>
 
-pkgname=lapack
-pkgver=3.4.1
+pkgbase=lapack
+pkgname=('lapack' 'blas')
+pkgver=3.4.2
 pkgrel=1
 url="http://www.netlib.org/lapack"
 pkgdesc="Linear Algebra PACKage"
-makedepends=('gcc-fortran')
-depends=("blas=${pkgver}")
+makedepends=('gcc-fortran' 'cmake')
+depends=('gcc-libs')
 arch=('i686' 'x86_64')
 license=("custom")
-source=(http://www.netlib.org/${pkgname}/${pkgname}-${pkgver}.tgz
-        Makefile.lapack) 
-sha1sums=('910109a931524f8dcc2734ce23fe927b00ca199f'
-          '2bedfe0d778b401b24d1fbf0eb1dc576d374be28')
-
+source=(http://www.netlib.org/${pkgbase}/${pkgbase}-${pkgver}.tgz
+        LICENSE.blas)
+sha1sums=('93a6e4e6639aaf00571d53a580ddc415416e868b'
+          '2491a151a37f0162b25fc4e4e9a8ac444b574a76')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  cp -f INSTALL/make.inc.gfortran make.inc
-  cp -f "${srcdir}/Makefile.lapack" SRC/Makefile
+  cd "${srcdir}"
 
-  export FC=gfortran
-
-  pushd INSTALL
-  make clean
-  make NOOPT="${CFLAGS/-O?/-O0} -fPIC" OPTS="${CFLAGS} -fPIC"
-  popd
-  # make sure no files with '_', *vxx.o *vfx.o and *2.O as defined in *ASRC
-  #  are in OBJS
-  pushd SRC
-  make clean
-  
-  make FFLAGS="${CFLAGS} -fPIC" CFLAGS="${CFLAGS} -fPIC" shared
-  cp liblapack.so.${pkgver} "${srcdir}/${pkgname}-${pkgver}/"
-  popd
+  install -d build
+  cd build
+  cmake ../${pkgname}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_Fortran_COMPILER=gfortran
+  make
 }
 
-package() {
-  install -m755 -d "${pkgdir}/usr/lib"
-  install -m755 "${srcdir}/${pkgname}-${pkgver}/liblapack.so.${pkgver}" \
-    "${pkgdir}/usr/lib/"
-  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so"
-  ln -sf liblapack.so.${pkgver} "${pkgdir}/usr/lib/liblapack.so.3"
+package_lapack() {
+  depends=("blas=${pkgver}")
 
+  install -m755 -d ${pkgdir}/usr/{lib,bin}
+  
+  for libname in liblapack libtmglib; do
+    install -m755 "${srcdir}/build/lib/${libname}.so" \
+      "${pkgdir}/usr/lib/"
+    ln -sf liblapack.so "${pkgdir}/usr/lib/${libname}.so.${pkgver}"
+    ln -sf liblapack.so "${pkgdir}/usr/lib/${libname}.so.3"
+  done
+  
+  install -m755 ${srcdir}/build/bin/* ${pkgdir}/usr/bin
   install -m755 -d "${pkgdir}/usr/share/licenses/lapack"
   install -m644 "${srcdir}/${pkgname}-${pkgver}/LICENSE" \
     "${pkgdir}/usr/share/licenses/lapack/"
 }
 
-sha1sums=('c115223ac1bac9ab971aae865d3e95442bc979bc'
-          '4ea739a743e2de248ad150873137432261d5b630')
+package_blas() {
+  pkgdesc="Basic Linear Algebra Subprograms"
+
+  install -m755 -d "${pkgdir}/usr/lib"
+  install -m755 "${srcdir}/build/lib/libblas.so" \
+      "${pkgdir}/usr/lib/"
+  ln -sf libblas.so "${pkgdir}/usr/lib/libblas.so.${pkgver}"
+  ln -sf libblas.so "${pkgdir}/usr/lib/libblas.so.3"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/blas"
+  install -m644 "${srcdir}/LICENSE.blas" \
+    "${pkgdir}/usr/share/licenses/blas/"
+}
