@@ -1,0 +1,87 @@
+commit 1009ba89b5d603ae7f1a95ef65a818c760c367cf
+Author: Joris Guisson <joris.guisson@gmail.com>
+Date:   Mon Oct 22 20:07:21 2012 +0200
+
+    Backport to 4.3: Fix crash in GroupViewModel when dragging torrents over groups
+    
+    BUG: 308733
+
+diff --git a/ktorrent/groups/groupviewmodel.cpp b/ktorrent/groups/groupviewmodel.cpp
+index f2e99d2..b4dca7e 100644
+--- ktorrent/groups/groupviewmodel.cpp
++++ ktorrent/groups/groupviewmodel.cpp
+@@ -55,6 +55,9 @@ namespace kt
+ 	QVariant GroupViewModel::data(const QModelIndex& index, int role) const
+ 	{
+ 		Item* item = (Item*)index.internalPointer();
++        if(!item)
++            return QVariant();
++        
+ 		switch(role)
+ 		{
+ 			case Qt::DisplayRole:
+@@ -72,6 +75,9 @@ namespace kt
+ 			return false;
+ 		
+ 		Item* item = (Item*)index.internalPointer();
++        if(!item)
++            return false;
++        
+ 		Group* group = item->group;
+ 		QString new_name = value.toString();
+ 		if(new_name.isEmpty() || gman->find(new_name))
+@@ -96,13 +102,16 @@ namespace kt
+ 			return 1;
+ 		
+ 		Item* item = (Item*)parent.internalPointer();
+-		return item->children.size();
++        if(!item)
++            return 0;
++        else
++            return item->children.size();
+ 	}
+ 
+ 	QModelIndex GroupViewModel::parent(const QModelIndex& child) const
+ 	{
+ 		Item* item = (Item*)child.internalPointer();
+-		if(!item->parent)
++		if(!item || !item->parent)
+ 			return QModelIndex();
+ 		else
+ 			return createIndex(item->parent->row, 0, (void*)item->parent);
+@@ -114,7 +123,7 @@ namespace kt
+ 			return createIndex(row, column, (void*)&root);
+ 		
+ 		Item* item = (Item*)parent.internalPointer();
+-		if(row < 0 || row >= item->children.count())
++		if(!item || row < 0 || row >= item->children.count())
+ 			return QModelIndex();
+ 		
+ 		return createIndex(row, column, (void*)&item->children.at(row));
+@@ -157,7 +166,7 @@ namespace kt
+ 	Qt::ItemFlags GroupViewModel::flags(const QModelIndex& index) const
+ 	{
+ 		Item* item = (Item*)index.internalPointer();
+-		if(item->group && !item->group->isStandardGroup())
++		if(item && item->group && !item->group->isStandardGroup())
+ 			return Qt::ItemIsEnabled | Qt::ItemIsEditable | Qt::ItemIsDropEnabled;
+ 		else
+ 			return Qt::ItemIsEnabled;
+@@ -218,8 +227,11 @@ namespace kt
+ 	
+ 	bool GroupViewModel::removeRows(int row, int count, const QModelIndex& parent)
+ 	{
++        Item* item = (Item*)parent.internalPointer();
++        if(!item)
++            return false;
++        
+ 		beginRemoveRows(parent, row, row + count);
+-		Item* item = (Item*)parent.internalPointer();
+ 		for(int i = 0; i < count; i++)
+ 			item->children.removeAt(row);
+ 		int row_index = 0;
+@@ -436,3 +448,4 @@ namespace kt
+ 
+ 
+ }
++
