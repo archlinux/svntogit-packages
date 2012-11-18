@@ -1,0 +1,65 @@
+Index: test/SemaCXX/libstdcxx_common_type_hack.cpp
+===================================================================
+--- test/SemaCXX/libstdcxx_common_type_hack.cpp	(revision 0)
++++ test/SemaCXX/libstdcxx_common_type_hack.cpp	(revision 166455)
+@@ -0,0 +1,33 @@
++// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify
++
++// This is a test for an egregious hack in Clang that works around
++// an issue with GCC's <type_traits> implementation. std::common_type
++// relies on pre-standard rules for decltype(), in which it doesn't
++// produce reference types so frequently.
++
++#ifdef BE_THE_HEADER
++
++#pragma GCC system_header
++namespace std {
++  template<typename T> T &&declval();
++
++  template<typename...Ts> struct common_type {};
++  template<typename A, typename B> struct common_type<A, B> {
++    // Under the rules in the standard, this always produces a
++    // reference type.
++    typedef decltype(true ? declval<A>() : declval<B>()) type;
++  };
++}
++
++#else
++
++#define BE_THE_HEADER
++#include "libstdcxx_common_type_hack.cpp"
++
++using T = int;
++using T = std::common_type<int, int>::type;
++
++using U = int; // expected-note {{here}}
++using U = decltype(true ? std::declval<int>() : std::declval<int>()); // expected-error {{different types}}
++
++#endif
+Index: lib/Sema/SemaTemplateInstantiateDecl.cpp
+===================================================================
+--- lib/Sema/SemaTemplateInstantiateDecl.cpp	(revision 166454)
++++ lib/Sema/SemaTemplateInstantiateDecl.cpp	(revision 166455)
+@@ -158,6 +158,22 @@
+     SemaRef.MarkDeclarationsReferencedInType(D->getLocation(), DI->getType());
+   }
+ 
++  // HACK: g++ has a bug where it gets the value kind of ?: wrong.
++  // libstdc++ relies upon this bug in its implementation of common_type.
++  // If we happen to be processing that implementation, fake up the g++ ?:
++  // semantics. See LWG issue 2141 for more information on the bug.
++  const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
++  CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
++  if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
++      DT->isReferenceType() &&
++      RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
++      RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
++      D->getIdentifier() && D->getIdentifier()->isStr("type") &&
++      SemaRef.getSourceManager().isInSystemHeader(D->getLocStart()))
++    // Fold it to the (non-reference) type which g++ would have produced.
++    DI = SemaRef.Context.getTrivialTypeSourceInfo(
++      DI->getType().getNonReferenceType());
++
+   // Create the new typedef
+   TypedefNameDecl *Typedef;
+   if (IsTypeAlias)
