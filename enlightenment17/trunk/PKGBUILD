@@ -1,0 +1,81 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald@archlinux.org>
+# Contributor: Gustavo Sverzut Barbieri <barbieri@gmail.com>
+
+pkgname=enlightenment17
+_pkgname=enlightenment
+pkgver=0.17.0alpha3
+_pkgver=0.17.0-alpha3
+pkgrel=1
+pkgdesc="Enlightenment window manager DR17 (aka e17)"
+arch=('i686' 'x86_64')
+url="http://www.enlightenment.org"
+license=('BSD')
+depends=('alsa-lib' 'pm-utils' 'pam' 'shared-mime-info' 'hicolor-icon-theme'
+  'desktop-file-utils' 'e_dbus' 'edje' 'efreet' 'eeze'
+  'eio' 'elementary' 'xcb-util-keysyms')
+provides=('notification-daemon' 'e')
+backup=('etc/enlightenment/sysactions.conf')
+options=('!libtool' '!emptydirs')
+install=enlightenment17.install
+source=(http://download.enlightenment.org/releases/$_pkgname-$_pkgver.tar.gz
+  'e-applications.menu' 'quickstart.patch')
+sha1sums=('49cd7da3e1c8df96e388e58c654dbe7253b9a487'
+          'e08cc63cb8a188a06705b42d03e032b9fcfa7ee5'
+          '3f53931ae86de8fe99e386aeb097521aac0decd8')
+
+build() {
+  cd "$srcdir/$_pkgname-$_pkgver"
+
+  export CFLAGS="-fvisibility=hidden -ffunction-sections -fdata-sections ${CFLAGS}"
+  export CXXFLAGS="-fvisibility=hidden -ffunction-sections -fdata-sections ${CXXFLAGS}"
+  export LDFLAGS="-fvisibility=hidden -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed  ${LDFLAGS}"
+
+  patch -p0 < $srcdir/quickstart.patch
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/lib/enlightenment  \
+    --enable-strict \
+    --disable-static \
+    --enable-pam \
+    --disable-device-hal \
+    --enable-device-udev \
+    --disable-mount-hal \
+    --enable-mount-udisks \
+    --enable-mount-eeze \
+    --enable-elementary \
+    --enable-emotion \
+    --enable-enotify \
+    --disable-ephysics \
+    --disable-wayland-clients \
+    --disable-conf-wallpaper2 \
+    --disable-illume2 \
+    --disable-physics \
+    --disable-doc
+  make
+}
+
+package() {
+  cd $srcdir/$_pkgname-$_pkgver
+
+  make DESTDIR=$pkgdir install
+
+# install license files
+  if [ -e $srcdir/$_pkgname-$_pkgver/COPYING ]; then
+    install -Dm644 $srcdir/$_pkgname-$_pkgver/COPYING \
+        $pkgdir/usr/share/licenses/$pkgname/COPYING
+  fi
+
+  if [ -e $srcdir/$_pkgname-$_pkgver/COPYING-PLAIN ]; then
+    install -Dm644 $srcdir/$_pkgname-$_pkgver/COPYING-PLAIN \
+        $pkgdir/usr/share/licenses/$pkgname/COPYING-PLAIN
+  fi
+
+  # install a default applications.menu file (mostly copy from gnome-menus)
+  install -Dm644 $srcdir/e-applications.menu \
+	$pkgdir/etc/xdg/menus/e-applications.menu
+}
+
+
