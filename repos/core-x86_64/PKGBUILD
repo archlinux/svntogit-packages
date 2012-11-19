@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=6.1p1
-pkgrel=3
+pkgrel=4
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
