@@ -1,0 +1,58 @@
+PKGNAME="texlive-core"
+UPDMAP="etc/texmf/web2c/updmap.cfg"
+UPDMAPLOCAL="etc/texmf/web2c/updmap-local.cfg"
+SYNCWITHTREES=''
+
+MAPFILE="var/lib/texmf/arch/installedpkgs/$PKGNAME.maps"
+
+post_install() {
+  TMPFILE=`mktemp`
+  echo    ">>> texlive: saving updmap.cfg as $TMPFILE..."
+  cp "$UPDMAP" "$TMPFILE"
+  echo    ">>> texlive: regenerating updmap.cfg (custom additions should go"
+  echo    "             into /etc/texmf/web2c/updmap-local.cfg"
+  cp usr/share/texmf/web2c/updmap-hdr.cfg $UPDMAP
+  cat var/lib/texmf/arch/installedpkgs/*.maps >> $UPDMAP
+  [ -f "$UPDMAPLOCAL" ] && cat "$UPDMAPLOCAL" >> $UPDMAP
+  echo    ">>> texlive: updating the filename database..."
+  usr/bin/mktexlsr
+  echo    ">>> texlive: updating the fontmap files with updmap..."
+  usr/bin/updmap-sys --quiet --nohash
+  echo    " done." 
+  echo -n   "creating all formats..."
+  usr/bin/fmtutil-sys --all 1>/dev/null
+  echo      " done." 
+  echo      " (logs are under /var/lib/texmf/web2c/<engine>/<formatname>.log)"
+  echo    "NB: To setup ConTeXt and the lua(la)tex font db,"
+  echo    "    see http://wiki.archlinux.org/index.php/TeX_Live"
+}
+
+post_upgrade() {
+  TMPFILE=`mktemp`
+  echo    ">>> texlive: saving updmap.cfg as $TMPFILE..."
+  cp "$UPDMAP" "$TMPFILE"
+  echo    ">>> texlive: regenerating updmap.cfg (custom additions should go"
+  echo    "             into /etc/texmf/web2c/updmap-local.cfg"
+  cp usr/share/texmf/web2c/updmap-hdr.cfg $UPDMAP
+  cat var/lib/texmf/arch/installedpkgs/*.maps >> $UPDMAP
+  [ -f "$UPDMAPLOCAL" ] && cat "$UPDMAPLOCAL" >> $UPDMAP
+  echo    ">>> texlive: updating the filename database..."
+  usr/bin/mktexlsr
+  echo    ">>> texlive: updating the fontmap files with updmap..."
+  usr/bin/updmap-sys --quiet --nohash $SYNCWITHTREES
+  echo    " done." 
+  echo    ">>> texlive: recreating all formats..."
+  usr/bin/fmtutil-sys --all 1>/dev/null
+  echo      " done." 
+  echo      " (logs are under /var/lib/texmf/web2c/<engine>/<formatname>.log)"
+  echo    "NB: To setup ConTeXt and the lua(la)tex font db,"
+  echo    "    see http://wiki.archlinux.org/index.php/TeX_Live"
+  if [[ "$2" == 200* ]]; then
+    echo      "Important note. Some directories have moved:"
+    echo      " \$TEXMFSYSVAR    is now /var/lib/texmf (previously /usr/share/texmf-var)"
+    echo      " \$TEXMFSYSCONFIG is now /etc/texmf     (previously /usr/share/texmf-config)"
+    echo      "Please move and update the config files you had modified and delete the rest."
+    echo      "(Note however that updmap.cfg has been automatically copied and updated.)"
+  fi
+}
+
