@@ -1,0 +1,146 @@
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+
+pkgname=texlive-core
+pkgver=2012.28273
+_revnr=${pkgver#2012.}
+pkgrel=1
+pkgdesc="TeX Live core distribution"
+license=('GPL')
+arch=(any)
+depends=('texlive-bin')
+optdepends=(
+  'perl:        for many useful tools'
+  'ruby:        for old ConTeXT MkII and epspdf'
+  'tk:          for texdoctk'
+  'python2:     for dviasm'
+  'ghostscript: for epstopdf, epspdf and other ConTeXt tools' 
+  'psutils:     to manipulate the output of dvips'
+  't1utils:     can be useful when installing Type1 fonts'
+)
+groups=('texlive-most')
+conflicts=('tetex' 'texlive-latex3')
+provides=('tetex' 'texlive-latex3')
+replaces=('tetex' 'texlive-latex3')
+url='http://tug.org/texlive/'
+source=("ftp://ftp.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip"
+        "$pkgname.maps")
+options=(!strip)
+install=texlive.install
+#backup=(etc/texmf/tex/context/config/cont-usr.tex)
+md5sums=('42ce6cf5a7728f2ebb9a1a2bbf9dc4ed'
+         '82c03f7226e1df4440f30c89c05ee653')
+
+build() {
+   cd "$srcdir"
+   echo -n "   --> extracting all packages... "
+   for p in *.tar.xz; do 
+     bsdtar -xf $p
+   done
+   echo "done"
+   rm -rf {tlpkg,doc,source,omega} || true
+}
+
+package() {
+   install -m755 -d $pkgdir/var/lib/texmf/arch/installedpkgs
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS $pkgdir/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs
+   install -m644 $pkgname.maps $pkgdir/var/lib/texmf/arch/installedpkgs/
+   install -m755 -d $pkgdir/usr/share
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 $pkgdir/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' $pkgdir/usr/share/texmf-dist/'{}' \;
+   done
+   find texmf-dist -type d -exec install -d -m755 $pkgdir/usr/share/'{}' \;
+   find texmf-dist -type f -exec install -m644 '{}' $pkgdir/usr/share/'{}' \;
+   if [[ -d $pkgdir/usr/share/texmf-dist/scripts ]]; then
+     find $pkgdir/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+   # use python2 for dviasm
+   sed -i 's/env python/env python2/' $pkgdir/usr/share/texmf-dist/scripts/dviasm/dviasm.py
+
+   # copy config file to texmf-config
+   #mkdir -p $pkgdir/etc/texmf/tex/context/config
+   #cp -a $pkgdir/usr/share/texmf-dist/tex/context/config/cont-usr.tex \
+   #	  $pkgdir/etc/texmf/tex/context/config/cont-usr.tex
+   
+   # remove obsolete stuff (we don't provide the omega and aleph binaries anyway)
+   rm -f $pkgdir/usr/share/texmf-dist/tex/plain/config/{omega,aleph}.ini
+   #sed -i '/cherokee\.map/d; /oinuit\.map/d; /omega\.map/d' \
+   #    "${pkgdir}/usr/share/texmf-dist/web2c/updmap.cfg"
+
+   # remove upstream updmap.cfg: it contains too many maps.
+   rm "${pkgdir}/usr/share/texmf-dist/web2c/updmap.cfg"
+ 
+   # more cleanup
+   rm -rf $pkgdir/usr/share/texmf-dist/scripts/context/stubs/mswin/
+
+    # link programs from /usr/share/texmf-dist/scripts
+    _linked_scripts="
+accfonts/mkt1font
+accfonts/vpl2ovp
+accfonts/vpl2vpl
+bundledoc/arlatex
+bundledoc/bundledoc
+context/perl/mptopdf.pl
+checkcites/checkcites.lua
+ctanify/ctanify
+ctanupload/ctanupload.pl
+de-macro/de-macro
+dviasm/dviasm.py
+epstopdf/epstopdf.pl
+findhyph/findhyph
+fontools/afm2afm
+fontools/autoinst
+fontools/ot2kpx
+fragmaster/fragmaster.pl
+installfont/installfont-tl
+latex2man/latex2man
+latexdiff/latexdiff-vc.pl
+latexdiff/latexdiff.pl
+latexdiff/latexrevise.pl
+latexfileversion/latexfileversion
+latexmk/latexmk.pl
+luaotfload/mkluatexfontdb.lua
+match_parens/match_parens
+mf2pt1/mf2pt1.pl
+mkjobtexmf/mkjobtexmf.pl
+oberdiek/pdfatfi.pl
+pdfcrop/pdfcrop.pl
+pdfjam/pdf180
+pdfjam/pdf270
+pdfjam/pdf90
+pdfjam/pdfbook
+pdfjam/pdfflip
+pdfjam/pdfjam
+pdfjam/pdfjam-pocketmod
+pdfjam/pdfjam-slides3up
+pdfjam/pdfjam-slides6up
+pdfjam/pdfjoin
+pdfjam/pdfnup
+pdfjam/pdfpun
+pkfix-helper/pkfix-helper
+pkfix/pkfix.pl
+purifyeps/purifyeps
+sty2dtx/sty2dtx.pl
+texcount/texcount.pl
+texdef/texdef.pl
+texdiff/texdiff
+texdirflatten/texdirflatten
+texloganalyser/texloganalyser
+thumbpdf/thumbpdf.pl
+typeoutfileinfo/typeoutfileinfo.sh
+texliveonfly/texliveonfly.py
+"
+    install -m755 -d $pkgdir/usr/bin
+    for _script in ${_linked_scripts}; do
+        _scriptbase=$(basename $_script)
+        _scriptbase=${_scriptbase%.*}
+        ln -s /usr/share/texmf-dist/scripts/${_script} ${pkgdir}/usr/bin/${_scriptbase}
+    done
+    ln -s /usr/share/texmf-dist/scripts/listings-ext/listings-ext.sh ${pkgdir}/usr/bin/listings-ext.sh
+
+    # additional symlinks
+    ln -s epstopdf ${pkgdir}/usr/bin/repstopdf
+    ln -s pdfcrop ${pkgdir}/usr/bin/rpdfcrop
+}
