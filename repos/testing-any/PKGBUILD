@@ -1,0 +1,52 @@
+# Maintainer: Rémy Oudompheng <remy.archlinux.org>
+
+pkgname=texlive-fontsextra
+pkgver=2012.28268
+_revnr=${pkgver#2012.}
+pkgrel=1
+pkgdesc="TeX Live - all sorts of extra fonts"
+license=('GPL')
+arch=(any)
+depends=('texlive-core')
+groups=('texlive-most')
+url='http://tug.org/texlive/'
+source=("ftp://ftp.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip" "$pkgname.maps")
+options=('!emptydirs')
+options=(!strip)
+install=texlive.install
+md5sums=('2c900d7eaa4506b057e25be64b4ad24b'
+         'd1d90a08bbea59c2f925a4b07c355828')
+
+build() {
+   cd "$srcdir"
+   for p in *.tar.xz; do
+	   bsdtar -xf $p
+   done
+   rm -rf {tlpkg,doc,source} || true
+}
+
+package() {
+   cd "$srcdir"
+   install -m755 -d $pkgdir/var/lib/texmf/arch/installedpkgs
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS $pkgdir/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs
+   install -m644 $pkgname.maps $pkgdir/var/lib/texmf/arch/installedpkgs/
+   install -m755 -d $pkgdir/usr/share
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 $pkgdir/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' $pkgdir/usr/share/texmf-dist/'{}' \;
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 $pkgdir/usr/share/'{}' \;
+     find texmf-dist -type f -exec install -m644 '{}' $pkgdir/usr/share/'{}' \;
+   fi
+   if [[ -d $pkgdir/usr/share/texmf-dist/scripts ]]; then
+     find $pkgdir/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+   
+   # remove stuff depending on omega/aleph
+   rm -rf $pkgdir/usr/share/texmf-dist/omega
+   find $pkgdir/ -wholename '*ocherokee*' -delete
+   find $pkgdir/ -wholename '*oinuit*' -delete
+}
