@@ -1,0 +1,64 @@
+# $Id$
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Angel Velasquez <angvp@archlinux.org>
+# Contributor: Eric Belanger <eric@archlinux.org>
+# Contributor: Lucien Immink <l.immink@student.fnt.hvu.nl>
+# Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgname=curl
+pkgver=7.28.1
+pkgrel=1
+pkgdesc="An URL retrieval utility and library"
+arch=('i686' 'x86_64')
+url="http://curl.haxx.se"
+license=('MIT')
+depends=('ca-certificates' 'libssh2' 'openssl' 'zlib')
+options=('!libtool')
+source=("http://curl.haxx.se/download/$pkgname-$pkgver.tar.gz"{,.asc}
+        curlbuild.h)
+md5sums=('252ef351c0fc307b2d8ea1ee31542072'
+         'e3cea743ef286f5aff1f1d27137e9828'
+         '751bd433ede935c8fae727377625a8ae')
+
+ptrsize=$(cpp <<<'__SIZEOF_POINTER__' | sed '/^#/d')
+case $ptrsize in
+  8) _curlbuild=curlbuild-64.h ;;
+  4) _curlbuild=curlbuild-32.h ;;
+  *) error "unknown pointer size for architecture: %s bytes" "$ptrsize"
+    exit 1
+    ;;
+esac
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  ./configure \
+      --prefix=/usr \
+      --mandir=/usr/share/man \
+      --disable-dependency-tracking \
+      --disable-ldap \
+      --disable-ldaps \
+      --enable-ipv6 \
+      --enable-manual \
+      --enable-versioned-symbols \
+      --enable-threaded-resolver \
+      --without-libidn \
+      --with-random=/dev/urandom \
+      --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
+
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+
+  make DESTDIR="$pkgdir" install
+
+  # license
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+
+  # devel
+  install -Dm644 docs/libcurl/libcurl.m4 "$pkgdir/usr/share/aclocal/libcurl.m4"
+  mv "$pkgdir/usr/include/curl/curlbuild.h" "$pkgdir/usr/include/curl/$_curlbuild"
+  install -m644 "$srcdir/curlbuild.h" "$pkgdir/usr/include/curl/curlbuild.h"
+}
