@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor : Damir Perisa <damir.perisa@bluewin.ch>
+
+pkgname=celestia
+pkgver=1.6.1
+pkgrel=4
+pkgdesc="Real-time space simulation"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.shatters.net/celestia/"
+depends=('gtk2' 'libtheora' 'lua51' 'gtkglext' 'glut' 'libxmu' 'glu' 'libjpeg' 'mesa')
+options=('!makeflags')
+source=("http://downloads.sourceforge.net/sourceforge/celestia/${pkgname}-${pkgver}.tar.gz"
+        'celestia-1.6.1-gcc46.patch' 
+        'celestia-1.6.1-libpng15.patch'
+        'celestia-1.6.1-linking.patch'
+        'gcc-4.7-fixes.diff')
+sha1sums=('1f0fdf4525a8b9d6c708e1f6383babed670d18e7'
+          '7c08ca391603806d788cb8f3342acedafc924eef'
+          '46ecc4e10b24191384bc848c206652498843adf0'
+          '534c8eee18d13a868c91f0b870ebecc05f3e7ae1'
+          '582f9eed93eca02a16350f02c29e2ea6f69aa869')
+
+build() {
+    cd ${srcdir}/${pkgname}-${pkgver}
+
+    # build patch
+    patch -Np0 -i "${srcdir}/celestia-1.6.1-gcc46.patch"
+    patch -Np0 -i "${srcdir}/celestia-1.6.1-libpng15.patch"
+    patch -Np1 -i "${srcdir}/celestia-1.6.1-linking.patch"
+    patch -Np1 -i "${srcdir}/gcc-4.7-fixes.diff"
+
+    # This version of Celestia has a bug in the font rendering and requires -fsigned-char 
+    export CFLAGS="$CFLAGS -fsigned-char"
+    export CXXFLAGS="$CXXFLAGS -fsigned-char"
+
+    autoreconf
+    ./configure --prefix=/usr \
+                --with-lua=/usr \
+		--datadir=/usr/share \
+                --with-gtk \
+                --disable-rpath \
+                --with-lua
+    make
+}
+
+package() {
+    cd ${srcdir}/${pkgname}-${pkgver}
+
+    make DESTDIR=${pkgdir} install
+}
+
