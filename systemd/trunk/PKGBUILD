@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=195
-pkgrel=2
+pkgver=196
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,20 +16,15 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
-        '0001-Reinstate-TIMEOUT-handling.patch'
         'use-split-usr-path.patch')
-md5sums=('38e8c8144e7e6e5bc3ce32eb4260e680'
+md5sums=('05ebd7f108e420e2b4e4810ea4b3c810'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
-         '5543be25f205f853a21fa5ee68e03f0d'
-         'fd5b5f04ab0a847373d357555129d4c0')
+         '76bf83fe34c5b40533abc5dc940576a6')
 
 build() {
   cd "$pkgname-$pkgver"
-
-  # still waiting on ipw2x00, et al to get fixed...
-  patch -Np1 <"$srcdir/0001-Reinstate-TIMEOUT-handling.patch"
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
@@ -42,9 +37,7 @@ build() {
       --enable-gtk-doc \
       --disable-audit \
       --disable-ima \
-      --with-distro=arch \
-      --with-usb-ids-path=/usr/share/hwdata/usb.ids \
-      --with-pci-ids-path=/usr/share/hwdata/pci.ids
+      --with-distro=arch
 
   make
 }
@@ -125,9 +118,6 @@ package_systemd() {
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
   install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
-
-  # XXX: kill off coredump rule until the journal can recover coredumps
-  rm "$pkgdir/usr/lib/sysctl.d/coredump.conf"
 
   ### split out manpages for sysvcompat
   rm -rf "$srcdir/_sysvcompat"
