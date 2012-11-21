@@ -1,5 +1,5 @@
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
-# Contributor: Tom Gundersen <teg@jklm.no>
+# Maintainer: Tom Gundersen <teg@jklm.no>
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
