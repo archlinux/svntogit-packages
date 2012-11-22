@@ -4,13 +4,13 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=196
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
-             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt' 'libxslt' 'linux-api-headers'
-             'pam' 'python' 'quota-tools' 'xz')
+             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
+             'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -53,13 +53,13 @@ package_systemd() {
   provides=("libsystemd=$pkgver" "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('libsystemd' 'systemd-tools' 'udev')
   conflicts=('libsystemd' 'systemd-tools' 'udev')
-  optdepends=('initscripts: legacy support for /etc/rc.conf'
+  optdepends=('cryptsetup: required for encrypted block devices'
+              'libmicrohttpd: systemd-journal-gatewayd'
+              'quota-tools: kernel-level quota management'
               'python: systemd library bindings'
               'python2-cairo: systemd-analyze'
-              'python2-dbus: systemd-analyze'
-              'systemd-sysvcompat: symlink package to provide sysvinit binaries'
-              'cryptsetup: required for encrypted block devices'
-              'quota-tools: kernel-level quota management')
+              'python2-gobject: systemd-analyze'
+              'systemd-sysvcompat: symlink package to provide sysvinit binaries')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
           etc/dbus-1/system.d/org.freedesktop.hostname1.conf
           etc/dbus-1/system.d/org.freedesktop.login1.conf
@@ -82,10 +82,16 @@ package_systemd() {
   # move bash-completion and symlink for *ctl's
   install -Dm644 "$pkgdir/etc/bash_completion.d/systemd-bash-completion.sh" \
     "$pkgdir/usr/share/bash-completion/completions/systemctl"
-  for ctl in {login,journal,timedate,locale,hostname}ctl; do
+  for ctl in {login,journal,timedate,locale,hostname,systemd-coredump}ctl udevadm; do
     ln -s systemctl "$pkgdir/usr/share/bash-completion/completions/$ctl"
   done
   rm -rf "$pkgdir/etc/bash_completion.d"
+
+  # zsh completion isn't installed as part of 196
+  # http://i.imgur.com/hMJgX.jpg
+  # TODO(dreisner): remove this for 197
+  install -Dm644 "$pkgname-$pkgver/shell-completion/systemd-zsh-completion.zsh" \
+      "$pkgdir/usr/share/zsh/site-functions/_systemd"
 
   # don't write units to /etc by default -- we'll enable this on post_install
   # as a sane default
