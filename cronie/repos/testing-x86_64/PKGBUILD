@@ -1,0 +1,69 @@
+# Contributor: Kaiting Chen <kaiting.chen@kiwilight.com>
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+
+pkgname='cronie'
+pkgver=1.4.9
+pkgrel=1
+pkgdesc='Daemon that runs specified programs at scheduled times and related tools'
+url='https://fedorahosted.org/cronie/'
+license=('custom:BSD')
+arch=('i686' 'x86_64')
+depends=('pam' 'bash' 'run-parts')
+optdepends=('pm-utils: defer anacron when on battery power'
+            'smtp-server: sending cron job output via email')
+
+source=("https://fedorahosted.org/releases/c/r/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        'cron.deny'
+	'service'
+        'pam.d'
+        'rc.d')
+sha1sums=('40405cb30b62bd60323e4daf5198f26f0e65c4c4'
+          '0f279b8fb820340267d578dc85511c980715f91e'
+          '3038a05476829f72fc4918bee9176b273ce10340'
+          '5eff7fb31f6bc0a924243ff046704726cf20c221'
+          'c08c040ed5cb12bc4fd15639a5242d31ec247ef5')
+
+backup=('etc/anacrontab'
+        'etc/conf.d/crond'
+        'etc/pam.d/crond'
+        'etc/cron.deny')
+
+conflicts=('cron')
+provides=('cron')
+groups=('base')
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--enable-anacron \
+		--with-inotify \
+		--with-pam \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	make DESTDIR="${pkgdir}" install
+
+	chmod u+s "${pkgdir}"/usr/bin/crontab
+	install -d "${pkgdir}"/var/spool/{ana,}cron
+	install -d "${pkgdir}"/etc/cron.{d,hourly,daily,weekly,monthly}
+
+	install -Dm755 ../rc.d "${pkgdir}"/etc/rc.d/crond
+	install -Dm644 ../pam.d "${pkgdir}"/etc/pam.d/crond
+	install -Dm644 ../cron.deny "${pkgdir}"/etc/cron.deny
+	install -Dm644 ../service "${pkgdir}"/usr/lib/systemd/system/cronie.service
+
+	install -Dm644 crond.sysconfig "${pkgdir}"/etc/conf.d/crond
+	install -Dm644 contrib/anacrontab "${pkgdir}"/etc/anacrontab
+	install -Dm644 contrib/0hourly "${pkgdir}"/etc/cron.d/0hourly
+	install -Dm755 contrib/0anacron "${pkgdir}"/etc/cron.hourly/0anacron
+
+	install -Dm644 COPYING "${pkgdir}"/usr/share/licenses/cronie/COPYING
+}
