@@ -5,7 +5,7 @@
 pkgbase=linux-lts           # Build stock -lts kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.0
-pkgver=3.0.51
+pkgver=3.0.52
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -23,16 +23,6 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'ext4-options.patch'
         'module-symbol-waiting-3.0.patch'
         'module-init-wait-3.0.patch')
-md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         '56cb3c09fefc33eb6e2352e0a9af8fbd'
-         'edc668eef98c6795fbdbc7efd755d9bb'
-         '6ec56de185c2a3a24e234ddc0915049a'
-         '232b52576a62c7a333e9fe7a1e1ca359'
-         '9d3c56a4b999c8bfbd4018089a62f662'
-         '263725f20c0b9eb9c353040792d644e5'
-         'c8299cf750a84e12d60b372c8ca7e1e8'
-         '670931649c60fcb3ef2e0119ed532bd4'
-         '8a71abc4224f575008f974a099b5cf6f')
 
 _kernelname=${pkgbase#linux}
 
@@ -315,3 +305,13 @@ for _p in ${pkgname[@]}; do
 done
 
 # vim:set ts=8 sts=2 sw=2 et:
+md5sums=('ecf932280e2441bdd992423ef3d55f8f'
+         '71d2032e6bbcbc993795189771136b02'
+         'edc668eef98c6795fbdbc7efd755d9bb'
+         '6ec56de185c2a3a24e234ddc0915049a'
+         '232b52576a62c7a333e9fe7a1e1ca359'
+         '9d3c56a4b999c8bfbd4018089a62f662'
+         '263725f20c0b9eb9c353040792d644e5'
+         'c8299cf750a84e12d60b372c8ca7e1e8'
+         '670931649c60fcb3ef2e0119ed532bd4'
+         '8a71abc4224f575008f974a099b5cf6f')
