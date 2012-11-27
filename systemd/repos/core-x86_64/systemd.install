@@ -4,10 +4,20 @@ sd_booted() {
   [ -e sys/fs/cgroup/systemd ]
 }
 
+add_privs() {
+  if ! setcap "$2" "$1" 2>/dev/null; then
+    echo "==> Warning: setcap failed, falling back to setuid root on /$1"
+    chmod u+s "$1"
+  fi
+}
+
 post_common() {
   systemd-machine-id-setup
 
-  setcap cap_dac_override,cap_sys_ptrace+ep usr/bin/systemd-detect-virt
+  add_privs usr/bin/systemd-detect-virt 'cap_dac_override,cap_sys_ptrace+ep'
+
+  udevadm hwdb --update
+  journalctl --update-catalog
 
   if sd_booted; then
     systemctl --system daemon-reexec
@@ -38,6 +48,11 @@ post_upgrade() {
   if [ "$(vercmp 194-4 "$2")" -eq 1 ]; then
     printf '==> journald now writes to /var/log/journal by default. This can be\n'
     printf '    controlled with the Storage setting in /etc/systemd/journald.conf\n'
+  fi
+
+  if [ "$(vercmp 196-1 "$2")" -eq 1 ]; then
+    printf '==> The legacy configuration options are no longer supported in rc.conf,\n'
+    printf '    convert your rc.conf to the new configuration formats.\n'
   fi
 
   # logind's protocol changed. kindly restart the daemon to avoid locking
