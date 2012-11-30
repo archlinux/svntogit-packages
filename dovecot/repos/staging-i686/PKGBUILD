@@ -1,0 +1,82 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Paul Mattal <paul@mattal.com>
+# Contributor: Federico Quagliata (quaqo) <quaqo@despammed.com>
+# Contributor: GARETTE Emmanuel <gnunux at laposte dot net>
+
+pkgname=dovecot
+pkgver=2.1.12
+pkgrel=1
+pkgdesc="An IMAP and POP3 server written with security primarily in mind"
+arch=('i686' 'x86_64')
+url="http://dovecot.org/"
+license=("LGPL")
+depends=('krb5' 'openssl' 'sqlite>=3.7.5' 'libmysqlclient>=5.5.10'
+        'postgresql-libs>=9.0.3' 'bzip2' 'expat' 'curl')
+makedepends=('pam>=1.1.1' 'libcap>=2.19' 'libldap>=2.4.22' 'clucene')
+optdepends=('libldap: ldap plugin'
+           'clucene: alternative FTS indexer')
+provides=('imap-server' 'pop3-server')
+options=('!libtool')
+install=$pkgname.install
+source=(http://dovecot.org/releases/2.1/${pkgname}-${pkgver}.tar.gz{,.sig}
+        dovecot.sh
+        dovecot.tmpfilesd)
+md5sums=('b575dfb5db954132f41e7c390e7e11ff'
+         '86abccd4ac989be71a33ff856b25057a'
+         '587159e84e2da6f83d70b3c706ba87cc'
+         '342a28251d40f983c98c0d1f1bf3d07d')
+
+build() {
+  cd ${srcdir}/$pkgname-$pkgver
+
+  # fix build with recent clucene (FC)
+  sed -i '/DEFAULT_INCLUDES *=/s|$| '"$(pkg-config --cflags libclucene-core)|" src/plugins/fts-lucene/Makefile.in
+  
+  # fix path in helper script
+  sed -i 's:OPENSSLCONFIG=${OPENSSLCONFIG-dovecot-openssl.cnf}:OPENSSLCONFIG=${OPENSSLCONFIG- /etc/ssl/dovecot-openssl.cnf}:' doc/mkcert.sh
+
+  # configure with openssl, mysql, and postgresql support
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+  	--libexecdir=/usr/lib  --with-moduledir=/usr/lib/dovecot/modules \
+  	--with-systemdsystemunitdir=/usr/lib/systemd/system \
+	--disable-static \
+	--with-nss \
+	--with-pam \
+	--with-mysql \
+	--with-pgsql \
+	--with-sqlite \
+	--with-ssl=openssl \
+	--with-ssldir=/etc/ssl \
+	--with-gssapi \
+	--with-ldap=plugin \
+	--with-zlib --with-bzlib \
+	--with-libcap \
+	--with-solr \
+	--with-lucene \
+	--with-docs
+  make
+}
+
+package() {
+  cd ${srcdir}/$pkgname-$pkgver
+  make DESTDIR=${pkgdir} install
+
+  # install the launch script
+  install -D -m755 ${srcdir}/$pkgname.sh ${pkgdir}/etc/rc.d/$pkgname
+
+  # install example conf files and ssl.conf
+  install -d -m755 ${pkgdir}/etc/dovecot/conf.d
+  install -m 644 ${pkgdir}/usr/share/doc/dovecot/example-config/dovecot.conf ${pkgdir}/etc/dovecot/dovecot.conf.sample
+  install -d -m755 ${pkgdir}/etc/ssl
+  install -m 644  ${srcdir}/$pkgname-$pkgver/doc/dovecot-openssl.cnf ${pkgdir}/etc/ssl/dovecot-openssl.cnf.sample
+
+  # install mkcert helper script
+  install -m 755  ${srcdir}/$pkgname-$pkgver/doc/mkcert.sh ${pkgdir}/usr/lib/dovecot/mkcert.sh
+
+  rm ${pkgdir}/etc/dovecot/README
+  
+  # systemd tmpfile
+  install -d -m755 ${pkgdir}/usr/lib/tmpfiles.d
+  install -m 644  ${srcdir}/dovecot.tmpfilesd ${pkgdir}/usr/lib/tmpfiles.d/dovecot.conf
+}
