@@ -1,0 +1,93 @@
+From dbd00cfc3805b6f1ff794f7de0b52b1a7893401f Mon Sep 17 00:00:00 2001
+From: Alexandre Bique <bique.alexandre@gmail.com>
+Date: Thu, 15 Nov 2012 20:43:41 +0100
+Subject: [PATCH 07/12] Check that added torrents from the disk are still on
+ the disk.
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ hefur/fs-tree-white-list.cc | 20 ++++++++++++++++++++
+ hefur/fs-tree-white-list.hh |  1 +
+ hefur/torrent-db.hh         |  4 +++-
+ 3 files changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/hefur/fs-tree-white-list.cc b/hefur/fs-tree-white-list.cc
+index f493e95..61714d0 100644
+--- a/hefur/fs-tree-white-list.cc
++++ b/hefur/fs-tree-white-list.cc
+@@ -54,10 +54,30 @@ namespace hefur
+   }
+ 
+   void
++  FsTreeWhiteList::check()
++  {
++    std::vector<m::StringRef> keys;
++    auto db = Hefur::instance().torrentDb();
++    m::SharedMutex::Locker locker(db->torrents_lock_);
++    db->torrents_.foreach([this, &keys] (Torrent::Ptr torrent) {
++        if (::strncmp(torrent->path().c_str(), root_.c_str(), root_.size()))
++          return;
++
++        struct ::stat st;
++        if (::stat(torrent->path().c_str(), &st) && errno == ENOENT)
++          keys.push_back(torrent->key());
++      });
++
++    for (auto it = keys.begin(); it != keys.end(); ++it)
++      db->torrents_.erase(*it);
++  }
++
++  void
+   FsTreeWhiteList::loopScan()
+   {
+     do {
+       scan();
++      check();
+     } while (!stop_.timedWait(m::time() + rescan_interval_));
+   }
+ }
+diff --git a/hefur/fs-tree-white-list.hh b/hefur/fs-tree-white-list.hh
+index c32bcd4..643fb78 100644
+--- a/hefur/fs-tree-white-list.hh
++++ b/hefur/fs-tree-white-list.hh
+@@ -30,6 +30,7 @@ namespace hefur
+      * When a .torrent is found, call TorrentDb::addTorrent().
+      */
+     void scan();
++    void check();
+ 
+   private:
+     /**
+diff --git a/hefur/torrent-db.hh b/hefur/torrent-db.hh
+index a1e5d38..e25ed33 100644
+--- a/hefur/torrent-db.hh
++++ b/hefur/torrent-db.hh
+@@ -17,6 +17,7 @@ namespace hefur
+ {
+   class StatHandler;
+   class PeersHandler;
++  class FsTreeWhiteList;
+ 
+   /**
+    * This is the "in memory" torrent database.
+@@ -63,6 +64,7 @@ namespace hefur
+     friend class StatHandler;
+     friend class PeersHandler;
+     friend class FileHandler;
++    friend class FsTreeWhiteList;
+ 
+     /** helper to use torrent->key() as a key for the trie */
+     static inline m::StringRef torrentKey(Torrent::Ptr torrent) {
+@@ -77,7 +79,7 @@ namespace hefur
+     m::Future<bool> cleanup_stop_;
+     m::Thread       cleanup_thread_;
+     m::SharedMutex  torrents_lock_;
+-    torrents_type        torrents_;
++    torrents_type   torrents_;
+   };
+ }
+ 
+-- 
+1.8.0.1
+
