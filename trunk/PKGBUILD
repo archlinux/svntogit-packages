@@ -1,41 +1,56 @@
 # $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Link Dupont <link@subpop.net>
 #
 pkgname=dbus
 pkgver=1.6.8
-pkgrel=1
+pkgrel=3
 pkgdesc="Freedesktop.org message bus system"
 url="http://www.freedesktop.org/Software/dbus"
 arch=(i686 x86_64)
 license=('GPL' 'custom')
-depends=("dbus-core>=$pkgver" 'libx11')
-source=(http://dbus.freedesktop.org/releases/$pkgname/$pkgname-$pkgver.tar.gz #{,.asc}
-        30-dbus)
-md5sums=('3bf059c7dd5eda5f539a1b7cfe7a14a2'
-         '9fafe8b28460aeaa6054309ef4c5ed92')
+# do not depend on systemd to avoid circular dep,
+# dep on shadow for install scriptlet FS#29341
+depends=('expat' 'coreutils' 'filesystem' 'shadow')
+makedepends=('libx11')
+optdepends=('libx11: dbus-launch support')
+provides=('dbus-core')
+conflicts=('dbus-core')
+replaces=('dbus-core')
+options=(!libtool)
+install=dbus.install
+source=(http://dbus.freedesktop.org/releases/dbus/dbus-$pkgver.tar.gz #{,.asc}
+        dbus systemd-user-session.patch)
 
 build() {
-  cd $pkgname-$pkgver
+  cd dbus-$pkgver
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
       --libexecdir=/usr/lib/dbus-1.0 --with-dbus-user=81 \
-      --with-system-pid-file=/var/run/dbus.pid \
-      --disable-verbose-mode --disable-static \
+      --with-system-pid-file=/run/dbus/pid \
+      --with-system-socket=/run/dbus/system_bus_socket \
+      --with-console-auth-dir=/run/console/ \
       --enable-inotify --disable-dnotify \
-      --disable-tests --disable-asserts
-  make -C tools dbus-launch
+      --disable-verbose-mode --disable-static \
+      --disable-tests --disable-asserts \
+      --with-systemdsystemunitdir=/usr/lib/systemd/system \
+      --enable-systemd
+
+  patch -p1 < "$srcdir/systemd-user-session.patch"
+
+  make
 }
 
-package() {
-  cd $pkgname-$pkgver
-  install -m755 -d "$pkgdir/usr/bin"
-  install -m755 -d "$pkgdir/usr/share/man/man1"
-  install -m755 tools/dbus-launch "$pkgdir/usr/bin/"
-  install -m644 doc/dbus-launch.1 "$pkgdir/usr/share/man/man1/"
+package(){
+  cd dbus-$pkgver
+  make DESTDIR="$pkgdir" install
 
-  install -m755 -d "$pkgdir/etc/X11/xinit/xinitrc.d"
-  install -m755 ../30-dbus "$pkgdir/etc/X11/xinit/xinitrc.d/"
+  rm -rf "$pkgdir/var/run"
 
-  install -d -m755 "$pkgdir/usr/share/licenses/dbus"
-  install -m644 COPYING "$pkgdir/usr/share/licenses/dbus/"
+  install -Dm755 ../dbus "$pkgdir/etc/rc.d/dbus"
+
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/dbus/COPYING"
 }
+md5sums=('3bf059c7dd5eda5f539a1b7cfe7a14a2'
+         'f0364f3f5dc5f653bb05d39aa36e3264'
+         'd8a1bd529b3ddca671ee1a695a143db9')
