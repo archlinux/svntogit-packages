@@ -5,7 +5,7 @@
 pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.6
-pkgver=3.6.10
+pkgver=3.6.11
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -24,7 +24,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'irq_cfg_pointer-3.6.6.patch'
         'fat-3.6.x.patch')
 md5sums=('1a1760420eac802c541a20ab51a093d1'
-         '406a52f90a2ddc78a3ecdf4fe46e7cf7'
+         'bd4bba74093405887d521309a74c19e9'
          '65f7ff39775f20f65014383564d3cb65'
          '3adbfa45451c4bcf9dd7879bed033d77'
          'eb14dcfd80c00852ef81ded6e826826a'
