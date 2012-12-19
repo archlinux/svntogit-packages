@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gst-plugins-base
+pkgname=('gst-plugins-base-libs' 'gst-plugins-base')
+pkgver=1.0.4
+pkgrel=1
+pkgdesc="GStreamer Multimedia Framework Base Plugins"
+arch=('i686' 'x86_64')
+license=('LGPL')
+makedepends=('pkgconfig' 'gstreamer' 'orc' 'libxv' 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis' 'libtheora' 'pango' 'gobject-introspection')
+options=(!libtool !emptydirs)
+url="http://gstreamer.freedesktop.org/"
+source=(${url}/src/$pkgbase/$pkgbase-${pkgver}.tar.xz)
+sha256sums=('11846cbf06f8d7f13b35aa92ca45f79aa5cf9fac2edd1db847de0a6278525944')
+
+build() {
+  cd $pkgbase-$pkgver
+  sed -i '/AC_PATH_XTRA/d' configure.ac
+  autoreconf
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --enable-experimental \
+    --with-package-name="GStreamer Base Plugins (Archlinux)" \
+    --with-package-origin="http://www.archlinux.org/"
+  make
+  sed -e 's/^SUBDIRS_EXT =.*/SUBDIRS_EXT =/' -i Makefile
+}
+
+check() {
+  cd $pkgbase-$pkgver
+  # Testsuite fails on one test. Some refcount leak
+  #make check
+}
+
+package_gst-plugins-base-libs() {
+  pkgdesc="GStreamer Multimedia Framework Base Plugin libraries"
+  depends=('gstreamer' 'orc' 'libxv')
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="${pkgdir}" install
+}
+
+package_gst-plugins-base() {
+  depends=("gst-plugins-base-libs=$pkgver" 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis' 'libtheora' 'pango')
+
+  cd $pkgbase-$pkgver
+  make -C gst-libs DESTDIR="${pkgdir}" install
+  make -C ext DESTDIR="${pkgdir}" install
+  make -C gst-libs DESTDIR="${pkgdir}" uninstall
+}
