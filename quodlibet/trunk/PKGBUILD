@@ -1,38 +1,56 @@
 # $Id$
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
-pkgname=quodlibet
-pkgver=2.4.1
+pkgbase=quodlibet
+pkgname=('quodlibet' 'quodlibet-plugins')
+pkgver=2.5.0
 pkgrel=1
-pkgdesc="An audio player written in pygtk"
-arch=('i686' 'x86_64')
+arch=('any')
 license=('GPL2')
 url="http://code.google.com/p/quodlibet/"
-depends=('gstreamer0.10-python' 'gstreamer0.10-base-plugins' 'gstreamer0.10-good-plugins' 
-         'gstreamer0.10-ugly-plugins' 'mutagen' 'pygtk')
-makedepends=('intltool')
-optdepends=('gstreamer0.10-ffmpeg: for ffmpeg (ASF/WMA) support ' 
-            'gstreamer0.10-bad-plugins: for MPEG-4 (AAC) and Musepack support' 
-            'python2-dbus: for dbus support' 
-            'notification-daemon: for notification support' 
-            'libgpod: for ipod support' 
-            'python2-feedparser: for audio feeds (podcast) support' 
-            'udisks: for media devices support' 
-            'media-player-info: for media devices support')
+makedepends=('intltool' 'python2-gobject2' 'gtk-update-icon-cache'
+             'hicolor-icon-theme' 'desktop-file-utils')
 options=('!makeflags')
-source=(http://quodlibet.googlecode.com/files/${pkgname}-${pkgver}.tar.gz)
-sha1sums=('4db812f0b447805a27ae8f25517623205712b75e')
+source=(http://quodlibet.googlecode.com/archive/${pkgname}-${pkgver}.zip)
+sha1sums=('e78289d2edb07e73dbe0ea7a2cc22f18be83d68d')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  sed -i 's#env python#env python2#' *.py quodlibet/util/fmps.py
-  sed -i 's#libudev.so.0#libudev.so.1#' quodlibet/devices/__init__.py
-  ./setup.py build
+  cd "${srcdir}"/${pkgname}-*/${pkgname}
+  sed -i 's/env python/env python2/' exfalso.py quodlibet.py \
+    ../plugins/songsmenu/replaygain.py
+  python2 setup.py build
 }
 
-package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  ./setup.py install --prefix="${pkgdir}/usr"
-  install -D -m644 quodlibet/images/hicolor/64x64/apps/exfalso.png "${pkgdir}/usr/share/pixmaps/exfalso.png"
-  install -D -m644 quodlibet/images/hicolor/64x64/apps/quodlibet.png "${pkgdir}/usr/share/pixmaps/quodlibet.png"
+package_quodlibet() {
+  pkgdesc="An audio library tagger, manager and player"
+  depends=('gstreamer0.10-python' 'gstreamer0.10-base-plugins' 'gstreamer0.10-good-plugins' 
+           'gstreamer0.10-ugly-plugins' 'mutagen' 'pygtk' 'hicolor-icon-theme' 'desktop-file-utils')
+  optdepends=('gstreamer0.10-ffmpeg: for ffmpeg (ASF/WMA) support ' 
+              'gstreamer0.10-bad-plugins: for MPEG-4 (AAC) and Musepack support' 
+              'python2-dbus: for dbus support' 
+              'notification-daemon: for notification support' 
+              'libgpod: for ipod support' 
+              'python2-feedparser: for audio feeds (podcast) support' 
+              'udisks: for media devices support' 
+              'media-player-info: for media devices support')
+  install=quodlibet.install
+
+  cd "${srcdir}"/quodlibet-*/quodlibet
+  python2 setup.py install --prefix="${pkgdir}/usr"
+}
+
+package_quodlibet-plugins() {
+  pkgdesc="Various plugins for QuodLibet"
+  depends=('quodlibet')
+  optdepends=('gnome-python: for "Automatic Masking" and "View in Nautilus" plugins'
+              'python2-dbus: for "Gajim Status Message" and "Notify" plugins'
+              'cddb-py: for "CDDB Lookup" plugin'
+              'python2-musicbrainz2: for "MusicBrainz Lookup" plugin'
+              'python2-pyinotify: for "Automatic library update" plugin'
+	      'kakasi: for "Kana/Kanji Simple Inverter" plugin'
+	      'zeitgeist: for "Event Logging" plugin')
+
+  cd "${srcdir}"/quodlibet-*/plugins
+  install -d "${pkgdir}/usr/lib/python2.7/site-packages/quodlibet/plugins"
+  cp -r editing events gstreamer playorder songsmenu "${pkgdir}/usr/lib/python2.7/site-packages/quodlibet/plugins"
 }
