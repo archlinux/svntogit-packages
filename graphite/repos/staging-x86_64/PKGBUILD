@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+pkgname=graphite
+pkgver=1.2.0
+pkgrel=1
+epoch=1
+arch=('i686' 'x86_64')
+url="http://projects.palaso.org/projects/graphitedev"
+pkgdesc='reimplementation of the SIL Graphite text processing engine'
+license=('LGPL' 'GPL' 'custom')
+depends=('gcc-libs')
+makedepends=('cmake' 'freetype2' 'python2') 
+# 'doxygen' 'texlive-latexextra' 'graphviz' 'asciidoc' 'perl-module-build' 'icu') - only for docs - target doesn't install properly
+options=('!libtool' '!emptydirs')
+source=("http://downloads.sourceforge.net/project/silgraphite/graphite2/graphite2-${pkgver}.tgz")
+md5sums=('f5ef3f7f10fa8c3542c6a085a233080b')
+
+build() {
+  cd "${srcdir}"
+  sed -i "s:\/usr\/bin\/python:\/usr\/bin\/python2:" graphite2-${pkgver}/tests/{jsoncmp,fuzztest,defuzz,corrupt.py}
+  mkdir build
+  cd build
+  cmake -G "Unix Makefiles" ../graphite2-${pkgver} \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DCMAKE_BUILD_TYPE:STRING=Release \
+	-DGRAPHITE2_COMPARE_RENDERER=OFF
+  make
+  make docs
+}
+
+check() {
+  cd "${srcdir}"/build
+  sed -i "s:python:python2:g" tests/CTestTestfile.cmake
+  ctest
+}
+
+package() {
+  cd "${srcdir}"/build
+  make DESTDIR="$pkgdir/" install
+
+  # licenses
+  mkdir -p "${pkgdir}"/usr/share/licenses/${pkgname}
+  install -m644 "${srcdir}"/graphite2-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
