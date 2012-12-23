@@ -4,12 +4,12 @@
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=subversion
-pkgver=1.7.7
-pkgrel=2
+pkgver=1.7.8
+pkgrel=1
 pkgdesc="A Modern Concurrent Version Control System"
 arch=('i686' 'x86_64')
 license=('APACHE')
-depends=('neon' 'apr-util' 'sqlite' 'file')
+depends=('neon' 'apr-util' 'sqlite' 'file' 'serf')
 optdepends=('libgnome-keyring' 'kdeutils-kwallet' 'bash-completion: for svn bash completion' \
             'python2: for some hook scripts' 'java-environment') #'ruby: for some hook scripts')
 makedepends=('krb5' 'apache' 'python2' 'perl' 'swig' 'java-runtime' 'java-environment'
@@ -25,31 +25,33 @@ source=(http://apache.mirror.rafal.ca/subversion/$pkgname-$pkgver.tar.bz2{,.asc}
         svnserve.conf
         svnserve.tmpfiles
         svnserve.service
-        subversion-1.7.6-kwallet-gcc47.patch        
+        subversion-kwallet.patch
         subversion.rpath.fix.patch)
-sha1sums=('c9fc0c5992eda36ba9affd93a15929e25958a951'
-          '3df83e46277f0f08868236a6b6e6c0f0d7ef9278'
+sha1sums=('12c7d8d5414bba74c9777c4d1dae74f152df63c2'
+          '24f8e82fa131c1a1b924d71046f8d38cb00645a7'
           '64ba3e6ebafc08ac62f59d788f7a825fdce69573'
           '73b36c046c09cec2093354911c89e3ba8056af6c'
           'ad117bf3b2a838a9a678a93fd8db1a066ad46c41'
           '00cc36e69077a8c45674ead6dd62a7647b3a3b6d'
           '9f6790d842cf3e0228b007483a43e39a42724068'
-          'aa0d01e606de2ebc5eed9c533d218d37a217c50c'
+          'f2aed28a2e34b8631ee9b69175bac1bac59327ce'
           '3d1e28408a9abb42af2e531adc0d01ce21acfad6')
 
 build() {
    cd "${srcdir}/${pkgname}-${pkgver}"
    export PYTHON=/usr/bin/python2
 
-   patch -p0 -i ../subversion.rpath.fix.patch
+   patch -Np0 -i ../subversion.rpath.fix.patch
    sed -i 's|/usr/bin/env python|/usr/bin/env python2|' tools/hook-scripts/{,mailer/{,tests/}}*.py
 
-   patch -Np1 -i ../subversion-1.7.6-kwallet-gcc47.patch
+   # FS#33081
+   patch -Np0 -i ../subversion-kwallet.patch
 
    ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
-               --with-zlib=/usr --with-neon=/usr --with-apxs \
+               --with-zlib=/usr --with-neon=/usr --with-serf=/usr --with-apxs \
                --with-sqlite=/usr --with-berkeley-db=:/usr/include/:/usr/lib:db-5.3 \
-               --enable-javahl --with-gnome-keyring --with-kwallet
+               --enable-javahl --with-gnome-keyring --with-kwallet \
+               --disable-static
 
    make external-all
    make LT_LDFLAGS="-L$Fdestdir/usr/lib" local-all
