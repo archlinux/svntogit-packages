@@ -5,14 +5,14 @@
 # NOTE: valgrind requires rebuilt with each major glibc version
 
 pkgname=glibc
-pkgver=2.16.0
-pkgrel=5
+pkgver=2.17
+pkgrel=1
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=3.5' 'tzdata')
+depends=('linux-api-headers>=3.7' 'tzdata')
 makedepends=('gcc>=4.7')
 backup=(etc/gai.conf
         etc/locale.gen
@@ -20,28 +20,12 @@ backup=(etc/gai.conf
 options=('!strip')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
-        glibc-2.15-fix-res_query-assert.patch
-        glibc-2.16-unlock-mutex.patch
-        glibc-2.16-rpcgen-cpp-path.patch
-        glibc-2.16-strncasecmp-segfault.patch
-        glibc-2.16-strtod-overflow.patch
-        glibc-2.16-detect-fma.patch
-        glibc-2.16-glob-use-size_t.patch
-        nscd.rcd
         nscd.service
         nscd.tmpfiles
         locale.gen.txt
         locale-gen)
-md5sums=('80b181b02ab249524ec92822c0174cf7'
-         '2a1221a15575820751c325ef4d2fbb90'
-         '31f415b41197d85d3bbee3d1eecd06a3'
-         '0afcd8c6020d61684aba63ed5f26bd91'
-         'ea6a43915474e8276e9361eed6a01280'
-         'f042d37cc8ca3459023431809039bc88'
-         '61d322f7681a85d3293ada5c3ccc2c7e'
-         '2426f593bc43f5499c41d21b57ee0e30'
-         'a441353901992feda4b15a11a20140a1'
-         '589d79041aa767a5179eaa4e2737dd3f'
+md5sums=('87bf675c8ee523ebda4803e8e1cec638'
+         '6db4d1661cf34282755dc90330465f6d'
          'c1e07c0bec0fe89791bfd9d13fc85edf'
          'bccbe5619e75cf1d97312ec3681c605c'
          '07ac979b6ab5eeb778d55f041529d623'
@@ -50,34 +34,6 @@ md5sums=('80b181b02ab249524ec92822c0174cf7'
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
-
-  # fix res_query assertion
-  # http://sourceware.org/bugzilla/show_bug.cgi?id=13013
-  patch -p1 -i ${srcdir}/glibc-2.15-fix-res_query-assert.patch
-
-  # prevent hang by locked mutex
-  # http://sourceware.org/git/?p=glibc.git;a=patch;h=c30e8edf
-  patch -p1 -i ${srcdir}/glibc-2.16-unlock-mutex.patch
-
-  # prevent need for /lib/cpp symlink
-  # http://sourceware.org/git/?p=glibc.git;a=commit;h=bf9b740a
-  patch -p1 -i ${srcdir}/glibc-2.16-rpcgen-cpp-path.patch
-
-  # strncasecmp segfault on i686
-  # http://sourceware.org/git/?p=glibc.git;a=commit;h=6db8f737
-  patch -p1 -i ${srcdir}/glibc-2.16-strncasecmp-segfault.patch
-
-  # strtod integer/buffer overflow
-  # http://sourceware.org/git/?p=glibc.git;a=commit;h=da1f4319
-  patch -p1 -i ${srcdir}/glibc-2.16-strtod-overflow.patch
-
-  # detect FMA supprt
-  # http://sourceware.org/git/?p=glibc.git;a=commit;h=a5cfcf08
-  patch -p1 -i ${srcdir}/glibc-2.16-detect-fma.patch
-  
-  # prevent overflow in globc
-  # http://sourceware.org/git/?p=glibc.git;a=commit;h=6c62f108
-  patch -p1 -i ${srcdir}/glibc-2.16-glob-use-size_t.patch
 
   # ldconfig does not need to look in /usr/lib64 or /usr/libx32 on Arch Linux
   sed -i "s#add_system_dir#do_not_add_system_dir#" sysdeps/unix/sysv/linux/x86_64/dl-cache.h
@@ -123,6 +79,9 @@ build() {
 }
 
 check() {
+  # bug to file - the linker commands need to be reordered
+  LDFLAGS=${LDFLAGS/--as-needed,/}
+
   cd ${srcdir}/glibc-build
   make check
 }
@@ -143,8 +102,6 @@ package() {
   install -dm755 ${pkgdir}/{etc/rc.d,usr/{sbin,lib/{,locale,systemd/system,tmpfiles.d}}}
 
   install -m644 ${srcdir}/${pkgname}-${pkgver}/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
-  sed -i -e 's/^\tserver-user/#\tserver-user/' ${pkgdir}/etc/nscd.conf
-  install -m755 ${srcdir}/nscd.rcd ${pkgdir}/etc/rc.d/nscd
   install -m644 ${srcdir}/nscd.service ${pkgdir}/usr/lib/systemd/system
   install -m644 ${srcdir}/nscd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/nscd.conf
 
@@ -155,7 +112,7 @@ package() {
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
-    ${srcdir}/glibc-2.16.0/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
+    ${srcdir}/glibc-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
 
   if [[ ${CARCH} = "x86_64" ]]; then
     # fix paths and compliance with binary blobs...
