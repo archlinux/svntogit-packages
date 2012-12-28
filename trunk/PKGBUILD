@@ -57,6 +57,7 @@ build() {
   ${srcdir}/${pkgname}-${pkgver}/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --with-headers=/usr/include \
+      --with-bugurl=https://bugs.archlinux.org/ \
       --enable-add-ons=nptl,libidn \
       --enable-obsolete-rpc \
       --enable-kernel=2.6.32 \
