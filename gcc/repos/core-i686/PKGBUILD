@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.2
-pkgrel=2
+pkgrel=3
 #_snapshot=4.7-20120721
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -97,7 +97,7 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.16')
+  depends=('glibc>=2.17')
   install=gcc-libs.install
 
   cd ${srcdir}/gcc-build
@@ -141,10 +141,10 @@ package_gcc()
   # unfortunately it is much, much easier to install the lot and clean-up the mess...
   rm $pkgdir/usr/bin/{{$CHOST-,}gfortran,{$CHOST-,}gccgo,gnat*}
   rm $pkgdir/usr/lib/*.so*
-  rm $pkgdir/usr/lib/lib{ffi,gfortran,go{,begin},objc,quadmath}.a
+  rm $pkgdir/usr/lib/lib{ffi,gfortran,go{,begin},objc}.a
   rm $pkgdir/usr/lib/libgfortran.spec
   rm -r $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{ada{include,lib},finclude,include/objc}
-  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/include/{ffi{,target}.h,quadmath{,_weak}.h}
+  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/include/ffi{,target}.h
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{cc1obj{,plus},f951,gnat1,go1}
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{libcaf_single,libgfortranbegin}.a
   rm -r $pkgdir/usr/lib/go
@@ -202,17 +202,14 @@ package_gcc-fortran()
   install=gcc-fortran.install
 
   cd ${srcdir}/gcc-build
-  make -j1 DESTDIR=${pkgdir} install-target-libquadmath
   make -j1 DESTDIR=$pkgdir install-target-libgfortran
   make -j1 -C $CHOST/libgomp DESTDIR=$pkgdir install-nodist_fincludeHEADERS
   make -j1 -C gcc DESTDIR=$pkgdir fortran.install-{common,man,info}
   install -Dm755 gcc/f951 $pkgdir/usr/lib/gcc/$CHOST/$pkgver/f951
-  
-  # remove libraries included in gcc-libs
-  rm ${pkgdir}/usr/lib/lib{gfortran,quadmath}.so*
-  rm ${pkgdir}/usr/share/info/libquadmath.info
 
   ln -s gfortran ${pkgdir}/usr/bin/f95
+
+  rm ${pkgdir}/usr/lib/libgfortran.so*
 
   # Install Runtime Library Exception
   install -Dm644 ${_basedir}/COPYING.RUNTIME \
