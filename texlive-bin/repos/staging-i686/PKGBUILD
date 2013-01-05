@@ -4,7 +4,8 @@
 
 pkgname=texlive-bin
 pkgver=2012.0
-pkgrel=6
+pkgrel=7
+_biber_ver=1.3 # for biblatex 2.3 only.
 pkgdesc="TeX Live binaries"
 license=('GPL')
 arch=('i686' 'x86_64')
@@ -22,8 +23,12 @@ source=('texmf.cnf'
         'poppler-0.20.patch'
         'http://mirrors.kernel.org/archlinux/other/texlive/texlive-bin-source-20120623.tar.xz'
         'http://mirrors.kernel.org/archlinux/other/texlive/texlive-bin-texmf-20120623.tar.xz'
+        "http://downloads.sourceforge.net/project/biblatex-biber/biblatex-biber/${_biber_ver}/binaries/Linux/biber-linux_x86_64.tar.gz"
+        "http://downloads.sourceforge.net/project/biblatex-biber/biblatex-biber/${_biber_ver}/binaries/Linux/biber-linux_x86_32.tar.gz"
         'luatex-r4449-radical-rule-thickness.patch'
 )
+noextract=(biber-linux_x86_64.tar.gz
+           biber-linux_x86_32.tar.gz)
 backup=(etc/texmf/web2c/texmf.cnf \
     etc/texmf/chktex/chktexrc \
 	etc/texmf/dvipdfm/config/config \
@@ -43,15 +48,21 @@ md5sums=('220a4f4cc0d915bf8fcbcb553dcee1ae'
          'e3a664d5a7f0923f35060fe9d25d2573'
          'ac2c3c3aa765581f8504e21a5edbfb9f'
          'f315a860158cfc952c82a6d759961024'
+         '7bde96fe615f19c020fda00af081377c'
+         'e8999a4f7bbcbd1f0ba6961aee6d5c61'
          '5190f3295eb9a604c5f17f5bd607299b')
 
 build() {
+   cd "$srcdir"
+
    if [ "${CARCH}" = "x86_64" ]; then
      export CFLAGS="${CFLAGS} -fPIC"
      export CXXFLAGS="${CXXFLAGS} -fPIC"
+     tar xf biber-linux_x86_64.tar.gz     
+   else
+     tar xf biber-linux_x86_32.tar.gz
    fi
 
-    cd "$srcdir"
    # this patch removes spurious error message with locale "xx_YY.utf8"
    patch -Np0 -i fix-fontforge-encoding.patch
    # fix build with poppler >= 0.20
@@ -196,7 +207,8 @@ package() {
 
    ## install Perl libraries
    mkdir -p "$pkgdir"/usr/share/tlpkg/TeXLive
-   install -m644 "${srcdir}"/source/utils/biber/TeXLive/*.pm "$pkgdir"/usr/share/tlpkg/TeXLive
+   install -m755 "${srcdir}/biber" "${pkgdir}/usr/bin/biber"
+   install -m644 "${srcdir}"/source/utils/biber/TeXLive/*.pm "${pkgdir}/usr/share/tlpkg/TeXLive"
 
    # create symlinks for formats 
    echo "--> Create symlinks for TeX formats ..."
