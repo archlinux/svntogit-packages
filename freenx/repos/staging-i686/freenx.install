@@ -1,0 +1,59 @@
+post_install() {
+  # Make sure the group and user "nx" exists on this system and have the correct values
+  if grep -q "^nx:" /etc/group &> /dev/null ; then
+    groupmod -g 85 -n nx nx &> /dev/null
+  else
+    groupadd -g 85 nx &> /dev/null
+  fi
+
+  if grep -q "^nx:" /etc/passwd 2> /dev/null ; then
+    usermod -s /usr/bin/nxserver -c "NX user" -d /var/lib/nxserver/home/nx -u 85 -g nx nx &> /dev/null
+  else
+    useradd -s /usr/bin/nxserver -c "NX user" -d /var/lib/nxserver/home/nx -u 85 -g nx -r nx &> /dev/null
+  fi 
+
+  # setting up freenx
+  echo 'Generating keys ...'
+  /usr/lib/nx/bin/nxsetup --install 2>&1 >/dev/null
+
+  echo "ATTENTION FREENX:"
+  echo "For correct setup please take a look at the wiki:"
+  echo "http://wiki.archlinux.org/index.php/FreeNX"
+}
+
+post_upgrade() {
+  # Make sure the group and user "nx" exists on this system and have the correct values
+  if grep -q "^nx:" /etc/group &> /dev/null ; then
+    groupmod -g 85 -n nx nx &> /dev/null
+  else
+    groupadd -g 85 nx &> /dev/null
+  fi
+
+  if grep -q "^nx:" /etc/passwd 2> /dev/null ; then
+    usermod -s /usr/bin/nxserver -c "NX user" -d /var/lib/nxserver/home/nx -u 85 -g nx nx &> /dev/null
+  else
+    useradd -s /usr/bin/nxserver -c "NX user" -d /var/lib/nxserver/home/nx -u 85 -g nx -r nx &> /dev/null
+  fi
+
+  # setting up freenx
+  echo "Rerunning nxsetup ..."
+  /usr/lib/nx/bin/nxsetup --install 2>&1 >/dev/null
+
+  if [ "`vercmp $2 0.7.3-10.1`" -lt 0 ]; then
+    # important upgrade notice
+    echo "*** config file location has been moved ***"
+    echo "Please apply your local settings from /opt/NX/etc/node.conf.pacsave"
+    echo "into /etc/nxserver/node.conf. A new key set is required."
+    echo "Please copy to your clients the new client key:"
+    echo "\"/var/lib/nxserver/home/nx/.ssh/client.id_dsa.key\""
+    echo "When you have FreeNX server running clean up with \"rm -rf /opt/NX\"."
+  fi
+}
+
+# arg 1:  the old package version
+pre_remove() {
+  /usr/lib/nx/bin/nxsetup --uninstall --purge 2>&1 >/dev/null
+#  usr/sbin/groupdel nx &>/dev/null
+    userdel nx &> /dev/null
+    groupdel nx &> /dev/null || /bin/true
+}
