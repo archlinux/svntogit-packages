@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=197
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -46,9 +46,9 @@ build() {
   make
 }
 
-check() {
-  make -C "$pkgname-$pkgver" check
-}
+#check() {
+#  make -C "$pkgname-$pkgver" check
+#}
 
 package_systemd() {
   pkgdesc="system and service manager"
