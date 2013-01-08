@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=196
-pkgrel=2
+pkgver=197
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -17,7 +17,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         'use-split-usr-path.patch')
-md5sums=('05ebd7f108e420e2b4e4810ea4b3c810'
+md5sums=('56a860dceadfafe59f40141eb5223743'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
@@ -30,14 +30,18 @@ build() {
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
 
   ./configure \
+      PYTHON=python2 \
+      PYTHON_CONFIG=python2-config \
       --libexecdir=/usr/lib \
       --localstatedir=/var \
       --sysconfdir=/etc \
       --enable-introspection \
       --enable-gtk-doc \
       --disable-audit \
-      --disable-ima \
-      --with-distro=arch
+      --disable-ima
+
+  # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
+  # https://pokersource.info/show_bug.cgi?id=50989
 
   make
 }
@@ -50,9 +54,9 @@ package_systemd() {
   pkgdesc="system and service manager"
   depends=('acl' 'bash' 'dbus-core' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
            'pam' 'util-linux' 'xz')
-  provides=("libsystemd=$pkgver" "systemd-tools=$pkgver" "udev=$pkgver")
-  replaces=('libsystemd' 'systemd-tools' 'udev')
-  conflicts=('libsystemd' 'systemd-tools' 'udev')
+  provides=("libsystemd=$pkgver" 'nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
+  replaces=('libsystemd' 'nss-myhostname' 'systemd-tools' 'udev')
+  conflicts=('libsystemd' 'nss-myhostname' 'systemd-tools' 'udev')
   optdepends=('cryptsetup: required for encrypted block devices'
               'libmicrohttpd: systemd-journal-gatewayd'
               'quota-tools: kernel-level quota management'
@@ -87,12 +91,6 @@ package_systemd() {
   done
   rm -rf "$pkgdir/etc/bash_completion.d"
 
-  # zsh completion isn't installed as part of 196
-  # http://i.imgur.com/hMJgX.jpg
-  # TODO(dreisner): remove this for 197
-  install -Dm644 "$pkgname-$pkgver/shell-completion/systemd-zsh-completion.zsh" \
-      "$pkgdir/usr/share/zsh/site-functions/_systemd"
-
   # don't write units to /etc by default -- we'll enable this on post_install
   # as a sane default
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
@@ -100,10 +98,6 @@ package_systemd() {
 
   # get rid of RPM macros
   rm -r "$pkgdir/etc/rpm"
-
-  # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
-  # https://pokersource.info/show_bug.cgi?id=50989
-  sed -i '1s/python$/python2/' "$pkgdir/usr/bin/systemd-analyze"
 
   # the path to udevadm is hardcoded in some places
   install -d "$pkgdir/sbin"
