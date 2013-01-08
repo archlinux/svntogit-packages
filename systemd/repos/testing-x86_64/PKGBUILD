@@ -40,8 +40,7 @@ build() {
       --disable-audit \
       --disable-ima \
       --with-sysvinit-path= \
-      --with-sysvrcnd-path= \
-      --with-rc-local-script-path-stop=/etc/rc.local.shutdown
+      --with-sysvrcnd-path=
 
   # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
   # https://pokersource.info/show_bug.cgi?id=50989
@@ -49,9 +48,9 @@ build() {
   make
 }
 
-#check() {
-#  make -C "$pkgname-$pkgver" check
-#}
+check() {
+  make -C "$pkgname-$pkgver" check
+}
 
 package_systemd() {
   pkgdesc="system and service manager"
