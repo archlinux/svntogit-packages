@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=197
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -38,7 +38,10 @@ build() {
       --enable-introspection \
       --enable-gtk-doc \
       --disable-audit \
-      --disable-ima
+      --disable-ima \
+      --with-sysvinit-path= \
+      --with-sysvrcnd-path= \
+      --with-rc-local-script-path-stop=/etc/rc.local.shutdown
 
   # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
   # https://pokersource.info/show_bug.cgi?id=50989
