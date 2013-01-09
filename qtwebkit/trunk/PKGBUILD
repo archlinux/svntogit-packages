@@ -2,105 +2,49 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qtwebkit
-pkgver=2.2.3
+pkgver=2.3git20130108
 pkgrel=1
 arch=('i686' 'x86_64')
 url='http://trac.webkit.org/wiki/QtWebKit'
 pkgdesc='An open source web browser engine (Qt port)'
 license=('LGPL2.1' 'GPL3')
-depends=('qt' 'gstreamer0.10-base')
-makedepends=('python2' 'mesa' 'gperf')
+depends=('qt' 'systemd')
+makedepends=('gperf' 'python2' 'ruby' 'git' 'mesa')
 conflicts=('qt<4.8')
-_qtver=4.8.3
-source=("ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}-source.tar.gz"
-        "ftp://ftp.archlinux.org/other/${pkgname}/qwebview-${_qtver}.tar.xz"
-        'bison26.patch'
-        'unsupported-gcc-flag.patch')
-sha1sums=('852dc408ff5ed872b8174780b9439bf8bdd51a42'
-          'cbaebec8d78a42b0a267b7a3461ed44b885f0366'
-          'f7cad6cfff9e03e5d2f2b74a0a13b89c637818bc'
-          '7c4b27d235cc569a970eb7ad50b20978da07fddd')
+_qtver=4.8.4
+source=("${pkgname}-${pkgver}.tar.gz"::"http://gitorious.org/webkit/qtwebkit-23/archive-tarball/${pkgname}-2.3"
+        "http://releases.qt-project.org/qt4/source/qt-everywhere-opensource-src-${_qtver}.tar.gz"
+        'use-python2.patch'
+        'qwebview.patch')
+sha1sums=('a1c62eab9fc476d5e646c9370f216f3c262b0ab7'
+          'f5880f11c139d7d8d01ecb8d874535f7d9553198'
+          '315b6ff603f35e5492a036f7082f6aa075dfb607'
+          'fed0c1a90e3997b5575dbc83d6ea23bc46097a6f')
 
 build() {
-  cd "${srcdir}"/${pkgname}-${pkgver}-source
-  patch -p0 -i "${srcdir}"/bison26.patch
-  patch -p0 -i "${srcdir}"/unsupported-gcc-flag.patch
+  cd webkit-qtwebkit-23
 
-  # move headers
-  mv include Source/
+  patch -p1 -i "${srcdir}"/use-python2.patch
 
-  cd Source
-  qmake
-  cd ../
-
-  make -C Source
+  export QTDIR=/usr
+  Tools/Scripts/build-webkit --qt \
+    --prefix=/usr \
+    --no-webkit2
 
   # Build the QWebView plugin (FS#27914)
-  cd "${srcdir}"/${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/qwebview
+  cd qt-everywhere-opensource-src-${_qtver}
+  patch -p1 -i "${srcdir}"/qwebview.patch
+  cd tools/designer/src/plugins/qwebview
   qmake
   make
 }
 
 package() {
-  cd "${srcdir}"/${pkgname}-${pkgver}-source
-  make INSTALL_ROOT="${pkgdir}" -C Source install
+  cd webkit-qtwebkit-23
+  make INSTALL_ROOT="${pkgdir}" -C WebKitBuild/Release install
 
-  cd "${srcdir}"/${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/qwebview
+  cd ../
+
+  cd qt-everywhere-opensource-src-${_qtver}/tools/designer/src/plugins/qwebview
   make INSTALL_ROOT="${pkgdir}" install
-}
-
-# needs python2, qmake, git, gperf
-mksource() {
-  local _current_dir=$(pwd)
-  local _tmp=$(mktemp -d --tmpdir)
-
-  cd ${_tmp}
-  git clone git://gitorious.org/+qtwebkit-developers/webkit/qtwebkit.git
-
-  # fetch the make-package.py script
-  git clone git://qt.gitorious.org/qtwebkit/tools.git
-
-  # create the qtwebkit tarball
-  cd qtwebkit
-  git checkout -b ${pkgname}-${pkgver} ${pkgname}-${pkgver}
-
-  sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' \
-    ../tools/make-package.py
-  python2 ../tools/make-package.py
-
-  mv ${pkgname}-${pkgver}-source.tar.gz ${_current_dir}/
-
-  cd ..
-  
-  # create the qwebview plugin tarball
-  mkdir qwebview-${_qtver}
-  cd qwebview-${_qtver}
-  wget http://releases.qt-project.org/qt4/source/qt-everywhere-opensource-src-${_qtver}.tar.gz
-  tar xf qt-everywhere-opensource-src-${_qtver}.tar.gz
-  mkdir -p ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/
-  cp -ra qt-everywhere-opensource-src-${_qtver}/tools/designer/src/plugins/qwebview \
-    ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/
-
-  cat > ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/plugins.pro <<"EOF"
-TEMPLATE = subdirs
-CONFIG += ordered
-
-REQUIRES = !CONFIG(static,shared|static)
-contains(QT_CONFIG, webkit): SUBDIRS += qwebview
-EOF
-
-  cat > ${_tmp}/header.txt <<"EOF"
-INCLUDEPATH += ../../../Source/include
-LIBS += -L../../../Source/lib
-
-EOF
-
-  cat ${_tmp}/header.txt qt-everywhere-opensource-src-${_qtver}/tools/designer/src/plugins/plugins.pri > \
-    ${pkgname}-${pkgver}-source/qwebview-${_qtver}/plugins/plugins.pri
-
-  tar cJf qwebview-${_qtver}.tar.xz ${pkgname}-${pkgver}-source
-
-  mv qwebview-${_qtver}.tar.xz ${_current_dir}/
-
-  rm -rf ${_tmp}
 }
