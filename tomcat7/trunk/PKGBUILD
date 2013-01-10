@@ -2,24 +2,26 @@
 pkgbase=tomcat7
 pkgname=('java-servlet3.0-tomcat' 'java-jsp2.2-tomcat' 'tomcat7')
 pkgver=7.0.34
-pkgrel=2
+pkgrel=3
 arch=('any')
 url='http://tomcat.apache.org/'
 license=('APACHE')
-makedepends=('java-environment' 'apache-ant>=1.8' 'java-commons-daemon')
+makedepends=('java-environment' 'apache-ant>=1.8' 'java-commons-daemon' 'eclipse-ecj')
 source=(http://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/src/apache-tomcat-${pkgver}-src.tar.gz
         http://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/bin/apache-tomcat-${pkgver}.tar.gz
-        tomcat7.conf.d
-        tomcat7
-        tomcat7.install
-        systemd.tomcat7.service)
+        conf.d_tomcat7
+        rc.d_tomcat7
+        systemd.tomcat7.service
+        systemd.tomcat7.tmpfiles.d
+        tomcat7.install)
 
 sha256sums=('c05b85928ff870244a061700166ee781e66bad68f4a7867ba22c48beeec19fc0'
             '4335136f0bee44aebfd7b4394c7fdfcc9d174a93ee4b1cf8d1f90ea164038e85'
             'a9a2d50244e5206e471af4cdf36fd8444e85d382d9f70ca776d72985c152b788'
             '7de8be5e501f0c697b6983f92e250702bb653fb8873a78bd04e15dce63670c01'
-            '8ae4e12ccdd1a7be04fae1cf68b0c170a5ee7559f8dffca5f9ecf05c20b66c8e'
-            '082227bd58187199503ac3222e3fcaa818eae0916d34c38dbcfa7f8fb7e5e6ce')
+            'a64609f621ec1838a5476d9c5a7860800fed5644940fbb32b40828d14d17485f'
+            '2cd2542b42660942eba36c8875d37966e79bcd6220a8f63fde93c11942c894a4'
+            '8ae4e12ccdd1a7be04fae1cf68b0c170a5ee7559f8dffca5f9ecf05c20b66c8e')
 
 _servletver=3.0
 _jspver=2.2
@@ -32,13 +34,14 @@ build() {
   ant deploy \
     -Dbase.path=${srcdir}/DOWN_LIBS \
     -Dcommons-daemon.jar=/usr/share/java/commons-daemon.jar \
+    -Djdt.jar=/usr/share/java/eclipse-ecj.jar \
     -Dno.build.dbcp=true
 }
 
 #TODO add test "ant test"
 
 package_java-servlet3.0-tomcat() {
-  pkgdesc="Servlet 3.0 java library implementation by Apache Tomcat"
+  pkgdesc='Servlet 3.0 java library implementation by Apache Tomcat'
   depends=('java-environment>=5')
 
   cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build/lib"
@@ -51,7 +54,7 @@ package_java-servlet3.0-tomcat() {
 }
 
 package_java-jsp2.2-tomcat() {
-  pkgdesc="JSP 2.2 java library implementation by Apache Tomcat"
+  pkgdesc='JSP 2.2 java library implementation by Apache Tomcat'
   depends=('java-environment>=5')
 
   cd "${srcdir}/apache-tomcat-${pkgver}-src/output/build/lib"
@@ -65,8 +68,8 @@ package_java-jsp2.2-tomcat() {
 }
 
 package_tomcat7() {
-  pkgdesc="Servlet-3.0/JSP-2.2 Container"
-  depends=('java-runtime>=6' 'java-jsvc'
+  pkgdesc='Servlet-3.0/JSP-2.2 Container'
+  depends=('java-runtime>=6' 'java-jsvc' 'eclipse-ecj'
            "java-servlet3.0-tomcat=${pkgver}" "java-jsp2.2-tomcat=${pkgver}")
   optdepends=('tomcat-native: to allow optimal performance in production environments')
   backup=(etc/tomcat7/catalina.policy
@@ -87,7 +90,10 @@ package_tomcat7() {
   rm bin/{*.bat,commons-daemon*,tomcat-native.tar.gz}
   cp -r bin ${pkgdir}/usr/share/${pkgname}
 
+  # eclipse-ecj is packaged on its own
+  rm lib/eclipse-ecj.jar
   install -m644 lib/* ${pkgdir}/usr/share/java/${pkgname}
+  ln -s ../eclipse-ecj.jar ${pkgdir}/usr/share/java/${pkgname}/eclipse-ecj.jar
 
   # Provided by previous packages
   rm ${pkgdir}/usr/share/java/${pkgname}/servlet-api.jar
@@ -129,9 +135,12 @@ package_tomcat7() {
   ln -s /var/tmp/${pkgname}/work ${pkgdir}/usr/share/${pkgname}/work
 
   # Arch scripts
-  install -Dm644 ${srcdir}/${pkgname}.conf.d ${pkgdir}/etc/conf.d/${pkgname}
-  install -Dm755 ${srcdir}/${pkgname} ${pkgdir}/etc/rc.d/${pkgname}
-  install -Dm644 ${srcdir}/systemd.${pkgname}.service \
+  install -Dm644 ${srcdir}/conf.d_tomcat7 ${pkgdir}/etc/conf.d/${pkgname}
+  install -Dm755 ${srcdir}/rc.d_tomcat7 ${pkgdir}/etc/rc.d/${pkgname}
+
+  install -Dm644 ${srcdir}/systemd_tomcat7.service \
                  ${pkgdir}/usr/lib/systemd/system/${pkgname}.service
+  install -Dm644 ${srcdir}/systemd_tmpfiles.d_tomcat7.conf \
+                 ${pkgdir}/lib/tmpfiles.d/${pkgname}.conf
 }
 
