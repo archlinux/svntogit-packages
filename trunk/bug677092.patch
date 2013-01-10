@@ -1,0 +1,330 @@
+exporting patch:
+# HG changeset patch
+# User Axel Hecht <axel@pike.org>
+# Date 1348128099 -7200
+# Node ID 812d0ba8317507c4026958a740960384eac1507a
+# Parent  97e49e7a33266a0680e5af59289264a07e4321f8
+bug 677092, make language packs restartless, r=Unfocused
+Make language packs just trigger the chrome registration hooks, and
+disable picking up bootstrap.js, and declare them restartless.
+
+diff -r 97e49e7a3326 -r 812d0ba83175 toolkit/mozapps/extensions/XPIProvider.jsm
+--- a/toolkit/mozapps/extensions/XPIProvider.jsm	Wed Sep 26 13:08:50 2012 +0200
++++ b/toolkit/mozapps/extensions/XPIProvider.jsm	Thu Sep 20 10:01:39 2012 +0200
+@@ -740,8 +740,8 @@
+     }
+   }
+   else {
+-    // spell check dictionaries never require a restart
+-    if (addon.type == "dictionary")
++    // spell check dictionaries and language packs never require a restart
++    if (addon.type == "dictionary" || addon.type == "locale")
+       addon.bootstrap = true;
+ 
+     // Only extensions are allowed to provide an optionsURL, optionsType or aboutURL. For
+@@ -3695,6 +3695,11 @@
+       Components.manager.addBootstrappedManifestLocation(aFile);
+ 
+     try {
++      // Don't call bootstrap.js methods for language packs,
++      // they only contain chrome.
++      if (aType == "locale")
++         return;
++
+       // Load the scope if it hasn't already been loaded
+       if (!(aId in this.bootstrapScopes))
+         this.loadBootstrapScope(aId, aFile, aVersion, aType);
+diff -r 97e49e7a3326 -r 812d0ba83175 toolkit/mozapps/extensions/test/addons/test_langpack/chrome.manifest
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/toolkit/mozapps/extensions/test/addons/test_langpack/chrome.manifest	Thu Sep 20 10:01:39 2012 +0200
+@@ -0,0 +1,1 @@
++locale test-langpack    x-testing locale/x-testing
+diff -r 97e49e7a3326 -r 812d0ba83175 toolkit/mozapps/extensions/test/addons/test_langpack/install.rdf
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/toolkit/mozapps/extensions/test/addons/test_langpack/install.rdf	Thu Sep 20 10:01:39 2012 +0200
+@@ -0,0 +1,23 @@
++<?xml version="1.0"?>
++
++<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
++     xmlns:em="http://www.mozilla.org/2004/em-rdf#">
++
++  <Description about="urn:mozilla:install-manifest">
++    <em:id>langpack-x-testing@tests.mozilla.org</em:id>
++    <em:type>8</em:type>
++    <em:version>1.0</em:version>
++
++    <!-- Front End MetaData -->
++    <em:name>Language Pack x-testing</em:name>
++
++    <em:targetApplication>
++      <Description>
++        <em:id>xpcshell@tests.mozilla.org</em:id>
++        <em:minVersion>1</em:minVersion>
++        <em:maxVersion>2</em:maxVersion>
++      </Description>
++    </em:targetApplication>
++
++  </Description>
++</RDF>
+diff -r 97e49e7a3326 -r 812d0ba83175 toolkit/mozapps/extensions/test/xpcshell/test_langpack.js
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/toolkit/mozapps/extensions/test/xpcshell/test_langpack.js	Thu Sep 20 10:01:39 2012 +0200
+@@ -0,0 +1,247 @@
++/* Any copyright is dedicated to the Public Domain.
++ * http://creativecommons.org/publicdomain/zero/1.0/
++ */
++
++// This verifies that language packs can be used without restarts.
++Components.utils.import("resource://gre/modules/Services.jsm");
++
++// Enable loading extensions from the user scopes
++Services.prefs.setIntPref("extensions.enabledScopes",
++                          AddonManager.SCOPE_PROFILE + AddonManager.SCOPE_USER);
++
++createAppInfo("xpcshell@tests.mozilla.org", "XPCShell", "1", "1.9.2");
++
++const profileDir = gProfD.clone();
++profileDir.append("extensions");
++const userExtDir = gProfD.clone();
++userExtDir.append("extensions2");
++userExtDir.append(gAppInfo.ID);
++registerDirectory("XREUSysExt", userExtDir.parent);
++
++var chrome = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
++  .getService(Components.interfaces.nsIXULChromeRegistry);
++
++function do_check_locale_not_registered(provider) {
++  let didThrow = false;
++  try {
++    chrome.getSelectedLocale(provider);
++  } catch (e) {
++    didThrow = true;
++  }
++  do_check_true(didThrow);
++}
++
++function run_test() {
++  do_test_pending();
++
++  startupManager();
++
++  run_test_1();
++}
++
++// Tests that installing doesn't require a restart
++function run_test_1() {
++  prepare_test({ }, [
++    "onNewInstall"
++  ]);
++
++  AddonManager.getInstallForFile(do_get_addon("test_langpack"), function(install) {
++    ensure_test_completed();
++
++    do_check_neq(install, null);
++    do_check_eq(install.type, "locale");
++    do_check_eq(install.version, "1.0");
++    do_check_eq(install.name, "Language Pack x-testing");
++    do_check_eq(install.state, AddonManager.STATE_DOWNLOADED);
++    do_check_true(install.addon.hasResource("install.rdf"));
++    do_check_false(install.addon.hasResource("bootstrap.js"));
++    do_check_eq(install.addon.operationsRequiringRestart &
++                AddonManager.OP_NEEDS_RESTART_INSTALL, 0);
++
++    let addon = install.addon;
++    prepare_test({
++      "langpack-x-testing@tests.mozilla.org": [
++        ["onInstalling", false],
++        "onInstalled"
++      ]
++    }, [
++      "onInstallStarted",
++      "onInstallEnded",
++    ], function() {
++      do_check_true(addon.hasResource("install.rdf"));
++      check_test_1();
++    });
++    install.install();
++  });
++}
++
++function check_test_1() {
++  AddonManager.getAllInstalls(function(installs) {
++    // There should be no active installs now since the install completed and
++    // doesn't require a restart.
++    do_check_eq(installs.length, 0);
++
++    AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++      do_check_neq(b1, null);
++      do_check_eq(b1.version, "1.0");
++      do_check_false(b1.appDisabled);
++      do_check_false(b1.userDisabled);
++      do_check_true(b1.isActive);
++      // check chrome reg that language pack is registered
++      do_check_eq(chrome.getSelectedLocale("test-langpack"), "x-testing");
++      do_check_true(b1.hasResource("install.rdf"));
++      do_check_false(b1.hasResource("bootstrap.js"));
++
++      let dir = do_get_addon_root_uri(profileDir, "langpack-x-testing@tests.mozilla.org");
++
++      AddonManager.getAddonsWithOperationsByTypes(null, function(list) {
++        do_check_eq(list.length, 0);
++
++        run_test_2();
++      });
++    });
++  });
++}
++
++// Tests that disabling doesn't require a restart
++function run_test_2() {
++  AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++    prepare_test({
++      "langpack-x-testing@tests.mozilla.org": [
++        ["onDisabling", false],
++        "onDisabled"
++      ]
++    });
++
++    do_check_eq(b1.operationsRequiringRestart &
++                AddonManager.OP_NEEDS_RESTART_DISABLE, 0);
++    b1.userDisabled = true;
++    ensure_test_completed();
++
++    do_check_neq(b1, null);
++    do_check_eq(b1.version, "1.0");
++    do_check_false(b1.appDisabled);
++    do_check_true(b1.userDisabled);
++    do_check_false(b1.isActive);
++    // check chrome reg that language pack is not registered
++    do_check_locale_not_registered("test-langpack");
++
++    AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(newb1) {
++      do_check_neq(newb1, null);
++      do_check_eq(newb1.version, "1.0");
++      do_check_false(newb1.appDisabled);
++      do_check_true(newb1.userDisabled);
++      do_check_false(newb1.isActive);
++
++      run_test_3();
++    });
++  });
++}
++
++// Test that restarting doesn't accidentally re-enable
++function run_test_3() {
++  shutdownManager();
++  startupManager(false);
++  // check chrome reg that language pack is not registered
++  do_check_locale_not_registered("test-langpack");
++
++  AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++    do_check_neq(b1, null);
++    do_check_eq(b1.version, "1.0");
++    do_check_false(b1.appDisabled);
++    do_check_true(b1.userDisabled);
++    do_check_false(b1.isActive);
++
++    run_test_4();
++  });
++}
++
++// Tests that enabling doesn't require a restart
++function run_test_4() {
++  AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++    prepare_test({
++      "langpack-x-testing@tests.mozilla.org": [
++        ["onEnabling", false],
++        "onEnabled"
++      ]
++    });
++
++    do_check_eq(b1.operationsRequiringRestart &
++                AddonManager.OP_NEEDS_RESTART_ENABLE, 0);
++    b1.userDisabled = false;
++    ensure_test_completed();
++
++    do_check_neq(b1, null);
++    do_check_eq(b1.version, "1.0");
++    do_check_false(b1.appDisabled);
++    do_check_false(b1.userDisabled);
++    do_check_true(b1.isActive);
++    // check chrome reg that language pack is registered
++    do_check_eq(chrome.getSelectedLocale("test-langpack"), "x-testing");
++
++    AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(newb1) {
++      do_check_neq(newb1, null);
++      do_check_eq(newb1.version, "1.0");
++      do_check_false(newb1.appDisabled);
++      do_check_false(newb1.userDisabled);
++      do_check_true(newb1.isActive);
++
++      run_test_5();
++    });
++  });
++}
++
++// Tests that a restart shuts down and restarts the add-on
++function run_test_5() {
++  shutdownManager();
++  startupManager(false);
++  // check chrome reg that language pack is registered
++  do_check_eq(chrome.getSelectedLocale("test-langpack"), "x-testing");
++
++  AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++    do_check_neq(b1, null);
++    do_check_eq(b1.version, "1.0");
++    do_check_false(b1.appDisabled);
++    do_check_false(b1.userDisabled);
++    do_check_true(b1.isActive);
++    do_check_false(isExtensionInAddonsList(profileDir, b1.id));
++
++    run_test_7();
++  });
++}
++
++// Tests that uninstalling doesn't require a restart
++function run_test_7() {
++  AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++    prepare_test({
++      "langpack-x-testing@tests.mozilla.org": [
++        ["onUninstalling", false],
++        "onUninstalled"
++      ]
++    });
++
++    do_check_eq(b1.operationsRequiringRestart &
++                AddonManager.OP_NEEDS_RESTART_UNINSTALL, 0);
++    b1.uninstall();
++
++    check_test_7();
++  });
++}
++
++function check_test_7() {
++  ensure_test_completed();
++  // check chrome reg that language pack is not registered
++  do_check_locale_not_registered("test-langpack");
++
++  AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(b1) {
++    do_check_eq(b1, null);
++
++    restartManager();
++
++    AddonManager.getAddonByID("langpack-x-testing@tests.mozilla.org", function(newb1) {
++      do_check_eq(newb1, null);
++
++      do_test_finished();
++    });
++  });
++}
+diff -r 97e49e7a3326 -r 812d0ba83175 toolkit/mozapps/extensions/test/xpcshell/xpcshell.ini
+--- a/toolkit/mozapps/extensions/test/xpcshell/xpcshell.ini	Wed Sep 26 13:08:50 2012 +0200
++++ b/toolkit/mozapps/extensions/test/xpcshell/xpcshell.ini	Thu Sep 20 10:01:39 2012 +0200
+@@ -139,6 +139,7 @@
+ [test_corrupt_strictcompat.js]
+ [test_db_sanity.js]
+ [test_dictionary.js]
++[test_langpack.js]
+ [test_disable.js]
+ [test_distribution.js]
+ [test_dss.js]
