@@ -1,0 +1,250 @@
+# $Id: PKGBUILD 172119 2012-11-29 17:17:54Z andrea $
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=qt
+pkgname=('qt')
+pkgname=('qtbase'
+         'qtdeclarative'
+         'qtmultimedia'
+         'qttools'
+         'qt-addons')
+pkgver=5.0.0
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://qt-project.org/'
+license=('GPL3' 'LGPL')
+makedepends=('libxcb' 'xcb-proto' 'xcb-util' 'xcb-util-image' 'xcb-util-wm' 'xcb-util-keysyms'
+            'mesa' 'libgl' 'at-spi2-core' 'alsa-lib' 'gstreamer0.10-base-plugins'
+            'libjpeg-turbo' 'cups' 'libpulse' 'hicolor-icon-theme' 'desktop-file-utils'
+            'postgresql-libs' 'libmysqlclient' 'sqlite' 'unixodbc' 'libfbclient'
+            'python2')
+groups=('qt5')
+options=('!libtool')
+_pkgfqn="${pkgbase}-everywhere-opensource-src-${pkgver}"
+source=("http://releases.qt-project.org/qt5/${pkgver}/single/${_pkgfqn}.tar.xz"
+        'assistant.desktop' 'designer.desktop' 'linguist.desktop'
+        'use-python2.patch')
+md5sums=('6b4f2f3f1e6252fbce3a57ac5165baff'
+         'f1837a03fd0ebbd2da58975845f278e3'
+         '480fea1ed076992b688373c8db274be0'
+         '5595c24d5bb942c21e3a4d299e6d0bf1'
+         'cbbb52e740308bd7e431418160c781bf')
+
+build() {
+  cd ${_pkgfqn}
+
+  export QTDIR="${srcdir}"/${_pkgfqn}
+  export LD_LIBRARY_PATH=${QTDIR}/lib:${LD_LIBRARY_PATH}
+
+  sed -i "s|-O2|${CXXFLAGS}|" qtbase/mkspecs/common/{g++,gcc}-base.conf
+  sed -i "/^QMAKE_LFLAGS_RPATH/s| -Wl,-rpath,||g" qtbase/mkspecs/common/gcc-base-unix.conf
+  sed -i "/^QMAKE_LFLAGS\s/s|+=|+= ${LDFLAGS}|g" qtbase/mkspecs/common/gcc-base.conf
+
+  # Use python2 for Python 2.x
+  patch -p1 -i "${srcdir}"/use-python2.patch
+
+  ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -docdir /usr/share/doc/qt \
+    -archdatadir /usr/lib/qt \
+    -datadir /usr/share/qt \
+    -sysconfdir /etc/xdg \
+    -examplesdir /usr/share/doc/qt/examples \
+    -plugin-sql-{psql,mysql,sqlite,odbc,ibase} \
+    -system-sqlite \
+    -openssl-linked \
+    -nomake examples \
+    -no-rpath \
+    -optimized-qmake \
+    -dbus-linked \
+    -reduce-relocations
+
+  # see the Makefile for the arrangement
+  cd qtbase
+  make
+  cd ../
+
+  export PATH="${QTDIR}/qtbase/bin:$PATH"
+
+  cd qtsvg
+  qmake
+  make
+  cd ../
+
+  cd qtxmlpatterns
+  qmake
+  make
+  cd ../
+
+  cd qtjsbackend
+  qmake
+  make
+  cd ../
+
+  cd qtdeclarative
+  qmake
+  make
+  cd ../
+
+  cd qtscript
+  qmake
+  make
+  cd ../
+
+  cd qtmultimedia
+  qmake
+  make
+  cd ../
+  
+  cd qttools
+  qmake
+  make
+  cd ../
+
+  cd qtquick1
+  qmake
+  make
+  cd ../
+
+  cd qtimageformats
+  qmake
+  make
+  cd ../
+  
+  cd qtgraphicaleffects
+  qmake
+  make
+  cd ../
+  
+  cd qttranslations
+  qmake
+  make
+  cd ../
+}
+
+package_qtbase() {
+  pkgdesc=('A cross-platform application and UI framework (Qt Core, Qt GUI, Qt Network, Qt SQL, Qt Widgets)')
+  depends=('libjpeg-turbo' 'xcb-util-keysyms' 'libgl' 'dbus' 'fontconfig' 'systemd'
+           'xcb-util-wm' 'libxrender' 'libxi' 'sqlite' 'libpng' 'xcb-util-image'
+           'hicolor-icon-theme')
+  optdepends=('postgresql-libs: PostgreSQL driver'
+              'libmysqlclient: MySQL driver'
+              'unixodbc: ODBC driver'
+              'libfbclient: Firebird/iBase driver')
+  replaces=('qt')
+  conflicts=('qt' 'qt-private-headers')
+  install='qtbase.install'
+
+  cd ${_pkgfqn}/qtbase
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+  
+  cd ${_pkgfqn}/qttranslations
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+
+  install -p -D -m644 ${_pkgfqn}/qtbase/src/widgets/dialogs/images/qtlogo-64.png \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/apps/qtlogo.png"
+
+  install -D -m644 ${_pkgfqn}/qtbase/LGPL_EXCEPTION.txt \
+    ${pkgdir}/usr/share/licenses/qt/LGPL_EXCEPTION.txt
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qtdeclarative() {
+  pkgdesc=('A cross-platform application and UI framework (Qt QML)')
+  depends=('qt-addons')
+  conflicts=('qt' 'qt-private-headers')
+
+  cd ${_pkgfqn}/qtdeclarative
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qtmultimedia() {
+  pkgdesc=('A cross-platform application and UI framework (Qt Multimedia)')
+  depends=('libpulse' 'gstreamer0.10-base' 'qtdeclarative')
+
+  cd ${_pkgfqn}/qtmultimedia
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt-addons() {
+  pkgdesc=('A cross-platform application and UI framework (Qt Add-ons Modules)')
+  depends=('qtbase' 'libtiff')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtgraphicaleffects
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+  
+  cd ${_pkgfqn}/qtimageformats
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+  
+  cd ${_pkgfqn}/qtjsbackend
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+
+  cd ${_pkgfqn}/qtquick1
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+  
+  cd ${_pkgfqn}/qtscript
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+  
+  cd ${_pkgfqn}/qtsvg
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+  
+  cd ${_pkgfqn}/qtxmlpatterns
+  make INSTALL_ROOT="${pkgdir}" install
+  cd ../..
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qttools() {
+  pkgdesc=('A cross-platform application and UI framework (Development Tools)')
+  depends=('qtbase' 'desktop-file-utils')
+  conflicts=('qt')
+  install='qttools.install'
+
+  cd ${_pkgfqn}/qttools
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # install missing icons and desktop files
+  for icon in src/linguist/linguist/images/icons/linguist-*-32.png ; do
+    size=$(echo $(basename ${icon}) | cut -d- -f2)
+    install -p -D -m644 ${icon} \
+      "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/linguist.png"
+  done
+
+  install -p -D -m644 src/assistant/assistant/images/assistant.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/assistant.png"
+  install -p -D -m644 src/assistant/assistant/images/assistant-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/assistant.png"
+  install -p -D -m644 src/designer/src/designer/images/designer.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/designer.png"
+  install -d "${pkgdir}/usr/share/applications"
+  install -m644 "${srcdir}"/{linguist,designer,assistant}.desktop \
+    "${pkgdir}/usr/share/applications/"
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
