@@ -1,0 +1,157 @@
+fix_permissions_server()
+{
+  # make sure db permissions are set correctly
+  chown -R root:x2gouser /var/lib/x2go
+  # egid x2gouser needs write access to the db dir (for temporary db journal file)
+  chmod 0770 /var/lib/x2go
+  # ... and to the db file itself, of course
+  test -f /var/lib/x2go/x2go_sessions && chmod 0660 /var/lib/x2go/x2go_sessions
+  # we may be upgrading versions of x2goserver that had
+  # /usr/lib/x2go/x2gosqlitewrapper.pl set to setuid x2gouser.
+  chown root:x2gouser /usr/lib/x2go/x2gosqlitewrapper
+  chmod 2755          /usr/lib/x2go/x2gosqlitewrapper
+}
+
+fix_permissions_print()
+{
+  # make sure x2goprint spool dir permissions are set correctly
+  chown -R x2goprint:x2goprint /var/spool/x2goprint
+  # egid x2goprint needs write access to the spool dir
+  chmod 0700 /var/spool/x2goprint
+}
+
+pre_install()
+{
+  # cleanup old x2goserver installations
+  rm -Rfv /var/db/x2go/ > /dev/null 2>&1
+  if getent group x2gousers >/dev/null; then
+    echo "  ==> The ,,x2gousers'' is no longer used by x2go and can be"
+    echo "  ==> removed as soon as no users are members of this group."
+  fi
+}
+
+pre_upgrade()
+{
+  pre_install
+}
+
+post_install_server()
+{
+  # setup x2gouser and group
+  if ! getent group x2gouser >/dev/null; then
+    groupadd -K GID_MIN=500 -K GID_MAX=999 x2gouser
+    echo "  ==> Group x2gouser created."
+  else
+    echo "  ==> Group x2gouser already exists."
+  fi
+
+  if ! getent passwd x2gouser > /dev/null; then
+    test ! -d /var/lib/x2go && mkdir -p /var/lib/x2go
+    useradd -r -g x2gouser -d /var/lib/x2go -s /bin/false x2gouser
+    passwd -l x2gouser > /dev/null
+    echo "  ==> User x2gouser created."
+
+  else
+    echo "  ==> User x2gouser already exists."
+    # make sure all settings are appropriate
+    if [ "`id -gn x2gouser`" != "x2gouser" ]; then
+      usermod --gid x2gouser x2gouser
+      test -d /var/lib/x2go && \
+        usermod --home /var/lib/x2go x2gouser || \
+        usermod --move-home --home /var/lib/x2go x2gouser
+    fi
+    if [ "`ls -1d ~x2gouser`" != "/var/lib/x2go" ]; then
+      usermod --move-home --home /var/lib/x2go x2gouser
+    fi
+    # we leave user shell alone. we have never set this wrongly
+    # and we need to respect the administrator's choices
+  fi
+}
+
+post_install_print()
+{
+  ###
+  ### X2Go printing
+  ###
+  # setup x2goprint user and x2goprint group
+  if ! getent group x2goprint >/dev/null; then
+    groupadd -K GID_MIN=500 -K GID_MAX=999 x2goprint
+    echo "  ==> Group x2goprint created."
+  else
+    echo "  ==> Group x2goprint already exists."
+  fi
+  if ! getent passwd x2goprint >/dev/null; then
+    test ! -d /var/spool/x2goprint && mkdir -p /var/spool/x2goprint
+    useradd -r -g x2goprint -s /bin/sh -d /var/spool/x2goprint x2goprint
+    passwd -l x2goprint > /dev/null
+    echo "  ==> User x2goprint created."
+  else
+    echo "  ==> User x2goprint already exists."
+    # make sure all settings are appropriate
+    if [ "`id -gn x2goprint`" != "x2goprint" ]; then
+      usermod --gid x2goprint x2goprint
+    fi
+    if getent passwd x2goprint | egrep -v ".*:x:.*:.*:.*:.*:/bin/sh" 1>/dev/null 2>/dev/null; then
+      usermod -s /bin/sh x2goprint
+    fi
+    if [ "`ls -1d ~x2goprint`" != "/var/spool/x2goprint" ]; then
+      test -d /var/spool/x2goprint && \
+        usermod --home /var/spool/x2goprint x2goprint || \
+        usermod --move-home --home /var/spool/x2goprint x2goprint
+    fi
+    # we leave user shell alone. we have never set this wrongly
+    # and we need to respect the administrator's choices
+  fi
+}
+
+post_install()
+{
+  post_install_server
+  post_install_print
+  fix_permissions_server
+  fix_permissions_print
+  
+cat << 'EOM'
+
+  ==> Use the following command to setup sqlite database:
+  ==> x2godbadmin --createdb
+
+  ==> You may want to add x2goserver to your /etc/rc.conf DAEMONS array
+  ==> and also start it:
+  ==> /etc/rc.d/x2goserver start
+EOM
+}
+
+
+post_upgrade()
+{
+  post_install_server
+  post_install_print
+  fix_permissions_server
+  fix_permissions_print
+  echo "X2Go server now has both /etc/rc.d script and systemd service file."
+  echo "Depending on your setup, you may prefer the new systemd approach."
+  echo "('systemctl enable x2goserver.service')"
+}
+
+pre_remove()
+{
+  if [ -x "/etc/rc.d/x2goserver" ]; then
+        /etc/rc.d/x2goserver stop > /dev/null 2>&1
+  fi
+}
+
+post_remove()
+{
+  rm -Rfv /var/lib/x2go > /dev/null 2>&1
+  echo "  ==> x2go session database removed."
+  getent passwd x2gouser > /dev/null && userdel  x2gouser
+  getent group  x2gouser > /dev/null && groupdel x2gouser
+  echo "  ==> User and group x2gouser removed."
+
+  rm -Rfv /var/spool/x2goprint > /dev/null 2>&1
+  getent passwd x2goprint > /dev/null && userdel x2goprint
+  getent group  x2goprint > /dev/null && groupdel x2goprint
+  echo "  ==> User and group x2goprint removed."
+}
+
