@@ -4,15 +4,15 @@
 # Maintainer: Douglas Soares de Andrade <dsandrade@gmail.com>
 
 pkgname=('python-urwid' 'python2-urwid')
-pkgver=1.0.2
-pkgrel=2
+pkgver=1.1.1
+pkgrel=1
 pkgdesc="Urwid is a curses-based user interface library."
 license=('LGPL')
 arch=('i686' 'x86_64')
 makedepends=('python2-distribute' 'python-distribute')
 url="http://excess.org/urwid/"
 source=(http://excess.org/urwid/urwid-$pkgver.tar.gz)
-md5sums=('00542bbd15fae7ea60b02a7570edee2b')
+md5sums=('eca2e0413cf7216b01c84b99e0f2576d')
 
 build() {
   cp -r urwid-$pkgver python2-urwid-$pkgver
