@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=197
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -13,11 +13,13 @@ makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
+        '0001-dbus-fix-serialization-of-calendar-timers.patch'
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         'use-split-usr-path.patch')
 md5sums=('56a860dceadfafe59f40141eb5223743'
+         '0341d680d5ab16bab3978bac96bf8797'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
@@ -28,6 +30,10 @@ build() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  # fix assertion failure when using calendar timers
+  # upstream 3761902e2e120849c283106fd4b78b6adec7367e
+  patch -Np1 <"$srcdir/0001-dbus-fix-serialization-of-calendar-timers.patch"
 
   ./configure \
       PYTHON=python2 \
