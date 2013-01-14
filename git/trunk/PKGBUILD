@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.1
+pkgver=1.8.1.1
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -28,13 +28,11 @@ source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
         git-daemon
         git-daemon.conf
         git-daemon@.service
-        git-daemon.socket
-        fix-git-build-python.patch)
+        git-daemon.socket)
 
 build() {
   export PYTHON_PATH='/usr/bin/python2'
   cd "$srcdir/$pkgname-$pkgver"
-  patch -Np1 < ../fix-git-build-python.patch
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
@@ -111,10 +109,9 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('a2c6f4404c5e432b47474d246ca83c7e'
-         '8da825142aed9f37f80ad67164990373'
+md5sums=('2bf7fd005ecf2e0a311b849e6add7994'
+         '4ac4ea5a72ec96ac24b7d6fba9ad1277'
          '8e2648910fd5dd4f1c41d3c7fa9e9156'
          '2e42bf97779a1c6411d89043334c9e78'
          '042524f942785772d7bd52a1f02fe5ae'
-         'f67869315c2cc112e076f0c73f248002'
-         '7fd505fdcd0cd0223e5b8ad641090de8')
+         'f67869315c2cc112e076f0c73f248002')
