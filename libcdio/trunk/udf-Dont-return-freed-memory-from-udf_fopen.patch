@@ -1,0 +1,33 @@
+From 6c0251d145e44b7cdfeb9767c615646fb8f51320 Mon Sep 17 00:00:00 2001
+From: Christophe Fergeau <cfergeau@redhat.com>
+Date: Thu, 22 Nov 2012 13:53:15 +0100
+Subject: [PATCH] udf: Don't return freed memory from udf_fopen
+
+When trying to open a file located in the root directory of the
+UDF filesystem, we call udf_ff_open with the dirent corresponding
+to the root dir and the filename. In this case, udf_ff_open will
+return the same dirent as the one that was passed as argument, so
+we must not free it as we'll be returning it.
+This causes a crash with iso-read when trying to read a file located
+at the root of the image.
+---
+ lib/udf/udf_fs.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/lib/udf/udf_fs.c b/lib/udf/udf_fs.c
+index 5f5add7..1e0601e 100644
+--- a/lib/udf/udf_fs.c
++++ b/lib/udf/udf_fs.c
+@@ -257,7 +257,8 @@ udf_fopen(udf_dirent_t *p_udf_root, const char *psz_name)
+ 		       p_udf_root->psz_name, p_udf_root->b_dir, 
+ 		       p_udf_root->b_parent);
+       p_udf_file = udf_ff_traverse(p_udf_dirent, psz_token);
+-      udf_dirent_free(p_udf_dirent);
++      if (p_udf_file != p_udf_dirent)
++        udf_dirent_free(p_udf_dirent);
+     }
+     else if ( 0 == strncmp("/", psz_name, sizeof("/")) ) {
+       return udf_new_dirent(&p_udf_root->fe, p_udf_root->p_udf,
+-- 
+1.7.2.5
+
