@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.17
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -20,12 +20,14 @@ backup=(etc/gai.conf
 options=('!strip')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
+        glibc-2.17-sync-with-linux37.patch
         nscd.service
         nscd.tmpfiles
         locale.gen.txt
         locale-gen)
 md5sums=('87bf675c8ee523ebda4803e8e1cec638'
          '6db4d1661cf34282755dc90330465f6d'
+         'fb99380d94598cc76d793deebf630022'
          'c1e07c0bec0fe89791bfd9d13fc85edf'
          'bccbe5619e75cf1d97312ec3681c605c'
          '07ac979b6ab5eeb778d55f041529d623'
@@ -35,8 +37,8 @@ md5sums=('87bf675c8ee523ebda4803e8e1cec638'
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
 
-  # ldconfig does not need to look in /usr/lib64 or /usr/libx32 on Arch Linux
-  sed -i "s#add_system_dir#do_not_add_system_dir#" sysdeps/unix/sysv/linux/x86_64/dl-cache.h
+  # combination of upstream commits 318cd0b, b540704 and fc1abbe
+  patch -p1 -i ${srcdir}/glibc-2.17-sync-with-linux37.patch
 
   cd ${srcdir}
   mkdir glibc-build
@@ -97,10 +99,7 @@ package() {
 
   rm -f ${pkgdir}/etc/ld.so.{cache,conf}
 
-  # eventually this will move to the filesystem package
-  ln -s usr/lib ${pkgdir}/lib
-
-  install -dm755 ${pkgdir}/{etc/rc.d,usr/{sbin,lib/{,locale,systemd/system,tmpfiles.d}}}
+  install -dm755 ${pkgdir}/usr/lib/{locale,systemd/system,tmpfiles.d}
 
   install -m644 ${srcdir}/${pkgname}-${pkgver}/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
   install -m644 ${srcdir}/nscd.service ${pkgdir}/usr/lib/systemd/system
@@ -108,18 +107,15 @@ package() {
 
   install -m644 ${srcdir}/${pkgname}-${pkgver}/posix/gai.conf ${pkgdir}/etc/gai.conf
 
-  install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/sbin
+  install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/bin
+
+  # temporary symlink
+  ln -s ../../sbin/ldconfig ${pkgdir}/usr/bin/ldconfig
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
     ${srcdir}/glibc-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
-
-  if [[ ${CARCH} = "x86_64" ]]; then
-    # fix paths and compliance with binary blobs...
-    sed -i '/RTLDLIST/s%lib64%lib%' ${pkgdir}/usr/bin/ldd
-    ln -s usr/lib ${pkgdir}/lib64
-  fi
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
