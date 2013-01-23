@@ -1,0 +1,48 @@
+# Contributor : Keshav P R <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname="efilinux-efi"
+pkgver="1.0"
+pkgrel="4"
+pkgdesc="Reference Implementation of a Linux Bootloader for UEFI Firmwares"
+url="https://github.com/mfleming/efilinux"
+arch=('any')
+license=('GPL')
+makedepends=('gnu-efi-libs')
+depends=('dosfstools' 'efibootmgr')
+conflicts=('efilinux-efi-x86_64' 'efilinux-efi-i386')
+provides=('efilinux-efi-x86_64' 'efilinux-efi-i386')
+replaces=('efilinux-efi-x86_64' 'efilinux-efi-i386')
+options=('!strip')
+install="${pkgname}.install"
+source=("http://www.kernel.org/pub/linux/utils/boot/efilinux/efilinux-${pkgver}.tar.xz"
+        'efilinux-1.0-to-aa925098a5887.patch')
+md5sums=('090e45f839cd23b97d05d82daa54508a'
+         '89e86f90e4f284651f5509ef1a1011cf')
+
+build() {	
+	if [[ "${CARCH}" != "x86_64" ]]; then
+		msg "efilinux-efi can be built only in an x86_64 system. Exiting."
+		exit 1
+	fi
+	
+	cd "${srcdir}/efilinux-${pkgver}/"
+	patch -Np1 -i "${srcdir}/efilinux-1.0-to-aa925098a5887.patch"
+	
+	sed 's|ARCH :=|ARCH ?=|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	sed 's|ARCH=|ARCH?=|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	sed 's|LIBDIR=|LIBDIR?=|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	
+	cp -r "${srcdir}/efilinux-${pkgver}" "${srcdir}/efilinux-${pkgver}-x86_64"
+	cd "${srcdir}/efilinux-${pkgver}-x86_64/"
+	CFLAGS="-m64" ARCH="x86_64" LIBDIR="/usr/lib" CRT0="/usr/lib/crt0-efi-x86_64.o" LDSCRIPT="/usr/lib/elf_x86_64_efi.lds" make
+	
+	cp -r "${srcdir}/efilinux-${pkgver}" "${srcdir}/efilinux-${pkgver}-i386"
+	cd "${srcdir}/efilinux-${pkgver}-i386/"
+	CFLAGS="-m32" ARCH="ia32" LIBDIR="/usr/lib32" CRT0="/usr/lib32/crt0-efi-ia32.o" LDSCRIPT="/usr/lib32/elf_ia32_efi.lds" make	
+}
+
+package() {	
+	install -d "${pkgdir}/usr/lib/efilinux/"
+	install -D -m0644 "${srcdir}/efilinux-${pkgver}-x86_64/efilinux.efi" "${pkgdir}/usr/lib/efilinux/efilinuxx64.efi"
+	install -D -m0644 "${srcdir}/efilinux-${pkgver}-i386/efilinux.efi" "${pkgdir}/usr/lib/efilinux/efilinuxia32.efi"	
+}
