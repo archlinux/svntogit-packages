@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.7.2
-pkgrel=3
+pkgrel=4
 #_snapshot=4.7-20120721
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -17,12 +17,8 @@ checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
 source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
 	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-	gcc_pure64.patch
-	gcc-4.7.1-libada-pic.patch
 	gcc-4.7.1-libgo-write.patch)
 md5sums=('cc308a0891e778cfda7a151ab8a6e762'
-         'ced48436c1b3c981d721a829f1094de1'
-         '2acbc9d35cc9d72329dc71d6b1f162ef'
          'df82dd175ac566c8a6d46b11ac21f14c')
 
 
@@ -41,17 +37,18 @@ build() {
   # Do not run fixincludes
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 
-  if [ "${CARCH}" = "x86_64" ]; then
-    patch -p1 -i ${srcdir}/gcc_pure64.patch
-  fi
+  # Arch Linux installs x86_64 libraries /lib
+  [[ $CARCH == "x86_64" ]] && sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
 
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53679
   patch -p1 -i ${srcdir}/gcc-4.7.1-libgo-write.patch
-  
-  # bug to file...
-  patch -p1 -i ${srcdir}/gcc-4.7.1-libada-pic.patch
 
   echo ${pkgver} > gcc/BASE-VER
+
+  # using -pipe causes spurious test-suite failures
+  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48565
+  CFLAGS=${CFLAGS/-pipe/}
+  CXXFLAGS=${CXXFLAGS/-pipe/}
 
   cd ${srcdir}
   mkdir gcc-build && cd gcc-build
