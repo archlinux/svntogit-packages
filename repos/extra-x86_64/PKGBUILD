@@ -3,23 +3,26 @@
 # Contributor: judd <jvinet@zeroflux.org>
 pkgbase=samba
 pkgname=('libwbclient' 'smbclient' 'samba')
-pkgver=3.6.10
+pkgver=3.6.11
 # We use the 'A' to fake out pacman's version comparators.  Samba chooses
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
-_realver=3.6.10
+_realver=3.6.11
 pkgrel=1
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
 makedepends=('db' 'popt' 'libcups' 'acl' 'libldap' 'libcap' 'krb5' 'pam' 'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb')
 source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
-        samba samba.logrotate
+        samba.logrotate
         swat.xinetd
         samba.pam
-        samba.conf.d
         smbd.service
+        smbd.socket
+        smbd@.service
         nmbd.service
+        swat.socket
+        swat@.service
         winbindd.service
         samba.conf)
 ### UNINSTALL dmapi package before building!!!
@@ -101,8 +104,6 @@ install='samba.install'
   rm -rf ${pkgdir}/usr/var
   rm -rf ${pkgdir}/var/run/samba
   (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
-  install -D -m755 ../../samba ${pkgdir}/etc/rc.d/samba
-  install -D -m644 ../../samba.conf.d ${pkgdir}/etc/conf.d/samba
   mkdir -p ${pkgdir}/etc/samba
   cat ../examples/smb.conf.default | \
     sed 's|log file = .*$|log file = /var/log/samba/log.%m|g' >${pkgdir}/etc/samba/smb.conf.default
@@ -150,20 +151,24 @@ install='samba.install'
   # copy ldap example
   install -D -m644 ${srcdir}/samba-${_realver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
   # install systemd files
-  for i in smbd nmbd winbindd; do
-  install -D -m644 ${srcdir}/$i.service ${pkgdir}/usr/lib/systemd/system/$i.service
+  install -d -m755 ${pkgdir}/usr/lib/systemd/system
+  for i in smbd nmbd swat winbindd; do
+    install -m644 ${srcdir}/*.service ${pkgdir}/usr/lib/systemd/system/
+    install -m644 ${srcdir}/*.socket ${pkgdir}/usr/lib/systemd/system/
   done
   # create ephemeral dirs via tmpfiles rather than shipping them in package
   install -D -m644 ${srcdir}/samba.conf ${pkgdir}/usr/lib/tmpfiles.d/samba.conf
   rm -rf ${pkgdir}/var/run
 }
-md5sums=('b5f0560c216122529b1c3b7f41c62567'
-         'a45a4283723be2b0ae32439dc4496a09'
+md5sums=('9039e0ab3e4fc632ff0a1a8f2433edb4'
          '5697da77590ec092cc8a883bae06093c'
          'a4bbfa39fee95bba2e7ad6b535fae7e6'
          '96f82c38f3f540b53f3e5144900acf17'
-         'f2f2e348acd1ccb566e95fa8a561b828'
-         '4b9c54d6fed4d0a225a84963516fc46f'
-         '67ce9229c4e343a91d70edba6de29437'
-         '617079917cdc84b450d109557b1fe2e1'
-         '8e7ed39b54968e427f9506e9107bfb45')
+         '5b7496b1b6706cf5a6e91ef879d9be7b'
+         'a78b9aa93eb14b0ac445897395693225'
+         '321afbca6665d8f647c2468906452176'
+         '9a49f3ee5afd278d21fcdd34776c5da1'
+         '6db11f3dd2112a4b7a73007b189bef3f'
+         'b0de262f9c62acd162e873658f33d063'
+         'de93ae37dd76a2cd2cdab6d342e5baf3'
+         '49abd7b719e3713a3f75a8a50958e381')
