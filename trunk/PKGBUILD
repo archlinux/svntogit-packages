@@ -3,7 +3,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xkeyboard-config
-pkgver=2.7
+pkgver=2.8
 pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
@@ -15,7 +15,7 @@ provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
 source=(http://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
-sha256sums=('e43478a12fb0fe6757a7bad3a04fd3747ec53e53d5af22a9d9829dfb9aac8321')
+sha256sums=('4e1cf5468d488aaf320ddfd439e03cbda0b213550fd734026d23138e4b2078ae')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
