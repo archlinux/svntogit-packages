@@ -30,8 +30,8 @@ libpath="/usr/lib/syslinux"
 bootpath="/boot/syslinux"
 extlinux="/usr/sbin/extlinux"
 
+core_modules=(ldlinux.c32)
 autoupdate_file=/boot/syslinux/SYSLINUX_AUTOUPDATE
-com32_files=(menu.c32 vesamenu.c32 chain.c32 hdt.c32 reboot.c32 poweroff.com)
 pciids_file=/usr/share/hwdata/pci.ids
 
 ## Helper functions ##
@@ -294,9 +294,10 @@ install_mbr() {
 }
 
 _install() {
-    # Copy files to /boot
-    for file in "${com32_files[@]}"; do
-        # Symlink files even if links exist
+    # Copy all com32 files to /boot
+    for file in "${libpath}"/*.c32; do
+        file=${file##*/}
+        # Symlink files if /boot resides on the same partition as root
         if [[ "$boot" = root ]]; then
             ln -s "${libpath#$CHROOT}/$file" "$bootpath/$file" &> /dev/null
         elif [[ "$boot" = boot ]]; then
@@ -304,8 +305,8 @@ _install() {
         fi
     done
 
-    # Copy / Symlink pci.ids if we copy the com32 module and if pci.ids exists in the FS
-    if check_is_in "hdt.c32" "${com32_files[@]}" && [[ -f $pciids_file ]]; then 
+    # Copy / Symlink pci.ids if pci.ids exists on the FS
+    if [[ -f $pciids_file ]]; then
         if [[ "$boot" = root ]]; then
             ln -s "$pciids_file" "$bootpath/pci.ids" &> /dev/null
         elif [[ "$boot" = boot ]]; then
@@ -331,16 +332,27 @@ _install() {
 }
 
 update() {
-    # Update any com and c32 files in /boot
+    # Update c32 files in /boot, if /boot is not on same fs
     if [[ "$boot" = boot ]]; then
-        for file in "$bootpath"/*.{c32,com}; do
-            file=$(basename "$file")
+        for file in "$bootpath"/*.{c32}; do
+            file=${file##*/}
             cp "$libpath/$file" "$bootpath/$file" &> /dev/null
         done
         if [[ -f "$bootpath/pci.ids" ]]; then
             cp "$pciids_file" "$bootpath/pci.ids" &> /dev/null
         fi
     fi
+
+    # Ensure core modules exist and if not install them
+    for file in "${core_modules[@]}"; do
+        if [[ ! -f $bootpath/$file ]]; then
+            if [[  "$boot" = root ]]; then
+                ln -s "${libpath#$CHROOT}/$file" "$bootpath/$file" &> /dev/null
+            elif [[ "$boot" = boot ]]; then
+                cp "$libpath/$file" "$bootpath/$file"
+            fi
+        fi
+    done
 
     if device_is_raid $bootpart; then
         echo "Detected RAID on /boot - installing Syslinux with --raid"
