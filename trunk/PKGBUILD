@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=6.1p1
-pkgrel=4
+pkgrel=5
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -30,7 +30,7 @@ sha1sums=('751c92c912310c3aa9cadc113e14458f843fc7b3'
           'f9af4a442b804ab661cec0edb25dd76dee16d8d2'
           'e12fa910b26a5634e5a6ac39ce1399a132cf6796'
           'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
-          '659e3ee95c269014783ff8b318c6f50bf7496fbd'
+          'd93dca5ebda4610ff7647187f8928a3de28703f3'
           '1488d4ed33cf3037accf4b0e1c7a7e90b6a097c7')
 
 backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
