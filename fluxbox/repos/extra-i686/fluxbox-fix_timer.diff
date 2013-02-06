@@ -1,0 +1,78 @@
+From 4d307dcd10af9d817ff5c05fc40ae7487564cb31 Mon Sep 17 00:00:00 2001
+From: Mathias Gumz <akira at fluxbox dot org>
+Date: Sat, 12 Jan 2013 08:24:11 +0000
+Subject: Fix bug: handle the list of Timers not in-place
+
+With commit 541c8c4 we switched from an (manually) ordered list to a
+std::set<> to handle the active timers. The code which checks for overdue
+timers now traverses and modifies the std::set<> in place. This might
+lead to an infinite loop. Examples of such bad behavior are "flickering of
+the tooltip" (bug #3590078) or crashes (bug #3600143) or just insanely high
+cpu load when autoraising windows or submenus.
+
+We now make a copy of the std::set<> traverse this instead of the original.
+---
+diff --git a/src/FbTk/Timer.cc b/src/FbTk/Timer.cc
+index f63ea38..dd736dd 100644
+--- a/src/FbTk/Timer.cc
++++ b/src/FbTk/Timer.cc
+@@ -52,6 +52,7 @@
+ #endif
+ 
+ #include <cstdio>
++#include <vector>
+ #include <set>
+ 
+ 
+@@ -195,32 +196,35 @@ void Timer::updateTimers(int fd) {
+         return;
+     }
+ 
++    // stoping / restarting the timers modifies the list in an upredictable
++    // way. to avoid problems such as infinite loops we save the current
++    // (ordered) list of timers into a list and work on it.
++
++    ssize_t i;
++    const ssize_t ts = s_timerlist.size();
++    std::vector<FbTk::Timer*> timers;
++
++    timers.reserve(ts);
++    for (it = s_timerlist.begin(); it != s_timerlist.end(); ++it ) {
++        timers.push_back(*it);
++    }
++
+     now = FbTime::now();
+-    for (it = s_timerlist.begin(); it != s_timerlist.end(); ) {
++    for (i = 0; i < ts; ++i) {
++
++        FbTk::Timer* t = timers[i];
+ 
+-        // t->fireTimeout() might add timers to the list
+-        // this invalidates 'it'. thus we store the current timer
+-        Timer* t = *it;
+         if (now < t->getEndTime()) {
+             break;
+         }
+ 
+         t->fireTimeout();
+-
+-        // find the iterator to the timer again
+-        // and continue working on the list
+-        it = s_timerlist.find(t);
+-        it++;
+-        s_timerlist.erase(t);
++        t->stop();
+ 
+         if (! t->doOnce()) { // restart the current timer
+-            t->m_timing = false;
+             t->start();
+-        } else {
+-            t->stop();
+         }
+     }
+-
+ }
+ 
+ 
+--
+cgit v0.9.1
