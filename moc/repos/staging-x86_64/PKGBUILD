@@ -1,0 +1,55 @@
+# $Id$
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=moc
+pkgver=2.5beta1
+pkgrel=2
+epoch=1
+pkgdesc="An ncurses console audio player designed to be powerful and easy to use"
+arch=('i686' 'x86_64')
+url="http://moc.daper.net/"
+license=('GPL')
+depends=('libmad' 'libid3tag' 'jack' 'curl' 'libltdl' 'file' 'popt')
+makedepends=('speex' 'ffmpeg' 'taglib' 'libmpcdec' 'wavpack' 'libmodplug' 'faad2')
+optdepends=('speex: for using the speex plugin' 
+	    'ffmpeg: for using the ffmpeg plugin'
+	    'taglib: for using the musepack plugin' 
+	    'libmpcdec: for using the musepack plugin' 
+            'wavpack: for using the wavpack plugin' 
+            'faad2: for using the aac plugin' 
+	    'libmodplug: for using the modplug plugin')
+options=('!libtool')
+source=(ftp://ftp.daper.net/pub/soft/moc/unstable/moc-2.5.0-beta1.tar.bz2{,.sig})
+sha1sums=('4030a1fa5c7cfef06909c54d8c7a1fbb93f23caa'
+          '29c232c37e1f3737c3b670372732446e9c0786a8')
+
+# source PKGBUILD && mksource
+mksource() {
+  [[ -x /usr/bin/svn ]] || (echo "svn not found. Install subversion." && return 1)
+  _svnver=2454
+  _svntrunk="svn://daper.net/moc/trunk"
+  _svnmod="${pkgname}-${pkgver}"
+  mkdir ${pkgname}-${pkgver}
+  pushd ${pkgname}-${pkgver}
+  svn co ${_svntrunk} --config-dir ./ -r ${_svnver} ${_svnmod}
+  find . -depth -type d -name .svn -exec rm -rf {} \;
+  tar -cJf ../${pkgname}-${pkgver}.tar.xz ${pkgname}-${pkgver}/*
+  popd
+  rm -r ${pkgname}-${pkgver}
+  gpg --detach-sign --use-agent -u ${GPGKEY} ${pkgname}-${pkgver}.tar.xz
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-2.5.0-beta1"
+  ./configure --prefix=/usr --without-rcc \
+    --with-oss --with-alsa --with-jack --with-aac --with-mp3 \
+    --with-musepack --with-vorbis --with-flac --with-wavpack \
+    --with-sndfile --with-modplug --with-ffmpeg --with-speex \
+    --with-samplerate --with-curl --disable-debug
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-2.5.0-beta1"
+  make DESTDIR="${pkgdir}" install
+}
