@@ -1,0 +1,205 @@
+diff --git a/include/mediastreamer2/msvideo.h b/include/mediastreamer2/msvideo.h
+index 5ae8a63..86edf86 100644
+--- mediastreamer2/include/mediastreamer2/msvideo.h
++++ mediastreamer2/include/mediastreamer2/msvideo.h
+@@ -21,6 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ #define msvideo_h
+ 
+ #include <mediastreamer2/msfilter.h>
++#ifndef INT64_C
++#define INT64_C(c) (c ## LL)
++#define UINT64_C(c) (c ## ULL)
++#endif
++#include <libavutil/avutil.h>
++#include <libavcodec/version.h>
+ 
+ /* some global constants for video MSFilter(s) */
+ #define MS_VIDEO_SIZE_SQCIF_W 128
+@@ -206,7 +212,9 @@ extern "C"{
+ MS2_PUBLIC int ms_pix_fmt_to_ffmpeg(MSPixFmt fmt);
+ MS2_PUBLIC MSPixFmt ffmpeg_pix_fmt_to_ms(int fmt);
+ MS2_PUBLIC MSPixFmt ms_fourcc_to_pix_fmt(uint32_t fourcc);
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ MS2_PUBLIC void ms_ffmpeg_check_init(void);
++#endif
+ MS2_PUBLIC int ms_yuv_buf_init_from_mblk(MSPicture *buf, mblk_t *m);
+ MS2_PUBLIC int ms_yuv_buf_init_from_mblk_with_size(MSPicture *buf, mblk_t *m, int w, int h);
+ MS2_PUBLIC int ms_picture_init_from_mblk_with_size(MSPicture *buf, mblk_t *m, MSPixFmt fmt, int w, int h);
+diff --git a/src/h264dec.c b/src/h264dec.c
+index 223de3d..8c40a7c 100644
+--- mediastreamer2/src/h264dec.c
++++ mediastreamer2/src/h264dec.c
+@@ -44,7 +44,9 @@ typedef struct _DecData{
+ static void ffmpeg_init(){
+ 	static bool_t done=FALSE;
+ 	if (!done){
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 		avcodec_init();
++#endif
+ 		avcodec_register_all();
+ 		done=TRUE;
+ 	}
+diff --git a/src/mscommon.c b/src/mscommon.c
+index 2cab005..bebb946 100644
+--- mediastreamer2/src/mscommon.c
++++ mediastreamer2/src/mscommon.c
+@@ -33,9 +33,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ #include "mediastreamer2/mscodecutils.h"
+ #include "mediastreamer2/msfilter.h"
+ #include <ortp/ortp_srtp.h>
++#ifndef INT64_C
++#define INT64_C(c) (c ## LL)
++#define UINT64_C(c) (c ## ULL)
++#endif
++#include <libavutil/avutil.h>
++#include <libavcodec/version.h>
+ 
+ extern void __register_ffmpeg_encoders_if_possible(void);
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ extern void ms_ffmpeg_check_init();
++#endif
+ extern bool_t libmsandroiddisplay_init(void);
+ extern void libmsandroiddisplaybad_init(void);
+ extern void libmsandroidopengldisplay_init(void);
+@@ -645,7 +653,9 @@ void ms_init(){
+ 		}
+ 	}
+ #if !defined(NO_FFMPEG)
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 	ms_ffmpeg_check_init();
++#endif
+ 	__register_ffmpeg_encoders_if_possible();
+ #endif
+ #endif
+diff --git a/src/videodec.c b/src/videodec.c
+index c04e1e9..a455075 100644
+--- mediastreamer2/src/videodec.c
++++ mediastreamer2/src/videodec.c
+@@ -27,9 +27,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ #include "mediastreamer2/msvideo.h"
+ #include "mediastreamer2/msticker.h"
+ #include "rfc2429.h"
++#ifndef INT64_C
++#define INT64_C(c) (c ## LL)
++#define UINT64_C(c) (c ## ULL)
++#endif
++#include <libavutil/avutil.h>
++#include <libavcodec/version.h>
+ 
+-
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ extern void ms_ffmpeg_check_init();
++#endif
+ 
+ 
+ typedef struct DecState{
+@@ -50,7 +57,9 @@ typedef struct DecState{
+ 
+ static void dec_init(MSFilter *f, enum CodecID cid){
+ 	DecState *s=(DecState *)ms_new0(DecState,1);
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 	ms_ffmpeg_check_init();
++#endif
+ 	
+ 	avcodec_get_context_defaults(&s->av_context);
+ 	s->av_codec=NULL;
+diff --git a/src/videoenc.c b/src/videoenc.c
+index 21d016f..520f06a 100644
+--- mediastreamer2/src/videoenc.c
++++ mediastreamer2/src/videoenc.c
+@@ -37,7 +37,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ 
+ #define RATE_CONTROL_MARGIN 15000 /*bits/second*/
+ 
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ static bool_t avcodec_initialized=FALSE;
++#endif
+ 
+ #ifdef ENABLE_LOG_FFMPEG
+ 
+@@ -51,6 +53,7 @@ void ms_ffmpeg_log_callback(void* ptr, int level, const char* fmt, va_list vl)
+ 
+ #endif
+ 
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ void ms_ffmpeg_check_init(){
+ 	if(!avcodec_initialized){
+ 		avcodec_init();
+@@ -62,6 +65,7 @@ void ms_ffmpeg_check_init(){
+ #endif
+ 	}
+ }
++#endif
+ 
+ /* the goal of this small object is to tell when to send I frames at startup:
+ at 2 and 4 seconds*/
+@@ -201,7 +205,9 @@ static void enc_init(MSFilter *f, enum CodecID codec)
+ {
+ 	EncState *s=(EncState *)ms_new(EncState,1);
+ 	f->data=s;
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 	ms_ffmpeg_check_init();
++#endif
+ 	s->profile=0;/*always default to profile 0*/
+ 	s->comp_buf=NULL;
+ 	s->fps=15;
+@@ -300,9 +306,13 @@ static void prepare_h263(EncState *s){
+ 	if (s->profile==0){
+ 		s->codec=CODEC_ID_H263;
+ 	}else{
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 		c->flags|=CODEC_FLAG_H263P_UMV;
++#endif
+ 		c->flags|=CODEC_FLAG_AC_PRED;
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 		c->flags|=CODEC_FLAG_H263P_SLICE_STRUCT;
++#endif
+ 		/*
+ 		c->flags|=CODEC_FLAG_OBMC;
+ 		c->flags|=CODEC_FLAG_AC_PRED;
+@@ -372,7 +382,11 @@ static void add_rfc2190_header(mblk_t **packet, AVCodecContext *context){
+ 	// assume video size is CIF or QCIF
+ 	if (context->width == 352 && context->height == 288) header->b_wptr[1] = 0x60;
+ 	else header->b_wptr[1] = 0x40;
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 	if (context->coded_frame->pict_type != FF_I_TYPE) header->b_wptr[1] |= 0x10;
++#else
++	if (context->coded_frame->pict_type != AV_PICTURE_TYPE_I) header->b_wptr[1] |= 0x10;
++#endif
+ 	header->b_wptr += 4;
+ 	header->b_cont = *packet;
+ 	*packet = header;
+@@ -779,7 +793,11 @@ static void process_frame(MSFilter *f, mblk_t *inm){
+ 		s->req_vfu=TRUE;
+ 	}
+ 	if (s->req_vfu){
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 		pict.pict_type=FF_I_TYPE;
++#else
++		pict.pict_type=AV_PICTURE_TYPE_I;
++#endif
+ 		s->req_vfu=FALSE;
+ 	}
+ 	comp_buf->b_rptr=comp_buf->b_wptr=comp_buf->b_datap->db_base;
+@@ -799,7 +817,11 @@ static void process_frame(MSFilter *f, mblk_t *inm){
+ 		if (s->framenum==1){
+ 			video_starter_first_frame (&s->starter,f->ticker->time);
+ 		}
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 		if (c->coded_frame->pict_type==FF_I_TYPE){
++#else
++		if (c->coded_frame->pict_type==AV_PICTURE_TYPE_I){
++#endif
+ 			ms_message("Emitting I-frame");
+ 		}
+ 		comp_buf->b_wptr+=error;
+@@ -1067,7 +1089,9 @@ MSFilterDesc ms_mjpeg_enc_desc={
+ #endif
+ 
+ void __register_ffmpeg_encoders_if_possible(void){
++#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(54, 0, 100)
+ 	ms_ffmpeg_check_init();
++#endif
+ 	if (avcodec_find_encoder(CODEC_ID_MPEG4))
+ 		ms_filter_register(&ms_mpeg4_enc_desc);
+ 	if (avcodec_find_encoder(CODEC_ID_H263)){
