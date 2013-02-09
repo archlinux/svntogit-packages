@@ -1,0 +1,41 @@
+# $Id$
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=libpcap
+pkgver=1.3.0
+pkgrel=2
+pkgdesc="A system-independent interface for user-level packet capture"
+arch=('i686' 'x86_64')
+url="http://www.tcpdump.org/"
+license=('BSD')
+depends=('glibc' 'libnl' 'sh' 'libusbx')
+makedepends=('flex')
+source=(http://www.tcpdump.org/release/libpcap-${pkgver}.tar.gz{,.sig}
+        libnl32.patch)
+sha256sums=('41cbd9ed68383afd9f1fda279cb78427d36879d9e34ee707e31a16a1afd872b9'
+            'a078cf1c0f36151cc84a0da7c25ad81fef87afa6bece58c990c62886a7beef99'
+            '7d0cbd49e55405cb2b55852223cd4965526e518cfb4f547ab9cc9b95b8f9c9e6')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  patch -Np1 -i "${srcdir}/libnl32.patch"
+  autoreconf -f -i
+  ./configure --prefix=/usr --enable-ipv6 --with-libnl
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  install -d -m755 ${pkgdir}/usr/bin
+  make DESTDIR=${pkgdir} install
+  # remove static library
+  rm -rf ${pkgdir}/usr/lib/libpcap.a
+  
+  # backwards compatibility, programs often look for net/bpf.h
+  mkdir -p ${pkgdir}/usr/include/net
+  cd ${pkgdir}/usr/include/net
+  ln -s ../pcap-bpf.h bpf.h
+
+  #install the license
+  install -D -m644 ${srcdir}/$pkgname-$pkgver/LICENSE ${pkgdir}/usr/share/licenses/$pkgname/LICENSE
+}
