@@ -5,7 +5,7 @@
 pkgbase=linux-lts           # Build stock -lts kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.0
-pkgver=3.0.62
+pkgver=3.0.63
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -24,7 +24,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'module-symbol-waiting-3.0.patch'
         'module-init-wait-3.0.patch')
 md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         'b0c86830c65280b02223fd8fff8aec08'
+         'd51e51287d9b97508643792e7869acb4'
          'a8c2f7618f3cc6689e1bea32692b72f5'
          '4925d736212481eb1f7b318ef9e8b95f'
          '232b52576a62c7a333e9fe7a1e1ca359'
