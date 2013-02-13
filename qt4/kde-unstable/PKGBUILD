@@ -2,39 +2,42 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
-pkgbase=qt4
-pkgname=('qt' 'qt-private-headers')
+pkgname=qt4
 pkgver=4.8.4
 pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('GPL3' 'LGPL')
-makedepends=('libtiff' 'libpng' 'libmng' 'sqlite' 'ca-certificates' 'glib2' 'dbus'
-    'fontconfig' 'libgl' 'libsm' 'libxrandr' 'libxv' 'libxi' 'alsa-lib'
-    'xdg-utils' 'hicolor-icon-theme' 'desktop-file-utils' 'mesa' 'postgresql-libs'
-    'mysql' 'unixodbc' 'cups' 'gtk2' 'libfbclient')
+pkgdesc='A cross-platform application and UI framework'
+depends=('libtiff' 'libpng' 'libmng' 'sqlite' 'ca-certificates' 'glib2' 'dbus'
+        'fontconfig' 'libgl' 'libsm' 'libxrandr' 'libxv' 'libxi' 'alsa-lib'
+        'xdg-utils' 'hicolor-icon-theme' 'desktop-file-utils')
+makedepends=('mesa' 'postgresql-libs' 'mysql' 'unixodbc' 'cups' 'gtk2' 'libfbclient')
+optdepends=('postgresql-libs: PostgreSQL driver'
+            'libmysqlclient: MySQL driver'
+            'unixodbc: ODBC driver'
+            'libfbclient: Firebird/iBase driver'
+            'libxinerama: Xinerama support'
+            'libxcursor: Xcursor support'
+            'libxfixes: Xfixes support'
+            'icu: Unicode support')
+install="${pkgname}.install"
 options=('!libtool')
+replaces=('qt')
+conflicts=('qt')
 _pkgfqn="qt-everywhere-opensource-src-${pkgver}"
-source=("http://releases.qt-project.org/qt4/source/${_pkgfqn}.tar.gz"
+source=("http://releases.qt-project.org/${pkgname}/source/${_pkgfqn}.tar.gz"
         'qtconfig.desktop'
-        'improve-cups-support.patch'
-        'fix-crash-in-assistant.patch')
+        'improve-cups-support.patch')
 md5sums=('89c5ecba180cae74c66260ac732dc5cb'
-         'f1837a03fd0ebbd2da58975845f278e3'
-         '480fea1ed076992b688373c8db274be0'
-         '5595c24d5bb942c21e3a4d299e6d0bf1'
-         '824a3b77a25e98567f640e0441ccdebc'
-         'c439c7731c25387352d8453ca7574971'
-         '57590084078b6379f0501f7728b02ae2')
+         '20ca06ef59775d749b9451ce7437fa9a'
+         'c439c7731c25387352d8453ca7574971')
 
 build() {
   cd ${_pkgfqn}
 
   # (FS#28381) (KDEBUG#180051)
   patch -p1 -i "${srcdir}"/improve-cups-support.patch
-
-  # (FS#29469)
-  patch -p1 -i "${srcdir}"/fix-crash-in-assistant.patch
 
   export QT4DIR="${srcdir}"/${_pkgfqn}
   export LD_LIBRARY_PATH=${QT4DIR}/lib:${LD_LIBRARY_PATH}
@@ -74,20 +77,7 @@ build() {
   make
 }
 
-package_qt() {
-    pkgdesc='A cross-platform application and UI framework'
-    depends=('libtiff' 'libpng' 'libmng' 'sqlite' 'ca-certificates' 'glib2' 'dbus'
-      'fontconfig' 'libgl' 'libsm' 'libxrandr' 'libxv' 'libxi' 'alsa-lib'
-      'xdg-utils' 'hicolor-icon-theme' 'desktop-file-utils')
-    optdepends=('postgresql-libs: PostgreSQL driver'
-                'libmysqlclient: MySQL driver'
-                'unixodbc: ODBC driver'
-                'libfbclient: Firebird/iBase driver'
-                'libxinerama: Xinerama support'
-                'libxcursor: Xcursor support'
-                'libxfixes: Xfixes support'
-                'icu: Unicode support')
-    install='qt4.install'
+package() {
 
     cd ${_pkgfqn}
     make INSTALL_ROOT="${pkgdir}" install
@@ -95,13 +85,12 @@ package_qt() {
     # install missing icons and desktop files
     install -D -m644 src/gui/dialogs/images/qtlogo-64.png \
       "${pkgdir}/usr/share/icons/hicolor/64x64/apps/qt4logo.png"
-    install -d "${pkgdir}/usr/share/applications"
-    install -m644 "${srcdir}"/qtconfig.desktop \
-      "${pkgdir}/usr/share/applications/"
+    install -Dm644 "${srcdir}"/qtconfig.desktop \
+      "${pkgdir}/usr/share/applications/qtconfig4.desktop"
 
     # install license addition
     install -D -m644 LGPL_EXCEPTION.txt \
-      ${pkgdir}/usr/share/licenses/${pkgbase}/LGPL_EXCEPTION.txt
+      ${pkgdir}/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
 
     # Fix wrong path in pkgconfig files
     find "${pkgdir}/usr/lib/pkgconfig" -type f -name '*.pc' \
@@ -110,21 +99,11 @@ package_qt() {
     # Fix wrong path in prl files
     find "${pkgdir}/usr/lib" -type f -name '*.prl' \
       -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
-}
 
-package_qt-private-headers(){
-    pkgdesc="Qt private headers for development"
-    depends=("qt=${pkgver}")
-
-    install -d "${pkgdir}"/usr/include/{QtCore,QtDeclarative,QtGui,QtScript}
-    install -d "${pkgdir}"/usr/src/{corelib,declarative,gui,script}
-    
-    for i in QtCore QtDeclarative QtGui QtScript; do
-      cp -r ${_pkgfqn}/include/${i}/private/ \
-        "${pkgdir}"/usr/include/${i}/
-    done
-
-    for i in corelib declarative gui script; do
-      cp -r ${_pkgfqn}/src/${i} "${pkgdir}"/usr/src/
-    done
+    # Do not install the qttools
+    rm "${pkgdir}"/usr/lib/qt4/bin/{assistant,designer,lconvert,linguist}
+    rm "${pkgdir}"/usr/lib/qt4/bin/{lrelease,lupdate,pixeltool,qcollectiongenerator}
+    rm "${pkgdir}"/usr/lib/qt4/bin/{qdbus,qdbusviewer,qhelpconverter,qhelpgenerator}
+    rm -r "${pkgdir}"/usr/lib/qt4/plugins/designer
+    rm /usr/share/qt4/translations/{assistant,designer,linguist,qt_help}_*.qm
 }
