@@ -1,0 +1,65 @@
+From 9d931b5e013475be5733fc92bd105b3a691a4097 Mon Sep 17 00:00:00 2001
+From: Giovanni Campagna <gcampagna@src.gnome.org>
+Date: Fri, 30 Nov 2012 15:05:38 +0000
+Subject: MessageTray: fix notification height expansion
+
+MessageTray._tween removes all tweens now, so it removes also
+those setting the height to expanded for critical notifications.
+
+This is a regression from 1a27d7dfc02c06bd0ccf4258a9108207b8832ce4
+
+https://bugzilla.gnome.org/show_bug.cgi?id=689295
+---
+diff --git a/js/ui/messageTray.js b/js/ui/messageTray.js
+index ce61e25..ef0cc02 100644
+--- a/js/ui/messageTray.js
++++ b/js/ui/messageTray.js
+@@ -2200,40 +2200,28 @@ const MessageTray = new Lang.Class({
+     _updateShowingNotification: function() {
+         this._notification.acknowledged = true;
+ 
+-        Tweener.removeTweens(this._notificationWidget);
+-
+         // We auto-expand notifications with CRITICAL urgency.
+-        // We use Tweener.removeTweens() to remove a tween that was hiding the notification we are
+-        // updating, in case that notification was in the process of being hidden. However,
+-        // Tweener.removeTweens() would also remove a tween that was updating the position of the
+-        // notification we are updating, in case that notification was already expanded and its height
+-        // changed. Therefore we need to call this._expandNotification() for expanded notifications
+-        // to make sure their position is updated.
+-        if (this._notification.urgency == Urgency.CRITICAL || this._notification.expanded)
++        if (this._notification.urgency == Urgency.CRITICAL)
+             this._expandNotification(true);
+ 
+         // We tween all notifications to full opacity. This ensures that both new notifications and
+         // notifications that might have been in the process of hiding get full opacity.
+         //
+-        // We tween any notification showing in the banner mode to banner height
+-        // (this._notificationWidget.y = -this._notificationWidget.height).
++        // We tween any notification showing in the banner mode to the appropriate height
++        // (which is banner height or expanded height, depending on the notification state)
+         // This ensures that both new notifications and notifications in the banner mode that might
+-        // have been in the process of hiding are shown with the banner height.
++        // have been in the process of hiding are shown with the correct height.
+         //
+         // We use this._showNotificationCompleted() onComplete callback to extend the time the updated
+         // notification is being shown.
+-        //
+-        // We don't set the y parameter for the tween for expanded notifications because
+-        // this._expandNotification() will result in getting this._notificationWidget.y set to the appropriate
+-        // fully expanded value.
++
+         let tweenParams = { opacity: 255,
++                            y: -this._notificationWidget.height,
+                             time: ANIMATION_TIME,
+                             transition: 'easeOutQuad',
+                             onComplete: this._showNotificationCompleted,
+                             onCompleteScope: this
+                           };
+-        if (!this._notification.expanded)
+-            tweenParams.y = -this._notificationWidget.height;
+ 
+         this._tween(this._notificationWidget, '_notificationState', State.SHOWN, tweenParams);
+    },
+--
+cgit v0.9.0.2
