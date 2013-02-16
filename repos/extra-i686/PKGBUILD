@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.17.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
