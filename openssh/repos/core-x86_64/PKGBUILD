@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=6.1p1
-pkgrel=5
+pkgrel=6
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -90,6 +90,7 @@ package() {
 
 	sed \
 		-e '/^#ChallengeResponseAuthentication yes$/c ChallengeResponseAuthentication no' \
+		-e '/^#PrintMotd yes$/c PrintMotd no # pam does that' \
 		-e '/^#UsePAM no$/c UsePAM yes' \
 		-i "${pkgdir}"/etc/ssh/sshd_config
 }
