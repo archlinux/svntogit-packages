@@ -2,19 +2,20 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=ghostscript
-pkgver=9.06
+pkgver=9.07
 pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
-license=('GPL3' 'custom')
-depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg' 'libtiff>=4.0.0' 'lcms') # 'lcms2' won't get used) # move in libpaper from community?
+license=('AGPL' 'custom')
+depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg'
+         'libtiff>=4.0.0' 'lcms' 'dbus')
 makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!libtool' '!makeflags')
-md5sums=('46f9ebe40dc52755287b30704270db11')
+md5sums=('eea27befc1e85bef6d4768202f6b03a5')
 
 build() {
   cd ${srcdir}/ghostscript-${pkgver}
@@ -34,12 +35,14 @@ build() {
 	--enable-fontconfig \
 	--enable-freetype \
 	--without-luratech \
+	--without-omni \
 	--with-system-libtiff \
 	--disable-compile-inits #--help # needed for linking with system-zlib
   make
 
   # Build IJS
   cd ${srcdir}/ghostscript-${pkgver}/ijs
+  sed -i "s:AM_PROG_CC_STDC:AC_PROG_CC:g" configure.ac
   ./autogen.sh
   ./configure --prefix=/usr --enable-shared --disable-static
   make
