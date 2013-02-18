@@ -1,0 +1,113 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=qt4
+pkgver=4.8.4
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://qt-project.org/'
+license=('GPL3' 'LGPL')
+pkgdesc='A cross-platform application and UI framework'
+depends=('libtiff' 'libpng' 'libmng' 'sqlite' 'ca-certificates' 'glib2' 'dbus'
+        'fontconfig' 'libgl' 'libsm' 'libxrandr' 'libxv' 'libxi' 'alsa-lib'
+        'xdg-utils' 'hicolor-icon-theme' 'desktop-file-utils')
+makedepends=('mesa' 'postgresql-libs' 'mysql' 'unixodbc' 'cups' 'gtk2' 'libfbclient')
+optdepends=('postgresql-libs: PostgreSQL driver'
+            'libmysqlclient: MySQL driver'
+            'unixodbc: ODBC driver'
+            'libfbclient: Firebird/iBase driver'
+            'libxinerama: Xinerama support'
+            'libxcursor: Xcursor support'
+            'libxfixes: Xfixes support'
+            'icu: Unicode support')
+install="${pkgname}.install"
+options=('!libtool')
+replaces=('qt<=4.8.4' 'qtwebkit<=2.3.beta2')
+conflicts=('qt<=4.8.4' 'qtwebkit<=2.3.beta2')
+_pkgfqn="qt-everywhere-opensource-src-${pkgver}"
+source=("http://releases.qt-project.org/${pkgname}/source/${_pkgfqn}.tar.gz"
+        'qtconfig.desktop'
+        'improve-cups-support.patch'
+        'ld-gold.patch')
+md5sums=('89c5ecba180cae74c66260ac732dc5cb'
+         '20ca06ef59775d749b9451ce7437fa9a'
+         'c439c7731c25387352d8453ca7574971'
+         '864de59a34a2f72ab2668dd918634b64')
+
+build() {
+  cd ${_pkgfqn}
+
+  # (FS#28381) (KDEBUG#180051)
+  patch -p1 -i "${srcdir}"/improve-cups-support.patch
+
+  # build on i686 fails
+  patch -p1 -i "${srcdir}"/ld-gold.patch
+
+  export QT4DIR="${srcdir}"/${_pkgfqn}
+  export LD_LIBRARY_PATH=${QT4DIR}/lib:${LD_LIBRARY_PATH}
+
+  sed -i "s|-O2|${CXXFLAGS}|" mkspecs/common/{g++,gcc}-base.conf
+  sed -i "/^QMAKE_LFLAGS_RPATH/s| -Wl,-rpath,||g" mkspecs/common/gcc-base-unix.conf
+  sed -i "/^QMAKE_LFLAGS\s/s|+=|+= ${LDFLAGS}|g" mkspecs/common/gcc-base.conf
+
+  ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -bindir /usr/lib/qt4/bin \
+    -headerdir /usr/include/qt4 \
+    -docdir /usr/share/doc/qt4 \
+    -plugindir /usr/lib/qt4/plugins \
+    -importdir /usr/lib/qt4/imports \
+    -datadir /usr/share/qt4 \
+    -translationdir /usr/share/qt4/translations \
+    -sysconfdir /etc/xdg \
+    -examplesdir /usr/share/doc/qt4/examples \
+    -demosdir /usr/share/doc/qt4/demos \
+    -plugin-sql-{psql,mysql,sqlite,odbc,ibase} \
+    -system-sqlite \
+    -no-phonon \
+    -no-phonon-backend \
+    -graphicssystem raster \
+    -openssl-linked \
+    -nomake demos \
+    -nomake examples \
+    -nomake docs \
+    -silent \
+    -no-rpath \
+    -optimized-qmake \
+    -reduce-relocations \
+    -dbus-linked \
+    -no-openvg
+  make
+}
+
+package() {
+
+    cd ${_pkgfqn}
+    make INSTALL_ROOT="${pkgdir}" install
+
+    # install missing icons and desktop files
+    install -D -m644 src/gui/dialogs/images/qtlogo-64.png \
+      "${pkgdir}/usr/share/icons/hicolor/64x64/apps/qt4logo.png"
+    install -Dm644 "${srcdir}"/qtconfig.desktop \
+      "${pkgdir}/usr/share/applications/qtconfig4.desktop"
+
+    # install license addition
+    install -D -m644 LGPL_EXCEPTION.txt \
+      ${pkgdir}/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+
+    # Fix wrong path in pkgconfig files
+    find "${pkgdir}/usr/lib/pkgconfig" -type f -name '*.pc' \
+      -exec perl -pi -e "s, -L${srcdir}/?\S+,,g" {} \;
+
+    # Fix wrong path in prl files
+    find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+      -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+    # Do not install the qttools
+    rm "${pkgdir}"/usr/lib/qt4/bin/{assistant,designer,lconvert,linguist}
+    rm "${pkgdir}"/usr/lib/qt4/bin/{lrelease,lupdate,pixeltool,qcollectiongenerator}
+    rm "${pkgdir}"/usr/lib/qt4/bin/{qdbus,qdbusviewer,qhelpconverter,qhelpgenerator}
+    rm -r "${pkgdir}"/usr/lib/qt4/plugins/designer
+    rm "${pkgdir}"/usr/share/qt4/translations/{assistant,designer,linguist,qt_help}_*.qm
+}
