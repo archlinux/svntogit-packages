@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.1.3
+pkgver=1.8.1.4
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -25,8 +25,6 @@ backup=('etc/conf.d/git-daemon.conf')
 install=git.install
 source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
         "http://git-core.googlecode.com/files/git-manpages-$pkgver.tar.gz"
-        git-daemon
-        git-daemon.conf
         git-daemon@.service
         git-daemon.socket)
 
@@ -100,18 +98,12 @@ package() {
   # remove perllocal.pod, .packlist, and empty directories.
   rm -rf "$pkgdir"/usr/lib/perl5
 
-  # git daemon script
-  install -D -m755 "$srcdir"/git-daemon "$pkgdir"/etc/rc.d/git-daemon
-  install -D -m644 "$srcdir"/git-daemon.conf "$pkgdir"/etc/conf.d/git-daemon.conf
-
-  # systemd stuff
+  # git-daemon via systemd socket activation
   install -D -m 644 "$srcdir"/git-daemon@.service "$pkgdir"/usr/lib/systemd/system/git-daemon@.service
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('05fb5ea3792a51cef2becc8d06ea9b87'
-         'b8e050c3c96b0b9fa28a7b7e9413af01'
-         '8e2648910fd5dd4f1c41d3c7fa9e9156'
-         '2e42bf97779a1c6411d89043334c9e78'
+md5sums=('60f32ef4a6b3fa2143b81a28704333ed'
+         '61d19a9d386c686ee06b493a9df6e61c'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
