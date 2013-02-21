@@ -1,16 +1,28 @@
 post_install() {
-  getent group tomcat >/dev/null 2>&1 || groupadd -g 66 tomcat
-  getent passwd tomcat >/dev/null 2>&1 || useradd -u 66 -g tomcat -d /usr/share/tomcat7 -s /bin/false tomcat
+  getent group tomcat7 >/dev/null 2>&1 || groupadd -g 71 tomcat7
+  getent passwd tomcat7 >/dev/null 2>&1 || useradd -u 71 -g tomcat7 -d /usr/share/tomcat7 -s /bin/false tomcat7
 
-  if [ -f lib/modules/`uname -r`/kernel/security/capability.ko ]; then
-    echo ">>> It appears that your current kernel has linux security"
-    echo ">>> capabilities built as a module. Tomcat requires this"
-    echo ">>> functionality to operate."
-    echo ">>>"
-    echo ">>> To activate the module, please load it now (modprobe capability)."
-    echo ">>> Also, you should add it to your MODULES array in rc.conf, so"
-    echo ">>> it will be activated automatically at boot-up."
+  if [ -f lib/modules/$(uname -r)/kernel/security/capability.ko ]; then
+    echo 'It appears that your current kernel has linux security'
+    echo 'capabilities built as a module. Tomcat requires this'
+    echo ' functionality to operate.'
+    echo ''
+    echo ' To activate the module, please load it now (modprobe capability).'
+    echo ' Also, you should add it to your MODULES array in rc.conf, so'
+    echo ' it will be activated automatically at boot-up.'
   fi
+
+  # Some tomcat7 files were owned by 'tomcat:tomcat', let's fix this
+  chown root:tomcat7 /etc/tomcat7 /etc/tomcat7/*
+  chown -R tomcat7:tomcat7 /etc/tomcat7/Catalina
+  chown -R tomcat7:tomcat7 /var/lib/tomcat7
+  chown -R tomcat7:tomcat7 /var/tmp/tomcat7
+  chown tomcat7:log /var/log/tomcat7
+  find /var/log/tomcat7 -user tomcat -exec chown tomcat7 {} \;
+  find /var/log/tomcat7 -group tomcat -exec chgrp tomcat7 {} \;
+
+  # Fix some previously erroneous mods
+  chmod 775 /var/tmp/tomcat7 /var/tmp/tomcat7/temp /var/tmp/tomcat7/work
 }
 
 post_upgrade() {
@@ -18,10 +30,15 @@ post_upgrade() {
 }
 
 pre_remove() {
-  if getent passwd tomcat >/dev/null 2>&1; then
-      userdel tomcat
+  if getent passwd tomcat7 > /dev/null 2>&1; then
+      userdel tomcat7
   fi
-  if getent group tomcat >/dev/null 2>&1; then
-      groupdel tomcat
+  if getent group tomcat7 > /dev/null 2>&1; then
+      groupdel tomcat7
   fi
+
+  echo 'Please consider removing the following directories:'
+  echo '  /var/lib/tomcat7'
+  echo '  /var/tmp/tomcat7'
+  echo '  /var/log/tomcat7'
 }
