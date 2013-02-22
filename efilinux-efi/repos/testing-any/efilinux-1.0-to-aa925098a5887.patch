@@ -1,0 +1,604 @@
+diff --git a/Makefile b/Makefile
+index 4c7e990..a955e34 100644
+--- a/Makefile
++++ b/Makefile
+@@ -12,9 +12,6 @@
+ #      copyright notice, this list of conditions and the following
+ #      disclaimer in the documentation and/or other materials provided
+ #      with the distribution.
+-#    * Neither the name of Intel Corporation nor the names of its
+-#      contributors may be used to endorse or promote products derived
+-#      from this software without specific prior written permission.
+ #
+ # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -32,7 +29,7 @@
+ 
+ %.efi: %.so
+ 	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel \
+-		-j .rela -j .reloc --target=$(FORMAT) $*.so $@
++		-j .rela -j .reloc -S --target=$(FORMAT) $*.so $@
+ 
+ OBJCOPY=objcopy
+ 
+@@ -63,6 +60,9 @@ ifeq ($(ARCH),ia32)
+ 		CFLAGS += -m32
+ 	endif
+ endif
++ifeq ($(ARCH),x86_64)
++	CFLAGS += -mno-red-zone
++endif
+ 
+ LDFLAGS=-T $(LDSCRIPT) -Bsymbolic -shared -nostdlib -znocombreloc \
+ 		-L$(LIBDIR) $(CRT0)
+diff --git a/README b/README
+index b94a49f..9eae5db 100644
+--- a/README
++++ b/README
+@@ -12,7 +12,12 @@ The latest development version of efilinux can be found at,
+ 
+ Stable versions can be found at,
+ 
+-	http://www.kernel.org/pub/linux/boot/efilinux/
++	http://www.kernel.org/pub/linux/utils/boot/efilinux/
+ 
++CONFIGURATION FILE SYNTAX
+ 
+-Matt Fleming <matt.fleming@linux.intel.com>
++There is no config syntax as such. A config file is a one-line file
++that contains command line parameters. See example.cfg.
++
++
++Matt Fleming <matt.fleming@intel.com>
+diff --git a/efilinux.h b/efilinux.h
+index 9ca320f..dcbcb29 100644
+--- a/efilinux.h
++++ b/efilinux.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+diff --git a/entry.c b/entry.c
+index 5e165b1..0aa6cdd 100644
+--- a/entry.c
++++ b/entry.c
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -323,7 +319,7 @@ read_config_file(EFI_LOADED_IMAGE *image, CHAR16 **options,
+ 	if (err != TRUE)
+ 		return FALSE;
+ 
+-	err = file_open(path, &file);
++	err = file_open(image, path, &file);
+ 	if (err != EFI_SUCCESS)
+ 		return FALSE;
+ 
+diff --git a/example.cfg b/example.cfg
+new file mode 100644
+index 0000000..bc3f786
+--- /dev/null
++++ b/example.cfg
+@@ -0,0 +1 @@
++-f 0:\bzImage console=ttyS0 initrd=0:\initrd
+diff --git a/fs/fs.c b/fs/fs.c
+index 8a45442..36a75f8 100644
+--- a/fs/fs.c
++++ b/fs/fs.c
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -73,7 +69,7 @@ handle_to_dev(EFI_HANDLE *handle)
+  * @file: used to return a pointer to the allocated file on success
+  */
+ EFI_STATUS
+-file_open(CHAR16 *name, struct file **file)
++file_open(EFI_LOADED_IMAGE *image, CHAR16 *name, struct file **file)
+ {
+ 	EFI_FILE_HANDLE fh;
+ 	struct file *f;
+@@ -91,10 +87,19 @@ file_open(CHAR16 *name, struct file **file)
+ 			break;
+ 	}
+ 
+-	if (!name[dev_len] || !dev_len)
+-		goto notfound;
++	if (!name[dev_len] || !dev_len) {
++		dev_len = 0;
++		if (!image)
++			goto notfound;
++
++		i = handle_to_dev(image->DeviceHandle);
++		if (i < 0 || i >= nr_fs_devices)
++			goto notfound;
+ 
+-	name[dev_len] = 0;
++		f->handle = fs_devices[i].fh;
++		goto found;
++	} else
++		name[dev_len++] = 0;
+ 
+ 	if (name[0] >= '0' && name[0] <= '9') {
+ 		i = Atoi(name);
+@@ -126,7 +131,7 @@ file_open(CHAR16 *name, struct file **file)
+ 
+ found:
+ 	/* Strip the device name */
+-	filename = name + dev_len + 1;
++	filename = name + dev_len;
+ 
+ 	/* skip any path separators */
+ 	while (*filename == ':' || *filename == '\\')
+diff --git a/fs/fs.h b/fs/fs.h
+index 0f76d0c..9223b79 100644
+--- a/fs/fs.h
++++ b/fs/fs.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -98,7 +94,7 @@ file_size(struct file *f, UINT64 *size)
+ 	return EFI_SUCCESS;
+ }
+ 
+-extern EFI_STATUS file_open(CHAR16 *name, struct file **file);
++extern EFI_STATUS file_open(EFI_LOADED_IMAGE *image, CHAR16 *name, struct file **file);
+ extern EFI_STATUS file_close(struct file *f);
+ 
+ extern void list_boot_devices(void);
+diff --git a/loaders/bzimage/bzimage.c b/loaders/bzimage/bzimage.c
+index af73e77..efdb884 100644
+--- a/loaders/bzimage/bzimage.c
++++ b/loaders/bzimage/bzimage.c
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -54,7 +50,7 @@ struct initrd {
+ 	struct file *file;
+ };
+ 
+-static void parse_initrd(struct boot_params *buf, char *cmdline)
++static void parse_initrd(EFI_LOADED_IMAGE *image, struct boot_params *buf, char *cmdline)
+ {
+ 	EFI_PHYSICAL_ADDRESS addr;
+ 	struct initrd *initrds;
+@@ -116,7 +112,7 @@ static void parse_initrd(struct boot_params *buf, char *cmdline)
+ 
+ 		*n = '\0';
+ 
+-		err = file_open(filename, &rdfile);
++		err = file_open(image, filename, &rdfile);
+ 		if (err != EFI_SUCCESS)
+ 			goto close_handles;
+ 
+@@ -167,13 +163,16 @@ close_handles:
+  * load_kernel - Load a kernel image into memory from the boot device
+  */
+ EFI_STATUS
+-load_kernel(EFI_HANDLE image, CHAR16 *name, char *cmdline)
++load_kernel(EFI_HANDLE image, CHAR16 *name, char *_cmdline)
+ {
+ 	UINTN map_size, _map_size, map_key;
+ 	EFI_PHYSICAL_ADDRESS kernel_start, addr;
++	EFI_PHYSICAL_ADDRESS pref_address;
+ 	struct boot_params *boot_params;
+ 	EFI_MEMORY_DESCRIPTOR *map_buf;
++	EFI_LOADED_IMAGE *info = NULL;
+ 	struct e820_entry *e820_map;
++	UINT64 setup_sz, init_size;
+ 	struct boot_params *buf;
+ 	struct efi_info *efi;
+ 	UINT32 desc_version;
+@@ -181,10 +180,16 @@ load_kernel(EFI_HANDLE image, CHAR16 *name, char *cmdline)
+ 	struct file *file;
+ 	UINTN desc_size;
+ 	EFI_STATUS err;
+-	UINTN size = 0;
++	char *cmdline;
++	UINT64 size;
+ 	int i, j = 0;
+ 
+-	err = file_open(name, &file);
++	err = handle_protocol(image, &LoadedImageProtocol, (void **)&info);
++	if (err != EFI_SUCCESS)
++		info = NULL;
++
++	err = file_open(info, name, &file);
++
+ 	if (err != EFI_SUCCESS)
+ 		goto out;
+ 
+@@ -193,14 +198,14 @@ load_kernel(EFI_HANDLE image, CHAR16 *name, char *cmdline)
+ 		goto out;
+ 
+ 	size = 1;
+-	err = file_read(file, &size, &nr_setup_secs);
++	err = file_read(file, (UINTN *)&size, &nr_setup_secs);
+ 	if (err != EFI_SUCCESS)
+ 		goto out;
+ 
+ 	nr_setup_secs++;	/* Add the boot sector */
+-	size = nr_setup_secs * 512;
++	setup_sz = nr_setup_secs * 512;
+ 
+-	buf = malloc(size);
++	buf = malloc(setup_sz);
+ 	if (!buf)
+ 		goto out;
+ 
+@@ -208,10 +213,16 @@ load_kernel(EFI_HANDLE image, CHAR16 *name, char *cmdline)
+ 	if (err != EFI_SUCCESS)
+ 		goto out;
+ 
+-	err = file_read(file, &size, buf);
++	err = file_read(file, (UINTN *)&setup_sz, buf);
++	if (err != EFI_SUCCESS)
++		goto out;
++
++	err = file_size(file, &size);
+ 	if (err != EFI_SUCCESS)
+ 		goto out;
+ 
++	size -= setup_sz;
++
+ 	/* Check boot sector signature */
+ 	if (buf->hdr.signature != 0xAA55) {
+ 		Print(L"bzImage kernel corrupt");
+@@ -237,33 +248,70 @@ load_kernel(EFI_HANDLE image, CHAR16 *name, char *cmdline)
+ 		goto out;
+ 	}
+ 
++	if (buf->hdr.version >= 0x20a) {
++		pref_address = buf->hdr.pref_address;
++		init_size = buf->hdr.init_size;
++	} else {
++		pref_address = 0x100000;
++
++		/*
++		 * We need to account for the fact that the kernel
++		 * needs room for decompression, otherwise we could
++		 * end up trashing other chunks of allocated memory.
++		 */
++		init_size = size * 3;
++	}
++
+ 	/* Don't need an allocated ID, we're a prototype */
+ 	buf->hdr.loader_id = 0x1;
+ 
+-	parse_initrd(buf, cmdline);
++	/*
++	 * The kernel expects cmdline to be allocated pretty low,
++	 * Documentation/x86/boot.txt says,
++	 *
++	 *	"The kernel command line can be located anywhere
++	 *	between the end of the setup heap and 0xA0000"
++	 */
++	addr = 0xA0000;
++	err = allocate_pages(AllocateMaxAddress, EfiLoaderData,
++			     EFI_SIZE_TO_PAGES(strlen(_cmdline) + 1),
++			     &addr);
++	if (err != EFI_SUCCESS)
++		goto out;
++	cmdline = (char *)(UINTN)addr;
++	memcpy(cmdline, _cmdline, strlen(_cmdline) + 1);
++
++	parse_initrd(info, buf, cmdline);
+ 
+ 	buf->hdr.cmd_line_ptr = (UINT32)(UINTN)cmdline;
+ 
+ 	memset((char *)&buf->screen_info, 0x0, sizeof(buf->screen_info));
+ 
+-	err = setup_graphics(buf);
+-	if (err != EFI_SUCCESS)
+-		goto out;
++	addr = pref_address;
++	err = allocate_pages(AllocateAddress, EfiLoaderData,
++			     EFI_SIZE_TO_PAGES(init_size), &addr);
++	if (err != EFI_SUCCESS) {
++		/*
++		 * We failed to allocate the preferred address, so
++		 * just allocate some memory and hope for the best.
++		 */
++		err = emalloc(init_size, buf->hdr.kernel_alignment, &addr);
++		if (err != EFI_SUCCESS)
++			goto out;
++	}
++
++	kernel_start = addr;
+ 
+ 	/*
+-	 * Time to allocate our memory.
+-	 *
+-	 * Because the kernel needs to decompress itself we first
+-	 * allocate boot_params, gdt and space for the memory map
+-	 * under the assumption that they'll be allocated at lower
+-	 * addresses than the kernel. If we dont't allocate these data
+-	 * structures first there is the potential for them to be
+-	 * trashed when the kernel is decompressed! Allocating them
+-	 * underneath the kernel should be safe.
+-	 *
+-	 * Max kernel size is 8MB
++	 * Read the rest of the kernel image.
+ 	 */
+-	err = emalloc(16384, 1, &addr);
++	err = file_read(file, (UINTN *)&size, (void *)(UINTN)kernel_start);
++	if (err != EFI_SUCCESS)
++		goto out;
++
++	addr = 0x3fffffff;
++	err = allocate_pages(AllocateMaxAddress, EfiLoaderData,
++			     EFI_SIZE_TO_PAGES(16384), &addr);
+ 	if (err != EFI_SUCCESS)
+ 		goto out;
+ 
+@@ -273,6 +321,20 @@ load_kernel(EFI_HANDLE image, CHAR16 *name, char *cmdline)
+ 
+ 	/* Copy first two sectors to boot_params */
+ 	memcpy((char *)boot_params, (char *)buf, 2 * 512);
++	boot_params->hdr.code32_start = (UINT32)((UINT64)kernel_start);
++
++	/*
++	 * Use the kernel's EFI boot stub by invoking the handover
++	 * protocol.
++	 */
++	if (buf->hdr.version >= 0x20b) {
++		handover_jump(image, boot_params, kernel_start);
++		goto out;
++	}
++
++	err = setup_graphics(buf);
++	if (err != EFI_SUCCESS)
++		goto out;
+ 
+ 	err = emalloc(gdt.limit, 8, (EFI_PHYSICAL_ADDRESS *)&gdt.base);
+ 	if (err != EFI_SUCCESS)
+@@ -312,38 +374,6 @@ again:
+ 		goto out;
+ 
+ 	map_buf = (EFI_MEMORY_DESCRIPTOR *)(UINTN)addr;
+-	size = 0x800000;
+-	err = emalloc(size, buf->hdr.kernel_alignment, &kernel_start);
+-	if (err != EFI_SUCCESS)
+-		goto out;
+-
+-	/*
+-	 * If the firmware doesn't sort the memory map by increasing
+-	 * address it's possible that kernel_start may have been
+-	 * allocated below boot_params or gdt.base.
+-	 *
+-	 * Print a warning and hope for the best.
+-	 */
+-	if (kernel_start < (UINTN)boot_params ||
+-	    kernel_start < (UINTN)map_buf ||
+-	    kernel_start < (UINTN)gdt.base)
+-	    Print(L"Warning: kernel_start is too low.\n");
+-
+-	/*
+-	 * Read the rest of the kernel image.
+-	 */
+-	err = file_read(file, &size, (void *)(UINTN)kernel_start);
+-	if (err != EFI_SUCCESS)
+-		goto out;
+-
+-	boot_params->hdr.code32_start = (UINT32)((UINT64)kernel_start);
+-
+-	/*
+-	 * Remember! We've already allocated map_buf with emalloc (and
+-	 * 'map_size' contains its size) which means that it should be
+-	 * positioned below our allocation for the kernel. Use that
+-	 * space for the memory map.
+-	 */
+ 	err = get_memory_map(&map_size, map_buf, &map_key,
+ 			     &desc_size, &desc_version);
+ 	if (err != EFI_SUCCESS) {
+@@ -355,9 +385,7 @@ again:
+ 			 * larger. 'map_size' has been updated by the
+ 			 * call to memory_map().
+ 			 */
+-			efree(kernel_start, 0x800000);
+ 			efree((UINTN)map_buf, _map_size);
+-			file_set_position(file, (UINT64)nr_setup_secs * 512);
+ 			goto again;
+ 		}
+ 		goto out;
+diff --git a/loaders/bzimage/bzimage.h b/loaders/bzimage/bzimage.h
+index 370d126..cd11fd3 100644
+--- a/loaders/bzimage/bzimage.h
++++ b/loaders/bzimage/bzimage.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -80,6 +76,9 @@ struct setup_header {
+ 	UINT32 payload_offset;
+ 	UINT32 payload_length;
+ 	UINT64 setup_data;
++	UINT64 pref_address;
++	UINT32 init_size;
++	UINT32 handover_offset;
+ } __attribute__((packed));
+ 
+ struct efi_info {
+diff --git a/loaders/bzimage/graphics.c b/loaders/bzimage/graphics.c
+index 22a4d81..b14cae1 100644
+--- a/loaders/bzimage/graphics.c
++++ b/loaders/bzimage/graphics.c
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+diff --git a/loaders/bzimage/i386.h b/loaders/bzimage/i386.h
+index 3199a02..593e2af 100644
+--- a/loaders/bzimage/i386.h
++++ b/loaders/bzimage/i386.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -46,4 +42,19 @@ static inline void kernel_jump(EFI_PHYSICAL_ADDRESS kernel_start,
+ 		      :: "m" (boot_params), "m" (kernel_start));
+ }
+ 
++static inline void handover_jump(EFI_HANDLE image, struct boot_params *bp,
++				 EFI_PHYSICAL_ADDRESS kernel_start)
++{
++	kernel_start += bp->hdr.handover_offset;
++
++	asm volatile ("cli		\n"
++		      "pushl %0         \n"
++		      "pushl %1         \n"
++		      "pushl %2         \n"
++		      "movl %3, %%ecx	\n"
++		      "jmp *%%ecx	\n"
++		      :: "m" (bp), "m" (ST),
++		         "m" (image), "m" (kernel_start));
++}
++
+ #endif /* __I386_H__ */
+diff --git a/loaders/bzimage/x86_64.h b/loaders/bzimage/x86_64.h
+index e3e7a33..b63710e 100644
+--- a/loaders/bzimage/x86_64.h
++++ b/loaders/bzimage/x86_64.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+@@ -37,6 +33,7 @@
+ #define EFI_LOADER_SIGNATURE	"EL64"
+ 
+ typedef void(*kernel_func)(void *, struct boot_params *);
++typedef void(*handover_func)(void *, EFI_SYSTEM_TABLE *, struct boot_params *);
+ 
+ static inline void kernel_jump(EFI_PHYSICAL_ADDRESS kernel_start,
+ 			       struct boot_params *boot_params)
+@@ -55,4 +52,19 @@ static inline void kernel_jump(EFI_PHYSICAL_ADDRESS kernel_start,
+ 	kf(NULL, boot_params);
+ }
+ 
++static inline void handover_jump(EFI_HANDLE image, struct boot_params *bp,
++				 EFI_PHYSICAL_ADDRESS kernel_start)
++{
++	UINT32 offset = bp->hdr.handover_offset;
++	handover_func hf;
++
++	asm volatile ("cli");
++
++	/* The 64-bit kernel entry is 512 bytes after the start. */
++	kernel_start += 512;
++
++	hf = (handover_func)(kernel_start + offset);
++	hf(image, ST, bp);
++}
++
+ #endif /* __X86_64_H__ */
+diff --git a/loaders/loader.h b/loaders/loader.h
+index 2a3d271..7e26eff 100644
+--- a/loaders/loader.h
++++ b/loaders/loader.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+diff --git a/malloc.c b/malloc.c
+index 8f2b18c..d10b314 100644
+--- a/malloc.c
++++ b/malloc.c
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+diff --git a/protocol.h b/protocol.h
+index 6881d70..2972d5d 100644
+--- a/protocol.h
++++ b/protocol.h
+@@ -12,10 +12,6 @@
+  *      notice, this list of conditions and the following disclaimer
+  *      in the documentation and/or other materials provided with the
+  *      distribution.
+- *    * Neither the name of Intel Corporation nor the names of its
+- *      contributors may be used to endorse or promote products
+- *      derived from this software without specific prior written
+- *      permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
