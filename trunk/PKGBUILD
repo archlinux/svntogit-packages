@@ -5,13 +5,13 @@
 
 pkgname=graphviz
 pkgver=2.30.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Graph visualization software'
 url='http://www.graphviz.org/'
 license=('custom:EPL')
 arch=('i686' 'x86_64')
 depends=('libltdl' 'gd' 'librsvg' 'libxaw' 'ghostscript' 'pango' 'gts')
-makedepends=('swig' 'mono' 'guile' 'lua51' 'ocaml' 'perl' 'php' 'python2' 'r' 'ruby' 'tk' 'qt4')
+makedepends=('swig' 'mono' 'guile' 'lua51' 'ocaml' 'perl' 'php' 'python2' 'r' 'ruby' 'tk' 'qt')
 optdepends=('mono: sharp bindings'
             'guile: guile bindings'
             'lua51: lua bindings'
@@ -22,7 +22,7 @@ optdepends=('mono: sharp bindings'
             'r: r bindings'
             'ruby: ruby bindings'
             'tcl: tcl bindings'
-            'qt4: gvedit')
+            'qt: gvedit')
 source=("${url}/pub/${pkgname}/stable/SOURCES/${pkgname}-${pkgver}.tar.gz"
         'LICENSE')
 sha1sums=('596c1ddf60c5428c5c4700d10f3ea86534195311'
@@ -40,14 +40,13 @@ build() {
 		-i config/config_ruby.rb
 
 	sed '/LIBPOSTFIX="64"/d' -i configure
-	source /etc/profile.d/qt4.sh
 	export PYTHON=python2
 	export LUA=lua5.1
 
-	./configure \
-		--prefix=/usr \
-		--with-cgraph=false # apps need porting to that new api first
+	# install the graph and cgraph api alongside
+	sed 's/@WITH_CGRAPH_FALSE@//g' -i lib/graph/Makefile.in
 
+	./configure --prefix=/usr
 	make || sed '/caml_array_length/d' -i tclpkg/gv/gv_ocaml.cpp # swig goes wonky
 	make
 }
@@ -58,4 +57,7 @@ package() {
 
 	# http://www.graphviz.org/License.php
 	install -Dm644 ../LICENSE "${pkgdir}"/usr/share/licenses/graphviz/LICENSE
+
+	# everything has been built against cgraph, but use graph as default api
+	sed '/#define WITH_CGRAPH 1/d' -i "${pkgdir}"/usr/include/graphviz/types.h
 }
