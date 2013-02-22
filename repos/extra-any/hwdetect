@@ -10,28 +10,24 @@ usage () {
 	echo "  Options:"
 	echo "    --kernel_version=      use kernel version (no autodetect)"
 	echo "    --kernel_directory=    use kernel module directory (no autodetect)"
-	echo "    --ide-legacy           use old ide modules instead of pata"
 	echo "    --load-modules         load all detected modules"
 	echo "    --unload-modules       unload all detected modules"
 	echo "    --show-modules         show all detected modules"
 	echo "    --show-modules-order   shows load order of detected modules"
 	echo "    --show-agp             show AGP modules"
-	echo "    --show-acpi            show ACPI modules"	
-	echo "    --show-ide             show IDE modules"
-	echo "    --show-pata            show PATA modules"
-	echo "    --show-scsi            show SCSI modules"
-	echo "    --show-sata            show SATA modules"
-	echo "    --show-usb             show USB modules"
-	echo "    --show-fw              show FIREWIRE modules"
+	echo "    --show-acpi            show ACPI modules"
+        echo "    --show-block           show BLOCK DEVICE modules"
 	echo "    --show-net             show NETWORK modules"
+	echo "    --show-drm             show DRM modules"
 	echo "    --show-input           show INPUT modules"
 	echo "    --show-irda            show IRDA modules"
 	echo "    --show-isdn            show ISDN modules"
 	echo "    --show-pcmcia          show PCMCIA modules"
 	echo "    --show-sound           show SOUND modules"
 	echo "    --show-staging         show STAGING modules"
-	echo "    --show-video           show VIDEO modules"
 	echo "    --show-other           show OTHER modules"
+	echo "    --modules              show all detected MODULES"
+	echo "    --modules-not-loaded   show all detected MODULES but not actually loaded"
 	echo ""
 	echo "  For /etc/mkinitcpio.conf use:"
 	echo "    --filesystem           add filesystems to MODULES="
@@ -46,21 +42,10 @@ usage () {
 	echo "    --hooks                show HOOKS="
 	echo "    --dmraid               add dmraid to HOOKS="
 	echo "    --keymap               add keymap to HOOKS="
-	echo "    --usb                  add usb to HOOKS="
-	echo "    --usbinput             add usbinput to HOOKS="
-	echo "    --fw                   add fw to HOOKS="
 	echo "    --pcmcia               add pcmcia to HOOKS="
 	echo "    --nfs                  add net to HOOKS="
 	echo "    --btrfs                add btrfs to HOOKS="
 	echo "    --shutdown             add shutdown to HOOKS="
-	echo ""
-	echo "  For persistent sound and network files use:"
-	echo "    --net                  generate /tmp/network_persistent.rules"
-	echo "    --sound                generate /tmp/sound_persistent.conf"
-	echo ""
-	echo "    --modules              show all detected MODULES"
-	echo "    --modules-not-loaded   show all detected MODULES but not actually loaded"
-	echo ""
 	exit 1
 }
 
@@ -96,9 +81,6 @@ if [ "$KERNEL_VERSION" = "" ]; then
 	KERNEL_VERSION="$(uname -r)"
 fi
 
-# IDE/PATA switch
-[ "$(echo $* | grep '\-ide-legacy')" ] && IDE_LEGACY=1
-
 # uvesafb switch
 [ "$(echo $* | grep '\-uvesafb')" ] && UVESAFB=1
 
@@ -107,15 +89,6 @@ fi
 
 # keymap switch
 [ "$(echo $* | grep '\-keymap')" ] && KEYMAP=1
-
-# usb switch
-[ "$(echo $* | grep '\-usb ')" ] && USB=1
-
-# usbinput switch
-[ "$(echo $* | grep '\-usbinput')" ] && USBINPUT=1
-
-# fw switch
-[ "$(echo $* | grep '\-fw')" ] && FW=1
 
 # pcmcia switch
 [ "$(echo $* | grep '\-pcmcia')" ] && PCMCIA=1
@@ -247,11 +220,6 @@ aliases=$(find /sys/ -noleaf -name modalias  -exec cat {} +)
 # generate files for the different actions
 modprobe -i -a --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends $aliases >> /tmp/modules-plain 2>/dev/null
 
-# fix ide cdrom detection on proliant 1600
-if [ "$(echo $aliases | grep 'pci:v00000E11d00000001sv00000000sd00000000bc06sc02i00')" ]; then
-	modprobe -i --dirname=$KERNEL_DIRECTORY --set-version=$KERNEL_VERSION --show-depends ide-generic >> /tmp/modules-plain 2>/dev/null
-fi
-
 # find PNP devices like parports, soundcards etc.
 #   (workaround for rtc, pcspkr, irtty-sir and analog are included)
 if [ "$(find /sys/devices -noleaf -name 'id' | grep /pnp)" ]; then
@@ -294,19 +262,14 @@ fi
 sort -u /tmp/modules-plain >> /tmp/modules-stripped
 
 # OTHER modules loading first for speed up!
-grep -v "ide/" /tmp/modules-stripped | grep -v "scsi/" | grep -v "fusion/" | grep -v "block/sx8" | grep -v "message/fusion" | \
+grep -v "scsi/" /tmp/modules-stripped | grep -v "fusion/" | grep -v "block/sx8" | grep -v "message/fusion" | \
 	grep -v  "block/cciss" | grep -v "block/cpqarray" | grep -v "block/DAC960" | grep -v "block/virtio" | grep -v "ata/" | \
 	grep -v "net/" | grep -v "pcmcia/" | grep -v "usb/" | \
 	grep -v "firewire" | grep -v "ieee1394/" | grep -v "usbhid/" | grep -v "staging/" | grep -v "wireless/" | grep -v "virtio_pci" >> /tmp/modules-sorted
 # load virtio first!
 grep "virtio_pci" /tmp/modules-stripped  >> /tmp/modules-sorted
 # make a correct order for the modules, internal devices have priority!
-# only use old ide modules if boot parameter 'ide-legacy' is given
-if [ "$IDE_LEGACY" = "1" ]; then
-	grep "ide/" /tmp/modules-stripped  | grep -v "ide-pci-generic" >> /tmp/modules-sorted
-else
-	grep "ata/pata" /tmp/modules-stripped | grep -v "pata_acpi" >> /tmp/modules-sorted
-fi
+grep "ata/pata" /tmp/modules-stripped | grep -v "pata_acpi" >> /tmp/modules-sorted
 grep "scsi/" /tmp/modules-stripped  | grep -v "sd_mod" | grep -v "sr_mod" | grep -v "/sg.ko" | grep -v "/st.ko" >> /tmp/modules-sorted
 grep "block/" /tmp/modules-stripped | grep -v "virtio_blk" | grep -v "sx8" | grep -v "nbd" | grep -v "pktcdvd" | grep -v "floppy" >> /tmp/modules-sorted
 grep "fusion/" /tmp/modules-stripped >> /tmp/modules-sorted
@@ -407,21 +370,19 @@ while [ -n "$*"  ]; do
 		--show-modules)
 			showlist "AGP    " $(listmods agp/)
 			showlist "ACPI   " $(listmods acpi/)
-			showlist "IDE    " $(listmods ide/ ide-)
-			showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix)
-			showlist "SCSI   " $(listmods virtio/virtio_pci) $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy)
-			showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8)
-			showlist "USB    " $(listmods usb/ usb/input)
-			showlist "FW     " $(listmods firewire/) $(listmods ieee1394/)
+			showlist "BLOCK  " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) \
+						  $(listmods virtio/virtio_pci) $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) \
+						  $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) \
+						  $(listmods usb/ usb/input) $(listmods firewire/) $(listmods ieee1394/)
 			showlist "NET    " $(listmods net/ irda/)
+			showlist "DRM    " $(listmods drm/)
 			showlist "INPUT  " $(listmods input/ pcspkr) $(listmods hid/)
 			showlist "IRDA   " $(listmods irda/)
 			showlist "ISDN   " $(listmods isdn/)
 			showlist "PCMCIA " $(listmods pcmcia/)
 			showlist "SOUND  " $(listmods pcspkr) $(listmods sound/)
 			showlist "STAGING" $(listmods staging/)
-			showlist "VIDEO  " $(listmods video/)
-			showlist "OTHER  " $(listmods modules/ agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio virtio/virtio_pci ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/)
+			showlist "OTHER  " $(listmods modules/ agp/ acpi/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio virtio/virtio_pci ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ drm/ firewire/ hid/ staging/)
 			;;
 
 		--show-modules-order)
@@ -430,12 +391,10 @@ while [ -n "$*"  ]; do
 
 		--show-agp)    showlist "AGP    " $(listmods agp/) ;;
 		--show-acpi)   showlist "ACPI   " $(listmods acpi/) ;;
-		--show-ide)    showlist "IDE    " $(listmods ide/ ide-) ;;
-		--show-pata)   showlist "PATA   " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) ;;
-		--show-scsi)   showlist "SCSI   " $(listmods virtio/virtio_pci) $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) ;;
-		--show-sata)   showlist "SATA   " $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) ;;
-		--show-usb)    showlist "USB    " $(listmods usb/ usb/input) ;;
-		--show-fw)     showlist "FW     " $(listmods firewire/) $(listmods ieee1394/) ;;
+		--show-block)  showlist "BLOCK  " $(listmods ata/pata pata_acpi) $(listmods ata/ata_piix) \
+						  $(listmods virtio/virtio_pci) $(listmods scsi/) $(listmods message/fusion/) $(listmods drivers/block/ nbd pktcdvd sx8 floppy) \
+						  $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) \
+						  $(listmods usb/ usb/input) $(listmods firewire/) $(listmods ieee1394/) ;;
 		--show-net)    showlist "NET    " $(listmods net/ irda/) ;;
 		--show-input)  showlist "INPUT  " $(listmods input/ pcspkr) $(listmods hid/) ;;
 		--show-irda)   showlist "IRDA   " $(listmods irda/) ;;
@@ -443,8 +402,8 @@ while [ -n "$*"  ]; do
 		--show-pcmcia) showlist "PCMCIA " $(listmods pcmcia/) ;;
 		--show-sound)  showlist "SOUND  " $(listmods pcspkr) $(listmods sound/) ;;
 		--show-staging) showlist "STAGING" $(listmods staging/) ;;
-		--show-video)  showlist "VIDEO  " $(listmods video/) ;;
-		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ ide/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio virtio/virtio_pci ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ video/ firewire/ hid/ staging/) ;;
+		--show-drm)  showlist "DRM  " $(listmods drm/) ;;
+		--show-other)  showlist "OTHER  " $(listmods .ko agp/ acpi/ scsi/ message/fusion block/sx8 block/cciss block/cpqarray block/DAC960 block/virtio virtio/virtio_pci ata/ usb/ ieee1394 net/ isdn/ input/ irda/ pcmcia/ sound/ drm/ firewire/ hid/ staging/) ;;
 		--filesystem)   FILESYSTEM="ext2 ext3 ext4 nilfs2 btrfs reiserfs xfs jfs vfat"
 				for i in $FILESYSTEM; do
 					 [ "$(grep $i /tmp/.blkid)" ] && FS="$FS $i"
@@ -453,7 +412,7 @@ while [ -n "$*"  ]; do
 				MODULES_INITRAMFS="$MODULES_INITRAMFS $FS"
 				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
-		--hostcontroller)HOSTCONTROLLER="$(listmods virtio/virtio_pci) $(listmods ide/ ide-) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/ virtio_blk nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods xhci-hcd) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $(listmods virtio_blk)"
+		--hostcontroller)HOSTCONTROLLER="$(listmods virtio/virtio_pci) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/ virtio_blk nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods xhci-hcd) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $(listmods virtio_blk)"
 				 MODULES_INITRAMFS="$MODULES_INITRAMFS $HOSTCONTROLLER"
 				 showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				 ;;
@@ -484,21 +443,6 @@ while [ -n "$*"  ]; do
 				MODULES_INITRAMFS="$FB $MODULES_INITRAMFS "
 				! [ "$HOOKS" = "1" ] && showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
 				;;
-		--net)  : >/tmp/network_persistent.rules
-			for i in $(ls /sys/class/net/ | grep -v ^lo); do
-			      echo "SUBSYSTEM==\"net\", ATTR{address}==\"$(cat /sys/class/net/${i}/address)\", NAME=\"${i}\"" >>/tmp/network_persistent.rules
-			done
-
-			;;
-		--sound) : >/tmp/sound_persistent.conf
-			 SOUND_EXPORTED=""
-			 if [ -e /proc/asound/modules ]; then
-				for i in $(cat /proc/asound/modules | cut -d ' ' -f 3); do
-					SOUND_EXPORTED="$SOUND_EXPORTED $i"
-				done
-				! [[ "$SOUND_EXPORTED" = "" ]] && echo "options snd slots=$(echo $SOUND_EXPORTED | sed -e 's# #,#g' -e 's#^,##g')" >> /tmp/sound_persistent.conf
-			 fi
-			 ;;
 		--modules) showlist2 "MODULES" \($(listmods modules/)\) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
 			 ;;
 		--modules-not-loaded) showlist4 "MODULES" $(listmods modules/) | sed -e 's/(\ /(/g' -e 's/\ )/)/g' -e 's/\ \ /\ /g'
@@ -507,22 +451,13 @@ while [ -n "$*"  ]; do
 			if [ "$HOOKS_DIR" = "" ]; then
 				HOOKS_DIR="/usr/lib/initcpio/install"
 			fi
-			START_HOOKS="base v86d udev keymap fsck autodetect ide pata scsi sata usb fw pcmcia net dmraid usbinput $ADVANCED btrfs filesystems shutdown"
+			START_HOOKS="base v86d udev keymap autodetect modconf block pcmcia net dmraid keyboard $ADVANCED btrfs filesystems fsck shutdown"
 			# remove the ones that don't exist on the system
 			for i in ${START_HOOKS}; do
 				if ! [ -e "${HOOKS_DIR}/$i" ]; then 
 					START_HOOKS=$(echo $START_HOOKS | sed -e "s/${i}\ //g")
 				fi
 			done
-			# ide/pata check
-			if [ "${IDE_LEGACY}" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/pata//g")
-			else
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/ide//g")
-			fi
-			if !  [ "$USBINPUT" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/usbinput//g")
-			fi
 			if ! [ "$KEYMAP" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/keymap//g")
 			fi
@@ -531,12 +466,6 @@ while [ -n "$*"  ]; do
 			fi
 			if ! [ "$DMRAID" = "1" ]; then 
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/dmraid//g")
-			fi
-			if ! [ "$USB" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/usb\ //g")
-			fi
-			if ! [ "$FW" = "1" ]; then
-				START_HOOKS=$(echo $START_HOOKS | sed -e "s/fw//g")
 			fi
 			if ! [ "$PCMCIA" = "1" ]; then
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/pcmcia//g")
