@@ -1,0 +1,69 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer: Keshav P R <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+# Contributor:  Mantas Mikulėnas <grawity@gmail.com>
+
+pkgname="gummiboot-efi"
+pkgver="23"
+pkgrel="2"
+pkgdesc="Simple text-mode UEFI Boot Manager"
+url="http://freedesktop.org/wiki/Software/gummiboot"
+arch=('any')
+license=('LGPL2.1')
+makedepends=('gnu-efi-libs')
+depends=('dosfstools' 'efibootmgr')
+optdepends=('mactel-boot: For bless command in Apple Mac systems')
+conflicts=('gummiboot-efi-x86_64' 'gummiboot-efi-i386')
+provides=('gummiboot-efi-x86_64' 'gummiboot-efi-i386')
+replaces=('gummiboot-efi-x86_64' 'gummiboot-efi-i386')
+options=('!strip' '!makeflags')
+source=("ftp://ftp.archlinux.org/other/gummiboot-efi/gummiboot-${pkgver}.tar.gz"
+        'gummiboot-fix-makefile.patch'
+        'loader.conf'
+        'arch.conf')
+
+build() {
+	if [[ "${CARCH}" != "x86_64" ]]; then
+		msg "${pkgname} can be built only in an x86_64 system. Exiting."
+		exit 1
+	fi
+	
+	cd "${srcdir}/gummiboot-${pkgver}/"
+	
+	## Fix Makefile to enable compile for both x86_64 and i386 UEFI
+	patch -Np1 -i "${srcdir}/gummiboot-fix-makefile.patch"
+	
+	unset CFLAGS
+	unset CPPFLAGS
+	unset LDFLAGS
+	
+	## Compile gummiboot for x86_64 UEFI
+	cp -r "${srcdir}/gummiboot-${pkgver}" "${srcdir}/gummiboot-${pkgver}-x86_64"
+	cd "${srcdir}/gummiboot-${pkgver}-x86_64/"
+	ARCH="x86_64" CFLAGS="-m64" LIBDIR="/usr/lib" make gummibootx64.efi
+	
+	unset CFLAGS
+	unset CPPFLAGS
+	unset LDFLAGS
+	
+	## Compile gummiboot for i386 aka IA32 UEFI
+	cp -r "${srcdir}/gummiboot-${pkgver}" "${srcdir}/gummiboot-${pkgver}-i386"
+	cd "${srcdir}/gummiboot-${pkgver}-i386/"
+	ARCH="i686" CFLAGS="-m32" LIBDIR="/usr/lib32" make gummibootia32.efi
+}
+
+package() {
+	install -d "${pkgdir}/usr/lib/gummiboot/loader/entries/"
+	
+	## Install gummiboot UEFI applications
+	install -D -m0644 "${srcdir}/gummiboot-${pkgver}-x86_64/gummibootx64.efi" "${pkgdir}/usr/lib/gummiboot/gummibootx64.efi"
+	install -D -m0644 "${srcdir}/gummiboot-${pkgver}-i386/gummibootia32.efi" "${pkgdir}/usr/lib/gummiboot/gummibootia32.efi"
+	
+	## Install gummiboot example configuration files
+	install -D -m0644 "${srcdir}/loader.conf" "${pkgdir}/usr/lib/gummiboot/loader/loader.conf"
+	install -D -m0644 "${srcdir}/arch.conf" "${pkgdir}/usr/lib/gummiboot/loader/entries/arch.conf"
+}
+sha1sums=('b883516a6dbec17823ddefb6b5789b6183132814'
+          'ec31cc88b3b0de26493b1b9ea06332f717a1f06f'
+          '82a59f90d9138c26f8db52bb8e94991602cf1edd'
+          'aff6e152c3f7494e6113a8e2f073810366433015')
