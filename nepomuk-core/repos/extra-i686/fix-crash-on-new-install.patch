@@ -1,0 +1,37 @@
+commit b94e9f73bd86593928988e5626511acea805b7be
+Author: Edward Toroshchin <kde@hades.name>
+Date:   Sun Feb 3 17:57:23 2013 +0100
+
+    fileindexer: initialize objects in correct order
+    
+    The IndexCleaner job created in IndexScheduler could complete before
+    m_eventMonitor is initialized, which leads to crash in slotCleaningDone.
+    
+    REVIEW: 108754
+
+diff --git a/services/fileindexer/indexscheduler.cpp b/services/fileindexer/indexscheduler.cpp
+index a13de1b..3ad7819 100644
+--- a/services/fileindexer/indexscheduler.cpp
++++ b/services/fileindexer/indexscheduler.cpp
+@@ -51,10 +51,6 @@ Nepomuk2::IndexScheduler::IndexScheduler( QObject* parent )
+         QFile::remove(KStandardDirs::locateLocal("data", QLatin1String("nepomuk/file-indexer-error-log")));
+     }
+ 
+-    m_cleaner = new IndexCleaner(this);
+-    connect( m_cleaner, SIGNAL(finished(KJob*)), this, SLOT(slotCleaningDone()) );
+-    m_cleaner->start();
+-
+     FileIndexerConfig* indexConfig = FileIndexerConfig::self();
+     connect( indexConfig, SIGNAL(includeFolderListChanged(QStringList,QStringList)),
+              this, SLOT(slotIncludeFolderListChanged(QStringList,QStringList)) );
+@@ -106,6 +102,10 @@ Nepomuk2::IndexScheduler::IndexScheduler( QObject* parent )
+     connect( m_eventMonitor, SIGNAL(powerManagementStatusChanged(bool)),
+              this, SLOT(slotScheduleIndexing()) );
+ 
++    m_cleaner = new IndexCleaner(this);
++    connect( m_cleaner, SIGNAL(finished(KJob*)), this, SLOT(slotCleaningDone()) );
++    m_cleaner->start();
++
+     // Special settings for the queues
+     KConfig config( "nepomukstrigirc" );
+     KConfigGroup cfg = config.group( "Indexing" );
