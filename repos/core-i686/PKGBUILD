@@ -19,14 +19,16 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         # standard config files for mkinitcpio ramdisk
         'linux.preset'
         'change-default-console-loglevel.patch'
-        'fat-3.6.x.patch')
+        'fat-3.6.x.patch'
+        'CVE-2013-1763.patch')
 md5sums=('21223369d682bcf44bcdfe1521095983'
          '375fa67b3daba9e6040f13a0a29bf543'
          '6a6b620836639fa5f989f9c9c2592d6e'
          '03666db0cd0a1f59c0b71b41eb2353eb'
          'eb14dcfd80c00852ef81ded6e826826a'
          '9d3c56a4b999c8bfbd4018089a62f662'
-         '88d501404f172dac6fcb248978251560')
+         '88d501404f172dac6fcb248978251560'
+         '420991808fe4cba143013427c0737aa9')
 
 _kernelname=${pkgbase#linux}
 
@@ -43,6 +45,10 @@ build() {
   # remove this when a Kconfig knob is made available by upstream
   # (relevant patch sent upstream: https://lkml.org/lkml/2011/7/26/227)
   patch -Np1 -i "${srcdir}/change-default-console-loglevel.patch"
+
+  # Fix security vulnetability CVE-2013-1763.patch
+  # https://bugs.archlinux.org/task/34005
+  patch -Np1 -i "${srcdir}/CVE-2013-1763.patch"
 
   # fix cosmetic fat issue
   # https://bugs.archlinux.org/task/32916
@@ -178,7 +184,7 @@ _package-headers() {
 
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/include"
 
-  for i in acpi asm-generic config crypto drm generated linux math-emu \
+  for i in acpi asm-generic config crypto drm generated keys linux math-emu \
     media net pcmcia scsi sound trace uapi video xen; do
     cp -a include/${i} "${pkgdir}/usr/src/linux-${_kernver}/include/"
   done
