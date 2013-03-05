@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.17.3
-pkgrel=2
+pkgrel=3
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
 license=('GPL')
@@ -16,9 +16,11 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl')
 makedepends=('doxygen')
 source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
+        'ffmpeg.patch'
         'tmpfiles.d'
         'rc.d') 
 sha1sums=('f684d73a7517371a4461afdb2439f9533b51a49d'
+          '8a06d04bfdf4e0dc43479907dc9b3bd7fba6dd10'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '3470d489565f0ed479f1665dd2876f66acb5a585')
 
@@ -27,6 +29,8 @@ install=install
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	patch -p1 -i ../ffmpeg.patch
 
 	./configure \
 		--prefix=/usr \
