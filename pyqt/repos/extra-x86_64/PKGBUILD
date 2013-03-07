@@ -5,28 +5,30 @@
 
 pkgbase=pyqt
 pkgname=('pyqt-common' 'pyqt' 'python2-pyqt')
-pkgver=4.9.6
-pkgrel=2
+pkgver=4.10
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
-makedepends=('qt4' 'python-sip' 'python-dbus' 'python2-sip' 'phonon' 'mesa'
+makedepends=('python-sip' 'python-dbus' 'python2-sip' 'phonon' 'mesa'
              'python2-opengl' 'qt-assistant-compat' 'qtwebkit' 'python2-dbus')
 source=("http://downloads.sourceforge.net/${pkgbase}/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('514e1f9597771dc732ba75ba9fa5c6b6')
+md5sums=('b5953e96d0f82d322d0cba008163321e')
 
 build() {
-  . /etc/profile.d/qt4.sh
-
   cp -r PyQt-x11-gpl-${pkgver} Py2Qt-x11-gpl-${pkgver}
 
   cd PyQt-x11-gpl-${pkgver}
   python configure.py \
     --confirm-license \
-    --qsci-api
+    --qsci-api \
+    -q /usr/bin/qmake-qt4
 
   # Thanks Gerardo for the rpath fix
   find -name 'Makefile' | xargs sed -i 's|-Wl,-rpath,/usr/lib||g;s|-Wl,-rpath,.* ||g'
+
+  # Ugly workaround to fix build
+  sed -i 's|/usr/include/qt4/phonon|/usr/include/phonon|' phonon/Makefile
 
   make
 
@@ -35,16 +37,21 @@ build() {
   python2 configure.py \
     --confirm-license \
     -v /usr/share/sip \
-    --qsci-api
+    --qsci-api \
+    -q /usr/bin/qmake-qt4
 
   # Thanks Gerardo for the rpath fix
   find -name 'Makefile' | xargs sed -i 's|-Wl,-rpath,/usr/lib||g;s|-Wl,-rpath,.* ||g'
+  
+  # Ugly workaround to fix build
+  sed -i 's|/usr/include/qt4/phonon|/usr/include/phonon|' phonon/Makefile
 
   make
 }
 
 package_pyqt-common(){
   pkgdesc="Common PyQt files shared between pyqt and python2-pyqt"
+  depends=('qt4')
   
   cd PyQt-x11-gpl-${pkgver}
   make -C pyrcc DESTDIR="${pkgdir}" install
