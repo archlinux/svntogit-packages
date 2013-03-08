@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=197
-pkgrel=4
+pkgver=198
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -13,13 +13,11 @@ makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
-        '0001-dbus-fix-serialization-of-calendar-timers.patch'
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         'use-split-usr-path.patch')
-md5sums=('56a860dceadfafe59f40141eb5223743'
-         '0341d680d5ab16bab3978bac96bf8797'
+md5sums=('26a75e2a310f8c1c1ea9ec26ddb171c5'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
@@ -31,13 +29,8 @@ build() {
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
 
-  # fix assertion failure when using calendar timers
-  # upstream 3761902e2e120849c283106fd4b78b6adec7367e
-  patch -Np1 <"$srcdir/0001-dbus-fix-serialization-of-calendar-timers.patch"
-
   ./configure \
-      PYTHON=python2 \
-      PYTHON_CONFIG=python2-config \
+      --enable-static \
       --libexecdir=/usr/lib \
       --localstatedir=/var \
       --sysconfdir=/etc \
@@ -47,9 +40,6 @@ build() {
       --disable-ima \
       --with-sysvinit-path= \
       --with-sysvrcnd-path=
-
-  # can't use py3k yet with systemd-analyze -- the 'plot' verb will not work.
-  # https://pokersource.info/show_bug.cgi?id=50989
 
   make
 }
@@ -69,8 +59,6 @@ package_systemd() {
               'libmicrohttpd: systemd-journal-gatewayd'
               'quota-tools: kernel-level quota management'
               'python: systemd library bindings'
-              'python2-cairo: systemd-analyze'
-              'python2-gobject: systemd-analyze'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
           etc/dbus-1/system.d/org.freedesktop.hostname1.conf
@@ -90,14 +78,6 @@ package_systemd() {
 
   install -dm755 "$pkgdir/bin"
   ln -s ../usr/lib/systemd/systemd "$pkgdir/bin/systemd"
-
-  # move bash-completion and symlink for *ctl's
-  install -Dm644 "$pkgdir/etc/bash_completion.d/systemd-bash-completion.sh" \
-    "$pkgdir/usr/share/bash-completion/completions/systemctl"
-  for ctl in {login,journal,timedate,locale,hostname,systemd-coredump}ctl udevadm; do
-    ln -s systemctl "$pkgdir/usr/share/bash-completion/completions/$ctl"
-  done
-  rm -rf "$pkgdir/etc/bash_completion.d"
 
   # don't write units to /etc by default -- we'll enable this on post_install
   # as a sane default
