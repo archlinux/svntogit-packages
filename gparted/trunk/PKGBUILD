@@ -5,12 +5,12 @@
 
 pkgname=gparted
 pkgver=0.14.1
-pkgrel=2
+pkgrel=3
 pkgdesc="A Partition Magic clone, frontend to GNU Parted"
 arch=('i686' 'x86_64')
 url="http://gparted.sourceforge.net"
 license=('GPL')
-depends=('parted' 'gtkmm' 'hicolor-icon-theme')
+depends=('parted' 'gtkmm' 'hicolor-icon-theme' 'polkit-gnome')
 makedepends=('intltool' 'pkg-config' 'gnome-doc-utils')
 optdepends=('dosfstools: for FAT16 and FAT32 partitions'
             'jfsutils: for jfs partitions'
@@ -20,12 +20,12 @@ optdepends=('dosfstools: for FAT16 and FAT32 partitions'
             'nilfs-utils: for nilfs2 support'
             'polkit-gnome: to run gparted directly from menu'
             'gpart: for recovering corrupt partition tables'
-            'mtools')
+            'mtools: utilities to access MS-DOS disks')
 install=gparted.install
 source=("http://downloads.sourceforge.net/project/${pkgname}/${pkgname}/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.bz2"
         'org.archlinux.pkexec.gparted.policy')
 md5sums=('1ffe859c70e102a776dffb1ff0a2164a'
-         '27c264cfad8fa413d75954dda7a2dd50')
+         'c031d7d2b845ccb025b9f83e0ddd5653')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -42,6 +42,14 @@ package() {
   # Install policy file
   install -Dm644 "${srcdir}/org.archlinux.pkexec.gparted.policy" "${pkgdir}/usr/share/polkit-1/actions/org.archlinux.pkexec.gparted.policy"
 
+  # We need rename the original binary
+  mv "${pkgdir}/usr/sbin/gparted" "${pkgdir}/usr/sbin/gparted.elf"
+
+  # Install launcher script
+  echo '#!/bin/sh' > ${pkgdir}/usr/sbin/gparted
+  echo 'pkexec "/usr/sbin/gparted.elf" "$@"' >> ${pkgdir}/usr/sbin/gparted
+  chmod 755 ${pkgdir}/usr/sbin/gparted
+
   # Modify desktop file
-  sed -i -e "s|^Exec=.*|Exec=pkexec --disable-internal-agent /usr/sbin/gparted|" "${pkgdir}/usr/share/applications/gparted.desktop"
+  sed -i -e "s|^Exec=.*|Exec=pkexec --disable-internal-agent /usr/sbin/gparted.elf|" "${pkgdir}/usr/share/applications/gparted.desktop"
 }
