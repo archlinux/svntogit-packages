@@ -1,0 +1,177 @@
+From beeddaae1da253d1a442228a75f80ef40a0204ac Mon Sep 17 00:00:00 2001
+From: Michel Dänzer <michel.daenzer@amd.com>
+Date: Wed, 31 Oct 2012 15:56:00 +0000
+Subject: Don't use glBlitFramebufferEXT for overlapping copies.
+
+According to the GL_EXT_framebuffer_blit spec, the result of doing so is
+undefined. But we need well-defined results. :)
+
+Signed-off-by: Michel Dänzer <michel.daenzer@amd.com>
+---
+diff --git a/src/glamor_copyarea.c b/src/glamor_copyarea.c
+index 7d06833..4e6f953 100644
+--- a/src/glamor_copyarea.c
++++ b/src/glamor_copyarea.c
+@@ -318,7 +318,8 @@ __glamor_copy_n_to_n(DrawablePtr src,
+ 		dx, dy,
+ 		src_pixmap, dst_pixmap);
+ #ifndef GLAMOR_GLES2
+-	if ((overlaped || glamor_priv->state != RENDER_STATE
++	if (!overlaped &&
++	    (glamor_priv->state != RENDER_STATE
+ 	     || !src_pixmap_priv->base.gl_tex || !dst_pixmap_priv->base.gl_tex)
+ 	    && glamor_copy_n_to_n_fbo_blit(src, dst, gc, box, nbox, dx,
+ 					   dy)) {
+--
+cgit v0.9.0.2-2-gbebe
+From f1457c1c59efdadbad25f01dce9433643d688844 Mon Sep 17 00:00:00 2001
+From: Zhigang Gong <zhigang.gong@linux.intel.com>
+Date: Tue, 13 Nov 2012 02:08:02 +0000
+Subject: glamor_compositerects: Need to initialize region before fallback.
+
+As we need to call DamageRegionAppend even for fallback path,
+we must initialize the region before do that. Pointed by
+Igor Vagulin.
+
+https://bugs.freedesktop.org/show_bug.cgi?id=56940
+
+Signed-off-by: Zhigang Gong <zhigang.gong@linux.intel.com>
+---
+diff --git a/src/glamor_compositerects.c b/src/glamor_compositerects.c
+index 5fe1bbf..f1564a2 100644
+--- a/src/glamor_compositerects.c
++++ b/src/glamor_compositerects.c
+@@ -131,16 +131,6 @@ glamor_composite_rectangles(CARD8	 op,
+ 		return;
+ 	}
+ 
+-	pixmap = glamor_get_drawable_pixmap(dst->pDrawable);
+-	priv = glamor_get_pixmap_private(pixmap);
+-
+-	if (!GLAMOR_PIXMAP_PRIV_HAS_FBO(priv))
+-		goto fallback;
+-	if (dst->alphaMap) {
+-		DEBUGF("%s: fallback, dst has an alpha-map\n", __FUNCTION__);
+-		goto fallback;
+-	}
+-
+ 	if ((color->red|color->green|color->blue|color->alpha) <= 0x00ff) {
+ 		switch (op) {
+ 		case PictOpOver:
+@@ -204,6 +194,16 @@ glamor_composite_rectangles(CARD8	 op,
+ 		return;
+ 	}
+ 
++	pixmap = glamor_get_drawable_pixmap(dst->pDrawable);
++	priv = glamor_get_pixmap_private(pixmap);
++
++	if (!GLAMOR_PIXMAP_PRIV_HAS_FBO(priv))
++		goto fallback;
++	if (dst->alphaMap) {
++		DEBUGF("%s: fallback, dst has an alpha-map\n", __FUNCTION__);
++		goto fallback;
++	}
++
+ 	need_free_region = TRUE;
+ 
+ 	DEBUGF("%s: drawable extents (%d, %d),(%d, %d) x %d\n",
+--
+cgit v0.9.0.2-2-gbebe
+From 4a0ac3ff00d70b13e8483d50657187c7abdfc110 Mon Sep 17 00:00:00 2001
+From: Dave Airlie <airlied@redhat.com>
+Date: Sat, 29 Dec 2012 06:28:17 +0000
+Subject: glamor: fix make distcheck part 1
+
+This just adds the headers, then it falls over on the sdk_HEADERS
+as it overrides proper install paths by the looks of it.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+---
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 766aac7..e1ee86d 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -20,10 +20,13 @@ AM_CFLAGS = $(CWARNFLAGS) $(XORG_CFLAGS) $(DIX_CFLAGS) $(LIBDRM_CFLAGS)
+ libglamor_la_LDFLAGS = -avoid-version
+ 
+ libglamor_la_SOURCES = \
++	compat-api.h \
+ 	glamor.c \
+ 	glamor_copyarea.c \
+ 	glamor_copywindow.c \
+ 	glamor_core.c \
++	glamor_debug.h \
++	glamor_gl_dispatch.h \
+ 	glamor_fill.c \
+ 	glamor_fillspans.c \
+ 	glamor_getspans.c \
+@@ -42,6 +45,7 @@ libglamor_la_SOURCES = \
+ 	glamor_copyplane.c\
+ 	glamor_glyphblt.c\
+ 	glamor_polyops.c\
++	glamor_priv.h\
+ 	glamor_pixmap.c\
+ 	glamor_largepixmap.c\
+ 	glamor_picture.c\
+@@ -49,7 +53,9 @@ libglamor_la_SOURCES = \
+ 	glamor_gl_dispatch.c\
+ 	glamor_fbo.c\
+ 	glamor_compositerects.c\
+-	glamor.h
++	glamor_utils.h\
++	glamor.h\
++	glapi.h
+ 
+ sdk_HEADERS = glamor.h
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From c6d9cb1eb4962a15f8bbc869e9fef6d1464165af Mon Sep 17 00:00:00 2001
+From: Dave Airlie <airlied@redhat.com>
+Date: Sat, 29 Dec 2012 06:42:10 +0000
+Subject: glamor: add compiler.h
+
+This is also required for distchecking.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+---
+diff --git a/src/Makefile.am b/src/Makefile.am
+index e1ee86d..55721f6 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -21,6 +21,7 @@ libglamor_la_LDFLAGS = -avoid-version
+ 
+ libglamor_la_SOURCES = \
+ 	compat-api.h \
++	compiler.h \
+ 	glamor.c \
+ 	glamor_copyarea.c \
+ 	glamor_copywindow.c \
+--
+cgit v0.9.0.2-2-gbebe
+From c0729336ae35dcc7e46bcf840d6e9a056d5cdd26 Mon Sep 17 00:00:00 2001
+From: Dave Airlie <airlied@redhat.com>
+Date: Sat, 29 Dec 2012 06:42:30 +0000
+Subject: glamor_utils: fix unlikely define use
+
+using a define across a split line expression is failure, compiling
+with warnings shows this up.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+---
+diff --git a/src/glamor_utils.h b/src/glamor_utils.h
+index 36beb49..d307838 100644
+--- a/src/glamor_utils.h
++++ b/src/glamor_utils.h
+@@ -80,8 +80,7 @@
+ 
+ #define pixmap_priv_get_fbo_off(_priv_, _xoff_, _yoff_)		\
+    do {								\
+-	if (unlikely(_priv_ && (_priv_)->type				\
+-		== GLAMOR_TEXTURE_LARGE)) {			\
++	if (unlikely(_priv_ && (_priv_)->type == GLAMOR_TEXTURE_LARGE)) {  \
+ 		*(_xoff_) = - (_priv_)->large.box.x1;	\
+ 		*(_yoff_) = - (_priv_)->large.box.y1;	\
+ 	} else {						\
+--
+cgit v0.9.0.2-2-gbebe
