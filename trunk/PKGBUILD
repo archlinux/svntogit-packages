@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.1.5
+pkgver=1.8.2
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -82,7 +82,11 @@ package() {
   sed -i 's|#![ ]*/usr/bin/env python|#!/usr/bin/env python2|' \
     $(find "$pkgdir" -name '*.py') \
     "$pkgdir"/usr/lib/git-core/git-p4 \
-    "$pkgdir"/usr/share/git/gitview/gitview
+    "$pkgdir"/usr/share/git/gitview/gitview \
+    "$pkgdir"/usr/share/git/remote-helpers/git-remote-bzr \
+    "$pkgdir"/usr/share/git/remote-helpers/git-remote-hg
+  sed -i 's|#![ ]*/usr/bin/python|#!/usr/bin/python2|' \
+    "$pkgdir"/usr/share/git/svn-fe/svnrdump_sim.py
 
   # emacs interface
   cd contrib/emacs
@@ -103,7 +107,7 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('ce168861c23a700b40ffe94475bb1d9e'
-         '3ea0d73b2fa09558454279aad9039a3b'
+md5sums=('210834d73c857931c3da34a65eb3e597'
+         '425e9421a1b128cfb46fa46d94cad919'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
