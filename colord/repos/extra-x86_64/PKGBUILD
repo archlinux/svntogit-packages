@@ -2,22 +2,22 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
-pkgname=colord
-pkgver=0.1.28
+pkgbase=colord
+pkgname=(colord colord-sane)
+pkgver=0.1.30
 pkgrel=1
 pkgdesc="System daemon for managing color devices"
-arch=('i686' 'x86_64')
+arch=(i686 x86_64)
 url="http://www.freedesktop.org/software/colord"
-license=('GPL2')
-depends=('lcms2' 'libgusb' 'polkit' 'shared-color-profiles' 'sqlite' 'udev')
-makedepends=('intltool' 'gobject-introspection' 'vala' 'docbook2x')
-source=($url/releases/$pkgname-$pkgver.tar.xz)
+license=(GPL2)
+depends=(lcms2 libgusb polkit shared-color-profiles sqlite udev dconf dbus)
+makedepends=(intltool gobject-introspection vala docbook2x sane)
 options=('!libtool')
-install=colord.install
-sha1sums=('d53167727ab0f1014ded86675ac8b518c188a88b')
+source=($url/releases/$pkgname-$pkgver.tar.xz)
+sha1sums=('54442a4736192aab65a7fa306142ae1cc30cda15')
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname-$pkgver
   
   # put udev files in /usr/lib
   sed -i "/slashlibdir=/s#/lib#/usr/lib#" configure
@@ -26,14 +26,29 @@ build() {
     --sysconfdir=/etc --libexecdir=/usr/lib/colord \
     --localstatedir=/var --disable-static \
     --with-systemdsystemunitdir=/usr/lib/systemd/system \
-    --enable-vala
+    --enable-vala --enable-sane
   make
 }
 
-package() {
-  cd "$pkgname-$pkgver"
+package_colord() {
+  install=colord.install
+
+  cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install \
     bashcompletiondir=/usr/share/bash-completion/completions
+
+# Split colord-sane
+  cd ..
+  mkdir -p sane/usr/lib/colord{,-plugins}
+  mv {"$pkgdir","$srcdir/sane"}/usr/lib/colord/colord-sane
+  mv {"$pkgdir","$srcdir/sane"}/usr/lib/colord-plugins/libcd_plugin_sane.so
+}
+
+package_colord-sane() {
+  pkgdesc=("SANE plugin for colord")
+  depends=(colord sane)
+
+  mv sane/* "$pkgdir"
 }
 
 # vim:set ts=2 sw=2 et:
