@@ -5,7 +5,7 @@
 
 pkgname=apache
 pkgver=2.2.24
-pkgrel=1
+pkgrel=2
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('i686' 'x86_64')
 options=('!libtool')
@@ -71,31 +71,41 @@ build() {
 
 	cat "${srcdir}/arch.layout" >> config.layout
 
+	cd ..
+	cp -r httpd-${pkgver} httpd-itk-${pkgver}
+
+	cd httpd-itk-${pkgver}
+	
+	# Fix patch to apply with latest Apache version
+	sed -i -e 's/mpmt_os2}/mpmt_os2|winnt}/g' "${srcdir}/03-add-mpm-to-build-system.patch"
+
+	mkdir -p server/mpm/experimental/itk
+	cp -r server/mpm/prefork/* server/mpm/experimental/itk/
+	mv server/mpm/experimental/itk/prefork.c server/mpm/experimental/itk/itk.c
+
+	patch -Np1 -i "${srcdir}/02-rename-prefork-to-itk.patch"
+	patch -Np1 -i "${srcdir}/03-add-mpm-to-build-system.patch"
+	patch -Np1 -i "${srcdir}/04-correct-output-makefile-location.patch"
+	patch -Np1 -i "${srcdir}/05-add-copyright.patch"
+	patch -Np1 -i "${srcdir}/06-hook-just-after-merging-perdir-config.patch"
+	patch -Np1 -i "${srcdir}/07-base-functionality.patch"
+	patch -Np1 -i "${srcdir}/08-max-clients-per-vhost.patch"
+	patch -Np1 -i "${srcdir}/09-capabilities.patch"
+	patch -Np1 -i "${srcdir}/10-nice.patch"
+	patch -Np1 -i "${srcdir}/11-fix-htaccess-reads-for-persistent-connections.patch"
+
+	autoconf
+	cd ..
 	for mpm in prefork worker itk; do
 		if [ "${mpm}" = "itk" ]; then
-                        # Fix patch to apply with latest Apache version
-                        sed -i -e 's/mpmt_os2}/mpmt_os2|winnt}/g' "${srcdir}/03-add-mpm-to-build-system.patch"
-
-			mkdir -p server/mpm/experimental/itk
-			cp -r server/mpm/prefork/* server/mpm/experimental/itk/
-			mv server/mpm/experimental/itk/prefork.c server/mpm/experimental/itk/itk.c
-
-			patch -Np1 -i "${srcdir}/02-rename-prefork-to-itk.patch"
-			patch -Np1 -i "${srcdir}/03-add-mpm-to-build-system.patch"
-			patch -Np1 -i "${srcdir}/04-correct-output-makefile-location.patch"
-			patch -Np1 -i "${srcdir}/05-add-copyright.patch"
-			patch -Np1 -i "${srcdir}/06-hook-just-after-merging-perdir-config.patch"
-			patch -Np1 -i "${srcdir}/07-base-functionality.patch"
-			patch -Np1 -i "${srcdir}/08-max-clients-per-vhost.patch"
-			patch -Np1 -i "${srcdir}/09-capabilities.patch"
-			patch -Np1 -i "${srcdir}/10-nice.patch"
-                        patch -Np1 -i "${srcdir}/11-fix-htaccess-reads-for-persistent-connections.patch"
-
-			autoconf
+			CONFIGURE=../httpd-itk-${pkgver}/configure
+		else
+			CONFIGURE=../httpd-${pkgver}/configure
 		fi
+
 		mkdir build-${mpm}
 		pushd build-${mpm}
-		../configure --enable-layout=Arch \
+		$CONFIGURE --enable-layout=Arch \
 			--enable-modules=all \
 			--enable-mods-shared=all \
 			--enable-so \
@@ -117,14 +127,19 @@ build() {
 			--with-pcre=/usr \
 			--with-mpm=${mpm}
 		make
-		if [ "${mpm}" = "prefork" ]; then
-			make DESTDIR="${pkgdir}" install
-		else
-			install -m755 httpd "${pkgdir}/usr/sbin/httpd.${mpm}"
-		fi
 		popd
 	done
+}
 
+package() {
+	cd "${srcdir}"
+	cd build-prefork
+	make DESTDIR="${pkgdir}" install
+	cd ..
+	
+	install -m755 build-worker/httpd "${pkgdir}/usr/sbin/httpd.worker"
+	install -m755 build-itk/httpd "${pkgdir}/usr/sbin/httpd.itk"
+	
 	install -D -m755 "${srcdir}/httpd" "${pkgdir}/etc/rc.d/httpd"
 	install -D -m644 "${srcdir}/httpd.logrotate" "${pkgdir}/etc/logrotate.d/httpd"
 	install -D -m644 "${srcdir}/apache.conf.d" "${pkgdir}/etc/conf.d/apache"
@@ -151,7 +166,6 @@ build() {
 	rm -rf "${pkgdir}/srv/"
 	rm -rf "${pkgdir}/usr/bin"
 	rm -rf "${pkgdir}/var/run"
-
 
         install -m755 -d "${pkgdir}/usr/lib/systemd/system"
         install -m644 "${srcdir}/httpd.service" "${pkgdir}/usr/lib/systemd/system/"
