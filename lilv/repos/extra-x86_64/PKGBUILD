@@ -3,37 +3,46 @@
 # Contributor: speps <speps at aur dot archlinux dot org>
 
 pkgname=lilv
-pkgver=0.14.4
+pkgver=0.16.0
 pkgrel=1
-pkgdesc="A library to make the use of LV2 plugins as simple as possible for applications."
-arch=(i686 x86_64)
-url="http://drobilla.net/software/$pkgname/"
+pkgdesc="A library to make the use of LV2 plugins as simple as possible for applications"
+arch=('i686' 'x86_64')
+url="http://drobilla.net/software/lilv/"
 license=('custom:ISC')
-depends=('python2' 'sratom' 'jack')
+depends=('python2' 'sratom>=0.4.2' 'jack')
 makedepends=('swig')
 optdepends=('bash-completion: auto-complete words')
-source=("http://download.drobilla.net/$pkgname-$pkgver.tar.bz2")
-md5sums=('891595410eeb68322cf875286f96fccf')
+source=("http://download.drobilla.net/$pkgname-$pkgver.tar.bz2"
+        'lilvmm.patch')
+md5sums=('12eb71f2b5b8a68e15c1c816896bcb9f'
+         'd34207f8ca3586650ad7c50284ffb3e0')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
 
+  # fix UI API error
+  # backport of http://dev.drobilla.net/changeset/5092
+  patch -Np2 -i "$srcdir/lilvmm.patch"
+
+  # pick up python2 even when python3 exists
+  # (the build system has flaky support for python3)
   export PYTHON="/usr/bin/python2"
 
-  # remove ldconfig
+  # remove ldconfig --speps
   sed -i "/ldconfig/d" wscript
 
-  python2 ./waf configure --prefix=/usr \
-                          --mandir=/usr/share/man \
-                          --configdir=/etc \
-                          --dyn-manifest \
-                          --bindings
-  python2 ./waf
+  python2 waf configure --prefix=/usr \
+                        --configdir=/etc \
+                        --dyn-manifest \
+                        --bindings
+
+  python2 waf build $MAKEFLAGS
 }
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
-  DESTDIR="$pkgdir" python2 ./waf install
+
+  python2 waf install --destdir="$pkgdir"
 
   # license
   install -Dm644 COPYING \
