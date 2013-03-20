@@ -16,11 +16,17 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
+        '0001-journal-pass-the-pid-to-sd_pid_get_owner_uid.patch'
+        '0001-strv-fix-STRV_FOREACH_PAIR-macro-definition.patch'
+        '0001-rules-move-builtin-calls-before-the-permissions-sect.patch'
         'use-split-usr-path.patch')
 md5sums=('26a75e2a310f8c1c1ea9ec26ddb171c5'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
+         'c93785560cd33e25013224ac84689aa3'
+         '80db2672a49667a3add02fb07dee9dca'
+         '8d45beb923b06d52cc5dc2be65df6d7f'
          '76bf83fe34c5b40533abc5dc940576a6')
 
 build() {
@@ -28,6 +34,15 @@ build() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  # upstream commit 83d7d83bcc6c462ecbb4c8003e3a8b41f3b88d46
+  patch -Np1 <"$srcdir"/0001-journal-pass-the-pid-to-sd_pid_get_owner_uid.patch
+
+  # upstream commit 961e4526925b7b1e1d3582f2fc9fb38035e2b5fb
+  patch -Np1 <"$srcdir"/0001-strv-fix-STRV_FOREACH_PAIR-macro-definition.patch
+
+  # upstream commit bbb7f2ae5035105575365750592caa87213d7072
+  patch -Np1 <"$srcdir"/0001-rules-move-builtin-calls-before-the-permissions-sect.patch
 
   ./configure \
       --enable-static \
@@ -112,9 +127,6 @@ package_systemd() {
   install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
   mv "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
      "$srcdir"/_sysvcompat/usr/share/man/man8
-
-  # create /var/log/journal. users can control the actual log destination via journald.conf
-  install -dm755 "$pkgdir/var/log/journal"
 }
 
 package_systemd-sysvcompat() {
