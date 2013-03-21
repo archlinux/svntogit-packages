@@ -4,20 +4,23 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=gnuplot 
-pkgver=4.6.1
-pkgrel=2
+pkgver=4.6.2
+pkgrel=1
 pkgdesc="Plotting package which outputs to X11, PostScript, PNG, GIF, and others" 
 arch=('i686' 'x86_64') 
 url="http://www.gnuplot.info" 
 license=('custom') 
 depends=('readline' 'gd' 'wxgtk' 'cairo' 'libjpeg' 'lua') 
 makedepends=('texinfo' 'emacs' 'texlive-core' 'texlive-latexextra')
+options=('!makeflags')
 install=gnuplot.install 
-source=("http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz")
-sha1sums=('1ea21a628223159b0297ae65fe8293afd5aab3c0')
+source=("http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz" 
+        gnuplot-doc2texi-el.patch)
+sha1sums=('88748d4bc9bd41ba8a267a35b6e5b7427cd997cd'
+          '46f381fafa2f6c6e3bfefa1e7b999729e260a2e8')
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
+  cd "$srcdir/$pkgname-$pkgver"
 
   # fix default source location; use the GDFONTPATH variable to modify at runtime 
   sed -i 's|/usr/X11R6/lib/X11/fonts/truetype|/usr/share/fonts/TTF|' src/variable.c
@@ -26,28 +29,22 @@ build() {
   -e 's|$(X11ROOT)/X11R6/lib/X11/fonts/Type1|$(X11ROOT)/usr/share/fonts/Type1|' \
   src/variable.c
 
-  ./configure --prefix=/usr --mandir=/usr/share/man \
-              --infodir=/usr/share/info \
+  (cd docs; patch -p0 -i "$srcdir/gnuplot-doc2texi-el.patch")
+
+  ./configure --prefix=/usr \
               --libexecdir=/usr/bin \
               --with-gihdir=/usr/share/gnuplot \
-              --datadir=/usr/share \
-              --with-readline=gnu \
-              --with-texdir=$pkgdir/usr/share/texmf/tex/latex/gnuplot
-  make pkglibexecdir=/usr/bin
+              --with-readline=gnu
+  make
 }
 
 
 package() {
-  cd $srcdir/$pkgname-$pkgver
-  make prefix=$pkgdir/usr libexecdir=$pkgdir/usr/bin \
-         mandir=$pkgdir/usr/share/man \
-        infodir=$pkgdir/usr/share/info \
-        pkglibexecdir=$pkgdir/usr/bin \
-        GIHDIR=$pkgdir/usr/share/gnuplot \
-        datadir=$pkgdir/usr/share install
+  cd "$srcdir/$pkgname-$pkgver"
+  make pkglibexecdir=/usr/bin DESTDIR="$pkgdir" install
 
-  install -Dm644 lisp/dotemacs $pkgdir/usr/share/emacs/site-lisp/dotemacs
-  install -Dm644 Copyright $pkgdir/usr/share/licenses/$pkgname/Copyright
+  install -Dm644 lisp/dotemacs "$pkgdir/usr/share/emacs/site-lisp/dotemacs"
+  install -Dm644 Copyright "$pkgdir/usr/share/licenses/$pkgname/Copyright"
 
-  rm -f $pkgdir/usr/share/texmf-dist/ls-R
+  rm -f "$pkgdir/usr/share/texmf-dist/ls-R"
 }
