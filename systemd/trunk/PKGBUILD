@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=198
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -44,6 +44,7 @@ build() {
   patch -Np1 <"$srcdir"/0001-strv-fix-STRV_FOREACH_PAIR-macro-definition.patch
 
   # upstream commit bbb7f2ae5035105575365750592caa87213d7072
+  # - modified to avoid pulling in disabling of firmware loading
   patch -Np1 <"$srcdir"/0001-rules-move-builtin-calls-before-the-permissions-sect.patch
 
   # upstream commit 6c142648aaced56ab681fcc97a71b06d588122a9
