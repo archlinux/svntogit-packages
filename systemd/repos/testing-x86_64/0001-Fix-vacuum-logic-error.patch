@@ -1,0 +1,40 @@
+From 6c142648aaced56ab681fcc97a71b06d588122a9 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Wed, 20 Mar 2013 21:32:05 +0100
+Subject: [PATCH] Fix vacuum logic error
+
+The vacuum code used to stop vacuuming after one deletion, even
+when max_use was still exceeded.
+
+Also make usage a uint64_t, as the code already pretends it is one.
+
+Signed-off-by: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+---
+ src/journal/journal-vacuum.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/journal/journal-vacuum.c b/src/journal/journal-vacuum.c
+index 731f6c7..4a3a5a9 100644
+--- a/src/journal/journal-vacuum.c
++++ b/src/journal/journal-vacuum.c
+@@ -36,7 +36,7 @@
+ #include "util.h"
+ 
+ struct vacuum_info {
+-        off_t usage;
++        uint64_t usage;
+         char *filename;
+ 
+         uint64_t realtime;
+@@ -293,7 +293,7 @@ int journal_directory_vacuum(
+                 if (unlinkat(dirfd(d), list[i].filename, 0) >= 0) {
+                         log_debug("Deleted archived journal %s/%s.", directory, list[i].filename);
+ 
+-                        if ((uint64_t) list[i].usage > sum)
++                        if (list[i].usage < sum)
+                                 sum -= list[i].usage;
+                         else
+                                 sum = 0;
+-- 
+1.8.2
+
