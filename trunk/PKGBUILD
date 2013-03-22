@@ -19,6 +19,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-journal-pass-the-pid-to-sd_pid_get_owner_uid.patch'
         '0001-strv-fix-STRV_FOREACH_PAIR-macro-definition.patch'
         '0001-rules-move-builtin-calls-before-the-permissions-sect.patch'
+        '0001-Fix-vacuum-logic-error.patch'
         'use-split-usr-path.patch')
 md5sums=('26a75e2a310f8c1c1ea9ec26ddb171c5'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
@@ -27,6 +28,7 @@ md5sums=('26a75e2a310f8c1c1ea9ec26ddb171c5'
          'c93785560cd33e25013224ac84689aa3'
          '80db2672a49667a3add02fb07dee9dca'
          'a0d3aca35ff7f71d1a5a79022b715ae0'
+         '7ae8e22cef30e57de02ca623b0673f76'
          '76bf83fe34c5b40533abc5dc940576a6')
 
 build() {
@@ -43,6 +45,9 @@ build() {
 
   # upstream commit bbb7f2ae5035105575365750592caa87213d7072
   patch -Np1 <"$srcdir"/0001-rules-move-builtin-calls-before-the-permissions-sect.patch
+
+  # upstream commit 6c142648aaced56ab681fcc97a71b06d588122a9
+  patch -Np1 <"$srcdir"/0001-Fix-vacuum-logic-error.patch
 
   ./configure \
       --enable-static \
