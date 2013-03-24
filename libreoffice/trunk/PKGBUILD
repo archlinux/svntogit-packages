@@ -21,7 +21,7 @@ pkgname=('libreoffice-common'
 	'libreoffice-extension-nlpsolver') # svn up -r 142692 (last one with all extensions built)
 _LOver=4.0.1.2
 pkgver=4.0.1
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.libreoffice.org/"
@@ -78,7 +78,8 @@ source=(${_mirror}/${pkgbase}{,-help,-translations}-${_LOver}.tar.xz
 	${_additional_source_url}/libmspub-0.0.5.tar.bz2
 	${_additional_source_url}/libvisio-0.0.25.tar.bz2
 	make-pyuno-work-with-system-wide-module-install.diff
-	libreoffice-common.sh libreoffice-common.csh)
+	libreoffice-common.sh libreoffice-common.csh
+	librelogo.diff)
 noextract=(f02578f5218f217a9f20e9c30e119c6a-boost_1_44_0.tar.bz2
 	185d60944ea767075d27247c3162b3bc-unowinreg.dll
 	9f9e15966b5624834157fe3d748312bc-mdds_0.6.1.tar.bz2
@@ -148,7 +149,8 @@ md5sums=('52c3bacdf46b4648c5697cc55b648784'
          '92bde158f249b9b27f76f48cc65a0242'
          '97bf43dda273d79ff90c848ab53b0e3c'
          'abcb1b0a7deaffe13ab3d7ca70becb49'
-         '72790a4103da259a55cadd66db931d00')
+         '72790a4103da259a55cadd66db931d00'
+         'cc07fdb40e005ad2a79ba8a6756b0ad6')
 
 build() {
 
@@ -157,6 +159,10 @@ build() {
 #	[ -z "${ANT_HOME}" ] && . /etc/profile.d/apache-ant.sh
 
     cd ${srcdir}/libreoffice-$_LOver
+
+    # make librelogo depend on libreoffice-writer
+    # http://cgit.freedesktop.org/libreoffice/core/commit/?id=4e69b35674882d8d675a677940805b187cad0bc3
+    patch -Np1 -i ${srcdir}/librelogo.diff
 
 	# move external sources into place
 	mkdir ${srcdir}/ext_sources &&	pushd ${srcdir}/ext_sources
@@ -206,7 +212,6 @@ build() {
 		--enable-gtk3 \
 		--enable-gstreamer \
 		--enable-lockdown\
-		--enable-mergelibs \
 		--enable-opengl \
 		--enable-odk\
 		--enable-python=system \
@@ -253,7 +258,9 @@ build() {
 		--with-system-clucene\
 		--without-system-servlet-api
 
-#		--without-ppds\
+#		--enable-mergelibs \ # https://bugs.archlinux.org/task/34414
+
+#		--without-ppds\ # breaks spadmin permission
 
 #--enable-split-opt-features Split file lists for some optional features, .e.g. pyuno, testtool
 
@@ -274,13 +281,12 @@ package_libreoffice-common() {
 
  pkgdesc="common files for LibreOffice - a productivity suite that is compatible with other major office suites"
  install=libreoffice-common.install
- depends=('libreoffice-langpack' "hunspell>=1.2.8" "python>=3.3" "neon>=0.28.6"
+ depends=('libreoffice-langpack' "hunspell>=1.2.8" "python>=3.3" "neon>=0.28.6" 'dbus-glib'
           'nss' 'libsm' 'redland' 'hyphen' 'graphite' "icu>=50.1" 'clucene' 'lcms2' "poppler>=0.22.2"
           'hicolor-icon-theme' 'desktop-file-utils' 'shared-mime-info' 'xdg-utils') # 'orbit2')
  optdepends=('libreoffice-langpack: additional language support'
              'java-runtime:     adds java support'
              'libcups:          adds printing support'
-             'dbus-glib:        adds dbus support'
              'pstoedit:         translates PostScript and PDF graphics into other vector formats'
              'libmythes:        for use in thesaurus'
              'beanshell:        interactive java -- good for prototyping /macros'
@@ -337,6 +343,9 @@ package_libreoffice-common() {
  rm -f ${pkgdir}/usr/lib/libreoffice/program/classes/ScriptProviderForJavaScript.jar
  rm -f ${pkgdir}/usr/lib/libreoffice/program/classes/js.jar
  rm -f ${pkgdir}/usr/lib/libreoffice/program/services/scriptproviderforjavascript.rdb
+ 
+ # workaround all packages now depend on that file
+ cp  ${srcdir}/fakeinstall/usr/lib/libreoffice/share/registry/writer.xcd ${pkgdir}/usr/lib/libreoffice/share/registry/writer.xcd
 }
 
 package_libreoffice-base() {
@@ -388,9 +397,8 @@ package_libreoffice-postgresql-connector() {
 package_libreoffice-calc() {
  pkgdesc="Spreadsheet application for LibreOffice."
  install=libreoffice-calc.install
- #depends=('libreoffice-common' 'lpsolve' )
- depends=('libreoffice-writer' 'lpsolve' ) # some hidden uno linking to parts of the writer pkg - https://bugs.archlinux.org/task/34332
- depends=('libreoffice-writer' 'lpsolve' ) # some hidden uno linking to parts of the writer pkg - https://bugs.archlinux.org/task/34332
+ depends=('libreoffice-common' 'lpsolve' )
+ #depends=('libreoffice-writer' 'lpsolve' ) # some hidden uno linking to parts of the writer pkg - https://bugs.archlinux.org/task/34332
  groups=('libreoffice')
  replaces=('libreoffice')
  
@@ -575,6 +583,9 @@ package_libreoffice-writer() {
    # mv file from fakeinstall to pkgdir
    mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
  done
+ 
+ # for workaround this file belongs now to common
+ rm ${pkgdir}/usr/lib/libreoffice/share/registry/writer.xcd
 }
 
 package_libreoffice-en-US() {
