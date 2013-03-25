@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Ionut Biru <ibiru@archlinux.org>
+
+pkgbase=pygobject
+pkgname=(python-gobject python2-gobject pygobject-devel)
+pkgver=3.8.0
+pkgrel=1
+arch=('i686' 'x86_64')
+url="https://live.gnome.org/PyGObject"
+license=('LGPL')
+makedepends=('python' 'python2' 'python-cairo' 'python2-cairo' 'gobject-introspection')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver::3}/$pkgbase-$pkgver.tar.xz)
+options=('!libtool')
+sha256sums=('9c57f581ae35587108c978cb116eeb7ec186b50c95b145f62033589ee248b32d')
+
+build() {
+  mkdir build-py2 build-py3 devel
+
+  (
+    cd build-py2
+    export PYTHON=/usr/bin/python2
+    ../${pkgbase}-${pkgver}/configure --prefix=/usr
+    make
+  )
+
+  (
+    cd build-py3
+    ../${pkgbase}-${pkgver}/configure --prefix=/usr
+    make
+  )
+}
+
+package_python-gobject() {
+  pkgdesc="Python 3 bindings for GObject"
+  depends=('gobject-introspection' 'python-cairo' "pygobject-devel=$pkgver")
+
+  cd build-py3
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
+}
+
+package_python2-gobject() {
+  pkgdesc="Python 2 bindings for GObject"
+  depends=('gobject-introspection' 'python2-cairo' "pygobject-devel=$pkgver")
+
+  cd build-py2
+  make DESTDIR="$pkgdir" install
+  mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
+}
+
+package_pygobject-devel() {
+  pkgdesc="Development files for the pygobject bindings"
+  cd "devel"
+  mkdir -p "$pkgdir"/usr/{include,lib}
+  mv include "$pkgdir/usr/"
+  mv pkgconfig "$pkgdir/usr/lib/"
+}
