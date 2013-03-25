@@ -4,6 +4,6 @@
 	notifempty
 	sharedscripts
 	postrotate
-		/usr/bin/killall -HUP lighttpd-angel &>/dev/null || true
+		systemctl reload lighttpd.service || true
 	endscript
 }
