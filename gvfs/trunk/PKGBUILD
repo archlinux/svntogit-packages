@@ -2,22 +2,19 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gvfs
-pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-obexftp')
-pkgver=1.14.2
-pkgrel=4
+pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-obexftp' 'gvfs-goa' 'gvfs-mtp')
+pkgver=1.16.0
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('LGPL')
-makedepends=('avahi' 'bluez' 'dbus-glib' 'fuse' 'intltool' 'libarchive' 'libcdio-paranoia' 'libgphoto2' 'libimobiledevice' 'libsoup-gnome' 'smbclient' 'udisks2' 'libsecret' 'docbook-xsl' 'gtk3')
+makedepends=('avahi' 'bluez' 'dbus-glib' 'fuse' 'intltool' 'libarchive' 'libcdio-paranoia' 'libgphoto2' 'libimobiledevice' 'libsoup-gnome' 'smbclient' 'udisks2' 'libsecret' 'docbook-xsl' 'gtk3' 'libmtp' 'gnome-online-accounts' 'libbluray')
 url="http://www.gnome.org"
 options=(!libtool)
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz
-        fix-paranoia-include.patch)
-sha256sums=('c3bbdac4bc89de82a2ba373799da80d24fb6a038a9893d9b54e2c9429c878fbc'
-            '4385f9c5100bc0e01c59d07bef07737bb8155e60b56d3ee948e0b48ff207ff76')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz)
+sha256sums=('b0cf3ec2be053ef42a25a34c64b90fdf28a5334c595452ee2e246734696dd55e')
 
 build() {
   cd "$pkgbase-$pkgver"
-  patch -Np0 -i ../fix-paranoia-include.patch
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-static \
       --libexecdir=/usr/lib/gvfs \
@@ -27,24 +24,28 @@ build() {
 
 package_gvfs() {
   pkgdesc="Userspace virtual filesystem implemented as a pluggable module for gio"
-  depends=('avahi' 'dconf' 'fuse' 'libarchive' 'libcdio-paranoia' 'libsoup-gnome' 'udisks2' 'libsecret')
+  depends=('avahi' 'dconf' 'fuse' 'libarchive' 'libcdio-paranoia' 'libsoup-gnome' 'udisks2' 'libsecret' 'libbluray')
   optdepends=('gvfs-afc: AFC (mobile devices) support'
               'gvfs-smb: SMB/CIFS (Windows client) support'
               'gvfs-gphoto2: gphoto2 (PTP camera/MTP media player) support'
               'gvfs-obexftp: ObexFTP (bluetooth) support'
               'gvfs-afp: Apple Filing Protocol (AFP) support'
+              'gvfs-mtp: MTP device support'
+              'gvfs-goa: gnome-online-accounts support'
               'gtk3: Recent files support')
   install=gvfs.install
 
   cd "$pkgbase-$pkgver"
   sed -e 's/^am__append_4/#am__append_4/' \
       -e 's/^am__append_5/#am__append_5/' \
+      -e 's/^am__append_6/#am__append_6/' \
+      -e 's/^am__append_7/#am__append_7/' \
       -i monitor/Makefile
   make DESTDIR="$pkgdir" install
 
   cd "$pkgdir"
-  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp}
-  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp}.mount
+  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp,mtp}
+  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,obexftp,mtp}.mount
   rm usr/share/glib-2.0/schemas/org.gnome.system.smb.gschema.xml
   rm usr/share/GConf/gsettings/gvfs-smb.convert
 }
@@ -113,4 +114,26 @@ package_gvfs-afp() {
   cd "$pkgbase-$pkgver/daemon"
   install -m755 .libs/gvfsd-afp{,-browse} "$pkgdir/usr/lib/gvfs/"
   install -m644 afp{,-browse}.mount "$pkgdir/usr/share/gvfs/mounts/"
+}
+
+package_gvfs-mtp() {
+  pkgdesc="MTP backend for gvfs"
+  depends=("gvfs=$pkgver" 'libmtp')
+  install=gvfs-module.install
+
+  cd "$pkgbase-$pkgver/daemon"
+  install -D .libs/gvfsd-mtp "$pkgdir/usr/lib/gvfs/gvfsd-mtp"
+  install -Dm644 mtp.mount "$pkgdir/usr/share/gvfs/mounts/mtp.mount"
+
+  cd "$srcdir/$pkgbase-$pkgver/monitor/mtp"
+  make DESTDIR="$pkgdir" install
+}
+
+package_gvfs-goa() {
+  pkgdesc="Gnome Online Accounts (webservices) backend for gvfs"
+  depends=("gvfs=$pkgver" 'gnome-online-accounts')
+  install=gvfs-module.install
+
+  cd "$srcdir/$pkgbase-$pkgver/monitor/goa"
+  make DESTDIR="$pkgdir" install
 }
