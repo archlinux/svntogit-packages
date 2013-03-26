@@ -1,66 +1,45 @@
 # $Id$
 # Maintainer: Ray Rashif <schiv@archlinux.org>
-# Contributor: tobias <tobias@archlinux.org>
-# Contributor: Giovanni Scafora <giovanni@archlinux.org>
-
-# ardour, liblrdf and raptor are heavily dependent on each other. Updating of
-# one package mostly will require an update of all the other packages. I vote
-# for fixed dependencies speaking in terms of versions -- tobias
-
-# SYSLIBS enabled, support still valid; see ardour 2.8.13 rel notes
-# http://ardour.org/node/5263
+# Contributor: SpepS <dreamspepser at yahoo dot it>
+# Contributor: see .contrib
 
 pkgname=ardour
-pkgver=2.8.16
+pkgver=3.0
 pkgrel=1
-pkgdesc="A multichannel hard disk recorder and digital audio workstation"
+pkgdesc="Professional-grade digital audio workstation"
 arch=('i686' 'x86_64')
 url="http://ardour.org/"
 license=('GPL')
-depends=('liblrdf' 'libusb-compat' 'liblo' 'soundtouch'
-         'aubio' 'lilv' 'suil' 'libgnomecanvasmm')
-         # -libgnomecanvas(+libgnomecanvasmm)
-         # +soundtouch (these +/- changes are for SYSLIBS=1)
-         # cwiid removed for https://bugs.archlinux.org/task/28344
-makedepends=('scons' 'boost')
-changelog=$pkgname.changelog
-source=("ftp://ftp.archlinux.org/other/ardour/$pkgname-$pkgver.tar.bz2"
+depends=('liblrdf' 'liblo' 'libsmf' 'lilv>=0.16.0'
+         'aubio' 'libgnomecanvasmm' 'suil>=0.6.12')
+makedepends=('python2' 'boost' 'cppunit' 'doxygen' 'graphviz')
+install=$pkgname.install
+source=("ftp://ftp.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.bz2"
         "$pkgname.desktop")
-md5sums=('5bafe41df00d25e7a357baaa1038f16d'
-         '8aeaf433ebf781733db48e5a16b0c4da')
+md5sums=('2759df2ac29e6075e006cc5b262bfee0'
+         '316bd21ece5e2208a104fd09cac521af')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
-  # ardour defaults to -O3; use this in CFLAGS below
-  sed -i '/-O3/d' SConstruct
+  # python2 fix
+  sed -i 's/python ${SRC}/python2 ${SRC}/' libs/pbd/wscript
 
-  # work around boost linking error (see ardour3 svn r13081)
-  # thanks to Harry Harren for the heads-up
-  CFLAGS+=" -DBOOST_SYSTEM_NO_DEPRECATED"
-  CXXFLAGS+=" -DBOOST_SYSTEM_NO_DEPRECATED"
-  export CFLAGS CXXFLAGS
+  python2 waf configure --prefix=/usr \
+                        --configdir=/etc \
+                        --docs
 
-  scons $MAKEFLAGS ARCH="${CFLAGS/-O[0-9]/-O3}" \
-                   PREFIX="/usr" \
-                   DIST_LIBDIR="lib" \
-                   FREEDESKTOP=0 \
-                   FREESOUND=1 \
-                   SYSLIBS=1
+  python2 waf build $MAKEFLAGS
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
-  scons DESTDIR="$pkgdir" install
+  python2 waf install --destdir="$pkgdir"
 
   # install some freedesktop.org compatibility
   install -Dm644 "$srcdir/$pkgname.desktop" \
     "$pkgdir/usr/share/applications/$pkgname.desktop"
-
-  # upstream will not do this
-  # install templates
-  cp -r templates "$pkgdir/usr/share/ardour2/"
 }
 
 # vim:set ts=2 sw=2 et:
