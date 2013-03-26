@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=nautilus
+pkgname=(nautilus libnautilus-extension)
+pkgver=3.8.0
+pkgrel=1
+pkgdesc="GNOME file manager"
+arch=(i686 x86_64)
+license=(GPL)
+depends=(libexif gnome-desktop exempi gvfs desktop-file-utils gnome-icon-theme dconf libtracker-sparql libnotify)
+makedepends=(intltool gobject-introspection python)
+url="http://www.gnome.org"
+options=('!libtool' '!emptydirs')
+source=(http://download.gnome.org/sources/$pkgbase/${pkgver::3}/$pkgbase-$pkgver.tar.xz)
+sha256sums=('c9b4096eb64006307bfd55640033191ab379c88ee8652e8203118a3ca9864e11')
+
+build() {
+  cd $pkgbase-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --libexecdir=/usr/lib/nautilus \
+      --disable-nst-extension \
+      --disable-update-mimedb \
+      --disable-packagekit \
+      --disable-schemas-compile
+  make
+}
+
+package_nautilus() {
+  depends+=(libnautilus-extension)
+  groups=(gnome)
+  install=nautilus.install
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+
+### Split libnautilus-extension
+  cd ..
+  mkdir -p n-e/usr/{lib,share}
+  mv "$pkgdir"/usr/include n-e/usr
+  mv "$pkgdir"/usr/lib/{girepository-1.0,pkgconfig} n-e/usr/lib
+  mv "$pkgdir"/usr/lib/libnautilus-extension.so* n-e/usr/lib
+  mv "$pkgdir"/usr/share/{gir-1.0,gtk-doc} n-e/usr/share
+}
+
+package_libnautilus-extension() {
+  pkgdesc="Library for extending the $pkgdesc"
+  depends=(gtk3)
+
+  mv n-e/* "$pkgdir"
+}
