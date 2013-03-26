@@ -4,8 +4,8 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=6.1p1
-pkgrel=6
+pkgver=6.2p1
+pkgrel=1
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -23,7 +23,7 @@ source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}
         'sshd.confd'
         'sshd.pam'
         'sshd')
-sha1sums=('751c92c912310c3aa9cadc113e14458f843fc7b3'
+sha1sums=('8824708c617cc781b2bb29fa20bd905fd3d2a43d'
           '954bf1660aa32620c37034320877f4511b767ccb'
           '6df5be396f8c593bb511a249a1453294d18a01a6'
           'bd6eae36c7ef9efb7147778baad7858b81f2d660'
