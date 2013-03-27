@@ -2,37 +2,26 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gnome-settings-daemon
-pkgver=3.6.4
-pkgrel=2
+pkgver=3.8.0
+pkgrel=1
 pkgdesc="The GNOME Settings daemon"
 arch=('i686' 'x86_64')
 license=('GPL')
 depends=('dconf' 'gnome-desktop' 'gsettings-desktop-schemas' 'hicolor-icon-theme' 'libcanberra-pulse' 'libnotify'
-         'libsystemd' 'libwacom' 'nss' 'pulseaudio' 'pulseaudio-alsa' 'upower' 'ibus')
+         'libsystemd' 'libwacom' 'pulseaudio' 'pulseaudio-alsa' 'upower' 'ibus' 'librsvg')
 makedepends=('intltool' 'xf86-input-wacom' 'libxslt' 'docbook-xsl')
 options=('!emptydirs' '!libtool')
 install=gnome-settings-daemon.install
 url="http://www.gnome.org"
 groups=('gnome')
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz
-        0001-power-and-media-keys-Use-logind-for-suspending-and-r.patch)
-sha256sums=('3db993f2dbabc0c9d06a309bb12c9a7104b9cdda414ac4b1c301f5114a441c15'
-            '5572b5b3f554ce361353a8db42c26a8f789606f65acc5943a286271603fcb8eb')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz)
+sha256sums=('dff9e725a34158558836843e17079f602522bc30f05acf96cb2712eb4544c9ea')
 
 build() {
   cd $pkgname-$pkgver
 
-  # logind key handling FS#31801, patch from Fedora
-  # rebased onto screensaver.patch
-  patch -Np1 -i ../0001-power-and-media-keys-Use-logind-for-suspending-and-r.patch
-
-  aclocal
-  autoconf
-  automake --add-missing
-
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-      --libexecdir=/usr/lib/gnome-settings-daemon --disable-static \
-      --enable-systemd
+      --libexecdir=/usr/lib/gnome-settings-daemon --disable-static
 
   #https://bugzilla.gnome.org/show_bug.cgi?id=656231
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -43,9 +32,4 @@ build() {
 package() {
   cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
-
-  # Plugins that aren't installed still have schema references
-  # and cause gsettings errors - remove the references we're not using
-  sed -i '/org\.gnome\.settings-daemon\.plugins\.updates/d' \
-    "$pkgdir/usr/share/glib-2.0/schemas/org.gnome.settings-daemon.plugins.gschema.xml"
 }
