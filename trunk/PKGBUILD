@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.17
-pkgrel=3
+pkgrel=4
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
