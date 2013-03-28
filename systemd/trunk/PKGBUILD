@@ -45,8 +45,7 @@ build() {
 }
 
 check() {
-  # make -C "$pkgname-$pkgver" check
-  :
+  make -C "$pkgname-$pkgver" check
 }
 
 package_systemd() {
