@@ -4,27 +4,36 @@
 
 pkgbase=anjuta
 pkgname=('libanjuta' 'anjuta')
-pkgver=3.6.2
-pkgrel=2
+pkgver=3.8.0
+pkgrel=1
 pkgdesc="GNOME Integrated Development Environment (IDE)"
-arch=('i686' 'x86_64')
-license=('GPL')
-makedepends=('vte3' 'gdl' 'autogen' 'devhelp' 'glade' 'libgda' 'subversion' 'gnome-icon-theme' 'vala' 'dconf' 'gnome-doc-utils' 'intltool' 'gobject-introspection' 'itstool')
+arch=(i686 x86_64)
+license=(GPL)
+makedepends=(gdl vte3 autogen devhelp glade libgda subversion gnome-icon-theme vala dconf
+             gtk-doc yelp-tools gnome-common intltool gobject-introspection itstool gjs)
 url="http://www.anjuta.org/"
-source=(ftp://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz)
 options=('!libtool' '!emptydirs')
-sha256sums=('2cf44120dcf22c4f4f25bbc65d3641c206e627776ab0f3a37ff0059844d581a2')
+source=(ftp://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz
+        fix-compile-error.patch)
+sha256sums=('c95caac9ad56a26457b76c49ec27b38e67de05df5f6656e0fbdac0508d59f117'
+            'd072af4c1c52ce65f84026b83baa642a9bcfa06b10913b356b5cd99d98931b1d')
 
 build() {
   cd "$pkgbase-$pkgver"
-  PYTHON=/usr/bin/python2 ./configure --prefix=/usr --sysconfdir=/etc \
-      --localstatedir=/var
+
+  patch -Np1 -i ../fix-compile-error.patch
+
+  # Bump vala version
+  sed -i '/vala/s/-0\.18/-0.20/' configure.ac
+
+  PYTHON=/usr/bin/python2 ./autogen.sh --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --enable-glade-catalog
   make
 }
 
 package_libanjuta(){
   pkgdesc="Anjuta runtime library"
-  depends=('gdl')
+  depends=(gdl)
   conflicts=('anjuta<3.4.4')
 
   cd "$pkgbase-$pkgver/libanjuta"
@@ -35,7 +44,7 @@ package_libanjuta(){
 
 package_anjuta(){
   pkgdesc="GNOME Integrated Development Environment (IDE)"
-  depends=('libanjuta' 'vte3' 'autogen' 'devhelp' 'glade' 'libgda' 'subversion' 'gnome-icon-theme' 'vala' 'dconf')
+  depends=(libanjuta vte3 autogen devhelp glade libgda subversion gnome-icon-theme vala dconf)
 
   install=anjuta.install
 
