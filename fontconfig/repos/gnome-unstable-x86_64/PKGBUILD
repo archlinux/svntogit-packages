@@ -1,0 +1,59 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=fontconfig
+pkgver=2.10.92
+pkgrel=1
+pkgdesc="A library for configuring and customizing font access"
+arch=(i686 x86_64)
+url="http://www.fontconfig.org/release/"
+license=('custom')
+depends=('expat' 'freetype2')
+options=('!libtool')
+install=fontconfig.install
+source=(http://www.fontconfig.org/release/$pkgname-$pkgver.tar.bz2
+        29-replace-bitmap-fonts.conf
+        bug62980.patch)
+sha256sums=('1162059927120f2321f12917189b524e6b2f09e11ac643278d0bb82634035b22'
+            '5addef189c5e01679ce3b610f8864c59980029c98f323f40f8c9080429857fdc'
+            'd0d17ddbb5a20ef259eb33757904e076291a817312e94deb6d8f7b7cd064a3ce')
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  patch -Np1 -i ../bug62980.patch
+
+  # make sure there's no rpath trouble and sane .so versioning - FC and Gentoo do this as well
+  libtoolize -f
+  autoreconf -fi
+
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --with-templatedir=/etc/fonts/conf.avail \
+    --with-xmldir=/etc/fonts \
+    --localstatedir=/var \
+    --disable-static \
+    --with-default-fonts=/usr/share/fonts \
+    --with-add-fonts=/usr/share/fonts
+  make
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make -k check
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+
+  # not upstream, not in FC and not in Gentoo, this should probably go upstream
+  # meanwhile to satisfy pages like http://zipcon.net/~swhite/docs/computers/browsers/fonttest.html we bring it back
+  install -m644 "$srcdir/29-replace-bitmap-fonts.conf" "$pkgdir/etc/fonts/conf.avail"
+  pushd $pkgdir/etc/fonts/conf.d
+  ln -s /etc/fonts/conf.avail/29-replace-bitmap-fonts.conf .
+  popd
+
+  #Install license
+  install -m755 -d "$pkgdir/usr/share/licenses/$pkgname"
+  install -m644 COPYING "$pkgdir/usr/share/licenses/$pkgname"
+}
