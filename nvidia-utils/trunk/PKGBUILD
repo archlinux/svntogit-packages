@@ -2,9 +2,9 @@
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 # Contributor: James Rayner <iphitus@gmail.com>
 pkgbase=nvidia-utils
-pkgname=('nvidia-utils' 'opencl-nvidia')
+pkgname=('nvidia-utils' 'nvidia-libgl' 'opencl-nvidia')
 pkgver=313.26
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -50,22 +50,36 @@ package_opencl-nvidia() {
     create_links
 }
 
-package_nvidia-utils() {
-    pkgdesc="NVIDIA drivers utilities and libraries."
-    depends=('xorg-server')
-    optdepends=('gtk2: nvidia-settings'
-                'opencl-nvidia: OpenCL support')
+package_nvidia-libgl() {
+    pkgdesc="NVIDIA drivers libraries symlinks"
     conflicts=('libgl')
     provides=('libgl')
+    cd "${srcdir}/${_pkg}"
+
+    mkdir -p "${pkgdir}/usr/lib/xorg/modules/extensions"
+    ln -s "/usr/lib/nvidia/xorg/modules/extensions/libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.${pkgver}"
+    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.1"
+    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so"
+
+    ln -s "/usr/lib/nvidia/libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so.${pkgver}"
+    ln -s "libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so.1"
+    ln -s "libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so"
+}
+
+package_nvidia-utils() {
+    pkgdesc="NVIDIA drivers utilities"
+    depends=('xorg-server' 'nvidia-libgl')
+    optdepends=('gtk2: nvidia-settings'
+                'opencl-nvidia: OpenCL support')
     cd "${srcdir}/${_pkg}"
 
     # X driver
     install -D -m755 nvidia_drv.so "${pkgdir}/usr/lib/xorg/modules/drivers/nvidia_drv.so"
     # GLX extension module for X
-    install -D -m755 "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.${pkgver}"
-    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so"	# X doesn't find glx otherwise
+    install -D -m755 "libglx.so.${pkgver}" "${pkgdir}/usr/lib/nvidia/xorg/modules/extensions/libglx.so.${pkgver}"
+    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/nvidia/xorg/modules/extensions/libglx.so"	# X doesn't find glx otherwise
     # OpenGL library
-    install -D -m755 "libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so.${pkgver}"
+    install -D -m755 "libGL.so.${pkgver}" "${pkgdir}/usr/lib/nvidia/libGL.so.${pkgver}"
     # OpenGL core library
     install -D -m755 "libnvidia-glcore.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glcore.so.${pkgver}"
     # VDPAU
