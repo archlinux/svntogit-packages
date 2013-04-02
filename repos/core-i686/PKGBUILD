@@ -5,43 +5,35 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.7.2
-pkgrel=4
+pkgver=4.8.0
+pkgrel=1
 #_snapshot=4.7-20120721
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
-makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'ppl' 'gcc-ada' 'doxygen')
+makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2)
 	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-	gcc-4.7.1-libgo-write.patch)
-md5sums=('cc308a0891e778cfda7a151ab8a6e762'
-         'df82dd175ac566c8a6d46b11ac21f14c')
+md5sums=('e6040024eb9e761c3bea348d1fa5abb0')
 
 
 if [ -n "${_snapshot}" ]; then
-  _basedir="${srcdir}/gcc-${_snapshot}"
+  _basedir=gcc-${_snapshot}
 else
-  _basedir="${srcdir}/gcc-${pkgver}"
+  _basedir=gcc-${pkgver}
 fi
 
 build() {
-  cd ${_basedir}
-
-  # Do not install libiberty
-  sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
+  cd ${srcdir}/${_basedir}
 
   # Do not run fixincludes
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 
   # Arch Linux installs x86_64 libraries /lib
   [[ $CARCH == "x86_64" ]] && sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
-
-  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53679
-  patch -p1 -i ${srcdir}/gcc-4.7.1-libgo-write.patch
 
   echo ${pkgver} > gcc/BASE-VER
 
@@ -53,7 +45,7 @@ build() {
   cd ${srcdir}
   mkdir gcc-build && cd gcc-build
 
-  ${_basedir}/configure --prefix=/usr \
+  ${srcdir}/${_basedir}/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --mandir=/usr/share/man --infodir=/usr/share/info \
       --with-bugurl=https://bugs.archlinux.org/ \
@@ -61,15 +53,13 @@ build() {
       --enable-shared --enable-threads=posix \
       --with-system-zlib --enable-__cxa_atexit \
       --disable-libunwind-exceptions --enable-clocale=gnu \
-      --disable-libstdcxx-pch --enable-libstdcxx-time \
+      --disable-libstdcxx-pch \
       --enable-gnu-unique-object --enable-linker-build-id \
-      --with-ppl --enable-cloog-backend=isl \
-      --disable-ppl-version-check --disable-cloog-version-check \
+      --enable-cloog-backend=isl --disable-cloog-version-check \
       --enable-lto --enable-gold --enable-ld=default \
       --enable-plugin --with-plugin-ld=ld.gold \
-      --with-linker-hash-style=gnu \
-      --disable-multilib --disable-libssp \
-      --disable-build-with-cxx --disable-build-poststage1-with-cxx \
+      --with-linker-hash-style=gnu --disable-install-libiberty \
+      --disable-multilib --disable-libssp --disable-werror \
       --enable-checking=release
   make
   
@@ -87,7 +77,7 @@ check() {
 
   # do not abort on error as some are "expected"
   make -k check || true
-  ${_basedir}/contrib/test_summary
+  ${srcdir}/${_basedir}/contrib/test_summary
 }
 
 package_gcc-libs()
@@ -99,9 +89,13 @@ package_gcc-libs()
 
   cd ${srcdir}/gcc-build
   make -j1 -C $CHOST/libgcc DESTDIR=${pkgdir} install-shared
-  for lib in libmudflap libgomp libstdc++-v3/src libitm; do
+  for lib in libmudflap libgomp libstdc++-v3/src libitm libsanitizer/asan; do
     make -j1 -C $CHOST/$lib DESTDIR=${pkgdir} install-toolexeclibLTLIBRARIES
   done
+
+  [[ $CARCH == "x86_64" ]] && \
+    make -j1 -C $CHOST/libsanitizer/tsan DESTDIR=${pkgdir} install-toolexeclibLTLIBRARIES
+  
   make -j1 -C $CHOST/libstdc++-v3/po DESTDIR=${pkgdir} install
   make -j1 -C $CHOST/libgomp DESTDIR=${pkgdir} install-info
   make -j1 -C $CHOST/libitm DESTDIR=${pkgdir} install-info
@@ -117,14 +111,14 @@ package_gcc-libs()
   find ${pkgdir} -name *.a -delete
   
   # Install Runtime Library Exception
-  install -Dm644 ${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION
 }
 
 package_gcc()
 {
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.23' 'libmpc' 'cloog' 'ppl')
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.23' 'libmpc' 'cloog')
   groups=('base-devel')
   install=gcc.install
 
@@ -133,19 +127,19 @@ package_gcc()
   make -j1 DESTDIR=${pkgdir} install
 
   install -d $pkgdir/usr/share/gdb/auto-load/usr/lib
-  mv $pkgdir{,/usr/share/gdb/auto-load}/usr/lib/libstdc++.so.6.0.17-gdb.py
+  mv $pkgdir{,/usr/share/gdb/auto-load}/usr/lib/libstdc++.so.6.0.18-gdb.py
 
   # unfortunately it is much, much easier to install the lot and clean-up the mess...
   rm $pkgdir/usr/bin/{{$CHOST-,}gfortran,{$CHOST-,}gccgo,gnat*}
   rm $pkgdir/usr/lib/*.so*
-  rm $pkgdir/usr/lib/lib{ffi,gfortran,go{,begin},objc}.a
+  rm $pkgdir/usr/lib/lib{atomic,ffi,gfortran,go{,begin},iberty,objc}.a
   rm $pkgdir/usr/lib/libgfortran.spec
   rm -r $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{ada{include,lib},finclude,include/objc}
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/include/ffi{,target}.h
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{cc1obj{,plus},f951,gnat1,go1}
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{libcaf_single,libgfortranbegin}.a
   rm -r $pkgdir/usr/lib/go
-  rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libgomp,libquadmath,libitm}.info
+  rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libffi,libgomp,libquadmath,libitm}.info
   rm $pkgdir/usr/share/locale/{de,fr}/LC_MESSAGES/libstdc++.mo
   rm $pkgdir/usr/share/man/man1/{gccgo,gfortran}.1
   rm $pkgdir/usr/share/man/man3/ffi*
@@ -188,7 +182,7 @@ EOF
     ${CHOST}/libstdc++-v3/doc/doxygen/man/man3/*.3
 
   # Install Runtime Library Exception
-  install -Dm644 ${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -206,10 +200,15 @@ package_gcc-fortran()
 
   ln -s gfortran ${pkgdir}/usr/bin/f95
 
-  rm ${pkgdir}/usr/lib/libgfortran.so*
+  # remove files included in gcc-libs or gcc
+  rm ${pkgdir}/usr/lib/lib{gfortran,gcc_s}.so*
+  rm ${pkgdir}/usr/lib/libquadmath.{a,so*}
+  rm ${pkgdir}/usr/lib/gcc/$CHOST/${pkgver}/{*.o,libgc*}
+  rm ${pkgdir}/usr/share/info/libquadmath.info
+  rm -r ${pkgdir}/usr/lib/gcc/$CHOST/${pkgver}/include
 
   # Install Runtime Library Exception
-  install -Dm644 ${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-fortran/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -223,11 +222,13 @@ package_gcc-objc()
   install -dm755 $pkgdir/usr/lib/gcc/$CHOST/$pkgver/
   install -m755 gcc/cc1obj{,plus} $pkgdir/usr/lib/gcc/$CHOST/$pkgver/
 
-  # remove libraries included in gcc-libs
-  rm ${pkgdir}/usr/lib/libobjc.so*
+  # remove files included in gcc-libs or gcc
+  rm ${pkgdir}/usr/lib/lib{gcc_s,objc}.so*
+  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{*.o,lib*}
+  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/include/unwind.h
 
   # Install Runtime Library Exception
-  install -Dm644 ${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-objc/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -244,7 +245,7 @@ package_gcc-ada()
   ln -s gcc ${pkgdir}/usr/bin/gnatgcc
   
   # Install Runtime Library Exception
-  install -Dm644 ${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-ada/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -260,6 +261,6 @@ package_gcc-go()
   install -Dm755 gcc/go1 $pkgdir/usr/lib/gcc/$CHOST/$pkgver/go1
 
   # Install Runtime Library Exception
-  install -Dm644 ${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-go/RUNTIME.LIBRARY.EXCEPTION
 }
