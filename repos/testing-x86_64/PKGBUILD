@@ -5,17 +5,19 @@
 
 pkgname=pacman
 pkgver=4.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support"
 arch=('i686' 'x86_64')
 url="http://www.archlinux.org/pacman/"
 license=('GPL')
 groups=('base' 'base-devel')
-depends=('bash' 'glibc>=2.15' 'libarchive>=3.1.2' 'curl>=7.19.4'
+depends=('bash>=4.2.042-2' 'glibc>=2.17-2' 'libarchive>=3.1.2' 'curl>=7.19.4'
          'gpgme' 'pacman-mirrorlist' 'archlinux-keyring')
-makedepends=('asciidoc')
-checkdepends=('fakechroot')
+checkdepends=('python2' 'fakechroot')
 optdepends=('fakeroot: for makepkg usage as normal user')
+provides=('pacman-contrib')
+conflicts=('pacman-contrib')
+replaces=('pacman-contrib')
 backup=(etc/pacman.conf etc/makepkg.conf)
 install=pacman.install
 options=(!libtool)
@@ -27,13 +29,15 @@ md5sums=('a0f2b3148bee4784f21cf373cf59a0bc'
          '4959b8d00056398195f4e549e7bdd346'
          '2db6c94709bb30cc614a176ecf8badb1'
          'de74a13618347f08ae4a9637f74471c4'
-         '2ea6f0a5badef735ec7d30a372f5e9c6')
+         '883292a326d2b3e0d9e7c3ec576263f5')
 
 build() {
   cd $srcdir/$pkgname-$pkgver
 
   ./configure --prefix=/usr --sysconfdir=/etc \
-    --localstatedir=/var --enable-doc
+    --localstatedir=/var --enable-doc \
+    --with-scriptlet-shell=/usr/bin/bash \
+    --with-ldconfig=/usr/bin/ldconfig
   make
   make -C contrib
 }
@@ -45,18 +49,19 @@ check() {
 package() {
   cd $srcdir/$pkgname-$pkgver
   make DESTDIR=$pkgdir install
+  make DESTDIR=$pkgdir -C contrib install
 
   # install Arch specific stuff
-  mkdir -p $pkgdir/etc
+  install -dm755 $pkgdir/etc
+  install -m644 $srcdir/pacman.conf.$CARCH $pkgdir/etc/pacman.conf
+  
   case "$CARCH" in
-    i686)
-      install -m644 $srcdir/pacman.conf.i686 $pkgdir/etc/pacman.conf
+    i686)    
       mycarch="i686"
       mychost="i686-pc-linux-gnu"
       myflags="-march=i686"
       ;;
     x86_64)
-      install -m644 $srcdir/pacman.conf.x86_64 $pkgdir/etc/pacman.conf
       mycarch="x86_64"
       mychost="x86_64-unknown-linux-gnu"
       myflags="-march=x86-64"
@@ -68,12 +73,14 @@ package() {
     -e "s|@CARCH[@]|$mycarch|g" \
     -e "s|@CHOST[@]|$mychost|g" \
     -e "s|@CARCHFLAGS[@]|$myflags|g"
+    
+  # put bash_completion in the right location
+  install -dm755 ${pkgdir}/usr/share/bash-completion/completions
+  mv ${pkgdir}/etc/bash_completion.d/pacman \
+    ${pkgdir}/usr/share/bash-completion/completions
+  rmdir ${pkgdir}/etc/bash_completion.d
 
-  # install completion files
-  install -Dm644 contrib/bash_completion "$pkgdir/usr/share/bash-completion/completions/pacman"
   for f in makepkg pacman-key; do
     ln -s pacman "$pkgdir/usr/share/bash-completion/completions/$f"
   done
-
-  install -Dm644 contrib/zsh_completion $pkgdir/usr/share/zsh/site-functions/_pacman
 }
