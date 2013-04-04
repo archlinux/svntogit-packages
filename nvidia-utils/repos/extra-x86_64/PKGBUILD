@@ -2,8 +2,8 @@
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 # Contributor: James Rayner <iphitus@gmail.com>
 pkgbase=nvidia-utils
-pkgname=('nvidia-utils' 'opencl-nvidia')
-pkgver=313.26
+pkgname=('nvidia-utils' 'nvidia-libgl' 'opencl-nvidia')
+pkgver=313.30
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
@@ -14,12 +14,12 @@ if [ "$CARCH" = "i686" ]; then
     _arch='x86'
     _pkg="NVIDIA-Linux-${_arch}-${pkgver}"
     source=("ftp://download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
-    md5sums=('3c2f5138d0fec58b27e26c5b37d845b8')
+    md5sums=('69c0f66c9246217a4fe4d28e95bb7bb6')
 elif [ "$CARCH" = "x86_64" ]; then
     _arch='x86_64'
     _pkg="NVIDIA-Linux-${_arch}-${pkgver}-no-compat32"
     source=("ftp://download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
-    md5sums=('2d35124fa5a4b009f170fe893b5d07e3')
+    md5sums=('e5f147fbcdcad71472b4ddeccf259bd7')
 fi
 
 create_links() {
@@ -50,22 +50,38 @@ package_opencl-nvidia() {
     create_links
 }
 
+package_nvidia-libgl() {
+    pkgdesc="NVIDIA drivers libraries symlinks"
+    depends=('nvidia-utils')
+    replaces=('nvidia-utils<=313.26-1')
+    conflicts=('libgl')
+    provides=('libgl')
+    cd "${srcdir}/${_pkg}"
+
+    mkdir -p "${pkgdir}/usr/lib/xorg/modules/extensions"
+    ln -s "/usr/lib/nvidia/xorg/modules/extensions/libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.${pkgver}"
+    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.1"
+    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so"
+
+    ln -s "/usr/lib/nvidia/libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so.${pkgver}"
+    ln -s "libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so.1"
+    ln -s "libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so"
+}
+
 package_nvidia-utils() {
-    pkgdesc="NVIDIA drivers utilities and libraries."
+    pkgdesc="NVIDIA drivers utilities"
     depends=('xorg-server')
     optdepends=('gtk2: nvidia-settings'
                 'opencl-nvidia: OpenCL support')
-    conflicts=('libgl')
-    provides=('libgl')
     cd "${srcdir}/${_pkg}"
 
     # X driver
     install -D -m755 nvidia_drv.so "${pkgdir}/usr/lib/xorg/modules/drivers/nvidia_drv.so"
     # GLX extension module for X
-    install -D -m755 "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.${pkgver}"
-    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so"	# X doesn't find glx otherwise
+    install -D -m755 "libglx.so.${pkgver}" "${pkgdir}/usr/lib/nvidia/xorg/modules/extensions/libglx.so.${pkgver}"
+    ln -s "libglx.so.${pkgver}" "${pkgdir}/usr/lib/nvidia/xorg/modules/extensions/libglx.so"	# X doesn't find glx otherwise
     # OpenGL library
-    install -D -m755 "libGL.so.${pkgver}" "${pkgdir}/usr/lib/libGL.so.${pkgver}"
+    install -D -m755 "libGL.so.${pkgver}" "${pkgdir}/usr/lib/nvidia/libGL.so.${pkgver}"
     # OpenGL core library
     install -D -m755 "libnvidia-glcore.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glcore.so.${pkgver}"
     # VDPAU
