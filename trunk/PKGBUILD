@@ -6,13 +6,13 @@ pkgname=firefox
 pkgver=20.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
-arch=('i686' 'x86_64')
-license=('MPL' 'GPL' 'LGPL')
-depends=('gtk2' 'mozilla-common' 'libxt' 'startup-notification' 'mime-types' 'dbus-glib' 'alsa-lib'
-         'libnotify' 'desktop-file-utils' 'hicolor-icon-theme'
-         'libvpx' 'libevent' 'nss>=3.14.1' 'hunspell' 'sqlite')
-makedepends=('unzip' 'zip' 'diffutils' 'python2' 'yasm' 'mesa'
-             'autoconf2.13' 'libidl2' 'xorg-server-xvfb' 'imake')
+arch=(i686 x86_64)
+license=(MPL GPL LGPL)
+depends=(gtk2 mozilla-common libxt startup-notification mime-types dbus-glib alsa-lib
+         libnotify desktop-file-utils hicolor-icon-theme
+         libvpx libevent nss hunspell sqlite)
+makedepends=(unzip zip diffutils python2 yasm mesa
+             autoconf2.13 libidl2 xorg-server-xvfb imake)
 optdepends=('networkmanager: Location detection via available WiFi networks')
 url="http://www.mozilla.org/projects/firefox"
 install=firefox.install
@@ -37,27 +37,35 @@ build() {
   sed -i '/^PRE_RELEASE_SUFFIX := ""/s/ ""//' \
     browser/base/Makefile.in
 
+  mkdir "$srcdir/path"
+  export PATH="$srcdir/path:$PATH"
+
   # WebRTC build tries to execute "python" and expects Python 2
-  # Workaround taken from chromium PKGBUILD
-  mkdir "$srcdir/python2-path"
-  ln -s /usr/bin/python2 "$srcdir/python2-path/python"
-  export PATH="$srcdir/python2-path:$PATH"
+  ln -s /usr/bin/python2 "$srcdir/path/python"
+
+  # Use gold, as Mozilla can use some of its features, such as safe ICF
+  ln -s /usr/bin/ld.gold "$srcdir/path/ld"
 
   export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/firefox"
   export PYTHON="/usr/bin/python2"
   export MOZ_MAKE_FLAGS="$MAKEFLAGS"
   unset MAKEFLAGS
 
-  # Enable PGO
-  export MOZ_PGO=1
-  export DISPLAY=:99
-  Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
-  _fail=0
+  # Enable PGO for x86_64 only. i686 currently has problems:
+  # Either segfaults since gcc 4.8, or the linker runs out of memory
+  # If you discover that PGO again works on i686, please file a bug
+  if [[ $CARCH = x86_64 ]]; then
+    export DISPLAY=:99
+    Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
+    _fail=0
 
-  make -f client.mk build || _fail=1
+    make -f client.mk build MOZ_PGO=1 || _fail=1
 
-  kill $! || true
-  return $_fail
+    kill $! || true
+    return $_fail
+  else
+    make -f client.mk build
+  fi
 }
 
 package() {
