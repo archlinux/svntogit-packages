@@ -15,13 +15,13 @@ pkgver=4.0.4
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
 _realver=4.0.4
-pkgrel=1
+pkgrel=2
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
 makedepends=('python2' 'docbook-xsl' 'pkg-config' 'libbsd' 'db' 'popt' 'libcups' 
              'readline' 'tevent' 'acl' 'libldap' 'libcap' 'ldb>=1.1.15' 'krb5' 'pam' 
-             'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb' 'dnsutils')
+             'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb')
 source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
         samba.logrotate
         swat.xinetd
@@ -33,18 +33,19 @@ source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
         swat.socket
         swat@.service
         winbindd.service
-        samba.conf)
-# Use samba-pkg as a staging directory for the split packages
-# (This is so RPATHS and symlinks are generated correctly via
-# make install, but the otherwise unsplit pieces can be split)
-_pkgsrc=${srcdir}/samba-pkg
-
+        samba.conf
+        samba-4.0.3-fix_pidl_with_gcc48.patch)
 ### UNINSTALL dmapi package before building!!!
 
 build() {
+  # Use samba-pkg as a staging directory for the split packages
+  # (This is so RPATHS and symlinks are generated correctly via
+  # make install, but the otherwise unsplit pieces can be split)
+  _pkgsrc=${srcdir}/samba-pkg
   rm -rf ${_pkgsrc}
   cd ${srcdir}/samba-${_realver}
-
+  # fix compile with gcc48
+  patch -Np1 -i ${srcdir}/samba-4.0.3-fix_pidl_with_gcc48.patch
   # change to use python2
   SAVEIFS=${IFS}
   IFS=$(echo -en "\n\b")
@@ -98,7 +99,10 @@ _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,a
 package_libwbclient() {
 pkgdesc="Samba winbind client library"
 depends=('glibc' 'libbsd')
-
+  # Use samba-pkg as a staging directory for the split packages
+  # (This is so RPATHS and symlinks are generated correctly via
+  # make install, but the otherwise unsplit pieces can be split)
+  _pkgsrc=${srcdir}/samba-pkg
   install -d -m755 ${pkgdir}/usr/lib
   mv ${_pkgsrc}/usr/lib/libwbclient*.so* ${pkgdir}/usr/lib/
 
@@ -117,12 +121,15 @@ package_smbclient() {
 pkgdesc="Tools to access a server's filespace and printers via SMB"
 depends=('popt' 'cifs-utils' 'tdb' "libwbclient>=$pkgver" 'ldb'
          'tevent' 'libgcrypt' 'python2' 'talloc' 'readline' 'gnutls' 
-         'libbsd' 'libldap' 'libcups' 'dnsutils')
+         'libbsd' 'libldap' 'libcups')
 
     _smbclient_bins=('smbclient' 'smbclient4' 'rpcclient' 'smbspool'
                      'smbtree' 'smbcacls' 'smbcquotas' 'smbget' 'net'
                      'nmblookup' 'nmblookup4' 'smbtar')
-
+    # Use samba-pkg as a staging directory for the split packages
+    # (This is so RPATHS and symlinks are generated correctly via
+    # make install, but the otherwise unsplit pieces can be split)
+    _pkgsrc=${srcdir}/samba-pkg
     install -d -m755 ${pkgdir}/usr/bin
     for bin in ${_smbclient_bins[@]}; do
         mv ${_pkgsrc}/usr/bin/${bin} ${pkgdir}/usr/bin/
@@ -177,7 +184,10 @@ backup=(etc/logrotate.d/samba
         etc/xinetd.d/swat
         etc/conf.d/samba)
 install=samba.install
-
+    # Use samba-pkg as a staging directory for the split packages
+    # (This is so RPATHS and symlinks are generated correctly via
+    # make install, but the otherwise unsplit pieces can be split)
+    _pkgsrc=${srcdir}/samba-pkg
     # Everything that libwbclient and smbclient didn't install goes
     # into the samba package...
     mv ${_pkgsrc}/* ${pkgdir}/
@@ -240,8 +250,9 @@ md5sums=('93af85940905d114f0231df2479eb31a'
          'd0b18dd7f5fafc8d25cb3a7c37c6d920'
          'a78b9aa93eb14b0ac445897395693225'
          '90845b89f2321cb19c0b13f385f1782a'
-         '6e458b408dc9a29fae973793f0180dfc'
+         '70186fa43510bf99e3afd5951e814fbf'
          '6db11f3dd2112a4b7a73007b189bef3f'
          'b0de262f9c62acd162e873658f33d063'
          '64a52bc798033aeabfae3410bd559aa4'
-         '49abd7b719e3713a3f75a8a50958e381')
+         '49abd7b719e3713a3f75a8a50958e381'
+         'a4a96fe0b391a74e67fb3d54afc0d657')
