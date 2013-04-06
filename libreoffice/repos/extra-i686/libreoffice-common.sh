@@ -1,5 +1,3 @@
-#export PYTHONPATH="$PYTHONPATH:/usr/lib/libreoffice/program"
-
 # to force a certain look'n feel
 
 #export SAL_USE_VCLPLUGIN=gen
