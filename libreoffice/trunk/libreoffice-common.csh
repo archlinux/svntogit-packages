@@ -1,5 +1,3 @@
-#setenv PYTHONPATH ${PYTHONPATH}:/usr/lib/libreoffice/program
-
 # to force a certain look'n feel
 
 #setenv SAL_USE_VCLPLUGIN gen
