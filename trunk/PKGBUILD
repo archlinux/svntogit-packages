@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.17
-pkgrel=4
+pkgrel=5
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -21,13 +21,17 @@ options=('!strip')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.17-sync-with-linux37.patch
+        glibc-2.17-getaddrinfo-stack-overflow.patch
+        glibc-2.17-regexp-matcher-overrun.patch
         nscd.service
         nscd.tmpfiles
         locale.gen.txt
         locale-gen)
 md5sums=('87bf675c8ee523ebda4803e8e1cec638'
-         '6db4d1661cf34282755dc90330465f6d'
+         'SKIP'
          'fb99380d94598cc76d793deebf630022'
+         '56d5f2c09503a348281a20ae404b7de3'
+         '200acc05961b084ee00dde919e64f82d'
          'c1e07c0bec0fe89791bfd9d13fc85edf'
          'bccbe5619e75cf1d97312ec3681c605c'
          '07ac979b6ab5eeb778d55f041529d623'
@@ -39,6 +43,12 @@ build() {
 
   # combination of upstream commits 318cd0b, b540704 and fc1abbe
   patch -p1 -i ${srcdir}/glibc-2.17-sync-with-linux37.patch
+
+  # CVE-2013-1914 - upstream commit 1cef1b19
+  patch -p1 -i ${srcdir}/glibc-2.17-getaddrinfo-stack-overflow.patch
+
+  # CVE-2013-0242 - upstream commit a445af0b
+  patch -p1 -i ${srcdir}/glibc-2.17-regexp-matcher-overrun.patch
 
   cd ${srcdir}
   mkdir glibc-build
@@ -52,9 +62,9 @@ build() {
 
   echo "slibdir=/usr/lib" >> configparms
 
-  # remove hardening options from CFLAGS for building libraries
+  # remove hardening options for building libraries
   CFLAGS=${CFLAGS/-fstack-protector/}
-  CFLAGS=${CFLAGS/-D_FORTIFY_SOURCE=2/}
+  CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
 
   ${srcdir}/${pkgname}-${pkgver}/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
