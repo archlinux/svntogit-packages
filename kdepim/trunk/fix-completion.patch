@@ -1,0 +1,182 @@
+commit 6a06c57f52a00018d607085efa7570deb91dc707
+Author: David Faure <faure@kde.org>
+Date:   Mon Apr 8 17:41:39 2013 +0200
+
+    Fix kmail autocompletion from akonadi.
+    
+    My commit 02f5f0214e made autocompletion from nepomuk work better, but broke
+    completion from akonadi. I kept the "keywords" based code, but now it's only
+    used for the special case of nickname-based search (because the nickname shouldn't
+    appear in the completion item). For everything else it really doesn't make sense
+    to have a search engine (akonadi/nepomuk) on top of a search engine
+    (the one inside KCompletion).
+    
+    This time I verified that:
+    * nepomuk search still works
+    * contacts from akonadi work again
+    * contact groups from akonadi work (after previous commit)
+    * nickname-search in akonadi still doesn't work, but it didn't before. More work
+    needed for that one. This is the only reason to keep KMailCompletion around btw,
+    everything else would work without it.
+    
+    BUG: 259949
+    FIXED-IN: 4.10.3
+
+diff --git a/libkdepim/addresseelineedit.cpp b/libkdepim/addresseelineedit.cpp
+index b7b11be..ec4caf9 100644
+--- a/libkdepim/addresseelineedit.cpp
++++ b/libkdepim/addresseelineedit.cpp
+@@ -30,6 +30,8 @@
+ #include "completionordereditor.h"
+ #endif
+ 
++#include "kmailcompletion.h"
++
+ #include <Akonadi/Contact/ContactSearchJob>
+ #include <Akonadi/Contact/ContactGroupSearchJob>
+ #include <Akonadi/CollectionFetchJob>
+@@ -77,6 +79,10 @@
+ 
+ using namespace KPIM;
+ 
++namespace KPIM {
++  typedef QMap< QString, QPair<int,int> > CompletionItemsMap;
++}
++
+ class AddresseeLineEditStatic
+ {
+   public:
+@@ -496,11 +502,9 @@ void AddresseeLineEdit::Private::addCompletionItem( const QString &string, int w
+     s_static->completionItemMap.insert( string, qMakePair( weight, completionItemSource ) );
+   }
+ 
+-  if ( keyWords == 0 ) {
+-    s_static->completion->addItem( string, weight );
+-  } else {
+-    s_static->completion->addItemWithKeys( string, weight, keyWords );
+-  }
++  s_static->completion->addItem(string, weight);
++  if (keyWords && !keyWords->isEmpty())
++    s_static->completion->addItemWithKeys(string, weight, keyWords); // see kmailcompletion.cpp
+ }
+ 
+ const QStringList KPIM::AddresseeLineEdit::Private::adjustedCompletionItems( bool fullSearch )
+@@ -1348,17 +1352,13 @@ void AddresseeLineEdit::addItem( const Akonadi::Item &item, int weight, int sour
+ void AddresseeLineEdit::addContactGroup( const KABC::ContactGroup &group, int weight, int source )
+ {
+   d->addCompletionItem( group.name(), weight, source );
+-  QStringList keyWords;
+-  keyWords.append( group.name() );
+-  d->addCompletionItem( group.name(), weight, source, &keyWords );
+ }
+ 
+ void AddresseeLineEdit::addContact( const KABC::Addressee &addr, int weight, int source )
+ {
+   const QStringList emails = addr.emails();
+   QStringList::ConstIterator it;
+-  const int prefEmailWeight = 1;     //increment weight by prefEmailWeight
+-  int isPrefEmail = prefEmailWeight; //first in list is preferredEmail
++  int isPrefEmail = 1; //first in list is preferredEmail
+   QStringList::ConstIterator end( emails.constEnd() );
+   for ( it = emails.constBegin(); it != end; ++it ) {
+     //TODO: highlight preferredEmail
+@@ -1368,40 +1368,6 @@ void AddresseeLineEdit::addContact( const KABC::Addressee &addr, int weight, int
+     const QString nickName  = addr.nickName();
+     QString fullEmail       = addr.fullEmail( email );
+ 
+-    // Prepare keywords (for CompletionShell, CompletionPopup)
+-    QStringList keyWords;
+-    const QString realName  = addr.realName();
+-
+-    if ( !givenName.isEmpty() && !familyName.isEmpty() ) {
+-      keyWords.append( givenName  + QLatin1Char( ' ' ) + familyName );
+-      keyWords.append( familyName + QLatin1Char( ' ' ) + givenName );
+-      keyWords.append( familyName + QLatin1String( ", " ) + givenName );
+-    } else if ( !givenName.isEmpty() ) {
+-      keyWords.append( givenName );
+-    } else if ( !familyName.isEmpty() ) {
+-      keyWords.append( familyName );
+-    }
+-
+-    if ( !nickName.isEmpty() ) {
+-      keyWords.append( nickName );
+-    }
+-
+-    if ( !realName.isEmpty() ) {
+-      keyWords.append( realName );
+-    }
+-
+-    keyWords.append( email );
+-
+-    /* KMailCompletion does not have knowledge about identities, it stores emails and
+-     * keywords for each email. KMailCompletion::allMatches does a lookup on the
+-     * keywords and returns an ordered list of emails. In order to get the preferred
+-     * email before others for each identity we use this little trick.
+-     * We remove the <blank> in adjustedCompletionItems.
+-     */
+-    if ( isPrefEmail == prefEmailWeight ) {
+-      fullEmail.replace( QLatin1String( " <" ), QLatin1String( "  <" ) );
+-    }
+-
+     // Prepare "givenName" + ' ' + "familyName"
+     QString fullName = givenName;
+     if (!familyName.isEmpty()) {
+@@ -1413,12 +1379,16 @@ void AddresseeLineEdit::addContact( const KABC::Addressee &addr, int weight, int
+     // Finally, we can add the completion items
+     if (!fullName.isEmpty()) {
+       const QString address = KPIMUtils::normalizedAddress(fullName, email, QString());
+-      d->addCompletionItem(address, weight + isPrefEmail, source, &keyWords);
++      if (fullEmail != address) {
++        // This happens when fullEmail contains a middle name, while our own fullName+email only has "first last".
++        // Let's offer both, the fullEmail with 3 parts, looks a tad formal.
++        d->addCompletionItem(address, weight + isPrefEmail, source);
++      }
+     }
+ 
+-    if ( !nickName.isEmpty() ) {
+-      const QString address = KPIMUtils::normalizedAddress(nickName, email, QString());
+-      d->addCompletionItem(address, weight + isPrefEmail, source, &keyWords);
++    QStringList keyWords;
++    if (!nickName.isEmpty()) {
++      keyWords.append(nickName);
+     }
+ 
+     d->addCompletionItem( fullEmail, weight + isPrefEmail, source, &keyWords );
+diff --git a/libkdepim/addresseelineedit.h b/libkdepim/addresseelineedit.h
+index 4e6784b..b2af4a9 100644
+--- a/libkdepim/addresseelineedit.h
++++ b/libkdepim/addresseelineedit.h
+@@ -27,7 +27,6 @@
+ #ifndef KDEPIM_ADDRESSEELINEEDIT_H
+ #define KDEPIM_ADDRESSEELINEEDIT_H
+ 
+-#include "kmailcompletion.h"
+ #include "kdepim_export.h"
+ 
+ #include "ldap/ldapclient.h"
+@@ -50,10 +49,6 @@ namespace KABC {
+   class ContactGroup;
+ }
+ 
+-namespace KPIM {
+-  typedef QMap< QString, QPair<int,int> > CompletionItemsMap;
+-}
+-
+ namespace Nepomuk2 {
+   namespace Query {
+     class Result;
+diff --git a/libkdepim/kmailcompletion.h b/libkdepim/kmailcompletion.h
+index e8574cc..93771d3 100644
+--- a/libkdepim/kmailcompletion.h
++++ b/libkdepim/kmailcompletion.h
+@@ -32,7 +32,9 @@ namespace KPIM {
+ 
+ /**
+  * KMailCompletion allows lookup of email addresses by keyword.
+- * Typically a keywods would be firstname, lastname, nickname or domain.
++ * This is used for lookup by nickname, since we don't want the nickname to appear in the final email.
++ * E.g. you have a nickname "idiot" for your boss, you want to type "idiot" but you want the completion
++ * to offer "Full Name <email@domain>", without the nickname being visible.
+  */
+ class KMailCompletion : public KCompletion
+ {
