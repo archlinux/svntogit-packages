@@ -6,32 +6,25 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.17.3
-pkgrel=3
+pkgver=0.17.4
+pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
-url='http://mpd.wikia.com/wiki/Music_Player_Daemon_Wiki'
+url='http://www.musicpd.org/'
 license=('GPL')
 arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl')
 makedepends=('doxygen')
-source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
-        'ffmpeg.patch'
-        'tmpfiles.d'
-        'rc.d') 
-sha1sums=('f684d73a7517371a4461afdb2439f9533b51a49d'
-          '8a06d04bfdf4e0dc43479907dc9b3bd7fba6dd10'
-          'f4d5922abb69abb739542d8e93f4dfd748acdad7'
-          '3470d489565f0ed479f1665dd2876f66acb5a585')
+source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"
+        'tmpfiles.d')
+sha1sums=('f60b54e368fe74fde2fd4571227b0428fe0ae3cb'
+          'f4d5922abb69abb739542d8e93f4dfd748acdad7')
 
 backup=('etc/mpd.conf')
 install=install
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-
-	patch -p1 -i ../ffmpeg.patch
-
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
@@ -41,25 +34,20 @@ build() {
 		--enable-pulse \
 		--disable-sidplay \
 		--with-systemdsystemunitdir=/usr/lib/systemd/system
-
 	make
 }
 
 package() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-
 	make DESTDIR="${pkgdir}" install
-
+	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
+	install -Dm644 doc/mpdconf.example "${pkgdir}"/etc/mpd.conf
+	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
 	sed \
 		-e '/^#playlist_directory/c playlist_directory "/var/lib/mpd/playlists"' \
 		-e '/^#db_file/c db_file "/var/lib/mpd/mpd.db"' \
 		-e '/^#pid_file/c pid_file "/run/mpd/mpd.pid"' \
 		-e '/^#state_file/c state_file "/var/lib/mpd/mpdstate"' \
 		-e '/^#user/c user "mpd"' \
-		-i doc/mpdconf.example
-
-	install -Dm755 ../rc.d "${pkgdir}"/etc/rc.d/mpd
-	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
-	install -Dm644 doc/mpdconf.example "${pkgdir}"/etc/mpd.conf
-	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
+		-i "${pkgdir}"/etc/mpd.conf
 }
