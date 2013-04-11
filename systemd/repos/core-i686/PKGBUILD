@@ -3,7 +3,7 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=200
+pkgver=201
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
@@ -17,17 +17,21 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         'use-split-usr-path.patch')
-md5sums=('5584b96e55c46217dab4c1768d10a472'
+md5sums=('3e758392ff0e9206b3f7ee252b4a654b'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
          '76bf83fe34c5b40533abc5dc940576a6')
 
-build() {
+prepare() {
   cd "$pkgname-$pkgver"
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
 
   ./configure \
       --enable-static \
@@ -45,9 +49,9 @@ build() {
   make
 }
 
-#check() {
-#  make -C "$pkgname-$pkgver" check
-#}
+check() {
+  make -C "$pkgname-$pkgver" check
+}
 
 package_systemd() {
   pkgdesc="system and service manager"
