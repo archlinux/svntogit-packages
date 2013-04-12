@@ -6,18 +6,18 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.0
-pkgrel=1
-#_snapshot=4.7-20120721
+pkgrel=2
+_snapshot=4.8-20130411
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
 makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
-checkdepends=('dejagnu')
+checkdepends=('dejagnu' 'inetutils')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2)
-	#ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-md5sums=('e6040024eb9e761c3bea348d1fa5abb0')
+source=(ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2)
+        #ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+md5sums=('cb529205469260f0d56adc01088c4850')
 
 
 if [ -n "${_snapshot}" ]; then
@@ -26,7 +26,7 @@ else
   _basedir=gcc-${pkgver}
 fi
 
-build() {
+prepare() {
   cd ${srcdir}/${_basedir}
 
   # Do not run fixincludes
@@ -37,13 +37,19 @@ build() {
 
   echo ${pkgver} > gcc/BASE-VER
 
+  # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
+
+  mkdir ${srcdir}/gcc-build
+}
+
+build() {
+  cd ${srcdir}/gcc-build
+
   # using -pipe causes spurious test-suite failures
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48565
   CFLAGS=${CFLAGS/-pipe/}
   CXXFLAGS=${CXXFLAGS/-pipe/}
-
-  cd ${srcdir}
-  mkdir gcc-build && cd gcc-build
 
   ${srcdir}/${_basedir}/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
@@ -132,17 +138,15 @@ package_gcc()
   # unfortunately it is much, much easier to install the lot and clean-up the mess...
   rm $pkgdir/usr/bin/{{$CHOST-,}gfortran,{$CHOST-,}gccgo,gnat*}
   rm $pkgdir/usr/lib/*.so*
-  rm $pkgdir/usr/lib/lib{atomic,ffi,gfortran,go{,begin},iberty,objc}.a
+  rm $pkgdir/usr/lib/lib{atomic,gfortran,go{,begin},iberty,objc}.a
   rm $pkgdir/usr/lib/libgfortran.spec
   rm -r $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{ada{include,lib},finclude,include/objc}
-  rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/include/ffi{,target}.h
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{cc1obj{,plus},f951,gnat1,go1}
   rm $pkgdir/usr/lib/gcc/$CHOST/${pkgver}/{libcaf_single,libgfortranbegin}.a
   rm -r $pkgdir/usr/lib/go
-  rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libffi,libgomp,libquadmath,libitm}.info
+  rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libgomp,libquadmath,libitm}.info
   rm $pkgdir/usr/share/locale/{de,fr}/LC_MESSAGES/libstdc++.mo
   rm $pkgdir/usr/share/man/man1/{gccgo,gfortran}.1
-  rm $pkgdir/usr/share/man/man3/ffi*
 
   # many packages expect this symlinks
   ln -s gcc ${pkgdir}/usr/bin/cc
