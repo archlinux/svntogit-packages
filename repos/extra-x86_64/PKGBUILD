@@ -1,26 +1,35 @@
-# $Id$
+
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
+# Contributor: Michael Hansen <zrax0111 gmail com>
+# Contributor: Marco A Rojas <marquicus at gmail.com>
+# Contributor: Netanel Shine <netanel at archlinux.org.il >
+# Contributor: ngoonee <ngoonee.talk@gmail.com>
+# Contributor: Adam Russell <adamlr6+arch@gmail.com>
+# Contributor: Dhananjay Sathe <dhananjaysathe@gmail.com>
+
 pkgbase=samba
 pkgname=('libwbclient' 'smbclient' 'samba')
-pkgver=3.6.13
+pkgver=4.0.5
 # We use the 'A' to fake out pacman's version comparators.  Samba chooses
 # to append 'a','b',etc to their subsequent releases, which pamcan
 # misconstrues as alpha, beta, etc.  Bad samba!
-_realver=3.6.13
+_realver=4.0.5
 pkgrel=1
 arch=(i686 x86_64)
 url="http://www.samba.org"
 license=('GPL3')
-makedepends=('db' 'popt' 'libcups' 'acl' 'libldap' 'libcap' 'krb5' 'pam' 'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb')
+makedepends=('python2' 'docbook-xsl' 'pkg-config' 'libbsd' 'db' 'popt' 'libcups' 
+             'readline' 'tevent' 'acl' 'libldap' 'libcap' 'ldb>=1.1.15' 'krb5' 'pam' 
+             'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb')
 source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
         samba.logrotate
         swat.xinetd
         samba.pam
         smbd.service
         smbd.socket
-        smbd@.service
         nmbd.service
+        smbd@.service
         swat.socket
         swat@.service
         winbindd.service
@@ -28,134 +37,175 @@ source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${_realver}.tar.gz
 ### UNINSTALL dmapi package before building!!!
 
 build() {
-  cd ${srcdir}/${pkgbase}-${_realver}/source3
-  ./configure --prefix=/usr \
-              --libdir=/usr/lib/ \
+  # Use samba-pkg as a staging directory for the split packages
+  # (This is so RPATHS and symlinks are generated correctly via
+  # make install, but the otherwise unsplit pieces can be split)
+  _pkgsrc=${srcdir}/samba-pkg
+  rm -rf ${_pkgsrc}
+  cd ${srcdir}/samba-${_realver}
+  # change to use python2
+  SAVEIFS=${IFS}
+  IFS=$(echo -en "\n\b")
+  PYTHON_CALLERS="$(find ${srcdir}/samba-${_realver} -name '*.py')
+$(find ${srcdir}/samba-${_realver} -name 'wscript*')
+$(find ${srcdir}/samba-${_realver} -name 'configure.ac')
+$(find ${srcdir}/samba-${_realver} -name 'upgrade_from_s3')
+$(find ${srcdir}/samba-${_realver}/buildtools -type f)
+$(find ${srcdir}/samba-${_realver}/source4/scripting -type f)"
+  sed -i -e "s|/usr/bin/env python$|/usr/bin/env python2|" \
+         -e "s|python-config|python2-config|" \
+         -e "s|bin/python|bin/python2|" \
+      ${PYTHON_CALLERS}
+  IFS=${SAVEIFS}
+
+  export PYTHON=/usr/bin/python2
+_samba4_idmap_modules=idmap_ad,idmap_rid,idmap_adex,idmap_hash,idmap_tdb2
+_samba4_pdb_modules=pdb_tdbsam,pdb_ldap,pdb_ads,pdb_smbpasswd,pdb_wbc_sam,pdb_samba4
+_samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,auth_samba4
+ cd ${srcdir}/samba-${_realver}
+  ./configure --enable-fhs \
+              --prefix=/usr \
+              --libdir=/usr/lib \
               --localstatedir=/var \
               --with-configdir=/etc/samba \
               --with-lockdir=/var/cache/samba \
-              --with-piddir=/var/run/samba \
-              --with-fhs \
-              --with-pam \
-              --with-pam_smbpass \
-              --with-pammodulesdir=/usr/lib/security \
-              --with-dnsupdate \
-              --with-automount \
-              --with-quotas \
+              --with-sockets-dir=/var/run/samba \
+              --with-piddir=/var/run \
               --with-ads \
+              --with-ldap \
+              --with-swat \
+              --with-winbind \
               --with-acl-support \
-              --with-libsmbclient \
-              --with-syslog \
-              --enable-external-libtalloc \
-              --disable-dnssd \
-              --disable-avahi \
-              --with-shared-modules=idmap_ad,idmap_adex,idmap_rid,idmap_hash,idmap_tdb2 \
-              --enable-external-libtdb
+              --enable-gnutls \
+              --with-pam \
+              --with-pammodulesdir=/usr/lib/security \
+              --with-shared-modules=${_samba4_idmap_modules},${_samba4_pdb_modules},${_samba4_auth_modules} \
+              --disable-rpath-install
+
+              # Add this to the options once it's working...
+               #--with-system-mitkrb5 /opt/heimdal
   make
+  make DESTDIR="${_pkgsrc}/" install
+
+  # This gets skipped somehow
+  if [ ! -e ${_pkgsrc}/usr/bin/smbtar ]; then
+      install -m755 ${srcdir}/samba-${_realver}/source3/script/smbtar ${_pkgsrc}/usr/bin/
+  fi
 }
 
-package_libwbclient () {
+package_libwbclient() {
 pkgdesc="Samba winbind client library"
-depends=('glibc')
-  cd ${srcdir}/${pkgbase}-${_realver}/source3
-  mkdir -p ${pkgdir}/usr/lib  
-  for i in libwbclient*; do
-      cp  -a bin/${i}*.so* ${pkgdir}/usr/lib/
-  done
-  install -D -m644 pkgconfig/wbclient.pc ${pkgdir}/usr/lib/pkgconfig/wbclient.pc
-  install -D -m644 ../nsswitch/libwbclient/wbclient.h ${pkgdir}/usr/include/wbclient.h
+depends=('glibc' 'libbsd')
+  # Use samba-pkg as a staging directory for the split packages
+  # (This is so RPATHS and symlinks are generated correctly via
+  # make install, but the otherwise unsplit pieces can be split)
+  _pkgsrc=${srcdir}/samba-pkg
+  install -d -m755 ${pkgdir}/usr/lib
+  mv ${_pkgsrc}/usr/lib/libwbclient*.so* ${pkgdir}/usr/lib/
+
+  install -d -m755 ${pkgdir}/usr/lib/samba
+  mv ${_pkgsrc}/usr/lib/samba/libwinbind-client*.so* ${pkgdir}/usr/lib/samba/
+  mv ${_pkgsrc}/usr/lib/samba/libreplace.so* ${pkgdir}/usr/lib/samba/
+
+  install -d -m755 ${pkgdir}/usr/lib/pkgconfig
+  mv ${_pkgsrc}/usr/lib/pkgconfig/wbclient.pc ${pkgdir}/usr/lib/pkgconfig/
+
+  install -d -m755 ${pkgdir}/usr/include/samba-4.0
+  mv ${_pkgsrc}/usr/include/samba-4.0/wbclient.h ${pkgdir}/usr/include/samba-4.0/
 }
 
-package_smbclient () {
+package_smbclient() {
 pkgdesc="Tools to access a server's filespace and printers via SMB"
-depends=('readline' 'popt' 'libldap' 'cifs-utils' 'libcap' 'krb5' 'db' 'e2fsprogs' 'tdb' 'talloc' 'libwbclient')
-  cd ${srcdir}/${pkgbase}-${_realver}/source3
-  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/usr/lib
-  install -m755 bin/{smbclient,rpcclient,smbspool,smbtree,smbcacls,smbcquotas,smbget,net,nmblookup} ${pkgdir}/usr/bin/
-  for i in libnetapi* libsmbclient*;do
-      cp  -a bin/${i}*.so* ${pkgdir}/usr/lib/
-  done
-  install -m755 script/smbtar ${pkgdir}/usr/bin/
-  mkdir -p ${pkgdir}/usr/lib/cups/backend
-  ln -sf /usr/bin/smbspool ${pkgdir}/usr/lib/cups/backend/smb
-  mkdir -p ${pkgdir}/usr/include
-  install -m644 include/libsmbclient.h ${pkgdir}/usr/include/
-  install -m644 lib/netapi/netapi.h ${pkgdir}/usr/include/
-  mkdir -p ${pkgdir}/usr/lib/pkgconfig
-  install -m644 pkgconfig/smbclient.pc ${pkgdir}/usr/lib/pkgconfig/
-  install -m644 pkgconfig/netapi.pc ${pkgdir}/usr/lib/pkgconfig/
-  mkdir -p ${pkgdir}/usr/share/man/man{1,7}
-  for man in rpcclient smbcacls smbclient smbcquotas smbget \
-      smbtree smbtar nmblookup; do
-      install -m644 ../docs/manpages/${man}.1 ${pkgdir}/usr/share/man/man1/
-  done
-  install -m644 ../docs/manpages/libsmbclient.7 ${pkgdir}/usr/share/man/man7/
+depends=('popt' 'cifs-utils' 'tdb' "libwbclient>=$pkgver" 'ldb'
+         'tevent' 'libgcrypt' 'python2' 'talloc' 'readline' 'gnutls' 
+         'libbsd' 'libldap' 'libcups')
+
+    _smbclient_bins=('smbclient' 'smbclient4' 'rpcclient' 'smbspool'
+                     'smbtree' 'smbcacls' 'smbcquotas' 'smbget' 'net'
+                     'nmblookup' 'nmblookup4' 'smbtar')
+    # Use samba-pkg as a staging directory for the split packages
+    # (This is so RPATHS and symlinks are generated correctly via
+    # make install, but the otherwise unsplit pieces can be split)
+    _pkgsrc=${srcdir}/samba-pkg
+    install -d -m755 ${pkgdir}/usr/bin
+    for bin in ${_smbclient_bins[@]}; do
+        mv ${_pkgsrc}/usr/bin/${bin} ${pkgdir}/usr/bin/
+    done
+
+    # smbclient binaries link to the majority of the samba
+    # libs, so this is a shortcut instead of resolving the
+    # whole dependency tree by hand
+    install -d -m755 ${pkgdir}/usr/lib
+    for lib in ${_pkgsrc}/usr/lib/lib*.so*; do
+        mv ${lib} ${pkgdir}/usr/lib/
+    done
+
+    install -d -m755 ${pkgdir}/usr/lib/samba
+    for lib in ${_pkgsrc}/usr/lib/samba/lib*.so*; do
+        mv ${lib} ${pkgdir}/usr/lib/samba/
+    done
+
+    install -d -m755 ${pkgdir}/usr/lib/pkgconfig
+    mv ${_pkgsrc}/usr/lib/pkgconfig/smbclient.pc ${pkgdir}/usr/lib/pkgconfig/
+    mv ${_pkgsrc}/usr/lib/pkgconfig/smbclient-raw.pc ${pkgdir}/usr/lib/pkgconfig/
+    mv ${_pkgsrc}/usr/lib/pkgconfig/netapi.pc ${pkgdir}/usr/lib/pkgconfig/
+
+    install -d -m755 ${pkgdir}/usr/share/man/man1
+    install -d -m755 ${pkgdir}/usr/share/man/man7
+    install -d -m755 ${pkgdir}/usr/share/man/man8
+    for bin in ${_smbclient_bins[@]}; do
+        if [ -e ${_pkgsrc}/usr/share/man/man1/${bin}.1 ]; then
+            mv ${_pkgsrc}/usr/share/man/man1/${bin}.1 ${pkgdir}/usr/share/man/man1/
+        fi
+        if [ -e ${_pkgsrc}/usr/share/man/man8/${bin}.8 ]; then
+            mv ${_pkgsrc}/usr/share/man/man8/${bin}.8 ${pkgdir}/usr/share/man/man8/
+        fi
+    done
+    mv ${_pkgsrc}/usr/share/man/man7/libsmbclient.7 ${pkgdir}/usr/share/man/man7/
+
+    install -d -m755 ${pkgdir}/usr/include/samba-4.0
+    mv ${_pkgsrc}/usr/include/samba-4.0/libsmbclient.h ${pkgdir}/usr/include/samba-4.0/
+    mv ${_pkgsrc}/usr/include/samba-4.0/netapi.h ${pkgdir}/usr/include/samba-4.0/
+
+    mkdir -p ${pkgdir}/usr/lib/cups/backend
+    ln -sf /usr/bin/smbspool ${pkgdir}/usr/lib/cups/backend/smb
 }
 
-package_samba () {
-pkgdesc="Tools to access a server's filespace and printers via SMB"
+package_samba() {
+pkgdesc="SMB Fileserver and AD Domain server"
+depends=('db>=4.7' 'popt' 'libcups' 'libcap>=2.16' 'gamin' 'gnutls>=2.4.1'
+         'talloc' 'ldb' 'libbsd' 'python2' 'tdb' "smbclient>=$pkgver")
 backup=(etc/logrotate.d/samba
         etc/pam.d/samba
         etc/samba/smb.conf
         etc/xinetd.d/swat
         etc/conf.d/samba)
-depends=('db' 'popt' 'libcups' 'acl' 'libldap' "smbclient>=$pkgver" 'libcap' 'krb5' 'pam' 'gamin' 'gnutls' 'e2fsprogs' 'tdb' 'talloc')
-install='samba.install'
-  cd ${srcdir}/samba-${_realver}/source3
-  mkdir -p ${pkgdir}/etc/samba/private
-  chmod 700 ${pkgdir}/etc/samba/private
-  make DESTDIR=${pkgdir} install
-  chmod 644 ${pkgdir}/usr/include/*.h
-  rm -rf ${pkgdir}/usr/var
-  rm -rf ${pkgdir}/var/run/samba
-  (cd script; cp installbin.sh i; cat i | sed 's/\/sbin\///' > installbin.sh)
-  mkdir -p ${pkgdir}/etc/samba
-  cat ../examples/smb.conf.default | \
-    sed 's|log file = .*$|log file = /var/log/samba/log.%m|g' >${pkgdir}/etc/samba/smb.conf.default
-  install -D -m644 ../../samba.logrotate ${pkgdir}/etc/logrotate.d/samba
-  install -D -m644 ../../swat.xinetd ${pkgdir}/etc/xinetd.d/swat
-  install -D -m644 ../../samba.pam ${pkgdir}/etc/pam.d/samba
-  # spool directory
-  install -d -m1777 ${pkgdir}/var/spool/samba
-  sed -i 's|/usr/spool/samba|/var/spool/samba|g' ${pkgdir}/etc/samba/smb.conf.default
-  # fix logrotate
-  sed -i -e 's|log.%m|%m.log|g' ${pkgdir}/etc/samba/smb.conf.default
-  # nsswitch libraries
-  install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_wins.so ${pkgdir}/usr/lib/libnss_wins.so
-  ln -s libnss_wins.so ${pkgdir}/usr/lib/libnss_wins.so.2
-  install -D -m755 ${srcdir}/samba-${_realver}/nsswitch/libnss_winbind.so ${pkgdir}/usr/lib/libnss_winbind.so
-  ln -s libnss_winbind.so ${pkgdir}/usr/lib/libnss_winbind.so.2
-  # winbind krb5 locator
-  mkdir -p ${pkgdir}/usr/lib/krb5/plugins/libkrb5
-  install -d -m 0755 ${pkgdir}/usr/lib/krb5/plugins/libkrb5
-  install -m 755 bin/winbind_krb5_locator.so ${pkgdir}/usr/lib/krb5/plugins/libkrb5/winbind_krb5_locator.so
-  # remove conflict files of smbclient
-  for man in libsmbclient smbspool \
-      mount.cifs net cifs.upcall; do
-      rm -f ${pkgdir}/usr/share/man/man8/${man}.8
-  done
-  for i in libnetapi* libwbclient* libsmbclient* winbind_krb5*;do
-      rm -f ${pkgdir}/usr/lib/$i
-  done
-  for bin in net \
-      nmblookup rpcclient smbcacls smbclient \
-      smbcquotas smbget smbspool smbtar smbtree; do
-      rm -f ${pkgdir}/usr/bin/$bin
-  done
-  rm -f ${pkgdir}/usr/sbin/cifs.upcall
-  rm -f ${pkgdir}/usr/include/netapi.h
-  rm -f ${pkgdir}/usr/include/wbclient.h
-  for man in rpcclient smbcacls smbclient smbcquotas \
-      smbtree smbtar nmblookup smbget; do
-      rm -f ${pkgdir}/usr/share/man/man1/${man}.1
-  done
-  for man in tdbbackup tdbdump tdbtool; do
-      rm -f ${pkgdir}/usr/share/man/man8/${man}.8
-  done
-  rm -f ${pkgdir}/usr/share/man/man7/libsmbclient.7
-  rm -f ${pkgdir}/usr/include/libsmbclient.h
-  # copy ldap example
-  install -D -m644 ${srcdir}/samba-${_realver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
+install=samba.install
+    # Use samba-pkg as a staging directory for the split packages
+    # (This is so RPATHS and symlinks are generated correctly via
+    # make install, but the otherwise unsplit pieces can be split)
+    _pkgsrc=${srcdir}/samba-pkg
+    # Everything that libwbclient and smbclient didn't install goes
+    # into the samba package...
+    mv ${_pkgsrc}/* ${pkgdir}/
+    rmdir ${_pkgsrc}
+
+    _pyver=`python2 -c 'import sys; print(sys.version[:3])'`
+
+    find ${pkgdir}/usr/lib/python${_pyver}/site-packages/ -name '*.py' | \
+         xargs sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|"
+    find ${pkgdir}/usr/bin ${pkgdir}/usr/sbin -type f -executable | \
+         xargs sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|"
+
+    # Make admin scripts look in the right place for the samba python module
+    for script in sbin/samba_dnsupdate sbin/samba_kcc sbin/samba_spnupdate \
+                  sbin/samba_upgradedns bin/samba-tool
+    do
+        sed -i "/^sys\.path\.insert/ a\
+sys.path.insert(0, '/usr/lib/python${_pyver}/site-packages')" \
+               ${pkgdir}/usr/${script}
+    done
+
   # install systemd files
   install -d -m755 ${pkgdir}/usr/lib/systemd/system
   for i in smbd nmbd swat winbindd; do
@@ -164,20 +214,41 @@ install='samba.install'
   done
   # create ephemeral dirs via tmpfiles rather than shipping them in package
   install -D -m644 ${srcdir}/samba.conf ${pkgdir}/usr/lib/tmpfiles.d/samba.conf
-  rm -rf ${pkgdir}/var/run
+  # install sample smb.conf
+  install -d -m755 ${pkgdir}/etc/samba
+  install -m644 ${srcdir}/samba-${_realver}/packaging/LSB/smb.conf ${pkgdir}/etc/samba/smb.conf.default
+  
+  mkdir -p ${pkgdir}/etc/samba/private
+  chmod 700 ${pkgdir}/etc/samba/private
 
-  mkdir -p ${pkgdir}/usr/lib/pkgconfig
-  install -m644 pkgconfig/smbsharemodes.pc ${pkgdir}/usr/lib/pkgconfig/
+  install -D -m644 ${srcdir}/samba.logrotate ${pkgdir}/etc/logrotate.d/samba
+  install -D -m644 ${srcdir}/swat.xinetd ${pkgdir}/etc/xinetd.d/swat
+  install -D -m644 ${srcdir}/samba.pam ${pkgdir}/etc/pam.d/samba 
+
+  # winbind krb5 locator
+  mkdir -p ${pkgdir}/usr/lib/krb5/plugins/libkrb5
+  mv  ${pkgdir}/usr/lib/*.so ${pkgdir}/usr/lib/krb5/plugins/libkrb5/
+
+  # fix logrotate
+  sed -i -e 's|log.%m|%m.log|g' ${pkgdir}/etc/samba/smb.conf.default
+  
+  # spool directory
+  install -d -m1777 ${pkgdir}/var/spool/samba
+  
+  rm -rf ${pkgdir}/var/run
+  
+  # copy ldap example
+  install -D -m644 ${srcdir}/samba-${_realver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
 }
-md5sums=('b9fe8413cbb6fa4b970a159968db2fb4'
+md5sums=('58ec2fec08872b72f8fd526f2da20a9e'
          '5697da77590ec092cc8a883bae06093c'
          'a4bbfa39fee95bba2e7ad6b535fae7e6'
          '96f82c38f3f540b53f3e5144900acf17'
-         '4d86a4e3b2ac4b35e12ac667d1d261a7'
+         'd0b18dd7f5fafc8d25cb3a7c37c6d920'
          'a78b9aa93eb14b0ac445897395693225'
-         '4f2a5266f88d016a78014bb02e118c7f'
-         '46bac3375dcf25baea4699226410987a'
+         '90845b89f2321cb19c0b13f385f1782a'
+         '70186fa43510bf99e3afd5951e814fbf'
          '6db11f3dd2112a4b7a73007b189bef3f'
          'b0de262f9c62acd162e873658f33d063'
-         '03257dd11fc041d59e612c02a54ef4c0'
+         '64a52bc798033aeabfae3410bd559aa4'
          '49abd7b719e3713a3f75a8a50958e381')
