@@ -21,8 +21,8 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=5.4.13
-pkgrel=3
+pkgver=5.4.14
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
@@ -33,7 +33,7 @@ makedepends=('apache' 'imap' 'postgresql-libs' 'libldap' 'postfix' 'libvpx'
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.bz2"
         'php.ini.patch' 'apache.conf' 'php-fpm.conf.in.patch'
         'logrotate.d.php-fpm' 'php-fpm.service' 'php-fpm.tmpfiles')
-md5sums=('cacd308e978b7cf9ba4993196612ccf7'
+md5sums=('cfdc044be2c582991a1fe0967898fa38'
          '44c1bb1df346b3b9d3e092c7df9a37d0'
          'dec2cbaad64e3abf4f0ec70e1de4e8e9'
          '5c1f4c967b66ce3eaf819b46951dcbf5'
@@ -41,8 +41,19 @@ md5sums=('cacd308e978b7cf9ba4993196612ccf7'
          'f8b206cb8fecb05cb1ded8bee45633ff'
          'c60343df74f8e1afb13b084d5c0e47ed')
 
+prepare() {
+	cd ${srcdir}/${pkgbase}-${pkgver}
+
+	# adjust paths
+	patch -p0 -i ${srcdir}/php.ini.patch
+	patch -p0 -i ${srcdir}/php-fpm.conf.in.patch
+
+	# workaround for pkg-config 0.28
+	sed 's/ && test -n "$OPENSSL_INCS"//g' -i configure
+}
+
 build() {
-	phpconfig="--srcdir=../${pkgbase}-${pkgver} \
+	local _phpconfig="--srcdir=../${pkgbase}-${pkgver} \
 		--config-cache \
 		--prefix=/usr \
 		--sysconfdir=/etc/php \
@@ -55,7 +66,7 @@ build() {
 		--without-pear \
 		"
 
-	phpextensions="--enable-bcmath=shared \
+	local _phpextensions="--enable-bcmath=shared \
 		--enable-calendar=shared \
 		--enable-dba=shared \
 		--enable-exif=shared \
@@ -120,72 +131,65 @@ build() {
 
 	cd ${srcdir}/${pkgbase}-${pkgver}
 
-	# adjust paths
-	patch -p0 -i ${srcdir}/php.ini.patch
-	patch -p0 -i ${srcdir}/php-fpm.conf.in.patch
-
-	# workaround for pkg-config 0.28
-	sed 's/ && test -n "$OPENSSL_INCS"//g' -i configure
-
 	# php
 	mkdir ${srcdir}/build-php
 	cd ${srcdir}/build-php
 	ln -s ../${pkgbase}-${pkgver}/configure
-	./configure ${phpconfig} \
+	./configure ${_phpconfig} \
 		--disable-cgi \
 		--with-readline \
 		--enable-pcntl \
-		${phpextensions}
+		${_phpextensions}
 	make
 
 	# cgi and fcgi
 	# reuse the previous run; this will save us a lot of time
 	cp -a ${srcdir}/build-php ${srcdir}/build-cgi
 	cd ${srcdir}/build-cgi
-	./configure ${phpconfig} \
+	./configure ${_phpconfig} \
 		--disable-cli \
 		--enable-cgi \
-		${phpextensions}
+		${_phpextensions}
 	make
 
 	# apache
 	cp -a ${srcdir}/build-php ${srcdir}/build-apache
 	cd ${srcdir}/build-apache
-	./configure ${phpconfig} \
+	./configure ${_phpconfig} \
 		--disable-cli \
 		--with-apxs2 \
-		${phpextensions}
+		${_phpextensions}
 	make
 
 	# fpm
 	cp -a ${srcdir}/build-php ${srcdir}/build-fpm
 	cd ${srcdir}/build-fpm
-	./configure ${phpconfig} \
+	./configure ${_phpconfig} \
 		--disable-cli \
 		--enable-fpm \
 		--with-fpm-user=http \
 		--with-fpm-group=http \
-		${phpextensions}
+		${_phpextensions}
 	make
 
 	# embed
 	cp -a ${srcdir}/build-php ${srcdir}/build-embed
 	cd ${srcdir}/build-embed
-	./configure ${phpconfig} \
+	./configure ${_phpconfig} \
 		--disable-cli \
 		--enable-embed=shared \
-		${phpextensions}
+		${_phpextensions}
 	make
 
 	# pear
 	cp -a ${srcdir}/build-php ${srcdir}/build-pear
 	cd ${srcdir}/build-pear
-	./configure ${phpconfig} \
+	./configure ${_phpconfig} \
 		--disable-cgi \
 		--with-readline \
 		--enable-pcntl \
 		--with-pear \
-		${phpextensions}
+		${_phpextensions}
 	make
 }
 
