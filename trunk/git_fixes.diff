@@ -1,0 +1,732 @@
+From 8fd0ed60a62cb7f36b2ade1bd16a66671eaf79da Mon Sep 17 00:00:00 2001
+From: Akira TAGOH <akira@tagoh.org>
+Date: Mon, 01 Apr 2013 09:16:28 +0000
+Subject: Bug 62980 - matching native fonts with even :lang=en
+
+Fix the matcher modified by 4eab908c8679a797ac7016b77a93ee41bb11b0fc
+to deal with both strong and weak of FC_LANG as the same location in the score
+---
+diff --git a/src/fcmatch.c b/src/fcmatch.c
+index 68f39ae..2d7b798 100644
+--- a/src/fcmatch.c
++++ b/src/fcmatch.c
+@@ -227,9 +227,10 @@ typedef enum _FcMatcherPriorityDummy {
+ #undef FC_OBJECT
+ 
+ #undef PRI1
+-#define PRI1(n)			\
+-    PRI_ ## n ## _STRONG,	\
+-    PRI_ ## n ## _WEAK
++#define PRI1(n)					\
++    PRI_ ## n,					\
++    PRI_ ## n ## _STRONG = PRI_ ## n,		\
++    PRI_ ## n ## _WEAK = PRI_ ## n
+ 
+ typedef enum _FcMatcherPriority {
+     PRI1(HASH),
+@@ -237,9 +238,8 @@ typedef enum _FcMatcherPriority {
+     PRI1(FOUNDRY),
+     PRI1(CHARSET),
+     PRI_FAMILY_STRONG,
+-    PRI_LANG_STRONG,
+     PRI_POSTSCRIPT_NAME_STRONG,
+-    PRI_LANG_WEAK,
++    PRI1(LANG),
+     PRI_FAMILY_WEAK,
+     PRI_POSTSCRIPT_NAME_WEAK,
+     PRI1(SPACING),
+@@ -910,8 +910,7 @@ FcFontSetSort (FcConfig	    *config FC_UNUSED,
+ 	 * If this node matches any language, go check
+ 	 * which ones and satisfy those entries
+ 	 */
+-	if (nodeps[f]->score[PRI_LANG_STRONG] < 2000 ||
+-	    nodeps[f]->score[PRI_LANG_WEAK] < 2000)
++	if (nodeps[f]->score[PRI_LANG] < 2000)
+ 	{
+ 	    for (i = 0; i < nPatternLang; i++)
+ 	    {
+@@ -935,13 +934,6 @@ FcFontSetSort (FcConfig	    *config FC_UNUSED,
+ 			}
+ 			patternLangSat[i] = FcTrue;
+ 			satisfies = FcTrue;
+-			/* adjust score to ensure it's not more than 10000.0
+-			 * which would means the lang didn't satisfy the requirements
+-			 */
+-			if (nodeps[f]->score[PRI_LANG_STRONG] > 10000.0)
+-			    nodeps[f]->score[PRI_LANG_STRONG] = 10000.0;
+-			if (nodeps[f]->score[PRI_LANG_WEAK] > 10000.0)
+-			    nodeps[f]->score[PRI_LANG_WEAK] = 10000.0;
+ 			break;
+ 		    }
+ 		}
+@@ -949,8 +941,7 @@ FcFontSetSort (FcConfig	    *config FC_UNUSED,
+ 	}
+ 	if (!satisfies)
+ 	{
+-	    nodeps[f]->score[PRI_LANG_STRONG] = 10000.0;
+-	    nodeps[f]->score[PRI_LANG_WEAK] = 10000.0;
++	    nodeps[f]->score[PRI_LANG] = 10000.0;
+ 	}
+     }
+ 
+--
+cgit v0.9.0.2-2-gbebe
+From 18bf57c70aafcad031c0b43756b754dcaf6a756a Mon Sep 17 00:00:00 2001
+From: Sebastian Freundt <hroptatyr@fresse.org>
+Date: Sun, 07 Apr 2013 00:02:58 +0000
+Subject: build-chain, replace INCLUDES directive by AM_CPPFLAGS
+
+As of automake-13.1 the INCLUDES directive is no longer supported.
+An automake run will return with an error.
+
+This changeset simply follows automake's advice to replace INCLUDES
+by AM_CPPFLAGS.
+---
+diff --git a/Tools.mk b/Tools.mk
+index 56766da..f0fa0ec 100644
+--- a/Tools.mk
++++ b/Tools.mk
+@@ -32,7 +32,7 @@ TOOL=./$(DIR)$(EXEEXT_FOR_BUILD)
+ 
+ EXTRA_DIST = $(TARG) $(TMPL) $(TSRC) $(DIST)
+ 
+-INCLUDES = \
++AM_CPPFLAGS = \
+ 	   -I$(builddir) \
+ 	   -I$(srcdir) \
+ 	   -I$(top_builddir)/src \
+@@ -43,7 +43,7 @@ INCLUDES = \
+ 	   $(WARN_CFLAGS)
+ 
+ $(TOOL): $(TSRC) $(ALIAS_FILES)
+-	$(AM_V_GEN) $(CC_FOR_BUILD) -o $(TOOL) $< $(INCLUDES)
++	$(AM_V_GEN) $(CC_FOR_BUILD) -o $(TOOL) $< $(AM_CPPFLAGS)
+ 
+ $(TARG): $(TMPL) $(TSRC) $(DEPS)
+ 	$(AM_V_GEN) $(MAKE) $(TOOL) && \
+diff --git a/fc-cache/Makefile.am b/fc-cache/Makefile.am
+index 7f7d1b1..0e10786 100644
+--- a/fc-cache/Makefile.am
++++ b/fc-cache/Makefile.am
+@@ -36,7 +36,7 @@ uninstall-local:
+ 	-$(RM) -rf "$(DESTDIR)$(fc_cachedir)"
+ endif
+ 
+-INCLUDES=-I${top_srcdir} -I${top_srcdir}/src $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} -I${top_srcdir}/src $(WARN_CFLAGS)
+ 
+ bin_PROGRAMS=fc-cache
+ 
+diff --git a/fc-cat/Makefile.am b/fc-cat/Makefile.am
+index b426723..04c1cc4 100644
+--- a/fc-cat/Makefile.am
++++ b/fc-cat/Makefile.am
+@@ -27,7 +27,7 @@ FC_CAT_SRC=${top_srcdir}/fc-cat
+ 
+ SGML = ${FC_CAT_SRC}/fc-cat.sgml
+ 
+-INCLUDES=-I${top_srcdir} $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(WARN_CFLAGS)
+ 
+ bin_PROGRAMS=fc-cat
+ 
+diff --git a/fc-list/Makefile.am b/fc-list/Makefile.am
+index b2c499d..c58540e 100644
+--- a/fc-list/Makefile.am
++++ b/fc-list/Makefile.am
+@@ -29,7 +29,7 @@ SGML = ${FC_LIST_SRC}/fc-list.sgml
+ 
+ bin_PROGRAMS=fc-list
+ 
+-INCLUDES=-I${top_srcdir} $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(WARN_CFLAGS)
+ 
+ BUILT_MANS=fc-list.1
+ 
+diff --git a/fc-match/Makefile.am b/fc-match/Makefile.am
+index 0e9e8fd..84afb8b 100644
+--- a/fc-match/Makefile.am
++++ b/fc-match/Makefile.am
+@@ -29,7 +29,7 @@ FC_MATCH_SRC=${top_srcdir}/fc-match
+ 
+ SGML = ${FC_MATCH_SRC}/fc-match.sgml
+ 
+-INCLUDES=-I${top_srcdir} $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(WARN_CFLAGS)
+ 
+ BUILT_MANS=fc-match.1
+ 
+diff --git a/fc-pattern/Makefile.am b/fc-pattern/Makefile.am
+index 92b0433..c456247 100644
+--- a/fc-pattern/Makefile.am
++++ b/fc-pattern/Makefile.am
+@@ -29,7 +29,7 @@ FC_PATTERN_SRC=${top_srcdir}/fc-pattern
+ 
+ SGML = ${FC_PATTERN_SRC}/fc-pattern.sgml
+ 
+-INCLUDES=-I${top_srcdir} $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(WARN_CFLAGS)
+ 
+ BUILT_MANS=fc-pattern.1
+ 
+diff --git a/fc-query/Makefile.am b/fc-query/Makefile.am
+index b3ea1e6..73b3f11 100644
+--- a/fc-query/Makefile.am
++++ b/fc-query/Makefile.am
+@@ -29,7 +29,7 @@ FC_QUERY_SRC=${top_srcdir}/fc-query
+ 
+ SGML = ${FC_QUERY_SRC}/fc-query.sgml
+ 
+-INCLUDES=-I${top_srcdir} $(FREETYPE_CFLAGS) $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(FREETYPE_CFLAGS) $(WARN_CFLAGS)
+ 
+ BUILT_MANS=fc-query.1
+ 
+diff --git a/fc-scan/Makefile.am b/fc-scan/Makefile.am
+index 2063405..471a42f 100644
+--- a/fc-scan/Makefile.am
++++ b/fc-scan/Makefile.am
+@@ -29,7 +29,7 @@ FC_SCAN_SRC=${top_srcdir}/fc-scan
+ 
+ SGML = ${FC_SCAN_SRC}/fc-scan.sgml
+ 
+-INCLUDES=-I${top_srcdir} $(FREETYPE_CFLAGS) $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(FREETYPE_CFLAGS) $(WARN_CFLAGS)
+ 
+ BUILT_MANS=fc-scan.1
+ 
+diff --git a/fc-validate/Makefile.am b/fc-validate/Makefile.am
+index 54edec2..782cead 100644
+--- a/fc-validate/Makefile.am
++++ b/fc-validate/Makefile.am
+@@ -29,7 +29,7 @@ FC_VALIDATE_SRC=${top_srcdir}/fc-validate
+ 
+ SGML = ${FC_VALIDATE_SRC}/fc-validate.sgml
+ 
+-INCLUDES=-I${top_srcdir} $(FREETYPE_CFLAGS) $(WARN_CFLAGS)
++AM_CPPFLAGS=-I${top_srcdir} $(FREETYPE_CFLAGS) $(WARN_CFLAGS)
+ 
+ BUILT_MANS=fc-validate.1
+ 
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 9fd7dd8..066cc03 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -70,7 +70,7 @@ uninstall-ms-import-lib:
+ 
+ endif
+ 
+-INCLUDES = 						\
++AM_CPPFLAGS = 						\
+ 	-I$(top_srcdir)					\
+ 	-I$(top_srcdir)/src				\
+ 	$(FREETYPE_CFLAGS)				\
+--
+cgit v0.9.0.2-2-gbebe
+From 9299155b5247255d6b6687448173056c3ca8d09b Mon Sep 17 00:00:00 2001
+From: Akira TAGOH <akira@tagoh.org>
+Date: Tue, 09 Apr 2013 02:34:35 +0000
+Subject: Ensure closing fp on error
+
+---
+diff --git a/src/fchash.c b/src/fchash.c
+index 827b20f..4ea5f37 100644
+--- a/src/fchash.c
++++ b/src/fchash.c
+@@ -220,7 +220,7 @@ FcHashGetSHA256DigestFromFile (const FcChar8 *filename)
+ 
+     ret = FcHashInitSHA256Digest ();
+     if (!ret)
+-	return NULL;
++	goto bail0;
+ 
+     while (!feof (fp))
+     {
+--
+cgit v0.9.0.2-2-gbebe
+From c93a8b8b54afe33e5ecf9870723543cb4058fa94 Mon Sep 17 00:00:00 2001
+From: Akira TAGOH <akira@tagoh.org>
+Date: Tue, 09 Apr 2013 03:46:30 +0000
+Subject: Obtain fonts data via FT_Face instead of opening a file directly
+
+---
+diff --git a/src/fcfreetype.c b/src/fcfreetype.c
+index 8a037c0..1eecfdb 100644
+--- a/src/fcfreetype.c
++++ b/src/fcfreetype.c
+@@ -1662,7 +1662,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
+     if (!FcPatternAddBool (pat, FC_DECORATIVE, decorative))
+ 	goto bail1;
+ 
+-    hashstr = FcHashGetSHA256DigestFromFile (file);
++    hashstr = FcHashGetSHA256DigestFromFace (face);
+     if (!hashstr)
+ 	goto bail1;
+     if (!FcPatternAddString (pat, FC_HASH, hashstr))
+diff --git a/src/fchash.c b/src/fchash.c
+index 4ea5f37..043d94b 100644
+--- a/src/fchash.c
++++ b/src/fchash.c
+@@ -29,6 +29,9 @@
+ #include "fcint.h"
+ #include <stdio.h>
+ #include <string.h>
++#include <ft2build.h>
++#include FT_TRUETYPE_TABLES_H
++#include FT_TRUETYPE_TAGS_H
+ 
+ #define ROTRN(w, v, n)	((((FcChar32)v) >> n) | (((FcChar32)v) << (w - n)))
+ #define ROTR32(v, n)	ROTRN(32, v, n)
+@@ -204,41 +207,50 @@ FcHashGetSHA256Digest (const FcChar8 *input_strings,
+ }
+ 
+ FcChar8 *
+-FcHashGetSHA256DigestFromFile (const FcChar8 *filename)
++FcHashGetSHA256DigestFromFace (const FT_Face face)
+ {
+-    FILE *fp = fopen ((const char *)filename, "rb");
+-    char ibuf[64];
++    char ibuf[64], *buf = NULL;
+     FcChar32 *ret;
+-    size_t len;
+-    struct stat st;
++    FT_Error err;
++    FT_ULong len = 0, alen, i = 0;
+ 
+-    if (!fp)
++    err = FT_Load_Sfnt_Table (face, 0, 0, NULL, &len);
++    if (err != FT_Err_Ok)
+ 	return NULL;
+-
+-    if (FcStat (filename, &st))
++    alen = (len + 63) & ~63;
++    buf = malloc (alen);
++    if (!buf)
++	return NULL;
++    err = FT_Load_Sfnt_Table (face, 0, 0, (FT_Byte *)buf, &len);
++    if (err != FT_Err_Ok)
+ 	goto bail0;
++    memset (&buf[len], 0, alen - len);
+ 
+     ret = FcHashInitSHA256Digest ();
+     if (!ret)
+ 	goto bail0;
+ 
+-    while (!feof (fp))
++    while (i <= len)
+     {
+-	if ((len = fread (ibuf, sizeof (char), 64, fp)) < 64)
++	if ((len - i) < 64)
+ 	{
+ 	    long v;
++	    int n;
+ 
+ 	    /* add a padding */
+-	    memset (&ibuf[len], 0, 64 - len);
+-	    ibuf[len] = 0x80;
+-	    if ((64 - len) < 9)
++	    n = len - i;
++	    if (n > 0)
++		memcpy (ibuf, &buf[i], n);
++	    memset (&ibuf[n], 0, 64 - n);
++	    ibuf[n] = 0x80;
++	    if ((64 - n) < 9)
+ 	    {
+ 		/* process a block once */
+ 		FcHashComputeSHA256Digest (ret, ibuf);
+ 		memset (ibuf, 0, 64);
+ 	    }
+ 	    /* set input size at the end */
+-	    v = (long)st.st_size * 8;
++	    v = len * 8;
+ 	    ibuf[63 - 0] =  v        & 0xff;
+ 	    ibuf[63 - 1] = (v >>  8) & 0xff;
+ 	    ibuf[63 - 2] = (v >> 16) & 0xff;
+@@ -252,14 +264,18 @@ FcHashGetSHA256DigestFromFile (const FcChar8 *filename)
+ 	}
+ 	else
+ 	{
+-	    FcHashComputeSHA256Digest (ret, ibuf);
++	    FcHashComputeSHA256Digest (ret, &buf[i]);
+ 	}
++	i += 64;
+     }
+-    fclose (fp);
++    if (buf)
++	free (buf);
+ 
+     return FcHashSHA256ToString (ret);
+ 
+ bail0:
+-    fclose (fp);
++    if (buf)
++	free (buf);
++
+     return NULL;
+ }
+diff --git a/src/fcint.h b/src/fcint.h
+index c45075e..703b983 100644
+--- a/src/fcint.h
++++ b/src/fcint.h
+@@ -47,6 +47,8 @@
+ #include "fcdeprecate.h"
+ #include "fcmutex.h"
+ #include "fcatomic.h"
++#include <ft2build.h>
++#include FT_FREETYPE_H
+ 
+ #ifndef FC_CONFIG_PATH
+ #define FC_CONFIG_PATH "fonts.conf"
+@@ -819,7 +821,7 @@ FcPrivate FcChar8 *
+ FcHashGetSHA256Digest (const FcChar8 *input_strings,
+ 		       size_t         len);
+ FcPrivate FcChar8 *
+-FcHashGetSHA256DigestFromFile (const FcChar8 *filename);
++FcHashGetSHA256DigestFromFace (const FT_Face face);
+ 
+ /* fcinit.c */
+ FcPrivate FcConfig *
+--
+cgit v0.9.0.2-2-gbebe
+From fc5a589abad0e8285f7d95007ebda76536e8fa7d Mon Sep 17 00:00:00 2001
+From: Akira TAGOH <akira@tagoh.org>
+Date: Tue, 09 Apr 2013 08:18:43 +0000
+Subject: Revert the previous change and rework to not export freetype API outside fcfreetype.c
+
+---
+diff --git a/src/fcfreetype.c b/src/fcfreetype.c
+index 1eecfdb..22064b3 100644
+--- a/src/fcfreetype.c
++++ b/src/fcfreetype.c
+@@ -1104,7 +1104,10 @@ FcFreeTypeQueryFace (const FT_Face  face,
+     char	    psname[256];
+     const char	    *tmp;
+ 
+-    FcChar8	    *hashstr;
++    FcChar8	    *hashstr = NULL;
++    char	    *fontdata = NULL;
++    FT_Error	    err;
++    FT_ULong	    len = 0, alen;
+ 
+     pat = FcPatternCreate ();
+     if (!pat)
+@@ -1662,12 +1665,22 @@ FcFreeTypeQueryFace (const FT_Face  face,
+     if (!FcPatternAddBool (pat, FC_DECORATIVE, decorative))
+ 	goto bail1;
+ 
+-    hashstr = FcHashGetSHA256DigestFromFace (face);
++    err = FT_Load_Sfnt_Table (face, 0, 0, NULL, &len);
++    if (err != FT_Err_Ok)
++	goto bail1;
++    alen = (len + 63) & ~63;
++    fontdata = malloc (alen);
++    if (!fontdata)
++	goto bail1;
++    err = FT_Load_Sfnt_Table (face, 0, 0, (FT_Byte *)fontdata, &len);
++    if (err != FT_Err_Ok)
++	goto bail1;
++    memset (&fontdata[len], 0, alen - len);
++    hashstr = FcHashGetSHA256DigestFromMemory (fontdata, len);
+     if (!hashstr)
+ 	goto bail1;
+     if (!FcPatternAddString (pat, FC_HASH, hashstr))
+ 	goto bail1;
+-    free (hashstr);
+ 
+     /*
+      * Compute the unicode coverage for the font
+@@ -1756,6 +1769,10 @@ FcFreeTypeQueryFace (const FT_Face  face,
+ bail2:
+     FcCharSetDestroy (cs);
+ bail1:
++    if (hashstr)
++	free (hashstr);
++    if (fontdata)
++	free (fontdata);
+     FcPatternDestroy (pat);
+ bail0:
+     return NULL;
+diff --git a/src/fchash.c b/src/fchash.c
+index 043d94b..1ef1e16 100644
+--- a/src/fchash.c
++++ b/src/fchash.c
+@@ -29,9 +29,6 @@
+ #include "fcint.h"
+ #include <stdio.h>
+ #include <string.h>
+-#include <ft2build.h>
+-#include FT_TRUETYPE_TABLES_H
+-#include FT_TRUETYPE_TAGS_H
+ 
+ #define ROTRN(w, v, n)	((((FcChar32)v) >> n) | (((FcChar32)v) << (w - n)))
+ #define ROTR32(v, n)	ROTRN(32, v, n)
+@@ -207,40 +204,28 @@ FcHashGetSHA256Digest (const FcChar8 *input_strings,
+ }
+ 
+ FcChar8 *
+-FcHashGetSHA256DigestFromFace (const FT_Face face)
++FcHashGetSHA256DigestFromMemory (const char *fontdata,
++				 size_t      length)
+ {
+-    char ibuf[64], *buf = NULL;
++    char ibuf[64];
+     FcChar32 *ret;
+-    FT_Error err;
+-    FT_ULong len = 0, alen, i = 0;
+-
+-    err = FT_Load_Sfnt_Table (face, 0, 0, NULL, &len);
+-    if (err != FT_Err_Ok)
+-	return NULL;
+-    alen = (len + 63) & ~63;
+-    buf = malloc (alen);
+-    if (!buf)
+-	return NULL;
+-    err = FT_Load_Sfnt_Table (face, 0, 0, (FT_Byte *)buf, &len);
+-    if (err != FT_Err_Ok)
+-	goto bail0;
+-    memset (&buf[len], 0, alen - len);
++    size_t i = 0;
+ 
+     ret = FcHashInitSHA256Digest ();
+     if (!ret)
+-	goto bail0;
++	return NULL;
+ 
+-    while (i <= len)
++    while (i <= length)
+     {
+-	if ((len - i) < 64)
++	if ((length - i) < 64)
+ 	{
+ 	    long v;
+-	    int n;
++	    size_t n;
+ 
+ 	    /* add a padding */
+-	    n = len - i;
++	    n = length - i;
+ 	    if (n > 0)
+-		memcpy (ibuf, &buf[i], n);
++		memcpy (ibuf, &fontdata[i], n);
+ 	    memset (&ibuf[n], 0, 64 - n);
+ 	    ibuf[n] = 0x80;
+ 	    if ((64 - n) < 9)
+@@ -250,7 +235,7 @@ FcHashGetSHA256DigestFromFace (const FT_Face face)
+ 		memset (ibuf, 0, 64);
+ 	    }
+ 	    /* set input size at the end */
+-	    v = len * 8;
++	    v = length * 8;
+ 	    ibuf[63 - 0] =  v        & 0xff;
+ 	    ibuf[63 - 1] = (v >>  8) & 0xff;
+ 	    ibuf[63 - 2] = (v >> 16) & 0xff;
+@@ -264,18 +249,10 @@ FcHashGetSHA256DigestFromFace (const FT_Face face)
+ 	}
+ 	else
+ 	{
+-	    FcHashComputeSHA256Digest (ret, &buf[i]);
++	    FcHashComputeSHA256Digest (ret, &fontdata[i]);
+ 	}
+ 	i += 64;
+     }
+-    if (buf)
+-	free (buf);
+ 
+     return FcHashSHA256ToString (ret);
+-
+-bail0:
+-    if (buf)
+-	free (buf);
+-
+-    return NULL;
+ }
+diff --git a/src/fcint.h b/src/fcint.h
+index 703b983..a662dbf 100644
+--- a/src/fcint.h
++++ b/src/fcint.h
+@@ -47,8 +47,6 @@
+ #include "fcdeprecate.h"
+ #include "fcmutex.h"
+ #include "fcatomic.h"
+-#include <ft2build.h>
+-#include FT_FREETYPE_H
+ 
+ #ifndef FC_CONFIG_PATH
+ #define FC_CONFIG_PATH "fonts.conf"
+@@ -821,7 +819,8 @@ FcPrivate FcChar8 *
+ FcHashGetSHA256Digest (const FcChar8 *input_strings,
+ 		       size_t         len);
+ FcPrivate FcChar8 *
+-FcHashGetSHA256DigestFromFace (const FT_Face face);
++FcHashGetSHA256DigestFromMemory (const char *fontdata,
++				 size_t      length);
+ 
+ /* fcinit.c */
+ FcPrivate FcConfig *
+--
+cgit v0.9.0.2-2-gbebe
+From 77419a4dfdf41ed34dd03e74d0e4e6f89dbc65e1 Mon Sep 17 00:00:00 2001
+From: Akira TAGOH <akira@tagoh.org>
+Date: Wed, 10 Apr 2013 02:14:39 +0000
+Subject: documented FC_HASH and FC_POSTSCRIPT_NAME
+
+---
+diff --git a/doc/fontconfig-devel.sgml b/doc/fontconfig-devel.sgml
+index 05c5c09..a7b8530 100644
+--- a/doc/fontconfig-devel.sgml
++++ b/doc/fontconfig-devel.sgml
+@@ -196,6 +196,9 @@ convenience for the application's rendering mechanism.
+                                                   default value of familylang,
+                                                   stylelang and fullnamelang
+     prgname        FC_PRGNAME             String  Name of the running program
++    hash           FC_HASH                String  SHA256 hash value of the font data
++                                                  with "sha256:" prefix.
++    postscriptname FC_POSTSCRIPT_NAME     String  Font name in PostScript
+     </programlisting>
+   </sect2>
+ </sect1>
+--
+cgit v0.9.0.2-2-gbebe
+From 03216ccf4ca0808f9c7b9513efcaeb7f4058b575 Mon Sep 17 00:00:00 2001
+From: Akira TAGOH <akira@tagoh.org>
+Date: Wed, 10 Apr 2013 09:41:22 +0000
+Subject: Bug 63329 - make check fails: .. contents:: :depth: 2
+
+Add back FcHashGetSHA256DigestFromFile() and fall back to it
+when font isn't SFNT-based font because FT_Load_Sfnt_Table
+fails with FT_Err_Invalid_Face_Handle.
+---
+diff --git a/src/fcfreetype.c b/src/fcfreetype.c
+index 22064b3..5e8990d 100644
+--- a/src/fcfreetype.c
++++ b/src/fcfreetype.c
+@@ -1666,17 +1666,29 @@ FcFreeTypeQueryFace (const FT_Face  face,
+ 	goto bail1;
+ 
+     err = FT_Load_Sfnt_Table (face, 0, 0, NULL, &len);
+-    if (err != FT_Err_Ok)
+-	goto bail1;
+-    alen = (len + 63) & ~63;
+-    fontdata = malloc (alen);
+-    if (!fontdata)
+-	goto bail1;
+-    err = FT_Load_Sfnt_Table (face, 0, 0, (FT_Byte *)fontdata, &len);
+-    if (err != FT_Err_Ok)
++    if (err == FT_Err_Ok)
++    {
++	alen = (len + 63) & ~63;
++	fontdata = malloc (alen);
++	if (!fontdata)
++	    goto bail1;
++	err = FT_Load_Sfnt_Table (face, 0, 0, (FT_Byte *)fontdata, &len);
++	if (err != FT_Err_Ok)
++	    goto bail1;
++	memset (&fontdata[len], 0, alen - len);
++	hashstr = FcHashGetSHA256DigestFromMemory (fontdata, len);
++    }
++    else if (err == FT_Err_Invalid_Face_Handle)
++    {
++	/* font may not support SFNT. falling back to
++	 * read the font data from file directly
++	 */
++	hashstr = FcHashGetSHA256DigestFromFile (file);
++    }
++    else
++    {
+ 	goto bail1;
+-    memset (&fontdata[len], 0, alen - len);
+-    hashstr = FcHashGetSHA256DigestFromMemory (fontdata, len);
++    }
+     if (!hashstr)
+ 	goto bail1;
+     if (!FcPatternAddString (pat, FC_HASH, hashstr))
+diff --git a/src/fchash.c b/src/fchash.c
+index 1ef1e16..92585a6 100644
+--- a/src/fchash.c
++++ b/src/fchash.c
+@@ -204,6 +204,68 @@ FcHashGetSHA256Digest (const FcChar8 *input_strings,
+ }
+ 
+ FcChar8 *
++FcHashGetSHA256DigestFromFile (const FcChar8 *filename)
++{
++    FILE *fp = fopen ((const char *)filename, "rb");
++    char ibuf[64];
++    FcChar32 *ret;
++    size_t len;
++    struct stat st;
++
++    if (!fp)
++	return NULL;
++
++    if (FcStat (filename, &st))
++	goto bail0;
++
++    ret = FcHashInitSHA256Digest ();
++    if (!ret)
++	goto bail0;
++
++    while (!feof (fp))
++    {
++	if ((len = fread (ibuf, sizeof (char), 64, fp)) < 64)
++	{
++	    long v;
++
++	    /* add a padding */
++	    memset (&ibuf[len], 0, 64 - len);
++	    ibuf[len] = 0x80;
++	    if ((64 - len) < 9)
++	    {
++		/* process a block once */
++		FcHashComputeSHA256Digest (ret, ibuf);
++		memset (ibuf, 0, 64);
++	    }
++	    /* set input size at the end */
++	    v = (long)st.st_size * 8;
++	    ibuf[63 - 0] =  v        & 0xff;
++	    ibuf[63 - 1] = (v >>  8) & 0xff;
++	    ibuf[63 - 2] = (v >> 16) & 0xff;
++	    ibuf[63 - 3] = (v >> 24) & 0xff;
++	    ibuf[63 - 4] = (v >> 32) & 0xff;
++	    ibuf[63 - 5] = (v >> 40) & 0xff;
++	    ibuf[63 - 6] = (v >> 48) & 0xff;
++	    ibuf[63 - 7] = (v >> 56) & 0xff;
++	    FcHashComputeSHA256Digest (ret, ibuf);
++	    break;
++	}
++	else
++	{
++	    FcHashComputeSHA256Digest (ret, ibuf);
++	}
++    }
++    fclose (fp);
++
++    return FcHashSHA256ToString (ret);
++
++bail0:
++    fclose (fp);
++
++    return NULL;
++}
++
++FcChar8 *
+ FcHashGetSHA256DigestFromMemory (const char *fontdata,
+ 				 size_t      length)
+ {
+diff --git a/src/fcint.h b/src/fcint.h
+index a662dbf..8919958 100644
+--- a/src/fcint.h
++++ b/src/fcint.h
+@@ -818,6 +818,10 @@ FcFontSetSerialize (FcSerialize *serialize, const FcFontSet * s);
+ FcPrivate FcChar8 *
+ FcHashGetSHA256Digest (const FcChar8 *input_strings,
+ 		       size_t         len);
++
++FcPrivate FcChar8 *
++FcHashGetSHA256DigestFromFile (const FcChar8 *filename);
++
+ FcPrivate FcChar8 *
+ FcHashGetSHA256DigestFromMemory (const char *fontdata,
+ 				 size_t      length);
+--
+cgit v0.9.0.2-2-gbebe
