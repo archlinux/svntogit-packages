@@ -1,0 +1,48 @@
+From 50fb97935d689a520251b2d543599be14bdfd0ed Mon Sep 17 00:00:00 2001
+From: Fedora systemd team <systemd-maint@redhat.com>
+Date: Wed, 10 Apr 2013 09:49:24 +0200
+Subject: [PATCH] logind: avoid creating stale session state files
+
+There were old session state files accumulating in /run/systemd/session.
+They confused e.g. "reboot", which thought there were still users logged
+in. The files got created like this:
+
+session_stop(Session *s) ->
+        ...
+        unlink(s->state_file);
+        ...
+        seat_set_active(s->seat, NULL) ->
+                session_save(...);  /* re-creates the state file we just
+                                       unlinked */
+
+Fix it simply by clearing the s->started flag earlier to prevent
+any further writes of the state file (session_save() checks the flag).
+---
+ src/login/logind-session.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/login/logind-session.c b/src/login/logind-session.c
+index 508336d..e2f41d3 100644
+--- a/src/login/logind-session.c
++++ b/src/login/logind-session.c
+@@ -710,6 +710,8 @@ int session_stop(Session *s) {
+         if (s->started)
+                 session_send_signal(s, false);
+ 
++        s->started = false;
++
+         if (s->seat) {
+                 if (s->seat->active == s)
+                         seat_set_active(s->seat, NULL);
+@@ -721,8 +723,6 @@ int session_stop(Session *s) {
+         user_send_changed(s->user, "Sessions\0");
+         user_save(s->user);
+ 
+-        s->started = false;
+-
+         return r;
+ }
+ 
+-- 
+1.8.2.1
+
