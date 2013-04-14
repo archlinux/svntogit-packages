@@ -16,11 +16,17 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
+        '0001-fileio-in-envfiles-do-not-skip-lines-following-empty.patch'
+        '0001-journal-fix-broken-tags-_SOURCE_REALTIME_TIMESTAMP-a.patch'
+        '0001-logind-avoid-creating-stale-session-state-files.patch'
         'use-split-usr-path.patch')
 md5sums=('3e758392ff0e9206b3f7ee252b4a654b'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
+         'd575a29ca735944aa45126ab9d3087a5'
+         '8170482f10bb0420770a64dce23975bc'
+         'b1355aae98071e83fca27549a0ac3def'
          '76bf83fe34c5b40533abc5dc940576a6')
 
 prepare() {
@@ -28,6 +34,10 @@ prepare() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  patch -Np1 <"$srcdir/0001-fileio-in-envfiles-do-not-skip-lines-following-empty.patch"
+  patch -Np1 <"$srcdir/0001-journal-fix-broken-tags-_SOURCE_REALTIME_TIMESTAMP-a.patch"
+  patch -Np1 <"$srcdir/0001-logind-avoid-creating-stale-session-state-files.patch"
 }
 
 build() {
