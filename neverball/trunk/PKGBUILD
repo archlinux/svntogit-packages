@@ -3,33 +3,34 @@
 
 pkgname=neverball
 pkgver=1.5.4
-pkgrel=4
+pkgrel=5
 pkgdesc="3D game similar to Super Monkey Ball or Marble Madness"
 arch=('i686' 'x86_64')
 url="http://neverball.org/"
 license=('GPL')
-depends=('sdl_ttf' 'libgl' 'libpng' 'libjpeg' 'libvorbis' 'physfs')
+depends=('sdl_ttf' 'libgl' 'libpng' 'libjpeg' 'libvorbis' 'physfs' \
+         'hicolor-icon-theme' 'xdg-utils')
 makedepends=('mesa')
+install=neverball.install
 source=(http://neverball.org/${pkgname}-${pkgver}.tar.gz neverball-1.5.4-underlink.patch)
 sha1sums=('619c227e1958bd60738f12dbbde9b30c91dd79a7'
           'f71982b7187d569c57b30c4c40fedd6c0e72baca')
 
-build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  sed -i 's|#define CONFIG_LOCALE "./locale"|#define CONFIG_LOCALE "/usr/share/locale"|' share/base_config.h
+prepare() {
+  cd ${pkgname}-${pkgver}
   patch -p0 -i ../neverball-1.5.4-underlink.patch
+}
 
-  if [ "${CARCH}" = "i686" ] ;then
-    make ENABLE_NLS=1 DATADIR=/usr/share/neverball SSE_CFLAGS=""
-  else
-    make ENABLE_NLS=1 DATADIR=/usr/share/neverball
-  fi
+build() {
+  cd ${pkgname}-${pkgver}
+  make DATADIR=/usr/share/neverball LOCALEDIR=/usr/share/locale \
+    CPPFLAGS="$CPPFLAGS -DNDEBUG" CFLAGS="$CFLAGS"
 }
 
 package(){
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}-${pkgver}
   install -d "${pkgdir}/usr/bin"
-  install -d "${pkgdir}"/usr/share/{neverball,locale,applications,pixmaps,doc/neverball}
+  install -d "${pkgdir}"/usr/share/{neverball,locale,applications,doc/neverball}
   install -d "${pkgdir}"/usr/share/man/man{1,6}
 
   install -m755 neverball neverputt mapc "${pkgdir}/usr/bin"
@@ -37,11 +38,13 @@ package(){
   cp -r data/* "${pkgdir}/usr/share/neverball/"
   install -m644 doc/* "${pkgdir}/usr/share/doc/neverball/"
   install -m644 dist/*.desktop "${pkgdir}/usr/share/applications/"
-  install -m644 dist/*.png "${pkgdir}/usr/share/pixmaps/"
   install -m644 dist/mapc.1 "${pkgdir}/usr/share/man/man1"
   install -m644 dist/{neverball.6,neverputt.6} "${pkgdir}/usr/share/man/man6"
 
-  ln -s neverball_48.png "${pkgdir}/usr/share/pixmaps/neverball.png"
-  ln -s neverputt_48.png "${pkgdir}/usr/share/pixmaps/neverputt.png"
-  find "${pkgdir}/usr/share/neverball" -type f -exec chmod 0644 {} \;
+  for i in 16 24 32 48 64 128 256; do
+    install -D -m644 dist/neverball_$i.png "${pkgdir}/usr/share/icons/hicolor/${i}x$i/apps/neverball.png"
+    install -D -m644 dist/neverputt_$i.png "${pkgdir}/usr/share/icons/hicolor/${i}x$i/apps/neverputt.png"
+  done
+
+  chmod -R u=rwX,go=rX "${pkgdir}/usr/share/neverball"
 }
