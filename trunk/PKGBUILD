@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=202
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,11 +16,13 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
+        '0001-nss-myhostname-ensure-that-glibc-s-assert-is-used.patch'
         'use-split-usr-path.patch')
 md5sums=('3136c6912d3ee1f6d4deb16234783731'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
+         '3090c0b9b19b76731b4cf9c01c10c534'
          '76bf83fe34c5b40533abc5dc940576a6')
 
 prepare() {
@@ -28,6 +30,8 @@ prepare() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  patch -Np1 <"$srcdir/0001-nss-myhostname-ensure-that-glibc-s-assert-is-used.patch"
 }
 
 build() {
