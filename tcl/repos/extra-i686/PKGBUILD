@@ -1,44 +1,47 @@
 # $Id$
-# Maintainer: Allan McRae <allan@archlinux.org>
-# Committer: Judd Vinet <jvinet@zeroflux.org>
+# Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=tcl
 pkgver=8.6.0
-pkgrel=3
+pkgrel=4
 pkgdesc="The Tcl scripting language"
 arch=('i686' 'x86_64')
 url="http://tcl.sourceforge.net/"
 license=('custom')
+depends=('zlib')
 source=(http://downloads.sourceforge.net/sourceforge/tcl/tcl${pkgver}-src.tar.gz)
 md5sums=('573aa5fe678e9185ef2b3c56b24658d3')
 
-build() {
-  cd ${srcdir}/tcl${pkgver}/unix
-
+prepare() {
+  cd tcl${pkgver}
   # we build the tcl sqlite interface in sqlite-tcl package
-  rm -rf ${srcdir}/tcl${pkgver}/pkgs/sqlite3*
-  
+  rm -rf pkgs/sqlite3*
+
+  sed -i 's/#define DUPTRAVERSE_MAX_DEPTH 500/#define DUPTRAVERSE_MAX_DEPTH 5000/' \
+    generic/regc_nfa.c
+}
+
+build() {
+  cd tcl${pkgver}/unix
   [[ $CARCH == "x86_64" ]] && BIT="--enable-64bit"
   ./configure --prefix=/usr --mandir=/usr/share/man --enable-threads $BIT
-  
   make
 }
 
 check() {
-  cd ${srcdir}/tcl${pkgver}/unix
+  cd tcl${pkgver}/unix
   make test
 }
 
-package()
-{
-  cd ${srcdir}/tcl${pkgver}/unix
-  
-  make INSTALL_ROOT=${pkgdir} install install-private-headers
-  ln -sf tclsh8.6 ${pkgdir}/usr/bin/tclsh
-  
+package() {
+  cd tcl${pkgver}/unix
+  make INSTALL_ROOT="${pkgdir}" install install-private-headers
+  find "${pkgdir}" -name '*.a' -type f -exec chmod 644 {} \;
+  ln -sf tclsh8.6 "${pkgdir}/usr/bin/tclsh"
+
   # install license
-  install -Dm644 ../license.terms ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+  install -Dm644 ../license.terms "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
   # remove buildroot traces
-  sed -i "s#${srcdir}#/usr/src#" ${pkgdir}/usr/lib/{tcl,tdbc1.0.0/tdbc,itcl4.0.0/itcl}Config.sh
+  sed -i "s#${srcdir}#/usr/src#" "${pkgdir}"/usr/lib/{tcl,tdbc1.0.0/tdbc,itcl4.0.0/itcl}Config.sh
 }
