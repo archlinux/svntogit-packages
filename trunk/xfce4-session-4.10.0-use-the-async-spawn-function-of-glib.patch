@@ -1,0 +1,79 @@
+From dee0200fa5dc4de064f288281ddd13199ba7fcde Mon Sep 17 00:00:00 2001
+From: Nick Schermer <nick@xfce.org>
+Date: Fri, 26 Apr 2013 17:46:29 +0000
+Subject: Use the async spawn function of glib.
+
+---
+diff --git a/xfce4-session/xfsm-startup.c b/xfce4-session/xfsm-startup.c
+index 911eec6..e43c53c 100644
+--- a/xfce4-session/xfsm-startup.c
++++ b/xfce4-session/xfsm-startup.c
+@@ -864,6 +864,7 @@ xfsm_startup_start_properties (XfsmProperties *properties,
+   gint             n;
+   const gchar     *current_directory;
+   GPid             pid;
++  GError          *error = NULL;
+ 
+   /* release any possible old resources related to a previous startup */
+   xfsm_properties_set_default_child_watch (properties);
+@@ -878,44 +879,28 @@ xfsm_startup_start_properties (XfsmProperties *properties,
+ 
+   current_directory = xfsm_properties_get_string (properties, SmCurrentDirectory);
+ 
+-  /* fork a new process for the application */
+-#ifdef HAVE_VFORK
+-  /* vfork() doesn't allow you to do anything but call exec*() or _exit(),
+-   * so if we need to set the working directory, we can't use vfork() */
+-  if (current_directory == NULL)
+-    pid = vfork ();
+-  else
+-#endif
+-    pid = fork ();
+-
+-  /* handle the child process */
+-  if (pid == 0)
++  if (!g_spawn_async (current_directory,
++                      argv, NULL,
++                      G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
++                      NULL, NULL,
++                      &pid, &error))
+     {
+-      /* execute the application here */
+-      if (current_directory)
+-        {
+-          if (chdir (current_directory))
+-            g_warning ("Unable to chdir to \"%s\": %s", current_directory, strerror (errno));
+-        }
+-      execvp (argv[0], argv);
+-      _exit (127);
+-    }
+-
+-  /* cleanup */
+-  g_strfreev (argv);
++      g_warning ("Unable to launch \"%s\": %s",
++                 *argv, error->message);
++      g_error_free (error);
++      g_strfreev (argv);
+ 
+-  /* check if we failed to fork */
+-  if (G_UNLIKELY (pid < 0))
+-    {
+-      /* tell the user that we failed to fork */
+-      perror ("Failed to fork new process");
+       return FALSE;
+     }
+ 
++  xfsm_verbose ("Launched command \"%s\" with PID %dn", *argv, (gint) pid);
++
++  g_strfreev (argv);
++
+   properties->pid = pid;
+ 
+   /* set a watch to make sure the child doesn't quit before registering */
+-  child_watch_data = g_new (XfsmStartupData, 1);
++  child_watch_data = g_new0 (XfsmStartupData, 1);
+   child_watch_data->manager = g_object_ref (manager);
+   child_watch_data->properties = properties;
+   g_child_watch_add_full (G_PRIORITY_LOW, properties->pid,
+--
+cgit v0.9.1
