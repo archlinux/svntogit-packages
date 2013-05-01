@@ -6,8 +6,8 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.0
-pkgrel=2
-_snapshot=4.8-20130411
+pkgrel=3
+_snapshot=4.8-20130425
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -17,7 +17,7 @@ checkdepends=('dejagnu' 'inetutils')
 options=('!libtool' '!emptydirs')
 source=(ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2)
         #ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-md5sums=('cb529205469260f0d56adc01088c4850')
+md5sums=('03690556f09991fbecac0467227c5d4e')
 
 
 if [ -n "${_snapshot}" ]; then
