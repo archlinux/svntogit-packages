@@ -4,28 +4,32 @@
 pkgbase=openldap
 pkgname=('libldap' 'openldap')
 pkgver=2.4.35
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.openldap.org/"
 license=('custom')
-makedepends=('libltdl' 'libsasl' 'e2fsprogs' 'util-linux')
+makedepends=('libltdl' 'libsasl' 'e2fsprogs' 'util-linux' 'chrpath')
 options=('!makeflags')
 source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/${pkgbase}-${pkgver}.tgz
-        slapd.service slapd.tmpfiles ntlm.patch)
+        slapd.service slapd.tmpfiles openldap-ntlm.patch openldap-nssov.patch)
 sha1sums=('db02243150b050baac6a8ea4145ad73a1f6d2266'
           '9c7f3441e6a6ee13cdcfe8d965081c7a574c3393'
           'f86a82e35ebe15026980467c9dee4007e686b795'
-          'e4afd9f1c810ef4c4cd8fe1101dfe5887f2b7eef')
+          'e4afd9f1c810ef4c4cd8fe1101dfe5887f2b7eef'
+          'b2d11b4c522750ad9da3409333094fb599ac2c85')
 
-build() {
-  cd "${srcdir}"/${pkgbase}-${pkgver}
-  patch -Np1 -i "${srcdir}"/ntlm.patch
-
+prepare() {
+  cd ${pkgbase}-${pkgver}
+  patch -p1 -i "${srcdir}"/openldap-ntlm.patch
+  patch -p0 -i "${srcdir}"/openldap-nssov.patch
   sed -i 's|-m 644 $(LIBRARY)|-m 755 $(LIBRARY)|' libraries/{liblber,libldap,libldap_r}/Makefile.in
   sed -i 's|#define LDAPI_SOCK LDAP_RUNDIR LDAP_DIRSEP "run" LDAP_DIRSEP "ldapi"|#define LDAPI_SOCK LDAP_DIRSEP "run" LDAP_DIRSEP "openldap" LDAP_DIRSEP "ldapi"|' include/ldap_defaults.h
-  sed -i 's|%LOCALSTATEDIR%/run|/run/openldap|' servers/slapd/slapd.conf
+  sed -i 's|%LOCALSTATEDIR%/run|/run/openldap|' servers/slapd/slapd.{conf,ldif}
   sed -i 's|-$(MKDIR) $(DESTDIR)$(localstatedir)/run|-$(MKDIR) $(DESTDIR)/run/openldap|' servers/slapd/Makefile.in
+}
 
+build() {
+  cd ${pkgbase}-${pkgver}
   ./configure --prefix=/usr --mandir=/usr/share/man --libexecdir=/usr/lib \
     --sysconfdir=/etc --localstatedir=/var/lib/openldap \
     --enable-ipv6 --enable-syslog --enable-local \
@@ -36,10 +40,14 @@ build() {
     --enable-spasswd --with-cyrus-sasl \
     --enable-overlays=mod --enable-modules=yes
   make
+
+  cd contrib/slapd-modules/nssov
+  make prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap
+  chrpath -d .libs/nssov.so
 }
 
 check() {
-  cd "${srcdir}"/${pkgbase}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   make test
 }
 
@@ -49,7 +57,7 @@ package_libldap() {
   backup=('etc/openldap/ldap.conf')
   options=('!libtool')
 
-  cd "${srcdir}"/${pkgbase}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   for dir in include libraries doc/man/man3 ; do
     pushd ${dir}
     make DESTDIR="${pkgdir}" install
@@ -69,16 +77,24 @@ package_libldap() {
 package_openldap() {
   pkgdesc="Lightweight Directory Access Protocol (LDAP) client and server"
   depends=("libldap>=${pkgver}" 'libltdl')
-  backup=('etc/openldap/slapd.conf')
+  backup=('etc/openldap/slapd.conf' 'etc/openldap/slapd.ldif')
   options=('!libtool' 'emptydirs')
   install=openldap.install
 
-  cd "${srcdir}"/${pkgbase}-${pkgver}
-  for dir in clients servers doc/man/man{1,5,8} ; do
+  cd ${pkgbase}-${pkgver}
+  for dir in clients servers doc/man/man{1,5,8}; do
     pushd ${dir}
     make DESTDIR="${pkgdir}" install
     popd
   done
+
+  pushd contrib/slapd-modules/nssov
+  install -m755 .libs/nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap
+  ln -s nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap/nssov.so
+  ln -s nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap/nssov.so.0
+  install -m444 ldapns.schema "${pkgdir}"/etc/openldap/schema
+  popd
+
   rm "${pkgdir}"/usr/share/man/man5/ldap.conf.5
   rm -r "${pkgdir}"/run
 
@@ -87,8 +103,8 @@ package_openldap() {
 
   ln -s ../lib/slapd "${pkgdir}"/usr/sbin/slapd
 
-  chown root:439 "${pkgdir}"/etc/openldap/{slapd.conf,DB_CONFIG.example}
-  chmod 640 "${pkgdir}"/etc/openldap/{slapd.conf,DB_CONFIG.example}
+  chown root:439 "${pkgdir}"/etc/openldap/{slapd.{conf,ldif},DB_CONFIG.example}
+  chmod 640 "${pkgdir}"/etc/openldap/{slapd.{conf,ldif},DB_CONFIG.example}
 
   install -dm700 -o 439 -g 439 "${pkgdir}"/var/lib/openldap
   install -dm700 -o 439 -g 439 "${pkgdir}"/etc/openldap/slapd.d
