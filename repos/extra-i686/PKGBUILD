@@ -3,7 +3,7 @@
 
 pkgname=ghostscript
 pkgver=9.07
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('AGPL' 'custom')
@@ -18,7 +18,7 @@ options=('!libtool' '!makeflags')
 md5sums=('eea27befc1e85bef6d4768202f6b03a5')
 
 build() {
-  cd ${srcdir}/ghostscript-${pkgver}
+  cd ghostscript-${pkgver}
   
   # force it to use system-libs
   rm -rf jpeg libpng zlib jasper expat tiff lcms freetype 
@@ -41,7 +41,7 @@ build() {
   make
 
   # Build IJS
-  cd ${srcdir}/ghostscript-${pkgver}/ijs
+  cd ijs
   sed -i "s:AM_PROG_CC_STDC:AC_PROG_CC:g" configure.ac
   ./autogen.sh
   ./configure --prefix=/usr --enable-shared --disable-static
@@ -49,21 +49,20 @@ build() {
 }
 
 package() {
-  cd ${srcdir}/ghostscript-${pkgver}
-  make DESTDIR=${pkgdir} \
-	cups_serverroot=${pkgdir}/etc/cups \
-	cups_serverbin=${pkgdir}/usr/lib/cups install soinstall
+  cd ghostscript-${pkgver}
+  make DESTDIR="${pkgdir}" \
+	cups_serverroot="${pkgdir}"/etc/cups \
+	cups_serverbin="${pkgdir}"/usr/lib/cups install soinstall
 
   # install missing doc files # http://bugs.archlinux.org/task/18023
-  install -m 644 ${srcdir}/ghostscript-${pkgver}/doc/{Ps2ps2.htm,gs-vms.hlp,gsdoc.el,pscet_status.txt} ${pkgdir}/usr/share/ghostscript/$pkgver/doc/
+  install -m 644 "${srcdir}"/ghostscript-${pkgver}/doc/{Ps2ps2.htm,gs-vms.hlp,gsdoc.el,pscet_status.txt} "${pkgdir}"/usr/share/ghostscript/$pkgver/doc/
   
-  mkdir -p ${pkgdir}/usr/share/licenses/${pkgname}
-  install -m644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/
+  install -D -m644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
 
   # remove unwanted localized man-pages
-  rm -rf $pkgdir/usr/share/man/[^man1]*
+  rm -rf "$pkgdir"/usr/share/man/[^man1]*
 
   # install IJS
-  cd ${srcdir}/ghostscript-${pkgver}/ijs
-  make DESTDIR=${pkgdir} install
+  cd ijs
+  make DESTDIR="${pkgdir}" install
 }
