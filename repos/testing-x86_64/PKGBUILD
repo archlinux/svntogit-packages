@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=203
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -17,12 +17,14 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         '0001-login-add-missing-_public_-to-sd_get_machine_names.patch'
+        '0002-systemd-sleep-it-is-not-an-error-if-the-config-file-.patch'
         'use-split-usr-path.patch')
 md5sums=('b5a124ae8aee2b9fa357f912e87e9048'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
          '8504a59afaa5d52fa6b5b26fc89873cf'
+         '988cf83af952990ff48d3b97bcf06845'
          '76bf83fe34c5b40533abc5dc940576a6')
 
 prepare() {
@@ -32,6 +34,7 @@ prepare() {
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
 
   patch -Np1 <"$srcdir/0001-login-add-missing-_public_-to-sd_get_machine_names.patch"
+  patch -Np1 <"$srcdir/0002-systemd-sleep-it-is-not-an-error-if-the-config-file-.patch"
 }
 
 build() {
