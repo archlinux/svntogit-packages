@@ -1,0 +1,102 @@
+From e1e40c25535af35fa5cdf7ffc95a01fbff098ddd Mon Sep 17 00:00:00 2001
+From: Takashi Iwai <tiwai@suse.de>
+Date: Mon, 15 Apr 2013 18:12:17 +0200
+Subject: [PATCH] Fix doubly call of dlclose() in dlobj caching code
+
+When multiple dlobj_cache items point to the same dlobj, dlclose() may
+be called wrongly multiple times when these items are cleared, because
+we manage the dlobj_cache list as a flat list.  This results in a bad
+segfault we've seen in openal-soft, for example.
+
+For fixing this, we need the refcounting of dlobj itself.  But, in
+this case, we don't have to manage yet another list,  since dlopen()
+does a proper refcounting by itself.  That is, we can just call always
+dlopen() at each time a new function is assigned, and also call
+dlclose() for each released dlobj_cache item at cleanup.
+
+Bugzilla: https://bugzilla.novell.com/show_bug.cgi?id=814250
+
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+---
+ src/dlmisc.c | 31 +++++++++++--------------------
+ 1 file changed, 11 insertions(+), 20 deletions(-)
+
+diff --git a/src/dlmisc.c b/src/dlmisc.c
+index 3788382..2de0234 100644
+--- a/src/dlmisc.c
++++ b/src/dlmisc.c
+@@ -208,8 +208,7 @@ void *snd_dlobj_cache_get(const char *lib, const char *name,
+ {
+ 	struct list_head *p;
+ 	struct dlobj_cache *c;
+-	void *func, *dlobj = NULL;
+-	int dlobj_close = 0;
++	void *func, *dlobj;
+ 
+ 	snd_dlobj_lock();
+ 	list_for_each(p, &pcm_dlobj_list) {
+@@ -220,7 +219,6 @@ void *snd_dlobj_cache_get(const char *lib, const char *name,
+ 			continue;
+ 		if (!lib && c->lib)
+ 			continue;
+-		dlobj = c->dlobj;
+ 		if (strcmp(c->name, name) == 0) {
+ 			c->refcnt++;
+ 			func = c->func;
+@@ -228,17 +226,16 @@ void *snd_dlobj_cache_get(const char *lib, const char *name,
+ 			return func;
+ 		}
+ 	}
++
++	dlobj = snd_dlopen(lib, RTLD_NOW);
+ 	if (dlobj == NULL) {
+-		dlobj = snd_dlopen(lib, RTLD_NOW);
+-		if (dlobj == NULL) {
+-			if (verbose)
+-				SNDERR("Cannot open shared library %s",
++		if (verbose)
++			SNDERR("Cannot open shared library %s",
+ 						lib ? lib : "[builtin]");
+-			snd_dlobj_unlock();
+-			return NULL;
+-		}
+-		dlobj_close = 1;
++		snd_dlobj_unlock();
++		return NULL;
+ 	}
++
+ 	func = snd_dlsym(dlobj, name, version);
+ 	if (func == NULL) {
+ 		if (verbose)
+@@ -257,8 +254,7 @@ void *snd_dlobj_cache_get(const char *lib, const char *name,
+ 		free((void *)c->lib);
+ 		free(c);
+ 	      __err:
+-		if (dlobj_close)
+-			snd_dlclose(dlobj);
++		snd_dlclose(dlobj);
+ 		snd_dlobj_unlock();
+ 		return NULL;
+ 	}
+@@ -298,16 +294,11 @@ void snd_dlobj_cache_cleanup(void)
+ 	struct list_head *p, *npos;
+ 	struct dlobj_cache *c;
+ 
+-	/* clean up caches only when really no user is present */
+ 	snd_dlobj_lock();
+-	list_for_each(p, &pcm_dlobj_list) {
+-		c = list_entry(p, struct dlobj_cache, list);
+-		if (c->refcnt)
+-			goto unlock;
+-	}
+-
+ 	list_for_each_safe(p, npos, &pcm_dlobj_list) {
+ 		c = list_entry(p, struct dlobj_cache, list);
++		if (c->refcnt)
++			continue;
+ 		list_del(p);
+ 		snd_dlclose(c->dlobj);
+ 		free((void *)c->name); /* shut up gcc warning */
+-- 
+1.7.11.7
+
