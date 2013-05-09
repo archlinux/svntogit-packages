@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=203
-pkgrel=2
+pkgver=204
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -16,15 +16,11 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
-        '0001-login-add-missing-_public_-to-sd_get_machine_names.patch'
-        '0002-systemd-sleep-it-is-not-an-error-if-the-config-file-.patch'
         'use-split-usr-path.patch')
-md5sums=('b5a124ae8aee2b9fa357f912e87e9048'
+md5sums=('a07619bb19f48164fbf0761d12fd39a8'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
-         '8504a59afaa5d52fa6b5b26fc89873cf'
-         '988cf83af952990ff48d3b97bcf06845'
          '76bf83fe34c5b40533abc5dc940576a6')
 
 prepare() {
@@ -32,9 +28,6 @@ prepare() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
-
-  patch -Np1 <"$srcdir/0001-login-add-missing-_public_-to-sd_get_machine_names.patch"
-  patch -Np1 <"$srcdir/0002-systemd-sleep-it-is-not-an-error-if-the-config-file-.patch"
 }
 
 build() {
@@ -90,9 +83,6 @@ package_systemd() {
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
 
   printf "d /run/console 0755 root root\n" > "$pkgdir/usr/lib/tmpfiles.d/console.conf"
-
-  install -dm755 "$pkgdir/bin"
-  ln -s ../usr/lib/systemd/systemd "$pkgdir/bin/systemd"
 
   # fix .so links in manpage stubs
   find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
