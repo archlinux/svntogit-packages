@@ -4,46 +4,38 @@
 
 pkgname=ossp
 pkgver=1.3.2
-pkgrel=14
+pkgrel=15
 pkgdesc="Emulate OSS device using CUSE"
 arch=(i686 x86_64)
 url="http://sourceforge.net/projects/osspd"
 license=(GPL2)
 depends=('fuse>=2.8.0')
-makedepends=(libpulse alsa-lib)
+makedepends=(libpulse alsa-lib git)
 optdepends=("libpulse: PulseAudio backend"
             "alsa-lib: ALSA backend")
-backup=(etc/conf.d/osspd)
-source=("http://downloads.sourceforge.net/project/osspd/${pkgname}-${pkgver}.tar.gz"
-        osspd.rc.d osspd.conf.d osspd.service osspd.modules-load)
-md5sums=('ee2d8c894de2fa4eb3291804fbc7df45'
-         'c58d5107a299fb26ae2099fa4b5ca6a1'
-         '5a5a3db1bb3c98d48d4794613cf12ef0'
-         '98dc2b2f55f69e3d2fb37f32742d30d4'
+source=('ossp::git://git.code.sf.net/p/osspd/code#commit=097dc7b'
+        osspd.service osspd.modules-load)
+md5sums=('SKIP'
+         'd084bd24e3dff167541dd3ff860cdebf'
          '36c01e144db7cf253df12d8ad9dac942')
 
-build() {
-  cd "$srcdir/$pkgname-$pkgver"
+prepare() {
+  cd $pkgname
+  sed -i 's|/sbin|/bin|g' Makefile
+  sed -i 's|GROUP="audio"|SUBSYSTEM=="cuse", MODE="0666"|' 98-osscuse.rules
+}
 
+build() {
+  cd $pkgname
   make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
-
+  cd $pkgname
   make DESTDIR="$pkgdir" prefix=/usr UDEVDIR=/usr/lib/udev/rules.d install
 
-  # Make compatible with udev ACLs
-  sed -e 's/GROUP="audio"/SUBSYSTEM=="cuse", MODE="0666"/' \
-      -i "$pkgdir/usr/lib/udev/rules.d/98-osscuse.rules"
-
-  install -Dm644 README "$pkgdir/usr/share/doc/$pkgname/README"
-
-  # initscripts
-  install -Dm755 "$srcdir/osspd.rc.d" "$pkgdir/etc/rc.d/osspd"
-  install -Dm644 "$srcdir/osspd.conf.d" "$pkgdir/etc/conf.d/osspd"
-
-  # systemd
   install -Dm644 "$srcdir/osspd.service" "$pkgdir/usr/lib/systemd/system/osspd.service"
   install -Dm644 "$srcdir/osspd.modules-load" "$pkgdir/usr/lib/modules-load.d/osspd.conf"
+
+  install -Dm644 README "$pkgdir/usr/share/doc/$pkgname/README"
 }
