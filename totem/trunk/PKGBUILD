@@ -12,14 +12,23 @@ arch=(i686 x86_64)
 license=(GPL2 custom)
 depends=(gst-plugins-base gst-plugins-good totem-plparser desktop-file-utils iso-codes libpeas
          hicolor-icon-theme gnome-icon-theme gsettings-desktop-schemas dconf clutter-gst
-         clutter-gtk python2-gobject gst-plugins-bad)
+         clutter-gtk python-gobject python-xdg gst-plugins-bad)
 makedepends=(intltool libnautilus-extension lirc-utils vala grilo dbus-glib libzeitgeist
-             itstool docbook-xsl python2-pylint)
+             itstool docbook-xsl python-pylint)
 options=('!libtool' '!emptydirs')
 source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz
-        browser-plugins.ini)
+        browser-plugins.ini bugreport.patch)
 sha256sums=('eda9e0a016bb2ac14f7cd7c8c03b8ee1ab3f1b3ba6558f65c64514e5d2583e01'
-            'a50a3bbf35f0535f7e8e20af1893446a2e5711015484f9ae6d1ff91af3b23c4e')
+            'a50a3bbf35f0535f7e8e20af1893446a2e5711015484f9ae6d1ff91af3b23c4e'
+            '30481dab7e21b66257e3238f5a8b708e1a5c4797d7da904f7ebaba4c2c2ef167')
+
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+
+  # Make compatible with Python 3 and Gstreamer 1.0
+  patch -Np1 -i ../bugreport.patch
+}
 
 build() {
   cd "$pkgbase-$pkgver"
@@ -29,8 +38,7 @@ build() {
     --localstatedir=/var \
     --disable-static \
     --enable-python \
-    --enable-nautilus \
-    PYLINT=/usr/bin/pylint2
+    --enable-nautilus
   make
 }
 
@@ -41,7 +49,6 @@ package_totem() {
               'gst-libav: Extra media codecs'
               'lirc-utils: Infrared Remote Control plugin'
               'grilo-plugins: Browse sidebar (remote media)'
-              'pyxdg: opensubtitles plugin'
               'libzeitgeist: Zeitgeist plugin')
 
   cd "$pkgbase-$pkgver"
@@ -49,9 +56,6 @@ package_totem() {
 
   rm -r "$pkgdir/usr/lib/mozilla"
   rm "$pkgdir/usr/lib/totem/totem-plugin-viewer"
-
-  sed -i "s|#!/usr/bin/python$|#!/usr/bin/python2|" \
-    $pkgdir/usr/lib/totem/totem/totem-bugreport.py
 
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem/COPYING"
 }
@@ -66,7 +70,7 @@ package_totem-plugin() {
     plugindir=/usr/lib/mozilla/plugins \
     xptdir=/usr/lib/mozilla/plugins \
     DESTDIR="$pkgdir" install
-  
+
   install -Dm644 ../browser-plugins.ini "$pkgdir/etc/totem/browser-plugins.ini"
 
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem-plugin/COPYING"
