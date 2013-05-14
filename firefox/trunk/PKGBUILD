@@ -3,30 +3,30 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=20.0.1
-pkgrel=5
+pkgver=21.0
+pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL' 'LGPL')
+url="http://www.mozilla.org/projects/firefox"
 depends=('gtk2' 'mozilla-common' 'libxt' 'startup-notification' 'mime-types'
          'dbus-glib' 'alsa-lib' 'libvpx' 'libevent' 'nss' 'hunspell' 'sqlite'
           'libnotify' 'desktop-file-utils' 'hicolor-icon-theme')
-makedepends=('unzip' 'zip' 'diffutils' 'python2' 'yasm' 'mesa' 'libidl2'
-             'xorg-server-xvfb' 'imake')
+makedepends=('unzip' 'zip' 'diffutils' 'python2' 'yasm' 'mesa' 'autoconf2.13' 'imake'
+             'xorg-server-xvfb')
 optdepends=('networkmanager: Location detection via available WiFi networks')
-url="http://www.mozilla.org/projects/firefox"
 install=firefox.install
-options=('!emptydirs')
+options=('!emptydirs' '!makeflags')
 source=(https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.bz2
         mozconfig firefox.desktop firefox-install-dir.patch vendor.js shared-libs.patch
         firefox-20.0.1-fixed-loading-icon.png)
-md5sums=('b822ff4b2348410587dec563235d9320'
-         'efdd58626b2f56dea31e26879eb2db3b'
-         '6174396b4788deffa399db3f6f010a94'
-         '150ac0fb3ac7b2114c8e8851a9e0516c'
-         '0d053487907de4376d67d8f499c5502b'
-         '52e52f840a49eb1d14be1c0065b03a93'
-         '6e335a517c68488941340ee1c23f97b0')
+sha256sums=('3909031cb5d403b12c796afb7775b4950f0347786ffd06028761852a1074d91c'
+            '17972dddb5ae20c1bf0ed1bbe2c1d94096ead931e8811cbcca56c74b1132a86a'
+            'd2a7610393ba259c35e3227b92e02ec91095a95189f56ac93ccdf6732772719c'
+            'ded67e8204bd5e1c0c5771c0d2c84ff80c998e1543711e7cd804cfe29e8dd1b0'
+            '4b50e9aec03432e21b44d18c4c97b2630bace606b033f7d556c9d3e3eb0f4fa4'
+            'e2b4a00d14f4ba69c62b3f9ef9908263fbab179ba8004197cbc67edbd916fdf1'
+            '68e3a5b47c6d175cc95b98b069a15205f027cab83af9e075818d38610feb6213')
 
 prepare() {
   cd mozilla-release
@@ -44,6 +44,9 @@ prepare() {
   # WebRTC build tries to execute "python" and expects Python 2
   ln -s /usr/bin/python2 "$srcdir/path/python"
 
+  # Use gold, as Mozilla can use some of its features, such as safe ICF
+  ln -s /usr/bin/ld.gold "$srcdir/path/ld"
+
   # configure script misdetects the preprocessor without an optimization level
   # https://bugs.archlinux.org/task/34644
   sed -i '/ac_cpp=/s/$CPPFLAGS/& -O2/' configure
@@ -56,34 +59,37 @@ prepare() {
 
 build() {
   cd mozilla-release
-
   export PATH="$srcdir/path:$PATH"
   export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/firefox"
   export PYTHON="/usr/bin/python2"
-  export MOZ_MAKE_FLAGS="$MAKEFLAGS"
-  unset MAKEFLAGS
 
-  # Enable PGO
   export DISPLAY=:99
   Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
-  _fail=0
 
-  make -f client.mk build MOZ_PGO=1 || _fail=1
+  if ! make -f client.mk build MOZ_PGO=1; then
+    kill $!
+    return 1
+  fi
 
-  kill $! || true
-  return $_fail
+  kill $! || :
 }
 
 package() {
   cd mozilla-release
-  make -j1 -f client.mk DESTDIR="$pkgdir" install
+  make -f client.mk DESTDIR="$pkgdir" install
 
-  install -Dm644 ../vendor.js "$pkgdir/usr/lib/firefox/defaults/preferences/vendor.js"
+  install -Dm644 ../vendor.js "$pkgdir/usr/lib/firefox/browser/defaults/preferences/vendor.js"
 
   for i in 16 22 24 32 48 256; do
       install -Dm644 browser/branding/official/default$i.png \
         "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/firefox.png"
   done
+  install -Dm644 browser/branding/official/content/icon64.png \
+    "$pkgdir/usr/share/icons/hicolor/64x64/apps/firefox.png"
+  install -Dm644 browser/branding/official/mozicon128.png \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/firefox.png"
+  install -Dm644 browser/branding/official/content/about-logo.png \
+    "$pkgdir/usr/share/icons/hicolor/210x210/apps/firefox.png"
 
   install -Dm644 ../firefox.desktop \
     "$pkgdir/usr/share/applications/firefox.desktop"
