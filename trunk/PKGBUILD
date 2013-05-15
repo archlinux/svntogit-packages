@@ -4,7 +4,7 @@
 
 pkgname=avahi
 pkgver=0.6.31
-pkgrel=7
+pkgrel=8
 pkgdesc='Multicast/unicast DNS-SD framework'
 url='http://www.avahi.org/'
 license=('LGPL')
@@ -39,21 +39,22 @@ install=install
 
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-	sed 's/netdev/network/g' -i avahi-daemon/avahi-dbus.conf
+	sed 's:netdev:network:g' -i avahi-daemon/avahi-dbus.conf
+	sed 's:/sbin/resolvconf:/usr/sbin/resolvconf:g' -i */*.action
+	sed 's:sbin:bin:g' -i */*.service.in
 }
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-
 	export MOC_QT3=/usr/bin/moc-qt3
 	export MOC_QT4=/usr/bin/moc-qt4
+	export PYTHON=/usr/bin/python2
 
-	# pygtk requires python2; make it explicit in case other python are installed: FS#21865
-	PYTHON=python2 \
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
 		--localstatedir=/var \
+		--sbindir=/usr/bin \
 		--disable-static \
 		--disable-monodoc \
 		--enable-compat-libdns_sd \
@@ -70,13 +71,9 @@ build() {
 package() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	make DESTDIR="${pkgdir}" install
-
-	cd "${pkgdir}"
-	rm -fr /etc/rc.d
-	sed -i '1c #!/usr/bin/python2' usr/bin/avahi-{bookmarks,discover}
-	sed -i 's:/sbin/resolvconf:/usr/sbin/resolvconf:g' etc/avahi/avahi-dnsconfd.action
+	rm -fr "${pkgdir}"/etc/rc.d
 
 	# howl and mdnsresponder compatability
-	(cd usr/include; ln -s avahi-compat-libdns_sd/dns_sd.h dns_sd.h; ln -s avahi-compat-howl howl)
-	(cd usr/lib/pkgconfig; ln -s avahi-compat-howl.pc howl.pc)
+	cd "${pkgdir}"/usr/include; ln -s avahi-compat-libdns_sd/dns_sd.h dns_sd.h; ln -s avahi-compat-howl howl
+	cd "${pkgdir}"/usr/lib/pkgconfig; ln -s avahi-compat-howl.pc howl.pc
 }
