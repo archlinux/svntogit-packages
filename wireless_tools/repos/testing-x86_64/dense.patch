@@ -1,0 +1,49 @@
+The length field of wext data (iw_point.data) is 16 bits. The largest
+value is thus 65535. During the attempts to increase buffer size the
+buffer starts at 4096 and is doubled after each failure to fill. From the
+time this length reaches 65536 it is effectively zero. We thus loose all
+potential space from 32768 to 65535.
+
+This problem is clear when scanning in a RF dense environment.
+
+Without this patch:
+~$ iwlist wlan0 scan
+print_scanning_info: Allocation failed
+
+With this patch:
+~$ iwlist wlan0 scan | grep Cell | wc -l
+86
+
+Signed-off-by: Reinette Chatre <reinette.chatre@intel.com>
+
+---
+A similar patch was recently created to fix wpa_supplicant.
+
+I could not find a source code repo for this code and created this patch
+against version 30-pre7 downloaded from 
+http://www.hpl.hp.com/personal/Jean_Tourrilhes/Linux/Tools.html
+
+diff -uprN wireless_tools_org/wireless_tools.30/iwlist.c wireless_tools.30/iwlist.c
+--- wireless_tools_org/wireless_tools.30/iwlist.c	2008-01-16 17:45:41.000000000 -0800
++++ wireless_tools.30/iwlist.c	2009-02-12 14:16:48.000000000 -0800
+@@ -800,7 +800,7 @@ print_scanning_info(int		skfd,
+ 	  if(iw_get_ext(skfd, ifname, SIOCGIWSCAN, &wrq) < 0)
+ 	    {
+ 	      /* Check if buffer was too small (WE-17 only) */
+-	      if((errno == E2BIG) && (range.we_version_compiled > 16))
++	      if((errno == E2BIG) && (range.we_version_compiled > 16) && (buflen < 65535))
+ 		{
+ 		  /* Some driver may return very large scan results, either
+ 		   * because there are many cells, or because they have many
+@@ -816,6 +816,10 @@ print_scanning_info(int		skfd,
+ 		  else
+ 		    buflen *= 2;
+ 
++		  /* wrq.u.data.length is 16 bits so max size is 65535 */
++		  if(buflen > 65535)
++		    buflen = 65535;
++
+ 		  /* Try again */
+ 		  goto realloc;
+ 		}
+
