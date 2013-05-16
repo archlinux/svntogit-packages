@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=204
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -13,11 +13,13 @@ makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
+        0001-utmp-turn-systemd-update-utmp-shutdown.service-into-.patch
         'initcpio-hook-udev'
         'initcpio-install-udev'
         'initcpio-install-timestamp'
         'use-split-usr-path.patch')
 md5sums=('a07619bb19f48164fbf0761d12fd39a8'
+         '7f39f9fde1ff7b48293ed1e3d0a6c213'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d'
@@ -28,6 +30,9 @@ prepare() {
 
   # hang onto this until we do the /{,s}bin merge
   patch -Np1 <"$srcdir/use-split-usr-path.patch"
+
+  patch -Np1 <"$srcdir/0001-utmp-turn-systemd-update-utmp-shutdown.service-into-.patch"
+  autoreconf
 }
 
 build() {
@@ -99,9 +104,6 @@ package_systemd() {
   # the path to udevadm is hardcoded in some places
   install -d "$pkgdir/sbin"
   ln -s ../usr/bin/udevadm "$pkgdir/sbin/udevadm"
-
-  # udevd is no longer udevd because systemd. why isn't udevadm now udevctl?
-  ln -s ../lib/systemd/systemd-udevd "$pkgdir/usr/bin/udevd"
 
   # add back tmpfiles.d/legacy.conf
   install -m644 "systemd-$pkgver/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
