@@ -5,7 +5,7 @@
 pkgbase=xsane
 pkgname=('xsane' 'xsane-gimp')
 pkgver=0.998
-pkgrel=4
+pkgrel=5
 arch=(i686 x86_64)
 url="http://www.xsane.org"
 license=('GPL2')
@@ -15,11 +15,15 @@ source=(http://www.xsane.org/download/$pkgname-$pkgver.tar.gz
 md5sums=('936f1cc76b37caa8f285e1e15ac7e0aa'
          '15541ff0ddc10acfa2059cf99d5478eb')
 
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  # fix use "xdg-open" instead of "netscape" to launch help browser - taken from Fedora
+  patch -Np1 -i ${srcdir}/xsane-0.995-xdg-open.patch
+  sed -i -e 's:png_ptr->jmpbuf:png_jmpbuf(png_ptr):' src/xsane-save.c
+}
+
 build() {
   cd "$srcdir/$pkgbase-$pkgver"
-  # fix use "xdg-open" instead of "netscape" to launch help browser - taken from Fedora
-  patch -Np1 -i "${srcdir}/xsane-0.995-xdg-open.patch"
-  sed -i -e 's:png_ptr->jmpbuf:png_jmpbuf(png_ptr):' src/xsane-save.c
 
   ./configure --prefix=/usr \
     --mandir=/usr/share/man \
@@ -29,7 +33,7 @@ build() {
 
   # build again with gimp enabled
   make clean
-  ./configure --prefix=/usr --mandir=/usr/share/man --disable-gimp
+  ./configure --prefix=/usr --sbindir=/usr/bin --mandir=/usr/share/man --disable-gimp
   make
 }
 
@@ -49,9 +53,10 @@ package_xsane-gimp() {
   install -D -m755 src/xsane-gimp "${pkgdir}/usr/bin/xsane-gimp"
 
   ## For making Gimp Plugin available 
-  /bin/mkdir -p "$pkgdir/usr/lib/gimp/2.0/plug-ins"
-  cd "$pkgdir/usr/lib/gimp/2.0/plug-ins/"
-  /bin/ln -s ../../../../bin/xsane-gimp xsane
+  mkdir -p "$pkgdir/usr/lib/gimp/2.0/plug-ins"
+  ln -sf /usr/bin/xsane-gimp $pkgdir/usr/lib/gimp/2.0/plug-ins/xsane
+  #cd "$pkgdir/usr/lib/gimp/2.0/plug-ins/"
+  #/bin/ln -s ../../../../bin/xsane-gimp xsane
 
 # http://cvs.fedoraproject.org/viewvc/rpms/xsane/devel/xsane.spec?revision=1.80&view=markup
 # when makepkg will allow splitted pkg install file support we might change add a xsane-gimp.install file with the commands that are used by fedora, 
