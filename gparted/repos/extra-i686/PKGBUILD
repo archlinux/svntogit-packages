@@ -5,7 +5,7 @@
 
 pkgname=gparted
 pkgver=0.16.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A Partition Magic clone, frontend to GNU Parted"
 arch=('i686' 'x86_64')
 url="http://gparted.sourceforge.net"
@@ -14,6 +14,9 @@ depends=('parted' 'gtkmm' 'hicolor-icon-theme')
 makedepends=('intltool' 'pkg-config' 'gnome-doc-utils')
 optdepends=('dosfstools: for FAT16 and FAT32 partitions'
             'jfsutils: for jfs partitions'
+            'f2fs-tools: for Flash-Friendly File System'
+            'btrfs-progs: for btrfs partitions'
+            'exfat-utils: for exFAT partitions'
             'ntfs-3g: for ntfs partitions'
             'reiserfsprogs: for reiser partitions'
             'xfsprogs: for xfs partitions'
@@ -25,28 +28,31 @@ install=gparted.install
 source=("http://downloads.sourceforge.net/project/${pkgname}/${pkgname}/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.bz2"
         'org.archlinux.pkexec.gparted.policy')
 md5sums=('3f399bff031b5ce14d11a8c346f4b89c'
-         'c031d7d2b845ccb025b9f83e0ddd5653')
+         '122ed3120c846376bead22b25f6a3b19')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  ./configure --prefix=/usr
+  ./configure --prefix=/usr \
+              --sbindir=/usr/bin
   make
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
+  sed -i -e "s:Exec=gksudo /usr/bin/gparted %f:Exec=/usr/bin/gparted_polkit %f:g" gparted.desktop
   make DESTDIR="${pkgdir}" install
 
   # Install policy file
   install -Dm644 "${srcdir}/org.archlinux.pkexec.gparted.policy" "${pkgdir}/usr/share/polkit-1/actions/org.archlinux.pkexec.gparted.policy"
 
-  # We need rename the original script
-  mv "${pkgdir}/usr/sbin/gparted" "${pkgdir}/usr/sbin/gparted.elf"
-
   # Install launcher script
-  echo '#!/bin/sh' > ${pkgdir}/usr/sbin/gparted
-  echo 'pkexec --disable-internal-agent "/usr/sbin/gparted.elf" "$@"' >> ${pkgdir}/usr/sbin/gparted
-  chmod 755 ${pkgdir}/usr/sbin/gparted
+  echo '#!/bin/sh' > ${pkgdir}/usr/bin/gparted_polkit
+  echo 'if [ $(which pkexec) ]; then' >> ${pkgdir}/usr/bin/gparted_polkit
+  echo '  pkexec --disable-internal-agent "/usr/bin/gparted" "$@"' >> ${pkgdir}/usr/bin/gparted_polkit
+  echo 'else' >> ${pkgdir}/usr/bin/gparted_polkit
+  echo '  /usr/bin/gparted "$@"' >> ${pkgdir}/usr/bin/gparted_polkit
+  echo 'fi' >> ${pkgdir}/usr/bin/gparted_polkit
+  chmod 755 ${pkgdir}/usr/bin/gparted_polkit
 }
