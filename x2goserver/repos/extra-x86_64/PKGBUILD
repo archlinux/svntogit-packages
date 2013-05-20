@@ -8,7 +8,7 @@
 
 pkgname=x2goserver
 pkgver=4.0.0.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Open source terminal server"
 arch=('i686' 'x86_64')
 url="http://www.x2go.org/"
@@ -19,13 +19,20 @@ makedepends=('man2html')
 options=('emptydirs')
 install=x2goserver.install
 backup=('etc/x2go/x2goserver.conf' 'etc/x2go/x2gosql/sql')
-source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz x2goserver.service)
+source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz
+        x2goserver.service
+        revert.patch)
 md5sums=('6b8cecfdd31a8877203f50d3666c265f'
-         'f76081c01e40b6206895d194dc949707')
+         'f76081c01e40b6206895d194dc949707'
+         'c487c31e7c0aa9a73323313007497764')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-#return 1
+
+  # revert an upstream commit that breaks sessions showing up
+  # http://code.x2go.org/gitweb?p=x2goserver.git;a=commitdiff;h=011d14ae076ba6fec96cd1e019c4f82444ab0f9f
+  patch -Rp1 -i ${srcdir}/revert.patch
+
   # -r option does not exist in Arch linux
   # (However, html man pages do not get installed anyway...)
   for Makefile in $(find . -type f -name Makefile); do
@@ -49,9 +56,8 @@ package() {
   install -Dm 644 "$srcdir/x2goserver.service" "$pkgdir/usr/lib/systemd/system/x2goserver.service"
   
   # X2go homedir + printing spool dir
-  #install -dm 755 $pkgdir/var/lib/x2go
   install -dm 770 $pkgdir/var/lib/x2go
-  install -dm 755 $pkgdir/var/spool/x2go
+  install -dm 770 $pkgdir/var/spool/x2go
   
   # load fuse module at system start
   install -dm755 $pkgdir/lib/modules-load.d
