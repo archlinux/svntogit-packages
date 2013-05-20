@@ -1,0 +1,152 @@
+From 011d14ae076ba6fec96cd1e019c4f82444ab0f9f Mon Sep 17 00:00:00 2001
+From: Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+Date: Sun, 19 May 2013 00:41:32 +0200
+Subject: [PATCH] Security fix for setgid wrapper x2gosqlitewrapper.c.
+ Hard-code path to x2gosqlitewrapper.pl during build via
+ defining a macro in the Makefile. Thanks to Richard
+ Weinberger for spotting this!!!
+
+---
+ Makefile                       |    2 +-
+ debian/changelog               |    3 +++
+ debian/rules                   |    4 +--
+ x2goserver/Makefile            |    4 +--
+ x2goserver/x2gosqlitewrapper.c |   54 +++-------------------------------------
+ 5 files changed, 12 insertions(+), 55 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 3be40f9..588084f 100755
+--- a/Makefile
++++ b/Makefile
+@@ -4,7 +4,7 @@ RM_FILE=rm -f
+ RM_DIR=rmdir -p --ignore-fail-on-non-empty
+ 
+ DESTDIR=
+-PREFIX=/usr/local
++PREFIX ?= /usr/local
+ ETCDIR=/etc/x2go
+ LIBDIR=$(PREFIX)/lib/x2go
+ SHAREDIR=$(PREFIX)/share/x2go
+diff --git a/debian/changelog b/debian/changelog
+index 470a502..2cf2dde 100644
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -12,6 +12,9 @@ x2goserver (4.0.0.2-0~x2go1) UNRELEASED; urgency=low
+   * New upstream version (4.0.0.2):
+     - Use make_path from File::Path in x2godbadmin to create user directory if
+       not present. (Fixes: #200).
++    - Security fix for setgid wrapper x2gosqlitewrapper.c. Hard-code path to
++      x2gosqlitewrapper.pl during build via defining a macro in the Makefile.
++      Thanks to Richard Weinberger for spotting this!!!
+   /debian/control:
+     + Let x2goserver bin:package depend on xfonts-base and fontconfig. (Fixes:
+       #163).
+diff --git a/debian/rules b/debian/rules
+index b32e08d..5bb94b2 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -1,10 +1,10 @@
+ #!/usr/bin/make -f
+ 
+ %:
+-	dh $@
++	PREFIX=/usr dh $@
+ 
+ override_dh_auto_install:
+-	make -f Makefile build-arch
++	PREFIX=/usr make -f Makefile build-arch
+ 
+ override_dh_auto_clean:
+ 	rm -fv x2gosqlitewrapper
+diff --git a/x2goserver/Makefile b/x2goserver/Makefile
+index 4287478..e9d56e6 100755
+--- a/x2goserver/Makefile
++++ b/x2goserver/Makefile
+@@ -15,7 +15,7 @@ RM_FILE=rm -f
+ RM_DIR=rmdir -p --ignore-fail-on-non-empty
+ 
+ DESTDIR=
+-PREFIX=/usr/local
++PREFIX ?= /usr/local
+ ETCDIR=/etc/x2go
+ BINDIR=$(PREFIX)/bin
+ SBINDIR=$(PREFIX)/sbin
+@@ -41,7 +41,7 @@ build: build-arch build-indep
+ build-arch: build_setgidwrappers
+ 
+ build_setgidwrappers:
+-	$(CC) $(CFLAGS) $(LDFLAGS) -o x2gosqlitewrapper x2gosqlitewrapper.c
++	$(CC) $(CFLAGS) $(LDFLAGS) -DTRUSTED_BINARY=\"$(DESTDIR)$(LIBDIR)/x2gosqlitewrapper.pl\" -o x2gosqlitewrapper x2gosqlitewrapper.c
+ 
+ build-indep: build_man2html
+ 
+diff --git a/x2goserver/x2gosqlitewrapper.c b/x2goserver/x2gosqlitewrapper.c
+index a134efc..ad95eff 100644
+--- a/x2goserver/x2gosqlitewrapper.c
++++ b/x2goserver/x2gosqlitewrapper.c
+@@ -21,58 +21,12 @@
+  * 
+  */
+ 
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <unistd.h>
+-#include <libgen.h>
+-#include <errno.h>
+-
+ int main( int argc, char *argv[] ) {
+-	char * x2gosqlitewrapper = NULL;
+-	size_t path_max;
+-	
+-/*
+-	The following snippet is taken from the realpath manpage
+-*/
+-#ifdef PATH_MAX
+-	path_max = PATH_MAX;
+-#else
+-	path_max = pathconf (".", _PC_PATH_MAX);
+-	if (path_max <= 0){
+-		path_max = 4096;
+-	}
+-#endif
+-	{
+-		// allocate dynamic buffer in stack: this needs C99 or gnu??
+-		char buffer[path_max];
+-		ssize_t rvrl;
+-		int rvap;
+-
+-		// resolve link of /proc/self/exe to find out where we are
+-		rvrl = readlink("/proc/self/exe", buffer, path_max);
+-		if(rvrl == -1){
+-			perror("readlink(\"/proc/self/exe\",buffer,path_max)");
+-			exit(EXIT_FAILURE);
+-		}
+-		if(rvrl >= path_max){
+-			fprintf(stderr, "Could not resolve the path of this file using \"/proc/self/exe\". The path is too long (> %i)", path_max);
+-			exit(EXIT_FAILURE);
+-		}
+-
+-		// derive the full path of x2gosqlitewrapper.pl from path of this binary
+-		rvap = asprintf(&x2gosqlitewrapper, "%s/%s", dirname(buffer), "x2gosqlitewrapper.pl");
+-		if(rvap == -1){
+-			fprintf(stderr, "Failed to allocate memory calling asprintf\n");
+-			exit(EXIT_FAILURE);
+-		}
+-
+-		// execute the script, running with user-rights of this binary 
+-		execv(x2gosqlitewrapper, argv);
+ 
+-	}
++	char x2gosqlitewrapper[] = TRUSTED_BINARY;
+ 
+-	// ...fail
+-	fprintf(stderr, "Failed to execute %s: %s\n", x2gosqlitewrapper, strerror(errno));
+-	return EXIT_FAILURE;
++	argv[0] = "x2gosqlitewrapper.pl";
++	// execute the script, running with user-rights of this binary
++	execv(x2gosqlitewrapper, argv);
+ 
+ }
+-- 
+1.7.9.5
+
