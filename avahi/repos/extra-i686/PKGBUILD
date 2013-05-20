@@ -4,7 +4,7 @@
 
 pkgname=avahi
 pkgver=0.6.31
-pkgrel=7
+pkgrel=9
 pkgdesc='Multicast/unicast DNS-SD framework'
 url='http://www.avahi.org/'
 license=('LGPL')
@@ -29,31 +29,31 @@ backup=('etc/avahi/hosts'
         'etc/avahi/services/sftp-ssh.service'
         'usr/lib/avahi/service-types.db'
         'usr/share/avahi/service-types')
-source=("http://www.avahi.org/download/avahi-${pkgver}.tar.gz"
-        'rc.d.patch')
-sha1sums=('7e05bd78572c9088b03b1207a0ad5aba38490684'
-          '625ad7c131c0c1c383caeddef18fc7a32d8f3ab9')
+source=("http://www.avahi.org/download/avahi-${pkgver}.tar.gz")
+sha1sums=('7e05bd78572c9088b03b1207a0ad5aba38490684')
 
 conflicts=('howl' 'mdnsresponder')
 provides=('howl' 'mdnsresponder')
 
 install=install
 
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	sed 's:netdev:network:g' -i avahi-daemon/avahi-dbus.conf
+	sed 's:/sbin/resolvconf:/usr/sbin/resolvconf:g' -i */*.action
+}
+
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-
-	sed -i 's/netdev/network/g' avahi-daemon/avahi-dbus.conf
-	patch -p1 -i ../rc.d.patch
-
 	export MOC_QT3=/usr/bin/moc-qt3
 	export MOC_QT4=/usr/bin/moc-qt4
+	export PYTHON=/usr/bin/python2
 
-	# pygtk requires python2; make it explicit in case other python are installed: FS#21865
-	PYTHON=python2 \
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
 		--localstatedir=/var \
+		--sbindir=/usr/bin \
 		--disable-static \
 		--disable-monodoc \
 		--enable-compat-libdns_sd \
@@ -70,12 +70,9 @@ build() {
 package() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	make DESTDIR="${pkgdir}" install
-
-	cd "${pkgdir}"
-	sed -i '1c #!/usr/bin/python2' usr/bin/avahi-{bookmarks,discover}
-	sed -i 's:/sbin/resolvconf:/usr/sbin/resolvconf:g' etc/avahi/avahi-dnsconfd.action
+	rm -fr "${pkgdir}"/etc/rc.d
 
 	# howl and mdnsresponder compatability
-	(cd usr/include; ln -s avahi-compat-libdns_sd/dns_sd.h dns_sd.h; ln -s avahi-compat-howl howl)
-	(cd usr/lib/pkgconfig; ln -s avahi-compat-howl.pc howl.pc)
+	cd "${pkgdir}"/usr/include; ln -s avahi-compat-libdns_sd/dns_sd.h dns_sd.h; ln -s avahi-compat-howl howl
+	cd "${pkgdir}"/usr/lib/pkgconfig; ln -s avahi-compat-howl.pc howl.pc
 }
