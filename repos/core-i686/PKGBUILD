@@ -4,7 +4,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=6.2p1
+pkgver=6.2p2
 pkgrel=1
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
@@ -15,31 +15,28 @@ depends=('krb5' 'openssl' 'libedit' 'ldns')
 optdepends=('xorg-xauth: X11 forwarding'
             'x11-ssh-askpass: input passphrase in X')
 source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"
-        'sshd.close-sessions'
         'sshdgenkeys.service'
         'sshd@.service'
         'sshd.service'
         'sshd.socket'
-        'sshd.confd'
-        'sshd.pam'
-        'sshd')
-sha1sums=('8824708c617cc781b2bb29fa20bd905fd3d2a43d'
-          '954bf1660aa32620c37034320877f4511b767ccb'
+        'sshd.pam')
+sha1sums=('c2b4909eba6f5ec6f9f75866c202db47f3b501ba'
           '6df5be396f8c593bb511a249a1453294d18a01a6'
-          'bd6eae36c7ef9efb7147778baad7858b81f2d660'
-          'f9af4a442b804ab661cec0edb25dd76dee16d8d2'
+          '6a0ff3305692cf83aca96e10f3bb51e1c26fccda'
+          '2d87de52a6b2f764180f9f67cb9747392784b4a5'
           'e12fa910b26a5634e5a6ac39ce1399a132cf6796'
-          'ec102deb69cad7d14f406289d2fc11fee6eddbdd'
-          'd93dca5ebda4610ff7647187f8928a3de28703f3'
-          '1488d4ed33cf3037accf4b0e1c7a7e90b6a097c7')
+          'd93dca5ebda4610ff7647187f8928a3de28703f3')
 
-backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd' 'etc/conf.d/sshd')
+backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
+
+install=install
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 
 	./configure \
 		--prefix=/usr \
+		--sbindir=/usr/bin \
 		--libexecdir=/usr/lib/ssh \
 		--sysconfdir=/etc/ssh \
 		--with-ldns \
@@ -69,20 +66,14 @@ package() {
 
 	make DESTDIR="${pkgdir}" install
 
-	rm "${pkgdir}"/usr/share/man/man1/slogin.1
-	ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1.gz
-
+	ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1
 	install -Dm644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENCE"
 
 	install -Dm644 ../sshdgenkeys.service "${pkgdir}"/usr/lib/systemd/system/sshdgenkeys.service
 	install -Dm644 ../sshd@.service "${pkgdir}"/usr/lib/systemd/system/sshd@.service
 	install -Dm644 ../sshd.service "${pkgdir}"/usr/lib/systemd/system/sshd.service
 	install -Dm644 ../sshd.socket "${pkgdir}"/usr/lib/systemd/system/sshd.socket
-
-	install -Dm755 ../sshd.close-sessions "${pkgdir}/etc/rc.d/functions.d/sshd-close-sessions" # FS#17389
-	install -Dm644 ../sshd.confd "${pkgdir}"/etc/conf.d/sshd
 	install -Dm644 ../sshd.pam "${pkgdir}"/etc/pam.d/sshd
-	install -Dm755 ../sshd "${pkgdir}"/etc/rc.d/sshd
 
 	install -Dm755 contrib/findssl.sh "${pkgdir}"/usr/bin/findssl.sh
 	install -Dm755 contrib/ssh-copy-id "${pkgdir}"/usr/bin/ssh-copy-id
