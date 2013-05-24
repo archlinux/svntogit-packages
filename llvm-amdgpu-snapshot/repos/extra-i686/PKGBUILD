@@ -1,0 +1,87 @@
+# $Id$
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Contributor: Thomas Dziedzic < gostrc at gmail >
+# Contributor: Roberto Alsina <ralsina@kde.org>
+# Contributor: Tomas Lindquist Olsen <tomas@famolsen.dk>
+# Contributor: Anders Bergh <anders@archlinuxppc.org>
+# Contributor: Tomas Wilhelmsson <tomas.wilhelmsson@gmail.com>
+
+pkgbase=llvm-amdgpu-snapshot
+pkgname=('llvm-amdgpu-snapshot' 'llvm-amdgpu-lib-snapshot')
+pkgver=20130403
+pkgrel=2
+pkgdesc='Low Level Virtual Machine with AMDGPU enabled to build r600g shader llvm support'
+arch=('i686' 'x86_64')
+url="http://llvm.org"
+license=('custom:University of Illinois/NCSA Open Source License')
+makedepends=('libffi' 'python2' 'ocaml')
+source=(ftp://ftp.archlinux.org/other/community/llvm-amdgpu/llvm-amdgpu-master.${pkgver}.tar.gz)
+md5sums=('4baa7b8da9eff4811952b6f855c141ca')
+
+prepare() {
+  cd "$srcdir"/llvm-c*
+
+  sed -i 's/python$/python2/' utils/llvm-build/llvm-build
+}
+
+build() {
+  cd "$srcdir"/llvm-c*
+
+  # Apply strip option to configure
+  _optimized_switch="enable"
+  [[ $(check_option strip) == n ]] && _optimized_switch="disable"
+
+  # Include location of libffi headers in CPPFLAGS
+  export CPPFLAGS="$CPPFLAGS $(pkg-config --cflags libffi)"
+
+  # Force the use of GCC instead of clang
+  PYTHON=python2 CC=gcc CXX=g++ \
+  ./configure \
+    --prefix=/usr \
+    --libdir=/usr/lib/llvm \
+    --sysconfdir=/etc \
+    --enable-shared \
+    --enable-libffi \
+    --enable-targets=all \
+    --enable-experimental-targets=R600 \
+    --disable-expensive-checks \
+    --with-binutils-include=/usr/include \
+    --$_optimized_switch-optimized
+
+  make REQUIRES_RTTI=1
+}
+
+package_llvm-amdgpu-snapshot() {
+  depends=("llvm-amdgpu-lib-snapshot=${pkgver}" 'python2')
+  conflicts=('llvm')
+
+  cd "$srcdir"/llvm-c*
+
+  make DESTDIR="$pkgdir" install
+
+  # Remove useless files
+  rm -r "$pkgdir"/usr/{docs,lib/ocaml}
+  # moved to llvm-amdgpu-lib-snapshot
+  rm "$pkgdir"/usr/lib/libLLVM-3.2svn.so
+  # Fix permissions of static libs
+  chmod -x "$pkgdir"/usr/lib/lib*.a
+
+  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_llvm-amdgpu-lib-snapshot() {
+  depends=('libffi' 'gcc-libs')
+  
+  cd "$srcdir"/llvm-c*
+
+  make DESTDIR="$pkgdir" install
+
+  mv -v "$pkgdir"/usr/lib/libLLVM-3.2svn.so "$pkgdir"/
+  
+  # Remove useless files
+  rm -r "$pkgdir"/usr/{bin,include,docs,lib/*}
+  
+  mv "$pkgdir"/libLLVM-3.2svn.so "$pkgdir"/usr/lib/
+
+  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
