@@ -1,0 +1,187 @@
+From 90ba983f6889e65a3b506b30dc606aa9d1d46cd2 Mon Sep 17 00:00:00 2001
+From: Theodore Ts'o <tytso@mit.edu>
+Date: Mon, 11 Mar 2013 23:39:59 -0400
+Subject: ext4: use atomic64_t for the per-flexbg free_clusters count
+
+From: Theodore Ts'o <tytso@mit.edu>
+
+commit 90ba983f6889e65a3b506b30dc606aa9d1d46cd2 upstream.
+
+A user who was using a 8TB+ file system and with a very large flexbg
+size (> 65536) could cause the atomic_t used in the struct flex_groups
+to overflow.  This was detected by PaX security patchset:
+
+http://forums.grsecurity.net/viewtopic.php?f=3&t=3289&p=12551#p12551
+
+This bug was introduced in commit 9f24e4208f7e, so it's been around
+since 2.6.30.  :-(
+
+Fix this by using an atomic64_t for struct orlav_stats's
+free_clusters.
+
+[Backported for 3.0-stable. Renamed free_clusters back to free_blocks;
+fixed a few more atomic_read's of free_blocks left in 3.0.]
+
+Signed-off-by: "Theodore Ts'o" <tytso@mit.edu>
+Reviewed-by: Lukas Czerner <lczerner@redhat.com>
+Signed-off-by: Lingzhu Xiang <lxiang@redhat.com>
+Reviewed-by: CAI Qian <caiqian@redhat.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+
+--- a/fs/ext4/ext4.h
++++ b/fs/ext4/ext4.h
+@@ -288,9 +288,9 @@ struct ext4_group_desc
+  */
+ 
+ struct flex_groups {
+-	atomic_t free_inodes;
+-	atomic_t free_blocks;
+-	atomic_t used_dirs;
++	atomic64_t	free_blocks;
++	atomic_t	free_inodes;
++	atomic_t	used_dirs;
+ };
+ 
+ #define EXT4_BG_INODE_UNINIT	0x0001 /* Inode table/bitmap not in use */
+diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
+index 29272de..dd732c7 100644
+--- a/fs/ext4/ialloc.c
++++ b/fs/ext4/ialloc.c
+@@ -345,8 +345,8 @@ static int find_group_flex(struct super_block *sb, struct inode *parent,
+ 	ext4_group_t ngroups = ext4_get_groups_count(sb);
+ 	int flex_size = ext4_flex_bg_size(sbi);
+ 	ext4_group_t best_flex = parent_fbg_group;
+-	int blocks_per_flex = sbi->s_blocks_per_group * flex_size;
+-	int flexbg_free_blocks;
++	ext4_fsblk_t blocks_per_flex = sbi->s_blocks_per_group * flex_size;
++	ext4_fsblk_t flexbg_free_blocks;
+ 	int flex_freeb_ratio;
+ 	ext4_group_t n_fbg_groups;
+ 	ext4_group_t i;
+@@ -355,7 +355,7 @@ static int find_group_flex(struct super_block *sb, struct inode *parent,
+ 		sbi->s_log_groups_per_flex;
+ 
+ find_close_to_parent:
+-	flexbg_free_blocks = atomic_read(&flex_group[best_flex].free_blocks);
++	flexbg_free_blocks = atomic64_read(&flex_group[best_flex].free_blocks);
+ 	flex_freeb_ratio = flexbg_free_blocks * 100 / blocks_per_flex;
+ 	if (atomic_read(&flex_group[best_flex].free_inodes) &&
+ 	    flex_freeb_ratio > free_block_ratio)
+@@ -370,7 +370,7 @@ find_close_to_parent:
+ 		if (i == parent_fbg_group || i == parent_fbg_group - 1)
+ 			continue;
+ 
+-		flexbg_free_blocks = atomic_read(&flex_group[i].free_blocks);
++		flexbg_free_blocks = atomic64_read(&flex_group[i].free_blocks);
+ 		flex_freeb_ratio = flexbg_free_blocks * 100 / blocks_per_flex;
+ 
+ 		if (flex_freeb_ratio > free_block_ratio &&
+@@ -380,14 +380,14 @@ find_close_to_parent:
+ 		}
+ 
+ 		if ((atomic_read(&flex_group[best_flex].free_inodes) == 0) ||
+-		    ((atomic_read(&flex_group[i].free_blocks) >
+-		      atomic_read(&flex_group[best_flex].free_blocks)) &&
++		    ((atomic64_read(&flex_group[i].free_blocks) >
++		      atomic64_read(&flex_group[best_flex].free_blocks)) &&
+ 		     atomic_read(&flex_group[i].free_inodes)))
+ 			best_flex = i;
+ 	}
+ 
+ 	if (!atomic_read(&flex_group[best_flex].free_inodes) ||
+-	    !atomic_read(&flex_group[best_flex].free_blocks))
++	    !atomic64_read(&flex_group[best_flex].free_blocks))
+ 		return -1;
+ 
+ found_flexbg:
+@@ -406,8 +406,8 @@ out:
+ }
+ 
+ struct orlov_stats {
++	__u64 free_blocks;
+ 	__u32 free_inodes;
+-	__u32 free_blocks;
+ 	__u32 used_dirs;
+ };
+ 
+@@ -424,7 +424,7 @@ static void get_orlov_stats(struct super_block *sb, ext4_group_t g,
+ 
+ 	if (flex_size > 1) {
+ 		stats->free_inodes = atomic_read(&flex_group[g].free_inodes);
+-		stats->free_blocks = atomic_read(&flex_group[g].free_blocks);
++		stats->free_blocks = atomic64_read(&flex_group[g].free_blocks);
+ 		stats->used_dirs = atomic_read(&flex_group[g].used_dirs);
+ 		return;
+ 	}
+diff --git a/fs/ext4/mballoc.c b/fs/ext4/mballoc.c
+index 31bbdb5..35959f6 100644
+--- a/fs/ext4/mballoc.c
++++ b/fs/ext4/mballoc.c
+@@ -2814,8 +2814,8 @@ ext4_mb_mark_diskspace_used(struct ext4_allocation_context *ac,
+ 	if (sbi->s_log_groups_per_flex) {
+ 		ext4_group_t flex_group = ext4_flex_group(sbi,
+ 							  ac->ac_b_ex.fe_group);
+-		atomic_sub(ac->ac_b_ex.fe_len,
+-			   &sbi->s_flex_groups[flex_group].free_blocks);
++		atomic64_sub(ac->ac_b_ex.fe_len,
++			     &sbi->s_flex_groups[flex_group].free_blocks);
+ 	}
+ 
+ 	err = ext4_handle_dirty_metadata(handle, NULL, bitmap_bh);
+@@ -4614,7 +4614,7 @@ do_more:
+ 
+ 	if (sbi->s_log_groups_per_flex) {
+ 		ext4_group_t flex_group = ext4_flex_group(sbi, block_group);
+-		atomic_add(count, &sbi->s_flex_groups[flex_group].free_blocks);
++		atomic64_add(count, &sbi->s_flex_groups[flex_group].free_blocks);
+ 	}
+ 
+ 	ext4_mb_unload_buddy(&e4b);
+@@ -4745,8 +4745,8 @@ void ext4_add_groupblocks(handle_t *handle, struct super_block *sb,
+ 
+ 	if (sbi->s_log_groups_per_flex) {
+ 		ext4_group_t flex_group = ext4_flex_group(sbi, block_group);
+-		atomic_add(blocks_freed,
+-			   &sbi->s_flex_groups[flex_group].free_blocks);
++		atomic64_add(blocks_freed,
++			     &sbi->s_flex_groups[flex_group].free_blocks);
+ 	}
+ 
+ 	ext4_mb_unload_buddy(&e4b);
+diff --git a/fs/ext4/resize.c b/fs/ext4/resize.c
+index 244100f..d2661aac 100644
+--- a/fs/ext4/resize.c
++++ b/fs/ext4/resize.c
+@@ -929,8 +929,8 @@ int ext4_group_add(struct super_block *sb, struct ext4_new_group_data *input)
+ 	    sbi->s_log_groups_per_flex) {
+ 		ext4_group_t flex_group;
+ 		flex_group = ext4_flex_group(sbi, input->group);
+-		atomic_add(input->free_blocks_count,
+-			   &sbi->s_flex_groups[flex_group].free_blocks);
++		atomic64_add(input->free_blocks_count,
++			     &sbi->s_flex_groups[flex_group].free_blocks);
+ 		atomic_add(EXT4_INODES_PER_GROUP(sb),
+ 			   &sbi->s_flex_groups[flex_group].free_inodes);
+ 	}
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index c6a3363..e05cd34 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1992,8 +1992,8 @@ static int ext4_fill_flex_info(struct super_block *sb)
+ 		flex_group = ext4_flex_group(sbi, i);
+ 		atomic_add(ext4_free_inodes_count(sb, gdp),
+ 			   &sbi->s_flex_groups[flex_group].free_inodes);
+-		atomic_add(ext4_free_blks_count(sb, gdp),
+-			   &sbi->s_flex_groups[flex_group].free_blocks);
++		atomic64_add(ext4_free_blks_count(sb, gdp),
++			     &sbi->s_flex_groups[flex_group].free_blocks);
+ 		atomic_add(ext4_used_dirs_count(sb, gdp),
+ 			   &sbi->s_flex_groups[flex_group].used_dirs);
+ 	}
+-- 
+1.7.11.7
+
+--
+To unsubscribe from this list: send the line "unsubscribe stable" in
+the body of a message to majordomo@vger.kernel.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
