@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
+pkgname=iproute2
+pkgver=3.9.0
+pkgrel=2
+pkgdesc="IP Routing Utilities"
+arch=('i686' 'x86_64')
+license=('GPL2')
+url="http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2"
+depends=('glibc' 'db' 'iptables')
+makedepends=('linux-atm')
+optdepends=('linux-atm: ATM support')
+groups=('base')
+provides=('iproute')
+conflicts=('iproute')
+replaces=('iproute')
+options=('!makeflags')
+backup=('etc/iproute2/ematch_map' 'etc/iproute2/rt_dsfield' 'etc/iproute2/rt_protos' \
+	'etc/iproute2/rt_realms' 'etc/iproute2/rt_scopes' 'etc/iproute2/rt_tables')
+source=(http://www.kernel.org/pub/linux/utils/net/$pkgname/$pkgname-$pkgver.tar.xz
+         iproute2-fhs.patch)
+sha1sums=('3f48a6d3019f1766f26cda6c4de5d3858837d92b'
+          '35b8cf2dc94b73eccad427235c07596146cd6f6c')
+
+prepare() {
+  cd $srcdir/$pkgname-$pkgver
+
+  # set correct fhs structure
+  patch -Np1 -i "$srcdir/iproute2-fhs.patch"
+
+  # do not treat warnings as errors
+  sed -i 's/-Werror//' Makefile
+}
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+
+  ./configure
+  make
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver
+
+  make DESTDIR="$pkgdir" install
+
+  # libnetlink isn't installed, install it FS#19385
+  install -Dm644 include/libnetlink.h "$pkgdir/usr/include/libnetlink.h"
+  install -Dm644 lib/libnetlink.a "$pkgdir/usr/lib/libnetlink.a"
+
+  # usrmove
+  cd "$pkgdir"
+  mv usr/sbin usr/bin
+}
