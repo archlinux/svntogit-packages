@@ -1,0 +1,49 @@
+# $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Maintainer: Eric Belanger <eric@archlinux.org>
+
+pkgname=sysvinit-tools
+pkgver=2.88
+pkgrel=11
+arch=('i686' 'x86_64')
+url="http://savannah.nongnu.org/projects/sysvinit"
+license=('GPL')
+depends=('glibc')
+source=(http://download.savannah.gnu.org/releases/sysvinit/sysvinit-${pkgver}dsf.tar.bz2
+        "0001-simplify-writelog.patch"
+        "0002-remove-ansi-escape-codes-from-log-file.patch")
+sha1sums=('f2ca149df1314a91f3007cccd7a0aa47d990de26'
+          '326112c8a9bd24cb45bd4bb2f958a25f0ac4773d'
+          'bbecfa7dfa45ac7c37ed8ac59fb53f6a85064b32')
+
+build() {
+  cd "${srcdir}/sysvinit-${pkgver}dsf"
+
+  # FS#30005
+  patch -p1 -d "src" -i "${srcdir}/0001-simplify-writelog.patch"
+  patch -p1 -d "src" -i "${srcdir}/0002-remove-ansi-escape-codes-from-log-file.patch"
+
+  make 
+}
+
+package() {
+  pkgdesc="Linux System V Init Tools"
+
+  cd "${srcdir}/sysvinit-${pkgver}dsf"
+  make ROOT="${pkgdir}" install
+
+  cd "${pkgdir}"
+  ### drop the stuff provided by systemd-sysvcompat and util-linux
+  rm -r usr/share/man/man5
+  rm -r usr/include
+  rm bin/mountpoint
+  rm sbin/{halt,init,poweroff,reboot,runlevel,shutdown,telinit,sulogin}
+  rm usr/bin/{mesg,utmpdump,wall}
+  rm usr/share/man/man1/{mountpoint,mesg,utmpdump,wall}.1
+  rm usr/share/man/man8/{halt,init,poweroff,reboot,runlevel,shutdown,telinit,sulogin}.8
+  ### usrmerge
+  mv sbin/* usr/bin/
+  rm -r sbin
+  mv bin/* usr/bin/
+  rm -r bin
+}
