@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=inetutils
+pkgver=1.9.1
+pkgrel=6
+pkgdesc="A collection of common network programs"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/inetutils/"
+license=('GPL3')
+groups=('base')
+depends=('pam')
+backup=('etc/xinetd.d/telnet' 'etc/xinetd.d/talk' \
+        'etc/xinetd.d/rlogin' 'etc/xinetd.d/rsh')
+options=('!emptydirs')
+install=inetutils.install
+source=(http://ftp.gnu.org/gnu/inetutils/${pkgname}-${pkgver}.tar.gz{,.sig} \
+        telnet.xinetd talk.xinetd rlogin.xinetd rsh.xinetd \
+        ftpd.service dnsdomainname)
+sha1sums=('86b7eb11cfdaefb1d4e9bfc10620beaf8f09bc90'
+          'SKIP'
+          '2b2dd71eb3233e5090f4c2df8abe9b4924d323f3'
+          'b15ab4faa9d97652e182c98c1e3a3b3cbbf6383c'
+          'd9b8f8aab094ecb779d0f16f21b4683ab327516f'
+          '26763ae31b8a5be256666a0ba55746941d75d6ee'
+          'e4a764828b57f1e907ec96f4ae0e0cf0d3e2e802'
+          'eb952b0b9c3e3d429d8e21b110249e495f0e0e63')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  sed -i 's|_GL_WARN_ON_USE (gets|//_GL_WARN_ON_USE (gets|' lib/stdio.in.h
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr --libexec=/usr/bin \
+    --localstatedir=/var --sysconfdir=/etc \
+    --without-wrap --with-pam \
+    --enable-ftp --enable-ftpd \
+    --enable-telnet --enable-telnetd \
+    --enable-talk --enable-talkd \
+    --enable-rlogin --enable-rlogind \
+    --enable-rsh --enable-rshd \
+    --enable-rcp --enable-hostname \
+    --disable-rexec --disable-rexecd \
+    --disable-tftp --disable-tftpd \
+    --disable-ping --disable-ping6 \
+    --disable-logger --disable-syslogd \
+    --disable-inetd --disable-whois \
+    --disable-uucpd --disable-ifconfig --disable-traceroute
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  install -D -m755 "${srcdir}/dnsdomainname" "${pkgdir}/usr/bin/dnsdomainname"
+  echo ".so man1/hostname.1" > "${pkgdir}/usr/share/man/man1/dnsdomainname.1"
+  install -D -m644 "${srcdir}/telnet.xinetd" "${pkgdir}/etc/xinetd.d/telnet"
+  install -D -m644 "${srcdir}/talk.xinetd" "${pkgdir}/etc/xinetd.d/talk"
+  install -D -m644 "${srcdir}/rlogin.xinetd" "${pkgdir}/etc/xinetd.d/rlogin"
+  install -D -m644 "${srcdir}/rsh.xinetd" "${pkgdir}/etc/xinetd.d/rsh"
+  install -D -m644 "${srcdir}/ftpd.service" "${pkgdir}/usr/lib/systemd/system/ftpd.service"
+}
