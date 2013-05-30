@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=wpa_supplicant
+pkgver=2.0
+pkgrel=4
+pkgdesc="A utility providing key negotiation for WPA wireless networks"
+url="http://hostap.epitest.fi/wpa_supplicant"
+arch=('i686' 'x86_64')
+depends=('openssl' 'dbus-core' 'readline' 'libnl')
+optdepends=('wpa_supplicant_gui: wpa_gui program')
+license=('GPL')
+backup=('etc/wpa_supplicant/wpa_supplicant.conf')
+source=("http://w1.fi/releases/${pkgname}-${pkgver}.tar.gz"
+	config)
+md5sums=('3be2ebfdcced52e00eda0afe2889839d'
+         '4aa1e5accd604091341b989b47fe1076')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}/"
+  cd "${pkgname}"
+
+  cp "${srcdir}/config" ./.config
+
+  sed -i 's@/usr/local@$(PREFIX)@g' Makefile
+
+  make PREFIX=/usr
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}/${pkgname}"
+  make PREFIX=/usr DESTDIR="${pkgdir}" install
+
+  install -d -m755 "${pkgdir}/etc/wpa_supplicant"
+  install -m644 wpa_supplicant.conf "${pkgdir}/etc/wpa_supplicant/wpa_supplicant.conf"
+
+  install -d -m755 "${pkgdir}/usr/share/man/man"{5,8}
+  install -m644 doc/docbook/*.5 "${pkgdir}/usr/share/man/man5/"
+  install -m644 doc/docbook/*.8 "${pkgdir}/usr/share/man/man8/"
+  rm -f "${pkgdir}/usr/share/man/man8/wpa_"{priv,gui}.8
+
+  install -d -m755 "${pkgdir}/usr/share/dbus-1/system-services"
+  install -m644 dbus/{fi.epitest.hostap.WPASupplicant.service,fi.w1.wpa_supplicant1.service} "${pkgdir}/usr/share/dbus-1/system-services/"
+
+  install -d -m755 "${pkgdir}/etc/dbus-1/system.d"
+  install -m644 dbus/dbus-wpa_supplicant.conf "${pkgdir}/etc/dbus-1/system.d/wpa_supplicant.conf"
+
+  install -d -m755 "${pkgdir}/usr/lib/systemd/system"
+  install -m644 systemd/*.service "${pkgdir}/usr/lib/systemd/system/"
+
+  # usrmove
+  cd "$pkgdir"/usr
+  mv sbin bin
+}
