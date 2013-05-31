@@ -5,9 +5,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.8.0
-pkgrel=4
-_snapshot=4.8-20130502
+pkgver=4.8.1
+pkgrel=1
+#_snapshot=4.8-20130502
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -15,9 +15,9 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
 options=('!libtool' '!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2)
-        #ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-md5sums=('672a1ad73f8391c5a6b3c4429eb0d798')
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2)
+        #ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+md5sums=('3b2386c114cd74185aa3754b58a79304')
 
 
 if [ -n "${_snapshot}" ]; then
