@@ -1,0 +1,97 @@
+# $Id$
+# Maintainer: Daniel Isenmann <daniel @archlinux.org>
+
+pkgbase=dhcp
+pkgname=('dhcp' 'dhclient')
+
+# separate patch levels with a period to maintain proper versioning.
+pkgver=4.2.5.p1
+_pkgver=4.2.5-P1
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('custom:isc-dhcp')
+url="https://www.isc.org/software/dhcp"
+makedepends=('bash' 'iproute2')
+source=(ftp://ftp.isc.org/isc/${pkgbase}/${_pkgver}/${pkgbase}-${_pkgver}.tar.gz{,.asc}
+        dhcp4 dhcp6 dhcp dhcpd4.service dhcpd6.service
+        dhcp-4.2.5-client_script-1.patch
+        dhcp-4.2.5-missing_ipv6-1.patch)
+md5sums=('f68e3c1f00a9af5742bc5e71d567cf93'
+         'SKIP'
+         'c49b1497837ba56c54e401a66e1bab9b'
+         '12c2f3ae47ed23eb698eb7f1bfd80f20'
+         '8f357e46e1efcbb746f38737a3f977a2'
+         '439ee2f145a1e86dd644cb94a854f8e7'
+         '588aa85b6fe228c45623185a58d11992'
+         '9e4dcf90beec15bfcb6631809cdcc780'
+         'da655f02f1cf4d95b4708e84e69edbc8')
+
+
+prepare() {
+  cd "${srcdir}/${pkgbase}-${_pkgver}"
+
+  # Define _GNU_SOURCE to fix IPV6.
+  sed '/^CFLAGS="$CFLAGS/ s/INGS"/INGS -D_GNU_SOURCE"/' -i configure
+
+  # Make not having ipv6 non-fatal.
+  patch -Np1 -i ../dhcp-4.2.5-missing_ipv6-1.patch
+  # Make dhcp client script suck less.
+  patch -Np1 -i ../dhcp-4.2.5-client_script-1.patch
+}
+
+build() {
+  cd "${srcdir}/${pkgbase}-${_pkgver}"
+  ./configure --prefix=/usr --sbindir=/usr/bin --sysconfdir=/etc \
+      --with-srv-lease-file=/var/lib/dhcp/dhcpd.leases \
+      --with-srv6-lease-file=/var/lib/dhcp/dhcpd6.leases \
+      --with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
+      --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases
+
+  make
+}
+
+package_dhcp(){
+  pkgdesc="A DHCP server, client, and relay agent"
+  backup=('etc/dhcpd.conf' 'etc/conf.d/dhcp')
+  install=dhcp.install
+  
+  cd "${srcdir}/${pkgbase}-${_pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  install -D -m755 "${srcdir}/dhcp4" "${pkgdir}/etc/rc.d/dhcp4"
+  install -D -m755 "${srcdir}/dhcp6" "${pkgdir}/etc/rc.d/dhcp6"
+  install -D -m644 "${srcdir}/dhcp" "${pkgdir}/etc/conf.d/${pkgbase}"
+  install -d "${pkgdir}/var/lib/dhcp"
+
+  install -D -m644 "${srcdir}/dhcpd4.service" "${pkgdir}/usr/lib/systemd/system/dhcpd4.service"
+  install -D -m644 "${srcdir}/dhcpd6.service" "${pkgdir}/usr/lib/systemd/system/dhcpd6.service"
+
+  # move back to config. This file is in backup array, so pacman will not overwrite a changed config.
+  mv "${pkgdir}/etc/dhcpd.conf.example" "${pkgdir}/etc/dhcpd.conf"
+
+  # Remove dhclient
+  make -C client DESTDIR="${pkgdir}" uninstall
+  
+  # install license
+  install -m644 -D LICENSE "${pkgdir}/usr/share/licenses/dhcp/LICENSE"
+}
+
+package_dhclient(){
+  pkgdesc="A standalone DHCP client from the dhcp package"
+  depends=('bash' 'iproute2')
+  provides=('dhcp-client')
+
+  cd "${srcdir}/${pkgbase}-${_pkgver}"
+  make -C client DESTDIR="${pkgdir}" install
+
+  install -m755 -d "${pkgdir}/usr/share/dhclient"
+  mv "${pkgdir}/etc/dhclient.conf.example" "${pkgdir}/usr/share/dhclient/"
+  
+  install -d "${pkgdir}/var/lib/dhclient"
+
+  # install dhclient linux script
+  install -m755 client/scripts/linux "${pkgdir}/usr/bin/dhclient-script"
+
+  # install license
+  install -m644 -D LICENSE "${pkgdir}/usr/share/licenses/dhclient/LICENSE"
+}
