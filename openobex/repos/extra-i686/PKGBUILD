@@ -1,34 +1,46 @@
 # $Id$
-# Maintainer: Geoffroy Carrier <geoffroy@archlinux.org>
+# Maintainer:
+# Contributor: Geoffroy Carrier <geoffroy@archlinux.org>
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: damir <damir@archlinux.org>
 
 pkgname=openobex
-pkgver=1.5
-pkgrel=3
+pkgver=1.7
+pkgrel=5
 pkgdesc="Implementation of the OBject EXchange (OBEX) protocol"
 url="http://dev.zuckschwerdt.org/openobex/"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
-depends=('bluez' 'libusb-compat')
-options=('!libtool')
-source=("http://mirror.anl.gov/pub/linux/bluetooth/${pkgname}-${pkgver}.tar.bz2")
-md5sums=('fce1b82eafb74bde54fe117372393ba8')
+depends=('bluez' 'libusbx')
+makedepends=('cmake')
+options=('!makeflags')
+source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}-Source.tar.gz)
+md5sums=('11031f6f0b876bb6259bd27106491528')
+
+prepare() {
+  mkdir build
+
+  cd ${pkgname}-${pkgver}-Source
+
+  # Fix path to obex-check-device in udev rule
+  # https://bugs.archlinux.org/task/35547
+  sed -i 's:/sbin/:/bin/:' udev/openobex.rules.in
+}
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-
-  [ "${CARCH}" = "x86_64" ] && export CFLAGS="${CFLAGS} -fPIC"
-
-  ./configure --prefix=/usr \
-              --enable-apps \
-              --enable-irda \
-              --enable-bluetooth \
-              --enable-usb
-  make
+  cd build
+  cmake ../${pkgname}-${pkgver}-Source \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_SBINDIR=bin
+  make all openobex-apps
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd build
   make DESTDIR="${pkgdir}" install
+  cp ../${pkgname}-${pkgver}-Source/apps/lib/*.h  "${pkgdir}/usr/include/openobex/"
+  install -m644 apps/lib/libopenobex-apps-common.a "${pkgdir}/usr/lib/libopenobex-apps-common.a"
 }
