@@ -10,7 +10,9 @@ pkgdesc="Deprecated daemon and tools for the Bluetooth protocol stack"
 url="http://www.bluez.org/"
 arch=('i686' 'x86_64')
 license=('GPL2')
-depends=('dbus' 'python2' 'systemd' 'bluez-libs' 'bluez-utils')
+depends=('dbus' 'python2')
+conflicts=('bluez')
+replaces=("bluez<=$pkgver")
 makedepends=('gstreamer0.10-base' 'libusb-compat' 'libsndfile' 'libusbx')
 optdepends=("gstreamer0.10-base: bluetooth GStreamer support"
             "alsa-lib: Audio bluetooth devices support"
@@ -20,7 +22,7 @@ optdepends=("gstreamer0.10-base: bluetooth GStreamer support"
             "cups: CUPS backend")
 options=('!libtool')
 backup=(etc/bluetooth/{main,rfcomm,audio,network,input,serial}.conf
-        'etc/conf.d/bluetooth' 'etc/dbus-1/system.d/bluetooth.conf')
+        etc/dbus-1/system.d/bluetooth.conf)
 source=("http://www.kernel.org/pub/linux/bluetooth/bluez-${pkgver}.tar.bz2")
 
 build() {
@@ -29,7 +31,7 @@ build() {
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
-    --libexecdir=/lib \
+    --libexecdir=/usr/lib \
     --sbindir=/usr/lib/bluetooth \
     --enable-gstreamer \
     --enable-alsa \
@@ -50,6 +52,10 @@ build() {
 package() {
   cd bluez-"${pkgver}"
   make DESTDIR=${pkgdir} install
+
+  # adjust systemd service file
+  sed -i 's#/usr/sbin/#/usr/lib/bluetooth/#' \
+    "${pkgdir}"/usr/lib/systemd/system/bluetooth.service
 
   install -d ${pkgdir}/etc/bluetooth
   install -m644 network/network.conf \
@@ -72,7 +78,7 @@ package() {
   rm "${pkgdir}"/usr/lib/libbluetooth*
 
   # drop files that are in bluez-utils
-  rm -rf "${pkgdir}"/usr/udev
+  rm -rf "${pkgdir}"/lib
   rm "${pkgdir}"/usr/bin/{ciptool,hcitool,l2ping,rfcomm,sdptool}
   rm "${pkgdir}"/usr/share/man/man1/{ciptool,hcitool,rfcomm,sdptool}.1
   rm "${pkgdir}"/usr/lib/bluetooth/{hciattach,hciconfig}
