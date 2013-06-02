@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=gnutls
+pkgver=3.2.1
+pkgrel=1
+pkgdesc="A library which provides a secure layer over a reliable transport layer"
+arch=('i686' 'x86_64')
+license=('GPL3' 'LGPL2.1')
+url="http://www.gnutls.org/"
+install=gnutls.install
+options=('!libtool' '!zipman')
+depends=('gcc-libs' 'libtasn1' 'readline' 'zlib' 'nettle' 'p11-kit')
+makedepends=('valgrind' 'strace' 'datefudge')
+source=(ftp://ftp.gnutls.org/gcrypt/gnutls/v3.2/${pkgname}-${pkgver}.tar.xz{,.sig}
+        check_fix.diff)
+md5sums=('c220b50736f61292ed8722d5132b6a3e'
+         'SKIP'
+         '53ae2a58a401d9e6d052910670da8b07')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  
+  # fix i686 test suite failure
+  patch -Np1 -i ${srcdir}/check_fix.diff
+  
+  ./configure --prefix=/usr \
+	--with-zlib \
+	--disable-static \
+	--disable-guile \
+	--disable-valgrind-tests
+  make
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -k check
+  #make -j1 check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  
+  # lots of .png files are put into infodir and are gzipped by makepkg! this may need to be fixed by using !zipman
+  # gzip -9 all files in infodir and manpages manually
+  find "$pkgdir/usr/share/info" -name '*.info*' -exec gzip -9 {} \;
+  find "$pkgdir/usr/share/man" -exec gzip -9 {} \;
+}
