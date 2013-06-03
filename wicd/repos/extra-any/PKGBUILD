@@ -5,38 +5,45 @@
 pkgbase=wicd
 pkgname=('wicd' 'wicd-gtk')
 pkgver=1.7.2.4
-pkgrel=6
+pkgrel=7
 arch=(any)
 url="http://wicd.sourceforge.net/"
 license=('GPL2')
 conflicts=('wicd-svn')
 install=wicd.install
-source=(http://launchpad.net/wicd/1.7/$pkgver/+download/wicd-$pkgver.tar.gz             wicd-daemon
+source=(http://launchpad.net/wicd/1.7/$pkgver/+download/wicd-$pkgver.tar.gz
         wicd.desktop
         dbus_string_fix.patch
 	http://bazaar.launchpad.net/~wicd-devel/wicd/experimental/diff/831
 	http://bazaar.launchpad.net/~wicd-devel/wicd/experimental/diff/835)
-makedepends=('python2' 'python2-babel' 'python2-distribute' 'gettext')
-options=('emptydirs')
 md5sums=('c2435ddfdef0b9898852d72a85a45f0f'
-         'f40e5f59998d0829707a7c9976afa8f8'
          '326df163a5732d38741371baa4fce9e5'
          '744b3c12fe901ed435351e884dc8cb1d'
          '0d2355bc2eb7234a537f42f1773edfe0'
          '1630d7fe8f09911302d33b26286ff9b8')
+makedepends=('python2' 'python2-babel' 'python2-distribute' 'gettext' 'dbus-glib' 'dhcpcd' 
+             'ethtool' 'inetutils' 'net-tools' 'pygtk' 'python2-dbus' 'python2-gobject2' 
+             'python2-urwid' 'rfkill' 'shared-mime-info' 'wireless_tools' 'wpa_supplicant'
+             'hicolor-icon-theme')
+options=('emptydirs')
 
-build() {
-  cd "$srcdir/$pkgbase-$pkgver"
+prepare() {
+  cd $pkgbase-$pkgver
 
   find . -type f -exec sed -i 's@#!/usr.*python@#!/usr/bin/python2@' {} \;
   export PYTHON=python2
   
+  sed -i 's|/usr/sbin/|/usr/bin/|' other/wicd.service
+
   patch -p0 < "$srcdir/dbus_string_fix.patch"
   
   # Fix problem with new urwid FS#33378 LP#1075399
   patch -Np0 -i "$srcdir/831"
   patch -Np0 -i "$srcdir/835"
+}
 
+build() {
+  cd $pkgbase-$pkgver
 
   python2 setup.py configure --no-install-init \
 	                     --resume=/usr/share/wicd/scripts/ \
@@ -44,6 +51,7 @@ build() {
                              --verbose \
                              --python=/usr/bin/python2 \
 			     --lib=/usr/lib \
+			     --sbin=/usr/bin \
 			     --systemd=/usr/lib/systemd/system
   
   #HACK for https://bugs.launchpad.net/wicd/+bug/928589
@@ -59,11 +67,8 @@ package_wicd() {
   backup=('etc/wicd/encryption/templates/active')
   install=wicd.install  
 
-  cd "$srcdir/$pkgbase-$pkgver"
+  cd $pkgbase-$pkgver
   python2 setup.py install --optimize=1 --root="$pkgdir"
-
-  # Add custom rc.d script
-  install -Dm755 "$srcdir/wicd-daemon" "$pkgdir/etc/rc.d/wicd"
 
   cd build/lib/wicd
   for i in *.py; do
@@ -81,13 +86,13 @@ package_wicd() {
 
 package_wicd-gtk() {
   pkgdesc="Wired and wireless network manager for Linux - GTK client"
-  depends=('wicd' 'pygtk')
+  depends=('wicd' 'pygtk' 'hicolor-icon-theme')
   optdepends=('gksu: needed to access some preferences in gtk interface'
               'notification-daemon: needed if you want notifications'
-              'python2-notify:	needed if you want notifications'
-              'hicolor-icon-theme')
+              'python2-notify:	needed if you want notifications')
+  install=wicd-gtk.install 
 
-  cd "$srcdir/$pkgbase-$pkgver"
+  cd $pkgbase-$pkgver
   python2 setup.py install --optimize=1 --root="$pkgdir"
 
   install -Dm644 "$srcdir/wicd.desktop" "$pkgdir/usr/share/applications/wicd.desktop"
@@ -99,12 +104,11 @@ package_wicd-gtk() {
   
   #deleting the core dirs which exists in wicd
   rm -rf "$pkgdir"/etc/{wicd,dbus-1,rc.d,logrotate.d}
-  rm -rf "$pkgdir"/usr/{lib,sbin}
+  rm -rf "$pkgdir"/usr/lib
   rm -rf "$pkgdir"/usr/share/{man,doc,locale,wicd/curses,wicd/daemon,wicd/backends,wicd/scripts,wicd/cli}
   rm -rf "$pkgdir"/var
-  rm -f "$pkgdir"/usr/bin/{wicd-curses,wicd-cli}
+  rm -f "$pkgdir"/usr/bin/{wicd,wicd-curses,wicd-cli}
 
   rm -rf "$pkgdir"/usr/share/autostart
-  rm -rf "$pkgdir"/lib/
   rm -rf "$pkgdir"/usr/share/dbus-1
 }
