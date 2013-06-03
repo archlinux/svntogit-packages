@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.17
-pkgrel=5
+pkgrel=6
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -61,6 +61,8 @@ build() {
   fi
 
   echo "slibdir=/usr/lib" >> configparms
+  echo "sbindir=/usr/bin" >> configparms
+  echo "rootsbindir=/usr/bin" >> configparms
 
   # remove hardening options for building libraries
   CFLAGS=${CFLAGS/-fstack-protector/}
@@ -88,7 +90,7 @@ build() {
   make
 
   # remove harding in preparation to run test-suite
-  sed -i '2,4d' configparms
+  sed -i '4,6d' configparms
 }
 
 check() {
@@ -119,9 +121,6 @@ package() {
 
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/bin
 
-  # temporary symlink
-  ln -s ../../sbin/ldconfig ${pkgdir}/usr/bin/ldconfig
-
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
@@ -135,11 +134,10 @@ package() {
   #   libthread_db-1.0.so
 
   cd $pkgdir
-  strip $STRIP_BINARIES sbin/{ldconfig,sln} \
-                        usr/bin/{gencat,getconf,getent,iconv,locale,localedef} \
-                        usr/bin/{makedb,pcprofiledump,pldd,rpcgen,sprof} \
-                        usr/lib/getconf/* \
-                        usr/sbin/{iconvconfig,nscd}
+  strip $STRIP_BINARIES usr/bin/{gencat,getconf,getent,iconv,iconvconfig} \
+                        usr/bin/{ldconfig,locale,localedef,nscd,makedb} \
+                        usr/bin/{pcprofiledump,pldd,rpcgen,sln,sprof} \
+                        usr/lib/getconf/*
   [[ $CARCH = "i686" ]] && strip $STRIP_BINARIES usr/bin/lddlibc4
 
   strip $STRIP_STATIC usr/lib/*.a
