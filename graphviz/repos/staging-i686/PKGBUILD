@@ -1,0 +1,71 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: kevin <kevin@archlinux.org>
+# Contributor: John Proctor <jproctor@prium.net>
+
+pkgname=graphviz
+pkgver=2.30.1
+pkgrel=5
+pkgdesc='Graph visualization software'
+url='http://www.graphviz.org/'
+license=('custom:EPL')
+arch=('i686' 'x86_64')
+depends=('libltdl' 'gd' 'librsvg' 'libxaw' 'ghostscript' 'pango' 'gts')
+makedepends=('swig' 'mono' 'guile' 'lua51' 'ocaml' 'perl' 'php' 'python2' 'r' 'ruby' 'tk' 'qt4')
+optdepends=('mono: sharp bindings'
+            'guile: guile bindings'
+            'lua51: lua bindings'
+            'ocaml: ocaml bindings'
+            'perl: perl bindings'
+            'php: php bindings'
+            'python2: python bindings'
+            'r: r bindings'
+            'ruby: ruby bindings'
+            'tcl: tcl bindings'
+            'qt4: gvedit')
+source=("${url}/pub/${pkgname}/stable/SOURCES/${pkgname}-${pkgver}.tar.gz"
+        'LICENSE')
+sha1sums=('96739220c4bbcf1bd3bd52e7111f4e60497185c6'
+          'e78277e502c29abb74b9587a5dc951ec392554ea')
+
+options=('!libtool')
+install=install
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	sed \
+		-e 's/ qw(\([^)]*\))/ (qw(\1))/g' \
+		-i config/config_perl.pl
+	sed \
+		-e '/"archdir"/s:$:+" '"$(echo -I/usr/include/ruby-2.0.0/{$CARCH-linux,ruby/backward,})"'":' \
+		-e '/CONFIG/s:site:vendor:' \
+		-i config/config_ruby.rb
+	sed \
+		-e 's:ruby-1.9:ruby-2.0:g' \
+		-e '/LIBPOSTFIX="64"/d' \
+		-i configure
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	export PYTHON=python2
+	export LUA=lua5.1
+
+	# install the graph and cgraph api alongside
+	sed 's/@WITH_CGRAPH_FALSE@//g' -i lib/graph/Makefile.in
+
+	./configure --prefix=/usr
+	make || sed '/caml_array_length/d' -i tclpkg/gv/gv_ocaml.cpp # swig goes wonky
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+
+	# http://www.graphviz.org/License.php
+	install -Dm644 ../LICENSE "${pkgdir}"/usr/share/licenses/graphviz/LICENSE
+
+	# everything has been built against cgraph, but use graph as default api
+	sed '/#define WITH_CGRAPH 1/d' -i "${pkgdir}"/usr/include/graphviz/types.h
+}
