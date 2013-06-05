@@ -2,7 +2,7 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=opengl-man-pages
-_svndate=20120225
+_svndate=20130605
 pkgver=0.${_svndate}
 pkgrel=1
 pkgdesc="OpenGL Man Pages"
@@ -13,31 +13,46 @@ makedepends=('libxslt' 'docbook-xsl' 'w3c-mathml2' 'docbook-mathml')
 options=('!makeflags')
 source=("ftp://ftp.archlinux.org/other/${pkgname}/${pkgname}_${_svndate}.tar.xz"
         'LICENSE')
-md5sums=('15429a947576e424b96956680c0e9e4c'
+md5sums=('b557459f660facc4d69cff8fc1a0f024'
          'cb856abe5968300057e650096ba25b2f')
+_mandirs=(man2 man3 man4) # manglsl fail to build, broken upstream
 
 # source PKGBUILD && mksource
 mksource() {
   mkdir ${pkgname}-source
+  
   pushd ${pkgname}-source
-  svn co --username anonymous --password anonymous https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/man/ man 
-  find man -depth -type d -name .svn -exec rm -rf {} \;
-  tar -cvJf ../${pkgname}_${_svndate}.tar.xz man/*
+  for manpages in ${_mandirs[@]} manglsl; do
+    svn co --username anonymous --password anonymous https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/${manpages}/ ${manpages}
+    find ${manpages} -depth -type d -name .svn -exec rm -rf {} \;
+  done
+  tar -cvJf ../${pkgname}_${_svndate}.tar.xz ${_mandirs[@]}
   popd
 }
 
+prepare() {
+  cd "${srcdir}/man2"
+  
+  # this file isn't in man2 anymore but in man3
+  sed -i '/glDrawElementsInstanced.xml/d' xhtml/Makefile
+}
+
 build() {
-  cd "${srcdir}/man"
-  export ROOT="${srcdir}/man"
-  make
-  for file in *.xml; do
-    xsltproc --noout --nonet /usr/share/xml/docbook/xsl-stylesheets-1.76.1/manpages/docbook.xsl ${file}
+  for manpages in ${_mandirs[@]}; do
+    cd "${srcdir}/${manpages}"
+    export ROOT="${srcdir}/${manpages}"
+    make
+    for file in *.xml; do
+      xsltproc --noout --nonet /usr/share/xml/docbook/xsl-stylesheets-1.78.1/manpages/docbook.xsl ${file}
+    done
   done
 }
 
 package() {
-  cd "${srcdir}/man"
   install -d "${pkgdir}/usr/share/man/man3"
-  install -m644 *.3G "${pkgdir}/usr/share/man/man3/"
+  for manpages in ${_mandirs[@]}; do
+    cd "${srcdir}/${manpages}"
+    install -m644 *.3G "${pkgdir}/usr/share/man/man3/"
+  done
   install -D -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
