@@ -3,86 +3,73 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Geoffroy Carrier <geoffroy@archlinux.org>
 
-pkgname=bluez
-pkgver=4.101
+pkgbase=bluez
+pkgname=('bluez' 'bluez-utils' 'bluez-libs')
+pkgver=5.5
 pkgrel=2
-pkgdesc="Libraries and tools for the Bluetooth protocol stack"
 url="http://www.bluez.org/"
 arch=('i686' 'x86_64')
 license=('GPL2')
-depends=('dbus-core' 'python2' 'systemd-tools')
-makedepends=('gstreamer0.10-base' 'libusb-compat' 'libsndfile' 'libusbx')
-optdepends=("gstreamer0.10-base: bluetooth GStreamer support"
-            "alsa-lib: Audio bluetooth devices support"
-            "python2-dbus: to run bluez-simple-agent"
-            "python2-gobject: to run bluez-simple-agent"
-            "libusb-compat: USB adapters support"
-            "cups: CUPS backend")
-conflicts=('bluez-libs' 'bluez-utils')
-provides=('bluez-libs' 'bluez-utils')
-replaces=('bluez-libs' 'bluez-utils')
-options=('!libtool')
-backup=(etc/bluetooth/{main,rfcomm,audio,network,input,serial}.conf
-        'etc/conf.d/bluetooth' 'etc/dbus-1/system.d/bluetooth.conf')
-source=("http://www.kernel.org/pub/linux/bluetooth/${pkgname}-${pkgver}.tar.bz2"
-        'bluetooth.conf.d'
-	'rc.bluetooth')
+makedepends=('libusb-compat' 'dbus' 'libical' 'systemd')
+options=(!libtool)
+source=("http://www.kernel.org/pub/linux/bluetooth/${pkgname}-${pkgver}.tar.bz2")
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  ./configure --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/lib \
-    --enable-gstreamer \
-    --enable-alsa \
-    --enable-usb \
-    --enable-tools \
-    --enable-bccmd \
-    --enable-dfutool \
-    --enable-hid2hci \
-    --enable-hidd \
-    --enable-pand \
-    --enable-dund \
-    --enable-cups \
-    --enable-wiimote \
-    --disable-test \
-    --with-systemdunitdir=/usr/lib/systemd/system
+  ./configure \
+          --prefix=/usr \
+          --mandir=/usr/share/man \
+          --sysconfdir=/etc \
+          --localstatedir=/var \
+          --libexecdir=/usr/lib \
+          --enable-library # this is deprecated
 
   make
 }
 
-package() {
+package_bluez() {
+  pkgdesc="Daemons for the bluetooth protocol stack"
+  depends=('libical' 'dbus' 'glib2')
+  optdepends=("cups: CUPS backend")
+  backup=('etc/dbus-1/system.d/bluetooth.conf')
+  conflicts=('obexd-client' 'obexd-server')
+
   cd ${srcdir}/${pkgname}-${pkgver}
   make DESTDIR=${pkgdir} install
 
-  install -Dm755 ${srcdir}/rc.bluetooth ${pkgdir}/etc/rc.d/bluetooth
-  
-  install -d ${pkgdir}/etc/bluetooth
-  install -m644 network/network.conf \
-                input/input.conf \
-                audio/audio.conf \
-                serial/serial.conf \
-    ${pkgdir}/etc/bluetooth/
-  
-  install -Dm644 ${srcdir}/bluetooth.conf.d \
-    ${pkgdir}/etc/conf.d/bluetooth
+  ### split out bluez-utils
+  rm -rf "$srcdir/_utils"
+  install -dm755 "$srcdir"/_utils/usr/share/man
+  mv "$pkgdir"/usr/share/man/man1 "$srcdir"/_utils/usr/share/man/
+  install -dm755 "$srcdir"/_utils/usr/bin
+  mv "$pkgdir"/usr/bin/{bccmd,ciptool,hciattach,hciconfig,hcidump,hcitool,l2ping,l2test,rctest,rfcomm,sdptool}\
+          "$srcdir"/_utils/usr/bin/
+  install -dm755 "$srcdir"/_utils/usr/lib
+  mv "$pkgdir"/usr/lib/udev "$srcdir"/_utils/usr/lib/
 
-  # FS#27630
-  install -Dm755 test/simple-agent "${pkgdir}"/usr/bin/bluez-simple-agent
-  install -Dm755 test/test-device "${pkgdir}"/usr/bin/bluez-test-device
-  install -Dm755 test/test-input "${pkgdir}"/usr/bin/bluez-test-input
-  sed -i 's#/usr/bin/python#/usr/bin/python2#' \
-    "${pkgdir}"/usr/bin/bluez-simple-agent \
-    "${pkgdir}"/usr/bin/bluez-test-device \
-    "${pkgdir}"/usr/bin/bluez-test-input
-
-        # usrmove
-        cd "$pkgdir"
-        mv usr/sbin/* usr/bin
-        rmdir usr/sbin
+  ### split out bluez-libs
+  rm -rf "$srcdir/_libs"
+  install -dm755 "$srcdir"/_libs/usr/lib/
+  mv "$pkgdir"/usr/lib/{pkgconfig,libbluetooth*} \
+          "$srcdir"/_libs/usr/lib/
+  mv "$pkgdir"/usr/include \
+          "$srcdir"/_libs/usr/
 }
-md5sums=('902b390af95c6c5d6d1a17d94c8344ab'
-         '7412982b440f29fa7f76a41a87fef985'
-         '864cbd24e6efc3592e9284b0b5fb2cfd')
+
+package_bluez-libs() {
+  pkgdesc="Deprecated libraries for the bluetooth protocol stack"
+  depends=('glibc')
+
+  mv "$srcdir/_libs"/* "$pkgdir"
+}
+package_bluez-utils() {
+  pkgdesc="Development and debugging utilities for the bluetooth protocol stack"
+  depends=('systemd' 'libusb-compat')
+  conflicts=('bluez-hcidump')
+  provides=('bluez-hcidump')
+  replaces=('bluez-hcidump')
+
+  mv "$srcdir/_utils"/* "$pkgdir"
+}
+md5sums=('cfe6bd2f7f3f45f689b3a21a6ba59edd')
