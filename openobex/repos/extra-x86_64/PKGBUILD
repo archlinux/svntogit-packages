@@ -6,12 +6,12 @@
 
 pkgname=openobex
 pkgver=1.7
-pkgrel=5
+pkgrel=6
 pkgdesc="Implementation of the OBject EXchange (OBEX) protocol"
 url="http://dev.zuckschwerdt.org/openobex/"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL')
-depends=('bluez' 'libusbx')
+depends=('libusbx' 'bluez-libs')
 makedepends=('cmake')
 options=('!makeflags')
 source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}-Source.tar.gz)
@@ -19,12 +19,6 @@ md5sums=('11031f6f0b876bb6259bd27106491528')
 
 prepare() {
   mkdir build
-
-  cd ${pkgname}-${pkgver}-Source
-
-  # Fix path to obex-check-device in udev rule
-  # https://bugs.archlinux.org/task/35547
-  sed -i 's:/sbin/:/bin/:' udev/openobex.rules.in
 }
 
 build() {
@@ -33,8 +27,8 @@ build() {
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_SKIP_RPATH=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INSTALL_LIBDIR=lib \
-    -DCMAKE_INSTALL_SBINDIR=bin
+    -DCMAKE_INSTALL_LIBDIR=/usr/lib \
+    -DCMAKE_INSTALL_SBINDIR=/usr/bin
   make all openobex-apps
 }
 
@@ -43,4 +37,9 @@ package() {
   make DESTDIR="${pkgdir}" install
   cp ../${pkgname}-${pkgver}-Source/apps/lib/*.h  "${pkgdir}/usr/include/openobex/"
   install -m644 apps/lib/libopenobex-apps-common.a "${pkgdir}/usr/lib/libopenobex-apps-common.a"
+
+  # usrmove
+  cd "$pkgdir"
+  mv lib/udev usr/lib/
+  rmdir lib
 }
