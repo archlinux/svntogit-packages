@@ -4,27 +4,31 @@
 pkgbase=libcanberra
 pkgname=(libcanberra libcanberra-pulse libcanberra-gstreamer)
 pkgver=0.30
-pkgrel=3
+pkgrel=4
 pkgdesc="A small and lightweight implementation of the XDG Sound Theme Specification"
 arch=(i686 x86_64)
 license=(LGPL)
 depends=(libvorbis libltdl alsa-lib tdb sound-theme-freedesktop)
-makedepends=(gtk-doc libpulse gstreamer gtk2 gtk3)
+makedepends=(gtk-doc libpulse gstreamer gtk2 gtk3 git)
 options=(!emptydirs)
-url=http://0pointer.de/lennart/projects/libcanberra
-source=("$url/$pkgbase-$pkgver.tar.xz"
-        libcanberra.xinit)
-sha256sums=('c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72'
+url="http://0pointer.de/lennart/projects/libcanberra"
+source=("git://git.0pointer.de/libcanberra.git#commit=c0620e4" libcanberra.xinit)
+sha256sums=('SKIP'
             '68a68d66b7491f99d5aa09fe7c6ef4eb38352a2a8ff7997d184d1cbc5e80c0d3')
 
 _plugindir=usr/lib/$pkgbase-$pkgver
 
+prepare() {
+  cd $pkgbase
+  ./autogen.sh
+}
+
 build() {
-  cd $pkgbase-$pkgver
+  cd $pkgbase
   ./configure --sysconfdir=/etc --prefix=/usr --localstatedir=/var \
       --disable-static --with-builtin=dso --enable-null --disable-oss \
       --enable-alsa --enable-gstreamer --enable-pulse \
-      --with-systemdsystemunitdir=/usr/lib/systemd/system
+      --with-systemdsystemunitdir=/usr/lib/systemd/system --enable-gtk-doc
 
   # Fight unused direct deps
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
@@ -37,7 +41,7 @@ package_libcanberra() {
   optdepends=("$pkgbase-pulse: PulseAudio driver"
               "$pkgbase-gstreamer: GStreamer driver")
 
-  cd $pkgbase-$pkgver
+  cd $pkgbase
 
   make -j1 DESTDIR="$pkgdir" install
   rm "$pkgdir"/usr/lib/libcanberra-gtk*.la
