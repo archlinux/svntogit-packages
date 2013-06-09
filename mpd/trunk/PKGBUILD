@@ -43,6 +43,7 @@ package() {
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
 	install -Dm644 doc/mpdconf.example "${pkgdir}"/etc/mpd.conf
 	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
+	ln -s ../system/mpd.service "${pkgdir}"/usr/lib/systemd/user/mpd.service
 	sed \
 		-e '/^#playlist_directory/c playlist_directory "/var/lib/mpd/playlists"' \
 		-e '/^#db_file/c db_file "/var/lib/mpd/mpd.db"' \
