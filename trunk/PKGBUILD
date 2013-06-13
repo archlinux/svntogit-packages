@@ -9,90 +9,49 @@
 # Contributor: Roberto Alsina <ralsina@kde.org>
 # Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
 
+pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer')
 pkgname=('llvm' 'llvm-ocaml' 'clang' 'clang-analyzer')
-pkgver=3.2
-pkgrel=6
+pkgver=3.3
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
 makedepends=('libffi' 'python2' 'ocaml' 'python-sphinx')
-source=(http://llvm.org/releases/$pkgver/$pkgname-$pkgver.src.tar.gz
-        http://llvm.org/releases/$pkgver/clang-$pkgver.src.tar.gz
-        http://dev.archlinux.org/~foutrelis/sources/compiler-rt/compiler-rt-$pkgver.src.tar.xz
+source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.gz
+        http://llvm.org/releases/$pkgver/cfe-$pkgver.src.tar.gz
+        http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.gz
+        clang-3.3-use-gold-linker.patch
         llvm-Config-config.h
-        llvm-Config-llvm-config.h
-        cindexer-clang-path.patch
-        enable-lto.patch
-        llvm-3.1-fix-debug-line-info.patch
-        clang-3.2-fix-std-thread-with-libstdc++.patch
-        clang-3.1-fix-libprofile_rt.a-location.patch)
-sha256sums=('125090c4d26740f1d5e9838477c931ed7d9ad70d599ba265f46f3a42cb066343'
-            '2aaaf03f7c0f6b16fe97ecc81247dc2bf2d4bec7620a77cc74670b7e07ff5658'
-            'a9a6b73a1bd5fc763f3b3826a6ce796cb150042d37d319e06e72d3d9778aaac1'
+        llvm-Config-llvm-config.h)
+sha256sums=('68766b1e70d05a25e2f502e997a3cb3937187a3296595cf6e0977d5cd6727578'
+            'b1b55de4ab3a57d3e0331a83e0284610191c77d924e3446498d9113d08dfb996'
+            '0e2f3180d6316e6c43f064fdd406c5c6515e682c5f31c57c28335b68c7525423'
+            '8240adda155d7961eeb5d07ed50ead10cb7125f70283dff7f1c9fee9df3cea09'
             '312574e655f9a87784ca416949c505c452b819fad3061f2cde8aced6540a19a3'
-            '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48'
-            '3074df5322900e087377a8e03a02115463ccc0011c25917c2f06df11facd9b92'
-            'fe3969d9ec93263814d9892a15b6a1eb60ad756fe7c3985a45d8cd82bc9b7a7b'
-            'db1f1aadebbc4c4232bdad49fb9b7dc61eac727085c63154b870fa9ce64fd18d'
-            '02b2c0fd29bc165140eb4524700254bfdd88369706719acb3f3be3134f1e67e8'
-            '0d32ad283566357ca1bfbeb4cbe6b0b961943b79d3d718ed0435101c05629137')
+            '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 
 prepare() {
-  cd "$srcdir/$pkgname-$pkgver.src"
+  cd "$srcdir/llvm-$pkgver.src"
 
   # At the present, clang must reside inside the LLVM source code tree to build
   # See http://llvm.org/bugs/show_bug.cgi?id=4840
-  mv "$srcdir/clang-$pkgver.src" tools/clang
+  mv "$srcdir/cfe-$pkgver.src" tools/clang
 
   mv "$srcdir/compiler-rt-$pkgver.src" projects/compiler-rt
 
-  # Fix symbolic links from OCaml bindings to LLVM libraries
-  sed -i 's:\$(PROJ_libdir):/usr/lib/llvm:' bindings/ocaml/Makefile.ocaml
-
-  # Fix installation directories, ./configure doesn't seem to set them right
-  sed -i -e 's:\$(PROJ_prefix)/etc/llvm:/etc/llvm:' \
-         -e 's:\$(PROJ_prefix)/lib:$(PROJ_prefix)/lib/llvm:' \
-         -e 's:\$(PROJ_prefix)/docs/llvm:$(PROJ_prefix)/share/doc/llvm:' \
+  # Fix docs installation directory
+  sed -i 's:\$(PROJ_prefix)/docs/llvm:$(PROJ_prefix)/share/doc/llvm:' \
     Makefile.config.in
-  sed -i '/ActiveLibDir = ActivePrefix/s:lib:lib/llvm:' \
-    tools/llvm-config/llvm-config.cpp
-  sed -i 's:LLVM_LIBDIR="${prefix}/lib":LLVM_LIBDIR="${prefix}/lib/llvm":' \
-    autoconf/configure.ac \
-    configure
 
   # Fix insecure rpath (http://bugs.archlinux.org/task/14017)
   sed -i 's:$(RPATH) -Wl,$(\(ToolDir\|LibDir\|ExmplDir\))::g' Makefile.rules
 
-  # Fix clang path in CIndexer.cpp (https://bugs.archlinux.org/task/22799)
-  patch -d tools/clang -Np0 -i "$srcdir/cindexer-clang-path.patch"
-
-  # Make -flto work
-  # Use gold instead of default linker, and always use the plugin
-  patch -d tools/clang -Np0 -i "$srcdir/enable-lto.patch"
-
-  # Fix FS#34861: crash on apps built using C++11's std::thread
-  # http://llvm.org/bugs/show_bug.cgi?id=12730
-  patch -d tools/clang -Np2 -i \
-    "$srcdir/clang-3.2-fix-std-thread-with-libstdc++.patch"
-
-  # Fix FS#29984: [clang] -coverage is broken
-  patch -d tools/clang -Np1 -i \
-    "$srcdir/clang-3.1-fix-libprofile_rt.a-location.patch"
-
-  # Fix FS#31098: LLVM 3.1 produces invalid debug information
-  # http://llvm.org/bugs/show_bug.cgi?id=13211
-  patch -Np1 -i "$srcdir/llvm-3.1-fix-debug-line-info.patch"
-
-  # Drop "svn" suffix from version string
-  sed -i 's/3\.2svn/3.2/g' configure
-
-  # Prepare Python 2 override
-  mkdir "$srcdir/python2-path"
-  ln -s /usr/bin/python2 "$srcdir/python2-path/python"
+  # Make -flto work; use ld.gold instead of the default linker
+  patch -d tools/clang -Np1 -i "$srcdir/clang-3.3-use-gold-linker.patch"
 }
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver.src"
+  cd "$srcdir/llvm-$pkgver.src"
 
   # Apply strip option to configure
   _optimized_switch="enable"
@@ -101,34 +60,33 @@ build() {
   # Include location of libffi headers in CPPFLAGS
   CPPFLAGS+=" $(pkg-config --cflags libffi)"
 
-  # Use Python 2
-  export PATH="$srcdir/python2-path:$PATH"
-
   # Force the use of GCC instead of clang
   CC=gcc CXX=g++ \
   ./configure \
     --prefix=/usr \
-    --libdir=/usr/lib/llvm \
     --sysconfdir=/etc \
     --enable-shared \
     --enable-libffi \
     --enable-targets=all \
+    --enable-experimental-targets=R600 \
     --disable-expensive-checks \
     --disable-debug-runtime \
     --disable-assertions \
     --with-binutils-include=/usr/include \
+    --with-python=/usr/bin/python2 \
     --$_optimized_switch-optimized
 
   make REQUIRES_RTTI=1
   make -C docs -f Makefile.sphinx man
   make -C docs -f Makefile.sphinx html
+  make -C tools/clang/docs -f Makefile.sphinx html
 }
 
 package_llvm() {
   pkgdesc="Low Level Virtual Machine"
-  depends=('perl' 'libffi')
+  depends=("llvm-libs=$pkgver-$pkgrel" 'perl')
 
-  cd "$srcdir/$pkgname-$pkgver.src"
+  cd "$srcdir/llvm-$pkgver.src"
 
   # We move the clang directory out of the tree so it won't get installed and
   # then we bring it back in for the clang package
@@ -138,27 +96,26 @@ package_llvm() {
   make -j1 DESTDIR="$pkgdir" install
   mv "$srcdir/clang" tools
 
+  # The runtime library goes into llvm-libs
+  mv "$pkgdir/usr/lib/libLLVM-$pkgver.so" "$srcdir"
+
   # OCaml bindings go to a separate package
   rm -rf "$srcdir"/{ocaml,ocamldoc}
   mv "$pkgdir"/usr/{lib/ocaml,share/doc/llvm/ocamldoc} "$srcdir"
 
   # Remove duplicate files installed by the OCaml bindings
-  rm "$pkgdir"/usr/{lib/llvm/libllvm*,share/doc/llvm/ocamldoc.tar.gz}
+  rm "$pkgdir"/usr/{lib/libllvm*,share/doc/llvm/ocamldoc.tar.gz}
 
   # Fix permissions of static libs
-  chmod -x "$pkgdir"/usr/lib/llvm/*.a
+  chmod -x "$pkgdir"/usr/lib/*.a
 
   # Get rid of example Hello transformation
-  rm "$pkgdir"/usr/lib/llvm/*LLVMHello.*
-
-  # Add ld.so.conf.d entry
-  install -d "$pkgdir/etc/ld.so.conf.d"
-  echo /usr/lib/llvm >"$pkgdir/etc/ld.so.conf.d/llvm.conf"
+  rm "$pkgdir"/usr/lib/*LLVMHello.*
 
   # Symlink LLVMgold.so into /usr/lib/bfd-plugins
   # (https://bugs.archlinux.org/task/28479)
   install -d "$pkgdir/usr/lib/bfd-plugins"
-  ln -s ../llvm/LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
+  ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
 
   if [[ $CARCH == x86_64 ]]; then
     # Needed for multilib (https://bugs.archlinux.org/task/29951)
@@ -175,10 +132,20 @@ package_llvm() {
   cp docs/_build/man/*.1 "$pkgdir/usr/share/man/man1/"
 
   # Install html docs
-  cp -r docs/_build/html/* "$pkgdir/usr/share/doc/llvm/html/"
-  rm -r "$pkgdir/usr/share/doc/llvm/html/_sources"
+  cp -r docs/_build/html/* "$pkgdir/usr/share/doc/$pkgname/html/"
+  rm -r "$pkgdir/usr/share/doc/$pkgname/html/_sources"
 
   install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_llvm-libs() {
+  pkgdesc="Low Level Virtual Machine (runtime library)"
+  depends=('gcc-libs' 'zlib' 'libffi')
+
+  install -D "$srcdir/libLLVM-$pkgver.so" "$pkgdir/usr/lib/libLLVM-$pkgver.so"
+
+  install -Dm644 "$srcdir/llvm-$pkgver.src/LICENSE.TXT" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 package_llvm-ocaml() {
@@ -210,11 +177,15 @@ package_clang() {
   make DESTDIR="$pkgdir" install
 
   # Fix permissions of static libs
-  chmod -x "$pkgdir"/usr/lib/llvm/*.a
+  chmod -x "$pkgdir"/usr/lib/*.a
 
   # Revert the path change in case we want to do a repackage later
   sed -i 's:$(PROJ_prefix)/share/doc/clang:$(PROJ_prefix)/share/doc/llvm:' \
     "$srcdir/llvm-$pkgver.src/Makefile.config"
+
+  # Install html docs
+  cp -r docs/_build/html/* "$pkgdir/usr/share/doc/$pkgname/html/"
+  rm -r "$pkgdir/usr/share/doc/$pkgname/html/_sources"
 
   install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/clang/LICENSE"
 }
