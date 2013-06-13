@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Link Dupont <link@subpop.net>
+#
+pkgname=dbus
+pkgver=1.6.12
+pkgrel=1
+pkgdesc="Freedesktop.org message bus system"
+url="http://www.freedesktop.org/Software/dbus"
+arch=(i686 x86_64)
+license=('GPL' 'custom')
+depends=('expat' 'coreutils' 'filesystem')
+makedepends=('libx11' 'systemd')
+optdepends=('libx11: dbus-launch support')
+provides=('dbus-core')
+conflicts=('dbus-core')
+replaces=('dbus-core')
+options=(!libtool)
+source=(http://dbus.freedesktop.org/releases/dbus/dbus-$pkgver.tar.gz
+        30-dbus systemd-user-session.patch)
+
+build() {
+  cd dbus-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --libexecdir=/usr/lib/dbus-1.0 --with-dbus-user=dbus \
+      --with-system-pid-file=/run/dbus/pid \
+      --with-system-socket=/run/dbus/system_bus_socket \
+      --with-console-auth-dir=/run/console/ \
+      --enable-inotify --disable-dnotify \
+      --disable-verbose-mode --disable-static \
+      --disable-tests --disable-asserts \
+      --with-systemdsystemunitdir=/usr/lib/systemd/system \
+      --enable-systemd
+
+  patch -p1 < "$srcdir/systemd-user-session.patch"
+
+  make
+}
+
+package(){
+  cd dbus-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  rm -rf "$pkgdir/var/run"
+
+  install -Dm755 ../30-dbus "$pkgdir/etc/X11/xinit/xinitrc.d/30-dbus"
+
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/dbus/COPYING"
+}
+md5sums=('a70edc50524f258eaf5c9a9994ed8748'
+         '3314d727fa57fc443fce25b5cbeebbcc'
+         'd8a1bd529b3ddca671ee1a695a143db9')
