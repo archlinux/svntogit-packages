@@ -3,38 +3,43 @@
 
 pkgname=webkitgtk2
 pkgver=1.10.2
-pkgrel=5
-arch=('i686' 'x86_64')
+pkgrel=6
+pkgdesc="GTK+ Web content engine library for GTK+ 2.0"
+arch=(i686 x86_64)
 url="http://webkitgtk.org/"
-license=('custom')
-makedepends=('libxt' 'libxslt' 'sqlite' 'libsoup' 'enchant' 'libgl' 'geoclue' 'gtk2' 'gstreamer0.10-base' 'gperf' 'gobject-introspection' 'python2' 'mesa' 'ruby' 'gtk-doc')
-options=('!libtool' '!emptydirs')
+license=(custom)
+depends=(libxt libxslt sqlite libsoup enchant libgl geoclue gtk2 gstreamer0.10-base
+         icu)
+makedepends=(gperf gobject-introspection python2 mesa ruby gtk-doc)
+optdepends=()
+provides=("libwebkit=${pkgver}")
+conflicts=(libwebkit)
+replaces=(libwebkit)
+options=(!libtool !emptydirs)
 source=(http://webkitgtk.org/releases/webkitgtk-$pkgver.tar.xz)
 sha256sums=('19234f8e4edfaefe91ed06471a2aa8c71d26dd55d33787eede1dcfc9a3a96d9c')
 
 build() {
-  cd "$srcdir/webkitgtk-$pkgver"
-  mkdir build-gtk2
+  cd webkitgtk-$pkgver
 
-  cd build-gtk2
-  PYTHON=/usr/bin/python2 ../configure --prefix=/usr \
+  # Suppress a *lot* of gcc 4.8 warnings
+  CPPFLAGS+=" -Wno-unused-local-typedefs"
+
+  PYTHON=/usr/bin/python2 ./configure --prefix=/usr \
+    --libexecdir=/usr/lib/$pkgname \
     --enable-introspection \
-    --disable-silent-rules \
-    --libexecdir=/usr/lib/webkitgtk2 \
+    --disable-webkit2 \
     --with-gstreamer=0.10 \
-    --with-gtk=2.0 \
-    --disable-webkit2
+    --with-gtk=2.0
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
   make all stamp-po
 }
 
 package() {
-  pkgdesc="GTK+ Web content engine library for GTK+ 2.0"
-  depends=('libxt' 'libxslt' 'sqlite' 'libsoup' 'enchant' 'libgl' 'geoclue' 'gtk2' 'gstreamer0.10-base')
-  conflicts=('libwebkit')
-  provides=("libwebkit=${pkgver}")
-  replaces=('libwebkit')
-  
-  cd "$srcdir/webkitgtk-$pkgver/build-gtk2"
+  cd webkitgtk-$pkgver
   make -j1 DESTDIR="$pkgdir" install
-  install -Dm644 ../Source/WebKit/LICENSE "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 Source/WebKit/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
