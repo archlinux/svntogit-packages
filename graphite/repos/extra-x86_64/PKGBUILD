@@ -2,7 +2,7 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=graphite
-pkgver=1.2.2
+pkgver=1.2.3
 pkgrel=1
 epoch=1
 arch=('i686' 'x86_64')
@@ -10,23 +10,40 @@ url="http://projects.palaso.org/projects/graphitedev"
 pkgdesc='reimplementation of the SIL Graphite text processing engine'
 license=('LGPL' 'GPL' 'custom')
 depends=('gcc-libs')
-makedepends=('cmake' 'freetype2' 'python2') 
-# 'doxygen' 'texlive-latexextra' 'graphviz' 'asciidoc' 'perl-module-build' 'icu') - only for docs - target doesn't install properly
+makedepends=('cmake' 'freetype2' 'python2')
+             # - only for docs - target doesn't install properly
+             #  'doxygen' 'texlive-latexextra' 'graphviz' 'asciidoc' 'perl-module-build' 'icu') # builds doc properly? 'texlive-helvetic' seems to be missing
 options=('!libtool' '!emptydirs')
-source=("http://downloads.sourceforge.net/project/silgraphite/graphite2/graphite2-${pkgver}.tgz")
-md5sums=('4bfd5db6c91a4097cd76a699beaca70e')
+source=(http://downloads.sourceforge.net/project/silgraphite/graphite2/graphite2-${pkgver}.tgz
+        graphite2-1.2.0-cmakepath.patch)
+md5sums=('7042305e4208af4c2d5249d814ccce58'
+         '00353b67941dbc30b76a43253760769e')
 
 build() {
   cd "${srcdir}"
+  
+  # python2 fixes
   sed -i "s:\/usr\/bin\/python:\/usr\/bin\/python2:" graphite2-${pkgver}/tests/{jsoncmp,fuzztest,defuzz,corrupt.py}
+  
+  # fix install path - .cmake files contain architecture dependend content - patch taken from FC/Slackware
+  pushd graphite2-${pkgver}
+  patch -Np1 -i ${srcdir}/graphite2-1.2.0-cmakepath.patch
+  popd
+  
   mkdir build
   cd build
   cmake -G "Unix Makefiles" ../graphite2-${pkgver} \
+	-DCMAKE_C_FLAGS:STRING="${CFLAGS}" \
 	-DCMAKE_INSTALL_PREFIX=/usr \
 	-DCMAKE_BUILD_TYPE:STRING=Release \
-	-DGRAPHITE2_COMPARE_RENDERER=OFF
-  make
-#  make docs
+	-DGRAPHITE2_COMPARE_RENDERER=OFF \
+	#-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON # remove when docs install target will be fixed
+
+  # fix unwanted -O3 cflag (taken form Debian)
+  find . -type f ! -name "rules" ! -name "changelog" -exec sed -i -e 's/\-O3//g' {} \;
+
+  make 
+  #make docs
 }
 
 check() {
@@ -37,7 +54,8 @@ check() {
 
 package() {
   cd "${srcdir}"/build
-  make DESTDIR="$pkgdir/" install
+  # FIXME: all target doesn't install the docs target files
+  make DESTDIR="$pkgdir/" install 
 
   # licenses
   mkdir -p "${pkgdir}"/usr/share/licenses/${pkgname}
