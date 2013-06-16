@@ -4,13 +4,12 @@
 
 pkgname=xkeyboard-config
 pkgver=2.9
-pkgrel=1
+pkgrel=2
 pkgdesc="X keyboard configuration files"
 arch=(any)
 license=('custom')
 url="http://www.freedesktop.org/wiki/Software/XKeyboardConfig"
-depends=('xorg-xkbcomp')
-makedepends=('intltool')
+makedepends=('intltool' 'xorg-xkbcomp')
 provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
