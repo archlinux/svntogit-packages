@@ -1,0 +1,110 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: John Proctor <jproctor@prium.net>
+# Contributor: dibblethewrecker <dibblethewrecker.at.jiwe.org>
+# Contributor: abelstr <abel@pinklf.eu>
+# Contributor: Marco Lima <cipparello gmail com>
+
+pkgname=nfs-utils
+pkgver=1.2.8
+pkgrel=7
+pkgdesc="Support programs for Network File Systems"
+arch=('i686' 'x86_64')
+url='http://nfs.sourceforge.net'
+license=('GPL')
+backup=(etc/{exports,idmapd.conf,nfsmount.conf} etc/conf.d/{nfs-common.conf,nfs-server.conf})
+depends=('glibc' 'e2fsprogs' 'rpcbind' 'libtirpc>=0.2.1' 'librpcsecgss>=0.19-2' 'nfsidmap' 'libevent>=2.0.10' 'libgssglue' 'device-mapper')
+makedepends=('pkgconfig' 'autoconf' 'automake' 'sqlite')
+source=(http://downloads.sourceforge.net/project/nfs/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.bz2
+	nfs-common.conf
+	nfs-server.conf
+	exports
+	idmapd.conf
+        nfs
+	nfs-utils-1.1.4-mtab-sym.patch
+	nfs-utils-1.1.4-no-exec.patch
+	rpc-gssd.service
+	rpc-mountd.service
+	rpc-svcgssd.service
+	rpc-idmapd.service
+	rpc-statd.service
+	nfsd.service
+	var-lib-nfs-rpc_pipefs.mount
+	proc-fs-nfsd.mount
+	blkmapd.service
+	nfs-utils.conf
+        id_resolver.conf
+        start-statd.patch)
+install=nfs-utils.install
+optdepends=('sqlite: for nfsdcltrack usage')
+
+md5sums=('6e7d97de51e428a0b8698c16ca23db77'
+         'f73f197a16b02c3e248488ec35c4cf43'
+         '9cef69bc686cc5dcac23fbb51450747d'
+         'ff585faf410a62c4333a027c50b56bae'
+         'eb4f4027fab6fc1201f1ca04f5954c76'
+         'f5e7bba09a46c5c5d7007cac6eff9df5'
+         '7674106eaaa4c149bccd4f05fe3604e9'
+         '4f4827dfc93008dfadd0a530ad0872b2'
+         '6aeb4a80b2a5162f5951438474ea22f3'
+         'ff95ad9275ef774e0a2ea8adfe55ee66'
+         '2e991f0e440b4809e22b6c7689544fc0'
+         '42d0088add3beab0284be1379391382b'
+         '60d82e2d2d19d21ceb72665e54bf913e'
+         '3bcc9901478f4f9ea0a03b67171c13e3'
+         '1cd65909fa0983047f3f06a3ab352401'
+         '8f1b5282795895c9b8ce8430d20cdda6'
+         '8f03e708b230619ffc2a799a48bffb53'
+         '8ac484023d786766d287ccbe878ae4ba'
+         'bed57f7c3911af695ec7b469248c104a'
+         'f8bb29c2ca1ce178e6371091a3e1090d')
+
+prepare() {
+  cd $srcdir/${pkgname}-${pkgver}
+  patch -Np1 -i ../nfs-utils-1.1.4-mtab-sym.patch
+  # fix /usr/bin in start-statd shell script
+  patch -Np1 -i ../start-statd.patch
+  #patch -Np1 -i ../nfs-utils-1.1.4-no-exec.patch
+}
+
+build() {
+  cd $srcdir/${pkgname}-${pkgver}
+  ./configure --prefix=/usr --sbindir=/usr/bin --enable-nfsv4 --enable-nfsv41 --enable-gss \
+              --without-tcp-wrappers --with-statedir=/var/lib/nfs \
+              --enable-ipv6 --sysconfdir=/etc --enable-libmount-mount \
+              --enable-mountconfig --with-start-statd=/usr/bin/start-statd
+  # move mount helpers to /usr/bin
+  sed -i -e 's#sbindir = /sbin#sbindir = /usr/bin#g' utils/mount/Makefile
+  # move osd_login to /usr/bin
+  sed -i -e 's#sbindir = /sbin#sbindir = /usr/bin#g' utils/osd_login/Makefile
+  make 
+}
+
+package() {
+  cd $srcdir/${pkgname}-${pkgver}
+  # fix make install
+  make DESTDIR=$pkgdir install
+
+  # support python2 (FS#25120)
+  sed -i '1s/python$/python2/' "$pkgdir"/usr/bin/{nfsiostat,mountstats}
+
+  # Configuration
+  install -D -m 644 ../exports "$pkgdir/"etc/exports
+  install -D -m 644 ../idmapd.conf "$pkgdir/"etc/idmapd.conf
+  install -D -m 644 ../nfs-common.conf "$pkgdir/"etc/conf.d/nfs-common.conf
+  install -D -m 644 ../nfs-server.conf "$pkgdir/"etc/conf.d/nfs-server.conf
+  install -D -m 644 ../nfs "$pkgdir/"etc/conf.d/nfs
+  install -D -m 644 utils/mount/nfsmount.conf "$pkgdir/"etc/nfsmount.conf
+  # keyutils id_resolver #35463
+  install -D -m 644 ../id_resolver.conf "$pkgdir/"etc/request-key.d/id_resolver.conf
+  # systemd files
+  for i in ${srcdir}/*.{service,mount}; do
+    install -D -m 644 $i "$pkgdir/usr/lib/systemd/system/${i##*/}"
+  done
+  install -D -m 644 ../nfs-utils.conf "$pkgdir/"usr/lib/modules-load.d/nfs-utils.conf
+  # directories
+  mkdir "$pkgdir/"etc/exports.d
+  mkdir -m 555 "$pkgdir/"var/lib/nfs/rpc_pipefs
+  mkdir "$pkgdir/"var/lib/nfs/v4recovery
+}
+
