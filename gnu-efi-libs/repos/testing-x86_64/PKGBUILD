@@ -1,0 +1,89 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Keshav Padram <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+# Contributor: Alessio 'mOLOk' Bolognino <themolok@gmail.com>
+
+_pkgver="3.0"
+pkgname="gnu-efi-libs"
+pkgver="${_pkgver}u"
+pkgrel="1"
+pkgdesc="Library for building x86_64 and ia32 UEFI Applications using GNU toolchain"
+url="http://sourceforge.net/projects/gnu-efi/"
+license=('GPL')
+arch=('i686' 'x86_64')
+options=('!strip' '!makeflags')
+makedepends=('pciutils')
+
+if [[ "${CARCH}" == "x86_64" ]]; then
+	makedepends+=('lib32-glibc' 'gcc-multilib')
+fi
+
+source=("http://download.sourceforge.net/gnu-efi/gnu-efi_${pkgver}.orig.tar.gz")
+md5sums=('d15d3c700e79a1e2938544d73edc572d')
+
+_build_gnu-efi-libs-x86_64() {
+	cp -r "${srcdir}/gnu-efi-${_pkgver}" "${srcdir}/gnu-efi-${_pkgver}-x86_64"
+	cd "${srcdir}/gnu-efi-${_pkgver}-x86_64/"
+	
+	unset CFLAGS
+	unset CPPFLAGS
+	unset CXXFLAGS
+	unset LDFLAGS
+	unset MAKEFLAGS
+	
+	make ARCH="x86_64" -j1
+	make ARCH="x86_64" -j1 -C apps all
+}
+
+_build_gnu-efi-libs-ia32() {
+	cp -r "${srcdir}/gnu-efi-${_pkgver}" "${srcdir}/gnu-efi-${_pkgver}-ia32"
+	cd "${srcdir}/gnu-efi-${_pkgver}-ia32/"
+	
+	unset CFLAGS
+	unset CPPFLAGS
+	unset CXXFLAGS
+	unset LDFLAGS
+	unset MAKEFLAGS
+	
+	make ARCH="ia32" -j1
+	make ARCH="ia32" -j1 -C apps all
+}
+
+build() {
+	cd "${srcdir}/gnu-efi-${_pkgver}/"
+	
+	if [[ "${CARCH}" == "x86_64" ]]; then
+		_build_gnu-efi-libs-x86_64
+	fi
+	
+	_build_gnu-efi-libs-ia32
+}
+
+_package_gnu-efi-libs-x86_64() {
+	cd "${srcdir}/gnu-efi-${_pkgver}-x86_64/"
+	
+	make ARCH="x86_64" INSTALLROOT="${pkgdir}" PREFIX="/usr" LIBDIR="/usr/lib" install
+	
+	install -d "${pkgdir}/usr/share/gnu-efi/apps/x86_64/"
+	install -D -m0644 "${srcdir}/gnu-efi-${_pkgver}-x86_64/apps"/*.efi "${pkgdir}/usr/share/gnu-efi/apps/x86_64/"
+}
+
+_package_gnu-efi-libs-ia32() {
+	cd "${srcdir}/gnu-efi-${_pkgver}-ia32/"
+	
+	make ARCH="ia32" INSTALLROOT="${pkgdir}" PREFIX="/usr" LIBDIR="/usr/${_LIBDIR32}" install
+	
+	install -d "${pkgdir}/usr/share/gnu-efi/apps/ia32/"
+	install -D -m0644 "${srcdir}/gnu-efi-${_pkgver}-ia32/apps"/*.efi "${pkgdir}/usr/share/gnu-efi/apps/ia32/"
+}
+
+package() {
+	if [[ "${CARCH}" == "x86_64" ]]; then
+		_package_gnu-efi-libs-x86_64
+		
+		_LIBDIR32="lib32"
+		_package_gnu-efi-libs-ia32
+	else
+		_LIBDIR32="lib"
+		_package_gnu-efi-libs-ia32
+	fi
+}
