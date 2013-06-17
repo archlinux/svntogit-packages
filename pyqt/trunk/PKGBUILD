@@ -3,17 +3,17 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 # Contributor: riai <riai@bigfoot.com> Ben <ben@benmazer.net>
 
-pkgbase=pyqt
-pkgname=('pyqt-common' 'pyqt' 'python2-pyqt')
-pkgver=4.10.1
+pkgbase=pyqt4
+pkgname=('pyqt4-common' 'python-pyqt4' 'python2-pyqt4')
+pkgver=4.10.2
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://riverbankcomputing.co.uk/software/pyqt/intro"
 license=('GPL')
 makedepends=('python-sip' 'python-dbus' 'python2-sip' 'phonon' 'mesa'
              'python2-opengl' 'qt-assistant-compat' 'qtwebkit' 'python2-dbus')
-source=("http://downloads.sourceforge.net/${pkgbase}/PyQt-x11-gpl-${pkgver}.tar.gz")
-md5sums=('e5973c4ec0b0469f329bc00209d2ad9c')
+source=("http://downloads.sourceforge.net/pyqt/PyQt-x11-gpl-${pkgver}.tar.gz")
+md5sums=('9257e12fec9b1b21e5a0d76d455d1691')
 
 build() {
   cp -r PyQt-x11-gpl-${pkgver} Py2Qt-x11-gpl-${pkgver}
@@ -43,9 +43,12 @@ build() {
   make
 }
 
-package_pyqt-common(){
-  pkgdesc="Common PyQt files shared between pyqt and python2-pyqt"
+package_pyqt4-common(){
+  pkgdesc="Common PyQt files shared between python-pyqt4 and python2-pyqt4"
   depends=('qt4')
+  replaces=('pyqt-common')
+  conflicts=('pyqt-common')
+  provides=("pyqt-common=${pkgver}")
   
   cd PyQt-x11-gpl-${pkgver}
   make -C pyrcc DESTDIR="${pkgdir}" install
@@ -54,12 +57,15 @@ package_pyqt-common(){
   install -Dm644 PyQt4.api "${pkgdir}"/usr/share/qt4/qsci/api/python/PyQt4.api
 }
 
-package_pyqt(){
+package_python-pyqt4(){
   pkgdesc="A set of Python 3.x bindings for the Qt toolkit"
-  depends=('qtwebkit' 'python-sip' 'python-dbus' 'pyqt-common')
+  depends=('qtwebkit' 'python-sip' 'python-dbus' 'pyqt4-common')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
+  replaces=('pyqt')
+  conflicts=('pyqt')
+  provides=("pyqt=${pkgver}")
 
   cd PyQt-x11-gpl-${pkgver}
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
@@ -70,24 +76,26 @@ package_pyqt(){
   rm "${pkgdir}"/usr/share/qt4/qsci/api/python/PyQt4.api
 }
 
-package_python2-pyqt(){
+package_python2-pyqt4(){
   pkgdesc="A set of Python 2.x bindings for the Qt toolkit"
-  depends=('qtwebkit' 'python2-sip' 'python2-dbus' 'pyqt-common')
+  depends=('qtwebkit' 'python2-sip' 'python2-dbus' 'pyqt4-common')
   optdepends=('phonon: enable audio and video in PyQt applications'
               'python2-opengl: enable OpenGL 3D graphics in PyQt applications'
               'qscintilla: QScintilla API'
               'qt-assistant-compat: add PyQt online help in Qt Assistant')
-  provides=('python2-qt')
+  replaces=('python2-pyqt')
+  conflicts=('python2-pyqt')
+  provides=("python2-pyqt=${pkgver}")
 
   cd Py2Qt-x11-gpl-${pkgver}
   # INSTALL_ROOT is needed for the QtDesigner module, the other Makefiles use DESTDIR
   make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
 
-  # Fix conflicts with pyqt
+  # Fix conflicts with python-pyqt4
   mv "${pkgdir}"/usr/bin/{,python2-}pyuic4
   
-  # Provided by pyqt
+  # Provided by python-pyqt4
   rm "${pkgdir}"/usr/bin/{pylupdate4,pyrcc4}
-  rm "${pkgdir}"/usr/lib/qt4/plugins/designer/libpythonplugin.so
+  rm "${pkgdir}"/usr/lib/qt4/plugins/designer/libpyqt4.so
   rm "${pkgdir}"/usr/share/qt4/qsci/api/python/PyQt4.api
 }
