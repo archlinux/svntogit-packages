@@ -6,7 +6,7 @@ _grub_lua_ver=24
 
 pkgname=grub-efi-x86_64
 pkgver=2.00
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU GRand Unified Bootloader (2) - x86_64 UEFI Modules"
 url="https://www.gnu.org/software/grub/"
 arch=('any')
@@ -19,12 +19,15 @@ replaces=('grub2-efi-x86_64')
 provides=('grub2-efi-x86_64')
 
 source=("http://ftp.gnu.org/gnu/grub/grub-${pkgver}.tar.xz"
-        "ftp://ftp.archlinux.org/other/grub2/grub2_extras_lua_r${_grub_lua_ver}.tar.xz")
+        "ftp://ftp.archlinux.org/other/grub2/grub2_extras_lua_r${_grub_lua_ver}.tar.xz"
+        '0069-Backport-gnulib-fixes-for-C11.-Fixes-Savannah-bug-37.patch'
+        'grub-2.00-fix-docs.patch')
+md5sums=('a1043102fbc7bcedbf53e7ee3d17ab91'
+         '704ea9f250b6137f05fa0197fd07053a'
+         'ab751d1d8cd3fd47e5ee24d71ecc31ed'
+         '342dd18472a24e5fd252458b24f39a29')
 
 noextract=("grub2_extras_lua_r${_grub_lua_ver}.tar.xz")
-
-sha1sums=('274d91e96b56a5b9dd0a07accff69dbb6dfb596b'
-          '89290031b974780c6df76893836d2477d4add895')
 
 build() {
 
@@ -35,15 +38,18 @@ build() {
 
 	cd "${srcdir}/grub-${pkgver}"
 
-	# fix build issue with glibc-2.16
-	sed -i -e '/gets is a/d' grub-core/gnulib/stdio.in.h
-
 	## add grub-extras
 	export GRUB_CONTRIB="${srcdir}/grub-${pkgver}/grub-extras/" 
 	install -d "${srcdir}/grub-${pkgver}/grub-extras"
 
 	bsdtar xf "${srcdir}/grub2_extras_lua_r${_grub_lua_ver}.tar.xz" \
 		-C "${srcdir}/grub-${pkgver}/grub-extras"
+
+	# fix compiling with gcc48
+        patch -Np1 -i ${srcdir}/0069-Backport-gnulib-fixes-for-C11.-Fixes-Savannah-bug-37.patch
+
+	#fix docs compiling
+        patch -Np1 -i ${srcdir}/grub-2.00-fix-docs.patch
 
 	## start the actual build process
 	cd "${srcdir}/grub-${pkgver}/"
