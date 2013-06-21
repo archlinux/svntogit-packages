@@ -6,90 +6,57 @@ _gitbranch="master"
 
 pkgname="efilinux-efi"
 pkgver="1.0"
-pkgrel="7"
+pkgrel="8"
 pkgdesc="Simple UEFI Linux bootloader - Precursor to EFISTUB"
 url="https://github.com/mfleming/efilinux"
-arch=('any')
+arch=('x86_64' 'i686')
 license=('GPL')
-makedepends=('gcc-multilib' 'gnu-efi-libs')
+makedepends=('gnu-efi-libs')
 depends=('dosfstools' 'efibootmgr')
 options=('!strip')
 install="${pkgname}.install"
 
-conflicts=('efilinux-efi-x86_64' 'efilinux-efi-i386')
-provides=('efilinux-efi-x86_64' 'efilinux-efi-i386')
-replaces=('efilinux-efi-x86_64' 'efilinux-efi-i386')
-
 source=("${_gitname}::git+${_gitroot}#branch=${_gitbranch}")
 sha1sums=('SKIP')
 
-_build_efilinux-efi-x86_64() {
-	
-	cp -r "${srcdir}/efilinux-${pkgver}" "${srcdir}/efilinux-${pkgver}-x86_64"
-	cd "${srcdir}/efilinux-${pkgver}-x86_64/"
-	
-	## Unset all compiler FLAGS
-	unset CFLAGS
-	unset CPPFLAGS
-	unset CXXFLAGS
-	unset LDFLAGS
-	unset MAKEFLAGS
-	
-	make ARCH="x86_64" LIBDIR="/usr/lib" CRT0="/usr/lib/crt0-efi-x86_64.o" LDSCRIPT="/usr/lib/elf_x86_64_efi.lds"
-	
-}
+[[ "${CARCH}" == "x86_64" ]] && _EFI_ARCH="x86_64"
+[[ "${CARCH}" == "i686" ]] && _EFI_ARCH="ia32"
 
-_build_efilinux-efi-ia32() {
-	
-	cp -r "${srcdir}/efilinux-${pkgver}" "${srcdir}/efilinux-${pkgver}-ia32"
-	cd "${srcdir}/efilinux-${pkgver}-ia32/"
-	
-	## Unset all compiler FLAGS
-	unset CFLAGS
-	unset CPPFLAGS
-	unset CXXFLAGS
-	unset LDFLAGS
-	unset MAKEFLAGS
-	
-	make ARCH="ia32" LIBDIR="/usr/lib32" CRT0="/usr/lib32/crt0-efi-ia32.o" LDSCRIPT="/usr/lib32/elf_ia32_efi.lds"
-	
-}
+[[ "${CARCH}" == "x86_64" ]] && _EFI_S_ARCH="x64"
+[[ "${CARCH}" == "i686" ]] && _EFI_S_ARCH="ia32"
 
 build() {
-	
-	if [[ "${CARCH}" != "x86_64" ]]; then
-		msg "efilinux-efi can be built only in an x86_64 system. Exiting."
-		exit 1
-	fi
 	
 	rm -rf "${srcdir}/efilinux-${pkgver}/" || true
 	cp -r "${srcdir}/${_gitname}" "${srcdir}/efilinux-${pkgver}"
 	
-	## Fix Makefile variables
-	sed 's|ARCH=|ARCH :=|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
-	sed 's|LIBDIR=|LIBDIR :=|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
-	
-	## Use gnu-efi ms_abi support
-	sed 's|-DEFI_FUNCTION_WRAPPER|-DEFI_FUNCTION_WRAPPER -DGNU_EFI_USE_MS_ABI|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	cd "${srcdir}/efilinux-${pkgver}/"
 	
 	## Add "-fno-strict-aliasing -fno-stack-protector -fno-stack-check -mno-sse -mno-mmx" to CFLAGS
-	sed 's|-DEFI_FUNCTION_WRAPPER|-fno-strict-aliasing -fno-stack-protector -fno-stack-check -mno-sse -mno-mmx -DEFI_FUNCTION_WRAPPER -DGNU_EFI_USE_MS_ABI|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	sed 's|-DEFI_FUNCTION_WRAPPER|-fno-strict-aliasing -fno-stack-protector -fno-stack-check -mno-sse -mno-mmx -DEFI_FUNCTION_WRAPPER|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	
+	## Add -DGNU_EFI_USE_MS_ABI to CFLAGS
+	sed 's|-DEFI_FUNCTION_WRAPPER|-DEFI_FUNCTION_WRAPPER -DGNU_EFI_USE_MS_ABI|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
 	
 	## Add -m64 for x86_64 build
 	sed 's|CFLAGS += -mno-red-zone|CFLAGS += -m64 -mno-red-zone|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
 	
-	## Compile efilinuxx64.efi
-	_build_efilinux-efi-x86_64
+	## Unset all compiler FLAGS
+	unset CFLAGS
+	unset CPPFLAGS
+	unset CXXFLAGS
+	unset LDFLAGS
+	unset MAKEFLAGS
 	
-	## Compile efilinuxia32.efi
-	_build_efilinux-efi-ia32
+	make CRT0="/usr/lib/crt0-efi-${_EFI_ARCH}.o" LDSCRIPT="/usr/lib/elf_${_EFI_ARCH}_efi.lds"
 	
 }
 
 package() {
 	
+	cd "${srcdir}/efilinux-${pkgver}/"
+	
 	install -d "${pkgdir}/usr/lib/efilinux/"
-	install -D -m0644 "${srcdir}/efilinux-${pkgver}-x86_64/efilinux.efi" "${pkgdir}/usr/lib/efilinux/efilinuxx64.efi"
-	install -D -m0644 "${srcdir}/efilinux-${pkgver}-ia32/efilinux.efi" "${pkgdir}/usr/lib/efilinux/efilinuxia32.efi"
+	install -D -m0644 "${srcdir}/efilinux-${pkgver}/efilinux.efi" "${pkgdir}/usr/lib/efilinux/efilinux${_EFI_S_ARCH}.efi"
 	
 }
