@@ -1,57 +1,167 @@
-# $Id$
-# Maintainer: Thomas Bächler <thomas@archlinux.org>
-# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer : Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer : Thomas Bächler <thomas@archlinux.org>
+# Contributor: Keshav Padram (the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
 
-pkgname=syslinux
-pkgver=5.10
-pkgrel=3
-arch=('i686' 'x86_64')
+pkgname="syslinux"
+pkgver="6.00"
+pkgrel="1"
+arch=('x86_64' 'i686')
 pkgdesc="Collection of boot loaders that boot from FAT, ext2/3/4 and btrfs filesystems, from CDs and via PXE"
-url="http://www.syslinux.org"
+url="http://syslinux.zytor.com/"
 license=('GPL2')
+
+makedepends=('python2' 'nasm' 'gnu-efi-libs')
 depends=('perl' 'glibc')
 optdepends=('perl-passwd-md5:  For md5pass'
             'perl-digest-sha1: For sha1pass'
             'mtools:           For mkdiskimage and syslinux support'
             'gptfdisk:         For GPT support'
-            'util-linux:       For isohybrid')
-makedepends=('nasm')
-backup=('boot/syslinux/syslinux.cfg')
-install=syslinux.install
-source=(http://www.kernel.org/pub/linux/utils/boot/syslinux/$pkgname-${pkgver}.tar.bz2
-        syslinux-dont-build-dos-windows-targets.patch
-        syslinux.cfg
-        syslinux-install_update)
-md5sums=('8f51d6a5d2730f534ba90e71f3347bff'
-         '25af85a05e7b212b7fb8b7587175e492'
-         'bbd97c4c735b8e5c52b79572d9296246'
-         '88a04d803bdd019a9a063d00aa008eee')
+            'util-linux:       For isohybrid'
+            'efibootmgr:       For EFI support'
+            'dosfstools:       For EFI support')
+
+install="${pkgname}.install"
+
+source=("https://www.kernel.org/pub/linux/utils/boot/syslinux/${pkgname}-${pkgver}.tar.xz"
+        'syslinux-6.00-efi-fix-libcom32.patch'
+        'syslinux-6.00-efi-export-kbdmap.patch'
+        'syslinux.cfg'
+        'syslinux-install_update')
+
+sha1sums=('601036fb00f39ea838ef1cbe3dae8b9bf24fabda'
+          'e24c10acc7a923ba957957b1c2c1cd4b649a4cf4'
+          '44245ab68b607f412738dc222d51e9b8b4bf664b'
+          'b0f174bcc0386fdf699e03d0090e3ac841098010'
+          'b1d915045fe3094f5359df043c53e73a4dc32745')
+
+_build_syslinux_bios() {
+	
+	rm -rf "${srcdir}/${pkgname}-${pkgver}-bios/" || true
+	cp -r "${srcdir}/${pkgname}-${pkgver}" "${srcdir}/${pkgname}-${pkgver}-bios"
+	cd "${srcdir}/${pkgname}-${pkgver}-bios/"
+	
+	## Do not try to build syslinux with our default LDFLAGS, it will fail
+	unset LDFLAGS
+	
+	make PYTHON="python2" bios
+	make PYTHON="python2" bios installer
+	
+}
+
+_build_syslinux_efi64() {
+	
+	rm -rf "${srcdir}/${pkgname}-${pkgver}-efi64/" || true
+	cp -r "${srcdir}/${pkgname}-${pkgver}" "${srcdir}/${pkgname}-${pkgver}-efi64"
+	cd "${srcdir}/${pkgname}-${pkgver}-efi64/"
+	
+	## Unset all compiler FLAGS for efi64 build
+	unset CFLAGS
+	unset CPPFLAGS
+	unset CXXFLAGS
+	unset LDFLAGS
+	unset MAKEFLAGS
+	
+	make PYTHON="python2" efi64
+	make PYTHON="python2" efi64 installer
+	
+}
+
+_build_syslinux_efi32() {
+	
+	rm -rf "${srcdir}/${pkgname}-${pkgver}-efi32/" || true
+	cp -r "${srcdir}/${pkgname}-${pkgver}" "${srcdir}/${pkgname}-${pkgver}-efi32"
+	cd "${srcdir}/${pkgname}-${pkgver}-efi32/"
+	
+	## Unset all compiler FLAGS for efi32 build
+	unset CFLAGS
+	unset CPPFLAGS
+	unset CXXFLAGS
+	unset LDFLAGS
+	unset MAKEFLAGS
+	
+	make PYTHON="python2" efi32
+	make PYTHON="python2" efi32 installer
+	
+}
 
 build() {
-  # Do not try to build syslinux with our default LDFLAGS, it will fail
-  unset LDFLAGS
-  cd "$srcdir"/$pkgname-${pkgver}
-  # Do not try to build the Windows or DOS installers
-  patch -p1 -i "$srcdir"/syslinux-dont-build-dos-windows-targets.patch
-  # Fix FHS manpage path
-  sed 's|/usr/man|/usr/share/man|g' -i mk/syslinux.mk
-  make installer
-  make -C utils
-  make -C com32
+	
+	cd "${srcdir}/${pkgname}-${pkgver}/"
+	
+	## Apply syslinux-6.00-efi-fix-libcom32.patch from git
+	patch -Np1 -i "${srcdir}/syslinux-6.00-efi-fix-libcom32.patch"
+	
+	## Apply syslinux-6.00-efi-export-kbdmap.patch from git
+	patch -Np1 -i "${srcdir}/syslinux-6.00-efi-export-kbdmap.patch"
+	
+	## Do not try to build the Windows or DOS installers
+	sed 's|diag libinstaller dos win32 win64 dosutil txt|libinstaller txt|g' -i "${srcdir}/${pkgname}-${pkgver}/Makefile" || true
+	sed 's|win32/syslinux.exe win64/syslinux64.exe||g' -i "${srcdir}/${pkgname}-${pkgver}/Makefile" || true
+	sed 's|dosutil/*.com dosutil/*.sys||g' -i "${srcdir}/${pkgname}-${pkgver}/Makefile" || true
+	sed 's|dos/syslinux.com||g' -i "${srcdir}/${pkgname}-${pkgver}/Makefile" || true
+	sed 's|INSTALLSUBDIRS = com32 utils dosutil|INSTALLSUBDIRS = com32 utils|g' -i "${srcdir}/${pkgname}-${pkgver}/Makefile" || true
+	
+	## Fix FHS manpage path
+	sed 's|/usr/man|/usr/share/man|g' -i "${srcdir}/${pkgname}-${pkgver}/mk/syslinux.mk" || true
+	
+	## Build syslinux-bios
+	_build_syslinux_bios
+	
+	## Build syslinux-efi
+	if [[ "${CARCH}" == "x86_64" ]]; then
+		_build_syslinux_efi64
+	fi
+	
+	if [[ "${CARCH}" == "i686" ]]; then
+		_build_syslinux_efi32
+	fi
+	
+}
+
+_package_syslinux_bios() {
+	
+	cd "${srcdir}/${pkgname}-${pkgver}-bios/"
+	
+	## Install Syslinux bios
+	make INSTALLROOT="${pkgdir}/" AUXDIR="/usr/lib/syslinux/bios/" bios install
+	
+	## Remove syslinux.exe,syslinux64.exe,syslinux.com and dosutil dir
+	rm "/usr/lib/syslinux/bios"/syslinux.{com,exe} || true
+	rm "/usr/lib/syslinux/bios/syslinux64.exe" || true
+	rm -rf "/usr/lib/syslinux/bios/dosutil/" || true
+	
+	## Move extlinux binary to /usr/bin
+	install -d "${pkgdir}/usr/bin"
+	mv "${pkgdir}/sbin/extlinux" "${pkgdir}/usr/bin/extlinux"
+	rm -rf "${pkgdir}/sbin/"
+	
+	## Install docs
+	cp -ar "${srcdir}/${pkgname}-${pkgver}/doc" "${pkgdir}/usr/share/"
+	
+	## Install the default configuration
+	install -D -m0644 "${srcdir}/syslinux.cfg" "${pkgdir}/boot/syslinux/syslinux.cfg"
+	
+	## Install the installation and update script
+	## This script is maintained at git://gist.github.com/772138.git
+	## Script not yet updated for syslinux-efi
+	install -D -m0755 "${srcdir}/syslinux-install_update" "${pkgdir}/usr/bin/syslinux-install_update"
+	
 }
 
 package() {
-  cd "$srcdir"/$pkgname-${pkgver}
-  make INSTALLROOT="$pkgdir" AUXDIR=/usr/lib/syslinux install
-
-  # install docs
-  cp -ar "$srcdir"/$pkgname-${pkgver}/doc "$pkgdir"/usr/share/
-  # Install the default configuration
-  install -D -m644 "$srcdir"/syslinux.cfg "$pkgdir"/boot/syslinux/syslinux.cfg
-  # Install the installation and update script
-  # This script is maintained at git://gist.github.com/772138.git
-  install -D -m755 "$srcdir"/syslinux-install_update "$pkgdir"/usr/bin/syslinux-install_update
-  # move extlinux binary to /usr/bin
-  mv "$pkgdir"/sbin/extlinux "$pkgdir"/usr/bin/extlinux
-  rmdir "$pkgdir"/sbin
+	
+	cd "${srcdir}/${pkgname}-${pkgver}/"
+	
+	_package_syslinux_bios
+	
+	if [[ "${CARCH}" == "x86_64" ]]; then
+		cd "${srcdir}/${pkgname}-${pkgver}-efi64/"
+		make INSTALLROOT="${pkgdir}/" AUXDIR="/usr/lib/syslinux/" efi64 install
+	fi
+	
+	if [[ "${CARCH}" == "i686" ]]; then
+		cd "${srcdir}/${pkgname}-${pkgver}-efi32/"
+		make INSTALLROOT="${pkgdir}/" AUXDIR="/usr/lib/syslinux/" efi32 install
+	fi
+	
 }
