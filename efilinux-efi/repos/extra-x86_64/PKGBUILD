@@ -1,0 +1,62 @@
+# Contributor : Keshav Padram <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+_gitroot="git://git.kernel.org/pub/scm/boot/efilinux/efilinux.git"
+_gitname="efilinux"
+_gitbranch="master"
+
+pkgname="efilinux-efi"
+pkgver="1.0"
+pkgrel="8"
+pkgdesc="Simple UEFI Linux bootloader - Precursor to EFISTUB"
+url="https://github.com/mfleming/efilinux"
+arch=('x86_64' 'i686')
+license=('GPL')
+makedepends=('gnu-efi-libs')
+depends=('dosfstools' 'efibootmgr')
+options=('!strip')
+install="${pkgname}.install"
+
+source=("${_gitname}::git+${_gitroot}#branch=${_gitbranch}")
+sha1sums=('SKIP')
+
+[[ "${CARCH}" == "x86_64" ]] && _EFI_ARCH="x86_64"
+[[ "${CARCH}" == "i686" ]] && _EFI_ARCH="ia32"
+
+[[ "${CARCH}" == "x86_64" ]] && _EFI_S_ARCH="x64"
+[[ "${CARCH}" == "i686" ]] && _EFI_S_ARCH="ia32"
+
+build() {
+	
+	rm -rf "${srcdir}/efilinux-${pkgver}/" || true
+	cp -r "${srcdir}/${_gitname}" "${srcdir}/efilinux-${pkgver}"
+	
+	cd "${srcdir}/efilinux-${pkgver}/"
+	
+	## Add "-fno-strict-aliasing -fno-stack-protector -fno-stack-check -mno-sse -mno-mmx" to CFLAGS
+	sed 's|-DEFI_FUNCTION_WRAPPER|-fno-strict-aliasing -fno-stack-protector -fno-stack-check -mno-sse -mno-mmx -DEFI_FUNCTION_WRAPPER|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	
+	## Add -DGNU_EFI_USE_MS_ABI to CFLAGS
+	sed 's|-DEFI_FUNCTION_WRAPPER|-DEFI_FUNCTION_WRAPPER -DGNU_EFI_USE_MS_ABI|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	
+	## Add -m64 for x86_64 build
+	sed 's|CFLAGS += -mno-red-zone|CFLAGS += -m64 -mno-red-zone|g' -i "${srcdir}/efilinux-${pkgver}/Makefile"
+	
+	## Unset all compiler FLAGS
+	unset CFLAGS
+	unset CPPFLAGS
+	unset CXXFLAGS
+	unset LDFLAGS
+	unset MAKEFLAGS
+	
+	make CRT0="/usr/lib/crt0-efi-${_EFI_ARCH}.o" LDSCRIPT="/usr/lib/elf_${_EFI_ARCH}_efi.lds"
+	
+}
+
+package() {
+	
+	cd "${srcdir}/efilinux-${pkgver}/"
+	
+	install -d "${pkgdir}/usr/lib/efilinux/"
+	install -D -m0644 "${srcdir}/efilinux-${pkgver}/efilinux.efi" "${pkgdir}/usr/lib/efilinux/efilinux${_EFI_S_ARCH}.efi"
+	
+}
