@@ -17,20 +17,20 @@ _COMPILER="GCC46"
 
 pkgname="refind-efi"
 pkgver="0.6.12"
-pkgrel="1"
+pkgrel="2"
 pkgdesc="Rod Smith's fork of rEFIt UEFI Boot Manager - built with Tianocore UDK libs"
 url="http://www.rodsbooks.com/refind/index.html"
-arch=('any')
+arch=('x86_64' 'i686')
 license=('GPL3' 'custom')
+
 makedepends=('subversion' 'python2')
 depends=('dosfstools' 'efibootmgr')
 optdepends=('mactel-boot: For bless command in Apple Mac systems'
             'bash: For /usr/bin/refind-mkfont script'
             'imagemagick: For /usr/bin/refind-mkfont script')
+
 options=('!strip' 'docs' '!makeflags')
-conflicts=('refind-efi-x86_64' 'refind-efi-i386')
-provides=('refind-efi-x86_64' 'refind-efi-i386')
-replaces=('refind-efi-x86_64' 'refind-efi-i386')
+
 install="${pkgname}.install"
 
 source=("http://downloads.sourceforge.net/refind/refind-src-${pkgver}.zip"
@@ -49,6 +49,12 @@ sha1sums=('aabac34b2a30e16c5fd105777b9245c2ed0496e4'
           'SKIP'
           'SKIP'
           'SKIP')
+
+[[ "${CARCH}" == "x86_64" ]] && _TIANO_ARCH="X64"
+[[ "${CARCH}" == "i686" ]] && _TIANO_ARCH="IA32"
+
+[[ "${CARCH}" == "x86_64" ]] && _TIANO_S_ARCH="x64"
+[[ "${CARCH}" == "i686" ]] && _TIANO_S_ARCH="ia32"
 
 _tianocore_udk_common() {
 	
@@ -114,19 +120,25 @@ _tianocore_udk_common() {
 	echo
 	
 	## Compile UDK x86_64-UEFI Libraries
-	"${EDK_TOOLS_PATH}/BinWrappers/PosixLike/build" -p "${_UDK_TARGET}" -a "X64" -b "${_TIANOCORE_TARGET}" -t "${_COMPILER}"
-	echo
-	
-	## Compile UDK i386-UEFI Libraries
-	"${EDK_TOOLS_PATH}/BinWrappers/PosixLike/build" -p "${_UDK_TARGET}" -a "IA32" -b "${_TIANOCORE_TARGET}" -t "${_COMPILER}"
+	"${EDK_TOOLS_PATH}/BinWrappers/PosixLike/build" -p "${_UDK_TARGET}" -a "${_TIANO_ARCH}" -b "${_TIANOCORE_TARGET}" -t "${_COMPILER}"
 	echo
 	
 	## Fix UDK Target ARCH for rEFInd
-	sed "s|IA32|X64 IA32|g" -i "${_UDK_DIR}/Conf/target.txt" || true
+	sed "s|IA32|${_TIANO_ARCH}|g" -i "${_UDK_DIR}/Conf/target.txt" || true
 	
 }
 
-_build_refind-efi-common() {
+build() {
+	
+	_tianocore_udk_common
+	echo
+	
+	cd "${srcdir}/refind-${pkgver}/"
+	
+	## Fix UDK Path in rEFInd Makefiles
+	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
+	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano" || true
+	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
 	
 	## Unset all FLAGS
 	unset CFLAGS
@@ -135,64 +147,27 @@ _build_refind-efi-common() {
 	unset LDFLAGS
 	unset MAKEFLAGS
 	
-	rm -rf "${srcdir}/refind-${pkgver}_${_UEFI_ARCH}/" || true
-	cp -r "${srcdir}/refind-${pkgver}" "${srcdir}/refind-${pkgver}_${_UEFI_ARCH}/"
-	
-	cd "${srcdir}/refind-${pkgver}_${_UEFI_ARCH}/"
-	
-	## Fix UDK Path in rEFInd Makefiles
-	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}_${_UEFI_ARCH}/Make.tiano" || true
-	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}_${_UEFI_ARCH}/filesystems/Make.tiano" || true
-	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}_${_UEFI_ARCH}/gptsync/Make.tiano" || true
-    
-    ## Compile refind.efi
-	ARCH="${_UEFI_ARCH}" make tiano
-	echo
+	## Compile refind.efi
+	make tiano
 	
 	## Compile UEFI FS drivers
-	ARCH="${_UEFI_ARCH}" make fs
-	echo
-	
-}
-
-build() {
-	
-	if [[ "${CARCH}" != "x86_64" ]]; then
-		echo "${pkgname} package can be built only in a x86_64 system. Exiting."
-		exit 1
-	fi
-	
-	_tianocore_udk_common
-	echo
-	
-    _UEFI_ARCH="x86_64"
-	_build_refind-efi-common
-	echo
-	
-	_UEFI_ARCH="ia32"
-	_build_refind-efi-common
-	echo
+	make fs
 	
 }
 
 package() {
 	
-	## Install the rEFInd UEFI applications
+	## Install the rEFInd UEFI application
 	install -d "${pkgdir}/usr/lib/refind/"
-	install -D -m0644 "${srcdir}/refind-${pkgver}_x86_64/refind/refind_x64.efi" "${pkgdir}/usr/lib/refind/refind_x64.efi"
-	install -D -m0644 "${srcdir}/refind-${pkgver}_ia32/refind/refind_ia32.efi" "${pkgdir}/usr/lib/refind/refind_ia32.efi"
+	install -D -m0644 "${srcdir}/refind-${pkgver}/refind/refind_${_TIANO_S_ARCH}.efi" "${pkgdir}/usr/lib/refind/refind_${_TIANO_S_ARCH}.efi"
 	
 	## Install UEFI drivers built from rEFInd
-	install -d "${pkgdir}/usr/lib/refind/drivers_x64/"
-	install -d "${pkgdir}/usr/lib/refind/drivers_ia32/"
-	install -D -m0644 "${srcdir}/refind-${pkgver}_x86_64/drivers_x64"/*_x64.efi "${pkgdir}/usr/lib/refind/drivers_x64/"
-	install -D -m0644 "${srcdir}/refind-${pkgver}_ia32/drivers_ia32"/*_ia32.efi "${pkgdir}/usr/lib/refind/drivers_ia32/"
+	install -d "${pkgdir}/usr/lib/refind/drivers_${_TIANO_S_ARCH}/"
+	install -D -m0644 "${srcdir}/refind-${pkgver}/drivers_${_TIANO_S_ARCH}"/*.efi "${pkgdir}/usr/lib/refind/drivers_${_TIANO_S_ARCH}/"
 	
 	## Install UEFI applications built from rEFInd
-	install -d "${pkgdir}/usr/lib/refind/tools_x64/"
-	install -d "${pkgdir}/usr/lib/refind/tools_ia32/"
-	install -D -m0644 "${srcdir}/refind-${pkgver}_x86_64/gptsync/gptsync_x64.efi" "${pkgdir}/usr/lib/refind/tools_x64/gptsync_x64.efi"
-	install -D -m0644 "${srcdir}/refind-${pkgver}_ia32/gptsync/gptsync_ia32.efi" "${pkgdir}/usr/lib/refind/tools_ia32/gptsync_ia32.efi"
+	install -d "${pkgdir}/usr/lib/refind/tools_${_TIANO_S_ARCH}"
+	install -D -m0644 "${srcdir}/refind-${pkgver}/gptsync/gptsync_${_TIANO_S_ARCH}.efi" "${pkgdir}/usr/lib/refind/tools_${_TIANO_S_ARCH}/gptsync_${_TIANO_S_ARCH}.efi"
 	
 	## Install the rEFInd config file
 	install -d "${pkgdir}/usr/lib/refind/config/"
