@@ -3,7 +3,7 @@
 if [ "$USEPEERDNS" = "1" -a -f /etc/ppp/resolv.conf ]; then
   if [ -x /usr/bin/resolvconf ]; then
     /usr/bin/resolvconf -a ${IFNAME} </etc/ppp/resolv.conf
-  elif
+  else
     [ -e /etc/resolv.conf ] && mv /etc/resolv.conf /etc/resolv.conf.backup.${IFNAME}
     mv /etc/ppp/resolv.conf /etc/resolv.conf
     chmod 644 /etc/resolv.conf
