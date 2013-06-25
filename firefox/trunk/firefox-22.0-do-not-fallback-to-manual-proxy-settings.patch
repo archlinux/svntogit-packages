@@ -1,0 +1,36 @@
+
+# HG changeset patch
+# User Patrick McManus <mcmanus@ducksong.com>
+# Date 1365623297 14400
+# Node ID 85f1d207f52546e0e5fe78990cdefe6efae485fb
+# Parent  2bb26d742f5ffd2d946291fd3c688dc3d6d34f67
+bug 817533 - failed system proxy lookups should not fallback to manual configs r=jduell
+
+diff --git a/netwerk/base/src/nsProtocolProxyService.cpp b/netwerk/base/src/nsProtocolProxyService.cpp
+--- a/netwerk/base/src/nsProtocolProxyService.cpp
++++ b/netwerk/base/src/nsProtocolProxyService.cpp
+@@ -1553,17 +1553,22 @@ nsProtocolProxyService::Resolve_Internal
+ 
+     // Proxy auto config magic...
+     if (mProxyConfig == PROXYCONFIG_PAC || mProxyConfig == PROXYCONFIG_WPAD) {
+         // Do not query PAC now.
+         *usePACThread = true;
+         return NS_OK;
+     }
+ 
+-    // proxy info values
++    // If we aren't in manual proxy configuration mode then we don't
++    // want to honor any manual specific prefs that might be still set
++    if (mProxyConfig != PROXYCONFIG_MANUAL)
++        return NS_OK;
++
++    // proxy info values for manual configuration mode
+     const char *type = nullptr;
+     const nsACString *host = nullptr;
+     int32_t port = -1;
+ 
+     uint32_t proxyFlags = 0;
+ 
+     if ((flags & RESOLVE_PREFER_SOCKS_PROXY) &&
+         !mSOCKSProxyHost.IsEmpty() && mSOCKSProxyPort > 0) {
+

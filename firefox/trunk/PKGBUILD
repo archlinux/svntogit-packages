@@ -20,6 +20,7 @@ install=firefox.install
 options=('!emptydirs' '!makeflags')
 source=(https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.bz2
         mozconfig firefox.desktop firefox-install-dir.patch vendor.js shared-libs.patch
+        firefox-22.0-do-not-fallback-to-manual-proxy-settings.patch
         firefox-20.0.1-fixed-loading-icon.png)
 sha256sums=('040d4e7fb5076b6aa25f0d3851f8d98c2a2e72ef1599f4387f09f47f6096515e'
             '1d750088958ae2a2faf43f9bb3909c3e396f01c6504ba39f09b8ed7fc1b29492'
@@ -27,6 +28,7 @@ sha256sums=('040d4e7fb5076b6aa25f0d3851f8d98c2a2e72ef1599f4387f09f47f6096515e'
             'ded67e8204bd5e1c0c5771c0d2c84ff80c998e1543711e7cd804cfe29e8dd1b0'
             '4b50e9aec03432e21b44d18c4c97b2630bace606b033f7d556c9d3e3eb0f4fa4'
             'e2b4a00d14f4ba69c62b3f9ef9908263fbab179ba8004197cbc67edbd916fdf1'
+            '2baebe5514aafdeacc5727cdaa5e84433dcbdb06228de546bfe051ab7c061b34'
             '68e3a5b47c6d175cc95b98b069a15205f027cab83af9e075818d38610feb6213')
 
 prepare() {
@@ -35,6 +37,10 @@ prepare() {
   cp ../mozconfig .mozconfig
   patch -Np1 -i ../firefox-install-dir.patch
   patch -Np1 -i ../shared-libs.patch
+
+  # Should be fixed in Firefox 23
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=817533
+  patch -Np1 -i ../firefox-22.0-do-not-fallback-to-manual-proxy-settings.patch
 
   # Fix PRE_RELEASE_SUFFIX
   sed -i '/^PRE_RELEASE_SUFFIX := ""/s/ ""//' \
@@ -61,6 +67,11 @@ build() {
   export PATH="$srcdir/path:$PATH"
   export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/firefox"
   export PYTHON="/usr/bin/python2"
+
+  # Work around memory address space exhaustion during linking on i686
+  if [[ $CARCH == i686 ]]; then
+    LDFLAGS+=' -Wl,--no-keep-memory'
+  fi
 
   export DISPLAY=:99
   Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
