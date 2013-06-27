@@ -1,0 +1,37 @@
+From ace549c1bf1861b4cbaec6f2451a6341aa738bae Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Florian=20M=C3=BCllner?= <fmuellner@gnome.org>
+Date: Mon, 24 Jun 2013 18:09:04 +0200
+Subject: [PATCH] st: Be more forgiving when calling get_theme_node() on
+ unstaged widgets
+
+While it is obviously still an error to call get_theme_node() on a
+widget that hasn't been added to the stage hierarchy yet, asserting
+on it hasn't proven too successful in avoiding those errors - it's
+likely the most frequent reason for crash reports. Just accept that
+there'll always be code paths where we can hit this case and make
+it non-fatal.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=610279
+---
+ src/st/st-widget.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/st/st-widget.c b/src/st/st-widget.c
+index 42992ec..4875acc 100644
+--- a/src/st/st-widget.c
++++ b/src/st/st-widget.c
+@@ -608,8 +608,9 @@ st_widget_get_theme_node (StWidget *widget)
+ 
+       if (stage == NULL)
+         {
+-          g_error ("st_widget_get_theme_node called on the widget %s which is not in the stage.",
+-                    st_describe_actor (CLUTTER_ACTOR (widget)));
++          g_critical ("st_widget_get_theme_node called on the widget %s which is not in the stage.",
++                      st_describe_actor (CLUTTER_ACTOR (widget)));
++          return g_object_new (ST_TYPE_THEME_NODE, NULL);
+         }
+ 
+       if (parent_node == NULL)
+-- 
+1.8.3.1
+
