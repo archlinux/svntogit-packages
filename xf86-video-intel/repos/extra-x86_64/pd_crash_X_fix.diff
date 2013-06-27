@@ -1,0 +1,148 @@
+From c88d911d4209a8ede5ec705ad925383c69182977 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Mon, 24 Jun 2013 14:30:00 +0100
+Subject: [PATCH] sna: Initialise gc->ops->PolyPoint for miWideDash
+
+The miWideDash may also call PolyPoint rather than emit spans, so make
+sure that we correctly prepare sna_poly_point before calling mi*.
+
+Reported-by: Tobias Brodel <toby.jamesjoy@gmail.com>
+Bugzilla: https://bugs.freedesktop.org/show_bug.cgi?id=66104
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+ src/sna/sna_accel.c | 60 +++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 54 insertions(+), 6 deletions(-)
+
+diff --git a/src/sna/sna_accel.c b/src/sna/sna_accel.c
+index 43d6a67..a3e4ed4 100644
+--- a/src/sna/sna_accel.c
++++ b/src/sna/sna_accel.c
+@@ -5750,6 +5750,39 @@ sna_poly_point__fill_clip_boxes(DrawablePtr drawable, GCPtr gc,
+ }
+ 
+ static void
++sna_poly_point__dash(DrawablePtr drawable, GCPtr gc,
++		     int mode, int n, DDXPointPtr pt)
++{
++	struct sna_fill_spans *data = sna_gc(gc)->priv;
++	struct sna_fill_op *op = data->op;
++
++	if (op->base.u.blt.pixel == gc->fgPixel)
++		sna_poly_point__fill(drawable, gc, mode, n, pt);
++}
++
++static void
++sna_poly_point__dash_clip_extents(DrawablePtr drawable, GCPtr gc,
++				  int mode, int n, DDXPointPtr pt)
++{
++	struct sna_fill_spans *data = sna_gc(gc)->priv;
++	struct sna_fill_op *op = data->op;
++
++	if (op->base.u.blt.pixel == gc->fgPixel)
++		sna_poly_point__fill_clip_extents(drawable, gc, mode, n, pt);
++}
++
++static void
++sna_poly_point__dash_clip_boxes(DrawablePtr drawable, GCPtr gc,
++				  int mode, int n, DDXPointPtr pt)
++{
++	struct sna_fill_spans *data = sna_gc(gc)->priv;
++	struct sna_fill_op *op = data->op;
++
++	if (op->base.u.blt.pixel == gc->fgPixel)
++		sna_poly_point__fill_clip_boxes(drawable, gc, mode, n, pt);
++}
++
++static void
+ sna_fill_spans__fill(DrawablePtr drawable,
+ 		     GCPtr gc, int n,
+ 		     DDXPointPtr pt, int *width, int sorted)
+@@ -8175,16 +8208,20 @@ spans_fallback:
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill_offset;
+ 					else
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill;
++					sna_gc_ops__tmp.PolyPoint = sna_poly_point__fill;
+ 				} else {
+ 					region_maybe_clip(&data.region,
+ 							  gc->pCompositeClip);
+ 					if (RegionNil(&data.region))
+ 						return;
+ 
+-					if (region_is_singular(&data.region))
++					if (region_is_singular(&data.region)) {
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill_clip_extents;
+-					else
++						sna_gc_ops__tmp.PolyPoint = sna_poly_point__fill_clip_extents;
++					} else {
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill_clip_boxes;
++						sna_gc_ops__tmp.PolyPoint = sna_poly_point__fill_clip_boxes;
++					}
+ 				}
+ 				assert(gc->miTranslate);
+ 
+@@ -8200,16 +8237,20 @@ spans_fallback:
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__dash_offset;
+ 					else
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__dash;
++					sna_gc_ops__tmp.PolyPoint = sna_poly_point__dash;
+ 				} else {
+ 					region_maybe_clip(&data.region,
+ 							  gc->pCompositeClip);
+ 					if (RegionNil(&data.region))
+ 						return;
+ 
+-					if (region_is_singular(&data.region))
++					if (region_is_singular(&data.region)) {
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__dash_clip_extents;
+-					else
++						sna_gc_ops__tmp.PolyPoint = sna_poly_point__dash_clip_extents;
++					} else {
+ 						sna_gc_ops__tmp.FillSpans = sna_fill_spans__dash_clip_boxes;
++						sna_gc_ops__tmp.PolyPoint = sna_poly_point__dash_clip_boxes;
++					}
+ 				}
+ 				assert(gc->miTranslate);
+ 
+@@ -8239,6 +8280,7 @@ spans_fallback:
+ 			 */
+ 			sna_gc_ops__tmp.FillSpans = sna_fill_spans__gpu;
+ 			sna_gc_ops__tmp.PolyFillRect = sna_poly_fill_rect__gpu;
++			sna_gc_ops__tmp.PolyPoint = sna_poly_point__gpu;
+ 			gc->ops = &sna_gc_ops__tmp;
+ 
+ 			switch (gc->lineStyle) {
+@@ -9083,16 +9125,20 @@ spans_fallback:
+ 					sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill_offset;
+ 				else
+ 					sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill;
++				sna_gc_ops__tmp.PolyPoint = sna_poly_point__fill;
+ 			} else {
+ 				region_maybe_clip(&data.region,
+ 						  gc->pCompositeClip);
+ 				if (RegionNil(&data.region))
+ 					return;
+ 
+-				if (region_is_singular(&data.region))
++				if (region_is_singular(&data.region)) {
+ 					sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill_clip_extents;
+-				else
++					sna_gc_ops__tmp.PolyPoint = sna_poly_point__fill_clip_extents;
++				} else {
+ 					sna_gc_ops__tmp.FillSpans = sna_fill_spans__fill_clip_boxes;
++					sna_gc_ops__tmp.PolyPoint = sna_poly_point__fill_clip_boxes;
++				}
+ 			}
+ 			assert(gc->miTranslate);
+ 			gc->ops = &sna_gc_ops__tmp;
+@@ -9103,6 +9149,8 @@ spans_fallback:
+ 			fill.done(data.sna, &fill);
+ 		} else {
+ 			sna_gc_ops__tmp.FillSpans = sna_fill_spans__gpu;
++			sna_gc_ops__tmp.PolyFillRect = sna_poly_fill_rect__gpu;
++			sna_gc_ops__tmp.PolyPoint = sna_poly_point__gpu;
+ 			gc->ops = &sna_gc_ops__tmp;
+ 
+ 			for (i = 0; i < n; i++)
+-- 
+1.8.3.1
+
