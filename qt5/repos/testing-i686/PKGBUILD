@@ -1,0 +1,356 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+
+pkgbase=qt5
+pkgname=('qt5-base'
+         'qt5-declarative'
+         'qt5-graphicaleffects'
+         'qt5-imageformats'
+         'qt5-jsbackend'
+         'qt5-multimedia'
+         'qt5-quick1'
+         'qt5-quickcontrols'
+         'qt5-script'
+         'qt5-sensors'
+         'qt5-serialport'
+         'qt5-svg'
+         'qt5-tools'
+         'qt5-translations'
+         'qt5-webkit'
+         'qt5-x11extras'
+         'qt5-xmlpatterns')
+pkgver=5.1.0
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://qt-project.org/'
+license=('GPL3' 'LGPL')
+makedepends=('libxcb' 'xcb-proto' 'xcb-util' 'xcb-util-image' 'xcb-util-wm' 'xcb-util-keysyms'
+            'mesa-libgl' 'at-spi2-core' 'alsa-lib' 'gstreamer0.10-base-plugins'
+            'libjpeg-turbo' 'cups' 'libpulse' 'hicolor-icon-theme' 'desktop-file-utils'
+            'postgresql-libs' 'libmariadbclient' 'sqlite' 'unixodbc' 'libfbclient'
+            'python2' 'ruby' 'gperf' 'libxslt' 'libxcomposite' 'fontconfig'
+            'libmng' 'openal' 'gtk2' 'libxkbcommon')
+groups=('qt' 'qt5')
+options=('!libtool')
+_pkgfqn="qt-everywhere-opensource-src-${pkgver}"
+source=("http://download.qt-project.org/official_releases/qt/5.1/${pkgver}/single/${_pkgfqn}.tar.xz"
+        'assistant.desktop' 'designer.desktop' 'linguist.desktop' 'qdbusviewer.desktop'
+        'use-python2.patch')
+md5sums=('44a507beebef73eb364b5a2ec7bbe090'
+         'b2897dd6a2967bccf8f10e397aafee55'
+         '9638a78e502719ef8fe5f8d10d0361a9'
+         '188da8f4c87316e730ebf1c6217bf5a0'
+         '322b419b16c75d4de0ee7ad0a246caa1'
+         '92831f79144d5cb8121915423ba47575')
+
+prepare() {
+  cd ${_pkgfqn}
+
+  sed -i "s|-O2|${CXXFLAGS}|" qtbase/mkspecs/common/{g++,gcc}-base.conf
+  sed -i "/^QMAKE_LFLAGS_RPATH/s| -Wl,-rpath,||g" qtbase/mkspecs/common/gcc-base-unix.conf
+  sed -i "/^QMAKE_LFLAGS\s/s|+=|+= ${LDFLAGS}|g" qtbase/mkspecs/common/gcc-base.conf
+
+  # Use python2 for Python 2.x
+  patch -p1 -i "${srcdir}"/use-python2.patch
+  sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+    -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
+    $(find . -name '*.py')
+}
+
+build() {
+  cd ${_pkgfqn}
+
+  export QTDIR="${srcdir}"/${_pkgfqn}
+  export LD_LIBRARY_PATH=${QTDIR}/lib:${LD_LIBRARY_PATH}
+
+  PYTHON=/usr/bin/python2 ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -bindir /usr/lib/qt/bin \
+    -docdir /usr/share/doc/qt \
+    -headerdir /usr/include/qt \
+    -archdatadir /usr/lib/qt \
+    -datadir /usr/share/qt \
+    -sysconfdir /etc/xdg \
+    -examplesdir /usr/share/doc/qt/examples \
+    -plugin-sql-{psql,mysql,sqlite,odbc,ibase} \
+    -system-sqlite \
+    -openssl-linked \
+    -nomake docs \
+    -nomake examples \
+    -nomake tests \
+    -no-rpath \
+    -optimized-qmake \
+    -dbus-linked \
+    -reduce-relocations
+
+  make
+}
+
+package_qt5-base() {
+  pkgdesc='A cross-platform application and UI framework'
+  depends=('libjpeg-turbo' 'xcb-util-keysyms' 'libgl' 'dbus' 'fontconfig' 'systemd'
+           'xcb-util-wm' 'libxrender' 'libxi' 'sqlite' 'libpng' 'xcb-util-image'
+           'icu' 'qtchooser' 'libxkbcommon')
+  optdepends=('postgresql-libs: PostgreSQL driver'
+              'libmariadbclient: MariaDB driver'
+              'unixodbc: ODBC driver'
+              'libfbclient: Firebird/iBase driver')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtbase
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  cd "${srcdir}"
+  install -D -m644 ${_pkgfqn}/qtbase/LGPL_EXCEPTION.txt \
+    ${pkgdir}/usr/share/licenses/${pkgbase}/LGPL_EXCEPTION.txt
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Fix wrong qmake path in pri file
+  sed -i "s|${srcdir}/${_pkgfqn}/qtbase|/usr|" \
+    "${pkgdir}"/usr/lib/qt/mkspecs/modules/qt_lib_bootstrap.pri
+
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+}
+
+package_qt5-declarative() {
+  pkgdesc='A cross-platform application and UI framework (QtQml, QtQuick)'
+  depends=('qt5-jsbackend' 'qt5-xmlpatterns')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtdeclarative
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+  
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+}
+
+package_qt5-jsbackend() {
+  pkgdesc='A cross-platform application and UI framework (QtV8)'
+  depends=('qt5-base')
+
+  cd ${_pkgfqn}/qtjsbackend
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt5-xmlpatterns() {
+  pkgdesc='A cross-platform application and UI framework (QtXmlPatterns)'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtxmlpatterns
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+  
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+}
+
+package_qt5-translations() {
+  pkgdesc='A cross-platform application and UI framework (Translations)'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qttranslations
+  make INSTALL_ROOT="${pkgdir}" install
+}
+
+package_qt5-multimedia() {
+  pkgdesc='A cross-platform application and UI framework (QtMultimedia)'
+  depends=('qt5-declarative' 'libpulse' 'gstreamer0.10-base' 'openal')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtmultimedia
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt5-graphicaleffects() {
+  pkgdesc='A cross-platform application and UI framework (QtGraphicalEffects)'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtgraphicaleffects
+  make INSTALL_ROOT="${pkgdir}" install
+}
+
+package_qt5-imageformats() {
+  pkgdesc='A cross-platform application and UI framework (Images plugins)'
+  depends=('qt5-base' 'libtiff' 'libmng')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtimageformats
+  make INSTALL_ROOT="${pkgdir}" install
+}
+
+package_qt5-quick1() {
+  pkgdesc='A cross-platform application and UI framework (QtDeclarative)'
+  depends=('qt5-webkit' 'qt5-script')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtquick1
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+  
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+}
+
+package_qt5-quickcontrols() {
+  pkgdesc='A cross-platform application and UI framework (QtQuick)'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtquickcontrols
+  make INSTALL_ROOT="${pkgdir}" install
+}
+
+package_qt5-script() {
+  pkgdesc='A cross-platform application and UI framework (QtScript)'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtscript
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt5-sensors() {
+  pkgdesc='A cross-platform application and UI framework (QtSensors)'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtsensors
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt5-serialport() {
+  pkgdesc='A cross-platform application and UI framework (QtSerialPort)'
+  depends=('qt5-base')
+  
+  cd ${_pkgfqn}/qtserialport
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt5-svg() {
+  pkgdesc='A cross-platform application and UI framework (QtSvg)'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtsvg
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+  
+package_qt5-tools() {
+  pkgdesc='A cross-platform application and UI framework (Development Tools, QtHelp)'
+  depends=('qt5-webkit' 'desktop-file-utils' 'qt5-translations' 'hicolor-icon-theme'
+           'xdg-utils')
+  optdepends=('qt5-doc: documentation')
+  install='qt5-tools.install'
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qttools
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # install missing icons and desktop files
+  for icon in src/linguist/linguist/images/icons/linguist-*-32.png ; do
+    size=$(echo $(basename ${icon}) | cut -d- -f2)
+    install -p -D -m644 ${icon} \
+      "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/linguist.png"
+  done
+
+  install -D -m644 src/assistant/assistant/images/assistant.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/assistant.png"
+  install -D -m644 src/assistant/assistant/images/assistant-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/assistant.png"
+  install -D -m644 src/designer/src/designer/images/designer.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/designer.png"
+  install -D -m644 src/qdbus/qdbusviewer/images/qdbusviewer.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/qdbusviewer.png"
+  install -D -m644 src/qdbus/qdbusviewer/images/qdbusviewer-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/qdbusviewer.png"
+  install -d "${pkgdir}/usr/share/applications"
+  install -m644 "${srcdir}"/{linguist,designer,assistant,qdbusviewer}.desktop \
+    "${pkgdir}/usr/share/applications/"
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+  
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done 
+}
+
+package_qt5-webkit() {
+  pkgdesc='A cross-platform application and UI framework (QtWebKit)'
+  depends=('qt5-declarative' 'gstreamer0.10-base' 'libxslt' 'libxcomposite' 'qt5-sensors')
+
+  cd ${_pkgfqn}/qtwebkit
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Fix wrong path in pc file
+  perl -pi -e "s, -L${srcdir}/?\S+,,g" "${pkgdir}"/usr/lib/pkgconfig/Qt5WebKit.pc
+}
+
+package_qt5-x11extras() {
+  pkgdesc='A cross-platform application and UI framework (QtX11Extras)'
+  depends=('qt5-base')
+  
+  cd ${_pkgfqn}/qtx11extras
+  make INSTALL_ROOT="${pkgdir}" install
+  
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
