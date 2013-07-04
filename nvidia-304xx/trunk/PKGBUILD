@@ -3,17 +3,19 @@
 
 pkgname=nvidia-304xx
 pkgver=304.88
-_extramodules=extramodules-3.9-ARCH
-pkgrel=10
+_extramodules=extramodules-3.10-ARCH
+pkgrel=11
 pkgdesc="NVIDIA drivers for linux, 304xx legacy branch"
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
-depends=('linux>=3.9' 'linux<3.10' "nvidia-304xx-utils=${pkgver}")
-makedepends=('linux-headers>=3.9' 'linux-headers<3.10')
+depends=('linux>=3.10' 'linux<3.11' "nvidia-304xx-utils=${pkgver}")
+makedepends=('linux-headers>=3.10' 'linux-headers<3.11')
 conflicts=('nvidia' 'nvidia-96xx' 'nvidia-173xx')
 license=('custom')
 install=nvidia.install
 options=(!strip)
+source=('nvidia-linux-3.10.patch')
+md5sums=('f12bb3f5829b979a0d79e68b78c2ba6a')
 
 if [ "$CARCH" = "i686" ]; then
     _arch='x86'
@@ -27,11 +29,15 @@ elif [ "$CARCH" = "x86_64" ]; then
     md5sums+=('35e0c7d30de795cccb6b95bda991fb77')
 fi
 
+
 build() {
     _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
     cd "${srcdir}"
     sh "${_pkg}.run" --extract-only
     cd "${_pkg}/kernel"
+    ### Derived from the linux-3.10 patch:
+    ### This patch removes AGP additional from /proc, I don't think this is correct but it makes it compile.
+    patch -Np2 -i ${srcdir}/nvidia-linux-3.10.patch
     make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
 }
 
@@ -43,4 +49,3 @@ package() {
     sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='${_extramodules}'/" "${startdir}/nvidia.install"
     gzip "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
 }
-
