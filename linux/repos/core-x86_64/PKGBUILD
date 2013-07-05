@@ -1,11 +1,11 @@
-# $Id$
+# $Id: PKGBUILD 189197 2013-06-29 09:29:53Z tpowa $
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.9
-pkgver=3.9.8
+pkgver=3.9.9
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -20,12 +20,11 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'linux.preset'
         'change-default-console-loglevel.patch')
 md5sums=('4348c9b6b2eb3144d601e87c19d5d909'
-         'c5f2166686a913abf550bfed8b77df27'
+         '41f350c2fd6aa14414bf39f173a8e6a3'
          'ff8c71d23fa8f635b1ae544fcc401044'
          '9daae0a53ea755e1477582b240954c5a'
          'eb14dcfd80c00852ef81ded6e826826a'
          'f3def2cefdcbb954c21d8505d23cc83c')
-
 _kernelname=${pkgbase#linux}
 
 # module.symbols md5sums
