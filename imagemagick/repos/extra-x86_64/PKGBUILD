@@ -3,17 +3,18 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.8.6.2
+pkgver=6.8.6.4
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
 makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript' \
-             'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'liblqr')
+             'openexr' 'libwmf' 'librsvg' 'libxml2' 'jasper' 'liblqr' \
+             'opencl-headers' 'libcl')
 #source=(http://www.imagemagick.org/download/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
 source=(ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz \
         perlmagick.rpath.patch)
-sha1sums=('58b09b94a59457a7c82a4db9cc29e9a5718129a2'
+sha1sums=('ab62d1777ef3ae18820bdb9f757ac65f9d2f944d'
           'e143cf9d530fabf3b58023899b5cc544ba93daec')
 
 prepare() {
@@ -29,9 +30,9 @@ build() {
     --disable-openmp --with-wmf --with-openexr --with-xml --with-lcms2 --with-jp2 \
     --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
     --with-perl --with-perl-options="INSTALLDIRS=vendor" --with-lqr --with-rsvg \
-    --without-gvc --without-djvu --without-autotrace --without-webp \
-    --without-jbig --without-fpx --without-dps --without-fftw
-  make
+    --enable-opencl --without-gvc --without-djvu --without-autotrace \
+    --without-webp --without-jbig --without-fpx --without-dps --without-fftw 
+ make
 }
 
 check() {
@@ -41,7 +42,7 @@ check() {
 
 package_imagemagick() {
   pkgdesc="An image viewing/manipulation program"
-  depends=('perl' 'libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'liblqr')
+  depends=('perl' 'libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'liblqr' 'libcl')
   optdepends=('ghostscript: for Ghostscript support' 
               'openexr: for OpenEXR support' 
               'libwmf: for WMF support' 
