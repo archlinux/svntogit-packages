@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.17.4
-pkgrel=1
+pkgrel=2
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -22,6 +22,12 @@ sha1sums=('f60b54e368fe74fde2fd4571227b0428fe0ae3cb'
 
 backup=('etc/mpd.conf')
 install=install
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	sed 's:cdio/paranoia.h:cdio/paranoia/paranoia.h:g' -i src/input/cdio_paranoia_input_plugin.c
+	sed 's:AVCODEC_MAX_AUDIO_FRAME_SIZE:192000:g' -i src/decoder/ffmpeg_decoder_plugin.c
+}
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
@@ -40,6 +46,7 @@ build() {
 package() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	make DESTDIR="${pkgdir}" install
+	install -d "${pkgdir}"/usr/lib/systemd/user
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
 	install -Dm644 doc/mpdconf.example "${pkgdir}"/etc/mpd.conf
 	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
