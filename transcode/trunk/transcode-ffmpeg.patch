@@ -1,0 +1,115 @@
+diff -Naur transcode-1.1.7-orig/encode/encode_lavc.c transcode-1.1.7/encode/encode_lavc.c
+--- transcode-1.1.7-orig/encode/encode_lavc.c	2013-07-13 18:41:25.441796991 -0400
++++ transcode-1.1.7/encode/encode_lavc.c	2013-07-13 18:45:21.042465999 -0400
+@@ -977,8 +977,6 @@
+     pd->ff_vcontext.mpeg_quant              = 0;
+     pd->ff_vcontext.rc_initial_cplx         = 0.0;
+     pd->ff_vcontext.rc_qsquish              = 1.0;
+-    pd->ff_vcontext.luma_elim_threshold     = 0;
+-    pd->ff_vcontext.chroma_elim_threshold   = 0;
+     pd->ff_vcontext.strict_std_compliance   = 0;
+     pd->ff_vcontext.dct_algo                = FF_DCT_AUTO;
+     pd->ff_vcontext.idct_algo               = FF_IDCT_AUTO;
+@@ -1150,8 +1148,6 @@
+         { "vrc_init_cplx", PCTX(rc_initial_cplx), TCCONF_TYPE_FLOAT, TCCONF_FLAG_RANGE, 0.0, 9999999.0 },
+         //  { "vrc_init_occupancy",   }, // not yet supported
+         { "vqsquish", PCTX(rc_qsquish), TCCONF_TYPE_FLOAT, TCCONF_FLAG_RANGE, 0.0, 99.0 },
+-        { "vlelim", PCTX(luma_elim_threshold), TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -99, 99 },
+-        { "vcelim", PCTX(chroma_elim_threshold), TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -99, 99 },
+         { "vstrict", PCTX(strict_std_compliance), TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -99, 99 },
+         { "vpsize", PCTX(rtp_payload_size), TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 100000000 },
+         { "dct", PCTX(dct_algo), TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 10 },
+@@ -1182,7 +1178,7 @@
+         { "intra_matrix_file", intra_matrix_file, TCCONF_TYPE_STRING, 0, 0, 0 },
+     
+         { "mv0", PAUX(flags.mv0), TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_MV0 },
+-        { "cbp", PAUX(flags.cbp), TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_CBP_RD },
++        { "cbp", PAUX(flags.cbp), TCCONF_TYPE_FLAG, 0, 0, 0x04000000 },
+         { "qpel", PAUX(flags.qpel), TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_QPEL },
+         { "alt", PAUX(flags.alt), TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_ALT_SCAN },
+         { "ilme", PAUX(flags.ilme), TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_INTERLACED_ME },
+diff -Naur transcode-1.1.7-orig/export/export_ffmpeg.c transcode-1.1.7/export/export_ffmpeg.c
+--- transcode-1.1.7-orig/export/export_ffmpeg.c	2013-07-13 18:41:25.438463695 -0400
++++ transcode-1.1.7/export/export_ffmpeg.c	2013-07-13 18:48:46.263478358 -0400
+@@ -835,8 +835,6 @@
+     lavc_venc_context->rc_strategy        = lavc_param_vrc_strategy;
+     lavc_venc_context->b_frame_strategy   = lavc_param_vb_strategy;
+     lavc_venc_context->b_quant_offset     = lavc_param_vb_qoffset;
+-    lavc_venc_context->luma_elim_threshold= lavc_param_luma_elim_threshold;
+-    lavc_venc_context->chroma_elim_threshold= lavc_param_chroma_elim_threshold;
+     lavc_venc_context->rtp_payload_size   = lavc_param_packet_size;
+ #if LIBAVCODEC_VERSION_INT < ((52<<16)+(0<<8)+0)   
+     if (lavc_param_packet_size)
+@@ -867,7 +865,6 @@
+     lavc_venc_context->context_model      = lavc_param_context;
+     lavc_venc_context->scenechange_threshold= lavc_param_sc_threshold;
+     lavc_venc_context->noise_reduction    = lavc_param_noise_reduction;
+-    lavc_venc_context->inter_threshold    = lavc_param_inter_threshold;
+     lavc_venc_context->intra_dc_precision = lavc_param_intra_dc_precision;
+     lavc_venc_context->skip_top           = lavc_param_skip_top;
+     lavc_venc_context->skip_bottom        = lavc_param_skip_bottom;
+diff -Naur transcode-1.1.7-orig/export/ffmpeg_cfg.c transcode-1.1.7/export/ffmpeg_cfg.c
+--- transcode-1.1.7-orig/export/ffmpeg_cfg.c	2013-07-13 18:41:25.438463695 -0400
++++ transcode-1.1.7/export/ffmpeg_cfg.c	2013-07-13 18:48:34.633609112 -0400
+@@ -50,8 +50,6 @@
+ //int lavc_param_vpass = 0;
+ int lavc_param_vrc_strategy = 2;
+ int lavc_param_vb_strategy = 0;
+-int lavc_param_luma_elim_threshold = 0;
+-int lavc_param_chroma_elim_threshold = 0;
+ int lavc_param_packet_size= 0;
+ int lavc_param_strict= 0;
+ int lavc_param_data_partitioning= 0;
+@@ -105,7 +103,6 @@
+ int lavc_param_mv0= 0;
+ int lavc_param_noise_reduction= 0;
+ int lavc_param_qp_rd= 0;
+-int lavc_param_inter_threshold= 0;
+ int lavc_param_sc_threshold= 0;
+ int lavc_param_ss= 0;
+ int lavc_param_top= -1;
+@@ -156,8 +153,6 @@
+     {"vrc_strategy", &lavc_param_vrc_strategy, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 2},
+     {"vb_strategy", &lavc_param_vb_strategy, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 10},
+     {"vb_qoffset", &lavc_param_vb_qoffset, TCCONF_TYPE_FLOAT, TCCONF_FLAG_RANGE, 0.0, 31.0},
+-    {"vlelim", &lavc_param_luma_elim_threshold, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -99, 99},
+-    {"vcelim", &lavc_param_chroma_elim_threshold, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -99, 99},
+     {"vpsize", &lavc_param_packet_size, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 100000000},
+     {"vstrict", &lavc_param_strict, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -99, 99},
+ //    {"keyint", &lavc_param_keyint, TCCONF_TYPE_INT, 0, 0, 0},
+@@ -215,13 +210,12 @@
+     {"context", &lavc_param_context, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 10},
+     {"intra_matrix", &lavc_param_intra_matrix, TCCONF_TYPE_STRING, 0, 0, 0},
+     {"inter_matrix", &lavc_param_inter_matrix, TCCONF_TYPE_STRING, 0, 0, 0},
+-    {"cbp", &lavc_param_cbp, TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_CBP_RD},
++    {"cbp", &lavc_param_cbp, TCCONF_TYPE_FLAG, 0, 0, 0x04000000},
+     {"mv0", &lavc_param_mv0, TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_MV0},
+     {"nr", &lavc_param_noise_reduction, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 0, 1000000},
+-    {"qprd", &lavc_param_qp_rd, TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_QP_RD},
++    {"qprd", &lavc_param_qp_rd, TCCONF_TYPE_FLAG, 0, 0, 0x08000000},
+     {"threads", &lavc_param_threads, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, 1, 16},
+     {"ilme", &lavc_param_ilme, TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_INTERLACED_ME},
+-    {"inter_threshold", &lavc_param_inter_threshold, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -1000000, 1000000},
+     {"sc_threshold", &lavc_param_sc_threshold, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -1000000, 1000000},
+     {"top", &lavc_param_top, TCCONF_TYPE_INT, TCCONF_FLAG_RANGE, -1, 1},
+     {"gmc", &lavc_param_gmc, TCCONF_TYPE_FLAG, 0, 0, CODEC_FLAG_GMC},
+diff -Naur transcode-1.1.7-orig/export/ffmpeg_cfg.h transcode-1.1.7/export/ffmpeg_cfg.h
+--- transcode-1.1.7-orig/export/ffmpeg_cfg.h	2013-07-13 18:41:25.438463695 -0400
++++ transcode-1.1.7/export/ffmpeg_cfg.h	2013-07-13 18:49:04.169944470 -0400
+@@ -29,8 +29,6 @@
+ //extern int lavc_param_vpass;
+ extern int lavc_param_vrc_strategy;
+ extern int lavc_param_vb_strategy;
+-extern int lavc_param_luma_elim_threshold;
+-extern int lavc_param_chroma_elim_threshold;
+ extern int lavc_param_packet_size;
+ extern int lavc_param_strict;
+ extern int lavc_param_data_partitioning;
+@@ -84,7 +82,6 @@
+ extern int lavc_param_mv0;
+ extern int lavc_param_noise_reduction;
+ extern int lavc_param_qp_rd;
+-extern int lavc_param_inter_threshold;
+ extern int lavc_param_sc_threshold;
+ extern int lavc_param_ss;
+ extern int lavc_param_top;
