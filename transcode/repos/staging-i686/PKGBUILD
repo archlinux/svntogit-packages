@@ -1,0 +1,73 @@
+# $Id$
+# Maintainer:
+# Contributor: Sarah Hay <sarahhay@mb.sympatico.ca>
+# Contributor: roberto <roberto@archlinux.org>
+
+pkgname=transcode
+_sripver=0.3-4
+pkgver=1.1.7
+pkgrel=10
+pkgdesc="A video/DVD ripper and encoder for the terminal/console"
+arch=('i686' 'x86_64')
+url="http://tcforge.berlios.de/"
+license=('GPL')
+depends=('gawk' 'imagemagick' 'lzo2' 'libdvdread' 'ffmpeg' 'mjpegtools'
+	 'libmpeg2' 'libxaw' 'libxv' 'a52dec')
+makedepends=('nasm')
+options=('!libtool')
+source=(https://bitbucket.org/france/transcode-tcforge/downloads/${pkgname}-${pkgver}.tar.bz2
+	http://downloads.sourceforge.net/sourceforge/subtitleripper/subtitleripper-${_sripver}.tgz
+        subtitleripper-0.3.4-linkingorder.patch subtitleripper-0.3.4-respect-ldflags.patch
+        ffmpeg-0.11.patch transcode-1.1.7-libav-9.patch 04_ffmpeg_options.patch transcode-ffmpeg.patch)
+sha1sums=('e35df68b960eb56ef0a59a4cdbed1491be56aee6'
+          'd93ff3578dd5f722c8f4ef16bc0903eec5781a0d'
+          'fa05aa1770d9350d90b7cf315aa7c4a1fd921ac7'
+          '591943a33235342a66c3df0625a164a1479c09ae'
+          '3d2dcdc23f14938e87d14cfc03000bb3b649b85e'
+          'ef1cccd35317d3a28443b654da49de731cdf1766'
+          '00938db9aebde719799c11116ed9fe85a9cc4bdd'
+          '6d1774e202cca689c4e417def982452990b8e7e4')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -p1 -i "${srcdir}/ffmpeg-0.11.patch"
+  patch -p0 -i "${srcdir}/transcode-1.1.7-libav-9.patch"
+  patch -p1 -i "${srcdir}/04_ffmpeg_options.patch"
+  patch -p1 -i "${srcdir}/transcode-ffmpeg.patch"
+
+  cd ../subtitleripper
+  patch -p1 -i "${srcdir}/subtitleripper-0.3.4-linkingorder.patch"
+  patch -p1 -i "${srcdir}/subtitleripper-0.3.4-respect-ldflags.patch"
+  sed -e 's|^\(.*lppm.*\)$|#\1|' \
+      -e 's|^\(.*D_HAVE_LIB_PPM.*\)$|#\1|' \
+      -e 's/DEFINES :=/DEFINES = -DHAVE_GETLINE/' \
+      -i Makefile
+}
+
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+    --disable-sse --disable-sse2 --disable-altivec --enable-mmx \
+    --enable-lame --enable-ogg --enable-vorbis --enable-theora \
+    --enable-libdv --enable-libxml2 --enable-v4l \
+    --enable-imagemagick --enable-libjpeg --enable-lzo --enable-mjpegtools \
+    --enable-sdl --enable-freetype2 --enable-a52 --enable-libpostproc \
+    --enable-xvid --enable-x264 --enable-alsa --enable-libmpeg2 --enable-libmpeg2convert
+  make
+
+  cd ../subtitleripper
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  cd ../subtitleripper
+  install -m 755 pgm2txt "${pkgdir}/usr/bin/"
+  install -m 755 srttool "${pkgdir}/usr/bin/"
+  install -m 755 subtitle2pgm "${pkgdir}/usr/bin/"
+  install -m 755 subtitle2vobsub "${pkgdir}/usr/bin/"
+  install -m 755 vobsub2pgm "${pkgdir}/usr/bin/"
+}
