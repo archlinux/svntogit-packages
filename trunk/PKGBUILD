@@ -3,28 +3,32 @@
 
 pkgname=libdrm
 pkgver=2.4.46
-pkgrel=1
+pkgrel=2
 pkgdesc="Userspace interface to kernel DRM services"
 arch=(i686 x86_64)
 license=('custom')
 depends=('glibc' 'libpciaccess')
-makedepends=('cairo' 'valgrind')
+makedepends=('cairo' 'valgrind' 'clang')
 replaces=('libdrm-new' 'libdrm-nouveau')
 options=('!libtool')
 url="http://dri.freedesktop.org/"
 source=(http://dri.freedesktop.org/$pkgname/$pkgname-$pkgver.tar.bz2
-        no-pthread-stubs.patch
         COPYING)
 sha256sums=('33cf320dad4e8060768714792e12643ddf6756a719d262ba7d60b39c2b2650f1'
-            'c2d2e8575dac9d08f1271b2cfa68ac3b42e69f99efe6e3a7e20064f22f7e28ab'
             '9631d4f694952e3e6ae5a05534c2e93e994e47d3413677a3a00e45c8cef6db93')
 
 build() {
   cd $pkgname-$pkgver
-  patch -Np1 -i ../no-pthread-stubs.patch
 
-  #libtoolize --force
+  # pthread is useless in Linux
+  sed -i "/pthread-stubs/d" configure.ac
   autoreconf --force --install
+  
+  # gcc 4.8 introduces graphic corruption and X crashes with nouveau cards (nv44)
+  # http://gcc.gnu.org/ml/gcc-help/2013-07/msg00103.html
+  # we use clang compiler meanwhile
+  export CC=clang
+
   ./configure --prefix=/usr --enable-udev
   make
 }
