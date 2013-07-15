@@ -2,14 +2,14 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.3.2
+pkgver=1.8.3.3
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
 license=('GPL2')
 depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.14.0' 'openssl' 'pcre')
-makedepends=('python2' 'emacs')
+makedepends=('python2' 'emacs' 'libgnome-keyring')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
             'perl-term-readkey: git svn'
@@ -18,10 +18,10 @@ optdepends=('tk: gitk and git gui'
             'perl-authen-sasl: git send-email TLS support'
             'python2: various helper scripts'
             'subversion: git svn'
-            'cvsps: git cvsimport')
+            'cvsps: git cvsimport'
+            'gnome-keyring: GNOME keyring credential helper')
 replaces=('git-core')
 provides=('git-core')
-backup=('etc/conf.d/git-daemon.conf')
 install=git.install
 source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
         "http://git-core.googlecode.com/files/git-manpages-$pkgver.tar.gz"
@@ -37,8 +37,8 @@ build() {
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
     all
 
-  cd contrib/emacs
-  make prefix=/usr
+  make -C contrib/emacs prefix=/usr
+  make -C contrib/credential/gnome-keyring
 }
 
 check() {
@@ -68,16 +68,23 @@ package() {
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
-    INSTALLDIRS=vendor DESTDIR="$pkgdir" install 
+    INSTALLDIRS=vendor DESTDIR="$pkgdir" install
 
   # bash completion
   mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
-  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git 
+  install -m644 ./contrib/completion/git-completion.bash "$pkgdir"/usr/share/bash-completion/completions/git
   # fancy git prompt
   mkdir -p "$pkgdir"/usr/share/git/
   install -m644 ./contrib/completion/git-prompt.sh "$pkgdir"/usr/share/git/git-prompt.sh
-  # more contrib stuff
-  cp -a ./contrib/* $pkgdir/usr/share/git/ 
+  # emacs
+  make -C contrib/emacs prefix=/usr DESTDIR="$pkgdir" install
+  # gnome credentials helper
+  install -m755 contrib/credential/gnome-keyring/git-credential-gnome-keyring \
+      "$pkgdir"/usr/lib/git-core/git-credential-gnome-keyring
+  make -C contrib/credential/gnome-keyring clean
+  # the rest of the contrib stuff
+  cp -a ./contrib/* $pkgdir/usr/share/git/
+
   # scripts are for python 2.x
   sed -i 's|#![ ]*/usr/bin/env python|#!/usr/bin/env python2|' \
     $(find "$pkgdir" -name '*.py') \
@@ -88,9 +95,6 @@ package() {
   sed -i 's|#![ ]*/usr/bin/python|#!/usr/bin/python2|' \
     "$pkgdir"/usr/share/git/svn-fe/svnrdump_sim.py
 
-  # emacs interface
-  cd contrib/emacs
-  make prefix=/usr DESTDIR="$pkgdir" install
 
   # how 'bout some manpages?
   for mansect in man1 man5 man7; do
@@ -107,7 +111,7 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('83b792fd06066c77e1d4911ebba2d701'
-         'f850829e1e7f32e388d2ffb61759fcc9'
+md5sums=('63f5355259bae32858dac07326fe4e07'
+         '99625bedd599c5970e2e3d2d05e8cbc3'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
