@@ -17,7 +17,7 @@ _COMPILER="GCC46"
 
 pkgname="refind-efi"
 pkgver="0.7.1"
-pkgrel="2"
+pkgrel="3"
 pkgdesc="Rod Smith's fork of rEFIt UEFI Boot Manager - built with Tianocore UDK libs"
 url="http://www.rodsbooks.com/refind/index.html"
 arch=('x86_64' 'i686')
@@ -63,10 +63,10 @@ _setup_env_vars() {
 
 _prepare_tianocore_sources() {
 	
-	_setup_env_vars
-	
 	msg "Delete old UDK BUILD dir"
 	rm -rf "${_UDK_DIR}/" || true
+	
+	msg "Create UDK BUILD dir"
 	mkdir -p "${_UDK_DIR}/"
 	
 	for _DIR_ in BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg ; do
@@ -104,10 +104,10 @@ _prepare_tianocore_sources() {
 	sed "s|TOOL_CHAIN_TAG        = MYTOOLS|TOOL_CHAIN_TAG        = ${_COMPILER}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
 	
 	msg "Fix UDK Target ARCH for rEFInd"
-	sed "s|X64|${_TIANO_ARCH}|g" -i "${_UDK_DIR}/Conf/target.txt" || true
-	sed "s|IA32|${_TIANO_ARCH}|g" -i "${_UDK_DIR}/Conf/target.txt" || true
+	sed "s|X64|${_TIANO_ARCH}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
+	sed "s|IA32|${_TIANO_ARCH}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
 	
-	chmod +x "${_UDK_DIR}/BaseTools/BuildEnv"
+	chmod 0755 "${_UDK_DIR}/BaseTools/BuildEnv"
 	
 }
 
@@ -123,6 +123,8 @@ _prepare_refind_sources() {
 }
 
 prepare() {
+	
+	_setup_env_vars
 	
 	msg "Prepare Tianocore Sources"
 	_prepare_tianocore_sources
@@ -192,17 +194,14 @@ package() {
 	
 	msg "Install rEFInd helper scripts"
 	install -d "${pkgdir}/usr/bin/"
-	install -D -m0644 "${srcdir}/refind-${pkgver}/install.sh" "${pkgdir}/usr/bin/refind-install"
-	install -D -m0644 "${srcdir}/refind-${pkgver}/mkrlconf.sh" "${pkgdir}/usr/bin/refind-mkrlconf"
-	install -D -m0644 "${srcdir}/refind-${pkgver}/mvrefind.sh" "${pkgdir}/usr/bin/refind-mvrefind"
+	install -D -m0755 "${srcdir}/refind-${pkgver}/install.sh" "${pkgdir}/usr/bin/refind-install"
+	install -D -m0755 "${srcdir}/refind-${pkgver}/mkrlconf.sh" "${pkgdir}/usr/bin/refind-mkrlconf"
+	install -D -m0755 "${srcdir}/refind-${pkgver}/mvrefind.sh" "${pkgdir}/usr/bin/refind-mvrefind"
 	install -D -m0755 "${srcdir}/refind-${pkgver}/fonts/mkfont.sh" "${pkgdir}/usr/bin/refind-mkfont"
 	
-	sed 's|#!/bin/bash|#!/usr/bin/env bash|g' -i "${pkgdir}/usr/bin"/refind-* || true
-	
-	msg "Install the rEFInd config file"
-	install -d "${pkgdir}/usr/lib/refind/config/"
-	install -D -m0644 "${srcdir}/refind-${pkgver}/refind.conf-sample" "${pkgdir}/usr/lib/refind/config/refind.conf"
-	install -D -m0644 "${srcdir}/refind_linux.conf" "${pkgdir}/usr/lib/refind/config/refind_linux.conf"
+	msg "Install the rEFInd sample config files"
+	install -D -m0644 "${srcdir}/refind-${pkgver}/refind.conf-sample" "${pkgdir}/usr/lib/refind/refind.conf-sample"
+	install -D -m0644 "${srcdir}/refind_linux.conf" "${pkgdir}/usr/lib/refind/refind_linux.conf-sample"
 	
 	msg "Install the rEFInd docs"
 	install -d "${pkgdir}/usr/share/doc/refind/html/"
@@ -233,5 +232,19 @@ package() {
 	msg "Install the rEFIt license file, since rEFInd is a fork of rEFIt"
 	install -d "${pkgdir}/usr/share/licenses/refind/"
 	install -D -m0644 "${srcdir}/refind-${pkgver}/LICENSE.txt" "${pkgdir}/usr/share/licenses/refind/LICENSE"
+	
+	msg "Use '#!/usr/bin/env bash' in all scripts"
+	sed 's|#!/bin/bash|#!/usr/bin/env bash|g' -i "${pkgdir}/usr/bin"/refind-* || true
+	
+	msg "Point refind dir paths to /usr/lib/refind/ in refind-install script"
+	sed 's|^ThisDir=.*|ThisDir="/usr/lib/refind/"|g' -i "${pkgdir}/usr/bin/refind-install"
+	sed 's|^RefindDir=.*|RefindDir="/usr/lib/refind/"|g' -i "${pkgdir}/usr/bin/refind-install"
+	sed 's|^ThisScript=.*|ThisScript="/usr/bin/refind-install"|g' -i "${pkgdir}/usr/bin/refind-install"
+	
+	msg "Setup SYMLINKS to refind dirs for the sake of refind-install script"
+	ln -s "/usr/share/refind/fonts" "${pkgdir}/usr/lib/refind/fonts"
+	ln -s "/usr/share/refind/icons" "${pkgdir}/usr/lib/refind/icons"
+	ln -s "/usr/share/refind/keys" "${pkgdir}/usr/lib/refind/keys"
+	ln -s "/usr/share/doc/refind" "${pkgdir}/usr/lib/refind/docs"
 	
 }
