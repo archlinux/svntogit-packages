@@ -16,12 +16,14 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         0001-utmp-turn-systemd-update-utmp-shutdown.service-into-.patch
         0001-journald-DO-recalculate-the-ACL-mask-but-only-if-it-.patch
         'initcpio-hook-udev'
+        'initcpio-install-systemd'
         'initcpio-install-udev'
         'initcpio-install-timestamp')
 md5sums=('a07619bb19f48164fbf0761d12fd39a8'
          '7f39f9fde1ff7b48293ed1e3d0a6c213'
          '66e3162856ded8eb7dc7383405c6e0d6'
          'e99e9189aa2f6084ac28b8ddf605aeb8'
+         'f5edda743fb0611f11f9b82ecddcf4b3'
          'fb37e34ea006c79be1c54cbb0f803414'
          'df69615503ad293c9ddf9d8b7755282d')
 
@@ -110,6 +112,7 @@ package_systemd() {
           s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
 
   # add mkinitcpio hooks
+  install -Dm644 "$srcdir/initcpio-install-systemd" "$pkgdir/usr/lib/initcpio/install/systemd"
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
   install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
