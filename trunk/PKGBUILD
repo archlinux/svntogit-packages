@@ -18,7 +18,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev')
 md5sums=('89e36f2d3ba963020b72738549954cbc'
          '2de72238ed5c0df62a7c3b6bdaf8cb7c'
-         '8bbda541cd275a82134de472e832d49d'
+         'ee6565a05be172de8f12e0a139ba8df4'
          'd83d45e67cd75cdbafb81c96a7485319')
 
 build() {
