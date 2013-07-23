@@ -1,5 +1,13 @@
 #!/bin/bash
 
+strip_quotes() {
+  local len=${#1} quotes=$'[\'"]' str=${!1}
+
+  if [[ ${str:0:1} = ${str: -1} && ${str:0:1} = $quotes ]]; then
+    declare -g "$1=${str:1:-1}"
+  fi
+}
+
 add_udev_rule() {
     # Add an udev rules file to the initcpio image. Dependencies on binaries
     # will be discovered and added.
@@ -17,11 +25,12 @@ add_udev_rule() {
 
     while IFS=, read -ra rule; do
         for pair in "${rule[@]}"; do
-            IFS='=' read -r key value <<< "$pair"
-
+            IFS=' =' read -r key value <<< "$pair"
+            strip_quotes 'value'
             case $key in
                 RUN@({program}|+)|IMPORT{program}|ENV{REMOVE_CMD})
-                    binary=${value[0]#\"}
+                    # just take the first word as the binary name
+                    binary=${value%% *}
                     if [[ ${binary:0:1} != '/' ]]; then
                         binary=$(PATH=/usr/lib/udev:/lib/udev type -P "$binary")
                     fi
@@ -29,7 +38,7 @@ add_udev_rule() {
                     ;;
             esac
         done
-    done < "$rules"
+    done <"$rules"
 }
 
 add_systemd_unit() {
@@ -63,7 +72,7 @@ add_systemd_unit() {
                 ;;
         esac
 
-    done < "$unit"
+    done <"$unit"
 
     # preserve reverse soft dependency
     for dep in {/usr,}/lib/systemd/system/*.wants/${unit##*/}; do
