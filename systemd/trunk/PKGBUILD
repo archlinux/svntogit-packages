@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=204
-pkgrel=3
+pkgver=206
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 license=('GPL2' 'LGPL2.1' 'MIT')
@@ -13,35 +13,18 @@ makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
-        0001-utmp-turn-systemd-update-utmp-shutdown.service-into-.patch
-        0001-journald-DO-recalculate-the-ACL-mask-but-only-if-it-.patch
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev'
-        'initcpio-install-timestamp')
-md5sums=('a07619bb19f48164fbf0761d12fd39a8'
-         '7f39f9fde1ff7b48293ed1e3d0a6c213'
-         '66e3162856ded8eb7dc7383405c6e0d6'
-         'e99e9189aa2f6084ac28b8ddf605aeb8'
-         'f5edda743fb0611f11f9b82ecddcf4b3'
-         'fb37e34ea006c79be1c54cbb0f803414'
-         'df69615503ad293c9ddf9d8b7755282d')
-
-prepare() {
-  cd "$pkgname-$pkgver"
-
-  patch -Np1 <"$srcdir/0001-utmp-turn-systemd-update-utmp-shutdown.service-into-.patch"
-
-  patch -Np1 <"$srcdir/0001-journald-DO-recalculate-the-ACL-mask-but-only-if-it-.patch"
-
-  autoreconf
-}
+        'initcpio-install-udev')
+md5sums=('89e36f2d3ba963020b72738549954cbc'
+         '2de72238ed5c0df62a7c3b6bdaf8cb7c'
+         '8bbda541cd275a82134de472e832d49d'
+         'd83d45e67cd75cdbafb81c96a7485319')
 
 build() {
   cd "$pkgname-$pkgver"
 
   ./configure \
-      --enable-static \
       --libexecdir=/usr/lib \
       --localstatedir=/var \
       --sysconfdir=/etc \
@@ -79,11 +62,13 @@ package_systemd() {
           etc/dbus-1/system.d/org.freedesktop.hostname1.conf
           etc/dbus-1/system.d/org.freedesktop.login1.conf
           etc/dbus-1/system.d/org.freedesktop.locale1.conf
+          etc/dbus-1/system.d/org.freedesktop.machine1.conf
           etc/dbus-1/system.d/org.freedesktop.timedate1.conf
+          etc/systemd/bootchart.conf
+          etc/systemd/journald.conf
+          etc/systemd/logind.conf
           etc/systemd/system.conf
           etc/systemd/user.conf
-          etc/systemd/logind.conf
-          etc/systemd/journald.conf
           etc/udev/udev.conf)
   install="systemd.install"
 
@@ -101,7 +86,7 @@ package_systemd() {
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
   # get rid of RPM macros
-  rm -r "$pkgdir/etc/rpm"
+  rm -r "$pkgdir/usr/lib/rpm/macros.d"
 
   # add back tmpfiles.d/legacy.conf
   install -m644 "systemd-$pkgver/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
@@ -115,7 +100,6 @@ package_systemd() {
   install -Dm644 "$srcdir/initcpio-install-systemd" "$pkgdir/usr/lib/initcpio/install/systemd"
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
-  install -Dm644 "$srcdir/initcpio-install-timestamp" "$pkgdir/usr/lib/initcpio/install/timestamp"
 
   ### split out manpages for sysvcompat
   rm -rf "$srcdir/_sysvcompat"
