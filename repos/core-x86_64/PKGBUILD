@@ -1,11 +1,11 @@
-# $Id: PKGBUILD 189197 2013-06-29 09:29:53Z tpowa $
+# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
-_srcname=linux-3.9
-pkgver=3.9.9
+_srcname=linux-3.10
+pkgver=3.10.2
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
@@ -19,25 +19,26 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         # standard config files for mkinitcpio ramdisk
         'linux.preset'
         'change-default-console-loglevel.patch')
-md5sums=('4348c9b6b2eb3144d601e87c19d5d909'
-         '41f350c2fd6aa14414bf39f173a8e6a3'
-         'ff8c71d23fa8f635b1ae544fcc401044'
-         '9daae0a53ea755e1477582b240954c5a'
+md5sums=('4f25cd5bec5f8d5a7d935b3f2ccb8481'
+         '0c94fa440515e289495909749d04aae4'
+         '480f8efb61ee244c52d881304a0ae14b'
+         'e55ce3dd5fead07eed8a6781a57c1b1b'
          'eb14dcfd80c00852ef81ded6e826826a'
          'f3def2cefdcbb954c21d8505d23cc83c')
+
 _kernelname=${pkgbase#linux}
 
 # module.symbols md5sums
 # x86_64
-# 20e4b8685a2f3a88957ae9412b905fa5  /lib/modules/3.9.7-1-ARCH/modules.symbols
+# a7b2aaafc7773e1054091cb5ca18dad5  /lib/modules/3.10.2-1-ARCH/modules.symbols
 # i686
-# 1efa064413c17189c8192c3b4f4d37c7  /lib/modules/3.9.7-1-ARCH/modules.symbols
+# 767136c9e87ce9f9b92eda46b544b263  /lib/modules/3.10.2-1-ARCH/modules.symbols 
 
 prepare() {
   cd "${srcdir}/${_srcname}"
 
   # add upstream patch
-   patch -p1 -i "${srcdir}/patch-${pkgver}"
+  patch -p1 -i "${srcdir}/patch-${pkgver}"
 
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
@@ -100,7 +101,7 @@ build() {
 }
 
 _package() {
-  pkgdesc="The ${pkgbase} kernel and modules"
+  pkgdesc="The ${pkgbase/linux/Linux} kernel and modules"
   [ "${pkgbase}" = "linux" ] && groups=('base')
   depends=('coreutils' 'linux-firmware' 'kmod' 'mkinitcpio>=0.7')
   optdepends=('crda: to set the correct wireless channels of your country')
@@ -163,7 +164,7 @@ _package() {
 }
 
 _package-headers() {
-  pkgdesc="Header files and scripts for building modules for ${pkgbase} kernel"
+  pkgdesc="Header files and scripts for building modules for ${pkgbase/linux/Linux} kernel"
   provides=("kernel26${_kernelname}-headers=${pkgver}")
   conflicts=("kernel26${_kernelname}-headers")
   replaces=("kernel26${_kernelname}-headers")
@@ -299,11 +300,11 @@ _package-headers() {
   done
 
   # remove unneeded architectures
-  rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arc,arm,arm26,avr32,blackfin,c6x,cris,frv,h8300,hexagon,ia64,m32r,m68k,m68knommu,metag,mips,microblaze,mn10300,openrisc,parisc,powerpc,ppc,s390,score,sh,sh64,sparc,sparc64,tile,unicore32,um,v850,xtensa}
+  rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arc,arm,arm26,arm64,avr32,blackfin,c6x,cris,frv,h8300,hexagon,ia64,m32r,m68k,m68knommu,metag,mips,microblaze,mn10300,openrisc,parisc,powerpc,ppc,s390,score,sh,sh64,sparc,sparc64,tile,unicore32,um,v850,xtensa}
 }
 
 _package-docs() {
-  pkgdesc="Kernel hackers manual - HTML documentation that comes with the ${pkgbase} kernel"
+  pkgdesc="Kernel hackers manual - HTML documentation that comes with the ${pkgbase/linux/Linux} kernel"
   provides=("kernel26${_kernelname}-docs=${pkgver}")
   conflicts=("kernel26${_kernelname}-docs")
   replaces=("kernel26${_kernelname}-docs")
