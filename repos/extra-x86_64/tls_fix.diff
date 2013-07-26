@@ -1,0 +1,32 @@
+diff --git a/lib/gnutls_cipher.c b/lib/gnutls_cipher.c
+index 198cb34..3caa5ac 100644
+--- a/lib/gnutls_cipher.c
++++ b/lib/gnutls_cipher.c
+@@ -710,7 +710,11 @@ ciphertext_to_compressed (gnutls_session_t session,
+         return gnutls_assert_val(ret);
+ 
+       if (unlikely((unsigned)length_to_decrypt > compressed->size))
+-        return gnutls_assert_val(GNUTLS_E_DECRYPTION_FAILED);
++        {
++          _gnutls_audit_log(session, "Received %u bytes, while expecting less than %u\n",
++                    (unsigned int)length_to_decrypt, (unsigned int)compressed->size);
++          return gnutls_assert_val(GNUTLS_E_DECRYPTION_FAILED);
++        }
+ 
+       ret =
+            _gnutls_auth_cipher_decrypt2 (&params->read.cipher_state,
+diff --git a/lib/gnutls_record.c b/lib/gnutls_record.c
+index 993ddb9..4795711 100644
+--- a/lib/gnutls_record.c
++++ b/lib/gnutls_record.c
+@@ -1193,8 +1193,8 @@ begin:
+   /* We allocate the maximum possible to allow few compressed bytes to expand to a
+    * full record.
+    */
+-  decrypted = _mbuffer_alloc(MAX_RECORD_RECV_SIZE(session), 
+-                             MAX_RECORD_RECV_SIZE(session));
++  t.size = _gnutls_get_max_decrypted_data(session);
++  decrypted = _mbuffer_alloc(t.size, t.size);
+   if (decrypted == NULL)
+     return gnutls_assert_val(GNUTLS_E_MEMORY_ERROR);
+ 
