@@ -1,0 +1,69 @@
+diff --git c/panels/power/cc-power-panel.c i/panels/power/cc-power-panel.c
+index d70496a..af71db9 100644
+--- c/panels/power/cc-power-panel.c
++++ i/panels/power/cc-power-panel.c
+@@ -70,6 +70,7 @@ struct _CcPowerPanelPrivate
+   GCancellable  *cancellable;
+   GtkBuilder    *builder;
+   UpClient      *up_client;
++  GDBusProxy    *logind_proxy;
+   GDBusProxy    *screen_proxy;
+   gboolean       has_batteries;
+ 
+@@ -137,6 +138,7 @@ cc_power_panel_dispose (GObject *object)
+     }
+   g_clear_object (&priv->builder);
+   g_clear_object (&priv->screen_proxy);
++  g_clear_object (&priv->logind_proxy);
+   g_clear_object (&priv->up_client);
+ #ifdef HAVE_BLUETOOTH
+   g_clear_object (&priv->bt_client);
+@@ -1737,6 +1739,7 @@ add_automatic_suspend_section (CcPowerPanel *self)
+   GtkWidget *dialog;
+   GtkWidget *combo;
+   GtkCellRenderer *cell;
++  GVariant *result;
+ 
+   /* The default values for these settings are unfortunate for us;
+    * timeout == 0, action == suspend means 'do nothing' - just
+@@ -1820,7 +1823,23 @@ add_automatic_suspend_section (CcPowerPanel *self)
+   gtk_widget_set_margin_bottom (label, 6);
+   gtk_box_pack_start (GTK_BOX (box), label, TRUE, TRUE, 0);
+ 
+-  if (up_client_get_can_hibernate (self->priv->up_client))
++  value = 0;
++  result = g_dbus_proxy_call_sync (self->priv->logind_proxy,
++                                   "CanHibernate",
++                                   NULL,
++                                   G_DBUS_CALL_FLAGS_NONE,
++                                   -1,
++                                   NULL,
++                                   NULL);
++  if (result)
++    {
++      g_variant_get (result, "(s)", &s);
++      if (g_strcmp0 (s, "yes") == 0)
++        value = 1;
++      g_variant_unref(result);
++    }
++
++  if (value)
+     {
+       model = (GtkTreeModel*)gtk_builder_get_object (priv->builder, "liststore_critical");
+       priv->critical_battery_combo = sw = gtk_combo_box_new_with_model (model);
+@@ -2070,6 +2089,15 @@ cc_power_panel_init (CcPowerPanel *self)
+                             got_screen_proxy_cb,
+                             self);
+ 
++  priv->logind_proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
++                                                      G_DBUS_PROXY_FLAGS_NONE,
++                                                      NULL,
++                                                      "org.freedesktop.login1",
++                                                      "/org/freedesktop/login1",
++                                                      "org.freedesktop.login1.Manager",
++                                                      NULL,
++                                                      &error);
++
+   priv->up_client = up_client_new ();
+ 
+   priv->gsd_settings = g_settings_new ("org.gnome.settings-daemon.plugins.power");
