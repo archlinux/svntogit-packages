@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: kevin <kevin@archlinux.org>
+
+pkgname=ntp
+pkgver=4.2.6.p5
+_realver=4.2.6p5
+pkgrel=16
+pkgdesc='Network Time Protocol reference implementation'
+url='http://www.ntp.org/'
+license=('custom')
+arch=('i686' 'x86_64')
+makedepends=('perl-html-parser')
+depends=('openssl' 'libcap' 'libedit')
+backup=('etc/ntp.conf')
+source=("http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${_realver}.tar.gz"
+        'ntp.conf'
+        'ntpd.service'
+        'ntpdate.service')
+sha1sums=('4a5353a4791b6f4315a66c28d504ec6c7926b192'
+          'd3496dbeb7d531dd6ab071dbce3262c3c9618d8b'
+          'ff8370719f003f184563b7d6068c03086678482f'
+          '0cb9dbd285e2e8ac51ff47dee08af69e12a09855'
+)
+
+install=install
+
+build() {
+	cd "${srcdir}/${pkgname}-${_realver}"
+
+	./configure \
+		--prefix=/usr \
+		--mandir=/usr/share/man \
+		--enable-linuxcaps \
+		--enable-ntp-signd \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${_realver}"
+
+	make DESTDIR="${pkgdir}" install
+
+	rmdir "${pkgdir}"/usr/{lib,sbin}
+	install -d -o 87 "${pkgdir}"/var/lib/ntp
+	install -Dm644 ../ntp.conf "${pkgdir}"/etc/ntp.conf
+	install -Dm644 ../ntpd.service "${pkgdir}"/usr/lib/systemd/system/ntpd.service
+	install -Dm644 ../ntpdate.service "${pkgdir}"/usr/lib/systemd/system/ntpdate.service
+	install -Dm644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	
+	cd html
+	../scripts/html2man
+	install -d "${pkgdir}"/usr/share/man
+	mv man/man* "${pkgdir}"/usr/share/man
+	mv "${pkgdir}/usr/share/man/man8/ntpd.8" "${pkgdir}/usr/share/man/man8/ntp-ntpd.8" # we should ditch openntpd
+
+	install -dm755 "${pkgdir}/usr/lib/systemd/ntp-units.d"
+	echo 'ntpd.service' > "${pkgdir}/usr/lib/systemd/ntp-units.d/${pkgname}.list"
+}
