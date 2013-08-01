@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.17.4
-pkgrel=3
+pkgrel=4
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
