@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.17.4
-pkgrel=4
+pkgrel=5
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -37,6 +37,7 @@ build() {
 		--enable-jack \
 		--enable-lastfm \
 		--enable-soundcloud \
+		--enable-pipe-output \
 		--enable-pulse \
 		--disable-sidplay \
 		--with-systemdsystemunitdir=/usr/lib/systemd/system
