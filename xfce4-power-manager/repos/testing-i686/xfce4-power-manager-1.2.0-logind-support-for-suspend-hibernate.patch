@@ -1,0 +1,156 @@
+From 244d0f09561eace29cbef819c2deb55b13701e25 Mon Sep 17 00:00:00 2001
+From: Mikhail Efremov <sem@altlinux.org>
+Date: Mon, 8 Apr 2013 21:04:30 +0400
+Subject: [PATCH] Add systemd-logind support for suspend/hibernate.
+
+---
+ configure.ac.in         | 20 +++++++++++++++++
+ src/xfpm-power-common.h |  8 +++++++
+ src/xfpm-power.c        | 57 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 84 insertions(+), 1 deletion(-)
+
+diff --git a/src/xfpm-power-common.h b/src/xfpm-power-common.h
+index 1040aed..11eaedc 100644
+--- a/src/xfpm-power-common.h
++++ b/src/xfpm-power-common.h
+@@ -33,9 +33,17 @@
+ #define UPOWER_PATH_WAKEUPS   "/org/freedesktop/UPower/Wakeups"
+ #define UPOWER_IFACE_WAKEUPS  "org.freedesktop.UPower.Wakeups"
+ 
++#ifdef WITH_SLEEP_MANAGER_UPOWER
+ #define POLKIT_AUTH_SUSPEND   "org.freedesktop.upower.suspend"
+ #define	POLKIT_AUTH_HIBERNATE "org.freedesktop.upower.hibernate"
++#else
++#define LOGIND_NAME 	      "org.freedesktop.login1"
++#define LOGIND_PATH 	      "/org/freedesktop/login1"
++#define LOGIND_IFACE 	      "org.freedesktop.login1.Manager"
+ 
++#define POLKIT_AUTH_SUSPEND   "org.freedesktop.login1.suspend"
++#define	POLKIT_AUTH_HIBERNATE "org.freedesktop.login1.hibernate"
++#endif
+ 
+ GPtrArray 	*xfpm_power_enumerate_devices		(DBusGProxy *proxy);
+ 
+diff --git a/src/xfpm-power.c b/src/xfpm-power.c
+index 796bef8..4a91e33 100644
+--- a/src/xfpm-power.c
++++ b/src/xfpm-power.c
+@@ -72,7 +72,10 @@ struct XfpmPowerPrivate
+     
+     DBusGProxy      *proxy;
+     DBusGProxy      *proxy_prop;
+-    
++#ifndef WITH_SLEEP_MANAGER_UPOWER
++    DBusGProxy      *proxy_logind;
++#endif
++
+     GHashTable      *hash;
+     
+     XfpmConsoleKit  *console;
+@@ -153,6 +156,7 @@ xfpm_power_check_polkit_auth (XfpmPower *power)
+ }
+ #endif
+ 
++#ifdef WITH_SLEEP_MANAGER_UPOWER
+ static void
+ xfpm_power_check_pm (XfpmPower *power, GHashTable *props)
+ {
+@@ -186,6 +190,32 @@ xfpm_power_check_pm (XfpmPower *power, GHashTable *props)
+ 	power->priv->can_hibernate = ret;
+     }
+ }
++#else
++static gboolean
++xfpm_power_can_sleep_method (XfpmPower *power, const char *method)
++{
++    GError *error = NULL;
++    char *retstr = NULL;
++    gboolean ret = FALSE;
++
++    if (!dbus_g_proxy_call (power->priv->proxy_logind, method, &error,
++            G_TYPE_INVALID,
++            G_TYPE_STRING, &retstr,
++            G_TYPE_INVALID))
++    {
++        g_warning ("Unable to check %s method: %s", method, error->message);
++        g_error_free (error);
++
++        return FALSE;
++    }
++
++	if (retstr && !strcmp (retstr, "yes"))
++			ret = TRUE;
++	g_free (retstr);
++
++    return ret;
++}
++#endif
+ 
+ static void
+ xfpm_power_check_power (XfpmPower *power, GHashTable *props)
+@@ -276,7 +306,12 @@ xfpm_power_get_properties (XfpmPower *power)
+     
+     props = xfpm_power_get_interface_properties (power->priv->proxy_prop, UPOWER_IFACE);
+     
++#ifdef WITH_SLEEP_MANAGER_UPOWER
+     xfpm_power_check_pm (power, props);
++#else
++    power->priv->can_suspend = xfpm_power_can_sleep_method (power, "CanSuspend");
++    power->priv->can_hibernate = xfpm_power_can_sleep_method (power, "CanHibernate");
++#endif
+     xfpm_power_check_lid (power, props);
+     xfpm_power_check_power (power, props);
+ 
+@@ -347,9 +382,16 @@ xfpm_power_sleep (XfpmPower *power, const gchar *sleep_time, gboolean force)
+ 	xfpm_lock_screen ();
+     }
+     
++#ifdef WITH_SLEEP_MANAGER_UPOWER
+     dbus_g_proxy_call (power->priv->proxy, sleep_time, &error,
+ 		       G_TYPE_INVALID,
+ 		       G_TYPE_INVALID);
++#else
++    dbus_g_proxy_call (power->priv->proxy_logind, sleep_time, &error,
++		       G_TYPE_BOOLEAN, TRUE,
++		       G_TYPE_INVALID,
++		       G_TYPE_INVALID);
++#endif
+     
+     if ( error )
+     {
+@@ -1360,12 +1402,20 @@ xfpm_power_init (XfpmPower *power)
+ 							 UPOWER_NAME,
+ 							 UPOWER_PATH,
+ 							 DBUS_INTERFACE_PROPERTIES);
++
+     if (power->priv->proxy_prop == NULL) 
+     {
+ 	g_critical ("Unable to create proxy for %s", UPOWER_NAME);
+ 	goto out;
+     }
+     
++#ifndef WITH_SLEEP_MANAGER_UPOWER
++    power->priv->proxy_logind = dbus_g_proxy_new_for_name (power->priv->bus,
++						    LOGIND_NAME,
++						    LOGIND_PATH,
++						    LOGIND_IFACE);
++#endif
++
+     xfpm_power_get_power_devices (power);
+     xfpm_power_get_properties (power);
+ #ifdef ENABLE_POLKIT
+@@ -1467,6 +1517,11 @@ xfpm_power_finalize (GObject *object)
+     if ( power->priv->proxy_prop )
+ 	g_object_unref (power->priv->proxy_prop);
+ 
++#ifndef WITH_SLEEP_MANAGER_UPOWER
++    if ( power->priv->proxy_logind )
++	g_object_unref (power->priv->proxy_logind);
++#endif
++
+     g_hash_table_destroy (power->priv->hash);
+ 
+ #ifdef ENABLE_POLKIT
+-- 
+1.8.1.5
+
