@@ -1,0 +1,103 @@
+From daf4c9fadaf8a49198c53c039bf78980dc251a4b Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Tue, 30 Jul 2013 15:57:16 +0200
+Subject: [PATCH 1/2] linux: Use a separate lock to serialize start/stop vs
+ hotplug events
+
+Using one lock for this is a bad idea, as we should not be holding any
+locks used by the hotplug thread when trying to stop otherwise the stop
+function may wait indefinetely in pthread_join, while the event-thread
+is waiting for the lock the caller of the stop function holds.
+
+Using 2 separate locks for this should fix this deadlock, which has been
+reported here: https://bugzilla.redhat.com/show_bug.cgi?id=985484
+
+Many thanks to Chris Dickens for figuring out the cause of this deadlock!
+
+CC: Chris Dickens <christopher.a.dickens@gmail.com>
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+---
+ libusb/os/linux_usbfs.c | 24 +++++++++++++++++-------
+ libusb/version_nano.h   |  2 +-
+ 2 files changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/libusb/os/linux_usbfs.c b/libusb/os/linux_usbfs.c
+index 09288af..90e23b7 100644
+--- a/libusb/os/linux_usbfs.c
++++ b/libusb/os/linux_usbfs.c
+@@ -120,7 +120,9 @@ static int sysfs_has_descriptors = -1;
+ /* how many times have we initted (and not exited) ? */
+ static volatile int init_count = 0;
+ 
+-/* Serialize hotplug start/stop, scan-devices, event-thread, and poll */
++/* Serialize hotplug start/stop */
++usbi_mutex_static_t linux_hotplug_startstop_lock = USBI_MUTEX_INITIALIZER;
++/* Serialize scan-devices, event-thread, and poll */
+ usbi_mutex_static_t linux_hotplug_lock = USBI_MUTEX_INITIALIZER;
+ 
+ static int linux_start_event_monitor(void);
+@@ -419,7 +421,7 @@ static int op_init(struct libusb_context *ctx)
+ 	if (sysfs_has_descriptors)
+ 		usbi_dbg("sysfs has complete descriptors");
+ 
+-	usbi_mutex_static_lock(&linux_hotplug_lock);
++	usbi_mutex_static_lock(&linux_hotplug_startstop_lock);
+ 	r = LIBUSB_SUCCESS;
+ 	if (init_count == 0) {
+ 		/* start up hotplug event handler */
+@@ -433,20 +435,20 @@ static int op_init(struct libusb_context *ctx)
+ 			linux_stop_event_monitor();
+ 	} else
+ 		usbi_err(ctx, "error starting hotplug event monitor");
+-	usbi_mutex_static_unlock(&linux_hotplug_lock);
++	usbi_mutex_static_unlock(&linux_hotplug_startstop_lock);
+ 
+ 	return r;
+ }
+ 
+ static void op_exit(void)
+ {
+-	usbi_mutex_static_lock(&linux_hotplug_lock);
++	usbi_mutex_static_lock(&linux_hotplug_startstop_lock);
+ 	assert(init_count != 0);
+ 	if (!--init_count) {
+ 		/* tear down event handler */
+ 		(void)linux_stop_event_monitor();
+ 	}
+-	usbi_mutex_static_unlock(&linux_hotplug_lock);
++	usbi_mutex_static_unlock(&linux_hotplug_startstop_lock);
+ }
+ 
+ static int linux_start_event_monitor(void)
+@@ -469,11 +471,19 @@ static int linux_stop_event_monitor(void)
+ 
+ static int linux_scan_devices(struct libusb_context *ctx)
+ {
++	int ret;
++
++	usbi_mutex_static_lock(&linux_hotplug_lock);
++
+ #if defined(USE_UDEV)
+-	return linux_udev_scan_devices(ctx);
++	ret = linux_udev_scan_devices(ctx);
+ #else
+-	return linux_default_scan_devices(ctx);
++	ret = linux_default_scan_devices(ctx);
+ #endif
++
++	usbi_mutex_static_unlock(&linux_hotplug_lock);
++
++	return ret;
+ }
+ 
+ static void op_hotplug_poll(void)
+diff --git a/libusb/version_nano.h b/libusb/version_nano.h
+index ebf41e1..34e26ff 100644
+--- a/libusb/version_nano.h
++++ b/libusb/version_nano.h
+@@ -1 +1 @@
+-#define LIBUSB_NANO 10774
++#define LIBUSB_NANO 10777
+-- 
+1.8.3.1
+
