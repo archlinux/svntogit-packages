@@ -1,0 +1,58 @@
+# arg 1:  the new package version
+post_install() {
+
+  # Make sure the group and user "dovecot"+"dovenull exists on this system and have the correct values
+
+  # dovecot
+  if grep -q "^dovecot:" /etc/group &> /dev/null ; then
+    groupmod -g 76 -n dovecot dovecot &> /dev/null
+  else
+    groupadd -g 76 dovecot &> /dev/null
+  fi
+
+  if grep -q "^dovecot:" /etc/passwd 2> /dev/null ; then
+    usermod -s /sbin/nologin -c "Dovecot user" -d /var/empty -u 76 -g dovecot dovecot &> /dev/null
+  else
+    useradd -s /sbin/nologin -c "Dovecot user" -d /var/empty -u 76 -g dovecot -r dovecot &> /dev/null
+  fi 
+
+  # dovenull
+  if grep -q "^dovenull:" /etc/group &> /dev/null ; then
+    groupmod -g 74 -n dovenull dovenull &> /dev/null
+  else
+    groupadd -g 74 dovenull &> /dev/null
+  fi
+
+  if grep -q "^dovenull:" /etc/passwd 2> /dev/null ; then
+    usermod -s /sbin/nologin -c "Dovecot user for completely untrustworthy processes" -d /var/empty -u 74 -g dovenull dovenull &> /dev/null
+  else
+    useradd -s /sbin/nologin -c "Dovecot user for completely untrustworthy processes" -d /var/empty -u 74 -g dovenull -r dovenull &> /dev/null
+  fi 
+}
+
+# arg 1:  the new package version
+# arg 2:  the old package version
+post_upgrade() {
+      if [ "`vercmp $2 2.0.0`" -lt 0 ]; then
+        # important upgrade notice
+        echo "> IMPORTANT DOVECOT 2.0 UPGRADE NOTICE"
+        echo "> ------------------------------------"
+        echo "> see http://wiki2.dovecot.org/Upgrading/2.0"
+	echo "> make sure, you convert the dovecot.conf file"
+      fi
+      if [ "`vercmp $2 2.0.13-2`" -lt 0 ]; then
+        # to remove no more existant usersdirs simply remove the dovecot users and let them recreate later
+        userdel dovecot &> /dev/null
+        userdel dovenull &> /dev/null
+      fi
+    post_install $1
+}
+
+# arg 1:  the old package version
+pre_remove() {
+    userdel dovecot &> /dev/null
+    userdel dovenull &> /dev/null
+    groupdel dovecot &> /dev/null || /bin/true
+    groupdel dovenull &> /dev/null || /bin/true
+    rm -rf /var/run/dovecot/ &> /dev/null || /bin/true
+}
