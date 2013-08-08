@@ -1,6 +1,6 @@
 # Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
 
-pkgname=sdl2-ttf
+pkgname=sdl2_ttf
 pkgver=2.0.12
 pkgrel=1
 pkgdesc="A library that allows you to use TrueType fonts in your SDL applications (Version 2)"
