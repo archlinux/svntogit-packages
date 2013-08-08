@@ -9,7 +9,6 @@ url="http://www.libsdl.org"
 license=('MIT')
 depends=('sdl2' 'freetype2')
 makedepends=('cmake')
-provides=(sdl2_ttf)
 options=(!libtool)
 source=("http://www.libsdl.org/tmp/SDL_ttf/release/SDL2_ttf-${pkgver}.tar.gz")
 md5sums=('a0925e117cc5f0fb7cf2a66c7968c117')
