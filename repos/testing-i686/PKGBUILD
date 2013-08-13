@@ -4,10 +4,9 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=206
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
-license=('GPL2' 'LGPL2.1' 'MIT')
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
@@ -15,11 +14,28 @@ options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev')
+        'initcpio-install-udev'
+        0001-udev-static_node-don-t-touch-permissions-uneccessari.patch
+        0002-tmpfiles-support-passing-prefix-multiple-times.patch
+        0003-tmpfiles-introduce-exclude-prefix.patch
+        0004-tmpfiles-setup-exclude-dev-prefixes-files.patch)
 md5sums=('89e36f2d3ba963020b72738549954cbc'
          '2de72238ed5c0df62a7c3b6bdaf8cb7c'
-         'ee6565a05be172de8f12e0a139ba8df4'
-         'd83d45e67cd75cdbafb81c96a7485319')
+         '9027b31a875e74a45623954b3b23d09f'
+         'd83d45e67cd75cdbafb81c96a7485319'
+         '133232cf621ca6333beefa20173e520e'
+         '948dd905195caafa7e528c3afa4a679a'
+         '121ea2d14d19548f5e317c925e2e7482'
+         '81a65872b15d14d7ac8250e029ae0cbe')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  patch -Np1 <"$srcdir"/0001-udev-static_node-don-t-touch-permissions-uneccessari.patch
+  patch -Np1 <"$srcdir"/0002-tmpfiles-support-passing-prefix-multiple-times.patch
+  patch -Np1 <"$srcdir"/0003-tmpfiles-introduce-exclude-prefix.patch
+  patch -Np1 <"$srcdir"/0004-tmpfiles-setup-exclude-dev-prefixes-files.patch
+}
 
 build() {
   cd "$pkgname-$pkgver"
@@ -46,6 +62,7 @@ check() {
 
 package_systemd() {
   pkgdesc="system and service manager"
+  license=('GPL2' 'LGPL2.1' 'MIT')
   depends=('acl' 'bash' 'dbus-core' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
            'pam' 'util-linux' 'xz')
   provides=("libsystemd=$pkgver" 'nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver"
@@ -106,10 +123,15 @@ package_systemd() {
   install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
   mv "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
      "$srcdir"/_sysvcompat/usr/share/man/man8
+
+  # include MIT license, since it's technically custom
+  install -Dm755 "$srcdir/$pkgname-$pkgver/LICENSE.MIT" \
+      "$pkgdir/usr/share/licenses/systemd/LICENSE.MIT"
 }
 
 package_systemd-sysvcompat() {
   pkgdesc="sysvinit compat for systemd"
+  license=('GPL2')
   groups=('base')
   conflicts=('sysvinit')
   depends=('sysvinit-tools' 'systemd')
