@@ -5,8 +5,8 @@
 pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.10
-pkgver=3.10.5
-pkgrel=1
+pkgver=3.10.6
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -18,21 +18,27 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'config' 'config.x86_64'
         # standard config files for mkinitcpio ramdisk
         'linux.preset'
-        'change-default-console-loglevel.patch')
+        'change-default-console-loglevel.patch'
+        'criu-no-expert.patch'
+        '3.10.6-logitech-dj.patch'
+        '3.10.6-reset-superseed-xhci-hcd.patch')
 md5sums=('4f25cd5bec5f8d5a7d935b3f2ccb8481'
-         '6366a8d4b0429ab6836c296ba298fb0e'
-         '480f8efb61ee244c52d881304a0ae14b'
-         'e55ce3dd5fead07eed8a6781a57c1b1b'
+         'b41c06c1154592045cc2a9d88363de14'
+         '09aad29932fe0d1aa765b314800db9a8'
+         '5ffd739d5b3e7c68bf07472aaceca400'
          'eb14dcfd80c00852ef81ded6e826826a'
-         'f3def2cefdcbb954c21d8505d23cc83c')
+         'f3def2cefdcbb954c21d8505d23cc83c'
+         'd50c1ac47394e9aec637002ef3392bd1'
+         '3ff40ca684cfe719723e627e2cef7cea'
+         '31f4d721494c4d5493ed90d9c504c5c9')
 
 _kernelname=${pkgbase#linux}
 
 # module.symbols md5sums
 # x86_64
-# f99a7b90bd91bdeafe424da0677b55fb  /lib/modules/3.10.4-1-ARCH/modules.symbols
+# 884860fd5052bd487776ac78a45a1e64  /lib/modules/3.10.6-1-ARCH/modules.symbols
 # i686
-# 767136c9e87ce9f9b92eda46b544b263  /lib/modules/3.10.2-1-ARCH/modules.symbols 
+# 6883aaf585ab8468db6e672dab5ab19d  /lib/modules/3.10.6-1-ARCH/modules.symbols
 
 prepare() {
   cd "${srcdir}/${_srcname}"
@@ -47,6 +53,16 @@ prepare() {
   # remove this when a Kconfig knob is made available by upstream
   # (relevant patch sent upstream: https://lkml.org/lkml/2011/7/26/227)
   patch -Np1 -i "${srcdir}/change-default-console-loglevel.patch"
+
+  # allow criu without expert option set
+  # patch from fedora
+  patch -Np1 -i "${srcdir}/criu-no-expert.patch"
+ 
+  # fix FS#35991 - [linux] 3.10.x renders Logitech Unified Receivers useless
+  patch -Np1 -i  "${srcdir}/3.10.6-logitech-dj.patch"
+
+  # fix FS#36296 - [linux] 3.10.3 reset SuperSpeed USB using xhci_hcd
+  patch -Np1 -i  "${srcdir}/3.10.6-reset-superseed-xhci-hcd.patch"
 
   if [ "${CARCH}" = "x86_64" ]; then
     cat "${srcdir}/config.x86_64" > ./.config
