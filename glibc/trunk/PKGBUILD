@@ -5,8 +5,8 @@
 # NOTE: valgrind requires rebuilt with each major glibc version
 
 pkgname=glibc
-pkgver=2.17
-pkgrel=6
+pkgver=2.18
+pkgrel=1
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -20,35 +20,20 @@ backup=(etc/gai.conf
 options=('!strip')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
-        glibc-2.17-sync-with-linux37.patch
-        glibc-2.17-getaddrinfo-stack-overflow.patch
-        glibc-2.17-regexp-matcher-overrun.patch
         nscd.service
         nscd.tmpfiles
         locale.gen.txt
         locale-gen)
-md5sums=('87bf675c8ee523ebda4803e8e1cec638'
+md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          'SKIP'
-         'fb99380d94598cc76d793deebf630022'
-         '56d5f2c09503a348281a20ae404b7de3'
-         '200acc05961b084ee00dde919e64f82d'
-         'c1e07c0bec0fe89791bfd9d13fc85edf'
-         'bccbe5619e75cf1d97312ec3681c605c'
+         'd5fab2cd3abea65aa5ae696ea4a47d6b'
+         'da662ca76e7c8d7efbc7986ab7acea2d'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
 
 build() {
   cd ${srcdir}/${pkgname}-${pkgver}
-
-  # combination of upstream commits 318cd0b, b540704 and fc1abbe
-  patch -p1 -i ${srcdir}/glibc-2.17-sync-with-linux37.patch
-
-  # CVE-2013-1914 - upstream commit 1cef1b19
-  patch -p1 -i ${srcdir}/glibc-2.17-getaddrinfo-stack-overflow.patch
-
-  # CVE-2013-0242 - upstream commit a445af0b
-  patch -p1 -i ${srcdir}/glibc-2.17-regexp-matcher-overrun.patch
 
   cd ${srcdir}
   mkdir glibc-build
@@ -146,5 +131,5 @@ package() {
                       usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
                       usr/lib/{libdl,libm,libnsl,libresolv,librt,libutil}-*.so \
                       usr/lib/{libmemusage,libpcprofile,libSegFault}.so \
-                      usr/lib/{pt_chown,{audit,gconv}/*.so}
+                      usr/lib/{audit,gconv}/*.so
 }
