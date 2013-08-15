@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.1
-pkgrel=2
+pkgrel=3
 _snapshot=4.8-20130725
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
