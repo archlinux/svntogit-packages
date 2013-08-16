@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -20,24 +20,36 @@ backup=(etc/gai.conf
 options=('!strip')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
+        glibc-2.18-readdir_r-CVE-2013-4237.patch
+        glibc-2.18-strstr-hackfix.patch
         nscd.service
         nscd.tmpfiles
         locale.gen.txt
         locale-gen)
 md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          'SKIP'
+         '154da6bf5a5248f42a7bf5bf08e01a47'
+         '4441f6dfe7d75ced1fa75e54dd21d36e'
          'd5fab2cd3abea65aa5ae696ea4a47d6b'
          'da662ca76e7c8d7efbc7986ab7acea2d'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
 
-build() {
+prepare() {
   cd ${srcdir}/${pkgname}-${pkgver}
+  
+  # upstream commit 91ce4085
+  patch -p1 -i $srcdir/glibc-2.18-readdir_r-CVE-2013-4237.patch
+  
+  # hack fix for strstr issues on x86
+  patch -p1 -i $srcdir/glibc-2.18-strstr-hackfix.patch
 
-  cd ${srcdir}
-  mkdir glibc-build
-  cd glibc-build
+  mkdir ${srcdir}/glibc-build
+}
+
+build() {
+  cd ${srcdir}/glibc-build
 
   if [[ ${CARCH} = "i686" ]]; then
     # Hack to fix NPTL issues with Xen, only required on 32bit platforms
