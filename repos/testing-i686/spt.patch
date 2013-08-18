@@ -1,0 +1,50 @@
+diff -u -r libbsd-0.5.2-orig/src/setproctitle.c libbsd-0.5.2/src/setproctitle.c
+--- libbsd-0.5.2-orig/src/setproctitle.c	2013-06-08 18:26:04.000000000 +0200
++++ libbsd-0.5.2/src/setproctitle.c	2013-06-18 02:35:59.441393418 +0200
+@@ -86,7 +86,7 @@
+ 	if (environ != envp)
+ 		return 0;
+ 
+-	/* Make a copy of the old environ array of pointers, in case
++	/* Make a deep copy of the old environ array of pointers, in case
+ 	 * clearenv() or setenv() is implemented to free the internal
+ 	 * environ array, because we will need to access the old environ
+ 	 * contents to make the new copy. */
+@@ -94,11 +94,13 @@
+ 	envcopy = malloc(envsize);
+ 	if (envcopy == NULL)
+ 		return errno;
+-	memcpy(envcopy, envp, envsize);
++	for (i = 0; envp[i]; i++) envcopy[i] = strdup(envp[i]);
++	envcopy[i] = NULL;
+ 
+ 	error = spt_clearenv();
+ 	if (error) {
+ 		environ = envp;
++		for(i = 0; envcopy[i]; i++) free(envcopy[i]);
+ 		free(envcopy);
+ 		return error;
+ 	}
+@@ -116,18 +118,20 @@
+ 		if (error) {
+ #ifdef HAVE_CLEARENV
+ 			/* Because the old environ might not be available
+-			 * anymore we will make do with the shallow copy. */
++			 * anymore we will make do with the deep copy. */
+ 			environ = envcopy;
+ #else
+ 			environ = envp;
++			for(i = 0; envcopy[i]; i++) free(envcopy[i]);
+ 			free(envcopy);
+ #endif
+ 			return error;
+ 		}
+ 	}
+ 
+-	/* Dispose of the shallow copy, now that we've finished transfering
++	/* Dispose of the deep copy, now that we've finished transfering
+ 	 * the old environment. */
++	for(i = 0; envcopy[i]; i++) free(envcopy[i]);
+ 	free(envcopy);
+ 
+ 	return 0;
