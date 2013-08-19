@@ -4,8 +4,8 @@
 
 pkgbase=lvm2
 pkgname=('lvm2' 'device-mapper')
-pkgver=2.02.98
-pkgrel=4
+pkgver=2.02.100
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://sourceware.org/lvm2/"
 license=('GPL2' 'LGPL2.1')
@@ -21,7 +21,7 @@ source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${pkgver}.tgz{,.asc}
         lvm-monitoring.service
         lvmetad.service
         lvmetad.socket)
-sha1sums=('077425115b164c335a9930df745943e9ea666a8a'
+sha1sums=('95a4478e4a19bba2c6eb8c36b08b310a96e3944b'
           'SKIP'
           '76e83966d1bc84f9a1e30bcaff84b8b8fefbca0f'
           'ff0fdf0a3005a41acd4b36865056109effc3474b'
@@ -33,8 +33,14 @@ sha1sums=('077425115b164c335a9930df745943e9ea666a8a'
           'f857a4a63fcc604a981e56875edda91767d4f1bf'
           'fcfc265e3b10294cc4b10949a342e9db4310b186')
 
+prepare() {
+  cd LVM2.${pkgver}
+  # enable lvmetad
+  sed -i 's|use_lvmetad = 0|use_lvmetad = 1|' conf/example.conf.in
+}
+
 build() {
-  cd "${srcdir}/LVM2.${pkgver}"
+  cd LVM2.${pkgver}
   unset LDFLAGS
 
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --sbindir=/usr/bin \
@@ -51,7 +57,7 @@ package_device-mapper() {
   url="http://sourceware.org/dm/"
   depends=('glibc' 'systemd')
 
-  cd "${srcdir}/LVM2.${pkgver}"
+  cd LVM2.${pkgver}
   make DESTDIR="${pkgdir}" install_device-mapper
   # extra udev rule for device-mapper in initramfs
   install -D -m644 "${srcdir}/11-dm-initramfs.rules" "${pkgdir}/usr/lib/initcpio/udev/11-dm-initramfs.rules"
@@ -70,7 +76,7 @@ package_lvm2() {
   options=('!makeflags')
   install=lvm2.install
 
-  cd "${srcdir}/LVM2.${pkgver}"
+  cd LVM2.${pkgver}
   make DESTDIR="${pkgdir}" install_lvm2
   # install applib
   make -C liblvm DESTDIR="${pkgdir}" install
@@ -86,6 +92,4 @@ package_lvm2() {
   install -D -m644 "${srcdir}/lvmetad.socket" "${pkgdir}/usr/lib/systemd/system/lvmetad.socket"
   install -d -m755 "${pkgdir}/usr/lib/systemd/system/sockets.target.wants"
   ln -sf /usr/lib/systemd/system/lvmetad.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/lvmetad.socket"
-  # enable lvmetad
-  sed 's|use_lvmetad = 0|use_lvmetad = 1|' -i "${pkgdir}/etc/lvm/lvm.conf"
 }
