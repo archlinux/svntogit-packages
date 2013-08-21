@@ -3,7 +3,7 @@
 # Contributor: Gustavo Alvarez <sl1pkn07@gmail.com>
 
 pkgname=nacl-toolchain-newlib
-pkgver=9513
+pkgver=12029
 pkgrel=1
 _binutilsver=2.20.1
 _newlibver=1.20.0
@@ -20,16 +20,20 @@ source=(http://ftp.gnu.org/gnu/binutils/binutils-$_binutilsver.tar.bz2
         http://commondatastorage.googleapis.com/nativeclient-archive2/x86_toolchain/r$pkgver/nacltoolchain-buildscripts-r$pkgver.tar.gz
         http://commondatastorage.googleapis.com/nativeclient-archive2/x86_toolchain/r$pkgver/naclbinutils-$_binutilsver-r$pkgver.patch.bz2
         http://commondatastorage.googleapis.com/nativeclient-archive2/x86_toolchain/r$pkgver/naclnewlib-$_newlibver-r$pkgver.patch.bz2
-        http://commondatastorage.googleapis.com/nativeclient-archive2/x86_toolchain/r$pkgver/naclgcc-$_gccver-r$pkgver.patch.bz2)
+        http://commondatastorage.googleapis.com/nativeclient-archive2/x86_toolchain/r$pkgver/naclgcc-$_gccver-r$pkgver.patch.bz2
+        binutils-texinfo-r0.patch
+        gcc-texinfo-r0.patch)
 sha256sums=('71d37c96451333c5c0b84b170169fdcb138bbb27397dc06281905d9717c8ed64'
             'c644b2847244278c57bec2ddda69d8fab5a7c767f3b9af69aa7aa3da823ff692'
             '97ed664694b02b4d58ac2cafe443d02a388f9cb3645e7778843b5086a5fec040'
-            '3c3d6e63ef8caec24a9e368b72e6c94a28edc8c016da5fef73a312b4a3514909'
-            'caaefc2bf90325f152bd0998a29fcad425522a22c6ce373366c4dde2b76c5338'
-            'be9e48f8714eaadfc3349ac6d8b077050b719d16a3e7592573670cee7a3c4934'
-            'ccbc83627bc7c36f7bbe994ccffe4d51584d8812f2ed62f08528c173e06dcf85')
+            'a77912c4aac01142bd1c2f684f9933d6fcd39f0e67a1058858be50f0db18da7e'
+            '3b0e41b7923a90d611e598b31ed30062cfa3cf2fc2cbe7304e340a0acc780186'
+            '2de88079c500a694b73dab5a6a3690b2126ea0df498f1e27c5819b7d4256cb1a'
+            'c98bda783fbc9726a9d0374118b1315f4ade4fe3bb5cbc96511b7a80b385dd70'
+            '64ba7c3f5edbe33b17312ab6da6c4b9e244e47289bde796a3078bf73072a0139'
+            '7eab20b6db6a7224984fd4b5bff1742571b0429428ea2af02f83f82f3de63070')
 
-build() {
+prepare() {
   cd "$srcdir"
 
   mkdir SRC
@@ -37,9 +41,23 @@ build() {
   mv newlib-$_newlibver SRC/newlib
   mv gcc-$_gccver SRC/gcc
 
-  for _patch in *.patch; do
+  for _patch in *-r$pkgver.patch; do
     patch -d SRC -Np0 -i "$srcdir/$_patch"
   done
+
+  cd SRC
+
+  # Fix build with texinfo 5.1
+  patch -d binutils -Np1 -i "$srcdir/binutils-texinfo-r0.patch"
+  patch -d gcc -Np1 -i "$srcdir/gcc-texinfo-r0.patch"
+}
+
+build() {
+  cd "$srcdir"
+
+  CFLAGS+=" $CPPFLAGS"
+  CXXFLAGS+=" $CPPFLAGS"
+  unset CPPFLAGS
 
   make PREFIX="$srcdir/$pkgname" CANNED_REVISION="yes" build-with-newlib
 }
@@ -49,6 +67,13 @@ package() {
 
   install -d "$pkgdir/usr/lib"
   mv $pkgname "$pkgdir/usr/lib/$pkgname"
+
+  # NaCL license
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Newlib license
+  install -m644 -t "$pkgdir/usr/share/licenses/$pkgname/" \
+    SRC/newlib/COPYING.{NEWLIB,LIBGLOSS}
 }
 
 # vim:set ts=2 sw=2 et:
