@@ -1,27 +1,29 @@
 # $Id$
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
+### !!! rebuild groff from core that picks up hardcoding the GS versioned font path !!! ###
+
 pkgname=ghostscript
-pkgver=9.08
+pkgver=9.09
 pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('AGPL' 'custom')
 depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg'
-         'libtiff>=4.0.0' 'lcms' 'dbus')
-makedepends=('gtk2' 'gnutls')
+         'libtiff>=4.0.0' 'lcms2' 'dbus')
+makedepends=('gtk2' 'gnutls' 'openjpeg')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!libtool' '!makeflags')
-md5sums=('22d5c66e32ea2a4a62ce43fbf01281f2')
+md5sums=('4f47c29daae8e567ebdef842b7e0f8ea')
 
 build() {
   cd ghostscript-${pkgver}
   
   # force it to use system-libs
-  rm -rf jpeg libpng zlib jasper expat tiff lcms freetype 
+  rm -rf jpeg libpng zlib jasper expat tiff lcms lcms2 freetype openjpeg cups/libs # jbig2dec is in community
 
   ./configure --prefix=/usr \
 	--enable-dynamic \
