@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.3.4
+pkgver=1.8.4
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -86,13 +86,13 @@ package() {
   cp -a ./contrib/* $pkgdir/usr/share/git/
 
   # scripts are for python 2.x
-  sed -i 's|#![ ]*/usr/bin/env python|#!/usr/bin/env python2|' \
+  sed -i 's|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|' \
     $(find "$pkgdir" -name '*.py') \
     "$pkgdir"/usr/lib/git-core/git-p4 \
     "$pkgdir"/usr/share/git/gitview/gitview \
     "$pkgdir"/usr/share/git/remote-helpers/git-remote-bzr \
     "$pkgdir"/usr/share/git/remote-helpers/git-remote-hg
-  sed -i 's|#![ ]*/usr/bin/python|#!/usr/bin/python2|' \
+  sed -i 's|#![ ]*/usr/bin/python$|#!/usr/bin/python2|' \
     "$pkgdir"/usr/share/git/svn-fe/svnrdump_sim.py
 
 
@@ -111,7 +111,7 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('80eec3201a5d012913d287b85adaee8e'
-         '86fd812754d25201fd72c7476045dfec'
+md5sums=('355768a1c70d0cb4fedf4b598ac1375b'
+         'e3720f56e18a5ab8ee1871ac9c72ca7c'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
