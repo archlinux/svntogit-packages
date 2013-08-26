@@ -1,0 +1,245 @@
+diff --git a/src/daemon.c b/src/daemon.c
+index ec5cc82..f85050a 100644
+--- a/src/daemon.c
++++ b/src/daemon.c
+@@ -256,6 +256,13 @@ typedef struct {
+         GHashTable *logout_hash;
+ } WTmpGeneratorState;
+ 
++static void
++user_previous_login_free (UserPreviousLogin *previous_login)
++{
++        g_free (previous_login->id);
++        g_free (previous_login);
++}
++
+ static struct passwd *
+ entry_generator_wtmp (GHashTable *users,
+                       gpointer   *state)
+@@ -365,11 +372,7 @@ entry_generator_wtmp (GHashTable *users,
+ 
+                 user = g_hash_table_lookup (users, key);
+                 if (user == NULL) {
+-                        for (l = accounting->previous_logins; l != NULL; l = l->next) {
+-                                previous_login = l->data;
+-                                g_free (previous_login->id);
+-                        }
+-                        g_list_free (accounting->previous_logins);
++                        g_list_free_full (accounting->previous_logins, (GDestroyNotify) user_previous_login_free);
+                         continue;
+                 }
+ 
+@@ -384,11 +387,10 @@ entry_generator_wtmp (GHashTable *users,
+                         g_variant_builder_add (builder2, "{sv}", "type", g_variant_new_string (previous_login->id));
+                         g_variant_builder_add (builder, "(xxa{sv})", previous_login->login_time, previous_login->logout_time, builder2);
+                         g_variant_builder_unref (builder2);
+-                        g_free (previous_login->id);
+                 }
+                 g_object_set (user, "login-history", g_variant_new ("a(xxa{sv})", builder), NULL);
+                 g_variant_builder_unref (builder);
+-                g_list_free (accounting->previous_logins);
++                g_list_free_full (accounting->previous_logins, (GDestroyNotify) user_previous_login_free);
+ 
+                 user_changed (user);
+         }
+@@ -491,7 +493,7 @@ entry_generator_cachedir (GHashTable *users,
+                 key_file = g_key_file_new ();
+                 if (g_key_file_load_from_file (key_file, filename, 0, NULL))
+                         user_update_from_keyfile (user, key_file);
+-                g_key_file_free (key_file);
++                g_key_file_unref (key_file);
+                 g_free (filename);
+         }
+ 
+diff --git a/src/libaccountsservice/act-user-manager.c b/src/libaccountsservice/act-user-manager.c
+index fd660e5..cf2cbfa 100644
+--- a/src/libaccountsservice/act-user-manager.c
++++ b/src/libaccountsservice/act-user-manager.c
+@@ -1178,6 +1178,28 @@ get_current_session_id (ActUserManager *manager)
+                 return;
+         }
+ #endif
++
++        if (manager->priv->ck_manager_proxy == NULL) {
++                GError *error = NULL;
++
++                manager->priv->ck_manager_proxy = console_kit_manager_proxy_new_sync (manager->priv->connection,
++                                                                                      G_DBUS_PROXY_FLAGS_NONE,
++                                                                                      CK_NAME,
++                                                                                      CK_MANAGER_PATH,
++                                                                                      NULL,
++                                                                                      &error);
++                if (manager->priv->ck_manager_proxy == NULL) {
++                        if (error != NULL) {
++                                g_warning ("Failed to create ConsoleKit proxy: %s", error->message);
++                                g_error_free (error);
++                        } else {
++                                g_warning ("Failed to create_ConsoleKit_proxy");
++                        }
++                        unload_seat (manager);
++                        return;
++                }
++        }
++
+         console_kit_manager_call_get_current_session (manager->priv->ck_manager_proxy, NULL,
+                                                       on_get_current_session_finished,
+                                                       g_object_ref (manager));
+@@ -1933,12 +1955,13 @@ reload_systemd_sessions (ActUserManager *manager)
+ }
+ 
+ #endif
+-static void
++static gboolean
+ on_session_monitor_event (GPollableInputStream *stream,
+                           ActUserManager       *manager)
+ {
+         sd_login_monitor_flush (manager->priv->seat.session_monitor);
+         reload_systemd_sessions (manager);
++        return TRUE;
+ }
+ 
+ static void
+@@ -2535,9 +2558,13 @@ load_seat_incrementally (ActUserManager *manager)
+ static gboolean
+ load_idle (ActUserManager *manager)
+ {
++        /* The order below is important: load_seat_incrementally might
++           set "is-loaded" immediately and we thus need to call
++           load_users before it.
++        */
++        load_users (manager);
+         manager->priv->seat.state = ACT_USER_MANAGER_SEAT_STATE_UNLOADED + 1;
+         load_seat_incrementally (manager);
+-        load_users (manager);
+         manager->priv->load_id = 0;
+ 
+         return FALSE;
+@@ -2805,22 +2832,6 @@ act_user_manager_init (ActUserManager *manager)
+                           G_CALLBACK (on_user_removed_in_accounts_service),
+                           manager);
+ 
+-        manager->priv->ck_manager_proxy = console_kit_manager_proxy_new_sync (manager->priv->connection,
+-                                                                              G_DBUS_PROXY_FLAGS_NONE,
+-                                                                              CK_NAME,
+-                                                                              CK_MANAGER_PATH,
+-                                                                              NULL,
+-                                                                              &error);
+-        if (manager->priv->ck_manager_proxy == NULL) {
+-                if (error != NULL) {
+-                        g_warning ("Failed to create ConsoleKit proxy: %s", error->message);
+-                        g_error_free (error);
+-                } else {
+-                        g_warning ("Failed to create_ConsoleKit_proxy");
+-                }
+-                return;
+-        }
+-
+         manager->priv->seat.state = ACT_USER_MANAGER_SEAT_STATE_UNLOADED;
+ }
+ 
+diff --git a/src/libaccountsservice/act-user.h b/src/libaccountsservice/act-user.h
+index 31b2cc6..e2966f4 100644
+--- a/src/libaccountsservice/act-user.h
++++ b/src/libaccountsservice/act-user.h
+@@ -64,7 +64,9 @@ const char    *act_user_get_shell                 (ActUser   *user);
+ const char    *act_user_get_email                 (ActUser   *user);
+ const char    *act_user_get_location              (ActUser   *user);
+ guint          act_user_get_num_sessions          (ActUser   *user);
++guint          act_user_get_num_sessions_anywhere (ActUser   *user);
+ gboolean       act_user_is_logged_in              (ActUser   *user);
++gboolean       act_user_is_logged_in_anywhere     (ActUser   *user);
+ int            act_user_get_login_frequency       (ActUser   *user);
+ gint64         act_user_get_login_time            (ActUser   *user);
+ const GVariant*act_user_get_login_history         (ActUser   *user);
+diff --git a/src/user.c b/src/user.c
+index 5271b63..661067a 100644
+--- a/src/user.c
++++ b/src/user.c
+@@ -78,6 +78,8 @@ struct User {
+ 
+         Daemon       *daemon;
+ 
++        GKeyFile     *keyfile;
++
+         uid_t         uid;
+         gid_t         gid;
+         gchar        *user_name;
+@@ -360,6 +362,9 @@ user_update_from_keyfile (User     *user,
+             }
+         }
+ 
++        g_clear_pointer (&user->keyfile, g_key_file_unref);
++        user->keyfile = g_key_file_ref (keyfile);
++
+         g_object_thaw_notify (G_OBJECT (user));
+ }
+ 
+@@ -387,6 +392,8 @@ static void
+ user_save_to_keyfile (User     *user,
+                       GKeyFile *keyfile)
+ {
++        g_key_file_remove_group (keyfile, "User", NULL);
++
+         if (user->email)
+                 g_key_file_set_string (keyfile, "User", "Email", user->email);
+ 
+@@ -412,15 +419,13 @@ static void
+ save_extra_data (User *user)
+ {
+         gchar *filename;
+-        GKeyFile *keyfile;
+         gchar *data;
+         GError *error;
+ 
+-        keyfile = g_key_file_new ();
+-        user_save_to_keyfile (user, keyfile);
++        user_save_to_keyfile (user, user->keyfile);
+ 
+         error = NULL;
+-        data = g_key_file_to_data (keyfile, NULL, &error);
++        data = g_key_file_to_data (user->keyfile, NULL, &error);
+         if (error == NULL) {
+                 filename = g_build_filename (USERDIR,
+                                              user->user_name,
+@@ -433,7 +438,6 @@ save_extra_data (User *user)
+                            user->user_name, error->message);
+                 g_error_free (error);
+         }
+-        g_key_file_free (keyfile);
+ }
+ 
+ static void
+@@ -1816,6 +1820,8 @@ user_finalize (GObject *object)
+ 
+         user = USER (object);
+ 
++        g_clear_pointer (&user->keyfile, g_key_file_unref);
++
+         g_free (user->object_path);
+         g_free (user->user_name);
+         g_free (user->real_name);
+@@ -1829,6 +1835,9 @@ user_finalize (GObject *object)
+         g_free (user->location);
+         g_free (user->password_hint);
+ 
++	if (user->login_history)
++		g_variant_unref (user->login_history);
++
+         if (G_OBJECT_CLASS (user_parent_class)->finalize)
+                 (*G_OBJECT_CLASS (user_parent_class)->finalize) (object);
+ }
+@@ -1861,6 +1870,8 @@ user_set_property (GObject      *object,
+                 user->login_time = g_value_get_int64 (value);
+                 break;
+         case PROP_LOGIN_HISTORY:
++                if (user->login_history)
++                        g_variant_unref (user->login_history);
+                 user->login_history = g_variant_ref (g_value_get_variant (value));
+                 break;
+         case PROP_AUTOMATIC_LOGIN:
+@@ -2031,4 +2042,5 @@ user_init (User *user)
+         user->automatic_login = FALSE;
+         user->system_account = FALSE;
+         user->login_history = NULL;
++        user->keyfile = g_key_file_new ();
+ }
