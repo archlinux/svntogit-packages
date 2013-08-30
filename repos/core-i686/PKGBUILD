@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=2
+pkgrel=3
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -74,6 +74,7 @@ build() {
       --enable-kernel=2.6.32 \
       --enable-bind-now --disable-profile \
       --enable-stackguard-randomization \
+      --enable-lock-elision \
       --enable-multi-arch
 
   # build libraries with hardening disabled
