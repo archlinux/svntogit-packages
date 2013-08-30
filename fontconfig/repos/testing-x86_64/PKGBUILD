@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=fontconfig
+pkgver=2.10.94
+pkgrel=1
+pkgdesc="A library for configuring and customizing font access"
+arch=(i686 x86_64)
+url="http://www.fontconfig.org/release/"
+license=('custom')
+depends=('expat' 'freetype2')
+options=('!libtool')
+install=fontconfig.install
+source=(http://www.fontconfig.org/release/$pkgname-$pkgver.tar.bz2
+        29-replace-bitmap-fonts.conf)
+sha256sums=('bf2c8504e015a955a4dbd1cb869968209fa321b8da2e55740a8064c7a89af63c'
+            '2325c478783659e8fce79f5754119934d6ce21f81552f878b740c7b18f9fe0d6')
+
+  # a nice page to test font matching:
+  # http://zipcon.net/~swhite/docs/computers/browsers/fonttest.html
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # make sure there's no rpath trouble and sane .so versioning - FC and Gentoo do this as well
+  libtoolize -f
+  autoreconf -fi
+
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --with-templatedir=/etc/fonts/conf.avail \
+    --with-xmldir=/etc/fonts \
+    --localstatedir=/var \
+    --disable-static \
+    --with-default-fonts=/usr/share/fonts \
+    --with-add-fonts=/usr/share/fonts
+  make
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make -k check
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+
+  install -m644 "$srcdir/29-replace-bitmap-fonts.conf" "$pkgdir/etc/fonts/conf.avail"
+  ln -s ../conf.avail/29-replace-bitmap-fonts.conf \
+    "$pkgdir/etc/fonts/conf.d/29-replace-bitmap-fonts.conf"
+
+  #Install license
+  install -m755 -d "$pkgdir/usr/share/licenses/$pkgname"
+  install -m644 COPYING "$pkgdir/usr/share/licenses/$pkgname"
+}
