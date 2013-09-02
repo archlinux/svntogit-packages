@@ -4,7 +4,7 @@
 ### !!! rebuild groff from core that picks up hardcoding the GS versioned font path !!! ###
 
 pkgname=ghostscript
-pkgver=9.09
+pkgver=9.10
 pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
@@ -17,7 +17,7 @@ optdepends=('texlive-core:      needed for dvipdf'
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!libtool' '!makeflags')
-md5sums=('4f47c29daae8e567ebdef842b7e0f8ea')
+md5sums=('7179bb1ed4f6f453147e6f7e1f210ce8')
 
 build() {
   cd ghostscript-${pkgver}
