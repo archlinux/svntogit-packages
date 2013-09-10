@@ -1,49 +1,59 @@
 # $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
-# Contributor : Murtuza Akhtari <inxsible at gmail dot com>
-# Contributor: Keshav P R <skodabenz at rocketmail dot com>
+# Contributor: Murtuza Akhtari <inxsible at gmail dot com>
+# Contributor: Keshav Padram Amburay <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
 
-pkgname=efibootmgr
-pkgver=0.6.0
-pkgrel=3
-pkgdesc="Tool to modify UEFI Firmware Boot Manager Variables."
-arch=('i686' 'x86_64')
-url="http://linux.dell.com/efibootmgr/"
+pkgname="efibootmgr"
+
+_gitroot="git://github.com/vathpela/efibootmgr.git"
+_gitname="${pkgname}-pjones"
+_gitbranch="libefivars"
+
+pkgver=0.6.0.138.1132342
+pkgrel=1
+pkgdesc="Tool to modify UEFI Firmware Boot Manager Variables"
+arch=('x86_64' 'i686')
+url="https://github.com/vathpela/efibootmgr"
 license=('GPL2')
-depends=('zlib' 'pciutils')
-makedepends=()
-provides=()
-options=(strip purge docs zipman !emptydirs)
+makedepends=('git')
+depends=('pciutils' 'efivar' 'zlib')
+options=('strip' 'zipman' '!emptydirs' '!libtool')
 
-source=("http://linux.dell.com/efibootmgr/permalink/${pkgname}-${pkgver}.tar.gz"
-        "efibootmgr-tilt_slashes-func.patch"
-)
+source=("${_gitname}::git+${_gitroot}#branch=${_gitbranch}")
+sha1sums=('SKIP')
 
-build () {	
-	rm -rf ${srcdir}/efibootmgr-${pkgver}_build/ || true
+pkgver() {
+	cd "${srcdir}/${_gitname}/"
 	
-	cp -r ${srcdir}/efibootmgr-${pkgver} ${srcdir}/efibootmgr-${pkgver}_build
+	_RELEASE_MAJOR="$(grep 'RELEASE_MAJOR' "${srcdir}/${_gitname}/Makefile" | head -1 | sed -e 's|RELEASE_MAJOR := ||g')"
+	_RELEASE_MINOR="$(grep 'RELEASE_MINOR' "${srcdir}/${_gitname}/Makefile" | head -1 | sed -e 's|RELEASE_MINOR := ||g')"
+	_RELEASE_SUBLEVEL="$(grep 'RELEASE_SUBLEVEL' "${srcdir}/${_gitname}/Makefile" | head -1 | sed -e 's|RELEASE_SUBLEVEL := ||g')"
 	
-	cd ${srcdir}/efibootmgr-${pkgver}_build/
-	patch -Np1 -i ${srcdir}/efibootmgr-tilt_slashes-func.patch
-	echo
+	_ACTUAL_VER="$(echo ${_RELEASE_MAJOR}.${_RELEASE_MINOR}.${_RELEASE_SUBLEVEL} | sed 's| ||g')"
 	
-	CFLAGS= make
+	echo "${_ACTUAL_VER}.$(git rev-list --count HEAD).$(git rev-parse --short HEAD)"
+}
+
+build() {
+	
+	rm -rf "${srcdir}/${_gitname}_build/" || true
+	cp -r "${srcdir}/${_gitname}" "${srcdir}/${_gitname}_build"
+	
+	cd "${srcdir}/${_gitname}_build/"
+	
+	make EXTRA_CFLAGS="-Os"
 	echo
 	
 }
-
 
 package() {
 	
-	mkdir -p ${pkgdir}/usr/bin/
-	mkdir -p ${pkgdir}/usr/share/man/man8/
+	cd "${srcdir}/${_gitname}_build/"
 	
-	cd ${srcdir}/efibootmgr-${pkgver}_build/
+	install -d "${pkgdir}/usr/bin/"
+	install -D -m0755 "${srcdir}/${_gitname}_build/src/efibootmgr/efibootmgr" "${pkgdir}/usr/bin/efibootmgr"
 	
-	install -D -m755 ${srcdir}/efibootmgr-${pkgver}_build/src/efibootmgr/efibootmgr ${pkgdir}/usr/bin/efibootmgr
-	install -D -m644 ${srcdir}/efibootmgr-${pkgver}_build/src/man/man8/efibootmgr.8 ${pkgdir}/usr/share/man/man8/efibootmgr.8
+	install -d "${pkgdir}/usr/share/man/man8/"
+	install -D -m0644 "${srcdir}/${_gitname}_build/src/man/man8/efibootmgr.8" "${pkgdir}/usr/share/man/man8/efibootmgr.8"
 	
 }
-md5sums=('9e9a31d79e579644de83a14139b66d10'
-         '3622c0e978cf859cae60803a6b6a0c5e')
