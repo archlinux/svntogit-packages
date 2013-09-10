@@ -1,0 +1,76 @@
+commit 7c3011e0a6459c00cf9d06d74da3a32f87f1a2f6
+Author: Eike Hein <hein@kde.org>
+Date:   Mon Sep 9 23:12:45 2013 +0200
+
+    Spin the event loop before destroying the menu.
+    
+    This allows the menu implementation to complete toggling the
+    launcher before the instance is destroyed. It's extremely un-
+    fortunate that the library currently requires this careful
+    handling; see e944d7ae in kde-workspace for a note on what
+    needs to be cleaned up there.
+    
+    BUG:324661
+
+diff --git a/applets/icontasks/windowtaskitem.cpp b/applets/icontasks/windowtaskitem.cpp
+index 970c19f..61b39ef 100644
+--- a/applets/icontasks/windowtaskitem.cpp
++++ b/applets/icontasks/windowtaskitem.cpp
+@@ -406,17 +406,18 @@ void WindowTaskItem::showContextMenu(const QPoint &pos, bool showAppMenu)
+         actionList.append(configAction);
+     }
+ 
+-    TaskManager::BasicMenu menu(0, m_task.data(), &m_applet->groupManager(), actionList, showAppMenu ? getAppMenu() : QList <QAction*>());
+-    menu.adjustSize();
++    TaskManager::BasicMenu * menu = new TaskManager::BasicMenu(0, m_task.data(), &m_applet->groupManager(), actionList, showAppMenu ? getAppMenu() : QList <QAction*>());
++    menu->adjustSize();
+ 
+     if (m_applet->formFactor() != Plasma::Vertical) {
+-        menu.setMinimumWidth(size().width());
++        menu->setMinimumWidth(size().width());
+     }
+ 
+     Q_ASSERT(m_applet->containment());
+     Q_ASSERT(m_applet->containment()->corona());
+     stopWindowHoverEffect();
+-    menu.exec(pos.isNull() ? m_applet->containment()->corona()->popupPosition(this, menu.size()) : pos);
++    menu->exec(pos.isNull() ? m_applet->containment()->corona()->popupPosition(this, menu->size()) : pos);
++    menu->deleteLater();
+     delete a;
+ }
+ 
+commit b56d1552e9a8f8efe8fb8fd641126e78627c61a9
+Author: Eike Hein <hein@kde.org>
+Date:   Mon Sep 9 23:33:30 2013 +0200
+
+    Fix it for non-running items too.
+    
+    BUG:324661
+
+diff --git a/applets/icontasks/applauncheritem.cpp b/applets/icontasks/applauncheritem.cpp
+index b5f646c..f721b5a 100644
+--- a/applets/icontasks/applauncheritem.cpp
++++ b/applets/icontasks/applauncheritem.cpp
+@@ -100,17 +100,18 @@ void AppLauncherItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *e)
+         actionList.append(configAction);
+     }
+ 
+-    TaskManager::BasicMenu menu(0, m_launcher, &m_applet->groupManager(), actionList, getAppMenu());
+-    menu.adjustSize();
++    TaskManager::BasicMenu *menu = new TaskManager::BasicMenu(0, m_launcher, &m_applet->groupManager(), actionList, getAppMenu());
++    menu->adjustSize();
+ 
+     if (m_applet->formFactor() != Plasma::Vertical) {
+-        menu.setMinimumWidth(size().width());
++        menu->setMinimumWidth(size().width());
+     }
+ 
+     Q_ASSERT(m_applet->containment());
+     Q_ASSERT(m_applet->containment()->corona());
+     stopWindowHoverEffect();
+-    menu.exec(m_applet->containment()->corona()->popupPosition(this, menu.size()));
++    menu->exec(m_applet->containment()->corona()->popupPosition(this, menu->size()));
++    menu->deleteLater();
+ }
+ 
+ 
