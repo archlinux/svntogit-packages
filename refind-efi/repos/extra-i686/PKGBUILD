@@ -1,23 +1,24 @@
 # $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
-# Contributor: Keshav Padram <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+# Contributor: Keshav Padram Amburay <(the.ridikulus.rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
 
 #######
 _TIANOCORE_SVN_URL="https://svn.code.sf.net/p/edk2/code/branches/UDK2010.SR1"
 # BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg
 _TIANO_DIR_="tianocore-udk-svn"
+_TIANO_SVN_REV_="14641"
 #######
 
 #######
 _TIANOCORE_PKG="Mde"
 _TIANOCORE_TARGET="RELEASE"
 _UDK_TARGET="${_TIANOCORE_PKG}Pkg/${_TIANOCORE_PKG}Pkg.dsc"
-_COMPILER="GCC46"
+_COMPILER="GCC47"
 #######
 
 pkgname="refind-efi"
-pkgver="0.7.3"
-pkgrel="2"
+pkgver="0.7.4"
+pkgrel="1"
 pkgdesc="Rod Smith's fork of rEFIt UEFI Boot Manager - built with Tianocore UDK libs"
 url="http://www.rodsbooks.com/refind/index.html"
 arch=('x86_64' 'i686')
@@ -36,10 +37,10 @@ source=("http://downloads.sourceforge.net/refind/refind-src-${pkgver}.zip"
         'refind_linux.conf')
 
 for _DIR_ in BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg ; do
-	source+=("${_TIANO_DIR_}/${_DIR_}::svn+${_TIANOCORE_SVN_URL}/${_DIR_}")
+	source+=("${_TIANO_DIR_}_${_DIR_}::svn+${_TIANOCORE_SVN_URL}/${_DIR_}#revision=${_TIANO_SVN_REV_}")
 done
 
-sha1sums=('5e4b15202efc658e58e68e64af8a1b2c84aab175'
+sha1sums=('410d2694c5005a5312d48414df8acf8291da42a9'
           '3d53eb615c3363d45feb95b9bfbf1d5491bf1c24'
           'SKIP'
           'SKIP'
@@ -70,7 +71,7 @@ _prepare_tianocore_sources() {
 	mkdir -p "${_UDK_DIR}/"
 	
 	for _DIR_ in BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg ; do
-		mv "${srcdir}/${_DIR_}" "${_UDK_DIR}/${_DIR_}"
+		mv "${srcdir}/${_TIANO_DIR_}_${_DIR_}" "${_UDK_DIR}/${_DIR_}"
 	done
 	
 	cd "${_UDK_DIR}/"
@@ -98,6 +99,10 @@ _prepare_tianocore_sources() {
 	sed 's|DEFINE GCC_ALL_CC_FLAGS            = -g |DEFINE GCC_ALL_CC_FLAGS            = -Os -mabi=ms |g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
 	sed 's|DEFINE GCC44_ALL_CC_FLAGS            = -g |DEFINE GCC44_ALL_CC_FLAGS            = -Os -mabi=ms |g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
 	
+	msg "Fix GenFw: ERROR 3000: Invalid, refind_x64.dll bad symbol definition"
+	## http://www.mail-archive.com/edk2-devel@lists.sourceforge.net/msg03625.html
+	sed -e 's|_OBJCOPY_FLAGS      =|_OBJCOPY_FLAGS      = -R .eh_frame|g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
+	
 	msg "Fix UDK Target Platform"
 	sed "s|ACTIVE_PLATFORM       = Nt32Pkg/Nt32Pkg.dsc|ACTIVE_PLATFORM       = ${_UDK_TARGET}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
 	sed "s|TARGET                = DEBUG|TARGET                = ${_TIANOCORE_TARGET}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
@@ -119,6 +124,11 @@ _prepare_refind_sources() {
 	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
 	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano" || true
 	sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
+	
+	msg "Fix GenFw: ERROR 3000: Invalid, refind_x64.dll bad symbol definition"
+	sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
+	sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano"
+	sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
 	
 }
 
@@ -242,10 +252,3 @@ package() {
 	sed 's|^ThisScript=.*|ThisScript="/usr/bin/refind-install"|g' -i "${pkgdir}/usr/bin/refind-install"
 	
 }
-sha1sums=('baac40c10b26b337c85248aa8e2b61ab4f06f73d'
-          '3d53eb615c3363d45feb95b9bfbf1d5491bf1c24'
-          'SKIP'
-          'SKIP'
-          'SKIP'
-          'SKIP'
-          'SKIP')
