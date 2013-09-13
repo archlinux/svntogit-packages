@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=206
-pkgrel=3
+pkgver=207
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -14,31 +14,11 @@ options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev'
-        0001-udev-static_node-don-t-touch-permissions-uneccessari.patch
-        0002-tmpfiles-support-passing-prefix-multiple-times.patch
-        0003-tmpfiles-introduce-exclude-prefix.patch
-        0004-tmpfiles-setup-exclude-dev-prefixes-files.patch
-        0001-journal-fix-parsing-of-facility-in-syslog-messages.patch)
-md5sums=('89e36f2d3ba963020b72738549954cbc'
+        'initcpio-install-udev')
+md5sums=('7799f3cc9d289b8db1c1fa56ae7ecd88'
          '2de72238ed5c0df62a7c3b6bdaf8cb7c'
          '9027b31a875e74a45623954b3b23d09f'
-         'd83d45e67cd75cdbafb81c96a7485319'
-         '133232cf621ca6333beefa20173e520e'
-         '948dd905195caafa7e528c3afa4a679a'
-         '121ea2d14d19548f5e317c925e2e7482'
-         '81a65872b15d14d7ac8250e029ae0cbe'
-         'c9565efc96a3f24effdf907049af6c44')
-
-prepare() {
-  cd "$pkgname-$pkgver"
-
-  patch -Np1 <"$srcdir"/0001-udev-static_node-don-t-touch-permissions-uneccessari.patch
-  patch -Np1 <"$srcdir"/0002-tmpfiles-support-passing-prefix-multiple-times.patch
-  patch -Np1 <"$srcdir"/0003-tmpfiles-introduce-exclude-prefix.patch
-  patch -Np1 <"$srcdir"/0004-tmpfiles-setup-exclude-dev-prefixes-files.patch
-  patch -Np1 <"$srcdir"/0001-journal-fix-parsing-of-facility-in-syslog-messages.patch
-}
+         'd83d45e67cd75cdbafb81c96a7485319')
 
 build() {
   cd "$pkgname-$pkgver"
