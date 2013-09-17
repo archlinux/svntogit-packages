@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=207
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -14,11 +14,22 @@ options=('!libtool')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev')
+        'initcpio-install-udev'
+        0001-swap-fix-reverse-dependencies.patch
+        0002-swap-create-.wants-symlink-to-auto-swap-devices.patch)
 md5sums=('7799f3cc9d289b8db1c1fa56ae7ecd88'
          '2de72238ed5c0df62a7c3b6bdaf8cb7c'
          '9027b31a875e74a45623954b3b23d09f'
-         'd83d45e67cd75cdbafb81c96a7485319')
+         'd83d45e67cd75cdbafb81c96a7485319'
+         '182be4c729aaecde249b7b05b48a481f'
+         'b54fbe35e2689ac36cda9ac4a5a86f24')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  patch -Np1 <"$srcdir"/0001-swap-fix-reverse-dependencies.patch
+  patch -Np1 <"$srcdir"/0002-swap-create-.wants-symlink-to-auto-swap-devices.patch
+}
 
 build() {
   cd "$pkgname-$pkgver"
