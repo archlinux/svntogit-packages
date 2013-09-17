@@ -4,7 +4,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=6.2p2
+pkgver=6.3p1
 pkgrel=1
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
@@ -20,10 +20,10 @@ source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}
         'sshd.service'
         'sshd.socket'
         'sshd.pam')
-sha1sums=('c2b4909eba6f5ec6f9f75866c202db47f3b501ba'
+sha1sums=('70845ca79474258cab29dbefae13d93e41a83ccb'
           '6df5be396f8c593bb511a249a1453294d18a01a6'
           '6a0ff3305692cf83aca96e10f3bb51e1c26fccda'
-          '2d87de52a6b2f764180f9f67cb9747392784b4a5'
+          'ec49c6beba923e201505f5669cea48cad29014db'
           'e12fa910b26a5634e5a6ac39ce1399a132cf6796'
           'd93dca5ebda4610ff7647187f8928a3de28703f3')
 
@@ -66,7 +66,7 @@ package() {
 
 	make DESTDIR="${pkgdir}" install
 
-	ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1
+	ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1.gz
 	install -Dm644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENCE"
 
 	install -Dm644 ../sshdgenkeys.service "${pkgdir}"/usr/lib/systemd/system/sshdgenkeys.service
