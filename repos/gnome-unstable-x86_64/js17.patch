@@ -1,0 +1,46 @@
+From 8c54d0ee9c929d9141f74a0c047fed2e28347aa3 Mon Sep 17 00:00:00 2001
+From: Garrett Regier <garrettregier@gmail.com>
+Date: Sat, 27 Apr 2013 11:36:13 +0000
+Subject: Fix Gjs plugin loader
+
+The garbage collection now takes a runtime instead of a contex
+so just use Gjs's gc method to do the right thing and jsvals
+cannot be compared anymore.
+---
+diff --git a/loaders/gjs/peas-extension-gjs.c b/loaders/gjs/peas-extension-gjs.c
+index 2a71ff8..0ec418c 100644
+--- a/loaders/gjs/peas-extension-gjs.c
++++ b/loaders/gjs/peas-extension-gjs.c
+@@ -362,7 +362,7 @@ peas_extension_gjs_call (PeasExtensionWrapper *exten,
+ 
+           if (!JS_GetElement (gexten->js_context, JSVAL_TO_OBJECT (js_retval),
+                               nth_out_arg++, &js_value) ||
+-              js_value == JSVAL_VOID)
++              JSVAL_IS_VOID (js_value))
+             {
+               g_warning ("Error failed to get out argument %i", nth_out_arg);
+               return FALSE;
+diff --git a/loaders/gjs/peas-plugin-loader-gjs.c b/loaders/gjs/peas-plugin-loader-gjs.c
+index d9acfdf..8cea724 100644
+--- a/loaders/gjs/peas-plugin-loader-gjs.c
++++ b/loaders/gjs/peas-plugin-loader-gjs.c
+@@ -279,7 +279,7 @@ peas_plugin_loader_gjs_create_extension (PeasPluginLoader *loader,
+ 
+       if (!JS_GetPropertyById (js_context, ginfo->extensions,
+                                prop_name_id, &prop_extension_ctor) ||
+-          prop_extension_ctor != extension_ctor)
++          JSVAL_TO_OBJECT (prop_extension_ctor) != JSVAL_TO_OBJECT (extension_ctor))
+         continue;
+ 
+       if (!JS_IdToValue (js_context, prop_name_id, &prop_name_val) ||
+@@ -327,7 +327,7 @@ static void
+ garbage_collect (PeasPluginInfo *info,
+                  GjsInfo        *ginfo)
+ {
+-  JS_GC (gjs_context_get_native_context (ginfo->context));
++  gjs_context_gc (ginfo->context);
+ }
+ 
+ static void
+--
+cgit v0.9.2
