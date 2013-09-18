@@ -1,0 +1,86 @@
+From 54e876d3fc25ec59c58beda915a8c9d1f8d5f101 Mon Sep 17 00:00:00 2001
+From: Matthew Barnes <mbarnes@redhat.com>
+Date: Tue, 09 Jul 2013 21:06:16 +0000
+Subject: CalDAV: Add support for OAuth 2.0 authentication.
+
+---
+diff --git a/calendar/backends/caldav/e-cal-backend-caldav.c b/calendar/backends/caldav/e-cal-backend-caldav.c
+index 58c70b6..58f0654 100644
+--- a/calendar/backends/caldav/e-cal-backend-caldav.c
++++ b/calendar/backends/caldav/e-cal-backend-caldav.c
+@@ -968,6 +968,32 @@ parse_propfind_response (SoupMessage *message,
+ /* Authentication helpers for libsoup */
+ 
+ static void
++soup_authenticate_bearer (SoupSession *session,
++                          SoupMessage *message,
++                          SoupAuth *auth,
++                          ESource *source)
++{
++	gchar *access_token = NULL;
++	gint expires_in_seconds = -1;
++	GError *local_error = NULL;
++
++	e_source_get_oauth2_access_token_sync (
++		source, NULL, &access_token,
++		&expires_in_seconds, &local_error);
++
++	e_soup_auth_bearer_set_access_token (
++		E_SOUP_AUTH_BEARER (auth),
++		access_token, expires_in_seconds);
++
++	if (local_error != NULL) {
++		g_warning ("%s: %s", G_STRFUNC, local_error->message);
++		g_error_free (local_error);
++	}
++
++	g_free (access_token);
++}
++
++static void
+ soup_authenticate (SoupSession *session,
+                    SoupMessage *msg,
+                    SoupAuth *auth,
+@@ -985,8 +1011,14 @@ soup_authenticate (SoupSession *session,
+ 	extension_name = E_SOURCE_EXTENSION_AUTHENTICATION;
+ 	auth_extension = e_source_get_extension (source, extension_name);
+ 
++	if (retrying)
++		return;
++
++	if (E_IS_SOUP_AUTH_BEARER (auth)) {
++		soup_authenticate_bearer (session, msg, auth, source);
++
+ 	/* do not send same password twice, but keep it for later use */
+-	if (!retrying && cbdav->priv->password != NULL) {
++	} else if (cbdav->priv->password != NULL) {
+ 		gchar *user;
+ 
+ 		user = e_source_authentication_dup_user (auth_extension);
+@@ -5194,6 +5226,8 @@ cal_backend_caldav_constructed (GObject *object)
+ static void
+ e_cal_backend_caldav_init (ECalBackendCalDAV *cbdav)
+ {
++	SoupSessionFeature *feature;
++
+ 	cbdav->priv = E_CAL_BACKEND_CALDAV_GET_PRIVATE (cbdav);
+ 	cbdav->priv->session = soup_session_sync_new ();
+ 	g_object_set (
+@@ -5203,6 +5237,16 @@ e_cal_backend_caldav_init (ECalBackendCalDAV *cbdav)
+ 		SOUP_SESSION_SSL_USE_SYSTEM_CA_FILE, TRUE,
+ 		NULL);
+ 
++	/* XXX SoupAuthManager is public API as of libsoup 2.42, but
++	 *     this isn't worth bumping our libsoup requirement over.
++	 *     So get the SoupAuthManager GType by its type name. */
++	feature = soup_session_get_feature (
++		cbdav->priv->session,
++		g_type_from_name ("SoupAuthManager"));
++
++	/* Add the "Bearer" auth type to support OAuth 2.0. */
++	soup_session_feature_add_feature (feature, E_TYPE_SOUP_AUTH_BEARER);
++
+ 	cbdav->priv->proxy = e_proxy_new ();
+ 	e_proxy_setup_proxy (cbdav->priv->proxy);
+ 	g_signal_connect (cbdav->priv->proxy, "changed", G_CALLBACK (proxy_settings_changed), cbdav->priv);
+
