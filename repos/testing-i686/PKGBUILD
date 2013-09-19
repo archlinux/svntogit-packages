@@ -19,7 +19,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         0001-swap-fix-reverse-dependencies.patch
         0002-swap-create-.wants-symlink-to-auto-swap-devices.patch)
 md5sums=('7799f3cc9d289b8db1c1fa56ae7ecd88'
-         '58f87d1f14cef7a2b2b663bac4ef39f0'
+         '29245f7a240bfba66e2b1783b63b6b40'
          '3ded8dde31e9449567cf205c50d91c89'
          'bde43090d4ac0ef048e3eaee8202a407'
          '9eb0a46aa2a3a6d74117f9a174dbe168'
