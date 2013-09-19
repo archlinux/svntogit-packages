@@ -4,13 +4,13 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=207
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
-options=('!libtool')
+options=('!libtool' 'strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
@@ -20,7 +20,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         0002-swap-create-.wants-symlink-to-auto-swap-devices.patch)
 md5sums=('7799f3cc9d289b8db1c1fa56ae7ecd88'
          '29245f7a240bfba66e2b1783b63b6b40'
-         '3ded8dde31e9449567cf205c50d91c89'
+         '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407'
          '9eb0a46aa2a3a6d74117f9a174dbe168'
          '182be4c729aaecde249b7b05b48a481f'
@@ -36,6 +36,8 @@ prepare() {
 
 build() {
   cd "$pkgname-$pkgver"
+
+  CFLAGS+=' -g'
 
   ./configure \
       --libexecdir=/usr/lib \
