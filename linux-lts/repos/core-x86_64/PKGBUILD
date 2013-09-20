@@ -4,13 +4,13 @@
 
 pkgbase=linux-lts           # Build stock -lts kernel
 #pkgbase=linux-custom       # Build kernel with a different name
-_srcname=linux-3.0
-pkgver=3.0.96
+_srcname=linux-3.10
+pkgver=3.10.12
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
-makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils')
+makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc')
 options=('!strip')
 source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         "http://www.kernel.org/pub/linux/kernel/v3.x/patch-${pkgver}.xz"
@@ -19,28 +19,25 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         # standard config files for mkinitcpio ramdisk
         'linux-lts.preset'
         'change-default-console-loglevel.patch'
-        'i915-fix-ghost-tv-output.patch'
-        'ext4-options.patch'
-        'module-symbol-waiting-3.0.patch'
-        'module-init-wait-3.0.patch')
-md5sums=('ecf932280e2441bdd992423ef3d55f8f'
-         'f7f1899890844babcf6d1e8cbe74f2ef'
-         'a5186d7ee7b7c79fa27bbb56e2d3b823'
-         'a0a497460f41850068b3a90c073768c2'
+        'criu-no-expert.patch'
+        '3.10.6-logitech-dj.patch')
+md5sums=('4f25cd5bec5f8d5a7d935b3f2ccb8481'
+         '9bfba28fef36c6a7fc16fd896eab131b'
+         'a3c76aea1b6b976becafaac005a4464c'
+         '6c2ab6ab86ab8faa0c7333e33e0faf49'
          '232b52576a62c7a333e9fe7a1e1ca359'
          'f3def2cefdcbb954c21d8505d23cc83c'
-         '263725f20c0b9eb9c353040792d644e5'
-         'c8299cf750a84e12d60b372c8ca7e1e8'
-         '670931649c60fcb3ef2e0119ed532bd4'
-         '8a71abc4224f575008f974a099b5cf6f')
+         'd50c1ac47394e9aec637002ef3392bd1'
+         '3ff40ca684cfe719723e627e2cef7cea')
+
+_kernelname=${pkgbase#linux}
 
 # module.symbols md5sums
 # x86_64
-# f8c8d094389ce630912ecfd53e651f8f  /lib/modules/3.0.91-1-lts/modules.symbols
+# 1f1a8928d0024181f132d67b671aaf3f  /lib/modules/3.10.12-1-lts/modules.symbols
 # i686
-# 7cc7f544df89dda72aeb87a99180e4d1  /lib/modules/3.0.91-1-lts/modules.symbols
+# be10d81ba6dbaf4894f2c4c357db5529  /lib/modules/3.0.91-1-lts/modules.symbols
 
-_kernelname=${pkgbase#linux}
 
 prepare() {
   cd "${srcdir}/${_srcname}"
@@ -51,28 +48,17 @@ prepare() {
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
 
-  # Some chips detect a ghost TV output
-  # mailing list discussion: http://lists.freedesktop.org/archives/intel-gfx/2011-April/010371.html
-  # Arch Linux bug report: FS#19234
-  #
-  # It is unclear why this patch wasn't merged upstream, it was accepted,
-  # then dropped because the reasoning was unclear. However, it is clearly
-  # needed.
-  patch -Np1 -i "${srcdir}/i915-fix-ghost-tv-output.patch"
-
   # set DEFAULT_CONSOLE_LOGLEVEL to 4 (same value as the 'quiet' kernel param)
   # remove this when a Kconfig knob is made available by upstream
   # (relevant patch sent upstream: https://lkml.org/lkml/2011/7/26/227)
   patch -Np1 -i "${srcdir}/change-default-console-loglevel.patch"
 
-  # fix ext4 module to mount ext3/2 correct
-  # https://bugs.archlinux.org/task/28653
-  patch -Np1 -i "${srcdir}/ext4-options.patch"
-
-  # fix module initialisation
-  # https://bugs.archlinux.org/task/32122
-  patch -Np1 -i "${srcdir}/module-symbol-waiting-3.0.patch"
-  patch -Np1 -i "${srcdir}/module-init-wait-3.0.patch"
+  # allow criu without expert option set
+  # patch from fedora
+  patch -Np1 -i "${srcdir}/criu-no-expert.patch"
+ 
+  # fix FS#35991 - [linux] 3.10.x renders Logitech Unified Receivers useless
+  patch -Np1 -i  "${srcdir}/3.10.6-logitech-dj.patch"
 
   if [ "${CARCH}" = "x86_64" ]; then
     cat "${srcdir}/config.x86_64" > ./.config
@@ -132,7 +118,7 @@ _package() {
   optdepends=('crda: to set the correct wireless channels of your country')
   provides=("kernel26${_kernelname}=${pkgver}")
   conflicts=("kernel26${_kernelname}")
-  replaces=("kernel26${_kernelname}" "nouveau-drm${_kernelname}")
+  replaces=("kernel26${_kernelname}")
   backup=("etc/mkinitcpio.d/${pkgbase}.preset")
   install=linux-lts.install
 
@@ -152,7 +138,6 @@ _package() {
   # add vmlinux
   install -D -m644 vmlinux "${pkgdir}/usr/src/linux-${_kernver}/vmlinux"
 
-
   # set correct depmod command for install
   cp -f "${startdir}/${install}" "${startdir}/${install}.pkg"
   true && install=${install}.pkg
@@ -161,9 +146,8 @@ _package() {
     -e  "s/KERNEL_VERSION=.*/KERNEL_VERSION=${_kernver}/" \
     -i "${startdir}/${install}"
 
-  # install fallback mkinitcpio.conf file and preset file for kernel
+  # install mkinitcpio preset file for kernel
   install -D -m644 "${srcdir}/linux-lts.preset" "${pkgdir}/etc/mkinitcpio.d/${pkgbase}.preset"
-
   sed \
     -e "1s|'linux.*'|'${pkgbase}'|" \
     -e "s|ALL_kver=.*|ALL_kver=\"/boot/vmlinuz-${pkgbase}\"|" \
@@ -211,8 +195,8 @@ _package-headers() {
 
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/include"
 
-  for i in acpi asm-generic config crypto drm generated linux math-emu \
-    media mtd net pcmcia scsi sound trace video xen; do
+  for i in acpi asm-generic config crypto drm generated keys linux math-emu \
+    media net pcmcia scsi sound trace uapi video xen; do
     cp -a include/${i} "${pkgdir}/usr/src/linux-${_kernver}/include/"
   done
 
@@ -239,13 +223,22 @@ _package-headers() {
   cp arch/${KARCH}/kernel/asm-offsets.s "${pkgdir}/usr/src/linux-${_kernver}/arch/${KARCH}/kernel/"
 
   # add headers for lirc package
-  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video"
-
-  cp drivers/media/video/*.h  "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video/"
-
-  for i in bt8xx cpia2 cx25840 cx88 em28xx et61x251 pwc saa7134 sn9c102; do
-    mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video/${i}"
-    cp -a drivers/media/video/${i}/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/video/${i}"
+  # pci
+  for i in bt8xx cx88 saa7134; do
+    mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/pci/${i}"
+    cp -a drivers/media/pci/${i}/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/pci/${i}"
+  done
+  # usb
+  for i in cpia2 em28xx pwc sn9c102; do
+    mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/usb/${i}"
+    cp -a drivers/media/usb/${i}/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/usb/${i}"
+  done
+  # i2c
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/i2c"
+  cp drivers/media/i2c/*.h  "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/i2c/"
+  for i in cx25840; do
+    mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/i2c/${i}"
+    cp -a drivers/media/i2c/${i}/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/i2c/${i}"
   done
 
   # add docbook makefile
@@ -267,8 +260,8 @@ _package-headers() {
   # add dvb headers for external modules
   # in reference to:
   # http://bugs.archlinux.org/task/9912
-  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/dvb-core"
-  cp drivers/media/dvb/dvb-core/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/dvb-core/"
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb-core"
+  cp drivers/media/dvb-core/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb-core/"
   # and...
   # http://bugs.archlinux.org/task/11194
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/include/config/dvb/"
@@ -277,19 +270,19 @@ _package-headers() {
   # add dvb headers for http://mcentral.de/hg/~mrec/em28xx-new
   # in reference to:
   # http://bugs.archlinux.org/task/13146
-  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/frontends/"
-  cp drivers/media/dvb/frontends/lgdt330x.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/frontends/"
-  cp drivers/media/video/msp3400-driver.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/frontends/"
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb-frontends/"
+  cp drivers/media/dvb-frontends/lgdt330x.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb-frontends/"
+  cp drivers/media/i2c/msp3400-driver.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/i2c/"
 
   # add dvb headers
   # in reference to:
   # http://bugs.archlinux.org/task/20402
-  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/dvb-usb"
-  cp drivers/media/dvb/dvb-usb/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/dvb-usb/"
-  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/frontends"
-  cp drivers/media/dvb/frontends/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb/frontends/"
-  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/common/tuners"
-  cp drivers/media/common/tuners/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/common/tuners/"
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/usb/dvb-usb"
+  cp drivers/media/usb/dvb-usb/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/usb/dvb-usb/"
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb-frontends"
+  cp drivers/media/dvb-frontends/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/dvb-frontends/"
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/tuners"
+  cp drivers/media/tuners/*.h "${pkgdir}/usr/src/linux-${_kernver}/drivers/media/tuners/"
 
   # add xfs and shmem for aufs building
   mkdir -p "${pkgdir}/usr/src/linux-${_kernver}/fs/xfs"
@@ -318,10 +311,27 @@ _package-headers() {
   done
 
   # remove unneeded architectures
-  rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arm,arm26,avr32,blackfin,cris,frv,h8300,ia64,m32r,m68k,m68knommu,mips,microblaze,mn10300,parisc,powerpc,ppc,s390,score,sh,sh64,sparc,sparc64,tile,um,unicore32,v850,xtensa}
+  rm -rf "${pkgdir}"/usr/src/linux-${_kernver}/arch/{alpha,arc,arm,arm26,arm64,avr32,blackfin,c6x,cris,frv,h8300,hexagon,ia64,m32r,m68k,m68knommu,metag,mips,microblaze,mn10300,openrisc,parisc,powerpc,ppc,s390,score,sh,sh64,sparc,sparc64,tile,unicore32,um,v850,xtensa}
 }
 
-pkgname=("${pkgbase}" "${pkgbase}-headers")
+_package-docs() {
+  pkgdesc="Kernel hackers manual - HTML documentation that comes with the ${pkgbase/linux/Linux} kernel"
+  provides=("kernel26${_kernelname}-docs=${pkgver}")
+  conflicts=("kernel26${_kernelname}-docs")
+  replaces=("kernel26${_kernelname}-docs")
+
+  cd "${srcdir}/${_srcname}"
+
+  mkdir -p "${pkgdir}/usr/src/linux-${_kernver}"
+  cp -al Documentation "${pkgdir}/usr/src/linux-${_kernver}"
+  find "${pkgdir}" -type f -exec chmod 444 {} \;
+  find "${pkgdir}" -type d -exec chmod 755 {} \;
+
+  # remove a file already in linux package
+  rm -f "${pkgdir}/usr/src/linux-${_kernver}/Documentation/DocBook/Makefile"
+}
+
+pkgname=("${pkgbase}" "${pkgbase}-headers" "${pkgbase}-docs")
 for _p in ${pkgname[@]}; do
   eval "package_${_p}() {
     _package${_p#${pkgbase}}
