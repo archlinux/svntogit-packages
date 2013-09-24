@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer:
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=system-config-printer
+pkgver=1.4.2
+pkgrel=1
+pkgdesc="A CUPS printer configuration tool and status applet"
+url="http://cyberelk.net/tim/software/system-config-printer/"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('pycups' 'python2-dbus' 'pysmbc' 'python2-pycurl' 'dbus-glib'
+         'gnome-icon-theme' 'python2-notify' 'python2-gobject' 'gtk3')
+makedepends=('intltool' 'xmlto' 'docbook-xsl' 'desktop-file-utils')
+optdepends=('gnome-keyring: password management')
+replaces=('system-config-printer-common' 'system-config-printer-gnome')
+conflicts=('system-config-printer-common' 'system-config-printer-gnome')
+source=(http://cyberelk.net/tim/data/${pkgname}/${pkgver%*.*}/${pkgname}-${pkgver}.tar.xz{,.sig})
+md5sums=('7f6462d84056be13aadeb6e3030aad5e'
+         'SKIP')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+    -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
+    $(find . -name '*.py')
+  sed -i "s|#!/usr/bin/python|#!/usr/bin/python2|" udev/udev-add-printer
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  PYTHON=/usr/bin/python2 ./configure --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --with-udev-rules
+
+  make udevhelperdir=/usr/lib/udev
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" udevhelperdir=/usr/lib/udev \
+    udevrulesdir=/usr/lib/udev/rules.d install
+}
