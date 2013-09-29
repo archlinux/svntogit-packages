@@ -1,36 +1,46 @@
 # $Id$
-# Maintainer: Allan McRae <allan@archlinux.org>
-# Contributor: Judd Vinet <jvinet@zeroflux.org>
+# Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=wget
 pkgver=1.14
-pkgrel=2
+pkgrel=3
 pkgdesc="A network utility to retrieve files from the Web"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/wget/wget.html"
 license=('GPL3')
-depends=('openssl' 'libidn' 'pcre' 'util-linux')
+depends=('openssl' 'libidn' 'util-linux')
+checkdepends=('perl-http-daemon' 'perl-io-socket-ssl')
 optdepends=('ca-certificates: HTTPS downloads')
 backup=('etc/wgetrc')
 install=wget.install
-source=(ftp://ftp.gnu.org/gnu/${pkgname}/${pkgname}-${pkgver}.tar.xz{,.sig})
-md5sums=('316f6f59292c9098ad81fd54f658c579'
-         '3e121933d69f32fa58776bff76bcebd0')
+source=(ftp://ftp.gnu.org/gnu/${pkgname}/${pkgname}-${pkgver}.tar.xz{,.sig}
+        wget-pod-fixes.patch)
+sha1sums=('cfa0906e6f72c1c902c29b52d140c22ecdcd617e'
+          'SKIP'
+          'aae4be72657c7a8e9dbedb7109cd2d8562a325d2')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -p1 -i "${srcdir}/wget-pod-fixes.patch"
+  cat >> doc/sample.wgetrc <<EOF
+
+# default root certs location
+ca_certificate=/etc/ssl/certs/ca-certificates.crt
+EOF
+}
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-
   ./configure -with-ssl=openssl --prefix=/usr --sysconfdir=/etc --enable-nls
   make
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make check
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
-
-  cat >> "$pkgdir/etc/wgetrc" <<EOF
-
-# default root certs location
-ca_certificate=/etc/ssl/certs/ca-certificates.crt
-EOF
 }
