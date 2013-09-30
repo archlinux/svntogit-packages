@@ -4,7 +4,7 @@
 pkgbase=gtk2
 pkgname=('gtk2' 'gtk-update-icon-cache')
 pkgver=2.24.21
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.gtk.org/"
 makedepends=('atk' 'pango' 'libxcursor' 'libxinerama' 'libxrandr' 'libxi' 'libxcomposite' 'libxdamage'
@@ -12,13 +12,20 @@ makedepends=('atk' 'pango' 'libxcursor' 'libxinerama' 'libxrandr' 'libxi' 'libxc
 options=('!libtool')
 license=('LGPL')
 source=(http://ftp.gnome.org/pub/gnome/sources/gtk+/2.24/gtk+-$pkgver.tar.xz
-        xid-collision-debug.patch)
+        gtkrc xid-collision-debug.patch gtkrc-fix.patch)
 sha256sums=('302e9216dd19ec4b5b9e2f77275e23758253f7e86b06287284d8e794ef38dce3'
-            'd758bb93e59df15a4ea7732cf984d1c3c19dff67c94b957575efea132b8fe558')
+            'b77a427df55a14182c10ad7e683b4d662df2846fcd38df2aa8918159d6be3ae2'
+            'd758bb93e59df15a4ea7732cf984d1c3c19dff67c94b957575efea132b8fe558'
+            '4038c0f1ef4cc052e469858abe32eaa8afc8d4f540760f18ad132986e396604d')
+
+prepare() {
+    cd gtk+-$pkgver
+    patch -Np1 -i ../xid-collision-debug.patch
+    patch -Np1 -i ../gtkrc-fix.patch
+}
 
 build() {
     cd gtk+-$pkgver
-    patch -Np1 -i ../xid-collision-debug.patch
 
     CXX=/bin/false ./configure --prefix=/usr \
         --sysconfdir=/etc \
@@ -34,15 +41,19 @@ build() {
 package_gtk2() {
     pkgdesc="GTK+ is a multi-platform toolkit (v2)"
     install=gtk2.install
-    depends=('atk' 'pango' 'libxcursor' 'libxinerama' 'libxrandr' 'libxi' 'libxcomposite' 'libxdamage' 'shared-mime-info' 'cairo' 'libcups' 'gtk-update-icon-cache')
+    depends=('atk' 'pango' 'libxcursor' 'libxinerama' 'libxrandr' 'libxi' 'libxcomposite' 'libxdamage' 
+             'shared-mime-info' 'cairo' 'libcups' 'gtk-update-icon-cache')
+    optdepends=('gnome-themes-standard: Default widget theme'
+                'gnome-icon-theme: Default icon theme')
     replaces=('gtk2-docs')
 
     cd gtk+-$pkgver
-
     make DESTDIR="$pkgdir" install
+
     sed -i "s#env python#env python2#" $pkgdir/usr/bin/gtk-builder-convert
-    mkdir -p "$pkgdir/usr/share/gtk-2.0"
-    echo 'gtk-fallback-icon-theme = "gnome"' > "$pkgdir/usr/share/gtk-2.0/gtkrc"
+
+    install -Dm644 "$srcdir/gtkrc" "$pkgdir/usr/share/gtk-2.0/gtkrc"
+
     #split this out to use with gtk3 too
     rm $pkgdir/usr/bin/gtk-update-icon-cache
 }
@@ -52,6 +63,5 @@ package_gtk-update-icon-cache() {
     install=gtk-update-icon-cache.install
 
     cd gtk+-$pkgver/gtk
-
-    install -D -m755 gtk-update-icon-cache $pkgdir/usr/bin/gtk-update-icon-cache
+    install -D -m755 gtk-update-icon-cache "$pkgdir/usr/bin/gtk-update-icon-cache"
 }
