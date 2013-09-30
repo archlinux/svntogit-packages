@@ -1,0 +1,92 @@
+From d3ce6fe6964857c89212ab1a5a7aaa052d93c584 Mon Sep 17 00:00:00 2001
+From: Aleksander Morgado <aleksander@lanedo.com>
+Date: Thu, 26 Sep 2013 16:06:21 +0000
+Subject: 7z: allow extracting/opening/adding files prefixed with '@'
+
+7z uses '@' to specify a listfile; i.e. a file with a list of files to add or
+extract. Therefore, if working with single files (e.g. open, add or extract a
+single file from the archive), the filenames need to be escaped with '!' and
+specified with '-i'. It is ok to mix files specified with '-i' and the ones
+given after the archive filename.
+
+E.g. instead of:
+  7z x -bd -y -o/tmp/.fr-2z9FXz -- HS04603.ZIP @HS04603.PDF
+
+it should be:
+  7z x -bd -y -o/tmp/.fr-2z9FXz -i!@HS04603.PDF -- HS04603.ZIP
+
+https://bugzilla.gnome.org/show_bug.cgi?id=708854
+---
+diff --git a/src/fr-command-7z.c b/src/fr-command-7z.c
+index f2e70a6..a9d15fd 100644
+--- a/src/fr-command-7z.c
++++ b/src/fr-command-7z.c
+@@ -375,11 +375,20 @@ fr_command_7z_add (FrCommand  *command,
+ 	if (from_file != NULL)
+ 		fr_process_add_arg_concat (command->process, "-i@", from_file, NULL);
+ 
++	if (from_file == NULL)
++		for (scan = file_list; scan; scan = scan->next)
++			/* Files prefixed with '@' need to be handled specially */
++			if (g_str_has_prefix (scan->data, "@"))
++				fr_process_add_arg_concat (command->process, "-i!", scan->data, NULL);
++
+ 	fr_process_add_arg (command->process, "--");
+ 	fr_process_add_arg (command->process, command->filename);
++
+ 	if (from_file == NULL)
+ 		for (scan = file_list; scan; scan = scan->next)
+-			fr_process_add_arg (command->process, scan->data);
++			/* Skip files prefixed with '@', already added */
++			if (!g_str_has_prefix (scan->data, "@"))
++				fr_process_add_arg (command->process, scan->data);
+ 
+ 	fr_process_end_command (command->process);
+ }
+@@ -409,11 +418,20 @@ fr_command_7z_delete (FrCommand  *command,
+ 	if (from_file != NULL)
+ 		fr_process_add_arg_concat (command->process, "-i@", from_file, NULL);
+ 
++	if (from_file == NULL)
++		for (scan = file_list; scan; scan = scan->next)
++			/* Files prefixed with '@' need to be handled specially */
++			if (g_str_has_prefix (scan->data, "@"))
++				fr_process_add_arg_concat (command->process, "-i!", scan->data, NULL);
++
+ 	fr_process_add_arg (command->process, "--");
+ 	fr_process_add_arg (command->process, command->filename);
++
+ 	if (from_file == NULL)
+ 		for (scan = file_list; scan; scan = scan->next)
+-			fr_process_add_arg (command->process, scan->data);
++			/* Skip files prefixed with '@', already added */
++			if (!g_str_has_prefix (scan->data, "@"))
++				fr_process_add_arg (command->process, scan->data);
+ 
+ 	fr_process_end_command (command->process);
+ }
+@@ -463,11 +481,21 @@ fr_command_7z_extract (FrCommand  *command,
+ 	if (from_file != NULL)
+ 		fr_process_add_arg_concat (command->process, "-i@", from_file, NULL);
+ 
++	if (from_file == NULL)
++		for (scan = file_list; scan; scan = scan->next)
++			/* Files prefixed with '@' need to be handled specially */
++			if (g_str_has_prefix (scan->data, "@"))
++				fr_process_add_arg_concat (command->process, "-i!", scan->data, NULL);
++
++
+ 	fr_process_add_arg (command->process, "--");
+ 	fr_process_add_arg (command->process, command->filename);
++
+ 	if (from_file == NULL)
+ 		for (scan = file_list; scan; scan = scan->next)
+-			fr_process_add_arg (command->process, scan->data);
++			/* Skip files prefixed with '@', already added */
++			if (!g_str_has_prefix (scan->data, "@"))
++				fr_process_add_arg (command->process, scan->data);
+ 
+ 	fr_process_end_command (command->process);
+ }
+--
+cgit v0.9.2

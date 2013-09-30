@@ -1,0 +1,43 @@
+From d05bdc3b60d928f1f40338208419f0ffa41195f6 Mon Sep 17 00:00:00 2001
+From: Paolo Bacchilega <paobac@src.gnome.org>
+Date: Sun, 29 Sep 2013 16:30:29 +0000
+Subject: libarchive: fixed failure when extracting some tar archives
+
+do not try to restore the creation time;
+do not set the G_FILE_ATTRIBUTE_TIME_CREATED_USEC attribute
+
+[bug #709035]
+---
+diff --git a/src/fr-archive-libarchive.c b/src/fr-archive-libarchive.c
+index 42673df..44aaad2 100644
+--- a/src/fr-archive-libarchive.c
++++ b/src/fr-archive-libarchive.c
+@@ -428,15 +428,8 @@ _g_file_info_create_from_entry (struct archive_entry *entry,
+ 
+ 	/* times */
+ 
+-	if (archive_entry_ctime_is_set (entry)) {
+-		g_file_info_set_attribute_uint64 (info, G_FILE_ATTRIBUTE_TIME_CREATED, archive_entry_ctime (entry));
+-		g_file_info_set_attribute_uint32 (info, G_FILE_ATTRIBUTE_TIME_CREATED_USEC, archive_entry_ctime_nsec (entry));
+-	}
+-
+-	if (archive_entry_mtime_is_set (entry)) {
++	if (archive_entry_mtime_is_set (entry))
+ 		g_file_info_set_attribute_uint64 (info, G_FILE_ATTRIBUTE_TIME_MODIFIED, archive_entry_mtime (entry));
+-		g_file_info_set_attribute_uint32 (info, G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC, archive_entry_mtime_nsec (entry));
+-	}
+ 
+ 	/* username */
+ 
+@@ -529,7 +522,8 @@ restore_modification_time (GHashTable    *created_folders,
+ 
+ 		info = g_file_info_new ();
+ 		g_file_info_set_attribute_uint64 (info, G_FILE_ATTRIBUTE_TIME_MODIFIED, g_file_info_get_attribute_uint64 (original_info, G_FILE_ATTRIBUTE_TIME_MODIFIED));
+-		g_file_info_set_attribute_uint32 (info, G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC, g_file_info_get_attribute_uint32 (original_info, G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC));
++		if (g_file_info_get_attribute_status (original_info, G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC) == G_FILE_ATTRIBUTE_STATUS_SET)
++			g_file_info_set_attribute_uint32 (info, G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC, g_file_info_get_attribute_uint32 (original_info, G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC));
+ 		result = _g_file_set_attributes_from_info (file, info, cancellable, error);
+ 
+ 		g_object_unref (info);
+--
+cgit v0.9.2
