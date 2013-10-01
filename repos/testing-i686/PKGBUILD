@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=207
-pkgrel=6
+pkgrel=7
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -18,6 +18,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         0001-polkit-Avoid-race-condition-in-scraping-proc.patch
         0001-swap-fix-reverse-dependencies.patch
         0002-swap-create-.wants-symlink-to-auto-swap-devices.patch
+        0001-core-whenever-a-new-PID-is-passed-to-us-make-sure-we.patch
         0001-cryptsetup-generator-allow-specifying-options-in-pro.patch
         0001-man-document-luks.options-kernel-commandline.patch
         0001-udev-rules-avoid-erroring-on-trailing-whitespace.patch)
@@ -28,6 +29,7 @@ md5sums=('7799f3cc9d289b8db1c1fa56ae7ecd88'
          '9eb0a46aa2a3a6d74117f9a174dbe168'
          '182be4c729aaecde249b7b05b48a481f'
          'b54fbe35e2689ac36cda9ac4a5a86f24'
+         '6067cc4f0565c02484918c3e1b05cbfa'
          '20e65eefdffe384edc4acebe9e01c873'
          '9fb76e01f41beb60e331908f7f1e04bc'
          '1f0bfc22e09b9dfe53f4485fab7af2ee')
@@ -38,6 +40,7 @@ prepare() {
   patch -Np1 <"$srcdir"/0001-swap-fix-reverse-dependencies.patch
   patch -Np1 <"$srcdir"/0002-swap-create-.wants-symlink-to-auto-swap-devices.patch
   patch -Np1 <"$srcdir"/0001-polkit-Avoid-race-condition-in-scraping-proc.patch
+  patch -Np1 <"$srcdir"/0001-core-whenever-a-new-PID-is-passed-to-us-make-sure-we.patch
   patch -Np1 <"$srcdir"/0001-cryptsetup-generator-allow-specifying-options-in-pro.patch
   patch -Np1 <"$srcdir"/0001-man-document-luks.options-kernel-commandline.patch
   patch -Np1 <"$srcdir"/0001-udev-rules-avoid-erroring-on-trailing-whitespace.patch
