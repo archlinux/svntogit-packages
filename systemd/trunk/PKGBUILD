@@ -14,20 +14,21 @@ options=('!libtool' 'strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev')
-md5sums=('6b30239cbea4cb2c832625f1012dbe03'
+        'initcpio-install-udev'
+        '0001-fix-lingering-references-to-var-lib-backlight-random.patch')
+md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
-         'bde43090d4ac0ef048e3eaee8202a407')
+         'bde43090d4ac0ef048e3eaee8202a407'
+         '1b191c4e7a209d322675fd199e3abc66')
 
 prepare() {
   cd "$pkgname-$pkgver"
+  patch -Np1 -i ../0001-fix-lingering-references-to-var-lib-backlight-random.patch
 }
 
 build() {
   cd "$pkgname-$pkgver"
-
-  CFLAGS+=' -g'
 
   ./configure \
       --libexecdir=/usr/lib \
