@@ -71,6 +71,7 @@ package_systemd() {
           etc/dbus-1/system.d/org.freedesktop.locale1.conf
           etc/dbus-1/system.d/org.freedesktop.machine1.conf
           etc/dbus-1/system.d/org.freedesktop.timedate1.conf
+          etc/pam.d/systemd-user
           etc/systemd/bootchart.conf
           etc/systemd/journald.conf
           etc/systemd/logind.conf
