@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=207
-pkgrel=7
+pkgver=208
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -14,36 +14,14 @@ options=('!libtool' 'strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev'
-        0001-polkit-Avoid-race-condition-in-scraping-proc.patch
-        0001-swap-fix-reverse-dependencies.patch
-        0002-swap-create-.wants-symlink-to-auto-swap-devices.patch
-        0001-core-whenever-a-new-PID-is-passed-to-us-make-sure-we.patch
-        0001-cryptsetup-generator-allow-specifying-options-in-pro.patch
-        0001-man-document-luks.options-kernel-commandline.patch
-        0001-udev-rules-avoid-erroring-on-trailing-whitespace.patch)
-md5sums=('7799f3cc9d289b8db1c1fa56ae7ecd88'
+        'initcpio-install-udev')
+md5sums=('6b30239cbea4cb2c832625f1012dbe03'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
-         'bde43090d4ac0ef048e3eaee8202a407'
-         '9eb0a46aa2a3a6d74117f9a174dbe168'
-         '182be4c729aaecde249b7b05b48a481f'
-         'b54fbe35e2689ac36cda9ac4a5a86f24'
-         '6067cc4f0565c02484918c3e1b05cbfa'
-         '20e65eefdffe384edc4acebe9e01c873'
-         '9fb76e01f41beb60e331908f7f1e04bc'
-         '1f0bfc22e09b9dfe53f4485fab7af2ee')
+         'bde43090d4ac0ef048e3eaee8202a407')
 
 prepare() {
   cd "$pkgname-$pkgver"
-
-  patch -Np1 <"$srcdir"/0001-swap-fix-reverse-dependencies.patch
-  patch -Np1 <"$srcdir"/0002-swap-create-.wants-symlink-to-auto-swap-devices.patch
-  patch -Np1 <"$srcdir"/0001-polkit-Avoid-race-condition-in-scraping-proc.patch
-  patch -Np1 <"$srcdir"/0001-core-whenever-a-new-PID-is-passed-to-us-make-sure-we.patch
-  patch -Np1 <"$srcdir"/0001-cryptsetup-generator-allow-specifying-options-in-pro.patch
-  patch -Np1 <"$srcdir"/0001-man-document-luks.options-kernel-commandline.patch
-  patch -Np1 <"$srcdir"/0001-udev-rules-avoid-erroring-on-trailing-whitespace.patch
 }
 
 build() {
@@ -114,7 +92,7 @@ package_systemd() {
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
   # get rid of RPM macros
-  rm -r "$pkgdir/usr/lib/rpm/macros.d"
+  rm -r "$pkgdir/usr/lib/rpm"
 
   # add back tmpfiles.d/legacy.conf
   install -m644 "systemd-$pkgver/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
@@ -128,6 +106,10 @@ package_systemd() {
   install -Dm644 "$srcdir/initcpio-install-systemd" "$pkgdir/usr/lib/initcpio/install/systemd"
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
+
+  # ensure proper permissions for /var/log/journal
+  chown root:systemd-journal "$pkgdir/var/log/journal"
+  chmod 2755 "$pkgdir/var/log/journal"
 
   ### split out manpages for sysvcompat
   rm -rf "$srcdir/_sysvcompat"
