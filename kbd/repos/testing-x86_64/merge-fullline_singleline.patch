@@ -1,0 +1,104 @@
+From 301cb9f132017ec67cc00681ca3f7a25f0d24ca2 Mon Sep 17 00:00:00 2001
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+Date: Mon, 7 Oct 2013 18:11:45 +0400
+Subject: [PATCH] parser: Merge fullline and singleline rule
+
+Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+---
+ src/libkeymap/parser.y |   59 ++++++++++++++++++++++++-----------------------
+ 1 files changed, 30 insertions(+), 29 deletions(-)
+
+diff --git a/src/libkeymap/parser.y b/src/libkeymap/parser.y
+index 627494a..17d953a 100644
+--- a/src/libkeymap/parser.y
++++ b/src/libkeymap/parser.y
+@@ -180,7 +180,6 @@ line		: EOL
+ 		| usualstringsline
+ 		| usualcomposeline
+ 		| keymapline
+-		| fullline
+ 		| singleline
+ 		| strline
+                 | compline
+@@ -281,34 +280,7 @@ compline        : COMPOSE compsym compsym TO compsym EOL
+ compsym		: CCHAR		{	$$ = $1;		}
+ 		| UNUMBER	{	$$ = $1 ^ 0xf000;	}
+ 		;
+-singleline	:	{
+-				ctx->mod = 0;
+-			}
+-		  modifiers KEYCODE NUMBER EQUALS rvalue EOL
+-			{
+-				if (lk_add_key(ctx, ctx->mod, $4, $6) < 0)
+-					YYERROR;
+-			}
+-		| PLAIN KEYCODE NUMBER EQUALS rvalue EOL
+-			{
+-				if (lk_add_key(ctx, 0, $3, $5) < 0)
+-					YYERROR;
+-			}
+-		;
+-modifiers	: modifiers modifier
+-		| modifier
+-		;
+-modifier	: SHIFT		{ ctx->mod |= M_SHIFT;	}
+-		| CONTROL	{ ctx->mod |= M_CTRL;	}
+-		| ALT		{ ctx->mod |= M_ALT;		}
+-		| ALTGR		{ ctx->mod |= M_ALTGR;	}
+-		| SHIFTL	{ ctx->mod |= M_SHIFTL;	}
+-		| SHIFTR	{ ctx->mod |= M_SHIFTR;	}
+-		| CTRLL		{ ctx->mod |= M_CTRLL;	}
+-		| CTRLR		{ ctx->mod |= M_CTRLR;	}
+-		| CAPSSHIFT	{ ctx->mod |= M_CAPSSHIFT;	}
+-		;
+-fullline	: KEYCODE NUMBER EQUALS rvalue0 EOL
++singleline	: KEYCODE NUMBER EQUALS rvalue0 EOL
+ 			{
+ 				unsigned int j, i, keycode;
+ 				int *val;
+@@ -367,6 +339,33 @@ fullline	: KEYCODE NUMBER EQUALS rvalue0 EOL
+ 					}
+ 				}
+ 			}
++
++		| modifiers KEYCODE NUMBER EQUALS rvalue EOL
++			{
++				if (lk_add_key(ctx, ctx->mod, $3, $5) < 0)
++					YYERROR;
++				ctx->mod = 0;
++			}
++		| PLAIN KEYCODE NUMBER EQUALS rvalue EOL
++			{
++				if (lk_add_key(ctx, 0, $3, $5) < 0)
++					YYERROR;
++				ctx->mod = 0;
++			}
++		;
++modifiers	: modifiers modifier
++		| modifier
++		;
++modifier	: SHIFT		{ ctx->mod |= M_SHIFT;	}
++		| CONTROL	{ ctx->mod |= M_CTRL;	}
++		| ALT		{ ctx->mod |= M_ALT;		}
++		| ALTGR		{ ctx->mod |= M_ALTGR;	}
++		| SHIFTL	{ ctx->mod |= M_SHIFTL;	}
++		| SHIFTR	{ ctx->mod |= M_SHIFTR;	}
++		| CTRLL		{ ctx->mod |= M_CTRLL;	}
++		| CTRLR		{ ctx->mod |= M_CTRLR;	}
++		| CAPSSHIFT	{ ctx->mod |= M_CAPSSHIFT;	}
++		;
+ 		;
+ 
+ rvalue0		:
+@@ -393,6 +392,8 @@ lk_parse_keymap(struct lk_ctx *ctx, lkfile_t *f)
+ 	yyscan_t scanner;
+ 	int rc = -1;
+ 
++	ctx->mod = 0;
++
+ 	yylex_init(&scanner);
+ 	yylex_init_extra(ctx, &scanner);
+ 
+-- 
+1.7.3.3
+
