@@ -5,7 +5,7 @@
 
 pkgname=hplip
 pkgver=3.13.9
-pkgrel=2
+pkgrel=3
 pkgdesc="Drivers for HP DeskJet, OfficeJet, Photosmart, Business Inkjet and some LaserJet"
 arch=('i686' 'x86_64')
 url="http://hplipopensource.com"
@@ -26,16 +26,21 @@ optdepends=('cups: for printing support'
 options=('!libtool')
 install=hplip.install
 source=(http://downloads.sourceforge.net/${pkgname}/$pkgname-$pkgver.tar.gz{,.asc}
-        hp-mkuri.patch)
+        hp-mkuri.patch
+        hplip-CVE-2013-4325.patch)
 md5sums=('8fcbbd0d3a0b76550f325bd6cf46d9d9'
          'SKIP'
-         '0bd7779fdbc4d7a9386df04dce2cb8d4')
+         '0bd7779fdbc4d7a9386df04dce2cb8d4'
+         '947db41ee8556c78dd027a2f107957e6')
 
-build() {
- cd "$srcdir/$pkgname-$pkgver"
+prepare() {
+ cd $pkgname-$pkgver
 
  # fix linking libnotify, FS#34283
  patch -Np0 -i ${srcdir}/hp-mkuri.patch
+ 
+ # https://bugzilla.redhat.com/show_bug.cgi?id=CVE-2013-4325
+ patch -Np1 -i ${srcdir}/hplip-CVE-2013-4325.patch
  
  export PYTHON=python2
  
@@ -61,7 +66,10 @@ build() {
    
  export AUTOMAKE='automake --foreign'
  autoreconf --force --install
+}
 
+build() {
+ cd $pkgname-$pkgver
  ./configure --prefix=/usr \
              --enable-qt4 \
              --disable-foomatic-rip-hplip-install \
@@ -79,15 +87,19 @@ build() {
 }
 
 package() {
- #cd "$srcdir/$pkgname-$pkgver"
- cd "$srcdir/$pkgname-${pkgver/.a/a}"
+ #cd $pkgname-$pkgver
+ cd $pkgname-${pkgver/.a/a}
  make rulesdir=/usr/lib/udev/rules.d DESTDIR="$pkgdir/" install
+ 
  # remove config provided by sane and autostart of hp-daemon
  rm -rf "$pkgdir"/etc/{sane.d,xdg}
+ 
  # remove HAL .fdi file because HAL is no longer used
  rm -rf "$pkgdir"/usr/share/hal
+ 
  # log dir should not be world writeable
  chmod 775 "$pkgdir"/var/log/hp{,/tmp}
+ 
  # remove rc script
  rm -rf "$pkgdir"/etc/init.d
 }
