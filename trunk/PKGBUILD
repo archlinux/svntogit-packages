@@ -4,6 +4,8 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: valgrind requires rebuilt with each major glibc version
 
+# NOTE: adjust version in install script when locale files are updated
+
 pkgname=glibc
 pkgver=2.18
 pkgrel=5
