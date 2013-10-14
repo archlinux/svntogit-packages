@@ -120,7 +120,7 @@ package_systemd() {
      "$srcdir"/_sysvcompat/usr/share/man/man8
 
   # include MIT license, since it's technically custom
-  install -Dm755 "$srcdir/$pkgname-$pkgver/LICENSE.MIT" \
+  install -Dm644 "$srcdir/$pkgname-$pkgver/LICENSE.MIT" \
       "$pkgdir/usr/share/licenses/systemd/LICENSE.MIT"
 }
 
