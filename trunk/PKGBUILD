@@ -5,9 +5,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.8.1
-pkgrel=3
-_snapshot=4.8-20130725
+pkgver=4.8.2
+pkgrel=1
+#_snapshot=4.8-20130725
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -15,10 +15,10 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
 options=('!libtool' '!emptydirs')
-source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2)
-        ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+        #ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         gcc-4.8-filename-output.patch)
-md5sums=('e21f259bc4c44e61e19a780ad5badfeb'
+md5sums=('a3d7d63b9cb6b6ea049469a0c4a43c9d'
          '40cb437805e2f7a006aa0d0c3098ab0f')
 
 
