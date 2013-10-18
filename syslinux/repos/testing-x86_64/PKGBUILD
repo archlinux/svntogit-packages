@@ -4,7 +4,7 @@
 
 pkgname="syslinux"
 pkgver="6.02"
-pkgrel="2"
+pkgrel="3"
 arch=('x86_64' 'i686')
 pkgdesc="Collection of boot loaders that boot from FAT, ext2/3/4 and btrfs filesystems, from CDs and via PXE"
 url="http://syslinux.zytor.com/"
@@ -22,13 +22,15 @@ optdepends=('perl-passwd-md5:  For md5pass'
             'dosfstools:       For EFI support')
 md5sums=('6f275813a1b08cf852e55c0a3f8fbc78'
          '46ca150f53322ff8f1597d9a342f7e40'
-         '0e7d47e1f791f0c5e7bd40ed5c6d80cc')
+         '0e7d47e1f791f0c5e7bd40ed5c6d80cc'
+         '9dbede6b71a4de9e46aac4aad65334d7')
 
 install="${pkgname}.install"
 
 source=("https://www.kernel.org/pub/linux/utils/boot/syslinux/${pkgname}-${pkgver}.tar.xz"
         'syslinux.cfg'
-        'syslinux-install_update')
+        'syslinux-install_update'
+        'syslinux-6.02-fix-chainloading.patch')
 
 _build_syslinux_bios() {
     
@@ -38,7 +40,6 @@ _build_syslinux_bios() {
     
     ## Do not try to build syslinux with our default LDFLAGS, it will fail
     unset LDFLAGS
-    make PYTHON="python2" bios spotless
     make PYTHON="python2" bios
     make PYTHON="python2" bios installer 
 }
@@ -56,7 +57,6 @@ _build_syslinux_efi64() {
     unset LDFLAGS
     unset MAKEFLAGS
     
-    make PYTHON="python2" efi64 spotless
     make PYTHON="python2" efi64
     make PYTHON="python2" efi64 installer 
 }
@@ -74,7 +74,6 @@ _build_syslinux_efi32() {
     unset LDFLAGS
     unset MAKEFLAGS
     
-    make PYTHON="python2" efi32 spotless
     make PYTHON="python2" efi32
     make PYTHON="python2" efi32 installer 
 }
@@ -94,6 +93,11 @@ build() {
     ## Fix FHS manpage path
     sed 's|/usr/man|/usr/share/man|g' -i "${srcdir}/${pkgname}-${pkgver}/mk/syslinux.mk" || true
     
+    # fix chainloading
+    # http://bugzilla.syslinux.org/show_bug.cgi?id=31
+    # http://www.syslinux.org/archives/2013-October/020971.html
+    patch -Np1 -i "${srcdir}/syslinux-6.02-fix-chainloading.patch"
+
     ## Build syslinux-efi
     if [[ "${CARCH}" == "x86_64" ]]; then
         _build_syslinux_efi64
