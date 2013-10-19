@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Sylinux Installer / Updater Scripts
-# Copyright (C) 2011  Matthew Gyurgyik <pyther@pyther.net>
+# Syslinux Installer / Updater Script (for BIOS only)
+# Copyright (C) 2013  Matthew Gyurgyik <pyther@pyther.net>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -26,13 +26,13 @@
 #
 shopt -s nullglob
 
-libpath="/usr/lib/syslinux"
-bootpath="/boot/syslinux"
-extlinux="/usr/bin/extlinux"
+bios_libpath="/usr/lib/syslinux/bios/"
+bios_bootpath="/boot/syslinux/"
+EXTLINUX="/usr/bin/extlinux"
 
-autoupdate_file=/boot/syslinux/SYSLINUX_AUTOUPDATE
-com32_files=(menu.c32 vesamenu.c32 chain.c32 hdt.c32 reboot.c32 poweroff.com)
-pciids_file=/usr/share/hwdata/pci.ids
+bios_core_modules=(config.c32 chain.c32 ldlinux.c32 libcom32.c32 libgpl.c32 liblua.c32 libmenu.c32 libutil.c32 linux.c32 menu.c32 vesamenu.c32)
+bios_autoupdate_file="/boot/syslinux/SYSLINUX_AUTOUPDATE"
+pciids_file="/usr/share/hwdata/pci.ids"
 
 ## Helper functions ##
 # Taken from libui-sh
@@ -120,7 +120,7 @@ usage() {
 cat << EOF
 usage: $0 options
 
-This script will install or upgrade Syslinux
+This script will install or upgrade Syslinux (for BIOS only)
 
 OPTIONS:
   -h    Show this message
@@ -133,16 +133,16 @@ OPTIONS:
  Arguments Required:
   -c    Chroot install (ex: -c /mnt)
 
-Example Usage: syslinux-install_update.sh -i -a -m (install, set boot flag, install mbr)
-               syslinux-install_update.sh -u (update)
+Example Usage: $0 -i -a -m     # (install, set boot flag, install mbr)
+               $0 -u           # (update)
 EOF
 }
 
 # Trys to find the partition that /boot resides on
 # This will either be on /boot or / (root)
 getBoot() {
-    if [[ ! -d "$bootpath" ]]; then
-        echo "Could not find $bootpath"
+    if [[ ! -d "$bios_bootpath" ]]; then
+        echo "Could not find $bios_bootpath"
         echo "Is boot mounted? Is Syslinux installed?"
         exit 1
     fi
@@ -278,9 +278,9 @@ install_mbr() {
         { echo "ABORT! MBR installation to partition ($disk)!"; exit 4;}
 
         if [[ "$ptb" = MBR ]]; then
-            mbrfile="$libpath/mbr.bin"
+            mbrfile="$bios_libpath/mbr.bin"
         elif [[ "$ptb" = GPT ]]; then
-            mbrfile="$libpath/gptmbr.bin"
+            mbrfile="$bios_libpath/gptmbr.bin"
         fi
 
         if dd bs=440 count=1 conv=notrunc if="$mbrfile" of="$disk" &> /dev/null; then
@@ -293,67 +293,65 @@ install_mbr() {
     return 0
 }
 
-_install() {
-    # Copy files to /boot
-    for file in "${com32_files[@]}"; do
-        # Symlink files even if links exist
+install_modules() {
+    # Copy all com32 files to /boot
+    for file in "${bios_libpath}"/*.c32; do
+        file=${file##*/}
+        rm "$bios_bootpath/$file" &> /dev/null
         if [[ "$boot" = root ]]; then
-            ln -s "${libpath#$CHROOT}/$file" "$bootpath/$file" &> /dev/null
+            # Symlink files if /boot resides on the same partition as root
+            ln -sf "${bios_libpath#$CHROOT}/$file" "$bios_bootpath/$file" &> /dev/null
         elif [[ "$boot" = boot ]]; then
-            cp "$libpath/$file" "$bootpath/$file"
+            cp "$bios_libpath/$file" "$bios_bootpath/$file"
         fi
     done
 
-    # Copy / Symlink pci.ids if we copy the com32 module and if pci.ids exists in the FS
-    if check_is_in "hdt.c32" "${com32_files[@]}" && [[ -f $pciids_file ]]; then 
+    # Copy / Symlink pci.ids if pci.ids exists on the FS
+    if [[ -f $pciids_file ]]; then
+        rm "$bios_bootpath/pci.ids" &> /dev/null
         if [[ "$boot" = root ]]; then
-            ln -s "$pciids_file" "$bootpath/pci.ids" &> /dev/null
+            ln -sf "$pciids_file" "$bios_bootpath/pci.ids" &> /dev/null
         elif [[ "$boot" = boot ]]; then
-            cp "$pciids_file" "$bootpath/pci.ids" &> /dev/null
+            cp "$pciids_file" "$bios_bootpath/pci.ids" &> /dev/null
         fi
     fi
+}
+
+_install() {
+    install_modules
 
     if device_is_raid "$bootpart"; then
-        echo "Detected RAID on /boot - installing Syslinux with --raid"
-        "$extlinux" --install "$bootpath" -r > /dev/null 2>&1
+        echo "Detected RAID on /boot"
+        "$EXTLINUX" --install "$bios_bootpath" --raid &> /dev/null
     else
-        "$extlinux" --install "$bootpath" > /dev/null 2>&1
+        "$EXTLINUX" --install "$bios_bootpath" &> /dev/null
     fi
 
     if (( $? )); then
-        echo "Syslinux install failed"
+        echo "Syslinux BIOS install failed"
         exit 2
     else
-        echo "Syslinux install successful"
+        echo "Syslinux BIOS install successful"
     fi
 
-    touch "$CHROOT/$autoupdate_file"
+    touch "$CHROOT/$bios_autoupdate_file"
 }
 
 update() {
-    # Update any com and c32 files in /boot
-    if [[ "$boot" = boot ]]; then
-        for file in "$bootpath"/*.{c32,com}; do
-            file=$(basename "$file")
-            cp "$libpath/$file" "$bootpath/$file" &> /dev/null
-        done
-        if [[ -f "$bootpath/pci.ids" ]]; then
-            cp "$pciids_file" "$bootpath/pci.ids" &> /dev/null
-        fi
-    fi
+    install_modules
 
     if device_is_raid $bootpart; then
-        echo "Detected RAID on /boot - installing Syslinux with --raid"
-        "$extlinux" --update "$bootpath" -r &> /dev/null
+        echo "Detected RAID on /boot"
+        "$EXTLINUX" --update "$bios_bootpath" --raid &> /dev/null
     else
-        "$extlinux" --update "$bootpath" &> /dev/null
+        "$EXTLINUX" --update "$bios_bootpath" &> /dev/null
     fi
 
     if (($?)); then
-        echo "Syslinux update failed"
+        echo "Syslinux BIOS update failed"
         exit 2
     else
-        echo "Syslinux update successful"
+        echo "Syslinux BIOS update successful"
     fi
 }
 
@@ -388,7 +386,7 @@ while getopts "c:uihmas" opt; do
             ;;
         s)
             # If AUTOUPDATE_FILE does not exist exit the script
-            if [[ -f $autoupdate_file ]]; then
+            if [[ -f $bios_autoupdate_file ]]; then
                 UPDATE="True"
             else
                 exit 0
@@ -420,14 +418,14 @@ fi
 
 # If a chroot dir is path set variables to reflect chroot
 if [[ "$CHROOT" ]]; then
-    libpath="$CHROOT$libpath"
-    bootpath="$CHROOT$bootpath"
-    extlinux="$CHROOT$extlinux"
+    bios_libpath="$CHROOT$bios_libpath"
+    bios_bootpath="$CHROOT$bios_bootpath"
+    EXTLINUX="$CHROOT$EXTLINUX"
 fi
 
 # Exit if no /boot path exists
-if ( f=("$bootpath"/*); (( ! ${#f[@]} )) ); then
-    echo "Error: $bootpath is empty!"
+if ( f=("$bios_bootpath"/*); (( ! ${#f[@]} )) ); then
+    echo "Error: $bios_bootpath is empty!"
     echo "Is /boot mounted?"
     exit 1
 fi
