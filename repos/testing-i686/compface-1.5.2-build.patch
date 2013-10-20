@@ -1,0 +1,82 @@
+o Build shared library, link tools against it
+o Make it possible to prevent stripping
+o Add DESTDIR support
+
+--- Makefile.in~	2005-10-04 15:59:49.000000000 +0300
++++ Makefile.in	2006-08-02 22:23:07.000000000 +0300
+@@ -15,6 +15,7 @@
+ INSTALL_PROGRAM = @INSTALL_PROGRAM@
+ INSTALL_DATA    = @INSTALL_DATA@
+ SHELL           = /bin/sh
++STRIP           = strip
+ 
+ NAME		= compface
+ UNNAME		= uncompface
+@@ -25,6 +26,7 @@
+ UNEXECUTABLE	= $(BINDIR)/$(UNNAMEEXE)
+ LIBNAME		= lib$(NAME).a
+ LIBRARY		= $(LIBDIR)/$(LIBNAME)
++SHLIBNAME	= lib$(NAME).so
+ MAN1DIR		= $(MANDIR)/man1
+ MAN3DIR		= $(MANDIR)/man3
+ OBJECTS		= arith.o file.o compress.o gen.o uncompface.o
+@@ -45,11 +47,11 @@
+ 
+ all:		$(NAMEEXE) $(UNNAMEEXE)
+ 
+-$(NAMEEXE) :	cmain.o compface.o $(LIBNAME)
+-		$(CC) $(LDFLAGS) -o $@ cmain.o compface.o $(LIBNAME)
++$(NAMEEXE) :	cmain.o compface.o $(SHLIBNAME)
++		$(CC) $(LDFLAGS) -o $@ cmain.o compface.o -L. -l$(NAME)
+ 
+-$(UNNAMEEXE) :	uncmain.o $(LIBNAME)
+-		$(CC) $(LDFLAGS) -o $@ uncmain.o $(LIBNAME)
++$(UNNAMEEXE) :	uncmain.o $(SHLIBNAME)
++		$(CC) $(LDFLAGS) -o $@ uncmain.o -L. -l$(NAME)
+ 
+ $(LIBNAME) :	$(OBJECTS)
+ 		ar rc $(LIBNAME) $(OBJECTS)
+@@ -73,25 +75,28 @@
+ 		tar chzf `cat .fname`.tar.gz `cat .fname`
+ 		$(RM) -rf `cat .fname` .fname
+ 
+-install: 	$(NAMEEXE) $(UNNAMEEXE) $(LIBNAME)
+-		$(INSTALL_PROGRAM) -d $(BINDIR) $(LIBDIR) $(MAN1DIR) $(MAN3DIR) $(INCLUDEDIR)
+-		$(INSTALL_PROGRAM) $(srcdir)/$(NAMEEXE) $(EXECUTABLE) 
+-		-chmod 0755 $(EXECUTABLE)
+-		-strip $(EXECUTABLE)
+-		$(INSTALL_PROGRAM) $(srcdir)/$(UNNAMEEXE) $(UNEXECUTABLE)
+-		-chmod 0755 $(UNEXECUTABLE)
+-		-strip $(UNEXECUTABLE)
+-		$(INSTALL_DATA) $(srcdir)/$(NAME).1 $(MAN1DIR)/$(NAME).1
+-		cd $(MAN1DIR) && $(RM) ./$(UNNAME).1 && $(LN_S) $(NAME).1 $(UNNAME).1
+-		$(INSTALL_DATA) $(srcdir)/$(NAME).3 $(MAN3DIR)/$(NAME).3
+-		cd $(MAN3DIR) && $(RM) ./$(UNNAME).3 && $(LN_S) $(NAME).3 $(UNNAME).3
+-		for hdr in $(INSTALLHEADERS); do $(INSTALL_DATA) $(srcdir)/$${hdr} $(INCLUDEDIR)/$${hdr}; done
+-		$(INSTALL_DATA) $(srcdir)/$(LIBNAME) $(LIBRARY)
++install: 	$(NAMEEXE) $(UNNAMEEXE) $(SHLIBNAME)
++		$(INSTALL_PROGRAM) -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBDIR) $(DESTDIR)$(MAN1DIR) $(DESTDIR)$(MAN3DIR) $(DESTDIR)$(INCLUDEDIR)
++		$(INSTALL_PROGRAM) $(srcdir)/$(NAMEEXE) $(DESTDIR)$(EXECUTABLE) 
++		-$(STRIP) $(DESTDIR)$(EXECUTABLE)
++		$(INSTALL_PROGRAM) $(srcdir)/$(UNNAMEEXE) $(DESTDIR)$(UNEXECUTABLE)
++		-$(STRIP) $(DESTDIR)$(UNEXECUTABLE)
++		$(INSTALL_DATA) $(srcdir)/$(NAME).1 $(DESTDIR)$(MAN1DIR)/$(NAME).1
++		cd $(DESTDIR)$(MAN1DIR) && $(RM) ./$(UNNAME).1 && $(LN_S) $(NAME).1 $(UNNAME).1
++		$(INSTALL_DATA) $(srcdir)/$(NAME).3 $(DESTDIR)$(MAN3DIR)/$(NAME).3
++		cd $(DESTDIR)$(MAN3DIR) && $(RM) ./$(UNNAME).3 && $(LN_S) $(NAME).3 $(UNNAME).3
++		for hdr in $(INSTALLHEADERS); do $(INSTALL_DATA) $(srcdir)/$${hdr} $(DESTDIR)$(INCLUDEDIR)/$${hdr}; done
++		$(INSTALL_PROGRAM) $(srcdir)/$(SHLIBNAME) $(DESTDIR)$(LIBDIR)/$(SHLIBNAME).1.0.0
++		$(LN_S) $(SHLIBNAME).1.0.0 $(DESTDIR)$(LIBDIR)/$(SHLIBNAME).1
++		$(LN_S) $(SHLIBNAME).1 $(DESTDIR)$(LIBDIR)/$(SHLIBNAME)
+ 
+ shar :
+ 		shar.script $(OTHERS) $(HDRS) $(SOURCES) > $(NAME).sh
+ 		compress $(NAME).sh
+ 
++$(SHLIBNAME): $(OBJECTS)
++	$(CC) -shared -Wl,-soname,$(SHLIBNAME).1 $(LDFLAGS) -o $(SHLIBNAME) $(OBJECTS)
++
+ .c.o:
+ 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+
