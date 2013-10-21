@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=6
+pkgrel=7
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -43,7 +43,7 @@ md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          'd5fab2cd3abea65aa5ae696ea4a47d6b'
          'da662ca76e7c8d7efbc7986ab7acea2d'
          '07ac979b6ab5eeb778d55f041529d623'
-         '3d46e93c8d2771a22502d5a9603e5c49')
+         'b5fd017036fb91199ee76f670da8c15b')
 
 prepare() {
   cd ${srcdir}/${pkgname}-${pkgver}
@@ -149,7 +149,8 @@ package() {
 
   # remove the static libraries that have a shared counterpart
   cd $pkgdir/usr/lib
-  rm lib{anl,BrokenLocale,c,crypt,dl,m,nsl,pthread,resolv,rt,util}.a
+  # note: keep libc, libdl, libm for binutils testsuite
+  rm lib{anl,BrokenLocale,crypt,nsl,pthread,resolv,rt,util}.a
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
