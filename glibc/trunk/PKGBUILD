@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=5
+pkgrel=6
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -19,13 +19,14 @@ makedepends=('gcc>=4.7')
 backup=(etc/gai.conf
         etc/locale.gen
         etc/nscd.conf)
-options=('!strip')
+options=('!strip' 'staticlibs')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
+        glibc-2.18-make-4.patch
         glibc-2.18-readdir_r-CVE-2013-4237.patch
-	glibc-2.18-malloc-corrupt-CVE-2013-4332.patch
-	glibc-2.18-strcoll-CVE-2012-4412+4424.patch
-	glibc-2.18-ptr-mangle-CVE-2013-4788.patch
+        glibc-2.18-malloc-corrupt-CVE-2013-4332.patch
+        glibc-2.18-strcoll-CVE-2012-4412+4424.patch
+        glibc-2.18-ptr-mangle-CVE-2013-4788.patch
         glibc-2.18-strstr-hackfix.patch
         nscd.service
         nscd.tmpfiles
@@ -33,6 +34,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         locale-gen)
 md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          'SKIP'
+         'e1883c2d1b01ff73650db5f5bb5a5a52'
          '154da6bf5a5248f42a7bf5bf08e01a47'
          'b79561ab9dce900e9bbeaf0d49927c2b'
          'c7264b99d0f7e51922a4d3126182c40a'
@@ -41,11 +43,14 @@ md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          'd5fab2cd3abea65aa5ae696ea4a47d6b'
          'da662ca76e7c8d7efbc7986ab7acea2d'
          '07ac979b6ab5eeb778d55f041529d623'
-         '476e9113489f93b348b21e144b6a8fcf')
+         '3d46e93c8d2771a22502d5a9603e5c49')
 
 prepare() {
   cd ${srcdir}/${pkgname}-${pkgver}
-  
+
+  # compatibility with make-4.0 (submitted upstream)
+  patch -p1 -i $srcdir/glibc-2.18-make-4.patch
+
   # upstream commit 91ce4085
   patch -p1 -i $srcdir/glibc-2.18-readdir_r-CVE-2013-4237.patch
 
@@ -110,7 +115,7 @@ build() {
 }
 
 check() {
-  # bug to file - the linker commands need to be reordered
+  # the linker commands need to be reordered - fixed in 2.19
   LDFLAGS=${LDFLAGS/--as-needed,/}
 
   cd ${srcdir}/glibc-build
@@ -141,6 +146,10 @@ package() {
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
     ${srcdir}/glibc-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
+
+  # remove the static libraries that have a shared counterpart
+  cd $pkgdir/usr/lib
+  rm lib{anl,BrokenLocale,c,crypt,dl,m,nsl,pthread,resolv,rt,util}.a
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
