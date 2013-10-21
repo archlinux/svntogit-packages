@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,16 +15,22 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
-        '0001-fix-lingering-references-to-var-lib-backlight-random.patch')
+        '0001-fix-lingering-references-to-var-lib-backlight-random.patch'
+        '0001-mount-check-for-NULL-before-reading-pm-what.patch'
+        '0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch')
 md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407'
-         '1b191c4e7a209d322675fd199e3abc66')
+         '1b191c4e7a209d322675fd199e3abc66'
+         'a693bef63548163ffc165f4c4801ebf7'
+         'ccafe716d87df9c42af0d1960b5a4105')
 
 prepare() {
   cd "$pkgname-$pkgver"
-  patch -Np1 -i ../0001-fix-lingering-references-to-var-lib-backlight-random.patch
+  patch -Np1 < "$srcdir"/0001-fix-lingering-references-to-var-lib-backlight-random.patch
+  patch -Np1 < "$srcdir"/0001-mount-check-for-NULL-before-reading-pm-what.patch
+  patch -Np1 < "$srcdir"/0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch
 }
 
 build() {
@@ -46,8 +52,7 @@ build() {
 }
 
 check() {
-  # two tests fail due to running under nspawn
-  make -C "$pkgname-$pkgver" check || true
+  make -C "$pkgname-$pkgver" check || :
 }
 
 package_systemd() {
