@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=7
+pkgrel=8
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -149,8 +149,8 @@ package() {
 
   # remove the static libraries that have a shared counterpart
   cd $pkgdir/usr/lib
-  # note: keep libc, libdl, libm for binutils testsuite
-  rm lib{anl,BrokenLocale,crypt,nsl,pthread,resolv,rt,util}.a
+  # note: keep libc, libdl, libm, libpthread for binutils testsuite
+  rm lib{anl,BrokenLocale,crypt,nsl,resolv,rt,util}.a
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
