@@ -6,7 +6,7 @@ pkgname=readline
 _basever=6.2
 _patchlevel=004 #prepare for some patches
 pkgver=$_basever.$_patchlevel
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU readline library"
 arch=('i686' 'x86_64')
 url="http://tiswww.case.edu/php/chet/readline/rltop.html"
@@ -38,14 +38,14 @@ build() {
   cd ${srcdir}/${pkgname}-$_basever
   for (( p=1; p<=$((10#${_patchlevel})); p++ )); do
     msg "applying patch readline${_basever//./}-$(printf "%03d" $p)"
-    patch -Np0 -i $srcdir/readline${_basever//./}-$(printf "%03d" $p)
+    patch -p0 -i $srcdir/readline${_basever//./}-$(printf "%03d" $p)
   done
 
   # Remove RPATH from shared objects (FS#14366)
   sed -i 's|-Wl,-rpath,$(libdir) ||g' support/shobj-conf
 
   # build with -fPIC for x86_64 (FS#15634)
-  [ $CARCH == "x86_64" ] && CFLAGS="$CFLAGS -fPIC"
+  [[ $CARCH == "x86_64" ]] && CFLAGS="$CFLAGS -fPIC"
 
   ./configure --prefix=/usr
   make SHLIB_LIBS=-lncurses
