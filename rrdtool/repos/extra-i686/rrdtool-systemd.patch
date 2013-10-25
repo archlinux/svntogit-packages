@@ -1,0 +1,140 @@
+From 78b519eb2ffa786d6427bb13277e9151ef7b111e Mon Sep 17 00:00:00 2001
+From: Tobias Oetiker <tobi@oetiker.ch>
+Date: Mon, 2 Jul 2012 15:05:32 +0000
+Subject: [PATCH] serviced config etc files for rrdtool
+
+git-svn-id: svn://svn.oetiker.ch/rrdtool/trunk/program@2292 a5681a0c-68f1-0310-ab6d-d61299d08faa
+---
+ etc/rrdcached.service.in | 19 +++++++++++++++++++
+ etc/rrdcached.socket.in  | 18 ++++++++++++++++++
+ 2 files changed, 37 insertions(+)
+ create mode 100644 etc/rrdcached.service.in
+ create mode 100644 etc/rrdcached.socket.in
+
+diff --git a/etc/rrdcached.service.in b/etc/rrdcached.service.in
+new file mode 100644
+index 0000000..3b6f309
+--- /dev/null
++++ b/etc/rrdcached.service.in
+@@ -0,0 +1,19 @@
++#
++# To customize, copy this file to /etc/systemd/system/
++# and edit there
++#
++
++[Unit]
++Description=Data caching daemon for rrdtool
++Documentation=man:rrdcached(1)
++
++[Service]
++# If you enable socket-activable rrdcached.socket,
++# command line socket declarations will be ignored
++ExecStart=@prefix@/bin/rrdcached -g
++#WorkingDirectory=
++#User=
++#Group=
++
++[Install]
++WantedBy=multi-user.target
+diff --git a/etc/rrdcached.socket.in b/etc/rrdcached.socket.in
+new file mode 100644
+index 0000000..7a2d63e
+--- /dev/null
++++ b/etc/rrdcached.socket.in
+@@ -0,0 +1,18 @@
++#
++# To customize, copy this file to /etc/systemd/system/
++# and edit there
++#
++
++[Unit]
++Description=sockets activating rrdcached
++Documentation=man:rrdcached(1)
++
++[Socket]
++ListenStream=/tmp/rrdcached.sock
++#ListenStream=[::1]:42217
++#DirectoryMode=0755
++#SocketMode=0666
++#BindToDevice=
++
++[Install]
++WantedBy=sockets.target
+-- 
+1.8.4
+
+From 134ed0d33953e7e71c55454591c1078f7ae1db8a Mon Sep 17 00:00:00 2001
+From: Tobias Oetiker <tobi@oetiker.ch>
+Date: Mon, 2 Jul 2012 14:01:06 +0000
+Subject: [PATCH] wire up systemd support in autoconf -- tomek@pipebreaker.pl
+
+git-svn-id: svn://svn.oetiker.ch/rrdtool/trunk/program@2291 a5681a0c-68f1-0310-ab6d-d61299d08faa
+---
+ Makefile.am       |  6 ++++++
+ configure.ac      | 12 ++++++++++++
+ doc/rrdcached.pod |  2 ++
+ 3 files changed, 20 insertions(+)
+
+diff --git a/Makefile.am b/Makefile.am
+index 20b2e0a..11d16d3 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -29,6 +29,12 @@ ACLOCAL_M4= $(top_srcdir)/aclocal.m4
+ 
+ #	$(RSYNC) CHANGES archive/$(PACKAGE)-$(VERSION).tar.gz tobi@ipn.caida.org:/ipn/web/Tools/RRDtool/pub/
+ 
++if HAVE_SYSTEMD
++systemdsystemunit_DATA = \
++	etc/rrdcached.socket \
++	etc/rrdcached.service
++endif
++
+ site-perl-inst: site-perl-install
+ 
+ site-perl-install: all bindings/perl-piped/Makefile bindings/perl-shared/Makefile
+diff --git a/configure.ac b/configure.ac
+index 51c3f81..ab210d1 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -918,6 +918,17 @@ AC_ARG_VAR(RRDDOCDIR, [[DATADIR/doc/PACKAGE-VERSION] Documentation directory])
+ if test -z "$RRDDOCDIR"; then
+    RRDDOCDIR='${datadir}/doc/${PACKAGE}-${VERSION}'; fi
+ 
++# systemd check
++PKG_PROG_PKG_CONFIG
++AC_ARG_WITH([systemdsystemunitdir],
++	AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
++	[], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
++if test "x$with_systemdsystemunitdir" != xno; then
++	AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
++	AC_OUTPUT([etc/rrdcached.socket etc/rrdcached.service])
++fi
++AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
++
+ 
+ CONFIGURE_PART(Apply Configuration Information)
+  
+@@ -993,6 +1004,7 @@ echo "       Build librrd MT: $enable_pthread"
+ echo "           Use gettext: $USE_NLS"
+ echo "           With libDBI: $have_libdbi"
+ echo "          With libwrap: $have_libwrap"
++echo "      With systemd dir: $with_systemdsystemunitdir"
+ echo
+ echo "             Libraries: $ALL_LIBS"
+ echo
+diff --git a/doc/rrdcached.pod b/doc/rrdcached.pod
+index 18adcf1..7c0b30c 100644
+--- a/doc/rrdcached.pod
++++ b/doc/rrdcached.pod
+@@ -448,6 +448,8 @@ accepted commands to those needed by external clients. If, for example,
+ external clients want to draw graphs of the cached data, they should only be
+ allowed to use the C<FLUSH> command.
+ 
++Authorization does not work when rrcached is socket-activated by systemd. 
++
+ =head2 Encryption
+ 
+ There is no encryption.
+-- 
+1.8.4
+
