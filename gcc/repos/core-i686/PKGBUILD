@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.2
-pkgrel=1
+pkgrel=3
 #_snapshot=4.8-20130725
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -14,7 +14,7 @@ license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
 makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
-options=('!libtool' '!emptydirs')
+options=('!emptydirs')
 source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         #ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         gcc-4.8-filename-output.patch)
@@ -131,6 +131,7 @@ package_gcc()
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
   depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.23' 'libmpc' 'cloog')
   groups=('base-devel')
+  options=('staticlibs')
   install=gcc.install
 
   cd ${srcdir}/gcc-build
@@ -152,6 +153,10 @@ package_gcc()
   rm $pkgdir/usr/share/info/{gccgo,gfortran,gnat*,libgomp,libquadmath,libitm}.info
   rm $pkgdir/usr/share/locale/{de,fr}/LC_MESSAGES/libstdc++.mo
   rm $pkgdir/usr/share/man/man1/{gccgo,gfortran}.1
+  
+  # remove static libraries - note libstdc++.a is needed for the binutils and glibc testsuite
+  rm $pkgdir/usr/lib/lib{asan,gomp,itm,mudflap{,th},quadmath}.a
+  [[ $CARCH = "x86_64" ]] && rm $pkgdir/usr/lib/libtsan.a
 
   # many packages expect this symlinks
   ln -s gcc ${pkgdir}/usr/bin/cc
@@ -199,6 +204,7 @@ package_gcc-fortran()
 {
   pkgdesc="Fortran front-end for GCC"
   depends=("gcc=$pkgver-$pkgrel")
+  options=('staticlibs' '!emptydirs')
   install=gcc-fortran.install
 
   cd ${srcdir}/gcc-build
@@ -209,12 +215,13 @@ package_gcc-fortran()
 
   ln -s gfortran ${pkgdir}/usr/bin/f95
 
-  # remove files included in gcc-libs or gcc
+  # remove files included in gcc-libs or gcc and unnneeded static lib
   rm ${pkgdir}/usr/lib/lib{gfortran,gcc_s}.so*
   rm ${pkgdir}/usr/lib/libquadmath.{a,so*}
   rm ${pkgdir}/usr/lib/gcc/$CHOST/${pkgver}/{*.o,libgc*}
   rm ${pkgdir}/usr/share/info/libquadmath.info
   rm -r ${pkgdir}/usr/lib/gcc/$CHOST/${pkgver}/include
+  rm ${pkgdir}/usr/lib/libgfortran.a
 
   # Install Runtime Library Exception
   install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
@@ -245,6 +252,7 @@ package_gcc-ada()
 {
   pkgdesc="Ada front-end for GCC (GNAT)"
   depends=("gcc=$pkgver-$pkgrel")
+  options=('staticlibs' '!emptydirs')
   install=gcc-ada.install
 
   cd ${srcdir}/gcc-build/gcc
@@ -252,7 +260,7 @@ package_gcc-ada()
   install -m755 gnat1 $pkgdir/usr/lib/gcc/$CHOST/$pkgver
 
   ln -s gcc ${pkgdir}/usr/bin/gnatgcc
-  
+
   # Install Runtime Library Exception
   install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-ada/RUNTIME.LIBRARY.EXCEPTION
@@ -262,12 +270,14 @@ package_gcc-go()
 {
   pkgdesc="Go front-end for GCC"
   depends=("gcc=$pkgver-$pkgrel")
+  options=('staticlibs' '!emptydirs')
   install=gcc-go.install
 
   cd ${srcdir}/gcc-build
   make -j1 DESTDIR=$pkgdir install-target-libgo
   make -j1 -C gcc DESTDIR=$pkgdir go.install-{common,man,info}
   install -Dm755 gcc/go1 $pkgdir/usr/lib/gcc/$CHOST/$pkgver/go1
+  rm $pkgdir/usr/lib/lib{atomic,go}.a
 
   # Install Runtime Library Exception
   install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
