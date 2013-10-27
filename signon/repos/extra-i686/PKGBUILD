@@ -1,0 +1,53 @@
+# $Id$
+#Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Balló György <ballogyor+arch at gmail dot com>
+
+pkgbase=signon
+pkgname=('signon' 'signon-doc')
+pkgver=8.54
+pkgrel=2
+arch=('i686' 'x86_64')
+url="http://code.google.com/p/accounts-sso/"
+license=('LGPL')
+makedepends=('qt4' 'libproxy' 'doxygen' 'graphviz' 'ttf-font')
+options=('!emptydirs')
+source=("http://accounts-sso.googlecode.com/files/$pkgbase-$pkgver.tar.bz2"
+        'use_keyring.patch')
+sha1sums=('a29a12d6fe3747930e94932f6e1b1339b471d108'
+          'cfdd48b494ad267654ceba23f1b81bcb8f56b9a1')
+
+prepare() {
+  cd $pkgbase-$pkgver
+  
+  # Use gnome-keyring secrets storage if signon-keyring-extension is available
+  patch -Np1 -i "$srcdir/use_keyring.patch"
+  
+  # qt4 fix
+  sed -i 's/qdbusxml2cpp/qdbusxml2cpp-qt4/' src/signond/signond.pro
+}
+
+build() {
+  cd $pkgbase-$pkgver
+  qmake-qt4 PREFIX=/usr LIBDIR=/usr/lib
+  make
+}
+
+package_signon() {
+  pkgdesc="Framework to provide credential storage and authentication service"
+  depends=('qt4' 'libproxy')
+  backup=('etc/signond.conf')
+  install=$pkgname.install
+
+  cd $pkgbase-$pkgver
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Split out documentation
+  mv "$pkgdir/usr/share/doc" "$srcdir"
+}
+
+package_signon-doc() {
+  pkgdesc="Developer documention of signon"
+
+  mkdir -p "$pkgdir/usr/share"
+  mv "$srcdir/doc" "$pkgdir/usr/share"
+}
