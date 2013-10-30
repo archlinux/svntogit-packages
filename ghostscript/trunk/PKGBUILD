@@ -16,7 +16,7 @@ optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
-options=('!libtool' '!makeflags')
+options=('!makeflags')
 md5sums=('7179bb1ed4f6f453147e6f7e1f210ce8')
 
 build() {
