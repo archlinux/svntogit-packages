@@ -1,0 +1,49 @@
+From 7b174c250df2bc97b503fd03b9e473998676b1a6 Mon Sep 17 00:00:00 2001
+From: Simon Kelley <simon@thekelleys.org.uk>
+Date: Mon, 28 Oct 2013 13:14:03 +0000
+Subject: [PATCH] Fix check for local domains in CNAME case. Fixes
+ d56a604a9600c08d4a863527d549713c07f0186d
+
+---
+ src/cache.c   | 2 +-
+ src/rfc1035.c | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/cache.c b/src/cache.c
+index d99aba6..6c5f601 100644
+--- a/src/cache.c
++++ b/src/cache.c
+@@ -330,7 +330,7 @@ static int cache_scan_free(char *name, struct all_addr *addr, time_t now, unsign
+ 		 ((flags & crecp->flags & F_TYPE) || ((crecp->flags | flags) & F_CNAME)) &&
+ 		 hostname_isequal(cache_get_name(crecp), name))
+ 	  {
+-	    if (crecp->flags & (F_HOSTS | F_DHCP))
++	    if (crecp->flags & (F_HOSTS | F_DHCP | F_CONFIG))
+ 	      return 0;
+ 	    *up = crecp->hash_next;
+ 	    cache_unlink(crecp);
+diff --git a/src/rfc1035.c b/src/rfc1035.c
+index fc6d09c..ff97576 100644
+--- a/src/rfc1035.c
++++ b/src/rfc1035.c
+@@ -1221,7 +1221,7 @@ int check_for_local_domain(char *name, time_t now)
+   struct naptr *naptr;
+ 
+   if ((crecp = cache_find_by_name(NULL, name, now, F_IPV4 | F_IPV6 | F_CNAME)) &&
+-      (crecp->flags & (F_HOSTS | F_DHCP)))
++      (crecp->flags & (F_HOSTS | F_DHCP | F_CONFIG)))
+     return 1;
+   
+   for (naptr = daemon->naptr; naptr; naptr = naptr->next)
+@@ -1861,7 +1861,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
+ 	  if (qtype == T_CNAME || qtype == T_ANY)
+ 	    {
+ 	      if ((crecp = cache_find_by_name(NULL, name, now, F_CNAME)) &&
+-		  (qtype == T_CNAME || (crecp->flags & (F_HOSTS | F_DHCP))))
++		  (qtype == T_CNAME || (crecp->flags & (F_HOSTS | F_DHCP | F_CONFIG))))
+ 		{
+ 		  ans = 1;
+ 		  if (!dryrun)
+-- 
+1.8.4.2
+
