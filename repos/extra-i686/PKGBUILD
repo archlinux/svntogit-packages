@@ -6,7 +6,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.17.6
+pkgver=0.18
 pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
@@ -15,18 +15,19 @@ arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl')
 makedepends=('doxygen')
-source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"
-        'tmpfiles.d')
-sha1sums=('c8cea5cbf87ece252d15457d2249090e73a8d11f'
-          'f4d5922abb69abb739542d8e93f4dfd748acdad7')
+source=("http://www.musicpd.org/download/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.xz"
+        'tmpfiles.d'
+        'conf')
+sha1sums=('e3cc99de0c2c595ca576cdb455c6aaedd4f7726a'
+          'f4d5922abb69abb739542d8e93f4dfd748acdad7'
+          '67c145c046cddd885630d72ce8ebe71f8321ff3b')
 
 backup=('etc/mpd.conf')
 install=install
 
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-	sed 's:cdio/paranoia.h:cdio/paranoia/paranoia.h:g' -i src/input/cdio_paranoia_input_plugin.c
-	sed 's:AVCODEC_MAX_AUDIO_FRAME_SIZE:192000:g' -i src/decoder/ffmpeg_decoder_plugin.c
+	sed 's:cdio/paranoia.h:cdio/paranoia/paranoia.h:g' -i src/input/CdioParanoiaInputPlugin.cxx
 }
 
 build() {
@@ -35,7 +36,6 @@ build() {
 		--prefix=/usr \
 		--sysconfdir=/etc \
 		--enable-jack \
-		--enable-lastfm \
 		--enable-soundcloud \
 		--enable-pipe-output \
 		--enable-pulse \
@@ -47,16 +47,9 @@ build() {
 package() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	make DESTDIR="${pkgdir}" install
-	install -d "${pkgdir}"/usr/lib/systemd/user
-	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
-	install -Dm644 doc/mpdconf.example "${pkgdir}"/etc/mpd.conf
+	install -Dm644 ../conf "${pkgdir}"/etc/mpd.conf
 	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
+	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
+	install -d "${pkgdir}"/usr/lib/systemd/user
 	ln -s ../system/mpd.service "${pkgdir}"/usr/lib/systemd/user/mpd.service
-	sed \
-		-e '/^#playlist_directory/c playlist_directory "/var/lib/mpd/playlists"' \
-		-e '/^#db_file/c db_file "/var/lib/mpd/mpd.db"' \
-		-e '/^#pid_file/c pid_file "/run/mpd/mpd.pid"' \
-		-e '/^#state_file/c state_file "/var/lib/mpd/mpdstate"' \
-		-e '/^#user/c user "mpd"' \
-		-i "${pkgdir}"/etc/mpd.conf
 }
