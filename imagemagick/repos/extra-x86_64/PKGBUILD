@@ -4,7 +4,7 @@
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
 pkgver=6.8.7.4
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
@@ -27,12 +27,15 @@ prepare() {
 
 build() {
   cd ImageMagick-${pkgver%.*}-${pkgver##*.}
+  [[ $CARCH = "i686" ]] && EXTRAOPTS="-with-gcc-arch=i686"
+  [[ $CARCH = "x86_64" ]] && EXTRAOPTS="--with-gcc-arch=x86-64"
+
   ./configure --prefix=/usr --sysconfdir=/etc --with-modules \
     --enable-hdri --with-wmf --with-openexr --with-xml --with-lcms2 --with-jp2 \
     --with-webp --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
     --with-perl --with-perl-options="INSTALLDIRS=vendor" --with-lqr --with-rsvg \
     --enable-opencl --without-gvc --without-djvu --without-autotrace \
-    --without-jbig --without-fpx --without-dps --without-fftw 
+    --without-jbig --without-fpx --without-dps --without-fftw $EXTRAOPTS
  make
 }
 
