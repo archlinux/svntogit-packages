@@ -47,7 +47,8 @@ check() {
 package_imagemagick() {
   pkgdesc="An image viewing/manipulation program"
   depends=('perl' 'libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'liblqr' 'libcl')
-  optdepends=('ghostscript: for Ghostscript support' 
+  optdepends=('imagemagick-doc: for additional information'
+              'ghostscript: for Ghostscript support' 
               'openexr: for OpenEXR support' 
               'libwmf: for WMF support' 
               'librsvg: for SVG support' 
