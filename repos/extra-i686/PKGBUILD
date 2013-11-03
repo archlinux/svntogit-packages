@@ -27,7 +27,7 @@ prepare() {
 
 build() {
   cd ImageMagick-${pkgver%.*}-${pkgver##*.}
-  [[ $CARCH = "i686" ]] && EXTRAOPTS="-with-gcc-arch=i686"
+  [[ $CARCH = "i686" ]] && EXTRAOPTS="--with-gcc-arch=i686"
   [[ $CARCH = "x86_64" ]] && EXTRAOPTS="--with-gcc-arch=x86-64"
 
   ./configure --prefix=/usr --sysconfdir=/etc --with-modules \
