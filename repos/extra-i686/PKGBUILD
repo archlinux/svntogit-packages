@@ -1,43 +1,51 @@
 # $Id$
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 
-pkgname=phonon
-pkgver=4.6.0
-pkgrel=8
-epoch=1
+pkgbase=phonon
+pkgname=('phonon-qt4' 'phonon-qt5')
+pkgver=4.7.0
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://phonon.kde.org/'
 license=('LGPL')
-pkgdesc="The multimedia framework for KDE"
-depends=('phonon-backend' 'libpulse' 'libqzeitgeist')
-optdepends=('pulseaudio: PulseAudio support')
-makedepends=('cmake' 'automoc4' 'pulseaudio')
-source=("http://download.kde.org/stable/${pkgname}/${pkgver}/src/${pkgname}-${pkgver}.tar.xz"
-        'fix-plugindir-for-qt-app.patch'
-        'fix-qmake.patch')
-md5sums=('bbe0c1c62ed14c31479c4c1a6cf1e173'
-         'e37d67038c2501f25ac7ee7c2de54a9a'
-         'c17d8617e9482f02b3e098842946b679')
+makedepends=('cmake' 'automoc4' 'libpulse' 'libqzeitgeist' 'qt5-base' 'qt5-tools' 'qt5-quick1')
+options=('!emptydirs')
+source=("http://download.kde.org/stable/${pkgbase}/${pkgver}/${pkgbase}-${pkgver}.tar.xz")
+md5sums=('f5c1a847ac8ae73e67bf762199978278')
+
+prepare() {
+  mkdir build
+  mkdir build-qt5
+}
 
 build() {
-  cd ${pkgname}-${pkgver}
-  # Upstream fixes
-  patch -p1 -i "${srcdir}"/fix-plugindir-for-qt-app.patch
-  patch -p1 -i "${srcdir}"/fix-qmake.patch
-  cd ../
-
-  mkdir build
   cd build
-  cmake ../${pkgname}-${pkgver} \
+  cmake ../${pkgbase}-${pkgver} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_SKIP_RPATH=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DPHONON_INSTALL_QT_EXTENSIONS_INTO_SYSTEM_QT=ON \
-    -DPHONON_BUILD_DESIGNER_PLUGIN=OFF
+    -DQT_QMAKE_EXECUTABLE=/usr/bin/qmake-qt4
+  make
+
+  cd ../build-qt5
+  cmake ../${pkgbase}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPHONON_INSTALL_QT_EXTENSIONS_INTO_SYSTEM_QT=ON \
+    -DPHONON_BUILD_PHONON4QT5=ON
   make
 }
 
-package(){
+package_phonon-qt4(){
+  pkgdesc="The multimedia framework for KDE4"
+  depends=('phonon-backend' 'libpulse' 'libqzeitgeist')
+  optdepends=('pulseaudio: PulseAudio support')
+  replaces=('phonon')
+  provides=('phonon')
+  conflicts=('phonon')
+
   cd build
   make DESTDIR="${pkgdir}" install
 
@@ -45,6 +53,19 @@ package(){
   install -d "${pkgdir}"/usr/include/qt4
   mv "${pkgdir}"/usr/include/{phonon,KDE} "${pkgdir}"/usr/include/qt4/
 
+  [[ -d "${pkgdir}"/usr/lib64 ]] && mv "${pkgdir}"/usr/{lib64/*,lib}
+
   sed -i 's#includedir=/usr/include#includedir=/usr/include/qt4#' \
-    "${pkgdir}"/usr/lib/pkgconfig/phonon.pc
+    "${pkgdir}/usr/lib/pkgconfig/phonon.pc"
+}
+
+package_phonon-qt5(){
+  pkgdesc="The multimedia framework for KF5"
+  depends=('phonon-backend' 'libpulse' 'qt5-base')
+  optdepends=('pulseaudio: PulseAudio support')
+
+  cd build-qt5
+  make DESTDIR="${pkgdir}" install
+
+  [[ -d "${pkgdir}"/usr/lib64 ]] && mv "${pkgdir}"/usr/{lib64/*,lib}
 }
