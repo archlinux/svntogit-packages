@@ -6,7 +6,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.18.1
+pkgver=0.18.2
 pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
@@ -15,10 +15,10 @@ arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl')
 makedepends=('doxygen')
-source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"
+source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
         'tmpfiles.d'
         'conf')
-sha1sums=('1556e8d7533ed016a552bae9f8da891a6a6443cd'
+sha1sums=('116f4cf0147320abd5253435c4be134a1d5eace8' 'SKIP'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '67c145c046cddd885630d72ce8ebe71f8321ff3b')
 
