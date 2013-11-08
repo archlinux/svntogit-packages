@@ -1,0 +1,53 @@
+From 77c63511d8809f7785328138e7e3a50303302730 Mon Sep 17 00:00:00 2001
+From: Max Kellermann <max@duempel.org>
+Date: Wed, 06 Nov 2013 22:30:29 +0000
+Subject: PlayerThread: reduce the number of DecoderThread wakeups
+
+After the number of decoded chunks has fallen below the threshold, the
+PlayerThread woke up the DecoderThread over and over.  This commit
+adds a boolean flag that avoids these duplicate wakeups, and thus
+reduces the number of system calls.
+---
+diff --git a/src/PlayerThread.cxx b/src/PlayerThread.cxx
+index e2e3ee3..cb3d6a9 100644
+--- a/src/PlayerThread.cxx
++++ b/src/PlayerThread.cxx
+@@ -69,6 +69,12 @@ class Player {
+ 	bool decoder_starting;
+ 
+ 	/**
++	 * Did we wake up the DecoderThread recently?  This avoids
++	 * duplicate wakeup calls.
++	 */
++	bool decoder_woken;
++
++	/**
+ 	 * is the player paused?
+ 	 */
+ 	bool paused;
+@@ -133,6 +139,7 @@ public:
+ 		:pc(_pc), dc(_dc), buffer(_buffer),
+ 		 buffering(true),
+ 		 decoder_starting(false),
++		 decoder_woken(false),
+ 		 paused(false),
+ 		 queued(true),
+ 		 output_open(false),
+@@ -861,8 +868,13 @@ Player::PlayNextChunk()
+ 	pc.Lock();
+ 	if (!dc.IsIdle() &&
+ 	    dc.pipe->GetSize() <= (pc.buffered_before_play +
+-				   buffer.GetSize() * 3) / 4)
+-		dc.Signal();
++				   buffer.GetSize() * 3) / 4) {
++		if (!decoder_woken) {
++			decoder_woken = true;
++			dc.Signal();
++		}
++	} else
++		decoder_woken = false;
+ 	pc.Unlock();
+ 
+ 	return true;
+--
+cgit v0.9.1-27-gd5a4
