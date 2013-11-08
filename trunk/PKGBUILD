@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.18.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -16,9 +16,11 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl')
 makedepends=('doxygen')
 source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+        '77c63511d8809f7785328138e7e3a50303302730.patch'
         'tmpfiles.d'
         'conf')
 sha1sums=('116f4cf0147320abd5253435c4be134a1d5eace8' 'SKIP'
+          '361122fa0267fbfc1a37cc953f9aadfa55fa0193'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '67c145c046cddd885630d72ce8ebe71f8321ff3b')
 
@@ -27,6 +29,7 @@ install=install
 
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -R -p1 -i ../77c63511d8809f7785328138e7e3a50303302730.patch # http://bugs.musicpd.org/view.php?id=3860
 	sed 's:cdio/paranoia.h:cdio/paranoia/paranoia.h:g' -i src/input/CdioParanoiaInputPlugin.cxx
 }
 
