@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=9
+pkgrel=10
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -29,6 +29,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.18-ptr-mangle-CVE-2013-4788.patch
         glibc-2.18-getaddrinfo-CVE-2013-4458.patch
         glibc-2.18-getaddrinfo-assertion.patch
+        glibc-2.18-scanf-parse-0e-0.patch
         glibc-2.18-strstr-hackfix.patch
         nscd.service
         nscd.tmpfiles
@@ -43,6 +44,7 @@ md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          '9749ba386b08a8fe53e7ecede9bf2dfb'
          '71329fccb8eb583fb0d67b55f1e8df68'
          'd4d86add33f22125777e0ecff06bc9bb'
+         '01d19fe9b2aea489cf5651530e0369f2'
          '4441f6dfe7d75ced1fa75e54dd21d36e'
          'd5fab2cd3abea65aa5ae696ea4a47d6b'
          'da662ca76e7c8d7efbc7986ab7acea2d'
@@ -72,6 +74,9 @@ prepare() {
 
   # upstream commit 894f3f10
   patch -p1 -i $srcdir/glibc-2.18-getaddrinfo-assertion.patch
+
+  # upstream commit a4966c61
+  patch -p1 -i $srcdir/glibc-2.18-scanf-parse-0e-0.patch
 
   # hack fix for strstr issues on x86
   patch -p1 -i $srcdir/glibc-2.18-strstr-hackfix.patch
