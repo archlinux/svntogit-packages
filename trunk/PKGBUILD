@@ -6,7 +6,7 @@
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.2
-pkgrel=3
+pkgrel=4
 #_snapshot=4.8-20130725
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -17,9 +17,11 @@ checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
 source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         #ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-        gcc-4.8-filename-output.patch)
+        gcc-4.8-filename-output.patch
+        gcc-4.8-lambda-ICE.patch)
 md5sums=('a3d7d63b9cb6b6ea049469a0c4a43c9d'
-         '40cb437805e2f7a006aa0d0c3098ab0f')
+         '40cb437805e2f7a006aa0d0c3098ab0f'
+         '6eb6e080dbf7bc6825f53a0aaa6c4ef9')
 
 
 if [ -n "${_snapshot}" ]; then
@@ -44,7 +46,10 @@ prepare() {
 
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57653
   patch -p0 -i ${srcdir}/gcc-4.8-filename-output.patch
-
+  
+  # http://gcc.gnu.org/bugzilla//show_bug.cgi?id=56710 - commit 3d1f8279
+  patch -p1 -i ${srcdir}/gcc-4.8-lambda-ICE.patch
+  
   mkdir ${srcdir}/gcc-build
 }
 
