@@ -3,8 +3,8 @@
 
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
-pkgver=6.8.7.4
-pkgrel=2
+pkgver=6.8.7.5
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
@@ -14,7 +14,7 @@ makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript' \
 #source=(http://www.imagemagick.org/download/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz{,.asc} \
 source=(ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz{,.asc} \
         perlmagick.rpath.patch)
-sha1sums=('88e936a1738967d078a9500f430e9017400a05e9'
+sha1sums=('7137f0f5341d305ec41bb79f1d8121a58feb0684'
           'SKIP'
           'e143cf9d530fabf3b58023899b5cc544ba93daec')
 
@@ -36,7 +36,7 @@ build() {
     --with-perl --with-perl-options="INSTALLDIRS=vendor" --with-lqr --with-rsvg \
     --enable-opencl --without-gvc --without-djvu --without-autotrace \
     --without-jbig --without-fpx --without-dps --without-fftw $EXTRAOPTS
- make
+  make
 }
 
 check() {
