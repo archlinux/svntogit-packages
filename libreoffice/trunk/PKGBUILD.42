@@ -16,7 +16,6 @@ pkgname=('libreoffice-common'
 	'libreoffice-writer'
 	'libreoffice-en-US'
 	'libreoffice-postgresql-connector'
-	'libreoffice-extension-presentation-minimizer'
 	'libreoffice-extension-wiki-publisher'
 	'libreoffice-extension-nlpsolver') # svn up -r 142692 (last one with all extensions built)
 _LOver=4.2.0.0.alpha1
@@ -89,6 +88,7 @@ source=(${_mirror}/${pkgbase}{,-help,-translations}-${_LOver}.tar.xz
 	${_additional_source_url}/Firebird-2.5.2.26540-0.tar.bz2
 	${_additional_source_url}/libatomic_ops-7_2d.zip
 	make-pyuno-work-with-system-wide-module-install.diff
+	build_fix.diff
 	libreoffice-common.sh libreoffice-common.csh)
 noextract=(15cb8c0803064faef0c4ddf5bc5ca279-boost_1_54_0.tar.bz2
 	185d60944ea767075d27247c3162b3bc-unowinreg.dll
@@ -168,6 +168,7 @@ md5sums=('78918f93b7fbbd0e9ecd8d8f6345f1c2'
          '21154d2004e025c8a3666625b0357bb5'
          'c0b86562d5aa40761a87134f83e6adcf'
          '07d2bf5ad839a394cca008b3ec6e7bb1'
+         '4f5aac74dcfc496ec9688a0815df236f'
          '4195735a80876ae812fca5736b50192a'
          'e7e4b3e70e99e5cba8f8dfcacf3b0d87')
 
@@ -185,6 +186,14 @@ prepare() {
 	  ln -s ${srcdir}/$source .
 	done
 	popd
+	
+	# fix build broken linking unowinreg.dll
+	patch -Np1 -i ${srcdir}/build_fix.diff
+    # unowinreg.dll must be a file not a symlink or the result will become a broken symlink
+    # /usr/share/libreoffice/sdk/classes/win/unowinreg.dll -> /build/libreoffice/src/185d60944ea767075d27247c3162b3bc-unowinreg.dll
+    rm ${srcdir}/ext_sources/185d60944ea767075d27247c3162b3bc-unowinreg.dll
+    cp -f ${srcdir}/185d60944ea767075d27247c3162b3bc-unowinreg.dll ${srcdir}/ext_sources
+    #cp -f ${srcdir}/185d60944ea767075d27247c3162b3bc-unowinreg.dll ${srcdir}/ext_sources
    
     # fix not upstreamable pyuno paths - patch taken from Debian
     patch -Np1 -i ${srcdir}/make-pyuno-work-with-system-wide-module-install.diff
@@ -275,7 +284,8 @@ build() {
 		--with-system-headers\
 		--without-system-hsqldb \
 		--with-alloc=system\
-		--with-system-clucene
+		--with-system-clucene \
+		--disable-dependency-tracking
 		
 #		--enable-mergelibs \ # https://bugs.archlinux.org/task/34414
 
@@ -327,7 +337,7 @@ package_libreoffice-common() {
  conflicts=('go-openoffice')
  replaces=('go-openoffice' 'openoffice-base' 'libreoffice' 'libreoffice-extension-pdfimport' 'libreoffice-extension-presenter-screen'
            'libreoffice-scripting-beanshell' 'libreoffice-scripting-javascript' 'libreoffice-extension-scripting-python'
-           'libreoffice-extension-report-builder')
+           'libreoffice-extension-report-builder' 'libreoffice-extension-presentation-minimizer' 'libreoffice-extension-presentation-minimizer')
 
  # create directories from *list.txt file
  for directory in `grep ^%dir ${srcdir}/libreoffice-$_LOver/file-lists/common_list.txt`; do
@@ -639,16 +649,6 @@ package_libreoffice-en-US() {
  done
 }
 
-package_libreoffice-extension-presentation-minimizer() {
-
- pkgdesc="This extension reduce the file size of the current presentation"
- depends=('libreoffice-common' 'gcc-libs')
- groups=('libreoffice-extensions')
-
-	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip -q ${srcdir}/libreoffice-$_LOver/solver/unxlng*/bin/presentation-minimizer.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/presentation-minimizer
-}
-
 package_libreoffice-extension-wiki-publisher() {
 
  pkgdesc="This extension enables you to create Wiki articles on MediaWiki servers without having to know the syntax of the MediaWiki markup language"
@@ -657,7 +657,8 @@ package_libreoffice-extension-wiki-publisher() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip -q ${srcdir}/libreoffice-$_LOver/solver/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/wiki-publisher
+	#unzip -q ${srcdir}/libreoffice-$_LOver/solver/unxlng*/bin/wiki-publisher.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/wiki-publisher
+	unzip -q ${srcdir}/libreoffice-$_LOver/workdir/unxlng*/Extension/wiki-publisher.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/wiki-publisher
 }
 
 package_libreoffice-extension-nlpsolver() {
@@ -668,5 +669,5 @@ package_libreoffice-extension-nlpsolver() {
  groups=('libreoffice-extensions')
 
 	install -dm755 ${pkgdir}/usr/lib/libreoffice/share/extensions
-	unzip -q ${srcdir}/libreoffice-$_LOver/solver/unxlng*/bin/nlpsolver.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/nlpsolver
+	unzip -q ${srcdir}/libreoffice-$_LOver/workdir/unxlng*/Extension/nlpsolver.oxt -d ${pkgdir}/usr/lib/libreoffice/share/extensions/nlpsolver
 }

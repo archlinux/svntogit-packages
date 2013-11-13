@@ -1,0 +1,38 @@
+From 85d584416fd7d51a397807597b5f36e39820a317 Mon Sep 17 00:00:00 2001
+From: Miklos Vajna <vmiklos@collabora.co.uk>
+Date: Wed, 13 Nov 2013 09:02:22 +0000
+Subject: installer: use 'mkdir -p' before 'ln -sf'
+
+Fixes the "ln: failed to create symbolic link
+'.../usr/lib/libreoffice/sdk/classes/win/unowinreg.dll': No such file or
+directory" problem, reported at
+http://lists.freedesktop.org/archives/libreoffice/2013-November/057443.html
+
+Change-Id: Ibe7dbbecc670921ca3c372cc9b8655cf2f50aefa
+---
+diff --git a/solenv/bin/modules/installer/worker.pm b/solenv/bin/modules/installer/worker.pm
+index 917066f..aab676f 100644
+--- a/solenv/bin/modules/installer/worker.pm
++++ b/solenv/bin/modules/installer/worker.pm
+@@ -23,6 +23,7 @@ use File::Copy;
+ use File::stat;
+ use File::Temp qw(tmpnam);
+ use File::Path;
++use File::Basename;
+ use installer::control;
+ use installer::converter;
+ use installer::exiter;
+@@ -369,7 +370,9 @@ sub install_simple ($$$$$$)
+         my $onelink = ${$unixlinksarray}[$i];
+         my $target = $onelink->{'Target'};
+         my $destination = $onelink->{'destination'};
+-        my $cmd = "ln -sf '$target' '$destdir$destination'";
++        my $cmd = "mkdir -p '" . dirname($destdir . $destination) . "'";
++        system($cmd) && die "Failed to execute \"$cmd\"";
++        $cmd = "ln -sf '$target' '$destdir$destination'";
+ 
+         system($cmd) && die "Failed \"$cmd\"";
+         push @lines, "$destination\n";
+--
+cgit v0.9.0.2-2-gbebe
+
