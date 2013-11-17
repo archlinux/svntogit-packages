@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.18.4
-pkgrel=1
+pkgrel=2
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -51,6 +51,7 @@ package() {
 	install -Dm644 ../conf "${pkgdir}"/etc/mpd.conf
 	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
-	install -d "${pkgdir}"/usr/lib/systemd/user
-	ln -s ../system/mpd.service "${pkgdir}"/usr/lib/systemd/user/mpd.service
+
+	install -Dm644 "${pkgdir}"/usr/lib/systemd/{system,user}/mpd.service
+	sed '/WantedBy=/c WantedBy=default.target' -i "${pkgdir}"/usr/lib/systemd/user/mpd.service
 }
