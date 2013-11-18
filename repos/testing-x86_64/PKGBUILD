@@ -1,0 +1,116 @@
+# $Id$
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Geoffroy Carrier <geoffroy@archlinux.org>
+
+pkgbase=bluez
+pkgname=('bluez' 'bluez-utils' 'bluez-libs' 'bluez-cups' 'bluez-hid2hci')
+pkgver=5.11
+pkgrel=1
+url="http://www.bluez.org/"
+arch=('i686' 'x86_64')
+license=('GPL2')
+makedepends=('dbus' 'libical' 'systemd')
+source=("http://www.kernel.org/pub/linux/bluetooth/${pkgname}-${pkgver}.tar.bz2"
+        bluetooth.modprobe)
+md5sums=('c3675ed157a433b6de7391854b907b8c'
+         '671c15e99d7154c2df987b71c5851b3d')
+
+build() {
+  cd ${pkgname}-${pkgver}
+
+  ./configure \
+          --prefix=/usr \
+          --mandir=/usr/share/man \
+          --sysconfdir=/etc \
+          --localstatedir=/var \
+          --libexecdir=/usr/lib \
+          --enable-library # this is deprecated
+#          --enable-experimental \
+
+  make all V=1
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make -k check
+}
+
+
+package_bluez() {
+  pkgdesc="Daemons for the bluetooth protocol stack"
+  depends=('libical' 'dbus' 'glib2')
+  backup=('etc/dbus-1/system.d/bluetooth.conf')
+  conflicts=('obexd-client' 'obexd-server')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR=${pkgdir} \
+       install-libexecPROGRAMS \
+       install-dbussessionbusDATA \
+       install-systemdsystemunitDATA \
+       install-systemduserunitDATA \
+       install-dbussystembusDATA \
+       install-dbusDATA \
+       install-man8
+
+  # add basic documention
+  install -dm755 ${pkgdir}/usr/share/doc/${pkgbase}/dbus-apis
+  cp -a doc/*.txt ${pkgdir}/usr/share/doc/${pkgbase}/dbus-apis/
+  # fix module loading errors
+  install -dm755 ${pkgdir}/usr/lib/modprobe.d
+  install -Dm644 ${srcdir}/bluetooth.modprobe ${pkgdir}/usr/lib/modprobe.d/bluetooth-usb.conf	
+}
+
+package_bluez-utils() {
+  pkgdesc="Development and debugging utilities for the bluetooth protocol stack"
+  depends=('dbus' 'systemd')
+  conflicts=('bluez-hcidump')
+  provides=('bluez-hcidump')
+  replaces=('bluez-hcidump' 'bluez<=4.101')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR=${pkgdir} \
+       install-binPROGRAMS \
+       install-man1
+
+  # libbluetooth.so* are part of libLTLIBRARIES and binPROGRAMS targets
+  #make DESTDIR=${pkgdir} uninstall-libLTLIBRARIES
+  #rmdir ${pkgdir}/usr/lib
+  rm -rf ${pkgdir}/usr/lib
+  
+  # move the hid2hci man page out
+  mv ${pkgdir}/usr/share/man/man1/hid2hci.1 ${srcdir}/
+}
+
+package_bluez-libs() {
+  pkgdesc="Deprecated libraries for the bluetooth protocol stack"
+  depends=('glibc')
+  license=('LGPL2.1')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR=${pkgdir} \
+       install-includeHEADERS \
+       install-libLTLIBRARIES \
+       install-pkgconfigDATA
+}
+
+package_bluez-cups() {
+  pkgdesc="CUPS printer backend for Bluetooth printers"
+  depends=('cups')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR=${pkgdir} install-cupsPROGRAMS
+}
+
+package_bluez-hid2hci() {
+  pkgdesc="Put HID proxying bluetooth HCI's into HCI mode"
+  depends=('systemd')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR=${pkgdir} \
+       install-udevPROGRAMS \
+       install-rulesDATA
+  
+  install -dm755 ${pkgdir}/usr/share/man/man1
+  mv ${srcdir}/hid2hci.1 ${pkgdir}/usr/share/man/man1/hid2hci.1
+}
