@@ -6,8 +6,8 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.18.4
-pkgrel=2
+pkgver=0.18.5
+pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -18,7 +18,7 @@ makedepends=('doxygen')
 source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
         'tmpfiles.d'
         'conf')
-sha1sums=('3a2c6b713f7e058b45d73295d0a45b1046037d77' 'SKIP'
+sha1sums=('4078755d77b7de4135458ae7db2518d2e057e745' 'SKIP'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '67c145c046cddd885630d72ce8ebe71f8321ff3b')
 
