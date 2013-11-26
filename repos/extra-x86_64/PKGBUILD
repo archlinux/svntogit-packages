@@ -3,52 +3,49 @@
 
 pkgbase=gstreamer-vaapi
 pkgname=(gst-vaapi gstreamer0.10-vaapi)
-pkgver=0.5.6
+pkgver=0.5.7
 pkgrel=1
 pkgdesc="GStreamer Multimedia Framework VA Plugins"
 arch=(i686 x86_64)
 license=(LGPL)
 url="http://www.freedesktop.org/software/vaapi/releases/gstreamer-vaapi/"
-makedepends=(gst-plugins-base gst-plugins-bad gstreamer0.10-base-plugins gstreamer0.10-bad-plugins libva
-             libxrandr)
+makedepends=(gst-plugins-base gst-plugins-bad gstreamer0.10-base-plugins gstreamer0.10-bad-plugins
+             libva libxrandr)
 options=(!emptydirs)
 
+#source=(git://gitorious.org/vaapi/${pkgbase}.git#tag=$pkgver)
 source=($url/$pkgbase-${pkgver}.tar.bz2)
-sha1sums=('884a47cc4916f441bec160235927556a79c7ea09')
+sha1sums=('6baa794e5f95a22fbb5e0788ec29c8a78f40b5b3')
 
 prepare() {
-  cd $pkgbase-$pkgver
-  mkdir build-1.0 build-0.10
+  mkdir build build-0.10
+  #cd $pkgbase
+  #NO_CONFIGURE=1 ./autogen.sh
 }
 
-build() {
-  cd $pkgbase-$pkgver/build-1.0
-  ../configure --prefix=/usr --disable-static --with-gstreamer-api=1.0
+_build() (
+  cd "$1"; shift
+  ../$pkgbase-$pkgver/configure --prefix=/usr --disable-static "$@"
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
+)
 
-  cd ../build-0.10
-  ../configure --prefix=/usr --disable-static --with-gstreamer-api=0.10 --disable-wayland
-  make
+build() {
+  _build build
+  _build build-0.10 --with-gstreamer-api=0.10 --disable-wayland
 }
 
 check() {
-  cd $pkgbase-$pkgver/build-1.0
-  make check
-
-  cd ../build-0.10
-  make check
+  make -C build -k check
+  make -C build-0.10 -k check
 }
 
 package_gst-vaapi() {
   depends=(gst-plugins-base gst-plugins-bad libva libxrandr)
-
-  cd $pkgbase-$pkgver/build-1.0
-  make DESTDIR="$pkgdir" install
+  make -C build DESTDIR="$pkgdir" install
 }
 
 package_gstreamer0.10-vaapi() {
   depends=(gstreamer0.10-base-plugins gstreamer0.10-bad-plugins libva libxrandr)
-
-  cd $pkgbase-$pkgver/build-0.10
-  make DESTDIR="$pkgdir" install
+  make -C build-0.10 DESTDIR="$pkgdir" install
 }
