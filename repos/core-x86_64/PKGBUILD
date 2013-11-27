@@ -6,7 +6,7 @@ pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.12
 pkgver=3.12.1
-pkgrel=1
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -19,14 +19,16 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         # standard config files for mkinitcpio ramdisk
         'linux.preset'
         'change-default-console-loglevel.patch'
-        'criu-no-expert.patch')
+        'criu-no-expert.patch'
+        '3.12-btrfs-relocate-csums.patch')
 md5sums=('cc6ee608854e0da4b64f6c1ff8b6398c'
          '5a8cb5a659baeeb6df3fe22de8d32df6'
          '798bca5d2f0a1505c9b86a5227a2b339'
-         '8fa6cbb28dda5a4b38730c7f728e1845'
+         '8cd452ae4f74f11dc09b25a0270b07f1'
          'eb14dcfd80c00852ef81ded6e826826a'
          '98beb36f9b8cf16e58de2483ea9985e3'
-         'd50c1ac47394e9aec637002ef3392bd1')
+         'd50c1ac47394e9aec637002ef3392bd1'
+         '923c1728634d4e0f7b77177c36d94791')
 
 _kernelname=${pkgbase#linux}
 
@@ -53,6 +55,11 @@ prepare() {
   # allow criu without expert option set
   # patch from fedora
   patch -Np1 -i "${srcdir}/criu-no-expert.patch"
+
+  # fix btrfs balance bug
+  # https://bugzilla.kernel.org/show_bug.cgi?id=63411
+  # https://bugs.archlinux.org/task/37867
+  patch -Np1 -i "${srcdir}/3.12-btrfs-relocate-csums.patch"
 
   if [ "${CARCH}" = "x86_64" ]; then
     cat "${srcdir}/config.x86_64" > ./.config
