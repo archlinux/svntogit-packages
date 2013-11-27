@@ -16,9 +16,11 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl' 'libmpdclient')
 makedepends=('doxygen')
 source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+        'paranoia.patch'
         'tmpfiles.d'
         'conf')
 sha1sums=('4078755d77b7de4135458ae7db2518d2e057e745' 'SKIP'
+          '8cd46e2d7782181279660f994d2cd5a941344aea'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '67c145c046cddd885630d72ce8ebe71f8321ff3b')
 
@@ -27,7 +29,8 @@ install=install
 
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-	sed 's:cdio/paranoia.h:cdio/paranoia/paranoia.h:g' -i src/input/CdioParanoiaInputPlugin.cxx
+	patch -p1 -i ../paranoia.patch
+	autoconf
 }
 
 build() {
