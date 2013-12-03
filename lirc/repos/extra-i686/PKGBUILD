@@ -4,14 +4,14 @@
 pkgbase=lirc
 pkgname=('lirc' 'lirc-utils')
 pkgver=0.9.0
-pkgrel=65
+pkgrel=66
 epoch=1
 _extramodules=extramodules-3.12-ARCH
 arch=('i686' 'x86_64')
 url="http://www.lirc.org/"
 license=('GPL')
 ### NOTICE don't forget to bump version in depends in package_lirc
-makedepends=('help2man' 'linux>=3.12' 'linux<3.13' 'linux-headers>=3.12' 'linux-headers<3.13' 'alsa-lib' 'libx11' 'libftdi' 'libirman' 'python2')
+makedepends=('help2man' 'linux>=3.12' 'linux<3.13' 'linux-headers>=3.12' 'linux-headers<3.13' 'alsa-lib' 'libx11' 'libftdi-compat' 'libirman' 'python2')
 options=('!makeflags' '!strip')
 source=(http://prdownloads.sourceforge.net/${pkgbase}/${pkgbase}-${pkgver}.tar.bz2
         lirc_wpc8769l.patch
@@ -24,9 +24,19 @@ source=(http://prdownloads.sourceforge.net/${pkgbase}/${pkgbase}-${pkgver}.tar.b
         lircm.service 
         irexec.service
         lirc.tmpfiles)
+md5sums=('b232aef26f23fe33ea8305d276637086'
+         '1cce37e18e3f6f46044abab29016d18f'
+         'b70cc9640505205446ec47b7d4779f38'
+         '1f8b104a2365d9f93404b143f499059b'
+         '087a7d102e1c96bf1179f38db2b0b237'
+         '9ee196bd03ea44af5a752fb0cc6ca96a'
+         '3deb02604b37811d41816e9b4385fcc3'
+         'a9ab637e7207472e61e55a2fa75dc555'
+         '1847b9997685bc3ad2cf11bea4590a92'
+         '07131d117fcfe9dcd50c453c3a5e9531'
+         'febf25c154a7d36f01159e84f26c2d9a')
 
-build() {
-  _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+prepare() {
   cd "${srcdir}/lirc-${pkgver}"
   patch -Np1 -i "${srcdir}/lirc_wpc8769l.patch"
   patch -Np1 -i "${srcdir}/lircd-handle-large-config.patch"
@@ -45,10 +55,16 @@ build() {
       -e 's/@X_LIBS@//g' \
       -e 's/@X_PRE_LIBS@//g' \
       -e 's/@X_EXTRA_LIBS@//g' -i Makefile.am tools/Makefile.am
+
   # fix for new automake #33497
   sed -i 's/AM_CONFIG_HEADER/AC_CONFIG_HEADER/' configure.ac
   libtoolize
   autoreconf
+}
+
+build() {
+  _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+  cd "${srcdir}/lirc-${pkgver}"
 
   PYTHON=python2 ./configure --enable-sandboxed --prefix=/usr \
       --with-driver=all --with-kerneldir=/usr/src/linux-${_kernver}/ \
@@ -60,7 +76,7 @@ build() {
       -e "s:lirc_imon::" -e "s:lirc_parallel::" -e "s:lirc_sasem::" \
       -e "s:lirc_serial::" -e "s:lirc_sir::" -e "s:lirc_ttusbir::" \
       -e "s:lirc_atiusb::" -e "s:lirc_i2c::" \
-      -i Makefile drivers/Makefile drivers/*/Makefile tools/Makefile 
+      -i Makefile drivers/Makefile drivers/*/Makefile tools/Makefile
   make
 }
 
@@ -81,7 +97,7 @@ package_lirc() {
 
 package_lirc-utils() {
   pkgdesc="Linux Infrared Remote Control utils"
-  depends=('alsa-lib' 'libx11' 'libftdi' 'libirman')
+  depends=('alsa-lib' 'libx11' 'libftdi-compat' 'libirman')
   optdepends=('python2: pronto2lirc utility')
   options=('strip')
   install=lirc-utils.install
@@ -103,14 +119,3 @@ package_lirc-utils() {
   # remove built modules
   rm -r "${pkgdir}/usr/lib/modules"
 }
-md5sums=('b232aef26f23fe33ea8305d276637086'
-         '1cce37e18e3f6f46044abab29016d18f'
-         'b70cc9640505205446ec47b7d4779f38'
-         '1f8b104a2365d9f93404b143f499059b'
-         '087a7d102e1c96bf1179f38db2b0b237'
-         '9ee196bd03ea44af5a752fb0cc6ca96a'
-         '3deb02604b37811d41816e9b4385fcc3'
-         'a9ab637e7207472e61e55a2fa75dc555'
-         '1847b9997685bc3ad2cf11bea4590a92'
-         '07131d117fcfe9dcd50c453c3a5e9531'
-         'febf25c154a7d36f01159e84f26c2d9a')
