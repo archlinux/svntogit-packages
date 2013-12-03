@@ -1,27 +1,36 @@
 # $Id$
-# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer:
 
 pkgname=libftdi
-pkgver=0.20
+pkgver=1.0
 pkgrel=2
 pkgdesc="A library to talk to FTDI chips"
 arch=('i686' 'x86_64')
 url="http://www.intra2net.com/en/developer/libftdi/download.php"
 license=('GPL2' 'LGPL2.1')
-depends=('libusb-compat' 'gcc-libs')
-makedepends=('boost')
-source=(http://www.intra2net.com/en/developer/libftdi/download/$pkgname-$pkgver.tar.gz{,.sig})
-sha1sums=('4bc6ce70c98a170ada303fbd00b8428d8a2c1aa2'
-          '807d145147c9bee08b4cea4d7ca82ccaf1330f02')
+depends=('libusbx')
+makedepends=('boost' 'cmake')
+source=(http://www.intra2net.com/en/developer/libftdi/download/${pkgname}1-$pkgver.tar.bz2{,.sig})
+sha1sums=('5be76cfd7cd36c5291054638f7caf4137303386f'
+          'SKIP')
+
+prepare() {
+  cd ${pkgname}1-$pkgver
+  sed -i 's|LIB_SUFFIX 64|LIB_SUFFIX ""|' CMakeLists.txt
+}
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
-  sed -i '/no-install/d' examples/Makefile.in
-  ./configure --prefix=/usr
+  cd ${pkgname}1-$pkgver
+  mkdir build
+  cd build
+  cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_BUILD_RPATH=ON -DCMAKE_BUILD_TYPE=Release
   make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd ${pkgname}1-$pkgver/build
   make DESTDIR="$pkgdir" install
+  find examples -type f -perm -755 -exec install {} "$pkgdir/usr/bin" \;
+  # Remove eepreom (conflict with i2c-tools FS#37925)
+  rm "$pkgdir/usr/bin/eeprom"
 }
