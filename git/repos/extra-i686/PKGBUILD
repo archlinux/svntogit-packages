@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.4.2
+pkgver=1.8.5.1
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -46,6 +46,8 @@ check() {
   cd "$srcdir/$pkgname-$pkgver"
   local jobs
   jobs=$(expr "$MAKEFLAGS" : '.*\(-j[0-9]*\).*')
+  # build failures with multiple jobs in check, not ideal...
+  jobs='-j1'
   mkdir -p /dev/shm/git-test
   # We used to use this, but silly git regressions:
   #GIT_TEST_OPTS="--root=/dev/shm/" \
@@ -111,7 +113,7 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('6f63d103465b86ca0ebe4189ea54731c'
-         '2b4719ec820d845134b689247abe65e8'
+md5sums=('7b9d622c98482aeb4532500231626210'
+         '4d6a83339753f5a9a2dd8aed4b7180bc'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
