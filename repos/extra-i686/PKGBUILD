@@ -7,9 +7,9 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=2.8.1
-_pkgver=2.8.1
-pkgrel=2
+pkgver=3.0.0
+_pkgver=3.0.0
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=('i686' 'x86_64')
 url='http://qt-project.org'
