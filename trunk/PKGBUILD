@@ -4,13 +4,14 @@
 
 pkgname=firefox
 pkgver=26.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=('i686' 'x86_64')
 license=('MPL' 'GPL' 'LGPL')
 url="https://www.mozilla.org/firefox/"
 depends=('gtk2' 'mozilla-common' 'libxt' 'startup-notification' 'mime-types'
-         'dbus-glib' 'alsa-lib' 'desktop-file-utils' 'hicolor-icon-theme')
+         'dbus-glib' 'alsa-lib' 'desktop-file-utils' 'hicolor-icon-theme'
+         'libvpx' 'libevent' 'nss' 'hunspell' 'sqlite')
 makedepends=('unzip' 'zip' 'diffutils' 'python2' 'yasm' 'mesa' 'imake'
              'xorg-server-xvfb' 'libpulse' 'gstreamer0.10-base'
              'inetutils')
@@ -24,12 +25,14 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 install=firefox.install
 options=('!emptydirs' '!makeflags')
 source=(https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.bz2
-        mozconfig firefox.desktop firefox-install-dir.patch vendor.js)
+        mozconfig firefox.desktop firefox-install-dir.patch vendor.js
+        firefox-20.0.1-fixed-loading-icon.png)
 sha256sums=('31c4fb2792df63ae450e350380a5e18cf1c51487011a9da0b6cc4bffb69d9812'
-            '1bed30ec8a8c4af16ae590d328cf49740af570f969a9a225020f4a5a338183f4'
+            '759a86ad115c57a16e577a0df85ce828c538530f48342228f60e2d1bf10aa977'
             'd2a7610393ba259c35e3227b92e02ec91095a95189f56ac93ccdf6732772719c'
             'bcf224d1f239b73e4ac6d268819c1e94a1606beee99c6d8f851f8192b6444de3'
-            '4b50e9aec03432e21b44d18c4c97b2630bace606b033f7d556c9d3e3eb0f4fa4')
+            '4b50e9aec03432e21b44d18c4c97b2630bace606b033f7d556c9d3e3eb0f4fa4'
+            '68e3a5b47c6d175cc95b98b069a15205f027cab83af9e075818d38610feb6213')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -61,6 +64,11 @@ prepare() {
   # configure script misdetects the preprocessor without an optimization level
   # https://bugs.archlinux.org/task/34644
   sed -i '/ac_cpp=/s/$CPPFLAGS/& -O2/' configure
+
+  # Fix tab loading icon (flickers with libpng 1.6)
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=841734
+  cp "$srcdir/firefox-20.0.1-fixed-loading-icon.png" \
+    browser/themes/linux/tabbrowser/loading.png
 }
 
 build() {
@@ -70,22 +78,16 @@ build() {
   export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/firefox"
   export PYTHON="/usr/bin/python2"
 
-  if [[ $CARCH == i686 ]]; then
-    # Work around memory address space exhaustion during linking on i686
-    LDFLAGS+=' -Wl,--no-keep-memory'
-    make -f client.mk build
-  else
-    # Set up PGO
-    export DISPLAY=:99
-    Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
+  # Set up PGO
+  export DISPLAY=:99
+  Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
 
-    if ! make -f client.mk build MOZ_PGO=1; then
-      kill $!
-      return 1
-    fi
-
-    kill $! || true
+  if ! make -f client.mk build MOZ_PGO=1; then
+    kill $!
+    return 1
   fi
+
+  kill $! || true
 }
 
 package() {
