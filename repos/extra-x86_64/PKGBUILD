@@ -1,0 +1,74 @@
+# $Id$
+# Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
+# Contributor: Christoph Zeiler <archNOSPAM_at_moonblade.dot.org>
+
+pkgbase=bullet
+pkgname=('bullet' 'bullet-docs')
+_rev=2704
+pkgver=2.82
+pkgrel=1
+pkgdesc="A 3D Collision Detection and Rigid Body Dynamics Library for games and animation"
+arch=('i686' 'x86_64')
+url="http://www.bulletphysics.com/Bullet/"
+license=('custom:zlib')
+depends=()
+makedepends=('cmake' 'doxygen' 'graphviz' 'ttf-dejavu' 'mesa')
+source=(http://bullet.googlecode.com/files/${pkgbase}-${pkgver}-r${_rev}.tgz
+        ${pkgbase}.pc)
+md5sums=('70b3c8d202dee91a0854b4cbc88173e8'
+         'd1da06deba3b08b884d2212f6838905c')
+
+build() {
+  cd ${pkgbase}-${pkgver}-r${_rev}
+
+  # get a clean build dir
+  [[ -d build ]] && rm -rf build
+  mkdir build && cd build 
+
+  # generate CMake Makefile
+  cmake .. \
+       -DCMAKE_INSTALL_PREFIX=/usr \
+       -DBUILD_SHARED_LIBS=1 \
+       -DBUILD_DEMOS=0 \
+       -DBUILD_MULTITHREADING=1 \
+       -DBUILD_EXTRAS=1 \
+       -DINSTALL_LIBS=1 \
+       -DINSTALL_EXTRA_LIBS=1 \
+       -DCMAKE_BUILD_TYPE=Release # set =Debug for debugging version
+
+  # compile
+  make
+
+  # generate docs
+  cd ..
+  sed -i 's/GENERATE_HTMLHELP.*//g' Doxyfile
+  doxygen
+}
+
+package_bullet() {
+  optdepends=('bullet-docs: documentation')
+
+  cd ${pkgbase}-${pkgver}-r${_rev}/build
+
+  # install it
+  make DESTDIR=${pkgdir} install
+
+  # manually handle pkgconfig file
+  mkdir -p "${pkgdir}"/usr/lib/pkgconfig
+  sed "s|VERSION|${pkgver}|g" ${srcdir}/bullet.pc > ${pkgdir}/usr/lib/pkgconfig/bullet.pc
+
+  # install license
+  install -Dm644 ../BulletLicense.txt ${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE
+}
+
+package_bullet-docs() {
+  pkgdesc="Documentation for bullet"
+  depends=()
+
+  cd ${pkgbase}-${pkgver}-r${_rev}
+
+  # install docs
+  install -Dm644 Bullet_User_Manual.pdf ${pkgdir}/usr/share/doc/bullet/Bullet_User_Manual.pdf
+  cp -r html ${pkgdir}/usr/share/doc/bullet/html  
+}
+# vim: sw=2 ts=2 et:
