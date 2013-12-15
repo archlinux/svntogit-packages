@@ -7,7 +7,7 @@
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.2
 _pkgver=4.8
-pkgrel=5
+pkgrel=6
 #_snapshot=4.8-20130725
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
@@ -52,7 +52,11 @@ prepare() {
   
   # http://gcc.gnu.org/bugzilla//show_bug.cgi?id=56710 - commit 3d1f8279
   patch -p1 -i ${srcdir}/gcc-4.8-lambda-ICE.patch
-  
+
+  # installing libiberty headers is broken
+  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=56780#c6
+  sed -i 's#@target_header_dir@#libiberty#' libiberty/Makefile.in
+
   mkdir ${srcdir}/gcc-build
 }
 
@@ -75,7 +79,7 @@ build() {
       --disable-libstdcxx-pch --disable-libssp \
       --enable-gnu-unique-object --enable-linker-build-id \
       --enable-cloog-backend=isl --disable-cloog-version-check \
-      --enable-lto --enable-plugin \
+      --enable-lto --enable-plugin --enable-install-libiberty \
       --with-linker-hash-style=gnu \
       --disable-multilib --disable-werror \
       --enable-checking=release
@@ -177,6 +181,8 @@ package_gcc()
   make -C $CHOST/libmudflap DESTDIR=${pkgdir} install-nobase_libsubincludeHEADERS
   make -C $CHOST/libquadmath DESTDIR=${pkgdir} install-nodist_libsubincludeHEADERS
   make -C $CHOST/libsanitizer/asan DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS
+
+  make -C libiberty DESTDIR=${pkgdir} install
 
   make -C gcc DESTDIR=${pkgdir} install-man install-info
   rm ${pkgdir}/usr/share/man/man1/{gccgo,gfortran}.1
