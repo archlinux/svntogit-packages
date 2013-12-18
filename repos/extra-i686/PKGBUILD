@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.5.1
+pkgver=1.8.5.2
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -113,7 +113,7 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('7b9d622c98482aeb4532500231626210'
-         '4d6a83339753f5a9a2dd8aed4b7180bc'
+md5sums=('df8519044f9880f3687d863d99245282'
+         '27851cc39808f1be6d3789fae87c8308'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
