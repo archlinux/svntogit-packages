@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -17,20 +17,50 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         '0001-fix-lingering-references-to-var-lib-backlight-random.patch'
         '0001-mount-check-for-NULL-before-reading-pm-what.patch'
-        '0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch')
+        '0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch'
+        '0001-login-Don-t-stop-a-running-user-manager-from-garbage.patch'
+        '0001-fstab-generator-When-parsing-the-root-cmdline-option.patch'
+        '0002-fstab-generator-Generate-explicit-dependencies-on-sy.patch'
+        '0003-gpt-auto-generator-Generate-explicit-dependencies-on.patch'
+        '0004-Remove-FsckPassNo-from-systemd-fsck-root.service.patch'
+        '0005-mount-service-drop-FsckPassNo-support.patch'
+        '0006-efi-boot-generator-hookup-to-fsck.patch'
+        '0007-fsck-root-only-run-when-requested-in-fstab.patch')
 md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407'
          '1b191c4e7a209d322675fd199e3abc66'
          'a693bef63548163ffc165f4c4801ebf7'
-         'ccafe716d87df9c42af0d1960b5a4105')
+         'ccafe716d87df9c42af0d1960b5a4105'
+         '441e3d464ee6af5fe4af6a8bc10d7980'
+         '718d841203cf2ea9e24a7d0f1d19d48b'
+         '623c77bad0d2968e44963d72924825f1'
+         'e52fc8368853c7800ab03ab8868cfd41'
+         '2096f33bd36dfa0a7f0431d0a429787a'
+         'd2481a6ea199b581e243a950125b0ca6'
+         'c2aee634a3a6c50778968f0d5c756f40'
+         'ef8b8212d504bb73c10bf4e85f0703b2')
 
 prepare() {
   cd "$pkgname-$pkgver"
   patch -Np1 < "$srcdir"/0001-fix-lingering-references-to-var-lib-backlight-random.patch
   patch -Np1 < "$srcdir"/0001-mount-check-for-NULL-before-reading-pm-what.patch
   patch -Np1 < "$srcdir"/0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch
+  # Fix lingering user managers
+  patch -Np1 < "$srcdir"/0001-login-Don-t-stop-a-running-user-manager-from-garbage.patch
+  # Backport changes in fstab passno handling
+  # Basically, we only need 0001 and 0007, but 0007 is based on earlier patches,
+  # and it doesn't hurt to backport them all.
+  patch -Np1 < "$srcdir"/0001-fstab-generator-When-parsing-the-root-cmdline-option.patch
+  patch -Np1 < "$srcdir"/0002-fstab-generator-Generate-explicit-dependencies-on-sy.patch
+  patch -Np1 < "$srcdir"/0003-gpt-auto-generator-Generate-explicit-dependencies-on.patch
+  patch -Np1 < "$srcdir"/0004-Remove-FsckPassNo-from-systemd-fsck-root.service.patch
+  patch -Np1 < "$srcdir"/0005-mount-service-drop-FsckPassNo-support.patch
+  patch -Np1 < "$srcdir"/0006-efi-boot-generator-hookup-to-fsck.patch
+  patch -Np1 < "$srcdir"/0007-fsck-root-only-run-when-requested-in-fstab.patch
+
+  autoreconf
 }
 
 build() {
@@ -118,6 +148,9 @@ package_systemd() {
   chown root:systemd-journal "$pkgdir/var/log/journal"
   chmod 2755 "$pkgdir/var/log/journal"
 
+  # fix pam file
+  sed 's|system-auth|system-login|g' -i "$pkgdir/etc/pam.d/systemd-user"
+
   ### split out manpages for sysvcompat
   rm -rf "$srcdir/_sysvcompat"
   install -dm755 "$srcdir"/_sysvcompat/usr/share/man/man8/
@@ -134,7 +167,7 @@ package_systemd-sysvcompat() {
   license=('GPL2')
   groups=('base')
   conflicts=('sysvinit')
-  depends=('sysvinit-tools' 'systemd')
+  depends=('systemd')
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
