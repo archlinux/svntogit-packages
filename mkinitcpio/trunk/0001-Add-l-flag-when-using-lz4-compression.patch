@@ -1,0 +1,61 @@
+From 2ce3a416c8714adedc3117e5247e6da364ddebc9 Mon Sep 17 00:00:00 2001
+From: Dave Reisner <dreisner@archlinux.org>
+Date: Sun, 22 Dec 2013 14:11:37 -0500
+Subject: [mkinitcpio] [PATCH] Add -l flag when using lz4 compression
+
+This isn't documented, but it's needed since the kernel lz4 support is
+based on the original streaming format and not the newer default. Use
+-l to force the legacy codec.
+
+Fixup lsinitcpio to support the older format, and, add a warning when
+the newer format is detected. Who knows when this will be "resolved" ...
+
+Upstream discussion: https://code.google.com/p/lz4/issues/detail?id=102
+---
+ lsinitcpio | 15 +++++++++++----
+ mkinitcpio |  3 +++
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/lsinitcpio b/lsinitcpio
+index 10cd663..9d98d57 100755
+--- a/lsinitcpio
++++ b/lsinitcpio
+@@ -91,10 +91,17 @@ detect_filetype() {
+         return
+     fi
+ 
+-    if [[ $(hexdump -n 4 -e '"%x"' "$1") == '184d2204' ]]; then
+-        echo 'lz4'
+-        return
+-    fi
++    case $(hexdump -n 4 -e '"%x"' "$1") in
++        184d2204)
++            error 'Newer lz4 stream format detected! This may not boot!'
++            echo 'lz4'
++            return
++            ;;
++        184c2102)
++            echo 'lz4 -l'
++            return
++            ;;
++    esac
+ 
+     if [[ $(hexdump -n 3 -e '"%c"' "$1") == 'BZh' ]]; then
+         echo 'bzip2'
+diff --git a/mkinitcpio b/mkinitcpio
+index cb94d62..42abde7 100755
+--- a/mkinitcpio
++++ b/mkinitcpio
+@@ -202,6 +202,9 @@ build_image() {
+         xz)
+             COMPRESSION_OPTIONS+=' --check=crc32'
+             ;;
++        lz4)
++            COMPRESSION_OPTIONS+=' -l'
++            ;;
+     esac
+ 
+     cpio_opts=('-0' '-o' '-H' 'newc')
+-- 
+1.8.5.2
+
