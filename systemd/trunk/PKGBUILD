@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=6
+pkgrel=7
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,6 +15,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
+        '0001-Make-hibernation-test-work-for-swap-files.patch'
         '0001-fix-lingering-references-to-var-lib-backlight-random.patch'
         '0001-mount-check-for-NULL-before-reading-pm-what.patch'
         '0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch'
@@ -31,6 +32,7 @@ md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407'
+         'a5c6564d5435ee99814effd2aa9baf93'
          '1b191c4e7a209d322675fd199e3abc66'
          'a693bef63548163ffc165f4c4801ebf7'
          'ccafe716d87df9c42af0d1960b5a4105'
@@ -46,6 +48,7 @@ md5sums=('df64550d92afbffb4f67a434193ee165'
 
 prepare() {
   cd "$pkgname-$pkgver"
+
   patch -Np1 < "$srcdir"/0001-fix-lingering-references-to-var-lib-backlight-random.patch
   patch -Np1 < "$srcdir"/0001-mount-check-for-NULL-before-reading-pm-what.patch
   patch -Np1 < "$srcdir"/0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch
@@ -63,6 +66,8 @@ prepare() {
   patch -Np1 < "$srcdir"/0007-fsck-root-only-run-when-requested-in-fstab.patch
   # Fix FS#38210 (result of the previous backport)
   patch -Np1 < "$srcdir"/0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch
+  # Fix FS#38123
+  patch -Np1 < "$srcdir"/0001-Make-hibernation-test-work-for-swap-files.patch
 
   autoreconf
 }
@@ -120,8 +125,6 @@ package_systemd() {
   install="systemd.install"
 
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
-
-  printf "d /run/console 0755 root root\n" > "$pkgdir/usr/lib/tmpfiles.d/console.conf"
 
   # fix .so links in manpage stubs
   find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
