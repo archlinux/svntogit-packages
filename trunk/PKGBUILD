@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=7
+pkgrel=8
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,6 +15,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
+        '0001-systemd-order-remote-mounts-from-mountinfo-before-re.patch'
         '0001-Make-hibernation-test-work-for-swap-files.patch'
         '0001-fix-lingering-references-to-var-lib-backlight-random.patch'
         '0001-mount-check-for-NULL-before-reading-pm-what.patch'
@@ -32,6 +33,7 @@ md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407'
+         '8f1182afa1156f0076a912b23e761e02'
          'a5c6564d5435ee99814effd2aa9baf93'
          '1b191c4e7a209d322675fd199e3abc66'
          'a693bef63548163ffc165f4c4801ebf7'
@@ -68,6 +70,8 @@ prepare() {
   patch -Np1 < "$srcdir"/0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch
   # Fix FS#38123
   patch -Np1 < "$srcdir"/0001-Make-hibernation-test-work-for-swap-files.patch
+  # Fix FS#35671
+  patch -Np1 <"$srcdir"/0001-systemd-order-remote-mounts-from-mountinfo-before-re.patch
 
   autoreconf
 }
