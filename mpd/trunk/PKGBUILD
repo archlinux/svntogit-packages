@@ -6,7 +6,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.18.5
+pkgver=0.18.6
 pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
@@ -16,22 +16,14 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl' 'libmpdclient')
 makedepends=('doxygen')
 source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
-        'paranoia.patch'
         'tmpfiles.d'
         'conf')
-sha1sums=('4078755d77b7de4135458ae7db2518d2e057e745' 'SKIP'
-          '8cd46e2d7782181279660f994d2cd5a941344aea'
+sha1sums=('06951d043a57ce460b728402768a235d8b18ba93' 'SKIP'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '67c145c046cddd885630d72ce8ebe71f8321ff3b')
 
 backup=('etc/mpd.conf')
 install=install
-
-prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	patch -p1 -i ../paranoia.patch
-	autoconf
-}
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
