@@ -7,8 +7,8 @@
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.2
 _pkgver=4.8
-pkgrel=6
-#_snapshot=4.8-20130725
+pkgrel=7
+_snapshot=4.8-20131219
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -16,11 +16,11 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-        #ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+        ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         gcc-4.8-filename-output.patch
         gcc-4.8-lambda-ICE.patch)
-md5sums=('a3d7d63b9cb6b6ea049469a0c4a43c9d'
+md5sums=('666ef08f87649f941bc5512e13a88fdc'
          '40cb437805e2f7a006aa0d0c3098ab0f'
          '6eb6e080dbf7bc6825f53a0aaa6c4ef9')
 
@@ -168,7 +168,8 @@ package_gcc()
   make -C $CHOST/libstdc++-v3/python DESTDIR=${pkgdir} install
 
   install -d $pkgdir/usr/share/gdb/auto-load/usr/lib
-  mv $pkgdir{,/usr/share/gdb/auto-load}/usr/lib/libstdc++.so.6.0.18-gdb.py
+  mv $pkgdir/usr/lib/libstdc++.so.6.*-gdb.py \
+    $pkgdir/usr/share/gdb/auto-load/usr/lib/
   rm ${pkgdir}/usr/lib/libstdc++.so*
 
   make DESTDIR=${pkgdir} install-fixincludes
