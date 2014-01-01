@@ -14,27 +14,39 @@ makedepends=('pkgconfig' 'asio' 'boost' 'fribidi' 'goffice' 'libwmf' 'wv'
              'libots' 'libwpg' 'librsvg' 'loudmouth' 'libsoup' 'psiconv'
              'redland' 'libical')
 options=('!makeflags')
-_plugins=('aiksaurus' 'applix' 'clarisworks' 'command' 'docbook' 'eml' 'epub'
-          'freetranslation' 'gda' 'gdict' 'gimp' 'google' 'grammar' 'kword'
-          'latex' 'loadbindings' 'mathview' 'mht' 'mif' 'opendocument' 'opml'
-          'openwriter' 'ots' 'pdb' 'presentation' 'sdw' 'urldict' 'wmf' 'wml'
-          'urldict' 'wikipedia' 'wordperfect' 'wpg' 'xslfo')
 source=(http://abisource.com/downloads/$pkgbase/$pkgver/source/$pkgbase-$pkgver.tar.gz)
 md5sums=('8d9c41cff3a8fbef8d0c835c65600e65')
 
 build() {
   cd $pkgbase-$pkgver
 
+# Collab plugin is somehow broken:
+# part service
+#In file included from ./../../../backends/service/xp/RealmConnection.h:33:0,
+#                 from ./../../../backends/service/xp/AbiCollabSaveInterceptor.h:23,
+#                 from ./../../../backends/service/xp/ServiceAccountHandler.h:33,
+#                 from ServiceUnixAccountHandler.h:23,
+#                 from ServiceUnixAccountHandler.cpp:20:
+#./../../../core/sync/xp/SynchronizedQueue.h:32:1: error: expected class-name before '{' token
+# {
+# part tcp
+#In file included from ./../../../backends/tcp/xp/IOServerHandler.h:29:0,
+#                 from ./../../../backends/tcp/xp/TCPAccountHandler.h:25,
+#                 from TCPUnixAccountHandler.h:22,
+#                 from TCPUnixAccountHandler.cpp:20:
+#./../../../backends/tcp/xp/Session.h:34:63: error: expected class-name before ',' token
+# class Session : public Synchronizer, public boost::noncopyable, public boost::enable_shared_from_this<Session>
+
   ./configure --prefix=/usr \
     --enable-shared \
     --disable-static \
     --enable-clipart \
     --enable-templates \
-    --disable-default-plugins \
     --disable-builtin-plugins \
-    --enable-plugins="$(echo $_plugins)"
-
-  make -j1
+    --enable-plugins \
+    --disable-collab-backend-service \
+    --disable-collab-backend-tcp
+  make
 }
 
 package_abiword() {
@@ -45,16 +57,19 @@ package_abiword() {
   optdepends=('abiword-plugins')
   conflicts=("abiword-plugins<${pkgver}-${pkgrel}")
 
-  make -C $pkgbase-$pkgver DESTDIR="$pkgdir" install
-  rm "$pkgdir"/usr/lib/abiword-${pkgver%.*}/plugins/*.so
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  # split out plugins, there's no Makefile target for a clean way
+  mkdir ${srcdir}/_pluginsdir
+  mv "$pkgdir"/usr/lib/abiword-${pkgver%.*}/plugins ${srcdir}/_pluginsdir
 }
 
 package_abiword-plugins() {
   pkgdesc='Additional plugins for Abiword'
   depends=("abiword=${pkgver}-${pkgrel}" 'loudmouth' 'libwpg' 'libwmf' 'link-grammar' 
-           'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf')
+           'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
 
-  for plugin in ${_plugins[@]}; do
-    make -C $pkgbase-$pkgver/plugins/$plugin DESTDIR="$pkgdir" install
-  done
+  install -dm755 ${pkgdir}/usr/lib/abiword-${pkgver%.*}
+  mv ${srcdir}/_pluginsdir/plugins ${pkgdir}/usr/lib/abiword-${pkgver%.*}/
 }
