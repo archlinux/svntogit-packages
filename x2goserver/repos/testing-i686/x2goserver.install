@@ -1,0 +1,69 @@
+pre_install() {
+  cat << 'EOM'
+  ==> Use the following command to setup sqlite database:
+  ==> x2godbadmin --createdb
+EOM
+}
+
+
+post_install() {
+
+  # Make sure the group and user "x2gouser"(111) +"x2goprint"(112) exists on this system and have the correct values
+
+  # x2gouser
+  if grep -q "^x2gouser:" /etc/group &> /dev/null ; then
+    groupmod -g 111 -n x2gouser x2gouser &> /dev/null
+  else
+    groupadd -g 111 x2gouser &> /dev/null
+  fi
+
+  if grep -q "^x2gouser:" /etc/passwd 2> /dev/null ; then
+    usermod -s /usr/bin/false -c "X2GoUser user" -M -d /var/lib/x2go -u 111 -g x2gouser x2gouser &> /dev/null
+  else
+    useradd -s /usr/bin/false -c "X2GoUser user" -M -d /var/lib/x2go -u 111 -g x2gouser -r x2gouser &> /dev/null
+  fi 
+
+  # x2goprint
+  if grep -q "^x2goprint:" /etc/group &> /dev/null ; then
+    groupmod -g 112 -n x2goprint x2goprint &> /dev/null
+  else
+    groupadd -g 112 x2goprint &> /dev/null
+  fi
+
+  if grep -q "^x2goprint:" /etc/passwd 2> /dev/null ; then
+    usermod -s /usr/bin/false -c "X2GoPrint user" -M -d /var/spool/x2go -u 112 -g x2goprint x2goprint &> /dev/null
+  else
+    useradd -s /usr/bin/false -c "X2GoPrint user" -M -d /var/spool/x2go -u 112 -g x2goprint -r x2goprint &> /dev/null
+  fi
+  
+  # fix permissions - see INSTALL file
+  chown -R x2goprint:x2goprint /var/spool/x2go
+  chmod 0770 /var/spool/x2go
+    
+  chown root:x2gouser /usr/lib/x2go/x2gosqlitewrapper
+  chmod 2755 /usr/lib/x2go/x2gosqlitewrapper
+  
+  chown root:x2goprint /usr/bin/x2goprint
+  chmod 2755 /usr/bin/x2goprint
+  
+  update-desktop-database -q
+  update-mime-database usr/share/mime &> /dev/null
+}
+
+post_upgrade() {
+  post_install $1
+}
+
+pre_remove() {
+    userdel x2gouser &> /dev/null
+    userdel x2goprint &> /dev/null
+    groupdel x2gouser &> /dev/null || /bin/true
+    groupdel x2goprint &> /dev/null || /bin/true
+    rm -rf /var/lib/x2go/* &> /dev/null || /bin/true
+    rm -rf /var/spool/x2go/* &> /dev/null || /bin/true
+}
+
+post_remove() {
+    update-desktop-database -q
+    update-mime-database usr/share/mime &> /dev/null
+}
