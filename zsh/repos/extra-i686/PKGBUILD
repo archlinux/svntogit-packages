@@ -1,23 +1,24 @@
 # $Id$
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
-pkgname=zsh
-pkgver=5.0.2
-pkgrel=4
-pkgdesc='A very advanced and programmable command interpreter (shell) for UNIX'
+pkgbase=zsh
+pkgname=('zsh' 'zsh-doc')
+pkgver=5.0.5
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://www.zsh.org/'
 license=('custom')
-depends=('pcre' 'libcap' 'gdbm')
-backup=('etc/zsh/zprofile')
-install=zsh.install
-source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
-        'zprofile')
-md5sums=('b8f2ad691acf58b3252225746480dcad'
-         '24a9335edf77252a7b5f52e079f7aef7')
+makedepends=('pcre' 'libcap' 'gdbm')
+source=("http://www.zsh.org/pub/zsh-${pkgver}.tar.bz2"
+        "http://www.zsh.org/pub/zsh-${pkgver}-doc.tar.bz2"
+        'zprofile' 'xattr-include.patch')
+md5sums=('6156dc2f19b0a067bdbc0fb7f81e2017'
+         '1eea70e7401a7a2116fa8de6ee5e8d32'
+         '24a9335edf77252a7b5f52e079f7aef7'
+         'd9af40097fcf112beba34919e8a5934f')
 
 prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgbase}-${pkgver}"
 
 	# Set correct keymap path
 	sed -i 's#/usr/share/keymaps#/usr/share/kbd/keymaps#g' Completion/Unix/Command/_loadkeys
@@ -29,12 +30,17 @@ prepare() {
 	done
 	rm -f  Completion/Linux/Command/_{pkgtool,rpmbuild,yast}
 	rm -f  Completion/Unix/Command/_{osc,systemd}
+
+	# Workaround for FS#38387
+	patch -p0 -i "${srcdir}/xattr-include.patch"
 }
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgbase}-${pkgver}"
 
 	./configure --prefix=/usr \
+		--docdir=/usr/share/doc/zsh \
+		--htmldir=/usr/share/doc/zsh/html \
 		--enable-etcdir=/etc/zsh \
 		--enable-zshenv=/etc/zsh/zshenv \
 		--enable-zlogin=/etc/zsh/zlogin \
@@ -55,13 +61,28 @@ build() {
 }
 
 check() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgbase}-${pkgver}"
 	HOME="${srcdir}" make check
 }
 
-package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+package_zsh() {
+	pkgdesc='A very advanced and programmable command interpreter (shell) for UNIX'
+	depends=('pcre' 'libcap' 'gdbm')
+	backup=('etc/zsh/zprofile')
+	install=zsh.install
+
+	cd "${srcdir}/${pkgbase}-${pkgver}"
 	make DESTDIR="${pkgdir}/" install
 	install -D -m644 "${srcdir}/zprofile" "${pkgdir}/etc/zsh/zprofile"
+	install -D -m644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+package_zsh-doc() {
+	pkgdesc='Info, HTML and PDF format of the ZSH documentation'
+	install=zsh-doc.install
+
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+	make DESTDIR="${pkgdir}/" install.info install.html
+	install -D -m644 Doc/zsh.pdf "${pkgdir}/usr/share/doc/zsh/zsh.pdf"
 	install -D -m644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
