@@ -1,0 +1,163 @@
+From 51bf0ead89df5c1ddaa22d2f7fc0e04cedbdc590 Mon Sep 17 00:00:00 2001
+From: Adam Williamson <awilliam@redhat.com>
+Date: Thu, 26 Dec 2013 18:58:23 -0800
+Subject: [PATCH] Revert "Drop deprecated functions"
+
+This reverts commit 7a38f4abc3ed1df368d5bad32a1d72559acdc234. It is incorrect and dangerous to drop functions without an soname bump. This broke GNOME.
+---
+ libevdev/libevdev.c | 49 +++++++++++++++++++++++++++++++++++++++++++++++++
+ libevdev/libevdev.h | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 79 insertions(+)
+
+diff --git a/libevdev/libevdev.c b/libevdev/libevdev.c
+index 8a37204..02e4f78 100644
+--- a/libevdev/libevdev.c
++++ b/libevdev/libevdev.c
+@@ -162,6 +162,14 @@ libevdev_free(struct libevdev *dev)
+ 	free(dev);
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT void
++libevdev_set_log_handler(struct libevdev *dev, libevdev_log_func_t logfunc)
++{
++	/* Can't be backwards compatible to this yet, so don't even try */
++	fprintf(stderr, "libevdev: ABI change. Log function will not be honored.\n");
++}
++
+ LIBEVDEV_EXPORT void
+ libevdev_set_log_function(libevdev_log_func_t logfunc, void *data)
+ {
+@@ -1244,6 +1252,12 @@ libevdev_disable_event_code(struct libevdev *dev, unsigned int type, unsigned in
+ }
+ 
+ LIBEVDEV_EXPORT int
++libevdev_kernel_set_abs_value(struct libevdev *dev, unsigned int code, const struct input_absinfo *abs)
++{
++	return libevdev_kernel_set_abs_info(dev, code, abs);
++}
++
++LIBEVDEV_EXPORT int
+ libevdev_kernel_set_abs_info(struct libevdev *dev, unsigned int code, const struct input_absinfo *abs)
+ {
+ 	int rc;
+@@ -1296,12 +1310,22 @@ libevdev_grab(struct libevdev *dev, enum libevdev_grab_mode grab)
+ 	return rc < 0 ? -errno : 0;
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT int
++libevdev_is_event_type(const struct input_event *ev, unsigned int type)
++ALIAS(libevdev_event_is_type);
++
+ LIBEVDEV_EXPORT int
+ libevdev_event_is_type(const struct input_event *ev, unsigned int type)
+ {
+ 	return type < EV_CNT && ev->type == type;
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT int
++libevdev_is_event_code(const struct input_event *ev, unsigned int type, unsigned int code)
++ALIAS(libevdev_event_is_code);
++
+ LIBEVDEV_EXPORT int
+ libevdev_event_is_code(const struct input_event *ev, unsigned int type, unsigned int code)
+ {
+@@ -1314,6 +1338,11 @@ libevdev_event_is_code(const struct input_event *ev, unsigned int type, unsigned
+ 	return (max > -1 && code <= (unsigned int)max && ev->code == code);
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT const char*
++libevdev_get_event_type_name(unsigned int type)
++ALIAS(libevdev_event_type_get_name);
++
+ LIBEVDEV_EXPORT const char*
+ libevdev_event_type_get_name(unsigned int type)
+ {
+@@ -1323,6 +1352,11 @@ libevdev_event_type_get_name(unsigned int type)
+ 	return ev_map[type];
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT const char*
++libevdev_get_event_code_name(unsigned int type, unsigned int code)
++ALIAS(libevdev_event_code_get_name);
++
+ LIBEVDEV_EXPORT const char*
+ libevdev_event_code_get_name(unsigned int type, unsigned int code)
+ {
+@@ -1334,6 +1368,16 @@ libevdev_event_code_get_name(unsigned int type, unsigned int code)
+ 	return event_type_map[type][code];
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT const char*
++libevdev_get_input_prop_name(unsigned int prop)
++ALIAS(libevdev_property_get_name);
++
++/* DEPRECATED */
++LIBEVDEV_EXPORT const char*
++libevdev_get_property_name(unsigned int prop)
++ALIAS(libevdev_property_get_name);
++
+ LIBEVDEV_EXPORT const char*
+ libevdev_property_get_name(unsigned int prop)
+ {
+@@ -1343,6 +1387,11 @@ libevdev_property_get_name(unsigned int prop)
+ 	return input_prop_map[prop];
+ }
+ 
++/* DEPRECATED */
++LIBEVDEV_EXPORT int
++libevdev_get_event_type_max(unsigned int type)
++ALIAS(libevdev_event_type_get_max);
++
+ LIBEVDEV_EXPORT int
+ libevdev_event_type_get_max(unsigned int type)
+ {
+diff --git a/libevdev/libevdev.h b/libevdev/libevdev.h
+index 37ca2f4..c89f4ad 100644
+--- a/libevdev/libevdev.h
++++ b/libevdev/libevdev.h
+@@ -1642,6 +1642,36 @@ int libevdev_get_repeat(const struct libevdev *dev, int *delay, int *period);
+ #define LIBEVDEV_DEPRECATED
+ #endif
+ 
++LIBEVDEV_DEPRECATED extern const enum libevdev_read_flag LIBEVDEV_READ_SYNC;
++LIBEVDEV_DEPRECATED extern const enum libevdev_read_flag LIBEVDEV_READ_NORMAL;
++LIBEVDEV_DEPRECATED extern const enum libevdev_read_flag LIBEVDEV_FORCE_SYNC;
++LIBEVDEV_DEPRECATED extern const enum libevdev_read_flag LIBEVDEV_READ_BLOCKING;
++
++/* replacement: libevdev_kernel_set_abs_info */
++int libevdev_kernel_set_abs_value(struct libevdev *dev, unsigned int code, const struct input_absinfo *abs) LIBEVDEV_DEPRECATED;
++
++
++/* replacement: libevdev_set_log_function */
++void libevdev_set_log_handler(struct libevdev *dev, libevdev_log_func_t logfunc) LIBEVDEV_DEPRECATED;
++
++/** replacement: libevdev_event_type_get_max */
++int libevdev_get_event_type_max(unsigned int type) LIBEVDEV_DEPRECATED;
++
++/** replacement: libevdev_property_get_name */
++const char* libevdev_get_property_name(unsigned int prop) LIBEVDEV_DEPRECATED;
++
++/** replacement: libevdev_event_type_get_name */
++const char * libevdev_get_event_type_name(unsigned int type) LIBEVDEV_DEPRECATED;
++/** replacement: libevdev_event_code_get_name */
++const char * libevdev_get_event_code_name(unsigned int type, unsigned int code) LIBEVDEV_DEPRECATED;
++
++/** replacement: libevdev_event_is_type */
++int libevdev_is_event_type(const struct input_event *ev, unsigned int type) LIBEVDEV_DEPRECATED;
++
++/** replacement: libevdev_event_is_code */
++int libevdev_is_event_code(const struct input_event *ev, unsigned int type, unsigned int code) LIBEVDEV_DEPRECATED;
++/**************************************/
++
+ #ifdef __cplusplus
+ }
+ #endif
+-- 
+1.8.5.2
+
