@@ -4,10 +4,10 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=9
+pkgrel=10
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
-makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
+makedepends=('acl' 'cryptsetup' 'libdbus' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('strip' 'debug')
@@ -28,7 +28,8 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0005-mount-service-drop-FsckPassNo-support.patch'
         '0006-efi-boot-generator-hookup-to-fsck.patch'
         '0007-fsck-root-only-run-when-requested-in-fstab.patch'
-        '0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch')
+        '0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch'
+        '0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch')
 md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
@@ -46,7 +47,8 @@ md5sums=('df64550d92afbffb4f67a434193ee165'
          'd2481a6ea199b581e243a950125b0ca6'
          'c2aee634a3a6c50778968f0d5c756f40'
          'ef8b8212d504bb73c10bf4e85f0703b2'
-         '4ba2317bf4d7708fca406f49482b1bf3')
+         '4ba2317bf4d7708fca406f49482b1bf3'
+         '078f10d6fc315b329844cd20fa742eee')
 
 prepare() {
   cd "$pkgname-$pkgver"
@@ -72,6 +74,8 @@ prepare() {
   patch -Np1 < "$srcdir"/0001-Make-hibernation-test-work-for-swap-files.patch
   # Fix FS#35671
   patch -Np1 <"$srcdir"/0001-systemd-order-remote-mounts-from-mountinfo-before-re.patch
+  # Fix FS#38403
+  patch -Np1 <"$srcdir"/0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch
 
   autoreconf
 }
