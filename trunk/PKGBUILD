@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.18
-pkgrel=11
+pkgrel=12
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -31,6 +31,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.18-getaddrinfo-assertion.patch
         glibc-2.18-scanf-parse-0e-0.patch
         glibc-2.18-strstr-hackfix.patch
+        glibc-2.18-xattr-compat-hack.patch
         nscd.service
         nscd.tmpfiles
         locale.gen.txt
@@ -46,6 +47,7 @@ md5sums=('88fbbceafee809e82efd52efa1e3c58f'
          'd4d86add33f22125777e0ecff06bc9bb'
          '01d19fe9b2aea489cf5651530e0369f2'
          '4441f6dfe7d75ced1fa75e54dd21d36e'
+         '7ca96c68a37f2a4ab91792bfa0160a24'
          'd5fab2cd3abea65aa5ae696ea4a47d6b'
          'da662ca76e7c8d7efbc7986ab7acea2d'
          '07ac979b6ab5eeb778d55f041529d623'
@@ -80,6 +82,9 @@ prepare() {
 
   # hack fix for strstr issues on x86
   patch -p1 -i $srcdir/glibc-2.18-strstr-hackfix.patch
+  
+  # hack fix for {linux,sys}/xattr.h incompatibility
+  patch -p1 -i $srcdir/glibc-2.18-xattr-compat-hack.patch
 
   mkdir ${srcdir}/glibc-build
 }
@@ -161,8 +166,9 @@ package() {
     ${srcdir}/glibc-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
 
   # remove the static libraries that have a shared counterpart
-  # note: keep libc, libdl, libm, libpthread for binutils testsuite
-  rm $pkgdir/usr/lib/lib{anl,BrokenLocale,crypt,nsl,resolv,rt,util}.a
+  # libc, libdl, libm and libpthread are required for toolchain testsuites
+  # in addition libcrypt appears widely required
+  rm $pkgdir/usr/lib/lib{anl,BrokenLocale,nsl,resolv,rt,util}.a
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
