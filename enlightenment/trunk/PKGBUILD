@@ -1,39 +1,40 @@
-# $Id$
-# Maintainer: Eric Bélanger <eric@archlinux.org>
+# Maintainer: Ronald van Haren <ronald@archlinux.org>
+# Contributor: Enlightenment Developers <enlightenment-devel@enlightenment.org>>
 
 pkgname=enlightenment
-pkgver=1.0.13
-_themever=1.0.1
+pkgver=0.18.2
 pkgrel=1
-pkgdesc="A fast, flexible, and very extensible Window Manager"
-arch=('i686' 'x86_64')
+pkgdesc="Enlightenment window manager"
+arch=('i686' 'x86_64' 'arm')
 url="http://www.enlightenment.org"
-license=('BSD' 'custom')
-depends=('libxinerama' 'imlib2' 'perl' 'pango' 'libxcomposite' \
-         'libxrandr' 'libpulse')
-source=(http://downloads.sourceforge.net/sourceforge/${pkgname}/e16-${pkgver}.tar.gz \
-        http://downloads.sourceforge.net/enlightenment/e16-themes-${_themever}.tar.gz)
-sha1sums=('bcb74385fb6d0732f735f27264ae02b539d136c9'
-          'ae34e2df1294198795736bf953bf695aba93b710')
+license=('BSD')
+depends=('elementary' 'xcb-util-keysyms' 'hicolor-icon-theme' 'pixman' 'mesa'
+         'desktop-file-utils' 'udisks2' 'ttf-font' 'bluez-libs')
+optdepends=('connman: network module'
+            'acpid: power events on laptop lid close')
+provides=("enlightenment17=$pkgver" 'notification-daemon')
+conflicts=("enlightenment17")
+replaces=("enlightenment17")
+backup=('etc/enlightenment/sysactions.conf'
+        'etc/xdg/menus/enlightenment.menu')
+source=(http://download.enlightenment.org/rel/apps/${pkgname}/$pkgname-$pkgver.tar.gz)
+install=enlightenment.install
+sha1sums=('e293108b8c5d6c7643ea868550763c9e8e0d6d08')
 
 build() {
-  cd "${srcdir}/e16-${pkgver}"
-  ./configure --prefix=/usr --sysconfdir=/etc --enable-sound-pulse
-  make
+  cd "${srcdir}/${pkgname}-${pkgver}"
 
-  cd "${srcdir}/e16-themes-${_themever}"
-  ./configure --prefix=/usr
+  export CFLAGS="$CFLAGS -fvisibility=hidden"
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+	--enable-wayland-clients --enable-wayland-egl
+  make
 }
 
 package() {
-  cd "${srcdir}/e16-${pkgver}"
-  make DESTDIR="${pkgdir}" install
-  install -D -m755 "${pkgdir}/usr/share/e16/misc/Xclients.e16-gnome.sh" "${pkgdir}/usr/bin/e16-gnome"
-  install -D -m755 "${pkgdir}/usr/share/e16/misc/Xclients.e16-kde.sh" "${pkgdir}/usr/bin/e16-kde"
-  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
-  install -D -m644 fonts/COPYRIGHT.Vera "${pkgdir}/usr/share/licenses/${pkgname}/COPYRIGHT.Vera"
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -j1 DESTDIR="$pkgdir" install
 
-  cd "${srcdir}/e16-themes-${_themever}"
-  make DESTDIR="${pkgdir}" install
-  chown -R root:root "${pkgdir}"/usr/share/*
+  # install LICENSE
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
 }
