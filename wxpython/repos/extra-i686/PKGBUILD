@@ -2,31 +2,32 @@
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=wxpython
-pkgver=2.8.12.1
-pkgrel=4
+pkgver=3.0.0.0
+_editraver=0.7.20
+pkgrel=1
 pkgdesc="A wxWidgets GUI toolkit for Python"
 arch=('i686' 'x86_64')
 license=('custom:wxWindows')
 url="http://www.wxpython.org"
 depends=('wxgtk' 'python2')
-makedepends=('mesa')
-source=(http://downloads.sourceforge.net/wxpython/wxPython-src-${pkgver}.tar.bz2 
-        wxpython-cairo.patch wxpython-fpb_default_style.patch)
-sha1sums=('05688dc03d61631750f5904273122bb40a2115f5'
-          '420700b0a216b853352ffafd054f406a82a30bb3'
-          'b832d628b8ff38ea598f404d133899f40d687a22')
+makedepends=('mesa' 'glu')
+source=(http://downloads.sourceforge.net/wxpython/wxPython-src-${pkgver}.tar.bz2
+        http://editra.org/uploads/src/Editra-${_editraver}.tar.gz)
+sha1sums=('48451763275cfe4e5bbec49ccd75bc9652cba719'
+          'f439f4aa2cb90b8348cebb1670df9cf47ba341ab')
+
+prepare() {
+  cd "${srcdir}"
+  find . -type f -exec sed -i 's/env python/env python2/' {} \;
+  sed -i 's/sys.exit(1)//' Editra-${_editraver}/setup.py
+}
 
 build() {
   cd "${srcdir}/wxPython-src-${pkgver}"
-  find . -type f -exec sed -i 's/env python/env python2/' {} \;
-  mv wxPython/wx/tools/Editra/editra wxPython/wx/tools/Editra/Editra
   ./configure --prefix=/usr --libdir=/usr/lib --with-gtk=2 --with-opengl --enable-unicode \
-    --enable-graphics_ctx --disable-optimize --enable-mediactrl \
-    --with-regex=sys --with-libpng=sys --with-libxpm=sys --with-libjpeg=sys --with-libtiff=sys \
-    --disable-precomp-headers
-  cd "${srcdir}/wxPython-src-${pkgver}/wxPython"
-  patch -p2 -i "${srcdir}/wxpython-cairo.patch"
-  patch -p1 -i "${srcdir}/wxpython-fpb_default_style.patch"
+    --enable-graphics_ctx --enable-mediactrl --disable-precomp-headers \
+    --with-regex=sys --with-libpng=sys --with-libxpm=sys --with-libjpeg=sys --with-libtiff=sys
+  cd wxPython
   python2 setup.py WXPORT=gtk2 UNICODE=1 build
 }
 
@@ -34,4 +35,8 @@ package() {
   cd "${srcdir}/wxPython-src-${pkgver}/wxPython"
   python2 setup.py WXPORT=gtk2 UNICODE=1 install --root="${pkgdir}"
   install -D -m644 ../docs/licence.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  cd "${srcdir}/Editra-${_editraver}"
+  python2 setup.py install --root="${pkgdir}"
+  rm -r "${pkgdir}/usr/lib/python2.7/site-packages/wx-3.0-gtk2/wx/tools/Editra"
 }
