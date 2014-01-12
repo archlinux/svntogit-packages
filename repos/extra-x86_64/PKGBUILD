@@ -5,7 +5,7 @@
 pkgbase=mkvtoolnix
 pkgname=('mkvtoolnix-cli' 'mkvtoolnix-gtk')
 pkgver=6.7.0
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.bunkus.org/videotools/mkvtoolnix/index.html"
@@ -14,7 +14,7 @@ makedepends=('libmatroska' 'flac' 'libvorbis' 'file' 'wxgtk'
 source=("http://www.bunkus.org/videotools/${pkgbase}/sources/${pkgbase}-${pkgver}.tar.xz")
 md5sums=('27bb6b0a10b3bb2fcf1c3e520c300207')
 
-build() {
+prepare() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
 
   # Disable automagic curl dep used for online update checking
@@ -24,18 +24,25 @@ build() {
   export CFLAGS="${CFLAGS} -DBOOST_FILESYSTEM_VERSION=3"
   export CXXFLAGS="${CXXFLAGS} -DBOOST_FILESYSTEM_VERSION=3"
 
-  autoreconf
+  # Sets number of threads for a parallel build
+  export DRAKETHREADS=4
+
+  autoreconf -vfi
+}
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
 
   ./configure --prefix=/usr \
               --with-boost-libdir=/usr/lib \
               --disable-gui
-  rake
+  ./drake
 
   mv src/mkvinfo{,-cli}
 
   ./configure --prefix=/usr \
               --with-boost-libdir=/usr/lib
-  rake
+  ./drake
 }
 
 package_mkvtoolnix-cli() {
@@ -47,7 +54,7 @@ package_mkvtoolnix-cli() {
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
 
-  rake DESTDIR="${pkgdir}" install
+  ./drake DESTDIR="${pkgdir}" install
   rm -rf "${pkgdir}"/usr/bin/mkvinfo
   install -Dm755 src/mkvinfo-cli "${pkgdir}"/usr/bin/mkvinfo
 
@@ -70,7 +77,7 @@ package_mkvtoolnix-gtk() {
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
 
-  rake DESTDIR="${pkgdir}" install
+  ./drake DESTDIR="${pkgdir}" install
   rm -rf "${pkgdir}"/usr/bin/mkv*
   install -Dm755 src/mkvinfo "${pkgdir}"/usr/bin/mkvinfo-gtk
   sed -ri 's/^(Exec=mkvinfo)/\1-gtk/' "${pkgdir}"/usr/share/applications/mkvinfo.desktop
