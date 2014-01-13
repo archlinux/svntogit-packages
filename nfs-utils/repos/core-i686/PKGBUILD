@@ -7,7 +7,7 @@
 
 pkgname=nfs-utils
 pkgver=1.2.9
-pkgrel=1
+pkgrel=5
 pkgdesc="Support programs for Network File Systems"
 arch=('i686' 'x86_64')
 url='http://nfs.sourceforge.net'
@@ -20,7 +20,6 @@ source=(http://downloads.sourceforge.net/project/nfs/${pkgname}/${pkgver}/${pkgn
 	nfs-server.conf
 	exports
 	idmapd.conf
-        nfs
 	nfs-utils-1.1.4-mtab-sym.patch
 	nfs-utils-1.1.4-no-exec.patch
 	rpc-gssd.service
@@ -31,32 +30,34 @@ source=(http://downloads.sourceforge.net/project/nfs/${pkgname}/${pkgver}/${pkgn
 	nfsd.service
 	var-lib-nfs-rpc_pipefs.mount
 	proc-fs-nfsd.mount
+	nfs-client.target
+	nfs-server.target
 	blkmapd.service
 	nfs-utils.conf
         id_resolver.conf
         start-statd.patch)
 install=nfs-utils.install
 optdepends=('sqlite: for nfsdcltrack usage')
-
 md5sums=('18869d16db3f49c053f8c68eba3fe2e0'
          'f73f197a16b02c3e248488ec35c4cf43'
          '9cef69bc686cc5dcac23fbb51450747d'
-         'ff585faf410a62c4333a027c50b56bae'
+         'e6ad3c7a59c7e4c24965a0e7da35026c'
          'eb4f4027fab6fc1201f1ca04f5954c76'
-         'f5e7bba09a46c5c5d7007cac6eff9df5'
          '7674106eaaa4c149bccd4f05fe3604e9'
          '4f4827dfc93008dfadd0a530ad0872b2'
-         '6aeb4a80b2a5162f5951438474ea22f3'
-         'ff95ad9275ef774e0a2ea8adfe55ee66'
-         '2e991f0e440b4809e22b6c7689544fc0'
-         '42d0088add3beab0284be1379391382b'
-         '60d82e2d2d19d21ceb72665e54bf913e'
-         '3bcc9901478f4f9ea0a03b67171c13e3'
-         '1cd65909fa0983047f3f06a3ab352401'
-         '8f1b5282795895c9b8ce8430d20cdda6'
-         '8f03e708b230619ffc2a799a48bffb53'
+         'b9329c9d4a6b4a72ab2a04aac9229171'
+         '656ac433c4443eba6b47744a53a3c7d9'
+         '295ec0c9c049e146992561650fec9d52'
+         '6ff4f297df4e90440b8bdbc6b1a78480'
+         '20d5b8120d1049b27dd44dc4c57f667d'
+         '01a1dd533382630ccecc9b882c47aa2f'
+         'f48da2fb07b1d5f016d63c16b0979ebb'
+         '972eb80ff8c94c647b977a8a3cdd985f'
+         'a13e9f388cd939d68fa6ada205eb4e25'
+         '1ee3eea917131f04bb08f2f858be7724'
+         'f513ab0eae74918df08f329b0c6a9b6f'
          '8ac484023d786766d287ccbe878ae4ba'
-         'bed57f7c3911af695ec7b469248c104a'
+         'a43aabf0b8d02406b1babc3a206d952a'
          'f8bb29c2ca1ce178e6371091a3e1090d')
 
 prepare() {
@@ -83,29 +84,22 @@ build() {
 
 package() {
   cd $srcdir/${pkgname}-${pkgver}
-  # fix make install
-  make DESTDIR=$pkgdir install
 
-  # support python2 (FS#25120)
+  make DESTDIR="$pkgdir" install
   sed -i '1s/python$/python2/' "$pkgdir"/usr/bin/{nfsiostat,mountstats}
+  install -D -m 644 utils/mount/nfsmount.conf "$pkgdir"/etc/nfsmount.conf
 
-  # Configuration
-  install -D -m 644 ../exports "$pkgdir/"etc/exports
-  install -D -m 644 ../idmapd.conf "$pkgdir/"etc/idmapd.conf
-  install -D -m 644 ../nfs-common.conf "$pkgdir/"etc/conf.d/nfs-common.conf
-  install -D -m 644 ../nfs-server.conf "$pkgdir/"etc/conf.d/nfs-server.conf
-  install -D -m 644 ../nfs "$pkgdir/"etc/conf.d/nfs
-  install -D -m 644 utils/mount/nfsmount.conf "$pkgdir/"etc/nfsmount.conf
-  # keyutils id_resolver #35463
-  install -D -m 644 ../id_resolver.conf "$pkgdir/"etc/request-key.d/id_resolver.conf
-  # systemd files
-  for i in ${srcdir}/*.{service,mount}; do
-    install -D -m 644 $i "$pkgdir/usr/lib/systemd/system/${i##*/}"
+  cd ..
+  install -D -m 644 nfs-common.conf  "$pkgdir"/etc/conf.d/nfs-common.conf
+  install -D -m 644 nfs-server.conf  "$pkgdir"/etc/conf.d/nfs-server.conf
+  install -D -m 644 exports          "$pkgdir"/etc/exports
+  install -D -m 644 idmapd.conf      "$pkgdir"/etc/idmapd.conf
+  install -D -m 644 id_resolver.conf "$pkgdir"/etc/request-key.d/id_resolver.conf
+  install -D -m 644 nfs-utils.conf   "$pkgdir"/usr/lib/modules-load.d/nfs-utils.conf
+  for i in *.service *.mount *.target; do
+    install -D -m 644 $i "$pkgdir"/usr/lib/systemd/system/$i
   done
-  install -D -m 644 ../nfs-utils.conf "$pkgdir/"usr/lib/modules-load.d/nfs-utils.conf
-  # directories
-  mkdir "$pkgdir/"etc/exports.d
-  mkdir -m 555 "$pkgdir/"var/lib/nfs/rpc_pipefs
-  mkdir "$pkgdir/"var/lib/nfs/v4recovery
+  mkdir "$pkgdir"/etc/exports.d
+  mkdir -m 555 "$pkgdir"/var/lib/nfs/rpc_pipefs
+  mkdir "$pkgdir"/var/lib/nfs/v4recovery
 }
-
