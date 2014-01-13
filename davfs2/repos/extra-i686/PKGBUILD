@@ -2,15 +2,28 @@
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=davfs2
 pkgver=1.4.7
-pkgrel=2
+pkgrel=3
 pkgdesc="File system driver that allows you to mount a WebDAV folder"
 arch=(i686 x86_64)
 url="http://savannah.nongnu.org/projects/davfs2"
 license=('GPL')
 depends=('neon')
 backup=(etc/davfs2/davfs2.conf etc/davfs2/secrets)
-source=(http://mirrors.zerg.biz/nongnu/davfs2/${pkgname}-${pkgver}.tar.gz)
-sha256sums=('50c0ee2a12e8d09fc6a852d32bdfebb1f784939433a85f05254bc7ef28cff044')
+source=(http://mirrors.zerg.biz/nongnu/davfs2/${pkgname}-${pkgver}.tar.gz
+        davfs2-1.4.7-system.diff
+        davfs2-1.4.7-fix-neon-version-check.patch)
+sha256sums=('50c0ee2a12e8d09fc6a852d32bdfebb1f784939433a85f05254bc7ef28cff044'
+            '1d7e921da5edf07bddbd2bfbbf5010a690b4d47166a86ab5abaa6de4dc82125e'
+            'd637ccfcac85bf642083525018ca6799754b3728766483a616de27213318c1a1')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -p1 -i "${srcdir}"/davfs2-1.4.7-system.diff
+  # Some autotools files are missing, so autoreconf fails!
+  # Running autoconf may fail here, it does work for now
+  patch -p1 -i "${srcdir}"/davfs2-1.4.7-fix-neon-version-check.patch
+  autoconf  
+}
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -22,6 +35,7 @@ package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
 
-  rm -rf ${pkgdir}/sbin
+  # This directory contains worthless symlinks
+  rm -r ${pkgdir}/sbin
   rm -f ${pkgdir}/usr/share/davfs2/{BUGS,COPYING,FAQ,NEWS,TODO,ChangeLog,GPL,README,THANKS}
 }
