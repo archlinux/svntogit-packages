@@ -4,10 +4,10 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=3
+pkgrel=10
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
-makedepends=('acl' 'cryptsetup' 'dbus-core' 'docbook-xsl' 'gobject-introspection' 'gperf'
+makedepends=('acl' 'cryptsetup' 'libdbus' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
              'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
 options=('strip' 'debug')
@@ -15,6 +15,8 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
+        '0001-systemd-order-remote-mounts-from-mountinfo-before-re.patch'
+        '0001-Make-hibernation-test-work-for-swap-files.patch'
         '0001-fix-lingering-references-to-var-lib-backlight-random.patch'
         '0001-mount-check-for-NULL-before-reading-pm-what.patch'
         '0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch'
@@ -25,11 +27,15 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0004-Remove-FsckPassNo-from-systemd-fsck-root.service.patch'
         '0005-mount-service-drop-FsckPassNo-support.patch'
         '0006-efi-boot-generator-hookup-to-fsck.patch'
-        '0007-fsck-root-only-run-when-requested-in-fstab.patch')
+        '0007-fsck-root-only-run-when-requested-in-fstab.patch'
+        '0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch'
+        '0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch')
 md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407'
+         '8f1182afa1156f0076a912b23e761e02'
+         'a5c6564d5435ee99814effd2aa9baf93'
          '1b191c4e7a209d322675fd199e3abc66'
          'a693bef63548163ffc165f4c4801ebf7'
          'ccafe716d87df9c42af0d1960b5a4105'
@@ -40,10 +46,13 @@ md5sums=('df64550d92afbffb4f67a434193ee165'
          '2096f33bd36dfa0a7f0431d0a429787a'
          'd2481a6ea199b581e243a950125b0ca6'
          'c2aee634a3a6c50778968f0d5c756f40'
-         'ef8b8212d504bb73c10bf4e85f0703b2')
+         'ef8b8212d504bb73c10bf4e85f0703b2'
+         '4ba2317bf4d7708fca406f49482b1bf3'
+         '078f10d6fc315b329844cd20fa742eee')
 
 prepare() {
   cd "$pkgname-$pkgver"
+
   patch -Np1 < "$srcdir"/0001-fix-lingering-references-to-var-lib-backlight-random.patch
   patch -Np1 < "$srcdir"/0001-mount-check-for-NULL-before-reading-pm-what.patch
   patch -Np1 < "$srcdir"/0001-shared-util-fix-off-by-one-error-in-tag_to_udev_node.patch
@@ -59,6 +68,14 @@ prepare() {
   patch -Np1 < "$srcdir"/0005-mount-service-drop-FsckPassNo-support.patch
   patch -Np1 < "$srcdir"/0006-efi-boot-generator-hookup-to-fsck.patch
   patch -Np1 < "$srcdir"/0007-fsck-root-only-run-when-requested-in-fstab.patch
+  # Fix FS#38210 (result of the previous backport)
+  patch -Np1 < "$srcdir"/0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch
+  # Fix FS#38123
+  patch -Np1 < "$srcdir"/0001-Make-hibernation-test-work-for-swap-files.patch
+  # Fix FS#35671
+  patch -Np1 <"$srcdir"/0001-systemd-order-remote-mounts-from-mountinfo-before-re.patch
+  # Fix FS#38403
+  patch -Np1 <"$srcdir"/0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch
 
   autoreconf
 }
@@ -116,8 +133,6 @@ package_systemd() {
   install="systemd.install"
 
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
-
-  printf "d /run/console 0755 root root\n" > "$pkgdir/usr/lib/tmpfiles.d/console.conf"
 
   # fix .so links in manpage stubs
   find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
