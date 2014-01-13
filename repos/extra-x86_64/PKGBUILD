@@ -1,85 +1,75 @@
 # $Id$
-# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
 # Contributor: Maël Lavault <moimael@neuf.fr>
 
 pkgbase=abiword
 pkgname=('abiword' 'abiword-plugins')
-pkgver=2.8.6
-pkgrel=9
+pkgver=3.0.0
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('GPL')
-url="http://www.abisource.com"
-makedepends=('pkgconfig' 'asio' 'boost' 'fribidi' 'goffice0.8' 'libwmf' 'wv' 'link-grammar' 'gtkmathview' 
-             'aiksaurus' 'libxslt' 'enchant' 'libots' 'libwpg' 'librsvg' 'loudmouth' 'libsoup' 'psiconv')
+url='http://www.abisource.com'
+makedepends=('pkgconfig' 'asio' 'boost' 'fribidi' 'goffice' 'libwmf' 'wv'
+             'link-grammar' 'gtkmathview' 'aiksaurus' 'libxslt' 'enchant'
+             'libots' 'libwpg' 'librsvg' 'loudmouth' 'libsoup' 'psiconv'
+             'redland' 'libical')
 options=('!makeflags')
-source=(http://www.abisource.com/downloads/${pkgbase}/${pkgver}/source/${pkgbase}-${pkgver}.tar.gz
-        compat_libwpg_0_9.patch
-	abiword-2.8.6-no-undefined.patch
-        abiword-2.8.6-libpng15.patch
-	abiword-2.8.6-glib-2.31.patch)
-md5sums=('f883b0a7f26229a9c66fd6a1a94381aa'
-         '09446a2ebba8288fc611e88f7cf17298'
-         '42e2614b6e0aad457d91f6ce20b6f225'
-         '40e370e7e88c5437140ef18037abfbd3'
-         '6ec338a27a6fb590c348724ddb545849')
+source=(http://abisource.com/downloads/$pkgbase/$pkgver/source/$pkgbase-$pkgver.tar.gz)
+md5sums=('8d9c41cff3a8fbef8d0c835c65600e65')
 
 build() {
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd $pkgbase-$pkgver
 
-  patch -Np1 -i "${srcdir}/compat_libwpg_0_9.patch"
-  # fix a gcc 4.6.x build issue, patch from Fedora
-  patch -Np1 -i "${srcdir}/abiword-2.8.6-no-undefined.patch"
-  patch -Np0 -i "${srcdir}/abiword-2.8.6-libpng15.patch"
-
-  # Fix build with recent glib, patch from Gentoo
-  patch -Np0 -i "${srcdir}/abiword-2.8.6-glib-2.31.patch"
-
-  libtoolize --force
-  autoreconf
+# Collab plugin is somehow broken:
+# part service
+#In file included from ./../../../backends/service/xp/RealmConnection.h:33:0,
+#                 from ./../../../backends/service/xp/AbiCollabSaveInterceptor.h:23,
+#                 from ./../../../backends/service/xp/ServiceAccountHandler.h:33,
+#                 from ServiceUnixAccountHandler.h:23,
+#                 from ServiceUnixAccountHandler.cpp:20:
+#./../../../core/sync/xp/SynchronizedQueue.h:32:1: error: expected class-name before '{' token
+# {
+# part tcp
+#In file included from ./../../../backends/tcp/xp/IOServerHandler.h:29:0,
+#                 from ./../../../backends/tcp/xp/TCPAccountHandler.h:25,
+#                 from TCPUnixAccountHandler.h:22,
+#                 from TCPUnixAccountHandler.cpp:20:
+#./../../../backends/tcp/xp/Session.h:34:63: error: expected class-name before ',' token
+# class Session : public Synchronizer, public boost::noncopyable, public boost::enable_shared_from_this<Session>
 
   ./configure --prefix=/usr \
-              --enable-clipart \
-              --enable-templates \
-              --enable-collab-backend-xmpp \
-              --enable-collab-backend-tcp \
-              --enable-collab-backend-service \
-              --disable-collab-backend-sugar \
-              --enable-plugins --without-gnomevfs \
-              --with-gio \
-              --with-goffice \
-              --disable-static \
-              --with-psiconv-config=/nothere
+    --enable-shared \
+    --disable-static \
+    --enable-clipart \
+    --enable-templates \
+    --disable-builtin-plugins \
+    --enable-plugins \
+    --disable-collab-backend-service \
+    --disable-collab-backend-tcp
   make
 }
 
 package_abiword() {
-  pkgdesc="A fully-featured word processor"
-  depends=('fribidi' 'wv' 'goffice0.8' 'librsvg' 'enchant' 'desktop-file-utils')
+  pkgdesc='Fully-featured word processor'
+  depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant' 'desktop-file-utils'
+           'redland' 'libical' 'gtk-update-icon-cache')
   install=$pkgname.install
   optdepends=('abiword-plugins')
   conflicts=("abiword-plugins<${pkgver}-${pkgrel}")
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
-  sed -i plugins/Makefile \
-      -e 's/ collab / /' \
-      -e 's/ wpg / /' \
-      -e 's/ wmf / /' \
-      -e 's/ grammar / /' \
-      -e 's/ mathview / /' \
-      -e 's/ aiksaurus / /' \
-      -e 's/ latex / /' \
-      -e 's/ ots / /' \
-      -e 's/ wordperfect / /'
-  make DESTDIR="${pkgdir}" install
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  # split out plugins, there's no Makefile target for a clean way
+  mkdir ${srcdir}/_pluginsdir
+  mv "$pkgdir"/usr/lib/abiword-${pkgver%.*}/plugins ${srcdir}/_pluginsdir
 }
 
 package_abiword-plugins() {
-  pkgdesc="Additional plugins for Abiword"
+  pkgdesc='Additional plugins for Abiword'
   depends=("abiword=${pkgver}-${pkgrel}" 'loudmouth' 'libwpg' 'libwmf' 'link-grammar' 
-           'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf')
+           'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
 
-  cd "${srcdir}/${pkgbase}-${pkgver}/plugins"
-  for dir in collab wpg wmf grammar mathview aiksaurus latex ots wordperfect; do
-    make -C ${dir} DESTDIR="${pkgdir}" install
-  done
+  install -dm755 ${pkgdir}/usr/lib/abiword-${pkgver%.*}
+  mv ${srcdir}/_pluginsdir/plugins ${pkgdir}/usr/lib/abiword-${pkgver%.*}/
 }
