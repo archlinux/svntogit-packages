@@ -21,7 +21,7 @@ pkgname=('libreoffice-common'
 	'libreoffice-extension-nlpsolver') # svn up -r 142692 (last one with all extensions built)
 _LOver=4.1.4.2
 pkgver=4.1.4
-pkgrel=1
+pkgrel=3
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.libreoffice.org/"
@@ -348,11 +348,6 @@ package_libreoffice-common() {
  mv ${pkgdir}/etc/bash_completion.d/libreoffice.sh ${pkgdir}/usr/share/bash-completion/completions/libreoffice.sh
  rm -rf ${pkgdir}/etc/bash_completion.d
  
- # some files would conflict
- rm -vf ${pkgdir}/usr/lib/libreoffice/program/classes/ScriptProviderForJavaScript.jar
- rm -vf ${pkgdir}/usr/lib/libreoffice/program/classes/js.jar
- rm -vf ${pkgdir}/usr/lib/libreoffice/program/services/scriptproviderforjavascript.rdb
- 
  # make pyuno find its modules
  install -dm755 ${pkgdir}/usr/lib/python3.3/site-packages
  ln -svf /usr/lib/libreoffice/program/uno.py ${pkgdir}/usr/lib/python3.3/site-packages/uno.py
@@ -360,6 +355,20 @@ package_libreoffice-common() {
   
  # workaround all packages now depend on that file
  cp ${srcdir}/fakeinstall/usr/lib/libreoffice/share/registry/writer.xcd ${pkgdir}/usr/lib/libreoffice/share/registry/writer.xcd
+ 
+ # add missing files from Beanshell provider
+ # create directories from *list.txt file
+ for directory in `grep ^%dir ${srcdir}/libreoffice-$_LOver/file-lists/orig/gid_Module_Optional_Extensions_Script_Provider_For_BS`; do
+   install -dm755 ${pkgdir}/${directory/\%dir/}
+ done
+ # install files into the pkg from fakeinstall dir
+ for file in `grep -v ^%dir $srcdir/libreoffice-$_LOver/file-lists/orig/gid_Module_Optional_Extensions_Script_Provider_For_BS`; do
+   dirname=`dirname $file`
+   # check if directory has been already been created - some are missing like manpages
+   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
+   # mv file from fakeinstall to pkgdir
+   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file || /bin/true # some double file entries make it fail
+ done
 }
 
 package_libreoffice-base() {
@@ -507,6 +516,20 @@ package_libreoffice-kde4() {
  done
  # install files into the pkg from fakeinstall dir
  for file in `grep -v ^%dir $srcdir/libreoffice-$_LOver/file-lists/kde4_list.txt`; do
+   dirname=`dirname $file`
+   # check if directory has been already been created - some are missing like manpages
+   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
+   # mv file from fakeinstall to pkgdir
+   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
+ done
+ 
+ # one file (libkde4be1lo.so) is part of kde_list.txt
+ # create directories from *list.txt file
+ for directory in `grep ^%dir ${srcdir}/libreoffice-$_LOver/file-lists/kde_list.txt`; do
+   install -dm755 ${pkgdir}/${directory/\%dir/}
+ done
+ # install files into the pkg from fakeinstall dir
+ for file in `grep -v ^%dir $srcdir/libreoffice-$_LOver/file-lists/kde_list.txt`; do
    dirname=`dirname $file`
    # check if directory has been already been created - some are missing like manpages
    [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
