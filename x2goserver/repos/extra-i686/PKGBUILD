@@ -7,22 +7,59 @@
 # Contributor: Milan Knížek <knizek@volny.cz>
 
 pkgname=x2goserver
-pkgver=4.0.1.8
-pkgrel=1
+pkgver=4.0.1.12
+pkgrel=2
 pkgdesc="Open source terminal server"
 arch=('i686' 'x86_64')
 url="http://www.x2go.org/"
-license=('GPL')
-depends=('openssh' 'perl-config-simple' 'perl-dbd-sqlite' 'perl-file-basedir' 'python' 'x2go-agent' 'xorg-xauth')
-makedepends=('man2html')
+license=('GPL2')
+# see x2goserver.spec
+depends=(# 'perl-file-basedir'
+         #'python' 'xorg-xauth' 
+
+         # For x2goruncommand - for now
+         'bc'
+         # For netstat in x2goresume-session
+         'net-tools'
+         'openssh'
+         'perl-file-readbackwards'
+         # We need a database
+         'perl-dbd-sqlite' 
+         # For killall in x2gosuspend-session
+         'psmisc'
+         # For x2goshowblocks
+         'lsof'
+         # For x2godbadmin
+		 'pwgen' # in community
+         # For printing, file-sharing
+         'sshfs'
+         # For /etc/sudoers.d
+         'sudo'
+         'x2go-agent'
+         # For /etc/X11/Xresources
+         'xorg-xinit'
+         'xorg-fonts-misc'
+         'shadow'
+         
+         # for post install actions
+         'desktop-file-utils'
+         'shared-mime-info'
+         
+         'perl-capture-tiny'
+         'perl-config-simple'
+
+         #x2goserver-extensions
+         #x2goserver-xsession
+         #x2goserver-fmbindings
+         #x2goserver-printing
+)
+makedepends=('man2html' 'perl-extutils-makemaker' 'systemd')
 #optdepends=('cups-x2go: printing support')
 options=('emptydirs')
 install=x2goserver.install
 backup=('etc/x2go/x2goserver.conf' 'etc/x2go/x2gosql/sql')
-source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz
-        x2goserver.service)
-md5sums=('754ee94f2b4b57fc08973027a174cf81'
-         'f76081c01e40b6206895d194dc949707')
+source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+md5sums=('2f41accfb7b7d8b8113eb6f2f686e340')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -38,16 +75,18 @@ build() {
   for Makefile in $(find . -type f -name Makefile); do
     sed -i "s:-o root -g root ::g" $Makefile
   done
-
-  make PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir"
+  # Do not ship xsession - Debian specific
+  sed -i -e '/xsession/s/^/#/' Makefile
+  
+  make PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir" PERL_INSTALLDIRS=vendor
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   make -j1 PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir" install
 
-  # systemd service file - only runs x2gocleansessions
-  install -Dm 644 "$srcdir/x2goserver.service" "$pkgdir/usr/lib/systemd/system/x2goserver.service"
+  # systemd service file 
+  install -Dm 644 "$srcdir/${pkgname}-${pkgver}/x2goserver.service" "$pkgdir/usr/lib/systemd/system/x2goserver.service"
   
   # X2go homedir + printing spool dir
   install -dm 770 $pkgdir/var/lib/x2go
