@@ -1,7 +1,7 @@
 #!/bin/sh
 
 sd_booted() {
-  [ -e sys/fs/cgroup/systemd ]
+  [[ -d /run/systemd/systemd/ ]]
 }
 
 add_privs() {
@@ -9,6 +9,12 @@ add_privs() {
     echo "==> Warning: setcap failed, falling back to setuid root on /$1"
     chmod u+s "$1"
   fi
+}
+
+add_journal_acls() {
+  # ignore errors, since the filesystem might not support ACLs
+  setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ 2>/dev/null
+  :
 }
 
 post_common() {
@@ -53,6 +59,8 @@ _208_changes() {
 
 post_install() {
   post_common
+
+  add_journal_acls
 
   # enable getty@tty1 by default, but don't track the file
   systemctl enable getty@tty1.service
@@ -114,6 +122,10 @@ post_upgrade() {
 
   if [ "$(vercmp 208-1 "$2")" -eq 1 ]; then
     _208_changes
+  fi
+
+  if [ "$(vercmp 208-8 "$2")" -eq 1 ]; then
+    add_journal_acls
   fi
 }
 
