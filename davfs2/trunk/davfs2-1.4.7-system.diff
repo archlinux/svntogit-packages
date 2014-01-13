@@ -1,0 +1,150 @@
+diff -ur davfs2-1.4.7/ChangeLog davfs2-1.4.7.new/ChangeLog
+--- davfs2-1.4.7/ChangeLog	2012-07-19 13:37:52.000000000 +0200
++++ davfs2-1.4.7.new/ChangeLog	2013-09-15 10:19:12.000000000 +0200
+@@ -1,6 +1,11 @@
+ ChangeLog for davfs2
+ --------------------
+ 
++2013-09-08 Werner Baumann (werner.baumann@onlinehome.de)
++    * kernel_interface.c, mount_davfs.c:
++      Don't create /dev/coda and /dev/fuse.
++      Remove insecure calls of system().
++
+ 2012-07-19 Werner Baumann (werner.baumann@onlinehome.de)
+     * Release version 1.4.7.
+ 
+diff -ur davfs2-1.4.7/src/kernel_interface.c davfs2-1.4.7.new/src/kernel_interface.c
+--- davfs2-1.4.7/src/kernel_interface.c	2012-07-19 12:58:48.000000000 +0200
++++ davfs2-1.4.7.new/src/kernel_interface.c	2013-09-15 10:15:07.000000000 +0200
+@@ -167,29 +167,6 @@
+         ++minor;
+     }
+ 
+-    if (*dev <= 0 && system("/sbin/modprobe coda &>/dev/null") == 0) {
+-        minor = 0;
+-        while (*dev <= 0 && minor < MAX_CODADEVS) {
+-            char *path;
+-            if (asprintf(&path, "%s/%s%i",
+-                         DAV_DEV_DIR, CODA_DEV_NAME, minor) < 0)
+-                abort();
+-            *dev = open(path, O_RDWR | O_NONBLOCK);
+-            if (*dev <= 0) {
+-                if (mknod(path, S_IFCHR, makedev(CODA_MAJOR, minor)) == 0) {
+-                    if (chown(path, 0, 0) == 0
+-                            && chmod(path, S_IRUSR | S_IWUSR) == 0) {
+-                        *dev = open(path, O_RDWR | O_NONBLOCK);
+-                    } else {
+-                        remove(path);
+-                    }
+-                }
+-            }
+-            free(path);
+-            ++minor;
+-        }
+-    }
+-
+     if (*dev <= 0) {
+         error(0, 0, _("no free coda device to mount"));
+         return -1;
+@@ -225,20 +202,6 @@
+             abort();
+ 
+     *dev = open(path, O_RDWR | O_NONBLOCK);
+-    if (*dev <= 0 && system("/sbin/modprobe fuse &>/dev/null") == 0) {
+-        *dev = open(path, O_RDWR | O_NONBLOCK);
+-    }
+-    if (*dev <= 0) {
+-        if (mknod(path, S_IFCHR, makedev(FUSE_MAJOR, FUSE_MINOR)) == 0) {
+-             if (chown(path, 0, 0) == 0
+-                    && chmod(path, S_IRUSR | S_IWUSR) == 0) {
+-                *dev = open(path, O_RDWR | O_NONBLOCK);
+-            } else {
+-                remove(path);
+-            }
+-        }
+-    }
+-
+     free(path);
+     if (*dev <= 0) {
+         error(0, 0, _("can't open fuse device"));
+diff -ur davfs2-1.4.7/src/mount_davfs.c davfs2-1.4.7.new/src/mount_davfs.c
+--- davfs2-1.4.7/src/mount_davfs.c	2012-07-19 13:35:11.000000000 +0200
++++ davfs2-1.4.7.new/src/mount_davfs.c	2013-09-15 10:15:22.000000000 +0200
+@@ -170,6 +170,9 @@
+ static int
+ arg_to_int(const char *arg, int base, const char *opt);
+ 
++static void
++cp_file(const char *src, const char *dest);
++
+ static int
+ debug_opts(const char *s);
+ 
+@@ -530,10 +533,7 @@
+             char *file_name = ne_concat(path, "/", DAV_CONFIG, NULL);
+             if (access(file_name, F_OK) != 0) {
+                 char *template = ne_concat(DAV_DATA_DIR, "/", DAV_CONFIG, NULL);
+-                char *command = ne_concat("cp ", template, " ", file_name,
+-                                          NULL);
+-                if (system(command) != 0);
+-                free(command);
++                cp_file(template, file_name);
+                 free(template);
+             }
+             free(file_name);
+@@ -542,11 +542,7 @@
+             if (access(file_name, F_OK) != 0) {
+                 char *template = ne_concat(DAV_DATA_DIR, "/", DAV_SECRETS,
+                                            NULL);
+-                char *command = ne_concat("cp ", template, " ", file_name,
+-                                          NULL);
+-                if (system(command) == 0)
+-                    chmod(file_name, S_IRUSR | S_IWUSR);
+-                free(command);
++                cp_file(template, file_name);
+                 free(template);
+             }
+             free(file_name);
+@@ -1304,6 +1300,7 @@
+    opt    : name of the option, arg belongs to. Used in the error message.
+    return value: the value of the integer number in arg */
+ static int
++
+ arg_to_int(const char *arg, int base, const char *opt)
+ {
+     char *tail = NULL;
+@@ -1325,6 +1322,34 @@
+ }
+ 
+ 
++/* Creates a copy of src with name dest. */
++static void
++cp_file(const char *src, const char *dest)
++{
++    FILE *in = fopen(src, "r");
++    if (!in)
++        error(EXIT_FAILURE, errno, _("can't open file %s"), src);
++
++    FILE *out = fopen(dest, "w");
++    if (!out)
++        error(EXIT_FAILURE, errno, _("can't open file %s"), dest);
++
++    size_t n = 0;
++    char *line = NULL;
++    int length = getline(&line, &n, in);
++    while (length > 0) {
++        if (fputs(line, out) == EOF) 
++            error(EXIT_FAILURE, errno, _("error writing to file %s"), dest);
++        length = getline(&line, &n, in);
++    }
++
++    if (line)
++        free(line);
++    fclose(out);
++    fclose(in);
++}
++
++
+ /* Converts a debug option string s into numerical value. If s is not a
+    valid debug option, it returns 0. */
+ static int
