@@ -2,14 +2,14 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.8.5.2
+pkgver=1.8.5.3
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
 url="http://git-scm.com/"
 license=('GPL2')
 depends=('curl' 'expat>=2.0' 'perl-error' 'perl>=5.14.0' 'openssl' 'pcre')
-makedepends=('python2' 'emacs' 'libgnome-keyring')
+makedepends=('python2' 'emacs' 'libgnome-keyring' 'xmlto' 'asciidoc')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
             'perl-term-readkey: git svn'
@@ -24,7 +24,6 @@ replaces=('git-core')
 provides=('git-core')
 install=git.install
 source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
-        "http://git-core.googlecode.com/files/git-manpages-$pkgver.tar.gz"
         git-daemon@.service
         git-daemon.socket)
 
@@ -35,7 +34,8 @@ build() {
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
-    all
+    MAN_BOLD_LITERAL=1 \
+    all doc
 
   make -C contrib/emacs prefix=/usr
   make -C contrib/credential/gnome-keyring
@@ -56,6 +56,7 @@ check() {
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
+    MAN_BOLD_LITERAL=1 \
     NO_SVN_TESTS=y \
     DEFAULT_TEST_TARGET=prove \
     GIT_PROVE_OPTS="$jobs -Q" \
@@ -70,7 +71,8 @@ package() {
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
     NO_CROSS_DIRECTORY_HARDLINKS=1 \
-    INSTALLDIRS=vendor DESTDIR="$pkgdir" install
+    MAN_BOLD_LITERAL=1 \
+    INSTALLDIRS=vendor DESTDIR="$pkgdir" install install-doc
 
   # bash completion
   mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
@@ -97,14 +99,6 @@ package() {
   sed -i 's|#![ ]*/usr/bin/python$|#!/usr/bin/python2|' \
     "$pkgdir"/usr/share/git/svn-fe/svnrdump_sim.py
 
-
-  # how 'bout some manpages?
-  for mansect in man1 man5 man7; do
-    for manpage in "$srcdir"/$mansect/*; do
-      install -D -m644 $manpage "$pkgdir"/usr/share/man/$mansect/$(basename $manpage)
-    done
-  done
-
   # remove perllocal.pod, .packlist, and empty directories.
   rm -rf "$pkgdir"/usr/lib/perl5
 
@@ -113,7 +107,6 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('df8519044f9880f3687d863d99245282'
-         '27851cc39808f1be6d3789fae87c8308'
+md5sums=('57b966065882f83ef5879620a1e329ca'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
