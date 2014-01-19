@@ -4,7 +4,7 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 pkgname=apache-ant
 pkgver=1.9.3
-pkgrel=1
+pkgrel=2
 pkgdesc='A java-based build tool'
 arch=('any')
 url='http://ant.apache.org/'
@@ -16,11 +16,15 @@ install=${pkgname}.install
 source=(http://apache.org/dist/ant/source/${pkgname}-${pkgver}-src.tar.bz2
         ${pkgname}.sh
         ${pkgname}.csh
-        ${pkgname}.install)
+        ${pkgname}.install
+        bin_ant
+        ant.conf)
 sha256sums=('eb9306e8b8322bb09b78cc3d8e288398f9cb657d76ffc61ee3fb175e786e8365'
             '182b9212610790966d3a018d3cbab2e5327dd9fd11dc15dd1f377853216f5718'
             '919a3ab1acae1d0d190fe6e0034b00975caab40e55359a720bfccd098fe2d995'
-            '37602eb618da3948e4b9334f1641fdc8372543a4014da37f6c5548ced8992fa2')
+            '3de451d0f963ba96e83f4e068a8325e3d4fc42b1e5c4818e9d7962ed4f5393b3'
+            '0823bf8d512c970f540ccad86045bc6a4a98de8cc036b00a36bd01550ee67b20'
+            'b86ce60f61cbd85a9faa61d698b0fc4607f1ff375cd15673aee57f053012eacb')
 
 _ant_home=/usr/share/${pkgname}
 
@@ -39,11 +43,6 @@ build() {
   ant dist
 }
 
-#check() {
-#  cd "${srcdir}/${pkgname}-${pkgver}"
-#  ant test
-#}
-
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}/${pkgname}-${pkgver}"
 
@@ -52,30 +51,18 @@ package() {
   install -dm755 ${pkgdir}/etc/${pkgname}
   cp -Rp etc/* ${pkgdir}/etc/${pkgname}
   rm ${pkgdir}/etc/${pkgname}/ant-bootstrap.jar
-  # Done in .install for now
-  #ln -s /etc/${pkgname} ${pkgdir}${_ant_home}/etc
+  ln -s /etc/${pkgname} ${pkgdir}${_ant_home}/etc
 
   install -dm755 ${pkgdir}${_ant_home}/bin
   find bin -type f -a ! -name \*.bat -a ! -name \*.cmd \
     -exec install -m755 {} ${pkgdir}${_ant_home}/bin \;
 
-  install -dm755 ${pkgdir}/usr/bin
-  ln -s ${_ant_home}/bin/ant ${pkgdir}/usr/bin/ant
+  install -Dm755 ${srcdir}/bin_ant ${pkgdir}/usr/bin/ant
+  install -Dm644 ${srcdir}/ant.conf ${pkgdir}/etc/apache-ant/ant.conf
 
   install -dm755 ${pkgdir}/usr/share/java/${pkgname}
-  install -m644 lib/*.jar \
-                ../lib/optional/*.jar \
-                ${pkgdir}/usr/share/java/${pkgname}
+  install -m644 lib/*.jar ${pkgdir}/usr/share/java/${pkgname}
   ln -s /usr/share/java/${pkgname} ${pkgdir}${_ant_home}/lib
-  # Provided
-  # http://bugs.archlinux.org/task/15229
-  rm ${pkgdir}/usr/share/java/${pkgname}/junit-4.11.jar
-  ln -sf ../junit.jar ${pkgdir}/usr/share/java/apache-ant/
-  rm ${pkgdir}/usr/share/java/${pkgname}/hamcrest-core-1.3.jar
-  ln -sf ../hamcrest-core.jar ${pkgdir}/usr/share/java/apache-ant/
-
-  # Should not be in package
-  rm ${pkgdir}/usr/share/java/${pkgname}/maven-artifact-ant-*-dep.jar
 
   # fix python2 path
   sed -i 's|/usr/bin/python|/usr/bin/python2|' ${pkgdir}${_ant_home}/bin/runant.py
