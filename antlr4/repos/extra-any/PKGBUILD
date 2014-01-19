@@ -1,0 +1,44 @@
+# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
+pkgname=antlr4
+pkgver=4.1
+pkgrel=1
+pkgdesc='Parser generator for reading, processing, executing, or translating structured text or binary files'
+arch=('any')
+url='http://www.antlr.org/index.html'
+license=('BSD')
+depends=('java-environment>=6')
+makedepends=('maven' 'openjdk7-src' 'unzip')
+provides=("antlr=${pkgver}")
+source=(http://www.antlr.org/download/${pkgname:0:-1}-${pkgver}.tar.gz
+        bin_antlr4
+        bin_grun)
+sha256sums=('3e2c26c7bc18e86ff5a363daca5407feb0f596194f0db6be1fcaaa73f4bf1db1'
+            'c32ed03752a24beb8f67c10b23a2a26c0c7d00288dd772e1ef40f807fb081aa6'
+            '2e6ef8e841429eb632278d3ab9a73afc477721fd69076c6ff8ad00a26cdd2554')
+
+prepare() {
+  unzip -o /usr/lib/jvm/java-7-openjdk/src.zip -d ${srcdir}/jdk_src
+  export M2_REPO=${srcdir}/m2_repo
+  mkdir -p ${M2_REPO}
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}/tool"
+  mvn -Dmaven.repo.local=${M2_REPO} \
+      -DJDK_SOURCE_ROOT=${srcdir}/jdk_src \
+      -Dbootclasspath.compile=${JAVA_HOME}/jre/lib/rt.jar \
+      -Dbootclasspath.testCompile=${JAVA_HOME}/jre/lib/rt.jar \
+      -Duser.name='Arch Linux' \
+      -Psonatype-oss-release \
+      -Dmaven.javadoc.skip=true \
+      clean package
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  install -D tool/target/${pkgname}-${pkgver}-complete.jar \
+             ${pkgdir}/usr/share/java/${pkgname:0:-1}-${pkgver}-complete.jar
+  install -D ${srcdir}/bin_antlr4 ${pkgdir}/bin/antlr4
+  install -D ${srcdir}/bin_grun   ${pkgdir}/bin/grun
+  install -D LICENSE.txt ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE.txt
+}
