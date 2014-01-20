@@ -4,28 +4,48 @@
 # Contributor: Angel 'angvp' Velasquez <angvp[at]archlinux.com.ve> 
 
 pkgbase=pycurl
-pkgname=('python2-pycurl')
-pkgver=7.19.0.2
+pkgname=('python-pycurl' 'python2-pycurl')
+pkgver=7.19.3
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://pycurl.sourceforge.net/"
-license=('GPL')
-makedepends=('python2' 'curl')
+license=('LGPL' 'MIT')
+makedepends=('python' 'python2' 'curl')
 source=("http://pycurl.sourceforge.net/download/${pkgbase}-${pkgver}.tar.gz")
-md5sums=('518be33976dbc6838e42495ada64b43f')
+sha1sums=('5d8b7a7f869362421061d72f6d234bf805ebebb5')
+
+prepare() {
+  cp -r ${pkgbase}-${pkgver} python2-${pkgbase}-${pkgver}
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  find . -name '*.py' -exec sed -i -e "s|#! /usr/bin/env python|#!/usr/bin/env python3|" {} +
+  sed -i 's/"share", "doc", PACKAGE/"share", "doc", "python-pycurl"/' setup.py
+  cd "${srcdir}/python2-${pkgbase}-${pkgver}"
+  find . -name '*.py' -exec sed -i -e "s|#! /usr/bin/env python|#!/usr/bin/env python2|" {} +
+  sed -i 's/"share", "doc", PACKAGE/"share", "doc", "python2-pycurl"/' setup.py
+}
+
+build() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  python3 setup.py build --with-ssl
+  cd "${srcdir}/python2-${pkgbase}-${pkgver}"
+  python2 setup.py build --with-ssl
+}
+
+package_python-pycurl() {
+  pkgdesc="A Python 3.x interface to libcurl"
+  depends=('python' 'curl')
+
+  cd ${pkgbase}-${pkgver}
+  python setup.py install --root="${pkgdir}"
+  install -D -m644 COPYING-MIT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
 
 package_python2-pycurl() {
   pkgdesc="A Python 2.x interface to libcurl"
   depends=('python2' 'curl')
-  replaces=('pycurl' 'python-pycurl')
-  provides=('pycurl' 'python-pycurl')
-  conflicts=('python-pycurl')
 
-  cd ${pkgbase}-${pkgver}
-  python2 setup.py install --curl-config=/usr/bin/curl-config \
-    --prefix "${pkgdir}"/usr --optimize=1
-
-  sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
-    -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
-    $(find "${pkgdir}" -name '*.py')
+  cd python2-${pkgbase}-${pkgver}
+  python2 setup.py install --root="${pkgdir}"
+  install -D -m644 COPYING-MIT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
