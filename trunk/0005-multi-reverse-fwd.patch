@@ -1,0 +1,85 @@
+Description: Allow requesting multiple reverse port forwarding tunnels per connection
+Author: Oleksandr Shneyder <o.schneyder@phoca-gmbh.de>
+Abstract:
+ Channel: Add ssh_channel_accept_forward().
+ .
+ This new function works the same way as ssh_forward_accept()
+ but can return a destination port of the channel (useful if
+ SSH connection is supposed to reverse forward multiple TCP/IP
+ ports).
+Origin: http://git.libssh.org/projects/libssh.git/commit/?id=a1c4fc07d43fb7a7e1e91bfdadbd3dc62b8ce462
+--- a/include/libssh/libssh.h
++++ b/include/libssh/libssh.h
+@@ -371,6 +371,7 @@
+ LIBSSH_API char *ssh_dirname (const char *path);
+ LIBSSH_API int ssh_finalize(void);
+ LIBSSH_API ssh_channel ssh_forward_accept(ssh_session session, int timeout_ms);
++LIBSSH_API ssh_channel ssh_channel_accept_forward(ssh_session session, int timeout_ms, int *destination_port);
+ LIBSSH_API int ssh_forward_cancel(ssh_session session, const char *address, int port);
+ LIBSSH_API int ssh_forward_listen(ssh_session session, const char *address, int port, int *bound_port);
+ LIBSSH_API void ssh_free(ssh_session session);
+--- a/src/channels.c
++++ b/src/channels.c
+@@ -1755,7 +1755,7 @@
+ }
+ 
+ static ssh_channel ssh_channel_accept(ssh_session session, int channeltype,
+-    int timeout_ms) {
++    int timeout_ms, int *destination_port) {
+ #ifndef _WIN32
+   static const struct timespec ts = {
+     .tv_sec = 0,
+@@ -1779,6 +1779,10 @@
+             ssh_message_subtype(msg) == channeltype) {
+           ssh_list_remove(session->ssh_message_list, iterator);
+           channel = ssh_message_channel_request_open_reply_accept(msg);
++          if(destination_port) {
++            *destination_port=msg->channel_request_open.destination_port;
++          }
++
+           ssh_message_free(msg);
+           return channel;
+         }
+@@ -1809,7 +1813,7 @@
+  *                      the server.
+  */
+ ssh_channel ssh_channel_accept_x11(ssh_channel channel, int timeout_ms) {
+-  return ssh_channel_accept(channel->session, SSH_CHANNEL_X11, timeout_ms);
++  return ssh_channel_accept(channel->session, SSH_CHANNEL_X11, timeout_ms, NULL);
+ }
+ 
+ /**
+@@ -1857,7 +1861,7 @@
+   } else {
+     session->global_req_state=SSH_CHANNEL_REQ_STATE_DENIED;
+   }
+-
++  session->global_req_state = SSH_CHANNEL_REQ_STATE_NONE;
+   leave_function();
+   return SSH_PACKET_USED;
+ 
+@@ -2027,7 +2031,23 @@
+  *         the server
+  */
+ ssh_channel ssh_forward_accept(ssh_session session, int timeout_ms) {
+-  return ssh_channel_accept(session, SSH_CHANNEL_FORWARDED_TCPIP, timeout_ms);
++  return ssh_channel_accept(session, SSH_CHANNEL_FORWARDED_TCPIP, timeout_ms, NULL);
++}
++
++/**
++ * @brief Accept an incoming TCP/IP forwarding channel and get information
++ * about incomming connection
++ * @param[in]  session    The ssh session to use.
++ *
++ * @param[in]  timeout_ms A timeout in milliseconds.
++ *
++ * @param[in]  destination_port A pointer to destination port or NULL.
++ *
++ * @return Newly created channel, or NULL if no incoming channel request from
++ *         the server
++ */
++ssh_channel ssh_channel_accept_forward(ssh_session session, int timeout_ms, int* destination_port) {
++  return ssh_channel_accept(session, SSH_CHANNEL_FORWARDED_TCPIP, timeout_ms, destination_port);
+ }
+ 
+ /**
