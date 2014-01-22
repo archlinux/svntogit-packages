@@ -5,15 +5,15 @@
 
 pkgname=ghostscript
 pkgver=9.10
-pkgrel=2
+pkgrel=3
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('AGPL' 'custom')
 depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg'
-         'libtiff>=4.0.0' 'lcms2' 'dbus')
-makedepends=('gtk2' 'gnutls')
+         'libtiff>=4.0.0' 'lcms2' 'dbus' 'libpaper')
+makedepends=('gtk3' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
-            'gtk2:              needed for gsx')
+            'gtk3:              needed for gsx')
 url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2)
 options=('!makeflags')
@@ -41,6 +41,7 @@ build() {
 	--without-luratech \
 	--without-omni \
 	--with-system-libtiff \
+	--with-libpaper \
 	--disable-compile-inits #--help # needed for linking with system-zlib
   make
 
