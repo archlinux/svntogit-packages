@@ -2,7 +2,7 @@
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=lm_sensors
-pkgver=3.3.4
+pkgver=3.3.5
 pkgrel=1
 pkgdesc="Collection of user space tools for general SMBus access and hardware monitoring"
 arch=('i686' 'x86_64')
@@ -11,27 +11,22 @@ license=('GPL' 'LGPL')
 depends=('perl' 'sysfsutils')
 makedepends=('rrdtool')
 optdepends=('rrdtool: for logging with sensord')
-backup=('etc/sensors3.conf' 'etc/healthd.conf')
-options=('!emptydirs')
-source=(http://dl.lm-sensors.org/lm-sensors/releases/lm_sensors-${pkgver}.tar.bz2{,.sig} \
-	healthd healthd.conf fancontrol.service sensord.service healthd.service \
-        linux_3.0.patch lm_sensors-fancontrol.patch)
-sha1sums=('4e62538ca99973ff505f2eeb5b841bb402e996d8'
+backup=('etc/sensors3.conf' 'etc/healthd.conf' 'etc/conf.d/sensord')
+source=(http://dl.lm-sensors.org/lm-sensors/releases/lm_sensors-${pkgver}.tar.bz2{,.sig}
+	healthd healthd.conf healthd.service sensord.conf
+        lm_sensors-fancontrol.patch)
+sha1sums=('179989a52bae8f01ba8ed77e8a15af6ec653d89e'
           'SKIP'
           '1c91ae403d3cd02b6177ad1f1b2f2c3a7a3257f5'
-          '6c4e8a2d89dd2fd3ca2f0f4f3b1230111e01b0fc'
-          '73cd658f4a418197dc75f65d6d309701c72cfd81'
-          'cea1ff07374a784cc4be1d28dc6c80641fcae99d'
+          '1edd4d72ade22adfc128fb8d670e85c633fd1d18'
           'd72ec328e9303acef86342483b6f8537de6117d9'
-          '5662828085cdd981f0dc7cf8f79d3d6e2b72f50c'
+          'f4b5f21fdb3b2a55aa353afa1603f953b207b73b'
           'b0bc977348610d6a008d75a43f65800251c4c9f7')
 
 prepare() {
   cd ${pkgname}-${pkgver}
-  sed -i 's|/etc/sysconfig|/etc/conf.d|' prog/{detect/sensors-detect,init/lm_sensors.service}
-  sed -i 's@\(/bin/systemctl\|/lib/systemd/system\)@/usr\1@g' prog/detect/sensors-detect
+  sed -i 's|/etc/sysconfig|/etc/conf.d|' prog/{detect/sensors-detect,init/{sensord,lm_sensors}.service}
   sed -i 's/EnvironmentFile=/EnvironmentFile=-/' prog/init/lm_sensors.service
-  patch -p0 -i "${srcdir}/linux_3.0.patch"
   patch -p0 -i "${srcdir}/lm_sensors-fancontrol.patch"
 }
 
@@ -44,10 +39,12 @@ package() {
   cd ${pkgname}-${pkgver}
   make PROG_EXTRA=sensord BUILD_STATIC_LIB=0 \
     PREFIX=/usr SBINDIR=/usr/bin MANDIR=/usr/share/man DESTDIR="${pkgdir}" install
-  install -D -m644 prog/init/lm_sensors.service "${pkgdir}/usr/lib/systemd/system/lm_sensors.service"
+
   install -D -m755 "${srcdir}/healthd" "${pkgdir}/usr/bin/healthd"
+
   install -D -m644 "${srcdir}/healthd.conf" "${pkgdir}/etc/healthd.conf"
-  install -D -m644 "${srcdir}/fancontrol.service" "${pkgdir}/usr/lib/systemd/system/fancontrol.service"
-  install -D -m644 "${srcdir}/sensord.service" "${pkgdir}/usr/lib/systemd/system/sensord.service"
+  install -D -m644 "${srcdir}/sensord.conf" "${pkgdir}/etc/conf.d/sensord"
+ 
   install -D -m644 "${srcdir}/healthd.service" "${pkgdir}/usr/lib/systemd/system/healthd.service"
+  install -D -m644 prog/init/*.service "${pkgdir}/usr/lib/systemd/system/"
 }
