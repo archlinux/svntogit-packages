@@ -5,13 +5,13 @@
 
 pkgname=ghostscript
 pkgver=9.10
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('AGPL' 'custom')
 depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg'
          'libtiff>=4.0.0' 'lcms2' 'dbus')
-makedepends=('gtk2' 'gnutls' 'openjpeg')
+makedepends=('gtk2' 'gnutls')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk2:              needed for gsx')
 url="http://www.ghostscript.com/"
@@ -21,9 +21,11 @@ md5sums=('7179bb1ed4f6f453147e6f7e1f210ce8')
 
 build() {
   cd ghostscript-${pkgver}
-  
+
   # force it to use system-libs
-  rm -rf jpeg libpng zlib jasper expat tiff lcms lcms2 freetype openjpeg cups/libs # jbig2dec is in community
+  # keep heavily patched included openjpeg, leads to segfault with system openjpeg
+  # https://bugs.archlinux.org/task/38226
+  rm -rf jpeg libpng zlib jasper expat tiff lcms lcms2 freetype cups/libs # jbig2dec is in community
 
   ./configure --prefix=/usr \
 	--enable-dynamic \
@@ -33,9 +35,9 @@ build() {
 	--with-x \
 	--with-drivers=ALL\
 	--with-fontpath=/usr/share/fonts/Type1:/usr/share/fonts \
-	--with-install-cups \
 	--enable-fontconfig \
 	--enable-freetype \
+	--enable-openjpeg \
 	--without-luratech \
 	--without-omni \
 	--with-system-libtiff \
