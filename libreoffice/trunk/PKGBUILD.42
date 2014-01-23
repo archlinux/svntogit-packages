@@ -27,7 +27,7 @@ url="http://www.libreoffice.org/"
 makedepends=( # makedepends
              'sane' 'perl-archive-zip' 'zip' 'unzip' 'unixodbc' #'boost'
              'apache-ant' 'gperf' 'kdelibs' 'gconf' 'gtk3' 'cppunit'
-             'beanshell'  'vigra' 'clucene' 'junit' 'libmythes' 'libwpg' 'imagemagick'
+             'beanshell2' 'vigra' 'clucene' 'junit' 'libmythes' 'libwpg' 'imagemagick'
              'glu' 'mesa' 'gst-plugins-base-libs' 'java-environment' 'postgresql-libs' 'doxygen'
              'clucene' 'bluez-libs' 'harfbuzz-icu' 'gdb'
              # the runtime dependencies
@@ -312,7 +312,7 @@ package_libreoffice-common() {
              'java-runtime:     adds java support'
              'pstoedit:         translates PostScript and PDF graphics into other vector formats'
              'libmythes:        for use in thesaurus'
-             'beanshell:        interactive java -- good for prototyping /macros'
+             'beanshell2:       interactive java -- good for prototyping/macros'
              'vigra:            C++ computer vision library, usable in Basebmp'
              'libmspack:        library for Microsoft compression formats for use in FontOOo'
              'libwpg:           library for importing and converting Corel WordPerfect(tm) Graphics images and for MS visual import'
@@ -366,11 +366,6 @@ package_libreoffice-common() {
  mv ${pkgdir}/etc/bash_completion.d/libreoffice.sh ${pkgdir}/usr/share/bash-completion/completions/libreoffice.sh
  rm -rf ${pkgdir}/etc/bash_completion.d
  
- # some files would conflict
- rm -vf ${pkgdir}/usr/lib/libreoffice/program/classes/ScriptProviderForJavaScript.jar
- rm -vf ${pkgdir}/usr/lib/libreoffice/program/classes/js.jar
- rm -vf ${pkgdir}/usr/lib/libreoffice/program/services/scriptproviderforjavascript.rdb
- 
  # make pyuno find its modules
  install -dm755 ${pkgdir}/usr/lib/python3.3/site-packages
  ln -svf /usr/lib/libreoffice/program/uno.py ${pkgdir}/usr/lib/python3.3/site-packages/uno.py
@@ -378,6 +373,20 @@ package_libreoffice-common() {
   
  # workaround all packages now depend on that file
  cp ${srcdir}/fakeinstall/usr/lib/libreoffice/share/registry/writer.xcd ${pkgdir}/usr/lib/libreoffice/share/registry/writer.xcd
+ 
+ # add missing files from Beanshell provider
+ # create directories from *list.txt file
+ for directory in `grep ^%dir ${srcdir}/libreoffice-$_LOver/file-lists/orig/gid_Module_Optional_Extensions_Script_Provider_For_BS`; do
+   install -dm755 ${pkgdir}/${directory/\%dir/}
+ done
+ # install files into the pkg from fakeinstall dir
+ for file in `grep -v ^%dir $srcdir/libreoffice-$_LOver/file-lists/orig/gid_Module_Optional_Extensions_Script_Provider_For_BS`; do
+   dirname=`dirname $file`
+   # check if directory has been already been created - some are missing like manpages
+   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
+   # mv file from fakeinstall to pkgdir
+   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file || /bin/true # some double file entries make it fail
+ done
 }
 
 package_libreoffice-base() {
@@ -525,6 +534,20 @@ package_libreoffice-kde4() {
  done
  # install files into the pkg from fakeinstall dir
  for file in `grep -v ^%dir $srcdir/libreoffice-$_LOver/file-lists/kde4_list.txt`; do
+   dirname=`dirname $file`
+   # check if directory has been already been created - some are missing like manpages
+   [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
+   # mv file from fakeinstall to pkgdir
+   mv ${srcdir}/fakeinstall${file} ${pkgdir}$file
+ done
+ 
+ # one file (libkde4be1lo.so) is part of kde_list.txt
+ # create directories from *list.txt file
+ for directory in `grep ^%dir ${srcdir}/libreoffice-$_LOver/file-lists/kde_list.txt`; do
+   install -dm755 ${pkgdir}/${directory/\%dir/}
+ done
+ # install files into the pkg from fakeinstall dir
+ for file in `grep -v ^%dir $srcdir/libreoffice-$_LOver/file-lists/kde_list.txt`; do
    dirname=`dirname $file`
    # check if directory has been already been created - some are missing like manpages
    [ -d ${pkgdir}/$dirname ] || install -dm755 ${pkgdir}/$dirname
