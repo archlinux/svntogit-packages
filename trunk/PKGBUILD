@@ -2,23 +2,41 @@
 # Maintainer: tobias <tobias@arhlinux.org>
 
 pkgname=exiv2
-pkgver=0.23
-pkgrel=2
+pkgver=0.24
+pkgrel=1
 pkgdesc="Exif and Iptc metadata manipulation library and tools"
 arch=('i686' 'x86_64')
 url="http://exiv2.org"
-license=('GPL')
+license=('GPL2')
 depends=('gcc-libs' 'zlib' 'expat')
-source=("http://www.exiv2.org/${pkgname}-${pkgver}.tar.gz")
-sha1sums=('5f342bf642477526f41add11d6ee7787cdcd639f')
+makedepends=('cmake') # for doc: 'doxygen' 'graphviz' 'ttf-liberation' 'libxslt')
+source=(http://www.exiv2.org/${pkgname}-${pkgver}.tar.gz)
+        # for doc build maybe add from FC exiv2-0.24-doxygen_config.patch)
+md5sums=('b8a23dc56a98ede85c00718a97a8d6fc')
 
+prepare() {
+  mkdir build
+  # fix man pages install patch
+  sed -i "s:man/man1:share/man/man1:" ${pkgbase}-${pkgver}/src/CMakeLists.txt
+}
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  CPPFLAGS="-D_FILE_OFFSET_BITS=64" ./configure --prefix=/usr
+  cd build
+  cmake ../${pkgbase}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DEXIV2_ENABLE_BUILD_PO:BOOL=ON \
+    -DEXIV2_ENABLE_BUILD_SAMPLES=ON
   make
+#  cd ../${pkgbase}-${pkgver}
+#  make -j1 doc # needs to be fixed
 }
 
+#check() {
+#  cd build
+#  make tests # doesn't work for me not finding tests dir
+#}
+
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd build
   make DESTDIR="${pkgdir}" install
 }
