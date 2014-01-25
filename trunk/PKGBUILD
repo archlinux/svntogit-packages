@@ -94,10 +94,6 @@ prepare() {
 
   # don't run depmod on 'make install'. We'll do this ourselves in packaging
   sed -i '2iexit 0' scripts/depmod.sh
-}
-
-build() {
-  cd "${srcdir}/${_srcname}"
 
   # get kernel version
   make prepare
@@ -119,14 +115,11 @@ build() {
   else
     cat .config > "${startdir}/config.last"
   fi
+}
 
-  ####################
-  # stop here
-  # this is useful to configure the kernel
-  #msg "Stopping build"; return 1
-  ####################
+build() {
+  cd "${srcdir}/${_srcname}"
 
-  # build!
   make ${MAKEFLAGS} LOCALVERSION= bzImage modules
 }
 
