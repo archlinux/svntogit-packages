@@ -6,7 +6,7 @@ pkgbase=linux               # Build stock -ARCH kernel
 #pkgbase=linux-custom       # Build kernel with a different name
 _srcname=linux-3.12
 pkgver=3.12.9
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -26,6 +26,7 @@ source=("http://www.kernel.org/pub/linux/kernel/v3.x/${_srcname}.tar.xz"
         'rpc_pipe-remove-the-clntXX-dir-if-creating-the-pipe-fails.patch'
         'sunrpc-add-an-info-file-for-the-dummy-gssd-pipe.patch'
         'rpc_pipe-fix-cleanup-of-dummy-gssd-directory-when-notification-fails.patch'
+        '0001-x86-x32-Correct-invalid-use-of-user-timespec-in-the-.patch'
 )
 md5sums=('cc6ee608854e0da4b64f6c1ff8b6398c'
          '0d539fc9bc799663caf0f383d9252d36'
@@ -77,6 +78,9 @@ prepare() {
   patch -Np1 -i "${srcdir}/sunrpc-add-an-info-file-for-the-dummy-gssd-pipe.patch"
 
   patch -Np1 -i "${srcdir}/rpc_pipe-fix-cleanup-of-dummy-gssd-directory-when-notification-fails.patch"
+
+  # Fix CVE-2014-0038
+  patch -p1 -i "${srcdir}/0001-x86-x32-Correct-invalid-use-of-user-timespec-in-the-.patch"
 
   if [ "${CARCH}" = "x86_64" ]; then
     cat "${srcdir}/config.x86_64" > ./.config
