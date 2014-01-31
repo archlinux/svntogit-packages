@@ -40,7 +40,8 @@ md5sums=('cc6ee608854e0da4b64f6c1ff8b6398c'
          '88eef9d3b5012ef7e82af1af8cc4e517'
          'cec0bb8981936eab2943b2009b7a6fff'
          '88d9cddf9e0050a76ec4674f264fb2a1'
-         'cb9016630212ef07b168892fbcfd4e5d')
+         'cb9016630212ef07b168892fbcfd4e5d'
+         '336d2c4afd7ee5f2bdf0dcb1a54df4b2')
 
 _kernelname=${pkgbase#linux}
 
