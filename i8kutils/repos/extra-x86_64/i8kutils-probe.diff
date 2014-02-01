@@ -1,0 +1,100 @@
+=== modified file 'i8kmon'
+--- i8kmon	2013-11-23 19:41:17 +0000
++++ i8kmon	2013-11-23 20:30:47 +0000
+@@ -27,6 +27,7 @@
+     sysconfig	/etc/i8kmon.conf
+     userconfig	~/.i8kmon
+     i8kfan	/usr/bin/i8kfan
++    acpi    "acpi"
+     geometry	{}
+     use_conf    1
+     auto	1
+@@ -62,7 +63,6 @@
+     t_low	0
+     t_high	0
+     ui		0
+-    suspend	0
+ }
+ 
+ proc read_config {} {
+@@ -202,22 +202,15 @@
+ 
+     set status(acpi_timer) [expr 60 / $config(timeout)]
+ 
+-    set cmd "acpi -a"; set acpi_ac [eval exec $cmd]
+-    set cmd2 "acpitool -a"; set acpi_ac2 [eval exec $cmd2]
+-    set ret [string first "on-line" $acpi_ac]
+-	set ret2 [string first "online" $acpi_ac2]
+-    if {$ret >= 0 | $ret2 >= 0} {
++    set acpi_ac [exec {*}$config(acpi)]
++    if {[string match *on-line* $acpi_ac] || [string match *online* $acpi_ac]} {
+         set status(ac) 1
+     } else {
+         set status(ac) 0
+     }
+ 
+     if {$config(verbose) > 0} {
+-        if {$ret >= 0} {
+-            puts "[clock seconds] acpi: $acpi_ac"
+-        } elseif {$ret2 >= 0} {
+-            puts "[clock seconds] acpi: $acpi_ac2"
+-        }
++        puts "[clock seconds] acpi: $acpi_ac"
+     }
+ 
+     return 0
+@@ -397,7 +390,6 @@
+     menu $menu -tearoff 0
+     $menu add check -label "Auto"    -variable config(auto)
+     $menu add check -label "Verbose" -variable config(verbose)
+-    $menu add check -label "Suspend" -variable status(suspend)
+     $menu add separator
+     $menu add command -label "Reload" -command { read_config; status_timer }
+     $menu add command -label "Exit"   -command { exit }
+@@ -495,8 +487,8 @@
+     -a|--auto               control automatically the fans
+    -na|--noauto	            don\x27t control automatically the fans
+     -d|--daemon             run in daemon mode without user interface
+-   -nd|--nodaemon           don\x27 run as daemon, open the user interface
+-   -nc|--nouserconfig       don't use \$HOME/.i8kmon
++   -nd|--nodaemon           don\x27t run as daemon, open the user interface
++   -nc|--nouserconfig       don\x27t use \$HOME/.i8kmon
+     -v|--verbose            report status on stdout
+     -g|--geometry <geom>    set applet geometry
+     -t|--timeout <secs>     set poll timeout
+@@ -556,7 +548,7 @@
+     }
+ 
+     if {$config(verbose) > 0} {
+-	set copyright "Copyright (C) 2013 i8kutils <https://launchpad.net/i8kutils>"
++	set copyright "Copyright (C) 2013 Vitor Augusto <vitorafsr@gmail.com>"
+ 	puts "i8kmon $PROG_VERSION - $copyright"
+ 	parray config
+ 	parray status
+@@ -596,8 +588,25 @@
+     set status(rightspeed) "0 $rspeed1 $rspeed2 $rspeed3"
+ }
+ 
++# probe external tools
++proc probe_tools {} {
++
++    # The possibility of choosing 'acpi' or 'acpitool' is for compatibility
++    # between different architectures: amd64, i386, kFreeBSD
++    # This code below is strictly related on package dependency stated at
++    # keyword 'Depends:' on file 'debian/control'
++    if {![catch {exec acpi}]} {
++        set config(acpi) "acpi"
++    } elseif {[catch {exec acpitool}]} {
++        set config(acpi) "acpitool"
++    } else {
++        puts stderr "Package dependency problem: neither 'acpi' nor 'acpitool' package is installed"
++    }
++}
++
+ proc main {} {
+     probe_fan_speed
++    probe_tools
+     read_config
+     parse_options
+     make_ui
+
