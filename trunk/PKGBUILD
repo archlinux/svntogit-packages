@@ -5,21 +5,23 @@
 
 pkgname=festival
 pkgver=2.1
-pkgrel=3
+pkgrel=4
 pkgdesc="A general multi-lingual speech synthesis system"
 arch=('i686' 'x86_64')
 url="http://www.cstr.ed.ac.uk/projects/festival/"
 license=('BSD' 'GPL' 'custom')
 depends=('perl')
 options=('!makeflags')
-source=("http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/${pkgname}-${pkgver}-release.tar.gz"
-        "http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/speech_tools-${pkgver}-release.tar.gz"
-	"http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/festlex_CMU.tar.gz"
-	"http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/festlex_OALD.tar.gz"
-	"http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/festlex_POSLEX.tar.gz"
-	'speechconfig.patch'
-	'festconfig.patch'
-	'festival-shared-build.patch')
+source=(http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/${pkgname}-${pkgver}-release.tar.gz
+        http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/speech_tools-${pkgver}-release.tar.gz
+        http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/festlex_CMU.tar.gz
+        http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/festlex_OALD.tar.gz
+        http://www.cstr.ed.ac.uk/downloads/${pkgname}/${pkgver}/festlex_POSLEX.tar.gz
+        speechconfig.patch
+        festconfig.patch
+        festival-shared-build.patch
+        festival.gcc47.patch
+        festival-2.1-bettersonamehack.patch)
 md5sums=('c93eb3e389ed171ab9abd46afe8897a8'
          '6920ddc75b042910a3bcfee3ab106938'
          '6a2ee4fed7c3ebedf197a3b8524ccb87'
@@ -27,26 +29,29 @@ md5sums=('c93eb3e389ed171ab9abd46afe8897a8'
          'aa80f9250065b318325f16fdad3a4484'
          'c30ae990baca40c9c2b1d5cd27502139'
          '348cc033430aee7989463198818ae74c'
-         '46132b1cd86a982007312def49ab176a')
+         '02f589688182527308e3fe8d1a82c056'
+         'ed738fdf981aaddbae6d00c3a0120d62'
+         '85367db2b57bae214d1032e2fc896753')
 
 prepare() {
-  cd "$srcdir"
-  patch -p0 -i "$srcdir/festival-shared-build.patch"
-  cd "$srcdir/speech_tools"
-  patch -p1 -i "$srcdir/speechconfig.patch"
+  cd $srcdir
+  patch -Np0 -i ${srcdir}/speechconfig.patch
+  patch -Np0 -i ${srcdir}/festconfig.patch
 
-  cd "$srcdir/festival"
-  patch -p1 -i "$srcdir/festconfig.patch"
-
+  # fix build with new gcc versions and build shared libs - taken from Mageia
+  patch -Np0 -i ${srcdir}/festival-shared-build.patch
+  patch -Np0 -i ${srcdir}/festival-2.1-bettersonamehack.patch
+  patch -Np0 -i ${srcdir}/festival.gcc47.patch
+  
   # Avoid make failure on making scripts and docs
-  sed -i "s#examples bin doc#examples#" Makefile
+  sed -i "s#examples bin doc#examples#" festival/Makefile
 }
 
 build() {
   # Build Speech Tools first
   cd "$srcdir/speech_tools"
   ./configure --prefix=/usr --sysconfdir=/etc
-  make OPTIMISE_CXXFLAGS="${CXXFLAGS}" OPTIMISE_CCFLAGS="${CFLAGS}"
+  make OPTIMISE_CXXFLAGS="${CXXFLAGS} -fno-strict-aliasing" OPTIMISE_CCFLAGS="${CFLAGS} -fno-strict-aliasing"
 
   # Build Festival itself
   cd "$srcdir/festival"
@@ -72,7 +77,6 @@ package() {
   ln -sf libestbase.so.${pkgver}.1 "$pkgdir"/usr/lib/libestbase.so
   ln -sf libestools.so.${pkgver}.1 "$pkgdir"/usr/lib/libestools.so
   ln -sf libeststring.so.1.2 "$pkgdir"/usr/lib/libeststring.so
-  install -m644 -t "$pkgdir"/usr/lib lib/lib*.a
 
   #headers
   for dir in {.,instantiate,ling_class,rxp,sigpr,unix}; do
@@ -98,7 +102,6 @@ package() {
   install -m755 examples/text2wave "$pkgdir"/usr/bin
 
   #libraries
-  install -m644 src/lib/libFestival.a "$pkgdir"/usr/lib/
   install -m755 src/lib/libFestival.so.* "$pkgdir"/usr/lib/
   ln -sf libFestival.so.2.1.0 "$pkgdir"/usr/lib/libFestival.so
 
@@ -108,8 +111,8 @@ package() {
 
   mkdir -p "$pkgdir"/usr/share/festival
   cp -aR lib/* "$pkgdir"/usr/share/festival
-  rm -f $(find "$pkgdir"/usr/share/festival -name Makefile)
-  rm -f $(find "$pkgdir"/usr/bin -name Makefile)
+  rm -fv $(find "$pkgdir"/usr/share/festival -name Makefile)
+  rm -fv $(find "$pkgdir"/usr/bin -name Makefile)
 
   #create voices directory
   install -dm755 "$pkgdir"/usr/share/festival/voices
