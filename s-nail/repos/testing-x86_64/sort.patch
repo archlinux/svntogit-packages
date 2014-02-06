@@ -1,0 +1,75 @@
+s-nail-14_5_2-sort.patch, 2014-01-30:
+
+Apply:
+  $ cd s-nail-14.5.2
+  $ patch -bu < s-nail-14_5_2-sort.patch
+
+Description:
+Reverses (sort(),thread(): use srelax()!, 2014-01-18, [a9b67e9]), which
+was a hasty commit of an untested diff that i've added few minutes
+beforehand.
+It was of course wrong.
+The problem (no memory relaxation during entire sort operation) requires
+a different approach (either only relax when we don't need to hold
+dope storage (as for SORT_TO/SORT_FROM/SORT_SUBJECT/+) or use heap
+memory for those allocations, then).
+
+s-nail-14_5_2-sort-alt.patch is an alternative working thesis that uses
+heap allocations, thus continues to relax the dope storage.
+This version has been pushed to [master].
+
+diff --git a/thread.c b/thread.c
+index 3ac5966..9ec1ac9 100644
+--- a/thread.c
++++ b/thread.c
+@@ -361,8 +361,6 @@ makethreads(struct message *m, long cnt, int nmail)
+ 		return;
+ 	mprime = nextprime(cnt);
+ 	mt = scalloc(mprime, sizeof *mt);
+-
+-	srelax_hold();
+ 	for (i = 0; i < cnt; i++) {
+ 		if ((m[i].m_flag&MHIDDEN) == 0) {
+ 			mlook(NULL, mt, &m[i], mprime);
+@@ -376,7 +374,6 @@ makethreads(struct message *m, long cnt, int nmail)
+ 		m[i].m_level = 0;
+ 		if (!nmail && !(inhook&2))
+ 			m[i].m_collapsed = 0;
+-		srelax();
+ 	}
+ 	/*
+ 	 * Most folders contain the eldest messages first. Traversing
+@@ -387,12 +384,8 @@ makethreads(struct message *m, long cnt, int nmail)
+ 	 * are replies to the one message, and are sorted such that
+ 	 * youngest messages occur first.
+ 	 */
+-	for (i = cnt-1; i >= 0; i--) {
++	for (i = cnt-1; i >= 0; i--)
+ 		lookup(&m[i], mt, mprime);
+-		srelax();
+-	}
+-	srelax_rele();
+-
+ 	threadroot = interlink(m, cnt, nmail);
+ 	finalize(threadroot);
+ 	free(mt);
+@@ -572,8 +565,6 @@ sort(void *vp)
+ 	default:
+ 		break;
+ 	}
+-
+-	srelax_hold();
+ 	for (n = 0, i = 0; i < msgCount; i++) {
+ 		mp = &message[i];
+ 		if ((mp->m_flag&MHIDDEN) == 0) {
+@@ -637,10 +628,7 @@ sort(void *vp)
+ 		mp->m_child = mp->m_younger = mp->m_elder = mp->m_parent = NULL;
+ 		mp->m_level = 0;
+ 		mp->m_collapsed = 0;
+-		srelax();
+ 	}
+-	srelax_rele();
+-
+ 	if (n > 0) {
+ 		qsort(ms, n, sizeof *ms, func);
+ 		threadroot = &message[ms[0].ms_n];
