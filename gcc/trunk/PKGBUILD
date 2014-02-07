@@ -7,23 +7,22 @@
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.8.2
 _pkgver=4.8
-pkgrel=7
-_snapshot=4.8-20131219
+pkgrel=8
+_snapshot=4.8-20140206
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
-makedepends=('binutils>=2.23' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
+makedepends=('binutils>=2.24' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         gcc-4.8-filename-output.patch
         gcc-4.8-lambda-ICE.patch)
-md5sums=('666ef08f87649f941bc5512e13a88fdc'
+md5sums=('9d35549404a2326540fb88301ebd1977'
          '40cb437805e2f7a006aa0d0c3098ab0f'
          '6eb6e080dbf7bc6825f53a0aaa6c4ef9')
-
 
 if [ -n "${_snapshot}" ]; then
   _basedir=gcc-${_snapshot}
@@ -105,7 +104,7 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.17')
+  depends=('glibc>=2.19')
   options=('!emptydirs')
   install=gcc-libs.install
 
@@ -146,7 +145,7 @@ package_gcc-libs()
 package_gcc()
 {
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.23' 'libmpc' 'cloog')
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.24' 'libmpc' 'cloog')
   groups=('base-devel')
   options=('staticlibs')
   install=gcc.install
@@ -280,11 +279,11 @@ package_gcc-ada()
 
   ln -s gcc ${pkgdir}/usr/bin/gnatgcc
 
-  # insist on dynamic linking
+  # insist on dynamic linking, but keep static libraries because gnatmake complains
   mv ${pkgdir}/${_libdir}/adalib/libgna{rl,t}-${_pkgver}.so ${pkgdir}/usr/lib
   ln -s libgnarl-${_pkgver}.so ${pkgdir}/usr/lib/libgnarl.so
   ln -s libgnat-${_pkgver}.so ${pkgdir}/usr/lib/libgnat.so
-  rm ${pkgdir}/${_libdir}/adalib/libgna{rl,t}.*
+  rm ${pkgdir}/${_libdir}/adalib/libgna{rl,t}.so
 
   # Install Runtime Library Exception
   install -d ${pkgdir}/usr/share/licenses/gcc-ada/
