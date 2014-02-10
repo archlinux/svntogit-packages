@@ -1,0 +1,327 @@
+From 699b4fd3139d1d6d02911d6c8f193ead3445f613 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sat, 01 Feb 2014 20:13:53 +0000
+Subject: sna: Undo region translation before returning
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/sna_accel.c b/src/sna/sna_accel.c
+index aecae51..d654660 100644
+--- a/src/sna/sna_accel.c
++++ b/src/sna/sna_accel.c
+@@ -2433,6 +2433,9 @@ sna_drawable_move_region_to_cpu(DrawablePtr drawable,
+ 					sna_damage_add(&priv->cpu_damage, region);
+ 					discard_gpu = false;
+ 				}
++
++				if (dx | dy)
++					RegionTranslate(region, -dx, -dy);
+ 			} else
+ 				sna_pixmap_free_cpu(sna, priv, false);
+ 		}
+--
+cgit v0.9.0.2-2-gbebe
+From 26613b046012f0ad968a15ab6bdfa8f6a6652e77 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sat, 01 Feb 2014 21:37:41 +0000
+Subject: sna: Allow more inplace promotions of CPU to GPU bo
+
+If the CPU bo is wholly damaged, then it makes an ideal candidate for
+simply converting into the GPU bo.
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/kgem.c b/src/sna/kgem.c
+index f7404df..788b710 100644
+--- a/src/sna/kgem.c
++++ b/src/sna/kgem.c
+@@ -6743,14 +6743,19 @@ kgem_replace_bo(struct kgem *kgem,
+ 	return dst;
+ }
+ 
+-bool kgem_bo_convert_to_gpu(struct kgem *kgem, struct kgem_bo *bo)
++bool kgem_bo_convert_to_gpu(struct kgem *kgem,
++			    struct kgem_bo *bo,
++			    unsigned flags)
+ {
+-	DBG(("%s: converting handle=%d from CPU to GPU\n", __FUNCTION__, bo->handle));
++	DBG(("%s: converting handle=%d from CPU to GPU, flags=%x\n", __FUNCTION__, bo->handle));
+ 	assert(bo->tiling == I915_TILING_NONE);
+ 
+ 	if (kgem->has_llc)
+ 		return true;
+ 
++	if (flags & MOVE_ASYNC_HINT && __kgem_bo_is_busy(kgem, bo))
++		return false;
++
+ 	assert(bo->snoop);
+ 
+ 	kgem_bo_submit(kgem, bo);
+diff --git a/src/sna/kgem.h b/src/sna/kgem.h
+index f670b60..4c4996f 100644
+--- a/src/sna/kgem.h
++++ b/src/sna/kgem.h
+@@ -301,7 +301,9 @@ struct kgem_bo *kgem_create_cpu_2d(struct kgem *kgem,
+ 				   int bpp,
+ 				   uint32_t flags);
+ 
+-bool kgem_bo_convert_to_gpu(struct kgem *kgem, struct kgem_bo *bo);
++bool kgem_bo_convert_to_gpu(struct kgem *kgem,
++			    struct kgem_bo *bo,
++			    unsigned flags);
+ 
+ uint32_t kgem_bo_get_binding(struct kgem_bo *bo, uint32_t format);
+ void kgem_bo_set_binding(struct kgem_bo *bo, uint32_t format, uint16_t offset);
+diff --git a/src/sna/sna_accel.c b/src/sna/sna_accel.c
+index d654660..9d7dec4 100644
+--- a/src/sna/sna_accel.c
++++ b/src/sna/sna_accel.c
+@@ -3868,7 +3868,7 @@ sna_pixmap_move_to_gpu(PixmapPtr pixmap, unsigned flags)
+ 
+ 			if (tiling == I915_TILING_NONE &&
+ 			    priv->cpu_bo && !priv->shm &&
+-			    kgem_bo_convert_to_gpu(&sna->kgem, priv->cpu_bo)) {
++			    kgem_bo_convert_to_gpu(&sna->kgem, priv->cpu_bo, flags)) {
+ 				assert(!priv->mapped);
+ 				assert(!IS_STATIC_PTR(priv->ptr));
+ #ifdef DEBUG_MEMORY
+@@ -3933,6 +3933,28 @@ sna_pixmap_move_to_gpu(PixmapPtr pixmap, unsigned flags)
+ 	if (priv->cpu_damage == NULL)
+ 		goto done;
+ 
++	if (DAMAGE_IS_ALL(priv->cpu_damage) &&
++	    priv->gpu_bo->tiling == I915_TILING_NONE &&
++	    priv->cpu_bo && !priv->shm &&
++	    kgem_bo_convert_to_gpu(&sna->kgem, priv->cpu_bo, flags)) {
++		assert(!priv->mapped);
++		assert(!IS_STATIC_PTR(priv->ptr));
++#ifdef DEBUG_MEMORY
++		sna->debug_memory.cpu_bo_allocs--;
++		sna->debug_memory.cpu_bo_bytes -= kgem_bo_size(priv->cpu_bo);
++#endif
++		sna_pixmap_free_gpu(sna, priv);
++		priv->gpu_bo = priv->cpu_bo;
++		priv->cpu_bo = NULL;
++		priv->ptr = NULL;
++		pixmap->devPrivate.ptr = NULL;
++		sna_damage_all(&priv->gpu_damage,
++			       pixmap->drawable.width,
++			       pixmap->drawable.height);
++		sna_damage_destroy(&priv->cpu_damage);
++		goto done;
++	}
++
+ 	if (priv->shm) {
+ 		assert(!priv->flush);
+ 		sna_add_flush_pixmap(sna, priv, priv->cpu_bo);
+--
+cgit v0.9.0.2-2-gbebe
+From ed8d4f0ce3bff662d02063528df64d478ac0dc00 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sat, 01 Feb 2014 21:38:47 +0000
+Subject: sna: Skip discarding CPU bo when using as a render target
+
+The issue with unwanted serialisation does not affect the async
+move-to-cpu of a render target.
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/sna_accel.c b/src/sna/sna_accel.c
+index 9d7dec4..4221a55 100644
+--- a/src/sna/sna_accel.c
++++ b/src/sna/sna_accel.c
+@@ -2420,19 +2420,45 @@ sna_drawable_move_region_to_cpu(DrawablePtr drawable,
+ 
+ 		sna_damage_destroy(&priv->gpu_damage);
+ 
+-		if ((flags & MOVE_READ) == 0 &&
++		if ((flags & (MOVE_READ | MOVE_ASYNC_HINT)) == 0 &&
+ 		    priv->cpu_bo && !priv->cpu_bo->flush &&
+ 		    __kgem_bo_is_busy(&sna->kgem, priv->cpu_bo)) {
++			DBG(("%s: active CPU bo replacing\n", __FUNCTION__));
++			assert(!priv->shm);
++			assert(!IS_STATIC_PTR(priv->ptr));
++
+ 			if (!region_subsumes_pixmap(region, pixmap)) {
++				DBG(("%s: partial replacement\n", __FUNCTION__));
+ 				if (get_drawable_deltas(drawable, pixmap, &dx, &dy))
+ 					RegionTranslate(region, dx, dy);
+ 
+-				sna_damage_subtract(&priv->cpu_damage, region);
+-				if (sna_pixmap_move_to_gpu(pixmap, MOVE_READ | MOVE_ASYNC_HINT)) {
+-					sna_pixmap_free_cpu(sna, priv, false);
+-					sna_damage_add(&priv->cpu_damage, region);
+-					discard_gpu = false;
++				if (sna->kgem.has_llc &&
++				    sna_pixmap_choose_tiling(pixmap,
++							     DEFAULT_TILING) == I915_TILING_NONE) {
++#ifdef DEBUG_MEMORY
++					sna->debug_memory.cpu_bo_allocs--;
++					sna->debug_memory.cpu_bo_bytes -= kgem_bo_size(priv->cpu_bo);
++#endif
++					DBG(("%s: promoting CPU bo to GPU bo\n", __FUNCTION__));
++					sna_pixmap_free_gpu(sna, priv);
++					priv->gpu_bo = priv->cpu_bo;
++					priv->cpu_bo = NULL;
++					priv->ptr = NULL;
++					pixmap->devPrivate.ptr = NULL;
++
++					sna_damage_destroy(&priv->cpu_damage);
++				} else {
++					DBG(("%s: pushing surrounding damage to GPU bo\n", __FUNCTION__));
++					sna_damage_subtract(&priv->cpu_damage, region);
++					assert(priv->cpu_damage);
++					if (sna_pixmap_move_to_gpu(pixmap, MOVE_READ | MOVE_ASYNC_HINT)) {
++						sna_pixmap_free_cpu(sna, priv, false);
++						if (priv->flush)
++							sna_add_flush_pixmap(sna, priv, priv->gpu_bo);
++						discard_gpu = false;
++					}
+ 				}
++				sna_damage_add(&priv->cpu_damage, region);
+ 
+ 				if (dx | dy)
+ 					RegionTranslate(region, -dx, -dy);
+--
+cgit v0.9.0.2-2-gbebe
+From 8b0748c57ee4c38ea98c4b6ca18cb2b99f8f9ed4 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sat, 01 Feb 2014 21:54:43 +0000
+Subject: sna: Add some more DBG for choosing render targets
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/gen6_render.c b/src/sna/gen6_render.c
+index 08c9f78..aadc6f7 100644
+--- a/src/sna/gen6_render.c
++++ b/src/sna/gen6_render.c
+@@ -1831,6 +1831,8 @@ gen6_composite_set_target(struct sna *sna,
+ 	BoxRec box;
+ 	unsigned int hint;
+ 
++	DBG(("%s: (%d, %d)x(%d, %d), partial?=%d\n", __FUNCTION__, x, y, w, h));
++
+ 	op->dst.pixmap = get_drawable_pixmap(dst->pDrawable);
+ 	op->dst.format = dst->format;
+ 	op->dst.width = op->dst.pixmap->drawable.width;
+diff --git a/src/sna/gen7_render.c b/src/sna/gen7_render.c
+index 1574813..a90bd15 100644
+--- a/src/sna/gen7_render.c
++++ b/src/sna/gen7_render.c
+@@ -2111,6 +2111,8 @@ gen7_composite_set_target(struct sna *sna,
+ 	BoxRec box;
+ 	unsigned int hint;
+ 
++	DBG(("%s: (%d, %d)x(%d, %d), partial?=%d\n", __FUNCTION__, x, y, w, h));
++
+ 	op->dst.pixmap = get_drawable_pixmap(dst->pDrawable);
+ 	op->dst.format = dst->format;
+ 	op->dst.width  = op->dst.pixmap->drawable.width;
+diff --git a/src/sna/gen8_render.c b/src/sna/gen8_render.c
+index 5c718bc..c096db1 100644
+--- a/src/sna/gen8_render.c
++++ b/src/sna/gen8_render.c
+@@ -1862,6 +1862,8 @@ gen8_composite_set_target(struct sna *sna,
+ 	BoxRec box;
+ 	unsigned int hint;
+ 
++	DBG(("%s: (%d, %d)x(%d, %d), partial?=%d\n", __FUNCTION__, x, y, w, h));
++
+ 	op->dst.pixmap = get_drawable_pixmap(dst->pDrawable);
+ 	op->dst.format = dst->format;
+ 	op->dst.width  = op->dst.pixmap->drawable.width;
+--
+cgit v0.9.0.2-2-gbebe
+From 853588ad5be9407d2123f6055458ca84e72b8eb9 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sat, 01 Feb 2014 21:55:09 +0000
+Subject: sna: If IGNORE_CPU is not set we must mark the move as MOVE_READ
+
+Logic reversal in discarding CPU damage. An old bug revealed by the more
+aggressive attempts to discard CPU damage.
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/sna_accel.c b/src/sna/sna_accel.c
+index 4221a55..acf4849 100644
+--- a/src/sna/sna_accel.c
++++ b/src/sna/sna_accel.c
+@@ -3689,7 +3689,7 @@ cpu_fail:
+ 		goto cpu_fail;
+ 
+ 	if (!sna_drawable_move_region_to_cpu(&pixmap->drawable, &region,
+-					     (flags & IGNORE_CPU ? MOVE_READ : 0) | MOVE_WRITE | MOVE_ASYNC_HINT)) {
++					     (flags & IGNORE_CPU ? 0 : MOVE_READ) | MOVE_WRITE | MOVE_ASYNC_HINT)) {
+ 		DBG(("%s: failed to move-to-cpu, fallback\n", __FUNCTION__));
+ 		goto cpu_fail;
+ 	}
+--
+cgit v0.9.0.2-2-gbebe
+From 7f08250a8960f90f6bd34de8c4a17870703bfa60 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sun, 02 Feb 2014 03:52:11 +0000
+Subject: sna: Reconstruct damage for the partially replaced discarded CPU bo
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+diff --git a/src/sna/sna_accel.c b/src/sna/sna_accel.c
+index acf4849..d31fa22 100644
+--- a/src/sna/sna_accel.c
++++ b/src/sna/sna_accel.c
+@@ -2432,7 +2432,7 @@ sna_drawable_move_region_to_cpu(DrawablePtr drawable,
+ 				if (get_drawable_deltas(drawable, pixmap, &dx, &dy))
+ 					RegionTranslate(region, dx, dy);
+ 
+-				if (sna->kgem.has_llc &&
++				if (sna->kgem.has_llc && !priv->pinned &&
+ 				    sna_pixmap_choose_tiling(pixmap,
+ 							     DEFAULT_TILING) == I915_TILING_NONE) {
+ #ifdef DEBUG_MEMORY
+@@ -2440,13 +2440,17 @@ sna_drawable_move_region_to_cpu(DrawablePtr drawable,
+ 					sna->debug_memory.cpu_bo_bytes -= kgem_bo_size(priv->cpu_bo);
+ #endif
+ 					DBG(("%s: promoting CPU bo to GPU bo\n", __FUNCTION__));
+-					sna_pixmap_free_gpu(sna, priv);
++					if (priv->gpu_bo)
++						sna_pixmap_free_gpu(sna, priv);
+ 					priv->gpu_bo = priv->cpu_bo;
+ 					priv->cpu_bo = NULL;
+ 					priv->ptr = NULL;
+ 					pixmap->devPrivate.ptr = NULL;
+ 
+-					sna_damage_destroy(&priv->cpu_damage);
++					priv->gpu_damage = priv->cpu_damage;
++					priv->cpu_damage = NULL;
++
++					discard_gpu = false;
+ 				} else {
+ 					DBG(("%s: pushing surrounding damage to GPU bo\n", __FUNCTION__));
+ 					sna_damage_subtract(&priv->cpu_damage, region);
+@@ -2456,6 +2460,12 @@ sna_drawable_move_region_to_cpu(DrawablePtr drawable,
+ 						if (priv->flush)
+ 							sna_add_flush_pixmap(sna, priv, priv->gpu_bo);
+ 						discard_gpu = false;
++
++						assert(priv->cpu_damage == NULL);
++						sna_damage_all(&priv->gpu_damage,
++							       pixmap->drawable.width,
++							       pixmap->drawable.height);
++						sna_damage_subtract(&priv->gpu_damage, region);
+ 					}
+ 				}
+ 				sna_damage_add(&priv->cpu_damage, region);
+@@ -3959,9 +3969,9 @@ sna_pixmap_move_to_gpu(PixmapPtr pixmap, unsigned flags)
+ 	if (priv->cpu_damage == NULL)
+ 		goto done;
+ 
+-	if (DAMAGE_IS_ALL(priv->cpu_damage) &&
++	if (DAMAGE_IS_ALL(priv->cpu_damage) && priv->cpu_bo &&
++	    !priv->pinned && !priv->shm &&
+ 	    priv->gpu_bo->tiling == I915_TILING_NONE &&
+-	    priv->cpu_bo && !priv->shm &&
+ 	    kgem_bo_convert_to_gpu(&sna->kgem, priv->cpu_bo, flags)) {
+ 		assert(!priv->mapped);
+ 		assert(!IS_STATIC_PTR(priv->ptr));
+--
+cgit v0.9.0.2-2-gbebe
+
