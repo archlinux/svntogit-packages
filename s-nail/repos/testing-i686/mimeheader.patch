@@ -1,0 +1,147 @@
+s-nail-14_5_2-mimeheader.patch, 2014-02-05:
+
+Apply:
+  $ cd s-nail-14.5.2
+  $ patch -bu < s-nail-14_5_2-mimeheader.patch
+
+Description:
+    mime_fromhdr(): fix my rewrite again..
+    
+    My hasty rewrite [0f9ad93] (mime_fromhdr(): partial rewrite using
+    n_iconv_str(), 2013-03-12), just about ninety (90) minutes before
+    the release of S-nail v14.1 already caused the bugfix [b608c6b]
+    (mime_fromhdr(): never return NULL output.., 2013-03-14), which
+    was the sole reason for the release of S-nail v14.2.
+    
+    Well, about a year later, after tens of thousands of mails,
+    including multibyte ones, i wrote myself a message that has shown
+    that the rewrite was still buggy -- the header
+    
+      Subject: ehm, .getElementById("blink") needs <span
+       =?US-ASCII?Q?id=3D"blink">,?= not =?US-ASCII?Q?class=3D"id"?=
+    
+    cannot be viewed correctly, the ", not" will be lost.
+    The reason is now understood and this changeset should fix
+    mime_fromhdr() so that it'll do what it is assumed to do in the
+    current codebase, unless i'm terribly mistaken.
+    
+    Because i bickered some time in private, i WANT to add that the
+    real problem is that the codebase is weird INSOFAR as that i still
+    don't really understand the WAY it works, because THAT IS SICK.
+    I.e., in my brain i assume this function effectively is
+    rfc_2047_decode(), meant to decode encoded words as specified in
+    RFC 2047, but that's simply not true, and FOR QUITE SOME TIME,
+    because of the embedded newlines that may be in the data and need
+    to passed through for at least the case that we send data to the
+    display.  I slowly get around that schizophrenic codebase while
+    also converting it to a straight one, but that will take years.
+    Until then we need to strip whitespace in between multiple
+    adjacent encoded words, while passing through newlines and
+    whitespace that follows newlines, regardless of whatever.
+    I hope this will do it until we are sane.
+---
+ mime.c | 63 +++++++++++++++++++++++++++++++++++++++------------------------
+ 1 file changed, 39 insertions(+), 24 deletions(-)
+
+diff --git a/mime.c b/mime.c
+index ccb0061..6ee55cc 100644
+--- a/mime.c
++++ b/mime.c
+@@ -863,20 +863,26 @@ jclear:
+ 	goto jleave;
+ }
+ 
+-/*
+- * Convert header fields from RFC 1522 format
+- * TODO mime_fromhdr(): NO error handling, fat; REWRITE **ASAP**
+- */
+ FL void
+ mime_fromhdr(struct str const *in, struct str *out, enum tdflags flags)
+ {
+-	/* TODO mime_fromhdr(): is called with strings that contain newlines;
+-	 * TODO this is the usual newline problem all around the codebase;
+-	 * TODO i.e., if we strip it, then the display misses it ;} */
++   /* TODO mime_fromhdr(): is called with strings that contain newlines;
++    * TODO this is the usual newline problem all around the codebase;
++    * TODO i.e., if we strip it, then the display misses it ;>
++    * TODO this is why it is so messy and why S-nail v14.2 plus additional
++    * TODO patch for v14.5.2 (and maybe even v14.5.3 subminor) occurred, and
++    * TODO why our display reflects what is contained in the message: the 1:1
++    * TODO relationship of message content and display!
++    * TODO instead a header line should be decoded to what it is (a single
++    * TODO line that is) and it should be objective to the backend wether
++    * TODO it'll be folded to fit onto the display or not, e.g., for search
++    * TODO purposes etc.  then the only condition we have to honour in here
++    * TODO is that whitespace in between multiple adjacent MIME encoded words
++    * TODO á la RFC 2047 is discarded; i.e.: this function should deal with
++    * TODO RFC 2047 and be renamed: mime_fromhdr() -> mime_rfc2047_decode() */
+ 	struct str cin, cout;
+ 	char *p, *op, *upper, *cs, *cbeg;
+-	int convert;
+-	size_t lastoutl = (size_t)-1;
++   ui32_t convert, lastenc, lastoutl;
+ #ifdef HAVE_ICONV
+ 	char const *tcs;
+ 	iconv_t fhicd = (iconv_t)-1;
+@@ -894,6 +900,7 @@ mime_fromhdr(struct str const *in, struct str *out, enum tdflags flags)
+ #endif
+ 	p = in->s;
+ 	upper = p + in->l;
++   lastenc = lastoutl = 0;
+ 
+ 	while (p < upper) {
+ 		op = p;
+@@ -949,8 +956,7 @@ mime_fromhdr(struct str const *in, struct str *out, enum tdflags flags)
+ 					--cout.l;
+ 			} else
+ 				(void)qp_decode(&cout, &cin, NULL);
+-			if (lastoutl != (size_t)-1)
+-				out->l = lastoutl;
++			out->l = lastenc;
+ #ifdef HAVE_ICONV
+ 			if ((flags & TD_ICONV) && fhicd != (iconv_t)-1) {
+ 				cin.s = NULL, cin.l = 0; /* XXX string pool ! */
+@@ -966,21 +972,30 @@ mime_fromhdr(struct str const *in, struct str *out, enum tdflags flags)
+ #ifdef HAVE_ICONV
+ 			}
+ #endif
+-			lastoutl = out->l;
++			lastenc = lastoutl = out->l;
+ 			free(cout.s);
+-		} else {
+-jnotmime:
+-			p = op;
+-			convert = 1;
+-			while ((op = p + convert) < upper &&
+-					(op[0] != '=' || op[1] != '?'))
+-				++convert;
+-			out = n_str_add_buf(out, p, convert);
+-			p += convert;
+-			if (! blankchar(p[-1]))
+-				lastoutl = (size_t)-1;
+-		}
++		} else
++jnotmime: {
++         bool_t onlyws;
++
++         p = op;
++         onlyws = (lastenc > 0);
++         for (;;) {
++            if (++op == upper)
++               break;
++            if (op[0] == '=' && (PTRCMP(op + 1, ==, upper) || op[1] == '?'))
++               break;
++            if (onlyws && !blankchar(*op))
++               onlyws = FAL0;
++         }
++
++         out = n_str_add_buf(out, p, PTR2SIZE(op - p));
++         p = op;
++         if (!onlyws || lastoutl != lastenc)
++            lastenc = out->l;
++         lastoutl = out->l;
+ 	}
++  }
+ 	out->s[out->l] = '\0';
+ 
+ 	if (flags & TD_ISPR) {
