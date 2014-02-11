@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=208
-pkgrel=10
+pkgrel=11
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'libdbus' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -29,7 +29,10 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0006-efi-boot-generator-hookup-to-fsck.patch'
         '0007-fsck-root-only-run-when-requested-in-fstab.patch'
         '0001-fstab-generator-Do-not-try-to-fsck-non-devices.patch'
-        '0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch')
+        '0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch'
+        '0001-cryptsetup-generator-auto-add-deps-for-device-as-pas.patch'
+        '0001-do-not-accept-garbage-from-acpi-firmware-performance.patch'
+        '0001-tmpfiles.d-include-setgid-perms-for-run-log-journal.patch')
 md5sums=('df64550d92afbffb4f67a434193ee165'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
@@ -48,7 +51,10 @@ md5sums=('df64550d92afbffb4f67a434193ee165'
          'c2aee634a3a6c50778968f0d5c756f40'
          'ef8b8212d504bb73c10bf4e85f0703b2'
          '4ba2317bf4d7708fca406f49482b1bf3'
-         '078f10d6fc315b329844cd20fa742eee')
+         '078f10d6fc315b329844cd20fa742eee'
+         'f3e4e5b840cace769556e802466574da'
+         '707d64bad7461c04d4cfce21bfddf712'
+         '13232b7f28100e40990dde1c9e411596')
 
 prepare() {
   cd "$pkgname-$pkgver"
@@ -76,6 +82,9 @@ prepare() {
   patch -Np1 <"$srcdir"/0001-systemd-order-remote-mounts-from-mountinfo-before-re.patch
   # Fix FS#38403
   patch -Np1 <"$srcdir"/0001-acpi-fpdt-break-on-zero-or-negative-length-read.patch
+  patch -Np1 <"$srcdir"/0001-cryptsetup-generator-auto-add-deps-for-device-as-pas.patch
+  patch -Np1 <"$srcdir"/0001-d""o-not-accept-garbage-from-acpi-firmware-performance.patch
+  patch -Np1 <"$srcdir"/0001-tmpfiles.d-include-setgid-perms-for-run-log-journal.patch
 
   autoreconf
 }
