@@ -3,8 +3,8 @@
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributor: Manolis Tzanidakis
 pkgname=spamassassin
-pkgver=3.3.2
-pkgrel=9
+pkgver=3.4.0
+pkgrel=1
 pkgdesc="A mail filter to identify spam."
 arch=('i686' 'x86_64')
 license=('APACHE')
@@ -21,18 +21,18 @@ backup=('etc/mail/spamassassin/local.cf'
         'etc/mail/spamassassin/v320.pre'
         'etc/mail/spamassassin/v330.pre')
 install="${pkgname}.install"
-options=('!emptydirs')
-source=("http://mirrors.devlib.org/apache/${pkgname}/source/Mail-SpamAssassin-${pkgver}.tar.gz"
-        'spamassassin.service'
-        'perl-5.18-fixes.patch')
-md5sums=('d1d62cc5c6eac57e88c4006d9633b81e'
-         'b8dcea016fb73b074b941e832cfae5c9'
-         '6cf63928eeeaea25967c2ffd875d106a')
+source=("http://www.us.apache.org/dist/${pkgname}/source/Mail-SpamAssassin-${pkgver}.tar.gz"{,.asc}
+        'spamassassin.service')
+md5sums=('5d0b50cee3bfa905cca35c33296c8c2a'
+         'SKIP'
+         'd0ce5f8a02fd74dbc83632f4aaec6185')
 
 prepare() {
   cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
 
-  patch -p0 -d lib -i "$srcdir/perl-5.18-fixes.patch"
+  sed -i t/sa_compile.t \
+	  -e 's#/foo/bin/spamassassin#/foo/bin/site_perl/spamassassin#' \
+	  -e 's#/foo/bin/sa-compile#/foo/bin/site_perl/sa-compile#'
 }
 
 build() {
@@ -47,9 +47,6 @@ build() {
 check() {
   cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
 
-  # SSLv2 is disabled by upstream so this test would fail
-  rm -rf t/spamd_ssl_v2.t
-
   # parallel tests cause lots of failures; disable for now
   #export HARNESS_OPTIONS="j$(echo $MAKEFLAGS | sed 's/.*-j\([0-9][0-9]*\).*/\1/')"
 
@@ -61,4 +58,5 @@ package() {
   make DESTDIR="${pkgdir}" install
 
   install -D -m644 "${srcdir}/spamassassin.service" "${pkgdir}/usr/lib/systemd/system/spamassassin.service"
+  install -d -o 182 -g 182 -m 755 "$pkgdir/var/lib/spamassassin"
 }
