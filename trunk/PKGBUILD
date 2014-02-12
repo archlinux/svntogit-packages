@@ -7,8 +7,8 @@
 pkgbase=pulseaudio
 pkgname=(pulseaudio libpulse)
 pkgdesc="A featureful, general-purpose sound server"
-pkgver=4.0
-pkgrel=6
+pkgver=4.99.3
+pkgrel=1
 arch=(i686 x86_64)
 url="http://www.freedesktop.org/wiki/Software/PulseAudio"
 license=(LGPL AGPL3)
@@ -17,16 +17,12 @@ makedepends=(libasyncns libcap attr libxtst libsm libsamplerate libtool rtkit
              lirc-utils openssl fftw orc json-c gtk3 webrtc-audio-processing
              check git)
 options=(!emptydirs)
-#source=(http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.xz
-source=($pkgbase-$pkgver::git://anongit.freedesktop.org/pulseaudio/pulseaudio#commit=09e88de
-        pulseaudio.xinit)
-sha256sums=('SKIP'
-            'a0db6cdc74fbf0ca10e2343c08e1e228f109221c6c0ff91b0bfade5c4bdf03cf')
+#source=(http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.xz)
+source=($pkgbase-$pkgver::git://anongit.freedesktop.org/pulseaudio/pulseaudio#commit=6021ce3)
+sha256sums=('SKIP')
 
 prepare() {
   cd $pkgbase-$pkgver
-  # ABI break https://bugs.freedesktop.org/show_bug.cgi?id=71047
-  git revert -n 16886bb b98a2e1
 }
 
 build() {
@@ -39,6 +35,7 @@ build() {
     --with-udev-rules-dir=/usr/lib/udev/rules.d \
     --with-database=tdb \
     --disable-tcpwrap \
+    --disable-bluez4 \
     --disable-rpath \
     --disable-default-build-tests
 
@@ -58,17 +55,13 @@ package_pulseaudio() {
               'jack: jack support'
               'lirc-utils: infra-red support'
               'openssl: RAOP support'
-              'python-pyqt: Equalizer GUI (qpaeq)')
+              'python-pyqt4: Equalizer GUI (qpaeq)')
   backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
   install=pulseaudio.install
 
   cd $pkgbase-$pkgver
   make -j1 DESTDIR="$pkgdir" install \
     bashcompletiondir=/usr/share/bash-completion/completions
-
-  # Disable autospawn by default
-  sed -e '/autospawn/iautospawn=no' \
-      -i "$pkgdir/etc/pulse/client.conf"
 
   # Speed up pulseaudio shutdown so that it exits immediately with
   # the last user session (module-systemd-login keeps it alive)
@@ -79,8 +72,6 @@ package_pulseaudio() {
   # when there's a Skype call incoming
   sed -e 's|/usr/bin/pactl load-module module-x11-cork-request|#&|' \
       -i "$pkgdir/usr/bin/start-pulseaudio-x11"
-
-  install -Dm755 "$srcdir/pulseaudio.xinit" "$pkgdir/etc/X11/xinit/xinitrc.d/pulseaudio"
 
   rm "$pkgdir/etc/dbus-1/system.d/pulseaudio-system.conf"
 
