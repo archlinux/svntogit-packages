@@ -3,27 +3,23 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
-pkgname=postfix
+pkgname=(postfix postfix-tools)
+pkgbase=postfix
 pkgver=2.11.0
-pkgrel=1
-pkgdesc='Fast, easy to administer, secure mail server'
+pkgrel=2
 url='http://www.postfix.org/'
 license=('custom')
 arch=('i686' 'x86_64')
-depends=('pcre' 'libsasl' 'libldap' 'db'
-         'libmariadbclient' 'postgresql-libs' 'sqlite' 'tinycdb')
-backup=('etc/postfix/'{access,aliases,canonical,generic,header_checks,main.cf,master.cf,relocated,transport,virtual})
+_postfix_depends=('pcre' 'libsasl' 'libldap' 'db'
+		 'libmariadbclient' 'postgresql-libs' 'sqlite' 'tinycdb')
+_postfix_tools_depends=('openssl')
+makedepends=("${_postfix_depends[@]}" "${_postfix_tools_depends[@]}")
 source=("ftp://ftp.porcupine.org/mirrors/postfix-release/official/${pkgname}-${pkgver}.tar.gz"{,.sig}
         'aliases.patch'
         'service')
 sha1sums=('bc1fd50412742d9c28232b07c7d2139e37d3de28' 'SKIP'
           '5fc3de6c7df1e5851a0a379e825148868808318b'
           'dd12885d367bebaf0fc9d2e9823a7f82086b6ee9')
-
-provides=('smtp-server' 'smtp-forwarder')
-conflicts=('smtp-server' 'smtp-forwarder')
-
-install=install
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
@@ -55,8 +51,14 @@ build() {
 	make
 }
 
-package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+package_postfix() {
+	pkgdesc='Fast, easy to administer, secure mail server'
+	depends=("${_postfix_depends[@]}")
+	backup=('etc/postfix/'{access,aliases,canonical,generic,header_checks,main.cf,master.cf,relocated,transport,virtual})
+	provides=('smtp-server' 'smtp-forwarder')
+	conflicts=('smtp-server' 'smtp-forwarder')
+	install=install
+	cd "${srcdir}/postfix-${pkgver}"
 
 	sh postfix-install -non-interactive install_root="${pkgdir}"
 
@@ -66,4 +68,17 @@ package() {
 	cd "${pkgdir}"
 	patch -p0 -i "${srcdir}"/aliases.patch
 	sed 's/^\(\$manpage[^:]*\):/\1.gz:/' -i "usr/lib/${pkgname}/postfix-files"
+}
+
+package_postfix-tools() {
+	pkgdesc='SMTP/QMQP tools from the postfix distribution'
+	depends=("${_postfix_tools_depends[@]}")
+	cd "${srcdir}/postfix-${pkgver}"
+
+	for name in posttls-finger {smtp,qmqp}-{sink,source}; do
+		install -Dm644 "man/man1/${name}.1" "$pkgdir/usr/share/man/man1/${name}.1"
+		install -Dm755 "bin/${name}" "$pkgdir/usr/bin/${name}"
+	done
+
+	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
