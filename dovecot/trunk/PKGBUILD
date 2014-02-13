@@ -8,7 +8,7 @@
 # --->>> remember to rebuild/bump pigeonhole in one step <<<---
 
 pkgname=dovecot
-pkgver=2.2.10
+pkgver=2.2.11
 pkgrel=1
 pkgdesc="An IMAP and POP3 server written with security primarily in mind"
 arch=('i686' 'x86_64')
@@ -23,17 +23,25 @@ optdepends=('libldap: ldap plugin'
 provides=('imap-server' 'pop3-server')
 install=$pkgname.install
 source=(http://dovecot.org/releases/2.2/${pkgname}-${pkgver}.tar.gz{,.sig}
-        dovecot.tmpfilesd)
-md5sums=('037e9c9e07d9dbff54dcff09f280fc8c'
+        dovecot.tmpfilesd
+        pop3_Access_sequence_numbers_correctly.diff)
+md5sums=('d53d207727df99e4362a3787223c6fa3'
          'SKIP'
-         '342a28251d40f983c98c0d1f1bf3d07d')
+         '342a28251d40f983c98c0d1f1bf3d07d'
+         'c8096d3966651222accd7f6bc678d08d')
 
-build() {
+prepare() {
   cd $pkgname-$pkgver
-  
+
   # fix path in helper script
   sed -i 's:OPENSSLCONFIG=${OPENSSLCONFIG-dovecot-openssl.cnf}:OPENSSLCONFIG=${OPENSSLCONFIG- /etc/ssl/dovecot-openssl.cnf}:' doc/mkcert.sh
 
+  # post release segfault fix
+  patch -Np1 -i ${srcdir}/pop3_Access_sequence_numbers_correctly.diff
+}
+
+build() {
+  cd $pkgname-$pkgver
   # configure with openssl, mysql, and postgresql support
   ./configure --prefix=/usr --sysconfdir=/etc \
     --sbindir=/usr/bin \
@@ -61,7 +69,7 @@ build() {
 
 check() {
   cd $pkgname-$pkgver
-  make -k check
+  make
 }
 
 package() {
