@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.19
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -29,7 +29,7 @@ md5sums=('e26b8cc666b162f999404b03970f14e4'
          'SKIP'
          '7ca96c68a37f2a4ab91792bfa0160a24'
          '07ac979b6ab5eeb778d55f041529d623'
-         'b5fd017036fb91199ee76f670da8c15b')
+         '476e9113489f93b348b21e144b6a8fcf')
 
 prepare() {
   cd ${srcdir}/${pkgname}-${pkgver}
