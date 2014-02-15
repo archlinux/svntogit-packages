@@ -1,13 +1,21 @@
-post_install() {
-  getent group tomcat >/dev/null 2>&1 || groupadd -g 66 tomcat
-  getent passwd tomcat >/dev/null 2>&1 || useradd -u 66 -g tomcat -d /usr/share/tomcat6 -s /bin/false tomcat
+_pkgname='tomcat6'
+_gid_tomcat_name='tomcat'
+_gid_tomcat=66
+_uid_tomcat_name='tomcat'
+_uid_tomcat=66
 
-  if [ -f lib/modules/`uname -r`/kernel/security/capability.ko ]; then
-    echo ">>> It appears that your current kernel has linux security"
-    echo ">>> capabilities built as a module. Tomcat requires this"
-    echo ">>> functionality to operate."
-    echo ">>>"
-    echo ">>> To activate the module, please load it now (modprobe capability)."
+post_install() {
+  if ! getent group ${_gid_tomcat_name} >/dev/null 2>&1; then
+    groupadd -g ${_gid_tomcat} ${_gid_tomcat_name}
+  fi
+  if ! getent passwd ${_uid_tomcat_name} >/dev/null 2>&1; then
+    useradd  -u ${_uid_tomcat} -g ${_gid_tomcat_name} -d /usr/share/${_pkgname} -s /bin/false ${_uid_tomcat_name}
+  fi
+
+  if [ -f lib/modules/$(uname -r)/kernel/security/capability.ko ]; then
+    echo 'It appears that your current kernel has linux security'
+    echo 'capabilities built as a module. Tomcat requires this'
+    echo ' functionality to operate.'
   fi
 }
 
@@ -16,10 +24,12 @@ post_upgrade() {
 }
 
 pre_remove() {
-  if getent passwd tomcat >/dev/null 2>&1; then
-      userdel tomcat
+  if getent passwd ${_uid_tomcat_name} > /dev/null 2>&1; then
+    userdel ${_uid_tomcat_name}
   fi
-  if getent group tomcat >/dev/null 2>&1; then
-      groupdel tomcat
+  if getent group ${_gid_tomcat_name} > /dev/null 2>&1; then
+    groupdel ${_gid_tomcat_name}
   fi
+
+  echo "To fully clean Tomcat's file, consider removing directories /var/{lib,tmp,log}/${_pkgname}"
 }
