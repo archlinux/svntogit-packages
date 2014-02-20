@@ -25,6 +25,11 @@ post_common() {
   udevadm hwdb --update
   journalctl --update-catalog
 
+  # don't reexec on 209-1 upgrade
+  if [ "$(vercmp 209-1 "$2")" -eq 1 ]; then
+    return
+  fi
+
   if sd_booted; then
     systemctl --system daemon-reexec
   fi
@@ -54,6 +59,31 @@ _208_changes() {
 
   if [ -e var/lib/random-seed ] && [ ! -e var/lib/systemd/random-seed ]; then
     mv -T var/lib/random-seed var/lib/systemd/random-seed
+  fi
+}
+
+_209_changes() {
+  # attempt to preserve existing behavior
+
+  local old_rule=etc/udev/rules.d/80-net-name-slot.rules
+  local new_rule=etc/udev/rules.d/80-net-setup-link.rules
+
+  echo ":: Network device naming is now controlled by udev's net_setup_link"
+  echo "   builtin. Refer to the NETWORK LINK CONFIGURATION section of the"
+  echo "   udev manpage for a full description."
+
+  # not clear what action we can take here, so don't do anything
+  [[ -e $new_rule ]] && return 0
+
+  # rename the old rule to the new one so that we preserve the user's
+  # existing option.
+  if [[ -e $old_rule ]]; then
+    printf ':: Renaming %s to %s in order\n' "${old_rule##*/}" "${new_rule##*/}"
+    printf '   to preserve existing network naming behavior.\n'
+    mv -v "$old_rule" "$new_rule"
+  else
+    echo ':: No changes have been made to your network naming configuration.'
+    echo '   Interfaces should continue to maintain the same names.'
   fi
 }
 
@@ -126,6 +156,10 @@ post_upgrade() {
 
   if [ "$(vercmp 208-8 "$2")" -eq 1 ]; then
     add_journal_acls
+  fi
+
+  if [ "$(vercmp 209-1 "$2")" -eq 1 ]; then
+    _209_changes
   fi
 }
 
