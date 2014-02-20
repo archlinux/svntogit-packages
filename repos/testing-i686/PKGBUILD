@@ -4,12 +4,12 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=209
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
-             'linux-api-headers' 'pam' 'python' 'quota-tools' 'xz')
+             'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -40,9 +40,9 @@ build() {
   make
 }
 
-check() {
-  make -C "$pkgname-$pkgver" check || :
-}
+#check() {
+#  make -C "$pkgname-$pkgver" check || :
+#}
 
 package_systemd() {
   pkgdesc="system and service manager"
