@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=209
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -12,13 +12,21 @@ makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
+        '0001-sd-event-Fix-systemd-crash-when-using-timer-units.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
 md5sums=('2c7a7c8ffede079a3e1b241565bd4ed7'
+         'bd3f3d91daf425bf76e55682a7274622'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  patch -Np1 <../0001-sd-event-Fix-systemd-crash-when-using-timer-units.patch
+}
 
 build() {
   cd "$pkgname-$pkgver"
@@ -40,9 +48,9 @@ build() {
   make
 }
 
-#check() {
-#  make -C "$pkgname-$pkgver" check || :
-#}
+check() {
+  make -C "$pkgname-$pkgver" check || :
+}
 
 package_systemd() {
   pkgdesc="system and service manager"
@@ -76,12 +84,10 @@ package_systemd() {
 
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
 
-  # fix .so links in manpage stubs
-  find "$pkgdir/usr/share/man" -type f -name '*.[[:digit:]]' \
-      -exec sed -ri '1s|^\.so (.*)\.([0-9]+)|.so man\2/\1.\2|' {} +
-
   # don't write units to /etc by default -- we'll enable this on post_install
   # as a sane default
+  # TODO(dreisner): handle systemd-networkd in the same way in 210 since it'll
+  # have the same "auto opt-in" behavior.
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
