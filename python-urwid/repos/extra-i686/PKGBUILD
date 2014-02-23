@@ -4,15 +4,15 @@
 # Maintainer: Douglas Soares de Andrade <dsandrade@gmail.com>
 
 pkgname=('python-urwid' 'python2-urwid')
-pkgver=1.1.1
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="Urwid is a curses-based user interface library."
 license=('LGPL')
 arch=('i686' 'x86_64')
 makedepends=('python2-distribute' 'python-distribute')
 url="http://excess.org/urwid/"
-source=(http://excess.org/urwid/urwid-$pkgver.tar.gz)
-md5sums=('eca2e0413cf7216b01c84b99e0f2576d')
+source=(https://pypi.python.org/packages/source/u/urwid/urwid-$pkgver.tar.gz)
+md5sums=('ea046a0f683bc2d46b08df70b29c7f66')
 
 build() {
   cp -r urwid-$pkgver python2-urwid-$pkgver
@@ -39,4 +39,5 @@ package_python2-urwid() {
   cd "$srcdir/python2-urwid-$pkgver"
   python2 setup.py install --prefix=/usr --root="$pkgdir" --optimize=1
 }
+
 
