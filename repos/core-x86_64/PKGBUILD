@@ -1,15 +1,16 @@
 # $Id$
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 pkgname=ppp
-pkgver=2.4.5
-pkgrel=8
+pkgver=2.4.6
+pkgrel=1
 pkgdesc="A daemon which implements the Point-to-Point Protocol for dial-up networking"
 arch=(i686 x86_64) 
 url="http://www.samba.org/ppp/"
 license=('custom:GPL/BSD')
 depends=('glibc' 'libpcap>=1.0.0')
 backup=(etc/ppp/{chap-secrets,pap-secrets,options,ip-up,ip-down,ip-down.d/00-dns.sh,ip-up.d/00-dns.sh,ipv6-up.d/00-iface-config.sh})
-source=(ftp://ftp.samba.org/pub/ppp/ppp-${pkgver}.tar.gz
+source=(ftp://ftp.samba.org/pub/ppp/ppp-${pkgver}.tar.gz{,.asc}
+        ppp-2.4.6-makefiles.patch
         options
         ip-up
         ip-down
@@ -19,45 +20,43 @@ source=(ftp://ftp.samba.org/pub/ppp/ppp-${pkgver}.tar.gz
         ipv6-down
         ipv6-up.d.iface-config.sh
         ppp.systemd)
-md5sums=('4621bc56167b6953ec4071043fe0ec57'
-         '7a9259a8f038073eeea7e4552ff1849f'
-         'e4beb16ed600b61336d50b2bd2df7cd5'
-         '529b924f644f80cf30d72a966abc7419'
-         '0e2eeb1af125a46291999162dcc9004a'
-         '3a5d56ac23e36cdbf48187813c8ec981'
-         '4cbd0a9af01c27067450ec7d3f5fa673'
-         'b75c2fbc4afa9f2d8108b680c88c7036'
-         '9dde53aa5a931ebe1c7e3469199777c5'
-         '37401eb0c3dcccb87f5ac4716d0f9f2c')
+sha256sums=('1b33181a03962c8a092c055fb9980e9722728a8d98a4bb7ec7acda17c1b1b49d'
+            'SKIP'
+            '811059427fb4240c29712782a7bb3f3e860450efe554ecbe094b78c9af6028cd'
+            '0933fecb9e0adaddd88ee1e049a5f3a0508e83b81dc1aa333df784e729ab4b6e'
+            'ddef42b2cc5d49e81556dc9dbacf5ee3bf8dc32704f3670c2233eed42c4a4efd'
+            '658630ba4c5cb583df80af6d4df81df8ae20798f63cc4b9cec8d4dad13a6a897'
+            'aafb75b978aa13225444dc6b914fab324d686821be93c49e893800e647aa7648'
+            '17b486fa69a71dafcbe543dc4f2b8cb9ed31e675aabc5f6c98ef94dbc1561c85'
+            'bb3f44a4f2c4b8dbe7f84d77feae90a71caa9fa3c252a20c390e015d4f8ea248'
+            '77292b79f99f97a01aa9a75cd7cd93da70d746d3b8cc60f35b31dfe0568544c0'
+            '20780cf4bd0774bebb55ecb3bdae7667c9ae5cbe003a52a1ecb0bbc77d46260f'
+            'eb8ab2e2d71c3bb9c4297cf847b6e9d52616a3fdbf2257c479cc43dff318c831')
 
-build() {
+prepare() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  # fix CFLAGS
-  # -D_GNU_SOURCE is needed for IPv6 to work apparently
-  export CFLAGS="$CFLAGS -D_GNU_SOURCE"
-  sed -i "s:-O2 -pipe -Wall -g:${CFLAGS}:" pppd/Makefile.linux
-  sed -i "s:-g -O2:${CFLAGS}:" pppd/plugins/Makefile.linux
-  sed -i "s:-O2:${CFLAGS}:" pppstats/Makefile.linux
-  sed -i "s:-O2 -g -pipe:${CFLAGS}:" chat/Makefile.linux
-  sed -i "s:-O:${CFLAGS}:" pppdump/Makefile.linux
 
+  patch -p1 -i "${srcdir}/ppp-2.4.6-makefiles.patch"
   # enable active filter
   sed -i "s:^#FILTER=y:FILTER=y:" pppd/Makefile.linux
   # enable ipv6 support
   sed -i "s:^#HAVE_INET6=y:HAVE_INET6=y:" pppd/Makefile.linux
   # Enable Microsoft proprietary Callback Control Protocol
   sed -i "s:^#CBCP=y:CBCP=y:" pppd/Makefile.linux 
-  
-  # Fix build error with recent kernels
-  rm include/linux/if_pppol2tp.h 
+}
 
-  ./configure --prefix=/usr
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # -D_GNU_SOURCE is needed for IPv6 to work apparently
+  CFLAGS="$CPPFLAGS $CFLAGS -D_GNU_SOURCE" LDFLAGS="$LDFLAGS" ./configure --prefix=/usr
   make 
 }
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  make DESTDIR="${pkgdir}/usr" install 
+  make INSTROOT="${pkgdir}" install 
+
   install -D -m644 ../options "${pkgdir}/etc/ppp/options"
   install -D -m755 ../ip-up   "${pkgdir}/etc/ppp/ip-up"
   install -D -m755 ../ip-down "${pkgdir}/etc/ppp/ip-down"
@@ -70,18 +69,15 @@ package() {
   install -d -m755 "${pkgdir}/etc/ppp/ipv6-up.d"
   install -d -m755 "${pkgdir}/etc/ppp/ipv6-down.d"
   install -m755 ../ipv6-up.d.iface-config.sh "${pkgdir}/etc/ppp/ipv6-up.d/00-iface-config.sh"
+
   install -D -m755 scripts/pon  "${pkgdir}/usr/bin/pon"
   install -D -m755 scripts/poff "${pkgdir}/usr/bin/poff"
-  install -D -m755 scripts/plog "${pkgdir}/usr/sbin/plog"
+  install -D -m755 scripts/plog "${pkgdir}/usr/bin/plog"
   install -D -m644 scripts/pon.1 "${pkgdir}/usr/share/man/man1/pon.1"
   install -D -m600 etc.ppp/pap-secrets  "${pkgdir}/etc/ppp/pap-secrets"
   install -D -m600 etc.ppp/chap-secrets "${pkgdir}/etc/ppp/chap-secrets"
   install -d -m755 "${pkgdir}/etc/ppp/peers" 
   chmod 0755 "${pkgdir}/usr/lib/pppd/${pkgver}"/*.so
-  install -D -m644 "${srcdir}"/ppp.systemd "${pkgdir}"/usr/lib/systemd/system/ppp@.service
 
-  # usrmove
-  cd "$pkgdir"/usr
-  mv sbin/* bin/
-  rmdir sbin
+  install -D -m644 "${srcdir}"/ppp.systemd "${pkgdir}"/usr/lib/systemd/system/ppp@.service
 }
