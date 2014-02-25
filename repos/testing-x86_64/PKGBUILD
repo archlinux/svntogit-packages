@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
-pkgver=209
-pkgrel=3
+pkgver=210
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -12,21 +12,13 @@ makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
-        '0001-sd-event-Fix-systemd-crash-when-using-timer-units.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
-md5sums=('2c7a7c8ffede079a3e1b241565bd4ed7'
-         'bd3f3d91daf425bf76e55682a7274622'
+md5sums=('03efddf8c9eca36d4d590f9967e7e818'
          '29245f7a240bfba66e2b1783b63b6b40'
          '8b68b0218a3897d4d37a6ccf47914774'
          'bde43090d4ac0ef048e3eaee8202a407')
-
-prepare() {
-  cd "$pkgname-$pkgver"
-
-  patch -Np1 <../0001-sd-event-Fix-systemd-crash-when-using-timer-units.patch
-}
 
 build() {
   cd "$pkgname-$pkgver"
@@ -84,11 +76,10 @@ package_systemd() {
 
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
 
-  # don't write units to /etc by default -- we'll enable this on post_install
-  # as a sane default
-  # TODO(dreisner): handle systemd-networkd in the same way in 210 since it'll
-  # have the same "auto opt-in" behavior.
+  # don't write units to /etc by default -- we'll enable the getty on
+  # post_install as a sane default.
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
+  rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
   # get rid of RPM macros
@@ -107,13 +98,9 @@ package_systemd() {
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
 
-  # BUG(dreisner): v209 doesn't ship /var/log/journal, but this is fixed
-  # upstream. carry the "patch" in the PKGBUILD rather than patching the
-  # buildsys and autoreconf'ing.
-  install -o root -g systemd-journal -dm2755 "$pkgdir/var/log/journal"
   # ensure proper permissions for /var/log/journal
-  # chown root:systemd-journal "$pkgdir/var/log/journal"
-  # chmod 2755 "$pkgdir/var/log/journal"
+  chown root:systemd-journal "$pkgdir/var/log/journal"
+  chmod 2755 "$pkgdir/var/log/journal"
 
   # fix pam file
   sed 's|system-auth|system-login|g' -i "$pkgdir/etc/pam.d/systemd-user"
