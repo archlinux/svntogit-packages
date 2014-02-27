@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=210
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -17,7 +17,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev')
 md5sums=('03efddf8c9eca36d4d590f9967e7e818'
          '29245f7a240bfba66e2b1783b63b6b40'
-         '8b68b0218a3897d4d37a6ccf47914774'
+         '5e04f468a13ae2b9d6a9dfc77c49a7d1'
          'bde43090d4ac0ef048e3eaee8202a407')
 
 build() {
