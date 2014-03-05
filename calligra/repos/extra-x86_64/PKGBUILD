@@ -4,6 +4,7 @@
 
 pkgbase=calligra
 pkgname=('calligra-braindump'
+         'calligra-devtools'
          'calligra-extras'
          'calligra-filters'
          'calligra-flow'
@@ -17,25 +18,26 @@ pkgname=('calligra-braindump'
          'calligra-sheets'
          'calligra-stage'
          'calligra-words')
-pkgver=2.7.5
-pkgrel=5
+pkgver=2.8.0
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://www.calligra-suite.org/'
 license=('FDL1.2' 'GPL2' 'LGPL')
 makedepends=('cmake' 'automoc4' 'boost' 'kdepimlibs' 'eigen2' 'kdeedu-marble'
              'lcms2' 'libmariadbclient' 'freetds' 'xbase' 'libwpg' 'opencolorio'
-             'libwps' 'gsl' 'glew' 'fftw' 'poppler-qt' 'libkdcraw'
-             'openjpeg' 'kdegraphics-okular' 'pstoedit' 'vc' 'libvisio')
-             # libpqxx is in community, move it to extra?
+             'libwps' 'gsl' 'glew' 'fftw' 'poppler-qt' 'libkdcraw' 'libodfgen'
+             'openjpeg' 'kdegraphics-okular' 'pstoedit' 'vc' 'libvisio'
+             'libetonyek' 'libpqxx' 'libspnav')
 groups=('calligra')
 source=("http://download.kde.org/stable/${pkgbase}-${pkgver}/${pkgbase}-${pkgver}.tar.xz")
-md5sums=('05d1d0bac970d6dc68ffabc12fca2eb7')
+md5sums=('59abfc331220f5282ea2d6df5e80e899')
 
 prepare() {
   mkdir build
-  # fix openjpeg detection
+
+   # fix openjpeg detection
   sed -i "s:/usr/include/openjpeg:/usr/include/openjpeg-1.5:" \
-     ${srcdir}/${pkgbase}-${pkgver}/cmake/modules/FindOpenJPEG.cmake
+    ${pkgbase}-${pkgver}/cmake/modules/FindOpenJPEG.cmake
 }
 
 build() {
@@ -43,34 +45,37 @@ build() {
   cmake ../${pkgbase}-${pkgver} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
     -DBUILD_active=OFF
   make
 }
 
 package_calligra-filters() {
   pkgdesc="Filters for the Calligra office suite"
+  depends=('libodfgen')
   optdepends=('libwpg: Corel WordPerfect Graphics image importer'
               'libwps: Microsoft Works file word processor format import'
-              'libvisio: Microsoft Visio import filter')
+              'libvisio: Microsoft Visio import filter'
+              'libetonyek: Apple Keynote import filter')
   conflicts=('koffice-filters')
   replaces=('koffice-filters')
   install=calligra-filters.install
 
-  cd "${srcdir}"/build/filters
+  cd build/filters
   make DESTDIR="${pkgdir}" install
 }
 
 package_calligra-libs() {
   pkgdesc="Libraries for the Calligra office suite"
-  depends=('kdepimlibs' 'lcms2' 'kactivities')
+  depends=('kdepimlibs' 'kactivities')
   conflicts=('koffice-interfaces' 'koffice-libs' 'koffice-pics'
-             'koffice-servicetypes' 'koffice-templates' 'calligra-interfaces'
-             'calligra-pics' 'calligra-servicetypes' 'calligra-templates')
+             'koffice-servicetypes' 'calligra-interfaces'
+             'calligra-pics' 'calligra-servicetypes')
   replaces=('koffice-interfaces' 'koffice-libs' 'koffice-pics'
-             'koffice-servicetypes' 'koffice-templates' 'calligra-interfaces'
-             'calligra-pics' 'calligra-servicetypes' 'calligra-templates')
+             'koffice-servicetypes' 'calligra-interfaces'
+             'calligra-pics' 'calligra-servicetypes')
 
-  for d in interfaces libs pics servicetypes templates; do
+  for d in interfaces libs pics servicetypes; do
     cd "${srcdir}"/build/${d}
     make DESTDIR="${pkgdir}" install
   done
@@ -78,16 +83,16 @@ package_calligra-libs() {
 
 package_calligra-plugins() {
   pkgdesc="Plugins for the Calligra office suite"
-  depends=('calligra-libs' 'calligra-filters')
+  depends=('calligra-libs' 'calligra-filters' 'libspnav')
   optdepends=('kdeedu-marble: map shape for Calligra')
   conflicts=('koffice-plugins' 'koffice-kchart')
   replaces=('koffice-plugins' 'koffice-kchart' 'koffice-kformula')
   install=calligra-plugins.install
 
-  cd "${srcdir}"/build/plugins
+  cd build/plugins
   make DESTDIR="${pkgdir}" install
-  
-  cd "${srcdir}"/build/3rdparty/kdchart
+
+  cd ../3rdparty/kdchart
   make DESTDIR="${pkgdir}" install
 }
 
@@ -100,7 +105,7 @@ package_calligra-karbon() {
   replaces=('koffice-karbon' 'koffice-karbon-doc' 'calligra-karbon-doc')
   install=calligra-karbon.install
 
-  cd "${srcdir}"/build/karbon
+  cd build/karbon
   make DESTDIR="${pkgdir}" install
 }
 
@@ -108,6 +113,7 @@ package_calligra-kexi() {
   pkgdesc="Develop desktop database applications"
   depends=('calligra-libs' 'glew' 'fftw')
   optdepends=('libmariadbclient: MariaDB driver'
+              'libpqxx: PostgreSQL driver'
               'freetds: Sybase & MS SQL driver'
               'xbase: XBase driver'
               'calligra-sheets: Spreadsheet-to-Kexi-table import plugin'
@@ -117,9 +123,9 @@ package_calligra-kexi() {
   replaces=('koffice-kexi' 'koffice-kexi-doc' 'calligra-kexi-doc')
   install=calligra-kexi.install
 
-  cd "${srcdir}"/build/kexi
+  cd build/kexi
   make DESTDIR="${pkgdir}" install
-  cd "${srcdir}"/build/doc/kexi
+  cd ../doc/kexi
   make DESTDIR="${pkgdir}" install
 }
 
@@ -130,10 +136,10 @@ package_calligra-plan() {
   replaces=('koffice-kplato' 'calligra-kplato')
   install=calligra-plan.install
 
-  cd "${srcdir}"/build/plan
+  cd build/plan
   make DESTDIR="${pkgdir}" install
 
-  cd "${srcdir}"/build/3rdparty/kdgantt
+  cd ../3rdparty/kdgantt
   make DESTDIR="${pkgdir}" install
 }
 
@@ -144,9 +150,9 @@ package_calligra-stage() {
   replaces=('koffice-kpresenter' 'koffice-kpresenter-doc' 'calligra-stage-doc')
   install=calligra-stage.install
 
-  cd "${srcdir}"/build/stage
+  cd build/stage
   make DESTDIR="${pkgdir}" install
-  cd "${srcdir}"/build/doc/stage
+  cd ../doc/stage
   make DESTDIR="${pkgdir}" install
 }
 
@@ -158,7 +164,7 @@ package_calligra-krita() {
   replaces=('koffice-krita' 'calligra-krita-doc')
   install=calligra-krita.install
 
-  cd "${srcdir}"/build/krita
+  cd build/krita
   make DESTDIR="${pkgdir}" install
 }
 
@@ -172,9 +178,9 @@ package_calligra-sheets() {
   replaces=('koffice-kspread' 'koffice-kspread-doc' 'calligra-tables-doc' 'calligra-tables')
   install=calligra-sheets.install
 
-  cd "${srcdir}"/build/sheets
+  cd build/sheets
   make DESTDIR="${pkgdir}" install
-  cd "${srcdir}"/build/doc/sheets
+  cd ../doc/sheets
   make DESTDIR="${pkgdir}" install
 }
 
@@ -186,7 +192,7 @@ package_calligra-words() {
   replaces=('koffice-kword')
   install=calligra-words.install
 
-  cd "${srcdir}"/build/words
+  cd build/words
   make DESTDIR="${pkgdir}" install
 }
 
@@ -196,7 +202,7 @@ package_calligra-handbook() {
   replaces=('koffice-handbook')
   options=('docs')
 
-  cd "${srcdir}"/build/doc/calligra
+  cd build/doc/calligra
   make DESTDIR="${pkgdir}" install
 }
 
@@ -205,19 +211,19 @@ package_calligra-braindump() {
   depends=('calligra-libs' 'kdebase-runtime')
   install=calligra-braindump.install
 
-  cd "${srcdir}"/build/braindump
+  cd build/braindump
   make DESTDIR="${pkgdir}" install
 }
 
 package_calligra-flow() {
   pkgdesc="Flowchart & Diagram Editing"
   depends=('calligra-words')
+  optdepends=('calligra-karbon: to export the charts in various formats')
   conflicts=('calligra-flow-doc')
   replaces=('calligra-flow-doc')
   install=calligra-flow.install
-  optdepends=('calligra-karbon: to export the charts in various formats')
 
-  cd "${srcdir}"/build/flow
+  cd build/flow
   make DESTDIR="${pkgdir}" install
 }
 
@@ -225,10 +231,22 @@ package_calligra-extras() {
   pkgdesc="Calligra suite extras"
   depends=('calligra-libs')
   optdepends=('kdegraphics-okular')
-  conflicts=('calligra-tools')
-  replaces=('calligra-tools')
+  conflicts=('calligra-tools' 'koffice-templates' 'calligra-templats')
+  replaces=('calligra-tools' 'koffice-templates' 'calligra-templats')
   install=calligra-extras.install
 
-  cd "${srcdir}"/build/extras
+  cd build/extras
+  make DESTDIR="${pkgdir}" install
+
+  cd ../data
   make DESTDIR="${pkgdir}" install
 }
+
+package_calligra-devtools() {
+  pkgdesc="Calligra developer tools"
+  depends=('calligra-libs')
+
+  cd build/devtools
+  make DESTDIR="${pkgdir}" install
+}
+
