@@ -3,7 +3,7 @@
 
 pkgname=libarchive
 pkgver=3.1.2
-pkgrel=4
+pkgrel=6
 pkgdesc="library that can create and read several streaming archive formats"
 arch=('i686' 'x86_64')
 url="http://libarchive.org/"
@@ -13,14 +13,16 @@ options=('strip' 'debug' 'libtool')
 provides=('libarchive.so')
 source=("http://libarchive.org/downloads/$pkgname-$pkgver.tar.gz"
         '0001-mtree-fix-line-filename-length-calculation.patch'
-        https://github.com/libarchive/libarchive/commit/22531545514043e04633e1c015c7540b9de9dbe4.patch
-        'libarchive-3.1.2-acl.patch')
+        '0001-Limit-write-requests-to-at-most-INT_MAX.patch'
+        'libarchive-3.1.2-acl.patch'
+        'libarchive-3.1.2-sparce-mtree.patch')
 md5sums=('efad5a503f66329bb9d2f4308b5de98a'
          'fda89c145bbcd793a96b06b463ef6a72'
-         '6a63086b1a2e540d74ca6dc240dbd021'
-         'a5c995661c62429ceff2c23ea322393b')
+         '9bf80940bd3ce861137a0a8dcacf5705'
+         'a5c995661c62429ceff2c23ea322393b'
+         'cb344a879b3c4550fe3faf86c3826f23')
 
-build() {
+prepare() {
   cd "$pkgname-$pkgver"
 
   # https://code.google.com/p/libarchive/issues/detail?id=301
@@ -31,8 +33,14 @@ build() {
   patch -Np1 -i "$srcdir/libarchive-3.1.2-acl.patch"
 
   # CVE-2013-0211
-  patch -Np1 -i "$srcdir/22531545514043e04633e1c015c7540b9de9dbe4.patch"
+  patch -Np1 -i "$srcdir/0001-Limit-write-requests-to-at-most-INT_MAX.patch"
 
+  # upstream commit 977bf2a4 - improved mtree support
+  patch -p1 -i $srcdir/libarchive-3.1.2-sparce-mtree.patch
+}
+
+build() {
+  cd "$pkgname-$pkgver"
   ./configure --prefix=/usr --without-xml2
   make
 }
