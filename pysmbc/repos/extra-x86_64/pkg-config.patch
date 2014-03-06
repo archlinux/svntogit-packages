@@ -1,0 +1,58 @@
+diff -up pysmbc-1.0.13/Makefile.pkg-config pysmbc-1.0.13/Makefile
+--- pysmbc-1.0.13/Makefile.pkg-config	2010-08-22 15:59:36.000000000 +0100
++++ pysmbc-1.0.13/Makefile	2012-11-21 12:44:29.051173967 +0000
+@@ -4,7 +4,7 @@ SDIST_ARGS=--formats=bztar -d.
+ 
+ smbc.so: force
+ 	python setup.py build
+-	mv build/lib*/$@ .
++	mv build/lib*/smbc*.so .
+ 
+ doc: smbc.so
+ 	rm -rf html
+@@ -14,7 +14,7 @@ doczip:	doc
+ 	cd html && zip ../smbc-html.zip *
+ 
+ clean:
+-	-rm -rf build smbc.so *.pyc tests/*.pyc *~ tests/*~
++	-rm -rf build smbc*.so *.pyc tests/*.pyc *~ tests/*~
+ 
+ dist:
+ 	python setup.py sdist $(SDIST_ARGS)
+diff -up pysmbc-1.0.13/setup.py.pkg-config pysmbc-1.0.13/setup.py
+--- pysmbc-1.0.13/setup.py.pkg-config	2012-02-15 16:12:44.000000000 +0000
++++ pysmbc-1.0.13/setup.py	2012-11-21 12:45:05.362285519 +0000
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env python
+ 
+-## Copyright (C) 2002, 2005, 2006, 2007, 2008, 2010, 2011  Red Hat, Inc
++## Copyright (C) 2002, 2005, 2006, 2007, 2008, 2010, 2011, 2012  Red Hat, Inc
+ ## Copyright (C) 2010  Open Source Solution Technology Corporation
+ ## Authors:
+ ##  Tim Waugh <twaugh@redhat.com>
+@@ -51,6 +51,18 @@ hello
+ """
+ 
+ from distutils.core import setup, Extension
++import subprocess
++
++def pkgconfig_I (pkg):
++    dirs = []
++    c = subprocess.Popen (["pkg-config", "--cflags", pkg],
++                          stdout=subprocess.PIPE)
++    (stdout, stderr) = c.communicate ()
++    for p in stdout.decode (encoding='ascii').split ():
++        if p.startswith ("-I"):
++            dirs.append (p[2:])
++    return dirs
++    
+ setup (name="pysmbc",
+        version="1.0.13",
+        description="Python bindings for libsmbclient",
+@@ -74,4 +86,5 @@ setup (name="pysmbc",
+                                "dir.c",
+                                "file.c",
+                                "smbcdirent.c"],
+-                              libraries=["smbclient"])])
++                              libraries=["smbclient"],
++                              include_dirs=pkgconfig_I("smbclient"))])
