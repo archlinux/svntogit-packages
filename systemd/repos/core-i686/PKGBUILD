@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'systemd-sysvcompat')
 pkgver=210
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -12,13 +12,65 @@ makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
+        '0001-login-fix-pos-array-allocation.patch'
+        '0002-login-set-pos-slot-to-fallback-on-pos-eviction.patch'
+        '0003-login-Allow-calling-org.freedesktop.login1.Seat.Swit.patch'
+        '0004-fix-typo-in-iDRAC-network-interface-name-irdac-idrac.patch'
+        '0007-mount-don-t-send-out-PropertiesChanged-message-if-ac.patch'
+        '0008-mount-don-t-fire-PropertiesChanged-signals-for-mount.patch'
+        '0009-logs-show-fix-corrupt-output-with-empty-messages.patch'
+        '0010-journalctl-refuse-extra-arguments-with-verify-and-si.patch'
+        '0011-cdrom_id-use-the-old-MMC-fallback.patch'
+        '0012-nspawn-fix-detection-of-missing-proc-self-loginuid.patch'
+        '0013-Fix-systemd-stdio-bridge-symlink.patch'
+        '0014-execute-free-directory-path-if-we-fail-to-remove-it-.patch'
+        '0015-journal-assume-that-next-entry-is-after-previous-ent.patch'
+        '0016-journal-forget-file-after-encountering-an-error.patch'
+        '0017-core-correctly-unregister-PIDs-from-PID-hashtables.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
 md5sums=('03efddf8c9eca36d4d590f9967e7e818'
+         'e64ade3fffc1e8fc5af0703135b389c4'
+         'b619c45b2e973b9bd1cc85a66647a859'
+         '5265ac8a57f8b6438effd332c5a38e7e'
+         '0d047c3e44076fcefded5c2db31743d7'
+         'c5bee064008abf23e5154768681944d2'
+         '11f93b3c02c268a16db95f69c3d8c459'
+         '43bc34b1e991dca2d9fb8b887e3b2d3d'
+         '2e4a5fc2b2cc2e64c3ade2f504763b81'
+         'b55c5fb9dccb25085e199afc460ca011'
+         'cc16a4ae58eb87a9739f183ed20e2290'
+         'be17e74f25c70a2928fe16ce4fdb5a7e'
+         '4875226e16a893b82663691c6ae7c922'
+         '0180fbe462be9ca6a0da208ccb94844e'
+         'c1182aee4a8baaf66d7a6b7a1347d60e'
+         '057ef5aa2089f0884151f22e7dbe4ed5'
          '29245f7a240bfba66e2b1783b63b6b40'
          '5e04f468a13ae2b9d6a9dfc77c49a7d1'
          'bde43090d4ac0ef048e3eaee8202a407')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  patch -Np1 <../0001-login-fix-pos-array-allocation.patch
+  patch -Np1 <../0002-login-set-pos-slot-to-fallback-on-pos-eviction.patch
+  patch -Np1 <../0003-login-Allow-calling-org.freedesktop.login1.Seat.Swit.patch
+  patch -Np1 <../0004-fix-typo-in-iDRAC-network-interface-name-irdac-idrac.patch
+  patch -Np1 <../0007-mount-don-t-send-out-PropertiesChanged-message-if-ac.patch
+  patch -Np1 <../0008-mount-don-t-fire-PropertiesChanged-signals-for-mount.patch
+  patch -Np1 <../0009-logs-show-fix-corrupt-output-with-empty-messages.patch
+  patch -Np1 <../0010-journalctl-refuse-extra-arguments-with-verify-and-si.patch
+  patch -Np1 <../0011-cdrom_id-use-the-old-MMC-fallback.patch
+  patch -Np1 <../0012-nspawn-fix-detection-of-missing-proc-self-loginuid.patch
+  patch -Np1 <../0013-Fix-systemd-stdio-bridge-symlink.patch
+  patch -Np1 <../0014-execute-free-directory-path-if-we-fail-to-remove-it-.patch
+  patch -Np1 <../0015-journal-assume-that-next-entry-is-after-previous-ent.patch
+  patch -Np1 <../0016-journal-forget-file-after-encountering-an-error.patch
+  patch -Np1 <../0017-core-correctly-unregister-PIDs-from-PID-hashtables.patch
+
+  autoreconf -fis
+}
 
 build() {
   cd "$pkgname-$pkgver"
