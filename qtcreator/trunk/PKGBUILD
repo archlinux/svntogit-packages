@@ -7,9 +7,9 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=3.0.1
-_pkgver=3.0.1
-pkgrel=1
+pkgver=3.0.1.git
+_pkgver=3.0
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=('i686' 'x86_64')
 url='http://qt-project.org'
@@ -26,7 +26,7 @@ optdepends=('qt5-doc: for the integrated Qt documentation'
             'bzr: for bazaar support'
             'valgrind: for analyze support')
 install=qtcreator.install
-source=("git://gitorious.org/qt-creator/qt-creator.git#tag=v${_pkgver}"
+source=("git://gitorious.org/qt-creator/qt-creator.git#branch=${_pkgver}"
         "git://gitorious.org/qt-labs/qbs.git"
         'qtcreator.desktop')
 md5sums=('SKIP'
