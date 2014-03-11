@@ -7,7 +7,7 @@ pkgname=readline
 _basever=6.3
 _patchlevel=000 #prepare for some patches
 pkgver=$_basever #.$_patchlevel
-pkgrel=2
+pkgrel=3
 pkgdesc='GNU readline library'
 arch=('i686' 'x86_64')
 url='http://tiswww.case.edu/php/chet/readline/rltop.html'
@@ -31,7 +31,7 @@ md5sums=('33c8fb279e981274f485fd91da77e94a'
          'SKIP'
          '58d54966c1191db45973cb3191ac621a'
          'fcfe0a50c69f56f66ad04127a927862e'
-         '5daf0ad2a175ccd43d7791ee3ce3d520')
+         'ee4e0df0dbf7e80783b7aa198c67fb45')
 
 prepare() {
   cd $pkgname-$pkgver
