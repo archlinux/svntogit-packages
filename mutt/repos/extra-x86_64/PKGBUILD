@@ -3,7 +3,7 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=mutt
-pkgver=1.5.22
+pkgver=1.5.23
 pkgrel=1
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
@@ -12,8 +12,8 @@ backup=('etc/Muttrc')
 arch=('i686' 'x86_64')
 optdepends=('smtp-forwarder: to send mail')
 depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb5')
-source=("ftp://ftp.mutt.org/mutt/devel/${pkgname}-${pkgver}.tar.gz")
-sha1sums=('728a114cb3a44df373dbf1292fc34dd8321057dc')
+source=("ftp://ftp.mutt.org/mutt/${pkgname}-${pkgver}.tar.gz")
+sha1sums=('8ac821d8b1e25504a31bf5fda9c08d93a4acc862')
 
 install=install
 
