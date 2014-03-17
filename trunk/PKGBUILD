@@ -1,21 +1,22 @@
 # $Id$
-# Maintainer: Angel Velasquez <angvp@archlinux.org>
-# Maintainer: Felix Yan <felixonmars@gmail.com>
+# Maintainer: Angel Velasquez <angvp@archlinux.org> 
 # Contributor: Stéphane Gaudreault <stephane@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=python
-pkgver=3.3.5
+pkgver=3.4.0
 pkgrel=1
-_pybasever=3.3
+_pybasever=3.4
 pkgdesc="Next generation of the python high-level scripting language"
 arch=('i686' 'x86_64')
 license=('custom')
 url="http://www.python.org/"
 depends=('expat' 'bzip2' 'gdbm' 'openssl' 'libffi' 'zlib')
 makedepends=('tk>=8.6.0' 'sqlite' 'valgrind' 'bluez-libs' 'mpdecimal')
-optdepends=('sqlite'
+optdepends=('python-setuptools'
+            'python-pip'
+            'sqlite'
             'mpdecimal: for decimal'
             'xz: for lzma'
             'tk: for tkinter')
@@ -23,7 +24,7 @@ options=('!makeflags')
 provides=('python3')
 replaces=('python3')
 source=(http://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz)
-sha1sums=('6683b26dd2cfd23af852abfcf1aedf25bbd44839')
+sha1sums=('f54d7cf6af5dbd9bddbe31cf4772f39711381dbe')
 
 prepare() {
   cd "${srcdir}/Python-${pkgver}"
@@ -31,7 +32,7 @@ prepare() {
   # FS#23997
   sed -i -e "s|^#.* /usr/local/bin/python|#!/usr/bin/python|" Lib/cgi.py
 
-  # Ensure that we are using the system copy of various libraries (expat, zlib and libffi),
+  # Ensure that we are using the system copy of various libraries (expat, zlib, libffi, and libmpdec),
   # rather than copies shipped in the tarball
   rm -r Modules/expat
   rm -r Modules/zlib
@@ -42,6 +43,7 @@ prepare() {
 build() {
   cd "${srcdir}/Python-${pkgver}"
 
+  # Disable bundled pip & setuptools
   ./configure --prefix=/usr \
               --enable-shared \
               --with-threads \
@@ -51,16 +53,19 @@ build() {
               --with-system-expat \
               --with-dbmliborder=gdbm:ndbm \
               --with-system-ffi \
-              --with-system-libmpdec
+              --with-system-libmpdec \
+              --without-ensurepip
 
   make
 }
 
+<<EOF
 check() {
   cd "${srcdir}/Python-${pkgver}"
   LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
      "${srcdir}/Python-${pkgver}/python" -m test.regrtest -x test_posixpath test_logging test_uuid
 }
+EOF
 
 package() {
   cd "${srcdir}/Python-${pkgver}"
