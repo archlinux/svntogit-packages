@@ -1,0 +1,82 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Douglas Soares de Andrade <dsa@aur.archlinux.org>
+
+pkgbase=qscintilla
+pkgname=('qscintilla' 'python-qscintilla' 'python2-qscintilla'
+         'python-qscintilla-common')
+pkgver=2.8.1
+pkgrel=1
+license=('GPL')
+arch=('i686' 'x86_64')
+url="http://www.riverbankcomputing.co.uk/software/qscintilla/intro"
+makedepends=('python2-pyqt4' 'python-pyqt4' 'chrpath')
+source=("http://downloads.sourceforge.net/pyqt/QScintilla-gpl-${pkgver}.tar.gz"
+        'configure.py-objdir-support.diff')
+md5sums=('bbf4725583ee9817f89413dca6cd38d2'
+         'eae1bd23117c5f1f7f172a1c1e11f600')
+
+prepare() {
+    cd QScintilla-gpl-${pkgver}
+    patch -Np1 -i "${srcdir}/configure.py-objdir-support.diff"
+}
+
+build() {
+    cd QScintilla-gpl-${pkgver}/Qt4Qt5
+    qmake-qt4 qscintilla.pro
+    make
+
+    cd ../designer-Qt4Qt5
+    qmake-qt4 designer.pro INCLUDEPATH+=../Qt4Qt5 QMAKE_LIBDIR+=../Qt4Qt5
+    make
+
+    cd ../
+    cp -rf Python Python2
+    cd Python
+    python3 configure.py -n ../Qt4Qt5/ -o ../Qt4Qt5/ -c --qmake /usr/bin/qmake-qt4
+    make
+
+    cd ../Python2
+    python2 configure.py -n ../Qt4Qt5/ -o ../Qt4Qt5/ -c --qmake /usr/bin/qmake-qt4
+    make
+}
+
+package_qscintilla() {
+    pkgdesc="A port to Qt4 of Neil Hodgson's Scintilla C++ editor class"
+    depends=('qt4')
+
+    cd QScintilla-gpl-${pkgver}/Qt4Qt5
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    cd ../designer-Qt4Qt5
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+}
+
+package_python-qscintilla-common() {
+    pkgdesc="Common python qscintilla bindings files shared between python-qscintilla and python2-qscintilla"
+    depends=('qscintilla')
+
+    cd QScintilla-gpl-${pkgver}/Python
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    # Provided by python-qscintilla
+    rm "${pkgdir}"/usr/lib/python3.4/site-packages/PyQt4/Qsci.so
+}
+
+package_python-qscintilla() {
+    pkgdesc="Python 3.x bindings for QScintilla2"
+    depends=('python-qscintilla-common' 'python-pyqt4')
+
+    cd QScintilla-gpl-${pkgver}/Python
+    install -Dm755 Qsci.so \
+      "${pkgdir}"/usr/lib/python3.4/site-packages/PyQt4/Qsci.so
+}
+
+package_python2-qscintilla() {
+    pkgdesc="Python 2.x bindings for QScintilla2"
+    depends=('python-qscintilla-common' 'python2-pyqt4')
+
+    cd QScintilla-gpl-${pkgver}/Python2
+    install -Dm755 Qsci.so \
+      "${pkgdir}"/usr/lib/python2.7/site-packages/PyQt4/Qsci.so
+}
