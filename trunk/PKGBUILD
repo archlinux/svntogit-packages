@@ -5,11 +5,11 @@
 
 pkgname=('python-urwid' 'python2-urwid')
 pkgver=1.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Urwid is a curses-based user interface library."
 license=('LGPL')
 arch=('i686' 'x86_64')
-makedepends=('python2-distribute' 'python-distribute')
+makedepends=('python2-setuptools' 'python-setuptools')
 url="http://excess.org/urwid/"
 source=(https://pypi.python.org/packages/source/u/urwid/urwid-$pkgver.tar.gz)
 md5sums=('ea046a0f683bc2d46b08df70b29c7f66')
