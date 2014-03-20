@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.9.0
+pkgver=1.9.1
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -23,7 +23,7 @@ optdepends=('tk: gitk and git gui'
 replaces=('git-core')
 provides=('git-core')
 install=git.install
-source=("http://git-core.googlecode.com/files/git-$pkgver.tar.gz"
+source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar.xz"
         git-daemon@.service
         git-daemon.socket)
 
@@ -107,9 +107,6 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('55c3b57b9d168facbc681d9f7b9a0803'
-         '042524f942785772d7bd52a1f02fe5ae'
-         'f67869315c2cc112e076f0c73f248002')
-md5sums=('e16c14b27c644b8e0dd72bdb5ff77450'
+md5sums=('d65ca55041898c226e532425fc673035'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
