@@ -1,0 +1,50 @@
+diff -rupN a/configure b/configure
+--- a/configure	2013-11-06 00:55:13.000000000 +0000
++++ b/configure	2013-12-28 22:06:00.925551644 +0000
+@@ -943,6 +943,26 @@ require_pkg_config(){
+     add_extralibs $(get_safe ${pkg}_libs)
+ }
+ 
++require_libfreetype(){
++    log require_libfreetype "$@"
++    pkg="freetype2"
++    check_cmd $pkg_config --exists --print-errors $pkg \
++    || die "ERROR: $pkg not found"
++    pkg_cflags=$($pkg_config --cflags $pkg)
++    pkg_libs=$($pkg_config --libs $pkg)
++    {
++        echo "#include <ft2build.h>"
++        echo "#include FT_FREETYPE_H"
++        echo "long check_func(void) { return (long) FT_Init_FreeType; }"
++        echo "int main(void) { return 0; }"
++    } | check_ld "cc" $pkg_cflags $pkg_libs \
++    && set_safe ${pkg}_cflags $pkg_cflags \
++    && set_safe ${pkg}_libs   $pkg_libs \
++    || die "ERROR: $pkg not found"
++    add_cflags    $(get_safe ${pkg}_cflags)
++    add_extralibs $(get_safe ${pkg}_libs)
++}
++
+ check_host_cc(){
+     log check_host_cc "$@"
+     cat > $TMPC
+@@ -3134,7 +3154,7 @@ enabled libdirac   && require_pkg_config
+     "libdirac_decoder/dirac_parser.h libdirac_encoder/dirac_encoder.h"  \
+     "dirac_decoder_init dirac_encoder_init"
+ enabled libfaac    && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac
+-enabled libfreetype && require_pkg_config freetype2 "ft2build.h freetype/freetype.h" FT_Init_FreeType
++enabled libfreetype && require_libfreetype
+ enabled libgsm     && require  libgsm gsm/gsm.h gsm_create -lgsm
+ enabled libmodplug && require  libmodplug libmodplug/modplug.h ModPlug_Load -lmodplug
+ enabled libmp3lame && require  "libmp3lame >= 3.98.3" lame/lame.h lame_set_VBR_quality -lmp3lame
+diff -rupN a/libavfilter/vf_drawtext.c b/libavfilter/vf_drawtext.c
+--- a/libavfilter/vf_drawtext.c	2013-11-06 00:55:16.000000000 +0000
++++ b/libavfilter/vf_drawtext.c	2013-12-28 22:06:16.495450750 +0000
+@@ -47,7 +47,6 @@
+ #undef time
+ 
+ #include <ft2build.h>
+-#include <freetype/config/ftheader.h>
+ #include FT_FREETYPE_H
+ #include FT_GLYPH_H
+ 
