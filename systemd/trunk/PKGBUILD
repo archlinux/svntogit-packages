@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=211
-pkgrel=2
+pkgver=212
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,7 +15,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
-md5sums=('0a70c382b6089526f98073b4ee85ef75'
+md5sums=('257a75fff826ff91cb1ce567091cf270'
          '29245f7a240bfba66e2b1783b63b6b40'
          '5e04f468a13ae2b9d6a9dfc77c49a7d1'
          'bde43090d4ac0ef048e3eaee8202a407')
