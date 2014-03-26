@@ -54,7 +54,7 @@ package_systemd() {
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
   optdepends=('python: systemd library bindings'
               'cryptsetup: required for encrypted block devices'
-              'libmicrohttpd: systemd-journal-gatewayd'
+              'libmicrohttpd: remote journald capabilities'
               'quota-tools: kernel-level quota management'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries')
   backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
