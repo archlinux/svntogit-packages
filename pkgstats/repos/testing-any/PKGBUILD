@@ -8,7 +8,7 @@ pkgdesc='submits a list of installed packages to the Arch Linux project'
 arch=('any')
 url='https://www.archlinux.de'
 license=('GPL')
-depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'cron' 'awk' 'grep')
+depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'systemd' 'awk' 'grep')
 source=('pkgstats.sh'
         pkgstats.{timer,service})
 install='pkgstats.install'
