@@ -1,0 +1,269 @@
+commit 40076246be995cc006a12f8afc2c18cfacbf0604
+Author: Andreas Schneider <asn@cryptomilk.org>
+Date:   Thu Jan 9 10:19:06 2014 +0100
+
+    kio_sftp: Support ECDSA keys.
+    
+    This migrates to the API of libssh 0.6.0.
+    
+    BUG: 327024
+
+diff --git a/kioslave/CMakeLists.txt b/kioslave/CMakeLists.txt
+index 026ae9b..b150290 100644
+--- a/kioslave/CMakeLists.txt
++++ b/kioslave/CMakeLists.txt
+@@ -11,7 +11,7 @@ set_package_properties(Samba PROPERTIES DESCRIPTION "the SMB client library, a v
+                       )
+ endif(NOT WIN32)
+ 
+-macro_optional_find_package(LibSSH 0.4.0)
++macro_optional_find_package(LibSSH 0.6.0)
+ set_package_properties(LibSSH PROPERTIES DESCRIPTION "the SSH library with SFTP support"
+                        URL "http://www.libssh.org/"
+                        TYPE OPTIONAL
+diff --git a/kioslave/sftp/kio_sftp.cpp b/kioslave/sftp/kio_sftp.cpp
+index 8c34faa..14bcaf6 100644
+--- a/kioslave/sftp/kio_sftp.cpp
++++ b/kioslave/sftp/kio_sftp.cpp
+@@ -632,8 +632,10 @@ void sftpProtocol::openConnection() {
+   QString msg;     // msg for dialog box
+   QString caption; // dialog box caption
+   unsigned char *hash = NULL; // the server hash
++  ssh_key srv_pubkey;
+   char *hexa;
+-  int rc, state, hlen;
++  size_t hlen;
++  int rc, state;
+ 
+   // Attempt to start a ssh session and establish a connection with the server.
+   if (!sftpOpenConnection(info)) {
+@@ -643,13 +645,25 @@ void sftpProtocol::openConnection() {
+   kDebug(KIO_SFTP_DB) << "Getting the SSH server hash";
+ 
+   /* get the hash */
+-  hlen = ssh_get_pubkey_hash(mSession, &hash);
+-  if (hlen < 0) {
++  rc = ssh_get_publickey(mSession, &srv_pubkey);
++  if (rc < 0) {
+     error(KIO::ERR_SLAVE_DEFINED, QString::fromUtf8(ssh_get_error(mSession)));
+     closeConnection();
+     return;
+   }
+ 
++  rc = ssh_get_publickey_hash(srv_pubkey,
++                              SSH_PUBLICKEY_HASH_SHA1,
++                              &hash,
++                              &hlen);
++  ssh_key_free(srv_pubkey);
++  if (rc < 0) {
++    error(KIO::ERR_SLAVE_DEFINED,
++          i18n("Could not create hash from server public key"));
++    closeConnection();
++    return;
++  }
++
+   kDebug(KIO_SFTP_DB) << "Checking if the SSH server is known";
+ 
+   /* check the server public key hash */
+@@ -658,7 +672,7 @@ void sftpProtocol::openConnection() {
+     case SSH_SERVER_KNOWN_OK:
+       break;
+     case SSH_SERVER_FOUND_OTHER:
+-      delete hash;
++      ssh_string_free_char((char *)hash);
+       error(KIO::ERR_SLAVE_DEFINED, i18n("The host key for this server was "
+             "not found, but another type of key exists.\n"
+             "An attacker might change the default server key to confuse your "
+@@ -668,7 +682,7 @@ void sftpProtocol::openConnection() {
+       return;
+     case SSH_SERVER_KNOWN_CHANGED:
+       hexa = ssh_get_hexa(hash, hlen);
+-      delete hash;
++      ssh_string_free_char((char *)hash);
+       /* TODO print known_hosts file, port? */
+       error(KIO::ERR_SLAVE_DEFINED, i18n("The host key for the server %1 has changed.\n"
+           "This could either mean that DNS SPOOFING is happening or the IP "
+@@ -676,18 +690,18 @@ void sftpProtocol::openConnection() {
+           "The fingerprint for the key sent by the remote host is:\n %2\n"
+           "Please contact your system administrator.\n%3",
+           mHost, QString::fromUtf8(hexa), QString::fromUtf8(ssh_get_error(mSession))));
+-      delete hexa;
++      ssh_string_free_char(hexa);
+       closeConnection();
+       return;
+     case SSH_SERVER_FILE_NOT_FOUND:
+     case SSH_SERVER_NOT_KNOWN:
+       hexa = ssh_get_hexa(hash, hlen);
+-      delete hash;
++      ssh_string_free_char((char *)hash);
+       caption = i18n("Warning: Cannot verify host's identity.");
+       msg = i18n("The authenticity of host %1 cannot be established.\n"
+         "The key fingerprint is: %2\n"
+         "Are you sure you want to continue connecting?", mHost, hexa);
+-      delete hexa;
++      ssh_string_free_char(hexa);
+ 
+       if (KMessageBox::Yes != messageBox(WarningYesNo, msg, caption)) {
+         closeConnection();
+@@ -704,7 +718,7 @@ void sftpProtocol::openConnection() {
+       }
+       break;
+     case SSH_SERVER_ERROR:
+-      delete hash;
++      ssh_string_free_char((char *)hash);
+       error(KIO::ERR_SLAVE_DEFINED, QString::fromUtf8(ssh_get_error(mSession)));
+       return;
+   }
+@@ -732,7 +746,7 @@ void sftpProtocol::openConnection() {
+   if (rc != SSH_AUTH_SUCCESS && (method & SSH_AUTH_METHOD_PUBLICKEY)) {
+     kDebug(KIO_SFTP_DB) << "Trying to authenticate with public key";
+     for(;;) {
+-      rc = ssh_userauth_autopubkey(mSession, NULL);
++      rc = ssh_userauth_publickey_auto(mSession, NULL, NULL);
+       if (rc == SSH_AUTH_ERROR) {
+         kDebug(KIO_SFTP_DB) << "Public key authentication failed:" <<
+                 QString::fromUtf8(ssh_get_error(mSession));
+@@ -747,6 +761,19 @@ void sftpProtocol::openConnection() {
+     }
+   }
+ 
++  // Try to authenticate with GSSAPI
++  if (rc != SSH_AUTH_SUCCESS && (method & SSH_AUTH_METHOD_GSSAPI_MIC)) {
++      kDebug(KIO_SFTP_DB) << "Trying to authenticate with GSSAPI";
++      rc = ssh_userauth_gssapi(mSession);
++      if (rc == SSH_AUTH_ERROR) {
++          kDebug(KIO_SFTP_DB) << "Public key authentication failed:" <<
++                 QString::fromUtf8(ssh_get_error(mSession));
++          closeConnection();
++          error(KIO::ERR_COULD_NOT_LOGIN, i18n("Authentication failed."));
++          return;
++      }
++  }
++
+   // Try to authenticate with keyboard interactive
+   if (rc != SSH_AUTH_SUCCESS && (method & SSH_AUTH_METHOD_INTERACTIVE)) {
+     kDebug(KIO_SFTP_DB) << "Trying to authenticate with keyboard interactive";
+From: Andreas Schneider <asn@cryptomilk.org>
+Date: Mon, 13 Jan 2014 09:42:44 +0000
+Subject: kio_sftp: Migrate to new libssh logging functionality.
+X-Git-Tag: v4.12.80
+X-Git-Url: http://quickgit.kde.org/?p=kde-runtime.git&a=commitdiff&h=9248c790b0cbcbe1c4c8519e7b7da9b504616fad
+---
+kio_sftp: Migrate to new libssh logging functionality.
+---
+
+
+--- a/kioslave/sftp/kio_sftp.cpp
++++ b/kioslave/sftp/kio_sftp.cpp
+@@ -176,16 +176,16 @@
+   return 0;
+ }
+ 
+-static void log_callback(ssh_session session, int priority, const char *message,
++static void log_callback(int priority, const char *function, const char *buffer,
+                          void *userdata)
+ {
+-  if (userdata == NULL) {
+-    return;
+-  }
+-
+-  sftpProtocol *slave = (sftpProtocol *) userdata;
+-
+-  slave->log_callback(session, priority, message, userdata);
++    if (userdata == NULL) {
++        return;
++    }
++
++    sftpProtocol *slave = (sftpProtocol *) userdata;
++
++    slave->log_callback(priority, function, buffer, userdata);
+ }
+ 
+ int sftpProtocol::auth_callback(const char *prompt, char *buf, size_t len,
+@@ -235,13 +235,12 @@
+   return 0;
+ }
+ 
+-void sftpProtocol::log_callback(ssh_session session, int priority,
+-                                const char *message, void *userdata)
++void sftpProtocol::log_callback(int priority, const char *function, const char *buffer,
++                                void *userdata)
+ {
+-  (void) session;
+-  (void) userdata;
+-
+-  kDebug(KIO_SFTP_DB) << "[" << priority << "] " << message;
++    (void) userdata;
++
++    kDebug(KIO_SFTP_DB) << "[" << function << "] (" << priority << ") " << buffer;
+ }
+ 
+ int sftpProtocol::authenticateKeyboardInteractive(AuthInfo &info) {
+@@ -464,11 +463,33 @@
+ 
+   mCallbacks->userdata = this;
+   mCallbacks->auth_function = ::auth_callback;
+-  if (getenv("KIO_SFTP_LOG_VERBOSITY")) {
+-    mCallbacks->log_function = ::log_callback;
+-  }
+ 
+   ssh_callbacks_init(mCallbacks);
++
++  char *verbosity = getenv("KIO_SFTP_LOG_VERBOSITY");
++  if (verbosity != NULL) {
++    int level = atoi(verbosity);
++    int rc;
++
++    rc = ssh_set_log_level(level);
++    if (rc != SSH_OK) {
++      error(KIO::ERR_INTERNAL, i18n("Could not set log verbosity."));
++      return;
++    }
++
++    rc = ssh_set_log_userdata(this);
++    if (rc != SSH_OK) {
++      error(KIO::ERR_INTERNAL, i18n("Could not set log userdata."));
++      return;
++    }
++
++    rc = ssh_set_log_callback(::log_callback);
++    if (rc != SSH_OK) {
++      error(KIO::ERR_INTERNAL, i18n("Could not set log callback."));
++      return;
++    }
++  }
++
+ }
+ 
+ sftpProtocol::~sftpProtocol() {
+@@ -556,15 +577,6 @@
+     rc = ssh_options_set(mSession, SSH_OPTIONS_USER, info.username.toUtf8().constData());
+     if (rc < 0) {
+       error(KIO::ERR_INTERNAL, i18n("Could not set username."));
+-      return false;
+-    }
+-  }
+-
+-  char* verbosity = getenv("KIO_SFTP_LOG_VERBOSITY");
+-  if (verbosity) {
+-    rc = ssh_options_set(mSession, SSH_OPTIONS_LOG_VERBOSITY_STR, verbosity);
+-    if (rc < 0) {
+-      error(KIO::ERR_INTERNAL, i18n("Could not set log verbosity."));
+       return false;
+     }
+   }
+
+--- a/kioslave/sftp/kio_sftp.h
++++ b/kioslave/sftp/kio_sftp.h
+@@ -73,8 +73,8 @@
+ 
+   // libssh logging callback (note that this is called by the
+   // global ::log_callback() call.
+-  void log_callback(ssh_session session, int priority, const char *message,
+-    void *userdata);
++  void log_callback(int priority, const char *function, const char *buffer,
++                    void *userdata);
+ 
+ private: // Private variables
+   /** True if ioslave is connected to sftp server. */
+
