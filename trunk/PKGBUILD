@@ -2,36 +2,46 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
-pkgbase=totem
-pkgname=('totem' 'totem-plugin')
-pkgver=3.10.1
+pkgname=totem
+pkgver=3.12.0
 pkgrel=1
 pkgdesc="GNOME3 movie player based on GStreamer"
 url="http://www.gnome.org"
 arch=(i686 x86_64)
 license=(GPL2 custom)
-depends=(gst-plugins-base gst-plugins-good totem-plparser desktop-file-utils iso-codes libpeas
-         hicolor-icon-theme gnome-icon-theme gsettings-desktop-schemas dconf clutter-gst
-         clutter-gtk python-gobject python-xdg gst-plugins-bad)
-makedepends=(intltool libnautilus-extension lirc-utils vala grilo dbus-glib zeitgeist
+depends=(totem-plparser desktop-file-utils iso-codes libpeas clutter-gtk clutter-gst grilo
+         hicolor-icon-theme gnome-icon-theme gsettings-desktop-schemas dconf
+         python-gobject python-xdg
+         gst-plugins-base gst-plugins-good gst-plugins-bad)
+makedepends=(intltool libnautilus-extension lirc-utils vala zeitgeist
              itstool docbook-xsl python-pylint)
+optdepends=('gst-plugins-ugly: Extra media codecs'
+            'gst-libav: Extra media codecs'
+            'lirc-utils: Infrared Remote Control plugin'
+            'grilo-plugins: Media discovery'
+            'zeitgeist: Zeitgeist plugin')
+groups=(gnome)
 options=('!emptydirs')
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver%.*}/$pkgbase-$pkgver.tar.xz
+backup=(etc/totem/browser-plugins.ini)
+install=totem.install
+conflicts=(totem-plugin)
+replaces=(totem-plugin)
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz
         browser-plugins.ini bugreport.patch)
-sha256sums=('b6b6038c9104965671a6d25e98496a487c3a9c590c9c104f668bd9f4fa7be9e2'
+sha256sums=('96762a1c2026f7bbc6ef8a431cf7626647e54ac2d195eb573a71d62dc3a2c430'
             'a50a3bbf35f0535f7e8e20af1893446a2e5711015484f9ae6d1ff91af3b23c4e'
             '30481dab7e21b66257e3238f5a8b708e1a5c4797d7da904f7ebaba4c2c2ef167')
 
 
 prepare() {
-  cd "$pkgbase-$pkgver"
+  cd "$pkgname-$pkgver"
 
   # Make compatible with Python 3 and Gstreamer 1.0
   patch -Np1 -i ../bugreport.patch
 }
 
 build() {
-  cd "$pkgbase-$pkgver"
+  cd "$pkgname-$pkgver"
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --libexecdir=/usr/lib/totem \
@@ -46,37 +56,13 @@ build() {
   make
 }
 
-package_totem() {
-  groups=(gnome)
-  install=totem.install
-  optdepends=('gst-plugins-ugly: Extra media codecs'
-              'gst-libav: Extra media codecs'
-              'lirc-utils: Infrared Remote Control plugin'
-              'grilo-plugins: Browse sidebar (remote media)'
-              'zeitgeist: Zeitgeist plugin')
-
-  cd "$pkgbase-$pkgver"
+package() {
+  cd "$pkgname-$pkgver"
   make DESTDIR="${pkgdir}" install
 
-  rm -r "$pkgdir/usr/lib/mozilla"
-  rm "$pkgdir/usr/lib/totem/totem-plugin-viewer"
-
+  install -Dm644 ../browser-plugins.ini "$pkgdir/etc/totem/browser-plugins.ini"
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem/COPYING"
 }
 
-package_totem-plugin() {
-  groups=(gnome)
-  pkgdesc="Totem plugin for web browsers"
-  depends=("totem=$pkgver" dbus-glib)
-  backup=(etc/totem/browser-plugins.ini)
-
-  cd "$pkgbase-$pkgver"
-  make -C browser-plugin \
-    plugindir=/usr/lib/mozilla/plugins \
-    xptdir=/usr/lib/mozilla/plugins \
-    DESTDIR="$pkgdir" install
-
-  install -Dm644 ../browser-plugins.ini "$pkgdir/etc/totem/browser-plugins.ini"
-
-  install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem-plugin/COPYING"
-}
+#plugindir=/usr/lib/mozilla/plugins \
+#xptdir=/usr/lib/mozilla/plugins \
