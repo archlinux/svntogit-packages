@@ -1,4 +1,0 @@
-#!/bin/sh
-
-/usr/bin/faxqclean
-/usr/bin/faxcron -rcv 30
