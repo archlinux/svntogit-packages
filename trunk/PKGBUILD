@@ -9,7 +9,7 @@ arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
-             'libutil-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
+             'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -48,7 +48,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
   depends=('acl' 'bash' 'dbus' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
-           'libsystemd' 'pam' 'libseccomp' 'libutil-linux' 'xz')
+           'libsystemd' 'pam' 'libseccomp' 'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
