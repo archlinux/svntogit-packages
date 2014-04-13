@@ -3,7 +3,7 @@
 
 pkgname=pkgstats
 pkgver=2.3
-pkgrel=4
+pkgrel=5
 pkgdesc='submits a list of installed packages to the Arch Linux project'
 arch=('any')
 url='https://www.archlinux.de'
