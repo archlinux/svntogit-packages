@@ -5,9 +5,8 @@
 
 pkgbase=tracker
 pkgname=(tracker libtracker-sparql)
-pkgver=0.16.4
-_tver=${pkgver%.*}
-pkgrel=1
+pkgver=1.0.0
+pkgrel=2
 pkgdesc="All-in-one indexer, search tool and metadata database"
 arch=(i686 x86_64)
 license=(GPL)
@@ -15,11 +14,11 @@ makedepends=(libgee libsecret upower libexif exempi
              poppler-glib libgsf icu enca networkmanager gtk3
              desktop-file-utils hicolor-icon-theme gobject-introspection
              intltool giflib gst-plugins-base-libs totem-plparser
-             taglib libvorbis flac vala libgxps libnautilus-extension)
+             taglib libvorbis flac vala libgxps libnautilus-extension libmediaart)
 url="http://www.gnome.org"
 options=('!emptydirs')
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/$_tver/$pkgbase-$pkgver.tar.xz)
-sha256sums=('9c2f50839c2b8b352ab9a022597ef985c1900e6286c0c3bcb7a64da39dbb3580')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver:0:3}/$pkgbase-$pkgver.tar.xz)
+sha256sums=('a1d033faf2c78f0e239f3c2c961b96623c9a7dabd938c08e3f5660bd70f54ba2')
 
 build() {
   cd $pkgbase-$pkgver
@@ -41,7 +40,7 @@ build() {
 package_tracker() {
   depends=("libtracker-sparql=$pkgver-$pkgrel" libgee libsecret
            upower libexif exempi poppler-glib libgsf enca
-           networkmanager gtk3 desktop-file-utils hicolor-icon-theme)
+           networkmanager gtk3 desktop-file-utils hicolor-icon-theme libmediaart)
   optdepends=('giflib: extractor for GIF data'
               'gst-plugins-base-libs: video extractor'
               'totem-plparser: playlist support'
@@ -56,29 +55,22 @@ package_tracker() {
   cd $pkgbase-$pkgver
   make DESTDIR="$pkgdir" install
 
-### Split libtracker-sparql
+  for dir in libtracker-{sparql,common,data,sparql-backend}; do
+    make DESTDIR="$pkgdir" -C src/$dir uninstall
+  done
 
-  mkdir -p "$srcdir"/sparql/usr/{include,lib}/tracker-$_tver
-  mkdir -p "$srcdir"/sparql/usr/lib/{girepository-1.0,pkgconfig}
-  mkdir -p "$srcdir"/sparql/usr/share/{gir-1.0,vala/vapi}
-
-  mv "$pkgdir"/usr/lib/libtracker-sparql-* "$srcdir/sparql/usr/lib"
-
-  mv "$pkgdir"/usr/lib/tracker-$_tver/*.so* \
-    "$srcdir/sparql/usr/lib/tracker-$_tver"
-
-  mv "$pkgdir"/usr/share/vala/vapi/tracker-sparql-* \
-    "$srcdir/sparql/usr/share/vala/vapi"
-
-  mv {"$pkgdir","$srcdir/sparql"}/usr/include/tracker-$_tver/libtracker-sparql
-  mv {"$pkgdir","$srcdir/sparql"}/usr/lib/girepository-1.0/Tracker-$_tver.typelib
-  mv {"$pkgdir","$srcdir/sparql"}/usr/lib/pkgconfig/tracker-sparql-$_tver.pc
-  mv {"$pkgdir","$srcdir/sparql"}/usr/share/gir-1.0/Tracker-$_tver.gir
+  rm -f "$pkgdir"/usr/lib/pkgconfig/tracker-sparql-*.pc
 }
 
 package_libtracker-sparql() {
   pkgdesc="$pkgdesc (SPARQL library)"
   depends=(sqlite icu glib2 libffi pcre util-linux)
 
-  mv "$srcdir"/sparql/* "$pkgdir"
+  cd $pkgbase-$pkgver/src
+  for dir in libtracker-{sparql,common,data,sparql-backend}; do
+    make DESTDIR="$pkgdir" -C $dir install
+  done
+
+  install -m755 -d "$pkgdir"/usr/lib/pkgconfig
+  install -m644 ../data/tracker-sparql-*.pc "$pkgdir"/usr/lib/pkgconfig/
 }
