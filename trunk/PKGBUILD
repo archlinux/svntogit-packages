@@ -12,18 +12,33 @@ url="http://www.libssh.org/"
 license=('LGPL')
 arch=('i686' 'x86_64')
 depends=('zlib' 'openssl')
-makedepends=('cmake' 'doxygen')
+makedepends=('cmake' 'cmocka' 'doxygen')
+checkdepends=('openssh')
 source=(https://red.libssh.org/attachments/download/87/${pkgname}-${pkgver}.tar.xz)
 md5sums=('66cf16e77f60913b4d54f18c92cdbf71')
 
+
+prepare() {
+  # disable the test. It is confused by our clean container setup.
+  # 'extra-x86-build' uses user 'nobody' that has a record in /etc/passwd file
+  # but $HOME envvar is set to '/build'. The test expects that $HOME corresponds to passwd file.
+  sed 's/unit_test(torture_path_expand_tilde_unix),//' -i libssh-${pkgver}/tests/unittests/torture_misc.c
+}
+
 build() {
-  mkdir build
+  mkdir build || true
   cd build
   cmake ../${pkgname}-${pkgver} \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release \
-    -DWITH_GSSAPI=OFF
+    -DWITH_GSSAPI=OFF \
+    -DWITH_TESTING=ON
   make
+}
+
+check() {
+  cd build
+  make test
 }
 
 package(){
