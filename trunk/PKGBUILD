@@ -5,7 +5,7 @@
 pkgbase=lvm2
 pkgname=('lvm2' 'device-mapper')
 pkgver=2.02.106
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://sourceware.org/lvm2/"
 license=('GPL2' 'LGPL2.1')
@@ -16,42 +16,47 @@ source=(ftp://sources.redhat.com/pub/lvm2/LVM2.${pkgver}.tgz{,.asc}
         lvm2_hook
         sd-lvm2
         11-dm-initramfs.rules
-        lvm2.conf
-        dmeventd.service
-        dmeventd.socket
-        lvm-monitoring.service
-        lvmetad.service
-        lvmetad.socket)
+        lvm2-fix-pvscan-service.patch
+        lvm2-make-sockets-static.patch)
 sha1sums=('0943d1c401675dfdc2118b9ad4fd4d7fb50eaaff'
           'SKIP'
-          '76e83966d1bc84f9a1e30bcaff84b8b8fefbca0f'
+          'be3b7db02e76d31d4742dc853b2fa3f898368ff8'
           'ff0fdf0a3005a41acd4b36865056109effc3474b'
-          'ab1719813fd7e5f5b525b7f38e969d1f855d6083'
+          '86c18852409dc03f38bdd734ac3e7b54bed9c4ce'
           'f6a554eea9557c3c236df2943bb6e7e723945c41'
-          'ccefad65fde3d50331a42b0e90a1539dc7c8b9e4'
-          '01782ce8e10718c1513e3906b126f30f682f5cab'
-          '1d56f47a81350ae37ffbf61ee036fe31f4c5d504'
-          'aad90fce0e12eda41d38571d8eb27c5d5a8c59ec'
-          'f857a4a63fcc604a981e56875edda91767d4f1bf'
-          'fcfc265e3b10294cc4b10949a342e9db4310b186')
+          'ec22d30fed5fb5ec836932b070ee65b34bbe875b'
+          'f9e96af741ef6d0b4bb3c302faa5f6b29f9ef04a')
 
 prepare() {
   cd LVM2.${pkgver}
   # enable lvmetad
   sed -i 's|use_lvmetad = 0|use_lvmetad = 1|' conf/example.conf.in
+  # fix pvscan@.service for initramfs
+  patch -p1 -i "${srcdir}/lvm2-fix-pvscan-service.patch"
+  # make systemd sockets static
+  patch -p1 -i "${srcdir}/lvm2-make-sockets-static.patch"
 }
 
 build() {
-  cd LVM2.${pkgver}
-  unset LDFLAGS
+  CONFIGUREOPTS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sbindir=/usr/bin \
+      --with-udev-prefix=/usr --with-systemdsystemunitdir=/usr/lib/systemd/system \
+      --with-default-pid-dir=/run --with-default-dm-run-dir=/run --with-default-run-dir=/run/lvm \
+      --enable-pkgconfig --enable-readline --enable-dmeventd --enable-cmdlib --enable-applib \
+      --enable-udev_sync --enable-udev_rules --with-default-locking-dir=/run/lock/lvm \
+      --enable-lvmetad --with-thin=internal"
 
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --sbindir=/usr/bin \
-    --with-udev-prefix=/usr --with-systemdsystemunitdir=/usr/lib/systemd/system \
-    --with-default-pid-dir=/run --with-default-dm-run-dir=/run --with-default-run-dir=/run/lvm \
-    --enable-pkgconfig --enable-readline --enable-dmeventd --enable-cmdlib --enable-applib \
-    --enable-udev_sync --enable-udev_rules --with-default-locking-dir=/run/lock/lvm \
-    --enable-lvmetad --with-thin=internal
+  cp -a LVM2.${pkgver} LVM2-initramfs
+
+  cd LVM2.${pkgver}
+
+  ./configure $CONFIGUREOPTS --enable-udev-systemd-background-jobs
   make
+
+  # Build legacy udev rule for initramfs
+  cd ../LVM2-initramfs
+  ./configure $CONFIGUREOPTS --enable-udev-systemd-background-jobs=no
+  cd udev
+  make 69-dm-lvm-metad.rules  
 }
 
 package_device-mapper() {
@@ -64,10 +69,10 @@ package_device-mapper() {
   # extra udev rule for device-mapper in initramfs
   install -D -m644 "${srcdir}/11-dm-initramfs.rules" "${pkgdir}/usr/lib/initcpio/udev/11-dm-initramfs.rules"
   # Install dmeventd socket and service
-  install -D -m644 "${srcdir}/dmeventd.service" "${pkgdir}/usr/lib/systemd/system/dmeventd.service"
-  install -D -m644 "${srcdir}/dmeventd.socket" "${pkgdir}/usr/lib/systemd/system/dmeventd.socket"
+  make DESTDIR="${pkgdir}" install_systemd_units
+  rm -f "${pkgdir}/usr/lib/systemd/system/"{blk-availability.service,lvm2-*}
   install -d -m755 "${pkgdir}/usr/lib/systemd/system/sockets.target.wants"
-  ln -sf /usr/lib/systemd/system/dmeventd.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/dmeventd.socket"
+  ln -sf ../dm-event.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/dm-event.socket"
 }
 
 package_lvm2() {
@@ -89,11 +94,12 @@ package_lvm2() {
   install -D -m644 "${srcdir}/lvm2_hook" "${pkgdir}/usr/lib/initcpio/hooks/lvm2"
   install -D -m644 "${srcdir}/lvm2_install" "${pkgdir}/usr/lib/initcpio/install/lvm2"
   install -D -m644 "${srcdir}/sd-lvm2" "${pkgdir}/usr/lib/initcpio/install/sd-lvm2"
+  # extra udev rule for lvmetad in non-systemd initramfs
+  install -D -m644 "${srcdir}/LVM2-initramfs/udev/69-dm-lvm-metad.rules" "${pkgdir}/usr/lib/initcpio/udev/69-dm-lvm-metad.rules"
   # systemd support
-  install -D -m644 "${srcdir}/lvm2.conf" "${pkgdir}/usr/lib/tmpfiles.d/lvm2.conf"
-  install -D -m644 "${srcdir}/lvm-monitoring.service" "${pkgdir}/usr/lib/systemd/system/lvm-monitoring.service"
-  install -D -m644 "${srcdir}/lvmetad.service" "${pkgdir}/usr/lib/systemd/system/lvmetad.service"
-  install -D -m644 "${srcdir}/lvmetad.socket" "${pkgdir}/usr/lib/systemd/system/lvmetad.socket"
+  make DESTDIR="${pkgdir}" install_systemd_units
+  rm -f "${pkgdir}/usr/lib/systemd/system/"dm-*
   install -d -m755 "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants"
-  ln -sf /usr/lib/systemd/system/lvmetad.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvmetad.socket"
+  ln -sf ../lvm2-lvmetad.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmetad.socket"
+  make DESTDIR="${pkgdir}" install_systemd_generators
 }
