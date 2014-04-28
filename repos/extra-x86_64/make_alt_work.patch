@@ -1,21 +1,50 @@
-From b73782a28894e25ed146271f9d6c6775a6836199 Mon Sep 17 00:00:00 2001
-From: Behdad Esfahbod <behdad@behdad.org>
-Date: Fri, 04 Jun 2010 18:36:45 +0000
-Subject: Bug 601926 - Don't hardcode meta to alt
+From a9d6a34708f846952f423d078397352858f7b1a4 Mon Sep 17 00:00:00 2001
+From: Christian Persch <chpe@gnome.org>
+Date: Sat, 12 May 2012 18:48:05 +0200
+Subject: [PATCH] keymap: Treat ALT as META
 
+https://bugzilla.gnome.org/show_bug.cgi?id=663779
 ---
-diff --git a/src/keymap.h b/src/keymap.h
-index 3a4cefe..243e22e 100644
---- a/src/keymap.h
-+++ b/src/keymap.h
-@@ -27,7 +27,7 @@
+ src/vte.c |   23 ++++++++++++++---------
+ 1 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/src/vte.c b/src/vte.c
+index dd27e9a..0657921 100644
+--- a/src/vte.c
++++ b/src/vte.c
+@@ -5170,19 +5170,24 @@ static void
+ vte_terminal_read_modifiers (VteTerminal *terminal,
+ 			     GdkEvent *event)
+ {
++        GdkKeymap *keymap;
+ 	GdkModifierType modifiers;
  
- G_BEGIN_DECLS
+ 	/* Read the modifiers. */
+-	if (gdk_event_get_state((GdkEvent*)event, &modifiers)) {
+-		GdkKeymap *keymap;
+-#if GTK_CHECK_VERSION (2, 90, 8)
+-                keymap = gdk_keymap_get_for_display(gdk_window_get_display(((GdkEventAny*)event)->window));
+-#else
+-                keymap = gdk_keymap_get_for_display(gdk_drawable_get_display(((GdkEventAny*)event)->window));
++	if (!gdk_event_get_state((GdkEvent*)event, &modifiers))
++                return;
++
++        keymap = gdk_keymap_get_for_display(gdk_window_get_display(((GdkEventAny*)event)->window));
++
++        gdk_keymap_add_virtual_modifiers (keymap, &modifiers);
++
++#if 1
++        /* HACK! Treat ALT as META; see bug #663779. */
++        if (modifiers & GDK_MOD1_MASK)
++                modifiers |= VTE_META_MASK;
+ #endif
+-                gdk_keymap_add_virtual_modifiers (keymap, &modifiers);
+-		terminal->pvt->modifiers = modifiers;
+-	}
++
++        terminal->pvt->modifiers = modifiers;
+ }
  
--#define VTE_META_MASK		GDK_MOD1_MASK
-+#define VTE_META_MASK		GDK_META_MASK
- #define VTE_NUMLOCK_MASK	GDK_MOD2_MASK
- 
- /* Map the specified keyval/modifier setup, dependent on the mode, to either
---
-cgit v0.9.2
+ /* Read and handle a keypress event. */
+-- 
+1.7.5.1.217.g4e3aa.dirty
