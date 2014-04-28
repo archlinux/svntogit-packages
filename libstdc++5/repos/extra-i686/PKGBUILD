@@ -3,7 +3,7 @@
 
 pkgname=libstdc++5
 pkgver=3.3.6
-pkgrel=4
+pkgrel=5
 pkgdesc="GNU Standard C++ library version 3"
 arch=('i686' 'x86_64')
 url="http://gcc.gnu.org"
@@ -12,16 +12,15 @@ depends=('gcc-libs')
 makedepends=('binutils' 'gcc')
 options=('!makeflags')
 source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-{core,g++}-${pkgver}.tar.bz2
-        'gcc-3.4.3-no_multilib_amd64.patch')
+        gcc-3.4.3-no_multilib_amd64.patch
+        siginfo.patch)
 md5sums=('18c52e6fb8966b7700665dca289d077f'
          '6b3d00b8d079805be1b895f7f6ce47a0'
-         '088e0807e677010cafe4e590e8711be1')
+         '088e0807e677010cafe4e590e8711be1'
+         'bf36b281a9fc81f624f31f2623a3ad0e')
 
-build(){
-  export CFLAGS="-march=${CARCH/_/-} -O2 -pipe"
-  export CXXFLAGS="-march=${CARCH/_/-} -O2 -pipe"
-
-  cd ${srcdir}/gcc-${pkgver}
+prepare() {
+  cd gcc-$pkgver
 
   if [ "$CARCH" = "x86_64" ]; then
     patch -Np0 -i $srcdir/gcc-3.4.3-no_multilib_amd64.patch
@@ -33,9 +32,18 @@ build(){
   # No fixincludes
   sed -i -e 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 
+  patch -Np0 -i ../siginfo.patch
+
   mkdir ../gcc-build
-  cd ../gcc-build
-  ../gcc-${pkgver}/configure --prefix=/usr --enable-shared \
+}
+
+build(){
+  export CFLAGS="-march=${CARCH/_/-} -O2"
+  export CXXFLAGS="-march=${CARCH/_/-} -O2"
+  unset CPPFLAGS
+
+  cd gcc-build
+  CPP=/usr/bin/cpp ../gcc-${pkgver}/configure --prefix=/usr --enable-shared \
       --enable-languages=c++ --enable-threads=posix --enable-__cxa_atexit \
       --disable-multilib --libdir=/usr/lib
   make all-target-libstdc++-v3 BOOT_CFLAGS="${CFLAGS}" STAGE1_CFLAGS="-O"
