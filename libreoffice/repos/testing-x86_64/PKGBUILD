@@ -20,7 +20,7 @@ pkgname=('libreoffice-common'
 	'libreoffice-extension-nlpsolver') # svn up -r 142692 (last one with all extensions built)
 _LOver=4.2.4.2
 pkgver=4.2.4
-pkgrel=0.3
+pkgrel=0.4
 arch=('i686' 'x86_64')
 license=('LGPL3')
 url="http://www.libreoffice.org/"
@@ -33,7 +33,7 @@ makedepends=( # makedepends
              # the runtime dependencies
              "curl>=7.20.0" "hunspell>=1.2.8" "python>=3.4" 'libwpd>=0.9.2'
 			 'libwps' 'libxaw' "neon>=0.28.6" 'pango' 'nspr' 'libjpeg' 'libxrandr'
-			 'libgl' 'dbus-glib' 'libxslt' 'librsvg' 'redland' #"icu>=52.1" 
+			 'libgl' 'dbus-glib' 'libxslt' 'librsvg' 'redland' 'icu'
 			 'hyphen' 'lpsolve' 'gcc-libs' 'sh'  'libtextcat' 'graphite'
 			 'lcms2' 'poppler>=0.24.0' 'libvisio' 'libetonyek' 'libodfgen'
 			 'libcdr' 'libmspub'
@@ -55,7 +55,6 @@ _additional_source_url="http://dev-www.libreoffice.org/src"
 _additional_source_url2="http://dev-www.libreoffice.org/extern"
 source=(${_mirror}/${pkgbase}{,-help,-translations}-${_LOver}.tar.xz{,.asc}
 	${_additional_source_url}/15cb8c0803064faef0c4ddf5bc5ca279-boost_1_54_0.tar.bz2
-	${_additional_source_url}/9e96ed4c1d99c0d14ac03c140f9f346c-icu4c-52_1-src.tgz
 	${_additional_source_url}/1f24ab1d39f4a51faf22244c94a6203f-xmlsec1-1.2.14.tar.gz
 	${_additional_source_url}/35c94d2df8893241173de1d16b6034c0-swingExSrc.zip
 	${_additional_source_url}/798b2ffdc8bcfe7bca2cf92b62caf685-rhino1_5R5.zip
@@ -90,9 +89,10 @@ source=(${_mirror}/${pkgbase}{,-help,-translations}-${_LOver}.tar.xz{,.asc}
 	${_additional_source_url}/language-subtag-registry-2014-03-27.tar.bz2 
 	make-pyuno-work-with-system-wide-module-install.diff
 	libreoffice-common.sh libreoffice-common.csh
-	prevent_KDE_Qt_from_interfering_with_the_session_manager.diff)
+	prevent_KDE_Qt_from_interfering_with_the_session_manager.diff
+	icu53.diff
+	icu53_crashfix.diff)
 noextract=(15cb8c0803064faef0c4ddf5bc5ca279-boost_1_54_0.tar.bz2
-	9e96ed4c1d99c0d14ac03c140f9f346c-icu4c-52_1-src.tgz
 	185d60944ea767075d27247c3162b3bc-unowinreg.dll
 	798b2ffdc8bcfe7bca2cf92b62caf685-rhino1_5R5.zip
 	1f24ab1d39f4a51faf22244c94a6203f-xmlsec1-1.2.14.tar.gz
@@ -132,7 +132,6 @@ md5sums=('698a482f0cacd8b5eba9865fdd8a5403'
          '3db05930dc7c694d2cf58875b3245c2e'
          'SKIP'
          '15cb8c0803064faef0c4ddf5bc5ca279'
-         '9e96ed4c1d99c0d14ac03c140f9f346c'
          '1f24ab1d39f4a51faf22244c94a6203f'
          '35c94d2df8893241173de1d16b6034c0'
          '798b2ffdc8bcfe7bca2cf92b62caf685'
@@ -168,7 +167,9 @@ md5sums=('698a482f0cacd8b5eba9865fdd8a5403'
          '07d2bf5ad839a394cca008b3ec6e7bb1'
          '4195735a80876ae812fca5736b50192a'
          'e7e4b3e70e99e5cba8f8dfcacf3b0d87'
-         'fa2109339289663cb8ea7cf27cc22f4e')
+         'fa2109339289663cb8ea7cf27cc22f4e'
+         '07f53a9f899e533f9393e48b5d429165'
+         '2a296750092824cd5631e7b529433b28')
 
 prepare() {
 
@@ -193,6 +194,10 @@ prepare() {
     # fix some startup issues with kde4 integration
     # https://bugs.archlinux.org/task/39819 - https://bugs.freedesktop.org/show_bug.cgi?id=77128
     patch -Np1 -i ${srcdir}/prevent_KDE_Qt_from_interfering_with_the_session_manager.diff
+
+    # upstream fixes for icu 53
+    patch -Np1 -i ${srcdir}/icu53.diff
+    patch -Np1 -i ${srcdir}/icu53_crashfix.diff
 
 	#use the CFLAGS but remove the LibO overridden ones
 	for i in $CFLAGS; do
@@ -283,7 +288,7 @@ build() {
 		--without-system-npapi-headers \
 		--with-ant-home="/usr/share/apache-ant"\
 		--without-system-boost\
-		--without-system-icu \
+		--with-system-icu \
 		--with-system-cairo\
 		--with-system-libs\
 		--with-system-mythes\
@@ -317,7 +322,7 @@ package_libreoffice-common() {
  install=libreoffice-common.install
  depends=('libreoffice-langpack' "hunspell>=1.2.8" "python>=3.3" "neon>=0.28.6"
 		  'dbus-glib' 'librsvg' 'libcups' 'nss' 'libsm' 'redland' 'hyphen'
-		  'graphite' 'clucene' 'lcms2' "poppler>=0.24.0" #"icu>=52.1"
+		  'graphite' 'clucene' 'lcms2' "poppler>=0.24.0" 'icu'
 		  #'telepathy-glib' # (calc telepathy-glib libtubeslo.so)
           'libodfgen'  'libvisio' 'harfbuzz-icu' 'hicolor-icon-theme' 'glu'
           'libmspub' 'libcdr'
