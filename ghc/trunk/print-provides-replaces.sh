@@ -31,13 +31,17 @@ print_var() {
   for pkg in $(ls ./*/*.cabal | awk -F '/' '{ print $2 }'); do
     [[ ${exclude[${pkg}]} ]] && continue
     version=$(awk 'tolower($0) ~ /^version:/ {print $2 }' $pkg/$pkg.cabal)
-    printf "'haskell-$pkg$2$version'\n          "
+    printf "'haskell-$pkg"
+    [[ -n "$2" ]] && printf "$2$version"
+    printf "'\n          "
   done
   # also add cabal
   version=$(awk 'tolower($0) ~ /^version:/ { print $2 }' Cabal/Cabal/Cabal.cabal)
-  printf "'haskell-cabal$2$version'\n          "
+  printf "'haskell-cabal"
+  [[ -n "$2" ]] && printf "$2$version"
+  printf "'\n          "
   echo -e '\b)'
 }
 
 print_var 'provides' '='
-print_var 'replaces' '<'
+print_var 'replaces'
