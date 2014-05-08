@@ -3,14 +3,15 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=shadow
-pkgver=4.1.5.1
-pkgrel=9
+pkgver=4.2
+pkgrel=1
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('i686' 'x86_64')
 url='http://pkg-shadow.alioth.debian.org/'
 license=('BSD')
 groups=('base')
 depends=('bash' 'pam' 'acl')
+makedepends=('libxslt' 'gnome-doc-utils' 'docbook-xsl')
 backup=(etc/login.defs
         etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
         etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
@@ -18,7 +19,7 @@ backup=(etc/login.defs
         etc/default/useradd)
 options=(strip debug)
 install='shadow.install'
-source=("ftp://ftp.archlinux.org/other/packages/$pkgname/$pkgname-$pkgver.tar.bz2"{,.sig}
+source=("http://pkg-shadow.alioth.debian.org/releases/$pkgname-$pkgver.tar.xz"{,.sig}
         LICENSE
         chgpasswd
         chpasswd
@@ -31,7 +32,7 @@ source=("ftp://ftp.archlinux.org/other/packages/$pkgname/$pkgname-$pkgver.tar.bz
         xstrdup.patch
         shadow-strncpy-usage.patch
         lastlog.tmpfiles)
-sha1sums=('81f38720b953ef9c2c100c43d02dfe19cafd6c30'
+sha1sums=('77feddc823a42623462d3c3a9a49f2f6cf213ca9'
           'SKIP'
           '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
           '4ad0e059406a305c8640ed30d93c2a1f62c2f4ad'
@@ -47,32 +48,38 @@ sha1sums=('81f38720b953ef9c2c100c43d02dfe19cafd6c30'
           '21e12966a6befb25ec123b403cd9b5c492fe5b16'
           'f57ecde3f72b4738fad75c097d19cf46a412350f')
 
-build() {
+prepare() {
   cd "$pkgname-$pkgver"
-
-  # avoid transitive linking issues with binutils 2.22
-  sed -i '/^user\(mod\|add\)_LDADD/s|$| -lattr|' src/Makefile.am
-
-  # link to glibc's crypt(3)
-  export LIBS="-lcrypt"
 
   # need to offer these upstream
   patch -Np1 <"$srcdir/xstrdup.patch"
   patch -Np1 <"$srcdir/shadow-strncpy-usage.patch"
 
   # supress etc/pam.d/*, we provide our own
-  sed -i '/^SUBDIRS/s/pam.d//' etc/Makefile.in
+  sed -i '/^SUBDIRS/s/pam\.d//' etc/Makefile.am
+
+  # XXX: The tarball for 4.2 wasn't created with make dist, so this means we
+  # have to do this ourselves. It also means the manpages aren't pregenerated,
+  # so we have to pass --enable-man, and add additional makedepends.
+  # http://lists.alioth.debian.org/pipermail/pkg-shadow-devel/2014-May/010237.html
+  autoreconf -fi
+}
+
+build() {
+  cd "$pkgname-$pkgver"
 
   ./configure \
+    LIBS="-lcrypt" \
     --prefix=/usr \
     --bindir=/usr/bin \
     --sbindir=/usr/bin \
     --libdir=/lib \
     --mandir=/usr/share/man \
     --sysconfdir=/etc \
+    --enable-man \
     --with-libpam \
-    --without-selinux \
-    --with-group-name-max-length=32
+    --with-group-name-max-length=32 \
+    --without-selinux
 
   make
 }
@@ -89,10 +96,10 @@ package() {
   install -Dm644 "$srcdir/useradd.defaults" "$pkgdir/etc/default/useradd"
 
   # systemd timer
-  install -D -m644 ${srcdir}/shadow.timer ${pkgdir}/usr/lib/systemd/system/shadow.timer
-  install -D -m644 ${srcdir}/shadow.service ${pkgdir}/usr/lib/systemd/system/shadow.service
-  install -d -m755 ${pkgdir}/usr/lib/systemd/system/multi-user.target.wants
-  ln -s ../shadow.timer ${pkgdir}//usr/lib/systemd/system/multi-user.target.wants/shadow.timer
+  install -D -m644 "$srcdir/shadow.timer" "$pkgdir/usr/lib/systemd/system/shadow.timer"
+  install -D -m644 "$srcdir/shadow.service" $pkgdir/usr/lib/systemd/system/shadow.service
+  install -d -m755 "$pkgdir/usr/lib/systemd/system/multi-user.target.wants"
+  ln -s ../shadow.timer "$pkgdir/usr/lib/systemd/system/multi-user.target.wants/shadow.timer"
 
   # login.defs
   install -Dm644 "$srcdir/login.defs" "$pkgdir/etc/login.defs"
@@ -111,7 +118,7 @@ package() {
   done
 
   # lastlog log file creation
-  install -Dm644 "$srcdir/lastlog.tmpfiles" "${pkgdir}/usr/lib/tmpfiles.d/lastlog.conf"
+  install -Dm644 "$srcdir/lastlog.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/lastlog.conf"
 
   # Remove evil/broken tools
   rm "$pkgdir"/usr/sbin/logoutd
