@@ -3,9 +3,10 @@
 # Contributor: kevin <kevin@archlinux.org>
 
 pkgname=ntp
-pkgver=4.2.6.p5
-_realver=4.2.6p5
-pkgrel=19
+_pkgname=ntp-dev
+_pkgver=4.2.7p441
+pkgver=${_pkgver/p/.p}
+pkgrel=1
 pkgdesc='Network Time Protocol reference implementation'
 url='http://www.ntp.org/'
 license=('custom')
@@ -13,24 +14,24 @@ arch=('i686' 'x86_64')
 makedepends=('perl-html-parser')
 depends=('openssl' 'libcap' 'libedit')
 backup=('etc/ntp.conf')
-source=("http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-${_realver}.tar.gz"
+source=("http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/${_pkgname}/${_pkgname}-${_pkgver}.tar.gz"
         'ntp.conf'
         'ntpd.service'
         'ntpdate.service')
-sha1sums=('4a5353a4791b6f4315a66c28d504ec6c7926b192'
+sha1sums=('81444413350982f92f99885f201b50df24a14201'
           'd3496dbeb7d531dd6ab071dbce3262c3c9618d8b'
           'dd24216e8333e12d5080965696602591c72537b1'
-          '059b382d1af0c55202e2d17f2ae065a2cbfec9ee'
-)
+          '059b382d1af0c55202e2d17f2ae065a2cbfec9ee')
 
+options=('!emptydirs')
 install=install
 
 build() {
-	cd "${srcdir}/${pkgname}-${_realver}"
+	cd "${srcdir}/${_pkgname}-${_pkgver}"
 
 	./configure \
 		--prefix=/usr \
-		--mandir=/usr/share/man \
+		--libexecdir=/usr/lib \
 		--enable-linuxcaps \
 		--enable-ntp-signd \
 
@@ -38,22 +39,17 @@ build() {
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${_realver}"
+	cd "${srcdir}/${_pkgname}-${_pkgver}"
 
 	make DESTDIR="${pkgdir}" install
 
-	rmdir "${pkgdir}"/usr/{lib,sbin}
-	install -d -o 87 "${pkgdir}"/var/lib/ntp
 	install -Dm644 ../ntp.conf "${pkgdir}"/etc/ntp.conf
 	install -Dm644 ../ntpd.service "${pkgdir}"/usr/lib/systemd/system/ntpd.service
 	install -Dm644 ../ntpdate.service "${pkgdir}"/usr/lib/systemd/system/ntpdate.service
 	install -Dm644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-	
-	cd html
-	../scripts/html2man
-	install -d "${pkgdir}"/usr/share/man
-	mv man/man* "${pkgdir}"/usr/share/man
-	mv "${pkgdir}/usr/share/man/man8/ntpd.8" "${pkgdir}/usr/share/man/man8/ntp-ntpd.8" # we should ditch openntpd
+
+	install -d -o 87 "${pkgdir}"/var/lib/ntp
+	echo > "${pkgdir}/var/lib/ntp/.placeholder"
 
 	install -dm755 "${pkgdir}/usr/lib/systemd/ntp-units.d"
 	echo 'ntpd.service' > "${pkgdir}/usr/lib/systemd/ntp-units.d/${pkgname}.list"
