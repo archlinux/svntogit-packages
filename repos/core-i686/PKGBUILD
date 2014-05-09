@@ -7,8 +7,8 @@
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.9.0
 _pkgver=4.9
-pkgrel=1
-#_snapshot=4.9.0-RC-20140411
+pkgrel=2
+_snapshot=4.9-20140507
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -16,11 +16,13 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.24' 'libmpc' 'cloog' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
-source=(ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-        #ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-        gcc-4.8-filename-output.patch)
-md5sums=('9709b49ae0e904cbb0a6a1b62853b556'
-         '40cb437805e2f7a006aa0d0c3098ab0f')
+source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
+        ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
+        gcc-4.8-filename-output.patch
+	gcc-4.9-tree-ssa-threadedge.patch)
+md5sums=('47dc2b91d2876daff53c20c30164c38f'
+         '40cb437805e2f7a006aa0d0c3098ab0f'
+         '311ece7f5446d550e84e28692d2fb823')
 
 if [ -n "${_snapshot}" ]; then
   _basedir=gcc-${_snapshot}
@@ -46,6 +48,9 @@ prepare() {
 
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57653
   patch -p0 -i ${srcdir}/gcc-4.8-filename-output.patch
+
+  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60902
+  patch -p1 -i ${srcdir}/gcc-4.9-tree-ssa-threadedge.patch
 
   mkdir ${srcdir}/gcc-build
 }
@@ -177,6 +182,8 @@ package_gcc()
   make -C $CHOST/libsanitizer/asan DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS
 
   make -C libiberty DESTDIR=${pkgdir} install
+  # install PIC version of libiberty
+  install -m644 ${srcdir}/gcc-build/libiberty/pic/libiberty.a ${pkgdir}/usr/lib
 
   make -C gcc DESTDIR=${pkgdir} install-man install-info
   rm ${pkgdir}/usr/share/man/man1/{gccgo,gfortran}.1
@@ -185,7 +192,7 @@ package_gcc()
   make -C libcpp DESTDIR=${pkgdir} install
   make -C gcc DESTDIR=${pkgdir} install-po
 
-  # many packages expect this symlinks
+  # many packages expect this symlink
   ln -s gcc ${pkgdir}/usr/bin/cc
 
   # POSIX conformance launcher scripts for c89 and c99
