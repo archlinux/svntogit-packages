@@ -72,11 +72,17 @@ noextract=("openjdk-${_OPENJDK_CHANGESET}.tar.gz"
            "langtools-${_LANGTOOLS_CHANGESET}.tar.gz"
            "hotspot-${_HOTSPOT_CHANGESET}.tar.gz")
 
-  _jvmdir=/usr/lib/jvm/java-7-openjdk
+[ "$CARCH" = "x86_64" ] && _JARCH=amd64
+[ "$CARCH" = "i686" ]   && _JARCH=i386
 
-  [ "$CARCH" = "x86_64" ] && _JARCH=amd64
-  [ "$CARCH" = "i686" ] && _JARCH=i386
-  
+_jvmdir=/usr/lib/jvm/java-7-openjdk
+_imgdir="icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image"
+_nonheadless=(bin/policytool
+              lib/${_JARCH}/libjsoundalsa.so
+              lib/${_JARCH}/libpulse-java.so
+              lib/${_JARCH}/libsplashscreen.so
+              lib/${_JARCH}/xawt/libmawt.so)
+
 build() {
   cd "${srcdir}/icedtea-${_icedtea_ver}"
   
@@ -153,40 +159,32 @@ package_jre7-openjdk-headless() {
           etc/java-7-openjdk/tz.properties)
   install=jre7-openjdk-headless.install
 
-  cd "${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image/jre"
-
-  mv lib/fontconfig.Ubuntu.properties.src lib/fontconfig.properties
-  mv lib/fontconfig.Ubuntu.bfc lib/fontconfig.bfc
-  rm -f lib/fontconfig.*.bfc
-  rm -f lib/fontconfig.*.properties.src 
-  rm -f lib/fontconfig.properties.src
+  cd "${srcdir}/${_imgdir}/jre"
 
   install -d -m755 ${pkgdir}${_jvmdir}/jre
   cp -a bin lib ${pkgdir}${_jvmdir}/jre
 
-  # Install man pages
-  pushd ../../j2re-image/man
-  install -m755 -d ${pkgdir}/usr/share/man/{,ja/}man1/
-  install -m644 man1/*.1 ${pkgdir}/usr/share/man/man1
-  install -m644 ja_JP.UTF-8/man1/*.1 ${pkgdir}/usr/share/man/ja/man1
-  popd
+  mv "${pkgdir}${_jvmdir}"/jre/lib/fontconfig.{Ubuntu.properties.src,properties}
+  mv "${pkgdir}${_jvmdir}"/jre/lib/fontconfig.{Ubuntu.bfc,bfc}
+  rm -f "${pkgdir}${_jvmdir}"/jre/lib/fontconfig.*.bfc
+  rm -f "${pkgdir}${_jvmdir}"/jre/lib/fontconfig.*.properties.src
+  rm -f "${pkgdir}${_jvmdir}"/jre/lib/fontconfig.properties.src
 
-  # more files that belong to the desktop package
-  mkdir ${srcdir}/tmp-desktop-jre
-  for file in \
-      "${_jvmdir}/jre/bin/policytool" \
-      "${_jvmdir}/jre/lib/${_JARCH}/libjsoundalsa.so" \
-      "${_jvmdir}/jre/lib/${_JARCH}/libpulse-java.so" \
-      "${_jvmdir}/jre/lib/${_JARCH}/libsplashscreen.so" \
-      "${_jvmdir}/jre/lib/${_JARCH}/xawt/libmawt.so" \
-      "/usr/share/man/ja/man1/policytool.1" \
-      "/usr/share/man/man1/policytool.1"; do
-     dirname=`dirname $file`
-     install -dm755 ${srcdir}/tmp-desktop-jre/$dirname || /bin/true
-     # mv file from fakeinstall to pkgdir
-     mv ${pkgdir}/$file ${srcdir}/tmp-desktop-jre$file
+  # Remove 'non-headless' files
+  for f in ${_nonheadless[@]}; do
+    rm "${pkgdir}${_jvmdir}/jre/${f}"
   done
-  rmdir ${pkgdir}${_jvmdir}/jre/lib/${_JARCH}/xawt
+
+  # Man pages
+  pushd "${pkgdir}${_jvmdir}/jre/bin"
+  install -d -m 755 "${pkgdir}"/usr/share/man/{,ja/}man1/
+  for file in *; do
+    install -m 644 "${srcdir}/${_imgdir}/man/man1/${file}.1" \
+      "${pkgdir}/usr/share/man/man1/${file}.1"
+    install -m 644 "${srcdir}/${_imgdir}/man/ja/man1/${file}.1" \
+      "${pkgdir}/usr/share/man/ja/man1/${file}.1"
+  done
+  popd
 
   # Link binaries into /usr/bin
   pushd ${pkgdir}${_jvmdir}/jre/bin
@@ -261,8 +259,13 @@ package_jre7-openjdk() {
   install=jre7-openjdk.install
   provides=('java-runtime=7')
   conflicts=('openjdk6')
-  
-  mv ${srcdir}/tmp-desktop-jre/* ${pkgdir}
+
+  cd "${srcdir}/${_imgdir}/jre"
+
+  for f in ${_nonheadless[@]}; do
+    install -D ${f} "${pkgdir}${_jvmdir}/jre/${f}"
+  done
+
   # Link binaries into /usr/bin
   pushd ${pkgdir}${_jvmdir}/jre/bin
   install -m755 -d ${pkgdir}/usr/bin/
@@ -270,8 +273,17 @@ package_jre7-openjdk() {
     ln -sf ${_jvmdir}/jre/bin/${file} ${pkgdir}/usr/bin
   done
   popd
-  
-  cd "${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image/jre"
+
+  # Man pages
+  pushd "${pkgdir}${_jvmdir}/jre/bin"
+  install -d -m 755 "${pkgdir}"/usr/share/man/{,ja/}man1/
+  for file in *; do
+    install -m 644 "${srcdir}/${_imgdir}/man/man1/${file}.1" \
+      "${pkgdir}/usr/share/man/man1/${file}.1"
+    install -m 644 "${srcdir}/${_imgdir}/man/ja/man1/${file}.1" \
+      "${pkgdir}/usr/share/man/ja/man1/${file}.1"
+  done
+  popd
 
   # Install icons and menu entries
   for s in 16 24 32 48 ; do
@@ -297,7 +309,7 @@ package_jdk7-openjdk() {
   replaces=('openjdk6')
   backup=(etc/profile.d/jdk.sh etc/profile.d/jdk.csh)
 
-  cd "${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image"
+  cd "${srcdir}/${_imgdir}"
 
   # Main files
   install -m755 -d ${pkgdir}${_jvmdir}
@@ -350,9 +362,8 @@ package_jdk7-openjdk() {
 package_openjdk7-src() {
   pkgdesc="Free Java environment based on OpenJDK 7.0 with IcedTea7 replacing binary plugs - sources"
   replaces=('openjdk6-src')
-  
-  install -D ${srcdir}/icedtea-${_icedtea_ver}/openjdk.build/j2sdk-image/src.zip \
-             ${pkgdir}${_jvmdir}/src.zip
+
+  install -D ${srcdir}/${_imgdir}/src.zip ${pkgdir}${_jvmdir}/src.zip
 }
 
 package_openjdk7-doc() {
