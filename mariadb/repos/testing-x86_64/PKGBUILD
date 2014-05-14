@@ -5,11 +5,11 @@ pkgbase=mariadb
 pkgname=('libmariadbclient' 'mariadb-clients' 'mytop' 'mariadb')
 pkgver=10.0.11
 _pkgver=${pkgver/.a/a}
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('GPL')
 url='http://mariadb.org/'
-makedepends=('cmake' 'openssl' 'zlib' 'libaio' 'libxml2' 'openssl' 'pcre')
+makedepends=('cmake' 'openssl' 'zlib' 'libaio' 'libxml2' 'openssl' 'pcre' 'clang')
 source=(https://downloads.mariadb.org/interstitial/mariadb-$pkgver/source/mariadb-$pkgver.tar.gz
         mariadb.service
         mariadb-post.sh
@@ -19,10 +19,19 @@ md5sums=('faa2ea3f9c6f7bc5f021d299367a7a8d'
          'b79e65a5aa536e6b5bc60988eb0b78a2'
          '2fa6e456964d4ff5e6d4f9ff0126aed6')
 
+prepare() {
+  cd $pkgbase-$_pkgver
+
+  # Fix build with ld.gold (for building with clang)
+  # https://mariadb.atlassian.net/browse/MDEV-5982
+  sed -i 's/-Wl,/&-T,/' libmysql/CMakeLists.txt
+}
+
 build() {
   mkdir build
   cd build
 
+  CC=clang CXX=clang++ \
   cmake ../$pkgbase-$_pkgver \
     -DBUILD_CONFIG=mysql_release \
     -DCMAKE_INSTALL_PREFIX=/usr \
