@@ -37,7 +37,7 @@ md5sums=('e26b8cc666b162f999404b03970f14e4'
 
 prepare() {
   cd ${srcdir}/${pkgname}-${pkgver}
-  
+
   # fix for {linux,sys}/xattr.h incompatibility - commit fdbe8eae
   patch -p1 -i $srcdir/glibc-2.19-xattr_header.patch
 
@@ -82,7 +82,7 @@ build() {
   # build libraries with hardening disabled
   echo "build-programs=no" >> configparms
   make
-  
+
   # re-enable hardening for programs
   sed -i "/build-programs=/s#no#yes#" configparms
   echo "CC += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
@@ -98,7 +98,7 @@ check() {
   LDFLAGS=${LDFLAGS/--as-needed,/}
 
   cd ${srcdir}/glibc-build
-  
+
   # ULP failures on i686 are all small and can be ignored
   # tst-cleanupx4.out failure on i686 needs investigating...
   make -k check || true
