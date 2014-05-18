@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer : Ionut Biru <ibiru@archlinux.org>
+# Contributor: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor:  Douglas Soares de Andrade <douglas@archlinux.org>
+
+pkgbase=twisted
+pkgname=(python-twisted python2-twisted)
+pkgver=14.0.0
+pkgrel=1
+pkgdesc="Asynchronous networking framework written in Python"
+arch=('i686' 'x86_64')
+url="http://twistedmatrix.com/"
+license=('MIT')
+makedepends=('python-crypto' 'python2-crypto' 'python-zope-interface' 'python2-zope-interface'
+             'python-setuptools' 'python2-setuptools' 'python-service-identity' 'python2-service-identity')
+source=("http://twistedmatrix.com/Releases/Twisted/${pkgver%.*}/Twisted-$pkgver.tar.bz2")
+sha1sums=('a90fae98072f8e28b9459875ce9b77f5524bbc48')
+
+prepare() {
+  cp -a "Twisted-$pkgver"{,-py2}
+
+  cd "Twisted-$pkgver-py2"
+  sed -i 's:^#!.*bin.*python:#!/usr/bin/python2:' \
+    twisted/python/test/pullpipe.py \
+    twisted/mail/test/pop3testserver.py \
+    twisted/trial/test/scripttest.py
+}
+
+build() {
+  cd "$srcdir/Twisted-$pkgver"
+  python3 setup.py build
+
+  cd "$srcdir/Twisted-$pkgver-py2"
+  python2 setup.py build
+}
+
+check() {
+  cd "$srcdir/Twisted-$pkgver"
+  #python bin/trial twisted
+
+  cd "$srcdir/Twisted-$pkgver-py2"
+  python2 bin/trial twisted || warning "Tests failed"
+}
+
+package_python-twisted() {
+  depends=('python-crypto' 'python-zope-interface')
+  optdepends=('python-pyopenssl'
+              'python-service-identity: for TLS client hostname verification'
+              'python-pyasn1: for using conch'
+              'tk: for using tkconch')
+
+  cd "Twisted-$pkgver"
+  python3 setup.py install --prefix=/usr --root="$pkgdir" --optimize=1
+  install -D -m644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_python2-twisted() {
+  depends=('python2-crypto' 'python2-zope-interface')
+  optdepends=('python2-pyopenssl'
+              'python2-service-identity: for TLS client hostname verification'
+              'python2-soappy: for twisted.web.soap'
+              'python2-pyasn1: for using conch'
+              'pygtk: for using manhole'
+              'tk: for using tkconch')
+  provides=("twisted=$pkgver")
+  conflicts=('twisted<14.0.0')
+  replaces=('twisted<14.0.0')
+
+  cd "Twisted-$pkgver-py2"
+  python2 setup.py install --prefix=/usr --root="$pkgdir" --optimize=1
+  install -D -m644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
