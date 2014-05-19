@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=1.9.2
+pkgver=1.9.3
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -39,6 +39,7 @@ build() {
 
   make -C contrib/emacs prefix=/usr
   make -C contrib/credential/gnome-keyring
+  make -C contrib/subtree prefix=/usr all doc
 }
 
 check() {
@@ -46,12 +47,7 @@ check() {
   cd "$srcdir/$pkgname-$pkgver"
   local jobs
   jobs=$(expr "$MAKEFLAGS" : '.*\(-j[0-9]*\).*')
-  # build failures with multiple jobs in check, not ideal...
-  jobs='-j1'
   mkdir -p /dev/shm/git-test
-  # We used to use this, but silly git regressions:
-  #GIT_TEST_OPTS="--root=/dev/shm/" \
-  # http://comments.gmane.org/gmane.comp.version-control.git/202020
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
     USE_LIBPCRE=1 \
@@ -86,13 +82,15 @@ package() {
   install -m755 contrib/credential/gnome-keyring/git-credential-gnome-keyring \
       "$pkgdir"/usr/lib/git-core/git-credential-gnome-keyring
   make -C contrib/credential/gnome-keyring clean
+  # subtree installation
+  sed "s|libexec/git-core|lib/git-core|" -i contrib/subtree/Makefile
+  make -C contrib/subtree prefix=/usr DESTDIR="$pkgdir" install install-doc
   # the rest of the contrib stuff
   cp -a ./contrib/* $pkgdir/usr/share/git/
 
   # scripts are for python 2.x
   sed -i 's|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|' \
     $(find "$pkgdir" -name '*.py') \
-    "$pkgdir"/usr/lib/git-core/git-p4 \
     "$pkgdir"/usr/share/git/gitview/gitview \
     "$pkgdir"/usr/share/git/remote-helpers/git-remote-bzr \
     "$pkgdir"/usr/share/git/remote-helpers/git-remote-hg
@@ -107,6 +105,6 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('437c32078b5b5b229f1c10f6474eae78'
+md5sums=('560200d1db05a2dd2b8a2b3718655463'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
