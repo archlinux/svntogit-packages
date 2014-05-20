@@ -1,0 +1,482 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+
+pkgbase=qt5
+pkgname=('qt5-base'
+         'qt5-connectivity'
+         'qt5-declarative'
+         'qt5-doc'
+         'qt5-enginio'
+         'qt5-graphicaleffects'
+         'qt5-imageformats'
+         'qt5-location'
+         'qt5-multimedia'
+         'qt5-quick1'
+         'qt5-quickcontrols'
+         'qt5-script'
+         'qt5-sensors'
+         'qt5-serialport'
+         'qt5-svg'
+         'qt5-tools'
+         'qt5-translations'
+         'qt5-webkit'
+         'qt5-websockets'
+         'qt5-x11extras'
+         'qt5-xmlpatterns')
+pkgver=5.3.0
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://qt-project.org/'
+license=('GPL3' 'LGPL' 'FDL' 'custom')
+makedepends=('libxcb' 'xcb-proto' 'xcb-util' 'xcb-util-image' 'xcb-util-wm' 'xcb-util-keysyms'
+            'mesa' 'at-spi2-core' 'alsa-lib' 'gst-plugins-base-libs' 'gstreamer0.10-base-plugins' 'libmng'
+            'libjpeg-turbo' 'cups' 'libpulse' 'hicolor-icon-theme' 'desktop-file-utils'
+            'postgresql-libs' 'libmariadbclient' 'sqlite' 'unixodbc' 'libfbclient'
+            'python2' 'ruby' 'gperf' 'libxslt' 'libxcomposite' 'fontconfig'
+            'openal' 'gtk2' 'libxkbcommon-x11' 'python' 'mtdev' 'harfbuzz')
+groups=('qt' 'qt5')
+_pkgfqn="qt-everywhere-opensource-src-${pkgver}"
+source=("http://download.qt-project.org/official_releases/qt/5.3/${pkgver}/single/${_pkgfqn}.tar.xz"
+        'assistant.desktop' 'designer.desktop' 'linguist.desktop' 'qdbusviewer.desktop'
+        'use-python2.patch')
+md5sums=('f00ac7930e3b1b2b364dedcd15acc142'
+         'b2897dd6a2967bccf8f10e397aafee55'
+         '9638a78e502719ef8fe5f8d10d0361a9'
+         '188da8f4c87316e730ebf1c6217bf5a0'
+         '322b419b16c75d4de0ee7ad0a246caa1'
+         'a378deccf363bd6079da459c89aff7b9')
+
+prepare() {
+  cd ${_pkgfqn}
+
+  sed -i "s|-O2|${CXXFLAGS}|" qtbase/mkspecs/common/{g++,gcc}-base.conf
+  sed -i "/^QMAKE_LFLAGS_RPATH/s| -Wl,-rpath,||g" qtbase/mkspecs/common/gcc-base-unix.conf
+  sed -i "/^QMAKE_LFLAGS\s/s|+=|+= ${LDFLAGS}|g" qtbase/mkspecs/common/gcc-base.conf
+
+  # Use python2 for Python 2.x
+  patch -p1 -i "${srcdir}"/use-python2.patch
+  sed -i -e "s|#![ ]*/usr/bin/python$|#!/usr/bin/python2|" \
+    -e "s|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|" \
+    $(find . -name '*.py')
+}
+
+build() {
+  cd ${_pkgfqn}
+
+  export QTDIR="${srcdir}"/${_pkgfqn}
+  export LD_LIBRARY_PATH="${QTDIR}"/qtbase/lib:"${QTDIR}"/qttools/lib:"${LD_LIBRARY_PATH}"
+  export QT_PLUGIN_PATH="${QTDIR}"/qtbase/plugins
+
+  [[ "${CARCH}" = "i686" ]] && SSE2="-no-sse2"
+
+  PYTHON=/usr/bin/python2 ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -bindir /usr/lib/qt/bin \
+    -docdir /usr/share/doc/qt \
+    -headerdir /usr/include/qt \
+    -archdatadir /usr/lib/qt \
+    -datadir /usr/share/qt \
+    -sysconfdir /etc/xdg \
+    -examplesdir /usr/share/doc/qt/examples \
+    -plugin-sql-{psql,mysql,sqlite,odbc,ibase} \
+    -system-sqlite \
+    -openssl-linked \
+    -nomake examples \
+    -no-rpath \
+    -optimized-qmake \
+    -dbus-linked \
+    -system-harfbuzz \
+    -journald \
+    -reduce-relocations ${SSE2}
+
+  make
+
+  # Fix paths
+  find "${QTDIR}" -name Makefile -exec sed -i "s|/usr/lib/qt/bin/qdoc|${QTDIR}/qtbase/bin/qdoc|g" {} +
+  find "${QTDIR}" -name Makefile.qmake-docs -exec sed -i "s|/usr/lib/qt/bin/qdoc|${QTDIR}/qtbase/bin/qdoc|g" {} +
+  find "${QTDIR}" -name Makefile -exec sed -i "s|/usr/lib/qt/bin/qhelpgenerator|${QTDIR}/qttools/bin/qhelpgenerator|g" {} +
+  find "${QTDIR}" -name Makefile.qmake-docs -exec sed -i "s|/usr/lib/qt/bin/qhelpgenerator|${QTDIR}/qttools/bin/qhelpgenerator|g" {} +
+  sed -i "s|/usr/lib/qt/bin/qhelpgenerator|${QTDIR}/qttools/bin/qhelpgenerator|g" qtwebkit/Source/Makefile.api
+
+  make docs
+}
+
+package_qt5-base() {
+  pkgdesc='A cross-platform application and UI framework'
+  depends=('libjpeg-turbo' 'xcb-util-keysyms' 'libgl' 'dbus' 'fontconfig' 'systemd'
+           'xcb-util-wm' 'libxrender' 'libxi' 'sqlite' 'xcb-util-image' 'icu'
+           'qtchooser')
+  optdepends=('postgresql-libs: PostgreSQL driver'
+              'libmariadbclient: MariaDB driver'
+              'unixodbc: ODBC driver'
+              'libfbclient: Firebird/iBase driver'
+              'mtdev: evdev plugin'
+              'libxkbcommon-x11: xcb plugin'
+              'libsm: xcb plugin'
+              'gtk2: GTK2 plugin')
+  conflicts=('qt')
+  options=('staticlibs') #libQt5PlatformSupport builds static only
+
+  cd ${_pkgfqn}/qtbase
+  make INSTALL_ROOT="${pkgdir}" install
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Fix wrong qmake path in pri file
+  sed -i "s|${srcdir}/${_pkgfqn}/qtbase|/usr|" \
+    "${pkgdir}"/usr/lib/qt/mkspecs/modules/qt_lib_bootstrap_private.pri
+
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+}
+
+package_qt5-connectivity() {
+  pkgdesc='Provides access to Bluetooth hardware'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtconnectivity
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-declarative() {
+  pkgdesc='Classes for QML and JavaScript languages'
+  depends=('qt5-xmlpatterns')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtdeclarative
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-doc() {
+  pkgdesc='A cross-platform application and UI framework (Documentation)'
+  depends=('qt5-base')
+#  arch=('any')
+  conflicts=('qt-doc')
+  replaces=('qt-doc')
+  provides=('qt-doc')
+  options=('docs' '!emptydirs')
+  groups=()
+
+  cd ${_pkgfqn}
+  make INSTALL_ROOT="${pkgdir}" install_docs
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-enginio() {
+  pkgdesc='A Backend-as-a-Service solution to ease the backend development for connected and data-driven application'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtenginio
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-xmlpatterns() {
+  pkgdesc='Support for XPath, XQuery, XSLT and XML schema validation'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtxmlpatterns
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-translations() {
+  pkgdesc='A cross-platform application and UI framework (Translations)'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qttranslations
+  make INSTALL_ROOT="${pkgdir}" install
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-multimedia() {
+  pkgdesc='Classes for audio, video, radio and camera functionality'
+  depends=('qt5-declarative' 'libpulse' 'gstreamer0.10-base' 'openal')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtmultimedia
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-graphicaleffects() {
+  pkgdesc='Graphical effects for use with Qt Quick 2'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtgraphicaleffects
+  make INSTALL_ROOT="${pkgdir}" install
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-imageformats() {
+  pkgdesc='Plugins for additional image formats: TIFF, MNG, TGA, WBMP'
+  depends=('qt5-base' 'jasper' 'libmng')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtimageformats
+  make INSTALL_ROOT="${pkgdir}" install
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-location() {
+  pkgdesc='Provides access to position, satellite and area monitoring classes'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtlocation
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-quick1() {
+  pkgdesc='Qt Declarative is provided for Qt 4 compatibility'
+  depends=('qt5-webkit' 'qt5-script')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtquick1
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-quickcontrols() {
+  pkgdesc='Reusable Qt Quick based UI controls to create classic desktop-style user interfaces'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtquickcontrols
+  make INSTALL_ROOT="${pkgdir}" install
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-script() {
+  pkgdesc='Classes for making Qt applications scriptable. Provided for Qt 4.x compatibility'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtscript
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-sensors() {
+  pkgdesc='Provides access to sensor hardware and motion gesture recognition'
+  depends=('qt5-declarative')
+
+  cd ${_pkgfqn}/qtsensors
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-serialport() {
+  pkgdesc='Provides access to hardware and virtual serial ports'
+  depends=('qt5-base')
+
+  cd ${_pkgfqn}/qtserialport
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-svg() {
+  pkgdesc='Classes for displaying the contents of SVG files'
+  depends=('qt5-base')
+  conflicts=('qt')
+
+  cd ${_pkgfqn}/qtsvg
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-tools() {
+  pkgdesc='A cross-platform application and UI framework (Development Tools, QtHelp)'
+  depends=('qt5-webkit' 'desktop-file-utils' 'qt5-translations' 'hicolor-icon-theme'
+           'xdg-utils')
+  optdepends=('qt5-doc: documentation')
+  install='qt5-tools.install'
+  conflicts=('qt')
+  options=('staticlibs') # libQt5UiTools builds as static only$
+
+  cd ${_pkgfqn}/qttools
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # install missing icons and desktop files
+  for icon in src/linguist/linguist/images/icons/linguist-*-32.png ; do
+    size=$(echo $(basename ${icon}) | cut -d- -f2)
+    install -p -D -m644 ${icon} \
+      "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/linguist.png"
+  done
+
+  install -D -m644 src/assistant/assistant/images/assistant.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/assistant.png"
+  install -D -m644 src/assistant/assistant/images/assistant-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/assistant.png"
+  install -D -m644 src/designer/src/designer/images/designer.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/designer.png"
+  install -D -m644 src/qdbus/qdbusviewer/images/qdbusviewer.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/qdbusviewer.png"
+  install -D -m644 src/qdbus/qdbusviewer/images/qdbusviewer-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/qdbusviewer.png"
+  install -d "${pkgdir}/usr/share/applications"
+  install -m644 "${srcdir}"/{linguist,designer,assistant,qdbusviewer}.desktop \
+    "${pkgdir}/usr/share/applications/"
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Useful symlinks
+  install -d "${pkgdir}"/usr/bin
+  for b in "${pkgdir}"/usr/lib/qt/bin/*; do
+    ln -s /usr/lib/qt/bin/$(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
+
+package_qt5-webkit() {
+  pkgdesc='Classes for a WebKit2 based implementation and a new QML API'
+  depends=('qt5-sensors' 'qt5-location' 'gst-plugins-base' 'libxslt' 'libxcomposite')
+  license=('GPL3' 'LGPL' 'FDL')
+
+  cd ${_pkgfqn}/qtwebkit
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  # Fix wrong path in pc file
+  perl -pi -e "s, -L${srcdir}/?\S+,,g" "${pkgdir}"/usr/lib/pkgconfig/Qt5WebKit.pc
+}
+
+package_qt5-websockets() {
+  pkgdesc='Provides WebSocket communication compliant with RFC 6455'
+  depends=('qt5-declarative')
+  license=('LGPL')
+
+  cd ${_pkgfqn}/qtwebsockets
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+}
+
+package_qt5-x11extras() {
+  pkgdesc='Provides platform-specific APIs for X11'
+  depends=('qt5-base')
+
+  cd ${_pkgfqn}/qtx11extras
+  make INSTALL_ROOT="${pkgdir}" install
+
+  # Fix wrong path in prl files
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/' {} \;
+
+  install -D -m644 LGPL_EXCEPTION.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/LGPL_EXCEPTION.txt
+}
