@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.19
-pkgrel=4
+pkgrel=5
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -24,12 +24,14 @@ install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.19-xattr_header.patch
         glibc-2.19-fix-sign-in-bsloww1-input.patch
+        glibc-2.19-tzselect-default.patch
         locale.gen.txt
         locale-gen)
 md5sums=('e26b8cc666b162f999404b03970f14e4'
          'SKIP'
          '39a4876837789e07746f1d84cd8cb46a'
          '755a1a9d7844a5e338eddaa9a5d974cd'
+         'c772dc99ddd8032ecbf43884ae0cf42e'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 
@@ -41,6 +43,9 @@ prepare() {
 
   # fix issues in sin/cos slow path calculation - commit ffe768a9
   patch -p1 -i $srcdir/glibc-2.19-fix-sign-in-bsloww1-input.patch
+
+  # fix tzselect with missing TZDIR - commit 893b4f37/c72399fb
+  patch -p1 -i $srcdir/glibc-2.19-tzselect-default.patch
 
   mkdir ${srcdir}/glibc-build
 }
@@ -59,7 +64,7 @@ build() {
   echo "rootsbindir=/usr/bin" >> configparms
 
   # remove hardening options for building libraries
-  CFLAGS=${CFLAGS/-fstack-protector/}
+  CFLAGS=${CFLAGS/-fstack-protector-strong/}
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
 
   ${srcdir}/${pkgname}-${pkgver}/configure --prefix=/usr \
@@ -80,8 +85,8 @@ build() {
   
   # re-enable hardening for programs
   sed -i "/build-programs=/s#no#yes#" configparms
-  echo "CC += -fstack-protector -D_FORTIFY_SOURCE=2" >> configparms
-  echo "CXX += -fstack-protector -D_FORTIFY_SOURCE=2" >> configparms
+  echo "CC += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
+  echo "CXX += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
   make
 
   # remove harding in preparation to run test-suite
@@ -93,9 +98,9 @@ check() {
   LDFLAGS=${LDFLAGS/--as-needed,/}
 
   cd ${srcdir}/glibc-build
-
-  # only acceptable testsuite error is some small libm ulp failures on i686 with gcc-4.9
-  # TODO: fix upstream and provide patch
+  
+  # ULP failures on i686 are all small and can be ignored
+  # tst-cleanupx4.out failure on i686 needs investigating...
   make -k check || true
 }
 
