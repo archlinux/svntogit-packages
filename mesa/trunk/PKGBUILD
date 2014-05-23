@@ -5,7 +5,7 @@
 pkgbase=mesa
 pkgname=('opencl-mesa' 'ati-dri' 'intel-dri' 'nouveau-dri' 'svga-dri' 'mesa' 'mesa-libgl')
 pkgver=10.2.0rc3
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 makedepends=('python2' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
              'libxshmfence' 'libxxf86vm'  'libxdamage' 'libvdpau' 'wayland' 'elfutils' 'llvm' 'systemd'
@@ -65,19 +65,19 @@ package_opencl-mesa() {
   depends=('mesa-libgl' "mesa=${pkgver}" 'libcl' 'libclc' 'clang')
   optdepends=('opencl-headers: headers necessary for OpenCL development')
   
+  install -m755 -d ${pkgdir}/etc
+  mv -v ${srcdir}/fakeinstall/etc/OpenCL ${pkgdir}/etc/
+  
   install -m755 -d ${pkgdir}/usr/lib/
   mv -v ${srcdir}/fakeinstall/usr/lib/lib*OpenCL* ${pkgdir}/usr/lib/
 
-  install -m755 -d ${pkgdir}/etc
-  mv -v ${srcdir}/fakeinstall/etc/OpenCL ${pkgdir}/etc
-  
   install -m755 -d "${pkgdir}/usr/share/licenses/opencl-mesa"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/opencl-mesa/"
 }
 
 package_ati-dri() {
   pkgdesc="Mesa drivers for AMD/ATI Radeon"
-  depends=('mesa-libgl' 'libtxc_dxtn' "mesa=${pkgver}")
+  depends=('mesa-libgl' 'libtxc_dxtn' 'libomxil-bellagio' "mesa=${pkgver}")
   conflicts=('xf86-video-ati<6.9.0-6')
 
   install -m755 -d ${pkgdir}/usr/lib/vdpau/
@@ -89,6 +89,11 @@ package_ati-dri() {
   install -m755 -d ${pkgdir}/usr/lib/gallium-pipe
   mv -v ${srcdir}/fakeinstall/usr/lib/gallium-pipe/pipe_{r300,r600,radeonsi}* ${pkgdir}/usr/lib/gallium-pipe/
   
+  # I don't think it's currently useful to package libomx_r600
+  install -m755 -d ${pkgdir}/usr/lib/bellagio
+  # mv -v ${srcdir}/fakeinstall/usr/lib/bellagio/libomx_{r600,radeonsi}.so ${pkgdir}/usr/lib/bellagio/
+  mv -v ${srcdir}/fakeinstall/usr/lib/bellagio/libomx_radeonsi.so ${pkgdir}/usr/lib/bellagio/
+
   install -m755 -d "${pkgdir}/usr/share/licenses/ati-dri"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/ati-dri/"
 }
@@ -116,6 +121,10 @@ package_nouveau-dri() {
   
   install -m755 -d ${pkgdir}/usr/lib/gallium-pipe
   mv -v ${srcdir}/fakeinstall/usr/lib/gallium-pipe/pipe_nouveau* ${pkgdir}/usr/lib/gallium-pipe/
+
+  # I don't think it's currently useful to package it
+  #install -m755 -d ${pkgdir}/usr/lib/bellagio
+  #mv -v ${srcdir}/fakeinstall/usr/lib/bellagio/libomx_nouveau.so ${pkgdir}/usr/lib/bellagio/
   
   install -m755 -d "${pkgdir}/usr/share/licenses/nouveau-dri"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/nouveau-dri/"
@@ -137,18 +146,31 @@ package_svga-dri() {
 
 package_mesa() {
   pkgdesc="an open-source implementation of the OpenGL specification"
-  depends=('libdrm' 'libvdpau' 'wayland' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libomxil-bellagio' 'systemd' 'elfutils' 'llvm-libs')
+  depends=('libdrm' 'libvdpau' 'wayland' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'systemd' 'elfutils' 'llvm-libs')
   optdepends=('opengl-man-pages: for the OpenGL API man pages')
   provides=('libglapi' 'osmesa' 'libgbm' 'libgles' 'libegl' 'khrplatform-devel')
   conflicts=('libglapi' 'osmesa' 'libgbm' 'libgles' 'libegl' 'khrplatform-devel')
   replaces=('libglapi' 'osmesa' 'libgbm' 'libgles' 'libegl' 'khrplatform-devel')
 
-  mv -v ${srcdir}/fakeinstall/* ${pkgdir}
+  install -m755 -d ${pkgdir}/etc
+  mv -v ${srcdir}/fakeinstall/etc/drirc ${pkgdir}/etc
+  
+  install -m755 -d ${pkgdir}/usr/lib/{gallium-pipe,gbm}
+  mv -v ${srcdir}/fakeinstall/usr/lib/lib{OSMesa,gbm,glapi,wayland-egl,xatracker}.so* ${pkgdir}/usr/lib/
+  mv -v ${srcdir}/fakeinstall/usr/lib/gallium-pipe/pipe_swrast* ${pkgdir}/usr/lib/gallium-pipe/
+  mv -v ${srcdir}/fakeinstall/usr/lib/gbm/gbm_gallium_drm* ${pkgdir}/usr/lib/gbm/
+
+  mv -v ${srcdir}/fakeinstall/usr/include ${pkgdir}/usr
+  mv -v ${srcdir}/fakeinstall/usr/lib/pkgconfig ${pkgdir}/usr/lib/
+  
+  install -m755 -d ${pkgdir}/usr/lib/xorg/modules/dri
+  mv -v ${srcdir}/fakeinstall/usr/lib/xorg/modules/dri/swrast_dri* ${pkgdir}/usr/lib/xorg/modules/dri/
+  
   install -m755 -d ${pkgdir}/usr/lib/mesa
   # move libgl/EGL/glesv*.so to not conflict with blobs - may break .pc files ?
-  mv -v ${pkgdir}/usr/lib/libGL.so* 	${pkgdir}/usr/lib/mesa/
-  mv -v ${pkgdir}/usr/lib/libEGL.so* 	${pkgdir}/usr/lib/mesa/
-  mv -v ${pkgdir}/usr/lib/libGLES*.so*	${pkgdir}/usr/lib/mesa/
+  mv -v ${srcdir}/fakeinstall/usr/lib/libGL.so* 	${pkgdir}/usr/lib/mesa/
+  mv -v ${srcdir}/fakeinstall/usr/lib/libEGL.so* 	${pkgdir}/usr/lib/mesa/
+  mv -v ${srcdir}/fakeinstall/usr/lib/libGLES*.so*	${pkgdir}/usr/lib/mesa/
 
   install -m755 -d "${pkgdir}/usr/share/licenses/mesa"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/mesa/"
