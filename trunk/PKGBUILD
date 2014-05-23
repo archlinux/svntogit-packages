@@ -4,43 +4,32 @@
 # Contributor: Ben <contrasutra@myrealbox.com>
 
 pkgname=sound-juicer
-pkgver=3.5.0
-pkgrel=2
+pkgver=3.12.0
+pkgrel=1
 pkgdesc="A cd ripper application"
 arch=(i686 x86_64)
 license=(GPL)
-depends=(libmusicbrainz5 libdiscid gtk3 gst-plugins-base gst-plugins-good brasero hicolor-icon-theme gconf)
-makedepends=(intltool gnome-doc-utils gnome-common)
+depends=(libmusicbrainz5 libdiscid gtk3 gst-plugins-base gst-plugins-good brasero hicolor-icon-theme iso-codes)
+makedepends=(intltool itstool)
 options=(!emptydirs)
 url="http://www.gnome.org"
-source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver:0:3}/$pkgname-$pkgver.tar.xz)
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
 install=sound-juicer.install
-sha256sums=('ea76703e08e67590af7b8ce5206c343eb01d77cd5023c0bc958a0c2f5a98d2e9')
+sha256sums=('c6f98dc6d453e2890fdc3bb7d2e360318d82dafd0304aa0a23ff6ea10b7aff1f')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  sed -e "s/AM_GST_ELEMENT_CHECK/GST_ELEMENT_CHECK/" \
-      -e "s/AM_CONFIG_HEADER/AC_CONFIG_HEADERS/" -i configure.in
-  autoreconf -f
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --disable-scrollkeeper
+  cd ${pkgname}-${pkgver}
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
 
   # drop unneeded direct library deps with --as-needed
   # libtool doesn't make this easy, so we do it the hard way
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
-  # Remove RPATH
-  sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
-  sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
 
-  export tagname=CC
-  make AM_CFLAGS=-export-dynamic
+  make
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
-
-  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
-  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain sound-juicer ${pkgdir}/etc/gconf/schemas/*.schemas
-  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
 }
