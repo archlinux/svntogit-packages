@@ -1,0 +1,59 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Eric Belanger <eric@archlinux.org>
+# Contributor: William Rea <sillywilly@gmail.com>
+
+pkgname=fontforge
+_pkgver=2.0.20140101
+pkgver=${_pkgver##*.}
+pkgrel=3
+pkgdesc='Outline and bitmap font editor'
+url='http://www.fontforge.org/'
+arch=('i686' 'x86_64')
+license=('BSD')
+depends=('libltdl' 'libxkbui' 'libxi'
+         'pango' 'giflib' 'libtiff' 'libspiro' 'libxml2' 'libspiro' 'libunicodenames' 'zeromq'
+         'python2' 'desktop-file-utils' 'gtk-update-icon-cache' 'hicolor-icon-theme')
+source=("https://github.com/fontforge/fontforge/archive/${_pkgver}.tar.gz"
+        'http://fontforge.org/cidmaps.tgz'
+        'giflib.patch')
+sha1sums=('abce297e53e8b6ff6f08871e53d1eb0be5ab82e7'
+          'efbc7c9d3e95159f5600dc71f9cccb370e46bb94'
+          '420dd1dd75d72719f3203d832bfa8c1c7e7eef86')
+
+options=('!makeflags')
+install=install
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+	sed '/fontforge_package_name/s/^#//' -i configure.ac
+	patch -p1 -i ../giflib.patch
+	./autogen.sh
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+	export LIBZMQ_LIBS=-lzmq
+	export PYTHON=python2
+	./configure \
+		--prefix=/usr \
+		--mandir=/usr/share/man \
+		--enable-python-extension \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+	make DESTDIR="${pkgdir}" install
+
+	install -d "${pkgdir}/usr/share/fontforge"
+	install -m644 ../Adobe-* "${pkgdir}/usr/share/fontforge"
+
+	install -d "${pkgdir}/usr/share/icons"
+	cp -a desktop/icons "${pkgdir}/usr/share/icons/hicolor"
+	rm -fr "${pkgdir}/usr/share/icons/hicolor/src"
+
+	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	install -Dm644 desktop/fontforge.desktop "${pkgdir}/usr/share/applications/fontforge.desktop"
+}
