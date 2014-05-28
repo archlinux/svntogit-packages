@@ -7,8 +7,8 @@
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.9.0
 _pkgver=4.9
-pkgrel=2
-_snapshot=4.9-20140507
+pkgrel=3
+_snapshot=4.9-20140521
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -18,11 +18,9 @@ checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-        gcc-4.8-filename-output.patch
-	gcc-4.9-tree-ssa-threadedge.patch)
-md5sums=('47dc2b91d2876daff53c20c30164c38f'
-         '40cb437805e2f7a006aa0d0c3098ab0f'
-         '311ece7f5446d550e84e28692d2fb823')
+        gcc-4.8-filename-output.patch)
+md5sums=('cd3cbe93ebc7207bf65d30e3c9a74a26'
+         '40cb437805e2f7a006aa0d0c3098ab0f')
 
 if [ -n "${_snapshot}" ]; then
   _basedir=gcc-${_snapshot}
@@ -48,9 +46,6 @@ prepare() {
 
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57653
   patch -p0 -i ${srcdir}/gcc-4.8-filename-output.patch
-
-  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60902
-  patch -p1 -i ${srcdir}/gcc-4.9-tree-ssa-threadedge.patch
 
   mkdir ${srcdir}/gcc-build
 }
