@@ -4,12 +4,12 @@
 pkgbase=imagemagick
 pkgname=('imagemagick' 'imagemagick-doc')
 pkgver=6.8.9.1
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.imagemagick.org/"
 license=('custom')
 makedepends=('libltdl' 'lcms2' 'libxt' 'fontconfig' 'libxext' 'ghostscript'
-             'openexr' 'libwmf' 'librsvg' 'libxml2' 'liblqr'
+             'openexr' 'libwmf' 'librsvg' 'libxml2' 'liblqr' 'openjpeg2'
              'opencl-headers' 'libcl' 'libwebp' 'subversion')
 #source=(http://www.imagemagick.org/download/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz{,.asc}
 source=(ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz{,.asc}
@@ -34,7 +34,7 @@ build() {
     --enable-hdri --with-wmf --with-openexr --with-xml --with-lcms2 \
     --with-webp --with-gslib --with-gs-font-dir=/usr/share/fonts/Type1 \
     --with-perl --with-perl-options="INSTALLDIRS=vendor" --with-lqr --with-rsvg \
-    --enable-opencl --without-gvc --without-djvu --without-autotrace \
+    --enable-opencl --with-openjp2 --without-gvc --without-djvu --without-autotrace \
     --without-jbig --without-fpx --without-dps --without-fftw $EXTRAOPTS
   make
 }
@@ -50,6 +50,7 @@ package_imagemagick() {
   optdepends=('imagemagick-doc: for additional information'
               'ghostscript: for Ghostscript support' 
               'openexr: for OpenEXR support' 
+	      'openjpeg2: for JP2 support' 
               'libwmf: for WMF support' 
               'librsvg: for SVG support' 
               'libxml2: for XML support' 
