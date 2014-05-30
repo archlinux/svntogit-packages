@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: kevin <kevin@archlinux.org>
+# Contributor: Eric Johnson <eric@coding-zone.com>
+
+pkgname=perl-dbd-mysql
+_realname=DBD-mysql
+pkgver=4.027
+pkgrel=2
+pkgdesc='Perl/CPAN DBD::mysql module for interacting with MySQL via DBD'
+arch=('i686' 'x86_64')
+license=('GPL' 'PerlArtistic')
+url="http://search.cpan.org/dist/$_realname/"
+depends=('libmariadbclient' 'perl-dbi')
+makedepends=('mariadb')
+options=('!emptydirs')
+source=(http://search.cpan.org/CPAN/authors/id/C/CA/CAPTTOFU/${_realname}-${pkgver}.tar.gz)
+md5sums=('11fa6449715ba9d3fa5f4ee5ae688d6f')
+
+build() {
+  cd $_realname-$pkgver
+  perl Makefile.PL INSTALLDIRS=vendor --testsocket=/tmp/socket.mysql
+  make
+}
+
+check() {
+  cd $_realname-$pkgver
+  mkdir -p /tmp/mysql_test
+  mysql_install_db \
+     --basedir=/usr \
+     --datadir=/tmp/mysql_test
+  mysqld -P 17999 \
+     --socket=/tmp/socket.mysql \
+     --datadir=/tmp/mysql_test &
+  sleep 10
+  DAEMON_PORT=$!
+  make test || true
+  kill -9 $DAEMON_PORT
+}
+
+package() {
+  cd $_realname-$pkgver
+  make install DESTDIR="$pkgdir"
+}
