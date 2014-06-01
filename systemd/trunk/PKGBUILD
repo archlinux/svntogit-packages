@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=213
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -52,10 +52,6 @@ build() {
   make
 }
 
-check() {
-  make -C "$pkgname-$pkgver" check || :
-}
-
 package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
@@ -90,6 +86,7 @@ package_systemd() {
   # post_install as a sane default.
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
   rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service"
+  rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
   # get rid of RPM macros
