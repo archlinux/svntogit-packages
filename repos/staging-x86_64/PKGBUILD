@@ -1,0 +1,83 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+
+pkgbase=tracker
+pkgname=(tracker libtracker-sparql)
+pkgver=1.0.1
+pkgrel=2
+pkgdesc="All-in-one indexer, search tool and metadata database"
+arch=(i686 x86_64)
+license=(GPL)
+makedepends=(libgee libsecret upower libexif exempi
+             poppler-glib libgsf icu enca networkmanager gtk3
+             desktop-file-utils hicolor-icon-theme gobject-introspection
+             intltool giflib gst-plugins-base-libs totem-plparser
+             taglib libvorbis flac vala libgxps libnautilus-extension libmediaart)
+url="http://www.gnome.org"
+options=('!emptydirs')
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver:0:3}/$pkgbase-$pkgver.tar.xz
+        tracker-1.0.1-giflib-5.1.0.patch)
+sha256sums=('76e7918e62526a8209f9c9226f82abe592a6332826ac7c12e6e405063181e889'
+            'b5440e8129256a315f932229e9a25a3586b9dfdc3505bd2c018351573345b0bc')
+
+prepare() {
+  cd $pkgbase-$pkgver
+  patch -p1 -i ../tracker-1.0.1-giflib-5.1.0.patch
+}
+
+build() {
+  cd $pkgbase-$pkgver
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib/tracker \
+    --disable-unit-tests \
+    --enable-libflac \
+    --enable-libvorbis
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
+
+  make
+}
+
+package_tracker() {
+  depends=("libtracker-sparql=$pkgver-$pkgrel" libgee libsecret
+           upower libexif exempi poppler-glib libgsf enca
+           networkmanager gtk3 desktop-file-utils hicolor-icon-theme libmediaart)
+  optdepends=('giflib: extractor for GIF data'
+              'gst-plugins-base-libs: video extractor'
+              'totem-plparser: playlist support'
+              'libvorbis: Vorbis metadata extractor'
+              'flac: FLAC metadata extractor'
+              'taglib: writeback for audio files'
+              "nautilus: edit files' tracker tags"
+              'libgxps: XPS extractor')
+  groups=('gnome')
+  install=tracker.install
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  for dir in libtracker-{sparql,common,data,sparql-backend}; do
+    make DESTDIR="$pkgdir" -C src/$dir uninstall
+  done
+
+  rm -f "$pkgdir"/usr/lib/pkgconfig/tracker-sparql-*.pc
+}
+
+package_libtracker-sparql() {
+  pkgdesc="$pkgdesc (SPARQL library)"
+  depends=(sqlite icu glib2 libffi pcre util-linux)
+
+  cd $pkgbase-$pkgver/src
+  for dir in libtracker-{sparql,common,data,sparql-backend}; do
+    make DESTDIR="$pkgdir" -C $dir install
+  done
+
+  install -m755 -d "$pkgdir"/usr/lib/pkgconfig
+  install -m644 ../data/tracker-sparql-*.pc "$pkgdir"/usr/lib/pkgconfig/
+}
