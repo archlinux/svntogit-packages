@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=213
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -16,17 +16,20 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
-        '0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch')
+        '0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch'
+        '0001-tmpfiles-systemd.conf-fix-ownership-of-network-direc.patch')
 md5sums=('06496edcf86ddf6d8c12d72ba78e735d'
          '29245f7a240bfba66e2b1783b63b6b40'
          '66cca7318e13eaf37c5b7db2efa69846'
          'bde43090d4ac0ef048e3eaee8202a407'
-         '5f8ad7126970855614c7fa34b317728d')
+         '5f8ad7126970855614c7fa34b317728d'
+         'd778cbbe8adb9651979da58cfe1c2dde')
 
 prepare() {
   cd "$pkgname-$pkgver"
 
   patch -Np1 <"$srcdir/0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch"
+  patch -Np1 <"$srcdir/0001-tmpfiles-systemd.conf-fix-ownership-of-network-direc.patch"
 }
 
 build() {
