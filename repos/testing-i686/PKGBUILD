@@ -1,0 +1,61 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Judd Vinet <jvinet@zeroflux.org>
+
+pkgname=gnupg
+pkgver=2.0.23
+pkgrel=1
+pkgdesc='Complete and free implementation of the OpenPGP standard'
+url='http://www.gnupg.org/'
+license=('GPL')
+arch=('i686' 'x86_64')
+optdepends=('curl: gpg2keys_curl'
+            'libldap: gpg2keys_ldap'
+            'libusb-compat: scdaemon')
+makedepends=('curl' 'libldap' 'libusb-compat')
+depends=('bzip2' 'libksba' 'libgcrypt' 'pth' 'libassuan' 'readline' 'pinentry' 'dirmngr')
+source=("ftp://ftp.gnupg.org/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
+        'protect-tool-env.patch')
+sha1sums=('c90e47ab95a40dd070fd75faef0a05c7b679553b' 'SKIP'
+          '2ec97ba55ae47ff0d63bc813b8c64cb79cef11db')
+
+install=install
+
+conflicts=('gnupg2')
+provides=("gnupg2=${pkgver}")
+replaces=('gnupg2')
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -p1 -i ../protect-tool-env.patch # FS#31900
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--sbindir=/usr/bin \
+		--libexecdir=/usr/lib/gnupg \
+		--enable-maintainer-mode \
+		--enable-symcryptrun \
+		--enable-gpgtar \
+
+	make
+}
+
+check() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make check
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+	ln -s gpg2 "${pkgdir}"/usr/bin/gpg
+	ln -s gpgv2 "${pkgdir}"/usr/bin/gpgv
+	ln -s gpg2.1.gz "${pkgdir}"/usr/share/man/man1/gpg.1.gz
+	rm "${pkgdir}/usr/share/gnupg/com-certs.pem" # FS#33059
+}
