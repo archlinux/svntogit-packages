@@ -3,47 +3,37 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=212
-pkgrel=3
+pkgver=213
+pkgrel=5
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
-             'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools' 'xz')
+             'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools'
+             'shadow' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
-        '0001-backlight-do-nothing-if-max_brightness-is-0.patch'
-        '0002-reduce-the-amount-of-messages-logged-to-dev-kmsg-whe.patch'
-        '0003-man-reword-Persistent-description.patch'
-        '0004-core-Make-sure-a-stamp-file-exists-for-all-Persisten.patch'
-        )
-md5sums=('257a75fff826ff91cb1ce567091cf270'
+        '0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch')
+md5sums=('06496edcf86ddf6d8c12d72ba78e735d'
          '29245f7a240bfba66e2b1783b63b6b40'
          '66cca7318e13eaf37c5b7db2efa69846'
          'bde43090d4ac0ef048e3eaee8202a407'
-         '4b5d61e30b423ff5a0ec38037146b61b'
-         'd9518fc6cef154ebc76555b0fb9d4412'
-         'c35c7f55d41c0a8b8725785b49ce6440'
-         '2e7aee18c749727c8bbc8db86f17edc0')
+         '5f8ad7126970855614c7fa34b317728d')
 
 prepare() {
   cd "$pkgname-$pkgver"
 
-  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=3cadce7d33e263ec7a6a83c00c11144930258b22
-  patch -p1 -i "$srcdir/0001-backlight-do-nothing-if-max_brightness-is-0.patch"
-  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=b2103dccb354de3f38c49c14ccb637bdf665e40f
-  patch -p1 -i "$srcdir/0002-reduce-the-amount-of-messages-logged-to-dev-kmsg-whe.patch"
-  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=de41590a9bb370de92e4a1ed933bc6e38abb6787
-  patch -p1 -i "$srcdir/0003-man-reword-Persistent-description.patch"
-  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=472fc28fdade525e700ebf4b25d026a8c907796d
-  patch -p1 -i "$srcdir/0004-core-Make-sure-a-stamp-file-exists-for-all-Persisten.patch"
+  patch -Np1 <"$srcdir/0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch"
 }
 
 build() {
   cd "$pkgname-$pkgver"
+
+  # LTO currently breaks the build because of libtool failures
+  CFLAGS+=' -fno-lto'
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -60,10 +50,6 @@ build() {
       --with-firmware-path="/usr/lib/firmware/updates:/usr/lib/firmware"
 
   make
-}
-
-check() {
-  make -C "$pkgname-$pkgver" check || :
 }
 
 package_systemd() {
@@ -100,6 +86,7 @@ package_systemd() {
   # post_install as a sane default.
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
   rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service"
+  rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
 
   # get rid of RPM macros
