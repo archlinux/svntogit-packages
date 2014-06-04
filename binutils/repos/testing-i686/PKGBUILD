@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
+
+pkgname=binutils
+pkgver=2.24
+pkgrel=5
+pkgdesc="A set of programs to assemble and manipulate binary and object files"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/binutils/"
+license=('GPL')
+groups=('base-devel')
+depends=('glibc>=2.19' 'zlib')
+checkdepends=('dejagnu' 'bc')
+conflicts=('binutils-multilib')
+replaces=('binutils-multilib')
+options=('staticlibs' '!distcc' '!ccache')
+install=binutils.install
+source=(ftp://ftp.gnu.org/gnu/binutils/binutils-${pkgver}.tar.bz2{,.sig}
+        binutils-2.24-lto-testsuite.patch
+        binutils-2.24-static-pie-hang.patch)
+md5sums=('e0f71a7b2ddab0f8612336ac81d9636b'
+         'SKIP'
+         'b16e895c24ff80acd98a21021eccefad'
+         '4d2cf591560c3d25265778146bbe1941')
+validpgpkeys=('EAF1C276A747E9ED86210CBAC3126D3B4AE55E93')
+
+prepare() {
+  cd ${srcdir}/binutils-${pkgver}
+
+  # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
+
+  # fix lto testsuite with gcc-4.9 - commit b35d44f1
+  patch -p1 -i $srcdir/binutils-2.24-lto-testsuite.patch
+
+  # fix autoconf hang with -static -fPIE -pie - commits d1ec1e40 and 818d220a
+  patch -p1 -i $srcdir/binutils-2.24-static-pie-hang.patch
+
+  mkdir ${srcdir}/binutils-build
+}
+
+build() {
+  cd ${srcdir}/binutils-build
+
+  ${srcdir}/binutils-${pkgver}/configure --prefix=/usr \
+    --with-lib-path=/usr/lib:/usr/local/lib \
+    --with-bugurl=https://bugs.archlinux.org/ \
+    --enable-threads --enable-shared --with-pic \
+    --enable-ld=default --enable-gold --enable-plugins \
+    --disable-werror
+
+  # check the host environment and makes sure all the necessary tools are available
+  make configure-host
+
+  make tooldir=/usr
+}
+
+check() {
+  cd ${srcdir}/binutils-build
+  
+  # unset LDFLAGS as testsuite makes assumptions about which ones are active
+  # do not abort on errors - manually check log files
+  make LDFLAGS="" -k check || true
+}
+
+package() {
+  cd ${srcdir}/binutils-build
+  make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
+
+  # Remove unwanted files
+  rm ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
+  rm ${pkgdir}/usr/share/info/{configure,standards}.info
+
+  # No shared linking to these files outside binutils
+  rm ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
+}
