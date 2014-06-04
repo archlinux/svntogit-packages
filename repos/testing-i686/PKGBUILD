@@ -1,0 +1,122 @@
+# $Id$
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Aaron Griffin <aaron@archlinux.org>
+
+pkgname=bash
+_basever=4.3
+_patchlevel=018
+pkgver=$_basever.$_patchlevel
+pkgrel=2
+pkgdesc='The GNU Bourne Again shell'
+arch=('i686' 'x86_64')
+license=('GPL')
+url='http://www.gnu.org/software/bash/bash.html'
+groups=('base')
+backup=(etc/bash.bash{rc,_logout} etc/skel/.bash{rc,_profile,_logout})
+depends=('readline>=6.3' 'glibc')
+provides=('sh')
+install=bash.install
+source=(http://ftp.gnu.org/gnu/bash/bash-$_basever.tar.gz{,.sig}
+        dot.bashrc
+        dot.bash_profile
+        dot.bash_logout
+        system.bashrc
+        system.bash_logout
+        bash-4.3-fix-setuid.patch)
+
+if [[ $((10#${_patchlevel})) -gt 0 ]]; then
+    for (( _p=1; _p<=$((10#${_patchlevel})); _p++ )); do
+        source=(${source[@]} http://ftp.gnu.org/gnu/bash/bash-$_basever-patches/bash${_basever//.}-$(printf "%03d" $_p){,.sig})
+    done
+fi
+
+prepare() {
+  cd $pkgname-$_basever
+
+  for (( _p=1; _p<=$((10#${_patchlevel})); _p++ )); do
+    msg "applying patch bash${_basever//.}-$(printf "%03d" $_p)"
+    patch -p0 -i ../bash${_basever//.}-$(printf "%03d" $_p)
+  done
+
+  # http://hmarco.org/bugs/bash_4.3-setuid-bug.html (FS#40663)
+  patch -p0 -i ../bash-4.3-fix-setuid.patch
+}
+
+build() {
+  cd $pkgname-$_basever
+
+  _bashconfig=(-DDEFAULT_PATH_VALUE=\'\"/usr/local/sbin:/usr/local/bin:/usr/bin\"\'
+               -DSTANDARD_UTILS_PATH=\'\"/usr/bin\"\'
+               -DSYS_BASHRC=\'\"/etc/bash.bashrc\"\'
+               -DSYS_BASH_LOGOUT=\'\"/etc/bash.bash_logout\"\')
+  export CFLAGS="${CFLAGS} ${_bashconfig[@]}"
+
+  ./configure --prefix=/usr --with-curses --enable-readline \
+    --without-bash-malloc --with-installed-readline
+  make
+}
+
+check() {
+  make -C $pkgname-$_basever check
+}
+
+package() {
+  make -C $pkgname-$_basever DESTDIR="$pkgdir" install
+  ln -s bash "$pkgdir"/usr/bin/sh
+
+  install -dm755 "$pkgdir"/etc/skel/
+  # system-wide configuration files
+  install -m644 system.bashrc $pkgdir/etc/bash.bashrc
+  install -m644 system.bash_logout "$pkgdir"/etc/bash.bash_logout
+
+  # user configuration file skeletons
+  install -m644 dot.bashrc "$pkgdir"/etc/skel/.bashrc
+  install -m644 dot.bash_profile "$pkgdir"/etc/skel/.bash_profile
+  install -m644 dot.bash_logout "$pkgdir"/etc/skel/.bash_logout
+}
+
+md5sums=('81348932d5da294953e15d4814c74dd1'
+         'SKIP'
+         '027d6bd8f5f6a06b75bb7698cb478089'
+         '2902e0fee7a9168f3a4fd2ccd60ff047'
+         '42f4400ed2314bd7519c020d0187edc5'
+         '561949793177116b7be29a07c385ba8b'
+         '472f536d7c9e8250dc4568ec4cfaf294'
+         'c87b8d9e12d628eac829dc08f4607a20'
+         '1ab682b4e36afa4cf1b426aa7ac81c0d'
+         'SKIP'
+         '8fc22cf50ec85da00f6af3d66f7ddc1b'
+         'SKIP'
+         'a41728eca78858758e26b5dea64ae506'
+         'SKIP'
+         'bf8d53d227829d67235927689a03cc7a'
+         'SKIP'
+         'c0c00935c8b8ffff76e8ab77e7be7d15'
+         'SKIP'
+         '6f01e364cd092faa28dd7119f47ddb5f'
+         'SKIP'
+         'dcf471d222bcd83283d3094e6ceeb6f8'
+         'SKIP'
+         'f7553416646dc26c266454c78a916d36'
+         'SKIP'
+         '7e73d2151f4064b484a4ba2c4b09960e'
+         'SKIP'
+         'a275463d21735bb6d7161f9fbd320d8f'
+         'SKIP'
+         'c17103ee20420d77e46b224c8d3fceda'
+         'SKIP'
+         '3e2a057a19d02b3f92a3a09eacbc03ae'
+         'SKIP'
+         'fb377143a996d4ff087a2771bc8332f9'
+         'SKIP'
+         '1a1aaecc99a9d0cbc310e8e247dcc8b6'
+         'SKIP'
+         '4f04387458a3c1b4d460d199f49991a8'
+         'SKIP'
+         '90e759709720c4f877525bebc9d5dc06'
+         'SKIP'
+         '11e4046e1b86070f6adbb7ffc89641be'
+         'SKIP'
+         'cd5a9b46f5bea0dc0248c93c7dfac011'
+         'SKIP')
