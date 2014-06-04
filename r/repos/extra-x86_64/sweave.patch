@@ -1,0 +1,500 @@
+Index: src/library/utils/R/Sweave.R
+===================================================================
+--- src/library/utils/R/Sweave.R	(revision 65431)
++++ src/library/utils/R/Sweave.R	(revision 65432)
+@@ -1,7 +1,7 @@
+ #   File src/library/utils/R/Sweave.R
+ #  Part of the R package, http://www.R-project.org
+ #
+-#  Copyright (C) 1995-2012 The R Core Team
++#  Copyright (C) 1995-2014 The R Core Team
+ #
+ #  This program is free software; you can redistribute it and/or modify
+ #  it under the terms of the GNU General Public License as published by
+@@ -30,7 +30,7 @@
+ ### re-encodes the output back to 'encoding': the Rtangle driver
+ ### leaves it in the encoding of the current locale and records what
+ ### that is in a comment.  The "UTF-8" encoding is preserved on
+-### both input and output in RweaveLatex, but is handled like 
++### both input and output in RweaveLatex, but is handled like
+ ### other encodings in Rtangle.
+ ###
+ ### SweaveReadFile first looks for a call to one of the LaTeX packages
+@@ -202,9 +202,11 @@
+             stop(gettextf("no Sweave file with name %s found",
+                           sQuote(file[1L])), domain = NA)
+         else if (length(f) > 1L)
+-            stop(paste(gettextf("%d Sweave files for basename %s found",
+-                                length(f), sQuote(file[1L])),
+-                       paste(":\n         ", f, collapse="")),
++            stop(paste(sprintf(ngettext(length(f), "%d Sweave file for basename %s found",
++                                        "%d Sweave files for basename %s found",
++
++                                domain = "R-utils"),
++                                length(f), sQuote(file[1L])), paste(":\n         ", f, collapse = "")),
+                  domain = NA)
+     }
+ 
+@@ -228,7 +230,7 @@
+                  " declares an encoding that Sweave does not know about",
+                  domain = NA, call. = FALSE)
+         }
+-        if (enc == "UTF-8") 
++        if (enc == "UTF-8")
+             Encoding(text) <- enc
+         else {
+             if (nzchar(enc)) text <- iconv(text, enc, "") else enc <- "ASCII"
+@@ -425,7 +427,7 @@
+     Usage <- function() {
+         cat("Usage: R CMD Sweave [options] file",
+             "",
+-            "A front-end for Sweave and other vignette engines",
++            "A front-end for Sweave and other vignette engines, via buildVignette()",
+             "",
+             "Options:",
+             "  -h, --help      print this help message and exit",
+@@ -433,6 +435,10 @@
+             "  --driver=name   use named Sweave driver",
+             "  --engine=pkg::engine  use named vignette engine",
+             "  --encoding=enc  default encoding 'enc' for file",
++	    "  --clean         corresponds to --clean=default",
++	    "  --clean=	       remove some of the created files:",
++            '                  "default" removes those the same initial name;',
++            '                  "keepOuts" keeps e.g. the *.tex ones even when PDF is produced',
+             "  --options=      comma-separated list of Sweave/engine options",
+             "  --pdf           convert to PDF document",
+             "  --compact=      try to compact PDF document:",
+@@ -454,6 +460,7 @@
+     engine <- NULL
+     toPDF <- FALSE
+     compact <- Sys.getenv("_R_SWEAVE_COMPACT_PDF_", "no")
++    clean <- FALSE ## default!
+     while(length(args)) {
+         a <- args[1L]
+         if (a %in% c("-h", "--help")) {
+@@ -465,7 +472,7 @@
+                 R.version[["major"]], ".",  R.version[["minor"]],
+                 " (r", R.version[["svn rev"]], ")\n", sep = "")
+             cat("",
+-                "Copyright (C) 2006-2013 The R Core Team.",
++                "Copyright (C) 2006-2014 The R Core Team.",
+                 "This is free software; see the GNU General Public License version 2",
+                 "or later for copying conditions.  There is NO warranty.",
+                 sep = "\n")
+@@ -476,6 +483,18 @@
+             engine <- substr(a, 10, 1000)
+         } else if (substr(a, 1, 11) == "--encoding=") {
+             encoding <- substr(a, 12, 1000)
++	} else if (a == "--clean") {
++	    clean <- TRUE
++	} else if (substr(a, 1, 8) == "--clean=") {
++	    clean. <- substr(a, 9, 1000)
++	    clean <- switch(clean.,
++			    "default" = TRUE,
++			    "keepOuts" = NA,
++			    message(gettextf("Warning: unknown option '--clean='%s",
++					     clean.), domain = NA))
++	} else if (a == "--no-clean") { # only exists in 3.1.0
++	    message("Warning: '--no-clean' is deprecated; default does not clean, see --clean")
++	    clean <- FALSE
+         } else if (substr(a, 1, 10) == "--options=") {
+             options <- substr(a, 11, 1000)
+         } else if (a == "--pdf") {
+@@ -494,7 +513,7 @@
+         Usage()
+         do_exit(1L)
+     }
+-    args <- list(file=file, tangle=FALSE, latex=toPDF, engine=engine)
++    args <- list(file=file, tangle=FALSE, latex=toPDF, engine=engine, clean=clean)
+     if(nzchar(driver)) args <- c(args, driver)
+     args <- c(args, encoding = encoding)
+     if(nzchar(options)) {
+@@ -503,7 +522,7 @@
+     }
+     output <- do.call(tools::buildVignette, args)
+     message("Output file:  ", output)
+-    if (toPDF && compact != "no" 
++    if (toPDF && compact != "no"
+         && length(output) == 1 && grepl(".pdf$", output, ignore.case=TRUE)) {
+ 	## <NOTE>
+ 	## Same code as used for --compact-vignettes in
+@@ -596,7 +615,7 @@
+         Usage()
+         do_exit(1L)
+     }
+-    args <- list(file=file, tangle=TRUE, weave=FALSE, engine=engine, 
++    args <- list(file=file, tangle=TRUE, weave=FALSE, engine=engine,
+                  encoding=encoding)
+     if(nzchar(options)) {
+         opts <- eval(parse(text = paste("list(", options, ")")))
+Index: src/library/tools/R/Vignettes.R
+===================================================================
+--- src/library/tools/R/Vignettes.R	(revision 65431)
++++ src/library/tools/R/Vignettes.R	(revision 65432)
+@@ -1,7 +1,7 @@
+ #  File src/library/tools/R/Vignettes.R
+ #  Part of the R package, http://www.R-project.org
+ #
+-#  Copyright (C) 1995-2013 The R Core Team
++#  Copyright (C) 1995-2014 The R Core Team
+ #
+ #  This program is free software; you can redistribute it and/or modify
+ #  it under the terms of the GNU General Public License as published by
+@@ -35,7 +35,7 @@
+ # Locates the vignette weave, tangle and texi2pdf product(s) based on the
+ # vignette name.   All such products must have the name as their filename
+ # prefix (i.e. "^<name>").
+-# For weave, final = TRUE will look for <name>.pdf and <name>.pdf, whereas
++# For weave, final = TRUE will look for <name>.pdf and <name>.html, whereas
+ # with final = FALSE it also looks for <name>.tex (if <name>.pdf is also
+ # found, it will be returned).  For tangle, main = TRUE will look <name>.R,
+ # whereas main = FALSE will look for <name><anything>*.R.
+@@ -44,20 +44,14 @@
+     function(name, by = c("weave", "tangle", "texi2pdf"),
+              final = FALSE, main = TRUE, dir = ".", engine, ...)
+ {
+-    stopifnot(length(name) == 1L)
++    stopifnot(length(name) == 1L, file_test("-d", dir))
+     by <- match.arg(by)
+-    stopifnot(file_test("-d", dir))
++    exts <- ## (lower case here):
++	switch(by,
++	       "weave" = if (final) c("pdf", "html") else c("pdf", "html", "tex"),
++	       "tangle" = c("r", "s"),
++	       "texi2pdf" = "pdf")
+ 
+-    if (by == "weave") {
+-        if (final)
+-            exts <- c("pdf", "html")
+-        else
+-            exts <- c("pdf", "html", "tex")
+-    } else if (by == "tangle") {
+-        exts <- c("r", "s")
+-    } else if (by == "texi2pdf") {
+-        exts <- "pdf"
+-    }
+     exts <- c(exts, toupper(exts))
+     pattern1 <- sprintf("^%s[.](%s)$", name, paste(exts, collapse = "|"))
+     output0 <- list.files(path = dir, all.files = FALSE, full.names = FALSE, no..=TRUE)
+@@ -113,16 +107,13 @@
+                  domain = NA)
+     }
+ 
++    ## return :
+     if (length(output) > 0L) {
+         if (dir == ".")
+-            output <- basename(output)
++            basename(output)
+         else
+-            output <- file.path(dir, output)
+-    } else {
+-        output <- NULL
+-    }
+-
+-    output
++            file.path(dir, output)
++    } ## else NULL
+ }
+ 
+ 
+@@ -382,28 +373,24 @@
+ 
+     docs <- names <- engines <- patterns <- character()
+     allFiles <- list.files(docdir, all.files = FALSE, full.names = TRUE)
+-    matchedPattern <- rep(FALSE, length(allFiles))
++    matchedPattern <- rep.int(FALSE, length(allFiles))
+     msg <- character()
+     if (length(allFiles) > 0L) {
+         for (name in names(engineList)) {
+             engine <- engineList[[name]]
+-            patternsT <- engine$pattern
+-            for (pattern in patternsT) {
++            for (pattern in engine$pattern) {
+                 idxs <- grep(pattern, allFiles)
+-		docsT <- allFiles[idxs]
+ 		matchedPattern[idxs] <- TRUE
+-		keep <- logical(length(docsT))
+-		for (i in seq_along(docsT))
+-		    keep[i] <- engineMatches(name, getVignetteEngine(docsT[i]))
+-		idxs  <- idxs[keep]
+-                nidxs <- length(idxs)
+-                if (nidxs > 0L) {
++		keep <- vapply(allFiles[idxs], function(.d.)
++			       engineMatches(name, getVignetteEngine(.d.)), NA)
++		if (any(keep)) {
++		    idxs <- idxs[keep]
+                     if (is.function(engine$weave)) {
+                         docsT <- allFiles[idxs]
+                         docs <- c(docs, docsT)
+                         names <- c(names, gsub(pattern, "", basename(docsT)))
+-                        engines <- c(engines, rep(name, times = nidxs))
+-                        patterns <- c(patterns, rep(pattern, times = nidxs))
++			engines	 <- c(engines,	rep.int(name,	 length(idxs)))
++			patterns <- c(patterns, rep.int(pattern, length(idxs)))
+                     }
+ 		    matchedPattern <- matchedPattern[-idxs]
+                     allFiles <- allFiles[-idxs]
+@@ -421,13 +408,12 @@
+     }
+ 
+     # Assert
+-    stopifnot(length(names) == length(docs))
+-    stopifnot(length(engines) == length(docs))
+-    stopifnot(length(patterns) == length(docs))
+-    stopifnot(!any(duplicated(docs)))
++    stopifnot(length(names)    == length(docs),
++	      length(engines)  == length(docs),
++	      length(patterns) == length(docs), !anyDuplicated(docs))
+ 
+     z <- list(docs=docs, names=names, engines=engines, patterns=patterns,
+-              dir=docdir, pkgdir=dir, msg = msg)
++	      dir = docdir, pkgdir = dir, msg = msg)
+ 
+     if (output) {
+         outputs <- character(length(docs))
+@@ -460,7 +446,6 @@
+ ###
+ ### Run a weave and pdflatex on all vignettes of a package and try to
+ ### remove all temporary files that were created.
+-
+ buildVignettes <-
+ function(package, dir, lib.loc = NULL, quiet = TRUE, clean = TRUE, tangle = FALSE)
+ {
+@@ -569,11 +554,11 @@
+             newer <- file_test("-nt", f, ".build.timestamp")
+             ## some packages, e.g. SOAR, create directories
+             unlink(f[newer], recursive = TRUE)
++            f <- setdiff(list.files(all.files = TRUE, no.. = TRUE),
++                         c(keep, origfiles))
++            f <- f[file_test("-f", f)]
++            file.remove(f)
+         }
+-        f <- setdiff(list.files(all.files = TRUE, no.. = TRUE),
+-                     c(keep, origfiles))
+-        f <- f[file_test("-f", f)]
+-        file.remove(f)
+     }
+ 
+     # Assert
+@@ -592,15 +577,13 @@
+ ###
+ ### Run a weave and/or tangle on one vignette and try to
+ ### remove all temporary files that were created.
+-
+-buildVignette <-
+-    function(file, dir = ".", weave = TRUE, latex = TRUE, tangle = TRUE,
+-    quiet = TRUE, clean = TRUE, engine = NULL, buildPkg = NULL, ...)
++### Also called from 'R CMD Sweave' via .Sweave() in ../../utils/R/Sweave.R
++buildVignette <- function(file, dir = ".", weave = TRUE, latex = TRUE, tangle = TRUE,
++			  quiet = TRUE, clean = TRUE, keep = character(),
++			  engine = NULL, buildPkg = NULL, ...)
+ {
+-
+     if (!file_test("-f", file))
+ 	stop(gettextf("file '%s' not found", file), domain = NA)
+-
+     if (!file_test("-d", dir))
+ 	stop(gettextf("directory '%s' does not exist", dir), domain = NA)
+ 
+@@ -628,12 +611,11 @@
+ 
+     # Set output directory temporarily
+     file <- file_path_as_absolute(file)
+-    olddir <- getwd()
++    olddir <- setwd(dir)
+     if (!is.null(olddir)) on.exit(setwd(olddir))
+-    setwd(dir)
+ 
+-    # Record existing files
+-    origfiles <- list.files(all.files = TRUE)
++    ## # Record existing files
++    ## origfiles <- list.files(all.files = TRUE)
+     if (is.na(clean) || clean) {
+ 	file.create(".build.timestamp")
+     }
+@@ -662,9 +644,9 @@
+ 	find_vignette_product(name, by = "tangle", main = FALSE, engine = engine)
+     } # else NULL
+ 
+-    # Cleanup
+-    keep <- c(sources, final)
+-    if (is.na(clean)) {  # Use NA to signal we want .tex files kept.
++    ## Cleanup newly created files unless those in 'keep'
++    keep <- c(sources, final, keep)
++    if (is.na(clean)) {  # Use NA to signal we want .tex (or .md) files kept.
+ 	keep <- c(keep, output)
+ 	clean <- TRUE
+     }
+@@ -674,10 +656,11 @@
+ 	## some packages create directories
+ 	unlink(f[newer], recursive = TRUE)
+     }
+-    f <- setdiff(list.files(all.files = TRUE, no.. = TRUE), c(keep, origfiles))
+-    f <- f[file_test("-f", f)]
+-    file.remove(f)
+-
++    ### huh?  2nd round of cleaning even if  clean is FALSE ??
++    ##     f <- setdiff(list.files(all.files = TRUE, no.. = TRUE), c(keep, origfiles))
++    ##     f <- f[file_test("-f", f)]
++    ##     file.remove(f)
++    ## #}
+     unique(keep)
+ }
+ 
+@@ -685,18 +668,18 @@
+ 
+ getVignetteEncoding <-  function(file, ...)
+ {
+-    # Look for inputen[cx] first, then %\SweaveUTF8.  Complain about 
++    # Look for inputen[cx] first, then %\SweaveUTF8.  Complain about
+     # inconsistencies.
+-    
++
+     lines <- readLines(file, warn = FALSE)
+     result1 <- .getVignetteEncoding(lines, ...)
+-    
++
+     poss <- grep("^[[:space:]]*%+[[:space:]]*\\\\SweaveUTF8[[:space:]]*$", lines, useBytes = TRUE)
+     if (length(poss)) {
+     	result <- "UTF-8"
+     	if (!(result1 %in% c("", "non-ASCII", "UTF-8")))
+-    	    stop("Inconsistent encoding specifications: ", result1, " with %\\SweaveUTF8")
+-    } else 
++    	    stop(gettextf("Inconsistent encoding specifications: %s with %%\\SweaveUTF8", result1), domain = NA)
++    } else
+     	result <- result1
+     result
+ }
+Index: src/library/tools/man/buildVignette.Rd
+===================================================================
+--- src/library/tools/man/buildVignette.Rd	(revision 65431)
++++ src/library/tools/man/buildVignette.Rd	(revision 65432)
+@@ -4,13 +4,15 @@
+ \description{
+   Run \code{\link{Sweave}} (or other custom weave function)
+   \code{\link{texi2dvi}}, and/or \code{\link{Stangle}} 
+-  (or other custom tangle function)  on one vignette.
++  (or other custom tangle function) on one vignette.
++
++  This is the workhorse of \command{R CMD Sweave}.
+ }
+ \usage{
+ buildVignette(file, dir = ".", weave = TRUE, latex = TRUE, tangle = TRUE, 
+-                  quiet = TRUE, clean = TRUE, engine = NULL, buildPkg = NULL, ...)
++              quiet = TRUE, clean = TRUE, keep = character(),
++              engine = NULL, buildPkg = NULL, ...)
+ }
+-%- maybe also 'usage' for other objects documented here.
+ \arguments{
+   \item{file}{character; the vignette source file}
+   \item{dir}{character; the working directory in which the intermediate and 
+@@ -19,9 +21,12 @@
+   \item{latex}{logical; \link{texi2pdf} be run if weaving produces a \file{.tex} file?}
+   \item{tangle}{logical; should tangle be run?}
+   \item{quiet}{logical; run in quiet mode?}
+-  \item{clean}{logical; whether to remove intermediate files.  See details below.}
+-  \item{engine}{\code{NULL} or character; name of vignette engine to use.  Overrides
+-   any  \code{\\VignetteEngine\{\}} markup in the vignette.}
++  \item{clean}{logical; whether to remove some newly created, often
++    intermediate, files.  See details below.}
++  \item{keep}{a list of file names to keep in any case when cleaning.  Note
++    that \dQuote{target} files are kept anyway.}
++  \item{engine}{\code{NULL} or character; name of vignette engine to
++    use.  Overrides any \code{\\VignetteEngine\{\}} markup in the vignette.}
+   \item{buildPkg}{\code{NULL} or character; an optional package in which to find
+     the vignette engine}
+   \item{...}{Additional arguments passed to weave and tangle.}
+@@ -28,26 +33,30 @@
+ 
+ }
+ \details{
+-This function determines the vignette engine for the vignette (default \code{utils::Sweave}), 
+-then weaves and/or tangles the vignette using that engine.  Finally, if \code{clean} is \code{TRUE},
+-newly created intermediate files will be deleted.  If \code{clean} is \code{NA}, newly created
+-\file{.tex} files will not be deleted even if a \file{.pdf} file has been produced from them.
++  This function determines the vignette engine for the vignette (default
++  \code{utils::Sweave}), then weaves and/or tangles the vignette using
++  that engine.  Finally, if \code{clean} is \code{TRUE}, newly created
++  intermediate files (non \dQuote{targets}, where these depend on the engine,
++  etc, and not any in \code{keep}) will be deleted.  If \code{clean} is
++  \code{NA}, and \code{weave} is true, newly created intermediate output
++  files (e.g., \file{.tex}) will not be deleted even if a \file{.pdf}
++  file has been produced from them.  
+ 
+-If \code{buildPkg} is specified, it will be loaded before the vignette is processed, and will
+-be used as the default package 
+-in the search for a vignette engine, but an explicitly specified package in the vignette source
+-(e.g. using \code{\\VignetteEngine\{utils::Sweave\}} to specify the \code{Sweave} 
+-engine in the \pkg{utils} package) will override it.   In contrast, 
+-if the \code{engine} argument is given, it will override the 
+-vignette source.
++  If \code{buildPkg} is specified, it will be loaded before the vignette
++  is processed, and will be used as the default package in the search
++  for a vignette engine, but an explicitly specified package in the
++  vignette source (e.g. using \code{\\VignetteEngine\{utils::Sweave\}}
++  to specify the \code{Sweave} engine in the \pkg{utils} package) will
++  override it.  In contrast, if the \code{engine} argument is given, it
++  will override the vignette source.
+ }
+ \value{
+-A character vector naming the files that have been produced.
++  A character vector naming the files that have been produced.
+ }
+ \author{
+-Henrik Bengtsson and Duncan Murdoch
++  Henrik Bengtsson and Duncan Murdoch
+ }
+ \seealso{
+-\code{\link{buildVignettes}} for building all vignettes in a package.
++  \code{\link{buildVignettes}} for building all vignettes in a package.
+ }
+ \keyword{documentation}
+Index: src/library/tools/man/buildVignettes.Rd
+===================================================================
+--- src/library/tools/man/buildVignettes.Rd	(revision 65431)
++++ src/library/tools/man/buildVignettes.Rd	(revision 65432)
+@@ -39,10 +39,10 @@
+   \item{subdirs}{a character vector of subdirectories of \code{dir} in which
+     to look for vignettes. The first which exists is used.  Defaults to
+     \code{"doc"} if \code{package} is supplied, otherwise \code{"vignettes"}.}
+-  \item{output}{logical.  If \code{TRUE}, the output filename
+-    for each vignette in the result.}
+-  \item{source}{logical.  If \code{TRUE}, include the tangled output filename
+-    for each vignette in the result.}
++  \item{output}{logical indicating if the output filenames for each
++    vignette should be returned (in component \code{outputs}).}
++  \item{source}{logical indicating if the \emph{tangled} output
++    filenames for each vignette should be returned (in component \code{sources}).}
+   \item{check}{logical.  If \code{TRUE}, check whether all files that
+     have vignette-like filenames have an identifiable vignette engine.
+     This may be a false positive if a file is not a vignette but has a 
+@@ -49,7 +49,7 @@
+     filename matching a pattern defined by one of the vignette engines.} 
+ }
+ \details{
+-  \code{buildVignettes} is used by \code{R CMD build} and \code{R CMD
++  \code{buildVignettes} is used by \command{R CMD build} and \command{R CMD
+     check} to (re-)build vignette PDFs from their sources. 
+ }
+ \value{
+@@ -60,5 +60,20 @@
+   \code{pkgVignettes} returns an object of class \code{"pkgVignettes"}
+   if a vignette directory is found, otherwise \code{NULL}.  
+ }
++\examples{
++str(gVigns <- pkgVignettes("grid"))
++\dontshow{
++ `\%=f=\%` <- function(a, b) normalizePath(a) == normalizePath(b)
++ with(gVigns,
++      stopifnot(engines == "utils::Sweave",
++                pkgdir \%=f=\% system.file(package="grid"),
++                dir    \%=f=\% system.file(package="grid", "doc"),
++                (n. <- length(docs)) >= 12, # have 13 
++                n. == length(names), n. == length(engines),
++                length(msg) == 0) ) # as it is a 'base' package
++}
++stopifnot("grid" \%in\% gVigns$names,
++          inherits(gVigns, "pkgVignettes"))
++}
+ \keyword{utilities}
+ \keyword{documentation}
