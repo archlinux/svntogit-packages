@@ -1,11 +1,12 @@
 # $Id$
-# Maintainer: Stéphane Gaudreault <stephane@archlinux.org>
-# Contributer: Allan McRae <allan@archlinux.org>
-# Contributer: Jason Chu <jason@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@gmail.com>
+# Contributor: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=python2
-pkgver=2.7.6
-pkgrel=3
+pkgver=2.7.7
+pkgrel=1
 _pybasever=2.7
 pkgdesc="A high-level scripting language"
 arch=('i686' 'x86_64')
@@ -15,19 +16,11 @@ depends=('bzip2' 'gdbm' 'openssl' 'zlib' 'expat' 'sqlite' 'libffi')
 makedepends=('tk>=8.6.0' 'bluez-libs')
 optdepends=('tk: for IDLE')
 conflicts=('python<3')
-options=('!makeflags')
-source=(http://www.python.org/ftp/python/${pkgver%rc?}/Python-${pkgver}.tar.xz
-        CVE-2014-1912.patch::http://hg.python.org/cpython/raw-rev/87673659d8f7)
-sha1sums=('8321636af2acbeaa68fc635d7dda7369ed446a80'
-          '1d0527f7b8483e1e0e12867675fdff86f22cd297')
+source=(http://www.python.org/ftp/python/${pkgver%rc?}/Python-${pkgver}.tar.xz)
+sha1sums=('5f82557cac5abf18d1df6f8bb2029aa335b321f4')
 
 prepare() {
-  cd "${srcdir}/Python-${pkgver}"
-
-  # FS#39040 / CVE-2014-1912, upstream report: http://bugs.python.org/issue20246
-  # Remove the NEWS file update from upstream patch which will cause a conflict
-  sed -i "40,51d" "$srcdir/CVE-2014-1912.patch"
-  patch -p1 -i "$srcdir/CVE-2014-1912.patch"
+  cd Python-${pkgver}
 
   # Temporary workaround for FS#22322
   # See http://bugs.python.org/issue10835 for upstream report
@@ -60,15 +53,30 @@ build() {
   cd "${srcdir}/Python-${pkgver}"
 
   export OPT="${CFLAGS}"
-  ./configure --prefix=/usr --enable-shared --with-threads --enable-ipv6 \
-              --enable-unicode=ucs4 --with-system-expat --with-system-ffi \
+  ./configure --prefix=/usr \
+              --enable-shared \
+              --with-threads \
+              --enable-ipv6 \
+              --enable-unicode=ucs4 \
+              --with-system-expat \
+              --with-system-ffi \
               --with-dbmliborder=gdbm:ndbm
 
   make
 }
 
+check() {
+  # As of 2.7.7, 1 test failed:
+  # test_uuid
+  # Besides, test_thread disabled as it will stuck
+
+  cd Python-${pkgver}
+  LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
+    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -uall -x test_thread || warning "Tests failed"
+}
+
 package() {
-  cd "${srcdir}/Python-${pkgver}"
+  cd Python-${pkgver}
   make DESTDIR="${pkgdir}" altinstall maninstall
 
   rm "${pkgdir}"/usr/share/man/man1/python.1
