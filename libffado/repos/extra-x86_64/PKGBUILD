@@ -4,24 +4,22 @@
 # Contributor: Jon Kristian Nilsen <jokr.nilsen@gmail.com>
 
 pkgname=libffado
-pkgver=2.1.0
-pkgrel=4
+pkgver=2.2.1
+pkgrel=1
 pkgdesc="Driver for FireWire audio devices"
 arch=('i686' 'x86_64')
 url="http://www.ffado.org/"
 license=('GPL')
 depends=('libiec61883' 'libavc1394' 'dbus-c++'
-         'libxml++' 'alsa-lib' 'libsigc++' 'libconfig')
+         'libxml++' 'jack' 'libsigc++' 'libconfig')
 makedepends=('scons' 'subversion' 'python2-pyqt')
 optdepends=('python2: ffado-diag'
             'python2-pyqt: mixer applet')
 provides=('ffado')
 source=("http://www.ffado.org/files/$pkgname-$pkgver.tgz"
-        'python2-qt.patch'
-        'rules.patch')
-md5sums=('26bce2be0b9c1fa4e614f2f494edf388'
-         '10aa837f5521da213caa93e1ddc58c0e'
-         'da1102bfb02e67b3dfcb3947435a81e9')
+        'python2-qt.patch')
+md5sums=('e113d828835051f835fb4a329cb0cbd4'
+         'acb6e0dca1239850c7862bf2e1443fd7')
 
 _scons-conf() {
   scons DEBUG=False \
@@ -34,20 +32,15 @@ _scons-conf() {
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
 
-  # python2 fix
+  msg2 "Applying Python 2 compatibility patch (downstream)"
   patch -Np1 -i "$srcdir/python2-qt.patch"
-
-  # rule comments must be on their own line
-  # see https://bugs.archlinux.org/task/36949
-  # and http://subversion.ffado.org/ticket/373
-  patch -Np0 -i "$srcdir/rules.patch"
 }
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
 
   if [ "$CARCH" = 'x86_64' ]; then
-    _scons-conf ENABLE_OPTIMIZATIONS=True
+    _scons-conf ENABLE_OPTIMIZATIONS=True # SSE et al. not suitable for i686
   else
     _scons-conf
   fi
@@ -58,7 +51,6 @@ package() {
 
   scons DESTDIR="$pkgdir" WILL_DEAL_WITH_XDG_MYSELF="True" install
 
-  # desktop files & icons
   install -Dm644 support/xdg/ffado.org-ffadomixer.desktop \
     "$pkgdir/usr/share/applications/ffadomixer.desktop"
 
