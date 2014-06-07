@@ -2,19 +2,19 @@
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=xscreensaver
-pkgver=5.26
+pkgver=5.28
 pkgrel=1
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
 url="http://www.jwz.org/xscreensaver/"
 license=('BSD')
 depends=('libglade' 'libxmu' 'glu' 'xorg-appres' 'perl-libwww')
-makedepends=('bc' 'libxpm' 'gdm')
+makedepends=('bc' 'intltool' 'libxpm' 'gdm')
 optdepends=('gdm: for login manager support')
 backup=('etc/pam.d/xscreensaver')
-source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz \
+source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz
         xscreensaver-add-electricsheep.diff LICENSE)
-sha1sums=('8055822b661733e68550872a4ae6b6129c0b73fc'
+sha1sums=('293337889089f54023c3a221175392830254936c'
           'e8dc57b6471fb3867ee099304ac6bf628351cb98'
           '3eedb8b91b13c29df9b1fe5cbb027e1470b802d2')
 
