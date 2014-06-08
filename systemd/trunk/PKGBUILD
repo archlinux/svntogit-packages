@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=213
-pkgrel=6
+pkgrel=7
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -81,18 +81,22 @@ package_systemd() {
           etc/systemd/journald.conf
           etc/systemd/logind.conf
           etc/systemd/system.conf
+          etc/systemd/timesyncd.conf
+          etc/systemd/resolved.conf
           etc/systemd/user.conf
           etc/udev/udev.conf)
   install="systemd.install"
 
   make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
 
-  # don't write units to /etc by default -- we'll enable the getty on
-  # post_install as a sane default.
-  rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service"
-  rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service"
-  rm "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
-  rmdir "$pkgdir/etc/systemd/system/getty.target.wants"
+  # don't write units to /etc by default. some of these will be re-enabled on
+  # post_install.
+  rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service" \
+      "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service" \
+      "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-resolved.service" \
+      "$pkgdir/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service"
+  rmdir "$pkgdir/etc/systemd/system/getty.target.wants" \
+      "$pkgdir/etc/systemd/system/network-online.target.wants"
 
   # get rid of RPM macros
   rm -r "$pkgdir/usr/lib/rpm"
