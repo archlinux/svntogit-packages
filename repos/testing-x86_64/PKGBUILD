@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=213
-pkgrel=7
+pkgrel=8
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -18,6 +18,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-install-udev'
         '0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch'
         '0001-fsck-disable-l-option-for-now.patch'
+        '0001-udev-exclude-device-mapper-from-block-device-ownersh.patch'
         '0001-networkd-link-intialize-mac-address.patch')
 md5sums=('06496edcf86ddf6d8c12d72ba78e735d'
          '29245f7a240bfba66e2b1783b63b6b40'
@@ -25,6 +26,7 @@ md5sums=('06496edcf86ddf6d8c12d72ba78e735d'
          'bde43090d4ac0ef048e3eaee8202a407'
          '5f8ad7126970855614c7fa34b317728d'
          '888cf85a92dd28bcf80e18539fef3915'
+         'f26803dda8811196c0564f928bfe69d1'
          '3d53d3bcd85ca0b2ff9f4e79d012808d')
 
 prepare() {
@@ -33,6 +35,7 @@ prepare() {
   patch -Np1 <"$srcdir/0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch"
   patch -Np1 <"$srcdir/0001-networkd-link-intialize-mac-address.patch"
   patch -Np1 <"$srcdir/0001-fsck-disable-l-option-for-now.patch"
+  patch -Np1 <"$srcdir/0001-udev-exclude-device-mapper-from-block-device-ownersh.patch"
 }
 
 build() {
