@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=213
-pkgrel=8
+pkgrel=9
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -19,7 +19,9 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch'
         '0001-fsck-disable-l-option-for-now.patch'
         '0001-udev-exclude-device-mapper-from-block-device-ownersh.patch'
-        '0001-networkd-link-intialize-mac-address.patch')
+        '0001-udev-always-close-lock-file-descriptor.patch'
+        '0001-networkd-link-intialize-mac-address.patch'
+        '0001-udev-really-exclude-device-mapper-from-block-device-.patch')
 md5sums=('06496edcf86ddf6d8c12d72ba78e735d'
          '29245f7a240bfba66e2b1783b63b6b40'
          '66cca7318e13eaf37c5b7db2efa69846'
@@ -27,7 +29,9 @@ md5sums=('06496edcf86ddf6d8c12d72ba78e735d'
          '5f8ad7126970855614c7fa34b317728d'
          '888cf85a92dd28bcf80e18539fef3915'
          'f26803dda8811196c0564f928bfe69d1'
-         '3d53d3bcd85ca0b2ff9f4e79d012808d')
+         '2a14fe9876fa48f01cca3c1d575e5771'
+         '3d53d3bcd85ca0b2ff9f4e79d012808d'
+         'ae060fc00eeced6554e70d9a9c0eb42f')
 
 prepare() {
   cd "$pkgname-$pkgver"
@@ -35,8 +39,11 @@ prepare() {
   patch -Np1 <"$srcdir/0001-units-use-KillMode-mixed-for-systemd-nspawn-.service.patch"
   patch -Np1 <"$srcdir/0001-networkd-link-intialize-mac-address.patch"
   patch -Np1 <"$srcdir/0001-fsck-disable-l-option-for-now.patch"
+  patch -Np1 <"$srcdir/0001-udev-always-close-lock-file-descriptor.patch"
   patch -Np1 <"$srcdir/0001-udev-exclude-device-mapper-from-block-device-ownersh.patch"
+  patch -Np1 <"$srcdir/0001-udev-really-exclude-device-mapper-from-block-device-.patch"
 }
+
 
 build() {
   cd "$pkgname-$pkgver"
