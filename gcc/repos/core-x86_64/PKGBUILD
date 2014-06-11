@@ -7,8 +7,8 @@
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=4.9.0
 _pkgver=4.9
-pkgrel=3
-_snapshot=4.9-20140521
+pkgrel=4
+_snapshot=4.9-20140604
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -19,7 +19,7 @@ options=('!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         gcc-4.8-filename-output.patch)
-md5sums=('cd3cbe93ebc7207bf65d30e3c9a74a26'
+md5sums=('57aa4ff81c56262dc89994853c4d0149'
          '40cb437805e2f7a006aa0d0c3098ab0f')
 
 if [ -n "${_snapshot}" ]; then
