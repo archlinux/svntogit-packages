@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=214
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -81,6 +81,9 @@ package_systemd() {
       "$pkgdir/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants" \
       "$pkgdir/etc/systemd/system/network-online.target.wants"
+
+  # remove the coredump rule until minidumps are a thing.
+  rm "$pkgdir/usr/lib/sysctl.d/50-coredump.conf"
 
   # get rid of RPM macros
   rm -r "$pkgdir/usr/lib/rpm"
