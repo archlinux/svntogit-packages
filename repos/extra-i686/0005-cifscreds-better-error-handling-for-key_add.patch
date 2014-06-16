@@ -1,0 +1,102 @@
+From 382ec63757c1d8d4d399d17ccc927c4897d4cfc9 Mon Sep 17 00:00:00 2001
+From: Jeff Layton <jlayton@samba.org>
+Date: Sun, 20 Apr 2014 20:41:05 -0400
+Subject: [PATCH] cifscreds: better error handling for key_add
+
+If the string buffers would have been overrun, set errno to EINVAL
+before returning. Then, have the callers report the errors to
+stderr or syslog as appropriate.
+
+Cc: Sebastian Krahmer <krahmer@suse.de>
+Signed-off-by: Jeff Layton <jlayton@samba.org>
+---
+ cifscreds.c     | 6 +++---
+ cifskey.c       | 8 ++++++--
+ pam_cifscreds.c | 9 +++++----
+ 3 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/cifscreds.c b/cifscreds.c
+index 64d55b0..5d84c3c 100644
+--- a/cifscreds.c
++++ b/cifscreds.c
+@@ -220,8 +220,8 @@ static int cifscreds_add(struct cmdarg *arg)
+ 	while (currentaddress) {
+ 		key_serial_t key = key_add(currentaddress, arg->user, pass, arg->keytype);
+ 		if (key <= 0) {
+-			fprintf(stderr, "error: Add credential key for %s\n",
+-				currentaddress);
++			fprintf(stderr, "error: Add credential key for %s: %s\n",
++				currentaddress, strerror(errno));
+ 		} else {
+ 			if (keyctl(KEYCTL_SETPERM, key, CIFS_KEY_PERMS) < 0) {
+ 				fprintf(stderr, "error: Setting permissons "
+@@ -422,7 +422,7 @@ static int cifscreds_update(struct cmdarg *arg)
+ 		key_serial_t key = key_add(addrs[id], arg->user, pass, arg->keytype);
+ 		if (key <= 0)
+ 			fprintf(stderr, "error: Update credential key "
+-				"for %s\n", addrs[id]);
++				"for %s: %s\n", addrs[id], strerror(errno));
+ 	}
+ 
+ 	return EXIT_SUCCESS;
+diff --git a/cifskey.c b/cifskey.c
+index 4f01ed0..919540f 100644
+--- a/cifskey.c
++++ b/cifskey.c
+@@ -47,13 +47,17 @@ key_add(const char *addr, const char *user, const char *pass, char keytype)
+ 	char val[MOUNT_PASSWD_SIZE +  MAX_USERNAME_SIZE + 2];
+ 
+ 	/* set key description */
+-	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc))
++	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc)) {
++		errno = EINVAL;
+ 		return -1;
++	}
+ 
+ 	/* set payload contents */
+ 	len = snprintf(val, sizeof(val), "%s:%s", user, pass);
+-	if (len >= (int)sizeof(val))
++	if (len >= (int)sizeof(val)) {
++		errno = EINVAL;
+ 		return -1;
++	}
+ 
+ 	return add_key(CIFS_KEY_TYPE, desc, val, len + 1, DEST_KEYRING);
+ }
+diff --git a/pam_cifscreds.c b/pam_cifscreds.c
+index fb23117..5d99c2d 100644
+--- a/pam_cifscreds.c
++++ b/pam_cifscreds.c
+@@ -208,6 +208,7 @@ static int cifscreds_pam_add(pam_handle_t *ph, const char *user, const char *pas
+ 
+ 		switch(errno) {
+ 		case ENOKEY:
++			/* success */
+ 			break;
+ 		default:
+ 			pam_syslog(ph, LOG_ERR, "Unable to search keyring for %s (%s)",
+@@ -233,8 +234,8 @@ static int cifscreds_pam_add(pam_handle_t *ph, const char *user, const char *pas
+ 	while (currentaddress) {
+ 		key_serial_t key = key_add(currentaddress, user, password, keytype);
+ 		if (key <= 0) {
+-			pam_syslog(ph, LOG_ERR, "error: Add credential key for %s",
+-				currentaddress);
++			pam_syslog(ph, LOG_ERR, "error: Add credential key for %s: %s",
++				currentaddress, strerror(errno));
+ 		} else {
+ 			if ((args & ARG_DEBUG) == ARG_DEBUG) {
+ 				pam_syslog(ph, LOG_DEBUG, "credential key for \\\\%s\\%s added",
+@@ -336,8 +337,8 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
+ 	for (id = 0; id < count; id++) {
+ 		key_serial_t key = key_add(currentaddress, user, password, keytype);
+ 		if (key <= 0) {
+-			pam_syslog(ph, LOG_ERR, "error: Update credential key for %s",
+-				currentaddress);
++			pam_syslog(ph, LOG_ERR, "error: Update credential key for %s: %s",
++				currentaddress, strerror(errno));
+ 		}
+ 	}
+ 
+-- 
+1.8.4.2
+
