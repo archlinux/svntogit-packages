@@ -1,10 +1,11 @@
 # $Id$
+# Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 # Contributor: James Rayner <iphitus@gmail.com>
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'nvidia-libgl' 'opencl-nvidia')
 pkgver=337.25
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -26,16 +27,17 @@ create_links() {
     done < <(find "${pkgdir}" -type f -name '*.so*' -print0)
 }
 
-build() {
-    cd "${srcdir}"
+prepare() {
     sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+    bsdtar -xf nvidia-persistenced-init.tar.bz2
 }
 
 package_opencl-nvidia() {
     pkgdesc="OpenCL implemention for NVIDIA"
     depends=('libcl' 'zlib')
     optdepends=('opencl-headers: headers necessary for OpenCL development')
-    cd "${srcdir}/${_pkg}"
+    cd "${_pkg}"
 
     # OpenCL
     install -D -m644 nvidia.icd "${pkgdir}/etc/OpenCL/vendors/nvidia.icd"
@@ -53,7 +55,7 @@ package_nvidia-libgl() {
     depends=('nvidia-utils')
     conflicts=('libgl')
     provides=('libgl')
-    cd "${srcdir}/${_pkg}"
+    cd "${_pkg}"
 
     mkdir -p "${pkgdir}/usr/lib/xorg/modules/extensions"
     ln -s "/usr/lib/nvidia/xorg/modules/extensions/libglx.so.${pkgver}" "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so.${pkgver}"
@@ -86,7 +88,8 @@ package_nvidia-utils() {
     optdepends=('gtk2: nvidia-settings'
                 'xorg-server-devel: nvidia-xconfig'
                 'opencl-nvidia: OpenCL support')
-    cd "${srcdir}/${_pkg}"
+    install="${pkgname}.install"
+    cd "${_pkg}"
 
     # X driver
     install -D -m755 nvidia_drv.so "${pkgdir}/usr/lib/xorg/modules/drivers/nvidia_drv.so"
@@ -146,11 +149,19 @@ package_nvidia-utils() {
 
     # nvidia-cuda-mps
     install -D -m755 nvidia-cuda-mps-server "${pkgdir}/usr/bin/nvidia-cuda-mps-server"
+    install -D -m755 nvidia-cuda-mps-control "${pkgdir}/usr/bin/nvidia-cuda-mps-control"
     install -D -m644 nvidia-cuda-mps-control.1.gz "${pkgdir}/usr/share/man/man1/nvidia-cuda-mps-control.1.gz"
 
     # nvidia-modprobe
     # This should be removed if nvidia fixed their uvm module!
     install -D -m4755 nvidia-modprobe "${pkgdir}/usr/bin/nvidia-modprobe"
+    install -D -m644 nvidia-modprobe.1.gz "${pkgdir}/usr/share/man/man1/nvidia-modprobe.1.gz"
+
+    # nvidia-persistenced
+    install -D -m755 nvidia-persistenced "${pkgdir}/usr/bin/nvidia-persistenced"
+    install -D -m644 nvidia-persistenced.1.gz "${pkgdir}/usr/share/man/man1/nvidia-persistenced.1.gz"
+    install -D -m644 nvidia-persistenced-init/systemd/nvidia-persistenced.service.template "${pkgdir}/usr/lib/systemd/system/nvidia-persistenced.service"
+    sed -i 's/__USER__/nvidia-persistenced/' "${pkgdir}/usr/lib/systemd/system/nvidia-persistenced.service"
 
     # application profiles
     install -D -m644 nvidia-application-profiles-${pkgver}-rc "${pkgdir}/usr/share/nvidia/nvidia-application-profiles-${pkgver}-rc"
@@ -160,6 +171,7 @@ package_nvidia-utils() {
     ln -s nvidia "${pkgdir}/usr/share/licenses/nvidia-utils"
     install -D -m644 README.txt "${pkgdir}/usr/share/doc/nvidia/README"
     install -D -m644 NVIDIA_Changelog "${pkgdir}/usr/share/doc/nvidia/NVIDIA_Changelog"
+    cp -r html "${pkgdir}/usr/share/doc/nvidia/"
     ln -s nvidia "${pkgdir}/usr/share/doc/nvidia-utils"
 
     create_links
