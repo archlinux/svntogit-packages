@@ -1,42 +1,41 @@
 # $Id$
-# Maintainer:
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 # Contributor: Robson Peixoto
 
 pkgname=unzip
 pkgver=6.0
-pkgrel=6
-pkgdesc="Unpacks .zip archives such as those made by PKZIP"
+_pkgver=${pkgver/./}
+pkgrel=7
+pkgdesc='For extracting and viewing files in .zip archives'
+url='http://www.info-zip.org/'
 arch=('i686' 'x86_64')
-url="http://www.info-zip.org/"
 license=('custom')
 depends=('bzip2' 'bash')
-source=('http://downloads.sourceforge.net/infozip/unzip60.tar.gz')
-md5sums=('62b490407489521db863b523a7f86375')
+source=("http://downloads.sourceforge.net/infozip/${pkgname}${_pkgver}.tar.gz")
+sha1sums=('abf7de8a4018a983590ed6f5cbd990d4740f8a22')
+
+prepare() {
+	cd "${srcdir}/${pkgname}${_pkgver}"
+	sed -i "/MANDIR =/s#)/#)/share/#" unix/Makefile
+}
 
 build() {
-  cd ${srcdir}/${pkgname}${pkgver/./}
+	cd "${srcdir}/${pkgname}${_pkgver}"
 
-  # set CFLAGS -- from Debian
-  export CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DACORN_FTYPE_NFS \
-  -DWILD_STOP_AT_DIR -DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT \
-  -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_LCHMOD -DDATE_FORMAT=DF_YMD \
-  -DUSE_BZIP2 -DNATIVE"
+	# DEFINES, make, and install args from Debian
+	DEFINES='-DACORN_FTYPE_NFS -DWILD_STOP_AT_DIR -DLARGE_FILE_SUPPORT \
+		-DUNICODE_SUPPORT -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_LCHMOD \
+		-DDATE_FORMAT=DF_YMD -DUSE_BZIP2 -DNOMEMCPY -DNO_WORKING_ISPRINT'
 
-  sed -i "/MANDIR =/s#)/#)/share/#" unix/Makefile
-
-  # make -- from Debian
-  make -f unix/Makefile LOCAL_UNZIP="$CFLAGS" prefix=/usr LF2="" \
-  D_USE_BZ2=-DUSE_BZIP2 L_BZ2=-lbz2 unzips
+	make -f unix/Makefile prefix=/usr \
+		D_USE_BZ2=-DUSE_BZIP2 L_BZ2=-lbz2 \
+		LF2="$LDFLAGS" CF="$CFLAGS $CPPFLAGS -I. $DEFINES" \
+		unzips
 }
 
 package() {
-  cd ${srcdir}/${pkgname}${pkgver/./}
-
-  # install -- from Debian
-  make -f unix/Makefile prefix=${pkgdir}/usr INSTALL_PROGRAM="install" install
-
-  # install the license file
-  install -Dm644 LICENSE ${pkgdir}/usr/share/licenses/unzip/LICENSE
+	cd "${srcdir}/${pkgname}${_pkgver}"
+	make -f unix/Makefile prefix="${pkgdir}"/usr install
+	install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/unzip/LICENSE
 }
-
