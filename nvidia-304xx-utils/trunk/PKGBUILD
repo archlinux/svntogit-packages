@@ -5,7 +5,7 @@
 pkgbase=nvidia-304xx-utils
 pkgname=('nvidia-304xx-utils' 'nvidia-304xx-libgl' 'opencl-nvidia-304xx')
 pkgver=304.121
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -26,11 +26,12 @@ fi
 
 create_links() {
   # create soname links
-  while read -d '' _lib; do
-    _soname="$(dirname "${_lib}")/$(LC_ALL=C readelf -d "${_lib}" | sed -nr 's/.*Library soname: \[(.*)\].*/\1/p')"
-    [[ -e "${_soname}" ]] || ln -s "$(basename "${_lib}")" "${_soname}"
-    [[ -e "${_soname/.[0-9]*/}" ]] || ln -s "$(basename "${_soname}")" "${_soname/.[0-9]*/}"
-  done < <(find "${pkgdir}" -type f -name '*.so*' -print0)
+  for _lib in $(find "${pkgdir}" -name '*.so*' | grep -v 'xorg/'); do
+    _soname=$(dirname "${_lib}")/$(readelf -d "${_lib}" | grep -Po 'SONAME.*: \[\K[^]]*' || true)
+    _base=$(echo ${_soname} | sed -r 's/(.*).so.*/\1.so/')
+    [[ -e "${_soname}" ]] || ln -s $(basename "${_lib}") "${_soname}"
+    [[ -e "${_base}" ]] || ln -s $(basename "${_soname}") "${_base}"
+  done
 }
 
 build() {
