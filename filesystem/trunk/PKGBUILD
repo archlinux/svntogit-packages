@@ -34,14 +34,42 @@ md5sums=('d46cb1adf8175888cc827a3dad8857d2'
          'b16a4674ccf3a932ff34c6c8393a4f33'
          '6f48288b6fcaf0065fcb7b0e525413e0'
          '22518e922891f9359f971f4f5b4e793c'
-         '09bce9236c3729d31aaa528bcf5d198e'
+         '820c520d7d1d26dffa1dce02f728bb1e'
          '0b6f835598c7640184e476057b3c7722'
          'a8a962370cd0128465d514e6a1f74130'
          '2e193c4a37245f2323ebe87f1a673563'
          '4fab2b798deff348e04f05152111aae0')
 
+lint() {
+	# ensure that passwd is sync'd to shadow and group is sync'd to gshadow.
+	local r=0
+
+	local passwd shadow group gshadow
+
+	for f in passwd shadow group gshadow; do
+		mapfile -t "$f" < <(cut -d: -f1 "$f" | sort)
+	done
+
+	# we can cheat and do simple string comparison only because we can make some
+	# assumptions about the data in these files
+	if [[ ${passwd[*]} != "${shadow[*]}" ]]; then
+		error 'passwd is not in sync with shadow!'
+		r=1
+	fi
+
+	if [[ ${group[*]} != "${gshadow[*]}" ]]; then
+		error 'group is not in sync with gshadow!'
+		r=1
+	fi
+
+	return $r
+}
+
 build() {
 	cd ${srcdir}
+
+	lint
+
 	a2x -d manpage -f manpage archlinux.7.txt
 }
 
