@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=215
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -86,6 +86,7 @@ package_systemd() {
   rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service" \
       "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service" \
       "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-resolved.service" \
+      "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-timesyncd.service" \
       "$pkgdir/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service"
   rmdir "$pkgdir/etc/systemd/system/getty.target.wants" \
       "$pkgdir/etc/systemd/system/network-online.target.wants"
@@ -102,7 +103,9 @@ package_systemd() {
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
           s#GROUP="tape"#GROUP="storage"#g;
-          s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
+          s#GROUP="cdrom"#GROUP="optical"#g' \
+            "$pkgdir"/usr/lib/udev/rules.d/*.rules \
+            "$pkgdir"/usr/lib/sysusers.d/basic.conf
 
   # add mkinitcpio hooks
   install -Dm644 "$srcdir/initcpio-install-systemd" "$pkgdir/usr/lib/initcpio/install/systemd"
