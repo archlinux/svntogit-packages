@@ -71,7 +71,7 @@ build() {
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --with-headers=/usr/include \
       --with-bugurl=https://bugs.archlinux.org/ \
-      --enable-add-ons=nptl,libidn \
+      --enable-add-ons \
       --enable-obsolete-rpc \
       --enable-kernel=2.6.32 \
       --enable-bind-now --disable-profile \
