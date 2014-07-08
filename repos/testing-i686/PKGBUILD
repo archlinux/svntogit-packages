@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=215
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -103,9 +103,10 @@ package_systemd() {
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
           s#GROUP="tape"#GROUP="storage"#g;
-          s#GROUP="cdrom"#GROUP="optical"#g' \
-            "$pkgdir"/usr/lib/udev/rules.d/*.rules \
-            "$pkgdir"/usr/lib/sysusers.d/basic.conf
+          s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
+  sed -i 's/dialout/uucp/g;
+          s/tape/storage/g;
+          s/cdrom/optical/g' "$pkgdir"/usr/lib/sysusers.d/basic.conf
 
   # add mkinitcpio hooks
   install -Dm644 "$srcdir/initcpio-install-systemd" "$pkgdir/usr/lib/initcpio/install/systemd"
