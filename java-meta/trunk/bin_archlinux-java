@@ -1,0 +1,156 @@
+#! /bin/bash
+
+# Arch Linux helper script to set/unset/check the enabled Java environment
+# See '-h' or '--help' for usage
+
+JVM_DIR=/usr/lib/jvm
+DEFAULT_NAME=java-default-runtime
+DEFAULT_PATH=${JVM_DIR}/${DEFAULT_NAME}
+
+
+# Utility functions
+
+check_root() {
+  if [ $(id -u) -ne 0 ]; then
+    echo 'This script must be run as root'
+    exit 1
+  fi
+}
+
+# $1: parameter count given to this script for this option
+# $2: expected parameter count for this option
+check_param_count() {
+  if [ $1 -ne $2 ]; then
+    echo 'Wrong parameter count'
+    exit 2
+  fi
+}
+
+# Second level functions
+
+get_default_java() {
+  path=$(readlink -e ${DEFAULT_PATH})
+  echo ${path/${JVM_DIR}\/}
+}
+
+get_installed_javas() {
+  javas=()
+  for dir in $(find ${JVM_DIR} -mindepth 1 -maxdepth 1 -type d | sort); do
+    if [ -x ${dir}/bin/javac ]; then
+      javas+=(${dir/${JVM_DIR}\/})
+    else
+      if [ -x ${dir}/jre/bin/java ]; then
+      javas+=(${dir/${JVM_DIR}\/}/jre)
+      fi
+    fi
+  done
+  echo ${javas[@]}
+}
+
+# $1: Java environment name to test
+is_java_valid() {
+  test "x$1" != "x${DEFAULT_NAME}" && test -x ${JVM_DIR}/$1/bin/java
+}
+
+# $1: Java environment name to set as default
+set_default_to() {
+  check_root
+  echo "Setting Java environment '$1' as default"
+  ln -s $1 ${DEFAULT_PATH}
+}
+
+unset_default() {
+  check_root
+  unlink ${DEFAULT_PATH} 2>/dev/null
+}
+
+# First level functions
+
+give_status() {
+  installed_java=$(get_installed_javas)
+  default_java=$(get_default_java)
+  if [ ${#installed_java[@]} -eq 0 ]; then
+    echo 'No compatible Java environment installed'
+  else
+    echo 'Available Java environments:'
+    for java in ${installed_java[@]}; do
+      if [ ${java} = "${default_java}" ]; then
+        echo -e "  ${java} (default)"
+      else
+        echo "  ${java}"
+      fi
+    done
+  fi
+  if [ -z ${default_java} ]; then
+    echo "No Java environment set as default"
+  fi
+}
+
+# $1: Java environment name to try to set
+try_set_default() {
+  default_java=$(get_default_java)
+  if is_java_valid ${default_java}; then
+    echo "The default Java environment is already set (${default_java})"
+  else
+    force_set_default $1
+  fi
+}
+
+# $1: Java environment name to set as default
+force_set_default() {
+  check_root
+  if is_java_valid $1; then
+    unset_default
+    set_default_to $1
+  else
+    echo "'${JVM_DIR}/$1' is not a valid Java environment path"
+    exit 3
+  fi
+}
+
+# $1: Java environment name to try to unset
+try_unset_default() {
+  default=$(get_default_java)
+  if [ "x${default}" = "x" -o "x${default}" = "x$1" ]; then
+    unset_default
+    echo 'Done. No Java environment is set as default any more.'
+  else
+    echo "'$1' is not set as Java environment default"
+  fi
+}
+
+fix_default() {
+  default=$(get_default_java)
+  if is_java_valid ${default}; then
+    echo "Current default Java environment is valid: '${default}'"
+  else
+    unset_default
+    installed_javas=$(get_installed_javas)
+    javas=('java-7-openjdk' 'java-7-openjdk/jre' ${installed_javas[@]})
+    for java in ${javas[@]}; do
+      if ! is_java_valid $(get_default_java) && is_java_valid ${java}; then
+        set_default_to ${java}
+      fi
+    done
+  fi
+}
+
+usage() {
+  echo "$0 [ --status | --try-set <JAVA_ENV> | --force-set <JAVA_ENV> | --try-unset <JAVA_ENV> ]"
+  echo -e "\n\t<JAVA_ENV> must be the name of a Java environment directory available in ${JVM_DIR}\n"
+  echo -e '\t--status\t\tList installed Java environments and enabled one'
+  echo -e '\t--try-set <JAVA_ENV>\tIf no Java environments is already set as default, set this one'
+  echo -e '\t--force-set <JAVA_ENV>\tForce <JAVA_ENV> as default'
+  echo -e '\t--try-unset <JAVA_ENV>\tIf <JAVA_ENV> is set as default, unset it'
+  echo -e '\t--fix\t\t\tFix an invalid default Java environment'
+}
+
+## Main
+case $1 in
+  '--status')    give_status;;
+  '--try-set')   check_param_count $# 2; try_set_default $2;;
+  '--force-set') check_param_count $# 2; force_set_default $2;;
+  '--try-unset') check_param_count $# 2; try_unset_default $2;;
+  '--fix')       fix_default;;
+  *)             usage;;
+esac
