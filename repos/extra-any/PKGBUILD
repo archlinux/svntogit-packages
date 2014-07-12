@@ -3,7 +3,7 @@
 
 pkgname=pkgstats
 pkgver=2.3
-pkgrel=5
+pkgrel=6
 pkgdesc='submits a list of installed packages to the Arch Linux project'
 arch=('any')
 url='https://www.archlinux.de'
@@ -12,9 +12,9 @@ depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'systemd' 'awk' 'grep')
 source=('pkgstats.sh'
         pkgstats.{timer,service})
 install='pkgstats.install'
-md5sums=('2943bc8c69999d8e3c0bd9b368a3f17b'
+md5sums=('36008b6296c01221d87b11c3aa79bc0c'
          '2285089dff45f583c27b9d561fda5405'
-         '5225a0bb6d32a3bbf89821f841f4eb8c')
+         '5948fa6ef41d3804f7eb6980684611d6')
 
 package() {
 	install -D -m755 ${srcdir}/pkgstats.sh ${pkgdir}/usr/bin/pkgstats
