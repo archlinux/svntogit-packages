@@ -3,7 +3,7 @@
 pkgstatsver='2.3'
 showonly=false
 quiet=false
-option='-q -s -S -4'
+option='-q -s -S'
 
 usage() {
 	echo "usage: ${0} [option]"
@@ -66,7 +66,7 @@ if ${showonly}; then
 	echo "quiet=${quiet}"
 else
 	${quiet} || echo 'Submitting data...'
-	curl ${option} -H 'Expect: ' \
+	curl ${option} \
 		-A "pkgstats/${pkgstatsver}" \
 		--data-urlencode "packages@${pkglist}" \
 		--data-urlencode "modules@${moduleslist}" \
