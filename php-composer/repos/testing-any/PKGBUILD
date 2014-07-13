@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=php-composer
+pkgver=1.0.0.alpha8.409
+pkgrel=1
+pkgdesc="Dependency Manager for PHP"
+arch=('any')
+license=('MIT')
+url='http://getcomposer.org/'
+depends=('php')
+makedepends=('git' "${pkgname}")
+checkdepends=('mercurial')
+source=("${pkgname}::git+https://github.com/composer/composer.git"
+        'php.ini')
+md5sums=('SKIP'
+         '6adcd6eee1d5f2c53f38bddd26415620')
+
+pkgver() {
+	cd ${srcdir}/${pkgname}
+
+	local _tag=$(git tag -l --sort -version:refname | head -1)
+	echo "${_tag}.$(git rev-list ${_tag}.. --count)" | sed 's/-/./g'
+}
+
+prepare() {
+	cd ${srcdir}/${pkgname}
+
+	sed "s~^#!/usr/bin/env php~#!/usr/bin/php -nc/usr/share/${pkgname}/php.ini~g" -i src/Composer/Compiler.php
+	/usr/bin/composer install
+}
+
+check() {
+	cd ${srcdir}/${pkgname}
+
+	/usr/bin/php -nc ${srcdir}/php.ini vendor/phpunit/phpunit/phpunit.php
+}
+
+build() {
+	cd ${srcdir}/${pkgname}
+
+	/usr/bin/php -nc ${srcdir}/php.ini bin/compile
+}
+
+package() {
+	cd ${srcdir}/${pkgname}
+
+	install -Dm644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+	install -Dm644 ${srcdir}/php.ini ${pkgdir}/usr/share/php-composer/php.ini
+	install -Dm755 composer.phar ${pkgdir}/usr/bin/composer
+}
