@@ -34,16 +34,17 @@ get_default_java() {
 }
 
 get_installed_javas() {
-  javas=()
-  for dir in $(find ${JVM_DIR} -mindepth 1 -maxdepth 1 -type d | sort); do
-    if [ -x ${dir}/bin/javac ]; then
-      javas+=(${dir/${JVM_DIR}\/})
-    else
-      if [ -x ${dir}/jre/bin/java ]; then
-      javas+=(${dir/${JVM_DIR}\/}/jre)
+  if [ -d ${JVM_DIR} ]; then
+    for dir in $(find ${JVM_DIR} -mindepth 1 -maxdepth 1 -type d | sort); do
+      if [ -x ${dir}/bin/javac ]; then
+        javas+=(${dir/${JVM_DIR}\/})
+      else
+        if [ -x ${dir}/jre/bin/java ]; then
+        javas+=(${dir/${JVM_DIR}\/}/jre)
+        fi
       fi
-    fi
-  done
+    done
+  fi
   echo ${javas[@]}
 }
 
@@ -56,18 +57,19 @@ is_java_valid() {
 set_default_to() {
   check_root
   echo "Setting Java environment '$1' as default"
-  ln -s $1 ${DEFAULT_PATH}
+  ln -sf $1 ${DEFAULT_PATH}
 }
 
 unset_default() {
   check_root
+  echo "Unsetting $(get_default_java) as default"
   unlink ${DEFAULT_PATH} 2>/dev/null
 }
 
 # First level functions
 
 give_status() {
-  installed_java=$(get_installed_javas)
+  installed_java=($(get_installed_javas))
   default_java=$(get_default_java)
   if [ ${#installed_java[@]} -eq 0 ]; then
     echo 'No compatible Java environment installed'
@@ -80,9 +82,9 @@ give_status() {
         echo "  ${java}"
       fi
     done
-  fi
-  if [ -z ${default_java} ]; then
-    echo "No Java environment set as default"
+    if [ -z ${default_java} ]; then
+      echo "No Java environment set as default"
+    fi
   fi
 }
 
@@ -90,9 +92,14 @@ give_status() {
 try_set_default() {
   default_java=$(get_default_java)
   if is_java_valid ${default_java}; then
-    echo "The default Java environment is already set (${default_java})"
+    echo "The default Java environment is already set to ${default_java}"
+    echo "Please use 'archlinux-java --force-set $1' if you want to force it"
   else
-    force_set_default $1
+    if is_java_valid $1; then
+      set_default_to $1
+    else
+      force_set_default $1
+    fi
   fi
 }
 
@@ -100,7 +107,9 @@ try_set_default() {
 force_set_default() {
   check_root
   if is_java_valid $1; then
-    unset_default
+    if [ "x$(get_default_java ${DEFAULT_PATH})" != "x" ]; then
+      unset_default
+    fi
     set_default_to $1
   else
     echo "'${JVM_DIR}/$1' is not a valid Java environment path"
@@ -111,9 +120,9 @@ force_set_default() {
 # $1: Java environment name to try to unset
 try_unset_default() {
   default=$(get_default_java)
-  if [ "x${default}" = "x" -o "x${default}" = "x$1" ]; then
+  if [ "x${default}" != "x" -a "x${default}" = "x$1" ]; then
     unset_default
-    echo 'Done. No Java environment is set as default any more.'
+    echo 'No Java environment is set as default any more'
   else
     echo "'$1' is not set as Java environment default"
   fi
@@ -124,8 +133,10 @@ fix_default() {
   if is_java_valid ${default}; then
     echo "Current default Java environment is valid: '${default}'"
   else
-    unset_default
-    installed_javas=$(get_installed_javas)
+    if [ "x${default}" != "x" ]; then
+      unset_default
+    fi
+    installed_javas=($(get_installed_javas))
     javas=('java-7-openjdk' 'java-7-openjdk/jre' ${installed_javas[@]})
     for java in ${javas[@]}; do
       if ! is_java_valid $(get_default_java) && is_java_valid ${java}; then
