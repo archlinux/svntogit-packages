@@ -1,0 +1,56 @@
+From e2bfa715a9e115921263d572b9f4c496b550a494 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Tue, 10 Jun 2014 21:28:32 +0100
+Subject: [PATCH] sna/dri2: Check that the window covers the whole CRTC before
+ xchg
+
+Fixes TearFre regression from
+
+commit 3932e97057fca16615adaefbc1eb25a0d51a1d8b [2.99.912]
+Author: Chris Wilson <chris@chris-wilson.co.uk>
+Date:   Mon Jun 9 08:58:15 2014 +0100
+
+    sna/dri2: Allow TearFree flipping to individual CRTC
+
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+ src/sna/sna_display.c |  1 +
+ src/sna/sna_dri2.c    | 10 ++++++++++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/src/sna/sna_display.c b/src/sna/sna_display.c
+index dcbe622..7169779 100644
+--- a/src/sna/sna_display.c
++++ b/src/sna/sna_display.c
+@@ -332,6 +332,7 @@ static unsigned get_fb(struct sna *sna, struct kgem_bo *bo,
+ 	assert(bo->refcnt);
+ 	assert(bo->proxy == NULL);
+ 	assert(!bo->snoop);
++	assert(8*bo->pitch >= width * scrn->bitsPerPixel);
+ 	assert(height * bo->pitch <= kgem_bo_size(bo)); /* XXX crtc offset */
+ 	if (bo->delta) {
+ 		DBG(("%s: reusing fb=%d for handle=%d\n",
+diff --git a/src/sna/sna_dri2.c b/src/sna/sna_dri2.c
+index 1baaf2b..e196464 100644
+--- a/src/sna/sna_dri2.c
++++ b/src/sna/sna_dri2.c
+@@ -1605,6 +1605,16 @@ can_xchg_one(struct sna *sna,
+ 		return false;
+ 	}
+ 
++	if (memcmp(&win->clipList.extents, &crtc->bounds, sizeof(crtc->bounds))) {
++		DBG(("%s: no, window [(%d, %d), (%d, %d)] does not cover CRTC [(%d, %d), (%d, %d)]\n",
++		     __FUNCTION__,
++		     win->clipList.extents.x1, win->clipList.extents.y1,
++		     win->clipList.extents.x2, win->clipList.extents.y2,
++		     crtc->bounds.x1, crtc->bounds.y1,
++		     crtc->bounds.x2, crtc->bounds.y2));
++		return false;
++	}
++
+ 	if (sna_crtc_is_transformed(crtc)) {
+ 		DBG(("%s: no, CRTC is rotated\n", __FUNCTION__));
+ 		return false;
+-- 
+2.0.1
+
