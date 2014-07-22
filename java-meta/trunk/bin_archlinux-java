@@ -6,6 +6,7 @@
 JVM_DIR=/usr/lib/jvm
 DEFAULT_NAME=java-default-runtime
 DEFAULT_PATH=${JVM_DIR}/${DEFAULT_NAME}
+BIN_PATH=/usr/bin
 
 
 # Utility functions
@@ -58,11 +59,19 @@ set_default_to() {
   check_root
   echo "Setting Java environment '$1' as default"
   ln -sf $1 ${DEFAULT_PATH}
+  find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
+    | while read bpath; do
+      ln -sf ${bpath} ${BIN_PATH}/$(basename ${bpath})
+    done
 }
 
 unset_default() {
   check_root
   echo "Unsetting $(get_default_java) as default"
+  find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
+    | while read bpath; do
+      unlink ${BIN_PATH}/$(basename ${bpath})
+    done
   unlink ${DEFAULT_PATH} 2>/dev/null
 }
 
@@ -136,18 +145,13 @@ fix_default() {
     if [ "x${default}" != "x" ]; then
       unset_default
     fi
-    installed=($(get_installed_javas))
-    if [ ${#installed[@]} -eq 0 ]; then
-      echo 'No valid Java environment found'
-    else
-      to_check=('java-7-openjdk' 'java-7-openjdk/jre' ${installed})
-      for java in ${to_check[@]}; do
-        if is_java_valid ${java}; then
-          set_default_to ${java}
-          exit 0
-        fi
-      done
-    fi
+    to_check=('java-7-openjdk' 'java-7-openjdk/jre' $(get_installed_javas))
+    for java in ${to_check[@]}; do
+      if is_java_valid ${java}; then
+        set_default_to ${java}
+        exit 0
+      fi
+    done
   fi
 }
 
