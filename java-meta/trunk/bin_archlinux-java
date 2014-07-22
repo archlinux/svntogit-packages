@@ -1,5 +1,10 @@
 #! /bin/bash
 
+# TODO
+# Add info about license here
+# add message when setting JRE whereas JDK exists
+# ensure links do not output errors (???)
+
 # Arch Linux helper script to set/unset/check the enabled Java environment
 # See '-h' or '--help' for usage
 
@@ -64,6 +69,11 @@ set_default_to() {
     | while read bpath; do
       ln -sf ${WRAPPER_PATH} ${BIN_PATH}/$(basename ${bpath})
     done
+  parent_dir=$(dirname $1)
+  if is_java_valid ${parent_dir}; then
+    echo "Warning: '${parent_dir}' looks like a valid JDK whereas you are only setting '$1' as default"
+    echo "Fix this with 'archlinux-java --force-set ${parent_dir}'"
+  fi
 }
 
 unset_default() {
@@ -141,7 +151,12 @@ try_unset_default() {
 fix_default() {
   default=$(get_default_java)
   if is_java_valid ${default}; then
-    echo "Current default Java environment is valid: '${default}'"
+    if is_java_valid $(dirname ${default}); then
+      unset_default
+      set_default_to $(dirname ${default})
+    else
+      echo "Current default Java environment is valid: '${default}'"
+    fi
   else
     if [ "x${default}" != "x" ]; then
       unset_default
