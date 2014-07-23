@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Maintainer: Sébastien Luttringer
+# Contributor: Dale Blount <dale@archlinux.org>
+# Contributor: Sergej Pupykin <ps@lx-ltd.ru>
+
+pkgname=ulogd
+pkgver=2.0.4
+pkgrel=1
+pkgdesc='Userspace Packet Logging for netfilter'
+arch=('i686' 'x86_64')
+url='http://www.netfilter.org/projects/ulogd/index.html'
+license=('GPL2')
+depends=('libmnl'
+         'libnetfilter_acct'
+         'libnetfilter_conntrack'
+         'libnetfilter_log'
+         'libnfnetlink')
+backup=('etc/ulogd.conf')
+makedepends=('libmariadbclient'
+             'libpcap'
+             'libdbi'
+             'postgresql-libs'
+             'sqlite')
+optdepends=("${makedepends[@]}")
+source=("http://www.netfilter.org/projects/ulogd/files/$pkgname-$pkgver.tar.bz2"{,.sig}
+        "$pkgname.logrotate"
+        "$pkgname.conf"
+        "$pkgname.service")
+md5sums=('7c71ec460dfea5287eba27472c521ebc'
+         'SKIP'
+         '95f05af0a0c8f5fdea5bd92ccb2fd465'
+         '2c8cbedb2fb455cba220ca35186ad846'
+         '092d72209e30c132e0a08112e4062772')
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --with-mysql \
+    --with-pgsql \
+    --with-dbi
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+  install -dm755 "$pkgdir/usr/share/doc/ulogd"
+  install -Dm644 ulogd.conf "$pkgdir/usr/share/doc/ulogd/ulogd.conf"
+  install -m644 doc/*.{table,sql} "$pkgdir/usr/share/doc/ulogd"
+  cd "$srcdir"
+  install -Dm644 $pkgname.service "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+  install -Dm644 $pkgname.logrotate "$pkgdir/etc/logrotate.d/$pkgname"
+  install -Dm644 $pkgname.conf "$pkgdir/etc/$pkgname.conf"
+}
+
+# vim:set ts=2 sw=2 et:
