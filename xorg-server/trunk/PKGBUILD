@@ -5,7 +5,7 @@
 pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-xwayland' 'xorg-server-common' 'xorg-server-devel')
 pkgver=1.16.0
-pkgrel=2 # build first with 0.1 and then rebuild it after xf86-input-evdev rebuild
+pkgrel=3 # build first with 0.1 and then rebuild it after xf86-input-evdev rebuild
 arch=('i686' 'x86_64')
 license=('custom')
 url="http://xorg.freedesktop.org"
@@ -15,24 +15,26 @@ makedepends=('pixman' 'libx11' 'mesa' 'mesa-libgl' 'xf86driproto' 'xcmiscproto' 
              'xf86dgaproto' 'libxmu' 'libxrender' 'libxi' 'dmxproto' 'libxaw' 'libdmx' 'libxtst' 'libxres'
              'xorg-xkbcomp' 'xorg-util-macros' 'xorg-font-util' 'glproto' 'dri2proto' 'libgcrypt' 'libepoxy'
              'xcb-util' 'xcb-util-image' 'xcb-util-wm' 'xcb-util-keysyms' 'dri3proto' 'libxshmfence') 
-source=(${url}/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2
-        autoconfig-nvidia.patch
+source=(${url}/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2{,.sig}
         autoconfig-sis.patch
+        glamor-upstream-fix.patch
+        nvidia-drm-outputclass.conf
         xvfb-run
         xvfb-run.1)
 sha256sums=('38330a03c5f7a38745a3f9816cf069db5b8844eebb358fd39dbabf61f32cd06b'
-            '66e25f76a7496c429e0aff4b0670f168719bb0ceaeb88c6f2272f2bf3ed21162'
+            'SKIP'
             'd027776fac1f7675b0a9ee817502290b1c45f9c09b0f0a6bb058c35f92361e84'
+            'fbd898f0e867c77c9bf918fd2e7956c7776ecb3cc3634c61290fb03513b47987'
+            'af1c3d2ea5de7f6a6b5f7c60951a189a4749d1495e5462f3157ae7ac8fe1dc56'
             'ff0156309470fc1d378fd2e104338020a884295e285972cc88e250e031cc35b9'
             '2460adccd3362fefd4cdc5f1c70f332d7b578091fb9167bf88b5f91265bbd776')
 
 prepare() {
   cd "${pkgbase}-${pkgver}"
-  # Use nouveau/nv/nvidia drivers for nvidia devices
-  patch -Np1 -i ../autoconfig-nvidia.patch
-
   # Use unofficial imedia SiS driver for supported SiS devices
   patch -Np0 -i ../autoconfig-sis.patch
+  # merged upstream (1.16 branch)
+  patch -Np1 -i ../glamor-upstream-fix.patch
 }
 
 build() {
@@ -55,7 +57,6 @@ build() {
       --enable-kdrive-evdev \
       --enable-kdrive-kbd \
       --enable-kdrive-mouse \
-      --enable-install-setuid \
       --enable-config-udev \
       --enable-systemd-logind \
       --enable-suid-wrapper \
@@ -113,12 +114,14 @@ package_xorg-server() {
   groups=('xorg')
   conflicts=('nvidia-utils<=331.20' 'glamor-egl')
   replaces=('glamor-egl')
-  
+  install=xorg-server.install
+
   cd "${pkgbase}-${pkgver}"
   make DESTDIR="${pkgdir}" install
 
   install -m755 -d "${pkgdir}/etc/X11"
   mv "${pkgdir}/usr/share/X11/xorg.conf.d" "${pkgdir}/etc/X11/"
+  install -m644 "${srcdir}/nvidia-drm-outputclass.conf" "${pkgdir}/etc/X11/xorg.conf.d/"
 
   rmdir "${pkgdir}/usr/share/X11"
 
