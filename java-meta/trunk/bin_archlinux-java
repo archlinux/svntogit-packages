@@ -1,12 +1,9 @@
 #! /bin/bash
 
-# TODO
-# Add info about license here
-# add message when setting JRE whereas JDK exists
-# ensure links do not output errors (???)
-
-# Arch Linux helper script to set/unset/check the enabled Java environment
-# See '-h' or '--help' for usage
+# Arch Linux helper script to set/unset/check/fix the enabled Java environment
+# This program may be freely redistributed under the terms of the GNU General Public License
+#
+# Author: Guillaume ALAUX <guillaume@archlinux.org>
 
 JVM_DIR=/usr/lib/jvm
 DEFAULT_NAME=java-default-runtime
@@ -60,15 +57,25 @@ is_java_valid() {
   test "x$1" != "x${DEFAULT_NAME}" && test -x ${JVM_DIR}/$1/bin/java
 }
 
+set_bin_links() {
+  find -L ${BIN_PATH} -samefile ${WRAPPER_PATH} \
+    | while read lpath; do
+      if [ ! -x "${DEFAULT_PATH}/bin/$(basename ${lpath})" ]; then
+        unlink ${lpath} 2>/dev/null
+      fi
+    done
+
+  find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
+    | while read bpath; do
+      ln -sf ${WRAPPER_PATH} ${BIN_PATH}/$(basename ${bpath}) > /dev/null 2>&1
+    done
+}
+
 # $1: Java environment name to set as default
 set_default_to() {
   check_root
-  echo "Setting Java environment '$1' as default"
   ln -sf $1 ${DEFAULT_PATH}
-  find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
-    | while read bpath; do
-      ln -sf ${WRAPPER_PATH} ${BIN_PATH}/$(basename ${bpath})
-    done
+  set_bin_links
   parent_dir=$(dirname $1)
   if is_java_valid ${parent_dir}; then
     echo "Warning: '${parent_dir}' looks like a valid JDK whereas you are only setting '$1' as default"
@@ -78,10 +85,9 @@ set_default_to() {
 
 unset_default() {
   check_root
-  echo "Unsetting $(get_default_java) as default"
   find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
     | while read bpath; do
-      unlink ${BIN_PATH}/$(basename ${bpath})
+      unlink ${BIN_PATH}/$(basename ${bpath}) 2>/dev/null
     done
   unlink ${DEFAULT_PATH} 2>/dev/null
 }
@@ -111,15 +117,11 @@ give_status() {
 # $1: Java environment name to try to set
 try_set_default() {
   default_java=$(get_default_java)
-  if is_java_valid ${default_java}; then
+  if ! is_java_valid ${default_java} || [ "x${default_java}" = "x$1/jre" ]; then
+    force_set_default $1
+  else
     echo "The default Java environment is already set to ${default_java}"
     echo "Please use 'archlinux-java --force-set $1' if you want to force it"
-  else
-    if is_java_valid $1; then
-      set_default_to $1
-    else
-      force_set_default $1
-    fi
   fi
 }
 
@@ -142,9 +144,8 @@ try_unset_default() {
   default=$(get_default_java)
   if [ "x${default}" != "x" -a "x${default}" = "x$1" ]; then
     unset_default
-    echo 'No Java environment is set as default any more'
   else
-    echo "'$1' is not set as Java environment default"
+    echo "'$1' is not set as default Java environment"
   fi
 }
 
@@ -154,8 +155,6 @@ fix_default() {
     if is_java_valid $(dirname ${default}); then
       unset_default
       set_default_to $(dirname ${default})
-    else
-      echo "Current default Java environment is valid: '${default}'"
     fi
   else
     if [ "x${default}" != "x" ]; then
@@ -167,9 +166,11 @@ fix_default() {
         set_default_to ${java}
       fi
     done
-    if ! is_java_valid $(get_default_java); then
-      echo 'No valid Java environment found'
-    fi
+  fi
+  if is_java_valid $(get_default_java); then
+    set_bin_links
+  else
+    echo 'No valid Java environment found'
   fi
 }
 

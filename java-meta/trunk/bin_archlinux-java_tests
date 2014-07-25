@@ -33,6 +33,8 @@ setUp() {
   mkdir -p ${BIN_PATH}
   WRAPPER_PATH=${test_dir}${INIT_WRAPPER_PATH}
   mkdir -p $(dirname ${WRAPPER_PATH})
+  touch ${WRAPPER_PATH}
+  chmod +x ${WRAPPER_PATH}
 }
 
 tearDown() {
@@ -119,17 +121,15 @@ test_get_installed_javas_no_env() {
 
 test_set_default_to() {
   create_valid_jre_env "${JAVA_NAME}/jre"
-  output=$(set_default_to "${JAVA_NAME}/jre")
+  set_default_to "${JAVA_NAME}/jre"
   assertEquals 'Success does not yield 0' 0 $?
-  assertEquals 'Wrong message' "Setting Java environment '${JAVA_NAME}/jre' as default" "${output}"
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
 test_set_default_to_jre_but_jdk() {
   create_valid_jdk_env "${JAVA_NAME}"
   output=$(set_default_to "${JAVA_NAME}/jre")
-  mess="Setting Java environment '${JAVA_NAME}/jre' as default"
-  mess+="\nWarning: '${JAVA_NAME}' looks like a valid JDK"
+  mess="Warning: '${JAVA_NAME}' looks like a valid JDK"
   mess+=" whereas you are only setting '${JAVA_NAME}/jre' as default"
   mess+="\nFix this with 'archlinux-java --force-set ${JAVA_NAME}'"
   expected=$(echo -e ${mess})
@@ -140,9 +140,8 @@ test_set_default_to_jre_but_jdk() {
 tests_unset_default() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "${JAVA_NAME}/jre"
-  output=$(unset_default)
+  unset_default
   assertEquals 'Success does not yield 0' 0 $?
-  assertEquals 'Wrong message' "Unsetting ${JAVA_NAME}/jre as default" "${output}"
   assertTrue 'Link was not unset' "[ ! -e ${DEFAULT_PATH} ]"
 }
 
@@ -176,8 +175,7 @@ test_give_status_no_javas() {
 
 test_try_set_default_no_default() {
   create_valid_jre_env "${JAVA_NAME}/jre"
-  output=$(try_set_default "${JAVA_NAME}/jre")
-  assertEquals 'Wrong message' "Setting Java environment '${JAVA_NAME}/jre' as default" "${output}"
+  try_set_default "${JAVA_NAME}/jre"
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
@@ -195,15 +193,20 @@ test_try_set_default_default_exists() {
 test_try_set_default_default_invalid() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "non_existing"
-  output=$(try_set_default "${JAVA_NAME}/jre")
-  assertEquals 'Wrong message' "Setting Java environment '${JAVA_NAME}/jre' as default" "${output}"
+  try_set_default "${JAVA_NAME}/jre"
   assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_try_set_default_jdk_where_jre_is_default() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  try_set_default "${JAVA_NAME}"
+  assertDefaultSetTo "${JAVA_NAME}"
 }
 
 test_force_set_default_no_default() {
   create_valid_jre_env "${JAVA_NAME}/jre"
-  output=$(force_set_default "${JAVA_NAME}/jre")
-  assertEquals 'Wrong message' "Setting Java environment '${JAVA_NAME}/jre' as default" "${output}"
+  force_set_default "${JAVA_NAME}/jre"
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
@@ -212,11 +215,7 @@ test_force_set_default_with_default() {
   set_default_for_test "${JAVA_NAME}/jre"
   JAVA_NAME_2="$(get_rand_str)"
   create_valid_jre_env "${JAVA_NAME_2}/jre"
-  output=$(force_set_default "${JAVA_NAME_2}/jre")
-  mess="Unsetting ${JAVA_NAME}/jre as default"
-  mess+="\nSetting Java environment '${JAVA_NAME_2}/jre' as default"
-  expected=$(echo -e "${mess}")
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  force_set_default "${JAVA_NAME_2}/jre"
   assertDefaultSetTo "${JAVA_NAME_2}/jre"
 }
 
@@ -232,7 +231,7 @@ test_force_set_default_target_invalid() {
 test_try_unset_default_no_default() {
   create_valid_jdk_env "${JAVA_NAME}"
   output=$(try_unset_default "${JAVA_NAME}")
-  expected="'${JAVA_NAME}' is not set as Java environment default"
+  expected="'${JAVA_NAME}' is not set as default Java environment"
   assertEquals 'Wrong message' "${expected}" "${output}"
   assertDefaultNotSet
 }
@@ -241,7 +240,7 @@ test_try_unset_default_default_not_target() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "${JAVA_NAME}/jre"
   output=$(try_unset_default "other_java")
-  expected="'other_java' is not set as Java environment default"
+  expected="'other_java' is not set as default Java environment"
   assertEquals 'Wrong message' "${expected}" "${output}"
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
@@ -249,52 +248,38 @@ test_try_unset_default_default_not_target() {
 test_try_unset_default_default_is_target() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "${JAVA_NAME}/jre"
-  output=$(try_unset_default "${JAVA_NAME}/jre")
-  mess="Unsetting ${JAVA_NAME}/jre as default"
-  mess+="\nNo Java environment is set as default any more"
-  expected=$(echo -e "${mess}")
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  try_unset_default "${JAVA_NAME}/jre"
   assertDefaultNotSet
 }
 
 test_fix_default_default_valid() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "${JAVA_NAME}/jre"
-  output=$(fix_default)
-  expected="Current default Java environment is valid: '${JAVA_NAME}/jre'"
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  fix_default
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
 test_fix_default_no_default() {
   create_valid_jre_env "${JAVA_NAME}/jre"
-  output=$(fix_default)
-  expected="Setting Java environment '${JAVA_NAME}/jre' as default"
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  fix_default
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
 test_fix_default_default_invalid_openjdk7_jdk_installed() {
   create_valid_jdk_env "java-7-openjdk"
-  output=$(fix_default)
-  expected="Setting Java environment 'java-7-openjdk' as default"
-  assertEquals 'Wrong message' "${expected}" "${output}"
-  #assertDefaultSetTo "java-7-openjdk"
+  fix_default
+  assertDefaultSetTo "java-7-openjdk"
 }
 
 test_fix_default_default_invalid_openjdk7_jre_installed() {
   create_valid_jre_env "java-7-openjdk/jre"
-  output=$(fix_default)
-  expected="Setting Java environment 'java-7-openjdk/jre' as default"
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  fix_default
   assertDefaultSetTo "java-7-openjdk/jre"
 }
 
 test_fix_default_default_invalid_random_java_installed() {
   create_valid_jdk_env "${JAVA_NAME}"
-  output=$(fix_default)
-  expected="Setting Java environment '${JAVA_NAME}' as default"
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  fix_default
   assertDefaultSetTo "${JAVA_NAME}"
 }
 
@@ -306,11 +291,7 @@ test_fix_default_default_invalid_no_java_installed() {
 test_fix_default_jre_but_jdk_exists() {
   create_valid_jdk_env "${JAVA_NAME}"
   set_default_for_test "${JAVA_NAME}/jre"
-  output=$(fix_default)
-  mess="Unsetting ${JAVA_NAME}/jre as default"
-  mess+="\nSetting Java environment '${JAVA_NAME}' as default"
-  expected=$(echo -e ${mess})
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  fix_default
   assertDefaultSetTo "${JAVA_NAME}"
 }
 
