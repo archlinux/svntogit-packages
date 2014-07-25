@@ -5,7 +5,7 @@
 pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 'xorg-server-xwayland' 'xorg-server-common' 'xorg-server-devel')
 pkgver=1.16.0
-pkgrel=3 # build first with 0.1 and then rebuild it after xf86-input-evdev rebuild
+pkgrel=4 # build first with 0.1 and then rebuild it after xf86-input-evdev rebuild
 arch=('i686' 'x86_64')
 license=('custom')
 url="http://xorg.freedesktop.org"
@@ -61,13 +61,12 @@ build() {
       --enable-systemd-logind \
       --enable-suid-wrapper \
       --disable-install-setuid \
-      --disable-config-dbus \
       --enable-record \
       --disable-xfbdev \
       --disable-xfake \
       --disable-static \
       --libexecdir=/usr/bin \
-      --sysconfdir=/etc/X11 \
+      --sysconfdir=/etc \
       --localstatedir=/var \
       --with-xkb-path=/usr/share/X11/xkb \
       --with-xkb-output=/var/lib/xkb \
@@ -107,7 +106,6 @@ package_xorg-server-common() {
 package_xorg-server() {
   pkgdesc="Xorg X server"
   depends=(libepoxy libxdmcp libxfont libpciaccess libdrm pixman libgcrypt libxau xorg-server-common xf86-input-evdev libxshmfence)
-  backup=('etc/X11/xorg.conf.d/10-evdev.conf' 'etc/X11/xorg.conf.d/10-quirks.conf')
   # see xorg-server-*/hw/xfree86/common/xf86Module.h for ABI versions - we provide major numbers that drivers can depend on
   # and /usr/lib/pkgconfig/xorg-server.pc in xorg-server-devel pkg
   provides=('X-ABI-VIDEODRV_VERSION=18' 'X-ABI-XINPUT_VERSION=21' 'X-ABI-EXTENSION_VERSION=8.0' 'x-server')
@@ -119,11 +117,9 @@ package_xorg-server() {
   cd "${pkgbase}-${pkgver}"
   make DESTDIR="${pkgdir}" install
 
-  install -m755 -d "${pkgdir}/etc/X11"
-  mv "${pkgdir}/usr/share/X11/xorg.conf.d" "${pkgdir}/etc/X11/"
+  # distro specific files must be installed in /etc/X11/xorg.conf.d
+  install -m755 -d "${pkgdir}/etc/X11/xorg.conf.d"
   install -m644 "${srcdir}/nvidia-drm-outputclass.conf" "${pkgdir}/etc/X11/xorg.conf.d/"
-
-  rmdir "${pkgdir}/usr/share/X11"
 
   # Needed for non-mesa drivers, libgl will restore it
   mv "${pkgdir}/usr/lib/xorg/modules/extensions/libglx.so" \
