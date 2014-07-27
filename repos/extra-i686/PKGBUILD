@@ -3,34 +3,33 @@
 
 pkgbase=gstreamer-vaapi
 pkgname=(gst-vaapi gstreamer0.10-vaapi)
-pkgver=0.5.8
-pkgrel=1
+pkgver=0.5.9pre
+pkgrel=2
 pkgdesc="GStreamer Multimedia Framework VA Plugins"
 arch=(i686 x86_64)
 license=(LGPL)
 url="http://www.freedesktop.org/software/vaapi/releases/gstreamer-vaapi/"
 makedepends=(gst-plugins-base gst-plugins-bad gstreamer0.10-base-plugins gstreamer0.10-bad-plugins
-             libva libxrandr)
+             libva libxrandr libvpx git)
 options=(!emptydirs)
 
-#source=(git://gitorious.org/vaapi/${pkgbase}.git#tag=$pkgver)
-source=($url/$pkgbase-${pkgver}.tar.bz2
-        https://gitorious.org/vaapi/gstreamer-videoutils/raw/f56f0ca70eaa39dc8f66f61e991094b385ed71ff:gst-libs/gst/video/gstvideoencoder.c
-        https://gitorious.org/vaapi/gstreamer-videoutils/raw/f56f0ca70eaa39dc8f66f61e991094b385ed71ff:gst-libs/gst/video/gstvideoencoder.h)
-sha1sums=('b0756a5941e3ad2d33a94a550eb9fe3ade0c07e6'
-          'd1edee8caacd6d0868b95fd80c8aab8018105178'
-          'd3f198da32cfe5c305818ca93a941ac5198efa1c')
+source=(git://gitorious.org/vaapi/${pkgbase}.git#commit=5ffa82b)
+sha1sums=('SKIP')
 
 prepare() {
   mkdir build build-0.10
 
-  # Fix files not in tarball
-  cp gstvideoencoder.{c,h} $pkgbase-$pkgver/ext/videoutils/gst-libs/gst/video
+  cd $pkgbase
+  sed -i 's/^1.3)/1.4)/' configure.ac
+  NO_CONFIGURE=1 ./autogen.sh
 }
 
 _build() (
   cd "$1"; shift
-  ../$pkgbase-$pkgver/configure --prefix=/usr --disable-static "$@"
+  ../$pkgbase/configure --prefix=/usr \
+    --disable-static \
+    --disable-builtin-libvpx \
+    "$@"
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 )
@@ -46,11 +45,11 @@ check() {
 }
 
 package_gst-vaapi() {
-  depends=(gst-plugins-base gst-plugins-bad libva libxrandr)
+  depends=(gst-plugins-base gst-plugins-bad libva libxrandr libvpx)
   make -C build DESTDIR="$pkgdir" install
 }
 
 package_gstreamer0.10-vaapi() {
-  depends=(gstreamer0.10-base-plugins gstreamer0.10-bad-plugins libva libxrandr)
+  depends=(gstreamer0.10-base-plugins gstreamer0.10-bad-plugins libva libxrandr libvpx)
   make -C build-0.10 DESTDIR="$pkgdir" install
 }
