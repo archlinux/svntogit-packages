@@ -1,0 +1,62 @@
+From 3640eaa726b7a9d761f1c67cd8620153d791688e Mon Sep 17 00:00:00 2001
+From: Milan Broz <gmazyland@gmail.com>
+Date: Thu, 24 Jul 2014 11:52:58 +0200
+Subject: [PATCH 2/3] Re-check flags after DM device creations.
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ lib/libdevmapper.c | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/lib/libdevmapper.c b/lib/libdevmapper.c
+index 8e5a696..6138a6b 100644
+--- a/lib/libdevmapper.c
++++ b/lib/libdevmapper.c
+@@ -566,6 +566,9 @@ static int _dm_create_device(const char *name, const char *type,
+ 	uint32_t cookie = 0;
+ 	uint16_t udev_flags = 0;
+ 
++	if (!params)
++		return -EINVAL;
++
+ 	if (flags & CRYPT_ACTIVATE_PRIVATE)
+ 		udev_flags = CRYPT_TEMP_UDEV_FLAGS;
+ 
+@@ -646,6 +649,10 @@ out_no_removal:
+ 		dm_task_destroy(dmt);
+ 
+ 	dm_task_update_nodes();
++
++	/* If code just loaded target module, update versions */
++	_dm_check_versions();
++
+ 	return r;
+ }
+ 
+@@ -655,7 +662,7 @@ int dm_create_device(struct crypt_device *cd, const char *name,
+ 		     int reload)
+ {
+ 	char *table_params = NULL;
+-	int r = -EINVAL;
++	int r;
+ 
+ 	if (!type)
+ 		return -EINVAL;
+@@ -668,10 +675,9 @@ int dm_create_device(struct crypt_device *cd, const char *name,
+ 	else if (dmd->target == DM_VERITY)
+ 		table_params = get_dm_verity_params(dmd->u.verity.vp, dmd);
+ 
+-	if (table_params)
+-		r = _dm_create_device(name, type, dmd->data_device,
+-				      dmd->flags, dmd->uuid, dmd->size,
+-				      table_params, reload);
++	r = _dm_create_device(name, type, dmd->data_device,
++			      dmd->flags, dmd->uuid, dmd->size,
++			      table_params, reload);
+ 
+ 	crypt_safe_free(table_params);
+ 	dm_exit_context();
+-- 
+2.0.1
+
