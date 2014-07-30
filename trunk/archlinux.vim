@@ -1,6 +1,6 @@
 " The ArchLinux global vimrc - setting only a few sane defaults
 "
-" Maintainer:      Tobias Kieslich [tobias funnychar archlinux dot org]
+" Maintainer:      Thomas Dziedzic [gostrc@gmail.com]
 "
 " NEVER EDIT THIS FILE, IT'S OVERWRITTEN UPON UPGRADES, GLOBAL CONFIGURATION
 " SHALL BE DONE IN /etc/vimrc, USER SPECIFIC CONFIGURATION IN ~/.vimrc
@@ -16,8 +16,7 @@ set ruler                       " show the cursor position all the time
 
 " Suffixes that get lower priority when doing tab completion for filenames.
 " These are files we are not likely to want to edit or read.
-set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc
-
+set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc,.png,.jpg
 
 if has('gui_running')
   " Make shift-insert work like in Xterm
