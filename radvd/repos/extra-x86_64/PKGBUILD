@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Sébastien Luttringer
+# Contributor: Kaiting Chen <kaitocracy@gmail.com>
+# Contributor: Mark Smith <markzzzsmith@yahoo.com.au>
+
+pkgname=radvd
+pkgver=2.2
+pkgrel=1
+pkgdesc='IPv6 Router Advertisement Daemon'
+url='http://www.litech.org/radvd/'
+license=('custom')
+depends=('glibc')
+makedepends=('check')
+arch=('i686' 'x86_64')
+backup=('etc/radvd.conf')
+source=("http://www.litech.org/radvd/dist/$pkgname-$pkgver.tar.xz"{,.asc}
+        "$pkgname.service"
+        '01-fix-rdnssinfo-length-fix.patch')
+sha1sums=('23ce0a4f2a927dab15088fcc781934172f8c039e'
+          'SKIP'
+          '2fdba3b0ed28c67dc1c04bfd1439fa4dece88bbc'
+          'e19cd657042ee9897cfd7b89fac39f34f0707877')
+
+prepare() {
+  patch -p1 -d $pkgname-$pkgver < '01-fix-rdnssinfo-length-fix.patch'
+}
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --with-pidfile=/run/radvd.pid \
+    --mandir=/usr/share/man
+  make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make check
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+  # default config
+  install -D -m 644 radvd.conf.example "$pkgdir/etc/radvd.conf"
+  # license
+  install -D -m 644 COPYRIGHT "$pkgdir/usr/share/licenses/$pkgname/COPYRIGHT"
+  # systemd
+  install -D -m 644 ../$pkgname.service \
+    "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+}
+
+# vim:set ts=2 sw=2 et:
