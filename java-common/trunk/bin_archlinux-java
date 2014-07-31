@@ -58,6 +58,7 @@ is_java_valid() {
 }
 
 set_bin_links() {
+  # TODO this 'unlink' part should be in its own function
   find -L ${BIN_PATH} -samefile ${WRAPPER_PATH} \
     | while read lpath; do
       if [ ! -x "${DEFAULT_PATH}/bin/$(basename ${lpath})" ]; then
@@ -72,19 +73,24 @@ set_bin_links() {
 }
 
 # $1: Java environment name to set as default
-set_default_to() {
-  check_root
+set_default_link_to() {
+  # FIXME if we do not "unlink", then test_force_set_default_with_default fails
+  unlink ${DEFAULT_PATH} 2>/dev/null
   ln -sf $1 ${DEFAULT_PATH}
-  set_bin_links
-  parent_dir=$(dirname $1)
-  if is_java_valid ${parent_dir}; then
-    echo "Warning: '${parent_dir}' looks like a valid JDK whereas you are only setting '$1' as default"
-    echo "Fix this with 'archlinux-java --force-set ${parent_dir}'"
-  fi
 }
 
-unset_default() {
-  check_root
+# $1: Java environment name to set as default
+set_java_to() {
+  set_default_link_to $1
+  set_bin_links
+#  parent_dir=$(dirname $1)
+#  if is_java_valid ${parent_dir}; then
+#    echo "Warning: '${parent_dir}' looks like a valid JDK whereas you are only setting '$1' as default"
+#    echo "Fix this with 'archlinux-java --force-set ${parent_dir}'"
+#  fi
+}
+
+unset_java() {
   find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
     | while read bpath; do
       unlink ${BIN_PATH}/$(basename ${bpath}) 2>/dev/null
@@ -116,36 +122,42 @@ give_status() {
 
 # $1: Java environment name to try to set
 try_set_default() {
-  default_java=$(get_default_java)
-  if ! is_java_valid ${default_java} || [ "x${default_java}" = "x$1/jre" ]; then
-    force_set_default $1
-  else
-    echo "The default Java environment is already set to ${default_java}"
-    echo "Please use 'archlinux-java --force-set $1' if you want to force it"
+  if is_java_valid $1; then
+    default_java=$(get_default_java)
+    if [ "${default_java}" = "$1/jre" ] \
+      || ( [ "x${default_java}" != "x" ] && ! is_java_valid ${default_java} ); then
+      unset_java
+    fi
+    if [ "x$(get_default_java)" = "x" ]; then
+      set_default_link_to $1
+    fi
+    set_bin_links
+  fi
+  if [ "x$(get_default_java)" != "x$1" ]; then
+    exit 1
   fi
 }
 
 # $1: Java environment name to set as default
 force_set_default() {
-  check_root
-  if is_java_valid $1; then
-    if [ "x$(get_default_java ${DEFAULT_PATH})" != "x" ]; then
-      unset_default
-    fi
-    set_default_to $1
-  else
+  if ! is_java_valid $1; then
     echo "'${JVM_DIR}/$1' is not a valid Java environment path"
-    exit 3
+    exit 1
   fi
+  default=$(get_default_java)
+  if [ "x$1" != "x${default}" ] || ! is_java_valid ${default}; then
+    set_default_link_to $1
+  fi
+  set_bin_links
 }
 
 # $1: Java environment name to try to unset
 try_unset_default() {
-  default=$(get_default_java)
-  if [ "x${default}" != "x" -a "x${default}" = "x$1" ]; then
-    unset_default
-  else
-    echo "'$1' is not set as default Java environment"
+  # This function should be used by pacman '.install' scripts. Its goal is:
+  #   "if the current Java env is set to $1, then remove it"
+  # So no need to report a failure if current Java is not equal to the one passed as param
+  if [ "x$1" != "x" -a "x$(get_default_java)" = "x$1" ]; then
+    unset_java
   fi
 }
 
@@ -153,17 +165,17 @@ fix_default() {
   default=$(get_default_java)
   if is_java_valid ${default}; then
     if is_java_valid $(dirname ${default}); then
-      unset_default
-      set_default_to $(dirname ${default})
+      unset_java
+      set_java_to $(dirname ${default})
     fi
   else
     if [ "x${default}" != "x" ]; then
-      unset_default
+      unset_java
     fi
     to_check=('java-7-openjdk' 'java-7-openjdk/jre' $(get_installed_javas))
     for java in ${to_check[@]}; do
       if ! is_java_valid $(get_default_java) && is_java_valid ${java}; then
-        set_default_to ${java}
+        set_java_to ${java}
       fi
     done
   fi
@@ -178,18 +190,18 @@ usage() {
   echo "$(basename $0) [ --status | --try-set <JAVA_ENV> | --force-set <JAVA_ENV> | --try-unset <JAVA_ENV> | --fix ]"
   echo -e "\n\t<JAVA_ENV> must be the name of a Java environment directory available in ${JVM_DIR}\n"
   echo -e '\t--status\t\tList installed Java environments and enabled one'
-  echo -e '\t--try-set <JAVA_ENV>\tIf no Java environments is already set as default, set this one'
+  echo -e '\t--try-set <JAVA_ENV>\tIf no valid Java environments is already set as default, then set this one'
   echo -e '\t--force-set <JAVA_ENV>\tForce <JAVA_ENV> as default'
-  echo -e '\t--try-unset <JAVA_ENV>\tIf <JAVA_ENV> is set as default, unset it'
-  echo -e '\t--fix\t\t\tFix an invalid default Java environment'
+  echo -e '\t--try-unset <JAVA_ENV>\tIf <JAVA_ENV> is set as default, then unset it'
+  echo -e '\t--fix\t\t\tFix an invalid default Java environment configuration'
 }
 
 ## Main
 case $1 in
   '--status')    give_status;;
-  '--try-set')   check_param_count $# 2; try_set_default $2;;
-  '--force-set') check_param_count $# 2; force_set_default $2;;
-  '--try-unset') check_param_count $# 2; try_unset_default $2;;
-  '--fix')       fix_default;;
+  '--try-set')   check_root; check_param_count $# 2; try_set_default $2;;
+  '--force-set') check_root; check_param_count $# 2; force_set_default $2;;
+  '--try-unset') check_root; check_param_count $# 2; try_unset_default $2;;
+  '--fix')       check_root; fix_default;;
   *)             usage;;
 esac
