@@ -45,23 +45,31 @@ tearDown() {
 # $1: path of Java environment to create
 create_valid_jre_env() {
   mkdir -p ${JVM_DIR}/$1/bin
-  touch    ${JVM_DIR}/$1/bin/java
-  chmod +x ${JVM_DIR}/$1/bin/java
+  for binary in java keytool orbd; do
+    touch    ${JVM_DIR}/$1/bin/${binary}
+    chmod +x ${JVM_DIR}/$1/bin/${binary}
+  done
 }
 
 # $1: path of Java environment to create
 create_valid_jdk_env() {
   create_valid_jre_env "$1"
-  touch    ${JVM_DIR}/$1/bin/javac
-  chmod +x ${JVM_DIR}/$1/bin/javac
+  for binary in javac javah jhat; do
+    touch    ${JVM_DIR}/$1/bin/${binary}
+    chmod +x ${JVM_DIR}/$1/bin/${binary}
+  done
   create_valid_jre_env "$1/jre"
 }
 
 set_default_for_test() {
   ln -s $1 ${DEFAULT_PATH}
-  ln -s ${WRAPPER_PATH} ${BIN_PATH}/java
-  if [ -x ${DEFAULT_PATH}/bin/javac ]; then
-    ln -s ${WRAPPER_PATH} ${BIN_PATH}/javac
+  for binary in java keytool orbd; do
+    ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
+  done
+  if [ -d ${DEFAULT_PATH}/jre ]; then
+    for binary in javac javah jhat; do
+      ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
+    done
   fi
 }
 
@@ -72,78 +80,23 @@ assertDefaultNotSet() {
 }
 
 assertDefaultSetTo() {
-  assertEquals "Default is not set to $1" "$1" "$(readlink ${DEFAULT_PATH})"
-  assertEquals "PATH has no java binary" "${WRAPPER_PATH}" "$(readlink ${BIN_PATH}/java)"
-  if [ -d ${DEFAULT_PATH}/jre ]; then
-    assertEquals "PATH has no javac binary" "${WRAPPER_PATH}" "$(readlink ${BIN_PATH}/javac)"
-  fi
+  new_java=$1
+  assertEquals "Default points at wrong Java env" "${new_java}" "$(readlink ${DEFAULT_PATH})"
+  # For all links in /usr/bin that point at the wrapper
+  for lpath in $(find -L ${BIN_PATH} -samefile ${WRAPPER_PATH}); do
+    # There is a binary in the JVM bin dir
+    assertTrue 'Wrong /usr/bin link' "test -x ${JVM_DIR}/${new_java}/bin/$(basename ${lpath})"
+  done
+  # For all executable binaries provided by the Java env
+  for binary in $(find ${JVM_DIR}/${new_java}/bin -type f -perm /a=x); do
+    # There is a link in /usr/bin
+    bin_link=${BIN_PATH}/$(basename ${binary})
+    assertEquals 'No link in /usr/bin' "${WRAPPER_PATH}" "$(readlink ${bin_link})"
+  done
 }
 
 
-test_valid_java_env_valid() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  assertTrue 'Does not detect valid Java env' "is_java_valid ${JAVA_NAME}/jre"
-}
-
-test_valid_java_env_not_valid() {
-  create_valid_jre_env "non_existing"
-  assertFalse 'Does not detect invalid Java env' "is_java_valid ${JAVA_NAME}/jre"
-}
-
-test_get_default_java() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  set_default_for_test "${JAVA_NAME}/jre"
-  assertEquals 'Wrong default Java found' "${JAVA_NAME}/jre" "$(get_default_java)"
-}
-
-test_get_default_java_no_default() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  assertNull 'Wrong default Java found' "$(get_default_java)"
-}
-
-test_get_installed_javas() {
-  JAVA_NAME_FIRST_ALPHA="a$(get_rand_str)"
-  JAVA_NAME_SECON_ALPHA="b$(get_rand_str)"
-  JAVA_NAME_THIRD_ALPHA="c$(get_rand_str)"
-  create_valid_jre_env "${JAVA_NAME_FIRST_ALPHA}/jre"
-  create_valid_jre_env "${JAVA_NAME_SECON_ALPHA}/jre"
-  create_valid_jdk_env "${JAVA_NAME_THIRD_ALPHA}"
-  list=($(get_installed_javas | sort))
-  expected=("${JAVA_NAME_FIRST_ALPHA}/jre" "${JAVA_NAME_SECON_ALPHA}/jre" "${JAVA_NAME_THIRD_ALPHA}")
-  assertTrue "Did not find installed Java environments" "[ '${expected[*]}' == '${list[*]}' ]"
-}
-
-test_get_installed_javas_no_env() {
-  list=($(get_installed_javas))
-  expected=()
-  assertEquals "List of installed Java envs is not 0" 0 "${#list[@]}"
-}
-
-test_set_default_to() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  set_default_to "${JAVA_NAME}/jre"
-  assertEquals 'Success does not yield 0' 0 $?
-  assertDefaultSetTo "${JAVA_NAME}/jre"
-}
-
-test_set_default_to_jre_but_jdk() {
-  create_valid_jdk_env "${JAVA_NAME}"
-  output=$(set_default_to "${JAVA_NAME}/jre")
-  mess="Warning: '${JAVA_NAME}' looks like a valid JDK"
-  mess+=" whereas you are only setting '${JAVA_NAME}/jre' as default"
-  mess+="\nFix this with 'archlinux-java --force-set ${JAVA_NAME}'"
-  expected=$(echo -e ${mess})
-  assertEquals 'Wrong message' "${expected}" "${output}"
-  assertDefaultSetTo "${JAVA_NAME}/jre"
-}
-
-tests_unset_default() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  set_default_for_test "${JAVA_NAME}/jre"
-  unset_default
-  assertEquals 'Success does not yield 0' 0 $?
-  assertTrue 'Link was not unset' "[ ! -e ${DEFAULT_PATH} ]"
-}
+# give_status
 
 test_give_status() {
   JAVA_NAME_1="a$(get_rand_str)"
@@ -173,41 +126,92 @@ test_give_status_no_javas() {
   assertEquals 'Wrong status output' 'No compatible Java environment installed' "${output}"
 }
 
+
+# try_set_default
+
 test_try_set_default_no_default() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  output=$(try_set_default "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_try_set_default_invalid_default_link() {
   create_valid_jre_env "${JAVA_NAME}/jre"
-  try_set_default "${JAVA_NAME}/jre"
+  set_default_for_test "non_existing"
+  output=$(try_set_default "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
-test_try_set_default_default_exists() {
+test_try_set_default_invalid_bin_link() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  set_default_for_test "${JAVA_NAME}/jre"
+  unlink "${BIN_PATH}/java"
+  output=$(try_set_default "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_try_set_default_default_already_set() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "${JAVA_NAME}/jre"
   output=$(try_set_default "${JAVA_NAME}/jre")
-  mess="The default Java environment is already set to ${JAVA_NAME}/jre"
-  mess+="\nPlease use 'archlinux-java --force-set ${JAVA_NAME}/jre' if you want to force it"
-  expected=$(echo -e "${mess}")
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  assertEquals 'Wrong status returned' 0 $?
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
-test_try_set_default_default_invalid() {
+test_try_set_default_other_java_set() {
+  JAVA_NAME_2="$(get_rand_str)"
   create_valid_jre_env "${JAVA_NAME}/jre"
-  set_default_for_test "non_existing"
-  try_set_default "${JAVA_NAME}/jre"
-  assertDefaultSetTo "${JAVA_NAME}/jre"
+  create_valid_jdk_env "${JAVA_NAME_2}"
+  set_default_for_test "${JAVA_NAME_2}"
+  output=$(try_set_default "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 1 $?
+  assertDefaultSetTo "${JAVA_NAME_2}"
 }
 
 test_try_set_default_jdk_where_jre_is_default() {
   create_valid_jdk_env "${JAVA_NAME}"
   set_default_for_test "${JAVA_NAME}/jre"
-  try_set_default "${JAVA_NAME}"
+  output=$(try_set_default "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
   assertDefaultSetTo "${JAVA_NAME}"
 }
 
-test_force_set_default_no_default() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  force_set_default "${JAVA_NAME}/jre"
-  assertDefaultSetTo "${JAVA_NAME}/jre"
+test_try_set_default_new_is_invalid() {
+  output=$(try_set_default "INVALID")
+  assertEquals 'Wrong status returned' 1 $?
+  assertDefaultNotSet
+}
+
+
+# force_set_default
+
+test_force_set_default_new_invalid() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  output=$(force_set_default "INVALID")
+  assertEquals 'Wrong status returned' 1 $?
+  assertEquals 'Wrong message' "'${JVM_DIR}/INVALID' is not a valid Java environment path" "${output}"
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_force_set_default_current_invalid() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "INVALID"
+  output=$(force_set_default "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_force_set_default_same_java() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  unlink ${BIN_PATH}/java
+  output=$(force_set_default "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
 }
 
 test_force_set_default_with_default() {
@@ -215,33 +219,42 @@ test_force_set_default_with_default() {
   set_default_for_test "${JAVA_NAME}/jre"
   JAVA_NAME_2="$(get_rand_str)"
   create_valid_jre_env "${JAVA_NAME_2}/jre"
-  force_set_default "${JAVA_NAME_2}/jre"
+  output=$(force_set_default "${JAVA_NAME_2}/jre")
+  assertEquals 'Wrong status returned' 0 $?
   assertDefaultSetTo "${JAVA_NAME_2}/jre"
+}
+
+test_force_set_default_no_default() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  output=$(force_set_default "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
 test_force_set_default_target_invalid() {
   create_valid_jre_env "${JAVA_NAME}/jre"
-  output=$(force_set_default "non_existing")
-  expected="'${JVM_DIR}/non_existing' is not a valid Java environment path"
+  output=$(force_set_default "INVALID")
+  assertEquals 'Wrong status returned' 1 $?
+  expected="'${JVM_DIR}/INVALID' is not a valid Java environment path"
   assertEquals 'Wrong message' "${expected}" "${output}"
   assertDefaultNotSet
 }
 
-#no_default
+
+# try_unset_default
+
 test_try_unset_default_no_default() {
   create_valid_jdk_env "${JAVA_NAME}"
-  output=$(try_unset_default "${JAVA_NAME}")
-  expected="'${JAVA_NAME}' is not set as default Java environment"
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  try_unset_default "${JAVA_NAME}"
   assertDefaultNotSet
 }
 
 test_try_unset_default_default_not_target() {
   create_valid_jre_env "${JAVA_NAME}/jre"
   set_default_for_test "${JAVA_NAME}/jre"
-  output=$(try_unset_default "other_java")
-  expected="'other_java' is not set as default Java environment"
-  assertEquals 'Wrong message' "${expected}" "${output}"
+  JAVA_NAME_2=$(get_rand_str)
+  create_valid_jdk_env "${JAVA_NAME_2}"
+  try_unset_default "${JAVA_NAME_2}"
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
@@ -251,6 +264,9 @@ test_try_unset_default_default_is_target() {
   try_unset_default "${JAVA_NAME}/jre"
   assertDefaultNotSet
 }
+
+
+# fix_default
 
 test_fix_default_default_valid() {
   create_valid_jre_env "${JAVA_NAME}/jre"
