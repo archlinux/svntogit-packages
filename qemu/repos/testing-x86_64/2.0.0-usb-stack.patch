@@ -1,0 +1,36 @@
+Correct post load checks:
+1. dev->setup_len == sizeof(dev->data_buf)
+    seems fine, no need to fail migration
+2. When state is DATA, passing index > len
+   will cause memcpy with negative length,
+   resulting in heap overflow
+
+First of the issues was reported by dgilbert.
+
+Reported-by: "Dr. David Alan Gilbert" <dgilbert <at> redhat.com>
+Signed-off-by: Michael S. Tsirkin <mst <at> redhat.com>
+---
+
+changes from v1:
+- drop state check
+- lightly tested
+
+ hw/usb/bus.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hw/usb/bus.c b/hw/usb/bus.c
+index e48b19f..ff1dfe6 100644
+--- a/hw/usb/bus.c
++++ b/hw/usb/bus.c
+ <at>  <at>  -51,8 +51,8  <at>  <at>  static int usb_device_post_load(void *opaque, int version_id)
+     }
+     if (dev->setup_index < 0 ||
+         dev->setup_len < 0 ||
+-        dev->setup_index >= sizeof(dev->data_buf) ||
+-        dev->setup_len >= sizeof(dev->data_buf)) {
++        dev->setup_index > dev->setup_len ||
++        dev->setup_len > sizeof(dev->data_buf)) {
+         return -EINVAL;
+     }
+     return 0;
+
