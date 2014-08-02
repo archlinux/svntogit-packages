@@ -52,60 +52,43 @@ get_installed_javas() {
   echo ${javas[@]}
 }
 
-# $1: Java environment name to test. MUST NOT BE "${DEFAULT_NAME}"
+# $1: Java environment name to test
 is_java_valid() {
   test "x$1" != "x${DEFAULT_NAME}" && test -x ${JVM_DIR}/$1/bin/java
 }
 
 set_bin_links() {
-  # TODO this 'unlink' part should be in its own function
-  find -L ${BIN_PATH} -samefile ${WRAPPER_PATH} \
-    | while read lpath; do
-      if [ ! -x "${DEFAULT_PATH}/bin/$(basename ${lpath})" ]; then
-        unlink ${lpath} 2>/dev/null
-      fi
-    done
-
   find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
     | while read bpath; do
       ln -sf ${WRAPPER_PATH} ${BIN_PATH}/$(basename ${bpath}) > /dev/null 2>&1
     done
 }
 
+unset_bin_links() {
+  find -L ${BIN_PATH} -samefile ${WRAPPER_PATH} \
+    | while read lpath; do
+      unlink ${lpath}
+    done
+}
+
 # $1: Java environment name to set as default
 set_default_link_to() {
-  # FIXME if we do not "unlink", then test_force_set_default_with_default fails
   unlink ${DEFAULT_PATH} 2>/dev/null
   ln -sf $1 ${DEFAULT_PATH}
 }
 
-# $1: Java environment name to set as default
-set_java_to() {
-  set_default_link_to $1
-  set_bin_links
-#  parent_dir=$(dirname $1)
-#  if is_java_valid ${parent_dir}; then
-#    echo "Warning: '${parent_dir}' looks like a valid JDK whereas you are only setting '$1' as default"
-#    echo "Fix this with 'archlinux-java --force-set ${parent_dir}'"
-#  fi
-}
-
-unset_java() {
-  find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
-    | while read bpath; do
-      unlink ${BIN_PATH}/$(basename ${bpath}) 2>/dev/null
-    done
+unset_default_link() {
   unlink ${DEFAULT_PATH} 2>/dev/null
 }
 
 # First level functions
 
-give_status() {
+do_status() {
   installed_java=($(get_installed_javas))
-  default_java=$(get_default_java)
   if [ ${#installed_java[@]} -eq 0 ]; then
     echo 'No compatible Java environment installed'
   else
+    default_java=$(get_default_java)
     echo 'Available Java environments:'
     for java in ${installed_java[@]}; do
       if [ ${java} = "${default_java}" ]; then
@@ -120,88 +103,82 @@ give_status() {
   fi
 }
 
-# $1: Java environment name to try to set
-try_set_default() {
-  if is_java_valid $1; then
-    default_java=$(get_default_java)
-    if [ "${default_java}" = "$1/jre" ] \
-      || ( [ "x${default_java}" != "x" ] && ! is_java_valid ${default_java} ); then
-      unset_java
-    fi
-    if [ "x$(get_default_java)" = "x" ]; then
-      set_default_link_to $1
-    fi
-    set_bin_links
-  fi
-  if [ "x$(get_default_java)" != "x$1" ]; then
-    exit 1
-  fi
+do_get() {
+  get_default_java
 }
 
 # $1: Java environment name to set as default
-force_set_default() {
+do_set() {
   if ! is_java_valid $1; then
     echo "'${JVM_DIR}/$1' is not a valid Java environment path"
     exit 1
   fi
   default=$(get_default_java)
   if [ "x$1" != "x${default}" ] || ! is_java_valid ${default}; then
+    unset_default_link
+    unset_bin_links
     set_default_link_to $1
   fi
   set_bin_links
+
+  #parent_dir=$(dirname $1)
+  #if is_java_valid ${parent_dir}; then
+  #  echo "Warning: '${parent_dir}' looks like a valid JDK whereas you only set '$1' as default"
+  #  echo "Fix this with 'archlinux-java set ${parent_dir}'"
+  #fi
 }
 
-# $1: Java environment name to try to unset
-try_unset_default() {
-  # This function should be used by pacman '.install' scripts. Its goal is:
-  #   "if the current Java env is set to $1, then remove it"
-  # So no need to report a failure if current Java is not equal to the one passed as param
-  if [ "x$1" != "x" -a "x$(get_default_java)" = "x$1" ]; then
-    unset_java
-  fi
+# $1: Java environment name to unset
+do_unset() {
+  unset_default_link
+  unset_bin_links
 }
 
-fix_default() {
+do_fix() {
   default=$(get_default_java)
   if is_java_valid ${default}; then
     if is_java_valid $(dirname ${default}); then
-      unset_java
-      set_java_to $(dirname ${default})
+      unset_default_link
+      set_default_link_to $(dirname ${default})
     fi
+    unset_bin_links
+    set_bin_links
   else
-    if [ "x${default}" != "x" ]; then
-      unset_java
-    fi
-    to_check=('java-7-openjdk' 'java-7-openjdk/jre' $(get_installed_javas))
+    prev=$(readlink ${DEFAULT_PATH})
+    unset_default_link
+    unset_bin_links
+    prev_fix=("${prev/\/jre}" "${prev}/jre")
+    openjdk7=('java-7-openjdk' 'java-7-openjdk/jre')
+    to_check=(${prev_fix[@]} ${openjdk7[@]} $(get_installed_javas))
     for java in ${to_check[@]}; do
       if ! is_java_valid $(get_default_java) && is_java_valid ${java}; then
-        set_java_to ${java}
+        set_default_link_to ${java}
+        set_bin_links
       fi
     done
   fi
-  if is_java_valid $(get_default_java); then
-    set_bin_links
-  else
+  if ! is_java_valid $(get_default_java); then
     echo 'No valid Java environment found'
   fi
 }
 
 usage() {
-  echo "$(basename $0) [ --status | --try-set <JAVA_ENV> | --force-set <JAVA_ENV> | --try-unset <JAVA_ENV> | --fix ]"
-  echo -e "\n\t<JAVA_ENV> must be the name of a Java environment directory available in ${JVM_DIR}\n"
-  echo -e '\t--status\t\tList installed Java environments and enabled one'
-  echo -e '\t--try-set <JAVA_ENV>\tIf no valid Java environments is already set as default, then set this one'
-  echo -e '\t--force-set <JAVA_ENV>\tForce <JAVA_ENV> as default'
-  echo -e '\t--try-unset <JAVA_ENV>\tIf <JAVA_ENV> is set as default, then unset it'
-  echo -e '\t--fix\t\t\tFix an invalid default Java environment configuration'
+  echo "$(basename $0) <COMMAND>"
+  echo -e "\nCOMMAND:"
+  echo -e '\tstatus\t\tList installed Java environments and enabled one'
+  echo -e '\tget\t\tReturns the short name of the Java environment set as default'
+  echo -e '\tset <JAVA_ENV>\tForce <JAVA_ENV> as default'
+  echo -e '\tunset\t\tUnset current default Java environment'
+  echo -e '\tfix\t\tFix an invalid/broken default Java environment configuration'
 }
 
 ## Main
 case $1 in
-  '--status')    give_status;;
-  '--try-set')   check_root; check_param_count $# 2; try_set_default $2;;
-  '--force-set') check_root; check_param_count $# 2; force_set_default $2;;
-  '--try-unset') check_root; check_param_count $# 2; try_unset_default $2;;
-  '--fix')       check_root; fix_default;;
-  *)             usage;;
+  'status') do_status;;
+  'get')    do_get;;
+  'set')    check_root; check_param_count $# 2; do_set $2;;
+  'unset')  check_root; do_unset;;
+  'fix')    check_root; do_fix;;
+  'help' | '--help' | '-h' | '') usage;;
+  *)           echo "$(basename $0): unknown option '$@'"; exit 1;;
 esac
