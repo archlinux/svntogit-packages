@@ -1,0 +1,1473 @@
+diff --git a/addressbook/gui/contact-editor/e-contact-editor.c b/addressbook/gui/contact-editor/e-contact-editor.c
+index b1b06ae..a6a81ec 100644
+--- a/addressbook/gui/contact-editor/e-contact-editor.c
++++ b/addressbook/gui/contact-editor/e-contact-editor.c
+@@ -4365,6 +4365,9 @@ e_contact_editor_constructed (GObject *object)
+ 	GtkAction *action;
+ 	GError *error = NULL;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (parent_class)->constructed (object);
++
+ 	editor->priv->focus_tracker = e_focus_tracker_new (GTK_WINDOW (editor->priv->app));
+ 	editor->priv->ui_manager = gtk_ui_manager_new ();
+ 
+diff --git a/addressbook/gui/contact-list-editor/e-contact-list-editor.c b/addressbook/gui/contact-list-editor/e-contact-list-editor.c
+index e1713bd..4df72b2 100644
+--- a/addressbook/gui/contact-list-editor/e-contact-list-editor.c
++++ b/addressbook/gui/contact-list-editor/e-contact-list-editor.c
+@@ -1436,8 +1436,7 @@ contact_list_editor_constructed (GObject *object)
+ 	editor = E_CONTACT_LIST_EDITOR (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_contact_list_editor_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_contact_list_editor_parent_class)->constructed (object);
+ 
+ 	shell = eab_editor_get_shell (EAB_EDITOR (editor));
+ 	client_cache = e_shell_get_client_cache (shell);
+diff --git a/addressbook/gui/widgets/e-addressbook-selector.c b/addressbook/gui/widgets/e-addressbook-selector.c
+index 4b04486..5a35a85 100644
+--- a/addressbook/gui/widgets/e-addressbook-selector.c
++++ b/addressbook/gui/widgets/e-addressbook-selector.c
+@@ -240,8 +240,7 @@ addressbook_selector_constructed (GObject *object)
+ 	g_object_unref (source);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_addressbook_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_addressbook_selector_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/addressbook/gui/widgets/eab-contact-formatter.c b/addressbook/gui/widgets/eab-contact-formatter.c
+index f4b24a2..42479dc 100644
+--- a/addressbook/gui/widgets/eab-contact-formatter.c
++++ b/addressbook/gui/widgets/eab-contact-formatter.c
+@@ -392,21 +392,22 @@ render_title_block (EABContactFormatter *formatter,
+ 				photo->data.inlined.data,
+ 				photo->data.inlined.length);
+ 		g_string_append_printf (
+-			buffer, "<img border=\"1\" src=\"data:%s;base64,%s\">",
++			buffer,
++			"<img id=\"__evo-contact-photo\" border=\"1\" src=\"data:%s;base64,%s\">",
+ 			photo->data.inlined.mime_type,
+ 			photo_data);
+ 	} else if (photo && photo->type == E_CONTACT_PHOTO_TYPE_URI && photo->data.uri && *photo->data.uri) {
+ 		gboolean is_local = g_str_has_prefix (photo->data.uri, "file://");
+ 		const gchar *uri = photo->data.uri;
+-		/* WebKit 2.2 doesn't re-escape URIs, thus do this only for versions before this */
+-		#if !WEBKIT_CHECK_VERSION(2,2,0)
++		/* WebKit 2.2.x doesn't re-escape URIs, thus do this for versions before and after this */
++		#if !(WEBKIT_MAJOR_VERSION == 2 && WEBKIT_MINOR_VERSION == 2)
+ 		gchar *unescaped = g_uri_unescape_string (photo->data.uri, NULL);
+ 		uri = unescaped;
+ 		#endif
+ 		g_string_append_printf (
+-			buffer, "<img border=\"1\" src=\"%s%s\">",
++			buffer, "<img id=\"__evo-contact-photo\" border=\"1\" src=\"%s%s\">",
+ 			is_local ? "evo-" : "", uri);
+-		#if !WEBKIT_CHECK_VERSION(2,2,0)
++		#if !(WEBKIT_MAJOR_VERSION == 2 && WEBKIT_MINOR_VERSION == 2)
+ 		g_free (unescaped);
+ 		#endif
+ 	}
+@@ -879,17 +880,17 @@ render_compact (EABContactFormatter *formatter,
+ 			photo->data.uri && *photo->data.uri) {
+ 			gboolean is_local = g_str_has_prefix (photo->data.uri, "file://");
+ 			const gchar *uri = photo->data.uri;
+-			/* WebKit 2.2 doesn't re-escape URIs, thus do this only for versions before this */
+-			#if !WEBKIT_CHECK_VERSION(2,2,0)
++			/* WebKit 2.2.x doesn't re-escape URIs, thus do this for versions before and after this */
++			#if !(WEBKIT_MAJOR_VERSION == 2 && WEBKIT_MINOR_VERSION == 2)
+ 			gchar *unescaped = g_uri_unescape_string (photo->data.uri, NULL);
+ 			uri = unescaped;
+ 			#endif
+ 			g_string_append_printf (
+ 				buffer,
+-				"<img width=\"%d\" height=\"%d\" src=\"%s%s\">",
++				"<img id=\"__evo-contact-photo\" width=\"%d\" height=\"%d\" src=\"%s%s\">",
+ 				calced_width, calced_height,
+ 				is_local ? "evo-" : "", uri);
+-			#if !WEBKIT_CHECK_VERSION(2,2,0)
++			#if !(WEBKIT_MAJOR_VERSION == 2 && WEBKIT_MINOR_VERSION == 2)
+ 			g_free (unescaped);
+ 			#endif
+ 		} else {
+@@ -900,7 +901,7 @@ render_compact (EABContactFormatter *formatter,
+ 					photo->data.inlined.length);
+ 			g_string_append_printf (
+ 				buffer,
+-				"<img border=\"1\" src=\"data:%s;base64,%s\" "
++				"<img id=\"__evo-contact-photo\" border=\"1\" src=\"data:%s;base64,%s\" "
+ 					"width=\"%d\" height=\"%d\">",
+ 				photo->data.inlined.mime_type,
+ 				photo_data,
+diff --git a/calendar/gui/e-calendar-selector.c b/calendar/gui/e-calendar-selector.c
+index cb3bac9..18bf071 100644
+--- a/calendar/gui/e-calendar-selector.c
++++ b/calendar/gui/e-calendar-selector.c
+@@ -301,8 +301,7 @@ calendar_selector_constructed (GObject *object)
+ 	g_object_unref (source);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_calendar_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_calendar_selector_parent_class)->constructed (object);
+ }
+ 
+ static gboolean
+diff --git a/calendar/gui/e-day-view-main-item.c b/calendar/gui/e-day-view-main-item.c
+index be2f96f..ae70909 100644
+--- a/calendar/gui/e-day-view-main-item.c
++++ b/calendar/gui/e-day-view-main-item.c
+@@ -1147,7 +1147,7 @@ day_view_main_item_draw (GnomeCanvasItem *canvas_item,
+ 
+ 			if (can_draw_in_region (draw_region, rect_x, rect_y, rect_width, rect_height)) {
+ 				cairo_save (cr);
+-				gdk_cairo_set_source_color (cr, &day_view->colors[gtk_widget_has_focus (GTK_WIDGET (day_view)) ? E_DAY_VIEW_COLOR_BG_SELECTED : E_DAY_VIEW_COLOR_BG_SELECTED_UNFOCUSSED]);
++				gdk_cairo_set_source_color (cr, &day_view->colors[E_DAY_VIEW_COLOR_BG_SELECTED]);
+ 				cairo_rectangle (cr, rect_x, rect_y, rect_width, rect_height);
+ 				cairo_fill (cr);
+ 				cairo_restore (cr);
+diff --git a/calendar/gui/e-day-view.c b/calendar/gui/e-day-view.c
+index 8f09d27..9950da6 100644
+--- a/calendar/gui/e-day-view.c
++++ b/calendar/gui/e-day-view.c
+@@ -4502,7 +4502,10 @@ e_day_view_show_popup_menu (EDayView *day_view,
+                             gint day,
+                             gint event_num)
+ {
+-	EDayViewEvent *pevent = tooltip_get_view_event (day_view, day, event_num);
++	EDayViewEvent *pevent = NULL;
++
++	if (event_num >= 0)
++		pevent = tooltip_get_view_event (day_view, day, event_num);
+ 
+ 	if (pevent && pevent->canvas_item)
+ 		tooltip_destroy (day_view, pevent->canvas_item);
+diff --git a/calendar/gui/e-memo-list-selector.c b/calendar/gui/e-memo-list-selector.c
+index b83d383..85243581 100644
+--- a/calendar/gui/e-memo-list-selector.c
++++ b/calendar/gui/e-memo-list-selector.c
+@@ -369,8 +369,7 @@ memo_list_selector_constructed (GObject *object)
+ 	g_object_unref (source);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_memo_list_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_memo_list_selector_parent_class)->constructed (object);
+ }
+ 
+ static gboolean
+diff --git a/calendar/gui/e-task-list-selector.c b/calendar/gui/e-task-list-selector.c
+index f6198f4..c22a653 100644
+--- a/calendar/gui/e-task-list-selector.c
++++ b/calendar/gui/e-task-list-selector.c
+@@ -353,8 +353,7 @@ task_list_selector_constructed (GObject *object)
+ 	g_object_unref (source);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_task_list_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_task_list_selector_parent_class)->constructed (object);
+ }
+ 
+ static gboolean
+diff --git a/calendar/gui/e-week-view.c b/calendar/gui/e-week-view.c
+index 317a78c..1c5a189 100644
+--- a/calendar/gui/e-week-view.c
++++ b/calendar/gui/e-week-view.c
+@@ -3294,6 +3294,28 @@ tooltip_destroy (EWeekView *week_view,
+ }
+ 
+ static gboolean
++e_week_view_handle_tooltip_timeout (gpointer user_data)
++{
++	ECalendarViewEventData *data = user_data;
++
++	g_return_val_if_fail (data != NULL, FALSE);
++
++	return e_calendar_view_get_tooltips (data);
++}
++
++static void
++e_week_view_destroy_tooltip_timeout_data (gpointer ptr)
++{
++	ECalendarViewEventData *data = ptr;
++
++	if (data) {
++		g_object_set_data ((GObject *) data->cal_view, "tooltip-timeout", NULL);
++		g_object_unref (data->cal_view);
++		g_free (data);
++	}
++}
++
++static gboolean
+ tooltip_event_cb (GnomeCanvasItem *item,
+                   GdkEvent *event,
+                   EWeekView *view)
+@@ -3315,14 +3337,14 @@ tooltip_event_cb (GnomeCanvasItem *item,
+ 			pevent->y = ((GdkEventCrossing *) event)->y_root;
+ 			pevent->tooltip = NULL;
+ 
+-			data->cal_view = (ECalendarView *) view;
++			data->cal_view = g_object_ref (view);
+ 			data->day = -1;
+ 			data->event_num = event_num;
+ 			data->get_view_event = (ECalendarViewEvent * (*)(ECalendarView *, int, gint)) tooltip_get_view_event;
+ 			pevent->timeout = e_named_timeout_add_full (
+ 				G_PRIORITY_DEFAULT, 500,
+-				(GSourceFunc) e_calendar_view_get_tooltips,
+-				data, (GDestroyNotify) g_free);
++				e_week_view_handle_tooltip_timeout,
++				data, e_week_view_destroy_tooltip_timeout_data);
+ 			g_object_set_data ((GObject *) view, "tooltip-timeout", GUINT_TO_POINTER (pevent->timeout));
+ 
+ 			return TRUE;
+@@ -3992,14 +4014,14 @@ e_week_view_on_text_item_event (GnomeCanvasItem *item,
+ 		pevent->y = (gint) event_y_root;
+ 		pevent->tooltip = NULL;
+ 
+-		data->cal_view = (ECalendarView *) week_view;
++		data->cal_view = g_object_ref (week_view);
+ 		data->day = -1;
+ 		data->event_num = nevent;
+ 		data->get_view_event = (ECalendarViewEvent * (*)(ECalendarView *, int, gint)) tooltip_get_view_event;
+ 		pevent->timeout = e_named_timeout_add_full (
+ 			G_PRIORITY_DEFAULT, 500,
+-			(GSourceFunc) e_calendar_view_get_tooltips,
+-			data, (GDestroyNotify) g_free);
++			e_week_view_handle_tooltip_timeout,
++			data, e_week_view_destroy_tooltip_timeout_data);
+ 		g_object_set_data ((GObject *) week_view, "tooltip-timeout", GUINT_TO_POINTER (pevent->timeout));
+ 
+ 		return TRUE;
+diff --git a/composer/e-composer-from-header.c b/composer/e-composer-from-header.c
+index 517908a..87d0e73 100644
+--- a/composer/e-composer-from-header.c
++++ b/composer/e-composer-from-header.c
+@@ -54,8 +54,7 @@ composer_from_header_constructed (GObject *object)
+ 	header->input_widget = g_object_ref_sink (widget);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_from_header_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_from_header_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/composer/e-composer-header-table.c b/composer/e-composer-header-table.c
+index 62a61ed..af63fca 100644
+--- a/composer/e-composer-header-table.c
++++ b/composer/e-composer-header-table.c
+@@ -757,8 +757,7 @@ composer_header_table_constructed (GObject *object)
+ 	gint row_padding;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_header_table_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_header_table_parent_class)->constructed (object);
+ 
+ 	table = E_COMPOSER_HEADER_TABLE (object);
+ 
+diff --git a/composer/e-composer-header.c b/composer/e-composer-header.c
+index dda34cd..c351618 100644
+--- a/composer/e-composer-header.c
++++ b/composer/e-composer-header.c
+@@ -213,6 +213,9 @@ composer_header_constructed (GObject *object)
+ 
+ 	header = E_COMPOSER_HEADER (object);
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_composer_header_parent_class)->constructed (object);
++
+ 	if (header->input_widget == NULL) {
+ 		g_critical (
+ 			"EComposerHeader's input_widget "
+diff --git a/composer/e-composer-name-header.c b/composer/e-composer-name-header.c
+index 4529fae..7005424 100644
+--- a/composer/e-composer-name-header.c
++++ b/composer/e-composer-name-header.c
+@@ -226,8 +226,7 @@ composer_name_header_constructed (GObject *object)
+ 		G_CALLBACK (composer_name_header_visible_changed_cb), object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_name_header_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_name_header_parent_class)->constructed (object);
+ 
+ 	e_composer_header_set_title_tooltip (
+ 		E_COMPOSER_HEADER (object),
+diff --git a/composer/e-composer-post-header.c b/composer/e-composer-post-header.c
+index f14b669..4c93ffd 100644
+--- a/composer/e-composer-post-header.c
++++ b/composer/e-composer-post-header.c
+@@ -175,8 +175,7 @@ static void
+ composer_post_header_constructed (GObject *object)
+ {
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_post_header_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_post_header_parent_class)->constructed (object);
+ 
+ 	e_composer_header_set_title_tooltip (
+ 		E_COMPOSER_HEADER (object),
+diff --git a/composer/e-composer-text-header.c b/composer/e-composer-text-header.c
+index 1997df7..e378d11 100644
+--- a/composer/e-composer-text-header.c
++++ b/composer/e-composer-text-header.c
+@@ -87,8 +87,7 @@ composer_text_header_constructed (GObject *object)
+ 	E_COMPOSER_HEADER (object)->input_widget = g_object_ref_sink (widget);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_text_header_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_text_header_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/data/webview.css b/data/webview.css
+index 6a5eb1b..5c0877c 100644
+--- a/data/webview.css
++++ b/data/webview.css
+@@ -23,6 +23,11 @@ span.navigable, div.navigable, p.navigable {
+   color: #003399;
+ }
+ 
++img#__evo-contact-photo {
++  max-width: 96px;
++  max-height: 96px;
++}
++
+ img.navigable {
+   cursor: pointer;
+   margin-right: 4px;
+diff --git a/e-util/e-attachment-icon-view.c b/e-util/e-attachment-icon-view.c
+index 0befff0..98a7d87 100644
+--- a/e-util/e-attachment-icon-view.c
++++ b/e-util/e-attachment-icon-view.c
+@@ -137,6 +137,9 @@ attachment_icon_view_constructed (GObject *object)
+ 	GtkCellLayout *cell_layout;
+ 	GtkCellRenderer *renderer;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_attachment_icon_view_parent_class)->constructed (object);
++
+ 	cell_layout = GTK_CELL_LAYOUT (object);
+ 
+ 	/* This needs to happen after constructor properties are set
+diff --git a/e-util/e-client-cache.c b/e-util/e-client-cache.c
+index 215c470..b844e49 100644
+--- a/e-util/e-client-cache.c
++++ b/e-util/e-client-cache.c
+@@ -1256,6 +1256,8 @@ e_client_cache_get_client (EClientCache *client_cache,
+ 	g_warn_if_reached ();  /* Should never happen. */
+ 
+ exit:
++	if (client_data)
++		client_data_unref (client_data);
+ 	g_object_unref (simple);
+ }
+ 
+diff --git a/e-util/e-mail-identity-combo-box.c b/e-util/e-mail-identity-combo-box.c
+index bc37754..2bb17e1 100644
+--- a/e-util/e-mail-identity-combo-box.c
++++ b/e-util/e-mail-identity-combo-box.c
+@@ -259,8 +259,7 @@ mail_identity_combo_box_constructed (GObject *object)
+ 	GtkCellRenderer *cell_renderer;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_identity_combo_box_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_identity_combo_box_parent_class)->constructed (object);
+ 
+ 	combo_box = GTK_COMBO_BOX (object);
+ 	cell_layout = GTK_CELL_LAYOUT (object);
+diff --git a/e-util/e-mail-signature-combo-box.c b/e-util/e-mail-signature-combo-box.c
+index 835fe80..fcd3dd0 100644
+--- a/e-util/e-mail-signature-combo-box.c
++++ b/e-util/e-mail-signature-combo-box.c
+@@ -244,8 +244,7 @@ mail_signature_combo_box_constructed (GObject *object)
+ 	GtkCellRenderer *cell_renderer;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_signature_combo_box_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_signature_combo_box_parent_class)->constructed (object);
+ 
+ 	combo_box = GTK_COMBO_BOX (object);
+ 	cell_layout = GTK_CELL_LAYOUT (object);
+diff --git a/e-util/e-mail-signature-editor.c b/e-util/e-mail-signature-editor.c
+index 05c783d..5f90bd5 100644
+--- a/e-util/e-mail-signature-editor.c
++++ b/e-util/e-mail-signature-editor.c
+@@ -491,8 +491,7 @@ mail_signature_editor_constructed (GObject *object)
+ 	GError *error = NULL;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_signature_editor_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_signature_editor_parent_class)->constructed (object);
+ 
+ 	editor = E_MAIL_SIGNATURE_EDITOR (object);
+ 
+diff --git a/e-util/e-mail-signature-manager.c b/e-util/e-mail-signature-manager.c
+index 7f75cb7..f96b211 100644
+--- a/e-util/e-mail-signature-manager.c
++++ b/e-util/e-mail-signature-manager.c
+@@ -256,8 +256,7 @@ mail_signature_manager_constructed (GObject *object)
+ 	GtkWidget *hbox;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_signature_manager_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_signature_manager_parent_class)->constructed (object);
+ 
+ 	manager = E_MAIL_SIGNATURE_MANAGER (object);
+ 	registry = e_mail_signature_manager_get_registry (manager);
+diff --git a/e-util/e-mail-signature-script-dialog.c b/e-util/e-mail-signature-script-dialog.c
+index 0d239e0..fe91579 100644
+--- a/e-util/e-mail-signature-script-dialog.c
++++ b/e-util/e-mail-signature-script-dialog.c
+@@ -351,8 +351,7 @@ mail_signature_script_dialog_constructed (GObject *object)
+ 	gchar *markup;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_signature_script_dialog_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_signature_script_dialog_parent_class)->constructed (object);
+ 
+ 	dialog = E_MAIL_SIGNATURE_SCRIPT_DIALOG (object);
+ 
+diff --git a/e-util/e-mail-signature-tree-view.c b/e-util/e-mail-signature-tree-view.c
+index 68e078b..08d14fd 100644
+--- a/e-util/e-mail-signature-tree-view.c
++++ b/e-util/e-mail-signature-tree-view.c
+@@ -170,8 +170,7 @@ mail_signature_tree_view_constructed (GObject *object)
+ 	GtkListStore *list_store;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_signature_tree_view_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_signature_tree_view_parent_class)->constructed (object);
+ 
+ 	list_store = gtk_list_store_new (
+ 		NUM_COLUMNS,
+diff --git a/e-util/e-name-selector-entry.c b/e-util/e-name-selector-entry.c
+index 0f872e7..e0382da 100644
+--- a/e-util/e-name-selector-entry.c
++++ b/e-util/e-name-selector-entry.c
+@@ -228,8 +228,7 @@ static void
+ name_selector_entry_constructed (GObject *object)
+ {
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_name_selector_entry_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_name_selector_entry_parent_class)->constructed (object);
+ 
+ 	e_extensible_load_extensions (E_EXTENSIBLE (object));
+ }
+diff --git a/e-util/e-proxy-link-selector.c b/e-util/e-proxy-link-selector.c
+index 360604b..4e1a62d 100644
+--- a/e-util/e-proxy-link-selector.c
++++ b/e-util/e-proxy-link-selector.c
+@@ -149,8 +149,7 @@ proxy_link_selector_constructed (GObject *object)
+ 		(GDestroyNotify) g_object_unref);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_proxy_link_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_proxy_link_selector_parent_class)->constructed (object);
+ 
+ 	/* This triggers a model rebuild, so chain up first. */
+ 	e_source_selector_set_show_icons (selector, TRUE);
+diff --git a/e-util/e-proxy-preferences.c b/e-util/e-proxy-preferences.c
+index 774735b..2af6623 100644
+--- a/e-util/e-proxy-preferences.c
++++ b/e-util/e-proxy-preferences.c
+@@ -371,8 +371,7 @@ proxy_preferences_constructed (GObject *object)
+ 	gboolean show_advanced;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_proxy_preferences_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_proxy_preferences_parent_class)->constructed (object);
+ 
+ 	preferences = E_PROXY_PREFERENCES (object);
+ 	registry = e_proxy_preferences_get_registry (preferences);
+diff --git a/e-util/e-source-config-dialog.c b/e-util/e-source-config-dialog.c
+index f5d1b72..98aea98 100644
+--- a/e-util/e-source-config-dialog.c
++++ b/e-util/e-source-config-dialog.c
+@@ -250,6 +250,9 @@ source_config_dialog_constructed (GObject *object)
+ 	GtkWidget *widget;
+ 	gulong handler_id;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_source_config_dialog_parent_class)->constructed (object);
++
+ 	priv = E_SOURCE_CONFIG_DIALOG_GET_PRIVATE (object);
+ 
+ 	config = GTK_WIDGET (priv->config);
+diff --git a/e-util/e-source-config.c b/e-util/e-source-config.c
+index 57baf44..9d51718 100644
+--- a/e-util/e-source-config.c
++++ b/e-util/e-source-config.c
+@@ -661,6 +661,9 @@ source_config_constructed (GObject *object)
+ 	ESource *original_source;
+ 	ESource *collection_source = NULL;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_source_config_parent_class)->constructed (object);
++
+ 	config = E_SOURCE_CONFIG (object);
+ 	registry = e_source_config_get_registry (config);
+ 	original_source = e_source_config_get_original_source (config);
+diff --git a/e-util/e-source-selector-dialog.c b/e-util/e-source-selector-dialog.c
+index f08c319..908370b 100644
+--- a/e-util/e-source-selector-dialog.c
++++ b/e-util/e-source-selector-dialog.c
+@@ -207,6 +207,9 @@ source_selector_dialog_constructed (GObject *object)
+ 	GtkWidget *widget;
+ 	gchar *label_text;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_source_selector_dialog_parent_class)->constructed (object);
++
+ 	dialog = E_SOURCE_SELECTOR_DIALOG (object);
+ 
+ 	container = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+diff --git a/e-util/e-source-selector.c b/e-util/e-source-selector.c
+index e540248..2952e4b 100644
+--- a/e-util/e-source-selector.c
++++ b/e-util/e-source-selector.c
+@@ -885,6 +885,9 @@ source_selector_constructed (GObject *object)
+ 	ESourceSelector *selector;
+ 	gulong handler_id;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_source_selector_parent_class)->constructed (object);
++
+ 	selector = E_SOURCE_SELECTOR (object);
+ 	registry = e_source_selector_get_registry (selector);
+ 
+diff --git a/e-util/e-table-column-selector.c b/e-util/e-table-column-selector.c
+index 4eba076..beab157 100644
+--- a/e-util/e-table-column-selector.c
++++ b/e-util/e-table-column-selector.c
+@@ -238,8 +238,7 @@ table_column_selector_constructed (GObject *object)
+ 	selector = E_TABLE_COLUMN_SELECTOR (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_table_column_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_table_column_selector_parent_class)->constructed (object);
+ 
+ 	tree_view_frame = E_TREE_VIEW_FRAME (object);
+ 	tree_view = e_tree_view_frame_get_tree_view (tree_view_frame);
+diff --git a/e-util/e-tree-table-adapter.c b/e-util/e-tree-table-adapter.c
+index b7efb05..a62e4f3 100644
+--- a/e-util/e-tree-table-adapter.c
++++ b/e-util/e-tree-table-adapter.c
+@@ -815,8 +815,7 @@ tree_table_adapter_constructed (GObject *object)
+ 	etta = E_TREE_TABLE_ADAPTER (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_tree_table_adapter_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_tree_table_adapter_parent_class)->constructed (object);
+ 
+ 	source_model = e_tree_table_adapter_get_source_model (etta);
+ 
+diff --git a/em-format/e-mail-part-attachment.c b/em-format/e-mail-part-attachment.c
+index 21b138c..9f6f92a 100644
+--- a/em-format/e-mail-part-attachment.c
++++ b/em-format/e-mail-part-attachment.c
+@@ -92,8 +92,7 @@ mail_part_attachment_constructed (GObject *object)
+ 	priv = E_MAIL_PART_ATTACHMENT_GET_PRIVATE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_part_attachment_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_part_attachment_parent_class)->constructed (object);
+ 
+ 	e_mail_part_set_mime_type (part, E_MAIL_PART_ATTACHMENT_MIME_TYPE);
+ 	e_mail_part_set_is_attachment (part, TRUE);
+diff --git a/em-format/e-mail-part-headers.c b/em-format/e-mail-part-headers.c
+index 526f95a..9ffa594 100644
+--- a/em-format/e-mail-part-headers.c
++++ b/em-format/e-mail-part-headers.c
+@@ -206,8 +206,7 @@ mail_part_headers_constructed (GObject *object)
+ 	part = E_MAIL_PART (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_part_headers_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_part_headers_parent_class)->constructed (object);
+ 
+ 	e_mail_part_set_mime_type (part, E_MAIL_PART_HEADERS_MIME_TYPE);
+ }
+diff --git a/libemail-engine/e-mail-folder-utils.c b/libemail-engine/e-mail-folder-utils.c
+index 0461930..bb0c3bb 100644
+--- a/libemail-engine/e-mail-folder-utils.c
++++ b/libemail-engine/e-mail-folder-utils.c
+@@ -1753,7 +1753,7 @@ e_mail_folder_uri_build (CamelStore *store,
+ 	uid = camel_service_get_uid (CAMEL_SERVICE (store));
+ 
+ 	encoded_uid = camel_url_encode (uid, ":;@/");
+-	encoded_name = camel_url_encode (folder_name, "#");
++	encoded_name = camel_url_encode (folder_name, ":;@?#");
+ 
+ 	uri = g_strdup_printf ("folder://%s/%s", encoded_uid, encoded_name);
+ 
+diff --git a/mail/e-mail-account-manager.c b/mail/e-mail-account-manager.c
+index 6b2e057..19a0c6a 100644
+--- a/mail/e-mail-account-manager.c
++++ b/mail/e-mail-account-manager.c
+@@ -601,8 +601,7 @@ mail_account_manager_constructed (GObject *object)
+ 	store = e_mail_account_manager_get_store (manager);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_account_manager_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_account_manager_parent_class)->constructed (object);
+ 
+ 	g_object_bind_property (
+ 		store, "busy",
+diff --git a/mail/e-mail-account-tree-view.c b/mail/e-mail-account-tree-view.c
+index 1946701..c7c824e 100644
+--- a/mail/e-mail-account-tree-view.c
++++ b/mail/e-mail-account-tree-view.c
+@@ -70,8 +70,7 @@ mail_account_tree_view_constructed (GObject *object)
+ 	GtkCellRenderer *cell_renderer;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_account_tree_view_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_account_tree_view_parent_class)->constructed (object);
+ 
+ 	tree_view = GTK_TREE_VIEW (object);
+ 
+diff --git a/mail/e-mail-config-activity-page.c b/mail/e-mail-config-activity-page.c
+index c925216..8fef1e4 100644
+--- a/mail/e-mail-config-activity-page.c
++++ b/mail/e-mail-config-activity-page.c
+@@ -50,8 +50,7 @@ mail_config_activity_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_ACTIVITY_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_activity_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_activity_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/mail/e-mail-config-assistant.c b/mail/e-mail-config-assistant.c
+index e1a4add..794eed9 100644
+--- a/mail/e-mail-config-assistant.c
++++ b/mail/e-mail-config-assistant.c
+@@ -648,8 +648,7 @@ mail_config_assistant_constructed (GObject *object)
+ 	assistant = E_MAIL_CONFIG_ASSISTANT (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_assistant_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_assistant_parent_class)->constructed (object);
+ 
+ 	title = _("Evolution Account Assistant");
+ 	gtk_window_set_title (GTK_WINDOW (assistant), title);
+diff --git a/mail/e-mail-config-auth-check.c b/mail/e-mail-config-auth-check.c
+index b333d34..c69414e 100644
+--- a/mail/e-mail-config-auth-check.c
++++ b/mail/e-mail-config-auth-check.c
+@@ -328,8 +328,7 @@ mail_config_auth_check_constructed (GObject *object)
+ 	const gchar *text;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_auth_check_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_auth_check_parent_class)->constructed (object);
+ 
+ 	auth_check = E_MAIL_CONFIG_AUTH_CHECK (object);
+ 	backend = e_mail_config_auth_check_get_backend (auth_check);
+diff --git a/mail/e-mail-config-confirm-page.c b/mail/e-mail-config-confirm-page.c
+index b1767a6..d99638c 100644
+--- a/mail/e-mail-config-confirm-page.c
++++ b/mail/e-mail-config-confirm-page.c
+@@ -107,8 +107,7 @@ mail_config_confirm_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_CONFIRM_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_confirm_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_confirm_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/mail/e-mail-config-defaults-page.c b/mail/e-mail-config-defaults-page.c
+index 5e85d64..8ef2882 100644
+--- a/mail/e-mail-config-defaults-page.c
++++ b/mail/e-mail-config-defaults-page.c
+@@ -508,8 +508,7 @@ mail_config_defaults_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_DEFAULTS_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_defaults_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_defaults_page_parent_class)->constructed (object);
+ 
+ 	source = e_mail_config_defaults_page_get_account_source (page);
+ 	extension_name = E_SOURCE_EXTENSION_MAIL_ACCOUNT;
+diff --git a/mail/e-mail-config-identity-page.c b/mail/e-mail-config-identity-page.c
+index 5526105..9bdc013 100644
+--- a/mail/e-mail-config-identity-page.c
++++ b/mail/e-mail-config-identity-page.c
+@@ -246,8 +246,7 @@ mail_config_identity_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_IDENTITY_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_identity_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_identity_page_parent_class)->constructed (object);
+ 
+ 	extension_name = E_SOURCE_EXTENSION_MAIL_IDENTITY;
+ 	registry = e_mail_config_identity_page_get_registry (page);
+diff --git a/mail/e-mail-config-lookup-page.c b/mail/e-mail-config-lookup-page.c
+index 4ef4fee..22cbf51 100644
+--- a/mail/e-mail-config-lookup-page.c
++++ b/mail/e-mail-config-lookup-page.c
+@@ -47,8 +47,7 @@ mail_config_lookup_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_LOOKUP_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_lookup_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_lookup_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/mail/e-mail-config-notebook.c b/mail/e-mail-config-notebook.c
+index a3e6f5c..ec48772 100644
+--- a/mail/e-mail-config-notebook.c
++++ b/mail/e-mail-config-notebook.c
+@@ -315,8 +315,7 @@ mail_config_notebook_constructed (GObject *object)
+ 	notebook = E_MAIL_CONFIG_NOTEBOOK (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_notebook_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_notebook_parent_class)->constructed (object);
+ 
+ 	session = e_mail_config_notebook_get_session (notebook);
+ 	registry = e_mail_session_get_registry (session);
+diff --git a/mail/e-mail-config-provider-page.c b/mail/e-mail-config-provider-page.c
+index 32c5473..4f923ae 100644
+--- a/mail/e-mail-config-provider-page.c
++++ b/mail/e-mail-config-provider-page.c
+@@ -648,8 +648,7 @@ mail_config_provider_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_PROVIDER_PAGE (object);
+ 
+ 	/* Chain up parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_provider_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_provider_page_parent_class)->constructed (object);
+ 
+ 	gtk_box_set_spacing (GTK_BOX (object), 6);
+ 
+diff --git a/mail/e-mail-config-security-page.c b/mail/e-mail-config-security-page.c
+index 4e1ab5a..00d59e9 100644
+--- a/mail/e-mail-config-security-page.c
++++ b/mail/e-mail-config-security-page.c
+@@ -224,8 +224,7 @@ mail_config_security_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_SECURITY_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_security_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_security_page_parent_class)->constructed (object);
+ 
+ 	source = e_mail_config_security_page_get_identity_source (page);
+ 
+diff --git a/mail/e-mail-config-service-backend.c b/mail/e-mail-config-service-backend.c
+index 3a8f8da..a5b9021 100644
+--- a/mail/e-mail-config-service-backend.c
++++ b/mail/e-mail-config-service-backend.c
+@@ -145,8 +145,7 @@ mail_config_service_backend_constructed (GObject *object)
+ 	mail_config_service_backend_init_collection (backend);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_service_backend_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_service_backend_parent_class)->constructed (object);
+ }
+ 
+ static gboolean
+diff --git a/mail/e-mail-config-service-notebook.c b/mail/e-mail-config-service-notebook.c
+index 4398eb3..a4cac0c 100644
+--- a/mail/e-mail-config-service-notebook.c
++++ b/mail/e-mail-config-service-notebook.c
+@@ -202,8 +202,7 @@ static void
+ mail_config_service_notebook_constructed (GObject *object)
+ {
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_service_notebook_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_service_notebook_parent_class)->constructed (object);
+ 
+ 	gtk_notebook_set_show_tabs (GTK_NOTEBOOK (object), FALSE);
+ 	gtk_notebook_set_show_border (GTK_NOTEBOOK (object), FALSE);
+diff --git a/mail/e-mail-config-service-page.c b/mail/e-mail-config-service-page.c
+index a27fac0..5e0457e 100644
+--- a/mail/e-mail-config-service-page.c
++++ b/mail/e-mail-config-service-page.c
+@@ -431,8 +431,7 @@ mail_config_service_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_SERVICE_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_service_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_service_page_parent_class)->constructed (object);
+ 
+ 	mail_config_service_page_init_backends (page);
+ }
+diff --git a/mail/e-mail-config-sidebar.c b/mail/e-mail-config-sidebar.c
+index 3c64dd6..5c23085 100644
+--- a/mail/e-mail-config-sidebar.c
++++ b/mail/e-mail-config-sidebar.c
+@@ -250,8 +250,7 @@ mail_config_sidebar_constructed (GObject *object)
+ 	sidebar = E_MAIL_CONFIG_SIDEBAR (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_sidebar_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_sidebar_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (sidebar), GTK_ORIENTATION_VERTICAL);
+diff --git a/mail/e-mail-config-summary-page.c b/mail/e-mail-config-summary-page.c
+index 79a04e2..e51df6a 100644
+--- a/mail/e-mail-config-summary-page.c
++++ b/mail/e-mail-config-summary-page.c
+@@ -291,8 +291,7 @@ mail_config_summary_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_SUMMARY_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_summary_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_summary_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/mail/e-mail-config-welcome-page.c b/mail/e-mail-config-welcome-page.c
+index 3f00c0f..8e5d82c 100644
+--- a/mail/e-mail-config-welcome-page.c
++++ b/mail/e-mail-config-welcome-page.c
+@@ -108,8 +108,7 @@ mail_config_welcome_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_WELCOME_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_welcome_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_welcome_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/mail/e-mail-config-window.c b/mail/e-mail-config-window.c
+index 2a28aa5..d0cb7db 100644
+--- a/mail/e-mail-config-window.c
++++ b/mail/e-mail-config-window.c
+@@ -317,8 +317,7 @@ mail_config_window_constructed (GObject *object)
+ 	window = E_MAIL_CONFIG_WINDOW (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_window_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_window_parent_class)->constructed (object);
+ 
+ 	mail_config_window_setup_scratch_sources (window);
+ 
+diff --git a/mail/e-mail-label-list-store.c b/mail/e-mail-label-list-store.c
+index 3d9a1a8..6ddd4ce 100644
+--- a/mail/e-mail-label-list-store.c
++++ b/mail/e-mail-label-list-store.c
+@@ -382,8 +382,7 @@ mail_label_list_store_constructed (GObject *object)
+ 	mail_label_list_store_ensure_defaults (store);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_label_list_store_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_label_list_store_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/mail/e-mail-print-config-headers.c b/mail/e-mail-print-config-headers.c
+index d79d0dd..e58b3e0 100644
+--- a/mail/e-mail-print-config-headers.c
++++ b/mail/e-mail-print-config-headers.c
+@@ -143,8 +143,7 @@ mail_print_config_headers_constructed (GObject *object)
+ 	config = E_MAIL_PRINT_CONFIG_HEADERS (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_print_config_headers_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_print_config_headers_parent_class)->constructed (object);
+ 
+ 	tree_view_frame = E_TREE_VIEW_FRAME (object);
+ 	tree_view = e_tree_view_frame_get_tree_view (tree_view_frame);
+diff --git a/mail/em-folder-tree-model.c b/mail/em-folder-tree-model.c
+index f64e147..bdbaebf 100644
+--- a/mail/em-folder-tree-model.c
++++ b/mail/em-folder-tree-model.c
+@@ -709,8 +709,7 @@ folder_tree_model_constructed (GObject *object)
+ 		GTK_SORT_ASCENDING);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (em_folder_tree_model_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (em_folder_tree_model_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/backup-restore/e-mail-config-restore-page.c b/modules/backup-restore/e-mail-config-restore-page.c
+index 4751a2e..2fc21be 100644
+--- a/modules/backup-restore/e-mail-config-restore-page.c
++++ b/modules/backup-restore/e-mail-config-restore-page.c
+@@ -153,8 +153,7 @@ mail_config_restore_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_RESTORE_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_restore_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_restore_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/modules/backup-restore/evolution-backup-restore.c b/modules/backup-restore/evolution-backup-restore.c
+index 12a1119..a3a23eb 100644
+--- a/modules/backup-restore/evolution-backup-restore.c
++++ b/modules/backup-restore/evolution-backup-restore.c
+@@ -362,8 +362,7 @@ evolution_backup_restore_assistant_constructed (GObject *object)
+ 	extensible = e_extension_get_extensible (extension);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (evolution_backup_restore_assistant_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (evolution_backup_restore_assistant_parent_class)->constructed (object);
+ 
+ 	assistant = E_MAIL_CONFIG_ASSISTANT (extensible);
+ 
+@@ -433,8 +432,7 @@ evolution_backup_restore_menu_items_constructed (GObject *object)
+ 	extensible = e_extension_get_extensible (extension);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (evolution_backup_restore_menu_items_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (evolution_backup_restore_menu_items_parent_class)->constructed (object);
+ 
+ 	shell_window = E_SHELL_WINDOW (extensible);
+ 	action_group = e_shell_window_get_action_group (shell_window, "shell");
+diff --git a/modules/book-config-ldap/e-source-ldap.c b/modules/book-config-ldap/e-source-ldap.c
+index 0d4f52b..d5700e8 100644
+--- a/modules/book-config-ldap/e-source-ldap.c
++++ b/modules/book-config-ldap/e-source-ldap.c
+@@ -241,6 +241,9 @@ source_ldap_constructed (GObject *object)
+ 	ESourceExtension *other_extension;
+ 	const gchar *extension_name;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_source_ldap_parent_class)->constructed (object);
++
+ 	this_extension = E_SOURCE_EXTENSION (object);
+ 	source = e_source_extension_ref_source (this_extension);
+ 
+diff --git a/modules/cal-config-caldav/e-caldav-chooser-dialog.c b/modules/cal-config-caldav/e-caldav-chooser-dialog.c
+index b01c100..66c3381 100644
+--- a/modules/cal-config-caldav/e-caldav-chooser-dialog.c
++++ b/modules/cal-config-caldav/e-caldav-chooser-dialog.c
+@@ -255,8 +255,7 @@ caldav_chooser_dialog_constructed (GObject *object)
+ 	dialog = E_CALDAV_CHOOSER_DIALOG (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_caldav_chooser_dialog_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_caldav_chooser_dialog_parent_class)->constructed (object);
+ 
+ 	switch (e_caldav_chooser_get_source_type (dialog->priv->chooser)) {
+ 		case E_CAL_CLIENT_SOURCE_TYPE_EVENTS:
+diff --git a/modules/cal-config-contacts/evolution-cal-config-contacts.c b/modules/cal-config-contacts/evolution-cal-config-contacts.c
+index f2bea8a..91f5940 100644
+--- a/modules/cal-config-contacts/evolution-cal-config-contacts.c
++++ b/modules/cal-config-contacts/evolution-cal-config-contacts.c
+@@ -194,6 +194,9 @@ book_config_birthdays_constructed (GObject *object)
+ 	GtkWidget *widget;
+ 	const gchar *label;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_book_config_birthdays_parent_class)->constructed (object);
++
+ 	birthdays = E_BOOK_CONFIG_BIRTHDAYS (object);
+ 	config = book_config_birthdays_get_config (birthdays);
+ 
+diff --git a/modules/cal-config-google/e-google-chooser-button.c b/modules/cal-config-google/e-google-chooser-button.c
+index 87ccffb..a6dc703 100644
+--- a/modules/cal-config-google/e-google-chooser-button.c
++++ b/modules/cal-config-google/e-google-chooser-button.c
+@@ -120,8 +120,7 @@ google_chooser_button_constructed (GObject *object)
+ 	button = E_GOOGLE_CHOOSER_BUTTON (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_google_chooser_button_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_google_chooser_button_parent_class)->constructed (object);
+ 
+ 	widget = gtk_label_new (_("Default User Calendar"));
+ 	gtk_misc_set_alignment (GTK_MISC (widget), 0.0, 0.5);
+diff --git a/modules/cal-config-google/e-google-chooser-dialog.c b/modules/cal-config-google/e-google-chooser-dialog.c
+index 64d24d9..68ff2a9 100644
+--- a/modules/cal-config-google/e-google-chooser-dialog.c
++++ b/modules/cal-config-google/e-google-chooser-dialog.c
+@@ -180,8 +180,7 @@ google_chooser_dialog_constructed (GObject *object)
+ 	dialog = E_GOOGLE_CHOOSER_DIALOG (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_google_chooser_dialog_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_google_chooser_dialog_parent_class)->constructed (object);
+ 
+ 	gtk_dialog_add_button (
+ 		GTK_DIALOG (dialog),
+diff --git a/modules/calendar/e-cal-shell-view.c b/modules/calendar/e-cal-shell-view.c
+index 716f87e..9dd5e3d 100644
+--- a/modules/calendar/e-cal-shell-view.c
++++ b/modules/calendar/e-cal-shell-view.c
+@@ -38,7 +38,8 @@ cal_shell_view_add_action_button (GtkBox *box,
+ 	GtkWidget *button, *icon;
+ 
+ 	button = gtk_button_new ();
+-	icon = gtk_action_create_icon (action, GTK_ICON_SIZE_BUTTON);
++	icon = gtk_action_create_icon (action, GTK_ICON_SIZE_MENU);
++	gtk_image_set_pixel_size (GTK_IMAGE (icon), 16);
+ 	gtk_button_set_image (GTK_BUTTON (button), icon);
+ 	gtk_box_pack_start (box, button, FALSE, FALSE, 0);
+ 	gtk_widget_show (button);
+diff --git a/modules/composer-autosave/e-composer-autosave.c b/modules/composer-autosave/e-composer-autosave.c
+index 33d6c02..52c0cfb 100644
+--- a/modules/composer-autosave/e-composer-autosave.c
++++ b/modules/composer-autosave/e-composer-autosave.c
+@@ -167,8 +167,7 @@ composer_autosave_constructed (GObject *object)
+ 	EExtensible *extensible;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_autosave_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_autosave_parent_class)->constructed (object);
+ 
+ 	extensible = e_extension_get_extensible (E_EXTENSION (object));
+ 
+diff --git a/modules/composer-autosave/e-composer-registry.c b/modules/composer-autosave/e-composer-registry.c
+index db951d3..1048563 100644
+--- a/modules/composer-autosave/e-composer-registry.c
++++ b/modules/composer-autosave/e-composer-registry.c
+@@ -192,8 +192,7 @@ composer_registry_constructed (GObject *object)
+ 	EExtensible *extensible;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_composer_registry_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_composer_registry_parent_class)->constructed (object);
+ 
+ 	extensible = e_extension_get_extensible (E_EXTENSION (object));
+ 
+diff --git a/modules/contact-photos/e-photo-cache-contact-loader.c b/modules/contact-photos/e-photo-cache-contact-loader.c
+index 2f853ef..30663aa 100644
+--- a/modules/contact-photos/e-photo-cache-contact-loader.c
++++ b/modules/contact-photos/e-photo-cache-contact-loader.c
+@@ -165,8 +165,7 @@ photo_cache_contact_loader_constructed (GObject *object)
+ 	gulong handler_id;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_photo_cache_contact_loader_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_photo_cache_contact_loader_parent_class)->constructed (object);
+ 
+ 	loader = E_PHOTO_CACHE_CONTACT_LOADER (object);
+ 	photo_cache = photo_cache_contact_loader_get_photo_cache (loader);
+diff --git a/modules/gravatar/e-photo-cache-gravatar-loader.c b/modules/gravatar/e-photo-cache-gravatar-loader.c
+index 938e508..6a59de5 100644
+--- a/modules/gravatar/e-photo-cache-gravatar-loader.c
++++ b/modules/gravatar/e-photo-cache-gravatar-loader.c
+@@ -42,8 +42,7 @@ photo_cache_gravatar_loader_constructed (GObject *object)
+ 	EPhotoSource *photo_source;
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_photo_cache_gravatar_loader_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_photo_cache_gravatar_loader_parent_class)->constructed (object);
+ 
+ 	loader = E_PHOTO_CACHE_GRAVATAR_LOADER (object);
+ 	photo_cache = photo_cache_gravatar_loader_get_photo_cache (loader);
+diff --git a/modules/mail-config/e-mail-config-google-summary.c b/modules/mail-config/e-mail-config-google-summary.c
+index 59fbf9a..190408f 100644
+--- a/modules/mail-config/e-mail-config-google-summary.c
++++ b/modules/mail-config/e-mail-config-google-summary.c
+@@ -215,8 +215,7 @@ mail_config_google_summary_constructed (GObject *object)
+ 	extension = E_MAIL_CONFIG_GOOGLE_SUMMARY (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_google_summary_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_google_summary_parent_class)->constructed (object);
+ 
+ 	page = mail_config_google_summary_get_summary_page (extension);
+ 
+diff --git a/modules/mail-config/e-mail-config-yahoo-summary.c b/modules/mail-config/e-mail-config-yahoo-summary.c
+index 7dad8f3..70b119b 100644
+--- a/modules/mail-config/e-mail-config-yahoo-summary.c
++++ b/modules/mail-config/e-mail-config-yahoo-summary.c
+@@ -210,8 +210,7 @@ mail_config_yahoo_summary_constructed (GObject *object)
+ 	extension = E_MAIL_CONFIG_YAHOO_SUMMARY (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_yahoo_summary_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_yahoo_summary_parent_class)->constructed (object);
+ 
+ 	page = mail_config_yahoo_summary_get_summary_page (extension);
+ 
+diff --git a/modules/mail/e-mail-shell-backend.c b/modules/mail/e-mail-shell-backend.c
+index b8afd2c..133e5fb 100644
+--- a/modules/mail/e-mail-shell-backend.c
++++ b/modules/mail/e-mail-shell-backend.c
+@@ -614,8 +614,7 @@ mail_shell_backend_constructed (GObject *object)
+ 	shell = e_shell_backend_get_shell (shell_backend);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_shell_backend_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_shell_backend_parent_class)->constructed (object);
+ 
+ 	mail_shell_backend_init_importers ();
+ 
+diff --git a/modules/settings/e-settings-cal-model.c b/modules/settings/e-settings-cal-model.c
+index 64e6baf..39fcda1 100644
+--- a/modules/settings/e-settings-cal-model.c
++++ b/modules/settings/e-settings-cal-model.c
+@@ -206,8 +206,7 @@ settings_cal_model_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_cal_model_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_cal_model_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-calendar-item.c b/modules/settings/e-settings-calendar-item.c
+index 9a375e3..b1484d0 100644
+--- a/modules/settings/e-settings-calendar-item.c
++++ b/modules/settings/e-settings-calendar-item.c
+@@ -61,8 +61,7 @@ settings_calendar_item_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_calendar_item_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_calendar_item_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-calendar-view.c b/modules/settings/e-settings-calendar-view.c
+index 77fe10a..d379833 100644
+--- a/modules/settings/e-settings-calendar-view.c
++++ b/modules/settings/e-settings-calendar-view.c
+@@ -97,8 +97,7 @@ settings_calendar_view_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_calendar_view_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_calendar_view_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-client-cache.c b/modules/settings/e-settings-client-cache.c
+index 419b660..c632e26 100644
+--- a/modules/settings/e-settings-client-cache.c
++++ b/modules/settings/e-settings-client-cache.c
+@@ -90,6 +90,9 @@ settings_client_cache_constructed (GObject *object)
+ 	EExtension *extension;
+ 	EExtensible *extensible;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_settings_client_cache_parent_class)->constructed (object);
++
+ 	extension = E_EXTENSION (object);
+ 	extensible = e_extension_get_extensible (extension);
+ 
+diff --git a/modules/settings/e-settings-comp-editor.c b/modules/settings/e-settings-comp-editor.c
+index 6c1bbae..36468f7 100644
+--- a/modules/settings/e-settings-comp-editor.c
++++ b/modules/settings/e-settings-comp-editor.c
+@@ -118,8 +118,7 @@ settings_comp_editor_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_comp_editor_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_comp_editor_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-date-edit.c b/modules/settings/e-settings-date-edit.c
+index 8ef31c8..aebdd74 100644
+--- a/modules/settings/e-settings-date-edit.c
++++ b/modules/settings/e-settings-date-edit.c
+@@ -66,8 +66,7 @@ settings_date_edit_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_date_edit_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_date_edit_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-deprecated.c b/modules/settings/e-settings-deprecated.c
+index b34e791..6f9b309 100644
+--- a/modules/settings/e-settings-deprecated.c
++++ b/modules/settings/e-settings-deprecated.c
+@@ -491,8 +491,7 @@ settings_deprecated_constructed (GObject *object)
+ 	priv = E_SETTINGS_DEPRECATED_GET_PRIVATE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_deprecated_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_deprecated_parent_class)->constructed (object);
+ 
+ 	/* Migrate values from deprecated to preferred keys. */
+ 
+diff --git a/modules/settings/e-settings-mail-browser.c b/modules/settings/e-settings-mail-browser.c
+index 79bc62a..89b8dbf 100644
+--- a/modules/settings/e-settings-mail-browser.c
++++ b/modules/settings/e-settings-mail-browser.c
+@@ -35,8 +35,7 @@ settings_mail_browser_constructed (GObject *object)
+ 	GSettings *settings;
+ 
+ 	/* Chain up parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_mail_browser_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_mail_browser_parent_class)->constructed (object);
+ 
+ 	extensible = e_extension_get_extensible (E_EXTENSION (object));
+ 
+diff --git a/modules/settings/e-settings-mail-formatter.c b/modules/settings/e-settings-mail-formatter.c
+index 7d32bc8..3c984c8 100644
+--- a/modules/settings/e-settings-mail-formatter.c
++++ b/modules/settings/e-settings-mail-formatter.c
+@@ -106,8 +106,7 @@ settings_mail_formatter_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_mail_formatter_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_mail_formatter_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-mail-part-headers.c b/modules/settings/e-settings-mail-part-headers.c
+index 054c36f..4b5c466 100644
+--- a/modules/settings/e-settings-mail-part-headers.c
++++ b/modules/settings/e-settings-mail-part-headers.c
+@@ -87,8 +87,7 @@ settings_mail_part_headers_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_mail_part_headers_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_mail_part_headers_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-mail-reader.c b/modules/settings/e-settings-mail-reader.c
+index 6a17db3..bd92668 100644
+--- a/modules/settings/e-settings-mail-reader.c
++++ b/modules/settings/e-settings-mail-reader.c
+@@ -95,8 +95,7 @@ settings_mail_reader_constructed (GObject *object)
+ 		(GDestroyNotify) g_object_unref);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_mail_reader_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_mail_reader_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-mail-session.c b/modules/settings/e-settings-mail-session.c
+index 188e325..31cc7a4 100644
+--- a/modules/settings/e-settings-mail-session.c
++++ b/modules/settings/e-settings-mail-session.c
+@@ -131,8 +131,7 @@ settings_mail_session_constructed (GObject *object)
+ 		(GDestroyNotify) g_object_unref);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_mail_session_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_mail_session_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-meeting-store.c b/modules/settings/e-settings-meeting-store.c
+index fd6cab8..3c5e8fa 100644
+--- a/modules/settings/e-settings-meeting-store.c
++++ b/modules/settings/e-settings-meeting-store.c
+@@ -103,8 +103,7 @@ settings_meeting_store_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_meeting_store_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_meeting_store_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-meeting-time-selector.c b/modules/settings/e-settings-meeting-time-selector.c
+index bf9a32b..58642c8 100644
+--- a/modules/settings/e-settings-meeting-time-selector.c
++++ b/modules/settings/e-settings-meeting-time-selector.c
+@@ -56,8 +56,7 @@ settings_meeting_time_selector_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_meeting_time_selector_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_meeting_time_selector_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-message-list.c b/modules/settings/e-settings-message-list.c
+index be73067..75c4962 100644
+--- a/modules/settings/e-settings-message-list.c
++++ b/modules/settings/e-settings-message-list.c
+@@ -70,8 +70,7 @@ settings_message_list_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_message_list_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_message_list_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-name-selector-entry.c b/modules/settings/e-settings-name-selector-entry.c
+index 8af261a..c088e43 100644
+--- a/modules/settings/e-settings-name-selector-entry.c
++++ b/modules/settings/e-settings-name-selector-entry.c
+@@ -63,8 +63,7 @@ settings_name_selector_entry_constructed (GObject *object)
+ 	extensible = e_extension_get_extensible (E_EXTENSION (extension));
+ 
+ 	/* Chain up to parent's consturcted() method. */
+-	G_OBJECT_CLASS (e_settings_name_selector_entry_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_name_selector_entry_parent_class)->constructed (object);
+ 
+ 	g_settings_bind (
+ 		extension->priv->settings, "completion-minimum-query-length",
+diff --git a/modules/settings/e-settings-spell-entry.c b/modules/settings/e-settings-spell-entry.c
+index df8cbf6..77dae81 100644
+--- a/modules/settings/e-settings-spell-entry.c
++++ b/modules/settings/e-settings-spell-entry.c
+@@ -52,8 +52,7 @@ settings_spell_entry_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_spell_entry_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_spell_entry_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-web-view-gtkhtml.c b/modules/settings/e-settings-web-view-gtkhtml.c
+index 7815eb6..59864c0 100644
+--- a/modules/settings/e-settings-web-view-gtkhtml.c
++++ b/modules/settings/e-settings-web-view-gtkhtml.c
+@@ -271,8 +271,7 @@ settings_web_view_gtkhtml_constructed (GObject *object)
+ 		G_CALLBACK (settings_web_view_gtkhtml_realize), object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_web_view_gtkhtml_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_web_view_gtkhtml_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-web-view.c b/modules/settings/e-settings-web-view.c
+index 0867b3c..9dce2df6 100644
+--- a/modules/settings/e-settings-web-view.c
++++ b/modules/settings/e-settings-web-view.c
+@@ -67,8 +67,7 @@ settings_web_view_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_web_view_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_web_view_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/settings/e-settings-weekday-chooser.c b/modules/settings/e-settings-weekday-chooser.c
+index 33ef4d5..552db48 100644
+--- a/modules/settings/e-settings-weekday-chooser.c
++++ b/modules/settings/e-settings-weekday-chooser.c
+@@ -52,8 +52,7 @@ settings_weekday_chooser_constructed (GObject *object)
+ 	g_object_unref (settings);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_settings_weekday_chooser_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_settings_weekday_chooser_parent_class)->constructed (object);
+ }
+ 
+ static void
+diff --git a/modules/startup-wizard/e-mail-config-import-page.c b/modules/startup-wizard/e-mail-config-import-page.c
+index 61e5bb0c..e459636 100644
+--- a/modules/startup-wizard/e-mail-config-import-page.c
++++ b/modules/startup-wizard/e-mail-config-import-page.c
+@@ -190,8 +190,7 @@ mail_config_import_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_IMPORT_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_import_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_import_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/modules/startup-wizard/e-mail-config-import-progress-page.c b/modules/startup-wizard/e-mail-config-import-progress-page.c
+index 7ec04c7..7acdeb8 100644
+--- a/modules/startup-wizard/e-mail-config-import-progress-page.c
++++ b/modules/startup-wizard/e-mail-config-import-progress-page.c
+@@ -169,8 +169,7 @@ mail_config_import_progress_page_constructed (GObject *object)
+ 	page = E_MAIL_CONFIG_IMPORT_PROGRESS_PAGE (object);
+ 
+ 	/* Chain up to parent's constructed() method. */
+-	G_OBJECT_CLASS (e_mail_config_import_progress_page_parent_class)->
+-		constructed (object);
++	G_OBJECT_CLASS (e_mail_config_import_progress_page_parent_class)->constructed (object);
+ 
+ 	gtk_orientable_set_orientation (
+ 		GTK_ORIENTABLE (page), GTK_ORIENTATION_VERTICAL);
+diff --git a/modules/web-inspector/evolution-web-inspector.c b/modules/web-inspector/evolution-web-inspector.c
+index ab385be..6ccba80 100644
+--- a/modules/web-inspector/evolution-web-inspector.c
++++ b/modules/web-inspector/evolution-web-inspector.c
+@@ -113,6 +113,9 @@ web_inspector_constructed (GObject *object)
+ 	WebKitWebSettings *settings;
+ 	WebKitWebInspector *inspector;
+ 
++	/* Chain up to parent's method. */
++	G_OBJECT_CLASS (e_web_inspector_parent_class)->constructed (object);
++
+ 	extension = E_WEB_INSPECTOR (object);
+ 	web_view = web_inspector_get_web_view (extension);
+ 	settings = webkit_web_view_get_settings (web_view);
