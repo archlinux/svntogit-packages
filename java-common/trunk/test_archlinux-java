@@ -1,0 +1,287 @@
+#! /bin/sh
+#
+# To run this script, ensure shunit2 (https://code.google.com/p/shunit2/)
+# is available on the local directory, then just run sh bin_archlinux-java_tests
+#
+# inotifywait -r -m -e MODIFY . | while read l; do sh bin_archlinux-java_tests; done
+
+declare test_dir
+
+. ./bin_archlinux-java > /dev/null
+
+INIT_JVM_DIR=${JVM_DIR}
+INIT_DEFAULT_PATH=${DEFAULT_PATH}
+INIT_BIN_PATH=${BIN_PATH}
+INIT_WRAPPER_PATH=${WRAPPER_PATH}
+
+# Redefining this so that tested script can be invoked without root privileges
+check_root() {
+  true
+}
+
+
+get_rand_str() {
+  echo $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
+}
+
+setUp() {
+  test_dir=$(mktemp -d)
+  JVM_DIR=${test_dir}${INIT_JVM_DIR}
+  DEFAULT_PATH=${test_dir}${INIT_DEFAULT_PATH}
+  JAVA_NAME=$(get_rand_str)
+  BIN_PATH=${test_dir}${INIT_BIN_PATH}
+  mkdir -p ${BIN_PATH}
+  WRAPPER_PATH=${test_dir}${INIT_WRAPPER_PATH}
+  mkdir -p $(dirname ${WRAPPER_PATH})
+  touch ${WRAPPER_PATH}
+  chmod +x ${WRAPPER_PATH}
+}
+
+tearDown() {
+  rm -rf ${test_dir}
+}
+
+# $1: path of Java environment to create
+create_valid_jre_env() {
+  mkdir -p ${JVM_DIR}/$1/bin
+  for binary in java keytool orbd; do
+    touch    ${JVM_DIR}/$1/bin/${binary}
+    chmod +x ${JVM_DIR}/$1/bin/${binary}
+  done
+}
+
+# $1: path of Java environment to create
+create_valid_jdk_env() {
+  create_valid_jre_env "$1"
+  for binary in javac javah jhat; do
+    touch    ${JVM_DIR}/$1/bin/${binary}
+    chmod +x ${JVM_DIR}/$1/bin/${binary}
+  done
+  create_valid_jre_env "$1/jre"
+}
+
+set_default_for_test() {
+  ln -s $1 ${DEFAULT_PATH}
+  for binary in java keytool orbd; do
+    ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
+  done
+  if [ -d ${DEFAULT_PATH}/jre ]; then
+    for binary in javac javah jhat; do
+      ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
+    done
+  fi
+}
+
+assertDefaultNotSet() {
+  assertNull 'Default is set' "$(readlink ${DEFAULT_PATH})"
+  assertNull "PATH has a java binary" "$(readlink ${BIN_PATH}/java)"
+  assertNull "PATH has a javac binary" "$(readlink ${BIN_PATH}/javac)"
+}
+
+assertDefaultSetTo() {
+  new_java=$1
+  assertEquals "Default points at wrong Java env" "${new_java}" "$(readlink ${DEFAULT_PATH})"
+  # For all links in /usr/bin that point at the wrapper
+  for lpath in $(find -L ${BIN_PATH} -samefile ${WRAPPER_PATH}); do
+    # There is a binary in the JVM bin dir
+    assertTrue 'Wrong /usr/bin link' "test -x ${JVM_DIR}/${new_java}/bin/$(basename ${lpath})"
+  done
+  # For all executable binaries provided by the Java env
+  for binary in $(find ${JVM_DIR}/${new_java}/bin -type f -perm /a=x); do
+    # There is a link in /usr/bin
+    bin_link=${BIN_PATH}/$(basename ${binary})
+    assertEquals 'No link in /usr/bin' "${WRAPPER_PATH}" "$(readlink ${bin_link})"
+  done
+}
+
+# do_status
+
+test_do_status() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  JAVA_NAME_2="b$(get_rand_str)"
+  create_valid_jre_env "${JAVA_NAME_1}/jre"
+  set_default_for_test "${JAVA_NAME_1}/jre"
+  create_valid_jdk_env "${JAVA_NAME_2}"
+  expected=$(echo -e "Available Java environments:\n  ${JAVA_NAME_1}/jre (default)\n  ${JAVA_NAME_2}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_no_default() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  JAVA_NAME_2="b$(get_rand_str)"
+  create_valid_jre_env "${JAVA_NAME_1}/jre"
+  create_valid_jdk_env "${JAVA_NAME_2}"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME_1}/jre"
+  mess+="\n  ${JAVA_NAME_2}"
+  mess+="\nNo Java environment set as default"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_no_javas() {
+  assertEquals 'Wrong status output' 'No compatible Java environment installed' "$(do_status)"
+}
+
+# do_get
+
+test_do_get_with_default() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  assertEquals 'Wrong result' "${JAVA_NAME}" "$(do_get)"
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_get_without_default() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  assertNull 'Wrong result' "$(do_get)"
+}
+
+# do_set
+
+test_do_set_new_invalid() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  output=$(do_set "INVALID")
+  assertEquals 'Wrong status returned' 1 $?
+  assertEquals 'Wrong message' "'${JVM_DIR}/INVALID' is not a valid Java environment path" "${output}"
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_current_invalid() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "INVALID"
+  $(do_set "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_same_java_missing_bin_link() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  unlink ${BIN_PATH}/java
+  $(do_set "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_with_default_already_set() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  set_default_for_test "${JAVA_NAME}/jre"
+  JAVA_NAME_2="$(get_rand_str)"
+  create_valid_jre_env "${JAVA_NAME_2}/jre"
+  $(do_set "${JAVA_NAME_2}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME_2}/jre"
+}
+
+test_do_set_no_default() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  $(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_set_exists_jdk() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  output=$(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+  #mess="Warning: '${JAVA_NAME}' looks like a valid JDK whereas you only set '${JAVA_NAME}/jre' as default"
+  #mess+="\nFix this with 'archlinux-java set ${JAVA_NAME}'"
+  #expected=$(echo -e "${mess}")
+  #assertEquals 'Wrong message' "${expected}" "${output}"
+}
+
+test_do_set_cleanup_old_java_default() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  output=$(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+# do_unset
+
+test_do_unset_default_not_target() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  set_default_for_test "${JAVA_NAME}/jre"
+  do_unset
+  assertDefaultNotSet
+}
+
+test_do_unset_no_default_link() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  unlink ${DEFAULT_PATH}
+  do_unset
+  assertDefaultNotSet
+}
+
+# do_fix
+
+test_do_fix_default_valid() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  set_default_for_test "${JAVA_NAME}/jre"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_fix_no_default() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_fix_default_invalid_openjdk7_jdk_installed() {
+  create_valid_jdk_env "java-7-openjdk"
+  create_valid_jdk_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "java-7-openjdk"
+}
+
+test_do_fix_default_invalid_openjdk7_jre_installed() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  create_valid_jre_env "java-7-openjdk/jre"
+  do_fix
+  assertDefaultSetTo "java-7-openjdk/jre"
+}
+
+test_do_fix_default_invalid_random_java_installed() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_default_invalid_no_java_installed() {
+  assertEquals 'Wrong message' "No valid Java environment found" "$(do_fix)"
+  assertDefaultNotSet
+}
+
+test_do_fix_jre_but_jdk_exists() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_jdk_but_jre_exists() {
+  create_valid_jdk_env "java-7-openjdk"
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  set_default_for_test "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_fix_cleanup_old_java_default() {
+  create_valid_jre_env "${JAVA_NAME}/jre"
+  set_default_for_test "${JAVA_NAME}/jre"
+  # Simulate installation of a jre over a jre-headless
+  ln -s ${WRAPPER_PATH} ${BIN_PATH}/policytool
+  output=$(do_fix "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+# load shunit2
+. shunit2-2.1.6/src/shunit2
