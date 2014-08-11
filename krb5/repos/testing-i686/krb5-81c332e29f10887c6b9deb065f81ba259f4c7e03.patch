@@ -1,0 +1,64 @@
+From 81c332e29f10887c6b9deb065f81ba259f4c7e03 Mon Sep 17 00:00:00 2001
+From: Tomas Kuthan <tkuthan@gmail.com>
+Date: Fri, 1 Aug 2014 15:25:50 +0200
+Subject: [PATCH] Fix LDAP key data segmentation [CVE-2014-4345]
+
+For principal entries having keys with multiple kvnos (due to use of
+-keepold), the LDAP KDB module makes an attempt to store all the keys
+having the same kvno into a single krbPrincipalKey attribute value.
+There is a fencepost error in the loop, causing currkvno to be set to
+the just-processed value instead of the next kvno.  As a result, the
+second and all following groups of multiple keys by kvno are each
+stored in two krbPrincipalKey attribute values.  Fix the loop to use
+the correct kvno value.
+
+CVE-2014-4345:
+
+In MIT krb5, when kadmind is configured to use LDAP for the KDC
+database, an authenticated remote attacker can cause it to perform an
+out-of-bounds write (buffer overrun) by performing multiple cpw
+-keepold operations.  An off-by-one error while copying key
+information to the new database entry results in keys sharing a common
+kvno being written to different array buckets, in an array whose size
+is determined by the number of kvnos present.  After sufficient
+iterations, the extra writes extend past the end of the
+(NULL-terminated) array.  The NULL terminator is always written after
+the end of the loop, so no out-of-bounds data is read, it is only
+written.
+
+Historically, it has been possible to convert an out-of-bounds write
+into remote code execution in some cases, though the necessary
+exploits must be tailored to the individual application and are
+usually quite complicated.  Depending on the allocated length of the
+array, an out-of-bounds write may also cause a segmentation fault
+and/or application crash.
+
+    CVSSv2 Vector: AV:N/AC:M/Au:S/C:C/I:C/A:C/E:POC/RL:OF/RC:C
+
+[ghudson@mit.edu: clarified commit message]
+[kaduk@mit.edu: CVE summary, CVSSv2 vector]
+
+ticket: 7980 (new)
+target_version: 1.12.2
+tags: pullup
+---
+ src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c b/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c
+index ce851ea..df5934c 100644
+--- a/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c
++++ b/src/plugins/kdb/ldap/libkdb_ldap/ldap_principal2.c
+@@ -456,7 +456,8 @@ krb5_encode_krbsecretkey(krb5_key_data *key_data_in, int n_key_data,
+             j++;
+             last = i + 1;
+ 
+-            currkvno = key_data[i].key_data_kvno;
++            if (i < n_key_data - 1)
++                currkvno = key_data[i + 1].key_data_kvno;
+         }
+     }
+     ret[num_versions] = NULL;
+-- 
+2.0.3
+
