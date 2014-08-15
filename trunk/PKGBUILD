@@ -48,7 +48,7 @@ sha256sums=('ec0b86c0a5883f769cb951a96a0b61734aa7e3c2b62e3b448f7bf6866a36c237'
 _jdkname=openjdk8
 _jvmdir=/usr/lib/jvm/java-8-openjdk
 _prefix="jdk8u-${_repo_ver}/image"
-_imgdir="${_prefix}/jvm/openjdk-1.8.0_$(printf '%.2d' ${_jdk_update})-ga"
+_imgdir="${_prefix}/jvm/openjdk-1.8.0_$(printf '%.2d' ${_jdk_update})"
 _nonheadless=(bin/policytool
               lib/${_JARCH}/libjsound.so
               lib/${_JARCH}/libjsoundalsa.so
@@ -81,7 +81,7 @@ build() {
     --prefix="${srcdir}/${_prefix}" \
     --with-update-version="${_jdk_update}" \
     --with-build-number="b${_jdk_build}" \
-    --with-milestone="ga" \
+    --with-milestone="fcs" \
     --enable-unlimited-crypto \
     --with-zlib=system
 
