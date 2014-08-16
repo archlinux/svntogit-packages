@@ -1,5 +1,5 @@
 # $Id$
-# Maintainer: Sébastien Luttringer
+# Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
 
 pkgname=nftables
 epoch=1
@@ -11,20 +11,36 @@ url='http://netfilter.org/projects/nftables/'
 license=('GPL2')
 depends=('libmnl' 'libnftnl' 'gmp' 'readline' 'ncurses')
 makedepends=('docbook2x')
-source=("http://netfilter.org/projects/nftables/files/nftables-$pkgver.tar.bz2"{,.sig})
+backups=('etc/nftables.conf')
+source=("http://netfilter.org/projects/nftables/files/nftables-$pkgver.tar.bz2"{,.sig}
+        'nftables.conf'
+        'nftables.service'
+        'nftables-flush')
 sha1sums=('4b097c23f38575347cec21835ee0e6ef89c57455'
-          'SKIP')
+          'SKIP'
+          '7ae2ed52542e26b2fa04afc624515302ed47a13b'
+          'a9021dd71f55f985a146f26a8ec66d4e15949978'
+          '194e4ab55f4b001396143f333988300541668e70')
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr --sbindir=/usr/bin --sysconfdir=/etc \
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/usr/share/$pkgname \
     CONFIG_MAN=y DB2MAN=docbook2man
   make
 }
 
 package() {
-  cd $pkgname-$pkgver
+  pushd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
+  popd
+  # basic safe firewall config
+  install -Dm644 nftables.conf "$pkgdir/etc/nftables.conf"
+  # systemd
+  install -Dm644 nftables.service "$pkgdir/usr/lib/systemd/system/nftables.service"
+  install -Dm755 nftables-flush "$pkgdir/usr/lib/systemd/scripts/nftables-flush"
 }
 
 # vim:set ts=2 sw=2 et:
