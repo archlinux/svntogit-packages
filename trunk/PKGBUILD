@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=3.1.2
 _pkgver=v3.1.2
-pkgrel=2
+pkgrel=3
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=('i686' 'x86_64')
 url='http://qt-project.org'
@@ -59,7 +59,7 @@ package() {
   # Workaround for FS#40583
   mv "${pkgdir}"/usr/bin/qtcreator "${pkgdir}"/usr/bin/qtcreator-bin
   echo "#!/bin/sh" > "${pkgdir}"/usr/bin/qtcreator
-  echo "QT_LOGGING_TO_CONSOLE=1 qtcreator" >> "${pkgdir}"/usr/bin/qtcreator
+  echo "QT_LOGGING_TO_CONSOLE=1 qtcreator-bin \$@" >> "${pkgdir}"/usr/bin/qtcreator
   chmod +x "${pkgdir}"/usr/bin/qtcreator
 
   install -Dm644 ${srcdir}/qtcreator.desktop ${pkgdir}/usr/share/applications/qtcreator.desktop
