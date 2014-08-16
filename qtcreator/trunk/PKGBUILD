@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=3.1.2
 _pkgver=v3.1.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=('i686' 'x86_64')
 url='http://qt-project.org'
@@ -35,10 +35,10 @@ md5sums=('SKIP'
          '50880836fd62ccd87550940feb995f06')
 
 prepare() {
-    cd qt-creator
-    git submodule init
-    git config submodule.qbs.url $srcdir/qbs
-    git submodule update
+  cd qt-creator
+  git submodule init
+  git config submodule.qbs.url $srcdir/qbs
+  git submodule update
 }
 
 build() {
@@ -55,6 +55,12 @@ package() {
 
   make INSTALL_ROOT="${pkgdir}/usr/" install
   make INSTALL_ROOT="${pkgdir}/usr/" install_docs
+
+  # Workaround for FS#40583
+  mv "${pkgdir}"/usr/bin/qtcreator "${pkgdir}"/usr/bin/qtcreator-bin
+  echo "#!/bin/sh" > "${pkgdir}"/usr/bin/qtcreator
+  echo "QT_LOGGING_TO_CONSOLE=1 qtcreator" >> "${pkgdir}"/usr/bin/qtcreator
+  chmod +x "${pkgdir}"/usr/bin/qtcreator
 
   install -Dm644 ${srcdir}/qtcreator.desktop ${pkgdir}/usr/share/applications/qtcreator.desktop
   install -Dm644 ${srcdir}/qt-creator/LGPL_EXCEPTION.TXT ${pkgdir}/usr/share/licenses/qtcreator/LGPL_EXCEPTION.TXT
