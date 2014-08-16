@@ -124,7 +124,7 @@ package_jre8-openjdk-headless() {
   pkgdesc='OpenJDK Java 8 headless runtime environment'
   depends=('java-common' 'ca-certificates-java' 'nss')
   optdepends=('java-rhino: for some JavaScript support')
-  provides=('java-runtime-headless=8')
+  provides=('java-runtime-headless=8' 'java-runtime-headless-openjdk=8')
   # Upstream config files that should go to etc and get backup
   _backup_etc=(etc/java-8-openjdk/${_JARCH}/jvm.cfg
                etc/java-8-openjdk/calendars.properties
@@ -197,7 +197,7 @@ package_jre8-openjdk() {
   # TODO when adding IcedTea: 'icedtea-web-java7: web browser plugin + Java Web Start'
   # TODO when adding IcedTea: 'giflib: for gif format support'
   # TODO when adding IcedTea: 'libpulse: for advanced sound support'
-  provides=('java-runtime=8')
+  provides=('java-runtime=8' 'java-runtime-openjdk=8')
   install=install_jre8-openjdk.sh
   replaces=('jre8-openjdk-wm')
 
@@ -232,7 +232,7 @@ package_jre8-openjdk() {
 package_jdk8-openjdk() {
   pkgdesc='OpenJDK Java 8 development kit'
   depends=("jre8-openjdk=${pkgver}-${pkgrel}")
-  provides=('java-environment=8')
+  provides=('java-environment=8' 'java-environment-openjdk=8')
   replaces=('jdk8-openjdk-wm')
   install=install_jdk8-openjdk.sh
 
