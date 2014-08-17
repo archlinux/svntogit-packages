@@ -20,14 +20,15 @@ url='http://openjdk.java.net/'
 license=('custom')
 makedepends=('jdk7-openjdk' 'ccache' 'cpio' 'unzip' 'zip'
              'libxrender' 'libxtst' 'fontconfig' 'libcups' 'alsa-lib')
-source=(jdk8u-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/archive/${_repo_ver}.tar.gz
-        corba-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/corba/archive/${_repo_ver}.tar.gz
-        hotspot-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/archive/${_repo_ver}.tar.gz
-        jdk-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/archive/${_repo_ver}.tar.gz
-        jaxws-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/jaxws/archive/${_repo_ver}.tar.gz
-        jaxp-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/jaxp/archive/${_repo_ver}.tar.gz
-        langtools-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/langtools/archive/${_repo_ver}.tar.gz
-        nashorn-${_repo_ver}.tar.gz::http://hg.openjdk.java.net/jdk8u/jdk8u/nashorn/archive/${_repo_ver}.tar.gz
+_url_src=http://hg.openjdk.java.net/jdk8u/jdk8u
+source=(jdk8u-${_repo_ver}.tar.gz::${_url_src}/archive/${_repo_ver}.tar.gz
+        corba-${_repo_ver}.tar.gz::${_url_src}/corba/archive/${_repo_ver}.tar.gz
+        hotspot-${_repo_ver}.tar.gz::${_url_src}/hotspot/archive/${_repo_ver}.tar.gz
+        jdk-${_repo_ver}.tar.gz::${_url_src}/jdk/archive/${_repo_ver}.tar.gz
+        jaxws-${_repo_ver}.tar.gz::${_url_src}/jaxws/archive/${_repo_ver}.tar.gz
+        jaxp-${_repo_ver}.tar.gz::${_url_src}/jaxp/archive/${_repo_ver}.tar.gz
+        langtools-${_repo_ver}.tar.gz::${_url_src}/langtools/archive/${_repo_ver}.tar.gz
+        nashorn-${_repo_ver}.tar.gz::${_url_src}/nashorn/archive/${_repo_ver}.tar.gz
         001_adjust-mflags-for-gmake-4.patch
         002_gcc.make-4.9.patch)
 
