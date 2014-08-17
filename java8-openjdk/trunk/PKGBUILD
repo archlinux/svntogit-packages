@@ -7,7 +7,7 @@
 #   icedtea-web-java8
 #   add policytool desktop files
 
-pkgname=('jre8-openjdk-headless' 'jre8-openjdk' 'jdk8-openjdk' 'openjdk8-src')
+pkgname=('jre8-openjdk-headless' 'jre8-openjdk' 'jdk8-openjdk' 'openjdk8-src' 'openjdk8-doc')
 pkgbase=java8-openjdk
 _java_ver=8
 _jdk_update=11
@@ -42,8 +42,10 @@ sha256sums=('e8594688f066f7a401fe2ef308a1e0d1efab2a6823e0c8b172e6575460b3ccd6'
             '682104f7723c5c543c47b53f51cc5577e273a12343bd04bebd1bcd70dd72ded9'
             '5b1ed72ffd14a18e36aba2129e0781696b8c9cccd060bf4dbe1c4b9a44100b69')
 
-[ "$CARCH" = "x86_64" ] && _JARCH=amd64
-[ "$CARCH" = "i686"   ] && _JARCH=i386
+case "${CARCH}" in
+  'x86_64') _JARCH=amd64 ; _DOC_ARCH=x86_64 ;;
+  'i686'  ) _JARCH=i386  ; _DOC_ARCH=x86    ;;
+esac
 
 _jdkname=openjdk8
 _jvmdir=/usr/lib/jvm/java-8-openjdk
@@ -95,9 +97,8 @@ build() {
   # These help to debug builds:
   #LOG=trace HOTSPOT_BUILD_JOBS=1
 
-  unset JAVA_HOME
-  # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1346
-  export MAKEFLAGS=${MAKEFLAGS/-j*}
+  make docs
+
   # FIXME sadly 'DESTDIR' is not used here!
   make install
 
@@ -278,4 +279,12 @@ package_openjdk8-src() {
   pkgdesc='OpenJDK Java 8 sources'
 
   install -D "${srcdir}/${_imgdir}/src.zip" "${pkgdir}${_jvmdir}/src.zip"
+}
+
+package_openjdk8-doc() {
+  pkgdesc='OpenJDK Java 8 documentation'
+
+  install -d -m 755 "${pkgdir}/usr/share/doc/${pkgbase}/"
+  cp -r "${srcdir}"/jdk8u-${_repo_ver}/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
+    "${pkgdir}/usr/share/doc/${pkgbase}/"
 }
