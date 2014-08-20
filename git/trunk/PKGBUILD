@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=2.0.4
+pkgver=2.1.0
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -18,7 +18,7 @@ optdepends=('tk: gitk and git gui'
             'perl-authen-sasl: git send-email TLS support'
             'python2: various helper scripts'
             'subversion: git svn'
-            'cvsps: git cvsimport'
+            'cvsps2: git cvsimport'
             'gnome-keyring: GNOME keyring credential helper')
 replaces=('git-core')
 provides=('git-core')
@@ -39,7 +39,7 @@ build() {
 
   make -C contrib/emacs prefix=/usr
   make -C contrib/credential/gnome-keyring
-  make -C contrib/subtree prefix=/usr all doc
+  make -C contrib/subtree prefix=/usr gitexecdir=/usr/lib/git-core all doc
 }
 
 check() {
@@ -83,8 +83,7 @@ package() {
       "$pkgdir"/usr/lib/git-core/git-credential-gnome-keyring
   make -C contrib/credential/gnome-keyring clean
   # subtree installation
-  sed "s|libexec/git-core|lib/git-core|" -i contrib/subtree/Makefile
-  make -C contrib/subtree prefix=/usr DESTDIR="$pkgdir" install install-doc
+  make -C contrib/subtree prefix=/usr gitexecdir=/usr/lib/git-core DESTDIR="$pkgdir" install install-doc
   # the rest of the contrib stuff
   cp -a ./contrib/* $pkgdir/usr/share/git/
 
@@ -105,6 +104,6 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('0caa9c54bb04612062d21823163ecb13'
+md5sums=('47b1f55d9a16be112f7ae2c778a9b30c'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
