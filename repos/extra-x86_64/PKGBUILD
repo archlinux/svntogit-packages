@@ -4,10 +4,10 @@
 # Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
 
 pkgbase=vim
-pkgname=('vim' 'gvim' 'gvim-python3' 'vim-runtime')
+pkgname=('vim-minimal' 'vim' 'vim-python3' 'gvim' 'gvim-python3' 'vim-runtime')
 _topver=7.4
-_patchlevel=404
-__hgrev=18fd959b07ef
+_patchlevel=410
+__hgrev=7af530381fec
 _versiondir="vim${_topver//./}"
 pkgver=${_topver}.${_patchlevel}
 pkgrel=1
@@ -20,7 +20,7 @@ source=("ftp://ftp.archlinux.org/other/vim/vim-${pkgver}.tar.xz"
         'vimrc'
         'archlinux.vim'
         'gvim.desktop')
-md5sums=('cc1ad0cd3399af0a8fe4d5ea6dabf7e2'
+md5sums=('8e9722fbd9ddc3c05d21210939c23f23'
          'SKIP'
          'b9d4dcb9d3ee2e151dc4be1e94934f6a'
          'f3c8931847a12949bdd14c9d48fdabb3'
@@ -43,33 +43,33 @@ mksource() {
   fi
   popd
 
-  mv vim ${pkgname}-${pkgver}
-  find ${pkgname}-${pkgver} -depth -type d -name .hg -exec rm -rf {} \;
-  rm ${pkgname}-${pkgver}/{.hgignore,.hgtags}
-  tar -cJf ${pkgname}-${pkgver}.tar.xz ${pkgname}-${pkgver}/*
-  rm -r ${pkgname}-${pkgver}
+  (cd vim/src && autoconf)
 
-  gpg --detach-sign ${pkgname}-${pkgver}.tar.xz
+  mv vim ${pkgbase}-${pkgver}
+  find ${pkgbase}-${pkgver} -depth -type d -name .hg -exec rm -rf {} \;
+  rm ${pkgbase}-${pkgver}/{.hgignore,.hgtags}
+  tar -cJf ${pkgbase}-${pkgver}.tar.xz ${pkgbase}-${pkgver}/*
+  rm -r ${pkgbase}-${pkgver}
 
-  scp ${pkgname}-${pkgver}.tar.xz nym:/srv/ftp/other/vim/
-  scp ${pkgname}-${pkgver}.tar.xz.sig nym:/srv/ftp/other/vim/
+  gpg --detach-sign ${pkgbase}-${pkgver}.tar.xz
+
+  scp ${pkgbase}-${pkgver}.tar.xz nym:/srv/ftp/other/vim/
+  scp ${pkgbase}-${pkgver}.tar.xz.sig nym:/srv/ftp/other/vim/
 }
 
 build() {
-  cp -a ${pkgname}-${pkgver} vim-build
-
   # define the place for the global (g)vimrc file (set to /etc/vimrc)
   sed -i 's|^.*\(#define SYS_.*VIMRC_FILE.*"\) .*$|\1|' \
-    vim-build/src/feature.h
+    ${pkgbase}-${pkgver}/src/feature.h
   sed -i 's|^.*\(#define VIMRC_FILE.*"\) .*$|\1|' \
-    vim-build/src/feature.h
+    ${pkgbase}-${pkgver}/src/feature.h
 
-  (cd vim-build/src && autoconf)
+  for pkg in ${pkgname[@]}
+  do
+    cp -a ${pkgbase}-${pkgver} ${pkg}-build
+  done
 
-  cp -a vim-build gvim-build
-  cp -a vim-build gvim-python3-build
-
-  cd "${srcdir}"/vim-build
+  cd "${srcdir}"/vim-minimal-build
 
   ./configure \
     --prefix=/usr \
@@ -88,6 +88,50 @@ build() {
     --disable-python3interp \
     --disable-rubyinterp \
     --disable-luainterp
+
+  make
+
+  cd "${srcdir}"/vim-build
+
+  ./configure \
+    --prefix=/usr \
+    --localstatedir=/var/lib/vim \
+    --with-features=huge \
+    --with-compiledby='Arch Linux' \
+    --enable-gpm \
+    --enable-acl \
+    --with-x=no \
+    --disable-gui \
+    --enable-multibyte \
+    --enable-cscope \
+    --enable-netbeans \
+    --enable-perlinterp \
+    --enable-pythoninterp \
+    --disable-python3interp \
+    --enable-rubyinterp \
+    --enable-luainterp
+
+  make
+
+  cd "${srcdir}"/vim-python3-build
+
+  ./configure \
+    --prefix=/usr \
+    --localstatedir=/var/lib/vim \
+    --with-features=huge \
+    --with-compiledby='Arch Linux' \
+    --enable-gpm \
+    --enable-acl \
+    --with-x=no \
+    --disable-gui \
+    --enable-multibyte \
+    --enable-cscope \
+    --enable-netbeans \
+    --enable-perlinterp \
+    --disable-pythoninterp \
+    --enable-python3interp \
+    --enable-rubyinterp \
+    --enable-luainterp
 
   make
 
@@ -148,12 +192,68 @@ check() {
   #make test
 }
 
-package_vim() {
-  pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor'
+package_vim-minimal() {
+  pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor (with a minimal set of dependencies)'
   depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm')
-  conflicts=('gvim')
+  conflicts=('vim' 'vim-python3' 'gvim' 'gvim-python3')
+  provides=("vim=${pkgver}-${pkgrel}")
+
+  cd "${srcdir}"/vim-minimal-build
+  make -j1 VIMRCLOC=/etc DESTDIR="${pkgdir}" install
+
+  # provided by (n)vi in core
+  rm "${pkgdir}"/usr/bin/{ex,view}
+
+  # delete some manpages
+  find "${pkgdir}"/usr/share/man -type d -name 'man1' 2>/dev/null | \
+    while read _mandir; do
+    cd ${_mandir}
+    rm -f ex.1 view.1 # provided by (n)vi
+    rm -f evim.1    # this does not make sense if we have no GUI
+  done
+
+  # Runtime provided by runtime package
+  rm -r "${pkgdir}"/usr/share/vim
+
+  # license
+  install -Dm644 "${srcdir}"/vim-${pkgver}/runtime/doc/uganda.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
+}
+
+package_vim() {
+  pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor (with support for additional scripting languages)'
+  depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'ruby' 'lua' 'python2')
+  conflicts=('vim-minimal' 'vim-python3' 'gvim' 'gvim-python3')
 
   cd "${srcdir}"/vim-build
+  make -j1 VIMRCLOC=/etc DESTDIR="${pkgdir}" install
+
+  # provided by (n)vi in core
+  rm "${pkgdir}"/usr/bin/{ex,view}
+
+  # delete some manpages
+  find "${pkgdir}"/usr/share/man -type d -name 'man1' 2>/dev/null | \
+    while read _mandir; do
+    cd ${_mandir}
+    rm -f ex.1 view.1 # provided by (n)vi
+    rm -f evim.1    # this does not make sense if we have no GUI
+  done
+
+  # Runtime provided by runtime package
+  rm -r "${pkgdir}"/usr/share/vim
+
+  # license
+  install -Dm644 "${srcdir}"/vim-${pkgver}/runtime/doc/uganda.txt \
+    "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
+}
+
+package_vim-python3() {
+  pkgdesc='Vi Improved, a highly configurable, improved version of the vi text editor (with support for additional scripting languages)'
+  depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'ruby' 'lua' 'python')
+  conflicts=('vim-minimal' 'vim' 'gvim' 'gvim-python3')
+  provides=("vim=${pkgver}-${pkgrel}")
+
+  cd "${srcdir}"/vim-python3-build
   make -j1 VIMRCLOC=/etc DESTDIR="${pkgdir}" install
 
   # provided by (n)vi in core
@@ -180,7 +280,7 @@ package_gvim() {
   depends=("vim-runtime=${pkgver}-${pkgrel}" 'gpm' 'ruby' 'libxt'
            'desktop-file-utils' 'gtk2' 'lua' 'python2')
   provides=("vim=${pkgver}-${pkgrel}")
-  conflicts=('vim')
+  conflicts=('vim-minimal' 'vim' 'vim-python3' 'gvim-python3')
   install=gvim.install
 
   cd "${srcdir}"/gvim-build
@@ -215,7 +315,7 @@ package_gvim-python3() {
            'desktop-file-utils' 'gtk2' 'lua' 'python')
   provides=("vim=${pkgver}-${pkgrel}"
             "gvim=${pkgver}-${pkgrel}")
-  conflicts=('vim')
+  conflicts=('vim-minimal' 'vim' 'vim-python3' 'gvim')
   install=gvim.install
 
   cd "${srcdir}"/gvim-python3-build
