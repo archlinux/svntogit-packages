@@ -4,13 +4,13 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=216
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
-             'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml' 'quota-tools'
-             'shadow' 'xz')
+             'lz4' 'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml'
+             'quota-tools' 'shadow' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -31,6 +31,7 @@ build() {
       --enable-introspection \
       --enable-gtk-doc \
       --enable-compat-libs \
+      --enable-lz4 \
       --disable-audit \
       --disable-ima \
       --disable-kdbus \
@@ -45,7 +46,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
   depends=('acl' 'bash' 'dbus' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
-           'libsystemd' 'pam' 'libseccomp' 'util-linux' 'xz')
+           'libsystemd' 'lz4' 'pam' 'libseccomp' 'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
@@ -63,6 +64,7 @@ package_systemd() {
           etc/dbus-1/system.d/org.freedesktop.timedate1.conf
           etc/pam.d/systemd-user
           etc/systemd/bootchart.conf
+          etc/systemd/coredump.conf
           etc/systemd/journald.conf
           etc/systemd/logind.conf
           etc/systemd/system.conf
