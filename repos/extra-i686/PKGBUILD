@@ -4,7 +4,7 @@
 pkgbase=icedtea-web
 pkgname=('icedtea-web' 'icedtea-web-doc')
 pkgver=1.5.1
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url='http://icedtea.classpath.org/wiki/IcedTea-Web'
 license=('GPL2')
@@ -12,21 +12,30 @@ license=('GPL2')
 # https://www.java.com/en/download/faq/chrome.xml
 makedepends=('java-environment-openjdk' 'zip' 'libxtst' 'npapi-sdk' 'rhino' 'junit'
              'firefox' 'chromium' 'epiphany')
+optdepends=('rhino: for using proxy auto config files')
 # Due to broken path names in the tarball that fails with LANG=C in our chroot
 noextract=${pkgbase}-${pkgver}.tar.gz
-source=(http://icedtea.classpath.org/download/source/${pkgbase}-${pkgver}.tar.gz)
-sha256sums=('03f16356fa84564f1ae32286e0a090a464c87ec123b40602dcea925757900195')
+source=(http://icedtea.classpath.org/download/source/${pkgbase}-${pkgver}.tar.gz
+        001_do_not_set_classpath.patch)
+sha256sums=('03f16356fa84564f1ae32286e0a090a464c87ec123b40602dcea925757900195'
+            'f929a292f1d2385b4a07ece9432a14ccba9be46a91d7b64168ddcb9a3e96302a')
 
-build() {
-  # extract it
+prepare() {
   cd "${srcdir}"
   LANG=en_US.UTF-8 bsdtar -x -f "${srcdir}"/${pkgbase}-${pkgver}.tar.gz
 
+  cd "${srcdir}"/${pkgbase}-${pkgver}
+  # FS#41639
+  patch -p1 < "${srcdir}"/001_do_not_set_classpath.patch
+}
+
+build() {
   cd "${srcdir}"/${pkgbase}-${pkgver}
   ./configure \
       --prefix=/usr/share/${pkgbase} \
       --datarootdir=/usr/share \
       --with-jdk-home=/usr/lib/jvm/java-default-runtime \
+      --with-java=/usr/bin/java \
       --with-browser-tests \
       --with-firefox=/usr/bin/firefox \
       --with-chromium=/usr/bin/chromium \
