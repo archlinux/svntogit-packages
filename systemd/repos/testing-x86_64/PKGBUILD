@@ -4,12 +4,12 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=216
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
-             'lz4' 'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml'
+             'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml'
              'quota-tools' 'shadow' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
@@ -31,7 +31,6 @@ build() {
       --enable-introspection \
       --enable-gtk-doc \
       --enable-compat-libs \
-      --enable-lz4 \
       --disable-audit \
       --disable-ima \
       --disable-kdbus \
@@ -46,7 +45,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
   depends=('acl' 'bash' 'dbus' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
-           'libsystemd' 'lz4' 'pam' 'libseccomp' 'util-linux' 'xz')
+           'libsystemd' 'pam' 'libseccomp' 'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
@@ -105,12 +104,15 @@ package_systemd() {
   install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
   install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
 
-  # ensure proper permissions for /var/log/journal
+  # ensure proper permissions for /var/log/journal. This is only to placate
   chown root:systemd-journal "$pkgdir/var/log/journal"
-  chmod 2755 "$pkgdir/var/log/journal"
+  chmod 2755 "$pkgdir/var/log/journal"{,/remote}
 
   # fix pam file
   sed 's|system-auth|system-login|g' -i "$pkgdir/etc/pam.d/systemd-user"
+
+  # ship default policy to leave services disabled
+  echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
 
   ### split out manpages for sysvcompat
   rm -rf "$srcdir/_sysvcompat"
