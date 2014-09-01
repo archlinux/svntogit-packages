@@ -11,6 +11,7 @@ declare test_dir
 
 INIT_JVM_DIR=${JVM_DIR}
 INIT_DEFAULT_PATH=${DEFAULT_PATH}
+INIT_DEFAULT_PATH_JRE=${DEFAULT_PATH_JRE}
 INIT_BIN_PATH=${BIN_PATH}
 INIT_WRAPPER_PATH=${WRAPPER_PATH}
 
@@ -28,6 +29,7 @@ setUp() {
   test_dir=$(mktemp -d)
   JVM_DIR=${test_dir}${INIT_JVM_DIR}
   DEFAULT_PATH=${test_dir}${INIT_DEFAULT_PATH}
+  DEFAULT_PATH_JRE=${test_dir}${INIT_DEFAULT_PATH_JRE}
   JAVA_NAME=$(get_rand_str)
   BIN_PATH=${test_dir}${INIT_BIN_PATH}
   mkdir -p ${BIN_PATH}
@@ -69,11 +71,15 @@ set_default_for_test() {
     for binary in javac javah jhat; do
       ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
     done
+    ln -s $1/jre ${DEFAULT_PATH_JRE}
+  else
+    ln -s $1 ${DEFAULT_PATH_JRE}
   fi
 }
 
 assertDefaultNotSet() {
   assertNull 'Default is set' "$(readlink ${DEFAULT_PATH})"
+  assertNull 'Default runtime is set' "$(readlink ${DEFAULT_PATH_JRE})"
   assertNull "PATH has a java binary" "$(readlink ${BIN_PATH}/java)"
   assertNull "PATH has a javac binary" "$(readlink ${BIN_PATH}/javac)"
 }
@@ -81,6 +87,9 @@ assertDefaultNotSet() {
 assertDefaultSetTo() {
   new_java=$1
   assertEquals "Default points at wrong Java env" "${new_java}" "$(readlink ${DEFAULT_PATH})"
+  if [ ${new_java} == */jre ]; then
+    assertEquals "Default runtime points at wrong Java env" "${new_java}/jre" "$(readlink ${DEFAULT_PATH_JRE})"
+  fi
   # For all links in /usr/bin that point at the wrapper
   for lpath in $(find -L ${BIN_PATH} -samefile ${WRAPPER_PATH}); do
     # There is a binary in the JVM bin dir
@@ -121,6 +130,15 @@ test_do_status_no_default() {
 
 test_do_status_no_javas() {
   assertEquals 'Wrong status output' 'No compatible Java environment installed' "$(do_status)"
+}
+
+test_do_status_jre_but_jdk_exists() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME} (${JAVA_NAME}/jre default)"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
 }
 
 # do_get

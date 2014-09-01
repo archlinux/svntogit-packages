@@ -6,10 +6,13 @@
 # Author: Guillaume ALAUX <guillaume@archlinux.org>
 
 JVM_DIR=/usr/lib/jvm
-DEFAULT_NAME=java-default-runtime
+DEFAULT_NAME=default
 DEFAULT_PATH=${JVM_DIR}/${DEFAULT_NAME}
+DEFAULT_NAME_JRE=default-runtime
+DEFAULT_PATH_JRE=${JVM_DIR}/${DEFAULT_NAME_JRE}
 BIN_PATH=/usr/bin
 WRAPPER_PATH=/usr/lib/java-common-wrapper
+
 
 
 # Utility functions
@@ -73,12 +76,21 @@ unset_bin_links() {
 
 # $1: Java environment name to set as default
 set_default_link_to() {
+  new_default=$1
   unlink ${DEFAULT_PATH} 2>/dev/null
-  ln -sf $1 ${DEFAULT_PATH}
+  ln -sf ${new_default} ${DEFAULT_PATH}
+
+  unlink ${DEFAULT_PATH_JRE} 2>/dev/null
+  if [[ ${new_default} == */jre ]]; then
+    ln -sf ${new_default} ${DEFAULT_PATH_JRE}
+  else
+    ln -sf ${new_default}/jre ${DEFAULT_PATH_JRE}
+  fi
 }
 
 unset_default_link() {
   unlink ${DEFAULT_PATH} 2>/dev/null
+  unlink ${DEFAULT_PATH_JRE} 2>/dev/null
 }
 
 # First level functions
@@ -91,7 +103,9 @@ do_status() {
     default_java=$(get_default_java)
     echo 'Available Java environments:'
     for java in ${installed_java[@]}; do
-      if [ ${java} = "${default_java}" ]; then
+      if [ "${java}/jre" = "${default_java}" ]; then
+        echo -e "  ${java} (${java}/jre default)"
+      elif [ ${java} = "${default_java}" ]; then
         echo -e "  ${java} (default)"
       else
         echo "  ${java}"
