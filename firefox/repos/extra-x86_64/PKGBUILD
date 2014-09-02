@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=31.0
+pkgver=32.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=('i686' 'x86_64')
@@ -17,19 +17,19 @@ makedepends=('unzip' 'zip' 'diffutils' 'python2' 'yasm' 'mesa' 'imake'
              'inetutils')
 optdepends=('networkmanager: Location detection via available WiFi networks'
             'gst-plugins-good: h.264 video'
-            'gst-libav: h.264 video'
-            'libpulse: PulseAudio audio driver')
+            'gst-libav: h.264 video')
 install=firefox.install
 options=('!emptydirs' '!makeflags')
 source=(https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.bz2{,.asc}
-        mozconfig firefox.desktop firefox-install-dir.patch vendor.js
-        firefox-20.0.1-fixed-loading-icon.png)
-sha256sums=('95c789f2f171c4c7bd832999a22bfa9461ac47ba33e97a46392c90e576baf9db'
+        mozconfig firefox.desktop firefox-install-dir.patch vendor.js rhbz-966424.patch
+        firefox-fixed-loading-icon.png)
+sha256sums=('3265971e15809ab904403b474fa9eccf15f34697deb16fc400c5c3684afd50eb'
             'SKIP'
             '2e04ee3aefb33bb0f9367e6e88c8ded2cb3e8926fce75a71acfb34b0619dc650'
             'd2a7610393ba259c35e3227b92e02ec91095a95189f56ac93ccdf6732772719c'
             'd86e41d87363656ee62e12543e2f5181aadcff448e406ef3218e91865ae775cd'
             '4b50e9aec03432e21b44d18c4c97b2630bace606b033f7d556c9d3e3eb0f4fa4'
+            '746cb474c5a2c26fc474256e430e035e604b71b27df1003d4af85018fa263f4a'
             '68e3a5b47c6d175cc95b98b069a15205f027cab83af9e075818d38610feb6213')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
@@ -43,6 +43,9 @@ prepare() {
 
   cp ../mozconfig .mozconfig
   patch -Np1 -i ../firefox-install-dir.patch
+
+  # https://bugs.archlinux.org/task/41689
+  patch -Np1 -i ../rhbz-966424.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo "ac_add_options --with-google-api-keyfile=\"$PWD/google-api-key\"" >>.mozconfig
@@ -61,9 +64,9 @@ prepare() {
 
   # Fix tab loading icon (flickers with libpng 1.6)
   # https://bugzilla.mozilla.org/show_bug.cgi?id=841734
-  # TODO: Remove this; Firefox 32 will use CSS animations for the loading icon
+  # TODO: Remove this; Firefox 34 might use CSS animations for the loading icon
   # https://bugzilla.mozilla.org/show_bug.cgi?id=759252
-  cp "$srcdir/firefox-20.0.1-fixed-loading-icon.png" \
+  cp "$srcdir/firefox-fixed-loading-icon.png" \
     browser/themes/linux/tabbrowser/loading.png
 }
 
@@ -74,16 +77,9 @@ build() {
   export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/firefox"
   export PYTHON="/usr/bin/python2"
 
-  # Set up PGO
-  export DISPLAY=:99
-  Xvfb -nolisten tcp -extension GLX -screen 0 1280x1024x24 $DISPLAY &
-
-  if ! make -f client.mk build MOZ_PGO=1; then
-    kill $!
-    return 1
-  fi
-
-  kill $! || true
+  # Do PGO
+  xvfb-run -a -s "-extension GLX -screen 0 1280x1024x24" \
+    make -f client.mk build MOZ_PGO=1
 }
 
 package() {
