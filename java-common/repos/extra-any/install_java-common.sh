@@ -22,7 +22,7 @@ set_default_link_to() {
 
 pre_install() {
   _curr_def=$(readlink ${OLD_DEFAULT_PATH} && true)
-  if [ -n ${_curr_def} ]; then
+  if [ -n "${_curr_def}" ]; then
     unlink ${OLD_DEFAULT_PATH} > /dev/null 2>&1
     ln -sf ${DEFAULT_NAME} ${OLD_DEFAULT_PATH}
 
