@@ -7,46 +7,30 @@
 # NOTE: adjust version in install script when locale files are updated
 
 pkgname=glibc
-pkgver=2.19
-pkgrel=5
+pkgver=2.20
+pkgrel=1
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=3.13' 'tzdata' 'filesystem>=2013.01')
-makedepends=('gcc>=4.8')
+depends=('linux-api-headers>=3.16' 'tzdata' 'filesystem>=2013.01')
+makedepends=('gcc>=4.9')
 backup=(etc/gai.conf
         etc/locale.gen
         etc/nscd.conf)
 options=('!strip' 'staticlibs')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
-        glibc-2.19-xattr_header.patch
-        glibc-2.19-fix-sign-in-bsloww1-input.patch
-        glibc-2.19-tzselect-default.patch
         locale.gen.txt
         locale-gen)
-md5sums=('e26b8cc666b162f999404b03970f14e4'
+md5sums=('948a6e06419a01bd51e97206861595b0'
          'SKIP'
-         '39a4876837789e07746f1d84cd8cb46a'
-         '755a1a9d7844a5e338eddaa9a5d974cd'
-         'c772dc99ddd8032ecbf43884ae0cf42e'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
+validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')
 
 prepare() {
-  cd ${srcdir}/${pkgname}-${pkgver}
-
-  # fix for {linux,sys}/xattr.h incompatibility - commit fdbe8eae
-  patch -p1 -i $srcdir/glibc-2.19-xattr_header.patch
-
-  # fix issues in sin/cos slow path calculation - commit ffe768a9
-  patch -p1 -i $srcdir/glibc-2.19-fix-sign-in-bsloww1-input.patch
-
-  # fix tzselect with missing TZDIR - commit 893b4f37/c72399fb
-  patch -p1 -i $srcdir/glibc-2.19-tzselect-default.patch
-
   mkdir ${srcdir}/glibc-build
 }
 
@@ -60,6 +44,7 @@ build() {
   fi
 
   echo "slibdir=/usr/lib" >> configparms
+  echo "rtlddir=/usr/lib" >> configparms
   echo "sbindir=/usr/bin" >> configparms
   echo "rootsbindir=/usr/bin" >> configparms
 
@@ -90,7 +75,7 @@ build() {
   make
 
   # remove harding in preparation to run test-suite
-  sed -i '4,6d' configparms
+  sed -i '5,7d' configparms
 }
 
 check() {
@@ -99,9 +84,8 @@ check() {
 
   cd ${srcdir}/glibc-build
 
-  # ULP failures on i686 are all small and can be ignored
-  # tst-cleanupx4.out failure on i686 needs investigating...
-  make -k check || true
+  # tst-cleanupx4 failure on i686 is "expected"
+  make check || true
 }
 
 package() {
