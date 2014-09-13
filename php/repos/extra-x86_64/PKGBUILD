@@ -7,6 +7,7 @@ pkgname=('php'
          'php-apache'
          'php-fpm'
          'php-embed'
+         'php-phpdbg'
          'php-pear'
          'php-enchant'
          'php-gd'
@@ -21,22 +22,22 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=5.5.16
-pkgrel=2
+pkgver=5.6.0
+pkgrel=6
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
-makedepends=('apache' 'imap' 'postgresql-libs' 'libldap' 'postfix' 'libvpx'
+makedepends=('apache' 'imap' 'postgresql-libs' 'libldap' 'postfix'
              'sqlite' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file' 'freetds'
-             'libmcrypt' 'tidyhtml' 'aspell' 'libltdl' 'libpng' 'libjpeg' 'icu'
-             'curl' 'libxslt' 'openssl' 'bzip2' 'db' 'gmp' 'freetype2' 'systemd')
-source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.gz"
-        "http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.gz.asc"
+             'libmcrypt' 'tidyhtml' 'aspell' 'libltdl' 'gd' 'icu'
+             'curl' 'libxslt' 'openssl' 'db' 'gmp' 'systemd')
+source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.xz"
+        "http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.xz.asc"
         'php.ini.patch' 'apache.conf' 'php-fpm.conf.in.patch'
         'logrotate.d.php-fpm' 'php-fpm.service' 'php-fpm.tmpfiles')
-md5sums=('5def6d89792caa70448c67cd510e0f3e'
+md5sums=('642825d75ce2634d9513d5b21dbee521'
          'SKIP'
-         '510f9092ebfe6e378e12817e197a88b6'
+         'c0da10d91c06b07489f495e78116ab1b'
          'dec2cbaad64e3abf4f0ec70e1de4e8e9'
          '6bc1fc4ceee039d21ff3b56aa845cc5a'
          '25bc67ad828e8147a817410b68d8016c'
@@ -92,7 +93,8 @@ build() {
 		--with-enchant=shared,/usr \
 		--with-fpm-systemd \
 		--with-freetype-dir=/usr \
-		--with-gd=shared \
+		--with-xpm-dir=/usr \
+		--with-gd=shared,/usr \
 		--with-gdbm \
 		--with-gettext=shared \
 		--with-gmp=shared \
@@ -104,6 +106,7 @@ build() {
 		--with-vpx-dir=/usr \
 		--with-ldap=shared \
 		--with-ldap-sasl \
+		--with-libzip \
 		--with-mcrypt=shared \
 		--with-mhash \
 		--with-mssql=shared \
@@ -185,6 +188,17 @@ build() {
 		${_phpextensions}
 	make
 
+	# phpdbg
+	cp -a ${srcdir}/build-php ${srcdir}/build-phpdbg
+	cd ${srcdir}/build-phpdbg
+	./configure ${_phpconfig} \
+		--disable-cli \
+		--disable-cgi \
+		--with-readline \
+		--enable-phpdbg \
+		${_phpextensions}
+	make
+
 	# pear
 	cp -a ${srcdir}/build-php ${srcdir}/build-pear
 	cd ${srcdir}/build-pear
@@ -208,7 +222,7 @@ build() {
 
 package_php() {
 	pkgdesc='An HTML-embedded scripting language'
-	depends=('pcre' 'libxml2' 'bzip2' 'curl')
+	depends=('pcre' 'libxml2' 'curl' 'libzip')
 	backup=('etc/php/php.ini')
 
 	cd ${srcdir}/build-php
@@ -258,11 +272,18 @@ package_php-fpm() {
 }
 
 package_php-embed() {
-	pkgdesc='Embed SAPI for PHP'
+	pkgdesc='Embedded PHP SAPI library'
 	depends=('php')
 
 	install -D -m755 ${srcdir}/build-embed/libs/libphp5.so ${pkgdir}/usr/lib/libphp5.so
 	install -D -m644 ${srcdir}/${pkgbase}-${pkgver}/sapi/embed/php_embed.h ${pkgdir}/usr/include/php/sapi/embed/php_embed.h
+}
+
+package_php-phpdbg() {
+	pkgdesc='Interactive PHP debugger'
+	depends=('php')
+
+	install -D -m755 ${srcdir}/build-phpdbg/sapi/phpdbg/phpdbg ${pkgdir}/usr/bin/phpdbg
 }
 
 package_php-pear() {
@@ -276,82 +297,95 @@ package_php-pear() {
 }
 
 package_php-enchant() {
-	depends=('php' 'enchant')
 	pkgdesc='enchant module for PHP'
+	depends=('php' 'enchant')
+
 	install -D -m755 ${srcdir}/build-php/modules/enchant.so ${pkgdir}/usr/lib/php/modules/enchant.so
 }
 
 package_php-gd() {
-	depends=('php' 'libpng' 'libjpeg' 'freetype2' 'libvpx')
 	pkgdesc='gd module for PHP'
+	depends=('php' 'gd')
+
 	install -D -m755 ${srcdir}/build-php/modules/gd.so ${pkgdir}/usr/lib/php/modules/gd.so
 }
 
 package_php-intl() {
-	depends=('php' 'icu')
 	pkgdesc='intl module for PHP'
+	depends=('php' 'icu')
+
 	install -D -m755 ${srcdir}/build-php/modules/intl.so ${pkgdir}/usr/lib/php/modules/intl.so
 }
 
 package_php-ldap() {
-	depends=('php' 'libldap')
 	pkgdesc='ldap module for PHP'
+	depends=('php' 'libldap')
+
 	install -D -m755 ${srcdir}/build-php/modules/ldap.so ${pkgdir}/usr/lib/php/modules/ldap.so
 }
 
 package_php-mcrypt() {
-	depends=('php' 'libmcrypt' 'libltdl')
 	pkgdesc='mcrypt module for PHP'
+	depends=('php' 'libmcrypt' 'libltdl')
+
 	install -D -m755 ${srcdir}/build-php/modules/mcrypt.so ${pkgdir}/usr/lib/php/modules/mcrypt.so
 }
 
 package_php-mssql() {
-	depends=('php' 'freetds')
 	pkgdesc='mssql module for PHP'
+	depends=('php' 'freetds')
+
 	install -D -m755 ${srcdir}/build-php/modules/mssql.so ${pkgdir}/usr/lib/php/modules/mssql.so
 }
 
 package_php-odbc() {
-	depends=('php' 'unixodbc')
 	pkgdesc='ODBC modules for PHP'
+	depends=('php' 'unixodbc')
+
 	install -D -m755 ${srcdir}/build-php/modules/odbc.so ${pkgdir}/usr/lib/php/modules/odbc.so
 	install -D -m755 ${srcdir}/build-php/modules/pdo_odbc.so ${pkgdir}/usr/lib/php/modules/pdo_odbc.so
 }
 
 package_php-pgsql() {
-	depends=('php' 'postgresql-libs')
 	pkgdesc='PostgreSQL modules for PHP'
+	depends=('php' 'postgresql-libs')
+
 	install -D -m755 ${srcdir}/build-php/modules/pgsql.so ${pkgdir}/usr/lib/php/modules/pgsql.so
 	install -D -m755 ${srcdir}/build-php/modules/pdo_pgsql.so ${pkgdir}/usr/lib/php/modules/pdo_pgsql.so
 }
 
 package_php-pspell() {
-	depends=('php' 'aspell')
 	pkgdesc='pspell module for PHP'
+	depends=('php' 'aspell')
+
 	install -D -m755 ${srcdir}/build-php/modules/pspell.so ${pkgdir}/usr/lib/php/modules/pspell.so
 }
 
 package_php-snmp() {
-	depends=('php' 'net-snmp')
 	pkgdesc='snmp module for PHP'
+	depends=('php' 'net-snmp')
+
 	install -D -m755 ${srcdir}/build-php/modules/snmp.so ${pkgdir}/usr/lib/php/modules/snmp.so
 }
 
 package_php-sqlite() {
-	depends=('php' 'sqlite')
 	pkgdesc='sqlite module for PHP'
+	depends=('php' 'sqlite')
+
 	install -D -m755 ${srcdir}/build-php/modules/sqlite3.so ${pkgdir}/usr/lib/php/modules/sqlite3.so
 	install -D -m755 ${srcdir}/build-php/modules/pdo_sqlite.so ${pkgdir}/usr/lib/php/modules/pdo_sqlite.so
 }
 
 package_php-tidy() {
-	depends=('php' 'tidyhtml')
 	pkgdesc='tidy module for PHP'
+	depends=('php' 'tidyhtml')
+
 	install -D -m755 ${srcdir}/build-php/modules/tidy.so ${pkgdir}/usr/lib/php/modules/tidy.so
 }
 
 package_php-xsl() {
-	depends=('php' 'libxslt')
 	pkgdesc='xsl module for PHP'
+	depends=('php' 'libxslt')
+
 	install -D -m755 ${srcdir}/build-php/modules/xsl.so ${pkgdir}/usr/lib/php/modules/xsl.so
 }
