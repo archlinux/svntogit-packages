@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.20
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -22,15 +22,33 @@ backup=(etc/gai.conf
 options=('!strip' 'staticlibs')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
+	glibc-2.20-getifaddrs_internal-segfault.patch
+	glibc-2.20-linux-3.16-additions.patch
+	glibc-2.20-do_ftell_wide-memleak.patch
         locale.gen.txt
         locale-gen)
 md5sums=('948a6e06419a01bd51e97206861595b0'
          'SKIP'
+         '1c5d5c2017445c75dbc5c6d0c1e45ddb'
+         '8f1059f431b842e54b12bde689620df8'
+         'b50feeab78fa6ce0a8cfb41ee8dc1fd8'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
-validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')
+validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
 
 prepare() {
+  cd ${srcdir}/glibc-${pkgver}
+
+  # fix segfault in getifaddrs_internal
+  # https://sourceware.org/ml/libc-alpha/2014-09/msg00312.html
+  patch -p1 -i $srcdir/glibc-2.20-getifaddrs_internal-segfault.patch
+  
+  # linux 3.16 additions - commit 0bd72468
+  patch -p1 -i $srcdir/glibc-2.20-linux-3.16-additions.patch
+  
+  # plug memory leak - commit 984c0ea9
+  patch -p1 -i $srcdir/glibc-2.20-do_ftell_wide-memleak.patch
+
   mkdir ${srcdir}/glibc-build
 }
 
