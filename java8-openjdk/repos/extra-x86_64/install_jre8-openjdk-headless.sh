@@ -13,7 +13,9 @@ post_install() {
   fi
 
   if [ ! -f /etc/ssl/certs/java/cacerts ]; then
-    JAVA_HOME=/usr/lib/jvm/java-default-runtime /usr/bin/init-jks-keystore
+    # Overwrite JAVA_HOME because if it still points at java-8-openjdk AND user just removed jdk,
+    # Then /usr/bin/java will in the end, refer to /usr/lib/jvm/java-7-openjdk/java which doesn't exist
+    JAVA_HOME=/usr/lib/jvm/${this_java} /usr/bin/init-jks-keystore
   fi
 }
 
@@ -26,7 +28,7 @@ post_upgrade() {
   fi
 
   if [ ! -f /etc/ssl/certs/java/cacerts ]; then
-    JAVA_HOME=/usr/lib/jvm/java-default-runtime /usr/bin/init-jks-keystore
+    JAVA_HOME=/usr/lib/jvm/${this_java} /usr/bin/init-jks-keystore
   fi
 }
 
