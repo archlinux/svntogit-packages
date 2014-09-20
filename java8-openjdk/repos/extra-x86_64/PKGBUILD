@@ -14,7 +14,7 @@ _jdk_update=20
 _jdk_build=23
 pkgver=${_java_ver}.u${_jdk_update}
 _repo_ver=jdk${_java_ver}u${_jdk_update}-b${_jdk_build}
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url='http://openjdk.java.net/'
 license=('custom')
@@ -30,7 +30,8 @@ source=(jdk8u-${_repo_ver}.tar.gz::${_url_src}/archive/${_repo_ver}.tar.gz
         langtools-${_repo_ver}.tar.gz::${_url_src}/langtools/archive/${_repo_ver}.tar.gz
         nashorn-${_repo_ver}.tar.gz::${_url_src}/nashorn/archive/${_repo_ver}.tar.gz
         001_adjust-mflags-for-gmake-4.patch
-        002_gcc.make-4.9.patch)
+        002_gcc.make-4.9.patch
+        003_nonreparenting-wm.patch)
 
 sha256sums=('ec0b86c0a5883f769cb951a96a0b61734aa7e3c2b62e3b448f7bf6866a36c237'
             'e979396e3d64af94664932a28eb63d3048bdf3595f180bd4bd3fad91bc8b685c'
@@ -41,7 +42,8 @@ sha256sums=('ec0b86c0a5883f769cb951a96a0b61734aa7e3c2b62e3b448f7bf6866a36c237'
             '05177c5ba5ec95d041d46e871358692ff1e62f8568c8c9580688b39e5165d580'
             '2499b19562e320eb304be8797c2a895f1fe2ab2d16fd7da68aeaed180b3f1899'
             '682104f7723c5c543c47b53f51cc5577e273a12343bd04bebd1bcd70dd72ded9'
-            '5b1ed72ffd14a18e36aba2129e0781696b8c9cccd060bf4dbe1c4b9a44100b69')
+            '5b1ed72ffd14a18e36aba2129e0781696b8c9cccd060bf4dbe1c4b9a44100b69'
+            'c41cec7415ace2f68a5f9529e6df7e87a8c21993ab9d040b0f8b395f6173d478')
 
 case "${CARCH}" in
   'x86_64') _JARCH=amd64 ; _DOC_ARCH=x86_64 ;;
@@ -65,11 +67,15 @@ prepare() {
     ln -s ../${subrepo}-${_repo_ver} ${subrepo}
   done
 
-  cd hotspot
+  cd "${srcdir}/jdk8u-${_repo_ver}/hotspot"
   # https://bugs.openjdk.java.net/browse/JDK-8028407
   patch -p1 < "${srcdir}/001_adjust-mflags-for-gmake-4.patch"
   # https://bugs.openjdk.java.net/browse/JDK-8041658
   patch -p1 < "${srcdir}/002_gcc.make-4.9.patch"
+
+  cd "${srcdir}/jdk8u-${_repo_ver}/jdk"
+  # https://bugs.archlinux.org/task/41846
+  patch -p0 < "${srcdir}/003_nonreparenting-wm.patch"
 }
 
 build() {
