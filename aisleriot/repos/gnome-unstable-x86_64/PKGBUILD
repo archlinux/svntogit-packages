@@ -1,0 +1,46 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=aisleriot
+pkgver=3.13.90
+pkgrel=1
+pkgdesc="A collection of patience games written in guile scheme"
+arch=(i686 x86_64)
+license=(GPL)
+url="http://www.gnome.org"
+groups=('gnome-extra')
+depends=(guile gtk3 librsvg libcanberra gconf hicolor-icon-theme dconf)
+makedepends=(intltool itstool docbook-xsl yelp-tools desktop-file-utils appdata-tools)
+optdepends=('libkdegames: KDE card sets'
+            'pysolfc: PySol card sets'
+            'pysolfc-cardsets: PySol card sets')
+options=('!emptydirs')
+install=aisleriot.install
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
+sha256sums=('d8cb306f24facd2639d48103ec0f48d793f7e3c589f93cb3016c1f6a383ca8e3')
+
+build() {
+  cd $pkgname-$pkgver
+  export GLIBC_PTHREAD_MUTEX=none
+  export GLIBC_PTHREAD_RWLOCK=none
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --libexecdir=/usr/lib --disable-static \
+    --with-card-theme-formats=all \
+    --with-kde-card-theme-path=/usr/share/apps/carddecks \
+    --with-pysol-card-theme-path=/usr/share/PySolFC
+
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1
+  install -m755 -d "$pkgdir/usr/share/gconf/schemas"
+  gconf-merge-schema "$pkgdir/usr/share/gconf/schemas/$pkgname.schemas" \
+    --domain aisleriot "$pkgdir"/etc/gconf/schemas/*.schemas
+  rm -f "$pkgdir"/etc/gconf/schemas/*.schemas
+}
