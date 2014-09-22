@@ -1,18 +1,29 @@
 export LC_ALL=C
 
 post_install() {
-	usr/bin/update-ca-certificates --fresh >/dev/null 2>&1
+	usr/bin/update-ca-trust
+}
+
+pre_upgrade() {
+	if (( $(vercmp $2 20140923-2) < 0 )); then
+		find /etc/ssl/certs -type l -print | while read symlink; do
+			case $(readlink $symlink) in
+			/usr/share/ca-certificates*) rm -f $symlink;;
+			esac
+		done
+		find /etc/ssl/certs -type l -print | while read symlink; do
+			test -f $symlink || rm -f $symlink
+		done
+		rm -f /etc/ssl/certs/ca-certificates.crt
+	fi
 }
 
 post_upgrade() {
-	usr/bin/update-ca-certificates --fresh >/dev/null 2>&1
+	usr/bin/update-ca-trust
 }
 
 pre_remove() {
-	usr/bin/update-ca-certificates --fresh >/dev/null 2>&1
+	usr/bin/update-ca-trust
 }
 
-post_remove() {
-	# remove the cert file if it is empty
-	[[ -s etc/ssl/certs/ca-certificates.crt ]] || rm -f etc/ssl/certs/ca-certificates.crt
-}
+# vim:set noet ts=8 sw=8:
