@@ -6,11 +6,10 @@ Origin:                  Based on Debian's dhclient-script, but modified for BLF
 Description:             This patch replaces original linux script for dhcp client with
                          better one which is based on Debian's dhclient-script, but modified
                          to be used on LFS/BLFS. It also removes net-tools dependency.
-                         Modified for archlinux: restored exit/enter hooks path.
 
---- dhcp.orig/client/scripts/linux	2012-07-13 08:10:30.000000000 +0200
-+++ dhcp/client/scripts/linux	2012-08-14 21:00:29.786634932 +0200
-@@ -1,318 +1,346 @@
+--- a/client/scripts/linux	2014-07-09 20:26:40.000000000 +0200
++++ b/client/scripts/linux	2014-08-12 01:21:02.858998828 +0200
+@@ -1,316 +1,346 @@
  #!/bin/bash
 +
  # dhclient-script for Linux. Dan Halbert, March, 1997.
@@ -180,8 +179,8 @@ Description:             This patch replaces original linux script for dhcp clie
    exit_status=$1
 -  if [ -f /etc/dhclient-exit-hooks ]; then
 -    . /etc/dhclient-exit-hooks
-+  if [ -f /etc/dhclient-exit-hooks ]; then
-+    . /etc/dhclient-exit-hooks
++  if [ -f /etc/dhcp/dhclient-exit-hooks ]; then
++    . /etc/dhcp/dhclient-exit-hooks
    fi
 -# probably should do something with exit status of the local script
    exit $exit_status
@@ -200,12 +199,12 @@ Description:             This patch replaces original linux script for dhcp clie
 +
  # Invoke the local dhcp client enter hooks, if they exist.
 -if [ -f /etc/dhclient-enter-hooks ]; then
-+if [ -f /etc/dhclient-enter-hooks ]; then
++if [ -f /etc/dhcp/dhclient-enter-hooks ]; then
    exit_status=0
 -  . /etc/dhclient-enter-hooks
 -  # allow the local script to abort processing of this state
 -  # local script must set exit_status variable to nonzero.
-+  . /etc/dhclient-enter-hooks
++  . /etc/dhcp/dhclient-enter-hooks
    if [ $exit_status -ne 0 ]; then
      exit $exit_status
    fi
@@ -280,14 +279,11 @@ Description:             This patch replaces original linux script for dhcp clie
 -    # IP address changed. Bringing down the interface will delete all routes,
 -    # and clear the ARP cache.
 -    ifconfig $interface inet 0 down
-+# Execute the operation
-+case "$reason" in
- 
+-
 -  fi
 -  if [ x$old_ip_address = x ] || [ x$old_ip_address != x$new_ip_address ] || \
 -     [ x$reason = xBOUND ] || [ x$reason = xREBOOT ]; then
-+    ### DHCPv4 Handlers
- 
+-
 -    ifconfig $interface inet $new_ip_address $new_subnet_arg \
 -					$new_broadcast_arg $mtu_arg
 -    # Add a network route to the computed network address.
@@ -322,6 +318,80 @@ Description:             This patch replaces original linux script for dhcp clie
 -  make_resolv_conf
 -  exit_with_hooks 0
 -fi
+-
+-if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ] || [ x$reason = xRELEASE ] \
+-   || [ x$reason = xSTOP ]; then
+-  if [ x$alias_ip_address != x ]; then
+-    # Turn off alias interface.
+-    ifconfig $interface:0- inet 0
+-  fi
+-  if [ x$old_ip_address != x ]; then
+-    # Shut down interface, which will delete routes and clear arp cache.
+-    ifconfig $interface inet 0 down
+-  fi
+-  if [ x$alias_ip_address != x ]; then
+-    ifconfig $interface:0 inet $alias_ip_address $alias_subnet_arg
+-    route add -host $alias_ip_address $interface:0
+-  fi
+-  exit_with_hooks 0
+-fi
+-
+-if [ x$reason = xTIMEOUT ]; then
+-  if [ x$alias_ip_address != x ]; then
+-    ifconfig $interface:0- inet 0
+-  fi
+-  ifconfig $interface inet $new_ip_address $new_subnet_arg \
+-					$new_broadcast_arg $mtu_arg
+-  set $new_routers
+-  if ping -q -c 1 $1; then
+-    if [ x$new_ip_address != x$alias_ip_address ] && \
+-			[ x$alias_ip_address != x ]; then
+-      ifconfig $interface:0 inet $alias_ip_address $alias_subnet_arg
+-      route add -host $alias_ip_address dev $interface:0
+-    fi
+-    for router in $new_routers; do
+-      if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
+-	route add -host $router dev $interface
+-      fi
+-      route add default gw $router $metric_arg dev $interface
+-    done
+-    make_resolv_conf
+-    exit_with_hooks 0
+-  fi
+-  ifconfig $interface inet 0 down
+-  exit_with_hooks 1
+-fi
+-
+-###
+-### DHCPv6 Handlers
+-###
+-
+-if [ x$reason = xPREINIT6 ] ; then
+-  # Ensure interface is up.
+-  ${ip} link set ${interface} up
+-
+-  # Remove any stale addresses from aborted clients.
+-  ${ip} -f inet6 addr flush dev ${interface} scope global permanent
+-
+-  exit_with_hooks 0
+-fi
+-
+-if [ x${old_ip6_prefix} != x ] || [ x${new_ip6_prefix} != x ] ; then
+-    echo Prefix ${reason} old=${old_ip6_prefix} new=${new_ip6_prefix}
++# Execute the operation
++case "$reason" in
+ 
+-    exit_with_hooks 0
+-fi
+-
+-if [ x$reason = xBOUND6 ] ; then
+-  if [ x${new_ip6_address} = x ] || [ x${new_ip6_prefixlen} = x ] ; then
+-    exit_with_hooks 2;
+-  fi
++    ### DHCPv4 Handlers
+ 
+-  ${ip} -f inet6 addr add ${new_ip6_address}/${new_ip6_prefixlen} \
+-	dev ${interface} scope global
 +    MEDIUM|ARPCHECK|ARPSEND)
 +        # Do nothing
 +        ;;
@@ -525,77 +595,6 @@ Description:             This patch replaces original linux script for dhcp clie
 +        ip -6 addr del ${old_ip6_address}/${old_ip6_prefixlen} \
 +            dev ${interface}
  
--if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ] || [ x$reason = xRELEASE ] \
--   || [ x$reason = xSTOP ]; then
--  if [ x$alias_ip_address != x ]; then
--    # Turn off alias interface.
--    ifconfig $interface:0- inet 0
--  fi
--  if [ x$old_ip_address != x ]; then
--    # Shut down interface, which will delete routes and clear arp cache.
--    ifconfig $interface inet 0 down
--  fi
--  if [ x$alias_ip_address != x ]; then
--    ifconfig $interface:0 inet $alias_ip_address $alias_subnet_arg
--    route add -host $alias_ip_address $interface:0
--  fi
--  exit_with_hooks 0
--fi
--
--if [ x$reason = xTIMEOUT ]; then
--  if [ x$alias_ip_address != x ]; then
--    ifconfig $interface:0- inet 0
--  fi
--  ifconfig $interface inet $new_ip_address $new_subnet_arg \
--					$new_broadcast_arg $mtu_arg
--  set $new_routers
--  if ping -q -c 1 $1; then
--    if [ x$new_ip_address != x$alias_ip_address ] && \
--			[ x$alias_ip_address != x ]; then
--      ifconfig $interface:0 inet $alias_ip_address $alias_subnet_arg
--      route add -host $alias_ip_address dev $interface:0
--    fi
--    for router in $new_routers; do
--      if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
--	route add -host $router dev $interface
--      fi
--      route add default gw $router $metric_arg dev $interface
--    done
--    make_resolv_conf
--    exit_with_hooks 0
--  fi
--  ifconfig $interface inet 0 down
--  exit_with_hooks 1
--fi
--
--###
--### DHCPv6 Handlers
--###
--
--if [ x$reason = xPREINIT6 ] ; then
--  # Ensure interface is up.
--  ${ip} link set ${interface} up
--
--  # Remove any stale addresses from aborted clients.
--  ${ip} -f inet6 addr flush dev ${interface} scope global permanent
--
--  exit_with_hooks 0
--fi
--
--if [ x${old_ip6_prefix} != x ] || [ x${new_ip6_prefix} != x ] ; then
--    echo Prefix ${reason} old=${old_ip6_prefix} new=${new_ip6_prefix}
--
--    exit_with_hooks 0
--fi
--
--if [ x$reason = xBOUND6 ] ; then
--  if [ x${new_ip6_address} = x ] || [ x${new_ip6_prefixlen} = x ] ; then
--    exit_with_hooks 2;
--  fi
--
--  ${ip} -f inet6 addr add ${new_ip6_address}/${new_ip6_prefixlen} \
--	dev ${interface} scope global
--
 -  # Check for nameserver options.
 -  make_resolv_conf
 -
@@ -603,12 +602,10 @@ Description:             This patch replaces original linux script for dhcp clie
 -fi
 -
 -if [ x$reason = xRENEW6 ] || [ x$reason = xREBIND6 ] ; then
--  if [ x${new_ip6_address} = x ] || [ x${new_ip6_prefixlen} = x ] ; then
--    exit_with_hooks 2;
--  fi
--
--  ${ip} -f inet6 addr add ${new_ip6_address}/${new_ip6_prefixlen} \
+-  if [ x${new_ip6_address} != x ] && [ x${new_ip6_prefixlen} != x ] ; then
+-    ${ip} -f inet6 addr add ${new_ip6_address}/${new_ip6_prefixlen} \
 -	dev ${interface} scope global
+-  fi
 -
 -  # Make sure nothing has moved around on us.
 -
