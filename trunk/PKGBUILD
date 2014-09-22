@@ -5,8 +5,8 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=2.4
-pkgrel=2
+pkgver=2.4.1
+pkgrel=1
 epoch=1
 pkgdesc='Complete and free Internet live audio and video broadcasting solution'
 arch=('i686' 'x86_64')
@@ -20,7 +20,7 @@ depends=(
 )
 makedepends=('libvdpau' 'yasm')
 source=(http://ffmpeg.org/releases/$pkgname-$pkgver.tar.bz2{,.asc})
-md5sums=('89a9c464cdf572f9028285eee605454d'
+md5sums=('c36caa8d29b3677dcb7bd8c546890c9d'
          'SKIP')
 
 build() {
@@ -74,5 +74,3 @@ package() {
   make DESTDIR="$pkgdir" install install-man
   install -Dm755 tools/qt-faststart "$pkgdir"/usr/bin/qt-faststart
 }
-
-# vim:set ts=2 sw=2 et:
