@@ -1,28 +1,36 @@
 # $Id$
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
-pkgname=nss
-pkgver=3.16.3
-pkgrel=1
+pkgbase=nss
+pkgname=(nss ca-certificates-mozilla)
+pkgver=3.17
+pkgrel=3
 pkgdesc="Mozilla Network Security Services"
 arch=(i686 x86_64)
 url="http://www.mozilla.org/projects/security/pki/nss/"
 license=('MPL' 'GPL')
-_nsprver=4.10.6
-depends=("nspr>=${_nsprver}" 'sqlite' 'zlib' 'sh')
-makedepends=('perl')
+_nsprver=4.10.7
+depends=("nspr>=${_nsprver}" 'sqlite' 'zlib' 'sh' 'p11-kit')
+makedepends=('perl' 'python2')
 options=('!strip' '!makeflags' 'staticlibs')
-source=(ftp://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/${pkgname}-${pkgver}.tar.gz
+source=("ftp://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/${pkgbase}-${pkgver}.tar.gz"
+        "certdata2pem.py::http://anonscm.debian.org/cgit/collab-maint/ca-certificates.git/plain/mozilla/certdata2pem.py?id=15470c64b5464d273556a290b1e7b50b32a2e5a0"
         nss.pc.in
         nss-config.in
-        ssl-renegotiate-transitional.patch)
-sha1sums=('a1937de60e03a24526591d883bcfe31a3acc8ef4'
-          'aa5b2c0aa38d3c1066d511336cf28d1333e3aebd'
-          'cb744cc3e56b604e4754bc3c7d9f25bb9a0a136c'
-          '8a964a744ba098711b80c0d279a2993524e8eb92')
+        ssl-renegotiate-transitional.patch
+        certdata2pem.py-loudness.patch)
+sha256sums=('3b1abcd8f89211dda2cc739bfa76552d080f7ea80482ef2727b006548a7f0c81'
+            '57bd6f309736825fc0edbf7d522726224764520595dfdddd0dba59158839e863'
+            'b9f1428ca2305bf30b109507ff335fa00bce5a7ce0434b50acd26ad7c47dd5bd'
+            'e44ac5095b4d88f24ec7b2e6a9f1581560bd3ad41a3d198596d67ef22f67adb9'
+            '12df04bccbf674db1eef7a519a28987927b5e9c107b1dc386686f05e64f49a97'
+            '90f8e72fbcca9ce907dcf6565bcd95ca23d2da5d87caee64c141ac54680f8703')
 
 prepare() {
-  cd $pkgname-$pkgver
+  mkdir certs
+  patch --follow-symlinks certdata2pem.py certdata2pem.py-loudness.patch
+
+  cd nss-$pkgver
 
   # Adds transitional SSL renegotiate support - patch from Debian
   patch -Np3 -i ../ssl-renegotiate-transitional.patch
@@ -30,12 +38,18 @@ prepare() {
   # Respect LDFLAGS
   sed -e 's/\$(MKSHLIB) -o/\$(MKSHLIB) \$(LDFLAGS) -o/' \
       -i nss/coreconf/rules.mk
+
+  ln -sr nss/lib/ckfw/builtins/certdata.txt ../certs/
 }
 
 
 build() {
-  cd $pkgname-$pkgver/nss
+  cd certs
+  python2 ../certdata2pem.py
+  printf "mozilla/%s\n" *.crt > mozilla.conf
+  test -s mozilla.conf
 
+  cd ../nss-$pkgver/nss
   export BUILD_OPT=1
   export NSS_USE_SYSTEM_SQLITE=1
   export NSS_ENABLE_ECC=1
@@ -50,8 +64,8 @@ build() {
   make
 }
 
-package() {
-  cd $pkgname-$pkgver
+package_nss() {
+  cd nss-$pkgver
   install -d "$pkgdir"/usr/{bin,include/nss,lib/pkgconfig}
 
   NSS_VMAJOR=$(grep '#define.*NSS_VMAJOR' nss/lib/nss/nss.h | awk '{print $3}')
@@ -88,4 +102,21 @@ package() {
 
   cd ../../public/nss
   install -t "$pkgdir/usr/include/nss" -m644 *.h
+
+  rm "$pkgdir/usr/lib/libnssckbi.so"
+  ln -s pkcs11/p11-kit-trust.so "$pkgdir/usr/lib/libnssckbi.so"
+}
+
+package_ca-certificates-mozilla() {
+  pkgdesc="Mozilla's set of trusted CA certificates"
+  depends=(ca-certificates-utils)
+  install=ca-certificates-mozilla.install
+
+  cd certs
+
+  local _certdir="$pkgdir/usr/share/ca-certificates/mozilla"
+  install -d "$_certdir"
+  install -t "$_certdir" -m644 *.crt
+
+  install -Dm644 mozilla.conf "$pkgdir/etc/ca-certificates/conf.d/mozilla.conf"
 }
