@@ -4,7 +4,7 @@
 ### !!! rebuild groff from core that picks up hardcoding the GS versioned font path !!! ###
 
 pkgname=ghostscript
-pkgver=9.14
+pkgver=9.15
 pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
@@ -18,7 +18,8 @@ url="http://www.ghostscript.com/"
 source=(http://downloads.ghostscript.com/public/ghostscript-${pkgver}.tar.bz2
         ghostscript-sys-zlib.patch)
 #options=('!makeflags')
-sha1sums=('eab1c9e9850d8aedf02d16f3f7f8198ad9384068'
+# http://downloads.ghostscript.com/public/SHA1SUMS
+sha1sums=('19f01538d33b9623bc6653d96ea4ec891f14a9d3'
           'e054caf753df4d67221b29a2eac66130653f7556')
 
 prepare() {
