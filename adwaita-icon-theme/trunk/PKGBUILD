@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=adwaita-icon-theme
-pkgver=3.13.91
+pkgver=3.14.0
 pkgrel=1
 pkgdesc="Adwaita icon theme"
 arch=(any)
@@ -14,7 +14,7 @@ groups=('gnome')
 install=adwaita-icon-theme.install
 options=('!emptydirs')
 source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
-sha256sums=('d0cf4705d3439c68d344431b62cca5fe6fcf91bd38c745c48b2476d0aa41b8ad')
+sha256sums=('afacb6025a18be007e33a9663b92cee9d2745279bb00107a68e09b2806f9541f')
 
 build() {
     cd "$pkgname-$pkgver"
