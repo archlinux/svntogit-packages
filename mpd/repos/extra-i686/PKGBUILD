@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.18.14
-pkgrel=2
+pkgrel=3
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -20,7 +20,7 @@ source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pk
         'conf')
 sha1sums=('5a4b5f5b0447994f3fc186ffd7c16cabeeed2978' 'SKIP'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
-          '67c145c046cddd885630d72ce8ebe71f8321ff3b')
+          '291fd5cda9f0845834a553017327c4586bd853f6')
 
 backup=('etc/mpd.conf')
 install=install
@@ -48,5 +48,8 @@ package() {
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
 
 	install -Dm644 "${pkgdir}"/usr/lib/systemd/{system,user}/mpd.service
-	sed '/WantedBy=/c WantedBy=default.target' -i "${pkgdir}"/usr/lib/systemd/user/mpd.service
+	sed \
+		-e '/\[Service\]/a User=mpd' \
+		-e '/WantedBy=/c WantedBy=default.target' \
+		-i "${pkgdir}"/usr/lib/systemd/user/mpd.service
 }
