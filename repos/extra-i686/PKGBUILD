@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.18.14
-pkgrel=3
+pkgrel=4
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -48,8 +48,6 @@ package() {
 	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
 
 	install -Dm644 "${pkgdir}"/usr/lib/systemd/{system,user}/mpd.service
-	sed \
-		-e '/\[Service\]/a User=mpd' \
-		-e '/WantedBy=/c WantedBy=default.target' \
-		-i "${pkgdir}"/usr/lib/systemd/user/mpd.service
+	sed '/\[Service\]/a User=mpd' -i "${pkgdir}"/usr/lib/systemd/system/mpd.service
+	sed '/WantedBy=/c WantedBy=default.target' -i "${pkgdir}"/usr/lib/systemd/{system,user}/mpd.service
 }
