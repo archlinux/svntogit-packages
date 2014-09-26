@@ -1,0 +1,47 @@
+From 9443151da38d25430f0683dfdcd7f6076ecabe0a Mon Sep 17 00:00:00 2001
+From: Erik de Castro Lopo <erikd@mega-nerd.com>
+Date: Tue, 8 Jul 2014 18:25:11 +1000
+Subject: [PATCH] src/flac/utils.c : Make sure get_console_width() returns value > 0.
+
+Previous version of get_console_width() may return 0 which will result in
+a division by 0 in stats_print_name():
+
+	console_width = get_console_width();
+	len = strlen_console(name)+2;
+	console_chars_left = console_width  - (len % console_width);
+
+Bug-report: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=739613
+Patch-from: lvqcl <lvqcl.mail@gmail.com>
+---
+ src/flac/utils.c |    7 +++++--
+ 1 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/flac/utils.c b/src/flac/utils.c
+index 557477e..52b2c43 100644
+--- a/src/flac/utils.c
++++ b/src/flac/utils.c
+@@ -176,7 +176,7 @@ static int console_chars_left;
+ 
+ int get_console_width(void)
+ {
+-	int width = 80;
++	int width = 0;
+ #if defined _WIN32
+ 	width = win_get_console_width();
+ #elif defined __EMX__
+@@ -185,8 +185,11 @@ int get_console_width(void)
+ 	width = s[0];
+ #elif defined GWINSZ_IN_SYS_IOCTL
+ 	struct winsize w;
+-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != -1)	width = w.ws_col;
++	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != -1)
++		width = w.ws_col;
+ #endif
++	if (width <= 0)
++		width = 80;
+ 	return width;
+ }
+ 
+-- 
+1.7.2.5
+
