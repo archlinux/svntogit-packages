@@ -1,0 +1,106 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+# Contributor: Gerhard Brauer <gerbra@archlinux.de>
+# Contributor: Richard Murri <admin@richardmurri.com>
+# Contributor: Markus Opitz <mastero23 at gmail dot com>
+# Contributor: Milan Knížek <knizek@volny.cz>
+
+pkgname=x2goserver
+pkgver=4.0.1.16
+pkgrel=1
+pkgdesc="Open source terminal server"
+arch=('i686' 'x86_64')
+url="http://www.x2go.org/"
+license=('GPL2')
+# see x2goserver.spec
+depends=(#'python' 'xorg-xauth' 
+
+         # For x2goruncommand - for now
+         'bc'
+         # For netstat in x2goresume-session
+         'net-tools'
+         'openssh'
+         'perl-file-readbackwards'
+         # We need a database
+         'perl-dbd-sqlite' 
+         # For killall in x2gosuspend-session
+         'psmisc'
+         # For x2goshowblocks
+         'lsof'
+         # For x2godbadmin
+		 'pwgen' # in community
+         # For printing, file-sharing
+         'sshfs'
+         # For /etc/sudoers.d
+         'sudo'
+         'x2go-agent'
+         # For /etc/X11/Xresources
+         'xorg-xinit'
+         'xorg-fonts-misc'
+         'shadow'
+         
+         # for post install actions
+         'desktop-file-utils'
+         'shared-mime-info'
+         
+         'perl-capture-tiny'
+         'perl-config-simple'
+         'perl-file-basedir' # FS#38551
+         
+         'xorg-xwininfo' # FS#38558
+         
+         #x2goserver-extensions
+         #x2goserver-xsession
+         #x2goserver-fmbindings
+         #x2goserver-printing
+)
+makedepends=('man2html' 'perl-extutils-makemaker' 'systemd')
+#optdepends=('cups-x2go: printing support')
+options=('emptydirs')
+install=x2goserver.install
+backup=('etc/x2go/x2goserver.conf' 'etc/x2go/x2gosql/sql')
+source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+md5sums=('41453b94dbcd2c6b44501bf517cba2db')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # -r option does not exist in Arch linux
+  # (However, html man pages do not get installed anyway...)
+  for Makefile in $(find . -type f -name Makefile); do
+    sed -i 's@(MAN2HTML_BIN) -r @(MAN2HTML_BIN) < @g' $Makefile
+    sed -i 's@ \$(MAN2HTML_SRC)/@ < \$(MAN2HTML_SRC)/@g' $Makefile
+  done
+
+  # fix some Makefile permission options
+  for Makefile in $(find . -type f -name Makefile); do
+    sed -i "s:-o root -g root ::g" $Makefile
+  done
+  # Do not ship xsession - Debian specific
+  sed -i -e '/xsession/s/^/#/' Makefile
+  
+  make PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir" PERL_INSTALLDIRS=vendor
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -j1 PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir" install
+
+  # systemd service file 
+  install -Dm 644 "$srcdir/${pkgname}-${pkgver}/x2goserver.service" "$pkgdir/usr/lib/systemd/system/x2goserver.service"
+  
+  # X2go homedir + printing spool dir
+  install -dm 770 $pkgdir/var/lib/x2go
+  install -dm 770 $pkgdir/var/spool/x2go
+  
+  # load fuse module at system start
+  install -dm755 $pkgdir/usr/lib/modules-load.d
+  echo "fuse" > $pkgdir/usr/lib/modules-load.d/x2goserver.conf
+
+  install -dm 755 "${pkgdir}/usr/share/doc/${pkgname}"
+  install -m 644 "ChangeLog" "${pkgdir}/usr/share/doc/${pkgname}/"
+
+  # fix permission
+  chmod 750 ${pkgdir}/etc/sudoers.d
+}
