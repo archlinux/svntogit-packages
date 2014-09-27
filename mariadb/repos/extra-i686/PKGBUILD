@@ -3,7 +3,7 @@
 
 pkgbase=mariadb
 pkgname=('libmariadbclient' 'mariadb-clients' 'mytop' 'mariadb')
-pkgver=10.0.13
+pkgver=10.0.14
 _pkgver=${pkgver/.a/a}
 pkgrel=1
 arch=('i686' 'x86_64')
@@ -14,10 +14,15 @@ source=(https://downloads.mariadb.org/interstitial/mariadb-$pkgver/source/mariad
         mariadb.service
         mariadb-post.sh
         mariadb-tmpfile.conf)
-md5sums=('7b2e88864b51d7d0607dc37abb8a0adb'
+md5sums=('80fea71de54a9cfa7f5508df53d3f06d'
          'd488fffa9f62f9949c4aa1bb6e6db692'
          'b79e65a5aa536e6b5bc60988eb0b78a2'
          '2fa6e456964d4ff5e6d4f9ff0126aed6')
+
+prepare() {
+  sed -i 's/_SVID_SOURCE/_DEFAULT_SOURCE/' \
+    $pkgbase-$pkgver/storage/tokudb/ft-index/cmake_modules/TokuSetupCompiler.cmake
+}
 
 build() {
   mkdir build
@@ -49,6 +54,7 @@ build() {
     -DWITH_SSL=system \
     -DWITH_PCRE=system \
     -DWITH_LIBWRAP=OFF \
+    -DWITH_JEMALLOC=OFF \
     -DWITH_EXTRA_CHARSETS=complex \
     -DWITH_EMBEDDED_SERVER=ON \
     -DWITH_ARCHIVE_STORAGE_ENGINE=1 \
@@ -61,7 +67,7 @@ build() {
     -DWITHOUT_PBXT_STORAGE_ENGINE=1 \
     -DCMAKE_C_FLAGS="-fPIC $CFLAGS -fno-strict-aliasing -DBIG_JOINS=1 -fomit-frame-pointer -fno-delete-null-pointer-checks" \
     -DCMAKE_CXX_FLAGS="-fPIC $CXXFLAGS -fno-strict-aliasing -DBIG_JOINS=1 -felide-constructors -fno-rtti -fno-delete-null-pointer-checks" \
-    -DWITH_MYSQLD_LDFLAGS="$LDFLAGS"
+    -DWITH_MYSQLD_LDFLAGS="-pie ${LDFLAGS},-z,now"
 
   make
 }
