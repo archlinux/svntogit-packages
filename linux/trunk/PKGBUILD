@@ -289,7 +289,7 @@ _package-docs() {
 pkgname=("${pkgbase}" "${pkgbase}-headers" "${pkgbase}-docs")
 for _p in ${pkgname[@]}; do
   eval "package_${_p}() {
-    _package${_p#${pkgbase}}
+    $(declare -f "_package${_p#${pkgbase}}")
   }"
 done
 
