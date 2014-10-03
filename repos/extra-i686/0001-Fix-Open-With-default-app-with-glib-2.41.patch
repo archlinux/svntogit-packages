@@ -1,0 +1,88 @@
+From fa0505341809837dec0dff7fbd7e197bd36d7e4f Mon Sep 17 00:00:00 2001
+From: Evangelos Foutras <evangelos@foutrelis.com>
+Date: Fri, 3 Oct 2014 06:59:54 +0300
+Subject: [PATCH] Fix "Open With" default app with glib >= 2.41
+
+Beginning with glib >= 2.41, g_app_info_get_all_for_type() no longer
+puts the default application in front of the list.
+
+This commit adds thunar_g_app_info_get_all_for_type() which imitates the
+old behavior of g_app_info_get_all_for_type() and moves the default
+application to the frond of the list.
+
+https://bugzilla.xfce.org/show_bug.cgi?id=11212
+---
+ thunar/thunar-file.c           |  2 +-
+ thunar/thunar-gio-extensions.c | 29 +++++++++++++++++++++++++++++
+ thunar/thunar-gio-extensions.h |  2 ++
+ 3 files changed, 32 insertions(+), 1 deletion(-)
+
+diff --git a/thunar/thunar-file.c b/thunar/thunar-file.c
+index c45cf81..ee2f467 100644
+--- a/thunar/thunar-file.c
++++ b/thunar/thunar-file.c
+@@ -4017,7 +4017,7 @@ thunar_file_list_get_applications (GList *file_list)
+ 
+       /* determine the list of applications that can open this file */
+       if (G_UNLIKELY (current_type != NULL))
+-        list = g_app_info_get_all_for_type (current_type);
++        list = thunar_g_app_info_get_all_for_type (current_type);
+       else
+         list = NULL;
+ 
+diff --git a/thunar/thunar-gio-extensions.c b/thunar/thunar-gio-extensions.c
+index 369c1f4..1c45443 100644
+--- a/thunar/thunar-gio-extensions.c
++++ b/thunar/thunar-gio-extensions.c
+@@ -513,6 +513,35 @@ thunar_g_file_list_to_stringv (GList *list)
+ 
+ 
+ 
++GList *
++thunar_g_app_info_get_all_for_type (const char *content_type)
++{
++  GList    *infos, *info;
++  GAppInfo *default_info;
++
++  infos = g_app_info_get_all_for_type (content_type);
++  default_info = g_app_info_get_default_for_type (content_type, FALSE);
++
++  if (default_info == NULL)
++    return infos;
++
++  for (info = infos; info; info = info->next)
++  {
++    if (g_app_info_equal (info->data, default_info))
++    {
++      g_object_unref (info->data);
++      infos = g_list_delete_link (infos, info);
++      break;
++    }
++  }
++
++  infos = g_list_prepend (infos, default_info);
++
++  return infos;
++}
++
++
++
+ gboolean
+ thunar_g_app_info_launch (GAppInfo          *info,
+                           GFile             *working_directory,
+diff --git a/thunar/thunar-gio-extensions.h b/thunar/thunar-gio-extensions.h
+index c19101e..b05c6cd 100644
+--- a/thunar/thunar-gio-extensions.h
++++ b/thunar/thunar-gio-extensions.h
+@@ -76,6 +76,8 @@ gchar   **thunar_g_file_list_to_stringv             (GList             *list);
+ #define   thunar_g_file_list_copy                   thunarx_file_info_list_copy
+ #define   thunar_g_file_list_free                   thunarx_file_info_list_free
+ 
++GList    *thunar_g_app_info_get_all_for_type        (const char *content_type);
++
+ gboolean  thunar_g_app_info_launch                  (GAppInfo          *info,
+                                                      GFile             *working_directory,
+                                                      GList             *path_list,
+-- 
+2.1.2
+
