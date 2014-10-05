@@ -5,7 +5,7 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=2.4.1
+pkgver=2.4.2
 pkgrel=1
 epoch=1
 pkgdesc='Complete and free Internet live audio and video broadcasting solution'
@@ -20,7 +20,7 @@ depends=(
 )
 makedepends=('libvdpau' 'yasm')
 source=(http://ffmpeg.org/releases/$pkgname-$pkgver.tar.bz2{,.asc})
-md5sums=('c36caa8d29b3677dcb7bd8c546890c9d'
+md5sums=('9e6163b09b7b9331b834d80874c2c0ff'
          'SKIP')
 
 build() {
