@@ -3,21 +3,33 @@
 
 pkgname=gitg
 pkgver=3.14.0
-pkgrel=1
+pkgrel=2
 pkgdesc='A GIT repository viewer based on GTK+'
 arch=('i686' 'x86_64')
 url='https://git.gnome.org/browse/gitg/'
 license=('GPL')
-depends=('gtksourceview3' 'git' 'desktop-file-utils' 'libgit2-glib' 'libgee' 'webkitgtk' 'libpeas' 'gtkspell3')
-makedepends=('intltool' 'vala' 'gobject-introspection' 'python2')
+depends=('gtksourceview3' 'git' 'desktop-file-utils' 'libgit2-glib' 'libgee' 'webkit2gtk' 'libpeas' 'gtkspell3')
+makedepends=('intltool' 'vala' 'gobject-introspection' 'python2' 'gnome-common')
 groups=('gnome-extra')
 install=gitg.install
-source=(ftp://ftp.gnome.org/pub/GNOME/sources/gitg/${pkgver:0:4}/${pkgname}-${pkgver}.tar.xz)
-sha256sums=('8e45a7198896eedd829a20ff8de437a08869d30005638114ca87abd42ffea11b')
+source=(ftp://ftp.gnome.org/pub/GNOME/sources/gitg/${pkgver:0:4}/${pkgname}-${pkgver}.tar.xz
+        webkit2gtk-4.0.patch)
+sha256sums=('8e45a7198896eedd829a20ff8de437a08869d30005638114ca87abd42ffea11b'
+            '3488adb8ea4ab40c1a8faa09d7c79e1933aa7667e3e6df2d644de750dc47d0d8')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -Np1 -i ../webkit2gtk-4.0.patch
+  AUTOPOINT='intltoolize --automake --copy' autoreconf -fi
+}
 
 build() {
   cd ${pkgname}-${pkgver}
   ./configure --prefix=/usr
+
+  # Don't overlink
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
+
   make WARN_CFLAGS="-Wall"
 }
 
