@@ -1,29 +1,22 @@
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
-pkgname=java-common
-pkgver=1
-pkgrel=8
-pkgdesc='Common files for Java Environments'
+pkgname=('java-runtime-common' 'java-environment-common')
+pkgbase=java-common
+pkgver=2
+pkgrel=1
 arch=('any')
 url='www.archlinux.org'
 license=('GPL')
 checkdepends=('wget')
-backup=(etc/profile.d/jre.sh
-        etc/profile.d/jre.csh)
-# TODO remove after a while
-replaces=('java-runtime-headless-meta' 'java-runtime-meta' 'java-environment-meta')
-install=install_java-common.sh
 source=(profile_jre.csh
         profile_jre.sh
         bin_archlinux-java
         test_archlinux-java
-        bin_java-common-wrapper
         https://shunit2.googlecode.com/files/shunit2-2.1.6.tgz)
 
-sha256sums=('72fa8a6d2d38f37ab51d36f383fa94bf424d494f0d3712b3af73daaf30046b2b'
-            'ffef7d042be3f20e3225780def56bcbadd75a74a3ceecc57c0af23d78e39cb54'
-            '00af7fe1894e0edc7663bfbdd626c68171cad7bc7d499f343f2eee9637d4b4c7'
-            'c28ffd3acc702e8cb02b3ec18516c0c4287614dd1f5803f9357a7a4c7c798f35'
-            '16a4fde19bd34210ff2d06480085f681b4e41e85ec89853e3cafaa8377bcedfb'
+sha256sums=('ab851cd30ee7f5c0d970163afe87f11797148fe8503dc1bd30f8a490e53f1246'
+            'e5837f87a6ab42f4f5c53ca5e5c678df67d9ea32611deea58521c144e126695c'
+            '272296ec7ca673b4f9f59fb70565328b6daef682c29cd964c988c018090c3fc2'
+            'c2c413a6b2f8b88ed170a5b19f7cb620518e09686f0d286b4b27d30f571e5050'
             '65a313a76fd5cc1c58c9e19fbc80fc0e418a4cbfbd46d54b35ed5b6e0025d4ee')
 
 check() {
@@ -31,11 +24,47 @@ check() {
   ./test_archlinux-java
 }
 
-build() {
+package_java-runtime-common() {
+  pkgdesc='Common files for Java Runtime Environments'
+  conflicts=('java-common')
+  replaces=('java-common')
+  backup=(etc/profile.d/jre.sh
+          etc/profile.d/jre.csh)
+  install=install_java-runtime-common.sh
+
   cd "${srcdir}"
+
+  install -d -m 755 "${pkgdir}/usr/lib/jvm/"
+  ln -s /dev/null "${pkgdir}/usr/lib/jvm/default"
+  ln -s /dev/null "${pkgdir}/usr/lib/jvm/default-runtime"
 
   install -D -m 644 profile_jre.sh  "${pkgdir}/etc/profile.d/jre.sh"
   install -D -m 644 profile_jre.csh "${pkgdir}/etc/profile.d/jre.csh"
-  install -D -m 755 bin_java-common-wrapper "${pkgdir}/usr/lib/java-common-wrapper"
   install -D -m 755 bin_archlinux-java "${pkgdir}/usr/bin/archlinux-java"
+
+  install -d -m 755 "${pkgdir}/usr/bin/"
+  # Official list of binaries that Java headless runtime packages MUST provide
+  # This list is based on Arch Linux' default Java implementation: "OpenJDK 7 Icedtea"
+  for b in \
+    java keytool orbd pack200 policytool rmid rmiregistry servertool tnameserv unpack200;
+  do
+    ln -s /usr/lib/jvm/default-runtime/bin/${b} "${pkgdir}/usr/bin/${b}"
+  done
+}
+
+package_java-environment-common() {
+  pkgdesc='Common files for Java Development Kits'
+
+  cd "${srcdir}"
+
+  install -d -m 755 "${pkgdir}/usr/bin/"
+  # Official list of supplementary binaries that Java environment packages MUST provide
+  # This list is based on Arch Linux' default Java implementation: "OpenJDK 7 Icedtea"
+  for b in \
+    appletviewer extcheck idlj jar jarsigner javac javadoc javah javap jcmd \
+    jconsole jdb jhat jinfo jmap jps jrunscript jsadebugd jstack jstat \
+    jstatd native2ascii rmic schemagen serialver wsgen wsimport xjc;
+  do
+    ln -s /usr/lib/jvm/default/bin/${b} "${pkgdir}/usr/bin/${b}"
+  done
 }
