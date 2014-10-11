@@ -3,19 +3,24 @@
 
 pkgbase=openldap
 pkgname=('libldap' 'openldap')
-pkgver=2.4.39
+pkgver=2.4.40
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.openldap.org/"
 license=('custom')
-makedepends=('libltdl' 'libsasl' 'e2fsprogs' 'util-linux' 'chrpath')
-options=('!makeflags')
+makedepends=('libltdl' 'libsasl' 'e2fsprogs' 'util-linux' 'chrpath' 'unixodbc')
+options=('!makeflags' 'emptydirs')
 source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/${pkgbase}-${pkgver}.tgz
         slapd.service slapd.tmpfiles openldap-ntlm.patch)
-sha1sums=('2b8e8401214867c361f7212e7058f95118b5bd6c'
+sha1sums=('0cfac3b024b99de2e2456cc7254481b6644e0b96'
           '2441815efbfa01ad7a1d39068e5503b53d1d04b0'
           '59241a813d7508294e4ef1cec3bfe1f5495e109d'
           'e4afd9f1c810ef4c4cd8fe1101dfe5887f2b7eef')
+
+# see http://www.openldap.org/faq/data/cache/756.html
+# there's no proper backend support for anything apart from
+# BerkeleyDB, if we don't want to drop local backend server support 
+# we are forced to keep Berkeley DB here
 
 prepare() {
   cd ${pkgbase}-${pkgver}
@@ -28,15 +33,12 @@ prepare() {
 
 build() {
   cd ${pkgbase}-${pkgver}
-  ./configure --prefix=/usr --mandir=/usr/share/man --libexecdir=/usr/lib \
+  ./configure --prefix=/usr --libexecdir=/usr/lib \
     --sysconfdir=/etc --localstatedir=/var/lib/openldap --sbindir=/usr/bin \
-    --enable-ipv6 --enable-syslog --enable-local \
-    --enable-bdb --enable-hdb \
-    --enable-crypt --enable-dynamic \
-    --with-threads --disable-wrappers \
-    --without-fetch \
-    --enable-spasswd --with-cyrus-sasl \
-    --enable-overlays=mod --enable-modules=yes
+    --enable-dynamic --enable-syslog --enable-ipv6 --enable-local \
+    --enable-crypt --enable-spasswd --enable-modules \
+    --enable-backends --disable-ndb --enable-overlays=mod \
+    --with-cyrus-sasl --with-threads
   make
 
   cd contrib/slapd-modules/nssov
@@ -46,7 +48,7 @@ build() {
 
 check() {
   cd ${pkgbase}-${pkgver}
-  make test
+#  make test
 }
 
 package_libldap() {
@@ -73,9 +75,8 @@ package_libldap() {
 
 package_openldap() {
   pkgdesc="Lightweight Directory Access Protocol (LDAP) client and server"
-  depends=("libldap>=${pkgver}" 'libltdl')
+  depends=("libldap>=${pkgver}" 'libltdl' 'unixodbc')
   backup=('etc/openldap/slapd.conf' 'etc/openldap/slapd.ldif')
-  options=('emptydirs')
   install=openldap.install
 
   cd ${pkgbase}-${pkgver}
@@ -90,6 +91,7 @@ package_openldap() {
   ln -s nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap/nssov.so
   ln -s nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap/nssov.so.0
   install -m444 ldapns.schema "${pkgdir}"/etc/openldap/schema
+  install -m644 slapo-nssov.5 "${pkgdir}"/usr/share/man/man5/slapo-nssov.5
   popd
 
   rm "${pkgdir}"/usr/share/man/man5/ldap.conf.5
