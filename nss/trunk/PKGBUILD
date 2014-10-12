@@ -4,7 +4,7 @@
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
 pkgver=3.17.1
-pkgrel=2
+pkgrel=1
 pkgdesc="Mozilla Network Security Services"
 arch=(i686 x86_64)
 url="http://www.mozilla.org/projects/security/pki/nss/"
@@ -14,20 +14,21 @@ depends=("nspr>=${_nsprver}" 'sqlite' 'zlib' 'sh' 'p11-kit')
 makedepends=('perl' 'python2')
 options=('!strip' '!makeflags' 'staticlibs')
 source=("ftp://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/${pkgbase}-${pkgver}.tar.gz"
-        certdata2pem.py
-        bundle.sh
+        "certdata2pem.py::http://anonscm.debian.org/cgit/collab-maint/ca-certificates.git/plain/mozilla/certdata2pem.py?id=15470c64b5464d273556a290b1e7b50b32a2e5a0"
         nss.pc.in
         nss-config.in
-        ssl-renegotiate-transitional.patch)
+        ssl-renegotiate-transitional.patch
+        certdata2pem.py-loudness.patch)
 sha256sums=('0e210afba7cd1e033a08f61fcd1f466639649fc413e72aa050f3d52c19376e5f'
-            'af13c30801a8a27623948206458432a4cf98061b75ff6e5b5e03912f93c034ee'
-            '045f520403f715a4cc7f3607b4e2c9bcc88fee5bce58d462fddaa2fdb0e4c180'
+            '57bd6f309736825fc0edbf7d522726224764520595dfdddd0dba59158839e863'
             'b9f1428ca2305bf30b109507ff335fa00bce5a7ce0434b50acd26ad7c47dd5bd'
             'e44ac5095b4d88f24ec7b2e6a9f1581560bd3ad41a3d198596d67ef22f67adb9'
-            '12df04bccbf674db1eef7a519a28987927b5e9c107b1dc386686f05e64f49a97')
+            '12df04bccbf674db1eef7a519a28987927b5e9c107b1dc386686f05e64f49a97'
+            '90f8e72fbcca9ce907dcf6565bcd95ca23d2da5d87caee64c141ac54680f8703')
 
 prepare() {
   mkdir certs
+  patch --follow-symlinks certdata2pem.py certdata2pem.py-loudness.patch
 
   cd nss-$pkgver
 
@@ -39,18 +40,16 @@ prepare() {
       -i nss/coreconf/rules.mk
 
   ln -sr nss/lib/ckfw/builtins/certdata.txt ../certs/
-  ln -sr nss/lib/ckfw/builtins/nssckbi.h ../certs/
 }
 
 
 build() {
   cd certs
   python2 ../certdata2pem.py
+  printf "mozilla/%s\n" *.crt > mozilla.conf
+  test -s mozilla.conf
 
-  cd ..
-  sh bundle.sh
-
-  cd nss-$pkgver/nss
+  cd ../nss-$pkgver/nss
   export BUILD_OPT=1
   export NSS_USE_SYSTEM_SQLITE=1
   export NSS_ENABLE_ECC=1
@@ -113,8 +112,11 @@ package_ca-certificates-mozilla() {
   depends=(ca-certificates-utils)
   install=ca-certificates-mozilla.install
 
-  local _certdir="$pkgdir/usr/share/ca-certificates/trust-source"
-  install -Dm644 ca-bundle.trust.crt "$_certdir/mozilla.trust.crt"
-  install -Dm644 ca-bundle.neutral-trust.crt "$_certdir/mozilla.neutral-trust.crt"
-  install -Dm644 ca-bundle.supplement.p11-kit "$_certdir/mozilla.supplement.p11-kit"
+  cd certs
+
+  local _certdir="$pkgdir/usr/share/ca-certificates/mozilla"
+  install -d "$_certdir"
+  install -t "$_certdir" -m644 *.crt
+
+  install -Dm644 mozilla.conf "$pkgdir/etc/ca-certificates/conf.d/mozilla.conf"
 }

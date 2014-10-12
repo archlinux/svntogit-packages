@@ -3,48 +3,35 @@
 
 pkgbase=ca-certificates
 pkgname=(ca-certificates-utils ca-certificates)
-pkgver=20140923
-pkgrel=4
+pkgver=20140325
+pkgrel=2
 pkgdesc='Common CA certificates'
 arch=('any')
-url='http://pkgs.fedoraproject.org/cgit/ca-certificates.git'
-license=('GPL2')
-depends=('sh' 'p11-kit')
-makedepends=('asciidoc')
-source=(update-ca-trust update-ca-trust.8.txt)
-sha256sums=('c737236405320440665c9e7034585fde95d34495fc65789591a7ab76dc7568d5'
-            '85e29428788bcb40136eecd7b05fa5e73f73f1468fa96da42991122ba39eb784')
+url='http://packages.qa.debian.org/c/ca-certificates.html'
+license=('MPL' 'GPL')
+depends=('bash' 'run-parts' 'openssl' 'findutils' 'coreutils' 'sed')
+makedepends=('python2')
+source=("http://ftp.debian.org/debian/pool/main/c/${pkgbase}/${pkgbase}_${pkgver}.tar.xz"
+	confd.patch)
+sha256sums=('c0e3d8c517995db2737f7f1a9b69d654b8823fa6d337871c6ce111fcf083454a'
+            '6a6efe688bd7f40dc57d07ad6bfdbb83f4853a1964c55e0620e833e6c2945dab')
 
-_confdir=/etc/$pkgbase
-_datadir=/usr/share/$pkgbase
-
-build() {
-	asciidoc.py -v -d manpage -b docbook update-ca-trust.8.txt
-	xsltproc --nonet -o update-ca-trust.8 /etc/asciidoc/docbook-xsl/manpage.xsl update-ca-trust.8.xml
+prepare() {
+	cd "${srcdir}/${pkgbase}"
+	patch -Np1 -i ../confd.patch
 }
 
 package_ca-certificates-utils() {
 	pkgdesc+=" (utilities)"
+	backup=('etc/ca-certificates.conf')
 	install=ca-certificates-utils.install
-	provides=(ca-certificates ca-certificates-java)
-	conflicts=(ca-certificates-java)
-	replaces=(ca-certificates-java)
+	provides=(ca-certificates)
 
-	install -D update-ca-trust "${pkgdir}/usr/bin/update-ca-trust"
-	install -Dm644 update-ca-trust.8 "${pkgdir}/usr/share/man/man8/update-ca-trust.8"
+	cd "${srcdir}/${pkgbase}"
 
-	install -d "${pkgdir}"{${_confdir},${_datadir}}/trust-source/{anchors,blacklist}
-
-	_extractdir="${pkgdir}${_confdir}/extracted"
-	_ssldir="${pkgdir}/etc/ssl"
-
-	install -d "${_ssldir}/certs/java" "${_extractdir}"/{openssl,pem,java}
-	ln -sr "${_extractdir}/openssl/ca-bundle.trust.crt" "${_ssldir}/certs/ca-bundle.trust.crt"
-	ln -sr "${_extractdir}/pem/tls-ca-bundle.pem" "${_ssldir}/cert.pem"
-
-	# These are inverted (for now?) to ease upgrading
-	ln -sr "${_ssldir}/certs/ca-certificates.crt" "${_extractdir}/pem/tls-ca-bundle.pem"
-	ln -sr "${_ssldir}/certs/java/cacerts" "${_extractdir}/java/cacerts" 
+	install -d "${pkgdir}"/{etc/{ca-certificates/update.d,ssl/certs},usr/share/ca-certificates}
+	install -Dm644 sbin/update-ca-certificates.8 "${pkgdir}/usr/share/man/man8/update-ca-certificates.8"
+	install -D sbin/update-ca-certificates "${pkgdir}/usr/bin/update-ca-certificates"
 }
 
 package_ca-certificates() {
