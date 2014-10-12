@@ -10,9 +10,6 @@ DEFAULT_NAME=default
 DEFAULT_PATH=${JVM_DIR}/${DEFAULT_NAME}
 DEFAULT_NAME_JRE=default-runtime
 DEFAULT_PATH_JRE=${JVM_DIR}/${DEFAULT_NAME_JRE}
-BIN_PATH=/usr/bin
-WRAPPER_PATH=/usr/lib/java-common-wrapper
-
 
 
 # Utility functions
@@ -37,7 +34,11 @@ check_param_count() {
 
 get_default_java() {
   path=$(readlink -e ${DEFAULT_PATH})
-  echo ${path/${JVM_DIR}\/}
+  if [ "x${path}" != "x/dev/null" ]; then
+    echo ${path/${JVM_DIR}\/}
+  else
+    echo ""
+  fi
 }
 
 get_installed_javas() {
@@ -58,20 +59,6 @@ get_installed_javas() {
 # $1: Java environment name to test
 is_java_valid() {
   test "x$1" != "x${DEFAULT_NAME}" && test -x ${JVM_DIR}/$1/bin/java
-}
-
-set_bin_links() {
-  find ${DEFAULT_PATH}/bin ! -type d -perm /a=x \
-    | while read bpath; do
-      ln -sf ${WRAPPER_PATH} ${BIN_PATH}/$(basename ${bpath}) > /dev/null 2>&1
-    done
-}
-
-unset_bin_links() {
-  find -L ${BIN_PATH} -samefile ${WRAPPER_PATH} \
-    | while read lpath; do
-      unlink ${lpath}
-    done
 }
 
 # $1: Java environment name to set as default
@@ -130,10 +117,8 @@ do_set() {
   default=$(get_default_java)
   if [ "x$1" != "x${default}" ] || ! is_java_valid ${default}; then
     unset_default_link
-    unset_bin_links
     set_default_link_to $1
   fi
-  set_bin_links
 
   #parent_dir=$(dirname $1)
   #if is_java_valid ${parent_dir}; then
@@ -145,7 +130,6 @@ do_set() {
 # $1: Java environment name to unset
 do_unset() {
   unset_default_link
-  unset_bin_links
 }
 
 do_fix() {
@@ -155,19 +139,15 @@ do_fix() {
       unset_default_link
       set_default_link_to $(dirname ${default})
     fi
-    unset_bin_links
-    set_bin_links
   else
     prev=$(readlink ${DEFAULT_PATH})
     unset_default_link
-    unset_bin_links
     prev_fix=("${prev/\/jre}" "${prev}/jre")
     openjdk7=('java-7-openjdk' 'java-7-openjdk/jre')
     to_check=(${prev_fix[@]} ${openjdk7[@]} $(get_installed_javas))
     for java in ${to_check[@]}; do
       if ! is_java_valid $(get_default_java) && is_java_valid ${java}; then
         set_default_link_to ${java}
-        set_bin_links
       fi
     done
   fi
