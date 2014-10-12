@@ -12,8 +12,6 @@ declare test_dir
 INIT_JVM_DIR=${JVM_DIR}
 INIT_DEFAULT_PATH=${DEFAULT_PATH}
 INIT_DEFAULT_PATH_JRE=${DEFAULT_PATH_JRE}
-INIT_BIN_PATH=${BIN_PATH}
-INIT_WRAPPER_PATH=${WRAPPER_PATH}
 
 # Redefining this so that tested script can be invoked without root privileges
 check_root() {
@@ -31,12 +29,7 @@ setUp() {
   DEFAULT_PATH=${test_dir}${INIT_DEFAULT_PATH}
   DEFAULT_PATH_JRE=${test_dir}${INIT_DEFAULT_PATH_JRE}
   JAVA_NAME=$(get_rand_str)
-  BIN_PATH=${test_dir}${INIT_BIN_PATH}
-  mkdir -p ${BIN_PATH}
-  WRAPPER_PATH=${test_dir}${INIT_WRAPPER_PATH}
-  mkdir -p $(dirname ${WRAPPER_PATH})
-  touch ${WRAPPER_PATH}
-  chmod +x ${WRAPPER_PATH}
+  mkdir -p ${JVM_DIR}
 }
 
 tearDown() {
@@ -64,13 +57,7 @@ create_valid_jdk_env() {
 
 set_default_for_test() {
   ln -s $1 ${DEFAULT_PATH}
-  for binary in java keytool orbd; do
-    ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
-  done
   if [ -d ${DEFAULT_PATH}/jre ]; then
-    for binary in javac javah jhat; do
-      ln -s ${WRAPPER_PATH} ${BIN_PATH}/${binary}
-    done
     ln -s $1/jre ${DEFAULT_PATH_JRE}
   else
     ln -s $1 ${DEFAULT_PATH_JRE}
@@ -80,8 +67,6 @@ set_default_for_test() {
 assertDefaultNotSet() {
   assertNull 'Default is set' "$(readlink ${DEFAULT_PATH})"
   assertNull 'Default runtime is set' "$(readlink ${DEFAULT_PATH_JRE})"
-  assertNull "PATH has a java binary" "$(readlink ${BIN_PATH}/java)"
-  assertNull "PATH has a javac binary" "$(readlink ${BIN_PATH}/javac)"
 }
 
 assertDefaultSetTo() {
@@ -90,17 +75,6 @@ assertDefaultSetTo() {
   if [ ${new_java} == */jre ]; then
     assertEquals "Default runtime points at wrong Java env" "${new_java}/jre" "$(readlink ${DEFAULT_PATH_JRE})"
   fi
-  # For all links in /usr/bin that point at the wrapper
-  for lpath in $(find -L ${BIN_PATH} -samefile ${WRAPPER_PATH}); do
-    # There is a binary in the JVM bin dir
-    assertTrue 'Wrong /usr/bin link' "test -x ${JVM_DIR}/${new_java}/bin/$(basename ${lpath})"
-  done
-  # For all executable binaries provided by the Java env
-  for binary in $(find ${JVM_DIR}/${new_java}/bin -type f -perm /a=x); do
-    # There is a link in /usr/bin
-    bin_link=${BIN_PATH}/$(basename ${binary})
-    assertEquals 'No link in /usr/bin' "${WRAPPER_PATH}" "$(readlink ${bin_link})"
-  done
 }
 
 # do_status
@@ -155,6 +129,11 @@ test_do_get_without_default() {
   assertNull 'Wrong result' "$(do_get)"
 }
 
+test_do_get_without_default() {
+  set_default_for_test "/dev/null"
+  assertNull 'Wrong result' "$(do_get)"
+}
+
 # do_set
 
 test_do_set_new_invalid() {
@@ -169,15 +148,6 @@ test_do_set_new_invalid() {
 test_do_set_current_invalid() {
   create_valid_jdk_env "${JAVA_NAME}"
   set_default_for_test "INVALID"
-  $(do_set "${JAVA_NAME}")
-  assertEquals 'Wrong status returned' 0 $?
-  assertDefaultSetTo "${JAVA_NAME}"
-}
-
-test_do_set_same_java_missing_bin_link() {
-  create_valid_jdk_env "${JAVA_NAME}"
-  set_default_for_test "${JAVA_NAME}"
-  unlink ${BIN_PATH}/java
   $(do_set "${JAVA_NAME}")
   assertEquals 'Wrong status returned' 0 $?
   assertDefaultSetTo "${JAVA_NAME}"
@@ -219,6 +189,14 @@ test_do_set_cleanup_old_java_default() {
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
+test_do_set_devnull() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "/dev/null"
+  output=$(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
 # do_unset
 
 test_do_unset_default_not_target() {
@@ -232,6 +210,12 @@ test_do_unset_no_default_link() {
   create_valid_jdk_env "${JAVA_NAME}"
   set_default_for_test "${JAVA_NAME}"
   unlink ${DEFAULT_PATH}
+  do_unset
+  assertDefaultNotSet
+}
+
+test_do_unset_devnull() {
+  set_default_for_test "/dev/null"
   do_unset
   assertDefaultNotSet
 }
@@ -291,14 +275,11 @@ test_do_fix_jdk_but_jre_exists() {
   assertDefaultSetTo "${JAVA_NAME}/jre"
 }
 
-test_do_fix_cleanup_old_java_default() {
-  create_valid_jre_env "${JAVA_NAME}/jre"
-  set_default_for_test "${JAVA_NAME}/jre"
-  # Simulate installation of a jre over a jre-headless
-  ln -s ${WRAPPER_PATH} ${BIN_PATH}/policytool
-  output=$(do_fix "${JAVA_NAME}/jre")
-  assertEquals 'Wrong status returned' 0 $?
-  assertDefaultSetTo "${JAVA_NAME}/jre"
+test_do_fix_devnull() {
+  create_valid_jdk_env "${JAVA_NAME}"
+  set_default_for_test "/dev/null"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
 }
 
 # load shunit2
