@@ -14,7 +14,7 @@ _jdk_update=20
 _jdk_build=23
 pkgver=${_java_ver}.u${_jdk_update}
 _repo_ver=jdk${_java_ver}u${_jdk_update}-b${_jdk_build}
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url='http://openjdk.java.net/'
 license=('custom')
@@ -126,7 +126,7 @@ build() {
 
 package_jre8-openjdk-headless() {
   pkgdesc='OpenJDK Java 8 headless runtime environment'
-  depends=('java-common' 'ca-certificates-java' 'nss')
+  depends=('java-runtime-common' 'ca-certificates-java' 'nss')
   optdepends=('java-rhino: for some JavaScript support')
   provides=('java-runtime-headless=8' 'java-runtime-headless-openjdk=8')
   # Upstream config files that should go to etc and get backup
@@ -235,7 +235,7 @@ package_jre8-openjdk() {
 
 package_jdk8-openjdk() {
   pkgdesc='OpenJDK Java 8 development kit'
-  depends=("jre8-openjdk=${pkgver}-${pkgrel}")
+  depends=('java-environment-common' "jre8-openjdk=${pkgver}-${pkgrel}")
   provides=('java-environment=8' 'java-environment-openjdk=8')
   replaces=('jdk8-openjdk-wm')
   install=install_jdk8-openjdk.sh
