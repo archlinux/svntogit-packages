@@ -14,7 +14,8 @@ backup=(boot/syslinux/syslinux.cfg)
 install=syslinux.install
 license=(GPL2)
 # syslinux build system is a mess of submakes that does not work with -jN
-options=(!makeflags)
+# efi32/com32 do not like Arch cflags/ldflags, though it would be nice to have the flags for userspace tools
+options=(!makeflags !buildflags)
 makedepends=(git python2 nasm upx asciidoc)
 if [[ "$CARCH" == x86_64 ]]; then
   # efi32 needs it
@@ -34,8 +35,8 @@ source=(git://git.kernel.org/pub/scm/boot/syslinux/syslinux.git#tag=$_tag
         syslinux.cfg
         syslinux-install_update)
 sha1sums=('SKIP'
-          '0640bd89e2ba609bab20db671e14f74e26554873'
-          '15db7e99259bed1c88907d0561f1af4174d1cc65')
+          '1145f454bd297d373ad123425f93620c3e92f585'
+          'd22e7e3fc544cf8a49f27ae9a25f17e65f575ea1')
 
 _targets='bios efi32'
 case "$CARCH" in
@@ -54,12 +55,6 @@ prepare() {
 
 build() {
   cd syslinux
-
-  # it would be great to use Arch cflags/ldflags for userspace tools
-  unset CFLAGS
-  unset CPPFLAGS
-  unset CXXFLAGS
-  unset LDFLAGS
   make PYTHON=python2 $_targets
 }
 
@@ -70,12 +65,15 @@ check() {
 
 package() {
   cd syslinux
-  make $_targets install INSTALLROOT="$pkgdir" SBINDIR=/usr/bin MANDIR=/usr/share/man
+  make $_targets install INSTALLROOT="$pkgdir" SBINDIR=/usr/bin MANDIR=/usr/share/man AUXDIR=/usr/lib/syslinux
 
-  rm -r "$pkgdir"/usr/share/syslinux/{com32,dosutil,syslinux.com}
+  rm -r "$pkgdir"/usr/lib/syslinux/{com32,dosutil,syslinux.com}
   install -D -m644 COPYING "$pkgdir"/usr/share/licenses/syslinux/COPYING
   install -d "$pkgdir"/usr/share/doc
   cp -ar doc "$pkgdir"/usr/share/doc/syslinux
+
+  install -d "$pkgdir"/usr/lib/syslinux/bios
+  mv "$pkgdir"/usr/lib/syslinux/{*.bin,*.c32,*.0,memdisk} "$pkgdir"/usr/lib/syslinux/bios 
 
   install -D -m0644 ../syslinux.cfg "$pkgdir"/boot/syslinux/syslinux.cfg
   install -D -m0755 ../syslinux-install_update "$pkgdir"/usr/bin/syslinux-install_update
