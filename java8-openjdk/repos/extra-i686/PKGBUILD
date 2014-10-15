@@ -10,11 +10,11 @@
 pkgname=('jre8-openjdk-headless' 'jre8-openjdk' 'jdk8-openjdk' 'openjdk8-src' 'openjdk8-doc')
 pkgbase=java8-openjdk
 _java_ver=8
-_jdk_update=20
-_jdk_build=23
+_jdk_update=25
+_jdk_build=18
 pkgver=${_java_ver}.u${_jdk_update}
 _repo_ver=jdk${_java_ver}u${_jdk_update}-b${_jdk_build}
-pkgrel=4
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://openjdk.java.net/'
 license=('custom')
@@ -32,14 +32,14 @@ source=(jdk8u-${_repo_ver}.tar.gz::${_url_src}/archive/${_repo_ver}.tar.gz
         001_adjust-mflags-for-gmake-4.patch
         003_nonreparenting-wm.patch)
 
-sha256sums=('ec0b86c0a5883f769cb951a96a0b61734aa7e3c2b62e3b448f7bf6866a36c237'
-            'e979396e3d64af94664932a28eb63d3048bdf3595f180bd4bd3fad91bc8b685c'
-            'ba0c359bb99b82fb2eca37ba5d2a7e775bd9f67749e41cbbf6a059677f20750a'
-            '7f66b915b4ad378710cf1b8e52a3615105457d6a93aaf6183b76d7d6dfa14c14'
-            '3d19d5b7fd7a13ed2bf860491731ca6c928ed0d44e10910f2d43340f627714f7'
-            '046de26b27cf7f24b77c33af249aac7fa8d14269306ed2e1f9517cce279243c3'
-            '05177c5ba5ec95d041d46e871358692ff1e62f8568c8c9580688b39e5165d580'
-            '2499b19562e320eb304be8797c2a895f1fe2ab2d16fd7da68aeaed180b3f1899'
+sha256sums=('90eb3f3cb7094e609686168ec52ba462ef0f9832a4264bd1575e5896a6dd85c3'
+            '61d0bba710d6803b0368c93bc9182b0b40348eed81d578886a03904baf61ba6f'
+            'e574567b48f57c5cdeebae6fa22e2482c05446dbf9133e820f2d95e99459ddf2'
+            '8ef05535a0e03c4262d55cc67887e884f3fda8e4872cbc2941dcb216ef1460ca'
+            'afbdf119af2ffc0f9cd6eb93e6dac8e6a56a4ed4b68c7ff07f9b0c1a6bd56a8f'
+            '2e91c958024e6b64f7484b8225e07edce3bd3bcde43081fb73f32e4b73ef7b87'
+            'f292afe8540436090489841771259b274e3c36d42f11d0f58ba8082cd24fcc66'
+            '98b4fc2d448920b81404ce745d9c00e9a33b58e123176dec4074caf611c3f9c2'
             '682104f7723c5c543c47b53f51cc5577e273a12343bd04bebd1bcd70dd72ded9'
             'c41cec7415ace2f68a5f9529e6df7e87a8c21993ab9d040b0f8b395f6173d478')
 
