@@ -2,36 +2,46 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Antonio Rojas
 
-pkgname=breeze
+pkgbase=breeze
+pkgname=('breeze' 'breeze-kde4')
 pkgver=5.1.0.1
-pkgrel=1
-pkgdesc='Artwork, styles and assets for the Breeze visual style for the Plasma Desktop'
+pkgrel=2
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/kde/workspace/breeze'
 license=('LGPL')
-depends=('frameworkintegration')
-makedepends=('extra-cmake-modules' 'python')
-optdepends=('breeze-kde4: Breeze widget style for KDE4 applications'
-            'oxygen-icons: fallback icon theme')
-source=("http://download.kde.org/stable/plasma/5.1.0/$pkgname-$pkgver.tar.xz")
+makedepends=('extra-cmake-modules' 'frameworkintegration' 'kdelibs' 'automoc4')
+source=("http://download.kde.org/stable/plasma/5.1.0/$pkgbase-$pkgver.tar.xz")
 md5sums=('548aa4ac6e1ae8b3ff5756cb15d2ecc4')
 
 prepare() {
-  mkdir -p build
+  mkdir build{,-kde4}
 }
 
 build() {
   cd build
-  cmake ../$pkgname-$pkgver \
+  cmake ../${pkgbase}-${pkgver} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLIB_INSTALL_DIR=lib \
     -DKDE_INSTALL_USE_QT_SYS_PATHS=ON \
     -DBUILD_TESTING=OFF
   make
+
+  cd ../build-kde4
+  cmake ../${pkgbase}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DUSE_KDE4=ON \
+    -DBUILD_TESTING=OFF
+  make
 }
 
-package() {
+package_breeze() {
+  depends=('frameworkintegration')
+  pkgdesc='Artwork, styles and assets for the Breeze visual style for the Plasma Desktop'
+  optdepends=('breeze-kde4: Breeze widget style for KDE4 applications'
+              'oxygen-icons: fallback icon theme')
+
   cd build
   make DESTDIR="${pkgdir}" install
 
@@ -39,4 +49,16 @@ package() {
   install -d "$pkgdir"/usr/share/apps/{QtCurve,color-schemes}
   ln -s /usr/share/QtCurve/Breeze.qtcurve "$pkgdir"/usr/share/apps/QtCurve/
   ln -s /usr/share/color-schemes/Breeze{,Dark}.colors "$pkgdir"/usr/share/apps/color-schemes/
+}
+
+package_breeze-kde4() {
+  pkgdesc='Artwork, styles and assets for the Breeze visual style for the KDE4'
+  depends=('kdelibs')
+
+  cd build-kde4
+  make DESTDIR="${pkgdir}" install
+
+  # needed for pure Qt4 apps
+  install -d "$pkgdir"/usr/lib/qt4/plugins/styles
+  ln -s /usr/lib/kde4/plugins/styles/breeze.so "$pkgdir"/usr/lib/qt4/plugins/styles
 }
