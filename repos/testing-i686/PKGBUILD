@@ -6,8 +6,8 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.19
-pkgrel=2
+pkgver=0.19.1
+pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -16,21 +16,15 @@ depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'f
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl' 'libmpdclient'
          'boost-libs')
 makedepends=('boost' 'doxygen')
-#source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
-source=("http://www.musicpd.org/download/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
         'tmpfiles.d'
         'conf')
-sha1sums=('1e86d7a724394e81ca0c248f032fc042aee9d2dc' 'SKIP'
+sha1sums=('68f1ff43a2dd4de913d6c979db504dc2955f5737' 'SKIP'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '291fd5cda9f0845834a553017327c4586bd853f6')
 
 backup=('etc/mpd.conf')
 install=install
-
-prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	touch systemd/mpd.socket
-}
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
