@@ -3,38 +3,62 @@
 # Contributor: Balló György <ballogyor+arch at gmail dot com>
 
 pkgbase=libaccounts-qt
-pkgname=('libaccounts-qt' 'libaccounts-qt-doc')
+pkgname=('libaccounts-qt4' 'libaccounts-qt5')
 pkgver=1.13
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://code.google.com/p/accounts-sso/"
 license=('LGPL')
-makedepends=('qt4' 'libaccounts-glib' 'doxygen')
-source=("ftp://ftp.archlinux.org/other/packages/${pkgname}/accounts-qt-$pkgver.tar.bz2")
+makedepends=('qt4' 'libaccounts-glib' 'doxygen' 'qt5-base')
+source=("ftp://ftp.archlinux.org/other/packages/${pkgbase}/accounts-qt-$pkgver.tar.bz2")
 sha1sums=('df4f51ea3dac547e0cbdda04d60f6c501d6280f2')
 
 prepare() {
   cd accounts-qt-$pkgver
   sed -i 's|SUBDIRS  += Accounts tests|SUBDIRS += Accounts|' accounts-qt.pro
+  cd ..
 
+  cp -r accounts-qt-${pkgver} accounts-qt-${pkgver}-qt4
+
+  # Qt4 fix
+  cd accounts-qt-${pkgver}-qt4
   sed -i 's|QHG_LOCATION           = qhelpgenerator|QHG_LOCATION = qhelpgenerator-qt4|' doc/doxy.conf
 }
 
 build() {
   cd accounts-qt-$pkgver
+  qmake PREFIX=/usr LIBDIR=/usr/lib
+  make
+  cd ..
+
+  cd accounts-qt-$pkgver-qt4
   qmake-qt4 PREFIX=/usr LIBDIR=/usr/lib
   make
 }
 
-package_libaccounts-qt() {
-  pkgdesc="Qt-based client library for accessing the online accounts database"
+package_libaccounts-qt4() {
+  pkgdesc="Qt4-based client library for accessing the online accounts database"
   depends=('qt4' 'libaccounts-glib')
+  provides=('libaccounts-qt')
+  conflicts=('libaccounts-qt')
+  replaces=('libaccounts-qt')
 
-  cd accounts-qt-$pkgver
-  make INSTALL_ROOT="$pkgdir" install_subtargets
+  cd accounts-qt-$pkgver-qt4
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Remove docs to fix conflicts
+  rm -rf "${pkgdir}"/usr/share/doc
+  rmdir "${pkgdir}"/usr/share
 }
 
-package_libaccounts-qt-doc() {
+package_libaccounts-qt5() {
+  pkgdesc="Qt5-based client library for accessing the online accounts database"
+  depends=('qt5-base' 'libaccounts-glib')
+
   cd accounts-qt-$pkgver
-  make INSTALL_ROOT="$pkgdir" install_documentation
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Remove docs to fix conflicts
+  rm -rf "${pkgdir}"/usr/share/doc
+  rmdir "${pkgdir}"/usr/share
 }
