@@ -2,21 +2,19 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Antonio Rojas
 
-pkgname=oxygen
+pkgbase=oxygen
+pkgname=('oxygen' 'oxygen-kde4')
 pkgver=5.1.0.1
-pkgrel=1
-pkgdesc='KDE Oxygen style'
+pkgrel=2
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/kde/workspace/oxygen'
 license=('LGPL')
-depends=('frameworkintegration' 'kwin')
-makedepends=('extra-cmake-modules' 'kdoctools')
-groups=('plasma-next')
+makedepends=('frameworkintegration' 'kwin' 'extra-cmake-modules' 'kdoctools' 'kdelibs' 'automoc4')
 source=("http://download.kde.org/stable/plasma/5.1.0/${pkgname}-${pkgver}.tar.xz")
 md5sums=('24667744ad797a612d0fe57b2b1d30e0')
 
 prepare() {
-  mkdir -p build
+  mkdir -p build{,-kde4}
 }
 
 build() {
@@ -28,9 +26,35 @@ build() {
     -DKDE_INSTALL_USE_QT_SYS_PATHS=ON \
     -DBUILD_TESTING=OFF
   make
+  cd ..
+
+  cd build-kde4
+  cmake ../$pkgname-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF \
+    -DUSE_KDE4=ON
+  make
 }
 
-package() {
+package_oxygen() {
+  pkgdesc='KDE Oxygen style'
+  depends=('frameworkintegration' 'kwin')
+  groups=('plasma-next')
+
   cd build
   make DESTDIR="${pkgdir}" install
+}
+
+package_oxygen-kde4() {
+  pkgdesc='KDE Oxygen style for KDE4 applications'
+  depends=('kdelibs')
+  conflicts=('kdebase-workspace')
+
+  cd build-kde4
+  make DESTDIR="${pkgdir}" install
+
+  # needed so that pure Qt4 apps are correctly themed
+  install -d -m755 "$pkgdir"/usr/lib/qt4/plugins/styles
+  ln -s /usr/lib/kde4/plugins/styles/oxygen.so "$pkgdir"/usr/lib/qt4/plugins/styles
 }
