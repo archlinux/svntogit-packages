@@ -4,7 +4,7 @@
 pkgbase="cups"
 pkgname=('libcups' 'cups')
 pkgver=2.0.0
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.cups.org/"
@@ -20,12 +20,10 @@ source=(http://www.cups.org/software/${pkgver}/cups-${pkgver}-source.tar.bz2{,.s
         cups-1.6.2-statedir.patch
         cups-1.6.0-fix-install-perms.patch
         # bugfixes
-    #    cups-res_init.patch # FC
-    #    cups-avahi-address.patch # FC
-    #    cups-enum-all.patch #FC 
-    #    cups-final-content-type.patch #FC
-    #    ppd-poll-with-client-conf.patch # Debian
-)
+        str4497.patch
+        str4495.patch
+        str4500.patch # FC
+        )
 md5sums=('2cdd81fea23e9e29555c24bdfd0d7c89'
          'SKIP'
          'fc8286f185e2cc5f7e1f6843bf193e2b'
@@ -34,7 +32,10 @@ md5sums=('2cdd81fea23e9e29555c24bdfd0d7c89'
          '1beb4896f217bc241bc08a422274ec0c'
          '90c30380d4c8cd48a908cfdadae1ea24'
          '451609db34f95209d64c38474de27ce1'
-         '5117f65342fcc69c6a506529e4daca9e')
+         '5117f65342fcc69c6a506529e4daca9e'
+         '5aab5a160482d89e5d2a4def1f83ef8f'
+         '84da6459947d4fb62398e9bad7922a11'
+         '8c0514e41c3b50b2b838b218f683e227')
 
 prepare() {
 
@@ -53,16 +54,22 @@ prepare() {
   patch -Np0 -i ${srcdir}/cups-1.6.0-fix-install-perms.patch
 
   # bug fixes 
-  # Debian patch for http://www.cups.org/str.php?L2763
-#  patch -Np1 -i ${srcdir}/ppd-poll-with-client-conf.patch
-  # FC: Re-initialise the resolver on failure in httpAddrGetList() 
-#  patch -Np1 -i ${srcdir}/cups-res_init.patch
-  # FC: Use IP address when resolving DNSSD URIs
-#  patch -Np1 -i ${srcdir}/cups-avahi-address.patch
-  # FC: Return from cupsEnumDests() once all records have been returned.
-#  patch -Np1 -i ${srcdir}/cups-enum-all.patch
-  # FC: Fix printing to some network printers fails - https://bugs.archlinux.org/task/37605
-#  patch -Np1 -i ${srcdir}/cups-final-content-type.patch
+  
+    # https://www.cups.org/str.php?L4497 + https://www.cups.org/str.php?L4491
+  # "Port 631" binds to localhost only (systemd regression)
+  patch -Np0 -i ${srcdir}/str4497.patch
+
+  # https://bugs.archlinux.org/task/40937 - https://www.cups.org/str.php?L4495
+  # adds a warning to the config file and honors the FatalErrors directive
+  patch -Np0 -i ${srcdir}/str4495.patch
+  
+  # https://www.cups.org/str.php?L4500
+  # /etc/cups/ppd/*.ppd not world-readable, cupsGetPPD() returns symlink
+  patch -Np1 -i ${srcdir}/str4500.patch
+  
+  
+  # set MaxLogSize to 0 to prevent using cups internal log rotation
+  sed -i -e '1iMaxLogSize 0' conf/cupsd.conf.in
   
   # Rebuild configure script for not zipping man-pages.
   aclocal -I config-scripts
