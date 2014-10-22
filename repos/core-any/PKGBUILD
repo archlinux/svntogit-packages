@@ -3,7 +3,7 @@
 
 pkgname=linux-firmware
 # Commit date + git rev-parse --short origin/master
-pkgver=20140828.13eb208
+pkgver=20141009.0e5f637
 pkgrel=1
 pkgdesc="Firmware files for Linux"
 makedepends=('git')
@@ -36,17 +36,21 @@ replaces=('kernel26-firmware'
           'rt2x00-rt71w-fw'
           'amd-ucode')
 options=(!strip)
-source=('git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git#commit=13eb208681bf7cc7434189dd925e587d12707d50')
+source=('git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git#commit=0e5f637')
 md5sums=('SKIP')
 
 package() {
   cd "${srcdir}/${pkgname}"
-  # remove not needed Makefile #35236
-  rm Makefile
-  install -d -m755 "${pkgdir}/usr/lib/firmware"
-  cp -a * "${pkgdir}/usr/lib/firmware/"
-  install -d -m755 "${pkgdir}/usr/share/licenses/linux-firmware/"
-  rm -f "${pkgdir}/usr/lib/firmware/"{README*,configure,GPL*}
-  mv "${pkgdir}/usr/lib/firmware"/{LICEN*,WHENCE} "${pkgdir}/usr/share/licenses/linux-firmware/"
+
+  make DESTDIR="${pkgdir}" FIRMWAREDIR=/usr/lib/firmware install
+  rm "${pkgdir}/usr/lib/firmware/"{Makefile,README,configure,GPL-3}
+
+  install -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm644 LICEN* WHENCE "${pkgdir}/usr/share/licenses/linux-firmware/"
+
+  # Trigger a microcode reload for configurations not using early updates
+  install -d "${pkgdir}/usr/lib/tmpfiles.d"
+  echo 'w /sys/devices/system/cpu/microcode/reload - - - - 1' \
+    >"${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
 }
 # vim:set ts=2 sw=2 et:
