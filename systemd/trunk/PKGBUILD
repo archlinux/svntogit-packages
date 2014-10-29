@@ -158,7 +158,6 @@ package_systemd-sysvcompat() {
   groups=('base')
   conflicts=('sysvinit')
   depends=('systemd')
-  arch=('any')
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
