@@ -3,26 +3,37 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=216
-pkgrel=3
+pkgver=217
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
-             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libgcrypt'  'libmicrohttpd' 'libxslt'
-             'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml'
+             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libidn' 'libgcrypt' 'libmicrohttpd'
+             'libxslt' 'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml'
              'quota-tools' 'shadow' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
+        '0001-nspawn-ignore-EEXIST-when-creating-mount-point.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
-md5sums=('04fda588a04f549da0f397dce3ae6a39'
+md5sums=('e68dbff3cc19f66e341572d9fb2ffa89'
+         'ca9e33118fd8d456563854d95512a577'
          '29245f7a240bfba66e2b1783b63b6b40'
          '66cca7318e13eaf37c5b7db2efa69846'
          'bde43090d4ac0ef048e3eaee8202a407')
 
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  patch -Np1 <../0001-nspawn-ignore-EEXIST-when-creating-mount-point.patch
+}
+
 build() {
   cd "$pkgname-$pkgver"
+
+  local timeservers=({0..3}.arch.pool.ntp.org)
 
   ./configure \
       --libexecdir=/usr/lib \
@@ -36,7 +47,7 @@ build() {
       --disable-kdbus \
       --with-sysvinit-path= \
       --with-sysvrcnd-path= \
-      --with-firmware-path="/usr/lib/firmware/updates:/usr/lib/firmware"
+      --with-ntp-servers="${timeservers[*]}"
 
   make
 }
@@ -45,7 +56,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
   depends=('acl' 'bash' 'dbus' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
-           'libsystemd' 'pam' 'libseccomp' 'util-linux' 'xz')
+           'libsystemd' 'libidn' 'pam' 'libseccomp' 'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
@@ -147,6 +158,7 @@ package_systemd-sysvcompat() {
   groups=('base')
   conflicts=('sysvinit')
   depends=('systemd')
+  arch=('any')
 
   mv "$srcdir/_sysvcompat"/* "$pkgdir"
 
