@@ -4,23 +4,29 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=217
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'kmod' 'libcap' 'libidn' 'libgcrypt' 'libmicrohttpd'
-             'libxslt' 'util-linux' 'linux-api-headers' 'pam' 'python' 'python-lxml'
-             'quota-tools' 'shadow' 'xz')
+             'libxslt' 'util-linux' 'linux-api-headers' 'lz4' 'pam' 'python'
+             'python-lxml' 'quota-tools' 'shadow' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-nspawn-ignore-EEXIST-when-creating-mount-point.patch'
+        '0001-sd-dhcp-client-clean-up-raw-socket-sd_event_source-w.patch'
+        '0001-shared-install-avoid-prematurely-rejecting-missing-u.patch'
+        '0001-sd-bus-properly-handle-removals-of-non-existing-matc.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
 md5sums=('e68dbff3cc19f66e341572d9fb2ffa89'
          'ca9e33118fd8d456563854d95512a577'
+         'ade8c1b5b2c85d0a83b7bcf5aa6d131a'
+         '7aaf44ce842deb449fca0f2595bbc1e4'
+         '4adc3ddce027693bafa53089322e859b'
          '29245f7a240bfba66e2b1783b63b6b40'
-         '66cca7318e13eaf37c5b7db2efa69846'
+         '030a01fd468af520a749159b0a582eba'
          'bde43090d4ac0ef048e3eaee8202a407')
 
 
@@ -28,6 +34,9 @@ prepare() {
   cd "$pkgname-$pkgver"
 
   patch -Np1 <../0001-nspawn-ignore-EEXIST-when-creating-mount-point.patch
+  patch -Np1 <../0001-sd-dhcp-client-clean-up-raw-socket-sd_event_source-w.patch
+  patch -Np1 <../0001-shared-install-avoid-prematurely-rejecting-missing-u.patch
+  patch -Np1 <../0001-sd-bus-properly-handle-removals-of-non-existing-matc.patch
 }
 
 build() {
@@ -41,6 +50,7 @@ build() {
       --sysconfdir=/etc \
       --enable-introspection \
       --enable-gtk-doc \
+      --enable-lz4 \
       --enable-compat-libs \
       --disable-audit \
       --disable-ima \
@@ -56,7 +66,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
   depends=('acl' 'bash' 'dbus' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
-           'libsystemd' 'libidn' 'pam' 'libseccomp' 'util-linux' 'xz')
+           'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp' 'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
