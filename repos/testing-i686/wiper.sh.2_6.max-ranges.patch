@@ -1,0 +1,84 @@
+--- hdparm-9.28/wiper/wiper.sh.orig	2010-03-09 06:17:37.000000000 -0800
+--- hdparm-9.28/wiper/wiper.sh	2010-05-15 03:08:02.182856971 -0700
+@@ -29,7 +29,7 @@
+ function usage_error(){
+ 	echo >&2
+ 	echo "Linux tune-up (TRIM) utility for SATA SSDs"
+-	echo "Usage:  $0 [--verbose] [--commit] <mount_point|block_device>" >&2
++	echo "Usage:  $0 [--max-ranges <num>] [--verbose] [--commit] <mount_point|block_device>" >&2
+ 	echo "   Eg:  $0 /dev/sda1" >&2
+ 	echo >&2
+ 	exit 1
+@@ -44,6 +44,7 @@
+ 
+ export verbose=0
+ commit=""
++max_ranges=-1
+ destroy_me=""
+ argc=$#
+ arg=""
+@@ -51,6 +52,10 @@
+ 		commit=yes
+ 	elif [ "$1" = "--verbose" ]; then
+ 		verbose=$((verbose + 1))
++	elif [ "$1" = "--max-ranges" -a $argc -gt 1 ]; then
++		max_ranges=$2
++		argc=$((argc - 1))
++		shift
+ 	elif [ "$1" = "" ]; then
+ 		usage_error
+ 	else
+@@ -499,6 +550,18 @@
+ 	fi
+ fi
+ 
++## Different SSD's have a different maximum number of ranges they'll accept
++## in a single TRIM command.
++if [ $max_ranges -le 0 ] ; then
++	model=`$HDPARM -I $rawdev | $GAWK '/Model Number/ { print $NF }'`
++	case "$model" in
++		SSDSA[12]*)  max_ranges=512 ;;	# Intel X18-M/X25-M
++		OCZ-VERTEX2) max_ranges=64 ;;	# OCZ Vertex2
++		*)           max_ranges=65535
++	esac
++fi
++[ $verbose -gt 0 ] && echo "max-ranges = $max_ranges"
++
+ ## All ready.  Now let the user know exactly what we intend to do:
+ ##
+ mountstatus="$fstype non-mounted"
+@@ -608,7 +671,7 @@
+ 		nsectors += count;
+ 		while (count > 0) {
+ 			this_count  = (count > 65535) ? 65535 : count
+-			printf "%u:%u ", lba, this_count
++			printf "%u:%u \n", lba, this_count
+ 			if (verbose > 1)
+ 				printf "%u:%u ", lba, this_count > "/dev/stderr"
+ 			lba        += this_count
+@@ -695,6 +758,22 @@
+ 	-v verbose="$verbose"			\
+ 	-v xfs_blksects="$xfs_blksects"		\
+ 	-v xfs_agoffsets="$xfs_agoffsets"	\
+-	"$GAWKPROG" | $TRIM
++	"$GAWKPROG" | (
++		i=0
++		while read range ; do
++			ranges=$ranges" "$range
++			((i++))
++			if [ $i -ge $max_ranges ] ; then
++				[ $verbose -gt 0 ] && echo -e "Trim ranges:"$ranges"\n"         
++				echo $ranges | $TRIM
++				ranges=""
++				i=0
++			fi
++		done
++		if [ $i -gt 0 ] ; then
++			[ $verbose -gt 0 ] && echo -e "Trim ranges:"$ranges"\n"
++ 			echo $ranges | $TRIM
++		fi
++	)
+ 
+ do_cleanup $?
+
+ 	  	 
