@@ -4,7 +4,6 @@
 # TODO
 # once icedtea:
 #   pulse
-#   icedtea-web-java8
 #   add policytool desktop files
 
 pkgname=('jre8-openjdk-headless' 'jre8-openjdk' 'jdk8-openjdk' 'openjdk8-src' 'openjdk8-doc')
@@ -196,9 +195,9 @@ package_jre8-openjdk-headless() {
 package_jre8-openjdk() {
   pkgdesc='OpenJDK Java 8 full runtime environment'
   depends=("jre8-openjdk-headless=${pkgver}-${pkgrel}" 'xdg-utils' 'hicolor-icon-theme')
-  optdepends=('alsa-lib: for basic sound support'
+  optdepends=('icedtea-web: web browser plugin + Java Web Start'
+              'alsa-lib: for basic sound support'
               'gtk2: for the Gtk+ look and feel - desktop usage')
-  # TODO when adding IcedTea: 'icedtea-web-java7: web browser plugin + Java Web Start'
   # TODO when adding IcedTea: 'giflib: for gif format support'
   # TODO when adding IcedTea: 'libpulse: for advanced sound support'
   provides=('java-runtime=8' 'java-runtime-openjdk=8')
