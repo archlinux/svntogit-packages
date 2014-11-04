@@ -17,6 +17,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-sd-dhcp-client-clean-up-raw-socket-sd_event_source-w.patch'
         '0001-shared-install-avoid-prematurely-rejecting-missing-u.patch'
         '0001-sd-bus-properly-handle-removals-of-non-existing-matc.patch'
+        '0001-units-don-t-order-journal-flushing-afte-remote-fs.ta.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
@@ -25,6 +26,7 @@ md5sums=('e68dbff3cc19f66e341572d9fb2ffa89'
          'ade8c1b5b2c85d0a83b7bcf5aa6d131a'
          '7aaf44ce842deb449fca0f2595bbc1e4'
          '4adc3ddce027693bafa53089322e859b'
+         '42ff9d59bb057637355b202157d59991'
          '29245f7a240bfba66e2b1783b63b6b40'
          '455b68a9a15f634dcfdaff2463010d4e'
          'bde43090d4ac0ef048e3eaee8202a407')
@@ -37,6 +39,7 @@ prepare() {
   patch -Np1 <../0001-sd-dhcp-client-clean-up-raw-socket-sd_event_source-w.patch
   patch -Np1 <../0001-shared-install-avoid-prematurely-rejecting-missing-u.patch
   patch -Np1 <../0001-sd-bus-properly-handle-removals-of-non-existing-matc.patch
+  patch -Np1 <../0001-units-don-t-order-journal-flushing-afte-remote-fs.ta.patch
 }
 
 build() {
