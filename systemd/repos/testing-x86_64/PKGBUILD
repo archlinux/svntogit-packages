@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=217
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -20,6 +20,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-units-don-t-order-journal-flushing-afte-remote-fs.ta.patch'
         '0001-units-order-sd-journal-flush-after-sd-remount-fs.patch'
         '0001-units-make-systemd-journald.service-Type-notify.patch'
+        '0001-shutdown-fix-arguments-to-run-initramfs-shutdown.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev')
@@ -31,8 +32,9 @@ md5sums=('e68dbff3cc19f66e341572d9fb2ffa89'
          '42ff9d59bb057637355b202157d59991'
          '92497d06e0af615be4b368fe615109c0'
          'a321d62d6ffada9e6976bdd339fa3219'
+         'f72e8d086172177c224f0ce48ef54222'
          '29245f7a240bfba66e2b1783b63b6b40'
-         '455b68a9a15f634dcfdaff2463010d4e'
+         '107c489f27c667be4101aecd3369b355'
          'bde43090d4ac0ef048e3eaee8202a407')
 
 
@@ -46,6 +48,7 @@ prepare() {
   patch -Np1 <../0001-units-don-t-order-journal-flushing-afte-remote-fs.ta.patch
   patch -Np1 <../0001-units-order-sd-journal-flush-after-sd-remount-fs.patch
   patch -Np1 <../0001-units-make-systemd-journald.service-Type-notify.patch
+  patch -Np1 <../0001-shutdown-fix-arguments-to-run-initramfs-shutdown.patch
 }
 
 build() {
