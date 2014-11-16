@@ -13,7 +13,7 @@ _jdk_update=25
 _jdk_build=18
 pkgver=${_java_ver}.u${_jdk_update}
 _repo_ver=jdk${_java_ver}u${_jdk_update}-b${_jdk_build}
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url='http://openjdk.java.net/'
 license=('custom')
@@ -125,7 +125,7 @@ build() {
 
 package_jre8-openjdk-headless() {
   pkgdesc='OpenJDK Java 8 headless runtime environment'
-  depends=('java-runtime-common' 'ca-certificates-java' 'nss')
+  depends=('java-runtime-common' 'ca-certificates-utils' 'nss')
   optdepends=('java-rhino: for some JavaScript support')
   provides=('java-runtime-headless=8' 'java-runtime-headless-openjdk=8')
   # Upstream config files that should go to etc and get backup
@@ -174,7 +174,7 @@ package_jre8-openjdk-headless() {
   done
   popd
 
-  # Link JKS keystore from ca-certificates-java
+  # Link JKS keystore from ca-certificates-utils
   rm -f "${pkgdir}${_jvmdir}/jre/lib/security/cacerts"
   ln -sf /etc/ssl/certs/java/cacerts "${pkgdir}${_jvmdir}/jre/lib/security/cacerts"
 
