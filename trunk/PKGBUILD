@@ -52,6 +52,28 @@ prepare() {
 }
 
 build() {
+  cd "${srcdir}"/vim-runtime-build
+
+  ./configure \
+    --prefix=/usr \
+    --localstatedir=/var/lib/vim \
+    --with-features=huge \
+    --with-compiledby='Arch Linux' \
+    --enable-gpm \
+    --enable-acl \
+    --with-x=no \
+    --disable-gui \
+    --enable-multibyte \
+    --enable-cscope \
+    --disable-netbeans \
+    --enable-perlinterp \
+    --disable-pythoninterp \
+    --disable-python3interp \
+    --disable-rubyinterp \
+    --disable-luainterp
+
+  make
+
   cd "${srcdir}"/vim-minimal-build
 
   ./configure \
@@ -279,8 +301,8 @@ package_gvim() {
     rm -f ex.1 view.1 # provided by (n)vi
   done
 
-  # Move the runtime for later packaging
-  mv "${pkgdir}"/usr/share/vim "${srcdir}"/runtime-install
+  # need to remove since this is provided by vim-runtime
+  rm -r "${pkgdir}"/usr/share/vim
 
   # freedesktop links
   install -Dm644 "${srcdir}"/gvim.desktop \
@@ -334,12 +356,12 @@ package_vim-runtime() {
 
   cd "${srcdir}"/vim-runtime-build
 
-  # Install the runtime split from gvim
-  install -dm755 "${pkgdir}"/usr/share
-  mv "${srcdir}"/runtime-install "${pkgdir}"/usr/share/vim
+  (cd src && make -j1 VIMRCLOC=/etc DESTDIR="${pkgdir}" installruntime install-languages installtools)
+  # man and bin files belong to 'vim'
+  rm -r "${pkgdir}"/usr/share/man/ "${pkgdir}"/usr/bin/
 
   # Don't forget logtalk.dict
-  install -Dm644 "${srcdir}"/gvim-build/runtime/ftplugin/logtalk.dict \
+  install -Dm644 runtime/ftplugin/logtalk.dict \
     "${pkgdir}"/usr/share/vim/${_versiondir}/ftplugin/logtalk.dict
 
   # fix FS#17216
