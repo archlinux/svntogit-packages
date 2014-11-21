@@ -1,24 +1,42 @@
 # $Id$
 # Maintainer: Angel Velasquez <angvp@archlinux.org>
-# Maintainer: Felix Yan <felixonmars@gmail.com>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgbase=python-lxml
 pkgname=('python-lxml' 'python2-lxml' 'python-lxml-docs')
-pkgver=3.4.0
+pkgver=3.4.1
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('BSD' 'custom')
 url="http://lxml.de/"
-makedepends=('python2' 'python' 'libxslt' 'python-cssselect' 'python2-cssselect')
+makedepends=('libxslt' 'python-cssselect' 'python2-cssselect')
 source=(http://pypi.python.org/packages/source/l/lxml/lxml-${pkgver}.tar.gz{,.asc})
-md5sums=('bc90cc4e4ee04e1f8290ae0f70e34eea'
+md5sums=('b7696a3f33d5610b215a343216ab5624'
          'SKIP')
 
-check() {
+prepare() {
+  cp -a lxml-$pkgver{,-py2}
+}
+
+build() {
   cd lxml-$pkgver
-  # Workaround encoding issue
-  LANG=en_US.UTF-8 make PYTHON=python2 test
+  python setup.py build
+
+  cd ../lxml-$pkgver-py2
+  python2 setup.py build
+}
+
+check() {
+  # Setting LANG to workaround encoding issue
+  # TODO: Find a sane way to skip inplace build
+
+  cd lxml-$pkgver
   LANG=en_US.UTF-8 make PYTHON=python test
+  # PYTHONPATH="$PWD/build/lib.linux-$CARCH-3.4:$PYTHONPATH" python test.py -p -v
+
+  cd ../lxml-$pkgver-py2
+  LANG=en_US.UTF-8 make PYTHON=python2 test
+  # PYTHONPATH="$PWD/build/lib.linux-$CARCH-2.7:$PYTHONPATH" python2 test.py -p -v
 }
 
 package_python2-lxml() {
@@ -27,8 +45,8 @@ package_python2-lxml() {
   optdepends=('python2-beautifulsoup3: support for parsing not well formed HTML'
               'python-lxml-docs: offline docs')
 
-  cd lxml-$pkgver
-  python2 setup.py install --root="${pkgdir}" --optimize=1
+  cd lxml-$pkgver-py2
+  python2 setup.py install --root="${pkgdir}" --skip-build --optimize=1
  
   install -Dm644 LICENSES.txt \
     "${pkgdir}"/usr/share/licenses/$pkgname/LICENSE
@@ -44,7 +62,7 @@ package_python-lxml() {
   optdepends=('python-lxml-docs: offline docs')
 
   cd lxml-$pkgver
-  python setup.py install --root="${pkgdir}" --optimize=1
+  python setup.py install --root="${pkgdir}" --skip-build --optimize=1
   
   install -Dm644 LICENSES.txt \
     "${pkgdir}"/usr/share/licenses/$pkgname/LICENSE
