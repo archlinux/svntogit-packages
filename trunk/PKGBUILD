@@ -2,7 +2,7 @@
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=xscreensaver
-pkgver=5.31
+pkgver=5.32
 pkgrel=1
 pkgdesc="Screen saver and locker for the X Window System"
 arch=('i686' 'x86_64')
@@ -13,17 +13,14 @@ makedepends=('bc' 'intltool' 'libxpm' 'gdm')
 optdepends=('gdm: for login manager support')
 backup=('etc/pam.d/xscreensaver')
 source=(http://www.jwz.org/xscreensaver/${pkgname}-${pkgver}.tar.gz
-        xscreensaver-add-electricsheep.diff LICENSE
-	xscreensaver-5.31-1001-binaryring.c-include-stdint.patch)
-sha1sums=('1b023a3b01f1f23aa136d13c37f79c0c01c3f1e6'
+        xscreensaver-add-electricsheep.diff LICENSE)
+sha1sums=('3131d45295b9a18a2901737c9b95f1c5434f53a6'
           'e8dc57b6471fb3867ee099304ac6bf628351cb98'
-          '3eedb8b91b13c29df9b1fe5cbb027e1470b802d2'
-          '5a91e707f6482a3349609e8016b7668e3cd53161')
+          '3eedb8b91b13c29df9b1fe5cbb027e1470b802d2')
 
 prepare() {
   cd ${pkgname}-${pkgver}
   patch -p0 -i "${srcdir}/xscreensaver-add-electricsheep.diff"
-  patch -p1 -i "${srcdir}/xscreensaver-5.31-1001-binaryring.c-include-stdint.patch"
 }
 
 build() {
