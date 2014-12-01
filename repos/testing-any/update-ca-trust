@@ -8,15 +8,18 @@
 # files in $DEST.
 
 DEST=/etc/ca-certificates/extracted
+SSL=/etc/ssl/certs
 
-# OpenSSL PEM bundle that includes trust flags
-# (BEGIN TRUSTED CERTIFICATE)
-trust extract --format=openssl-bundle --filter=certificates --overwrite $DEST/openssl/ca-bundle.trust.crt
-#trust extract --format=pem-bundle --filter=ca-anchors --overwrite --purpose server-auth $DEST/pem/tls-ca-bundle.pem
-trust extract --format=pem-bundle --filter=ca-anchors --overwrite --purpose email $DEST/pem/email-ca-bundle.pem
-trust extract --format=pem-bundle --filter=ca-anchors --overwrite --purpose code-signing $DEST/pem/objsign-ca-bundle.pem
-#trust extract --format=java-cacerts --filter=ca-anchors --overwrite --purpose server-auth $DEST/java/cacerts
+trust extract --overwrite --format=pem-bundle --filter=ca-anchors --purpose server-auth  $DEST/tls-ca-bundle.pem
+trust extract --overwrite --format=pem-bundle --filter=ca-anchors --purpose email        $DEST/email-ca-bundle.pem
+trust extract --overwrite --format=pem-bundle --filter=ca-anchors --purpose code-signing $DEST/objsign-ca-bundle.pem
 
-# Make upgrade on Arch smooth, by inverting some locations
-trust extract --format=pem-bundle --filter=ca-anchors --overwrite --purpose server-auth /etc/ssl/certs/ca-certificates.crt
-trust extract --format=java-cacerts --filter=ca-anchors --overwrite --purpose server-auth /etc/ssl/certs/java/cacerts
+# Removes all files in /etc/ssl/certs, but not directories or files therein
+trust extract --overwrite --format=openssl-directory --filter=certificates $SSL
+
+# 'trust extract' makes everything it generated mode 0555; let's not do that for the directory
+chmod 0755 $SSL
+
+trust extract --overwrite --format=openssl-bundle --filter=certificates $SSL/ca-bundle.trust.crt
+trust extract --overwrite --format=java-cacerts --filter=ca-anchors --purpose server-auth $SSL/java/cacerts
+ln -fsrT $DEST/tls-ca-bundle.pem $SSL/ca-certificates.crt
