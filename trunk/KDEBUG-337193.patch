@@ -1,0 +1,151 @@
+From: David Rosca <nowrep@gmail.com>
+Date: Sat, 13 Dec 2014 12:20:24 +0000
+Subject: Bluedevil daemon: Save and restore adapters state
+X-Git-Url: http://quickgit.kde.org/?p=bluedevil.git&a=commitdiff&h=ff6ae6022286e118e98efd69ba1833f2be2e4842
+---
+Bluedevil daemon: Save and restore adapters state
+
+Fixes issue that some adapters were always powered off
+on startup.
+
+BUG: 337193
+---
+
+
+--- a/src/daemon/kded/BlueDevilDaemon.cpp
++++ b/src/daemon/kded/BlueDevilDaemon.cpp
+@@ -36,6 +36,7 @@
+ #include <KPluginFactory>
+ #include <kfileplacesmodel.h>
+ #include <kdirnotify.h>
++#include <ksharedconfig.h>
+ 
+ #include <bluedevil/bluedevilmanager.h>
+ #include <bluedevil/bluedeviladapter.h>
+@@ -66,6 +67,7 @@
+     QTimer                           m_timer;
+     KComponentData                  m_componentData;
+     QHash<QString, bool>            m_adapterPoweredHash;
++    KSharedConfig::Ptr              m_config;
+ };
+ 
+ BlueDevilDaemon::BlueDevilDaemon(QObject *parent, const QList<QVariant>&)
+@@ -83,6 +85,7 @@
+             , QDBusConnection::sessionBus(), QDBusServiceWatcher::WatchForUnregistration, this);
+     d->m_timer.setInterval(20000);
+     d->m_timer.setSingleShot(true);
++    d->m_config = KSharedConfig::openConfig("bluedevilglobalrc");
+ 
+     KAboutData aboutData(
+         "bluedevildaemon",
+@@ -106,6 +109,8 @@
+ 
+     connect(Manager::self(), SIGNAL(usableAdapterChanged(Adapter*)),
+             this, SLOT(usableAdapterChanged(Adapter*)));
++    connect(Manager::self(), SIGNAL(adapterAdded(Adapter*)),
++            this, SLOT(adapterAdded(Adapter*)));
+ 
+     // Catch suspend/resume events
+     QDBusConnection::systemBus().connect("org.freedesktop.login1",
+@@ -117,6 +122,8 @@
+                                          );
+ 
+     d->m_status = Private::Offline;
++
++    restoreAdaptersState();
+     usableAdapterChanged(Manager::self()->usableAdapter());
+ 
+     if (!Manager::self()->adapters().isEmpty()) {
+@@ -126,6 +133,8 @@
+ 
+ BlueDevilDaemon::~BlueDevilDaemon()
+ {
++    saveAdaptersState();
++
+     if (d->m_status == Private::Online) {
+         offlineMode();
+     }
+@@ -344,6 +353,11 @@
+     }
+ }
+ 
++void BlueDevilDaemon::adapterAdded(Adapter *adapter)
++{
++    restoreAdapterState(adapter);
++}
++
+ void BlueDevilDaemon::deviceFound(Device *device)
+ {
+     kDebug(dblue()) << "DeviceFound: " << device->name();
+@@ -359,6 +373,47 @@
+         qDebug() << "Error response: " << reply.error().message();
+         killMonolithic();
+     }
++}
++
++void BlueDevilDaemon::saveAdaptersState()
++{
++    Manager *manager = Manager::self();
++    if (!manager) {
++        return;
++    }
++
++    KConfigGroup adaptersGroup = d->m_config->group("Adapters");
++
++    Q_FOREACH (Adapter *adapter, manager->adapters()) {
++        const QString key = QString("%1_powered").arg(adapter->address());
++        adaptersGroup.writeEntry<bool>(key, adapter->isPowered());
++    }
++
++    d->m_config->sync();
++}
++
++// New adapters are automatically powered on
++void BlueDevilDaemon::restoreAdaptersState()
++{
++    Manager *manager = Manager::self();
++    if (!manager) {
++        return;
++    }
++
++    KConfigGroup adaptersGroup = d->m_config->group("Adapters");
++
++    Q_FOREACH (Adapter *adapter, manager->adapters()) {
++        const QString key = QString("%1_powered").arg(adapter->address());
++        adapter->setPowered(adaptersGroup.readEntry<bool>(key, true));
++    }
++}
++
++void BlueDevilDaemon::restoreAdapterState(Adapter *adapter)
++{
++    KConfigGroup adaptersGroup = d->m_config->group("Adapters");
++
++    const QString key = QString("%1_powered").arg(adapter->address());
++    adapter->setPowered(adaptersGroup.readEntry<bool>(key, true));
+ }
+ 
+ DeviceInfo BlueDevilDaemon::deviceToInfo(Device *const device) const
+
+--- a/src/daemon/kded/BlueDevilDaemon.h
++++ b/src/daemon/kded/BlueDevilDaemon.h
+@@ -82,6 +82,8 @@
+      */
+     void usableAdapterChanged(Adapter *adapter);
+ 
++    void adapterAdded(Adapter *adapter);
++
+     /**
+      * When the agent is released this is called to unload it
+      */
+@@ -97,6 +99,10 @@
+     void executeMonolithic();
+     void killMonolithic();
+ 
++    void saveAdaptersState();
++    void restoreAdaptersState();
++    void restoreAdapterState(Adapter *adapter);
++
+     DeviceInfo deviceToInfo (Device *const device) const;
+ 
+ private:
+
