@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=2.1.3
+pkgver=2.2.0
 pkgrel=1
 pkgdesc="the fast distributed version control system"
 arch=(i686 x86_64)
@@ -24,8 +24,19 @@ replaces=('git-core')
 provides=('git-core')
 install=git.install
 source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar.xz"
+        0001-create-gpg-homedir-on-the-fly.patch
+        0002-skip-RFC1991-tests-for-gnupg-2.1.patch
         git-daemon@.service
         git-daemon.socket)
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  patch -Np1 < ../0001-create-gpg-homedir-on-the-fly.patch
+  # patch utility doesn't support git binary diffs
+  rm t/lib-gpg/random_seed
+  rm t/lib-gpg/trustdb.gpg
+  patch -Np1 < ../0002-skip-RFC1991-tests-for-gnupg-2.1.patch
+}
 
 build() {
   export PYTHON_PATH='/usr/bin/python2'
@@ -46,7 +57,7 @@ check() {
   export PYTHON_PATH='/usr/bin/python2'
   cd "$srcdir/$pkgname-$pkgver"
   local jobs
-  jobs=$(expr "$MAKEFLAGS" : '.*\(-j[0-9]*\).*')
+  jobs=$(expr "$MAKEFLAGS" : '.*\(-j[0-9]*\).*') || true
   mkdir -p /dev/shm/git-test
   make prefix=/usr gitexecdir=/usr/lib/git-core \
     CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
@@ -104,6 +115,8 @@ package() {
   install -D -m 644 "$srcdir"/git-daemon.socket "$pkgdir"/usr/lib/systemd/system/git-daemon.socket
 }
 
-md5sums=('43815ec043c0ae46c3efa4c8e28feaba'
+md5sums=('5c9d20582297f8f24606fe49f515b584'
+         '5383e27f24bfd356f24b709ea27f8201'
+         '9bb82b29aee1772a893cc2a0a1584b89'
          '042524f942785772d7bd52a1f02fe5ae'
          'f67869315c2cc112e076f0c73f248002')
