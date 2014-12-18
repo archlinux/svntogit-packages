@@ -27,10 +27,9 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         locale-gen)
 md5sums=('948a6e06419a01bd51e97206861595b0'
          'SKIP'
-         '8cfa2a0fa2a9aad8b86a138587d6261f'
+         'f7a5faf2911ae7c13f584bd60c802873'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
-
 validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
 
 prepare() {
