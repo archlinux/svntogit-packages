@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.20
-pkgrel=4
+pkgrel=5
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -36,7 +36,7 @@ validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
 prepare() {
   cd ${srcdir}/glibc-${pkgver}
 
-  # glibc-2.20..d73ac1bb
+  # glibc-2.20..f80af766
   patch -p1 -i $srcdir/glibc-2.20-roundup.patch
 
   mkdir ${srcdir}/glibc-build
