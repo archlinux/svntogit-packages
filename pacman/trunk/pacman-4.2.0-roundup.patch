@@ -11,11 +11,79 @@ index 1c10b32..f4fd540 100644
  	echo
  	printf "List all packages installed from a given repository\n" "${myname}"
  	echo
+diff --git a/etc/makepkg.conf.in b/etc/makepkg.conf.in
+index 712ca60..9ed7ef9 100644
+--- a/etc/makepkg.conf.in
++++ b/etc/makepkg.conf.in
+@@ -19,6 +19,13 @@ DLAGENTS=('ftp::/usr/bin/curl -qfC - --ftp-pasv --retry 3 --retry-delay 3 -o %o
+ # /usr/bin/lftpget -c
+ # /usr/bin/wget
+ 
++#-- The the package required by makepkg to download VCS sources
++#  Format: 'protocol::package'
++VCSCLIENTS=('bzr::bzr'
++            'git::git'
++            'hg::mercurial'
++            'svn::subversion')
++
+ #########################################################################
+ # ARCHITECTURE, COMPILE FLAGS
+ #########################################################################
+diff --git a/scripts/makepkg-template.pl.in b/scripts/makepkg-template.pl.in
+index 6e6d944..d9da167 100755
+--- a/scripts/makepkg-template.pl.in
++++ b/scripts/makepkg-template.pl.in
+@@ -70,7 +70,7 @@ sub parse_template_line {
+ 	foreach my $element (@elements) {
+ 		my ($key, $val) = ($element =~ /^([a-z0-9]+)=(.*)$/);
+ 		unless ($key and $val) {
+-			die gettext("invalid key/value pair\n%s:%s: %s"),
++			die gettext("invalid key/value pair\n"),
+ 				"$filename:$linenumber: $line";
+ 		}
+ 		$values{$key} = $val;
 diff --git a/scripts/makepkg.sh.in b/scripts/makepkg.sh.in
-index 33dff24..23e70cd 100644
+index 33dff24..60276f6 100644
 --- a/scripts/makepkg.sh.in
 +++ b/scripts/makepkg.sh.in
-@@ -3435,7 +3435,7 @@ CARCH=${_CARCH:-$CARCH}
+@@ -2896,7 +2896,7 @@ get_vcsclient() {
+ }
+ 
+ check_vcs_software() {
+-	local ret=0
++	local all_sources all_deps deps ret=0
+ 
+ 	if (( SOURCEONLY == 1 )); then
+ 		# we will not download VCS sources
+@@ -2908,7 +2908,17 @@ check_vcs_software() {
+ 		return $ret
+ 	fi
+ 
+-	for netfile in ${source[@]}; do
++	# we currently only use global depends/makedepends arrays for --syncdeps
++	for attr in depends makedepends; do
++		pkgbuild_get_attribute "$pkg" "$attr" 1 'deps'
++		all_deps+=("${deps[@]}")
++
++		pkgbuild_get_attribute "$pkg" "${attr}_$CARCH" 1 'deps'
++		all_deps+=("${deps[@]}")
++	done
++
++	get_all_sources_for_arch 'all_sources'
++	for netfile in ${all_sources[@]}; do
+ 		local proto=$(get_protocol "$netfile")
+ 
+ 		case $proto in
+@@ -2921,7 +2931,7 @@ check_vcs_software() {
+ 					uninstalled="$(set +E; check_deps $client)" || exit 1
+ 					# if not installed, check presence in depends or makedepends
+ 					if [[ -n "$uninstalled" ]] && (( ! NODEPS || ( VERIFYSOURCE && !DEP_BIN ) )); then
+-						if ! in_array "$client" ${depends[@]} ${makedepends[@]}; then
++						if ! in_array "$client" ${alldeps[@]}; then
+ 							error "$(gettext "Cannot find the %s package needed to handle %s sources.")" \
+ 									"$client" "${proto%%+*}"
+ 							ret=1
+@@ -3435,7 +3445,7 @@ CARCH=${_CARCH:-$CARCH}
  if (( ! INFAKEROOT )); then
  	if (( EUID == 0 )); then
  		error "$(gettext "Running %s as root is not allowed as it can cause permanent,\n\
