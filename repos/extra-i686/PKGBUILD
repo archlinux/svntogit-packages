@@ -12,11 +12,14 @@
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
          'clang-tools-extra')
 pkgver=3.5.0
-pkgrel=2
+pkgrel=3
+_ocaml_ver=4.02.1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
-makedepends=('libffi' 'python2' 'ocaml' 'python-sphinx' 'chrpath')
+makedepends=('libffi' 'python2' "ocaml=$_ocaml_ver" 'python-sphinx' 'chrpath')
+# Use gcc-multilib to build 32-bit compiler-rt libraries on x86_64 (FS#41911)
+makedepends_x86_64=('gcc-multilib')
 options=('staticlibs')
 source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/cfe-$pkgver.src.tar.xz{,.sig}
@@ -24,6 +27,7 @@ source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
         llvm-3.5.0-force-link-pass.o.patch
         llvm-3.5.0-fix-cmake-llvm-exports.patch
+        llvm-3.5.0-fix-ocaml-as-needed.patch
         llvm-Config-config.h
         llvm-Config-llvm-config.h)
 sha256sums=('28e199f368ef0a4666708f31c7991ad3bcc3a578342b0306526dd35f07595c03'
@@ -36,8 +40,10 @@ sha256sums=('28e199f368ef0a4666708f31c7991ad3bcc3a578342b0306526dd35f07595c03'
             'SKIP'
             '5702053503d49448598eda1b8dc8c263f0df9ad7486833273e3987b5dec25a19'
             '841a153d0e9d2d196ea5318388ff295e69c41547eb73b24edf92a1b2cc3cccdd'
+            '0d8b268cf101b0a08dbe458a041c33be0500d09b1a62ed0a16f205758647a5fc'
             '312574e655f9a87784ca416949c505c452b819fad3061f2cde8aced6540a19a3'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
+validpgpkeys=('54E3BDE33185D9F69664D22455F5CD70BB5A0569')
 
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
@@ -60,11 +66,15 @@ prepare() {
 
   # Fix build with GCC 4.9 (patch from Debian)
   # http://llvm.org/bugs/show_bug.cgi?id=20067
-  patch -Np1 -i "$srcdir/llvm-3.5.0-force-link-pass.o.patch"
+  patch -Np1 -i ../llvm-3.5.0-force-link-pass.o.patch
 
   # Fix generation of broken LLVMExports.cmake file
   # http://llvm.org/bugs/show_bug.cgi?id=20884
-  patch -Np0 -i "$srcdir/llvm-3.5.0-fix-cmake-llvm-exports.patch"
+  patch -Np0 -i ../llvm-3.5.0-fix-cmake-llvm-exports.patch
+
+  # Fix OCaml bindings linking with -Wl,--as-needed
+  # http://llvm.org/bugs/show_bug.cgi?id=22014
+  patch -Np1 -i ../llvm-3.5.0-fix-ocaml-as-needed.patch
 }
 
 build() {
@@ -171,7 +181,7 @@ package_llvm-libs() {
 
 package_llvm-ocaml() {
   pkgdesc="OCaml bindings for LLVM"
-  depends=("llvm=$pkgver-$pkgrel" 'ocaml')
+  depends=("llvm=$pkgver-$pkgrel" "ocaml=$_ocaml_ver")
 
   cd "$srcdir/llvm-$pkgver.src"
 
