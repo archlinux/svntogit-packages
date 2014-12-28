@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.20
-pkgrel=5
+pkgrel=6
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
