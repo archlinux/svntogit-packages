@@ -13,6 +13,7 @@ checkdepends=('python2')
 source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz{,.asc})
 sha1sums=('e95d9fca57f7ddace9f197071cbcfb92fa16748e'
           'a93d26016730cb9fa214c753d079ee77dca1f326')
+validpgpkeys=('73571E85C19F4281D8C97AA86CA41A7743B8D6C8')
 
 prepare() {
   cd ${pkgname}-${pkgver}
