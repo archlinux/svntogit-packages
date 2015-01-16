@@ -1,0 +1,63 @@
+From 224e6776cfe6fc23a207cd05bf75b1e3548853a0 Mon Sep 17 00:00:00 2001
+From: Mark Wielaard <mjw@redhat.com>
+Date: Thu, 15 Jan 2015 13:39:06 +0100
+Subject: [PATCH] tests: Make deleted and vdsosyms testcases work with
+ "restricted ptrace".
+
+Some systems might have "restricted ptrace" that doesn't allow process
+inspection of arbitrary processes. Change the deleted testcase to
+explicitly allow any other process to inspect it using the PR_SET_PTRACER
+prctl set to PR_SET_PTRACER_ANY. Change the vdsosyms testcase to inspect
+the process itself which should always be allowed.
+
+Reported-by: Anatol Pomozov <anatol.pomozov@gmail.com>
+Signed-off-by: Mark Wielaard <mjw@redhat.com>
+---
+ tests/ChangeLog  | 5 +++++
+ tests/deleted.c  | 6 ++++++
+ tests/vdsosyms.c | 5 +++--
+ 3 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/tests/deleted.c b/tests/deleted.c
+index 32a310b..d071bf7 100644
+--- a/tests/deleted.c
++++ b/tests/deleted.c
+@@ -23,6 +23,7 @@
+ #include <stdio.h>
+ #include <error.h>
+ #include <errno.h>
++#include <sys/prctl.h>
+ 
+ extern void libfunc (void);
+ 
+@@ -42,6 +43,11 @@ main (int argc __attribute__ ((unused)), char **argv __attribute__ ((unused)))
+       assert (!err);
+       err = close (2);
+       assert (!err);
++      /* Make sure eu-stack -p works on this process even with
++	 "restricted ptrace".  */
++#ifdef PR_SET_PTRACER_ANY
++      prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
++#endif
+       libfunc ();
+       abort ();
+     }
+diff --git a/tests/vdsosyms.c b/tests/vdsosyms.c
+index c1f8d89..4f12b9a 100644
+--- a/tests/vdsosyms.c
++++ b/tests/vdsosyms.c
+@@ -80,8 +80,9 @@ main (int argc __attribute__ ((unused)), char **argv __attribute__ ((unused)))
+   if (dwfl == NULL)
+     error (2, 0, "dwfl_begin: %s", dwfl_errmsg (-1));
+ 
+-  /* Take our parent as "arbitrary" process to inspect.  */
+-  pid_t pid = getppid();
++  /* Take ourself as "arbitrary" process to inspect.  This should work
++     even with "restricted ptrace".  */
++  pid_t pid = getpid();
+ 
+   int result = dwfl_linux_proc_report (dwfl, pid);
+   if (result < 0)
+-- 
+1.8.3.1
+
