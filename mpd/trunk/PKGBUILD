@@ -6,7 +6,7 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.19.7
+pkgver=0.19.8
 pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
@@ -20,7 +20,7 @@ validpgpkeys=('0392335A78083894A4301C43236E8A58C6DB4512')
 source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
         'tmpfiles.d'
         'conf')
-sha1sums=('6f67d8ac14881c2d72c2907c2c1e14c6b2fd04c5' 'SKIP'
+sha1sums=('e5e325b666474bddec6c07502fa2dcf3710a42e3' 'SKIP'
           'f4d5922abb69abb739542d8e93f4dfd748acdad7'
           '291fd5cda9f0845834a553017327c4586bd853f6')
 
