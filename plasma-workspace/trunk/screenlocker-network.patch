@@ -1,0 +1,171 @@
+commit 0a9cea625dfcb068fb03a4deab7430b1c4ad8aa4
+Author: Martin Gräßlin <mgraesslin@kde.org>
+Date:   Fri Jan 2 15:50:15 2015 +0100
+
+    [ksld] Provide custom QQmlNetworkAccessManagerFactory in greeter
+    
+    The greeter installs a custom QQmlNetworkAccessManagerFactory which
+    creates QNetworkAccessManagers which do not have access to the
+    network.
+    
+    Unfortunately this is not a 100 % secure way to disable network, any
+    plugin could change the factory again and thus enable network. This
+    is done for example by KDeclarative, so the greeter now first creates
+    KDeclarative and then sets the custom factory.
+    
+    It is a sufficient solution to block all network access for pure
+    QtQuick without a binary package as we would find in a look'n'feel
+    package.
+    
+    Network access needs to be blocked in the greeter as otherwise a
+    look'n'feel package were able to send the entered password (and other
+    information to the creator of the look'n'feel package.
+    
+    REVIEW: 121847
+
+diff --git a/ksmserver/screenlocker/greeter/CMakeLists.txt b/ksmserver/screenlocker/greeter/CMakeLists.txt
+index 14a34f0..5ec0104 100644
+--- a/ksmserver/screenlocker/greeter/CMakeLists.txt
++++ b/ksmserver/screenlocker/greeter/CMakeLists.txt
+@@ -13,6 +13,7 @@ set(kscreenlocker_greet_SRCS
+    sessions.cpp
+    greeterapp.cpp
+    main.cpp
++   noaccessnetworkaccessmanagerfactory.cpp
+ )
+ 
+ qt5_add_resources(kscreenlocker_greet_SRCS fallbacktheme.qrc)
+@@ -34,6 +35,7 @@ target_link_libraries(kscreenlocker_greet
+                         KF5::Crash
+                         KF5::I18n
+                         KF5::ConfigGui
++                        KF5::Declarative
+                         KF5::WindowSystem
+                         KF5::Solid
+                         Qt5::Quick
+diff --git a/ksmserver/screenlocker/greeter/greeterapp.cpp b/ksmserver/screenlocker/greeter/greeterapp.cpp
+index 824ba60..a23b562 100644
+--- a/ksmserver/screenlocker/greeter/greeterapp.cpp
++++ b/ksmserver/screenlocker/greeter/greeterapp.cpp
+@@ -22,10 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ #include "kscreensaversettings.h"
+ #include "sessions.h"
+ #include "authenticator.h"
++#include "noaccessnetworkaccessmanagerfactory.h"
+ 
+ // KDE
+ #include <KAuthorized>
+ #include <KCrash>
++#include <kdeclarative/kdeclarative.h>
+ #include <KUser>
+ #include <KWindowSystem>
+ #include <Solid/PowerManagement>
+@@ -162,6 +164,16 @@ void UnlockApp::desktopResized()
+         QQuickView *view = new QQuickView();
+         connect(view, &QQuickView::statusChanged, this, &UnlockApp::viewStatusChanged);
+ 
++        // first create KDecoration, to be sure that it created a KIO Network Factory
++        KDeclarative::KDeclarative declarative;
++        declarative.setDeclarativeEngine(view->engine());
++        declarative.setupBindings();
++        // overwrite the factory set by kdeclarative
++        auto oldFactory = view->engine()->networkAccessManagerFactory();
++        view->engine()->setNetworkAccessManagerFactory(nullptr);
++        delete oldFactory;
++        view->engine()->setNetworkAccessManagerFactory(new NoAccessNetworkAccessManagerFactory);
++
+         if (!m_testing) {
+             view->setFlags(Qt::X11BypassWindowManagerHint);
+         }
+@@ -202,6 +214,9 @@ void UnlockApp::desktopResized()
+             connect(view->rootObject(), SIGNAL(suspendToDisk()), SLOT(suspendToDisk()));
+         }
+ 
++        // verify that the engine's controller didn't change
++        Q_ASSERT(dynamic_cast<NoAccessNetworkAccessManagerFactory*>(view->engine()->networkAccessManagerFactory()));
++
+         m_views << view;
+     }
+ 
+diff --git a/ksmserver/screenlocker/greeter/noaccessnetworkaccessmanagerfactory.cpp b/ksmserver/screenlocker/greeter/noaccessnetworkaccessmanagerfactory.cpp
+new file mode 100644
+index 0000000..eaa58c1
+--- /dev/null
++++ b/ksmserver/screenlocker/greeter/noaccessnetworkaccessmanagerfactory.cpp
+@@ -0,0 +1,34 @@
++/********************************************************************
++ KSld - the KDE Screenlocker Daemon
++ This file is part of the KDE project.
++
++Copyright (C) 2015 Martin Gräßlin <mgraesslin@kde.org>
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program.  If not, see <http://www.gnu.org/licenses/>.
++*********************************************************************/
++#include "noaccessnetworkaccessmanagerfactory.h"
++
++#include <QNetworkAccessManager>
++
++namespace ScreenLocker
++{
++
++QNetworkAccessManager *NoAccessNetworkAccessManagerFactory::create(QObject *parent)
++{
++    QNetworkAccessManager *manager = new QNetworkAccessManager(parent);
++    manager->setNetworkAccessible(QNetworkAccessManager::NotAccessible);
++    return manager;
++}
++
++}
+diff --git a/ksmserver/screenlocker/greeter/noaccessnetworkaccessmanagerfactory.h b/ksmserver/screenlocker/greeter/noaccessnetworkaccessmanagerfactory.h
+new file mode 100644
+index 0000000..6b2f739
+--- /dev/null
++++ b/ksmserver/screenlocker/greeter/noaccessnetworkaccessmanagerfactory.h
+@@ -0,0 +1,36 @@
++/********************************************************************
++ KSld - the KDE Screenlocker Daemon
++ This file is part of the KDE project.
++
++Copyright (C) 2015 Martin Gräßlin <mgraesslin@kde.org>
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program.  If not, see <http://www.gnu.org/licenses/>.
++*********************************************************************/
++#ifndef NOACCESSNETWORKACCESSMANAGERFACTORY_H
++#define NOACCESSNETWORKACCESSMANAGERFACTORY_H
++
++#include <QQmlNetworkAccessManagerFactory>
++
++namespace ScreenLocker
++{
++
++class NoAccessNetworkAccessManagerFactory : public QQmlNetworkAccessManagerFactory
++{
++public:
++    QNetworkAccessManager *create(QObject *parent) override;
++};
++
++}
++
++#endif
