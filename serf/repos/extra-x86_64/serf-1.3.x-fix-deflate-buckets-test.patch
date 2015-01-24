@@ -1,0 +1,81 @@
+From: Ivan Zhakov <ivan@visualsvn.com>
+Date: 2014-10-23 17:15:22 +0100 
+Subject: Reduce memory usage by deflate buckets test.
+Upstream: Committed
+References: https://code.google.com/p/serf/source/detail?r=2445 https://groups.google.com/d/msg/serf-dev/qoTK8BfRfrI/EJL7xj4PmT4J
+
+Fixes failing test program by reducing memory usage.
+
+------------------------------------------------------------------------
+r2445 | chemodax | 2014-10-23 17:15:22 +0100 (Thu, 23 Oct 2014) | 6 lines
+Changed paths:
+   M /trunk/test/test_buckets.c
+
+Reduce memory usage by deflate buckets test.
+
+* test/test_buckets.c
+  (deflate_buckets): Add POOL argument and use it instead of tb->pool.
+  (test_deflate_buckets): Use iterpool for deflate_buckets() call.
+
+------------------------------------------------------------------------
+Index: trunk/test/test_buckets.c
+===================================================================
+--- trunk/test/test_buckets.c	(revision 2444)
++++ trunk/test/test_buckets.c	(revision 2445)
+@@ -1400,12 +1400,12 @@ static void read_bucket_and_check_pattern(CuTest *
+                           expected_len);
+ }
+ 
+-static void deflate_buckets(CuTest *tc, int nr_of_loops)
++static void deflate_buckets(CuTest *tc, int nr_of_loops, apr_pool_t *pool)
+ {
+     const char *msg = "12345678901234567890123456789012345678901234567890";
+ 
+     test_baton_t *tb = tc->testBaton;
+-    serf_bucket_alloc_t *alloc = serf_bucket_allocator_create(tb->pool, NULL,
++    serf_bucket_alloc_t *alloc = serf_bucket_allocator_create(pool, NULL,
+                                                               NULL);
+     z_stream zdestr;
+     int i;
+@@ -1424,8 +1424,8 @@ static void read_bucket_and_check_pattern(CuTest *
+     {
+         serf_config_t *config;
+ 
+-        serf_context_t *ctx = serf_context_create(tb->pool);
+-        /* status = */ serf__config_store_get_config(ctx, NULL, &config, tb->pool);
++        serf_context_t *ctx = serf_context_create(pool);
++        /* status = */ serf__config_store_get_config(ctx, NULL, &config, pool);
+ 
+         serf_bucket_set_config(defbkt, config);
+     }
+@@ -1447,11 +1447,11 @@ static void read_bucket_and_check_pattern(CuTest *
+         if (i == nr_of_loops - 1) {
+             CuAssertIntEquals(tc, APR_SUCCESS,
+                               deflate_compress(&data, &len, &zdestr, msg,
+-                                               strlen(msg), 1, tb->pool));
++                                               strlen(msg), 1, pool));
+         } else {
+             CuAssertIntEquals(tc, APR_SUCCESS,
+                               deflate_compress(&data, &len, &zdestr, msg,
+-                                               strlen(msg), 0, tb->pool));
++                                               strlen(msg), 0, pool));
+         }
+ 
+         if (len == 0)
+@@ -1469,10 +1469,15 @@ static void read_bucket_and_check_pattern(CuTest *
+ static void test_deflate_buckets(CuTest *tc)
+ {
+     int i;
++    apr_pool_t *iterpool;
++    test_baton_t *tb = tc->testBaton;
+ 
++    apr_pool_create(&iterpool, tb->pool);
+     for (i = 1; i < 1000; i++) {
+-        deflate_buckets(tc, i);
++        apr_pool_clear(iterpool);
++        deflate_buckets(tc, i, iterpool);
+     }
++    apr_pool_destroy(iterpool);
+ }
+ 
+ static apr_status_t discard_data(serf_bucket_t *bkt,
