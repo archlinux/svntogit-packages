@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=nvidia-304xx
+pkgver=304.125
+_extramodules=extramodules-3.18-ARCH
+pkgrel=8
+pkgdesc="NVIDIA drivers for linux, 304xx legacy branch"
+arch=('i686' 'x86_64')
+url="http://www.nvidia.com/"
+depends=('linux>=3.18' 'linux<3.19' 'nvidia-304xx-libgl' "nvidia-304xx-utils=${pkgver}")
+makedepends=('linux-headers>=3.18' 'linux-headers<3.19')
+conflicts=('nvidia')
+license=('custom')
+install=nvidia.install
+options=(!strip)
+
+if [ "$CARCH" = "i686" ]; then
+    _arch='x86'
+    _pkg="NVIDIA-Linux-${_arch}-${pkgver}"
+    source=("http://us.download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
+    md5sums=('bc3b0ac291fa998d5109a6f7e94fb2d4')
+elif [ "$CARCH" = "x86_64" ]; then
+    _arch='x86_64'
+    _pkg="NVIDIA-Linux-${_arch}-${pkgver}-no-compat32"
+    source=("http://us.download.nvidia.com/XFree86/Linux-${_arch}/${pkgver}/${_pkg}.run")
+    md5sums=('291d41ccdbcc08f752a38f9e0a7eeea0')
+fi
+
+source+=('nv-drm.patch')
+md5sums+=('79671a27131da619a33eb02ed0c2c031')
+
+prepare() {
+    cd "${srcdir}"
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+    # patches here
+    patch -p0 -i "$srcdir/nv-drm.patch"
+}
+
+build() {
+    _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+    cd "${_pkg}/kernel"
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+}
+
+package() {
+    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
+        "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
+    install -d -m755 "${pkgdir}/usr/lib/modprobe.d"
+    echo "blacklist nouveau" >> "${pkgdir}/usr/lib/modprobe.d/nvidia.conf"
+    sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='${_extramodules}'/" "${startdir}/nvidia.install"
+    gzip "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
+
+    # the license file is part of nvidia-304xx-utils - the module depends on it, so we don't ship it another time.
+}
