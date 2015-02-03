@@ -1,54 +1,47 @@
 # $Id$
-#Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+#Maintainer: Gaetan Bisson <bisson@archlinux.org>
+#Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=unison
 pkgver=2.48.3
-pkgrel=1
-pkgdesc="Unison is a file-synchronization tool"
-arch=(i686 x86_64)
+pkgrel=2
+pkgdesc='File-synchronization tool'
+url='http://www.cis.upenn.edu/~bcpierce/unison/'
+arch=('i686' 'x86_64')
 license=('GPL2')
-url="http://www.cis.upenn.edu/~bcpierce/unison"
-depends=('glibc')
-makedepends=('ocaml' 'lablgtk2' 'imagemagick')
 optdepends=('gtk2: for gtk2 support')
-source=(http://www.cis.upenn.edu/~bcpierce/unison/download/releases/$pkgname-$pkgver/$pkgname-$pkgver.tar.gz
-        $pkgname.desktop)
+makedepends=('ocaml' 'lablgtk2' 'imagemagick')
+source=("http://www.cis.upenn.edu/~bcpierce/unison/download/releases/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz"
+        'desktop')
 sha1sums=('74f1c087ee49dc1db4680ad779280f7333d5c968'
-          'a5181e97d954925c8b14be8f73cd473ca5bd21ba')
+          '9dad1737dd8d90e7ee2744a96cf71bd9f802a12a')
 
-options=(!makeflags)
+options=('!makeflags')
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
-  CFLAGS=""
-  make clean
-  make mkProjectInfo 
-  make UISTYLE=text DEBUGGING=false THREADS=true 
-  mv unison unison-text
- 
- # clean the builddir and rebuild with gtk support
-  # broken at the moment!
-  # make clean
-  # make mkProjectInfo
-  # make UISTYLE=gtk DEBUGGING=false THREADS=true
-  # install -Dm755 unison "$pkgdir"/usr/bin/unison-gtk
- # clean the builddir and rebuild with gtk2 support
-  make clean
-  make mkProjectInfo
-  make UISTYLE=gtk2 DEBUGGING=false THREADS=true
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	CFLAGS=""
+
+	for ui in text gtk2; do
+		make clean
+		make mkProjectInfo 
+		make UISTYLE=$ui DEBUGGING=false THREADS=true
+		mv unison unison-$ui
+	done
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
-  install -Dm755 unison-text "$pkgdir"/usr/bin/unison
-  install -Dm755 unison "$pkgdir"/usr/bin/unison-gtk2
- # install a .desktop file; create a compliant icon from ico file and install the png
-  install -Dm644 ../$pkgname.desktop "$pkgdir"/usr/share/applications/$pkgname.desktop
-  convert win32rc/U.ico unison.png
-  install -Dm644 ${pkgname}-1.png  "$pkgdir"/usr/share/pixmaps/$pkgname.png
- # make symlink for .desktop file
-  cd "$pkgdir"/usr/bin
-  ln -s unison-gtk2 unison-x11
- # make versioned symlink #29827
-  ln -s unison unison-2.40
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	install -d "${pkgdir}"/usr/bin
+	install -m755 unison-* "${pkgdir}"/usr/bin
+
+	install -d "${pkgdir}"/usr/share/{pixmaps,applications}
+	convert win32rc/U.ico[1] "${pkgdir}/usr/share/pixmaps/${pkgname}.png"
+	install -m644 ../desktop "${pkgdir}/usr/share/applications/${pkgname}.desktop"
+
+	cd "${pkgdir}"/usr/bin
+	ln -s unison-text unison
+	ln -s unison-gtk2 unison-x11
+	ln -s unison unison-${pkgver%.*}
 }
