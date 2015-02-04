@@ -4,25 +4,19 @@
 
 pkgbase=wicd
 pkgname=('wicd' 'wicd-gtk')
-pkgver=1.7.2.4
-pkgrel=10
+pkgver=1.7.3
+pkgrel=1
 arch=(any)
-url="http://wicd.sourceforge.net/"
+url="https://launchpad.net/wicd/"
 license=('GPL2')
 conflicts=('wicd-svn')
 install=wicd.install
 source=(http://launchpad.net/wicd/1.7/$pkgver/+download/wicd-$pkgver.tar.gz
         wicd.desktop
-        dbus_string_fix.patch
-	http://bazaar.launchpad.net/~wicd-devel/wicd/experimental/diff/831
-	http://bazaar.launchpad.net/~wicd-devel/wicd/experimental/diff/835
-        wicd-1.7.2.4-urwid-1.3.0.patch)
-md5sums=('c2435ddfdef0b9898852d72a85a45f0f'
+        wicd-1.7.3-urwid-1.3.0.patch)
+md5sums=('162ca2e6f4ab903bb7ab2bc0adb7d1aa'
          '326df163a5732d38741371baa4fce9e5'
-         '744b3c12fe901ed435351e884dc8cb1d'
-         '0d2355bc2eb7234a537f42f1773edfe0'
-         '1630d7fe8f09911302d33b26286ff9b8'
-         '797a1663714da24e446c50698bba25b5')
+         'f7e6085e482f37f2b8529326c21cbbbf')
 makedepends=('python2' 'python2-babel' 'python2-setuptools' 'gettext' 'dbus-glib' 'dhcpcd' 
              'ethtool' 'inetutils' 'net-tools' 'pygtk' 'python2-dbus' 'python2-gobject2' 
              'python2-urwid' 'rfkill' 'shared-mime-info' 'wireless_tools' 'wpa_supplicant'
@@ -37,26 +31,22 @@ prepare() {
   export PYTHON=python2
   
   sed -i 's|/usr/sbin/|/usr/bin/|' other/wicd.service
-
-  patch -p0 < "$srcdir/dbus_string_fix.patch"
-  
-  # Fix problem with new urwid FS#33378 LP#1075399
-  patch -Np0 -i "$srcdir/831"
-  patch -Np0 -i "$srcdir/835"
-  patch -p1  -i "$srcdir/wicd-1.7.2.4-urwid-1.3.0.patch"
+  patch -Np0 -i "$srcdir/wicd-1.7.3-urwid-1.3.0.patch"
 }
 
 build() {
   cd $pkgbase-$pkgver
-
-  python2 setup.py configure --no-install-init \
-	                     --resume=/usr/share/wicd/scripts/ \
-                             --suspend=/usr/share/wicd/scripts/ \
-                             --verbose \
-                             --python=/usr/bin/python2 \
-			     --lib=/usr/lib \
-			     --sbin=/usr/bin \
-			     --systemd=/usr/lib/systemd/system
+  python2 setup.py configure \
+      --no-install-init \
+      --resume=/usr/share/wicd/scripts/ \
+      --suspend=/usr/share/wicd/scripts/ \
+      --verbose \
+      --python=/usr/bin/python2 \
+      --lib=/usr/lib \
+      --sbin=/usr/bin \
+      --no-install-gnome-shell-extensions \
+	  --systemd=/usr/lib/systemd/system
+  python2 setup.py build
   python2 setup.py compile_translations
   
   #HACK for https://bugs.launchpad.net/wicd/+bug/928589
@@ -73,7 +63,7 @@ package_wicd() {
   install=wicd.install  
 
   cd $pkgbase-$pkgver
-  python2 setup.py install --optimize=1 --root="$pkgdir"
+  python2 setup.py install --skip-build --optimize=1 --root="$pkgdir"
 
   cd build/lib/wicd
   for i in *.py; do
@@ -86,7 +76,7 @@ package_wicd() {
   rm -rf "$pkgdir"/etc/xdg
   rm -f "$pkgdir"/usr/bin/{wicd-client,wicd-gtk}
   rm -rf "$pkgdir"/usr/share/{applications,icons,pixmaps}
-  rm -rf "$pkgdir"/usr/share/wicd/gtk  
+  rm -rf "$pkgdir"/usr/share/wicd/{gtk,icons}  
 }
 
 package_wicd-gtk() {
@@ -98,7 +88,7 @@ package_wicd-gtk() {
   install=wicd-gtk.install 
 
   cd $pkgbase-$pkgver
-  python2 setup.py install --optimize=1 --root="$pkgdir"
+  python2 setup.py install --skip-build --optimize=1 --root="$pkgdir"
 
   install -Dm644 "$srcdir/wicd.desktop" "$pkgdir/usr/share/applications/wicd.desktop"
 
