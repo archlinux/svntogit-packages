@@ -8,7 +8,7 @@ arch=('i686' 'x86_64')
 url="http://projects.archlinux.org/users/remy/pyalpm.git/"
 license=('GPL')
 depends=('python>=3.4' 'pacman>=4.2')
-source=("ftp://ftp.archlinux.org/other/pyalpm/$pkgname-$pkgver.tar.gz")
+source=("https://sources.archlinux.org/other/pyalpm/$pkgname-$pkgver.tar.gz")
 sha1sums=('62fafb93d30c27b5a5a09df3e802d6e50fed9802')
 
 build() {
