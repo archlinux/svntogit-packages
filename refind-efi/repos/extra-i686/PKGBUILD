@@ -13,7 +13,7 @@ _USE_GNU_EFI="1"
 #######
 
 pkgname="refind-efi"
-pkgver="0.8.3"
+pkgver="0.8.5"
 pkgrel="1"
 pkgdesc="Rod Smith's fork of rEFIt UEFI Boot Manager"
 url="http://www.rodsbooks.com/refind/index.html"
@@ -30,20 +30,18 @@ install="${pkgname}.install"
 
 source=("http://downloads.sourceforge.net/refind/refind-src-${pkgver}.zip"
         'refind_linux.conf')
-
-md5sums=('ed0a6048e135e7140ee37540819454fa'
+md5sums=('dedb0b3d7d9c5cab81ab333850cd73c4'
          '12ce3e22a216e7b25c253478a34713b4')
-
 
 if [[ "${_USE_GNU_EFI}" == "1" ]]; then
 	
 	pkgdesc="${pkgdesc} - Built with GNU-EFI libs"
-	makedepends=('gnu-efi-libs')
+	makedepends=('gnu-efi-libs' 'git')
 	
 else
 	
 	pkgdesc="${pkgdesc} - Built with Tianocore UDK libs"
-	makedepends+=('subversion' 'python2')
+	makedepends+=('subversion' 'python2' 'git')
 	
 	_TIANOCORE_SVN_URL="https://svn.code.sf.net/p/edk2/code/branches/UDK2014"
 	_TIANO_DIR_="tianocore-udk-2014-svn"
@@ -295,7 +293,19 @@ build() {
 		# make xfs
 		# echo
 	fi
-	
+        if [[ "${CARCH}" == "x86_64" ]];then
+            cd "${srcdir}/refind-${pkgver}/net"
+            msg "Unset all compiler FLAGS"
+            unset CFLAGS
+            unset CPPFLAGS
+            unset CXXFLAGS
+            unset LDFLAGS
+            unset MAKEFLAGS
+
+            msg "Compile Network support"
+            make source
+            make netboot
+        fi
 }
 
 package() {
@@ -311,7 +321,10 @@ package() {
 	msg "Install UEFI applications built from rEFInd"
 	install -d "${pkgdir}/usr/share/refind/tools_${_TIANO_S_ARCH}"
 	install -D -m0644 "${srcdir}/refind-${pkgver}/gptsync/gptsync_${_TIANO_S_ARCH}.efi" "${pkgdir}/usr/share/refind/tools_${_TIANO_S_ARCH}/gptsync_${_TIANO_S_ARCH}.efi"
-	
+        if [[ "${CARCH}" == "x86_64" ]]; then
+            install -D -m0644 "${srcdir}/refind-${pkgver}/net/bin/ipxe.efi" "${pkgdir}/usr/share/refind/tools_${_TIANO_S_ARCH}/ipxe_${_TIANO_S_ARCH}.efi"
+            install -D -m0644 "${srcdir}/refind-${pkgver}/net/bin/ipxe_discovery.efi" "${pkgdir}/usr/share/refind/tools_${_TIANO_S_ARCH}/ipxe_discovery_${_TIANO_S_ARCH}.efi"
+        fi
 	msg "Install rEFInd helper scripts"
 	install -d "${pkgdir}/usr/bin/"
 	install -D -m0755 "${srcdir}/refind-${pkgver}/install.sh" "${pkgdir}/usr/bin/refind-install"
