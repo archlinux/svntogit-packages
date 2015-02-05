@@ -1,0 +1,224 @@
+From fa18180cc5f6d84168ffca6b7b8e467a5c72da14 Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Tue, 2 Apr 2013 11:15:47 -0400
+Subject: preinit: Don't bother explicitly loading int10, vbe will do it for us
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+
+diff --git a/src/atipreinit.c b/src/atipreinit.c
+index 0f5c785..e3048d2 100644
+--- a/src/atipreinit.c
++++ b/src/atipreinit.c
+@@ -531,9 +531,8 @@ ATIPreInit
+ 
+ #ifndef AVOID_CPIO
+ 
+-    xf86Int10InfoPtr pInt10Info = NULL;
+     vbeInfoPtr       pVBE = NULL;
+-    pointer          pInt10Module, pDDCModule = NULL, pVBEModule = NULL;
++    pointer          pVBEModule = NULL;
+ 
+ #endif /* AVOID_CPIO */
+ 
+@@ -657,42 +656,21 @@ ATIPreInit
+ #endif /* TV_OUT */
+ 
+     /*
+-     * If there is an ix86-style BIOS, ensure its initialisation entry point
+-     * has been executed, and retrieve DDC and VBE information from it.
++     * If VBE setup works, grab DDC from it
+      */
+-    if (!(pInt10Module = xf86LoadSubModule(pScreenInfo, "int10")))
+-    {
+-        xf86DrvMsg(pScreenInfo->scrnIndex, X_WARNING,
+-            "Unable to load int10 module.\n");
+-    }
+-    else if (!(pInt10Info = xf86InitInt10(pATI->iEntity)))
+-    {
+-        xf86DrvMsg(pScreenInfo->scrnIndex, X_WARNING,
+-             "Unable to initialise int10 interface.\n");
++    if (!(pVBEModule = xf86LoadSubModule(pScreenInfo, "vbe"))) {
++	xf86DrvMsg(pScreenInfo->scrnIndex, X_WARNING,
++		   "Unable to load vbe module.\n");
+     }
+     else
+     {
+-        if (!(pDDCModule = xf86LoadSubModule(pScreenInfo, "ddc")))
+-        {
+-            xf86DrvMsg(pScreenInfo->scrnIndex, X_WARNING,
+-                "Unable to load ddc module.\n");
+-        }
+-        else
+-        if (!(pVBEModule = xf86LoadSubModule(pScreenInfo, "vbe")))
+-        {
+-            xf86DrvMsg(pScreenInfo->scrnIndex, X_WARNING,
+-                "Unable to load vbe module.\n");
+-        }
+-        else
+-        {
+-            if ((pVBE = VBEInit(pInt10Info, pATI->iEntity)))
+-            {
+-                ConfiguredMonitor = vbeDoEDID(pVBE, pDDCModule);
+-            }
+-        }
++	if ((pVBE = VBEInit(NULL, pATI->iEntity)))
++	    ConfiguredMonitor = vbeDoEDID(pVBE, NULL);
+ 
+-        if (!(flags & PROBE_DETECT))
++        if (pVBE && !(flags & PROBE_DETECT))
+         {
++	    xf86Int10InfoPtr pInt10Info = pVBE->pInt10;
++
+             /* Validate, then make a private copy of, the initialised BIOS */
+             CARD8 *pBIOS = xf86int10Addr(pInt10Info, pInt10Info->BIOSseg << 4);
+ 
+@@ -715,15 +693,9 @@ ATIPreInit
+     /* De-activate VBE */
+     vbeFree(pVBE);
+     xf86UnloadSubModule(pVBEModule);
+-
+-    /* De-activate int10 */
+-    xf86FreeInt10(pInt10Info);
+-    xf86UnloadSubModule(pInt10Module);
+ #else
+-    pATI->pInt10 = pInt10Info;
+     pATI->pVBE = pVBE;
+     pVBE = NULL;
+-    pInt10Info = NULL;
+ #endif /* TV_OUT */
+ 
+     if (ConfiguredMonitor && !(flags & PROBE_DETECT))
+@@ -732,9 +704,6 @@ ATIPreInit
+         xf86SetDDCproperties(pScreenInfo, ConfiguredMonitor);
+     }
+ 
+-    /* DDC module is no longer needed at this point */
+-    xf86UnloadSubModule(pDDCModule);
+-
+ #endif /* AVOID_CPIO */
+ 
+     if (flags & PROBE_DETECT)
+-- 
+cgit v0.10.2
+From 2c83b465b336a012f2d2716940bf483358388000 Mon Sep 17 00:00:00 2001
+From: Matthieu Herrb <matthieu.herrb@laas.fr>
+Date: Mon, 3 Jun 2013 13:01:23 -0400
+Subject: Deal with pPict->pDrawable == NULL for source-only pictures.
+
+Falling back to software rendering for such source pictures
+(solid/gradient).
+
+Signed-off-by: Matthieu Herrb <matthieu.herrb@laas.fr>
+Reviewed-by: Alex Deucher <alexander.deucher@amd.com>
+
+diff --git a/src/atimach64render.c b/src/atimach64render.c
+index ffde2cb..8d259fa 100644
+--- a/src/atimach64render.c
++++ b/src/atimach64render.c
+@@ -339,10 +339,13 @@ Mach64GetOrder(int val, int *shift)
+ static Bool
+ Mach64CheckTexture(PicturePtr pPict)
+ {
+-    int w = pPict->pDrawable->width;
+-    int h = pPict->pDrawable->height;
++    int h,w;
+     int l2w, l2h, level, i;
+ 
++    if (pPict->pDrawable == NULL)
++	    return FALSE;
++    w = pPict->pDrawable->width;
++    h = pPict->pDrawable->height;
+     for (i = 0; i < MACH64_NR_TEX_FORMATS; i++) {
+         if (Mach64TexFormats[i].pictFormat == pPict->format)
+             break;
+-- 
+cgit v0.10.2
+From e538ff6b2108117a7ae6644a844c6ce10fc0f1ee Mon Sep 17 00:00:00 2001
+From: Connor Behan <connor.behan@gmail.com>
+Date: Wed, 27 Nov 2013 23:53:31 -0800
+Subject: Drop dependence on xf86PciInfo.h
+
+It is about time we stop using this deprecated file and include pciids
+locally.
+
+Signed-off-by: Connor Behan <connor.behan@gmail.com>
+Reviewed-by: Alex Deucher <alexander.deucher@amd.com>
+
+diff --git a/src/atimach64probe.c b/src/atimach64probe.c
+index e94c3f2..430af6c 100644
+--- a/src/atimach64probe.c
++++ b/src/atimach64probe.c
+@@ -38,7 +38,42 @@
+ #include "atiadjust.h"
+ #include "ativalid.h"
+ 
+-#include "xf86PciInfo.h"
++/* Chip definitions */
++#define PCI_VENDOR_ATI			0x1002
++#define PCI_CHIP_MACH64CT		0x4354
++#define PCI_CHIP_MACH64CX		0x4358
++#define PCI_CHIP_MACH64ET		0x4554
++#define PCI_CHIP_MACH64GB		0x4742
++#define PCI_CHIP_MACH64GD		0x4744
++#define PCI_CHIP_MACH64GI		0x4749
++#define PCI_CHIP_MACH64GL		0x474C
++#define PCI_CHIP_MACH64GM		0x474D
++#define PCI_CHIP_MACH64GN		0x474E
++#define PCI_CHIP_MACH64GO		0x474F
++#define PCI_CHIP_MACH64GP		0x4750
++#define PCI_CHIP_MACH64GQ		0x4751
++#define PCI_CHIP_MACH64GR		0x4752
++#define PCI_CHIP_MACH64GS		0x4753
++#define PCI_CHIP_MACH64GT		0x4754
++#define PCI_CHIP_MACH64GU		0x4755
++#define PCI_CHIP_MACH64GV		0x4756
++#define PCI_CHIP_MACH64GW		0x4757
++#define PCI_CHIP_MACH64GX		0x4758
++#define PCI_CHIP_MACH64GY		0x4759
++#define PCI_CHIP_MACH64GZ		0x475A
++#define PCI_CHIP_MACH64LB		0x4C42
++#define PCI_CHIP_MACH64LD		0x4C44
++#define PCI_CHIP_MACH64LG		0x4C47
++#define PCI_CHIP_MACH64LI		0x4C49
++#define PCI_CHIP_MACH64LM		0x4C4D
++#define PCI_CHIP_MACH64LN		0x4C4E
++#define PCI_CHIP_MACH64LP		0x4C50
++#define PCI_CHIP_MACH64LQ		0x4C51
++#define PCI_CHIP_MACH64LR		0x4C52
++#define PCI_CHIP_MACH64LS		0x4C53
++#define PCI_CHIP_MACH64VT		0x5654
++#define PCI_CHIP_MACH64VU		0x5655
++#define PCI_CHIP_MACH64VV		0x5656
+ 
+ #ifndef XSERVER_LIBPCIACCESS
+ static Bool Mach64Probe(DriverPtr pDriver, int flags);
+-- 
+cgit v0.10.2
+From 810572536e153ac9e4615a35e2ab99dc266806da Mon Sep 17 00:00:00 2001
+From: Dave Airlie <airlied@redhat.com>
+Date: Sat, 15 Nov 2014 11:29:54 +1000
+Subject: mach64: fix build probably not required with pci access anyways
+
+
+diff --git a/src/atipreinit.c b/src/atipreinit.c
+index e3048d2..dbcd9fd 100644
+--- a/src/atipreinit.c
++++ b/src/atipreinit.c
+@@ -1079,12 +1079,14 @@ ATIPreInit
+         }
+     }
+ 
++#ifndef XSERVER_LIBPCIACCESS
+     if (!xf86LinearVidMem())
+     {
+         xf86DrvMsg(pScreenInfo->scrnIndex, X_ERROR,
+             "A linear aperture is not available.\n");
+         goto bail;
+     }
++#endif
+ 
+     /*
+      * Set colour weights.
+-- 
+cgit v0.10.2
+
