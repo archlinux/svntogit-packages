@@ -1,0 +1,447 @@
+From 62ba63f687d7b99aff7c88ffd2774f15a2471ce0 Mon Sep 17 00:00:00 2001
+From: Mikulas Patocka <mpatocka@redhat.com>
+Date: Fri, 17 Jan 2014 16:04:26 -0500
+Subject: xf86-video-mga: set the pan_ctl register
+
+On my Matrox G550 most videomodes in Xorg didn't work. I found out that it
+works if Xorg pixel clock is similar to the pixel clock set on framebuffer
+console.
+
+Further analysis showed that the Linux framebuffer driver sets the pan_ctl
+register (the register 0xa2) according to the pixel clock, the Xorg driver
+doesn't set it.
+
+I copied the code to set the pan_ctl register from the Linux kernel to the
+Xorg driver, and most videomodes in Xorg work.
+
+The pan_ctl register is required for both analog and digital output.
+
+The pan_ctl register is saved and restored, this is required so that we
+restore text-mode screen or Linux framebuffer correctly.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+
+diff --git a/src/mga.h b/src/mga.h
+index 988ba93..5f75d37 100644
+--- a/src/mga.h
++++ b/src/mga.h
+@@ -218,6 +218,7 @@ typedef struct {
+     CARD32		Option2;
+     CARD32		Option3;
+     long                Clock;
++    unsigned char	Pan_Ctl;
+     Bool                PIXPLLCSaved;
+     unsigned char       PllM;
+     unsigned char       PllN;
+diff --git a/src/mga_dacG.c b/src/mga_dacG.c
+index 9a80193..f307488 100644
+--- a/src/mga_dacG.c
++++ b/src/mga_dacG.c
+@@ -849,6 +849,43 @@ MGAGSetPCLK( ScrnInfoPtr pScrn, long f_out )
+ 
+ 	if(MGAISGx50(pMga)) {
+ 	    pReg->Clock = f_out;
++	    if (pMga->Chipset == PCI_CHIP_MGAG550) {
++		if (f_out < 45000) {
++		    pReg->Pan_Ctl = 0x00;
++		} else if (f_out < 55000) {
++		    pReg->Pan_Ctl = 0x08;
++		} else if (f_out < 70000) {
++		    pReg->Pan_Ctl = 0x10;
++		} else if (f_out < 85000) {
++		    pReg->Pan_Ctl = 0x18;
++		} else if (f_out < 100000) {
++		    pReg->Pan_Ctl = 0x20;
++		} else if (f_out < 115000) {
++		    pReg->Pan_Ctl = 0x28;
++		} else if (f_out < 125000) {
++		    pReg->Pan_Ctl = 0x30;
++		} else {
++		    pReg->Pan_Ctl = 0x38;
++		}
++	    } else {
++		if (f_out < 45000) {
++		    pReg->Pan_Ctl = 0x00;
++		} else if (f_out < 65000) {
++		    pReg->Pan_Ctl = 0x08;
++		} else if (f_out < 85000) {
++		    pReg->Pan_Ctl = 0x10;
++		} else if (f_out < 105000) {
++		    pReg->Pan_Ctl = 0x18;
++		} else if (f_out < 135000) {
++		    pReg->Pan_Ctl = 0x20;
++		} else if (f_out < 160000) {
++		    pReg->Pan_Ctl = 0x28;
++		} else if (f_out < 175000) {
++		    pReg->Pan_Ctl = 0x30;
++		} else {
++		    pReg->Pan_Ctl = 0x38;
++		}
++	    }
+ 	    return;
+ 	}
+ 
+@@ -1395,6 +1432,7 @@ MGA_NOT_HAL(
+ 	     * To test this we check for Clock == 0.
+ 	     */
+ 	    MGAG450SetPLLFreq(pScrn, mgaReg->Clock);
++	    outMGAdac(MGA1064_PAN_CTL, mgaReg->Pan_Ctl);
+ 	    mgaReg->PIXPLLCSaved = FALSE;
+ 	}
+ 
+@@ -1583,6 +1621,7 @@ MGAGSave(ScrnInfoPtr pScrn, vgaRegPtr vgaReg, MGARegPtr mgaReg,
+ 	 * VESA modes (s.o.). MATROX: hint, hint.
+ 	 */
+ 	if (MGAISGx50(pMga)) {
++	    mgaReg->Pan_Ctl = inMGAdac(MGA1064_PAN_CTL);
+ 	    mgaReg->Clock = MGAG450SavePLLFreq(pScrn);
+ 	}
+ 
+-- 
+cgit v0.10.2
+From 0789f3f2799e6497e9e2e7488da679c03b7fa468 Mon Sep 17 00:00:00 2001
+From: Mikulas Patocka <mpatocka@redhat.com>
+Date: Thu, 13 Mar 2014 18:25:56 -0400
+Subject: xf86-video-mga: fix a lockup in the mga driver
+
+I've had a Xserver lockup in the mga driver, examining it with gdb showed
+this obviously broken loop:
+	count = INREG(MGAREG_VCOUNT) + 2;
+	while(INREG(MGAREG_VCOUNT) < count);
+
+It reads the line counter and waits until the counter advances by two. The
+cause of the lockup is this - if the kernel reschedules the Xorg process
+and lets it run in such a moment when INREG(MGAREG_VCOUNT) returns the
+maximum (or maximum minus 1) line count, the loop never exits.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+
+diff --git a/src/mga_driver.c b/src/mga_driver.c
+index f0b5abb..177a5a7 100644
+--- a/src/mga_driver.c
++++ b/src/mga_driver.c
+@@ -3618,7 +3618,7 @@ void
+ MGAAdjustFrame(ADJUST_FRAME_ARGS_DECL)
+ {
+     SCRN_INFO_PTR(arg);
+-    int Base, tmp, count;
++    int Base, tmp, count, last_vcount;
+ 
+     MGAFBLayout *pLayout;
+     MGAPtr pMga;
+@@ -3648,8 +3648,14 @@ MGAAdjustFrame(ADJUST_FRAME_ARGS_DECL)
+         while (INREG8(0x1FDA) & 0x08);
+         while (!(INREG8(0x1FDA) & 0x08));
+         /* wait until we're past the start (fixseg.c in the DDK) */
+-        count = INREG(MGAREG_VCOUNT) + 2;
+-        while(INREG(MGAREG_VCOUNT) < count);
++        last_vcount = INREG(MGAREG_VCOUNT);
++        count = last_vcount + 2;
++        while (1) {
++           int vcount = INREG(MGAREG_VCOUNT);
++           if (vcount >= count) break;
++           if (vcount < last_vcount) break;
++           last_vcount = count;
++        }
+ 
+         OUTREG16(MGAREG_CRTC_INDEX, (Base & 0x00FF00) | 0x0C);
+         OUTREG16(MGAREG_CRTC_INDEX, ((Base & 0x0000FF) << 8) | 0x0D);
+-- 
+cgit v0.10.2
+From d2c65c24e94dca1e8fb16c851d0e2fe41bf5d1c6 Mon Sep 17 00:00:00 2001
+From: Mikulas Patocka <mpatocka@redhat.com>
+Date: Thu, 13 Mar 2014 23:17:52 -0400
+Subject: fix a type in previous lockup in the mga driver fix
+
+Oh, I had a typo in that patch - so please commit this to fix it.
+
+Signed-off-by: Dave Airlie <airlied@redhat.com>
+
+diff --git a/src/mga_driver.c b/src/mga_driver.c
+index 177a5a7..46478a6 100644
+--- a/src/mga_driver.c
++++ b/src/mga_driver.c
+@@ -3654,7 +3654,7 @@ MGAAdjustFrame(ADJUST_FRAME_ARGS_DECL)
+            int vcount = INREG(MGAREG_VCOUNT);
+            if (vcount >= count) break;
+            if (vcount < last_vcount) break;
+-           last_vcount = count;
++           last_vcount = vcount;
+         }
+ 
+         OUTREG16(MGAREG_CRTC_INDEX, (Base & 0x00FF00) | 0x0C);
+-- 
+cgit v0.10.2
+From 1a5bc65f27e76263818a44ddbc4197f6083077cf Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Thu, 22 May 2014 12:48:27 -0400
+Subject: man: Don't mention the HAL
+
+I mentioned it once, but I think I got away with it all right.
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+
+diff --git a/man/mga.man b/man/mga.man
+index e1e674f..8a8f87c 100644
+--- a/man/mga.man
++++ b/man/mga.man
+@@ -22,11 +22,7 @@ TrueColor.  Multi\-card configurations are supported.  XVideo is supported
+ on G200 and newer systems, with either
+ .B TexturedVideo
+ or video overlay.  The second head of dual\-head cards is supported for the
+-G450 and G550.  Support for the second head on G400 cards requires a
+-binary\-only "mga_hal" module that is available from Matrox
+-<http://www.matrox.com>, and may be on the CD supplied with the card.  That
+-module also provides various other enhancements, and may be necessary to
+-use the DVI (digital) output on the G550 (and other cards).
++G450 and G550.
+ .SH "SUPPORTED HARDWARE"
+ The
+ .B mga
+@@ -117,10 +113,6 @@ the Render and Composite extensions, but the rendering code for it is newer and
+ possibly unstable.  The default is
+ .B XAA.
+ .TP
+-.BI "Option \*qNoHal\*q \*q" boolean \*q
+-Disable or enable loading the "mga_hal" module.  Default: the module is
+-loaded when available and when using hardware that it supports.
+-.TP
+ .BI "Option \*qOverclockMem\*q"
+ Set clocks to values used by some commercial X Servers (G100, G200 and G400
+ only).  Default: off.
+-- 
+cgit v0.10.2
+From cf46b1017a2663c59f07abd417573b9580f0145f Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Tue, 29 Jul 2014 09:14:15 -0400
+Subject: dri: Stop (uselessly) initializing the ValidateTree hooks
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+
+diff --git a/src/mga_dri.c b/src/mga_dri.c
+index a1c39f3..b957028 100644
+--- a/src/mga_dri.c
++++ b/src/mga_dri.c
+@@ -1165,9 +1165,6 @@ Bool MGADRIScreenInit( ScreenPtr pScreen )
+    pDRIInfo->frameBufferStride = pScrn->displayWidth*(pScrn->bitsPerPixel/8);
+    pDRIInfo->ddxDrawableTableEntry = MGA_MAX_DRAWABLES;
+ 
+-   pDRIInfo->wrap.ValidateTree = NULL;
+-   pDRIInfo->wrap.PostValidateTree = NULL;
+-
+    pDRIInfo->createDummyCtx = TRUE;
+    pDRIInfo->createDummyCtxPriv = FALSE;
+ 
+-- 
+cgit v0.10.2
+From 132dee029e36c9a91a85f178885e94a9f9b5ee37 Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Tue, 29 Jul 2014 14:35:46 -0400
+Subject: undef DISABLE_VGA_IO
+
+Dead conditional ever since m12n, must not be needed.
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+
+diff --git a/src/mga.h b/src/mga.h
+index 5f75d37..e87932f 100644
+--- a/src/mga.h
++++ b/src/mga.h
+@@ -314,16 +314,6 @@ typedef struct {
+ #define ISTV1(p) (p->pMgaHwInfo && ((p->pMgaHwInfo->ulCapsFirstOutput) & MGAHWINFOCAPS_OUTPUT_TV))
+ #define ISTV2(p) (p->pMgaHwInfo && ((p->pMgaHwInfo->ulCapsSecondOutput) & MGAHWINFOCAPS_OUTPUT_TV))
+ 
+-#ifdef DISABLE_VGA_IO
+-typedef struct mgaSave {
+-#ifdef XSERVER_LIBPCIACCESS
+-    struct pci_device * pvp;
+-#else
+-    pciVideoPtr pvp;
+-#endif
+-    Bool enable;
+-} MgaSave, *MgaSavePtr;
+-#endif
+ 
+ 
+ typedef enum {
+diff --git a/src/mga_driver.c b/src/mga_driver.c
+index 46478a6..f0025b1 100644
+--- a/src/mga_driver.c
++++ b/src/mga_driver.c
+@@ -123,12 +123,6 @@ static Bool	MGACloseScreen(CLOSE_SCREEN_ARGS_DECL);
+ static Bool	MGASaveScreen(ScreenPtr pScreen, int mode);
+ static Bool	MGASaveScreenCrtc2(ScreenPtr pScreen, int mode);
+ 
+-/* This shouldn't be needed since RAC will disable all I/O for MGA cards. */
+-#ifdef DISABLE_VGA_IO
+-static void     VgaIOSave(int i, void *arg);
+-static void     VgaIORestore(int i, void *arg);
+-#endif
+-
+ /* Optional functions */
+ static void	MGAFreeScreen(FREE_SCREEN_ARGS_DECL);
+ static ModeStatus MGAValidMode(SCRN_ARG_TYPE arg, DisplayModePtr mode,
+@@ -667,13 +661,6 @@ MGAPciProbe(DriverPtr drv, int entity_num, struct pci_device * dev,
+     ScrnInfoPtr pScrn = NULL;
+     EntityInfoPtr pEnt;
+     MGAPtr pMga;
+-#ifdef DISABLE_VGA_IO
+-    MgaSavePtr smga;
+-
+-
+-    smga = xnfalloc(sizeof(MgaSave));
+-    smga->pvp = dev;
+-#endif
+ 
+     if (pci_device_has_kernel_driver(dev)) {
+ 	/* If it's a G200 server chip, it's probably on KMS, so bail; if not,
+@@ -697,11 +684,7 @@ MGAPciProbe(DriverPtr drv, int entity_num, struct pci_device * dev,
+     /* Allocate a ScrnInfoRec and claim the slot */
+     pScrn = xf86ConfigPciEntity(pScrn, 0, entity_num, MGAPciChipsets,
+ 				NULL,
+-#ifndef DISABLE_VGA_IO
+ 				NULL, NULL, NULL, NULL
+-#else
+-				VgaIOSave, VgaIOSave, VgaIORestore, smga
+-#endif
+ 				);
+     if (pScrn != NULL) {
+ 	/* Fill in what we can of the ScrnInfoRec */
+@@ -838,22 +821,11 @@ MGAProbe(DriverPtr drv, int flags)
+ 	ScrnInfoPtr pScrn = NULL;
+ 	EntityInfoPtr pEnt;
+ 	int attrib_no;
+-#ifdef DISABLE_VGA_IO
+-	MgaSavePtr smga;
+-#endif
+ 
+ 	/* Allocate a ScrnInfoRec and claim the slot */
+-#ifndef DISABLE_VGA_IO
+ 	pScrn = xf86ConfigPciEntity(pScrn, 0,usedChips[i],
+ 				    MGAPciChipsets, NULL, NULL,
+ 				    NULL, NULL, NULL);
+-#else
+-	smga = xnfalloc(sizeof(MgaSave));
+-	smga->pvp = xf86GetPciInfoForEntity(usedChips[i]);
+-	pScrn = xf86ConfigPciEntity(pScrn, 0,usedChips[i],
+-				    MGAPciChipsets, NULL,VgaIOSave,
+-				    VgaIOSave, VgaIORestore,smga);
+-#endif
+         if (pScrn != NULL) {
+ 	    MGAPtr pMga;
+ 
+@@ -1389,90 +1361,6 @@ MGAdoDDC(ScrnInfoPtr pScrn)
+     return MonInfo;
+ }
+ 
+-#ifdef DISABLE_VGA_IO
+-static void
+-VgaIOSave(int i, void *arg)
+-{
+-    MgaSavePtr sMga = arg;
+-#ifndef XSERVER_LIBPCIACCESS
+-    PCITAG tag = pciTag(sMga->pvp->bus,sMga->pvp->device,sMga->pvp->func);
+-#endif
+-    uint32_t temp;
+-
+-#ifdef DEBUG
+-    ErrorF("mga: VgaIOSave: %d:%d:%d\n", sMga->pvp->bus, sMga->pvp->device,
+-	   sMga->pvp->func);
+-#endif
+-#ifdef XSERVER_LIBPCIACCESS
+-    pci_device_cfg_read_u32(pMga->PciInfo, & temp, PCI_OPTION_REG);
+-#else
+-    temp = pciReadLong(tag, PCI_OPTION_REG);
+-#endif
+-    sMga->enable = (temp & 0x100) != 0;
+-}
+-
+-static void
+-VgaIORestore(int i, void *arg)
+-{
+-    MgaSavePtr sMga = arg;
+-#ifndef XSERVER_LIBPCIACCESS
+-    PCITAG tag = pciTag(sMga->pvp->bus,sMga->pvp->device,sMga->pvp->func);
+-#endif
+-
+-#ifdef DEBUG
+-    ErrorF("mga: VgaIORestore: %d:%d:%d\n", sMga->pvp->bus, sMga->pvp->device,
+-	   sMga->pvp->func);
+-#endif
+-#ifdef XSERVER_LIBPCIACCESS
+-    pci_device_cfg_write_bits(pMga->PciInfo, 0x00000100, sMga->enable,
+-			      PCI_OPTION_REG);
+-#else
+-    pciSetBitsLong(tag, PCI_OPTION_REG, 0x100, sMga->enable ? 0x100 : 0x000);
+-#endif
+-}
+-
+-static void
+-VgaIODisable(void *arg)
+-{
+-    MGAPtr pMga = arg;
+-
+-#ifdef DEBUG
+-    ErrorF("mga: VgaIODisable: %d:%d:%d, %s, xf86ResAccessEnter is %s\n",
+-	   pMga->PciInfo->bus, pMga->PciInfo->device, pMga->PciInfo->func,
+-	   pMga->Primary ? "primary" : "secondary",
+-	   BOOLTOSTRING(xf86ResAccessEnter));
+-#endif
+-    /* Turn off the vgaioen bit. */
+-#ifdef XSERVER_LIBPCIACCESS
+-    pci_device_cfg_write_bits(pMga->PciInfo, 0x00000100, 0x00000000,
+-			      PCI_OPTION_REG);
+-#else
+-    pciSetBitsLong(pMga->PciTag, PCI_OPTION_REG, 0x100, 0x000);
+-#endif
+-}
+-
+-static void
+-VgaIOEnable(void *arg)
+-{
+-    MGAPtr pMga = arg;
+-
+-#ifdef DEBUG
+-    ErrorF("mga: VgaIOEnable: %d:%d:%d, %s, xf86ResAccessEnter is %s\n",
+-	   pMga->PciInfo->bus, pMga->PciInfo->device, pMga->PciInfo->func,
+-	   pMga->Primary ? "primary" : "secondary",
+-	   BOOLTOSTRING(xf86ResAccessEnter));
+-#endif
+-    /* Turn on the vgaioen bit. */
+-    if (pMga->Primary) {
+-#ifdef XSERVER_LIBPCIACCESS
+-	pci_device_cfg_write_bits(pMga->PciInfo, 0x00000100, 0x00000100,
+-				  PCI_OPTION_REG);
+-#else
+-	pciSetBitsLong(pMga->PciTag, PCI_OPTION_REG, 0x100, 0x100);
+-#endif
+-    }
+-}
+-#endif /* DISABLE_VGA_IO */
+ 
+ void
+ MGAProbeDDC(ScrnInfoPtr pScrn, int index)
+@@ -1587,20 +1475,10 @@ MGAPreInit(ScrnInfoPtr pScrn, int flags)
+ 
+     pMga->Primary = xf86IsPrimaryPci(pMga->PciInfo);
+ 
+-#ifndef DISABLE_VGA_IO
+ #ifndef XSERVER_LIBPCIACCESS
+     xf86SetOperatingState(resVgaIo, pMga->pEnt->index, ResUnusedOpr);
+     xf86SetOperatingState(resVgaMem, pMga->pEnt->index, ResDisableOpr);
+ #endif
+-#else
+-    /*
+-     * Set our own access functions, which control the vgaioen bit.
+-     */
+-    pMga->Access.AccessDisable = VgaIODisable;
+-    pMga->Access.AccessEnable = VgaIOEnable;
+-    pMga->Access.arg = pMga;
+-    xf86SetAccessFuncs(pMga->pEnt, &pMga->Access, &pMga->Access);
+-#endif
+ 
+     /* Set pScrn->monitor */
+     pScrn->monitor = pScrn->confScreen->monitor;
+-- 
+cgit v0.10.2
+
