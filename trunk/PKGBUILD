@@ -1,42 +1,61 @@
 # $Id$
-# Maintainer : Ionut Biru <ibiru@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Massimiliano Torromeo < massimiliano DOT torromeo AT gmail DOT com >
 
 pkgname=('python-beaker' 'python2-beaker')
-pkgver=1.6.4
-pkgrel=2
+pkgver=1.6.5
+pkgrel=1
 arch=('any')
 license=('custom')
 pkgdesc="Caching and sessions WSGI middleware for use with web applications and stand-alone Python scripts and applications"
 url="http://beaker.groovie.org/"
-makedepends=('python-setuptools' 'python2-setuptools')
-source=("http://cheeseshop.python.org/packages/source/B/Beaker/Beaker-${pkgver}.tar.gz")
-md5sums=('c2e102870ed4c53104dec48ceadf8e9d')
+makedepends=('python-setuptools' 'python2-setuptools' 'git')
+checkdepends=('python-nose' 'python2-nose' 'python-mock' 'python2-mock')
+source=("git+https://github.com/bbangert/beaker.git#tag=v$pkgver")
+md5sums=('SKIP')
+
+prepare() {
+    cp -a beaker{,-py2}
+
+    sed -i "s#/usr/bin/python#/usr/bin/python3#" beaker/beaker/crypto/pbkdf2.py
+    sed -i "s#/usr/bin/python#/usr/bin/python2#" beaker-py2/beaker/crypto/pbkdf2.py
+}
 
 build() {
-    cp -r Beaker-${pkgver} python2-Beaker-${pkgver}
-
-    cd "${srcdir}/Beaker-${pkgver}"
-    sed -i "s#/usr/bin/python#/usr/bin/python3#" beaker/crypto/pbkdf2.py
+    cd "${srcdir}/beaker"
     python3 setup.py build
 
-    cd "${srcdir}/python2-Beaker-${pkgver}"
-    sed -i "s#/usr/bin/python#/usr/bin/python2#" beaker/crypto/pbkdf2.py
+    cd "${srcdir}/beaker-py2"
     python2 setup.py build
+}
+
+check() {
+    cd "${srcdir}/beaker"
+    mkdir tests_py3
+    2to3 -w -n -o tests_py3 tests/*.py
+    PYTHONPATH="$PWD/build/lib:$PYTHONPATH" nosetests3 --py3where=tests_py3
+
+    cd "${srcdir}/beaker-py2"
+    PYTHONPATH="$PWD/build/lib:$PYTHONPATH" nosetests2
 }
 
 package_python-beaker() {
     depends=('python')
 
-    cd "${srcdir}/Beaker-${pkgver}"
+    cd "${srcdir}/beaker"
     python3 setup.py install --root="${pkgdir}" --optimize=1
     install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/python-beaker/LICENSE"
+
+    mv "$pkgdir/usr/lib/python3.4/site-packages/"{tests,beaker/}
 }
 
 package_python2-beaker() {
     depends=('python2')
 
-    cd "${srcdir}/python2-Beaker-${pkgver}"
+    cd "${srcdir}/beaker-py2"
     python2 setup.py install --root="${pkgdir}" --optimize=1
     install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/python2-beaker/LICENSE"
+
+    mv "$pkgdir/usr/lib/python2.7/site-packages/"{tests,beaker/}
 }
