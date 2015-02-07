@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer : Thomas Baechler <thomas@archlinux.org>
+
+pkgname=nvidia
+pkgver=346.35
+_extramodules=extramodules-3.18-ARCH
+pkgrel=6
+pkgdesc="NVIDIA drivers for linux"
+arch=('i686' 'x86_64')
+url="http://www.nvidia.com/"
+depends=('linux>=3.18' 'linux<3.19' "nvidia-libgl" "nvidia-utils=${pkgver}")
+makedepends=('linux-headers>=3.18' 'linux-headers<3.19')
+license=('custom')
+install=nvidia.install
+options=(!strip)
+source=("ftp://download.nvidia.com/XFree86/Linux-x86/${pkgver}/NVIDIA-Linux-x86-${pkgver}.run"
+        "ftp://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run"
+        nv-drm-343.36.patch)
+md5sums=('d2b8f7f90ef5037f03f94519f9809511'
+         '9ca9f07f91361362f304ca8317ddd453'
+         'ff8a5f979e4428f8c847423fb007042c')
+
+[[ "$CARCH" = "i686" ]] && _pkg="NVIDIA-Linux-x86-${pkgver}"
+[[ "$CARCH" = "x86_64" ]] && _pkg="NVIDIA-Linux-x86_64-${pkgver}-no-compat32"
+
+prepare() {
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+    # patches here
+    patch -p1 -i ../nv-drm-343.36.patch
+}
+
+build() {
+    _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+    cd "${_pkg}"/kernel
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+
+    if [[ "$CARCH" = "x86_64" ]]; then
+        cd uvm
+        make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+    fi
+}
+
+package() {
+    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
+        "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
+
+    if [[ "$CARCH" = "x86_64" ]]; then
+        install -D -m644 "${srcdir}/${_pkg}/kernel/uvm/nvidia-uvm.ko" \
+            "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia-uvm.ko"
+    fi
+
+    gzip "${pkgdir}/usr/lib/modules/${_extramodules}/"*.ko
+    install -d -m755 "${pkgdir}/usr/lib/modprobe.d"
+    echo "blacklist nouveau" >> "${pkgdir}/usr/lib/modprobe.d/nvidia.conf"
+}
