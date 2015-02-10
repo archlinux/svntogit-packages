@@ -1,0 +1,84 @@
+# $Id$
+# Contributor: Jeff Brodnax <tullyarcher@bellsouth.net>
+# Contributor: Paul Mattal <paul@archlinux.org>
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+
+pkgname=postfix
+pkgver=3.0.0
+pkgrel=1
+url='http://www.postfix.org/'
+pkgdesc='Fast, easy to administer, secure mail server'
+license=('custom')
+arch=('i686' 'x86_64')
+depends=('openssl' 'pcre' 'libsasl' 'libldap' 'db'
+         'libmariadbclient' 'postgresql-libs' 'sqlite' 'tinycdb')
+source=("ftp://ftp.porcupine.org/mirrors/postfix-release/official/${pkgname}-${pkgver}.tar.gz"
+        'aliases.patch'
+        'service')
+sha1sums=('f4eaa87673e0b073265749a1de88664a1fe58067'
+          '5fc3de6c7df1e5851a0a379e825148868808318b'
+          'dd12885d367bebaf0fc9d2e9823a7f82086b6ee9')
+
+backup=('etc/postfix/'{access,aliases,canonical,generic,header_checks,main.cf,master.cf,relocated,transport,virtual})
+
+conflicts=('smtp-server' 'smtp-forwarder' 'postfix-tools')
+provides=('smtp-server' 'smtp-forwarder' 'postfix-tools')
+replaces=('postfix-tools')
+
+install=install
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	CCARGS='
+                -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl
+                -DHAS_LDAP
+                -DUSE_TLS
+                -DHAS_MYSQL -I/usr/include/mysql
+                -DHAS_PGSQL -I/usr/include/postgresql
+                -DHAS_SQLITE
+                -DHAS_CDB
+                -DDEF_COMMAND_DIR=\"/usr/bin\"
+                -DDEF_DAEMON_DIR=\"/usr/lib/postfix\"
+                -DDEF_SENDMAIL_PATH=\"/usr/bin/sendmail\"
+                -DDEF_README_DIR=\"/usr/share/doc/postfix\"
+                -DDEF_SAMPLE_DIR=\"/etc/postfix/sample\"
+                -DDEF_MANPAGE_DIR=\"/usr/share/man\"
+        '
+	AUXLIBS='
+                -lsasl2
+                -lldap -llber
+                -lssl -lcrypto
+                -lmysqlclient -lz -lm
+                -lpq
+                -lsqlite3 -lpthread
+                -lcdb
+        '
+	make makefiles \
+		DEBUG='' \
+		shared=yes \
+		CCARGS="${CCARGS//$'\n'/}" \
+		AUXLIBS="${AUXLIBS//$'\n'/}" \
+		OPT="${CFLAGS} ${LDFLAGS}" \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/postfix-${pkgver}"
+
+        LD_PRELOAD= LD_LIBRARY_PATH=./lib \
+	sh postfix-install -non-interactive install_root="${pkgdir}"
+
+	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	install -Dm644 ../service "${pkgdir}/usr/lib/systemd/system/${pkgname}.service"
+
+	for name in posttls-finger {smtp,qmqp}-{sink,source}; do
+		install -Dm644 "man/man1/${name}.1" "${pkgdir}/usr/share/man/man1/${name}.1"
+		install -Dm755 "bin/${name}" "${pkgdir}/usr/bin/${name}"
+	done
+
+	cd "${pkgdir}"
+	patch -p0 -i "${srcdir}"/aliases.patch
+	sed 's/^\(\$manpage[^:]*\):/\1.gz:/' -i "etc/postfix/postfix-files"
+}
