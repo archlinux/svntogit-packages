@@ -194,3 +194,177 @@ index 42de52c..513cf7b 100644
  #include "micmap.h"
 --
 cgit v0.9.0.2-2-gbebe
+From: Egbert Eich <eich@suse.de>
+
+xf86PciInfo.h is not needed in the ASpeed driver at all.
+
+Signed-off-by: Egbert Eich <eich@suse.de>
+---
+ src/ast_2dtool.c  | 1 -
+ src/ast_accel.c   | 1 -
+ src/ast_cursor.c  | 1 -
+ src/ast_driver.c  | 1 -
+ src/ast_mode.c    | 1 -
+ src/ast_tool.c    | 1 -
+ src/ast_vgatool.c | 1 -
+ 7 files changed, 7 deletions(-)
+
+diff --git a/src/ast_2dtool.c b/src/ast_2dtool.c
+index 210d75c..47f0d64 100644
+--- a/src/ast_2dtool.c
++++ b/src/ast_2dtool.c
+@@ -36,7 +36,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+diff --git a/src/ast_accel.c b/src/ast_accel.c
+index 71eeb79..3bfe7ee 100644
+--- a/src/ast_accel.c
++++ b/src/ast_accel.c
+@@ -36,7 +36,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+diff --git a/src/ast_cursor.c b/src/ast_cursor.c
+index 80d787a..7bfa15f 100644
+--- a/src/ast_cursor.c
++++ b/src/ast_cursor.c
+@@ -36,7 +36,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+diff --git a/src/ast_driver.c b/src/ast_driver.c
+index 5f7fa8e..c2ba129 100644
+--- a/src/ast_driver.c
++++ b/src/ast_driver.c
+@@ -40,7 +40,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+diff --git a/src/ast_mode.c b/src/ast_mode.c
+index 964fe7a..8c3d828 100644
+--- a/src/ast_mode.c
++++ b/src/ast_mode.c
+@@ -36,7 +36,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+diff --git a/src/ast_tool.c b/src/ast_tool.c
+index 7f1362e..1e1cb6b 100644
+--- a/src/ast_tool.c
++++ b/src/ast_tool.c
+@@ -36,7 +36,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+diff --git a/src/ast_vgatool.c b/src/ast_vgatool.c
+index 73d379c..8522a6f 100644
+--- a/src/ast_vgatool.c
++++ b/src/ast_vgatool.c
+@@ -36,7 +36,6 @@
+ #include "xf86xv.h"
+ #include <X11/extensions/Xv.h>
+ 
+-#include "xf86PciInfo.h"
+ #include "xf86Pci.h"
+ 
+ /* framebuffer offscreen manager */
+-- 
+1.8.4.5
+From: eich@freedesktop.org Egbert Eich 
+To:  
+Date: Thu, 24 Apr 2014 19:36:50 +0200 
+Subject: [PATCH driver/ast 02/15] Fix compiler warnings: get rid of deprecated IOADDRESS 
+ 
+From: Egbert Eich <eich@suse.de>
+
+For newer ABI versions IOADDRESS can be replaced by int
+which is big enough to hold an PIO offset.
+
+Signed-off-by: Egbert Eich <eich@suse.de>
+---
+ src/ast.h        |  6 ++++--
+ src/ast_driver.c | 18 ++++++++----------
+ 2 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/src/ast.h b/src/ast.h
+index cbe62fb..3b56a6c 100644
+--- a/src/ast.h
++++ b/src/ast.h
+@@ -261,9 +261,11 @@ typedef struct _ASTRec {
+     unsigned long	FbMapSize;
+     unsigned long	MMIOMapSize;
+ 
+-    IOADDRESS		IODBase;        	/* Base of PIO memory area */
+-    IOADDRESS		PIOOffset;
++#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
+     IOADDRESS		RelocateIO;
++#else
++    int			RelocateIO;
++#endif
+ 
+     VIDEOMODE 		VideoModeInfo;
+     ASTRegRec       SavedReg;
+diff --git a/src/ast_driver.c b/src/ast_driver.c
+index c2ba129..639562d 100644
+--- a/src/ast_driver.c
++++ b/src/ast_driver.c
+@@ -570,23 +570,21 @@ ASTPreInit(ScrnInfoPtr pScrn, int flags)
+    xf86DrvMsg(pScrn->scrnIndex, from, "Chipset: \"%s\"\n",
+ 	      (pScrn->chipset != NULL) ? pScrn->chipset : "Unknown ast");
+ 
+-   /* Resource Allocation */
++
+ #if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
+-    pAST->IODBase = pScrn->domainIOBase;
+-#else
+-    pAST->IODBase = 0;
+-#endif
+     /* "Patch" the PIOOffset inside vgaHW in order to force
+      * the vgaHW module to use our relocated i/o ports.
+      */
++    VGAHWPTR(pScrn)->PIOOffset =
++	pScrn->domainIOBase + PCI_REGION_BASE(pAST->PciInfo, 2, REGION_IO) - 0x380;
++
++    pAST->RelocateIO = pScrn->domainIOBase +
++	    PCI_REGION_BASE(pAST->PciInfo, 2, REGION_IO);
++#else
++    pAST->RelocateIO = (PCI_REGION_BASE(pAST->PciInfo, 2, REGION_IO));
+ 
+-#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
+-    VGAHWPTR(pScrn)->PIOOffset = /* ... */
+ #endif
+-       	pAST->PIOOffset =
+-	pAST->IODBase + PCI_REGION_BASE(pAST->PciInfo, 2, REGION_IO) - 0x380;
+ 
+-    pAST->RelocateIO = (IOADDRESS)(PCI_REGION_BASE(pAST->PciInfo, 2, REGION_IO) + pAST->IODBase);
+ 
+    if (pAST->pEnt->device->MemBase != 0) {
+       pAST->FBPhysAddr = pAST->pEnt->device->MemBase;
+-- 
+1.8.4.5
+
