@@ -2,7 +2,7 @@
 # Maintainer:
 
 pkgname=krb5
-pkgver=1.13
+pkgver=1.13.1
 pkgrel=1
 pkgdesc="The Kerberos network authentication system"
 arch=('i686' 'x86_64')
@@ -12,14 +12,14 @@ depends=('e2fsprogs' 'libldap' 'keyutils')
 makedepends=('perl')
 backup=('etc/krb5.conf' 'var/lib/krb5kdc/kdc.conf')
 options=('!emptydirs')
-source=(http://web.mit.edu/kerberos/dist/krb5/${pkgver}/${pkgname}-${pkgver}-signed.tar
+source=(http://web.mit.edu/kerberos/dist/krb5/${pkgver%.*}/${pkgname}-${pkgver}-signed.tar
         krb5-config_LDFLAGS.patch
         krb5-kadmind.service
         krb5-kdc.service
         krb5-kpropd.service
         krb5-kpropd@.service
         krb5-kpropd.socket)
-sha1sums=('897df8ce442dad3372c8a298387f98c18b22def5'
+sha1sums=('2832695845d6c4cb0e7a622df4885f18acbd94cf'
           'f125824ed37f31e6fd2fdb6a437be8ff1c3700ab'
           '59bbc7e686cbb4bcefddf0f134d928d7bd5e7722'
           '2ef2476a8673b3b702e829d8f451c839c2273b02'
@@ -28,9 +28,6 @@ sha1sums=('897df8ce442dad3372c8a298387f98c18b22def5'
           'f3677d30dbbd7106c581379c2c6ebb1bf7738912')
 
 prepare() {
-  # the signature and source are bundled together, so signature check needs to be done here
-  _check_pgpsig
-
   tar -xf ${pkgname}-${pkgver}.tar.gz
   cd ${pkgname}-${pkgver}
   # cf https://bugs.gentoo.org/show_bug.cgi?id=448778
@@ -83,57 +80,4 @@ package() {
    install -dm 755 "${pkgdir}"/usr/lib/systemd/system
    install -m 644 ../../krb5-{kadmind.service,kdc.service,kpropd.service,kpropd@.service,kpropd.socket} \
       "${pkgdir}"/usr/lib/systemd/system
-}
-
-_check_pgpsig() {
-  (( SKIPPGPCHECK )) && return 0
-
-  msg "$(gettext "Verifying source file signatures with %s...")" "gpg"
-
-  local file=${pkgname}-${pkgver}.tar.gz.asc
-  local sourcefile=${file%.*}
-  local pubkey
-  local warning=0
-  local errors=0
-  local statusfile=$(mktemp)
-
-  printf "    %s ... " "${file%.*}" >&2
-
-  if ! gpg --quiet --batch --status-file "$statusfile" --verify "$file" "$sourcefile" 2> /dev/null; then
-    printf "FAILED" >&2
-    if ! pubkey=$(awk '/NO_PUBKEY/ { print $3; exit 1; }' "$statusfile"); then
-      printf " (unknown public key $pubkey)" >&2
-      warnings=1
-    else
-      errors=1
-    fi
-    printf '\n' >&2
-  else
-    if grep -q "REVKEYSIG" "$statusfile"; then
-      printf "FAILED (the key has been revoked.)" >&2
-      errors=1
-    else
-      printf "Passed" >&2
-      if grep -q "EXPSIG" "$statusfile"; then
-        printf " (WARNING: the signature has expired.)" >&2
-        warnings=1
-      elif grep -q "EXPKEYSIG" "$statusfile"; then
-        printf " (WARNING: the key has expired.)" >&2
-        warnings=1
-      fi
-    fi
-    printf '\n' >&2
-  fi
-  
-  rm -f "$statusfile"
-
-  if (( errors )); then
-    error "One or more PGP signatures could not be verified!"
-    exit 1
-  fi
-
-  if (( warnings )); then
-    warning "Warnings have occurred while verifying the signatures."
-    plain "Please make sure you really trust them."
-  fi
 }
