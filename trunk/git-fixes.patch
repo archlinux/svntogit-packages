@@ -1,0 +1,330 @@
+From 64d7dad289f494ab2a8475ec73bbd7b27ccb4afb Mon Sep 17 00:00:00 2001
+From: Lasse Liehu <lasse.liehu@gmail.com>
+Date: Sat, 15 Nov 2014 12:32:54 +0200
+Subject: [PATCH 1/5] Finnish translation update
+
+---
+ po/fi.po | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/po/fi.po b/po/fi.po
+index 31678a5..8c9c700 100644
+--- a/po/fi.po
++++ b/po/fi.po
+@@ -14,7 +14,7 @@ msgstr ""
+ "Project-Id-Version: file-roller\n"
+ "Report-Msgid-Bugs-To: http://bugzilla.gnome.org/enter_bug.cgi?product=file-"
+ "roller&keywords=I18N+L10N&component=general\n"
+-"POT-Creation-Date: 2014-09-06 04:49+0000\n"
++"POT-Creation-Date: 2014-11-07 05:38+0000\n"
+ "PO-Revision-Date: 2014-09-06 17:05+0300\n"
+ "Last-Translator: Jiri Grönroos <jiri.gronroos+l10n@iki.fi>\n"
+ "Language-Team: suomi <gnome-fi-laatu@lists.sourceforge.net>\n"
+@@ -53,7 +53,6 @@ msgid "bzip archives (.tar.bz, .tbz)"
+ msgstr "bzip-arkistot (.tar.bz, .tbz)"
+ 
+ #: ../data/org.gnome.FileRoller.appdata.xml.in.h:6
+-#| msgid "Zip (.zip)"
+ msgid "zip archives (.zip)"
+ msgstr "zip-arkistot (.zip)"
+ 
+@@ -463,7 +462,7 @@ msgstr ""
+ "Ilkka Tuohela , 2005-2009\n"
+ "Pauli Virtanen, 2003-2004\n"
+ "\n"
+-"http://gnome.fi/"
++"https://l10n.gnome.org/teams/fi/"
+ 
+ #: ../src/fr-archive.c:1845
+ msgid "You don't have the right permissions."
+@@ -1122,7 +1121,6 @@ msgid "_About"
+ msgstr "Ti_etoja"
+ 
+ #: ../src/ui/ask-password.ui.h:2
+-#| msgid "_Ok"
+ msgid "_OK"
+ msgstr "_OK"
+ 
+@@ -1135,7 +1133,6 @@ msgid "Delete"
+ msgstr "Poista"
+ 
+ #: ../src/ui/delete.ui.h:3
+-#| msgid "Delete"
+ msgid "_Delete"
+ msgstr "_Poista"
+ 
+-- 
+2.3.0
+
+
+From 3d9bfa9677960c1c03d795c1d5e849fc1ac4e18d Mon Sep 17 00:00:00 2001
+From: Paolo Bacchilega <paobac@src.gnome.org>
+Date: Sun, 15 Feb 2015 11:52:55 +0100
+Subject: [PATCH 2/5] Deleting all files does not work
+
+only happens when the archive is modified with libarchive
+
+[bug #738178]
+---
+ src/fr-archive-libarchive.c | 24 +++++++++++++++++-------
+ 1 file changed, 17 insertions(+), 7 deletions(-)
+
+diff --git a/src/fr-archive-libarchive.c b/src/fr-archive-libarchive.c
+index 8770f8a..6909b8a 100644
+--- a/src/fr-archive-libarchive.c
++++ b/src/fr-archive-libarchive.c
+@@ -1641,6 +1641,7 @@ fr_archive_libarchive_add_files (FrArchive           *archive,
+ 
+ typedef struct {
+ 	GHashTable *files_to_remove;
++	gboolean    remove_all_files;
+ 	int         n_files_to_remove;
+ } RemoveData;
+ 
+@@ -1648,7 +1649,8 @@ typedef struct {
+ static void
+ remove_data_free (RemoveData *remove_data)
+ {
+-	g_hash_table_unref (remove_data->files_to_remove);
++	if (remove_data->files_to_remove != NULL)
++		g_hash_table_unref (remove_data->files_to_remove);
+ 	g_free (remove_data);
+ }
+ 
+@@ -1662,7 +1664,7 @@ _remove_files_begin (SaveData *save_data,
+ 
+ 	fr_archive_progress_set_total_files (load_data->archive, remove_data->n_files_to_remove);
+ 	fr_archive_progress_set_total_bytes (load_data->archive,
+-				FR_ARCHIVE_LIBARCHIVE (load_data->archive)->priv->uncompressed_size);
++					     FR_ARCHIVE_LIBARCHIVE (load_data->archive)->priv->uncompressed_size);
+ }
+ 
+ 
+@@ -1676,6 +1678,9 @@ _remove_files_entry_action (SaveData             *save_data,
+ 	WriteAction  action;
+ 	const char  *pathname;
+ 
++	if (remove_data->remove_all_files)
++		return WRITE_ACTION_SKIP_ENTRY;
++
+ 	action = WRITE_ACTION_WRITE_ENTRY;
+ 	pathname = archive_entry_pathname (w_entry);
+ 	if (g_hash_table_lookup (remove_data->files_to_remove, pathname) != NULL) {
+@@ -1701,12 +1706,17 @@ fr_archive_libarchive_remove_files (FrArchive           *archive,
+ 	GList      *scan;
+ 
+ 	remove_data = g_new0 (RemoveData, 1);
+-	remove_data->files_to_remove = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+-	remove_data->n_files_to_remove = 0;
+-	for (scan = file_list; scan; scan = scan->next) {
+-		g_hash_table_insert (remove_data->files_to_remove, g_strdup (scan->data), GINT_TO_POINTER (1));
+-		remove_data->n_files_to_remove++;
++	remove_data->remove_all_files = (file_list == NULL);
++	if (! remove_data->remove_all_files) {
++		remove_data->files_to_remove = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
++		remove_data->n_files_to_remove = 0;
++		for (scan = file_list; scan; scan = scan->next) {
++			g_hash_table_insert (remove_data->files_to_remove, g_strdup (scan->data), GINT_TO_POINTER (1));
++			remove_data->n_files_to_remove++;
++		}
+ 	}
++	else
++		remove_data->n_files_to_remove = archive->files->len;
+ 
+ 	_fr_archive_libarchive_save (archive,
+ 				     FALSE,
+-- 
+2.3.0
+
+
+From e503d9556a3ab05133616f4718cce9f2324432df Mon Sep 17 00:00:00 2001
+From: Paolo Bacchilega <paobac@src.gnome.org>
+Date: Sun, 15 Feb 2015 10:20:48 +0100
+Subject: [PATCH 3/5] Dragging a file to desktop doesn't work
+
+[bug #479351]
+---
+ src/fr-window.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/fr-window.c b/src/fr-window.c
+index fd1beb0..f7492e9 100644
+--- a/src/fr-window.c
++++ b/src/fr-window.c
+@@ -4228,6 +4228,7 @@ static char *
+ get_xds_atom_value (GdkDragContext *context)
+ {
+ 	char *ret;
++	int   len;
+ 
+ 	g_return_val_if_fail (context != NULL, NULL);
+ 	g_return_val_if_fail (gdk_drag_context_get_source_window (context) != NULL, NULL);
+@@ -4235,9 +4236,12 @@ get_xds_atom_value (GdkDragContext *context)
+ 	if (gdk_property_get (gdk_drag_context_get_source_window (context),
+ 			      XDS_ATOM, TEXT_ATOM,
+ 			      0, MAX_XDS_ATOM_VAL_LEN,
+-			      FALSE, NULL, NULL, NULL,
++			      FALSE, NULL, NULL, &len,
+ 			      (unsigned char **) &ret))
++	{
++		ret[len] = '\0';
+ 		return ret;
++	}
+ 
+ 	return NULL;
+ }
+-- 
+2.3.0
+
+
+From a18cdd2da3d6bc69223acc20b772c71dc9cda01f Mon Sep 17 00:00:00 2001
+From: Paolo Bacchilega <paobac@src.gnome.org>
+Date: Sun, 15 Feb 2015 13:28:34 +0100
+Subject: [PATCH 4/5] Extracting (by drag & drop) causes an error when the
+ mouse is hovering Chromium
+
+[bug #735857]
+---
+ src/fr-window.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/fr-window.c b/src/fr-window.c
+index f7492e9..4075792 100644
+--- a/src/fr-window.c
++++ b/src/fr-window.c
+@@ -4515,10 +4515,15 @@ fr_window_file_list_drag_data_get (FrWindow         *window,
+ 	g_return_val_if_fail (uri != NULL, FALSE);
+ 
+ 	destination = g_file_new_for_uri (uri);
+-	destination_folder = g_file_get_parent (destination);
++	if (destination == NULL)
++		return FALSE;
+ 
++	destination_folder = g_file_get_parent (destination);
+ 	g_object_unref (destination);
+ 
++	if (destination_folder == NULL)
++		return FALSE;
++
+ 	/* check whether the extraction can be performed in the destination
+ 	 * folder */
+ 
+-- 
+2.3.0
+
+
+From 7ea8f58268f68c48b2b7e9e49c02335ad3a9964e Mon Sep 17 00:00:00 2001
+From: Paolo Bacchilega <paobac@src.gnome.org>
+Date: Sun, 15 Feb 2015 17:48:23 +0100
+Subject: [PATCH 5/5]  Cannot delete files from password protected 7zip
+ archives
+
+ [bug #618909]
+---
+ src/fr-command-7z.c |  6 +-----
+ src/fr-command.c    |  4 ++++
+ src/fr-window.c     | 26 +++++++++++++++++++++++++-
+ src/fr-window.h     |  1 +
+ 4 files changed, 31 insertions(+), 6 deletions(-)
+
+diff --git a/src/fr-command-7z.c b/src/fr-command-7z.c
+index 809717f..e6e8258 100644
+--- a/src/fr-command-7z.c
++++ b/src/fr-command-7z.c
+@@ -424,11 +424,7 @@ fr_command_7z_delete (FrCommand  *command,
+ 			if (g_str_has_prefix (scan->data, "@"))
+ 				fr_process_add_arg_concat (command->process, "-i!", scan->data, NULL);
+ 
+-	if (archive->encrypt_header
+-	    && fr_archive_is_capable_of (archive, FR_ARCHIVE_CAN_ENCRYPT_HEADER))
+-	{
+-		add_password_arg (command, FR_ARCHIVE (command)->password, FALSE);
+-	}
++	add_password_arg (command, FR_ARCHIVE (command)->password, FALSE);
+ 
+ 	fr_process_add_arg (command->process, "--");
+ 	fr_process_add_arg (command->process, command->filename);
+diff --git a/src/fr-command.c b/src/fr-command.c
+index 69436de..f4d0af6 100644
+--- a/src/fr-command.c
++++ b/src/fr-command.c
+@@ -632,6 +632,10 @@ _fr_command_load_complete (XferData *xfer_data,
+ 		 * original name */
+ 		if (archive->multi_volume)
+ 			fr_archive_change_name (archive, FR_COMMAND (archive)->filename);
++
++		/* the header is encrypted if the load is successful and the password is not void */
++		archive->encrypt_header = (xfer_data->password != NULL) && (*xfer_data->password != '\0');
++
+ 		fr_archive_update_capabilities (archive);
+ 	}
+ 	else
+diff --git a/src/fr-window.c b/src/fr-window.c
+index 4075792..779bf0b 100644
+--- a/src/fr-window.c
++++ b/src/fr-window.c
+@@ -6195,6 +6195,9 @@ fr_window_archive_add_dropped_items (FrWindow *window,
+ }
+ 
+ 
++/* -- fr_window_archive_remove -- */
++
++
+ static void
+ archive_remove_ready_cb (GObject      *source_object,
+ 			 GAsyncResult *result,
+@@ -6214,10 +6217,26 @@ void
+ fr_window_archive_remove (FrWindow *window,
+ 			  GList    *file_list)
+ {
++	GList *new_file_list;
++
++	new_file_list = _g_string_list_dup (file_list);
++	fr_window_set_current_batch_action (window,
++					    FR_BATCH_ACTION_REMOVE,
++					    new_file_list,
++					    (GFreeFunc) _g_string_list_free);
++
+ 	_archive_operation_started (window, FR_ACTION_DELETING_FILES);
++
++	g_object_set (window->archive,
++		      "compression", window->priv->compression,
++		      "encrypt-header", window->priv->encrypt_header,
++		      "password", window->priv->password,
++		      "volume-size", window->priv->volume_size,
++		      NULL);
++
+ 	fr_window_clipboard_remove_file_list (window, file_list);
+ 	fr_archive_remove (window->archive,
+-			   file_list,
++			   new_file_list,
+ 			   window->priv->compression,
+ 			   window->priv->cancellable,
+ 			   archive_remove_ready_cb,
+@@ -9162,6 +9181,11 @@ fr_window_exec_batch_action (FrWindow      *window,
+ 		fr_window_archive_add_dropped_items (window, (GList *) action->data);
+ 		break;
+ 
++	case FR_BATCH_ACTION_REMOVE:
++		debug (DEBUG_INFO, "[BATCH] REMOVE\n");
++		fr_window_archive_remove (window, (GList *) action->data);
++		break;
++
+ 	case FR_BATCH_ACTION_OPEN:
+ 		debug (DEBUG_INFO, "[BATCH] OPEN\n");
+ 
+diff --git a/src/fr-window.h b/src/fr-window.h
+index 0aabaf6..13a48a4 100644
+--- a/src/fr-window.h
++++ b/src/fr-window.h
+@@ -54,6 +54,7 @@ typedef enum {
+ 	FR_BATCH_ACTION_LOAD,
+ 	FR_BATCH_ACTION_OPEN,
+ 	FR_BATCH_ACTION_ADD,
++	FR_BATCH_ACTION_REMOVE,
+ 	FR_BATCH_ACTION_EXTRACT,
+ 	FR_BATCH_ACTION_EXTRACT_HERE,
+ 	FR_BATCH_ACTION_EXTRACT_INTERACT,
+-- 
+2.3.0
+
