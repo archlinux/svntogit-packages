@@ -5,13 +5,13 @@
 
 pkgname=ghostscript
 pkgver=9.15
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('AGPL' 'custom')
 depends=('libxt' 'libcups' 'fontconfig' 'jasper' 'zlib' 'libpng>=1.5.7' 'libjpeg'
          'libtiff>=4.0.0' 'lcms2' 'dbus' 'libpaper')
-makedepends=('gtk3' 'gnutls')
+makedepends=('gtk3' 'gnutls' 'hardening-wrapper')
 optdepends=('texlive-core:      needed for dvipdf'
             'gtk3:              needed for gsx')
 url="http://www.ghostscript.com/"
