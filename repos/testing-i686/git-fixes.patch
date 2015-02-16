@@ -1,0 +1,82 @@
+From 127aae5a72a69df325fed0b63d345e81583d5ca1 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Mon, 16 Feb 2015 21:37:35 +0000
+Subject: tools/intel-virtual-output: Check for DRI3 more carefully
+
+Using xcb, we cannot simply call xcb_dri3_query_version() without it
+terminating the connection if DRI3 is not enabled on the target display.
+Oops.
+
+Bugzilla: https://bugs.freedesktop.org/show_bug.cgi?id=89172
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+
+diff --git a/tools/virtual.c b/tools/virtual.c
+index 8e2b4a2..3bcd057 100644
+--- a/tools/virtual.c
++++ b/tools/virtual.c
+@@ -218,6 +218,13 @@ static inline XRRScreenResources *_XRRGetScreenResourcesCurrent(Display *dpy, Wi
+ static int _x_error_occurred;
+ 
+ static int
++_io_error_handler(Display *display)
++{
++	fprintf(stderr, "XIO error on display %s\n", DisplayString(display));
++	abort();
++}
++
++static int
+ _check_error_handler(Display     *display,
+ 		     XErrorEvent *event)
+ {
+@@ -320,6 +327,7 @@ can_use_shm(Display *dpy,
+ #include <X11/Xlib-xcb.h>
+ #include <X11/xshmfence.h>
+ #include <xcb/xcb.h>
++#include <xcb/xcbext.h>
+ #include <xcb/dri3.h>
+ #include <xcb/sync.h>
+ static Pixmap dri3_create_pixmap(Display *dpy,
+@@ -357,6 +365,7 @@ static int dri3_query_version(Display *dpy, int *major, int *minor)
+ {
+ 	xcb_connection_t *c = XGetXCBConnection(dpy);
+ 	xcb_dri3_query_version_reply_t *reply;
++	xcb_generic_error_t *error;
+ 
+ 	*major = *minor = -1;
+ 
+@@ -364,7 +373,8 @@ static int dri3_query_version(Display *dpy, int *major, int *minor)
+ 					     xcb_dri3_query_version(c,
+ 								    XCB_DRI3_MAJOR_VERSION,
+ 								    XCB_DRI3_MINOR_VERSION),
+-					     NULL);
++					     &error);
++	free(error);
+ 	if (reply == NULL)
+ 		return -1;
+ 
+@@ -377,8 +387,14 @@ static int dri3_query_version(Display *dpy, int *major, int *minor)
+ 
+ static int dri3_exists(Display *dpy)
+ {
++	xcb_extension_t dri3 = { "DRI3", 0 };
++	const xcb_query_extension_reply_t *ext;
+ 	int major, minor;
+ 
++	ext = xcb_get_extension_data(XGetXCBConnection(dpy), &dri3);
++	if (ext == NULL || !ext->present)
++		return 0;
++
+ 	if (dri3_query_version(dpy, &major, &minor) < 0)
+ 		return 0;
+ 
+@@ -3228,6 +3244,7 @@ int main(int argc, char **argv)
+ 		return -ret;
+ 
+ 	XSetErrorHandler(_check_error_handler);
++	XSetIOErrorHandler(_io_error_handler);
+ 
+ 	ret = add_fd(&ctx, display_open(&ctx, src_name));
+ 	if (ret) {
+-- 
+cgit v0.10.2
+
