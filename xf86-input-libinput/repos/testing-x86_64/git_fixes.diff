@@ -1,0 +1,108 @@
+From dcdf1e24c8427ecac3bff315b85e8273b849a1da Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 28 Jan 2015 10:48:50 +1000
+Subject: Formatting fix
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+diff --git a/src/libinput.c b/src/libinput.c
+index 2563efe..85824ce 100644
+--- a/src/libinput.c
++++ b/src/libinput.c
+@@ -1115,9 +1115,10 @@ xf86libinput_parse_options(InputInfoPtr pInfo,
+ 
+ }
+ 
+-static int xf86libinput_pre_init(InputDriverPtr drv,
+-				 InputInfoPtr pInfo,
+-				 int flags)
++static int
++xf86libinput_pre_init(InputDriverPtr drv,
++		      InputInfoPtr pInfo,
++		      int flags)
+ {
+ 	struct xf86libinput *driver_data = NULL;
+         struct libinput *libinput = NULL;
+-- 
+cgit v0.10.2
+
+From 45e9b6c64b9bf0a84e3ee0e1fbb8f9f4efc3a8a0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Friedrich=20Sch=C3=B6ller?= <code@schoeller.se>
+Date: Sat, 24 Jan 2015 02:20:22 +0100
+Subject: Reapply configuration at DEVICE_ON
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The driver ignored my xorg configuration. Maybe I am doing something wrong,
+but I tried to track down the error and came up with this solution.
+
+The device is closed after DEVICE_INIT so we need to apply configuration
+options at DEVICE_ON.
+
+Signed-off-by: Friedrich Schöller <code@schoeller.se>
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+diff --git a/src/libinput.c b/src/libinput.c
+index 85824ce..a24cbff 100644
+--- a/src/libinput.c
++++ b/src/libinput.c
+@@ -326,6 +326,8 @@ xf86libinput_on(DeviceIntPtr dev)
+ 	driver_context.device_enabled_count++;
+ 	dev->public.on = TRUE;
+ 
++	LibinputApplyConfig(dev);
++
+ 	return Success;
+ }
+ 
+-- 
+cgit v0.10.2
+
+From 875f1696b780862886c75cd88b29fbc933ea7a1b Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 4 Feb 2015 14:08:46 +1000
+Subject: Only apply left-handed/scroll button configuration when it's
+ available
+
+https://bugs.freedesktop.org/show_bug.cgi?id=88961
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+diff --git a/src/libinput.c b/src/libinput.c
+index a24cbff..9613fbd 100644
+--- a/src/libinput.c
++++ b/src/libinput.c
+@@ -259,7 +259,8 @@ LibinputApplyConfig(DeviceIntPtr dev)
+ 			    driver_data->options.matrix[6], driver_data->options.matrix[7],
+ 			    driver_data->options.matrix[8]);
+ 
+-	if (libinput_device_config_left_handed_set(device,
++	if (libinput_device_config_left_handed_is_available(device) &&
++	    libinput_device_config_left_handed_set(device,
+ 						   driver_data->options.left_handed) != LIBINPUT_CONFIG_STATUS_SUCCESS)
+ 		xf86IDrvMsg(pInfo, X_ERROR,
+ 			    "Failed to set LeftHanded to %d\n",
+@@ -283,11 +284,13 @@ LibinputApplyConfig(DeviceIntPtr dev)
+ 			    method);
+ 	}
+ 
+-	scroll_button = btn_xorg2linux(driver_data->options.scroll_button);
+-	if (libinput_device_config_scroll_set_button(device, scroll_button) != LIBINPUT_CONFIG_STATUS_SUCCESS)
+-		xf86IDrvMsg(pInfo, X_ERROR,
+-			    "Failed to set ScrollButton to %d\n",
+-			    driver_data->options.scroll_button);
++	if (libinput_device_config_scroll_get_methods(device) & LIBINPUT_CONFIG_SCROLL_ON_BUTTON_DOWN) {
++		scroll_button = btn_xorg2linux(driver_data->options.scroll_button);
++		if (libinput_device_config_scroll_set_button(device, scroll_button) != LIBINPUT_CONFIG_STATUS_SUCCESS)
++			xf86IDrvMsg(pInfo, X_ERROR,
++				    "Failed to set ScrollButton to %d\n",
++				    driver_data->options.scroll_button);
++	}
+ }
+ 
+ static int
+-- 
+cgit v0.10.2
+
+
