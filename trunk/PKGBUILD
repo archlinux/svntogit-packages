@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=218
-pkgrel=2
+pkgver=219
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,56 +15,11 @@ options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev'
-        0001-journal-fix-dangling-else-ambiguity.patch
-        0002-nspawn-properly-validate-machine-names.patch
-        0003-systemctl-fix-argument-handling-when-invoked-as-shut.patch
-        0004-systemctl-properly-iterate-through-service-array-whe.patch
-        0005-nss-myhostname-always-will-in-canonical-hostname-fie.patch
-        0010-log-fix-log_full_errno-with-custom-facilities.patch
-        0014-timesyncd-consider-too-long-packets-as-invalid.patch
-        0016-logind-fix-sd_eviocrevoke-ioctl-call.patch
-        0019-sd-bus-fix-handling-of-double-parameters-in-sd_bus_m.patch
-        0021-units-fix-all-TTY-paths-for-container-gettys.patch
-        0024-sd-dhcp-chop-of-trailing-dot-of-DHCP-supplied-host-a.patch
-        0025-logind-handle-closing-sessions-over-daemon-restarts.patch
-        0026-core-make-setting-the-shutdown-watchdog-configuratio.patch
-        0027-sd-rtnl-don-t-fail-event-handler-when-callback-fails.patch
-        0029-config_parse_set_status-put-signals-in-the-correct-s.patch
-        0030-network-address-test-network-avoid-undefined-behavio.patch
-        0033-core-disarm-shutdown-watchdog-if-we-fail-to-set-time.patch
-        0034-exit-on-idle-only-exit-if-actually-idle.patch)
-md5sums=('4e2c511b0a7932d7fc9d79822273aac6'
+        'initcpio-install-udev')
+md5sums=('e0d6c9a4b4f69f66932d2230298c9a34'
          '90ea67a7bb237502094914622a39e281'
          'c9db3010602913559295de3481019681'
-         'bde43090d4ac0ef048e3eaee8202a407'
-         '22920ff32e345a26a9c05662ec274314'
-         '6960b43aaec4f899fdf0fe87d0457901'
-         '715cefd0e803d8b441811688fd4da1c3'
-         '3bb57f2812572ee999928ba33b489afe'
-         '5d42fda1f10c02861ee454277b516716'
-         'a079c6e5c8d0184adf47794aaf338ac4'
-         'c9b4e7bff3d1c073852c3d1b3bb8002e'
-         'ae4d820582570ceb7b7c80b6810596f1'
-         '5b212435622f69c2a24b01ef7380bc94'
-         '0523c9ae27abdd30b847625b1c9c7a03'
-         'c0d236b41dd4afad3f91dee72bb296a8'
-         '25e191463fb877fd5dabecb95f15ee8f'
-         '5911ef7d3ab5c5a06076fdea221ea27e'
-         'ab7baf675e224cf19b9194fc1e4ea5ff'
-         '1d6cb563b3864fd8d724982bc2007f16'
-         '529c4fba7e0a709fda9e108e658e76c3'
-         '9d0d909507294afb879965e74fef79c8'
-         'c0b68cefe7f00ea5ec856c64f799cca4')
-
-prepare() {
-  cd "$pkgname-$pkgver"
-
-  for p in "${source[@]}"; do
-    [[ $p = *.patch ]] || continue
-    patch -Np1 <"../$p"
-  done
-}
+         'bde43090d4ac0ef048e3eaee8202a407')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -109,6 +64,8 @@ package_systemd() {
           etc/dbus-1/system.d/org.freedesktop.locale1.conf
           etc/dbus-1/system.d/org.freedesktop.machine1.conf
           etc/dbus-1/system.d/org.freedesktop.timedate1.conf
+          etc/dbus-1/system.d/org.freedesktop.import1.conf
+          etc/dbus-1/system.d/org.freedesktop.network1.conf
           etc/pam.d/systemd-user
           etc/systemd/bootchart.conf
           etc/systemd/coredump.conf
@@ -125,13 +82,7 @@ package_systemd() {
 
   # don't write units to /etc by default. some of these will be re-enabled on
   # post_install.
-  rm "$pkgdir/etc/systemd/system/getty.target.wants/getty@tty1.service" \
-      "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-networkd.service" \
-      "$pkgdir/etc/systemd/system/multi-user.target.wants/systemd-resolved.service" \
-      "$pkgdir/etc/systemd/system/sysinit.target.wants/systemd-timesyncd.service" \
-      "$pkgdir/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service"
-  rmdir "$pkgdir/etc/systemd/system/getty.target.wants" \
-      "$pkgdir/etc/systemd/system/network-online.target.wants"
+  rm -r "$pkgdir/etc/systemd/system/"*.wants
 
   # get rid of RPM macros
   rm -r "$pkgdir/usr/lib/rpm"
