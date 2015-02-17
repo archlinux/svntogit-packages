@@ -1,97 +1,71 @@
 # $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 # Contributor: Maël Lavault <moimael@neuf.fr>
 
-pkgbase=abiword
-pkgname=('abiword' 'abiword-plugins')
-pkgver=3.0.0
-pkgrel=3
+pkgname=abiword
+pkgver=3.0.1
+pkgrel=1
+pkgdesc='Fully-featured word processor'
 arch=('i686' 'x86_64')
 license=('GPL')
 url='http://www.abisource.com'
-makedepends=('pkgconfig' 'asio' 'boost' 'fribidi' 'goffice' 'libwmf' 'wv'
-             'link-grammar' 'gtkmathview' 'aiksaurus' 'libxslt' 'enchant'
-             'libots' 'libwpg' 'librsvg' 'loudmouth' 'libsoup' 'psiconv'
-             'redland' 'libical')
+depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant' 'desktop-file-utils'
+         'redland' 'libical' 'gtk-update-icon-cache' 'loudmouth' 'libwpg' 'libwmf' 'link-grammar' 
+         'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
+makedepends=('pkgconfig' 'asio' 'boost' 'gobject-introspection' 'python2' 'libwpd')
+conflicts=('abiword-plugins')
+replaces=('abiword-plugins')
+install=abiword.install
 options=('!makeflags')
-source=(http://abisource.com/downloads/$pkgbase/$pkgver/source/$pkgbase-$pkgver.tar.gz
-        fix_crash_saving_pdf.patch
-        abiword-3.0.0-librevenge.patch)
-md5sums=('8d9c41cff3a8fbef8d0c835c65600e65'
-         'c3336f5ac7d227ff755c7e42459f20e1'
-         '6fc2d653d3b814bbfd9b0d71c69c4796')
+source=(http://abisource.com/downloads/$pkgname/$pkgver/source/$pkgname-$pkgver.tar.gz
+        abiword-3.0.0-librevenge.patch
+        abiword-3.0.0-link-grammar-5.patch
+        abiword-3.0.0-link-grammar-5-second.patch
+        link-grammar-panic.patch
+        aiksaurus-plugin.m4)
+sha256sums=('e094f6fbf0afc5c5538b4894888e7c346f8ee8f49c9d24821dd696d0734865c6'
+            '77b52a3722096cec3bfbe4fff3802f51b6c9e0ff7aaa30028c29825fd4e6a65f'
+            '6d88800f1e16becd69ed93d5f070793a56b9f162f7d886c71756643bcaed7ef5'
+            'd2c80da81a339634a7a4ee4cef12f7ee968f2c2a8c2f75533b6713b71f0d61fd'
+            '94d1e638f7b85123dc2282d2e59b982bde6ad0dbbe1b6b54351e610c5a0ea578'
+            '5f80a2f94f9929cdba9809c5e1a87cd5d537a2518bb879bfb9eab51a71c8dac1')
 
 prepare() {
-  cd $pkgbase-$pkgver
+  cd $pkgname-$pkgver
 
-  # fix FS#39652 - http://bugzilla.abisource.com/show_bug.cgi?id=13586#c2
-  patch -Np2 -i ${srcdir}/fix_crash_saving_pdf.patch
-  
   # fix build with librevenge based import filters
-  patch -Np0 -i ${srcdir}/abiword-3.0.0-librevenge.patch
+  patch -Np0 -i ../abiword-3.0.0-librevenge.patch
 
+  # Fix build with recent versions of link-grammar
+  patch -Np1 -i ../abiword-3.0.0-link-grammar-5.patch
+  patch -Np1 -i ../abiword-3.0.0-link-grammar-5-second.patch
+  patch -Np0 -i ../link-grammar-panic.patch
+
+  # Install missing m4 file
+  install -m644 ../aiksaurus-plugin.m4 plugins/aiksaurus/plugin.m4
+
+  # Generate m4 file for configure
   find plugins -name plugin.m4 | xargs cat > plugin-configure.m4
-  
-  #aclocal -I m4 --install
-  #autoconf
+
   libtoolize --force
   autoreconf -fi
 }
 
 
 build() {
-  cd $pkgbase-$pkgver
-
-# Collab plugin is somehow broken:
-# part service
-#In file included from ./../../../backends/service/xp/RealmConnection.h:33:0,
-#                 from ./../../../backends/service/xp/AbiCollabSaveInterceptor.h:23,
-#                 from ./../../../backends/service/xp/ServiceAccountHandler.h:33,
-#                 from ServiceUnixAccountHandler.h:23,
-#                 from ServiceUnixAccountHandler.cpp:20:
-#./../../../core/sync/xp/SynchronizedQueue.h:32:1: error: expected class-name before '{' token
-# {
-# part tcp
-#In file included from ./../../../backends/tcp/xp/IOServerHandler.h:29:0,
-#                 from ./../../../backends/tcp/xp/TCPAccountHandler.h:25,
-#                 from TCPUnixAccountHandler.h:22,
-#                 from TCPUnixAccountHandler.cpp:20:
-#./../../../backends/tcp/xp/Session.h:34:63: error: expected class-name before ',' token
-# class Session : public Synchronizer, public boost::noncopyable, public boost::enable_shared_from_this<Session>
-
+  cd $pkgname-$pkgver
   ./configure --prefix=/usr \
     --enable-shared \
     --disable-static \
     --enable-clipart \
     --enable-templates \
-    --disable-builtin-plugins \
     --enable-plugins \
-    --disable-collab-backend-service \
-    --disable-collab-backend-tcp
+    --enable-introspection
   make
 }
 
-package_abiword() {
-  pkgdesc='Fully-featured word processor'
-  depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant' 'desktop-file-utils'
-           'redland' 'libical' 'gtk-update-icon-cache')
-  install=$pkgname.install
-  optdepends=('abiword-plugins')
-  conflicts=("abiword-plugins<${pkgver}-${pkgrel}")
-
-  cd $pkgbase-$pkgver
+package() {
+  cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
-
-  # split out plugins, there's no Makefile target for a clean way
-  mkdir ${srcdir}/_pluginsdir
-  mv "$pkgdir"/usr/lib/abiword-${pkgver%.*}/plugins ${srcdir}/_pluginsdir
-}
-
-package_abiword-plugins() {
-  pkgdesc='Additional plugins for Abiword'
-  depends=("abiword=${pkgver}-${pkgrel}" 'loudmouth' 'libwpg' 'libwmf' 'link-grammar' 
-           'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
-
-  install -dm755 ${pkgdir}/usr/lib/abiword-${pkgver%.*}
-  mv ${srcdir}/_pluginsdir/plugins ${pkgdir}/usr/lib/abiword-${pkgver%.*}/
 }
