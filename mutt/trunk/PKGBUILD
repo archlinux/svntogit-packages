@@ -15,8 +15,6 @@ depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb
 source=("ftp://ftp.mutt.org/mutt/${pkgname}-${pkgver}.tar.gz")
 sha1sums=('8ac821d8b1e25504a31bf5fda9c08d93a4acc862')
 
-install=install
-
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	./configure \
