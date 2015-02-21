@@ -4,13 +4,13 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=219
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
-             'gtk-doc' 'intltool' 'kmod' 'libcap' 'libidn' 'libgcrypt' 'libmicrohttpd'
-             'libxslt' 'util-linux' 'linux-api-headers' 'lz4' 'pam' 'python'
-             'python-lxml' 'quota-tools' 'shadow' 'xz')
+             'gtk-doc' 'intltool' 'iptables' 'kmod' 'libcap' 'libidn' 'libgcrypt'
+             'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers' 'lz4' 'pam'
+             'python' 'python-lxml' 'quota-tools' 'shadow' 'xz')
 options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
@@ -47,8 +47,9 @@ build() {
 package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1' 'MIT')
-  depends=('acl' 'bash' 'dbus' 'glib2' 'kbd' 'kmod' 'hwids' 'libcap' 'libgcrypt'
-           'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp' 'util-linux' 'xz')
+  depends=('acl' 'bash' 'dbus' 'glib2' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
+           'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp' 'util-linux'
+           'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
@@ -105,7 +106,10 @@ package_systemd() {
 
   # ensure proper permissions for /var/log/journal. This is only to placate
   chown root:systemd-journal "$pkgdir/var/log/journal"
-  chmod 2755 "$pkgdir/var/log/journal"{,/remote}
+  chmod 2755 "$pkgdir/var/log/journal"
+
+  # we'll create this on installation
+  rmdir "$pkgdir/var/log/journal/remote"
 
   # fix pam file
   sed 's|system-auth|system-login|g' -i "$pkgdir/etc/pam.d/systemd-user"
