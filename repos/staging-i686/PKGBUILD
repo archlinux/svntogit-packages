@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=tomboy
+pkgver=1.14.1
+pkgrel=2
+pkgdesc="Desktop note-taking application for Linux and Unix"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://www.gnome.org/projects/tomboy/"
+depends=('gtk2' 'gtkspell' 'gconf' 'gconf-sharp' 'dbus-sharp-glib' 'mono-addins' 'hicolor-icon-theme')
+makedepends=('intltool' 'pkgconfig'  'gnome-doc-utils')
+options=('!emptydirs' '!makeflags')
+install=tomboy.install
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz
+        use_dbussharp_2.patch)
+sha256sums=('f9e81fd9c9a9180e8ddcb4b9237ead0c842aa5b5ac21af87e97939e5015af018'
+            'ef6804f9f461f4c61d0d4ab514936f423f4a58b7d4606d576a8c62162f9acf9e')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../use_dbussharp_2.patch
+}
+
+build() {
+  export MONO_SHARED_DIR="$srcdir/.wabi"
+  mkdir -p "$MONO_SHARED_DIR"
+
+  cd "$pkgname-$pkgver"
+  autoreconf -fi
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var \
+      --disable-update-mimedb
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install
+
+  install -m755 -d "$pkgdir/usr/share/gconf/schemas"
+  gconf-merge-schema "$pkgdir/usr/share/gconf/schemas/$pkgname.schemas" --domain tomboy "$pkgdir"/etc/gconf/schemas/*.schemas
+  rm -f "$pkgdir"/etc/gconf/schemas/*.schemas
+}
