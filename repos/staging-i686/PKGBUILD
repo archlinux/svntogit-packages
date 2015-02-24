@@ -1,0 +1,67 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Antonio Rojas
+
+pkgbase=breeze
+pkgname=('breeze' 'breeze-kde4')
+pkgver=5.2.1
+pkgrel=1
+arch=('i686' 'x86_64')
+url='https://projects.kde.org/projects/kde/workspace/breeze'
+license=('LGPL')
+makedepends=('extra-cmake-modules' 'frameworkintegration' 'kdelibs'
+             'automoc4' 'kdecoration')
+source=("http://download.kde.org/stable/plasma/${pkgver}/$pkgbase-$pkgver.tar.xz")
+md5sums=('0a0cd80e1c6aa6f428c4d7a7d4b06bfd')
+
+prepare() {
+  mkdir build{,-kde4}
+}
+
+build() {
+  cd build
+  cmake ../${pkgbase}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLIB_INSTALL_DIR=lib \
+    -DKDE_INSTALL_USE_QT_SYS_PATHS=ON \
+    -DBUILD_TESTING=OFF
+  make
+
+  cd ../build-kde4
+  cmake ../${pkgbase}-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DUSE_KDE4=ON \
+    -DBUILD_TESTING=OFF
+  make
+}
+
+package_breeze() {
+  depends=('frameworkintegration' 'kdecoration')
+  pkgdesc='Artwork, styles and assets for the Breeze visual style for the Plasma Desktop'
+  optdepends=('breeze-kde4: Breeze widget style for KDE4 applications'
+              'oxygen-icons: fallback icon theme')
+  groups=('plasma')
+
+  cd build
+  make DESTDIR="${pkgdir}" install
+
+  # make QtCurve preset and color scheme available for KDE4 too
+  install -d "$pkgdir"/usr/share/apps/{QtCurve,color-schemes}
+  ln -s /usr/share/QtCurve/Breeze.qtcurve "$pkgdir"/usr/share/apps/QtCurve/
+  ln -s /usr/share/color-schemes/Breeze{,Dark}.colors "$pkgdir"/usr/share/apps/color-schemes/
+}
+
+package_breeze-kde4() {
+  pkgdesc='Artwork, styles and assets for the Breeze visual style for the KDE4'
+  depends=('kdelibs')
+
+  cd build-kde4
+  make DESTDIR="${pkgdir}" install
+
+  # needed for pure Qt4 apps
+  install -d "$pkgdir"/usr/lib/qt4/plugins/styles
+  ln -s /usr/lib/kde4/plugins/styles/breeze.so "$pkgdir"/usr/lib/qt4/plugins/styles
+}
