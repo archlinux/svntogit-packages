@@ -7,8 +7,8 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=3.3.0
-_pkgver=v3.3.0
+pkgver=3.3.1
+_pkgver=v3.3.1
 pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=('i686' 'x86_64')
