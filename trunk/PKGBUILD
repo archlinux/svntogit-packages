@@ -1,0 +1,73 @@
+# $Id: PKGBUILD 231971 2015-02-25 11:36:57Z andyrtr $
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Mantas Mikulėnas <grawity@gmail.com>
+
+pkgname=gssproxy
+pkgver=0.3.1
+pkgrel=2
+pkgdesc="GSSAPI Proxy"
+arch=(i686 x86_64)
+url="https://fedorahosted.org/gss-proxy/"
+license=('custom: MIT')
+depends=('krb5' 'popt' 'ding-libs')
+makedepends=('popt' 'libxslt' 'systemd' 'docbook-xsl' 'doxygen' )
+option=('!emptydirs')
+backup=('etc/gssproxy/gssproxy.conf' 'etc/gss/mech')
+source=(https://fedorahosted.org/released/gss-proxy/$pkgname-$pkgver.tar.gz
+        0001-Fix-error-in-compiling-without-SELinux.patch
+        gssproxy-0.3.1-deadlock_fix.patch
+        gssproxy-0.3.1-flags_handling.patch
+        gssproxy-0.3.1-gssi_inquire_context.patch
+        gssproxy-0.3.1-nfsd_startup.patch
+        fix-build-with-automake1.15.patch)
+md5sums=('f455f4e483ecda8274d235942fa8e943'
+         '91cadad2cc7ae0d7c2353f2a1e6783d6'
+         '5f24413b213524feffb14d3710da9051'
+         '0e51c445f5fbadf94c914783267338e3'
+         '4462cbf85e39f50bbfef34cfb24fe061'
+         'ee9a5f57b879f7b59e3b6aac7114369e'
+         'a16f985cc74e67a4a97f97fafe157388')
+
+prepare() {
+  cd "$srcdir/gssproxy-$pkgver"
+  # build broken without selinux https://fedorahosted.org/gss-proxy/ticket/131
+  patch -Np1 -i $srcdir/0001-Fix-error-in-compiling-without-SELinux.patch
+  # patch from Fedora rpm - their maintainer is the upstream dev
+  patch -Np2 -i $srcdir/gssproxy-0.3.1-deadlock_fix.patch
+  patch -Np2 -i $srcdir/gssproxy-0.3.1-flags_handling.patch
+  patch -Np2 -i $srcdir/gssproxy-0.3.1-gssi_inquire_context.patch
+  patch -Np2 -i $srcdir/gssproxy-0.3.1-nfsd_startup.patch
+  # upstream patches
+  patch -Np2 -i $srcdir/fix-build-with-automake1.15.patch
+  
+  autoreconf -vfi
+}
+
+build() {
+  cd "$srcdir/gssproxy-$pkgver"
+  # make it find bundled verto from krb5 without its own pkg-config file
+  export VERTO_CFLAGS="-I/usr/include", export VERTO_LIBS="-L/usr/lib -lverto"
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc  \
+    --with-pubconf-path=/etc \
+    --sbindir=/usr/bin \
+    --localstatedir=/var \
+    --without-selinux \
+    --with-initscript=systemd 
+  make
+  make test_proxymech
+}
+
+package() {
+  cd "$srcdir/gssproxy-$pkgver"
+  make DESTDIR="$pkgdir" install
+  
+  rm -rf  $pkgdir/usr/include
+  rm -rf $pkgdir/usr/share/doc
+
+  install -m644 examples/gssproxy.conf $pkgdir/etc/gssproxy/gssproxy.conf
+  install -m644 examples/mech  $pkgdir/etc/gss/mech
+  
+  install -m755 -d "${pkgdir}/usr/share/licenses/$pkgname"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/$pkgname/"
+}
