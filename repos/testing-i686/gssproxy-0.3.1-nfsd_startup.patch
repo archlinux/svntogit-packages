@@ -1,0 +1,241 @@
+From 58a39677c961c72b052eae0b9d94b992254d6e10 Mon Sep 17 00:00:00 2001
+From: Simo Sorce <simo@redhat.com>
+Date: Fri, 3 Jan 2014 16:45:35 -0500
+Subject: [PATCH 1/2] Add utility functions to read()/write() safely
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Automatically handle short reads due to singals interrupting the process.
+
+Signed-off-by: Simo Sorce <simo@redhat.com>
+Reviewed-by: Günther Deschner <gdeschner@redhat.com>
+---
+ proxy/src/gp_common.h |  2 ++
+ proxy/src/gp_util.c   | 39 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 41 insertions(+)
+
+diff --git a/proxy/src/gp_common.h b/proxy/src/gp_common.h
+index f2b8c3e..3a1b7be 100644
+--- a/proxy/src/gp_common.h
++++ b/proxy/src/gp_common.h
+@@ -69,6 +69,8 @@ bool gp_same(const char *a, const char *b);
+ bool gp_boolean_is_true(const char *s);
+ char *gp_getenv(const char *name);
+ 
++ssize_t gp_safe_read(int fd, void *buf, size_t count);
++ssize_t gp_safe_write(int fd, const void *buf, size_t count);
+ /* NOTE: read the note in gp_util.c before using gp_strerror() */
+ char *gp_strerror(int errnum);
+ 
+diff --git a/proxy/src/gp_util.c b/proxy/src/gp_util.c
+index 4fbac4e..34f3024 100644
+--- a/proxy/src/gp_util.c
++++ b/proxy/src/gp_util.c
+@@ -29,6 +29,7 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <errno.h>
++#include <unistd.h>
+ 
+ bool gp_same(const char *a, const char *b)
+ {
+@@ -125,3 +126,41 @@ char *gp_strerror(int errnum)
+     errno = saved_errno;
+     return buf;
+ }
++
++ssize_t gp_safe_read(int fd, void *buf, size_t count)
++{
++    char *b = (char *)buf;
++    ssize_t len = 0;
++    ssize_t ret;
++
++    do {
++        ret = read(fd, &b[len], count - len);
++        if (ret == -1) {
++            if (errno == EINTR) continue;
++            return ret;
++        }
++        if (ret == 0) break; /* EOF */
++        len += ret;
++    } while (count > len);
++
++    return len;
++}
++
++ssize_t gp_safe_write(int fd, const void *buf, size_t count)
++{
++    const char *b = (const char *)buf;
++    ssize_t len = 0;
++    ssize_t ret;
++
++    do {
++        ret = write(fd, &b[len], count - len);
++        if (ret == -1) {
++            if (errno == EINTR) continue;
++            return ret;
++        }
++        if (ret == 0) break; /* EOF */
++        len += ret;
++    } while (count > len);
++
++    return len;
++}
+-- 
+1.8.4.2
+
+
+From bd8ffcf67be8fdbe14bc49a65a8eafe904119d88 Mon Sep 17 00:00:00 2001
+From: Simo Sorce <simo@redhat.com>
+Date: Fri, 3 Jan 2014 12:10:36 -0500
+Subject: [PATCH 2/2] Block parent process until child is initialized.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This way the init system will not proceed starting dependencies until gssproxy
+is actually ready to serve requests.
+In particular this is used to make sure the nfsd proc file has been touched
+before the nfsd server is started.
+
+Resolves: https://fedorahosted.org/gss-proxy/ticket/114
+
+Signed-off-by: Simo Sorce <simo@redhat.com>
+Reviewed-by: Günther Deschner <gdeschner@redhat.com>
+---
+ proxy/src/gp_init.c  | 42 +++++++++++++++++++++++++++++++++++++++---
+ proxy/src/gp_proxy.h |  3 ++-
+ proxy/src/gssproxy.c | 11 +++++++++--
+ 3 files changed, 50 insertions(+), 6 deletions(-)
+
+diff --git a/proxy/src/gp_init.c b/proxy/src/gp_init.c
+index 830ae16..6207a78 100644
+--- a/proxy/src/gp_init.c
++++ b/proxy/src/gp_init.c
+@@ -37,12 +37,22 @@
+ #include <stdio.h>
+ #include "gp_proxy.h"
+ 
+-void init_server(bool daemonize)
++void init_server(bool daemonize, int *wait_fd)
+ {
+     pid_t pid, sid;
+     int ret;
+ 
++    *wait_fd = -1;
++
+     if (daemonize) {
++        int pipefd[2];
++        char buf[1];
++
++        /* create parent-child pipe */
++        ret = pipe(pipefd);
++        if (ret == -1) {
++            exit(EXIT_FAILURE);
++        }
+ 
+         pid = fork();
+         if (pid == -1) {
+@@ -50,10 +60,22 @@ void init_server(bool daemonize)
+             exit(EXIT_FAILURE);
+         }
+         if (pid != 0) {
+-            /* ok kill the parent */
+-            exit(EXIT_SUCCESS);
++            /* wait for child to signal it is ready */
++            close(pipefd[1]);
++            ret = gp_safe_read(pipefd[0], buf, 1);
++            if (ret == 1) {
++                /* child signaled all ok */
++                exit(EXIT_SUCCESS);
++            } else {
++                /* lost child, something went wrong */
++                exit(EXIT_FAILURE);
++            }
+         }
+ 
++        /* child */
++        close(pipefd[0]);
++        *wait_fd = pipefd[1];
++
+         sid = setsid();
+         if (sid == -1) {
+             /* setsid error ? abort */
+@@ -78,6 +100,20 @@ void init_server(bool daemonize)
+     gp_logging_init();
+ }
+ 
++void init_done(int wait_fd)
++{
++    char buf = 0;
++    int ret;
++
++    if (wait_fd != -1) {
++        ret = gp_safe_write(wait_fd, &buf, 1);
++        if (ret != 1) {
++            exit(EXIT_FAILURE);
++        }
++        close(wait_fd);
++    }
++}
++
+ void fini_server(void)
+ {
+     closelog();
+diff --git a/proxy/src/gp_proxy.h b/proxy/src/gp_proxy.h
+index 733fec5..79bebb8 100644
+--- a/proxy/src/gp_proxy.h
++++ b/proxy/src/gp_proxy.h
+@@ -106,7 +106,8 @@ struct gp_creds_handle *gp_service_get_creds_handle(struct gp_service *svc);
+ void free_config(struct gp_config **config);
+ 
+ /* from gp_init.c */
+-void init_server(bool daemonize);
++void init_server(bool daemonize, int *wait_fd);
++void init_done(int wait_fd);
+ void fini_server(void);
+ verto_ctx *init_event_loop(void);
+ void init_proc_nfsd(struct gp_config *cfg);
+diff --git a/proxy/src/gssproxy.c b/proxy/src/gssproxy.c
+index 1bf0a0b..80430d6 100644
+--- a/proxy/src/gssproxy.c
++++ b/proxy/src/gssproxy.c
+@@ -42,6 +42,7 @@ int main(int argc, const char *argv[])
+     int vflags;
+     struct gssproxy_ctx *gpctx;
+     struct gp_sock_ctx *sock_ctx;
++    int wait_fd;
+     int ret;
+     int i;
+ 
+@@ -97,7 +98,7 @@ int main(int argc, const char *argv[])
+         exit(EXIT_FAILURE);
+     }
+ 
+-    init_server(gpctx->config->daemonize);
++    init_server(gpctx->config->daemonize, &wait_fd);
+ 
+     write_pid();
+ 
+@@ -139,9 +140,15 @@ int main(int argc, const char *argv[])
+         }
+     }
+ 
+-    /* special call to tell the Linux kernel gss-proxy is available */
++    /* We need to tell nfsd that GSS-Proxy is available before it starts,
++     * as nfsd needs to know GSS-Proxy is in use before the first time it
++     * needs to call accept_sec_context. */
+     init_proc_nfsd(gpctx->config);
+ 
++    /* Now it is safe to tell the init system that we're done starting up,
++     * so it can continue with dependencies and start nfsd */
++    init_done(wait_fd);
++
+     ret = gp_workers_init(gpctx);
+     if (ret) {
+         exit(EXIT_FAILURE);
+-- 
+1.8.4.2
+
+
