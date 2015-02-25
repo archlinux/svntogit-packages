@@ -1,0 +1,37 @@
+From f39b471f34b381784a1bd1906bf8335ac2c7ef5e Mon Sep 17 00:00:00 2001
+From: Simo Sorce <simo@redhat.com>
+Date: Tue, 11 Mar 2014 18:16:32 -0400
+Subject: [PATCH] Properly cleanup mutex on failure.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+If the call to create socket fails we leave a dangling lock and the client
+enters into a deadlock on the next call.
+
+Fixes: https://fedorahosted.org/gss-proxy/ticket/121
+
+Signed-off-by: Simo Sorce <simo@redhat.com>
+Reviewed-by: Günther Deschner <gdeschner@redhat.com>
+---
+ proxy/src/client/gpm_common.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/proxy/src/client/gpm_common.c b/proxy/src/client/gpm_common.c
+index 74296da..4651194 100644
+--- a/proxy/src/client/gpm_common.c
++++ b/proxy/src/client/gpm_common.c
+@@ -153,6 +153,9 @@ static int gpm_grab_sock(struct gpm_ctx *gpmctx)
+         ret = gpm_open_socket(gpmctx);
+     }
+ 
++    if (ret) {
++        pthread_mutex_unlock(&gpmctx->lock);
++    }
+     return ret;
+ }
+ 
+-- 
+1.8.5.3
+
+
