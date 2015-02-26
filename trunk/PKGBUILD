@@ -4,7 +4,7 @@
 
 pkgname=gssproxy
 pkgver=0.3.1
-pkgrel=2
+pkgrel=3
 pkgdesc="GSSAPI Proxy"
 arch=(i686 x86_64)
 url="https://fedorahosted.org/gss-proxy/"
@@ -41,33 +41,50 @@ prepare() {
   patch -Np2 -i $srcdir/fix-build-with-automake1.15.patch
   
   autoreconf -vfi
+  
+  # delete unneeded service dependency
+  sed -i "/# GSSPROXY will not be started until syslog is/d" systemd/gssproxy.service.in
+  sed -i "/^After=syslog.target/d" systemd/gssproxy.service.in
+  
+  # see http://pkgs.fedoraproject.org/cgit/nfs-utils.git/tree/nfs-utils.spec creating symlinks
+  # rpc-gssd.service is nfs-secure.service
+  sed -i "s/nfs-secure.service/rpc-gssd.service/" systemd/gssproxy.service.in
+  # rpc.svcgssd is nfs-secure-server.service
+  sed -i "s/nfs-secure-server.service/rpc-svcgssd.service/" systemd/gssproxy.service.in
 }
 
 build() {
-  cd "$srcdir/gssproxy-$pkgver"
+  cd gssproxy-$pkgver
   # make it find bundled verto from krb5 without its own pkg-config file
-  export VERTO_CFLAGS="-I/usr/include", export VERTO_LIBS="-L/usr/lib -lverto"
+  export VERTO_CFLAGS="-I/usr/include"
+  export VERTO_LIBS="-L/usr/lib -lverto"
   ./configure --prefix=/usr \
     --sysconfdir=/etc  \
-    --with-pubconf-path=/etc \
+    --with-pubconf-path=/etc/gssproxy \
     --sbindir=/usr/bin \
     --localstatedir=/var \
     --without-selinux \
     --with-initscript=systemd 
   make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  #make -k check
   make test_proxymech
 }
 
+
 package() {
-  cd "$srcdir/gssproxy-$pkgver"
-  make DESTDIR="$pkgdir" install
+  cd gssproxy-$pkgver
+  make DESTDIR=$pkgdir install
   
-  rm -rf  $pkgdir/usr/include
+  rm -rf $pkgdir/usr/include
   rm -rf $pkgdir/usr/share/doc
 
   install -m644 examples/gssproxy.conf $pkgdir/etc/gssproxy/gssproxy.conf
   install -m644 examples/mech  $pkgdir/etc/gss/mech
   
-  install -m755 -d "${pkgdir}/usr/share/licenses/$pkgname"
-  install -m644 COPYING "${pkgdir}/usr/share/licenses/$pkgname/"
+  install -m755 -d ${pkgdir}/usr/share/licenses/$pkgname
+  install -m644 COPYING ${pkgdir}/usr/share/licenses/$pkgname/
 }
