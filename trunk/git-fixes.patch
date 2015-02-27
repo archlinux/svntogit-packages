@@ -1,0 +1,187 @@
+From 2600a4a352185f7d4d828f7d223628e4bb0f2aa3 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 25 Feb 2015 07:48:18 +1000
+Subject: Fix off-by-one error in buttonmap initialization (#89300)
+
+X.Org Bug 89300 <http://bugs.freedesktop.org/show_bug.cgi?id=89300>
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+diff --git a/src/libinput.c b/src/libinput.c
+index 9613fbd..eee3bfb 100644
+--- a/src/libinput.c
++++ b/src/libinput.c
+@@ -372,7 +372,7 @@ init_button_map(unsigned char *btnmap, size_t size)
+ 	int i;
+ 
+ 	memset(btnmap, 0, size);
+-	for (i = 0; i <= size; i++)
++	for (i = 0; i < size; i++)
+ 		btnmap[i] = i;
+ }
+ 
+-- 
+cgit v0.10.2
+From 98ae01b9ae8616d3c2047f5510205aa4e3bc52b5 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Wed, 25 Feb 2015 11:49:19 +0100
+Subject: Ignore property changes if the device is disabled
+
+If the device is present but disabled, the server will still call into
+SetProperty. We don't have a libinput device to back it up in this case,
+causing a null-pointer dereference.
+
+This is a bug specific to this driver that cannot easily be fixed. All
+other drivers can handle property changes even if no device is present,
+here we rely on libinput to make the final call. But without a device
+path/fd we don't have a libinput reference.
+
+The protocol doesn't mention this case, so let's pick BadMatch as the
+least wrong error code. And put a warning in the log, this needs a
+workaround in the client.
+
+Also, if we get here and the device is on, then that's definitely a bug,
+warn about that.
+
+https://bugs.freedesktop.org/show_bug.cgi?id=89296
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+diff --git a/src/libinput.c b/src/libinput.c
+index eee3bfb..0ab240c 100644
+--- a/src/libinput.c
++++ b/src/libinput.c
+@@ -1293,6 +1293,26 @@ static Atom prop_float;
+ static Atom prop_device;
+ static Atom prop_product_id;
+ 
++static inline BOOL
++xf86libinput_check_device (DeviceIntPtr dev,
++			   Atom atom)
++{
++	InputInfoPtr pInfo = dev->public.devicePrivate;
++	struct xf86libinput *driver_data = pInfo->private;
++	struct libinput_device *device = driver_data->device;
++
++	if (device == NULL) {
++		BUG_WARN(dev->public.on);
++		xf86IDrvMsg(pInfo, X_INFO,
++			    "SetProperty on %d called but device is disabled.\n"
++			    "This driver cannot change properties on a disabled device\n",
++			    atom);
++		return FALSE;
++	}
++
++	return TRUE;
++}
++
+ static inline int
+ LibinputSetPropertyTap(DeviceIntPtr dev,
+                        Atom atom,
+@@ -1312,6 +1332,9 @@ LibinputSetPropertyTap(DeviceIntPtr dev,
+ 		if (*data != 0 && *data != 1)
+ 			return BadValue;
+ 
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
++
+ 		if (libinput_device_config_tap_get_finger_count(device) == 0)
+ 			return BadMatch;
+ 	} else {
+@@ -1343,6 +1366,9 @@ LibinputSetPropertyCalibration(DeviceIntPtr dev,
+ 		    data[8] != 1)
+ 			return BadValue;
+ 
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
++
+ 		if (!libinput_device_config_calibration_has_matrix(device))
+ 			return BadMatch;
+ 	} else {
+@@ -1374,6 +1400,9 @@ LibinputSetPropertyAccel(DeviceIntPtr dev,
+ 		if (*data < -1 || *data > 1)
+ 			return BadValue;
+ 
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
++
+ 		if (libinput_device_config_accel_is_available(device) == 0)
+ 			return BadMatch;
+ 	} else {
+@@ -1403,6 +1432,9 @@ LibinputSetPropertyNaturalScroll(DeviceIntPtr dev,
+ 		if (*data != 0 && *data != 1)
+ 			return BadValue;
+ 
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
++
+ 		if (libinput_device_config_scroll_has_natural_scroll(device) == 0)
+ 			return BadMatch;
+ 	} else {
+@@ -1435,9 +1467,12 @@ LibinputSetPropertySendEvents(DeviceIntPtr dev,
+ 		modes |= LIBINPUT_CONFIG_SEND_EVENTS_DISABLED_ON_EXTERNAL_MOUSE;
+ 
+ 	if (checkonly) {
+-		uint32_t supported =
+-			libinput_device_config_send_events_get_modes(device);
++		uint32_t supported;
++
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
+ 
++		supported = libinput_device_config_send_events_get_modes(device);
+ 		if ((modes | supported) != supported)
+ 			return BadValue;
+ 
+@@ -1465,9 +1500,13 @@ LibinputSetPropertyLeftHanded(DeviceIntPtr dev,
+ 	data = (BOOL*)val->data;
+ 
+ 	if (checkonly) {
+-		int supported = libinput_device_config_left_handed_is_available(device);
++		int supported;
+ 		int left_handed = *data;
+ 
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
++
++		supported = libinput_device_config_left_handed_is_available(device);
+ 		if (!supported && left_handed)
+ 			return BadValue;
+ 	} else {
+@@ -1502,11 +1541,15 @@ LibinputSetPropertyScrollMethods(DeviceIntPtr dev,
+ 		modes |= LIBINPUT_CONFIG_SCROLL_ON_BUTTON_DOWN;
+ 
+ 	if (checkonly) {
+-		uint32_t supported = libinput_device_config_scroll_get_methods(device);
++		uint32_t supported;
+ 
+ 		if (__builtin_popcount(modes) > 1)
+ 			return BadValue;
+ 
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
++
++		supported = libinput_device_config_scroll_get_methods(device);
+ 		if (modes && (modes & supported) == 0)
+ 			return BadValue;
+ 	} else {
+@@ -1534,9 +1577,13 @@ LibinputSetPropertyScrollButton(DeviceIntPtr dev,
+ 
+ 	if (checkonly) {
+ 		uint32_t button = *data;
+-		uint32_t supported = libinput_device_has_button(device,
+-								btn_xorg2linux(button));
++		uint32_t supported;
++
++		if (!xf86libinput_check_device (dev, atom))
++			return BadMatch;
+ 
++		supported = libinput_device_has_button(device,
++						       btn_xorg2linux(button));
+ 		if (button && !supported)
+ 			return BadValue;
+ 	} else {
+-- 
+cgit v0.10.2
+
