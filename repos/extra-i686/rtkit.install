@@ -1,26 +1,15 @@
 post_install() {
-  getent group rtkit &>/dev/null || /usr/sbin/groupadd -g 133 rtkit || return 1
-  getent passwd rtkit &>/dev/null || /usr/sbin/useradd -u 133 -g rtkit -c 'RealtimeKit' -s /sbin/nologin -d /proc rtkit || return 1
+  if ! getent passwd rtkit &>/dev/null; then
+    groupadd -g 133 rtkit
+    useradd -u 133 -g rtkit -c 'RealtimeKit' -s /bin/false -d /proc rtkit
+  fi
 
-  dbus-send --system --type=method_call --dest=org.freedesktop.DBus / org.freedesktop.DBus.ReloadConfig >/dev/null 2>&1
-
-  true
+  post_upgrade
 }
 
 post_upgrade() {
-  if (( $(vercmp $2 0.10) < 0 )); then
-    # Get rid of old user and group
-    post_remove
-  fi
-
-  post_install
-}
-
-post_remove() {
-  getent passwd rtkit &>/dev/null && /usr/sbin/userdel -f rtkit
-  getent group rtkit &>/dev/null && /usr/sbin/groupdel rtkit
-
-  true
+  dbus-send --system --type=method_call --dest=org.freedesktop.DBus / org.freedesktop.DBus.ReloadConfig &>/dev/null
+  return 0
 }
 
 # vim:set ts=2 sw=2 et:
