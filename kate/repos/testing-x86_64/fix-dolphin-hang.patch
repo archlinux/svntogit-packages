@@ -1,0 +1,76 @@
+diff -rup kate-14.12.1/CMakeLists.txt kate/CMakeLists.txt
+--- kate-14.12.1/CMakeLists.txt	2014-12-09 19:35:28.000000000 +0800
++++ kate/CMakeLists.txt	2015-01-25 17:16:16.570425122 +0800
+@@ -47,6 +47,12 @@ find_package(KF5 REQUIRED COMPONENTS
+   XmlGui
+ )
+ 
++find_package(X11)
++set(HAVE_X11 ${X11_FOUND})
++if (HAVE_X11)
++    find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED X11Extras)
++endif()
++
+ # use sane compile flags
+ add_definitions(
+   -DQT_USE_QSTRINGBUILDER
+diff -rup kate-14.12.1/config.h.cmake kate/config.h.cmake
+--- kate-14.12.1/config.h.cmake	2014-12-09 19:35:28.000000000 +0800
++++ kate/config.h.cmake	2015-01-25 17:08:36.686329148 +0800
+@@ -8,4 +8,6 @@
+ #cmakedefine HAVE_CTERMID 1
+ #cmakedefine KActivities_FOUND 1
+ 
++#cmakedefine01 HAVE_X11
++
+ #endif
+diff -rup kate-14.12.1/kate/src/kateapp.cpp kate/kate/src/kateapp.cpp
+--- kate-14.12.1/kate/src/kateapp.cpp	2014-12-09 19:35:28.000000000 +0800
++++ kate/kate/src/kateapp.cpp	2015-01-25 17:23:45.624284162 +0800
+@@ -151,9 +151,9 @@ bool KateApp::startupKate()
+     } else if (!m_args.isSet(QStringLiteral("stdin")) && (m_args.positionalArguments().count() == 0)) { // only start session if no files specified
+         // let the user choose session if possible
+         if (!sessionManager()->chooseSession()) {
+-#ifdef Q_WS_X11
++#ifdef HAVE_X11
+             // we will exit kate now, notify the rest of the world we are done
+-            KStartupInfo::appStarted(startupId());
++            KStartupInfo::appStarted(KStartupInfo::startupId());
+ #endif
+             return false;
+         }
+@@ -167,8 +167,8 @@ bool KateApp::startupKate()
+     }
+ 
+     // notify about start
+-#ifdef Q_WS_X11
+-    KStartupInfo::setNewStartupId(activeKateMainWindow(), startupId());
++#ifdef HAVE_X11
++    KStartupInfo::setNewStartupId(activeKateMainWindow(), KStartupInfo::startupId());
+ #endif
+ 
+     QTextCodec *codec = m_args.isSet(QStringLiteral("encoding")) ? QTextCodec::codecForName(m_args.value(QStringLiteral("encoding")).toUtf8()) : 0;
+diff -rup kate-14.12.1/kate/src/main.cpp kate/kate/src/main.cpp
+--- kate-14.12.1/kate/src/main.cpp	2014-12-09 19:35:28.000000000 +0800
++++ kate/kate/src/main.cpp	2015-01-25 20:34:33.613003810 +0800
+@@ -25,6 +25,7 @@
+ 
+ #include <KAboutData>
+ #include <KLocalizedString>
++#include <KStartupInfo>
+ #include <kdbusservice.h>
+ 
+ #include <QByteArray>
+@@ -385,7 +386,11 @@ extern "C" Q_DECL_EXPORT int kdemain(int
+                 QDBusConnection::sessionBus().connect(serviceName, QStringLiteral("/MainApplication"), QStringLiteral("org.kde.Kate.Application"), QStringLiteral("documentClosed"), waiter, SLOT(documentClosed(QString)));
+             }
+ 
+-    #ifdef Q_WS_X11
++            // KToolInvocation (and KRun) will wait until we register on dbus
++            KDBusService dbusService(KDBusService::Multiple);
++            dbusService.unregister();
++
++    #ifdef HAVE_X11
+             // make the world happy, we are started, kind of...
+             KStartupInfo::appStarted();
+     #endif
