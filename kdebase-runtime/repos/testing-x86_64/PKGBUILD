@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=kdebase-runtime
+pkgver=14.12.3
+pkgrel=1
+pkgdesc="Plugins and applications necessary for the running of KDE applications"
+arch=('i686' 'x86_64')
+url='https://projects.kde.org/projects/kde/kde-runtime'
+license=('GPL' 'LGPL')
+depends=("kdelibs" 'kactivities' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra'
+         'oxygen-icons' 'xorg-xauth' 'libwebp')
+makedepends=('pkg-config' 'cmake' 'automoc4' 'kdepimlibs' 'openslp' 'doxygen'
+             'networkmanager' 'boost')
+optdepends=('kdepimlibs: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org'
+            'gdb: needed by DrKonqi to generate backtrace'
+            'htdig: to build the search index in the KHelpCenter'
+            'rarian: needed by KHelpCenter')
+provides=('khelpcenter' 'notification-daemon')
+install="${pkgname}.install"
+source=("http://download.kde.org/stable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz")
+sha1sums=('f597893c4801106d790b3beb17b213a91ee89b9a')
+
+prepare() {
+  mkdir build
+
+  cd kde-runtime-${pkgver}
+}
+
+build() {
+  cd build
+  cmake ../kde-runtime-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKDE4_BUILD_TESTS=OFF \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DWITH_QNtrack=OFF \
+    -DSAMBA_INCLUDE_DIR=/usr/include/samba-4.0 \
+    -DWITH_NepomukCore=OFF
+  make
+}
+
+package() {
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  rm "${pkgdir}"/usr/share/icons/hicolor/index.theme
+
+  ln -sf /usr/lib/kde4/libexec/kdesu "${pkgdir}/usr/bin/"
+
+  # FS#36668
+  chown :nobody "${pkgdir}"/usr/lib/kde4/libexec/kdesud
+  chmod g+s "${pkgdir}"/usr/lib/kde4/libexec/kdesud
+}
