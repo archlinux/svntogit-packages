@@ -9,15 +9,16 @@
 # Contributor: Roberto Alsina <ralsina@kde.org>
 # Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
 
-pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
+pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lldb' 'clang' 'clang-analyzer'
          'clang-tools-extra')
-pkgver=3.5.1
+pkgver=3.6.0
 pkgrel=1
 _ocaml_ver=4.02.1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
-makedepends=('libffi' 'python2' "ocaml=$_ocaml_ver" 'python-sphinx' 'chrpath')
+makedepends=('libffi' 'python2' "ocaml=$_ocaml_ver" 'python-sphinx' 'chrpath'
+             'ocaml-ctypes' 'ocaml-findlib' 'libedit' 'swig')
 # Use gcc-multilib to build 32-bit compiler-rt libraries on x86_64 (FS#41911)
 makedepends_x86_64=('gcc-multilib')
 options=('staticlibs')
@@ -25,24 +26,24 @@ source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/cfe-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
-        llvm-3.5.0-force-link-pass.o.patch
-        llvm-3.5.0-fix-ocaml-as-needed.patch
+        http://llvm.org/releases/$pkgver/lldb-$pkgver.src.tar.xz{,.sig}
+        llvm-3.6.0-use-ocamlfind-for-ocamldoc.patch
         llvm-Config-config.h
         llvm-Config-llvm-config.h)
-sha256sums=('bf3275d2d7890015c8d8f5e6f4f882f8cf3bf51967297ebe74111d6d8b53be15'
+sha256sums=('b39a69e501b49e8f73ff75c9ad72313681ee58d6f430bfad4d81846fe92eb9ce'
             'SKIP'
-            '6773f3f9cf815631cc7e779ec134ddd228dc8e9a250e1ea3a910610c59eb8f5c'
+            'be0e69378119fe26f0f2f74cffe82b7c26da840c9733fe522ed3c1b66b11082d'
             'SKIP'
-            'e8d011250389cfc36eb51557ca25ae66ab08173e8d53536a0747356105d72906'
+            '3aa949ba82913490a75697287d9ee8598c619fae0aa6bb8fddf0095ff51bc812'
             'SKIP'
-            'adf4b526f33e681aff5961f0821f5b514d3fc375410008842640b56a2e6a837a'
+            '7f49fb79e5adcdce7dddaf973f1db130228dfb19e37a99a7f5365a6948b26b11'
             'SKIP'
-            '5702053503d49448598eda1b8dc8c263f0df9ad7486833273e3987b5dec25a19'
-            '0d8b268cf101b0a08dbe458a041c33be0500d09b1a62ed0a16f205758647a5fc'
+            '2b1ad1d42c4ea3fa2f9dd6db7c522d86e80891659b24dbb3d0d80386d8eaf0b2'
+            'SKIP'
+            '7e62bd5dd1ae5755a63abab692ae366186be392104e232e6b3a10a4ea5807283'
             '312574e655f9a87784ca416949c505c452b819fad3061f2cde8aced6540a19a3'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
-validpgpkeys=('54E3BDE33185D9F69664D22455F5CD70BB5A0569'
-              '11E521D646982372EB577A1F8F0871F202119294')
+validpgpkeys=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D')
 
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
@@ -55,6 +56,12 @@ prepare() {
 
   mv "$srcdir/compiler-rt-$pkgver.src" projects/compiler-rt
 
+  mv "$srcdir/lldb-$pkgver.src" tools/lldb
+
+  # Fix source file permissions
+  # http://llvm.org/bugs/show_bug.cgi?id=22742
+  chmod -R u=rwX,go=rX "$srcdir/llvm-$pkgver.src"
+
   # Fix docs installation directory
   sed -i 's:$(PROJ_prefix)/docs/llvm:$(PROJ_prefix)/share/doc/llvm:' \
     Makefile.config.in
@@ -63,13 +70,14 @@ prepare() {
   sed -i '/@LLVM_CONFIG_CMAKE_DIR@/s:$(PROJ_cmake):$(PROJ_prefix)/share/llvm/cmake:' \
     cmake/modules/Makefile
 
-  # Fix build with GCC 4.9 (patch from Debian)
-  # http://llvm.org/bugs/show_bug.cgi?id=20067
-  patch -Np1 -i ../llvm-3.5.0-force-link-pass.o.patch
+  # Use Python 2
+  find tools/lldb -name Makefile -exec sed -i 's/python-config/python2-config/' {} +
+  sed -i 's|/usr/bin/env python|&2|' \
+    tools/lldb/scripts/Python/{build-swig-Python,finish-swig-Python-LLDB}.sh
 
-  # Fix OCaml bindings linking with -Wl,--as-needed
-  # http://llvm.org/bugs/show_bug.cgi?id=22014
-  patch -Np1 -i ../llvm-3.5.0-fix-ocaml-as-needed.patch
+  # Fix docs/Makefile to use ocamlfind
+  # http://llvm.org/bugs/show_bug.cgi?id=22737
+  patch -Np1 -i ../llvm-3.6.0-use-ocamlfind-for-ocamldoc.patch
 }
 
 build() {
@@ -90,6 +98,7 @@ build() {
     --enable-shared \
     --enable-libffi \
     --enable-targets=all \
+    --enable-bindings=ocaml \
     --disable-expensive-checks \
     --disable-debug-runtime \
     --disable-assertions \
@@ -111,11 +120,15 @@ package_llvm() {
 
   # We move the clang directory out of the tree so it won't get installed and
   # then we bring it back in for the clang package
-  mv tools/clang "$srcdir"
+  mv tools/clang "$srcdir/"
+
+  # Same for lldb
+  mv tools/lldb "$srcdir/"
 
   # -j1 is due to race conditions during the installation of the OCaml bindings
   make -j1 DESTDIR="$pkgdir" install
   mv "$srcdir/clang" tools
+  mv "$srcdir/lldb" tools
 
   # The runtime library goes into llvm-libs
   mv -f "$pkgdir/usr/lib/libLLVM-$pkgver.so" "$srcdir/"
@@ -124,9 +137,6 @@ package_llvm() {
   # OCaml bindings go to a separate package
   rm -rf "$srcdir"/{ocaml,ocamldoc}
   mv "$pkgdir"/usr/{lib/ocaml,share/doc/llvm/ocamldoc} "$srcdir"
-
-  # Remove duplicate files installed by the OCaml bindings
-  rm "$pkgdir"/usr/{lib/libllvm*,share/doc/llvm/ocamldoc.tar.gz}
 
   # Fix permissions of static libs
   chmod -x "$pkgdir"/usr/lib/*.a
@@ -176,7 +186,7 @@ package_llvm-libs() {
 
 package_llvm-ocaml() {
   pkgdesc="OCaml bindings for LLVM"
-  depends=("llvm=$pkgver-$pkgrel" "ocaml=$_ocaml_ver")
+  depends=("llvm=$pkgver-$pkgrel" "ocaml=$_ocaml_ver" 'ocaml-ctypes')
 
   cd "$srcdir/llvm-$pkgver.src"
 
@@ -187,8 +197,27 @@ package_llvm-ocaml() {
   # Remove execute bit from static libraries
   chmod -x "$pkgdir"/usr/lib/ocaml/libllvm*.a
 
+  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_lldb() {
+  pkgdesc="Next generation, high-performance debugger"
+  url="http://lldb.llvm.org/"
+  depends=("llvm-libs=$pkgver-$pkgrel" 'libedit' 'python2')
+
+  cd "$srcdir/llvm-$pkgver.src/tools/lldb"
+
+  make DESTDIR="$pkgdir" install
+
+  # Fix permissions of static libs
+  chmod -x "$pkgdir"/usr/lib/*.a
+
   # Remove insecure rpath
-  chrpath -d "$pkgdir"/usr/lib/ocaml/*.so
+  chrpath -d "$pkgdir"/usr/bin/*
+
+  # Compile Python scripts
+  python2 -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
+  python2 -O -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
 
   install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
