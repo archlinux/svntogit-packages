@@ -9,8 +9,8 @@ pkgver=4.9.2
 _pkgver=4.9
 _islver=0.12.2
 _cloogver=0.18.1
-pkgrel=3
-_snapshot=4.9-20150204
+pkgrel=4
+_snapshot=4.9-20150304
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -21,12 +21,10 @@ options=('!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
-        http://www.bastoul.net/cloog/pages/download/cloog-${_cloogver}.tar.gz
-        gcc-4.8-filename-output.patch)
-md5sums=('5a59c19c4ff7acd3db7f8d94843f7f85'
+        http://www.bastoul.net/cloog/pages/download/cloog-${_cloogver}.tar.gz)
+md5sums=('863bb9d2a9551c9b7447cfc8b7cc7498'
          'e039bfcfb6c2ab039b8ee69bf883e824'
-         'e34fca0540d840e5d0f6427e98c92252'
-         '6810bb9b2252f03e6c98d9a671d94589')
+         'e34fca0540d840e5d0f6427e98c92252')
 
 if [ -n "${_snapshot}" ]; then
   _basedir=gcc-${_snapshot}
@@ -54,10 +52,6 @@ prepare() {
   # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
 
-  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57653
-  # https://gcc.gnu.org/git/?p=gcc.git;a=patch;h=9140d56f
-  patch -p1 -i ${srcdir}/gcc-4.8-filename-output.patch
-
   mkdir ${srcdir}/gcc-build
 }
 
@@ -84,6 +78,12 @@ build() {
       --with-linker-hash-style=gnu \
       --disable-multilib --disable-werror \
       --enable-checking=release
+      
+# gcc-5.0 changes
+#      --with-default-libstdcxx-abi=c++98    - before gcc-5.0 c++ rebuild
+#      --enable-gnu-indirect-function
+#      --with-isl    - cloog no longer needed
+
   make
   
   # make documentation
