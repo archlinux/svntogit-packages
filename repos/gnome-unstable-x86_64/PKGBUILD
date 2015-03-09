@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Ionut Biru <ibiru@archlinux.org>
+
+pkgbase=pygobject
+pkgname=(python-gobject python2-gobject pygobject-devel)
+pkgver=3.15.91
+pkgrel=1
+arch=(i686 x86_64)
+url="https://live.gnome.org/PyGObject"
+license=(LGPL)
+makedepends=(python python2 python-cairo python2-cairo gobject-introspection gnome-common)
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver:0:4}/$pkgbase-$pkgver.tar.xz)
+sha256sums=('53c2901a889d69e079a5c6db0383b1b9bc8f444629623db18e3199c69827037d')
+
+prepare() {
+  mkdir build-py2 build-py3 devel
+  cd ${pkgbase}-${pkgver}
+  sed -i '/Werror=format/d' configure # gcc 4.8
+}
+
+build() {
+  cd build-py2
+  ../${pkgbase}-${pkgver}/configure --prefix=/usr --with-python=/usr/bin/python2
+  make
+
+  cd ../build-py3
+  ../${pkgbase}-${pkgver}/configure --prefix=/usr
+  make
+}
+
+package_python-gobject() {
+  pkgdesc="Python 3 bindings for GObject"
+  depends=('gobject-introspection-runtime' "pygobject-devel=$pkgver" 'python' 'cairo')
+
+  cd build-py3
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
+}
+
+package_python2-gobject() {
+  pkgdesc="Python 2 bindings for GObject"
+  depends=('gobject-introspection-runtime' "pygobject-devel=$pkgver" 'python2' 'cairo')
+
+  cd build-py2
+  make DESTDIR="$pkgdir" install
+  mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
+  python2 -m compileall "$pkgdir"//usr/lib/python2.7/site-packages/gi
+}
+
+package_pygobject-devel() {
+  pkgdesc="Development files for the pygobject bindings"
+
+  cd "devel"
+  mkdir -p "$pkgdir"/usr/{include,lib}
+  mv include "$pkgdir/usr/"
+  mv pkgconfig "$pkgdir/usr/lib/"
+}
