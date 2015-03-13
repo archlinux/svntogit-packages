@@ -1,0 +1,63 @@
+# $Id$
+# Maintainer: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Fabian Schoelzel <myfirstname.mylastname@googlemail.com>
+# Contributor: funkyou <spamopfer@nickname.berlin.de>
+# Contributor: tardo <tardo@nagi-fanboi.net>
+# Contributor: Stefan Husmann <stefan-husmann@t-online.de>
+
+pkgbase=mlt
+pkgname=('mlt' 'mlt-python-bindings')
+pkgver=0.9.6
+pkgrel=2
+pkgdesc="An open source multimedia framework"
+arch=('i686' 'x86_64')
+url="http://www.mltframework.org"
+license=('GPL')
+makedepends=('sdl_image' 'libsamplerate' 'libdv' 'qt5-svg' 'sox' 'libxml2' 'gtk2' 'ffmpeg'
+	     'frei0r-plugins' 'swig' 'python2' 'jack' 'ladspa' 'vid.stab')
+source=(http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz
+    	fix-segmentation-fault-at-exit-by-calling-av_lockmgr.patch)
+md5sums=('92bcc95af44ff086df0a0ce17a201d1c'
+         '8227e7a1b059b1b16901166d2a508317')
+
+prepare() {
+  cd "$srcdir/mlt-$pkgver"
+  sed -i 's|freetype/|freetype2/|' src/modules/gtk2/producer_pango.c
+}
+
+build() {
+  # mlt
+  cd "$srcdir/mlt-$pkgver"
+
+  msg "SSE2=$SSE2"
+  ./configure --prefix=/usr \
+	--avformat-swscale \
+	--enable-gpl --enable-gpl3
+  make
+
+  # mlt python bindings
+  cd "$srcdir/mlt-$pkgver/src/swig/python"
+  sed -i 's_path=`which python_path=`which python2_' build
+  sed -i 's_`python -c_`python2 -c_' build
+  sed -i 's#python-config#python2-config#' build
+  ./build
+}
+
+package_mlt() {
+  depends=('sdl_image' 'libsamplerate' 'libdv' 'sox' 'frei0r-plugins' 'vid.stab')
+  optdepends=('jack' 'libexif' 'qt5-svg' 'gtk2' "ladspa")
+  conflicts=('mlt++<=0.3.8')
+
+  cd "$srcdir/mlt-$pkgver"
+  make DESTDIR="$pkgdir" install
+}
+
+package_mlt-python-bindings() {
+  depends=('python2' 'mlt')
+
+  cd "$srcdir/mlt-$pkgver/src/swig/python"
+  mkdir -p "$pkgdir/usr/lib/python2.7/"
+  install -m755 mlt.py "$pkgdir/usr/lib/python2.7/"
+  install -m755 _mlt.so "$pkgdir/usr/lib/python2.7/"
+  install -m755 mlt_wrap.o "$pkgdir/usr/lib/python2.7/"
+}
