@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=219
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,11 +15,31 @@ options=('strip' 'debug')
 source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev')
+        'initcpio-install-udev'
+        '0001-tmpfiles-avoid-creating-duplicate-acl-entries.patch'
+        '0001-nspawn-when-connected-to-pipes-for-stdin-stdout-pass.patch'
+        '0001-core-shared-in-deserializing-match-same-files-reache.patch'
+        '0001-tmpfiles-Fix-handling-of-duplicate-lines.patch'
+        '0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch')
 md5sums=('e0d6c9a4b4f69f66932d2230298c9a34'
          '90ea67a7bb237502094914622a39e281'
          'c9db3010602913559295de3481019681'
-         'bde43090d4ac0ef048e3eaee8202a407')
+         'bde43090d4ac0ef048e3eaee8202a407'
+         '7cdefc73bf61934c353e4450e280e551'
+         'cb8550749cd52b5902ed6fdf0eb465ec'
+         '9d46aebfc04cc849fd4295f449b239a2'
+         'c4c9c0f0a06314450563ed571962881e'
+         '6b9d611dffd92c94641360c3ef2659c1')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  patch -Np1 <../0001-tmpfiles-avoid-creating-duplicate-acl-entries.patch
+  patch -Np1 <../0001-nspawn-when-connected-to-pipes-for-stdin-stdout-pass.patch
+  patch -Np1 <../0001-core-shared-in-deserializing-match-same-files-reache.patch
+  patch -Np1 <../0001-tmpfiles-Fix-handling-of-duplicate-lines.patch
+  patch -Np1 <../0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch
+}
 
 build() {
   cd "$pkgname-$pkgver"
@@ -71,6 +91,8 @@ package_systemd() {
           etc/systemd/bootchart.conf
           etc/systemd/coredump.conf
           etc/systemd/journald.conf
+          etc/systemd/journal-remote.conf
+          etc/systemd/journal-upload.conf
           etc/systemd/logind.conf
           etc/systemd/system.conf
           etc/systemd/timesyncd.conf
