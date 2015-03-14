@@ -13,19 +13,27 @@
 # ported to LLVM 3.6 yet. Such packages may depend on llvm35-libs but not on
 # llvm35 which isn't co-installable with the regular LLVM 3.6 packages.
 
-pkgname=('llvm35' 'llvm35-libs')
+pkgname=('llvm35' 'llvm35-libs' 'clang35')
 pkgver=3.5.1
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
 makedepends=('libffi' 'python2' 'python-sphinx')
+# Use gcc-multilib to build 32-bit compiler-rt libraries on x86_64 (FS#41911)
+makedepends_x86_64=('gcc-multilib')
 options=('staticlibs')
 source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
+        http://llvm.org/releases/$pkgver/cfe-$pkgver.src.tar.xz{,.sig}
+        http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
         llvm-3.5.0-force-link-pass.o.patch
         llvm-Config-config.h
         llvm-Config-llvm-config.h)
 sha256sums=('bf3275d2d7890015c8d8f5e6f4f882f8cf3bf51967297ebe74111d6d8b53be15'
+            'SKIP'
+            '6773f3f9cf815631cc7e779ec134ddd228dc8e9a250e1ea3a910610c59eb8f5c'
+            'SKIP'
+            'adf4b526f33e681aff5961f0821f5b514d3fc375410008842640b56a2e6a837a'
             'SKIP'
             '5702053503d49448598eda1b8dc8c263f0df9ad7486833273e3987b5dec25a19'
             '312574e655f9a87784ca416949c505c452b819fad3061f2cde8aced6540a19a3'
@@ -34,6 +42,12 @@ validpgpkeys=('11E521D646982372EB577A1F8F0871F202119294')
 
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
+
+  # At the present, clang must reside inside the LLVM source code tree to build
+  # See http://llvm.org/bugs/show_bug.cgi?id=4840
+  mv "$srcdir/cfe-$pkgver.src" tools/clang
+
+  mv "$srcdir/compiler-rt-$pkgver.src" projects/compiler-rt
 
   # Fix docs installation directory
   sed -i 's:$(PROJ_prefix)/docs/llvm:$(PROJ_prefix)/share/doc/llvm:' \
@@ -76,6 +90,7 @@ build() {
   make REQUIRES_RTTI=1
   make -C docs -f Makefile.sphinx man
   make -C docs -f Makefile.sphinx html
+  make -C tools/clang/docs -f Makefile.sphinx html
 }
 
 package_llvm35() {
@@ -85,7 +100,12 @@ package_llvm35() {
 
   cd "$srcdir/llvm-$pkgver.src"
 
+  # We move the clang directory out of the tree so it won't get installed and
+  # then we bring it back in for the clang package
+  mv tools/clang "$srcdir"
+
   make DESTDIR="$pkgdir" install
+  mv "$srcdir/clang" tools/
 
   # The runtime library goes into llvm35-libs
   mv -f "$pkgdir/usr/lib/libLLVM-$pkgver.so" "$srcdir/"
@@ -135,6 +155,34 @@ package_llvm35-libs() {
 
   install -Dm644 "$srcdir/llvm-$pkgver.src/LICENSE.TXT" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_clang35() {
+  pkgdesc="C language family frontend for LLVM"
+  url="http://clang.llvm.org/"
+  depends=("llvm35-libs=$pkgver-$pkgrel" 'gcc')
+  conflicts=('clang')
+
+  # Fix installation path for clang docs
+  sed -i 's:$(PROJ_prefix)/share/doc/llvm:$(PROJ_prefix)/share/doc/clang:' \
+    "$srcdir/llvm-$pkgver.src/Makefile.config"
+
+  cd "$srcdir/llvm-$pkgver.src/tools/clang"
+
+  make DESTDIR="$pkgdir" install
+
+  # Fix permissions of static libs
+  chmod -x "$pkgdir"/usr/lib/*.a
+
+  # Revert the path change in case we want to do a repackage later
+  sed -i 's:$(PROJ_prefix)/share/doc/clang:$(PROJ_prefix)/share/doc/llvm:' \
+    "$srcdir/llvm-$pkgver.src/Makefile.config"
+
+  # Install html docs
+  cp -r docs/_build/html/* "$pkgdir/usr/share/doc/clang/html/"
+  rm -r "$pkgdir/usr/share/doc/clang/html/_sources"
+
+  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 # vim:set ts=2 sw=2 et:
