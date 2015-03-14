@@ -1,0 +1,35 @@
+# $id$
+# Maintainer: Sébastien Luttringer
+# Contributor: Lawrence Lee <valheru@facticius.net>
+# Contributor: Phillip Marvin <phillip.marvin@gmail.com>
+# Contributor: keystone <phillip.marvin@gmail.com>
+
+pkgname=libunwind
+pkgver=1.1
+pkgrel=2
+pkgdesc='Portable and efficient C programming interface (API) to determine the call-chain of a program'
+arch=('i686' 'x86_64')
+url='http://www.nongnu.org/libunwind/'
+license=('GPL')
+depends=('glibc' 'xz')
+source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz")
+md5sums=('fb4ea2f6fbbe45bf032cd36e586883ce')
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure CFLAGS="$CFLAGS -U_FORTIFY_SOURCE" --prefix=/usr
+  make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  # This function is ``supposed'' to fail. Upstream know, but haven't fixed it.
+  make check || return 0
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir/" install
+}
+
+# vim:set ts=2 sw=2 et:
