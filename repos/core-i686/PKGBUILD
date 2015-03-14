@@ -2,7 +2,7 @@
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
 
 pkgname=kmod
-pkgver=19
+pkgver=20
 pkgrel=1
 pkgdesc="Linux kernel module handling"
 arch=('i686' 'x86_64')
@@ -10,13 +10,16 @@ url='http://git.kernel.org/?p=utils/kernel/kmod/kmod.git;a=summary'
 license=('GPL2')
 depends=('glibc' 'zlib' 'xz')
 makedepends=('gtk-doc')
+checkdepends=('linux-headers')
 options=('strip' 'debug')
 provides=('module-init-tools=3.16' 'libkmod.so')
 conflicts=('module-init-tools')
 replaces=('module-init-tools')
-source=("ftp://ftp.kernel.org/pub/linux/utils/kernel/$pkgname/$pkgname-$pkgver.tar.xz"
-"depmod-search.conf")
-md5sums=('a08643f814aa4efc12211c6e5909f4d9'
+validpgpkeys=('EAB33C9690013C733916AC839BA2A5A630CBEA53')  # Lucas DeMarchi
+source=("ftp://ftp.kernel.org/pub/linux/utils/kernel/$pkgname/$pkgname-$pkgver.tar."{xz,sign}
+        "depmod-search.conf")
+md5sums=('d6f4fef718a50bd88080de6a43bc64d8'
+         'SKIP'
          'dd62cbf62bd8f212f51ef8c43bec9a77')
 
 
@@ -33,7 +36,22 @@ build() {
 }
 
 check() {
-  make -C "$pkgname-$pkgver" check
+  # As of kmod v20, the test suite needs to build some kernel modules, and thus
+  # needs headers available in order to run. We depend on linux-headers, but
+  # this is really only to try and make sure that *some* useable tree of kernel
+  # headers exist. The first useable tree we find is good enough, as these
+  # modules will never be loaded by tests.
+
+  local kdirs=(/usr/lib/modules/*/build/Makefile)
+  if [[ ! -f ${kdirs[0]} ]]; then
+    printf '==> Unable to find kernel headers to build modules for tests\n' >&2
+    return 1
+  fi
+
+  local kver kdir=${kdirs[0]%/Makefile}
+  IFS=/ read _ _ _ kver _ <<<"$kdir"
+
+  make -C "$pkgname-$pkgver" check KDIR="$kdir" KVER="$kver"
 }
 
 package() {
