@@ -1,0 +1,166 @@
+From 7624830d2ec11d2f3645a27384ae9ced7ac7a258 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pali=20Roh=C3=A1r?= <pali.rohar@gmail.com>
+Date: Sun, 15 Mar 2015 14:00:40 +0100
+Subject: [PATCH] Fix libjingle compilation with mediastreamer >= 2.11
+
+BUG: 345162
+FIXED-IN: 15.04
+---
+ cmake/modules/FindMediastreamer.cmake              |   11 +++--
+ protocols/jabber/libjingle/CMakeLists.txt          |   10 +++--
+ .../libjingle/patches/08_mediastreamer_2_11.patch  |   47 ++++++++++++++++++++
+ .../talk/session/phone/linphonemediaengine.cc      |   22 ++++-----
+ 4 files changed, 74 insertions(+), 16 deletions(-)
+ create mode 100644 protocols/jabber/libjingle/patches/08_mediastreamer_2_11.patch
+
+diff --git a/cmake/modules/FindMediastreamer.cmake b/cmake/modules/FindMediastreamer.cmake
+index 929b1ee..47fe5c3 100644
+--- a/cmake/modules/FindMediastreamer.cmake
++++ b/cmake/modules/FindMediastreamer.cmake
+@@ -22,9 +22,14 @@ IF (MEDIASTREAMER_FOUND)
+   IF (NOT MEDIASTREAMER_FIND_QUIETLY)
+       MESSAGE(STATUS "Found Mediastreamer: ${MEDIASTREAMER_LIBRARIES} (version: ${MEDIASTREAMER_VERSION})")
+       IF (MEDIASTREAMER_VERSION VERSION_LESS 2.9)
+-          SET(MEDIASTREAMER_OLD TRUE)
++          SET(MEDIASTREAMER_LESS_2_9 TRUE)
++          SET(MEDIASTREAMER_LESS_2_11 TRUE)
++      ELSEIF (MEDIASTREAMER_VERSION VERSION_LESS 2.11)
++          SET(MEDIASTREAMER_LESS_2_9 FALSE)
++          SET(MEDIASTREAMER_LESS_2_11 TRUE)
+       ELSE (MEDIASTREAMER_VERSION VERSION_LESS 2.9)
+-          SET(MEDIASTREAMER_OLD FALSE)
++          SET(MEDIASTREAMER_LESS_2_9 FALSE)
++          SET(MEDIASTREAMER_LESS_2_11 FALSE)
+       ENDIF (MEDIASTREAMER_VERSION VERSION_LESS 2.9)
+   ENDIF (NOT MEDIASTREAMER_FIND_QUIETLY)
+ ELSE (MEDIASTREAMER_FOUND)
+@@ -33,4 +38,4 @@ ELSE (MEDIASTREAMER_FOUND)
+   ENDIF (MEDIASTREAMER_FIND_REQUIRED)
+ ENDIF (MEDIASTREAMER_FOUND)
+ 
+-MARK_AS_ADVANCED(MEDIASTREAMER_INCLUDE_DIR MEDIASTREAMER_LIBRARIES MEDIASTREAMER_OLD)
++MARK_AS_ADVANCED(MEDIASTREAMER_INCLUDE_DIR MEDIASTREAMER_LIBRARIES MEDIASTREAMER_LESS_2_9 MEDIASTREAMER_LESS_2_11)
+diff --git a/protocols/jabber/libjingle/CMakeLists.txt b/protocols/jabber/libjingle/CMakeLists.txt
+index 6db3da3..4b4b620 100644
+--- a/protocols/jabber/libjingle/CMakeLists.txt
++++ b/protocols/jabber/libjingle/CMakeLists.txt
+@@ -28,9 +28,13 @@ if ( NOT WIN32 )
+ 	endif ( NOT APPLE )
+ endif ( NOT WIN32 )
+ 
+-if ( MEDIASTREAMER_OLD )
+-	add_definitions ( -DMEDIASTREAMER_OLD )
+-endif ( MEDIASTREAMER_OLD )
++if ( MEDIASTREAMER_LESS_2_9 )
++	add_definitions ( -DMEDIASTREAMER_LESS_2_9 )
++endif ( MEDIASTREAMER_LESS_2_9 )
++
++if ( MEDIASTREAMER_LESS_2_11 )
++	add_definitions ( -DMEDIASTREAMER_LESS_2_11 )
++endif ( MEDIASTREAMER_LESS_2_11 )
+ 
+ if ( CMAKE_BUILD_TYPE STREQUAL "Debug" )
+ 	add_definitions ( -D_DEBUG )
+diff --git a/protocols/jabber/libjingle/patches/08_mediastreamer_2_11.patch b/protocols/jabber/libjingle/patches/08_mediastreamer_2_11.patch
+new file mode 100644
+index 0000000..5eef985
+--- /dev/null
++++ b/protocols/jabber/libjingle/patches/08_mediastreamer_2_11.patch
+@@ -0,0 +1,47 @@
++diff --git a/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc b/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc
++index 6da35e0..e337dd4 100644
++--- a/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc
+++++ b/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc
++@@ -171,6 +171,16 @@ bool LinphoneVoiceChannel::SetPlayout(bool playout) {
++   return true;
++ }
++ 
+++#ifdef MEDIASTREAMER_LESS_2_11
+++static inline RtpSession * audio_stream_get_rtp_session(const AudioStream *stream) {
+++#ifdef MEDIASTREAMER_LESS_2_9
+++  return stream->session;
+++#else
+++  return stream->ms.session;
+++#endif
+++}
+++#endif
+++
++ bool LinphoneVoiceChannel::SetSendCodecs(const std::vector<AudioCodec>& codecs) {
++ 
++   bool first = true;
++@@ -200,11 +210,7 @@ bool LinphoneVoiceChannel::SetSendCodecs(const std::vector<AudioCodec>& codecs)
++       LOG(LS_INFO) << "Using " << i->name << "/" << i->clockrate;
++       pt_ = i->id;
++       audio_stream_ = audio_stream_start(&av_profile, -1, "localhost", port1, i->id, 250, 0); /* -1 means that function will choose some free port */
++-#ifdef MEDIASTREAMER_OLD
++-      port2 = rtp_session_get_local_port(audio_stream_->session);
++-#else
++-      port2 = rtp_session_get_local_port(audio_stream_->ms.session);
++-#endif
+++      port2 = rtp_session_get_local_port(audio_stream_get_rtp_session(audio_stream_));
++       first = false;
++     }
++   }
++@@ -215,11 +221,7 @@ bool LinphoneVoiceChannel::SetSendCodecs(const std::vector<AudioCodec>& codecs)
++     // working with a buggy client; let's try PCMU.
++     LOG(LS_WARNING) << "Received empty list of codces; using PCMU/8000";
++     audio_stream_ = audio_stream_start(&av_profile, -1, "localhost", port1, 0, 250, 0); /* -1 means that function will choose some free port */
++-#ifdef MEDIASTREAMER_OLD
++-    port2 = rtp_session_get_local_port(audio_stream_->session);
++-#else
++-    port2 = rtp_session_get_local_port(audio_stream_->ms.session);
++-#endif
+++    port2 = rtp_session_get_local_port(audio_stream_get_rtp_session(audio_stream_));
++   }
++ 
++   return true;
+diff --git a/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc b/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc
+index 6da35e0..e337dd4 100644
+--- a/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc
++++ b/protocols/jabber/libjingle/talk/session/phone/linphonemediaengine.cc
+@@ -171,6 +171,16 @@ bool LinphoneVoiceChannel::SetPlayout(bool playout) {
+   return true;
+ }
+ 
++#ifdef MEDIASTREAMER_LESS_2_11
++static inline RtpSession * audio_stream_get_rtp_session(const AudioStream *stream) {
++#ifdef MEDIASTREAMER_LESS_2_9
++  return stream->session;
++#else
++  return stream->ms.session;
++#endif
++}
++#endif
++
+ bool LinphoneVoiceChannel::SetSendCodecs(const std::vector<AudioCodec>& codecs) {
+ 
+   bool first = true;
+@@ -200,11 +210,7 @@ bool LinphoneVoiceChannel::SetSendCodecs(const std::vector<AudioCodec>& codecs)
+       LOG(LS_INFO) << "Using " << i->name << "/" << i->clockrate;
+       pt_ = i->id;
+       audio_stream_ = audio_stream_start(&av_profile, -1, "localhost", port1, i->id, 250, 0); /* -1 means that function will choose some free port */
+-#ifdef MEDIASTREAMER_OLD
+-      port2 = rtp_session_get_local_port(audio_stream_->session);
+-#else
+-      port2 = rtp_session_get_local_port(audio_stream_->ms.session);
+-#endif
++      port2 = rtp_session_get_local_port(audio_stream_get_rtp_session(audio_stream_));
+       first = false;
+     }
+   }
+@@ -215,11 +221,7 @@ bool LinphoneVoiceChannel::SetSendCodecs(const std::vector<AudioCodec>& codecs)
+     // working with a buggy client; let's try PCMU.
+     LOG(LS_WARNING) << "Received empty list of codces; using PCMU/8000";
+     audio_stream_ = audio_stream_start(&av_profile, -1, "localhost", port1, 0, 250, 0); /* -1 means that function will choose some free port */
+-#ifdef MEDIASTREAMER_OLD
+-    port2 = rtp_session_get_local_port(audio_stream_->session);
+-#else
+-    port2 = rtp_session_get_local_port(audio_stream_->ms.session);
+-#endif
++    port2 = rtp_session_get_local_port(audio_stream_get_rtp_session(audio_stream_));
+   }
+ 
+   return true;
+-- 
+1.7.9.5
+
