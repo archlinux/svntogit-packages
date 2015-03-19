@@ -1,0 +1,49 @@
+From d76c2e9aa1c05ceac1c2d06a29783ee95e876a37 Mon Sep 17 00:00:00 2001
+From: Daniel Robbins <drobbins@funtoo.org>
+Date: Wed, 18 Mar 2015 11:20:58 -0600
+Subject: [PATCH] FL-2195: From Todd Eigenschink <todd@xymmetrix.com>:
+
+OpenSSH 6.8, which was just released, includes the following change:
+
+http://www.openssh.com/txt/release-6.8
+
+   Fingerprints now have the hash algorithm prepended. An example of
+   the new format: SHA256:mVPwvezndPv/ARoIadVY98vAC0g+P/5633yTC4d/wXE
+   Please note that visual host keys will also be different.
+
+(Previous versions always dumped in MD5 with no prefix.)
+
+The pattern match that keychain uses doesn't work with the new
+fingerprint format. The patch below takes care of it.
+
+I used shopt extglob so I could use @( ) for the alternative. I'm not
+a bash pattern whiz; there may be a better way to do that.
+---
+ keychain.sh | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/keychain.sh b/keychain.sh
+index 1834c85..c9a25d5 100755
+--- a/keychain.sh
++++ b/keychain.sh
+@@ -55,6 +55,8 @@ systemdopt=false
+ unset ssh_confirm
+ unset GREP_OPTIONS
+ 
++shopt -s extglob
++
+ BLUE="[34;01m"
+ CYAN="[36;01m"
+ CYANN="[36m"
+@@ -671,6 +673,11 @@
+                 #   1024 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00 /home/barney/.ssh/id_dsa (DSA)
+                 echo "$ef_line" | cut -f2 -d' '
+                 ;;
++	   *\ @(SHA256|MD5):[0-9a-zA-Z\+\/=]*)
++		# The new OpenSSH 6.8+ format,
++		#   1024 SHA256:mVPwvezndPv/ARoIadVY98vAC0g+P/5633yTC4d/wXE /home/barney/.ssh/id_dsa (DSA)
++		echo "$ef_line" | cut -f2 -d' '
++		;;
+             *)
+                 # Fall back to filename.  Note that commercial ssh is handled
+                 # explicitly in ssh_l and ssh_f, so hopefully this rule will
