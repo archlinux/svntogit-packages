@@ -5,7 +5,7 @@
 
 pkgname=postfix
 pkgver=3.0.0
-pkgrel=2
+pkgrel=3
 url='http://www.postfix.org/'
 pkgdesc='Fast, easy to administer, secure mail server'
 license=('custom')
@@ -39,10 +39,9 @@ build() {
                 -DHAS_SQLITE
                 -DHAS_CDB
                 -DDEF_COMMAND_DIR=\"/usr/bin\"
-                -DDEF_DAEMON_DIR=\"/usr/lib/postfix\"
+                -DDEF_DAEMON_DIR=\"/usr/lib/postfix/bin\"
                 -DDEF_SENDMAIL_PATH=\"/usr/bin/sendmail\"
                 -DDEF_README_DIR=\"/usr/share/doc/postfix\"
-                -DDEF_SAMPLE_DIR=\"/etc/postfix/sample\"
                 -DDEF_MANPAGE_DIR=\"/usr/share/man\"
         '
 	AUXLIBS='
@@ -67,7 +66,8 @@ build() {
 package() {
 	cd "${srcdir}/postfix-${pkgver}"
 
-        LD_PRELOAD= LD_LIBRARY_PATH=./lib \
+	sed 's:bin/postconf -dhx:bin/postconf -c conf -dhx:g' -i postfix-install
+	LD_LIBRARY_PATH=lib:$LD_LIBRARY_PATH \
 	sh postfix-install -non-interactive install_root="${pkgdir}"
 
 	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
@@ -78,7 +78,23 @@ package() {
 		install -Dm755 "bin/${name}" "${pkgdir}/usr/bin/${name}"
 	done
 
+	# now set permissions right to appease the pacman gods
+	sed -r \
+		-e '/override=1/d' \
+		-e '/absolute path name/d' \
+		-e 's/\$POSTCONF -/$POSTCONF -c .\/etc\/postfix -/g' \
+		-e '/(if \[|chmod|chown|find|mkdir|test)/s/\$path/.\/$path/g' \
+		libexec/post-install > ../arch-post-install
 	cd "${pkgdir}"
+	LD_LIBRARY_PATH=usr/lib/postfix:$LD_LIBRARY_PATH \
+	sh "${srcdir}/arch-post-install" \
+                command_directory=usr/bin \
+                config_directory=etc/postfix \
+                meta_directory=etc/postfix \
+                setgid_group=75 \
+                mail_owner=73 \
+                set-permissions
+
 	patch -p0 -i "${srcdir}"/aliases.patch
 	sed 's/^\(\$manpage[^:]*\):/\1.gz:/' -i "etc/postfix/postfix-files"
 }
