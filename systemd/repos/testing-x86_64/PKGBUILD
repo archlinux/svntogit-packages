@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=219
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -23,7 +23,7 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch')
 md5sums=('e0d6c9a4b4f69f66932d2230298c9a34'
          '90ea67a7bb237502094914622a39e281'
-         'c9db3010602913559295de3481019681'
+         '58af51bd4c0464f195b3433b4e17cf6c'
          'bde43090d4ac0ef048e3eaee8202a407'
          '7cdefc73bf61934c353e4450e280e551'
          'cb8550749cd52b5902ed6fdf0eb465ec'
