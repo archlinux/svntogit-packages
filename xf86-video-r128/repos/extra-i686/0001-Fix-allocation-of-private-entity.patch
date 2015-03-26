@@ -1,0 +1,83 @@
+From bae1922f1a38e51633644cf65d2c6f8c73490d12 Mon Sep 17 00:00:00 2001
+From: Connor Behan <connor.behan@gmail.com>
+Date: Thu, 12 Mar 2015 17:18:13 -0400
+Subject: [PATCH] Fix allocation of private entity
+
+In the past, pR128Ent was only used for Xinerama-style dualhead and
+therefore only allocated for cards with two outputs. However, recent
+patches have repurposed pR128Ent as a general struct for things that are
+card-specific instead of instance-specific. It therefore needs to be
+allocated for all cards.
+
+Signed-off-by: Connor Behan <connor.behan@gmail.com>
+---
+ src/r128_probe.c | 32 +++++++++++++++-----------------
+ 1 file changed, 15 insertions(+), 17 deletions(-)
+
+diff --git a/src/r128_probe.c b/src/r128_probe.c
+index 9771d52..0fd31c6 100644
+--- a/src/r128_probe.c
++++ b/src/r128_probe.c
+@@ -234,6 +234,7 @@ r128_get_scrninfo(int entity_num)
+ {
+     ScrnInfoPtr   pScrn = NULL;
+     EntityInfoPtr pEnt;
++    DevUnion*     pPriv;
+ 
+     pScrn = xf86ConfigPciEntity(pScrn, 0, entity_num, R128PciChipsets,
+                                 NULL,
+@@ -261,6 +262,20 @@ r128_get_scrninfo(int entity_num)
+ 
+     pEnt = xf86GetEntityInfo(entity_num);
+ 
++    /* Allocate private entity used for convenience with one or two heads. */
++    if (gR128EntityIndex < 0) {
++        gR128EntityIndex = xf86AllocateEntityPrivateIndex();
++        pPriv = xf86GetEntityPrivate(pScrn->entityList[0], gR128EntityIndex);
++
++	if (!pPriv->ptr) {
++	    R128EntPtr pR128Ent;
++	    pPriv->ptr = xnfcalloc(sizeof(R128EntRec), 1);
++	    pR128Ent = pPriv->ptr;
++	    pR128Ent->HasSecondary = FALSE;
++	    pR128Ent->IsSecondaryRestored = FALSE;
++	}
++    }
++
+     /* mobility cards support Dual-Head, mark the entity as sharable*/
+     if (pEnt->chipset == PCI_CHIP_RAGE128LE ||
+         pEnt->chipset == PCI_CHIP_RAGE128LF ||
+@@ -268,7 +283,6 @@ r128_get_scrninfo(int entity_num)
+         pEnt->chipset == PCI_CHIP_RAGE128ML)
+     {
+         static int instance = 0;
+-        DevUnion* pPriv;
+ 
+         xf86SetEntitySharable(entity_num);
+ 
+@@ -276,22 +290,6 @@ r128_get_scrninfo(int entity_num)
+                                        pScrn->entityList[0],
+                                        instance);
+ 
+-        if (gR128EntityIndex < 0)
+-        {
+-            gR128EntityIndex = xf86AllocateEntityPrivateIndex();
+-
+-            pPriv = xf86GetEntityPrivate(pScrn->entityList[0],
+-                                         gR128EntityIndex);
+-
+-            if (!pPriv->ptr)
+-            {
+-                R128EntPtr pR128Ent;
+-                pPriv->ptr = xnfcalloc(sizeof(R128EntRec), 1);
+-                pR128Ent = pPriv->ptr;
+-                pR128Ent->HasSecondary = FALSE;
+-                pR128Ent->IsSecondaryRestored = FALSE;
+-            }
+-        }
+         instance++;
+     }
+ 
+-- 
+2.3.2
+

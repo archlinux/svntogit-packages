@@ -1,0 +1,59 @@
+From ffa931387c627ee04292e745b4adadd4243aa122 Mon Sep 17 00:00:00 2001
+From: Connor Behan <connor.behan@gmail.com>
+Date: Thu, 19 Mar 2015 15:48:18 -0400
+Subject: [PATCH] Update bitmasks for DDC
+
+A RAGE128TR chipset with a VGA port uses different i2c clock bits than
+the VGA cards previously tested. It seems reasonable to assume that
+other Pro2 cards are set up this way as well. In case this is incorrect,
+a newly added xf86I2CProbeAddress() should still allow a monitor to be
+detected.
+
+Signed-off-by: Connor Behan <connor.behan@gmail.com>
+---
+ src/r128_output.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/src/r128_output.c b/src/r128_output.c
+index 0160880..bd418ba 100644
+--- a/src/r128_output.c
++++ b/src/r128_output.c
+@@ -239,6 +239,9 @@ static R128MonitorType R128DisplayDDCConnected(xf86OutputPtr output)
+ 
+     if (r128_output->type == OUTPUT_LVDS) {
+         return MT_LCD;
++    } else if (r128_output->type == OUTPUT_VGA && info->isPro2) {
++        mask1 = R128_GPIO_MONID_MASK_1 | R128_GPIO_MONID_MASK_2;
++        mask2 = R128_GPIO_MONID_A_1    | R128_GPIO_MONID_A_2;
+     } else if (r128_output->type == OUTPUT_VGA) {
+         mask1 = R128_GPIO_MONID_MASK_1 | R128_GPIO_MONID_MASK_3;
+         mask2 = R128_GPIO_MONID_A_1    | R128_GPIO_MONID_A_3;
+@@ -268,6 +271,9 @@ static R128MonitorType R128DisplayDDCConnected(xf86OutputPtr output)
+             else
+                 MonType = MT_CRT;
+ 	}
++    } else if (xf86I2CProbeAddress(r128_output->pI2CBus, 0x0060)) {
++        /* Just in case. */
++        MonType = MT_CRT;
+     }
+ 
+     return MonType;
+@@ -454,8 +460,13 @@ Bool R128SetupConnectors(ScrnInfoPtr pScrn)
+ 
+         if (otypes[i] != OUTPUT_LVDS && info->DDC) {
+             i2c.ddc_reg      = R128_GPIO_MONID;
+-            i2c.put_clk_mask = R128_GPIO_MONID_EN_3;
+-            i2c.get_clk_mask = R128_GPIO_MONID_Y_3;
++            if (otypes[i] == OUTPUT_VGA && info->isPro2) {
++                i2c.put_clk_mask = R128_GPIO_MONID_EN_2;
++                i2c.get_clk_mask = R128_GPIO_MONID_Y_2;
++            } else {
++                i2c.put_clk_mask = R128_GPIO_MONID_EN_3;
++                i2c.get_clk_mask = R128_GPIO_MONID_Y_3;
++            }
+             if (otypes[i] == OUTPUT_VGA) {
+                 i2c.put_data_mask = R128_GPIO_MONID_EN_1;
+                 i2c.get_data_mask = R128_GPIO_MONID_Y_1;
+-- 
+2.3.2
+

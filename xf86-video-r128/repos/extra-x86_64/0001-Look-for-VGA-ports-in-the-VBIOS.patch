@@ -1,0 +1,57 @@
+From bd8f067e559bab3bba187a0aa905a0ebd3f957c2 Mon Sep 17 00:00:00 2001
+From: Connor Behan <connor.behan@gmail.com>
+Date: Mon, 16 Mar 2015 18:53:04 -0400
+Subject: [PATCH] Look for VGA ports in the VBIOS
+
+It appears that not all r128 chipsets marked as DFP capable have DVI
+ports. Some have VGA which we should detect. The old driver "detected"
+this by attempting a DVI based probe for monitors. Anything that failed
+this was assumed to be VGA.
+
+Signed-off-by: Connor Behan <connor.behan@gmail.com>
+---
+ src/r128_output.c | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/src/r128_output.c b/src/r128_output.c
+index 0160880..c042c98 100644
+--- a/src/r128_output.c
++++ b/src/r128_output.c
+@@ -400,6 +400,24 @@ void R128SetupGenericConnectors(ScrnInfoPtr pScrn, R128OutputType *otypes)
+     otypes[1] = OUTPUT_VGA;
+ }
+ 
++void R128GetConnectorInfoFromBIOS(ScrnInfoPtr pScrn, R128OutputType *otypes)
++{
++    R128InfoPtr info = R128PTR(pScrn);
++    uint16_t bios_header;
++    int offset;
++
++    /* XXX: Currently, this function only finds VGA ports misidentified as DVI. */
++    if (!info->VBIOS || otypes[0] != OUTPUT_DVI) return;
++
++    bios_header = R128_BIOS16(0x48);
++    offset = R128_BIOS16(bios_header + 0x60);
++
++    if (offset) {
++        otypes[0] = OUTPUT_VGA;
++	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Found CRT table, assuming VGA connector\n");
++    }
++}
++
+ Bool R128SetupConnectors(ScrnInfoPtr pScrn)
+ {
+     R128InfoPtr info    = R128PTR(pScrn);
+@@ -411,8 +429,8 @@ Bool R128SetupConnectors(ScrnInfoPtr pScrn)
+     int num_dvi = 0;
+     int i;
+ 
+-    /* XXX: Can we make R128GetConnectorInfoFromBIOS()? */
+     R128SetupGenericConnectors(pScrn, otypes);
++    R128GetConnectorInfoFromBIOS(pScrn, otypes);
+ 
+     for (i = 0; i < R128_MAX_BIOS_CONNECTOR; i++) {
+         if (otypes[i] == OUTPUT_VGA)
+-- 
+2.3.2
+
