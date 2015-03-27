@@ -1,0 +1,42 @@
+export LC_ALL=C
+
+post_install() {
+	usr/bin/update-ca-trust
+}
+
+pre_upgrade() {
+	if (( $(vercmp $2 20140923-2) < 0 )); then
+		find /etc/ssl/certs -type l -print | while read symlink; do
+			case $(readlink $symlink) in
+			/usr/share/ca-certificates*) rm -f $symlink;;
+			esac
+		done
+		find /etc/ssl/certs -type l -print | while read symlink; do
+			test -f $symlink || rm -f $symlink
+		done
+	fi
+}
+
+post_upgrade() {
+	usr/bin/update-ca-trust
+
+	if (( $(vercmp $2 20140923-7.1) < 0 )); then
+		cat <<MSG
+  The way local CA certificates are handled has changed.
+  If you have added any certificates manually:
+
+  1. Move certificates from /usr/local/share/ca-certificates/
+     to /etc/ca-certificates/trust-source/anchors/
+  2. Do the same with root certificates added to /etc/ssl/certs/
+  3. Instead of \`update-ca-certificates\`, run \`trust extract-compat\`
+
+  Also see \`man 8 update-ca-trust\` and \`trust --help\`.
+MSG
+	fi
+}
+
+pre_remove() {
+	usr/bin/update-ca-trust
+}
+
+# vim:set noet ts=8 sw=8:
