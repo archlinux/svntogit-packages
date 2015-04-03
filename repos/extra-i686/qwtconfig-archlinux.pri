@@ -9,7 +9,7 @@
 
 QWT_VER_MAJ      = 6
 QWT_VER_MIN      = 1
-QWT_VER_PAT      = 0
+QWT_VER_PAT      = 2
 QWT_VERSION      = $${QWT_VER_MAJ}.$${QWT_VER_MIN}.$${QWT_VER_PAT}
 
 ######################################################################
@@ -28,7 +28,7 @@ win32 {
 
 QWT_INSTALL_DOCS      = $${QWT_INSTALL_PREFIX}/share/doc/qwt
 QWT_INSTALL_HEADERS   = $${QWT_INSTALL_PREFIX}/include/qwt
-QWT_INSTALL_LIBS      = $${QWT_INSTALL_PREFIX}/lib
+QWT_INSTALL_LIBS      = $${QWT_INSTALL_PREFIX}/lib/qwt
 
 ######################################################################
 # Designer plugin
