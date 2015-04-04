@@ -3,23 +3,16 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
-pkgname=kdebase-runtime
+pkgbase=kdebase-runtime
+pkgname=('kdebase-runtime' 'khelpcenter4')
 pkgver=15.03.97
-pkgrel=1
+pkgrel=2
 pkgdesc="Plugins and applications necessary for the running of KDE applications"
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/kde/kde-runtime'
 license=('GPL' 'LGPL')
-depends=("kdelibs" 'kactivities' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra'
-         'oxygen-icons' 'xorg-xauth' 'libwebp')
-makedepends=('pkg-config' 'cmake' 'automoc4' 'kdepimlibs' 'openslp' 'doxygen'
-             'networkmanager' 'boost')
-optdepends=('kdepimlibs: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org'
-            'gdb: needed by DrKonqi to generate backtrace'
-            'htdig: to build the search index in the KHelpCenter'
-            'rarian: needed by KHelpCenter')
-provides=('khelpcenter' 'notification-daemon')
-install="${pkgname}.install"
+makedepends=('kdelibs' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra' 'libwebp'
+	'pkg-config' 'cmake' 'automoc4' 'kdepimlibs' 'openslp' 'doxygen' 'networkmanager' 'boost')
 source=("http://download.kde.org/unstable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz")
 sha1sums=('0e72a7b80400d420176cbb64830836dd5a970942')
 
@@ -42,7 +35,24 @@ build() {
   make
 }
 
-package() {
+package_khelpcenter4() {
+  pkgdesc=("Application to show KDE Applications' documentation")
+  depends=('kdebase-runtime' 'htdig' 'rarian')
+  provides=('khelpcenter')
+  conflicts=('khelpcenter')
+
+  cd build/khelpcenter
+  make DESTDIR="$pkgdir" install
+}
+
+package_kdebase-runtime() {
+  depends=("kdelibs" 'kactivities' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra'
+         'oxygen-icons' 'xorg-xauth' 'libwebp')
+  optdepends=('kdepimlibs: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org'
+            'gdb: needed by DrKonqi to generate backtrace' 'khelpcenter: to display applications documentation')
+  provides=('notification-daemon')
+  install=$pkgname.install
+
   cd build
   make DESTDIR="$pkgdir" install
 
@@ -53,4 +63,10 @@ package() {
   # FS#36668
   chown :nobody "${pkgdir}"/usr/lib/kde4/libexec/kdesud
   chmod g+s "${pkgdir}"/usr/lib/kde4/libexec/kdesud
+
+# Remove khelpcenter
+  cd "$pkgdir"
+  find -name '*khelpcenter*' | xargs rm -fr
+  find -name 'khc*' | xargs rm -fr
+  rm usr/share/applications/kde4/Help.desktop
 }
