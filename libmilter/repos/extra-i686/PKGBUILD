@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Maintainer: mutantmonkey <mutantmonkey@gmail.com>
+
+pkgname=libmilter
+pkgver=8.14.8
+pkgrel=1
+pkgdesc="libmilter"
+arch=(i686 x86_64)
+url="http://www.postfix.org/MILTER_README.html"
+options=('staticlibs')
+license=('custom:Sendmail open source license')
+source="ftp://ftp.sendmail.org/pub/sendmail/sendmail.${pkgver}.tar.gz"
+md5sums=('73bfc621c75dbdd3d719e54685d92577')
+
+build(){
+  cd "${srcdir}/sendmail-${pkgver}"
+
+  # From http://www.j-chkmail.org/wiki/doku.php/doc/installation/start#libmilter
+  cat >> devtools/Site/site.config.m4 <<EOF
+dnl
+dnl Enable libmilter with a pool of workers
+APPENDDEF(\`conf_libmilter_ENVDEF',\`-D_FFR_WORKERS_POOL=1 -DMIN_WORKERS=4')
+dnl
+dnl Use poll instead of select
+APPENDDEF(\`conf_libmilter_ENVDEF',\`-DSM_CONF_POLL=1')
+dnl Enable IPv6
+APPENDDEF(\`conf_libmilter_ENVDEF',\`-DNETINET6=1')
+dnl
+dnl Include our CFLAGS
+APPENDDEF(\`conf_libmilter_ENVDEF',\`${CFLAGS}')
+dnl
+dnl Add -fPIC
+APPENDDEF(\`conf_libmilter_ENVDEF',\`-fPIC')
+dnl
+EOF
+
+  cd libmilter
+  ./Build
+}
+
+package(){
+  cd "${srcdir}/sendmail-${pkgver}/libmilter"
+  mkdir -p "${pkgdir}/usr/lib"
+  ./Build DESTDIR="${pkgdir}" install
+  install -Dm0644 ../LICENSE $pkgdir/usr/share/licenses/$pkgname/LICENSE
+  chown -R root:root $pkgdir
+}
