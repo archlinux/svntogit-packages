@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=gnutls
+pkgver=3.4.0
+pkgrel=1
+pkgdesc="A library which provides a secure layer over a reliable transport layer"
+arch=('i686' 'x86_64')
+license=('GPL3' 'LGPL2.1')
+url="http://www.gnutls.org/"
+install=gnutls.install
+options=('!zipman')
+depends=('gcc-libs' 'libidn' 'libtasn1' 'readline' 'zlib' 'nettle' 'p11-kit')
+optdepends=('guile: for use with Guile bindings')
+source=(ftp://ftp.gnutls.org/gcrypt/gnutls/v3.4/${pkgname}-${pkgver}.tar.xz{,.sig}
+        buildfix.diff)
+md5sums=('aa015c2666b031044edfb01b01980d84'
+         'SKIP'
+         'ffce1bd795445aaecf54100f44299fa7')
+validpgpkeys=('0424D4EE81A0E3D119C6F835EDA21E94B565716F'
+              '1F42418905D8206AA754CCDC29EE58B996865171')
+               # "Simon Josefsson <simon@josefsson.org>"
+               # "Nikos Mavrogiannopoulos <nmav@gnutls.org>
+
+prepare(){
+  cd ${pkgname}-${pkgver}
+  # buildfix https://gitlab.com/gnutls/gnutls/commit/7e63027a5caafa55dcca65c5b9bff3bf76c5a41c?view=inline
+  patch -Np1 -i ${srcdir}/buildfix.diff
+  autoreconf -vfi
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+	--with-zlib \
+	--disable-static \
+	--enable-guile --with-guile-site-dir=no \
+	--with-default-trust-store-pkcs11="pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit"
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # lots of .png files are put into infodir and are gzipped by makepkg! this needs to be fixed by using !zipman
+  # gzip -9 all files in infodir and manpages manually
+  find "$pkgdir/usr/share/info" -name '*.info*' -exec gzip -9 {} \;
+  find "$pkgdir/usr/share/man" -exec gzip -9 {} \;
+}
