@@ -6,23 +6,22 @@
 # files in $DEST.
 
 DEST=/etc/ca-certificates/extracted
-trust extract --overwrite --format=pem-bundle --filter=ca-anchors --purpose server-auth  $DEST/tls-ca-bundle.pem
-trust extract --overwrite --format=pem-bundle --filter=ca-anchors --purpose email        $DEST/email-ca-bundle.pem
-trust extract --overwrite --format=pem-bundle --filter=ca-anchors --purpose code-signing $DEST/objsign-ca-bundle.pem
 
-# Removes all files in the target directory, but not directories or files therein
-trust extract --overwrite --format=openssl-directory --filter=certificates $DEST/cadir
-
-SSL=/etc/ssl/certs
-trust extract --overwrite --format=openssl-bundle --filter=certificates $SSL/ca-bundle.trust.crt
-trust extract --overwrite --format=java-cacerts --filter=ca-anchors --purpose server-auth $SSL/java/cacerts
-ln -fsrT $DEST/tls-ca-bundle.pem $SSL/ca-certificates.crt
+# The directory-format extractors remove all files in the target directory, but not directories or files therein
+trust extract --overwrite --format=pem-directory-hash --filter=ca-anchors --purpose server-auth  $DEST/cadir
+trust extract --overwrite --format=pem-bundle         --filter=ca-anchors --purpose server-auth  $DEST/tls-ca-bundle.pem
+trust extract --overwrite --format=pem-bundle         --filter=ca-anchors --purpose email        $DEST/email-ca-bundle.pem
+trust extract --overwrite --format=pem-bundle         --filter=ca-anchors --purpose code-signing $DEST/objsign-ca-bundle.pem
+trust extract --overwrite --format=openssl-bundle     --filter=certificates                      $DEST/ca-bundle.trust.crt
 
 # We don't want to have to remove everything from the certs directory but neither
 # do we want to leave stale certs around, so symlink it all from somewhere else
 for f in $DEST/cadir/*; do
-  ln -fsr -t $SSL "$f"
+  ln -fsr -t /etc/ssl/certs "$f"
 done
 
 # Now find and remove all broken symlinks
-find -L $SSL -maxdepth 1 -type l -delete
+find -L /etc/ssl/certs -maxdepth 1 -type l -delete
+
+# Java bundle
+trust extract --overwrite --format=java-cacerts --filter=ca-anchors --purpose server-auth /etc/ssl/certs/java/cacerts
