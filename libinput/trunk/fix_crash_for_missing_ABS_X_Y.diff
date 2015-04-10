@@ -1,0 +1,114 @@
+From 67208c0b1acd7b6db8a853994f7e7c9be94e0178 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 8 Apr 2015 09:54:29 +1000
+Subject: evdev: fix crash for missing ABS_X/Y
+
+libevdev_set_abs_info() is a noop if the event code isn't enabled on the
+device. This leaves ABS_X/Y on NULL, causing a crash later when dereferencing
+the absinfo.
+
+https://bugs.freedesktop.org/show_bug.cgi?id=89783
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+
+diff --git a/src/evdev.c b/src/evdev.c
+index a972b9d..115dc99 100644
+--- a/src/evdev.c
++++ b/src/evdev.c
+@@ -1444,9 +1444,9 @@ evdev_fix_android_mt(struct evdev_device *device)
+ 	    !libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_Y))
+ 		return;
+ 
+-	libevdev_set_abs_info(evdev, ABS_X,
++	libevdev_enable_event_code(evdev, EV_ABS, ABS_X,
+ 		      libevdev_get_abs_info(evdev, ABS_MT_POSITION_X));
+-	libevdev_set_abs_info(evdev, ABS_Y,
++	libevdev_enable_event_code(evdev, EV_ABS, ABS_Y,
+ 		      libevdev_get_abs_info(evdev, ABS_MT_POSITION_Y));
+ }
+ 
+-- 
+cgit v0.10.2
+
+From e2b13e602220a906584b21d51bc5472577be4372 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 8 Apr 2015 09:54:30 +1000
+Subject: evdev: fix handling of fake MT devices without ABS_X/Y
+
+The previous code didn't handle fake MT devices without ABS_X/Y axes (like the
+Razer BlackWidow keyboard). Those devices usually start at ABS_MISC and go up
+to ABS_MAX, thus triggering the Android check.
+
+Split the condition up: if the device is not a fake MT device we check for the
+Android missing axes first and add them. Then we proceed, but now we know that
+the ABS_X axis must exist on any valid device.
+
+https://bugs.freedesktop.org/show_bug.cgi?id=89783
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+
+diff --git a/src/evdev.c b/src/evdev.c
+index 115dc99..16ebb9c 100644
+--- a/src/evdev.c
++++ b/src/evdev.c
+@@ -1431,6 +1431,18 @@ evdev_device_get_udev_tags(struct evdev_device *device,
+ 	return tags;
+ }
+ 
++/* Fake MT devices have the ABS_MT_SLOT bit set because of
++   the limited ABS_* range - they aren't MT devices, they
++   just have too many ABS_ axes */
++static inline bool
++evdev_is_fake_mt_device(struct evdev_device *device)
++{
++	struct libevdev *evdev = device->evdev;
++
++	return libevdev_has_event_code(evdev, EV_ABS, ABS_MT_SLOT) &&
++		libevdev_get_num_slots(evdev) == -1;
++}
++
+ static inline void
+ evdev_fix_android_mt(struct evdev_device *device)
+ {
+@@ -1441,7 +1453,8 @@ evdev_fix_android_mt(struct evdev_device *device)
+ 		return;
+ 
+ 	if (!libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_X) ||
+-	    !libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_Y))
++	    !libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_Y) ||
++	    evdev_is_fake_mt_device(device))
+ 		return;
+ 
+ 	libevdev_enable_event_code(evdev, EV_ABS, ABS_X,
+@@ -1611,10 +1624,10 @@ evdev_configure_device(struct evdev_device *device)
+ 		return -1;
+ 	}
+ 
+-	if (libevdev_has_event_code(evdev, EV_ABS, ABS_X) ||
+-	    libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_X)) {
++	if (!evdev_is_fake_mt_device(device))
+ 		evdev_fix_android_mt(device);
+ 
++	if (libevdev_has_event_code(evdev, EV_ABS, ABS_X)) {
+ 		if (evdev_fix_abs_resolution(device,
+ 					     ABS_X,
+ 					     ABS_Y,
+@@ -1624,11 +1637,7 @@ evdev_configure_device(struct evdev_device *device)
+ 		device->abs.absinfo_x = libevdev_get_abs_info(evdev, ABS_X);
+ 		device->abs.absinfo_y = libevdev_get_abs_info(evdev, ABS_Y);
+ 
+-		/* Fake MT devices have the ABS_MT_SLOT bit set because of
+-		   the limited ABS_* range - they aren't MT devices, they
+-		   just have too many ABS_ axes */
+-		if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_SLOT) &&
+-		    libevdev_get_num_slots(evdev) == -1) {
++		if (evdev_is_fake_mt_device(device)) {
+ 			udev_tags &= ~EVDEV_UDEV_TAG_TOUCHSCREEN;
+ 		} else if (evdev_configure_mt_device(device) == -1) {
+ 			return -1;
+-- 
+cgit v0.10.2
+
+
