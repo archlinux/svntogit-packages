@@ -4,9 +4,9 @@
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgbase=kdebase-runtime
-pkgname=('kdebase-runtime' 'khelpcenter4')
+pkgname=('kdebase-runtime' 'khelpcenter4' 'kdebase-runtime-doc' 'kdesu4')
 pkgver=15.04.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Plugins and applications necessary for the running of KDE applications"
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/kde/kde-runtime'
@@ -18,8 +18,6 @@ sha1sums=('5cbfec48ead85a1cd3dab675b98623dd4a831d91')
 
 prepare() {
   mkdir build
-
-  cd kde-runtime-${pkgver}
 }
 
 build() {
@@ -37,7 +35,7 @@ build() {
 
 package_khelpcenter4() {
   pkgdesc=("Application to show KDE Applications' documentation")
-  depends=('kdebase-runtime' 'htdig' 'rarian')
+  depends=('kdebase-runtime' 'htdig' 'rarian' 'kdebase-runtime-doc')
   provides=('khelpcenter')
   conflicts=('khelpcenter')
 
@@ -46,9 +44,9 @@ package_khelpcenter4() {
 }
 
 package_kdebase-runtime() {
-  depends=("kdelibs" 'kactivities' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra'
+  depends=('kdelibs' 'kactivities' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra'
          'oxygen-icons' 'xorg-xauth' 'libwebp')
-  optdepends=('kdepimlibs: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org'
+  optdepends=('kdepimlibs: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org' 'kdebase-runtime-doc: KDE4 documentation'
             'gdb: needed by DrKonqi to generate backtrace' 'khelpcenter: to display applications documentation')
   provides=('notification-daemon')
   install=$pkgname.install
@@ -58,15 +56,46 @@ package_kdebase-runtime() {
 
   rm "${pkgdir}"/usr/share/icons/hicolor/index.theme
 
-  ln -sf /usr/lib/kde4/libexec/kdesu "${pkgdir}/usr/bin/"
-
-  # FS#36668
-  chown :nobody "${pkgdir}"/usr/lib/kde4/libexec/kdesud
-  chmod g+s "${pkgdir}"/usr/lib/kde4/libexec/kdesud
-
 # Remove khelpcenter
   cd "$pkgdir"
   find -name '*khelpcenter*' | xargs rm -fr
   find -name 'khc*' | xargs rm -fr
   rm usr/share/applications/kde4/Help.desktop
+
+# Remove docs
+  rm -r "$pkgdir"/usr/share/{doc,man}
+
+# Remove kdesu
+  rm "$pkgdir"/usr/lib/kde4/libexec/kdesu*
+}
+
+package_kdebase-runtime-doc() {
+  pkgdesc=("KDE4 documentation")
+  conflicts=('khelpcenter' 'plasma-desktop' 'kio-extras')
+
+  cd build/doc
+  make DESTDIR="$pkgdir" install
+
+# Remove kdesu docs
+  rm -r "$pkgdir"/usr/share/doc/HTML/en/kdesu/
+  rm "$pkgdir"/usr/share/man/man1/kdesu.1
+}
+
+package_kdesu4() {
+  pkgdesc=("Run KDE applications as root")
+  depends=('kdebase-runtime')
+  conflicts=('kde-cli-tools')
+
+  cd build/kdesu
+  make DESTDIR="$pkgdir" install
+
+  cd ../doc/kdesu
+  make DESTDIR="$pkgdir" install
+
+  mkdir -p "$pkgdir"/usr/bin
+  ln -sf /usr/lib/kde4/libexec/kdesu "$pkgdir"/usr/bin/
+
+  # FS#36668
+  chown :nobody "${pkgdir}"/usr/lib/kde4/libexec/kdesud
+  chmod g+s "${pkgdir}"/usr/lib/kde4/libexec/kdesud
 }
