@@ -125,4 +125,51 @@ index 88db508..fd6c46c 100644
  	if (sna->flags & SNA_IS_HOSTED)
 -- 
 cgit v0.10.2
+From 9c109f3dc56621215e580e74a6161f00035bdac3 Mon Sep 17 00:00:00 2001
+From: Chris Wilson <chris@chris-wilson.co.uk>
+Date: Sun, 12 Apr 2015 21:15:54 +0100
+Subject: [PATCH] sna: Mark the GPU as available before doing the mode restore
+ on VT enter
+
+Sometimes we want to render with the GPU when doing a mode switch, e.g.
+if we need to initialise an output surface. To do so, we need to prepare
+the acceleration layer first.
+
+Lots of thanks to Vasily for tracking this one down.
+
+Reported-by: Vasily Khoruzhick <anarsoul@gmail.com>
+Bugzilla: https://bugs.archlinux.org/task/43534
+Signed-off-by: Chris Wilson <chris@chris-wilson.co.uk>
+---
+ src/sna/sna_driver.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/sna/sna_driver.c b/src/sna/sna_driver.c
+index 31500e7..488ca9b 100644
+--- a/src/sna/sna_driver.c
++++ b/src/sna/sna_driver.c
+@@ -1213,6 +1213,8 @@ static Bool sna_enter_vt(VT_FUNC_ARGS_DECL)
+ 	if (intel_get_master(sna->dev))
+ 		return FALSE;
+ 
++	sna_accel_enter(sna);
++
+ 	if (sna->flags & SNA_REPROBE) {
+ 		DBG(("%s: reporting deferred hotplug event\n", __FUNCTION__));
+ 		sna_mode_discover(sna);
+@@ -1221,11 +1223,11 @@ static Bool sna_enter_vt(VT_FUNC_ARGS_DECL)
+ 	sna_mode_check(sna);
+ 
+ 	if (!sna_set_desired_mode(sna)) {
++		sna_accel_leave(sna);
+ 		intel_put_master(sna->dev);
+ 		return FALSE;
+ 	}
+ 
+-	sna_accel_enter(sna);
+ 	return TRUE;
+ }
+ 
+-- 
+2.3.5
 
