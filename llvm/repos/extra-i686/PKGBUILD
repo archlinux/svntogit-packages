@@ -12,7 +12,7 @@
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lldb' 'clang' 'clang-analyzer'
          'clang-tools-extra')
 pkgver=3.6.0
-pkgrel=4
+pkgrel=5
 _ocaml_ver=4.02.1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
@@ -124,9 +124,10 @@ package_llvm() {
   mv "$srcdir/clang" tools
   mv "$srcdir/lldb" tools
 
-  # The runtime library goes into llvm-libs
+  # The runtime libraries go into llvm-libs
   mv -f "$pkgdir/usr/lib/libLLVM-$pkgver.so" "$srcdir/"
   mv -f "$pkgdir/usr/lib/libLLVM-${pkgver%.*}.so" "$srcdir/"
+  mv -f "$pkgdir"/usr/lib/{LLVMgold,libLTO,BugpointPasses}.so "$srcdir/"
 
   # OCaml bindings go to a separate package
   rm -rf "$srcdir"/{ocaml,ocamldoc}
@@ -137,11 +138,6 @@ package_llvm() {
 
   # Get rid of example Hello transformation
   rm "$pkgdir"/usr/lib/*LLVMHello.*
-
-  # Symlink LLVMgold.so from /usr/lib/bfd-plugins
-  # https://bugs.archlinux.org/task/28479
-  install -d "$pkgdir/usr/lib/bfd-plugins"
-  ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
 
   if [[ $CARCH == x86_64 ]]; then
     # Needed for multilib (https://bugs.archlinux.org/task/29951)
@@ -165,14 +161,20 @@ package_llvm() {
 }
 
 package_llvm-libs() {
-  pkgdesc="Low Level Virtual Machine (runtime library)"
+  pkgdesc="Low Level Virtual Machine (runtime libraries)"
   depends=('gcc-libs' 'zlib' 'libffi' 'libedit' 'ncurses')
 
   install -d "$pkgdir/usr/lib"
   cp -P \
     "$srcdir/libLLVM-$pkgver.so" \
     "$srcdir/libLLVM-${pkgver%.*}.so" \
+    "$srcdir"/{LLVMgold,libLTO,BugpointPasses}.so \
     "$pkgdir/usr/lib/"
+
+  # Symlink LLVMgold.so from /usr/lib/bfd-plugins
+  # https://bugs.archlinux.org/task/28479
+  install -d "$pkgdir/usr/lib/bfd-plugins"
+  ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
 
   install -Dm644 "$srcdir/llvm-$pkgver.src/LICENSE.TXT" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
