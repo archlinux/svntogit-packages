@@ -8,13 +8,13 @@
 
 pkgname=glibc
 pkgver=2.21
-pkgrel=2
+pkgrel=3
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=3.16' 'tzdata' 'filesystem>=2013.01')
+depends=('linux-api-headers>=3.18' 'tzdata' 'filesystem')
 makedepends=('gcc>=4.9')
 backup=(etc/gai.conf
         etc/locale.gen
@@ -27,7 +27,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         locale-gen)
 md5sums=('9cb398828e8f84f57d1f7d5588cf40cd'
          'SKIP'
-         'bf9d96b11c76b113606aae102da63d9d'
+         'feb826d5f4965e9892ee6e851fec43a9'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
@@ -35,7 +35,7 @@ validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
 prepare() {
   cd ${srcdir}/glibc-${pkgver}
 
-  # glibc-2.21..75adf430
+  # glibc-2.21..01b07c70
   patch -p1 -i $srcdir/glibc-2.21-roundup.patch
 
   mkdir ${srcdir}/glibc-build
