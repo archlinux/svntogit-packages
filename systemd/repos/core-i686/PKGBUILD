@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=219
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -21,7 +21,10 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         '0001-core-shared-in-deserializing-match-same-files-reache.patch'
         '0001-tmpfiles-Fix-handling-of-duplicate-lines.patch'
         '0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch'
-        '0001-use-x-machine-unix-prefix-for-the-container-bus-on-dbus1.patch')
+        '0001-use-x-machine-unix-prefix-for-the-container-bus-on-dbus1.patch'
+        '0001-unit-use-weaker-dependencies-between-mount-and-devic.patch'
+        '0001-core-rework-device-state-logic.patch'
+        '0001-core-don-t-change-removed-devices-to-state-tentative.patch')
 md5sums=('e0d6c9a4b4f69f66932d2230298c9a34'
          '90ea67a7bb237502094914622a39e281'
          '58af51bd4c0464f195b3433b4e17cf6c'
@@ -31,7 +34,10 @@ md5sums=('e0d6c9a4b4f69f66932d2230298c9a34'
          '9d46aebfc04cc849fd4295f449b239a2'
          'c4c9c0f0a06314450563ed571962881e'
          '6b9d611dffd92c94641360c3ef2659c1'
-         '3a0fc672b34ced18ca1364edf8644165')
+         '3a0fc672b34ced18ca1364edf8644165'
+         'cd2719e8e93ad662c00bf9f195fdce66'
+         '12e01f00c91e54680098a799517698f2'
+         'd0aa4e5ec598063eab2e79fb95bceece')
 
 prepare() {
   cd "$pkgname-$pkgver"
@@ -42,6 +48,9 @@ prepare() {
   patch -Np1 <../0001-tmpfiles-Fix-handling-of-duplicate-lines.patch
   patch -Np1 <../0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch
   patch -Np1 <../0001-use-x-machine-unix-prefix-for-the-container-bus-on-dbus1.patch
+  patch -Np1 <../0001-unit-use-weaker-dependencies-between-mount-and-devic.patch
+  patch -Np1 <../0001-core-rework-device-state-logic.patch
+  patch -Np1 <../0001-core-don-t-change-removed-devices-to-state-tentative.patch
 }
 
 build() {
