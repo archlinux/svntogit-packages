@@ -14,8 +14,8 @@
 # llvm35 or clang35 which aren't co-installable with the LLVM 3.6 packages.
 
 pkgname=('llvm35' 'llvm35-libs' 'clang35')
-pkgver=3.5.1
-pkgrel=2
+pkgver=3.5.2
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
@@ -27,15 +27,17 @@ source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/cfe-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
         llvm-3.5.0-force-link-pass.o.patch
+        gcc5.patch
         llvm-Config-config.h
         llvm-Config-llvm-config.h)
-sha256sums=('bf3275d2d7890015c8d8f5e6f4f882f8cf3bf51967297ebe74111d6d8b53be15'
+sha256sums=('44196156d5749eb4b4224fe471a29cc3984df92570a4a89fa859f7394fc0c575'
             'SKIP'
-            '6773f3f9cf815631cc7e779ec134ddd228dc8e9a250e1ea3a910610c59eb8f5c'
+            '4feb575f74fb3a74b6245400460230141bf610f235ef3a25008cfe6137828620'
             'SKIP'
-            'adf4b526f33e681aff5961f0821f5b514d3fc375410008842640b56a2e6a837a'
+            '542d7aadd21e7fe35bea0a7912bc965f08a1a566746cebcca76f96dcfeb74dc3'
             'SKIP'
             '5702053503d49448598eda1b8dc8c263f0df9ad7486833273e3987b5dec25a19'
+            'c964eecdfb0cbf4d2a59a553d7bdb3f16e70d8910e6aa7e9c768828ecbdfcea2'
             '312574e655f9a87784ca416949c505c452b819fad3061f2cde8aced6540a19a3'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys=('11E521D646982372EB577A1F8F0871F202119294')
@@ -60,14 +62,14 @@ prepare() {
   # Fix build with GCC 4.9 (patch from Debian)
   # http://llvm.org/bugs/show_bug.cgi?id=20067
   patch -Np1 -i ../llvm-3.5.0-force-link-pass.o.patch
+
+  # Fix build with GCC 5.1
+  # http://llvm.org/viewvc/llvm-project?view=revision&revision=218295
+  patch -Np0 -i ../gcc5.patch
 }
 
 build() {
   cd "$srcdir/llvm-$pkgver.src"
-
-  # Apply strip option to configure
-  _optimized_switch="enable"
-  [[ $(check_option strip) == n ]] && _optimized_switch="disable"
 
   # Include location of libffi headers in CPPFLAGS
   CPPFLAGS+=" $(pkg-config --cflags libffi)"
@@ -78,14 +80,12 @@ build() {
     --prefix=/usr \
     --sysconfdir=/etc \
     --enable-shared \
+    --enable-optimized \
     --enable-libffi \
     --enable-targets=all \
-    --disable-expensive-checks \
-    --disable-debug-runtime \
     --disable-assertions \
     --with-binutils-include=/usr/include \
-    --with-python=/usr/bin/python2 \
-    --$_optimized_switch-optimized
+    --with-python=/usr/bin/python2
 
   make REQUIRES_RTTI=1
   make -C docs -f Makefile.sphinx man
@@ -117,10 +117,8 @@ package_llvm35() {
   # Get rid of example Hello transformation
   rm "$pkgdir"/usr/lib/*LLVMHello.*
 
-  # Symlink LLVMgold.so from /usr/lib/bfd-plugins
-  # https://bugs.archlinux.org/task/28479
-  install -d "$pkgdir/usr/lib/bfd-plugins"
-  ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
+  # Remove LTO libs which conflict with llvm-libs
+  rm "$pkgdir"/usr/lib/{LLVMgold,libLTO,BugpointPasses}.so
 
   if [[ $CARCH == x86_64 ]]; then
     # Needed for multilib (https://bugs.archlinux.org/task/29951)
@@ -161,6 +159,7 @@ package_clang35() {
   pkgdesc="C language family frontend for LLVM"
   url="http://clang.llvm.org/"
   depends=("llvm35-libs=$pkgver-$pkgrel" 'gcc')
+  optdepends=('llvm-libs: for compiling with -flto')
   conflicts=('clang')
 
   # Fix installation path for clang docs
