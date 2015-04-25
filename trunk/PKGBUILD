@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=3.4.0
 _pkgver=v3.4.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=('i686' 'x86_64')
 url='http://qt-project.org'
@@ -32,7 +32,7 @@ source=("git+https://gitorious.org/qt-creator/qt-creator.git#tag=${_pkgver}"
         'qtcreator.desktop')
 md5sums=('SKIP'
          'SKIP'
-         'aab59d7e8b8527b18a41ec310bd6e543')
+         '800c94165c547b64012a207d9830250a')
 
 prepare() {
   cd qt-creator
