@@ -1,0 +1,63 @@
+# $Id: PKGBUILD 234446 2015-03-21 17:59:50Z bpiotrowski $
+# Maintainer: Sébastien Luttringer <seblu@archlinux.org>
+# Contributor: Juergen Hoetzel <juergen@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+
+pkgname=lua52
+pkgver=5.2.4
+pkgrel=1
+pkgdesc='Powerful lightweight programming language designed for extending applications'
+arch=('i686' 'x86_64')
+url='http://www.lua.org/'
+depends=('readline')
+license=('MIT')
+options=('!emptydirs')
+source=(http://www.lua.org/ftp/lua-$pkgver.tar.gz
+        liblua.so.patch
+        lua.pc
+        LICENSE)
+md5sums=('913fdb32207046b273fdb17aad70be13'
+         'bdc663c7b82ffc0b5df67611621fb625'
+         'e7ba6c2b695b0b84a5ea0cbff5fc9067'
+         '0e2bd67b909b9ff673da844ca3480df2')
+
+prepare() {
+  cd lua-$pkgver
+  patch -p1 -i ../liblua.so.patch
+
+  sed "s/%VER%/${pkgver%.*}/g;s/%REL%/$pkgver/g" ../lua.pc > lua.pc
+  sed -e 's:llua:llua5.2:' -e 's:/include:/include/lua5.2:' -i lua.pc
+  sed -r -e '/^LUA_(SO|A|T)=/ s/lua/lua5.2/' -e '/^LUAC_T=/ s/luac/luac5.2/' -i src/Makefile
+}
+
+build() {
+  cd lua-$pkgver
+
+  make MYCFLAGS="$CFLAGS -fPIC" MYLDFLAGS="$LDFLAGS" linux
+}
+
+package() {
+  cd lua-$pkgver
+
+  make \
+    TO_BIN='lua5.2 luac5.2' \
+    TO_LIB="liblua5.2.a liblua5.2.so liblua5.2.so.5.2 liblua5.2.so.$pkgver" \
+    INSTALL_DATA='cp -d' \
+    INSTALL_TOP="$pkgdir"/usr \
+    INSTALL_INC="$pkgdir"/usr/include/lua5.2 \
+    INSTALL_MAN="$pkgdir"/usr/share/man/man1 \
+    install
+
+  install -Dm644 lua.pc "$pkgdir"/usr/lib/pkgconfig/$pkgname.pc
+
+  install -d "$pkgdir"/usr/share/doc/$pkgname
+  install -m644 doc/*.{gif,png,css,html} "$pkgdir"/usr/share/doc/$pkgname
+  install -Dm644 ../LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+
+  ln -s liblua5.2.so "$pkgdir"/usr/lib/liblua.so.5.2
+  ln -s liblua5.2.so "$pkgdir"/usr/lib/liblua.so.$pkgver
+ 
+  cd "$pkgdir"/usr/share/man/man1
+  mv lua.1 lua5.2.1
+  mv luac.1 luac5.2.1
+}
