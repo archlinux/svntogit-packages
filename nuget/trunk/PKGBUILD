@@ -2,21 +2,40 @@
 # Contributor: wenLiangcan <boxeed at gmail dot com>
 
 pkgname=nuget
-pkgver=2.8.60318.667
+pkgver=2.8.5
 pkgrel=1
 pkgdesc="Package manager for .NET."
 arch=('any')
 url="http://www.nuget.org"
-license=('Apache')
+license=('APACHE')
 depends=('mono' 'sh')
-source=("http://nuget.org/nuget.exe"
-        "${pkgname}")
-md5sums=('c0888dc1e2c4da4e621719a69e1cc0d2'
-         '7d52a5ad1c8ba770f57940457c26644f')
+source=(https://sources.archlinux.org/other/packages/${pkgname}/${pkgname}-${pkgver}.tar.gz
+        "${pkgname}"
+        "${pkgname}.pc"
+	"https://sources.archlinux.org/other/packages/${pkgname}/xdt.tar.gz")
+md5sums=('38793be9c7748960b1951ff436e9863e'
+         'dce06048fb6eb42beb69001adb2fd530'
+         'ffb7d95fb39f72c9619c72db91ec36a0'
+         '61580e6d1e1ecf80f8f2caf4a43b7b71')
 install="${pkgname}.install"
+epoch=1
 
-package() {
-    install -Dm755 "${pkgname}.exe" "${pkgdir}/opt/${pkgname}/${pkgname}.exe"
-    install -Dm755 "${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+build() {
+	xbuild /p:Configuration=Release xdt/XmlTransform/Microsoft.Web.XmlTransform.csproj
+	cd ${srcdir}/${pkgname}-${pkgver}
+	xbuild Build/Build.proj /p:Configuration=Release /p:TreatWarningsAsErrors=false /tv:4.0 /p:TargetFrameworkVersion=v4.5 /p:Configuration="Mono Release" /t:BuildMono
 }
 
+package() {
+
+mkdir -p ${pkgdir}/lib/pkgconfig
+install -m 0644 ${srcdir}/nuget.pc ${pkgdir}/lib/pkgconfig/nuget.pc
+
+install -d ${pkgdir}/lib/nuget
+install -m 0644 ${srcdir}/nuget-2.8.5/src/CommandLine/obj/Mono\ Release/NuGet.exe ${pkgdir}/lib/nuget/
+install -m 0644 ${srcdir}/nuget-2.8.5/src/Core/obj/Mono\ Release/NuGet.Core.dll ${pkgdir}/lib/nuget/
+install -m 0644 ${srcdir}/xdt/XmlTransform/obj/Release/Microsoft.Web.XmlTransform.dll ${pkgdir}/lib/nuget/
+
+install -d ${pkgdir}/usr/bin
+install -m 0755 ${srcdir}/nuget ${pkgdir}/usr/bin/nuget
+}
