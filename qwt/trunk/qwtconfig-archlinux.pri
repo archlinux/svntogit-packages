@@ -28,7 +28,7 @@ win32 {
 
 QWT_INSTALL_DOCS      = $${QWT_INSTALL_PREFIX}/share/doc/qwt
 QWT_INSTALL_HEADERS   = $${QWT_INSTALL_PREFIX}/include/qwt
-QWT_INSTALL_LIBS      = $${QWT_INSTALL_PREFIX}/lib/qwt
+QWT_INSTALL_LIBS      = $${QWT_INSTALL_PREFIX}/lib
 
 ######################################################################
 # Designer plugin
