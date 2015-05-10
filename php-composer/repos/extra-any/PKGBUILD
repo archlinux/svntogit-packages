@@ -2,7 +2,7 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=php-composer
-pkgver=1.0.0.alpha10.106
+pkgver=1.0.0.alpha10.155
 pkgrel=1
 pkgdesc="Dependency Manager for PHP"
 arch=('any')
@@ -15,7 +15,7 @@ source=("${pkgname}::git+https://github.com/composer/composer.git"
         "composer-${pkgver}.phar::https://getcomposer.org/composer.phar"
         'php.ini')
 md5sums=('SKIP'
-         'fe61b13b7e0dc27714a94299a7950b40'
+         '7eb2cdba130718a1989951a075aa4fbd'
          'b31326c352763328dca0a567a67609ab')
 
 pkgver() {
@@ -29,7 +29,14 @@ prepare() {
 	cd ${srcdir}/${pkgname}
 
 	sed "s~^#!/usr/bin/env php~#!/usr/bin/php -nc/usr/share/${pkgname}/php.ini~g" -i src/Composer/Compiler.php
-	/usr/bin/php -nc ${srcdir}/php.ini ${srcdir}/composer-${pkgver}.phar -on install --prefer-dist
+	sed "s~php bin/composer~php -nc/usr/share/${pkgname}/php.ini bin/composer~g" -i bin/compile
+	/usr/bin/php -nc ${srcdir}/php.ini ${srcdir}/composer-${pkgver}.phar -n install --no-dev
+}
+
+build() {
+	cd ${srcdir}/${pkgname}
+
+	/usr/bin/php -nc ${srcdir}/php.ini bin/compile
 }
 
 check() {
@@ -37,13 +44,10 @@ check() {
 
 	git config --global user.email "${USER}@${HOST}"
 	git config --global user.name "${USER}"
+
+	# install the dev dependencies to run the unit tests
+	/usr/bin/php -nc ${srcdir}/php.ini bin/composer install
 	/usr/bin/php -nc ${srcdir}/php.ini vendor/bin/phpunit
-}
-
-build() {
-	cd ${srcdir}/${pkgname}
-
-	/usr/bin/php -nc ${srcdir}/php.ini bin/compile
 }
 
 package() {
