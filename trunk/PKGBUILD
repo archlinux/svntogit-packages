@@ -2,7 +2,7 @@
 
 pkgname=imap
 pkgver=2007f
-pkgrel=4
+pkgrel=5
 pkgdesc="An IMAP/POP server"
 arch=('i686' 'x86_64')
 license=('APACHE')
@@ -11,30 +11,33 @@ depends=('openssl' 'pam')
 provides=('imap-server' 'pop3-server')
 conflicts=('courier-mta' 'courier-imap')
 source=("ftp://ftp.cac.washington.edu/imap/${pkgname}-${pkgver}.tar.gz"
+        'c-client-2006k_GENTOO_amd64-so-fix.patch'
         'imap' 'ipop2' 'ipop3')
 options=('staticlibs')
 backup=(etc/xinetd.d/{imap,ipop2,ipop3} etc/ssl/certs/{imapd,ipop3d}.pem)
 md5sums=('2126fd125ea26b73b20f01fcd5940369'
+         '7f3937a871edd54203fe51f91423e204'
          '3ae5b3b333bc8ea2da106f6a97d7bd8d'
          '448f988dc5f9bdb2223dcea3abc4f5f1'
          '1499b13015075f0aafba04324a6f523a')
 
 prepare() {
+  cd $srcdir/$pkgname-$pkgver
+
   sed \
     -e "s:-g -fno-omit-frame-pointer -O6:\${CFLAGS}:" \
     -e "s:SSLDIR=/usr/local/ssl:SSLDIR=/usr:" \
     -e "s:SSLCERTS=\$(SSLDIR)/certs:SSLCERTS=/etc/ssl/certs:" \
-    -i $srcdir/$pkgname-$pkgver/src/osdep/unix/Makefile
+    -i src/osdep/unix/Makefile
+
+  patch -p1 -i $srcdir/c-client-2006k_GENTOO_amd64-so-fix.patch
 }
 
 build() {
   cd $srcdir/$pkgname-$pkgver
   # NOTE: if you wish to enforce SSL, use SSLTYPE=unix.nopwd
 
-  if [ "$CARCH" == "x86_64" ]; then
-         yes "y" | make lnp SPECIALAUTHENTICATORS=ssl SSLTYPE=unix EXTRACFLAGS="${CFLAGS} -fPIC"
-    else yes "y" | make lnp SPECIALAUTHENTICATORS=ssl SSLTYPE=unix
-  fi
+  yes "y" | make lnp EXTRAAUTHENTICATORS=gss PASSWDTYPE=pam SPECIALAUTHENTICATORS=ssl SSLTYPE=unix EXTRACFLAGS="${CFLAGS} -fPIC -lgssapi_krb5 -lkrb5 -lk5crypto -lcom_err -lpam"
 
   # create ssl certs for secure imap
   for i in imapd ipop3d; do
@@ -71,6 +74,10 @@ package() {
   done
   install -D -m644 c-client/c-client.a $pkgdir/usr/lib/c-client.a
   ln -sf c-client.a $pkgdir/usr/lib/libc-client.a
+
+  install -D -m755 c-client/libc-client.so.1.0.0 $pkgdir/usr/lib/libc-client.so.1.0.0
+  ln -sf /usr/lib/libc-client.so.1.0.0 $pkgdir/usr/lib/libc-client.so.1
+  ln -sf /usr/lib/libc-client.so.1.0.0 $pkgdir/usr/lib/libc-client.so
 
   # install certs
   install -D -m600 imapd.pem $pkgdir/etc/ssl/certs/imapd.pem
