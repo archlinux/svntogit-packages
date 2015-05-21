@@ -5,12 +5,11 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=4.9.2
-_pkgver=4.9
-_islver=0.12.2
-_cloogver=0.18.1
+pkgver=5.1.0
+_pkgver=5
+_islver=0.14.1
 pkgrel=4
-_snapshot=4.9-20150304
+_snapshot=5-20150519
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -21,10 +20,12 @@ options=('!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
         ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
-        http://www.bastoul.net/cloog/pages/download/cloog-${_cloogver}.tar.gz)
-md5sums=('863bb9d2a9551c9b7447cfc8b7cc7498'
-         'e039bfcfb6c2ab039b8ee69bf883e824'
-         'e34fca0540d840e5d0f6427e98c92252')
+        pr65882.patch
+        pr66035.patch)
+md5sums=('84f261b2f23e154ec6d9bd4149851a21'
+         '118d1a379abf7606a3334c98a8411c79'
+         '9a9cc98e916fd37c7b3dad50f29d2f48'
+         '5b980076cd5fcbc3aff6014f306282dd')
 
 if [ -n "${_snapshot}" ]; then
   _basedir=gcc-${_snapshot}
@@ -37,9 +38,8 @@ _libdir="usr/lib/gcc/$CHOST/$pkgver"
 prepare() {
   cd ${srcdir}/${_basedir}
 
-  # link isl/cloog for in-tree builds
+  # link isl for in-tree build
   ln -s ../isl-${_islver} isl
-  ln -s ../cloog-${_cloogver} cloog
 
   # Do not run fixincludes
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
@@ -51,6 +51,12 @@ prepare() {
 
   # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
+
+  # https://gcc.gnu.org/ml/gcc-patches/2015-04/msg01558.html
+  patch -p1 -i ${srcdir}/pr65882.patch
+
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66035
+  patch -p1 -i ${srcdir}/pr66035.patch
 
   mkdir ${srcdir}/gcc-build
 }
@@ -68,21 +74,16 @@ build() {
       --mandir=/usr/share/man --infodir=/usr/share/info \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++ \
-      --enable-shared --enable-threads=posix \
-      --with-system-zlib --enable-__cxa_atexit \
+      --enable-shared --enable-threads=posix --enable-libmpx \
+      --with-system-zlib --with-isl --enable-__cxa_atexit \
       --disable-libunwind-exceptions --enable-clocale=gnu \
       --disable-libstdcxx-pch --disable-libssp \
       --enable-gnu-unique-object --enable-linker-build-id \
-      --enable-cloog-backend=isl \
       --enable-lto --enable-plugin --enable-install-libiberty \
-      --with-linker-hash-style=gnu \
+      --with-linker-hash-style=gnu --enable-gnu-indirect-function \
       --disable-multilib --disable-werror \
-      --enable-checking=release
-      
-# gcc-5.0 changes
-#      --with-default-libstdcxx-abi=c++98    - before gcc-5.0 c++ rebuild
-#      --enable-gnu-indirect-function
-#      --with-isl    - cloog no longer needed
+      --enable-checking=release \
+      --with-default-libstdcxx-abi=c++98
 
   make
   
@@ -106,7 +107,7 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.20')
+  depends=('glibc>=2.21')
   options=('!emptydirs' '!strip')
   install=gcc-libs.install
 
@@ -131,8 +132,11 @@ package_gcc-libs()
     make -C $CHOST/libsanitizer/tsan DESTDIR=${pkgdir} install-toolexeclibLTLIBRARIES
 
   make -C $CHOST/libobjc DESTDIR=${pkgdir} install-libs
-  
+
   make -C $CHOST/libstdc++-v3/po DESTDIR=${pkgdir} install
+
+  make -C $CHOST/libmpx DESTDIR=${pkgdir} install
+  rm ${pkgdir}/usr/lib/libmpx.spec
 
   for lib in libgomp \
              libitm \
@@ -148,7 +152,7 @@ package_gcc-libs()
 package_gcc()
 {
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.24' 'libmpc')
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.25' 'libmpc')
   groups=('base-devel')
   options=('staticlibs')
   install=gcc.install
@@ -158,7 +162,7 @@ package_gcc()
   make -C gcc DESTDIR=${pkgdir} install-driver install-cpp install-gcc-ar \
     c++.install-common install-headers install-plugin install-lto-wrapper
 
-  install -m755 gcc/gcov $pkgdir/usr/bin/
+  install -m755 -t $pkgdir/usr/bin/ gcc/gcov{,-tool}
   install -m755 -t $pkgdir/${_libdir}/ gcc/{cc1,cc1plus,collect2,lto1}
 
   make -C $CHOST/libgcc DESTDIR=${pkgdir} install
@@ -169,6 +173,7 @@ package_gcc()
   make -C $CHOST/libstdc++-v3/libsupc++ DESTDIR=${pkgdir} install
   make -C $CHOST/libstdc++-v3/python DESTDIR=${pkgdir} install
 
+  make DESTDIR=${pkgdir} install-libcc1
   install -d $pkgdir/usr/share/gdb/auto-load/usr/lib
   mv $pkgdir/usr/lib/libstdc++.so.6.*-gdb.py \
     $pkgdir/usr/share/gdb/auto-load/usr/lib/
@@ -176,7 +181,11 @@ package_gcc()
 
   make DESTDIR=${pkgdir} install-fixincludes
   make -C gcc DESTDIR=${pkgdir} install-mkheaders
+  
   make -C lto-plugin DESTDIR=${pkgdir} install
+  install -dm755 ${pkgdir}/usr/lib/bfd-plugins/
+  ln -s /usr/lib/gcc/$CHOST/${pkgver}/liblto_plugin.so \
+    ${pkgdir}/usr/lib/bfd-plugins/
 
   make -C $CHOST/libcilkrts DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS \
     install-nodist_cilkincludeHEADERS
@@ -184,8 +193,9 @@ package_gcc()
     install-nodist_libsubincludeHEADERS
   make -C $CHOST/libitm DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS
   make -C $CHOST/libquadmath DESTDIR=${pkgdir} install-nodist_libsubincludeHEADERS
-  make -C $CHOST/libsanitizer DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS
+  make -C $CHOST/libsanitizer DESTDIR=${pkgdir} install-nodist_{saninclude,toolexeclib}HEADERS
   make -C $CHOST/libsanitizer/asan DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS
+  make -C $CHOST/libmpx DESTDIR=${pkgdir} install-nodist_toolexeclibHEADERS
 
   make -C libiberty DESTDIR=${pkgdir} install
   # install PIC version of libiberty
@@ -246,7 +256,8 @@ package_gcc-fortran()
   install=gcc-fortran.install
 
   cd ${srcdir}/gcc-build
-  make -C $CHOST/libgfortran DESTDIR=$pkgdir install-{{caf,my}execlibLTLIBRARIES,toolexeclibDATA}
+  make -C $CHOST/libgfortran DESTDIR=$pkgdir install-{caf,my}execlibLTLIBRARIES \
+    install-{toolexeclibDATA,nodist_fincludeHEADERS}
   make -C $CHOST/libgomp DESTDIR=$pkgdir install-nodist_fincludeHEADERS
   make -C gcc DESTDIR=$pkgdir fortran.install-{common,man,info}
   install -Dm755 gcc/f951 $pkgdir/${_libdir}/f951
@@ -301,6 +312,7 @@ package_gcc-go()
 {
   pkgdesc="Go front-end for GCC"
   depends=("gcc=$pkgver-$pkgrel")
+  conflicts=('go')
   options=('!emptydirs')
   install=gcc-go.install
 
@@ -308,6 +320,8 @@ package_gcc-go()
   make -C $CHOST/libgo DESTDIR=$pkgdir install-exec-am
   make -C gcc DESTDIR=$pkgdir go.install-{common,man,info}
   install -Dm755 gcc/go1 $pkgdir/${_libdir}/go1
+
+  make DESTDIR=${pkgdir} install-gotools
 
   # Install Runtime Library Exception
   install -d ${pkgdir}/usr/share/licenses/gcc-go/
