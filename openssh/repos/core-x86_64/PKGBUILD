@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=6.8p1
-pkgrel=2
+pkgrel=3
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -17,17 +17,21 @@ optdepends=('xorg-xauth: X11 forwarding'
 validpgpkeys=('59C2118ED206D927E667EBE3D3E5F56B6D920D30')
 source=("ftp://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
         'error.patch'
+        'dispatch.patch'
         'sshdgenkeys.service'
         'sshd@.service'
         'sshd.service'
         'sshd.socket'
+        'sshd.conf'
         'sshd.pam')
 sha1sums=('cdbc51e46a902b30d263b05fdc71340920e91c92' 'SKIP'
           '1b6b11efe9b20b9d1e51a59ac4b16eefb1dc84b8'
+          'e629d45e899bbb2b3e702080f37cb40f3dc2b9b4'
           'cc1ceec606c98c7407e7ac21ade23aed81e31405'
           '6a0ff3305692cf83aca96e10f3bb51e1c26fccda'
           'ec49c6beba923e201505f5669cea48cad29014db'
           'e12fa910b26a5634e5a6ac39ce1399a132cf6796'
+          'c9b2e4ce259cd62ddb00364d3ee6f00a8bf2d05f'
           'd93dca5ebda4610ff7647187f8928a3de28703f3')
 
 backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
@@ -37,6 +41,7 @@ install=install
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	patch -p1 -i ../error.patch
+	patch -p1 -i ../dispatch.patch
 }
 
 build() {
@@ -82,6 +87,7 @@ package() {
 	install -Dm644 ../sshd@.service "${pkgdir}"/usr/lib/systemd/system/sshd@.service
 	install -Dm644 ../sshd.service "${pkgdir}"/usr/lib/systemd/system/sshd.service
 	install -Dm644 ../sshd.socket "${pkgdir}"/usr/lib/systemd/system/sshd.socket
+	install -Dm644 ../sshd.conf "${pkgdir}"/usr/lib/tmpfiles.d/sshd.conf
 	install -Dm644 ../sshd.pam "${pkgdir}"/etc/pam.d/sshd
 
 	install -Dm755 contrib/findssl.sh "${pkgdir}"/usr/bin/findssl.sh
