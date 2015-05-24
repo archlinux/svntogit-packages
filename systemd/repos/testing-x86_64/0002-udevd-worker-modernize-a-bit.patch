@@ -1,0 +1,58 @@
+From 2dd9f98d2d7a06a8e28729da6339fce50d66e9cc Mon Sep 17 00:00:00 2001
+From: Tom Gundersen <teg@jklm.no>
+Date: Sun, 24 May 2015 15:14:43 +0200
+Subject: [PATCH 2/3] udevd: worker - modernize a bit
+
+Initialize structs when declaring rather than using memzero().
+---
+ src/udev/udevd.c | 18 +++++++-----------
+ 1 file changed, 7 insertions(+), 11 deletions(-)
+
+diff --git a/src/udev/udevd.c b/src/udev/udevd.c
+index d8cb046..4a44b03 100644
+--- a/src/udev/udevd.c
++++ b/src/udev/udevd.c
+@@ -316,10 +316,11 @@ static void worker_spawn(Manager *manager, struct event *event) {
+         switch (pid) {
+         case 0: {
+                 struct udev_device *dev = NULL;
++                _cleanup_rtnl_unref_ sd_rtnl *rtnl = NULL;
+                 int fd_monitor;
+                 _cleanup_close_ int fd_signal = -1, fd_ep = -1;
+-                _cleanup_rtnl_unref_ sd_rtnl *rtnl = NULL;
+-                struct epoll_event ep_signal, ep_monitor;
++                struct epoll_event ep_signal = { .events = EPOLLIN };
++                struct epoll_event ep_monitor = { .events = EPOLLIN };
+                 sigset_t mask;
+                 int r = 0;
+ 
+@@ -345,6 +346,10 @@ static void worker_spawn(Manager *manager, struct event *event) {
+                         r = log_error_errno(errno, "error creating signalfd %m");
+                         goto out;
+                 }
++                ep_signal.data.fd = fd_signal;
++
++                fd_monitor = udev_monitor_get_fd(worker_monitor);
++                ep_monitor.data.fd = fd_monitor;
+ 
+                 fd_ep = epoll_create1(EPOLL_CLOEXEC);
+                 if (fd_ep < 0) {
+@@ -352,15 +357,6 @@ static void worker_spawn(Manager *manager, struct event *event) {
+                         goto out;
+                 }
+ 
+-                memzero(&ep_signal, sizeof(struct epoll_event));
+-                ep_signal.events = EPOLLIN;
+-                ep_signal.data.fd = fd_signal;
+-
+-                fd_monitor = udev_monitor_get_fd(worker_monitor);
+-                memzero(&ep_monitor, sizeof(struct epoll_event));
+-                ep_monitor.events = EPOLLIN;
+-                ep_monitor.data.fd = fd_monitor;
+-
+                 if (epoll_ctl(fd_ep, EPOLL_CTL_ADD, fd_signal, &ep_signal) < 0 ||
+                     epoll_ctl(fd_ep, EPOLL_CTL_ADD, fd_monitor, &ep_monitor) < 0) {
+                         r = log_error_errno(errno, "fail to add fds to epoll: %m");
+-- 
+2.4.1
+
