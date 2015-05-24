@@ -1,0 +1,34 @@
+From 6d1b1e0bc6bd020218afc5f05286bf372be283d5 Mon Sep 17 00:00:00 2001
+From: Tom Gundersen <teg@jklm.no>
+Date: Sun, 24 May 2015 15:10:04 +0200
+Subject: [PATCH 1/3] udevd: worker - fully clean up unnecessary fds
+
+These are only ever used in the parent process, so close them early in the worker.
+---
+ src/udev/udevd.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/udev/udevd.c b/src/udev/udevd.c
+index afd4640..d8cb046 100644
+--- a/src/udev/udevd.c
++++ b/src/udev/udevd.c
+@@ -329,11 +329,15 @@ static void worker_spawn(Manager *manager, struct event *event) {
+ 
+                 manager_workers_free(manager);
+                 event_queue_cleanup(manager, EVENT_UNDEF);
++
+                 manager->monitor = udev_monitor_unref(manager->monitor);
++                manager->ctrl_conn_blocking = udev_ctrl_connection_unref(manager->ctrl_conn_blocking);
+                 manager->ctrl = udev_ctrl_unref(manager->ctrl);
++
++                manager->fd_ep = safe_close(manager->fd_ep);
+                 manager->fd_signal = safe_close(manager->fd_signal);
++                manager->fd_inotify = safe_close(manager->fd_inotify);
+                 manager->worker_watch[READ_END] = safe_close(manager->worker_watch[READ_END]);
+-                manager->fd_ep = safe_close(manager->fd_ep);
+ 
+                 sigfillset(&mask);
+                 fd_signal = signalfd(-1, &mask, SFD_NONBLOCK|SFD_CLOEXEC);
+-- 
+2.4.1
+
