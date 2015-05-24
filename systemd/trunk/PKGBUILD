@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=219
-pkgrel=6
+pkgver=220
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -16,41 +16,26 @@ source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
-        '0001-tmpfiles-avoid-creating-duplicate-acl-entries.patch'
-        '0001-nspawn-when-connected-to-pipes-for-stdin-stdout-pass.patch'
-        '0001-core-shared-in-deserializing-match-same-files-reache.patch'
-        '0001-tmpfiles-Fix-handling-of-duplicate-lines.patch'
-        '0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch'
-        '0001-use-x-machine-unix-prefix-for-the-container-bus-on-dbus1.patch'
-        '0001-unit-use-weaker-dependencies-between-mount-and-devic.patch'
-        '0001-core-rework-device-state-logic.patch'
-        '0001-core-don-t-change-removed-devices-to-state-tentative.patch')
-md5sums=('e0d6c9a4b4f69f66932d2230298c9a34'
+        '0001-udevd-worker-fully-clean-up-unnecessary-fds.patch'
+        '0002-udevd-worker-modernize-a-bit.patch'
+        '0003-udevd-event-fix-event-queue-in-daemenozied-mode.patch')
+md5sums=('60acd92b04c0f5faa806678abd433014'
          '90ea67a7bb237502094914622a39e281'
-         '58af51bd4c0464f195b3433b4e17cf6c'
+         '8516a7bd65157d0115c113118c10c3f3'
          'bde43090d4ac0ef048e3eaee8202a407'
-         '7cdefc73bf61934c353e4450e280e551'
-         'cb8550749cd52b5902ed6fdf0eb465ec'
-         '9d46aebfc04cc849fd4295f449b239a2'
-         'c4c9c0f0a06314450563ed571962881e'
-         '6b9d611dffd92c94641360c3ef2659c1'
-         '3a0fc672b34ced18ca1364edf8644165'
-         'cd2719e8e93ad662c00bf9f195fdce66'
-         '12e01f00c91e54680098a799517698f2'
-         'd0aa4e5ec598063eab2e79fb95bceece')
+         '498cf4130f8ae5d0d8262baf49d79459'
+         '9549dd7a683be0e6ac798f3caa433458'
+         'fee8074218b71bf5e4195d5c15bba61a')
 
 prepare() {
   cd "$pkgname-$pkgver"
 
-  patch -Np1 <../0001-tmpfiles-avoid-creating-duplicate-acl-entries.patch
-  patch -Np1 <../0001-nspawn-when-connected-to-pipes-for-stdin-stdout-pass.patch
-  patch -Np1 <../0001-core-shared-in-deserializing-match-same-files-reache.patch
-  patch -Np1 <../0001-tmpfiles-Fix-handling-of-duplicate-lines.patch
-  patch -Np1 <../0001-core-do-not-spawn-jobs-or-touch-other-units-during-c.patch
-  patch -Np1 <../0001-use-x-machine-unix-prefix-for-the-container-bus-on-dbus1.patch
-  patch -Np1 <../0001-unit-use-weaker-dependencies-between-mount-and-devic.patch
-  patch -Np1 <../0001-core-rework-device-state-logic.patch
-  patch -Np1 <../0001-core-don-t-change-removed-devices-to-state-tentative.patch
+  rm -f src/journal/audit_type-to-name.h src/udev/keyboard-keys-from-name.gperf
+
+  patch -Np1 < ../0001-udevd-worker-fully-clean-up-unnecessary-fds.patch
+  patch -Np1 < ../0002-udevd-worker-modernize-a-bit.patch
+  patch -Np1 < ../0003-udevd-event-fix-event-queue-in-daemenozied-mode.patch
+
 }
 
 build() {
@@ -78,7 +63,7 @@ build() {
 
 package_systemd() {
   pkgdesc="system and service manager"
-  license=('GPL2' 'LGPL2.1' 'MIT')
+  license=('GPL2' 'LGPL2.1')
   depends=('acl' 'bash' 'dbus' 'glib2' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
            'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp' 'util-linux'
            'xz')
@@ -162,10 +147,6 @@ package_systemd() {
   install -dm755 "$srcdir"/_libsystemd/usr/lib
   cd "$srcdir"/_libsystemd
   mv "$pkgdir"/usr/lib/lib{systemd,{g,}udev}*.so* usr/lib
-
-  # include MIT license, since it's technically custom
-  install -Dm644 "$srcdir/$pkgname-$pkgver/LICENSE.MIT" \
-      "$pkgdir/usr/share/licenses/systemd/LICENSE.MIT"
 }
 
 package_libsystemd() {
