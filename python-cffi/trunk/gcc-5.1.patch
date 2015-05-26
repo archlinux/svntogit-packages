@@ -1,0 +1,55 @@
+# HG changeset patch
+# User Armin Rigo <arigo@tunes.org>
+# Date 1432628446 -7200
+# Node ID 588e46d0032954479cb62db1784d554c0b4d6107
+# Parent  4e69fd3efc25128d62eef5eea8a52fbfea166ebf
+Silence some warnings with gcc 5.1: if T is a type smaller than 'int',
+then the C expression "condition ? (T)x : (T)y" is typed not as a T, but
+as a larger 'int' --- which means there was an implicit cast from the
+final 'int' to the T-typed target of the assignment whenever this macro
+was used.
+
+diff --git a/cffi/_cffi_include.h b/cffi/_cffi_include.h
+--- a/cffi/_cffi_include.h
++++ b/cffi/_cffi_include.h
+@@ -82,7 +82,8 @@
+             PyLong_FromLongLong((long long)x)))
+ 
+ #define _cffi_to_c_int(o, type)                                          \
+-    (sizeof(type) == 1 ? (((type)-1) > 0 ? (type)_cffi_to_c_u8(o)        \
++    ((type)(                                                             \
++     sizeof(type) == 1 ? (((type)-1) > 0 ? (type)_cffi_to_c_u8(o)        \
+                                          : (type)_cffi_to_c_i8(o)) :     \
+      sizeof(type) == 2 ? (((type)-1) > 0 ? (type)_cffi_to_c_u16(o)       \
+                                          : (type)_cffi_to_c_i16(o)) :    \
+@@ -90,7 +91,7 @@
+                                          : (type)_cffi_to_c_i32(o)) :    \
+      sizeof(type) == 8 ? (((type)-1) > 0 ? (type)_cffi_to_c_u64(o)       \
+                                          : (type)_cffi_to_c_i64(o)) :    \
+-     (Py_FatalError("unsupported size for type " #type), (type)0))
++     (Py_FatalError("unsupported size for type " #type), (type)0)))
+ 
+ #define _cffi_to_c_i8                                                    \
+                  ((int(*)(PyObject *))_cffi_exports[1])
+diff --git a/cffi/vengine_cpy.py b/cffi/vengine_cpy.py
+--- a/cffi/vengine_cpy.py
++++ b/cffi/vengine_cpy.py
+@@ -886,7 +886,8 @@
+             PyLong_FromLongLong((long long)x)))
+ 
+ #define _cffi_to_c_int(o, type)                                          \
+-    (sizeof(type) == 1 ? (((type)-1) > 0 ? (type)_cffi_to_c_u8(o)        \
++    ((type)(                                                             \
++     sizeof(type) == 1 ? (((type)-1) > 0 ? (type)_cffi_to_c_u8(o)        \
+                                          : (type)_cffi_to_c_i8(o)) :     \
+      sizeof(type) == 2 ? (((type)-1) > 0 ? (type)_cffi_to_c_u16(o)       \
+                                          : (type)_cffi_to_c_i16(o)) :    \
+@@ -894,7 +895,7 @@
+                                          : (type)_cffi_to_c_i32(o)) :    \
+      sizeof(type) == 8 ? (((type)-1) > 0 ? (type)_cffi_to_c_u64(o)       \
+                                          : (type)_cffi_to_c_i64(o)) :    \
+-     (Py_FatalError("unsupported size for type " #type), (type)0))
++     (Py_FatalError("unsupported size for type " #type), (type)0)))
+ 
+ #define _cffi_to_c_i8                                                    \
+                  ((int(*)(PyObject *))_cffi_exports[1])
