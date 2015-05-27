@@ -4,42 +4,39 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=220
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'gtk-doc' 'intltool' 'iptables' 'kmod' 'libcap' 'libidn' 'libgcrypt'
              'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers' 'lz4' 'pam'
-             'python' 'python-lxml' 'quota-tools' 'shadow' 'xz')
+             'python' 'python-lxml' 'quota-tools' 'shadow' 'xz' 'gnu-efi-libs' 'git')
 options=('strip' 'debug')
-source=("http://www.freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz"
+source=("git://anongit.freedesktop.org/systemd/systemd#tag=v$pkgver"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev'
-        '0001-udevd-worker-fully-clean-up-unnecessary-fds.patch'
-        '0002-udevd-worker-modernize-a-bit.patch'
-        '0003-udevd-event-fix-event-queue-in-daemenozied-mode.patch')
-md5sums=('60acd92b04c0f5faa806678abd433014'
+        'initcpio-install-udev')
+md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
          '8516a7bd65157d0115c113118c10c3f3'
-         'bde43090d4ac0ef048e3eaee8202a407'
-         '498cf4130f8ae5d0d8262baf49d79459'
-         '9549dd7a683be0e6ac798f3caa433458'
-         'fee8074218b71bf5e4195d5c15bba61a')
+         'bde43090d4ac0ef048e3eaee8202a407')
 
 prepare() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
 
-  rm -f src/journal/audit_type-to-name.h src/udev/keyboard-keys-from-name.gperf
+  # udevd: event - fix event queue in daemenozied mode
+  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=040e689654ef
+  git cherry-pick -n 040e689654ef
 
-  patch -Np1 < ../0001-udevd-worker-fully-clean-up-unnecessary-fds.patch
-  patch -Np1 < ../0002-udevd-worker-modernize-a-bit.patch
-  patch -Np1 < ../0003-udevd-event-fix-event-queue-in-daemenozied-mode.patch
+  # udevd: fix SIGCHLD handling in --daemon mode
+  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=86c3bece38bc
+  git cherry-pick -n 86c3bece38bc
 
+  ./autogen.sh
 }
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
 
   local timeservers=({0..3}.arch.pool.ntp.org)
 
@@ -51,6 +48,7 @@ build() {
       --enable-gtk-doc \
       --enable-lz4 \
       --enable-compat-libs \
+      --enable-gnuefi \
       --disable-audit \
       --disable-ima \
       --disable-kdbus \
@@ -98,7 +96,7 @@ package_systemd() {
           etc/udev/udev.conf)
   install="systemd.install"
 
-  make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
+  make -C "$pkgname" DESTDIR="$pkgdir" install
 
   # don't write units to /etc by default. some of these will be re-enabled on
   # post_install.
@@ -108,7 +106,7 @@ package_systemd() {
   rm -r "$pkgdir/usr/lib/rpm"
 
   # add back tmpfiles.d/legacy.conf
-  install -m644 "systemd-$pkgver/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
+  install -m644 "$pkgname/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
 
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
