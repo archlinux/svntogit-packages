@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=220
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -15,11 +15,17 @@ options=('strip' 'debug')
 source=("git://anongit.freedesktop.org/systemd/systemd#tag=v$pkgver"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
-        'initcpio-install-udev')
+        'initcpio-install-udev'
+        'arch.conf'
+        'loader.conf'
+        'splash-arch.bmp')
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
          '8516a7bd65157d0115c113118c10c3f3'
-         'bde43090d4ac0ef048e3eaee8202a407')
+         'bde43090d4ac0ef048e3eaee8202a407'
+         '82bda9612e3a361a74cf8de2a0134b15'
+         '6ea803e5179d623716e3be0b636de658'
+         '1e2f9a8b0fa32022bf0a8f39123e5f4e')
 
 prepare() {
   cd "$pkgname"
@@ -145,6 +151,11 @@ package_systemd() {
   install -dm755 "$srcdir"/_libsystemd/usr/lib
   cd "$srcdir"/_libsystemd
   mv "$pkgdir"/usr/lib/lib{systemd,{g,}udev}*.so* usr/lib
+
+  # add example bootctl configuration
+  install -Dm644 "$srcdir/arch.conf" "$pkgdir"/usr/share/systemd/bootctl/arch.conf
+  install -Dm644 "$srcdir/loader.conf" "$pkgdir"/usr/share/systemd/bootctl/loader.conf
+  install -Dm644 "$srcdir/splash-arch.bmp" "$pkgdir"/usr/share/systemd/bootctl/splash-arch.bmp
 }
 
 package_libsystemd() {
