@@ -6,6 +6,7 @@
 #   pulse
 #   add policytool desktop files
 
+# Package 'openjfx' must be updated when this one is
 pkgname=('jre8-openjdk-headless' 'jre8-openjdk' 'jdk8-openjdk' 'openjdk8-src' 'openjdk8-doc')
 pkgbase=java8-openjdk
 _java_ver=8
@@ -185,7 +186,8 @@ package_jre8-openjdk() {
   depends=("jre8-openjdk-headless=${pkgver}-${pkgrel}" 'xdg-utils' 'hicolor-icon-theme')
   optdepends=('icedtea-web: web browser plugin + Java Web Start'
               'alsa-lib: for basic sound support'
-              'gtk2: for the Gtk+ look and feel - desktop usage')
+              'gtk2: for the Gtk+ look and feel - desktop usage'
+              'java-openjfx: for JavaFX GUI components support')
   # TODO when adding IcedTea: 'giflib: for gif format support'
   # TODO when adding IcedTea: 'libpulse: for advanced sound support'
   provides=('java-runtime=8' 'java-runtime-openjdk=8')
