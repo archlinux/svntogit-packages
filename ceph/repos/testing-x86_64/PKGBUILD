@@ -1,0 +1,83 @@
+# $Id$
+# Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
+
+pkgname=ceph
+pkgver=0.94.1
+pkgrel=1
+pkgdesc='Distributed, fault-tolerant storage platform delivering object, block, and file system'
+arch=('x86_64' 'i686')
+url='http://ceph.com/'
+license=('GPL')
+makedepends=('boost' 'systemd' 'xfsprogs')
+depends=('boost-libs'
+         'curl'
+         'expat'
+         'fcgi'
+         'fuse'
+         'gcc-libs'
+         'glibc'
+         'gperftools'
+         'keyutils'
+         'leveldb'
+         'libaio'
+         'libatomic_ops'
+         'libedit'
+         'libsystemd'
+         'libutil-linux'
+         'ncurses'
+         'nss'
+         'python2'
+         'snappy')
+optdepends=('xfsprogs: support xfs backend')
+options=('emptydirs')
+source=("http://ceph.com/download/$pkgname-$pkgver.tar.bz2"
+        'ceph-osd@.service'
+        'ceph-mon@.service'
+        'ceph-mds@.service'
+        '01-boost-158.patch')
+md5sums=('e4a625aa2c91fe5d3f0c62faa4716ca2'
+         '9104b5b90349d2aa7802eb89158456e8'
+         '63a584aa2a4e2b0efbee4e8fd32593f0'
+         'd2411c41208d95743baa6d899cc1e0b0'
+         '99ddd5aee25664de55055ed1bd78941d')
+
+prepare() {
+  patch -p1 -d $pkgname-$pkgver < 01-boost-158.patch
+  # fix python2 shebang
+  find $pkgname-$pkgver -type f -exec \
+    sed -i '1s,^#! \?/usr/bin/\(env \|\)python$,#!/usr/bin/python2,' {} \;
+  # substitue buggy shebang in src/Makefile.in
+  sed -i 's,"#!/usr/bin/env python","#!/usr/bin/python2",' \
+    $pkgname-$pkgver/src/Makefile.in
+}
+
+build() {
+  cd $pkgname-$pkgver
+  export PYTHON=/usr/bin/python2
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --libexecdir=/usr/lib \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --with-radosgw
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+  cd "$pkgdir"
+
+  # systemd
+  install -dm755 usr/lib/{systemd/system,udev/rules.d}
+  install -Dm644 "$srcdir"/ceph-{osd,mon,mds}@.service usr/lib/systemd/system
+  install -Dm644 "$srcdir"/$pkgname-$pkgver/udev/* usr/lib/udev/rules.d
+
+  # fix directories path
+  mv sbin/* usr/bin
+  mv etc/bash_completion.d usr/share/bash-completion
+  rmdir sbin
+}
+
+# vim:set ts=2 sw=2 et:
