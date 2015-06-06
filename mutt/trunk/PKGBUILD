@@ -17,14 +17,21 @@ source=("ftp://ftp.mutt.org/mutt/${pkgname}-${pkgver}.tar.gz"
 sha1sums=('8ac821d8b1e25504a31bf5fda9c08d93a4acc862'
           '776e3e00fcf8a325e7b9c2bb456d3e9ba2c82307')
 
-prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	patch -p1 -i ../cve-2014-9116.patch
-}
+makedepends=('mercurial')
+source=('hg+http://dev.mutt.org/hg/mutt#revision=0255b37be491bf11347c91d2197a4d9031423010')
+sha1sums=('SKIP')
+pkgver=1.5.23.hg.20150606
+
+#prepare() {
+#	cd "${srcdir}/${pkgname}-${pkgver}"
+#	patch -p1 -i ../cve-2014-9116.patch
+#}
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	./configure \
+#	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgname}"
+#	./configure \
+	./prepare \
 		--prefix=/usr \
 		--sysconfdir=/etc \
 		--enable-gpgme \
@@ -43,7 +50,8 @@ build() {
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+#	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgname}"
 	make DESTDIR="${pkgdir}" install
 
 	rm "${pkgdir}"/etc/mime.types{,.dist}
