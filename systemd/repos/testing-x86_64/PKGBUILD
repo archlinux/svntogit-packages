@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=220
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -12,7 +12,7 @@ makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
              'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers' 'lz4' 'pam'
              'python' 'python-lxml' 'quota-tools' 'shadow' 'xz' 'gnu-efi-libs' 'git')
 options=('strip' 'debug')
-source=("git://anongit.freedesktop.org/systemd/systemd#tag=v$pkgver"
+source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
@@ -23,20 +23,24 @@ md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
          '8516a7bd65157d0115c113118c10c3f3'
          'bde43090d4ac0ef048e3eaee8202a407'
-         '82bda9612e3a361a74cf8de2a0134b15'
-         '6ea803e5179d623716e3be0b636de658'
+         '20ead378f5d6df4b2a3e670301510a7d'
+         'ddaef54f68f6c86c6c07835fc668f62a'
          '1e2f9a8b0fa32022bf0a8f39123e5f4e')
 
 prepare() {
   cd "$pkgname"
 
   # udevd: event - fix event queue in daemenozied mode
-  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=040e689654ef
+  # https://github.com/systemd/systemd/commit/040e689654ef
   git cherry-pick -n 040e689654ef
 
   # udevd: fix SIGCHLD handling in --daemon mode
-  # http://cgit.freedesktop.org/systemd/systemd/commit/?id=86c3bece38bc
+  # https://github.com/systemd/systemd/commit/86c3bece38bc
   git cherry-pick -n 86c3bece38bc
+
+  # libudev: enumerate - accept NULL parameters in add_match()
+  # https://github.com/systemd/systemd/commit/54f0b4d9a3e3
+  git cherry-pick -n 54f0b4d9a3e3
 
   ./autogen.sh
 }
