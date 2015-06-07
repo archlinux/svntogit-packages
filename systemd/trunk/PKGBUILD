@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=220
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
@@ -41,6 +41,10 @@ prepare() {
   # libudev: enumerate - accept NULL parameters in add_match()
   # https://github.com/systemd/systemd/commit/54f0b4d9a3e3
   git cherry-pick -n 54f0b4d9a3e3
+
+  # core/namespace: Protect /usr instead of /home with ProtectSystem=yes
+  # https://github.com/systemd/systemd/commit/d38e01dc96c5
+  git cherry-pick -n d38e01dc96c5
 
   ./autogen.sh
 }
