@@ -7,14 +7,14 @@
 
 pkgname=mpd
 pkgver=0.19.9
-pkgrel=4
+pkgrel=5
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
 arch=('i686' 'x86_64')
 depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl' 'faad2'
          'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl' 'libmpdclient'
-         'icu' 'libupnp' 'libnfs' 'libsamplerate' 'libsoxr')
+         'icu' 'libupnp' 'libnfs' 'libsamplerate' 'libsoxr' 'smbclient')
 makedepends=('boost' 'doxygen')
 validpgpkeys=('0392335A78083894A4301C43236E8A58C6DB4512')
 source=("http://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
