@@ -11,6 +11,7 @@ pkgname=('php'
          'php-pear'
          'php-enchant'
          'php-gd'
+         'php-imap'
          'php-intl'
          'php-ldap'
          'php-mcrypt'
@@ -22,20 +23,21 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=5.6.9
-pkgrel=2
+pkgver=5.6.10
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('PHP')
 url='http://www.php.net'
-makedepends=('apache' 'imap' 'postgresql-libs' 'libldap' 'postfix'
+makedepends=('apache' 'c-client' 'postgresql-libs' 'libldap' 'postfix'
              'sqlite' 'unixodbc' 'net-snmp' 'libzip' 'enchant' 'file' 'freetds'
              'libmcrypt' 'tidyhtml' 'aspell' 'libltdl' 'gd' 'icu'
              'curl' 'libxslt' 'openssl' 'db' 'gmp' 'systemd')
+checkdepends=('procps-ng')
 source=("http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.xz"
         "http://www.php.net/distributions/${pkgbase}-${pkgver}.tar.xz.asc"
         'php.ini.patch' 'apache.conf' 'php-fpm.conf.in.patch'
         'logrotate.d.php-fpm' 'php-fpm.service' 'php-fpm.tmpfiles')
-md5sums=('f6b90cd0503310c38e9573bae1eb38c7'
+md5sums=('4631ef265253d2f496b3574d297f26ed'
          'SKIP'
          '942f9d8af9bcab2487ca710ef42ef1de'
          'dec2cbaad64e3abf4f0ec70e1de4e8e9'
@@ -104,6 +106,7 @@ build() {
 		--with-icu-dir=/usr \
 		--with-imap-ssl \
 		--with-imap=shared \
+		--with-kerberos=/usr \
 		--with-jpeg-dir=/usr \
 		--with-vpx-dir=/usr \
 		--with-ldap=shared \
@@ -213,14 +216,23 @@ build() {
 	make
 }
 
-# check() {
-# 	cd ${srcdir}/build-php
-# 	export SNMP_TIMEOUT=1
-# 	export SNMP_RETRIES=0
-# 	export NO_INTERACTION=1
-# 	make test
-# 	echo
-# }
+check() {
+	# tests on i686 fail
+	[[ $CARCH == 'i686' ]] && return
+
+	cd ${srcdir}/build-php
+
+	export REPORT_EXIT_STATUS=1
+	export NO_INTERACTION=1
+	export SKIP_ONLINE_TESTS=1
+	export SKIP_SLOW_TESTS=1
+
+	sapi/cli/php -n \
+		${srcdir}/${pkgbase}-${pkgver}/run-tests.php -n -P \
+		${srcdir}/${pkgbase}-${pkgver}/{Zend,ext/{date,pcre,spl,standard},sapi/cli}
+
+	echo
+}
 
 package_php() {
 	pkgdesc='An HTML-embedded scripting language'
@@ -237,7 +249,7 @@ package_php() {
 	# remove static modules
 	rm -f ${pkgdir}/usr/lib/php/modules/*.a
 	# remove modules provided by sub packages
-	rm -f ${pkgdir}/usr/lib/php/modules/{enchant,gd,intl,ldap,mcrypt,mssql,odbc,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
+	rm -f ${pkgdir}/usr/lib/php/modules/{enchant,gd,imap,intl,ldap,mcrypt,mssql,odbc,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
 	# remove empty directory
 	rmdir ${pkgdir}/usr/include/php/include
 	# fix broken link
@@ -312,6 +324,13 @@ package_php-gd() {
 	depends=('php' 'gd')
 
 	install -D -m755 ${srcdir}/build-php/modules/gd.so ${pkgdir}/usr/lib/php/modules/gd.so
+}
+
+package_php-imap() {
+	pkgdesc='imap module for PHP'
+	depends=('php' 'c-client')
+
+	install -D -m755 ${srcdir}/build-php/modules/imap.so ${pkgdir}/usr/lib/php/modules/imap.so
 }
 
 package_php-intl() {
