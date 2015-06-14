@@ -1,0 +1,90 @@
+From cccc44ce0c8a251d987d0d83f05e93d31aa659d7 Mon Sep 17 00:00:00 2001
+From: Colin Walters <walters@verbum.org>
+Date: Mon, 3 Jun 2013 17:09:25 -0400
+Subject: [PATCH] pacrunner_mozjs: Also support mozjs-17.0
+
+GNOME 3.10 is moving to hard require mozjs-17.0, so we should support
+it too.  See also:
+
+https://bugs.freedesktop.org/show_bug.cgi?id=59830
+https://bugzilla.gnome.org/show_bug.cgi?id=690982
+---
+ libproxy/cmake/modules/pacrunner_mozjs.cmk |    8 +++++++-
+ libproxy/modules/pacrunner_mozjs.cpp       |   16 +++++++++++++---
+ 2 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/libproxy/cmake/modules/pacrunner_mozjs.cmk b/libproxy/cmake/modules/pacrunner_mozjs.cmk
+index 21072db..49856a6 100644
+--- a/libproxy/cmake/modules/pacrunner_mozjs.cmk
++++ b/libproxy/cmake/modules/pacrunner_mozjs.cmk
+@@ -14,7 +14,13 @@ elseif(NOT APPLE)
+       include_directories(${MOZJS_INCLUDE_DIRS})
+       link_directories(${MOZJS_LIBRARY_DIRS})
+     else()
+-      set(MOZJS_FOUND 0)
++      pkg_search_module(MOZJS mozjs-17.0)
++      if(MOZJS_FOUND)
++        include_directories(${MOZJS_INCLUDE_DIRS})
++        link_directories(${MOZJS_LIBRARY_DIRS})
++      else()
++        set(MOZJS_FOUND 0)
++      endif()
+     endif()
+   else()
+     set(MOZJS_FOUND 0)
+diff --git a/libproxy/modules/pacrunner_mozjs.cpp b/libproxy/modules/pacrunner_mozjs.cpp
+index abb4b9d..f5e678c 100644
+--- a/libproxy/modules/pacrunner_mozjs.cpp
++++ b/libproxy/modules/pacrunner_mozjs.cpp
+@@ -19,6 +19,7 @@
+ 
+ #include <cstring> // ?
+ #include <unistd.h> // gethostname
++#include <stdint.h>
+ 
+ #include "../extension_pacrunner.hpp"
+ using namespace libproxy;
+@@ -76,12 +77,12 @@ static JSBool dnsResolve_(JSContext *cx, jsval hostname, jsval *vp) {
+ 		return true;
+ }
+ 
+-static JSBool dnsResolve(JSContext *cx, uintN /*argc*/, jsval *vp) {
++static JSBool dnsResolve(JSContext *cx, uint32_t /*argc*/, jsval *vp) {
+ 	jsval *argv = JS_ARGV(cx, vp);
+ 	return dnsResolve_(cx, argv[0], vp);
+ }
+ 
+-static JSBool myIpAddress(JSContext *cx, uintN /*argc*/, jsval *vp) {
++static JSBool myIpAddress(JSContext *cx, uint32_t /*argc*/, jsval *vp) {
+ 	char *hostname = (char *) JS_malloc(cx, 1024);
+ 	if (!gethostname(hostname, 1023)) {
+ 		JSString *myhost = JS_NewStringCopyN(cx, hostname, strlen(hostname));
+@@ -98,7 +99,12 @@ static JSBool myIpAddress(JSContext *cx, uintN /*argc*/, jsval *vp) {
+ static JSClass cls = {
+ 		"global", JSCLASS_GLOBAL_FLAGS,
+ 		JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub,
+-		JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub,
++		JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
++#if JS_VERSION == 186      
++		NULL,
++#else
++		JS_FinalizeStub,
++#endif
+ 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+ };
+ 
+@@ -117,7 +123,11 @@ public:
+ 	    //JS_SetOptions(this->jsctx, JSOPTION_VAROBJFIX);
+ 	    //JS_SetVersion(this->jsctx, JSVERSION_LATEST);
+ 	    //JS_SetErrorReporter(cx, reportError);
++#if JS_VERSION == 186
++		if (!(this->jsglb = JS_NewGlobalObject(this->jsctx, &cls, NULL))) goto error;
++#else
+ 		if (!(this->jsglb = JS_NewCompartmentAndGlobalObject(this->jsctx, &cls, NULL))) goto error;
++#endif
+ 		if (!JS_InitStandardClasses(this->jsctx, this->jsglb))            goto error;
+ 
+ 		// Define Javascript functions
+-- 
+1.7.1
+
