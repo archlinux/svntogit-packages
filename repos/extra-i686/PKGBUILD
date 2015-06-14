@@ -7,7 +7,7 @@
 
 pkgname=mpd
 pkgver=0.19.9
-pkgrel=5
+pkgrel=6
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='http://www.musicpd.org/'
 license=('GPL')
@@ -47,7 +47,7 @@ package() {
 	make DESTDIR="${pkgdir}" install
 	install -Dm644 ../conf "${pkgdir}"/etc/mpd.conf
 	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
-	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd/playlists
+	install -d -g 45 -o 45 "${pkgdir}"/var/lib/mpd{,/playlists}
 
 	install -Dm644 "${pkgdir}"/usr/lib/systemd/{system,user}/mpd.service
 	sed '/\[Service\]/a User=mpd' -i "${pkgdir}"/usr/lib/systemd/system/mpd.service
