@@ -4,8 +4,8 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=dnsmasq
-pkgver=2.72
-pkgrel=2
+pkgver=2.73
+pkgrel=1
 pkgdesc="Lightweight, easy to configure DNS forwarder and DHCP server"
 url="http://www.thekelleys.org.uk/dnsmasq/doc.html"
 arch=('i686' 'x86_64')
@@ -13,10 +13,14 @@ license=('GPL')
 depends=('glibc' 'libdbus' 'gmp' 'nettle')
 install=$pkgname.install
 backup=('etc/dnsmasq.conf')
-source=("http://www.thekelleys.org.uk/$pkgname/$pkgname-$pkgver.tar.xz"
+source=("http://www.thekelleys.org.uk/$pkgname/$pkgname-$pkgver.tar.xz"{,.asc}
         'dnsmasq.service')
-md5sums=('0256e0a71e27c8d8a5c89a0d18f3cfe2'
+md5sums=('b8bfe96d22945c8cf4466826ba9b21bd'
+         'SKIP'
          'b87f68013c3e8b4bb37117de968d4603')
+validpgpkeys=('269322E7D9255916E0394DD628FC869A289B82B7')  # Simon Kelley
+
+build_copts="-DHAVE_DNSSEC -DHAVE_DBUS"
 
 build() {
   cd "$pkgname-$pkgver"
@@ -24,13 +28,16 @@ build() {
   make \
     CFLAGS="$CPPFLAGS $CFLAGS" \
     LDFLAGS="$LDFLAGS" \
-    COPTS="-DHAVE_DNSSEC -DHAVE_DBUS"
+    COPTS="$build_copts"
 }
 
 package() {
   cd "$pkgname-$pkgver"
 
-  make BINDIR=/usr/bin PREFIX=/usr DESTDIR="$pkgdir" install
+  # need to pass COPTS here to avoid rebuilding the binary.
+  make \
+    COPTS="$build_copts" \
+    BINDIR=/usr/bin PREFIX=/usr DESTDIR="$pkgdir" install
 
   install -Dm644 "dbus/dnsmasq.conf" "$pkgdir"/etc/dbus-1/system.d/dnsmasq.conf
   install -Dm644 "dnsmasq.conf.example" "$pkgdir"/etc/dnsmasq.conf
