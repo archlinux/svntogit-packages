@@ -3,14 +3,14 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=220
-pkgrel=5
+pkgver=221
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
-makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gobject-introspection' 'gperf'
-             'gtk-doc' 'intltool' 'iptables' 'kmod' 'libcap' 'libidn' 'libgcrypt'
-             'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers' 'lz4' 'pam'
-             'python' 'python-lxml' 'quota-tools' 'shadow' 'xz' 'gnu-efi-libs' 'git')
+makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam'
+             'intltool' 'iptables' 'kmod' 'libcap' 'libidn' 'libgcrypt'
+             'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers'
+             'python' 'python-lxml' 'quota-tools' 'shadow' 'gnu-efi-libs' 'git')
 options=('strip' 'debug')
 source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'initcpio-hook-udev'
@@ -30,21 +30,7 @@ md5sums=('SKIP'
 prepare() {
   cd "$pkgname"
 
-  # udevd: event - fix event queue in daemenozied mode
-  # https://github.com/systemd/systemd/commit/040e689654ef
-  git cherry-pick -n 040e689654ef
-
-  # udevd: fix SIGCHLD handling in --daemon mode
-  # https://github.com/systemd/systemd/commit/86c3bece38bc
-  git cherry-pick -n 86c3bece38bc
-
-  # libudev: enumerate - accept NULL parameters in add_match()
-  # https://github.com/systemd/systemd/commit/54f0b4d9a3e3
-  git cherry-pick -n 54f0b4d9a3e3
-
-  # core/namespace: Protect /usr instead of /home with ProtectSystem=yes
-  # https://github.com/systemd/systemd/commit/d38e01dc96c5
-  git cherry-pick -n d38e01dc96c5
+  # 'git cherry-pick -n' upstream fixes here
 
   ./autogen.sh
 }
@@ -58,8 +44,6 @@ build() {
       --libexecdir=/usr/lib \
       --localstatedir=/var \
       --sysconfdir=/etc \
-      --enable-introspection \
-      --enable-gtk-doc \
       --enable-lz4 \
       --enable-compat-libs \
       --enable-gnuefi \
@@ -158,7 +142,7 @@ package_systemd() {
   rm -rf "$srcdir/_libsystemd"
   install -dm755 "$srcdir"/_libsystemd/usr/lib
   cd "$srcdir"/_libsystemd
-  mv "$pkgdir"/usr/lib/lib{systemd,{g,}udev}*.so* usr/lib
+  mv "$pkgdir"/usr/lib/lib{systemd,udev}*.so* usr/lib
 
   # add example bootctl configuration
   install -Dm644 "$srcdir/arch.conf" "$pkgdir"/usr/share/systemd/bootctl/arch.conf
@@ -170,7 +154,7 @@ package_libsystemd() {
   pkgdesc="systemd client libraries"
   depends=('glib2' 'glibc' 'libgcrypt' 'lz4' 'xz')
   license=('GPL2')
-  provides=('libgudev-1.0.so' 'libsystemd.so' 'libsystemd-daemon.so' 'libsystemd-id128.so'
+  provides=('libsystemd.so' 'libsystemd-daemon.so' 'libsystemd-id128.so'
             'libsystemd-journal.so' 'libsystemd-login.so' 'libudev.so')
 
   mv "$srcdir/_libsystemd"/* "$pkgdir"
