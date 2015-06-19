@@ -1,0 +1,84 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Arjan Timmerman <arjan@archlinux.org>
+# Contributor: Wael Nasreddine <gandalf@siemens-mobiles.org>
+# Contributor: Tor Krill <tor@krill.nu>
+# Contributor: Will Rea <sillywilly@gmail.com>
+
+pkgbase=network-manager-applet
+pkgname=(nm-connection-editor network-manager-applet)
+pkgver=1.0.2
+pkgrel=3
+pkgdesc="Applet for managing network connections"
+arch=(i686 x86_64)
+license=(GPL2 LGPL2.1)
+url="http://www.gnome.org/projects/NetworkManager/"
+makedepends=(libnm-glib libsecret gtk3 mobile-broadband-provider-info iso-codes
+             libnotify libmm-glib intltool gobject-introspection libgudev)
+options=('!emptydirs')
+source=(http://ftp.gnome.org/pub/GNOME/sources/$pkgbase/${pkgver::3}/$pkgbase-$pkgver.tar.xz)
+sha256sums=('760af85b43fa5bcf74b96f899a6d4c1d5e9445e5eb63088c49e5164bbf88d9a9')
+
+prepare() {
+  mkdir -p nma/etc/xdg nma/usr/bin \
+    nma/usr/share/{applications,icons/hicolor/22x22/apps,man/man1,nm-applet}
+  cd $pkgbase-$pkgver
+}
+
+build() {
+  cd $pkgbase-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var \
+      --libexecdir=/usr/lib/networkmanager \
+      --disable-static \
+      --disable-maintainer-mode \
+      --disable-migration \
+      --with-modem-manager-1
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgbase-$pkgver
+  make -k check
+}
+
+package_nm-connection-editor() {
+  pkgdesc="NetworkManager GUI connection editor"
+  depends=(libnm-glib libgudev gtk3 mobile-broadband-provider-info iso-codes)
+  provides=("libnm-gtk=$pkgver-$pkgrel")
+  conflicts=(libnm-gtk)
+  replaces=(libnm-gtk)
+  install=nm-connection-editor.install
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+
+### Split network-manager-applet
+  cd ../nma
+  mv "$pkgdir"/etc/xdg/autostart etc/xdg/
+  mv "$pkgdir"/usr/bin/nm-applet usr/bin/
+  mv "$pkgdir"/usr/share/GConf usr/share/
+
+  cd usr/share
+  mv "$pkgdir"/usr/share/applications/nm-applet.desktop applications/
+  mv "$pkgdir"/usr/share/man/man1/nm-applet.1 man/man1/
+  mv "$pkgdir"/usr/share/nm-applet/{{8021x,gsm-unlock,info}.ui,keyring.png} nm-applet/
+  
+  cd icons/hicolor/22x22
+  mv "$pkgdir"/usr/share/icons/hicolor/22x22/apps/nm-{adhoc,mb-roam,wwan-tower}.png apps/
+  mv "$pkgdir"/usr/share/icons/hicolor/22x22/apps/nm-{secure,vpn-active}-lock.png apps/
+  mv "$pkgdir"/usr/share/icons/hicolor/22x22/apps/nm-{signal,tech}-*.png apps/
+  mv "$pkgdir"/usr/share/icons/hicolor/22x22/apps/nm-*connecting*.png apps/
+}
+
+package_network-manager-applet() {
+  depends=(nm-connection-editor libmm-glib libnotify libsecret)
+  install=network-manager-applet.install
+
+  mv nma/* "$pkgdir"
+}
