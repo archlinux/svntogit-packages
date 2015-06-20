@@ -49,7 +49,6 @@ build() {
       --enable-gnuefi \
       --disable-audit \
       --disable-ima \
-      --disable-kdbus \
       --with-sysvinit-path= \
       --with-sysvrcnd-path= \
       --with-ntp-servers="${timeservers[*]}"
