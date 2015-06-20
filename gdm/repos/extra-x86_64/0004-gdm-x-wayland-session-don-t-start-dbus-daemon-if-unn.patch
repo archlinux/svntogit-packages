@@ -1,0 +1,88 @@
+From a5184cdd92faeba9967afe26d677f1103a9a34c0 Mon Sep 17 00:00:00 2001
+From: David Herrmann <dh.herrmann@gmail.com>
+Date: Wed, 3 Jun 2015 20:07:18 +0200
+Subject: [PATCH 4/4] gdm-{x,wayland}-session: don't start dbus-daemon if
+ unneeded
+
+Desktop sessions require a message bus to be present for IPC between
+the various desktop services and applications.
+
+GDM handles that by manually, unconditionally spawning an instance of
+dbus-daemon at login time before starting the user session (from the
+gdm-x-session and gdm-wayland-session launcher programs).
+
+Newer versions of the kernel will support this message bus functionality
+without needing to start dbus-daemon (via kdbus). The message bus is
+initialized as part of the login process by a kernel interface exercised
+from pam_systemd.
+
+Since gdm-x-session and gdm-wayland-session spawn a dbus-daemon
+unconditionally as part of session startup, users using kdbus end up with
+two message buses per session. The extra bus gets in the way, confusing
+programs and wasting resources.
+
+This commit changes gdm-x-session and gdm-wayland-session to check for
+DBUS_SESSION_BUS_ADDRESS in the environment, and if set, skip spawning
+a dbus-daemon based session bus.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=750358
+---
+ daemon/gdm-wayland-session.c | 8 ++++++++
+ daemon/gdm-x-session.c       | 8 ++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/daemon/gdm-wayland-session.c b/daemon/gdm-wayland-session.c
+index b2f3808..b6eccc2 100644
+--- a/daemon/gdm-wayland-session.c
++++ b/daemon/gdm-wayland-session.c
+@@ -95,6 +95,7 @@ spawn_bus (State        *state,
+         GInputStream        *input_stream = NULL;
+         GDataInputStream    *data_stream = NULL;
+         GError              *error = NULL;
++        const char          *bus_env = NULL;
+         char                *bus_address_fd_string = NULL;
+         char                *bus_address = NULL;
+         gsize                bus_address_size;
+@@ -105,6 +106,13 @@ spawn_bus (State        *state,
+ 
+         g_debug ("Running session message bus");
+ 
++        bus_env = g_getenv ("DBUS_SESSION_BUS_ADDRESS");
++        if (bus_env != NULL) {
++                g_debug ("session message bus already running, not starting another one");
++                state->bus_address = g_strdup (bus_env);
++                return TRUE;
++        }
++
+         ret = g_unix_open_pipe (pipe_fds, FD_CLOEXEC, &error);
+ 
+         if (!ret) {
+diff --git a/daemon/gdm-x-session.c b/daemon/gdm-x-session.c
+index 3cc7d40..bcb884c 100644
+--- a/daemon/gdm-x-session.c
++++ b/daemon/gdm-x-session.c
+@@ -367,6 +367,7 @@ spawn_bus (State        *state,
+         GInputStream        *input_stream = NULL;
+         GDataInputStream    *data_stream = NULL;
+         GError              *error = NULL;
++        const char          *bus_env = NULL;
+         char                *bus_address_fd_string;
+         char                *bus_address = NULL;
+         gsize                bus_address_size;
+@@ -377,6 +378,13 @@ spawn_bus (State        *state,
+ 
+         g_debug ("Running session message bus");
+ 
++        bus_env = g_getenv ("DBUS_SESSION_BUS_ADDRESS");
++        if (bus_env != NULL) {
++                g_debug ("session message bus already running, not starting another one");
++                state->bus_address = g_strdup (bus_env);
++                return TRUE;
++        }
++
+         ret = g_unix_open_pipe (pipe_fds, FD_CLOEXEC, &error);
+ 
+         if (!ret) {
+-- 
+2.4.4
+
