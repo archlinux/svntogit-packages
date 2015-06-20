@@ -1,0 +1,43 @@
+From 45fe287fd83b06ad1260cf91c49be8990b423ae4 Mon Sep 17 00:00:00 2001
+From: Richard Bradfield <bradfirj@fstab.me>
+Date: Sun, 24 May 2015 21:48:01 +0100
+Subject: [PATCH 3/4] manager: fix monitor hotplug segfault
+
+commit e5a0e92f59e256edc6489f2234fbe54c25ba9743 introduced a way to
+find a user session associated with a display object.
+
+That function has a bug in it, where it skips every even
+registered user session because it follows the next pointer
+twice per iteration of the loop.
+
+This can cause a crash on monitor hotplug, and in other scenarios
+if there are an odd number of user sessions (since the
+terminating NULL will be even and skipped over).
+
+https://bugzilla.gnome.org/show_bug.cgi?id=749987
+---
+ daemon/gdm-manager.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/daemon/gdm-manager.c b/daemon/gdm-manager.c
+index 64f11dd..5e496f7 100644
+--- a/daemon/gdm-manager.c
++++ b/daemon/gdm-manager.c
+@@ -1126,11 +1126,10 @@ static GdmSession *
+ get_user_session_for_display (GdmManager *self,
+                               GdmDisplay *display)
+ {
+-        GList *node;
+ 
+-        for (node = self->priv->user_sessions;
+-             node != NULL;
+-             node = node->next) {
++        GList *node = self->priv->user_sessions;
++
++        while (node != NULL) {
+                 GdmSession *session = node->data;
+                 GdmDisplay *candidate_display;
+                 GList *next_node = node->next;
+-- 
+2.4.4
+
