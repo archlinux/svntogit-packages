@@ -28,7 +28,8 @@ source=(jdk8u-${_repo_ver}.tar.gz::${_url_src}/archive/${_repo_ver}.tar.gz
         jaxws-${_repo_ver}.tar.gz::${_url_src}/jaxws/archive/${_repo_ver}.tar.gz
         jaxp-${_repo_ver}.tar.gz::${_url_src}/jaxp/archive/${_repo_ver}.tar.gz
         langtools-${_repo_ver}.tar.gz::${_url_src}/langtools/archive/${_repo_ver}.tar.gz
-        nashorn-${_repo_ver}.tar.gz::${_url_src}/nashorn/archive/${_repo_ver}.tar.gz)
+        nashorn-${_repo_ver}.tar.gz::${_url_src}/nashorn/archive/${_repo_ver}.tar.gz
+        JDK-8074312-hotspot.patch)
 
 sha256sums=('b3567bc0383fedb263cd0b2ba84c8716b0dc4e51cf2828c56cdfd96e2d1aa6b2'
             '6158c421b49b6c197e17e198525998505f4643c4c7a6b92278f8e700e77f99de'
@@ -37,7 +38,8 @@ sha256sums=('b3567bc0383fedb263cd0b2ba84c8716b0dc4e51cf2828c56cdfd96e2d1aa6b2'
             'e6f6233c26335536436de89ebf741df8b142119d8b41abc34c3287dd155a43bb'
             'c5e0f96dd56326598bdd5e29c16ca63f2b12becf0228b6bac6688260c08e5976'
             'eed8556576f39d6028e5ce31560b157cf956ee82367501435c5844fd2ca970b9'
-            'e18987e06e448820daa49e2ea5ef6dee2f497dadba5a2488bb707ba574cf30e9')
+            'e18987e06e448820daa49e2ea5ef6dee2f497dadba5a2488bb707ba574cf30e9'
+            '95fbd155806cac22de9e6df6f4f92ae79530f86d63cea1deaf98e607953e0b50')
 
 case "${CARCH}" in
   'x86_64') _JARCH=amd64 ; _DOC_ARCH=x86_64 ;;
@@ -60,6 +62,10 @@ prepare() {
   do
     ln -s ../${subrepo}-${_repo_ver} ${subrepo}
   done
+
+  # https://bugs.openjdk.java.net/browse/JDK-8074312
+  cd "${srcdir}/hotspot-${_repo_ver}"
+  patch -p1 < ${srcdir}/JDK-8074312-hotspot.patch
 }
 
 build() {
