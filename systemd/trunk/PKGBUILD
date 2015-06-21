@@ -30,7 +30,9 @@ md5sums=('SKIP'
 prepare() {
   cd "$pkgname"
 
-  # 'git cherry-pick -n' upstream fixes here
+  # pam_systemd: Properly check kdbus availability
+  # https://github.com/systemd/systemd/commit/c5d452bb228e
+  git cherry-pick -n c5d452bb228e
 
   ./autogen.sh
 }
