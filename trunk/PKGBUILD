@@ -34,6 +34,10 @@ prepare() {
   # https://github.com/systemd/systemd/commit/c5d452bb228e
   git cherry-pick -n c5d452bb228e
 
+  # udevd: suppress warning if we don't find cgroup
+  # https://github.com/systemd/systemd/commit/11b9fb15be96
+  git cherry-pick -n 11b9fb15be96
+
   ./autogen.sh
 }
 
