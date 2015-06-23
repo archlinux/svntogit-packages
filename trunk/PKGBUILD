@@ -5,14 +5,16 @@
 
 pkgname=akonadi
 pkgver=1.13.0
-pkgrel=4
+pkgrel=5
 pkgdesc="PIM layer, which provides an asynchronous API to access all kind of PIM data"
 arch=('i686' 'x86_64')
 url='http://community.kde.org/KDE_PIM/Akonadi'
 license=('LGPL')
-depends=('shared-mime-info' 'boost-libs' 'mariadb' 'qt4' 'libxslt')
-makedepends=('cmake' 'automoc4' 'boost' 'postgresql')
-optdepends=('postgresql: PostgreSQL backend')
+depends=('shared-mime-info' 'boost-libs' 'qt4' 'libxslt')
+makedepends=('cmake' 'automoc4' 'boost' 'postgresql' 'mariadb')
+checkdepends=('xorg-server-xvfb')
+optdepends=('postgresql: PostgreSQL backend'
+            'mariadb: MariaDB backend')
 install="${pkgname}.install"
 source=("http://download.kde.org/stable/${pkgname}/src/${pkgname}-${pkgver}.tar.bz2")
 md5sums=('84eb2e471bd6bdfe54a2a2f1d858c07d')
@@ -28,9 +30,16 @@ build() {
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DINSTALL_QSQLITE_IN_QT_PREFIX=TRUE \
     -DQT_QMAKE_EXECUTABLE=qmake-qt4 \
-    -DAKONADI_BUILD_TESTS=OFF \
+    -DDATABASE_BACKEND=SQLITE \
     -DWITH_SOPRANO=OFF
   make
+}
+
+check() {
+  # 17 akonadi-dbconfigtest failed as we changed the default backend
+  # 24~30 failed due to qt cannot find the sqldriver which is not installed yet
+  cd build
+  xvfb-run -a dbus-launch --exit-with-session make test || warning "Tests failed"
 }
 
 package() {
