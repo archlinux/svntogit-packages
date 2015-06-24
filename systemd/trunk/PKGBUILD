@@ -21,7 +21,7 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'splash-arch.bmp')
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
-         '8516a7bd65157d0115c113118c10c3f3'
+         '5fde57294d72d2bcfcb531f10ae4d26f'
          'bde43090d4ac0ef048e3eaee8202a407'
          '20ead378f5d6df4b2a3e670301510a7d'
          'ddaef54f68f6c86c6c07835fc668f62a'
