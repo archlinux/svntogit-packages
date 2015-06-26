@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=221
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam'
@@ -37,6 +37,18 @@ prepare() {
   # udevd: suppress warning if we don't find cgroup
   # https://github.com/systemd/systemd/commit/11b9fb15be96
   git cherry-pick -n 11b9fb15be96
+
+  # core: fix reversed dependency check in unit_check_unneeded
+  # https://github.com/systemd/systemd/commit/084918ba41ac
+  git cherry-pick -n 084918ba41ac
+
+  # rules: remove all power management from udev
+  # https://github.com/systemd/systemd/commit/e2452eef02a8
+  git cherry-pick -n e2452eef02a8
+
+  # logind: fix delayed execution regression
+  # https://github.com/systemd/systemd/commit/418b22b88f79
+  git cherry-pick -n 418b22b88f79
 
   ./autogen.sh
 }
