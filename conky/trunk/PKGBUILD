@@ -5,32 +5,41 @@
 # Contributor: Partha Chowdhury <kira.laucas@gmail.com>
 
 pkgname=conky
-pkgver=1.9.0
-pkgrel=7
+pkgver=1.10.0
+pkgrel=1
 pkgdesc='Lightweight system monitor for X'
 url='http://conky.sourceforge.net/'
 license=('BSD' 'GPL')
 arch=('i686' 'x86_64')
-makedepends=('docbook2x')
+makedepends=('cmake' 'docbook2x' 'docbook-xml' 'man-db')
 depends=('glib2' 'curl' 'lua' 'wireless_tools' 'libxml2' 'libxft' 'libxdamage' 'imlib2')
-source=("http://downloads.sourceforge.net/project/${pkgname}/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.gz")
-sha1sums=('a8d26d002370c9b877ae77ad3a3bbd2566b38e5d')
+source=("https://github.com/brndnmtthws/conky/archive/v${pkgver}.tar.gz"
+        'ascii.patch'
+        'lua53.patch')
+sha1sums=('d5863420150150002947180d0ee96c9ef56c43b1'
+          '96cdbc38e8706c8a3120601983df5c7265716128'
+          'a3a74542b6524e5663ad37aaba292b48e8bea3b1')
 
-backup=('etc/conky/'conky{,_no_x11}.conf)
-options=('!emptydirs')
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -p1 -i ../ascii.patch # db2x_manxml fails on non-ascii chars
+	patch -p1 -i ../lua53.patch # lua_gettable returns an int in lua-5.3
+}
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 
-	CPPFLAGS="${CXXFLAGS}" LIBS="${LDFLAGS}" ./configure \
-		--prefix=/usr \
-		--sysconfdir=/etc \
-		--enable-ibm \
-		--enable-curl \
-		--enable-rss \
-		--enable-weather-xoap \
-		--enable-imlib2 \
-		--enable-wlan \
+	cmake \
+		-D CMAKE_BUILD_TYPE=Release \
+		-D MAINTAINER_MODE=ON \
+		-D BUILD_CURL=ON \
+                -D BUILD_IMLIB2=ON \
+		-D BUILD_RSS=ON \
+		-D BUILD_WEATHER_METAR=ON \
+		-D BUILD_WEATHER_XOAP=ON \
+		-D BUILD_WLAN=ON \
+		-D CMAKE_INSTALL_PREFIX=/usr \
+		.
 
 	make
 }
