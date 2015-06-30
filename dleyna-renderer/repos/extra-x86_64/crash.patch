@@ -1,0 +1,32 @@
+From d8ebea65fe69d6df05ee87bdabf30ae8dc313b26 Mon Sep 17 00:00:00 2001
+From: Debarshi Ray <debarshir@freedesktop.org>
+Date: Tue, 20 Jan 2015 11:20:07 +0100
+Subject: [PATCH] Ensure that g_context.watchers has a valid value
+
+Since g_context.watchers is an unsigned integer, we should be careful
+not to decrement it below zero. This can happen if the service is
+spawned as a result of the following command:
+$ gdbus call \
+    --session \
+    --dest com.intel.dleyna-renderer \
+    --object-path /com/intel/dLeynaRenderer \
+    --method com.intel.dLeynaRenderer.Manager.Release
+---
+ libdleyna/renderer/server.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/libdleyna/renderer/server.c b/libdleyna/renderer/server.c
+index 6d5afa6..e15c326 100644
+--- a/libdleyna/renderer/server.c
++++ b/libdleyna/renderer/server.c
+@@ -688,7 +688,9 @@ static void prv_remove_client(const gchar *name)
+ 
+ 	dlr_upnp_lost_client(g_context.upnp, name);
+ 
+-	g_context.watchers--;
++	if (g_context.watchers > 0)
++		g_context.watchers--;
++
+ 	if (g_context.watchers == 0)
+ 		if (!dleyna_settings_is_never_quit(g_context.settings))
+ 			dleyna_task_processor_set_quitting(g_context.processor);
