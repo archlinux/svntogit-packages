@@ -1,0 +1,83 @@
+From 00870c6f44b68582c98cb36e73297f014c269f95 Mon Sep 17 00:00:00 2001
+From: Debarshi Ray <debarshir@freedesktop.org>
+Date: Mon, 19 Jan 2015 19:24:05 +0100
+Subject: [PATCH] Don't crash when trying to unwatch non-existent client
+
+$ gdbus call \
+    --session \
+    --dest com.intel.dleyna-renderer \
+    --object-path /com/intel/dLeynaRenderer \
+    --method com.intel.dLeynaRenderer.Manager.Release
+
+If a service is spawned as a result of the above command, then it will
+lead to a crash with this backtrace:
+
+    (client_name=0x7f7c94009750 ":1.603") at src/connector-dbus.c:271
+    (conn=<optimized out>, sender=0x7f7c94009750 ":1.603",
+    object=<optimized out>, interface=<optimized out>,
+    method=<optimized out>, parameters=<optimized out>,
+    invocation=0x2360e00) at server.c:780
+    at gdbusconnection.c:4884
+    at gmain.c:3111
+    (context=context@entry=0x2342ea0) at gmain.c:3710
+    block=block@entry=1, dispatch=dispatch@entry=1,
+    self=<optimized out>) at gmain.c:3781
+    at gmain.c:3975
+    (server=<optimized out>, control_point=<optimized out>,
+    user_data=0x0) at libdleyna/core/main-loop.c:155
+    argv=<optimized out>) at daemon.c:93
+
+This is because g_hash_table_lookup returns NULL which we try to
+dereference to get the client_id.
+
+Instead of our hand-spun solution for storing unsigned integers in a
+GHashTable, let's use standard GLib mechanisms for doing that. We
+avoid this problem and reduce a g_new/g_free pair as a bonus.
+---
+ src/connector-dbus.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/src/connector-dbus.c b/src/connector-dbus.c
+index 0e16239..83774c0 100644
+--- a/src/connector-dbus.c
++++ b/src/connector-dbus.c
+@@ -173,7 +173,7 @@ static gboolean prv_connector_initialize(const gchar *server_info,
+ 	g_context.objects = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+ 						  g_free, prv_free_dbus_object);
+ 	g_context.clients = g_hash_table_new_full(g_str_hash, g_str_equal,
+-						  g_free, g_free);
++						  g_free, NULL);
+ 
+ 	g_context.root_node_info = g_dbus_node_info_new_for_xml(root_info,
+ 								NULL);
+@@ -268,8 +268,8 @@ static void prv_connector_unwatch_client(const gchar *client_name)
+ 
+ 	DLEYNA_LOG_DEBUG("Enter");
+ 
+-	client_id = *(guint *)g_hash_table_lookup(g_context.clients,
+-						  client_name);
++	client_id = GPOINTER_TO_UINT(g_hash_table_lookup(g_context.clients,
++							 client_name));
+ 	(void) g_hash_table_remove(g_context.clients, client_name);
+ 
+ 	g_bus_unwatch_name(client_id);
+@@ -287,7 +287,6 @@ static void prv_lost_client(GDBusConnection *connection, const gchar *name,
+ static gboolean prv_connector_watch_client(const gchar *client_name)
+ {
+ 	guint watch_id;
+-	guint *client_id;
+ 	gboolean added = TRUE;
+ 
+ 	DLEYNA_LOG_DEBUG("Enter");
+@@ -301,10 +300,8 @@ static gboolean prv_connector_watch_client(const gchar *client_name)
+ 				      G_BUS_NAME_WATCHER_FLAGS_NONE,
+ 				      NULL, prv_lost_client, NULL,
+ 				      NULL);
+-	client_id = g_new(guint, 1);
+-	*client_id = watch_id;
+ 	g_hash_table_insert(g_context.clients, g_strdup(client_name),
+-			    client_id);
++			    GUINT_TO_POINTER(watch_id));
+ 
+ out:
+ 	DLEYNA_LOG_DEBUG("Exit");
