@@ -6,43 +6,86 @@
 # Contributor: Andreas W. Hauser <andy-aur@splashground.de>
 # Contributor: Marco Crosio <marco.crosio@gmail.com>
 
-pkgname=eclipse
-pkgver=4.4.2
+pkgbase=eclipse
+pkgname=(eclipse-{common,java,cpp,php})
+pkgver=4.5.0
 pkgrel=1
-_release=luna-SR2
-pkgdesc="An IDE for Java and other languages"
+_release=mars-R
+pkgdesc="Highly extensible IDE"
 license=("EPL")
-arch=('i686' 'x86_64')
+arch=(i686 x86_64)
 url="http://eclipse.org"
-depends=('java-environment' 'gtk2' 'unzip' 'webkitgtk2' 'libxtst')
-install=eclipse.install
-source=("http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$pkgname-standard-$_release-linux-gtk.tar.gz"
-        "http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$pkgname-standard-$_release-linux-gtk-x86_64.tar.gz"
-        'eclipse.sh' 'eclipse.desktop')
-md5sums=('ceb3bda732e4b5b6ed7004b8571b0542'
-         'eec208c584a2449eb6f69d45a396c6bd'
-         '66757230837fdebabb8ce91eb4fccc80'
-         'ba2cf02c48e6e35bfe3685401c26bb5b')
+makedepends=(ruby)
+source=(commonify eclipse.sh eclipse.desktop)
+source_i686=()
+source_x86_64=()
+noextract=()
 
-if (( ! GENINTEG )); then
-  if [[ $CARCH == x86_64 ]]; then
-    source=("${source[@]:1}")
-    md5sums=("${md5sums[@]:1}")
-  else
-    source=("${source[0]}" "${source[@]:2}")
-    md5sums=("${md5sums[0]}" "${md5sums[@]:2}")
-  fi
-fi
+for _pkg in ${pkgname[@]}; do
+  [[ $_pkg == 'eclipse-common' ]] && continue
+  source_i686+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk.tar.gz)
+  source_x86_64+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk-x86_64.tar.gz)
+  noextract+=($_pkg-$_release-linux-gtk{,-x86_64}.tar.gz)
+  eval "package_$_pkg() { _package $_pkg; }"
+done
 
-package_eclipse() {
-  install -d "$pkgdir/usr/share"
-  cp -a eclipse "$pkgdir/usr/share/eclipse"
+sha256sums=('becd292c83556fff2eea889ebe6df075056c6343b88f95abd6abbd04253d82c9'
+            '04e789fb695d5f95d09ddb994ae30397b39aee35f11997465dd91d129c41b2ed'
+            '57559c2548ae463089acb3c2825ebc002ed83067ddc953b23d36a7b5a02deaf3')
+sha256sums_i686=('43089aa4738d05e92fd24cf320336e8ab1cfd2e66ce07de9955a40bf7a08de87'
+                 '1b1d7a9aaf27d7dd6dcb9fd7b04629f687fb43e6db8c3299c092e0f554b174f4'
+                 '93769a4b8a1d12fb95dd1a848339104032a08b3e00dcf0c597bbf471f3359073')
+sha256sums_x86_64=('2eeea5e563001f6812bad97e159befe4152bf8ef49124c98e635fd68104a1727'
+                   'a990130c1529fcd8c3b3904f37fd8fe26c4c024be4863ccc7a9b2f16908ad49f'
+                   'f93d0f6a8fc03077887049080d332b7aa61127641ac2d815e8729f3ff3aa037a')
+
+prepare() {
+  for _pkg in ${pkgname[@]}; do
+    mkdir $_pkg
+
+    [[ $_pkg == 'eclipse-common' ]] && continue
+
+    if [[ $CARCH == x86_64 ]]; then
+      bsdtar -C $_pkg -xf "$_pkg-$_release-linux-gtk-x86_64.tar.gz"
+    else
+      bsdtar -C $_pkg -xf "$_pkg-$_release-linux-gtk.tar.gz"
+    fi
+  done
+}
+
+build() {
+  ./commonify ${pkgname[@]}
+}
+
+package_eclipse-common() {
+  pkgdesc+=" (common files)"
+  depends=(java-environment gtk3 unzip webkitgtk libxtst)
+  install=eclipse.install
+
+  install -d "$pkgdir/usr/lib"
+  cp -a eclipse-common "$pkgdir/usr/lib/eclipse"
 
   install -D eclipse.sh "$pkgdir/usr/bin/eclipse"
   install -Dm644 eclipse.desktop "$pkgdir/usr/share/applications/eclipse.desktop"
 
   for _i in 16 32 48 256; do
-    install -Dm644 eclipse/plugins/org.eclipse.platform_*/eclipse${_i}.png \
+    install -Dm644 eclipse-common/eclipse/plugins/org.eclipse.platform_*/eclipse${_i}.png \
       "$pkgdir/usr/share/icons/hicolor/${_i}x${_i}/apps/eclipse.png"
   done
+}
+
+_package() {
+  _variant=${1#eclipse-}
+  pkgdesc+=" (${_variant^^} variant)"
+  depends=(eclipse-common)
+  provides=("eclipse=$pkgver-$pkgrel")
+  conflicts=(eclipse)
+
+  case $1 in
+    java) replaces=(eclipse) ;;
+    cpp)  replaces=(eclipse-cdt) ;;
+  esac
+
+  install -d "$pkgdir/usr/lib"
+  cp -a $1 "$pkgdir/usr/lib/eclipse"
 }
