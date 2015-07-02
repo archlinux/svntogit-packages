@@ -50,6 +50,10 @@ prepare() {
   # https://github.com/systemd/systemd/commit/418b22b88f79
   git cherry-pick -n 418b22b88f79
 
+  # bus-proxy: never apply policy when sending signals
+  # https://github.com/systemd/systemd/commit/3723263f4989
+  git cherry-pick -n 3723263f4989
+
   ./autogen.sh
 }
 
