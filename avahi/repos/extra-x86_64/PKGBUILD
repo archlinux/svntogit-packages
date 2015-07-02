@@ -1,17 +1,20 @@
 # $Id$
-# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=avahi
 pkgver=0.6.31
-pkgrel=15
-pkgdesc='Multicast/unicast DNS-SD framework'
+pkgrel=16
+_commit=573e3b5
+pkgdesc='Multicast DNS-SD / Zeroconf Suite'
 #url='http://www.avahi.org/'
 url='http://git.0pointer.net/avahi.git'
-license=('LGPL')
-arch=('i686' 'x86_64')
-options=('!emptydirs')
-depends=('expat' 'libdaemon' 'glib2' 'libcap' 'gdbm' 'dbus')
+license=(LGPL)
+arch=(i686 x86_64)
+depends=(expat libdaemon glib2 libcap gdbm dbus)
+makedepends=(git qt4 pygtk mono intltool python2-dbus gtk-sharp-2 gobject-introspection gtk3
+             xmltoman python-dbus)
 optdepends=('gtk3: avahi-discover-standalone, bshell, bssh, bvnc'
             'gtk2: gtk2 bindings'
             'qt4: qt4 bindings'
@@ -20,64 +23,59 @@ optdepends=('gtk3: avahi-discover-standalone, bshell, bssh, bvnc'
             'mono: mono bindings'
             'python2-dbus: avahi-discover'
             'nss-mdns: NSS support for mDNS')
-makedepends=('git' 'qt4' 'pygtk' 'mono' 'intltool' 'python2-dbus'
-             'gtk-sharp-2' 'gobject-introspection' 'gtk3' 'xmltoman')
-backup=('etc/avahi/hosts'
-        'etc/avahi/avahi-daemon.conf'
-        'etc/avahi/services/ssh.service'
-        'etc/avahi/services/sftp-ssh.service'
-        'usr/lib/avahi/service-types.db'
-        'usr/share/avahi/service-types')
-#source=("http://www.avahi.org/download/avahi-${pkgver}.tar.gz")
-#sha1sums=('7e05bd78572c9088b03b1207a0ad5aba38490684')
-source=('git://git.0pointer.net/avahi.git#commit=147cdce70b22ae7cee9fb4fe123db40952f31c9e')
-sha1sums=('SKIP')
+conflicts=(howl mdnsresponder)
+provides=(howl mdnsresponder)
+install=avahi.install
+options=(!emptydirs)
+backup=(etc/avahi/{hosts,avahi-daemon.conf,services/{ssh,sftp-ssh}.service}
+        usr/lib/avahi/service-types.db usr/share/avahi/service-types)
+source=("git+https://github.com/heftig/avahi#commit=$_commit")
+sha256sums=('SKIP')
 
-conflicts=('howl' 'mdnsresponder')
-provides=('howl' 'mdnsresponder')
-
-install=install
 
 prepare() {
-	cd "${srcdir}/${pkgname}" #-${pkgver}"
-	sed '/^Libs:/s:$: -ldbus-1:' -i avahi-client.pc.in
-	sed 's:/sbin/resolvconf:/usr/sbin/resolvconf:g' -i */*.action
-	sed 's:-DG[^ ]*_DISABLE_DEPRECATED=1::g' -i avahi-ui/Makefile.*
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-	cd "${srcdir}/${pkgname}" #-${pkgver}"
-	export MOC_QT4=/usr/bin/moc-qt4
-	export PYTHON=/usr/bin/python2
+  cd $pkgname
+  export MOC_QT4=/usr/bin/moc-qt4 PYTHON=/usr/bin/python2
 
-	./autogen.sh || true
-	./configure \
-		--prefix=/usr \
-		--sysconfdir=/etc \
-		--localstatedir=/var \
-		--sbindir=/usr/bin \
-		--disable-monodoc \
-		--disable-qt3 \
-		--enable-compat-libdns_sd \
-		--enable-compat-howl \
-		--with-distro=archlinux \
-		--with-avahi-priv-access-group=network \
-		--with-autoipd-user=avahi \
-		--with-autoipd-group=avahi \
-		--with-systemdsystemunitdir=/usr/lib/systemd/system \
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sbindir=/usr/bin \
+    --disable-monodoc \
+    --disable-qt3 \
+    --enable-compat-libdns_sd \
+    --enable-compat-howl \
+    --with-distro=archlinux \
+    --with-avahi-priv-access-group=network \
+    --with-autoipd-user=avahi \
+    --with-autoipd-group=avahi \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system
 
-	make
+  cp -a avahi-python/avahi avahi-python/avahi3
+
+  make
+  make -C avahi-python/avahi3 PYTHON=/usr/bin/python3
 }
 
 package() {
-	cd "${srcdir}/${pkgname}" #-${pkgver}"
-	make DESTDIR="${pkgdir}" install
-	rm -fr "${pkgdir}"/etc/rc.d
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+  make DESTDIR="$pkgdir" -C avahi-python/avahi3 install \
+    PYTHON=/usr/bin/python3 pythondir=/usr/lib/python3.4/site-packages
 
-	# howl and mdnsresponder compatability
-	cd "${pkgdir}"/usr/include; ln -s avahi-compat-libdns_sd/dns_sd.h dns_sd.h; ln -s avahi-compat-howl howl
-	cd "${pkgdir}"/usr/lib/pkgconfig; ln -s avahi-compat-howl.pc howl.pc
+  # howl compat
+  ln -s avahi-compat-howl "$pkgdir/usr/include/howl"
+  ln -s avahi-compat-howl.pc "$pkgdir/usr/lib/pkgconfig/howl.pc"
 
-	# see FS#42638
-	ln avahi-daemon.service -s "${pkgdir}"/usr/lib/systemd/system/dbus-org.freedesktop.Avahi.service
+  # mdnsresponder compat
+  ln -s avahi-compat-libdns_sd/dns_sd.h "$pkgdir/usr/include/dns_sd.h"
+
+  # see FS#42638
+  ln -s avahi-daemon.service "$pkgdir/usr/lib/systemd/system/dbus-org.freedesktop.Avahi.service"
 }
