@@ -54,6 +54,10 @@ prepare() {
   # https://github.com/systemd/systemd/commit/3723263f4989
   git cherry-pick -n 3723263f4989
 
+  # sd-bus: don't leak kdbus notifications
+  # https://github.com/systemd/systemd/commit/0c9cc10dcca6
+  git cherry-pick -n 0c9cc10dcca6
+
   ./autogen.sh
 }
 
