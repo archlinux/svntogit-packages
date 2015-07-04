@@ -58,6 +58,10 @@ prepare() {
   # https://github.com/systemd/systemd/commit/0c9cc10dcca6
   git cherry-pick -n 0c9cc10dcca6
 
+  # core: harden cgroups-agent forwarding
+  # https://github.com/systemd/systemd/commit/0a069ce62de9
+  git cherry-pick -n 0a069ce62de9
+
   ./autogen.sh
 }
 
