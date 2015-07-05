@@ -90,7 +90,7 @@ build() {
 package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1')
-  depends=('acl' 'bash' 'dbus' 'glib2' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
+  depends=('acl' 'bash' 'dbus' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
            'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp' 'util-linux'
            'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
@@ -182,7 +182,7 @@ package_systemd() {
 
 package_libsystemd() {
   pkgdesc="systemd client libraries"
-  depends=('glib2' 'glibc' 'libgcrypt' 'lz4' 'xz')
+  depends=('glibc' 'libgcrypt' 'lz4' 'xz')
   license=('GPL2')
   provides=('libsystemd.so' 'libsystemd-daemon.so' 'libsystemd-id128.so'
             'libsystemd-journal.so' 'libsystemd-login.so' 'libudev.so')
