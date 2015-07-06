@@ -22,7 +22,7 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
          '976c5511b6493715e381f43f16cdb151'
-         'bde43090d4ac0ef048e3eaee8202a407'
+         '1b3aa3a0551b08af9305d33f85b5c2fc'
          '20ead378f5d6df4b2a3e670301510a7d'
          'ddaef54f68f6c86c6c07835fc668f62a'
          '1e2f9a8b0fa32022bf0a8f39123e5f4e')
