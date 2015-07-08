@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=221
-pkgrel=2
+pkgver=222
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam'
@@ -29,38 +29,6 @@ md5sums=('SKIP'
 
 prepare() {
   cd "$pkgname"
-
-  # pam_systemd: Properly check kdbus availability
-  # https://github.com/systemd/systemd/commit/c5d452bb228e
-  git cherry-pick -n c5d452bb228e
-
-  # udevd: suppress warning if we don't find cgroup
-  # https://github.com/systemd/systemd/commit/11b9fb15be96
-  git cherry-pick -n 11b9fb15be96
-
-  # core: fix reversed dependency check in unit_check_unneeded
-  # https://github.com/systemd/systemd/commit/084918ba41ac
-  git cherry-pick -n 084918ba41ac
-
-  # rules: remove all power management from udev
-  # https://github.com/systemd/systemd/commit/e2452eef02a8
-  git cherry-pick -n e2452eef02a8
-
-  # logind: fix delayed execution regression
-  # https://github.com/systemd/systemd/commit/418b22b88f79
-  git cherry-pick -n 418b22b88f79
-
-  # bus-proxy: never apply policy when sending signals
-  # https://github.com/systemd/systemd/commit/3723263f4989
-  git cherry-pick -n 3723263f4989
-
-  # sd-bus: don't leak kdbus notifications
-  # https://github.com/systemd/systemd/commit/0c9cc10dcca6
-  git cherry-pick -n 0c9cc10dcca6
-
-  # core: harden cgroups-agent forwarding
-  # https://github.com/systemd/systemd/commit/0a069ce62de9
-  git cherry-pick -n 0a069ce62de9
 
   ./autogen.sh
 }
