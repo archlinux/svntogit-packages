@@ -18,9 +18,9 @@ sha1sums=('8ac821d8b1e25504a31bf5fda9c08d93a4acc862'
           '776e3e00fcf8a325e7b9c2bb456d3e9ba2c82307')
 
 makedepends=('mercurial')
-source=('hg+http://dev.mutt.org/hg/mutt#revision=0255b37be491bf11347c91d2197a4d9031423010')
+source=('hg+http://dev.mutt.org/hg/mutt#revision=2ca89bed64480780d0a435e89c13dba06c748094')
 sha1sums=('SKIP')
-pkgver=1.5.23.hg.20150606
+pkgver=1.5.23.hg.20150711
 
 #prepare() {
 #	cd "${srcdir}/${pkgname}-${pkgver}"
