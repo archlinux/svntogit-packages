@@ -2,18 +2,16 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
-pkgname=nvidia-304xx
+pkgbase=nvidia-304xx
+pkgname=(nvidia-304xx nvidia-304xx-dkms)
 pkgver=304.125
 _extramodules=extramodules-4.1-ARCH
-pkgrel=19
-pkgdesc="NVIDIA drivers for linux, 304xx legacy branch"
+pkgrel=20
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
-depends=('linux>=4.1' 'linux<4.2' 'libgl' "nvidia-304xx-utils=${pkgver}")
-makedepends=('linux-headers>=4.1' 'linux-headers<4.2')
+makedepends=('libgl' "nvidia-304xx-utils=${pkgver}" 'linux' 'linux-headers>=4.1' 'linux-headers<4.2')
 conflicts=('nvidia')
 license=('custom')
-install=${pkgname}.install
 options=(!strip)
 source=("http://us.download.nvidia.com/XFree86/Linux-x86/${pkgver}/NVIDIA-Linux-x86-${pkgver}.run"
         "http://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run"
@@ -45,7 +43,12 @@ build() {
     make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
 }
 
-package() {
+package_nvidia-304xx() {
+    pkgdesc="NVIDIA drivers for linux, 304xx legacy branch"
+    depends=('linux>=4.1' 'linux<4.2' 'libgl' "nvidia-304xx-utils=${pkgver}")
+	conflict+=('nvidia-304xx-dkms')
+    install=nvidia-304xx.install
+
     install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
         "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
     install -d -m755 "${pkgdir}/usr/lib/modprobe.d"
@@ -54,4 +57,19 @@ package() {
     gzip "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
 
     # the license file is part of nvidia-304xx-utils - the module depends on it, so we don't ship it another time.
+}
+
+package_nvidia-304xx-dkms() {
+    pkgdesc="NVIDIA driver sources for linux, 304xx legacy branch"
+    depends=('dkms' "nvidia-304xx-utils=$pkgver")
+    optdepends=('linux-headers: Build the module for Arch kernel'
+                'linux-lts-headers: Build the module for LTS Arch kernel')
+	conflict+=('nvidia-304xx')
+    install=nvidia-304xx-dkms.install
+
+    cd ${_pkg}
+	make -C kernel clean
+    install -dm 755 "${pkgdir}"/usr/{lib/modprobe.d,src}
+    cp -dr --no-preserve='ownership' kernel "${pkgdir}"/usr/src/nvidia-${pkgver}
+    echo 'blacklist nouveau' > "${pkgdir}"/usr/lib/modprobe.d/nvidia.conf
 }
