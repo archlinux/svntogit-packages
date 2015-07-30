@@ -2,36 +2,40 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=libmarble4
-pkgver=15.04.3
-pkgrel=4
+pkgver=15.07.80
+pkgrel=1
 pkgdesc="KDE4 Marble libraries"
 url="http://kde.org/applications/education/marble/"
 arch=(i686 x86_64)
 license=(GPL LGPL FDL)
-depends=(kdebase-runtime libastro)
+depends=(qtwebkit libastro marble-data)
 makedepends=(cmake automoc4 gpsd libwlocate)
 optdepends=('gpsd: GPS support' 'libwlocate: WLAN based geolocation')
 conflicts=(kdeedu-marble)
 provides=(kdeedu-marble)
-source=("http://download.kde.org/stable/applications/$pkgver/src/marble-$pkgver.tar.xz")
-sha1sums=('34f6bdedb6ff37f49c1e0f1f3cca219a515accb4')
+source=("http://download.kde.org/unstable/applications/$pkgver/src/marble-$pkgver.tar.xz" 'marble-nowebkit-1508-1.diff')
+sha1sums=('8f61030eec2b2c9702150d799e2337867b9743b2'
+          'ebe19afe48153ad9409ac783c42e44c6bb567b6b')
 
 prepare() {
   mkdir -p build
 
-# rename include dir
-  sed -e 's|marble/MarbleModel.h|marble4/MarbleModel.h|' -i marble-$pkgver/FindMarble.cmake
-# hack: change soname to make it coinstallable with 15.08 version
-  sed -e 's|GENERIC_LIB_VERSION "0.17.20"|GENERIC_LIB_VERSION "0.17"|' -e 's|GENERIC_LIB_SOVERSION "1"|GENERIC_LIB_SOVERSION "0"|' \
-   -i marble-$pkgver/src/lib/astro/CMakeLists.txt
+  cd marble-$pkgver
+  patch -p1 -i ../marble-nowebkit-1508-1.diff
+  cd ..
+ 
+# rename include dir 
+  sed -e 's|marble/MarbleModel.h|marble4/MarbleModel.h|' -i marble-$pkgver/FindMarble.cmake.in
 }
 
 build() {
   cd build
   cmake ../marble-$pkgver \
     -DCMAKE_BUILD_TYPE=Release \
-    -DKDE4_BUILD_TESTS=OFF \
-    -DCMAKE_INSTALL_PREFIX=/usr
+    -DBUILD_MARBLE_TESTS=OFF \
+    -DBUILD_MARBLE_APPS=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DMARBLE_PLUGIN_PATH=/usr/lib/marble4/plugins
   make
 }
 
@@ -39,13 +43,14 @@ package() {
   cd build
   make DESTDIR="$pkgdir" install
 
-# remove files provided by libastro and marble
-  rm -r "$pkgdir"/usr/bin
-  rm -r "$pkgdir"/usr/share/applications/kde4/marble-*
+# move cmake file
+  install -Dm644 "$pkgdir"/usr/share/marble/cmake/FindMarble.cmake "$pkgdir"/usr/share/apps/cmake/modules/FindMarble.cmake
+
+# remove files provided by libastro and marble-data
   rm -r "$pkgdir"/usr/include/astro
-  rm -r "$pkgdir"/usr/lib/libastro.so
-  rm -r "$pkgdir"/usr/share/{appdata,config.kcfg,doc,icons}
+  rm -r "$pkgdir"/usr/lib/libastro.*
+  rm -r "$pkgdir"/usr/share/{appdata,applications,icons,marble}
+
 # rename include dir to avoid conflicts with marble
   mv "$pkgdir"/usr/include/marble{,4}
 }
-
