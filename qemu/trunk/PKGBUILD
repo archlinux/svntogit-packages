@@ -1,17 +1,23 @@
 # $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
-pkgname=('qemu' 'libcacard')
+# Contributor: Sébastien "Seblu" Luttringer <seblu@seblu.net>
+
+pkgbase=qemu
+pkgname=('qemu'
+         'qemu-block-iscsi'
+         'qemu-block-rbd'
+         'qemu-block-gluster'
+         'libcacard')
 pkgver=2.3.0
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 license=('GPL2' 'LGPL2.1')
-url="http://wiki.qemu.org/Index.html"
+url='http://wiki.qemu.org/'
 makedepends=('pixman' 'libjpeg' 'libpng' 'sdl' 'alsa-lib' 'nss' 'glib2'
              'gnutls' 'bluez-libs' 'vde2' 'util-linux' 'curl' 'libsasl'
              'libgl' 'libpulse' 'seabios' 'libcap-ng' 'libaio' 'libseccomp'
              'libiscsi' 'libcacard' 'spice' 'spice-protocol' 'python2'
-             'usbredir' 'ceph' 'glusterfs' 'libssh2' 'lzo')
-options=(!strip)
+             'usbredir' 'ceph' 'glusterfs' 'libssh2' 'lzo' 'snappy')
 source=(http://wiki.qemu.org/download/${pkgname}-${pkgver}.tar.bz2
         CVE-2015-3456.patch
         CVE-2015-5154.patch
@@ -28,14 +34,14 @@ md5sums=('2fab3ea4460de9b57192e5b8b311f221'
 prepare() {
   for _p in *.patch; do
     [[ -e "$_p" ]] || continue
-  msg2 "Patching $_p"
+    msg2 "Patching $_p"
     patch -p1 -d ${pkgname}-${pkgver} < "$_p"
   done
 }
 
 build ()
 {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}-${pkgver}
   # qemu vs. make 4 == bad
   export ARFLAGS="rv"
   # http://permalink.gmane.org/gmane.comp.emulators.qemu/238740
@@ -52,66 +58,98 @@ build ()
 }
 
 package_qemu() {
-  pkgdesc="A generic and open source processor emulator which achieves a good emulation speed by using dynamic translation."
-  depends=('pixman' 'libjpeg' 'libpng' 'sdl' 'alsa-lib' 'nss' 'glib2'
-         'gnutls' 'bluez-libs' 'vde2' 'util-linux' 'curl' 'libsasl'
-         'libgl' 'libpulse' 'seabios' 'libcap-ng' 'libaio' 'libseccomp'
-         'libcacard' 'spice' 'usbredir' 'lzo')
+  pkgdesc='A generic and open source processor emulator which achieves a good emulation speed by using dynamic translation'
+  depends=('glibc' 'pixman' 'libjpeg' 'libpng' 'sdl' 'alsa-lib' 'nss' 'glib2'
+           'gnutls' 'bluez-libs' 'vde2' 'util-linux' 'libsasl' 'mesa-libgl'
+           'seabios' 'libcap' 'libcap-ng' 'libaio' 'libseccomp' 'libcacard'
+           'spice' 'usbredir' 'lzo' 'snappy' 'gcc-libs' 'zlib' 'bzip2' 'nspr'
+           'ncurses' 'libx11' 'libusb' 'libpulse')
   backup=('etc/qemu/target-x86_64.conf')
   replaces=('qemu-kvm')
-  optdepends=('samba: for SMB server support'
-        'libssh2: for remote disks over ssh support'
-        'curl: for remote disks over http/ftp support'
-        'libiscsi: for iSCSI support'
-        'ceph: for RDB support'
-        'glusterfs: for glusterfs support')
+  optdepends=('samba: SMB/CIFS server support'
+              'qemu-block-iscsi: iSCSI block support'
+              'qemu-block-rbd: RDB block support'
+              'qemu-block-gluster: glusterfs block support')
+  options=(!strip)
   install=qemu.install
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make DESTDIR="${pkgdir}" libexecdir="/usr/lib/qemu" install
+
+  make -C ${pkgname}-${pkgver} DESTDIR="${pkgdir}" libexecdir="/usr/lib/qemu" install
+
+  cd "${pkgdir}"
+
   # provided by seabios package
-  rm "${pkgdir}/usr/share/qemu/bios.bin"
-  rm "${pkgdir}/usr/share/qemu/acpi-dsdt.aml"
-  rm "${pkgdir}/usr/share/qemu/q35-acpi-dsdt.aml"
-  rm "${pkgdir}/usr/share/qemu/bios-256k.bin"
-  rm "${pkgdir}/usr/share/qemu/vgabios-cirrus.bin"
-  rm "${pkgdir}/usr/share/qemu/vgabios-qxl.bin"
-  rm "${pkgdir}/usr/share/qemu/vgabios-stdvga.bin"
-  rm "${pkgdir}/usr/share/qemu/vgabios-vmware.bin"
+  rm usr/share/qemu/bios.bin
+  rm usr/share/qemu/acpi-dsdt.aml
+  rm usr/share/qemu/q35-acpi-dsdt.aml
+  rm usr/share/qemu/bios-256k.bin
+  rm usr/share/qemu/vgabios-cirrus.bin
+  rm usr/share/qemu/vgabios-qxl.bin
+  rm usr/share/qemu/vgabios-stdvga.bin
+  rm usr/share/qemu/vgabios-vmware.bin
 
   # remove conflicting /var/run directory
-  rm -r "${pkgdir}/var"
-  install -D -m644 "${srcdir}/65-kvm.rules" \
-                   "${pkgdir}/usr/lib/udev/rules.d/65-kvm.rules"
+  rm -r var
+
+  # systemd stuff
+  install -D -m644 "${srcdir}/65-kvm.rules" usr/lib/udev/rules.d/65-kvm.rules
+  install -D -m644 "${srcdir}/qemu.sysusers" usr/lib/sysusers.d/qemu.conf
+
   # bridge_helper needs suid
   # https://bugs.archlinux.org/task/32565
-  chmod u+s "${pkgdir}/usr/lib/qemu/qemu-bridge-helper"
+  chmod u+s usr/lib/qemu/qemu-bridge-helper
+
   # add sample config
-  echo "allow br0" > ${pkgdir}/etc/qemu/bridge.conf.sample
-  # strip scripts directory
-    find "${pkgdir}/usr/src/linux-${_kernver}/scripts"  -type f -perm -u+w 2>/dev/null | while read binary ; do
+  echo 'allow br0' > etc/qemu/bridge.conf.sample
+
+  # manual striping in scripts directory
+  find usr/src/linux-${_kernver}/scripts -type f -perm -u+w 2>/dev/null|while read binary ; do
       case "$(file -bi "$binary")" in
         *application/x-executable*) # Binaries
         /usr/bin/strip $STRIP_BINARIES "$binary";;
       esac
     done
+
   # remove libcacard files
-  rm -rf ${pkgdir}/usr/include/cacard
-  rm -rf ${pkgdir}/usr/lib/libcacard*
-  rm -rf ${pkgdir}/usr/lib/pkgconfig/libcacard.pc
-  rm -rf ${pkgdir}/usr/bin/vscclient
+  rm -r usr/include/cacard
+  rm usr/lib/libcacard*
+  rm usr/lib/pkgconfig/libcacard.pc
+  rm usr/bin/vscclient
+
+  # remove splited block modules
+  rm usr/lib/qemu/block-{iscsi,rbd,gluster}.so
 }
 
 package_libcacard() {
- pkgdesc="Common Access Card (CAC) Emulation"
- options=('strip')
- depends=('nss' 'libaio' 'libcap-ng' 'libiscsi' 'curl' 'vde2' 'glib2')
- mkdir -p ${pkgdir}/usr/bin
- mkdir -p ${pkgdir}/usr/lib/pkgconfig
- mkdir -p ${pkgdir}/usr/include/cacard
- cp -a ${srcdir}/qemu-${pkgver}/libcacard/*.h ${pkgdir}/usr/include/cacard/
- cp -a ${srcdir}/qemu-${pkgver}/.libs/libcacard.so* ${pkgdir}/usr/lib/
- cp -a ${srcdir}/qemu-${pkgver}/libcacard.pc ${pkgdir}/usr/lib/pkgconfig/
- cp -a ${srcdir}/qemu-${pkgver}/.libs/vscclient ${pkgdir}/usr/bin/
+ pkgdesc='Common Access Card (CAC) Emulation'
+ depends=('glibc' 'nss' 'nspr' 'glib2')
+
+  cd "${pkgdir}"
+  install -d usr/{bin,lib/pkgconfig,include/cacard}
+  install "${srcdir}"/qemu-${pkgver}/libcacard/*.h usr/include/cacard/
+  install "${srcdir}"/qemu-${pkgver}/.libs/libcacard.so* usr/lib/
+  install "${srcdir}"/qemu-${pkgver}/libcacard.pc usr/lib/pkgconfig/
+  install "${srcdir}"/qemu-${pkgver}/.libs/vscclient usr/bin/
+}
+
+package_qemu-block-iscsi() {
+  pkgdesc='Qemu iSCSI block module'
+  depends=('glibc' 'glib2' 'libiscsi')
+
+  install -D qemu-${pkgver}/block-iscsi.so "${pkgdir}"/usr/lib/qemu/block-iscsi.so
+}
+
+package_qemu-block-rbd() {
+  pkgdesc='Qemu RBD block module'
+  depends=('glibc' 'glib2' 'ceph')
+
+  install -D qemu-${pkgver}/block-rbd.so "${pkgdir}"/usr/lib/qemu/block-rbd.so
+}
+
+package_qemu-block-gluster() {
+  pkgdesc='Qemu GlusterFS block module'
+  depends=('glibc' 'glib2' 'glusterfs')
+
+  install -D qemu-${pkgver}/block-gluster.so "${pkgdir}"/usr/lib/qemu/block-gluster.so
 }
 
 # vim:set ts=2 sw=2 et:
