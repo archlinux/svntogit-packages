@@ -148,6 +148,6 @@ package() {
                       usr/lib/lib{memusage,pcprofile,SegFault}.so \
                       usr/lib/{audit,gconv}/*.so || true
   if [[ $CARCH = "x86_64" ]]; then
-    strip STRIP_SHARED usr/lib/libmvec-*.so
+    strip $STRIP_SHARED usr/lib/libmvec-*.so
   fi
 }
