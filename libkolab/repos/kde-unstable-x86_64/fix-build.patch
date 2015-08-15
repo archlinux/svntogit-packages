@@ -1,0 +1,67 @@
+diff --git a/conversion/kabcconversion.cpp b/conversion/kabcconversion.cpp
+--- a/conversion/kabcconversion.cpp
++++ b/conversion/kabcconversion.cpp
+@@ -488,7 +488,9 @@
+       addressee.setTitle(fromStdString(contact.titles().at(0))); //TODO support multiple
+   }
+   if (!contact.urls().empty()) {
+-      addressee.setUrl(QUrl(fromStdString(contact.urls().at(0).url()))); //TODO support multiple
++      KContacts::ResourceLocatorUrl url;
++      url.setUrl(QUrl(fromStdString(contact.urls().at(0).url()))); //TODO support multiple
++      addressee.setUrl(url);
+       foreach(const Kolab::Url &u, contact.urls()) {
+           if (u.type() == Kolab::Url::Blog) {
+               addressee.insertCustom("KADDRESSBOOK", "BlogFeed", fromStdString(u.url()));
+@@ -664,8 +666,8 @@
+     }
+     
+     std::vector<Kolab::Url> urls;
+-    if (!addressee.url().isEmpty()) {
+-        urls.push_back(Kolab::Url(toStdString(addressee.url().url())));
++    if (!addressee.url().url().isEmpty()) {
++        urls.push_back(Kolab::Url(toStdString(addressee.url().url().url())));
+     }   
+     const QString &blogUrl = addressee.custom(QLatin1String("KADDRESSBOOK"), QLatin1String("BlogFeed"));
+     if (!blogUrl.isEmpty()) {
+@@ -703,7 +705,7 @@
+         c.setRelateds(std::vector<Kolab::Related>() << Kolab::Related(Kolab::Related::Text, toStdString(spouse), Kolab::Related::Spouse));
+     }
+     c.setBDay(fromDate(KDateTime(addressee.birthday(), KDateTime::ClockTime)));
+-    c.setAnniversary(fromDate(KDateTime(QDate::fromString( addressee.custom(QLatin1String("KADDRESSBOOK"), QLatin1String("X-Anniversary")), Qt::ISODate ), KDateTime::ClockTime)));
++    c.setAnniversary(fromDate(KDateTime(QDate::fromString( addressee.custom(QLatin1String("KADDRESSBOOK"), QLatin1String("X-Anniversary")), Qt::ISODate ), KDateTime::Spec(KDateTime::ClockTime))));
+     if (!addressee.photo().isEmpty()) {
+         std::string mimetype;
+         const std::string &photo = fromPicture(addressee.photo(), mimetype);
+diff --git a/kolabformatV2/contact.cpp b/kolabformatV2/contact.cpp
+--- a/kolabformatV2/contact.cpp
++++ b/kolabformatV2/contact.cpp
+@@ -947,7 +947,7 @@
+   setPrefix( addressee->prefix() );
+   setSuffix( addressee->suffix() );
+   setOrganization( addressee->organization() );
+-  setWebPage( addressee->url().url() );
++  setWebPage( addressee->url().url().url() );
+   setIMAddress( addressee->custom( "KADDRESSBOOK", "X-IMAddress" ) );
+   setDepartment( addressee->department());
+   setOfficeLocation( addressee->custom( "KADDRESSBOOK", "X-Office" ) );
+@@ -1082,15 +1082,18 @@
+ {
+   // TODO: This needs the same set of TODOs as the setFields method
+   KolabBase::saveTo( addressee );
++  KContacts::ResourceLocatorUrl url;
++
++  url.setUrl(QUrl(webPage()));
+ 
+   addressee->setGivenName( givenName() );
+   addressee->setAdditionalName( middleNames() );
+   addressee->setFamilyName( lastName() );
+   addressee->setFormattedName( fullName() );
+   addressee->setPrefix( prefix() );
+   addressee->setSuffix( suffix() );
+   addressee->setOrganization( organization() );
+-  addressee->setUrl( QUrl(webPage()) );
++  addressee->setUrl(url);
+   addressee->insertCustom( "KADDRESSBOOK", "X-IMAddress", imAddress() );
+   addressee->setDepartment( department() );
+   addressee->insertCustom( "KADDRESSBOOK", "X-Office", officeLocation() );
+
