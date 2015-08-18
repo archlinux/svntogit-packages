@@ -7,9 +7,10 @@ pkgname=('qemu'
          'qemu-block-iscsi'
          'qemu-block-rbd'
          'qemu-block-gluster'
+         'qemu-guest-agent'
          'libcacard')
-pkgver=2.3.0
-pkgrel=7
+pkgver=2.4.0
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('GPL2' 'LGPL2.1')
 url='http://wiki.qemu.org/'
@@ -19,18 +20,12 @@ makedepends=('pixman' 'libjpeg' 'libpng' 'sdl' 'alsa-lib' 'nss' 'glib2'
              'libiscsi' 'libcacard' 'spice' 'spice-protocol' 'python2'
              'usbredir' 'ceph' 'glusterfs' 'libssh2' 'lzo' 'snappy')
 source=(http://wiki.qemu.org/download/${pkgname}-${pkgver}.tar.bz2
-        CVE-2015-3456.patch
-        CVE-2015-5154.patch
-        CVE-2015-3214.patch
-        CVE-2015-5158.patch
         qemu.sysusers
+        qemu-ga.service
         65-kvm.rules)
-md5sums=('2fab3ea4460de9b57192e5b8b311f221'
-         '5e8a68940c4e0267e795a6ddd144e00e'
-         '311d3845dda4795bf63107c3dcbf2bea'
-         '29840d5f2fa93ff447bf9dd120d12e5a'
-         'cd87c265dfec4d8aa3767d5d047cd397'
+md5sums=('186ee8194140a484a455f8e3c74589f4'
          '49778d11c28af170c4bebcc648b0ace1'
+         '44ee242d758f9318c6a1ea1dae96aa3a'
          '33ab286a20242dda7743a900f369d68a')
 
 prepare() {
@@ -100,9 +95,6 @@ package_qemu() {
   # https://bugs.archlinux.org/task/32565
   chmod u+s usr/lib/qemu/qemu-bridge-helper
 
-  # add sample config
-  echo 'allow br0' > etc/qemu/bridge.conf.sample
-
   # manual striping in scripts directory
   find usr/src/linux-${_kernver}/scripts -type f -perm -u+w 2>/dev/null|while read binary ; do
       case "$(file -bi "$binary")" in
@@ -119,6 +111,9 @@ package_qemu() {
 
   # remove splitted block modules
   rm usr/lib/qemu/block-{iscsi,rbd,gluster}.so
+
+  # remove guest agent
+  rm usr/bin/qemu-ga
 }
 
 package_libcacard() {
@@ -152,6 +147,14 @@ package_qemu-block-gluster() {
   depends=('glibc' 'glib2' 'glusterfs')
 
   install -D qemu-${pkgver}/block-gluster.so "${pkgdir}"/usr/lib/qemu/block-gluster.so
+}
+
+package_qemu-guest-agent() {
+  pkgdesc='QEMU Guest Agent'
+  depends=('glibc' 'gcc-libs' 'glib2')
+
+  install -D qemu-${pkgver}/qemu-ga "${pkgdir}"/usr/bin/qemu-ga
+  install -D qemu-ga.service "${pkgdir}"/usr/lib/systemd/system/qemu-ga.service
 }
 
 # vim:set ts=2 sw=2 et:
