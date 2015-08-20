@@ -2,19 +2,23 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gvfs
-pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-goa' 'gvfs-mtp')
-pkgver=1.24.1
-pkgrel=2
+pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-goa' 'gvfs-mtp' 'gvfs-nfs')
+pkgver=1.24.2
+pkgrel=1
 arch=('i686' 'x86_64')
 license=('LGPL')
-makedepends=('avahi' 'dbus' 'fuse' 'intltool' 'libarchive' 'libcdio-paranoia' 'libgphoto2' 'libimobiledevice' 'libsoup' 'smbclient' 'udisks2' 'libsecret' 'docbook-xsl' 'gtk3' 'libmtp' 'gnome-online-accounts' 'libbluray' 'libgudev')
+makedepends=('avahi' 'dbus' 'fuse' 'intltool' 'libarchive' 'libcdio-paranoia' 'libgphoto2' 'libimobiledevice' 'libsoup' 'smbclient' 'udisks2' 'libsecret' 'docbook-xsl' 'gtk3' 'libmtp' 'gnome-online-accounts' 'libbluray' 'libgudev' 'libnfs')
 url="http://www.gnome.org"
 source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver:0:4}/$pkgbase-$pkgver.tar.xz)
-sha256sums=('d38367ce189415c36fd19dca478bc9b80694b495c3458e74fb0f13d1ac9df1f9')
+sha256sums=('0949eaedd1df7175f8d7ee2700df8210d1f854b8ee37d963bc32ee7091eeb228')
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+  autoreconf -fvi
+}
 
 build() {
   cd "$pkgbase-$pkgver"
-  autoreconf -fi
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-static \
       --libexecdir=/usr/lib/gvfs \
@@ -33,6 +37,7 @@ package_gvfs() {
               'gvfs-afp: Apple Filing Protocol (AFP) support'
               'gvfs-mtp: MTP device support'
               'gvfs-goa: gnome-online-accounts support'
+              'gvfs-nfs: NFS support'
               'gtk3: Recent files support')
   install=gvfs.install
 
@@ -45,8 +50,8 @@ package_gvfs() {
   make DESTDIR="$pkgdir" install
 
   cd "$pkgdir"
-  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,mtp}
-  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,mtp}.mount
+  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,mtp,nfs}
+  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,mtp,nfs}.mount
   rm usr/share/glib-2.0/schemas/org.gnome.system.smb.gschema.xml
   rm usr/share/GConf/gsettings/gvfs-smb.convert
 }
@@ -127,4 +132,14 @@ package_gvfs-goa() {
 
   cd "$srcdir/$pkgbase-$pkgver/monitor/goa"
   make DESTDIR="$pkgdir" install
+}
+
+package_gvfs-nfs() {
+  pkgdesc="NFS backend for gvfs"
+  depends=("gvfs=$pkgver" 'libnfs')
+  install=gvfs-module.install
+
+  cd "$pkgbase-$pkgver/daemon"
+  install -D .libs/gvfsd-nfs "$pkgdir/usr/lib/gvfs/gvfsd-nfs"
+  install -Dm644 nfs.mount "$pkgdir/usr/share/gvfs/mounts/nfs.mount"
 }
