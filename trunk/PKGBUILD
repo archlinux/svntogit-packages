@@ -3,22 +3,44 @@
 
 pkgbase=doxygen
 pkgname=('doxygen' 'doxygen-docs')
-pkgver=1.8.9.1
+pkgver=1.8.10
 pkgrel=1
 license=('GPL')
 arch=(i686 x86_64)
 url="http://www.doxygen.org/"
-makedepends=('gcc-libs' 'flex' 'qt4' 'texlive-core' 'ghostscript'
+makedepends=('cmake' 'gcc-libs' 'flex' 'qt4' 'texlive-core' 'ghostscript'
              'texlive-latexextra' 'graphviz' 'python2')
-			 source=(http://ftp.stack.nl/pub/users/dimitri/${pkgname}-${pkgver}.src.tar.gz)
-md5sums=('3d1a5c26bef358c10a3894f356a69fbc')
-sha1sums=('eb6b7e5f8dc8302e67053aba841f485017f246fd')
+source=(http://ftp.stack.nl/pub/users/dimitri/${pkgname}-${pkgver}.src.tar.gz)
+md5sums=('79767ccd986f12a0f949015efb5f058f')
+sha1sums=('6bad93cbdb1b2efacba14769d39bcc7bc9c0753b')
+
+prepare() {
+  mkdir build
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  # Install the man pages in the right place
+  sed -i 's:DESTINATION man/man1:DESTINATION "${CMAKE_INSTALL_PREFIX}/share/man/man1":g' \
+    doc/CMakeLists.txt
+}
 
 build() {
-  export PATH=$PATH:/usr/lib/qt4/bin
-  cd "${srcdir}/${pkgbase}-${pkgver}"
-  QTDIR=/usr/lib/qt4 ./configure --prefix /usr --with-doxywizard
+  cd build
+
+  cmake "../${pkgbase}-${pkgver}" \
+    -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+    -DDOC_INSTALL_DIR:PATH=share/doc/doxygen \
+    -DQT_QMAKE_EXECUTABLE:FILE=/usr/lib/qt4/bin/qmake \
+    -DPYTHON_EXECUTABLE:FILE=/usr/bin/python2 \
+    -Dbuild_doc:BOOL=ON \
+    -Dbuild_wizard:BOOL=ON
+
   make
+  make docs
+}
+
+check(){
+  cd build
+  make tests
 }
 
 package_doxygen() {
@@ -27,13 +49,19 @@ package_doxygen() {
   optdepends=('graphviz: for caller/callee graph generation'
               'qt4: for doxywizard')
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
-  make INSTALL="${pkgdir}"/usr MAN1DIR=share/man/man1 install
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  # Docs are in 'doxygen-docs'
+  rm -rf "${pkgdir}/usr/share/doc"
 }
 
 package_doxygen-docs() {
   pkgdesc="Developer documentation for doxygen"
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
-  make INSTALL="${pkgdir}"/usr MAN1DIR=share/man/man1 install_docs
+  cd build
+  make DESTDIR="${pkgdir}" install
+
+  rm -rf "${pkgdir}/usr/bin"
+  rm -rf "${pkgdir}/usr/share/man"
 }
