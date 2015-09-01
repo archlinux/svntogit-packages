@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.22
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -22,10 +22,12 @@ backup=(etc/gai.conf
 options=('!strip' 'staticlibs')
 install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
+	glibc-2.22-roundup.patch
         locale.gen.txt
         locale-gen)
 md5sums=('e51e02bf552a0a1fbbdc948fb2f5e83c'
          'SKIP'
+         'b6b7a0e8d6e6520e40e3164ae773631d'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
@@ -34,7 +36,7 @@ prepare() {
   cd ${srcdir}/glibc-${pkgver}
 
   # glibc-2.21..01b07c70
-  #patch -p1 -i $srcdir/glibc-2.21-roundup.patch
+  #patch -p1 -i $srcdir/glibc-2.22-roundup.patch
 
   mkdir ${srcdir}/glibc-build
 }
