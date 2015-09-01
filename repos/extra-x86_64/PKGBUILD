@@ -3,8 +3,8 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=mutt
-pkgver=1.5.23
-pkgrel=2
+pkgver=1.5.24
+pkgrel=1
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 license=('GPL')
@@ -12,26 +12,13 @@ backup=('etc/Muttrc')
 arch=('i686' 'x86_64')
 optdepends=('smtp-forwarder: to send mail')
 depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb5')
-source=("ftp://ftp.mutt.org/mutt/${pkgname}-${pkgver}.tar.gz"
-        'cve-2014-9116.patch')
-sha1sums=('8ac821d8b1e25504a31bf5fda9c08d93a4acc862'
-          '776e3e00fcf8a325e7b9c2bb456d3e9ba2c82307')
-
-makedepends=('mercurial')
-source=('hg+http://dev.mutt.org/hg/mutt#revision=2ca89bed64480780d0a435e89c13dba06c748094')
-sha1sums=('SKIP')
-pkgver=1.5.23.hg.20150711
-
-#prepare() {
-#	cd "${srcdir}/${pkgname}-${pkgver}"
-#	patch -p1 -i ../cve-2014-9116.patch
-#}
+source=("http://ftp.mutt.org/pub/mutt/${pkgname}-${pkgver}.tar.gz"{,.asc})
+sha1sums=('38a2da5eb01ff83a90a2caee28fa2e95dbfe6898' 'SKIP')
+validpgpkeys=('8975A9B33AA37910385C5308ADEF768480316BDA')
 
 build() {
-#	cd "${srcdir}/${pkgname}-${pkgver}"
-	cd "${srcdir}/${pkgname}"
-#	./configure \
-	./prepare \
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
 		--enable-gpgme \
@@ -50,8 +37,7 @@ build() {
 }
 
 package() {
-#	cd "${srcdir}/${pkgname}-${pkgver}"
-	cd "${srcdir}/${pkgname}"
+	cd "${srcdir}/${pkgname}-${pkgver}"
 	make DESTDIR="${pkgdir}" install
 
 	rm "${pkgdir}"/etc/mime.types{,.dist}
