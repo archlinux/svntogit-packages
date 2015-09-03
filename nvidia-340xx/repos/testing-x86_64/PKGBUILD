@@ -1,0 +1,54 @@
+# $Id: PKGBUILD 221857 2014-09-17 20:29:16Z tpowa $
+# Maintainer : Thomas Baechler <thomas@archlinux.org>
+
+pkgname=nvidia-340xx
+pkgver=340.76
+_extramodules=extramodules-4.2-ARCH
+pkgrel=15
+pkgdesc="NVIDIA drivers for linux, 340xx legacy branch"
+arch=('i686' 'x86_64')
+url="http://www.nvidia.com/"
+depends=('linux>=4.2' 'linux<4.3' 'nvidia-340xx-libgl' "nvidia-340xx-utils=${pkgver}")
+makedepends=('linux-headers>=4.2' 'linux-headers<4.3')
+conflicts=('nvidia')
+license=('custom')
+install=${pkgname}.install
+options=(!strip)
+source=("ftp://download.nvidia.com/XFree86/Linux-x86/${pkgver}/NVIDIA-Linux-x86-${pkgver}.run"
+        "ftp://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run"
+        nv-drm.patch
+        nvidia-4.0.patch)
+md5sums=('8064c0a0998c3e7ee3c98ac1832b8194'
+         '440df290e213280d6e20d4d4be6f8b4c'
+         '79671a27131da619a33eb02ed0c2c031'
+         'f42bdf589f52d4e6c38baa5bef15eef8')
+
+[[ "$CARCH" = "i686" ]] && _pkg="NVIDIA-Linux-x86-${pkgver}"
+[[ "$CARCH" = "x86_64" ]] && _pkg="NVIDIA-Linux-x86_64-${pkgver}-no-compat32"
+
+prepare() {
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+    # patches here
+    patch -p0 -i ../nv-drm.patch
+    patch -p0 -i ../nvidia-4.0.patch
+}
+
+build() {
+    _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+    cd "${_pkg}"/kernel
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+
+    cd uvm
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+}
+
+package() {
+    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
+        "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
+    install -D -m644 "${srcdir}/${_pkg}/kernel/uvm/nvidia-uvm.ko" \
+        "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia-uvm.ko"
+    gzip "${pkgdir}/usr/lib/modules/${_extramodules}/"*.ko
+    install -d -m755 "${pkgdir}/usr/lib/modprobe.d"
+    echo "blacklist nouveau" >> "${pkgdir}/usr/lib/modprobe.d/nvidia.conf"
+}
