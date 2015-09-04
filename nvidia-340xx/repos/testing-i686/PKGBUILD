@@ -1,27 +1,23 @@
-# $Id: PKGBUILD 221857 2014-09-17 20:29:16Z tpowa $
+# $Id$
 # Maintainer : Thomas Baechler <thomas@archlinux.org>
 
-pkgname=nvidia-340xx
-pkgver=340.76
+pkgbase=nvidia-340xx
+pkgname=(nvidia-340xx nvidia-340xx-dkms)
+pkgver=340.93
 _extramodules=extramodules-4.2-ARCH
-pkgrel=15
-pkgdesc="NVIDIA drivers for linux, 340xx legacy branch"
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.nvidia.com/"
-depends=('linux>=4.2' 'linux<4.3' 'nvidia-340xx-libgl' "nvidia-340xx-utils=${pkgver}")
-makedepends=('linux-headers>=4.2' 'linux-headers<4.3')
+makedepends=("nvidia-340xx-utils=${pkgver}" 'linux' 'linux-headers>=4.2' 'linux-headers<4.3')
 conflicts=('nvidia')
 license=('custom')
-install=${pkgname}.install
 options=(!strip)
 source=("ftp://download.nvidia.com/XFree86/Linux-x86/${pkgver}/NVIDIA-Linux-x86-${pkgver}.run"
         "ftp://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run"
-        nv-drm.patch
-        nvidia-4.0.patch)
-md5sums=('8064c0a0998c3e7ee3c98ac1832b8194'
-         '440df290e213280d6e20d4d4be6f8b4c'
-         '79671a27131da619a33eb02ed0c2c031'
-         'f42bdf589f52d4e6c38baa5bef15eef8')
+        nv-drm.patch)
+md5sums=('4a7edf6838a80c77a57fb6f6ec7f0437'
+         'cb80e3f1cb6f2fb6e6eab35fad0884e4'
+         '79671a27131da619a33eb02ed0c2c031')
 
 [[ "$CARCH" = "i686" ]] && _pkg="NVIDIA-Linux-x86-${pkgver}"
 [[ "$CARCH" = "x86_64" ]] && _pkg="NVIDIA-Linux-x86_64-${pkgver}-no-compat32"
@@ -31,7 +27,6 @@ prepare() {
     cd "${_pkg}"
     # patches here
     patch -p0 -i ../nv-drm.patch
-    patch -p0 -i ../nvidia-4.0.patch
 }
 
 build() {
@@ -43,7 +38,12 @@ build() {
     make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
 }
 
-package() {
+package_nvidia-340xx() {
+    pkgdesc="NVIDIA drivers for linux, 340xx legacy branch"
+    depends=('linux>=4.2' 'linux<4.3' 'libgl' "nvidia-340xx-utils=${pkgver}")
+    conflict+=('nvidia-340xx-dkms')
+    install=nvidia-340xx.install
+
     install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
         "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia.ko"
     install -D -m644 "${srcdir}/${_pkg}/kernel/uvm/nvidia-uvm.ko" \
@@ -51,4 +51,19 @@ package() {
     gzip "${pkgdir}/usr/lib/modules/${_extramodules}/"*.ko
     install -d -m755 "${pkgdir}/usr/lib/modprobe.d"
     echo "blacklist nouveau" >> "${pkgdir}/usr/lib/modprobe.d/nvidia.conf"
+}
+
+package_nvidia-340xx-dkms() {
+    pkgdesc="NVIDIA driver sources for linux, 340xx legacy branch"
+    depends=('dkms' "nvidia-340xx-utils=$pkgver")
+    optdepends=('linux-headers: Build the module for Arch kernel'
+                'linux-lts-headers: Build the module for LTS Arch kernel')
+    conflict+=('nvidia-340xx')
+    install=nvidia-340xx-dkms.install
+
+    cd ${_pkg}
+    make -C kernel clean
+    install -dm 755 "${pkgdir}"/usr/{lib/modprobe.d,src}
+    cp -dr --no-preserve='ownership' kernel "${pkgdir}"/usr/src/nvidia-${pkgver}
+    echo 'blacklist nouveau' > "${pkgdir}"/usr/lib/modprobe.d/nvidia.conf
 }
