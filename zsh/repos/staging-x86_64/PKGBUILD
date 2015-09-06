@@ -1,0 +1,87 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=zsh
+pkgname=('zsh' 'zsh-doc')
+pkgver=5.1
+pkgrel=2
+arch=('i686' 'x86_64')
+url='http://www.zsh.org/'
+license=('custom')
+makedepends=('pcre' 'libcap' 'gdbm')
+source=("http://www.zsh.org/pub/zsh-${pkgver}.tar.xz"
+        "http://www.zsh.org/pub/zsh-${pkgver}-doc.tar.xz"
+        'zprofile')
+md5sums=('fbf736a6540873f4fb7bdaf70cafb1f0'
+         '1cae4809faf084081fb9aa08a3041288'
+         '24a9335edf77252a7b5f52e079f7aef7')
+
+prepare() {
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+
+	# Set correct keymap path
+	sed -i 's#/usr/share/keymaps#/usr/share/kbd/keymaps#g' Completion/Unix/Command/_loadkeys
+
+	# Fix usb.ids path
+	sed -i 's#/usr/share/misc/usb.ids#/usr/share/hwdata/usb.ids#g' Completion/Linux/Command/_lsusb
+
+	# Remove unneeded and conflicting completion scripts
+	for _fpath in AIX BSD Cygwin Darwin Debian Mandriva openSUSE Redhat Solaris; do
+		rm -rf Completion/$_fpath
+		sed "s#\s*Completion/$_fpath/\*/\*##g" -i Src/Zle/complete.mdd
+	done
+	rm Completion/Linux/Command/_{pkgtool,rpmbuild}
+	rm Completion/Unix/Command/_systemd
+}
+
+build() {
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+
+	./configure --prefix=/usr \
+		--docdir=/usr/share/doc/zsh \
+		--htmldir=/usr/share/doc/zsh/html \
+		--enable-etcdir=/etc/zsh \
+		--enable-zshenv=/etc/zsh/zshenv \
+		--enable-zlogin=/etc/zsh/zlogin \
+		--enable-zlogout=/etc/zsh/zlogout \
+		--enable-zprofile=/etc/zsh/zprofile \
+		--enable-zshrc=/etc/zsh/zshrc \
+		--enable-maildir-support \
+		--with-term-lib='ncursesw' \
+		--enable-multibyte \
+		--enable-function-subdirs \
+		--enable-fndir=/usr/share/zsh/functions \
+		--enable-scriptdir=/usr/share/zsh/scripts \
+		--with-tcsetpgrp \
+		--enable-pcre \
+		--enable-cap \
+		--enable-zsh-secure-free
+	make
+}
+
+check() {
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+	HOME="${srcdir}" make check
+}
+
+package_zsh() {
+	pkgdesc='A very advanced and programmable command interpreter (shell) for UNIX'
+	depends=('pcre' 'libcap' 'gdbm')
+	backup=('etc/zsh/zprofile')
+	install=zsh.install
+
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+	make DESTDIR="${pkgdir}/" install
+	install -D -m644 "${srcdir}/zprofile" "${pkgdir}/etc/zsh/zprofile"
+	install -D -m644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+package_zsh-doc() {
+	pkgdesc='Info, HTML and PDF format of the ZSH documentation'
+	install=zsh-doc.install
+
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+	make DESTDIR="${pkgdir}/" install.info install.html
+	install -D -m644 Doc/zsh.pdf "${pkgdir}/usr/share/doc/zsh/zsh.pdf"
+	install -D -m644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
