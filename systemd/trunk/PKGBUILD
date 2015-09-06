@@ -28,13 +28,13 @@ md5sums=('SKIP'
          '1e2f9a8b0fa32022bf0a8f39123e5f4e')
 
 prepare() {
-  cd "$pkgname"
+  cd "$pkgbase"
 
   ./autogen.sh
 }
 
 build() {
-  cd "$pkgname"
+  cd "$pkgbase"
 
   local timeservers=({0..3}.arch.pool.ntp.org)
 
@@ -91,7 +91,7 @@ package_systemd() {
           etc/udev/udev.conf)
   install="systemd.install"
 
-  make -C "$pkgname" DESTDIR="$pkgdir" install
+  make -C "$pkgbase" DESTDIR="$pkgdir" install
 
   # don't write units to /etc by default. some of these will be re-enabled on
   # post_install.
@@ -101,7 +101,7 @@ package_systemd() {
   rm -r "$pkgdir/usr/lib/rpm"
 
   # add back tmpfiles.d/legacy.conf
-  install -m644 "$pkgname/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
+  install -m644 "$pkgbase/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
 
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
