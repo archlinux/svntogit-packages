@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gdb
+pkgver=7.10
+pkgrel=2
+pkgdesc='The GNU Debugger'
+arch=(i686 x86_64)
+url='http://www.gnu.org/software/gdb/'
+license=(GPL3)
+depends=(ncurses expat python xz guile)
+makedepends=(texinfo)
+backup=(etc/gdb/gdbinit)
+install=gdb.install
+source=(http://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig})
+sha1sums=('95338f65ae9f61ecb76592f2cbe336a7d948b905'
+          'SKIP')
+validpgpkeys=('F40ADB902B24264AA42E50BF92EDB04BFF325CF3') # Joel Brobecker
+
+prepare() {
+  cd gdb-$pkgver
+
+  # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
+}
+
+build() {
+  cd gdb-$pkgver
+  
+  ./configure --prefix=/usr --disable-nls \
+    --with-system-readline \
+    --with-python=/usr/bin/python3 \
+    --with-system-gdbinit=/etc/gdb/gdbinit
+  make
+}
+
+package() {
+  cd gdb-$pkgver
+  make DESTDIR=$pkgdir install
+
+  # install "custom" system gdbinit
+  install -dm755 $pkgdir/etc/gdb
+  touch $pkgdir/etc/gdb/gdbinit
+
+  # resolve conflicts with binutils
+  rm $pkgdir/usr/include/{ansidecl,bfd,bfdlink,dis-asm,plugin-api,symcat}.h
+  rm $pkgdir/usr/share/info/bfd.info
+  rm $pkgdir/usr/lib/{libbfd,libopcodes}.a
+}
