@@ -1,0 +1,41 @@
+
+# HG changeset patch
+# User Victor Stinner <victor.stinner@gmail.com>
+# Date 1423661015 -3600
+# Node ID 689092296ad31951f8f919fc06b49450e648e93d
+# Parent  645f3d750be139ce0198e15e221da07b22289a92
+Issue #23433: Fix faulthandler._stack_overflow()
+
+Fix undefined behaviour: don't compare pointers. Use Py_uintptr_t type instead
+of void*. It fixes test_faulthandler on Fedora 22 which now uses GCC 5.
+
+diff --git a/Modules/faulthandler.c b/Modules/faulthandler.c
+--- a/Modules/faulthandler.c
++++ b/Modules/faulthandler.c
+@@ -911,12 +911,12 @@ faulthandler_fatal_error_py(PyObject *se
+ }
+ 
+ #if defined(HAVE_SIGALTSTACK) && defined(HAVE_SIGACTION)
+-static void*
+-stack_overflow(void *min_sp, void *max_sp, size_t *depth)
++static Py_uintptr_t
++stack_overflow(Py_uintptr_t min_sp, Py_uintptr_t max_sp, size_t *depth)
+ {
+     /* allocate 4096 bytes on the stack at each call */
+     unsigned char buffer[4096];
+-    void *sp = &buffer;
++    Py_uintptr_t sp = (Py_uintptr_t)&buffer;
+     *depth += 1;
+     if (sp < min_sp || max_sp < sp)
+         return sp;
+@@ -929,7 +929,8 @@ static PyObject *
+ faulthandler_stack_overflow(PyObject *self)
+ {
+     size_t depth, size;
+-    char *sp = (char *)&depth, *stop;
++    Py_uintptr_t sp = (Py_uintptr_t)&depth;
++    Py_uintptr_t stop;
+ 
+     depth = 0;
+     stop = stack_overflow(sp - STACK_OVERFLOW_MAX_SIZE,
+
