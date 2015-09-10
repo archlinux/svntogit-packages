@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Daniel Isenmann <daniel@archlinux.org>
+
+pkgname=gegl
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="Graph based image processing framework"
+arch=('i686' 'x86_64')
+url="http://www.gegl.org/"
+license=('GPL3' 'LGPL3')
+depends=('babl' 'libspiro' 'json-glib')
+makedepends=('intltool' 'ruby' 'lua' 'libopenraw' 'openexr' 'mesa' 'glu' 'ffmpeg' 'librsvg' 'jasper' 'exiv2' 'vala' 'python2' 'suitesparse')
+optdepends=('libopenraw: openraw plugin'
+            'openexr: openexr plugin'
+            'ffmpeg: ffmpeg plugin'
+            'suitessparse: matting-levin plugin'
+            'librsvg: svg plugin'
+            'jasper: jasper plugin')
+source=(http://ftp.gimp.org/pub/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('f0fec8f2e7b8835979d3cf4e38b05d41bb79f68dc80cf899a846484da693bbf7')
+
+prepare() {
+  mkdir path
+  ln -s /usr/bin/python2 path/python
+
+  cd ${pkgname}-${pkgver}
+}
+
+build() {
+  export PATH="$srcdir/path:$PATH" PYTHON=/usr/bin/python2
+  cd ${pkgname}-${pkgver}
+  ./configure  --prefix=/usr  --with-sdl --with-librsvg \
+    --with-libavformat --with-jasper --disable-docs
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  export PATH="$srcdir/path:$PATH" PYTHON=/usr/bin/python2
+  cd ${pkgname}-${pkgver}
+  make -k check || :
+}
+
+package() {
+  export PATH="$srcdir/path:$PATH" PYTHON=/usr/bin/python2
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+}
