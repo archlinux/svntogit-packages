@@ -1,0 +1,50 @@
+# $Id$
+# Maintainer: Daniel Isenmann <daniel@archlinux.org>
+
+pkgname=gimp
+pkgver=2.8.14
+pkgrel=4
+pkgdesc="GNU Image Manipulation Program"
+arch=('i686' 'x86_64')
+url="http://www.gimp.org/"
+license=('GPL' 'LGPL')
+depends=('pygtk' 'lcms' 'libxpm' 'libwmf' 'libxmu' 'librsvg' 'libmng' 'dbus-glib'
+         'libexif' 'gegl02' 'jasper' 'desktop-file-utils' 'hicolor-icon-theme' 'babl'
+         'openexr' 'libgudev')
+makedepends=('intltool' 'webkitgtk2' 'poppler-glib' 'alsa-lib' 'iso-codes' 'curl' 'ghostscript')
+optdepends=('gutenprint: for sophisticated printing only as gimp has built-in cups print support'
+            'webkitgtk2: for the help browser'
+            'poppler-glib: for pdf support'
+            'alsa-lib: for MIDI event controller module'
+            'curl: for URI support'
+            'ghostscript: for postscript support')
+options=('!makeflags')
+conflicts=('gimp-devel')
+install=gimp.install
+source=(http://download.gimp.org/pub/gimp/v${pkgver%.*}/${pkgname}-${pkgver}.tar.bz2 linux.gpl 
+        uri-backend-libcurl.patch)
+md5sums=('233c948203383fa078434cc3f8f925cb'
+         'bb27bc214261d36484093e857f015f38'
+         'e894f4b2ffa92c71448fdd350e9b78c6')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  PYTHON=/usr/bin/python2 ./configure --prefix=/usr --sysconfdir=/etc \
+    --enable-mp --enable-gimp-console --enable-gimp-remote \
+    --enable-python --with-gif-compression=lzw --with-libcurl \
+    --without-aa --without-hal --without-gvfs --without-gnomevfs
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' "${pkgdir}"/usr/lib/gimp/2.0/plug-ins/*.py
+  install -D -m644 "${srcdir}/linux.gpl" "${pkgdir}/usr/share/gimp/2.0/palettes/Linux.gpl"
+
+  rm "${pkgdir}/usr/share/man/man1/gimp-console.1"
+  ln -s gimp-console-${pkgver%.*}.1.gz "${pkgdir}/usr/share/man/man1/gimp-console.1.gz"
+  ln -s gimptool-2.0 "${pkgdir}/usr/bin/gimptool"
+  ln -sf gimptool-2.0.1.gz "${pkgdir}/usr/share/man/man1/gimptool.1.gz"
+}
+
