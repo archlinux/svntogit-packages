@@ -1,0 +1,180 @@
+From 93a2baac05a325b688aea2cc12d9714d6b186f69 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dan=20Vr=C3=A1til?= <dvratil@redhat.com>
+Date: Mon, 7 Sep 2015 16:20:39 +0200
+Subject: [PATCH] IMAP: switch to GID-based merge when the Collection can
+ contain something else than emails
+
+In order to fix the recurrent multiple-merge-candidates issue which was breaking
+ItemSync, ItemSync switched to RID-based merging, which is way more reliable.
+However in some cases the IMAP resource still wants to use GID-based merging,
+because RID might not be stable enough.
+---
+ CMakeLists.txt                              |  2 +-
+ resources/imap/resourcestate.cpp            |  5 +++++
+ resources/imap/resourcestate.h              |  2 ++
+ resources/imap/resourcestateinterface.h     |  2 ++
+ resources/imap/resourcetask.cpp             |  5 +++++
+ resources/imap/resourcetask.h               |  2 ++
+ resources/imap/retrieveitemstask.cpp        | 10 ++++++++++
+ resources/imap/tests/dummyresourcestate.cpp |  8 +++++++-
+ resources/imap/tests/dummyresourcestate.h   |  4 ++++
+ 9 files changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6f1b347..e416ba4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -53,7 +53,7 @@ find_package(KDE4 4.14.0 REQUIRED)
+ include(KDE4Defaults)
+ 
+ # KdepimLibs
+-find_package(KdepimLibs 4.14.10)
++find_package(KdepimLibs 4.14.11)
+ set_package_properties(KdepimLibs PROPERTIES DESCRIPTION "The KDEPIM libraries" URL "http://www.kde.org" TYPE REQUIRED)
+ 
+ #Boost
+diff --git a/resources/imap/resourcestate.cpp b/resources/imap/resourcestate.cpp
+index d2ed2d2..b0156ce 100644
+--- a/resources/imap/resourcestate.cpp
++++ b/resources/imap/resourcestate.cpp
+@@ -362,3 +362,8 @@ MessageHelper::Ptr ResourceState::messageHelper() const
+ {
+   return MessageHelper::Ptr(new MessageHelper());
+ }
++
++void ResourceState::setItemMergingMode(Akonadi::ItemSync::MergeMode mode)
++{
++    m_resource->setItemMergingMode(mode);
++}
+\ No newline at end of file
+diff --git a/resources/imap/resourcestate.h b/resources/imap/resourcestate.h
+index 4a61a11..00d1c3e 100644
+--- a/resources/imap/resourcestate.h
++++ b/resources/imap/resourcestate.h
+@@ -129,6 +129,8 @@ public:
+ 
+   virtual MessageHelper::Ptr messageHelper() const;
+ 
++  void setItemMergingMode(Akonadi::ItemSync::MergeMode mergeMode);
++
+ private:
+   ImapResourceBase *m_resource;
+   const TaskArguments m_arguments;
+diff --git a/resources/imap/resourcestateinterface.h b/resources/imap/resourcestateinterface.h
+index 704038e..584af81 100644
+--- a/resources/imap/resourcestateinterface.h
++++ b/resources/imap/resourcestateinterface.h
+@@ -26,6 +26,7 @@
+ 
+ #include <Akonadi/Collection>
+ #include <Akonadi/Item>
++#include <Akonadi/ItemSync>
+ 
+ #include <kimap/listjob.h>
+ 
+@@ -110,6 +111,7 @@ public:
+ 
+   virtual MessageHelper::Ptr messageHelper() const = 0;
+ 
++  virtual void setItemMergingMode(Akonadi::ItemSync::MergeMode mergeMode) = 0;
+ };
+ 
+ #endif
+diff --git a/resources/imap/resourcetask.cpp b/resources/imap/resourcetask.cpp
+index 7056435..d549bba 100644
+--- a/resources/imap/resourcetask.cpp
++++ b/resources/imap/resourcetask.cpp
+@@ -537,3 +537,8 @@ ResourceStateInterface::Ptr ResourceTask::resourceState()
+ {
+     return m_resource;
+ }
++
++void ResourceTask::setItemMergingMode(Akonadi::ItemSync::MergeMode mode)
++{
++    m_resource->setItemMergingMode(mode);
++}
+diff --git a/resources/imap/resourcetask.h b/resources/imap/resourcetask.h
+index 4b08f6f..ee345de 100644
+--- a/resources/imap/resourcetask.h
++++ b/resources/imap/resourcetask.h
+@@ -138,6 +138,8 @@ protected:
+ 
+   int batchSize() const;
+ 
++  void setItemMergingMode(Akonadi::ItemSync::MergeMode mode);
++
+   ResourceStateInterface::Ptr resourceState();
+ 
+ private:
+diff --git a/resources/imap/retrieveitemstask.cpp b/resources/imap/retrieveitemstask.cpp
+index 8b54d50..0bc76d5 100644
+--- a/resources/imap/retrieveitemstask.cpp
++++ b/resources/imap/retrieveitemstask.cpp
+@@ -84,6 +84,16 @@ void RetrieveItemsTask::doStart(KIMAP::Session *session)
+     m_session = session;
+ 
+     const Akonadi::Collection col = collection();
++    // Only with emails we can be sure that RID is persistent and thus we can use
++    // it for merging. For other potential content types (like Kolab events etc.)
++    // use GID instead.
++    QStringList cts = col.contentMimeTypes();
++    cts.removeOne(Akonadi::Collection::mimeType());
++    cts.removeOne(KMime::Message::mimeType());
++    if (!cts.isEmpty()) {
++        setItemMergingMode(Akonadi::ItemSync::GIDMerge);
++    }
++
+     if (m_fetchMissingBodies && col.cachePolicy()
+         .localParts().contains( QLatin1String(Akonadi::MessagePart::Body))) { //disconnected mode, make sure we really have the body cached
+ 
+diff --git a/resources/imap/tests/dummyresourcestate.cpp b/resources/imap/tests/dummyresourcestate.cpp
+index 32dad6c..cdd8e01 100644
+--- a/resources/imap/tests/dummyresourcestate.cpp
++++ b/resources/imap/tests/dummyresourcestate.cpp
+@@ -26,7 +26,8 @@ Q_DECLARE_METATYPE(QVector<qint64>)
+ 
+ DummyResourceState::DummyResourceState()
+   : m_automaticExpunge( true ), m_subscriptionEnabled( true ),
+-    m_disconnectedMode( true ), m_intervalCheckTime( -1 )
++    m_disconnectedMode( true ), m_intervalCheckTime( -1 ),
++    m_mergeMode( Akonadi::ItemSync::RIDMerge )
+ {
+   qRegisterMetaType<QList<qint64> >();
+   qRegisterMetaType<QVector<qint64> >();
+@@ -346,6 +347,11 @@ int DummyResourceState::batchSize() const
+   return 10;
+ }
+ 
++void DummyResourceState::setItemMergingMode( Akonadi::ItemSync::MergeMode mergeMode )
++{
++  m_mergeMode = mergeMode;
++}
++
+ MessageHelper::Ptr DummyResourceState::messageHelper() const
+ {
+   return MessageHelper::Ptr(new MessageHelper());
+diff --git a/resources/imap/tests/dummyresourcestate.h b/resources/imap/tests/dummyresourcestate.h
+index 9e77a74..aab7aa5 100644
+--- a/resources/imap/tests/dummyresourcestate.h
++++ b/resources/imap/tests/dummyresourcestate.h
+@@ -123,6 +123,8 @@ public:
+ 
+   virtual int batchSize() const;
+ 
++  virtual void setItemMergingMode(Akonadi::ItemSync::MergeMode mergeMode);
++
+   virtual MessageHelper::Ptr messageHelper() const;
+ 
+   QList< QPair<QByteArray, QVariant> > calls() const;
+@@ -141,6 +143,8 @@ private:
+   int m_intervalCheckTime;
+   QChar m_separator;
+ 
++  Akonadi::ItemSync::MergeMode m_mergeMode;
++
+   Akonadi::Collection m_collection;
+   Akonadi::Item::List m_items;
+ 
+-- 
+2.4.6
+
