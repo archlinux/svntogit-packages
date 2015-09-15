@@ -14,7 +14,7 @@ arch=('i686' 'x86_64')
 license=('custom')
 url="http://www.python.org/"
 depends=('expat' 'bzip2' 'gdbm' 'openssl' 'libffi' 'zlib')
-makedepends=('tk' 'sqlite' 'valgrind' 'bluez-libs' 'mpdecimal' 'hardening-wrapper')
+makedepends=('tk' 'sqlite' 'valgrind' 'bluez-libs' 'mpdecimal')
 checkdepends=('gdb' 'xorg-server-xvfb')
 optdepends=('python-setuptools'
             'python-pip'
@@ -26,15 +26,20 @@ options=('!makeflags')
 provides=('python3')
 replaces=('python3')
 source=("http://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"
-        test_gdb-version-fix.patch)
+        test_gdb-version-fix.patch
+        dont-make-libpython-readonly.patch)
 sha1sums=('871a06df9ab70984b7398ac53047fe125c757a70'
-          'ab86515aff465385675e2e6e593f09596e0a8db0')
+          'ab86515aff465385675e2e6e593f09596e0a8db0'
+          'c22b24324b8e53326702de439c401d97927ee3f2')
 
 prepare() {
   cd Python-${pkgver}
 
   # https://bugs.python.org/issue25096
   patch -p1 -i ../test_gdb-version-fix.patch
+
+  # FS#45809
+  patch -p1 -i ../dont-make-libpython-readonly.patch
 
   # FS#23997
   sed -i -e "s|^#.* /usr/local/bin/python|#!/usr/bin/python|" Lib/cgi.py
@@ -63,7 +68,7 @@ build() {
               --enable-loadable-sqlite-extensions \
               --without-ensurepip
 
-  make
+  make EXTRA_CFLAGS="$CFLAGS"
 }
 
 check() {
@@ -82,7 +87,7 @@ check() {
 
 package() {
   cd Python-${pkgver}
-  make DESTDIR="${pkgdir}" install maninstall
+  make DESTDIR="${pkgdir}" EXTRA_CFLAGS="$CFLAGS" install maninstall
 
   # Why are these not done by default...
   ln -s python3               "${pkgdir}"/usr/bin/python
