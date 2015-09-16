@@ -11,8 +11,8 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lldb' 'clang' 'clang-analyzer'
          'clang-tools-extra')
-pkgver=3.6.2
-pkgrel=4
+pkgver=3.7.0
+pkgrel=0
 _ocaml_ver=4.02.3
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
@@ -27,25 +27,22 @@ source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/lldb-$pkgver.src.tar.xz{,.sig}
-        llvm-3.6.0-use-ocamlfind-for-ocamldoc.patch
-        llvm-ocaml-ctypes-0.4.patch
         llvm-Config-config.h
         llvm-Config-llvm-config.h)
-sha256sums=('f60dc158bfda6822de167e87275848969f0558b3134892ff54fced87e4667b94'
+sha256sums=('ab45895f9dcdad1e140a3a79fd709f64b05ad7364e308c0e582c5b02e9cc3153'
             'SKIP'
-            'ae9180466a23acb426d12444d866b266ff2289b266064d362462e44f8d4699f3'
+            '4ed740c5a91df1c90a4118c5154851d6a475f39a91346bdf268c1c29c13aa1cc'
             'SKIP'
-            '6a0ec627d398f501ddf347060f7a2ccea4802b2494f1d4fd7bda3e0442d04feb'
+            '8ae8a0a3a96b7a700412d67df0af172cb2fc1326beec575fcc0f71d2e72709cd'
             'SKIP'
-            '0f2ff37d80a64575fecd8cf0d5c50f7ac1f837ddf700d1855412bb7547431d87'
+            '227fa998520bc94974a428dc8e7654d9bdf277e5bc70d4064ebc05691bd62b0b'
             'SKIP'
-            '940dc96b64919b7dbf32c37e0e1d1fc88cc18e1d4b3acf1e7dfe5a46eb6523a9'
+            'f4d7505bc111044eaa4033af012221e492938405b62522b8e3e354c20c4b71e9'
             'SKIP'
-            '7e62bd5dd1ae5755a63abab692ae366186be392104e232e6b3a10a4ea5807283'
-            '0e45ad131908a121f628d1575d32b7ad522b3a7039b517dfef4aac25243f3e7f'
             '312574e655f9a87784ca416949c505c452b819fad3061f2cde8aced6540a19a3'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
-validpgpkeys=('11E521D646982372EB577A1F8F0871F202119294')
+validpgpkeys=('11E521D646982372EB577A1F8F0871F202119294'
+              'B6C8F98282B944E3B0D5C2530FC3042E345AD05D')
 
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
@@ -64,32 +61,24 @@ prepare() {
   sed -i 's:$(PROJ_prefix)/docs/llvm:$(PROJ_prefix)/share/doc/llvm:' \
     Makefile.config.in
 
-  # Fix definition of LLVM_CMAKE_DIR in LLVMConfig.cmake
-  sed -i '/@LLVM_CONFIG_CMAKE_DIR@/s:$(PROJ_cmake):$(PROJ_prefix)/share/llvm/cmake:' \
-    cmake/modules/Makefile
-
   # Use Python 2
   find tools/lldb -name Makefile -exec sed -i 's/python-config/python2-config/' {} +
-  sed -i 's|/usr/bin/env python|&2|' \
-    tools/lldb/scripts/Python/{build-swig-Python,finish-swig-Python-LLDB}.sh
+  sed -i -e 's|env python|&2|' -e 's|/usr/bin/python$|&2|' \
+    tools/lldb/scripts/Python/{build-swig-Python,finish-swig-Python-LLDB}.sh \
+    tools/lldb/examples/python/symbolication.py
 
-  # Fix docs/Makefile to use ocamlfind
-  # http://llvm.org/bugs/show_bug.cgi?id=22737
-  patch -Np1 -i ../llvm-3.6.0-use-ocamlfind-for-ocamldoc.patch
-
-  # Fix build with ocaml-ctypes 0.4.x
-  patch -Np1 -i ../llvm-ocaml-ctypes-0.4.patch
+  mkdir build
 }
 
 build() {
-  cd "$srcdir/llvm-$pkgver.src"
+  cd "$srcdir/llvm-$pkgver.src/build"
 
   # Include location of libffi headers in CPPFLAGS
   CPPFLAGS+=" $(pkg-config --cflags libffi)"
 
   # Force the use of GCC instead of clang
   CC=gcc CXX=g++ \
-  ./configure \
+  ../configure \
     --prefix=/usr \
     --sysconfdir=/etc \
     --enable-shared \
@@ -102,9 +91,10 @@ build() {
     --with-python=/usr/bin/python2
 
   make REQUIRES_RTTI=1
-  make -C docs -f Makefile.sphinx man
-  make -C docs -f Makefile.sphinx html
-  make -C tools/clang/docs -f Makefile.sphinx html
+  make -C ../docs -f Makefile.sphinx man
+  make -C ../docs -f Makefile.sphinx html
+  make -C ../tools/clang/docs -f Makefile.sphinx man
+  make -C ../tools/clang/docs -f Makefile.sphinx html
 }
 
 package_llvm() {
@@ -113,17 +103,19 @@ package_llvm() {
 
   cd "$srcdir/llvm-$pkgver.src"
 
-  # We move the clang directory out of the tree so it won't get installed and
-  # then we bring it back in for the clang package
-  mv tools/clang "$srcdir/"
+  # Temporarily rename clang and lldb directories so they don't get installed
+  for tool in clang lldb; do
+      mv build/tools/$tool{,.hidden}
+      mv tools/$tool{,.hidden}
+  done
 
-  # Same for lldb
-  mv tools/lldb "$srcdir/"
+  make -C build DESTDIR="$pkgdir" install
 
-  # -j1 is due to race conditions during the installation of the OCaml bindings
-  make -j1 DESTDIR="$pkgdir" install
-  mv "$srcdir/clang" tools
-  mv "$srcdir/lldb" tools
+  # Restore original tool directory names
+  for tool in clang lldb; do
+      mv build/tools/$tool{.hidden,}
+      mv tools/$tool{.hidden,}
+  done
 
   # The runtime libraries go into llvm-libs
   mv -f "$pkgdir/usr/lib/libLLVM-$pkgver.so" "$srcdir/"
@@ -202,9 +194,9 @@ package_lldb() {
   url="http://lldb.llvm.org/"
   depends=("llvm-libs=$pkgver-$pkgrel" 'libedit' 'python2')
 
-  cd "$srcdir/llvm-$pkgver.src/tools/lldb"
+  cd "$srcdir/llvm-$pkgver.src"
 
-  make DESTDIR="$pkgdir" install
+  make -C build/tools/lldb DESTDIR="$pkgdir" install
 
   # Fix permissions of static libs
   chmod -x "$pkgdir"/usr/lib/*.a
@@ -216,7 +208,7 @@ package_lldb() {
   python2 -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
   python2 -O -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
 
-  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 tools/lldb/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 package_clang() {
@@ -224,33 +216,40 @@ package_clang() {
   url="http://clang.llvm.org/"
   depends=("llvm-libs=$pkgver-$pkgrel" 'gcc')
 
+  cd "$srcdir/llvm-$pkgver.src"
+
   # Fix installation path for clang docs
   sed -i 's:$(PROJ_prefix)/share/doc/llvm:$(PROJ_prefix)/share/doc/clang:' \
-    "$srcdir/llvm-$pkgver.src/Makefile.config"
+    build/Makefile.config
 
-  cd "$srcdir/llvm-$pkgver.src/tools/clang"
+  # Temporarily rename clang extra tools directory so they don't get installed
+  mv build/tools/clang/tools/extra{,.hidden}
+  mv tools/clang/tools/extra{,.hidden}
 
-  # We move the extra tools directory out of the tree so it won't get
-  # installed and then we bring it back in for the clang-tools-extra package
-  mv tools/extra "$srcdir"
+  make -C build/tools/clang DESTDIR="$pkgdir" install
 
-  make DESTDIR="$pkgdir" install
-  mv "$srcdir/extra" tools/
+  # Restore original extra tools directory name
+  mv build/tools/clang/tools/extra{.hidden,}
+  mv tools/clang/tools/extra{.hidden,}
 
   # Fix permissions of static libs
   chmod -x "$pkgdir"/usr/lib/*.a
 
   # Revert the path change in case we want to do a repackage later
   sed -i 's:$(PROJ_prefix)/share/doc/clang:$(PROJ_prefix)/share/doc/llvm:' \
-    "$srcdir/llvm-$pkgver.src/Makefile.config"
+    build/Makefile.config
+
+  # Install man pages
+  install -d "$pkgdir/usr/share/man/man1"
+  cp tools/clang/docs/_build/man/*.1 "$pkgdir/usr/share/man/man1/"
 
   # Install html docs
-  cp -r docs/_build/html/* "$pkgdir/usr/share/doc/$pkgname/html/"
+  cp -r tools/clang/docs/_build/html/* "$pkgdir/usr/share/doc/$pkgname/html/"
   rm -r "$pkgdir/usr/share/doc/$pkgname/html/_sources"
 
   # Install Python bindings
   install -d "$pkgdir/usr/lib/python2.7/site-packages"
-  cp -r bindings/python/clang "$pkgdir/usr/lib/python2.7/site-packages/"
+  cp -r tools/clang/bindings/python/clang "$pkgdir/usr/lib/python2.7/site-packages/"
   python2 -m compileall "$pkgdir/usr/lib/python2.7/site-packages/clang"
   python2 -O -m compileall "$pkgdir/usr/lib/python2.7/site-packages/clang"
 
@@ -258,7 +257,7 @@ package_clang() {
   # Destination paths are copied from clang-format/CMakeLists.txt
   install -d "$pkgdir/usr/share/$pkgname"
   (
-    cd tools/clang-format
+    cd tools/clang/tools/clang-format
     cp \
       clang-format-diff.py \
       clang-format-sublime.py \
@@ -271,7 +270,8 @@ package_clang() {
       "$pkgdir/usr/share/$pkgname/clang-format-diff.py"
   )
 
-  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 tools/clang/LICENSE.TXT \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 package_clang-analyzer() {
@@ -296,9 +296,7 @@ package_clang-analyzer() {
     "$pkgdir/usr/share/man/man1/"
 
   # Use Python 2
-  sed -i \
-    -e 's|env python$|&2|' \
-    -e 's|/usr/bin/python$|&2|' \
+  sed -i -e 's|env python$|&2|' -e 's|/usr/bin/python$|&2|' \
     "$pkgdir/usr/lib/clang-analyzer/scan-view/scan-view" \
     "$pkgdir/usr/lib/clang-analyzer/scan-build/set-xcode-analyzer"
 
@@ -314,14 +312,15 @@ package_clang-tools-extra() {
   url="http://clang.llvm.org/"
   depends=("clang=$pkgver-$pkgrel")
 
-  cd "$srcdir/llvm-$pkgver.src/tools/clang/tools/extra"
+  cd "$srcdir/llvm-$pkgver.src"
 
-  make DESTDIR="$pkgdir" install
+  make -C build/tools/clang/tools/extra DESTDIR="$pkgdir" install
 
   # Fix permissions of static libs
   chmod -x "$pkgdir"/usr/lib/*.a
 
-  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 tools/clang/tools/extra/LICENSE.TXT \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 # vim:set ts=2 sw=2 et:
