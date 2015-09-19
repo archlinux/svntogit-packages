@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
+
+pkgbase=python-requests
+pkgname=('python-requests' 'python2-requests')
+pkgver=2.7.0
+pkgrel=2
+pkgdesc="Python HTTP for Humans"
+arch=('any')
+url="http://python-requests.org"
+license=('Apache')
+makedepends=('python-setuptools' 'python2-setuptools')
+source=(http://pypi.python.org/packages/source/r/requests/requests-$pkgver.tar.gz
+        certs.patch)
+sha256sums=('398a3db6d61899d25fd4a06c6ca12051b0ce171d705decd7ed5511517b4bb93d'
+            'e35e779d8640f35ea2ea51112f967d927b44d59483af4cd2c0945c84e79bb7c7')
+
+prepare() {
+    cd "$srcdir"/requests-$pkgver
+    patch -p1 -i "$srcdir"/certs.patch
+    sed -r 's#(\W|^)requests/cacert\.pem(\W|$)##' -i MANIFEST.in
+    rm -f requests/cacert.pem
+
+    cd "$srcdir"
+    cp -a requests-$pkgver{,-py2}
+    find requests-$pkgver-py2 -name \*.py -exec sed -r 's|^#!(.*)python$|#!\1python2|' -i {} +
+}
+
+build() {
+    cd "$srcdir"/requests-$pkgver
+    python setup.py build
+
+    cd "$srcdir"/requests-$pkgver-py2
+    python2 setup.py build
+}
+
+check() {
+    cd "$srcdir"/requests-$pkgver
+    test -f "$(python -m requests.certs)"
+}
+
+package_python-requests() {
+    depends=('python')
+
+    cd "$srcdir"/requests-$pkgver
+    python setup.py install --skip-build -O1 --root="$pkgdir"
+    install -m0644 -D "LICENSE" "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}
+
+package_python2-requests() {
+    depends=('python2')
+    optdepends=('python2-ndg-httpsclient: HTTPS requests with SNI support'
+                'python2-grequests: asynchronous requests with gevent')
+
+    cd "$srcdir"/requests-$pkgver-py2
+    python2 setup.py install --skip-build -O1 --root="$pkgdir"
+}
