@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Eric Belanger <eric@archlinux.org>
+# Contributor: William Rea <sillywilly@gmail.com>
+
+pkgname=fontforge
+pkgver=20150612
+pkgrel=2
+pkgdesc='Outline and bitmap font editor'
+url='http://www.fontforge.org/'
+arch=('i686' 'x86_64')
+license=('BSD')
+makedepends=('git')
+depends=('libtool' 'libxkbui' 'libxi'
+         'pango' 'giflib' 'libtiff' 'libxml2' 'libspiro' 'libunicodenames' 'zeromq'
+         'python' 'desktop-file-utils' 'gtk-update-icon-cache' 'hicolor-icon-theme')
+source=("https://github.com/fontforge/fontforge/archive/${pkgver}.tar.gz"
+        'http://fontforge.org/cidmaps.tgz'
+        'python35.patch')
+sha1sums=('a29ef3ff4df9b77344e29b25c632b36fb79c13e9'
+          'efbc7c9d3e95159f5600dc71f9cccb370e46bb94'
+          '8003bc30a56aee7378ac1d74639d2678a823d952')
+
+install=install
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -p1 -i ../python35.patch
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	export LIBZMQ_LIBS=-lzmq
+	./bootstrap --force
+	./configure \
+		--prefix=/usr \
+		--mandir=/usr/share/man \
+		--enable-python-extension \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+
+	install -d "${pkgdir}/usr/share/fontforge"
+	install -m644 ../Adobe-* "${pkgdir}/usr/share/fontforge"
+
+	install -d "${pkgdir}/usr/share/icons"
+	cp -a desktop/icons "${pkgdir}/usr/share/icons/hicolor"
+	rm -fr "${pkgdir}/usr/share/icons/hicolor/src"
+
+	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	install -Dm644 desktop/fontforge.desktop "${pkgdir}/usr/share/applications/fontforge.desktop"
+}
