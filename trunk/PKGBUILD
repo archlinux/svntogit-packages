@@ -14,7 +14,7 @@ makedepends=('systemd' 'python')
 license=('GPL2')
 options=('strip' 'debug')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
-source=("https://www.kernel.org/pub/linux/utils/util-linux/v2.27/$pkgname-$pkgver.tar."{xz,sign}
+source=("https://www.kernel.org/pub/linux/utils/util-linux/v2.27/$pkgbase-$pkgver.tar."{xz,sign}
         uuidd.tmpfiles
         pam-{login,common,su})
 md5sums=('5b06bbda9309624ee7add15bc8d8ca22'
@@ -25,7 +25,7 @@ md5sums=('5b06bbda9309624ee7add15bc8d8ca22'
          'fa85e5cce5d723275b14365ba71a8aad')
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgbase-$pkgver"
 
   ./configure --prefix=/usr \
               --libdir=/usr/lib \
@@ -39,7 +39,6 @@ build() {
               --enable-write \
               --enable-mesg \
               --enable-libmount-force-mountinfo \
-              --enable-socket-activation \
               --with-python=3
 
   make
@@ -59,7 +58,7 @@ package_util-linux() {
           etc/pam.d/su
           etc/pam.d/su-l)
 
-  cd "$pkgname-$pkgver"
+  cd "$pkgbase-$pkgver"
 
   make DESTDIR="$pkgdir" install
 
@@ -77,21 +76,19 @@ package_util-linux() {
   # TODO(dreisner): offer this upstream?
   install -Dm644 "$srcdir/uuidd.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/uuidd.conf"
 
-  # usrmove
+  # adjust for usrmove
+  # TODO(dreisner): fix configure.ac upstream so that this isn't needed
   cd "$pkgdir"
   mv {,usr/}sbin/* usr/bin
   rmdir sbin usr/sbin
 
-  ### create libutil-linux split
-  rm -rf "$srcdir/_libutil-linux"
-  install -dm755 "$srcdir"/_libutil-linux/usr/lib
-  cd "$srcdir"/_libutil-linux
-  mv "$pkgdir"/usr/lib/lib*.{a,so}* usr/lib
+  ### runtime libs are shipped as part of libutil-linux
+  rm "$pkgdir"/usr/lib/lib*.{a,so}*
 }
 
 package_libutil-linux() {
   pkgdesc="util-linux runtime libraries"
   provides=('libblkid.so' 'libfdisk.so' 'libmount.so' 'libsmartcols.so' 'libuuid.so')
 
-  mv "$srcdir/_libutil-linux"/* "$pkgdir"
+  make -C "$pkgbase-$pkgver" DESTDIR="$pkgdir" install-usrlib_execLTLIBRARIES
 }
