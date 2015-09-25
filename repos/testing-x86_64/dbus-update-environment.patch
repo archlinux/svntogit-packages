@@ -1,24 +1,54 @@
-diff -u -r plasma-workspace-5.4.1/startkde/startkde.cmake plasma-workspace-5.4.1-dbus/startkde/startkde.cmake
---- plasma-workspace-5.4.1/startkde/startkde.cmake	2015-09-25 19:12:09.630988076 +0200
-+++ plasma-workspace-5.4.1-dbus/startkde/startkde.cmake	2015-09-25 19:15:07.320598595 +0200
-@@ -286,6 +286,8 @@
- # D-Bus autolaunch is broken
- if test -z "$DBUS_SESSION_BUS_ADDRESS" ; then
-     eval `dbus-launch --sh-syntax --exit-with-session`
-+elif which dbus-update-activation-environment >/dev/null 2>/dev/null ; then
-+    dbus-update-activation-environment --systemd --all
+From 195a2f24ea87d642c654ad6e06f3fede4fb66c64 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 25 Sep 2015 19:27:29 +0200
+Subject: [PATCH] [startkde] Use dbus-update-activation-environment
+
+The difference to ksyncdbusenv is that d-u-a-e can update systemd's
+environment, too. This is only important if a userspace (dbus-daemon) bus
+is used and service files make use of SystemdService to have dbus-daemon
+tell systemd to start the service.
+
+In the kernel bus (kdbus) case, systemd's environment gets updated when
+org.freedesktop.dbus.UpdateActivationEnvironment is called.
+---
+ startkde/startkde.cmake              | 6 +++++-
+ startkde/startplasmacompositor.cmake | 6 +++++-
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/startkde/startkde.cmake b/startkde/startkde.cmake
+index b034b96..f5748dc 100644
+--- a/startkde/startkde.cmake
++++ b/startkde/startkde.cmake
+@@ -343,7 +343,11 @@ if test -n "$PAM_KWALLET5_LOGIN" ; then
  fi
- if $qdbus >/dev/null 2>/dev/null; then
-     : # ok
-diff -u -r plasma-workspace-5.4.1/startkde/startplasmacompositor.cmake plasma-workspace-5.4.1-dbus/startkde/startplasmacompositor.cmake
---- plasma-workspace-5.4.1/startkde/startplasmacompositor.cmake	2015-09-03 12:26:33.000000000 +0200
-+++ plasma-workspace-5.4.1-dbus/startkde/startplasmacompositor.cmake	2015-09-25 19:15:17.150577050 +0200
-@@ -163,6 +163,8 @@
- # D-Bus autolaunch is broken
- if test -z "$DBUS_SESSION_BUS_ADDRESS" ; then
-     eval `dbus-launch --sh-syntax --exit-with-session`
-+elif which dbus-update-activation-environment >/dev/null 2>/dev/null ; then
+ 
+ # At this point all environment variables are set, let's send it to the DBus session server to update the activation environment
+-@CMAKE_INSTALL_FULL_LIBEXECDIR@/ksyncdbusenv
++if which dbus-update-activation-environment >/dev/null 2>/dev/null ; then
 +    dbus-update-activation-environment --systemd --all
- fi
- if $qdbus >/dev/null 2>/dev/null; then
-     : # ok
++else
++    @CMAKE_INSTALL_FULL_LIBEXECDIR@/ksyncdbusenv
++fi
+ if test $? -ne 0; then
+   # Startup error
+   echo 'startkde: Could not sync environment to dbus.'  1>&2
+diff --git a/startkde/startplasmacompositor.cmake b/startkde/startplasmacompositor.cmake
+index d8ed68e..17f5881 100644
+--- a/startkde/startplasmacompositor.cmake
++++ b/startkde/startplasmacompositor.cmake
+@@ -212,7 +212,11 @@ QT_QPA_PLATFORM=wayland
+ export QT_QPA_PLATFORM
+ 
+ # At this point all environment variables are set, let's send it to the DBus session server to update the activation environment
+-@CMAKE_INSTALL_FULL_LIBEXECDIR@/ksyncdbusenv
++if which dbus-update-activation-environment >/dev/null 2>/dev/null ; then
++    dbus-update-activation-environment --systemd --all
++else
++    @CMAKE_INSTALL_FULL_LIBEXECDIR@/ksyncdbusenv
++fi
+ if test $? -ne 0; then
+   # Startup error
+   echo 'startplasmacompositor: Could not sync environment to dbus.'  1>&2
+-- 
+2.4.6
+
