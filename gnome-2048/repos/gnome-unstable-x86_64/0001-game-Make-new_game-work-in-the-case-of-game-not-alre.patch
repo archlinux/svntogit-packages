@@ -1,0 +1,55 @@
+From 8a18366cb3c054f01ceef43b403cf0838937bb70 Mon Sep 17 00:00:00 2001
+From: Yanko Kaneti <yaneti@declera.com>
+Date: Sat, 26 Sep 2015 13:18:31 +0300
+Subject: [PATCH] game: Make new_game() work in the case of game not already
+ existing
+
+https://bugzilla.gnome.org/show_bug.cgi?id=755658
+---
+ src/game.vala | 20 +++++++++-----------
+ 1 file changed, 9 insertions(+), 11 deletions(-)
+
+diff --git a/src/game.vala b/src/game.vala
+index 4142223..d8673c6 100644
+--- a/src/game.vala
++++ b/src/game.vala
+@@ -107,7 +107,11 @@ public class Game : GLib.Object
+   {
+     _grid.clear ();
+     _undo_stack.clear ();
+-    _clear_foreground ();
++    // new_game could be called without an existing game
++    if (_background == null) {
++      _init_background ();
++    } else
++      _clear_foreground ();
+     score = 0;
+     _state = GameState.SHOWING_FIRST_TILE;
+     _create_random_tile ();
+@@ -148,19 +152,13 @@ public class Game : GLib.Object
+     try {
+       FileUtils.get_contents (_saved_path, out contents);
+     } catch (FileError e) {
+-      // FIXME: Returning false guarantees a crash, because _clear_foreground
+-      // will be called before _init_background(). Also, warning here makes no
+-      // sense, since restoring is expected to fail if no previously-saved game
+-      // exists. Someone needs to take a closer look at this to see what should
+-      // happen if this function needs to return false, or if it needs a return
+-      // value at all.
+-
+-      // warning ("Failed to restore game: %s", e.message);
+-      // return false;
++      return false;
+     }
+ 
+-    if (!_grid.load (contents))
++    if (!_grid.load (contents)) {
++      warning ("Failed to restore game from saved file");
+       return false;
++    }
+ 
+     lines = contents.split ("\n");
+     score = (uint)int.parse (lines[lines.length-2]);
+-- 
+2.5.3
+
