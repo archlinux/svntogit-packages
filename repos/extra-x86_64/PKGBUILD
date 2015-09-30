@@ -6,14 +6,16 @@
 
 pkgname=libunwind
 pkgver=1.1
-pkgrel=2
+pkgrel=3
 pkgdesc='Portable and efficient C programming interface (API) to determine the call-chain of a program'
 arch=('i686' 'x86_64')
 url='http://www.nongnu.org/libunwind/'
 license=('GPL')
 depends=('glibc' 'xz')
-source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz")
-md5sums=('fb4ea2f6fbbe45bf032cd36e586883ce')
+source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz"
+        '001-invalid-dwarf-opcodes-can-cause-references-beyond.patch')
+md5sums=('fb4ea2f6fbbe45bf032cd36e586883ce'
+         'ea8aa624d6b6eaf1cbf56dfb48468e92')
 
 build() {
   cd $pkgname-$pkgver
