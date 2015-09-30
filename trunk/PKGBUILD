@@ -15,7 +15,11 @@ depends=('glibc' 'xz')
 source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz"
         '001-invalid-dwarf-opcodes-can-cause-references-beyond.patch')
 md5sums=('fb4ea2f6fbbe45bf032cd36e586883ce'
-         'ea8aa624d6b6eaf1cbf56dfb48468e92')
+         '73db2376e195a716f271ebce6bb7e5c0')
+
+prepare() {
+  patch -p1 -d $pkgname-$pkgver < 001-invalid-dwarf-opcodes-can-cause-references-beyond.patch
+}
 
 build() {
   cd $pkgname-$pkgver
