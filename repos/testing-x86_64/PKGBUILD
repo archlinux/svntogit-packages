@@ -47,7 +47,6 @@ build() {
       --enable-gnuefi \
       --disable-audit \
       --disable-ima \
-      --disable-kdbus \
       --with-sysvinit-path= \
       --with-sysvrcnd-path= \
       --with-ntp-servers="${timeservers[*]}"
@@ -59,8 +58,8 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1')
   depends=('acl' 'bash' 'dbus' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
-           'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp' 'util-linux'
-           'xz')
+           'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp'
+           'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
