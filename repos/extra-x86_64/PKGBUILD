@@ -2,19 +2,21 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gvfs
-pkgname=('gvfs' 'gvfs-smb' 'gvfs-afc' 'gvfs-afp' 'gvfs-gphoto2' 'gvfs-goa' 'gvfs-mtp' 'gvfs-nfs')
-pkgver=1.24.2
-pkgrel=1
-arch=('i686' 'x86_64')
-license=('LGPL')
-makedepends=('avahi' 'dbus' 'fuse' 'intltool' 'libarchive' 'libcdio-paranoia' 'libgphoto2' 'libimobiledevice' 'libsoup' 'smbclient' 'udisks2' 'libsecret' 'docbook-xsl' 'gtk3' 'libmtp' 'gnome-online-accounts' 'libbluray' 'libgudev' 'libnfs')
+pkgname=(gvfs gvfs-{smb,afc,gphoto2,goa,mtp,nfs,google})
+pkgver=1.26.0
+pkgrel=3
+arch=(i686 x86_64)
+license=(LGPL)
+makedepends=(avahi dbus fuse intltool libarchive libcdio-paranoia libgphoto2 libimobiledevice
+             libsoup smbclient udisks2 libsecret docbook-xsl gtk3 libmtp gnome-online-accounts
+             libbluray libgudev libnfs libgdata)
 url="http://www.gnome.org"
+groups=(gnome)
 source=(http://ftp.gnome.org/pub/gnome/sources/$pkgbase/${pkgver:0:4}/$pkgbase-$pkgver.tar.xz)
-sha256sums=('0949eaedd1df7175f8d7ee2700df8210d1f854b8ee37d963bc32ee7091eeb228')
+sha256sums=('6d43e8b33a5c1588525875f9d3979b515f648da1d567d0ce3d337a18f5ff8c32')
 
 prepare() {
   cd "$pkgbase-$pkgver"
-  autoreconf -fvi
 }
 
 build() {
@@ -22,22 +24,21 @@ build() {
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-static \
       --libexecdir=/usr/lib/gvfs \
-      --with-bash-completion-dir=/usr/share/bash-completion/completions \
-      --disable-obexftp
+      --with-bash-completion-dir=/usr/share/bash-completion/completions
   make
 }
 
 package_gvfs() {
   pkgdesc="Userspace virtual filesystem implemented as a pluggable module for gio"
-  depends=('avahi' 'dconf' 'fuse' 'libarchive' 'libcdio-paranoia' 'libsoup' 'udisks2' 'libsecret' 'libbluray' 'libgudev')
-  replaces=('gvfs-obexftp')
+  depends=(avahi dconf fuse libarchive libcdio-paranoia libsoup udisks2 libsecret libbluray libgudev gcr)
+  replaces=(gvfs-{obexftp,afp})
   optdepends=('gvfs-afc: AFC (mobile devices) support'
               'gvfs-smb: SMB/CIFS (Windows client) support'
               'gvfs-gphoto2: gphoto2 (PTP camera/MTP media player) support'
-              'gvfs-afp: Apple Filing Protocol (AFP) support'
               'gvfs-mtp: MTP device support'
               'gvfs-goa: gnome-online-accounts support'
               'gvfs-nfs: NFS support'
+              'gvfs-google: Google Drive support'
               'gtk3: Recent files support')
   install=gvfs.install
 
@@ -50,15 +51,15 @@ package_gvfs() {
   make DESTDIR="$pkgdir" install
 
   cd "$pkgdir"
-  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,afp,afp-browse,gphoto2,mtp,nfs}
-  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,afp,afp-browse,gphoto2,mtp,nfs}.mount
+  rm usr/lib/gvfs/gvfsd-{smb,smb-browse,afc,gphoto2,mtp,nfs,google}
+  rm usr/share/gvfs/mounts/{smb,smb-browse,afc,gphoto2,mtp,nfs,google}.mount
   rm usr/share/glib-2.0/schemas/org.gnome.system.smb.gschema.xml
   rm usr/share/GConf/gsettings/gvfs-smb.convert
 }
 
 package_gvfs-smb() {
   pkgdesc="SMB/CIFS (Windows client) backend for gvfs"
-  depends=("gvfs=$pkgver" 'smbclient')
+  depends=("gvfs=$pkgver" smbclient)
   install=gvfs-smb.install
 
   cd "$pkgbase-$pkgver/daemon"
@@ -75,8 +76,8 @@ package_gvfs-smb() {
 }
 
 package_gvfs-afc() {
-  pkgdesc="AFC (mobile devices) backend for gvfs"
-  depends=("gvfs=$pkgver" 'libimobiledevice' 'usbmuxd')
+  pkgdesc="AFC (Apple mobile devices) backend for gvfs"
+  depends=("gvfs=$pkgver" libimobiledevice usbmuxd)
   install=gvfs-module.install
 
   cd "$pkgbase-$pkgver/daemon"
@@ -88,8 +89,8 @@ package_gvfs-afc() {
 }
 
 package_gvfs-gphoto2() {
-  pkgdesc="gphoto2 (PTP camera/MTP media player) backend for gvfs"
-  depends=("gvfs=$pkgver" 'dbus' 'libgphoto2')
+  pkgdesc="gphoto2 (PTP camera, MTP media player) backend for gvfs"
+  depends=("gvfs=$pkgver" libgphoto2)
   install=gvfs-module.install
 
   cd "$pkgbase-$pkgver/daemon"
@@ -100,21 +101,9 @@ package_gvfs-gphoto2() {
   make DESTDIR="$pkgdir" install
 }
 
-package_gvfs-afp() {
-  pkgdesc="Apple Filing Protocol (AFP) backend for gvfs"
-  depends=("gvfs=$pkgver")
-  install=gvfs-module.install
-  install -m755 -d "$pkgdir/usr/lib/gvfs"
-  install -m755 -d "$pkgdir/usr/share/gvfs/mounts"
-
-  cd "$pkgbase-$pkgver/daemon"
-  install -m755 .libs/gvfsd-afp{,-browse} "$pkgdir/usr/lib/gvfs/"
-  install -m644 afp{,-browse}.mount "$pkgdir/usr/share/gvfs/mounts/"
-}
-
 package_gvfs-mtp() {
-  pkgdesc="MTP backend for gvfs"
-  depends=("gvfs=$pkgver" 'libmtp')
+  pkgdesc="MTP (Android, media player) backend for gvfs"
+  depends=("gvfs=$pkgver" libmtp)
   install=gvfs-module.install
 
   cd "$pkgbase-$pkgver/daemon"
@@ -127,7 +116,7 @@ package_gvfs-mtp() {
 
 package_gvfs-goa() {
   pkgdesc="Gnome Online Accounts (webservices) backend for gvfs"
-  depends=("gvfs=$pkgver" 'gnome-online-accounts')
+  depends=("gvfs=$pkgver" gnome-online-accounts)
   install=gvfs-module.install
 
   cd "$srcdir/$pkgbase-$pkgver/monitor/goa"
@@ -136,10 +125,20 @@ package_gvfs-goa() {
 
 package_gvfs-nfs() {
   pkgdesc="NFS backend for gvfs"
-  depends=("gvfs=$pkgver" 'libnfs')
-  install=gvfs-module.install
+  depends=("gvfs=$pkgver" libnfs)
+  install=gvfs-nfs.install
 
   cd "$pkgbase-$pkgver/daemon"
   install -D .libs/gvfsd-nfs "$pkgdir/usr/lib/gvfs/gvfsd-nfs"
   install -Dm644 nfs.mount "$pkgdir/usr/share/gvfs/mounts/nfs.mount"
+}
+
+package_gvfs-google() {
+  pkgdesc="Google Drive backend for gvfs"
+  depends=("gvfs=$pkgver" libgdata)
+  install=gvfs-module.install
+
+  cd "$pkgbase-$pkgver/daemon"
+  install -D .libs/gvfsd-google "$pkgdir/usr/lib/gvfs/gvfsd-google"
+  install -Dm644 google.mount "$pkgdir/usr/share/gvfs/mounts/google.mount"
 }
