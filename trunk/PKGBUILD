@@ -8,7 +8,7 @@
 
 pkgname=glibc
 pkgver=2.22
-pkgrel=3
+pkgrel=4
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -27,7 +27,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         locale-gen)
 md5sums=('e51e02bf552a0a1fbbdc948fb2f5e83c'
          'SKIP'
-         'b6b7a0e8d6e6520e40e3164ae773631d'
+         '8476d7f2bceaacde30ea2b9d4afb4bd1'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
@@ -35,7 +35,7 @@ validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
 prepare() {
   cd ${srcdir}/glibc-${pkgver}
 
-  # glibc-2.21..01b07c70
+  # glibc-2.21..g2b529a8
   patch -p1 -i $srcdir/glibc-2.22-roundup.patch
 
   mkdir ${srcdir}/glibc-build
