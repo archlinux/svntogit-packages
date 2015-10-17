@@ -3,43 +3,54 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=iana-etc
-pkgver=2.30
-pkgrel=5
+pkgver=20151016
+pkgrel=1
 pkgdesc='/etc/protocols and /etc/services provided by IANA'
-url='http://sethwklein.net/iana-etc.html'
+url='http://www.iana.org/protocols'
 arch=('any')
-license=('custom')
+license=('custom:none')
 backup=('etc/'{protocols,services})
-source=("http://sethwklein.net/${pkgname}-${pkgver}.tar.bz2"
-        'protocols.gawk'
-        'services.gawk'
-        'newer.patch')
-sha1sums=('218593bcb9264014c4e397d838b2c218eac9df06'
-          '48c1b94d9069f73e8a919301da564f414c4108f8'
-          'c04278a7f11466efc64b80c193ef630857d9698a'
-          '2ff4a7aa0854a2b191b0b1a5c36eff072cd6885e')
-
-prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	cp ../protocols.gawk ../services.gawk .
-	patch -p1 -i ../newer.patch
-}
-
-build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make get
-	make
-}
-
-check() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make test
-}
+source=('http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml'
+        'http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xml'
+        'LICENSE')
+sha1sums=('2d26b6b0033d34b4555a1e1c3d503b266cef1b2f'
+          'c4ebdff6e286aa7c55620076feecd8a9bbeeab65'
+          'ef54e7a2182f1ab7c1d2d4c9e1ab2bcc5ec65b66')
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make DESTDIR="${pkgdir}" install
-	install -Dm644 COPYING "${pkgdir}/usr/share/licenses/iana-etc/LICENSE"
-	install -Dm644 port-numbers.iana "${pkgdir}/usr/share/iana-etc/port-numbers.iana"
-	install -Dm644 protocol-numbers.iana "${pkgdir}/usr/share/iana-etc/protocol-numbers.iana"
+	cd "${srcdir}"
+	install -d "${pkgdir}/etc"
+	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/iana-etc/LICENSE"
+	install -Dm644 protocol-numbers.xml "${pkgdir}/usr/share/iana-etc/protocol-numbers.iana"
+	install -Dm644 service-names-port-numbers.xml "${pkgdir}/usr/share/iana-etc/port-numbers.iana"
+
+	gawk '
+BEGIN {
+	print "# Full data: /usr/share/iana-etc/protocol-numbers.iana\n"
+	FS="[<>]"
+}
+
+{
+	if (/<record/) { v=n=0 }
+	if (/<value/) v=$3
+	if (/<name/ && !($3~/ /)) n=$3
+	if (/<\/record/ && (v || n=="HOPOPT") && n) printf "%-12s %3i %s\n", tolower(n),v,n
+}
+' protocol-numbers.xml > "${pkgdir}/etc/protocols"
+
+	gawk '
+BEGIN {
+	print "# Full data: /usr/share/iana-etc/port-numbers.iana\n"
+	FS="[<>]"
+}
+
+{
+	if (/<record/) { n=u=p=c=0 }
+	if (/<name/ && !/\(/) n=$3
+	if (/<number/) u=$3
+	if (/<protocol/) p=$3
+	if (/Unassigned/ || /Reserved/ || /historic/) c=1
+	if (/<\/record/ && n && u && p && !c) printf "%-15s %5i/%s\n", n,u,p
+}' service-names-port-numbers.xml > "${pkgdir}/etc/services"
+
 }
