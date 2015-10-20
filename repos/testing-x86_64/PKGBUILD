@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=gnutls
+pkgver=3.4.6
+pkgrel=1
+pkgdesc="A library which provides a secure layer over a reliable transport layer"
+arch=('i686' 'x86_64')
+license=('GPL3' 'LGPL2.1')
+url="http://www.gnutls.org/"
+install=gnutls.install
+options=('!zipman')
+depends=('gcc-libs' 'libtasn1' 'readline' 'zlib' 'nettle' 'p11-kit')
+optdepends=('guile: for use with Guile bindings')
+source=(ftp://ftp.gnutls.org/gcrypt/gnutls/v3.4/${pkgname}-${pkgver}.tar.xz{,.sig})
+md5sums=('4f2c4b4483da65de7edfeb050911fafb'
+         'SKIP')
+validpgpkeys=('0424D4EE81A0E3D119C6F835EDA21E94B565716F'
+              '1F42418905D8206AA754CCDC29EE58B996865171')
+               # "Simon Josefsson <simon@josefsson.org>"
+               # "Nikos Mavrogiannopoulos <nmav@gnutls.org>
+
+build() {
+  cd ${pkgname}-${pkgver}
+
+  # disable libidn for security reasons:
+  # http://lists.gnupg.org/pipermail/gnutls-devel/2015-May/007582.html
+
+  ./configure --prefix=/usr \
+	--with-zlib \
+	--disable-static \
+	--without-idn \
+	--enable-guile --with-guile-site-dir=no \
+	--with-default-trust-store-pkcs11="pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit"
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # lots of .png files are put into infodir and are gzipped by makepkg! this needs to be fixed by using !zipman
+  # gzip -9 all files in infodir and manpages manually
+  find "$pkgdir/usr/share/info" -name '*.info*' -exec gzip -9 {} \;
+  find "$pkgdir/usr/share/man" -exec gzip -9 {} \;
+}
