@@ -51,6 +51,28 @@ check_is_in() {
     return 1
 }
 
+get_disk() {
+    local part=$1
+    if [[ ! -b "${part}" ]]; then
+        echo >&2 "error: '$part' is not a valid block partition!"
+        exit 1
+    fi
+
+    case "$part" in
+        *[[:digit:]]p[[:digit:]]*)
+            local disk="${part%%p$partnum}" # get everything before p1
+            ;;
+        *)
+            local disk="${part%%[[:digit:]]*}"
+            ;;
+    esac
+    if [[ ! -b "${disk}" ]]; then
+        echo >&2 "error: '$diskj' is not a valid block device!"
+        exit 1
+    fi
+    echo $disk
+}
+
 # return true when blockdevice is an md raid, otherwise return a unset value
 # get all devices that are part of raid device $1
 device_is_raid() {
@@ -194,12 +216,12 @@ get_boot_devices() {
         slaves=$(mdraid_all_slaves "$bootpart")
 
         for slave in ${slaves[@]}; do
-            local disk="${slave%%[[:digit:]]*}"
+            local disk=$(get_disk "$slave")
             device_is_gpt "$disk" && local ptb="GPT" || local ptb="MBR"
             bootdevs[$slave]="$ptb"
         done
     else
-        local disk="${bootpart%%[[:digit:]]*}"
+        local disk=$(get_disk "$bootpart")
         device_is_gpt "$disk" && local ptb="GPT" || local ptb="MBR"
         bootdevs[$bootpart]="$ptb"
     fi
@@ -220,7 +242,7 @@ set_active() {
     for dev in "${!bootdevs[@]}"; do
         local ptb="${bootdevs[$dev]}"
         if [[ "$ptb" = GPT ]]; then
-            local disk="${dev%%[[:digit:]]*}" #ex: /dev/sda
+            local disk=$(get_disk "$dev")
             clear_gpt_attr2 "$disk"
         fi
     done
@@ -229,14 +251,7 @@ set_active() {
     for part in "${!bootdevs[@]}"; do
         local ptb="${bootdevs[$part]}"
         local partnum="${part##*[[:alpha:]]}"
-        case "$part" in
-            *[[:digit:]]p[[:digit:]]*)
-                local disk="${part%%p$partnum}" # get everything before p1
-                ;;
-            *)
-                local disk="${part%%[[:digit:]]*}"
-                ;;
-        esac
+        local disk=$(get_disk "$part")
 
         if [[ "$ptb" = MBR ]]; then
             if sfdisk "$disk" --activate "$partnum" &>/dev/null; then
@@ -271,14 +286,7 @@ install_mbr() {
 
     for part in "${!bootdevs[@]}"; do
         local partnum="${part##*[[:alpha:]]}"
-        case "$part" in
-            *[[:digit:]]p[[:digit:]]*)
-                local disk="${part%%p$partnum}" # get everything before p1
-                ;;
-            *)
-                local disk="${part%%[[:digit:]]*}"
-                ;;
-        esac
+        local disk=$(get_disk "$part")
         local ptb="${bootdevs[$part]}"
 
         # We want to install to the root of the block device
