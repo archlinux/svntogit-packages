@@ -1,0 +1,156 @@
+From ce695719d7292bfe9d8183cfa057afe1df53565b Mon Sep 17 00:00:00 2001
+From: Lionel Landwerlin <llandwerlin@gmail.com>
+Date: Sat, 17 Oct 2015 00:24:42 +0100
+Subject: viewer: gst: port to ClutterGst 3.0
+
+https://bugzilla.gnome.org/show_bug.cgi?id=756725
+---
+ configure.ac          |  2 +-
+ src/js/viewers/gst.js | 56 +++++++++++++++++++++++++++------------------------
+ 2 files changed, 31 insertions(+), 27 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 3b5ff56..7e869d5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -62,7 +62,7 @@ PKG_CHECK_MODULES(SUSHI,
+                   clutter-x11-1.0 >= $CLUTTER_MIN_VERSION
+                   gtk+-3.0 >= $GTK_MIN_VERSION
+                   clutter-gtk-1.0 >= $CLUTTER_GTK_MIN_VERSION
+-                  clutter-gst-2.0
++                  clutter-gst-3.0
+                   gstreamer-1.0
+                   gstreamer-pbutils-1.0
+                   gstreamer-tag-1.0
+diff --git a/src/js/viewers/gst.js b/src/js/viewers/gst.js
+index 3560277..6a010f6 100644
+--- a/src/js/viewers/gst.js
++++ b/src/js/viewers/gst.js
+@@ -23,7 +23,7 @@
+  *
+  */
+ 
+-imports.gi.versions.ClutterGst = '2.0';
++imports.gi.versions.ClutterGst = '3.0';
+ const ClutterGst = imports.gi.ClutterGst;
+ const Clutter = imports.gi.Clutter;
+ const Gdk = imports.gi.Gdk;
+@@ -60,29 +60,33 @@ const GstRenderer = new Lang.Class({
+     },
+ 
+     clear : function() {
+-        this._video.playing = false;
++        this._player.playing = false;
+     },
+ 
+     _createVideo : function(file) {
+-        this._video =
+-            new ClutterGst.VideoTexture({ sync_size: false });
++        this._player = new ClutterGst.Playback();
++        this._video = new Clutter.Actor({
++            content: new ClutterGst.Aspectratio({
++                player: this._player
++            })
++        });
+ 
+-        this._video.set_uri(file.get_uri());
+-        this._video.playing = true;
++        this._player.set_uri(file.get_uri());
++        this._player.playing = true;
+ 
+         this._videoSizeChangeId =
+-            this._video.connect('size-change',
+-                                Lang.bind(this,
+-                                          this._onVideoSizeChange));
+-        this._video.connect('notify::playing',
+-                            Lang.bind(this,
+-                                      this._onVideoPlayingChange));
+-        this._video.connect('notify::progress',
+-                            Lang.bind(this,
+-                                      this._onVideoProgressChange));
+-        this._video.connect('notify::duration',
+-                            Lang.bind(this,
+-                                      this._onVideoDurationChange));
++            this._player.connect('size-change',
++                                 Lang.bind(this,
++                                           this._onVideoSizeChange));
++        this._player.connect('notify::playing',
++                             Lang.bind(this,
++                                       this._onVideoPlayingChange));
++        this._player.connect('notify::progress',
++                             Lang.bind(this,
++                                       this._onVideoProgressChange));
++        this._player.connect('notify::duration',
++                             Lang.bind(this,
++                                       this._onVideoDurationChange));
+     },
+ 
+     _updateProgressBar : function() {
+@@ -90,7 +94,7 @@ const GstRenderer = new Lang.Class({
+             return;
+ 
+         this._isSettingValue = true;
+-        this._progressBar.set_value(this._video.progress * 1000);
++        this._progressBar.set_value(this._player.progress * 1000);
+         this._isSettingValue = false;
+     },
+ 
+@@ -99,7 +103,7 @@ const GstRenderer = new Lang.Class({
+             return;
+ 
+         let currentTime =
+-            Math.floor(this._video.duration * this._video.progress);
++            Math.floor(this._player.duration * this._player.progress);
+ 
+         this._currentLabel.set_text(Utils.formatTimeString(currentTime));
+     },
+@@ -108,7 +112,7 @@ const GstRenderer = new Lang.Class({
+         if (!this._mainToolbar)
+             return;
+ 
+-        let totalTime = this._video.duration;
++        let totalTime = this._player.duration;
+ 
+         this._durationLabel.set_text(Utils.formatTimeString(totalTime));
+     },
+@@ -123,7 +127,7 @@ const GstRenderer = new Lang.Class({
+     },
+ 
+     _onVideoPlayingChange : function() {
+-        if (this._video.playing)
++        if (this._player.playing)
+             this._toolbarPlay.set_icon_name('media-playback-pause-symbolic');
+         else
+         {
+@@ -166,8 +170,8 @@ const GstRenderer = new Lang.Class({
+ 
+         this._toolbarPlay.connect('clicked',
+                                   Lang.bind(this, function () {
+-                                      let playing = !this._video.playing;
+-                                      this._video.playing = playing;
++                                      let playing = !this._player.playing;
++                                      this._player.playing = playing;
+                                   }));
+ 
+         this._progressBar =
+@@ -178,7 +182,7 @@ const GstRenderer = new Lang.Class({
+         this._progressBar.connect('value-changed',
+                                   Lang.bind(this, function() {
+                                       if(!this._isSettingValue)
+-                                          this._video.progress = this._progressBar.get_value() / 1000;
++                                          this._player.progress = this._progressBar.get_value() / 1000;
+                                   }));
+ 
+         item = new Gtk.ToolItem();
+@@ -200,7 +204,7 @@ const GstRenderer = new Lang.Class({
+         return this._toolbarActor;
+     },
+ 
+-    _onVideoSizeChange : function(video, width, height) {
++    _onVideoSizeChange : function(player, width, height) {
+         this._videoWidth = width;
+         this._videoHeight = height;
+ 
+-- 
+cgit v0.11.2
+
