@@ -1,0 +1,71 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=rpcbind
+pkgver=0.2.3
+pkgrel=3
+pkgdesc="portmap replacement which supports RPC over various protocols"
+arch=(i686 x86_64)
+backup=('etc/conf.d/rpcbind')
+makedepends=('systemd')
+depends=('bash' 'glibc' 'libtirpc' 'libsystemd')
+url="http://rpcbind.sourceforge.net"
+license=('custom')
+replaces=('portmap')
+# see also http://git.infradead.org/users/steved/rpcbind.git
+source=(http://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.bz2
+        bug-940191.patch
+        do_not_use_the_xp_auth_pointer_directly.diff
+        rpcbind-sunrpc.patch
+        rpcbind.service
+        rpcbind.socket
+        rpcbind.conf)
+install=rpcbind.install
+sha1sums=('e79974a99d09b6d6fff9d86bf00225dc33723ce2'
+          '717e2700510b1b40f452eddb929a7be00df4292b'
+          '3fa6138b6a559b5b3a5610686ec1de045a0b8d1d'
+          '1b997ce76f9727efc8c72fc5f97189591c9a60e2'
+          '3534c7bcdecebda90182fe2328a16137353cb1ad'
+          'c52f8396cd05181b788fbdf74898730343c03c9a'
+          '08246ff18d12cee01e5c9391c6ba8f5597cac936')
+
+prepare() {
+  cd $srcdir/$pkgname-$pkgver
+  # patch for iana services file # FS#20273
+  patch -Np1 -i ../rpcbind-sunrpc.patch
+  
+  # fix a memory corruption crash when remote scanning
+  # https://bugs.archlinux.org/task/46341
+  # http://seclists.org/oss-sec/2015/q3/581
+  patch -Np1 -i ../bug-940191.patch
+  
+  # upstream fix for libtirpc 1.0.1
+  patch -Np1 -i ../do_not_use_the_xp_auth_pointer_directly.diff
+}
+
+build() {
+  cd $srcdir/$pkgname-$pkgver
+  ./configure --prefix=/usr \
+    --with-rpcuser=rpc \
+    --enable-warmstarts \
+    --with-statedir=/var/lib/rpcbind
+  make
+}
+
+package() {
+  cd $srcdir/$pkgname-$pkgver
+  make DESTDIR=$pkgdir install
+  # install rpcbind config file
+  install -D -m644 $srcdir/rpcbind.conf $pkgdir/etc/conf.d/rpcbind
+  # install missing man page - https://bugs.archlinux.org/task/21271
+  install -m644 man/rpcinfo.8 $pkgdir/usr/share/man/man8/
+  # install systemd service file
+  install -D -m644 $srcdir/rpcbind.service $pkgdir/usr/lib/systemd/system/rpcbind.service
+  # install system socket activation
+  install -D -m644 $srcdir/rpcbind.socket $pkgdir/usr/lib/systemd/system/rpcbind.socket
+  # add state directory
+  install -d -m 700 -o 32 -g 32 $pkgdir/var/lib/rpcbind
+  # install license
+  install -D -m644 COPYING $pkgdir/usr/share/licenses/rpcbind/COPYING
+}
