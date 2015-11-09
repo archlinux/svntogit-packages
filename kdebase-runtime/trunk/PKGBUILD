@@ -3,18 +3,23 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
-pkgbase=kdebase-runtime
-pkgname=('kdebase-runtime' 'kdesu4')
-pkgver=15.08.2
+pkgname=kdebase-runtime
+pkgver=15.08.3
 pkgrel=1
 pkgdesc="Plugins and applications necessary for the running of KDE applications"
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/kde/kde-runtime'
 license=('GPL' 'LGPL')
-makedepends=('kdelibs' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra' 'libwebp'
-	'pkg-config' 'cmake' 'automoc4' 'kdepimlibs4' 'openslp' 'doxygen' 'networkmanager' 'boost')
+makedepends=('pkg-config' 'cmake' 'automoc4' 'kdepimlibs4' 'openslp' 'doxygen' 'networkmanager' 'boost')
+depends=('libkactivities4' 'smbclient' 'libssh' 'libcanberra' 'oxygen-icons' 'xorg-xauth' 'libwebp')
+optdepends=('kdepimlibs4: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org'
+            'gdb: needed by DrKonqi to generate backtrace' 'khelpcenter: to display applications documentation')
+provides=(notification-daemon)
+conflicts=(kdesu4)
+replaces=(kdesu4)
+install=$pkgname.install
 source=("http://download.kde.org/stable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz")
-sha1sums=('51ff136a75dcc3e706a9634c698e2b9d5493df1a')
+sha1sums=('edc6a2d454aed325b6c8c8f962e67ff8aeb9f8bf')
 
 prepare() {
   mkdir -p build
@@ -22,58 +27,27 @@ prepare() {
 
 build() {
   cd build
-  cmake ../kde-runtime-${pkgver} \
+  cmake ../kde-runtime-$pkgver \
     -DCMAKE_BUILD_TYPE=Release \
     -DKDE4_BUILD_TESTS=OFF \
     -DCMAKE_SKIP_RPATH=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DWITH_QNtrack=OFF \
     -DSAMBA_INCLUDE_DIR=/usr/include/samba-4.0 \
-    -DWITH_NepomukCore=OFF
+    -DWITH_NepomukCore=OFF \
+    -DBUILD_khelpcenter=OFF \
+    -DBUILD_doc=OFF
   make
 }
 
-package_kdebase-runtime() {
-  depends=('kdelibs' 'kactivities' 'libkactivities4' 'smbclient' 'libssh' 'libcanberra'
-         'oxygen-icons' 'xorg-xauth' 'libwebp')
-  optdepends=('kdepimlibs4: for kwalletd, and is needed by DrKonqi to send crash reports to KDE.org'
-            'gdb: needed by DrKonqi to generate backtrace' 'khelpcenter: to display applications documentation')
-  provides=('notification-daemon')
-  install=$pkgname.install
-
+package() {
   cd build
   make DESTDIR="$pkgdir" install
 
-  rm "${pkgdir}"/usr/share/icons/hicolor/index.theme
+  rm "$pkgdir"/usr/share/icons/hicolor/index.theme
+  ln -s /usr/lib/kde4/libexec/kdesu "$pkgdir"/usr/bin/kdesu4
 
-# Remove khelpcenter
-  cd "$pkgdir"
-  find -name '*khelpcenter*' | xargs rm -fr
-  find -name 'khc*' | xargs rm -fr
-  rm usr/share/applications/kde4/Help.desktop
-
-# Remove docs
-  rm -r "$pkgdir"/usr/share/{doc,man}
-
-# Remove kdesu
-  rm "$pkgdir"/usr/lib/kde4/libexec/kdesu*
-}
-
-package_kdesu4() {
-  pkgdesc=("Run KDE applications as root")
-  depends=('kdebase-runtime')
-  conflicts=('kde-cli-tools')
-
-  cd build/kdesu
-  make DESTDIR="$pkgdir" install
-
-  cd ../doc/kdesu
-  make DESTDIR="$pkgdir" install
-
-  mkdir -p "$pkgdir"/usr/bin
-  ln -sf /usr/lib/kde4/libexec/kdesu "$pkgdir"/usr/bin/
-
-  # FS#36668
-  chown :nobody "${pkgdir}"/usr/lib/kde4/libexec/kdesud
-  chmod g+s "${pkgdir}"/usr/lib/kde4/libexec/kdesud
+# FS#36668
+  chown :nobody "$pkgdir"/usr/lib/kde4/libexec/kdesud
+  chmod g+s "$pkgdir"/usr/lib/kde4/libexec/kdesud
 }
