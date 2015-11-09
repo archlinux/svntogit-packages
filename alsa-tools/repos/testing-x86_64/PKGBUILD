@@ -1,0 +1,77 @@
+# Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: Limao Luo <luolimao+AUR@gmail.com>
+# Contributor: Sebastien Luttringer <seblu+arch@seblu.net>
+# Contributor: Jochen Immendœrfer <jochen.immendoerfer@gmail.com>
+
+pkgname=alsa-tools
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="Advanced tools for certain sound cards"
+arch=('i686' 'x86_64')
+url="http://alsa-project.org/"
+license=('GPL')
+depends=('gcc-libs' 'alsa-lib')
+makedepends=('fltk' 'gtk2' 'gtk3')
+optdepends=('fltk: hdspconf, hdspmixer'
+            'gtk2: other GUI tools'
+            'gtk3: hdajackretask'
+            'bash: couple of tools')
+provides=("$pkgname-emu10k1" "$pkgname-ice1712")
+source=("ftp://ftp.alsa-project.org/pub/tools/$pkgname-$pkgver.tar.bz2")
+md5sums=('b476a5afaa3ea3230855553ad59d259d')
+
+_tools=("as10k1" "echomixer" "envy24control" "hdajackretask" "hda-verb"
+        "hdspconf" "hdsploader" "hdspmixer" "ld10k1" "mixartloader"
+        "pcxhrloader" "rmedigicontrol" "sb16_csp" "sbiload" "sscape_ctl"
+        "us428control" "usx2yloader" "vxloader")
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # qlo10k1 cannot be built; it depends on ld10k1
+  sed -i 's:ld10k1 qlo10k1 \\:ld10k1 \\:' Makefile
+
+  # hwmixvolume requires pyalsa, not currently in repos
+  sed -i 's:hwmixvolume hdajackretask :hdajackretask :' Makefile
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # not using upstream's global makefile as it's too clever
+  for i in ${_tools[@]}; do
+    if [ $i != sbiload ]; then
+      (
+      cd $i
+      ./configure --prefix=/usr --sbindir=/usr/bin
+      make
+      )
+    else
+      (
+      cd seq/sbiload
+      ./configure --prefix=/usr --sbindir=/usr/bin
+      make
+      )
+    fi
+  done
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  for i in ${_tools[@]}; do
+    if [ $i != sbiload ]; then
+      (
+      cd $i
+      make DESTDIR="$pkgdir" install
+      )
+    else
+      (
+      cd seq/sbiload
+      make DESTDIR="$pkgdir" install
+      )
+    fi
+  done
+}
+
+# vim:set ts=2 sw=2 et:
