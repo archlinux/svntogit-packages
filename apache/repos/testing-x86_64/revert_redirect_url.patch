@@ -1,0 +1,150 @@
+From 7feb3c0999927f9d0d16f37c7bed13b58c09162f Mon Sep 17 00:00:00 2001
+From: Jim Jagielski <jim@apache.org>
+Date: Tue, 3 Nov 2015 12:02:43 +0000
+Subject: [PATCH] Merge r1710380, r1710391 from trunk:
+
+Make the fix for fully qualifying REDIRECT_URL from PR#57785 opt-in.
+
+
+
+
+followup to r1710380 -- refactored name and didn't have 'make depend'
+
+
+Submitted by: covener
+Reviewed/backported by: jim
+
+
+git-svn-id: https://svn.apache.org/repos/asf/httpd/httpd/branches/2.4.x@1712268 13f79535-47bb-0310-9956-ffa450edef68
+---
+ CHANGES                  |  3 +++
+ STATUS                   |  7 -------
+ docs/manual/mod/core.xml | 27 +++++++++++++++++++++++++++
+ include/http_core.h      | 13 +++++++++++++
+ server/core.c            | 16 ++++++++++++++++
+ server/util_script.c     | 31 ++++++++++++++++++-------------
+ 6 files changed, 77 insertions(+), 20 deletions(-)
+
+diff --git a/include/http_core.h b/include/http_core.h
+index 6ca53f7..8535455 100644
+--- a/include/http_core.h
++++ b/include/http_core.h
+@@ -465,6 +465,17 @@ typedef unsigned long etag_components_t;
+ /* This is the default value used */
+ #define ETAG_BACKWARD (ETAG_MTIME | ETAG_SIZE)
+ 
++/* Generic ON/OFF/UNSET for unsigned int foo :2 */
++#define AP_CORE_CONFIG_OFF   (0)
++#define AP_CORE_CONFIG_ON    (1)
++#define AP_CORE_CONFIG_UNSET (2)
++
++/* Generic merge of flag */
++#define AP_CORE_MERGE_FLAG(field, to, base, over) to->field = \
++               over->field != AP_CORE_CONFIG_UNSET            \
++               ? over->field                                  \
++               : base->field                                   
++
+ /**
+  * @brief Server Signature Enumeration
+  */
+@@ -630,6 +641,8 @@ typedef struct {
+      * advice
+      */
+     unsigned int cgi_pass_auth : 2;
++    unsigned int qualify_redirect_url :2;
++
+ } core_dir_config;
+ 
+ /* macro to implement off by default behaviour */
+diff --git a/server/core.c b/server/core.c
+index 37484b6..803d4d4 100644
+--- a/server/core.c
++++ b/server/core.c
+@@ -191,6 +191,7 @@ static void *create_core_dir_config(apr_pool_t *a, char *dir)
+     conf->max_reversals = AP_MAXRANGES_UNSET;
+ 
+     conf->cgi_pass_auth = AP_CGI_PASS_AUTH_UNSET;
++    conf->qualify_redirect_url = AP_CORE_CONFIG_UNSET; 
+ 
+     return (void *)conf;
+ }
+@@ -405,6 +406,8 @@ static void *merge_core_dir_configs(apr_pool_t *a, void *basev, void *newv)
+ 
+     conf->cgi_pass_auth = new->cgi_pass_auth != AP_CGI_PASS_AUTH_UNSET ? new->cgi_pass_auth : base->cgi_pass_auth;
+ 
++    AP_CORE_MERGE_FLAG(qualify_redirect_url, conf, base, new);
++
+     return (void*)conf;
+ }
+ 
+@@ -1707,6 +1710,15 @@ static const char *set_cgi_pass_auth(cmd_parms *cmd, void *d_, int flag)
+     return NULL;
+ }
+ 
++static const char *set_qualify_redirect_url(cmd_parms *cmd, void *d_, int flag)
++{
++    core_dir_config *d = d_;
++
++    d->qualify_redirect_url = flag ? AP_CORE_CONFIG_ON : AP_CORE_CONFIG_OFF;
++
++    return NULL;
++}
++
+ static const char *set_override_list(cmd_parms *cmd, void *d_, int argc, char *const argv[])
+ {
+     core_dir_config *d = d_;
+@@ -4206,6 +4218,10 @@ AP_INIT_TAKE12("LimitInternalRecursion", set_recursion_limit, NULL, RSRC_CONF,
+ AP_INIT_FLAG("CGIPassAuth", set_cgi_pass_auth, NULL, OR_AUTHCFG,
+              "Controls whether HTTP authorization headers, normally hidden, will "
+              "be passed to scripts"),
++AP_INIT_FLAG("QualifyRedirectURL", set_qualify_redirect_url, NULL, OR_FILEINFO,
++             "Controls whether HTTP authorization headers, normally hidden, will "
++             "be passed to scripts"),
++
+ AP_INIT_TAKE1("ForceType", ap_set_string_slot_lower,
+        (void *)APR_OFFSETOF(core_dir_config, mime_type), OR_FILEINFO,
+      "a mime type that overrides other configured type"),
+diff --git a/server/util_script.c b/server/util_script.c
+index 14991cd..7ac7930 100644
+--- a/server/util_script.c
++++ b/server/util_script.c
+@@ -282,21 +282,26 @@ AP_DECLARE(void) ap_add_common_vars(request_rec *r)
+     /* Apache custom error responses. If we have redirected set two new vars */
+ 
+     if (r->prev) {
+-        /* PR#57785: reconstruct full URL here */
+-        apr_uri_t *uri = &r->prev->parsed_uri;
+-        if (!uri->scheme) {
+-            uri->scheme = (char*)ap_http_scheme(r->prev);
+-        }
+-        if (!uri->port) {
+-            uri->port = ap_get_server_port(r->prev);
+-            uri->port_str = apr_psprintf(r->pool, "%u", uri->port);
+-        }
+-        if (!uri->hostname) {
+-            uri->hostname = (char*)ap_get_server_name_for_url(r->prev);
++        if (conf->qualify_redirect_url != AP_CORE_CONFIG_ON) { 
++            add_unless_null(e, "REDIRECT_URL", r->prev->uri);
++        }
++        else { 
++            /* PR#57785: reconstruct full URL here */
++            apr_uri_t *uri = &r->prev->parsed_uri;
++            if (!uri->scheme) {
++                uri->scheme = (char*)ap_http_scheme(r->prev);
++            }
++            if (!uri->port) {
++                uri->port = ap_get_server_port(r->prev);
++                uri->port_str = apr_psprintf(r->pool, "%u", uri->port);
++            }
++            if (!uri->hostname) {
++                uri->hostname = (char*)ap_get_server_name_for_url(r->prev);
++            }
++            add_unless_null(e, "REDIRECT_URL",
++                            apr_uri_unparse(r->pool, uri, 0));
+         }
+         add_unless_null(e, "REDIRECT_QUERY_STRING", r->prev->args);
+-        add_unless_null(e, "REDIRECT_URL",
+-                        apr_uri_unparse(r->pool, uri, 0));
+     }
+ 
+     if (e != r->subprocess_env) {
