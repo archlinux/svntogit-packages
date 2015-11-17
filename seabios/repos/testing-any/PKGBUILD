@@ -1,0 +1,76 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=seabios
+pkgver=1.9.0
+pkgrel=1
+pkgdesc="A 16-bit x86 bios"
+arch=('any')
+url="http://www.coreboot.org/SeaBIOS"
+license=('GPL3' 'LGPL3')
+makedepends=('iasl' 'python2' 'inetutils')
+options=('!makeflags' '!strip')
+source=(http://code.coreboot.org/p/seabios/downloads/get/${pkgname}-${pkgver}.tar.gz
+        config.coreboot
+        config.seabios-128k
+        config.seabios-256k
+        config.vga.isavga
+        config.vga.stdvga
+        config.csm
+        config.vga.cirrus
+        config.vga.qxl
+        config.vga.vmware)
+sha1sums=('810c8f2ab6e61133e3ebe03f783bfb2b9d7e8606'
+          '5f2adb09c9006def1719b8cbd4792f14a7c7f7c9'
+          '39c2f98d3662933d3ce3360bc89421ec9c42612f'
+          '05b912a291994226049103cbe6754976cc03532d'
+          'd56482f6ee0bf9633c551b10e99e24c74d9ece1e'
+          '54d4edf6eccf30883aedca348b9d2f125502fcdb'
+          '590739c1d5dc6cb63bdf311ee1cfbcde6c0ccc0f'
+          '84a44c04e74a09affae0d1a6e50800d10997108f'
+          '5a1316a0081f91acc300f57372de18fa9c67415e'
+          '5b017b16aec445df873618aaebd154aa97107148')
+
+# build routine from fedora
+build_bios() {
+    make clean distclean
+    cp $1 .config
+    make oldnoconfig V=1
+
+    make V=1 $4
+
+    cp out/$2 binaries/$3
+}
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  rm -rf binaries
+  sed -i 's/python/python2/g' Makefile
+  mkdir binaries
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  # seabios
+  build_bios ${srcdir}/config.csm Csm16.bin bios-csm.bin
+  build_bios ${srcdir}/config.coreboot bios.bin.elf bios-coreboot.bin
+  build_bios ${srcdir}/config.seabios-128k bios.bin bios.bin
+  build_bios ${srcdir}/config.seabios-256k bios.bin bios-256k.bin
+  cp out/src/fw/*dsdt*.aml binaries
+  # seavgabios
+  for config in ${srcdir}/{config.vga.isavga,config.vga.stdvga,config.vga.cirrus,config.vga.qxl,config.vga.vmware}; do
+    name=${config#*config.vga.}
+    build_bios ${config} vgabios.bin vgabios-${name}.bin out/vgabios.bin
+  done
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  install -Dm644 binaries/bios.bin "${pkgdir}/usr/share/qemu/bios.bin"
+  install -Dm644 binaries/bios-256k.bin "${pkgdir}/usr/share/qemu/bios-256k.bin"
+  install -Dm644 binaries/bios-csm.bin "${pkgdir}/usr/share/qemu/bios-csm.bin"
+  install -Dm644 binaries/bios-coreboot.bin "${pkgdir}/usr/share/qemu/bios-coreboot.bin"
+  install -Dm644 binaries/*.aml "${pkgdir}/usr/share/qemu"
+  install -Dm644 binaries/vgabios*.bin "${pkgdir}/usr/share/qemu"
+}
+
