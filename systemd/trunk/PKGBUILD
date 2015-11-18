@@ -3,11 +3,11 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=227
+pkgver=228
 pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
-makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam'
+makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
              'intltool' 'iptables' 'kmod' 'libcap' 'libidn' 'libgcrypt'
              'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers'
              'python-lxml' 'quota-tools' 'shadow' 'gnu-efi-libs' 'git')
@@ -58,7 +58,7 @@ package_systemd() {
   pkgdesc="system and service manager"
   license=('GPL2' 'LGPL2.1')
   depends=('acl' 'bash' 'dbus' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
-           'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libseccomp'
+           'libgcrypt' 'libsystemd' 'libidn' 'lz4' 'pam' 'libelf' 'libseccomp'
            'util-linux' 'xz')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
