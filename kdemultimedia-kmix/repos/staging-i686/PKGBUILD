@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgbase=kdemultimedia-kmix
+pkgname=('kdemultimedia-kmix' 'kmix')
+pkgver=15.11.80
+pkgrel=1
+pkgdesc="KDE volume control program"
+url='http://kde.org/applications/multimedia/kmix/'
+arch=('i686' 'x86_64')
+license=('GPL' 'LGPL' 'FDL')
+makedepends=('cmake' 'automoc4' 'kdelibs' 'extra-cmake-modules' 'python' 'kdoctools' 'kdelibs4support' 'kcmutils' 'libcanberra')
+source=("http://download.kde.org/unstable/applications/${pkgver}/src/kmix-${pkgver}.tar.xz"
+        'use-qdbus-qt4.patch')
+sha1sums=('befa7f6e98b8937de6ff6d672ba6143339fd02c9'
+          'f89a076c5a29c51d213864e27d07baf5400ece03')
+
+prepare() {
+  mkdir -p build{,-kf5}
+
+  cp -r kmix-$pkgver kmix-kf5-$pkgver
+
+  # FS#40786
+  cd kmix-${pkgver}
+  sed -i 's|qdbus|qdbus-qt4|' apps/kmixremote
+  
+  # https://bugs.kde.org/show_bug.cgi?id=343621
+  cd ../kmix-kf5-$pkgver
+  sed -e 's|${ECM_MODULE_PATH} ${ECM_KDE_MODULE_DIR}|${ECM_MODULE_PATH} ${ECM_KDE_MODULE_DIR} ${CMAKE_SOURCE_DIR}/cmake/modules|' -i CMakeLists.txt
+}
+
+build() {
+  cd build
+  cmake ../kmix-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKDE4_BUILD_TESTS=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  make
+
+  cd ../build-kf5
+  cmake ../kmix-kf5-${pkgver} \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKMIX_KF5_BUILD=ON \
+    -DLIB_INSTALL_DIR=lib \
+    -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
+  make
+}
+
+package_kdemultimedia-kmix() {
+  depends=('kdebase-runtime')
+  optdepends=('libcanberra-pulse: PulseAudio support')
+  groups=('kde-applications' 'kdemultimedia')
+  install="${pkgbase}.install"
+  
+  cd build
+  make DESTDIR="${pkgdir}" install
+}
+
+package_kmix() {
+  pkgdesc="KDE volume control program (experimental KF5 version)"
+  depends=('kdelibs4support' 'kcmutils' 'libcanberra' 'hicolor-icon-theme')
+  optdepends=('libcanberra-pulse: PulseAudio support')
+  conflicts=('kdemultimedia-kmix')
+  install="${pkgbase}.install"
+  
+  cd build-kf5
+  make DESTDIR="${pkgdir}" install
+}
