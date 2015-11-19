@@ -1,0 +1,71 @@
+# $Id$
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+
+pkgname=kmod
+pkgver=22
+pkgrel=1
+pkgdesc="Linux kernel module management tools and library"
+arch=('i686' 'x86_64')
+url='http://git.kernel.org/?p=utils/kernel/kmod/kmod.git;a=summary'
+license=('GPL2')
+depends=('glibc' 'zlib' 'xz')
+makedepends=('gtk-doc')
+checkdepends=('linux-headers')
+options=('strip' 'debug')
+provides=('module-init-tools=3.16' 'libkmod.so')
+conflicts=('module-init-tools')
+replaces=('module-init-tools')
+validpgpkeys=('EAB33C9690013C733916AC839BA2A5A630CBEA53')  # Lucas DeMarchi
+source=("ftp://ftp.kernel.org/pub/linux/utils/kernel/$pkgname/$pkgname-$pkgver.tar."{xz,sign}
+        "depmod-search.conf")
+md5sums=('4371b847f3fbfaa4e9aa890ad616748f'
+         'SKIP'
+         'dd62cbf62bd8f212f51ef8c43bec9a77')
+
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  ./configure \
+    --sysconfdir=/etc \
+    --enable-gtk-doc \
+    --with-xz \
+    --with-zlib
+
+  make
+}
+
+check() {
+  # As of kmod v20, the test suite needs to build some kernel modules, and thus
+  # needs headers available in order to run. We depend on linux-headers, but
+  # this is really only to try and make sure that *some* useable tree of kernel
+  # headers exist. The first useable tree we find is good enough, as these
+  # modules will never be loaded by tests.
+
+  local kdirs=(/usr/lib/modules/*/build/Makefile)
+  if [[ ! -f ${kdirs[0]} ]]; then
+    printf '==> Unable to find kernel headers to build modules for tests\n' >&2
+    return 1
+  fi
+
+  local kver kdir=${kdirs[0]%/Makefile}
+  IFS=/ read _ _ _ kver _ <<<"$kdir"
+
+  make -C "$pkgname-$pkgver" check KDIR="$kdir" KVER="$kver"
+}
+
+package() {
+  make -C "$pkgname-$pkgver" DESTDIR="$pkgdir" install
+
+  # extra directories
+  install -dm755 "$pkgdir"/{etc,usr/lib}/{depmod,modprobe}.d
+
+  for tool in {ins,ls,rm,dep}mod mod{probe,info}; do
+    ln -s kmod "$pkgdir/usr/bin/$tool"
+  done
+
+  # install depmod.d file for search/ dir
+  install -Dm644 "$srcdir/depmod-search.conf" "$pkgdir/usr/lib/depmod.d/search.conf"
+}
+
+# vim: ft=sh syn=sh et
