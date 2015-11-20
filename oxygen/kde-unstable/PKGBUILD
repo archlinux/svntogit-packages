@@ -1,0 +1,74 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Antonio Rojas
+
+pkgbase=oxygen
+pkgname=('oxygen' 'oxygen-cursors' 'oxygen-kde4')
+pkgver=5.4.95
+pkgrel=1
+arch=('i686' 'x86_64')
+url='https://projects.kde.org/projects/kde/workspace/oxygen'
+license=('LGPL')
+makedepends=('frameworkintegration' 'kcmutils' 'kdecoration' 'extra-cmake-modules' 'kdoctools' 'kdelibs' 'automoc4')
+source=("http://download.kde.org/unstable/plasma/${pkgver}/${pkgname}-${pkgver}.tar.xz")
+md5sums=('1eb2b803881047b1c236f7de0945dc0b')
+
+prepare() {
+  mkdir -p build{,-kde4}
+}
+
+build() {
+  cd build
+  cmake ../$pkgname-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLIB_INSTALL_DIR=lib \
+    -DKDE_INSTALL_USE_QT_SYS_PATHS=ON \
+    -DBUILD_TESTING=OFF
+  make
+  cd ..
+
+  cd build-kde4
+  cmake ../$pkgname-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF \
+    -DUSE_KDE4=ON
+  make
+}
+
+package_oxygen() {
+  pkgdesc='KDE Oxygen style'
+  depends=('frameworkintegration' 'kdecoration' 'kcmutils')
+  optdepends=('oxygen-cursors: cursor themes for Plasma 5')
+  groups=('plasma')
+
+  cd build
+  make DESTDIR="${pkgdir}" install
+
+  # Cursors conflicts with kdebase-workspace
+  rm -r "${pkgdir}"/usr/share/icons/
+}
+
+package_oxygen-cursors() {
+  pkgdesc='KDE Oxygen cursor themes for Plasma 5'
+  groups=('plasma')
+  conflicts=('kdebase-workspace')
+
+  cd build/cursors
+  make DESTDIR="${pkgdir}" install
+}
+
+package_oxygen-kde4() {
+  pkgdesc='KDE Oxygen style for KDE4 applications'
+  depends=('kdelibs')
+  conflicts=('kdebase-workspace')
+
+  cd build-kde4
+  make DESTDIR="${pkgdir}" install
+
+  # needed so that pure Qt4 apps are correctly themed
+  install -d -m755 "$pkgdir"/usr/lib/qt4/plugins/styles
+  ln -s /usr/lib/kde4/plugins/styles/oxygen.so "$pkgdir"/usr/lib/qt4/plugins/styles
+}
