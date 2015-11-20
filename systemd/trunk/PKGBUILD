@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=228
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -29,6 +29,11 @@ md5sums=('SKIP'
 
 prepare() {
   cd "$pkgbase"
+
+  # sd-ndisc: drop RA packets from non-link-local addresses
+  # https://github.com/systemd/systemd/commit/3ccd31635353
+  # https://github.com/systemd/systemd/issues/1866
+  git cherry-pick -n 3ccd31635353
 
   ./autogen.sh
 }
