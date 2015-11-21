@@ -2,59 +2,49 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=php-composer
-pkgver=1.0.0.alpha10.465
+_tag=1.0.0-alpha11
+pkgver=${_tag/-/.}
 pkgrel=1
 pkgdesc="Dependency Manager for PHP"
 arch=('any')
 license=('MIT')
-url='http://getcomposer.org/'
-depends=('php' 'php-intl')
+url='https://getcomposer.org/'
+depends=('php')
 makedepends=('git')
-checkdepends=('mercurial')
-source=("${pkgname}::git+https://github.com/composer/composer.git"
-        "composer-${pkgver}.phar::https://getcomposer.org/composer.phar"
-        'php.ini')
-backup=('usr/share/php-composer/php.ini')
+source=("${pkgname}::git+https://github.com/composer/composer.git#tag=${_tag}"
+        "composer-${pkgver}.phar::https://getcomposer.org/download/${_tag}/composer.phar"
+        'php' 'php.ini')
 md5sums=('SKIP'
-         'bc7ca705316637ca93b49860926eed98'
-         'b31326c352763328dca0a567a67609ab')
-
-pkgver() {
-	cd ${srcdir}/${pkgname}
-
-	local _tag=$(git tag -l --sort -version:refname | head -1)
-	echo "${_tag}.$(git rev-list ${_tag}.. --count)" | sed 's/-/./g'
-}
+         '488ca7972e447e0e1b2988f66d8e01e6'
+         '407acec5e2be64bc18c95fadb2ad86d4'
+         '5cc154807e3a7a990657c1c4bcc80149')
 
 prepare() {
 	cd ${srcdir}/${pkgname}
 
-	sed "s~^#!/usr/bin/env php~#!/usr/bin/php -nc/usr/share/${pkgname}/php.ini~g" -i src/Composer/Compiler.php
-	sed "s~php bin/composer~php -nc/usr/share/${pkgname}/php.ini bin/composer~g" -i bin/compile
-	/usr/bin/php -nc ${srcdir}/php.ini ${srcdir}/composer-${pkgver}.phar -n install --no-dev
+	# Use a php wrapper which is configured with the required modules
+	export PATH=${srcdir}:$PATH
+
+	php ${srcdir}/composer-${pkgver}.phar -n install --no-dev
 }
 
 build() {
 	cd ${srcdir}/${pkgname}
 
-	/usr/bin/php -nc ${srcdir}/php.ini bin/compile
+	bin/compile
 }
 
 check() {
 	cd ${srcdir}/${pkgname}
 
-	git config --global user.email "${USER}@${HOST}"
-	git config --global user.name "${USER}"
-
-	# install the dev dependencies to run the unit tests
-	/usr/bin/php -nc ${srcdir}/php.ini bin/composer install
-	/usr/bin/php -nc ${srcdir}/php.ini vendor/bin/phpunit
+	# Install the dev dependencies to run the unit tests
+	bin/composer -n install
+	vendor/bin/phpunit
 }
 
 package() {
 	cd ${srcdir}/${pkgname}
 
 	install -Dm644 LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
-	install -Dm644 ${srcdir}/php.ini ${pkgdir}/usr/share/php-composer/php.ini
 	install -Dm755 composer.phar ${pkgdir}/usr/bin/composer
 }
