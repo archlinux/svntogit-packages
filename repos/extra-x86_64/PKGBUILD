@@ -5,64 +5,69 @@
 # Contributor: Jason Taylor <jftaylor21@gmail.com>
 
 pkgbase=lapack
-pkgname=('lapack' 'blas')
-pkgver=3.5.0
-pkgrel=1
+pkgname=('lapack' 'blas' 'cblas')
+pkgver=3.6.0
+pkgrel=2
 url="http://www.netlib.org/lapack"
 pkgdesc="Linear Algebra PACKage"
 makedepends=('gcc-fortran' 'cmake')
-depends=('gcc-libs')
 arch=('i686' 'x86_64')
 license=("custom")
 source=(http://www.netlib.org/${pkgbase}/${pkgbase}-${pkgver}.tgz
         LICENSE.blas)
-sha1sums=('5870081889bf5d15fd977993daab29cf3c5ea970'
+sha1sums=('7e993de16d80d52b22b6093465eeb90c93c7a2e7'
           '2491a151a37f0162b25fc4e4e9a8ac444b574a76')
 
-build() {
-  cd "${srcdir}"
+prepare() {
+  cd $pkgname-$pkgver
+  sed -e 's|/CMAKE/|/cmake/|' -i CBLAS/CMakeLists.txt
+}
 
+build() {
   install -d build
   cd build
   cmake ../${pkgname}-${pkgver} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_SKIP_RPATH=ON \
     -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_Fortran_COMPILER=gfortran \
-    -DLAPACKE=ON
+    -DLAPACKE=ON \
+    -DCBLAS=ON \
+    -DBUILD_DEPRECATED=ON
   make
 }
 
 package_lapack() {
   depends=("blas=${pkgver}")
+  
+  cd build
+  make DESTDIR="$pkgdir" install
 
-  install -m755 -d ${pkgdir}/usr/{lib,bin,include}
-  
-  for libname in liblapack libtmglib liblapacke; do
-    install -m755 "${srcdir}/build/lib/${libname}.so" \
-      "${pkgdir}/usr/lib/"
-    ln -sf ${libname}.so "${pkgdir}/usr/lib/${libname}.so.${pkgver}"
-    ln -sf ${libname}.so "${pkgdir}/usr/lib/${libname}.so.3"
-  done
-  
-  install -m755 "${srcdir}"/build/bin/* "${pkgdir}/usr/bin"
-  install -m644 "${srcdir}"/build/include/* "${pkgdir}/usr/include"
-  install -m755 -d "${pkgdir}/usr/share/licenses/lapack"
-  install -m644 "${srcdir}/${pkgname}-${pkgver}/LICENSE" \
-    "${pkgdir}/usr/share/licenses/lapack/"
+  rm -r "$pkgdir"/usr/lib/{libblas.*,libcblas.*}
+  rm -r "$pkgdir"/usr/lib/pkgconfig/{blas.*,cblas.*}
+  rm -r "$pkgdir"/usr/lib/cmake/cblas*
+  rm -r "$pkgdir"/usr/include/cblas*
 }
 
 package_blas() {
   pkgdesc="Basic Linear Algebra Subprograms"
+  depends=('gcc-libs')
 
-  install -m755 -d "${pkgdir}/usr/lib"
-  install -m755 "${srcdir}/build/lib/libblas.so" \
-      "${pkgdir}/usr/lib/"
-  ln -sf libblas.so "${pkgdir}/usr/lib/libblas.so.${pkgver}"
-  ln -sf libblas.so "${pkgdir}/usr/lib/libblas.so.3"
-
+  cd build/BLAS
+  make DESTDIR="$pkgdir" install
+  
   install -m755 -d "${pkgdir}/usr/share/licenses/blas"
   install -m644 "${srcdir}/LICENSE.blas" \
     "${pkgdir}/usr/share/licenses/blas/"
+}
+
+package_cblas() {
+  pkgdesc=("C interface to BLAS")
+  depends=("blas=$pkgver")
+
+  cd build/CBLAS
+  make DESTDIR="$pkgdir" install
 }
