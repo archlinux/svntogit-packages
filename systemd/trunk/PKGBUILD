@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=228
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -34,6 +34,11 @@ prepare() {
   # https://github.com/systemd/systemd/commit/3ccd31635353
   # https://github.com/systemd/systemd/issues/1866
   git cherry-pick -n 3ccd31635353
+
+  # networkd: link - do not drop config for loopback device
+  # https://github.com/systemd/systemd/commit/e5d44b34cca3
+  # https://github.com/systemd/systemd/issues/2023
+  git cherry-pick -n e5d44b34cca3
 
   ./autogen.sh
 }
