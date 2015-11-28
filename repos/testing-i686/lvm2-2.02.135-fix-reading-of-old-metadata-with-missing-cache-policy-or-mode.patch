@@ -1,0 +1,116 @@
+commit 265a99e98a81113c2f27f0e4d6c5b73d198ed586
+Author: Peter Rajnoha <prajnoha@redhat.com>
+Date:   Tue Nov 24 11:28:31 2015 +0100
+
+    Fix reading of old cache metadata.
+---
+ lib/cache_segtype/cache.c        | 34 +++++++++++++++++++++++++++++++++
+ test/shell/lvchange-cache-old.sh | 41 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 75 insertions(+)
+
+diff --git a/lib/cache_segtype/cache.c b/lib/cache_segtype/cache.c
+index 85cba18..2a7eb96 100644
+--- a/lib/cache_segtype/cache.c
++++ b/lib/cache_segtype/cache.c
+@@ -34,6 +34,32 @@ static unsigned _feature_mask;
+         log_error(t " segment %s of logical volume %s.", ## p,	\
+                   dm_config_parent_name(sn), seg->lv->name), 0;
+ 
++/*
++ * When older metadata are loaded without newer settings,
++ * set then to default settings (the one that could have been
++ * used implicitely at that time).
++ *
++ * Needs both segments cache and cache_pool to be loaded.
++ */
++static int _fix_missing_defaults(struct lv_segment *cpool_seg)
++{
++	if (!cpool_seg->policy_name) {
++		cpool_seg->policy_name = "mq";
++		log_verbose("Cache is missing cache policy, using %s.",
++			    cpool_seg->policy_name);
++	}
++
++	if (!cache_mode_is_set(cpool_seg)) {
++		if (!cache_set_mode(cpool_seg, "writethrough")) {
++			log_error(INTERNAL_ERROR "Failed to writethrough cache mode.");
++			return 0;
++		}
++		log_verbose("Cache is missing cache mode, using %s.",
++			    get_cache_mode_name(cpool_seg));
++	}
++
++	return 1;
++}
+ 
+ static int _cache_pool_text_import(struct lv_segment *seg,
+ 				   const struct dm_config_node *sn,
+@@ -115,6 +141,10 @@ static int _cache_pool_text_import(struct lv_segment *seg,
+ 	if (!attach_pool_metadata_lv(seg, meta_lv))
+ 		return_0;
+ 
++	if (!dm_list_empty(&seg->lv->segs_using_this_lv) &&
++	    !_fix_missing_defaults(seg))
++		return_0;
++
+ 	return 1;
+ }
+ 
+@@ -319,6 +349,10 @@ static int _cache_text_import(struct lv_segment *seg,
+ 	if (!attach_pool_lv(seg, pool_lv, NULL, NULL))
+ 		return_0;
+ 
++	if (!dm_list_empty(&pool_lv->segments) &&
++	    !_fix_missing_defaults(first_seg(pool_lv)))
++		return_0;
++
+ 	return 1;
+ }
+ 
+diff --git a/test/shell/lvchange-cache-old.sh b/test/shell/lvchange-cache-old.sh
+new file mode 100644
+index 0000000..0b6ef7c
+--- /dev/null
++++ b/test/shell/lvchange-cache-old.sh
+@@ -0,0 +1,41 @@
++#!/bin/sh
++# Copyright (C) 2015 Red Hat, Inc. All rights reserved.
++#
++# This copyrighted material is made available to anyone wishing to use,
++# modify, copy, or redistribute it subject to the terms and conditions
++# of the GNU General Public License v.2.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software Foundation,
++# Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++
++# Exercise usage of older metadata which are missing some new settings
++
++SKIP_WITH_LVMPOLLD=1
++
++. lib/inittest
++
++aux have_cache 1 3 0 || skip
++
++# FIXME: parallel cache metadata allocator is crashing when used value 8000!
++aux prepare_vg 5 80
++
++
++lvcreate -l 10 --type cache-pool $vg/cpool
++lvcreate -l 20 -H -n $lv1 $vg/cpool
++
++vgcfgbackup -f backup $vg
++
++# check metadata without cache policy
++lvchange -an $vg
++grep -v "policy =" backup >backup_1
++vgcfgrestore -f backup_1 $vg
++lvchange -ay $vg
++
++# check metadata without cache mode
++lvchange -an $vg
++grep -v "cache_mode =" backup >backup_2
++vgcfgrestore -f backup_2 $vg
++lvchange -ay $vg
++
++vgremove -ff $vg
