@@ -1,0 +1,40 @@
+# $Id$
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Gilles CHAUVIN <gcnweb@gmail.com>
+
+pkgname=live-media
+pkgver=2015.08.07
+pkgrel=2
+pkgdesc="A set of C++ libraries for multimedia streaming"
+arch=('i686' 'x86_64')
+license=('LGPL')
+url="http://live555.com/liveMedia"
+depends=('gcc-libs')
+options=('staticlibs')
+#source=("http://live555.com/liveMedia/public/live.${pkgver}.tar.gz")
+source=("https://sources.archlinux.org/other/$pkgname/live.${pkgver}.tar.gz")
+md5sums=('047008e71c58a1caf4e0c0439c392486')
+
+build() {
+  cd ${srcdir}/live
+
+  sed \
+      -e 's/$(INCLUDES) -I. -O2 -DSOCKLEN_T/$(INCLUDES) -I. -O2 -I. -fPIC -DRTSPCLIENT_SYNCHRONOUS_INTERFACE=1 -DSOCKLEN_T/g' \
+      -i config.linux
+  ./genMakefiles linux
+  make
+}
+
+package() {
+  cd ${srcdir}/live
+
+  for dir in BasicUsageEnvironment groupsock liveMedia UsageEnvironment; do
+    install -dm755 ${pkgdir}/usr/{bin,lib,include/${dir}}
+    install -m644 ${dir}/*.a "${pkgdir}/usr/lib"
+    install -m644 ${dir}/include/*.h* "${pkgdir}/usr/include/${dir}"
+  done
+
+  for testprog in `find testProgs -type f -perm 755`; do
+    install ${testprog} "${pkgdir}/usr/bin"
+  done
+}
