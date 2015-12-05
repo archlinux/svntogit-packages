@@ -1,0 +1,47 @@
+# $Id$
+# Maintainer: speps <speps at aur dot archlinux dot org>
+
+pkgname=zita-alsa-pcmi
+pkgver=0.2.0
+pkgrel=3
+pkgdesc="The successor of clalsadrv, provides easy access to ALSA PCM devices."
+arch=(i686 x86_64)
+url="http://kokkinizita.linuxaudio.org/linuxaudio/"
+license=('GPL3')
+depends=('gcc-libs' 'alsa-lib')
+source=("${url}downloads/$pkgname-$pkgver.tar.bz2")
+md5sums=('0ba4d59abce231056e2628d081124114')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver/libs"
+  # call ldconfig locally
+  sed -i 's/ldconfig/& -N $(DESTDIR)$(PREFIX)\/$(LIBDIR)/' Makefile
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver/libs"
+
+  # libs
+  make PREFIX=/usr
+
+  # create lib link for building apps
+  ln -s lib$pkgname.so.$pkgver lib$pkgname.so
+
+  # apps
+  cd ../apps
+  CXXFLAGS+=" -I../libs" \
+  LDFLAGS+=" -L../libs" \
+  make PREFIX=/usr
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # libs
+  make -C libs DESTDIR="$pkgdir/" PREFIX=/usr LIBDIR=lib install
+
+  # apps
+  make -C apps DESTDIR="$pkgdir/" PREFIX=/usr LIBDIR=lib install
+}
+
+# vim:set ts=2 sw=2 et:
