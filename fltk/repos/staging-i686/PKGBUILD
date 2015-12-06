@@ -1,0 +1,69 @@
+# $Id$
+# Maintainer:
+
+pkgbase=fltk
+pkgname=('fltk' 'fltk-docs' 'fltk-games')
+pkgver=1.3.3
+pkgrel=5
+arch=('i686' 'x86_64')
+license=('custom:LGPL')
+url="http://www.fltk.org/"
+makedepends=('mesa' 'glu' 'doxygen' 'libjpeg' 'libxft' 'libxinerama'
+             'alsa-lib' 'desktop-file-utils' 'libxcursor')
+source=(http://fltk.org/pub/fltk/$pkgver/fltk-$pkgver-source.tar.gz
+        tigervnc.patch fltk-config-dynlibs.patch)
+md5sums=('9ccdb0d19dc104b87179bd9fd10822e3'
+         '45bb8f6be2b92710c8f21c1f91fad7d2'
+         '401c6df25c78f766e6dff26a13806eb2')
+
+prepare() {
+  cd $pkgbase-$pkgver
+  patch -p1 -i ../tigervnc.patch
+  patch -p1 -i ../fltk-config-dynlibs.patch
+  sed -i 's/class Fl_XFont_On_Demand/class FL_EXPORT Fl_XFont_On_Demand/' FL/x.H
+}
+
+build() {
+  cd $pkgbase-$pkgver
+  sed -i -e 's/$(LINKFLTK)/$(LINKSHARED)/' \
+         -e 's/$(LINKFLTKIMG)/$(LINKSHARED)/' test/Makefile
+  ./configure --prefix=/usr --enable-threads --enable-xft --enable-shared
+  make
+  make -C documentation html
+}
+
+package_fltk() {
+  pkgdesc="Graphical user interface toolkit for X"
+  depends=('libjpeg' 'libxft' 'libxinerama' 'hicolor-icon-theme'
+           'desktop-file-utils' 'xdg-utils' 'libxcursor' 'glu')
+  options=('!docs')
+  install=fltk.install
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+  make DESTDIR="$pkgdir" -C fluid install install-linux
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+package_fltk-docs() {
+  pkgdesc="Graphical user interface toolkit for X (documentation)"
+
+  cd $pkgbase-$pkgver/documentation
+  install -d "$pkgdir"/usr/share/doc/fltk/
+  for _file in html/* ; do
+    install -m644 $_file "$pkgdir"/usr/share/doc/fltk/
+  done
+  make DESTDIR="$pkgdir" -C ../test install
+  install -D -m644 ../COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+package_fltk-games() {
+  pkgdesc="Example games that accompany FLTK: blocks, checkers and sudoku"
+  depends=('alsa-lib' 'fltk')
+  install=fltk-games.install
+
+  cd $pkgbase-$pkgver/test
+  make DESTDIR="$pkgdir" install-linux
+  make DESTDIR="$pkgdir" -C ../documentation install-linux
+  install -D -m644 ../COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
