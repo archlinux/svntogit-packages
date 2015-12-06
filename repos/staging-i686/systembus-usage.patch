@@ -1,0 +1,79 @@
+commit 88c6e9334c8440721189ef7d020fa94d47f30f8b
+Author: Harald Sitter <sitter@kde.org>
+Date:   Fri Aug 1 16:34:03 2014 +0200
+
+    do not use global static systembus instance
+    
+    global static destruction order cannot be controlled and we need our bus
+    to disconnect from the consolekit signals, so use our own bus instance
+    to connect to systembus signals
+    
+    REVIEW: 119545
+
+diff --git a/core/polkitqt1-authority.cpp b/core/polkitqt1-authority.cpp
+index dd014cf..f25354d 100644
+--- a/core/polkitqt1-authority.cpp
++++ b/core/polkitqt1-authority.cpp
+@@ -83,7 +83,10 @@ public:
+     // Polkit will return NULL on failures, hence we use it instead of 0
+     Private(Authority *qq) : q(qq)
+             , pkAuthority(NULL)
+-            , m_hasError(false) {}
++            , m_hasError(false)
++            , m_systemBus(0)
++    {
++    }
+ 
+     ~Private();
+ 
+@@ -103,6 +106,13 @@ public:
+     bool m_hasError;
+     Authority::ErrorCode m_lastError;
+     QString m_errorDetails;
++    // Local system bus. QDBusConnection::systemBus() may only be savely used
++    // inside a QCoreApplication scope as for example destruction of connected
++    // objects need to happen before the bus disappears. Since this class however
++    // is a global static and systemBus() internally is a global static we
++    // cannot assure destruction order. Instead we create a local copy of the
++    // global systemBus instance so we can make life time to our needs.
++    // This prevents crashes when cleaning up the global statics.
+     QDBusConnection *m_systemBus;
+     GCancellable *m_checkAuthorizationCancellable,
+     *m_enumerateActionsCancellable,
+@@ -127,6 +137,7 @@ public:
+ 
+ Authority::Private::~Private()
+ {
++    delete m_systemBus;
+     g_object_unref(m_checkAuthorizationCancellable);
+     g_object_unref(m_enumerateActionsCancellable);
+     g_object_unref(m_registerAuthenticationAgentCancellable);
+@@ -170,6 +181,9 @@ void Authority::Private::init()
+ 
+     g_type_init();
+ 
++    m_systemBus = new QDBusConnection(QDBusConnection::connectToBus(QDBusConnection::SystemBus,
++                                                                    QString("polkit_qt_system_bus")));
++
+     m_checkAuthorizationCancellable = g_cancellable_new();
+     m_enumerateActionsCancellable = g_cancellable_new();
+     m_registerAuthenticationAgentCancellable = g_cancellable_new();
+@@ -219,7 +233,7 @@ void Authority::Private::init()
+ 
+     // then we need to extract all seats from ConsoleKit
+     QDBusMessage msg = QDBusMessage::createMethodCall(consoleKitService, consoleKitManagerPath, consoleKitManagerInterface, "GetSeats");
+-    msg = QDBusConnection::systemBus().call(msg);
++    msg = m_systemBus->call(msg);
+     if (!msg.arguments().isEmpty()) {
+         // this method returns a list with present seats
+         QList<QString> seats;
+@@ -256,8 +270,7 @@ void Authority::Private::seatSignalsConnect(const QString &seat)
+ void Authority::Private::dbusSignalAdd(const QString &service, const QString &path, const QString &interface, const QString &name)
+ {
+     // FIXME: This code seems to be nonfunctional - it needs to be fixed somewhere (is it Qt BUG?)
+-    QDBusConnection::systemBus().connect(service, path, interface, name,
+-                                         q, SLOT(dbusFilter(QDBusMessage)));
++    m_systemBus->connect(service, path, interface, name, q, SLOT(dbusFilter(QDBusMessage)));
+ }
+ 
+ void Authority::Private::dbusFilter(const QDBusMessage &message)
