@@ -1,0 +1,164 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=nx
+pkgname=('libxcomp' 'nxproxy' 'nx-x11' 'nx-xcompext' 'nxagent' 'x2go-agent' 'nx-headers')
+pkgver=3.5.0.32
+pkgrel=2
+arch=('i686' 'x86_64')
+url="http://wiki.x2go.org/"
+license=('GPL')
+#options=('!makeflags') # '!strip')
+makedepends=('libjpeg-turbo' 'libpng' 'bash' 'perl' 'libxml2' 'fontconfig' # runtime dependencies from subpackages
+             'xproto' 'freetype2' 'libxaw' 'libxrender' 'libxp' 'libxpm' 'libxdamage' 'libxrandr'
+             'libxcomposite' 'libxtst' 'xorg-sessreg' 'libfontenc' # makedepends
+             )
+source=(http://code.x2go.org/releases/source/nx-libs/nx-libs-$pkgver-full.tar.gz{,.asc})
+sha256sums=('be166390ed7c08b96bd62f1e93910d720d105c679481bc389e833003da2a226d'
+          'SKIP')
+validpgpkeys=('1AD23D1B8F087A35AB74BDE9F4A7678C9C6B0B2B' # X2go Git Administrator <git-admin@x2go.org>
+              '9BFBAEE86C0AA5FFBF2207829AF46B3025771B31') # Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+build() {
+  cd "${srcdir}/nx-libs-$pkgver"
+  
+  # debug flags
+#  export CFLAGS="-march=x86-64 -O1 -g -pipe"
+#  export CXXFLAGS="-march=x86-64 -O1 -g -pipe"
+
+  # honour CFLAGS in X11 build - upstream fixed so far only the other libs
+  # From xorg-x11-6.9.0-r3.ebuild
+  pushd "${srcdir}/nx-libs-$pkgver/nx-X11"
+
+  HOSTCONF="config/cf/host.def"
+  echo "#define OptimizedCDebugFlags ${CFLAGS} GccAliasingArgs" >> ${HOSTCONF}
+  echo "#define OptimizedCplusplusDebugFlags ${CXXFLAGS} GccAliasingArgs" >> ${HOSTCONF}
+  # Respect LDFLAGS
+  echo "#define ExtraLoadFlags ${LDFLAGS}" >> ${HOSTCONF}
+  echo "#define SharedLibraryLoadFlags -shared ${LDFLAGS}" >> ${HOSTCONF}
+  popd
+
+  # fix a broken Makefiles
+  sed -i "s:-o root -g root ::" nxcompshad/Makefile.in
+  
+  # let makepkg zip the man files
+  sed -i "s:gzip:#gzip:g" Makefile
+
+  make \
+    PREFIX=/usr \
+    CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --includedir=/usr/include"
+    
+  # fake install
+  mkdir $srcdir/fakeinstall
+  make PREFIX=/usr DESTDIR="$srcdir/fakeinstall" install
+}
+
+package_libxcomp() {
+  
+  pkgdesc="NX X compression library"
+  depends=('libjpeg-turbo' 'libpng' 'gcc-libs')
+	
+  install -dm755 ${pkgdir}/usr/lib
+  cp -a ${srcdir}/fakeinstall/usr/lib/libXcomp.so* ${pkgdir}/usr/lib
+}
+
+package_nxproxy() {
+
+  pkgdesc="NX proxy"
+  depends=('libxcomp')
+  
+  install -dm755 ${pkgdir}/usr/{bin,share/man/man1,lib/nx/bin}
+  cp -a ${srcdir}/fakeinstall/usr/lib/nx/bin/nxproxy ${pkgdir}/usr/lib/nx/bin/nxproxy
+  cp -a ${srcdir}/fakeinstall/usr/share/man/man1/nxproxy.1 ${pkgdir}/usr/share/man/man1
+  # the wrapper
+  cp -a ${srcdir}/fakeinstall/usr/bin/nxproxy ${pkgdir}/usr/bin
+}
+
+package_nx-xcompext() {
+  
+  pkgdesc="Xcompext/Xcompshad library for NX"
+  depends=('libxcomp' 'nx-x11')
+	
+  install -dm755 ${pkgdir}/usr/lib
+  cp -a ${srcdir}/fakeinstall/usr/lib/libXcompext.so* ${pkgdir}/usr/lib
+}
+
+package_nx-x11() {
+ 
+  pkgdesc="NX-X11 lib for the NX framework"
+  depends=('libxcomp' 'fontconfig')
+  optdepends=('libxext: for Xinerama support')
+	
+  install -dm755 ${pkgdir}/{usr/bin,usr/lib/nx/{X11,bin},usr/share/man/man1}
+  cp -aR ${srcdir}/fakeinstall/usr/lib/nx/X11/* ${pkgdir}/usr/lib/nx/X11
+  cp -aR ${srcdir}/fakeinstall/usr/lib/libNX* ${pkgdir}/usr/lib
+  
+  # nxauth
+  cp -a ${srcdir}/fakeinstall/usr/lib/nx/bin/nxauth ${pkgdir}/usr/lib/nx/bin
+  cp -a ${srcdir}/fakeinstall/usr/share/man/man1/nxauth.1 ${pkgdir}/usr/share/man/man1
+
+  # the wrapper
+  cp -a ${srcdir}/fakeinstall/usr/bin/nxauth ${pkgdir}/usr/bin
+  # add symlinks required for proper Xinerama support # FS#41037
+  cd ${pkgdir}/usr/lib/nx/X11/Xinerama
+  ln -sv /usr/lib/libX11.so.6 libNX_X11.so.6
+  ln -sv /usr/lib/libXext.so.6 libNX_Xext.so.6
+}
+
+package_nxagent() {
+  
+  pkgdesc="NX X server based on Xnest"
+  backup=(etc/nxagent/{keystrokes.cfg,nxagent.keyboard,rgb})
+  depends=('nx-xcompext' 'libxml2')
+	
+  install -dm755 ${pkgdir}/usr/{bin,lib/nx/bin,share/nx,share/man/man1,share/pixmaps}
+  cp -a ${srcdir}/fakeinstall/usr/lib/nx/bin/nxagent ${pkgdir}/usr/lib/nx/bin
+  cp -a ${srcdir}/fakeinstall/usr/share/man/man1/nxagent.1 ${pkgdir}/usr/share/man/man1
+  cp -a ${srcdir}/fakeinstall/usr/share/pixmaps/nxagent.xpm ${pkgdir}/usr/share/pixmaps
+
+  # the wrapper
+  cp -a ${srcdir}/fakeinstall/usr/bin/nxagent ${pkgdir}/usr/bin
+  
+  # additional files for documentation
+  cp -a ${srcdir}/fakeinstall/usr/share/nx/{rgb,SecurityPolicy} ${pkgdir}/usr/share/nx
+  
+  cp -a ${srcdir}/fakeinstall/usr/lib/libXcompshad.so* ${pkgdir}/usr/lib
+  
+  # Needed for nxagent to find the keymap directory
+  install -dm755 ${pkgdir}/usr/lib/X11/xkb
+  touch ${pkgdir}/usr/lib/X11/xkb/keymap.dir
+  
+  install -dm755 ${pkgdir}/etc/nxagent
+  cp -a ${srcdir}/fakeinstall/etc/nxagent/{keystrokes.cfg,nxagent.keyboard,rgb} ${pkgdir}/etc/nxagent
+}
+
+package_x2go-agent() {
+  
+  pkgdesc="Wrapper arround nxagent to use with x2goserver"
+  backup=(etc/x2go/{keystrokes.cfg,x2goagent.keyboard,rgb})
+  depends=('nxagent')
+  provides=('x2goagent')
+  replaces=('x2goagent')
+	
+  install -dm755 ${pkgdir}/usr/{bin,lib/x2go/bin,share/{pixmaps,x2go/versions,man/man1}}
+  # this is a nxagent symlink
+  ln -sv /usr/lib/nx/bin/nxagent ${pkgdir}/usr/lib/x2go/bin/x2goagent 
+
+  # the wrapper
+  cp -a ${srcdir}/fakeinstall/usr/bin/x2goagent ${pkgdir}/usr/bin
+  cp -a ${srcdir}/fakeinstall/usr/share/man/man1/x2goagent.1 ${pkgdir}/usr/share/man/man1
+
+  cp -a ${srcdir}/fakeinstall/usr/share/pixmaps/x2go.xpm ${pkgdir}/usr/share/pixmaps
+  cp -a ${srcdir}/fakeinstall/usr/share/x2go/rgb ${pkgdir}/usr/share/x2go
+  cp -a ${srcdir}/fakeinstall/usr/share/x2go/versions/VERSION.x2goagent ${pkgdir}/usr/share/x2go/versions
+  
+  install -dm755 ${pkgdir}/etc/x2go
+  cp -a ${srcdir}/fakeinstall/etc/x2go/{keystrokes.cfg,x2goagent.keyboard,rgb} ${pkgdir}/etc/x2go
+}
+
+package_nx-headers() {
+
+  pkgdesc="NX headers"
+  
+  install -dm755 ${pkgdir}/usr/include/nx
+  cp -aR ${srcdir}/fakeinstall/usr/include/nx/* ${pkgdir}/usr/include/nx
+}  
