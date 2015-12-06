@@ -1,0 +1,81 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Alexander Rødseth
+# Contributor: Alois Nespor <alois.nespor@gmail.com>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+pkgname=clucene
+pkgver=2.3.3.4
+pkgrel=9
+pkgdesc="C++ port of the high-performance text search engine Lucene"
+arch=('x86_64' 'i686')
+url="http://clucene.sourceforge.net/"
+license=('APACHE' 'LGPL')
+depends=('gcc-libs>=4.7.1-5' 'zlib' 'boost-libs')
+makedepends=('cmake' 'boost>=1.54.0')
+source=(http://downloads.sourceforge.net/$pkgname/$pkgname-core-$pkgver.tar.gz
+		# Fedora patches
+		clucene-core-2.3.3.4-pkgconfig.patch
+        clucene-core-2.3.3.4-install_contribs_lib.patch
+        # upstream patch
+        fix_zlib_detections.diff
+        # LibreOffice patches
+        clucene-warnings.patch
+        clucene-gcc-atomics.patch
+        clucene-debug.patch
+        clucene-narrowing-conversions.patch
+        clucene-multimap-put.patch)
+sha256sums=('ddfdc433dd8ad31b5c5819cc4404a8d2127472a3b720d3e744e8c51d79732eab'
+            '10c808ce483d997d7ff349cc3ec97b8785c365f956d6eef45458e9caf4e5e88d'
+            '3d3f73685f75b4ceacf1941e50b6108941bded3ca558ac1343c35b1b7d0e78dc'
+            'e1a6a58dc344d8d5e3218137a5e7a689900eb6ea4cce1dc426e861706ab78889'
+            'a66922411eca00c1cd171dd15ac462eec7a832cf067dbb0231773553554242ef'
+            'b11dca0d6b889f6ddfa4fd2566373717f54fed9590bf0daee054dea5e39a9f46'
+            'c944b9de6b18e49bb065d10c5d045446eeb15f680d6af4b5ac7e4f5fbda8f2a0'
+            'cfc88dae46efb2a17ffdc088fd78ca28655e653c9d183b83bdae18c0192a8ddd'
+            '917c8bfc1dd3313a716ecacf398dbcaf0aa02ce61b41ca2d3d7eb84fa160fce3')
+
+build() {
+  cd $srcdir/$pkgname-core-$pkgver
+
+  # add missing contrib-libs needed by LibO 3.6, patch by FC
+  patch -Np1 -i ${srcdir}/clucene-core-2.3.3.4-install_contribs_lib.patch
+  # pkgconfig file is missing clucene-shared (upstream ID: 3461512), patch by FC
+  patch -Np1 -i ${srcdir}/clucene-core-2.3.3.4-pkgconfig.patch
+  # one upstream postrelease commit for proper zlib detection
+  patch -Np1 -i ${srcdir}/fix_zlib_detections.diff
+  # LibreOffice patches http://cgit.freedesktop.org/libreoffice/core/tree/clucene/patches
+  patch -Np0 -i ${srcdir}/clucene-warnings.patch
+  patch -Np0 -i ${srcdir}/clucene-gcc-atomics.patch
+  patch -Np0 -i ${srcdir}/clucene-debug.patch
+  patch -Np0 -i ${srcdir}/clucene-narrowing-conversions.patch
+  patch -Np0 -i ${srcdir}/clucene-multimap-put.patch
+
+  mkdir build
+  pushd build
+  cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DENABLE_ASCII_MODE=OFF \
+    -DENABLE_PACKAGING=OFF \
+    -DBUILD_CONTRIBS_LIB:BOOL=ON \
+    -DLIB_DESTINATION:PATH=/usr/lib \
+    -DLUCENE_SYS_INCLUDES:PATH=/usr/lib \
+    -DDISABLE_MULTITHREADING=OFF
+  popd
+  make -C build
+}
+
+#check() {
+#  cd $srcdir/$pkgname-core-$pkgver
+#  make cl_test -C build
+#  make test -C build || /bin/true # currently fails the tests as expected (see FC comment)
+#}
+
+package() {
+  cd $srcdir/$pkgname-core-$pkgver
+  make DESTDIR="$pkgdir" install -C build
+  rm -rfv $pkgdir/usr/lib/CLuceneConfig.cmake
+  
+  cd $pkgdir/usr/include//CLucene
+  ln -s /usr/lib/CLucene/clucene-config.h .
+}
