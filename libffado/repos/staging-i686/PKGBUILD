@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: galiyosha@gmail.com
+# Contributor: Jon Kristian Nilsen <jokr.nilsen@gmail.com>
+
+pkgname=libffado
+pkgver=2.2.1
+pkgrel=4
+pkgdesc="Driver for FireWire audio devices"
+arch=('i686' 'x86_64')
+url="http://www.ffado.org/"
+license=('GPL')
+depends=('libiec61883' 'libavc1394' 'dbus-c++'
+         'libxml++' 'jack' 'libsigc++' 'libconfig')
+makedepends=('scons' 'subversion' 'python2-pyqt')
+optdepends=('python2: ffado-diag'
+            'python2-pyqt: mixer applet')
+provides=('ffado')
+source=("http://www.ffado.org/files/$pkgname-$pkgver.tgz"
+        'fix-test-errno-usage.patch'
+        'python2-qt.patch')
+md5sums=('e113d828835051f835fb4a329cb0cbd4'
+         '308ff20eeb99a29e3e51061bdf9fe123'
+         'acb6e0dca1239850c7862bf2e1443fd7')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=805211
+  patch -Np1 -i "$srcdir/fix-test-errno-usage.patch"
+
+  msg2 "Applying Python 2 compatibility patch (downstream)"
+  patch -Np1 -i "$srcdir/python2-qt.patch"
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  scons DEBUG=False \
+        PREFIX=/usr \
+        MANDIR=/usr/share/man \
+        UDEVDIR=/usr/lib/udev/rules.d \
+        COMPILE_FLAGS="$CFLAGS -std=gnu++11"
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  scons DESTDIR="$pkgdir" WILL_DEAL_WITH_XDG_MYSELF="True" install
+
+  install -Dm644 support/xdg/ffado.org-ffadomixer.desktop \
+    "$pkgdir/usr/share/applications/ffadomixer.desktop"
+
+  install -Dm644 support/xdg/hi64-apps-ffado.png \
+    "$pkgdir/usr/share/pixmaps/ffado.png"
+}
+
+# vim:set ts=2 sw=2 et:
