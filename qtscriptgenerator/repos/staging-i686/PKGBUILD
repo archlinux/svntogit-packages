@@ -1,0 +1,44 @@
+# $Id$
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=qtscriptgenerator
+pkgver=0.2.0
+pkgrel=4
+pkgdesc="A tool that generates Qt bindings for Qt Script"
+arch=("i686" "x86_64")
+url="https://code.google.com/p/qtscriptgenerator/"
+license=('GPL')
+depends=('qtwebkit')
+makedepends=('pkgconfig' 'mesa')
+source=("https://qtscriptgenerator.googlecode.com/files/${pkgname}-src-${pkgver}.tar.gz"
+        'phonon.patch'
+        'no-phonon.patch')
+sha1sums=('4c1078f26b196156e857c17c9d11a66cfea66f00'
+          'cca1cd546628a10a91475a82fe12ad2e4066a7d0'
+          'c50b26e6504f5c981a916860d9c3929e436e1067')
+
+build() {
+  cd $pkgname-src-$pkgver
+
+  patch -p1 -i "${srcdir}"/phonon.patch
+  patch -p1 -i "${srcdir}"/no-phonon.patch
+
+  # prepare plugins
+  cd generator
+  qmake-qt4
+  make
+  QTDIR=/usr ./generator --include-paths=/usr/include/qt4
+
+  # build plugins
+  cd ../qtbindings
+  qmake-qt4
+  make
+}
+
+package() {
+  cd $pkgname-src-$pkgver/qtbindings
+  # move plugins to correct directory
+  install -d "${pkgdir}"/usr/lib/qt4/plugins/script
+  cp -a "${srcdir}"/$pkgname-src-$pkgver/plugins/script/* \
+    "${pkgdir}"/usr/lib/qt4/plugins/script/
+}
