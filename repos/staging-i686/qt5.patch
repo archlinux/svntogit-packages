@@ -1,0 +1,95 @@
+diff -up quazip-0.7.1/CMakeLists.txt.qt5 quazip-0.7.1/CMakeLists.txt
+--- quazip-0.7.1/CMakeLists.txt.qt5	2013-11-18 11:37:54.000000000 -0600
++++ quazip-0.7.1/CMakeLists.txt	2015-04-19 17:25:59.638703934 -0500
+@@ -10,10 +10,11 @@ endif()
+ 
+ if (Qt5Core_FOUND)
+     set(QTCORE_LIBRARIES ${Qt5Core_LIBRARIES})
++    set(QUAZIP_LIB_VERSION_SUFFIX 5)
+     # if there is no QT_ROOT, try to deduce it from Qt QtCore include
+     if ("${QT_ROOT}" STREQUAL "")
+         set(QT_ROOT ${QT_QTCORE_INCLUDE_DIR}/../..)
+-    endif()    
++    endif()
+     include_directories(${Qt5Core_INCLUDE_DIRS})
+ 
+     macro(qt_wrap_cpp)
+@@ -33,7 +34,7 @@ else()
+ endif()
+ 
+ # Use system zlib on unix and Qt ZLIB on Windows
+-IF(UNIX)
++IF(UNIX OR MINGW)
+ 	find_package(ZLIB REQUIRED)
+ ELSE(UNIX)
+ 	SET(ZLIB_INCLUDE_DIRS "${QT_ROOT}/src/3rdparty/zlib" CACHE STRING "Path to ZLIB headers of Qt")
+@@ -48,7 +49,9 @@ SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_D
+ 
+ set(LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)")
+ set(LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" CACHE STRING "Library directory name" FORCE)
++set(QUAZIP_LIB_TARGET_NAME quazip${QUAZIP_LIB_VERSION_SUFFIX} CACHE
++    INTERNAL "Target name of libquazip" FORCE)
+ 
+ add_subdirectory(quazip)
+ 
+-install(FILES FindQuaZip.cmake DESTINATION ${CMAKE_ROOT}/Modules)
++install(FILES FindQuaZip.cmake RENAME FindQuaZip${QUAZIP_LIB_VERSION_SUFFIX}.cmake DESTINATION ${CMAKE_ROOT}/Modules)
+diff -up quazip-0.7.1/FindQuaZip.cmake.qt5 quazip-0.7.1/FindQuaZip.cmake
+--- quazip-0.7.1/FindQuaZip.cmake.qt5	2012-02-26 00:46:10.000000000 -0600
++++ quazip-0.7.1/FindQuaZip.cmake	2015-04-19 17:25:59.638703934 -0500
+@@ -9,14 +9,17 @@ IF (QUAZIP_INCLUDE_DIRS AND QUAZIP_LIBRA
+ 	# in cache already
+ 	SET(QUAZIP_FOUND TRUE)
+ ELSE (QUAZIP_INCLUDE_DIRS AND QUAZIP_LIBRARIES)
++	IF (Qt5Core_FOUND)
++		set(QUAZIP_LIB_VERSION_SUFFIX 5)
++	ENDIF()
+ 	IF (WIN32)
+ 		FIND_PATH(QUAZIP_LIBRARY_DIR
+ 			WIN32_DEBUG_POSTFIX d
+-			NAMES libquazip.dll
++			NAMES libquazip${QUAZIP_LIB_VERSION_SUFFIX}.dll
+ 			HINTS "C:/Programme/" "C:/Program Files"
+ 			PATH_SUFFIXES QuaZip/lib
+ 		)
+-		FIND_LIBRARY(QUAZIP_LIBRARIES NAMES libquazip.dll HINTS ${QUAZIP_LIBRARY_DIR})
++		FIND_LIBRARY(QUAZIP_LIBRARIES NAMES libquazip${QUAZIP_LIB_VERSION_SUFFIX}.dll HINTS ${QUAZIP_LIBRARY_DIR})
+ 		FIND_PATH(QUAZIP_INCLUDE_DIR NAMES quazip.h HINTS ${QUAZIP_LIBRARY_DIR}/../ PATH_SUFFIXES include/quazip)
+ 		FIND_PATH(QUAZIP_ZLIB_INCLUDE_DIR NAMES zlib.h)
+ 	ELSE(WIN32)
+@@ -25,12 +28,12 @@ ELSE (QUAZIP_INCLUDE_DIRS AND QUAZIP_LIB
+ 		pkg_check_modules(PC_QUAZIP quazip)
+ 		FIND_LIBRARY(QUAZIP_LIBRARIES
+ 			WIN32_DEBUG_POSTFIX d
+-			NAMES quazip
++			NAMES quazip${QUAZIP_LIB_VERSION_SUFFIX}
+ 			HINTS /usr/lib /usr/lib64
+ 		)
+ 		FIND_PATH(QUAZIP_INCLUDE_DIR quazip.h
+ 			HINTS /usr/include /usr/local/include
+-			PATH_SUFFIXES quazip
++			PATH_SUFFIXES quazip${QUAZIP_LIB_VERSION_SUFFIX}
+ 		)
+ 		FIND_PATH(QUAZIP_ZLIB_INCLUDE_DIR zlib.h HINTS /usr/include /usr/local/include)
+ 	ENDIF (WIN32)
+diff -up quazip-0.7.1/quazip/CMakeLists.txt.qt5 quazip-0.7.1/quazip/CMakeLists.txt
+--- quazip-0.7.1/quazip/CMakeLists.txt.qt5	2013-08-10 11:00:00.000000000 -0500
++++ quazip-0.7.1/quazip/CMakeLists.txt	2015-04-19 17:29:26.600686574 -0500
+@@ -14,10 +14,11 @@ ADD_DEFINITIONS(-DQUAZIP_BUILD)
+ qt_wrap_cpp(MOC_SRCS ${PUBLIC_HEADERS})
+ set(SRCS ${SRCS} ${MOC_SRCS})
+ 
+-add_library(quazip SHARED ${SRCS})
+-set_target_properties(quazip PROPERTIES VERSION 1.0.0 SOVERSION 1)
++add_library(${QUAZIP_LIB_TARGET_NAME} SHARED ${SRCS})
++ 
++set_target_properties(${QUAZIP_LIB_TARGET_NAME} PROPERTIES VERSION 1.0.0 SOVERSION 1 DEBUG_POSTFIX d)
+ # Link against ZLIB_LIBRARIES if needed (on Windows this variable is empty)
+-target_link_libraries(quazip ${QT_QTMAIN_LIBRARY} ${QT_QTCORE_LIBRARY} ${ZLIB_LIBRARIES})
++target_link_libraries(${QUAZIP_LIB_TARGET_NAME} ${QT_QTMAIN_LIBRARY} ${QTCORE_LIBRARIES} ${ZLIB_LIBRARIES})
+ 
+-install(FILES ${PUBLIC_HEADERS} DESTINATION include/quazip)
+-install(TARGETS quazip LIBRARY DESTINATION ${LIB_DESTINATION} ARCHIVE DESTINATION ${LIB_DESTINATION} RUNTIME DESTINATION ${LIB_DESTINATION})
++install(FILES ${PUBLIC_HEADERS} DESTINATION include/quazip${QUAZIP_LIB_VERSION_SUFFIX})
++install(TARGETS ${QUAZIP_LIB_TARGET_NAME} LIBRARY DESTINATION ${LIB_DESTINATION} ARCHIVE DESTINATION ${LIB_DESTINATION} RUNTIME DESTINATION ${LIB_DESTINATION})
+
