@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+
+pkgname=wxpython2.8
+pkgver=2.8.12.1
+pkgrel=3
+pkgdesc="A wxWidgets GUI toolkit for Python"
+arch=('i686' 'x86_64')
+license=('custom:wxWindows')
+url="http://www.wxpython.org"
+depends=('wxgtk2.8' 'wxpython' 'python2')
+makedepends=('mesa' 'glu')
+source=(http://downloads.sourceforge.net/wxpython/wxPython-src-${pkgver}.tar.bz2 
+        wxpython-cairo.patch wxpython-fpb_default_style.patch wxGTK-collision.patch)
+sha1sums=('05688dc03d61631750f5904273122bb40a2115f5'
+          '922288b5e6c20075730655b79292959819c5fa77'
+          '0385386b5a622e6c623b63c9bf203d9748bd309b'
+          SKIP)
+
+# http://wiki.wxpython.org/MultiVersionInstalls
+# python program must have this snipet code added to force 2.8 usage:
+# import wxversion
+# wxversion.select("2.8")
+
+build() {
+  cd "${srcdir}/wxPython-src-${pkgver}"
+
+  patch -p1 -i ../wxGTK-collision.patch
+
+  find . -type f -exec sed -i 's/env python/env python2/' {} \;
+  #mv wxPython/wx/tools/Editra/editra wxPython/wx/tools/Editra/Editra
+  ./configure --prefix=/usr --libdir=/usr/lib --with-gtk=2 --with-opengl --enable-unicode \
+    --enable-graphics_ctx --disable-optimize --enable-mediactrl \
+    --with-regex=sys --with-libpng=sys --with-libxpm=sys --with-libjpeg=sys --with-libtiff=sys \
+    --disable-precomp-headers
+
+  cd "${srcdir}/wxPython-src-${pkgver}/wxPython"
+  patch -p2 -i "${srcdir}/wxpython-cairo.patch"
+  patch -p1 -i "${srcdir}/wxpython-fpb_default_style.patch"
+  python2 setup.py WXPORT=gtk2 UNICODE=1 WX_CONFIG=/usr/bin/wx-config-2.8 build
+}
+
+package() {
+  cd "${srcdir}/wxPython-src-${pkgver}/wxPython"
+
+  python2 setup.py WXPORT=gtk2 UNICODE=1 WX_CONFIG=/usr/bin/wx-config-2.8 install --root="${pkgdir}"
+  rm -rf "${pkgdir}/usr/bin"
+  rm "${pkgdir}"/usr/lib/python2.7/site-packages/{wx.pth,wxversion.py*}
+  
+  install -D -m644 ../docs/licence.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
