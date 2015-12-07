@@ -1,0 +1,74 @@
+# $Id$
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgbase=telepathy-qt
+pkgname=(telepathy-qt4 telepathy-qt5)
+pkgver=0.9.6.1
+pkgrel=2
+arch=(i686 x86_64)
+url="http://telepathy.freedesktop.org/wiki/"
+license=(LGPL)
+makedepends=(qt4 telepathy-farstream libxslt python2 cmake doxygen qt5-base)
+options=(staticlibs)
+source=("http://telepathy.freedesktop.org/releases/$pkgbase/$pkgbase-$pkgver.tar.gz"{,.asc} 'glibc-2.20.patch'
+	gstreamer-1.6.patch::"http://cgit.freedesktop.org/telepathy/telepathy-qt/patch/?id=ec4a3d62")
+md5sums=('bebebfbe29d194a9ba00b4f422a44f74'
+         'SKIP'
+         '8b5f10988c8e26551c3f5283413f0b92'
+         '0bd5aa2a0aad18f812c9602b890e910e')
+validpgpkeys=('AA33B0D27868E36C151780F0FE0B6D736B1195ED') # Alexandr Akulich
+
+prepare() {
+  mkdir build{,-qt4}
+
+# Fix build with glibc 2.20
+  cd $pkgbase-$pkgver
+  patch -p1 -i ../glibc-2.20.patch
+# Fix build with gstreamer 1.6
+  patch -p1 -i ../gstreamer-1.6.patch
+}
+
+build() {
+  cd build
+  cmake ../$pkgbase-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPYTHON_EXECUTABLE=/usr/bin/python2 \
+    -DDESIRED_QT_VERSION=5 \
+    -DENABLE_EXAMPLES=OFF \
+    -DENABLE_TESTS=OFF
+  make
+  cd ..
+
+  cd build-qt4
+  cmake ../$pkgbase-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPYTHON_EXECUTABLE=/usr/bin/python2 \
+    -DDESIRED_QT_VERSION=4 \
+    -DQT_QMAKE_EXECUTABLE=/usr/bin/qmake-qt4 \
+    -DENABLE_EXAMPLES=OFF \
+    -DENABLE_TESTS=OFF
+  make
+}
+
+package_telepathy-qt4() {
+  pkgdesc="A library for Qt4-based Telepathy clients"
+  depends=(qt4 telepathy-farstream)
+  conflicts=(telepathy-qt)
+  replaces=(telepathy-qt)
+  provides=(telepathy-qt)
+
+  cd build-qt4
+  make DESTDIR="$pkgdir" install
+}
+
+package_telepathy-qt5() {
+  pkgdesc="A library for Qt5-based Telepathy clients"
+  depends=(qt5-base telepathy-farstream)
+
+  cd build
+  make DESTDIR="$pkgdir" install
+}
