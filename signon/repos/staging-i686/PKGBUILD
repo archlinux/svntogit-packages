@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Balló György <ballogyor+arch at gmail dot com>
+
+pkgbase=signon
+pkgname=('libsignon-qt4' 'signon')
+pkgver=8.58
+pkgrel=2
+arch=('i686' 'x86_64')
+url="https://gitlab.com/accounts-sso/signond/"
+license=('LGPL')
+makedepends=('qt4' 'libproxy' 'doxygen' 'graphviz' 'qt5-base' 'ttf-font' 'qt5-tools')
+options=('!emptydirs')
+source=("https://gitlab.com/accounts-sso/signond/repository/archive.tar.bz2?ref=VERSION_$pkgver"
+        'use_keyring.patch')
+sha1sums=('e736e13d15f7f74e3681696f3a57bc3639bb24ff'
+          'cfdd48b494ad267654ceba23f1b81bcb8f56b9a1')
+
+prepare() {
+  mv signond-VERSION_$pkgver-* $pkgbase-$pkgver
+
+  cd $pkgbase-$pkgver
+  # Use gnome-keyring secrets storage if signon-keyring-extension is available
+  patch -Np1 -i "$srcdir/use_keyring.patch"
+  cd ..
+
+  cp -a $pkgbase-$pkgver $pkgbase-$pkgver-qt4
+
+  # qt4 fix
+  cd $pkgbase-$pkgver-qt4
+  sed -i 's/qdbusxml2cpp/qdbusxml2cpp-qt4/' src/signond/signond.pro
+}
+
+build() {
+  cd $pkgbase-$pkgver
+  qmake PREFIX=/usr LIBDIR=/usr/lib
+  make
+    
+  cd ../$pkgbase-$pkgver-qt4
+  qmake-qt4 PREFIX=/usr LIBDIR=/usr/lib
+  make
+}
+
+package_libsignon-qt4() {
+  pkgdesc="Qt4 signon library"
+  depends=('qt4' 'signon')
+  conflicts=('signon-qt4')
+  replaces=('signon-qt4')
+
+  cd $pkgbase-$pkgver-qt4/lib/SignOn
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Do not ship docs
+  rm -rf "${pkgdir}"/usr/share/doc
+}
+
+package_signon() {
+  pkgdesc="Qt Framework to provide credential storage and authentication service"
+  depends=('qt5-base' 'libproxy')
+  conflicts=('signon-qt5')
+  provides=('signon-qt5')
+  replaces=('signon-qt5')
+
+  cd $pkgbase-$pkgver
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Do not ship docs
+  rm -rf "${pkgdir}"/usr/share/doc
+}
+
