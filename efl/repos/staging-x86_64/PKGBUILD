@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald@archlinux.org>
+# Contributor: Enlightenment Developers <enlightenment-devel@enlightenment.org>
+
+pkgbase=efl
+pkgname=('efl' 'efl-docs')
+pkgver=1.15.1
+pkgrel=2
+pkgdesc="Enlightenment Foundation Libraries"
+arch=('i686' 'x86_64')
+url="http://www.enlightenment.org"
+license=('BSD' 'LGPL2.1' 'GPL2' 'custom')
+depends=('bullet' 'libjpeg-turbo' 'gst-plugins-base'
+         'luajit' 'curl' 'fribidi' 'libpulse' 'libxcomposite'
+         'libxinerama' 'libxrandr' 'libxss'
+         'libxcursor' 'libxp' 'libwebp' 'shared-mime-info'
+         'libxkbcommon' 'wayland' 'lz4' 'openjpeg' 'avahi')
+optdepends=('python2: einabench-cmp')
+makedepends=('doxygen' 'python' 'texlive-core' 'ghostscript')
+replaces=('ecore' 'edje' 'eet' 'eeze' 'efreet' 'eina' 'eio' 'embryo'
+          'emotion' 'ethumb' 'evas')
+options=('!emptydirs')
+source=(http://download.enlightenment.org/rel/libs/${pkgname}/$pkgname-$pkgver.tar.xz
+	'eina_doxygen.patch')
+install=efl.install
+sha1sums=('52ac42d561b4ec88e224832609df7d655b650a31'
+          'ef2b961e793c711685623a149ab55b1bec9a3676')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -i 's/env python$/&2/' src/scripts/eina/eina-bench-cmp
+
+  # fix docs building
+  patch -Np0 -i ${srcdir}/eina_doxygen.patch
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  export CFLAGS="$CFLAGS -fvisibility=hidden"
+
+  ./configure --prefix=/usr \
+  --disable-static --disable-tslib --enable-fb \
+  --enable-xinput22 --enable-multisense --enable-systemd \
+  --enable-image-loader-webp --enable-harfbuzz --enable-wayland \
+  --enable-liblz4
+
+  make
+  make -j1 doc
+}
+
+package_efl(){
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -j1 DESTDIR=${pkgdir} install
+
+  # install non-standard license files
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/licenses/COPYING.BSD" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.BSD"
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/licenses/COPYING.SMALL" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.SMALL"
+}
+
+package_efl-docs() {
+  pkgdesc="Documentation for the Enlightenment Foundation Libraries"
+  depends=()
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  install -d "${pkgdir}/usr/share/doc/${pkgbase}"
+  cp -a doc/html "${pkgdir}/usr/share/doc/${pkgbase}/html"
+  cp -a doc/latex "${pkgdir}/usr/share/doc/${pkgbase}/latex"
+}
+
