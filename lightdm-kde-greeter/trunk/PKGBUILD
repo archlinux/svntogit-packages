@@ -6,7 +6,7 @@
 
 pkgname=lightdm-kde-greeter
 pkgver=0.3.2.2
-pkgrel=2
+pkgrel=3
 pkgdesc='KDE greeter for LightDM'
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/playground/base/lightdm'
