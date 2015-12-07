@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Fabian Schoelzel <myfirstname.mylastname@googlemail.com>
+# Contributor: funkyou <spamopfer@nickname.berlin.de>
+# Contributor: tardo <tardo@nagi-fanboi.net>
+# Contributor: Stefan Husmann <stefan-husmann@t-online.de>
+# Contributor: Gustavo Alvarez <sl1pkn07@gmail.com>
+
+pkgbase=mlt
+pkgname=(mlt mlt-python-bindings)
+pkgver=0.9.8
+pkgrel=4
+pkgdesc="An open source multimedia framework"
+arch=(i686 x86_64)
+url="http://www.mltframework.org"
+license=(GPL)
+makedepends=(ladspa frei0r-plugins libdv sdl_image libsamplerate sox ffmpeg vid.stab qt5-svg jack libexif python2 swig movit eigen)
+source=("https://github.com/mltframework/mlt/archive/v$pkgver.tar.gz")
+md5sums=('57397f2f0fa0545c248c5e9b59c140d5')
+
+prepare() {
+  cd mlt-$pkgver
+  sed -i 's|freetype/|freetype2/|' src/modules/gtk2/producer_pango.c
+}
+
+build() {
+  # mlt
+  cd mlt-$pkgver
+
+  msg "SSE2=$SSE2"
+  ./configure --prefix=/usr \
+	--avformat-swscale \
+	--enable-gpl --enable-gpl3 \
+	--qt-libdir=/usr/lib --qt-includedir=/usr/include/qt
+  make
+
+  # mlt python bindings
+  cd src/swig/python
+  sed -i 's_path=`which python_path=`which python2_' build
+  sed -i 's_`python -c_`python2 -c_' build
+  sed -i 's#python-config#python2-config#' build
+  ./build
+}
+
+package_mlt() {
+  optdepends=('sdl_image: for SDL plugin'
+	'libsamplerate: for libavresample plugin'
+	'sox: for SOX (Audio Swiss Army Knife) plugin'
+	'ffmpeg: for ffmpeg plugin'
+	'vid.stab: for video stabilize plugin'
+	'gtk2: Gtk plugin'
+	'qt5-svg: for Qt5 plugins'
+	'jack: for JACK sound output plugin'
+	'libexif: for auto rotate plugin'
+	'frei0r-plugins: for additional effects'
+	'movit: opengl plugin')
+  conflicts=('mlt++<=0.3.8')
+
+  cd mlt-$pkgver
+  make DESTDIR="$pkgdir" install
+}
+
+package_mlt-python-bindings() {
+  depends=(python2 mlt)
+
+  cd "$srcdir/mlt-$pkgver/src/swig/python"
+  mkdir -p "$pkgdir/usr/lib/python2.7/"
+  install -m755 mlt.py "$pkgdir/usr/lib/python2.7/"
+  install -m755 _mlt.so "$pkgdir/usr/lib/python2.7/"
+  install -m755 mlt_wrap.o "$pkgdir/usr/lib/python2.7/"
+}
