@@ -1,0 +1,33 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=evolution-data-server
+pkgver=3.18.2
+pkgrel=2
+pkgdesc="Centralized access to appointments and contacts"
+arch=(i686 x86_64)
+depends=(gnome-online-accounts nss krb5 libgweather libical db libgdata)
+makedepends=(intltool gperf gobject-introspection vala gtk-doc)
+install=$pkgname.install
+url="https://wiki.gnome.org/Apps/Evolution"
+license=(GPL)
+source=(http://ftp.gnome.org/pub/gnome/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
+sha256sums=('5942fc1cf395acdc15425939d83824d861d01c57225ee3fc8c1d77009468ce9b')
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --with-openldap=yes \
+      --libexecdir=/usr/lib/evolution-data-server \
+      --with-krb5=/usr --with-libdb=/usr \
+      --enable-vala-bindings --disable-uoa \
+      --enable-gtk-doc
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+}
