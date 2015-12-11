@@ -5,8 +5,8 @@
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=python2
-pkgver=2.7.10
-pkgrel=2
+pkgver=2.7.11
+pkgrel=1
 _pybasever=2.7
 pkgdesc="A high-level scripting language"
 arch=('i686' 'x86_64')
@@ -14,13 +14,13 @@ license=('PSF')
 url="http://www.python.org/"
 depends=('bzip2' 'gdbm' 'openssl' 'zlib' 'expat' 'sqlite' 'libffi')
 makedepends=('tk' 'bluez-libs' 'hardening-wrapper')
-checkdepends=('gdb')
+checkdepends=('gdb' 'file')
 optdepends=('tk: for IDLE'
             'python2-setuptools'
             'python2-pip')
 conflicts=('python<3')
 source=(http://www.python.org/ftp/python/${pkgver%rc?}/Python-${pkgver}.tar.xz)
-sha1sums=('ee5a50c5562e7448f037d35fdedc18d95c748b9e')
+sha1sums=('c3b8bbe3f084c4d4ea13ffb03d75a5e22f9756ff')
 
 prepare() {
   cd Python-${pkgver}
@@ -53,8 +53,8 @@ prepare() {
   find . -name '*.py' | \
     xargs sed -i "s|#[ ]*![ ]*/usr/bin/env python$|#!/usr/bin/env python2|"
 
-  # Workaround asdl_c.py error after we touched the shebangs
-  touch Include/Python-ast.h Python/Python-ast.c
+  # Workaround asdl_c.py/makeopcodetargets.py errors after we touched the shebangs
+  touch Include/Python-ast.h Python/Python-ast.c Python/opcode_targets.h
 }
 
 build() {
@@ -75,12 +75,14 @@ build() {
 }
 
 check() {
-  # As of 2.7.10, 3 tests failed:
-  # test_doctest test_gdb test_mhlib
+  # As of 2.7.11, 2 tests failed:
+  # test_doctest test_gdb
   # Besides, test_thread disabled as it will stuck
+  
+  # $SHELL was set to avoid a test failure in test_gdb (it still fails due to other reasons, though)
 
   cd Python-${pkgver}
-  LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
+  SHELL=/bin/sh LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
     "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_thread || warning "Tests failed"
 }
 
