@@ -1,0 +1,60 @@
+From c4fcb1c772bd695a1b820ba656bb4149ab595c6e Mon Sep 17 00:00:00 2001
+From: David Kreuter <dkreuter@gmail.com>
+Date: Wed, 25 Mar 2015 20:48:24 +0100
+Subject: mainwindow: unavailable profiles are marked as such in their
+ description
+
+
+diff --git a/src/mainwindow.cc b/src/mainwindow.cc
+index b45ab59..d440e9e 100644
+--- a/src/mainwindow.cc
++++ b/src/mainwindow.cc
+@@ -37,7 +37,7 @@
+ 
+ /* Used for profile sorting */
+ struct profile_prio_compare {
+-    bool operator() (const pa_card_profile_info& lhs, const pa_card_profile_info& rhs) const {
++    bool operator() (const pa_card_profile_info2& lhs, const pa_card_profile_info2& rhs) const {
+ 
+         if (lhs.priority == rhs.priority)
+             return strcmp(lhs.name, rhs.name) > 0;
+@@ -333,7 +333,7 @@ void MainWindow::updateCard(const pa_card_info &info) {
+     CardWidget *w;
+     bool is_new = false;
+     const char *description, *icon;
+-    std::set<pa_card_profile_info,profile_prio_compare> profile_priorities;
++    std::set<pa_card_profile_info2,profile_prio_compare> profile_priorities;
+ 
+     if (cardWidgets.count(info.index))
+         w = cardWidgets[info.index];
+@@ -359,7 +359,7 @@ void MainWindow::updateCard(const pa_card_info &info) {
+     for (uint32_t i=0; i<info.n_profiles; ++i) {
+         w->hasSinks = w->hasSinks || (info.profiles[i].n_sinks > 0);
+         w->hasSources = w->hasSources || (info.profiles[i].n_sources > 0);
+-        profile_priorities.insert(info.profiles[i]);
++        profile_priorities.insert(*info.profiles2[i]);
+     }
+ 
+     w->ports.clear();
+@@ -379,7 +379,7 @@ void MainWindow::updateCard(const pa_card_info &info) {
+     }
+ 
+     w->profiles.clear();
+-    for (std::set<pa_card_profile_info>::iterator profileIt = profile_priorities.begin(); profileIt != profile_priorities.end(); ++profileIt) {
++    for (std::set<pa_card_profile_info2>::iterator profileIt = profile_priorities.begin(); profileIt != profile_priorities.end(); ++profileIt) {
+         bool hasNo = false, hasOther = false;
+         std::map<Glib::ustring, PortInfo>::iterator portIt;
+         Glib::ustring desc = profileIt->description;
+@@ -400,6 +400,9 @@ void MainWindow::updateCard(const pa_card_info &info) {
+         if (hasNo && !hasOther)
+             desc += _(" (unplugged)");
+ 
++        if (!profileIt->available)
++            desc += _(" (unavailable)");
++
+         w->profiles.push_back(std::pair<Glib::ustring,Glib::ustring>(profileIt->name, desc));
+     }
+ 
+-- 
+cgit v0.10.2
+
