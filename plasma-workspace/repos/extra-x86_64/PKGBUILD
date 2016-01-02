@@ -5,9 +5,9 @@
 # Contributor: Alexey D. <lq07829icatm at rambler.ru>
 
 pkgbase=plasma-workspace
-pkgname=('plasma-workspace' 'drkonqi' 'plasma-wayland-session')
+pkgname=('plasma-workspace' 'drkonqi' 'kuiserver' 'plasma-wayland-session')
 pkgver=5.5.2
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=('i686' 'x86_64')
 url='https://projects.kde.org/projects/kde/workspace/plasma-workspace'
@@ -21,9 +21,11 @@ depends=('kjsembed' 'knotifyconfig' 'libxdamage' 'libksysguard' 'libkscreen' 'kt
 makedepends=('extra-cmake-modules' 'kdoctools' 'gpsd' 'baloo'
              'krunner' 'kxmlrpcclient' 'networkmanager-qt')
 groups=('plasma')
-source=("http://download.kde.org/stable/plasma/${pkgver}/${pkgbase}-${pkgver}.tar.xz" 'kde.pam')
+source=("http://download.kde.org/stable/plasma/${pkgver}/${pkgbase}-${pkgver}.tar.xz" 'kde.pam'
+	xembedsniproxy-crash.patch::"https://bugsfiles.kde.org/attachment.cgi?id=96251")
 md5sums=('771be8128b03bc50d79b3579e631ae15'
-         '378ee33a9ec2870a1a899f2e05ee00d4')
+         '378ee33a9ec2870a1a899f2e05ee00d4'
+         '28113c15b8609db604b779a8d732fa91')
 
 prepare() {
   mkdir -p build
@@ -31,6 +33,8 @@ prepare() {
   cd ${pkgbase}-${pkgver}
   # be sure to use the Qt5 version of qtpaths
   sed -e 's:qtpaths:qtpaths-qt5:' -i startkde/start*.cmake
+
+  patch -p1 -i ../xembedsniproxy-crash.patch
 }
 
 build() {
@@ -46,19 +50,25 @@ build() {
 }
 
 package_plasma-workspace() {
+  depends+=('kuiserver')
   optdepends=('plasma-workspace-wallpapers: additional wallpapers'
               'gpsd: GPS based geolocation' 'networkmanager-qt: IP based geolocation')
   conflicts=('kdebase-workspace')
 
   cd build
-  make DESTDIR="${pkgdir}" install
+  make DESTDIR="$pkgdir" install
 
-  install -Dm644 "${srcdir}"/kde.pam \
-    "${pkgdir}"/etc/pam.d/kde
+  install -Dm644 "$srcdir"/kde.pam "$pkgdir"/etc/pam.d/kde
 
   # Remove conflicts with drkonqi
-  rm "${pkgdir}"/usr/lib/drkonqi
-  rm -r "${pkgdir}"/usr/share/drkonqi
+  rm "$pkgdir"/usr/lib/drkonqi
+  rm -r "$pkgdir"/usr/share/drkonqi
+
+  # Remove conflicts with kuiserver
+  rm "$pkgdir"/usr/bin/kuiserver5
+  rm "$pkgdir"/usr/lib/libkdeinit5_kuiserver5.so
+  rm "$pkgdir"/usr/share/dbus-1/services/kf5_org.kde.kuiserver.service
+  rm "$pkgdir"/usr/share/kservices5/kuiserver.desktop
 
   # Split plasma-wayland scripts
   rm -r "$pkgdir"/usr/share/wayland-sessions
@@ -69,7 +79,15 @@ package_drkonqi() {
   depends=('kxmlrpcclient' 'gdb')
 
   cd build/drkonqi
-  make DESTDIR="${pkgdir}" install
+  make DESTDIR="$pkgdir" install
+}
+
+package_kuiserver() {
+  pkgdesc='KDE Progress Info UI server'
+  depends=('kxmlgui')
+
+  cd build/kuiserver
+  make DESTDIR="$pkgdir" install
 }
 
 package_plasma-wayland-session() {
