@@ -5,7 +5,7 @@
 
 pkgname=ghostscript
 pkgver=9.18
-pkgrel=4
+pkgrel=5
 pkgdesc="An interpreter for the PostScript language"
 arch=('i686' 'x86_64')
 license=('AGPL' 'custom')
@@ -42,7 +42,8 @@ build() {
   # force it to use system-libs
   # keep heavily patched included openjpeg, leads to segfault with system openjpeg
   # https://bugs.archlinux.org/task/38226
-  rm -rf jpeg libpng zlib jasper expat tiff lcms lcms2 freetype cups/libs # jbig2dec is in community
+  #freetype # use internal one - FS#46744
+  rm -rf jpeg libpng zlib jasper expat tiff lcms lcms2 cups/libs # jbig2dec is in community
 
   autoconf --force
 
