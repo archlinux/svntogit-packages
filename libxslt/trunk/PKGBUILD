@@ -4,7 +4,7 @@
 
 pkgname=libxslt
 pkgver=1.1.28
-pkgrel=3
+pkgrel=4
 pkgdesc="XML stylesheet transformation library"
 arch=('i686' 'x86_64')
 url="http://xmlsoft.org/XSLT/"
@@ -12,13 +12,23 @@ license=('custom')
 depends=('libxml2' 'libgcrypt')
 makedepends=('python2')
 checkdepends=('docbook-xml')
-source=(http://xmlsoft.org/sources/${pkgname}-${pkgver}.tar.gz)
-md5sums=('9667bf6f9310b957254fdcf6596600b7')
+source=(http://xmlsoft.org/sources/${pkgname}-${pkgver}.tar.gz
+        CVE-2015-7995.patch)
+md5sums=('9667bf6f9310b957254fdcf6596600b7'
+         'b97b695cbe4171f8cb10df41f652aba5')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../CVE-2015-7995.patch
+}
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   sed -e 's|/usr/bin/python -u|/usr/bin/python2 -u|g' -e 's|/usr/bin/python$|/usr/bin/python2|g' -i python/tests/*.py
   ./configure --prefix=/usr --with-python=/usr/bin/python2
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
+
   make
 }
 
