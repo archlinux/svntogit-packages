@@ -3,12 +3,12 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgbase="sqlite"
-pkgname=('sqlite' 'sqlite-tcl' 'sqlite-doc') 
+pkgname=('sqlite' 'sqlite-tcl' 'sqlite-doc' 'sqlite-analyzer') 
 _srcver=3100100
 _docver=${_srcver}
 #_docver=3080001
 pkgver=3.10.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A C library that implements an SQL database engine"
 arch=('i686' 'x86_64')
 license=('custom:Public Domain')
@@ -17,32 +17,36 @@ makedepends=('tcl' 'readline')
 source=(http://www.sqlite.org/2016/sqlite-src-${_srcver}.zip
         http://www.sqlite.org/2016/sqlite-doc-${_docver}.zip
         license.txt)
-options=('!emptydirs' '!makeflags')
+options=('!emptydirs' '!makeflags') # json extensions breaks parallel build
 sha1sums=('01f5aa582d41b1f306bd68555977ce7772bace8a'
           '1a7035b584b9b587346c55ffcd384db2509ced9c'
           'f34f6daa4ab3073d74e774aad21d66878cf26853')
 
 prepare() {
-  cd "$srcdir"/sqlite-src-$_srcver
-  autoreconf -vfi
+  cd sqlite-src-$_srcver
+#  autoreconf -vfi
 }
 
 build() {
-  export CFLAGS="$CFLAGS -DSQLITE_ENABLE_FTS3=1 \
-                         -DSQLITE_ENABLE_COLUMN_METADATA=1 \
-                         -DSQLITE_ENABLE_UNLOCK_NOTIFY \
-                         -DSQLITE_ENABLE_DBSTAT_VTAB=1 \
-                         -DSQLITE_ENABLE_RTREE=1 \
-                         -DSQLITE_SECURE_DELETE"
+  export CPPFLAGS="$CPPFLAGS -DSQLITE_ENABLE_COLUMN_METADATA=1 \
+                             -DSQLITE_ENABLE_UNLOCK_NOTIFY \
+                             -DSQLITE_ENABLE_DBSTAT_VTAB=1 \
+                             -DSQLITE_SECURE_DELETE"
 
   # build sqlite
-  cd "$srcdir"/sqlite-src-$_srcver
+  cd sqlite-src-$_srcver
   ./configure --prefix=/usr \
 	--disable-static \
+	--disable-amalgamation \
+	--enable-fts3 \
+	--enable-fts4 \
+	--enable-fts5 \
+	--enable-rtree \
+	--enable-json1 \
 	TCLLIBDIR=/usr/lib/sqlite$pkgver
   make
   # build additional tools
-  make showdb showjournal showstat4 showwal sqldiff
+  make showdb showjournal showstat4 showwal sqldiff sqlite3_analyzer
 }
 
 package_sqlite() {
@@ -52,7 +56,7 @@ package_sqlite() {
  provides=("sqlite3=$pkgver")
  replaces=("sqlite3")
  
-  cd ${srcdir}/sqlite-src-$_srcver
+  cd sqlite-src-$_srcver
   make DESTDIR=${pkgdir} install
   
   install -m755 showdb showjournal showstat4 showwal sqldiff ${pkgdir}/usr/bin/
@@ -88,6 +92,16 @@ package_sqlite-tcl() {
   ln -sf /usr/share/licenses/${pkgbase} "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
+package_sqlite-analyzer() {
+ 
+ pkgdesc="An analysis program for sqlite3 database files"
+ depends=('sqlite' 'tcl')
+
+  cd sqlite-src-$_srcver
+  install -m755 -d ${pkgdir}/usr/bin
+  install -m755 sqlite3_analyzer ${pkgdir}/usr/bin/
+}
+
 package_sqlite-doc() {
 
  pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
@@ -95,8 +109,7 @@ package_sqlite-doc() {
  provides=("sqlite3-doc=$pkgver")
  replaces=("sqlite3-doc")
  
-  #cd ${srcdir}/sqlite-doc-${_amalgamationver}
-  cd ${srcdir}/sqlite-doc-${_docver}
+  cd sqlite-doc-${_docver}
   mkdir -p ${pkgdir}/usr/share/doc/${pkgbase}
   cp -R *  ${pkgdir}/usr/share/doc/${pkgbase}/
 }
