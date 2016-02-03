@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=librsvg
-pkgver=2.40.11
+pkgver=2.40.13
 pkgrel=1
 epoch=2
 pkgdesc="A SVG viewing library"
@@ -13,13 +13,28 @@ makedepends=('intltool' 'gobject-introspection' 'vala' 'python2')
 options=('!emptydirs')
 url="https://live.gnome.org/LibRsvg"
 install=librsvg.install
-source=(https://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
-sha256sums=('611ac0f544debd0c9bf1ef5509c990d218e83dd1d8c83297075c4b29796a2e02')
+source=(https://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz
+        bgo759084.patch)
+sha256sums=('4d6ea93ec05f5dabe7262d711d246a0a99b2311e215360dd3dcabd6afe3b9804'
+            'd6cf5b318a89fb002a520c830c0666f0cb905d4d38322b2c41296fdd36d60b93')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../bgo759084.patch
+}
 
 build() {
   cd $pkgname-$pkgver
   ./configure --prefix=/usr --disable-static --enable-vala
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
+
   make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make check
 }
 
 package() {
