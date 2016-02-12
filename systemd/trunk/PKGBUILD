@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=228
-pkgrel=4
+pkgver=229
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -30,21 +30,6 @@ md5sums=('SKIP'
 prepare() {
   cd "$pkgbase"
 
-  # sd-ndisc: drop RA packets from non-link-local addresses
-  # https://github.com/systemd/systemd/commit/3ccd31635353
-  # https://github.com/systemd/systemd/issues/1866
-  git cherry-pick -n 3ccd31635353
-
-  # networkd: link - do not drop config for loopback device
-  # https://github.com/systemd/systemd/commit/e5d44b34cca3
-  # https://github.com/systemd/systemd/issues/2023
-  git cherry-pick -n e5d44b34cca3
-
-  # virt: detect dmi before cpuid
-  # https://github.com/systemd/systemd/commit/050e65ada2e0
-  # https://github.com/systemd/systemd/issues/1993
-  git cherry-pick -n 050e65ada2e0
-
   ./autogen.sh
 }
 
@@ -58,7 +43,6 @@ build() {
       --localstatedir=/var \
       --sysconfdir=/etc \
       --enable-lz4 \
-      --enable-compat-libs \
       --enable-gnuefi \
       --disable-audit \
       --disable-ima \
@@ -157,10 +141,9 @@ package_systemd() {
 
 package_libsystemd() {
   pkgdesc="systemd client libraries"
-  depends=('glibc' 'libgcrypt' 'lz4' 'xz')
+  depends=('glibc' 'libcap' 'libgcrypt' 'lz4' 'xz')
   license=('GPL2')
-  provides=('libsystemd.so' 'libsystemd-daemon.so' 'libsystemd-id128.so'
-            'libsystemd-journal.so' 'libsystemd-login.so' 'libudev.so')
+  provides=('libsystemd.so' 'libudev.so')
 
   make -C "$pkgbase" DESTDIR="$pkgdir" install-libLTLIBRARIES
 }
