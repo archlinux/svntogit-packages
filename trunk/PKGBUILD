@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=229
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -29,6 +29,15 @@ md5sums=('SKIP'
 
 prepare() {
   cd "$pkgbase"
+
+  # networkd: FIONREAD is not reliable on some sockets
+  git cherry-pick -n 4edc2c9b6b5b921873eb82e58719ed4d9e0d69bf
+
+  # fix assertion failure in src/core/timer.c on bootup (FS#48197)
+  git cherry-pick -n 6d2353394fc33e923d1ab464c8f88df2a5105ffb
+
+  # fix udevd error checking from cg_unified() (FS#48188)
+  git cherry-pick -n 6d2353394fc33e923d1ab464c8f88df2a5105ffb
 
   ./autogen.sh
 }
