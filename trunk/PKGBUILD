@@ -24,14 +24,12 @@ install=glibc.install
 source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         glibc-2.22-roundup.patch
         glibc-2.22-CVE-2015-7547.patch
-        glibc-2.22-Gracefully-handle-incompatible-locale-data.patch
         locale.gen.txt
         locale-gen)
 md5sums=('e51e02bf552a0a1fbbdc948fb2f5e83c'
          'SKIP'
          '176ca8230b2c1d2e9a904c3527ebed24'
          'db053da46e40f25a0fc988936725080b'
-         '462e43aa6438fb1dfce8ad605e35cc24'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
 validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
