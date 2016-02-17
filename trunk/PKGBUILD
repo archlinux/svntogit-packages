@@ -28,7 +28,7 @@ source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
         locale-gen)
 md5sums=('e51e02bf552a0a1fbbdc948fb2f5e83c'
          'SKIP'
-         '176ca8230b2c1d2e9a904c3527ebed24'
+         'd4b9754a2d5e8f113d47c67386f75e7b'
          'db053da46e40f25a0fc988936725080b'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
@@ -38,6 +38,8 @@ prepare() {
   cd ${srcdir}/glibc-${pkgver}
 
   # glibc-2.22..287de30e
+  # 060f8dbd (and 13ff0739) is reverted as it breaks the testsuite on x86_64
+  # TODO: figure out why...
   patch -p1 -i $srcdir/glibc-2.22-roundup.patch
 
   # CVE-2015-7547 - patch from upstream
