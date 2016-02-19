@@ -3,34 +3,27 @@
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 
-# build from head of release branch as bug fix releases are rare
-
 pkgname=binutils
-pkgver=2.25.1
-pkgrel=3
-_commit=2bd25930
+pkgver=2.26
+pkgrel=1
+_commit=a4496709
 pkgdesc="A set of programs to assemble and manipulate binary and object files"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/binutils/"
 license=('GPL')
 groups=('base-devel')
-depends=('glibc>=2.22' 'zlib')
+depends=('glibc>=2.23' 'zlib')
 makedepends=('git')
 checkdepends=('dejagnu' 'bc')
 conflicts=('binutils-multilib')
 replaces=('binutils-multilib')
 options=('staticlibs' '!distcc' '!ccache')
 install=binutils.install
-source=(git://sourceware.org/git/binutils-gdb.git#commit=${_commit}
-        binutils-e9c1bdad.patch)
-md5sums=('SKIP'
-         'eb3aceaab8ed26e06d505f82beb30f8f')
+source=(git://sourceware.org/git/binutils-gdb.git#commit=${_commit})
+md5sums=('SKIP')
 
 prepare() {
-  cd ${srcdir}/binutils-gdb
-
-  # https://sourceware.org/bugzilla/show_bug.cgi?id=16992
-  patch -p1 -i ${srcdir}/binutils-e9c1bdad.patch
+  cd binutils-gdb
 
   # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
@@ -39,9 +32,9 @@ prepare() {
 }
 
 build() {
-  cd ${srcdir}/binutils-build
+  cd binutils-build
 
-  ${srcdir}/binutils-gdb/configure --prefix=/usr \
+  ../binutils-gdb/configure --prefix=/usr \
     --with-lib-path=/usr/lib:/usr/local/lib \
     --with-bugurl=https://bugs.archlinux.org/ \
     --enable-threads --enable-shared --with-pic \
@@ -56,7 +49,7 @@ build() {
 }
 
 check() {
-  cd ${srcdir}/binutils-build
+  cd binutils-build
   
   # unset LDFLAGS as testsuite makes assumptions about which ones are active
   # ignore failures in gold testsuite...
@@ -64,7 +57,7 @@ check() {
 }
 
 package() {
-  cd ${srcdir}/binutils-build
+  cd binutils-build
   make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
 
   # Remove unwanted files
@@ -72,4 +65,6 @@ package() {
 
   # No shared linking to these files outside binutils
   rm ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
+  echo "INPUT ( %{_libdir}/libbfd.a -liberty -lz -ldl )" > "$pkgdir"/usr/lib/libbfd.so
+  echo "INPUT ( %{_libdir}/libopcodes.a -lbfd )" > "$pkgdir"/usr/lib/libopcodes.so
 }
