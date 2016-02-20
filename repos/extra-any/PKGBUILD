@@ -2,48 +2,44 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=opengl-man-pages
-_svndate=20130605
-pkgver=0.${_svndate}
+pkgver=20160220
+_revision=32463
 pkgrel=1
 pkgdesc="OpenGL Man Pages"
 arch=('any')
 url="http://www.opengl.org/wiki/Getting_started/XML_Toolchain_and_Man_Pages"
 license=('custom')
-makedepends=('libxslt' 'docbook-xsl' 'w3c-mathml2' 'docbook-mathml')
-options=('!makeflags')
-source=("https://sources.archlinux.org/other/${pkgname}/${pkgname}_${_svndate}.tar.xz"
+# OpenGL 4.x (current) API and GLSL pages - libxslt' 'docbook-xsl'
+# OpenGL 3.x and older 'w3c-mathml2' 'docbook-mathml'
+makedepends=('libxslt' 'docbook-xsl' 'w3c-mathml2' 'docbook-mathml' 'subversion')
+# https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/
+source=(man4::svn+https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/man4/#revision=${_revision}	# OpenGL 4.x (current) API and GLSL pages
+        man3::svn+https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/man3/#revision=${_revision}	# OpenGL 3.x API pages
+        man2::svn+https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/man2/#revision=${_revision}	# OpenGL 2.x API pages
         'LICENSE')
-md5sums=('b557459f660facc4d69cff8fc1a0f024'
+md5sums=('SKIP'
+         'SKIP'
+         'SKIP'
          'cb856abe5968300057e650096ba25b2f')
-_mandirs=(man2 man3 man4) # manglsl fail to build, broken upstream
+_mandirs=(man4 man3 man2)
 
-# source PKGBUILD && mksource
-mksource() {
-  mkdir ${pkgname}-source
-  
-  pushd ${pkgname}-source
-  for manpages in ${_mandirs[@]} manglsl; do
-    svn co --username anonymous --password anonymous https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/docs/${manpages}/ ${manpages}
-    find ${manpages} -depth -type d -name .svn -exec rm -rf {} \;
-  done
-  tar -cvJf ../${pkgname}_${_svndate}.tar.xz ${_mandirs[@]}
-  popd
-}
-
-prepare() {
-  cd "${srcdir}/man2"
-  
-  # this file isn't in man2 anymore but in man3
-  sed -i '/glDrawElementsInstanced.xml/d' xhtml/Makefile
+pkgver() {
+  date +%Y%m%d
 }
 
 build() {
+  export WD=`pwd`
+  xmlcatalog --create --noout \
+    --add public "-//W3C//DTD MathML 2.0//EN" "file:///usr/share/xml/w3c/mathml2/mathml2.dtd" \
+    --add public "-//W3C//DTD MathML//EN" "file:///usr/share/xml/w3c/mathml2/mathml2.dtd" \
+    --add system "http://www.w3.org/TR/MathML2/dtd/mathml2.dtd" "file:///usr/share/xml/w3c/mathml2/mathml2.dtd" \
+    mathml2.cat
+  export XML_CATALOG_FILES="$WD/mathml2.cat /etc/xml/catalog"
+ 
   for manpages in ${_mandirs[@]}; do
     cd "${srcdir}/${manpages}"
-    export ROOT="${srcdir}/${manpages}"
-    make
-    for file in *.xml; do
-      xsltproc --noout --nonet /usr/share/xml/docbook/xsl-stylesheets-1.78.1/manpages/docbook.xsl ${file}
+    for file in gl*.xml; do
+      xsltproc --noout --nonet /usr/share/xml/docbook/xsl-stylesheets-*/manpages/docbook.xsl ${file}
     done
   done
 }
@@ -54,5 +50,6 @@ package() {
     cd "${srcdir}/${manpages}"
     install -m644 *.3G "${pkgdir}/usr/share/man/man3/"
   done
+  # license
   install -D -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
