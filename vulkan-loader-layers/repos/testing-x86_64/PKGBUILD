@@ -1,0 +1,96 @@
+# $Id$
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+
+pkgbase=vulkan-loader-layers
+pkgname=(vulkan-icd-loader vulkan-validation-layers)
+_pkgname=Vulkan-LoaderAndValidationLayers
+pkgver=1.0.3.0
+pkgrel=2
+arch=(i686 x86_64)
+url="https://www.khronos.org/vulkan/"
+license=('custom')
+depends=()
+makedepends=(git cmake python libxcb)
+source=('git://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git#commit=ec513f8'
+        'git://github.com/KhronosGroup/glslang.git#commit=6c292d3')
+sha256sums=('SKIP'
+            'SKIP')
+
+build() {
+  # for validation layers
+  pushd glslang
+  rm -rf build ; mkdir build ; cd build
+  cmake -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    ../
+  make
+  make DESTDIR=install install
+  cd install
+  ln -s usr/* .
+  popd
+  
+  
+  cd "${srcdir}/${_pkgname}"
+  rm -rf build ; mkdir build ; cd build
+  cmake -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DINCLUDE_INSTALL_DIR=/usr/include \
+    -DLIB_INSTALL_DIR=/usr/lib \
+    -DCMAKE_INSTALL_DATADIR=/usr/share \
+    -DCMAKE_SKIP_RPATH=True \
+    -DGLSLANG_PREFIX=${srcdir}/glslang \
+    -DCMAKE_BUILD_TYPE=Release \
+    ..
+  make
+  make DESTDIR=install install
+}
+
+package_vulkan-icd-loader() {
+  pkgdesc="Vulkan Installable Client Driver (ICD) Loader"
+  depends=(glibc)
+  cd "${_pkgname}"
+  
+  install -dm755 ${pkgdir}/usr/{lib,include/vulkan}
+  install -dm755 ${pkgdir}/usr/share/licenses/${pkgname}
+  install -dm755 ${pkgdir}/etc/vulkan/icd.d/
+  
+  install -m644 build/loader/libvulkan.so.1.0.3 ${pkgdir}/usr/lib
+  ln -s libvulkan.so.1.0.3 ${pkgdir}/usr/lib/libvulkan.so.1
+  ln -s libvulkan.so.1.0.3 ${pkgdir}/usr/lib/libvulkan.so
+
+  install -m644 include/vulkan/vk_icd.h ${pkgdir}/usr/include/vulkan/
+  
+  install -m644 LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
+
+package_vulkan-validation-layers() {
+  pkgdesc="Vulkan Software Development Kit"
+  depends=(gcc-libs vulkan-icd-loader vulkan-headers)
+  conflicts=('vulkan-sdk')
+  replaces=('vulkan-sdk')
+  groups=('vulkan-devel')
+  cd "${_pkgname}"
+  
+  install -dm755 ${pkgdir}/usr/{bin,lib,include/vulkan}
+  install -dm755 ${pkgdir}/usr/share/{doc,licenses}/${pkgname}
+  install -dm755 ${pkgdir}/usr/share/vulkan/{explicit,implicit}_layer.d
+
+  install -m755 build/demos/vulkaninfo ${pkgdir}/usr/bin/
+  
+  install -m644 build/layers/*.so ${pkgdir}/usr/lib
+
+  install -m644 include/vulkan/* ${pkgdir}/usr/include/vulkan/
+  # already in vulkan-headers
+  rm ${pkgdir}/usr/include/vulkan/{vulkan,vk_platform}.h
+  # already in vulkan-icd-loader
+  rm ${pkgdir}/usr/include/vulkan/vk_icd.h
+
+  # fix library paths  
+  for i in layers/linux/*.json ; do 
+    sed 's@./@@' $i > ${pkgdir}/usr/share/vulkan/explicit_layer.d/$(basename $i)
+  done
+  
+  install -m644 loader/LoaderAndLayerInterface.md "${pkgdir}"/usr/share/doc/${pkgname}/
+
+  install -m644 LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
