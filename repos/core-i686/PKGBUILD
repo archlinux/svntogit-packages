@@ -8,13 +8,13 @@ pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=5.3.0
 _pkgver=5
 _islver=0.15
-pkgrel=4
+pkgrel=5
 _snapshot=5-20160209
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
-makedepends=('binutils>=2.25' 'libmpc' 'gcc-ada' 'doxygen')
+makedepends=('binutils>=2.26' 'libmpc' 'gcc-ada' 'doxygen')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
 source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
@@ -101,7 +101,7 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.22')
+  depends=('glibc>=2.23')
   options=('!emptydirs' '!strip')
   install=gcc-libs.install
 
@@ -147,7 +147,7 @@ package_gcc-libs()
 package_gcc()
 {
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.25' 'libmpc')
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.26' 'libmpc')
   groups=('base-devel')
   options=('staticlibs')
   install=gcc.install
