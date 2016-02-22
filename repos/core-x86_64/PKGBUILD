@@ -4,52 +4,35 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: valgrind requires rebuilt with each major glibc version
 
-# NOTE: adjust version in install script when locale files are updated
-
 pkgname=glibc
-pkgver=2.22
-pkgrel=4
+pkgver=2.23
+pkgrel=1
+_commit=e742928c
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
 depends=('linux-api-headers>=4.1' 'tzdata' 'filesystem')
-makedepends=('gcc>=5.2')
+makedepends=('gcc>=5.2' 'git')
 backup=(etc/gai.conf
         etc/locale.gen
         etc/nscd.conf)
 options=('!strip' 'staticlibs')
 install=glibc.install
-source=(http://ftp.gnu.org/gnu/libc/${pkgname}-${pkgver}.tar.xz{,.sig}
-        glibc-2.22-roundup.patch
-        glibc-2.22-CVE-2015-7547.patch
+source=(git://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
         locale-gen)
-md5sums=('e51e02bf552a0a1fbbdc948fb2f5e83c'
-         'SKIP'
-         'd4b9754a2d5e8f113d47c67386f75e7b'
-         'db053da46e40f25a0fc988936725080b'
+md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
-validpgpkeys=('F37CDAB708E65EA183FD1AF625EF0A436C2A4AFF')  # Carlos O'Donell
 
 prepare() {
-  cd ${srcdir}/glibc-${pkgver}
-
-  # glibc-2.22..287de30e
-  # 060f8dbd (and 13ff0739) is reverted as it breaks the testsuite on x86_64
-  # TODO: figure out why...
-  patch -p1 -i $srcdir/glibc-2.22-roundup.patch
-
-  # CVE-2015-7547 - patch from upstream
-  patch -p1 -i $srcdir/glibc-2.22-CVE-2015-7547.patch
-
-  mkdir ${srcdir}/glibc-build
+  mkdir glibc-build
 }
 
 build() {
-  cd ${srcdir}/glibc-build
+  cd glibc-build
 
   if [[ ${CARCH} = "i686" ]]; then
     # Hack to fix NPTL issues with Xen, only required on 32bit platforms
@@ -66,7 +49,7 @@ build() {
   CFLAGS=${CFLAGS/-fstack-protector-strong/}
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
 
-  ${srcdir}/${pkgname}-${pkgver}/configure --prefix=/usr \
+  ../${pkgname}/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --with-headers=/usr/include \
       --with-bugurl=https://bugs.archlinux.org/ \
@@ -90,18 +73,18 @@ build() {
   make
 
   # remove harding in preparation to run test-suite
-  sed -i '5,7d' configparms
+  sed -i '/FORTIFY/d' configparms
 }
 
 check() {
-  cd ${srcdir}/glibc-build
+  cd glibc-build
 
   # some failures are "expected"
   make check || true
 }
 
 package() {
-  cd ${srcdir}/glibc-build
+  cd glibc-build
 
   install -dm755 ${pkgdir}/etc
   touch ${pkgdir}/etc/ld.so.conf
@@ -112,26 +95,18 @@ package() {
 
   install -dm755 ${pkgdir}/usr/lib/{locale,systemd/system,tmpfiles.d}
 
-  install -m644 ${srcdir}/${pkgname}-${pkgver}/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
-  install -m644 ${srcdir}/${pkgname}-${pkgver}/nscd/nscd.service ${pkgdir}/usr/lib/systemd/system
-  install -m644 ${srcdir}/${pkgname}-${pkgver}/nscd/nscd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/nscd.conf
+  install -m644 ${srcdir}/${pkgname}/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
+  install -m644 ${srcdir}/${pkgname}/nscd/nscd.service ${pkgdir}/usr/lib/systemd/system
+  install -m644 ${srcdir}/${pkgname}/nscd/nscd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/nscd.conf
 
-  install -m644 ${srcdir}/${pkgname}-${pkgver}/posix/gai.conf ${pkgdir}/etc/gai.conf
+  install -m644 ${srcdir}/${pkgname}/posix/gai.conf ${pkgdir}/etc/gai.conf
 
   install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/bin
 
   # create /etc/locale.gen
   install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
-    ${srcdir}/glibc-${pkgver}/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
-
-  # remove the static libraries that have a shared counterpart
-  # libc, libdl, libm and libpthread are required for toolchain testsuites
-  # in addition libcrypt appears widely required
-  rm $pkgdir/usr/lib/lib{anl,BrokenLocale,nsl,resolv,rt,util}.a
-  if [[ $CARCH = "x86_64" ]]; then
-    rm $pkgdir/usr/lib/libmvec.a
-  fi
+    ${srcdir}/glibc/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
