@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Sébastien Luttringer
+# Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
+
+pkgname=dkms
+pkgver=2.2.0.3+git151023
+pkgrel=5
+pkgdesc='Dynamic Kernel Modules System'
+arch=('any')
+url='http://linux.dell.com/dkms/'
+license=('GPL2')
+depends=('bash' 'kmod' 'gcc' 'make' 'patch')
+makedepends=('git')
+optdepends=('linux-headers: build modules against Arch kernel'
+            'linux-lts-headers: build modules against LTS Arch kernel')
+backup=('etc/dkms/framework.conf')
+install=$pkgname.install
+source=('git+git://linux.dell.com/dkms.git#commit=7b6e78f'
+        '02-no-kernel-hook.patch'
+        'hook.install'
+        'hook.remove'
+        'hook.sh')
+md5sums=('SKIP'
+         '82d520c39c99c34977e48b313a189c6c'
+         '8fe2064106958bcfd386e83494c8959a'
+         '41fcecb1c2dfc59a4b648fddcd8b462f'
+         '7fdc44f8ecdd0ac0dc5e6bcf02901681')
+
+prepare() {
+  cd dkms
+  # patching
+  patches=("$srcdir"/*.patch)
+  if (( ${#patches[*]} > 0 )); then
+    for p in "${patches[@]}"; do
+      msg2 "Apply patch: ${p##*/}"
+      patch -p1 -i "$p"
+    done
+  fi
+  # /usr move
+  msg2 '/usr move patching'
+  for i in dkms{,_framework.conf,.bash-completion,.8,_common.postinst}; do
+    sed -ri 's,/lib/modules,/usr/lib/modules,g' "$i"
+  done
+}
+
+package() {
+  # alpm hook
+  install -D -m 644 hook.install "$pkgdir/usr/share/libalpm/hooks/70-dkms-install.hook"
+  install -D -m 644 hook.remove "$pkgdir/usr/share/libalpm/hooks/70-dkms-remove.hook"
+  install -D -m 755 hook.sh "$pkgdir/usr/lib/dkms/alpm-hook"
+  # upstream installer
+  cd dkms
+  make \
+    DESTDIR="$pkgdir" \
+    SBIN="$pkgdir/usr/bin" \
+    BASHDIR="$pkgdir/usr/share/bash-completion/completions" \
+    install
+}
+
+# vim:set ts=2 sw=2 et:
