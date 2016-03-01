@@ -9,7 +9,7 @@ pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('GPL3' 'LGPL' 'FDL' 'custom')
-pkgdesc='A cross-platform application and UI framework'
+pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'libxcomposite' 'libxrandr' 'libxtst' 'libxcursor' 'libpulse' 'pciutils' 'libxss' 'nss'
          'libvpx' 'opus' 'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'minizip')
 makedepends=('python2' 'git' 'gperf')
