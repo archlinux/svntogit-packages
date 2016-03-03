@@ -1,0 +1,88 @@
+From 0be43dedbc03139b9d9d0bc71deefc4d7f47296d Mon Sep 17 00:00:00 2001
+From: John Keeping <john@keeping.me.uk>
+Date: Sun, 21 Feb 2016 17:32:21 +0000
+Subject: [PATCH] t8005: avoid grep on non-ASCII data
+
+GNU grep 2.23 detects the input used in this test as binary data so it
+does not work for extracting lines from a file.  We could add the "-a"
+option to force grep to treat the input as text, but not all
+implementations support that.  Instead, use sed to extract the desired
+lines since it will always treat its input as text.
+
+While touching these lines, modernize the test style to avoid hiding the
+exit status of "git blame" and remove a space following a redirection
+operator.  Also swap the order of the expected and actual output
+files given to test_cmp; we compare expect and actual to show how
+actual output differs from what is expected.
+
+Signed-off-by: John Keeping <john@keeping.me.uk>
+Signed-off-by: Junio C Hamano <gitster@pobox.com>
+---
+ t/t8005-blame-i18n.sh | 28 ++++++++++++++++------------
+ 1 file changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/t/t8005-blame-i18n.sh b/t/t8005-blame-i18n.sh
+index 847d098..75da219 100755
+--- a/t/t8005-blame-i18n.sh
++++ b/t/t8005-blame-i18n.sh
+@@ -33,11 +33,15 @@ author $SJIS_NAME
+ summary $SJIS_MSG
+ EOF
+ 
++filter_author_summary () {
++	sed -n -e '/^author /p' -e '/^summary /p' "$@"
++}
++
+ test_expect_success !MINGW \
+ 	'blame respects i18n.commitencoding' '
+-	git blame --incremental file | \
+-		egrep "^(author|summary) " > actual &&
+-	test_cmp actual expected
++	git blame --incremental file >output &&
++	filter_author_summary output >actual &&
++	test_cmp expected actual
+ '
+ 
+ cat >expected <<EOF
+@@ -52,9 +56,9 @@ EOF
+ test_expect_success !MINGW \
+ 	'blame respects i18n.logoutputencoding' '
+ 	git config i18n.logoutputencoding eucJP &&
+-	git blame --incremental file | \
+-		egrep "^(author|summary) " > actual &&
+-	test_cmp actual expected
++	git blame --incremental file >output &&
++	filter_author_summary output >actual &&
++	test_cmp expected actual
+ '
+ 
+ cat >expected <<EOF
+@@ -68,9 +72,9 @@ EOF
+ 
+ test_expect_success !MINGW \
+ 	'blame respects --encoding=UTF-8' '
+-	git blame --incremental --encoding=UTF-8 file | \
+-		egrep "^(author|summary) " > actual &&
+-	test_cmp actual expected
++	git blame --incremental --encoding=UTF-8 file >output &&
++	filter_author_summary output >actual &&
++	test_cmp expected actual
+ '
+ 
+ cat >expected <<EOF
+@@ -84,9 +88,9 @@ EOF
+ 
+ test_expect_success !MINGW \
+ 	'blame respects --encoding=none' '
+-	git blame --incremental --encoding=none file | \
+-		egrep "^(author|summary) " > actual &&
+-	test_cmp actual expected
++	git blame --incremental --encoding=none file >output &&
++	filter_author_summary output >actual &&
++	test_cmp expected actual
+ '
+ 
+ test_done
+-- 
+2.7.1
+
