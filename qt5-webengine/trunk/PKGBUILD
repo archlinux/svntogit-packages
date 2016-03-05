@@ -27,7 +27,7 @@ prepare() {
   mkdir -p bin
   ln -s /usr/bin/python2 bin/python
 
-  # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870
+  # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870 (KaOSx patch)
   cd ${_pkgfqn}
   patch -p1 -i ../qt5-webengine-nss.patch
 }
