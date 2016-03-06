@@ -32,7 +32,6 @@ fi
 # dkms path from framework config
 # note: the alpm hooks which trigger this script use static path
 source_tree='/usr/src'
-dkms_tree='/var/lib/dkms'
 install_tree='/usr/lib/modules'
 source /etc/dkms/framework.conf
 
@@ -48,13 +47,16 @@ while read -r path; do
 		done
 		popd >/dev/null
 	elif [[ "/$path" =~ ^$install_tree/([^/]+)/ ]]; then
-		# do $@ once for each registered dkms module
-		pushd "$dkms_tree" >/dev/null
-		for mod in */*/source; do
-			dkms "$@" -m "${mod%/source}" -k "${BASH_REMATCH[1]}"
+		kver="${BASH_REMATCH[1]}"
+		# do $@ once for each dkms module in $source_tree
+		for path in "$source_tree"/*-*/dkms.conf; do
+			if [[ "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
+				dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
+			fi
 		done
-		popd >/dev/null
 	else
 		echo "Skipping invalid path: $path" >&2
 	fi
 done
+
+true
