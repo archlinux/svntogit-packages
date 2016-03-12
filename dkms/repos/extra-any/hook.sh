@@ -40,7 +40,7 @@ check_kernel() {
 # $*: dkms args
 do_module() {
 	local modname="$1"; shift
-	local modver="$2"; shift
+	local modver="$1"; shift
 	pushd "$install_tree" >/dev/null
 	# do $@ for each kernel with headers for $modname v$modver
 	local path
