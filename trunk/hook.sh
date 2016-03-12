@@ -17,46 +17,86 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-# prevent to have all each dkms call to fail
-if (( EUID )); then
-	echo 'You must be root to use this hook' >&2
-	exit 1
-fi
-
-# check args count
-if (( $# < 1 )); then
-	echo "usage: ${0##*/} dkms-arguments" >&2
-	exit 1
-fi
-
-# dkms path from framework config
-# note: the alpm hooks which trigger this script use static path
-source_tree='/usr/src'
-install_tree='/usr/lib/modules'
-source /etc/dkms/framework.conf
-
-shopt -s nullglob
-
-# parse stdin path to guess what do do
-while read -r path; do
-	if [[ "/$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-		# do $@ for each kernel with headers
-		pushd "$install_tree" >/dev/null
-		for incpath in */build/include; do
-			dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "${incpath%%/*}"
-		done
-		popd >/dev/null
-	elif [[ "/$path" =~ ^$install_tree/([^/]+)/ ]]; then
-		kver="${BASH_REMATCH[1]}"
-		# do $@ once for each dkms module in $source_tree
-		for path in "$source_tree"/*-*/dkms.conf; do
-			if [[ "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-				dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
-			fi
-		done
-	else
-		echo "Skipping invalid path: $path" >&2
+# check kernel is valid for action
+# it means kernel and its headers are installed
+# $1: kernel version
+check_kernel() {
+	local kver="$1"; shift
+	if [[ ! -d "$install_tree/$kver/kernel" ]]; then
+		echo "==> Kernel $kver modules are missing. Nothing will be done for this kernel!"
+		echo '==> You have to install the matching kernel package to use dkms'
+		return 1
+	elif [[ ! -d "$install_tree/$kver/build/include" ]]; then
+		echo "==> Kernel $kver headers are missing. Nothing will be done for this kernel!"
+		echo '==> You have to install the matching kernel headers package to use dkms'
+		return 1
 	fi
-done
+	return 0
+}
 
-true
+# handle actions on module addition/upgrade/removal
+# $1: module name
+# $2: module version
+# $*: dkms args
+do_module() {
+	local modname="$1"; shift
+	local modver="$2"; shift
+	pushd "$install_tree" >/dev/null
+	# do $@ for each kernel with headers for $modname v$modver
+	local path
+	for path in */build/; do
+		local kver="${path%%/*}"
+		check_kernel "$kver" || return
+		dkms "$@" -m "$modname" -v "$modver" -k "$kver"
+	done
+	popd >/dev/null
+}
+
+# handle actions on kernel addition/upgrade/removal
+# $1: kernel version
+# $*: dkms args
+do_kernel() {
+	local kver="$1"; shift
+	check_kernel "$kver" || return
+	# do $@ once for each dkms module in $source_tree
+	local path
+	for path in "$source_tree"/*-*/dkms.conf; do
+		if [[ "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
+			dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
+		fi
+	done
+}
+
+# emulated program entry point
+main() {
+	# prevent to have all each dkms call to fail
+	if (( EUID )); then
+		echo 'You must be root to use this hook' >&2
+		exit 1
+	fi
+
+	# check args count
+	if (( $# < 1 )); then
+		echo "usage: ${0##*/} dkms-arguments" >&2
+		exit 1
+	fi
+
+	# dkms path from framework config
+	# note: the alpm hooks which trigger this script use static path
+	source_tree='/usr/src'
+	install_tree='/usr/lib/modules'
+	source /etc/dkms/framework.conf
+
+	# parse stdin paths to guess what do do
+	while read -r path; do
+		if [[ "/$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
+			do_module "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$@"
+		elif [[ "/$path" =~ ^$install_tree/([^/]+)/ ]]; then
+			do_kernel "${BASH_REMATCH[1]}" "$@"
+		fi
+	done
+
+	return 0
+}
+
+main "$@"
