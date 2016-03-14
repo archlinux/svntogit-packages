@@ -1,0 +1,75 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=iptables
+pkgver=1.6.0
+pkgrel=1
+pkgdesc='Linux kernel packet control tool'
+arch=('i686' 'x86_64')
+license=('GPL2')
+url='http://www.netfilter.org/projects/iptables/index.html'
+depends=('glibc' 'bash' 'libnftnl')
+makedepends=('linux-api-headers')
+source=(http://www.netfilter.org/projects/iptables/files/${pkgname}-${pkgver}.tar.bz2{,.sig} \
+        empty.rules
+        simple_firewall.rules
+        empty-filter.rules
+        empty-mangle.rules
+        empty-nat.rules
+        empty-raw.rules
+        empty-security.rules
+        iptables.service
+        ip6tables.service
+        iptables-flush)
+sha1sums=('21a694e75b0d6863cc001f85fb15915d12b8cc22'
+          'SKIP'
+          '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
+          'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
+          'd9f9f06b46b4187648e860afa0552335aafe3ce4'
+          'c45b738b5ec4cfb11611b984c21a83b91a2d58f3'
+          '1694d79b3e6e9d9d543f6a6e75fed06066c9a6c6'
+          '7db53bb882f62f6c677cc8559cff83d8bae2ef73'
+          'ebbd1424a1564fd45f455a81c61ce348f0a14c2e'
+          '49be9443fc302dd0fda78b63d64e884cadb61603'
+          '635ba179aeed0c06af0c8b0dba3935f6267e608b'
+          'e7abda09c61142121b6695928d3b71ccd8fdf73a')
+validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4') # Netfilter Core Team
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # use system one
+  rm include/linux/types.h
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+ ./configure --prefix=/usr \
+     --libexecdir=/usr/lib/iptables --sysconfdir=/etc \
+     --with-xtlibdir=/usr/lib/iptables \
+     --enable-devel --enable-shared \
+     --sbindir=/usr/bin
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make DESTDIR="${pkgdir}" install
+
+  cd "${srcdir}"
+  install -D -m644 empty.rules "${pkgdir}"/etc/iptables/empty.rules
+  install -D -m644 simple_firewall.rules "${pkgdir}"/etc/iptables/simple_firewall.rules
+
+  mkdir -p "${pkgdir}"/var/lib/{iptables,ip6tables}
+  install -m644 empty-{filter,mangle,nat,raw,security}.rules "${pkgdir}"/var/lib/iptables
+  install -m644 empty-{filter,mangle,nat,raw,security}.rules "${pkgdir}"/var/lib/ip6tables
+
+  # install systemd files
+  install -Dm644 ${srcdir}/iptables.service ${pkgdir}/usr/lib/systemd/system/iptables.service
+  install -Dm644 ${srcdir}/ip6tables.service ${pkgdir}/usr/lib/systemd/system/ip6tables.service
+  install -Dm755 ${srcdir}/iptables-flush ${pkgdir}/usr/lib/systemd/scripts/iptables-flush
+}
+
