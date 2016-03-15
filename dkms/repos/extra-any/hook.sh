@@ -17,18 +17,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+# display what to run and run it
+run() {
+	echo "==> $*"
+	"$@"
+}
+
 # check kernel is valid for action
 # it means kernel and its headers are installed
 # $1: kernel version
 check_kernel() {
 	local kver="$1"; shift
 	if [[ ! -d "$install_tree/$kver/kernel" ]]; then
-		echo "==> Kernel $kver modules are missing. Nothing will be done for this kernel!"
-		echo '==> You have to install the matching kernel package to use dkms'
+		echo "==> No kernel $kver modules. You must install them to use DKMS!"
 		return 1
 	elif [[ ! -d "$install_tree/$kver/build/include" ]]; then
-		echo "==> Kernel $kver headers are missing. Nothing will be done for this kernel!"
-		echo '==> You have to install the matching kernel headers package to use dkms'
+		echo "==> No kernel $kver headers. You must install them to use DKMS!"
 		return 1
 	fi
 	return 0
@@ -46,8 +50,8 @@ do_module() {
 	local path
 	for path in */build/; do
 		local kver="${path%%/*}"
-		check_kernel "$kver" || return
-		dkms "$@" -m "$modname" -v "$modver" -k "$kver"
+		check_kernel "$kver" || continue
+		run dkms -q "$@" -m "$modname" -v "$modver" -k "$kver"
 	done
 	popd >/dev/null
 }
@@ -62,7 +66,7 @@ do_kernel() {
 	local path
 	for path in "$source_tree"/*-*/dkms.conf; do
 		if [[ "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-			dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
+			run dkms -q "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
 		fi
 	done
 }
