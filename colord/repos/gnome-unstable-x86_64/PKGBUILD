@@ -1,0 +1,46 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgname=colord
+pkgver=1.3.2
+pkgrel=1
+pkgdesc="System daemon for managing color devices"
+arch=(i686 x86_64)
+url="http://www.freedesktop.org/software/colord"
+license=(GPL2)
+depends=(lcms2 libgusb polkit sqlite systemd dconf dbus libgudev)
+makedepends=(intltool gobject-introspection vala docbook2x sane bash-completion
+             argyllcms)
+optdepends=('sane: scanner support'
+            'argyllcms: color profiling')
+replaces=('shared-color-profiles')
+install=colord.install
+source=($url/releases/$pkgname-$pkgver.tar.xz{,.asc})
+sha1sums=('6e921b03c3575bf4b1f9adfddcd2891541e8ef82'
+          'SKIP')
+validpgpkeys=('163EB50119225DB3DF8F49EA17ACBA8DFA970E17')
+
+prepare() {
+  cd $pkgname-$pkgver
+}
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --libexecdir=/usr/lib/$pkgname --disable-static \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --enable-vala --enable-sane --with-daemon-user=colord
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  # the build system has no colord user, so the chown fails
+  chown -R 124:124 "$pkgdir/var/lib/colord"
+}
+
+# vim:set ts=2 sw=2 et:
