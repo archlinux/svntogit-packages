@@ -1,8 +1,6 @@
 # $Id$
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
-### !!! rebuild groff from core that picks up hardcoding the GS versioned font path !!! ###
-
 pkgname=ghostscript
 pkgver=9.19
 pkgrel=1
