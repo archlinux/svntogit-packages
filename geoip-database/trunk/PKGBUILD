@@ -2,19 +2,20 @@
 # Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
 
 pkgname=geoip-database
-pkgver=20160105
+pkgver=20160301
 pkgrel=1
 pkgdesc="GeoLite country geolocation database compiled by MaxMind"
 arch=('any')
 url="http://dev.maxmind.com/geoip/legacy/downloadable/"
 license=('custom:OPEN DATA LICENSE')
+checkdepends=('geoip')
 source=(GeoIP-$pkgver.dat.gz::https://geolite.maxmind.com/download/geoip/database/GeoLiteCountry/GeoIP.dat.gz
         GeoIPv6-$pkgver.dat.gz::https://geolite.maxmind.com/download/geoip/database/GeoIPv6.dat.gz
-        http://geolite.maxmind.com/download/geoip/database/LICENSE.txt)
+        GeoIP-LICENSE.txt::https://geolite.maxmind.com/download/geoip/database/LICENSE.txt)
 noextract=(GeoIP-$pkgver.dat.gz
            GeoIPv6-$pkgver.dat.gz)
-sha256sums=('6730bdb1177b67a99fced9ea34d1b63e84e5185d84bb40e03d07c5f48f82011e'
-            'a986c13af6c340bb3873f311f0401471e58d07c877a566300db8e48838609a93'
+sha256sums=('13963b7a047489d56a150abf66f48ecec86d9dc0c989f610ea6db6001bcfc282'
+            'a888319051e14b8c7d30ff3b2b3514ecc75fbfcc2c7c2cb88a25b0969e568b80'
             '83a4cb82ef8953c0107886b49bc39fcf77590a222d30e778d48f5d92f5b5e383')
 
 prepare() {
@@ -28,12 +29,15 @@ prepare() {
 check() {
   cd "$srcdir"
 
-  for _database in {GeoIP,GeoIPv6}.dat; do
-    if ! grep -q 'MaxMind Inc All Rights Reserved' $_database; then
-      error "Copyright notice is missing from $_database; something is fishy!"
-      return 1
-    fi
-  done
+  if [[ $(geoiplookup -d . 8.8.8.8) != *"US, United States" ]]; then
+    error 'Unable to resolve IPv4 address.'
+    return 1
+  fi
+
+  if [[ $(geoiplookup6 -d . 2001:4860:4860::8888) != *"US, United States" ]]; then
+    error 'Unable to resolve IPv6 address.'
+    return 1
+  fi
 }
 
 package() {
@@ -42,7 +46,7 @@ package() {
   install -d "$pkgdir/usr/share/GeoIP"
   install -m644 -t "$pkgdir/usr/share/GeoIP" GeoIP.dat GeoIPv6.dat
 
-  install -Dm644 LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE.txt"
+  install -Dm644 GeoIP-LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE.txt"
 }
 
 # vim:set ts=2 sw=2 et:
