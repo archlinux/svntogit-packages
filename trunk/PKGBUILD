@@ -3,8 +3,8 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=mutt
-pkgver=1.5.24
-pkgrel=3
+pkgver=1.6.0
+pkgrel=1
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 license=('GPL')
@@ -13,7 +13,7 @@ arch=('i686' 'x86_64')
 optdepends=('smtp-forwarder: to send mail')
 depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb5')
 source=("http://ftp.mutt.org/pub/mutt/${pkgname}-${pkgver}.tar.gz"{,.asc})
-sha1sums=('38a2da5eb01ff83a90a2caee28fa2e95dbfe6898' 'SKIP')
+sha1sums=('bab62759af0873a94dc8b85a62a7a9e09e33c6bb' 'SKIP')
 validpgpkeys=('8975A9B33AA37910385C5308ADEF768480316BDA')
 
 build() {
