@@ -1,0 +1,66 @@
+From 2d2dcf3354701aa663d08e8337c608e245a9f2c1 Mon Sep 17 00:00:00 2001
+From: Andreas Henriksson <andreas@fatal.se>
+Date: Wed, 30 Mar 2016 18:49:15 +0200
+Subject: [PATCH] main: fix starting gnome session via startx
+
+The changes related to gsm_util_setenv during 3.19.x seems to have
+broken starting a gnome desktop the old fashioned way, eg. via startx.
+
+The gnome.session required components has OnlyShowIn=GNOME; which
+disqualifies them from being started unless XDG_CURRENT_DESKTOP is also
+set to GNOME (by the gio utility function used to look up info).
+
+Currently gnome-session already carries code to catch the case of
+XDG_CURRENT_DESKTOP being unset and set it to GNOME as a fallback.
+Unfortunately the changes to gsm_util_setenv seems to have made it only
+set the values in the (dbus activated) child environment, rather than
+the current environment which g_desktop_app_info_get_show_in is looking
+at.
+
+Make the fallback code set XDG_CURRENT_DESKTOP in both current
+and child environment fixes it.
+Also move the entire hunk of code before initializing gio to
+prevent potential thread issues, now that is uses g_setenv.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=764379
+---
+ gnome-session/main.c | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/gnome-session/main.c b/gnome-session/main.c
+index 14b201b..9f3ca0f 100644
+--- a/gnome-session/main.c
++++ b/gnome-session/main.c
+@@ -292,6 +292,15 @@ main (int argc, char **argv)
+                 gsm_util_init_error (TRUE, "%s", error->message);
+         }
+ 
++        /* From 3.14 GDM sets XDG_CURRENT_DESKTOP. For compatibility with
++         * older versions of GDM,  other display managers, and startx,
++         * set a fallback value if we don't find it set.
++         */
++        if (g_getenv ("XDG_CURRENT_DESKTOP") == NULL) {
++            g_setenv("XDG_CURRENT_DESKTOP", "GNOME", TRUE);
++            gsm_util_setenv ("XDG_CURRENT_DESKTOP", "GNOME");
++        }
++
+         /* Make sure we initialize gio in a way that does not autostart any daemon */
+         initialize_gio ();
+ 
+@@ -375,13 +384,6 @@ main (int argc, char **argv)
+                 exit (1);
+         }
+ 
+-        /* From 3.14 GDM sets XDG_CURRENT_DESKTOP. For compatibility with
+-         * older versions of GDM,  other display managers, and startx,
+-         * set a fallback value if we don't find it set.
+-         */
+-        if (g_getenv ("XDG_CURRENT_DESKTOP") == NULL)
+-            gsm_util_setenv ("XDG_CURRENT_DESKTOP", "GNOME");
+-
+         /* Push locale variables to dbus-daemon */
+         maybe_push_env_var ("LC_TIME");
+         maybe_push_env_var ("LC_NUMERIC");
+-- 
+2.8.0
+
