@@ -1,0 +1,74 @@
+# $Id$
+# Maintainer: 
+
+pkgname=netpbm
+pkgver=10.73
+_rev=r2692
+pkgrel=1
+pkgdesc="A toolkit for manipulation of graphic images"
+arch=('i686' 'x86_64')
+license=('custom' 'BSD' 'GPL' 'LGPL')
+url="http://netpbm.sourceforge.net/"
+depends=('perl' 'libpng' 'libtiff' 'libxml2')
+makedepends=('python2' 'jbigkit' 'subversion')
+options=('!makeflags')
+# Get docs with: wget --recursive --relative -nH http://netpbm.sourceforge.net/doc/
+source=(svn://svn.code.sf.net/p/netpbm/code/stable#revision=$_rev
+        https://sources.archlinux.org/other/packages/netpbm/netpbm-doc-31Jan2014.tar.xz{,.sig}
+        netpbm-CAN-2005-2471.patch netpbm-security-code.patch netpbm-security-scripts.patch)
+sha1sums=('SKIP'
+          '25a58975bd8cd383238b4ae31f4405c60914faac'
+          'SKIP'
+          'b79cf9d42488fea065ba16262ed97694c47af08d'
+          '60088182b44ed2f10914413f7c95841a71a594fe'
+          'ca61aabdeb24a6421781ca975719ce7314be2bb9')
+validpgpkeys=('5357F3B111688D88C1D88119FCF2CB179205AC90')
+
+prepare() {
+  cd stable
+
+  patch -p1 < ../netpbm-CAN-2005-2471.patch
+  patch -p1 < ../netpbm-security-code.patch
+  patch -p1 < ../netpbm-security-scripts.patch
+  sed -i 's|#!/usr/bin/python|#!/usr/bin/python2|' buildtools/makeman
+  sed -i 's|@python|@python2|' buildtools/manpage.mk
+
+  cp config.mk.in  config.mk
+  [ "${CARCH}" = 'x86_64' ] && echo 'CFLAGS_SHLIB = -fPIC' >> config.mk
+  echo "NETPBM_DOCURL = file://${srcdir}/doc" >> config.mk
+  echo 'TIFFLIB = libtiff.so' >> config.mk
+  echo 'JPEGLIB = libjpeg.so' >> config.mk
+  echo 'PNGLIB = libpng.so' >> config.mk
+  echo 'ZLIB = libz.so' >> config.mk
+  echo 'JBIGLIB = /usr/lib/libjbig.a' >> config.mk
+
+  sed -i 's|misc|share/netpbm|' common.mk
+  sed -i 's|/link|/lib|' lib/Makefile
+  sed -i 's|install.manwebmain install.manweb install.man|install.man|' GNUmakefile
+}
+
+build() {
+  cd stable
+  make
+  # Generating useful man pages with html doc
+  make MAKEMAN="${srcdir}/stable/buildtools/makeman" USERGUIDE=. \
+    -C ../doc -f "${srcdir}/stable/buildtools/manpage.mk" manpages
+}
+
+package() {
+  cd stable
+  make pkgdir="${pkgdir}/usr" PKGMANDIR=share/man install-run install-dev
+
+# Removing dummy man pages
+  rm "${pkgdir}"/usr/share/man/man{1,3,5}/*
+
+  make MAKEMAN="${srcdir}/stable/buildtools/makeman" MANDIR="${pkgdir}/usr/share/man" \
+    -C ../doc -f "${srcdir}/stable/buildtools/manpage.mk" installman
+
+# Replace obsolete utility
+  echo -e '#!/bin/sh\npamditherbw $@ | pamtopnm\n' > "${pkgdir}/usr/bin/pgmtopbm"
+
+# Licensing.  Note that each program in the package has a separate license.
+  install -D -m644 "${srcdir}/stable/doc/copyright_summary" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/copyright_summary.txt"
+}
