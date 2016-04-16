@@ -91,6 +91,15 @@ main() {
 	install_tree='/usr/lib/modules'
 	source /etc/dkms/framework.conf
 
+	# check source_tree and install_tree exists
+	local path
+	for path in "$source_tree" "$install_tree"; do
+		if [[ ! -d "$path" ]]; then
+			echo "==> Missing mandatory directory: $path. Exiting!"
+			return 1
+		fi
+	done
+
 	# parse stdin paths to guess what do do
 	while read -r path; do
 		if [[ "/$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
