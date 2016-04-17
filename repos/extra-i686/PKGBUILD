@@ -1,42 +1,52 @@
 # $Id$
-# Maintainer: Sergej Pupykin <pupykin.s+arch@gmail.com>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gst-python
 pkgname=('gst-python' 'gst-python2')
-pkgver=1.6.2
+pkgver=1.8.0
 pkgrel=2
-pkgdesc="Python bindings for GStreamer"
+pkgdesc="GStreamer Python binding overrides"
 arch=('i686' 'x86_64')
 license=('LGPL')
-url="http://gstreamer.freedesktop.org/"
 makedepends=('pkg-config' 'python-gobject' 'python2-gobject' 'gst-plugins-base')
-source=(http://gstreamer.freedesktop.org/src/gst-python/gst-python-${pkgver}.tar.xz)
-md5sums=('14b6cfe1a0db5cc01c6a58f7b4af6184')
+url="http://gstreamer.freedesktop.org/"
+source=(${url}/src/$pkgbase/$pkgbase-${pkgver}.tar.xz)
+sha256sums=('ce45ff17c59f86a3a525685e37b95e6a78a019e709f66a5c4b462a7f7a22f6ea')
+
+prepare() {
+  mkdir py2 py3
+}
+
+_build() (
+  cd $1
+  # Out-of-tree build fails to check
+  cp -a ../$pkgbase-$pkgver/* .
+  ./configure --prefix=/usr
+  make
+)
 
 build() {
-  cp -a "${srcdir}/gst-python-${pkgver}" "${srcdir}/gst-python2-${pkgver}"
+  _build py3
+  PYTHON=python2 _build py2
+}
 
-  cd "${srcdir}/gst-python-${pkgver}"
-  ./configure --prefix=/usr
-  make
-
-  cd "${srcdir}/gst-python2-${pkgver}"
-  export PYTHON=python2
-  ./configure --prefix=/usr
-  make
+check() {
+  make -C py3 check
+  make -C py2 check
 }
 
 package_gst-python() {
+  pkgdesc="${pkgdesc//Python/Python 3}"
   depends=('python-gobject' 'gst-plugins-base')
 
-  cd "${srcdir}/gst-python-${pkgver}"
-  make DESTDIR="${pkgdir}" install
+  make -C py3 DESTDIR="$pkgdir" install
 }
 
 package_gst-python2() {
+  pkgdesc="${pkgdesc//Python/Python 2}"
   depends=('python2-gobject' 'gst-plugins-base')
 
-  cd "${srcdir}/gst-python2-${pkgver}"
-  make DESTDIR="${pkgdir}" install
+  make -C py2 DESTDIR="$pkgdir" install
 }
