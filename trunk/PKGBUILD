@@ -1,16 +1,16 @@
 # $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
-pkgname=gutenprint
+pkgbase=gutenprint
+pkgname=('gutenprint' 'foomatic-db-gutenprint' 'foomatic-db-gutenprint-ppds')
 pkgver=5.2.11
-pkgrel=1
+pkgrel=2
 pkgdesc="Top quality printer drivers for POSIX systems"
 arch=('i686' 'x86_64')
 license=('GPL')
-install=gutenprint.install
-#depends=('readline') # 'gnutls') # needs to be checked. build log says -Lgnutls but namcap doesn't detect it
-depends=('glibc')
-makedepends=('gimp' 'gtk2' 'cups' 'foomatic-db-engine' 'ghostscript')
+makedepends=('gimp' 'gtk2' 'cups' 'foomatic-db-engine' 'ghostscript'
+            # for the docs
+            'dialog' 'doxygen' 'docbook-utils' 'texi2html' 'texlive-bin')
 optdepends=('cups:		to use cups printer spooler(recommended)'
             'foomatic-db-engine:	to use foomatic spooler'
             'ghostscript:	adds postscript support for ijsgutenprint'
@@ -18,34 +18,80 @@ optdepends=('cups:		to use cups printer spooler(recommended)'
             'libusb: required for drivers that depend on gutenprint52usb backend')
 source=(http://downloads.sourceforge.net/gimp-print/$pkgname-$pkgver.tar.bz2)
 url="http://gimp-print.sourceforge.net/"
-replaces=('gimp-print')
 options=('!emptydirs')
 sha1sums=('2a00c84ebb382c701d95e18b7decf1268bb2b9d2')
 
-build() {
-  cd ${pkgname}-${pkgver}
-  
+prepare(){
+  cd ${pkgbase}-${pkgver}
   # sbindir is not properly taken over there
   sed -i "s:cups_sbindir=\"\/usr\/sbin\":cups_sbindir=\"\/usr\/bin\":g" m4/stp_cups.m4
   sed -i  "s:cups_sbindir=\"\${cups_prefix}\/sbin\":cups_sbindir=\"\${cups_prefix}\/bin\":" m4/stp_cups.m4
-
   sed -i "s:m4local:m4extra:" Makefile.am
   autoreconf -vfi
-  
+}
+
+build() {
+  cd ${pkgbase}-${pkgver}
   ./configure --prefix=/usr \
     --sbindir=/usr/bin \
+    --disable-rpath \
     --enable-samples \
-	--enable-cups-ppds \
-	--enable-cups-ppds-at-top-level \
-	--disable-translated-cups-ppds \
-	--disable-globalized-cups-ppds \
 	--disable-static \
-	--disable-static-genppd
+	--disable-static-genppd \
+	--enable-cups-ppds \
+	--enable-simplified-cups-ppds=only \
+	--enable-translated-cups-ppds \
+	--enable-globalized-cups-ppds #--help
+
+  # globalized ppds -> put all translations into one ppd file
+  # enable translated cups ppds grows size 9,5MB -> 156MB
+  # simplified cups ppds (yes, no, only) - only offer basic paper sizes, not all options 
+  # 4,3MB (only), 17MB (both) -> translated 41MB simpl., 165MB, 231MB both
+	
   make
 }
 
-package() {
+package_gutenprint() {
+  pkgdesc="Top quality printer drivers for POSIX systems"
+  install=gutenprint.install
+  depends=('glibc')
+  optdepends=('cups:		to use cups printer spooler(recommended)'
+            'ghostscript:	adds postscript support for ijsgutenprint'
+            'gimp:		adds gutenprint plugin to gimp'
+            'libusb: required for drivers that depend on gutenprint52usb backend')
+  replaces=('gimp-print')
+  options=('!emptydirs')
+  
   cd ${pkgname}-${pkgver}
   make DESTDIR=${pkgdir} install
+  
+  # split out files
+  mkdir $srcdir/tmp_foomatic-db-gutenprint
+  mkdir $srcdir/tmp_foomatic-db-gutenprint-ppds
+  
+  mv ${pkgdir}/usr/share/foomatic $srcdir/tmp_foomatic-db-gutenprint/
+  
+  mv ${pkgdir}/usr/share/cups/model $srcdir/tmp_foomatic-db-gutenprint-ppds/
+
+  # cleanup
+  rm -rf ${pkgdir}/usr/share/foomatic #/kitload.log
+  rm -rf ${pkgdir}/etc #/cups/command.types
 }
 
+package_foomatic-db-gutenprint() {
+  pkgdesc="database of printers,printer drivers, and driver descriptions"
+  depends=('foomatic-db-engine')
+  optdepends=('foomatic-db-gutenprint-ppds')
+
+  cd ${pkgbase}-${pkgver}
+  mkdir -p ${pkgdir}/usr/share/gutenprint
+  mv $srcdir/tmp_foomatic-db-gutenprint/foomatic ${pkgdir}/usr/share/foomatic
+}
+
+package_foomatic-db-gutenprint-ppds() {
+  pkgdesc="simplified prebuilt ppd files"
+  
+  cd ${pkgbase}-${pkgver}
+  mkdir -p ${pkgdir}/usr/share/cups
+  mv $srcdir/tmp_foomatic-db-gutenprint-ppds/* ${pkgdir}//usr/share/cups/
+}
