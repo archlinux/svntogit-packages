@@ -1,0 +1,99 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+# Maintainer: Anatol Pomozov <anatol.pomozov@gmail.com>
+# Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname=syslinux
+pkgver=6.03
+_tag=syslinux-$pkgver
+pkgrel=6
+pkgdesc='Collection of boot loaders that boot from FAT, ext2/3/4 and btrfs filesystems, from CDs and via PXE'
+url='http://www.syslinux.org/'
+arch=(i686 x86_64)
+backup=(boot/syslinux/syslinux.cfg)
+install=syslinux.install
+license=(GPL2)
+# syslinux build system is a mess of submakes that does not work with -jN
+# efi32/com32 do not like Arch cflags/ldflags, though it would be nice to have the flags for userspace tools
+options=(!makeflags !buildflags)
+makedepends=(git python2 nasm upx asciidoc)
+if [[ "$CARCH" == x86_64 ]]; then
+  # efi32 needs it
+  makedepends+=(lib32-glibc)
+fi
+optdepends=('perl-passwd-md5:  For md5pass'
+            'perl-digest-sha1: For sha1pass'
+            'mtools:           For mkdiskimage and syslinux support'
+            'gptfdisk:         For GPT support'
+            'util-linux:       For isohybrid'
+            'efibootmgr:       For EFI support'
+            'dosfstools:       For EFI support')
+
+# The syslinux-install_update script is maintained at https://gist.github.com/pyther/772138
+# Script not yet updated for syslinux-efi
+source=(git://git.kernel.org/pub/scm/boot/syslinux/syslinux.git#tag=$_tag
+        syslinux.cfg
+        syslinux-install_update
+        btrfs-fix.patch::http://repo.or.cz/syslinux.git/patch/548386049cd41e887079cdb904d3954365eb28f3?hp=721a0af2f0ba111c31685c5f6c5481eb25346971
+        gcc-fix-alignment.patch::http://repo.or.cz/syslinux.git/patch/e5f2b577ded109291c9632dacb6eaa621d8a59fe?hp=8dc6d758b564a1ccc44c3ae11f265d43628219ce
+        dont-guess-alignment.patch::http://repo.or.cz/syslinux.git/patch/0cc9a99e560a2f52bcf052fd85b1efae35ee812f?hp=e5f2b577ded109291c9632dacb6eaa621d8a59fe
+        kdb-230.patch::http://repo.or.cz/syslinux.git/patch/138e850fab106b5235178848b3e0d33e25f4d3a2
+)
+sha1sums=('SKIP'
+          '1145f454bd297d373ad123425f93620c3e92f585'
+          '29d7c28639e57cdaefc8ef2447e8412a7b59709d'
+          '3e7d6e399c25fb7f5d31cc8e580d01163695e351'
+          '74b976dd3ce28a619c2e9ef69a33fd455dc4bd4c'
+          'b6ef5a7cdd4b7c714fd78c174e93ae6e854ae1ee'
+          '370b4bd392361d3fbc4a10f057d69c737acabd8a')
+
+_targets='bios efi32'
+case "$CARCH" in
+  x86_64) _targets+=' efi64' ;;
+esac
+
+prepare() {
+  cd syslinux
+
+  # FS#48253
+  patch -p1 < ../gcc-fix-alignment.patch
+  patch -p1 < ../dont-guess-alignment.patch
+
+  # FS#48214
+  patch -p1 < ../btrfs-fix.patch
+
+  # FS#49046
+  patch -p1 < ../kdb-230.patch
+
+  # do not swallow efi compilation output to make debugging easier
+  sed 's|> /dev/null 2>&1||' -i efi/check-gnu-efi.sh
+
+  # disable debug and development flags to reduce bootloader size
+  truncate --size 0 mk/devel.mk
+}
+
+build() {
+  cd syslinux
+  make PYTHON=python2 $_targets
+}
+
+check() {
+  cd syslinux
+  make unittest
+}
+
+package() {
+  cd syslinux
+  make $_targets install INSTALLROOT="$pkgdir" SBINDIR=/usr/bin MANDIR=/usr/share/man AUXDIR=/usr/lib/syslinux
+
+  rm -r "$pkgdir"/usr/lib/syslinux/{com32,dosutil,syslinux.com}
+  install -D -m644 COPYING "$pkgdir"/usr/share/licenses/syslinux/COPYING
+  install -d "$pkgdir"/usr/share/doc
+  cp -ar doc "$pkgdir"/usr/share/doc/syslinux
+
+  install -d "$pkgdir"/usr/lib/syslinux/bios
+  mv "$pkgdir"/usr/lib/syslinux/{*.bin,*.c32,*.0,memdisk} "$pkgdir"/usr/lib/syslinux/bios 
+
+  install -D -m0644 ../syslinux.cfg "$pkgdir"/boot/syslinux/syslinux.cfg
+  install -D -m0755 ../syslinux-install_update "$pkgdir"/usr/bin/syslinux-install_update
+}
