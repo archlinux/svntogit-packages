@@ -9,25 +9,32 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm-glib)
 pkgver=1.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Network Management daemon"
 arch=(i686 x86_64)
 license=(GPL2 LGPL2.1)
 url="http://www.gnome.org/projects/NetworkManager/"
 _pppver=2.4.7
-makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver"
-             modemmanager dbus-glib iproute2 libnl nss polkit wpa_supplicant libsoup
-             systemd libgudev libmm-glib rp-pppoe libnewt libndp libteam vala perl-yaml
-             python-gobject)
+makedepends=(intltool dhclient iptables gobject-introspection gtk-doc
+             "ppp=$_pppver" modemmanager dbus-glib iproute2 nss polkit
+             wpa_supplicant libsoup systemd libgudev libmm-glib rp-pppoe
+             libnewt libndp libteam vala perl-yaml python-gobject)
 checkdepends=(libx11 python-dbus)
 source=(https://download.gnome.org/sources/NetworkManager/${pkgver:0:3}/NetworkManager-$pkgver.tar.xz
+        hidepid.patch
         NetworkManager.conf)
 sha256sums=('e947cf30fa3d19dce88e6f6af51f06dc282b7db7996f946aaa37b03526ef2a80'
-            '2c6a647b5aec9f3c356d5d95251976a21297c6e64bd8d2a59339f8450a86cb3b')
+            '1de5b511b6b4a933739b0ef48ede1830fa3d6dea2277c1302b12b08fa83a73f1'
+            '452e4f77c1de92b1e08f6f58674a6c52a2b2d65b7deb0ba436e9afa91ee15103')
 
 prepare() {
   cd NetworkManager-$pkgver
+
+  # https://bugs.archlinux.org/task/48984
+  patch -Np1 -i ../hidepid.patch
+
   2to3 -w libnm src tools
+
   NOCONFIGURE=1 ./autogen.sh
 }
 
@@ -59,6 +66,8 @@ build() {
     --enable-doc \
     --enable-gtk-doc
 
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
+
   make
 }
 
@@ -68,13 +77,14 @@ check() {
 }
 
 package_networkmanager() {
-  depends=(libnm-glib iproute2 libnl polkit wpa_supplicant dhclient libsoup
-           libmm-glib libnewt libndp libteam libgudev)
+  depends=(libnm-glib iproute2 polkit wpa_supplicant libsoup libmm-glib
+           libnewt libndp libteam)
   optdepends=('dnsmasq: connection sharing'
               'bluez: Bluetooth support'
               'openresolv: resolvconf support'
               'ppp: dialup connection support'
               'rp-pppoe: ADSL support'
+              'dhclient: External DHCP client'
               'modemmanager: cellular network support')
   backup=('etc/NetworkManager/NetworkManager.conf')
 
@@ -93,6 +103,8 @@ package_networkmanager() {
   install -m755 -d "$pkgdir/etc/NetworkManager/dnsmasq.d"
 
   rm -r "$pkgdir/var/run"
+  rmdir -p --ignore-fail-on-non-empty \
+    "$pkgdir"/usr/{share/{vala/vapi,gir-1.0},lib/girepository-1.0}
 }
 
 package_libnm-glib() {
