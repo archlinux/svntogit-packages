@@ -1,0 +1,49 @@
+diff -up dhcp-4.3.0a1/client/dhc6.c.honor-expired dhcp-4.3.0a1/client/dhc6.c
+--- dhcp-4.3.0a1/client/dhc6.c.honor-expired	2013-12-19 16:00:28.062183037 +0100
++++ dhcp-4.3.0a1/client/dhc6.c	2013-12-19 16:00:28.076182842 +0100
+@@ -1351,6 +1351,32 @@ start_info_request6(struct client_state
+ 		go_daemon();
+ }
+ 
++/* Run through the addresses in lease and return true if there's any unexpired.
++ * Return false otherwise.
++ */
++isc_boolean_t
++unexpired_address_in_lease(struct dhc6_lease *lease)
++{
++	struct dhc6_ia *ia;
++	struct dhc6_addr *addr;
++
++	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
++		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
++			if (addr->flags & DHC6_ADDR_EXPIRED)
++				continue;
++
++			if (addr->starts + addr->max_life > cur_time) {
++				return ISC_TRUE;
++			}
++		}
++	}
++
++	log_info("PRC: Previous lease is devoid of active addresses."
++		 "  Re-initializing.");
++
++	return ISC_FALSE;
++}
++
+ /*
+  * start_confirm6() kicks off an "init-reboot" version of the process, at
+  * startup to find out if old bindings are 'fair' and at runtime whenever
+@@ -1363,8 +1389,10 @@ start_confirm6(struct client_state *clie
+ 
+ 	/* If there is no active lease, there is nothing to check. */
+ 	if ((client->active_lease == NULL) ||
+-	    !active_prefix(client) ||
+-	    client->active_lease->released) {
++		!active_prefix(client) ||
++		client->active_lease->released ||
++		!unexpired_address_in_lease(client->active_lease)) {
++		dhc6_lease_destroy(&client->active_lease, MDL);
+ 		start_init6(client);
+ 		return;
+ 	}
