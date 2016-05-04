@@ -5,7 +5,7 @@
 
 pkgname=abiword
 pkgver=3.0.1
-pkgrel=6
+pkgrel=7
 pkgdesc='Fully-featured word processor'
 arch=('i686' 'x86_64')
 license=('GPL')
@@ -13,7 +13,7 @@ url='http://www.abisource.com'
 depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant' 'desktop-file-utils'
          'redland' 'libical' 'gtk-update-icon-cache' 'loudmouth' 'libwpg' 'libwps' 'libwmf' 'link-grammar' 
          'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
-makedepends=('pkgconfig' 'asio' 'boost' 'gobject-introspection' 'python2' 'libwpd' 'libwps')
+makedepends=('pkgconfig' 'asio' 'boost' 'gobject-introspection' 'libwpd' 'libwps' 'python2-gobject' 'python-gobject')
 conflicts=('abiword-plugins')
 replaces=('abiword-plugins')
 options=('!makeflags')
@@ -25,7 +25,8 @@ source=(http://abisource.com/downloads/$pkgname/$pkgver/source/$pkgname-$pkgver.
 	abiword-3.0.1-libwps-0.4.patch
         aiksaurus-plugin.m4
         command-plugin.m4
-        gnutls-3.4.0.patch)
+        gnutls-3.4.0.patch
+        python-override.patch)
 sha256sums=('e094f6fbf0afc5c5538b4894888e7c346f8ee8f49c9d24821dd696d0734865c6'
             '77b52a3722096cec3bfbe4fff3802f51b6c9e0ff7aaa30028c29825fd4e6a65f'
             '6d88800f1e16becd69ed93d5f070793a56b9f162f7d886c71756643bcaed7ef5'
@@ -34,7 +35,8 @@ sha256sums=('e094f6fbf0afc5c5538b4894888e7c346f8ee8f49c9d24821dd696d0734865c6'
             'f1375b2ab7af2959717cba0259ba546c8e75ef849e84263bdc253019e849cb2a'
             '5f80a2f94f9929cdba9809c5e1a87cd5d537a2518bb879bfb9eab51a71c8dac1'
             '2f26826e9d59d80dacd0dae4aceb815804eaa75954e47507a0897794f33e45be'
-            'b393e26c19f92901f64d2bae54c86708ea7dd0b647572088a8ac0cd2eec89100')
+            'b393e26c19f92901f64d2bae54c86708ea7dd0b647572088a8ac0cd2eec89100'
+            'dba1e3265cd42589f17b41fea1a39c8aa4b83c7203b9d5944b578d0ff9c858be')
 
 prepare() {
   cd $pkgname-$pkgver
@@ -53,9 +55,9 @@ prepare() {
   # Fix libwpd 0.4 detection
   patch -Np1 -i ../abiword-3.0.1-libwps-0.4.patch
 
-  # python2 fix
-  sed -i 's/python -c/python2 -c/' src/gi-overrides/Makefile.{am,in}
-  
+  # Fix python override code to work with Python 3.x
+  patch -Np1 -i ../python-override.patch
+
   # Install missing m4 file
   install -m644 ../aiksaurus-plugin.m4 plugins/aiksaurus/plugin.m4
   install -m644 ../command-plugin.m4 plugins/command/plugin.m4
@@ -84,4 +86,8 @@ build() {
 package() {
   cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
+
+  cd src/gi-overrides
+  sed -i 's/python -c/python2 -c/' Makefile
+  make DESTDIR="$pkgdir" PYTHON=python2 install
 }
