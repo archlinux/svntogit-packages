@@ -5,36 +5,30 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=5.3.0
-_pkgver=5
-_islver=0.15
-pkgrel=5
-_snapshot=5-20160209
+pkgver=6.1.1
+_pkgver=6
+_islver=0.16.1
+pkgrel=1
+_commit=80f78834
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
-makedepends=('binutils>=2.26' 'libmpc' 'gcc-ada' 'doxygen')
+makedepends=('binutils>=2.26' 'libmpc' 'gcc-ada' 'doxygen' 'git')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
-source=(#ftp://gcc.gnu.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.bz2
-        ftp://gcc.gnu.org/pub/gcc/snapshots/${_snapshot}/gcc-${_snapshot}.tar.bz2
-        http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
-        Unlink-the-response-file.patch)
-md5sums=('499161c65b639aa5c12a14944582b7ec'
-         '8428efbbc6f6e2810ce5c1ba73ecf98c'
-         '1f4d4ef71004261376d26d5ba6a84499')
+source=(git://gcc.gnu.org/git/gcc.git#commit=${_commit}
+        http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2)
+md5sums=('SKIP'
+         'ac1f25a0677912952718a51f5bc20f32')
 
-if [ -n "${_snapshot}" ]; then
-  _basedir=gcc-${_snapshot}
-else
-  _basedir=gcc-${pkgver}
-fi
+# gcc-6.0 forces a changed triplet - need to address in pacman/devtools
+[[ $CARCH == "x86_64" ]] && CHOST=x86_64-pc-linux-gnu
 
 _libdir="usr/lib/gcc/$CHOST/$pkgver"
 
 prepare() {
-  cd ${srcdir}/${_basedir}
+  cd ${srcdir}/gcc
 
   # link isl for in-tree build
   ln -s ../isl-${_islver} isl
@@ -45,13 +39,8 @@ prepare() {
   # Arch Linux installs x86_64 libraries /lib
   [[ $CARCH == "x86_64" ]] && sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
 
-  echo ${pkgver} > gcc/BASE-VER
-
   # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
-
-  # https://bugs.archlinux.org/task/47874 - commit f591a95d
-  patch -p1 -i $srcdir/Unlink-the-response-file.patch
 
   mkdir ${srcdir}/gcc-build
 }
@@ -64,7 +53,7 @@ build() {
   CFLAGS=${CFLAGS/-pipe/}
   CXXFLAGS=${CXXFLAGS/-pipe/}
 
-  ${srcdir}/${_basedir}/configure --prefix=/usr \
+  ${srcdir}/gcc/configure --prefix=/usr \
       --libdir=/usr/lib --libexecdir=/usr/lib \
       --mandir=/usr/share/man --infodir=/usr/share/info \
       --with-bugurl=https://bugs.archlinux.org/ \
@@ -94,8 +83,9 @@ check() {
 
   # do not abort on error as some are "expected"
   make -k check || true
-  ${srcdir}/${_basedir}/contrib/test_summary
+  ${srcdir}/gcc/contrib/test_summary
 }
+
 
 package_gcc-libs()
 {
@@ -103,7 +93,6 @@ package_gcc-libs()
   groups=('base')
   depends=('glibc>=2.23')
   options=('!emptydirs' '!strip')
-  install=gcc-libs.install
 
   cd ${srcdir}/gcc-build
   
@@ -140,7 +129,7 @@ package_gcc-libs()
   done
 
   # Install Runtime Library Exception
-  install -Dm644 ${srcdir}/${_basedir}/COPYING.RUNTIME \
+  install -Dm644 ${srcdir}/gcc/COPYING.RUNTIME \
     ${pkgdir}/usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION
 }
 
@@ -150,7 +139,6 @@ package_gcc()
   depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.26' 'libmpc')
   groups=('base-devel')
   options=('staticlibs')
-  install=gcc.install
 
   cd ${srcdir}/gcc-build
 
@@ -248,10 +236,9 @@ package_gcc-fortran()
   pkgdesc="Fortran front-end for GCC"
   depends=("gcc=$pkgver-$pkgrel")
   options=('!emptydirs')
-  install=gcc-fortran.install
 
   cd ${srcdir}/gcc-build
-  make -C $CHOST/libgfortran DESTDIR=$pkgdir install-{caf,my}execlibLTLIBRARIES \
+  make -C $CHOST/libgfortran DESTDIR=$pkgdir install-cafexeclibLTLIBRARIES \
     install-{toolexeclibDATA,nodist_fincludeHEADERS}
   make -C $CHOST/libgomp DESTDIR=$pkgdir install-nodist_fincludeHEADERS
   make -C gcc DESTDIR=$pkgdir fortran.install-{common,man,info}
@@ -284,7 +271,6 @@ package_gcc-ada()
   pkgdesc="Ada front-end for GCC (GNAT)"
   depends=("gcc=$pkgver-$pkgrel")
   options=('staticlibs' '!emptydirs')
-  install=gcc-ada.install
 
   cd ${srcdir}/gcc-build/gcc
   make DESTDIR=$pkgdir ada.install-{common,info}
@@ -309,7 +295,6 @@ package_gcc-go()
   depends=("gcc=$pkgver-$pkgrel")
   conflicts=('go')
   options=('!emptydirs')
-  install=gcc-go.install
 
   cd ${srcdir}/gcc-build
   make -C $CHOST/libgo DESTDIR=$pkgdir install-exec-am
