@@ -6,8 +6,8 @@
 
 pkgname=glibc
 pkgver=2.23
-pkgrel=1
-_commit=e742928c
+pkgrel=2
+_commit=5769d5d1
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
