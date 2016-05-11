@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=libproxy
+pkgver=0.4.12
+pkgrel=2
+pkgdesc="A library that provides automatic proxy configuration management"
+arch=(i686 x86_64)
+license=('LGPL')
+depends=('gcc-libs')
+optdepends=('networkmanager: NetworkManager configuration module'
+            'perl: Perl bindings'
+            'python2: Python bindings'
+            'glib2: gsettings configuration module'
+            'js17: PAC proxy support - Mozilla based pacrunner'
+            'webkitgtk: PAC proxy support - Webkit based pacrunner')
+makedepends=('cmake' 'networkmanager' 'python2' 'perl' 'js17' 'webkitgtk')
+url="http://libproxy.github.io/libproxy/"
+source=(https://github.com/libproxy/libproxy/archive/${pkgver}.tar.gz
+        0001-pacrunner_mozjs-Also-support-mozjs-17.0.patch
+        libproxy-0.4.11-crash.patch)
+md5sums=('258d89cc052e0a3c09aa1f42d7f93045'
+         '16cb8ad1292f04279108a80f36434c7b'
+         'a45f2195c164a48639e963e8341f5d93')
+
+prepare() {
+  mkdir build
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../0001-pacrunner_mozjs-Also-support-mozjs-17.0.patch
+  patch -Np1 -i ../libproxy-0.4.11-crash.patch
+}
+
+build() {
+  cd build
+  cmake ../${pkgname}-${pkgver} \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLIBEXEC_INSTALL_DIR=/usr/lib/libproxy \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DPERL_VENDORINSTALL=yes \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DWITH_WEBKIT3=ON \
+    -DWITH_MOZJS=ON \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+    -DCMAKE_C_FLAGS="${CFLAGS}" \
+    -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python2
+  make
+}
+
+package() {
+  cd build
+  make DESTDIR="${pkgdir}" install
+}
