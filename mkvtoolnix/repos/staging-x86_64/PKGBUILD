@@ -1,0 +1,60 @@
+# $Id$
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: xduugu <xduugu@gmx.com>
+
+pkgbase=mkvtoolnix
+pkgname=('mkvtoolnix-cli' 'mkvtoolnix-gui')
+pkgver=9.1.0
+pkgrel=2
+pkgdesc='Set of tools to create, edit and inspect Matroska files'
+arch=('i686' 'x86_64')
+url='https://www.bunkus.org/videotools/mkvtoolnix/'
+license=('GPL')
+makedepends=('boost' 'boost-libs' 'file' 'flac' 'libebml' 'libmatroska'
+             'libogg' 'libvorbis' 'qt5-base' 'ruby' 'zlib')
+source=("http://www.bunkus.org/videotools/mkvtoolnix/sources/mkvtoolnix-${pkgver}.tar.xz")
+md5sums=('7eafd6f5a9affd35f9cbf607d8ccf9b3')
+
+build() {
+  cd mkvtoolnix-${pkgver}
+
+  ./configure --prefix='/usr' \
+              --without-curl \
+              --disable-qt
+  ./drake apps:mkvinfo $MAKEFLAGS
+  mv src/mkvinfo{,-cli}
+
+  ./configure --prefix='/usr' \
+              --without-curl
+  ./drake $MAKEFLAGS
+}
+
+package_mkvtoolnix-cli() {
+  depends=('boost-libs' 'file' 'flac' 'gcc-libs' 'glibc' 'libogg' 'zlib'
+           'libebml.so' 'libmatroska.so' 'libvorbis.so')
+
+  cd mkvtoolnix-${pkgver}
+
+  ./drake DESTDIR="${pkgdir}" install
+  install -m 755 src/mkvinfo-cli "${pkgdir}"/usr/bin/mkvinfo
+  rm -rf "${pkgdir}"/usr/share/{applications,icons,mime}
+  find "${pkgdir}" -name mkvtoolnix-gui* -delete
+}
+
+package_mkvtoolnix-gui() {
+  depends=('desktop-file-utils' 'hicolor-icon-theme' 'mkvtoolnix-cli'
+           'qt5-base' 'shared-mime-info' 'xdg-utils')
+  replaces=('mkvtoolnix-gtk')
+  install='mkvtoolnix-gui.install'
+
+  cd mkvtoolnix-${pkgver}
+
+  ./drake DESTDIR="${pkgdir}" install
+  rm -rf "${pkgdir}"/usr/share/locale
+  for t in mkv{extract,info,merge,propedit}; do
+    find "${pkgdir}" -name $t* -delete
+  done
+}
+
+# vim: ts=2 sw=2 et:
