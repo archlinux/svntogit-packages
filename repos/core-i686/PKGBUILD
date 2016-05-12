@@ -3,18 +3,19 @@
 # Contributor: Mantas Mikulėnas <grawity@gmail.com>
 
 pkgname=gssproxy
-pkgver=0.4.1
-pkgrel=1
+pkgver=0.5.0
+pkgrel=3
 pkgdesc="GSSAPI Proxy"
 arch=(i686 x86_64)
 url="https://fedorahosted.org/gss-proxy/"
 license=('custom: MIT')
 depends=('krb5' 'popt' 'ding-libs')
-makedepends=('popt' 'libxslt' 'systemd' 'docbook-xsl' 'doxygen' )
+makedepends=('popt' 'libxslt' 'systemd' 'docbook-xsl' 'doxygen'  'po4a')
 options=('emptydirs')
-backup=('etc/gssproxy/gssproxy.conf' 'etc/gss/mech')
+backup=(etc/gssproxy/{gssproxy,24-nfs-server,80-httpd,99-nfs-client}.conf
+        etc/gss/mech.d/gssproxy.conf)
 source=(https://fedorahosted.org/released/gss-proxy/$pkgname-$pkgver.tar.gz)
-sha512sums=('f536075601ec8936ca876d94c9212b8e80c7bd5ee3dff23d04ddcfb90b848a48022f226609d6cd3b6a92d6dbfcbd32b9dddcf45dc8380cb58e5d10e8ef1b7ec5')
+sha512sums=('14a50583fa304a667243b470415d107026042871374b69e5c5ff82ceb7ae9fd83532241ac032e79e87cea1706970ea0d552f5fc31a0340e22242f4cc4abd5cf8')
 
 prepare() {
   cd "$srcdir/gssproxy-$pkgver"
@@ -40,13 +41,12 @@ build() {
     --sbindir=/usr/bin \
     --localstatedir=/var \
     --without-selinux \
-    --with-initscript=systemd 
+    --with-initscript=systemd
   make
 }
 
 check() {
   cd $pkgname-$pkgver
-  #make -k check
   make test_proxymech
 }
 
@@ -55,11 +55,20 @@ package() {
   cd gssproxy-$pkgver
   make DESTDIR=$pkgdir install
   
+  # cleanup empty directories
   rm -rf $pkgdir/usr/include
   rm -rf $pkgdir/usr/share/doc
 
+  # install default config files
   install -m644 examples/gssproxy.conf $pkgdir/etc/gssproxy/gssproxy.conf
-  install -m644 examples/mech  $pkgdir/etc/gss/mech
+  # nfs services
+  install -m644 examples/24-nfs-server.conf $pkgdir/etc/gssproxy/24-nfs-server.conf
+  install -m644 examples/99-nfs-client.conf $pkgdir/etc/gssproxy/99-nfs-client.conf
+  # httpd service / use Arch UID/GID http/33 (by pkg filesystem)
+  install -m644 examples/80-httpd.conf $pkgdir/etc/gssproxy/80-httpd.conf
+  sed -i -e "s:euid = apache:euid = http:" $pkgdir/etc/gssproxy/80-httpd.conf
+
+  install -Dm644 examples/mech  $pkgdir/etc/gss/mech.d/gssproxy.conf
   
   install -m755 -d ${pkgdir}/usr/share/licenses/$pkgname
   install -m644 COPYING ${pkgdir}/usr/share/licenses/$pkgname/
