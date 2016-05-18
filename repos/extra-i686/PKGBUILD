@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Mirco Tischler <mt-ml at gmx dot de>
+
+pkgname=ostree
+pkgver=2016.5
+pkgrel=2
+pkgdesc="Git for operating system binaries"
+url="https://wiki.gnome.org/Projects/OSTree"
+arch=(i686 x86_64)
+license=(GPL)
+depends=(glib2 libgsystem xz zlib libsoup gpgme libarchive fuse util-linux 
+         mkinitcpio)
+makedepends=(e2fsprogs gobject-introspection gtk-doc libxslt systemd git
+             python2)
+checkdepends=(parallel syslinux gjs)
+source=("git+https://git.gnome.org/browse/ostree#tag=v$pkgver"
+        "git+https://git.gnome.org/browse/libglnx"
+        "git+https://github.com/mendsley/bsdiff")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP')
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.libglnx.url "$srcdir/libglnx"
+  git config --local submodule.bsdiff.url "$srcdir/bsdiff"
+  git submodule update
+
+  find . -name '*.py' -exec sed -i '1s/python$/&2/' {} +
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --sbindir=/usr/bin --libexecdir=/usr/lib \
+    --with-mkinitcpio --disable-static --enable-gtk-doc
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgname
+  make -k check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
