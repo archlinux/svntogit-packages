@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=flatpak
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="Application deployment framework for desktop apps"
+url="https://wiki.gnome.org/Projects/SandboxedApps"
+arch=(i686 x86_64)
+license=(GPL)
+depends=(dbus systemd glib2 libsoup polkit xorg-xauth libgsystem ostree fuse
+         json-glib libseccomp libarchive libelf)
+makedepends=(intltool python libxslt gobject-introspection gtk-doc git)
+source=("flatpak::git+https://github.com/alexlarsson/xdg-app#tag=$pkgver"
+        "git+https://git.gnome.org/browse/libglnx"
+        "git+https://github.com/projectatomic/bubblewrap")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP')
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.libglnx.url "$srcdir/libglnx"
+  git config --local submodule.bubblewrap.url "$srcdir/bubblewrap"
+  git submodule update
+
+  #find . -name '*.py' -exec sed -i '1s/python$/&2/' {} +
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --sbindir=/usr/bin --libexecdir=/usr/lib \
+    --disable-static --enable-gtk-doc
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgname
+  make -k check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
