@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=230
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -22,7 +22,7 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'udev-hwdb.hook')
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
-         '976c5511b6493715e381f43f16cdb151'
+         '19185c46811f7e056a760864870bfb4c'
          '1b3aa3a0551b08af9305d33f85b5c2fc'
          '20ead378f5d6df4b2a3e670301510a7d'
          'ddaef54f68f6c86c6c07835fc668f62a'
