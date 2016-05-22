@@ -3,8 +3,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-pkgver=229
-pkgrel=3
+pkgver=230
+pkgrel=1
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -18,29 +18,26 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'initcpio-install-udev'
         'arch.conf'
         'loader.conf'
-        'splash-arch.bmp')
+        'splash-arch.bmp'
+        'udev-hwdb.hook')
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
          '976c5511b6493715e381f43f16cdb151'
          '1b3aa3a0551b08af9305d33f85b5c2fc'
          '20ead378f5d6df4b2a3e670301510a7d'
          'ddaef54f68f6c86c6c07835fc668f62a'
-         '1e2f9a8b0fa32022bf0a8f39123e5f4e')
+         '1e2f9a8b0fa32022bf0a8f39123e5f4e'
+         'a475a5ed8f03fb0f6b58b4684998d05c')
+
+_backports=(
+)
 
 prepare() {
   cd "$pkgbase"
 
-  # networkd: FIONREAD is not reliable on some sockets
-  git cherry-pick -n 4edc2c9b6b5b921873eb82e58719ed4d9e0d69bf
-
-  # fix assertion failure in src/core/timer.c on bootup (FS#48197)
-  git cherry-pick -n 3f51aec8647fe13f4b1e46b2f75ff635403adf91
-
-  # fix udevd error checking from cg_unified() (FS#48188)
-  git cherry-pick -n 6d2353394fc33e923d1ab464c8f88df2a5105ffb
-
-  # revert "core: resolve specifier in config_parse_exec()"
-  git cherry-pick -n bd1b973fb326e9b7587494fd6108e5ded46e9163
+  if (( ${#_backports[*]} > 0 )); then
+    git cherry-pick -n "${_backports[@]}"
+  fi
 
   ./autogen.sh
 }
@@ -50,17 +47,24 @@ build() {
 
   local timeservers=({0..3}.arch.pool.ntp.org)
 
-  ./configure \
-      --libexecdir=/usr/lib \
-      --localstatedir=/var \
-      --sysconfdir=/etc \
-      --enable-lz4 \
-      --enable-gnuefi \
-      --disable-audit \
-      --disable-ima \
-      --with-sysvinit-path= \
-      --with-sysvrcnd-path= \
-      --with-ntp-servers="${timeservers[*]}"
+  local configure_options=(
+    --libexecdir=/usr/lib
+    --localstatedir=/var
+    --sysconfdir=/etc
+
+    --enable-lz4
+    --enable-gnuefi
+    --disable-audit
+    --disable-ima
+
+    --with-sysvinit-path=
+    --with-sysvrcnd-path=
+    --with-ntp-servers="${timeservers[*]}"
+    --with-default-dnssec=no
+    --without-kill-user-processes
+  )
+
+  ./configure "${configure_options[@]}"
 
   make
 }
@@ -88,7 +92,6 @@ package_systemd() {
           etc/dbus-1/system.d/org.freedesktop.import1.conf
           etc/dbus-1/system.d/org.freedesktop.network1.conf
           etc/pam.d/systemd-user
-          etc/systemd/bootchart.conf
           etc/systemd/coredump.conf
           etc/systemd/journald.conf
           etc/systemd/journal-remote.conf
@@ -149,6 +152,8 @@ package_systemd() {
   install -Dm644 "$srcdir/arch.conf" "$pkgdir"/usr/share/systemd/bootctl/arch.conf
   install -Dm644 "$srcdir/loader.conf" "$pkgdir"/usr/share/systemd/bootctl/loader.conf
   install -Dm644 "$srcdir/splash-arch.bmp" "$pkgdir"/usr/share/systemd/bootctl/splash-arch.bmp
+
+  install -Dm644 "$srcdir/udev-hwdb.hook" "$pkgdir/usr/share/libalpm/hooks/udev-hwdb.hook"
 }
 
 package_libsystemd() {
