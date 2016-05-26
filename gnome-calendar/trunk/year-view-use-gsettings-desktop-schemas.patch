@@ -1,0 +1,72 @@
+From da06a48fde20f84d920953a7d4f80f67ed51fe50 Mon Sep 17 00:00:00 2001
+From: Iain Lane <iain@orangesquash.org.uk>
+Date: Thu, 12 May 2016 11:26:35 +0100
+Subject: [PATCH] year-view: Use the new schema from gsettings-desktop-schemas
+
+So that we don't have to depend on GNOME shell.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=764001
+---
+ configure.ac         |  4 +++-
+ src/gcal-year-view.c | 10 +++++-----
+ 2 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 815260e..693d38e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -100,6 +100,7 @@ EDATASERVER_REQUIRED=3.17.1
+ EDATASERVERUI_REQUIRED=3.17.1
+ LIBICAL_REQUIRED=1.0
+ GOA_MIN_VERSION=3.2.0
++GSETTINGS_DESKTOP_SCHEMAS_REQUIRED=3.21.2
+ 
+ PKG_CHECK_MODULES(CALENDAR,
+                   gmodule-export-2.0
+@@ -110,7 +111,8 @@ PKG_CHECK_MODULES(CALENDAR,
+                   libecal-1.2 >= $ECAL_REQUIRED
+                   libedataserver-1.2 >= $EDATASERVER_REQUIRED
+                   libedataserverui-1.2 >= $EDATASERVERUI_REQUIRED
+-                  libical >= $LIBICAL_REQUIRED)
++                  libical >= $LIBICAL_REQUIRED
++                  gsettings-desktop-schemas >= $GSETTINGS_DESKTOP_SCHEMAS_REQUIRED)
+ 
+ AC_CHECK_LIB(ical, icaltime_days_in_year, [],
+                 AC_MSG_ERROR([Error: icaltime_days_in_year() not found in libical!. Upgrade your libical library.]))
+diff --git a/src/gcal-year-view.c b/src/gcal-year-view.c
+index 60b061c..3864c83 100644
+--- a/src/gcal-year-view.c
++++ b/src/gcal-year-view.c
+@@ -88,7 +88,7 @@ struct _GcalYearView
+   gboolean      use_24h_format;
+ 
+   /* show week numbers from GNOME Shell settings */
+-  GSettings    *shell_settings;
++  GSettings    *calendar_settings;
+   gboolean      show_week_numbers;
+ 
+   /* text direction factors */
+@@ -1099,7 +1099,7 @@ gcal_year_view_finalize (GObject *object)
+ 
+   g_clear_pointer (&year_view->date, g_free);
+ 
+-  g_clear_object (&year_view->shell_settings);
++  g_clear_object (&year_view->calendar_settings);
+ 
+   G_OBJECT_CLASS (gcal_year_view_parent_class)->finalize (object);
+ }
+@@ -1502,9 +1502,9 @@ gcal_year_view_init (GcalYearView *self)
+   self->end_selected_date->zone = e_cal_util_get_system_timezone ();
+ 
+   /* bind GNOME Shell' show week numbers property to GNOME Calendar's one */
+-  self->shell_settings = g_settings_new ("org.gnome.shell.calendar");
+-  g_settings_bind (self->shell_settings, "show-weekdate", self, "show-week-numbers", G_SETTINGS_BIND_DEFAULT);
+-  g_signal_connect_swapped (self->shell_settings, "changed::show-weekdate", G_CALLBACK (gtk_widget_queue_draw), self);
++  self->calendar_settings = g_settings_new ("org.gnome.desktop.calendar");
++  g_settings_bind (self->calendar_settings, "show-weekdate", self, "show-week-numbers", G_SETTINGS_BIND_DEFAULT);
++  g_signal_connect_swapped (self->calendar_settings, "changed::show-weekdate", G_CALLBACK (gtk_widget_queue_draw), self);
+ 
+   gtk_list_box_set_header_func (GTK_LIST_BOX (self->events_sidebar), update_sidebar_headers, self, NULL);
+   gtk_list_box_set_sort_func (GTK_LIST_BOX (self->events_sidebar), sidebar_sort_func, NULL, NULL);
+-- 
+2.7.4
