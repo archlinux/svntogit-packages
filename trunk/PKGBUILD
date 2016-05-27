@@ -30,6 +30,11 @@ md5sums=('SKIP'
          'a475a5ed8f03fb0f6b58b4684998d05c')
 
 _backports=(
+  # Revert "rules: allow users to access frame buffer devices" (#3333)
+  e77813ca9f4e0735fd0e3e2caae4d7d1ee436011
+
+  # {machine,system}ctl: always pass &changes and &n_changes (#3350)
+  acc0269cad31d1aaef2034a055b34c07c88a353d
 )
 
 prepare() {
