@@ -1,0 +1,78 @@
+From 93eb6e6ebcb825cd7b740069f02bc6ea3995aa19 Mon Sep 17 00:00:00 2001
+From: Luca Beltrame <lbeltrame@kde.org>
+Date: Sun, 5 Jun 2016 15:46:14 +0200
+Subject: [PATCH 2/3] Properly install GTK+ theme depending on version
+
+Currently, even if the theme was updated, CMakeLists.txt would still
+pick data from an old "gtk-3.0" directory, instead of the newer
+"gtk-3.18" (for GTK+ <= 3.18) or "gtk-3.20" (for GTK+ 3.20 or newer).
+
+This patch fixes it by setting a runtime option ("-DWITH_GTK3_VERSION")
+which is set to 3.18 as default (same behavior as before). If one sets
+-DWITH_GTK3_VERSION=3.20 or anything higher, CMake will install the
+GTK+ 3.20 version.
+
+Thus, (fellow) packagers, bear this in mind: the next version of Plasma
+(5.7) will require -DGTK3_VERSION=3.20 added to your CMake setup command
+if you use GTK+ 3.20, otherwise, nothing will be needed.
+
+Both Breeze and Breeze-Dark have been adjusted for this.
+
+This was done as opposed to having a version check to not require the
+GTK+3 development package just to check the version.
+
+CCMAIL: plasma-devel@kde.org
+CCMAIL: kde-distro-packagers@kde.org
+---
+ Breeze-dark-gtk/CMakeLists.txt | 8 ++++++--
+ Breeze-gtk/CMakeLists.txt      | 8 ++++++--
+ CMakeLists.txt                 | 3 +++
+ 3 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/Breeze-dark-gtk/CMakeLists.txt b/Breeze-dark-gtk/CMakeLists.txt
+index 45aa2c6..fb99f60 100644
+--- a/Breeze-dark-gtk/CMakeLists.txt
++++ b/Breeze-dark-gtk/CMakeLists.txt
+@@ -1,4 +1,8 @@
+ install(DIRECTORY gtk-2.0 DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze-Dark
+     ${directory_EXCLUDES})
+-install(DIRECTORY gtk-3.0 DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze-Dark
+-    ${directory_EXCLUDES})
++
++if (WITH_GTK3_VERSION VERSION_LESS "3.20")
++install(FILES gtk-3.18/gtk.css DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze-Dark/gtk-3.0/)
++else()
++install(FILES gtk-3.20/gtk.css DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze-Dark/gtk-3.0/)
++endif()
+diff --git a/Breeze-gtk/CMakeLists.txt b/Breeze-gtk/CMakeLists.txt
+index f629e15..4b2e8e6 100644
+--- a/Breeze-gtk/CMakeLists.txt
++++ b/Breeze-gtk/CMakeLists.txt
+@@ -1,4 +1,8 @@
+ install(DIRECTORY gtk-2.0 DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze
+     ${directory_EXCLUDES})
+-install(DIRECTORY gtk-3.0 DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze
+-    ${directory_EXCLUDES})
++
++if (WITH_GTK3_VERSION VERSION_LESS "3.20")
++install(FILES gtk-3.18/gtk.css DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze/gtk-3.0/)
++else()
++install(FILES gtk-3.20/gtk.css DESTINATION ${KDE_INSTALL_FULL_DATAROOTDIR}/themes/Breeze/gtk-3.0/)
++endif()
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b38e4c9..c5abafe 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -7,6 +7,9 @@ cmake_minimum_required(VERSION 2.8.12)
+ find_package(ECM 0.0.9 REQUIRED NO_MODULE)
+ include(FeatureSummary)
+ 
++set(WITH_GTK3_VERSION 3.18 CACHE STRING
++    "Use the theme for the specified GTK+3 version (default: 3.18)")
++
+ set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${ECM_KDE_MODULE_DIR} "${CMAKE_SOURCE_DIR}/cmake")
+ include(KDEInstallDirs)
+ 
+-- 
+2.8.3
+
