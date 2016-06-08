@@ -2,37 +2,39 @@
 # Maintainer: damir <damir@archlinux.org>
 
 pkgname=dasher
-pkgver=4.11
-pkgrel=3
+pkgver=5.0.0.alpha+22+gc2ef9ef
+pkgrel=1
 pkgdesc="Information-efficient text-entry interface, driven by natural continuous pointing gestures"
 arch=('i686' 'x86_64')
 license=('GPL')
-depends=('at-spi' 'gnome-speech' 'hicolor-icon-theme')
-makedepends=('intltool' 'gnome-doc-utils' 'libgnomeui')
+depends=('speech-dispatcher' 'gtk3')
+makedepends=('git' 'gnome-common' 'gnome-doc-utils')
 url="http://www.gnome.org"
 options=('!emptydirs')
-install=dasher.install
-source=(https://download.gnome.org/sources/${pkgname}/4.11/${pkgname}-${pkgver}.tar.bz2
-        error-format-security.patch
-        fix-binutils-gold.patch)
-sha256sums=('fb21cc4ef606e10a8e5deffebe8695a376eabb0766d7d1bdf80abc5f03f4fed2'
-            '7aeba2667972e408f38b8337f972ff589f05cdf244dec5674f138fc5110405df'
-            'f9e2a661e6d0b873e9a5d491b1b70f3a05ea4edda693e078e2e206451c265daf')
+source=('git://git.gnome.org/dasher#commit=c2ef9ef66378ed7dad66f713559c227bb04a66ed')
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --long | sed -e 's/-/+/g' -e 's/^DASHER_//' -e 's/_/./g'
+}
+
+prepare() {
+  cd $pkgname
+  rm -f m4/glib-gettext.m4
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  patch -Np1 -i "${srcdir}/error-format-security.patch"
-  patch -Np1 -i "${srcdir}/fix-binutils-gold.patch"
+  cd $pkgname
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-scrollkeeper --enable-speech
   make
+  Src/Gtk2/generate-schema -s > dasher.gschema.xml
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
-
-  install -m755 -d "${pkgdir}/usr/share/gconf/schemas"
-  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" --domain dasher ${pkgdir}/etc/gconf/schemas/*.schemas
-  rm -f ${pkgdir}/etc/gconf/schemas/*.schemas
+  cd $pkgname
+  install -Dm644 dasher.gschema.xml "${pkgdir}/usr/share/glib-2.0/schemas/dasher.gschema.xml"
+  make DESTDIR="${pkgdir}" install
 }
