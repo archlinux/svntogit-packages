@@ -5,7 +5,7 @@
 pkgname=qt5-webengine
 _qtver=5.6.1
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('GPL3' 'LGPL' 'FDL' 'custom')
@@ -16,8 +16,10 @@ makedepends=('python2' 'git' 'gperf')
 conflicts=('qt')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
-source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
-md5sums=('35f168743638b07157e20af0586f39a2')
+source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
+        qt5-webengine-fno-delete-null-pointer-checks.patch)
+md5sums=('35f168743638b07157e20af0586f39a2'
+         '5c4e4eb61165985330e018d79906d012')
 
 prepare() {
   mkdir -p build
@@ -25,6 +27,10 @@ prepare() {
   # Hack to force using python2
   mkdir -p bin
   ln -s /usr/bin/python2 bin/python
+
+  cd ${_pkgfqn}/src/3rdparty
+  # Workaround for v8 segfaults with GCC 6
+  patch -p1 -i "$srcdir"/qt5-webengine-fno-delete-null-pointer-checks.patch
 }
 
 build() {
