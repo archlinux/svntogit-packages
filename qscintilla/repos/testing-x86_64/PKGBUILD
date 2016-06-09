@@ -1,0 +1,171 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Douglas Soares de Andrade <dsa@aur.archlinux.org>
+
+pkgbase=qscintilla
+pkgname=('qscintilla-qt4' 'python-qscintilla-qt4' 'python2-qscintilla-qt4'
+         'python-qscintilla-qt4-common'
+         'qscintilla-qt5' 'python-qscintilla-qt5' 'python2-qscintilla-qt5'
+         'python-qscintilla-qt5-common')
+pkgver=2.9.2
+pkgrel=1
+license=('GPL')
+arch=('i686' 'x86_64')
+url="http://www.riverbankcomputing.co.uk/software/qscintilla/intro"
+makedepends=('python-pyqt4' 'python2-pyqt4' 'python-pyqt5' 'python2-pyqt5' 'qt5-tools')
+options=('!buildflags') # Fix Qt Designer plugin
+source=("http://downloads.sourceforge.net/pyqt/QScintilla_gpl-${pkgver}.tar.gz"
+        'configure.py-objdir-support.diff' 'QScintilla_gpl-2.9.2-qt5.patch')
+md5sums=('db260651a5e086cc4eee6417172e27e8'
+         '0a952497a52c85bf5c09dd2ee091e763'
+         'd7b1504fc0c61042a85e44792e462b37')
+
+prepare() {
+  (cd QScintilla_gpl-${pkgver}; patch -p1 -i "${srcdir}"/configure.py-objdir-support.diff)
+
+  cp -a QScintilla_gpl-${pkgver}{,-qt4}
+
+  # Patch from Fedora
+  (cd QScintilla_gpl-${pkgver}; patch -p1 -i "${srcdir}"/QScintilla_gpl-2.9.2-qt5.patch)
+}
+
+build() {
+    cd "$srcdir"/QScintilla_gpl-${pkgver}/Qt4Qt5
+    qmake-qt5 qscintilla.pro
+    make
+
+    cd ../designer-Qt4Qt5
+    QMAKEFEATURES=../Qt4Qt5/features qmake-qt5 designer.pro INCLUDEPATH+=../Qt4Qt5 QMAKE_LIBDIR+=../Qt4Qt5
+    make
+
+    cd ../
+    cp -rf Python Python2
+    cd Python
+    QMAKEFEATURES=../Qt4Qt5/features python configure.py --pyqt=PyQt5 -n ../Qt4Qt5/ -o ../Qt4Qt5/ -c --qmake /usr/bin/qmake-qt5
+    make
+
+    cd ../Python2
+    QMAKEFEATURES=../Qt4Qt5/features python2 configure.py --pyqt=PyQt5 -n ../Qt4Qt5/ -o ../Qt4Qt5/ -c --qmake /usr/bin/qmake-qt5
+    make
+
+    cd "$srcdir"/QScintilla_gpl-${pkgver}-qt4/Qt4Qt5
+    qmake-qt4 qscintilla.pro
+    make
+
+    cd ../designer-Qt4Qt5
+    QMAKEFEATURES=../Qt4Qt5/features qmake-qt4 designer.pro INCLUDEPATH+=../Qt4Qt5 QMAKE_LIBDIR+=../Qt4Qt5
+    make
+
+    cd ../
+    cp -rf Python Python2
+    cd Python
+    QMAKEFEATURES=../Qt4Qt5/features python configure.py -n ../Qt4Qt5/ -o ../Qt4Qt5/ -c --qmake /usr/bin/qmake-qt4
+    make
+
+    cd ../Python2
+    QMAKEFEATURES=../Qt4Qt5/features python2 configure.py -n ../Qt4Qt5/ -o ../Qt4Qt5/ -c --qmake /usr/bin/qmake-qt4
+    make
+}
+
+package_qscintilla-qt5() {
+    pkgdesc="A port to Qt5 of Neil Hodgson's Scintilla C++ editor class"
+    depends=('qt5-base')
+
+    cd QScintilla_gpl-${pkgver}/Qt4Qt5
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    cd ../designer-Qt4Qt5
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+}
+
+package_python-qscintilla-qt5-common() {
+    pkgdesc="Common python qscintilla bindings files shared between python-qscintilla-qt5 and python2-qscintilla-qt5"
+    depends=('qscintilla-qt5')
+
+    cd QScintilla_gpl-${pkgver}/Python
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    # Provided by python-qscintilla
+    rm "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt5/Qsci{.so,.pyi}
+    rmdir "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt5
+}
+
+package_python-qscintilla-qt5() {
+    pkgdesc="Python 3.x bindings for QScintilla2"
+    depends=('python-qscintilla-qt5-common' 'python-pyqt5')
+
+    cd QScintilla_gpl-${pkgver}/Python
+    install -Dm755 Qsci.so \
+      "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt5/Qsci.so
+    install -Dm755 Qsci.pyi \
+      "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt5/Qsci.pyi
+}
+
+package_python2-qscintilla-qt5() {
+    pkgdesc="Python 2.x bindings for QScintilla2"
+    depends=('python-qscintilla-qt5-common' 'python2-pyqt5')
+
+    cd QScintilla_gpl-${pkgver}/Python2
+    install -Dm755 Qsci.so \
+      "${pkgdir}"/usr/lib/python2.7/site-packages/PyQt5/Qsci.so
+    install -Dm755 Qsci.pyi \
+      "${pkgdir}"/usr/lib/python2.7/site-packages/PyQt5/Qsci.pyi
+}
+
+package_qscintilla-qt4() {
+    pkgdesc="A port to Qt4 of Neil Hodgson's Scintilla C++ editor class"
+    depends=('qt4')
+    replaces=('qscintilla<2.9.1')
+    conflicts=('qscintilla<2.9.1')
+    provides=("qscintilla=$pkgver")
+
+    cd QScintilla_gpl-${pkgver}-qt4/Qt4Qt5
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    cd ../designer-Qt4Qt5
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+}
+
+package_python-qscintilla-qt4-common() {
+    pkgdesc="Common python qscintilla bindings files shared between python-qscintilla-qt4 and python2-qscintilla-qt4"
+    depends=('qscintilla-qt4')
+    replaces=('python-qscintilla-common<2.9.1')
+    conflicts=('python-qscintilla-common<2.9.1')
+    provides=("python-qscintilla-common=$pkgver")
+
+    cd QScintilla_gpl-${pkgver}-qt4/Python
+    make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+
+    # Provided by python-qscintilla
+    rm "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt4/Qsci{.so,.pyi}
+    rmdir "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt4
+}
+
+package_python-qscintilla-qt4() {
+    pkgdesc="Python 3.x bindings for QScintilla2"
+    depends=('python-qscintilla-qt4-common' 'python-pyqt4')
+    replaces=('python-qscintilla<2.9.1')
+    conflicts=('python-qscintilla<2.9.1')
+    provides=("python-qscintilla=$pkgver")
+
+    cd QScintilla_gpl-${pkgver}-qt4/Python
+    install -Dm755 Qsci.so \
+      "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt4/Qsci.so
+    install -Dm755 Qsci.pyi \
+      "${pkgdir}"/usr/lib/python3.5/site-packages/PyQt4/Qsci.pyi
+}
+
+package_python2-qscintilla-qt4() {
+    pkgdesc="Python 2.x bindings for QScintilla2"
+    depends=('python-qscintilla-qt4-common' 'python2-pyqt4')
+    replaces=('python2-qscintilla<2.9.1')
+    conflicts=('python2-qscintilla<2.9.1')
+    provides=("python2-qscintilla=$pkgver")
+
+    cd QScintilla_gpl-${pkgver}-qt4/Python2
+    install -Dm755 Qsci.so \
+      "${pkgdir}"/usr/lib/python2.7/site-packages/PyQt4/Qsci.so
+    install -Dm755 Qsci.pyi \
+      "${pkgdir}"/usr/lib/python2.7/site-packages/PyQt4/Qsci.pyi
+}
