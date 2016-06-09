@@ -3,22 +3,21 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.6.0
+_qtver=5.6.1
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('GPL3' 'LGPL' 'FDL' 'custom')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'libxtst' 'libxcursor' 'libpulse' 'pciutils' 'libxss' 'libvpx' 'opus'
-         'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'minizip' 'nss' 'libxml2' 'libxslt')
+         'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'nss' 'libxml2' 'libxslt') # minizip
 makedepends=('python2' 'git' 'gperf')
 conflicts=('qt')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
-source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch)
-md5sums=('a8be84d642a78724d84b27c20adee14c'
-         '26f5e1e96be524ccad564dc2fdb9766c')
+source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
+md5sums=('35f168743638b07157e20af0586f39a2')
 
 prepare() {
   mkdir -p build
@@ -26,10 +25,6 @@ prepare() {
   # Hack to force using python2
   mkdir -p bin
   ln -s /usr/bin/python2 bin/python
-
-  # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870 (KaOSx patch)
-  cd ${_pkgfqn}
-  patch -p1 -i ../qt5-webengine-nss.patch
 }
 
 build() {
