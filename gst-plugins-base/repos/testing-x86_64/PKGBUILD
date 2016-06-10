@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gst-plugins-base
+pkgname=('gst-plugins-base-libs' 'gst-plugins-base')
+pkgver=1.8.2
+pkgrel=1
+pkgdesc="GStreamer Multimedia Framework Base Plugins"
+arch=('i686' 'x86_64')
+license=('LGPL')
+makedepends=('pkgconfig' 'gstreamer' 'orc' 'libxv' 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis'
+             'libtheora' 'pango' 'gobject-introspection' 'opus')
+options=(!emptydirs)
+url="http://gstreamer.freedesktop.org/"
+source=(${url}/src/$pkgbase/$pkgbase-${pkgver}.tar.xz)
+sha256sums=('9d7109c8fb0a5dec8edb17b0053c59a46aba7ddf48dc48ea822ebbbd4339d38d')
+
+build() {
+  cd $pkgbase-$pkgver
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --enable-experimental \
+    --with-package-name="GStreamer Base Plugins (Arch Linux)" \
+    --with-package-origin="http://www.archlinux.org/"
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+
+  sed -e 's/^SUBDIRS_EXT =.*/SUBDIRS_EXT =/' -i Makefile
+}
+
+check() {
+  cd $pkgbase-$pkgver
+  # Testsuite fails on one test. Some refcount leak
+  make check
+}
+
+package_gst-plugins-base-libs() {
+  pkgdesc="GStreamer Multimedia Framework Base Plugin libraries"
+  depends=('gstreamer' 'orc' 'libxv')
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="${pkgdir}" install
+}
+
+package_gst-plugins-base() {
+  depends=("gst-plugins-base-libs=$pkgver" 'alsa-lib' 'cdparanoia' 'libvisual' 'libvorbis'
+           'libtheora' 'pango' 'opus')
+
+  cd $pkgbase-$pkgver
+  make -C gst-libs DESTDIR="${pkgdir}" install
+  make -C ext DESTDIR="${pkgdir}" install
+  make -C gst-libs DESTDIR="${pkgdir}" uninstall
+}
