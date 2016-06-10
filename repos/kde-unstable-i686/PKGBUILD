@@ -5,7 +5,7 @@
 pkgname=qt5-webengine
 _qtver=5.7.0-rc
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('GPL3' 'LGPL' 'FDL' 'custom')
@@ -15,9 +15,12 @@ depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'libxtst' '
 makedepends=('python2' 'git' 'gperf')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
-source=("http://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch)
+source=("http://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
+        qt5-webengine-fno-delete-null-pointer-checks.patch)
+
 md5sums=('cb0e6ee6fc580e651f536b5250777d0a'
-         '2a1610b34204102938a24154a52e5571')
+         '2a1610b34204102938a24154a52e5571'
+         '5671a16fef65152928789bffd1f7cf24')
 
 prepare() {
   mkdir -p build
@@ -29,15 +32,13 @@ prepare() {
   # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870 (KaOSx patch)
   cd ${_pkgfqn}
   patch -p1 -i ../qt5-webengine-nss.patch
+
+  # Workaround for v8 segfaults with GCC 6
+  patch -p1 -i "$srcdir"/qt5-webengine-fno-delete-null-pointer-checks.patch
 }
 
 build() {
   cd build
-
-  # Work around bug in v8 in which GCC 6 optimizes away null pointer checks
-  # https://bugs.chromium.org/p/v8/issues/detail?id=3782
-  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69234
-  CFLAGS+=' -fno-delete-null-pointer-checks'
 
   export PATH="$srcdir/bin:$PATH"
   qmake WEBENGINE_CONFIG+=use_proprietary_codecs ../${_pkgfqn}
