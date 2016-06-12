@@ -1,0 +1,48 @@
+# $Id: PKGBUILD 240297 2015-06-03 10:22:03Z fyan $
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=qt5-webkit
+_qtver=5.6.1
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=('i686' 'x86_64')
+url='http://qt-project.org/'
+license=('GPL3' 'LGPL' 'FDL' 'custom')
+pkgdesc='Classes for a WebKit2 based implementation and a new QML API'
+depends=('qt5-location' 'qt5-sensors' 'qt5-webchannel' 'libwebp' 'libxslt' 'libxcomposite' 'gst-plugins-base')
+makedepends=('ruby' 'gperf' 'python2')
+optdepends=('gst-plugins-good: Webm codec support')
+conflicts=('qt')
+groups=('qt' 'qt5')
+_pkgfqn="${pkgname/5-/}-opensource-src-${pkgver}"
+source=("http://download.qt.io/community_releases/${pkgver%.*}/${pkgver}/qtwebkit-opensource-src-${pkgver}.tar.xz")
+md5sums=('9ea7cb557375ba2fc7c62742c522d093')
+
+prepare() {
+  mkdir -p build
+
+# Hack to force python2
+  mkdir -p bin
+  ln -s /usr/bin/python2 bin/python
+}
+
+build() {
+  cd build  
+
+  export PATH="${srcdir}/bin:$PATH"
+  qmake ../${_pkgfqn}
+  make
+}
+
+package() {
+  cd build
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Drop QMAKE_PRL_BUILD_DIR because reference the build dir
+  find "$pkgdir/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+}
