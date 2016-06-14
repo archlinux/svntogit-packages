@@ -3,8 +3,8 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xkeyboard-config
-pkgver=2.17
-pkgrel=2
+pkgver=2.18
+pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
 license=('custom')
@@ -14,7 +14,7 @@ provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
 source=(http://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
-sha256sums=('dec6be44bd31775cdc1ab95bfd75d5f2c0055613eeca8b4e9c6480b183430701')
+sha256sums=('c41d917d6c8a59feb7ccbda51c40a6ada824fdd1e9684b52dd48c9530617ddd0')
 
 build() {
   cd ${pkgname}-${pkgver}
