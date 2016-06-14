@@ -3,22 +3,37 @@
 
 pkgbase=nautilus
 pkgname=(nautilus libnautilus-extension)
-pkgver=3.20.1+gf84d431
+pkgver=3.20.1+17+gf84d431
 pkgrel=1
-pkgdesc="GNOME file manager"
+pkgdesc="Default file manager for GNOME"
+url="https://wiki.gnome.org/Apps/Nautilus"
 arch=(i686 x86_64)
 license=(GPL)
-depends=(libexif gnome-desktop exempi gvfs desktop-file-utils dconf 
-         libtracker-sparql nautilus-sendto)
+depends=(libexif gnome-desktop exempi gvfs dconf libtracker-sparql nautilus-sendto)
 makedepends=(intltool gobject-introspection python packagekit python2 gnome-common git gtk-doc)
-url="http://www.gnome.org"
-options=('!emptydirs')
-source=('git://git.gnome.org/nautilus#commit=f84d4319dcd5fcfa460a37dfdb78c93d188e2703')
-sha256sums=('SKIP')
+options=(!emptydirs)
+_commit=f84d4319dcd5fcfa460a37dfdb78c93d188e2703
+source=("git://git.gnome.org/nautilus#commit=$_commit"
+        'git://git.gnome.org/libgd')
+sha256sums=('SKIP'
+            'SKIP')
 
 prepare() {
   cd $pkgbase
+
+  git submodule init
+  git config --local submodule.libgd.url "$srcdir/libgd"
+  git submodule update
+
+  # Fixup missing tag...
+  git rev-parse --verify -q 3.20.1 || git tag 3.20.1 6824271e2915e43fb12928ca884afa0f4de6532b
+
   NOCONFIGURE=1 ./autogen.sh
+}
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
 }
 
 build() {
@@ -26,6 +41,7 @@ build() {
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-static \
       --libexecdir=/usr/lib/nautilus \
+      --enable-gtk-doc \
       --disable-update-mimedb \
       --disable-schemas-compile \
       --disable-selinux --enable-gtk-doc
