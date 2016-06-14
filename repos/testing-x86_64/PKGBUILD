@@ -1,0 +1,64 @@
+# $Id$
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Andrew Simmons <andrew.simmons@gmail.com>
+# Contributor: György Balló <ballogy@freestart.hu>
+
+pkgname=gparted
+pkgver=0.26.1
+pkgrel=1
+pkgdesc="A Partition Magic clone, frontend to GNU Parted"
+arch=('i686' 'x86_64')
+url="http://gparted.sourceforge.net"
+license=('GPL')
+depends=('parted' 'gtkmm')
+makedepends=('intltool' 'pkg-config' 'gnome-doc-utils')
+optdepends=('dosfstools: for FAT16 and FAT32 partitions'
+            'jfsutils: for jfs partitions'
+            'f2fs-tools: for Flash-Friendly File System'
+            'btrfs-progs: for btrfs partitions'
+            'exfat-utils: for exFAT partitions'
+            'ntfs-3g: for ntfs partitions'
+            'reiserfsprogs: for reiser partitions'
+            'xfsprogs: for xfs partitions'
+            'nilfs-utils: for nilfs2 support'
+            'polkit: to run gparted directly from menu'
+            'gpart: for recovering corrupt partition tables'
+            'mtools: utilities to access MS-DOS disks')
+source=(http://downloads.sourceforge.net/project/${pkgname}/${pkgname}/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz{,.sig}
+        'org.archlinux.pkexec.gparted.policy'
+        'gparted_polkit')
+validpgpkeys=(BB09FFB87563FA2E1A22146817A6D3FF338C9570) # "Curtis Gedak <gedakc@gmail.com>"
+md5sums=('b9c5f6b5ffd37400bd4bf5929e9b1781'
+         'SKIP'
+         '122ed3120c846376bead22b25f6a3b19'
+         '0b68a4e2bc6bc15440730ebe2d7bf9f6')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  sed -i "s:@gksuprog@ @installdir@/gparted %f:@installdir@/gparted_polkit %f:g" gparted.desktop.in.in
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  ./configure --prefix=/usr \
+              --sbindir=/usr/bin \
+              --enable-online-resize \
+              --enable-libparted-dmraid
+  make
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make DESTDIR="${pkgdir}" install
+
+  # Install policy file
+  install -Dm644 "${srcdir}/org.archlinux.pkexec.gparted.policy" \
+                 "${pkgdir}/usr/share/polkit-1/actions/org.archlinux.pkexec.gparted.policy"
+
+  # Install launcher script
+  install -m755 "${srcdir}/gparted_polkit" \
+                "${pkgdir}/usr/bin/gparted_polkit"
+}
