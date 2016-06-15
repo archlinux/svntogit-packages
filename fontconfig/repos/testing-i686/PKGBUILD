@@ -1,0 +1,66 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=fontconfig
+pkgver=2.12.0
+pkgrel=1
+pkgdesc="A library for configuring and customizing font access"
+arch=(i686 x86_64)
+url="http://www.fontconfig.org/release/"
+license=('custom')
+depends=('expat' 'freetype2')
+makedepends=('python2' 'docbook2x')
+#makedepends=('python2' 'python2-lxml' 'gperf' 'git') # for git build
+install=fontconfig.install
+source=(http://www.fontconfig.org/release/$pkgname-$pkgver.tar.bz2
+        #git://anongit.freedesktop.org/fontconfig#commit=d05d083e9f87eb378b92e477d34a88061a572d86 # 2016-03-09 01:20:41 (GMT)
+        0002-Update-aliases-for-new-URW-fonts.patch)
+sha256sums=('b433e4efff1f68fdd8aac221ed1df3ff1e580ffedbada020a703fe64017d8224'
+            '08b5b1ccdfc1fb91787b9211758b01d9d7a988ad939c4cd0c4b5ae0e8143e59d')
+
+  # a nice page to test font matching:
+  # http://zipcon.net/~swhite/docs/computers/browsers/fonttest.html
+
+prepare() {
+  cd $pkgname-$pkgver
+  
+  #cd $pkgname
+
+  # Upstream patches implementing FS#45928
+  # changes in 30-metric-aliases.conf and 60-latin.conf went upstream, 
+  # keep changes in 45-latin.conf - is this really required? - disable for testing purpose
+#  patch -p1 -i ../0002-Update-aliases-for-new-URW-fonts.patch
+
+}
+
+build() {
+  cd $pkgname-$pkgver
+  #cd $pkgname
+
+  # make sure there's no rpath trouble and sane .so versioning - FC and Gentoo do this as well
+#  libtoolize -f
+#  autoreconf -fi
+  
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --with-templatedir=/etc/fonts/conf.avail \
+    --with-xmldir=/etc/fonts \
+    --localstatedir=/var \
+    --disable-static \
+    --with-default-fonts=/usr/share/fonts \
+    --with-add-fonts=/usr/share/fonts
+  make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  #cd $pkgname
+  make -k check
+}
+
+package() {
+  cd $pkgname-$pkgver
+  #cd $pkgname
+  make DESTDIR="$pkgdir" install
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+}
