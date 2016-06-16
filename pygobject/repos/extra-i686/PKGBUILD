@@ -4,55 +4,57 @@
 pkgbase=pygobject
 pkgname=(python-gobject python2-gobject pygobject-devel)
 pkgver=3.20.0
-pkgrel=1
+pkgrel=2
+pkgdesc="Python Bindings for GLib/GObject/GIO/GTK+"
+url="https://wiki.gnome.org/Projects/PyGObject"
 arch=(i686 x86_64)
-url="https://live.gnome.org/PyGObject"
 license=(LGPL)
-makedepends=(python python2 python-cairo python2-cairo gobject-introspection)
-source=(https://download.gnome.org/sources/$pkgbase/${pkgver:0:4}/$pkgbase-$pkgver.tar.xz)
+depends=(gobject-introspection-runtime)
+makedepends=(python{,2}-cairo gobject-introspection)
+optdepends=('cairo: Cairo bindings')
+source=("https://download.gnome.org/sources/$pkgbase/${pkgver:0:4}/$pkgbase-$pkgver.tar.xz")
 sha256sums=('31ab4701f40490082aa98af537ccddba889577abe66d242582f28577e8807f46')
 
 prepare() {
-  mkdir build-py2 build-py3 devel
-  cd ${pkgbase}-${pkgver}
+  mkdir build-py{2,3} devel
 }
 
-build() {
-  cd build-py2
-  ../${pkgbase}-${pkgver}/configure --prefix=/usr --with-python=/usr/bin/python2
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+_build() (
+  cd build-py$1
+  ../$pkgbase-$pkgver/configure --prefix=/usr --with-python=/usr/bin/python$1
+  sed -i 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
+)
 
-  cd ../build-py3
-  ../${pkgbase}-${pkgver}/configure --prefix=/usr --with-python=/usr/bin/python
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+build() {
+  _build 2
+  _build 3
 }
 
 package_python-gobject() {
-  pkgdesc="Python 3 bindings for GObject"
-  depends=('gobject-introspection-runtime' "pygobject-devel=$pkgver" 'python' 'cairo')
+  depends=("pygobject-devel=$pkgver" python)
 
   cd build-py3
   make DESTDIR="$pkgdir" install
-  rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
+  mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
 }
 
 package_python2-gobject() {
-  pkgdesc="Python 2 bindings for GObject"
-  depends=('gobject-introspection-runtime' "pygobject-devel=$pkgver" 'python2' 'cairo')
+  pkgdesc="${pkgdesc/Python/Python2}"
+  depends=("pygobject-devel=$pkgver" python2)
 
   cd build-py2
   make DESTDIR="$pkgdir" install
-  mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
-  python2 -m compileall "$pkgdir"//usr/lib/python2.7/site-packages/gi
+  python2 -m compileall "$pkgdir"/usr/lib/python2.7/site-packages/gi
+  rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
 }
 
 package_pygobject-devel() {
-  pkgdesc="Development files for the pygobject bindings"
+  pkgdesc="Common development files for pygobject"
+  optdepends=()
 
-  cd "devel"
-  mkdir -p "$pkgdir"/usr/{include,lib}
+  cd devel
+  mkdir -p "$pkgdir/usr/lib"
   mv include "$pkgdir/usr/"
   mv pkgconfig "$pkgdir/usr/lib/"
 }
