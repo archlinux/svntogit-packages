@@ -12,10 +12,12 @@ arch=('i686' 'x86_64')
 url='http://www.nongnu.org/libunwind/'
 license=('GPL')
 depends=('glibc' 'xz')
-source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz"
+source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig}
         '001-invalid-dwarf-opcodes-can-cause-references-beyond.patch')
 md5sums=('fb4ea2f6fbbe45bf032cd36e586883ce'
+         'SKIP'
          '73db2376e195a716f271ebce6bb7e5c0')
+validpgpkeys=('5C96BDEAF5F47FB02BD4F6B965D98560914F3F48')  # Arun Sharma
 
 prepare() {
   patch -p1 -d $pkgname-$pkgver < 001-invalid-dwarf-opcodes-can-cause-references-beyond.patch
