@@ -1,0 +1,66 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Antonio Rojas
+
+pkgbase=oxygen
+pkgname=('oxygen' 'oxygen-kde4')
+pkgver=5.6.95
+pkgrel=1
+arch=('i686' 'x86_64')
+url='https://www.kde.org/workspaces/plasmadesktop/'
+license=('LGPL')
+makedepends=('frameworkintegration' 'kcmutils' 'kdecoration' 'extra-cmake-modules' 'kdoctools' 'kdelibs' 'automoc4'
+             'python')
+source=("http://download.kde.org/unstable/plasma/${pkgver}/${pkgname}-${pkgver}.tar.xz"{,.sig})
+sha256sums=('03a21bde1c5b699a435f795ba32c4bca732fc74d9aae0be9ea34f4efaf9d6e7f'
+            'SKIP')
+validpgpkeys=('13C16D03EDE728514473AA73A506E6D4DD4D5088'  # Jonathan Riddell
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF') # David Edmundson
+
+prepare() {
+  mkdir -p build{,-kde4}
+}
+
+build() {
+  cd build
+  cmake ../$pkgname-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DKDE_INSTALL_LIBDIR=lib \
+    -DBUILD_TESTING=OFF
+  make
+  cd ..
+
+  cd build-kde4
+  cmake ../$pkgname-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF \
+    -DUSE_KDE4=ON
+  make
+}
+
+package_oxygen() {
+  pkgdesc='KDE Oxygen style'
+  depends=('frameworkintegration' 'kdecoration' 'kcmutils' 'kwayland')
+  conflicts=('oxygen-cursors')
+  replaces=('oxygen-cursors')
+  groups=('plasma')
+
+  cd build
+  make DESTDIR="${pkgdir}" install
+}
+
+package_oxygen-kde4() {
+  pkgdesc='KDE Oxygen style for KDE4 applications'
+  depends=('kdelibs')
+  conflicts=('kdebase-workspace')
+
+  cd build-kde4
+  make DESTDIR="${pkgdir}" install
+
+  # needed so that pure Qt4 apps are correctly themed
+  install -d -m755 "$pkgdir"/usr/lib/qt4/plugins/styles
+  ln -s /usr/lib/kde4/plugins/styles/oxygen.so "$pkgdir"/usr/lib/qt4/plugins/styles
+}
