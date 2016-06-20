@@ -17,10 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-# display what to run and run it
+# display what to run and run it quietly
 run() {
 	echo "==> $*"
-	"$@"
+	"$@" > /dev/null
 }
 
 # check kernel is valid for action
@@ -51,7 +51,7 @@ do_module() {
 	for path in */build/; do
 		local kver="${path%%/*}"
 		check_kernel "$kver" || continue
-		run dkms -q "$@" -m "$modname" -v "$modver" -k "$kver"
+		run dkms "$@" -m "$modname" -v "$modver" -k "$kver"
 	done
 	popd >/dev/null
 }
@@ -66,7 +66,7 @@ do_kernel() {
 	local path
 	for path in "$source_tree"/*-*/dkms.conf; do
 		if [[ "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-			run dkms -q "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
+			run dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
 		fi
 	done
 }
