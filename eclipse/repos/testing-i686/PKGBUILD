@@ -1,0 +1,99 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Paul Mattal <paul@archlinux.org>
+# Contributor: Andrew Wright <andreww@photism.org>
+# Contributor: Andreas W. Hauser <andy-aur@splashground.de>
+# Contributor: Marco Crosio <marco.crosio@gmail.com>
+
+pkgbase=eclipse
+pkgname=(eclipse-{common,java,jee,cpp,php})
+pkgver=4.6.0
+pkgrel=1
+_release=neon-R
+pkgdesc="Highly extensible IDE"
+license=("EPL")
+arch=(i686 x86_64)
+url="http://eclipse.org"
+makedepends=(ruby)
+options=(!emptydirs)
+source=(commonify eclipse.sh eclipse.desktop)
+source_i686=()
+source_x86_64=()
+noextract=()
+
+for _pkg in ${pkgname[@]}; do
+  [[ $_pkg == 'eclipse-common' ]] && continue
+  source_i686+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk.tar.gz)
+  source_x86_64+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk-x86_64.tar.gz)
+  noextract+=($_pkg-$_release-linux-gtk{,-x86_64}.tar.gz)
+  eval "package_$_pkg() { _package $_pkg; }"
+done
+
+sha256sums=('9f8980078c97fb3020ba2e9c6c07eac077b932406aba3e2d6a4763a5d299290d'
+            '04e789fb695d5f95d09ddb994ae30397b39aee35f11997465dd91d129c41b2ed'
+            '57559c2548ae463089acb3c2825ebc002ed83067ddc953b23d36a7b5a02deaf3')
+sha256sums_i686=('3e09e203e0a8682bc3d6ddf218df788e2b9dc064b370a980f63e3e2fa4ae2e3f'
+                 '6689bab833e854b3ef619e181587eaa823b2dc7498fea730bedbf568d0f24391'
+                 'b0d85ed3612a6928a96c552ae01631b7cecc7ed81206cbebd2670b8171c52228'
+                 '05130e4f1c9f55410f80d1d1e603318550276d7cf19f7d26cd2e6dbed9dd7fd5')
+sha256sums_x86_64=('ca06e10df42eab462f130aa89658f9c75f1df61ba79ede02fb7bb748f4544c34'
+                   '3a97e2b9e99b09cb6b18bc22fab05977838618999fe62051e52352ae9f00b8f1'
+                   'd54430fb0ae4a01591c1e2084fc6d28b7c32629c990df08fddb839b9f6d3d825'
+                   '0fe0d9735816d9106ca800a13c581aae7ad52566a06862f2f2dd92c873859d3c')
+
+prepare() {
+  mkdir eclipse-common
+
+  for _pkg in ${pkgname[@]}; do
+    [[ $_pkg == 'eclipse-common' ]] && continue
+
+    if [[ $CARCH == x86_64 ]]; then
+      bsdtar -xf "$_pkg-$_release-linux-gtk-x86_64.tar.gz"
+    else
+      bsdtar -xf "$_pkg-$_release-linux-gtk.tar.gz"
+    fi
+
+    mv eclipse $_pkg
+  done
+}
+
+build() {
+  ./commonify ${pkgname[@]}
+
+  mkdir -p eclipse-common/dropins
+  touch eclipse-common/dropins/.keep
+}
+
+package_eclipse-common() {
+  pkgdesc+=" (common files)"
+  depends=(java-environment webkitgtk unzip)
+  install=eclipse.install
+
+  install -d "$pkgdir/usr/lib"
+  cp -a eclipse-common "$pkgdir/usr/lib/eclipse"
+
+  install -D eclipse.sh "$pkgdir/usr/bin/eclipse"
+  install -Dm644 eclipse.desktop "$pkgdir/usr/share/applications/eclipse.desktop"
+
+  for _i in 16 32 48 256; do
+    install -Dm644 eclipse-common/plugins/org.eclipse.platform_*/eclipse${_i}.png \
+      "$pkgdir/usr/share/icons/hicolor/${_i}x${_i}/apps/eclipse.png"
+  done
+}
+
+_package() {
+  _variant=${1#eclipse-}
+  pkgdesc+=" (${_variant^^} variant)"
+  depends=(eclipse-common)
+  provides=("eclipse=$pkgver-$pkgrel")
+  conflicts=(eclipse)
+
+  case $_variant in
+    java) replaces=(eclipse) ;;
+    cpp)  replaces=(eclipse-cdt) ;;
+  esac
+
+  install -d "$pkgdir/usr/lib"
+  cp -a $1 "$pkgdir/usr/lib/eclipse"
+}
