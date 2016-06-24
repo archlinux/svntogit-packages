@@ -8,7 +8,7 @@ pkgver=${_qtver/-/}
 pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
-license=('GPL3' 'LGPL' 'FDL' 'custom')
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'libxtst' 'libxcursor' 'libpulse' 'pciutils' 'libxss' 'libvpx' 'opus'
          'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'nss' 'libxml2' 'libxslt' 'protobuf') # minizip
