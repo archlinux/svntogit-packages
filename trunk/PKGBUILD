@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=230
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -22,7 +22,7 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'udev-hwdb.hook')
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
-         '8a093826cbce909e34f15dccd73974c4'
+         'bee7fd6ccda39582259708e3f262ea6d'
          '1b3aa3a0551b08af9305d33f85b5c2fc'
          '20ead378f5d6df4b2a3e670301510a7d'
          'ddaef54f68f6c86c6c07835fc668f62a'
@@ -47,6 +47,12 @@ _backports=(
 
   # resolved: when restarting a transaction make sure to not touch it anymore (#3553)
   5278bbfe0c79c1f2b5bf8a215d8e7d63f1900ce9
+
+  # basic: pass flags to the fnmatch
+  2027927b1002a74d24300704a655614f8ea48e45
+
+  # nspawn: fix uid patching logic
+  0c6aeb4609f619328b9dcf8d8d815bd06e412ac5
 )
 
 prepare() {
