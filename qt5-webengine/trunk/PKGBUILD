@@ -5,13 +5,13 @@
 pkgname=qt5-webengine
 _qtver=5.7.0
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('GPL3' 'LGPL3' 'FDL' 'custom')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'libxtst' 'libxcursor' 'libpulse' 'pciutils' 'libxss' 'libvpx' 'opus'
-         'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'nss' 'libxml2' 'libxslt' 'protobuf') # minizip
+         'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'nss' 'protobuf') # minizip
 makedepends=('python2' 'git' 'gperf')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
@@ -21,7 +21,7 @@ source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submo
 md5sums=('937f64886fbcb038d6fa4b44ae80cbeb'
          '2a1610b34204102938a24154a52e5571'
          '5671a16fef65152928789bffd1f7cf24'
-         '8145ce05fb86e762f012ca1b56f718fe')
+         '7f585a57ab3adae070c5ac6cfddfaa6a')
 
 prepare() {
   mkdir -p build
@@ -32,7 +32,7 @@ prepare() {
 
   # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870 (KaOSx patch)
   cd ${_pkgfqn}
-  patch -p1 -i ../qt5-webengine-nss.patch
+ # patch -p1 -i ../qt5-webengine-nss.patch
 
   # Workaround for v8 segfaults with GCC 6
   patch -p1 -i "$srcdir"/qt5-webengine-fno-delete-null-pointer-checks.patch
@@ -44,6 +44,7 @@ build() {
   cd build
 
   export PATH="$srcdir/bin:$PATH"
+  export CXXFLAGS+=" -fno-delete-null-pointer-checks"
   qmake WEBENGINE_CONFIG+=use_proprietary_codecs ../${_pkgfqn}
   make
 }
