@@ -21,7 +21,7 @@ source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submo
 md5sums=('937f64886fbcb038d6fa4b44ae80cbeb'
          '2a1610b34204102938a24154a52e5571'
          '5671a16fef65152928789bffd1f7cf24'
-         '7f585a57ab3adae070c5ac6cfddfaa6a')
+         '8145ce05fb86e762f012ca1b56f718fe')
 
 prepare() {
   mkdir -p build
