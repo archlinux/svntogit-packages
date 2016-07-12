@@ -11,6 +11,8 @@ url="http://www.freetype.org/"
 # adding harfbuzz for improved OpenType features auto-hinting
 # introduces a cycle dep to harfbuzz depending on freetype wanted by upstream
 depends=('zlib' 'bzip2' 'sh' 'libpng' 'harfbuzz')
+makedepends=('libx11')
+optdepends=('libx11: Some demo programs')
 provides=('libfreetype.so')
 install=freetype2.install
 source=(http://download.savannah.gnu.org/releases/freetype/freetype-${pkgver}.tar.bz2{,.sig}
@@ -33,19 +35,25 @@ sha1sums=('5db38ae2308c5a2c519c8e071e98b70d61585201'
 validpgpkeys=('58E0C111E39F5408C5D3EC76C1A60EACE707FDA5')
 
 prepare() {
-  # rename source dir to allow building the demos
+  # Rename source dir to allow building the demos
   mv freetype-${pkgver} freetype2
+
   cd freetype2
-  patch -Np1 -i "${srcdir}/0001-Enable-table-validation-modules.patch"
-  patch -Np1 -i "${srcdir}/0002-Enable-subpixel-rendering.patch"
+  patch -Np1 -i ../0001-Enable-table-validation-modules.patch
+  patch -Np1 -i ../0002-Enable-subpixel-rendering.patch
 
   # Provide a way to set the default subpixel hinting mode
   # at runtime, without depending on the application to do so.
-  patch -Np1 -i "${srcdir}/0003-Make-subpixel-hinting-mode-configurable.patch"
+  patch -Np1 -i ../0003-Make-subpixel-hinting-mode-configurable.patch
 
   # Keep the classic subpixel hinting mode as default, as expected
   # by upstream for the 2.6 series
-  patch -Np1 -i "${srcdir}/0004-Keep-default-interpreter-version-as-35.patch"
+  patch -Np1 -i ../0004-Keep-default-interpreter-version-as-35.patch
+
+  cd ../ft2demos-${pkgver}
+
+  # Suppress RPATH
+  sed -i '/X11_LIB:%=-R%/d' graph/x11/rules.mk
 }
 
 build() {
@@ -54,9 +62,8 @@ build() {
   make
 
   # Build demos
-  pushd ../ft2demos-${pkgver}
+  cd ../ft2demos-${pkgver}
   make
-  popd
 }
 
 check() {
@@ -68,10 +75,13 @@ package() {
   cd freetype2
   make DESTDIR="${pkgdir}" install
 
-  # package demos
-  install -m755 ../ft2demos-${pkgver}/bin/.libs/{f,t}t* "$pkgdir/usr/bin/"
+  # Package docs
+  install -dm755 "${pkgdir}/usr/share/doc"
+  cp -a docs "${pkgdir}/usr/share/doc/${pkgname}"
 
-  # package docs
-  install -dm755 ${pkgdir}/usr/share/doc/${pkgname}
-  cp -a docs/* ${pkgdir}/usr/share/doc/${pkgname}
+  # Package demos
+  cd ../ft2demos-${pkgver}
+  for _i in bin/{f,t}t*; do
+    libtool --mode=install install $_i "$pkgdir/usr/bin/"
+  done
 }
