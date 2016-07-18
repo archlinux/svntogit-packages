@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=230
-pkgrel=6
+pkgrel=7
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -53,6 +53,9 @@ _backports=(
 
   # nspawn: fix uid patching logic
   0c6aeb4609f619328b9dcf8d8d815bd06e412ac5
+
+  # load-fragment: don't try to do a template instance replacement if we are not an instance (#3451)
+  9d3e340639bc0b4610f7ece98a84157dbc1c2c8f
 )
 
 prepare() {
@@ -84,6 +87,7 @@ build() {
     --with-sysvrcnd-path=
     --with-ntp-servers="${timeservers[*]}"
     --with-default-dnssec=no
+    --with-dbuspolicydir=/usr/share/dbus-1/system.d
     --without-kill-user-processes
   )
 
@@ -106,15 +110,7 @@ package_systemd() {
               'quota-tools: kernel-level quota management'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
               'polkit: allow administration as unprivileged user')
-  backup=(etc/dbus-1/system.d/org.freedesktop.systemd1.conf
-          etc/dbus-1/system.d/org.freedesktop.hostname1.conf
-          etc/dbus-1/system.d/org.freedesktop.login1.conf
-          etc/dbus-1/system.d/org.freedesktop.locale1.conf
-          etc/dbus-1/system.d/org.freedesktop.machine1.conf
-          etc/dbus-1/system.d/org.freedesktop.timedate1.conf
-          etc/dbus-1/system.d/org.freedesktop.import1.conf
-          etc/dbus-1/system.d/org.freedesktop.network1.conf
-          etc/pam.d/systemd-user
+  backup=(etc/pam.d/systemd-user
           etc/systemd/coredump.conf
           etc/systemd/journald.conf
           etc/systemd/journal-remote.conf
