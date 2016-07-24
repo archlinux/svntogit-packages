@@ -2,34 +2,42 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=easy-rsa
-pkgver=2.2.2
-pkgrel=2
-pkgdesc="Simple shell based CA utility"
-arch=(any)
-url="https://github.com/OpenVPN/easy-rsa"
+pkgver=3.0.1
+pkgrel=1
+pkgdesc='Simple shell based CA utility'
+arch=('any')
+url='https://github.com/OpenVPN/easy-rsa'
 depends=('openssl' 'sh')
 license=('custom')
-backup=('usr/share/easy-rsa/vars'
-        'usr/share/easy-rsa/openssl-1.0.0.cnf')
-source=(${pkgname}-${pkgver}::https://github.com/OpenVPN/easy-rsa/archive/${pkgver}.tar.gz)
-md5sums=('040238338980617bc9c2df4274349593')
+backup=('etc/easy-rsa/openssl-1.0.cnf'
+	'etc/easy-rsa/vars')
+validpgpkeys=(
+	'65FF3F24AA08E882CB444C94D731D97A606FD463'	# Josh Cepek <josh.cepek@usa.net>
+	'6F4056821152F03B6B24F2FCF8489F839D7367F3')	# Eric Crist <ecrist@secure-computing.net>
+source=("https://github.com/OpenVPN/easy-rsa/releases/download/${pkgver}/EasyRSA-${pkgver}.tgz"{,.sig})
+sha256sums=('dbdaf5b9444b99e0c5221fd4bcf15384c62380c1b63cea23d42239414d7b2d4e'
+            'SKIP')
 
 prepare() {
-  cd "${srcdir}"/${pkgname}-${pkgver}
-  autoreconf -i
-}
+	cd EasyRSA-${pkgver}/
 
-build() {
-  cd "${srcdir}"/${pkgname}-${pkgver}
-  ./configure --prefix=/usr
-  make
+	# fix output of help command, we have it in PATH
+	sed -i 's|./easyrsa|easyrsa|' easyrsa
 }
 
 package() {
-  cd "${srcdir}"/$pkgname-$pkgver
-  make install DESTDIR="${pkgdir}"
-  rm -f ${pkgdir}/usr/share/easy-rsa/openssl-0.9.?.cnf
-  # Install license
-  install -d -m755 "${pkgdir}"/usr/share/licenses/${pkgname}/
-  ln -sf /usr/share/doc/${pkgname}/{COPYING,COPYRIGHT.GPL} "${pkgdir}"/usr/share/licenses/${pkgname}/
+	cd EasyRSA-${pkgver}/
+
+	install -D -m0755 easyrsa "${pkgdir}"/usr/bin/easyrsa
+
+	install -D -m0644 openssl-1.0.cnf "${pkgdir}"/etc/easy-rsa/openssl-1.0.cnf
+	install -D -m0644 vars.example "${pkgdir}"/etc/easy-rsa/vars
+	install -d -m0755 "${pkgdir}"/etc/easy-rsa/x509-types/
+	install -m0644 x509-types/* "${pkgdir}"/etc/easy-rsa/x509-types/
+
+	install -d -m0755  ${pkgdir}/usr/share/doc/easy-rsa/
+	install -m0644 doc/* ChangeLog ${pkgdir}/usr/share/doc/easy-rsa/
+
+	install -D -m0644 COPYING ${pkgdir}/usr/share/licenses/easy-rsa/COPYING
 }
+
