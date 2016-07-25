@@ -6,7 +6,7 @@
 # Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
 
 pkgname=curl
-pkgver=7.49.1
+pkgver=7.50.0
 pkgrel=1
 pkgdesc="An URL retrieval utility and library"
 arch=('i686' 'x86_64')
@@ -16,20 +16,12 @@ depends=('ca-certificates' 'krb5' 'libidn' 'libssh2' 'openssl' 'zlib')
 provides=('libcurl.so')
 options=('strip' 'debug')
 source=("http://curl.haxx.se/download/$pkgname-$pkgver.tar.gz"{,.asc}
-        curlbuild.h
-        '0001-curl-fix-q-regression.patch')
-md5sums=('2feb3767b958add6a177c6602ff21e8c'
+        curlbuild.h)
+md5sums=('03940d7d4fcea1521fbbf07c1cf16f5e'
          'SKIP'
-         '751bd433ede935c8fae727377625a8ae'
-         'cf4fe87fc22ae744d87800891d608fa3')
+         '751bd433ede935c8fae727377625a8ae')
 validpgpkeys=('27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2'   # Daniel Stenberg
               '914C533DF9B2ADA2204F586D78E11C6B279D5C91')  # Daniel Stenberg (old key)
-
-prepare() {
-  cd "$pkgname-$pkgver"
-
-  patch -Np1 <../0001-curl-fix-q-regression.patch
-}
 
 build() {
   cd "$pkgname-$pkgver"
@@ -56,14 +48,8 @@ package() {
 
   make DESTDIR="$pkgdir" install
 
-  local ptrsize=$(cpp <<<'__SIZEOF_POINTER__' | sed '/^#/d')
-  case $ptrsize in
-    8) _curlbuild=curlbuild-64.h ;;
-    4) _curlbuild=curlbuild-32.h ;;
-    *) error "unknown pointer size for architecture: %s bytes" "$ptrsize"
-      exit 1
-      ;;
-  esac
+  local wordsize=$(cpp -include 'bits/wordsize.h' <<<'__WORDSIZE' | sed '$!d')
+  local _curlbuild=curlbuild-$wordsize.h
 
   # license
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
