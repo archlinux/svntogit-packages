@@ -4,7 +4,7 @@
 pkgbase=vulkan-loader-layers
 pkgname=(vulkan-icd-loader vulkan-validation-layers)
 _pkgname=Vulkan-LoaderAndValidationLayers
-pkgver=1.0.17.0
+pkgver=1.0.21.0
 pkgrel=1
 arch=(i686 x86_64)
 url="https://www.khronos.org/vulkan/"
@@ -12,16 +12,28 @@ license=('custom')
 depends=()
 makedepends=(git cmake python-lxml libx11 wayland)
 source=("https://github.com/KhronosGroup/${_pkgname}/archive/sdk-${pkgver}.tar.gz"
-        'git://github.com/KhronosGroup/glslang.git#commit=4678ca9dacfec7a084dbc69bbe568bdad6889f1b'
-        'git://github.com/KhronosGroup/SPIRV-Tools.git#commit=37e4600c3efad7b1cfdc1df70a977be82eb3c811'
+        'git://github.com/KhronosGroup/glslang.git#commit=e4821e43c86d97bcf65fb07c1f70471b7102978d'
+        'git://github.com/KhronosGroup/SPIRV-Tools.git#commit=1a9385bbd0e6eae188c14302cf37c415ecc8b698'
         'git://github.com/KhronosGroup/SPIRV-Headers')
-sha256sums=('b19fcff86e606d11ca149f7e10bdb7f8b073c5bb40647fe68a52045e1d0d7c8f'
+sha256sums=('205e6feee6af29d0d23d241c666261e9646e595689e9a90900fbc63c4c838134'
             'SKIP'
             'SKIP'
             'SKIP')
 
 build() {
   cd "${srcdir}/${_pkgname}-sdk-${pkgver}"
+
+  pushd ${srcdir}/glslang
+  # Revert glslang a5c33d6ffb34ccede5b233bc724c907166b6e479
+  # See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
+  git diff-index --quiet HEAD | true
+  rc=${PIPESTATUS[0]}
+  if (( $rc == 0 ))
+  then
+    echo "applying patch to revert glslang a5c33d"
+    git apply "${srcdir}/${_pkgname}-sdk-${pkgver}"/glslang_revert_a5c33d.patch.txt
+  fi
+  popd
   
   # reproduce some of the update_external_sources.sh script
   rm -rf external ; mkdir external ; cd external
