@@ -1,4 +1,4 @@
-# $Id: PKGBUILD 272011 2016-07-19 19:49:37Z andyrtr $
+# $Id$
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=ijs
@@ -8,8 +8,8 @@ pkgdesc="a library which implements a protocol for transmission of raster page i
 arch=('i686' 'x86_64')
 url="http://www.openprinting.org/download/ijs/"
 license=('GPL')
-depends=('ghostscript' 'sh')
-makedepends=('docbook-utils')
+depends=('glibc' 'sh')
+makedepends=('docbook-utils' 'ghostscript')
 source=("http://www.openprinting.org/download/ijs/download/ijs-$pkgver.tar.bz2")
 md5sums=('896fdcb7a01c586ba6eb81398ea3f6e9')
 
