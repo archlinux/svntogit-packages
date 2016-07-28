@@ -5,11 +5,11 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.20.1
-pkgrel=1
-pkgdesc="Gnome Display Manager"
+pkgrel=2
+pkgdesc="Display manager and login screen"
 arch=(i686 x86_64)
 license=(GPL)
-url="http://www.gnome.org"
+url="https://wiki.gnome.org/Projects/GDM"
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-server-xwayland xorg-xhost)
 makedepends=(itstool intltool yelp-tools gobject-introspection)
 checkdepends=('check')
@@ -40,10 +40,11 @@ build() {
     --enable-ipv6 \
     --with-at-spi-registryd-directory=/usr/lib/at-spi2-core \
     --with-check-accelerated-directory=/usr/lib/gnome-session \
+    --with-default-pam-config=arch \
+    --with-default-path=/usr/local/bin:/usr/local/sbin:/usr/bin \
     --with-gnome-settings-daemon-directory=/usr/lib/gnome-settings-daemon \
-    --without-tcp-wrappers \
     --without-plymouth \
-    --with-default-pam-config=arch
+    --without-tcp-wrappers
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
 
@@ -67,8 +68,10 @@ package_gdm() {
   cd $pkgbase-$pkgver
   make DESTDIR="$pkgdir" install
 
-  chmod 711 "$pkgdir/var/log/gdm"
-  rm -r "$pkgdir/var/run"
+  chown -R 120:120 "$pkgdir/var/lib/gdm"
+
+  # Unused or created at start
+  rm -r "$pkgdir"/var/{cache,log,run}
 
 ### Split libgdm
   make -C libgdm DESTDIR="$pkgdir" uninstall
@@ -78,7 +81,6 @@ package_gdm() {
 package_libgdm() {
   pkgdesc="GDM support library"
   depends=(systemd glib2)
-  install=libgdm.install
 
   cd $pkgbase-$pkgver
   make -C libgdm DESTDIR="$pkgdir" install
