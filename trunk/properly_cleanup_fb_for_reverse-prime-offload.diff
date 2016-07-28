@@ -1,0 +1,45 @@
+From 12f77348e7a9579b167b41228dec9e6f97b74de8 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Fri, 3 Jun 2016 14:46:10 +0200
+Subject: Properly cleanup fb for reverse-prime-offload
+
+drmmode_set_scanout_pixmap(pix) adds drmmod->fb_id through a call
+to drmmode_xf86crtc_resize(), but on a subsequent
+drmmode_set_scanout_pixmap(NULL) it would not remove the fb.
+
+This keeps the crtc marked as busy, which causes the dgpu to not
+being able to runtime suspend, after an output attached to the dgpu
+has been used once. Which causes burning through an additional 10W
+of power and the laptop to run quite hot.
+
+This commit adds the missing remove fb call, allowing the dgpu to runtime
+suspend after an external monitor has been plugged into the laptop.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Ben Skeggs <bskeggs@redhat.com>
+
+diff --git a/src/drmmode_display.c b/src/drmmode_display.c
+index b950f42..f326e46 100644
+--- a/src/drmmode_display.c
++++ b/src/drmmode_display.c
+@@ -680,10 +680,16 @@ drmmode_set_scanout_pixmap(xf86CrtcPtr crtc, PixmapPtr ppix)
+ 	PixmapPtr screenpix = screen->GetScreenPixmap(screen);
+ 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(crtc->scrn);
+ 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++	drmmode_ptr drmmode = drmmode_crtc->drmmode;
+ 	int c, total_width = 0, max_height = 0, this_x = 0;
+ 	if (!ppix) {
+-		if (crtc->randr_crtc->scanout_pixmap)
++		if (crtc->randr_crtc->scanout_pixmap) {
+ 			PixmapStopDirtyTracking(crtc->randr_crtc->scanout_pixmap, screenpix);
++			if (drmmode && drmmode->fb_id) {
++				drmModeRmFB(drmmode->fd, drmmode->fb_id);
++				drmmode->fb_id = 0;
++			}
++		}
+ 		drmmode_crtc->scanout_pixmap_x = 0;
+ 		return TRUE;
+ 	}
+-- 
+cgit v0.10.2
+
