@@ -4,7 +4,7 @@
 
 pkgname=('texlive-bin' 'libsynctex')
 pkgver=2016.41290
-pkgrel=2
+pkgrel=2.1
 license=('GPL')
 arch=('i686' 'x86_64')
 makedepends=('cairo' 'pixman' 'graphite' 't1lib' 'gd' 'poppler'
@@ -14,9 +14,17 @@ makedepends=('cairo' 'pixman' 'graphite' 't1lib' 'gd' 'poppler'
 url='http://tug.org/texlive/'
 source=('fix-fontforge-encoding.patch'
         "http://mirrors.kernel.org/archlinux/other/texlive/texlive-bin-source-${pkgver}.tar.xz"
+        "mktexlsr.hook"
+        "mktexlsr.script"
+        "texlive-updmap.hook"
+        "texlive-updmap.script"
 )
 md5sums=('bfb9716aa00c86c08cd31e5b32edeb98'
-         '7303361f2d441eb5c962a996fd77e8fa')
+         '7303361f2d441eb5c962a996fd77e8fa'
+         '7bc9cef52d3b0c15d2364b7d8658faa6'
+         'b8005a998186d3846df357ef0f4b4560'
+         'c18cbbd000aac60813b1695aa058964f'
+         '06034157badeeefe9982d7b29e7f5b51')
 
 build() {
    cd "$srcdir"
@@ -86,14 +94,12 @@ build() {
 }
 
 package_libsynctex() {
-   pkgdesc='Library for synchronization between TeX files and resulting file'
-   depends=('glibc' 'zlib')
+    pkgdesc='Library for synchronization between TeX files and resulting file'
+    depends=('glibc' 'zlib')
 
-   install -d "$pkgdir"/usr/lib
-
-   for lib in "$srcdir"/source/Work/texk/web2c/.libs/libsynctex.so*; do
-      cp -P $lib "$pkgdir"/usr/lib/
-   done
+    cd "${srcdir}/source/Work"
+    make -C texk/web2c DESTDIR="${pkgdir}" \
+        install-data-am install-libLTLIBRARIES
 }
 
 package_texlive-bin() {
@@ -152,6 +158,12 @@ package_texlive-bin() {
    ln -s pdftex ${pkgdir}/usr/bin/utf8mex
    ln -s pdftex ${pkgdir}/usr/bin/xmltex
    ln -s xetex ${pkgdir}/usr/bin/xelatex
+
+   ## install pacman hooks
+   install -D -m644 ${srcdir}/mktexlsr.hook "$pkgdir/usr/share/libalpm/hooks/mktexlsr.hook"
+   install -D -m644 ${srcdir}/texlive-updmap.hook "$pkgdir/usr/share/libalpm/hooks/texlive-updmap.hook"
+   install -D -m755 ${srcdir}/mktexlsr.script "$pkgdir/usr/share/libalpm/scripts/mktexlsr"
+   install -D -m755 ${srcdir}/texlive-updmap.script "$pkgdir/usr/share/libalpm/scripts/texlive-updmap"
 
    #############################################################
    # remove dangling symlinks
@@ -344,6 +356,9 @@ pn2pdf"
    ###################################################################
 
    # remove libsynctex
+   rm -f "$pkgdir"/usr/include/synctex/*
    rm -f "$pkgdir"/usr/lib/libsynctex.*
+   rm -f "$pkgdir"/usr/lib/pkgconfig/synctex.pc
+   rm -f "$pkgdir"/usr/share/man/man*/synctex.*
 }
 
