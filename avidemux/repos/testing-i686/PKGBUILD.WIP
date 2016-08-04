@@ -1,0 +1,84 @@
+# $Id: PKGBUILD 160693 2012-06-03 22:00:17Z eric $
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgbase=avidemux
+pkgname=('avidemux-cli' 'avidemux-gtk' 'avidemux-qt')
+pkgver=2.6.8
+pkgrel=1
+arch=('i686' 'x86_64')
+license=('GPL2')
+url="http://fixounet.free.fr/avidemux/"
+makedepends=('cmake' 'libxslt' 'gtk3' 'qt4' 'jack' 'libvorbis' 'sdl' 'libxv' \
+             'alsa-lib' 'lame' 'xvidcore' 'faad2' 'faac' 'x264' 'libsamplerate' \
+             'opencore-amr' 'yasm' 'mesa' 'libvpx' 'libpulse' 'libva' \
+             'libvdpau' 'libdca' 'fribidi' 'glu')
+options=('!makeflags' '!emptydirs')
+source=(http://downloads.sourceforge.net/avidemux/avidemux_${pkgver}.tar.gz)
+sha1sums=('50f3dfe270e6272fce46d725b198b9d0dd95664b')
+#source=(http://www.avidemux.org/nightly/snapshot/source_r8810.tar.gz)
+#sha1sums=('8c27d54e2b0655a8b8a3adfde1c0308ffedfec0c')
+
+prepare() {
+#  mv 2.6_snapshot ${pkgbase}_${pkgver}
+  cd ${pkgbase}_${pkgver}
+  sed -i 's|avidemux2|avidemux3|' avidemux2.desktop
+  sed -i 's|../avidemux/qt4|../avidemux/qt4 -DLRELEASE_EXECUTABLE=/usr/bin/lrelease-qt4|' bootStrap.bash
+  sed -i 's|#include "ADM_files.h"|#include "ADM_files.h"\n#include "ADM_toolkitGtk.h"|' avidemux/gtk/ADM_userInterfaces/ui_support.cpp
+}
+
+build() {
+  cd ${pkgbase}_${pkgver}
+  bash bootStrap.bash --with-core --with-cli --with-gtk --with-qt4 --with-plugins
+}
+
+package_avidemux-cli() {
+  pkgdesc="A graphical tool to edit video (filter/re-encode/split)"
+  depends=('libxml2' 'sdl' 'fontconfig' 'libvpx' 'libva')
+  optdepends=('lame: for the corresponding audio encoder plugin'
+              'faac: for the corresponding audio encoder plugin'
+              'faad2: for the corresponding audio decoder plugin'
+              'opencore-amr: for the corresponding audio decoder plugin'
+              'jack: for the corresponding audio device plugin'
+              'libpulse: for the corresponding audio device plugin'
+              'sdl: for the corresponding audio device plugin'
+              'x264: for the corresponding video encoder plugin'
+              'xvidcore: for the corresponding video encoder plugin'
+              'qt4: for the QtScript scripting support'
+              'libdca: for the corresponding audio decoder plugin'
+              'fribidi: for the corresponding video filter plugin')
+
+  cd ${pkgbase}_${pkgver}
+  (cd buildCli; make DESTDIR="${pkgdir}" install)
+  (cd buildCore; make DESTDIR="${pkgdir}" install)
+  (cd buildPluginsCLI; make DESTDIR="${pkgdir}" install)
+  (cd buildPluginsCommon; make DESTDIR="${pkgdir}" install)
+
+  install -D -m644 avidemux_icon.png "${pkgdir}/usr/share/pixmaps/avidemux.png"
+  install -D -m644 man/avidemux.1 "${pkgdir}/usr/share/man/man1/avidemux.1"
+}
+
+package_avidemux-gtk() {
+  pkgdesc="A graphical tool to edit video (filter/re-encode/split) - GTK GUI"
+  depends=("avidemux-cli=${pkgver}" 'gtk3' 'libxv' 'desktop-file-utils')
+  install=avidemux.install
+
+  cd ${pkgbase}_${pkgver}
+  (cd buildGtk; make DESTDIR="${pkgdir}" install)
+  (cd buildPluginsGtk; make DESTDIR="${pkgdir}" install)
+  install -D -m644 avidemux2.desktop "${pkgdir}/usr/share/applications/avidemux-gtk.desktop"
+
+  rm "${pkgdir}/usr/lib/ADM_plugins6/videoEncoders/libADM_ve_x264_other.so"
+}
+
+package_avidemux-qt() {
+  pkgdesc="A graphical tool to edit video (filter/re-encode/split) - Qt GUI"
+  depends=("avidemux-cli=${pkgver}" 'qt4' 'x264' 'glu')
+  install=avidemux.install
+
+  cd ${pkgbase}_${pkgver}
+  (cd buildQt4; make DESTDIR="${pkgdir}" install)
+  (cd buildPluginsQt4; make DESTDIR="${pkgdir}" install)
+
+  install -D -m644 avidemux2.desktop "${pkgdir}/usr/share/applications/avidemux-qt.desktop"
+  sed -i 's|gtk|qt4|' "${pkgdir}/usr/share/applications/avidemux-qt.desktop"
+}
