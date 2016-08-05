@@ -5,16 +5,16 @@
 # NOTE: valgrind requires rebuilt with each major glibc version
 
 pkgname=glibc
-pkgver=2.23
-pkgrel=5
-_commit=1915d6d1
+pkgver=2.24
+pkgrel=1
+_commit=fdfc9260
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=4.1' 'tzdata' 'filesystem')
-makedepends=('gcc>=5.2' 'git')
+depends=('linux-api-headers>=4.7' 'tzdata' 'filesystem')
+makedepends=('gcc>=6' 'git')
 backup=(etc/gai.conf
         etc/locale.gen
         etc/nscd.conf)
