@@ -5,26 +5,29 @@ pkgbase=gvfs
 pkgname=(gvfs gvfs-{smb,afc,gphoto2,goa,mtp,nfs,google})
 pkgdesc="Virtual filesystem implementation for GIO"
 url="https://wiki.gnome.org/Projects/gvfs"
-pkgver=1.28.2
+pkgver=1.28.2+22+g6c1124d
 pkgrel=1
 arch=(i686 x86_64)
 license=(LGPL)
 depends=(avahi dconf fuse libarchive libcdio-paranoia libsoup udisks2 libsecret
          libbluray libgudev gcr psmisc)
 makedepends=(dbus intltool libgphoto2 libimobiledevice smbclient docbook-xsl
-             gtk3 libmtp gnome-online-accounts libnfs libgdata)
+             gtk3 libmtp gnome-online-accounts libnfs libgdata git gtk-doc python)
 groups=(gnome)
-source=(https://download.gnome.org/sources/$pkgbase/${pkgver:0:4}/$pkgbase-$pkgver.tar.xz
+_commit=6c1124d7d48e680378f353c993c311818dcdbf0d
+source=("git://git.gnome.org/gvfs#commit=$_commit"
         gvfsd.hook)
-sha256sums=('bc6af45cff7e7e8d33c3a4be1d27e479f10f80105a6f2d1fae75c5c0d40636d9'
+sha256sums=('SKIP'
             '478b9cf7b4c242959fc640dbf0cd4935f16c59b81f5828a3af102d608d7a9d72')
 
-prepare() {
-  cd "$pkgbase-$pkgver"
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
 }
 
 build() {
-  cd "$pkgbase-$pkgver"
+  cd "$pkgbase"
+  NOCONFIGURE=1 ./autogen.sh
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var --disable-static \
       --libexecdir=/usr/lib/gvfs \
@@ -44,7 +47,7 @@ package_gvfs() {
               'gvfs-google: Google Drive support'
               'gtk3: Recent files support')
 
-  cd "$pkgbase-$pkgver"
+  cd "$pkgbase"
   sed -e 's/^am__append_4/#am__append_4/' \
       -e 's/^am__append_5/#am__append_5/' \
       -e 's/^am__append_6/#am__append_6/' \
@@ -65,7 +68,7 @@ package_gvfs-smb() {
   pkgdesc+=" (SMB/CIFS backend; Windows client)"
   depends=("gvfs=$pkgver" smbclient)
 
-  cd "$pkgbase-$pkgver/daemon"
+  cd "$pkgbase/daemon"
   install -m755 -d "$pkgdir/usr/lib/gvfs"
   install -m755 -d "$pkgdir/usr/share/gvfs/mounts"
 
@@ -82,11 +85,11 @@ package_gvfs-afc() {
   pkgdesc+=" (AFC backend; Apple mobile devices)"
   depends=("gvfs=$pkgver" libimobiledevice usbmuxd)
 
-  cd "$pkgbase-$pkgver/daemon"
+  cd "$pkgbase/daemon"
   install -D .libs/gvfsd-afc "$pkgdir/usr/lib/gvfs/gvfsd-afc"
   install -Dm644 afc.mount "$pkgdir/usr/share/gvfs/mounts/afc.mount"
 
-  cd "$srcdir/$pkgbase-$pkgver/monitor/afc"
+  cd "$srcdir/$pkgbase/monitor/afc"
   make DESTDIR="$pkgdir" install
 }
 
@@ -94,11 +97,11 @@ package_gvfs-gphoto2() {
   pkgdesc+=" (gphoto2 backend; PTP camera, MTP media player)"
   depends=("gvfs=$pkgver" libgphoto2)
 
-  cd "$pkgbase-$pkgver/daemon"
+  cd "$pkgbase/daemon"
   install -D .libs/gvfsd-gphoto2 "$pkgdir/usr/lib/gvfs/gvfsd-gphoto2"
   install -Dm644 gphoto2.mount "$pkgdir/usr/share/gvfs/mounts/gphoto2.mount"
 
-  cd "$srcdir/$pkgbase-$pkgver/monitor/gphoto2"
+  cd "$srcdir/$pkgbase/monitor/gphoto2"
   make DESTDIR="$pkgdir" install
 }
 
@@ -106,11 +109,11 @@ package_gvfs-mtp() {
   pkgdesc+=" (MTP backend; Android, media player)"
   depends=("gvfs=$pkgver" libmtp)
 
-  cd "$pkgbase-$pkgver/daemon"
+  cd "$pkgbase/daemon"
   install -D .libs/gvfsd-mtp "$pkgdir/usr/lib/gvfs/gvfsd-mtp"
   install -Dm644 mtp.mount "$pkgdir/usr/share/gvfs/mounts/mtp.mount"
 
-  cd "$srcdir/$pkgbase-$pkgver/monitor/mtp"
+  cd "$srcdir/$pkgbase/monitor/mtp"
   make DESTDIR="$pkgdir" install
 }
 
@@ -118,7 +121,7 @@ package_gvfs-goa() {
   pkgdesc+=" (Gnome Online Accounts backend; cloud storage)"
   depends=("gvfs=$pkgver" gnome-online-accounts)
 
-  cd "$srcdir/$pkgbase-$pkgver/monitor/goa"
+  cd "$srcdir/$pkgbase/monitor/goa"
   make DESTDIR="$pkgdir" install
 }
 
@@ -127,7 +130,7 @@ package_gvfs-nfs() {
   depends=("gvfs=$pkgver" libnfs)
   install=gvfs-nfs.install
 
-  cd "$pkgbase-$pkgver/daemon"
+  cd "$pkgbase/daemon"
   install -D .libs/gvfsd-nfs "$pkgdir/usr/lib/gvfs/gvfsd-nfs"
   install -Dm644 nfs.mount "$pkgdir/usr/share/gvfs/mounts/nfs.mount"
 }
@@ -136,7 +139,7 @@ package_gvfs-google() {
   pkgdesc+=" (Google Drive backend)"
   depends=("gvfs-goa=$pkgver" libgdata)
 
-  cd "$pkgbase-$pkgver/daemon"
+  cd "$pkgbase/daemon"
   install -D .libs/gvfsd-google "$pkgdir/usr/lib/gvfs/gvfsd-google"
   install -Dm644 google.mount "$pkgdir/usr/share/gvfs/mounts/google.mount"
 }
