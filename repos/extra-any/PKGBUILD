@@ -4,16 +4,16 @@
 pkgbase=python-pyelftools
 pkgname=('python2-pyelftools' 'python-pyelftools')
 _pkgname=pyelftools
-pkgver=0.23
-pkgrel=3
+pkgver=0.24
+pkgrel=1
 pkgdesc='Python library for analyzing ELF files and DWARF debugging information'
-url="https://github.com/eliben/pyelftools"
+url='https://github.com/eliben/pyelftools'
 arch=('any')
 license=('custom:Public Domain')
 makedepends=('python' 'python2')
 options=('!strip')
 source=(${_pkgname}-${pkgver}.tar.gz::https://github.com/eliben/${_pkgname}/archive/v${pkgver}.tar.gz)
-sha512sums=('277976a889291c4abf9a700655d4a2e373f763aa80f8d5929822dd323a7d3563d51a51b7cf72979752f33790394aabdc3cbd06e03c4bb54022030adc8942dd4b')
+sha512sums=('5f02018b3c1c6da55c762e4e7a0eb9d5c9d2af542779dbcda231f563eb93565a0b5bd520ab5a4e07b26958122abeea1e76ee8609e4941ac38289adacea50910f')
 
 prepare() {
   cp -ra ${_pkgname}-${pkgver}{,-py2}
@@ -57,8 +57,8 @@ package_python-pyelftools() {
   depends=('python')
   cd ${_pkgname}-${pkgver}
   python setup.py install -O1 --root="${pkgdir}" --skip-build
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-  install -Dm644 README.rst "${pkgdir}/usr/share/doc/${pkgname}/README"
+  install -Dm 644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm 644 README.rst CHANGES -t "${pkgdir}/usr/share/doc/${pkgname}"
   cp -r examples "${pkgdir}/usr/share/doc/${pkgname}"
 }
 
@@ -66,8 +66,8 @@ package_python2-pyelftools() {
   depends=('python2')
   cd ${_pkgname}-${pkgver}-py2
   python2 setup.py install -O1 --root="${pkgdir}" --skip-build
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-  install -Dm644 README.rst "${pkgdir}/usr/share/doc/${pkgname}/README"
+  install -Dm 644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm 644 README.rst CHANGES -t "${pkgdir}/usr/share/doc/${pkgname}"
   cp -r examples "${pkgdir}/usr/share/doc/${pkgname}"
 }
 
