@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.24
-pkgrel=1
+pkgrel=2
 _commit=fdfc9260
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
