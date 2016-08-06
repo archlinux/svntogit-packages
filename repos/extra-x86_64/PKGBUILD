@@ -3,44 +3,29 @@
 
 pkgname=fontconfig
 pkgver=2.12.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A library for configuring and customizing font access"
 arch=(i686 x86_64)
 url="http://www.fontconfig.org/release/"
 license=('custom')
 depends=('expat' 'freetype2')
 makedepends=('python2' 'docbook2x')
-#makedepends=('python2' 'python2-lxml' 'gperf' 'git') # for git build
 install=fontconfig.install
 source=(http://www.fontconfig.org/release/$pkgname-$pkgver.tar.bz2
-        #git://anongit.freedesktop.org/fontconfig#commit=d05d083e9f87eb378b92e477d34a88061a572d86 # 2016-03-09 01:20:41 (GMT)
-        0002-Update-aliases-for-new-URW-fonts.patch)
+        52-emoji.conf)
 sha256sums=('b449a3e10c47e1d1c7a6ec6e2016cca73d3bd68fbbd4f0ae5cc6b573f7d6c7f3'
-            '08b5b1ccdfc1fb91787b9211758b01d9d7a988ad939c4cd0c4b5ae0e8143e59d')
+            '48740f38359a268f396e4c39d3da0868c9af336f5e5063cdd9a07ef783c56e43')
 
-  # a nice page to test font matching:
-  # http://zipcon.net/~swhite/docs/computers/browsers/fonttest.html
+# a nice page to test font matching:
+# http://zipcon.net/~swhite/docs/computers/browsers/fonttest.html
+# http://getemoji.com/
 
 prepare() {
   cd $pkgname-$pkgver
-  
-  #cd $pkgname
-
-  # Upstream patches implementing FS#45928
-  # changes in 30-metric-aliases.conf and 60-latin.conf went upstream, 
-  # keep changes in 45-latin.conf - is this really required? - disable for testing purpose
-#  patch -p1 -i ../0002-Update-aliases-for-new-URW-fonts.patch
-
 }
 
 build() {
   cd $pkgname-$pkgver
-  #cd $pkgname
-
-  # make sure there's no rpath trouble and sane .so versioning - FC and Gentoo do this as well
-#  libtoolize -f
-#  autoreconf -fi
-  
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --with-templatedir=/etc/fonts/conf.avail \
@@ -54,13 +39,17 @@ build() {
 
 check() {
   cd $pkgname-$pkgver
-  #cd $pkgname
   make -k check
+}
+
+_install_conf() {
+  install -m644 "$1" "$pkgdir/etc/fonts/conf.avail"
+  ln -s "../conf.avail/${1##*/}" "$pkgdir/etc/fonts/conf.d"
 }
 
 package() {
   cd $pkgname-$pkgver
-  #cd $pkgname
   make DESTDIR="$pkgdir" install
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+  _install_conf ../52-emoji.conf
 }
