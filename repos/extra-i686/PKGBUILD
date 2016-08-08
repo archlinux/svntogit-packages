@@ -5,32 +5,37 @@
 pkgname=qt5-wayland
 _qtver=5.7.0
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
-license=('GPL3' 'LGPL' 'FDL' 'custom')
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
 pkgdesc='Provides APIs for Wayland'
-depends=('qt5-declarative' 'libxcomposite')
+depends=('qt5-declarative' 'libxcomposite' 'wayland') # namcap note: wayland is needed for nvidia-libgl users
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
-source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
-md5sums=('2d2543a2564ee1b5db9f25dca9cc2e3b')
+source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
+        qtbug-53945.patch::"https://github.com/qtproject/qtwayland/commit/75294be3.patch")
+md5sums=('2d2543a2564ee1b5db9f25dca9cc2e3b'
+         '887f656b651e230169ce02753f14d746')
 
 prepare() {
   mkdir -p build
+
+  cd ${_pkgfqn}
+# Fix out-of-tree build
+  patch -p1 -i ../qtbug-53945.patch
 }
 
 build() {
-#  cd build
-  cd ${_pkgfqn} # out-of-tree build fails https://bugreports.qt.io/browse/QTBUG-54148
-# qmake ../${_pkgfqn}
-  qmake .
+  cd build
+
+  qmake ../${_pkgfqn}
   make
 }
 
 package() {
-# cd build
-  cd ${_pkgfqn}
+  cd build
+
   make INSTALL_ROOT="$pkgdir" install
 
   # Drop QMAKE_PRL_BUILD_DIR because reference the build dir
