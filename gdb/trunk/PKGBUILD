@@ -2,16 +2,17 @@
 # Maintainer: Allan McRae <allan@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
-pkgname=gdb
+pkgbase=gdb
+# gdb-common is a package that contains files common for all cross compiled versions
+# of gdb (for arm/avr/...)
+pkgname=(gdb gdb-common)
 pkgver=7.11.1
-pkgrel=1
+pkgrel=2
 pkgdesc='The GNU Debugger'
 arch=(i686 x86_64)
 url='http://www.gnu.org/software/gdb/'
 license=(GPL3)
-depends=(ncurses expat python xz guile)
-makedepends=(texinfo)
-backup=(etc/gdb/gdbinit)
+makedepends=(texinfo python guile ncurses expat xz)
 source=(http://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig})
 sha1sums=('df23fde077df1b8555949281bc963596f70de3ec'
           'SKIP')
@@ -34,7 +35,24 @@ build() {
   make
 }
 
-package() {
+package_gdb-common() {
+  depends=(python guile)
+
+  cd gdb-$pkgver
+  make DESTDIR=$pkgdir install
+
+  # resolve conflicts with binutils
+  rm $pkgdir/usr/include/{ansidecl,bfd,bfdlink,dis-asm,plugin-api,symcat}.h
+  rm $pkgdir/usr/share/info/bfd.info
+  rm $pkgdir/usr/lib/{libbfd,libopcodes}.a
+
+  rm -r $pkgdir/usr/{bin,include,lib,share/info,share/man}
+}
+
+package_gdb() {
+  depends=(ncurses expat xz gdb-common=$pkgver)
+  backup=(etc/gdb/gdbinit)
+
   cd gdb-$pkgver
   make DESTDIR=$pkgdir install
 
@@ -46,4 +64,7 @@ package() {
   rm $pkgdir/usr/include/{ansidecl,bfd,bfdlink,dis-asm,plugin-api,symcat}.h
   rm $pkgdir/usr/share/info/bfd.info
   rm $pkgdir/usr/lib/{libbfd,libopcodes}.a
+
+  # comes from gdb-common
+  rm -r $pkgdir/usr/share/gdb/
 }
