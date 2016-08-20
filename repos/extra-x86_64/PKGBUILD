@@ -4,7 +4,7 @@
 
 pkgname=mutt
 pkgver=1.7.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 license=('GPL')
@@ -26,6 +26,7 @@ build() {
 		--enable-imap \
 		--enable-smtp \
 		--enable-hcache \
+		--enable-sidebar \
 		--with-curses=/usr \
 		--with-regex \
 		--with-gss=/usr \
