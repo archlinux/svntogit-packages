@@ -1,20 +1,54 @@
-#!/bin/bash
-# archlinux config files
-. /etc/conf.d/nfs-common.conf
-. /etc/conf.d/nfs-server.conf
-# config file read by systemd files
-NFS_UTILS_CONFIG=/run/sysconfig/nfs-utils
+#!/bin/sh
 
-[[ -d /run/sysconfig ]] || mkdir /run/sysconfig
-[[ -e  $NFS_UTILS_CONFIG ]] && rm -f $NFS_UTILS_CONFIG
+#
+# Extract configuration from /etc/sysconfig/nfs and write
+# environment variables to /run/sysconfig/nfs-utils to be 
+# used by systemd nfs-config service
+#
 
-# /etc/conf.d/nfs-common
-echo "STATDARGS=\"$STATD_OPTS\"" >> $NFS_UTILS_CONFIG
-echo "SMNOTIFYARGS=\"$SMNOTIFY_OPTS\"" >> $NFS_UTILS_CONFIG
-echo "RPCIDMAPDARGS=\"$IDMAPD_OPTS\"" >> $NFS_UTILS_CONFIG
-echo "GSSDARGS=\"$GSSD_OPTS\"" >> $NFS_UTILS_CONFIG
+nfs_config=/etc/sysconfig/nfs
+if test -r $nfs_config; then
+    . $nfs_config
+fi
 
-# /etc/conf.d/nfs-server
-echo "RPCMOUNTDARGS=\"$MOUNTD_OPTS\"" >> $NFS_UTILS_CONFIG
-echo "RPCNFSDARGS=\"$NFSD_OPTS\"" >> $NFS_UTILS_CONFIG
-echo "SVCGSSDARGS=\"$SVCGSSD_OPTS\"" >> $NFS_UTILS_CONFIG
+[ -n "$LOCKDARG" ] && /usr/bin/modprobe lockd $LOCKDARG
+if [ -n "$LOCKD_TCPPORT" -o -n "$LOCKD_UDPPORT" ]; then
+    [ -z "$LOCKDARG" ] && /usr/bin/modprobe lockd $LOCKDARG
+    [ -n "$LOCKD_TCPPORT" ] && \
+        /usr/bin/sysctl -w fs.nfs.nlm_tcpport=$LOCKD_TCPPORT >/dev/null 2>&1
+    [ -n "$LOCKD_UDPPORT" ] && \
+        /usr/bin/sysctl -w fs.nfs.nlm_udpport=$LOCKD_UDPPORT >/dev/null 2>&1
+fi
+
+if [ -n "$NFSD_V4_GRACE" ]; then
+    grace="-G $NFSD_V4_GRACE"
+fi
+
+if [ -n "$NFSD_V4_LEASE" ]; then
+    lease="-L $NFSD_V4_LEASE"
+fi
+
+if [ -n "$RPCNFSDCOUNT" ]; then
+    nfsds=$RPCNFSDCOUNT
+else
+    nfsds=8
+fi
+
+if [ -n "$RPCNFSDARGS" ]; then
+    nfsdargs="$RPCNFSDARGS $grace $lease $nfsds"
+else
+    nfsdargs="$grace $lease $nfsds"
+fi
+
+mkdir -p /run/sysconfig
+{
+echo RPCNFSDARGS=\"$nfsdargs\"
+echo RPCMOUNTDARGS=\"$RPCMOUNTDOPTS\"
+echo STATDARGS=\"$STATDARG\"
+echo SMNOTIFYARGS=\"$SMNOTIFYARGS\"
+echo RPCIDMAPDARGS=\"$RPCIDMAPDARGS\"
+echo RPCGSSDARGS=\"$RPCGSSDARGS\"
+echo RPCSVCGSSDARGS=\"$RPCSVCGSSDARGS\"
+echo BLKMAPDARGS=\"$BLKMAPDARGS\"
+echo GSS_USE_PROXY=\"$GSS_USE_PROXY\"
+} > /run/sysconfig/nfs-utils
