@@ -5,11 +5,11 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=6.1.1
+pkgver=6.2.1
 _pkgver=6
 _islver=0.16.1
-pkgrel=5
-_commit=c8454ab1
+pkgrel=1
+_commit=c2103c17
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
