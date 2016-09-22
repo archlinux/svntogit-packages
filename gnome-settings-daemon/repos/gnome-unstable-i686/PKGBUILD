@@ -1,0 +1,45 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=gnome-settings-daemon
+pkgver=3.22.0+1+g86695d5
+pkgrel=1
+pkgdesc="The GNOME Settings daemon"
+arch=(i686 x86_64)
+license=(GPL)
+depends=(dconf gnome-desktop gsettings-desktop-schemas libcanberra-pulse
+         libnotify libsystemd libwacom pulseaudio pulseaudio-alsa upower
+         librsvg libgweather geocode-glib geoclue2 nss libgudev)
+makedepends=(intltool xf86-input-wacom libxslt docbook-xsl python git gnome-common)
+options=('!emptydirs')
+url="http://www.gnome.org"
+groups=(gnome)
+source=('git://git.gnome.org/gnome-settings-daemon#commit=86695d5f743daf4c74b16e02f753f9d5bde68150')
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --long | sed -e 's/-/+/g' -e 's/^GNOME_SETTINGS_DAEMON_//' -e 's/_/./g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+      --libexecdir=/usr/lib/$pkgname --disable-static
+
+  #https://bugzilla.gnome.org/show_bug.cgi?id=656231
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
