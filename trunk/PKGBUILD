@@ -3,18 +3,18 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgbase=gtk3
-pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.22.0
+pkgname=(gtk3 gtk-update-icon-cache gtk3-print-backends)
+pkgver=3.22.0+21+gad32a48
 pkgrel=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(i686 x86_64)
 url="http://www.gtk.org/"
-depends=(atk cairo libcups libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2
-         libxcomposite libxdamage pango shared-mime-info colord at-spi2-atk wayland libxkbcommon
-         adwaita-icon-theme json-glib rest librsvg wayland-protocols desktop-file-utils mesa)
-makedepends=(gobject-introspection libcanberra gtk-doc git)
+depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2
+         libxcomposite libxdamage pango shared-mime-info at-spi2-atk wayland libxkbcommon
+         adwaita-icon-theme json-glib librsvg wayland-protocols desktop-file-utils mesa)
+makedepends=(gobject-introspection libcanberra gtk-doc git colord rest libcups)
 license=(LGPL)
-_commit=b51255b6a7a883e4e5977057707205ab8f225d55
+_commit=ad32a48765dedcf2c795321e7930dc8aa65add31
 source=("git://git.gnome.org/gtk+#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
@@ -32,6 +32,7 @@ pkgver() {
 }
 
 prepare() {
+    mkdir print-backends
     cd gtk+
     NOCONFIGURE=1 ./autogen.sh
 }
@@ -56,7 +57,8 @@ build() {
 
 package_gtk3() {
     depends+=(gtk-update-icon-cache)
-    optdepends=('libcanberra: gtk3-widget-factory demo')
+    optdepends=('libcanberra: gtk3-widget-factory demo'
+                'gtk3-print-backends: Printing')
     install=gtk3.install
 
     cd gtk+
@@ -67,6 +69,16 @@ package_gtk3() {
 
     # split this out to use with gtk2 too
     rm "$pkgdir/usr/bin/gtk-update-icon-cache"
+
+    cd "$pkgdir"
+    for _f in usr/lib/*/*/printbackends/*; do
+        case $_f in
+            *-file.so|*-lpr.so) continue;;
+        esac
+
+        mkdir -p "$srcdir/print-backends/${_f%/*}"
+        mv "$_f" "$srcdir/print-backends/$_f"
+    done
 }
 
 package_gtk-update-icon-cache() {
@@ -79,4 +91,11 @@ package_gtk-update-icon-cache() {
     install -D ../gtk-update-icon-cache.script "$pkgdir/usr/share/libalpm/scripts/gtk-update-icon-cache"
 }
 
+package_gtk3-print-backends() {
+    pkgdesc="Print backends for GTK3"
+    depends=(gtk3 rest colord libcups)
+    groups=(gnome)
+
+    mv print-backends/* "$pkgdir"
+}
 # vim:set et sw=4:
