@@ -2,21 +2,34 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=libpeas
-pkgver=1.18.0
-pkgrel=2
+pkgver=1.20.0
+pkgrel=1
 pkgdesc="A GObject-based plugins engine"
 arch=(i686 x86_64)
 url="http://www.gtk.org/"
 license=(GPL2)
 depends=(gtk3 gobject-introspection-runtime)
-makedepends=(gtk-doc intltool python-gobject python2-gobject glade gobject-introspection)
-source=(http://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-${pkgver}.tar.xz)
-sha256sums=('bf49842c64c36925bbc41d954de490b6ff7faa29b45f6fd9e91ddcc779165e26')
+makedepends=(gtk-doc intltool python-gobject python2-gobject glade gobject-introspection git
+             gnome-common)
+_commit=7548b2717160e33a806bcfa8aaaac7894f4abccc
+source=("git://git.gnome.org/libpeas#commit=$_commit")
+sha256sums=('SKIP')
 
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^libpeas-//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+  cd $pkgname
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --enable-gtk-doc --disable-static
 
   # https://bugzilla.gnome.org/show_bug.cgi?id=655517
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -25,13 +38,12 @@ build() {
 }
 
 check() {
-  cd $pkgname-$pkgver
-  # Pygobject 3.15.x Throws deprecation message to stderr which causes failed test suite. Works fine with 3.14.x
-  make check || return 0
+  cd $pkgname
+  make check
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make DESTDIR="${pkgdir}" install
 }
 
