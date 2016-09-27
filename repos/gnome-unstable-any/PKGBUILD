@@ -2,7 +2,7 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=adwaita-icon-theme
-pkgver=3.21.2+17+ge562774
+pkgver=3.22.0
 pkgrel=1
 pkgdesc="Adwaita icon theme"
 arch=(any)
@@ -12,7 +12,7 @@ url="http://www.gnome.org"
 license=('GPL')
 groups=('gnome')
 options=('!emptydirs')
-_commit=e562774e7d7a43ca4baaf6af47a2a2fc001f1db6
+_commit=00bc0b453d858bed3f2fe0538a016c6449fc20d3
 source=("git://git.gnome.org/adwaita-icon-theme#commit=$_commit")
 sha256sums=('SKIP')
 
