@@ -3,33 +3,46 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgbase=glibmm
-pkgname=('glibmm' 'glibmm-docs')
-pkgver=2.48.1
+pkgname=(glibmm glibmm-docs)
+pkgver=2.50.0
 pkgrel=1
-arch=('i686' 'x86_64')
-license=('LGPL')
-makedepends=('glib2' 'libsigc++' 'pkgconfig')
-source=(http://ftp.gnome.org/pub/GNOME/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
+pkgdesc="C++ bindings for Glib"
 url="http://www.gtkmm.org/"
-sha256sums=('dc225f7d2f466479766332483ea78f82dc349d59399d30c00de50e5073157cdf')
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(glib2 libsigc++)
+makedepends=(git mm-common perl-xml-parser clang)
+_commit=cf798ba21055d05044302561353d3abd0c9615a1
+source=("git://git.gnome.org/glibmm#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd "$pkgname-$pkgver"
-  ./configure --prefix=/usr
+  cd $pkgbase
+  ./configure --prefix=/usr --enable-maintainer-mode
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  make -j1
 }
 
 package_glibmm() {
-  pkgdesc="Glib-- (glibmm) is a C++ interface for glib"
-  depends=('glib2' 'libsigc++')
-  cd "$pkgbase-$pkgver"
+  cd $pkgbase
   sed -i -e 's/^doc_subdirs/#doc_subdirs/' Makefile
   make DESTDIR="$pkgdir" install
 }
 
 package_glibmm-docs() {
   pkgdesc="Developer documentation for glibmm"
-  cd "$pkgbase-$pkgver/docs"
+  depends=()
+
+  cd $pkgbase/docs
   make DESTDIR="$pkgdir" install
 }
