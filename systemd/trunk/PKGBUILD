@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=231
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -22,7 +22,7 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'udev-hwdb.hook')
 md5sums=('SKIP'
          '90ea67a7bb237502094914622a39e281'
-         'bee7fd6ccda39582259708e3f262ea6d'
+         '55ea7d81c02d090b65c42a88f1a5a21a'
          '1b3aa3a0551b08af9305d33f85b5c2fc'
          '20ead378f5d6df4b2a3e670301510a7d'
          'ddaef54f68f6c86c6c07835fc668f62a'
@@ -30,6 +30,9 @@ md5sums=('SKIP'
          'a475a5ed8f03fb0f6b58b4684998d05c')
 
 _backports=(
+  '531ac2b2349da02acc9c382849758e07eb92b020'
+  'b2922837d67a4bf66c7862b06eb5b513a7fe6ef6'
+  '6bd74eb055ad278904d152b08e26d5ad4241ddb0'
 )
 
 prepare() {
@@ -155,6 +158,7 @@ package_libsystemd() {
   license=('GPL2')
   provides=('libsystemd.so' 'libudev.so')
 
+  # TODO(dreisner): for v232, this should be install-rootlibLTLIBRARIES.
   make -C "$pkgbase" DESTDIR="$pkgdir" install-libLTLIBRARIES
 }
 
