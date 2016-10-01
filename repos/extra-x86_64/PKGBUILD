@@ -10,31 +10,39 @@ pkgbase=network-manager-applet
 pkgname=(nm-connection-editor network-manager-applet)
 pkgdesc="Applet for managing network connections"
 url="https://wiki.gnome.org/Projects/NetworkManager/"
-pkgver=1.4.0
+pkgver=1.4.2
 pkgrel=1
 arch=(i686 x86_64)
 license=(GPL2 LGPL2.1)
 depends=(libnm-glib libgudev gtk3 mobile-broadband-provider-info iso-codes)
-makedepends=(libsecret libnotify libmm-glib intltool gobject-introspection)
+makedepends=(libsecret libnotify libmm-glib intltool gobject-introspection git)
 options=(!emptydirs)
-source=(http://ftp.gnome.org/pub/GNOME/sources/$pkgbase/${pkgver:0:3}/$pkgbase-$pkgver.tar.xz)
-sha256sums=('d9f5f1e151b8edbbcebb6f818eed9a49b53aadcb4e8aed2cae4fc09996278331')
+_commit=e5f280769a7097cdf97789c11fdf3a49c11cf3f6  # tags/1.4.2^0
+source=("git://git.gnome.org/network-manager-applet#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
 
 prepare() {
   mkdir -p nma/etc/xdg nma/usr/bin \
     nma/usr/share/{applications,icons/hicolor/22x22/apps,man/man1,nm-applet}
-  cd $pkgbase-$pkgver
+  cd $pkgbase
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgbase-$pkgver
+  cd $pkgbase
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var \
       --libexecdir=/usr/lib/networkmanager \
       --disable-static \
       --disable-maintainer-mode \
       --disable-migration \
-      --with-modem-manager-1
+      --with-modem-manager-1 \
+      --enable-gtk-doc
 
   # https://bugzilla.gnome.org/show_bug.cgi?id=655517
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -43,17 +51,17 @@ build() {
 }
 
 check() {
-  cd $pkgbase-$pkgver
+  cd $pkgbase
   make -k check
 }
 
 package_nm-connection-editor() {
-  pkgdesc="NetworkManager GUI connection editor"
+  pkgdesc="NetworkManager GUI connection editor and widgets"
   provides=("libnm-gtk=$pkgver-$pkgrel")
   conflicts=(libnm-gtk)
   replaces=(libnm-gtk)
 
-  cd $pkgbase-$pkgver
+  cd $pkgbase
   make DESTDIR="$pkgdir" install
 
 ### Split network-manager-applet
