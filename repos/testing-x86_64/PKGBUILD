@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=231
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="http://www.freedesktop.org/wiki/Software/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -30,9 +30,10 @@ md5sums=('SKIP'
          'a475a5ed8f03fb0f6b58b4684998d05c')
 
 _backports=(
-  '531ac2b2349da02acc9c382849758e07eb92b020'
-  'b2922837d67a4bf66c7862b06eb5b513a7fe6ef6'
-  '6bd74eb055ad278904d152b08e26d5ad4241ddb0'
+  '531ac2b2349da02acc9c382849758e07eb92b020'  # If the notification message length is 0, ignore the message
+  '8523bf7dd514a3a2c6114b7b8fb8f308b4f09fc4'  # pid1: process zero-length notification messages again
+  '9987750e7a4c62e0eb8473603150596ba7c3a015'  # pid1: don't return any error in manager_dispatch_notify_fd()
+  'bd64d82c1c0e3fe2a5f9b3dd9132d62834f50b2d'  # Revert "pid1: reconnect to the console before being re-executed"
 )
 
 prepare() {
