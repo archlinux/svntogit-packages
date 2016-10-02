@@ -5,7 +5,7 @@
 
 pkgname=openssh
 pkgver=7.3p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Free version of the SSH connectivity tools'
 url='http://www.openssh.org/portable.html'
 license=('custom:BSD')
@@ -47,7 +47,6 @@ build() {
 		--with-privsep-user=nobody \
 		--with-kerberos5=/usr \
 		--with-xauth=/usr/bin/xauth \
-		--with-mantype=man \
 		--with-md5-passwords \
 		--with-pid-dir=/run \
 
