@@ -3,27 +3,39 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=networkmanager-vpnc
-pkgver=1.2.2
+pkgver=1.2.4
 pkgrel=1
 pkgdesc="NetworkManager VPN plugin for VPNC"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(i686 x86_64)
 license=(GPL)
-depends=(libnm-gtk libsecret vpnc)
-makedepends=(intltool python)
-source=(http://ftp.gnome.org/pub/GNOME/sources/NetworkManager-vpnc/${pkgver::3}/NetworkManager-vpnc-${pkgver}.tar.xz)
-sha256sums=('e900f6500026f8c3ee4feb92e1d0a0c0abbee9ba507dad915b47a8ab7df9e1f3')
+depends=(libnm-glib libsecret vpnc)
+makedepends=(libnm-gtk intltool python git)
+_commit=f6969f0038438d4ef9320e275eb22df98592fe53  # tags/1.2.4^0
+source=("git://git.gnome.org/network-manager-vpnc#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd network-manager-vpnc
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd network-manager-vpnc
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd NetworkManager-vpnc-$pkgver
+  cd network-manager-vpnc
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     --libexecdir=/usr/lib/networkmanager \
     --enable-more-warnings=yes \
     --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 package() {
-  cd NetworkManager-vpnc-$pkgver
+  cd network-manager-vpnc
   make DESTDIR="$pkgdir" install
 }
