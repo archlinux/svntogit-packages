@@ -3,29 +3,41 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=networkmanager-pptp
-pkgver=1.2.2
+pkgver=1.2.4
 pkgrel=1
 pkgdesc="NetworkManager VPN plugin for PPTP"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(i686 x86_64)
 license=(GPL)
 _pppver=2.4.7
-depends=(libnm-gtk libsecret "ppp=$_pppver" pptpclient)
-makedepends=(intltool python)
-source=(http://ftp.gnome.org/pub/GNOME/sources/NetworkManager-pptp/${pkgver::3}/NetworkManager-pptp-${pkgver}.tar.xz)
-sha256sums=('a72cb88ecc0a9edec836e8042c592d68b8b290c0d78082e6b25cf08b46c6be5d')
+depends=(libnm-glib libsecret "ppp=$_pppver" pptpclient)
+makedepends=(libnm-gtk intltool python git)
+_commit=7861022af7edcf4a26b01d30ad6b2f0bbc51e55e  # tags/1.2.4^0
+source=("git://git.gnome.org/network-manager-pptp#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd network-manager-pptp
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd network-manager-pptp
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd NetworkManager-pptp-$pkgver
+  cd network-manager-pptp
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     --libexecdir=/usr/lib/networkmanager \
     --with-pppd-plugin-dir=/usr/lib/pppd/$_pppver \
     --enable-more-warnings=yes \
     --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 package() {
-  cd NetworkManager-pptp-$pkgver
+  cd network-manager-pptp
   make DESTDIR="$pkgdir" install
 }
