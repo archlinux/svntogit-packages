@@ -50,12 +50,12 @@ Last-Update: <2015-11-02>
 +++ opal-3.10.10~dfsg2/plugins/video/H.264/h264-x264.cxx
 @@ -1074,7 +1074,6 @@ class MyDecoder : public PluginCodec<MY_
        m_context->workaround_bugs = FF_BUG_AUTODETECT;
-       m_context->idct_algo = FF_IDCT_H264;
+       m_context->idct_algo = FF_IDCT_AUTO;
        m_context->error_concealment = FF_EC_GUESS_MVS | FF_EC_DEBLOCK;
 -      m_context->flags = CODEC_FLAG_INPUT_PRESERVED | CODEC_FLAG_EMU_EDGE;
-       m_context->flags2 = CODEC_FLAG2_DROP_FRAME_TIMECODE |
-                           CODEC_FLAG2_SKIP_RD |
-                           CODEC_FLAG2_CHUNKS;
+       m_context->flags2 = 
+ #ifdef CODEC_FLAG2_DROP_FRAME_TIMECODE
+                           CODEC_FLAG2_DROP_FRAME_TIMECODE |
 @@ -1084,7 +1083,7 @@ class MyDecoder : public PluginCodec<MY_
        if ((m_picture = FFMPEGLibraryInstance.AvcodecAllocFrame()) == NULL)
          return false;
@@ -111,6 +111,43 @@ Last-Update: <2015-11-02>
          PTRACE(1, "MPEG4", "Decoder failed to open");
          return false;
      }
+--- opal-3.10.10~dfsg2.orig/plugins/video/common/dyna.cxx
++++ opal-3.10.10~dfsg2/plugins/video/common/dyna.cxx
+@@ -291,14 +291,14 @@ AVFrame *FFMPEGLibrary::AvcodecAllocFram
+ {
+   WaitAndSignal m(processLock);
+ 
+-  return avcodec_alloc_frame();
++  return av_frame_alloc();
+ }
+ 
+-int FFMPEGLibrary::AvcodecOpen(AVCodecContext *ctx, AVCodec *codec)
++int FFMPEGLibrary::AvcodecOpen(AVCodecContext *ctx, AVCodec *codec, AVDictionary **options)
+ {
+   WaitAndSignal m(processLock);
+ 
+-  return avcodec_open2(ctx, codec, NULL);
++  return avcodec_open2(ctx, codec, options);
+ }
+ 
+ int FFMPEGLibrary::AvcodecClose(AVCodecContext *ctx)
+@@ -344,7 +344,15 @@ void FFMPEGLibrary::AvSetDimensions(AVCo
+ {
+   WaitAndSignal m(processLock);
+ 
+-  avcodec_set_dimensions(s, width, height);
++  if (av_image_check_size(width, height, 0, s) < 0) {
++    av_log(s, AV_LOG_WARNING, "Failed to set dimensions %d %d\n", width, height);
++    width = height = 0;
++  }
++
++  s->coded_width  = width;
++  s->coded_height = height;
++  s->width        = (width + (1 << av_codec_get_lowres(s)) - 1) >> av_codec_get_lowres(s);
++  s->height       = (height + (1 << av_codec_get_lowres(s)) - 1) >> av_codec_get_lowres(s);
+ }
+ 
+ void FFMPEGLibrary::AvLogSetLevel(int level)
 --- opal-3.10.10~dfsg2.orig/plugins/video/common/dyna.h
 +++ opal-3.10.10~dfsg2/plugins/video/common/dyna.h
 @@ -97,7 +97,7 @@ class FFMPEGLibrary
@@ -127,121 +164,8 @@ Last-Update: <2015-11-02>
 @@ -47,6 +47,7 @@
  
  extern "C" {
- #include "libavcodec/avcodec.h"
-+#include "libavutil/imgutils.h"
+ #include <libavcodec/avcodec.h>
++#include <libavutil/imgutils.h>
  // AVPacket was declared in avformat.h before April 2009
  #if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(52, 25, 0)
  #include <libavformat/avformat.h>
---- opal-3.10.11/plugins/video/H.263-1998/h263-1998.cxx.0	2016-02-19 21:19:02.095496404 +0000
-+++ opal-3.10.11/plugins/video/H.263-1998/h263-1998.cxx	2016-02-19 21:19:48.541962342 +0000
-@@ -98,7 +98,7 @@
-   { CIF16_WIDTH, CIF16_HEIGHT, PLUGINCODEC_CIF16_MPI },
- };
- 
--static FFMPEGLibrary FFMPEGLibraryInstance(CODEC_ID_H263P);
-+static FFMPEGLibrary FFMPEGLibraryInstance(AV_CODEC_ID_H263P);
- 
- 
- /////////////////////////////////////////////////////////////////////////////
-@@ -583,7 +583,7 @@
- 
- bool H263_RFC2190_EncoderContext::Init()
- {
--  if (!H263_Base_EncoderContext::Init(CODEC_ID_H263))
-+  if (!H263_Base_EncoderContext::Init(AV_CODEC_ID_H263))
-     return false;
- 
- #if LIBAVCODEC_RTP_MODE
-@@ -620,7 +620,7 @@
- 
- bool H263_RFC2429_EncoderContext::Init()
- {
--  return H263_Base_EncoderContext::Init(CODEC_ID_H263P);
-+  return H263_Base_EncoderContext::Init(AV_CODEC_ID_H263P);
- }
- 
- 
-@@ -644,7 +644,7 @@
-   if (!FFMPEGLibraryInstance.Load())
-     return;
- 
--  if ((m_codec = FFMPEGLibraryInstance.AvcodecFindDecoder(CODEC_ID_H263)) == NULL) {
-+  if ((m_codec = FFMPEGLibraryInstance.AvcodecFindDecoder(AV_CODEC_ID_H263)) == NULL) {
-     PTRACE(1, m_prefix, "Codec not found for decoder");
-     return;
-   }
---- opal-3.10.11/plugins/video/common/dyna.cxx.0	2016-02-19 21:31:56.865493193 +0000
-+++ opal-3.10.11/plugins/video/common/dyna.cxx	2016-02-19 21:32:05.935454276 +0000
-@@ -213,11 +213,11 @@
- FFMPEGLibrary::FFMPEGLibrary(AVCodecID codec)
- {
-   m_codec = codec;
--  if (m_codec==CODEC_ID_H264)
-+  if (m_codec==AV_CODEC_ID_H264)
-       snprintf( m_codecString, sizeof(m_codecString), "H264");
--  if (m_codec==CODEC_ID_H263P)
-+  if (m_codec==AV_CODEC_ID_H263P)
-       snprintf( m_codecString, sizeof(m_codecString), "H263+");
--  if (m_codec==CODEC_ID_MPEG4)
-+  if (m_codec==AV_CODEC_ID_MPEG4)
-       snprintf( m_codecString, sizeof(m_codecString), "MPEG4");
-   m_isLoadedOK = false;
- }
-@@ -374,7 +374,7 @@
-   return Favcodec_alloc_frame();
- }
- 
--int FFMPEGLibrary::AvcodecOpen(AVCodecContext *ctx, AVCodec *codec)
-+int FFMPEGLibrary::AvcodecOpen(AVCodecContext *ctx, AVCodec *codec, AVDictionary **options)
- {
-   WaitAndSignal m(processLock);
- 
---- opal-3.10.11/plugins/video/MPEG4-ffmpeg/mpeg4.cxx.0	2016-02-19 21:52:51.566808873 +0000
-+++ opal-3.10.11/plugins/video/MPEG4-ffmpeg/mpeg4.cxx	2016-02-19 21:53:02.306763310 +0000
-@@ -206,7 +206,7 @@
-     { 0 }
- };
- 
--FFMPEGLibrary FFMPEGLibraryInstance(CODEC_ID_MPEG4);
-+FFMPEGLibrary FFMPEGLibraryInstance(AV_CODEC_ID_MPEG4);
- 
- 
- static bool mpeg4IsIframe (BYTE * frameBuffer, unsigned int frameLen )
-@@ -703,7 +703,7 @@
-     return false;
-   }
- 
--  if((m_avcodec = FFMPEGLibraryInstance.AvcodecFindEncoder(CODEC_ID_MPEG4)) == NULL){
-+  if((m_avcodec = FFMPEGLibraryInstance.AvcodecFindEncoder(AV_CODEC_ID_MPEG4)) == NULL){
-     PTRACE(1, "MPEG4", "Encoder not found");
-     return false;
-   }
-@@ -1396,7 +1396,7 @@
- 
- bool MPEG4DecoderContext::OpenCodec()
- {
--    if ((m_avcodec = FFMPEGLibraryInstance.AvcodecFindDecoder(CODEC_ID_MPEG4)) == NULL) {
-+    if ((m_avcodec = FFMPEGLibraryInstance.AvcodecFindDecoder(AV_CODEC_ID_MPEG4)) == NULL) {
-         PTRACE(1, "MPEG4", "Decoder not found for encoder");
-         return false;
-     }
---- opal-3.10.11/plugins/video/H.264/h264-x264.cxx.orig	2016-02-19 22:04:47.243776296 +0000
-+++ opal-3.10.11/plugins/video/H.264/h264-x264.cxx	2016-02-19 22:04:58.863727118 +0000
-@@ -107,7 +107,7 @@
- 
- ///////////////////////////////////////////////////////////////////////////////
- 
--FFMPEGLibrary FFMPEGLibraryInstance(CODEC_ID_H264);
-+FFMPEGLibrary FFMPEGLibraryInstance(AV_CODEC_ID_H264);
- 
- PLUGINCODEC_CONTROL_LOG_FUNCTION_DEF
- 
-@@ -1067,7 +1067,7 @@
-          allows you to fail the create operation (return false), which cannot
-          be done in the normal C++ constructor. */
- 
--      if ((m_codec = FFMPEGLibraryInstance.AvcodecFindDecoder(CODEC_ID_H264)) == NULL)
-+      if ((m_codec = FFMPEGLibraryInstance.AvcodecFindDecoder(AV_CODEC_ID_H264)) == NULL)
-         return false;
- 
-       if ((m_context = FFMPEGLibraryInstance.AvcodecAllocContext()) == NULL)
