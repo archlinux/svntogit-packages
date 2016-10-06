@@ -1,0 +1,99 @@
+From 86a0a8c64d468bf92c646db0fb6fa89bb48f1878 Mon Sep 17 00:00:00 2001
+From: Rui Matos <tiagomatos@gmail.com>
+Date: Thu, 6 Oct 2016 16:04:49 +0200
+Subject: [PATCH] meta-monitor-config: Look at an output's modes directly when
+ assigning
+
+Going through the global mode pool and then checking if the mode is
+available for a given output is pointless work since we can look at
+the output's available modes directly.
+
+This implicitly changes how we choose the default mode since, instead
+of relying on the sort order of the global modes array, we now rely on
+the sort order of the output modes array. Still not ideal, but at
+least it makes more sense since the global array is essentially
+unsorted.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=772176
+---
+ src/backends/meta-monitor-config.c | 27 +++++----------------------
+ 1 file changed, 5 insertions(+), 22 deletions(-)
+
+diff --git a/src/backends/meta-monitor-config.c b/src/backends/meta-monitor-config.c
+index fde615d..f691e54 100644
+--- a/src/backends/meta-monitor-config.c
++++ b/src/backends/meta-monitor-config.c
+@@ -1802,19 +1802,6 @@ crtc_can_drive_output (MetaCRTC   *crtc,
+ }
+ 
+ static gboolean
+-output_supports_mode (MetaOutput      *output,
+-                      MetaMonitorMode *mode)
+-{
+-  unsigned int i;
+-
+-  for (i = 0; i < output->n_modes; i++)
+-    if (output->modes[i] == mode)
+-      return TRUE;
+-
+-  return FALSE;
+-}
+-
+-static gboolean
+ crtc_assignment_assign (CrtcAssignment       *assign,
+ 			MetaCRTC             *crtc,
+ 			MetaMonitorMode      *mode,
+@@ -1828,9 +1815,6 @@ crtc_assignment_assign (CrtcAssignment       *assign,
+   if (!crtc_can_drive_output (crtc, output))
+     return FALSE;
+ 
+-  if (!output_supports_mode (output, mode))
+-    return FALSE;
+-
+   if ((crtc->all_transforms & (1 << transform)) == 0)
+     return FALSE;
+ 
+@@ -1917,10 +1901,9 @@ static gboolean
+ real_assign_crtcs (CrtcAssignment     *assignment,
+                    unsigned int        output_num)
+ {
+-  MetaMonitorMode *modes;
+   MetaCRTC *crtcs;
+   MetaOutput *outputs;
+-  unsigned int n_crtcs, n_modes, n_outputs;
++  unsigned int n_crtcs, n_outputs;
+   MetaOutputKey *output_key;
+   MetaOutputConfig *output_config;
+   unsigned int i;
+@@ -1936,7 +1919,7 @@ real_assign_crtcs (CrtcAssignment     *assignment,
+     return real_assign_crtcs (assignment, output_num + 1);
+ 
+   meta_monitor_manager_get_resources (assignment->manager,
+-                                      &modes, &n_modes,
++                                      NULL, NULL,
+                                       &crtcs, &n_crtcs,
+                                       &outputs, &n_outputs);
+ 
+@@ -1953,9 +1936,9 @@ real_assign_crtcs (CrtcAssignment     *assignment,
+           MetaOutput *output = find_output_by_key (outputs, n_outputs, output_key);
+           unsigned int j;
+ 
+-          for (j = 0; j < n_modes; j++)
++          for (j = 0; j < output->n_modes; j++)
+ 	    {
+-              MetaMonitorMode *mode = &modes[j];
++              MetaMonitorMode *mode = output->modes[j];
+               int width, height;
+ 
+               if (meta_monitor_transform_is_rotated (output_config->transform))
+@@ -1980,7 +1963,7 @@ real_assign_crtcs (CrtcAssignment     *assignment,
+                                 output_config->transform,
+                                 pass);
+ 
+-                  if (crtc_assignment_assign (assignment, crtc, &modes[j],
++                  if (crtc_assignment_assign (assignment, crtc, mode,
+                                               output_config->rect.x, output_config->rect.y,
+                                               output_config->transform,
+                                               output))
+-- 
+2.9.3
