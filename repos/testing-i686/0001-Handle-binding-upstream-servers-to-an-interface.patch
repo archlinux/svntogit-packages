@@ -1,0 +1,123 @@
+From f7fcfebdbc3c57570d2f6de35f38c72ce6c80143 Mon Sep 17 00:00:00 2001
+From: Christian Hesse <mail@eworm.de>
+Date: Wed, 31 Aug 2016 18:42:22 +0200
+Subject: [PATCH 1/1] Handle binding upstream servers to an interface
+
+upstream commits:
+
+* 2675f2061525bc954be14988d64384b74aa7bf8b
+* 16800ea072dd0cdf14d951c4bb8d2808b3dfe53d
+
+Signed-off-by: Christian Hesse <mail@eworm.de>
+---
+ src/dnsmasq.h |  1 +
+ src/network.c | 32 ++++++++++++++++++++++++++++++--
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/src/dnsmasq.h b/src/dnsmasq.h
+index 1896a64..aa5ec84 100644
+--- a/src/dnsmasq.h
++++ b/src/dnsmasq.h
+@@ -487,6 +487,7 @@ struct serverfd {
+   int fd;
+   union mysockaddr source_addr;
+   char interface[IF_NAMESIZE+1];
++  unsigned int ifindex, used;
+   struct serverfd *next;
+ };
+ 
+diff --git a/src/network.c b/src/network.c
+index e7722fd..d87d08f 100644
+--- a/src/network.c
++++ b/src/network.c
+@@ -1204,6 +1204,7 @@ int local_bind(int fd, union mysockaddr *addr, char *intname, int is_tcp)
+ static struct serverfd *allocate_sfd(union mysockaddr *addr, char *intname)
+ {
+   struct serverfd *sfd;
++  unsigned int ifindex = 0;
+   int errsave;
+ 
+   /* when using random ports, servers which would otherwise use
+@@ -1224,11 +1225,15 @@ static struct serverfd *allocate_sfd(union mysockaddr *addr, char *intname)
+ 	return NULL;
+ #endif
+     }
++
++  if (intname && strlen(intname) != 0)
++    ifindex = if_nametoindex(intname); /* index == 0 when not binding to an interface */
+       
+   /* may have a suitable one already */
+   for (sfd = daemon->sfds; sfd; sfd = sfd->next )
+     if (sockaddr_isequal(&sfd->source_addr, addr) &&
+-	strcmp(intname, sfd->interface) == 0)
++	strcmp(intname, sfd->interface) == 0 &&
++	ifindex == sfd->ifindex) 
+       return sfd;
+   
+   /* need to make a new one. */
+@@ -1250,11 +1255,13 @@ static struct serverfd *allocate_sfd(union mysockaddr *addr, char *intname)
+       errno = errsave;
+       return NULL;
+     }
+-    
++
+   strcpy(sfd->interface, intname); 
+   sfd->source_addr = *addr;
+   sfd->next = daemon->sfds;
++  sfd->ifindex = ifindex;
+   daemon->sfds = sfd;
++
+   return sfd; 
+ }
+ 
+@@ -1429,12 +1436,16 @@ void check_servers(void)
+ {
+   struct irec *iface;
+   struct server *serv;
++  struct serverfd *sfd, *tmp, **up;
+   int port = 0, count;
+ 
+   /* interface may be new since startup */
+   if (!option_bool(OPT_NOWILD))
+     enumerate_interfaces(0);
+   
++  for (sfd = daemon->sfds; sfd; sfd = sfd->next)
++    sfd->used = 0;
++
+ #ifdef HAVE_DNSSEC
+  /* Disable DNSSEC validation when using server=/domain/.... servers
+     unless there's a configured trust anchor. */
+@@ -1505,6 +1516,9 @@ void check_servers(void)
+ 	      serv->flags |= SERV_MARK;
+ 	      continue;
+ 	    }
++	  
++	  if (serv->sfd)
++	    serv->sfd->used = 1;
+ 	}
+       
+       if (!(serv->flags & SERV_NO_REBIND) && !(serv->flags & SERV_LITERAL_ADDRESS))
+@@ -1547,6 +1561,20 @@ void check_servers(void)
+   if (count - 1 > SERVERS_LOGGED)
+     my_syslog(LOG_INFO, _("using %d more nameservers"), count - SERVERS_LOGGED - 1);
+ 
++  /* Remove unused sfds */
++  for (sfd = daemon->sfds, up = &daemon->sfds; sfd; sfd = tmp)
++    {
++       tmp = sfd->next;
++       if (!sfd->used) 
++	{
++	  *up = sfd->next;
++	  close(sfd->fd);
++	  free(sfd);
++	} 
++      else
++	up = &sfd->next;
++    }
++  
+   cleanup_servers();
+ }
+ 
+-- 
+2.9.3
+
