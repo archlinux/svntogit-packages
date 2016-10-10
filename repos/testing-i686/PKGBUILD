@@ -3,13 +3,14 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.50.0+9+g34751ad
+pkgver=2.50.1
 pkgrel=1
 pkgdesc="Low level core library"
 url="http://www.gtk.org/"
 arch=(i686 x86_64)
-makedepends=('gettext' 'gtk-doc' 'libffi' 'pcre' 'zlib' 'shared-mime-info' 'python' 'libelf' 'git')
-_commit=34751ad17ac8e73558c530d15a3398273a5f4f67
+makedepends=(gettext gtk-doc libffi pcre zlib shared-mime-info python libelf git)
+checkdepends=(desktop-file-utils dbus)
+_commit=e44ea516afeb41d22cebf968b3ea5d9543856df2  # tags/2.50.1^0
 source=("git://git.gnome.org/glib#commit=$_commit"
         glib-compile-schemas.hook
         gio-querymodules.hook
@@ -43,16 +44,19 @@ build() {
 
 check() {
   cd glib
-  # Takes an effing long time
-  #make -k check || :
+  if ! make check; then
+    # Rounding error in timer tests?
+    # GLib:ERROR:timer.c:38:test_timer_basic: assertion failed (micros == ((guint64)(elapsed * 1e6)) % 1000000): (1 == 0)
+    make check
+  fi
 }
 
 package_glib2() {
-  depends=('pcre' 'libffi')
+  depends=(pcre libffi)
   optdepends=('python: for gdbus-codegen and gtester-report'
               'libelf: gresource inspection tool')
-  options=('!docs' '!emptydirs')
-  license=('LGPL')
+  options=(!docs !emptydirs)
+  license=(LGPL)
 
   cd glib
   make completiondir=/usr/share/bash-completion/completions DESTDIR="$pkgdir" install
@@ -60,20 +64,20 @@ package_glib2() {
   chmod -x "$pkgdir"/usr/share/bash-completion/completions/*
 
   # install hooks
-  install -dm755 "$pkgdir"/usr/share/libalpm/hooks/
-  install -m644 "$srcdir"/{glib-compile-schemas,gio-querymodules}.hook "$pkgdir"/usr/share/libalpm/hooks/
+  install -d "$pkgdir/usr/share/libalpm/hooks/"
+  install -m644 "$srcdir"/{glib-compile-schemas,gio-querymodules}.hook \
+    "$pkgdir/usr/share/libalpm/hooks/"
 }
 
 package_glib2-docs() {
   pkgdesc="Documentation for glib2"
-  conflicts=('gobject2-docs')
-  replaces=('gobject2-docs')
-  license=('custom')
-  options=('docs' '!emptydirs')
+  conflicts=(gobject2-docs)
+  replaces=(gobject2-docs)
+  license=(custom)
+  options=(docs !emptydirs)
   
   cd glib/docs
-  make DESTDIR="${pkgdir}" install
-  rm -rf "${pkgdir}/usr/share/man"
-  install -m755 -d "${pkgdir}/usr/share/licenses/glib2-docs"
-  install -m644 reference/COPYING "${pkgdir}/usr/share/licenses/glib2-docs/"
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir/usr/share/man"
+  install -Dm644 reference/COPYING "$pkgdir/usr/share/licenses/glib2-docs/COPYING"
 }
