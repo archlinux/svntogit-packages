@@ -5,23 +5,25 @@
 pkgname=qt5-webengine
 _qtver=5.7.0
 pkgver=${_qtver/-/}
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'libxtst' 'libxcursor' 'libpulse' 'pciutils' 'libxss' 'libvpx' 'opus'
-         'libevent' 'libsrtp' 'jsoncpp' 'libwebp' 'snappy' 'nss' 'protobuf') # minizip
-makedepends=('python2' 'git' 'gperf')
+         'libevent' 'libsrtp' 'libwebp' 'snappy' 'nss' 'protobuf' 'libxslt')
+makedepends=('python2' 'git' 'gperf' 'jsoncpp')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
-        qt5-webengine-fno-delete-null-pointer-checks.patch qt5-webengine-fno-delete-null-pointer-checks-2.patch)
+        qt5-webengine-fno-delete-null-pointer-checks.patch qt5-webengine-fno-delete-null-pointer-checks-2.patch
+        qt5-webengine-glibc2.24.patch::"https://github.com/qt/qtwebengine-chromium/commit/b12ffcd4.patch")
 
 md5sums=('937f64886fbcb038d6fa4b44ae80cbeb'
          '2a1610b34204102938a24154a52e5571'
          '5671a16fef65152928789bffd1f7cf24'
-         '8145ce05fb86e762f012ca1b56f718fe')
+         '8145ce05fb86e762f012ca1b56f718fe'
+         '753154df82838d19a7629d56cec7b649')
 
 prepare() {
   mkdir -p build
@@ -38,6 +40,9 @@ prepare() {
   patch -p1 -i "$srcdir"/qt5-webengine-fno-delete-null-pointer-checks.patch
   cd src/3rdparty
   patch -p1 -i "$srcdir"/qt5-webengine-fno-delete-null-pointer-checks-2.patch
+
+  # Fix segfault with glibc 2.24
+  patch -p1 -i "$srcdir"/qt5-webengine-glibc2.24.patch
 }
 
 build() {
