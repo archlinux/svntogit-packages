@@ -2,28 +2,43 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=grilo
-pkgver=0.3.2
+pkgver=0.3.2+8+g6ffe445
 pkgrel=1
 pkgdesc="Framework that provides access to various sources of multimedia content"
-url="http://www.gnome.org"
-arch=('i686' 'x86_64')
-license=('LGPL')
-depends=('gtk3' 'libxml2' 'libsoup' 'liboauth' 'totem-plparser')
-makedepends=('gobject-introspection' 'gtk-doc' 'vala' 'intltool')
+url="https://wiki.gnome.org/Projects/Grilo"
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(gtk3 libxml2 libsoup liboauth totem-plparser)
+makedepends=(gobject-introspection gtk-doc vala intltool git gnome-common)
 optdepends=('grilo-plugins: Plugins for grilo')
-options=('!emptydirs')
-source=(https://download.gnome.org/sources/${pkgname}/${pkgver:0:3}/${pkgname}-${pkgver}.tar.xz)
-sha256sums=('f26f684a5d76aea8dbce136750bc67d2170b36575f109292fbb78ae99ec87f5b')
+_commit=6ffe44554fe4abd4f21e35497133c1ebe02482af
+source=("git://git.gnome.org/grilo#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^grilo-//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  # Add missing tag for pkgver()
+  git tag -f grilo-0.3.2 343d0a4c29b234f81197f502fed16ba739022a6a
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure --prefix=/usr --sysconfdir=/etc --disable-static --disable-debug \
-    --libdir=/usr/lib
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc --libdir=/usr/lib \
+    --disable-static --disable-debug --enable-gtk-doc
+
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
   make
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make DESTDIR="${pkgdir}" install
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
 }
