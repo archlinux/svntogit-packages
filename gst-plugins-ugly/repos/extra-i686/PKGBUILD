@@ -1,27 +1,46 @@
 # $Id$
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gst-plugins-ugly
-pkgver=1.8.3
+pkgver=1.9.90+2+g07e5039
 pkgrel=1
 pkgdesc="GStreamer Multimedia Framework Ugly Plugins"
-arch=('i686' 'x86_64')
-license=('LGPL')
 url="https://gstreamer.freedesktop.org/"
-depends=('gst-plugins-base-libs' 'libdvdread' 'lame' 'libmpeg2' 'a52dec' 'libmad' 'libsidplay'
-         'libcdio' 'libx264' 'opencore-amr' 'mpg123')
-makedepends=('python' 'gtk-doc' 'x264')
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(gst-plugins-base-libs libdvdread lame libmpeg2 a52dec libmad libsidplay
+         libcdio libx264 opencore-amr mpg123)
+makedepends=(python gtk-doc x264 autoconf-archive git)
 options=(!emptydirs)
-source=(${url}/src/$pkgname/$pkgname-$pkgver.tar.xz)
-sha256sums=('6fa2599fdd072d31fbaf50c34af406e2be944a010b1f4eab67a5fe32a0310693')
+_commit=07e503984825410bc77fd0622ca376c38109be43  # master
+source=("git://anongit.freedesktop.org/gstreamer/gst-plugins-ugly#commit=$_commit"
+        "gst-common::git://anongit.freedesktop.org/gstreamer/common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgname
 
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --disable-static --enable-experimental --enable-gtk-doc \
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib \
     --with-package-name="GStreamer Ugly Plugins (Arch Linux)" \
-    --with-package-origin="http://www.archlinux.org/"
+    --with-package-origin="http://www.archlinux.org/" \
+    --enable-experimental --enable-gtk-doc --disable-static
 
   # https://bugzilla.gnome.org/show_bug.cgi?id=655517
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -30,11 +49,11 @@ build() {
 }
 
 check() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make check
 }
 
 package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="${pkgdir}" install
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
 }
