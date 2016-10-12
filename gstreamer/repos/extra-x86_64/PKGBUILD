@@ -2,19 +2,39 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer
-pkgver=1.8.3
+pkgver=1.9.90+8+g6d0d350
 pkgrel=1
 pkgdesc="GStreamer Multimedia Framework"
-arch=('i686' 'x86_64')
-license=('LGPL')
 url="https://gstreamer.freedesktop.org/"
-depends=('libxml2' 'glib2')
-makedepends=('intltool' 'pkgconfig' 'gtk-doc' 'gobject-introspection')
-source=(${url}/src/gstreamer/gstreamer-${pkgver}.tar.xz)
-sha256sums=('66b37762d4fdcd63bce5a2bec57e055f92420e95037361609900278c0db7c53f')
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(libxml2 glib2 libunwind libcap)
+makedepends=(intltool pkgconfig gtk-doc gobject-introspection autoconf-archive git
+             valgrind)
+_commit=6d0d350a94ba6b4e7775a8321bd2a29e889cbc21  # master
+install=gstreamer.install
+source=("git://anongit.freedesktop.org/gstreamer/gstreamer#commit=$_commit"
+        "gst-common::git://anongit.freedesktop.org/gstreamer/common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd "${srcdir}/gstreamer-${pkgver}"
+  cd $pkgname
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib \
     --with-package-name="GStreamer (Arch Linux)" \
     --with-package-origin="http://www.archlinux.org/" \
@@ -27,11 +47,11 @@ build() {
 }
 
 check() {
-  cd "${srcdir}/gstreamer-${pkgver}"
+  cd $pkgname
   make check
 }
 
 package() {
-  cd "${srcdir}/gstreamer-${pkgver}"
-  make DESTDIR="${pkgdir}" install
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
 }
