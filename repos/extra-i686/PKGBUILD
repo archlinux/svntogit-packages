@@ -3,26 +3,48 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gst-plugins-good
-pkgver=1.8.3
+pkgver=1.9.90+8+g6542edd
 pkgrel=1
 pkgdesc="GStreamer Multimedia Framework Good Plugins"
+url="https://gstreamer.freedesktop.org/"
 arch=(i686 x86_64)
 license=(LGPL)
-url="https://gstreamer.freedesktop.org/"
 depends=(libpulse jack libsoup gst-plugins-base-libs wavpack aalib taglib libdv libshout libvpx
          gdk-pixbuf2 libcaca libavc1394 libiec61883 libxdamage v4l-utils cairo libgudev)
-makedepends=(gstreamer speex flac libraw1394 python gtk-doc)
+makedepends=(gstreamer speex flac libraw1394 python gtk-doc autoconf-archive git)
 options=(!emptydirs)
-source=(${url}/src/$pkgname/$pkgname-$pkgver.tar.xz)
-sha256sums=('a1d6579ba203a7734927c24b90bf6590d846c5a5fcec01a48201018c8ad2827a')
+_commit=6542edd9098aad98c0ac18f0ba5a4650932e14e1  # master
+source=("git://anongit.freedesktop.org/gstreamer/gst-plugins-good#commit=$_commit"
+        "gst-common::git://anongit.freedesktop.org/gstreamer/common"
+        0001-tests-Fix-level-test-in-CK_FORK-no-mode.patch)
+sha256sums=('SKIP'
+            'SKIP'
+            'bff7a50820ddd3696c8a3bdb2e556c74aaf2eeac3be633801544cb4a48b5eeca')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  patch -Np1 -i ../0001-tests-Fix-level-test-in-CK_FORK-no-mode.patch
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgname
 
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --disable-static --enable-experimental --enable-gtk-doc \
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib \
     --with-package-name="GStreamer Good Plugins (Arch Linux)" \
-    --with-package-origin="http://www.archlinux.org/"
+    --with-package-origin="http://www.archlinux.org/" \
+    --enable-experimental --enable-gtk-doc --disable-static
 
   # https://bugzilla.gnome.org/show_bug.cgi?id=655517
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -30,13 +52,13 @@ build() {
   make
 }
 
-# Disabled for now: souphttpsrc times out, and takes a damn long time to do so
-#check() {
-#  cd $pkgname-$pkgver
-#  make check
-#}
+check() {
+  cd $pkgname
+  # souphttpsrc tests break when libcheck forks
+  CK_FORK=no make check
+}
 
 package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="${pkgdir}" install
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
 }
