@@ -2,26 +2,34 @@
 # Maintainer: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=at-spi2-atk
-pkgver=2.20.1
-pkgrel=2
+pkgver=2.22.0
+pkgrel=1
 pkgdesc="A GTK+ module that bridges ATK to D-Bus at-spi"
 arch=('i686' 'x86_64')
 url="https://wiki.gnome.org/Accessibility"
 license=('GPL2')
 depends=('at-spi2-core' 'libx11' 'atk')
-makedepends=('intltool')
+makedepends=('git')
 provides=('at-spi')
 replaces=('at-spi')
 conflicts=('at-spi')
-source=(http://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
-sha256sums=('2358a794e918e8f47ce0c7370eee8fc8a6207ff1afe976ec9ff547a03277bf8e')
+_commit=372999fb152c847ed4fd8b0a2cb3ceb91040c1ec
+source=("git://git.gnome.org/at-spi2-atk#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed -e 's/AT_SPI2_ATK_//' -e 's/_/\./g' -e 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  sed -i -e '/AC_PATH_XTRA/d' configure.ac
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
-
-  sed -i -e '/AC_PATH_XTRA/d' configure.ac
-  autoreconf --force --install
-
+  cd $pkgname
   ./configure --prefix=/usr --sysconfdir=/etc \
     --disable-schemas-compile
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -29,7 +37,7 @@ build() {
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make DESTDIR="$pkgdir" install
 }
 
