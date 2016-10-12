@@ -3,48 +3,57 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=totem
-pkgver=3.20.1
+pkgver=3.22.0+5+ge0bf46e
 pkgrel=1
-pkgdesc="GNOME3 movie player based on GStreamer"
-url="http://www.gnome.org"
+pkgdesc="Movie player for the GNOME desktop based on GStreamer"
+url="https://wiki.gnome.org/Apps/Videos"
 arch=(i686 x86_64)
 license=(GPL2 custom)
-depends=(totem-plparser desktop-file-utils iso-codes libpeas clutter-gtk clutter-gst grilo
-         hicolor-icon-theme gsettings-desktop-schemas dconf
-         python-gobject python-xdg
-         gst-plugins-base gst-plugins-good gst-plugins-bad gnome-desktop)
-makedepends=(intltool libnautilus-extension lirc vala zeitgeist
-             itstool docbook-xsl python-pylint gobject-introspection)
+depends=(totem-plparser iso-codes libpeas clutter-gtk clutter-gst grilo gsettings-desktop-schemas
+         dconf python-gobject python-xdg gnome-desktop gst-plugins-base gst-plugins-good
+         gst-plugins-bad)
+makedepends=(intltool libnautilus-extension lirc vala itstool docbook-xsl python-pylint
+             gobject-introspection git gnome-common appstream-glib gtk-doc)
 optdepends=('gst-plugins-ugly: Extra media codecs'
             'gst-libav: Extra media codecs'
             'lirc-utils: Infrared Remote Control plugin'
             'grilo-plugins: Media discovery'
-            'zeitgeist: Zeitgeist plugin'
             'python-dbus: MPRIS plugin')
 groups=(gnome)
 options=('!emptydirs')
-install=totem.install
 conflicts=(totem-plugin)
 replaces=(totem-plugin)
-source=(https://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz
-        i686.patch)
-sha256sums=('6f22480361ae869fd336854b4f83614fde528aff4e808eb716de33432eb45c27'
-            'a8daa11c5048d738de8f6db0cb8c41d3904d6c3451fbbf2922a9202b89f8d891')
+_commit=e0bf46e391c05081e1e29ffa8ff7550198997a97  # master
+source=("git://git.gnome.org/totem#commit=$_commit"
+        "git://git.gnome.org/libgd")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^V_//;s/_/./g;s/-/+/g'
+}
 
 prepare() {
-  cd "$pkgname-$pkgver"
-  patch -Np1 -i ../i686.patch
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.libgd.url "$srcdir/libgd"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --libexecdir=/usr/lib/totem \
     --localstatedir=/var \
     --disable-static \
     --enable-python \
-    --enable-nautilus
+    --enable-nautilus \
+    --enable-gtk-doc
 
   # https://bugzilla.gnome.org/show_bug.cgi?id=655517
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
@@ -53,8 +62,7 @@ build() {
 }
 
 package() {
-  cd "$pkgname-$pkgver"
-  make DESTDIR="${pkgdir}" install
-
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/totem/COPYING"
 }
