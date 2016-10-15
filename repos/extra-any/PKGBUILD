@@ -3,20 +3,27 @@
 
 pkgbase=vulkan-docs
 pkgname=(vulkan-headers vulkan-man-pages vulkan-html-docs)
-pkgver=1.0.29
+pkgver=1.0.31
 pkgrel=1
 epoch=1
 _pkgname=Vulkan-Docs
-_pkgver=1.0-core-20160930
+_pkgver=1.0-core-20161014
 arch=(any)
 url="https://www.khronos.org/vulkan/"
 license=('custom')
-makedepends=(asciidoc python3)
+makedepends=(asciidoc python3 tinyxml2)
 groups=(vulkan-devel)
-source=("https://github.com/KhronosGroup/${_pkgname}/archive/v${_pkgver}.tar.gz")
-md5sums=('3f9370c61eadfb28895f0884c94eada7')
+source=("https://github.com/KhronosGroup/${_pkgname}/archive/v${_pkgver}.tar.gz"
+        https://raw.githubusercontent.com/KhronosGroup/Vulkan-Hpp/master/VulkanHppGenerator.cpp)
+md5sums=('70d8f2b6669576577b575fd24d231078'
+         '422e798179bbc3bb76284009749883a8')
 
 build() {
+  # we need this to build hpp headers
+  g++ VulkanHppGenerator.cpp -DVK_SPEC="\"vk.xml\"" -DVULKAN_HPP="\"vulkan.hpp\"" -ltinyxml2 -o VulkanHppGenerator
+
+  ./VulkanHppGenerator "${_pkgname}-${_pkgver}/src/spec/vk.xml"
+
   cd "${_pkgname}-${_pkgver}/doc/specs/vulkan"
 
   # ./makeKHR manpages
@@ -37,6 +44,7 @@ package_vulkan-headers() {
 
   install -m644 src/vulkan/vk_platform.h ${pkgdir}/usr/include/vulkan/
   install -m644 src/vulkan/vulkan.h ${pkgdir}/usr/include/vulkan
+  install -m644 ${srcdir}/vulkan.hpp ${pkgdir}/usr/include/vulkan
   install -m644 src/spec/vk.xml ${pkgdir}/usr/share/vulkan
 
   install -m644 doc/specs/vulkan/copyright-ccby.txt ${pkgdir}/usr/share/licenses/${pkgname}/copyright-ccby.txt
