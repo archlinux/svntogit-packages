@@ -1,30 +1,38 @@
 # $Id$
-# Maintainer: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=gcr
-pkgver=3.20.0
-pkgrel=2
+pkgver=3.20.0+11+g8322f27
+pkgrel=1
 pkgdesc="A library for bits of crypto UI and parsing"
-arch=(i686 x86_64)
 url="https://git.gnome.org/browse/gcr"
-license=('GPL2')
-depends=('dconf' 'gtk3' 'libgcrypt' 'p11-kit')
-makedepends=('intltool' 'gobject-introspection' 'python' 'vala' 'libxslt')
-options=('!makeflags')
-source=(http://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz
+arch=(i686 x86_64)
+license=(GPL2)
+depends=(dconf gtk3 libgcrypt p11-kit)
+makedepends=(intltool gobject-introspection python vala libxslt gnome-common git)
+_commit=8322f271bd921278b2dd2692a7f2acdd452b1115  # gnome-3-20
+source=("git://git.gnome.org/gcr#commit=$_commit"
         10-gcr.conf)
-sha256sums=('90572c626d8a708225560c42b4421f7941315247fa1679d4ef569bde7f4bb379'
+sha256sums=('SKIP'
             '5f2eda7175ae9f23ee0e09d2beceb24fd2f6daafd7bddfcc1c1f5a3734eb60fc')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
 
 prepare() {
   mkdir path
   ln -s /usr/bin/python2 path/python
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname
   ./configure --prefix=/usr \
     --libexec=/usr/lib/gcr \
+    --enable-gtk-doc \
     --disable-static \
     --disable-update-mime \
     --disable-schemas-compile
@@ -33,12 +41,12 @@ build() {
 }
 
 check() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname
   PATH="$srcdir/path:$PATH" dbus-run-session make -k check || :
 }
 
 package() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname
   make DESTDIR="$pkgdir" install
 
   # gcr wants to lock some memory to prevent swapping out private keys
