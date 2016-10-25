@@ -3,8 +3,8 @@
 # Contributor: tobias <tobias funnychar archlinux.org>
 
 pkgname=xfce4-panel
-pkgver=4.12.0
-pkgrel=2
+pkgver=4.12.1
+pkgrel=1
 pkgdesc="Panel for the Xfce desktop environment"
 arch=('i686' 'x86_64')
 url="http://www.xfce.org/"
@@ -14,7 +14,7 @@ depends=('exo' 'garcon' 'libxfce4ui' 'libwnck' 'hicolor-icon-theme'
          'desktop-file-utils')
 makedepends=('intltool' 'gtk-doc')
 source=(http://archive.xfce.org/src/xfce/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.bz2)
-sha256sums=('30920fc2e2fc26279a82b5261a155c2cc15ab2aa1ced2275684a6ff8261b97b0')
+sha256sums=('93d58b80cca9c9eb58adb281bc75404df7cf6cae89f7f98bb9f38690009aa2e8')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
