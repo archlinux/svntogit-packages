@@ -12,7 +12,7 @@
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lldb' 'clang' 'clang-tools-extra')
 pkgver=3.9.0
 pkgrel=1
-_ocaml_ver=4.02.3
+_ocaml_ver=4.03.0
 arch=('i686' 'x86_64')
 url="http://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
@@ -26,6 +26,7 @@ source=(http://llvm.org/releases/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
         http://llvm.org/releases/$pkgver/lldb-$pkgver.src.tar.xz{,.sig}
+        msan-prevent-initialization-failure-with-newer-glibc.patch
         llvm-Config-llvm-config.h)
 sha256sums=('66c73179da42cee1386371641241f79ded250e117a79f571bbd69e56daa48948'
             'SKIP'
@@ -37,9 +38,9 @@ sha256sums=('66c73179da42cee1386371641241f79ded250e117a79f571bbd69e56daa48948'
             'SKIP'
             '61280e07411e3f2b4cca0067412b39c16b0a9edd19d304d3fc90249899d12384'
             'SKIP'
+            '8e4f194c2283b91644a7fff43bc4e58c36b5507f2a4d90b72f275c0bd7511c20'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
-validpgpkeys=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D'
-              '11E521D646982372EB577A1F8F0871F202119294')
+validpgpkeys=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D')
 
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
@@ -54,6 +55,9 @@ prepare() {
 
   mv "$srcdir/lldb-$pkgver.src" tools/lldb
 
+  # https://reviews.llvm.org/D24736
+  patch -Np0 -d projects/compiler-rt <../msan-prevent-initialization-failure-with-newer-glibc.patch
+
   mkdir build
 }
 
@@ -64,7 +68,6 @@ build() {
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLLVM_BUILD_LLVM_DYLIB=ON \
-    -DLLVM_DYLIB_EXPORT_ALL=ON \
     -DLLVM_LINK_LLVM_DYLIB=ON \
     -DLLVM_ENABLE_RTTI=ON \
     -DLLVM_ENABLE_FFI=ON \
@@ -72,6 +75,7 @@ build() {
     -DLLVM_BUILD_DOCS=ON \
     -DLLVM_ENABLE_SPHINX=ON \
     -DLLVM_ENABLE_DOXYGEN=OFF \
+    -DLLDB_DISABLE_LIBEDIT=1 \
     -DSPHINX_WARNINGS_AS_ERRORS=OFF \
     -DFFI_INCLUDE_DIR=$(pkg-config --variable=includedir libffi) \
     -DLLVM_BINUTILS_INCDIR=/usr/include \
@@ -159,11 +163,15 @@ package_llvm-ocaml() {
 package_lldb() {
   pkgdesc="Next generation, high-performance debugger"
   url="http://lldb.llvm.org/"
-  depends=('libedit' 'libxml2' 'python2' 'python2-six')
+  depends=('libxml2' 'python2' 'python2-six')
 
   cd "$srcdir/llvm-$pkgver.src"
 
   make -C build/tools/lldb DESTDIR="$pkgdir" install
+
+  # https://bugs.archlinux.org/task/50759
+  sed -i "/import_module('_lldb')/s/_lldb/lldb.&/" \
+  "$pkgdir/usr/lib/python2.7/site-packages/lldb/__init__.py"
 
   # Remove bundled six library
   rm "$pkgdir/usr/lib/python2.7/site-packages/six.py"
@@ -226,10 +234,8 @@ package_clang-tools-extra() {
   make -C build/tools/clang/tools/extra DESTDIR="$pkgdir" install
 
   # Use Python 2
-  sed -i \
-    -e 's|env python$|&2|' \
-    -e 's|/usr/bin/python$|&2|' \
-    "$pkgdir"/usr/share/clang/{clang-tidy-diff,run-clang-tidy}.py
+  sed -i 's|/usr/bin/env python|&2|' \
+    "$pkgdir"/usr/share/clang/{clang-tidy-diff,run-clang-tidy,run-find-all-symbols}.py
 
   install -Dm644 tools/clang/tools/extra/LICENSE.TXT \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
