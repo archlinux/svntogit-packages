@@ -1,0 +1,90 @@
+diff --git a/kwalletd/CMakeLists.txt b/kwalletd/CMakeLists.txt
+index 73aec82..4fd511d 100644
+--- a/kwalletd/CMakeLists.txt
++++ b/kwalletd/CMakeLists.txt
+@@ -3,13 +3,14 @@ project(kwalletd)
+ ########### find needed packages ######
+ find_package(Gpgme)  # Called by FindQGpgme, but since we call some gpgme
+                      # functions ourselves we need to link against it directly.
+-find_package(QGpgme) # provided by kdepimlibs
++find_package(Gpgmepp)
++set(GPGMEPP_LIBS Gpgmepp)
+ 
+-if (GPGME_FOUND AND QGPGME_FOUND)
++if (Gpgmepp_FOUND)
+     add_definitions(-DHAVE_QGPGME)
+-    include_directories(${GPGME_INCLUDES} ${QGPGME_INCLUDE_DIR})
++    include_directories(${GPGME_INCLUDES})
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${KDE4_ENABLE_EXCEPTIONS}")
+-endif(GPGME_FOUND AND QGPGME_FOUND)
++endif(Gpgmepp_FOUND)
+ 
+ ########### build backends #########
+ add_subdirectory(backend)
+@@ -37,7 +38,7 @@ kde4_add_ui_files(kwalletd_KDEINIT_SRCS
+    kwalletwizardpagepassword.ui
+ )
+ 
+-if (GPGME_FOUND AND QGPGME_FOUND)
++if (Gpgmepp_FOUND)
+     set(kwalletd_KDEINIT_SRCS
+         ${kwalletd_KDEINIT_SRCS}
+         knewwalletdialog.cpp
+@@ -48,7 +49,7 @@ if (GPGME_FOUND AND QGPGME_FOUND)
+         knewwalletdialogintro.ui
+         knewwalletdialoggpg.ui
+     )
+-endif(GPGME_FOUND AND QGPGME_FOUND)
++endif(Gpgmepp_FOUND)
+ 
+ find_file(kwallet_xml org.kde.KWallet.xml HINTS ${KDE4_DBUS_INTERFACES_DIR} )
+ 
+@@ -57,9 +58,9 @@ qt4_add_dbus_adaptor( kwalletd_KDEINIT_SRCS ${kwallet_xml} kwalletd.h KWalletD )
+ kde4_add_kdeinit_executable( kwalletd NOGUI ${kwalletd_KDEINIT_SRCS} )
+ 
+ target_link_libraries(kdeinit_kwalletd ${KDE4_KDEUI_LIBS} kwalletbackend )
+-if (GPGME_FOUND AND QGPGME_FOUND)
+-    target_link_libraries(kdeinit_kwalletd ${QGPGME_LIBRARIES} )
+-endif(GPGME_FOUND AND QGPGME_FOUND)
++if (Gpgmepp_FOUND)
++    target_link_libraries(kdeinit_kwalletd ${GPGMEPP_LIBS} )
++endif(Gpgmepp_FOUND)
+ 
+ install(TARGETS kdeinit_kwalletd  ${INSTALL_TARGETS_DEFAULT_ARGS})
+ 
+--- a/kwalletd/backend/CMakeLists.txt
++++ b/kwalletd/backend/CMakeLists.txt
+@@ -20,9 +20,9 @@ set(kwalletbackend_LIB_SRCS
+ kde4_add_library(kwalletbackend SHARED ${kwalletbackend_LIB_SRCS})
+ 
+ target_link_libraries(kwalletbackend ${KDE4_KDEUI_LIBS} ${LIBGCRYPT_LIBRARIES})
+-if(QGPGME_FOUND)
+-target_link_libraries(kwalletbackend ${QGPGME_LIBRARIES} )
+-endif(QGPGME_FOUND)
++if(Gpgmepp_FOUND)
++target_link_libraries(kwalletbackend ${GPGMEPP_LIBS} )
++endif(Gpgmepp_FOUND)
+ 
+ # link with advapi32 on windows
+ if(WIN32 AND NOT WINCE)
+--- a/kwalletd/backend/backendpersisthandler.cpp
++++ b/kwalletd/backend/backendpersisthandler.cpp
+@@ -33,6 +33,7 @@
+ #include <gpgme++/data.h>
+ #include <gpgme++/encryptionresult.h>
+ #include <gpgme++/decryptionresult.h>
++#include <boost/shared_ptr.hpp>
+ #endif
+ #include "backendpersisthandler.h"
+ #include "kwalletbackend.h"
+--- a/kwalletd/kwalletwizard.cpp
++++ b/kwalletd/kwalletwizard.cpp
+@@ -40,6 +40,7 @@
+ #include <kdebug.h>
+ #include <kmessagebox.h>
+ #include <gpgme.h>
++#include <boost/shared_ptr.hpp>
+ #endif
+ 
+ class PageIntro : public QWizardPage
+
