@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.24
-pkgrel=2
+pkgrel=2.90
 _commit=fdfc9260
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -22,13 +22,20 @@ options=('!strip' 'staticlibs')
 install=glibc.install
 source=(git://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
-        locale-gen)
+        locale-gen
+        0001-Revert-Avoid-an-extra-branch-to-PLT-for-z-now.patch)
 md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
-         '476e9113489f93b348b21e144b6a8fcf')
+         '476e9113489f93b348b21e144b6a8fcf'
+         'aa0c0742ea5de00c25dfae8868c1bc9b')
 
 prepare() {
   mkdir glibc-build
+  
+  cd glibc
+  # build fails with PIE enabled toolchain
+  # https://sourceware.org/bugzilla/show_bug.cgi?id=20621
+  patch -p1 -i $srcdir/0001-Revert-Avoid-an-extra-branch-to-PLT-for-z-now.patch
 }
 
 build() {
@@ -46,17 +53,20 @@ build() {
   echo "rootsbindir=/usr/bin" >> configparms
 
   # remove hardening options for building libraries
-  CFLAGS=${CFLAGS/-fstack-protector-strong/}
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
+  CFLAGS=${CFLAGS/-fstack-protector-strong/}
 
-  ../${pkgname}/configure --prefix=/usr \
-      --libdir=/usr/lib --libexecdir=/usr/lib \
+  ../${pkgname}/configure \
+      --prefix=/usr \
+      --libdir=/usr/lib \
+      --libexecdir=/usr/lib \
       --with-headers=/usr/include \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-add-ons \
       --enable-obsolete-rpc \
       --enable-kernel=2.6.32 \
-      --enable-bind-now --disable-profile \
+      --enable-bind-now \
+      --disable-profile \
       --enable-stackguard-randomization \
       --enable-lock-elision \
       --enable-multi-arch \
@@ -68,16 +78,17 @@ build() {
 
   # re-enable hardening for programs
   sed -i "/build-programs=/s#no#yes#" configparms
+
   echo "CC += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
   echo "CXX += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
   make
-
-  # remove harding in preparation to run test-suite
-  sed -i '/FORTIFY/d' configparms
 }
 
 check() {
   cd glibc-build
+
+  # remove harding in preparation to run test-suite
+  sed -i '/FORTIFY/d' configparms
 
   # some failures are "expected"
   make check || true
