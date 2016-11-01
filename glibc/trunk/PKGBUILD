@@ -6,7 +6,7 @@
 
 pkgname=glibc
 pkgver=2.24
-pkgrel=2.90
+pkgrel=2.91
 _commit=fdfc9260
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
@@ -55,6 +55,8 @@ build() {
   # remove hardening options for building libraries
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
   CFLAGS=${CFLAGS/-fstack-protector-strong/}
+  # this is handled properly by --enable-bind-now
+  LDFLAGS=${LDFLAGS/,-z,now/}
 
   ../${pkgname}/configure \
       --prefix=/usr \
