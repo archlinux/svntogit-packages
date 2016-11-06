@@ -6,9 +6,6 @@
 [[ $- != *i* ]] && return
 
 PS1='[\u@\h \W]\$ '
-PS2='> '
-PS3='> '
-PS4='+ '
 
 case ${TERM} in
   xterm*|rxvt*|Eterm|aterm|kterm|gnome*)
