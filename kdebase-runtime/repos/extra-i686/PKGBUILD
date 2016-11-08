@@ -5,22 +5,29 @@
 
 pkgname=kdebase-runtime
 pkgver=16.08.2
-pkgrel=1
+pkgrel=3
 pkgdesc="Plugins and applications necessary for the running of KDE applications"
 arch=('i686' 'x86_64')
 url='https://www.kde.org/'
 license=('GPL' 'LGPL')
 makedepends=('pkg-config' 'cmake' 'automoc4' 'openslp' 'doxygen' 'networkmanager' 'boost')
-depends=('libkactivities4' 'smbclient' 'libssh' 'libcanberra' 'oxygen-icons' 'xorg-xauth' 'libwebp' 'kdepimlibs4')
-optdepends=('gdb: needed by DrKonqi to generate backtrace' 'khelpcenter: to display applications documentation')
+depends=('libkactivities4' 'smbclient' 'libssh' 'libcanberra' 'oxygen-icons' 'xorg-xauth' 'libwebp' 'exiv2' 'gpgme')
+optdepends=('drkonqi: crash report tool' 'khelpcenter: to display applications documentation')
 provides=(notification-daemon)
 conflicts=(kdesu4)
 replaces=(kdesu4)
-source=("http://download.kde.org/stable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz")
-sha1sums=('966c5706318f6f8f09aa77332d4088a379cb1914')
+source=("http://download.kde.org/stable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz" kdebase-runtime-gpgme-1.7.patch)
+sha1sums=('966c5706318f6f8f09aa77332d4088a379cb1914'
+          'a9261cc182da51ed86155e5068a845b9d490b784')
 
 prepare() {
   mkdir -p build
+
+# Build against gpgme's gpgme++
+  cd kde-runtime-$pkgver
+  patch -p1 -i ../kdebase-runtime-gpgme-1.7.patch
+# Don't build drkonqi
+  sed -e '/drkonqi/d' -i CMakeLists.txt
 }
 
 build() {
@@ -46,6 +53,9 @@ package() {
 
   rm "$pkgdir"/usr/share/icons/hicolor/index.theme
   ln -s /usr/lib/kde4/libexec/kdesu "$pkgdir"/usr/bin/kdesu4
+
+# Use KF5 drkonqi
+  ln -s /usr/lib/drkonqi "$pkgdir"/usr/lib/kde4/libexec/
 
 # FS#36668
   chown :nobody "$pkgdir"/usr/lib/kde4/libexec/kdesud
