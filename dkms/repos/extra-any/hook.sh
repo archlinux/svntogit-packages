@@ -41,38 +41,51 @@ check_kernel() {
 # handle actions on module addition/upgrade/removal
 # $1: module name
 # $2: module version
-# $*: dkms args
-do_module() {
-	local modname="$1"; shift
-	local modver="$1"; shift
+# $3: dkms action
+parse_module() {
 	pushd "$install_tree" >/dev/null
-	# do $@ for each kernel with headers for $modname v$modver
 	local path
 	for path in */build/; do
 		local kver="${path%%/*}"
-		check_kernel "$kver" || continue
-		run dkms "$@" -m "$modname" -v "$modver" -k "$kver"
+		dkms_register "$1" "$2" "$kver" "$3"
 	done
 	popd >/dev/null
 }
 
 # handle actions on kernel addition/upgrade/removal
 # $1: kernel version
-# $*: dkms args
-do_kernel() {
-	local kver="$1"; shift
-	check_kernel "$kver" || return
-	# do $@ once for each dkms module in $source_tree
+# $2: dkms action
+parse_kernel() {
 	local path
 	for path in "$source_tree"/*-*/dkms.conf; do
-		if [[ "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-			run dkms "$@" -m "${BASH_REMATCH[1]}" -v "${BASH_REMATCH[2]}" -k "$kver"
+		if [[ -f "$path" && "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
+			dkms_register "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$1" "$2"
 		fi
+	done
+}
+
+# register a dkms call
+# this function suppress echo call for a module
+# $1: module name, $2: module version, $3: kernel version, $4: action
+dkms_register() {
+	DKMS_ACTION["$1/$2/$3"]="$4"
+}
+
+# run registered dkms commands
+dkms_run() {
+	local modname modver kver args nvk
+	for nvk in "${!DKMS_ACTION[@]}"; do
+		mod=${nvk%/*}
+		kver=${nvk##*/}
+		check_kernel "$kver" || return
+		run dkms "${DKMS_ACTION[$nvk]}" "$mod" -k "$kver"
 	done
 }
 
 # emulated program entry point
 main() {
+	[[ -n "$DKMS_ALPM_HOOK_DEBUG" ]] && set -x
+
 	# prevent to have all each dkms call to fail
 	if (( EUID )); then
 		echo 'You must be root to use this hook' >&2
@@ -100,14 +113,19 @@ main() {
 		fi
 	done
 
+	# Storage for DKMS action to run
+	declare -A DKMS_ACTION
+
 	# parse stdin paths to guess what do do
 	while read -r path; do
 		if [[ "/$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-			do_module "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$@"
+			parse_module "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$@"
 		elif [[ "/$path" =~ ^$install_tree/([^/]+)/ ]]; then
-			do_kernel "${BASH_REMATCH[1]}" "$@"
+			parse_kernel "${BASH_REMATCH[1]}" "$@"
 		fi
 	done
+
+	dkms_run
 
 	return 0
 }
