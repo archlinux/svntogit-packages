@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=232
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -19,7 +19,9 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
         'arch.conf'
         'loader.conf'
         'splash-arch.bmp'
-        'udev-hwdb.hook')
+        'udev-hwdb.hook'
+        '0001-disable-RestrictAddressFamilies-on-i686.patch'
+        '0001-Revert-nspawn-try-to-bind-mount-resolved-s-resolv.co.patch')
 sha512sums=('SKIP'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
             '5a3cf61bb0b8da6061c13fbfce7191c545ccf4c95c5bbf3e47f2b41225f35a4a366e691a04f90b76fd24536ea4cb29ff24585408d4a9972cd0f1279544604abb'
@@ -27,17 +29,60 @@ sha512sums=('SKIP'
             '61032d29241b74a0f28446f8cf1be0e8ec46d0847a61dadb2a4f096e8686d5f57fe5c72bcf386003f6520bc4b5856c32d63bf3efe7eb0bc0deefc9f68159e648'
             'c416e2121df83067376bcaacb58c05b01990f4614ad9de657d74b6da3efa441af251d13bf21e3f0f71ddcb4c9ea658b81da3d915667dc5c309c87ec32a1cb5a5'
             '5a1d78b5170da5abe3d18fdf9f2c3a4d78f15ba7d1ee9ec2708c4c9c2e28973469bc19386f70b3cf32ffafbe4fcc4303e5ebbd6d5187a1df3314ae0965b25e75'
-            '888ab01bc6e09beb08d7126472c34c9e1aa35ea34e62a09e900ae34c93b1de2fcc988586efd8d0dc962393974f45c77b206d59a86cf53e370f061bf9a1b1a862')
+            '888ab01bc6e09beb08d7126472c34c9e1aa35ea34e62a09e900ae34c93b1de2fcc988586efd8d0dc962393974f45c77b206d59a86cf53e370f061bf9a1b1a862'
+            '89f9b2d3918c679ce4f76c2b10dc7fcb7e04f1925a5f92542f06891de2a123a91df7eb67fd4ce71506a8132f5440b3560b7bb667e1c1813944b115c1dfe35e3f'
+            'b993a42c5534582631f7b379d54f6abc37e3aaa56ecf869a6d86ff14ae5a52628f4e447b6a30751bc1c14c30cec63a5c6d0aa268362d235ed477b639cac3a219')
+validpgpkeys=(
+  '63CDA1E5D3FC22B998D20DD6327F26951A015CC4'  # Lennart Poettering
+)
 
 _backports=(
 )
 
+_validate_tag() {
+  local success fingerprint trusted status tag=v$pkgver
+
+  parse_gpg_statusfile /dev/stdin < <(git verify-tag --raw "$tag" 2>&1)
+
+  if (( ! success )); then
+    error 'failed to validate tag %s\n' "$tag"
+    return 1
+  fi
+
+  if ! in_array "$fingerprint" "${validpgpkeys[@]}" && (( ! trusted )); then
+    error 'unknown or untrusted public key: %s\n' "$fingerprint"
+    return 1
+  fi
+
+  case $status in
+    'expired')
+      warning 'the signature has expired'
+      ;;
+    'expiredkey')
+      warning 'the key has expired'
+      ;;
+  esac
+
+  return 0
+}
+
 prepare() {
   cd "$pkgbase"
+
+  _validate_tag || return
 
   if (( ${#_backports[*]} > 0 )); then
     git cherry-pick -n "${_backports[@]}"
   fi
+
+  # these patches aren't upstream, but they make v232 more useable.
+
+  # https://github.com/systemd/systemd/issues/4575
+  patch -Np1 <../0001-disable-RestrictAddressFamilies-on-i686.patch
+
+  # https://github.com/systemd/systemd/issues/4595
+  # https://github.com/systemd/systemd/issues/3826
+  patch -Np1 <../0001-Revert-nspawn-try-to-bind-mount-resolved-s-resolv.co.patch
 
   ./autogen.sh
 }
