@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@mirantis.com>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=libpcap
+pkgver=1.8.1
+pkgrel=2
+pkgdesc='A system-independent interface for user-level packet capture'
+arch=('i686' 'x86_64')
+url='http://www.tcpdump.org/'
+license=('BSD')
+depends=('glibc' 'libnl' 'sh' 'libusbx' 'dbus')
+makedepends=('flex' 'bluez-libs')
+source=(http://www.tcpdump.org/release/libpcap-${pkgver}.tar.gz{,.sig}
+        mgmt.h
+        disable-remote.diff)
+validpgpkeys=('1F166A5742ABB9E0249A8D30E089DEF1D9C15D0D') # The Tcpdump Group
+sha256sums=('673dbc69fdc3f5a86fb5759ab19899039a8e5e6c631749e48dcd9c6f0c83541e'
+            'SKIP'
+            '7c85da5330ce7ecb6934795c02c652b9e344461302cf74804a4692c3e2e1e7e2'
+            'dd67dbc3d1fbbbc42c500b9640418e9156c63609800f43cb1ad9c71aa2177ec9')
+
+prepare() {
+  mkdir -p include/bluetooth
+  cp mgmt.h include/bluetooth/
+
+  cd $pkgname-$pkgver
+  patch -p1 -i "$srcdir"/disable-remote.diff
+}
+
+build() {
+  cd $pkgname-$pkgver
+  CFLAGS="$CFLAGS -I${srcdir}/include $(pkg-config libnl-genl-3.0 --cflags)" \
+  ./configure --prefix=/usr \
+    --enable-ipv6 \
+    --enable-bluetooth \
+    --with-libnl
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  install -d -m755 "$pkgdir"/usr/bin
+  make DESTDIR="$pkgdir" install
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # backwards compatibility, programs often look for net/bpf.h
+  mkdir -p "$pkgdir/usr/include/net"
+  cd "$pkgdir/usr/include/net"
+  ln -s ../pcap-bpf.h bpf.h
+}
