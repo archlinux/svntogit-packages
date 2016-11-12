@@ -4,17 +4,18 @@
 
 pkgname=geoclue2
 pkgver=2.4.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Modular geoinformation service built on the D-Bus messaging system"
 arch=(i686 x86_64)
-url="http://geoclue.freedesktop.org/"
+url="https://www.freedesktop.org/wiki/Software/GeoClue/"
 license=(LGPL)
 depends=(libsoup json-glib libnm-glib libmm-glib avahi)
-makedepends=(intltool geoip python2 systemd gobject-introspection)
+makedepends=(intltool geoip python2 systemd gobject-introspection gnome-common git)
 optdepends=('geoip: geoip-lookup server binary')
 backup=(etc/geoclue/geoclue.conf)
-source=(http://freedesktop.org/software/geoclue/releases/${pkgver:0:3}/geoclue-$pkgver.tar.xz)
-sha256sums=('9c43fb9d0c12067ea64400500abb0640194947d4c2c55e38545afe5d9c5c315c')
+_commit=45efbbd15a762ff2998876885cb320d3ec09b7b8  # tags/2.4.4^0
+source=("git://anongit.freedesktop.org/geoclue#commit=$_commit")
+sha256sums=('SKIP')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -28,21 +29,27 @@ _google_api_key=AIzaSyDwr302FpOSkGRpLlUpPThNTDPbXcIn_FM
 # more information.
 _mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
 
+pkgver() {
+  cd geoclue
+  git describe --tags | sed 's/-/+/g'
+}
+
 prepare() {
-  cd geoclue-$pkgver
+  cd geoclue
   sed -e "s/key=geoclue/key=$_mozilla_api_key/" \
       -e "s/key=YOUR_KEY/key=$_google_api_key/" \
       -i data/geoclue.conf.in
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd geoclue-$pkgver
+  cd geoclue
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --libexecdir=/usr/lib/$pkgname --disable-static
+    --libexecdir=/usr/lib/$pkgname --disable-static --enable-gtk-doc
   make
 }
 
 package() {
-  cd geoclue-$pkgver
+  cd geoclue
   make DESTDIR="$pkgdir" install
 }
