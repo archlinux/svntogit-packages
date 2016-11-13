@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=232
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -37,6 +37,9 @@ validpgpkeys=(
 )
 
 _backports=(
+  '843d5baf6aad6c53fc00ea8d95d83209a4f92de1'  # core: don't use the unified hierarchy for the systemd cgroup yet (#4628)
+  'abd67ce74858491565cde157c7b08fda43d3279c'  # basic/virt: fix userns check on CONFIG_USER_NS=n kernel (#4651)
+  '4318abe8d26e969ebdb97744a63ab900233a0185'  # build-sys: do not install ctrl-alt-del.target symlink twice
 )
 
 _validate_tag() {
