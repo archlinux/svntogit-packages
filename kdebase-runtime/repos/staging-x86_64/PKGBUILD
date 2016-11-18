@@ -1,0 +1,59 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=kdebase-runtime
+pkgver=16.11.80
+pkgrel=1
+pkgdesc="Plugins and applications necessary for the running of KDE applications"
+arch=('i686' 'x86_64')
+url='https://www.kde.org/'
+license=('GPL' 'LGPL')
+makedepends=('pkg-config' 'cmake' 'automoc4' 'openslp' 'doxygen' 'networkmanager' 'boost')
+depends=('libkactivities4' 'smbclient' 'libssh' 'libcanberra' 'oxygen-icons' 'xorg-xauth' 'libwebp' 'exiv2' 'gpgme')
+optdepends=('drkonqi: crash report tool' 'khelpcenter: to display applications documentation')
+provides=(notification-daemon)
+conflicts=(kdesu4)
+replaces=(kdesu4)
+source=("http://download.kde.org/unstable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz"{,.sig})
+sha1sums=('319d795bc8e4cea9d4a031d0d2c51059f17ce45c'
+          'SKIP')
+validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7) # Albert Astals Cid <aacid@kde.org>
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+  cmake ../kde-runtime-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKDE4_BUILD_TESTS=OFF \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DWITH_QNtrack=OFF \
+    -DSAMBA_INCLUDE_DIR=/usr/include/samba-4.0 \
+    -DWITH_NepomukCore=OFF \
+    -DBUILD_khelpcenter=OFF \
+    -DBUILD_kglobalaccel=OFF \
+    -DBUILD_kuiserver=OFF \
+    -DBUILD_drkonqi=OFF \
+    -DBUILD_doc=OFF
+  make
+}
+
+package() {
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  rm "$pkgdir"/usr/share/icons/hicolor/index.theme
+  ln -s /usr/lib/kde4/libexec/kdesu "$pkgdir"/usr/bin/kdesu4
+
+# Use KF5 drkonqi
+  ln -s /usr/lib/drkonqi "$pkgdir"/usr/lib/kde4/libexec/
+
+# FS#36668
+  chown :nobody "$pkgdir"/usr/lib/kde4/libexec/kdesud
+  chmod g+s "$pkgdir"/usr/lib/kde4/libexec/kdesud
+}
