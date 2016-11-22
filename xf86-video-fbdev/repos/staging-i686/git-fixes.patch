@@ -1,0 +1,307 @@
+From dd1cf1028c3f0de77d075c4a169011518baab0f4 Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Fri, 21 Mar 2014 12:20:01 -0400
+Subject: [PATCH 1/4] Default to 32bpp if the console is 8bpp (and we weren't
+ told otherwise)
+
+You can still override this on the command line or in the config file.
+Without this we'll come up at 8bpp on matroxfb (and probably others),
+which among other things breaks the default desktop since gnome-shell
+wants GLX and GLX doesn't support pseudocolor anymore.
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+---
+ src/fbdev.c | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/src/fbdev.c b/src/fbdev.c
+index f5a7378..a73565f 100644
+--- a/src/fbdev.c
++++ b/src/fbdev.c
+@@ -38,6 +38,9 @@
+ #include <pciaccess.h>
+ #endif
+ 
++/* for xf86{Depth,FbBpp}. i am a terrible person, and i am sorry. */
++#include "xf86Priv.h"
++
+ static Bool debug = 0;
+ 
+ #define TRACE_ENTER(str) \
+@@ -427,6 +430,29 @@ FBDevPreInit(ScrnInfoPtr pScrn, int flags)
+ 	if (!fbdevHWInit(pScrn,NULL,xf86FindOptionValue(fPtr->pEnt->device->options,"fbdev")))
+ 		return FALSE;
+ 	default_depth = fbdevHWGetDepth(pScrn,&fbbpp);
++
++	if (default_depth == 8) do {
++	    /* trust the command line */
++	    if (xf86FbBpp > 0 || xf86Depth > 0)
++		break;
++
++	    /* trust the config file's Screen stanza */
++	    if (pScrn->confScreen->defaultfbbpp > 0 ||
++		pScrn->confScreen->defaultdepth > 0)
++		break;
++
++	    /* trust our Device stanza in the config file */
++	    if (xf86FindOption(fPtr->pEnt->device->options, "DefaultDepth") ||
++		xf86FindOption(fPtr->pEnt->device->options, "DefaultFbBpp"))
++		break;
++
++	    /* otherwise, lol no */
++	    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
++		       "Console is 8bpp, defaulting to 32bpp\n");
++	    default_depth = 24;
++	    fbbpp = 32;
++	} while (0);
++
+ 	if (!xf86SetDepthBpp(pScrn, default_depth, default_depth, fbbpp,
+ 			     Support24bppFb | Support32bppFb | SupportConvert32to24 | SupportConvert24to32))
+ 		return FALSE;
+-- 
+2.10.2
+
+
+From 2673e727063fe28310836f1e6e9eda552930218a Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Wed, 21 May 2014 09:49:56 -0400
+Subject: [PATCH 2/4] Use own thunk functions instead of fbdevHW*Weak
+
+I plan to remove the Weak functions from a future server.
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+---
+ src/fbdev.c | 86 ++++++++++++++++++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 71 insertions(+), 15 deletions(-)
+
+diff --git a/src/fbdev.c b/src/fbdev.c
+index a73565f..5e38da4 100644
+--- a/src/fbdev.c
++++ b/src/fbdev.c
+@@ -233,6 +233,35 @@ FBDevIdentify(int flags)
+ 	xf86PrintChipsets(FBDEV_NAME, "driver for framebuffer", FBDevChipsets);
+ }
+ 
++static Bool
++fbdevSwitchMode(ScrnInfoPtr pScrn, DisplayModePtr mode)
++{
++    return fbdevHWSwitchMode(pScrn, mode);
++}
++
++static void
++fbdevAdjustFrame(ScrnInfoPtr pScrn, int x, int y)
++{
++    fbdevHWAdjustFrame(pScrn, x, y);
++}
++
++static Bool
++fbdevEnterVT(ScrnInfoPtr pScrn)
++{
++    return fbdevHWEnterVT(pScrn);
++}
++
++static void
++fbdevLeaveVT(ScrnInfoPtr pScrn)
++{
++    fbdevHWLeaveVT(pScrn);
++}
++
++static ModeStatus
++fbdevValidMode(ScrnInfoPtr pScrn, DisplayModePtr mode, Bool verbose, int flags)
++{
++    return fbdevHWValidMode(pScrn, mode, verbose, flags);
++}
+ 
+ #ifdef XSERVER_LIBPCIACCESS
+ static Bool FBDevPciProbe(DriverPtr drv, int entity_num,
+@@ -258,11 +287,11 @@ static Bool FBDevPciProbe(DriverPtr drv, int entity_num,
+ 	    pScrn->Probe         = FBDevProbe;
+ 	    pScrn->PreInit       = FBDevPreInit;
+ 	    pScrn->ScreenInit    = FBDevScreenInit;
+-	    pScrn->SwitchMode    = fbdevHWSwitchModeWeak();
+-	    pScrn->AdjustFrame   = fbdevHWAdjustFrameWeak();
+-	    pScrn->EnterVT       = fbdevHWEnterVTWeak();
+-	    pScrn->LeaveVT       = fbdevHWLeaveVTWeak();
+-	    pScrn->ValidMode     = fbdevHWValidModeWeak();
++	    pScrn->SwitchMode    = fbdevSwitchMode;
++	    pScrn->AdjustFrame   = fbdevAdjustFrame;
++	    pScrn->EnterVT       = fbdevEnterVT;
++	    pScrn->LeaveVT       = fbdevLeaveVT;
++	    pScrn->ValidMode     = fbdevValidMode;
+ 
+ 	    xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+ 		       "claimed PCI slot %d@%d:%d:%d\n", 
+@@ -375,11 +404,11 @@ FBDevProbe(DriverPtr drv, int flags)
+ 		    pScrn->Probe         = FBDevProbe;
+ 		    pScrn->PreInit       = FBDevPreInit;
+ 		    pScrn->ScreenInit    = FBDevScreenInit;
+-		    pScrn->SwitchMode    = fbdevHWSwitchModeWeak();
+-		    pScrn->AdjustFrame   = fbdevHWAdjustFrameWeak();
+-		    pScrn->EnterVT       = fbdevHWEnterVTWeak();
+-		    pScrn->LeaveVT       = fbdevHWLeaveVTWeak();
+-		    pScrn->ValidMode     = fbdevHWValidModeWeak();
++		    pScrn->SwitchMode    = fbdevSwitchMode;
++		    pScrn->AdjustFrame   = fbdevAdjustFrame;
++		    pScrn->EnterVT       = fbdevEnterVT;
++		    pScrn->LeaveVT       = fbdevLeaveVT;
++		    pScrn->ValidMode     = fbdevValidMode;
+ 		    
+ 		    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+ 			       "using %s\n", dev ? dev : "default device");
+@@ -632,6 +661,17 @@ FBDevPreInit(ScrnInfoPtr pScrn, int flags)
+ 	return TRUE;
+ }
+ 
++static void
++fbdevUpdateRotatePacked(ScreenPtr pScreen, shadowBufPtr pBuf)
++{
++    shadowUpdateRotatePacked(pScreen, pBuf);
++}
++
++static void
++fbdevUpdatePacked(ScreenPtr pScreen, shadowBufPtr pBuf)
++{
++    shadowUpdatePacked(pScreen, pBuf);
++}
+ 
+ static Bool
+ FBDevCreateScreenResources(ScreenPtr pScreen)
+@@ -651,7 +691,7 @@ FBDevCreateScreenResources(ScreenPtr pScreen)
+     pPixmap = pScreen->GetScreenPixmap(pScreen);
+ 
+     if (!shadowAdd(pScreen, pPixmap, fPtr->rotate ?
+-		   shadowUpdateRotatePackedWeak() : shadowUpdatePackedWeak(),
++		   fbdevUpdateRotatePacked : fbdevUpdatePacked,
+ 		   FBDevWindowLinear, fPtr->rotate, NULL)) {
+ 	return FALSE;
+     }
+@@ -675,6 +715,23 @@ FBDevShadowInit(ScreenPtr pScreen)
+     return TRUE;
+ }
+ 
++static void
++fbdevLoadPalette(ScrnInfoPtr pScrn, int num, int *i, LOCO *col, VisualPtr pVis)
++{
++    fbdevHWLoadPalette(pScrn, num, i, col, pVis);
++}
++
++static void
++fbdevDPMSSet(ScrnInfoPtr pScrn, int mode, int flags)
++{
++    fbdevHWDPMSSet(pScrn, mode, flags);
++}
++
++static Bool
++fbdevSaveScreen(ScreenPtr pScreen, int mode)
++{
++    return fbdevHWSaveScreen(pScreen, mode);
++}
+ 
+ static Bool
+ FBDevScreenInit(SCREEN_INIT_ARGS_DECL)
+@@ -909,13 +966,12 @@ FBDevScreenInit(SCREEN_INIT_ARGS_DECL)
+ 		return FALSE;
+ 	}
+ 	flags = CMAP_PALETTED_TRUECOLOR;
+-	if(!xf86HandleColormaps(pScreen, 256, 8, fbdevHWLoadPaletteWeak(), 
+-				NULL, flags))
++	if(!xf86HandleColormaps(pScreen, 256, 8, fbdevLoadPalette, NULL, flags))
+ 		return FALSE;
+ 
+-	xf86DPMSInit(pScreen, fbdevHWDPMSSetWeak(), 0);
++	xf86DPMSInit(pScreen, fbdevDPMSSet, 0);
+ 
+-	pScreen->SaveScreen = fbdevHWSaveScreenWeak();
++	pScreen->SaveScreen = fbdevSaveScreen;
+ 
+ 	/* Wrap the current CloseScreen function */
+ 	fPtr->CloseScreen = pScreen->CloseScreen;
+-- 
+2.10.2
+
+
+From ae0aeffae6657464f610da13e7b3349d0d97e81b Mon Sep 17 00:00:00 2001
+From: Adam Jackson <ajax@redhat.com>
+Date: Mon, 11 Aug 2014 12:07:54 -0400
+Subject: [PATCH 3/4] Pass the pci device (if any) through to fbdevhw in probe
+ and preinit
+
+Signed-off-by: Adam Jackson <ajax@redhat.com>
+---
+ src/fbdev.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/fbdev.c b/src/fbdev.c
+index 5e38da4..dcfed28 100644
+--- a/src/fbdev.c
++++ b/src/fbdev.c
+@@ -280,7 +280,7 @@ static Bool FBDevPciProbe(DriverPtr drv, int entity_num,
+ 						  pScrn->entityInstanceList[0]);
+ 
+ 	device = xf86FindOptionValue(devSection->options, "fbdev");
+-	if (fbdevHWProbe(NULL, device, NULL)) {
++	if (fbdevHWProbe(dev, device, NULL)) {
+ 	    pScrn->driverVersion = FBDEV_VERSION;
+ 	    pScrn->driverName    = FBDEV_DRIVER_NAME;
+ 	    pScrn->name          = FBDEV_NAME;
+@@ -427,6 +427,7 @@ FBDevPreInit(ScrnInfoPtr pScrn, int flags)
+ 	int default_depth, fbbpp;
+ 	const char *s;
+ 	int type;
++	void *pci_dev;
+ 
+ 	if (flags & PROBE_DETECT) return FALSE;
+ 
+@@ -454,9 +455,14 @@ FBDevPreInit(ScrnInfoPtr pScrn, int flags)
+ 		   "xf86RegisterResources() found resource conflicts\n");
+ 		return FALSE;
+ 	}
++#else
++	if (fPtr->pEnt->location.type == BUS_PCI)
++	    pci_dev = fPtr->pEnt->location.id.pci;
+ #endif
+ 	/* open device */
+-	if (!fbdevHWInit(pScrn,NULL,xf86FindOptionValue(fPtr->pEnt->device->options,"fbdev")))
++	if (!fbdevHWInit(pScrn, pci_dev,
++			 xf86FindOptionValue(fPtr->pEnt->device->options,
++					     "fbdev")))
+ 		return FALSE;
+ 	default_depth = fbdevHWGetDepth(pScrn,&fbbpp);
+ 
+-- 
+2.10.2
+
+
+From 66e7909bfefd93c05aa37d0cadccc5348f0382be Mon Sep 17 00:00:00 2001
+From: Pascal Terjan <pterjan@google.com>
+Date: Fri, 22 Jan 2016 00:26:22 +0000
+Subject: [PATCH 4/4] Initialize pci_dev
+
+Else it is read before initialization if XSERVER_LIBPCIACCESS is not
+defined or location.type is not BUS_PCI.
+
+Noticed when I got a segfault where it was 0x1 while doing some tests on
+arm.
+
+Signed-off-by: Pascal Terjan <pterjan@google.com>
+Reviewed-by: Emil Velikov <emil.l.velikov@gmail.com>
+---
+ src/fbdev.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/fbdev.c b/src/fbdev.c
+index dcfed28..2c658fe 100644
+--- a/src/fbdev.c
++++ b/src/fbdev.c
+@@ -427,7 +427,7 @@ FBDevPreInit(ScrnInfoPtr pScrn, int flags)
+ 	int default_depth, fbbpp;
+ 	const char *s;
+ 	int type;
+-	void *pci_dev;
++	void *pci_dev = NULL;
+ 
+ 	if (flags & PROBE_DETECT) return FALSE;
+ 
+-- 
+2.10.2
+
