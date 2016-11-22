@@ -1,0 +1,236 @@
+From 29433844c8b8989ea2ac64bd92b3ad61b6f9cf10 Mon Sep 17 00:00:00 2001
+From: Antoine Martin <antoine@nagafix.co.uk>
+Date: Thu, 17 Sep 2015 10:55:25 -0400
+Subject: [PATCH 3/6] Honor DacSpeed setting in xorg.conf
+
+Reviewed-by: Adam Jackson <ajax@redhat.com>
+Signed-off-by: Antoine Martin <antoine@nagafix.co.uk>
+---
+ src/dummy_driver.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/dummy_driver.c b/src/dummy_driver.c
+index 6062c39..470e125 100644
+--- a/src/dummy_driver.c
++++ b/src/dummy_driver.c
+@@ -281,7 +281,7 @@ DUMMYPreInit(ScrnInfoPtr pScrn, int flags)
+     ClockRangePtr clockRanges;
+     int i;
+     DUMMYPtr dPtr;
+-    int maxClock = 230000;
++    int maxClock = 300000;
+     GDevPtr device = xf86GetEntityInfo(pScrn->entityList[0])->device;
+ 
+     if (flags & PROBE_DETECT) 
+@@ -391,7 +391,7 @@ DUMMYPreInit(ScrnInfoPtr pScrn, int flags)
+     clockRanges->next = NULL;
+     clockRanges->ClockMulFactor = 1;
+     clockRanges->minClock = 11000;   /* guessed §§§ */
+-    clockRanges->maxClock = 300000;
++    clockRanges->maxClock = maxClock;
+     clockRanges->clockIndex = -1;		/* programmable */
+     clockRanges->interlaceAllowed = TRUE; 
+     clockRanges->doubleScanAllowed = TRUE;
+-- 
+2.10.2
+
+
+From 8706f60ab457867c120dd44e812b8fadc2be7179 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Thu, 14 Jan 2016 10:30:40 +1000
+Subject: [PATCH 4/6] Switch to using dixChangeWindowProperty
+
+eb36924ead40564325aa56d54a973dc8fb4eae83 removed ChangeWindowProperty from the
+server.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Jon Turney <jon.turney@dronecode.org.uk>
+---
+ src/dummy_driver.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/dummy_driver.c b/src/dummy_driver.c
+index 470e125..9d4d5bf 100644
+--- a/src/dummy_driver.c
++++ b/src/dummy_driver.c
+@@ -790,8 +790,9 @@ DUMMYCreateWindow(WindowPtr pWin)
+         if (! ValidAtom(VFB_PROP))
+             VFB_PROP = MakeAtom(VFB_PROP_NAME, strlen(VFB_PROP_NAME), 1);
+ 
+-        ret = ChangeWindowProperty(pWinRoot, VFB_PROP, XA_STRING, 
+-		8, PropModeReplace, (int)4, (pointer)"TRUE", FALSE);
++        ret = dixChangeWindowProperty(serverClient, pWinRoot, VFB_PROP,
++                                      XA_STRING, 8, PropModeReplace,
++                                      (int)4, (pointer)"TRUE", FALSE);
+ 	if( ret != Success)
+ 		ErrorF("Could not set VFB root window property");
+         dPtr->prop = TRUE;
+-- 
+2.10.2
+
+
+From 367c778240b4266958f33cec3653d5389e283557 Mon Sep 17 00:00:00 2001
+From: Antoine Martin <antoine@nagafix.co.uk>
+Date: Tue, 20 Sep 2016 13:34:40 +0700
+Subject: [PATCH 5/6] remove dead code in dummy driver
+
+Signed-off-by: Antoine Martin <antoine@nagafix.co.uk>
+Reviewed-by: Eric Engestrom <eric.engestrom@imgtec.com>
+Reviewed-by: Aaron Plattner <aplattner@nvidia.com>
+Signed-off-by: Aaron Plattner <aplattner@nvidia.com>
+---
+ src/dummy_driver.c | 19 -------------------
+ 1 file changed, 19 deletions(-)
+
+diff --git a/src/dummy_driver.c b/src/dummy_driver.c
+index 9d4d5bf..cf15053 100644
+--- a/src/dummy_driver.c
++++ b/src/dummy_driver.c
+@@ -673,25 +673,6 @@ DUMMYSwitchMode(SWITCH_MODE_ARGS_DECL)
+ void
+ DUMMYAdjustFrame(ADJUST_FRAME_ARGS_DECL)
+ {
+-    SCRN_INFO_PTR(arg);
+-    int Base; 
+-
+-    Base = (y * pScrn->displayWidth + x) >> 2;
+-
+-    /* Scale Base by the number of bytes per pixel. */
+-    switch (pScrn->depth) {
+-    case  8 :
+-	break;
+-    case 15 :
+-    case 16 :
+-	Base *= 2;
+-	break;
+-    case 24 :
+-	Base *= 3;
+-	break;
+-    default :
+-	break;
+-    }
+ }
+ 
+ /* Mandatory */
+-- 
+2.10.2
+
+
+From e434975017eb90fa702653592ae590bc22aa483c Mon Sep 17 00:00:00 2001
+From: Aaron Plattner <aplattner@nvidia.com>
+Date: Thu, 22 Sep 2016 09:14:26 -0700
+Subject: [PATCH 6/6] Remove pointless empty functions
+
+These functions might be useful in a real driver, but with no
+hardware, they're pointless.  Get rid of them.
+
+v2: Rebase, get rid of pointless calls to DUMMYAdjustFrame, return TRUE from
+DUMMYSwitchMode.
+
+Signed-off-by: Aaron Plattner <aplattner@nvidia.com>
+Reviewed-by: Antoine Martin <antoine@nagafix.co.uk>
+Tested-by: Antoine Martin <antoine@nagafix.co.uk>
+---
+ src/dummy_driver.c | 44 +-------------------------------------------
+ 1 file changed, 1 insertion(+), 43 deletions(-)
+
+diff --git a/src/dummy_driver.c b/src/dummy_driver.c
+index cf15053..2656602 100644
+--- a/src/dummy_driver.c
++++ b/src/dummy_driver.c
+@@ -65,9 +65,6 @@ static ModeStatus DUMMYValidMode(SCRN_ARG_TYPE arg, DisplayModePtr mode,
+ static Bool	DUMMYSaveScreen(ScreenPtr pScreen, int mode);
+ 
+ /* Internally used functions */
+-static Bool     dummyModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
+-static void	dummySave(ScrnInfoPtr pScrn);
+-static void	dummyRestore(ScrnInfoPtr pScrn, Bool restoreText);
+ static Bool	dummyDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op,
+ 				pointer ptr);
+ 
+@@ -461,14 +458,6 @@ DUMMYPreInit(ScrnInfoPtr pScrn, int flags)
+ static Bool
+ DUMMYEnterVT(VT_FUNC_ARGS_DECL)
+ {
+-    SCRN_INFO_PTR(arg);
+-    
+-    /* Should we re-save the text mode on each VT enter? */
+-    if(!dummyModeInit(pScrn, pScrn->currentMode))
+-      return FALSE;
+-
+-    DUMMYAdjustFrame(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
+-
+     return TRUE;
+ }
+ 
+@@ -476,8 +465,6 @@ DUMMYEnterVT(VT_FUNC_ARGS_DECL)
+ static void
+ DUMMYLeaveVT(VT_FUNC_ARGS_DECL)
+ {
+-    SCRN_INFO_PTR(arg);
+-    dummyRestore(pScrn, TRUE);
+ }
+ 
+ static void
+@@ -535,15 +522,6 @@ DUMMYScreenInit(SCREEN_INIT_ARGS_DECL)
+ 
+     if (!(dPtr->FBBase = malloc(pScrn->videoRam * 1024)))
+ 	return FALSE;
+-    
+-    /*
+-     * next we save the current state and setup the first mode
+-     */
+-    dummySave(pScrn);
+-    
+-    if (!dummyModeInit(pScrn,pScrn->currentMode))
+-	return FALSE;
+-    DUMMYAdjustFrame(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
+ 
+     /*
+      * Reset visual list.
+@@ -665,8 +643,7 @@ DUMMYScreenInit(SCREEN_INIT_ARGS_DECL)
+ Bool
+ DUMMYSwitchMode(SWITCH_MODE_ARGS_DECL)
+ {
+-    SCRN_INFO_PTR(arg);
+-    return dummyModeInit(pScrn, mode);
++    return TRUE;
+ }
+ 
+ /* Mandatory */
+@@ -683,7 +660,6 @@ DUMMYCloseScreen(CLOSE_SCREEN_ARGS_DECL)
+     DUMMYPtr dPtr = DUMMYPTR(pScrn);
+ 
+     if(pScrn->vtSema){
+- 	dummyRestore(pScrn, TRUE);
+ 	free(dPtr->FBBase);
+     }
+ 
+@@ -725,24 +701,6 @@ DUMMYValidMode(SCRN_ARG_TYPE arg, DisplayModePtr mode, Bool verbose, int flags)
+     return(MODE_OK);
+ }
+ 
+-static void
+-dummySave(ScrnInfoPtr pScrn)
+-{
+-}
+-
+-static void 
+-dummyRestore(ScrnInfoPtr pScrn, Bool restoreText)
+-{
+-}
+-    
+-static Bool
+-dummyModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
+-{
+-    dummyRestore(pScrn, FALSE);
+-    
+-    return(TRUE);
+-}
+-
+ Atom VFB_PROP  = 0;
+ #define  VFB_PROP_NAME  "VFB_IDENT"
+ 
+-- 
+2.10.2
+
