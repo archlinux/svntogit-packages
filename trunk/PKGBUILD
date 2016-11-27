@@ -5,29 +5,32 @@
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=libgphoto2
-pkgver=2.5.10
-pkgrel=2
+pkgver=2.5.11
+pkgrel=1
 pkgdesc="The core library of gphoto2, designed to allow access to digital camera by external programs."
 arch=(i686 x86_64)
-url="http://www.gphoto.org"
+url="http://www.gphoto.org/"
 license=(LGPL)
-depends=('libexif' 'libjpeg' 'gd' 'libltdl' 'libusb' 'libxml2')
-makedepends=('gtk-doc')
-source=(http://downloads.sourceforge.net/gphoto/$pkgname-$pkgver.tar.bz2{,.asc}
-        jpeg.patch)
-sha1sums=('dc1a1ed203d52360c10dc126f70e4f433a9f174e'
-          'SKIP'
-          '3039b2986b1aac8be30416f6659322c7de09e426')
+depends=(libexif libjpeg gd libltdl libusb libxml2)
+makedepends=(autoconf-archive git)
+_commit=00113c93678cd42d3ac768abc152a07b1c650a53  # tags/libgphoto2-2_5_11-release^0
+source=("git+https://github.com/gphoto/libgphoto2#commit=$_commit")
+sha256sums=('SKIP')
 validpgpkeys=('7C4AFD61D8AAE7570796A5172209D6902F969C95') # Marcus Meissner 
 
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^libgphoto2-//;s/-release//;s/_/./g;s/-/+/g'
+}
+
 prepare() {
-  cd $pkgname-$pkgver
-  patch -Np1 -i ../jpeg.patch
+  cd $pkgname
+  autoreconf -fvi
 }
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr --disable-rpath --enable-gtk-doc
+  cd $pkgname
+  ./configure --prefix=/usr --disable-rpath
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
 
@@ -35,7 +38,7 @@ build() {
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make DESTDIR="${pkgdir}" install
 
   # Remove unused udev helper
