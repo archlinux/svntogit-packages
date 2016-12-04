@@ -5,25 +5,27 @@
 pkgname=qt5-webengine
 _qtver=5.7.0
 pkgver=${_qtver/-/}
-pkgrel=6
+pkgrel=7
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
-depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'libxtst' 'libxcursor' 'libpulse' 'pciutils' 'libxss' 'libvpx' 'opus'
-         'libevent' 'libsrtp' 'libwebp' 'snappy' 'nss' 'protobuf' 'libxslt' 'minizip')
+depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 'libvpx'
+         'libevent' 'libsrtp' 'snappy' 'nss' 'protobuf' 'libxslt' 'minizip' 'ffmpeg')
 makedepends=('python2' 'git' 'gperf' 'jsoncpp')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
         qt5-webengine-fno-delete-null-pointer-checks.patch qt5-webengine-fno-delete-null-pointer-checks-2.patch
-        qt5-webengine-glibc2.24.patch::"https://github.com/qt/qtwebengine-chromium/commit/b12ffcd4.patch")
+        qt5-webengine-glibc2.24.patch::"https://github.com/qt/qtwebengine-chromium/commit/b12ffcd4.patch"
+        qtwebengine-5.7.0-icu58.patch)
 
 md5sums=('937f64886fbcb038d6fa4b44ae80cbeb'
          '2a1610b34204102938a24154a52e5571'
          '5671a16fef65152928789bffd1f7cf24'
          '8145ce05fb86e762f012ca1b56f718fe'
-         '753154df82838d19a7629d56cec7b649')
+         '753154df82838d19a7629d56cec7b649'
+         'c2ffb0073e6f67a0a77a8fe39f9e9859')
 
 prepare() {
   mkdir -p build
@@ -35,6 +37,9 @@ prepare() {
   # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870 (KaOSx patch)
   cd ${_pkgfqn}
  # patch -p1 -i ../qt5-webengine-nss.patch
+
+  # Fix build with ICU 58 (gentoo)
+  patch -p1 -i "$srcdir"/qtwebengine-5.7.0-icu58.patch
 
   # Workaround for v8 segfaults with GCC 6
   patch -p1 -i "$srcdir"/qt5-webengine-fno-delete-null-pointer-checks.patch
@@ -50,7 +55,7 @@ build() {
 
   export PATH="$srcdir/bin:$PATH"
   export CXXFLAGS+=" -fno-delete-null-pointer-checks"
-  qmake WEBENGINE_CONFIG+=use_proprietary_codecs ../${_pkgfqn}
+  qmake WEBENGINE_CONFIG+="use_proprietary_codecs use_system_ffmpeg use_system_icu" ../${_pkgfqn}
   make
 }
 
