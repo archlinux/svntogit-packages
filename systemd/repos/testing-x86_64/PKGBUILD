@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=232
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -31,7 +31,7 @@ sha512sums=('SKIP'
             '61032d29241b74a0f28446f8cf1be0e8ec46d0847a61dadb2a4f096e8686d5f57fe5c72bcf386003f6520bc4b5856c32d63bf3efe7eb0bc0deefc9f68159e648'
             'c416e2121df83067376bcaacb58c05b01990f4614ad9de657d74b6da3efa441af251d13bf21e3f0f71ddcb4c9ea658b81da3d915667dc5c309c87ec32a1cb5a5'
             '5a1d78b5170da5abe3d18fdf9f2c3a4d78f15ba7d1ee9ec2708c4c9c2e28973469bc19386f70b3cf32ffafbe4fcc4303e5ebbd6d5187a1df3314ae0965b25e75'
-            '2688e8be6943aa34b4a4e2481e23d07ab7dae53cc9426260010cf6a1e2361eff4b9a8b3652a1fca65680e1f23221026c6460e04feb1cee919b24e2bbf69be5ed'
+            'b90c99d768dc2a4f020ba854edf45ccf1b86a09d2f66e475de21fe589ff7e32c33ef4aa0876d7f1864491488fd7edb2682fc0d68e83a6d4890a0778dc2d6fe19'
             '888ab01bc6e09beb08d7126472c34c9e1aa35ea34e62a09e900ae34c93b1de2fcc988586efd8d0dc962393974f45c77b206d59a86cf53e370f061bf9a1b1a862'
             '89f9b2d3918c679ce4f76c2b10dc7fcb7e04f1925a5f92542f06891de2a123a91df7eb67fd4ce71506a8132f5440b3560b7bb667e1c1813944b115c1dfe35e3f'
             'b993a42c5534582631f7b379d54f6abc37e3aaa56ecf869a6d86ff14ae5a52628f4e447b6a30751bc1c14c30cec63a5c6d0aa268362d235ed477b639cac3a219'
@@ -187,9 +187,6 @@ package_systemd() {
 
   # we'll create this on installation
   rmdir "$pkgdir/var/log/journal/remote"
-
-  # fix pam file
-  sed 's|system-auth|system-login|g' -i "$pkgdir/etc/pam.d/systemd-user"
 
   # ship default policy to leave services disabled
   echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
