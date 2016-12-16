@@ -5,6 +5,8 @@
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
+[[ $DISPLAY ]] && shopt -s checkwinsize
+
 PS1='[\u@\h \W]\$ '
 
 case ${TERM} in
