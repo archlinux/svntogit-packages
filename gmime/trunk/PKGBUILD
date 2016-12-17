@@ -3,30 +3,48 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=gmime
-pkgver=2.6.20
-pkgrel=2
-pkgdesc="Core mime parsing library"
-arch=('i686' 'x86_64')
-license=('GPL')
+pkgver=2.6.22
+pkgrel=1
+pkgdesc="Glorious MIME Utility Library"
+arch=(i686 x86_64)
+license=(GPL)
 url="http://spruce.sourceforge.net/gmime/"
-depends=('glib2' 'gpgme' 'zlib')
-makedepends=('gtk-sharp-2' 'gobject-introspection')
-source=(http://ftp.gnome.org/pub/GNOME/sources/$pkgname/${pkgver:0:3}/$pkgname-$pkgver.tar.xz)
-sha256sums=('e0a170fb264c2ae4cecd852f4e7aaddb8d58e8f3f0b569ce2d2a4704f55bdf65')
+depends=(glib2 gpgme zlib)
+makedepends=(gtk-sharp-2 gobject-introspection gtk-doc git vala docbook-utils)
+_commit=f0cdd82ebdc6c9daf6725ce10a7a97d5e15ea848  # tags/2.6.22^0
+source=("git+https://git.gnome.org/browse/gmime#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
   # get rid of that .wapi errors in fakeroot
   export MONO_SHARED_DIR="$srcdir/weird"
   mkdir -p "$MONO_SHARED_DIR"
 
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
 
-  ./configure --prefix=/usr --enable-smime \
-      --disable-static
+  ./configure --prefix=/usr \
+    --program-prefix=$pkgname \
+    --enable-gtk-doc \
+    --enable-mono \
+    --enable-smime \
+    --disable-static
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
   make
 }
 
 package() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
   make DESTDIR="$pkgdir" install
 }
