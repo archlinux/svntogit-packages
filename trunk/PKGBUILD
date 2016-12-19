@@ -3,27 +3,37 @@
 
 pkgbase=vulkan-docs
 pkgname=(vulkan-headers vulkan-man-pages vulkan-html-docs)
-pkgver=1.0.34
+pkgver=1.0.38
 pkgrel=1
 epoch=1
 _pkgname=Vulkan-Docs
 arch=(any)
 url="https://www.khronos.org/vulkan/"
 license=('custom')
-makedepends=(asciidoc python3 tinyxml2)
+makedepends=(asciidoc python3 tinyxml2 cmake git)
 groups=(vulkan-devel)
 source=("https://github.com/KhronosGroup/${_pkgname}/archive/v${pkgver}-core.tar.gz"
-        https://raw.githubusercontent.com/KhronosGroup/Vulkan-Hpp/master/VulkanHppGenerator.cpp)
-md5sums=('4042f31dc6bc171a2204ca51d9f75571'
-         '422e798179bbc3bb76284009749883a8')
+        git+https://github.com/leethomason/tinyxml2.git#commit=c8dad95
+        git+https://github.com/KhronosGroup/Vulkan-Hpp.git#commit=09e169c)
+md5sums=('d8f2db57201cb56e94582654bf29d67e'
+         'SKIP'
+         'SKIP')
+
+prepare() {
+  cd Vulkan-Hpp
+  git submodule init
+  git config submodule.tinyxml2.url $srcdir/tinyxml2
+  git submodule update
+}
 
 build() {
   # we need this to build hpp headers
-  g++ VulkanHppGenerator.cpp -DVK_SPEC="\"vk.xml\"" -DVULKAN_HPP="\"vulkan.hpp\"" -ltinyxml2 -o VulkanHppGenerator
+  cd Vulkan-Hpp
+  cmake ./ && make
 
-  ./VulkanHppGenerator "${_pkgname}-${pkgver}-core/src/spec/vk.xml"
+  ./VulkanHppGenerator "${srcdir}/${_pkgname}-${pkgver}-core/src/spec/vk.xml"
 
-  cd "${_pkgname}-${pkgver}-core/doc/specs/vulkan"
+  cd "${srcdir}/${_pkgname}-${pkgver}-core/doc/specs/vulkan"
 
   #./makeKHR manpages
   # Broken, see https://github.com/KhronosGroup/Vulkan-Docs/issues/367
@@ -43,7 +53,7 @@ package_vulkan-headers() {
 
   install -m644 src/vulkan/vk_platform.h ${pkgdir}/usr/include/vulkan/
   install -m644 src/vulkan/vulkan.h ${pkgdir}/usr/include/vulkan
-  install -m644 ${srcdir}/vulkan.hpp ${pkgdir}/usr/include/vulkan
+  install -m644 ${srcdir}/Vulkan-Hpp/vulkan/vulkan.hpp ${pkgdir}/usr/include/vulkan
   install -m644 src/spec/vk.xml ${pkgdir}/usr/share/vulkan
 
   install -m644 doc/specs/vulkan/copyright-ccby.txt ${pkgdir}/usr/share/licenses/${pkgname}/copyright-ccby.txt
