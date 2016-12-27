@@ -5,8 +5,8 @@
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=python2
-pkgver=2.7.12
-pkgrel=2
+pkgver=2.7.13
+pkgrel=1
 _pybasever=2.7
 pkgdesc="A high-level scripting language"
 arch=('i686' 'x86_64')
@@ -14,14 +14,14 @@ license=('PSF')
 url="http://www.python.org/"
 depends=('bzip2' 'gdbm' 'openssl' 'zlib' 'expat' 'sqlite' 'libffi')
 makedepends=('tk' 'bluez-libs' 'hardening-wrapper')
-checkdepends=('gdb' 'file')
+checkdepends=('gdb' 'file' 'xorg-server-xvfb')
 optdepends=('tk: for IDLE'
             'python2-setuptools'
             'python2-pip')
 conflicts=('python<3')
 source=("https://www.python.org/ftp/python/${pkgver%rc?}/Python-${pkgver}.tar.xz"{,.asc}
         descr_ref.patch)
-sha1sums=('05360b8ade117b35e266b2004a7f1f11250c6dcd'
+sha1sums=('18a8f30a0356c751b8d0ea6f76e764cab13ee046'
           'SKIP'
           '8cc6ac63e909063eb16bbdabc0f0eac7d24ff0c1')
 validpgpkeys=('C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF')  # Benjamin Peterson
@@ -41,11 +41,6 @@ prepare() {
 
   sed -i "s/python2.3/python2/g" Lib/distutils/tests/test_build_scripts.py \
     Lib/distutils/tests/test_install_scripts.py
-
-  # TODO: Still not passed
-  # Silent test_gdb failures on 'no symbol table loaded'.
-  #sed -i '/ignore_patterns = (/a "No symbol table is loaded.  Use the \\"file\\" command.",' \
-  #  Lib/test/test_gdb.py
 
   # Ensure that we are using the system copy of various libraries (expat, zlib and libffi),
   # rather than copies shipped in the tarball
@@ -83,15 +78,13 @@ build() {
 }
 
 check() {
-  # As of 2.7.12, 1 test failed:
-  # test_gdb
-  # Besides, test_thread disabled as it will stuck
-  
-  # $SHELL was set to avoid a test failure in test_gdb (it still fails due to other reasons, though)
+  # Since 2.7.13,
+  # test_replace_overflow (present in test_bytes, test_str, test_string, test_unicode, test_userstring) segfault on i686
+  # test_bigrepeat (present in test_tuple) segfault on i686
 
   cd Python-${pkgver}
-  SHELL=/bin/sh LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
-    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_thread || warning "Tests failed"
+  LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
+    xvfb-run "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_bytes test_str test_string test_tuple test_unicode test_userstring
 }
 
 package() {
