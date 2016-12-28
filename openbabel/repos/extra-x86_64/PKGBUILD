@@ -2,38 +2,46 @@
 # Maintainer: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 
-pkgname=openbabel
-pkgver=2.3.2
-pkgrel=6
+pkgbase=openbabel
+pkgname=(openbabel python-openbabel)
+pkgver=2.4.1
+pkgrel=2
 pkgdesc="A library designed to interconvert between many file formats used in molecular modeling and computational chemistry"
 arch=('i686' 'x86_64')
 url="http://openbabel.org/wiki/Main_Page"
 license=('GPL')
-depends=('gcc-libs' 'libxml2' 'libsm')
-makedepends=('cmake' 'eigen' 'wxgtk2.8' 'boost')
-optdepends=('wxgtk2.8: GUI interface')
-source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz" 'gcc-5.patch')
-md5sums=('9b0007560d9d838b40ab4ad06daf5610'
-         '0821ec915b2ab52d54658dc83f5a93d8')
+makedepends=('cmake' 'eigen' 'wxgtk2.8' 'boost' 'python')
+source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz")
+md5sums=('d9defcd7830b0592fece4fe54a137b99')
 
 prepare() {
   mkdir -p build
-
-  cd $pkgname-$pkgver
-# Fix build with GCC 5 (Fedora)
-  patch -p0 -i "$srcdir"/gcc-5.patch
 }
 
 build() {
   cd build
   export CXXFLAGS+=' -std=gnu++98'
-  cmake ../$pkgname-$pkgver \
+  cmake ../openbabel-$pkgver \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr -DwxWidgets_CONFIG_EXECUTABLE=/usr/bin/wx-config-2.8
+    -DCMAKE_INSTALL_PREFIX=/usr -DwxWidgets_CONFIG_EXECUTABLE=/usr/bin/wx-config-2.8 \
+    -DPYTHON_BINDINGS=ON
   make
+
+  # To split python bindings
+  sed -i '/scripts.cmake_install.cmake/d' cmake_install.cmake
 }
 
-package() {
+package_openbabel() {
+  depends=('libxml2' 'libsm')
+  optdepends=('wxgtk2.8: GUI interface')
+
   cd build
+  make DESTDIR="$pkgdir" install
+}
+
+package_python-openbabel() {
+  depends=('python' 'openbabel')
+
+  cd build/scripts
   make DESTDIR="$pkgdir" install
 }
