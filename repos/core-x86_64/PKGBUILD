@@ -5,9 +5,9 @@
 
 pkgname=openssh
 pkgver=7.4p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Free version of the SSH connectivity tools'
-url='https://www.openssh.org/portable.html'
+url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
 arch=('i686' 'x86_64')
 makedepends=('linux-headers')
