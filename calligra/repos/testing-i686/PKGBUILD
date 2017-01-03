@@ -5,31 +5,31 @@
 # Contributor: Ronald van Haren <ronald.archlinux.org>
 
 pkgbase=calligra
-pkgname=('braindump'
-         'calligra-devtools'
+pkgname=('calligra-devtools'
          'calligra-extras'
          'calligra-filters'
-         'calligra-handbook'
          'karbon'
          'calligra-libs'
          'calligra-plan'
          'calligra-plugins'
          'calligra-sheets'
          'calligra-stage'
-         'calligra-words')
-pkgver=3.0.0
-pkgrel=4
+         'calligra-words'
+         'calligra-l10n')
+pkgver=3.0.0.1
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://www.calligra-suite.org/'
 license=('FDL1.2' 'GPL2' 'LGPL')
 makedepends=('extra-cmake-modules' 'kcmutils' 'kdoctools' 'python' 'kdelibs4support' 'knotifyconfig'
              'kdesignerplugin' 'kross' 'ktexteditor' 'threadweaver' 'kactivities' 'khtml' 'boost'
-             'libwpg' 'poppler-qt5' 'kdiagram' 'kreport' 'eigen' 'marble' 'openjpeg' 'pstoedit' 'libspnav'
-             'libvisio' 'libetonyek' 'libodfgen' 'libwps' 'gsl' 'openexr' 'akonadi-contacts' 'kcalcore'
-             'vc' 'qca-qt5' 'git')
+             'libwpg' 'okular' 'kdiagram' 'kreport' 'eigen' 'marble' 'openjpeg' 'pstoedit' 'libspnav' 'cauchy'
+             'libvisio' 'libetonyek' 'libodfgen' 'libwps' 'gsl' 'openexr' 'akonadi-contacts' 'kcalcore' 'vc' 'qca-qt5')
 groups=('calligra')
-source=("http://download.kde.org/stable/${pkgbase}-${pkgver}/${pkgbase}-${pkgver}.tar.gz")
-md5sums=('e1380e00acb92db59d4a24ee856acaa9')
+source=("http://download.kde.org/stable/${pkgbase}/${pkgver}/${pkgbase}-${pkgver}.tar.xz"{,.sig})
+md5sums=('c4cffca0a8008b5efd285414eeeddcff'
+         'SKIP')
+validpgpkeys=(05D00A8B73A686789E0A156858B9596C722EA3BD) # Boudewijn Rempt <foundation@krita.org>
 
 prepare() {
   mkdir -p build
@@ -41,8 +41,7 @@ build() {
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DKDE_INSTALL_LIBDIR=lib \
-    -DBUILD_TESTING=OFF \
-    -DBUILD_UNMAINTAINED=ON
+    -DBUILD_TESTING=OFF
   make
 }
 
@@ -61,19 +60,9 @@ package_calligra-filters() {
   make DESTDIR="$pkgdir" install
 }
 
-package_braindump() {
-  pkgdesc="Notes and idea gathering"
-  depends=('qt5-webkit' 'hicolor-icon-theme' 'calligra-libs')
-  conflicts=('calligra-braindump')
-  replaces=('calligra-braindump')
-
-  cd build/braindump
-  make DESTDIR="$pkgdir" install
-}
-
 package_calligra-libs() {
   pkgdesc="Libraries for the Calligra office suite"
-  depends=('akonadi-contacts' 'ilmbase' 'kactivities' 'qca-qt5')
+  depends=('akonadi-contacts' 'ilmbase' 'kactivities' 'qca-qt5' 'kross')
 
   for _d in interfaces libs pics servicetypes; do
     cd "$srcdir"/build/$_d
@@ -84,6 +73,7 @@ package_calligra-libs() {
 package_calligra-plugins() {
   pkgdesc="Plugins for the Calligra office suite"
   depends=('calligra-filters' 'libspnav' 'kdiagram')
+  optdepends=('cauchy: formula shape')
 
   cd build/plugins
   make DESTDIR="$pkgdir" install
@@ -137,14 +127,6 @@ package_calligra-words() {
   make DESTDIR="$pkgdir" install
 }
 
-package_calligra-handbook() {
-  pkgdesc="Documentation for Calligra"
-  options=('docs')
-
-  cd build/doc/calligra
-  make DESTDIR="$pkgdir" install
-}
-
 package_calligra-extras() {
   pkgdesc="Calligra suite extras"
   depends=('calligra-libs')
@@ -162,4 +144,19 @@ package_calligra-devtools() {
 
   cd build/devtools
   make DESTDIR="$pkgdir" install
+}
+
+package_calligra-l10n() {
+  pkgdesc="Localization for Calligra"
+  for _lang in bs ca ca@valencia cs da de el en_gb es et fi fr gl hu it ja kk nb nl \
+               pl pt pt_br ru sk sv uk zh_cn zh_tw; do
+    conflicts+=(calligra-l10n-$_lang)
+    replaces+=(calligra-l10n-$_lang)
+  done
+
+  cd build
+  mkdir -p install_l10n
+  make DESTDIR=install_l10n install
+  mkdir -p "$pkgdir"/usr/share
+  mv install_l10n/usr/share/locale "$pkgdir"/usr/share/
 }
