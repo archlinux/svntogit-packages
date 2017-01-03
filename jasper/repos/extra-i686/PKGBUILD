@@ -1,44 +1,75 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
-pkgname=jasper
-pkgver=1.900.31
+pkgbase=jasper
+pkgname=('jasper' 'jasper-doc')
+pkgver=2.0.10
 pkgrel=1
 pkgdesc='Software-based implementation of the codec specified in the emerging JPEG-2000 Part-1 standard'
 url='http://www.ece.uvic.ca/~mdadams/jasper/'
 arch=('i686' 'x86_64')
 license=('custom:JasPer2.0')
-depends=('libjpeg')
-makedepends=('freeglut' 'libxmu' 'glu')
-optdepends=('freeglut: jiv support'
-            'glu: jiv support')
+makedepends=('libjpeg' 'freeglut' 'libxmu' 'glu' 'cmake' 'doxygen')
 options=('staticlibs')
 source=(${pkgname}-${pkgver}.tar.gz::https://github.com/mdadams/jasper/archive/version-${pkgver}.tar.gz
         jasper-1.900.1-fix-filename-buffer-overflow.patch)
-sha512sums=('e0f37106b59e4226a65e562e78e577e889dd8cbad7a04c63ca3e6ea2d0b1fe72e325abc0a701e2557aeb64b2dc999fa52426341264cb82e3e44338fb0cdc0f65'
+sha512sums=('8f96f72b73197088ff28364c7b4db79745a3188aa9be888ad3b211541bb4d1e45f23604b36d0b6c4176a432c2da888d1e31f119279aaab73e09430699e036859'
             'b8d798bf75523c5db263783e42c653dd0cb03deee90be32eddf878bb6893cca02abadd94de6a8c737a5b7fe76f7fb245979f010765e6a95fc520b215e3a2a7f0')
 
 prepare() {
-  cd ${pkgname}-version-${pkgver}
+  cd ${pkgbase}-version-${pkgver}
   patch -p1 < "${srcdir}/jasper-1.900.1-fix-filename-buffer-overflow.patch"
-  autoreconf -fvi
+  sed -r 's|(CMAKE_SKIP_BUILD_RPATH) FALSE|\1 TRUE|g' -i CMakeLists.txt
+  mkdir -p build-shared build-static
 }
 
 build() {
-  cd ${pkgname}-version-${pkgver}
-  ./configure --prefix=/usr --mandir=/usr/share/man --enable-shared
-  make
+  cd ${pkgbase}-version-${pkgver}
+  local options=(
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_LIBDIR=lib
+    -DCMAKE_BUILD_TYPE=Release
+    -DJAS_ENABLE_OPENGL=ON
+    -DJAS_ENABLE_LIBJPEG=ON
+    -DJAS_ENABLE_AUTOMATIC_DEPENDENCIES=OFF
+    -DCMAKE_SKIP_RPATH=ON
+  )
+  msg2 "Building static lib..."
+  (cd build-static
+    cmake ${options[@]} -DJAS_ENABLE_SHARED=OFF ..
+    make
+  )
+  msg2 "Building shared lib..."
+  (cd build-shared
+    cmake ${options[@]} -DJAS_ENABLE_SHARED=ON ..
+    make
+  )
 }
 
 check() {
-  cd ${pkgname}-version-${pkgver}
-  make -j1 check
+  cd ${pkgbase}-version-${pkgver}/build-static
+  make -j1 test
 }
 
-package() {
-  cd ${pkgname}-version-${pkgver}
-  make DESTDIR="${pkgdir}" install
+package_jasper() {
+  depends=('libjpeg')
+  optdepends=('jasper-doc: documentation'
+              'freeglut: jiv support'
+              'glu: jiv support')
+  cd ${pkgbase}-version-${pkgver}
+  make -C build-static DESTDIR="${pkgdir}" install
+  make -C build-shared DESTDIR="${pkgdir}" install
   install -Dm 644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  rm -r "${pkgdir}/usr/share/doc"
+}
+
+package_jasper-doc() {
+  pkgdesc+=' (documentation)'
+  optdepends=('jasper')
+  cd ${pkgbase}-version-${pkgver}
+  make -C build-shared DESTDIR="${pkgdir}" install
+  install -Dm 644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  rm -rf "${pkgdir}/usr/"{bin,include,lib,share/man}
 }
 
 # vim: ts=2 sw=2 et:
