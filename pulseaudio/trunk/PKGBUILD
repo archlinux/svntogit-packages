@@ -5,29 +5,36 @@
 # Contributor: William Rea <sillywilly@gmail.com>
 
 pkgbase=pulseaudio
-pkgname=(pulseaudio libpulse pulseaudio-{gconf,zeroconf,lirc,xen,jack,bluetooth,equalizer})
+pkgname=(pulseaudio libpulse pulseaudio-{gconf,zeroconf,lirc,jack,bluetooth,equalizer})
 pkgdesc="A featureful, general-purpose sound server"
-pkgver=9.0
+pkgver=9.99.1
 pkgrel=1
 arch=(i686 x86_64)
 url="http://www.freedesktop.org/wiki/Software/PulseAudio"
-license=(LGPL)
+license=(GPL)
 makedepends=(libasyncns libcap attr libxtst libsm libsndfile libtool rtkit libsoxr
              speexdsp tdb systemd dbus avahi bluez bluez-libs gconf intltool jack2-dbus sbc
-             lirc openssl xenstore fftw orc json-c gtk3 webrtc-audio-processing
-             check)
+             lirc openssl fftw orc json-c gtk3 webrtc-audio-processing
+             check autoconf-archive git)
 options=(!emptydirs)
-source=(http://freedesktop.org/software/$pkgbase/releases/$pkgbase-$pkgver.tar.xz
+_commit=72256f9302b5530b56b8abb7c3fe4b1426c1cb8e  # tags/v9.99.1^0
+source=("git+https://anongit.freedesktop.org/git/pulseaudio/pulseaudio#commit=$_commit"
         padsp-lib32.patch)
-sha256sums=('c3d3d66b827f18fbe903fe3df647013f09fc1e2191c035be1ee2d82a9e404686'
+sha256sums=('SKIP'
             '7832fc59df76538ff10aedd297c03cb7ff117235da8bfad26082994bb5b84332')
 
+pkgver() {
+  cd pulseaudio
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
 prepare() {
-  cd $pkgbase-$pkgver
+  cd pulseaudio
+  NOCONFIGURE=1 ./bootstrap.sh
 }
 
 build() {
-  cd $pkgbase-$pkgver
+  cd pulseaudio
 
   ./configure --prefix=/usr \
     --sysconfdir=/etc \
@@ -54,8 +61,9 @@ package_pulseaudio() {
   optdepends=('pulseaudio-alsa: ALSA configuration (recommended)')
   backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
   install=pulseaudio.install
+  replaces=('pulseaudio-xen<=9.0')
 
-  cd $pkgbase-$pkgver
+  cd pulseaudio
 
   _pulsever=$(./git-version-gen .tarball-version)
   while [[ $_pulsever = *.*.* ]]; do
@@ -119,7 +127,7 @@ package_pulseaudio() {
 
 ### Split modules
 
-  mkdir -p "$srcdir"/{gconf,zeroconf,lirc,xen,jack,bluetooth,equalizer}/usr/lib/pulse-$_pulsever/modules \
+  mkdir -p "$srcdir"/{gconf,zeroconf,lirc,jack,bluetooth,equalizer}/usr/lib/pulse-$_pulsever/modules \
            "$srcdir"/{gconf/usr/lib/pulse,equalizer/usr/bin}
 
   mv usr/lib/pulse-$_pulsever/modules/module-gconf.so \
@@ -132,9 +140,6 @@ package_pulseaudio() {
 
   mv usr/lib/pulse-$_pulsever/modules/module-lirc.so \
      "$srcdir/lirc/usr/lib/pulse-$_pulsever/modules"
-
-  mv usr/lib/pulse-$_pulsever/modules/module-xenpv-sink.so \
-     "$srcdir/xen/usr/lib/pulse-$_pulsever/modules"
 
   mv usr/lib/pulse-$_pulsever/modules/module-jack{-sink,-source,dbus-detect}.so \
      "$srcdir/jack/usr/lib/pulse-$_pulsever/modules"
@@ -151,6 +156,7 @@ package_pulseaudio() {
 package_libpulse() {
   pkgdesc="$pkgdesc (client library)"
   depends=(dbus libasyncns libcap libxtst libsm libsndfile json-c systemd)
+  license=(LGPL)
   backup=(etc/pulse/client.conf)
 
   mv "$srcdir"/libpulse/* "$pkgdir"
@@ -175,14 +181,6 @@ package_pulseaudio-lirc(){
   depends=("pulseaudio=$pkgver-$pkgrel" lirc)
 
   mv "$srcdir"/lirc/* "$pkgdir"
-}
-
-package_pulseaudio-xen(){
-  pkgdesc="Xen support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" xenstore)
-  license=(GPL2)
-
-  mv "$srcdir"/xen/* "$pkgdir"
 }
 
 package_pulseaudio-jack(){
