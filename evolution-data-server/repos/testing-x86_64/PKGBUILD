@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=evolution-data-server
+pkgver=3.22.3
+pkgrel=2
+pkgdesc="Centralized access to appointments and contacts"
+url="https://wiki.gnome.org/Apps/Evolution"
+arch=(i686 x86_64)
+depends=(gnome-online-accounts nss krb5 libgweather libical db libgdata libphonenumber)
+makedepends=(intltool gperf gobject-introspection vala gtk-doc boost git gnome-common)
+license=(GPL)
+_commit=9d0d40d02034e37b6589f463f4e2a07fc6e5a782  # tags/EVOLUTION_DATA_SERVER_3_22_3^0
+source=("git+https://git.gnome.org/browse/evolution-data-server#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^EVOLUTION_DATA_SERVER_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --with-openldap=yes \
+      --libexecdir=/usr/lib/evolution-data-server \
+      --with-krb5=/usr --with-libdb=/usr --with-phonenumber=/usr \
+      --enable-vala-bindings --disable-uoa \
+      --enable-gtk-doc
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgname
+  # libedata-book tests fail because they try to
+  # mkdir /usr/lib/evolution-data-server/camel-providers
+  make check -k || :
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
