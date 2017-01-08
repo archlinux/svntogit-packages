@@ -17,7 +17,7 @@ url="http://gcc.gnu.org"
 makedepends=('binutils>=2.26' 'libmpc' 'gcc-ada' 'doxygen' 'git')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
-source=(git://gcc.gnu.org/git/gcc.git#commit=${_commit}
+source=(git+https://gcc.gnu.org/git/gcc.git#commit=${_commit}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2)
 md5sums=('SKIP'
          'ac1f25a0677912952718a51f5bc20f32')
