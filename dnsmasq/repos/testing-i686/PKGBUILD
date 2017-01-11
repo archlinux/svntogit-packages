@@ -1,0 +1,64 @@
+# $Id$
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Paul Mattal <paul@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+
+pkgname=dnsmasq
+pkgver=2.76
+pkgrel=4
+pkgdesc="Lightweight, easy to configure DNS forwarder and DHCP server"
+url="http://www.thekelleys.org.uk/dnsmasq/doc.html"
+arch=('i686' 'x86_64')
+license=('GPL')
+depends=('glibc' 'gmp' 'libidn' 'libdbus' 'libnetfilter_conntrack' 'nettle')
+backup=('etc/dnsmasq.conf')
+source=("http://www.thekelleys.org.uk/$pkgname/$pkgname-$pkgver.tar.xz"{,.asc}
+        '0001-Handle-binding-upstream-servers-to-an-interface.patch'
+        'dnsmasq-sysusers.conf'
+        'dnsmasq.service')
+md5sums=('00f5ee66b4e4b7f14538bf62ae3c9461'
+         'SKIP'
+         '2d64212b5e69696fc61948f9b86d6999'
+         '8d07ccf412c107d068ec5cc6964788aa'
+         'b87f68013c3e8b4bb37117de968d4603')
+validpgpkeys=('269322E7D9255916E0394DD628FC869A289B82B7')  # Simon Kelley
+
+_build_copts="-DHAVE_DNSSEC -DHAVE_DBUS -DHAVE_IDN -DHAVE_CONNTRACK"
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  # Handle binding upstream servers to an interface
+  patch -Np1 < "$srcdir/0001-Handle-binding-upstream-servers-to-an-interface.patch"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  make \
+    CFLAGS="$CPPFLAGS $CFLAGS" \
+    LDFLAGS="$LDFLAGS" \
+    COPTS="$_build_copts" \
+    all-i18n
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+
+  # need to pass COPTS here to avoid rebuilding the binary.
+  make \
+    COPTS="$_build_copts" \
+    BINDIR=/usr/bin PREFIX=/usr DESTDIR="$pkgdir" \
+    install install-i18n
+
+  install -Dm644 "dbus/dnsmasq.conf" "$pkgdir"/usr/share/dbus-1/system.d/dnsmasq.conf
+  install -Dm644 "dnsmasq.conf.example" "$pkgdir"/etc/dnsmasq.conf
+  install -Dm644 "$srcdir/dnsmasq.service" "$pkgdir"/usr/lib/systemd/system/dnsmasq.service
+  install -Dm644 "$srcdir/dnsmasq-sysusers.conf" "$pkgdir"/usr/lib/sysusers.d/dnsmasq.conf
+
+  # DNSSEC setup
+  sed -i 's,%%PREFIX%%,/usr,' "$pkgdir"/etc/dnsmasq.conf
+  install -Dm644 "trust-anchors.conf" "$pkgdir"/usr/share/dnsmasq/trust-anchors.conf
+}
+
+# vim: ts=2 sw=2 et ft=sh
