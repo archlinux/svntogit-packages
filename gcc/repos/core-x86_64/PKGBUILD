@@ -5,11 +5,11 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
-pkgver=6.2.1
+pkgver=6.3.1
 _pkgver=6
 _islver=0.16.1
 pkgrel=1
-_commit=c2103c17
+_commit=4ca53f06ff7d346ef8021a23108f23a5406a0417
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -21,9 +21,6 @@ source=(git+https://gcc.gnu.org/git/gcc.git#commit=${_commit}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2)
 md5sums=('SKIP'
          'ac1f25a0677912952718a51f5bc20f32')
-
-# gcc-6.0 forces a changed triplet - need to address in pacman/devtools
-[[ $CARCH == "x86_64" ]] && CHOST=x86_64-pc-linux-gnu
 
 _libdir="usr/lib/gcc/$CHOST/$pkgver"
 
@@ -54,18 +51,31 @@ build() {
   CXXFLAGS=${CXXFLAGS/-pipe/}
 
   ${srcdir}/gcc/configure --prefix=/usr \
-      --libdir=/usr/lib --libexecdir=/usr/lib \
-      --mandir=/usr/share/man --infodir=/usr/share/info \
+      --libdir=/usr/lib \
+      --libexecdir=/usr/lib \
+      --mandir=/usr/share/man \
+      --infodir=/usr/share/info \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++ \
-      --enable-shared --enable-threads=posix --enable-libmpx \
-      --with-system-zlib --with-isl --enable-__cxa_atexit \
-      --disable-libunwind-exceptions --enable-clocale=gnu \
-      --disable-libstdcxx-pch --disable-libssp \
-      --enable-gnu-unique-object --enable-linker-build-id \
-      --enable-lto --enable-plugin --enable-install-libiberty \
-      --with-linker-hash-style=gnu --enable-gnu-indirect-function \
-      --disable-multilib --disable-werror \
+      --enable-shared \
+      --enable-threads=posix \
+      --enable-libmpx \
+      --with-system-zlib \
+      --with-isl \
+      --enable-__cxa_atexit \
+      --disable-libunwind-exceptions \
+      --enable-clocale=gnu \
+      --disable-libstdcxx-pch \
+      --disable-libssp \
+      --enable-gnu-unique-object \
+      --enable-linker-build-id \
+      --enable-lto \
+      --enable-plugin \
+      --enable-install-libiberty \
+      --with-linker-hash-style=gnu \
+      --enable-gnu-indirect-function \
+      --disable-multilib \
+      --disable-werror \
       --enable-checking=release
 
   make
