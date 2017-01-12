@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Jameson Pugh <imntreal@gmail.com>
+# Contributor: Tim Jester-Pfadt <t.jp<at>gmx.de>
+
+pkgbase=appstream
+pkgname=(appstream appstream-qt)
+pkgver=0.10.5
+pkgrel=1
+pkgdesc="Provides a standard for creating app stores across distributions"
+arch=(i686 x86_64)
+url="http://distributions.freedesktop.org/wiki/AppStream"
+license=(GPL)
+depends=(libyaml libxml2 protobuf libstemmer glib2)
+makedepends=(cmake xmlto intltool gobject-introspection python2 docbook-xsl qt5-base itstool)
+source=("https://www.freedesktop.org/software/appstream/releases/AppStream-$pkgver.tar.xz"{,.asc}
+        update-appstream-index.hook)
+sha256sums=('340281ca5a17a7157a40bdb0531562f2920b089f7c8b54e91321c2a3032aa46a'
+            'SKIP'
+            'a08b972b31388efe7edfa6db8dbd6909914bb613dd39b608b1764ed040907f82')
+validpgpkeys=(D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB) # Matthias Klumpp <matthias@tenstral.net>
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+
+  cmake ../AppStream-$pkgver \
+	-DQT=ON \
+	-DCMAKE_INSTALL_LIBDIR=lib \
+	-DCMAKE_BUILD_TYPE=Release
+  make
+}
+
+package_appstream() {
+  cd build
+
+  make DESTDIR="$pkgdir" install
+  
+# provided by -qt subpackage
+  rm -r "$pkgdir"/usr/{include/AppStreamQt,lib/cmake,lib/libAppStreamQt.*}
+
+  install -Dm644 "$srcdir"/update-appstream-index.hook "$pkgdir"/usr/share/libalpm/hooks/update-appstream-index.hook
+}
+
+package_appstream-qt() {
+  pkgdesc='Qt5 interface for AppStream'
+  depends=(appstream qt5-base)
+
+  cd build/qt
+  make DESTDIR="$pkgdir" install
+}
