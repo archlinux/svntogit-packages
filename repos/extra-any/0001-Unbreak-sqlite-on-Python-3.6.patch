@@ -1,4 +1,4 @@
-From 0f8b5572de64a3e1a68d20975dffffadd6452c9a Mon Sep 17 00:00:00 2001
+From 2e665e9f51e44808a472a8e7fd13edb205ba5ba7 Mon Sep 17 00:00:00 2001
 From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
 Date: Fri, 13 Jan 2017 00:21:52 +0100
 Subject: [PATCH] Unbreak sqlite on Python 3.6
@@ -11,11 +11,11 @@ Changing the isolation_level to None so that transactions aren't opened
 anymore is a possible workaround. However, using executescript() seems
 like a better idea; it always commits any open transaction first.
 ---
- engine/tabsqlitedb.py | 42 ++++++++++++++++++++++--------------------
- 1 file changed, 22 insertions(+), 20 deletions(-)
+ engine/tabsqlitedb.py | 60 +++++++++++++++++++++++++++------------------------
+ 1 file changed, 32 insertions(+), 28 deletions(-)
 
 diff --git a/engine/tabsqlitedb.py b/engine/tabsqlitedb.py
-index 4ff7f020ecf9dd40..beac0f82ce3ea885 100755
+index 4ff7f020ecf9dd40..9d3b576ba84723d1 100755
 --- a/engine/tabsqlitedb.py
 +++ b/engine/tabsqlitedb.py
 @@ -205,16 +205,17 @@ class tabsqlitedb:
@@ -74,6 +74,35 @@ index 4ff7f020ecf9dd40..beac0f82ce3ea885 100755
          self.create_tables()
          if self.old_phrases:
              sqlargs = []
+@@ -657,18 +659,20 @@ class tabsqlitedb:
+             return
+         if not path.exists(self.user_db_file):
+             db = sqlite3.connect(self.user_db_file)
+-            db.execute('PRAGMA encoding = "UTF-8";')
+-            db.execute('PRAGMA case_sensitive_like = true;')
+-            db.execute('PRAGMA page_size = 4096;')
+             # a database containing the complete German Hunspell
+             # dictionary has less then 6000 pages. 20000 pages
+             # should be enough to cache the complete database
+             # in most cases.
+-            db.execute('PRAGMA cache_size = 20000;')
+-            db.execute('PRAGMA temp_store = MEMORY; ')
+-            db.execute('PRAGMA journal_mode = WAL;')
+-            db.execute('PRAGMA journal_size_limit = 1000000;')
+-            db.execute('PRAGMA synchronous = NORMAL;')
++            self.db.executescript('''
++                PRAGMA encoding = "UTF-8";
++                PRAGMA case_sensitive_like = true;
++                PRAGMA page_size = 4096;
++                PRAGMA cache_size = 20000;
++                PRAGMA temp_store = MEMORY;
++                PRAGMA journal_mode = WAL;
++                PRAGMA journal_size_limit = 1000000;
++                PRAGMA synchronous = NORMAL;
++            ''')
+             db.commit()
+ 
+     def get_database_desc(self, db_file):
 -- 
 2.11.0
 
