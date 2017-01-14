@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright © 2016 Sébastien Luttringer
+# Copyright © 2017 Sébastien Luttringer
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -73,11 +73,11 @@ dkms_register() {
 
 # run registered dkms commands
 dkms_run() {
-	local modname modver kver args nvk
+	local nvk mod kver
 	for nvk in "${!DKMS_ACTION[@]}"; do
 		mod=${nvk%/*}
 		kver=${nvk##*/}
-		check_kernel "$kver" || return
+		check_kernel "$kver" || continue
 		run dkms "${DKMS_ACTION[$nvk]}" "$mod" -k "$kver"
 	done
 }
