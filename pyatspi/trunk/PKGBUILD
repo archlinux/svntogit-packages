@@ -1,31 +1,38 @@
 # $Id$
-# Maintainer: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgbase=pyatspi
 pkgname=(python-atspi python2-atspi)
-pkgver=2.20.2
-pkgrel=2
+pkgver=2.20.3
+pkgrel=1
 arch=(any)
-url="http://www.linuxfoundation.org/en/AT-SPI_on_D-Bus"
-license=('GPL2')
-makedepends=(python-gobject python2-gobject at-spi2-core)
-source=(http://download.gnome.org/sources/${pkgbase}/${pkgver:0:4}/${pkgbase}-${pkgver}.tar.xz)
-sha256sums=('50e5021cd19f2b12b36ba06635aa4e8c9d980eb988855b352b24f80bddf317da')
+url="https://wiki.linuxfoundation.org/en/AT-SPI_on_D-Bus"
+license=(GPL2)
+makedepends=(python-gobject python2-gobject at-spi2-core gnome-common git)
+_commit=7bf7658b96e00e4efa077ed8e9432443ecc5eb0a  # tags/PYATSPI_2_20_3^0
+source=("git+https://git.gnome.org/browse/pyatspi2#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd pyatspi2
+  git describe --tags | sed 's/^PYATSPI_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  mkdir python2 python3
+  cd pyatspi2
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+_build() (
+  cd python$1
+  ../pyatspi2/configure --prefix=/usr --with-python=/usr/bin/python$1
+  make
+)
 
 build() {
-  mkdir python2 python3
-
-  cd $pkgbase-$pkgver
-  sed '/AC_PATH_XTRA/d' -i configure.ac
-  autoreconf -fi
-
-  cd ../python2
-  ../$pkgbase-$pkgver/configure --prefix=/usr --with-python=/usr/bin/python2
-  make
-
-  cd ../python3
-  ../$pkgbase-$pkgver/configure --prefix=/usr --with-python=/usr/bin/python
-  make
+  _build 2
+  _build 3
 }
 
 package_python-atspi() {
@@ -39,9 +46,6 @@ package_python-atspi() {
 package_python2-atspi() {
   pkgdesc="Python 2 bindings for at-spi"
   depends=(python2-gobject at-spi2-core)
-  provides=("pyatspi=$pkgver")
-  replaces=(pyatspi)
-  conflicts=(pyatspi)
 
   cd python2
   make DESTDIR="$pkgdir" install
