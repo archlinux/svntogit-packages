@@ -3,63 +3,48 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 # Contributor: dorphell <dorphell@archlinux.org>
 
-pkgbase=('cdrdao')
-pkgname=('cdrdao' 'gcdmaster')
+pkgname=cdrdao
 pkgver=1.2.3
-pkgrel=9
+pkgrel=10
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://cdrdao.sourceforge.net/"
-makedepends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao' 'libgnomeuimm')
-source=("http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
-        'cdrdao-1.2.3-autoconf-update.patch'
-        'cdrdao-1.2.3-k3b.patch'
-        'cdrdao-1.2.3-stat.patch')
-md5sums=('8d15ba6280bb7ba2f4d6be31d28b3c0c'
-         '8e53dfc174f7c0882194caa05e68b85e'
-         '696f6ca01e1eeb9b6a5be88e535d9398'
-         '0fce05542ebad283f36fa1c4d62992a0')
+pkgdesc='Records audio/data CD-Rs in disk-at-once (DAO) mode'
+depends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao')
+source=(https://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2
+        cdrdao-1.2.3-autoconf-update.patch
+        cdrdao-1.2.3-k3b.patch
+        cdrdao-1.2.3-stat.patch
+        cdrdao-1.2.3-format_security.patch
+        cdrdao-1.2.3-narrowing.patch)
+sha256sums=('8193cb8fa6998ac362c55807e89ad0b3c63edc6b01afaeb3d5042519527fb75e'
+            '2f4f54ed23b4f3b22fd64a2a3d4fa67ff186b3865213cba3fbe81ed9f6c42c74'
+            '6eddd7c79f548b3ad1d8d4ce23367bcae3cd6dee74f0aeb6439758d6599090e0'
+            'ca89b7c56a376d5a9574c5757f0d372236a895334f81867ff5e1703806565bbc'
+            '7909a3ad290d45fd2db5059025bf219be7b77af60050a409a3dc2a41a4859fe3'
+            '6222e307ebabe5149f88d64ef2cee7bf2a44588b9022babb7071bb87c224cae6')
 
 prepare() {
-	cd "${srcdir}/${pkgbase}-${pkgver}"
-
-	patch -Np1 -i "${srcdir}/cdrdao-1.2.3-autoconf-update.patch"
-	patch -Np1 -i "${srcdir}/cdrdao-1.2.3-k3b.patch"
-	patch -Np1 -i "${srcdir}/cdrdao-1.2.3-stat.patch"
-
-	find -name '*.h' -exec sed -i '/sigc++\/object.h/d' {} +
+  cd ${pkgname}-${pkgver}
+  
+  patch -Np1 -i ../cdrdao-1.2.3-autoconf-update.patch
+  patch -Np1 -i ../cdrdao-1.2.3-k3b.patch
+  patch -Np1 -i ../cdrdao-1.2.3-stat.patch
+  patch -Np1 -i ../cdrdao-1.2.3-format_security.patch
+  patch -Np1 -i ../cdrdao-1.2.3-narrowing.patch
 }
 
 build() {
-	cd "${srcdir}/${pkgbase}-${pkgver}"
-
-	CXXFLAGS+=' -std=c++11 -Wno-narrowing'
-	./configure --prefix=/usr \
-		--mandir=/usr/share/man \
-		--sysconfdir=/etc \
-		--with-xdao --with-lame \
-		--with-ogg-support --with-mp3-support
-	make
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+	--mandir=/usr/share/man \
+	--sysconfdir=/etc \
+	--without-xdao --with-lame \
+	--with-ogg-support --with-mp3-support
+  make
 }
 
-package_cdrdao() {
-	pkgdesc='Records audio/data CD-Rs in disk-at-once (DAO) mode'
-	depends=('gcc-libs' 'lame' 'libmad' 'libvorbis' 'libao')
-
-	cd "${srcdir}/${pkgbase}-${pkgver}"
-	for dir in trackdb utils paranoia dao
-	do
-	     make -C ${dir} DESTDIR="${pkgdir}" install
-	done
-}
-
-package_gcdmaster() {
-	pkgdesc='GUI frontend for creating audio CDs using cdrdao'
-	depends=('libgnomeuimm' "cdrdao=${pkgver}")
-
-	cd "${srcdir}/${pkgbase}-${pkgver}"
-	make -C xdao GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
-
-	mv "${pkgdir}/etc/gconf" "${pkgdir}/usr/share/"
-	rmdir "${pkgdir}/etc"
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
 }
