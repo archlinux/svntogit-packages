@@ -3,47 +3,53 @@
 
 pkgname=gnome-alsamixer
 pkgver=0.9.7
-pkgrel=2
+pkgrel=3
 pkgdesc="Gnome ALSA mixer"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/gnome-alsamixer"
 license=('GPL')
-depends=('libgnomeui')
+depends=('alsa-lib' 'gconf' 'gtk2')
 options=('!emptydirs')
 source=(https://launchpad.net/ubuntu/+archive/primary/+files/gnome-alsamixer_0.9.7~cvs.20060916.ds.1.orig.tar.gz
-        02_change_gconf-keys_path.diff 03_gnome-alsamixer.schemas.diff 04_ignore-delimiters.diff
-	05-remove-G_CONST_RETURN.patch 06-use-libgnome-headers.patch gnome-alsamixer.desktop)
+        02_change_gconf-keys_path.patch
+        03_gnome-alsamixer.schemas.patch
+        04_ignore-delimiters.patch
+        05-remove-G_CONST_RETURN.patch
+        06-drop-libgnomeui.patch
+        gnome-alsamixer.desktop)
 sha1sums=('98e716cd14fe46cb9c77034de7558ef113da26f5'
           'ee7743abfc8d6005be6fcb0fb47b45e636db5fdc'
           '6b3148bab4ed53bc9a0a123b33585cd81b138225'
           'd4a7f9a5868c5af52f9b3c7a146ae34ddc45adf7'
           '6b19224d0346cf53b864333b191fa99fc8e7ebdc'
-          '2731a7ef249aac51eeab1717c645c995780f36a7'
+          'f3b72ae8d83e482573e78f48125367e9bf8c6cd2'
           '31639f7932d088ca76a18c79839682be811f23d0')
 
 prepare() {
   cd ${pkgname}-${pkgver}~cvs.20060916
-  patch -Np1 -i ../02_change_gconf-keys_path.diff
-  patch -Np1 -i ../03_gnome-alsamixer.schemas.diff
-  patch -Np1 -i ../04_ignore-delimiters.diff
+  patch -Np1 -i ../02_change_gconf-keys_path.patch
+  patch -Np1 -i ../03_gnome-alsamixer.schemas.patch
+  patch -Np1 -i ../04_ignore-delimiters.patch
   patch -Np1 -i ../05-remove-G_CONST_RETURN.patch
-  patch -Np1 -i ../06-use-libgnome-headers.patch
+  patch -Np1 -i ../06-drop-libgnomeui.patch
 
   ln -sf /usr/share/automake-*/mkinstalldirs mkinstalldirs
+  autoreconf -fi
 }
 
 build() {
   cd ${pkgname}-${pkgver}~cvs.20060916
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+  ./configure \
+      --prefix=/usr \
+      --sysconfdir=/etc \
+      --localstatedir=/var \
+      --disable-schemas-install \
+      --with-gconf-schema-file-dir=/usr/share/gconf/schemas
   make MSGFMT_OPTS="-c" LIBS+="-lm"
 }
 
 package() {
   cd ${pkgname}-${pkgver}~cvs.20060916
-  make GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 DESTDIR="${pkgdir}" install
+  make DESTDIR="${pkgdir}" install
   install -D -m644 "${srcdir}/gnome-alsamixer.desktop" "${pkgdir}/usr/share/applications/gnome-alsamixer.desktop"
-
-  install -d "${pkgdir}/usr/share/gconf/schemas"
-  gconf-merge-schema "${pkgdir}/usr/share/gconf/schemas/${pkgname}.schemas" "${pkgdir}"/etc/gconf/schemas/*.schemas
-  rm -f "${pkgdir}"/etc/gconf/schemas/*.schemas
 }
