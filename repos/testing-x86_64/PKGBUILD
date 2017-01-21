@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Mantas Mikulėnas <grawity@gmail.com>
+
+pkgname=gssproxy
+pkgver=0.6.1
+pkgrel=1
+pkgdesc="GSSAPI Proxy"
+arch=(i686 x86_64)
+url="https://fedorahosted.org/gss-proxy/"
+license=('custom: MIT')
+depends=('krb5' 'popt' 'ding-libs')
+makedepends=('popt' 'libxslt' 'systemd' 'docbook-xsl' 'doxygen'  'po4a')
+options=('emptydirs')
+backup=(etc/gssproxy/{gssproxy,24-nfs-server,80-httpd,99-nfs-client}.conf
+        etc/gss/mech.d/gssproxy.conf)
+source=(https://fedorahosted.org/released/gss-proxy/$pkgname-$pkgver.tar.gz)
+sha512sums=('c3dff11ddd17804e4be3f8930b0b2b3f30174d628fa513bd8f3998ab692bf71bd560ef351eb37d4ac40b6258c645e7833fc0b10d53985c45072a335d0270ff1c')
+
+prepare() {
+  cd "$srcdir/gssproxy-$pkgver"
+  # delete unneeded service dependency
+  sed -i "/# GSSPROXY will not be started until syslog is/d" systemd/gssproxy.service.in
+  sed -i "/^After=syslog.target/d" systemd/gssproxy.service.in
+  
+  # see http://pkgs.fedoraproject.org/cgit/nfs-utils.git/tree/nfs-utils.spec creating symlinks
+  # rpc-gssd.service is nfs-secure.service
+  sed -i "s/nfs-secure.service/rpc-gssd.service/" systemd/gssproxy.service.in
+  # rpc.svcgssd is nfs-secure-server.service
+  sed -i "s/nfs-secure-server.service/rpc-svcgssd.service/" systemd/gssproxy.service.in
+}
+
+build() {
+  cd gssproxy-$pkgver
+  # make it find bundled verto from krb5 without its own pkg-config file
+  export VERTO_CFLAGS="-I/usr/include"
+  export VERTO_LIBS="-L/usr/lib -lverto"
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc  \
+    --with-pubconf-path=/etc/gssproxy \
+    --sbindir=/usr/bin \
+    --localstatedir=/var \
+    --without-selinux \
+    --with-initscript=systemd
+  make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make test_proxymech
+}
+
+
+package() {
+  cd gssproxy-$pkgver
+  make DESTDIR=$pkgdir install
+  
+  # cleanup empty directories
+  rm -rf $pkgdir/usr/include
+  rm -rf $pkgdir/usr/share/doc
+
+  # install default config files
+  install -m644 examples/gssproxy.conf $pkgdir/etc/gssproxy/gssproxy.conf
+  # nfs services
+  install -m644 examples/24-nfs-server.conf $pkgdir/etc/gssproxy/24-nfs-server.conf
+  install -m644 examples/99-nfs-client.conf $pkgdir/etc/gssproxy/99-nfs-client.conf
+  # httpd service / use Arch UID/GID http/33 (by pkg filesystem)
+  install -m644 examples/80-httpd.conf $pkgdir/etc/gssproxy/80-httpd.conf
+  sed -i -e "s:euid = apache:euid = http:" $pkgdir/etc/gssproxy/80-httpd.conf
+
+  install -Dm644 examples/mech  $pkgdir/etc/gss/mech.d/gssproxy.conf
+  
+  # FS#51574
+  install -m700 -d ${pkgdir}/var/lib/gssproxy/rcache
+
+  install -m755 -d ${pkgdir}/usr/share/licenses/$pkgname
+  install -m644 COPYING ${pkgdir}/usr/share/licenses/$pkgname/
+}
