@@ -2,32 +2,23 @@
 # Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
 
 pkgname=ceph
-pkgver=10.2.3
-pkgrel=2
+pkgver=11.2.0
+pkgrel=1
 pkgdesc='Distributed, fault-tolerant storage platform delivering object, block, and file system'
 arch=('x86_64' 'i686')
 url='https://ceph.com/'
 license=('GPL')
 makedepends=('boost' 'systemd' 'xfsprogs' 'python2-setuptools' 'python2-sphinx'
-             'python2-virtualenv' 'cython2')
+             'python2-virtualenv' 'cython2' 'cmake' 'yasm')
 depends=('boost-libs' 'curl' 'expat' 'fcgi' 'fuse2' 'gcc-libs' 'glibc'
   'gperftools' 'keyutils' 'leveldb' 'libaio' 'libatomic_ops' 'libedit'
   'libsystemd' 'libutil-linux' 'ncurses' 'nss' 'python2' 'snappy')
 optdepends=('xfsprogs: support xfs backend')
-options=('emptydirs')
-install=ceph.install
-source=("https://ceph.com/download/$pkgname-$pkgver.tar.gz"
-        'ceph.sysusers'
-        '01-virtualenv2.patch'
-        '02-setup-python2.patch'
-        '03-Revert-rgw-ldap-fix-ldap-bindpw-parsing.patch'
-        '04-fix-686-build.patch')
-md5sums=('5d660c78a211f6d53161e197729aebd2'
-         'b3e24e3aa005a657ab475f84bfe3291a'
-         'a3f72dc8e97f9fd5708d52256bcd9e75'
-         'f11582acceeb6c1790518c3a5a29bb18'
-         '6c4cbe6288858421832e751164617774'
-         'e8fbd2dfb359a8f6d2738d46441fbffa')
+options=('!emptydirs')
+source=("https://download.ceph.com/tarballs/ceph-$pkgver.tar.gz"
+        'ceph.sysusers')
+md5sums=('1e394a69820d71e5df19abe38ef647a6'
+         'b3e24e3aa005a657ab475f84bfe3291a')
 
 prepare() {
   cd $pkgname-$pkgver
@@ -44,47 +35,55 @@ prepare() {
 
 build() {
   cd $pkgname-$pkgver
-  ./configure \
-    --prefix=/usr \
-    --sbindir=/usr/bin \
-    --libexecdir=/usr/lib \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --with-man-pages \
-    --with-radosgw \
-    --without-openldap \
-    PYTHON=/usr/bin/python2 \
-    CYTHON_CHECK=yes \
-    PYTHON_CONFIG_CHECK=yes \
-    SPHINX_BUILD=sphinx-build2
+  [[ -d build ]] || mkdir build
+  cd build
+  # list of options defaults: grep ^option CMakeLists.txt
+  cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_INSTALL_SBINDIR=/usr/bin \
+    -DCMAKE_INSTALL_LIBDIR=/usr/lib \
+    -DCMAKE_INSTALL_LIBEXECDIR=/usr/lib \
+    -DSPHINX_BUILD=/usr/bin/sphinx-build2 \
+    -DWITH_SYSTEM_BOOST=ON \
+    -DWITH_SYSTEMD=ON \
+    -DWITH_EMBEDDED=OFF \
+    -DWITH_OPENLDAP=OFF \
+    -DWITH_LTTNG=OFF \
+    -DHAVE_BABELTRACE=OFF \
+    -DWITH_TESTS=OFF \
+    ..
   make
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd $pkgname-$pkgver/build
 
   make DESTDIR="$pkgdir" install
 
-  # install tmpfiles.d
-  install -Dm644 systemd/ceph.tmpfiles.d "$pkgdir/usr/lib/tmpfiles.d/$pkgname.conf"
-  install -Dm644 "$srcdir"/ceph.sysusers "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
-
   cd "$pkgdir"
+
+  # install tmpfiles.d
+  install -Dm644 "$srcdir"/$pkgname-$pkgver/systemd/ceph.tmpfiles.d \
+    usr/lib/tmpfiles.d/$pkgname.conf
+  install -Dm644 "$srcdir"/ceph.sysusers \
+    usr/lib/sysusers.d/$pkgname.conf
 
   # fix sbin path
   msg2 'Fix sbin paths'
   mv -v usr/sbin/* usr/bin
-  rmdir -v usr/sbin
 
   # fix bash completions path
   msg2 'Fix bash completion path'
   install -d -m 755 usr/share/bash-completion
-  mv etc/bash_completion.d usr/share/bash-completion/completions
+  mv -v etc/bash_completion.d usr/share/bash-completion/completions
 
-  # fix python2 shebang, did not do it in prepare() anymore because it
-  # confuse automake
+  # remove debian init
+  rm -v etc/init.d/ceph
+
+  # fix python2 shebang, did not do it in prepare() because cmake remplace some
   msg2 'Fix python2 shebang'
-  find . -type f -executable -exec \
+  find usr/bin -type f -executable -exec \
     sed -i '1s,^#! \?/usr/bin/\(env \|\)python$,#!/usr/bin/python2,' {} \;
 }
 
