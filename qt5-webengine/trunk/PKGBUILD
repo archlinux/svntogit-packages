@@ -3,9 +3,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.7.1
+_qtver=5.8.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -18,9 +18,9 @@ _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
         qtwebengine-5.7.0-icu58.patch)
 
-md5sums=('c90fba515fb33c091904fe2cadbb345a'
+md5sums=('6e7fb2be161c6db4d988a4f5b329672f'
          '2a1610b34204102938a24154a52e5571'
-         'c2ffb0073e6f67a0a77a8fe39f9e9859')
+         '9d225d1bf83ea45dbf6556d30d35fcb8')
 
 prepare() {
   mkdir -p build
@@ -41,8 +41,7 @@ build() {
   cd build
 
   export PATH="$srcdir/bin:$PATH"
-  export CXXFLAGS+=" -fno-delete-null-pointer-checks"
-  qmake WEBENGINE_CONFIG+="use_proprietary_codecs use_system_ffmpeg use_system_icu" ../${_pkgfqn}
+  qmake CONFIG+="proprietary-codecs" WEBENGINE_CONFIG+="use_proprietary_codecs use_system_ffmpeg use_system_icu" ../${_pkgfqn}
   make
 }
 
