@@ -2,25 +2,36 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=libteam
-pkgver=1.23
-pkgrel=2
+pkgver=1.26
+pkgrel=1
 pkgdesc="Library for controlling team network device"
 arch=(i686 x86_64)
 url="http://libteam.org/"
 license=(LGPL2.1)
 depends=(libnl libdaemon jansson libdbus bash zeromq)
-makedepends=(python python2 swig)
-source=($url/files/$pkgname-$pkgver.tar.gz)
-sha256sums=('d8cd132c425032cc3a7e9314c55485e32243875e0b1adbddd043bbadf1d28c5a')
+makedepends=(python python2 swig git doxygen)
+_commit=8c1cea00a21950089058e4e33ea1f7bf4deaddeb  # tags/v1.26
+source=("git+https://github.com/jpirko/libteam#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     --disable-static --libexecdir=/usr/lib
-  make
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make all html
 
   cp -aT binding/python binding/python2
-
   cd binding/python
   python  ./setup.py build
   cd ../python2
@@ -28,12 +39,12 @@ build() {
 }
 
 check() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make check
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make DESTDIR="$pkgdir" install
 
   install -Dm644 teamd/redhat/systemd/teamd@.service \
@@ -45,4 +56,8 @@ package() {
   python  ./setup.py install --root "$pkgdir" -O1
   cd ../python2
   python2 ./setup.py install --root "$pkgdir" -O1
+
+  cd ../../doc
+  install -d "$pkgdir/usr/share/doc/$pkgname"
+  cp -a api "$pkgdir/usr/share/doc/$pkgname"
 }
