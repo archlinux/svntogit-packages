@@ -1,16 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 case "${DESKTOP_SESSION-}" in
-  gnome) # Done by gnome-settings-daemon
+  gnome*) # Done by gnome-settings-daemon
   ;;
   *)
     # Extra check in case DESKTOP_SESSION is not set correctly
-    if [[ -z ${GNOME_DESKTOP_SESSION_ID-} ]]; then
-      if [[ -z ${GTK_MODULES-} ]]; then
-        GTK_MODULES="canberra-gtk-module"
-      else
-        GTK_MODULES="$GTK_MODULES:canberra-gtk-module"
-      fi
+    if [ -z "${GNOME_DESKTOP_SESSION_ID-}" ]; then
+      GTK_MODULES="${GTK_MODULES:+$GTK_MODULES:}canberra-gtk-module"
       export GTK_MODULES
     fi
   ;;
