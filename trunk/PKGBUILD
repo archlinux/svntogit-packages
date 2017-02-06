@@ -3,22 +3,38 @@
 
 pkgbase=libxml++
 pkgname=('libxml++' 'libxml++-docs')
-pkgver=2.40.1
+pkgver=3.0.1+4+g2af973f
 pkgrel=1
 arch=('i686' 'x86_64')
 license=('LGPL')
 url="http://libxmlplusplus.sourceforge.net/"
-makedepends=('pkgconfig' 'glibmm-docs' 'libxml2' 'glibmm')
+makedepends=('pkgconfig' 'glibmm-docs' 'libxml2' 'glibmm' git mm-common)
 options=('!emptydirs')
-source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgbase}/${pkgver:0:4}/${pkgbase}-${pkgver}.tar.xz)
-sha256sums=('4ad4abdd3258874f61c2e2a41d08e9930677976d303653cd1670d3e9f35463e9')
+_commit=2af973ff59b2151e0783bbe4155816ce88d0c8b0  # libxml++-3.0
+source=("git+https://git.gnome.org/browse/libxml++#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/$pkgbase"
   ./configure --prefix=/usr
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
+}
+
+check() {
+  cd "${srcdir}/$pkgbase"
+  make check
 }
 
 package_libxml++() {
@@ -28,13 +44,13 @@ package_libxml++() {
   provides=("libxml++2=${pkgver}")
   conflicts=('libxml++2')
 
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/$pkgbase"
   make DESTDIR="${pkgdir}" install doc_subdirs=
 }
 
 package_libxml++-docs() {
   pkgdesc="Developer documentation for libxml++"
   depends=('glibmm-docs')
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "${srcdir}/$pkgbase"
   make DESTDIR="${pkgdir}" -C docs install
 }
