@@ -1,0 +1,65 @@
+# $Id$
+# Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: galiyosha@gmail.com
+# Contributor: Jon Kristian Nilsen <jokr.nilsen@gmail.com>
+
+pkgname=libffado
+pkgver=2.3.0
+pkgrel=1
+pkgdesc="Driver for FireWire audio devices"
+arch=('i686' 'x86_64')
+url="http://www.ffado.org/"
+license=('GPL')
+depends=('libiec61883' 'libavc1394' 'dbus-c++'
+         'libxml++' 'jack' 'libsigc++' 'libconfig')
+makedepends=('scons' 'subversion' 'python2-pyqt')
+optdepends=('python2: ffado-diag'
+            'python2-pyqt: mixer applet')
+provides=('ffado')
+source=("http://www.ffado.org/files/$pkgname-$pkgver.tgz"
+        'python2-qt.patch'
+        'libxml++3.patch'
+        'gcc-warnings.patch'
+        'cpuinfo-parsing.patch'
+        'gcc6.patch')
+md5sums=('8f452977267200cfaf9b8e16ba3c92df'
+         '223f7a10dd208f30ead7ec0c3c84473f'
+         '4203ef91ace1639516408461d03e39f1'
+         '6d353c935007b048b36af7a2bcd9e433'
+         '71532069197df12783d389c7a21382ba'
+         '8a02cc31fa9c538d84b263eb9de063b3')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  msg2 "Applying Python 2 compatibility patch (downstream)"
+  patch -Np1 -i "$srcdir/python2-qt.patch"
+  patch -Np3 -i "$srcdir/libxml++3.patch"
+  patch -Np3 -i "$srcdir/gcc-warnings.patch"
+  patch -Np1 -i "$srcdir/cpuinfo-parsing.patch"
+  patch -Np1 -i "$srcdir/gcc6.patch"
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  scons DEBUG=False \
+        PREFIX=/usr \
+        MANDIR=/usr/share/man \
+        UDEVDIR=/usr/lib/udev/rules.d \
+        COMPILE_FLAGS="$CFLAGS -std=gnu++11"
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  scons DESTDIR="$pkgdir" WILL_DEAL_WITH_XDG_MYSELF="True" install
+
+  install -Dm644 support/xdg/ffado.org-ffadomixer.desktop \
+    "$pkgdir/usr/share/applications/ffadomixer.desktop"
+
+  install -Dm644 support/xdg/hi64-apps-ffado.png \
+    "$pkgdir/usr/share/pixmaps/ffado.png"
+}
+
+# vim:set ts=2 sw=2 et:
