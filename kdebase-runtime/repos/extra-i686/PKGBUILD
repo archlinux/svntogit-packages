@@ -1,0 +1,69 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=kdebase-runtime
+pkgver=16.12.2
+pkgrel=1
+pkgdesc="Plugins and applications necessary for the running of KDE applications"
+arch=('i686' 'x86_64')
+url='https://www.kde.org/'
+license=('GPL' 'LGPL')
+makedepends=('pkg-config' 'cmake' 'automoc4' 'openslp' 'doxygen' 'networkmanager' 'boost')
+depends=('kdelibs' 'smbclient' 'libssh' 'libcanberra' 'oxygen-icons' 'xorg-xauth' 'libwebp' 'exiv2' 'gpgme')
+optdepends=('drkonqi: crash report tool' 'khelpcenter: to display applications documentation')
+provides=(notification-daemon)
+conflicts=(kdesu4)
+replaces=(kdesu4)
+source=("http://download.kde.org/stable/applications/${pkgver}/src/kde-runtime-${pkgver}.tar.xz"{,.sig}
+        kdebase-runtime-no-html-thumbnails.patch kdebase-runtime-no-kdewebkit.patch)
+sha1sums=('e182fb3f7daf9db0345c18e7cb0804c4b09d1783'
+          'SKIP'
+          '5f78db33cfdae44e53aa5bb0b7bd9ebdc1e42808'
+          '4613c4168ce80ba8ada401d6b20a3a76c067de75')
+validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7) # Albert Astals Cid <aacid@kde.org>
+
+prepare() {
+  mkdir -p build
+
+# Don't link to kactivities
+  sed -e '/plasmaextracomponents/d' -i kde-runtime-$pkgver/plasma/declarativeimports/CMakeLists.txt
+# Drop HTML thumbnailer, uses insecure QtWebKit
+  cd kde-runtime-$pkgver
+  patch -p1 -i ../kdebase-runtime-no-html-thumbnails.patch
+  patch -p1 -i ../kdebase-runtime-no-kdewebkit.patch
+}
+
+build() {
+  cd build
+  cmake ../kde-runtime-$pkgver \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKDE4_BUILD_TESTS=OFF \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DWITH_QNtrack=OFF \
+    -DSAMBA_INCLUDE_DIR=/usr/include/samba-4.0 \
+    -DWITH_NepomukCore=OFF \
+    -DBUILD_khelpcenter=OFF \
+    -DBUILD_kglobalaccel=OFF \
+    -DBUILD_kuiserver=OFF \
+    -DBUILD_drkonqi=OFF \
+    -DBUILD_doc=OFF
+  make
+}
+
+package() {
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  rm "$pkgdir"/usr/share/icons/hicolor/index.theme
+  ln -s /usr/lib/kde4/libexec/kdesu "$pkgdir"/usr/bin/kdesu4
+
+# Use KF5 drkonqi
+  ln -s /usr/lib/drkonqi "$pkgdir"/usr/lib/kde4/libexec/
+
+# FS#36668
+  chown :nobody "$pkgdir"/usr/lib/kde4/libexec/kdesud
+  chmod g+s "$pkgdir"/usr/lib/kde4/libexec/kdesud
+}
