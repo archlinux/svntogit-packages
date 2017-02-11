@@ -1,0 +1,76 @@
+From fef1bbc259bca9cfaac65a85de877f9b7ed27773 Mon Sep 17 00:00:00 2001
+From: Andreas Cadhalpun <Andreas.Cadhalpun@googlemail.com>
+Date: Fri, 14 Oct 2016 20:24:56 +0200
+Subject: Add support for LLVM 3.9
+
+Changes:
+IRBuilder no longer has a preserveNames template argument.
+AtomicOrdering is now a strongly typed enum.
+
+Patch-Name: Add-support-for-LLVM-3.9.patch
+---
+ libclamav/c++/bytecode2llvm.cpp | 12 +++++++++++-
+ libclamav/c++/m4/llvm-flags.m4  |  4 ++--
+ 2 files changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/libclamav/c++/bytecode2llvm.cpp b/libclamav/c++/bytecode2llvm.cpp
+index 213847c..252f8f6 100644
+--- a/libclamav/c++/bytecode2llvm.cpp
++++ b/libclamav/c++/bytecode2llvm.cpp
+@@ -787,7 +787,11 @@ class RuntimeLimits : public FunctionPass {
+         AbrtC->setDoesNotThrow();
+ #endif
+         new UnreachableInst(F.getContext(), AbrtBB);
++#if LLVM_VERSION < 39
+ 	IRBuilder<false> Builder(F.getContext());
++#else
++    IRBuilder<> Builder(F.getContext());
++#endif
+ 
+ #if LLVM_VERSION < 38
+ 	Value *Flag = F.arg_begin();
+@@ -825,8 +829,10 @@ class RuntimeLimits : public FunctionPass {
+ #if LLVM_VERSION < 30
+ 	    // store-load barrier: will be a no-op on x86 but not other arches
+ 	    Builder.CreateCall(LSBarrier, ARRAYREF(Value*, MBArgs, MBArgs+5));
+-#else
++#elif LLVM_VERSION < 39
+ 	    Builder.CreateFence(Release);
++#else
++        Builder.CreateFence(AtomicOrdering::Release);
+ #endif
+ 	    // Load Flag that tells us we timed out (first byte in bc_ctx)
+ 	    Value *Cond = Builder.CreateLoad(Flag, true);
+@@ -969,7 +975,11 @@ class LLVMCodegen {
+     Twine BytecodeID;
+ 
+     TargetFolder Folder;
++#if LLVM_VERSION < 39
+     IRBuilder<false, TargetFolder> Builder;
++#else
++    IRBuilder<TargetFolder> Builder;
++#endif
+ 
+     std::vector<Value*> globals;
+     DenseMap<unsigned, unsigned> GVoffsetMap;
+diff --git a/libclamav/c++/m4/llvm-flags.m4 b/libclamav/c++/m4/llvm-flags.m4
+index 345c7ae..9631d5d 100644
+--- a/libclamav/c++/m4/llvm-flags.m4
++++ b/libclamav/c++/m4/llvm-flags.m4
+@@ -98,14 +98,14 @@ elif test $llvmver_test -lt 290; then
+ elif test $llvmver_test -lt 360; then
+     llvmcomp="jit nativecodegen scalaropts ipo"
+     AC_MSG_RESULT([ok ($llvmver)])
+-elif test $llvmver_test -lt 390; then
++elif test $llvmver_test -lt 400; then
+     dnl LLVM 3.6.0 removed jit, so we have to use mcjit
+     dnl and we're using InitializeNativeTargetAsmParser, so we need the architecture specific parsers
+     llvmcomp="mcjit nativecodegen scalaropts ipo x86asmparser powerpcasmparser"
+     AC_MSG_RESULT([ok ($llvmver)])
+ else
+     AC_MSG_RESULT([no ($llvmver)])
+-    AC_MSG_ERROR([LLVM < 3.9 required, but "$llvmver"($llvmver_test) found])
++    AC_MSG_ERROR([LLVM < 4.0 required, but "$llvmver"($llvmver_test) found])
+ fi
+ 
+ dnl aquire the required flags to properly link in external LLVM
