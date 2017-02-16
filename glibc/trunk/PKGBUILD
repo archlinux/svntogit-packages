@@ -5,9 +5,9 @@
 # NOTE: valgrind requires rebuilt with each major glibc version
 
 pkgname=glibc
-pkgver=2.24
-pkgrel=2.91
-_commit=fdfc9260
+pkgver=2.25
+pkgrel=1
+_commit=58520986c38e34db60e07260c64c563e3efcf353
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -20,22 +20,15 @@ backup=(etc/gai.conf
         etc/nscd.conf)
 options=('!strip' 'staticlibs')
 install=glibc.install
-source=(git://sourceware.org/git/glibc.git#commit=${_commit}
+source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
-        locale-gen
-        0001-Revert-Avoid-an-extra-branch-to-PLT-for-z-now.patch)
+        locale-gen)
 md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
-         '476e9113489f93b348b21e144b6a8fcf'
-         'aa0c0742ea5de00c25dfae8868c1bc9b')
+         '476e9113489f93b348b21e144b6a8fcf')
 
 prepare() {
   mkdir glibc-build
-  
-  cd glibc
-  # build fails with PIE enabled toolchain
-  # https://sourceware.org/bugzilla/show_bug.cgi?id=20621
-  patch -p1 -i $srcdir/0001-Revert-Avoid-an-extra-branch-to-PLT-for-z-now.patch
 }
 
 build() {
@@ -52,11 +45,8 @@ build() {
   echo "sbindir=/usr/bin" >> configparms
   echo "rootsbindir=/usr/bin" >> configparms
 
-  # remove hardening options for building libraries
+  # remove fortify for building libraries
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
-  CFLAGS=${CFLAGS/-fstack-protector-strong/}
-  # this is handled properly by --enable-bind-now
-  LDFLAGS=${LDFLAGS/,-z,now/}
 
   ../${pkgname}/configure \
       --prefix=/usr \
@@ -70,26 +60,27 @@ build() {
       --enable-bind-now \
       --disable-profile \
       --enable-stackguard-randomization \
+      --enable-stack-protector=strong \
       --enable-lock-elision \
       --enable-multi-arch \
       --disable-werror
 
-  # build libraries with hardening disabled
+  # build libraries with fortify disabled
   echo "build-programs=no" >> configparms
   make
 
-  # re-enable hardening for programs
+  # re-enable fortify for programs
   sed -i "/build-programs=/s#no#yes#" configparms
 
-  echo "CC += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
-  echo "CXX += -fstack-protector-strong -D_FORTIFY_SOURCE=2" >> configparms
+  echo "CC += -D_FORTIFY_SOURCE=2" >> configparms
+  echo "CXX += -D_FORTIFY_SOURCE=2" >> configparms
   make
 }
 
 check() {
   cd glibc-build
 
-  # remove harding in preparation to run test-suite
+  # remove fortify in preparation to run test-suite
   sed -i '/FORTIFY/d' configparms
 
   # some failures are "expected"
@@ -137,7 +128,9 @@ package() {
     strip $STRIP_BINARIES usr/bin/lddlibc4
   fi
 
-  strip $STRIP_STATIC usr/lib/*.a
+  strip $STRIP_STATIC usr/lib/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
+                      usr/lib/lib{dl,g,ieee,m-${pkgver},mcheck,mvec{,_nonshared}}.a \
+                      usr/lib/lib{nsl,pthread{,_nonshared},resolv,rpcsvc,rt,util}.a
 
   strip $STRIP_SHARED usr/lib/lib{anl,BrokenLocale,cidn,crypt}-*.so \
                       usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
