@@ -1,0 +1,193 @@
+From 6cee8f8afb1b6c5398faf75b7b96bd2d4eaebde7 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Thu, 16 Feb 2017 01:24:48 +0100
+Subject: [PATCH] build: Improve docs and introspection
+
+---
+ doc/grilo/Makefile.am      | 12 ++++++++++++
+ doc/grilo/meson.build      | 10 +++++++++-
+ doc/grilo/writing-apps.xml | 10 +++++-----
+ libs/meson.build           |  2 ++
+ libs/net/meson.build       | 13 ++++---------
+ libs/pls/meson.build       |  9 ++++++---
+ src/meson.build            |  1 +
+ 7 files changed, 39 insertions(+), 18 deletions(-)
+
+diff --git a/doc/grilo/Makefile.am b/doc/grilo/Makefile.am
+index 11ce4220c45cbec6..4f2ed610cf44df24 100644
+--- a/doc/grilo/Makefile.am
++++ b/doc/grilo/Makefile.am
+@@ -74,6 +74,18 @@ IGNORE_HFILES=config.h \
+ # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
+ HTML_IMAGES=
+ 
++program_listings = \
++	configuring-plugins.c \
++	browsing.c \
++	searching.c \
++	multivalues.c \
++	efficient-metadata-resolution.c
++
++%.c: $(top_srcdir)/examples/%.c
++	cp -f $< $@
++
++html-build.stamp: $(program_listings)
++
+ # Extra SGML files that are included by $(DOC_MAIN_SGML_FILE).
+ # e.g. content_files=running.sgml building.sgml changes-2.0.sgml
+ content_files=overview.xml	\
+diff --git a/doc/grilo/meson.build b/doc/grilo/meson.build
+index 299c28b6fd4df45a..e86c6784a41dbb6c 100644
+--- a/doc/grilo/meson.build
++++ b/doc/grilo/meson.build
+@@ -11,7 +11,10 @@ types = configure_file(input : 'grilo.types',
+ 
+ gnome.gtkdoc('grilo',
+     main_sgml: 'grilo-docs.sgml',
+-    src_dir: join_paths(meson.source_root(), 'src'),
++    src_dir: [
++        join_paths(meson.source_root(), 'src'),
++        join_paths(meson.source_root(), 'libs'),
++    ],
+     dependencies: libgrl_dep,
+     gobject_typesfile: types,
+     install: true,
+@@ -22,5 +25,10 @@ gnome.gtkdoc('grilo',
+         'quick-start.xml',
+         'writing-apps.xml',
+         'overview.xml',
++        join_paths(meson.source_root(), 'examples', 'configuring-plugins.c'),
++        join_paths(meson.source_root(), 'examples', 'browsing.c'),
++        join_paths(meson.source_root(), 'examples', 'searching.c'),
++        join_paths(meson.source_root(), 'examples', 'multivalues.c'),
++        join_paths(meson.source_root(), 'examples', 'efficient-metadata-resolution.c'),
+     ]
+ )
+diff --git a/doc/grilo/writing-apps.xml b/doc/grilo/writing-apps.xml
+index 3f8a86b2c635535f..a301d283d3ca592b 100644
+--- a/doc/grilo/writing-apps.xml
++++ b/doc/grilo/writing-apps.xml
+@@ -397,7 +397,7 @@
+         application:
+       </para>
+       <programlisting role="C">
+-        <xi:include  href="../../examples/configuring-plugins.c"
++        <xi:include  href="configuring-plugins.c"
+                      parse="text"
+                      xmlns:xi="http://www.w3.org/2001/XInclude"/>
+       </programlisting>
+@@ -418,7 +418,7 @@
+         content from a particular media source (a similar approach
+         can be used for searching content instead of browsing):</para>
+       <programlisting role="C">
+-        <xi:include  href="../../examples/browsing.c"
++        <xi:include  href="browsing.c"
+                      parse="text"
+                      xmlns:xi="http://www.w3.org/2001/XInclude"/>
+       </programlisting>
+@@ -473,7 +473,7 @@
+         content by text from a particular media source (Jamendo
+         in this example):</para>
+       <programlisting role="C">
+-        <xi:include  href="../../examples/searching.c"
++        <xi:include  href="searching.c"
+                      parse="text"
+                      xmlns:xi="http://www.w3.org/2001/XInclude"/>
+       </programlisting>
+@@ -538,7 +538,7 @@
+         to illustrate how to use it:
+       </para>
+       <programlisting role="C">
+-        <xi:include  href="../../examples/multivalues.c"
++        <xi:include  href="multivalues.c"
+                      parse="text"
+                      xmlns:xi="http://www.w3.org/2001/XInclude"/>
+       </programlisting>
+@@ -637,7 +637,7 @@
+         be an acceptable delay.
+       </para>
+       <programlisting role="C">
+-        <xi:include  href="../../examples/efficient-metadata-resolution.c"
++        <xi:include  href="efficient-metadata-resolution.c"
+                      parse="text"
+                      xmlns:xi="http://www.w3.org/2001/XInclude"/>
+       </programlisting>
+diff --git a/libs/meson.build b/libs/meson.build
+index 458f21447a0c552e..be874cbe109ed6cd 100644
+--- a/libs/meson.build
++++ b/libs/meson.build
+@@ -5,6 +5,8 @@
+ #
+ # Copyright (C) 2016 Igalia S.L. All rights reserved.
+ 
++libs_inc = include_directories('.')
++
+ if enable_grlnet
+     subdir('net')
+ endif
+diff --git a/libs/net/meson.build b/libs/net/meson.build
+index fe971db65cae6217..de9b6a6c1513e659 100644
+--- a/libs/net/meson.build
++++ b/libs/net/meson.build
+@@ -35,20 +35,15 @@ libgrlnet = shared_library('grlnet-@0@'.format(grl_majorminor),
+     include_directories: libgrl_inc)
+ 
+ if enable_gir
+-    gir_extra_args = [
+-        '--c-include=net/grl-net.h',
+-        '--cflags-begin',
+-        '-I' + '@0@/libs'.format(meson.source_root()),
+-        '--cflags-end',
+-    ]
+-
+     grlnet_gir = gnome.generate_gir(libgrlnet,
+-        sources: grlnet_headers,
++        sources: grlnet_headers + grlnet_sources,
+         namespace: 'GrlNet',
+         nsversion: grl_majorminor,
+         identifier_prefix: 'GrlNet',
+         symbol_prefix: 'grl_net',
++        dependencies: [ gobject_dep, gio_dep, libsoup_dep ],
+         includes: [ 'GObject-2.0', 'Gio-2.0', 'Soup-2.4' ],
++        include_directories: libs_inc,
+         install: true,
+-        extra_args: gir_extra_args)
++        extra_args: [ '--c-include=net/grl-net.h' ])
+ endif
+diff --git a/libs/pls/meson.build b/libs/pls/meson.build
+index 66c4ff247469e0c4..1dfc51ca57339098 100644
+--- a/libs/pls/meson.build
++++ b/libs/pls/meson.build
+@@ -30,11 +30,14 @@ libgrlpls = shared_library('grlpls-@0@'.format(grl_majorminor),
+ 
+ if enable_gir
+     gnome.generate_gir(libgrlpls,
+-        sources: grlpls_headers,
++        sources: grlpls_headers + grlpls_sources,
+         namespace: 'GrlPls',
+         nsversion: grl_majorminor,
+         identifier_prefix: 'GrlPls',
+         symbol_prefix: 'grl_pls',
+-        includes: [ 'GObject-2.0', 'Gio-2.0' ],
+-        install: true)
++        dependencies: [ gobject_dep, gio_dep ],
++        includes: [ 'GObject-2.0', 'Gio-2.0', grl_gir[0] ],
++        include_directories: libs_inc,
++        install: true,
++        extra_args: [ '--c-include=pls/grl-pls.h' ])
+ endif
+diff --git a/src/meson.build b/src/meson.build
+index d9d93cabf44f1b89..08a742a4d4c2539c 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -117,6 +117,7 @@ if enable_gir
+         nsversion: grl_majorminor,
+         identifier_prefix: 'Grl',
+         symbol_prefix: 'grl',
++        dependencies: [ gobject_dep, gmodule_dep, gio_dep ],
+         includes: [ 'GObject-2.0', 'GModule-2.0', 'Gio-2.0' ],
+         install: true,
+         extra_args: gir_extra_args)
+-- 
+2.11.1
+

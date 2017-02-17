@@ -2,18 +2,20 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=grilo
-pkgver=0.3.2+8+g6ffe445
+pkgver=0.3.3
 pkgrel=1
 pkgdesc="Framework that provides access to various sources of multimedia content"
 url="https://wiki.gnome.org/Projects/Grilo"
 arch=(i686 x86_64)
 license=(LGPL)
 depends=(gtk3 libxml2 libsoup liboauth totem-plparser)
-makedepends=(gobject-introspection gtk-doc vala intltool git gnome-common)
+makedepends=(gobject-introspection gtk-doc vala git meson)
 optdepends=('grilo-plugins: Plugins for grilo')
-_commit=6ffe44554fe4abd4f21e35497133c1ebe02482af
-source=("git://git.gnome.org/grilo#commit=$_commit")
-sha256sums=('SKIP')
+_commit=53b44b711a4558c0511dbe73d928971fd2c7bb30  # tags/grilo-0.3.3^0
+source=("git+https://git.gnome.org/browse/grilo#commit=$_commit"
+        0001-build-Improve-docs-and-introspection.patch)
+sha256sums=('SKIP'
+            '4857162520bacfa3742d039e781cc00a458bace6aead268bbfe5536bc6b8a13f')
 
 pkgver() {
   cd $pkgname
@@ -21,24 +23,24 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  # Add missing tag for pkgver()
-  git tag -f grilo-0.3.2 343d0a4c29b234f81197f502fed16ba739022a6a
-  NOCONFIGURE=1 ./autogen.sh
+  patch -Np1 -i ../0001-build-Improve-docs-and-introspection.patch
 }
 
 build() {
-  cd $pkgname
+  cd build
+  export LANG=en_US.UTF-8
+  meson --prefix=/usr --buildtype=plain -Denable-gtk-doc=true ../$pkgname
+  ninja
+}
 
-  ./configure --prefix=/usr --sysconfdir=/etc --libdir=/usr/lib \
-    --disable-static --disable-debug --enable-gtk-doc
-
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+check() {
+  cd build
+  ninja test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
