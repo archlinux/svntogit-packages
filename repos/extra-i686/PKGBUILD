@@ -2,7 +2,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=grilo-plugins
-pkgver=0.3.3+7+gab5596b
+pkgver=0.3.4
 pkgrel=1
 pkgdesc="A collection of plugins for the Grilo framework"
 url="https://git.gnome.org/browse/grilo-plugins"
@@ -10,13 +10,20 @@ arch=(i686 x86_64)
 license=(LGPL)
 depends=(grilo lua libmediaart libgdata libtracker-sparql gom libdmapsharing chromaprint
          gst-plugins-bad)
-makedepends=(intltool itstool yelp-tools git gnome-common python)
+makedepends=(git meson gperf)
+checkdepends=(gst-plugins-good gst-plugins-base)
 optdepends=('dleyna-server: DLNA plugin'
             'tracker: Tracker plugin')
 groups=(gnome)
-_commit=ab5596b7372a3d9b4a74fc3ff4daa669797a6c5a
-source=("git://git.gnome.org/grilo-plugins#commit=$_commit")
-sha256sums=('SKIP')
+_commit=9e4026978b4069468a6fe6d3e961c4d1a9c88051  # tags/grilo-plugins-0.3.4^0
+source=("git+https://git.gnome.org/browse/grilo-plugins#commit=$_commit"
+        0001-lua-factory-Remove-bad-prototype-for-html_entity_has.patch
+        0002-lua-factory-Remove-generated-htmlentity.c.patch
+        0001-meson-Fix-library-name-of-optical-media-plugin.patch)
+sha256sums=('SKIP'
+            'f13466194a7f6f923189563814aa40c2cafe2cee7a9f5b86d5e0208bd1840111'
+            '4c9a2eaa9bba70e39fe65eb0ef06207f7553341c51d0d8bcab9c5934b30e7aea'
+            'a1a48c04892adc3dab9b71d59eb464eadf5c72fffe3a13a9e5c078421288baee')
 
 pkgver() {
   cd $pkgname
@@ -24,25 +31,26 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  # Add missing tag for pkgver()
-  git tag -f grilo-plugins-0.3.3 7a29a3ba6b0874e39fc664407cfcb2298906163a
-  NOCONFIGURE=1 ./autogen.sh
+  patch -Np1 -i ../0001-lua-factory-Remove-bad-prototype-for-html_entity_has.patch
+  patch -Np1 -i ../0002-lua-factory-Remove-generated-htmlentity.c.patch
+  patch -Np1 -i ../0001-meson-Fix-library-name-of-optical-media-plugin.patch
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc --disable-static
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  cd build
+  export LANG=en_US.UTF-8
+  meson --prefix=/usr --buildtype=plain ../$pkgname
+  ninja
 }
 
 check() {
-  cd $pkgname
-  make -k check || :
+  cd build
+  ninja test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
