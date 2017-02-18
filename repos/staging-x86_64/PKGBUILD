@@ -1,0 +1,75 @@
+# $Id$
+# Maintainer: Jürgen Hötzel <juergen@archlinux.org>
+# Contributor: John Proctor <jproctor@prium.net>
+# Contributor: Kevin Piche <kevin@archlinux.org>
+
+pkgname=bigloo
+_pkgver=4.2c
+pkgver=${_pkgver/-/_}
+pkgrel=5
+pkgdesc="Fast scheme compiler"
+arch=('i686' 'x86_64')
+url="http://www-sop.inria.fr/mimosa/fp/Bigloo/"
+license=('GPL' 'LGPL')
+depends=('gmp' 'openssl' 'libunistring')
+makedepends=('java-environment' 'emacs' 'zip' 'sqlite' 'alsa-lib' 'flac' 'avahi' 'chrpath')
+optdepends=('java-environment' 'emacs' 'zip' 'sqlite' 'alsa-lib' 'flac' 'avahi')
+options=('!makeflags')
+source=(ftp://ftp-sop.inria.fr/indes/fp/Bigloo/${pkgname}${_pkgver}.tar.gz bigloo-openssl11.patch bigloo-emacs25.patch)
+md5sums=('c2208e166954cf8476898a28cfc975be'
+         '93905812f5f37de5d2e8c52228448c16'
+         'f4b1700dd82b1f6143e8eb0b6e729e91')
+
+elisp_dir=/usr/share/emacs/site-lisp/bigloo
+
+prepare() {
+  cd $pkgname$_pkgver
+# Fix build with OpenSSL 1.1 (Fedora)
+  patch -p0 -i ../bigloo-openssl11.patch
+# Fix build with emacs 25 (Fedora)
+  patch -p0 -i ../bigloo-emacs25.patch
+}
+
+build() {
+  cd "${srcdir}/${pkgname}${_pkgver}"
+  ./configure --prefix=/usr \
+    --enable-ssl \
+    --enable-sqlite \
+    --lispdir=${elisp_dir} \
+    --enable-avahi \
+    --enable-flac \
+    --disable-gstreamer \
+    --mandir=/usr/share/man \
+    --infodir=/usr/share/info \
+    --docdir=/usr/share/doc/bigloo \
+    --jvm=yes
+  make build compile-bee
+}
+
+check() {
+  cd "${srcdir}/${pkgname}${_pkgver}"
+  make test
+}
+
+package() {
+  cd "${srcdir}/${pkgname}${_pkgver}"
+
+  make DESTDIR="${pkgdir}" install install-bee
+  make -C manuals DESTDIR="${pkgdir}" install-bee
+
+  chmod 644 "${pkgdir}"${elisp_dir}/etc/bass-snap.au \
+	"${pkgdir}"${elisp_dir}/images/*
+
+  rm ${pkgdir}/usr/bin/{bglafile,bigloo}.sh
+
+  # Remove references to the build root
+  sed -e "s|^BOOTDIR=.*|BOOTDIR=/usr|g" \
+      -e "s|^BOOTBINDIR=.*|BOOTBINDIR=/usr/bin|g" \
+      -e "s|^BOOTLIBDIR=.*|BOOTLIBDIR=/usr/lib/bigloo/${pkgver}|g" \
+      -e "s|^BGLBUILDBINDIR=.*|BGLBUILDBINDIR=/usr/bin|g" \
+      -e "s|^BGLBUILDLIBDIR=.*|BGLBUILDLIBDIR=/usr/lib/bigloo/${pkgver}|g" \
+      -e "s|^\(BIGLOO=.*\)\.sh|\1|" \
+      -e "s|^\(BGL.*=.*\)\.sh|\1|" \
+      -i  ${pkgdir}/usr/lib/bigloo/${pkgver}/Makefile.config
+
+}
