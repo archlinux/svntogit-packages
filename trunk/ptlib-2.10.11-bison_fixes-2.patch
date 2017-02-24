@@ -1,13 +1,39 @@
 Submitted By:            Armin K. <krejzi at email dot com>
+Updated By:              Bruce Dubbs <bduubs at linuxfromscratch dot org>
 Date:                    2013-08-20
+                         2016-05-04
 Initial Package Version: 2.10.10
 Upstream Status:         Reported
 Origin:                  Self
 Description:             Adds pregenerated C file which isn't generated correctly
                          with Bison 3.0.
+Update:                  Add fixes for gcc-6
 
---- a/src/ptlib/common/getdate.tab.c	1970-01-01 01:00:00.000000000 +0100
-+++ b/src/ptlib/common/getdate.tab.c	2013-08-20 17:26:14.143891774 +0200
+diff -Naur ptlib-2.10.11.orig/include/ptlib/critsec.h ptlib-2.10.11/include/ptlib/critsec.h
+--- ptlib-2.10.11.orig/include/ptlib/critsec.h	2013-08-14 18:20:32.000000000 -0500
++++ ptlib-2.10.11/include/ptlib/critsec.h	2016-05-04 19:40:01.626203961 -0500
+@@ -40,7 +40,7 @@
+ #if P_HAS_ATOMIC_INT
+ 
+ #if defined(__GNUC__)
+-#  if __GNUC__ >= 4 && __GNUC_MINOR__ >= 2
++#  if (__GNUC__ >= 4 && __GNUC_MINOR__ >= 2) || __GNUC__ >= 5
+ #     include <ext/atomicity.h>
+ #  else
+ #     include <bits/atomicity.h>
+diff -Naur ptlib-2.10.11.orig/make/unix.mak ptlib-2.10.11/make/unix.mak
+--- ptlib-2.10.11.orig/make/unix.mak	2013-08-14 18:20:27.000000000 -0500
++++ ptlib-2.10.11/make/unix.mak	2016-05-04 19:38:50.921583820 -0500
+@@ -729,4 +729,6 @@
+ 
+ LDLIBS		+= -l$(PTLIB_BASE)$(LIB_TYPE)
+ 
++STDCCFLAGS  += -Wno-deprecated-declarations
++
+ # End of unix.mak
+diff -Naur ptlib-2.10.11.orig/src/ptlib/common/getdate.tab.c ptlib-2.10.11/src/ptlib/common/getdate.tab.c
+--- ptlib-2.10.11.orig/src/ptlib/common/getdate.tab.c	1969-12-31 18:00:00.000000000 -0600
++++ ptlib-2.10.11/src/ptlib/common/getdate.tab.c	2016-05-04 19:38:59.892281859 -0500
 @@ -0,0 +1,2884 @@
 +/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
 +
@@ -2893,3 +2919,33 @@ Description:             Adds pregenerated C file which isn't generated correctl
 +
 +
 +/* End of file ***************************************************************/
+diff -Naur ptlib-2.10.11.orig/src/ptlib/unix/svcproc.cxx ptlib-2.10.11/src/ptlib/unix/svcproc.cxx
+--- ptlib-2.10.11.orig/src/ptlib/unix/svcproc.cxx	2013-08-14 18:20:26.000000000 -0500
++++ ptlib-2.10.11/src/ptlib/unix/svcproc.cxx	2016-05-04 19:42:20.526529457 -0500
+@@ -217,7 +217,7 @@
+     pid_t pid;
+ 
+     {
+-      ifstream pidfile(pidfilename);
++      ifstream pidfile((std::string&)pidfilename);
+       if (!pidfile.is_open()) {
+         cout << "Could not open pid file: \"" << pidfilename << "\""
+                 " - " << strerror(errno) << endl;
+@@ -384,7 +384,7 @@
+   // Run as a daemon, ie fork
+ 
+   if (!pidfilename) {
+-    ifstream pidfile(pidfilename);
++    ifstream pidfile((std::string&)pidfilename);
+     if (pidfile.is_open()) {
+       pid_t pid;
+       pidfile >> pid;
+@@ -412,7 +412,7 @@
+       cout << "Daemon started with pid " << pid << endl;
+       if (!pidfilename) {
+         // Write out the child pid to magic file in /var/run (at least for linux)
+-        ofstream pidfile(pidfilename);
++        ofstream pidfile((std::string&)pidfilename);
+         if (pidfile.is_open())
+           pidfile << pid;
+         else
