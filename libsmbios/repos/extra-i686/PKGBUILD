@@ -4,21 +4,32 @@
 # Contributor: daniel g. siegel <dgsiegel@gmail.com>
 
 pkgname=libsmbios
-pkgver=2.3.0
+pkgver=2.3.2
 pkgrel=1
 pkgdesc="A library for providing access to as much BIOS information as possible"
 arch=('i686' 'x86_64')
-url="http://linux.dell.com/libsmbios/main/index.html"
+url="https://github.com/dell/libsmbios"
 license=('GPL' 'custom')
 depends=('gcc-libs')
-makedepends=('libxml2' 'python2' 'chrpath' 'doxygen')
+makedepends=('libxml2' 'python2' 'chrpath' 'doxygen' git)
 optdepends=('python2: tools')
-source=(http://linux.dell.com/libsmbios/download/${pkgname}/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.xz)
-md5sums=('8f4bef657b04250f077f7ac5f2ecac2c')
+_commit=0a6ba645725a10f78c19f8dde73550ab0093c21c  # tags/v2.3.2
+source=("git+https://github.com/dell/libsmbios.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  ./autogen.sh --no-configure
+}
 
 build() {
-unset MAKEFLAGS
-  cd $pkgname-$pkgver
+  unset MAKEFLAGS
+  cd $pkgname
   mkdir build
   cd build
   PYTHON=python2 ../configure --prefix=/usr --sbindir=/usr/bin --sysconfdir=/etc --disable-static
@@ -28,7 +39,7 @@ unset MAKEFLAGS
 }
 
 package() {
-  cd ${pkgname}-${pkgver}/build
+  cd $pkgname/build
   make DESTDIR="${pkgdir}" install
 
   chrpath -d "${pkgdir}/usr/bin/smbios-sys-info-lite"
@@ -40,7 +51,7 @@ package() {
   rm -rf "${pkgdir}/usr/lib/yum-plugins"
 
   sed -e 's|#!/usr/bin/python|#!/usr/bin/python2|g' \
-      -i "${pkgdir}"/usr/bin/smbios-{{wakeup,token,wireless,keyboard,thermal}-ctl,lcd-brightness,rbu-bios-update,passwd,sys-info}
+      -i "${pkgdir}"/usr/bin/smbios-{{wakeup,token,wireless,keyboard,thermal}-ctl,lcd-brightness,passwd,sys-info,battery-ctl}
 
   install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
   install -m644 ../COPYING-OSL "${pkgdir}/usr/share/licenses/${pkgname}/"
