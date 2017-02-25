@@ -5,22 +5,24 @@
 pkgname=qt5-webengine
 _qtver=5.8.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
-depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 'libvpx'
-         'libevent' 'libsrtp' 'snappy' 'nss' 'protobuf' 'libxslt' 'minizip' 'ffmpeg')
+depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 'libvpx' 
+         'libevent' 'libsrtp' 'snappy' 'nss' 'protobuf' 'libxslt' 'libxdamage' 'minizip' 'ffmpeg')
+         # namcap note: libxdamage is needed for nvidia users
 makedepends=('python2' 'git' 'gperf' 'jsoncpp')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
-        qtwebengine-5.7.0-icu58.patch)
+        qtwebengine-5.7.0-icu58.patch qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch")
 
 md5sums=('6e7fb2be161c6db4d988a4f5b329672f'
          '2a1610b34204102938a24154a52e5571'
-         '9d225d1bf83ea45dbf6556d30d35fcb8')
+         '9d225d1bf83ea45dbf6556d30d35fcb8'
+         '3762cbdbc6a752e4d876e048e5e16de6')
 
 prepare() {
   mkdir -p build
@@ -35,6 +37,9 @@ prepare() {
 
   # Fix build with ICU 58 (gentoo)
   patch -p1 -i "$srcdir"/qtwebengine-5.7.0-icu58.patch
+
+  # Prevent drop-down popups form stealing focus https://bugreports.qt.io/browse/QTBUG-58488
+  patch -p1 -i ../qtbug-58488.patch
 }
 
 build() {
