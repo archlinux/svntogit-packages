@@ -3,52 +3,45 @@
 # Contributor: Sylvain HENRY <hsyl20@yahoo.fr>
 
 pkgname=opencl-headers
-pkgver=2.1.20151224
-_clbasever=2.1
-pkgrel=1
+pkgver=2.1.20161129 # date of the commit, branch 2.1
+pkgrel=2
 epoch=2
 pkgdesc='OpenCL (Open Computing Language) header files'
 arch=('any')
-url='http://www.khronos.org/registry/cl/'
+url='https://www.khronos.org/registry/cl/'
 license=('custom')
-source=("https://sources.archlinux.org/other/community/${pkgname}/${pkgname}-${pkgver}.src.tar.xz"
+makedepends=(git python)
+source=('git+https://github.com/KhronosGroup/OpenCL-Headers.git#commit=abb2958'
+        'git+https://github.com/KhronosGroup/OpenCL-CLHPP.git#commit=d54d52c'
         'LICENSE.txt')
-_headers=("http://www.khronos.org/registry/cl/api/${_clbasever}/opencl.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl_platform.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl_ext.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl_egl.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl_gl.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl_gl_ext.h"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl2.hpp"
-          "http://www.khronos.org/registry/cl/api/${_clbasever}/cl.hpp") # compatibility for OCL 1.2
-sha1sums=('6fae079bd2b02b1ea5312f61ff817c8f541ceb4f'
-          '98abb35b2eca82d0fc19db6d28fcc7bd20be0655')
+sha256sums=('SKIP'
+            'SKIP'
+            'd1059405dce021e0c0a7f7e01b48447e641477e0c14a9bc29983f4202b67c410')
 
-# source PKGBUILD && mksource
-mksource() {
-   cd "${srcdir}"
-   _dirname=${pkgname}-${pkgver}
-   mkdir ${_dirname}
+prepare() {
+  cd "${srcdir}"/OpenCL-CLHPP
 
-   pushd ${_dirname}
-   for _h in ${_headers[@]}; do
-      wget ${_h}
-   done
-   popd
-
-   tar -cJv --exclude=CVS -f ${_dirname}.src.tar.xz ${_dirname}
-   rm -rf ${_dirname}
+  # https://github.com/KhronosGroup/OpenCL-CLHPP/issues/26
+  git cherry-pick -n befe77b66fd3dd87ce9fef940e475cdc71d8bd9f
 }
 
 package() {
-   cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}"/OpenCL-Headers
 
-   install -dm755 "${pkgdir}"/usr/include/CL
+  install -dm755 "${pkgdir}"/usr/include/CL
 
-   for h in $(ls -1 *.h *.hpp); do
-      install -m 644 ${h} "${pkgdir}"/usr/include/CL/
-   done
+  for h in *.h; do
+    install -m 644 ${h} "${pkgdir}"/usr/include/CL/
+  done
 
-   install -D -m644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+  # remove useless headers
+  rm "${pkgdir}"/usr/include/CL/{cl_d3d,cl_dx9}*.h
+
+  cd "${srcdir}"/OpenCL-CLHPP
+
+  python gen_cl_hpp.py -i input_cl.hpp -o cl.hpp
+  install -m 644 cl.hpp "${pkgdir}"/usr/include/CL/
+  install -m 644 input_cl2.hpp "${pkgdir}"/usr/include/CL/cl2.hpp
+
+  install -D -m644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
 }
