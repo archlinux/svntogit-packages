@@ -4,35 +4,27 @@
 # Contributor: m4xm4n <max@maxfierke.com>
 
 pkgname=dnssec-anchors
-pkgver=20150403
+pkgver=20170228
 pkgrel=1
 pkgdesc='DNSSEC trust anchors for the root zone'
 url='https://data.iana.org/root-anchors/'
 license=('custom:NoCopyright')
 arch=('any')
-makedepends=('ldns')
-validpgpkeys=('2FBB91BCAAEE0ABE1F8031C7D1AFBCE00F6C91D2')
-source=('https://data.iana.org/root-anchors/root-anchors.xml'
-        'root-anchors.xml.asc::https://data.iana.org/root-anchors/root-anchors.asc'
-        'LICENSE')
-sha256sums=('dfb281b771dc854c18d1cff9d2eecaf184cf7a9668606aaa33e8f01bf4b4d8e4'
-            'SKIP'
-            'dd37e92942d5a4024f1c77df49d61ca77fc6284691814903a741785df61f78cb')
+makedepends=('unbound')
 
-build() {
+prepare() {
 	cd "${srcdir}"
-	drill -z -t -s DNSKEY . > root.key
 
-	cat root-anchors.xml |
-	awk 'BEGIN{ORS=" "}(NR>4){gsub(/<[^>]*>/,"");print tolower($0)}' |
-	sed 's/   /\n/' > root.ds
+	unbound-anchor -v -a root.key ||
+	unbound-anchor -v -a root.key
 
-	# Any of those tests failing is suspicious; check thoroughly!
-	[[ "$(<root.ds)" = '19036 8 2 49aac11d7b6f6446702e54a1607371607a1a41855200fd2ce1cdde32f24e8fb5' ]] &&
-	grep -Pq 'IN\tDS\t'"$(<root.ds)" root.key ||
-	return 1
+	unbound-host -v -f root.key -t DNSKEY . |
+	sed 's/ (secure)//;t;d' |
+	sed 's/ has / IN /' |
+	sed 's/ record / /' \
+	> trusted-key.key
 
-	sed '/DNSKEY/s/ ;{id = '"$(cut -d\  -f1<root.ds)"' .*//;t;d' root.key > trusted-key.key
+	echo 'The contents of this package are inelligible for copyright protection.' > LICENSE
 }
 
 package() {
