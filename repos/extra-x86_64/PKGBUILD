@@ -2,39 +2,44 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
  
 pkgname=graphene
-pkgver=1.4.0
+pkgver=1.6.0
 pkgrel=1
 pkgdesc="A thin layer of graphic data types"
 url="https://github.com/ebassi/graphene"
 arch=(i686 x86_64)
 license=(MIT)
 depends=(glib2)
-makedepends=(git gtk-doc gobject-introspection)
-source=("git+$url#tag=$pkgver")
-md5sums=('SKIP')
+makedepends=(git gtk-doc gobject-introspection meson)
+_commit=aa40018fa12905d024b85293ef49bfc7af1b5627  # tags/1.6.0^0
+source=("git+https://github.com/ebassi/graphene#commit=$_commit")
+sha256sums=('SKIP')
 
-_confargs=
-[[ $CARCH == i686 ]] && _confargs=--disable-sse2
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
 
 prepare() {
+  mkdir build
   cd $pkgname
-  sed -i '1s/python$/&2/' build/identfilter.py
-  NOCONFIGURE=1 ./autogen.sh
 }
  
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --enable-gtk-doc $_confargs
-  make
+  cd build
+  export LANG=en_US.UTF-8
+  meson --prefix=/usr --buildtype=release ../$pkgname --libexecdir=/usr/lib -Denable-gtk-doc=true
+  ninja
 }
 
 check() {
-  cd $pkgname
-  make check
+  cd build
+  ninja test
 }
  
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
+
+  cd ../$pkgname
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
