@@ -1,0 +1,46 @@
+# $Id$
+# Maintainer: Jan de Groot <jan@archlinux.org>
+# Contributor: Tom K <tomk@runbox.com>
+pkgname=opal
+pkgver=3.10.11
+pkgrel=12
+pkgdesc="Open Phone Abstraction Library"
+arch=(i686 x86_64)
+url="http://www.opalvoip.org"
+license=(GPL)
+depends=(ptlib libtheora libx264 speex gsm celt)
+makedepends=(ffmpeg x264)
+optdepends=('ffmpeg: h263 and mpeg4 plugins')
+options=(!makeflags)
+source=(http://downloads.sourceforge.net/opalvoip/$pkgname-$pkgver.tar.bz2
+        disable-samples-ftbfs.diff
+        libav9.patch
+        libav10.patch
+        ffmpeg_2.9.patch)
+sha256sums=('f38e7969e88a28dd9a10a6051315aceecde79d0bbd1a35676868dc5787aed706'
+            'f6497c74bbfd47fac036ff97dd74e8c87e6040d686944d29a926ccf3b7525be2'
+            '460e5c814aaedc8573b14b2096930464d669f7dcd884f9fce7188533927ae968'
+            'a47ca14dd5f04b63fda7a3d0481692ae01340b84b65b693ad43cfacf778a6534'
+            '0d4392ce9688cf576ae864605d48ed58427a2a281ad88028ff5bd7016341d276')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../disable-samples-ftbfs.diff
+  patch -Np1 -i ../libav9.patch
+  patch -Np1 -i ../libav10.patch
+  patch -Np1 -i ../ffmpeg_2.9.patch
+  sed -e '/<< mime.PrintContents/ s/mime/(const std::string\&)&/' -i src/im/msrp.cxx
+  sed -e 's|-lcrypto|-L/usr/lib/openssl-1.0 -lcrypto|' -i Makefile.in
+}
+
+build() {
+  cd $pkgname-$pkgver
+  CXXFLAGS="$CXXFLAGS -fpermissive" \
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="${pkgdir}" install
+}
