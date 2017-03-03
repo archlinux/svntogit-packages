@@ -2,32 +2,45 @@
 # Maintainer: Laurent Carlier <lordheavym@gmail.com>
 
 pkgname=libepoxy
-pkgver=1.4.0
+pkgver=1.4.1
 pkgrel=1
 pkgdesc="Library handling OpenGL function pointer management"
 url="https://github.com/anholt/libepoxy"
-arch=('i686' 'x86_64')
-license=('MIT')
-depends=('glibc')
-makedepends=('xorg-util-macros' 'python' 'mesa-libgl')
-source=(${url}/releases/download/v${pkgver%.0}/${pkgname}-${pkgver}.tar.xz)
-sha256sums=('25a906b14a921bc2b488cfeaa21a00486fe92630e4a9dd346e4ecabeae52ab41')
+arch=(i686 x86_64)
+license=(MIT)
+depends=(glibc)
+makedepends=(python mesa-libgl git meson doxygen graphviz)
+_commit=5564f9d28de46b2e1236dd7252549698efe66d8a  # tags/1.4.1^0
+source=("git+https://github.com/anholt/libepoxy#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  mkdir build
+  cd $pkgname
+}
 
 build() {
-  cd "${pkgname}-${pkgver}"
-  ./configure --prefix=/usr
-  make
+  cd build
+  export LANG=en_US.UTF-8
+  meson --prefix=/usr --buildtype=release ../$pkgname -Denable-docs=true
+  ninja
 }
 
 check() {
-  cd "${pkgname}-${pkgver}"
-  # Most tests get skipped because we have no X server (Xvfb doesn't have GLX)
-  make -k check
+  cd build
+  ninja test
 }
 
 package() {
-  cd "${pkgname}-${pkgver}"
-  make DESTDIR="$pkgdir" install
-  install -Dm644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  cd build
+  DESTDIR="$pkgdir" ninja install
+
+  cd ../$pkgname
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
