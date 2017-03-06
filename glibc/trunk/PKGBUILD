@@ -135,15 +135,21 @@ package() {
   fi
 
   strip $STRIP_STATIC usr/lib/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
-                      usr/lib/lib{dl,g,ieee,m-${pkgver},mcheck,mvec{,_nonshared}}.a \
-                      usr/lib/lib{nsl,pthread{,_nonshared},resolv,rpcsvc,rt,util}.a
+                      usr/lib/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
+                      usr/lib/lib{resolv,rpcsvc,rt,util}.a
 
-  strip $STRIP_SHARED usr/lib/lib{anl,BrokenLocale,cidn,crypt}-*.so \
+  strip $STRIP_SHARED usr/lib/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
                       usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
-                      usr/lib/lib{dl,m,nsl,resolv,rt,util}-*.so \
+                      usr/lib/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
                       usr/lib/lib{memusage,pcprofile,SegFault}.so \
                       usr/lib/{audit,gconv}/*.so || true
+
   if [[ $CARCH = "x86_64" ]]; then
+    strip $STRIP_STATIC usr/lib/lib{m-${pkgver},mvec{,_nonshared}}.a
     strip $STRIP_SHARED usr/lib/libmvec-*.so
+  fi
+  
+  if [[ $CARCH = "i686" ]]; then
+    strip $STRIP_STATIC usr/lib/libm.a
   fi
 }
