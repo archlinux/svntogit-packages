@@ -32,7 +32,7 @@ prepare() {
   
   cd glibc
   # avoid crashes on i686 memchr-sse2.S
-  git revert 23d27709a423aec32821e9a5198a10267107bae2
+  git revert 23d27709a423aec32821e9a5198a10267107bae2 --no-edit
 }
 
 build() {
