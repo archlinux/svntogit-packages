@@ -13,7 +13,7 @@ arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
 license=('GPL' 'LGPL')
 groups=('base')
-depends=('linux-api-headers>=4.7' 'tzdata' 'filesystem')
+depends=('linux-api-headers>=4.10' 'tzdata' 'filesystem')
 makedepends=('gcc>=6' 'git')
 backup=(etc/gai.conf
         etc/locale.gen
