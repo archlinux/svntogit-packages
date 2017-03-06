@@ -32,7 +32,10 @@ prepare() {
   
   cd glibc
   # avoid crashes on i686 memchr-sse2.S
-  git revert 23d27709a423aec32821e9a5198a10267107bae2 --no-edit
+  # https://sourceware.org/bugzilla/show_bug.cgi?id=21182
+  _revert_commit="23d27709a423aec32821e9a5198a10267107bae2"
+  _revert_file="sysdeps/i386/i686/multiarch/memchr-sse2.S"
+  git show ${_revert_commit} -- ${_revert_file} | git apply -R
 }
 
 build() {
