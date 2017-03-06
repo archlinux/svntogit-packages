@@ -8,13 +8,13 @@ pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=6.3.1
 _pkgver=6
 _islver=0.16.1
-pkgrel=1
-_commit=4ca53f06ff7d346ef8021a23108f23a5406a0417
+pkgrel=2
+_commit=4fc407888a30c5d953816b05c8a8e98ec2ab3101
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
 url="http://gcc.gnu.org"
-makedepends=('binutils>=2.26' 'libmpc' 'gcc-ada' 'doxygen' 'git')
+makedepends=('binutils>=2.28' 'libmpc' 'gcc-ada' 'doxygen' 'git')
 checkdepends=('dejagnu' 'inetutils')
 options=('!emptydirs')
 source=(git+https://gcc.gnu.org/git/gcc.git#commit=${_commit}
@@ -101,7 +101,7 @@ package_gcc-libs()
 {
   pkgdesc="Runtime libraries shipped by GCC"
   groups=('base')
-  depends=('glibc>=2.24')
+  depends=('glibc>=2.25')
   options=('!emptydirs' '!strip')
 
   cd ${srcdir}/gcc-build
@@ -146,7 +146,7 @@ package_gcc-libs()
 package_gcc()
 {
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.26' 'libmpc')
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.28' 'libmpc')
   groups=('base-devel')
   options=('staticlibs')
 
