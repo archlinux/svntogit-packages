@@ -7,7 +7,7 @@
 pkgname=glibc
 pkgver=2.25
 pkgrel=1
-_commit=58520986c38e34db60e07260c64c563e3efcf353
+_commit=69e0a87cc4c570e3b7218392fc3e743b5bddcce2
 pkgdesc="GNU C Library"
 arch=('i686' 'x86_64')
 url="http://www.gnu.org/software/libc"
@@ -29,6 +29,10 @@ md5sums=('SKIP'
 
 prepare() {
   mkdir glibc-build
+  
+  cd glibc
+  # avoid crashes on i686 memchr-sse2.S
+  git revert 23d27709a423aec32821e9a5198a10267107bae2
 }
 
 build() {
@@ -36,7 +40,6 @@ build() {
 
   if [[ ${CARCH} = "i686" ]]; then
     # Hack to fix NPTL issues with Xen, only required on 32bit platforms
-    # TODO: make separate glibc-xen package for i686
     export CFLAGS="${CFLAGS} -mno-tls-direct-seg-refs"
   fi
 
