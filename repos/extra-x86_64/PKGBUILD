@@ -5,7 +5,7 @@
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=libgphoto2
-pkgver=2.5.11
+pkgver=2.5.12
 pkgrel=1
 pkgdesc="The core library of gphoto2, designed to allow access to digital camera by external programs."
 arch=(i686 x86_64)
@@ -13,10 +13,10 @@ url="http://www.gphoto.org/"
 license=(LGPL)
 depends=(libexif libjpeg gd libltdl libusb libxml2)
 makedepends=(autoconf-archive git)
-_commit=00113c93678cd42d3ac768abc152a07b1c650a53  # tags/libgphoto2-2_5_11-release^0
+_commit=1719ba76c7ad5b934f113fcd6e433999fe99b92e  # tags/libgphoto2-2_5_12-release
 source=("git+https://github.com/gphoto/libgphoto2#commit=$_commit")
 sha256sums=('SKIP')
-validpgpkeys=('7C4AFD61D8AAE7570796A5172209D6902F969C95') # Marcus Meissner 
+validpgpkeys=('7C4AFD61D8AAE7570796A5172209D6902F969C95') # Marcus Meissner
 
 pkgver() {
   cd $pkgname
@@ -39,24 +39,23 @@ build() {
 
 package() {
   cd $pkgname
-  make DESTDIR="${pkgdir}" install
+  make DESTDIR="$pkgdir" install
 
   # Remove unused udev helper
-  rm -rf "${pkgdir}/usr/lib/udev"
-
-  install -m755 -d "${pkgdir}/usr/lib/udev/hwdb.d"
-  install -m755 -d "${pkgdir}/usr/lib/udev/rules.d"
-
-  LD_LIBRARY_PATH="${pkgdir}/usr/lib${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH" \
-  CAMLIBS="${pkgdir}/usr/lib/libgphoto2/${pkgver}" \
-      "${pkgdir}/usr/lib/libgphoto2/print-camera-list" hwdb > \
-      "${pkgdir}/usr/lib/udev/hwdb.d/20-gphoto.hwdb"
-
-  LD_LIBRARY_PATH="${pkgdir}/usr/lib${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH" \
-  CAMLIBS="${pkgdir}/usr/lib/libgphoto2/${pkgver}" \
-      "${pkgdir}/usr/lib/libgphoto2/print-camera-list" udev-rules version 201 > \
-      "${pkgdir}/usr/lib/udev/rules.d/40-gphoto.rules"
+  rm -r "$pkgdir/usr/lib/udev"
 
   # Remove recursive symlink
-  rm -fv "${pkgdir}/usr/include/gphoto2/gphoto2"
+  rm "$pkgdir/usr/include/gphoto2/gphoto2"
+
+  (
+    cd "$pkgdir/usr/lib/libgphoto2"
+
+    export LD_LIBRARY_PATH="$pkgdir/usr/lib${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH"
+    export CAMLIBS="$PWD/$pkgver"
+
+    ./print-camera-list hwdb \
+      | install -Dm644 /dev/stdin "$pkgdir/usr/lib/udev/hwdb.d/20-gphoto.hwdb"
+    ./print-camera-list udev-rules version 201 \
+      | install -Dm644 /dev/stdin "$pkgdir/usr/lib/udev/rules.d/40-gphoto.rules"
+  )
 }
