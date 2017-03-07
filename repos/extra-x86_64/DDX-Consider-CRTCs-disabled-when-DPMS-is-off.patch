@@ -1,0 +1,141 @@
+diff --git a/src/drmmode_display.c b/src/drmmode_display.c
+index b6c9bb9..dd9fa27 100644
+--- a/src/drmmode_display.c
++++ b/src/drmmode_display.c
+@@ -65,6 +65,7 @@ typedef struct {
+     uint32_t rotate_fb_id;
+     Bool cursor_visible;
+     int scanout_pixmap_x;
++    int dpms_mode;
+ } drmmode_crtc_private_rec, *drmmode_crtc_private_ptr;
+ 
+ typedef struct {
+@@ -114,6 +115,14 @@ drmmode_crtc(xf86CrtcPtr crtc)
+ 	return drmmode_crtc->mode_crtc->crtc_id;
+ }
+ 
++Bool
++drmmode_crtc_on(xf86CrtcPtr crtc)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++
++    return crtc->enabled && drmmode_crtc->dpms_mode == DPMSModeOn;
++}
++
+ int
+ drmmode_head(xf86CrtcPtr crtc)
+ {
+@@ -313,9 +322,10 @@ drmmode_ConvertToKMode(ScrnInfoPtr scrn, drmModeModeInfo *kmode,
+ }
+ 
+ static void
+-drmmode_crtc_dpms(xf86CrtcPtr drmmode_crtc, int mode)
++drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
+ {
+-
++	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++	drmmode_crtc->dpms_mode = mode;
+ }
+ 
+ void
+diff --git a/src/nouveau_dri2.c b/src/nouveau_dri2.c
+index 81ee9be..cbb7b2a 100644
+--- a/src/nouveau_dri2.c
++++ b/src/nouveau_dri2.c
+@@ -279,23 +279,27 @@ can_exchange(DrawablePtr draw, PixmapPtr dst_pix, PixmapPtr src_pix)
+ 	ScrnInfoPtr scrn = xf86ScreenToScrn(draw->pScreen);
+ 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
+ 	NVPtr pNv = NVPTR(scrn);
+-	int i;
++	int i, active_crtc_count = 0;
+ 
+ 	if (!xf86_config->num_crtc)
+ 		return FALSE;
+ 
+ 	for (i = 0; i < xf86_config->num_crtc; i++) {
+ 		xf86CrtcPtr crtc = xf86_config->crtc[i];
+-		if (crtc->enabled && crtc->rotatedData)
+-			return FALSE;
++		if (drmmode_crtc_on(crtc)) {
++			if (crtc->rotatedData)
++				return FALSE;
+ 
++			active_crtc_count++;
++		}
+ 	}
+ 
+ 	return ((DRI2CanFlip(draw) && pNv->has_pageflip)) &&
+ 		dst_pix->drawable.width == src_pix->drawable.width &&
+ 		dst_pix->drawable.height == src_pix->drawable.height &&
+ 		dst_pix->drawable.bitsPerPixel == src_pix->drawable.bitsPerPixel &&
+-		dst_pix->devKind == src_pix->devKind;
++		dst_pix->devKind == src_pix->devKind &&
++		active_crtc_count;
+ }
+ 
+ static Bool
+@@ -475,7 +479,7 @@ dri2_page_flip(DrawablePtr draw, PixmapPtr back, void *priv,
+ 		int head = drmmode_crtc(config->crtc[i]);
+ 		void *token;
+ 
+-		if (!config->crtc[i]->enabled)
++		if (!drmmode_crtc_on(config->crtc[i]))
+ 			continue;
+ 
+ 		flipdata->flip_count++;
+diff --git a/src/nouveau_present.c b/src/nouveau_present.c
+index 482ac6e..ebd5fcf 100644
+--- a/src/nouveau_present.c
++++ b/src/nouveau_present.c
+@@ -152,7 +152,7 @@ nouveau_present_flip_check(RRCrtcPtr rrcrtc, WindowPtr window,
+ 	ScrnInfoPtr scrn = xf86ScreenToScrn(window->drawable.pScreen);
+ 	xf86CrtcPtr crtc = rrcrtc->devPrivate;
+ 
+-	if (!scrn->vtSema || !crtc->enabled)
++	if (!scrn->vtSema || !drmmode_crtc_on(crtc))
+ 		return FALSE;
+ 
+ 	return TRUE;
+@@ -199,7 +199,7 @@ nouveau_present_flip_exec(ScrnInfoPtr scrn, uint64_t event_id, int sync,
+ 			flip->msc = target_msc;
+ 
+ 			for (i = 0; i < config->num_crtc; i++) {
+-				if (config->crtc[i]->enabled)
++				if (drmmode_crtc_on(config->crtc[i]))
+ 					last = i;
+ 			}
+ 
+@@ -208,7 +208,7 @@ nouveau_present_flip_exec(ScrnInfoPtr scrn, uint64_t event_id, int sync,
+ 				int crtc = drmmode_crtc(config->crtc[i]);
+ 				void *user = NULL;
+ 
+-				if (!config->crtc[i]->enabled)
++				if (!drmmode_crtc_on(config->crtc[i]))
+ 					continue;
+ 
+ 				if (token && ((crtc == sync) || (i == last))) {
+diff --git a/src/nouveau_xv.c b/src/nouveau_xv.c
+index 716b18d..4b939f7 100644
+--- a/src/nouveau_xv.c
++++ b/src/nouveau_xv.c
+@@ -299,7 +299,7 @@ nv_window_belongs_to_crtc(ScrnInfoPtr pScrn, int x, int y, int w, int h)
+ 	for (i = 0; i < xf86_config->num_crtc; i++) {
+ 		xf86CrtcPtr crtc = xf86_config->crtc[i];
+ 
+-		if (!crtc->enabled)
++		if (!drmmode_crtc_on(crtc))
+ 			continue;
+ 
+ 		if ((x < (crtc->x + crtc->mode.HDisplay)) &&
+diff --git a/src/nv_proto.h b/src/nv_proto.h
+index 122ede5..4a57406 100644
+--- a/src/nv_proto.h
++++ b/src/nv_proto.h
+@@ -13,6 +13,7 @@ void drmmode_screen_init(ScreenPtr pScreen);
+ void drmmode_screen_fini(ScreenPtr pScreen);
+ 
+ int  drmmode_crtc(xf86CrtcPtr crtc);
++Bool drmmode_crtc_on(xf86CrtcPtr crtc);
+ int  drmmode_head(xf86CrtcPtr crtc);
+ void drmmode_swap(ScrnInfoPtr, uint32_t, uint32_t *);
+ 
