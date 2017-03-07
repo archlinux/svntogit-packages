@@ -1,0 +1,54 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=ca-certificates
+pkgname=(ca-certificates-utils ca-certificates)
+pkgver=20170307
+pkgrel=1
+pkgdesc="Common CA certificates"
+url="http://pkgs.fedoraproject.org/cgit/rpms/ca-certificates.git"
+arch=(any)
+license=(GPL2)
+makedepends=(asciidoc p11-kit)
+source=(update-ca-trust update-ca-trust.8.txt update-ca-trust.hook)
+sha256sums=('857096d0cd82e0cb58622f8e427cec5eaa2d4e3ae32a3bb60c7292ceeabf9668'
+            '38c10446738c1e99bc95e42fe844a9e95ea106795059fa769f3b4ba82b395929'
+            '15eb04e757b7c61c8ee1540fd697771b8ae8e31f92cfb39c260b423101e21af8')
+
+build() {
+	asciidoc.py -v -d manpage -b docbook update-ca-trust.8.txt
+	xsltproc --nonet -o update-ca-trust.8 /etc/asciidoc/docbook-xsl/manpage.xsl update-ca-trust.8.xml
+}
+
+package_ca-certificates-utils() {
+	pkgdesc+=" (utilities)"
+	depends=('bash' 'coreutils' 'findutils' 'p11-kit>=0.23.1')
+	provides=(ca-certificates ca-certificates-java)
+	conflicts=(ca-certificates-java)
+	replaces=(ca-certificates-java)
+
+	install -D update-ca-trust "$pkgdir/usr/bin/update-ca-trust"
+	install -Dm644 update-ca-trust.8 "$pkgdir/usr/share/man/man8/update-ca-trust.8"
+	install -Dm644 update-ca-trust.hook "$pkgdir/usr/share/libalpm/hooks/update-ca-trust.hook"
+
+	# Trust source directories
+	install -d "$pkgdir"/{etc,usr/share}/$pkgbase/trust-source/{anchors,blacklist}
+
+	# Directories used by update-ca-trust (aka "trust extract-compat")
+	install -d "$pkgdir"/etc/{ssl/certs/java,$pkgbase/extracted}
+
+	# Compatibility link for OpenSSL using /etc/ssl as CAdir
+	# Used in preference to the individual links in /etc/ssl/certs
+	ln -sr "$pkgdir/etc/$pkgbase/extracted/tls-ca-bundle.pem" "$pkgdir/etc/ssl/cert.pem"
+
+	# Compatiblity link for legacy bundle
+	ln -sr "$pkgdir/etc/$pkgbase/extracted/tls-ca-bundle.pem" "$pkgdir/etc/ssl/certs/ca-certificates.crt"
+}
+
+package_ca-certificates() {
+	pkgdesc+=" (default providers)"
+	depends=(ca-certificates-{mozilla,cacert})
+}
+
+# vim:set noet ts=8 sw=8 sts=0:
