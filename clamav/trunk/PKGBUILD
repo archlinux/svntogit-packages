@@ -5,13 +5,13 @@
 
 pkgname=clamav
 pkgver=0.99.2
-pkgrel=3
+pkgrel=4
 pkgdesc='Anti-virus toolkit for Unix'
 url='http://www.clamav.net/'
 license=('GPL')
 arch=('i686' 'x86_64')
 makedepends=('libmilter' 'llvm')
-depends=('bzip2' 'libltdl' 'llvm-libs' 'libxml2' 'curl')
+depends=('bzip2' 'libltdl' 'llvm-libs' 'libxml2' 'curl' 'pcre')
 validpgpkeys=('B964E6D7BC7D7C82CCB8D45840B8EA2364221D53'
               'F79FB2D08751574C5D3FDFFBB3D5342C260429A0')
 source=("http://www.clamav.net/downloads/production/${pkgname}-${pkgver}.tar.gz"{,.sig}
@@ -23,7 +23,8 @@ source=("http://www.clamav.net/downloads/production/${pkgname}-${pkgver}.tar.gz"
         'freshclamd.service'
         'Add-support-for-LLVM-3.7.patch'
         'Add-support-for-LLVM-3.8.patch'
-        'Add-support-for-LLVM-3.9.patch')
+        'Add-support-for-LLVM-3.9.patch'
+        'make_it_compile_against_openssl_1_1_0.patch')
 sha256sums=('167bd6a13e05ece326b968fdb539b05c2ffcfef6018a274a10aeda85c2c0027a'
             'SKIP'
             'ce4b9b8c300614641af600c9a73b52a00ee8e47ccc9f91b2428a113b0ecff21b'
@@ -34,7 +35,8 @@ sha256sums=('167bd6a13e05ece326b968fdb539b05c2ffcfef6018a274a10aeda85c2c0027a'
             'dd5ff6c79ee360da5f2221c4d9110a2a8886d86293f6c93c16bf74fdb126593c'
             '2862fe2b5579c5bd59041c22326155c135946613ece1c3f2a6bd6f25b7af99a4'
             'c8d710f1d7f71bd754a7c4f58a1e1b6a23295b5eb18f7df3a098697e52e38b96'
-            'e71225e55b42a06741feaaa303133e947a98898751994645f5b34dd6503b61df')
+            'e71225e55b42a06741feaaa303133e947a98898751994645f5b34dd6503b61df'
+            '0a8e02a91bc3f2c99bd52dc475592637376baa991fe3f899b7745b840fc586c5')
 
 backup=('etc/clamav/clamd.conf'
         'etc/clamav/freshclam.conf'
@@ -47,7 +49,8 @@ prepare() {
 	patch -Np1 -i ../Add-support-for-LLVM-3.7.patch
 	patch -Np1 -i ../Add-support-for-LLVM-3.8.patch
 	patch -Np1 -i ../Add-support-for-LLVM-3.9.patch
-	autoreconf -vi libclamav/c++
+        patch -Np1 -i ../make_it_compile_against_openssl_1_1_0.patch
+	autoreconf -fi
 }
 
 build() {
@@ -64,6 +67,8 @@ build() {
 		--enable-milter \
 		--with-system-llvm \
 		--with-llvm-linking=dynamic
+
+        sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
 	make
 }
 
