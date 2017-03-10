@@ -1,0 +1,32 @@
+setup_user() {
+	getent group spamd  &>/dev/null || groupadd -g 182 spamd  >/dev/null
+	getent passwd spamd &>/dev/null || useradd -u 182 -d /var/lib/spamassassin -g spamd -s /bin/false spamd >/dev/null
+
+	if [[ -d /var/lib/spamassassin ]]; then
+		chown spamd:spamd /var/lib/spamassassin
+	fi
+
+	true
+}
+
+post_install() {
+	echo "You must run 'sa-update' to install spam rules before use."
+	setup_user
+}
+
+post_upgrade() {
+	setup_user
+	if  [ "$(vercmp $2 3.4)" -lt 0 ]; then
+		echo '/var/lib/spamassassin is now owned by the spamd user. spamassassin.service'
+		echo 'will also run under that user. You may need to adjust your setup.'
+	fi
+
+	# Compile rules, if rules have previously been compiled, and it's possible
+	if type re2c &>/dev/null && type sa-compile &>/dev/null && [[ -d /var/lib/spamassassin/compiled ]]; then
+		echo "Detected compiled rules, running sa-compile..."
+		sa-compile > /dev/null 2>&1
+	fi
+
+	true
+}
+
