@@ -3,20 +3,20 @@
 
 pkgbase=vulkan-docs
 pkgname=(vulkan-headers vulkan-html-docs)
-pkgver=1.0.39
+pkgver=1.0.43
 pkgrel=1
 epoch=1
 _pkgname=Vulkan-Docs
 arch=(any)
 url="https://www.khronos.org/vulkan/"
 license=('custom')
-makedepends=(asciidoc python3 dblatex source-highlight cmake git)
+makedepends=(asciidoctor python3 dblatex source-highlight cmake ghostscript git
+             lyx pango gdk-pixbuf2) # for asciidoctor-mathematical
 groups=(vulkan-devel)
-#source=("https://github.com/KhronosGroup/${_pkgname}/archive/v${pkgver}-core.tar.gz"
-source=(Vulkan-Docs-${pkgver}-core::git+https://github.com/KhronosGroup/Vulkan-Docs.git#commit=ca4abe0
+source=("https://github.com/KhronosGroup/${_pkgname}/archive/v${pkgver}-core.tar.gz"
         git+https://github.com/leethomason/tinyxml2.git#commit=c8dad95
-        git+https://github.com/KhronosGroup/Vulkan-Hpp.git#commit=ae2e22e)
-sha256sums=('SKIP'
+        git+https://github.com/KhronosGroup/Vulkan-Hpp.git#commit=7b37d72)
+sha256sums=('2d7163e06106eeffbb243b6e20dcd48a5338342559a993abfd13029c16e3ca35'
             'SKIP'
             'SKIP')
 
@@ -25,6 +25,16 @@ prepare() {
   git submodule init
   git config submodule.tinyxml2.url $srcdir/tinyxml2
   git submodule update
+
+  # for asciidoctor
+  # it was hard to find versions that builds properly ^^
+  local _gemdir="$(ruby -e 'puts Gem.default_dir')"
+
+  gem install -v 0.7.0 ruby-enum
+  gem install -v 1.6.8 mathematical
+  gem install -v 0.2.2 asciidoctor-mathematical  
+  gem install -v 1.5.0.alpha.14 asciidoctor-pdf  
+  gem install coderay  
 }
 
 build() {
@@ -36,7 +46,11 @@ build() {
 
   cd "${srcdir}/${_pkgname}-${pkgver}-core/doc/specs/vulkan"
 
-  make all
+  # asciidoctor / mathematical workaround bug - fail to find liblasem.so
+  cp ~/.gem/ruby/2.4.0/gems/mathematical-1.6.8/ext/mathematical/lasem/build/liblasem.so ${srcdir}
+  LD_LIBRARY_PATH=${srcdir}:$LD_LIBRARY_PATH make all
+
+  rm -f ${srcdir}/liblasem.so
 }
 
 package_vulkan-headers() {
