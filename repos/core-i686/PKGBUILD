@@ -1,24 +1,29 @@
 # $Id$
-# Maintainer: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=p11-kit
-pkgver=0.23.2
+pkgver=0.23.5
 pkgrel=1
-pkgdesc="Library to work with PKCS#11 modules"
+pkgdesc="Provides a way to load and enumerate PKCS#11 modules"
 arch=(i686 x86_64)
-url="http://p11-glue.freedesktop.org"
-license=('BSD')
-depends=('glibc' 'libtasn1' 'libffi')
-makedepends=('gtk-doc')
-source=($url/releases/$pkgname-$pkgver.tar.gz{,.sig}
+url="https://p11-glue.freedesktop.org"
+license=(BSD)
+depends=(glibc libtasn1 libffi)
+makedepends=(gtk-doc git)
+_commit=817a1c67c407850ab1756fdacb1c38e4bded5509  # tags/0.23.5^0
+source=("git+https://github.com/p11-glue/p11-kit#commit=$_commit"
         libnssckbi-compat.patch)
-sha256sums=('ba726ea8303c97467a33fca50ee79b7b35212964be808ecf9b145e9042fdfaf0'
-            'SKIP'
+sha256sums=('SKIP'
             '8f763cdbc6c0ca6c5a7898f9fd6f3018b7ac5b1aca36f67c6c813343c2962962')
 validpgpkeys=('C0F67099B808FB063E2C81117BFB1108D92765AF')
 
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
 prepare() {
-  cd $pkgname-$pkgver
+  cd $pkgname
 
   # Build and install an additional library (libnssckbi-p11-kit.so) which
   # is a copy of p11-kit-trust.so but uses the same label for root certs as
@@ -26,15 +31,16 @@ prepare() {
   # https://bugs.freedesktop.org/show_bug.cgi?id=66161
   patch -Np1 -i ../libnssckbi-compat.patch
 
-  autoreconf -vi
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgname
 
-  ./configure \
-    --prefix=/usr \
+  ./configure --prefix=/usr \
     --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib \
     --enable-doc \
     --with-module-path=/usr/lib/pkcs11 \
     --with-trust-paths=/etc/ca-certificates/trust-source:/usr/share/ca-certificates/trust-source
@@ -42,14 +48,14 @@ build() {
 }
 
 check() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make check
 }
 
 package() {
-  cd  $pkgname-$pkgver
+  cd $pkgname
   make DESTDIR="$pkgdir" install
-  install -Dm644 COPYING $pkgdir/usr/share/licenses/$pkgname/COPYING
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 
   ln -srf "$pkgdir/usr/bin/update-ca-trust" "$pkgdir/usr/lib/p11-kit/trust-extract-compat"
 }
