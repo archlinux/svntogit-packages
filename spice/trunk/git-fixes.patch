@@ -1,0 +1,98 @@
+diff --git a/server/main_channel.c b/server/main_channel.c
+index 0ecc9df8..1fc39155 100644
+--- a/server/main_channel.c
++++ b/server/main_channel.c
+@@ -1026,6 +1026,9 @@ static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
+ 
+     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
+         return reds_get_agent_data_buffer(mcc, size);
++    } else if (size > sizeof(main_chan->recv_buf)) {
++        /* message too large, caller will log a message and close the connection */
++        return NULL;
+     } else {
+         return main_chan->recv_buf;
+     }
+diff --git a/server/reds.c b/server/reds.c
+index 61bf7357..f439a366 100644
+--- a/server/reds.c
++++ b/server/reds.c
+@@ -2110,6 +2110,14 @@ static void reds_handle_read_link_done(void *opaque)
+     link_mess->num_channel_caps = GUINT32_FROM_LE(link_mess->num_channel_caps);
+     link_mess->num_common_caps = GUINT32_FROM_LE(link_mess->num_common_caps);
+ 
++    /* Prevent DoS. Currently we defined only 13 capabilities,
++     * I expect 1024 to be valid for quite a lot time */
++    if (link_mess->num_channel_caps > 1024 || link_mess->num_common_caps > 1024) {
++        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
++        reds_link_free(link);
++        return;
++    }
++
+     num_caps = link_mess->num_common_caps + link_mess->num_channel_caps;
+     caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
+ 
+@@ -2184,12 +2192,6 @@ static void reds_handle_read_header_done(void *opaque)
+     header->minor_version = GUINT32_FROM_LE(header->minor_version);
+     header->size = GUINT32_FROM_LE(header->size);
+ 
+-    if (header->magic != SPICE_MAGIC) {
+-        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_MAGIC);
+-        reds_link_free(link);
+-        return;
+-    }
+-
+     if (header->major_version != SPICE_VERSION_MAJOR) {
+         if (header->major_version > 0) {
+             reds_send_link_error(link, SPICE_LINK_ERR_VERSION_MISMATCH);
+@@ -2202,7 +2204,8 @@ static void reds_handle_read_header_done(void *opaque)
+ 
+     reds->peer_minor_version = header->minor_version;
+ 
+-    if (header->size < sizeof(SpiceLinkMess)) {
++    /* the check for 4096 is to avoid clients to cause arbitrary big memory allocations */
++    if (header->size < sizeof(SpiceLinkMess) || header->size > 4096) {
+         reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
+         spice_warning("bad size %u", header->size);
+         reds_link_free(link);
+@@ -2218,13 +2221,31 @@ static void reds_handle_read_header_done(void *opaque)
+                            link);
+ }
+ 
++static void reds_handle_read_magic_done(void *opaque)
++{
++    RedLinkInfo *link = (RedLinkInfo *)opaque;
++    const SpiceLinkHeader *header = &link->link_header;
++
++    if (header->magic != SPICE_MAGIC) {
++        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_MAGIC);
++        reds_link_free(link);
++        return;
++    }
++
++    reds_stream_async_read(link->stream,
++                           ((uint8_t *)&link->link_header) + sizeof(header->magic),
++                           sizeof(SpiceLinkHeader) - sizeof(header->magic),
++                           reds_handle_read_header_done,
++                           link);
++}
++
+ static void reds_handle_new_link(RedLinkInfo *link)
+ {
+     reds_stream_set_async_error_handler(link->stream, reds_handle_link_error);
+     reds_stream_async_read(link->stream,
+                            (uint8_t *)&link->link_header,
+-                           sizeof(SpiceLinkHeader),
+-                           reds_handle_read_header_done,
++                           sizeof(link->link_header.magic),
++                           reds_handle_read_magic_done,
+                            link);
+ }
+ 
+@@ -2816,6 +2837,7 @@ static void reds_mig_fill_wait_disconnect(void)
+         wait_client->client = client;
+         ring_add(&reds->mig_wait_disconnect_clients, &wait_client->link);
+     }
++    reds->mig_wait_connect = FALSE;
+     reds->mig_wait_disconnect = TRUE;
+     core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
+ }
