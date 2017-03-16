@@ -5,7 +5,7 @@
 pkgname=qt5-webengine
 _qtver=5.8.0
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -17,12 +17,18 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
-        qtwebengine-5.7.0-icu58.patch qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch")
+        qtwebengine-5.7.0-icu58.patch qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch"
+        qtbug-58381.patch::"https://github.com/qt/qtwebengine/commit/8e147ed3.patch"
+        qtbug-58515.patch::"https://github.com/qt/qtwebengine/commit/a6c6665d.patch"
+        qtbug-58673.patch::"https://github.com/qt/qtwebengine/commit/90501711.patch")
 
 md5sums=('6e7fb2be161c6db4d988a4f5b329672f'
          '2a1610b34204102938a24154a52e5571'
          '9d225d1bf83ea45dbf6556d30d35fcb8'
-         '3762cbdbc6a752e4d876e048e5e16de6')
+         '3762cbdbc6a752e4d876e048e5e16de6'
+         '951ac7549fff82f9d1d11e9bf50556ba'
+         'd5da5608285ad764f37fe196f9afe5a1'
+         'c7b5acd58319d23d769c19f42323e8ec')
 
 prepare() {
   mkdir -p build
@@ -40,6 +46,11 @@ prepare() {
 
   # Prevent drop-down popups form stealing focus https://bugreports.qt.io/browse/QTBUG-58488
   patch -p1 -i ../qtbug-58488.patch
+
+  # Backport some focus fixes
+  patch -p1 -i ../qtbug-58381.patch
+  patch -p1 -i ../qtbug-58515.patch
+  patch -p1 -i ../qtbug-58673.patch 
 }
 
 build() {
