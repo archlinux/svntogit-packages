@@ -2,23 +2,24 @@
 # Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
 
 pkgname=ceph
-pkgver=11.2.0
+pkgver=10.2.5
 pkgrel=1
 pkgdesc='Distributed, fault-tolerant storage platform delivering object, block, and file system'
 arch=('x86_64' 'i686')
 url='https://ceph.com/'
 license=('GPL')
-makedepends=('boost' 'systemd' 'xfsprogs' 'python2-setuptools' 'python2-sphinx'
-             'python2-virtualenv' 'cython2' 'cmake' 'yasm')
+makedepends=('boost' 'systemd' 'xfsprogs' 'python2-sphinx' 'cython2' 'sed')
 depends=('boost-libs' 'curl' 'expat' 'fcgi' 'fuse2' 'gcc-libs' 'glibc'
   'gperftools' 'keyutils' 'leveldb' 'libaio' 'libatomic_ops' 'libedit'
-  'libsystemd' 'libutil-linux' 'ncurses' 'nss' 'python2' 'snappy')
-optdepends=('xfsprogs: support xfs backend')
-options=('!emptydirs')
-source=("https://download.ceph.com/tarballs/ceph-$pkgver.tar.gz"
-        'ceph.sysusers')
-md5sums=('1e394a69820d71e5df19abe38ef647a6'
-         'b3e24e3aa005a657ab475f84bfe3291a')
+  'libsystemd' 'libutil-linux' 'ncurses' 'nss' 'python2' 'snappy'
+  'python2-setuptools' 'xfsprogs')
+options=('emptydirs')
+source=("https://ceph.com/download/$pkgname-$pkgver.tar.gz"
+        'ceph.sysusers'
+        '01-ceph-detec-init.patch')
+md5sums=('772bf99f4360774f5948191a7b012c88'
+         'b3e24e3aa005a657ab475f84bfe3291a'
+         'da25c78ae413dc134cc99fe9818f6ff1')
 
 prepare() {
   cd $pkgname-$pkgver
@@ -35,55 +36,59 @@ prepare() {
 
 build() {
   cd $pkgname-$pkgver
-  [[ -d build ]] || mkdir build
-  cd build
-  # list of options defaults: grep ^option CMakeLists.txt
-  cmake \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
-    -DCMAKE_INSTALL_SBINDIR=/usr/bin \
-    -DCMAKE_INSTALL_LIBDIR=/usr/lib \
-    -DCMAKE_INSTALL_LIBEXECDIR=/usr/lib \
-    -DSPHINX_BUILD=/usr/bin/sphinx-build2 \
-    -DWITH_SYSTEM_BOOST=ON \
-    -DWITH_SYSTEMD=ON \
-    -DWITH_EMBEDDED=OFF \
-    -DWITH_OPENLDAP=OFF \
-    -DWITH_LTTNG=OFF \
-    -DHAVE_BABELTRACE=OFF \
-    -DWITH_TESTS=OFF \
-    ..
+  # fix xfs.h failure in configure on i686
+  [[ $CARCH == i686 ]] && export CXXFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64"
+  # don't use autotools for ceph-disk, ceph-detect and tests
+  sed -ri 's,include (ceph-disk|ceph-detect-init|test)/Makefile.am,,' src/Makefile.am
+  # regen configure
+  ./autogen.sh
+  # fix python-config binary name
+  sed -i 's,python-config,python2-config,g' configure
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --libexecdir=/usr/lib \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --with-man-pages \
+    --without-radosgw \
+    --without-openldap \
+    PYTHON=/usr/bin/python2 \
+    CYTHON_CHECK=yes \
+    PYTHON_CONFIG_CHECK=yes \
+    SPHINX_BUILD=sphinx-build2
   make
 }
 
 package() {
-  cd $pkgname-$pkgver/build
+  cd $pkgname-$pkgver
 
+  # main install
   make DESTDIR="$pkgdir" install
 
-  cd "$pkgdir"
+  # ceph-disk
+  pushd src/ceph-disk
+  python2 setup.py install --root "$pkgdir" --prefix=/usr
+  popd
 
-  # install tmpfiles.d
-  install -Dm644 "$srcdir"/$pkgname-$pkgver/systemd/ceph.tmpfiles.d \
-    usr/lib/tmpfiles.d/$pkgname.conf
-  install -Dm644 "$srcdir"/ceph.sysusers \
-    usr/lib/sysusers.d/$pkgname.conf
+  # ceph-detect-init
+  pushd src/ceph-detect-init
+  python2 setup.py install --root "$pkgdir" --prefix=/usr
+  popd
 
-  # fix sbin path
-  msg2 'Fix sbin paths'
-  mv -v usr/sbin/* usr/bin
+  # systemd stuff
+  install -Dm644 systemd/ceph.tmpfiles.d "$pkgdir/usr/lib/tmpfiles.d/$pkgname.conf"
+  install -Dm644 "$srcdir"/ceph.sysusers "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
 
   # fix bash completions path
   msg2 'Fix bash completion path'
-  install -d -m 755 usr/share/bash-completion
-  mv -v etc/bash_completion.d usr/share/bash-completion/completions
+  install -d -m 755 "$pkgdir"/usr/share/bash-completion
+  mv "$pkgdir"/{etc/bash_completion.d,usr/share/bash-completion/completions}
 
-  # remove debian init
-  rm -v etc/init.d/ceph
-
-  # fix python2 shebang, did not do it in prepare() because cmake remplace some
+  # fix python2 shebang, did not do it in prepare() anymore because it
+  # confuse automake
   msg2 'Fix python2 shebang'
-  find usr/bin -type f -executable -exec \
+  find "$pkgdir" -type f -executable -exec \
     sed -i '1s,^#! \?/usr/bin/\(env \|\)python$,#!/usr/bin/python2,' {} \;
 }
 
