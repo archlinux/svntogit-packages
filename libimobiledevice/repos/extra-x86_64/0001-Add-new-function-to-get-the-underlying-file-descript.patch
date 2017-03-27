@@ -1,0 +1,62 @@
+From 692f7c9de72ca7fcaba51659972270d445751438 Mon Sep 17 00:00:00 2001
+From: BALATON Zoltan <balaton@eik.bme.hu>
+Date: Wed, 23 Sep 2015 02:19:27 +0200
+Subject: [PATCH] Add new function to get the underlying file descriptor of an
+ idevice connection
+
+---
+ include/libimobiledevice/libimobiledevice.h | 10 ++++++++++
+ src/idevice.c                               | 16 ++++++++++++++++
+ 2 files changed, 26 insertions(+)
+
+diff --git a/include/libimobiledevice/libimobiledevice.h b/include/libimobiledevice/libimobiledevice.h
+index 016cadb..b125adf 100644
+--- a/include/libimobiledevice/libimobiledevice.h
++++ b/include/libimobiledevice/libimobiledevice.h
+@@ -239,6 +239,16 @@ idevice_error_t idevice_connection_enable_ssl(idevice_connection_t connection);
+  */
+ idevice_error_t idevice_connection_disable_ssl(idevice_connection_t connection);
+ 
++/**
++ * Get the underlying file descriptor for a connection
++ *
++ * @param connection The connection to get fd of
++ * @param fd Pointer to an int where the fd is stored
++ *
++ * @return IDEVICE_E_SUCCESS if ok, otherwise an error code.
++ */
++idevice_error_t idevice_connection_get_fd(idevice_connection_t connection, int *fd);
++
+ /* misc */
+ 
+ /**
+diff --git a/src/idevice.c b/src/idevice.c
+index b776e84..5912aeb 100644
+--- a/src/idevice.c
++++ b/src/idevice.c
+@@ -463,6 +463,22 @@ LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_receive(idevice_connecti
+ 	return internal_connection_receive(connection, data, len, recv_bytes);
+ }
+ 
++LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_get_fd(idevice_connection_t connection, int *fd)
++{
++	if (!connection || !fd) {
++		return IDEVICE_E_INVALID_ARG;
++	}
++
++	idevice_error_t result = IDEVICE_E_UNKNOWN_ERROR;
++	if (connection->type == CONNECTION_USBMUXD) {
++		*fd = (int)(long)connection->data;
++		result = IDEVICE_E_SUCCESS;
++	} else {
++		debug_info("Unknown connection type %d", connection->type);
++	}
++	return result;
++}
++
+ LIBIMOBILEDEVICE_API idevice_error_t idevice_get_handle(idevice_t device, uint32_t *handle)
+ {
+ 	if (!device)
+-- 
+2.9.3
+
