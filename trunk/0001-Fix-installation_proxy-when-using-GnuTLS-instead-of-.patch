@@ -1,0 +1,41 @@
+From 6070126868069f2ee01ea9414f4cfbe5de285267 Mon Sep 17 00:00:00 2001
+From: "Jay Freeman (saurik)" <saurik@saurik.com>
+Date: Wed, 21 Oct 2015 00:39:14 -0700
+Subject: [PATCH] Fix installation_proxy when using GnuTLS instead of OpenSSL
+
+---
+ src/idevice.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/idevice.c b/src/idevice.c
+index 7c33cdd..b776e84 100644
+--- a/src/idevice.c
++++ b/src/idevice.c
+@@ -393,10 +393,13 @@ LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_receive_timeout(idevice_
+ 	}
+ 
+ 	if (connection->ssl_data) {
+-#ifdef HAVE_OPENSSL
+ 		uint32_t received = 0;
+ 		while (received < len) {
++#ifdef HAVE_OPENSSL
+ 			int r = SSL_read(connection->ssl_data->session, (void*)((char*)(data+received)), (int)len-received);
++#else
++			ssize_t r = gnutls_record_recv(connection->ssl_data->session, (void*)(data+received), (size_t)len-received);
++#endif
+ 			if (r > 0) {
+ 				received += r;
+ 			} else {
+@@ -404,9 +407,6 @@ LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_receive_timeout(idevice_
+ 			}
+ 		}
+ 		debug_info("SSL_read %d, received %d", len, received);
+-#else
+-		ssize_t received = gnutls_record_recv(connection->ssl_data->session, (void*)data, (size_t)len);
+-#endif
+ 		if (received > 0) {
+ 			*recv_bytes = received;
+ 			return IDEVICE_E_SUCCESS;
+-- 
+2.5.0
+
