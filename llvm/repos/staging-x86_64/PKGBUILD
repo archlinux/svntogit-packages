@@ -1,0 +1,246 @@
+# $Id$
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+# Contributor: Sebastian Nowicki <sebnow@gmail.com>
+# Contributor: Devin Cofer <ranguvar{AT]archlinux[DOT}us>
+# Contributor: Tobias Kieslich <tobias@justdreams.de>
+# Contributor: Geoffroy Carrier <geoffroy.carrier@aur.archlinux.org>
+# Contributor: Tomas Lindquist Olsen <tomas@famolsen.dk>
+# Contributor: Roberto Alsina <ralsina@kde.org>
+# Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
+
+pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lldb' 'clang' 'clang-tools-extra')
+pkgver=4.0.0
+pkgrel=1
+_ocaml_ver=4.04.0
+arch=('i686' 'x86_64')
+url="http://llvm.org/"
+license=('custom:University of Illinois/NCSA Open Source License')
+makedepends=('cmake' 'libffi' 'python2' "ocaml=$_ocaml_ver" 'python-sphinx'
+             'ocaml-ctypes' 'ocaml-findlib' 'libedit' 'swig')
+# Use gcc-multilib to build 32-bit compiler-rt libraries on x86_64 (FS#41911)
+makedepends_x86_64=('gcc-multilib')
+options=('staticlibs')
+source=(http://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
+        http://releases.llvm.org/$pkgver/cfe-$pkgver.src.tar.xz{,.sig}
+        http://releases.llvm.org/$pkgver/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
+        http://releases.llvm.org/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
+        http://releases.llvm.org/$pkgver/lldb-$pkgver.src.tar.xz{,.sig}
+        0001-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
+        0002-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
+        0001-AMDGPU-Fix-bug-31610.patch
+        llvm-config.h)
+sha256sums=('8d10511df96e73b8ff9e7abbfb4d4d432edbdbe965f1f4f07afaf370b8a533be'
+            'SKIP'
+            'cea5f88ebddb30e296ca89130c83b9d46c2d833685e2912303c828054c4dc98a'
+            'SKIP'
+            '41b7d37eb128fd362ab3431be5244cf50325bb3bb153895735c5bacede647c99'
+            'SKIP'
+            'd3f25b23bef24c305137e6b44f7e81c51bbec764c119e01512a9bd2330be3115'
+            'SKIP'
+            '2dbd8f05c662c1c9f11270fc9d0c63b419ddc988095e0ad107ed911cf882033d'
+            'SKIP'
+            'ead18f586f1ee902b01bebd1f7f9feec07be271fe3229d67808b8016fe99d512'
+            '6d4e7541a70981d8c5162d92bf5604eec3f61536cc1a3ebc9f118dc892ae879b'
+            'cddd04be4fd822e03ff16b7640618e424d475d3bf04494c0d38aa225b920f00e'
+            '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
+validpgpkeys=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D')
+
+prepare() {
+  cd "$srcdir/llvm-$pkgver.src"
+
+  mv "$srcdir/cfe-$pkgver.src" tools/clang
+  mv "$srcdir/clang-tools-extra-$pkgver.src" tools/clang/tools/extra
+  mv "$srcdir/compiler-rt-$pkgver.src" projects/compiler-rt
+  mv "$srcdir/lldb-$pkgver.src" tools/lldb
+
+  patch -Np1 -i ../0001-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
+  patch -Np1 -i ../0001-AMDGPU-Fix-bug-31610.patch
+  patch -Np1 -d tools/clang/tools/extra <../0002-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
+
+  mkdir build
+}
+
+build() {
+  cd "$srcdir/llvm-$pkgver.src/build"
+
+  cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLLVM_BUILD_LLVM_DYLIB=ON \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DLLVM_INSTALL_UTILS=ON \
+    -DLLVM_ENABLE_RTTI=ON \
+    -DLLVM_ENABLE_FFI=ON \
+    -DLLVM_BUILD_TESTS=ON \
+    -DLLVM_BUILD_DOCS=ON \
+    -DLLVM_ENABLE_SPHINX=ON \
+    -DLLVM_ENABLE_DOXYGEN=OFF \
+    -DLLDB_DISABLE_LIBEDIT=1 \
+    -DSPHINX_WARNINGS_AS_ERRORS=OFF \
+    -DFFI_INCLUDE_DIR=$(pkg-config --variable=includedir libffi) \
+    -DLLVM_BINUTILS_INCDIR=/usr/include \
+    ..
+
+  make
+  make ocaml_doc
+
+  # Disable automatic installation of components that go into subpackages
+  sed -i '/\(clang\|lldb\)\/cmake_install.cmake/d' tools/cmake_install.cmake
+  sed -i '/extra\/cmake_install.cmake/d' tools/clang/tools/cmake_install.cmake
+  sed -i '/compiler-rt\/cmake_install.cmake/d' projects/cmake_install.cmake
+}
+
+check() {
+  cd "$srcdir/llvm-$pkgver.src/build"
+  make check
+  make check-clang
+}
+
+package_llvm() {
+  pkgdesc="Low Level Virtual Machine"
+  depends=('llvm-libs' 'perl')
+
+  cd "$srcdir/llvm-$pkgver.src"
+
+  make -C build DESTDIR="$pkgdir" install
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
+
+  # The runtime libraries go into llvm-libs
+  mv -f "$pkgdir"/usr/lib/lib{LLVM,LTO}*.so* "$srcdir"
+  mv -f "$pkgdir"/usr/lib/LLVMgold.so "$srcdir"
+
+  # OCaml bindings go to a separate package
+  rm -rf "$srcdir"/ocaml.{lib,doc}
+  mv "$pkgdir/usr/lib/ocaml" "$srcdir/ocaml.lib"
+  mv "$pkgdir/usr/share/doc/$pkgname/ocaml-html" "$srcdir/ocaml.doc"
+
+  if [[ $CARCH == x86_64 ]]; then
+    # Needed for multilib (https://bugs.archlinux.org/task/29951)
+    # Header stub is taken from Fedora
+    mv "$pkgdir/usr/include/llvm/Config/llvm-config"{,-64}.h
+    cp "$srcdir/llvm-config.h" "$pkgdir/usr/include/llvm/Config/llvm-config.h"
+  fi
+
+  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_llvm-libs() {
+  pkgdesc="Low Level Virtual Machine (runtime libraries)"
+  depends=('gcc-libs' 'zlib' 'libffi' 'libedit' 'ncurses')
+
+  install -d "$pkgdir/usr/lib"
+  cp -P \
+    "$srcdir"/lib{LLVM,LTO}*.so* \
+    "$srcdir"/LLVMgold.so \
+    "$pkgdir/usr/lib/"
+
+  # Symlink LLVMgold.so from /usr/lib/bfd-plugins
+  # https://bugs.archlinux.org/task/28479
+  install -d "$pkgdir/usr/lib/bfd-plugins"
+  ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
+
+  install -Dm644 "$srcdir/llvm-$pkgver.src/LICENSE.TXT" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_llvm-ocaml() {
+  pkgdesc="OCaml bindings for LLVM"
+  depends=("llvm=$pkgver-$pkgrel" "ocaml=$_ocaml_ver" 'ocaml-ctypes')
+
+  cd "$srcdir/llvm-$pkgver.src"
+
+  install -d "$pkgdir"/{usr/lib,usr/share/doc/$pkgname}
+  cp -a "$srcdir/ocaml.lib" "$pkgdir/usr/lib/ocaml"
+  cp -a "$srcdir/ocaml.doc" "$pkgdir/usr/share/doc/$pkgname/html"
+
+  install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_lldb() {
+  pkgdesc="Next generation, high-performance debugger"
+  url="http://lldb.llvm.org/"
+  depends=('llvm-libs' 'libxml2' 'python2' 'python2-six')
+
+  cd "$srcdir/llvm-$pkgver.src"
+
+  make -C build/tools/lldb DESTDIR="$pkgdir" install
+
+  # https://bugs.archlinux.org/task/50759
+  sed -i "/import_module('_lldb')/s/_lldb/lldb.&/" \
+    "$pkgdir/usr/lib/python2.7/site-packages/lldb/__init__.py"
+
+  # Remove bundled six library
+  rm "$pkgdir/usr/lib/python2.7/site-packages/six.py"
+
+  # Compile Python scripts
+  python2 -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
+  python2 -O -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
+
+  install -Dm644 tools/lldb/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_clang() {
+  pkgdesc="C language family frontend for LLVM"
+  url="http://clang.llvm.org/"
+  depends=('llvm-libs' 'gcc' 'libxml2')
+  optdepends=('openmp: OpenMP support in clang with -fopenmp'
+              'python2: for scan-view and git-clang-format')
+  provides=("clang-analyzer=$pkgver")
+  conflicts=('clang-analyzer')
+  replaces=('clang-analyzer')
+
+  cd "$srcdir/llvm-$pkgver.src"
+
+  make -C build/tools/clang DESTDIR="$pkgdir" install
+  make -C build/projects/compiler-rt DESTDIR="$pkgdir" install
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
+
+  # Move analyzer scripts out of /usr/libexec
+  mv "$pkgdir"/usr/libexec/{ccc,c++}-analyzer "$pkgdir/usr/lib/clang/"
+  rmdir "$pkgdir/usr/libexec"
+  sed -i 's|libexec|lib/clang|' "$pkgdir/usr/bin/scan-build"
+
+  # Install Python bindings
+  install -d "$pkgdir/usr/lib/python2.7/site-packages"
+  cp -a tools/clang/bindings/python/clang "$pkgdir/usr/lib/python2.7/site-packages/"
+
+  # Use Python 2
+  sed -i 's|/usr/bin/env python|&2|' \
+    "$pkgdir/usr/bin/scan-view" \
+    "$pkgdir/usr/bin/git-clang-format" \
+    "$pkgdir/usr/share/$pkgname/clang-format-diff.py"
+
+  # Compile Python scripts
+  python2 -m compileall "$pkgdir"
+  python2 -O -m compileall "$pkgdir"
+
+  install -Dm644 tools/clang/LICENSE.TXT \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+package_clang-tools-extra() {
+  pkgdesc="Extra tools built using clang's tooling APIs"
+  url="http://clang.llvm.org/"
+  depends=("clang=$pkgver-$pkgrel")
+
+  cd "$srcdir/llvm-$pkgver.src"
+
+  make -C build/tools/clang/tools/extra DESTDIR="$pkgdir" install
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/clang-tools/html/{_sources,.buildinfo}
+
+  # Use Python 2
+  sed -i 's|/usr/bin/env python|&2|' \
+    "$pkgdir"/usr/share/clang/{clang-tidy-diff,run-clang-tidy,run-find-all-symbols}.py
+
+  install -Dm644 tools/clang/tools/extra/LICENSE.TXT \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+# vim:set ts=2 sw=2 et:
