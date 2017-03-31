@@ -5,7 +5,7 @@
 pkgname=qt5-webengine
 _qtver=5.8.0
 pkgver=${_qtver/-/}
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -20,7 +20,8 @@ source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submo
         qtwebengine-5.7.0-icu58.patch qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch"
         qtbug-58381.patch::"https://github.com/qt/qtwebengine/commit/8e147ed3.patch"
         qtbug-58515.patch::"https://github.com/qt/qtwebengine/commit/a6c6665d.patch"
-        qtbug-58673.patch::"https://github.com/qt/qtwebengine/commit/90501711.patch")
+        qtbug-58673.patch::"https://github.com/qt/qtwebengine/commit/90501711.patch"
+        qtbug-58362.patch::"https://github.com/qt/qtwebengine/commit/31374ba9.patch")
 
 md5sums=('6e7fb2be161c6db4d988a4f5b329672f'
          '2a1610b34204102938a24154a52e5571'
@@ -28,7 +29,8 @@ md5sums=('6e7fb2be161c6db4d988a4f5b329672f'
          '3762cbdbc6a752e4d876e048e5e16de6'
          '951ac7549fff82f9d1d11e9bf50556ba'
          'd5da5608285ad764f37fe196f9afe5a1'
-         'c7b5acd58319d23d769c19f42323e8ec')
+         'c7b5acd58319d23d769c19f42323e8ec'
+         '663f8454990de96fad4c8c78bcd6f819')
 
 prepare() {
   mkdir -p build
@@ -51,6 +53,9 @@ prepare() {
   patch -p1 -i ../qtbug-58381.patch
   patch -p1 -i ../qtbug-58515.patch
   patch -p1 -i ../qtbug-58673.patch 
+
+  # Fix IME support
+  patch -p1 -i ../qtbug-58362.patch
 }
 
 build() {
