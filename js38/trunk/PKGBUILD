@@ -1,0 +1,66 @@
+# $Id: PKGBUILD 280035 2016-11-07 16:57:54Z foutrelis $
+# Maintainer: Ionut Biru <ibiru@archlinux.org>
+
+pkgname=js38
+pkgver=38.0.0
+pkgrel=1
+pkgdesc="JavaScript interpreter and libraries - Version 38"
+arch=(i686 x86_64)
+url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Releases/38"
+license=(MPL)
+depends=(nspr gcc-libs readline zlib icu)
+makedepends=(python2 libffi zip)
+options=(!staticlibs)
+source=(https://people.mozilla.org/~sstangl/mozjs-38.2.1.rc0.tar.bz2
+        mozjs38-fix-tracelogger.patch
+        mozjs38-shell-version.patch
+        mozjs38-pkg-config-version.patch
+        mozjs38-install-name.patch
+        mozjs38-copy-headers.patch
+        mozjs38-add-bracket.patch
+        mozjs38-1269317.patch)
+sha256sums=('01994c758174bc173bcf4960f05ecb4da21014f09641a63b2952bbf9eeaa8b5c'
+            '55e656c41583cd4e5468cb4b93c0f57f40f2817adcc1acf9333b4b248969983d'
+            '16b00caf68c23d7b484b42b523ca49465853fee5161b34520cb93fc89bf16903'
+            'fcdc86524d3abb89244310bded9e994833b1ecad2cb181821cbb523e2c1b567a'
+            '56d1336f0bfa9b1d1a19313f3cdece317bf6a169c7369ecdc068e7ab99d16d9e'
+            'd052a19e7d33023e927c83fda5dcf7a90127934df034969011960b3b8e6930ed'
+            '3d3a53949da5d1da201548d9de41c99c1ff6d52e1ac7bc047e2c96e6c5f9e3a7'
+            'e34338b3bfb1a16c3f98b73007b914560085d54ba94d56cb1b8586330cbef506')
+
+prepare() {
+  cd mozjs-$pkgver
+
+  patch -Np1 -i ../mozjs38-fix-tracelogger.patch
+  patch -Np1 -i ../mozjs38-shell-version.patch
+  patch -Np1 -i ../mozjs38-pkg-config-version.patch
+  patch -Np1 -i ../mozjs38-install-name.patch
+  patch -Np1 -i ../mozjs38-copy-headers.patch
+  patch -Np1 -i ../mozjs38-add-bracket.patch
+  patch -Np1 -i ../mozjs38-1269317.patch
+}
+
+build() {
+  unset CPPFLAGS
+  CXXFLAGS+=' -fno-delete-null-pointer-checks'
+  export PYTHON=/usr/bin/python2
+  cd mozjs-$pkgver/js/src
+  ./configure --prefix=/usr --with-system-nspr --enable-system-ffi \
+    --with-system-zlib --with-system-icu --with-intl-api
+  make
+}
+
+check() {
+  cd mozjs-$pkgver/js/src
+  # Disabled: test suite fails because it is broken.
+  #make -j1 check
+}
+
+package() {
+  cd mozjs-$pkgver/js/src
+  make DESTDIR="$pkgdir" install
+  rm -f "$pkgdir"/usr/lib/*.ajs
+  find "$pkgdir"/usr/{lib/pkgconfig,include} -type f -exec chmod -x {} +
+}
+
+# vim:set ts=2 sw=2 et:
