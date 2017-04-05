@@ -5,39 +5,44 @@
 
 pkgname=mlocate
 pkgver=0.26
-pkgrel=5
+pkgrel=6
 pkgdesc='Merging locate/updatedb implementation'
-url='https://fedorahosted.org/mlocate/'
+url='https://anonscm.debian.org/cgit/collab-maint/mlocate.git'
 arch=('i686' 'x86_64')
 license=('GPL')
 backup=('etc/updatedb.conf')
 depends=('glibc')
-source=("https://fedorahosted.org/releases/m/l/mlocate/mlocate-${pkgver}.tar.xz"
+makedepends=('git')
+_commit=596d4ad222328e8bae7a00cc489a9f862edc82fb #tag=upstream/0.26
+source=("git+https://anonscm.debian.org/cgit/collab-maint/mlocate.git#commit=$_commit"
+	'sysusers.d'
 	'updatedb.conf'
-	updatedb.{timer,service})
-sha1sums=('c6e6d81b25359c51c545f4b8ba0f3b469227fcbc'
-          '0150379149bf9d714bc81332d775fc273e7e3535'
-          '2f3a94994ece62aeb286315a6fa5e9e03203706a'
-          '387185ea34fc65f8457cb40dc374319f0b2490cd')
+	'updatedb.timer'
+	'updatedb.service')
+sha256sums=('SKIP'
+            '1713a8fc8b81f4a390bf8597c4c0e917474379002dcc984aad2f44218d10c82a'
+            'ea65bb68bb854803965ac16c770ba2567256e2066d68c272f1a1974ffc5c5ee7'
+            '2e813effb651fae101d93722827553c6b9b9d42e898e808db4991eafdd330e02'
+            '83c7a508bad5dccd55a158cf8b8029d680f82cf8b1d21074279def14d9ad4dee')
 
 prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgname}"
 	sed -i '/^groupname /s/mlocate/locate/' Makefile.in
 }
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgname}"
 	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var/lib
 	make
 }
 
 check() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgname}"
 	make check
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${srcdir}/${pkgname}"
 
 	make DESTDIR="${pkgdir}" install
 
@@ -49,9 +54,10 @@ package() {
 	install -dm750 -g21 "${pkgdir}/var/lib/locate"
 	
 	install -Dm644 ../updatedb.conf "${pkgdir}/etc/updatedb.conf"
+	install -Dm644 ../sysusers.d "${pkgdir}/usr/lib/sysusers.d/locate.conf"
+	install -Dm644 ../updatedb.timer "${pkgdir}/usr/lib/systemd/system/updatedb.timer"
+	install -Dm644 ../updatedb.service "${pkgdir}/usr/lib/systemd/system/updatedb.service"
 
-	install -D -m644 ${srcdir}/updatedb.timer ${pkgdir}/usr/lib/systemd/system/updatedb.timer
-	install -D -m644 ${srcdir}/updatedb.service ${pkgdir}/usr/lib/systemd/system/updatedb.service
-	install -d -m755 ${pkgdir}/usr/lib/systemd/system/multi-user.target.wants
-	ln -s ../updatedb.timer ${pkgdir}//usr/lib/systemd/system/multi-user.target.wants/updatedb.timer
+	install -d "${pkgdir}/usr/lib/systemd/system/multi-user.target.wants"
+	ln -s ../updatedb.timer "${pkgdir}//usr/lib/systemd/system/multi-user.target.wants/updatedb.timer"
 }
