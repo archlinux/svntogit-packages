@@ -2,32 +2,40 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gfbgraph
-pkgver=0.2.3
+pkgver=0.2.3+10+gbc03c1f
 pkgrel=1
 pkgdesc="GLib/GObject wrapper for the Facebook Graph API"
-arch=('i686' 'x86_64')
-license=('LGPL')
-makedepends=('rest' 'json-glib' 'gobject-introspection' 'gtk-doc')
-depends=('gnome-online-accounts')
 url="https://wiki.gnome.org/Projects/GFBGraph"
-source=(https://download.gnome.org/sources/$pkgname/${pkgver:0:3}/$pkgname-$pkgver.tar.xz)
-sha256sums=('da1179083cde2b649d7491c745250a00d292e390fd620b7dd2dd95a122dae0b6')
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(gnome-online-accounts)
+makedepends=(rest json-glib gobject-introspection gtk-doc git)
+_commit=bc03c1f8fa59d80b9a12c0a57c26e7a2f852651e  # master
+source=("git+https://git.gnome.org/browse/libgfbgraph#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd libgfbgraph
+  git describe --tags | sed 's/^v_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd libgfbgraph
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr --disable-silent-rules \
+  cd libgfbgraph
+  ./configure --prefix=/usr \
     --disable-static \
     --enable-gtk-doc \
     --enable-introspection
-
-  # Omit unused direct shared library dependencies.
   sed -i -e 's! -shared ! -Wl,--as-needed\0!g' libtool
   make
 }
 
 package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="$pkgdir" install
-  install -m755 -d "$pkgdir"/usr/share
-  mv "$pkgdir"/usr/doc "$pkgdir"/usr/share/doc
+  cd libgfbgraph
+  make DESTDIR="$pkgdir" install \
+    libgfbgraphdocdir=/usr/share/doc/$pkgname
 }
