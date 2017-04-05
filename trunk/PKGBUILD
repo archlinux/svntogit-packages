@@ -3,29 +3,24 @@
 
 pkgbase=nautilus
 pkgname=(nautilus libnautilus-extension)
-pkgver=3.22.3
+pkgver=3.24.0+6+g5d5e16989
 pkgrel=1
 pkgdesc="Default file manager for GNOME"
 url="https://wiki.gnome.org/Apps/Nautilus"
 arch=(i686 x86_64)
 license=(GPL)
 depends=(libexif gnome-desktop exempi gvfs dconf libtracker-sparql nautilus-sendto gnome-autoar)
-makedepends=(intltool gobject-introspection python packagekit python2 gnome-common git gtk-doc)
+makedepends=(gobject-introspection packagekit git gtk-doc meson)
 options=(!emptydirs)
-_commit=8edb4f1c886417ceae8c3a20638e3cec8ba9f911  # tags/3.22.3^0
+_commit=5d5e16989484933181d374dd9afbd3981617cacc  # gnome-3-24
 source=("git+https://git.gnome.org/browse/nautilus#commit=$_commit"
         "git+https://git.gnome.org/browse/libgd")
 sha256sums=('SKIP'
             'SKIP')
 
 prepare() {
+  mkdir -p build libne/usr/{lib,share}
   cd $pkgbase
-
-  git submodule init
-  git config --local submodule.libgd.url "$srcdir/libgd"
-  git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 pkgver() {
@@ -34,34 +29,34 @@ pkgver() {
 }
 
 build() {
-  cd $pkgbase
-  ./configure --prefix=/usr --sysconfdir=/etc \
-      --localstatedir=/var --disable-static \
-      --libexecdir=/usr/lib/nautilus \
-      --enable-gtk-doc \
-      --disable-update-mimedb \
-      --disable-schemas-compile \
-      --disable-selinux --enable-gtk-doc
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  cd build
+  export LANG=en_US.UTF-8
+  meson --prefix=/usr --buildtype=release ../$pkgbase \
+    --sysconfdir=/etc \
+    -Denable-exif=true \
+    -Denable-xmp=true \
+    -Denable-gtk-doc=true \
+    -Denable-selinux=false
+  ninja
 }
 
 package_nautilus() {
   depends+=(libnautilus-extension)
   groups=(gnome)
 
-  cd $pkgbase
-  make DESTDIR="$pkgdir" install
-  make DESTDIR="$pkgdir" -C libnautilus-extension uninstall
-  make DESTDIR="$pkgdir" -C docs/reference/libnautilus-extension uninstall
+  cd build
+  DESTDIR="$pkgdir" ninja install
 
+### Split libnautilus-extension
+
+  cd ../libne
+  mv "$pkgdir"/usr/include usr
+  mv "$pkgdir"/usr/lib/{girepository-1.0,libnautilus-extension*,pkgconfig} usr/lib
+  mv "$pkgdir"/usr/share/{gir-1.0,gtk-doc} usr/share
 }
 
 package_libnautilus-extension() {
   pkgdesc="Library for extending the $pkgdesc"
   depends=(gtk3)
-
-  cd $pkgbase
-  make DESTDIR="$pkgdir" -C libnautilus-extension install
-  make DESTDIR="$pkgdir" -C docs/reference/libnautilus-extension install
+  mv libne/usr "$pkgdir"
 }
