@@ -9,7 +9,7 @@
 # Contributor: Roberto Alsina <ralsina@kde.org>
 # Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
 
-pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lldb' 'clang' 'clang-tools-extra')
+pkgname=('llvm' 'llvm-libs' 'llvm-ocaml' 'lld' 'lldb' 'clang' 'clang-tools-extra')
 pkgver=4.0.0
 pkgrel=1
 _ocaml_ver=4.04.0
@@ -25,9 +25,11 @@ source=(http://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         http://releases.llvm.org/$pkgver/cfe-$pkgver.src.tar.xz{,.sig}
         http://releases.llvm.org/$pkgver/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         http://releases.llvm.org/$pkgver/compiler-rt-$pkgver.src.tar.xz{,.sig}
+        http://releases.llvm.org/$pkgver/lld-$pkgver.src.tar.xz{,.sig}
         http://releases.llvm.org/$pkgver/lldb-$pkgver.src.tar.xz{,.sig}
         0001-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
         0002-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
+        0003-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
         0001-AMDGPU-Fix-bug-31610.patch
         llvm-config.h)
 sha256sums=('8d10511df96e73b8ff9e7abbfb4d4d432edbdbe965f1f4f07afaf370b8a533be'
@@ -38,10 +40,13 @@ sha256sums=('8d10511df96e73b8ff9e7abbfb4d4d432edbdbe965f1f4f07afaf370b8a533be'
             'SKIP'
             'd3f25b23bef24c305137e6b44f7e81c51bbec764c119e01512a9bd2330be3115'
             'SKIP'
+            '33e06457b9ce0563c89b11ccc7ccabf9cff71b83571985a5bf8684c9150e7502'
+            'SKIP'
             '2dbd8f05c662c1c9f11270fc9d0c63b419ddc988095e0ad107ed911cf882033d'
             'SKIP'
             'ead18f586f1ee902b01bebd1f7f9feec07be271fe3229d67808b8016fe99d512'
             '6d4e7541a70981d8c5162d92bf5604eec3f61536cc1a3ebc9f118dc892ae879b'
+            'a33a0106909b04c2a551a817d7184462e62995abaa01e5940cd3e67d28f141d5'
             'cddd04be4fd822e03ff16b7640618e424d475d3bf04494c0d38aa225b920f00e'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D')
@@ -52,11 +57,13 @@ prepare() {
   mv "$srcdir/cfe-$pkgver.src" tools/clang
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/clang/tools/extra
   mv "$srcdir/compiler-rt-$pkgver.src" projects/compiler-rt
+  mv "$srcdir/lld-$pkgver.src" tools/lld
   mv "$srcdir/lldb-$pkgver.src" tools/lldb
 
   patch -Np1 -i ../0001-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
   patch -Np1 -i ../0001-AMDGPU-Fix-bug-31610.patch
   patch -Np1 -d tools/clang/tools/extra <../0002-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
+  patch -Np1 -d tools/lld <../0003-CMake-Fix-pthread-handling-for-out-of-tree-builds.patch
 
   mkdir build
 }
@@ -86,15 +93,14 @@ build() {
   make ocaml_doc
 
   # Disable automatic installation of components that go into subpackages
-  sed -i '/\(clang\|lldb\)\/cmake_install.cmake/d' tools/cmake_install.cmake
+  sed -i '/\(clang\|lld\|lldb\)\/cmake_install.cmake/d' tools/cmake_install.cmake
   sed -i '/extra\/cmake_install.cmake/d' tools/clang/tools/cmake_install.cmake
   sed -i '/compiler-rt\/cmake_install.cmake/d' projects/cmake_install.cmake
 }
 
 check() {
   cd "$srcdir/llvm-$pkgver.src/build"
-  make check
-  make check-clang
+  make check-{llvm,clang,clang-tools,lld,sanitizer}
 }
 
 package_llvm() {
@@ -159,6 +165,21 @@ package_llvm-ocaml() {
   install -Dm644 LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
+package_lld() {
+  pkgdesc="Linker from the LLVM project"
+  url="http://lld.llvm.org/"
+  depends=('llvm-libs')
+
+  cd "$srcdir/llvm-$pkgver.src"
+
+  make -C build/tools/lld DESTDIR="$pkgdir" install
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
+
+  install -Dm644 tools/$pkgname/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
 package_lldb() {
   pkgdesc="Next generation, high-performance debugger"
   url="http://lldb.llvm.org/"
@@ -179,7 +200,7 @@ package_lldb() {
   python2 -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
   python2 -O -m compileall "$pkgdir/usr/lib/python2.7/site-packages/lldb"
 
-  install -Dm644 tools/lldb/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 tools/$pkgname/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 package_clang() {
@@ -219,7 +240,7 @@ package_clang() {
   python2 -m compileall "$pkgdir"
   python2 -O -m compileall "$pkgdir"
 
-  install -Dm644 tools/clang/LICENSE.TXT \
+  install -Dm644 tools/$pkgname/LICENSE.TXT \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
