@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=233
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -27,7 +27,7 @@ source=("git://github.com/systemd/systemd.git#tag=v$pkgver"
 sha512sums=('SKIP'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
             '691acebb243b9cd7fb63272662f34bdb9aead710c69aee9361ab2322f9f108600ad5b0214fc00b7cb2d9c95db8abd748030625d60d6567efd98663c56ba28c65'
-            'fec639de0d99967ed3e67289eff5ff78fff0c5829d350e73bed536a8391f1daa1d118d72dbdc1f480ffd33fc22b72f4817d0973bd09ec7f182fd26ad87b24355'
+            'a25b28af2e8c516c3a2eec4e64b8c7f70c21f974af4a955a4a9d45fd3e3ff0d2a98b4419fe425d47152d5acae77d64e69d8d014a7209524b75a81b0edb10bf3a'
             '61032d29241b74a0f28446f8cf1be0e8ec46d0847a61dadb2a4f096e8686d5f57fe5c72bcf386003f6520bc4b5856c32d63bf3efe7eb0bc0deefc9f68159e648'
             'c416e2121df83067376bcaacb58c05b01990f4614ad9de657d74b6da3efa441af251d13bf21e3f0f71ddcb4c9ea658b81da3d915667dc5c309c87ec32a1cb5a5'
             '5a1d78b5170da5abe3d18fdf9f2c3a4d78f15ba7d1ee9ec2708c4c9c2e28973469bc19386f70b3cf32ffafbe4fcc4303e5ebbd6d5187a1df3314ae0965b25e75'
@@ -100,6 +100,9 @@ build() {
     --with-default-dnssec=no
     --with-dbuspolicydir=/usr/share/dbus-1/system.d
     --without-kill-user-processes
+    --with-rpmmacrosdir=no
+    # TODO(dreisner): consider changing this to unified
+    --with-default-hierarchy=hybrid
   )
 
   ./configure "${configure_options[@]}"
@@ -139,9 +142,6 @@ package_systemd() {
   # post_install.
   rm -r "$pkgdir/etc/systemd/system/"*.wants
 
-  # get rid of RPM macros
-  rm -r "$pkgdir/usr/lib/rpm"
-
   # add back tmpfiles.d/legacy.conf
   install -m644 "$pkgbase/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
 
@@ -162,17 +162,23 @@ package_systemd() {
   chown root:systemd-journal "$pkgdir/var/log/journal"
   chmod 2755 "$pkgdir/var/log/journal"
 
+  # match directory mode from extra/polkit
+  chmod 0750 "$pkgdir/usr/share/polkit-1/rules.d"
+
   # we'll create this on installation
   rmdir "$pkgdir/var/log/journal/remote"
 
   # ship default policy to leave services disabled
   echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
 
-  ### manpages shipped with systemd-sysvcompat
+  # manpages shipped with systemd-sysvcompat
   rm "$pkgdir"/usr/share/man/man8/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8
 
-  ### runtime libraries shipped with libsystemd
+  # runtime libraries shipped with libsystemd
   rm "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so*
+
+  # allow core/filesystem to pristine nsswitch.conf
+  rm "$pkgdir/usr/share/factory/etc/nsswitch.conf"
 
   # add example bootctl configuration
   install -Dm644 "$srcdir/arch.conf" "$pkgdir"/usr/share/systemd/bootctl/arch.conf
