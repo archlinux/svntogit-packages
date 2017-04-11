@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=233
-pkgrel=2
+pkgrel=3
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -38,6 +38,10 @@ sha512sums=('SKIP'
             '10190fba9f39a8f4b620a0829e0ba8ed63bb4dbeca712966011ee7807880d01ab2abff1a80baafeb6674db70526a473fe585db8190e864f318fc4d6068552618')
 validpgpkeys=(
   '63CDA1E5D3FC22B998D20DD6327F26951A015CC4'  # Lennart Poettering
+)
+
+_backports=(
+  'ff2e33db54719bfe8feea833571652318c6d197c'
 )
 
 _validate_tag() {
@@ -179,6 +183,7 @@ package_systemd() {
 
   # allow core/filesystem to pristine nsswitch.conf
   rm "$pkgdir/usr/share/factory/etc/nsswitch.conf"
+  sed -i '/^C \/etc\/nsswitch\.conf/d' "$pkgdir/usr/lib/tmpfiles.d/etc.conf"
 
   # add example bootctl configuration
   install -Dm644 "$srcdir/arch.conf" "$pkgdir"/usr/share/systemd/bootctl/arch.conf
