@@ -2,34 +2,46 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=pangomm
-pkgname=('pangomm' 'pangomm-docs')
+pkgname=(pangomm pangomm-docs)
 pkgver=2.40.1
-pkgrel=1
+pkgrel=2
 pkgdesc="C++ bindings for Pango"
-arch=('i686' 'x86_64')
-license=('LGPL')
-depends=('pango' 'glibmm' 'cairomm')
-makedepends=('glibmm-docs' 'pkgconfig')
-source=(http://ftp.gnome.org/pub/GNOME/sources/${pkgname}/${pkgver::4}/${pkgname}-${pkgver}.tar.xz)
-url="http://gtkmm.sourceforge.net/"
-sha256sums=('9762ee2a2d5781be6797448d4dd2383ce14907159b30bc12bf6b08e7227be3af')
+url="http://www.gtkmm.org/"
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(pango glibmm cairomm)
+makedepends=(git mm-common glibmm-docs cairomm-docs)
+_commit=19b91c7b62286e9fc4c03063f61aa67e77342c97  # tags/2.40.1^0
+source=("git+https://git.gnome.org/browse/pangomm#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+  NOCONFIGURE=1 ./autogen.sh
+}
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure --prefix=/usr
+  cd $pkgbase
+  ./configure --prefix=/usr --enable-maintainer-mode
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
+
 package_pangomm() {
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd $pkgbase
   sed -i -e 's/^doc_subdirs/#doc_subdirs/' Makefile
-  make DESTDIR="${pkgdir}" install
+  make DESTDIR="$pkgdir" install
 }
 
 package_pangomm-docs() {
   pkgdesc+=" (documentation)"
   depends=()
 
-  cd "${srcdir}/${pkgbase}-${pkgver}/docs"
-  make DESTDIR="${pkgdir}" install
+  cd $pkgbase
+  make -C docs DESTDIR="$pkgdir" install
 }
