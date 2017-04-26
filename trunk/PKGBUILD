@@ -17,7 +17,8 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
-        qtwebengine-5.7.0-icu58.patch qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch"
+        qtwebengine-5.7.0-icu58.patch
+        qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch"
         qtbug-58381.patch::"https://github.com/qt/qtwebengine/commit/8e147ed3.patch"
         qtbug-58515.patch::"https://github.com/qt/qtwebengine/commit/a6c6665d.patch"
         qtbug-58673.patch::"https://github.com/qt/qtwebengine/commit/90501711.patch"
@@ -46,7 +47,7 @@ prepare() {
  # patch -p1 -i ../qt5-webengine-nss.patch
 
   # Fix build with ICU 58 (gentoo)
-  patch -p1 -i "$srcdir"/qtwebengine-5.7.0-icu58.patch
+  #patch -p1 -i "$srcdir"/qtwebengine-5.7.0-icu58.patch
 
   # Prevent drop-down popups form stealing focus https://bugreports.qt.io/browse/QTBUG-58488
   patch -p1 -i ../qtbug-58488.patch
@@ -67,7 +68,7 @@ build() {
   cd build
 
   export PATH="$srcdir/bin:$PATH"
-  qmake CONFIG+="proprietary-codecs" WEBENGINE_CONFIG+="use_proprietary_codecs use_system_ffmpeg use_system_icu" ../${_pkgfqn}
+  qmake CONFIG+="proprietary-codecs" WEBENGINE_CONFIG+="use_proprietary_codecs use_system_ffmpeg" ../${_pkgfqn}
   make
 }
 
