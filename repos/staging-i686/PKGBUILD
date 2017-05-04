@@ -1,0 +1,74 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gst-plugins-base
+pkgname=(gst-plugins-base-libs gst-plugins-base)
+pkgver=1.12.0
+pkgrel=1
+pkgdesc="GStreamer Multimedia Framework Base Plugins"
+url="https://gstreamer.freedesktop.org/"
+arch=(i686 x86_64)
+license=(LGPL)
+makedepends=(gstreamer orc libxv iso-codes alsa-lib cdparanoia libvisual libvorbis libtheora pango
+             opus gobject-introspection gtk-doc autoconf-archive git pkgconfig)
+checkdepends=(gtk3 qt5-base)
+options=(!emptydirs)
+_commit=112cc33d6a3a89fb290dfe81a9d2116502a22e85  # tags/1.12.0^0
+source=("git+https://anongit.freedesktop.org/git/gstreamer/gst-plugins-base#commit=$_commit"
+        "gst-common::git+https://anongit.freedesktop.org/git/gstreamer/common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgbase
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib \
+    --with-package-name="GStreamer Base Plugins (Arch Linux)" \
+    --with-package-origin="http://www.archlinux.org/" \
+    --enable-experimental --enable-gtk-doc --disable-static
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+
+  sed -e 's/^SUBDIRS_EXT =.*/SUBDIRS_EXT =/' -i Makefile
+}
+
+check() {
+  cd $pkgbase
+  make check
+}
+
+package_gst-plugins-base-libs() {
+  pkgdesc="GStreamer Multimedia Framework Base Plugin libraries"
+  depends=(gstreamer orc libxv iso-codes)
+
+  cd $pkgbase
+  make DESTDIR="$pkgdir" install
+}
+
+package_gst-plugins-base() {
+  depends=("gst-plugins-base-libs=$pkgver" alsa-lib cdparanoia libvisual libvorbis
+           libtheora pango opus)
+
+  cd $pkgbase
+  make -C gst-libs DESTDIR="$pkgdir" install
+  make -C ext DESTDIR="$pkgdir" install
+  make -C gst-libs DESTDIR="$pkgdir" uninstall
+}
