@@ -1,0 +1,66 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gst-python
+pkgname=(gst-python gst-python2)
+pkgver=1.12.0
+pkgrel=1
+pkgdesc="GStreamer Python binding overrides"
+url="https://gstreamer.freedesktop.org/"
+arch=(i686 x86_64)
+license=(LGPL)
+makedepends=(pkg-config python-gobject python2-gobject gst-plugins-base git)
+_commit=6981cbfbab74098a93c517b6e3f4ad6e25e4194e  # tags/1.12.0^0
+source=("git+https://anongit.freedesktop.org/git/gstreamer/gst-python#commit=$_commit"
+        "gst-common::git+https://anongit.freedesktop.org/git/gstreamer/common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  mkdir py2 py3
+  cd $pkgbase
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+
+_build() (
+  cd $1
+  ../$pkgbase/configure --prefix=/usr
+  make
+)
+
+build() {
+  _build py3
+  PYTHON=python2 _build py2
+}
+
+check() {
+  make -C py3 check
+  make -C py2 check
+}
+
+package_gst-python() {
+  pkgdesc="${pkgdesc//Python/Python 3}"
+  depends=(python-gobject gst-plugins-base)
+
+  make -C py3 DESTDIR="$pkgdir" install
+}
+
+package_gst-python2() {
+  pkgdesc="${pkgdesc//Python/Python 2}"
+  depends=(python2-gobject gst-plugins-base)
+
+  make -C py2 DESTDIR="$pkgdir" install
+}
