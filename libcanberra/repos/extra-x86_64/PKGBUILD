@@ -3,8 +3,8 @@
 
 pkgbase=libcanberra
 pkgname=(libcanberra libcanberra-pulse libcanberra-gstreamer)
-pkgver=0.30
-pkgrel=8
+pkgver=0.30+2+gc0620e4
+pkgrel=1
 pkgdesc="A small and lightweight implementation of the XDG Sound Theme Specification"
 arch=(i686 x86_64)
 license=(LGPL)
@@ -13,11 +13,16 @@ makedepends=(gtk-doc libpulse gstreamer gtk2 gtk3 git)
 options=(!emptydirs libtool)
 url="http://0pointer.de/lennart/projects/libcanberra"
 _commit=c0620e432650e81062c1967cc669829dbd29b310  # master
-source=("git://git.0pointer.de/libcanberra.git#commit=$_commit" libcanberra.xinit)
+source=("git+http://git.0pointer.net/clone/libcanberra.git#commit=$_commit" libcanberra.xinit)
 sha256sums=('SKIP'
             'a0d0b135d3fea5c703a5f84208b79d66f671b082ae85f67b629ee2568a7ddc30')
 
-_plugindir=usr/lib/$pkgbase-$pkgver
+_plugindir=usr/lib/$pkgbase-0.30
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
 
 prepare() {
   cd $pkgbase
@@ -31,9 +36,7 @@ build() {
       --enable-alsa --enable-gstreamer --enable-pulse \
       --with-systemdsystemunitdir=/usr/lib/systemd/system --enable-gtk-doc
 
-  # Fight unused direct deps
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0 /g' -e 's/    if test "$export_dynamic" = yes && test -n "$export_dynamic_flag_spec"; then/      func_append compile_command " -Wl,-O1,--as-needed"\n      func_append finalize_command " -Wl,-O1,--as-needed"\n\0/' libtool
-
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
@@ -55,6 +58,12 @@ package_libcanberra() {
     mkdir ../$_p-plugin
     mv "$pkgdir/$_plugindir"/libcanberra-$_p.* ../$_p-plugin
   done
+
+  # FS#52370: Remove login, logout and system-ready sounds.
+  # We have no sound themes that include these so do not play them.
+  rm -f "$pkgdir/usr/share/gnome/autostart/libcanberra-login-sound.desktop"
+  rm -f "$pkgdir/usr/share/gnome/shutdown/libcanberra-logout-sound.sh"
+  rm -f "$pkgdir/usr/share/gdm/autostart/LoginWindow/libcanberra-ready-sound.desktop"
 }
 
 package_libcanberra-pulse() {
