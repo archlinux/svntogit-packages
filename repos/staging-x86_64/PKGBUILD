@@ -1,0 +1,67 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gst-plugins-bad
+pkgver=1.12.0
+pkgrel=1
+pkgdesc="GStreamer Multimedia Framework Bad Plugins"
+url="https://gstreamer.freedesktop.org/"
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(mjpegtools gst-plugins-base-libs curl chromaprint libmms faad2 celt libdca libdvdnav
+         libmodplug libgme wayland libofa openjpeg2 libwebp libsrtp gnutls glu sbc rtmpdump
+         libgudev graphene schroedinger libexif libdvdread libvdpau libmpeg2 wildmidi ladspa
+         openal libusb vulkan-icd-loader libfdk-aac faac soundtouch spandsp neon
+         webrtc-audio-processing libdc1394 libmpcdec zvbi)
+makedepends=(python valgrind gobject-introspection gtk-doc git autoconf-archive vulkan-headers
+             gtk3 clutter librsvg libtiger qt5-declarative qt5-x11extras qt5-wayland zbar
+             fluidsynth lilv opencv openexr)
+_commit=da5b0d7ad3a55b958a4203659f9ff2ab270bcc91  # tags/1.12.0^0
+source=("git+https://anongit.freedesktop.org/git/gstreamer/gst-plugins-bad#commit=$_commit"
+        "gst-common::git+https://anongit.freedesktop.org/git/gstreamer/common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  sed -i 's/cmu_us_kal/&16/g' configure.ac ext/flite/gstflitetestsrc.c
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib \
+    --with-package-name="GStreamer Bad Plugins (Arch Linux)" \
+    --with-package-origin="http://www.archlinux.org/" \
+    --with-gtk=3.0 \
+    --enable-experimental --enable-gtk-doc --disable-static
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgname
+  # bad tests are bad
+  #make -k check || :
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
