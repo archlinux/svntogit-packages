@@ -1,0 +1,75 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
+
+pkgname=binutils
+pkgver=2.28.0
+pkgrel=3
+_commit=09e514a92b6bb7c910051a7fafc9fded8a687848
+pkgdesc="A set of programs to assemble and manipulate binary and object files"
+arch=('i686' 'x86_64')
+url="http://www.gnu.org/software/binutils/"
+license=('GPL')
+groups=('base-devel')
+depends=('glibc>=2.25' 'zlib')
+makedepends=('git')
+checkdepends=('dejagnu' 'bc')
+conflicts=('binutils-multilib')
+replaces=('binutils-multilib')
+options=('staticlibs' '!distcc' '!ccache')
+source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit})
+md5sums=('SKIP')
+
+prepare() {
+  cd binutils-gdb
+
+  # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
+
+  mkdir ${srcdir}/binutils-build
+}
+
+build() {
+  cd binutils-build
+
+  ../binutils-gdb/configure \
+    --prefix=/usr \
+    --with-lib-path=/usr/lib:/usr/local/lib \
+    --with-bugurl=https://bugs.archlinux.org/ \
+    --enable-threads \
+    --enable-shared \
+    --enable-ld=default \
+    --enable-gold \
+    --enable-plugins \
+    --enable-deterministic-archives \
+    --with-pic \
+    --disable-werror \
+    --disable-gdb
+
+  # check the host environment and makes sure all the necessary tools are available
+  make configure-host
+
+  make tooldir=/usr
+}
+
+check() {
+  cd binutils-build
+  
+  # unset LDFLAGS as testsuite makes assumptions about which ones are active
+  # ignore failures in gold testsuite...
+  make -k LDFLAGS="" check || true
+}
+
+package() {
+  cd binutils-build
+  make prefix=${pkgdir}/usr tooldir=${pkgdir}/usr install
+
+  # Remove unwanted files
+  rm ${pkgdir}/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
+
+  # No shared linking to these files outside binutils
+  rm ${pkgdir}/usr/lib/lib{bfd,opcodes}.so
+  echo "INPUT ( /usr/lib/libbfd.a -liberty -lz -ldl )" > "$pkgdir"/usr/lib/libbfd.so
+  echo "INPUT ( /usr/lib/libopcodes.a -lbfd )" > "$pkgdir"/usr/lib/libopcodes.so
+}
