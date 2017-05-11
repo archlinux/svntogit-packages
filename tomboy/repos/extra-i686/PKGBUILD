@@ -2,31 +2,39 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=tomboy
-pkgver=1.15.4
+pkgver=1.15.7
 pkgrel=1
 pkgdesc="Desktop note-taking application for Linux and Unix"
 arch=('i686' 'x86_64')
 license=('GPL')
 url="http://www.gnome.org/projects/tomboy/"
 depends=('gtk2' 'gtkspell' 'gconf' 'gconf-sharp' 'dbus-sharp-glib' 'mono-addins' 'hicolor-icon-theme')
-makedepends=('intltool' 'pkgconfig'  'gnome-doc-utils')
+makedepends=('intltool' 'pkgconfig'  'gnome-doc-utils' git yelp-tools autoconf-archive)
 options=('!emptydirs' '!makeflags')
-install=tomboy.install
-source=(https://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz
-        use_dbussharp_2.patch)
-sha256sums=('1429790dbe7475850e753e9ac10bb1ea9f184f2142826c389da75930c093968b'
-            'ef6804f9f461f4c61d0d4ab514936f423f4a58b7d4606d576a8c62162f9acf9e')
+_commit=6f031efb7e5a905704ef6ee877f5240a3b0a4a86  # tags/1.15.7^0
+source=("git+https://git.gnome.org/browse/tomboy#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+check() {
+  cd $pkgname
+  make check
+}
 
 prepare() {
-  cd $pkgname-$pkgver
-  patch -Np1 -i ../use_dbussharp_2.patch
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
   export MONO_SHARED_DIR="$srcdir/.wabi"
   mkdir -p "$MONO_SHARED_DIR"
 
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
   autoreconf -fi
   ./configure --prefix=/usr --sysconfdir=/etc \
       --localstatedir=/var \
@@ -36,7 +44,7 @@ build() {
 }
 
 package() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname"
   make DESTDIR="$pkgdir" GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1 install
 
   install -m755 -d "$pkgdir/usr/share/gconf/schemas"
