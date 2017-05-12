@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=233
-pkgrel=3
+pkgrel=4
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -41,7 +41,10 @@ validpgpkeys=(
 )
 
 _backports=(
+  # build-sys: make RPM macros installation path configurable
   'ff2e33db54719bfe8feea833571652318c6d197c'
+  # resolved: do not start LLMNR or mDNS stack when no network enables them
+  '2c7ef56459bf6fe7761595585aa4eed5cd183f27^..2c7ef56459bf6fe7761595585aa4eed5cd183f27^2'
 )
 
 _validate_tag() {
@@ -76,9 +79,14 @@ prepare() {
 
   _validate_tag || return
 
-  if (( ${#_backports[*]} > 0 )); then
-    git cherry-pick -n "${_backports[@]}"
-  fi
+  local _commit
+  for _commit in "${_backports[@]}"; do
+    git cherry-pick -n "$_commit"
+  done
+
+  # nss-resolve: drop the internal fallback to libnss_dns
+  git show 5486a31d287f26bcd7c0a4eb2abfa4c074b985f1 -- \
+    Makefile.am src/nss-resolve/nss-resolve.c | git apply --index
 
   ./autogen.sh
 }
