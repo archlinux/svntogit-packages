@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	start = 0;
 	for (;;) {
 		size_t size;
-		unsigned int family, model, stepping;
+		unsigned int family, model, stepping, type;
 		unsigned int year, month, day;
 
 		mc = (union mcbuf *) &buf[start];
@@ -118,20 +118,22 @@ int main(int argc, char *argv[])
 		 * 16-19 extended model
 		 * 20-27 extended family
 		 */
-		family = (mc->hdr.sig >> 8) & 0xf;
-		if (family == 0xf)
-			family += (mc->hdr.sig >> 20) & 0xff;
+		stepping = mc->hdr.sig & 0x0f;
 		model = (mc->hdr.sig >> 4) & 0x0f;
+		family = (mc->hdr.sig >> 8) & 0x0f;
+		type = (mc->hdr.sig >> 12) & 0x0f;
 		if (family == 0x06)
 			model += ((mc->hdr.sig >> 16) & 0x0f) << 4;
-		stepping = mc->hdr.sig & 0x0f;
+		if (family == 0x0f)
+			family += (mc->hdr.sig >> 20) & 0xff;
 
 		year = mc->hdr.date & 0xffff;
 		month = mc->hdr.date >> 24;
 		day = (mc->hdr.date >> 16) & 0xff;
 
 		printf("\n");
-		printf("signature: 0x%02x\n", mc->hdr.sig);
+		printf("signature: 0x%02x (stepping %d, model %d, family %d, type %d)\n",
+			mc->hdr.sig, stepping, model, family, type);
 		printf("flags:     0x%02x\n", mc->hdr.pf);
 		printf("revision:  0x%02x\n", mc->hdr.rev);
 		printf("date:      %04x-%02x-%02x\n", year, month, day);
