@@ -1,0 +1,96 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Alexey D. <lq07829icatm at rambler.ru>
+
+pkgbase=plasma-workspace
+pkgname=('plasma-workspace' 'drkonqi' 'kuiserver' 'plasma-wayland-session')
+pkgver=5.9.95
+pkgrel=1
+pkgdesc='KDE Plasma Workspace'
+arch=('i686' 'x86_64')
+url='https://www.kde.org/workspaces/plasmadesktop/'
+license=('LGPL')
+# note on libxdamage:
+# not detected by namcap because libgl depends on it
+# but nvidia providing libgl does not depend on libxdamage
+depends=('kjsembed' 'knotifyconfig' 'libxdamage' 'libksysguard' 'ktexteditor' 'libqalculate' 'appstream-qt'
+         'qt5-tools' 'kde-cli-tools' 'xorg-xrdb' 'xorg-xsetroot' 'kactivitymanagerd' 'kholidays'
+         'xorg-xmessage' 'xorg-xprop' 'milou' 'prison' 'kwin' 'plasma-integration' 'kdelibs4support')
+makedepends=('extra-cmake-modules' 'kdoctools' 'gpsd' 'baloo'
+             'krunner' 'kxmlrpcclient' 'networkmanager-qt' 'kdesignerplugin')
+groups=('plasma')
+source=("https://download.kde.org/stable/plasma/${pkgver}/${pkgbase}-${pkgver}.tar.xz"{,.sig} 'kde.pam')
+sha256sums=('2bcbe4c6e984f56ec837f83d7805b7a6e96028cdfc843e31108738345e711274'
+            'SKIP'
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
+validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell
+              '348C8651206633FD983A8FC4DEACEA00075E1D76'  # KDE Neon
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF') # David Edmundson
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+  cmake ../$pkgbase-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKDE_INSTALL_LIBDIR=lib \
+    -DKDE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  make
+}
+
+package_plasma-workspace() {
+  depends+=('kuiserver')
+  optdepends=('plasma-workspace-wallpapers: additional wallpapers'
+              'gpsd: GPS based geolocation' 'networkmanager-qt: IP based geolocation'
+              'kdepim-addons: displaying PIM events in the calendar'
+              'appmenu-qt4: global menu support for Qt4 applications')
+  conflicts=('kdebase-workspace')
+
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  install -Dm644 "$srcdir"/kde.pam "$pkgdir"/etc/pam.d/kde
+
+  # Remove conflicts with drkonqi
+  rm "$pkgdir"/usr/lib/drkonqi
+  rm -r "$pkgdir"/usr/share/drkonqi
+
+  # Remove conflicts with kuiserver
+  rm "$pkgdir"/usr/bin/kuiserver5
+  rm "$pkgdir"/usr/lib/libkdeinit5_kuiserver5.so
+  rm "$pkgdir"/usr/share/dbus-1/services/kf5_org.kde.kuiserver.service
+  rm "$pkgdir"/usr/share/kservices5/kuiserver.desktop
+
+  # Split plasma-wayland scripts
+  rm -r "$pkgdir"/usr/share/wayland-sessions
+}
+
+package_drkonqi() {
+  pkgdesc='KDE crash handler'
+  depends=('kxmlrpcclient' 'kidletime' 'gdb')
+
+  cd build/drkonqi
+  make DESTDIR="$pkgdir" install
+}
+
+package_kuiserver() {
+  pkgdesc='KDE Progress Info UI server'
+  depends=('kxmlgui')
+
+  cd build/kuiserver
+  make DESTDIR="$pkgdir" install
+}
+
+package_plasma-wayland-session() {
+  pkgdesc='Plasma Wayland session'
+  depends=('plasma-workspace' 'qt5-wayland' 'kwayland-integration' 'xorg-server-xwayland')
+  groups=()
+
+  install -Dm644 build/plasmawayland.desktop "$pkgdir"/usr/share/wayland-sessions/plasmawayland.desktop
+}
