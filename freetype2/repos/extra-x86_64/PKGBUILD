@@ -3,52 +3,51 @@
 
 pkgbase=freetype2
 pkgname=('freetype2' 'freetype2-demos')
-pkgver=2.7.1
+pkgver=2.8
 pkgrel=2
+pkgdesc="Font rasterization library"
 arch=(i686 x86_64)
 license=('GPL')
-url="http://www.freetype.org/"
+url="https://www.freetype.org/"
 # adding harfbuzz for improved OpenType features auto-hinting
 # introduces a cycle dep to harfbuzz depending on freetype wanted by upstream
-makedepends=('libx11' 'zlib' 'bzip2' 'sh' 'libpng' 'harfbuzz')
-source=(https://download.savannah.gnu.org/releases/freetype/freetype-${pkgver}.tar.bz2{,.sig}
-        https://download.savannah.gnu.org/releases/freetype/freetype-doc-${pkgver}.tar.bz2{,.sig}
-        https://download.savannah.gnu.org/releases/freetype/ft2demos-${pkgver}.tar.bz2{,.sig}
+depends=('zlib' 'bzip2' 'sh' 'libpng' 'harfbuzz')
+makedepends=('libx11')
+source=(https://download-mirror.savannah.gnu.org/releases/freetype/freetype-${pkgver}.tar.bz2{,.sig}
+        https://download-mirror.savannah.gnu.org/releases/freetype/freetype-doc-${pkgver}.tar.bz2{,.sig}
+        https://download-mirror.savannah.gnu.org/releases/freetype/ft2demos-${pkgver}.tar.bz2{,.sig}
         0001-Enable-table-validation-modules.patch
         0002-Enable-subpixel-rendering.patch
         0003-Enable-infinality-subpixel-hinting.patch
+        0004-Enable-long-PCF-family-names.patch
         0005-freetype-2.5.2-more-demos.patch
-	CVE-2017-8105.patch
-	CVE-2017-8287.patch
         freetype2.sh)
-sha1sums=('4d08a9a6567c6332d58e9a5f9a7e9e3fbce66789'
+sha1sums=('42c6b1f733fe13a3eba135f5025b22cb68450f91'
           'SKIP'
-          'd8ce472cd775b8ce50d127689acab59181e72ecf'
+          '5b221ee14fe674cd5f6db0193d55360bc0bd3655'
           'SKIP'
-          '2ebe93df13eb45dac8515c5ed0216ef694c33f18'
+          '7849f1ac4a352971fab61a5fc2e5c6a597201201'
           'SKIP'
-          'b31882ef5e8447e761acee1c4a44c0630cd4d465'
-          'b1494810ed3aca25cdd8e8cedf634e5adfe6c09e'
-          '41d27140fd590945e22e012c9dce62de3d6f11e6'
+          'c3e91e668936206d3c158bffde0f69788a086a5b'
+          '4ff958229a7f87e04a9894d5a6ed2df227071931'
+          '81586014ea44375ddc85dd9dbcabae6e91c34d62'
+          '334f229875039794adeb574e27d365bb445fb314'
           '72cfecbe738085eec475e012617661ad0cc9b76f'
-          '9ff76b0d0a079872279a62300af7806b15b6a51a'
-          '049ed3cb4471596396660896a8ccd95288001d8f'
           'bc6df1661c4c33e20f5ce30c2da8ad3c2083665f')
 validpgpkeys=('58E0C111E39F5408C5D3EC76C1A60EACE707FDA5')
 
 prepare() {
   # Rename source dir to allow building the demos
   mv freetype-${pkgver} freetype2
+  mv ft2demos-${pkgver} freetype2-demos
 
   cd freetype2
   patch -Np1 -i ../0001-Enable-table-validation-modules.patch
   patch -Np1 -i ../0002-Enable-subpixel-rendering.patch
   patch -Np1 -i ../0003-Enable-infinality-subpixel-hinting.patch
+  patch -Np1 -i ../0004-Enable-long-PCF-family-names.patch
 
-  patch -Np1 -i ../CVE-2017-8105.patch
-  patch -Np1 -i ../CVE-2017-8287.patch
-
-  cd ../ft2demos-${pkgver}
+  cd ../freetype2-demos
   # enable more demos
   patch -Np1 -i ../0005-freetype-2.5.2-more-demos.patch
 
@@ -62,7 +61,7 @@ build() {
   make
 
   # Build demos
-  cd ../ft2demos-${pkgver}
+  cd ../freetype2-demos
   make
 }
 
@@ -72,8 +71,6 @@ check() {
 }
 
 package_freetype2() {
-  pkgdesc="TrueType font rendering library"
-  depends=('zlib' 'bzip2' 'sh' 'libpng' 'harfbuzz')
   provides=('libfreetype.so')
   install=freetype2.install
   backup=('etc/profile.d/freetype2.sh')
@@ -83,20 +80,19 @@ package_freetype2() {
   install -Dm644 ../freetype2.sh "${pkgdir}/etc/profile.d/freetype2.sh"
 
   # Package docs
-  install -dm755 "${pkgdir}/usr/share/doc"
-  cp -a docs "${pkgdir}/usr/share/doc/${pkgname}"
-
-  cd ../ft2demos-${pkgver}
-  mkdir -p $srcdir/ft-demos
-  for _i in bin/{f,t}t*; do
-    libtool --mode=install install $_i "$srcdir/ft-demos"
-  done
+  install -d "${pkgdir}/usr/share/doc"
+  cp -a docs "${pkgdir}/usr/share/doc/freetype2"
 }
 
 package_freetype2-demos() {
   pkgdesc="Freetype tools and demos"
   depends=('freetype2' 'libx11')
 
-  install -dm755 "${pkgdir}/usr/bin"
-  cp -a $srcdir/ft-demos/* "${pkgdir}/usr/bin"
+  cd freetype2-demos
+  install -d "${pkgdir}/usr/bin"
+  for _i in bin/{f,t}t*; do
+    libtool --mode=install install $_i "${pkgdir}/usr/bin"
+  done
 }
+
+# vim:set ts=2 sw=2 et:
