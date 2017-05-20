@@ -2,48 +2,42 @@
 # Maintainer: Angel Velasquez <angvp@archlinux.org>  
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
-pkgname=python-cairo
-pkgver=1.10.0
-_waf_version=1.9.7
-pkgrel=8
+pkgbase=python-cairo
+pkgname=(python-cairo python2-cairo)
+pkgver=1.13.1
+pkgrel=1
 pkgdesc="Python bindings for the cairo graphics library"
 arch=('i686' 'x86_64')
-url="https://www.cairographics.org/pycairo"
-license=('LGPL3')
-depends=('python' 'cairo')
-source=(https://www.cairographics.org/releases/pycairo-${pkgver}.tar.bz2
-        https://waf.io/waf-${_waf_version})
-md5sums=('e6fd3f2f1e6a72e0db0868c4985669c5'
-         '36161654a112bd6a721835dc005ea069')
-sha1sums=('b4283aa1cc9aafd12fd72ad371303a486da1d014'
-          'f0b47d139d837eb247320495a535ba3aa24d0e3c')
+url="https://pycairo.readthedocs.io/en/latest/"
+license=('LGPL2.1' 'MPL')
+makedepends=(python python2 cairo git)
+_commit=aeed942c9b2017a058ad9ee8a6b5f7f3a4204999  # tags/v1.13.1
+source=("git+https://github.com/pygobject/pycairo/#commit=$_commit")
+sha256sums=('SKIP')
 
-prepare() {
-  cd pycairo-${pkgver}
-
-  # use newer waf
-  cp "$srcdir/waf-$_waf_version" ./waf
-
-  # fix compatibility with newer waf
-  # http://cgit.freedesktop.org/pycairo/commit/?id=c57cd129407c904f8c2f752a59d0183df7b01a5e
-  sed -e "s/ctx.\(tool_options\|check_tool\)(/ctx.load(/" \
-      -e "s/\bcompiler_cc\b/compiler_c/g" \
-      -i wscript
+pkgver() {
+  cd pycairo
+  git describe --tags | sed 's/^v//;s/-/+/g'
 }
+
 
 build() {
-  cd pycairo-${pkgver}
-  # Ensure that ./waf has created the cached unpacked version
-  # of the wafadmin source tree.
-  # This will be created to a subdirectory like
-  #    .waf3-1.5.18-a7b91e2a913ce55fa6ecdf310df95752
-  python3 ./waf --version
-
-  ./waf configure --prefix=/usr --libdir=/usr/lib
-  ./waf build
+  cd pycairo
+  python2 setup.py build
+  python setup.py build
 }
 
-package() {
-  cd pycairo-${pkgver}
-  ./waf install --destdir="${pkgdir}"
+package_python2-cairo() {
+  depends=('cairo' 'python2')
+  pkgdesc="Python2 bindings for the cairo graphics library"
+
+  cd pycairo
+  python2 setup.py install --skip-build --root="${pkgdir}" --optimize='1'
+}
+
+package_python-cairo() {
+  depends=('cairo' 'python')
+
+  cd pycairo
+  python setup.py install --skip-build --root="${pkgdir}" --optimize='1'
 }
