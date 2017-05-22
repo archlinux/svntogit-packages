@@ -3,26 +3,27 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=9.6.2
+pkgver=9.6.3
 _majorver=${pkgver%.*}
 pkgrel=1
+pkgdesc='Sophisticated object-relational DBMS'
+url='https://www.postgresql.org/'
 arch=('i686' 'x86_64')
-url="https://www.postgresql.org/"
 license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
         postgresql.pam
-		postgresql.logrotate
+        postgresql.logrotate
         postgresql.service
-		postgresql-check-db-dir)
-sha256sums=('0187b5184be1c09034e74e44761505e52357248451b0c854dddec6c231fe50c9'
+        postgresql-check-db-dir)
+sha256sums=('1645b3736901f6d854e695a937389e68ff2066ce0cde9d73919d6ab7c995b9c6'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             'b48fe97f8e43ed0d2041d519119a4dafb70fcae72870951bf4fb7350fe169ac8'
             '2340da0947bcb1c5602008d0ca00588ca0bfa8aca4fa6947a8bdb2c6df800b0e')
-sha512sums=('7c9d61a591408e29d7dc70d6b28ecdf06edf7f8fbf4e014e60a1e4f841fd5734c74a820094f6153e10ef633d48ea73f2a85194f6d2cd519a8f7087a261e9e02b'
+sha512sums=('97141972e154e6b0e756ee6a4e20f26e82022a9fd4c56305314a3a5567a79ece638e4ac3d513b46138737ae6bd27a098f30013a94767db151181aac9c01290a1'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
             '9ab4da01337ffbab8faec0e220aaa2a642dbfeccf7232ef2645bdc2177a953f17ee3cc14a4d8f8ebd064e1dae8b3dba6029adbffb8afaabea383963213941ba8'
@@ -112,7 +113,7 @@ package_postgresql-docs() {
 }
 
 package_postgresql() {
-  pkgdesc="A sophisticated object-relational DBMS"
+  pkgdesc='Sophisticated object-relational DBMS'
   backup=('etc/pam.d/postgresql' 'etc/logrotate.d/postgresql')
   depends=("postgresql-libs>=${pkgver}" 'krb5' 'libxml2' 'readline>=6.0' 'openssl>=1.0.0' 'pam')
   optdepends=('python2: for PL/Python support'
