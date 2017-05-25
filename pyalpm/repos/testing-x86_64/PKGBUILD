@@ -2,10 +2,10 @@
 
 pkgname=pyalpm
 pkgver=0.8.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Libalpm bindings for Python 3"
 arch=('i686' 'x86_64')
-url="http://projects.archlinux.org/users/remy/pyalpm.git/"
+url="https://git.archlinux.org/pyalpm.git/"
 license=('GPL')
 makedepends=('git')
 depends=('python>=3.6' 'pacman>=4.2')
