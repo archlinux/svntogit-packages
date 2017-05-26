@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=apr-util
+pkgver=1.5.4
+pkgrel=4
+pkgdesc="The Apache Portable Runtime"
+arch=('i686' 'x86_64')
+url="http://apr.apache.org/"
+depends=('apr' 'expat')
+makedepends=('gdbm' 'libldap' 'unixodbc' 'openssl' 'nss' 'sqlite' 'libmariadb' 'db' 'postgresql-libs' 'python2')
+optdepends=(
+  'gdbm: enable gdbm support'
+  'libldap: enable ldap support'
+  'unixodbc: enable odbc support'
+  'libmariadb: enable mysql/mariadb support'
+  'postgresql-libs: enable postgres support'
+  'db: enable berkley db support'
+  'sqlite: enable sqlite support'
+  'nss: enable nss crypto support'
+  'openssl: enable openssl crypto support'
+)
+license=('APACHE')
+source=(https://www.apache.org/dist/apr/apr-util-${pkgver}.tar.bz2{,.asc}
+        buildconf_config.guess_sub_location.patch
+        openssl-1.1.patch)
+sha256sums=('a6cf327189ca0df2fb9d5633d7326c460fe2b61684745fd7963e79a6dd0dc82e'
+            'SKIP'
+            '33f3509d8ad089109c70835efc3535b27a6b5fc2fe27793d30689138f8c4f8aa'
+            '88225f93632ee4fb2fa1e0c5ee7a177b1299e1b55f644c567b4763f8c8acbe54')
+validpgpkeys=('5B5181C2C0AB13E59DA3F7A3EC582EB639FF092C') # Jeff Trawick
+
+prepare() {
+  cd apr-util-$pkgver
+  patch -Np1 -i ../buildconf_config.guess_sub_location.patch
+  patch -Np1 -i ../openssl-1.1.patch
+  ./buildconf --with-apr=`apr-1-config --srcdir`
+}
+
+build() {
+  cd "${srcdir}/apr-util-${pkgver}"
+  ./configure --prefix=/usr --with-apr=/usr --with-ldap --with-crypto \
+    --with-gdbm=/usr --with-sqlite3=/usr --with-nss=/usr --with-odbc=/usr \
+    --with-berkeley-db=/usr --with-pgsql=/usr --with-mysql=/usr --with-oracle=/usr \
+    --with-openssl=/usr
+  make
+}
+
+check() {
+  cd "${srcdir}/apr-util-${pkgver}"
+  make -j1 check
+}
+
+package() {
+  cd "${srcdir}/apr-util-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+}
