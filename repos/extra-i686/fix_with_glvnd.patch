@@ -1,0 +1,70 @@
+From 6273d9dacbf165331c21bcda5a8945c8931d87b8 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Mon, 13 Mar 2017 12:18:53 +0100
+Subject: Fix xdriinfo not working with glvnd
+
+For glx calls to work on libglvnd as glx provider we must first call
+glXGetClientString. This also means that we can no longer take the
+shortcut to not open the Display when a driver name is past to options.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+
+diff --git a/xdriinfo.c b/xdriinfo.c
+index c23cfa1..c7e7482 100644
+--- a/xdriinfo.c
++++ b/xdriinfo.c
+@@ -112,23 +112,9 @@ int main (int argc, char *argv[]) {
+ 	    return 1;
+ 	}
+     }
+-  /* if the argument to the options command is a driver name, we can handle
+-   * it without opening an X connection */
+-    if (func == OPTIONS && screenNum == -1) {
+-	const char *options = (*GetDriverConfig) (funcArg);
+-	if (!options) {
+-	    fprintf (stderr,
+-		     "Driver \"%s\" is not installed or does not support configuration.\n",
+-		     funcArg);
+-	    return 1;
+-	}
+-	printf ("%s", options);
+-	if (isatty (STDOUT_FILENO))
+-	    printf ("\n");
+-	return 0;
+-    } 
++
+   /* driver command needs a valid screen number */
+-    else if (func == DRIVER && screenNum == -1) {
++    if (func == DRIVER && screenNum == -1) {
+ 	fprintf (stderr, "Invalid screen number \"%s\".\n", funcArg);
+ 	return 1;
+     }
+@@ -146,6 +132,9 @@ int main (int argc, char *argv[]) {
+ 	return 1;
+     }
+ 
++   /* Call glXGetClientString to load vendor libs on glvnd enabled systems */
++    glXGetClientString (dpy, GLX_EXTENSIONS);
++
+     switch (func) {
+       case NSCREENS:
+ 	printf ("%d", nScreens);
+@@ -165,7 +154,13 @@ int main (int argc, char *argv[]) {
+ 	  break;
+       }
+       case OPTIONS: {
+-	  const char *name = (*GetScreenDriver) (dpy, screenNum), *options;
++	  const char *name, *options;
++	  
++	  if (screenNum == -1) {
++	      name = funcArg;
++	  } else {
++	      name = (*GetScreenDriver) (dpy, screenNum);
++	  }
+ 	  if (!name) {
+ 	      fprintf (stderr, "Screen \"%d\" is not direct rendering capable.\n",
+ 		       screenNum);
+-- 
+cgit v0.10.2
+
+
