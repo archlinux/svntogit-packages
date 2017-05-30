@@ -1,0 +1,25 @@
+_global_units() {
+	systemctl --global $1 dirmngr.socket gpg-agent.socket gpg-agent-{browser,extra,ssh}.socket
+}
+
+post_install() {
+	# See FS#42798 and FS#47371
+	dirmngr </dev/null &>/dev/null
+
+	# Let systemd supervise daemons by default
+	_global_units enable
+}
+
+post_upgrade() {
+	if (( $(vercmp $2 2.1.13-1) < 0 )); then
+		echo "==> Please kill running gpg-agent and dirmngr processes before using this release."
+	fi
+
+	if (( $(vercmp $2 2.1.21-2) < 0 )); then
+		_global_units enable
+	fi
+}
+
+pre_remove() {
+	_global_units disable
+}
