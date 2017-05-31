@@ -1,0 +1,340 @@
+From 5b217362bc313eb55f8c89e0d0cb3ab6f9c88736 Mon Sep 17 00:00:00 2001
+From: Christian Hesse <mail@eworm.de>
+Date: Wed, 31 May 2017 23:16:28 +0200
+Subject: [PATCH 1/1] fix compilation with GCC 7.1.1 (implicit-fallthrough)
+
+GCC 7.1.1 adds more extensive checks for implicit fallthrough. This is
+reported with:
+
+error: this statement may fall through [-Werror=implicit-fallthrough=]
+
+So explicitly tell the compiler we want to fall though.
+
+Signed-off-by: Christian Hesse <mail@eworm.de>
+---
+ galera/src/key_set.hpp        |  1 +
+ galera/src/replicator_smm.cpp |  7 ++++---
+ galerautils/src/gu_dbug.c     |  1 +
+ galerautils/src/gu_mmh3.h     | 13 +++++++++++++
+ galerautils/src/gu_spooky.h   | 11 +++++++++++
+ galerautils/src/gu_to.c       |  1 +
+ galerautils/src/gu_utils.c    |  4 ++++
+ gcomm/src/evs_proto.cpp       |  2 +-
+ gcs/src/gcs.cpp               |  1 +
+ gcs/src/gcs_core.cpp          |  1 +
+ gcs/src/gcs_node.cpp          |  1 +
+ gcs/src/gcs_test.cpp          |  4 ++++
+ www.evanjones.ca/crc32c.c     |  5 +++++
+ 13 files changed, 48 insertions(+), 4 deletions(-)
+
+diff --git a/galera/src/key_set.hpp b/galera/src/key_set.hpp
+index d1bd8583..afd70be9 100644
+--- a/galera/src/key_set.hpp
++++ b/galera/src/key_set.hpp
+@@ -173,6 +173,7 @@ public:
+ #else
+                 ret = (lhs[2] == rhs[2] && lhs[3] == rhs[3]);
+ #endif /* WORDSIZE */
++                __attribute__((fallthrough));
+             case FLAT8:
+             case FLAT8A:
+                 /* shift is to clear up the header */
+diff --git a/galera/src/replicator_smm.cpp b/galera/src/replicator_smm.cpp
+index e3a78917..60bd3999 100644
+--- a/galera/src/replicator_smm.cpp
++++ b/galera/src/replicator_smm.cpp
+@@ -275,6 +275,7 @@ galera::ReplicatorSMM::~ReplicatorSMM()
+     case S_SYNCED:
+     case S_DONOR:
+         close();
++        __attribute__((fallthrough));
+     case S_CLOSING:
+         // @todo wait that all users have left the building
+     case S_CLOSED:
+@@ -846,7 +847,7 @@ wsrep_status_t galera::ReplicatorSMM::replay_trx(TrxHandle* trx, void* trx_ctx)
+             break;
+         }
+         trx->set_state(TrxHandle::S_MUST_REPLAY_AM);
+-        // fall through
++        __attribute__((fallthrough));
+     case TrxHandle::S_MUST_REPLAY_AM:
+     {
+         // safety measure to make sure that all preceding trxs finish before
+@@ -855,7 +856,7 @@ wsrep_status_t galera::ReplicatorSMM::replay_trx(TrxHandle* trx, void* trx_ctx)
+         ApplyOrder ao(*trx);
+         gu_trace(apply_monitor_.enter(ao));
+         trx->set_state(TrxHandle::S_MUST_REPLAY_CM);
+-        // fall through
++        __attribute__((fallthrough));
+     }
+     case TrxHandle::S_MUST_REPLAY_CM:
+         if (co_mode_ != CommitOrder::BYPASS)
+@@ -864,7 +865,7 @@ wsrep_status_t galera::ReplicatorSMM::replay_trx(TrxHandle* trx, void* trx_ctx)
+             gu_trace(commit_monitor_.enter(co));
+         }
+         trx->set_state(TrxHandle::S_MUST_REPLAY);
+-        // fall through
++        __attribute__((fallthrough));
+     case TrxHandle::S_MUST_REPLAY:
+         ++local_replays_;
+         trx->set_state(TrxHandle::S_REPLAYING);
+diff --git a/galerautils/src/gu_dbug.c b/galerautils/src/gu_dbug.c
+index e548a2b7..b1001bb6 100644
+--- a/galerautils/src/gu_dbug.c
++++ b/galerautils/src/gu_dbug.c
+@@ -706,6 +706,7 @@ _gu_db_push_(const char *control)
+ 	case 'A':
+ 	case 'O':
+ 	    _gu_db_stack->flags |= FLUSH_ON_WRITE;
++	    __attribute__((fallthrough));
+ 	case 'a':
+ 	case 'o':
+ 	    if (*scan++ == ',') {
+diff --git a/galerautils/src/gu_mmh3.h b/galerautils/src/gu_mmh3.h
+index b2b97a6d..a05e1937 100644
+--- a/galerautils/src/gu_mmh3.h
++++ b/galerautils/src/gu_mmh3.h
+@@ -185,23 +185,36 @@ _mmh3_128_tail (const uint8_t* const tail, size_t const len,
+     switch(len & 15)
+     {
+     case 15: k2 ^= ((uint64_t)tail[14]) << 48;
++        __attribute__((fallthrough));
+     case 14: k2 ^= ((uint64_t)tail[13]) << 40;
++        __attribute__((fallthrough));
+     case 13: k2 ^= ((uint64_t)tail[12]) << 32;
++        __attribute__((fallthrough));
+     case 12: k2 ^= ((uint64_t)tail[11]) << 24;
++        __attribute__((fallthrough));
+     case 11: k2 ^= ((uint64_t)tail[10]) << 16;
++        __attribute__((fallthrough));
+     case 10: k2 ^= ((uint64_t)tail[ 9]) << 8;
++        __attribute__((fallthrough));
+     case  9: k2 ^= ((uint64_t)tail[ 8]) << 0;
+         k2 *= _mmh3_128_c2; k2 = GU_ROTL64(k2,33); k2 *= _mmh3_128_c1; h2 ^= k2;
+         k1 = gu_le64(((uint64_t*)tail)[0]);
+         k1 *= _mmh3_128_c1; k1 = GU_ROTL64(k1,31); k1 *= _mmh3_128_c2; h1 ^= k1;
+         break;
+     case  8: k1 ^= ((uint64_t)tail[ 7]) << 56;
++        __attribute__((fallthrough));
+     case  7: k1 ^= ((uint64_t)tail[ 6]) << 48;
++        __attribute__((fallthrough));
+     case  6: k1 ^= ((uint64_t)tail[ 5]) << 40;
++        __attribute__((fallthrough));
+     case  5: k1 ^= ((uint64_t)tail[ 4]) << 32;
++        __attribute__((fallthrough));
+     case  4: k1 ^= ((uint64_t)tail[ 3]) << 24;
++        __attribute__((fallthrough));
+     case  3: k1 ^= ((uint64_t)tail[ 2]) << 16;
++        __attribute__((fallthrough));
+     case  2: k1 ^= ((uint64_t)tail[ 1]) << 8;
++        __attribute__((fallthrough));
+     case  1: k1 ^= ((uint64_t)tail[ 0]) << 0;
+         k1 *= _mmh3_128_c1; k1 = GU_ROTL64(k1,31); k1 *= _mmh3_128_c2; h1 ^= k1;
+     };
+diff --git a/galerautils/src/gu_spooky.h b/galerautils/src/gu_spooky.h
+index eb711eff..508ca275 100644
+--- a/galerautils/src/gu_spooky.h
++++ b/galerautils/src/gu_spooky.h
+@@ -245,36 +245,47 @@ static GU_INLINE void gu_spooky_short_host(
+     {
+     case 15:
+         d += ((uint64_t)u.p8[14]) << 48;
++        __attribute__((fallthrough));
+     case 14:
+         d += ((uint64_t)u.p8[13]) << 40;
++        __attribute__((fallthrough));
+     case 13:
+         d += ((uint64_t)u.p8[12]) << 32;
++        __attribute__((fallthrough));
+     case 12:
+         d += gu_le32(u.p32[2]);
+         c += gu_le64(u.p64[0]);
+         break;
+     case 11:
+         d += ((uint64_t)u.p8[10]) << 16;
++        __attribute__((fallthrough));
+     case 10:
+         d += ((uint64_t)u.p8[9]) << 8;
++        __attribute__((fallthrough));
+     case 9:
+         d += (uint64_t)u.p8[8];
++        __attribute__((fallthrough));
+     case 8:
+         c += gu_le64(u.p64[0]);
+         break;
+     case 7:
+         c += ((uint64_t)u.p8[6]) << 48;
++        __attribute__((fallthrough));
+     case 6:
+         c += ((uint64_t)u.p8[5]) << 40;
++        __attribute__((fallthrough));
+     case 5:
+         c += ((uint64_t)u.p8[4]) << 32;
++        __attribute__((fallthrough));
+     case 4:
+         c += gu_le32(u.p32[0]);
+         break;
+     case 3:
+         c += ((uint64_t)u.p8[2]) << 16;
++        __attribute__((fallthrough));
+     case 2:
+         c += ((uint64_t)u.p8[1]) << 8;
++        __attribute__((fallthrough));
+     case 1:
+         c += (uint64_t)u.p8[0];
+         break;
+diff --git a/galerautils/src/gu_to.c b/galerautils/src/gu_to.c
+index f7178da3..6b9e18a7 100644
+--- a/galerautils/src/gu_to.c
++++ b/galerautils/src/gu_to.c
+@@ -421,6 +421,7 @@ long gu_to_interrupt (gu_to_t *to, gu_seqno_t seqno)
+             gu_debug ("signaling to interrupt wait seqno: seqno = %llu, "
+                       "TO seqno = %llu", seqno, to->seqno);
+             rcode    = to_wake_waiter (w);
++            __attribute__((fallthrough));
+         case RELEASED:
+             w->state = INTERRUPTED;
+             break;
+diff --git a/galerautils/src/gu_utils.c b/galerautils/src/gu_utils.c
+index e2b9e0b9..aa7d118d 100644
+--- a/galerautils/src/gu_utils.c
++++ b/galerautils/src/gu_utils.c
+@@ -28,12 +28,15 @@ gu_str2ll (const char* str, long long* ll)
+     case 't':
+     case 'T':
+         shift += 10;
++        __attribute__((fallthrough));
+     case 'g':
+     case 'G':
+         shift += 10;
++        __attribute__((fallthrough));
+     case 'm':
+     case 'M':
+         shift += 10;
++        __attribute__((fallthrough));
+     case 'k':
+     case 'K':
+         shift += 10;
+@@ -47,6 +50,7 @@ gu_str2ll (const char* str, long long* ll)
+             else llret = LLONG_MIN;
+             errno = ERANGE;
+         }
++        __attribute__((fallthrough));
+     default:
+         *ll = llret;
+     }
+diff --git a/gcomm/src/evs_proto.cpp b/gcomm/src/evs_proto.cpp
+index 1d72cf79..65adff58 100644
+--- a/gcomm/src/evs_proto.cpp
++++ b/gcomm/src/evs_proto.cpp
+@@ -2629,8 +2629,8 @@ int gcomm::evs::Proto::handle_down(Datagram& wb, const ProtoDownMeta& dm)
+         case EAGAIN:
+         {
+             output_.push_back(std::make_pair(wb, dm));
+-            // Fall through
+         }
++            __attribute__((fallthrough));
+         case 0:
+             ret = 0;
+             break;
+diff --git a/gcs/src/gcs.cpp b/gcs/src/gcs.cpp
+index 0346b119..8406e659 100644
+--- a/gcs/src/gcs.cpp
++++ b/gcs/src/gcs.cpp
+@@ -805,6 +805,7 @@ _join (gcs_conn_t* conn, gcs_seqno_t seqno)
+     case -ENOTCONN:
+         gu_warn ("Sending JOIN failed: %d (%s). "
+                  "Will retry in new primary component.", err, strerror(-err));
++        __attribute__((fallthrough));
+     case 0:
+         return 0;
+     default:
+diff --git a/gcs/src/gcs_core.cpp b/gcs/src/gcs_core.cpp
+index 3a5f72b6..1f5418b1 100644
+--- a/gcs/src/gcs_core.cpp
++++ b/gcs/src/gcs_core.cpp
+@@ -812,6 +812,7 @@ core_handle_comp_msg (gcs_core_t*          core,
+                   "WAIT_STATE_MSG. Can't continue.");
+         ret = -ENOTRECOVERABLE;
+         assert(0);
++        __attribute__((fallthrough));
+     default:
+         gu_fatal ("Failed to handle component message: %d (%s)!",
+                   ret, strerror (-ret));
+diff --git a/gcs/src/gcs_node.cpp b/gcs/src/gcs_node.cpp
+index 49a49d8f..ce5f1f53 100644
+--- a/gcs/src/gcs_node.cpp
++++ b/gcs/src/gcs_node.cpp
+@@ -181,6 +181,7 @@ gcs_node_update_status (gcs_node_t* node, const gcs_state_quorum_t* quorum)
+             else {
+                 node->desync_count = 1;
+             }
++            __attribute__((fallthrough));
+         case GCS_NODE_STATE_SYNCED:
+             node->count_last_applied = true;
+             break;
+diff --git a/gcs/src/gcs_test.cpp b/gcs/src/gcs_test.cpp
+index c6472d54..bb7a9411 100644
+--- a/gcs/src/gcs_test.cpp
++++ b/gcs/src/gcs_test.cpp
+@@ -644,15 +644,19 @@ static long gcs_test_conf (gcs_test_conf_t *conf, long argc, char *argv[])
+     case 6:
+         conf->n_recv = strtol (argv[5], &endptr, 10);
+         if ('\0' != *endptr) goto error;
++        __attribute__((fallthrough));
+     case 5:
+         conf->n_send = strtol (argv[4], &endptr, 10);
+         if ('\0' != *endptr) goto error;
++        __attribute__((fallthrough));
+     case 4:
+         conf->n_repl = strtol (argv[3], &endptr, 10);
+         if ('\0' != *endptr) goto error;
++        __attribute__((fallthrough));
+     case 3:
+         conf->n_tries = strtol (argv[2], &endptr, 10);
+         if ('\0' != *endptr) goto error;
++        __attribute__((fallthrough));
+     case 2:
+         conf->backend = argv[1];
+         break;
+diff --git a/www.evanjones.ca/crc32c.c b/www.evanjones.ca/crc32c.c
+index 67a5007e..53cc33c0 100644
+--- a/www.evanjones.ca/crc32c.c
++++ b/www.evanjones.ca/crc32c.c
+@@ -715,6 +715,7 @@ uint32_t crc32cHardware32(uint32_t crc, const void* data, size_t length) {
+     switch (length) {
+         case 3:
+             crc = __builtin_ia32_crc32qi(crc, *p_buf++);
++            __attribute__((fallthrough));
+         case 2:
+             crc = __builtin_ia32_crc32hi(crc, *(uint16_t*) p_buf);
+             break;
+@@ -756,21 +757,25 @@ uint32_t crc32cHardware64(uint32_t crc, const void* data, size_t length) {
+     switch (length) {
+         case 7:
+             crc32bit = __builtin_ia32_crc32qi(crc32bit, *p_buf++);
++            __attribute__((fallthrough));
+         case 6:
+             crc32bit = __builtin_ia32_crc32hi(crc32bit, *(uint16_t*) p_buf);
+             p_buf += 2;
++            __attribute__((fallthrough));
+         // case 5 is below: 4 + 1
+         case 4:
+             crc32bit = __builtin_ia32_crc32si(crc32bit, *(uint32_t*) p_buf);
+             break;
+         case 3:
+             crc32bit = __builtin_ia32_crc32qi(crc32bit, *p_buf++);
++            __attribute__((fallthrough));
+         case 2:
+             crc32bit = __builtin_ia32_crc32hi(crc32bit, *(uint16_t*) p_buf);
+             break;
+         case 5:
+             crc32bit = __builtin_ia32_crc32si(crc32bit, *(uint32_t*) p_buf);
+             p_buf += 4;
++            __attribute__((fallthrough));
+         case 1:
+             crc32bit = __builtin_ia32_crc32qi(crc32bit, *p_buf);
+             break;
+-- 
+2.13.0
+
