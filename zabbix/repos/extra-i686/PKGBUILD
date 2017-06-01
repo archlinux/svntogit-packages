@@ -5,11 +5,11 @@
 pkgbase=zabbix
 pkgname=(zabbix-server zabbix-agent zabbix-proxy zabbix-frontend-php)
 pkgver=3.2.6
-pkgrel=1
+pkgrel=4
 arch=(i686 x86_64)
 url='http://www.zabbix.com/'
 license=(GPL)
-makedepends=(postgresql-libs libxml2 unixodbc net-snmp libmysqlclient libldap)
+makedepends=(postgresql-libs libxml2 unixodbc net-snmp libmariadbclient libldap)
 source=(https://downloads.sourceforge.net/sourceforge/zabbix/zabbix-${pkgver}.tar.gz
         zabbix-agent.{service,sysusers,tmpfiles}
 	zabbix-server{-sqlite,-mysql,-pgsql}.service zabbix-server.{sysusers,tmpfiles}
@@ -36,6 +36,10 @@ prepare() {
     -e '/^LogFile=.*/d' \
     -e 's/# LogType=file/LogType=system/' \
     conf/zabbix_{agentd,proxy,server}.conf
+  sed -i \
+    -e 's/mariadbclient/mariadb/' \
+    m4/ax_lib_mysql.m4
+  autoreconf -fi
 }
 
 build() {
@@ -140,7 +144,7 @@ package_zabbix-agent() {
 package_zabbix-proxy() {
   pkgdesc='Data collecting proxy for Zabbix'
   depends=(net-snmp curl libxml2 sqlite unixodbc libldap)
-  optdepends=('libmysqlclient: for MySQL support'
+  optdepends=('libmariadbclient: for MariaDB support'
               'postgresql-libs: for PostgreSQL support')
   backup=(etc/zabbix/zabbix_proxy.conf)
 
@@ -151,7 +155,7 @@ package_zabbix-proxy() {
 
     install -d "$pkgdir/usr/share/$pkgname/$db"
     install -m644 database/$db/schema.sql -t "$pkgdir/usr/share/$pkgname/$db"
-  done 
+  done
   install -Dm644 conf/zabbix_proxy.conf "$pkgdir/etc/zabbix/zabbix_proxy.conf"
   chown 171:171 "$pkgdir/etc/zabbix/zabbix_proxy.conf"
 
