@@ -1,0 +1,156 @@
+From 128c34c9823340454dbdc16700bb67b40398a997 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dagfinn=20Ilmari=20Manns=C3=A5ker?= <ilmari@ilmari.org>
+Date: Mon, 22 May 2017 18:04:28 +0100
+Subject: [PATCH 1/2] Use File::Temp::tempdir in UNIX socket test/example
+
+POSIX::tmpnam is insecure, and has been removed in Perl 5.26.
+Instead, use File::Temp::tempdir() to create a secure tmporary
+directory that the server can create its UNIX sockets in.
+---
+ examples/connection_test.pl | 14 ++++++++------
+ t/UNIX_test.t               |  6 ++++--
+ 2 files changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/examples/connection_test.pl b/examples/connection_test.pl
+index 1ec49a1..7d8ff7a 100644
+--- a/examples/connection_test.pl
++++ b/examples/connection_test.pl
+@@ -20,11 +20,11 @@ =head1 CLIENT SYNOPSIS
+ 
+     # or
+ 
+-    perl connection_test.pl UNIX
++    perl connection_test.pl UNIX <UNIX socket directory>
+ 
+     # or
+ 
+-    perl connection_test.pl UNIX_DGRAM
++    perl connection_test.pl UNIX_DGRAM <UNIX socket directory>
+ 
+ =cut
+ 
+@@ -34,7 +34,8 @@ package MyPack;
+ use warnings;
+ use base qw(Net::Server);
+ use IO::Socket ();
+-use POSIX qw(tmpnam);
++use File::Temp qw(tempdir);
++use File::Spec::Functions qw(catdir);
+ use Socket qw(SOCK_DGRAM SOCK_STREAM);
+ 
+ sub post_bind_hook {
+@@ -44,13 +45,14 @@ sub post_bind_hook {
+   }
+ }
+ 
+-my $socket_file  = tmpnam();
+-$socket_file =~ s|/[^/]+$|/mysocket.file|;
+-my $socket_file2 = $socket_file ."2";
++my $socket_dir  = $ARGV[1] || tempdir();
++my $socket_file = catdir($socket_dir, 'mysocket.file');
++my $socket_file2 = catdir($socket_dir, 'mysocket.file2');
+ my $udp_port    = 20204;
+ my $tcp_port    = 20204;
+ 
+ print "\$Net::Server::VERSION = $Net::Server::VERSION\n";
++print "UNIX socket directory = $socket_dir\n";
+ 
+ if( @ARGV ){
+   if( uc($ARGV[0]) eq 'UDP' ){
+diff --git a/t/UNIX_test.t b/t/UNIX_test.t
+index b41f2fa..92649f2 100644
+--- a/t/UNIX_test.t
++++ b/t/UNIX_test.t
+@@ -2,7 +2,8 @@
+ 
+ package Net::Server::Test;
+ use strict;
+-use POSIX qw(tmpnam);
++use File::Temp qw(tempdir);
++use File::Spec::Functions qw(catfile);
+ use English qw($UID $GID);
+ use FindBin qw($Bin);
+ use lib $Bin;
+@@ -22,7 +23,8 @@ sub accept {
+     return shift->SUPER::accept(@_);
+ }
+ 
+-my $socket_file = tmpnam; # must do before fork
++my $socket_dir = tempdir();
++my $socket_file = catfile($socket_dir, 'socket'); # must do before fork
+ my $ok = eval {
+     local $SIG{'ALRM'} = sub { die "Timeout\n" };
+     alarm $env->{'timeout'};
+
+From 25a33396e0af3a0a24463f4633b6b130904a8676 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dagfinn=20Ilmari=20Manns=C3=A5ker?= <ilmari@ilmari.org>
+Date: Mon, 22 May 2017 18:05:58 +0100
+Subject: [PATCH 2/2] Use File::Temp::tempfile instead of POSIX::tmpnam for
+ lock file
+
+POSIX::tmpnam is insecure, and has been removed in Perl 5.26.
+Instead, use File::Temp::tempfile to create the lock file.
+---
+ Makefile.PL                     | 1 +
+ lib/Net/Server/PreFork.pm       | 2 +-
+ lib/Net/Server/PreForkSimple.pm | 8 ++++++--
+ 3 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile.PL b/Makefile.PL
+index b7859fe..094f904 100644
+--- a/Makefile.PL
++++ b/Makefile.PL
+@@ -23,6 +23,7 @@ my %WriteMakefileArgs = (
+    AUTHOR        => 'Paul Seamons <paul@seamons.com> and Rob Brown <bbb@cpan.org>',
+    EXE_FILES     => [ 'bin/net-server' ],
+    PREREQ_PM  => {
++     'File::Temp' => 0,
+      'IO::Socket' => 0,
+      Socket       => 0,
+      POSIX        => 0,
+diff --git a/lib/Net/Server/PreFork.pm b/lib/Net/Server/PreFork.pm
+index d986f1a..40b2dfa 100644
+--- a/lib/Net/Server/PreFork.pm
++++ b/lib/Net/Server/PreFork.pm
+@@ -512,7 +512,7 @@ You really should also see L<Net::Server::PreForkSimple>.
+     serialize           (flock|semaphore
+                          |pipe|none)            undef
+     # serialize defaults to flock on multi_port or on Solaris
+-    lock_file           "filename"              File::Temp::tempfile or POSIX::tmpnam
++    lock_file           "filename"              File::Temp->new
+ 
+     check_for_dead      \d+                     30
+     check_for_waiting   \d+                     10
+diff --git a/lib/Net/Server/PreForkSimple.pm b/lib/Net/Server/PreForkSimple.pm
+index fcccb74..03805c7 100644
+--- a/lib/Net/Server/PreForkSimple.pm
++++ b/lib/Net/Server/PreForkSimple.pm
+@@ -23,6 +23,7 @@ package Net::Server::PreForkSimple;
+ 
+ use strict;
+ use base qw(Net::Server);
++use File::Temp qw(tempfile);
+ use Net::Server::SIG qw(register_sig check_sigs);
+ use POSIX qw(WNOHANG EINTR);
+ use Fcntl ();
+@@ -81,7 +82,10 @@ sub post_bind {
+         if (defined $prop->{'lock_file'}) {
+             $prop->{'lock_file_unlink'} = undef;
+         } else {
+-            $prop->{'lock_file'} = eval { require File::Temp } ? File::Temp::tmpnam() : POSIX::tmpnam();
++            (my $fh, $prop->{'lock_file'}) = tempfile();
++            # We don't need to keep the file handle open in the parent;
++            # each child opens it separately to avoid sharing the lock
++            close $fh or die "Cannot close lock file $prop->{'lock_file'}: $!";
+             $prop->{'lock_file_unlink'} = 1;
+         }
+ 
+@@ -407,7 +411,7 @@ parameters.
+     serialize         (flock|semaphore
+                        |pipe|none)  undef
+     # serialize defaults to flock on multi_port or on Solaris
+-    lock_file         "filename"              File::Temp::tempfile or POSIX::tmpnam
++    lock_file         "filename"              File::Temp->new
+ 
+     check_for_dead    \d+                     30
+ 
