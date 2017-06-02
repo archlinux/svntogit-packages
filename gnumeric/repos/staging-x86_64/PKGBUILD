@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Eric Belanger <eric@archlinux.org>
+# Contributor: Kritoke <typeolinux@yahoo.com>
+
+pkgname=gnumeric
+pkgver=1.12.34
+pkgrel=2
+pkgdesc="A GNOME Spreadsheet Program"
+arch=('i686' 'x86_64')
+url="http://www.gnome.org/projects/gnumeric/"
+license=('GPL')
+depends=('goffice')
+makedepends=('intltool' 'psiconv' 'pygobject-devel' docbook-xml
+             'gobject-introspection' 'python2-gobject' gtk-doc autoconf-archive git yelp-tools)
+optdepends=('python2-gobject: for python plugin support'
+            'perl: for perl plugin support'
+            'psiconv: for Psion 5 file support'
+            'yelp: for viewing the help manual')
+_commit=577c7b0aca1afd23efb3e3776cb914139884a2a7  # tags/GNUMERIC_1_12_34^0
+source=("git+https://git.gnome.org/browse/gnumeric#commit=$_commit"
+        revert-warnings.patch)
+sha256sums=('SKIP'
+            'bcafca016b809000c2a5bf911e2e3dfa4de28f9e541d9964574cac5c7ce09e53')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^GNUMERIC_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git cherry-pick -n 798755af32c42e395d167d9d49d14cbe449d2842
+
+  patch -Np0 -i ../revert-warnings.patch
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  PYTHON=/usr/bin/python2 ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-schemas-compile --enable-introspection
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="${pkgdir}" install
+}
