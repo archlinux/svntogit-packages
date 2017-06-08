@@ -3,9 +3,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.8.0
+_qtver=5.9.0
 pkgver=${_qtver/-/}
-pkgrel=9
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -13,27 +13,11 @@ pkgdesc='Provides support for web applications using the Chromium browser projec
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 'libvpx' 
          'libevent' 'libsrtp' 'snappy' 'nss' 'protobuf' 'libxslt' 'libxdamage' 'minizip' 'ffmpeg')
          # namcap note: libxdamage is needed for nvidia users
-makedepends=('python2' 'git' 'gperf' 'jsoncpp')
+makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
-source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz" qt5-webengine-nss.patch
-        qtwebengine-5.7.0-icu58.patch
-        qtbug-58488.patch::"https://github.com/qt/qtwebengine/commit/7e7dd262.patch"
-        qtbug-58381.patch::"https://github.com/qt/qtwebengine/commit/8e147ed3.patch"
-        qtbug-58515.patch::"https://github.com/qt/qtwebengine/commit/a6c6665d.patch"
-        qtbug-58673.patch::"https://github.com/qt/qtwebengine/commit/90501711.patch"
-        qtbug-58362.patch::"https://github.com/qt/qtwebengine/commit/31374ba9.patch"
-        qtbug-57778.patch::"https://github.com/qt/qtwebengine/commit/5c2cbfcc.patch")
-
-md5sums=('6e7fb2be161c6db4d988a4f5b329672f'
-         '2a1610b34204102938a24154a52e5571'
-         '9d225d1bf83ea45dbf6556d30d35fcb8'
-         '3762cbdbc6a752e4d876e048e5e16de6'
-         '951ac7549fff82f9d1d11e9bf50556ba'
-         'd5da5608285ad764f37fe196f9afe5a1'
-         'c7b5acd58319d23d769c19f42323e8ec'
-         '663f8454990de96fad4c8c78bcd6f819'
-         '849ab18980b0523405f0282c83b4a54c')
+source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
+sha256sums=('2ed4a579b0fc89c586ed84f131f8c64f6fb70f3126711138ce68f1290ac2b820')
 
 prepare() {
   mkdir -p build
@@ -41,27 +25,6 @@ prepare() {
   # Hack to force using python2
   mkdir -p bin
   ln -s /usr/bin/python2 bin/python
-
-  # Fix opening some websites with recent NSS https://github.com/QupZilla/qupzilla/issues/1870 (KaOSx patch)
-  cd ${_pkgfqn}
- # patch -p1 -i ../qt5-webengine-nss.patch
-
-  # Fix build with ICU 58 (gentoo)
-  #patch -p1 -i "$srcdir"/qtwebengine-5.7.0-icu58.patch
-
-  # Prevent drop-down popups form stealing focus https://bugreports.qt.io/browse/QTBUG-58488
-  patch -p1 -i ../qtbug-58488.patch
-
-  # Backport some focus fixes
-  patch -p1 -i ../qtbug-58381.patch
-  patch -p1 -i ../qtbug-58515.patch
-  patch -p1 -i ../qtbug-58673.patch 
-
-  # Fix IME support
-  patch -p1 -i ../qtbug-58362.patch
-
-  # Fix incorrectly overriding new and delete
-  patch -p1 -i ../qtbug-57778.patch
 }
 
 build() {
