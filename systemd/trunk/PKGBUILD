@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=233
-pkgrel=4
+pkgrel=5
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -45,6 +45,8 @@ _backports=(
   'ff2e33db54719bfe8feea833571652318c6d197c'
   # resolved: do not start LLMNR or mDNS stack when no network enables them
   '2c7ef56459bf6fe7761595585aa4eed5cd183f27^..2c7ef56459bf6fe7761595585aa4eed5cd183f27^2'
+  # networkd: RFC compliant autonomous prefix handling (#5636)
+  '6554550f35a7976f9110aff94743d3576d5f02dd'
 )
 
 _validate_tag() {
