@@ -1,0 +1,242 @@
+From 0e56f729d74e4af6c19fe60f6e2b47f5e717dcac Mon Sep 17 00:00:00 2001
+From: Marko Kreen <markokr@gmail.com>
+Date: Tue, 6 Dec 2016 20:05:17 +0200
+Subject: [PATCH] tls: additional openssl 1.1 compat
+
+Fixes: #15
+---
+ test/connect-tls.c     |  2 +-
+ usual/tls/tls.c        |  2 ++
+ usual/tls/tls_cert.c   | 12 ++++++------
+ usual/tls/tls_compat.h | 45 +++++++++++++++++++++++++++++++++++++++++++++
+ usual/tls/tls_ocsp.c   | 28 +++++++++++++++++-----------
+ usual/tls/tls_util.c   |  2 +-
+ usual/tls/tls_verify.c |  8 ++++----
+ 7 files changed, 76 insertions(+), 23 deletions(-)
+
+diff --git a/usual/tls/tls.c b/usual/tls/tls.c
+index 3377cb4..1843e44 100644
+--- a/usual/tls/tls.c
++++ b/usual/tls/tls.c
+@@ -67,7 +67,9 @@ tls_deinit(void)
+ 		CRYPTO_cleanup_all_ex_data();
+ 		BIO_sock_cleanup();
+ 		ERR_clear_error();
++#ifdef USE_LIBSSL_INTERNALS
+ 		ERR_remove_thread_state(NULL);
++#endif
+ 		ERR_free_strings();
+ 
+ 		tls_initialised = 0;
+diff --git a/usual/tls/tls_cert.c b/usual/tls/tls_cert.c
+index ca6668a..9a81e2f 100644
+--- a/usual/tls/tls_cert.c
++++ b/usual/tls/tls_cert.c
+@@ -86,7 +86,7 @@ tls_parse_bigint(struct tls *ctx, const ASN1_INTEGER *asn1int, const char **dst_
+  */
+ 
+ static int
+-check_invalid_bytes(struct tls *ctx, unsigned char *data, unsigned int len,
++check_invalid_bytes(struct tls *ctx, const unsigned char *data, unsigned int len,
+ 		    int ascii_only, const char *desc)
+ {
+ 	unsigned int i, c;
+@@ -125,7 +125,7 @@ static int
+ tls_parse_asn1string(struct tls *ctx, ASN1_STRING *a1str, const char **dst_p, int minchars, int maxchars, const char *desc)
+ {
+ 	int format, len, ret = -1;
+-	unsigned char *data;
++	const unsigned char *data;
+ 	ASN1_STRING *a1utf = NULL;
+ 	int ascii_only = 0;
+ 	char *cstr = NULL;
+@@ -134,7 +134,7 @@ tls_parse_asn1string(struct tls *ctx, ASN1_STRING *a1str, const char **dst_p, in
+ 	*dst_p = NULL;
+ 
+ 	format = ASN1_STRING_type(a1str);
+-	data = ASN1_STRING_data(a1str);
++	data = ASN1_STRING_get0_data(a1str);
+ 	len = ASN1_STRING_length(a1str);
+ 	if (len < minchars) {
+ 		tls_set_errorx(ctx, "invalid %s: string too short", desc);
+@@ -188,7 +188,7 @@ tls_parse_asn1string(struct tls *ctx, ASN1_STRING *a1str, const char **dst_p, in
+ 			tls_set_errorx(ctx, "multibyte conversion failed: expected UTF8 result");
+ 			goto failed;
+ 		}
+-		data = ASN1_STRING_data(a1utf);
++		data = ASN1_STRING_get0_data(a1utf);
+ 		len = ASN1_STRING_length(a1utf);
+ 	}
+ 
+@@ -275,12 +275,12 @@ static int
+ tls_load_alt_ipaddr(struct tls *ctx, ASN1_OCTET_STRING *bin, struct tls_cert *cert)
+ {
+ 	struct tls_cert_general_name *slot;
+-	void *data;
++	const void *data;
+ 	int len;
+ 
+ 	slot = &cert->subject_alt_names[cert->subject_alt_name_count];
+ 	len = ASN1_STRING_length(bin);
+-	data = ASN1_STRING_data(bin);
++	data = ASN1_STRING_get0_data(bin);
+ 	if (len < 0) {
+ 		tls_set_errorx(ctx, "negative length for ipaddress");
+ 		return -1;
+diff --git a/usual/tls/tls_compat.h b/usual/tls/tls_compat.h
+index 40ca5cf..8305958 100644
+--- a/usual/tls/tls_compat.h
++++ b/usual/tls/tls_compat.h
+@@ -12,6 +12,7 @@
+ #include <usual/time.h>
+ 
+ #include <openssl/ssl.h>
++#include <openssl/err.h>
+ 
+ /* OpenSSL 1.1+ has hidden struct fields */
+ #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+@@ -21,6 +22,50 @@
+ #define X509_get_key_usage(x509) ((x509)->ex_kusage)
+ #define X509_get_extended_key_usage(x509) ((x509)->ex_xkusage)
+ #define SSL_CTX_get0_param(ssl_ctx) ((ssl_ctx)->param)
++#define ASN1_STRING_get0_data(x) ((const unsigned char*)ASN1_STRING_data(x))
++#define X509_OBJECT_get0_X509(x) ((x)->data.x509)
++
++#ifndef OPENSSL_VERSION
++#define OPENSSL_VERSION SSLEAY_VERSION
++#define OpenSSL_version(x) SSLeay_version(x)
++#endif
++
++static inline X509_OBJECT *X509_OBJECT_new(void)
++{
++	X509_OBJECT *obj = OPENSSL_malloc(sizeof(*obj));
++	if (obj) {
++		memset(obj, 0, sizeof(*obj));
++	} else {
++		X509err(X509_F_GET_CERT_BY_SUBJECT, ERR_R_MALLOC_FAILURE);
++	}
++	return obj;
++}
++
++static inline void X509_OBJECT_free(X509_OBJECT *obj)
++{
++	if (obj) {
++		if (obj->type == X509_LU_X509) {
++			X509_free(obj->data.x509);
++		} else if (obj->type == X509_LU_CRL) {
++			X509_CRL_free(obj->data.crl);
++		}
++		OPENSSL_free(obj);
++	}
++}
++
++static inline X509_OBJECT *X509_STORE_CTX_get_obj_by_subject(X509_STORE_CTX *ctx, int lookup, X509_NAME *name)
++{
++	X509_OBJECT *obj = X509_OBJECT_new();
++	if (obj) {
++		if (X509_STORE_get_by_subject(ctx, lookup, name, obj)) {
++			return obj;
++		}
++		X509_OBJECT_free(obj);
++	}
++	return NULL;
++}
++
++
+ #endif
+ 
+ /* ecdh_auto is broken - ignores main EC key */
+diff --git a/usual/tls/tls_ocsp.c b/usual/tls/tls_ocsp.c
+index 1e41d48..0b21e32 100644
+--- a/usual/tls/tls_ocsp.c
++++ b/usual/tls/tls_ocsp.c
+@@ -164,8 +164,8 @@ tls_ocsp_get_certid(X509 *main_cert, STACK_OF(X509) *extra_certs, SSL_CTX *ssl_c
+ {
+ 	X509_NAME *issuer_name;
+ 	X509 *issuer;
+-	X509_STORE_CTX storectx;
+-	X509_OBJECT tmpobj;
++	X509_STORE_CTX *storectx = NULL;
++	X509_OBJECT *tmpobj;
+ 	OCSP_CERTID *cid = NULL;
+ 	X509_STORE *store;
+ 	int ok;
+@@ -182,17 +182,23 @@ tls_ocsp_get_certid(X509 *main_cert, STACK_OF(X509) *extra_certs, SSL_CTX *ssl_c
+ 
+ 	store = SSL_CTX_get_cert_store(ssl_ctx);
+ 	if (!store)
+-		return NULL;
+-	ok = X509_STORE_CTX_init(&storectx, store, main_cert, extra_certs);
++		goto error;
++	ok = X509_STORE_CTX_init(storectx, store, main_cert, extra_certs);
+ 	if (ok != 1)
+-		return NULL;
+-	ok = X509_STORE_get_by_subject(&storectx, X509_LU_X509, issuer_name, &tmpobj);
+-	if (ok == 1) {
+-		cid = OCSP_cert_to_id(NULL, main_cert, tmpobj.data.x509);
+-		X509_free(tmpobj.data.x509);
+-	}
+-	X509_STORE_CTX_cleanup(&storectx);
++		goto error;
++
++	tmpobj = X509_STORE_CTX_get_obj_by_subject(storectx, X509_LU_X509, issuer_name);
++	if (!tmpobj)
++		goto error;
++        cid = OCSP_cert_to_id(NULL, main_cert, X509_OBJECT_get0_X509(tmpobj));
++	X509_OBJECT_free(tmpobj);
++	X509_STORE_CTX_free(storectx);
+ 	return cid;
++error:
++	if (storectx) {
++		X509_STORE_CTX_free(storectx);
++	}
++	return NULL;
+ }
+ 
+ static int
+diff --git a/usual/tls/tls_util.c b/usual/tls/tls_util.c
+index 2b91c64..823ccd1 100644
+--- a/usual/tls/tls_util.c
++++ b/usual/tls/tls_util.c
+@@ -30,7 +30,7 @@
+ const char *
+ tls_backend_version(void)
+ {
+-	return SSLeay_version(SSLEAY_VERSION);
++	return OpenSSL_version(OPENSSL_VERSION);
+ }
+ 
+ /*
+diff --git a/usual/tls/tls_verify.c b/usual/tls/tls_verify.c
+index 1c94b7c..9e5cce6 100644
+--- a/usual/tls/tls_verify.c
++++ b/usual/tls/tls_verify.c
+@@ -116,12 +116,12 @@ tls_check_subject_altname(struct tls *ctx, X509 *cert, const char *name)
+ 			continue;
+ 
+ 		if (type == GEN_DNS) {
+-			void		*data;
++			const void	*data;
+ 			int		 format, len;
+ 
+ 			format = ASN1_STRING_type(altname->d.dNSName);
+ 			if (format == V_ASN1_IA5STRING) {
+-				data = ASN1_STRING_data(altname->d.dNSName);
++				data = ASN1_STRING_get0_data(altname->d.dNSName);
+ 				len = ASN1_STRING_length(altname->d.dNSName);
+ 
+ 				if (len < 0 || len != (int)strlen(data)) {
+@@ -161,11 +161,11 @@ tls_check_subject_altname(struct tls *ctx, X509 *cert, const char *name)
+ 			}
+ 
+ 		} else if (type == GEN_IPADD) {
+-			unsigned char	*data;
++			const unsigned char *data;
+ 			int		 datalen;
+ 
+ 			datalen = ASN1_STRING_length(altname->d.iPAddress);
+-			data = ASN1_STRING_data(altname->d.iPAddress);
++			data = ASN1_STRING_get0_data(altname->d.iPAddress);
+ 
+ 			if (datalen < 0) {
+ 				tls_set_errorx(ctx,
