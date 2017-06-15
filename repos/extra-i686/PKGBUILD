@@ -4,30 +4,30 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=53.0.3
+pkgver=54.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(i686 x86_64)
 license=(MPL GPL LGPL)
 url="https://www.mozilla.org/firefox/"
 depends=(gtk3 gtk2 mozilla-common libxt startup-notification mime-types dbus-glib alsa-lib ffmpeg
-         libvpx libevent nss hunspell sqlite ttf-font icu)
-makedepends=(unzip zip diffutils python2 yasm mesa imake gconf libpulse inetutils xorg-server-xvfb
+         nss hunspell sqlite ttf-font libpulse icu libvpx)
+makedepends=(unzip zip diffutils python2 yasm mesa imake gconf inetutils xorg-server-xvfb
              autoconf2.13 cargo mercurial)
 optdepends=('networkmanager: Location detection via available WiFi networks'
             'libnotify: Notification integration'
+            'pulseaudio: Audio support'
             'speech-dispatcher: Text-to-Speech')
 options=(!emptydirs !makeflags !strip)
 _repo=https://hg.mozilla.org/mozilla-unified
 source=("hg+$_repo#tag=FIREFOX_${pkgver//./_}_RELEASE"
-        firefox.desktop firefox-symbolic.svg
-        0001-Bug-1338655-Don-t-try-to-build-mp4parse-bindings.-r-.patch
-        firefox-install-dir.patch fix-wifi-scanner.diff)
+        $pkgname.desktop firefox-symbolic.svg
+        firefox-install-dir.patch no-crmf.diff fix-wifi-scanner.diff)
 sha256sums=('SKIP'
             'ada313750e6fb14558b37c764409a17c1672a351a46c73b350aa1fe4ea9220ef'
             'a2474b32b9b2d7e0fb53a4c89715507ad1c194bef77713d798fa39d507def9e9'
-            '413cd6d366d78f325d80ebebccfd0afa0d266b40b2e54b66ba2fa03c15f3ea67'
             'd86e41d87363656ee62e12543e2f5181aadcff448e406ef3218e91865ae775cd'
+            'fb85a538044c15471c12cf561d6aa74570f8de7b054a7063ef88ee1bdfc1ccbb'
             '9765bca5d63fb5525bbd0520b7ab1d27cabaed697e2fc7791400abc3fa4f13b8')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
@@ -49,11 +49,11 @@ prepare() {
   cd mozilla-unified
   patch -Np1 -i ../firefox-install-dir.patch
 
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1371991
+  patch -Np1 -i ../no-crmf.diff
+
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1314968
   patch -Np1 -i ../fix-wifi-scanner.diff
-
-  # https://bugs.archlinux.org/task/53890
-  patch -Np1 -i ../0001-Bug-1338655-Don-t-try-to-build-mp4parse-bindings.-r-.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
@@ -65,6 +65,7 @@ ac_add_options --prefix=/usr
 ac_add_options --enable-release
 ac_add_options --enable-gold
 ac_add_options --enable-pie
+ac_add_options --enable-optimize="-O2"
 
 # Branding
 ac_add_options --enable-official-branding
@@ -87,7 +88,6 @@ ac_add_options --with-system-icu
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-zlib
 ac_add_options --with-system-bz2
-ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
 ac_add_options --enable-system-hunspell
 ac_add_options --enable-system-sqlite
@@ -97,7 +97,6 @@ ac_add_options --enable-system-pixman
 # Features
 ac_add_options --enable-startup-notification
 ac_add_options --enable-crashreporter
-ac_add_options --enable-alsa
 ac_add_options --disable-updater
 
 STRIP_FLAGS="--strip-debug"
@@ -125,7 +124,7 @@ package() {
   cd mozilla-unified
   make -f client.mk DESTDIR="$pkgdir" INSTALL_SDK= install
 
-  _vendorjs="$pkgdir/usr/lib/firefox/browser/defaults/preferences/vendor.js"
+  _vendorjs="$pkgdir/usr/lib/$pkgname/browser/defaults/preferences/vendor.js"
   install -Dm644 /dev/stdin "$_vendorjs" <<END
 // Use LANG environment variable to choose locale
 pref("intl.locale.matchOS", true);
@@ -141,7 +140,7 @@ pref("extensions.shownSelectionUI", true);
 pref("browser.tabs.remote.autostart", true);
 END
 
-  _distini="$pkgdir/usr/lib/firefox/distribution/distribution.ini"
+  _distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
   install -Dm644 /dev/stdin "$_distini" <<END
 [Global]
 id=archlinux
@@ -156,35 +155,35 @@ END
 
   for i in 16 22 24 32 48 256; do
     install -Dm644 browser/branding/official/default$i.png \
-      "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/firefox.png"
+      "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/$pkgname.png"
   done
   install -Dm644 browser/branding/official/content/icon64.png \
-    "$pkgdir/usr/share/icons/hicolor/64x64/apps/firefox.png"
+    "$pkgdir/usr/share/icons/hicolor/64x64/apps/$pkgname.png"
   install -Dm644 browser/branding/official/mozicon128.png \
-    "$pkgdir/usr/share/icons/hicolor/128x128/apps/firefox.png"
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/$pkgname.png"
   install -Dm644 browser/branding/official/content/about-logo.png \
-    "$pkgdir/usr/share/icons/hicolor/192x192/apps/firefox.png"
+    "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
   install -Dm644 browser/branding/official/content/about-logo@2x.png \
-    "$pkgdir/usr/share/icons/hicolor/384x384/apps/firefox.png"
+    "$pkgdir/usr/share/icons/hicolor/384x384/apps/$pkgname.png"
   install -Dm644 ../firefox-symbolic.svg \
-    "$pkgdir/usr/share/icons/hicolor/symbolic/apps/firefox-symbolic.svg"
+    "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.svg"
 
-  install -Dm644 ../firefox.desktop \
-    "$pkgdir/usr/share/applications/firefox.desktop"
+  install -Dm644 ../$pkgname.desktop \
+    "$pkgdir/usr/share/applications/$pkgname.desktop"
 
   # Use system-provided dictionaries
-  rm -r "$pkgdir"/usr/lib/firefox/dictionaries
-  ln -Ts /usr/share/hunspell "$pkgdir/usr/lib/firefox/dictionaries"
-  ln -Ts /usr/share/hyphen "$pkgdir/usr/lib/firefox/hyphenation"
+  rm -r "$pkgdir"/usr/lib/$pkgname/dictionaries
+  ln -Ts /usr/share/hunspell "$pkgdir/usr/lib/$pkgname/dictionaries"
+  ln -Ts /usr/share/hyphen "$pkgdir/usr/lib/$pkgname/hyphenation"
 
   # Install a wrapper to avoid confusion about binary path
-  install -Dm755 /dev/stdin "$pkgdir/usr/bin/firefox" <<END
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/$pkgname" <<END
 #!/bin/sh
-exec /usr/lib/firefox/firefox "\$@"
+exec /usr/lib/$pkgname/firefox "\$@"
 END
 
   # Replace duplicate binary with wrapper
   # https://bugzilla.mozilla.org/show_bug.cgi?id=658850
-  ln -srf "$pkgdir/usr/bin/firefox" \
-    "$pkgdir/usr/lib/firefox/firefox-bin"
+  ln -srf "$pkgdir/usr/bin/$pkgname" \
+    "$pkgdir/usr/lib/$pkgname/firefox-bin"
 }
