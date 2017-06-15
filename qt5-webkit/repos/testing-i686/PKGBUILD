@@ -1,0 +1,61 @@
+# $Id: PKGBUILD 240297 2015-06-03 10:22:03Z fyan $
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=qt5-webkit
+_qtver=5.212.0-alpha
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=(i686 x86_64)
+url='http://qt-project.org/'
+license=(GPL3 LGPL3 FDL custom)
+pkgdesc='Classes for a WebKit2 based implementation and a new QML API'
+depends=(qt5-location qt5-sensors qt5-webchannel libwebp libxslt libxcomposite gst-plugins-base hyphen)
+makedepends=(cmake ruby gperf python2 qt5-doc qt5-tools)
+optdepends=('gst-plugins-good: Webm codec support')
+conflicts=(qt5-webkit-ng)
+replaces=(qt5-webkit-ng)
+groups=(qt qt5)
+_pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
+source=("https://github.com/annulen/webkit/releases/download/qtwebkit-$_qtver/qtwebkit-$_qtver.tar.xz"
+        qt5-webkit-functional.patch::"https://github.com/qt/qtwebkit/commit/c119ecc7.patch"
+        qt5-webkit-no-expansion-to-defined.patch::"https://github.com/annulen/webkit/commit/a4d1f641.patch"
+        qt5-webkit-gcc7.patch qt5-webkit-i686-linking.patch)
+sha256sums=('f70fea4623a0f1df6ec535358f9c431d6ead9c04742a85258aaabcd0805d2719'
+            'e9dd2a6d5682a788666b8a1dd078e079f8460a512096fb0381b48226e95e3d1f'
+            '60eafaf42e5cd81805b74c29564b6504092d69bf0083c728d113af9d1740b3c1'
+            '58ecbd8708f5afe4e974fdcd6c1f32fea61ccc55dc9bb711768f2d0da6963fb8'
+            '2b494dcd22db8d50b3b4ddbc73639f089041681575fbc435e600788e7e2a6525')
+
+prepare() {
+  mkdir -p build
+
+  cd qtwebkit-$_qtver
+# Fix build with GCC 7
+  sed -e '/ChangeLog/d' -i ../*.patch
+  patch -p1 -i ../qt5-webkit-gcc7.patch
+  patch -p1 -i ../qt5-webkit-functional.patch
+  patch -p1 -i ../qt5-webkit-no-expansion-to-defined.patch
+# Fix i686 linking
+  patch -p1 -i ../qt5-webkit-i686-linking.patch
+}
+
+build() {
+  cd build
+
+  cmake ../qtwebkit-$_qtver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DPORT=Qt \
+    -DENABLE_TOOLS=OFF
+  make
+}
+
+package() {
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+}
