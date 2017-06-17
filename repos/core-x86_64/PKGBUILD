@@ -6,19 +6,20 @@
 
 pkgname=glibc
 pkgver=2.25
-pkgrel=2
+pkgrel=3
 _commit=ccb4fd7a657b0fbc4890c98f4586d58a135fc583
-pkgdesc="GNU C Library"
-arch=('i686' 'x86_64')
-url="http://www.gnu.org/software/libc"
-license=('GPL' 'LGPL')
-groups=('base')
-depends=('linux-api-headers>=4.10' 'tzdata' 'filesystem')
-makedepends=('gcc>=6' 'git')
+pkgdesc='GNU C Library'
+arch=(i686 x86_64)
+url='http://www.gnu.org/software/libc'
+license=(GPL LGPL)
+groups=(base)
+depends=('linux-api-headers>=4.10' tzdata filesystem)
+makedepends=('gcc>=6' git gd)
+optdepends=('gd: for memusagestat')
 backup=(etc/gai.conf
         etc/locale.gen
         etc/nscd.conf)
-options=('!strip' 'staticlibs')
+options=(!strip staticlibs)
 install=glibc.install
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
