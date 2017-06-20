@@ -1,0 +1,54 @@
+From 4dde7d0061b6d2f9159d3f31f9c3c1faf9038fdb Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Tue, 20 Jun 2017 16:39:36 +0200
+Subject: [PATCH 4/4] tests: souphttpsrc: Avoid deprecated ssl-ca-file property
+
+SoupSession's ssl-ca-file property is deprecated. Use the recommended
+tls-database property.
+
+This is a bit more complex as it requires creating a GTlsFileDatabase
+object for an absolute (!) path to the CA certificates file.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=784005
+---
+ tests/check/elements/souphttpsrc.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/tests/check/elements/souphttpsrc.c b/tests/check/elements/souphttpsrc.c
+index d5eefb9364f78280..40d4dbbb6ebef05c 100644
+--- a/tests/check/elements/souphttpsrc.c
++++ b/tests/check/elements/souphttpsrc.c
+@@ -125,8 +125,29 @@ run_test (gboolean use_https, const gchar * path, gint expected)
+   g_object_set (src, "location", url, NULL);
+   g_free (url);
+ 
++  if (use_https) {
++    GTlsDatabase *tlsdb;
++    GError *error = NULL;
++    gchar *path;
++
++    /* GTlsFileDatabase needs an absolute path. Using a relative one
++     * causes a warning from GLib-Net followed by a segfault in GnuTLS */
++    if (g_path_is_absolute (ssl_cert_file)) {
++      path = g_strdup (ssl_cert_file);
++    } else {
++      path = g_build_filename (g_get_current_dir (), ssl_cert_file, NULL);
++    }
++
++    tlsdb = g_tls_file_database_new (path, &error);
++    fail_unless (tlsdb, "Failed to load certificate: %s", error->message);
++
++    g_object_set (src, "tls-database", tlsdb, NULL);
++
++    g_object_unref (tlsdb);
++    g_free (path);
++  }
++
+   g_object_set (src, "automatic-redirect", redirect, NULL);
+-  g_object_set (src, "ssl-ca-file", ssl_cert_file, NULL);
+   if (cookies != NULL)
+     g_object_set (src, "cookies", cookies, NULL);
+   g_object_set (sink, "signal-handoffs", TRUE, NULL);
+-- 
+2.13.1
+
