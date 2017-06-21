@@ -1,0 +1,194 @@
+From 9b1befabbb7a7105501d27843873d14e1c2de54b Mon Sep 17 00:00:00 2001
+From: Qi Wang <interwq@gwu.edu>
+Date: Thu, 15 Jun 2017 16:53:22 -0700
+Subject: [PATCH] Add minimal initialized TSD.
+
+We use the minimal_initilized tsd (which requires no cleanup) for free()
+specifically, if tsd hasn't been initialized yet.
+
+Any other activity will transit the state from minimal to normal.  This is to
+workaround the case where a thread has no malloc calls in its lifetime until
+during thread termination, free() happens after tls destructors.
+---
+ include/jemalloc/internal/tsd.h | 30 ++++++++++++++++++++--------
+ src/jemalloc.c                  | 10 +++++++++-
+ src/tsd.c                       | 44 +++++++++++++++++++++++++++--------------
+ 3 files changed, 60 insertions(+), 24 deletions(-)
+
+diff --git a/include/jemalloc/internal/tsd.h b/include/jemalloc/internal/tsd.h
+index 631fbf1f..155a2ec6 100644
+--- a/include/jemalloc/internal/tsd.h
++++ b/include/jemalloc/internal/tsd.h
+@@ -99,9 +99,10 @@ enum {
+ 	tsd_state_nominal_slow = 1, /* Initialized but on slow path. */
+ 	/* the above 2 nominal states should be lower values. */
+ 	tsd_state_nominal_max = 1, /* used for comparison only. */
+-	tsd_state_purgatory = 2,
+-	tsd_state_reincarnated = 3,
+-	tsd_state_uninitialized = 4
++	tsd_state_minimal_initialized = 2,
++	tsd_state_purgatory = 3,
++	tsd_state_reincarnated = 4,
++	tsd_state_uninitialized = 5
+ };
+ 
+ /* Manually limit tsd_state_t to a single byte. */
+@@ -190,7 +191,8 @@ JEMALLOC_ALWAYS_INLINE t *						\
+ tsd_##n##p_get(tsd_t *tsd) {						\
+ 	assert(tsd->state == tsd_state_nominal ||			\
+ 	    tsd->state == tsd_state_nominal_slow ||			\
+-	    tsd->state == tsd_state_reincarnated);			\
++	    tsd->state == tsd_state_reincarnated ||			\
++	    tsd->state == tsd_state_minimal_initialized);		\
+ 	return tsd_##n##p_get_unsafe(tsd);				\
+ }
+ MALLOC_TSD
+@@ -225,7 +227,8 @@ MALLOC_TSD
+ #define O(n, t, nt)							\
+ JEMALLOC_ALWAYS_INLINE void						\
+ tsd_##n##_set(tsd_t *tsd, t val) {					\
+-	assert(tsd->state != tsd_state_reincarnated);			\
++	assert(tsd->state != tsd_state_reincarnated &&			\
++	    tsd->state != tsd_state_minimal_initialized);		\
+ 	*tsd_##n##p_get(tsd) = val;					\
+ }
+ MALLOC_TSD
+@@ -248,7 +251,7 @@ tsd_fast(tsd_t *tsd) {
+ }
+ 
+ JEMALLOC_ALWAYS_INLINE tsd_t *
+-tsd_fetch_impl(bool init, bool internal) {
++tsd_fetch_impl(bool init, bool minimal) {
+ 	tsd_t *tsd = tsd_get(init);
+ 
+ 	if (!init && tsd_get_allocates() && tsd == NULL) {
+@@ -257,7 +260,7 @@ tsd_fetch_impl(bool init, bool internal) {
+ 	assert(tsd != NULL);
+ 
+ 	if (unlikely(tsd->state != tsd_state_nominal)) {
+-		return tsd_fetch_slow(tsd, internal);
++		return tsd_fetch_slow(tsd, minimal);
+ 	}
+ 	assert(tsd_fast(tsd));
+ 	tsd_assert_fast(tsd);
+@@ -265,11 +268,22 @@ tsd_fetch_impl(bool init, bool internal) {
+ 	return tsd;
+ }
+ 
++/* Get a minimal TSD that requires no cleanup.  See comments in free(). */
+ JEMALLOC_ALWAYS_INLINE tsd_t *
+-tsd_internal_fetch(void) {
++tsd_fetch_min(void) {
+ 	return tsd_fetch_impl(true, true);
+ }
+ 
++/* For internal background threads use only. */
++JEMALLOC_ALWAYS_INLINE tsd_t *
++tsd_internal_fetch(void) {
++	tsd_t *tsd = tsd_fetch_min();
++	/* Use reincarnated state to prevent full initialization. */
++	tsd->state = tsd_state_reincarnated;
++
++	return tsd;
++}
++
+ JEMALLOC_ALWAYS_INLINE tsd_t *
+ tsd_fetch(void) {
+ 	return tsd_fetch_impl(true, false);
+diff --git a/src/jemalloc.c b/src/jemalloc.c
+index 52c86aa6..c773cc44 100644
+--- a/src/jemalloc.c
++++ b/src/jemalloc.c
+@@ -2264,7 +2264,15 @@ JEMALLOC_EXPORT void JEMALLOC_NOTHROW
+ je_free(void *ptr) {
+ 	UTRACE(ptr, 0, 0);
+ 	if (likely(ptr != NULL)) {
+-		tsd_t *tsd = tsd_fetch();
++		/*
++		 * We avoid setting up tsd fully (e.g. tcache, arena binding)
++		 * based on only free() calls -- other activities trigger the
++		 * minimal to full transition.  This is because free() may
++		 * happen during thread shutdown after tls deallocation: if a
++		 * thread never had any malloc activities until then, a
++		 * fully-setup tsd won't be destructed properly.
++		 */
++		tsd_t *tsd = tsd_fetch_min();
+ 		check_entry_exit_locking(tsd_tsdn(tsd));
+ 
+ 		tcache_t *tcache;
+diff --git a/src/tsd.c b/src/tsd.c
+index 97330332..f968992f 100644
+--- a/src/tsd.c
++++ b/src/tsd.c
+@@ -87,7 +87,8 @@ assert_tsd_data_cleanup_done(tsd_t *tsd) {
+ 
+ static bool
+ tsd_data_init_nocleanup(tsd_t *tsd) {
+-	assert(tsd->state == tsd_state_reincarnated);
++	assert(tsd->state == tsd_state_reincarnated ||
++	    tsd->state == tsd_state_minimal_initialized);
+ 	/*
+ 	 * During reincarnation, there is no guarantee that the cleanup function
+ 	 * will be called (deallocation may happen after all tsd destructors).
+@@ -103,15 +104,8 @@ tsd_data_init_nocleanup(tsd_t *tsd) {
+ }
+ 
+ tsd_t *
+-tsd_fetch_slow(tsd_t *tsd, bool internal) {
+-	if (internal) {
+-		/* For internal background threads use only. */
+-		assert(tsd->state == tsd_state_uninitialized);
+-		tsd->state = tsd_state_reincarnated;
+-		tsd_set(tsd);
+-		tsd_data_init_nocleanup(tsd);
+-		return tsd;
+-	}
++tsd_fetch_slow(tsd_t *tsd, bool minimal) {
++	assert(!tsd_fast(tsd));
+ 
+ 	if (tsd->state == tsd_state_nominal_slow) {
+ 		/* On slow path but no work needed. */
+@@ -119,11 +113,28 @@ tsd_fetch_slow(tsd_t *tsd, bool internal) {
+ 		    tsd_reentrancy_level_get(tsd) > 0 ||
+ 		    *tsd_arenas_tdata_bypassp_get(tsd));
+ 	} else if (tsd->state == tsd_state_uninitialized) {
+-		tsd->state = tsd_state_nominal;
+-		tsd_slow_update(tsd);
+-		/* Trigger cleanup handler registration. */
+-		tsd_set(tsd);
+-		tsd_data_init(tsd);
++		if (!minimal) {
++			tsd->state = tsd_state_nominal;
++			tsd_slow_update(tsd);
++			/* Trigger cleanup handler registration. */
++			tsd_set(tsd);
++			tsd_data_init(tsd);
++		} else {
++			tsd->state = tsd_state_minimal_initialized;
++			tsd_set(tsd);
++			tsd_data_init_nocleanup(tsd);
++		}
++	} else if (tsd->state == tsd_state_minimal_initialized) {
++		if (!minimal) {
++			/* Switch to fully initialized. */
++			tsd->state = tsd_state_nominal;
++			assert(*tsd_reentrancy_levelp_get(tsd) >= 1);
++			(*tsd_reentrancy_levelp_get(tsd))--;
++			tsd_slow_update(tsd);
++			tsd_data_init(tsd);
++		} else {
++			assert_tsd_data_cleanup_done(tsd);
++		}
+ 	} else if (tsd->state == tsd_state_purgatory) {
+ 		tsd->state = tsd_state_reincarnated;
+ 		tsd_set(tsd);
+@@ -197,6 +208,9 @@ tsd_cleanup(void *arg) {
+ 	case tsd_state_uninitialized:
+ 		/* Do nothing. */
+ 		break;
++	case tsd_state_minimal_initialized:
++		/* This implies the thread only did free() in its life time. */
++		/* Fall through. */
+ 	case tsd_state_reincarnated:
+ 		/*
+ 		 * Reincarnated means another destructor deallocated memory

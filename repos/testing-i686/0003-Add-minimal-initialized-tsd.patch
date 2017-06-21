@@ -1,0 +1,37 @@
+From d35c037e03e1450794dcf595e49a1e1f97f87ac4 Mon Sep 17 00:00:00 2001
+From: Qi Wang <interwq@gwu.edu>
+Date: Mon, 19 Jun 2017 21:19:15 -0700
+Subject: [PATCH] Clear tcache_ql after fork in child.
+
+---
+ src/arena.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/src/arena.c b/src/arena.c
+index 019dd877..d401808b 100644
+--- a/src/arena.c
++++ b/src/arena.c
+@@ -2133,6 +2133,23 @@ void
+ arena_postfork_child(tsdn_t *tsdn, arena_t *arena) {
+ 	unsigned i;
+ 
++	atomic_store_u(&arena->nthreads[0], 0, ATOMIC_RELAXED);
++	atomic_store_u(&arena->nthreads[1], 0, ATOMIC_RELAXED);
++	if (tsd_arena_get(tsdn_tsd(tsdn)) == arena) {
++		arena_nthreads_inc(arena, false);
++	}
++	if (tsd_iarena_get(tsdn_tsd(tsdn)) == arena) {
++		arena_nthreads_inc(arena, true);
++	}
++	if (config_stats) {
++		ql_new(&arena->tcache_ql);
++		tcache_t *tcache = tcache_get(tsdn_tsd(tsdn));
++		if (tcache != NULL && tcache->arena == arena) {
++			ql_elm_new(tcache, link);
++			ql_tail_insert(&arena->tcache_ql, tcache, link);
++		}
++	}
++
+ 	for (i = 0; i < NBINS; i++) {
+ 		malloc_mutex_postfork_child(tsdn, &arena->bins[i].lock);
+ 	}
