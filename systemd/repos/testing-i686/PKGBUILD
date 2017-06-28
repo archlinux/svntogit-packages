@@ -4,7 +4,7 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 pkgver=233
-pkgrel=5
+pkgrel=6
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -47,6 +47,8 @@ _backports=(
   '2c7ef56459bf6fe7761595585aa4eed5cd183f27^..2c7ef56459bf6fe7761595585aa4eed5cd183f27^2'
   # networkd: RFC compliant autonomous prefix handling (#5636)
   '6554550f35a7976f9110aff94743d3576d5f02dd'
+  # shared: fix keyring handling in ask-password-api
+  '2c390a919055af01b3ab6cce6dd0f97fb4784460'
 )
 
 _validate_tag() {
@@ -89,6 +91,13 @@ prepare() {
   # nss-resolve: drop the internal fallback to libnss_dns
   git show 5486a31d287f26bcd7c0a4eb2abfa4c074b985f1 -- \
     Makefile.am src/nss-resolve/nss-resolve.c | git apply --index
+  
+  # Resolved packet size (#6214) (FS#54619, CVE-2017-9445)
+  git show '751ca3f1de316ca79b60001334dbdf54077e1d01' \
+    'db848813bae4d28c524b3b6a7dad135e426659ce' \
+    '88795538726a5bbfd9efc13d441cb05e1d7fc139' \
+    '64a21fdaca7c93f1c30b21f6fdbd2261798b161a' \
+    -- . ':!src/resolve/meson.build'  | git apply --index
 
   ./autogen.sh
 }
@@ -176,8 +185,9 @@ package_systemd() {
   chown root:systemd-journal "$pkgdir/var/log/journal"
   chmod 2755 "$pkgdir/var/log/journal"
 
-  # match directory mode from extra/polkit
-  chmod 0750 "$pkgdir/usr/share/polkit-1/rules.d"
+  # match directory owner/group and mode from extra/polkit
+  chown root:102 "$pkgdir"/usr/share/polkit-1/rules.d
+  chmod 0750     "$pkgdir"/usr/share/polkit-1/rules.d
 
   # we'll create this on installation
   rmdir "$pkgdir/var/log/journal/remote"
