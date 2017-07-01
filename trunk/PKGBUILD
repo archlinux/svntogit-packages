@@ -3,9 +3,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.9.0
+_qtver=5.9.1
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=('i686' 'x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -17,7 +17,7 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-opensource-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
-sha256sums=('2ed4a579b0fc89c586ed84f131f8c64f6fb70f3126711138ce68f1290ac2b820')
+sha256sums=('f6a37eeb9188474a16d29ede498fce959396ab80329a0a83eaeb925251686401')
 
 prepare() {
   mkdir -p build
