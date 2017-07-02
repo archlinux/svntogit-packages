@@ -1,0 +1,75 @@
+From a4d6fe73cf07b3be3af6b7811cfc5950320bb37f Mon Sep 17 00:00:00 2001
+From: Qi Wang <interwq@gwu.edu>
+Date: Wed, 14 Jun 2017 12:12:23 -0700
+Subject: [PATCH] Only abort on dlsym when necessary.
+
+If neither background_thread nor lazy_lock is in use, do not abort on dlsym
+errors.
+---
+ include/jemalloc/internal/background_thread_externs.h |  1 +
+ src/background_thread.c                               | 14 +++++++++++---
+ src/ctl.c                                             |  7 +++++++
+ 3 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/include/jemalloc/internal/background_thread_externs.h b/include/jemalloc/internal/background_thread_externs.h
+index 7c883697..8b4b8471 100644
+--- a/include/jemalloc/internal/background_thread_externs.h
++++ b/include/jemalloc/internal/background_thread_externs.h
+@@ -6,6 +6,7 @@ extern malloc_mutex_t background_thread_lock;
+ extern atomic_b_t background_thread_enabled_state;
+ extern size_t n_background_threads;
+ extern background_thread_info_t *background_thread_info;
++extern bool can_enable_background_thread;
+ 
+ bool background_thread_create(tsd_t *tsd, unsigned arena_ind);
+ bool background_threads_enable(tsd_t *tsd);
+diff --git a/src/background_thread.c b/src/background_thread.c
+index a7403b85..1ff59447 100644
+--- a/src/background_thread.c
++++ b/src/background_thread.c
+@@ -20,6 +20,9 @@ size_t n_background_threads;
+ /* Thread info per-index. */
+ background_thread_info_t *background_thread_info;
+ 
++/* False if no necessary runtime support. */
++bool can_enable_background_thread;
++
+ /******************************************************************************/
+ 
+ #ifdef JEMALLOC_PTHREAD_CREATE_WRAPPER
+@@ -785,9 +788,14 @@ background_thread_boot0(void) {
+ #ifdef JEMALLOC_PTHREAD_CREATE_WRAPPER
+ 	pthread_create_fptr = dlsym(RTLD_NEXT, "pthread_create");
+ 	if (pthread_create_fptr == NULL) {
+-		malloc_write("<jemalloc>: Error in dlsym(RTLD_NEXT, "
+-		    "\"pthread_create\")\n");
+-		abort();
++		can_enable_background_thread = false;
++		if (config_lazy_lock || opt_background_thread) {
++			malloc_write("<jemalloc>: Error in dlsym(RTLD_NEXT, "
++			    "\"pthread_create\")\n");
++			abort();
++		}
++	} else {
++		can_enable_background_thread = true;
+ 	}
+ #endif
+ 	return false;
+diff --git a/src/ctl.c b/src/ctl.c
+index b3ae4aab..f1310cdf 100644
+--- a/src/ctl.c
++++ b/src/ctl.c
+@@ -1522,6 +1522,13 @@ background_thread_ctl(tsd_t *tsd, const size_t *mib, size_t miblen,
+ 
+ 		background_thread_enabled_set(tsd_tsdn(tsd), newval);
+ 		if (newval) {
++			if (!can_enable_background_thread) {
++				malloc_printf("<jemalloc>: Error in dlsym("
++			            "RTLD_NEXT, \"pthread_create\"). Cannot "
++				    "enable background_thread\n");
++				ret = EFAULT;
++				goto label_return;
++			}
+ 			if (background_threads_enable(tsd)) {
+ 				ret = EFAULT;
+ 				goto label_return;
