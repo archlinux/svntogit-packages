@@ -3,21 +3,26 @@
 
 pkgname=qwt
 pkgver=6.1.3
-pkgrel=2
+pkgrel=3
 pkgdesc='Qt Widgets for Technical Applications'
 url='http://qwt.sourceforge.net/'
 arch=('i686' 'x86_64')
-depends=('qt5-base' 'qt5-svg' 'qt5-tools')
+depends=('qt5-base' 'qt5-svg')
+optdepends=('qt5-tools: For Designer plugin')
+makedepends=('qt5-tools')
 license=("custom:${pkgname}")
-source=(https://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2
-        qwtconfig-archlinux.pri)
-sha512sums=('d4a73e9e7ddcb7c16c508920a298784935be2eddc8f7585993d9fffe1bb01e1787a0d5d7ea4f220398b94ea2b211a19009dccaeadce56a84410357124bcb051a'
-            '28f99798d8ce92c39b817435bdc7210962a7ae4a8291c294e356ade9378d637e17a316ee702fafcbf453017f47b6fa87b66ada7ac7741ff9b11ca040d79de0fd')
+source=(https://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
+sha512sums=('d4a73e9e7ddcb7c16c508920a298784935be2eddc8f7585993d9fffe1bb01e1787a0d5d7ea4f220398b94ea2b211a19009dccaeadce56a84410357124bcb051a')
 
 prepare() {
   cd ${pkgname}-${pkgver}
-  # copy our config file to the right place
-  cp "${srcdir}/qwtconfig-archlinux.pri" qwtconfig.pri
+
+  sed -e '/^\s*QWT_INSTALL_PREFIX/ s|=.*|= /usr|' \
+      -e '/^QWT_INSTALL_DOCS/ s|/doc|/share/doc/qwt|' \
+      -e '/^QWT_INSTALL_HEADERS/ s|include|&/qwt|' \
+      -e '/^QWT_INSTALL_PLUGINS/ s|plugins/designer|lib/qt/&|' \
+      -e '/^QWT_INSTALL_FEATURES/ s|features|lib/qt/mkspecs/&|' \
+      -i qwtconfig.pri
 }
 
 build() {
@@ -30,14 +35,6 @@ package() {
   cd ${pkgname}-${pkgver}
 
   make INSTALL_ROOT="${pkgdir}" install
-
-  # install web designer plugin
-  install -Dm 755 designer/plugins/designer/libqwt_designer_plugin.so \
-    -t "${pkgdir}/usr/lib/qt5/plugins/designer"
-
-  # needed by qmake (FS#30407)
-  install -Dm 644 qwtconfig.pri qwt.prf qwtfunctions.pri \
-    -t "${pkgdir}/usr/share/qt5/mkspecs/features"
 
   # move man pages
   mv "${pkgdir}/usr/share/doc/qwt/man" "${pkgdir}/usr/share"
