@@ -1,4 +1,4 @@
-From d0104750cdbd92f1870428c95c7a8a3956bff2f7 Mon Sep 17 00:00:00 2001
+From 7c483b3a7b2d87ae1d0dde1e5c12fa2bdb22d681 Mon Sep 17 00:00:00 2001
 From: Evangelos Foutras <evangelos@foutrelis.com>
 Date: Thu, 6 Jul 2017 18:15:43 +0300
 Subject: [PATCH 2/2] Enable SSP and PIE by default
@@ -17,45 +17,40 @@ solution, but a simple temporary fix.
 Hopefully these changes will be obsoleted by the introduction upstream
 of a compile-time option (https://bugs.llvm.org/show_bug.cgi?id=13410)
 ---
- lib/Driver/ToolChains.cpp     | 21 ++++++++++++++++++++-
- lib/Driver/ToolChains.h       |  1 +
- lib/Driver/Tools.cpp          |  1 +
- test/Driver/cross-linux.c     | 16 ++++++++--------
- test/Driver/env.c             |  2 +-
- test/Driver/fsanitize.c       | 14 ++++++++------
- test/Driver/gcc-toolchain.cpp |  2 +-
- test/Driver/linux-ld.c        |  2 ++
- test/Driver/stack-protector.c |  4 ++--
- 9 files changed, 44 insertions(+), 19 deletions(-)
+ lib/Driver/ToolChains.cpp           | 14 +++++++++++++-
+ lib/Driver/ToolChains.h             |  1 +
+ lib/Driver/Tools.cpp                |  1 +
+ test/Driver/cross-linux.c           | 16 ++++++++--------
+ test/Driver/env.c                   |  2 +-
+ test/Driver/fsanitize.c             | 18 ++++++++++--------
+ test/Driver/gcc-toolchain.cpp       |  2 +-
+ test/Driver/hexagon-toolchain-elf.c |  2 +-
+ test/Driver/linux-as.c              |  4 ++--
+ test/Driver/linux-ld.c              |  2 ++
+ test/Driver/stack-protector.c       |  4 ++--
+ 11 files changed, 42 insertions(+), 24 deletions(-)
 
 diff --git a/lib/Driver/ToolChains.cpp b/lib/Driver/ToolChains.cpp
-index 9bc9ae4f6a..66faa59930 100644
+index 9bc9ae4f6a..add512e0a5 100644
 --- a/lib/Driver/ToolChains.cpp
 +++ b/lib/Driver/ToolChains.cpp
-@@ -4710,7 +4710,26 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
+@@ -4710,7 +4710,19 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
    }
  }
  
 -bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
 +bool Linux::isPIEDefault() const {
-+  const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
-+  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
++  const bool IsMips = isMipsArch(getTriple().getArch());
 +  const bool IsAndroid = getTriple().isAndroid();
 +
-+  if ((IsX86 || IsX86_64) && !IsAndroid)
-+    return true;
++  if (IsMips || IsAndroid)
++    return getSanitizerArgs().requiresPIE();
 +
-+  return getSanitizerArgs().requiresPIE();
++  return true;
 +}
 +
 +unsigned Linux::GetDefaultStackProtectorLevel(bool KernelOrKext) const {
-+  const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
-+  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-+
-+  if (IsX86 || IsX86_64)
-+    return 2;
-+
-+  return Generic_ELF::GetDefaultStackProtectorLevel(KernelOrKext);
++  return 2;
 +}
  
  SanitizerMask Linux::getSupportedSanitizers() const {
@@ -146,7 +141,7 @@ index 0371bc91c4..ea89f52512 100644
  // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib"
  // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../.."
 diff --git a/test/Driver/fsanitize.c b/test/Driver/fsanitize.c
-index 25aea01aae..fe8cdaf408 100644
+index 25aea01aae..c81da6715c 100644
 --- a/test/Driver/fsanitize.c
 +++ b/test/Driver/fsanitize.c
 @@ -182,13 +182,13 @@
@@ -167,7 +162,7 @@ index 25aea01aae..fe8cdaf408 100644
  
  // CHECK-NO-PIE-NOT: "-pie"
  // CHECK-NO-PIE: "-mrelocation-model" "static"
-@@ -424,8 +424,8 @@
+@@ -424,12 +424,12 @@
  // RUN: %clang -fno-sanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NOSP
  // NOSP-NOT: "-fsanitize=safe-stack"
  
@@ -177,7 +172,13 @@ index 25aea01aae..fe8cdaf408 100644
 +// RUN: %clang -target x86_64-linux-gnu -fsanitize=address,safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP-ASAN
  // RUN: %clang -target x86_64-linux-gnu -fstack-protector -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP
  // RUN: %clang -target x86_64-linux-gnu -fsanitize=safe-stack -fstack-protector-all -### %s 2>&1 | FileCheck %s -check-prefix=SP
- // RUN: %clang -target arm-linux-androideabi -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
+-// RUN: %clang -target arm-linux-androideabi -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
+-// RUN: %clang -target aarch64-linux-android -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
++// RUN: %clang -target arm-linux-androideabi -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP
++// RUN: %clang -target aarch64-linux-android -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP
+ // RUN: %clang -target i386-contiki-unknown -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
+ // NO-SP-NOT: stack-protector
+ // NO-SP: "-fsanitize=safe-stack"
 @@ -439,6 +439,8 @@
  
  // NO-SP-ASAN-NOT: stack-protector
@@ -199,6 +200,41 @@ index ca96757a2b..ae1c25e989 100644
 +// CHECK: "crtbeginS.o"
  // CHECK: "-L[[TOOLCHAIN]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5"
  // CHECK: "-L[[TOOLCHAIN]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../.."
+diff --git a/test/Driver/hexagon-toolchain-elf.c b/test/Driver/hexagon-toolchain-elf.c
+index 827c19186b..a8f0918a8d 100644
+--- a/test/Driver/hexagon-toolchain-elf.c
++++ b/test/Driver/hexagon-toolchain-elf.c
+@@ -425,7 +425,7 @@
+ // RUN:   %s 2>&1 \
+ // RUN:   | FileCheck -check-prefix=CHECK042 %s
+ // CHECK042:      "-cc1"
+-// CHECK042:      "-mrelocation-model" "static"
++// CHECK042:      "-mrelocation-model" "pic"
+ // CHECK042:      "-mllvm" "-hexagon-small-data-threshold=8"
+ // CHECK042-NEXT: llvm-mc
+ // CHECK042:      "-gpsize=8"
+diff --git a/test/Driver/linux-as.c b/test/Driver/linux-as.c
+index a07abc17e5..d7b1a6041d 100644
+--- a/test/Driver/linux-as.c
++++ b/test/Driver/linux-as.c
+@@ -106,7 +106,7 @@
+ // CHECK-PPC-NO-MCPU-NOT: as{{.*}} "-mcpu=invalid-cpu"
+ //
+ // RUN: %clang -target sparc64-linux -mcpu=invalid-cpu -### \
+-// RUN:   -no-integrated-as -c %s 2>&1 \
++// RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
+ // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9 %s
+ // CHECK-SPARCV9: as
+ // CHECK-SPARCV9: -64
+@@ -115,7 +115,7 @@
+ // CHECK-SPARCV9: -o
+ //
+ // RUN: %clang -target sparc64-linux -mcpu=invalid-cpu -### \
+-// RUN:   -no-integrated-as -fpic -c %s 2>&1 \
++// RUN:   -no-integrated-as -c %s 2>&1 \
+ // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9PIC %s
+ // CHECK-SPARCV9PIC: as
+ // CHECK-SPARCV9PIC: -64
 diff --git a/test/Driver/linux-ld.c b/test/Driver/linux-ld.c
 index 5d1001beb0..f9f0969f1b 100644
 --- a/test/Driver/linux-ld.c
