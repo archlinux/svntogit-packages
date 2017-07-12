@@ -1,0 +1,506 @@
+From ab03196a879f4064f618a9a45d63c67a67f4b901 Mon Sep 17 00:00:00 2001
+From: Jim Jagielski <jim@apache.org>
+Date: Tue, 4 Jul 2017 12:34:15 +0000
+Subject: [PATCH] Merge r1800689 from trunk:
+
+On the trunk:
+
+mod_http2: disable and give warning when mpm_prefork is encountered.
+     The server will continue to work, but HTTP/2 will no longer be negotiated.
+
+
+Submitted by: icing
+Reviewed by: icing, ylavic, jim
+
+
+git-svn-id: https://svn.apache.org/repos/asf/httpd/httpd/branches/2.4.x@1800774 13f79535-47bb-0310-9956-ffa450edef68
+---
+ modules/http2/h2_conn.c    |  21 +++++++-
+ modules/http2/h2_conn.h    |   3 +-
+ modules/http2/h2_mplx.c    |  37 +++++++-------
+ modules/http2/h2_mplx.h    |   2 +-
+ modules/http2/h2_session.c |   7 +--
+ modules/http2/h2_stream.c  |  14 +++++-
+ modules/http2/h2_switch.c  |   8 +++
+ modules/http2/h2_util.c    | 118 +++++++++++++++++++++------------------------
+ modules/http2/h2_workers.c |   7 +--
+ modules/http2/mod_http2.c  |  12 +++++
+ 12 files changed, 139 insertions(+), 99 deletions(-)
+
+diff --git a/modules/http2/h2_conn.c b/modules/http2/h2_conn.c
+index fcf6bad4d41..e2502c2f167 100644
+--- a/modules/http2/h2_conn.c
++++ b/modules/http2/h2_conn.c
+@@ -47,6 +47,7 @@ static struct h2_workers *workers;
+ static h2_mpm_type_t mpm_type = H2_MPM_UNKNOWN;
+ static module *mpm_module;
+ static int async_mpm;
++static int mpm_supported = 1;
+ static apr_socket_t *dummy_socket;
+ 
+ static void check_modules(int force) 
+@@ -76,11 +77,18 @@ static void check_modules(int force)
+             else if (!strcmp("prefork.c", m->name)) {
+                 mpm_type = H2_MPM_PREFORK;
+                 mpm_module = m;
++                /* While http2 can work really well on prefork, it collides
++                 * today's use case for prefork: runnning single-thread app engines
++                 * like php. If we restrict h2_workers to 1 per process, php will
++                 * work fine, but browser will be limited to 1 active request at a
++                 * time. */
++                mpm_supported = 0;
+                 break;
+             }
+             else if (!strcmp("simple_api.c", m->name)) {
+                 mpm_type = H2_MPM_SIMPLE;
+                 mpm_module = m;
++                mpm_supported = 0;
+                 break;
+             }
+             else if (!strcmp("mpm_winnt.c", m->name)) {
+@@ -107,7 +115,6 @@ apr_status_t h2_conn_child_init(apr_pool_t *pool, server_rec *s)
+     int idle_secs = 0;
+ 
+     check_modules(1);
+-    
+     ap_mpm_query(AP_MPMQ_MAX_THREADS, &max_threads_per_child);
+     
+     status = ap_mpm_query(AP_MPMQ_IS_ASYNC, &async_mpm);
+@@ -157,6 +164,18 @@ h2_mpm_type_t h2_conn_mpm_type(void)
+     return mpm_type;
+ }
+ 
++const char *h2_conn_mpm_name(void)
++{
++    check_modules(0);
++    return mpm_module? mpm_module->name : "unknown";
++}
++
++int h2_mpm_supported(void)
++{
++    check_modules(0);
++    return mpm_supported;
++}
++
+ static module *h2_conn_mpm_module(void)
+ {
+     check_modules(0);
+diff --git a/modules/http2/h2_conn.h b/modules/http2/h2_conn.h
+index 79948644ae8..7111a6cd69c 100644
+--- a/modules/http2/h2_conn.h
++++ b/modules/http2/h2_conn.h
+@@ -64,7 +64,8 @@ typedef enum {
+ 
+ /* Returns the type of MPM module detected */
+ h2_mpm_type_t h2_conn_mpm_type(void);
+-
++const char *h2_conn_mpm_name(void);
++int h2_mpm_supported(void);
+ 
+ conn_rec *h2_slave_create(conn_rec *master, int slave_id, apr_pool_t *parent);
+ void h2_slave_destroy(conn_rec *slave);
+diff --git a/modules/http2/h2_mplx.c b/modules/http2/h2_mplx.c
+index b73bd0d5bfd..214d84ed1f9 100644
+--- a/modules/http2/h2_mplx.c
++++ b/modules/http2/h2_mplx.c
+@@ -481,9 +481,6 @@ void h2_mplx_release_and_join(h2_mplx *m, apr_thread_cond_t *wait)
+     
+     H2_MPLX_LEAVE(m);
+ 
+-    /* 5. unregister again, now that our workers are done */
+-    h2_workers_unregister(m->workers, m);
+-
+     ap_log_cerror(APLOG_MARK, APLOG_TRACE1, 0, m->c,
+                   "h2_mplx(%ld): released", m->id);
+ }
+@@ -662,7 +659,7 @@ apr_status_t h2_mplx_reprioritize(h2_mplx *m, h2_stream_pri_cmp *cmp, void *ctx)
+ 
+ static void register_if_needed(h2_mplx *m) 
+ {
+-    if (!m->is_registered && !h2_iq_empty(m->q)) {
++    if (!m->aborted && !m->is_registered && !h2_iq_empty(m->q)) {
+         apr_status_t status = h2_workers_register(m->workers, m); 
+         if (status == APR_SUCCESS) {
+             m->is_registered = 1;
+@@ -755,25 +752,27 @@ static h2_task *next_stream_task(h2_mplx *m)
+     return NULL;
+ }
+ 
+-h2_task *h2_mplx_pop_task(h2_mplx *m, int *has_more)
++apr_status_t h2_mplx_pop_task(h2_mplx *m, h2_task **ptask)
+ {
+-    h2_task *task = NULL;
++    apr_status_t rv = APR_EOF;
+     
+-    H2_MPLX_ENTER_ALWAYS(m);
+-
+-    *has_more = 0;
+-    if (!m->aborted) {
+-        task = next_stream_task(m);
+-        if (task != NULL && !h2_iq_empty(m->q)) {
+-            *has_more = 1;
+-        }
+-        else {
+-            m->is_registered = 0; /* h2_workers will discard this mplx */
+-        }
++    *ptask = NULL;
++    if (APR_SUCCESS != (rv = apr_thread_mutex_lock(m->lock))) {
++        return rv;
++    }
++    
++    if (m->aborted) {
++        rv = APR_EOF;
++    }
++    else {
++        *ptask = next_stream_task(m);
++        rv = (*ptask != NULL && !h2_iq_empty(m->q))? APR_EAGAIN : APR_SUCCESS;
++    }
++    if (APR_EAGAIN != rv) {
++        m->is_registered = 0; /* h2_workers will discard this mplx */
+     }
+-
+     H2_MPLX_LEAVE(m);
+-    return task;
++    return rv;
+ }
+ 
+ static void task_done(h2_mplx *m, h2_task *task, h2_req_engine *ngn)
+diff --git a/modules/http2/h2_mplx.h b/modules/http2/h2_mplx.h
+index 61b1b99aba7..d56c65289c2 100644
+--- a/modules/http2/h2_mplx.h
++++ b/modules/http2/h2_mplx.h
+@@ -124,7 +124,7 @@ h2_mplx *h2_mplx_create(conn_rec *c, apr_pool_t *master,
+  */ 
+ void h2_mplx_release_and_join(h2_mplx *m, struct apr_thread_cond_t *wait);
+ 
+-struct h2_task *h2_mplx_pop_task(h2_mplx *mplx, int *has_more);
++apr_status_t h2_mplx_pop_task(h2_mplx *m, struct h2_task **ptask);
+ 
+ void h2_mplx_task_done(h2_mplx *m, struct h2_task *task, struct h2_task **ptask);
+ 
+diff --git a/modules/http2/h2_session.c b/modules/http2/h2_session.c
+index bc24bb41cdb..da85d7053fd 100644
+--- a/modules/http2/h2_session.c
++++ b/modules/http2/h2_session.c
+@@ -326,6 +326,7 @@ static int on_frame_recv_cb(nghttp2_session *ng2s,
+ {
+     h2_session *session = (h2_session *)userp;
+     h2_stream *stream;
++    apr_status_t rv = APR_SUCCESS;
+     
+     if (APLOGcdebug(session->c)) {
+         char buffer[256];
+@@ -346,7 +347,7 @@ static int on_frame_recv_cb(nghttp2_session *ng2s,
+              * trailers */
+             stream = h2_session_stream_get(session, frame->hd.stream_id);
+             if (stream) {
+-                h2_stream_recv_frame(stream, NGHTTP2_HEADERS, frame->hd.flags);
++                rv = h2_stream_recv_frame(stream, NGHTTP2_HEADERS, frame->hd.flags);
+             }
+             break;
+         case NGHTTP2_DATA:
+@@ -356,7 +357,7 @@ static int on_frame_recv_cb(nghttp2_session *ng2s,
+                               H2_STRM_LOG(APLOGNO(02923), stream, 
+                               "DATA, len=%ld, flags=%d"), 
+                               (long)frame->hd.length, frame->hd.flags);
+-                h2_stream_recv_frame(stream, NGHTTP2_DATA, frame->hd.flags);
++                rv = h2_stream_recv_frame(stream, NGHTTP2_DATA, frame->hd.flags);
+             }
+             break;
+         case NGHTTP2_PRIORITY:
+@@ -411,7 +412,7 @@ static int on_frame_recv_cb(nghttp2_session *ng2s,
+             }
+             break;
+     }
+-    return 0;
++    return (APR_SUCCESS == rv)? 0 : NGHTTP2_ERR_PROTO;
+ }
+ 
+ static int h2_session_continue_data(h2_session *session) {
+diff --git a/modules/http2/h2_stream.c b/modules/http2/h2_stream.c
+index 4cd2132207e..925f3d6d81d 100644
+--- a/modules/http2/h2_stream.c
++++ b/modules/http2/h2_stream.c
+@@ -444,7 +444,13 @@ apr_status_t h2_stream_recv_frame(h2_stream *stream, int ftype, int flags)
+             else {
+                 /* request HEADER */
+                 ap_assert(stream->request == NULL);
+-                ap_assert(stream->rtmp != NULL);
++                if (stream->rtmp == NULL) {
++                    /* This can only happen, if the stream has received no header
++                     * name/value pairs at all. The lastest nghttp2 version have become
++                     * pretty good at detecting this early. In any case, we have
++                     * to abort the connection here, since this is clearly a protocol error */
++                    return APR_EINVAL;
++                }
+                 status = h2_request_end_headers(stream->rtmp, stream->pool, eos);
+                 if (status != APR_SUCCESS) {
+                     return status;
+@@ -739,9 +745,13 @@ apr_status_t h2_stream_add_header(h2_stream *stream,
+         status = h2_request_add_header(stream->rtmp, stream->pool,
+                                        name, nlen, value, vlen);
+     }
+-    else  {
++    else if (H2_SS_OPEN == stream->state) {
+         status = add_trailer(stream, name, nlen, value, vlen);
+     }
++    else {
++        status = APR_EINVAL;
++    }
++    
+     if (status != APR_SUCCESS) {
+         ap_log_cerror(APLOG_MARK, APLOG_TRACE1, 0, session->c,
+                       H2_STRM_MSG(stream, "header %s not accepted"), name);
+diff --git a/modules/http2/h2_switch.c b/modules/http2/h2_switch.c
+index 8a8d56e59ef..5b1247ec700 100644
+--- a/modules/http2/h2_switch.c
++++ b/modules/http2/h2_switch.c
+@@ -55,6 +55,10 @@ static int h2_protocol_propose(conn_rec *c, request_rec *r,
+     const char **protos = is_tls? h2_tls_protos : h2_clear_protos;
+     
+     (void)s;
++    if (!h2_mpm_supported()) {
++        return DECLINED;
++    }
++    
+     if (strcmp(AP_PROTOCOL_HTTP1, ap_get_protocol(c))) {
+         /* We do not know how to switch from anything else but http/1.1.
+          */
+@@ -127,6 +131,10 @@ static int h2_protocol_switch(conn_rec *c, request_rec *r, server_rec *s,
+     const char **p = protos;
+     
+     (void)s;
++    if (!h2_mpm_supported()) {
++        return DECLINED;
++    }
++
+     while (*p) {
+         if (!strcmp(*p, protocol)) {
+             found = 1;
+diff --git a/modules/http2/h2_util.c b/modules/http2/h2_util.c
+index 01b506ac854..04a9311424e 100644
+--- a/modules/http2/h2_util.c
++++ b/modules/http2/h2_util.c
+@@ -695,16 +695,47 @@ int h2_fifo_count(h2_fifo *fifo)
+ 
+ static apr_status_t check_not_empty(h2_fifo *fifo, int block)
+ {
+-    if (fifo->count == 0) {
++    while (fifo->count == 0) {
+         if (!block) {
+             return APR_EAGAIN;
+         }
+-        while (fifo->count == 0) {
+-            if (fifo->aborted) {
+-                return APR_EOF;
++        if (fifo->aborted) {
++            return APR_EOF;
++        }
++        apr_thread_cond_wait(fifo->not_empty, fifo->lock);
++    }
++    return APR_SUCCESS;
++}
++
++static apr_status_t fifo_push_int(h2_fifo *fifo, void *elem, int block)
++{
++    if (fifo->aborted) {
++        return APR_EOF;
++    }
++
++    if (fifo->set && index_of(fifo, elem) >= 0) {
++        /* set mode, elem already member */
++        return APR_EEXIST;
++    }
++    else if (fifo->count == fifo->nelems) {
++        if (block) {
++            while (fifo->count == fifo->nelems) {
++                if (fifo->aborted) {
++                    return APR_EOF;
++                }
++                apr_thread_cond_wait(fifo->not_full, fifo->lock);
+             }
+-            apr_thread_cond_wait(fifo->not_empty, fifo->lock);
+         }
++        else {
++            return APR_EAGAIN;
++        }
++    }
++    
++    ap_assert(fifo->count < fifo->nelems);
++    fifo->elems[nth_index(fifo, fifo->count)] = elem;
++    ++fifo->count;
++    if (fifo->count == 1) {
++        apr_thread_cond_broadcast(fifo->not_empty);
+     }
+     return APR_SUCCESS;
+ }
+@@ -718,33 +749,7 @@ static apr_status_t fifo_push(h2_fifo *fifo, void *elem, int block)
+     }
+ 
+     if ((rv = apr_thread_mutex_lock(fifo->lock)) == APR_SUCCESS) {
+-        if (fifo->set && index_of(fifo, elem) >= 0) {
+-            /* set mode, elem already member */
+-            apr_thread_mutex_unlock(fifo->lock);
+-            return APR_EEXIST;
+-        }
+-        else if (fifo->count == fifo->nelems) {
+-            if (block) {
+-                while (fifo->count == fifo->nelems) {
+-                    if (fifo->aborted) {
+-                        apr_thread_mutex_unlock(fifo->lock);
+-                        return APR_EOF;
+-                    }
+-                    apr_thread_cond_wait(fifo->not_full, fifo->lock);
+-                }
+-            }
+-            else {
+-                apr_thread_mutex_unlock(fifo->lock);
+-                return APR_EAGAIN;
+-            }
+-        }
+-        
+-        ap_assert(fifo->count < fifo->nelems);
+-        fifo->elems[nth_index(fifo, fifo->count)] = elem;
+-        ++fifo->count;
+-        if (fifo->count == 1) {
+-            apr_thread_cond_broadcast(fifo->not_empty);
+-        }
++        rv = fifo_push_int(fifo, elem, block);
+         apr_thread_mutex_unlock(fifo->lock);
+     }
+     return rv;
+@@ -760,12 +765,15 @@ apr_status_t h2_fifo_try_push(h2_fifo *fifo, void *elem)
+     return fifo_push(fifo, elem, 0);
+ }
+ 
+-static void *pull_head(h2_fifo *fifo)
++static apr_status_t pull_head(h2_fifo *fifo, void **pelem, int block)
+ {
+-    void *elem;
++    apr_status_t rv;
+     
+-    ap_assert(fifo->count > 0);
+-    elem = fifo->elems[fifo->head];
++    if ((rv = check_not_empty(fifo, block)) != APR_SUCCESS) {
++        *pelem = NULL;
++        return rv;
++    }
++    *pelem = fifo->elems[fifo->head];
+     --fifo->count;
+     if (fifo->count > 0) {
+         fifo->head = nth_index(fifo, 1);
+@@ -773,7 +781,7 @@ static void *pull_head(h2_fifo *fifo)
+             apr_thread_cond_broadcast(fifo->not_full);
+         }
+     }
+-    return elem;
++    return APR_SUCCESS;
+ }
+ 
+ static apr_status_t fifo_pull(h2_fifo *fifo, void **pelem, int block)
+@@ -785,15 +793,7 @@ static apr_status_t fifo_pull(h2_fifo *fifo, void **pelem, int block)
+     }
+     
+     if ((rv = apr_thread_mutex_lock(fifo->lock)) == APR_SUCCESS) {
+-        if ((rv = check_not_empty(fifo, block)) != APR_SUCCESS) {
+-            apr_thread_mutex_unlock(fifo->lock);
+-            *pelem = NULL;
+-            return rv;
+-        }
+-
+-        ap_assert(fifo->count > 0);
+-        *pelem = pull_head(fifo);
+-
++        rv = pull_head(fifo, pelem, block);
+         apr_thread_mutex_unlock(fifo->lock);
+     }
+     return rv;
+@@ -818,25 +818,17 @@ static apr_status_t fifo_peek(h2_fifo *fifo, h2_fifo_peek_fn *fn, void *ctx, int
+         return APR_EOF;
+     }
+     
+-    if ((rv = apr_thread_mutex_lock(fifo->lock)) == APR_SUCCESS) {
+-        if ((rv = check_not_empty(fifo, block)) != APR_SUCCESS) {
+-            apr_thread_mutex_unlock(fifo->lock);
+-            return rv;
++    if (APR_SUCCESS == (rv = apr_thread_mutex_lock(fifo->lock))) {
++        if (APR_SUCCESS == (rv = pull_head(fifo, &elem, block))) {
++            switch (fn(elem, ctx)) {
++                case H2_FIFO_OP_PULL:
++                    break;
++                case H2_FIFO_OP_REPUSH:
++                    rv = fifo_push_int(fifo, elem, block);
++                    break;
++            }
+         }
+-
+-        ap_assert(fifo->count > 0);
+-        elem = pull_head(fifo);
+-        
+         apr_thread_mutex_unlock(fifo->lock);
+-
+-        switch (fn(elem, ctx)) {
+-            case H2_FIFO_OP_PULL:
+-                break;
+-            case H2_FIFO_OP_REPUSH:
+-                return h2_fifo_push(fifo, elem);
+-                break;
+-        }
+-        
+     }
+     return rv;
+ }
+diff --git a/modules/http2/h2_workers.c b/modules/http2/h2_workers.c
+index 0bbb65223f7..5abddd4a1d5 100644
+--- a/modules/http2/h2_workers.c
++++ b/modules/http2/h2_workers.c
+@@ -150,15 +150,16 @@ static void cleanup_zombies(h2_workers *workers)
+ 
+ static apr_status_t slot_pull_task(h2_slot *slot, h2_mplx *m)
+ {
+-    int has_more;
+-    slot->task = h2_mplx_pop_task(m, &has_more);
++    apr_status_t rv;
++    
++    rv = h2_mplx_pop_task(m, &slot->task);
+     if (slot->task) {
+         /* Ok, we got something to give back to the worker for execution. 
+          * If we still have idle workers, we let the worker be sticky, 
+          * e.g. making it poll the task's h2_mplx instance for more work 
+          * before asking back here. */
+         slot->sticks = slot->workers->max_workers;
+-        return has_more? APR_EAGAIN : APR_SUCCESS;            
++        return rv;            
+     }
+     slot->sticks = 0;
+     return APR_EOF;
+diff --git a/modules/http2/mod_http2.c b/modules/http2/mod_http2.c
+index ea399c91a28..420e74c3363 100644
+--- a/modules/http2/mod_http2.c
++++ b/modules/http2/mod_http2.c
+@@ -65,6 +65,7 @@ typedef struct {
+ } features;
+ 
+ static features myfeats;
++static int mpm_warned;
+ 
+ /* The module initialization. Called once as apache hook, before any multi
+  * processing (threaded or not) happens. It is typically at least called twice, 
+@@ -141,6 +142,17 @@ static int h2_post_config(apr_pool_t *p, apr_pool_t *plog,
+             break;
+     }
+     
++    if (!h2_mpm_supported() && !mpm_warned) {
++        mpm_warned = 1;
++        ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s, APLOGNO(10034)
++                     "The mpm module (%s) is not supported by mod_http2. The mpm determines "
++                     "how things are processed in your server. HTTP/2 has more demands in "
++                     "this regard and the currently selected mpm will just not do. "
++                     "This is an advisory warning. Your server will continue to work, but "
++                     "the HTTP/2 protocol will be inactive.", 
++                     h2_conn_mpm_name());
++    }
++    
+     status = h2_h2_init(p, s);
+     if (status == APR_SUCCESS) {
+         status = h2_switch_init(p, s);
