@@ -6,11 +6,11 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 # latest commit on stable branch
-_commit='27c7bc970d9e7ffe060688a8dd77b7747503a564'
+_commit='c1edab7ad1e7ccc9be693bedfd464cd1cbffb395'
 # Bump this to latest major release for signed tag verification,
 # the commit count is handled by pkgver() function.
-pkgver=233.75
-pkgrel=3
+pkgver=234.0
+pkgrel=1
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -49,21 +49,9 @@ validpgpkeys=(
 )
 
 _backports=(
-  # build-sys: make RPM macros installation path configurable
-  'ff2e33db54719bfe8feea833571652318c6d197c'
-  # resolved: do not start LLMNR or mDNS stack when no network enables them
-  '2c7ef56459bf6fe7761595585aa4eed5cd183f27^..2c7ef56459bf6fe7761595585aa4eed5cd183f27^2'
-  # networkd: RFC compliant autonomous prefix handling (#5636)
-  '6554550f35a7976f9110aff94743d3576d5f02dd'
-  # core: do not print color console message about gc-ed jobs
-  '047d7219fde661698d3487fc49e9878c61eefd77'
 )
 
 _reverts=(
-  # core: store the invocation ID in the per-service keyring
-  'b3415f5daef49642be3d5f417b8880c078420ff7'
-  # core: run each system service with a fresh session keyring
-  '74dd6b515fa968c5710b396a7664cac335e25ca8'
 )
 
 _validate_tag() {
@@ -119,16 +107,11 @@ prepare() {
     git revert -n "$_commit"
   done
 
-  # nss-resolve: drop the internal fallback to libnss_dns
-  git show '5486a31d287f26bcd7c0a4eb2abfa4c074b985f1' -- \
-    'Makefile.am' 'src/nss-resolve/nss-resolve.c' | git apply --index
-  
-  # Resolved packet size (#6214) (FS#54619, CVE-2017-9445)
-  git show '751ca3f1de316ca79b60001334dbdf54077e1d01' \
-    'db848813bae4d28c524b3b6a7dad135e426659ce' \
-    '88795538726a5bbfd9efc13d441cb05e1d7fc139' \
-    '64a21fdaca7c93f1c30b21f6fdbd2261798b161a' \
-    -- . ':!src/resolve/meson.build'  | git apply --index
+  # core: store the invocation ID in the per-service keyring
+  # core: run each system service with a fresh session keyring
+  git show 'b3415f5daef49642be3d5f417b8880c078420ff7' \
+    '74dd6b515fa968c5710b396a7664cac335e25ca8' \
+    -- . ':!src/test/test-id128.c' | git apply --reverse --index
 
   ./autogen.sh
 }
@@ -148,6 +131,7 @@ build() {
     --disable-audit
     --disable-ima
 
+    --with-fallback-hostname='archlinux'
     --with-sysvinit-path=
     --with-sysvrcnd-path=
     --with-ntp-servers="${timeservers[*]}"
