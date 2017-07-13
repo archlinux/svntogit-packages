@@ -8,8 +8,8 @@ pkgname=('gcc' 'gcc-libs' 'gcc-fortran' 'gcc-objc' 'gcc-ada' 'gcc-go')
 pkgver=7.1.1
 _pkgver=${pkgver:0:1}
 _islver=0.18
-pkgrel=3
-_commit=81fc9125b24bba5f2761b7986ff4e3de14740291
+pkgrel=4
+_commit=d791474f3fc2133fa0c310e566988b0cbdff321e
 pkgdesc="The GNU Compiler Collection"
 arch=('i686' 'x86_64')
 license=('GPL' 'LGPL' 'FDL' 'custom')
@@ -81,7 +81,9 @@ build() {
       --enable-gnu-indirect-function \
       --disable-multilib \
       --disable-werror \
-      --enable-checking=release
+      --enable-checking=release \
+      --enable-default-pie \
+      --enable-default-ssp
 
   make
 
