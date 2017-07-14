@@ -10,13 +10,14 @@ _commit='c1edab7ad1e7ccc9be693bedfd464cd1cbffb395'
 # Bump this to latest major release for signed tag verification,
 # the commit count is handled by pkgver() function.
 pkgver=234.0
-pkgrel=1
+pkgrel=2
 arch=('i686' 'x86_64')
 url="https://www.github.com/systemd/systemd"
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
              'intltool' 'iptables' 'kmod' 'libcap' 'libidn' 'libgcrypt'
              'libmicrohttpd' 'libxslt' 'util-linux' 'linux-api-headers'
-             'python-lxml' 'quota-tools' 'shadow' 'gnu-efi-libs' 'git')
+             'python-lxml' 'quota-tools' 'shadow' 'gnu-efi-libs' 'git'
+             'meson')
 options=('strip')
 source=("git://github.com/systemd/systemd-stable.git#commit=${_commit}"
         'git://github.com/systemd/systemd.git' # pull in for tags
@@ -49,6 +50,8 @@ validpgpkeys=(
 )
 
 _backports=(
+  # build-sys: install udev rule 70-joystick.{rules,hwdb} (#6363)
+  '816be2ba448940e2517dba81492e80b1e6a5954f'
 )
 
 _reverts=(
@@ -93,7 +96,7 @@ pkgver() {
 
 prepare() {
   cd "$pkgbase-stable"
-  
+
   git remote add upstream ../systemd/
   git fetch --all
 
@@ -112,40 +115,33 @@ prepare() {
   git show 'b3415f5daef49642be3d5f417b8880c078420ff7' \
     '74dd6b515fa968c5710b396a7664cac335e25ca8' \
     -- . ':!src/test/test-id128.c' | git apply --reverse --index
-
-  ./autogen.sh
 }
 
 build() {
-  cd "$pkgbase-stable"
-
   local timeservers=({0..3}.arch.pool.ntp.org)
 
-  local configure_options=(
-    --libexecdir=/usr/lib
-    --localstatedir=/var
-    --sysconfdir=/etc
+  local meson_options=(
+    -Daudit=false
+    -Dgnuefi=true
+    -Dima=false
+    -Dlz4=true
+    -Db_lto=true
 
-    --enable-lz4
-    --enable-gnuefi
-    --disable-audit
-    --disable-ima
-
-    --with-fallback-hostname='archlinux'
-    --with-sysvinit-path=
-    --with-sysvrcnd-path=
-    --with-ntp-servers="${timeservers[*]}"
-    --with-default-dnssec=no
-    --with-dbuspolicydir=/usr/share/dbus-1/system.d
-    --without-kill-user-processes
-    --with-rpmmacrosdir=no
+    -Ddbuspolicydir=/usr/share/dbus-1/system.d
+    -Ddefault-dnssec=no
     # TODO(dreisner): consider changing this to unified
-    --with-default-hierarchy=hybrid
+    -Ddefault-hierarchy=hybrid
+    -Ddefault-kill-user-processes=false
+    -Dfallback-hostname='archlinux'
+    -Dntp-servers="${timeservers[*]}"
+    -Drpmmacrosdir=no
+    -Dsysvinit-path=
+    -Dsysvrcnd-path=
   )
 
-  ./configure "${configure_options[@]}"
+  meson "$pkgbase-stable" build "${meson_options[@]}"
 
-  make
+  ninja -C build
 }
 
 package_systemd() {
@@ -174,7 +170,7 @@ package_systemd() {
           etc/udev/udev.conf)
   install="systemd.install"
 
-  make -C "$pkgbase-stable" DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 
   # don't write units to /etc by default. some of these will be re-enabled on
   # post_install.
@@ -241,7 +237,12 @@ package_libsystemd() {
   license=('GPL2')
   provides=('libsystemd.so' 'libudev.so')
 
-  make -C "$pkgbase-stable" DESTDIR="$pkgdir" install-rootlibLTLIBRARIES
+  # meson does not support installing subsets of files, no?
+  # So do a full install to temporary directory, then install what we need.
+  DESTDIR="$srcdir"/full-install ninja -C build install
+
+  install -dm755 "$pkgdir"/usr/lib/
+  cp --archive "$srcdir"/full-install/usr/lib/lib{nss_*,systemd,udev}.so* "$pkgdir"/usr/lib/
 }
 
 package_systemd-sysvcompat() {
@@ -253,7 +254,7 @@ package_systemd-sysvcompat() {
 
   install -dm755 "$pkgdir"/usr/share/man/man8
   cp -d --no-preserve=ownership,timestamp \
-    "$pkgbase-stable"/man/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
+    build/man/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
     "$pkgdir"/usr/share/man/man8
 
   install -dm755 "$pkgdir/usr/bin"
