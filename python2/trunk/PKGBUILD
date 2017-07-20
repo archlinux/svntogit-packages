@@ -6,14 +6,14 @@
 
 pkgname=python2
 pkgver=2.7.13
-pkgrel=3
+pkgrel=4
 _pybasever=2.7
 pkgdesc="A high-level scripting language"
 arch=('i686' 'x86_64')
 license=('PSF')
 url="http://www.python.org/"
 depends=('bzip2' 'gdbm' 'openssl' 'zlib' 'expat' 'sqlite' 'libffi')
-makedepends=('tk' 'bluez-libs' 'hardening-wrapper')
+makedepends=('tk' 'bluez-libs')
 checkdepends=('gdb' 'file' 'xorg-server-xvfb')
 optdepends=('tk: for IDLE'
             'python2-setuptools'
@@ -22,12 +22,13 @@ conflicts=('python<3')
 source=("https://www.python.org/ftp/python/${pkgver%rc?}/Python-${pkgver}.tar.xz"{,.asc}
         bpo-29697-don-t-use-openssl-1.0-fallback-on-1.1.patch
         bpo-30714-alpn-changes-for-openssl-1.1.0f.patch
-        descr_ref.patch)
-sha1sums=('18a8f30a0356c751b8d0ea6f76e764cab13ee046'
-          'SKIP'
-          'cb503cdbee806382db1ddad4de5ae1390ff6bb9f'
-          'fb888fc23761976616da0b735c702c23f8707771'
-          '8cc6ac63e909063eb16bbdabc0f0eac7d24ff0c1')
+        descr_ref.patch fix-profile-task.patch)
+sha512sums=('f37c9a28ce129d01e63c84d7db627a06402854578f62d17927334ea21ede318e04bbf66e890e3f47c85333e6b19f6e5581fb3f3e27efd24be27017d1b6529c4b'
+            'SKIP'
+            '115c40c36f2f18474244c758472c6b670a576d8f0289d9add005af1ed23d368738eed09fe2123df38ed5111c37ce31d998ae3db2eeff29fc5ac3065f8ea25211'
+            'b32c2a0f17b3d19720187b68606024886c6b8008b7c61feaf4fe7b26b4547fddc71a2f191f87557d5fe613d06a8bc79ce5f724681a3090559fc34a032ccbf61a'
+            '2e16eb23eb402dbe921c09bce99b400c10939114b4a1ded0e94a744d8cb66427947bc8d07c4fb054f9fe0906d10d1da509fc2273fd136225c0f019cc43dd045d'
+            '5d7b47bfa9f13cf5fb827546189d823033278f96866366fca5257aaf819c92ffb26e2116426c84ab78d9ae3178eebb591fa4b2f22cfc2725e3e3e795fdb5c2b6')
 validpgpkeys=('C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF')  # Benjamin Peterson
 
 prepare() {
@@ -68,6 +69,9 @@ prepare() {
   # FS#48761
   # http://bugs.python.org/issue25750
   patch -Np1 -i ../descr_ref.patch
+
+  # Backport from Python 3.x
+  patch -Np2 -i ../fix-profile-task.patch
 }
 
 build() {
@@ -77,6 +81,8 @@ build() {
   ./configure --prefix=/usr \
               --enable-shared \
               --with-threads \
+              --enable-optimizations \
+              --with-lto \
               --enable-ipv6 \
               --enable-unicode=ucs4 \
               --with-system-expat \
@@ -99,6 +105,10 @@ check() {
 
 package() {
   cd Python-${pkgver}
+
+  # Hack to avoid building again
+  sed -i 's/^all:.*$/all: build_all/' Makefile
+
   make DESTDIR="${pkgdir}" altinstall maninstall
 
   rm "${pkgdir}"/usr/share/man/man1/python.1
