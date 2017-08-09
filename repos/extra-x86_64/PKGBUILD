@@ -2,19 +2,25 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=gdk-pixbuf2
-pkgver=2.36.7
+pkgver=2.36.8
 pkgrel=1
 pkgdesc="An image loading library"
 arch=(i686 x86_64)
 url="https://wiki.gnome.org/Projects/GdkPixbuf"
 license=(LGPL2.1)
 depends=(glib2 libpng libtiff libjpeg libx11 jasper shared-mime-info)
-makedepends=(gtk-doc gobject-introspection git docbook-utils)
+makedepends=(gtk-doc gobject-introspection git docbook-xsl meson)
 install=gdk-pixbuf2.install
-_commit=9c188574e25cb8e1306be6b575c95e30fca4adb2  # tags/2.36.7^0
+_commit=31c0a1f43aaeddef706057065e38bbfc205dbbe0  # tags/2.36.8^0
 source=("git+https://git.gnome.org/browse/gdk-pixbuf#commit=$_commit"
+        0001-meson-Use-configure_file-to-copy-typesfile.patch
+        0002-meson-Use-include_directories-references-throughout.patch
+        0003-meson-Use-the-right-dependency-for-gtkdoc.patch
         gdk-pixbuf-query-loaders.hook)
 sha256sums=('SKIP'
+            'b0a5ea767ecf78f346ed89be715a71c5bcc9c107eb697f7f018699ba4ddc3481'
+            '9ba1eb2df860157a93cda5968a3bb1d04650a82287fee6d97654956f7f1a613c'
+            'c0b7b99efc08a3488f939b108dd33c6569d4cf73c3aa5a13a79a54c3d52459d3'
             '963afcfacde9fd36031d93c8aa4c94a669ab1dbe9ba0d2cf17599b7d358e54c2')
 
 pkgver() {
@@ -23,37 +29,33 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd gdk-pixbuf
 
-  # Jasper sometimes runs into this limit
-  sed -i 's/ifdef HAVE_SETRLIMIT/if 0/' tests/pixbuf-randomly-modified.c
-
-  NOCONFIGURE=1 ./autogen.sh
+  # Fix docs build
+  patch -Np1 -i ../0001-meson-Use-configure_file-to-copy-typesfile.patch
+  patch -Np1 -i ../0002-meson-Use-include_directories-references-throughout.patch
+  patch -Np1 -i ../0003-meson-Use-the-right-dependency-for-gtkdoc.patch
 }
 
 build() {
-  cd gdk-pixbuf
-  ./configure --prefix=/usr \
-    --with-x11 \
-    --with-libjasper \
-    --with-included-loaders=png \
-    --enable-gtk-doc \
-    --enable-man
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  cd build
+  meson --prefix=/usr --buildtype=release ../gdk-pixbuf \
+    --libexecdir=/usr/lib -Denable_jasper=true -Dwith_docs=true
+  ninja
 }
 
 check() {
-  cd gdk-pixbuf
-  # cve-2015-4491 (scaling overflow) test image fails to load
-  make check || :
+  cd build
+  # pixbuf-randomly-modified fails randomly
+  mesontest || :
 }
 
 package() {
-  cd gdk-pixbuf
-  make DESTDIR="$pkgdir" install
-  install -Dm644 ../gdk-pixbuf-query-loaders.hook \
-    "$pkgdir/usr/share/libalpm/hooks/gdk-pixbuf-query-loaders.hook"
+  cd build
+  DESTDIR="$pkgdir" ninja install
+  rm -rf "$pkgdir"/usr/{lib,share}/installed-tests
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 ../gdk-pixbuf-query-loaders.hook
 }
 
 # vim:set et sw=2:
