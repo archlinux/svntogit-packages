@@ -2,17 +2,19 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libmediaart
-pkgver=1.9.1
+pkgver=1.9.2
 pkgrel=1
 pkgdesc="Library tasked with managing, extracting and handling media art caches"
-arch=('i686' 'x86_64')
-license=('LGPL')
-depends=('gdk-pixbuf2')
-makedepends=('vala' 'gobject-introspection' 'git' 'gtk-doc')
-url="https://github.com/curlybeast/libmediaart"
-_commit=015a7f81bb3eb0d6f30f1e15062dbca388927f1e  # tags/1.9.1^0
-source=("git+https://git.gnome.org/browse/libmediaart#commit=$_commit")
-sha256sums=('SKIP')
+url="https://git.gnome.org/browse/libmediaart"
+arch=(i686 x86_64)
+license=(LGPL)
+depends=(gdk-pixbuf2)
+makedepends=(vala gobject-introspection git gtk-doc meson)
+_commit=c73faaa1bac76a34fa9fcda0f6f1bf0ca9a62f50  # tags/1.9.2^0
+source=("git+https://git.gnome.org/browse/libmediaart#commit=$_commit"
+        0001-meson-Fix-library-versioning.patch)
+sha256sums=('SKIP'
+            '796493227d381c6db579133ef1bd6ef06652cd5d922a2f604e5c26bea7cfbaeb')
 
 pkgver() {
   cd $pkgname
@@ -20,17 +22,23 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  patch -Np1 -i ../0001-meson-Fix-library-versioning.patch
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --disable-static --enable-gdkpixbuf --disable-qt --enable-gtk-doc
-  make
+  cd build
+  meson --prefix=/usr --buildtype=release ../$pkgname
+  ninja
+}
+
+check() {
+  cd build
+  mesontest
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
