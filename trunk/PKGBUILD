@@ -2,7 +2,7 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=composer
-pkgver=1.4.3
+pkgver=1.5.1
 pkgrel=1
 pkgdesc="Dependency Manager for PHP"
 arch=('any')
@@ -10,13 +10,14 @@ license=('MIT')
 url='https://getcomposer.org/'
 depends=('php')
 makedepends=('git')
+checkdepends=('git' 'mercurial' 'parallel')
 replaces=('php-composer')
 conflicts=('php-composer')
 provides=('php-composer')
 source=("${pkgname}::git+https://github.com/composer/composer.git#tag=${pkgver}"
         "${pkgname}-${pkgver}.phar::https://getcomposer.org/download/${pkgver}/composer.phar")
 md5sums=('SKIP'
-         '94d6379656f273e3ecd62024eda49436')
+         '43e330d8c79d008dd810f0479f5cb003')
 
 prepare() {
 	cd ${srcdir}/${pkgname}
@@ -36,9 +37,13 @@ check() {
 	# check if the upstream build and ours differ
 	diff -q ${srcdir}/${pkgname}-${pkgver}.phar composer.phar
 
+	git config --global user.email "${USER}@${HOST}"
+	git config --global user.name "${USER}"
+
 	# Install the dev dependencies to run the unit tests
 	bin/composer -n install --prefer-dist
-	vendor/bin/phpunit
+
+	ls -d tests/Composer/Test/* | parallel --gnu --keep-order vendor/bin/phpunit {} \;
 }
 
 package() {
