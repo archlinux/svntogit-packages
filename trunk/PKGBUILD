@@ -3,15 +3,15 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=libgxps
-pkgver=0.2.5+1+g764ae1e
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="XPS Documents library"
 url="https://wiki.gnome.org/Projects/libgxps"
 arch=(i686 x86_64)
 license=(GPL2)
-depends=(cairo libarchive libjpeg-turbo libtiff lcms2)
-makedepends=(gobject-introspection gtk-doc git)
-_commit=764ae1e1e22c3f1bb58543aa40fa80488ee49a47  # master
+depends=(gtk3 libarchive libjpeg-turbo libtiff lcms2)
+makedepends=(gobject-introspection gtk-doc git meson)
+_commit=762b3026bb3f29cdc67f7816ef3d34d7d9a243ec  # tags/0.3.0^0
 source=("git+https://git.gnome.org/browse/libgxps#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -21,21 +21,25 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
 }
-  
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --disable-static --enable-gtk-doc
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  cd build
+  meson --prefix=/usr --buildtype=release ../$pkgname \
+    -Denable-man=true -Denable-gtk-doc=true
+  ninja
+}
+
+check() {
+  cd build
+  mesontest
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
 
 # vim:set ts=2 sw=2 et:
