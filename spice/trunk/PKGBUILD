@@ -3,33 +3,43 @@
 # Maintainer: Patryk Kowalczyk < patryk at kowalczyk dot ws>
 
 pkgname=spice
-pkgver=0.12.8
-pkgrel=2
-pkgdesc="SPICE client and server"
+pkgver=0.12.8+8+ga957a90b
+pkgrel=1
+pkgdesc="SPICE server"
 arch=('i686' 'x86_64')
 url="https://www.spice-space.org"
 license=('LGPL2.1')
-depends=(alsa-lib celt0.5.1 libcacard libjpeg-turbo libsasl libxinerama libxfixes libxrandr pixman)
-makedepends=(python2-pyparsing python2-six qemu spice-protocol)
-source=(https://www.spice-space.org/download/releases/$pkgname-$pkgver.tar.bz2{,.sign}
-        git-fixes.patch)
-validpgpkeys=('94A9F75661F77A6168649B23A9D8C21429AC6C82')
-sha256sums=('f901a5c5873d61acac84642f9eea5c4d6386fc3e525c2b68792322794e1c407d'
-            'SKIP'
-            '70a6d71e24095bc0864f659b0f3b196ffea5c618e8799281607112726dc2484d')
+depends=(celt0.5.1 libjpeg-turbo libsasl pixman glib2)
+makedepends=(python2-pyparsing python2-six qemu spice-protocol git libcacard)
+_commit=a957a90baf2c62d31f3547e56bba7d0e812d2331  # 0.12
+source=("git+https://anongit.freedesktop.org/git/spice/spice#commit=$_commit"
+        "git+https://anongit.freedesktop.org/git/spice/spice-common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+check() {
+  cd $pkgname
+  rm -rf .git
+  make check
+}
 
 prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
-  patch -Np1 -i ../git-fixes.patch
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
-  PYTHON=python2 ./configure --prefix=/usr --disable-static --enable-smartcard --enable-client
+  cd "$srcdir/$pkgname"
+  PYTHON=python2 ./configure --prefix=/usr --disable-static --enable-smartcard --enable-client --disable-werror
   make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgname"
   make DESTDIR="$pkgdir/" install
 }
