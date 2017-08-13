@@ -3,20 +3,20 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=colord
-pkgver=1.3.5
+pkgver=1.4.0+11+g98cf67b
 pkgrel=1
 pkgdesc="System daemon for managing color devices"
 arch=(i686 x86_64)
 url="https://www.freedesktop.org/software/colord"
 license=(GPL2)
-depends=(lcms2 libgusb polkit sqlite systemd dconf dbus libgudev)
-makedepends=(intltool gobject-introspection vala sane bash-completion argyllcms gnome-common git
-             docbook-utils docbook-sgml perl-sgmls)
+depends=(lcms2 libgusb polkit sqlite systemd dconf dbus libgudev shared-mime-info)
+makedepends=(gobject-introspection vala sane bash-completion argyllcms git docbook-utils
+             docbook-sgml perl-sgmls meson gtk-doc)
 optdepends=('sane: scanner support'
             'argyllcms: color profiling')
 replaces=(shared-color-profiles)
 install=colord.install
-_commit=54723dc6e3373a63a43cf814ad7424932bd996f0  # tags/1.3.5^0
+_commit=98cf67bf3ffe2e6ccb629e3bcaf9a6b15dfd79ed  # master
 source=("git+https://github.com/hughsie/colord#commit=$_commit")
 sha1sums=('SKIP')
 validpgpkeys=('163EB50119225DB3DF8F49EA17ACBA8DFA970E17')
@@ -27,31 +27,30 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib/$pkgname \
-    --with-systemdsystemunitdir=/usr/lib/systemd/system \
-    --with-daemon-user=colord \
-    --enable-print-profiles \
-    --enable-libcolordcompat \
-    --enable-vala \
-    --enable-sane \
-    --disable-static
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  PATH="$srcdir/path:$PATH" make
+  cd build
+  meson --prefix=/usr --buildtype=release ../$pkgname \
+    --localstatedir=/var --libexecdir=/usr/lib/$pkgname \
+    -Denable-libcolordcompat=true \
+    -Denable-sane=true \
+    -Denable-vala=true \
+    -Denable-print-profiles=true \
+    -Dwith-daemon-user=colord
+  ninja
+}
+
+check() {
+  cd build
+  mesontest
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 
   # the build system has no colord user, so the chown fails
   chown -R 124:124 "$pkgdir/var/lib/colord"
