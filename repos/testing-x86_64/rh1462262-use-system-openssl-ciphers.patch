@@ -1,0 +1,122 @@
+From 61665e43b0509e3d05b2519bf10531bd2163ed66 Mon Sep 17 00:00:00 2001
+From: Beniamino Galvani <bgalvani@redhat.com>
+Date: Sun, 9 Jul 2017 11:06:50 +0200
+Subject: [PATCH] OpenSSL: Add build option to select default ciphers
+
+Add a build option to select different default ciphers for OpenSSL
+instead of the hardcoded default "DEFAULT:!EXP:!LOW".
+
+This new option is useful on distributions where the security level
+should be consistent for all applications, as in Fedora [1]. In such
+cases the new configuration option would be set to "" or
+"PROFILE=SYSTEM" to select the global crypto policy by default.
+
+[1] https://fedoraproject.org/wiki/Changes/CryptoPolicy
+
+Signed-off-by: Beniamino Galvani <bgalvani@redhat.com>
+(cherry picked from commit 2b9891bd6e125d3e28f26afde32e153db658b7cc)
+---
+ src/crypto/tls_openssl.c           | 2 +-
+ wpa_supplicant/Android.mk          | 4 ++++
+ wpa_supplicant/Makefile            | 4 ++++
+ wpa_supplicant/android.config      | 4 ++++
+ wpa_supplicant/defconfig           | 4 ++++
+ wpa_supplicant/wpa_supplicant.conf | 4 ++--
+ 6 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/src/crypto/tls_openssl.c b/src/crypto/tls_openssl.c
+index 23ac64b..c4170b6 100644
+--- a/src/crypto/tls_openssl.c
++++ b/src/crypto/tls_openssl.c
+@@ -1017,7 +1017,7 @@ void * tls_init(const struct tls_config *conf)
+ 	if (conf && conf->openssl_ciphers)
+ 		ciphers = conf->openssl_ciphers;
+ 	else
+-		ciphers = "DEFAULT:!EXP:!LOW";
++		ciphers = TLS_DEFAULT_CIPHERS;
+ 	if (SSL_CTX_set_cipher_list(ssl, ciphers) != 1) {
+ 		wpa_printf(MSG_ERROR,
+ 			   "OpenSSL: Failed to set cipher string '%s'",
+diff --git a/wpa_supplicant/Android.mk b/wpa_supplicant/Android.mk
+index a8d6a7f..a9dc086 100644
+--- a/wpa_supplicant/Android.mk
++++ b/wpa_supplicant/Android.mk
+@@ -971,6 +971,10 @@ ifdef CONFIG_TLS_ADD_DL
+ LIBS += -ldl
+ LIBS_p += -ldl
+ endif
++ifndef CONFIG_TLS_DEFAULT_CIPHERS
++CONFIG_TLS_DEFAULT_CIPHERS = "DEFAULT:!EXP:!LOW"
++endif
++L_CFLAGS += -DTLS_DEFAULT_CIPHERS=\"$(CONFIG_TLS_DEFAULT_CIPHERS)\"
+ endif
+ 
+ ifeq ($(CONFIG_TLS), gnutls)
+diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
+index 512052e..cc55a52 100644
+--- a/wpa_supplicant/Makefile
++++ b/wpa_supplicant/Makefile
+@@ -1020,6 +1020,10 @@ ifdef CONFIG_TLS_ADD_DL
+ LIBS += -ldl
+ LIBS_p += -ldl
+ endif
++ifndef CONFIG_TLS_DEFAULT_CIPHERS
++CONFIG_TLS_DEFAULT_CIPHERS = "DEFAULT:!EXP:!LOW"
++endif
++CFLAGS += -DTLS_DEFAULT_CIPHERS=\"$(CONFIG_TLS_DEFAULT_CIPHERS)\"
+ endif
+ 
+ ifeq ($(CONFIG_TLS), gnutls)
+diff --git a/wpa_supplicant/android.config b/wpa_supplicant/android.config
+index 02505bb..f3cc838 100644
+--- a/wpa_supplicant/android.config
++++ b/wpa_supplicant/android.config
+@@ -291,6 +291,10 @@ CONFIG_IEEE80211W=y
+ # will be used)
+ #CONFIG_TLSV12=y
+ 
++# Select which ciphers to use by default with OpenSSL if the user does not
++# specify them.
++#CONFIG_TLS_DEFAULT_CIPHERS="DEFAULT:!EXP:!LOW"
++
+ # If CONFIG_TLS=internal is used, additional library and include paths are
+ # needed for LibTomMath. Alternatively, an integrated, minimal version of
+ # LibTomMath can be used. See beginning of libtommath.c for details on benefits
+diff --git a/wpa_supplicant/defconfig b/wpa_supplicant/defconfig
+index 1d05198..8b0eb87 100644
+--- a/wpa_supplicant/defconfig
++++ b/wpa_supplicant/defconfig
+@@ -316,6 +316,10 @@ CONFIG_PEERKEY=y
+ # will be used)
+ #CONFIG_TLSV12=y
+ 
++# Select which ciphers to use by default with OpenSSL if the user does not
++# specify them.
++#CONFIG_TLS_DEFAULT_CIPHERS="DEFAULT:!EXP:!LOW"
++
+ # If CONFIG_TLS=internal is used, additional library and include paths are
+ # needed for LibTomMath. Alternatively, an integrated, minimal version of
+ # LibTomMath can be used. See beginning of libtommath.c for details on benefits
+diff --git a/wpa_supplicant/wpa_supplicant.conf b/wpa_supplicant/wpa_supplicant.conf
+index 1061c98..70989c0 100644
+--- a/wpa_supplicant/wpa_supplicant.conf
++++ b/wpa_supplicant/wpa_supplicant.conf
+@@ -183,13 +183,13 @@ fast_reauth=1
+ # OpenSSL cipher string
+ #
+ # This is an OpenSSL specific configuration option for configuring the default
+-# ciphers. If not set, "DEFAULT:!EXP:!LOW" is used as the default.
++# ciphers. If not set, the value configured at build time ("DEFAULT:!EXP:!LOW"
++# by default) is used.
+ # See https://www.openssl.org/docs/apps/ciphers.html for OpenSSL documentation
+ # on cipher suite configuration. This is applicable only if wpa_supplicant is
+ # built to use OpenSSL.
+ #openssl_ciphers=DEFAULT:!EXP:!LOW
+ 
+-
+ # Dynamic EAP methods
+ # If EAP methods were built dynamically as shared object files, they need to be
+ # loaded here before being used in the network blocks. By default, EAP methods
+-- 
+2.9.3
+
