@@ -3,8 +3,8 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.41.2
-pkgrel=2
+pkgver=0.42.0
+pkgrel=1
 pkgdesc='High productivity build system'
 url='http://mesonbuild.com/'
 arch=('any')
@@ -14,9 +14,9 @@ makedepends=('python-setuptools')
 checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-base' 'git' 'gnustep-base'
               'cython' 'gtkmm3' 'gtest' 'gmock' 'protobuf' 'wxgtk' 'python-gobject' 'gobject-introspection'
               'itstool' 'gtk3' 'valgrind' 'ldc' 'java-environment>=8' 'gtk-doc' 'llvm' 'clang' 'sdl2'
-              'doxygen')
+              'doxygen' 'vulkan-validation-layers' 'openmpi' 'mercurial')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc})
-sha512sums=('0b22f08bc1fc500a416d536aec558cb1f775c90b618c1079cfcdbd1b6a6d9b8b02a57288295e1cbea4e44bab3f23ecdab89e8b7bac5d7025e699e2f71908f97e'
+sha512sums=('798877326b0d05e3b747da09a1da82e5d215411e7e7bb57e1ace4029e1868357b6c51fe49c57ae4bd7db4bf5c24c683b015761bfbea8a32c0285213b9c9845c1'
             'SKIP')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
