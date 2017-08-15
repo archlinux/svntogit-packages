@@ -3,16 +3,16 @@
 
 pkgbase=openldap
 pkgname=('openldap' 'libldap')
-pkgver=2.4.44
-pkgrel=5
+pkgver=2.4.45
+pkgrel=1
 arch=('i686' 'x86_64')
-url="http://www.openldap.org/"
+url="https://www.openldap.org/"
 license=('custom')
 makedepends=('libltdl' 'libsasl' 'e2fsprogs' 'util-linux' 'chrpath' 'unixodbc')
 options=('!makeflags' 'emptydirs')
-source=(ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/${pkgbase}-${pkgver}.tgz
+source=(https://www.openldap.org/software/download/OpenLDAP/openldap-release/${pkgbase}-${pkgver}.tgz
         slapd.service openldap.tmpfiles openldap.sysusers openldap-ntlm.patch)
-sha1sums=('016a738d050a68d388602a74b5e991035cdba149'
+sha1sums=('c98437385d3eaee80c9e2c09f3f0d4b7c140233d'
           '2441815efbfa01ad7a1d39068e5503b53d1d04b0'
           '1f68bd85fb50595c4e916db164d8e90e0c6e21ee'
           '2bf64351c32b0bf0a70663bd42de22910998b795'
@@ -43,9 +43,10 @@ build() {
     --with-cyrus-sasl --with-threads
   make
 
-  cd contrib/slapd-modules/nssov
-  make prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap
-  chrpath -d .libs/nssov.so
+  make -C contrib/slapd-modules/nssov OPT="$CFLAGS $CPPFLAGS" prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap
+  make -C contrib/slapd-modules/autogroup OPT="$CFLAGS $CPPFLAGS" prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap
+  make -C contrib/slapd-modules/lastbind OPT="$CFLAGS $CPPFLAGS" prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap
+  make -C contrib/slapd-modules/passwd/sha2 OPT="$CFLAGS $CPPFLAGS" prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap
 }
 
 check() {
@@ -87,13 +88,13 @@ package_openldap() {
     popd
   done
 
-  pushd contrib/slapd-modules/nssov
-  install -m755 .libs/nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap
-  ln -s nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap/nssov.so
-  ln -s nssov.so.0.0.0 "${pkgdir}"/usr/lib/openldap/nssov.so.0
-  install -m444 ldapns.schema "${pkgdir}"/etc/openldap/schema
-  install -m644 slapo-nssov.5 "${pkgdir}"/usr/share/man/man5/slapo-nssov.5
-  popd
+  make -C contrib/slapd-modules/autogroup prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap DESTDIR="$pkgdir" install
+  make -C contrib/slapd-modules/lastbind prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap DESTDIR="$pkgdir" install
+  make -C contrib/slapd-modules/passwd/sha2 prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap DESTDIR="$pkgdir" install
+  make -C contrib/slapd-modules/nssov prefix=/usr libexecdir=/usr/lib sysconfdir=/etc/openldap DESTDIR="$pkgdir" install
+  install -m644 contrib/slapd-modules/nssov/slapo-nssov.5 "${pkgdir}"/usr/share/man/man5/slapo-nssov.5
+  install -m644 contrib/slapd-modules/autogroup/slapo-autogroup.5 "${pkgdir}"/usr/share/man/man5/slapo-autogroup.5
+  install -m644 contrib/slapd-modules/lastbind/slapo-lastbind.5 "${pkgdir}"/usr/share/man/man5/slapo-lastbind.5
 
   rm "${pkgdir}"/usr/share/man/man5/ldap.conf.5
   rm -r "${pkgdir}"/run
