@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gtk-doc
-pkgver=1.26
+pkgver=1.26+10+g01844e7
 pkgrel=1
 pkgdesc="Documentation tool for public library API"
 url="https://www.gtk.org/gtk-doc/"
@@ -12,11 +12,11 @@ depends=(docbook-xsl docbook-xml source-highlight glib2-docs python-six)
 makedepends=(dblatex git yelp-tools)
 checkdepends=(bc gtk3)
 optdepends=('dblatex: PDF support')
-_commit=4c7bf464748963b275e0bf656beb6c12d48924df  # tags/GTK_DOC_1_26^0
+_commit=01844e70cae73bfc95a7746fd958c1756a62c340  # master
 source=("git+https://git.gnome.org/browse/gtk-doc#commit=$_commit"
-        gtkdoc.patch)
+        0001-gtkdoc-Don-t-immediately-choke-on-non-UTF-8-files.patch)
 sha256sums=('SKIP'
-            '0ccf34e1a523b7a9dce3d66eca845847bcd985335c1d61168bdd7cde93b07552')
+            'ff885d4c6cd4697ebd5855cf57a674dbd1b5a17c2b315e437638ad4a993bd133')
 
 pkgver() {
   cd $pkgname
@@ -25,7 +25,11 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  patch -Np1 -i ../gtkdoc.patch
+  patch -Np1 -i ../0001-gtkdoc-Don-t-immediately-choke-on-non-UTF-8-files.patch
+
+  # Recover a file from the old version, because GStreamer/common needs it
+  git checkout 1db161bd708cdfb88b362ea0b5d047034d9c3272 -- gtkdoc-common.pl.in
+
   NOCONFIGURE=1 ./autogen.sh
 }
 
@@ -43,4 +47,6 @@ check() {
 package() {
   cd $pkgname
   make DESTDIR="$pkgdir" install
+  sed 's|@PERL@|/usr/bin/perl|g' gtkdoc-common.pl.in \
+    | install -D /dev/stdin "$pkgdir/usr/share/gtk-doc/data/gtkdoc-common.pl"
 }
