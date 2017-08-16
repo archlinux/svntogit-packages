@@ -1,0 +1,86 @@
+From f4e102a45feb94030002f102f3ef6474401bcd1a Mon Sep 17 00:00:00 2001
+Message-Id: <f4e102a45feb94030002f102f3ef6474401bcd1a.1502882026.git.jan.steffens@gmail.com>
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Wed, 16 Aug 2017 13:00:09 +0200
+Subject: [PATCH] gtkdoc: Don't immediately choke on non-UTF-8 files
+
+---
+ gtkdoc/mkdb.py | 13 +++++++++++--
+ gtkdoc/scan.py | 12 ++++++++++--
+ 2 files changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/gtkdoc/mkdb.py b/gtkdoc/mkdb.py
+index e103138f3dc6ede4..382195df6348c6a5 100644
+--- a/gtkdoc/mkdb.py
++++ b/gtkdoc/mkdb.py
+@@ -24,7 +24,7 @@ Creates the DocBook files from the source comments.
+ """
+ 
+ from __future__ import print_function
+-from six import iteritems, iterkeys
++from six import iteritems, iterkeys, PY2
+ 
+ from collections import OrderedDict
+ import logging
+@@ -3665,18 +3665,27 @@ def ScanSourceFile(ifile, ignore_files):
+ 
+     logging.info("Scanning source file: %s", ifile)
+ 
+-    SRCFILE = open(ifile)
++    SRCFILE = open(ifile, 'rb')
+     in_comment_block = False
+     symbol = None
+     in_part = ''
+     description = ''
+     return_desc = ''
+     since_desc = stability_desc = deprecated_desc = ''
+     params = OrderedDict()
+     param_name = None
+     line_number = 0
+     for line in SRCFILE:
+         line_number += 1
++
++        # FIXME Make a better effort at scanning non-UTF-8 files
++        if not PY2:
++            try:
++                line = line.decode()
++            except UnicodeDecodeError:
++                logging.warn('Skipping non-UTF-8 line: %r', line)
++                continue
++
+         # Look for the start of a comment block.
+         if not in_comment_block:
+             if re.search(r'^\s*/\*.*\*/', line):
+diff --git a/gtkdoc/scan.py b/gtkdoc/scan.py
+index 084351959ba9c700..e8b88e8e88bda7ee 100644
+--- a/gtkdoc/scan.py
++++ b/gtkdoc/scan.py
+@@ -34,7 +34,7 @@ organized into sections ready to output the XML pages.
+ """
+ 
+ from __future__ import print_function
+-from six import iteritems, iterkeys
++from six import iteritems, iterkeys, PY2
+ 
+ import logging
+ import os
+@@ -226,7 +226,15 @@ def ScanHeader(input_file, section_list, decl_list, get_types, options):
+ 
+     logging.info('Scanning %s', input_file)
+ 
+-    for line in open(input_file):
++    for line in open(input_file, 'rb'):
++        # FIXME Make a better effort at scanning non-UTF-8 files
++        if not PY2:
++            try:
++                line = line.decode()
++            except UnicodeDecodeError:
++                logging.warn('Skipping non-UTF-8 line: %r', line)
++                continue
++
+         # If this is a private header, skip it.
+         if re.search(r'%^\s*/\*\s*<\s*private_header\s*>\s*\*/', line):
+             return
+-- 
+2.14.1
+
