@@ -1,20 +1,21 @@
 # $Id$
-# Maintainer: Allan McRae <allan@archlinux.org>
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: valgrind requires rebuilt with each major glibc version
 
 pkgname=glibc
-pkgver=2.25
-pkgrel=7
-_commit=adc7e06fb412a2a1ee52f8cb788caf436335b9f3  # release/2.25/master
+pkgver=2.26
+pkgrel=1
+_commit=1c9a5c270d8b66f30dcfaf1cb2d6cf39d3e18369
 pkgdesc='GNU C Library'
 arch=(i686 x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
 groups=(base)
 depends=('linux-api-headers>=4.10' tzdata filesystem)
-makedepends=('gcc>=6' git gd)
+makedepends=(git gd)
 optdepends=('gd: for memusagestat')
 backup=(etc/gai.conf
         etc/locale.gen
@@ -29,8 +30,7 @@ md5sums=('SKIP'
          '476e9113489f93b348b21e144b6a8fcf')
 
 prepare() {
-  mkdir glibc-build
-  cd ${pkgname}
+  mkdir -p glibc-build
 }
 
 build() {
@@ -38,7 +38,7 @@ build() {
 
   if [[ ${CARCH} = "i686" ]]; then
     # Hack to fix NPTL issues with Xen, only required on 32bit platforms
-    export CFLAGS="${CFLAGS} -mno-tls-direct-seg-refs"
+    export CFLAGS="$CFLAGS -mno-tls-direct-seg-refs"
   fi
 
   echo "slibdir=/usr/lib" >> configparms
@@ -49,21 +49,22 @@ build() {
   # remove fortify for building libraries
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
 
-  ../${pkgname}/configure \
+  "$srcdir/glibc/configure" \
       --prefix=/usr \
       --libdir=/usr/lib \
       --libexecdir=/usr/lib \
       --with-headers=/usr/include \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-add-ons \
-      --enable-obsolete-rpc \
-      --enable-kernel=2.6.32 \
       --enable-bind-now \
-      --disable-profile \
-      --enable-stackguard-randomization \
-      --enable-stack-protector=strong \
+      --enable-kernel=2.6.32 \
       --enable-lock-elision \
       --enable-multi-arch \
+      --enable-obsolete-nsl \
+      --enable-obsolete-rpc \
+      --enable-stack-protector=strong \
+      --enable-stackguard-randomization \
+      --disable-profile \
       --disable-werror
 
   # build libraries with fortify disabled
@@ -89,29 +90,28 @@ check() {
 }
 
 package() {
-  cd glibc-build
+  install -dm755 "$pkgdir/etc"
+  touch "$pkgdir/etc/ld.so.conf"
 
-  install -dm755 ${pkgdir}/etc
-  touch ${pkgdir}/etc/ld.so.conf
+  make -C glibc-build install_root="$pkgdir" install
+  rm -f "$pkgdir"/etc/ld.so.{cache,conf}
 
-  make install_root=${pkgdir} install
+  cd glibc
 
-  rm -f ${pkgdir}/etc/ld.so.{cache,conf}
+  install -dm755 "$pkgdir"/usr/lib/{locale,systemd/system,tmpfiles.d}
+  install -m644 nscd/nscd.conf "$pkgdir/etc/nscd.conf"
+  install -m644 nscd/nscd.service "$pkgdir/usr/lib/systemd/system"
+  install -m644 nscd/nscd.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/nscd.conf"
+  install -dm755 "$pkgdir/var/db/nscd"
 
-  install -dm755 ${pkgdir}/usr/lib/{locale,systemd/system,tmpfiles.d}
+  install -m644 posix/gai.conf "$pkgdir"/etc/gai.conf
 
-  install -m644 ${srcdir}/${pkgname}/nscd/nscd.conf ${pkgdir}/etc/nscd.conf
-  install -m644 ${srcdir}/${pkgname}/nscd/nscd.service ${pkgdir}/usr/lib/systemd/system
-  install -m644 ${srcdir}/${pkgname}/nscd/nscd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/nscd.conf
-
-  install -m644 ${srcdir}/${pkgname}/posix/gai.conf ${pkgdir}/etc/gai.conf
-
-  install -m755 ${srcdir}/locale-gen ${pkgdir}/usr/bin
+  install -m755 "$srcdir/locale-gen" "$pkgdir/usr/bin"
 
   # create /etc/locale.gen
-  install -m644 ${srcdir}/locale.gen.txt ${pkgdir}/etc/locale.gen
+  install -m644 "$srcdir/locale.gen.txt" "$pkgdir/etc/locale.gen"
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
-    ${srcdir}/glibc/localedata/SUPPORTED >> ${pkgdir}/etc/locale.gen
+    "$srcdir/glibc/localedata/SUPPORTED" >> "$pkgdir/etc/locale.gen"
 
   # Do not strip the following files for improved debugging support
   # ("improved" as in not breaking gdb and valgrind...):
@@ -120,14 +120,11 @@ package() {
   #   libpthread-${pkgver}.so
   #   libthread_db-1.0.so
 
-  cd $pkgdir
+  cd "$pkgdir"
   strip $STRIP_BINARIES usr/bin/{gencat,getconf,getent,iconv,iconvconfig} \
                         usr/bin/{ldconfig,locale,localedef,nscd,makedb} \
                         usr/bin/{pcprofiledump,pldd,rpcgen,sln,sprof} \
                         usr/lib/getconf/*
-  if [[ $CARCH = "i686" ]]; then
-    strip $STRIP_BINARIES usr/bin/lddlibc4
-  fi
 
   strip $STRIP_STATIC usr/lib/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
                       usr/lib/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
@@ -143,8 +140,9 @@ package() {
     strip $STRIP_STATIC usr/lib/lib{m-${pkgver},mvec{,_nonshared}}.a
     strip $STRIP_SHARED usr/lib/libmvec-*.so
   fi
-  
+
   if [[ $CARCH = "i686" ]]; then
+    strip $STRIP_BINARIES usr/bin/lddlibc4
     strip $STRIP_STATIC usr/lib/libm.a
   fi
 }
