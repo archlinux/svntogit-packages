@@ -19,7 +19,7 @@ usage() {
 	echo 'the architecture and the mirror you are using'
 	echo 'to the Arch Linux project.'
 	echo ''
-	echo 'Statistics are available at https://www.archlinux.de/?page=Statistics'
+	echo 'Statistics are available at https://www.archlinux.de/statistics'
 }
 
 while getopts 'vdhsq' parameter; do
@@ -74,6 +74,6 @@ else
 		--data-urlencode "cpuarch=${cpuarch}" \
 		--data-urlencode "mirror=${mirror}" \
 		--data-urlencode "quiet=${quiet}" \
-		'https://www.archlinux.de/?page=PostPackageList' \
+		'https://www.archlinux.de/statistics' \
 	|| echo 'Sorry, data could not be sent.' >&2
 fi
