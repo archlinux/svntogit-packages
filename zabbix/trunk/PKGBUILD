@@ -4,22 +4,21 @@
 
 pkgbase=zabbix
 pkgname=(zabbix-server zabbix-agent zabbix-proxy zabbix-frontend-php)
-pkgver=3.2.7
+pkgver=3.4.0
 pkgrel=1
 arch=(i686 x86_64)
 url='http://www.zabbix.com/'
 license=(GPL)
-makedepends=(postgresql-libs libxml2 unixodbc net-snmp libmariadbclient libldap)
+makedepends=(postgresql-libs libxml2 unixodbc net-snmp libmariadbclient libldap libevent)
 source=(https://downloads.sourceforge.net/sourceforge/zabbix/zabbix-${pkgver}.tar.gz
         zabbix-agent.{service,sysusers,tmpfiles}
-	zabbix-server{-sqlite,-mysql,-pgsql}.service zabbix-server.{sysusers,tmpfiles}
+	zabbix-server{-mysql,-pgsql}.service zabbix-server.{sysusers,tmpfiles}
 	zabbix-proxy{-sqlite,-mysql,-pgsql}.service zabbix-proxy.{sysusers,tmpfiles})
 
-sha256sums=('3ea0c299bd69bc728177128740f0476bc1a2c1de438330df5bbd8f5fc6090712'
+sha256sums=('7126df44de57eebc74e14e6738f604551b9a7d462e2f77d6ecfe03770850f013'
             '484fa9969eab61eaf20043ae08e2615c0569982dff869c985f2e2065da698c6a'
             'ef23133aae2340945e621c9725094a3458d9089d3de15f641afcdabdf7c5a39c'
             'c38a871d237b00dd6310dfb02e5a8e1b930e445204e73dde8305bed8baf380ec'
-            '5362a7e06cadb9844397a51ef9b3d9269e122a69a66ba83ad569f419815eccae'
             '7b14586f5b418de6a174c35d466e25ee42c5e4d8190eea4663f4b3e905f91216'
             '6e49cd520604745aa0febd76d582a2936ad8ab7374c3c9f353ac8c7b1adbbf61'
             '9fe22526327a0573652c65ff374eba7c36a00b85f8e72d32643d1cc68a07ebbb'
@@ -48,8 +47,6 @@ build() {
     --sysconfdir=/etc/zabbix
     --enable-agent
     --enable-ipv6
-    --enable-proxy
-    --enable-server
     --with-ldap
     --with-libcurl
     --with-libxml2
@@ -61,18 +58,24 @@ build() {
 
   cd $pkgbase-$pkgver
 
-  for db in postgresql mysql sqlite3; do
-    ./configure ${_configure_flags[@]} --with-$db
+  for db in postgresql mysql; do
+    ./configure ${_configure_flags[@]} --enable-server --with-$db
     make clean
     make
     mv src/zabbix_server/zabbix_server{,_$db}
+  done
+
+  for db in postgresql mysql sqlite3; do
+    ./configure ${_configure_flags[@]} --enable-proxy --with-$db
+    make clean
+    make
     mv src/zabbix_proxy/zabbix_proxy{,_$db}
   done
 }
 
 package_zabbix-server() {
   pkgdesc='Monitoring software for networks and applications'
-  depends=(net-snmp curl libxml2 sqlite unixodbc libldap)
+  depends=(net-snmp curl libxml2 unixodbc libldap libevent)
   optdepends=('postgresql-libs: for PostgreSQL support'
               'libmariadbclient: for MariaDB support')
   backup=(etc/zabbix/zabbix_server.conf)
@@ -80,7 +83,7 @@ package_zabbix-server() {
 
   cd $pkgbase-$pkgver
 
-  for db in postgresql mysql sqlite3; do
+  for db in postgresql mysql; do
     install -Dm755 src/zabbix_server/zabbix_server_$db \
       "$pkgdir/usr/bin/zabbix_server_$db"
 
@@ -95,8 +98,6 @@ package_zabbix-server() {
   install -Dm644 conf/zabbix_server.conf "$pkgdir/etc/zabbix/zabbix_server.conf"
   chown 170:170 "$pkgdir/etc/zabbix/zabbix_server.conf"
 
-  install -Dm644 "$srcdir/zabbix-server-sqlite.service" \
-    "$pkgdir/usr/lib/systemd/system/zabbix-server-sqlite.service"
   install -Dm644 "$srcdir/zabbix-server-pgsql.service" \
     "$pkgdir/usr/lib/systemd/system/zabbix-server-pgsql.service"
   install -Dm644 "$srcdir/zabbix-server-mysql.service" \
