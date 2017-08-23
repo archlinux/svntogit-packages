@@ -3,27 +3,27 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=9.6.3
+pkgver=9.6.4
 _majorver=${pkgver%.*}
-pkgrel=3
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('i686' 'x86_64')
 license=('custom:PostgreSQL')
-makedepends=('krb5' 'libxml2' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0')
+makedepends=('krb5' 'libxml2' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0' 'pam')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
         postgresql.pam
         postgresql.logrotate
         postgresql.service
         postgresql-check-db-dir)
-sha256sums=('1645b3736901f6d854e695a937389e68ff2066ce0cde9d73919d6ab7c995b9c6'
+sha256sums=('2b3ab16d82e21cead54c08b95ce3ac480696944a68603b6c11b3205b7376ce13'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             'b48fe97f8e43ed0d2041d519119a4dafb70fcae72870951bf4fb7350fe169ac8'
             '2340da0947bcb1c5602008d0ca00588ca0bfa8aca4fa6947a8bdb2c6df800b0e')
-sha512sums=('97141972e154e6b0e756ee6a4e20f26e82022a9fd4c56305314a3a5567a79ece638e4ac3d513b46138737ae6bd27a098f30013a94767db151181aac9c01290a1'
+sha512sums=('b0527efacce6efc09340b68c8c56483cd884676e01cb6bfb4f9ce63226a394bdb0bcf3d832f84e4dff5ceecf09ef4cf93e9fbd0ac453ec85efb11ac50a7dff39'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
             '9ab4da01337ffbab8faec0e220aaa2a642dbfeccf7232ef2645bdc2177a953f17ee3cc14a4d8f8ebd064e1dae8b3dba6029adbffb8afaabea383963213941ba8'
