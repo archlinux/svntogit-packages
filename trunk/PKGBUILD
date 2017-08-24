@@ -7,7 +7,8 @@
 
 pkgname=perl
 pkgver=5.26.0
-pkgrel=3
+_baseversion="${pkgver%.*}"
+pkgrel=4
 pkgdesc="A highly capable, feature-rich programming language"
 arch=(i686 x86_64)
 license=('GPL' 'PerlArtistic')
@@ -132,23 +133,29 @@ provides=('perl-archive-tar=2.24'
           'perl-xsloader=0.27')
 # Add your own provides here
 provides=(${provides[@]})
-source=(http://www.cpan.org/src/5.0/perl-${pkgver}.tar.xz
+source=(https://www.cpan.org/src/5.0/perl-${pkgver}.tar.xz
         perlbin.sh
         perlbin.csh
         perlbin.fish
-        perl-binary-module-dependency-1.template)
+        perl-binary-module-dependency-1.template
+        detect-old-perl-modules.sh
+        detect-old-perl-modules.hook)
 options=('makeflags' '!purge' 'emptydirs')
 md5sums=('8c6995718e4cb62188f0d5e3488cd91f'
          'f2a1ee55a05e84652cb10cab17a4c546'
          'd8153ad4a43bb4142d1bdeaa9fcdd95b'
          '626605dc8beef956cbaf46f031c7e894'
-         '2a366dfc783c460764cde0caf88a23af')
+         '2a366dfc783c460764cde0caf88a23af'
+         '2fa12aa0f924e8dccb4dab84ca3e0db3'
+         '80bc41c440de5fd36fb5bb199ad2a314')
 sha256sums=('9bf2e3d0d72aad77865c3bdbc20d3b576d769c5c255c4ceb30fdb9335266bf55'
             '7469f4b645e5f7460b76bcdf44268823600e99c10be5765c451f55b43e14664f'
             '478a52dc440d5ca324f4c95238b39cc8c90d5d7d8d5601fa085ffef79fea04f4'
             '11ce66bcf4803b0bf27179a32ce53f41bcdfa967c4c0d54ac103dbc4951d18a3'
-            '6750ef8a0458d3377ad13f863d2eab09084932ee58de1abd92ed1e702bb93e3e')
-# http://www.cpan.org/src/5.0/perl-$pkgver.tar.xz.sha256.txt
+            '6750ef8a0458d3377ad13f863d2eab09084932ee58de1abd92ed1e702bb93e3e'
+            'c5db3dcd1db71724fa4df5db34586688aa8db92ac6ffcbddaaa213c71cceff20'
+            'b310d418db6e301cf07a6093c187a629dfc61db093bc08533d74bfc89d8a759c')
+# https://www.cpan.org/src/5.0/perl-$pkgver.tar.xz.sha256.txt
 
 prepare() {
   cd ${srcdir}/${pkgname}-${pkgver}
@@ -169,11 +176,11 @@ build() {
   ./Configure -des -Dusethreads -Duseshrplib -Doptimize="${CFLAGS}" \
     -Dprefix=/usr -Dvendorprefix=/usr \
     -Dprivlib=/usr/share/perl5/core_perl \
-    -Darchlib=/usr/lib/perl5/core_perl \
+    -Darchlib=/usr/lib/perl5/$_baseversion/core_perl \
     -Dsitelib=/usr/share/perl5/site_perl \
-    -Dsitearch=/usr/lib/perl5/site_perl \
+    -Dsitearch=/usr/lib/perl5/$_baseversion/site_perl \
     -Dvendorlib=/usr/share/perl5/vendor_perl \
-    -Dvendorarch=/usr/lib/perl5/vendor_perl \
+    -Dvendorarch=/usr/lib/perl5/$_baseversion/vendor_perl \
     -Dscriptdir=/usr/bin/core_perl \
     -Dsitescript=/usr/bin/site_perl \
     -Dvendorscript=/usr/bin/vendor_perl \
@@ -205,7 +212,7 @@ package() {
   sed -e '/^man1ext=/ s/1perl/1p/' -e '/^man3ext=/ s/3perl/3pm/' \
       -e "/^cf_email=/ s/'.*'/''/" \
       -e "/^perladmin=/ s/'.*'/''/" \
-      -i ${pkgdir}/usr/lib/perl5/core_perl/Config_heavy.pl
+      -i ${pkgdir}/usr/lib/perl5/$_baseversion/core_perl/Config_heavy.pl
 
   ### CPAN Settings ###
   # Set CPAN default config to use the site directories.
@@ -230,6 +237,9 @@ package() {
 
   #(cd ${pkgdir}/usr/bin; mv perl${pkgver} perl)
   rm "$pkgdir/usr/bin/perl$pkgver"
+
+  install -D -m755 -t "$pkgdir/usr/share/libalpm/scripts" "$srcdir/detect-old-perl-modules.sh"
+  install -D -m644 -t "$pkgdir/usr/share/libalpm/hooks" "$srcdir/detect-old-perl-modules.hook"
 
   find $pkgdir -name perllocal.pod -delete
   find $pkgdir -name .packlist -delete
