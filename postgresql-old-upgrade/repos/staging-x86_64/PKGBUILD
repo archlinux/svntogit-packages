@@ -1,0 +1,54 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Dan McGee <dan@archlinux.org>
+
+pkgname=postgresql-old-upgrade
+pkgver=9.5.8
+_majorver=${pkgver%.*}
+pkgrel=3
+pkgdesc='PostgreSQL build for migrating between major versions with pg_upgrade'
+url='https://www.postgresql.org/'
+arch=('i686' 'x86_64')
+license=('custom:PostgreSQL')
+depends=("postgresql-libs>=${_majorver}" 'libxml2' 'openssl>=1.0.0' 'pam')
+makedepends=('krb5' 'python2' 'perl' 'tcl>=8.6.0')
+source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2)
+sha256sums=('ade57068f134f36710fa953e1ef79185abd96572f8098741413132f79ed37202')
+sha512sums=('4a11f0a16df460391c8250122ca8bf1ab76e49672a8c003ed09718bb4ce2aa57757e7aaec6e41b53d0d1ada293172b974761606647fcc8b4fce8807490b6ef10')
+
+build() {
+  cd postgresql-${pkgver}
+
+  ./configure \
+    --prefix=/opt/pgsql-${_majorver} \
+    --with-gssapi \
+    --with-libxml \
+    --with-openssl \
+    --with-perl \
+    --with-python PYTHON=/usr/bin/python2 \
+    --with-tcl \
+    --with-pam \
+    --without-readline \
+    --with-system-tzdata=/usr/share/zoneinfo \
+    --with-uuid=e2fs \
+    --disable-nls \
+    --enable-thread-safety
+
+  make -C src all
+  make -C contrib all
+}
+
+package() {
+  cd postgresql-${pkgver}
+
+  # install
+  make -C src DESTDIR="${pkgdir}" install
+  make -C contrib DESTDIR="${pkgdir}" install
+
+  # install license
+  install -Dm 644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # clean up unneeded installed items
+  rm -rf "${pkgdir}/opt/pgsql-${_majorver}/include"
+}
+
+# vim: ts=2 sw=2 et:
