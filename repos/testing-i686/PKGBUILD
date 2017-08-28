@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: dorphell <dorphell@archlinux.org>
+# Contributor: Travis Willard <travis@archlinux.org>
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+
+pkgname=libpng
+pkgver=1.6.32
+_apngver=1.6.32
+pkgrel=1
+pkgdesc="A collection of routines used to create PNG format graphics files"
+arch=('i686' 'x86_64')
+url="http://www.libpng.org/pub/png/libpng.html"
+license=('custom')
+depends=('zlib' 'sh')
+validpgpkeys=('8048643BA2C840F4F92A195FF54984BFA16C640F') # Glenn Randers-Pehrson (mozilla) <glennrp@gmail.com>
+source=("https://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.xz"{,.asc}
+        "https://downloads.sourceforge.net/sourceforge/libpng-apng/libpng-$_apngver-apng.patch.gz"
+        '0001-fix-build.patch')
+sha256sums=('c918c3113de74a692f0a1526ce881dc26067763eb3915c57ef3a0f7b6886f59b'
+            'SKIP'
+            'a6b79f1027bde510b215042c4375a3e2f9103113393269a5c261048e8d7a30c9'
+            '98adabd33280c16ebf6db68410c09bd2882c1dfef619297b8dc9cdd93eb06c78')
+
+prepare() {
+  cd $pkgname-$pkgver
+
+  # Add animated PNG (apng) support. Required by Firefox
+  # see http://sourceforge.net/projects/libpng-apng/
+  patch -Np1 -i ../libpng-$_apngver-apng.patch
+
+  # fix build
+  patch -Np1 -i ../0001-fix-build.patch
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+  ./configure --prefix=/usr --disable-static
+  make
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make check
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  cd contrib/pngminus
+  make PNGLIB="-L$pkgdir/usr/lib -lpng" -f makefile.std png2pnm pnm2png
+  install -m755 png2pnm pnm2png "$pkgdir/usr/bin/"
+  install -D -m644 ../../LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
