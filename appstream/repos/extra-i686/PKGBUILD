@@ -5,17 +5,17 @@
 
 pkgbase=appstream
 pkgname=(appstream appstream-qt)
-pkgver=0.11.3
+pkgver=0.11.4
 pkgrel=1
 pkgdesc="Provides a standard for creating app stores across distributions"
 arch=(i686 x86_64)
 url="http://distributions.freedesktop.org/wiki/AppStream"
 license=(GPL)
 depends=(libyaml libxml2 libstemmer glib2)
-makedepends=(cmake xmlto gobject-introspection python2 docbook-xsl qt5-base itstool vala)
+makedepends=(meson xmlto gobject-introspection python2 gtk-doc qt5-base itstool vala)
 source=("https://www.freedesktop.org/software/appstream/releases/AppStream-$pkgver.tar.xz"{,.asc}
         update-appstream-index.hook)
-sha256sums=('2095f798086def39027185702d9202a79e5fa9fe9cfc7e837f890b0d50dc15a1'
+sha256sums=('d1458c3266e7a71ac9a80c2412bc3535fcb8e35aac2c7e493ba61c5609e17b09'
             'SKIP'
             'a08b972b31388efe7edfa6db8dbd6909914bb613dd39b608b1764ed040907f82')
 validpgpkeys=(D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB) # Matthias Klumpp <matthias@tenstral.net>
@@ -27,18 +27,17 @@ prepare() {
 build() {
   cd build
 
-  cmake ../AppStream-$pkgver \
-  -DQT=ON \
-  -DVAPI=ON \
-  -DCMAKE_INSTALL_LIBDIR=lib \
-  -DCMAKE_BUILD_TYPE=Release
-  make
+  meson ../AppStream-$pkgver \
+    --prefix=/usr \
+    -Dqt=true \
+    -Dvapi=true
+  ninja
 }
 
 package_appstream() {
   cd build
 
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja install
 
 # provided by -qt subpackage
   rm -r "$pkgdir"/usr/{include/AppStreamQt,lib/cmake,lib/libAppStreamQt.*}
@@ -50,6 +49,9 @@ package_appstream-qt() {
   pkgdesc='Qt5 interface for AppStream'
   depends=(appstream qt5-base)
 
-  cd build/qt
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
+
+# provided by appstream
+  rm -r "$pkgdir"{/etc,/usr/{bin,include/appstream,lib/{girepository-1.0,libappstream*,pkgconfig},share}}
 }
