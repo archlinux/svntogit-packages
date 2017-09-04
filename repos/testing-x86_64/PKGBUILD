@@ -7,8 +7,7 @@
 
 pkgname=glibc
 pkgver=2.26
-pkgrel=1
-_commit=1c9a5c270d8b66f30dcfaf1cb2d6cf39d3e18369
+pkgrel=2
 pkgdesc='GNU C Library'
 arch=(i686 x86_64)
 url='http://www.gnu.org/software/libc'
@@ -22,12 +21,18 @@ backup=(etc/gai.conf
         etc/nscd.conf)
 options=(!strip staticlibs)
 install=glibc.install
+_commit=58270c0049404ef2f878fdd45df55f17f0b8c1f7
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
         locale-gen)
 md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf')
+
+# pkgver() {
+#   cd glibc
+#   git describe --tags | sed 's/^glibc-//;s/-/+/g'
+# }
 
 prepare() {
   mkdir -p glibc-build
@@ -57,7 +62,6 @@ build() {
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-add-ons \
       --enable-bind-now \
-      --enable-kernel=2.6.32 \
       --enable-lock-elision \
       --enable-multi-arch \
       --enable-obsolete-nsl \
