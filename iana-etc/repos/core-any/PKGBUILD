@@ -3,7 +3,7 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=iana-etc
-pkgver=20170512
+pkgver=20170824
 pkgrel=1
 pkgdesc='/etc/protocols and /etc/services provided by IANA'
 url='http://www.iana.org/protocols'
@@ -13,8 +13,8 @@ backup=('etc/'{protocols,services})
 source=('https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml'
         'https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xml'
         'LICENSE')
-sha256sums=('fc4ef2d9dc2616e9981aa7845f33071dc9fd7b4269cc6440e3a52d4149c95d52'
-            'f7a7fd69b66b936cdcba4416066cba8d8e88b6261ba43c2c2fab8cc3c6876825'
+sha256sums=('222bfbe9b4d7834b387a7cfa7223f717be48dc7f1d5eadc79979ef07a743a69a'
+            '5f1868355c828163dbfd61161e4f4050e026a28076fdd9a7c89ac54da7a71abd'
             'dd37e92942d5a4024f1c77df49d61ca77fc6284691814903a741785df61f78cb')
 
 pkgver() {
@@ -30,33 +30,22 @@ package() {
 	install -Dm644 protocol-numbers.xml "${pkgdir}/usr/share/iana-etc/protocol-numbers.iana"
 	install -Dm644 service-names-port-numbers.xml "${pkgdir}/usr/share/iana-etc/port-numbers.iana"
 
-	gawk '
-BEGIN {
-	print "# Full data: /usr/share/iana-etc/protocol-numbers.iana\n"
-	FS="[<>]"
-}
-
-{
-	if (/<record/) { v=n=0 }
-	if (/<value/) v=$3
-	if (/<name/ && !($3~/ /)) n=$3
-	if (/<\/record/ && (v || n=="HOPOPT") && n) printf "%-12s %3i %s\n", tolower(n),v,n
-}
+	gawk -F"[<>]" '
+BEGIN { print "# Full data: /usr/share/iana-etc/protocol-numbers.iana\n" }
+(/<record/) { v=n="" }
+(/<value/) { v=$3 }
+(/<name/ && $3!~/ /) { n=$3 }
+(/<\/record/ && n && v!="") { printf "%-12s %3i %s\n", tolower(n),v,n }
 ' protocol-numbers.xml > "${pkgdir}/etc/protocols"
 
-	gawk '
-BEGIN {
-	print "# Full data: /usr/share/iana-etc/port-numbers.iana\n"
-	FS="[<>]"
-}
-
-{
-	if (/<record/) { n=u=p=c=0 }
-	if (/<name/ && !/\(/) n=$3
-	if (/<number/) u=$3
-	if (/<protocol/) p=$3
-	if (/Unassigned/ || /Reserved/ || /historic/) c=1
-	if (/<\/record/ && n && u && p && !c) printf "%-15s %5i/%s\n", n,u,p
-}' service-names-port-numbers.xml > "${pkgdir}/etc/services"
+	gawk -F"[<>]" '
+BEGIN { print "# Full data: /usr/share/iana-etc/port-numbers.iana\n" }
+(/<record/) { n=u=p=c="" }
+(/<name/ && !/\(/) { n=$3 }
+(/<number/) { u=$3 }
+(/<protocol/) { p=$3 }
+(/Unassigned/ || /Reserved/ || /historic/) { c=1 }
+(/<\/record/ && n && u && p && !c) { printf "%-15s %5i/%s\n", n,u,p }
+' service-names-port-numbers.xml > "${pkgdir}/etc/services"
 
 }
