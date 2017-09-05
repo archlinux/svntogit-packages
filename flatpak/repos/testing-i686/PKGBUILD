@@ -1,0 +1,79 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=flatpak
+pkgver=0.9.10
+pkgrel=1
+pkgdesc="Linux application sandboxing and distribution framework (formerly xdg-app)"
+url="http://flatpak.org"
+arch=(i686 x86_64)
+license=(LGPL2.1)
+depends=(dbus systemd glib2 libsoup polkit libxau ostree fuse json-glib libseccomp libarchive
+         python bubblewrap)
+makedepends=(intltool gobject-introspection gtk-doc git docbook-xsl xmlto)
+checkdepends=(valgrind)
+install=flatpak.install
+replaces=('flatpak<0.9.10')
+_commit=52aab929fb4f261f2d7995190adfad167d76589a  # tags/0.9.10^0
+source=("git+https://github.com/flatpak/flatpak#commit=$_commit"
+        "git+https://github.com/projectatomic/bubblewrap"
+        "git+https://git.gnome.org/browse/libglnx")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP')
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.bubblewrap.url "$srcdir/bubblewrap"
+  git config --local submodule.libglnx.url "$srcdir/libglnx"
+  git submodule update
+
+  # https://github.com/flatpak/flatpak/issues/267
+  sed -i '/locale\/C\./d' tests/make-test-runtime.sh
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+build() {
+  cd $pkgname
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sbindir=/usr/bin \
+    --libexecdir=/usr/lib/$pkgname \
+    --disable-static \
+    --enable-gtk-doc \
+    --with-system-bubblewrap \
+    --with-priv-mode=setuid \
+    --with-dbus-config-dir=/usr/share/dbus-1/system.d
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgname
+  # Xattr tests fail on tmpfs
+  make -k check || :
+}
+
+package() {
+  depends+=(xdg-desktop-portal)
+
+  cd $pkgname
+
+  make DESTDIR="$pkgdir" install
+
+  # Fixup mode to match polkit
+  install -d -o root -g 102 -m 750 "$pkgdir/usr/share/polkit-1/rules.d"
+}
