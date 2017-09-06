@@ -1,0 +1,51 @@
+
+# HG changeset patch
+# User Todd C. Miller <Todd.Miller@courtesan.com>
+# Date 1504722576 21600
+# Node ID 7668f93e6544c762e6753590426ca882c0a373a5
+# Parent  6ee5cc13af69f4248dfa1d89215e7c95fa90d051
+The read and write sides of signal_pipe[] were swapped, resulting
+in EBADF reading from and writing to the signal pipe on Linux and
+probably others.  On systems with bidirectional pipes this was not
+an issue.
+
+diff -r 6ee5cc13af69 -r 7668f93e6544 lib/util/event.c
+--- a/lib/util/event.c	Tue Sep 05 09:30:19 2017 -0600
++++ b/lib/util/event.c	Wed Sep 06 12:29:36 2017 -0600
+@@ -153,7 +153,7 @@
+     }
+     if (nread == -1 && errno != EAGAIN) {
+ 	sudo_debug_printf(SUDO_DEBUG_ERROR|SUDO_DEBUG_LINENO|SUDO_DEBUG_ERRNO,
+-	    "%s: error reading from signal pipe", __func__);
++	    "%s: error reading from signal pipe fd %d", __func__, fd);
+     }
+ 
+     /* Activate signal events. */
+@@ -182,7 +182,7 @@
+ 	    "%s: unable to create signal pipe", __func__);
+ 	goto bad;
+     }
+-    sudo_ev_init(&base->signal_event, base->signal_pipe[1],
++    sudo_ev_init(&base->signal_event, base->signal_pipe[0],
+ 	SUDO_EV_READ|SUDO_EV_PERSIST, signal_pipe_cb, base);
+ 
+     debug_return_int(0);
+@@ -341,7 +341,7 @@
+ 	signal_base->signal_caught = 1;
+ 
+ 	/* Wake up the other end of the pipe. */
+-	ignore_result(write(signal_base->signal_pipe[0], &ch, 1));
++	ignore_result(write(signal_base->signal_pipe[1], &ch, 1));
+     }
+ }
+ 
+@@ -622,7 +622,7 @@
+ 	    if (errno == EINTR) {
+ 		/* Interrupted by signal, check for sigevents. */
+ 		if (base->signal_caught) {
+-		    signal_pipe_cb(base->signal_pipe[1], SUDO_EV_READ, base);
++		    signal_pipe_cb(base->signal_pipe[0], SUDO_EV_READ, base);
+ 		    break;
+ 		}
+ 		continue;
+
