@@ -7,7 +7,7 @@
 
 pkgname=glibc
 pkgver=2.26
-pkgrel=2
+pkgrel=3
 pkgdesc='GNU C Library'
 arch=(i686 x86_64)
 url='http://www.gnu.org/software/libc'
@@ -24,10 +24,12 @@ install=glibc.install
 _commit=58270c0049404ef2f878fdd45df55f17f0b8c1f7
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
-        locale-gen)
+        locale-gen
+        0001-Don-t-use-IFUNC-resolver-for-longjmp-or-system-in-li.patch)
 md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
-         '476e9113489f93b348b21e144b6a8fcf')
+         '476e9113489f93b348b21e144b6a8fcf'
+         'cbc073315c00b03898b7fc614274d6b3')
 
 # pkgver() {
 #   cd glibc
@@ -36,6 +38,9 @@ md5sums=('SKIP'
 
 prepare() {
   mkdir -p glibc-build
+
+  cd glibc
+  patch -p1 -i "$srcdir/0001-Don-t-use-IFUNC-resolver-for-longjmp-or-system-in-li.patch"
 }
 
 build() {
