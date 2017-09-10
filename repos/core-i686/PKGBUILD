@@ -218,7 +218,7 @@ package_gcc() {
   make -C $CHOST/libstdc++-v3/doc DESTDIR="$pkgdir" doc-install-man
 
   # Install Runtime Library Exception
-  install -d "$pkgdir/usr/share/licenses/gcc/"
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
   ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
@@ -237,7 +237,7 @@ package_gcc-fortran() {
   ln -s gfortran "$pkgdir/usr/bin/f95"
 
   # Install Runtime Library Exception
-  install -d "$pkgdir/usr/share/licenses/gcc/"
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
   ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
@@ -252,7 +252,7 @@ package_gcc-objc() {
   install -m755 gcc/cc1obj{,plus} "$pkgdir/${_libdir}/"
 
   # Install Runtime Library Exception
-  install -d "$pkgdir/usr/share/licenses/gcc/"
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
   ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
@@ -275,7 +275,7 @@ package_gcc-ada() {
   rm -f "$pkgdir"/${_libdir}/adalib/libgna{rl,t}.so
 
   # Install Runtime Library Exception
-  install -d "$pkgdir/usr/share/licenses/gcc/"
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
   ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
@@ -283,6 +283,7 @@ package_gcc-ada() {
 package_gcc-go() {
   pkgdesc='Go front-end for GCC'
   depends=("gcc=$pkgver-$pkgrel")
+  provides=("go=1.8.1")
   conflicts=(go)
 
   cd gcc-build
@@ -294,7 +295,7 @@ package_gcc-go() {
   install -Dm755 gcc/go1 "$pkgdir/${_libdir}/go1"
 
   # Install Runtime Library Exception
-  install -d "$pkgdir/usr/share/licenses/gcc/"
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
   ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
