@@ -14,7 +14,7 @@ makedepends=('python-setuptools')
 checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-base' 'git' 'gnustep-base'
               'cython' 'gtkmm3' 'gtest' 'gmock' 'protobuf' 'wxgtk' 'python-gobject' 'gobject-introspection'
               'itstool' 'gtk3' 'valgrind' 'java-environment>=8' 'gtk-doc' 'llvm' 'clang' 'sdl2'
-              'doxygen' 'vulkan-validation-layers' 'openmpi' 'mercurial')
+              'doxygen' 'vulkan-validation-layers' 'openmpi' 'openssh' 'mercurial')
 checkdepends_x86_64=('ldc')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc})
 sha512sums=('f9982a19160c51c53741a65a48432896799be90c2d99941a45a14c3fcc14df3469808b75d905e1ac81221b057400913e7ae0f7d24e6865d8f1e664e1686aecb4'
@@ -29,10 +29,10 @@ build() {
 check() {
   cd ${pkgname}-${pkgver}
   unset CLASSPATH  # GNUstep breaks java tests
+  LDFLAGS="${LDFLAGS/,--as-needed/}" # --as-needed breaks openmpi linking
   # export MESON_PRINT_TEST_OUTPUT=1 # set this for debug output
   # graphviz: Installing breaks doxygen tests
-  # openmpi: Tests fail due to our CFLAGS?
-  LC_CTYPE=en_US.UTF-8 DC=ldc ./run_tests.py || :
+  LC_CTYPE=en_US.UTF-8 DC=ldc ./run_tests.py
 }
 
 package() {
