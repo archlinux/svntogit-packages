@@ -3,18 +3,22 @@
 # Contributor: Roman Kyrylych <roman@archlinux.org>
 
 pkgname=gnome-bluetooth
-pkgver=3.20.1+1+ge902d1a
+pkgver=3.26.0+1+g3875844
 pkgrel=1
 pkgdesc="The GNOME Bluetooth Subsystem"
 url="https://wiki.gnome.org/Projects/GnomeBluetooth"
 arch=(i686 x86_64)
 license=(GPL LGPL)
 depends=(gtk3 libnotify bluez libcanberra libsystemd pulseaudio-bluetooth)
-makedepends=(intltool gobject-introspection itstool docbook-xsl gnome-common git systemd)
-_commit=e902d1aca835bfc823e5e4cf2b37f5444d606042  # master
+makedepends=(gobject-introspection gtk-doc docbook-xsl git systemd meson)
+_commit=3875844ce772224d6fdafc71482861a31662e64d  # master
 source=("git+https://git.gnome.org/browse/gnome-bluetooth#commit=$_commit"
+        0001-meson-Remove-duplicate-and-or-unused-defines-from-se.patch
+        0002-meson-Fix-installing-the-icons.patch
         61-gnome-bluetooth-rfkill.rules)
 sha256sums=('SKIP'
+            '327d8b07c76fbf7c752eace757440a657d79a56b1fd0097e408bf6ca4c2192b7'
+            '1603ba04936f69627a562b3a69db3c73b2ebc0208eca9e52434e3e17fad57c58'
             '8dd2d3637f380a89e72f65e6c8021e994ccbdc645f1a1b1dbffe74ac9f061f53')
 
 pkgver() {
@@ -23,30 +27,26 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  git apply -3 ../0001-meson-Remove-duplicate-and-or-unused-defines-from-se.patch
+  git apply -3 ../0002-meson-Fix-installing-the-icons.patch
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --enable-gtk-doc \
-    --disable-desktop-update \
-    --disable-icon-update \
-    --disable-schemas-compile
+  cd build
+  meson setup --prefix=/usr --buildtype=release ../$pkgname \
+    -Denable-gtk-doc=true -Denable-icon-update=false
+  ninja
+}
 
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+check() {
+  cd build
+  meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
-
-  install -m644 -D ../61-gnome-bluetooth-rfkill.rules \
-      "$pkgdir/usr/lib/udev/rules.d//61-gnome-bluetooth-rfkill.rules"
+  cd build
+  DESTDIR="$pkgdir" ninja install
+  install -Dt "$pkgdir/usr/lib/udev/rules.d" -m644 ../61-gnome-bluetooth-rfkill.rules
 }
