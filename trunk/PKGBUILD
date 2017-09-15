@@ -3,18 +3,24 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=geocode-glib
-pkgver=3.24.0
+pkgver=3.25.4.1
 pkgrel=1
 pkgdesc="Helper library for geocoding services"
 url="https://git.gnome.org/browse/geocode-glib/"
 arch=(i686 x86_64)
 license=(LGPL)
 depends=(glib2 json-glib libsoup)
-makedepends=(intltool gobject-introspection git gtk-doc autoconf-archive)
+makedepends=(intltool gobject-introspection git gtk-doc meson)
 options=(!emptydirs)
-_commit=aa513ab2a33039382023f3dbffea2604ad5af0f3  # tags/3.24.0^0
+_commit=a811227fce460f3ac319f689ff927ab37427b84b  # tags/3.25.4.1^0
 source=("git+https://git.gnome.org/browse/geocode-glib#commit=$_commit")
 sha256sums=('SKIP')
+
+check() {
+  cd build
+  # Needs sv_SE.utf8, will not pass in chroot
+  #meson test
+}
 
 pkgver() {
   cd $pkgname
@@ -22,19 +28,19 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  sed -i 's/gnome/Adwaita/g' icons/Makefile.am
-  NOCONFIGURE=1 ./autogen.sh
+  sed -i 's/gnome/Adwaita/' icons/meson.build
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --enable-gtk-doc --disable-Werror
-  make
+  cd build
+  meson setup --prefix=/usr --buildtype=release -Denable-installed-tests=false ../$pkgname
+  ninja
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
 
