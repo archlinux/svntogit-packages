@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=bijiben
+pkgver=3.26.0
+pkgrel=1
+pkgdesc="Write out notes, every detail matters"
+url="https://wiki.gnome.org/Apps/Bijiben"
+arch=(i686 x86_64)
+license=(GPL)
+depends=(tracker webkit2gtk gnome-online-accounts evolution-data-server)
+makedepends=(intltool itstool evolution python appstream-glib yelp-tools autoconf-archive git)
+groups=(gnome-extra)
+_commit=a431b4d221792c334256362f6337d6ec9eef7cf4  # tags/BIJIBEN_3_26_0^0
+source=("git+https://git.gnome.org/browse/bijiben#commit=$_commit"
+        "git+https://git.gnome.org/browse/libgd")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^BIJIBEN_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  sed -i 's/tracker-sparql-1.0/tracker-sparql-2.0/g' configure.ac
+
+  git submodule init
+  git config --local submodule.libgd.url "$srcdir/libgd"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib/$pkgname \
+    --disable-update-mimedb \
+    --enable-compile-warnings
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
