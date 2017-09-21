@@ -9,7 +9,7 @@ pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go)
 pkgver=7.2.0
 _pkgver=${pkgver:0:1}
 _islver=0.18
-pkgrel=2
+pkgrel=3
 pkgdesc='The GNU Compiler Collection'
 arch=(i686 x86_64)
 license=(GPL LGPL FDL custom)
@@ -21,12 +21,14 @@ _commit=1bd23ca8c30f4827c4bea23deedf7ca33a86ffb5
 source=(git+https://gcc.gnu.org/git/gcc.git#commit=${_commit}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
         c89 c99
-        Revert-eeb6872bf.patch)
+        Revert-eeb6872bf.patch
+        PR82155.patch)
 md5sums=('SKIP'
          '11436d6b205e516635b666090b94ab32'
          '3d333df77302ed89e06a4a8539943b7d'
          'da96f545b863e57c6ab2598c1ea9a740'
-         'e4c9c8b498b04c0f51d219d025ca8407')
+         'e4c9c8b498b04c0f51d219d025ca8407'
+         'e77419f7d25aad0980c765012dc8c417')
 
 _libdir=usr/lib/gcc/$CHOST/$pkgver
 
@@ -47,6 +49,9 @@ prepare() {
 
   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80717
   git apply ../Revert-eeb6872bf.patch
+
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82155
+  patch -p1 -i ../PR82155.patch
 
   mkdir -p "$srcdir/gcc-build"
 }
