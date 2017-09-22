@@ -44,7 +44,7 @@ get_default_java() {
 get_installed_javas() {
   if [ -d ${JVM_DIR} ]; then
     for dir in $(find ${JVM_DIR} -mindepth 1 -maxdepth 1 -type d | sort); do
-      if [ -x ${dir}/bin/javac ]; then
+      if [ -x ${dir}/bin/java ]; then
         javas+=(${dir/${JVM_DIR}\/})
       else
         if [ -x ${dir}/jre/bin/java ]; then
@@ -68,10 +68,10 @@ set_default_link_to() {
   ln -sf ${new_default} ${DEFAULT_PATH}
 
   unlink ${DEFAULT_PATH_JRE} 2>/dev/null
-  if [[ ${new_default} == */jre ]]; then
-    ln -sf ${new_default} ${DEFAULT_PATH_JRE}
-  else
+  if [[ -d ${new_default}/jre ]]; then
     ln -sf ${new_default}/jre ${DEFAULT_PATH_JRE}
+  else
+    ln -sf ${new_default} ${DEFAULT_PATH_JRE}
   fi
 }
 
@@ -90,6 +90,7 @@ do_status() {
     default_java=$(get_default_java)
     echo 'Available Java environments:'
     for java in ${installed_java[@]}; do
+      # We discoverd this Java env but its JRE is actually set as default
       if [ "${java}/jre" = "${default_java}" ]; then
         echo -e "  ${java} (${java}/jre default)"
       elif [ ${java} = "${default_java}" ]; then
@@ -135,6 +136,7 @@ do_unset() {
 do_fix() {
   default=$(get_default_java)
   if is_java_valid ${default}; then
+    # If its parent is also a valid Java environment
     if is_java_valid $(dirname ${default}); then
       unset_default_link
       set_default_link_to $(dirname ${default})
@@ -142,9 +144,13 @@ do_fix() {
   else
     prev=$(readlink ${DEFAULT_PATH})
     unset_default_link
-    prev_fix=("${prev/\/jre}" "${prev}/jre")
-    openjdk7=('java-7-openjdk' 'java-7-openjdk/jre')
-    to_check=(${prev_fix[@]} ${openjdk7[@]} $(get_installed_javas))
+    potential_fixes=("${prev/\/jre}" "${prev}/jre")
+    openjdk8=('java-8-openjdk' 'java-8-openjdk/jre')
+    # List of environments to check by order of preference:
+    # - first potential fixes of user choices,
+    # - then OpenJDK8 as it is considered a default in Arch Linux
+    # - finally, any installed environment
+    to_check=(${potential_fixes[@]} ${openjdk8[@]} $(get_installed_javas))
     for java in ${to_check[@]}; do
       if ! is_java_valid $(get_default_java) && is_java_valid ${java}; then
         set_default_link_to ${java}
