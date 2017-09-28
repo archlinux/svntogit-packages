@@ -16,9 +16,11 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-b
               'itstool' 'gtk3' 'valgrind' 'java-environment>=8' 'gtk-doc' 'llvm' 'clang' 'sdl2'
               'doxygen' 'vulkan-validation-layers' 'openmpi' 'openssh' 'mercurial')
 checkdepends_x86_64=('ldc')
-source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc})
+source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
+        arch-meson)
 sha512sums=('f9982a19160c51c53741a65a48432896799be90c2d99941a45a14c3fcc14df3469808b75d905e1ac81221b057400913e7ae0f7d24e6865d8f1e664e1686aecb4'
-            'SKIP')
+            'SKIP'
+            '0445d5d913a3962db94c63bdc7ed2afad064aa0184f73382887300f77c9c0fb39fcd7a26c3108cbf7a6988e3ed064fd2295c0d7e6e90aae420a80773ce6399ec')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
 build() {
@@ -41,6 +43,9 @@ package() {
   install -Dm 644 syntax-highlighting/vim/ftdetect/meson.vim -t "${pkgdir}/usr/share/vim/vimfiles/ftdetect"
   install -Dm 644 syntax-highlighting/vim/indent/meson.vim -t "${pkgdir}/usr/share/vim/vimfiles/indent"
   install -Dm 644 syntax-highlighting/vim/syntax/meson.vim -t "${pkgdir}/usr/share/vim/vimfiles/syntax"
+
+  # Arch packaging helper
+  install -D ../arch-meson -t "${pkgdir}/usr/bin"
 }
 
 # vim: ts=2 sw=2 et:
