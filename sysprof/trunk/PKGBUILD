@@ -1,33 +1,47 @@
 # $Id$
-# Maintainer: Sergej Pupykin <pupykin.s+arch@gmail.com>
-# Maintainer: Geoffroy Carrier <geoffroy.carrier@aur.archlinux.org>
-# Previous Contributor: Eric Belanger <belanger@astro.umontreal.ca>
-# Previous Contributor: aeolist <aeolist@hotmail.com>
-# Previous Contributor: Gabriel Rauter <rauter.gabriel@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Geoffroy Carrier <geoffroy.carrier@aur.archlinux.org>
+# Contributor: Eric Belanger <belanger@astro.umontreal.ca>
+# Contributor: aeolist <aeolist@hotmail.com>
+# Contributor: Gabriel Rauter <rauter.gabriel@gmail.com>
 
 pkgname=sysprof
-pkgver=3.24.0
+pkgver=3.26.0+1+g9077226
 pkgrel=1
-pkgdesc="a profiling tool that helps in finding the functions in which a program uses most of its time"
-arch=('i686' 'x86_64')
-url="http://www.daimi.au.dk/~sandmann/sysprof/"
-license=("GPL")
-source=(https://download.gnome.org/sources/sysprof/${pkgver%.*}/$pkgname-$pkgver.tar.xz)
-depends=('gtk3' 'glib2' 'polkit')
-makedepends=('gtk3' 'glib2' 'systemd' 'itstool')
-sha256sums=('589c71573865f49aa27bbf3eb92d8089205dc48c3bcab451a619f4a99489b4ac')
+pkgdesc="Kernel based performance profiler"
+url="https://wiki.gnome.org/Apps/Sysprof"
+license=(GPL)
+arch=(i686 x86_64)
+depends=(gtk3 polkit)
+makedepends=(itstool git meson)
+_commit=9077226cbec0274655b9a4f492ec87f82a76617b  # sysprof-3-26
+source=("git+https://git.gnome.org/browse/sysprof#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^sysprof-//;s/-/+/g'
+}
+
+prepare() {
+  mkdir build
+  cd $pkgname
+}
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/usr/lib \
-    --libexecdir=/usr/lib/ \
-    --disable-Werror
-  make
+  cd build
+  meson setup --prefix=/usr --buildtype=release ../$pkgname \
+    --libexecdir=/usr/lib
+  ninja
+}
+
+check() {
+  cd build
+  meson test
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
