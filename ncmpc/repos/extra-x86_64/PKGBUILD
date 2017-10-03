@@ -6,7 +6,7 @@
 # Contributor: Daniel Bainton <dpb [at] backarrow.org>
 
 pkgname=ncmpc
-pkgver=0.27
+pkgver=0.28
 pkgrel=1
 pkgdesc='Fully featured MPD client using ncurses'
 url='https://www.musicpd.org/clients/ncmpc/'
@@ -15,23 +15,26 @@ license=('GPL')
 depends=('ncurses' 'glib2' 'libmpdclient=2.11')
 optdepends=('python2: to enable lyrics plugin'
             'ruby: to enable lyrics plugin')
+makedepends=('meson')
 validpgpkeys=('0392335A78083894A4301C43236E8A58C6DB4512')
 source=("https://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig})
-sha256sums=('f9a26a3fc869cfdf0a16b0ea3e6512c2fe28a031bbc71b1d24a2bf0bbd3e15d9'
+sha256sums=('f66e5b6fef83bdfda3b3efaf3fbad6a4d8c47bb1b3b6810bed44d3e35b007804'
             'SKIP')
 
-build() {
+prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-	./configure \
-		--prefix=/usr \
-		--sysconfdir=/etc \
-		--enable-lyrics-screen \
-		--with-lyrics-plugin-dir=/usr/share/ncmpc/lyrics
-	make
+	sed "s/curses == 'ncursesw'/false/g" -i meson.build
+	rm -fr build
+	install -d build
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}/build"
+	arch-meson .. -Dlyrics_screen=true
+	ninja
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make DESTDIR="${pkgdir}" install
-	for i in lyrics/*; do install -Dm755 "$i" "${pkgdir}/usr/share/ncmpc/$i"; done
+	cd "${srcdir}/${pkgname}-${pkgver}/build"
+	DESTDIR="${pkgdir}" ninja install
 }
