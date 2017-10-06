@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=3.24.3
+pkgver=3.26.1
 pkgrel=1
 pkgdesc="The next generation GNOME Shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -12,13 +12,12 @@ license=(GPL2)
 depends=(accountsservice caribou gcr gjs gnome-bluetooth gnome-menus upower
          gnome-session gnome-settings-daemon gnome-themes-standard gsettings-desktop-schemas
          libcanberra-pulse libcroco libgdm libsecret mutter nm-connection-editor
-         telepathy-logger telepathy-mission-control unzip gstreamer)
-makedepends=(intltool gtk-doc gnome-control-center evolution-data-server python
-             gobject-introspection git gnome-common)
+         unzip gstreamer)
+makedepends=(gtk-doc gnome-control-center evolution-data-server gobject-introspection git meson)
 optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
-_commit=ecea0218f2d32841c32cd94dc586b78a99bfd60d  # tags/3.24.3^0
+_commit=bf2a824fd123ee8b9011bf2f1110ff445d5ee480  # tags/3.26.1^0
 source=("git+https://git.gnome.org/browse/gnome-shell#commit=$_commit"
         "git+https://git.gnome.org/browse/libgnome-volume-control"
         "git+https://git.gnome.org/browse/gnome-shell-sass"
@@ -34,36 +33,30 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
+
+  # FS#30747 FS#32730 Problems due to libexecdir different from NM
+  patch -Np1 -i ../nm-libexecdir.patch
+
+  # Move the plugin to our custom epihpany-only dir
+  sed -i "s/'mozilla'/'epiphany'/g" meson.build
 
   git submodule init
   git config --local submodule.src/gvc.url "$srcdir/libgnome-volume-control"
   git config --local submodule.data/theme/gnome-shell-sass.url "$srcdir/gnome-shell-sass"
   git submodule update
-
-  # FS#30747 FS#32730 Problems due to libexecdir different from NM
-  patch -Np1 -i ../nm-libexecdir.patch
-
-  NOCONFIGURE=1 ./autogen.sh
 }
   
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc \
-      --libexecdir=/usr/lib/gnome-shell \
-      --localstatedir=/var --disable-static \
-      --disable-schemas-compile --enable-gtk-doc \
-      BROWSER_PLUGIN_DIR=/usr/lib/epiphany/plugins
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  cd build
+  arch-meson ../$pkgname -Denable-documentation=true
+  ninja
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 
   # Must exist; FS#37412
   mkdir "$pkgdir/usr/share/gnome-shell/modes"
