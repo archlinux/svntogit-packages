@@ -2,38 +2,43 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=at-spi2-core
-pkgver=2.24.1
-pkgrel=1
+pkgver=2.26.0
+pkgrel=2
 pkgdesc="Protocol definitions and daemon for D-Bus at-spi"
-arch=('i686' 'x86_64')
-url="http://www.gnome.org"
-license=('GPL2')
-depends=('dbus' 'glib2' 'libxtst')
-makedepends=('intltool' 'gobject-introspection' 'git' 'gtk-doc')
-_commit=e2e67483240533643d19e2b1604ebcb9ec12f0ee  # tags/AT_SPI2_CORE_2_24_1^0
-source=("git+https://git.gnome.org/browse/at-spi2-core#commit=$_commit")
-sha256sums=('SKIP')
+url="https://git.gnome.org/browse/at-spi2-core"
+arch=(i686 x86_64)
+license=(GPL2)
+depends=(dbus glib2 libxtst)
+makedepends=(intltool gobject-introspection git gtk-doc meson)
+_commit=ff911c5dcb5553605b7fa83cae5494de1407ce33  # tags/AT_SPI2_CORE_2_26_0^0
+source=("git+https://git.gnome.org/browse/at-spi2-core#commit=$_commit"
+        0001-meson-Actually-use-the-soversion.patch)
+sha256sums=('SKIP'
+            '36f67a3a20bdb63f3ee2199634962a7e93f323d481f8da5801f3ad2a533a9d8e')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed -e 's/AT_SPI2_CORE_//' -e 's/_/\./g' -e 's/-/+/g'
+  git describe --tags | sed 's/^AT_SPI2_CORE_//;s/_/./g;s/-/+/g'
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  git apply -3 ../0001-meson-Actually-use-the-soversion.patch
 }
   
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc \
-    --libexecdir=/usr/lib/at-spi2-core --disable-xevie --enable-gtk-doc
-  make
+  cd build
+  meson setup --prefix=/usr --buildtype=release ../$pkgname \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/lib/$pkgname \
+    -Denable_docs=true
+  ninja
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
 
 # vim:set ts=2 sw=2 et:
