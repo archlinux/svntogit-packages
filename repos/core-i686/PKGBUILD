@@ -3,22 +3,32 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.52.3
+pkgver=2.54.1
 pkgrel=1
 pkgdesc="Low level core library"
-url="http://www.gtk.org/"
+url="https://wiki.gnome.org/Projects/GLib"
+license=(LGPL2.1)
 arch=(i686 x86_64)
-makedepends=(gettext gtk-doc libffi pcre zlib shared-mime-info python libelf git util-linux)
+depends=(pcre libffi libutil-linux)
+makedepends=(gettext gtk-doc zlib shared-mime-info python libelf git util-linux meson)
 checkdepends=(desktop-file-utils dbus)
-_commit=90bb8778f2eabf00bee5bff1259c48f1e7b791b8  # tags/2.52.3^0
+optdepends=('python: for gdbus-codegen and gtester-report'
+            'libelf: gresource inspection tool')
+options=(!emptydirs)
+_commit=5fc5a3eaa6fc2ab23a3585cf22799adae642afa7  # tags/2.54.1^0
 source=("git+https://git.gnome.org/browse/glib#commit=$_commit"
-        glib-compile-schemas.hook
-        gio-querymodules.hook
-        skip-broken-timer-test.patch)
+        0001-docs-Fix-building-with-meson.patch
+        0001-meson-Fix-permissions-of-installed-scripts.patch
+        libs.diff
+        noisy-glib-compile-schemas.diff
+        glib-compile-schemas.hook gio-querymodules.hook)
 sha256sums=('SKIP'
+            '8b289f3e1a5a3b29d310d45610468199acfe6f2b38a0d1be38c9224437a0e40c'
+            '12b1a2f4e304e4c03e48ae9564d73ae38619bbb7711a013138939ff8e5cc2327'
+            '05cce54fa4a728e2f0db45326ba3d4f303c2cc4d0cc68506e338906ad17ea7f0'
+            '81a4df0b638730cffb7fa263c04841f7ca6b9c9578ee5045db6f30ff0c3fc531'
             'e1123a5d85d2445faac33f6dae1085fdd620d83279a4e130a83fe38db52b62b3'
-            '5ba204a2686304b1454d401a39a9d27d09dd25e4529664e3fd565be3d439f8b6'
-            'a39dc8c1c1707053d565d5b198b1f03f7c55b31e11335a1bfdc3f9803b114d5d')
+            '5ba204a2686304b1454d401a39a9d27d09dd25e4529664e3fd565be3d439f8b6')
 
 pkgver() {
   cd glib
@@ -26,60 +36,49 @@ pkgver() {
 }
 
 prepare() {
+  mkdir -p build glib2-docs/usr/share
   cd glib
-  git revert -n 6560b37450cd  # Noisy glib-compile-schemas
 
-  # Rounding error in timer tests?
-  # GLib:ERROR:timer.c:38:test_timer_basic: assertion failed (micros == ((guint64)(elapsed * 1e6)) % 1000000): (1 == 0)
-  [[ $CARCH == i686 ]] && patch -Np1 -i ../skip-broken-timer-test.patch
+  # https://bugzilla.gnome.org/show_bug.cgi?id=786796
+  patch -Np1 -i ../0001-docs-Fix-building-with-meson.patch
 
-  NOCONFIGURE=1 ./autogen.sh
+  # https://bugzilla.gnome.org/show_bug.cgi?id=787671
+  patch -Np1 -i ../0001-meson-Fix-permissions-of-installed-scripts.patch
+
+  # Unbreak .pc files when built with meson
+  # Fix gdb scripts install
+  patch -Np1 -i ../libs.diff
+
+  # Suppress noise from glib-compile-schemas.hook
+  patch -Np1 -i ../noisy-glib-compile-schemas.diff
 }
 
 build() {
-  cd glib
-  ./configure --prefix=/usr --libdir=/usr/lib \
-      --sysconfdir=/etc \
-      --with-pcre=system \
-      --disable-fam \
-      --enable-gtk-doc \
-      $(check_option debug y && echo --enable-debug=yes)
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  cd build
+  arch-meson ../glib
+  ninja
 }
 
 check() {
-  cd glib
-  make check
+  cd build
+  meson test -t 2
 }
 
 package_glib2() {
-  depends=(pcre libffi libutil-linux)
-  optdepends=('python: for gdbus-codegen and gtester-report'
-              'libelf: gresource inspection tool')
-  options=(!emptydirs)
-  license=(LGPL)
-
-  cd glib
-  make DESTDIR="$pkgdir" install
-  rm -r "$pkgdir/usr/share/gtk-doc"
+  cd build
+  DESTDIR="$pkgdir" ninja install
+  mv "$pkgdir/usr/share/gtk-doc" "$srcdir/glib2-docs/usr/share"
 
   # install hooks
-  install -d "$pkgdir/usr/share/libalpm/hooks/"
-  install -m644 "$srcdir"/{glib-compile-schemas,gio-querymodules}.hook \
-    "$pkgdir/usr/share/libalpm/hooks/"
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 ../*.hook
 }
 
 package_glib2-docs() {
-  pkgdesc="Documentation for glib2"
-  conflicts=(gobject2-docs)
-  replaces=(gobject2-docs)
-  license=(custom)
-  options=(!emptydirs)
+  pkgdesc="Documentation for GLib"
+  depends=()
+  optdepends=()
+  license+=(custom)
 
-  cd glib/docs
-  make DESTDIR="$pkgdir" install
-  rm -r "$pkgdir/usr/share/man"
-
-  install -Dm644 reference/COPYING "$pkgdir/usr/share/licenses/glib2-docs/COPYING"
+  mv glib2-docs/* "$pkgdir"
+  install -Dt "$pkgdir/usr/share/licenses/glib2-docs" -m644 glib/docs/reference/COPYING
 }
