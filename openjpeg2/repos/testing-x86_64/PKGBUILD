@@ -1,0 +1,58 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+
+pkgname=openjpeg2
+pkgver=2.3.0
+pkgrel=1
+pkgdesc="An open source JPEG 2000 codec, version ${pkgver}"
+arch=(i686 x86_64)
+license=('custom: BSD')
+#url="http://www.openjpeg.org"
+url="https://github.com/uclouvain/openjpeg"
+makedepends=('cmake' 'doxygen')
+             #'fcgi' 'xerces2-java')
+depends=('zlib' 'libpng' 'libtiff' 'lcms2')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/uclouvain/openjpeg/archive/v$pkgver.tar.gz")
+sha256sums=('3dc787c1bb6023ba846c2a0d9b1f6e179f1cd255172bde9eb75b01f1e6c7d71a')
+
+prepare() {
+  cd ${srcdir}
+  mkdir build
+  # remove thirdparty libs
+  sed -i '/add_subdirectory(thirdparty)/d' openjpeg-${pkgver}/CMakeLists.txt
+  # Install doxygen docs to the right directory
+  sed -i -e "s:DESTINATION\ share/doc:DESTINATION\ share/doc/${pkgname}:" openjpeg-${pkgver}/doc/CMakeLists.txt
+}
+
+build() {
+  cd "${srcdir}/build"
+
+  # CMAKE flags
+  # MJ2 executables: '-DBUILD_MJ2:bool=on' (default: 'OFF')
+  # JPWL executables and JPWL library: '-DBUILD_JPWL:bool=on' (default: 'OFF')
+  # JPIP client (java compiler recommended) library and executables: '-DBUILD_JPIP:bool=on' (default: 'OFF')
+  # JPIP server (need fcgi) library and executables: '-DBUILD_JPIP_SERVER:bool=on' (default: 'OFF')
+
+  cmake "../openjpeg-${pkgver}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_DOC=on
+
+#    -DBUILD_MJ2=ON \
+#    -DBUILD_JPWL=ON \
+#    -DBUILD_JPIP=ON \
+#    -DBUILD_JPIP_SERVER=ON \
+#    -DBUILD_JP3D=ON # --help -LAH
+
+  make
+}
+
+package() {
+  cd "${srcdir}/build"
+  make DESTDIR="${pkgdir}" install
+  
+  install -m755 -d "${pkgdir}/usr/share/licenses/openjpeg2"
+  mv ${pkgdir}/usr/share/doc/openjpeg-*/LICENSE ${pkgdir}/usr/share/licenses/openjpeg2
+  rmdir ${pkgdir}/usr/share/doc/openjpeg-*
+}
