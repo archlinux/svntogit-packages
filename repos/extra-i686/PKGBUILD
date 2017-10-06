@@ -3,76 +3,52 @@
 # Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
-pkgbase=tracker
-pkgname=(tracker libtracker-sparql)
-pkgver=1.12.3
+pkgname=tracker
+pkgver=2.0.1
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
 arch=(i686 x86_64)
 license=(GPL)
-makedepends=(libsecret upower libexif exempi poppler-glib libgsf icu enca libnm-glib
-             gtk3 gobject-introspection intltool giflib gst-plugins-base-libs totem-plparser taglib libsoup json-glib
-             libvorbis flac vala libgxps libnautilus-extension libxslt libiptcdata
-             libosinfo libcue libstemmer git gtk-doc libgrss libseccomp)
-_commit=c756218387e1df2590a50b8ba93ecd19f9d5cf7d  # tags/1.12.3^0
-options=(!emptydirs)
+depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp libsoup json-glib upower libnm)
+makedepends=(python2 gobject-introspection intltool vala git gtk-doc bash-completion)
+groups=(gnome)
+_commit=3096d13c3e47b4ff5d8ac0cfffcd19444556350e  # tags/2.0.1^0
 source=("git+https://git.gnome.org/browse/tracker#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgbase
+  cd $pkgname
   git describe --tags | sed 's/-/+/g'
 }
 
 prepare() {
-  cd $pkgbase
+  cd $pkgname
   NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgbase
-
+  cd $pkgname
   ./configure \
     --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
-    --libexecdir=/usr/lib/tracker \
-    --disable-libmediaart \
-    --disable-unit-tests \
-    --disable-miner-user-guides \
-    --enable-libflac \
-    --enable-libvorbis \
+    --libexecdir=/usr/lib/$pkgname \
+    --enable-unit-tests \
+    --enable-functional-tests \
     --enable-gtk-doc
-
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
-package_tracker() {
-  depends=("libtracker-sparql=$pkgver-$pkgrel" libsecret
-           upower libexif exempi poppler-glib libgsf enca libiptcdata libcue libosinfo
-           libnm-glib gtk3 libgxps taglib flac libvorbis totem-plparser
-           gst-plugins-base-libs giflib libgrss gvfs)
-  optdepends=("nautilus: edit files' tracker tags")
-  groups=('gnome')
-
-  cd $pkgbase
-  make DESTDIR="$pkgdir" install
-
-  make DESTDIR="$pkgdir" -C src/libtracker-sparql uninstall
-  make DESTDIR="$pkgdir" -C src/libtracker-sparql-backend uninstall
-  make DESTDIR="$pkgdir" -C src/libtracker-data uninstall-libtracker_dataLTLIBRARIES
-  make DESTDIR="$pkgdir" -C src/libtracker-common uninstall-libtracker_commonLTLIBRARIES
+check() {
+  cd $pkgname
+  # Some tests only work with the schemas installed
+  dbus-run-session make -k check || :
 }
 
-package_libtracker-sparql() {
-  pkgdesc="$pkgdesc (SPARQL library)"
-  depends=(sqlite icu glib2 libffi pcre util-linux libstemmer libseccomp libsoup json-glib)
-
-  cd $pkgbase
-  make DESTDIR="$pkgdir" -C src/libtracker-common install-libtracker_commonLTLIBRARIES
-  make DESTDIR="$pkgdir" -C src/libtracker-data install-libtracker_dataLTLIBRARIES
-  make DESTDIR="$pkgdir" -C src/libtracker-sparql install
-  make DESTDIR="$pkgdir" -C src/libtracker-sparql-backend install
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir/usr/share/tracker-tests"
 }
