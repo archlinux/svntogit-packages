@@ -2,17 +2,17 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=epiphany
-pkgver=3.24.3
+pkgver=3.26.1
 pkgrel=1
 pkgdesc="A GNOME web browser based on the WebKit rendering engine"
 url="https://wiki.gnome.org/Apps/Web"
 arch=(i686 x86_64)
 license=(GPL)
 depends=(webkit2gtk gcr gnome-desktop icu)
-makedepends=(intltool itstool docbook-xml startup-notification lsb-release
-             gobject-introspection yelp-tools autoconf-archive appstream-glib git)
+makedepends=(itstool docbook-xml startup-notification lsb-release
+             gobject-introspection yelp-tools appstream-glib git meson)
 groups=(gnome)
-_commit=43489a7d54b89a45709fadd6a90d0e99cf0dc45d  # tags/3.24.3^0
+_commit=70755404799e4393bf5605c9debec6877acf0177  # tags/3.26.1^0
 source=("git+https://git.gnome.org/browse/epiphany#commit=$_commit"
         "git+https://git.gnome.org/browse/libgd"
         "git+https://git.gnome.org/browse/gvdb"
@@ -20,7 +20,7 @@ source=("git+https://git.gnome.org/browse/epiphany#commit=$_commit"
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
-            '3bbd4b36e697a3a9165e0b71d5af566fe96a8f1237d854b9dee9a7e0b9fef8e3')
+            '0e4db79fe22a4ed447aa926eecd09fc660cf2f5aac2d42aa9adaacad45416faf')
 
 pkgver() {
   cd $pkgname
@@ -28,7 +28,9 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
+
   patch -Np1 -i ../pluginsdir.diff
 
   git submodule init
@@ -36,21 +38,15 @@ prepare() {
   git config --local submodule.gvdb.url "$srcdir/gvdb"
   git submodule update
 
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc \
-      --localstatedir=/var --libexecdir=/usr/lib/$pkgname --enable-compile-warnings=yes
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  cd build
+  arch-meson ../$pkgname -Ddistributor_name="Arch Linux®"
+  ninja
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
