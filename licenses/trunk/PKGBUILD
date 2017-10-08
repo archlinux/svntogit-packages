@@ -10,7 +10,7 @@ license=('custom:none')
 url='https://www.archlinux.org/'
 groups=('base')
 makedepends=('links')
-source=(apache-2.0.txt::http://www.apache.org/licenses/LICENSE-2.0.txt
+source=(apache-2.0.txt::https://www.apache.org/licenses/LICENSE-2.0.txt
         cc-by-3.0.txt
         cc-by-nc-3.0.txt
         cc-by-nc-nd-3.0.txt
@@ -20,14 +20,14 @@ source=(apache-2.0.txt::http://www.apache.org/licenses/LICENSE-2.0.txt
         cc-readme.txt
         cddl-1.0.txt
         eclipse-1.0.txt
-        http://www.gnu.org/licenses/agpl-3.0.txt
-        http://www.gnu.org/licenses/gpl-2.0.txt
-        http://www.gnu.org/licenses/gpl-3.0.txt
-        http://www.gnu.org/licenses/lgpl-2.1.txt
-        http://www.gnu.org/licenses/lgpl-3.0.txt
-        http://www.gnu.org/licenses/fdl-1.2.txt
-        http://www.gnu.org/licenses/fdl-1.3.txt
-        http://www.latex-project.org/lppl.txt
+        https://www.gnu.org/licenses/agpl-3.0.txt
+        https://www.gnu.org/licenses/gpl-2.0.txt
+        https://www.gnu.org/licenses/gpl-3.0.txt
+        https://www.gnu.org/licenses/lgpl-2.1.txt
+        https://www.gnu.org/licenses/lgpl-3.0.txt
+        https://www.gnu.org/licenses/fdl-1.2.txt
+        https://www.gnu.org/licenses/fdl-1.3.txt
+        https://www.latex-project.org/lppl.txt
         perlartistic.txt
         http://www.perlfoundation.org/attachment/legal/artistic-2_0.txt
         php-3.0.txt::http://www.php.net/license/3_0.txt
