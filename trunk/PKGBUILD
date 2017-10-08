@@ -13,9 +13,9 @@ depends=('python' 'ninja')
 makedepends=('python-setuptools')
 checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-base' 'git' 'gnustep-base'
               'cython' 'gtkmm3' 'gtest' 'gmock' 'protobuf' 'wxgtk' 'python-gobject' 'gobject-introspection'
-              'itstool' 'gtk3' 'valgrind' 'java-environment=8' 'gtk-doc' 'llvm' 'clang' 'sdl2'
+              'itstool' 'gtk3' 'java-environment=8' 'gtk-doc' 'llvm' 'clang' 'sdl2'
               'doxygen' 'vulkan-validation-layers' 'openmpi' 'openssh' 'mercurial' 'gtk-sharp-2')
-checkdepends_x86_64=('ldc')
+checkdepends_x86_64=('ldc' 'valgrind')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         fix-tests.diff
         arch-meson)
