@@ -7,7 +7,7 @@
 
 pkgname=glibc
 pkgver=2.26
-pkgrel=4
+pkgrel=5
 pkgdesc='GNU C Library'
 arch=(i686 x86_64)
 url='http://www.gnu.org/software/libc'
@@ -21,7 +21,7 @@ backup=(etc/gai.conf
         etc/nscd.conf)
 options=(!strip staticlibs)
 install=glibc.install
-_commit=58270c0049404ef2f878fdd45df55f17f0b8c1f7
+_commit=d5c6dea2d5b4b5c64625c5386f6baec7bf2d89b3
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
         locale-gen
