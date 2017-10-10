@@ -1,0 +1,39 @@
+# $Id$
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=mkinitcpio-busybox
+pkgver=1.27.2
+pkgrel=1
+pkgdesc='Base initramfs tools'
+arch=(i686 x86_64)
+url="http://www.busybox.net/"
+license=(GPL)
+depends_x86_64=(glibc)
+options=(!buildflags)
+source=(https://busybox.net/downloads/busybox-$pkgver.tar.bz2
+        config)
+sha256sums=('9d4be516b61e6480f156b11eb42577a13529f75d3383850bb75c50c285de63df'
+            'c75ad568ff0d97b16250c3c1069c00d02ff7d72f7241b58021ad7a32b9ecb068')
+
+prepare() {
+  cd "busybox-$pkgver"
+
+  local safeflags="-march=${CARCH/_/-} -mtune=generic -Os -pipe -fno-strict-aliasing"
+
+  sed 's|^\(CONFIG_EXTRA_CFLAGS\)=.*|\1="'"$safeflags"'"|' "$srcdir/config" >.config
+
+  # workaround for FS#54240
+  if [[ $CARCH == 'i686' ]]; then
+    echo 'CONFIG_STATIC=y' >> .config
+  fi
+}
+
+build() {
+  make -C "busybox-$pkgver"
+}
+
+package() {
+  install -Dm755 "$srcdir/busybox-$pkgver/busybox" "$pkgdir/usr/lib/initcpio/busybox"
+}
