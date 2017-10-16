@@ -10,7 +10,7 @@ license=(LGPL)
 groups=(kf5)
 depends=(kirigami2 kiconthemes)
 makedepends=(extra-cmake-modules)
-source=("https://download.kde.org/stable/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig})
+source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig})
 sha256sums=('fb8818b22dbc1f47c38bef488543f025ec5da810e84f5ed732b08969338411e1'
             'SKIP')
 validpgpkeys=('53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB') # David Faure <faure@kde.org>
