@@ -1,9 +1,10 @@
 # Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
 # Contributor: Thore Bödecker <foxxx0@archlinux.org>
 
-pkgname=ceph
+pkgbase='ceph'
+pkgname=('ceph' 'ceph-libs')
 pkgver=12.2.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Distributed, fault-tolerant storage platform delivering object, block, and file system'
 arch=('x86_64' 'i686')
 url='https://ceph.com/'
@@ -19,13 +20,8 @@ makedepends=('babeltrace>=1.5.3-1' 'bc' 'boost' 'boost-libs' 'cmake' 'cpio'
   'python2-sphinx' 'python2-tox' 'python2-virtualenv' 'python2-werkzeug'
   'sed' 'snappy' 'socat' 'systemd' 'valgrind' 'xfsprogs' 'xmlstarlet' 'yasm'
   'zlib' 'zstd')
-depends=('babeltrace' 'boost-libs' 'curl' 'fuse2' 'glibc' 'gperftools'
-  'keyutils' 'leveldb' 'libaio' 'libsystemd' 'libutil-linux' 'lsb-release'
-  'lttng-ust' 'ncurses' 'nss' 'python2' 'python2-cherrypy' 'python2-jinja'
-  'python2-pecan' 'python2-prettytable' 'python2-pyopenssl' 'python2-setuptools'
-  'python2-werkzeug' 'snappy' 'xfsprogs')
 options=('emptydirs')
-source=("https://download.ceph.com/tarballs/${pkgname}-${pkgver}.tar.gz"
+source=("https://download.ceph.com/tarballs/${pkgbase}-${pkgver}.tar.gz"
         'ceph.sysusers'
         'fix-ceph_disk-python-interpreter.patch'
         'fix-or-disable-broken-tests.patch'
@@ -39,7 +35,7 @@ sha512sums=('ec2623c1f6ab563c6fd0bb5fd046c78528fdbedca7cde347c92a9b15005d2ab2b1a
             'e2ed33e2ac37bfdb9597083388e1a87f10051e976033055d440b1a4bc2bd11148c29128fb9841771ca983c12fb36b343bcc04219dea87199321ceea9aa18b3cc')
 
 prepare() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgbase}-${pkgver}"
   # apply patch from the source array (should be a pacman feature)
   local filename
   for filename in "${source[@]}"; do
@@ -65,7 +61,7 @@ prepare() {
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgbase}-${pkgver}"
 
   mkdir -p build
   cd build
@@ -99,7 +95,7 @@ build() {
 }
 
 check() {
-  cd "${srcdir}/${pkgname}-${pkgver}/build"
+  cd "${srcdir}/${pkgbase}-${pkgver}/build"
 
   export CTEST_PARALLEL_LEVEL="$(nproc)"
   make check
@@ -110,17 +106,49 @@ check() {
   done
 }
 
-package() {
-  cd "${srcdir}/${pkgname}-${pkgver}/build"
+package_ceph-libs() {
+  depends=('boost-libs' 'curl' 'glibc' 'keyutils' 'leveldb' 'libaio'
+    'libutil-linux' 'lttng-ust' 'nss' 'python2' 'xfsprogs')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/build"
 
   # main install
   make DESTDIR="$pkgdir" install
 
+  # remove stuff that goes into the ceph package
+  rm -rf "${pkgdir}"/usr/lib/{ceph/mgr,systemd,sysusers.d,tmpfiles.d}
+  rm -rf "${pkgdir}/usr/share"
+  rm -rf "${pkgdir}/usr/sbin"
+  rm -rf "${pkgdir}/usr/bin"
+  rm -rf "${pkgdir}/etc"
+  rm -rf "${pkgdir}/var"
+}
+
+package_ceph() {
+  depends=('ceph-libs' 'babeltrace' 'boost-libs' 'curl' 'fuse2' 'glibc'
+    'gperftools' 'keyutils' 'leveldb' 'libaio' 'libsystemd' 'libutil-linux'
+    'lsb-release' 'lttng-ust' 'ncurses' 'nss' 'python2' 'python2-cherrypy'
+    'python2-jinja' 'python2-pecan' 'python2-prettytable' 'python2-pyopenssl'
+    'python2-setuptools' 'python2-werkzeug' 'snappy' 'xfsprogs')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}/build"
+
+  # main install
+  make DESTDIR="$pkgdir" install
+
+  # remove stuff that is in the ceph-libs package
+  find "${pkgdir}/usr/lib" -maxdepth 1 -type f -delete
+  find "${pkgdir}/usr/lib" -maxdepth 1 -type l -delete
+  find "${pkgdir}/usr/lib/ceph" -maxdepth 1 -type f -delete
+  find "${pkgdir}/usr/lib/ceph" -maxdepth 1 -type l -delete
+  rm -rf "${pkgdir}"/usr/lib/{ceph/{compressor,crypto,erasure-code},python2.7,rados-classes}
+  rm -rf "${pkgdir}/usr/include"
+
   # install tmpfiles.d and sysusers.d stuff
-  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/systemd/ceph.tmpfiles.d" \
-    "${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
+  install -Dm644 "${srcdir}/${pkgbase}-${pkgver}/systemd/ceph.tmpfiles.d" \
+    "${pkgdir}/usr/lib/tmpfiles.d/${pkgbase}.conf"
   install -Dm644 "${srcdir}/ceph.sysusers" \
-    "${pkgdir}/usr/lib/sysusers.d/${pkgname}.conf"
+    "${pkgdir}/usr/lib/sysusers.d/${pkgbase}.conf"
 
   # remove debian init script
   rm -rf "${pkgdir}/etc/init.d"
