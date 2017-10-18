@@ -10,8 +10,9 @@ url="http://www.mega-nerd.com/libsndfile"
 license=('LGPL')
 depends=('alsa-lib' 'flac' 'libvorbis')
 checkdepends=('python2')
-source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz)
-sha1sums=('85aa967e19f6b9bf975601d79669025e5f8bc77d')
+source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz{,.asc})
+sha1sums=('85aa967e19f6b9bf975601d79669025e5f8bc77d'
+          'SKIP')
 validpgpkeys=('73571E85C19F4281D8C97AA86CA41A7743B8D6C8')
 
 prepare() {
