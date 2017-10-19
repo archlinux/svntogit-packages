@@ -3,7 +3,7 @@
 # Maintainer: Jan de Groot
 
 pkgname=libinput
-pkgver=1.8.3
+pkgver=1.9.0
 pkgrel=1
 pkgdesc="Input device management and event handling library"
 url="https://www.freedesktop.org/wiki/Software/libinput/"
@@ -11,32 +11,33 @@ arch=(i686 x86_64)
 license=(custom:X11)
 depends=('mtdev' 'systemd' 'libevdev' 'libwacom')
 makedepends=('doxygen' 'graphviz' 'gtk3' 'meson')
-optdepends=('gtk3: libinput debug-gui')
+optdepends=('gtk3: libinput debug-gui'
+            'python-pyudev: libinput measure'
+            'python-evdev: libinput measure')
 source=(https://freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz{,.sig})
-sha512sums=('88006d217e3507858fa6b9ac1f25c267255fb51d1bcf1208d2afd423bf2a9292944bc5526ea91f27fad3ff04c2f9f43ab3aa25fd9fb7ace1231ecd33ddf18de6'
+sha512sums=('4111dd02ef7778c246da28ead284a77014f6eaa4b7f90f36ee124af809e31c70ac065216ef5648d1d2dc525355176e2aa22788bfbb19f5f6d25276fbba42e150'
             'SKIP')
 validpgpkeys=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # Peter Hutterer (Who-T) <office@who-t.net>
 
 prepare() {
-  mkdir build
   cd $pkgname-$pkgver
+  # Reduce docs size
+  printf '%s\n' >>doc/libinput.doxygen.in \
+    HAVE_DOT=yes DOT_IMAGE_FORMAT=svg INTERACTIVE_SVG=yes
 }
 
 build() {
-  cd build
-  meson --prefix=/usr --buildtype=release ../$pkgname-$pkgver --libexecdir=/usr/lib \
-    -Dtests=false
-  ninja
+  arch-meson $pkgname-$pkgver build -Dtests=false
+  ninja -C build
 }
 
 package() {
-  cd build
-  DESTDIR="$pkgdir" ninja install
+  DESTDIR="$pkgdir" ninja -C build install
 
-  cd ../$pkgname-$pkgver
-  install -Dvm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dvm644 $pkgname-$pkgver/COPYING \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 
   # install doc - no Makefile target
-  install -dv "$pkgdir/usr/share/doc/libinput"
-  cp -av doc/html/* "$pkgdir/usr/share/doc/libinput"
+  install -d "$pkgdir/usr/share/doc"
+  cp -av build/html "$pkgdir/usr/share/doc/libinput"
 }
