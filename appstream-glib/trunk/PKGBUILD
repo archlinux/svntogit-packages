@@ -2,19 +2,18 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=appstream-glib
-pkgver=0.6.13
+pkgver=0.7.2
 pkgrel=1
 pkgdesc="Objects and methods for reading and writing AppStream metadata"
 url="https://people.freedesktop.org/~hughsient/appstream-glib/"
 arch=(i686 x86_64)
 license=(LGPL)
 depends=(gtk3 libyaml pacman gcab libsoup libstemmer)
-makedepends=(intltool gobject-introspection gtk-doc autoconf-archive git
-             gperf)
+makedepends=(gobject-introspection gtk-doc autoconf-archive git gperf meson)
 provides=(appdata-tools)
 conflicts=(appdata-tools)
 replaces=(appdata-tools)
-_commit=e8151f4d119f5763123aced1ebf64d100bc83266  # tags/appstream_glib_0_6_13^0
+_commit=6149f7eb067c4d267738fd5e7ea5c0cc1be7bc5b  # tags/appstream_glib_0_7_2^0
 source=("git+https://github.com/hughsie/appstream-glib#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -24,26 +23,25 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --enable-alpm --enable-stemmer --enable-gtk-doc
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  cd build
+  arch-meson ../$pkgname \
+    -Denable-alpm=true \
+    -Denable-gtk-doc=true \
+    -Denable-rpm=false
+  ninja
 }
 
 check() {
-  cd $pkgname
-  make -k check || :
+  cd build
+  meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 }
