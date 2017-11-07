@@ -10,14 +10,14 @@ pkgbase=network-manager-applet
 pkgname=(nm-connection-editor network-manager-applet)
 pkgdesc="Applet for managing network connections"
 url="https://wiki.gnome.org/Projects/NetworkManager/"
-pkgver=1.8.4
-pkgrel=2
+pkgver=1.8.6
+pkgrel=1
 arch=(i686 x86_64)
 license=(GPL2 LGPL2.1)
 depends=(libnm-glib libgudev gtk3 mobile-broadband-provider-info iso-codes gcr)
-makedepends=(libsecret libnotify libmm-glib intltool gobject-introspection git gtk-doc)
+makedepends=(libsecret libnotify libmm-glib intltool gobject-introspection git gtk-doc meson)
 options=(!emptydirs)
-_commit=110ed180adb8d94549e95f278c4f0c6cff015be0  # tags/1.8.4^0
+_commit=a2377d7534780b96a32405cce2e5548e81bbd081  # tags/1.8.6^0
 source=("git+https://git.gnome.org/browse/network-manager-applet#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -27,40 +27,20 @@ pkgver() {
 }
 
 prepare() {
-  mkdir -p nma/etc/xdg nma/usr/bin \
+  mkdir -p build nma/etc/xdg nma/usr/bin \
     nma/usr/share/{applications,icons/hicolor/22x22/apps,man/man1,nm-applet}
   cd $pkgbase
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgbase
-  ./configure --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    runstatedir=/run \
-    --sbindir=/usr/bin \
-    --libexecdir=/usr/lib/NetworkManager \
-    --disable-maintainer-mode \
-    --disable-static \
-    --enable-gtk-doc \
-    --enable-introspection \
-    --enable-ld-gc \
-    --with-gcr \
-    --with-team \
-    --with-wwan \
-    --without-appindicator \
-    --without-selinux
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  cd build
+  arch-meson ../$pkgbase -Denable-selinux=false
+  ninja
 }
 
 check() {
-  cd $pkgbase
-  make -k check
+  cd build
+  meson test
 }
 
 package_nm-connection-editor() {
@@ -69,8 +49,8 @@ package_nm-connection-editor() {
   conflicts=(libnm-gtk)
   replaces=(libnm-gtk)
 
-  cd $pkgbase
-  make DESTDIR="$pkgdir" install
+  cd build
+  DESTDIR="$pkgdir" ninja install
 
 ### Split network-manager-applet
   cd ../nma
