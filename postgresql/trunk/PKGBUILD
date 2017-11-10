@@ -3,38 +3,40 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=10.0
+pkgver=10.1
 _majorver=${pkgver%.*}
 pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
-arch=('i686' 'x86_64')
+arch=('x86_64')
 license=('custom:PostgreSQL')
-makedepends=('krb5' 'libxml2' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0' 'pam')
+makedepends=('krb5' 'libxml2' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0' 'pam' 'zlib')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
         postgresql.pam
         postgresql.logrotate
         postgresql.service
         postgresql-check-db-dir)
-sha256sums=('712f5592e27b81c5b454df96b258c14d94b6b03836831e015c65d6deeae57fd1'
+sha256sums=('3ccb4e25fe7a7ea6308dea103cac202963e6b746697366d72ec2900449a5e713'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             'b48fe97f8e43ed0d2041d519119a4dafb70fcae72870951bf4fb7350fe169ac8'
             '888a1d44f03fccfa4bf344ee45824fefb846ae3c1c0c40113ad6020b4be3b0cf')
-sha512sums=('88295af13db77a85a604c925aa627d383fdac62c1185119bba87753ce4167a13aed0f055a7a1329b3051f8757c6ba7529baed00a564ef0cfbee685720f282678'
+sha512sums=('06050d353aa43f32e0de0199d833d8a4652aff893b718b1c40ed31837838f73fe4d977ac0f2164ab97b3eeff4aae3409f440601740898a893877d96bc0ed1882'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
             '9ab4da01337ffbab8faec0e220aaa2a642dbfeccf7232ef2645bdc2177a953f17ee3cc14a4d8f8ebd064e1dae8b3dba6029adbffb8afaabea383963213941ba8'
             'ec2625c3ccfb6c142ea12ef4392b00f3d4cb0a5411d603b98157d55cd162ed3b422dbbd42e8b13211063db94a42f6d1f3febd4acaadde69ea17bfd8eccae3539'
             '56974ef34a8d94596068413154b1a7ed5a71f5a3942bd79427f05e6f6b7853036874dedd8d988bb94306023f2a675996d500b075eaf8a192ef5c24026eb28eb0')
 
+prepare() {
+  cd postgresql-${pkgver}
+  patch -p1 < ../postgresql-run-socket.patch
+}
+
 build() {
   cd postgresql-${pkgver}
-
-  patch -Np1 < ../postgresql-run-socket.patch
-
   ./configure \
     --prefix=/usr \
     --mandir=/usr/share/man \
@@ -51,20 +53,19 @@ build() {
     --with-uuid=e2fs \
     --enable-nls \
     --enable-thread-safety
-
   make world
 }
 
 package_postgresql-libs() {
   pkgdesc="Libraries for use with PostgreSQL"
-  depends=('krb5' 'openssl>=1.0.0' 'readline>=6.0')
+  depends=('krb5' 'openssl>=1.0.0' 'readline>=6.0' 'zlib')
   provides=('postgresql-client')
   conflicts=('postgresql-client')
 
   cd postgresql-${pkgver}
 
   # install license
-  install -Dm 644 COPYRIGHT "${pkgdir}/usr/share/licenses/postgresql-libs/LICENSE"
+  install -Dm 644 COPYRIGHT -t "${pkgdir}/usr/share/licenses/${pkgname}"
 
   # install libs and non-server binaries
   for dir in src/interfaces src/bin/pg_config src/bin/pg_dump src/bin/psql src/bin/scripts; do
@@ -99,10 +100,9 @@ package_postgresql-docs() {
   pkgdesc="HTML documentation for PostgreSQL"
   options=('docs')
 
-  cd "${srcdir}/postgresql-${pkgver}"
+  cd postgresql-${pkgver}
 
-  # install license
-  install -Dm 644 COPYRIGHT "${pkgdir}/usr/share/licenses/postgresql-docs/LICENSE"
+  install -Dm 644 COPYRIGHT -t "${pkgdir}/usr/share/licenses/${pkgname}"
 
   make -C doc/src/sgml DESTDIR="${pkgdir}" install-html
   chown -R root:root "${pkgdir}/usr/share/doc/postgresql/html"
@@ -140,7 +140,7 @@ package_postgresql() {
   done
 
   # install license
-  install -Dm 644 COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE"
+  install -Dm 644 COPYRIGHT -t "${pkgdir}/usr/share/licenses/${pkgname}"
 
   # clean up unneeded installed items
   rm -rf "${pkgdir}/usr/include/postgresql/internal"
@@ -148,16 +148,11 @@ package_postgresql() {
   find "${pkgdir}/usr/include" -maxdepth 1 -type f -execdir rm {} +
   rmdir "${pkgdir}/usr/share/doc/postgresql/html"
 
-  install -Dm 644 "${srcdir}/postgresql.service" \
-    "${pkgdir}/usr/lib/systemd/system/postgresql.service"
-  install -Dm 755 "${srcdir}/postgresql-check-db-dir" \
-    "${pkgdir}/usr/bin/postgresql-check-db-dir"
+  install -Dm 644 "${srcdir}/postgresql.service" -t "${pkgdir}/usr/lib/systemd/system"
+  install -Dm 755 "${srcdir}/postgresql-check-db-dir" -t "${pkgdir}/usr/bin"
 
-  install -Dm 644 "${srcdir}/postgresql.pam" \
-    "${pkgdir}/etc/pam.d/postgresql"
-
-  install -Dm 644 "${srcdir}/postgresql.logrotate" \
-    "${pkgdir}/etc/logrotate.d/postgresql"
+  install -Dm 644 "${srcdir}/postgresql.pam" "${pkgdir}/etc/pam.d/postgresql"
+  install -Dm 644 "${srcdir}/postgresql.logrotate" "${pkgdir}/etc/logrotate.d/postgresql"
 }
 
 # vim: ts=2 sw=2 et:
