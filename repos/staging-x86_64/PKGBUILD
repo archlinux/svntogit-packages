@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=epiphany
+pkgver=3.26.2
+pkgrel=2
+pkgdesc="A GNOME web browser based on the WebKit rendering engine"
+url="https://wiki.gnome.org/Apps/Web"
+arch=(i686 x86_64)
+license=(GPL)
+depends=(webkit2gtk gcr gnome-desktop icu)
+makedepends=(itstool docbook-xml startup-notification lsb-release
+             gobject-introspection yelp-tools appstream-glib git meson)
+groups=(gnome)
+_commit=e02df42f79051d7c2895ea1f398b75dcf0733b91  # tags/3.26.2^0
+source=("git+https://git.gnome.org/browse/epiphany#commit=$_commit"
+        "git+https://git.gnome.org/browse/libgd"
+        "git+https://git.gnome.org/browse/gvdb"
+        pluginsdir.diff)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            '0e4db79fe22a4ed447aa926eecd09fc660cf2f5aac2d42aa9adaacad45416faf')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  mkdir build
+  cd $pkgname
+
+  patch -Np1 -i ../pluginsdir.diff
+
+  git submodule init
+  git config --local submodule.libgd.url "$srcdir/libgd"
+  git config --local submodule.gvdb.url "$srcdir/gvdb"
+  git submodule update
+
+}
+
+build() {
+  cd build
+  arch-meson ../$pkgname -Ddistributor_name="Arch Linux®"
+  ninja
+}
+
+package() {
+  cd build
+  DESTDIR="$pkgdir" ninja install
+}
