@@ -2,28 +2,38 @@
 #Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xf86-video-fbdev
-pkgver=0.4.4
-pkgrel=7
+pkgver=0.4.4+12+ge0bce0d
+pkgrel=1
 pkgdesc="X.org framebuffer video driver"
 arch=(i686 x86_64)
 license=('custom')
 url="https://xorg.freedesktop.org/"
 depends=('glibc')
-makedepends=('xorg-server-devel' 'X-ABI-VIDEODRV_VERSION=23')
+makedepends=('xorg-server-devel' 'X-ABI-VIDEODRV_VERSION=23' git)
 conflicts=('xorg-server<1.19' 'X-ABI-VIDEODRV_VERSION<23' 'X-ABI-VIDEODRV_VERSION>=24')
 groups=('xorg-drivers')
-source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2
-        git-fixes.patch)
-sha256sums=('9dd4b326498223abbfdf786089a46ea3db4fa6bbd341308eb48a9e00bc3fd51b'
-            'cbf66effa928b57610eb85441bc81dda337f03a1a8de37aa63eea78501dd072c')
+_commit=e0bce0d017c5e1597aa8269551355e1ddeb3c8fb  # master
+source=("git+https://anongit.freedesktop.org/git/xorg/driver/xf86-video-fbdev#commit=$_commit")
+sha256sums=('SKIP')
+
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^xf86-video-fbdev-//;s/-/+/g'
+}
 
 prepare() {
-  cd ${pkgname}-${pkgver}
-  patch -Np1 -i ../git-fixes.patch
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+check() {
+  cd $pkgname
+  make check
 }
 
 build() {
-  cd ${pkgname}-${pkgver}
+  cd $pkgname
 
   # Since pacman 5.0.2-2, hardened flags are now enabled in makepkg.conf
   # With them, module fail to load with undefined symbol.
@@ -37,8 +47,10 @@ build() {
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
+  cd $pkgname
   make DESTDIR="${pkgdir}" install
   install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
   install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/"
 }
+
+
