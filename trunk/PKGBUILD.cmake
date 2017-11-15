@@ -9,7 +9,7 @@ pkgrel=3
 pkgdesc='Professional vector graphics editor'
 url='https://inkscape.org/'
 license=('GPL' 'LGPL')
-arch=('i686' 'x86_64')
+arch=('x86_64')
 makedepends=('boost' 'intltool' 'cmake')
 depends=('gc' 'gsl' 'gtkmm' 'gtkspell' 'imagemagick' 'libxslt' 'poppler-glib'
          'popt' 'potrace' 'ttf-dejavu' 'python' 'libcdr' 'libvisio' 'libwpg'
