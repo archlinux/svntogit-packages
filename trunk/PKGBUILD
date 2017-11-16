@@ -2,14 +2,14 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=js52
-pkgver=52.4.1
-pkgrel=2
+pkgver=52.5.0
+pkgrel=1
 _ffver=${pkgver%%.*}
 pkgdesc="JavaScript interpreter and libraries - Version $_ffver"
 arch=(x86_64)
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey"
 license=(MPL)
-depends=(nspr gcc-libs readline zlib icu libffi)
+depends=(gcc-libs readline zlib sh)
 makedepends=(python2 zip autoconf2.13 mercurial)
 _repo=https://hg.mozilla.org/mozilla-unified
 source=("hg+$_repo#tag=FIREFOX_${pkgver//./_}esr_RELEASE"
@@ -35,34 +35,30 @@ prepare() {
 
 build() {
   unset CPPFLAGS
-  CXXFLAGS+=' -fno-delete-null-pointer-checks -fno-schedule-insns2 -fno-lifetime-dse'
-  CFLAGS+=' -fno-delete-null-pointer-checks -fno-schedule-insns2 -fno-lifetime-dse'
-  export PYTHON=/usr/bin/python2
+  CFLAGS+=' -fno-delete-null-pointer-checks -fno-strict-aliasing -fno-tree-vrp'
+  CXXFLAGS+=' -fno-delete-null-pointer-checks -fno-strict-aliasing -fno-tree-vrp'
+  export CC=gcc CXX=g++ PYTHON=/usr/bin/python2
 
   cd mozilla-unified/js/src
   sh configure \
     --prefix=/usr \
     --disable-optimize \
-    --enable-ctypes \
-    --enable-gcgenerational \
+    --disable-strip \
     --enable-pie \
+    --enable-posix-nspr-emulation \
     --enable-readline \
     --enable-shared-js \
-    --enable-system-ffi \
     --enable-tests \
-    --enable-threadsafe \
-    --enable-xterm-updates \
     --with-intl-api \
-    --with-system-icu \
-    --with-system-nspr \
-    --with-system-zlib
+    --with-system-zlib \
+    --without-system-icu
   make
 }
 
 check() {
   cd mozilla-unified/js/src
-  # Intl/Date/toLocaleDateString_timeZone.js:39:5 Error: Assertion failed: got "12/6/2012, UTC", expected "12/6/2012, GMT"
-  #make check-jstests
+  python2 tests/jstests.py -d -s -t 300 --no-progress ../../js/src/js/src/shell/js
+  python2 jit-test/jit_test.py -s -t 300 --no-progress ../../js/src/js/src/shell/js basic
 }
 
 package() {
