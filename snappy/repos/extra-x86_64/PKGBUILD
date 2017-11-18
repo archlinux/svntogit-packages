@@ -3,16 +3,19 @@
 # Contributor: Antony Male <antony dot male at geemail dot com>>
 
 pkgname=snappy
-pkgver=1.1.4
+pkgver=1.1.7
 pkgrel=1
 pkgdesc='A fast compressor/decompressor library'
-arch=('i686' 'x86_64')
+arch=('x86_64')
 url="https://google.github.io/snappy/"
 license=('BSD')
 depends=('glibc' 'gcc-libs')
 checkdepends=('zlib')
-source=("https://github.com/google/snappy/releases/download/$pkgver/$pkgname-$pkgver.tar.gz")
-md5sums=('c328993b68afe3e5bd87c8ea9bdeb028')
+makedepends=('cmake' 'clang')
+source=("https://github.com/google/snappy/archive/$pkgver.tar.gz"
+        snappy.pc)
+md5sums=('ee9086291c9ae8deb4dac5e0b85bf54a'
+         '4b491e29a8142fedd11472306f5c1192')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -20,7 +23,14 @@ build() {
   # compile without assertions
   CXXFLAGS+=\ -DNDEBUG
 
-  ./configure --prefix=/usr
+  # export CXX=clang++
+
+  cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=/usr/lib \
+    -DBUILD_SHARED_LIBS=yes \
+    .
+
   make
 }
 
@@ -28,7 +38,7 @@ check() {
   # compile without assertions
   CXXFLAGS+=\ -DNDEBUG
 
-  make -C "$pkgname-$pkgver" check
+  make -C "$pkgname-$pkgver" test
 }
 
 package() {
@@ -36,6 +46,10 @@ package() {
 
   make DESTDIR="$pkgdir" install
   install -m644 -D COPYING "$pkgdir/usr/share/licenses/snappy/LICENSE"
+
+  # remove this after the file exists upstream again
+  # https://github.com/google/snappy/pull/55
+  install -Dm644 "$srcdir/snappy.pc" "$pkgdir/usr/lib/pkgconfig/snappy.pc"
 }
 
 # vim:set ts=2 sw=2 et:
