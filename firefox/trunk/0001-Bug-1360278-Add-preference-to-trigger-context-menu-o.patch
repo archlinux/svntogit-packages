@@ -23,7 +23,7 @@ index 315422a6e2255e5f..92bcf5f02564d46e 100644
 --- a/modules/libpref/init/all.js
 +++ b/modules/libpref/init/all.js
 @@ -234,6 +234,10 @@ pref("browser.sessionhistory.max_total_viewers", -1);
-
+ 
  pref("ui.use_native_colors", true);
  pref("ui.click_hold_context_menus", false);
 +
@@ -40,33 +40,33 @@ index cac897327a190422..bf42b4f8c0950753 100644
 @@ -4700,30 +4700,49 @@ NSEvent* gLastDragMouseDownEvent = nil;
    if (!mGeckoChild)
      return;
-
+ 
 -  // Let the superclass do the context menu stuff.
 -  [super rightMouseDown:theEvent];
 +  if (!nsBaseWidget::ShowContextMenuAfterMouseUp()) {
 +    // Let the superclass do the context menu stuff.
 +    [super rightMouseDown:theEvent];
 +  }
-
+ 
    NS_OBJC_END_TRY_ABORT_BLOCK;
  }
-
+ 
  - (void)rightMouseUp:(NSEvent *)theEvent
  {
    NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
-
+ 
    if (!mGeckoChild)
      return;
    if (mTextInputHandler->OnHandleEvent(theEvent)) {
      return;
    }
-
+ 
    WidgetMouseEvent geckoEvent(true, eMouseUp, mGeckoChild,
                                WidgetMouseEvent::eReal);
    [self convertCocoaMouseEvent:theEvent toGeckoEvent:&geckoEvent];
    geckoEvent.button = WidgetMouseEvent::eRightButton;
    geckoEvent.mClickCount = [theEvent clickCount];
-
+ 
    nsAutoRetainCocoaObject kungFuDeathGrip(self);
    mGeckoChild->DispatchInputEvent(&geckoEvent);
 +  if (!mGeckoChild)
@@ -86,7 +86,7 @@ index cac897327a190422..bf42b4f8c0950753 100644
 +
 +    [super rightMouseDown:dupeEvent];
 +  }
-
+ 
    NS_OBJC_END_TRY_ABORT_BLOCK;
  }
 diff --git a/widget/gtk/nsWindow.cpp b/widget/gtk/nsWindow.cpp
@@ -96,7 +96,7 @@ index 87cc858ca7efd11d..17992f78bbf0a0a7 100644
 @@ -2737,6 +2737,19 @@ static guint ButtonMaskFromGDKButton(guint button)
      return GDK_BUTTON1_MASK << (button - 1);
  }
-
+ 
 +void
 +nsWindow::DispatchContextMenuEventFromMouseEvent(uint16_t domButton,
 +                                                 GdkEventButton *aEvent)
@@ -115,7 +115,7 @@ index 87cc858ca7efd11d..17992f78bbf0a0a7 100644
  {
 @@ -2806,13 +2819,8 @@ nsWindow::OnButtonPressEvent(GdkEventButton *aEvent)
      DispatchInputEvent(&event);
-
+ 
      // right menu click on linux should also pop up a context menu
 -    if (domButton == WidgetMouseEvent::eRightButton &&
 -        MOZ_LIKELY(!mIsDestroyed)) {
@@ -128,9 +128,9 @@ index 87cc858ca7efd11d..17992f78bbf0a0a7 100644
 +        DispatchContextMenuEventFromMouseEvent(domButton, aEvent);
      }
  }
-
+ 
 @@ -2848,6 +2856,11 @@ nsWindow::OnButtonReleaseEvent(GdkEventButton *aEvent)
-
+ 
      DispatchInputEvent(&event);
      mLastMotionPressure = pressure;
 +
@@ -139,16 +139,16 @@ index 87cc858ca7efd11d..17992f78bbf0a0a7 100644
 +        DispatchContextMenuEventFromMouseEvent(domButton, aEvent);
 +    }
  }
-
+ 
  void
 diff --git a/widget/gtk/nsWindow.h b/widget/gtk/nsWindow.h
 index 0fafc8994579fe3c..7a28e3260c0fdefb 100644
 --- a/widget/gtk/nsWindow.h
 +++ b/widget/gtk/nsWindow.h
 @@ -245,6 +245,8 @@ private:
-
+ 
      void               UpdateClientOffset();
-
+ 
 +    void               DispatchContextMenuEventFromMouseEvent(uint16_t domButton,
 +                                                              GdkEventButton *aEvent);
  public:
@@ -161,7 +161,7 @@ index 13fccd7f7d6627fb..e4ca5e011894f5c4 100644
 @@ -1218,6 +1218,22 @@ nsBaseWidget::DispatchEventToAPZOnly(mozilla::WidgetInputEvent* aEvent)
    }
  }
-
+ 
 +// static
 +bool
 +nsBaseWidget::ShowContextMenuAfterMouseUp()
@@ -188,7 +188,7 @@ index f4e8e3d783307cc1..3cb56f38b6ced983 100644
 @@ -417,6 +417,12 @@ public:
    void RecvScreenPixels(mozilla::ipc::Shmem&& aMem, const ScreenIntSize& aSize) override {};
  #endif
-
+ 
 +  /**
 +   * Whether context menus should only appear on mouseup instead of mousedown,
 +   * on OSes where they normally appear on mousedown (macOS, *nix).
@@ -198,5 +198,6 @@ index f4e8e3d783307cc1..3cb56f38b6ced983 100644
  protected:
    // These are methods for CompositorWidgetWrapper, and should only be
    // accessed from that class. Derived widgets can choose which methods to
---
+-- 
 2.15.0
+
