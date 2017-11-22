@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=gnome-todo
+pkgver=3.26.2
+pkgrel=2
+pkgdesc="Task manager for GNOME"
+url="https://wiki.gnome.org/Apps/Todo"
+arch=(x86_64)
+license=(GPL)
+depends=(evolution-data-server libpeas python)
+makedepends=(gobject-introspection appstream-glib git meson gtk-doc)
+groups=(gnome-extra)
+_commit=7fc6169efedbd75877aa8b3f13c6e8125c169a0c  # tags/GNOME_TODO_3_26_2^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-todo.git#commit=$_commit"
+        gnome-todo-3.26.2-libical-3.0.patch)
+sha256sums=('SKIP'
+            '83cc34d6ced22e8edab14cd9afc1c130e96c4a305c36ed06f81e7d92f30d71a3')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^GNOME_TODO_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  mkdir build
+  cd $pkgname
+  patch -Np1 -i ../gnome-todo-3.26.2-libical-3.0.patch
+}
+
+build() {
+  cd build
+  LDFLAGS+=" -fuse-ld=gold"  # Avoid endless loop in ld.bfd
+  arch-meson ../$pkgname -Denable-gtk-doc=true -Db_lto=false
+  ninja
+}
+
+check() {
+  cd build
+  meson test
+}
+
+package() {
+  cd build
+  DESTDIR="$pkgdir" ninja install
+}
+
+# vim:set ts=2 sw=2 et:
