@@ -3,7 +3,7 @@
 
 pkgname=pipewire
 pkgver=0.1.6
-pkgrel=1
+pkgrel=2
 pkgdesc="Server and user space API to deal with multimedia pipelines"
 url="http://pipewire.org"
 license=(LGPL2.1)
@@ -11,11 +11,10 @@ arch=(x86_64)
 depends=(gstreamer gst-plugins-base v4l-utils)
 makedepends=(git meson doxygen graphviz xmltoman ffmpeg jack2 libva)
 optdepends=(ffmpeg jack2 libva)
+install=pipewire.install
 _commit=5fec60078d25ca3465f30b5d4fbe5d7ea6fabd65  # tags/0.1.6
-source=("git+https://github.com/PipeWire/pipewire#commit=$_commit"
-        svg.diff)
-sha256sums=('SKIP'
-            '23df81ab6c70e1d1e29505f846abffe3530495fdcede6fbed08f42b4c86e6e65')
+source=("git+https://github.com/PipeWire/pipewire#commit=$_commit")
+sha256sums=('SKIP')
 
 
 pkgver() {
@@ -26,13 +25,14 @@ pkgver() {
 prepare() {
   mkdir build
   cd $pkgname
-  patch -Np1 -i ../svg.diff
+  # Reduce docs size
+  printf '%s\n' >>doc/Doxyfile.in \
+    HAVE_DOT=yes DOT_IMAGE_FORMAT=svg INTERACTIVE_SVG=yes
 }
 
 build() {
-  cd build
-  meson setup --prefix=/usr --sysconfdir=/etc --buildtype=release -Denable_docs=true -Denable_man=true ../$pkgname
-  ninja
+  arch-meson $pkgname build -Denable_docs=true -Denable_man=true
+  ninja -C build
 }
 
 check() {
@@ -41,6 +41,5 @@ check() {
 }
 
 package() {
-  cd build
-  DESTDIR="$pkgdir" ninja install
+  DESTDIR="$pkgdir" ninja -C build install
 }
