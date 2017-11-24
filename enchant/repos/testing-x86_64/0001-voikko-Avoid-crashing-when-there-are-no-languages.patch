@@ -1,0 +1,46 @@
+From 5d1257041e6e84b16ee9adc8d1ec6495adc26103 Mon Sep 17 00:00:00 2001
+Message-Id: <5d1257041e6e84b16ee9adc8d1ec6495adc26103.1511516301.git.jan.steffens@gmail.com>
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 24 Nov 2017 10:34:01 +0100
+Subject: [PATCH] voikko: Avoid crashing when there are no languages
+
+voikko_provider_list_dicts returned NULL in this case. Fix this and use
+voikkoListSupportedSpellingLanguages directly, which always returns a
+valid pointer and also avoids copying.
+---
+ providers/enchant_voikko.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/providers/enchant_voikko.c b/providers/enchant_voikko.c
+index 7af9db4c18580872..d6df8baa9a49c859 100644
+--- a/providers/enchant_voikko.c
++++ b/providers/enchant_voikko.c
+@@ -111,16 +111,19 @@ static int
+ voikko_provider_dictionary_exists (struct str_enchant_provider * me _GL_UNUSED_PARAMETER,
+                                    const char *const tag)
+ {
+-	size_t i, n_dicts;
+-	char ** existing_dicts = voikko_provider_list_dicts (NULL, &n_dicts);
++	size_t i;
++	int exists = 0;
++	char ** voikko_langs = voikkoListSupportedSpellingLanguages (NULL);
+ 
+-	for (i = 0; existing_dicts[i] != NULL; i++) {
+-		if (strncmp (tag, existing_dicts[i], strlen (tag)) == 0) {
+-			return 1;
++	for (i = 0; voikko_langs[i] != NULL; i++) {
++		if (strncmp (tag, voikko_langs[i], strlen (tag)) == 0) {
++			exists = 1;
++			break;
+ 		}
+ 	}
++	voikkoFreeCstrArray(voikko_langs);
+ 
+-	return 0;
++	return exists;
+ }
+ 
+ static EnchantDict *
+-- 
+2.15.0
+
