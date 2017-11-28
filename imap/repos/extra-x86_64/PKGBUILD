@@ -3,8 +3,8 @@
 pkgbase=imap
 pkgname=(imap c-client)
 pkgver=2007f
-pkgrel=8
-arch=('i686' 'x86_64')
+pkgrel=9
+arch=('x86_64')
 license=('APACHE')
 url="http://www.washington.edu/imap"
 makedepends=('pam')
@@ -36,29 +36,8 @@ build() {
   cd $srcdir/$pkgbase-$pkgver
   # NOTE: if you wish to enforce SSL, use SSLTYPE=unix.nopwd
 
-  yes "y" | make lnp EXTRAAUTHENTICATORS=gss PASSWDTYPE=pam SPECIALAUTHENTICATORS=ssl SSLTYPE=unix EXTRACFLAGS="${CFLAGS} -fPIC -lgssapi_krb5 -lkrb5 -lk5crypto -lcom_err -lpam"
+  yes "y" | make lnp EXTRAAUTHENTICATORS=gss PASSWDTYPE=pam SPECIALAUTHENTICATORS=ssl SSLTYPE=unix EXTRACFLAGS="${CFLAGS} -fPIC -lgssapi_krb5 -lkrb5 -lk5crypto -lcom_err -lpam" EXTRALDFLAGS="${LDFLAGS}"
 
-  # create ssl certs for secure imap
-  for i in imapd ipop3d; do
-    PEM1=$srcdir/pem1
-    PEM2=$srcdir/pem2
-    /usr/bin/openssl req -newkey rsa:1024 -keyout $PEM1 \
-      -nodes -x509 -days 365 -out  $PEM2 << EOF
---
-SomeState
-SomeCity
-SomeOrganization
-SomeOrganizationalUnit
-localhost.localdomain
-root@localhost.localdomain
-EOF
-
-    cat $PEM1 >  ${i}.pem
-    echo ""    >> ${i}.pem
-    cat $PEM2 >> ${i}.pem
-    rm $PEM1 $PEM2
-    umask 022
-  done
 }
 
 package_imap() {
@@ -66,17 +45,14 @@ package_imap() {
   depends=('c-client')
   provides=('imap-server' 'pop3-server')
   conflicts=('courier-mta' 'courier-imap')
-  backup=(etc/xinetd.d/{imap,ipop2,ipop3} etc/ssl/certs/{imapd,ipop3d}.pem)
+  backup=(etc/xinetd.d/{imap,ipop2,ipop3})
+  install=imap.install
 
   cd $srcdir/$pkgbase-$pkgver
   install -d $pkgdir/usr/bin
   install -D -m755 imapd/imapd $pkgdir/usr/bin/imapd
   install -D -m755 ipopd/ipop2d $pkgdir/usr/bin/ipop2d
   install -D -m755 ipopd/ipop3d $pkgdir/usr/bin/ipop3d
-
-  # install certs
-  install -D -m600 imapd.pem $pkgdir/etc/ssl/certs/imapd.pem
-  install -D -m600 ipop3d.pem $pkgdir/etc/ssl/certs/ipop3d.pem
 
   # install xinetd.d configs
   install -D -m644 ../imap $pkgdir/etc/xinetd.d/imap
