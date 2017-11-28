@@ -1,0 +1,70 @@
+# $Id$
+# Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
+
+pkgbase=speech-dispatcher
+pkgname=(speech-dispatcher libspeechd)
+pkgver=0.8.8
+pkgrel=1
+arch=('x86_64')
+pkgdesc="High-level device independent layer for speech synthesis interface"
+url="http://www.freebsoft.org/speechd"
+license=('GPL2' 'FDL')
+makedepends=('intltool' 'espeak' 'libltdl' 'python-xdg' 'dotconf' 'libpulse' 'libao')
+source=("https://www.freebsoft.org/pub/projects/speechd/$pkgname-$pkgver.tar.gz"
+        'speech-dispatcherd.service')
+sha512sums=('7c7b9bf9b9ce541e790b5ae396cb614616c6b3883e75c0258603e91bf679850e3d63a6251daa3a1819b30d7518e3f552c83fe87b006274ffe1aa0f7e19c0b99b'
+            '73eb563003b03f4836b17af66335664050d1dc3bd8434be368cd09ff8933aa2adc4bd17c4ce5c1bbbd406a0b0880191426a679fa05eac0a30f4005eaeeb47340')
+
+build() {
+  cd ${pkgname}-${pkgver}
+
+  # Disabled due to bug: https://bugs.archlinux.org/task/35700
+  sed -i "s/cicero //g" configure.ac
+  sed -i "s/sd_cicero//g" src/modules/Makefile.am
+
+  autoreconf -i
+  ./configure --prefix=/usr \
+    --enable-shared \
+    --sysconfdir=/etc \
+    --without-flite
+  make
+}
+
+package_speech-dispatcher() {
+  depends=("libspeechd=$pkgver-$pkgrel" 'libltdl' 'python-xdg' 'dotconf' 'libpulse' 'libao')
+  optdepends=('festival: Speech output using Festival'
+              'espeak: Speech output using ESpeak'
+              'pulseaudio: PulseAudio support')
+  backup=(etc/speech-dispatcher/clients/emacs.conf
+  	      etc/speech-dispatcher/modules/ibmtts.conf
+  	      etc/speech-dispatcher/modules/espeak-generic.conf
+  	      etc/speech-dispatcher/modules/espeak.conf
+  	      etc/speech-dispatcher/modules/swift-generic.conf
+  	      etc/speech-dispatcher/modules/festival.conf
+  	      etc/speech-dispatcher/modules/cicero.conf
+  	      etc/speech-dispatcher/modules/espeak-mbrola-generic.conf
+  	      etc/speech-dispatcher/modules/dtk-generic.conf
+  	      etc/speech-dispatcher/modules/llia_phon-generic.conf
+  	      etc/speech-dispatcher/modules/ivona.conf
+  	      etc/speech-dispatcher/modules/epos-generic.conf
+          etc/speech-dispatcher/modules/flite.conf
+          etc/speech-dispatcher/modules/pico-generic.conf
+          etc/speech-dispatcher/speechd.conf)
+
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  install -Dm644 "${srcdir}"/speech-dispatcherd.service "${pkgdir}/usr/lib/systemd/system/speech-dispatcherd.service"
+  install -d "${pkgdir}/var/log/speech-dispatcher"
+
+  sed -i 's|includedir=.*|includedir=${prefix}/include/speech-dispatcher|g' "${pkgdir}/usr/lib/pkgconfig/speech-dispatcher.pc"
+
+  mkdir -p ${srcdir}/libspeechd/usr/lib
+  mv "${pkgdir}"/usr/lib/libspeechd*so* ${srcdir}/libspeechd/usr/lib
+}
+
+package_libspeechd() {
+  mkdir -p "${pkgdir}"/usr/lib
+
+  mv ${srcdir}/libspeechd/usr/lib/* "${pkgdir}"/usr/lib
+}
