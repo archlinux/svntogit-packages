@@ -1,0 +1,622 @@
+From d0e3daafdbdd858a5ee6e6b0b2de6a7a39ff27f1 Mon Sep 17 00:00:00 2001
+From: Marco Martin <notmart@gmail.com>
+Date: Wed, 29 Nov 2017 11:03:41 +0100
+Subject: determine QQC2 version at build time
+
+Summary:
+the qqc2 theme style needs to import the same qqc2 version
+than the latest one available in the installed Qt, otherwise
+users of QQC2 will only be able to use features available in
+Qt 5.7, even if they have a more recent Qt installed.
+this will also be needed to conditionally support the icon
+property introduced  in Qt 5.10
+
+BUG:386289
+
+Test Plan:
+kirigami gallery works with the style installed in this way
+it will need a better way to figure out what the available
+qqc2 version is
+
+Reviewers: #plasma, rizzitello, davidedmundson, apol
+
+Reviewed By: #plasma, rizzitello, davidedmundson, apol
+
+Subscribers: apol, rizzitello, plasma-devel
+
+Tags: #plasma
+
+Differential Revision: https://phabricator.kde.org/D9021
+---
+ CMakeLists.txt                      | 21 ++++++++++++++++++++-
+ org.kde.desktop/Button.qml          |  2 +-
+ org.kde.desktop/CheckBox.qml        |  4 ++--
+ org.kde.desktop/CheckDelegate.qml   |  2 +-
+ org.kde.desktop/ComboBox.qml        | 34 +++++++++++++++++++++++++++++++---
+ org.kde.desktop/Container.qml       |  2 +-
+ org.kde.desktop/Control.qml         |  2 +-
+ org.kde.desktop/Dial.qml            |  4 ++--
+ org.kde.desktop/Dialog.qml          |  2 +-
+ org.kde.desktop/DialogButtonBox.qml |  2 +-
+ org.kde.desktop/Drawer.qml          |  4 ++--
+ org.kde.desktop/Frame.qml           |  4 ++--
+ org.kde.desktop/GroupBox.qml        |  4 ++--
+ org.kde.desktop/ItemDelegate.qml    |  2 +-
+ org.kde.desktop/Label.qml           |  2 +-
+ org.kde.desktop/Menu.qml            |  4 ++--
+ org.kde.desktop/MenuItem.qml        |  2 +-
+ org.kde.desktop/Popup.qml           |  2 +-
+ org.kde.desktop/ProgressBar.qml     |  2 +-
+ org.kde.desktop/RadioButton.qml     |  4 ++--
+ org.kde.desktop/RadioDelegate.qml   |  2 +-
+ org.kde.desktop/RangeSlider.qml     |  4 ++--
+ org.kde.desktop/ScrollBar.qml       |  2 +-
+ org.kde.desktop/ScrollView.qml      |  4 ++--
+ org.kde.desktop/Slider.qml          |  2 +-
+ org.kde.desktop/SpinBox.qml         |  2 +-
+ org.kde.desktop/Switch.qml          |  2 +-
+ org.kde.desktop/SwitchDelegate.qml  |  2 +-
+ org.kde.desktop/TabBar.qml          |  2 +-
+ org.kde.desktop/TabButton.qml       |  4 ++--
+ org.kde.desktop/TextArea.qml        |  2 +-
+ org.kde.desktop/TextField.qml       |  4 ++--
+ org.kde.desktop/ToolBar.qml         |  2 +-
+ org.kde.desktop/ToolButton.qml      |  2 +-
+ org.kde.desktop/ToolTip.qml         |  4 ++--
+ 35 files changed, 96 insertions(+), 49 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 51cd1b8..49425c2 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -94,7 +94,26 @@ if (KF5IconThemes_FOUND AND KF5WidgetsAddons_FOUND)
+ add_subdirectory(kirigami-plasmadesktop-integration)
+ endif(KF5IconThemes_FOUND AND KF5WidgetsAddons_FOUND)
+ 
+-install(DIRECTORY org.kde.desktop DESTINATION ${KDE_INSTALL_QMLDIR}/QtQuick/Controls.2)
++#FIXME: this assumes there will always be a QQC2 release for each Qt release, needs
++#something to discover what's the latest qqc2 version available
++math(EXPR QQC2_VERSION "${Qt5QuickControls2_VERSION_MINOR} - 7")
++set(QQC2_VERSION "2.${QQC2_VERSION}")
++
++# Find all the source qml files
++FILE(GLOB_RECURSE inFiles RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
++    "${CMAKE_CURRENT_SOURCE_DIR}/org.kde.desktop/*")
++
++    #for each file, replace @QQC2_VERSION@ with the version we found
++FOREACH(infileName ${inFiles})
++    configure_package_config_file(
++        "${CMAKE_CURRENT_SOURCE_DIR}/${infileName}"
++        "${CMAKE_CURRENT_BINARY_DIR}/${infileName}"
++        INSTALL_DESTINATION  ${CMAKECONFIG_INSTALL_DIR}
++        PATH_VARS  QQC2_VERSION
++    )
++ENDFOREACH(infileName)
++
++install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/org.kde.desktop DESTINATION ${KDE_INSTALL_QMLDIR}/QtQuick/Controls.2)
+ 
+ feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+ 
+diff --git a/org.kde.desktop/Button.qml b/org.kde.desktop/Button.qml
+index 5c256ea..9b5ce27 100644
+--- a/org.kde.desktop/Button.qml
++++ b/org.kde.desktop/Button.qml
+@@ -20,7 +20,7 @@
+  */
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+diff --git a/org.kde.desktop/CheckBox.qml b/org.kde.desktop/CheckBox.qml
+index 6a3f8db..0141f59 100644
+--- a/org.kde.desktop/CheckBox.qml
++++ b/org.kde.desktop/CheckBox.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
+-import QtQuick.Controls 2.0
++import QtQuick.Templates @QQC2_VERSION@ as T
++import QtQuick.Controls @QQC2_VERSION@
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.CheckBox {
+diff --git a/org.kde.desktop/CheckDelegate.qml b/org.kde.desktop/CheckDelegate.qml
+index 9f522ef..4e1b960 100644
+--- a/org.kde.desktop/CheckDelegate.qml
++++ b/org.kde.desktop/CheckDelegate.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.5
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import "private"
+ 
+diff --git a/org.kde.desktop/ComboBox.qml b/org.kde.desktop/ComboBox.qml
+index d78a4ad..9d58bd6 100644
+--- a/org.kde.desktop/ComboBox.qml
++++ b/org.kde.desktop/ComboBox.qml
+@@ -22,15 +22,16 @@
+ 
+ import QtQuick 2.6
+ import QtQuick.Window 2.2
+-import QtQuick.Templates 2.0 as T
+-import QtQuick.Controls 2.0 as Controls
++import QtQuick.Templates @QQC2_VERSION@ as T
++import QtQuick.Controls @QQC2_VERSION@ as Controls
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ import QtGraphicalEffects 1.0
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.ComboBox {
+     id: controlRoot
+-    Kirigami.Theme.colorSet: Kirigami.Theme.Button
++    //NOTE: typeof necessary to not have warnings on Qt 5.7
++    Kirigami.Theme.colorSet: typeof(editable) != "undefined" && editable ? Kirigami.Theme.View : Kirigami.Theme.Button
+     Kirigami.Theme.inherit: false
+ 
+     implicitWidth: background.implicitWidth + leftPadding + rightPadding
+@@ -62,6 +63,30 @@ T.ComboBox {
+                 controlRoot.currentIndex = (controlRoot.currentIndex - 1 + delegateModel.count) % delegateModel.count
+             }
+         }
++        T.TextField {
++            anchors {
++                fill: parent
++                leftMargin: controlRoot.mirrored ? 12 : 1
++                rightMargin: !controlRoot.mirrored ? 12 : 1
++            }
++
++            text: controlRoot.editText
++
++            visible: typeof(controlRoot.editable) != "undefined" && controlRoot.editable
++            readOnly: controlRoot.popup.visible
++            inputMethodHints: controlRoot.inputMethodHints
++            validator: controlRoot.validator
++            renderType: Window.devicePixelRatio % 1 !== 0 ? Text.QtRendering : Text.NativeRendering
++            color: controlRoot.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
++            selectionColor: Kirigami.Theme.highlightColor
++            selectedTextColor: Kirigami.Theme.highlightedTextColor
++            selectByMouse: true
++
++            font: controlRoot.font
++            horizontalAlignment: Text.AlignLeft
++            verticalAlignment: Text.AlignVCenter
++            opacity: controlRoot.enabled ? 1 : 0.3
++        }
+     }
+ 
+     background: StylePrivate.StyleItem {
+@@ -77,6 +102,9 @@ T.ComboBox {
+         // contentHeight as in QComboBox magic numbers taken from QQC1 style
+         contentHeight: Math.max(Math.ceil(textHeight("")), 14) + 2
+         text: controlRoot.displayText
++        properties: {
++            "editable" : control.editable
++        }
+     }
+ 
+     popup: T.Popup {
+diff --git a/org.kde.desktop/Container.qml b/org.kde.desktop/Container.qml
+index 7eea039..2428473 100644
+--- a/org.kde.desktop/Container.qml
++++ b/org.kde.desktop/Container.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.Container {
+     id: control
+diff --git a/org.kde.desktop/Control.qml b/org.kde.desktop/Control.qml
+index 7d6fa3d..e03947a 100644
+--- a/org.kde.desktop/Control.qml
++++ b/org.kde.desktop/Control.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.Control {
+     id: control
+diff --git a/org.kde.desktop/Dial.qml b/org.kde.desktop/Dial.qml
+index 6a797ee..2ba3c49 100644
+--- a/org.kde.desktop/Dial.qml
++++ b/org.kde.desktop/Dial.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Controls 2.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ 
+diff --git a/org.kde.desktop/Dialog.qml b/org.kde.desktop/Dialog.qml
+index f477a28..ea133c5 100644
+--- a/org.kde.desktop/Dialog.qml
++++ b/org.kde.desktop/Dialog.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import QtGraphicalEffects 1.0
+-import QtQuick.Templates 2.1 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.Dialog {
+diff --git a/org.kde.desktop/DialogButtonBox.qml b/org.kde.desktop/DialogButtonBox.qml
+index fe4bfe9..c74084d 100644
+--- a/org.kde.desktop/DialogButtonBox.qml
++++ b/org.kde.desktop/DialogButtonBox.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.1 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.DialogButtonBox {
+diff --git a/org.kde.desktop/Drawer.qml b/org.kde.desktop/Drawer.qml
+index 5f2909e..0d78fdc 100644
+--- a/org.kde.desktop/Drawer.qml
++++ b/org.kde.desktop/Drawer.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Controls 2.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.Drawer {
+diff --git a/org.kde.desktop/Frame.qml b/org.kde.desktop/Frame.qml
+index 38647af..fcf4ee2 100644
+--- a/org.kde.desktop/Frame.qml
++++ b/org.kde.desktop/Frame.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Controls 2.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.Frame {
+diff --git a/org.kde.desktop/GroupBox.qml b/org.kde.desktop/GroupBox.qml
+index d2710a0..9042e58 100644
+--- a/org.kde.desktop/GroupBox.qml
++++ b/org.kde.desktop/GroupBox.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Controls 2.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.GroupBox {
+diff --git a/org.kde.desktop/ItemDelegate.qml b/org.kde.desktop/ItemDelegate.qml
+index 5b2bf62..4c66136 100644
+--- a/org.kde.desktop/ItemDelegate.qml
++++ b/org.kde.desktop/ItemDelegate.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.5
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import "private"
+ 
+diff --git a/org.kde.desktop/Label.qml b/org.kde.desktop/Label.qml
+index f84a2ac..a79e910 100644
+--- a/org.kde.desktop/Label.qml
++++ b/org.kde.desktop/Label.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.1
+ import QtQuick.Window 2.2
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+diff --git a/org.kde.desktop/Menu.qml b/org.kde.desktop/Menu.qml
+index 3320086..0bebe53 100644
+--- a/org.kde.desktop/Menu.qml
++++ b/org.kde.desktop/Menu.qml
+@@ -23,8 +23,8 @@
+ import QtQuick 2.6
+ import QtQuick.Layouts 1.2
+ import QtGraphicalEffects 1.0
+-import QtQuick.Controls 2.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.Menu {
+diff --git a/org.kde.desktop/MenuItem.qml b/org.kde.desktop/MenuItem.qml
+index 6e88f9c..527d078 100644
+--- a/org.kde.desktop/MenuItem.qml
++++ b/org.kde.desktop/MenuItem.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import QtQuick.Layouts 1.2
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.MenuItem {
+diff --git a/org.kde.desktop/Popup.qml b/org.kde.desktop/Popup.qml
+index 328f9f5..e4c434b 100644
+--- a/org.kde.desktop/Popup.qml
++++ b/org.kde.desktop/Popup.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import QtGraphicalEffects 1.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.Popup {
+diff --git a/org.kde.desktop/ProgressBar.qml b/org.kde.desktop/ProgressBar.qml
+index 28e32c9..5f9017a 100644
+--- a/org.kde.desktop/ProgressBar.qml
++++ b/org.kde.desktop/ProgressBar.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.ProgressBar {
+     id: controlRoot
+diff --git a/org.kde.desktop/RadioButton.qml b/org.kde.desktop/RadioButton.qml
+index 7cf0c16..7bd0420 100644
+--- a/org.kde.desktop/RadioButton.qml
++++ b/org.kde.desktop/RadioButton.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
+-import QtQuick.Controls 2.0
++import QtQuick.Templates @QQC2_VERSION@ as T
++import QtQuick.Controls @QQC2_VERSION@
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.RadioButton {
+diff --git a/org.kde.desktop/RadioDelegate.qml b/org.kde.desktop/RadioDelegate.qml
+index fc8068d..e493aa5 100644
+--- a/org.kde.desktop/RadioDelegate.qml
++++ b/org.kde.desktop/RadioDelegate.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.5
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import "private"
+ 
+diff --git a/org.kde.desktop/RangeSlider.qml b/org.kde.desktop/RangeSlider.qml
+index e86b2c3..235cd7d 100644
+--- a/org.kde.desktop/RangeSlider.qml
++++ b/org.kde.desktop/RangeSlider.qml
+@@ -21,8 +21,8 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Controls 2.0
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.RangeSlider {
+diff --git a/org.kde.desktop/ScrollBar.qml b/org.kde.desktop/ScrollBar.qml
+index d5945a1..b6f292e 100644
+--- a/org.kde.desktop/ScrollBar.qml
++++ b/org.kde.desktop/ScrollBar.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.ScrollBar {
+     id: controlRoot
+diff --git a/org.kde.desktop/ScrollView.qml b/org.kde.desktop/ScrollView.qml
+index bdfc772..8b7b16d 100644
+--- a/org.kde.desktop/ScrollView.qml
++++ b/org.kde.desktop/ScrollView.qml
+@@ -21,9 +21,8 @@
+ 
+ 
+ import QtQuick 2.9
+-import QtQuick.Controls 2.2
+-//import QtQuick.Controls.impl 2.2
+-import QtQuick.Templates 2.2 as T
++import QtQuick.Controls @QQC2_VERSION@
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.ScrollView {
+     id: control
+diff --git a/org.kde.desktop/Slider.qml b/org.kde.desktop/Slider.qml
+index 3ca284d..aa36f35 100644
+--- a/org.kde.desktop/Slider.qml
++++ b/org.kde.desktop/Slider.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.Slider {
+diff --git a/org.kde.desktop/SpinBox.qml b/org.kde.desktop/SpinBox.qml
+index 661fdf9..b7d68bb 100644
+--- a/org.kde.desktop/SpinBox.qml
++++ b/org.kde.desktop/SpinBox.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ 
+diff --git a/org.kde.desktop/Switch.qml b/org.kde.desktop/Switch.qml
+index e24f8fa..2349a58 100644
+--- a/org.kde.desktop/Switch.qml
++++ b/org.kde.desktop/Switch.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.CheckBox {
+diff --git a/org.kde.desktop/SwitchDelegate.qml b/org.kde.desktop/SwitchDelegate.qml
+index ec48ba8..6382460 100644
+--- a/org.kde.desktop/SwitchDelegate.qml
++++ b/org.kde.desktop/SwitchDelegate.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.5
+ import org.kde.kirigami 2.2 as Kirigami
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import "private"
+ 
+ T.SwitchDelegate {
+diff --git a/org.kde.desktop/TabBar.qml b/org.kde.desktop/TabBar.qml
+index f706c0c..6b836c9 100644
+--- a/org.kde.desktop/TabBar.qml
++++ b/org.kde.desktop/TabBar.qml
+@@ -23,7 +23,7 @@
+ import QtQuick 2.6
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ import org.kde.kirigami 2.2 as Kirigami
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.TabBar {
+     id: controlRoot
+diff --git a/org.kde.desktop/TabButton.qml b/org.kde.desktop/TabButton.qml
+index 66c687b..e7eaee7 100644
+--- a/org.kde.desktop/TabButton.qml
++++ b/org.kde.desktop/TabButton.qml
+@@ -23,9 +23,9 @@
+ import QtQuick 2.6
+ import QtQml.Models 2.1
+ //for TabBar.*
+-import QtQuick.Controls 2.0
++import QtQuick.Controls @QQC2_VERSION@
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ 
+ T.TabButton {
+     id: controlRoot
+diff --git a/org.kde.desktop/TextArea.qml b/org.kde.desktop/TextArea.qml
+index e490182..05f52f1 100644
+--- a/org.kde.desktop/TextArea.qml
++++ b/org.kde.desktop/TextArea.qml
+@@ -22,7 +22,7 @@
+ 
+ import QtQuick 2.6
+ import QtQuick.Window 2.1
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ 
+diff --git a/org.kde.desktop/TextField.qml b/org.kde.desktop/TextField.qml
+index 18a6131..c171ebe 100644
+--- a/org.kde.desktop/TextField.qml
++++ b/org.kde.desktop/TextField.qml
+@@ -22,8 +22,8 @@
+ 
+ import QtQuick 2.6
+ import QtQuick.Window 2.1
+-import QtQuick.Controls 2.0 as Controls
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@ as Controls
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ 
+diff --git a/org.kde.desktop/ToolBar.qml b/org.kde.desktop/ToolBar.qml
+index 1b96d8c..37fe7b7 100644
+--- a/org.kde.desktop/ToolBar.qml
++++ b/org.kde.desktop/ToolBar.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.ToolBar {
+diff --git a/org.kde.desktop/ToolButton.qml b/org.kde.desktop/ToolButton.qml
+index bb08ea0..0f3f63e 100644
+--- a/org.kde.desktop/ToolButton.qml
++++ b/org.kde.desktop/ToolButton.qml
+@@ -21,7 +21,7 @@
+ 
+ 
+ import QtQuick 2.6
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ import org.kde.qqc2desktopstyle.private 1.0 as StylePrivate
+ 
+diff --git a/org.kde.desktop/ToolTip.qml b/org.kde.desktop/ToolTip.qml
+index fe22cbd..fd8e5b5 100644
+--- a/org.kde.desktop/ToolTip.qml
++++ b/org.kde.desktop/ToolTip.qml
+@@ -22,8 +22,8 @@
+ 
+ import QtQuick 2.6
+ import QtGraphicalEffects 1.0
+-import QtQuick.Controls 2.0 as Controls
+-import QtQuick.Templates 2.0 as T
++import QtQuick.Controls @QQC2_VERSION@ as Controls
++import QtQuick.Templates @QQC2_VERSION@ as T
+ import org.kde.kirigami 2.2 as Kirigami
+ 
+ T.ToolTip {
+-- 
+cgit v0.11.2
+
