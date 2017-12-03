@@ -3,7 +3,7 @@
 pkgstatsver='2.3'
 showonly=false
 quiet=false
-option='-q -s -S'
+option='-q -s -S -L'
 
 usage() {
 	echo "usage: ${0} [option]"
@@ -19,7 +19,7 @@ usage() {
 	echo 'the architecture and the mirror you are using'
 	echo 'to the Arch Linux project.'
 	echo ''
-	echo 'Statistics are available at https://www.archlinux.de/statistics'
+	echo 'Statistics are available at https://pkgstats.archlinux.de/'
 }
 
 while getopts 'vdhsq' parameter; do
@@ -74,6 +74,6 @@ else
 		--data-urlencode "cpuarch=${cpuarch}" \
 		--data-urlencode "mirror=${mirror}" \
 		--data-urlencode "quiet=${quiet}" \
-		'https://www.archlinux.de/statistics' \
+		'https://pkgstats.archlinux.de/post' \
 	|| echo 'Sorry, data could not be sent.' >&2
 fi
