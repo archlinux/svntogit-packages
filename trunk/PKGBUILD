@@ -2,8 +2,8 @@
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgbase=imagemagick
-pkgname=(imagemagick imagemagick-doc)
-pkgver=6.9.9.25
+pkgname=(libmagick imagemagick imagemagick-doc)
+pkgver=7.0.7.13
 pkgrel=1
 pkgdesc="An image viewing/manipulation program"
 url="https://www.imagemagick.org/"
@@ -17,12 +17,16 @@ _relname=ImageMagick-${pkgver%%.*}
 _tarname=ImageMagick-${pkgver%.*}-${pkgver##*.}
 source=(https://www.imagemagick.org/download/$_tarname.tar.xz{,.asc}
         arch-fonts.diff)
-sha256sums=('5d78b1b50c6d71aee9d5aba8d2c2d1f26b739d432a0cfef5afb8316a45e58771'
+sha256sums=('cea13c9419d691879cf52c4e967967c392e8f76c0a6013f51c3bae90efc6480f'
             'SKIP'
             'a85b744c61b1b563743ecb7c7adad999d7ed9a8af816650e3ab9321b2b102e73')
 validpgpkeys=(D8272EF51DA223E4D05B466989AB63D48277377A)  # Lexie Parsimoniae
 
+shopt -s extglob
+
 prepare() {
+  mkdir -p binpkg/usr/lib/pkgconfig {binpkg,docpkg}/usr/share
+
   cd $_tarname
 
   # Fix up typemaps to match our packages, where possible
@@ -69,9 +73,9 @@ check() (
   make check
 )
 
-package_imagemagick() {
-  optdepends=('imagemagick-doc: manual and API docs'
-              'ghostscript: PS/PDF support'
+package_libmagick() {
+  pkgdesc+=" (library)"
+  optdepends=('ghostscript: PS/PDF support'
               'libraw: DNG support'
               'librsvg: SVG support'
               'libwebp: WEBP support'
@@ -82,12 +86,34 @@ package_imagemagick() {
               'openjpeg2: JPEG2000 support'
               'pango: Text rendering')
   backup=(etc/$_relname/{coder,colors,delegates,log,magic,mime,policy,quantization-table,thresholds,type,type-{dejavu,ghostscript}}.xml)
-  options=('!docs' '!emptydirs' libtool)
+  options=('!emptydirs' libtool)
 
   cd $_tarname
   make DESTDIR="$pkgdir" install
 
+  rm "$pkgdir"/etc/$_relname/type-{apple,urw-base35,windows}.xml
   rm "$pkgdir"/usr/lib/*.la
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 LICENSE NOTICE
+
+# Split 'imagemagick'
+  cd ../binpkg
+  mv "$pkgdir/usr/bin" usr/
+  mv "$pkgdir/usr/lib/perl5" usr/lib/
+  mv "$pkgdir"/usr/lib/pkgconfig/!(*Q16HDRI*) usr/lib/pkgconfig/
+  mv "$pkgdir/usr/share/man" usr/share/
+
+# Split docs
+  mv "$pkgdir/usr/share/doc" "$srcdir/docpkg/usr/share/"
+}
+
+package_imagemagick() {
+  depends=("libmagick=$pkgver-$pkgrel")
+  optdepends=('imagemagick-doc: manual and API docs')
+  options=('!emptydirs')
+
+  mv binpkg/* "$pkgdir"
+
   find "$pkgdir/usr/lib/perl5" -name '*.so' -exec chrpath -d {} +
 
 # template start; name=perl-binary-module-dependency; version=1;
@@ -98,6 +124,7 @@ if [[ $(find "$pkgdir/usr/lib/perl5/" -name "*.so") ]]; then
 fi
 # template end;
 
+  cd $_tarname
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 LICENSE NOTICE
 }
 
@@ -105,7 +132,8 @@ package_imagemagick-doc() {
   pkgdesc+=" (manual and API docs)"
   depends=()
 
+  mv docpkg/* "$pkgdir"
+
   cd $_tarname
-  make DESTDIR="$pkgdir" install-data-html
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 LICENSE NOTICE
 }
