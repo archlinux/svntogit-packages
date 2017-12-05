@@ -5,13 +5,13 @@
 pkgbase=opencv
 pkgname=('opencv' 'opencv-samples')
 pkgver=3.3.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Open Source Computer Vision Library"
 arch=('x86_64')
 license=('BSD')
 url="http://opencv.org/"
-depends=('intel-tbb' 'openexr' 'xine-lib' 'libdc1394' 'gtkglext')
-makedepends=('cmake' 'python-numpy' 'python2-numpy' 'mesa' 'eigen' 'hdf5')
+depends=('intel-tbb' 'openexr' 'xine-lib' 'libdc1394' 'gtkglext' 'cblas' 'lapack')
+makedepends=('cmake' 'python-numpy' 'python2-numpy' 'mesa' 'eigen' 'hdf5' 'lapacke')
 optdepends=('opencv-samples'
             'hdf5: support for HDF5 format'
             'opencl-icd-loader: For coding with OpenCL'
@@ -36,30 +36,28 @@ _cmakeopts=('-D WITH_OPENCL=ON'
             '-D CMAKE_BUILD_TYPE=Release'
             '-D CMAKE_INSTALL_PREFIX=/usr'
             '-D CMAKE_SKIP_RPATH=ON'
+            '-D CPU_BASELINE_DISABLE=SSE3 -D CPU_BASELINE_REQUIRE=SSE2'
             #'-D WITH_IPP=ON'
             #'-D INSTALL_CREATE_DISTRIB=ON'
             )
-
-# SSE only available from Pentium 3 onwards (i686 is way older)
-[[ "$CARCH" = 'i686' ]] && _cmakeopts+=('-D CPU_BASELINE_DISABLE=SSE2')
-[[ "$CARCH" = 'x86_64' ]] && _cmakeopts+=('-D CPU_BASELINE_DISABLE=SSE3 -D CPU_BASELINE_REQUIRE=SSE2')
 
 build() {
   mkdir -p build
 
   cd build
+  # cmake's FindLAPACK doesn't add cblas to LAPACK_LIBRARIES, so we need to specify them manually
   cmake ${_cmakeopts[@]} \
     -DOPENCV_EXTRA_MODULES_PATH="$srcdir/opencv_contrib-$pkgver/modules" \
+    -DLAPACK_LIBRARIES="/usr/lib/liblapack.so;/usr/lib/libblas.so;/usr/lib/libcblas.so" \
+    -DLAPACK_CBLAS_H="/usr/include/cblas.h" \
+    -DLAPACK_LAPACKE_H="/usr/include/lapacke.h" \
     ../$pkgname-$pkgver
-
-  make
 }
 
 package_opencv() {
   options=('staticlibs')
 
   cd build
-
   make DESTDIR="$pkgdir" install
 
   # install license file
