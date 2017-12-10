@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.43.0
+pkgver=0.44.0
 pkgrel=1
 pkgdesc='High productivity build system'
 url='http://mesonbuild.com/'
@@ -14,20 +14,18 @@ makedepends=('python-setuptools')
 checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-base' 'git' 'gnustep-base'
               'cython' 'gtkmm3' 'gtest' 'gmock' 'protobuf' 'wxgtk' 'python-gobject' 'gobject-introspection'
               'itstool' 'gtk3' 'java-environment=8' 'gtk-doc' 'llvm' 'clang' 'sdl2'
-              'doxygen' 'vulkan-validation-layers' 'openmpi' 'openssh' 'mercurial' 'gtk-sharp-2')
+              'doxygen' 'vulkan-validation-layers' 'openmpi' 'openssh' 'mercurial' 'gtk-sharp-2'
+              'qt5-tools' 'libwmf')
 checkdepends_x86_64=('ldc' 'valgrind')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
-        fix-tests.diff
         arch-meson)
-sha512sums=('e149758fa6ad4b2d3643bcda176577633f2e50e58f38074c1a17f1712d554bac0fbabf26fe7eef15954dc51630b1f923b15cfe9040a025cf61b5666098197d16'
+sha512sums=('9aefa52d92d7750528e9a9236f19131c8e58bfc21212595c311f4e2787ad40bb53d6085f52283cad13923ddf12da1a59067d48424c72ace47fc127978d1af2ff'
             'SKIP'
-            '7ea1f02adf79e4fde5d002956852d9b976b36386be8d78a3845292e8195a36d462db20a9c708e332e0d3b261a7abf9d05f5d034aab96ede58229639f3620ec91'
             '82557891b9424b1597f1200bfacfae2f357e94bf81d53fc3fe9b2b641098566513dce6eeaa8882e9892c7cdec796650e5298ed25af61f35f9d02d9b4b9ca39c8')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
 prepare() {
   cd ${pkgname}-${pkgver}
-  patch -Np1 -i ../fix-tests.diff
 }
 
 build() {
@@ -47,9 +45,12 @@ check() {
 package() {
   cd ${pkgname}-${pkgver}
   python setup.py install --root="${pkgdir}" --optimize=1 --skip-build
-  install -Dm 644 syntax-highlighting/vim/ftdetect/meson.vim -t "${pkgdir}/usr/share/vim/vimfiles/ftdetect"
-  install -Dm 644 syntax-highlighting/vim/indent/meson.vim -t "${pkgdir}/usr/share/vim/vimfiles/indent"
-  install -Dm 644 syntax-highlighting/vim/syntax/meson.vim -t "${pkgdir}/usr/share/vim/vimfiles/syntax"
+
+  for _f in data/syntax-highlighting/vim/*/*; do
+    install -Dt "${pkgdir}/usr/share/vim/vimfiles/$(basename "$(dirname "$_f")")" -m644 "$_f"
+  done
+  install -Dt "${pkgdir}/usr/share/emacs/site-lisp" -m644 data/syntax-highlighting/emacs/*
+  install -Dt "${pkgdir}/usr/share/zsh/site-functions" -m644 data/shell-completions/zsh/*
 
   # Arch packaging helper
   install -D ../arch-meson -t "${pkgdir}/usr/bin"
