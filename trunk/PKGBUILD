@@ -5,7 +5,7 @@
 pkgbase=lvm2
 pkgname=('lvm2' 'device-mapper')
 pkgver=2.02.176
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://sourceware.org/lvm2/"
 license=('GPL2' 'LGPL2.1')
@@ -37,23 +37,40 @@ prepare() {
 }
 
 build() {
-  CONFIGUREOPTS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sbindir=/usr/bin \
-      --with-udev-prefix=/usr --with-systemdsystemunitdir=/usr/lib/systemd/system \
-      --with-default-pid-dir=/run --with-default-dm-run-dir=/run --with-default-run-dir=/run/lvm \
-      --enable-pkgconfig --enable-readline --enable-dmeventd --enable-cmdlib --enable-applib \
-      --enable-udev_sync --enable-udev_rules --with-default-locking-dir=/run/lock/lvm \
-      --enable-lvmetad --with-thin=internal --with-cache=internal"
+  local CONFIGUREOPTS=(
+    --prefix=/usr
+    --sbindir=/usr/bin
+    --sysconfdir=/etc
+    --localstatedir=/var
+    --enable-applib
+    --enable-cmdlib
+    --enable-dmeventd
+    --enable-lvmetad
+    --enable-lvmpolld
+    --enable-pkgconfig
+    --enable-readline
+    --enable-udev_rules
+    --enable-udev_sync
+    --with-cache=internal
+    --with-default-dm-run-dir=/run
+    --with-default-locking-dir=/run/lock/lvm
+    --with-default-pid-dir=/run
+    --with-default-run-dir=/run/lvm
+    --with-systemdsystemunitdir=/usr/lib/systemd/system
+    --with-thin=internal
+    --with-udev-prefix=/usr
+  )
 
   cp -a LVM2.${pkgver} LVM2-initramfs
 
   cd LVM2.${pkgver}
 
-  ./configure $CONFIGUREOPTS --enable-udev-systemd-background-jobs
+  ./configure "${CONFIGUREOPTS[@]}" --enable-udev-systemd-background-jobs
   make
 
   # Build legacy udev rule for initramfs
   cd ../LVM2-initramfs
-  ./configure $CONFIGUREOPTS --enable-udev-systemd-background-jobs=no
+  ./configure "${CONFIGUREOPTS[@]}" --enable-udev-systemd-background-jobs=no
   cd udev
   make 69-dm-lvm-metad.rules
 }
@@ -100,5 +117,7 @@ package_lvm2() {
   rm -f "${pkgdir}/usr/lib/systemd/system/"dm-*
   install -d -m755 "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants"
   ln -sf ../lvm2-lvmetad.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmetad.socket"
+  ln -sf ../lvm2-lvmpolld.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmpolld.socket"
+  ln -sf ../lvm2-monitor.service "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-monitor.service"
   make DESTDIR="${pkgdir}" install_systemd_generators
 }
