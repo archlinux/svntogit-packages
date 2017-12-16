@@ -13,7 +13,7 @@ arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd)
-options=(!strip staticlibs debug)
+options=(!strip staticlibs)
 _commit=71170eba2af41e08d51cf9d7b1ded5fd4b0b5c9c  # release/2.26/master
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
