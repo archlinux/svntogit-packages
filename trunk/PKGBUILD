@@ -3,7 +3,7 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=colord
-pkgver=1.4.1
+pkgver=1.4.1+6+gf08c25d
 pkgrel=1
 pkgdesc="System daemon for managing color devices"
 arch=(x86_64)
@@ -15,10 +15,14 @@ makedepends=(gobject-introspection vala sane bash-completion argyllcms git docbo
 optdepends=('sane: scanner support'
             'argyllcms: color profiling')
 replaces=(shared-color-profiles)
-install=colord.install
-_commit=ef560710602ce590e72f8412cb200f68d6e3e153  # tags/1.4.1^0
-source=("git+https://github.com/hughsie/colord#commit=$_commit")
-sha1sums=('SKIP')
+options=(!emptydirs)
+_commit=f08c25ddd93ad3fa691172119a038465cd178420  # master
+source=("git+https://github.com/hughsie/colord#commit=$_commit"
+        0001-Make-cd_color_get_blackbody_rgb_full-safer.patch
+        0002-Avoid-buffer-overflow-when-reading-profile_id.patch)
+sha256sums=('SKIP'
+            'b804aa00631040fff7032af12c2c92c1b6de42b7adfd8d05671257071ef348ce'
+            'db50941a8f35f819123f4dac55269acf6e1916287c69087e69d506499c0ee974')
 validpgpkeys=('163EB50119225DB3DF8F49EA17ACBA8DFA970E17')
 
 pkgver() {
@@ -27,20 +31,19 @@ pkgver() {
 }
 
 prepare() {
-  mkdir build
   cd $pkgname
+  patch -Np1 -i ../0001-Make-cd_color_get_blackbody_rgb_full-safer.patch
+  patch -Np1 -i ../0002-Avoid-buffer-overflow-when-reading-profile_id.patch
 }
 
 build() {
-  cd build
-  meson setup --prefix=/usr --buildtype=release ../$pkgname \
-    --localstatedir=/var --libexecdir=/usr/lib/$pkgname \
+  arch-meson $pkgname build \
     -Denable-libcolordcompat=true \
     -Denable-sane=true \
     -Denable-vala=true \
     -Denable-print-profiles=true \
     -Dwith-daemon-user=colord
-  ninja
+  ninja -C build
 }
 
 check() {
@@ -49,11 +52,9 @@ check() {
 }
 
 package() {
-  cd build
-  DESTDIR="$pkgdir" ninja install
-
-  # the build system has no colord user, so the chown fails
-  chown -R 124:124 "$pkgdir/var/lib/colord"
+  DESTDIR="$pkgdir" ninja -C build install
+  echo 'u colord - "Color management daemon" /var/lib/colord' |
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
 }
 
 # vim:set ts=2 sw=2 et:
