@@ -4,8 +4,8 @@
 # Contributor: Mladen Pejakovic <pejakm@gmail.com>
 
 pkgbase=libxkbcommon
-pkgname=(libxkbcommon libxkbcommon-x11)
-pkgver=0.7.2
+pkgname=(libxkbcommon libxkbcommon-doc libxkbcommon-x11)
+pkgver=0.8.0
 pkgrel=1
 pkgdesc="Keymap handling library for toolkits and window systems"
 arch=(x86_64)
@@ -14,7 +14,7 @@ license=(custom)
 depends=(xkeyboard-config glibc)
 checkdepends=(xorg-server-xvfb libgl)
 makedepends=(libxcb doxygen git graphviz wayland wayland-protocols meson)
-_commit=ba9568bdb128f3c5f717b8503439ef6e50a66e97  # tags/xkbcommon-0.7.2^0
+_commit=b82e3b764e60df337ca695e8f8642e7bf42b0cca  # tags/xkbcommon-0.8.0^0
 source=("git+https://github.com/xkbcommon/libxkbcommon#commit=$_commit")
 md5sums=('SKIP')
 
@@ -24,31 +24,46 @@ pkgver() {
 }
 
 prepare() {
-  mkdir -p build x11/usr/{include/xkbcommon,lib/pkgconfig}
   cd $pkgbase
+  printf '%s\n' >>doc/Doxyfile.in \
+    HAVE_DOT=yes DOT_IMAGE_FORMAT=svg INTERACTIVE_SVG=yes
 }
 
 build() {
-  cd build
-  meson --prefix=/usr --buildtype=release ../$pkgbase
-  ninja
+  arch-meson $pkgbase build
+  ninja -C build
 }
 
 check() {
   cd build
-  xvfb-run -a mesontest
+  xvfb-run -a meson test
 }
 
 package_libxkbcommon() {
-  cd build
-  DESTDIR="$pkgdir" ninja install
-  install -Dm644 ../$pkgbase/LICENSE "$pkgdir/usr/share/licenses/libxkbcommon/LICENSE"
+  DESTDIR="$pkgdir" ninja -C build install
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
+
+### Split libxkbcommon-doc
+
+  mkdir -p "$srcdir"/doc/usr/share
+  mv "$pkgdir"/usr/share/doc "$srcdir/doc/usr/share"
 
 ### Split libxkbcommon-x11
 
+  mkdir -p "$srcdir"/x11/usr/{include/xkbcommon,lib/pkgconfig}
   mv "$pkgdir"/usr/lib/*x11* "$srcdir/x11/usr/lib"
   mv "$pkgdir"/usr/lib/pkgconfig/*x11* "$srcdir/x11/usr/lib/pkgconfig"
   mv "$pkgdir"/usr/include/xkbcommon/*x11* "$srcdir/x11/usr/include/xkbcommon"
+}
+
+package_libxkbcommon-doc() {
+  pkgdesc="API documentation for libxkbcommon"
+  depends=(libxkbcommon)
+
+  mv doc/* "$pkgdir"
+
+  install -d "$pkgdir/usr/share/licenses"
+  ln -s libxkbcommon "$pkgdir/usr/share/licenses/$pkgname"
 }
 
 package_libxkbcommon-x11() {
@@ -57,5 +72,6 @@ package_libxkbcommon-x11() {
 
   mv x11/* "$pkgdir"
 
-  install -Dm644 $pkgbase/LICENSE "$pkgdir/usr/share/licenses/libxkbcommon-x11/LICENSE"
+  install -d "$pkgdir/usr/share/licenses"
+  ln -s libxkbcommon "$pkgdir/usr/share/licenses/$pkgname"
 }
