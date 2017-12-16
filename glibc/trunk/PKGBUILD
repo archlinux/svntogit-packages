@@ -13,7 +13,7 @@ arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd)
-options=(!strip staticlibs)
+options=(!strip staticlibs debug)
 _commit=71170eba2af41e08d51cf9d7b1ded5fd4b0b5c9c  # release/2.26/master
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
@@ -154,22 +154,24 @@ package_glibc() {
   #   libpthread-${pkgver}.so
   #   libthread_db-1.0.so
 
-  cd "$pkgdir"
-  strip $STRIP_BINARIES usr/bin/{gencat,getconf,getent,iconv,iconvconfig} \
-                        usr/bin/{ldconfig,locale,localedef,nscd,makedb} \
-                        usr/bin/{pcprofiledump,pldd,rpcgen,sln,sprof} \
-                        usr/lib/getconf/*
+  if check_option 'debug' n; then
+    cd "$pkgdir"
+    strip $STRIP_BINARIES usr/bin/{gencat,getconf,getent,iconv,iconvconfig} \
+                          usr/bin/{ldconfig,locale,localedef,nscd,makedb} \
+                          usr/bin/{pcprofiledump,pldd,rpcgen,sln,sprof} \
+                          usr/lib/getconf/*
 
-  strip $STRIP_STATIC usr/lib/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
-                      usr/lib/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
-                      usr/lib/lib{resolv,rpcsvc,rt,util}.a \
-                      usr/lib/lib{m-${pkgver},mvec{,_nonshared}}.a
+    strip $STRIP_STATIC usr/lib/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
+                        usr/lib/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
+                        usr/lib/lib{resolv,rpcsvc,rt,util}.a \
+                        usr/lib/lib{m-${pkgver},mvec{,_nonshared}}.a
 
-  strip $STRIP_SHARED usr/lib/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
-                      usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
-                      usr/lib/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
-                      usr/lib/lib{memusage,pcprofile,SegFault}.so \
-                      usr/lib/{audit,gconv}/*.so usr/lib/libmvec-*.so || true
+    strip $STRIP_SHARED usr/lib/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
+                        usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
+                        usr/lib/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
+                        usr/lib/lib{memusage,pcprofile,SegFault}.so \
+                        usr/lib/{audit,gconv}/*.so usr/lib/libmvec-*.so || true
+  fi
 }
 
 package_lib32-glibc() {
@@ -194,14 +196,16 @@ package_lib32-glibc() {
   # Symlink /usr/lib32/locale to /usr/lib/locale
   ln -s ../lib/locale "$pkgdir/usr/lib32/locale"
 
-  cd $pkgdir
-  strip $STRIP_BINARIES usr/lib32/getconf/*
-  strip $STRIP_STATIC usr/lib32/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
-                      usr/lib32/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
-                      usr/lib32/lib{resolv,rpcsvc,rt,util,m}.a
-  strip $STRIP_SHARED usr/lib32/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
-                      usr/lib32/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
-                      usr/lib32/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
-                      usr/lib32/lib{memusage,pcprofile,SegFault}.so \
-                      usr/lib32/{audit,gconv}/*.so || true
+  if check_option 'debug' n; then
+    cd $pkgdir
+    strip $STRIP_BINARIES usr/lib32/getconf/*
+    strip $STRIP_STATIC usr/lib32/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
+                        usr/lib32/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
+                        usr/lib32/lib{resolv,rpcsvc,rt,util,m}.a
+    strip $STRIP_SHARED usr/lib32/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
+                        usr/lib32/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
+                        usr/lib32/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
+                        usr/lib32/lib{memusage,pcprofile,SegFault}.so \
+                        usr/lib32/{audit,gconv}/*.so || true
+  fi
 }
