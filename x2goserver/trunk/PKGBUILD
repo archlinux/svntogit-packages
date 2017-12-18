@@ -8,7 +8,7 @@
 
 pkgname=x2goserver
 pkgver=4.0.1.22
-pkgrel=1
+pkgrel=2
 pkgdesc="Open source graphical Remote Desktop and terminal server based on NX technology"
 arch=('x86_64')
 url="http://www.x2go.org/"
@@ -69,9 +69,13 @@ options=('emptydirs')
 install=x2goserver.install
 backup=('etc/x2go/x2goserver.conf' 'etc/x2go/x2gosql/sql')
 # no https due to invalid certificate
-source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.asc})
+source=(http://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.asc}
+       tmpfiles.d
+       sysusers.d)
 sha256sums=('bb7bd9abadfb6201f39068731a955df5183f4d447c42fc0720777f32acafbfbc'
-            'SKIP')
+            'SKIP'
+            '548d48925171aeca198494236cfba7232921a25a1c4c81f5d004a734d83d1350'
+            '04d429e8d8fe02c8078d75ba63ba57774274df877b2c6ec942621312b7bf9118')
 validpgpkeys=('1AD23D1B8F087A35AB74BDE9F4A7678C9C6B0B2B') # X2go Git Administrator <git-admin@x2go.org>
 
 build() {
@@ -95,19 +99,13 @@ build() {
 }
 
 package() {
-  
-  # system user/group x2gouser - 111
-  # system user/group x2goprint - 112
-  
   cd "${srcdir}/${pkgname}-${pkgver}"
   make -j1 PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir" install
 
-  # systemd service file 
+  # systemd files
   install -Dm 644 "$srcdir/${pkgname}-${pkgver}/x2goserver.service" "$pkgdir/usr/lib/systemd/system/x2goserver.service"
-  
-  # X2go homedir + printing spool dir
-  install -dm 0770 --owner=111 --group=111 $pkgdir/var/lib/x2go
-  install -dm 0770 --owner=112 --group=112 $pkgdir/var/spool/x2go
+  install -Dm644 ../tmpfiles.d ${pkgdir}/usr/lib/tmpfiles.d/x2goserver.conf
+  install -Dm644 ../sysusers.d ${pkgdir}/usr/lib/sysusers.d/x2goserver.conf
   
   # load fuse module at system start
   install -dm755 $pkgdir/usr/lib/modules-load.d
