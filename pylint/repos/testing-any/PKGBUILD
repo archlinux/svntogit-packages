@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: Angel Velasquez <angvp@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+
+pkgbase=pylint
+pkgname=('python-pylint' 'python2-pylint')
+pkgver=1.8.0
+pkgrel=1
+pkgdesc="Analyzes Python code looking for bugs and signs of poor quality"
+arch=('any')
+url="http://pylint.org"
+license=('GPL')
+makedepends=('python-astroid' 'python2-astroid' 'python-setuptools' 'python2-setuptools'
+             'python-six' 'python2-six' 'python-isort' 'python2-isort' 'python-mccabe'
+             'python2-mccabe' 'python2-backports.functools_lru_cache' 'python2-configparser'
+             'python2-singledispatch')
+checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'mpdecimal')
+optdepends=('tk: Pylint GUI')
+source=("$pkgbase-$pkgver.tar.gz::https://github.com/PyCQA/pylint/archive/pylint-$pkgver.tar.gz")
+sha512sums=('4f221297b4079f0db1ac21324c5ebbe4a728de85922e47737c569918521a5e2db2e3acf4a549dfc194e54ac58fe70fe7d80eb75f2bc5ac7fb1e14dd494b35a78')
+
+prepare() {
+  sed -i 's/pytest<3.3/pytest/' pylint-pylint-$pkgver/setup.py
+
+  cp -a pylint-pylint-$pkgver{,-py2}
+
+  cd "$srcdir"/pylint-pylint-$pkgver/pylint
+  sed -e "s|/usr/bin/env python|/usr/bin/env python3|" -e "s|/usr/bin/python$|/usr/bin/python3|" -i epylint.py __main__.py test/input/noext test/data/ascript
+
+  cd "$srcdir"/pylint-pylint-$pkgver-py2/pylint
+  sed -e "s|/usr/bin/env python|/usr/bin/env python2|" -e "s|/usr/bin/python$|/usr/bin/python2|" -i epylint.py __main__.py test/input/noext test/data/ascript
+}
+
+build() {
+  cd "$srcdir"/pylint-pylint-$pkgver
+  python setup.py build
+
+  cd "$srcdir"/pylint-pylint-$pkgver-py2
+  python2 setup.py build
+}
+
+check() {
+  cd "$srcdir"/pylint-pylint-$pkgver
+  python setup.py pytest
+
+  cd "$srcdir"/pylint-pylint-$pkgver-py2
+  python2 setup.py pytest
+}
+
+package_python-pylint() {
+  depends=('python-astroid' 'python-setuptools' 'python-mccabe' 'python-isort')
+
+  cd pylint-pylint-$pkgver
+
+  python3 setup.py install --prefix=/usr --root="$pkgdir" --skip-build --optimize=1
+
+  install -d "$pkgdir"/usr/share/man/man1
+  install -m644 man/* "$pkgdir"/usr/share/man/man1
+}
+
+package_python2-pylint() {
+  depends=('python2-astroid' 'python2-setuptools' 'python2-mccabe' 'python2-isort'
+           'python2-backports.functools_lru_cache' 'python2-configparser' 'python2-singledispatch')
+
+  cd pylint-pylint-$pkgver-py2
+
+  python2 setup.py install --prefix=/usr --root="$pkgdir" --skip-build --optimize=1
+
+  install -d "$pkgdir"/usr/share/man/man1
+  install -m644 man/* "$pkgdir"/usr/share/man/man1
+
+  for _exe in epylint pylint pyreverse symilar; do
+     mv "$pkgdir"/usr/bin/${_exe}{,2}
+     mv "$pkgdir"/usr/share/man/man1/${_exe}{,2}.1
+  done
+}
