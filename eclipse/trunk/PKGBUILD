@@ -8,63 +8,44 @@
 
 pkgbase=eclipse
 pkgname=(eclipse-{common,java,jee,cpp,php,javascript})
-pkgver=4.7.1.a
+pkgver=4.7.2
 pkgrel=1
-_release=oxygen-1a
+_release=oxygen-2
 pkgdesc="Highly extensible IDE"
 license=(EPL)
 arch=(x86_64)
 url="https://eclipse.org"
 makedepends=(python3)
 options=(!emptydirs)
-source=(commonify eclipse.sh eclipse.desktop)
-source_i686=()
-source_x86_64=()
+source=(commonify)
 noextract=()
 
 for _pkg in ${pkgname[@]}; do
   [[ $_pkg == 'eclipse-common' ]] && continue
-  source_i686+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk.tar.gz)
-  source_x86_64+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk-x86_64.tar.gz)
-  noextract+=($_pkg-$_release-linux-gtk{,-x86_64}.tar.gz)
+  source+=(http://ftp-stud.fht-esslingen.de/pub/Mirrors/eclipse/technology/epp/downloads/release/${_release/-//}/$_pkg-$_release-linux-gtk-x86_64.tar.gz)
+  noextract+=($_pkg-$_release-linux-gtk-x86_64.tar.gz)
   eval "package_$_pkg() { _package $_pkg; }"
 done
 
-sha256sums=('9e5573f7b951774be3f98c69f9d391ddafbe8a3a727ce81c08dfd67d42cee503'
-            '04e789fb695d5f95d09ddb994ae30397b39aee35f11997465dd91d129c41b2ed'
-            '57559c2548ae463089acb3c2825ebc002ed83067ddc953b23d36a7b5a02deaf3')
-sha256sums_i686=('9ffb8980f1f5e68ee6779c9f02376040ace2dec76d8be6407e0d2c77c1c3100b'
-                 '9752f15435a417c03bb75313ee94a4dc3b35adcdd300af055a6f7aa9311225a5'
-                 'eb8462e778034dd4c8e5fcb538d271300730fd7584fe7c2c5e2d53541ee453c8'
-                 'ac6d167124aaad5fb8629802ce5e7acfa57848fc5c7854d068ecd9cd19719ca8'
-                 '65a536d0ce3b41a0c8471167085757eee49b4ebeb04b68929af6475ac465aa5b')
-sha256sums_x86_64=('f1b8205abec2dc9cc769941fbde96bb83007050841d7f094dcb3cb07b1696446'
-                   '7c6bf1640c2ed9db3717cf2c65cecd5f18c3736b46151caa09cd28397516f08b'
-                   'a155afe0b305a1206efb463123f68f48be3900e694f4c7fffa0643e1424511cf'
-                   '6b90524ec4f075ed382f14c598c817df1764f31bebbf4b1ba9bdd4056033eaf3'
-                   'af546dd94f7376dced761970ab0a0f31508fc0ec06e51282a02f5df96748918c')
+sha256sums=('da1eaf6239cb0c2b5009cd8c261e96e7b17a7536b12fe60fcb1e903f5e67dbdc'
+            '96cea8ab8ce6873d254054766f34a0b4cbdbe70c43d30148c49ee2d7917cc32f'
+            'e35f2bc01e6e3db89e29840bd8c4cd105aec583a0177917e8455a16ff39aeb62'
+            '30e1b431c5e5ca82a72fe3f35e1b311af75671b04d0bd3120b848673325dec10'
+            '5e8c0da6b2438db8b4df546a3e1ebfa03bb6ee065b9323bfa99467782bbaf3f4'
+            '9a099b141421d09ae50ca469d162b3e2a41134a8bd7985fd4d28f284ba29757e')
 
 prepare() {
-  mkdir eclipse-common
-
   for _pkg in ${pkgname[@]}; do
-    [[ $_pkg == 'eclipse-common' ]] && continue
-
-    if [[ $CARCH == x86_64 ]]; then
-      bsdtar -xf "$_pkg-$_release-linux-gtk-x86_64.tar.gz"
-    else
-      bsdtar -xf "$_pkg-$_release-linux-gtk.tar.gz"
-    fi
-
-    mv eclipse $_pkg
+    mkdir $_pkg
+    [[ $_pkg == eclipse-common ]] && continue
+    bsdtar -xf "$_pkg-$_release-linux-gtk-x86_64.tar.gz" -C $_pkg --strip-components 1
   done
 }
 
 build() {
-  ./commonify --identical ${pkgname[@]}
-
-  mkdir -p eclipse-common/dropins
+  mkdir eclipse-common/dropins
   touch eclipse-common/dropins/.keep
+  ./commonify --identical ${pkgname[@]}
 }
 
 package_eclipse-common() {
@@ -74,8 +55,23 @@ package_eclipse-common() {
   install -d "$pkgdir/usr/lib"
   cp -a eclipse-common "$pkgdir/usr/lib/eclipse"
 
-  install -D eclipse.sh "$pkgdir/usr/bin/eclipse"
-  install -Dm644 eclipse.desktop "$pkgdir/usr/share/applications/eclipse.desktop"
+  install -D /dev/stdin "$pkgdir/usr/bin/eclipse" <<END
+#!/bin/bash
+export ECLIPSE_HOME=/usr/lib/eclipse
+exec \$ECLIPSE_HOME/eclipse "\$@"
+END
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/eclipse.desktop" <<END
+[Desktop Entry]
+Name=Eclipse
+Comment=A Java Development Environment
+Icon=eclipse
+Exec=eclipse
+Terminal=false
+Type=Application
+Categories=Development;IDE;Java;
+StartupNotify=true
+END
 
   for _i in 16 32 48 256; do
     install -Dm644 eclipse-common/plugins/org.eclipse.platform_*/eclipse${_i}.png \
