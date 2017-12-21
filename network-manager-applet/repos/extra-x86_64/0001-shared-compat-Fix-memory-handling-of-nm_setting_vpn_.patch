@@ -1,5 +1,5 @@
-From d4dee89e97952dff63a65ea850ab7aeac2d1f9c0 Mon Sep 17 00:00:00 2001
-Message-Id: <d4dee89e97952dff63a65ea850ab7aeac2d1f9c0.1513880568.git.jan.steffens@gmail.com>
+From 313649cccb8aa137ef7135f69dc56fd6fcf1a1db Mon Sep 17 00:00:00 2001
+Message-Id: <313649cccb8aa137ef7135f69dc56fd6fcf1a1db.1513881566.git.jan.steffens@gmail.com>
 From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
 Date: Thu, 21 Dec 2017 18:22:55 +0100
 Subject: [PATCH] shared/compat: Fix memory handling of
@@ -16,15 +16,34 @@ Fix this by handing out a duplicate of the array.
 
 Fixes: 272439cb2077a889485dd195bb6b99ca91d3e3bf
 ---
- shared/nm-utils/nm-compat.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ shared/nm-utils/nm-compat.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
 
 diff --git a/shared/nm-utils/nm-compat.c b/shared/nm-utils/nm-compat.c
-index 22ab675de8373639..ba50a509a3a5f530 100644
+index 22ab675de8373639..b470e804c08441b4 100644
 --- a/shared/nm-utils/nm-compat.c
 +++ b/shared/nm-utils/nm-compat.c
-@@ -54,15 +54,15 @@ _get_keys (NMSettingVpn *setting,
- 	if (a->len) {
+@@ -44,25 +44,32 @@ _get_keys (NMSettingVpn *setting,
+ 
+ 	nm_assert (NM_IS_SETTING_VPN (setting));
+ 
+-	a = g_ptr_array_new ();
++	if (is_secrets)
++		len = nm_setting_vpn_get_num_secrets (setting);
++	else
++		len = nm_setting_vpn_get_num_data_items (setting);
++
++	a = g_ptr_array_new_full (len + 1, (GDestroyNotify) g_free);
++
+ 	if (is_secrets)
+ 		nm_setting_vpn_foreach_secret (setting, _get_keys_cb, a);
+ 	else
+ 		nm_setting_vpn_foreach_data_item (setting, _get_keys_cb, a);
++
+ 	len = a->len;
+ 
+-	if (a->len) {
++	if (len) {
  		g_ptr_array_sort (a, nm_strcmp_p);
  		g_ptr_array_add (a, NULL);
 -		keys = (const char **) g_ptr_array_free (g_steal_pointer (&a), FALSE);
