@@ -1,0 +1,94 @@
+# $Id$
+# Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgbase=opencv
+pkgname=('opencv' 'opencv-samples')
+pkgver=3.4.0
+pkgrel=1
+pkgdesc="Open Source Computer Vision Library"
+arch=('x86_64')
+license=('BSD')
+url="http://opencv.org/"
+depends=('intel-tbb' 'openexr' 'xine-lib' 'libdc1394' 'gtkglext' 'cblas' 'lapack' 'libgphoto2')
+makedepends=('cmake' 'python-numpy' 'python2-numpy' 'mesa' 'eigen' 'hdf5' 'lapacke')
+optdepends=('opencv-samples'
+            'hdf5: support for HDF5 format'
+            'opencl-icd-loader: For coding with OpenCL'
+            'python-numpy: Python 3 interface'
+            'python2-numpy: Python 2 interface')
+source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
+        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
+sha256sums=('ae8a9f468b7ee3822a62d20d356c69f2b32330a231e738ac2914f332766611b7'
+            '699ab3eee7922fbd3e8f98c68e6d16a1d453b20ef364e76172e56466dc9c16cd')
+
+_cmakeopts=('-D WITH_OPENCL=ON'
+            '-D WITH_OPENGL=ON'
+            '-D WITH_TBB=ON'
+            '-D WITH_XINE=ON'
+            '-D WITH_GSTREAMER=OFF'
+            '-D BUILD_WITH_DEBUG_INFO=OFF'
+            '-D BUILD_TESTS=OFF'
+            '-D BUILD_PERF_TESTS=OFF'
+            '-D BUILD_EXAMPLES=ON'
+            '-D INSTALL_C_EXAMPLES=ON'
+            '-D INSTALL_PYTHON_EXAMPLES=ON'
+            '-D CMAKE_BUILD_TYPE=Release'
+            '-D CMAKE_INSTALL_PREFIX=/usr'
+            '-D CMAKE_SKIP_RPATH=ON'
+            '-D CPU_BASELINE_DISABLE=SSE3 -D CPU_BASELINE_REQUIRE=SSE2'
+            #'-D WITH_IPP=ON'
+            #'-D INSTALL_CREATE_DISTRIB=ON'
+            )
+
+build() {
+  mkdir -p build
+
+  cd build
+  # cmake's FindLAPACK doesn't add cblas to LAPACK_LIBRARIES, so we need to specify them manually
+  cmake ${_cmakeopts[@]} \
+    -DOPENCV_EXTRA_MODULES_PATH="$srcdir/opencv_contrib-$pkgver/modules" \
+    -DLAPACK_LIBRARIES="/usr/lib/liblapack.so;/usr/lib/libblas.so;/usr/lib/libcblas.so" \
+    -DLAPACK_CBLAS_H="/usr/include/cblas.h" \
+    -DLAPACK_LAPACKE_H="/usr/include/lapacke.h" \
+    ../$pkgname-$pkgver
+  make
+}
+
+package_opencv() {
+  options=('staticlibs')
+
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  # install license file
+  install -Dm644 "$srcdir/$pkgname-$pkgver/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  cd "$pkgdir/usr/share"
+
+  # separate samples package; also be -R friendly
+  if [[ -d OpenCV/samples ]]; then
+    mv OpenCV/samples "$srcdir/$pkgname-samples"
+    mv OpenCV $pkgname # otherwise folder naming is inconsistent
+  elif [[ ! -d OpenCV ]]; then
+    warning "Directory naming issue; samples package may not be built!"
+  fi
+}
+
+package_opencv-samples() {
+  pkgdesc+=" (samples)"
+  depends=("opencv=$pkgver") # sample codes change with lib/API
+  unset optdepends
+
+  mkdir -p "$pkgdir/usr/share/opencv"
+  cp -r "$srcdir/opencv-samples" "$pkgdir/usr/share/opencv/samples"
+  # fix permissions
+  chmod 755 "$pkgdir"/usr/share/opencv/samples/*
+
+  # install license file
+  install -Dm644 "$srcdir/opencv-$pkgver/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+# vim:set ts=2 sw=2 et:
