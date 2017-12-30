@@ -1,0 +1,301 @@
+From: arvidn <arvid@libtorrent.org>
+Date: Thu, 14 Dec 2017 01:37:27 +0100
+Subject: [PATCH] fix build against boost-1.66, specifically the boost.asio
+ changes
+
+diff --git a/include/libtorrent/proxy_base.hpp b/include/libtorrent/proxy_base.hpp
+index 00246af76e..7e8ab32930 100644
+--- a/include/libtorrent/proxy_base.hpp
++++ b/include/libtorrent/proxy_base.hpp
+@@ -66,6 +66,11 @@ class proxy_base : boost::noncopyable
+ 		m_port = port;
+ 	}
+ 
++#if BOOST_VERSION >= 106600
++	typedef tcp::socket::executor_type executor_type;
++	executor_type get_executor() { return m_sock.get_executor(); }
++#endif
++
+ 	template <class Mutable_Buffers, class Handler>
+ 	void async_read_some(Mutable_Buffers const& buffers, Handler const& handler)
+ 	{
+@@ -122,6 +127,18 @@ class proxy_base : boost::noncopyable
+ 		m_sock.async_write_some(buffers, handler);
+ 	}
+ 
++#ifndef BOOST_NO_EXCEPTIONS
++	void non_blocking(bool b)
++	{
++		m_sock.non_blocking(b);
++	}
++#endif
++
++	error_code non_blocking(bool b, error_code& ec)
++	{
++		return m_sock.non_blocking(b, ec);
++	}
++
+ #ifndef BOOST_NO_EXCEPTIONS
+ 	template <class SettableSocketOption>
+ 	void set_option(SettableSocketOption const& opt)
+diff --git a/include/libtorrent/socket_type.hpp b/include/libtorrent/socket_type.hpp
+index 0b58159715..884a86e684 100644
+--- a/include/libtorrent/socket_type.hpp
++++ b/include/libtorrent/socket_type.hpp
+@@ -267,6 +267,14 @@ namespace libtorrent
+ 		error_code set_option(SettableSocketOption const& opt, error_code& ec)
+ 		{ TORRENT_SOCKTYPE_FORWARD_RET(set_option(opt, ec), ec) }
+ 
++		void non_blocking(bool b, error_code& ec)
++		{ TORRENT_SOCKTYPE_FORWARD(non_blocking(b, ec)) }
++
++#ifndef BOOST_NO_EXCEPTIONS
++		void non_blocking(bool b)
++		{ TORRENT_SOCKTYPE_FORWARD(non_blocking(b)) }
++#endif
++
+ #ifndef BOOST_NO_EXCEPTIONS
+ 		template <class GettableSocketOption>
+ 		void get_option(GettableSocketOption& opt)
+diff --git a/include/libtorrent/ssl_stream.hpp b/include/libtorrent/ssl_stream.hpp
+index 48fe111289..a18416c723 100644
+--- a/include/libtorrent/ssl_stream.hpp
++++ b/include/libtorrent/ssl_stream.hpp
+@@ -85,6 +85,10 @@ class ssl_stream
+ 	typedef typename Stream::lowest_layer_type lowest_layer_type;
+ 	typedef typename Stream::endpoint_type endpoint_type;
+ 	typedef typename Stream::protocol_type protocol_type;
++#if BOOST_VERSION >= 106600
++	typedef typename sock_type::executor_type executor_type;
++	executor_type get_executor() { return m_sock.get_executor(); }
++#endif
+ 
+ 	void set_host_name(std::string name)
+ 	{
+@@ -204,6 +208,13 @@ class ssl_stream
+ 		m_sock.next_layer().io_control(ioc, ec);
+ 	}
+ 
++#ifndef BOOST_NO_EXCEPTIONS
++	void non_blocking(bool b) { m_sock.next_layer().non_blocking(b); }
++#endif
++
++	error_code non_blocking(bool b, error_code& ec)
++	{ return m_sock.next_layer().non_blocking(b, ec); }
++
+ 	template <class Const_Buffers, class Handler>
+ 	void async_write_some(Const_Buffers const& buffers, Handler const& handler)
+ 	{
+diff --git a/include/libtorrent/utp_stream.hpp b/include/libtorrent/utp_stream.hpp
+index ede524e2e6..896c0365e0 100644
+--- a/include/libtorrent/utp_stream.hpp
++++ b/include/libtorrent/utp_stream.hpp
+@@ -201,6 +201,11 @@ class TORRENT_EXTRA_EXPORT utp_stream
+ 	typedef tcp::socket::endpoint_type endpoint_type;
+ 	typedef tcp::socket::protocol_type protocol_type;
+ 
++#if BOOST_VERSION >= 106600
++	typedef tcp::socket::executor_type executor_type;
++	executor_type get_executor() { return m_io_service.get_executor(); }
++#endif
++
+ 	explicit utp_stream(io_service& io_service);
+ 	~utp_stream();
+ 
+@@ -218,6 +223,12 @@ class TORRENT_EXTRA_EXPORT utp_stream
+ 	template <class IO_Control_Command>
+ 	void io_control(IO_Control_Command&, error_code&) {}
+ 
++#ifndef BOOST_NO_EXCEPTIONS
++	void non_blocking(bool) {}
++#endif
++
++	error_code non_blocking(bool, error_code&) { return error_code(); }
++
+ #ifndef BOOST_NO_EXCEPTIONS
+ 	void bind(endpoint_type const& /*endpoint*/) {}
+ #endif
+@@ -330,8 +341,13 @@ class TORRENT_EXTRA_EXPORT utp_stream
+ 			return;
+ 		}
+ 		std::size_t bytes_added = 0;
++#if BOOST_VERSION >= 106600
++		for (auto i = buffer_sequence_begin(buffers)
++			, end(buffer_sequence_end(buffers)); i != end; ++i)
++#else
+ 		for (typename Mutable_Buffers::const_iterator i = buffers.begin()
+ 			, end(buffers.end()); i != end; ++i)
++#endif
+ 		{
+ 			if (buffer_size(*i) == 0) continue;
+ 			using boost::asio::buffer_cast;
+@@ -401,8 +417,13 @@ class TORRENT_EXTRA_EXPORT utp_stream
+ 		size_t buf_size = 0;
+ #endif
+ 
++#if BOOST_VERSION >= 106600
++		for (auto i = buffer_sequence_begin(buffers)
++			, end(buffer_sequence_end(buffers)); i != end; ++i)
++#else
+ 		for (typename Mutable_Buffers::const_iterator i = buffers.begin()
+ 			, end(buffers.end()); i != end; ++i)
++#endif
+ 		{
+ 			using boost::asio::buffer_cast;
+ 			using boost::asio::buffer_size;
+@@ -466,8 +487,13 @@ class TORRENT_EXTRA_EXPORT utp_stream
+ 		}
+ 
+ 		std::size_t bytes_added = 0;
++#if BOOST_VERSION >= 106600
++		for (auto i = buffer_sequence_begin(buffers)
++			, end(buffer_sequence_end(buffers)); i != end; ++i)
++#else
+ 		for (typename Const_Buffers::const_iterator i = buffers.begin()
+ 			, end(buffers.end()); i != end; ++i)
++#endif
+ 		{
+ 			if (buffer_size(*i) == 0) continue;
+ 			using boost::asio::buffer_cast;
+diff --git a/simulation/fake_peer.hpp b/simulation/fake_peer.hpp
+index deb8d3e536..c417b8e619 100644
+--- a/simulation/fake_peer.hpp
++++ b/simulation/fake_peer.hpp
+@@ -194,7 +194,7 @@ struct udp_server
+ 		m_socket.bind(asio::ip::udp::endpoint(asio::ip::address_v4::any(), port), ec);
+ 		TEST_CHECK(!ec);
+ 
+-		m_socket.io_control(lt::udp::socket::non_blocking_io(true));
++		m_socket.non_blocking(true);
+ 
+ 		std::printf("udp_server::async_read_some\n");
+ 		using namespace std::placeholders;
+diff --git a/simulation/setup_dht.cpp b/simulation/setup_dht.cpp
+index 82561a2b14..57280638db 100644
+--- a/simulation/setup_dht.cpp
++++ b/simulation/setup_dht.cpp
+@@ -94,9 +94,7 @@ struct dht_node final : lt::dht::udp_socket_interface
+ 		error_code ec;
+ 		sock().open(asio::ip::udp::v4());
+ 		sock().bind(asio::ip::udp::endpoint(lt::address_v4::any(), 6881));
+-
+-		udp::socket::non_blocking_io ioc(true);
+-		sock().io_control(ioc);
++		sock().non_blocking(true);
+ 
+ 		sock().async_receive_from(asio::mutable_buffers_1(m_buffer, sizeof(m_buffer))
+ 			, m_ep, boost::bind(&dht_node::on_read, this, _1, _2));
+diff --git a/src/http_connection.cpp b/src/http_connection.cpp
+index a099973f99..7efb4131b7 100644
+--- a/src/http_connection.cpp
++++ b/src/http_connection.cpp
+@@ -330,8 +330,7 @@ void http_connection::start(std::string const& hostname, int port
+ 		{
+ 			if (m_ssl_ctx == 0)
+ 			{
+-				m_ssl_ctx = new (std::nothrow) ssl::context(
+-					m_timer.get_io_service(), ssl::context::sslv23_client);
++				m_ssl_ctx = new (std::nothrow) ssl::context(ssl::context::sslv23_client);
+ 				if (m_ssl_ctx)
+ 				{
+ 					m_own_ssl_context = true;
+diff --git a/src/peer_connection.cpp b/src/peer_connection.cpp
+index 1c94fb278f..10b8e1a57c 100644
+--- a/src/peer_connection.cpp
++++ b/src/peer_connection.cpp
+@@ -309,9 +309,8 @@ namespace libtorrent
+ 
+ 		if (!m_outgoing)
+ 		{
+-			tcp::socket::non_blocking_io ioc(true);
+ 			error_code ec;
+-			m_socket->io_control(ioc, ec);
++			m_socket->non_blocking(true, ec);
+ 			if (ec)
+ 			{
+ 				disconnect(ec, op_iocontrol);
+@@ -6406,11 +6405,10 @@ namespace libtorrent
+ 
+ 		// set the socket to non-blocking, so that we can
+ 		// read the entire buffer on each read event we get
+-		tcp::socket::non_blocking_io ioc(true);
+ #ifndef TORRENT_DISABLE_LOGGING
+ 		peer_log(peer_log_alert::info, "SET_NON_BLOCKING");
+ #endif
+-		m_socket->io_control(ioc, ec);
++		m_socket->non_blocking(true, ec);
+ 		if (ec)
+ 		{
+ 			disconnect(ec, op_iocontrol);
+diff --git a/src/session_impl.cpp b/src/session_impl.cpp
+index 043d791fef..88718441bd 100644
+--- a/src/session_impl.cpp
++++ b/src/session_impl.cpp
+@@ -346,7 +346,7 @@ namespace aux {
+ #endif
+ 		, m_io_service(ios)
+ #ifdef TORRENT_USE_OPENSSL
+-		, m_ssl_ctx(m_io_service, boost::asio::ssl::context::sslv23)
++		, m_ssl_ctx(boost::asio::ssl::context::sslv23)
+ #endif
+ 		, m_alerts(m_settings.get_int(settings_pack::alert_queue_size)
+ 			, m_settings.get_int(settings_pack::alert_mask))
+diff --git a/src/torrent.cpp b/src/torrent.cpp
+index 2b6bae7446..0795b1d104 100644
+--- a/src/torrent.cpp
++++ b/src/torrent.cpp
+@@ -1702,7 +1702,7 @@ namespace libtorrent
+ 		// create the SSL context for this torrent. We need to
+ 		// inject the root certificate, and no other, to
+ 		// verify other peers against
+-		boost::shared_ptr<context> ctx = boost::make_shared<context>(boost::ref(m_ses.get_io_service()), context::sslv23);
++		boost::shared_ptr<context> ctx = boost::make_shared<context>(context::sslv23);
+ 
+ 		if (!ctx)
+ 		{
+@@ -1739,7 +1739,7 @@ namespace libtorrent
+ 			return;
+ 		}
+ 
+-		SSL_CTX* ssl_ctx = ctx->impl();
++		SSL_CTX* ssl_ctx = ctx->native_handle();
+ 		// create a new x.509 certificate store
+ 		X509_STORE* cert_store = X509_STORE_new();
+ 		if (!cert_store)
+diff --git a/src/udp_socket.cpp b/src/udp_socket.cpp
+index d2e6ae3b80..551412c659 100644
+--- a/src/udp_socket.cpp
++++ b/src/udp_socket.cpp
+@@ -806,8 +806,7 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
+ 
+ 		m_ipv4_sock.bind(ep, ec);
+ 		if (ec) return;
+-		udp::socket::non_blocking_io ioc(true);
+-		m_ipv4_sock.io_control(ioc, ec);
++		m_ipv4_sock.non_blocking(true, ec);
+ 		if (ec) return;
+ 		setup_read(&m_ipv4_sock);
+ 	}
+@@ -837,8 +836,7 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
+ 			, boost::system::generic_category()))
+ 		{
+ 			if (ec) return;
+-			udp::socket::non_blocking_io ioc(true);
+-			m_ipv6_sock.io_control(ioc, ec);
++			m_ipv6_sock.non_blocking(true, ec);
+ 			if (ec) return;
+ 			setup_read(&m_ipv6_sock);
+ 		}
+diff --git a/test/test_ssl.cpp b/test/test_ssl.cpp
+index 2903332dd2..679780b1b1 100644
+--- a/test/test_ssl.cpp
++++ b/test/test_ssl.cpp
+@@ -363,7 +363,7 @@ bool try_connect(libtorrent::session& ses1, int port
+ 	// create the SSL context for this torrent. We need to
+ 	// inject the root certificate, and no other, to
+ 	// verify other peers against
+-	context ctx(ios, context::sslv23);
++	context ctx(context::sslv23);
+ 
+ 	ctx.set_options(context::default_workarounds
+ 		| boost::asio::ssl::context::no_sslv2
