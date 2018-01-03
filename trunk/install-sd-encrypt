@@ -25,6 +25,18 @@ build() {
     add_systemd_unit systemd-ask-password-console.path
     add_systemd_unit systemd-ask-password-console.service
 
+    # the directory /run/lock/cryptsetup/ is supposed to be created by
+    # systemd-tmpfiles, but that is not available in early userspace.
+    # https://github.com/systemd/systemd/issues/7794
+    mkdir -p "$BUILDROOT/etc/systemd/system/systemd-cryptsetup@.service.d/"
+    cat >"$BUILDROOT/etc/systemd/system/systemd-cryptsetup@.service.d/lock.conf" <<EOF
+[Service]
+ExecStartPre=/usr/bin/mkdir -p /run/lock/cryptsetup/
+EOF
+    
+    # cryptsetup calls pthread_create(), which dlopen()s libgcc_s.so.1
+    add_file "/usr/lib/libgcc_s.so.1"
+
     [[ -f /etc/crypttab.initramfs ]] && add_file /etc/crypttab.initramfs /etc/crypttab
 }
 
