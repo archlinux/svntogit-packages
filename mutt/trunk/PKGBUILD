@@ -4,7 +4,7 @@
 
 pkgname=mutt
 pkgver=1.9.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Small but very powerful text-based mail client'
 url='http://www.mutt.org/'
 license=('GPL')
@@ -13,7 +13,7 @@ arch=('x86_64')
 optdepends=('smtp-forwarder: to send mail')
 depends=('gpgme' 'ncurses' 'openssl' 'libsasl' 'gdbm' 'libidn' 'mime-types' 'krb5')
 source=("http://ftp.mutt.org/pub/mutt/${pkgname}-${pkgver}.tar.gz"{,.asc})
-sha256sums=('a2e152a352bbf02d222d54074199d9c53821c19f700c4cb85f78fa85faed7896'
+sha512sums=('3e35f3d27f1444bcee38e98fe62d41c7fa5b56ac9d5010b1c2cbf034c1e707491a09ccc7387b8d90d8c6c7150edf1d9093fec981d348cf9495313859d373b339'
             'SKIP')
 validpgpkeys=('8975A9B33AA37910385C5308ADEF768480316BDA')
 
