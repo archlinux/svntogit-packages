@@ -6,27 +6,28 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=7.2.1
-_pkgver=${pkgver:0:1}
+pkgver=7.2.1+20171224
+_majorver=${pkgver:0:1}
 _islver=0.18
-pkgrel=2
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
 url='http://gcc.gnu.org'
-makedepends=(binutils libmpc gcc-ada doxygen git lib32-glibc)
+makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs)
 checkdepends=(dejagnu inetutils)
 options=(!emptydirs)
-_commit=bce1ab0478f96724828df51ccfd43197d917c572
-source=(git+https://gcc.gnu.org/git/gcc.git#commit=${_commit}
+source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
         c89 c99)
-md5sums=('SKIP'
-         '11436d6b205e516635b666090b94ab32'
-         '3d333df77302ed89e06a4a8539943b7d'
-         'da96f545b863e57c6ab2598c1ea9a740')
+validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9) # bpiotrowski@archlinux.org
+sha256sums=('394c416a35dc608e5c9ea5ca902c5b08b51fcbc6b3b39ece05b8eea67033b4a8'
+            'SKIP'
+            '6b8b0fd7f81d0a957beb3679c81bbb34ccc7568d5682844d8924424a0dadcb1b'
+            'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
+            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
-_libdir=usr/lib/gcc/$CHOST/$pkgver
+_libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 
 prepare() {
   cd gcc
@@ -92,10 +93,6 @@ build() {
 
 check() {
   cd gcc-build
-
-  # increase stack size to prevent test failures
-  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=31827
-  ulimit -s 32768
 
   # do not abort on error as some are "expected"
   make -k check || true
@@ -290,15 +287,15 @@ package_gcc-ada() {
   ln -s gcc "$pkgdir/usr/bin/gnatgcc"
 
   # insist on dynamic linking, but keep static libraries because gnatmake complains
-  mv "$pkgdir"/${_libdir}/adalib/libgna{rl,t}-${_pkgver}.so "$pkgdir/usr/lib"
-  ln -s libgnarl-${_pkgver}.so "$pkgdir/usr/lib/libgnarl.so"
-  ln -s libgnat-${_pkgver}.so "$pkgdir/usr/lib/libgnat.so"
+  mv "$pkgdir"/${_libdir}/adalib/libgna{rl,t}-${_majorver}.so "$pkgdir/usr/lib"
+  ln -s libgnarl-${_majorver}.so "$pkgdir/usr/lib/libgnarl.so"
+  ln -s libgnat-${_majorver}.so "$pkgdir/usr/lib/libgnat.so"
   rm -f "$pkgdir"/${_libdir}/adalib/libgna{rl,t}.so
 
   install -d "$pkgdir/usr/lib32/"
-  mv "$pkgdir"/${_libdir}/32/adalib/libgna{rl,t}-${_pkgver}.so "$pkgdir/usr/lib32"
-  ln -s libgnarl-${_pkgver}.so "$pkgdir/usr/lib32/libgnarl.so"
-  ln -s libgnat-${_pkgver}.so "$pkgdir/usr/lib32/libgnat.so"
+  mv "$pkgdir"/${_libdir}/32/adalib/libgna{rl,t}-${_majorver}.so "$pkgdir/usr/lib32"
+  ln -s libgnarl-${_majorver}.so "$pkgdir/usr/lib32/libgnarl.so"
+  ln -s libgnat-${_majorver}.so "$pkgdir/usr/lib32/libgnat.so"
   rm -f "$pkgdir"/${_libdir}/32/adalib/libgna{rl,t}.so
 
   # Install Runtime Library Exception
