@@ -5,11 +5,11 @@
 
 pkgname=openssh
 pkgver=7.6p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Free version of the SSH connectivity tools'
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
-arch=('i686' 'x86_64')
+arch=('x86_64')
 makedepends=('linux-headers')
 depends=('krb5' 'openssl' 'libedit' 'ldns')
 optdepends=('xorg-xauth: X11 forwarding'
@@ -58,6 +58,7 @@ build() {
 		--with-xauth=/usr/bin/xauth \
 		--with-md5-passwords \
 		--with-pid-dir=/run \
+		--with-default-path='/usr/local/sbin:/usr/local/bin:/usr/bin' \
 
 	make
 }
