@@ -9,7 +9,7 @@ pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
 pkgver=7.2.1+20171224
 _majorver=${pkgver:0:1}
 _islver=0.18
-pkgrel=1
+pkgrel=2
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -27,7 +27,26 @@ sha256sums=('394c416a35dc608e5c9ea5ca902c5b08b51fcbc6b3b39ece05b8eea67033b4a8'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
+_svnrev=255990
+_svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
+
+snapshot() {
+  svn export -r${_svnrev} ${_svnurl} gcc-r${_svnrev}
+
+  local datestamp basever _pkgver
+  basever=$(< gcc-r${_svnrev}/gcc/BASE-VER)
+  datestamp=$(< gcc-r${_svnrev}/gcc/DATESTAMP)
+  _pkgver=${basever}-${datestamp}
+
+  mv gcc-r${_svnrev} gcc-${_pkgver}
+  tar cf - gcc-${_pkgver} | xz > gcc-${_pkgver}.tar.xz
+  gpg -b gcc-${_pkgver}.tar.xz
+  scp gcc-${_pkgver}.tar.xz{,.sig} sources.archlinux.org:/srv/ftp/other/gcc/
+
+  echo
+  echo "pkgver=${_pkgver/-/+}"
+}
 
 prepare() {
   cd gcc
@@ -183,7 +202,7 @@ package_gcc() {
 
   make -C lto-plugin DESTDIR="$pkgdir" install
   install -dm755 "$pkgdir"/usr/lib/bfd-plugins/
-  ln -s /usr/lib/gcc/$CHOST/$pkgver/liblto_plugin.so \
+  ln -s /${_libdir}/liblto_plugin.so \
     "$pkgdir/usr/lib/bfd-plugins/"
 
   make -C $CHOST/libcilkrts DESTDIR="$pkgdir" install-nodist_{toolexeclib,cilkinclude}HEADERS
