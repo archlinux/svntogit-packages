@@ -8,34 +8,22 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.26
-pkgrel=10
+pkgrel=11
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs)
 options=(!strip staticlibs)
-_commit=633e2f7f3d88df6427aa3a7a984d3a6b796d9611  # release/2.26/master
+_commit=de51f431ed6226ec68ca76e578f2cbd55b6262cb
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
-        0001-manual-Update-to-mention-ENODEV-for-ttyname-and-ttyn.patch
-        0002-linux-ttyname-Update-a-reference-to-kernel-docs-for-.patch
-        0003-linux-ttyname-Change-return-type-of-is_pty-from-int-.patch
-        0004-linux-ttyname-_r-Make-tty-checks-consistent.patch
-        0005-linux-ttyname-_r-Don-t-bail-prematurely-BZ-22145.patch
-        0006-linux-ttyname-_r-Add-tests.patch
         bz20338.patch)
 md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
-         '2bb2dfa660fbb4b349f844459f79d5a1'
-         '299316b1a35426eadf3301a3fad170be'
-         '41d212e3f8d838bff341102679b2af09'
-         '8a886e84f950caf2ad1c37cc3a456339'
-         'fc5af427803b139d9753230849053458'
-         'eb4e1836f4f3721f1215450a2cca3523'
          'dc0d3ad59aeaaf591b085a77de6e03e9')
 
 prepare() {
