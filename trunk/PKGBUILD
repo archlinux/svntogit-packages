@@ -6,10 +6,10 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=7.2.1+20171224
+pkgver=7.2.1+20180116
 _majorver=${pkgver:0:1}
 _islver=0.18
-pkgrel=2
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -21,13 +21,13 @@ source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
         c89 c99)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9) # bpiotrowski@archlinux.org
-sha256sums=('394c416a35dc608e5c9ea5ca902c5b08b51fcbc6b3b39ece05b8eea67033b4a8'
+sha256sums=('7757097376a0766bbbeed8c90ee08cab93b33d89f3e72358c8bf984401bf69d9'
             'SKIP'
             '6b8b0fd7f81d0a957beb3679c81bbb34ccc7568d5682844d8924424a0dadcb1b'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
-_svnrev=255990
+_svnrev=256757
 _svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 
@@ -49,6 +49,7 @@ snapshot() {
 }
 
 prepare() {
+  mv gcc-${pkgver/+/-} gcc
   cd gcc
 
   # link isl for in-tree build
