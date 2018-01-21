@@ -1,0 +1,86 @@
+From d97f4dfd8a4f395ef65abfd67d5a758aadb46042 Mon Sep 17 00:00:00 2001
+From: Alexey Korop <akorop@gmail.com>
+Date: Fri, 19 Jan 2018 16:12:08 +0200
+Subject: [PATCH] Make mouse-through workable (#213)
+
+---
+ src/conky.cc | 18 ++++++++++++++++++
+ src/x11.cc   | 22 ----------------------
+ 2 files changed, 18 insertions(+), 22 deletions(-)
+
+diff --git a/src/conky.cc b/src/conky.cc
+index b483af33..7163d776 100644
+--- a/src/conky.cc
++++ b/src/conky.cc
+@@ -60,6 +60,9 @@
+ #ifdef BUILD_IMLIB2
+ #include "imlib2.h"
+ #endif /* BUILD_IMLIB2 */
++#ifdef BUILD_XSHAPE
++#include <X11/extensions/shape.h>
++#endif /* BUILD_XSHAPE */
+ #endif /* BUILD_X11 */
+ #ifdef BUILD_NCURSES
+ #include <ncurses.h>
+@@ -2070,6 +2073,21 @@ static void main_loop(void)
+ 	sigaddset(&newmask, SIGUSR1);
+ #endif
+ 
++#ifdef BUILD_XSHAPE
++	/* allow only decorated windows to be given mouse input */
++	int major_version, minor_version;
++	if (!XShapeQueryVersion(display, &major_version, &minor_version)) {
++		NORM_ERR("Input shapes are not supported");
++	} else {
++		if (own_window.get(*state) &&
++		    (own_window_type.get(*state) != TYPE_NORMAL ||
++		     (TEST_HINT(own_window_hints.get(*state), HINT_UNDECORATED)))) {
++			XShapeCombineRectangles(display, window.window, ShapeInput, 0, 0,
++			   NULL, 0, ShapeSet, Unsorted);
++		}
++	}
++#endif /* BUILD_XSHAPE */
++
+ 	last_update_time = 0.0;
+ 	next_update_time = get_time() - fmod(get_time(), active_update_interval());
+ 	info.looped = 0;
+diff --git a/src/x11.cc b/src/x11.cc
+index 216fe22e..c245c25d 100644
+--- a/src/x11.cc
++++ b/src/x11.cc
+@@ -47,10 +47,6 @@
+ #ifdef BUILD_XFT
+ #include <X11/Xft/Xft.h>
+ #endif
+-#ifdef BUILD_XSHAPE
+-#include <X11/extensions/shape.h>
+-#include <X11/extensions/shapeconst.h>
+-#endif
+ #ifdef BUILD_XINERAMA
+ #include <X11/extensions/Xinerama.h>
+ #endif
+@@ -771,24 +767,6 @@ static void init_window(lua::state &l __attribute__((unused)), bool own)
+ 			/* allow decorated windows to be given input focus by WM */
+ 			wmHint.input =
+ 				TEST_HINT(hints, HINT_UNDECORATED) ? False : True;
+-#ifdef BUILD_XSHAPE
+-			if (!wmHint.input) {
+-				int event_base, error_base;
+-				if (XShapeQueryExtension(display, &event_base, &error_base)) {
+-					int major_version = 0, minor_version = 0;
+-					XShapeQueryVersion(display, &major_version, &minor_version);
+-					if ((major_version > 1) || ((major_version == 1) && (minor_version >=1))) {
+-						Region empty_region = XCreateRegion();
+-						XShapeCombineRegion(display, window.window, ShapeInput, 0, 0, empty_region, ShapeSet);
+-						XDestroyRegion(empty_region);
+-					} else {
+-						NORM_ERR("Input shapes are not supported");
+-					}
+-				} else {
+-					NORM_ERR("No shape extension found");
+-				}
+-			}
+-#endif
+ 			if (own_window_type.get(l) == TYPE_DOCK || own_window_type.get(l) == TYPE_PANEL) {
+ 				wmHint.initial_state = WithdrawnState;
+ 			} else {
