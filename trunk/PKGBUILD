@@ -4,39 +4,41 @@
 # Contributor: Kritoke <kritoke@nospam.gmail.com>
 
 pkgname=gnome-nettool
-pkgver=3.8.1+144+gdd04271
+pkgver=3.8.1+205+g8550eef
 pkgrel=1
 pkgdesc="Graphical interface for various networking tools"
+url="https://git.gnome.org/browse/gnome-nettool"
 arch=(x86_64)
 license=(GPL)
 depends=(gtk3 libgtop dnsutils iputils dconf whois)
-makedepends=(yelp-tools intltool nmap net-tools git gnome-common)
+makedepends=(nmap net-tools git meson itstool)
 optdepends=('nmap: Port scanning'
             'net-tools: Network statistics')
 groups=(gnome-extra)
-url="https://git.gnome.org/browse/gnome-nettool"
-_commit=dd04271f17440ceb130995d72fed6478158f9d50  # master
+_commit=8550eef45eb228fb4a4c816bde33ec24da0aa06e  # master
 source=("git+https://git.gnome.org/browse/gnome-nettool#commit=$_commit")
 sha256sums=('SKIP')
 
-prepare() {
+pkgver() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  git describe --tags | sed 's/^gnome-nettool-//;s/-/./;s/-/./;s/-/+/g'
 }
 
-check() {
+prepare() {
   cd $pkgname
-  make check
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc \
-      --localstatedir=/var --disable-schemas-compile
-  make
+  CFLAGS+=" -fvisibility=hidden"
+  arch-meson $pkgname build
+  ninja -C build
+}
+
+check() {
+  cd build
+  meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
