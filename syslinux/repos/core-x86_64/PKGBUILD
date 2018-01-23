@@ -6,10 +6,10 @@
 pkgname=syslinux
 pkgver=6.03
 _tag=syslinux-$pkgver
-pkgrel=7
+pkgrel=8
 pkgdesc='Collection of boot loaders that boot from FAT, ext2/3/4 and btrfs filesystems, from CDs and via PXE'
 url='http://www.syslinux.org/'
-arch=(i686 x86_64)
+arch=(x86_64)
 backup=(boot/syslinux/syslinux.cfg)
 install=syslinux.install
 license=(GPL2)
@@ -37,16 +37,20 @@ source=(git://git.kernel.org/pub/scm/boot/syslinux/syslinux.git#tag=$_tag
         kdb-230.patch::http://repo.or.cz/syslinux.git/patch/138e850fab106b5235178848b3e0d33e25f4d3a2
         correct_base_type.patch::http://repo.or.cz/syslinux.git/patch/83aad4f
         set_mode_base.patch::http://repo.or.cz/syslinux.git/patch/0a2dbb3
+        fix_return_pointer.patch::http://repo.or.cz/syslinux.git/patch/8dc6d758b564a1ccc44c3ae11f265d43628219ce
+        fix_infinite_loop_tests.patch
 )
 sha1sums=('SKIP'
           '1145f454bd297d373ad123425f93620c3e92f585'
-          '2cf5a0eccfb0bf4196b8aea4add1002be948332d'
-          '3e7d6e399c25fb7f5d31cc8e580d01163695e351'
-          '74b976dd3ce28a619c2e9ef69a33fd455dc4bd4c'
-          'b6ef5a7cdd4b7c714fd78c174e93ae6e854ae1ee'
-          '370b4bd392361d3fbc4a10f057d69c737acabd8a'
-          '6fdd0ebd6c34e4a424982e29beacff0a16e50c02'
-          'd3551c17674ea51f3457a05ec1136604349fb89e')
+          '6bf38a8de1891ba3fbea27ef73cc4a8047c1b6c7'
+          '6ebf77bf028c928a6ef33dadeee7402b3113b6d3'
+          'eaa9f5cd82b501f076ece4812d2d37f49d02caae'
+          'c6a6e96e233b2f8105503725cd614abc1bac2845'
+          'f50e0a92c65536ef73a84614d489e52d9d1db329'
+          'e24bf5b1617bab4a3f46925c5a8ee6079f4686bf'
+          '500c174fce91133d40024b28f6f5cedb144b84c2'
+          'b3d2196aaec154749c5b796c6d9bfd605a918cf8'
+          '7ecb02550666dfafeb0b22a67dcc34caa4b79767')
 
 _targets='bios efi32'
 case "$CARCH" in
@@ -70,6 +74,12 @@ prepare() {
   patch -p1 < ../correct_base_type.patch
   patch -p1 < ../set_mode_base.patch
 
+  # FS#49250
+  patch -p1 < ../fix_return_pointer.patch
+
+  # fix infinite loop in load_linux
+  patch -p1 < ../fix_infinite_loop_tests.patch
+
   # do not swallow efi compilation output to make debugging easier
   sed 's|> /dev/null 2>&1||' -i efi/check-gnu-efi.sh
 
@@ -79,6 +89,8 @@ prepare() {
 
 build() {
   cd syslinux
+  export LDFLAGS+=--no-dynamic-linker  # workaround for binutils 2.28 http://www.syslinux.org/wiki/index.php?title=Building
+  export EXTRA_CFLAGS=-fno-PIE   # to fix gpxe build
   make PYTHON=python2 $_targets
 }
 
