@@ -1,78 +1,84 @@
-# $Id$
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
 # Contributor: Dale Blount <dale@archlinux.org>
 # Contributor: Gregor Ibic <gregor.ibic@intelicom.si>
-# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=clamav
-pkgver=0.99.2
-pkgrel=7
+pkgver=0.99.3
+pkgrel=1
 pkgdesc='Anti-virus toolkit for Unix'
-url='http://www.clamav.net/'
+url='https://www.clamav.net/'
 license=('GPL')
 arch=('x86_64')
-makedepends=('libmilter')
-depends=('bzip2' 'libltdl' 'libxml2' 'curl' 'pcre')
-validpgpkeys=('B964E6D7BC7D7C82CCB8D45840B8EA2364221D53'
-              'F79FB2D08751574C5D3FDFFBB3D5342C260429A0')
-source=("http://www.clamav.net/downloads/production/${pkgname}-${pkgver}.tar.gz"{,.sig}
-        'logrotate'
-        'tmpfiles.d'
-        'clamd.conf'
-        'freshclam.conf'
-        'clamd.service'
-        'freshclamd.service'
-        'make_it_compile_against_openssl_1_1_0.patch')
-sha256sums=('167bd6a13e05ece326b968fdb539b05c2ffcfef6018a274a10aeda85c2c0027a'
-            'SKIP'
-            'ce4b9b8c300614641af600c9a73b52a00ee8e47ccc9f91b2428a113b0ecff21b'
-            '0a61abee3b9bba94126afe3344e7d8e82da5120ca6dbd2b413b10f75da5b0b0d'
-            'afdb95f93f7e11e163d368caccd5f6814206c6f0d74816b4f712c0267b50572a'
-            '127b39e13525ffb4242198cfb76f99d4d517e5f2fd9fa8dcad3f31fc9f82f952'
-            'e376ab0cefeefa5ac5f1cd611718452ea8646198e854aca3cc0026f5ffe58fb4'
-            'dd5ff6c79ee360da5f2221c4d9110a2a8886d86293f6c93c16bf74fdb126593c'
-            '0a8e02a91bc3f2c99bd52dc475592637376baa991fe3f899b7745b840fc586c5')
-
+makedepends=('libmilter' 'systemd')
+depends=('bzip2' 'libltdl' 'libxml2' 'curl' 'pcre' 'libsystemd')
 backup=('etc/clamav/clamd.conf'
         'etc/clamav/freshclam.conf'
+        'etc/clamav/clamav-milter.conf'
         'etc/logrotate.d/clamav')
-
-install=install
+install=clamav.install
+source=(https://www.clamav.net/downloads/production/${pkgname}-${pkgver}.tar.gz{,.sig}
+        clamav.logrotate
+        clamav.tmpfiles
+        clamav.sysusers)
+sha256sums=('00fa5292a6e00a3a4035b826267748965d5d2c4943d8ff417d740238263e8e84'
+            'SKIP'
+            'c36e3ddf790fa6ea90169038ae08521a31652a372017e6e38858e28fc63b3f74'
+            '8e216c7e4763a273a120930787dcc444ea221bb719eed180a9d15b4c1d603a84'
+            '01a896c3a1cd34b323594403fd82a9e353b5aa848b8462137b621959558199e8')
+validpgpkeys=('65ED513993F08DA06F9639A6F13F9E16BCA5BFAD') # Talos (Talos, Cisco Systems Inc.) <research@sourcefire.com>
 
 prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	patch -Np1 -i ../make_it_compile_against_openssl_1_1_0.patch
-	autoreconf -fi
+  cd ${pkgname}-${pkgver}
+  sed -E 's|^(Example)$|#\1|' -i etc/{clamd,freshclam,clamav-milter}.conf.sample
+  sed -E 's|#(User) .+|\1 clamav|' -i etc/{clamd,freshclam,clamav-milter}.conf.sample
+  sed -E 's|#(LogFile) .+|\1 /var/log/clamav/clamd.log|' -i etc/clamd.conf.sample
+  sed -E 's|#(LogTime) .+|\1 yes|' -i etc/clamd.conf.sample etc/clamav-milter.conf.sample
+  sed -E 's|#(PidFile) .+|\1 /run/clamav/clamd.pid|' -i etc/clamd.conf.sample
+  sed -E 's|#(TemporaryDirectory) .+|\1 /tmp|' -i etc/{clamd,clamav-milter}.conf.sample
+  sed -E 's|#(LocalSocket) .+|\1 /run/clamav/clamd.ctl|' -i etc/clamd.conf.sample
+  sed -E 's|#(UpdateLogFile) .+|\1 /var/log/clamav/freshclam.log|' -i etc/freshclam.conf.sample
+  sed -E 's|#(DatabaseMirror) .+|\1 database.clamav.net|' -i etc/freshclam.conf.sample
+  sed -E 's|#(NotifyClamd) .+|\1 /etc/clamav/clamd.conf|' -i etc/freshclam.conf.sample
+  sed -E 's|#(PidFile) .+|\1 /run/clamav/freshclam.pid|' -i etc/freshclam.conf.sample
+  sed -E 's|#(LogFile) .+|\1 /var/log/clamav/clamav-milter.log|' -i etc/clamav-milter.conf.sample
+  sed -E 's|#(PidFile) .+|\1 /run/clamav/clamav-milter.pid|' -i etc/clamav-milter.conf.sample
+  autoreconf -fiv
 }
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	# --disable-zlib-vcheck because the configure script thinks that
-	# zlib 1.2.11 is older than 1.2.2
-	./configure \
-		--prefix=/usr \
-		--sbindir=/usr/bin \
-		--sysconfdir=/etc/clamav \
-		--with-dbdir=/var/lib/clamav \
-		--disable-clamav \
-		--disable-llvm \
-		--disable-zlib-vcheck \
-		--enable-milter
+  cd ${pkgname}-${pkgver}
+  # --disable-zlib-vcheck because the configure script thinks that
+  # zlib 1.2.11 is older than 1.2.2
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc/clamav \
+    --with-dbdir=/var/lib/clamav \
+    --with-user=clamav \
+    --with-group=clamav \
+    --disable-rpath \
+    --disable-clamav \
+    --disable-llvm \
+    --enable-zlib-vcheck \
+    --enable-milter \
+    --enable-clamdtop
 
-        sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-	make
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make DESTDIR="${pkgdir}" install
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
 
-	install -Dm644 ../clamd.conf "${pkgdir}"/etc/clamav/clamd.conf
-	install -Dm644 ../freshclam.conf "${pkgdir}"/etc/clamav/freshclam.conf
-	install -Dm644 ../freshclamd.service "${pkgdir}"/usr/lib/systemd/system/freshclamd.service
-	install -Dm644 ../clamd.service "${pkgdir}"/usr/lib/systemd/system/clamd.service
-	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/clamav.conf
-	install -Dm644 ../logrotate "${pkgdir}"/etc/logrotate.d/clamav
+  mv "${pkgdir}"/etc/clamav/freshclam.conf{.sample,}
+  mv "${pkgdir}"/etc/clamav/clamd.conf{.sample,}
+  mv "${pkgdir}"/etc/clamav/clamav-milter.conf{.sample,}
 
-	install -d -o 64 -g 64 "${pkgdir}"/var/log/clamav
-	install -d -o 64 -g 64 "${pkgdir}"/var/lib/clamav
+  install -Dm 644 ../clamav.sysusers "${pkgdir}"/usr/lib/sysusers.d/clamav.conf
+  install -Dm 644 ../clamav.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/clamav.conf
+  install -Dm 644 ../clamav.logrotate "${pkgdir}"/etc/logrotate.d/clamav
 }
+
+# vim: ts=2 sw=2 et:
