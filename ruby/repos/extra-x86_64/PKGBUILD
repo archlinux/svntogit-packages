@@ -1,11 +1,11 @@
-# Maintainer: Thomas Dziedzic <gostrc@gmail.com>
+# Contributor: Thomas Dziedzic <gostrc@gmail.com>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: John Proctor <jproctor@prium.net>
 # Contributor: Jeramy Rutley <jrutley@gmail.com>
 
 pkgname=(ruby ruby-docs)
 pkgver=2.5.0
-pkgrel=2
+pkgrel=4
 arch=(x86_64)
 url='http://www.ruby-lang.org/en/'
 license=(BSD custom)
@@ -16,10 +16,16 @@ source=(https://cache.ruby-lang.org/pub/ruby/${pkgver:0:3}/ruby-${pkgver}.tar.xz
 sha512sums=('55714a33d7661fe8b432f73c34fd67b49699f8b79df1cbd680a74899124d31111ab0f444677672aac1ba725820182940d485efb2db0bf2bc96737c5d40c54578'
             '8cafd14d414ee3c16aa94f79072bc6c100262f925dc1300e785846c3fabbbbffc1356b8e2223af5684e3340c55032d41231179ffa948bb12e01dbae0f4131911')
 
+prepare() {
+  cd ruby-${pkgver}
+  # remove bundled gems, we are going to ship them as separate packages
+  rm -rf gems/
+}
+
 build() {
   cd ruby-${pkgver}
 
-  PKG_CONFIG=/usr/bin/pkg-config ./configure \
+  ./configure \
     --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
@@ -45,8 +51,7 @@ package_ruby() {
       'ruby-docs: Ruby documentation'
       'tk: for Ruby/TK'
   )
-  provides=(rubygems rake)
-  conflicts=(rake)
+  provides=(rubygems)
   backup=(etc/gemrc)
   install=ruby.install
 
@@ -58,6 +63,14 @@ package_ruby() {
 
   install -D -m644 COPYING "${pkgdir}/usr/share/licenses/ruby/LICENSE"
   install -D -m644 BSDL "${pkgdir}/usr/share/licenses/ruby/BSDL"
+
+  gemver=${pkgver:0:3}.0
+  # remove bundled rdoc gem
+  # we are doing it here instead of prepare() because rdoc used doring Ruby build process
+  rm -r "${pkgdir}"/usr/lib/ruby/${gemver}/rdoc/
+  rm -r "${pkgdir}"/usr/bin/{rdoc,ri}
+  rm -r "${pkgdir}"/usr/lib/ruby/gems/${gemver}/gems/*
+  rm -r "${pkgdir}"/usr/lib/ruby/gems/${gemver}/specifications/default/rdoc-*.gemspec
 }
 
 package_ruby-docs() {
