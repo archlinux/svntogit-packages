@@ -6,7 +6,7 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=7.2.1+20180116
+pkgver=7.3.0
 _majorver=${pkgver:0:1}
 _islver=0.18
 pkgrel=1
@@ -17,11 +17,13 @@ url='http://gcc.gnu.org'
 makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs)
 checkdepends=(dejagnu inetutils)
 options=(!emptydirs)
-source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
+#source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
+source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
         c89 c99)
-validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9) # bpiotrowski@archlinux.org
-sha256sums=('7757097376a0766bbbeed8c90ee08cab93b33d89f3e72358c8bf984401bf69d9'
+validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
+              13975A70E63C361C73AE69EF6EEB81F8981C74C7) # richard.guenther@gmail.com
+sha256sums=('832ca6ae04636adbb430e865a1451adf6979ab44ca1c8374f61fba65645ce15c'
             'SKIP'
             '6b8b0fd7f81d0a957beb3679c81bbb34ccc7568d5682844d8924424a0dadcb1b'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
@@ -49,7 +51,7 @@ snapshot() {
 }
 
 prepare() {
-  mv gcc-${pkgver/+/-} gcc
+  ln -s gcc-${pkgver/+/-} gcc
   cd gcc
 
   # link isl for in-tree build
