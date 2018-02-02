@@ -4,12 +4,11 @@
 pkgname=nvidia-lts
 pkgver=390.25
 _extramodules=extramodules-4.14-lts
-pkgrel=3
-pkgdesc="NVIDIA drivers for linux-lts"
+pkgrel=1
+epoch=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
-makedepends=("nvidia-utils=$pkgver" 'linux-lts>=4.14.16' 'linux-lts-headers>=4.14.16')
-provides=('nvidia')
+makedepends=('nvidia-libgl' "nvidia-utils=${pkgver}" 'linux-lts' 'linux-lts-headers>=4.14.16')
 license=('custom')
 options=('!strip')
 source=("http://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run")
@@ -18,32 +17,27 @@ sha512sums=('02dbb790013f51b6e6945933d977366211f47cb62f7ff1b6b2f57bd40be7fc28d8e
 _pkg="NVIDIA-Linux-x86_64-${pkgver}-no-compat32"
 
 prepare() {
-    sh ${_pkg}.run --extract-only
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
 }
 
 build() {
-    export IGNORE_CC_MISMATCH=1
-
     _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
-    cd "${_pkg}/kernel"
-    make SYSSRC=/usr/lib/modules/${_kernver}/build module
+    cd "${_pkg}"/kernel
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
 }
 
 package() {
-    depends=('linux-lts>=4.14.16' "nvidia-utils=$pkgver" 'libgl')
+    pkgdesc="NVIDIA drivers for linux-lts"
+    depends=('linux-lts>=4.14.16' "nvidia-utils=${pkgver}" 'libgl')
 
-    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia.ko" \
-      "${pkgdir}/usr/lib/modules/${_extramodules}/kernel/drivers/video/nvidia.ko"
-    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia-modeset.ko" \
-      "${pkgdir}/usr/lib/modules/${_extramodules}/kernel/drivers/video/nvidia-modeset.ko"
-    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia-drm.ko" \
-      "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia-drm.ko"
-    install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia-uvm.ko" \
-      "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia-uvm.ko"
+    install -Dt "${pkgdir}/usr/lib/modules/${_extramodules}" -m644 \
+      "${srcdir}/${_pkg}/kernel"/nvidia{,-modeset,-drm,-uvm}.ko
 
-    gzip "${pkgdir}/usr/lib/modules/${_extramodules}/kernel/drivers/video/"*.ko
-    install -d -m755 "${pkgdir}/usr/lib/modprobe.d"
-    echo "blacklist nouveau" >> "${pkgdir}/usr/lib/modprobe.d/nvidia-lts.conf"
-    echo "blacklist nvidiafb" >> "${pkgdir}/usr/lib/modprobe.d/nvidia-lts.conf"
-    install -D -m644 "${srcdir}/${_pkg}/LICENSE" "${pkgdir}/usr/share/licenses/nvidia-lts/LICENSE"
+    find "${pkgdir}" -name '*.ko' -exec gzip -n {} +
+
+    echo "blacklist nouveau" |
+      install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
+
+    install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 "${srcdir}/${_pkg}/LICENSE"
 }
