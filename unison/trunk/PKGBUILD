@@ -3,52 +3,43 @@
 #Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=unison
-pkgver=2.48.4
-pkgrel=2
+_pkgver=2.48.15v4
+pkgver=${_pkgver%v*}
+pkgrel=1
 pkgdesc='File-synchronization tool'
+#url='https://github.com/bcpierce00/unison/'
 url='https://www.cis.upenn.edu/~bcpierce/unison/'
 arch=('x86_64')
 license=('GPL2')
-optdepends=('gtk2: for gtk2 support')
-makedepends=('ocaml' 'lablgtk2' 'imagemagick')
-source=("https://www.cis.upenn.edu/~bcpierce/unison/download/releases/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz"
+makedepends=('ocaml' 'emacs')
+source=("https://github.com/bcpierce00/unison/archive/v${_pkgver}.tar.gz"
         'large.patch'
         'desktop')
-sha256sums=('30aa53cd671d673580104f04be3cf81ac1e20a2e8baaf7274498739d59e99de8'
+sha256sums=('f8c7e982634bbe1ed6510fe5b36b6c5c55c06caefddafdd9edc08812305fdeec'
             '2a971cf17e0a7303e99a793829e2b7b03533d17041e3b2ebba53555a5bd62284'
             'e9ef4e8b845453e21abafa8c9d153080375024d2465e3bf65f0e5a2ca1f5ea4a')
 
 options=('!makeflags')
 
 prepare() {
-	cd "${srcdir}/src"
+	cd "${srcdir}/${pkgname}-${_pkgver}"
 	patch -p0 -i ../large.patch
 }
 
 build() {
-	cd "${srcdir}/src"
-	CFLAGS=""
-
-	for ui in text gtk2; do
-		make clean
-		make mkProjectInfo 
-		make UISTYLE=$ui DEBUGGING=false THREADS=true
-		mv unison unison-$ui
-	done
+	cd "${srcdir}/${pkgname}-${_pkgver}"
+	export CFLAGS=
+	make UISTYLE=text DEBUGGING=false THREADS=true
+	mv src/unison src/unison-text
 }
 
 package() {
-	cd "${srcdir}/src"
-
+	cd "${srcdir}/${pkgname}-${_pkgver}"
 	install -d "${pkgdir}"/usr/bin
-	install -m755 unison-* "${pkgdir}"/usr/bin
+	install -m755 src/unison-* "${pkgdir}"/usr/bin
+	ln -s unison-text "${pkgdir}"/usr/bin/unison
 
 	install -d "${pkgdir}"/usr/share/{pixmaps,applications}
-	convert win32rc/U.ico[1] "${pkgdir}/usr/share/pixmaps/${pkgname}.png"
+	install -m644 icons/U.32x32x16m.png "${pkgdir}/usr/share/pixmaps/${pkgname}.png"
 	install -m644 ../desktop "${pkgdir}/usr/share/applications/${pkgname}.desktop"
-
-	cd "${pkgdir}"/usr/bin
-	ln -s unison-text unison
-	ln -s unison-gtk2 unison-x11
-	ln -s unison unison-${pkgver%.*}
 }
