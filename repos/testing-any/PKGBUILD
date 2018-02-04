@@ -4,7 +4,7 @@
 
 pkgname=xkeyboard-config
 pkgver=2.23.1
-pkgrel=1
+pkgrel=2
 pkgdesc="X keyboard configuration files"
 arch=(any)
 license=('custom')
@@ -13,11 +13,18 @@ makedepends=('intltool' 'xorg-xkbcomp' 'libxslt')
 provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
-source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2{,.sig})
+source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2{,.sig}
+        0001-Fix-typo-in-Polish-symbols-file.patch)
 validpgpkeys=('FFB4CCD275AAA422F5F9808E0661D98FC933A145')
 validpgpkeys+=('15CFA5C595041D2CCBEA155F1732AA424A0E86B4') # "Sergey Udaltsov (For GNOME-related tasks) <svu@gnome.org>"
 sha512sums=('d651bb89c265e58abe8bba4af6683364a8023cb73af7d00f401f33960e44fa94a7d8a8fdd2483d6703d1c261ca72ae5f2b53f543cfb70b2f571cfe9dcb80c3ba'
-            'SKIP')
+            'SKIP'
+            '2c9a846a0eae6f208cd6be5aa92d69b0b7d1ffc2fe0f98af22f3b62cd73105ff63862d9a2b5719d6b0c5c035b7839faf4e88da5e0c6a336663afede41802381c')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -p1 -i "${srcdir}/0001-Fix-typo-in-Polish-symbols-file.patch"
+}
 
 build() {
   cd ${pkgname}-${pkgver}
