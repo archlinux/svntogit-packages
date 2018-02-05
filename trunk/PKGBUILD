@@ -5,13 +5,14 @@
 pkgname=unison
 _pkgver=2.48.15v4
 pkgver=${_pkgver%v*}
-pkgrel=1
+pkgrel=2
 pkgdesc='File-synchronization tool'
 #url='https://github.com/bcpierce00/unison/'
 url='https://www.cis.upenn.edu/~bcpierce/unison/'
 arch=('x86_64')
 license=('GPL2')
-makedepends=('ocaml' 'emacs')
+optdepends=('gtk2: graphical interface')
+makedepends=('ocaml' 'emacs' 'lablgtk2')
 source=("https://github.com/bcpierce00/unison/archive/v${_pkgver}.tar.gz"
         'large.patch'
         'desktop')
@@ -23,20 +24,28 @@ options=('!makeflags')
 
 prepare() {
 	cd "${srcdir}/${pkgname}-${_pkgver}"
+	sed 's/region_of_string/region_of_bytes/' -i src/uigtk2.ml
 	patch -p0 -i ../large.patch
 }
 
 build() {
 	cd "${srcdir}/${pkgname}-${_pkgver}"
-	export CFLAGS=
-	make UISTYLE=text DEBUGGING=false THREADS=true
-	mv src/unison src/unison-text
+	for ui in gtk2 text; do
+		cp -a . build || true
+		pushd build
+		export CFLAGS=
+		make UISTYLE=$ui DEBUGGING=false THREADS=true
+		mv src/unison src/unison-$ui
+		mv src/unison-* ..
+		popd
+		rm -fr build
+	done
 }
 
 package() {
 	cd "${srcdir}/${pkgname}-${_pkgver}"
 	install -d "${pkgdir}"/usr/bin
-	install -m755 src/unison-* "${pkgdir}"/usr/bin
+	install -m755 unison-* "${pkgdir}"/usr/bin
 	ln -s unison-text "${pkgdir}"/usr/bin/unison
 
 	install -d "${pkgdir}"/usr/share/{pixmaps,applications}
