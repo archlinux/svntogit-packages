@@ -3,8 +3,8 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.44.0
-pkgrel=2
+pkgver=0.44.1
+pkgrel=1
 pkgdesc='High productivity build system'
 url='http://mesonbuild.com/'
 arch=('any')
@@ -18,12 +18,10 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-b
               'qt5-tools' 'libwmf' 'dmd' 'valgrind')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         0001-tests-skip-objc-nsstring-test-if-gnustep-is-not-inst.patch
-        0002-d-Detect-recent-DMD-compilers.patch
         arch-meson)
-sha512sums=('9aefa52d92d7750528e9a9236f19131c8e58bfc21212595c311f4e2787ad40bb53d6085f52283cad13923ddf12da1a59067d48424c72ace47fc127978d1af2ff'
+sha512sums=('1ecccccfa24ec2c5c144f8c13fd95d250b59cb22b79676a2a1a6f9ed30a7b08adb71d5882b2d4421d07689ad6dd6d6aef139ac33f628e55a1d428cbc40b4d93e'
             'SKIP'
             '04a0f113ba5f1ae57591fad3f5ecf812ef88b8809b4ffe063e82f6548e728a1a7bd51c171a948873884c2631fc10a9cd141f56de22cd7cf766cdb74996840eec'
-            'b38af817966e60db19c1efcc5e8e4f1b822925bf823b0a68c33eb0bfd0aa4ccff1439e352d8df032d0a189cd0ff37fb7dcefe0ed7a272e45f963f7e3d0b63f0f'
             'e901f87f3ee1baa7b9aedb79bd5c9e50898a5695ac938f7f8420d8e81f526a09f07ceedadb65975437efa5a68fcf581110a040f579f2530437d1e6eb5addea76')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
@@ -32,9 +30,6 @@ prepare() {
 
   # Skip gnustep tests
   patch -Np1 -i ../0001-tests-skip-objc-nsstring-test-if-gnustep-is-not-inst.patch
-
-  # Fix for recent DMD
-  patch -Np1 -i ../0002-d-Detect-recent-DMD-compilers.patch
 }
 
 build() {
