@@ -1,0 +1,50 @@
+From fd9fec4fc7f43fb939e8e5a946c7858390bbd9d3 Mon Sep 17 00:00:00 2001
+From: Johan Klokkhammer Helsing <johan.helsing@qt.io>
+Date: Thu, 8 Feb 2018 16:53:39 +0100
+Subject: [PATCH] Fix crash when connecting a new screen
+
+In QWaylandWindow::virtualSiblings, don't include screens that have not been
+added yet. I.e. QWaylandScreens for which QPlatformIntegration::screenAdded has
+not yet been called.
+
+There are two reasons why this crash wasn't covered by the
+removePrimaryScreen() test. First of all, the mock output didn't send
+wl_output.done events when updating the mode/geometry. These wayland events are
+what causes QWindowSystemInterface::handleScreenGeometryChange() to be called
+(where virtualSiblings are called).
+
+Furthermore, virtualSiblings is only called when the geometry actually changes,
+so add a new test that changes the screen geometry of the existing screen while
+a new one is being added (i.e. moves it to the right).
+
+Task-number: QTBUG-62044
+Change-Id: I623fbf8799d21c6b9293e7120ded301277639cc6
+Reviewed-by: David Edmundson <davidedmundson@kde.org>
+Reviewed-by: Aleix Pol
+Reviewed-by: Paul Olav Tvete <paul.tvete@qt.io>
+---
+ src/client/qwaylandscreen.cpp               |  6 ++++--
+ tests/auto/client/client/tst_client.cpp     | 25 +++++++++++++++++++++++++
+ tests/auto/client/shared/mockcompositor.cpp |  8 ++++++++
+ tests/auto/client/shared/mockcompositor.h   |  2 ++
+ tests/auto/client/shared/mockoutput.cpp     | 27 +++++++++++++++++++++++++--
+ tests/auto/client/shared/mockoutput.h       |  1 +
+ 6 files changed, 65 insertions(+), 4 deletions(-)
+
+diff --git a/src/client/qwaylandscreen.cpp b/src/client/qwaylandscreen.cpp
+index fba75557..1c9ce23b 100644
+--- a/src/client/qwaylandscreen.cpp
++++ b/src/client/qwaylandscreen.cpp
+@@ -138,8 +138,10 @@ QList<QPlatformScreen *> QWaylandScreen::virtualSiblings() const
+     QList<QPlatformScreen *> list;
+     const QList<QWaylandScreen*> screens = mWaylandDisplay->screens();
+     list.reserve(screens.count());
+-    foreach (QWaylandScreen *screen, screens)
+-        list << screen;
++    for (QWaylandScreen *screen : qAsConst(screens)) {
++        if (screen->screen())
++            list << screen;
++    }
+     return list;
+ }
+ 
