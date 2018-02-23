@@ -1,7 +1,5 @@
 " The ArchLinux global vimrc - setting only a few sane defaults
 "
-" Maintainer:      Thomas Dziedzic [gostrc@gmail.com]
-"
 " NEVER EDIT THIS FILE, IT'S OVERWRITTEN UPON UPGRADES, GLOBAL CONFIGURATION
 " SHALL BE DONE IN /etc/vimrc, USER SPECIFIC CONFIGURATION IN ~/.vimrc
 
@@ -17,6 +15,10 @@ set ruler                       " show the cursor position all the time
 " Suffixes that get lower priority when doing tab completion for filenames.
 " These are files we are not likely to want to edit or read.
 set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc,.png,.jpg
+
+" Move the swap file location to protect against CVE-2017-1000382
+silent !install -d -m 700 ~/.vim/swap/ 2>&1 > /dev/null
+set directory=~/.vim/swap/
 
 if has('gui_running')
   " Make shift-insert work like in Xterm
