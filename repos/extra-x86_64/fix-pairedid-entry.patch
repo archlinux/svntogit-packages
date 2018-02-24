@@ -1,0 +1,43 @@
+From 007c25052bf20adc1f5311c3e5668f6f343ac18b Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Tue, 13 Feb 2018 15:01:40 +1000
+Subject: [PATCH] data: fix PairedID entry for the DTH-2452
+
+Missing the 'usb' prefix which wasn't caught by the test suite. Add the entry
+to libwacom_compare() to make sure this doesn't happen again.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ data/dth-2452.tablet | 2 +-
+ libwacom/libwacom.c  | 5 +++++
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/data/dth-2452.tablet b/data/dth-2452.tablet
+index 12309db..54f8191 100644
+--- a/data/dth-2452.tablet
++++ b/data/dth-2452.tablet
+@@ -16,7 +16,7 @@
+ [Device]
+ Name=Wacom DTH2452
+ DeviceMatch=usb:056a:037d
+-PairedID=056a:037e
++PairedID=usb:056a:037e
+ Class=PenDisplay
+ Width=20
+ Height=12
+diff --git a/libwacom/libwacom.c b/libwacom/libwacom.c
+index 3daff81..b813d5e 100644
+--- a/libwacom/libwacom.c
++++ b/libwacom/libwacom.c
+@@ -460,6 +460,11 @@ libwacom_compare(const WacomDevice *a, const WacomDevice *b, WacomCompareFlags f
+ 	if (memcmp(a->button_codes, b->button_codes, sizeof(int) * a->num_buttons) != 0)
+ 		return 1;
+ 
++	if ((a->paired == NULL && b->paired != NULL) ||
++	    (a->paired != NULL && b->paired == NULL) ||
++	    (a->paired && b->paired && strcmp(a->paired->match, b->paired->match) != 0))
++		return 1;
++
+ 	if ((flags & WCOMPARE_MATCHES) && compare_matches(a, b) != 0)
+ 		return 1;
+ 	else if (strcmp(a->matches[a->match]->match, b->matches[b->match]->match) != 0)
