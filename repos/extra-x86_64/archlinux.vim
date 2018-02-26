@@ -17,7 +17,9 @@ set ruler                       " show the cursor position all the time
 set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc,.png,.jpg
 
 " Move the swap file location to protect against CVE-2017-1000382
-silent !install -d -m 700 ~/.vim/swap/ 2>&1 > /dev/null
+if ! isdirectory('~/.vim/swap/')
+  silent! call system('install -dm 700 ~/.vim/swap')
+endif
 set directory=~/.vim/swap/
 
 if has('gui_running')
