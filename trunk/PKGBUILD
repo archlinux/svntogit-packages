@@ -23,6 +23,7 @@ validpgpkeys=('63CDA1E5D3FC22B998D20DD6327F26951A015CC4'  # Lennart Poettering <
               '5C251B5FC54EB2F80F407AAAC54CA336CFEB557E') # Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>
 source=('git+https://github.com/systemd/systemd-stable'
         'git+https://github.com/systemd/systemd'
+        '0001-Use-Arch-Linux-device-access-groups.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
@@ -42,6 +43,7 @@ source=('git+https://github.com/systemd/systemd-stable'
         'systemd-update.hook')
 sha512sums=('SKIP'
             'SKIP'
+            '9348683829190628e25b7b3300fd880c426d555bde330d5fc5150a9a54b3ad9d4d1f2e69ea1dc6d6f086693dacc53c5af30f1fa7ad9b479791fd77bcdafa430e'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
             '86d7cacd7536b1069c82bbbb08de7ec81e7f0f18a19fc2b06fabe90db4700623eb3540b75121080d325672d92e26912632ae4f93fd3c0bb48eb3e5eedd88352c'
             'a25b28af2e8c516c3a2eec4e64b8c7f70c21f974af4a955a4a9d45fd3e3ff0d2a98b4419fe425d47152d5acae77d64e69d8d014a7209524b75a81b0edb10bf3a'
@@ -118,6 +120,9 @@ prepare() {
   for c in "${_reverts[@]}"; do
     git revert -n "$c"
   done
+
+  # Replace cdrom/dialout/tape groups with optical/uucp/storage
+  patch -Np1 -i ../0001-Use-Arch-Linux-device-access-groups.patch
 }
 
 build() {
@@ -202,14 +207,6 @@ package_systemd() {
 
   # add back tmpfiles.d/legacy.conf, normally omitted without sysv-compat
   install -m644 $pkgbase-stable/tmpfiles.d/legacy.conf "$pkgdir"/usr/lib/tmpfiles.d
-
-  # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
-  sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
-          s#GROUP="tape"#GROUP="storage"#g;
-          s#GROUP="cdrom"#GROUP="optical"#g' "$pkgdir"/usr/lib/udev/rules.d/*.rules
-  sed -i 's/dialout/uucp/g;
-          s/tape/storage/g;
-          s/cdrom/optical/g' "$pkgdir"/usr/lib/sysusers.d/basic.conf
 
   # ship default policy to leave services disabled
   echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
