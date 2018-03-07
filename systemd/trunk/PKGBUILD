@@ -7,8 +7,6 @@ pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
 _commit='738ab7502afb7663d9aacdd73e79025aa7cd0a9b'
-# Bump this to latest major release for signed tag verification,
-# the commit count is handled by pkgver() function.
 pkgver=238.0
 pkgrel=1
 arch=('x86_64')
@@ -68,9 +66,10 @@ _backports=(
 _reverts=(
 )
 
-_validate_tag() {
+_validate_tag() (
   local success fingerprint trusted status tag=v${pkgver%.*}
 
+  cd "$srcdir/$pkgbase-stable"
   parse_gpg_statusfile /dev/stdin < <(git verify-tag --raw "$tag" 2>&1)
 
   if (( ! success )); then
@@ -93,25 +92,13 @@ _validate_tag() {
   esac
 
   return 0
-}
-
-pkgver() {
-  local version count
-
-  cd "$pkgbase-stable"
-
-  version="$(git describe --abbrev=0 --tags)"
-  count="$(git rev-list --count ${version}..)"
-  printf '%s.%s' "${version#v}" "${count}"
-}
+)
 
 prepare() {
   cd "$pkgbase-stable"
 
   git remote add -f upstream ../systemd
   git checkout "$_commit"
-
-  _validate_tag || return
 
   local c
   for c in "${_backports[@]}"; do
@@ -125,7 +112,19 @@ prepare() {
   patch -Np1 -i ../0001-Use-Arch-Linux-device-access-groups.patch
 }
 
+pkgver() {
+  local version count
+
+  cd "$pkgbase-stable"
+
+  version="$(git describe --abbrev=0 --tags)"
+  count="$(git rev-list --count ${version}..)"
+  printf '%s.%s' "${version#v}" "${count}"
+}
+
 build() {
+  _validate_tag || return
+
   local timeservers=({0..3}.arch.pool.ntp.org)
 
   local meson_options=(
