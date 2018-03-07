@@ -5,7 +5,7 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-sysvcompat')
-# latest commit on stable branch
+# Can be from either systemd or systemd-stable
 _commit='738ab7502afb7663d9aacdd73e79025aa7cd0a9b'
 # Bump this to latest major release for signed tag verification,
 # the commit count is handled by pkgver() function.
@@ -22,7 +22,7 @@ options=('strip')
 validpgpkeys=('63CDA1E5D3FC22B998D20DD6327F26951A015CC4'  # Lennart Poettering <lennart@poettering.net>
               '5C251B5FC54EB2F80F407AAAC54CA336CFEB557E') # Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>
 source=('git+https://github.com/systemd/systemd-stable'
-        'git+https://github.com/systemd/systemd' # pull in for tags, backports & reverts
+        'git+https://github.com/systemd/systemd'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
@@ -94,19 +94,17 @@ pkgver() {
 prepare() {
   cd "$pkgbase-stable"
 
-  git remote add upstream ../systemd/
-  git fetch --all
-
-  git checkout "${_commit}"
+  git remote add -f upstream ../systemd
+  git checkout "$_commit"
 
   _validate_tag || return
 
-  local _commit
-  for _commit in "${_backports[@]}"; do
-    git cherry-pick -n "$_commit"
+  local c
+  for c in "${_backports[@]}"; do
+    git cherry-pick -n "$c"
   done
-  for _commit in "${_reverts[@]}"; do
-    git revert -n "$_commit"
+  for c in "${_reverts[@]}"; do
+    git revert -n "$c"
   done
 }
 
@@ -161,17 +159,32 @@ package_systemd() {
           etc/systemd/resolved.conf
           etc/systemd/user.conf
           etc/udev/udev.conf)
-  install="systemd.install"
+  install=systemd.install
 
   DESTDIR="$pkgdir" ninja -C build install
 
   # don't write units to /etc by default. some of these will be re-enabled on
   # post_install.
-  rm -r "$pkgdir/etc/systemd/system/"*.wants
-  rm -r "$pkgdir/etc/systemd/system/"*.service
+  rm -rv "$pkgdir"/etc/systemd/system/*
 
-  # add back tmpfiles.d/legacy.conf
-  install -m644 "$pkgbase-stable/tmpfiles.d/legacy.conf" "$pkgdir/usr/lib/tmpfiles.d"
+  # we'll create this on installation
+  rmdir "$pkgdir"/var/log/journal/remote
+
+  # runtime libraries shipped with libsystemd
+  rm "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so*
+
+  # manpages shipped with systemd-sysvcompat
+  rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,runlevel,shutdown,telinit}.8
+
+  # executable (symlinks) shipped with systemd-sysvcompat
+  rm "$pkgdir"/usr/bin/{halt,init,poweroff,reboot,runlevel,shutdown,telinit}
+
+  # avoid a potential conflict with [core]/filesystem
+  rm "$pkgdir"/usr/share/factory/etc/nsswitch.conf
+  sed -i '/^C \/etc\/nsswitch\.conf/d' "$pkgdir"/usr/lib/tmpfiles.d/etc.conf
+
+  # add back tmpfiles.d/legacy.conf, normally omitted without sysv-compat
+  install -m644 $pkgbase-stable/tmpfiles.d/legacy.conf "$pkgdir"/usr/lib/tmpfiles.d
 
   # Replace dialout/tape/cdrom group in rules with uucp/storage/optical group
   sed -i 's#GROUP="dialout"#GROUP="uucp"#g;
@@ -181,53 +194,33 @@ package_systemd() {
           s/tape/storage/g;
           s/cdrom/optical/g' "$pkgdir"/usr/lib/sysusers.d/basic.conf
 
+  # ship default policy to leave services disabled
+  echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
+
   # add mkinitcpio hooks
-  install -Dm644 "$srcdir/initcpio-install-systemd" "$pkgdir/usr/lib/initcpio/install/systemd"
-  install -Dm644 "$srcdir/initcpio-install-udev" "$pkgdir/usr/lib/initcpio/install/udev"
-  install -Dm644 "$srcdir/initcpio-hook-udev" "$pkgdir/usr/lib/initcpio/hooks/udev"
+  install -Dm644 initcpio-install-systemd "$pkgdir"/usr/lib/initcpio/install/systemd
+  install -Dm644 initcpio-install-udev "$pkgdir"/usr/lib/initcpio/install/udev
+  install -Dm644 initcpio-hook-udev "$pkgdir"/usr/lib/initcpio/hooks/udev
 
   # ensure proper permissions for /var/log/journal
   # The permissions are stored with named group by tar, so this works with
   # users and groups populated by systemd-sysusers. This is only to prevent a
   # warning from pacman as permissions are set by systemd-tmpfiles anyway.
-  chown root:systemd-journal "$pkgdir/var/log/journal"
-  chmod 2755 "$pkgdir/var/log/journal"
+  install -d -o root -g systemd-journal -m 2755 "$pkgdir"/var/log/journal
 
-  # match directory owner/group and mode from extra/polkit
-  chown root:102 "$pkgdir"/usr/share/polkit-1/rules.d
-  chmod 0750     "$pkgdir"/usr/share/polkit-1/rules.d
-
-  # we'll create this on installation
-  rmdir "$pkgdir/var/log/journal/remote"
-
-  # ship default policy to leave services disabled
-  echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
-
-  # manpages shipped with systemd-sysvcompat
-  rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,runlevel,shutdown,telinit}.8
-
-  # executable (symlinks) shipped with systemd-sysvcompat
-  rm "$pkgdir"/usr/bin/{halt,init,poweroff,reboot,runlevel,shutdown,telinit}
-
-  # runtime libraries shipped with libsystemd
-  rm "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so*
-
-  # allow core/filesystem to pristine nsswitch.conf
-  rm "$pkgdir/usr/share/factory/etc/nsswitch.conf"
-  sed -i '/^C \/etc\/nsswitch\.conf/d' "$pkgdir/usr/lib/tmpfiles.d/etc.conf"
+  # match directory owner/group and mode from [extra]/polkit
+  install -d -o root -g 102 -m 750 "$pkgdir"/usr/share/polkit-1/rules.d
 
   # add example bootctl configuration
-  install -Dm644 "$srcdir/arch.conf" "$pkgdir"/usr/share/systemd/bootctl/arch.conf
-  install -Dm644 "$srcdir/loader.conf" "$pkgdir"/usr/share/systemd/bootctl/loader.conf
-  install -Dm644 "$srcdir/splash-arch.bmp" "$pkgdir"/usr/share/systemd/bootctl/splash-arch.bmp
+  install -Dm644 arch.conf "$pkgdir"/usr/share/systemd/bootctl/arch.conf
+  install -Dm644 loader.conf "$pkgdir"/usr/share/systemd/bootctl/loader.conf
+  install -Dm644 splash-arch.bmp "$pkgdir"/usr/share/systemd/bootctl/splash-arch.bmp
 
-  install -Dm644 "$srcdir/systemd-hwdb.hook" "$pkgdir/usr/share/libalpm/hooks/systemd-hwdb.hook"
-  install -Dm644 "$srcdir/systemd-sysusers.hook" "$pkgdir/usr/share/libalpm/hooks/systemd-sysusers.hook"
-  install -Dm644 "$srcdir/systemd-tmpfiles.hook" "$pkgdir/usr/share/libalpm/hooks/systemd-tmpfiles.hook"
-  install -Dm644 "$srcdir/systemd-update.hook" "$pkgdir/usr/share/libalpm/hooks/systemd-update.hook"
+  # pacman hooks
+  install -Dm644 -t "$pkgdir"/usr/share/libalpm/hooks *.hook
 
   # overwrite the systemd-user PAM configuration with our own
-  install -Dm644 systemd-user.pam "$pkgdir/etc/pam.d/systemd-user"
+  install -Dm644 systemd-user.pam "$pkgdir"/etc/pam.d/systemd-user
 }
 
 package_libsystemd() {
@@ -241,7 +234,7 @@ package_libsystemd() {
   DESTDIR="$srcdir"/full-install ninja -C build install
 
   install -dm755 "$pkgdir"/usr/lib/
-  cp --archive "$srcdir"/full-install/usr/lib/lib{nss_*,systemd,udev}.so* "$pkgdir"/usr/lib/
+  cp --archive full-install/usr/lib/lib{nss_*,systemd,udev}.so* "$pkgdir"/usr/lib/
 }
 
 package_systemd-sysvcompat() {
@@ -251,17 +244,14 @@ package_systemd-sysvcompat() {
   conflicts=('sysvinit')
   depends=('systemd')
 
-  install -dm755 "$pkgdir"/usr/share/man/man8
-  cp -d --no-preserve=ownership,timestamp \
-    build/man/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8 \
-    "$pkgdir"/usr/share/man/man8
+  install -Dm644 -t "$pkgdir"/usr/share/man/man8 \
+    build/man/{telinit,halt,reboot,poweroff,runlevel,shutdown}.8
 
-  install -dm755 "$pkgdir/usr/bin"
+  install -dm755 "$pkgdir"/usr/bin
+  ln -s ../lib/systemd/systemd "$pkgdir"/usr/bin/init
   for tool in runlevel reboot shutdown poweroff halt telinit; do
-    ln -s 'systemctl' "$pkgdir/usr/bin/$tool"
+    ln -s systemctl "$pkgdir"/usr/bin/$tool
   done
-
-  ln -s '../lib/systemd/systemd' "$pkgdir/usr/bin/init"
 }
 
 # vim: ft=sh syn=sh et
