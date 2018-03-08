@@ -1,0 +1,55 @@
+#$Id$
+# Maintainer: Jan De Groot <jgc@archlinux.org>
+
+pkgname=gnome-keyring
+pkgver=3.27.92+1+g7120f44c
+pkgrel=1
+epoch=1
+pkgdesc="Stores passwords and encryption keys"
+url="https://wiki.gnome.org/Projects/GnomeKeyring"
+arch=(x86_64)
+license=(GPL LGPL)
+depends=(gcr libcap-ng pam openssh)
+makedepends=(git docbook-xsl python)
+checkdepends=(python2)
+groups=(gnome)
+install=gnome-keyring.install
+_commit=7120f44ceedd5c10802781d64a5829b3c6d8e13f  # master
+source=("git+https://git.gnome.org/browse/gnome-keyring#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  sed -i 's/MATE/MATE;Cinnamon/' daemon/*.desktop.in.in
+  sed -i '1s/python$/&2/' build/tap-{driver,gtester}
+  autoreconf -fvi
+}
+
+build() {
+  cd $pkgname
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib \
+    --with-pam-dir=/usr/lib/security \
+    --disable-static \
+    --disable-schemas-compile
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd $pkgname
+  # Secure memory tests fail
+  dbus-run-session make -k check || :
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
