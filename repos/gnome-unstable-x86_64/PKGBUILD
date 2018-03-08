@@ -1,0 +1,46 @@
+# $Id$
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgname=gdk-pixbuf2
+pkgver=2.36.11+70+g00e03a272
+pkgrel=1
+pkgdesc="An image loading library"
+arch=(x86_64)
+url="https://wiki.gnome.org/Projects/GdkPixbuf"
+license=(LGPL2.1)
+depends=(glib2 libpng libtiff libjpeg libx11 jasper shared-mime-info)
+makedepends=(gtk-doc gobject-introspection git docbook-xsl meson)
+install=gdk-pixbuf2.install
+_commit=00e03a2727b276ea32e2902dd9b41298ff1f9e96  # master
+source=("git+https://git.gnome.org/browse/gdk-pixbuf#commit=$_commit"
+        gdk-pixbuf-query-loaders.hook)
+sha256sums=('SKIP'
+            '963afcfacde9fd36031d93c8aa4c94a669ab1dbe9ba0d2cf17599b7d358e54c2')
+
+pkgver() {
+  cd gdk-pixbuf
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd gdk-pixbuf
+}
+
+build() {
+  arch-meson gdk-pixbuf build -D jasper=true -D docs=true
+  ninja -C build
+}
+
+check() {
+  cd build
+  # pixbuf-randomly-modified fails randomly
+  meson test -t 3 || :
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
+  rm -rf "$pkgdir"/usr/{lib,share}/installed-tests
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+}
+
+# vim:set et sw=2:
