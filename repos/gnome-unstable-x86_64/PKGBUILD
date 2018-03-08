@@ -1,0 +1,78 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=glib2
+pkgname=(glib2 glib2-docs)
+pkgver=2.55.1+240+g5d93dd63e
+pkgrel=1
+pkgdesc="Low level core library"
+url="https://wiki.gnome.org/Projects/GLib"
+license=(LGPL2.1)
+arch=(x86_64)
+depends=(pcre libffi libutil-linux zlib)
+makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux dbus)
+checkdepends=(desktop-file-utils)
+optdepends=('python: for gdbus-codegen and gtester-report'
+            'libelf: gresource inspection tool')
+options=(!emptydirs)
+_commit=5d93dd63e8e533fffdc5ebbd74a25508b98f9b93  # master
+source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
+        noisy-glib-compile-schemas.diff
+        glib-compile-schemas.hook gio-querymodules.hook)
+sha256sums=('SKIP'
+            '81a4df0b638730cffb7fa263c04841f7ca6b9c9578ee5045db6f30ff0c3fc531'
+            'e1123a5d85d2445faac33f6dae1085fdd620d83279a4e130a83fe38db52b62b3'
+            '5ba204a2686304b1454d401a39a9d27d09dd25e4529664e3fd565be3d439f8b6')
+
+pkgver() {
+  cd glib
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd glib
+
+  # Suppress noise from glib-compile-schemas.hook
+  patch -Np1 -i ../noisy-glib-compile-schemas.diff
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd glib
+  ./configure \
+    --prefix=/usr \
+    --libdir=/usr/lib \
+    --sysconfdir=/etc \
+    --with-pcre=system \
+    --enable-debug=yes \
+    --enable-gtk-doc \
+    --disable-fam
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd glib
+  make check
+}
+
+package_glib2() {
+  cd glib
+  make DESTDIR="$pkgdir" install
+  mv "$pkgdir/usr/share/gtk-doc" "$srcdir"
+
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 ../*.hook
+}
+
+package_glib2-docs() {
+  pkgdesc="Documentation for GLib"
+  depends=()
+  optdepends=()
+  license+=(custom)
+
+  mkdir -p "$pkgdir/usr/share"
+  mv gtk-doc "$pkgdir/usr/share"
+
+  install -Dt "$pkgdir/usr/share/licenses/glib2-docs" -m644 glib/docs/reference/COPYING
+}
