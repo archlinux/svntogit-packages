@@ -2,7 +2,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gnome-settings-daemon
-pkgver=3.26.2
+pkgver=3.27.92+5+g1035756e
 pkgrel=1
 pkgdesc="GNOME Settings Daemon"
 url="https://git.gnome.org/browse/gnome-settings-daemon"
@@ -11,10 +11,10 @@ license=(GPL)
 depends=(dconf gnome-desktop gsettings-desktop-schemas libcanberra-pulse libnotify libsystemd
          libwacom pulseaudio pulseaudio-alsa upower librsvg libgweather geocode-glib geoclue2 nss
          libgudev gtk3-print-backends libnm)
-makedepends=(intltool xf86-input-wacom libxslt docbook-xsl python git gnome-common)
+makedepends=(xf86-input-wacom libxslt docbook-xsl python git meson)
 groups=(gnome)
-_commit=b4a1b1ab4da2be6628811a763376fc39c116cdbe  # tags/GNOME_SETTINGS_DAEMON_3_26_2^0
-source=("git+https://git.gnome.org/browse/gnome-settings-daemon#commit=$_commit"
+_commit=1035756e3609e90742f7f61a783ed0f7a3bf93c7  # master
+source=("git+https://gitlab.gnome.org/GNOME/gnome-settings-daemon.git#commit=$_commit"
         "git+https://git.gnome.org/browse/libgnome-volume-control")
 sha256sums=('SKIP'
             'SKIP')
@@ -28,25 +28,21 @@ prepare() {
   cd $pkgname
 
   git submodule init
-  git config --local submodule."panels/media-keys/gvc".url "$srcdir/libgnome-volume-control"
+  git config --local submodule.subprojects/gvc.url "$srcdir/libgnome-volume-control"
   git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
+  arch-meson $pkgname build
+  ninja -C build
+}
 
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-      --libexecdir=/usr/lib/$pkgname --disable-static
-
-  #https://bugzilla.gnome.org/show_bug.cgi?id=656231
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+check() {
+  cd build
+  # Needs python-dbusmock
+  #meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
