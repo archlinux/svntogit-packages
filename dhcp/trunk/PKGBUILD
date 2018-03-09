@@ -7,11 +7,11 @@ pkgname=('dhcp' 'dhclient')
 
 # separate patch levels with a period to maintain proper versioning.
 pkgver=4.4.1
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('custom:isc-dhcp')
 url="https://www.isc.org/software/dhcp"
-makedepends=('bash' 'iproute2')
+makedepends=('bash' 'iproute2' 'openldap')
 validpgpkeys=('BE0E9748B718253A28BB89FFF1B11BF05CF02E57') # Internet Systems Consortium, Inc. (Signing key, 2017-2018) <codesign@isc.org>
 source=("ftp://ftp.isc.org/isc/${pkgbase}/${pkgver}/${pkgbase}-${pkgver}.tar.gz"{,.asc}
         'dhcp-sysusers.conf'
@@ -36,27 +36,31 @@ prepare() {
 
 build() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
+
   ./configure \
       --prefix=/usr \
       --sbindir=/usr/bin \
       --sysconfdir=/etc \
+      --enable-binary-leases \
       --enable-paranoia \
+      --with-ldap \
+      --with-ldapcrypto \
       --with-srv-lease-file=/var/lib/dhcp/dhcpd.leases \
       --with-srv6-lease-file=/var/lib/dhcp/dhcpd6.leases \
       --with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
-      --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases \
-      --enable-binary-leases
+      --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases
 
   make -j1
 }
 
 package_dhcp(){
   pkgdesc="A DHCP server, client, and relay agent"
-  depends=('glibc')
+  depends=('glibc' 'libldap')
   backup=('etc/dhcpd.conf' 'etc/dhcpd6.conf')
   install=dhcp.install
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
+
   make DESTDIR="${pkgdir}" install
 
   install -d "${pkgdir}/var/lib/dhcp"
@@ -82,6 +86,7 @@ package_dhclient(){
   provides=('dhcp-client')
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
+
   make -C client DESTDIR="${pkgdir}" install
 
   install -m755 -d "${pkgdir}/usr/share/dhclient"
