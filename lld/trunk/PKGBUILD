@@ -1,0 +1,62 @@
+# $Id$
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+
+pkgname=lld
+pkgver=6.0.0
+pkgrel=1
+pkgdesc="Linker from the LLVM project"
+arch=('x86_64')
+url="https://lld.llvm.org/"
+license=('custom:University of Illinois/NCSA Open Source License')
+depends=('llvm-libs')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'gtest')
+source=(https://releases.llvm.org/$pkgver/$pkgname-$pkgver.src.tar.xz{,.sig})
+sha256sums=('6b8c4a833cf30230c0213d78dbac01af21387b298225de90ab56032ca79c0e0b'
+            'SKIP')
+validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
+validpgpkeys+=('11E521D646982372EB577A1F8F0871F202119294') # Tom Stellard <tom@stellard.net>
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver.src"
+  mkdir build
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPYTHON_EXECUTABLE=/usr/bin/python \
+    -DBUILD_SHARED_LIBS=ON \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DLLVM_INCLUDE_TESTS=ON \
+    -DLLVM_BUILD_TESTS=ON \
+    -DLLVM_BUILD_DOCS=ON \
+    -DLLVM_ENABLE_SPHINX=ON \
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit
+  ninja
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+  if [[ -e /usr/bin/lld ]]; then
+    # TODO(foutrelis): tests use system lld if it exists; check if it's fixable
+    error "Cannot run the tests while lld is installed to the system"
+    return 1
+  fi
+  ninja check-lld
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  DESTDIR="$pkgdir" ninja install
+  install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
+}
+
+# vim:set ts=2 sw=2 et:
