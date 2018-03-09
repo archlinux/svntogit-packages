@@ -3,19 +3,15 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
-pkgname=kcachegrind
+pkgbase=kcachegrind
+pkgname=(kcachegrind kcachegrind-common qcachegrind)
 pkgver=17.12.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Visualization of Performance Profiling Data'
 url='https://kde.org/applications/development/kcachegrind/'
 arch=(x86_64)
 license=(GPL LGPL FDL)
-groups=(kde-applications kdesdk)
-depends=(kio hicolor-icon-theme)
-makedepends=(extra-cmake-modules kdoctools python qt5-tools)
-optdepends=('php: PHP support' 'graphviz: for plotting support')
-conflicts=(kdesdk-kcachegrind)
-replaces=(kdesdk-kcachegrind)
+makedepends=(extra-cmake-modules kdoctools python qt5-tools kio)
 source=("https://download.kde.org/stable/applications/$pkgver/src/$pkgname-$pkgver.tar.xz"{,.sig})
 sha256sums=('0d9670aa3b96e9d5ad2a110965c523922138786e8c00de9e2aee59dd46405ddb'
             'SKIP')
@@ -35,11 +31,35 @@ build() {
   make
 }
 
-package() {
+package_kcachegrind() {
+  groups=(kde-applications kdesdk)
+  depends=(kio kcachegrind-common)
+  conflicts=(kdesdk-kcachegrind)
+  replaces=(kdesdk-kcachegrind)
+
   cd build
   make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/{bin/*tree,share/{doc,icons,locale}}
+}
+
+package_kcachegrind-common() {
+  pkdesc+=' (common files)'
+  depends=(hicolor-icon-theme)
+  optdepends=('php: PHP support' 'graphviz: for plotting support' 'python2: for hotshot2calltree')
+
+  cd build
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/{bin/kcachegrind,share/{kxmlgui5,kcachegrind,applications}} # provided by kcachegrind
 
   # Fix python 2 path
   sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' \
     "$pkgdir"/usr/bin/hotshot2calltree
+}
+
+package_qcachegrind() {
+  pkgdesc+=' (pure Qt version)'
+  depends=(qt5-base kcachegrind-common)
+
+  install -Dm755 build/qcachegrind/qcachegrind -t "$pkgdir"/usr/bin/
+  install -Dm644 $pkgbase-$pkgver/qcachegrind/qcachegrind.desktop -t "$pkgdir"/usr/share/applications/
 }
