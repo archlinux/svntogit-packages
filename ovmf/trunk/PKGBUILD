@@ -1,7 +1,7 @@
 # $Id$
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 pkgname=ovmf
-pkgver=r23112.018432f0ce
+pkgver=r23518.6d2d2e6e5b
 epoch=1
 pkgrel=1
 arch=('any')
@@ -9,7 +9,8 @@ pkgdesc="Tianocore UEFI firmware for qemu."
 url="http://sourceforge.net/apps/mediawiki/tianocore/index.php?title=EDK2"
 license=('custom')
 makedepends=('git' 'python2' 'iasl' 'nasm' 'subversion' 'perl-libwww')
-source=('edk2::git+https://github.com/tianocore/edk2#commit=018432f0ce1b42541977f61f9c7607257a4bf43a')
+_commit=6d2d2e6e5b6619dd46d944b90629739c97ee8a65
+source=(edk2::git+https://github.com/tianocore/edk2#commit=$_commit)
 sha256sums=('SKIP')
 options=(!makeflags)
 _toolchain_opt=GCC5
@@ -37,18 +38,10 @@ build() {
   export EDK_TOOLS_PATH="${srcdir}"/edk2/BaseTools
   . edksetup.sh BaseTools
 
-  # Set RELEASE target, toolchain and number of build threads
-  sed "s|^TARGET[ ]*=.*|TARGET = RELEASE|; \
-       s|TOOL_CHAIN_TAG[ ]*=.*|TOOL_CHAIN_TAG = ${_toolchain_opt}|; \
-       s|MAX_CONCURRENT_THREAD_NUMBER[ ]*=.*|MAX_CONCURRENT_THREAD_NUMBER = $(nproc)|;" -i Conf/target.txt
-  # Build OVMF for ia32
-  #sed "s|^TARGET_ARCH[ ]*=.*|TARGET_ARCH = IA32|; \
-  #     s|^ACTIVE_PLATFORM[ ]*=.*|ACTIVE_PLATFORM = OvmfPkg/OvmfPkgIa32.dsc|;" -i Conf/target.txt
-  #./BaseTools/BinWrappers/PosixLike/build
-  # Build OVMF for x64
-  sed "s|^TARGET_ARCH[ ]*=.*|TARGET_ARCH = X64|; \
-       s|^ACTIVE_PLATFORM[ ]*=.*|ACTIVE_PLATFORM = OvmfPkg/OvmfPkgX64.dsc|;" -i Conf/target.txt
-  ./BaseTools/BinWrappers/PosixLike/build
+  ./BaseTools/BinWrappers/PosixLike/build -t $_toolchain_opt -a X64 -p OvmfPkg/OvmfPkgX64.dsc -n $(nproc) -b RELEASE -D FD_SIZE_2MB
+
+  # build fails for 32bit binary
+  # ./BaseTools/BinWrappers/PosixLike/build -t $_toolchain_opt -a IA32 -p OvmfPkg/OvmfPkgIa32.dsc -n $(nproc) -b RELEASE -D FD_SIZE_2MB
 }
 
 package() {
