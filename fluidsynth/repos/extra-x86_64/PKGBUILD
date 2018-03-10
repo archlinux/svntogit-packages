@@ -1,46 +1,50 @@
 # $Id$
 # Maintainer: Ray Rashif <schiv@archlinux.org>
+# Contributor: David Runge <dave@sleepmap.de>
 # Contributor: damir <damir@archlinux.org>
 
 pkgname=fluidsynth
-pkgver=1.1.9
+pkgver=1.1.10
 pkgrel=1
 pkgdesc="A real-time software synthesizer based on the SoundFont 2 specifications"
 arch=('x86_64')
 url="http://www.fluidsynth.org/"
-depends=('jack' 'libpulse' 'glib2')
+depends=('glib2' 'jack' 'lash' 'libpulse' 'portaudio')
 makedepends=('cmake' 'ladspa' 'doxygen')
 optdepends=('pulseaudio: PulseAudio sound support')
 license=('LGPL')
 backup=("etc/conf.d/$pkgname")
-install=$pkgname.install
-source=($pkgname-$pkgver.tar.gz::"https://github.com/FluidSynth/fluidsynth/archive/v$pkgver.tar.gz"
-        'fluidsynth.systemd'
-        'fluidsynth.conf')
-md5sums=('0011c2b173e90f95a72b12c9a73b7c2c'
-         'ba5e2c71a98d593339e1460c60b0951c'
-         '2167e6a7e38ed29399d77179072548f2')
+source=($pkgname-$pkgver.tar.gz::"https://github.com/${pkgname}/${pkgname}/archive/v$pkgver.tar.gz")
+sha512sums=('7ff7757baf6dee37f65a4fd214ffab1aa1434cfd1545deb4108fe2e9b0ed19d616880b2740a693b51ade0a4be998a671910b43cae26eb67fb97b16a513752cbc')
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  # out-of-tree build
+  mkdir build
+}
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
-
-  cmake . -DCMAKE_INSTALL_PREFIX=/usr \
-          -DCMAKE_BUILD_TYPE=Release \
-          -Denable-ladspa=ON \
-          -DLIB_SUFFIX=""
+  cd "${pkgname}-${pkgver}/build"
+  cmake .. -DCMAKE_INSTALL_PREFIX=/usr \
+           -DCMAKE_BUILD_TYPE=Release \
+           -DFLUID_DAEMON_ENV_FILE=/etc/conf.d/fluidsynth \
+           -Denable-ladspa=ON \
+           -Denable-lash=ON \
+           -Denable-portaudio=ON \
+           -DLIB_SUFFIX=""
   make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
-
+  cd "${pkgname}-${pkgver}/build"
   make DESTDIR="$pkgdir" install
-
-  install -Dm644 "$srcdir/$pkgname.systemd" \
-    "$pkgdir/usr/lib/systemd/system/$pkgname.service"
-
-  install -Dm644 "$srcdir/$pkgname.conf" \
-    "$pkgdir/etc/conf.d/$pkgname"
+  # systemd user unit
+  install -vDm644 "${pkgname}.service" \
+    "$pkgdir/usr/lib/systemd/user/${pkgname}.service"
+  # system-wide configuration file
+  install -vDm644 "${pkgname}.conf" "${pkgdir}/etc/conf.d/${pkgname}"
+  # docs
+  install -t "${pkgdir}/usr/share/doc/${pkgname}" \
+    -vDm644 ../{AUTHORS,ChangeLog,NEWS,README.md,THANKS,TODO}
 }
 
-# vim:set ts=2 sw=2 et:
