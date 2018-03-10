@@ -3,38 +3,42 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=libgit2-glib
-pkgver=0.26.2
+pkgver=0.26.4
 pkgrel=1
 pkgdesc="GLib wrapper for libgit2"
 url="http://wiki.gnome.org/Projects/Libgit2-glib"
 license=(LGPL2.1)
 arch=(x86_64)
 depends=(glib2 libgit2)
-makedepends=(gobject-introspection python vala gtk-doc)
-source=("https://ftp.gnome.org/pub/GNOME/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz")
-sha256sums=('2ad6f20db2e38bbfdb6cb452704fe8a911036b86de82dc75bb0f3b20db40ce9c')
+makedepends=(gobject-introspection python-gobject python2 vala gtk-doc git meson)
+_commit=fed5187a24bbee3aa72049df3f55af4a4166c0bb  # tags/v0.26.4^0
+source=("git+https://git.gnome.org/browse/libgit2-glib#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
 
 prepare() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname
 }
 
 build() {
-  cd "$pkgname-$pkgver"
-
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-gtk-doc
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  arch-meson $pkgname build -D gtk_doc=true
+  ninja -C build
 }
 
 check() {
-  cd "$pkgname-$pkgver"
-  make check
+  cd build
+  meson test
 }
 
 package() {
-  cd "$pkgname-$pkgver"
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
+  cp -a "$pkgdir"/usr/lib/python{3.6,2.7}
+  python3 -m compileall "$pkgdir/usr/lib/python3.6"
+  python3 -O -m compileall "$pkgdir/usr/lib/python3.6"
+  python2 -m compileall "$pkgdir/usr/lib/python2.7"
+  python2 -O -m compileall "$pkgdir/usr/lib/python2.7"
 }
