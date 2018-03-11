@@ -3,35 +3,26 @@
 
 pkgbase=nautilus
 pkgname=(nautilus libnautilus-extension)
-pkgver=3.26.2
-pkgrel=3
+pkgver=3.27.92.1+7+gd316f4d09
+pkgrel=1
 pkgdesc="Default file manager for GNOME"
 url="https://wiki.gnome.org/Apps/Nautilus"
 arch=(x86_64)
 license=(GPL)
-depends=(libexif gnome-desktop exempi gvfs dconf tracker nautilus-sendto gnome-autoar)
+depends=(libgexiv2 gnome-desktop gvfs dconf tracker nautilus-sendto gnome-autoar)
 makedepends=(gobject-introspection packagekit git gtk-doc meson)
 options=(!emptydirs)
-_commit=51637bc0960002b811e1c0c7be8671cf9a1cc5be  # tags/3.26.2^0
+_commit=d316f4d0926db2f5316c07f11f61c5ce832bfe18  # master
 source=("git+https://gitlab.gnome.org/GNOME/nautilus.git#commit=$_commit"
-        "git+https://git.gnome.org/browse/libgd"
-        0001-rename-file-popover-controller-Don-t-destroy-the-pop.patch)
+        "git+https://git.gnome.org/browse/libgd")
 sha256sums=('SKIP'
-            'SKIP'
-            'de644c2426a96e595bd93daef1db1716dc4d9680af2b6884db9518d29ea7eaac')
+            'SKIP')
 
 prepare() {
-  mkdir -p build libne/usr/{lib,share}
   cd $pkgbase
 
-  # https://gitlab.gnome.org/GNOME/nautilus/issues/25
-  git cherry-pick -n d74e1a3d 9238456b
-
-  # https://gitlab.gnome.org/GNOME/nautilus/issues/216
-  patch -Np1 -i ../0001-rename-file-popover-controller-Don-t-destroy-the-pop.patch
-
   git submodule init
-  git config --local submodule.libgd.url "$srcdir/libgd"
+  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
   git submodule update
 }
 
@@ -41,32 +32,26 @@ pkgver() {
 }
 
 build() {
-  cd build
-  arch-meson ../$pkgbase  \
-    -Denable-exif=true \
-    -Denable-xmp=true \
-    -Denable-gtk-doc=true \
-    -Denable-selinux=false
-  ninja
+  arch-meson $pkgbase build -D docs=true
+  ninja -C build
 }
 
 package_nautilus() {
   depends+=(libnautilus-extension)
   groups=(gnome)
 
-  cd build
-  DESTDIR="$pkgdir" ninja install
+  DESTDIR="$pkgdir" ninja -C build install
 
 ### Split libnautilus-extension
 
-  cd ../libne
-  mv "$pkgdir"/usr/include usr
-  mv "$pkgdir"/usr/lib/{girepository-1.0,libnautilus-extension*,pkgconfig} usr/lib
-  mv "$pkgdir"/usr/share/{gir-1.0,gtk-doc} usr/share
+  mkdir -p libne/{lib,share}
+  mv "$pkgdir"/usr/include libne
+  mv "$pkgdir"/usr/lib/{girepository-1.0,libnautilus-extension*,pkgconfig} libne/lib
+  mv "$pkgdir"/usr/share/{gir-1.0,gtk-doc} libne/share
 }
 
 package_libnautilus-extension() {
   pkgdesc="Library for extending the $pkgdesc"
   depends=(gtk3)
-  mv libne/usr "$pkgdir"
+  mv libne "$pkgdir/usr"
 }
