@@ -1,19 +1,21 @@
 # $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gst-plugins-base
 pkgname=(gst-plugins-base-libs gst-plugins-base)
-pkgver=1.12.4
+pkgver=1.13.90+3+g98fc23062
 pkgrel=1
 pkgdesc="GStreamer Multimedia Framework Base Plugins"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
 license=(LGPL)
-makedepends=(gstreamer orc libxv iso-codes alsa-lib cdparanoia libvisual libvorbis libtheora pango
-             opus gobject-introspection gtk-doc autoconf-archive git pkgconfig)
-checkdepends=(gtk3 qt5-base)
+depends=(gstreamer orc libxv iso-codes libgudev mesa)
+makedepends=(alsa-lib cdparanoia libvisual libvorbis libtheora pango opus graphene libpng libjpeg
+             gobject-introspection gtk-doc autoconf-archive git)
+checkdepends=(gtk3 qt5-base clutter sdl glu)
 options=(!emptydirs)
-_commit=e07c69f65598068b380753066783a1c67e3d4464  # tags/1.12.4^0
+_commit=98fc23062f211ac1ffe96802bfe891869615660d  # master
 source=("git+https://anongit.freedesktop.org/git/gstreamer/gst-plugins-base#commit=$_commit"
         "gst-common::git+https://anongit.freedesktop.org/git/gstreamer/common")
 sha256sums=('SKIP'
@@ -36,36 +38,37 @@ prepare() {
 
 build() {
   cd $pkgbase
-
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib \
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib \
     --with-package-name="GStreamer Base Plugins (Arch Linux)" \
     --with-package-origin="https://www.archlinux.org/" \
-    --enable-experimental --enable-gtk-doc --disable-static
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+    --enable-experimental \
+    --enable-gtk-doc \
+    --disable-static
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
   make
-
-  sed -e 's/^SUBDIRS_EXT =.*/SUBDIRS_EXT =/' -i Makefile
 }
 
 check() {
   cd $pkgbase
-  make check
+  # GL tests need hardware
+  make check || :
 }
 
 package_gst-plugins-base-libs() {
-  pkgdesc="GStreamer Multimedia Framework Base Plugin libraries"
-  depends=(gstreamer orc libxv iso-codes)
+  pkgdesc="${pkgdesc/Plugins/Libraries}"
 
   cd $pkgbase
   make DESTDIR="$pkgdir" install
+  make -C ext DESTDIR="$pkgdir" uninstall
 }
 
 package_gst-plugins-base() {
-  depends=("gst-plugins-base-libs=$pkgver" alsa-lib cdparanoia libvisual libvorbis
-           libtheora pango opus)
+  depends=("gst-plugins-base-libs=$pkgver"
+           alsa-lib cdparanoia libvisual libvorbis libtheora pango opus graphene libpng libjpeg)
 
   cd $pkgbase
   make -C gst-libs DESTDIR="$pkgdir" install
