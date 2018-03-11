@@ -1,0 +1,66 @@
+# $Id$
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+
+pkgname=lldb
+pkgver=6.0.0
+pkgrel=1
+pkgdesc="Next generation, high-performance debugger"
+arch=('x86_64')
+url="https://lldb.llvm.org/"
+license=('custom:University of Illinois/NCSA Open Source License')
+depends=('llvm-libs' 'clang' 'python2' 'python2-six')
+makedepends=('llvm' 'cmake' 'ninja' 'swig')
+source=(https://releases.llvm.org/$pkgver/$pkgname-$pkgver.src.tar.xz{,.sig})
+sha256sums=('46f54c1d7adcd047d87c0179f7b6fa751614f339f4f87e60abceaa45f414d454'
+            'SKIP')
+validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
+validpgpkeys+=('11E521D646982372EB577A1F8F0871F202119294') # Tom Stellard <tom@stellard.net>
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver.src"
+  mkdir build
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPYTHON_EXECUTABLE=/usr/bin/python2 \
+    -DPYTHON_LIBRARY=/usr/lib/libpython2.7.so \
+    -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DLLDB_USE_SYSTEM_SIX=1 \
+    -DHAVE_LIBDL=ON \
+    -DHAVE_LIBPTHREAD=ON
+
+  # For the lldb-{server,test} targets, libLLVMSupport.a appears before
+  # libLLVM-6.0.so and conflicts at runtime (within the options parser)
+  # https://bugs.llvm.org/show_bug.cgi?id=36687
+  sed -i 's|/usr/lib/libLLVMSupport.a||g' build.ninja
+
+  ninja
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  DESTDIR="$pkgdir" ninja install
+  install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Remove static libraries
+  rm "$pkgdir"/usr/lib/*.a
+
+  # Relocate custom readline.so module which links agaisnt libedit
+  mv "$pkgdir"/usr/lib/python2.7/site-packages/{,lldb/}readline.so
+  sed -i '2isys.path.insert(1, "/usr/lib/python2.7/site-packages/lldb")' \
+    "$pkgdir/usr/lib/python2.7/site-packages/lldb/embedded_interpreter.py"
+
+  # Compile Python scripts
+  python2 -m compileall "$pkgdir"
+  python2 -O -m compileall "$pkgdir"
+}
+
+# vim:set ts=2 sw=2 et:
