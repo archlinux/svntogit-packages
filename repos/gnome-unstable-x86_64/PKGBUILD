@@ -1,0 +1,61 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gst-plugins-ugly
+pkgver=1.13.90+1+ga8f55f0f
+pkgrel=1
+pkgdesc="GStreamer Multimedia Framework Ugly Plugins"
+url="https://gstreamer.freedesktop.org/"
+arch=(x86_64)
+license=(LGPL)
+depends=(gst-plugins-base-libs libdvdread libmpeg2 a52dec libsidplay libcdio libx264 libx264-all
+         opencore-amr)
+makedepends=(python gtk-doc x264 autoconf-archive git)
+_commit=a8f55f0f456890e064e1c92c3a7c5b3f8da1542f  # master
+source=("git+https://anongit.freedesktop.org/git/gstreamer/gst-plugins-ugly#commit=$_commit"
+        "gst-common::git+https://anongit.freedesktop.org/git/gstreamer/common")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.common.url "$srcdir/gst-common"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib \
+    --with-package-name="GStreamer Ugly Plugins (Arch Linux)" \
+    --with-package-origin="https://www.archlinux.org/" \
+    --with-x264-libraries="/usr/lib/x264/libx264-8bit.so:/usr/lib/x264/libx264-10bit.so" \
+    --enable-experimental \
+    --enable-gtk-doc \
+    --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd $pkgname
+  make check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
