@@ -1,0 +1,61 @@
+# $Id$
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgname=gnome-online-accounts
+pkgver=3.27.92+3+gdde33649
+pkgrel=1
+pkgdesc="Single sign-on framework for GNOME"
+url="https://wiki.gnome.org/Projects/GnomeOnlineAccounts"
+arch=(x86_64)
+license=(LGPL)
+depends=(webkit2gtk json-glib libnotify rest libsecret telepathy-glib krb5 gcr)
+makedepends=(gobject-introspection gtk-doc vala autoconf-archive gnome-common git)
+optdepends=('gvfs-goa: Virtual file systems (e.g. OwnCloud)'
+            'gvfs-google: Google Drive')
+_commit=dde336495f8e0c2669946f4427e5b7416317d5ed  # master
+source=("git+https://git.gnome.org/browse/gnome-online-accounts#commit=$_commit"
+        "git+https://git.gnome.org/browse/telepathy-account-widgets")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.telepathy-account-widgets.url "$srcdir/telepathy-account-widgets"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure \
+    --prefix=/usr \
+    --libexecdir=/usr/lib \
+    --disable-static \
+    --enable-compile-warnings=minimum \
+    --enable-inspector \
+    --enable-media-server \
+    --enable-kerberos \
+    --enable-lastfm \
+    --enable-todoist \
+    --enable-gtk-doc
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
+
+# vim:set ts=2 sw=2 et:
