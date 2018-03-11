@@ -1,0 +1,59 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-control-center
+pkgver=3.27.92+4+g77d81dc15
+pkgrel=1
+pkgdesc="GNOME's main interface to configure various aspects of the desktop"
+url="https://gitlab.gnome.org/GNOME/gnome-control-center"
+license=(GPL2)
+arch=(x86_64)
+depends=(accountsservice cups-pk-helper gnome-bluetooth gnome-desktop
+         gnome-online-accounts gnome-settings-daemon gsettings-desktop-schemas gtk3
+         libgtop libnm-gtk sound-theme-freedesktop upower libpwquality
+         gnome-color-manager smbclient libmm-glib libgnomekbd grilo clutter-gtk libibus
+         cheese libgudev)
+makedepends=(docbook-xsl modemmanager git python meson)
+optdepends=('system-config-printer: Printer settings'
+            'gnome-user-share: Bluetooth and WebDAV file sharing'
+            'rygel: media sharing'
+            'vino: screen sharing'
+            'openssh: remote login')
+groups=(gnome)
+_commit=77d81dc155ddc0d865020c0ae923668be0bff972  # gnome-3-28
+source=("git+https://gitlab.gnome.org/GNOME/gnome-control-center.git#commit=$_commit"
+        "git+https://git.gnome.org/browse/libgnome-volume-control"
+        "git+https://git.gnome.org/browse/libgd")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^GNOME_CONTROL_CENTER_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  git submodule init
+  git config --local submodule.subprojects/gvc.url "$srcdir/libgnome-volume-control"
+  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
+  git submodule update
+}
+
+
+build() {
+  arch-meson $pkgname build -D documentation=true -D b_lto=false
+  ninja -C build
+}
+
+check() {
+  cd build
+  meson test
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
+  install -d -o root -g 102 -m 750 "$pkgdir/usr/share/polkit-1/rules.d"
+}
