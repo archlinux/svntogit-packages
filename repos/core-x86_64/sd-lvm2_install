@@ -4,23 +4,33 @@ build() {
     local mod
     local symlink
 
+    # device mapper modules
     for mod in dm-mod dm-snapshot dm-mirror dm-cache dm-cache-smq dm-thin-pool; do
         add_module "$mod"
     done
 
-    # from lvm2
-    add_binary "/usr/bin/lvm"
-    add_binary "/usr/bin/lvmetad"
+    # device mapper and lvm2 systemd units
+    # binaries and libraries are pull automatically, except ...
+    add_systemd_unit "dm-event.service"
+    add_systemd_unit "lvm2-lvmetad.service"
+    add_systemd_unit "lvm2-pvscan@.service"
+    add_symlink "/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmetad.socket"
 
-    # from device-mapper
-    add_binary "/usr/bin/dmsetup"
+    # ... dmsetup and ...
+    add_binary "dmsetup"
+
+    # ... these, which are dlopen()ed
+    for library in libdevmapper-event-lvm2{mirror,raid,snapshot,thin}; do
+    	add_binary "/usr/lib/${library}.so"
+    done
 
     # from thin-provisioning-tools
-    add_binary "/usr/bin/pdata_tools"
+    add_binary "pdata_tools"
     for symlink in cache_{check,dump,metadata_size,repair,restore} thin_{check,delta,dump,ls,metadata_size,repair,restore,rmap,trim}; do
         add_symlink "/usr/bin/${symlink}" "pdata_tools"
     done
 
+    # udev rules and lvm configuration
     add_file "/usr/lib/udev/rules.d/10-dm.rules"
     add_file "/usr/lib/udev/rules.d/13-dm-disk.rules"
     add_file "/usr/lib/udev/rules.d/95-dm-notify.rules"
@@ -28,11 +38,6 @@ build() {
     add_file "/usr/lib/udev/rules.d/69-dm-lvm-metad.rules"
     add_file "/usr/lib/initcpio/udev/11-dm-initramfs.rules" "/usr/lib/udev/rules.d/11-dm-initramfs.rules"
     add_file "/etc/lvm/lvm.conf"
-
-    add_file "/usr/lib/systemd/system/lvm2-lvmetad.service"
-    add_file "/usr/lib/systemd/system/lvm2-lvmetad.socket"
-    add_file "/usr/lib/systemd/system/lvm2-pvscan@.service"
-    add_symlink "/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmetad.socket"
 }
 
 help() {
