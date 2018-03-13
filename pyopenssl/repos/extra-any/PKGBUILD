@@ -6,56 +6,60 @@
 pkgbase=pyopenssl
 pkgname=('python-pyopenssl' 'python2-pyopenssl')
 pkgver=17.5.0
-pkgrel=1
+pkgrel=2
 arch=('any')
-url="http://pypi.python.org/pypi/pyOpenSSL"
-license=('LGPL2.1')
+pkgdesc="Python3 wrapper module around the OpenSSL library"
+url='https://github.com/pyca/pyopenssl'
+license=('Apache')
 makedepends=('openssl' 'python-setuptools' 'python2-setuptools' 'python-cryptography'
-             'python2-cryptography')
+             'python2-cryptography' 'python-six' 'python2-six')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-pretend' 'python2-pretend'
               'python-flaky' 'python2-flaky')
-source=("https://pypi.io/packages/source/p/pyOpenSSL/pyOpenSSL-$pkgver.tar.gz")
-sha512sums=('f194662b5842f1e3a4fcb910b9f2e6482d1dcdf834f306acc3dd6d9723f65038f7bff550248fa6268d90c839c9d9e8248bb6c7d399495fe6aed25291b93ece86')
+source=(${pkgname}-${pkgver}.tar.gz::https://github.com/pyca/pyopenssl/archive/${pkgver}.tar.gz
+        ${pkgname}-17.5.0-fix-import.patch::https://github.com/pyca/pyopenssl/commit/993c4e4afc4274019bdb835b64191afeed6c13b7.patch)
+sha512sums=('de297ed6b38a0b0cb6f9aca1c916fe8daacb8ba88d68998a436082789700c8a2d0c470ee8836d8eb43243104937fa310a41dbaa21a3142a65c347e9430f6bada'
+            'c1cb7cce6c31d1b41af515d4878275604ba4d99068e13a10caad23acde7c9e2c6de10bdc533c30c55bb83c9c66b10599b8a2b1fbe83d492bd686fd7bf0a57489')
 
 prepare() {
-  cp -a pyOpenSSL-$pkgver{,-py2}
-
+  sed 's|,<3.3.0||' -i pyopenssl-$pkgver/setup.py
+  patch -Np1 -d pyopenssl-$pkgver < ${pkgname}-17.5.0-fix-import.patch
+  cp -a pyopenssl-$pkgver{,-py2}
   export LC_CTYPE=en_US.UTF-8
 }
 
-build () {
-  cd "$srcdir"/pyOpenSSL-$pkgver
+build() {
+  cd "$srcdir"/pyopenssl-$pkgver
   python setup.py build
 
-  cd "$srcdir"/pyOpenSSL-$pkgver-py2
+  cd "$srcdir"/pyopenssl-$pkgver-py2
   python2 setup.py build
 }
 
-check () {
+check() {
   (
-    cd "$srcdir"/pyOpenSSL-$pkgver
+    cd "$srcdir"/pyopenssl-$pkgver
     python setup.py pytest
 
-    cd "$srcdir"/pyOpenSSL-$pkgver-py2
+    cd "$srcdir"/pyopenssl-$pkgver-py2
     python2 setup.py pytest
   ) || warning "Tests failed due to missing SSLv3_METHOD"
 }
 
-package_python-pyopenssl(){
-  pkgdesc="Python3 wrapper module around the OpenSSL library"
-  depends=('openssl' 'python-six' 'python-cryptography')
+package_python-pyopenssl() {
+  depends=('openssl' 'python' 'python-six' 'python-cryptography')
   replaces=('pyopenssl')
   provides=('pyopenssl')
   conflicts=('pyopenssl')
 
-  cd "$srcdir"/pyOpenSSL-$pkgver
-  python setup.py install --root="$pkgdir" --optimize=1
+  cd pyopenssl-$pkgver
+  python setup.py install --root="$pkgdir" --optimize=1 --skip-build
 }
 
-package_python2-pyopenssl(){
-  pkgdesc="Python2 wrapper module around the OpenSSL library"
-  depends=('openssl' 'python2-six' 'python2-cryptography')
+package_python2-pyopenssl() {
+  depends=('openssl' 'python2' 'python2-six' 'python2-cryptography')
 
-  cd "$srcdir"/pyOpenSSL-$pkgver-py2
-  python2 setup.py install --root="$pkgdir" --optimize=1
+  cd pyopenssl-$pkgver-py2
+  python2 setup.py install --root="$pkgdir" --optimize=1 --skip-build
 }
+
+# vim: ts=2 sw=2 et:
