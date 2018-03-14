@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=aisleriot
+pkgver=3.22.5
+pkgrel=1
+pkgdesc="A collection of patience games written in guile scheme"
+url="https://wiki.gnome.org/Apps/Aisleriot"
+arch=(x86_64)
+license=(GPL)
+depends=(guile gtk3 librsvg libcanberra gconf dconf)
+makedepends=(intltool itstool docbook-xsl yelp-tools appdata-tools gnome-common git)
+optdepends=('libkdegames: KDE card sets'
+            'pysolfc: PySol card sets'
+            'pysolfc-cardsets: PySol card sets')
+options=(!emptydirs)
+_commit=66195185e6ea14c53ee4641476bfaa812fda4cdf  # tags/3.22.5^0
+source=("git+https://git.gnome.org/browse/aisleriot#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --libexecdir=/usr/lib --disable-static \
+    --with-kde-card-theme-path=/usr/share/carddecks \
+    --with-pysol-card-theme-path=/usr/share/PySolFC
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install GCONF_DISABLE_MAKEFILE_SCHEMA_INSTALL=1
+  install -d "$pkgdir/usr/share/gconf/schemas"
+  gconf-merge-schema "$pkgdir/usr/share/gconf/schemas/$pkgname.schemas" \
+    --domain aisleriot "$pkgdir"/etc/gconf/schemas/*.schemas
+  rm "$pkgdir"/etc/gconf/schemas/*.schemas
+}
