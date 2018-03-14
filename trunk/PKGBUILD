@@ -4,7 +4,7 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.26.5
+pkgver=3.28.0+8+gf3e2c90d24
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -15,11 +15,9 @@ depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
 options=(!emptydirs)
-_commit=ce6a53d0f4c04e3d617567c9c3f0a3b5a604710b  # tags/3.26.5^0
-source=("git+https://git.gnome.org/browse/evolution#commit=$_commit"
-        enchant-2.diff)
-sha256sums=('SKIP'
-            'cc0a9dea2f8ef78aaeade6e0b9ddaca8414eb0975ad79dfbb057b2b369a332ba')
+_commit=f3e2c90d24020bdc5953ef86b8cd68f98fb6875a  # gnome-3-28
+source=("git+https://git.gnome.org/browse/evolution#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgbase
@@ -28,10 +26,6 @@ pkgver() {
 
 build() {
   cd $pkgbase
-
-  # enchant 2.2
-  patch -Np1 -i ../enchant-2.diff
-
   cmake . -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
@@ -47,14 +41,14 @@ package_evolution() {
               'evolution-bogofilter: Bogofilter spam check plugin')
   groups=(gnome-extra)
 
-  cd $pkgbase
-  DESTDIR="$pkgdir" ninja install
+  DESTDIR="$pkgdir" ninja -C $pkgbase install
 
-  mkdir ../plugins
-  mv "$pkgdir/usr/lib/evolution/modules/module-bogofilter.so" ../plugins/
-  mv "$pkgdir/usr/lib/evolution/modules/module-spamassassin.so" ../plugins/
-  mv "$pkgdir/usr/share/appdata/evolution-bogofilter.metainfo.xml" ../plugins/
-  mv "$pkgdir/usr/share/appdata/evolution-spamassassin.metainfo.xml" ../plugins/
+### Split
+  for _x in bogofilter spamassassin; do
+    mkdir -p $_x/usr/{lib/evolution/modules,share/metainfo}
+    mv {"$pkgdir",$_x}/usr/lib/evolution/modules/module-$_x.so
+    mv {"$pkgdir",$_x}/usr/share/metainfo/org.gnome.Evolution-$_x.metainfo.xml
+  done
 }
 
 
@@ -62,14 +56,12 @@ package_evolution-bogofilter() {
   pkgdesc="Spam filtering for Evolution, using Bogofilter"
   depends=("evolution=$pkgver" bogofilter)
 
-  install -Dm755 plugins/module-bogofilter.so "$pkgdir/usr/lib/evolution/modules/module-bogofilter.so"
-  install -Dm644 plugins/evolution-bogofilter.metainfo.xml "$pkgdir/usr/share/appdata/evolution-bogofilter.metainfo.xml"
+  mv bogofilter/usr "$pkgdir"
 }
 
 package_evolution-spamassassin() {
   pkgdesc="Spam filtering for Evolution, using SpamAssassin"
   depends=("evolution=$pkgver" spamassassin)
 
-  install -Dm755 plugins/module-spamassassin.so "$pkgdir/usr/lib/evolution/modules/module-spamassassin.so"
-  install -Dm644 plugins/evolution-spamassassin.metainfo.xml "$pkgdir/usr/share/appdata/evolution-spamassassin.metainfo.xml"
+  mv spamassassin/usr "$pkgdir"
 }
