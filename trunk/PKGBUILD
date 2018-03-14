@@ -2,7 +2,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gnome-documents
-pkgver=3.26.2+2+gfa6dd4f5
+pkgver=3.27.92+1+gcf96a64d
 pkgrel=1
 pkgdesc="A document manager application for GNOME"
 url="https://wiki.gnome.org/Apps/Documents"
@@ -10,10 +10,10 @@ arch=(x86_64)
 license=(GPL)
 depends=(evince gjs gtk3 gnome-desktop gnome-online-accounts libgdata tracker-miners libzapojit
          webkit2gtk gnome-online-miners librsvg libgepub)
-makedepends=(gobject-introspection git gnome-common)
+makedepends=(gobject-introspection git meson yelp-tools inkscape)
 optdepends=('libreoffice-fresh: Support for Libreoffice document types')
 groups=(gnome)
-_commit=fa6dd4f5b29a836022a18c15a04db1b1efe1e5c0  # gnome-3-26
+_commit=cf96a64d3b3e20be3b15851ffcb377bf5bae9fbc  # gnome-3-28
 source=("git+https://git.gnome.org/browse/gnome-documents#commit=$_commit"
         "git+https://git.gnome.org/browse/libgd")
 sha256sums=('SKIP'
@@ -28,32 +28,23 @@ prepare() {
   cd $pkgname
 
   git submodule init
-  git config --local submodule.libgd.url "$srcdir/libgd"
+  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
   git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
 }
   
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build -D getting_started=true
+  ninja -C build
 }
 
 check() {
-  cd $pkgname
-  make check
+  cd build
+  meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
 
 # vim:set ts=2 sw=2 et:
