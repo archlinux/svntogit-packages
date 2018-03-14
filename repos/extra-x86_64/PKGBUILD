@@ -1,52 +1,59 @@
-# $Id$
-# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
 # Contributor: Manolis Tzanidakis
 
 pkgname=perl-net-ssleay
 _cpanname=Net-SSLeay
-pkgver=1.81
-pkgrel=4
-pkgdesc="Perl extension for using OpenSSL"
-arch=('i686' 'x86_64')
+pkgver=1.85
+pkgrel=1
+pkgdesc='Perl extension for using OpenSSL'
+url='https://search.cpan.org/dist/Net-SSLeay/'
+arch=('x86_64')
 license=('custom:BSD')
-url="http://search.cpan.org/dist/${_cpanname}/"
 depends=('openssl')
-options=(!emptydirs)
+makedepends=('chrpath')
 replaces=('net-ssleay')
 provides=('net-ssleay')
-source=("http://www.cpan.org/authors/id/M/MI/MIKEM/${_cpanname}-${pkgver}.tar.gz")
-md5sums=('71932ce34d4db44de8d00399c3405792')
+options=('!emptydirs')
+source=(https://www.cpan.org/authors/id/M/MI/MIKEM/${_cpanname}-${pkgver}.tar.gz)
+sha512sums=('74e0f2f56b707f1ff845c78c1fa7ce26a71b8f943bb99e994d4e065d1f42259fe4cd1a6a17d333459727534158f9541f116dbc8515122380807d9450b0faa26b')
 
 prepare() {
-  cd ${srcdir}/${_cpanname}-${pkgver}
-
+  cd ${_cpanname}-${pkgver}
   sed -i \
       -e "/\$opts->{optimize} = '-O2 -g';/d" \
       inc/Module/Install/PRIVATE/Net/SSLeay.pm
 }
 
 build() {
-  cd ${srcdir}/${_cpanname}-${pkgver}
-
-  export OPTIMIZE="$CFLAGS"
+  cd ${_cpanname}-${pkgver}
+  export OPTIMIZE="${CFLAGS}"
   export OPENSSL_PREFIX=/usr
-
-  # install module in vendor directories.
-  PERL_MM_USE_DEFAULT=1 perl Makefile.PL -- INSTALLDIRS=vendor 
+  PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor
   make
 }
 
-package() {
-  cd ${srcdir}/${_cpanname}-${pkgver}
-
-  make install DESTDIR=${pkgdir} 
-  install -D -m644 README "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-
-# template start; name=perl-binary-module-dependency; version=1;
-if [[ $(find "$pkgdir/usr/lib/perl5/" -name "*.so") ]]; then
-	_perlver_min=$(perl -e '$v = $^V->{version}; print $v->[0].".".($v->[1]);')
-	_perlver_max=$(perl -e '$v = $^V->{version}; print $v->[0].".".($v->[1]+1);')
-	depends+=("perl>=$_perlver_min" "perl<$_perlver_max")
-fi
-# template end;
+check() {
+  cd ${_cpanname}-${pkgver}
+  make test
 }
+
+package() {
+  cd ${_cpanname}-${pkgver}
+
+  make install DESTDIR="${pkgdir}"
+  install -Dm 644 README "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # strip rpath
+  find "${pkgdir}" -name '*.so' -exec chrpath -d '{}' \;
+
+  # template start; name=perl-binary-module-dependency; version=1;
+  if [[ $(find "${pkgdir}/usr/lib/perl5/" -name "*.so") ]]; then
+    _perlver_min=$(perl -e '$v = $^V->{version}; print $v->[0].".".($v->[1]);')
+    _perlver_max=$(perl -e '$v = $^V->{version}; print $v->[0].".".($v->[1]+1);')
+    depends+=("perl>=${_perlver_min}" "perl<${_perlver_max}")
+  fi
+  # template end;
+}
+
+# vim: ts=2 sw=2 et:
