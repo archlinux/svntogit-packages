@@ -4,19 +4,20 @@
 # Contributor: Michel Brabants <michel.linux@tiscali.be>
 
 pkgname=seahorse
-pkgver=3.20.0+105+gb31e32fe
+pkgver=3.20.0+288+gce2340dc
 pkgrel=1
 pkgdesc="GNOME application for managing PGP keys."
 url="https://wiki.gnome.org/Apps/Seahorse"
 arch=(x86_64)
 license=(GPL)
-depends=(gtk3 gcr libsecret libsoup desktop-file-utils dconf gpgme gnome-keyring)
-makedepends=(libldap intltool yelp-tools gobject-introspection openssh vala gnome-common git)
-optdepends=('openssh: SSH support')
+depends=(gtk3 gcr libsecret libsoup gpgme gnome-keyring)
+makedepends=(libldap yelp-tools gobject-introspection vala git meson)
 provides=(x11-ssh-askpass)
-_commit=b31e32fe145a6599096cebf9fba93d86090c6d90  # master
-source=("git+https://git.gnome.org/browse/seahorse#commit=$_commit")
-sha256sums=('SKIP')
+_commit=ce2340dc80820a130f9a65d0084e54443cc9c82d  # master
+source=("git+https://git.gnome.org/browse/seahorse#commit=$_commit"
+        0001-LDAP-source-Fix-non-debug-build.patch)
+sha256sums=('SKIP'
+            '7c45e55f9d98510e1f9305af71d9a11d66fd15100ed29239493c94d591eb9e98')
 
 pkgver() {
   cd $pkgname
@@ -25,17 +26,19 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  patch -Np1 -i ../0001-LDAP-source-Fix-non-debug-build.patch
 }
 
 build() {
-  cd "$pkgname"
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-      --enable-ldap --enable-hkp --disable-schemas-compile
-  make
+  arch-meson $pkgname build
+  ninja -C build
+}
+
+check() {
+  cd build
+  meson test
 }
 
 package() {
-  cd "$pkgname"
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
