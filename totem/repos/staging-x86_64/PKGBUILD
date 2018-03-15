@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=totem
+pkgver=3.26.0+37+g84700147
+pkgrel=1
+pkgdesc="Movie player for the GNOME desktop based on GStreamer"
+url="https://wiki.gnome.org/Apps/Videos"
+arch=(x86_64)
+license=(GPL2 custom)
+depends=(totem-plparser iso-codes libpeas clutter-gtk clutter-gst grilo gsettings-desktop-schemas
+         dconf python-gobject python-xdg gnome-desktop gst-plugins-base gst-plugins-good
+         gst-plugins-bad)
+makedepends=(libnautilus-extension lirc itstool docbook-xsl python-pylint
+             gobject-introspection git appstream-glib gtk-doc meson intltool)
+optdepends=('gst-plugins-ugly: Extra media codecs'
+            'gst-libav: Extra media codecs'
+            'lirc-utils: Infrared Remote Control plugin'
+            'grilo-plugins: Media discovery'
+            'python-dbus: MPRIS plugin')
+groups=(gnome)
+conflicts=(totem-plugin)
+replaces=(totem-plugin)
+_commit=84700147475c3272400c7aa70aaec0a8807bb08e  # master
+source=("git+https://git.gnome.org/browse/totem#commit=$_commit"
+        "git+https://git.gnome.org/browse/libgd")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^V_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
+  git submodule update
+}
+
+build() {
+  arch-meson $pkgname build -D enable-gtk-doc=true -D enable-vala=no -D b_lto=false
+  ninja -C build
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
+  install -Dm644 $pkgname/COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
