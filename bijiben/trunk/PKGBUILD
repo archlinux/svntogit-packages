@@ -2,15 +2,15 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=bijiben
-pkgver=3.26.2
-pkgrel=2
+pkgver=3.28.0
+pkgrel=1
 pkgdesc="Write out notes, every detail matters"
 url="https://wiki.gnome.org/Apps/Bijiben"
 arch=(x86_64)
 license=(GPL)
 depends=(tracker webkit2gtk gnome-online-accounts evolution-data-server)
-makedepends=(intltool itstool evolution python appstream-glib yelp-tools autoconf-archive git)
-_commit=bae6c22d229980d412d7edcb589e54732d1279bc  # tags/BIJIBEN_3_26_2^0
+makedepends=(evolution python appstream-glib yelp-tools git meson)
+_commit=5c76cd9251435894a337b3ccba48ac2929e90223  # tags/BIJIBEN_3_28_0^0
 source=("git+https://git.gnome.org/browse/bijiben#commit=$_commit"
         "git+https://git.gnome.org/browse/libgd")
 sha256sums=('SKIP'
@@ -25,25 +25,20 @@ prepare() {
   cd $pkgname
 
   git submodule init
-  git config --local submodule.libgd.url "$srcdir/libgd"
+  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
   git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib/$pkgname \
-    --disable-update-mimedb \
-    --enable-compile-warnings
-  make
+  arch-meson $pkgname build
+  ninja -C build
+}
+
+check() {
+  cd build
+  meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
