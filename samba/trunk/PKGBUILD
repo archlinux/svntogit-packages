@@ -10,7 +10,7 @@
 
 pkgbase=samba
 pkgname=('libwbclient' 'smbclient' 'samba')
-pkgver=4.7.6
+pkgver=4.8.0
 pkgrel=1
 arch=(x86_64)
 url="http://www.samba.org"
@@ -22,13 +22,6 @@ source=(http://us1.samba.org/samba/ftp/stable/${pkgbase}-${pkgver}.tar.gz
         http://us1.samba.org/samba/ftp/stable/${pkgbase}-${pkgver}.tar.asc
         samba.logrotate
         samba.pam
-        samba.service
-        samba.conf.d
-        smbd.service
-        smbd.socket
-        nmbd.service
-        smbd@.service
-        winbindd.service
         samba.conf)
 validpgpkeys=('52FBC0B86D954B0843324CDC6F33915B6568B7EA') #Samba Distribution Verification Key <samba-bugs@samba.org>
 ### UNINSTALL dmapi package before building!!!
@@ -78,6 +71,8 @@ _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,a
               --with-ldap \
               --with-winbind \
               --with-acl-support \
+              --with-systemd \
+              --systemd-install-services \
               --enable-gnutls \
               --with-pam \
               --with-pammodulesdir=/usr/lib/security \
@@ -208,19 +203,16 @@ sys.path.insert(0, '/usr/lib/python${_pyver}/site-packages')" \
                ${pkgdir}/usr/${script}
     done
 
-  # install systemd files
-  install -d -m755 ${pkgdir}/usr/lib/systemd/system
-  #for i in smbd nmbd winbindd; do
-  install -m644 ${srcdir}/*.service ${pkgdir}/usr/lib/systemd/system/
-  install -m644 ${srcdir}/*.socket ${pkgdir}/usr/lib/systemd/system/
-  install -d -m755  ${pkgdir}/etc/conf.d
-  install -m644 ${srcdir}/samba.conf.d ${pkgdir}/etc/conf.d/samba
-  #done
+  # packaging/wscript_build to use /etc/conf.d
+  sed -i -e '/^EnvironmentFile/ s/sysconfig/conf.d/' "${pkgdir}"/usr/lib/systemd/system/*.service
+  install -d -m755  "${pkgdir}"/etc/conf.d
+  install -m644 "${srcdir}"/samba-${pkgver}/packaging/systemd/samba.sysconfig "${pkgdir}"/etc/conf.d/samba
+
   # create ephemeral dirs via tmpfiles rather than shipping them in package
   install -D -m644 ${srcdir}/samba.conf ${pkgdir}/usr/lib/tmpfiles.d/samba.conf
-  # install sample smb.conf
+  # create config dir
   install -d -m755 ${pkgdir}/etc/samba
-  
+
   mkdir -p ${pkgdir}/etc/samba/private
   chmod 700 ${pkgdir}/etc/samba/private
 
@@ -239,15 +231,8 @@ sys.path.insert(0, '/usr/lib/python${_pyver}/site-packages')" \
   # copy ldap example
   install -D -m644 ${srcdir}/samba-${pkgver}/examples/LDAP/samba.schema ${pkgdir}/usr/share/doc/samba/examples/LDAP/samba.schema
 }
-md5sums=('0253021a45c479cec1e135b004a0177a'
+md5sums=('3724c1d3d1befe12ecf7bb86ed7e3463'
          'SKIP'
-         '5697da77590ec092cc8a883bae06093c'
+         '995621522c6ec9b68c1b858ceed627ed'
          '96f82c38f3f540b53f3e5144900acf17'
-         'ee4763a656cf00d92bfda31b6bb2c5cb'
-         '6c447748a064d631435dbef0a3dcf32f'
-         'e4ae6a3cac080602120aa151918c4a36'
-         'a78b9aa93eb14b0ac445897395693225'
-         'df6380c73cb73163968eabc8650f7358'
-         '70afd2db60a2e8eff7615dbdecd887ac'
-         'd5f56f43e1280bba20f6bbd88d16fa41'
          '49abd7b719e3713a3f75a8a50958e381')
