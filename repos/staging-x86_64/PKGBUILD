@@ -4,7 +4,7 @@
 
 pkgname=lldb
 pkgver=6.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Next generation, high-performance debugger"
 arch=('x86_64')
 url="https://lldb.llvm.org/"
@@ -12,9 +12,11 @@ license=('custom:University of Illinois/NCSA Open Source License')
 depends=('llvm-libs' 'clang' 'python2' 'python2-six')
 makedepends=('llvm' 'cmake' 'ninja' 'swig')
 source=(https://releases.llvm.org/$pkgver/$pkgname-$pkgver.src.tar.xz{,.sig}
+        PR36630-install-lldb-SB-headers.patch
         PR36687-fix-standalone-LLVM_LINK_LLVM_DYLIB-builds.patch)
 sha256sums=('46f54c1d7adcd047d87c0179f7b6fa751614f339f4f87e60abceaa45f414d454'
             'SKIP'
+            '5b765f7420bbf3fb4521a2f2022a40ba4f703ab555fe61e88a6d6617a6713921'
             '1f146b2009553c6a5f76fa077b621fba66db5ef26c9790e9f64e608304d099e5')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('11E521D646982372EB577A1F8F0871F202119294') # Tom Stellard <tom@stellard.net>
@@ -22,6 +24,9 @@ validpgpkeys+=('11E521D646982372EB577A1F8F0871F202119294') # Tom Stellard <tom@s
 prepare() {
   cd "$srcdir/$pkgname-$pkgver.src"
   mkdir build
+
+  # https://bugs.llvm.org/show_bug.cgi?id=36630
+  patch -Np1 -i ../PR36630-install-lldb-SB-headers.patch
 
   # https://bugs.llvm.org/show_bug.cgi?id=36687
   patch -Np1 -i ../PR36687-fix-standalone-LLVM_LINK_LLVM_DYLIB-builds.patch
@@ -46,6 +51,9 @@ package() {
 
   DESTDIR="$pkgdir" ninja install
   install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Install possibly outdated man page; better than nothing!
+  install -Dm644 ../docs/lldb.1 "$pkgdir/usr/share/man/man1/lldb.1"
 
   # Remove static libraries
   rm "$pkgdir"/usr/lib/*.a
