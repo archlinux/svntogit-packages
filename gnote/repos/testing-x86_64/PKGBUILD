@@ -1,0 +1,52 @@
+# $Id$
+# Maintainer:  Ionut Biru <ibiru@archlinux.org>
+# Contributor: uastasi <uastasi@archlinux.us>
+
+pkgname=gnote
+pkgver=3.28.0
+pkgrel=1
+pkgdesc="A note taking application"
+url="https://wiki.gnome.org/Apps/Gnote"
+arch=(x86_64)
+license=(GPL3)
+depends=(gtkmm3 gtkspell3 libxslt dconf libsecret)
+makedepends=(intltool itstool boost yelp-tools autoconf-archive git)
+_commit=49dc02ae9c052367b560db6794d604c08efdd605  # tags/3.28.0^0
+source=("git+https://git.gnome.org/browse/gnote#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Work around aclocal exiting with "too many loops"
+  cp /usr/share/aclocal/ax_require_defined.m4 m4
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib/$pkgname \
+    --disable-schemas-compile \
+    --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd $pkgname
+  make check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
