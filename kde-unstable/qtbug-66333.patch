@@ -1,0 +1,870 @@
+From 235def8f2af6b858f5c8eafd8bc9a411a53dc7e9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=BCri=20Valdmann?= <juri.valdmann@qt.io>
+Date: Mon, 19 Feb 2018 11:25:24 +0100
+Subject: [PATCH] Make WebChannelIPCTransport into a RenderFrameObserver
+
+As of version 63, Chromium creates proxy frames also for the main frame in the
+frame tree during cross-process navigations. This leads to a segmentation fault
+in WebChannelIPCTransport because we assume that all main frames are local.
+
+See https://crrev.com/27caae83cb530daaf49f9a38793e427cdf493a65 for details.
+
+This patch refactors the renderer-side WebChannelIPCTransport from a
+RenderViewObserver into a RenderFrameObserver, which prevents the segmentation
+fault since the RenderFrameObserver is not created for proxy frames. Most likely
+this would have to be done eventually anyway since the RenderView and
+RenderViewObserver classes are deprecated and will likely be removed as part of
+the Site Isolation project.
+
+Installation is changed to follow Chromium's RenderFrameImpl in the sense of
+performing the installation from RenderFrameObserver::DidClearWindowObject
+instead of ContentRendererClient::RunScriptsAtDocumentStart. This has the
+benefit of avoiding the ScriptForbiddenScope DCHECK.
+
+Additionally there are the following minor changes:
+
+  - The deprecated parameterless version of v8::Value::ToObject() method is
+    replaced with v8::Value::IsObject() check and v8::Local::Cast.
+
+  - The deprecated v8::Handle typedef is replaced with v8::Local.
+
+  - The deprecated single-parameter WebContentsObserver::OnMessageReceived is
+    replaced with the new two-parameter version.
+
+  - blink::MainThreadIsolate() is used instead of v8::Isolate::GetCurrent() for
+    Install/Uninstall since we know we are executing on the main thread.
+
+  - WebChannelIPCTransportHost is changed to ignore messages from unexpected
+    renderers in case something goes wrong with the renderers.
+
+  - Logging is added to WebChannelIPCTransportHost for debugging purposes.
+
+Some new unit tests are added, all of which fail with the old version.
+
+Task-number: QTBUG-66333
+Change-Id: I936d142fb042d9f936a3f9d08d4328ecba595f1f
+---
+ src/core/common/qt_messages.h                      |   3 +-
+ src/core/renderer/content_renderer_client_qt.cpp   |   5 +-
+ src/core/renderer/web_channel_ipc_transport.cpp    | 237 ++++++++++-----------
+ src/core/renderer/web_channel_ipc_transport.h      |  36 ++--
+ .../web_channel_ipc_transport_host.cpp             |  89 ++++----
+ .../renderer_host/web_channel_ipc_transport_host.h |  32 +--
+ .../qwebenginescript/tst_qwebenginescript.cpp      | 121 ++++++++++-
+ 7 files changed, 312 insertions(+), 211 deletions(-)
+
+diff --git a/src/core/common/qt_messages.h b/src/core/common/qt_messages.h
+index 3bedb10d217..864c3ea454d 100644
+--- a/src/core/common/qt_messages.h
++++ b/src/core/common/qt_messages.h
+@@ -39,8 +39,7 @@ IPC_MESSAGE_ROUTED1(RenderViewObserverQt_FetchDocumentInnerText,
+ IPC_MESSAGE_ROUTED1(RenderViewObserverQt_SetBackgroundColor,
+                     uint32_t /* color */)
+ 
+-IPC_MESSAGE_ROUTED1(WebChannelIPCTransport_Install, uint /* worldId */)
+-IPC_MESSAGE_ROUTED1(WebChannelIPCTransport_Uninstall, uint /* worldId */)
++IPC_MESSAGE_ROUTED1(WebChannelIPCTransport_SetWorldId, base::Optional<uint> /* worldId */)
+ IPC_MESSAGE_ROUTED2(WebChannelIPCTransport_Message, std::vector<char> /*binaryJSON*/, uint /* worldId */)
+ 
+ // User scripts messages
+diff --git a/src/core/renderer/content_renderer_client_qt.cpp b/src/core/renderer/content_renderer_client_qt.cpp
+index a77bcf7854f..4f7c5cff4ad 100644
+--- a/src/core/renderer/content_renderer_client_qt.cpp
++++ b/src/core/renderer/content_renderer_client_qt.cpp
+@@ -124,13 +124,14 @@ void ContentRendererClientQt::RenderViewCreated(content::RenderView* render_view
+ {
+     // RenderViewObservers destroy themselves with their RenderView.
+     new RenderViewObserverQt(render_view, m_webCacheImpl.data());
+-    new WebChannelIPCTransport(render_view);
+     UserResourceController::instance()->renderViewCreated(render_view);
+ }
+ 
+ void ContentRendererClientQt::RenderFrameCreated(content::RenderFrame* render_frame)
+ {
+     new QtWebEngineCore::RenderFrameObserverQt(render_frame);
++    if (render_frame->IsMainFrame())
++        new WebChannelIPCTransport(render_frame);
+     UserResourceController::instance()->renderFrameCreated(render_frame);
+ 
+ #if BUILDFLAG(ENABLE_SPELLCHECK)
+@@ -151,8 +152,6 @@ void ContentRendererClientQt::RunScriptsAtDocumentStart(content::RenderFrame* re
+     if (!render_frame_observer || render_frame_observer->isFrameDetached())
+         return; // The frame is invisible to scripts.
+ 
+-    if (WebChannelIPCTransport *transport = WebChannelIPCTransport::Get(render_frame->GetRenderView()))
+-        transport->RunScriptsAtDocumentStart(render_frame);
+     UserResourceController::instance()->RunScriptsAtDocumentStart(render_frame);
+ }
+ 
+diff --git a/src/core/renderer/web_channel_ipc_transport.cpp b/src/core/renderer/web_channel_ipc_transport.cpp
+index 534ee302dcb..bb544168f7b 100644
+--- a/src/core/renderer/web_channel_ipc_transport.cpp
++++ b/src/core/renderer/web_channel_ipc_transport.cpp
+@@ -45,13 +45,12 @@
+ #include "common/qt_messages.h"
+ 
+ #include "content/public/renderer/render_frame.h"
+-#include "content/public/renderer/render_view.h"
+ #include "gin/arguments.h"
+ #include "gin/handle.h"
+ #include "gin/object_template_builder.h"
+ #include "gin/wrappable.h"
++#include "third_party/WebKit/public/web/WebKit.h"
+ #include "third_party/WebKit/public/web/WebLocalFrame.h"
+-#include "third_party/WebKit/public/web/WebView.h"
+ #include "v8/include/v8.h"
+ 
+ #include <QJsonDocument>
+@@ -61,193 +60,189 @@ namespace QtWebEngineCore {
+ class WebChannelTransport : public gin::Wrappable<WebChannelTransport> {
+ public:
+     static gin::WrapperInfo kWrapperInfo;
+-    static void Install(blink::WebFrame *frame, uint worldId);
+-    static void Uninstall(blink::WebFrame *frame, uint worldId);
++    static void Install(blink::WebLocalFrame *frame, uint worldId);
++    static void Uninstall(blink::WebLocalFrame *frame, uint worldId);
+ private:
+-    content::RenderView *GetRenderView(v8::Isolate *isolate);
+-    WebChannelTransport() { }
+-    gin::ObjectTemplateBuilder GetObjectTemplateBuilder(v8::Isolate *isolate) override;
++    WebChannelTransport() {}
++    bool NativeQtSendMessage(gin::Arguments *args);
+ 
+-    bool NativeQtSendMessage(gin::Arguments *args)
+-    {
+-        content::RenderView *renderView = GetRenderView(args->isolate());
+-        if (!renderView || args->Length() != 1)
+-            return false;
+-        v8::Handle<v8::Value> val;
+-        args->GetNext(&val);
+-        if (!val->IsString() && !val->IsStringObject())
+-            return false;
+-        v8::String::Utf8Value utf8(val->ToString());
+-
+-        QByteArray valueData(*utf8, utf8.length());
+-        QJsonParseError error;
+-        QJsonDocument doc = QJsonDocument::fromJson(valueData, &error);
+-        if (error.error != QJsonParseError::NoError) {
+-            qWarning("%s %d: Parsing error: %s",__FILE__, __LINE__, qPrintable(error.errorString()));
+-            return false;
+-        }
+-        int size = 0;
+-        const char *rawData = doc.rawData(&size);
+-        if (size == 0)
+-            return false;
+-        renderView->Send(new WebChannelIPCTransportHost_SendMessage(renderView->GetRoutingID(), std::vector<char>(rawData, rawData + size)));
+-        return true;
+-    }
++    // gin::WrappableBase
++    gin::ObjectTemplateBuilder GetObjectTemplateBuilder(v8::Isolate *isolate) override;
+ 
+     DISALLOW_COPY_AND_ASSIGN(WebChannelTransport);
+ };
+ 
+ gin::WrapperInfo WebChannelTransport::kWrapperInfo = { gin::kEmbedderNativeGin };
+ 
+-void WebChannelTransport::Install(blink::WebFrame *frame, uint worldId)
++void WebChannelTransport::Install(blink::WebLocalFrame *frame, uint worldId)
+ {
+-    v8::Isolate *isolate = v8::Isolate::GetCurrent();
++    v8::Isolate *isolate = blink::MainThreadIsolate();
+     v8::HandleScope handleScope(isolate);
+-    v8::Handle<v8::Context> context;
++    v8::Local<v8::Context> context;
+     if (worldId == 0)
+-        context = frame->ToWebLocalFrame()->MainWorldScriptContext();
++        context = frame->MainWorldScriptContext();
+     else
+-        context = frame->ToWebLocalFrame()->IsolatedWorldScriptContext(worldId);
++        context = frame->IsolatedWorldScriptContext(worldId);
+     v8::Context::Scope contextScope(context);
+ 
+     gin::Handle<WebChannelTransport> transport = gin::CreateHandle(isolate, new WebChannelTransport);
+-    v8::Handle<v8::Object> global = context->Global();
+-    v8::Handle<v8::Object> qt = global->Get(gin::StringToV8(isolate, "qt"))->ToObject();
+-    if (qt.IsEmpty()) {
+-        qt = v8::Object::New(isolate);
+-        global->Set(gin::StringToV8(isolate, "qt"), qt);
++
++    v8::Local<v8::Object> global = context->Global();
++    v8::Local<v8::Value> qtObjectValue = global->Get(gin::StringToV8(isolate, "qt"));
++    v8::Local<v8::Object> qtObject;
++    if (qtObjectValue.IsEmpty() || !qtObjectValue->IsObject()) {
++        qtObject = v8::Object::New(isolate);
++        global->Set(gin::StringToV8(isolate, "qt"), qtObject);
++    } else {
++        qtObject = v8::Local<v8::Object>::Cast(qtObjectValue);
+     }
+-    qt->Set(gin::StringToV8(isolate, "webChannelTransport"), transport.ToV8());
++    qtObject->Set(gin::StringToV8(isolate, "webChannelTransport"), transport.ToV8());
+ }
+ 
+-void WebChannelTransport::Uninstall(blink::WebFrame *frame, uint worldId)
++void WebChannelTransport::Uninstall(blink::WebLocalFrame *frame, uint worldId)
+ {
+-    v8::Isolate *isolate = v8::Isolate::GetCurrent();
++    v8::Isolate *isolate = blink::MainThreadIsolate();
+     v8::HandleScope handleScope(isolate);
+-    v8::Handle<v8::Context> context;
++    v8::Local<v8::Context> context;
+     if (worldId == 0)
+-        context = frame->ToWebLocalFrame()->MainWorldScriptContext();
++        context = frame->MainWorldScriptContext();
+     else
+-        context = frame->ToWebLocalFrame()->IsolatedWorldScriptContext(worldId);
++        context = frame->IsolatedWorldScriptContext(worldId);
+     v8::Context::Scope contextScope(context);
+ 
+-    v8::Handle<v8::Object> global(context->Global());
+-    v8::Handle<v8::Object> qt = global->Get(gin::StringToV8(isolate, "qt"))->ToObject();
+-    if (qt.IsEmpty())
++    v8::Local<v8::Object> global(context->Global());
++    v8::Local<v8::Value> qtObjectValue = global->Get(gin::StringToV8(isolate, "qt"));
++    if (qtObjectValue.IsEmpty() || !qtObjectValue->IsObject())
+         return;
+-    qt->Delete(gin::StringToV8(isolate, "webChannelTransport"));
+-}
+-
+-gin::ObjectTemplateBuilder WebChannelTransport::GetObjectTemplateBuilder(v8::Isolate *isolate)
+-{
+-    return gin::Wrappable<WebChannelTransport>::GetObjectTemplateBuilder(isolate).SetMethod("send", &WebChannelTransport::NativeQtSendMessage);
++    v8::Local<v8::Object> qtObject = v8::Local<v8::Object>::Cast(qtObjectValue);
++    qtObject->Delete(gin::StringToV8(isolate, "webChannelTransport"));
+ }
+ 
+-content::RenderView *WebChannelTransport::GetRenderView(v8::Isolate *isolate)
++bool WebChannelTransport::NativeQtSendMessage(gin::Arguments *args)
+ {
+-    blink::WebLocalFrame *webframe = blink::WebLocalFrame::FrameForContext(isolate->GetCurrentContext());
+-    DCHECK(webframe) << "There should be an active frame since we just got a native function called.";
+-    if (!webframe)
+-        return 0;
++    blink::WebLocalFrame *frame = blink::WebLocalFrame::FrameForCurrentContext();
++    if (!frame || !frame->View())
++        return false;
++
++    content::RenderFrame *renderFrame = content::RenderFrame::FromWebFrame(frame);
++    if (!renderFrame)
++        return false;
++
++    std::string message;
++    if (!args->GetNext(&message))
++        return false;
++
++    QByteArray valueData(message.data(), message.size());
++    QJsonParseError error;
++    QJsonDocument doc = QJsonDocument::fromJson(valueData, &error);
++    if (error.error != QJsonParseError::NoError) {
++        LOG(WARNING) << "Parsing error: " << qPrintable(error.errorString());
++        return false;
++    }
+ 
+-    blink::WebView *webview = webframe->View();
+-    if (!webview)
+-        return 0;  // can happen during closing
++    int size = 0;
++    const char *rawData = doc.rawData(&size);
++    if (size == 0)
++        return false;
+ 
+-    return content::RenderView::FromWebView(webview);
++    renderFrame->Send(new WebChannelIPCTransportHost_SendMessage(
++                          renderFrame->GetRoutingID(),
++                          std::vector<char>(rawData, rawData + size)));
++    return true;
+ }
+ 
+-WebChannelIPCTransport::WebChannelIPCTransport(content::RenderView *renderView)
+-    : content::RenderViewObserver(renderView)
+-    , content::RenderViewObserverTracker<WebChannelIPCTransport>(renderView)
+-    , m_installed(false)
+-    , m_installedWorldId(0)
++gin::ObjectTemplateBuilder WebChannelTransport::GetObjectTemplateBuilder(v8::Isolate *isolate)
+ {
++    return gin::Wrappable<WebChannelTransport>::GetObjectTemplateBuilder(isolate)
++        .SetMethod("send", &WebChannelTransport::NativeQtSendMessage);
+ }
+ 
+-void WebChannelIPCTransport::RunScriptsAtDocumentStart(content::RenderFrame *render_frame)
++WebChannelIPCTransport::WebChannelIPCTransport(content::RenderFrame *renderFrame)
++    : content::RenderFrameObserver(renderFrame)
+ {
+-    // JavaScript run before this point doesn't stick, and needs to be redone.
+-    // ### FIXME: we should try no even installing before
+-    if (m_installed && render_frame->IsMainFrame())
+-        WebChannelTransport::Install(render_frame->GetWebFrame(), m_installedWorldId);
+ }
+ 
+-
+-void WebChannelIPCTransport::installWebChannel(uint worldId)
++void WebChannelIPCTransport::setWorldId(base::Optional<uint> worldId)
+ {
+-    blink::WebView *webView = render_view()->GetWebView();
+-    if (!webView)
++    if (m_worldId == worldId)
+         return;
+-    WebChannelTransport::Install(webView->MainFrame(), worldId);
+-    m_installed = true;
+-    m_installedWorldId = worldId;
+-}
+ 
+-void WebChannelIPCTransport::uninstallWebChannel(uint worldId)
+-{
+-    Q_ASSERT(worldId == m_installedWorldId);
+-    blink::WebView *webView = render_view()->GetWebView();
+-    if (!webView)
+-        return;
+-    WebChannelTransport::Uninstall(webView->MainFrame(), worldId);
+-    m_installed = false;
++    if (m_worldId && m_canUseContext)
++        WebChannelTransport::Uninstall(render_frame()->GetWebFrame(), *m_worldId);
++
++    m_worldId = worldId;
++
++    if (m_worldId && m_canUseContext)
++        WebChannelTransport::Install(render_frame()->GetWebFrame(), *m_worldId);
+ }
+ 
+-void WebChannelIPCTransport::dispatchWebChannelMessage(const std::vector<char> &binaryJSON, uint worldId)
++void WebChannelIPCTransport::dispatchWebChannelMessage(const std::vector<char> &binaryJson, uint worldId)
+ {
+-    blink::WebView *webView = render_view()->GetWebView();
+-    if (!webView)
+-        return;
++    DCHECK(m_canUseContext);
++    DCHECK(m_worldId == worldId);
+ 
+-    QJsonDocument doc = QJsonDocument::fromRawData(binaryJSON.data(), binaryJSON.size(), QJsonDocument::BypassValidation);
+-    Q_ASSERT(doc.isObject());
++    QJsonDocument doc = QJsonDocument::fromRawData(binaryJson.data(), binaryJson.size(), QJsonDocument::BypassValidation);
++    DCHECK(doc.isObject());
+     QByteArray json = doc.toJson(QJsonDocument::Compact);
+ 
+-    v8::Isolate *isolate = v8::Isolate::GetCurrent();
++    blink::WebLocalFrame *frame = render_frame()->GetWebFrame();
++    v8::Isolate *isolate = blink::MainThreadIsolate();
+     v8::HandleScope handleScope(isolate);
+-    blink::WebFrame *frame = webView->MainFrame();
+-    v8::Handle<v8::Context> context;
++    v8::Local<v8::Context> context;
+     if (worldId == 0)
+-        context = frame->ToWebLocalFrame()->MainWorldScriptContext();
++        context = frame->MainWorldScriptContext();
+     else
+-        context = frame->ToWebLocalFrame()->IsolatedWorldScriptContext(worldId);
++        context = frame->IsolatedWorldScriptContext(worldId);
+     v8::Context::Scope contextScope(context);
+ 
+-    v8::Handle<v8::Object> global(context->Global());
+-    v8::Handle<v8::Value> qtObjectValue(global->Get(gin::StringToV8(isolate, "qt")));
+-    if (!qtObjectValue->IsObject())
++    v8::Local<v8::Object> global(context->Global());
++    v8::Local<v8::Value> qtObjectValue(global->Get(gin::StringToV8(isolate, "qt")));
++    if (qtObjectValue.IsEmpty() || !qtObjectValue->IsObject())
+         return;
+-    v8::Handle<v8::Value> webChannelObjectValue(qtObjectValue->ToObject()->Get(gin::StringToV8(isolate, "webChannelTransport")));
+-    if (!webChannelObjectValue->IsObject())
++    v8::Local<v8::Object> qtObject = v8::Local<v8::Object>::Cast(qtObjectValue);
++    v8::Local<v8::Value> webChannelObjectValue(qtObject->Get(gin::StringToV8(isolate, "webChannelTransport")));
++    if (webChannelObjectValue.IsEmpty() || !webChannelObjectValue->IsObject())
+         return;
+-    v8::Handle<v8::Value> onmessageCallbackValue(webChannelObjectValue->ToObject()->Get(gin::StringToV8(isolate, "onmessage")));
+-    if (!onmessageCallbackValue->IsFunction()) {
+-        qWarning("onmessage is not a callable property of qt.webChannelTransport. Some things might not work as expected.");
++    v8::Local<v8::Object> webChannelObject = v8::Local<v8::Object>::Cast(webChannelObjectValue);
++    v8::Local<v8::Value> callbackValue(webChannelObject->Get(gin::StringToV8(isolate, "onmessage")));
++    if (callbackValue.IsEmpty() || !callbackValue->IsFunction()) {
++        LOG(WARNING) << "onmessage is not a callable property of qt.webChannelTransport. Some things might not work as expected.";
+         return;
+     }
+ 
+-    v8::Handle<v8::Object> messageObject(v8::Object::New(isolate));
++    v8::Local<v8::Object> messageObject(v8::Object::New(isolate));
+     v8::Maybe<bool> wasSet = messageObject->DefineOwnProperty(
+                 context,
+                 v8::String::NewFromUtf8(isolate, "data"),
+                 v8::String::NewFromUtf8(isolate, json.constData(), v8::String::kNormalString, json.size()),
+                 v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
+-    Q_ASSERT(!wasSet.IsNothing() && wasSet.FromJust());
++    DCHECK(!wasSet.IsNothing() && wasSet.FromJust());
++
++    v8::Local<v8::Function> callback = v8::Local<v8::Function>::Cast(callbackValue);
++    v8::Local<v8::Value> argv[] = { messageObject };
++    frame->CallFunctionEvenIfScriptDisabled(callback, webChannelObject, 1, argv);
++}
++
++void WebChannelIPCTransport::WillReleaseScriptContext(v8::Local<v8::Context> context, int worldId)
++{
++    if (static_cast<uint>(worldId) == m_worldId)
++        m_canUseContext = false;
++}
+ 
+-    v8::Handle<v8::Function> callback = v8::Handle<v8::Function>::Cast(onmessageCallbackValue);
+-    const int argc = 1;
+-    v8::Handle<v8::Value> argv[argc];
+-    argv[0] = messageObject;
+-    frame->ToWebLocalFrame()->CallFunctionEvenIfScriptDisabled(callback, webChannelObjectValue->ToObject(), argc, argv);
++void WebChannelIPCTransport::DidClearWindowObject()
++{
++    if (!m_canUseContext) {
++        m_canUseContext = true;
++        if (m_worldId)
++            WebChannelTransport::Install(render_frame()->GetWebFrame(), *m_worldId);
++    }
+ }
+ 
+ bool WebChannelIPCTransport::OnMessageReceived(const IPC::Message &message)
+ {
+     bool handled = true;
+     IPC_BEGIN_MESSAGE_MAP(WebChannelIPCTransport, message)
+-        IPC_MESSAGE_HANDLER(WebChannelIPCTransport_Install, installWebChannel)
+-        IPC_MESSAGE_HANDLER(WebChannelIPCTransport_Uninstall, uninstallWebChannel)
++        IPC_MESSAGE_HANDLER(WebChannelIPCTransport_SetWorldId, setWorldId)
+         IPC_MESSAGE_HANDLER(WebChannelIPCTransport_Message, dispatchWebChannelMessage)
+         IPC_MESSAGE_UNHANDLED(handled = false)
+     IPC_END_MESSAGE_MAP()
+@@ -259,4 +254,4 @@ void WebChannelIPCTransport::OnDestruct()
+     delete this;
+ }
+ 
+-} // namespace
++} // namespace QtWebEngineCore
+diff --git a/src/core/renderer/web_channel_ipc_transport.h b/src/core/renderer/web_channel_ipc_transport.h
+index 04041c6c7d0..19494360a5a 100644
+--- a/src/core/renderer/web_channel_ipc_transport.h
++++ b/src/core/renderer/web_channel_ipc_transport.h
+@@ -40,41 +40,31 @@
+ #ifndef WEB_CHANNEL_IPC_TRANSPORT_H
+ #define WEB_CHANNEL_IPC_TRANSPORT_H
+ 
+-#include "base/values.h"
+-#include "content/public/renderer/render_view_observer.h"
+-#include "content/public/renderer/render_view_observer_tracker.h"
++#include "content/public/renderer/render_frame_observer.h"
+ 
+ #include <QtCore/qglobal.h>
+ 
+-namespace content {
+-class RenderFrame;
+-}
+-
+-namespace v8 {
+-class Extension;
+-}
+-
+ namespace QtWebEngineCore {
+ 
+-class WebChannelIPCTransport : public content::RenderViewObserver
+-                             , public content::RenderViewObserverTracker<WebChannelIPCTransport>
+-{
++class WebChannelIPCTransport : private content::RenderFrameObserver {
+ public:
+-    WebChannelIPCTransport(content::RenderView *);
+-
+-    void RunScriptsAtDocumentStart(content::RenderFrame *render_frame);
++    WebChannelIPCTransport(content::RenderFrame *);
+ 
+ private:
+-    void dispatchWebChannelMessage(const std::vector<char> &binaryJSON, uint worldId);
+-    void installWebChannel(uint worldId);
+-    void uninstallWebChannel(uint worldId);
++    void setWorldId(base::Optional<uint> worldId);
++    void dispatchWebChannelMessage(const std::vector<char> &binaryJson, uint worldId);
+ 
+-    // content::RenderViewObserver overrides:
++    // RenderFrameObserver
++    void WillReleaseScriptContext(v8::Local<v8::Context> context, int worldId) override;
++    void DidClearWindowObject() override;
+     bool OnMessageReceived(const IPC::Message &message) override;
+     void OnDestruct() override;
+ 
+-    bool m_installed;
+-    uint m_installedWorldId;
++    // The worldId from our WebChannelIPCTransportHost or empty when there is no
++    // WebChannelIPCTransportHost.
++    base::Optional<uint> m_worldId;
++    // True means it's currently OK to manipulate the frame's script context.
++    bool m_canUseContext = false;
+ };
+ 
+ } // namespace
+diff --git a/src/core/renderer_host/web_channel_ipc_transport_host.cpp b/src/core/renderer_host/web_channel_ipc_transport_host.cpp
+index b624d7e454d..6b32093a6c3 100644
+--- a/src/core/renderer_host/web_channel_ipc_transport_host.cpp
++++ b/src/core/renderer_host/web_channel_ipc_transport_host.cpp
+@@ -1,6 +1,6 @@
+ /****************************************************************************
+ **
+-** Copyright (C) 2016 The Qt Company Ltd.
++** Copyright (C) 2018 The Qt Company Ltd.
+ ** Contact: https://www.qt.io/licensing/
+ **
+ ** This file is part of the QtWebEngine module of the Qt Toolkit.
+@@ -39,70 +39,71 @@
+ 
+ #include "web_channel_ipc_transport_host.h"
+ 
+-#include "base/strings/string16.h"
+-#include "content/public/browser/render_view_host.h"
++#include "content/public/browser/render_frame_host.h"
++#include "content/public/browser/render_process_host.h"
+ #include "content/public/browser/web_contents.h"
+ 
+ #include "common/qt_messages.h"
+-#include "type_conversion.h"
+ 
+ #include <QJsonDocument>
+ #include <QJsonObject>
++#include <QLoggingCategory>
+ 
+ namespace QtWebEngineCore {
+ 
++Q_LOGGING_CATEGORY(log, "qt.webengine.webchanneltransport");
++
++inline QDebug operator<<(QDebug stream, content::RenderFrameHost *frame)
++{
++    return stream << "frame " << frame->GetRoutingID() << " in process " << frame->GetProcess()->GetID();
++}
++
++template <class T>
++inline QDebug operator<<(QDebug stream, const base::Optional<T> &opt)
++{
++    if (opt)
++        return stream << *opt;
++    else
++        return stream << "nullopt";
++}
++
+ WebChannelIPCTransportHost::WebChannelIPCTransportHost(content::WebContents *contents, uint worldId, QObject *parent)
+     : QWebChannelAbstractTransport(parent)
+     , content::WebContentsObserver(contents)
+-    , m_worldId(worldId)
+ {
+-    contents->GetRenderViewHost()->Send(
+-                new WebChannelIPCTransport_Install(
+-                    contents->GetRenderViewHost()->GetRoutingID(),
+-                    m_worldId));
++    setWorldId(worldId);
+ }
+ 
+ WebChannelIPCTransportHost::~WebChannelIPCTransportHost()
+ {
++    setWorldId(base::nullopt);
+ }
+ 
+-void WebChannelIPCTransportHost::RenderViewHostChanged(content::RenderViewHost *oldHost, content::RenderViewHost *)
+-{
+-    if (oldHost)
+-        oldHost->Send(new WebChannelIPCTransport_Uninstall(oldHost->GetRoutingID(), m_worldId));
+-}
+-
+-void WebChannelIPCTransportHost::RenderViewCreated(content::RenderViewHost *view_host)
++void WebChannelIPCTransportHost::sendMessage(const QJsonObject &message)
+ {
+-    // Make sure the new view knows a webchannel is installed and in which world.
+-    view_host->Send(new WebChannelIPCTransport_Install(view_host->GetRoutingID(), m_worldId));
++    QJsonDocument doc(message);
++    int size = 0;
++    const char *rawData = doc.rawData(&size);
++    content::RenderFrameHost *frame = web_contents()->GetMainFrame();
++    qCDebug(log).nospace() << "sending webchannel message to " << frame << ": " << doc;
++    frame->Send(new WebChannelIPCTransport_Message(frame->GetRoutingID(), std::vector<char>(rawData, rawData + size), *m_worldId));
+ }
+ 
+-void WebChannelIPCTransportHost::setWorldId(uint worldId)
++void WebChannelIPCTransportHost::setWorldId(base::Optional<uint> worldId)
+ {
+-    if (worldId == m_worldId)
++    if (m_worldId == worldId)
+         return;
+-    web_contents()->GetRenderViewHost()->Send(
+-                new WebChannelIPCTransport_Uninstall(
+-                    web_contents()->GetRenderViewHost()->GetRoutingID(),
+-                    m_worldId));
++    for (content::RenderFrameHost *frame : web_contents()->GetAllFrames())
++        setWorldId(frame, worldId);
+     m_worldId = worldId;
+-    web_contents()->GetRenderViewHost()->Send(
+-                new WebChannelIPCTransport_Install(
+-                    web_contents()->GetRenderViewHost()->GetRoutingID(),
+-                    m_worldId));
+ }
+ 
+-void WebChannelIPCTransportHost::sendMessage(const QJsonObject &message)
++void WebChannelIPCTransportHost::setWorldId(content::RenderFrameHost *frame, base::Optional<uint> worldId)
+ {
+-    QJsonDocument doc(message);
+-    int size = 0;
+-    const char *rawData = doc.rawData(&size);
+-    web_contents()->GetRenderViewHost()->Send(
+-                new WebChannelIPCTransport_Message(
+-                    web_contents()->GetRenderViewHost()->GetRoutingID(),
+-                    std::vector<char>(rawData, rawData + size),
+-                    m_worldId));
++    if (!frame->IsRenderFrameLive())
++        return;
++    qCDebug(log).nospace() << "sending setWorldId(" << worldId << ") message to " << frame;
++    frame->Send(new WebChannelIPCTransport_SetWorldId(frame->GetRoutingID(), worldId));
+ }
+ 
+ void WebChannelIPCTransportHost::onWebChannelMessage(const std::vector<char> &message)
+@@ -110,11 +111,21 @@ void WebChannelIPCTransportHost::onWebChannelMessage(const std::vector<char> &me
+     Q_ASSERT(!message.empty());
+     QJsonDocument doc = QJsonDocument::fromRawData(message.data(), message.size(), QJsonDocument::BypassValidation);
+     Q_ASSERT(doc.isObject());
++    content::RenderFrameHost *frame = web_contents()->GetMainFrame();
++    qCDebug(log).nospace() << "received webchannel message from " << frame << ": " << doc;
+     Q_EMIT messageReceived(doc.object(), this);
+ }
+ 
+-bool WebChannelIPCTransportHost::OnMessageReceived(const IPC::Message &message)
++void WebChannelIPCTransportHost::RenderFrameCreated(content::RenderFrameHost *frame)
+ {
++    setWorldId(frame, m_worldId);
++}
++
++bool WebChannelIPCTransportHost::OnMessageReceived(const IPC::Message& message, content::RenderFrameHost *receiver)
++{
++    if (receiver != web_contents()->GetMainFrame())
++        return false;
++
+     bool handled = true;
+     IPC_BEGIN_MESSAGE_MAP(WebChannelIPCTransportHost, message)
+         IPC_MESSAGE_HANDLER(WebChannelIPCTransportHost_SendMessage, onWebChannelMessage)
+@@ -123,4 +134,4 @@ bool WebChannelIPCTransportHost::OnMessageReceived(const IPC::Message &message)
+     return handled;
+ }
+ 
+-} // namespace
++} // namespace QtWebEngineCore
+diff --git a/src/core/renderer_host/web_channel_ipc_transport_host.h b/src/core/renderer_host/web_channel_ipc_transport_host.h
+index a1e697a910a..3a814a79419 100644
+--- a/src/core/renderer_host/web_channel_ipc_transport_host.h
++++ b/src/core/renderer_host/web_channel_ipc_transport_host.h
+@@ -1,6 +1,6 @@
+ /****************************************************************************
+ **
+-** Copyright (C) 2016 The Qt Company Ltd.
++** Copyright (C) 2018 The Qt Company Ltd.
+ ** Contact: https://www.qt.io/licensing/
+ **
+ ** This file is part of the QtWebEngine module of the Qt Toolkit.
+@@ -40,38 +40,40 @@
+ #ifndef WEB_CHANNEL_IPC_TRANSPORT_H
+ #define WEB_CHANNEL_IPC_TRANSPORT_H
+ 
++#include "qtwebenginecoreglobal.h"
+ 
+-#include <QtWebChannel/QWebChannelAbstractTransport>
+ #include "content/public/browser/web_contents_observer.h"
+ 
+-#include "qtwebenginecoreglobal.h"
+-#include <QtCore/QObject>
++#include <QWebChannelAbstractTransport>
+ 
+ QT_FORWARD_DECLARE_CLASS(QString)
+ 
+ namespace QtWebEngineCore {
+ 
+ class WebChannelIPCTransportHost : public QWebChannelAbstractTransport
+-        , public content::WebContentsObserver
+-{
++                                 , private content::WebContentsObserver {
+ public:
+-    WebChannelIPCTransportHost(content::WebContents *, uint worldId = 0, QObject *parent = 0);
++    WebChannelIPCTransportHost(content::WebContents *webContents, uint worldId = 0, QObject *parent = nullptr);
+     virtual ~WebChannelIPCTransportHost();
+ 
+-    // WebContentsObserver
+-    void RenderViewHostChanged(content::RenderViewHost* old_host, content::RenderViewHost* new_host) override;
+-    void RenderViewCreated(content::RenderViewHost* render_view_host) override;
++    void setWorldId(uint worldId) { setWorldId(base::Optional<uint>(worldId)); }
++    uint worldId() const { return *m_worldId; }
+ 
+     // QWebChannelAbstractTransport
+     void sendMessage(const QJsonObject &message) override;
+ 
+-    void setWorldId(uint worldId);
+-    uint worldId() const { return m_worldId; }
+-
+ private:
+-    bool OnMessageReceived(const IPC::Message& message) override;
++    void setWorldId(base::Optional<uint> worldId);
++    void setWorldId(content::RenderFrameHost *frame, base::Optional<uint> worldId);
+     void onWebChannelMessage(const std::vector<char> &message);
+-    uint m_worldId;
++
++    // WebContentsObserver
++    void RenderFrameCreated(content::RenderFrameHost *frame) override;
++    bool OnMessageReceived(const IPC::Message& message, content::RenderFrameHost *receiver) override;
++
++    // Empty only during construction/destruction. Synchronized to all the
++    // WebChannelIPCTransports/RenderFrames in the observed WebContents.
++    base::Optional<uint> m_worldId;
+ };
+ 
+ } // namespace
+diff --git a/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp b/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp
+index d852ca90200..e342632e75f 100644
+--- a/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp
++++ b/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp
+@@ -20,6 +20,7 @@
+ #include <QtTest/QtTest>
+ 
+ #include <qwebenginepage.h>
++#include <qwebengineprofile.h>
+ #include <qwebenginescript.h>
+ #include <qwebenginescriptcollection.h>
+ #include <qwebengineview.h>
+@@ -39,6 +40,9 @@ private Q_SLOTS:
+     void webChannel();
+     void noTransportWithoutWebChannel();
+     void scriptsInNestedIframes();
++    void webChannelResettingAndUnsetting();
++    void webChannelWithExistingQtObject();
++    void navigation();
+ };
+ 
+ void tst_QWebEngineScript::domEditing()
+@@ -183,6 +187,27 @@ private:
+     QString m_text;
+ };
+ 
++static QString readFile(const QString &path)
++{
++    QFile file(path);
++    file.open(QFile::ReadOnly);
++    QByteArray contents = file.readAll();
++    file.close();
++    return contents;
++}
++
++static QWebEngineScript webChannelScript()
++{
++    QString sourceCode = readFile(QStringLiteral(":/qwebchannel.js"));
++    if (sourceCode.isEmpty())
++        return {};
++
++    QWebEngineScript script;
++    script.setSourceCode(sourceCode);
++    script.setInjectionPoint(QWebEngineScript::DocumentCreation);
++    script.setWorldId(QWebEngineScript::MainWorld);
++    return script;
++}
+ 
+ void tst_QWebEngineScript::webChannel_data()
+ {
+@@ -204,15 +229,8 @@ void tst_QWebEngineScript::webChannel()
+     channel->registerObject(QStringLiteral("object"), &testObject);
+     page.setWebChannel(channel.data(), worldId);
+ 
+-    QFile qwebchanneljs(":/qwebchannel.js");
+-    QVERIFY(qwebchanneljs.exists());
+-    qwebchanneljs.open(QFile::ReadOnly);
+-    QByteArray scriptSrc = qwebchanneljs.readAll();
+-    qwebchanneljs.close();
+-    QWebEngineScript script;
+-    script.setInjectionPoint(QWebEngineScript::DocumentCreation);
++    QWebEngineScript script = webChannelScript();
+     script.setWorldId(worldId);
+-    script.setSourceCode(QString::fromLatin1(scriptSrc));
+     page.scripts().insert(script);
+     page.setHtml(QStringLiteral("<html><body></body></html>"));
+     QSignalSpy spyFinished(&page, &QWebEnginePage::loadFinished);
+@@ -300,6 +318,93 @@ void tst_QWebEngineScript::scriptsInNestedIframes()
+                 QVariant::fromValue(QStringLiteral("Modified Inner text")));
+ }
+ 
++void tst_QWebEngineScript::webChannelResettingAndUnsetting()
++{
++    QWebEnginePage page;
++
++    // There should be no webChannelTransport yet.
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::MainWorld),
++             QVariant(QVariant::Invalid));
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::ApplicationWorld),
++             QVariant(QVariant::Invalid));
++
++    QWebChannel channel;
++    page.setWebChannel(&channel, QWebEngineScript::MainWorld);
++
++    // There should be one in MainWorld now.
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::MainWorld),
++             QVariant(QVariantMap()));
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::ApplicationWorld),
++             QVariant(QVariant::Invalid));
++
++    page.setWebChannel(&channel, QWebEngineScript::ApplicationWorld);
++
++    // Now it should have moved to ApplicationWorld.
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::MainWorld),
++             QVariant(QVariant::Invalid));
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::ApplicationWorld),
++             QVariant(QVariantMap()));
++
++    page.setWebChannel(nullptr);
++
++    // And now it should be gone again.
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::MainWorld),
++             QVariant(QVariant::Invalid));
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "qt.webChannelTransport", QWebEngineScript::ApplicationWorld),
++             QVariant(QVariant::Invalid));
++}
++
++void tst_QWebEngineScript::webChannelWithExistingQtObject()
++{
++    QWebEnginePage page;
++
++    evaluateJavaScriptSync(&page, "qt = 42");
++    QCOMPARE(evaluateJavaScriptSync(&page, "qt.webChannelTransport"), QVariant(QVariant::Invalid));
++
++    QWebChannel channel;
++    page.setWebChannel(&channel);
++
++    // setWebChannel should have overwritten the qt variable
++    QCOMPARE(evaluateJavaScriptSync(&page, "qt.webChannelTransport"), QVariant(QVariantMap()));
++}
++
++static QWebEngineScript locationMonitorScript()
++{
++    QWebEngineScript script = webChannelScript();
++    script.setSourceCode(script.sourceCode() + QStringLiteral(R"(
++        new QWebChannel(qt.webChannelTransport, channel => {
++            channel.objects.object.text = window.location.href;
++        })
++    )"));
++    return script;
++}
++
++void tst_QWebEngineScript::navigation()
++{
++    QWebEnginePage page;
++    TestObject testObject;
++    QSignalSpy spyTextChanged(&testObject, &TestObject::textChanged);
++    QWebChannel channel;
++    channel.registerObject(QStringLiteral("object"), &testObject);
++    page.setWebChannel(&channel);
++    page.scripts().insert(locationMonitorScript());
++
++    QString url1 = QStringLiteral("about:blank");
++    page.setUrl(url1);
++    QTRY_COMPARE(spyTextChanged.count(), 1);
++    QCOMPARE(testObject.text(), url1);
++
++    QString url2 = QStringLiteral("chrome://gpu/");
++    page.setUrl(url2);
++    QTRY_COMPARE(spyTextChanged.count(), 2);
++    QCOMPARE(testObject.text(), url2);
++
++    QString url3 = QStringLiteral("qrc:/resources/test_iframe_main.html");
++    page.setUrl(url3);
++    QTRY_COMPARE(spyTextChanged.count(), 3);
++    QCOMPARE(testObject.text(), url3);
++}
++
+ QTEST_MAIN(tst_QWebEngineScript)
+ 
+ #include "tst_qwebenginescript.moc"
+-- 
+2.16.2
+
