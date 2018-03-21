@@ -1,0 +1,196 @@
+From 0ab2905aeb3de6f3bcff10730be5b77a78022567 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=BCri=20Valdmann?= <juri.valdmann@qt.io>
+Date: Mon, 5 Mar 2018 11:12:41 +0100
+Subject: [PATCH] Execute scripts asynchronously in UserResourceController
+
+Needed to avoid ScriptForbiddenScope DCHECK when executing isolated world
+scripts in subframes on document creation. The main frame does not trigger the
+DCHECK because the HTML parser is suspended and resumed before trying to execute
+the scripts, which bypasses the DCHECK. The subframe HTML parser seems to work
+in one go however, so some extra asynchronicity is needed.
+
+Also ExecuteScriptInIsolatedWorld is marked as deprecated in blink.
+
+Task-number: QTBUG-66338
+Change-Id: Ica4acb8ada4acc38aa5e1ca00e7512a2e69b785f
+---
+ src/core/renderer/user_resource_controller.cpp     | 10 +++-
+ .../qwebenginescript/tst_qwebenginescript.cpp      | 67 +++++++++++++++++-----
+ 2 files changed, 61 insertions(+), 16 deletions(-)
+
+diff --git a/src/core/renderer/user_resource_controller.cpp b/src/core/renderer/user_resource_controller.cpp
+index eed5208766f..129123577e4 100644
+--- a/src/core/renderer/user_resource_controller.cpp
++++ b/src/core/renderer/user_resource_controller.cpp
+@@ -191,9 +191,13 @@ void UserResourceController::runScripts(UserScriptData::InjectionPoint p, blink:
+         if (!scriptMatchesURL(script, frame->GetDocument().Url()))
+             continue;
+         blink::WebScriptSource source(blink::WebString::FromUTF8(script.source), script.url);
+-        if (script.worldId)
+-            frame->ExecuteScriptInIsolatedWorld(script.worldId, &source, /*numSources = */1, /*contentScriptExtentsionGroup = */ 0);
+-        else
++        if (script.worldId) {
++            unsigned numSources = 1;
++            bool userGesture = false;
++            blink::WebLocalFrame::ScriptExecutionType executionType = blink::WebLocalFrame::kAsynchronous;
++            blink::WebScriptExecutionCallback *callback = nullptr;
++            frame->RequestExecuteScriptInIsolatedWorld(script.worldId, &source, numSources, userGesture, executionType, callback);
++        } else
+             frame->ExecuteScript(source);
+     }
+ }
+diff --git a/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp b/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp
+index 43e9d313565..3a7591a6981 100644
+--- a/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp
++++ b/tests/auto/widgets/qwebenginescript/tst_qwebenginescript.cpp
+@@ -27,6 +27,9 @@
+ #include "../util.h"
+ #include <QWebChannel>
+ 
++Q_DECLARE_METATYPE(QWebEngineScript::InjectionPoint);
++Q_DECLARE_METATYPE(QWebEngineScript::ScriptWorldId);
++
+ class tst_QWebEngineScript: public QObject {
+     Q_OBJECT
+ 
+@@ -39,7 +42,10 @@ private Q_SLOTS:
+     void webChannel_data();
+     void webChannel();
+     void noTransportWithoutWebChannel();
++    void scriptsInNestedIframes_data();
+     void scriptsInNestedIframes();
++    void scriptsInNestedIframesNoDom_data();
++    void scriptsInNestedIframesNoDom();
+     void webChannelResettingAndUnsetting();
+     void webChannelWithExistingQtObject();
+     void navigation();
+@@ -77,12 +83,12 @@ void tst_QWebEngineScript::domEditing()
+ 
+ void tst_QWebEngineScript::injectionPoint()
+ {
+-    QFETCH(int, injectionPoint);
++    QFETCH(QWebEngineScript::InjectionPoint, injectionPoint);
+     QFETCH(QString, testScript);
+ 
+     QWebEngineScript s;
+     s.setSourceCode("var foo = \"foobar\";");
+-    s.setInjectionPoint(static_cast<QWebEngineScript::InjectionPoint>(injectionPoint));
++    s.setInjectionPoint(injectionPoint);
+     s.setWorldId(QWebEngineScript::MainWorld);
+     QWebEnginePage page;
+     QSignalSpy spyFinished(&page, &QWebEnginePage::loadFinished);
+@@ -95,17 +101,17 @@ void tst_QWebEngineScript::injectionPoint()
+ 
+ void tst_QWebEngineScript::injectionPoint_data()
+ {
+-    QTest::addColumn<int>("injectionPoint");
++    QTest::addColumn<QWebEngineScript::InjectionPoint>("injectionPoint");
+     QTest::addColumn<QString>("testScript");
+-    QTest::newRow("DocumentCreation") << static_cast<int>(QWebEngineScript::DocumentCreation)
++    QTest::newRow("DocumentCreation") << QWebEngineScript::DocumentCreation
+                                       << QStringLiteral("document.myContents = (typeof(foo) == \"undefined\")? \"FAILURE\" : \"SUCCESS\";");
+-    QTest::newRow("DocumentReady") << static_cast<int>(QWebEngineScript::DocumentReady)
++    QTest::newRow("DocumentReady") << QWebEngineScript::DocumentReady
+     // use a zero timeout to make sure the user script got a chance to run as the order is undefined.
+                                    << QStringLiteral("document.addEventListener(\"DOMContentLoaded\", function() {\
+                                                         setTimeout(function() {\
+                                                           document.myContents = (typeof(foo) == \"undefined\")? \"FAILURE\" : \"SUCCESS\";\
+                                                         }, 0)});");
+-    QTest::newRow("Deferred") << static_cast<int>(QWebEngineScript::DocumentReady)
++    QTest::newRow("Deferred") << QWebEngineScript::DocumentReady
+                               << QStringLiteral("document.onreadystatechange = function() { \
+                                                    if (document.readyState == \"complete\") { \
+                                                      setTimeout(function() {\
+@@ -266,14 +272,21 @@ void tst_QWebEngineScript::noTransportWithoutWebChannel()
+     QCOMPARE(evaluateJavaScriptSync(&page, "qt.webChannelTransport"), QVariant(QVariant::Invalid));
+ }
+ 
++void tst_QWebEngineScript::scriptsInNestedIframes_data()
++{
++    QTest::addColumn<QWebEngineScript::ScriptWorldId>("worldId");
++    QTest::newRow("MainWorld")        << QWebEngineScript::MainWorld;
++    QTest::newRow("ApplicationWorld") << QWebEngineScript::ApplicationWorld;
++}
++
+ void tst_QWebEngineScript::scriptsInNestedIframes()
+ {
++    QFETCH(QWebEngineScript::ScriptWorldId, worldId);
++
+     QWebEnginePage page;
+-    QWebEngineView view;
+-    view.setPage(&page);
+     QWebEngineScript s;
+     s.setInjectionPoint(QWebEngineScript::DocumentReady);
+-    s.setWorldId(QWebEngineScript::ApplicationWorld);
++    s.setWorldId(worldId);
+ 
+     // Prepend a "Modified prefix" to every frame's div content.
+     s.setSourceCode("var elements = document.getElementsByTagName(\"div\");\
+@@ -290,13 +303,12 @@ void tst_QWebEngineScript::scriptsInNestedIframes()
+ 
+     QSignalSpy spyFinished(&page, &QWebEnginePage::loadFinished);
+     page.load(QUrl("qrc:/resources/test_iframe_main.html"));
+-    view.show();
+     QVERIFY(spyFinished.wait());
+ 
+     // Check that main frame has modified content.
+     QCOMPARE(
+         evaluateJavaScriptSyncInWorld(&page, "document.getElementsByTagName(\"div\")[0].innerHTML",
+-                                      QWebEngineScript::ApplicationWorld),
++                                      worldId),
+                 QVariant::fromValue(QStringLiteral("Modified Main text")));
+ 
+     // Check that outer frame has modified content.
+@@ -304,7 +316,7 @@ void tst_QWebEngineScript::scriptsInNestedIframes()
+         evaluateJavaScriptSyncInWorld(&page,
+                                       "var i = document.getElementById(\"outer\").contentDocument;\
+                                        i.getElementsByTagName(\"div\")[0].innerHTML",
+-                                      QWebEngineScript::ApplicationWorld),
++                                      worldId),
+                 QVariant::fromValue(QStringLiteral("Modified Outer text")));
+ 
+ 
+@@ -314,10 +326,39 @@ void tst_QWebEngineScript::scriptsInNestedIframes()
+                                       "var i = document.getElementById(\"outer\").contentDocument;\
+                                        var i2 = i.getElementById(\"inner\").contentDocument;\
+                                        i2.getElementsByTagName(\"div\")[0].innerHTML",
+-                                      QWebEngineScript::ApplicationWorld),
++                                      worldId),
+                 QVariant::fromValue(QStringLiteral("Modified Inner text")));
+ }
+ 
++void tst_QWebEngineScript::scriptsInNestedIframesNoDom_data()
++{
++    QTest::addColumn<QWebEngineScript::InjectionPoint>("injectionPoint");
++    QTest::addColumn<QWebEngineScript::ScriptWorldId>("worldId");
++    QTest::newRow("DocumentCreation/MainWorld")        << QWebEngineScript::DocumentCreation << QWebEngineScript::MainWorld;
++    QTest::newRow("DocumentCreation/ApplicationWorld") << QWebEngineScript::DocumentCreation << QWebEngineScript::ApplicationWorld;
++    QTest::newRow("DocumentReady/MainWorld")           << QWebEngineScript::DocumentReady    << QWebEngineScript::MainWorld;
++    QTest::newRow("DocumentReady/ApplicationWorld")    << QWebEngineScript::DocumentReady    << QWebEngineScript::ApplicationWorld;
++}
++
++void tst_QWebEngineScript::scriptsInNestedIframesNoDom()
++{
++    QFETCH(QWebEngineScript::InjectionPoint, injectionPoint);
++    QFETCH(QWebEngineScript::ScriptWorldId, worldId);
++    QWebEnginePage page;
++    QWebEngineScript s;
++    s.setInjectionPoint(injectionPoint);
++    s.setWorldId(worldId);
++    s.setSourceCode("window.scriptOk = true");
++    s.setRunsOnSubFrames(true);
++    page.scripts().insert(s);
++    QSignalSpy spyFinished(&page, &QWebEnginePage::loadFinished);
++    page.load(QUrl("qrc:/resources/test_iframe_main.html"));
++    QVERIFY(spyFinished.wait());
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "window.scriptOk", worldId), QVariant::fromValue(true));
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "window[0].scriptOk", worldId), QVariant::fromValue(true));
++    QCOMPARE(evaluateJavaScriptSyncInWorld(&page, "window[0][0].scriptOk", worldId), QVariant::fromValue(true));
++}
++
+ void tst_QWebEngineScript::webChannelResettingAndUnsetting()
+ {
+     QWebEnginePage page;
+-- 
+2.16.2
+
