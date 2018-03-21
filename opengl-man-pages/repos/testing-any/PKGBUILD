@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+pkgname=opengl-man-pages
+pkgver=20180321
+_commit=3e3580afb5d0634e71582c0d691f6cc756d31a5d
+pkgrel=1
+pkgdesc="OpenGL Man Pages"
+arch=('any')
+url="https://github.com/KhronosGroup/OpenGL-Refpages"
+license=('custom')
+# OpenGL 4.x (current) API and GLSL pages - libxslt' 'docbook-xsl'
+# OpenGL 3.x and older 'w3c-mathml2' 'docbook-mathml'
+makedepends=('libxslt' 'docbook-xsl' 'w3c-mathml2' 'docbook-mathml' 'git')
+source=(${pkgname}::git+https://github.com/KhronosGroup/OpenGL-Refpages#commit=$_commit
+        'LICENSE')
+sha256sums=('SKIP'
+            'a7b2f6669d7ead91dcaf5a03620cdf9d37c54d83fd1899b4ef84683c7e6d4024')
+# gl2.1 = OpenGL 2.1 (including fixed functionality)
+# es3   = OpenGL ES 3.x (will always be the latest ES, currently 3.2)
+# gl4   = OpenGL 4.x (current) API and GLSL pages
+_mandirs=(gl4 es3 gl2.1)
+
+pkgver() {
+  date +%Y%m%d
+}
+
+build() {
+  export WD=`pwd`
+  xmlcatalog --create --noout \
+    --add public "-//W3C//DTD MathML 2.0//EN" "file:///usr/share/xml/w3c/mathml2/mathml2.dtd" \
+    --add public "-//W3C//DTD MathML//EN" "file:///usr/share/xml/w3c/mathml2/mathml2.dtd" \
+    --add system "http://www.w3.org/TR/MathML2/dtd/mathml2.dtd" "file:///usr/share/xml/w3c/mathml2/mathml2.dtd" \
+    mathml2.cat
+  export XML_CATALOG_FILES="$WD/mathml2.cat /etc/xml/catalog"
+ 
+  for manpages in ${_mandirs[@]}; do
+    cd "${srcdir}/${pkgname}/${manpages}"
+    for file in gl*.xml; do
+      xsltproc --noout --nonet /usr/share/xml/docbook/xsl-stylesheets-*/manpages/docbook.xsl ${file}
+    done
+  done
+}
+
+package() {
+  install -d "${pkgdir}/usr/share/man/man3"
+  for manpages in ${_mandirs[@]}; do
+    cd "${srcdir}/${pkgname}/${manpages}"
+    install -m644 *.3G "${pkgdir}/usr/share/man/man3/"
+  done
+  # license
+  install -D -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
