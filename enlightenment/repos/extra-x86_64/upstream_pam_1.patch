@@ -1,0 +1,1736 @@
+diff --git a/configure.ac b/configure.ac
+index fbe22de10..e33aab2dc 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1,1138 +1,1143 @@
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ m4_define([v_maj], [0])
+ m4_define([v_min], [22])
+ m4_define([v_mic], [2])
+ m4_define([v_rev], m4_esyscmd([(git rev-list --count HEAD 2>/dev/null || echo 0) | tr -d '\n']))dnl
+ ##--   When released, remove the dnl on the below line
+ m4_undefine([v_rev])
+ m4_define([relname], [0.22.2])
+ ##--   When doing snapshots - change soname. remove dnl on below line
+ m4_define([relname], [0.22])
+ dnl m4_define([v_rel], [-release relname])
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ m4_ifdef([v_rev], [m4_define([v_ver], [v_maj.v_min.v_mic.v_rev])], [m4_define([v_ver], [v_maj.v_min.v_mic])])
+ m4_define([lt_cur], m4_eval(v_maj + v_min))
+ m4_define([lt_rev], v_mic)
+ m4_define([lt_age], v_min)
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ 
+ AC_INIT([enlightenment], [v_ver], [enlightenment-devel@lists.sourceforge.net])
+ AC_PREREQ([2.52])
+ AC_CONFIG_SRCDIR([configure.ac])
+ AC_CONFIG_MACRO_DIR([m4])
+ AC_CANONICAL_BUILD
+ AC_CANONICAL_HOST
+ 
+ AC_CONFIG_HEADERS([config.h])
+ AH_TOP([
+ #ifndef EFL_CONFIG_H__
+ #define EFL_CONFIG_H__
+ ])
+ AH_BOTTOM([
+ #endif /* EFL_CONFIG_H__ */
+ ])
+ 
+ AM_INIT_AUTOMAKE([1.11 dist-xz -Wno-portability tar-ustar])
+ AM_SILENT_RULES([yes])
+ 
+ AC_USE_SYSTEM_EXTENSIONS
+ AC_PROG_MKDIR_P
+ AC_C_BIGENDIAN
+ AC_PROG_CC_C99
+ AM_PROG_CC_C_O
+ AC_FUNC_ALLOCA
+ 
+ LT_INIT([disable-static])
+ 
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ m4_ifdef([v_rev], , [m4_define([v_rev], [0])])
+ m4_ifdef([v_rel], , [m4_define([v_rel], [])])
+ AC_DEFINE_UNQUOTED(VMAJ, [v_maj], [Major version])
+ AC_DEFINE_UNQUOTED(VMIN, [v_min], [Minor version])
+ AC_DEFINE_UNQUOTED(VMIC, [v_mic], [Micro version])
+ AC_DEFINE_UNQUOTED(VREV, [v_rev], [Revison])
+ AC_DEFINE_UNQUOTED(E_RELEASE_BUILD, [1], [doin it])
+ version_info="lt_cur:lt_rev:lt_age"
+ release_info="v_rel"
+ AC_SUBST([version_info])
+ AC_SUBST([release_info])
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+ 
+ release=relname
+ AC_SUBST([release])
+ 
+ PKG_PROG_PKG_CONFIG
+ 
+ EFL_CHECK_PATH_MAX
+ 
+ AC_CHECK_FUNCS(setenv)
+ AC_CHECK_FUNCS(unsetenv)
+ AC_CHECK_FUNCS(clearenv)
+ AC_CHECK_HEADERS(features.h)
+ 
+ case "$host_os" in
+    darwin*)
+       AC_DEFINE([environ], [(*_NSGetEnviron())],
+                 ["apple doesn't follow POSIX in this case."])
+       ;;
+    *)
+       ;;
+ esac
+ AC_TRY_COMPILE([
+ #define _GNU_SOURCE 1
+ #include <unistd.h>
+     ],[
+ extern char **environ;
+     ],[
+ AC_DEFINE(HAVE_ENVIRON, 1, [Have environ var])
+     ])
+ 
+ efl_version="1.20.5"
+ AC_SUBST(efl_version)
+ 
+ #We use ecore_drm2 beta API
+ efl_ecore_drm2_version="1.20.5"
+ AC_SUBST(efl_ecore_drm2_version)
+ 
+ AC_CHECK_HEADERS([sys/timerfd.h sys/ptrace.h arpa/inet.h netinet/in.h])
+ 
+ dnl AC_CHECK_HEADERS(X11/extensions/shape.h,, AC_MSG_ERROR([Cannot find X11/extensions/shape.h. Make sure your CFLAGS environment variable contains include lines for the location of this file]))
+ 
+ AC_CHECK_HEADERS(fnmatch.h,, AC_MSG_ERROR([Cannot find fnmatch.h. Make sure your CFLAGS environment variable contains include lines for the location of this file]))
+ 
+ AC_CHECK_FUNCS(fnmatch, res=yes, res=no)
+ if test "x$res" = "xno"; then
+   AC_CHECK_LIB(fnmatch, fnmatch, res=yes, res=no)
+   if test "x$res" = "xno"; then
+     AC_MSG_ERROR([Cannot find fnmatch() in neither libc nor libfnmatch])
+   else
+     fnmatch_libs="-lfnmatch"
+   fi
+ fi
+ 
+ AC_SUBST([fnmatch_libs])
+ 
++CKPASSWD_LIBS=""
++
+ have_pam=no
+ AC_ARG_ENABLE(pam,
+   AS_HELP_STRING([--enable-pam], [enable PAM support @<:@default=detect@:>@]),
+   [want_pam=$enableval],
+   [want_pam=auto]
+ )
+ if test "x$want_pam" != "xno" ; then
+   AC_CHECK_HEADERS(security/pam_appl.h, [
+     LIBS="$LIBS -lpam"
++    CKPASSWD_LIBS="$CKPASSWD_LIBS -lpam"
+     have_pam=yes
+     AC_DEFINE(HAVE_PAM, 1, [PAM Authentication Support])])
+     if test "x$want_pam$have_pam" = "xyesno" ; then
+       AC_MSG_ERROR([PAM support was requested but not found])
+     fi
+ fi
+ 
+ dnl AC_E_CHECK_PKG(VALGRIND, [valgrind >= 2.4.0], [], [:])
+ AC_SUBST([VALGRIND_CFLAGS])
+ AC_SUBST([VALGRIND_LIBS])
+ 
+ MODULE_ARCH="$host_os-$host_cpu-relname"
+ AC_SUBST([MODULE_ARCH])
+ AC_DEFINE_UNQUOTED(MODULE_ARCH, "$MODULE_ARCH", "Module architecture")
+ 
+ if test "x${bindir}" = 'xNONE'; then
+   if test "x${prefix}" = "xNONE"; then
+     PACKAGE_BIN_DIR="${ac_default_prefix}/bin"
+   else
+     PACKAGE_BIN_DIR="${prefix}/bin"
+   fi
+ else
+   PACKAGE_BIN_DIR="${bindir}"
+ fi
+ AC_SUBST([PACKAGE_BIN_DIR])
+ 
+ if test "x${libdir}" = 'xNONE'; then
+   if test "x${prefix}" = "xNONE"; then
+     PACKAGE_LIB_DIR="${ac_default_prefix}/lib"
+   else
+     PACKAGE_LIB_DIR="${prefix}/lib"
+   fi
+ else
+   PACKAGE_LIB_DIR="${libdir}"
+ fi
+ AC_SUBST([PACKAGE_LIB_DIR])
+ 
+ if test "x${prefix}" = "xNONE"; then
+   PACKAGE_DATA_DIR="${ac_default_prefix}/share/${PACKAGE}"
+   LOCALE_DIR="${ac_default_prefix}/share/locale"
+   PACKAGE_SYSCONF_DIR="${ac_default_prefix}/etc"
+ else
+   PACKAGE_DATA_DIR="${prefix}/share/${PACKAGE}"
+   LOCALE_DIR="${prefix}/share/locale"
+   PACKAGE_SYSCONF_DIR="${sysconfdir}"
+ fi
+ AC_SUBST([PACKAGE_DATA_DIR])
+ AC_SUBST([LOCALE_DIR])
+ AC_SUBST([PACKAGE_SYSCONF_DIR])
+ 
+ #######################################
+ ## Simple X11 build/link
+ 
+ ##AC_ARG_ENABLE(simple-x11,
+ ##  AS_HELP_STRING([--enable-simple-x11], [enable simple x11 linking]),
+ ##  [ want_evas_simple_x11=$enableval ]
+ ##)
+     
+ dnl x_dir=""
+ dnl x_cflags=""
+ dnl x_libs=""
+ dnl AC_PATH_XTRA
+ dnl AC_CHECK_HEADER(X11/X.h,
+ dnl   [
+ dnl     if test "x$want_evas_simple_x11" = "xyes"; then
+ dnl       x_libs="${x_libs} -lX11 -lXext"
+ dnl     else
+ dnl       x_dir=${x_dir:-/usr/X11R6}
+ dnl       x_cflags=${x_cflags:--I${x_includes:-$x_dir/include}}
+ dnl       x_libs="${x_libs:--L${x_libraries:-$x_dir/lib}} -lX11 -lXext"
+ dnl     fi
+ dnl   ],[
+ dnl     AC_MSG_ERROR([Cannot find X headers and libraries.])
+ dnl   ]
+ dnl )
+ dnl AC_SUBST([x_cflags])
+ dnl AC_SUBST([x_libs])
+ 
+ cf_cflags=""
+ cf_libs=""
+ PCPPFLAGS="${CPPFLAGS}"
+ CPPFLAGS="${CPPFLAGS} -I /System/Library/Frameworks/CoreFoundation.framework/Headers"
+ AC_CHECK_HEADERS(CFBase.h,
+   [
+     cf_cflags="-I /System/Library/Frameworks/CoreFoundation.framework/Headers"
+     cf_cflags="${cf_cflags} -I /System/Library/Frameworks/IOKit.framework/Headers"
+     cf_libs="-framework 'CoreFoundation' -framework 'IOKit'"
+   ]
+ )
+ CPPFLAGS="${PCPPFLAGS}"
+ AC_SUBST([cf_cflags])
+ AC_SUBST([cf_libs])
+ 
+ PKG_CHECK_MODULES([BLUEZ], [bluez],
+ 	[have_bluetooth="yes"],
+ 	[have_bluetooth="no"])
+ AM_CONDITIONAL([HAVE_BLUETOOTH], [test "x${have_bluetooth}"])
+ if test "x${have_bluetooth}" = "xyes"; then
+    AC_DEFINE_UNQUOTED([HAVE_BLUETOOTH], [1], [Bluetooth is there])
+ fi
+ 
+ AC_ARG_ENABLE([systemd],
+   AC_HELP_STRING([--disable-systemd], [disable systemd support @<:@default=detect@:>@]),
+   [want_systemd=${enableval}], [want_systemd=auto])
+ 
+ AC_ARG_WITH([systemdunitdir],
+          AC_HELP_STRING([--with-systemdunitdir=DIR],
+                 [path to systemd user services directory]),
+          [USER_SESSION_DIR=${withval}])
+ 
+ if test "$want_systemd" == "no"; then
+   have_systemd_user_session="no"
+ elif test -n "${USER_SESSION_DIR}"; then
+   have_systemd_user_session="yes"
+   AC_MSG_NOTICE([Using systemd user services directory as ${USER_SESSION_DIR}])
+ else
+   # Detect systemd user session directory properly
+   EFL_PKG_CHECK_VAR([USER_SESSION_DIR], [systemd >= 192], [systemduserunitdir],
+ 	[have_systemd_user_session="yes"], [have_systemd_user_session="no"])
+ 
+   if test "$want_systemd" = "yes" -a "$have_systemd_user_session" = "no"; then
+      AC_MSG_ERROR([systemd support wanted, but systemd was not found.])
+   fi
+ fi
+ 
+ AM_CONDITIONAL([HAVE_SYSTEMD_USER_SESSION], [test "x${have_systemd_user_session}" = "xyes"])
+ AC_SUBST([USER_SESSION_DIR])
+ 
+ execinfo_libs=""
+ AC_CHECK_HEADERS([execinfo.h], [have_execinfo="yes"], [have_execinfo="no"])
+ if test "x${have_execinfo}" = "xyes" ; then
+   AC_MSG_CHECKING([whether backtrace_symbols_fd() is in libc])
+ 
+   AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM(
+       [[
+ #include <stdlib.h>
+ #include <execinfo.h>
+       ]],
+       [[
+ backtrace_symbols_fd(NULL, 0, 0);
+       ]])],
+     [link_execinfo="yes"],
+     [link_execinfo="no"])
+ 
+   AC_MSG_RESULT([${link_execinfo}])
+ fi
+ 
+ if test "x${link_execinfo}" = "xno" ; then
+   AC_MSG_CHECKING([whether backtrace_symbols_fd() is in libexecinfo])
+ 
+   LDFLAGS_save="${LDFLAGS}"
+   LDFLAGS="${LDFLAGS} -lexecinfo"
+   AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM(
+       [[
+ #include <stdlib.h>
+ #include <execinfo.h>
+       ]],
+       [[
+ backtrace_symbols_fd(NULL, 0, 0);
+       ]])],
+     [
+       link_execinfo="yes"
+       execinfo_libs="-lexecinfo"
+     ],
+     [link_execinfo="no"])
+   LDFLAGS="${LDFLAGS_save}"
+ 
+   AC_MSG_RESULT([${link_execinfo}])
+ fi
+ 
+ dnl if test "x${link_execinfo}" = "xno" ; then
+ dnl   AC_MSG_ERROR([Cannot use backtrace_symbols_fd()])
+ dnl fi
+ 
+ 
+ #ALL_LINGUAS="bg de eo es fi fr ja pl pt ru zh_CN hu sl it cs da sk sv nb nl zh_TW ko"
+ #ALL_LINGUAS="bg de eo es fi fr ja pt ru zh_CN hu sl it cs da sk sv nb nl zh_TW"
+ # a lot of .po's are broken
+ ALL_LINGUAS="bg ca cs da de el eo es fi fr fr_CH he hu it ja ko nb nl pl pt_BR ru sk sl sv tr zh_CN zh_TW"
+ AC_SUBST([ALL_LINGUAS])
+ 
+ m4_ifdef([AM_GNU_GETTEXT_VERSION], [
+ AM_GNU_GETTEXT_VERSION([0.18])
+ ])
+ 
+ m4_ifdef([AC_GNU_GETTEXT], [
+ AC_GNU_GETTEXT([external], [need-ngettext])
+ po_makefile_in=po/Makefile.in
+ have_po="yes"
+ ],[
+ m4_ifdef([AM_GNU_GETTEXT], [
+ AM_GNU_GETTEXT([external], [need-ngettext])
+ po_makefile_in=po/Makefile.in
+ have_po="yes"
+ ],[
+ have_po="no"
+ ])
+ ])
+ AC_SUBST([LTLIBINTL])
+ if test "x$LIBINTL" = "x"; then
+   LIBINTL="$INTLLIBS"
+ fi
+ 
+ if test "x${POSUB}" = "x" ; then
+    have_po="no"
+ fi
+ 
+ AM_CONDITIONAL([HAVE_PO], [test "x${have_po}" = "xyes"])
+ 
+ AC_CHECK_LIB(dl, dlopen, dlopen_libs=-ldl)
+ AC_SUBST([dlopen_libs])
+ 
+ AC_MSG_CHECKING([whether to install sysactions.conf])
+ AC_ARG_ENABLE([install-sysactions],
+   AS_HELP_STRING([--disable-install-sysactions],[disable installing /etc/enlightenment/sysactions.conf @<:@default=enabled@:>@]),
+     [e_cv_enable_install_sysactions=$enableval],
+     AC_CACHE_VAL([e_cv_enable_install_sysactions], [e_cv_enable_install_sysactions=yes]))
+ AC_MSG_RESULT([$e_cv_enable_install_sysactions])
+ AM_CONDITIONAL(INSTALL_SYSACTIONS, test x${e_cv_enable_install_sysactions} = xyes)
+ 
+ AC_MSG_CHECKING([whether to install enlightenment.menu])
+ AC_ARG_ENABLE([install-enlightenment-menu],
+   AS_HELP_STRING([--disable-install-enlightenment-menu],[disable installing /etc/xdg/menus/e-applications.menu @<:@default=enabled@:>@]),
+     [e_cv_enable_install_enlightenment_menu=$enableval],
+     AC_CACHE_VAL([e_cv_enable_install_enlightenment_menu], [e_cv_enable_install_enlightenment_menu=yes]))
+ AC_MSG_RESULT([$e_cv_enable_install_enlightenment_menu])
+ AM_CONDITIONAL(INSTALL_ENLIGHTENMENT_MENU, test x${e_cv_enable_install_enlightenment_menu} = xyes)
+ 
+ AC_MSG_CHECKING([whether to enable Files menu item])
+ AC_ARG_ENABLE([files],
+   AS_HELP_STRING([--disable-files],[disable Files menu item @<:@default=enabled@:>@]),
+     [e_cv_enable_files=$enableval],
+     AC_CACHE_VAL([e_cv_enable_files], [e_cv_enable_files=yes]))
+ if test "[${e_cv_enable_files}]" = yes; then
+   AC_DEFINE_UNQUOTED([ENABLE_FILES],[1],[enable Files menu item])
+ fi
+ AC_MSG_RESULT([$e_cv_enable_files])
+ 
+ AC_ARG_ENABLE([device-udev],
+   AS_HELP_STRING([--enable-device-udev],[enable udev device backend @<:@default=enabled@:>@]),
+   [e_cv_want_device_udev=$enableval],
+   [e_cv_want_device_udev=yes])
+ 
+ AC_MSG_CHECKING([whether the UDEV device backend is enabled])
+ AC_MSG_RESULT([${e_cv_want_device_udev}])
+ 
+ device_backend=
+ device_libs=
+ 
+ if test "x$e_cv_want_device_udev" != "xno";then
+   PKG_CHECK_MODULES([EEZE], [eeze >= ${efl_version} ecore >= ${efl_version} eina >= ${efl_version}],
+     [
+       device_backend=eeze
+       device_libs=eeze
+       AC_DEFINE_UNQUOTED([HAVE_EEZE],[1],[enable udev support])
+     ])
+ fi
+ 
+ AC_MSG_CHECKING([which device backend to use])
+ AC_MSG_RESULT($device_backend)
+ 
+ AM_CONDITIONAL([HAVE_EEZE], [test "x${device_backend}" = "xeeze"])
+ 
+ DBUS_MOUNT_CONFIG=1
+ dbus_mount="dbus-1"
+ 
+ AC_ARG_ENABLE([mount-udisks],
+   AS_HELP_STRING([--enable-mount-udisks],[enable udisks mounting support @<:@default=enabled@:>@]),
+   [e_cv_want_mount_udisks=$enableval],
+   [e_cv_want_mount_udisks=yes])
+ 
+ AC_MSG_CHECKING([whether the UDISKS mounting support is enabled])
+ AC_MSG_RESULT([${e_cv_want_mount_udisks}])
+ 
+ 
+ if test "x${e_cv_want_mount_udisks}" = "xno" ; then
+   DBUS_MOUNT_CONFIG=0
+   dbus_mount=
+ fi
+ 
+ AC_ARG_ENABLE([mount-eeze],
+   AS_HELP_STRING([--enable-mount-eeze],[enable eeze mounting support @<:@default=disabled@:>@]),
+   [e_cv_want_mount_eeze=$enableval],
+   [e_cv_want_mount_eeze=no])
+ 
+ AC_MSG_CHECKING([whether the Eeze mounting support is enabled])
+ AC_MSG_RESULT([${e_cv_want_mount_eeze}])
+ 
+ eeze_mount=
+ EEZE_MOUNT_CONFIG=0
+ if test "x$e_cv_want_mount_eeze" != "xno" && test -z "$dbus_mount" ; then
+       CPPFLAGS_save="$CPPFLAGS"
+       LIBS_save="$LIBS"
+       CPPFLAGS="$EEZE_CFLAGS $CPPFLAGS"
+       LIBS="$EEZE_LIBS $LIBS"
+       AC_CHECK_LIB([eeze], [eeze_disk_function],
+         [
+            eeze_mount="eeze >= $efl_version ecore-con >= $efl_version"
+            EEZE_MOUNT_CONFIG=1
+            AC_DEFINE_UNQUOTED([HAVE_EEZE_MOUNT], [1], [enable eeze mounting])
+            AC_MSG_NOTICE([eeze mounting enabled])
+         ],
+         [
+            AC_MSG_NOTICE([eeze mounting disabled])
+            e_cv_want_mount_eeze=no
+         ]
+       )
+       CPPFLAGS="$CPPFLAGS_save"
+       LIBS="$LIBS_save"
+ else
+   AC_MSG_NOTICE([eeze mounting disabled])
+ fi
+ 
+ AC_SUBST([EEZE_MOUNT_CONFIG])
+ AC_SUBST([DBUS_MOUNT_CONFIG])
+ AM_CONDITIONAL([HAVE_EEZE_MOUNT], [false])
+ test -n "$dbus_mount" && AC_DEFINE_UNQUOTED([HAVE_UDISKS_MOUNT], [1], [enable Udisks mounting])
+ AM_CONDITIONAL([HAVE_UDISKS_MOUNT], [test -n "$dbus_mount"])
+ AM_CONDITIONAL([HAVE_EEZE_MOUNT], [test -n "$eeze_mount"])
+ 
+ # verify "wayland-only" early to adapt dependencies
+ 
+ have_wayland_only=no
+ AC_ARG_ENABLE([wayland],
+   AS_HELP_STRING([--enable-wayland],[enable wayland support in enlightenment @<:@default=disabled@:>@]),
+   [e_cv_want_wayland_only=$enableval],
+   [e_cv_want_wayland_only=no])
+ AC_MSG_CHECKING([whether wayland support is enabled])
+ AC_MSG_RESULT([${e_cv_want_wayland_only}])
+ 
+ # doxygen program for documentation building
+ 
+ EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
+ 
+ # explicit libs for each binary to reduce linkage requirements
+ PKG_CHECK_MODULES(E_REMOTE, [
+   ecore >= ${efl_version}
+   ecore-ipc >= ${efl_version}
+   eet >= ${efl_version}
+   eina >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_START, [
+   eina >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_IMC, [
+   ecore-file >= ${efl_version}
+   eet >= ${efl_version}
+   eina >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_ASKPASS, [
+   elementary >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_THUMB, [
+   eina >= ${efl_version}
+   evas >= ${efl_version}
+   ecore >= ${efl_version}
+   ecore-evas >= ${efl_version}
+   edje >= ${efl_version}
+   ecore-file >= ${efl_version}
+   ecore-ipc >= ${efl_version}
+   eet >= ${efl_version}
+   efreet >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_GRABBER, [
+   eina >= ${efl_version}
+   eet >= ${efl_version}
+ ])
+ 
+ efm_requires="\
+ ecore >= $efl_version \
+ ecore-file >= $efl_version \
+ ecore-ipc >= $efl_version \
+ eet >= $efl_version \
+ efreet >= $efl_version \
+ eldbus >= $efl_version \
+ eina >= $efl_version"
+ efm_requires="$efm_requires $eeze_mount $dbus_mount $udisks_mount"
+ 
+ PKG_CHECK_MODULES(E_FM, [$efm_requires])
+ 
+ PKG_CHECK_MODULES(E_FM_CMDLINE, [
+   eina >= ${efl_version}
+   ecore >= ${efl_version}
+   ecore-file >= ${efl_version}
+   eldbus >= ${efl_version}
+   efreet >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_FM_OP, [
+   ecore >= ${efl_version}
+   ecore-file >= ${efl_version}
+   eina >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_FM_OPEN, [
+   eina >= ${efl_version}
+   eet >= ${efl_version}
+   ecore >= ${efl_version}
+   ecore-ipc >= ${efl_version}
+   ecore-con >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_MODULES(E_SYS, [
+   eina >= ${efl_version}
+   ecore >= ${efl_version}
+ ])
+ 
+ e_requires="\
+   evas >= $efl_version \
+   ecore >= $efl_version \
+   ecore-evas >= $efl_version \
+   ecore-input >= $efl_version \
+   ecore-input-evas >= $efl_version \
+   ecore-con >= $efl_version \
+   ecore-ipc >= $efl_version \
+   ecore-file >= $efl_version \
+   eet >= $efl_version \
+   edje >= $efl_version \
+   efreet >= $efl_version \
+   efreet-mime >= $efl_version \
+   efreet-trash >= $efl_version \
+   eina >= $efl_version \
+   eldbus >= $efl_version \
+   eio >= $efl_version \
+   eo >= $efl_version \
+   elementary >= $efl_version \
+   emotion >= $efl_version \
+   $eeze_mount \
+   $udisks_mount \
+   $device_libs"
+ 
+ 
+ PKG_CHECK_MODULES(E_OPEN, [
+   eina >= ${efl_version}
+   ecore >= ${efl_version}
+   efreet >= ${efl_version}
+   efreet-mime >= ${efl_version}
+ ])
+ 
+ PKG_CHECK_EXISTS([xkeyboard-config],[
+   xkb_base=`$PKG_CONFIG --variable=xkb_base xkeyboard-config 2>/dev/null`
+   AC_DEFINE_UNQUOTED([XKB_BASE],["$xkb_base"],[Define to the base directory for X keyboard configuration data])
+ ])
+ 
+ profile="SLOW_PC"
+ AC_ARG_WITH(profile,
+   AS_HELP_STRING([--with-profile=TARGET_PROFILE], 
+   [specify a target format profile of:
+                                     LOWRES_PDA, MEDIUMRES_PDA, HIRES_PDA, SLOW_PC, MEDIUM_PC, FAST_PC]),
+   [profile=$withval])
+ AC_MSG_NOTICE([Enlightenment build profile set to $profile])
+ EDJE_DEF="-DLOWRES_PDA=1 -DMEDIUMRES_PDA=2 -DHIRES_PDA=3 -DSLOW_PC=4 -DMEDIUM_PC=5 -DFAST_PC=6"
+ EDJE_DEF=$EDJE_DEF" -DE_PROFILE"=$profile
+ AC_SUBST([EDJE_DEF])
+ 
+ PKG_CHECK_MODULES(EET, [eet >= ${efl_version}])
+ EFL_WITH_BIN([eet], [eet-eet], [eet])
+ EFL_WITH_BIN([eldbus], [eldbus_codegen], [eldbus-codegen])
+ 
+ AC_DEFINE(E_INTERNAL, 1, "This define can be used to wrap internal E stuff, as config.h isn't exported")
+ 
+ have_openbsd="no"
+ have_freebsd="no"
+ have_dragonfly="no"
+ have_netbsd="no"
+ BATTERY_LDFLAGS=
+ case "$host_os" in
+   darwin*)
+     BATTERY_LDFLAGS="${cf_libs}"
+     BATTERY_CFLAGS="${cf_cflags}"
+   ;;
+   openbsd*)
+     have_openbsd="yes"
+   ;;
+   netbsd*)
+     have_netbsd="yes"
+   ;;
+   freebsd*)
+     have_freebsd="yes"
+   ;;
+   dragonfly*)
+     have_dragonfly="yes"
+   ;;
+ esac
+ 
+ AC_SUBST([BATTERY_CFLAGS])
+ AC_SUBST([BATTERY_LDFLAGS])
+ AM_CONDITIONAL([HAVE_OPENBSD], [test "x${have_openbsd}" = "xyes"])
+ AM_CONDITIONAL([HAVE_NETBSD], [test "x${have_netbsd}" = "xyes"])
+ AM_CONDITIONAL([HAVE_FREEBSD], [test "x${have_freebsd}" = "xyes"])
+ AM_CONDITIONAL([HAVE_DRAGONFLY], [test "x${have_dragonfly}" = "xyes"])
+ 
+ ##have_exchange=no
+ ##AC_ARG_ENABLE(exchange,
+ ##  AS_HELP_STRING([--disable-exchange], [disable Exchange support @<:@default=detect@:>@]),
+ ##  [want_exchange=$enableval],
+ ##  [want_exchange=auto]
+ ##)
+ 
+ AM_CONDITIONAL(HAVE_EXCHANGE, false)
+ ##define([CHECK_MODULE_CONF_THEME],
+ ##[
+ ##  if test "x$want_exchange" != "xno" ; then
+ ##    AC_E_CHECK_PKG(EXCHANGE, [exchange], [], [:])
+ ##  else
+ ##    AC_MSG_NOTICE([requested to not use exchange library])
+ ##  fi
+ ##])
+ 
+ 
+ AM_CONDITIONAL(HAVE_ALSA, false)
+ AM_CONDITIONAL(HAVE_PULSE, false)
+ define([CHECK_MODULE_MIXER],
+ [
+   AC_E_CHECK_PKG(ALSA, [alsa >= 1.0.8],
+     [ ], [ ])
+  AC_E_CHECK_PKG([PULSE], [libpulse-simple libpulse],
+     [AC_DEFINE_UNQUOTED([HAVE_PULSE], [1], [have pulseaudio])], [ ])
+ ])
+ 
+ SHM_OPEN_LIBS=""
+ AC_MSG_CHECKING([whether shm_open() is present])
+ LIBS_save=${LIBS}
+ LIBS="${LIBS} -lrt"
+ AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM(
+       [[
+ #include <sys/stat.h>
+ #include <sys/mman.h>
+ #include <fcntl.h>
+       ]],
+       [[
+ int fd;
+ fd = shm_open("/", O_RDWR | O_CREAT, S_IRUSR |
+ S_IWUSR);
+ shm_unlink("/");
+       ]])],
+    [
+     have_shm_open="yes"
+     AC_DEFINE(HAVE_SHM_OPEN, 1, [Have shm_open() call])
+     SHM_OPEN_LIBS="-lrt"
+    ])
+ LIBS=${LIBS_save}
+ AC_MSG_RESULT([${have_shm_open}])
+ AC_SUBST(SHM_OPEN_LIBS)
+                            
+ AC_SUBST([SOUND_CFLAGS])
+ AC_SUBST([SOUND_LIBS])
+ 
+ if test "x${e_cv_want_wayland_only}" != "xno" ;then
+   PKG_CHECK_MODULES([WAYLAND], [ecore-wl2 >= 1.18 wayland-server >= 1.11.0 wayland-client >= 1.11.0 wayland-protocols >= 1.9 wayland-scanner >= 1.11.0 xkbcommon uuid],
+     [
+       have_wayland=yes
+       have_wayland_dep=true
+       AC_ARG_VAR([wayland_scanner], [The wayland-scanner executable])
+       AC_PATH_PROG([wayland_scanner], [wayland-scanner])
+       if test x$wayland_scanner = x; then
+         PKG_CHECK_MODULES(WAYLAND_SCANNER, [wayland-scanner])
+         wayland_scanner=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`
+       fi
+       ac_wayland_protocols_pkgdatadir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
+       AC_SUBST(WAYLAND_PROTOCOLS_DATADIR, $ac_wayland_protocols_pkgdatadir)
+       AC_SUBST(WAYLAND, "true")
+       AC_DEFINE_UNQUOTED([HAVE_WAYLAND],[1],[enable wayland support])
+     ])
+ else
+   have_wayland=no
+ fi
+ 
+ AM_CONDITIONAL([HAVE_WAYLAND], [test "x${have_wayland}" = "xyes"])
+ 
+ if test "x${e_cv_want_wayland_only}" != "xyes"; then
+   PKG_CHECK_MODULES([ECORE_X], [ecore-x >= ${efl_version}])
+   if test -n "$ECORE_X_CFLAGS" ; then
+      ecore_x=true
+   else
+      ecore_x=false
+   fi
+ else
+   ecore_x=false
+ fi
+ 
+ WL_X11=false
+ define([CHECK_MODULE_WL_X11],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     AC_E_CHECK_PKG(WL_X11, [ ecore-x >= ${efl_version} ], [WL_X11=true], [WL_X11=false])
+   else
+     WL_X11=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_X11], [test "x${WL_X11}" = "xtrue"])
+ 
+ WL_WL=false
+ define([CHECK_MODULE_WL_WL],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     WL_WL=true
+   else
+     WL_WL=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_WL], [test "x${WL_WL}" = "xtrue"])
+ 
+ WL_BUFFER=false
+ define([CHECK_MODULE_WL_BUFFER],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     WL_BUFFER=true
+   else
+     WL_BUFFER=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_BUFFER], [test "x${WL_BUFFER}" = "xtrue"])
+ 
+ WL_DESKTOP_SHELL=false
+ define([CHECK_MODULE_WL_DESKTOP_SHELL],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     WL_DESKTOP_SHELL=true
+   else
+     WL_DESKTOP_SHELL=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_DESKTOP_SHELL], [test "x${WL_DESKTOP_SHELL}" = "xtrue"])
+ 
+ WL_FB=false
+ define([CHECK_MODULE_WL_FB],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     AC_E_CHECK_PKG(WL_FB, [ ecore-fb >= $efl_version ], [WL_FB=true], [WL_FB=false])
+   else
+     WL_FB=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_FB], [test "x${WL_FB}" = "xtrue"])
+ 
+ WL_DRM=false
+ define([CHECK_MODULE_WL_DRM],
+ [
+   if test "x${have_wayland}" = "xyes" ; then
+     PKG_CHECK_EXISTS([ecore-drm2 >= $efl_ecore_drm2_version], [have_ecore_drm2="yes"], [have_ecore_drm2="no"])
+     if test "x${have_ecore_drm2}" = "xyes"; then
+       AC_E_CHECK_PKG(WL_DRM, [ ecore-drm2 >= $efl_ecore_drm2_version elput >= $efl_version ecore >= $efl_version eina >= $efl_version ],
+         [
+           WL_DRM=true
+         ], [WL_DRM=false])
+     else
+       WL_DRM=false
+     fi
+   else
+     WL_DRM=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_DRM], [test "x${WL_DRM}" = "xtrue"])
+ 
+ HAVE_XWAYLAND_DEPS=false
+ define([CHECK_MODULE_XWAYLAND],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     AC_E_CHECK_PKG(XWAYLAND, [ ecore-x >= ${efl_version} ecore-audio >= ${efl_version}  ], [HAVE_XWAYLAND_DEPS=true], [HAVE_XWAYLAND_DEPS=false])
+     AC_ARG_WITH(Xwayland, AS_HELP_STRING([--with-Xwayland=PATH], [Path to Xwayland]), [Xwayland_with="$withval"], [Xwayland_with="yes"])
+     if test "x${Xwayland_with}" != "xyes"; then
+       xwayland=$Xwayland_with
+       AC_SUBST(xwayland)
+     else
+       AC_PATH_PROG(xwayland, Xwayland, "no")
+     fi
+     if test "x${xwayland}" == "xno"; then
+       AC_MSG_ERROR([Xwayland enabled but not found.])
+     fi
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_XWAYLAND], [test "x${HAVE_XWAYLAND}" != "xno"])
+ 
+ define([CHECK_MODULE_WL_TEXT_INPUT],
+ [
+   if test "x${have_wayland}" = "xyes"; then
+     WL_TEXT_INPUT=true
+   else
+     WL_TEXT_INPUT=false
+   fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_TEXT_INPUT], [test "x${WL_TEXT_INPUT}" = "xtrue"])
+ 
+ WL_WEEKEYBOARD=false
+ define([CHECK_MODULE_WL_WEEKEYBOARD],
+ [
+    if test "x${have_wayland}" = "xyes" ; then
+      WL_WEEKEYBOARD=true
+    else
+       WL_WEEKEYBOARD=false
+    fi
+ ])
+ AM_CONDITIONAL([HAVE_WL_WEEKEYBOARD], [test "x${WL_WEEKEYBOARD}" = "xtrue"])
+ 
+ AC_E_OPTIONAL_MODULE([ibar], true)
+ AC_E_OPTIONAL_MODULE([clock], true)
+ AC_E_OPTIONAL_MODULE([pager], true)
+ AC_E_OPTIONAL_MODULE([pager_plain], true)
+ AC_E_OPTIONAL_MODULE([battery], true)
+ AC_E_OPTIONAL_MODULE([temperature], true)
+ AC_E_OPTIONAL_MODULE([notification], true)
+ AC_E_OPTIONAL_MODULE([cpufreq], true)
+ AC_E_OPTIONAL_MODULE([ibox], true)
+ AC_E_OPTIONAL_MODULE([start], true)
+ AC_E_OPTIONAL_MODULE([winlist], true)
+ AC_E_OPTIONAL_MODULE([fileman], true)
+ AC_E_OPTIONAL_MODULE([fileman_opinfo], true)
+ AC_E_OPTIONAL_MODULE([wizard], true)
+ AC_E_OPTIONAL_MODULE([conf], true)
+ AC_E_OPTIONAL_MODULE([conf_theme], true, true)
+ AC_E_OPTIONAL_MODULE([conf_intl], true)
+ AC_E_OPTIONAL_MODULE([msgbus], true)
+ AC_E_OPTIONAL_MODULE([conf_applications], true)
+ AC_E_OPTIONAL_MODULE([conf_display], true)
+ AC_E_OPTIONAL_MODULE([conf_shelves], true)
+ AC_E_OPTIONAL_MODULE([conf_bindings], true)
+ AC_E_OPTIONAL_MODULE([conf_window_remembers], true)
+ AC_E_OPTIONAL_MODULE([conf_window_manipulation], true)
+ AC_E_OPTIONAL_MODULE([conf_menus], true)
+ AC_E_OPTIONAL_MODULE([conf_dialogs], true)
+ AC_E_OPTIONAL_MODULE([conf_performance], true)
+ AC_E_OPTIONAL_MODULE([conf_paths], true)
+ AC_E_OPTIONAL_MODULE([conf_interaction], true)
+ AC_E_OPTIONAL_MODULE([gadman], true)
+ AC_E_OPTIONAL_MODULE([mixer], true, [CHECK_MODULE_MIXER])
+ AC_E_OPTIONAL_MODULE([connman], true)
+ AC_E_OPTIONAL_MODULE([bluez4], true)
+ AC_E_OPTIONAL_MODULE([syscon], true)
+ AC_E_OPTIONAL_MODULE([everything], true)
+ AC_E_OPTIONAL_MODULE([systray], true)
+ AC_E_OPTIONAL_MODULE([appmenu], true)
+ AC_E_OPTIONAL_MODULE([quickaccess], true)
+ AC_E_OPTIONAL_MODULE([teamwork], true)
+ AC_E_OPTIONAL_MODULE([lokker], true)
+ AC_E_OPTIONAL_MODULE([shot], true, true)
+ AC_E_OPTIONAL_MODULE([backlight], true)
+ AC_E_OPTIONAL_MODULE([tasks], true)
+ AC_E_OPTIONAL_MODULE([conf_randr], true)
+ AC_E_OPTIONAL_MODULE([xkbswitch], true, true)
+ AC_E_OPTIONAL_MODULE([tiling], true)
+ AC_E_OPTIONAL_MODULE([music_control], true)
+ AC_E_OPTIONAL_MODULE([packagekit], true)
+ AC_E_OPTIONAL_MODULE([wl_desktop_shell], $have_wayland_dep)
+ AC_E_OPTIONAL_MODULE([wl_x11], $have_wayland_dep, [CHECK_MODULE_WL_X11])
+ AC_E_OPTIONAL_MODULE([wl_wl], $have_wayland_dep)
+ AC_E_OPTIONAL_MODULE([wl_buffer], $have_wayland_dep)
+ #AC_E_OPTIONAL_MODULE([wl_fb], $have_wayland_dep, [CHECK_MODULE_WL_FB])
+ AC_E_OPTIONAL_MODULE([wl_drm], $have_wayland_dep, [CHECK_MODULE_WL_DRM])
+ AC_E_OPTIONAL_MODULE([wl_text_input], $have_wayland_dep)
+ AC_E_OPTIONAL_MODULE([wl_weekeyboard], $have_wayland_dep)
+ AC_E_OPTIONAL_MODULE([geolocation], true)
+ AC_E_OPTIONAL_MODULE([xwayland], $have_wayland_dep, [CHECK_MODULE_XWAYLAND])
+ AC_E_OPTIONAL_MODULE([wireless], true)
+ AC_E_OPTIONAL_MODULE([time], true)
+ AC_E_OPTIONAL_MODULE([sysinfo], true)
+ 
+ if test "x${HAVE_WL_X11}" != "xyes" && test "x${have_wayland}" = "xyes" && test "x${HAVE_XWAYLAND}" != "xyes"; then
+   AC_DEFINE_UNQUOTED([HAVE_WAYLAND_ONLY],[1],[enable wayland-only version of enlightenment])
+   have_wayland_only=yes
+ else
+   have_wayland_only=no
+ fi
+ 
+ AM_CONDITIONAL([HAVE_WAYLAND_ONLY], [test "x${have_wayland_only}" = "xyes"])
+ 
+ e_alert_requires="\
+   evas >= $efl_version \
+   eina >= ${efl_version} \
+   ecore >= ${efl_version} \
+   ecore-ipc >= ${efl_version}"
+ 
+ if test "x${have_wayland}" = "xyes"; then
+   if test "x${HAVE_WL_DRM}" = "xyes"; then
+       e_alert_requires="\
+         $e_alert_requires \
+         ecore-input >= ${efl_version} \
+         ecore-drm2 >= ${efl_ecore_drm2_version}"
+  fi
+ fi
+ 
+ if test "x${have_wayland_only}" != "xyes"; then
+   e_alert_requires="\
+     $e_alert_requires \
+     xcb \
+     xcb-shape \
+     xcb-keysyms"
+ fi
+ 
+ PKG_CHECK_MODULES(E_ALERT, [$e_alert_requires])
+ 
+ if test "x${have_wayland_only}" != "xyes"; then
+   e_requires="$e_requires ecore-x >= $efl_version"
+ fi
+ 
+ PKG_CHECK_MODULES(E, [$e_requires])
+ requirements_e="\
+ evas >= ${efl_version} \
+ ecore >= ${efl_version} \
+ ecore-evas >= ${efl_version} \
+ ecore-con >= ${efl_version} \
+ ecore-ipc >= ${efl_version} \
+ ecore-file >= ${efl_version} \
+ eet >= ${efl_version} \
+ edje >= ${efl_version} \
+ efreet >= ${efl_version} \
+ efreet-mime >= ${efl_version} \
+ efreet-trash >= ${efl_version} \
+ eina >= ${efl_version} \
+ eldbus >= ${efl_version} \
+ eio >= ${efl_version} \
+ eo >= ${efl_version} \
+ elementary >= ${efl_version} \
+ emotion >= ${efl_version} \
+ $udisks_mount \
+ $eeze_mount \
+ $device_libs"
+ if test "x${have_wayland_only}" != "xyes"; then
+   requirements_e="$requirements_e ecore-x >= $efl_version"
+ fi
+ 
+ e_libs="$E_LIBS $LIBINTL $fnmatch_libs $execinfo_libs"
+ e_cflags="$E_CFLAGS"
+ 
+ AC_SUBST([e_libs])
+ AC_SUBST([e_cflags])
+ AC_SUBST([requirements_e])
+ 
+ HALT="/sbin/shutdown -h now"
+ REBOOT="/sbin/shutdown -r now"
+ SUSPEND=""
+ HIBERNATE=""
+ MOUNT="/bin/mount"
+ UMOUNT="/bin/umount"
+ EJECT="/usr/bin/eject"
+ case "$host_os" in
+    freebsd*|pcbsd*)
+       #SUSPEND="acpiconf -s3"
+       SUSPEND="/usr/sbin/zzz"
+       AC_MSG_NOTICE([use suspend method: $SUSPEND])
+       HIBERNATE="acpiconf -s4"
+       AC_MSG_NOTICE([use hibernate method: $HIBERNATE])
+       HALT="/sbin/shutdown -p now"
+       MOUNT="/sbin/mount"
+       UMOUNT="/sbin/umount"
+       EJECT="/usr/sbin/cdcontrol eject"
+       ;;
+    *)
+       if test "x${have_systemd_user_session}" = "xyes"; then
+          HALT="/usr/bin/systemctl poweroff"
+          REBOOT="/usr/bin/systemctl reboot"
+          SUSPEND="/usr/bin/systemctl suspend"
+          HIBERNATE="/usr/bin/systemctl hibernate"
+          AC_MSG_NOTICE([use systemctl for halt, reboot, suspend and hibernate])
+       else
+          AC_PATH_PROGS([SUSPEND], [sleep.sh pm-suspend],[/etc/acpi/sleep.sh], [/etc/acpi:/sbin:/usr/sbin:$PATH])
+          if test "$SUSPEND" = "/etc/acpi/sleep.sh" ; then
+             SUSPEND="/etc/acpi/sleep.sh force"
+             AC_MSG_NOTICE([use suspend method: $SUSPEND])
+          fi
+ 
+          AC_PATH_PROGS([HIBERNATE], [hibernate.sh pm-hibernate],[/etc/acpi/hibernate.sh], [/etc/acpi:/sbin:/usr/sbin:$PATH])
+          if test "$HIBERNATE" = "/etc/acpi/hibernate.sh" ; then
+             HIBERNATE="/etc/acpi/hibernate.sh force"
+             AC_MSG_NOTICE([use hibernate method: $HIBERNATE])
+          fi
+       fi
+       ;;
+ esac
+ AC_SUBST([HALT])
+ AC_SUBST([REBOOT])
+ AC_SUBST([SUSPEND])
+ AC_SUBST([HIBERNATE])
+ AC_SUBST([MOUNT])
+ AC_SUBST([UMOUNT])
+ AC_SUBST([EJECT])
+ 
+ m4_ifdef([v_rev],
+    [
+     EFL_COMPILER_FLAG([-Wall])
+     EFL_COMPILER_FLAG([-W])
+     EFL_COMPILER_FLAG([-Wpointer-arith])
+     EFL_COMPILER_FLAG([-Wshadow])
+     EFL_COMPILER_FLAG([-Wno-missing-field-initializers])
+     EFL_COMPILER_FLAG([-Wfloat-equal])
+     EFL_COMPILER_FLAG([-Wuninitialized])
+     EFL_COMPILER_FLAG([-Wundef])
+     EFL_COMPILER_FLAG([-Wcast-align])
+     EFL_COMPILER_FLAG([-Wformat=2])
+     EFL_COMPILER_FLAG([-Wno-format-y2k])
+    ])
+ 
+ SUID_CFLAGS=
+ SUID_LDFLAGS=
+ case "$host_os" in
+    freebsd*|pcbsd*)
++      CKPASSWD_LIBS="$CKPASSWD_LIBS -lcrypt"
+       ;;
+    *)
+       if test -n "$GCC"; then
+         AC_MSG_CHECKING(if GCC supports -fPIE)
+ 
+         OLDCFLAGS="$CFLAGS"
+         OLDLDFLAGS="$LDFLAGS"
+ 
+         CFLAGS="$CFLAGS -fPIE"
+         LDFLAGS="$LDFLAGS -pie"
+ 
+         AC_TRY_LINK(,,
+              [
+               SUID_CFLAGS="-fPIE"
+              SUID_LDFLAGS="-pie"
+              AC_MSG_RESULT(yes)],
+              AC_MSG_RESULT(no))
+         CFLAGS="$OLDCFLAGS"
+         LDFLAGS="$OLDLDFLAGS"
+       fi
+       ;;
+ esac
++AC_SUBST([CKPASSWD_LIBS])
+ AC_SUBST([SUID_CFLAGS])
+ AC_SUBST([SUID_LDFLAGS])
+ 
+ AC_OUTPUT([
+ Makefile
+ enlightenment.pc
+ src/bin/e_fm_shared_types.h
+ src/modules/everything/everything.pc
+ data/session/enlightenment.desktop
+ data/etc/sysactions.conf
+ data/units/enlightenment.service
+ doc/Doxyfile
+ doc/e.dox
+ $po_makefile_in
+ ])
+ 
+ # report
+ txt_strip() {
+   echo "[$]@" | sed -e 's/^[[ \t]]*\([[^ \t]]*\)[[ \t]]*$/\1/g'
+ }
+ 
+ echo
+ cat << SUMMARY_EOF
+ Summary:
+  * project.........: $PACKAGE $VERSION
+  * prefix..........: $(txt_strip $prefix)
+  * CFLAGS..........: $(txt_strip $CFLAGS)
+  * LDFLAGS.........: $(txt_strip $LDFLAGS)
+  * eet.............: ${eet_eet}
+  * eldbus-codegen..: ${eldbus_codegen}
+ SUMMARY_EOF
+ 
+ if test "$have_systemd_user_session" = "yes"; then
+   echo " * systemd.........: yes (${USER_SESSION_DIR})"
+ else
+   echo " * systemd.........: no"
+ fi
+ 
+ echo
+ cat << ACTIONS_EOF
+ System Actions:
+  * Halt.....: ${HALT}
+  * Reboot...: ${REBOOT}
+  * Suspend..: ${SUSPEND}
+  * Hibernate: ${HIBERNATE}
+ 
+ ACTIONS_EOF
+ 
+ cat << DEVICE_EOF
+ Preferred Backends:
+  * device..............: $device_backend
+  * udisks_mount........: $e_cv_want_mount_udisks
+  * eeze_mount..........: $e_cv_want_mount_eeze
+ DEVICE_EOF
+ echo
+ 
+ UNUSED_MODS=""
+ for mod in $UNUSED_OPTIONAL_MODULES; do
+   UNUSED_MODS="$UNUSED_MODS${COLOR_HRED}$mod${COLOR_END} "
+ done
+ 
+ cat << MODULES_EOF
+ Modules:
+  * disabled........: $(txt_strip $UNUSED_MODS)
+ MODULES_EOF
+ echo
+ 
+ cat << DOCS_EOF
+ Documentation:
+  * enabled.........: ${build_doc}
+ DOCS_EOF
+ if test "x${build_doc}" = "xyes" ; then
+   echo " Building..........: make doc"
+ fi
+ echo
+ 
+ cat << COMPILE_EOF
+ Compilation........: make (or gmake)
+ COMPILE_EOF
+ echo
+ 
+ cat << INSTALL_EOF
+ Installation.......: make all install (as root if needed, with 'su' or 'sudo')
+ INSTALL_EOF
+ echo
+diff --git a/src/bin/Makefile.mk b/src/bin/Makefile.mk
+index 4235b821c..3ab9cc2ab 100644
+--- a/src/bin/Makefile.mk
++++ b/src/bin/Makefile.mk
+@@ -1,582 +1,576 @@
+ DISTCLEANFILES += src/bin/e_fm_shared_types.h
+ 
+ EXTRA_DIST += src/bin/e_drm2.x
+ 
+ efx_files = \
+ src/bin/efx/efx_bumpmapping.c \
+ src/bin/efx/efx.c \
+ src/bin/efx/efx_fade.c \
+ src/bin/efx/efx_helpers.c \
+ src/bin/efx/efx_move.c \
+ src/bin/efx/efx_pan.c \
+ src/bin/efx/e_efx_private.h \
+ src/bin/efx/efx_queue.c \
+ src/bin/efx/efx_resize.c \
+ src/bin/efx/efx_rotate.c \
+ src/bin/efx/efx_spin.c \
+ src/bin/efx/efx_util.c \
+ src/bin/efx/efx_zoom.c
+ 
+ E_CPPFLAGS = \
+ -I$(top_builddir) \
+ -I$(top_builddir)/src/bin \
+ -I$(top_srcdir) \
+ -I$(top_srcdir)/src/bin \
+ -I$(top_srcdir)/src/bin/efx \
+ -I$(top_builddir)/src/bin/generated \
+ @e_cflags@ \
+ @cf_cflags@ \
+ @VALGRIND_CFLAGS@ \
+ @EDJE_DEF@ \
+ @WAYLAND_CFLAGS@ \
+ -DE_BINDIR=\"$(bindir)\" \
+ -DPACKAGE_BIN_DIR=\"@PACKAGE_BIN_DIR@\" \
+ -DPACKAGE_LIB_DIR=\"@PACKAGE_LIB_DIR@\" \
+ -DPACKAGE_DATA_DIR=\"@PACKAGE_DATA_DIR@\" \
+ -DLOCALE_DIR=\"@LOCALE_DIR@\" \
+ -DPACKAGE_SYSCONF_DIR=\"@PACKAGE_SYSCONF_DIR@\"
+ 
+ bin_PROGRAMS = \
+ src/bin/enlightenment \
+ src/bin/enlightenment_imc \
+ src/bin/enlightenment_start \
+ src/bin/enlightenment_filemanager \
+ src/bin/enlightenment_open \
+ src/bin/enlightenment_askpass
+ 
+ internal_bindir = $(libdir)/enlightenment/utils
+ internal_bin_PROGRAMS = \
+ src/bin/enlightenment_backlight \
+ src/bin/enlightenment_fm_op \
+ src/bin/enlightenment_sys \
+ src/bin/enlightenment_thumb \
+ src/bin/enlightenment_elm_cfgtool \
+ src/bin/enlightenment_static_grabber \
+ src/bin/enlightenment_alert
+ 
+-if HAVE_FREEBSD
+ internal_bin_PROGRAMS += src/bin/enlightenment_ckpasswd
+-endif
+ 
+ ENLIGHTENMENTHEADERS = \
+ src/bin/efx/e_Efx.h \
+ src/bin/e_about.h \
+ src/bin/e_acpi.h \
+ src/bin/e_actions.h \
+ src/bin/e_alert.h \
+ src/bin/e_atoms.h \
+ src/bin/e_auth.h \
+ src/bin/e_backlight.h \
+ src/bin/e_bg.h \
+ src/bin/e_bindings.h \
+ src/bin/e_bryce.h \
+ src/bin/e_client.h \
+ src/bin/e_client_volume.h \
+ src/bin/e_client.x \
+ src/bin/e_color_dialog.h  \
+ src/bin/e_color.h \
+ src/bin/e_comp.h \
+ src/bin/e_comp_canvas.h \
+ src/bin/e_comp_cfdata.h \
+ src/bin/e_comp_object.h \
+ src/bin/e_comp_x.h \
+ src/bin/e_comp_x_randr.h \
+ src/bin/e_config_data.h \
+ src/bin/e_config_dialog.h \
+ src/bin/e_config.h \
+ src/bin/e_configure.h \
+ src/bin/e_confirm_dialog.h \
+ src/bin/e_datastore.h \
+ src/bin/e_dbusmenu.h \
+ src/bin/e_desk.h \
+ src/bin/e_deskenv.h \
+ src/bin/e_desklock.h \
+ src/bin/e_deskmirror.h \
+ src/bin/e_dialog.h \
+ src/bin/e_dnd.h \
+ src/bin/e_dpms.h \
+ src/bin/e_desktop_editor.h \
+ src/bin/e_entry_dialog.h \
+ src/bin/e_env.h \
+ src/bin/e_error.h \
+ src/bin/e_exec.h \
+ src/bin/e_exehist.h \
+ src/bin/e_filereg.h \
+ src/bin/e_flowlayout.h \
+ src/bin/e_fm_custom.h \
+ src/bin/e_fm_device.h \
+ src/bin/e_fm.h \
+ src/bin/e_fm_mime.h \
+ src/bin/e_fm_op.h \
+ src/bin/e_fm_op_registry.h \
+ src/bin/e_fm_prop.h \
+ src/bin/e_fm_shared_codec.h \
+ src/bin/e_fm_shared_device.h \
+ src/bin/e_focus.h \
+ src/bin/e_font.h \
+ src/bin/e_gadcon.h \
+ src/bin/e_gadcon_popup.h \
+ src/bin/e_gadget.h \
+ src/bin/e_gadget_types.h \
+ src/bin/e_grabinput.h \
+ src/bin/e_grab_dialog.h \
+ src/bin/e.h \
+ src/bin/e_macros.h \
+ src/bin/e_hints.h \
+ src/bin/e_icon.h \
+ src/bin/e_ilist.h \
+ src/bin/e_import_config_dialog.h \
+ src/bin/e_import_dialog.h \
+ src/bin/e_includes.h \
+ src/bin/e_init.h \
+ src/bin/e_int_client_locks.h \
+ src/bin/e_int_client_menu.h \
+ src/bin/e_int_client_prop.h \
+ src/bin/e_int_client_remember.h \
+ src/bin/e_int_config_modules.h \
+ src/bin/e_int_gadcon_config.h \
+ src/bin/e_intl_data.h \
+ src/bin/e_intl.h \
+ src/bin/e_int_menus.h \
+ src/bin/e_int_shelf_config.h \
+ src/bin/e_int_toolbar_config.h \
+ src/bin/e_ipc_codec.h \
+ src/bin/e_ipc.h \
+ src/bin/e_layout.h \
+ src/bin/e_livethumb.h \
+ src/bin/e_log.h \
+ src/bin/e_maximize.h \
+ src/bin/e_menu.h \
+ src/bin/e_mmx.h \
+ src/bin/e_module.h \
+ src/bin/e_mouse.h \
+ src/bin/e_moveresize.h \
+ src/bin/e_msgbus.h \
+ src/bin/e_notification.h \
+ src/bin/e_msg.h \
+ src/bin/e_obj_dialog.h \
+ src/bin/e_object.h \
+ src/bin/e_order.h \
+ src/bin/e_pan.h \
+ src/bin/e_path.h \
+ src/bin/e_pixmap.h \
+ src/bin/e_place.h \
+ src/bin/e_pointer.h \
+ src/bin/e_powersave.h \
+ src/bin/e_prefix.h \
+ src/bin/e_randr2.h \
+ src/bin/e_remember.h \
+ src/bin/e_resist.h \
+ src/bin/e_scale.h \
+ src/bin/e_screensaver.h \
+ src/bin/e_scrollframe.h \
+ src/bin/e_sha1.h \
+ src/bin/e_shelf.h \
+ src/bin/e_signals.h \
+ src/bin/e_slidecore.h \
+ src/bin/e_slider.h \
+ src/bin/e_slidesel.h \
+ src/bin/e_spectrum.h \
+ src/bin/e_startup.h \
+ src/bin/e_sys.h \
+ src/bin/e_test.h \
+ src/bin/e_theme_about.h \
+ src/bin/e_theme.h \
+ src/bin/e_thumb.h \
+ src/bin/e_toolbar.h \
+ src/bin/e_update.h \
+ src/bin/e_user.h \
+ src/bin/e_utils.h \
+ src/bin/e_video.h \
+ src/bin/e_widget_aspect.h \
+ src/bin/e_widget_button.h \
+ src/bin/e_widget_check.h \
+ src/bin/e_widget_color_well.h \
+ src/bin/e_widget_config_list.h \
+ src/bin/e_widget_bgpreview.h \
+ src/bin/e_widget_entry.h \
+ src/bin/e_widget_filepreview.h \
+ src/bin/e_widget_flist.h \
+ src/bin/e_widget_font_preview.h \
+ src/bin/e_widget_framelist.h \
+ src/bin/e_widget_frametable.h \
+ src/bin/e_widget_fsel.h \
+ src/bin/e_widget.h \
+ src/bin/e_widget_ilist.h \
+ src/bin/e_widget_image.h \
+ src/bin/e_widget_label.h \
+ src/bin/e_widget_list.h \
+ src/bin/e_widget_preview.h \
+ src/bin/e_widget_radio.h \
+ src/bin/e_widget_scrollframe.h \
+ src/bin/e_widget_slider.h \
+ src/bin/e_widget_spectrum.h \
+ src/bin/e_widget_table.h \
+ src/bin/e_widget_textblock.h \
+ src/bin/e_widget_toolbar.h \
+ src/bin/e_widget_toolbook.h \
+ src/bin/e_win.h \
+ src/bin/e_xinerama.h \
+ src/bin/e_xkb.h \
+ src/bin/e_xsettings.h \
+ src/bin/e_zoomap.h \
+ src/bin/e_zone.h
+ 
+ if HAVE_WAYLAND
+ ENLIGHTENMENTHEADERS += \
+ src/bin/e_comp_wl_data.h \
+ src/bin/e_comp_wl_dmabuf.h \
+ src/bin/e_comp_wl_input.h \
+ src/bin/e_comp_wl.h
+ endif
+ 
+ enlightenment_gen_src =
+ MAINTAINERCLEANFILES += $(enlightenment_gen_src)
+ 
+ enlightenment_src = \
+ src/bin/e_about.c \
+ src/bin/e_acpi.c \
+ src/bin/e_actions.c \
+ src/bin/e_atoms.c \
+ src/bin/e_auth.c \
+ src/bin/e_backlight.c \
+ src/bin/e_bg.c \
+ src/bin/e_bindings.c \
+ src/bin/e_bryce.c \
+ src/bin/e_bryce_editor.c \
+ src/bin/e_client.c \
+ src/bin/e_client_volume.c \
+ src/bin/e_color.c \
+ src/bin/e_color_dialog.c \
+ src/bin/e_comp.c \
+ src/bin/e_comp_canvas.c \
+ src/bin/e_comp_cfdata.c \
+ src/bin/e_comp_object.c \
+ src/bin/e_config.c \
+ src/bin/e_config_data.c \
+ src/bin/e_config_dialog.c \
+ src/bin/e_configure.c \
+ src/bin/e_confirm_dialog.c \
+ src/bin/e_datastore.c \
+ src/bin/e_dbusmenu.c \
+ src/bin/e_desk.c \
+ src/bin/e_deskenv.c \
+ src/bin/e_desklock.c \
+ src/bin/e_deskmirror.c \
+ src/bin/e_dialog.c \
+ src/bin/e_dpms.c \
+ src/bin/e_desktop_editor.c \
+ src/bin/e_dnd.c \
+ src/bin/e_entry_dialog.c \
+ src/bin/e_env.c \
+ src/bin/e_error.c \
+ src/bin/e_exec.c \
+ src/bin/e_exehist.c \
+ src/bin/e_filereg.c \
+ src/bin/e_flowlayout.c \
+ src/bin/e_fm.c \
+ src/bin/e_fm_custom.c \
+ src/bin/e_fm_device.c \
+ src/bin/e_fm_mime.c \
+ src/bin/e_fm_op_registry.c \
+ src/bin/e_fm_prop.c \
+ src/bin/e_fm_shared_codec.c \
+ src/bin/e_fm_shared_device.c \
+ src/bin/e_focus.c \
+ src/bin/e_font.c \
+ src/bin/e_gadcon.c \
+ src/bin/e_gadcon_popup.c \
+ src/bin/e_gadget.c \
+ src/bin/e_grabinput.c \
+ src/bin/e_grab_dialog.c \
+ src/bin/e_hints.c \
+ src/bin/e_icon.c \
+ src/bin/e_ilist.c \
+ src/bin/e_import_config_dialog.c \
+ src/bin/e_import_dialog.c \
+ src/bin/e_init.c \
+ src/bin/e_int_client_locks.c \
+ src/bin/e_int_client_menu.c \
+ src/bin/e_int_client_prop.c \
+ src/bin/e_int_client_remember.c \
+ src/bin/e_int_config_modules.c \
+ src/bin/e_int_config_comp.c \
+ src/bin/e_int_config_comp_match.c \
+ src/bin/e_int_gadcon_config.c \
+ src/bin/e_intl.c \
+ src/bin/e_intl_data.c \
+ src/bin/e_int_menus.c \
+ src/bin/e_int_shelf_config.c \
+ src/bin/e_int_toolbar_config.c \
+ src/bin/e_ipc.c \
+ src/bin/e_ipc_codec.c \
+ src/bin/e_layout.c \
+ src/bin/e_livethumb.c \
+ src/bin/e_log.c \
+ src/bin/e_maximize.c \
+ src/bin/e_menu.c \
+ src/bin/e_module.c \
+ src/bin/e_mouse.c \
+ src/bin/e_moveresize.c \
+ src/bin/e_msgbus.c \
+ src/bin/e_notification.c \
+ src/bin/e_msg.c \
+ src/bin/e_obj_dialog.c \
+ src/bin/e_object.c \
+ src/bin/e_order.c \
+ src/bin/e_pan.c \
+ src/bin/e_path.c \
+ src/bin/e_pixmap.c \
+ src/bin/e_place.c \
+ src/bin/e_pointer.c \
+ src/bin/e_powersave.c \
+ src/bin/e_prefix.c \
+ src/bin/e_randr2.c \
+ src/bin/e_remember.c \
+ src/bin/e_resist.c \
+ src/bin/e_scale.c \
+ src/bin/e_screensaver.c \
+ src/bin/e_scrollframe.c \
+ src/bin/e_sha1.c \
+ src/bin/e_shelf.c \
+ src/bin/e_signals.c \
+ src/bin/e_slidecore.c \
+ src/bin/e_slider.c \
+ src/bin/e_slidesel.c \
+ src/bin/e_spectrum.c \
+ src/bin/e_startup.c \
+ src/bin/e_sys.c \
+ src/bin/e_test.c \
+ src/bin/e_theme_about.c \
+ src/bin/e_theme.c \
+ src/bin/e_thumb.c \
+ src/bin/e_toolbar.c \
+ src/bin/e_update.c \
+ src/bin/e_user.c \
+ src/bin/e_utils.c \
+ src/bin/e_video.c \
+ src/bin/e_widget_aspect.c \
+ src/bin/e_widget_button.c \
+ src/bin/e_widget.c \
+ src/bin/e_widget_check.c \
+ src/bin/e_widget_color_well.c \
+ src/bin/e_widget_config_list.c \
+ src/bin/e_widget_bgpreview.c \
+ src/bin/e_widget_entry.c \
+ src/bin/e_widget_filepreview.c \
+ src/bin/e_widget_flist.c \
+ src/bin/e_widget_font_preview.c \
+ src/bin/e_widget_framelist.c \
+ src/bin/e_widget_frametable.c \
+ src/bin/e_widget_fsel.c \
+ src/bin/e_widget_ilist.c \
+ src/bin/e_widget_image.c \
+ src/bin/e_widget_label.c \
+ src/bin/e_widget_list.c \
+ src/bin/e_widget_preview.c \
+ src/bin/e_widget_radio.c \
+ src/bin/e_widget_scrollframe.c \
+ src/bin/e_widget_slider.c \
+ src/bin/e_widget_spectrum.c \
+ src/bin/e_widget_table.c \
+ src/bin/e_widget_textblock.c \
+ src/bin/e_widget_toolbar.c \
+ src/bin/e_widget_toolbook.c \
+ src/bin/e_win.c \
+ src/bin/e_xkb.c \
+ src/bin/e_xinerama.c \
+ src/bin/e_zoomap.c \
+ src/bin/e_zone.c \
+ $(ENLIGHTENMENTHEADERS) \
+ $(efx_files)
+ 
+ if ! HAVE_WAYLAND_ONLY
+ enlightenment_src += \
+ src/bin/e_comp_x.c \
+ src/bin/e_comp_x_randr.c \
+ src/bin/e_alert.c \
+ src/bin/e_xsettings.c
+ endif
+ 
+ if HAVE_WAYLAND
+ #Stolen from weston's Makefile.am and modified for Enlightenment
+ .SECONDEXPANSION:
+ 
+ define protostability
+ $(if $(findstring unstable,$1),unstable,stable)
+ endef
+ 
+ define protoname
+ $(shell echo $1 | sed 's/\([a-z\-]\+\)-[a-z]\+-v[0-9]\+/\1/')
+ endef
+ 
+ %-protocol.c : $(WAYLAND_PROTOCOLS_DATADIR)/$$(call protostability,$$*)/$$(call protoname,$$*)/$$*.xml
+ 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) code < $< > $@
+ 
+ %-server-protocol.h : $(WAYLAND_PROTOCOLS_DATADIR)/$$(call protostability,$$*)/$$(call protoname,$$*)/$$*.xml
+ 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) server-header < $< > $@
+ 
+ %-client-protocol.h : $(WAYLAND_PROTOCOLS_DATADIR)/$$(call protostability,$$*)/$$(call protoname,$$*)/$$*.xml
+ 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) client-header < $< > $@
+ 
+ %-protocol.c : $(top_srcdir)/src/protocol/$(notdir $$*).xml
+ 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) code < $< > $@
+ 
+ %-server-protocol.h : $(top_srcdir)/src/protocol/$(notdir $$*).xml
+ 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) server-header < $< > $@
+ 
+ %-client-protocol.h : $(top_srcdir)/src/protocol/$(notdir $$*).xml
+ 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) client-header < $< > $@
+ #End of weston stuff
+ 
+ enlightenment_src += \
+ src/bin/e_comp_wl_data.c \
+ src/bin/e_comp_wl_input.c \
+ src/bin/e_comp_wl_dmabuf.c \
+ src/bin/e_comp_wl.c \
+ src/bin/e_comp_wl_extensions.c \
+ src/bin/e_comp_wl_extensions_tizen.c
+ 
+ enlightenment_gen_src += \
+ src/bin/generated/linux-dmabuf-unstable-v1-server-protocol.h \
+ src/bin/generated/linux-dmabuf-unstable-v1-protocol.c \
+ src/bin/generated/session-recovery-protocol.c \
+ src/bin/generated/session-recovery-server-protocol.h \
+ src/bin/generated/www-protocol.c \
+ src/bin/generated/www-server-protocol.h \
+ src/bin/generated/action_route-protocol.c \
+ src/bin/generated/action_route-server-protocol.h \
+ src/bin/generated/xdg-foreign-unstable-v1-protocol.c \
+ src/bin/generated/xdg-foreign-unstable-v1-server-protocol.h \
+ src/bin/generated/relative-pointer-unstable-v1-protocol.c \
+ src/bin/generated/relative-pointer-unstable-v1-server-protocol.h \
+ src/bin/generated/pointer-constraints-unstable-v1-protocol.c \
+ src/bin/generated/pointer-constraints-unstable-v1-server-protocol.h \
+ src/bin/generated/efl-aux-hints-protocol.c \
+ src/bin/generated/efl-aux-hints-server-protocol.h
+ 
+ src/bin/e_comp_wl_extensions.c: \
+  $(enlightenment_gen_src)
+ 
+ src/bin/e_comp_wl.c: \
+  src/bin/generated/www-server-protocol.h
+ 
+ src/bin/e_comp_wl_dmabuf.c: \
+  src/bin/generated/linux-dmabuf-unstable-v1-server-protocol.h
+ 
+ endif
+ 
+ src_bin_enlightenment_CPPFLAGS = $(E_CPPFLAGS) -DE_LOGGING=1 @WAYLAND_CFLAGS@ @ECORE_X_CFLAGS@
+ src_bin_enlightenment_SOURCES = \
+ src/bin/e_main.c \
+ $(enlightenment_src)
+ 
+ nodist_src_bin_enlightenment_SOURCES = $(enlightenment_gen_src)
+ 
+ src_bin_enlightenment_LDFLAGS = -export-dynamic
+ src_bin_enlightenment_LDADD = @e_libs@ @dlopen_libs@ @cf_libs@ @VALGRIND_LIBS@ @WAYLAND_LIBS@ @WL_DRM_LIBS@ -lm @SHM_OPEN_LIBS@ @ECORE_X_LIBS@
+ 
+ src_bin_enlightenment_imc_SOURCES = \
+ src/bin/e.h \
+ src/bin/e_macros.h \
+ src/bin/e_config_data.c \
+ src/bin/e_imc_main.c \
+ src/bin/e_intl_data.c
+ 
+ src_bin_enlightenment_imc_LDADD = @E_IMC_LIBS@
+ src_bin_enlightenment_imc_CPPFLAGS = $(E_CPPFLAGS)
+ 
+ src_bin_enlightenment_start_SOURCES = \
+ src/bin/e_start_main.c
+ src_bin_enlightenment_start_CPPFLAGS = $(E_CPPFLAGS) @E_START_CFLAGS@
+ src_bin_enlightenment_start_LDADD = @dlopen_libs@ @E_START_LIBS@
+ 
+ src_bin_enlightenment_askpass_SOURCES = \
+ src/bin/e_askpass_main.c
+ 
+ src_bin_enlightenment_askpass_LDADD = @E_ASKPASS_LIBS@
+ src_bin_enlightenment_askpass_CPPFLAGS = $(E_CPPFLAGS)
+ 
+ src_bin_enlightenment_thumb_SOURCES = \
+ src/bin/e_sha1.c \
+ src/bin/e_thumb_main.c \
+ src/bin/e_user.c
+ 
+ src_bin_enlightenment_thumb_LDADD = @e_libs@
+ src_bin_enlightenment_thumb_CPPFLAGS = $(E_CPPFLAGS)
+ 
+ src_bin_enlightenment_elm_cfgtool_SOURCES = \
+ src/bin/e_elm_cfgtool_main.c
+ 
+ src_bin_enlightenment_elm_cfgtool_LDADD = @e_libs@ -lm
+ src_bin_enlightenment_elm_cfgtool_CPPFLAGS = $(E_CPPFLAGS)
+ 
+ src_bin_enlightenment_fm_op_SOURCES = \
+ src/bin/e_fm_op.c
+ 
+ src_bin_enlightenment_fm_op_LDADD = @E_FM_OP_LIBS@ -lm
+ src_bin_enlightenment_fm_op_CPPFLAGS = $(E_CPPFLAGS)
+ 
+ src_bin_enlightenment_sys_SOURCES = \
+ src/bin/e_sys_main.c \
+ src/bin/e_sys_l2ping.c
+ 
+ src_bin_enlightenment_sys_LDADD = @SUID_LDFLAGS@ @E_SYS_LIBS@ @BLUEZ_LIBS@
+ src_bin_enlightenment_sys_CPPFLAGS = @SUID_CFLAGS@ @E_SYS_CFLAGS@ @BLUEZ_CFLAGS@ -DPACKAGE_SYSCONF_DIR=\"@PACKAGE_SYSCONF_DIR@\"
+ 
+ src_bin_enlightenment_backlight_SOURCES = \
+ src/bin/e_backlight_main.c
+ 
+ src_bin_enlightenment_backlight_CPPFLAGS = @SUID_CFLAGS@ @EEZE_CFLAGS@
+ src_bin_enlightenment_backlight_LDADD = @SUID_LDFLAGS@ @EEZE_LIBS@
+ 
+-if HAVE_FREEBSD
+ src_bin_enlightenment_ckpasswd_SOURCES = \
+ src/bin/e_ckpasswd_main.c
+ 
+ src_bin_enlightenment_ckpasswd_CPPFLAGS = @SUID_CFLAGS@
+-src_bin_enlightenment_ckpasswd_LDADD = @SUID_LDFLAGS@ -lcrypt
+-endif
++src_bin_enlightenment_ckpasswd_LDADD = @SUID_LDFLAGS@ @CKPASSWD_LIBS@
+ 
+ src_bin_enlightenment_alert_SOURCES = \
+ src/bin/e_alert_main.c
+ 
+ src_bin_enlightenment_alert_LDADD = @E_ALERT_LIBS@ @dlopen_libs@
+ src_bin_enlightenment_alert_CPPFLAGS = @E_ALERT_CFLAGS@
+ 
+ src_bin_enlightenment_filemanager_SOURCES = \
+ src/bin/e_fm_cmdline.c
+ src_bin_enlightenment_filemanager_LDADD = @E_FM_CMDLINE_LIBS@
+ src_bin_enlightenment_filemanager_CPPFLAGS = @E_FM_CMDLINE_CFLAGS@
+ 
+ src_bin_enlightenment_open_SOURCES = \
+ src/bin/e_open.c
+ src_bin_enlightenment_open_LDADD = @E_OPEN_LIBS@
+ src_bin_enlightenment_open_CPPFLAGS = @E_OPEN_CFLAGS@
+ 
+ src_bin_enlightenment_static_grabber_SOURCES = \
+ src/bin/e_static_grab.c
+ src_bin_enlightenment_static_grabber_LDADD = @E_GRABBER_LIBS@
+ src_bin_enlightenment_static_grabber_CPPFLAGS = @E_GRABBER_CFLAGS@
+ 
+ include src/bin/e_fm/Makefile.mk
+ 
+ # HACK! why install-data-hook? install-exec-hook is run after bin_PROGRAMS
+ # and before internal_bin_PROGRAMS are installed. install-data-hook is
+ # run after both
+ setuid_root_mode = a=rx,u+xs
+ enlightenment-sys-install-data-hook:
+ 	@chmod $(setuid_root_mode) $(DESTDIR)$(libdir)/enlightenment/utils/enlightenment_sys$(EXEEXT) || true
+ 	@chmod $(setuid_root_mode) $(DESTDIR)$(libdir)/enlightenment/utils/enlightenment_backlight$(EXEEXT) || true
+-if HAVE_FREEBSD
+ 	@chmod $(setuid_root_mode) $(DESTDIR)$(libdir)/enlightenment/utils/enlightenment_ckpasswd$(EXEEXT) || true
+-endif
+ installed_headersdir = $(prefix)/include/enlightenment
+ installed_headers_DATA = $(ENLIGHTENMENTHEADERS) src/bin/e_fm_shared_types.h
+ INSTALL_DATA_HOOKS += enlightenment-sys-install-data-hook
+ 
+ PHONIES += e enlightenment install-e install-enlightenment
+ e: $(bin_PROGRAMS)
+ enlightenment: e
+ install-e: install-binPROGRAMS
+ install-enlightenment: install-e 
