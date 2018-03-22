@@ -1,68 +1,68 @@
-# $Id$
-# Maintainer: Thomas Bächler <thomas@archlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=bftpd
-pkgver=4.8
+pkgver=4.9
 pkgrel=1
-pkgdesc="Small, easy-to-configure FTP server"
-arch=(x86_64)
-url="https://bftpd.sourceforge.net/"
+pkgdesc='Small, easy-to-configure FTP server'
+url='http://bftpd.sourceforge.net/'
+arch=('x86_64')
 license=('GPL')
-depends=('pam')
-install=bftpd.install
+depends=('pam' 'zlib' 'glibc')
 backup=(etc/bftpd.conf
         etc/logrotate.d/bftpd
         etc/pam.d/bftpd
         etc/xinetd.d/bftpd)
-source=(https://downloads.sourceforge.net/sourceforge/bftpd/bftpd-$pkgver.tar.gz
+source=(https://downloads.sourceforge.net/sourceforge/bftpd/bftpd-${pkgver}.tar.gz
         bftpd.logrotate
         bftpd.pam
         bftpd.xinetd
         bftpd.service
         bftpd.socket
-        bftpd_AT.service)
-sha256sums=('0c80399b0cbdd24c882d59c39b4bd5233fe1a153f5d92f23e3a9496ea4549afe'
-            '83b6c950026ed7c1ac7802f800dd79d494ac395b48f88d57bee55c2122c7f821'
+        bftpd_AT.service
+        bftpd.tmpfiles
+        bftpd-4.9-Makefile.patch)
+sha256sums=('cdd8cdfbca44309bac47b2d6cc1efd7c63ff3535a1803ace89f73dc9128df28e'
+            '4768016884e2aaaaecc1412353f7dfaf19d2dab0e03789c4df9bbae2d56dfb7a'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '18096a2f6914fecd9f36721247d170ba48b986225dae3564cb2d3b0e6f18c35a'
             '6047c33d1694445aa1b0cfad4ba796ff6c1635eb86c8398f39c0f9180d9490be'
             '0f930f803cf40dda1336ddb89e925b8f7b703518484b8a1a41153f0828de404c'
-            '97dba309c60029c498f353b39778c6594deef8a3b98ca09889857ca920674ccc')
+            '97dba309c60029c498f353b39778c6594deef8a3b98ca09889857ca920674ccc'
+            '0be0b772ca19362173152fa7a8d7578faa535995b1e150bafec7a28e649b399f'
+            '93248ffd3f99336e704aeedaaac207cb2e25f64998fd5c274fd29cb548f14acc')
+prepare() {
+  cd ${pkgname}
+  patch -Np1 < ../bftpd-4.9-Makefile.patch
+  # Fix default in config file
+  sed 's|#ROOTDIR="/path/for/anonymous/user"|# bftpd interprets ROOTDIR="%h" (the default), as ROOTDIR="/" for the anonymous user, override it\n  ROOTDIR="/srv/ftp"|' -i bftpd.conf
+  rm -f config.{cache,status}
+  autoreconf -fiv
+}
 
 build() {
-  cd "${srcdir}"/$pkgname
-  # The bftpd author keeps screwing up the release tarballs
-  rm -f config.{cache,status}
-  autoreconf
-  sed 's|$(prefix)/sbin|$(prefix)/bin|g' -i Makefile.in
-  ./configure --prefix=/usr \
-              --enable-pam \
-              --mandir=/usr/share/man \
-              --sysconfdir=/etc \
+  cd ${pkgname}
+    ./configure \
+    --prefix=/usr \
+    --enable-pam \
+    --enable-libz \
+    --mandir=/usr/share/man \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin
   make
 }
 
 package() {
-  cd "${srcdir}"/$pkgname
-  install -d -m755 "${pkgdir}"/usr/{bin,share/man/man8}
-  install -D -m644 "${srcdir}"/bftpd.logrotate "${pkgdir}"/etc/logrotate.d/bftpd
+  cd ${pkgname}
   make DESTDIR="${pkgdir}" install
-  # Remove log file and /var/run from the package
-  # This guy keeps messing up his Makefile, /usr/var, wtf?
-  rm -f "${pkgdir}"/usr/var/log/bftpd.log
-  rmdir "${pkgdir}"/usr/var/{run/bftpd,run,log,}
-  # Install PAM file
-  mkdir -p "${pkgdir}"/etc/pam.d
-  cp "${srcdir}"/bftpd.pam "${pkgdir}"/etc/pam.d/bftpd
-  # Install xinetd file
-  install -D -m644 "${srcdir}"/bftpd.xinetd "${pkgdir}"/etc/xinetd.d/bftpd
-  # Did I mention this guy keeps messing up his Makefiles?
-  mv "${pkgdir}"/usr/etc/bftpd.conf "${pkgdir}"/etc/
-  rmdir "${pkgdir}"/usr/etc
-  # Fix default in config file
-  sed 's|#ROOTDIR="/path/for/anonymous/user"|# bftpd interprets ROOTDIR="%h" (the default), as ROOTDIR="/" for the anonymous user, override it\n  ROOTDIR="/srv/ftp"|' -i "${pkgdir}"/etc/bftpd.conf
-  # Install systemd files
-  install -D -m644 "${srcdir}"/bftpd.service "${pkgdir}"/usr/lib/systemd/system/bftpd.service
-  install -D -m644 "${srcdir}"/bftpd_AT.service "${pkgdir}"/usr/lib/systemd/system/bftpd@.service
-  install -D -m644 "${srcdir}"/bftpd.socket "${pkgdir}"/usr/lib/systemd/system/bftpd.socket
+  rm -rf "${pkgdir}/usr/var"
+  install -Dm 644 ../bftpd.service "${pkgdir}/usr/lib/systemd/system/bftpd.service"
+  install -Dm 644 ../bftpd_AT.service "${pkgdir}/usr/lib/systemd/system/bftpd@.service"
+  install -Dm 644 ../bftpd.socket "${pkgdir}/usr/lib/systemd/system/bftpd.socket"
+  install -Dm 644 ../bftpd.tmpfiles "${pkgdir}/usr/lib/tmpfiles.d/bftpd.conf"
+  install -Dm 644 ../bftpd.logrotate "${pkgdir}/etc/logrotate.d/bftpd"
+  install -Dm 644 ../bftpd.pam "${pkgdir}/etc/pam.d/bftpd"
+  install -Dm 644 ../bftpd.xinetd "${pkgdir}/etc/xinetd.d/bftpd"
 }
+
+# vim: ts=2 sw=2 et:
