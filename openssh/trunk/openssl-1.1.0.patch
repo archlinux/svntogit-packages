@@ -357,19 +357,8 @@ diff -aurp old/kexdhc.c new/kexdhc.c
  	    kex->hostkey_alg, ssh->compat)) != 0)
 diff -aurp old/kexdhs.c new/kexdhs.c
 --- old/kexdhs.c	2018-03-22 16:21:14.000000000 -1000
-+++ new/kexdhs.c	2018-03-23 10:05:03.889621527 -1000
-@@ -87,6 +87,10 @@ kexdh_server(struct ssh *ssh)
- 	ssh_dispatch_set(ssh, SSH2_MSG_KEXDH_INIT, &input_kex_dh_init);
- 	r = 0;
-  out:
-+	if (r != 0) {
-+		if (kex->dh) DH_free(kex->dh);
-+		kex->dh = NULL;
-+	}
- 	return r;
- }
- 
-@@ -163,6 +167,9 @@ input_kex_dh_init(int type, u_int32_t se
++++ new/kexdhs.c	2018-03-23 10:58:58.126733207 -1000
+@@ -163,6 +163,9 @@ input_kex_dh_init(int type, u_int32_t se
  		goto out;
  	/* calc H */
  	hashlen = sizeof(hash);
@@ -379,7 +368,7 @@ diff -aurp old/kexdhs.c new/kexdhs.c
  	if ((r = kex_dh_hash(
  	    kex->hash_alg,
  	    kex->client_version_string,
-@@ -171,10 +178,12 @@ input_kex_dh_init(int type, u_int32_t se
+@@ -171,10 +174,12 @@ input_kex_dh_init(int type, u_int32_t se
  	    sshbuf_ptr(kex->my), sshbuf_len(kex->my),
  	    server_host_key_blob, sbloblen,
  	    dh_client_pub,
@@ -394,7 +383,7 @@ diff -aurp old/kexdhs.c new/kexdhs.c
  
  	/* save session id := H */
  	if (kex->session_id == NULL) {
-@@ -195,12 +204,17 @@ input_kex_dh_init(int type, u_int32_t se
+@@ -195,12 +200,17 @@ input_kex_dh_init(int type, u_int32_t se
  	/* destroy_sensitive_data(); */
  
  	/* send server hostkey, DH pubkey 'f' and singed H */
@@ -416,7 +405,7 @@ diff -aurp old/kexdhs.c new/kexdhs.c
  		r = kex_send_newkeys(ssh);
 diff -aurp old/kexgexc.c new/kexgexc.c
 --- old/kexgexc.c	2018-03-22 16:21:14.000000000 -1000
-+++ new/kexgexc.c	2018-03-23 10:05:03.889621527 -1000
++++ new/kexgexc.c	2018-03-23 11:00:00.132866201 -1000
 @@ -118,11 +118,17 @@ input_kex_dh_gex_group(int type, u_int32
  	p = g = NULL; /* belong to kex->dh now */
  
@@ -439,16 +428,7 @@ diff -aurp old/kexgexc.c new/kexgexc.c
  	debug("SSH2_MSG_KEX_DH_GEX_INIT sent");
  #ifdef DEBUG_KEXDH
  	DHparams_print_fp(stderr, kex->dh);
-@@ -136,6 +142,8 @@ input_kex_dh_gex_group(int type, u_int32
- out:
- 	BN_clear_free(p);
- 	BN_clear_free(g);
-+	DH_free(kex->dh);
-+	kex->dh = NULL;
- 	return r;
- }
- 
-@@ -212,6 +220,10 @@ input_kex_dh_gex_reply(int type, u_int32
+@@ -212,6 +218,10 @@ input_kex_dh_gex_reply(int type, u_int32
  
  	/* calc and verify H */
  	hashlen = sizeof(hash);
@@ -459,7 +439,7 @@ diff -aurp old/kexgexc.c new/kexgexc.c
  	if ((r = kexgex_hash(
  	    kex->hash_alg,
  	    kex->client_version_string,
-@@ -220,12 +232,14 @@ input_kex_dh_gex_reply(int type, u_int32
+@@ -220,12 +230,14 @@ input_kex_dh_gex_reply(int type, u_int32
  	    sshbuf_ptr(kex->peer), sshbuf_len(kex->peer),
  	    server_host_key_blob, sbloblen,
  	    kex->min, kex->nbits, kex->max,
@@ -479,7 +459,7 @@ diff -aurp old/kexgexc.c new/kexgexc.c
  	    hashlen, kex->hostkey_alg, ssh->compat)) != 0)
 diff -aurp old/kexgexs.c new/kexgexs.c
 --- old/kexgexs.c	2018-03-22 16:21:14.000000000 -1000
-+++ new/kexgexs.c	2018-03-23 10:05:03.889621527 -1000
++++ new/kexgexs.c	2018-03-23 11:03:06.045049721 -1000
 @@ -101,11 +101,16 @@ input_kex_dh_gex_request(int type, u_int
  		goto out;
  	}
@@ -500,18 +480,7 @@ diff -aurp old/kexgexs.c new/kexgexs.c
  
  	/* Compute our exchange value in parallel with the client */
  	if ((r = dh_gen_key(kex->dh, kex->we_need * 8)) != 0)
-@@ -115,6 +120,10 @@ input_kex_dh_gex_request(int type, u_int
- 	ssh_dispatch_set(ssh, SSH2_MSG_KEX_DH_GEX_INIT, &input_kex_dh_gex_init);
- 	r = 0;
-  out:
-+	if (r != 0) {
-+		DH_free(kex->dh);
-+		kex->dh = NULL;
-+	}
- 	return r;
- }
- 
-@@ -191,6 +200,10 @@ input_kex_dh_gex_init(int type, u_int32_
+@@ -191,6 +196,10 @@ input_kex_dh_gex_init(int type, u_int32_
  		goto out;
  	/* calc H */
  	hashlen = sizeof(hash);
@@ -522,7 +491,7 @@ diff -aurp old/kexgexs.c new/kexgexs.c
  	if ((r = kexgex_hash(
  	    kex->hash_alg,
  	    kex->client_version_string,
-@@ -199,12 +212,14 @@ input_kex_dh_gex_init(int type, u_int32_
+@@ -199,12 +208,14 @@ input_kex_dh_gex_init(int type, u_int32_
  	    sshbuf_ptr(kex->my), sshbuf_len(kex->my),
  	    server_host_key_blob, sbloblen,
  	    kex->min, kex->nbits, kex->max,
@@ -540,7 +509,7 @@ diff -aurp old/kexgexs.c new/kexgexs.c
  
  	/* save session id := H */
  	if (kex->session_id == NULL) {
-@@ -225,12 +240,17 @@ input_kex_dh_gex_init(int type, u_int32_
+@@ -225,12 +236,17 @@ input_kex_dh_gex_init(int type, u_int32_
  	/* destroy_sensitive_data(); */
  
  	/* send server hostkey, DH pubkey 'f' and singed H */
