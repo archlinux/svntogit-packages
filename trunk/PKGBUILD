@@ -5,11 +5,11 @@
 pkgbase=mesa
 pkgname=('opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgver=18.0.0
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 makedepends=('python2-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
              'libxshmfence' 'libxxf86vm' 'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
-             'elfutils' 'llvm' 'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors')
+             'elfutils' 'llvm' 'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
@@ -30,48 +30,76 @@ prepare() {
   # non-upstreamed ones
   patch -Np1 -i ../0001-glvnd-fix-gl-dot-pc.patch
   
-  autoreconf -fiv
+#  autoreconf -fiv
 }
 
 build() {
-  cd ${srcdir}/mesa-${pkgver}
+#  cd ${srcdir}/mesa-${pkgver}
 
-  ./configure --prefix=/usr \
-    --sysconfdir=/etc \
-    --with-gallium-drivers=r300,r600,radeonsi,nouveau,svga,swrast,virgl,swr \
-    --with-dri-drivers=i915,i965,r200,radeon,nouveau,swrast \
-    --with-platforms=x11,drm,wayland \
-    --with-vulkan-drivers=intel,radeon \
-    --disable-xvmc \
-    --enable-llvm \
-    --enable-llvm-shared-libs \
-    --enable-shared-glapi \
-    --enable-libglvnd \
-    --enable-libunwind \
-    --enable-lmsensors \
-    --enable-egl \
-    --enable-glx \
-    --enable-glx-tls \
-    --enable-gles1 \
-    --enable-gles2 \
-    --enable-gbm \
-    --enable-dri \
-    --enable-gallium-osmesa \
-    --enable-gallium-extra-hud \
-    --enable-texture-float \
-    --enable-xa \
-    --enable-vdpau \
-    --enable-omx-bellagio \
-    --enable-nine \
-    --enable-opencl \
-    --enable-opencl-icd \
-    --with-clang-libdir=/usr/lib
+ # ./configure --prefix=/usr \
+ #   --sysconfdir=/etc \
+ #   --with-gallium-drivers=r300,r600,radeonsi,nouveau,svga,swrast,virgl,swr \
+ #   --with-dri-drivers=i915,i965,r200,radeon,nouveau,swrast \
+ #   --with-platforms=x11,drm,wayland \
+ #   --with-vulkan-drivers=intel,radeon \
+ #   --disable-xvmc \
+ #   --enable-llvm \
+ #   --enable-llvm-shared-libs \
+ #   --enable-shared-glapi \
+ #   --enable-libglvnd \
+ #   --enable-libunwind \
+ #   --enable-lmsensors \
+ #   --enable-egl \
+ #   --enable-glx \
+ #   --enable-glx-tls \
+ #   --enable-gles1 \
+ #   --enable-gles2 \
+ #   --enable-gbm \
+ #   --enable-dri \
+ #   --enable-gallium-osmesa \
+ #   --enable-gallium-extra-hud \
+ #   --enable-texture-float \
+ #   --enable-xa \
+ #   --enable-vdpau \
+ #   --enable-omx-bellagio \
+ #   --enable-nine \
+ #   --enable-opencl \
+ #   --enable-opencl-icd \
+ #   --with-clang-libdir=/usr/lib
 
-  make
+ # make
+
+  arch-meson mesa-$pkgver build \
+    -Dgallium-drivers=r300,r600,radeonsi,nouveau,svga,swrast,virgl,swr \
+    -Ddri-drivers=i915,i965,r200,radeon,nouveau \
+    -Dplatforms=x11,drm,wayland \
+    -Dvulkan-drivers=intel,radeon \
+    -Dgallium-xvmc=false \
+    -Dllvm=true \
+    -Dshared-glapi=true \
+    -Dglvnd=true \
+    -Dlibunwind=true \
+    -Dlmsensors=true \
+    -Degl=true \
+    -Dglx=auto \
+    -Dgles1=true \
+    -Dgles2=true \
+    -Dgbm=true \
+    -Dosmesa=gallium \
+    -Dgallium-extra-hud=true \
+    -Dtexture-float=true \
+    -Dgallium-xa=true \
+    -Dgallium-vdpau=true \
+    -Dgallium-omx=true \
+    -Dgallium-nine=true \
+    -Dgallium-opencl=icd
+
+  ninja -C build
 
   # fake installation
   mkdir $srcdir/fakeinstall
-  make DESTDIR=${srcdir}/fakeinstall install
+#  make DESTDIR=${srcdir}/fakeinstall install
+  DESTDIR=${srcdir}/fakeinstall ninja -C build install
 }
 
 package_opencl-mesa() {
