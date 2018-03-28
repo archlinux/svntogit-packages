@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=tracker-miners
+pkgver=2.0.4
+pkgrel=2
+pkgdesc="Collection of data extractors for Tracker/Nepomuk"
+url="https://wiki.gnome.org/Projects/Tracker"
+arch=(x86_64)
+license=(GPL)
+depends=(tracker gst-plugins-base-libs exempi flac libexif libcue libgrss libgsf libgxps
+         libiptcdata libosinfo libvorbis poppler-glib taglib totem-plparser giflib)
+makedepends=(intltool git python)
+groups=(gnome)
+_commit=ff2a01d9dca36051e6093ea95afe85d31e03681f  # tags/2.0.4^0
+source=("git+https://git.gnome.org/browse/tracker-miners#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib \
+    --enable-unit-tests \
+    --enable-functional-tests \
+    --enable-libflac \
+    --enable-libvorbis \
+    --enable-guarantee-metadata
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd $pkgname
+  # Many tests are broken:
+  # - Assume schemas are installed
+  # - Assume services are autolaunched
+  dbus-run-session make -k check || :
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir/usr/share/tracker-tests"
+}
