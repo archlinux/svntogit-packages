@@ -1,0 +1,43 @@
+From e10c204e1226e94a1eaaeaee076e7e2e5b13c504 Mon Sep 17 00:00:00 2001
+From: Szymon Janc <szymon.janc@codecoup.pl>
+Date: Wed, 4 Apr 2018 09:28:56 +0200
+Subject: gatt: Fix crash with BR/EDR only adapter
+
+adapter->database can be NULL if controller is BR/EDR only or LE was
+disabled. Make btd_gatt_database_restore_svc_chng_ccc accept NULL
+pointer and silently ignore it similiar to rest of btd_gatt_database
+API.
+
+Invalid read of size 8
+   at 0x164DCB: btd_gatt_database_restore_svc_chng_ccc (src/bluez-git/src/bluetoothd)
+   by 0x17B70F: read_info_complete (src/bluez-git/src/bluetoothd)
+   by 0x1A7E58: request_complete (src/bluez-git/src/bluetoothd)
+   by 0x1A89AD: can_read_data (src/bluez-git/src/bluetoothd)
+   by 0x1B5752: watch_callback (src/bluez-git/src/bluetoothd)
+   by 0x4E852C5: g_main_context_dispatch (in /usr/lib/libglib-2.0.so.0.5600.0)
+   by 0x4E856A0: ??? (in /usr/lib/libglib-2.0.so.0.5600.0)
+   by 0x4E859D1: g_main_loop_run (in /usr/lib/libglib-2.0.so.0.5600.0)
+   by 0x125058: main (src/bluez-git/src/bluetoothd)
+ Address 0x40 is not stack'd, malloc'd or (recently) free'd
+---
+ src/gatt-database.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/gatt-database.c b/src/gatt-database.c
+index 1cdc72e..0ac5b75 100644
+--- a/src/gatt-database.c
++++ b/src/gatt-database.c
+@@ -3330,6 +3330,9 @@ void btd_gatt_database_restore_svc_chng_ccc(struct btd_gatt_database *database)
+ 	uint8_t value[4];
+ 	uint16_t handle, ccc_handle;
+ 
++	if (!database)
++		return;
++
+ 	handle = gatt_db_attribute_get_handle(database->svc_chngd);
+ 	ccc_handle = gatt_db_attribute_get_handle(database->svc_chngd_ccc);
+ 
+-- 
+cgit v1.1
+
+
