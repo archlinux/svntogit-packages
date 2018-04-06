@@ -36,7 +36,7 @@ index 0c4e24b..ce92df5 100644
  if (BOTAN_FOUND)
     if (NOT Botan_FIND_QUIETLY)
 diff --git a/plugins/qca-botan/qca-botan.cpp b/plugins/qca-botan/qca-botan.cpp
-index f387575..ab28e57 100644
+index f387575..92820a0 100644
 --- a/plugins/qca-botan/qca-botan.cpp
 +++ b/plugins/qca-botan/qca-botan.cpp
 @@ -23,13 +23,18 @@
@@ -168,20 +168,22 @@ index f387575..ab28e57 100644
  		return makeKey(secret, salt, keyLength, *iterationCount);
  	}
  
-@@ -304,7 +282,12 @@ public:
+@@ -304,7 +282,14 @@ public:
  
      int blockSize() const
      {
 +#if BOTAN_VERSION_CODE < BOTAN_VERSION_CODE_FOR(2,0,0)
  	return Botan::block_size_of(m_algoName);
 +#else
-+	if(const Botan::BlockCipher *bc = Botan::BlockCipher::create(m_algoName).release())
++	if(const std::unique_ptr<Botan::BlockCipher> bc = Botan::BlockCipher::create(m_algoName))
 +	    return bc->block_size();
++        
++        throw Botan::Algorithm_Not_Found(m_algoName);
 +#endif
      }
  
      QCA::AuthTag tag() const
-@@ -337,23 +320,31 @@ public:
+@@ -337,23 +322,31 @@ public:
  
      QCA::KeyLength keyLength() const
      {
@@ -197,19 +199,19 @@ index f387575..ab28e57 100644
 +#if BOTAN_VERSION_CODE < BOTAN_VERSION_CODE_FOR(2,0,0)
          if(const Botan::BlockCipher *bc = af.prototype_block_cipher(m_algoName))
 +#else
-+        if(const Botan::BlockCipher *bc = Botan::BlockCipher::create(m_algoName).release())
++        if(const std::unique_ptr<Botan::BlockCipher> bc = Botan::BlockCipher::create(m_algoName))
 +#endif
              kls = bc->key_spec();
 +#if BOTAN_VERSION_CODE < BOTAN_VERSION_CODE_FOR(2,0,0)
          else if(const Botan::StreamCipher *sc = af.prototype_stream_cipher(m_algoName))
 +#else
-+        else if(const Botan::StreamCipher *sc = Botan::StreamCipher::create(m_algoName).release())
++        else if(const std::unique_ptr<Botan::StreamCipher> sc = Botan::StreamCipher::create(m_algoName))
 +#endif
              kls = sc->key_spec();
 +#if BOTAN_VERSION_CODE < BOTAN_VERSION_CODE_FOR(2,0,0)
          else if(const Botan::MessageAuthenticationCode *mac = af.prototype_mac(m_algoName))
 +#else
-+        else if(const Botan::MessageAuthenticationCode *mac = Botan::MessageAuthenticationCode::create(m_algoName).release())
++        else if(const std::unique_ptr<Botan::MessageAuthenticationCode> mac = Botan::MessageAuthenticationCode::create(m_algoName))
 +#endif
              kls = mac->key_spec();
          return QCA::KeyLength( kls.minimum_keylength(),
@@ -219,7 +221,7 @@ index f387575..ab28e57 100644
      }
  
  
-@@ -379,7 +370,9 @@ class botanProvider : public QCA::Provider
+@@ -379,7 +372,9 @@ class botanProvider : public QCA::Provider
  public:
      void init()
      {
@@ -229,7 +231,7 @@ index f387575..ab28e57 100644
      }
  
      ~botanProvider()
-@@ -538,7 +531,9 @@ public:
+@@ -538,7 +533,9 @@ public:
  	    return 0;
      }
  private:
