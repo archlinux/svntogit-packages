@@ -3,16 +3,15 @@
 # Contributor: Nezmer <Nezmer@gmail.com>
 
 pkgname=fribidi
-pkgver=1.0.1+8+gdf7252b
+pkgver=1.0.2
 pkgrel=1
 pkgdesc="A Free Implementation of the Unicode Bidirectional Algorithm"
 arch=('x86_64')
 license=('LGPL')
 url="https://github.com/fribidi/fribidi/"
-makedepends=(git glib2)
 depends=('glibc')
-options=('!makeflags')
-_commit=df7252be3fd94ceae8141a09ee86421fdd8b3b7e  # master
+makedepends=('git' 'meson')
+_commit=f2c9d50722cb60d0cdec3b1bafba9029770e86b4  # tags/v1.0.2^0
 source=("git+https://github.com/fribidi/fribidi#commit=$_commit")
 md5sums=('SKIP')
 
@@ -21,26 +20,20 @@ pkgver() {
   git describe --tags | sed -e 's/-/+/g' -e 's/^v//'
 }
 
-
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd "${srcdir}/$pkgname"
-  ./configure --prefix=/usr
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
-}
-
-package() {
-  cd "${srcdir}/$pkgname"
-
-  make DESTDIR="${pkgdir}" install
+  arch-meson $pkgname build -D docs=false
+  ninja -C build
 }
 
 check() {
-  cd "${srcdir}/$pkgname"
-  make check
+  cd build
+  meson test
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
 }
