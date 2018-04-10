@@ -7,20 +7,23 @@
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
-pkgver=2.26
-pkgrel=11
+pkgver=2.27
+pkgrel=1
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs)
 options=(!strip staticlibs)
-_commit=de51f431ed6226ec68ca76e578f2cbd55b6262cb
-source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
+_commit=23158b08a0908f381459f273a984c6fd328363cb
+#source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
+source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
         bz20338.patch)
-md5sums=('SKIP'
+validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8) # Carlos O'Donell
+md5sums=('898cd5656519ffbc3a03fe811dd89e82'
+         'SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
@@ -29,6 +32,7 @@ md5sums=('SKIP'
 prepare() {
   mkdir -p glibc-build lib32-glibc-build
 
+  [[ -d glibc-$pkgver ]] && ln -s glibc-$pkgver glibc 
   cd glibc
 
   local i; for i in ${source[@]}; do
@@ -50,10 +54,9 @@ build() {
       --enable-bind-now
       --enable-lock-elision
       --enable-multi-arch
-      --enable-obsolete-nsl
-      --enable-obsolete-rpc
       --enable-stack-protector=strong
       --enable-stackguard-randomization
+      --enable-static-pie
       --disable-profile
       --disable-werror
   )
@@ -155,35 +158,22 @@ package_glibc() {
 
   install -m755 "$srcdir/locale-gen" "$pkgdir/usr/bin"
 
-  # create /etc/locale.gen
+  # Create /etc/locale.gen
   install -m644 "$srcdir/locale.gen.txt" "$pkgdir/etc/locale.gen"
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
     "$srcdir/glibc/localedata/SUPPORTED" >> "$pkgdir/etc/locale.gen"
 
-  # Do not strip the following files for improved debugging support
-  # ("improved" as in not breaking gdb and valgrind...):
-  #   ld-${pkgver}.so
-  #   libc-${pkgver}.so
-  #   libpthread-${pkgver}.so
-  #   libthread_db-1.0.so
-
   if check_option 'debug' n; then
-    cd "$pkgdir"
-    strip $STRIP_BINARIES usr/bin/{gencat,getconf,getent,iconv,iconvconfig} \
-                          usr/bin/{ldconfig,locale,localedef,nscd,makedb} \
-                          usr/bin/{pcprofiledump,pldd,rpcgen,sln,sprof} \
-                          usr/lib/getconf/*
+    find "$pkgdir"/usr/bin -type f -executable -exec strip $STRIP_BINARIES {} + 2> /dev/null || true
+    find "$pkgdir"/usr/lib -name '*.a' -type f -exec strip $STRIP_STATIC {} + 2> /dev/null || true
 
-    strip $STRIP_STATIC usr/lib/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
-                        usr/lib/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
-                        usr/lib/lib{resolv,rpcsvc,rt,util}.a \
-                        usr/lib/lib{m-${pkgver},mvec{,_nonshared}}.a
-
-    strip $STRIP_SHARED usr/lib/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
-                        usr/lib/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
-                        usr/lib/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
-                        usr/lib/lib{memusage,pcprofile,SegFault}.so \
-                        usr/lib/{audit,gconv}/*.so usr/lib/libmvec-*.so || true
+    # Do not strip these for gdb and valgrind functionality, but strip the rest
+    find "$pkgdir"/usr/lib \
+      -not -name 'ld-*.so' \
+      -not -name 'libc-*.so' \
+      -not -name 'libpthread-*.so' \
+      -not -name 'libthread_db-*.so' \
+      -name '*-*.so' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
 }
 
@@ -210,15 +200,12 @@ package_lib32-glibc() {
   ln -s ../lib/locale "$pkgdir/usr/lib32/locale"
 
   if check_option 'debug' n; then
-    cd $pkgdir
-    strip $STRIP_BINARIES usr/lib32/getconf/*
-    strip $STRIP_STATIC usr/lib32/lib{anl,BrokenLocale,c{,_nonshared},crypt}.a \
-                        usr/lib32/lib{dl,g,ieee,mcheck,nsl,pthread{,_nonshared}}.a \
-                        usr/lib32/lib{resolv,rpcsvc,rt,util,m}.a
-    strip $STRIP_SHARED usr/lib32/lib{anl,BrokenLocale,cidn,crypt}-${pkgver}.so \
-                        usr/lib32/libnss_{compat,db,dns,files,hesiod,nis,nisplus}-*.so \
-                        usr/lib32/lib{dl,m,nsl,resolv,rt,util}-${pkgver}.so \
-                        usr/lib32/lib{memusage,pcprofile,SegFault}.so \
-                        usr/lib32/{audit,gconv}/*.so || true
+    find "$pkgdir"/usr/lib32 -name '*.a' -type f -exec strip $STRIP_STATIC {} + 2> /dev/null || true
+    find "$pkgdir"/usr/lib32 \
+      -not -name 'ld-*.so' \
+      -not -name 'libc-*.so' \
+      -not -name 'libpthread-*.so' \
+      -not -name 'libthread_db-*.so' \
+      -name '*-*.so' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
 }
