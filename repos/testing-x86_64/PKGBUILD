@@ -8,7 +8,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.27
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -56,7 +56,6 @@ build() {
       --enable-multi-arch
       --enable-stack-protector=strong
       --enable-stackguard-randomization
-      --enable-static-pie
       --disable-profile
       --disable-werror
   )
