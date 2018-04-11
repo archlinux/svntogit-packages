@@ -2,7 +2,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=srt
-pkgver=1.2.3
+pkgver=1.3.0
 pkgrel=1
 pkgdesc="Secure Reliable Transport library"
 url="https://www.srtalliance.org/"
@@ -10,9 +10,11 @@ arch=(x86_64)
 license=(MPL2)
 depends=(openssl)
 makedepends=(git cmake ninja)
-_commit=1367914ea5d7e26be8274e2fffe8b3e7b05ad193  # tags/v1.2.3
-source=("git+https://github.com/Haivision/srt#commit=$_commit")
-sha256sums=('SKIP')
+_commit=52769952acb191a90a3b6a0523cae99791e91df8  # tags/v1.3.0
+source=("git+https://github.com/Haivision/srt#commit=$_commit"
+        no-rpath.diff)
+sha256sums=('SKIP'
+            'ce9a97d661d796da85a7e4faf9c70c27368d00eb505f85c03a31bba8f22e6847')
 
 pkgver() {
   cd $pkgname
@@ -21,13 +23,19 @@ pkgver() {
 
 prepare() {
   mkdir build
+  cd $pkgname
+  patch -Np1 -i ../no-rpath.diff
 }
 
 build() {
   cd build
   cmake -G Ninja ../srt \
-    -DCMAKE_INSTALL_PREFIX=/usr
-  ninja
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_BINDIR=bin \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_INCLUDEDIR=include \
+    -DENABLE_TESTING=True
+  cmake --build .
 }
 
 check() {
@@ -36,7 +44,13 @@ check() {
 }
 
 package() {
-  DESTDIR="$pkgdir" ninja -C build install
+  DESTDIR="$pkgdir" cmake --build build --target install
+  rm "$pkgdir"/usr/bin/*-test
+
+  # Build tries this but fails when DESTDIR is set
+  ln -s srt-live-transmit "$pkgdir/usr/bin/stransmit"
+
+  ln -s srt-ffplay "$pkgdir/usr/bin/sfplay"
 }
 # vim:set ts=2 sw=2:
 
