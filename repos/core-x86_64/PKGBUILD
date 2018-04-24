@@ -6,10 +6,10 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=7.3.1+20180312
+pkgver=7.3.1+20180406
 _majorver=${pkgver:0:1}
 _islver=0.18
-pkgrel=2
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -17,21 +17,21 @@ url='http://gcc.gnu.org'
 makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python)
 checkdepends=(dejagnu inetutils)
 options=(!emptydirs)
-source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
 #source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
+source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
         c89 c99
         bz84080.patch)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               13975A70E63C361C73AE69EF6EEB81F8981C74C7) # richard.guenther@gmail.com
-sha256sums=('c52618f656f2102b3544419e7d0a8a4f4e6ff052783865202be73edf1a40e28b'
+sha256sums=('41675861b7fdb4ebfb5cbbe1bce456d4e4061ce4df95096075756eaae3263e00'
             'SKIP'
             '6b8b0fd7f81d0a957beb3679c81bbb34ccc7568d5682844d8924424a0dadcb1b'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'bce05807443558db55f0d6b4dae37a678ea1bb3388b541c876fe3d110e3717e7')
 
-_svnrev=258469
+_svnrev=259195
 _svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 
@@ -45,6 +45,7 @@ snapshot() {
 
   mv gcc-r${_svnrev} gcc-${_pkgver}
   tar cf - gcc-${_pkgver} | xz > gcc-${_pkgver}.tar.xz
+  rm -rf gcc-${_pkgver}
   gpg -b gcc-${_pkgver}.tar.xz
   scp gcc-${_pkgver}.tar.xz{,.sig} sources.archlinux.org:/srv/ftp/other/gcc/
 
@@ -129,7 +130,7 @@ check() {
 package_gcc-libs() {
   pkgdesc='Runtime libraries shipped by GCC'
   groups=(base)
-  depends=('glibc>=2.26')
+  depends=('glibc>=2.27')
   options+=(!strip)
   provides=($pkgname-multilib libgo.so libgfortran.so)
   replaces=($pkgname-multilib)
@@ -359,7 +360,7 @@ package_gcc-go() {
 
 package_lib32-gcc-libs() {
   pkgdesc='32-bit runtime libraries shipped by GCC'
-  depends=('lib32-glibc>=2.26')
+  depends=('lib32-glibc>=2.27')
   groups=(multilib-devel)
   options=(!emptydirs !strip)
 
