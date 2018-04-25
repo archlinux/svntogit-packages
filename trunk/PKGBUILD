@@ -5,56 +5,59 @@
 
 pkgbase=python-beaker
 pkgname=('python-beaker' 'python2-beaker')
-pkgver=1.8.1
-pkgrel=2
+pkgver=1.9.1
+pkgrel=1
 arch=('any')
 license=('custom')
 pkgdesc="Caching and sessions WSGI middleware for use with web applications and stand-alone Python scripts and applications"
 url="http://beaker.groovie.org/"
-makedepends=('python-setuptools' 'python2-setuptools' 'git')
-checkdepends=('python-nose' 'python2-nose' 'python-mock' 'python2-mock' 'python-sqlalchemy' 'python2-sqlalchemy'
-              'python-crypto' 'python2-crypto' 'python-coverage' 'python2-coverage' 'python-webtest' 'python2-webtest'
-              'python-beautifulsoup4' 'python2-beautifulsoup4')
-source=("git+https://github.com/bbangert/beaker.git#tag=$pkgver")
-md5sums=('SKIP')
+makedepends=('python-setuptools' 'python2-setuptools' 'python2-funcsigs')
+checkdepends=('python-nose' 'python2-nose' 'python-mock' 'python2-mock' 'python-sqlalchemy'
+              'python2-sqlalchemy' 'python-pycryptodomex' 'python2-pycryptodomex' 'python-coverage'
+              'python2-coverage' 'python-webtest' 'python2-webtest' 'python-redis' 'python2-redis'
+              'python-pymongo' 'python2-pymongo' 'python-pylibmc' 'python2-pylibmc' 'redis'
+              'python-cryptography' 'python2-cryptography' 'python-memcached' 'python2-memcached'
+              'memcached' 'mongodb' 'pifpaf')
+source=("$pkgbase-$pkgver.tar.gz::https://github.com/bbangert/beaker/archive/$pkgver.tar.gz")
+sha512sums=('3b121037d56e07d27fc11dc4ff9ed47725f009d020d84c923e75a533717b8fad514b3d670f613b89db274fb8563a2ee93b8697e526efb9628ec18c5c1094b699')
 
 prepare() {
-    cp -a beaker{,-py2}
+  sed -i "s/'pycryptodome'/'pycryptodomex'/g" beaker-$pkgver/setup.py
+  sed -i 's/from Crypto./from Cryptodome./' beaker-$pkgver/beaker/crypto/*.py
+  cp -a beaker-$pkgver{,-py2}
 
-    sed -i "s#/usr/bin/python#/usr/bin/python3#" beaker/beaker/crypto/pbkdf2.py
-    sed -i "s#/usr/bin/python#/usr/bin/python2#" beaker-py2/beaker/crypto/pbkdf2.py
+  sed -i "s#/usr/bin/python#/usr/bin/python3#" beaker-$pkgver/beaker/crypto/pbkdf2.py
+  sed -i "s#/usr/bin/python#/usr/bin/python2#" beaker-$pkgver-py2/beaker/crypto/pbkdf2.py
 }
 
 build() {
-    cd "$srcdir"/beaker
-    python3 setup.py build
+  cd "$srcdir"/beaker-$pkgver
+  python3 setup.py build
 
-    cd "$srcdir"/beaker-py2
-    python2 setup.py build
+  cd "$srcdir"/beaker-$pkgver-py2
+  python2 setup.py build
 }
 
 check() {
-    cd "$srcdir"/beaker
-    mkdir tests_py3
-    2to3 -w -n -o tests_py3 tests/*.py
-    PYTHONPATH="$PWD/build/lib:$PYTHONPATH" nosetests3 --py3where=tests_py3
+  cd "$srcdir"/beaker-$pkgver
+  pifpaf run memcached --port 11211 -- pifpaf run mongodb --port 27017 -- pifpaf run redis python setup.py nosetests || warning "Tests failed"
 
-    cd "$srcdir"/beaker-py2
-    PYTHONPATH="$PWD/build/lib:$PYTHONPATH" nosetests2
+  cd "$srcdir"/beaker-$pkgver-py2
+  pifpaf run memcached --port 11211 -- pifpaf run mongodb --port 27017 -- pifpaf run redis python2 setup.py nosetests
 }
 
 package_python-beaker() {
-    depends=('python')
+  depends=('python')
 
-    cd beaker
-    python3 setup.py install --root="$pkgdir" --optimize=1
-    install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/python-beaker/LICENSE
+  cd beaker-$pkgver
+  python setup.py install --root="$pkgdir" --optimize=1
+  install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/python-beaker/LICENSE
 }
 
 package_python2-beaker() {
-    depends=('python2')
+  depends=('python2-funcsigs')
 
-    cd beaker-py2
-    python2 setup.py install --root="$pkgdir" --optimize=1
-    install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/python2-beaker/LICENSE
+  cd beaker-$pkgver-py2
+  python2 setup.py install --root="$pkgdir" --optimize=1
+  install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/python2-beaker/LICENSE
 }
