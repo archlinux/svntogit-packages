@@ -1,0 +1,56 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=gnome-photos
+pkgver=3.28.0
+pkgrel=2
+pkgdesc="Access, organize, and share your photos on GNOME"
+arch=(x86_64)
+url="https://wiki.gnome.org/Apps/Photos"
+license=(GPL)
+depends=(exempi gtk3 libexif librsvg babl gegl gsettings-desktop-schemas grilo-plugins lcms2
+         tracker-miners geocode-glib grilo gfbgraph libgdata libgexiv2 libraw gnome-online-accounts
+         gnome-online-miners dleyna-server dleyna-renderer libdazzle)
+makedepends=(itstool python yelp-tools autoconf-archive git)
+groups=(gnome)
+_commit=cceaa5f8543a995b186cafb5443f3dd1a9c13c9c  # tags/3.28.0^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-photos.git#commit=$_commit"
+        "git+https://git.gnome.org/browse/libgd")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git config --local submodule.libgd.url "$srcdir/libgd"
+  git submodule update
+
+  git cherry-pick -n 4479b7da00ba788e85b463e06dbf57f633ec2c01
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --libexecdir=/usr/lib --enable-compile-warnings=minimum
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd $pkgname
+  # disabled: needs dogtail which we don't have
+  #make check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
