@@ -1,0 +1,115 @@
+From 2c04198877dd8b25a787af6bd7928c6c7ddb86d2 Mon Sep 17 00:00:00 2001
+Message-Id: <2c04198877dd8b25a787af6bd7928c6c7ddb86d2.1524910574.git.jan.steffens@gmail.com>
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Sat, 28 Apr 2018 12:12:27 +0200
+Subject: [PATCH] Allow D-Bus to launch the prompter using systemd
+
+This applies only when a user bus is in use. It is a better fit for a
+system where the gpg-agent is also supervised and spawns pinentry-gnome3
+as a peer on the user bus.
+---
+ configure.ac                                    | 11 +++++++++++
+ gcr/Makefile.am                                 | 17 ++++++++++++-----
+ gcr/gcr-prompter.service.in                     |  7 +++++++
+ ...org.gnome.keyring.PrivatePrompter.service.in |  1 +
+ gcr/org.gnome.keyring.SystemPrompter.service.in |  1 +
+ 5 files changed, 32 insertions(+), 5 deletions(-)
+ create mode 100644 gcr/gcr-prompter.service.in
+
+diff --git a/configure.ac b/configure.ac
+index 06dfc0c..c8ace9b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -234,6 +234,17 @@ fi
+ 
+ AC_SUBST(DBUS_SERVICES_DIR)
+ 
++AC_ARG_WITH(user-services,
++		  [AC_HELP_STRING([--with-user-services=<dir>],
++		  [where systemd user services directory is])])
++if ! test -z "$with_user_services" ; then
++	USER_SERVICES_DIR="$with_user_services"
++else
++	USER_SERVICES_DIR="$libdir/systemd/user"
++fi
++
++AC_SUBST(USER_SERVICES_DIR)
++
+ # --------------------------------------------------------------------
+ # Compilation and linking options
+ #
+diff --git a/gcr/Makefile.am b/gcr/Makefile.am
+index 692875b..15c1e8f 100644
+--- a/gcr/Makefile.am
++++ b/gcr/Makefile.am
+@@ -188,24 +188,31 @@ pkgconfig_DATA += \
+ gcr-base-$(GCR_MAJOR).pc: gcr/gcr-base.pc
+ 	$(AM_V_GEN) cp gcr/gcr-base.pc gcr-base-$(GCR_MAJOR).pc
+ 
+-service_in_files = \
++dbus_service_in_files = \
+ 	gcr/org.gnome.keyring.SystemPrompter.service.in \
+ 	gcr/org.gnome.keyring.PrivatePrompter.service.in
+-servicedir       = $(DBUS_SERVICES_DIR)
+-service_DATA     = $(service_in_files:.service.in=.service)
++dbus_servicedir       = $(DBUS_SERVICES_DIR)
++dbus_service_DATA     = $(dbus_service_in_files:.service.in=.service)
++
++user_service_in_files = \
++	gcr/gcr-prompter.service.in
++user_servicedir       = $(USER_SERVICES_DIR)
++user_service_DATA     = $(user_service_in_files:.service.in=.service)
+ 
+ EXTRA_DIST += \
+ 	gcr/gcr-base.pc.in \
+ 	gcr/gcr-marshal.list \
+ 	gcr/gcr-oids.list \
+ 	gcr/gcr-mkoids \
+ 	$(DBUS_XML_DEFINITIONS) \
+ 	gcr/gcr-base.symbols \
+-	$(service_in_files) \
++	$(dbus_service_in_files) \
++	$(user_service_in_files) \
+ 	gcr/gcr-version.h.in
+ 
+ CLEANFILES += \
+-	$(service_DATA) \
++	$(dbus_service_DATA) \
++	$(user_service_DATA) \
+ 	gcr-base-actual.abi \
+ 	gcr-base-expected.abi \
+ 	Gcr-3.broken.gir
+diff --git a/gcr/gcr-prompter.service.in b/gcr/gcr-prompter.service.in
+new file mode 100644
+index 0000000..11b20d6
+--- /dev/null
++++ b/gcr/gcr-prompter.service.in
+@@ -0,0 +1,7 @@
++[Unit]
++Description=GNOME crypto prompt UI service
++
++[Service]
++ExecStart=@libexecdir@/gcr-prompter
++Type=dbus
++BusName=org.gnome.keyring.SystemPrompter
+diff --git a/gcr/org.gnome.keyring.PrivatePrompter.service.in b/gcr/org.gnome.keyring.PrivatePrompter.service.in
+index 542a376..a3aa8aa 100644
+--- a/gcr/org.gnome.keyring.PrivatePrompter.service.in
++++ b/gcr/org.gnome.keyring.PrivatePrompter.service.in
+@@ -1,3 +1,4 @@
+ [D-BUS Service]
+ Name=org.gnome.keyring.PrivatePrompter
+ Exec=@libexecdir@/gcr-prompter
++SystemdService=gcr-prompter.service
+diff --git a/gcr/org.gnome.keyring.SystemPrompter.service.in b/gcr/org.gnome.keyring.SystemPrompter.service.in
+index 8d0063c..4add95a 100644
+--- a/gcr/org.gnome.keyring.SystemPrompter.service.in
++++ b/gcr/org.gnome.keyring.SystemPrompter.service.in
+@@ -1,3 +1,4 @@
+ [D-BUS Service]
+ Name=org.gnome.keyring.SystemPrompter
+ Exec=@libexecdir@/gcr-prompter
++SystemdService=gcr-prompter.service
+-- 
+2.17.0
+
