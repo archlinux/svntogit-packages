@@ -1,0 +1,72 @@
+From 2802259184ada839793152ed0a0f130065f82dfd Mon Sep 17 00:00:00 2001
+From: Steve Dickson <steved@redhat.com>
+Date: Thu, 12 Apr 2018 10:24:02 -0400
+Subject: [PATCH] clnt_create: Restore using reserve ports for client
+ connections
+
+Commit 46e04a73 changed clnt_create(3) not to
+use reserve ports when binding a connection to
+a server.
+
+For certain legacy apps, like some of the NIS commands,
+the client has to used reserve port to be able
+to communicate with the server.
+
+So the use of reserve ports in clnt_create(3)
+has been restored.
+
+Signed-off-by: Steve Dickson <steved@redhat.com>
+---
+ src/clnt_generic.c | 4 +---
+ src/rpc_soc.c      | 5 +----
+ 2 files changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/src/clnt_generic.c b/src/clnt_generic.c
+index e5a314f..3f3dabf 100644
+--- a/src/clnt_generic.c
++++ b/src/clnt_generic.c
+@@ -47,7 +47,6 @@
+ 
+ extern bool_t __rpc_is_local_host(const char *);
+ int __rpc_raise_fd(int);
+-extern int __binddynport(int fd);
+ 
+ #ifndef NETIDLEN
+ #define	NETIDLEN 32
+@@ -341,8 +340,7 @@ clnt_tli_create(int fd, const struct netconfig *nconf,
+ 		servtype = nconf->nc_semantics;
+ 		if (!__rpc_fd2sockinfo(fd, &si))
+ 			goto err;
+-		if (__binddynport(fd) == -1)
+-			goto err;
++		bindresvport(fd, NULL);
+ 	} else {
+ 		if (!__rpc_fd2sockinfo(fd, &si))
+ 			goto err;
+diff --git a/src/rpc_soc.c b/src/rpc_soc.c
+index af6c482..5a6eeb7 100644
+--- a/src/rpc_soc.c
++++ b/src/rpc_soc.c
+@@ -67,8 +67,6 @@
+ 
+ extern mutex_t	rpcsoc_lock;
+ 
+-extern int __binddynport(int fd);
+-
+ static CLIENT *clnt_com_create(struct sockaddr_in *, rpcprog_t, rpcvers_t,
+     int *, u_int, u_int, char *, int);
+ static SVCXPRT *svc_com_create(int, u_int, u_int, char *);
+@@ -147,8 +145,7 @@ clnt_com_create(raddr, prog, vers, sockp, sendsz, recvsz, tp, flags)
+ 	bindaddr.maxlen = bindaddr.len =  sizeof (struct sockaddr_in);
+ 	bindaddr.buf = raddr;
+ 
+-	if (__binddynport(fd) == -1)
+-		goto err;
++	bindresvport(fd, NULL);
+ 	cl = clnt_tli_create(fd, nconf, &bindaddr, prog, vers,
+ 				sendsz, recvsz);
+ 	if (cl) {
+-- 
+1.8.3.1
+
+
