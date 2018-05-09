@@ -17,10 +17,16 @@ set ruler                       " show the cursor position all the time
 set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc,.png,.jpg
 
 " Move the swap file location to protect against CVE-2017-1000382
-if ! isdirectory('~/.vim/swap/')
-  silent! call system('install -dm 700 ~/.vim/swap')
+if exists('$XDG_CACHE_HOME')
+	let &g:directory=$XDG_CACHE_HOME
+else
+	let &g:directory=$HOME . '/.cache'
 endif
-set directory=~/.vim/swap/
+let &g:directory.='/vim/swap//'
+" Create swap directory if it doesn't exist
+if ! isdirectory(expand(&g:directory))
+  silent! call mkdir(expand(&g:directory), 'p', 0700)
+endif
 
 if has('gui_running')
   " Make shift-insert work like in Xterm
