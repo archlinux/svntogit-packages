@@ -3,35 +3,42 @@
 
 pkgname=babl
 pkgver=0.1.46
-pkgrel=1
+pkgrel=2
 pkgdesc="Dynamic, any to any, pixel format conversion library"
 arch=(x86_64)
 url="http://gegl.org/babl/"
 license=(LGPL3)
 depends=(glibc)
-makedepends=(git meson)
+makedepends=(git)
 _commit=e92ced2c54250af1dddb58f76ff1678d74a30dcf  # tags/BABL_0_1_46^0
 source=("git+https://git.gnome.org/browse/babl#commit=$_commit")
 sha256sums=('SKIP')
+
+# Don't port to meson until babl's runtime cpu detection works there
 
 pkgver() {
   cd $pkgname
   git describe --tags | sed 's/^BABL_//;s/_/./g;s/-/+/g'
 }
 
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
 build() {
-  arch-meson $pkgname build \
-    -D enable-sse4_1=false \
-    -D enable-f16c=false \
-    -D with-docs=false
-  ninja -C build
+  cd $pkgname
+  ./configure --prefix=/usr
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
 }
 
 check() {
-  cd build
-  meson test
+  make -C $pkgname check
 }
 
 package() {
-  DESTDIR="$pkgdir" ninja -C build install
+  DESTDIR="$pkgdir" make -C $pkgname install
 }
+
+# vim:set sw=2 et:
