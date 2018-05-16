@@ -1,0 +1,55 @@
+# $Id$
+# Maintainer: Sébastien Luttringer
+# Contributor: Valere Monseur <valere_monseur@hotmail.com>
+# Contributor: Alessandro Sagratini <ale_sagra@hotmail.com>
+# Contributor: Kevin Edmonds <edmondskevin@hotmail.com>
+
+pkgname=conntrack-tools
+pkgver=1.4.5
+pkgrel=1
+pkgdesc='Userspace tools to interact with the Netfilter connection tracking system'
+arch=('x86_64')
+url='https://www.netfilter.org/projects/conntrack-tools/'
+license=('GPL2')
+makedepends=('systemd')
+depends=('glibc' 'libtirpc' 'libnetfilter_conntrack' 'libnetfilter_cttimeout'
+         'libnetfilter_cthelper' 'libnetfilter_queue' 'libmnl' 'libsystemd'
+         'libnfnetlink')
+backup=('etc/conntrackd.conf')
+validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4') # Netfilter Core Team
+source=("http://www.netfilter.org/projects/$pkgname/files/$pkgname-$pkgver.tar.bz2"{,.sig}
+        'conntrackd.service')
+install=$pkgname.install
+sha1sums=('7d03a8d6d9ef56a9980ebfe25a282123807f8dcb'
+          'SKIP'
+          'ab888d59b98b673709d2d89554c668e2bea0cb86')
+
+prepare() {
+  sed -i -e 's,/etc/conntrackd/,/etc/,' -e 's,/var/lock/,/run/lock/,' \
+    $pkgname-$pkgver/include/conntrackd.h
+}
+
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure  \
+    LIBNETFILTER_CTHELPER_CFLAGS='-I /usr/include/tirpc/' \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin \
+    --enable-systemd
+  make
+}
+
+package() {
+  # install binaries
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+  # systemd
+  cd "$pkgdir"
+  install -D -m 644 "$srcdir/conntrackd.service" usr/lib/systemd/system/conntrackd.service
+  # install empty configuration files
+  install -D -m 644 /dev/null etc/conntrackd.conf
+}
+
+# vim:set ts=2 sw=2 et:
