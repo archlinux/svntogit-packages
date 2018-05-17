@@ -5,13 +5,13 @@
 
 pkgname=file
 pkgver=5.33
-pkgrel=2
+pkgrel=3
 pkgdesc='File type identification utility'
 arch=('x86_64')
 license=('custom')
 groups=('base' 'base-devel')
 url='https://www.darwinsys.com/file/'
-depends=('glibc' 'zlib' 'libseccomp')
+depends=('glibc' 'zlib')
 source=("ftp://ftp.astron.com/pub/$pkgname/$pkgname-$pkgver.tar.gz"{,.asc})
 validpgpkeys=('BE04995BA8F90ED0C0C176C471112AB16CB33B3A') # Christos Zoulas
 md5sums=('bbe6db96e3a9ca9554dce647390540ef'
@@ -32,7 +32,17 @@ prepare() {
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr --datadir=/usr/share/file --enable-fsect-man5
+
+  # seccomp breaks file -z foo.xz
+  # does a whole pipe-fork-exec dance with /bin/xz, so difficult to fix
+  # this breaks makepkg, specifically on the linux PKGBUILD's patch-*.xz
+
+  ./configure \
+    --prefix=/usr \
+    --datadir=/usr/share/file \
+    --enable-fsect-man5 \
+    --disable-libseccomp
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
