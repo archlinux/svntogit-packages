@@ -3,10 +3,10 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=xorg-server
-pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest' 
+pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xdmx' 'xorg-server-xvfb' 'xorg-server-xnest'
          'xorg-server-xwayland' 'xorg-server-common' 'xorg-server-devel')
 pkgver=1.20.0
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
@@ -16,12 +16,12 @@ makedepends=('xorgproto' 'pixman' 'libx11' 'mesa' 'mesa-libgl' 'xtrans'
              'libxmu' 'libxrender' 'libxi' 'libxaw' 'libdmx' 'libxtst' 'libxres'
              'xorg-xkbcomp' 'xorg-util-macros' 'xorg-font-util' 'libepoxy'
              'xcb-util' 'xcb-util-image' 'xcb-util-renderutil' 'xcb-util-wm' 'xcb-util-keysyms'
-             'libxshmfence' 'libunwind' 'systemd' 'wayland-protocols' 'meson') # 'git')
+             'libxshmfence' 'libunwind' 'systemd' 'wayland-protocols' 'egl-wayland' 'meson') # 'git')
 #_commit=d0d1a694f967af770fba0d36043fd5218ff20984 # branch 1.19
 
 #source=("git+https://anongit.freedesktop.org/git/xorg/xserver.git#commit=$_commit"
 source=(https://xorg.freedesktop.org/releases/individual/xserver/${pkgbase}-${pkgver}.tar.bz2{,.sig}
-        xwayland-config.h.meson.in # missing from tarball
+        'xwayland-config.h.meson.in::https://cgit.freedesktop.org/xorg/xserver/plain/include/xwayland-config.h.meson.in?id=xorg-server-1.20.0'
         xserver-autobind-hotplug.patch
         xvfb-run # with updates from FC master
         xvfb-run.1)
@@ -31,7 +31,7 @@ validpgpkeys=('7B27A3F1A6E18CD9588B4AE8310180050905E40C'
               '995ED5C8A6138EB0961F18474C09DD83CAAA50B2')
 sha512sums=('1489e8511c9da682ef0460182dfeeddd241c72d4ef4d206d9706f1e39572c09953df851fab18cefb65a1ee4c6710c6ba13c63c9c9fc0bc1b5f12c50780412cde'
             'SKIP'
-            '4ed2a66dd98697accef34f84d44490594bf071232fa74640d514a170f1fbe760b292a0b53fe47080b73acf6083cea57e35f11cfd42ba9dc211b8e8dcac343dfc'
+            'd707e0870367de2665c3b82f09564d17ed3f62c9e8b4bd471c11af1fb1e9249e306e92c7961a04e355756eec9f5271bc8e66999e56c73c31bc9da4127ff30a8e'
             'd84f4d63a502b7af76ea49944d1b21e2030dfd250ac1e82878935cf631973310ac9ba1f0dfedf10980ec6c7431d61b7daa4b7bbaae9ee477b2c19812c1661a22'
             '55bbf520333f6e818b0125b37179a7039b69a0d3d2242b80a08da003d94cbf6c1fb912d880abcce318a85d7947e3eff8fbc4cdf57d7118572e8ebc56c4569af6'
             'de5e2cb3c6825e6cf1f07ca0d52423e17f34d70ec7935e9dd24be5fb9883bf1e03b50ff584931bd3b41095c510ab2aa44d2573fd5feaebdcb59363b65607ff22')
@@ -42,6 +42,7 @@ sha512sums=('1489e8511c9da682ef0460182dfeeddd241c72d4ef4d206d9706f1e39572c09953d
 #}
 
 prepare() {
+  # missing from tarball
   cp xwayland-config.h.meson.in ${pkgbase}-${pkgver}/include/
 
   #cd xserver
@@ -69,19 +70,18 @@ build() {
     -D xorg=true \
     -D xephyr=true \
     -D xwayland=true \
+    -D xwayland_eglstream=true \
     -D glamor=true \
     -D udev=true \
     -D systemd_logind=true \
     -D suid_wrapper=true \
     -D xkb_dir=/usr/share/X11/xkb \
     -D xkb_output_dir=/var/lib/xkb
-     
-#     -D xwayland_eglstream=true \ # requires weston-eglstream from AUR
 
   # Print config
   meson configure build
   ninja -C build
- 
+
   # fake installation to be seperated into packages
   DESTDIR="${srcdir}/fakeinstall" ninja -C build install
 }
@@ -110,7 +110,7 @@ package_xorg-server-common() {
 
 package_xorg-server() {
   pkgdesc="Xorg X server"
-  depends=(libepoxy libxfont2 pixman xorg-server-common libunwind 
+  depends=(libepoxy libxfont2 pixman xorg-server-common libunwind
            dbus libgl xf86-input-libinput nettle
            libpciaccess libdrm libxshmfence) # FS#52949
 
@@ -121,7 +121,6 @@ package_xorg-server() {
   replaces=('glamor-egl' 'xf86-video-modesetting')
   install=xorg-server.install
 
-  
   _install fakeinstall/usr/bin/{Xorg,cvt,gtf}
   ln -s /usr/bin/Xorg "${pkgdir}/usr/bin/X"
   _install fakeinstall/usr/lib/Xorg{,.wrap}
@@ -178,7 +177,7 @@ package_xorg-server-xnest() {
 
 package_xorg-server-xdmx() {
   pkgdesc="Distributed Multihead X Server and utilities"
-  depends=(libxfont2 libxi libxaw libxrender libdmx libxfixes 
+  depends=(libxfont2 libxi libxaw libxrender libdmx libxfixes
            pixman xorg-server-common nettle)
 
   _install fakeinstall/usr/bin/{Xdmx,dmx*,vdltodmx,xdmxconfig}
