@@ -5,7 +5,7 @@
 
 pkgname=file
 pkgver=5.33
-pkgrel=1
+pkgrel=3
 pkgdesc='File type identification utility'
 arch=('x86_64')
 license=('custom')
@@ -32,7 +32,17 @@ prepare() {
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr --datadir=/usr/share/file --enable-fsect-man5
+
+  # seccomp breaks file -z foo.xz
+  # does a whole pipe-fork-exec dance with /bin/xz, so difficult to fix
+  # this breaks makepkg, specifically on the linux PKGBUILD's patch-*.xz
+
+  ./configure \
+    --prefix=/usr \
+    --datadir=/usr/share/file \
+    --enable-fsect-man5 \
+    --disable-libseccomp
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
