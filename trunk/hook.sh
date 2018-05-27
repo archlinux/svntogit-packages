@@ -23,62 +23,119 @@ run() {
 	"$@" > /dev/null
 }
 
-# check kernel is valid for action
-# it means kernel and its headers are installed
-# $1: kernel version
-check_kernel() {
-	local kver="$1"; shift
-	if [[ ! -d "$install_tree/$kver/kernel" ]]; then
-		echo "==> No kernel $kver modules. You must install them to use DKMS!"
-		return 1
-	elif [[ ! -d "$install_tree/$kver/build/include" ]]; then
-		echo "==> No kernel $kver headers. You must install them to use DKMS!"
-		return 1
-	fi
+# check whether the dependencies of a module are installed
+# $1: module name/module version
+# $2: kernel version
+check_dependency() {
+	local -a BUILD_DEPENDS
+	readarray -t BUILD_DEPENDS <<<$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "${BUILD_DEPENDS[@]}")
+	[[ -z ${BUILD_DEPENDS[@]} ]] && unset BUILD_DEPENDS
+	local mod
+	for mod in "${BUILD_DEPENDS[@]}"; do
+		if ! [[ "$(dkms status -m "$mod" -k "$2")" =~ :[[:space:]]installed$ ]]; then
+			return 1
+		fi
+	done
 	return 0
+}
+
+# check whether the modules should be built with this kernel version
+# $1: module name/module version
+# $2: kernel version
+check_buildexclusive() {
+	local BUILD_EXCLUSIVE_KERNEL
+	readarray -t BUILD_EXCLUSIVE_KERNEL <<<$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "$BUILD_EXCLUSIVE_KERNEL")
+	[[ "$2" =~ $BUILD_EXCLUSIVE_KERNEL ]]
 }
 
 # handle actions on module addition/upgrade/removal
 # $1: module name
 # $2: module version
-# $3: dkms action
 parse_module() {
 	pushd "$install_tree" >/dev/null
 	local path
 	for path in */build/; do
 		local kver="${path%%/*}"
-		dkms_register "$1" "$2" "$kver" "$3"
+		dkms_register "$1" "$2" "$kver"
 	done
 	popd >/dev/null
 }
 
 # handle actions on kernel addition/upgrade/removal
 # $1: kernel version
-# $2: dkms action
 parse_kernel() {
 	local path
 	for path in "$source_tree"/*-*/dkms.conf; do
 		if [[ -f "$path" && "$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-			dkms_register "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$1" "$2"
+			dkms_register "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$1"
 		fi
 	done
 }
 
-# register a dkms call
+# register a dkms module to install/remove
 # this function suppress echo call for a module
-# $1: module name, $2: module version, $3: kernel version, $4: action
+# $1: module name, $2: module version, $3: kernel version
 dkms_register() {
-	DKMS_ACTION["$1/$2/$3"]="$4"
+	DKMS_MODULES["$1/$2/$3"]=''
 }
 
-# run registered dkms commands
-dkms_run() {
+# install registered modules
+dkms_install() {
 	local nvk mod kver
-	for nvk in "${!DKMS_ACTION[@]}"; do
+	local -i retry=1
+
+	while (( $retry > 0 )); do
+		retry=0
+		for nvk in "${!DKMS_MODULES[@]}"; do
+			mod=${nvk%/*}
+			kver=${nvk##*/}
+			# do not build excluded modules
+			if ! check_buildexclusive "$mod" "$kver"; then
+				unset DKMS_MODULES[$nvk]
+				continue
+			# skip modules with missing kernel headers
+			elif [[ ! -d "$install_tree/$kver/build/include" ]]; then
+				DKMS_MODULES[$nvk]="Missing kernel headers"
+				continue
+			# skip modules with missing kernel package
+			elif [[ ! -d "$install_tree/$kver/kernel" ]]; then
+				DKMS_MODULES[$nvk]="Missing kernel modules tree"
+				continue
+			# postone modules with missing dependencies
+			elif ! check_dependency "$mod" "$kver"; then
+				DKMS_MODULES[$nvk]="Missing dependency"
+				continue
+			fi
+			# give it a try dkms
+			run dkms install "$mod" -k "$kver"
+			unset DKMS_MODULES[$nvk]
+			# maybe this module was a dep of another, so we retry
+			retry=1
+		done
+	done
+}
+
+# remove registered modules when built/installed
+dkms_remove() {
+	local nvk mod kver
+	for nvk in "${!DKMS_MODULES[@]}"; do
 		mod=${nvk%/*}
 		kver=${nvk##*/}
-		check_kernel "$kver" || continue
-		run dkms "${DKMS_ACTION[$nvk]}" "$mod" -k "$kver"
+		state=$(dkms status -m "$mod" -k "$kver")
+		if [[ "$state" =~ :[[:space:]](built|installed)$ ]]; then
+			run dkms remove "$mod" -k "$kver"
+		fi
+		unset DKMS_MODULES[$nvk]
+	done
+}
+
+# show information about failed modules
+show_errors() {
+	local nvk mod kver
+	for nvk in "${!DKMS_MODULES[@]}"; do
+		mod=${nvk%/*}
+		kver=${nvk##*/}
+		echo "==> Unable to $DKMS_ACTION module $mod for kernel $kver: ${DKMS_MODULES[$nvk]}."
 	done
 }
 
@@ -92,11 +149,16 @@ main() {
 		exit 1
 	fi
 
-	# check args count
-	if (( $# < 1 )); then
-		echo "usage: ${0##*/} dkms-arguments" >&2
-		exit 1
-	fi
+	# register DKMS action
+	case "$1" in
+		install|remove)
+			local -r DKMS_ACTION="$1"
+			;;
+		*)
+			echo "usage: ${0##*/} install|remove" >&2
+			exit 1
+			;;
+	esac
 
 	# dkms path from framework config
 	# note: the alpm hooks which trigger this script use static path
@@ -113,19 +175,22 @@ main() {
 		fi
 	done
 
-	# Storage for DKMS action to run
-	declare -A DKMS_ACTION
+	# storage for DKMS modules to install/remove
+	# we use associate arrays to prevent duplicate
+	declare -A DKMS_MODULES
 
 	# parse stdin paths to guess what do do
 	while read -r path; do
 		if [[ "/$path" =~ ^$source_tree/([^/]+)-([^/]+)/dkms\.conf$ ]]; then
-			parse_module "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$@"
+			parse_module "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
 		elif [[ "/$path" =~ ^$install_tree/([^/]+)/ ]]; then
-			parse_kernel "${BASH_REMATCH[1]}" "$@"
+			parse_kernel "${BASH_REMATCH[1]}"
 		fi
 	done
 
-	dkms_run
+	dkms_$DKMS_ACTION
+
+	show_errors
 
 	return 0
 }
