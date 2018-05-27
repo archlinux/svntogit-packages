@@ -152,7 +152,7 @@ main() {
 	# register DKMS action
 	case "$1" in
 		install|remove)
-			local -r DKMS_ACTION="$1"
+			declare -r DKMS_ACTION="$1"
 			;;
 		*)
 			echo "usage: ${0##*/} install|remove" >&2
