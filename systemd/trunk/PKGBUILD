@@ -19,10 +19,10 @@ makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
 options=('strip')
 validpgpkeys=('63CDA1E5D3FC22B998D20DD6327F26951A015CC4'  # Lennart Poettering <lennart@poettering.net>
               '5C251B5FC54EB2F80F407AAAC54CA336CFEB557E') # Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>
-source=('git+https://github.com/systemd/systemd-stable'
-        'git+https://github.com/systemd/systemd'
+source=(# fragment is latest tag for source verification, final checkout in prepare()
+        "git+https://github.com/systemd/systemd-stable#tag=v${pkgver%.*}?signed"
+        "git+https://github.com/systemd/systemd#tag=v${pkgver%.*}?signed"
         '0001-Use-Arch-Linux-device-access-groups.patch'
-        'gnupg-keys.gpg'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
@@ -43,7 +43,6 @@ source=('git+https://github.com/systemd/systemd-stable'
 sha512sums=('SKIP'
             'SKIP'
             '9348683829190628e25b7b3300fd880c426d555bde330d5fc5150a9a54b3ad9d4d1f2e69ea1dc6d6f086693dacc53c5af30f1fa7ad9b479791fd77bcdafa430e'
-            '42dcacfa0b0c68b04267446d2c360e508dab13f06c07506f46632b19fca0561c27bb5813cd916f7d28b53f853f7197f721c1a02aacd7a3cc8d8742bb6a393cff'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
             '01de24951a05d38eca6b615a7645beb3677ca0e0f87638d133649f6dc14dcd2ea82594a60b793c31b14493a286d1d11a0d25617f54dbfa02be237652c8faa691'
             'a25b28af2e8c516c3a2eec4e64b8c7f70c21f974af4a955a4a9d45fd3e3ff0d2a98b4419fe425d47152d5acae77d64e69d8d014a7209524b75a81b0edb10bf3a'
@@ -70,41 +69,12 @@ _backports=(
 _reverts=(
 )
 
-_validate_tag() (
-  local success fingerprint trusted status tag=v${pkgver%.*}
-
-  cd "$srcdir/$pkgbase-stable"
-  parse_gpg_statusfile /dev/stdin < <(git verify-tag --raw "$tag" 2>&1)
-
-  if (( ! success )); then
-    error 'failed to validate tag %s\n' "$tag"
-    return 1
-  fi
-
-  if ! in_array "$fingerprint" "${validpgpkeys[@]}" && (( ! trusted )); then
-    error 'unknown or untrusted public key: %s\n' "$fingerprint"
-    return 1
-  fi
-
-  case $status in
-    'expired')
-      warning 'the signature has expired'
-      ;;
-    'expiredkey')
-      warning 'the key has expired'
-      ;;
-  esac
-
-  return 0
-)
-
 prepare() {
   cd "$pkgbase-stable"
 
-  # import gpg keys for verification
-  gpg --import ../gnupg-keys.gpg
-
+  # add upstream repository for cherry-picking
   git remote add -f upstream ../systemd
+  # checkout the latest stable commit
   git checkout "$_commit"
 
   local c
@@ -130,8 +100,6 @@ pkgver() {
 }
 
 build() {
-  _validate_tag || return
-
   local timeservers=({0..3}.arch.pool.ntp.org)
 
   local meson_options=(
