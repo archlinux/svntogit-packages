@@ -6,9 +6,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=8.1.0
+pkgver=8.1.1+20180531
 _majorver=${pkgver:0:1}
-_islver=0.18
+_islver=0.19
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -17,20 +17,20 @@ url='http://gcc.gnu.org'
 makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python)
 checkdepends=(dejagnu inetutils)
 options=(!emptydirs)
-#source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
-source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
+#source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
+source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.bz2
         c89 c99)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('1d1866f992626e61349a1ccd0b8d5253816222cdc13390dcfaa74b093aa2b153'
+sha256sums=('a92eb923a4368548666acfc619074c76c4f6cdc34c9348f7e7aa56656aaee0d5'
             'SKIP'
-            '6b8b0fd7f81d0a957beb3679c81bbb34ccc7568d5682844d8924424a0dadcb1b'
+            'd59726f34f7852a081fbd3defd1ab2136f174110fc2e0c8d10bb122173fa9ed8'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
-_svnrev=259195
+_svnrev=260987
 _svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 
@@ -128,7 +128,8 @@ package_gcc-libs() {
   groups=(base)
   depends=('glibc>=2.27')
   options+=(!strip)
-  provides=($pkgname-multilib libgo.so libgfortran.so libubsan.so libasan.so)
+  provides=($pkgname-multilib libgo.so libgfortran.so libubsan.so libasan.so
+            libtsan.so liblsan.so)
   replaces=($pkgname-multilib)
 
   cd gcc-build
@@ -214,6 +215,8 @@ package_gcc() {
   make -C $CHOST/libquadmath DESTDIR="$pkgdir" install-nodist_libsubincludeHEADERS
   make -C $CHOST/libsanitizer DESTDIR="$pkgdir" install-nodist_{saninclude,toolexeclib}HEADERS
   make -C $CHOST/libsanitizer/asan DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
+  make -C $CHOST/libsanitizer/tsan DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
+  make -C $CHOST/libsanitizer/lsan DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
   make -C $CHOST/libmpx DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
   make -C $CHOST/32/libgomp DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
   make -C $CHOST/32/libitm DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
