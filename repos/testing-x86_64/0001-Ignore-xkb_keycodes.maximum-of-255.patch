@@ -1,0 +1,51 @@
+From 52195d453cae1369a90b4fd08793df9bb0869192 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Thu, 7 Jun 2018 11:25:01 +1000
+Subject: [PATCH xkbcomp] Ignore xkb_keycodes.maximum of > 255
+
+Continuation from 7fdfabd75 "keycodes: Ignore high keycodes"
+
+A keymap with a key > 255 will have a xkb_keycodes.maximum of that keycode.
+Let's not throw a fatal error on that, just crop it back to the maximum of
+255. This doesn't set the "high_keycode_warned" on purpose so we get this for
+the first key that actually matters.
+
+Reproducible with xkeyboard-config 2.24 which has a maximum of 374.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ keycodes.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/keycodes.c b/keycodes.c
+index d5ac762..c21f7c4 100644
+--- a/keycodes.c
++++ b/keycodes.c
+@@ -663,7 +663,7 @@ HandleKeyNameVar(VarDef * stmt, KeyNamesInfo * info)
+         ACTION1("Assignment to field %s ignored\n", field.str);
+         return 0;
+     }
+-    if ((tmp.ival < XkbMinLegalKeyCode) || (tmp.ival > XkbMaxLegalKeyCode))
++    if ((tmp.ival < XkbMinLegalKeyCode))
+     {
+         ERROR3
+             ("Illegal keycode %d (must be in the range %d-%d inclusive)\n",
+@@ -671,6 +671,14 @@ HandleKeyNameVar(VarDef * stmt, KeyNamesInfo * info)
+         ACTION1("Value of \"%s\" not changed\n", field.str);
+         return 0;
+     }
++    if ((tmp.ival > XkbMaxLegalKeyCode))
++    {
++        WARN2("Unsupported maximum keycode %d, clipping.\n", tmp.ival);
++        ACTION2("X11 cannot support keycodes above 255.\n");
++        info->explicitMax = XkbMaxLegalKeyCode;
++        info->effectiveMax = XkbMaxLegalKeyCode;
++        return 1;
++    }
+     if (which == MIN_KEYCODE_DEF)
+     {
+         if ((info->explicitMax > 0) && (info->explicitMax < tmp.ival))
+-- 
+2.14.4
+
+
