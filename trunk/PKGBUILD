@@ -4,16 +4,16 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=libfprint
-pkgver=0.7.0
+pkgver=0.8.1
 pkgrel=1
 pkgdesc="Library for fingerprint readers"
 arch=(x86_64)
 url="https://www.freedesktop.org/wiki/Software/fprint/libfprint"
 license=(LGPL)
 depends=(libusb nss pixman glib2)
-makedepends=(git)
+makedepends=(git meson gtk-doc)
 groups=(fprint)
-_commit=d82847a6b4bbd2864388f2bf8e6a2b9d1aed05c4  # tags/V_0_7_0^0
+_commit=6f6127cbb640a8549eb971aa73d6fe8543d3c40b  # master~1
 source=("git+https://anongit.freedesktop.org/git/libfprint/libfprint#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -24,17 +24,20 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  # Fixup missing tag
+  git tag -f V_0_8_1 6f6127cbb640a8549eb971aa73d6fe8543d3c40b
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc --disable-static
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build -D x11-examples=false
+  ninja -C build
+}
+
+check() {
+  cd build
+  meson test
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
