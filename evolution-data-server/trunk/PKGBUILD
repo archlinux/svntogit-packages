@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=evolution-data-server
-pkgver=3.28.2
+pkgver=3.28.3
 pkgrel=1
 pkgdesc="Centralized access to appointments and contacts"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -10,7 +10,7 @@ arch=(x86_64)
 depends=(gnome-online-accounts nss krb5 libgweather libical db libgdata libphonenumber)
 makedepends=(intltool gperf gobject-introspection vala gtk-doc boost git cmake ninja)
 license=(GPL)
-_commit=92004cb91579d03c773565a836971c32e63362ed  # tags/3.28.2^0
+_commit=2f829f8be300b7041e81315edd1e716e757dd685  # tags/3.28.3^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution-data-server.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -20,16 +20,13 @@ pkgver() {
 }
 
 prepare() {
+  mkdir build
   cd $pkgname
 }
 
 build() {
-  cd $pkgname
-
-  # http://site.icu-project.org/download/61#TOC-Migration-Issues
-  CXXFLAGS+=' -DU_USING_ICU_NAMESPACE=1'
-
-  cmake . -G Ninja \
+  cd build
+  cmake ../$pkgname -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
     -DSYSCONF_INSTALL_DIR=/etc \
@@ -38,17 +35,15 @@ build() {
     -DENABLE_UOA=OFF \
     -DENABLE_GTK_DOC=ON \
     -DWITH_PHONENUMBER=ON
-  ninja
+  cmake --build .
 }
 
 check() {
-  cd $pkgname
   # libedata-book tests fail because they try to
   # mkdir /usr/lib/evolution-data-server/camel-providers
-  ninja test || :
+  cmake --build build --target test || :
 }
 
 package() {
-  cd $pkgname
-  DESTDIR="$pkgdir" ninja install
+  DESTDIR="$pkgdir" cmake --build build --target install
 }
