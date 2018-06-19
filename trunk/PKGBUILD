@@ -4,7 +4,7 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.28.2
+pkgver=3.28.3
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -15,8 +15,8 @@ depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
 options=(!emptydirs)
-_commit=1ef6a4cbab1ffe06c56c96e1d05c85a07f514f19  # tags/3.28.2^0
-source=("git+https://git.gnome.org/browse/evolution#commit=$_commit")
+_commit=abb462aa2c09b7e8ac1e2a993d366c553e7e569b  # tags/3.28.3^0
+source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -24,15 +24,20 @@ pkgver() {
   git describe --tags | sed 's/^EVOLUTION_//;s/_/./g;s/-/+/g'
 }
 
-build() {
+prepare() {
+  mkdir build
   cd $pkgbase
-  cmake . -G Ninja \
+}
+
+build() {
+  cd build
+  cmake ../$pkgbase -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
     -DSYSCONF_INSTALL_DIR=/etc \
     -DENABLE_SMIME=ON \
     -DENABLE_GTK_DOC=ON
-  ninja
+  cmake --build .
 }
 
 package_evolution() {
@@ -41,13 +46,14 @@ package_evolution() {
               'evolution-bogofilter: Bogofilter spam check plugin')
   groups=(gnome-extra)
 
-  DESTDIR="$pkgdir" ninja -C $pkgbase install
+  DESTDIR="$pkgdir" cmake --build build --target install
 
 ### Split
-  for _x in bogofilter spamassassin; do
-    mkdir -p $_x/usr/{lib/evolution/modules,share/metainfo}
-    mv {"$pkgdir",$_x}/usr/lib/evolution/modules/module-$_x.so
-    mv {"$pkgdir",$_x}/usr/share/metainfo/org.gnome.Evolution-$_x.metainfo.xml
+  local x
+  for x in bogofilter spamassassin; do
+    mkdir -p $x/usr/{lib/evolution/modules,share/metainfo}
+    mv {"$pkgdir",$x}/usr/lib/evolution/modules/module-$x.so
+    mv {"$pkgdir",$x}/usr/share/metainfo/org.gnome.Evolution-$x.metainfo.xml
   done
 }
 
