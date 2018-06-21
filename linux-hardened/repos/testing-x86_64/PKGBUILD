@@ -7,7 +7,7 @@ pkgbase=linux-hardened
 _srcname=linux-4.17
 _pkgver=4.17.2
 pkgver=${_pkgver}.a
-pkgrel=1
+pkgrel=2
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
@@ -35,7 +35,7 @@ sha256sums=('9faa1dd896eaea961dc6e886697c0b3301277102e5bc976b2758f9a62d3ccd13'
             'SKIP'
             'c8d5c08c36dd6ac00a3b0e8ba8f113acd1703bf39838bfefb1ce8195da979234'
             'SKIP'
-            'd53f199b729dbe4e3f1652d1dae85a90d27486121cad68bf8627f2d93c95a278'
+            'cf49a3ee5b8e21d4da6859840e8d2078b834aeb6daf8e19b180db0074b77882d'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
