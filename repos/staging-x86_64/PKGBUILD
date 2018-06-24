@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=lighttpd
+pkgver=1.4.49
+pkgrel=2
+pkgdesc='A secure, fast, compliant and very flexible web-server'
+license=('custom')
+arch=('x86_64')
+url="http://www.lighttpd.net/"
+depends=('pcre' 'util-linux' 'systemd')
+makedepends=('libmariadbclient' 'lua' 'libxml2' 'e2fsprogs' 'sqlite' 'gdbm' 'pkgconfig')
+optdepends=('libxml2: mod_webdav'
+            'lua: mod_cml/mod_magnet'
+            'libmariadbclient: mod_mysql_vhost/mod_authn_mysql'
+            'sqlite: mod_webdav')
+backup=('etc/lighttpd/lighttpd.conf' 'etc/logrotate.d/lighttpd')
+options=('emptydirs')
+source=("https://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-${pkgver}.tar.xz"{,.asc}
+        'lighttpd.logrotate.d' 'lighttpd.conf' 'lighttpd.tmpfiles' 'lighttpd.service')
+sha512sums=('de766da68b4cacfb6c322210eafe819b6423334272e9fae4688c2282a66a2e55aaf580c5fdbf02676ed6f7b32d13f2f28cefd22518f77127055ec336ec5d6784'
+            'SKIP'
+            'b67f6683c55f4d63bf3e42878165a5f56d30bab056e6474f4652f050c8f783ceb7c1246969b7186afa2a43e22204dc8a9785bd5599f112aa61e8361b4369e064'
+            'b28f6171a96cf4d293ccf92914f1d1696007acc647c6c24cc5f309da0860356864618865afcc6f0aa7616ffb70405b8e1fefd12ccd5685effc2aa7c0b72be1a5'
+            '0079d6fd80ca42fa5384838b3df68d25000fb7a5a92ea9fb02f6a18cdfb85b23279c78b881e21270e7e450ee3ae28ea839932f3268b826b52478079e510ecd33'
+            '2caf419d96ddfc3c4d832483e0d243463632823df1b2bcde212c46a932b5fd6d9ca28aab8139aa234854e0e91f85d4245ab7c9a4c304fb36b8cd1dde7908a5bd')
+validpgpkeys=('C7CA1E9E29DC77F5480894B2E0E7D0171E95BAD7'
+              '649D0DD767FF206202A76C5158F14A786FE198C8'
+              'EAAF41A8BE3BB8D001CACD136DE62CA242909B84')
+
+build() {
+	cd $srcdir/$pkgname-$pkgver
+
+	./configure --prefix=/usr \
+		--sbindir=/usr/bin \
+		--libdir=/usr/lib/lighttpd/ \
+		--sysconfdir=/etc/lighttpd \
+		--with-mysql \
+		--with-ldap \
+		--with-attr \
+		--with-openssl \
+		--with-kerberos5 \
+		--without-fam \
+		--with-webdav-props \
+		--with-webdav-locks \
+		--with-gdbm \
+		--with-lua
+	sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+	make
+}
+
+check() {
+	cd $srcdir/$pkgname-$pkgver
+	make check
+}
+
+package() {
+	cd $srcdir/$pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+
+	install -D -m644 $srcdir/lighttpd.logrotate.d $pkgdir/etc/logrotate.d/lighttpd
+	install -D -m644 $srcdir/lighttpd.conf $pkgdir/etc/lighttpd/lighttpd.conf
+	install -d -m700 -o http -g http $pkgdir/var/{log,cache}/lighttpd/
+	install -D -m644 ${srcdir}/lighttpd.tmpfiles ${pkgdir}/usr/lib/tmpfiles.d/lighttpd.conf
+	install -D -m644 ${srcdir}/lighttpd.service ${pkgdir}/usr/lib/systemd/system/lighttpd.service
+
+	pushd doc/config >/dev/null
+	find . -type f ! -name 'Makefile*' -exec install -D -m644 {} ${pkgdir}/usr/share/doc/lighttpd/config/{} \;
+	popd >/dev/null
+
+	install -D -m644 COPYING $pkgdir/usr/share/licenses/$pkgname/COPYING
+}
