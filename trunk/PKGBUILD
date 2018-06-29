@@ -8,33 +8,30 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.10.10
+pkgver=1.12.0
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
+url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
-url="https://wiki.gnome.org/Projects/NetworkManager"
 _pppver=2.4.7
 makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver" modemmanager
              dbus-glib iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
-             glib2-docs dhcpcd)
+             glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl)
 checkdepends=(libx11 python-dbus)
-_commit=25c3239d04e26a3bcf2f75582f4f3edddf827580  # tags/1.10.10^0
+_commit=8964dbe8bc9cbe7300a48bffe86faee6b149fbf2  # tags/1.12.0^0
 source=("git+https://anongit.freedesktop.org/git/NetworkManager/NetworkManager#commit=$_commit")
 sha256sums=('SKIP')
-
-prepare() {
-  mkdir -p libnm{,-glib}/usr/{include,lib/{girepository-1.0,pkgconfig},share/{gir-1.0,gtk-doc/html,vala/vapi}}
-
-  cd NetworkManager
-  git cherry-pick -n 4d1f090aedf05c0e2955d431638e311d1e18a52f
-  NOCONFIGURE=1 ./autogen.sh
-}
 
 pkgver() {
   cd NetworkManager
   git describe | sed 's/-dev/dev/;s/-rc/rc/;s/-/+/g'
+}
+
+prepare() {
+  cd NetworkManager
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
@@ -46,12 +43,11 @@ build() {
     --sbindir=/usr/bin \
     --libexecdir=/usr/lib \
     --disable-ifcfg-rh \
-    --disable-ifcfg-suse \
-    --disable-ifnet \
     --disable-ifupdown \
     --disable-lto \
     --disable-more-logging \
     --disable-more-warnings \
+    --disable-qt \
     --disable-static \
     --enable-bluez5-dun \
     --enable-concheck \
@@ -74,13 +70,15 @@ build() {
     --with-dhclient=/usr/bin/dhclient \
     --with-dhcpcd-supports-ipv6 \
     --with-dhcpcd=/usr/bin/dhcpcd \
-    --with-dist-version="$pkgver-$pkgrel, Arch Linux" \
+    --with-dist-version="$pkgver-$pkgrel" \
     --with-dnsmasq=/usr/bin/dnsmasq \
     --with-dnssec-trigger=/usr/lib/dnssec-trigger/dnssec-trigger-script \
     --with-hostname-persist=default \
     --with-iptables=/usr/bin/iptables \
+    --with-iwd \
     --with-kernel-firmware-dir=/usr/lib/firmware \
     --with-libnm-glib \
+    --with-libpsl \
     --with-modem-manager-1 \
     --with-nmcli \
     --with-nmtui \
@@ -96,6 +94,7 @@ build() {
     --with-udev-dir=/usr/lib/udev \
     --with-wext \
     --without-consolekit \
+    --without-dhcpcanon \
     --without-libaudit \
     --without-more-asserts \
     --without-netconfig \
@@ -108,23 +107,32 @@ build() {
 }
 
 check() {
-  cd NetworkManager
   # netns tests fail in our containers
-  make -k check || :
+  make -C NetworkManager -k check || :
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
 }
 
 package_networkmanager() {
   depends=(libnm-glib iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
-           bluez-libs)
+           bluez-libs libpsl)
   optdepends=('dnsmasq: connection sharing'
               'bluez: Bluetooth support'
               'ppp: dialup connection support'
-              'modemmanager: cellular network support')
+              'modemmanager: cellular network support'
+              'iwd: wpa_supplicant alternative')
   backup=('etc/NetworkManager/NetworkManager.conf')
   groups=('gnome')
 
-  cd NetworkManager
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" make -C NetworkManager install
 
   # packaged configuration
   install -Dm644 /dev/stdin "$pkgdir/usr/lib/NetworkManager/conf.d/20-connectivity.conf" <<END
@@ -141,31 +149,22 @@ END
 END
 
 ### Split libnm
-
-  cd ../libnm
-  mv "$pkgdir"/usr/include/libnm usr/include
-  mv "$pkgdir"/usr/lib/girepository-1.0/NM-* usr/lib/girepository-1.0
-  mv "$pkgdir"/usr/lib/libnm.* usr/lib
-  mv "$pkgdir"/usr/lib/pkgconfig/libnm.pc usr/lib/pkgconfig
-  mv "$pkgdir"/usr/share/gir-1.0/NM-* usr/share/gir-1.0
-  mv "$pkgdir"/usr/share/gtk-doc/html/libnm usr/share/gtk-doc/html
-  mv "$pkgdir"/usr/share/vala/vapi/libnm.* usr/share/vala/vapi
+  _pick libnm "$pkgdir"/usr/include/libnm
+  _pick libnm "$pkgdir"/usr/lib/girepository-1.0/NM-*
+  _pick libnm "$pkgdir"/usr/lib/libnm.*
+  _pick libnm "$pkgdir"/usr/lib/pkgconfig/libnm.pc
+  _pick libnm "$pkgdir"/usr/share/gir-1.0/NM-*
+  _pick libnm "$pkgdir"/usr/share/gtk-doc/html/libnm
+  _pick libnm "$pkgdir"/usr/share/vala/vapi/libnm.*
 
 ### Split libnm-glib
-
-  cd ../libnm-glib
-  mv "$pkgdir"/usr/include/* usr/include
-  mv "$pkgdir"/usr/lib/girepository-1.0/* usr/lib/girepository-1.0
-  mv "$pkgdir"/usr/lib/libnm-* usr/lib
-  mv "$pkgdir"/usr/lib/pkgconfig/* usr/lib/pkgconfig
-  mv "$pkgdir"/usr/share/gir-1.0/* usr/share/gir-1.0
-  mv "$pkgdir"/usr/share/gtk-doc/html/libnm-* usr/share/gtk-doc/html
-  mv "$pkgdir"/usr/share/vala/vapi/* usr/share/vala/vapi
-
-  rmdir -p --ignore-fail-on-non-empty \
-    "$pkgdir"/usr/include \
-    "$pkgdir"/usr/lib/{girepository-1.0,pkgconfig} \
-    "$pkgdir"/usr/share/{gir-1.0,vala/vapi}
+  _pick libnm-glib "$pkgdir"/usr/include/*
+  _pick libnm-glib "$pkgdir"/usr/lib/girepository-1.0/*
+  _pick libnm-glib "$pkgdir"/usr/lib/libnm-*
+  _pick libnm-glib "$pkgdir"/usr/lib/pkgconfig/*
+  _pick libnm-glib "$pkgdir"/usr/share/gir-1.0/*
+  _pick libnm-glib "$pkgdir"/usr/share/gtk-doc/html/libnm-*
+  _pick libnm-glib "$pkgdir"/usr/share/vala/vapi/*
 }
 
 package_libnm() {
