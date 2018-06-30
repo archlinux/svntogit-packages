@@ -1,0 +1,63 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=libteam
+pkgver=1.27
+pkgrel=2
+pkgdesc="Library for controlling team network device"
+arch=(x86_64)
+url="http://libteam.org/"
+license=(LGPL2.1)
+depends=(libnl libdaemon jansson libdbus bash zeromq)
+makedepends=(python python2 swig git doxygen)
+_commit=91a928a56a501daac5ce8b3c16bd9943661f1d16  # tags/v1.27
+source=("git+https://github.com/jpirko/libteam#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static --libexecdir=/usr/lib
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make all html
+
+  cp -aT binding/python binding/python2
+  cd binding/python
+  python  ./setup.py build
+  cd ../python2
+  python2 ./setup.py build
+}
+
+check() {
+  cd $pkgname
+  make check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+
+  install -Dm644 teamd/redhat/systemd/teamd@.service \
+    "$pkgdir/usr/lib/systemd/system/teamd@.service"
+  install -Dm644 teamd/dbus/teamd.conf \
+    "$pkgdir/etc/dbus-1/system.d/teamd.conf"
+
+  cd binding/python
+  python  ./setup.py install --root "$pkgdir" -O1
+  cd ../python2
+  python2 ./setup.py install --root "$pkgdir" -O1
+
+  cd ../../doc
+  install -d "$pkgdir/usr/share/doc/$pkgname"
+  cp -a api "$pkgdir/usr/share/doc/$pkgname"
+}
