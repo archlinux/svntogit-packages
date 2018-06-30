@@ -1,0 +1,72 @@
+# $Id$
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Angel 'angvp' Velasquez <angvp[at]archlinux.com.ve>
+
+pkgbase=python-pycurl
+pkgname=('python-pycurl' 'python2-pycurl')
+pkgver=7.43.0.2
+pkgrel=2
+arch=('x86_64')
+url="http://pycurl.sourceforge.net/"
+license=('LGPL' 'MIT')
+makedepends=('python' 'python2' 'curl')
+checkdepends=('python-bottle' 'python2-bottle' 'python-nose-show-skipped' 'python2-nose-show-skipped'
+              'vsftpd' 'python-flaky' 'python2-flaky' 'python-pyflakes' 'python2-pyflakes')
+source=("$pkgbase-$pkgver.tar.gz::https://github.com/pycurl/pycurl/archive/REL_${pkgver//./_}.tar.gz")
+sha512sums=('047ea5390a0b9abdaade1095ab86b5d3a13cc1b88d94ae152dabbdabc74c9cc951465d4420a5e9ac17530a632725d7603c30309ef277463dcd73f9443f394f4a')
+
+prepare() {
+  mv pycurl-REL_${pkgver//./_} pycurl-$pkgver
+  cp -a pycurl-$pkgver{,-py2}
+
+  cd "$srcdir"/pycurl-$pkgver
+  find . -name '*.py' -exec sed -i -e "s|#! /usr/bin/env python|#!/usr/bin/env python3|" {} +
+    sed -i 's/"share", "doc", PACKAGE/"share", "doc", "python-pycurl"/' setup.py
+  sed -e "s/nosetests/nosetests3/" -e "s/python/python3/" -i tests/run.sh
+
+  cd "$srcdir"/pycurl-$pkgver-py2
+  find . -name '*.py' -exec sed -i -e "s|#! /usr/bin/env python|#!/usr/bin/env python2|" {} +
+    sed -i 's/"share", "doc", PACKAGE/"share", "doc", "python2-pycurl"/' setup.py
+  sed -e "s/nosetests/nosetests2/" -e "s/python/python2/" -i tests/run.sh
+  sed -e "s/pyflakes/pyflakes-python2/" -i Makefile
+}
+
+build() {
+  cd "$srcdir"/pycurl-$pkgver
+  make
+  python3 setup.py build --with-ssl
+
+  cd "$srcdir"/pycurl-$pkgver-py2
+  make
+  python2 setup.py build --with-ssl
+}
+
+check() {
+  export PYCURL_VSFTPD_PATH=vsftpd
+  # We don't have HTTP2 enabled
+
+  cd "$srcdir"/pycurl-$pkgver
+  PYTHONPATH="$PWD/build/lib.linux-$CARCH-3.6:$PYTHONPATH" make test || warning "Tests failed"
+
+  cd "$srcdir"/pycurl-$pkgver-py2
+  PYTHONPATH="$PWD/build/lib.linux-$CARCH-2.7:$PYTHONPATH" make PYTHON=python2 NOSETESTS=nosetests2 test || warning "Tests failed"
+}
+
+package_python-pycurl() {
+  pkgdesc="A Python 3.x interface to libcurl"
+  depends=('python' 'curl')
+
+  cd pycurl-$pkgver
+  python setup.py install -O1 --root="$pkgdir"
+  install -D -m644 COPYING-MIT "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}
+
+package_python2-pycurl() {
+  pkgdesc="A Python 2.x interface to libcurl"
+  depends=('python2' 'curl')
+
+  cd pycurl-$pkgver-py2
+  python2 setup.py install -O1 --root="$pkgdir"
+  install -D -m644 COPYING-MIT "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}
