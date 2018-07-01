@@ -1,0 +1,75 @@
+# $Id$
+# Maintainer: Allan McRae <allan@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gdb
+# gdb-common is a package that contains files common for all cross compiled versions
+# of gdb (for arm/avr/...)
+pkgname=(gdb gdb-common)
+pkgver=8.1
+pkgrel=3
+pkgdesc='The GNU Debugger'
+arch=(x86_64)
+url='http://www.gnu.org/software/gdb/'
+license=(GPL3)
+makedepends=(texinfo python guile2.0 ncurses expat xz)
+source=(https://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig}
+        fix_python37.patch)
+sha1sums=('641861f7d3f22b6a23bc3e801f0ff29a78375490'
+          'SKIP'
+          '37a299b86478228cf35f00c7e01274c07dc5fa94')
+validpgpkeys=('F40ADB902B24264AA42E50BF92EDB04BFF325CF3') # Joel Brobecker
+
+prepare() {
+  cd gdb-$pkgver
+
+  # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
+
+  patch -p1 < ../fix_python37.patch
+}
+
+build() {
+  cd gdb-$pkgver
+  
+  ./configure --prefix=/usr --disable-nls \
+    --with-system-readline \
+    --with-python=/usr/bin/python3 \
+    --with-guile=guile-2.0 \
+    --with-system-gdbinit=/etc/gdb/gdbinit
+  make
+}
+
+package_gdb-common() {
+  depends=(python guile2.0)
+
+  cd gdb-$pkgver
+  make DESTDIR=$pkgdir install
+
+  # resolve conflicts with binutils
+  rm $pkgdir/usr/include/{ansidecl,bfd,bfdlink,dis-asm,plugin-api,symcat}.h
+  rm $pkgdir/usr/share/info/bfd.info
+  rm $pkgdir/usr/lib/{libbfd,libopcodes}.a
+
+  rm -r $pkgdir/usr/{bin,include,lib,share/info,share/man}
+}
+
+package_gdb() {
+  depends=(ncurses expat xz mpfr gdb-common=$pkgver)
+  backup=(etc/gdb/gdbinit)
+
+  cd gdb-$pkgver
+  make DESTDIR=$pkgdir install
+
+  # install "custom" system gdbinit
+  install -dm755 $pkgdir/etc/gdb
+  touch $pkgdir/etc/gdb/gdbinit
+
+  # resolve conflicts with binutils
+  rm $pkgdir/usr/include/{ansidecl,bfd,bfdlink,dis-asm,plugin-api,symcat}.h
+  rm $pkgdir/usr/share/info/bfd.info
+  rm $pkgdir/usr/lib/{libbfd,libopcodes}.a
+
+  # comes from gdb-common
+  rm -r $pkgdir/usr/share/gdb/
+}
