@@ -5,13 +5,14 @@
 
 pkgbase=linux-hardened
 _srcname=linux-4.17
-_pkgver=4.17.4
+_pkgver=4.17.5
 pkgver=${_pkgver}.a
 pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
 makedepends=('xmlto' 'kmod' 'inetutils' 'bc' 'libelf')
+optdepends=('usbctl: deny_new_usb control')
 options=('!strip')
 source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
         https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.sign
@@ -31,11 +32,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
 replaces=('linux-grsec')
 sha256sums=('9faa1dd896eaea961dc6e886697c0b3301277102e5bc976b2758f9a62d3ccd13'
             'SKIP'
-            'b4b4b60d2f20f9b84ba8e55e2099102ad5b9460115bf31f4bab5c161451c0e3d'
+            'cc18fcf14df25f0bab047aa180b9362bd4f3ce96f1b05e1f7764cfcc0e271bbd'
             'SKIP'
-            '703ffb99e6fc79730ddad9132a329d7eca8275ab7ecb2284880fa83f7b5a6a17'
+            '7b39254f8a01e1c5f3757360f18eb68d250b4ae9393176cceddd6122203f94e0'
             'SKIP'
-            'd1bb81b827e43f9785aee9b4a6cc4a43ddbb104b31831c784a15c3d916476108'
+            '43896cb1572f82a463e92b8f5ded9a30d73352117df05de309541aadaf9e6bcd'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
