@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 _srcname=linux-4.17
-_pkgver=4.17.5
+_pkgver=4.17.6
 pkgver=${_pkgver}.a
 pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
@@ -28,20 +28,23 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
         ACPI-watchdog-Prefer-iTCO_wdt-always-when-WDAT-table.patch
         # https://bugs.archlinux.org/task/56711
         Revert-drm-i915-edp-Allow-alternate-fixed-mode-for-e.patch
+        # Fix iwd provoking a BUG
+        mac80211-disable-BHs-preemption-in-ieee80211_tx_cont.patch
 )
 replaces=('linux-grsec')
 sha256sums=('9faa1dd896eaea961dc6e886697c0b3301277102e5bc976b2758f9a62d3ccd13'
             'SKIP'
-            'cc18fcf14df25f0bab047aa180b9362bd4f3ce96f1b05e1f7764cfcc0e271bbd'
+            '7699b2246e4ed1e284f2947d5e0b66653c27574995caf6a02a3280bd055cfedf'
             'SKIP'
-            '7b39254f8a01e1c5f3757360f18eb68d250b4ae9393176cceddd6122203f94e0'
+            '682684b99a2cea2937d3365b4dc43df313c7b87338a2612a2976172d3891a762'
             'SKIP'
-            '43896cb1572f82a463e92b8f5ded9a30d73352117df05de309541aadaf9e6bcd'
+            '37bb7dce427e4e7a07263746c141e30488e1a785cdb931f479ea57707dc3e479'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
             'd744e7f4552896670bc8b99361534eec7ba095bebc2462ef0e5ee433e6341a0a'
-            '8114295b8c07795a15b9f8eafb0f515c34661a1e05512da818a34581dd30f87e')
+            '8114295b8c07795a15b9f8eafb0f515c34661a1e05512da818a34581dd30f87e'
+            'ef7c149d9af24efea551cec86e26f52c9c1cc02714335e948f929985ff414676')
 validpgpkeys=(
               'ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman
