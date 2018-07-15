@@ -1,0 +1,39 @@
+From 31eef6c766f47df8281942d19f76e35f475c781d Mon Sep 17 00:00:00 2001
+From: Richard Russon <rich@flatcap.org>
+Date: Fri, 13 Jul 2018 11:33:16 -0700
+Subject: [PATCH] Selectively cache headers.
+
+Thanks to NeoMutt and Jeriko One for the patch, which was slightly
+modified to apply to the Mutt code.
+---
+ imap/util.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/imap/util.c b/imap/util.c
+index 27792944..d4cc2742 100644
+--- a/imap/util.c
++++ b/imap/util.c
+@@ -84,6 +84,7 @@ header_cache_t* imap_hcache_open (IMAP_DATA* idata, const char* path)
+   ciss_url_t url;
+   char cachepath[LONG_STRING];
+   char mbox[LONG_STRING];
++  size_t len;
+ 
+   if (path)
+     imap_cachepath (idata, path, mbox, sizeof (mbox));
+@@ -96,6 +97,12 @@ header_cache_t* imap_hcache_open (IMAP_DATA* idata, const char* path)
+     FREE (&mx.mbox);
+   }
+ 
++  if (strstr(mbox, "/../") || (strcmp(mbox, "..") == 0) || (strncmp(mbox, "../", 3) == 0))
++    return NULL;
++  len = strlen(mbox);
++  if ((len > 3) && (strcmp(mbox + len - 3, "/..") == 0))
++    return NULL;
++
+   mutt_account_tourl (&idata->conn->account, &url);
+   url.path = mbox;
+   url_ciss_tostring (&url, cachepath, sizeof (cachepath), U_PATH);
+-- 
+2.18.0
+
