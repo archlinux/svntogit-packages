@@ -1,0 +1,127 @@
+From 185152818541f5cdc059cbff3f3e8b654fc27c1d Mon Sep 17 00:00:00 2001
+From: Kevin McCarthy <kevin@8t8.us>
+Date: Sat, 7 Jul 2018 19:03:44 -0700
+Subject: [PATCH] Properly quote IMAP mailbox names when (un)subscribing.
+
+When handling automatic subscription (via $imap_check_subscribed), or
+manual subscribe/unsubscribe commands, mutt generating a "mailboxes"
+command but failed to properly escape backquotes.
+
+Thanks to Jeriko One for the detailed bug report and patch, which this
+commit is based upon.
+---
+ imap/command.c      |  5 +++--
+ imap/imap.c         |  7 +++++--
+ imap/imap_private.h |  3 ++-
+ imap/util.c         | 25 ++++++++++++++++++++-----
+ 4 files changed, 30 insertions(+), 10 deletions(-)
+
+diff --git a/imap/command.c b/imap/command.c
+index c8825981..c79d4f28 100644
+--- a/imap/command.c
++++ b/imap/command.c
+@@ -842,8 +842,9 @@ static void cmd_parse_lsub (IMAP_DATA* idata, char* s)
+ 
+   strfcpy (buf, "mailboxes \"", sizeof (buf));
+   mutt_account_tourl (&idata->conn->account, &url);
+-  /* escape \ and " */
+-  imap_quote_string(errstr, sizeof (errstr), list.name);
++  /* escape \ and ". Also escape ` because the resulting
++   * string will be passed to mutt_parse_rc_line. */
++  imap_quote_string_and_backquotes (errstr, sizeof (errstr), list.name);
+   url.path = errstr + 1;
+   url.path[strlen(url.path) - 1] = '\0';
+   if (!mutt_strcmp (url.user, ImapUser))
+diff --git a/imap/imap.c b/imap/imap.c
+index 668203b8..c3a8ffd0 100644
+--- a/imap/imap.c
++++ b/imap/imap.c
+@@ -1930,6 +1930,7 @@ int imap_subscribe (char *path, int subscribe)
+   char buf[LONG_STRING];
+   char mbox[LONG_STRING];
+   char errstr[STRING];
++  int mblen;
+   BUFFER err, token;
+   IMAP_MBOX mx;
+ 
+@@ -1951,8 +1952,10 @@ int imap_subscribe (char *path, int subscribe)
+     mutt_buffer_init (&err);
+     err.data = errstr;
+     err.dsize = sizeof (errstr);
+-    snprintf (mbox, sizeof (mbox), "%smailboxes \"%s\"",
+-              subscribe ? "" : "un", path);
++    mblen = snprintf (mbox, sizeof (mbox), "%smailboxes ",
++                      subscribe ? "" : "un");
++    imap_quote_string_and_backquotes (mbox + mblen, sizeof(mbox) - mblen,
++                                      path);
+     if (mutt_parse_rc_line (mbox, &token, &err))
+       dprint (1, (debugfile, "Error adding subscribed mailbox: %s\n", errstr));
+     FREE (&token.data);
+diff --git a/imap/imap_private.h b/imap/imap_private.h
+index 312fbfe4..349c5a49 100644
+--- a/imap/imap_private.h
++++ b/imap/imap_private.h
+@@ -301,7 +301,8 @@ char* imap_next_word (char* s);
+ time_t imap_parse_date (char* s);
+ void imap_make_date (char* buf, time_t timestamp);
+ void imap_qualify_path (char *dest, size_t len, IMAP_MBOX *mx, char* path);
+-void imap_quote_string (char* dest, size_t slen, const char* src);
++void imap_quote_string (char* dest, size_t dlen, const char* src);
++void imap_quote_string_and_backquotes (char *dest, size_t dlen, const char *src);
+ void imap_unquote_string (char* s);
+ void imap_munge_mbox_name (IMAP_DATA *idata, char *dest, size_t dlen, const char *src);
+ void imap_unmunge_mbox_name (IMAP_DATA *idata, char *s);
+diff --git a/imap/util.c b/imap/util.c
+index 914c93c3..3274a70c 100644
+--- a/imap/util.c
++++ b/imap/util.c
+@@ -608,11 +608,9 @@ void imap_qualify_path (char *dest, size_t len, IMAP_MBOX *mx, char* path)
+ }
+ 
+ 
+-/* imap_quote_string: quote string according to IMAP rules:
+- *   surround string with quotes, escape " and \ with \ */
+-void imap_quote_string (char *dest, size_t dlen, const char *src)
++static void _imap_quote_string (char *dest, size_t dlen, const char *src,
++                                const char *to_quote)
+ {
+-  static const char quote[] = "\"\\";
+   char *pt;
+   const char *s;
+ 
+@@ -625,7 +623,7 @@ void imap_quote_string (char *dest, size_t dlen, const char *src)
+ 
+   for (; *s && dlen; s++)
+   {
+-    if (strchr (quote, *s))
++    if (strchr (to_quote, *s))
+     {
+       dlen -= 2;
+       if (!dlen)
+@@ -643,6 +641,23 @@ void imap_quote_string (char *dest, size_t dlen, const char *src)
+   *pt = 0;
+ }
+ 
++/* imap_quote_string: quote string according to IMAP rules:
++ *   surround string with quotes, escape " and \ with \ */
++void imap_quote_string (char *dest, size_t dlen, const char *src)
++{
++  _imap_quote_string (dest, dlen, src, "\"\\");
++}
++
++/* imap_quote_string_and_backquotes: quote string according to IMAP rules:
++ *   surround string with quotes, escape " and \ with \.
++ * Additionally, escape backquotes with \ to protect against code injection
++ * when using the resulting string in mutt_parse_rc_line().
++ */
++void imap_quote_string_and_backquotes (char *dest, size_t dlen, const char *src)
++{
++  _imap_quote_string (dest, dlen, src, "\"\\`");
++}
++
+ /* imap_unquote_string: equally stupid unquoting routine */
+ void imap_unquote_string (char *s)
+ {
+-- 
+2.18.0
+
