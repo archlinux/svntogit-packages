@@ -3,39 +3,50 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgbase=hunspell-es
-pkgname=(hunspell-es hyphen-es mythes-es)
+pkgname=(hunspell-es_any hyphen-es mythes-es)
 pkgver=2.3
-pkgrel=1
+pkgrel=2
 epoch=1
-pkgdesc="Spanish hunspell dictionaries"
 arch=(any)
 url="https://github.com/sbosio/rla-es"
-license=('LGPL3')
-noextract=(es_ANY.oxt es_AR.oxt es_BO.oxt es_CL.oxt es_CO.oxt 
-           es_CR.oxt es_CU.oxt es_DO.oxt es_EC.oxt es_ES.oxt 
-           es_GT.oxt es_HN.oxt es_MX.oxt es_NI.oxt es_PA.oxt 
-           es_PE.oxt es_PR.oxt es_PY.oxt es_SV.oxt es_UY.oxt es_VE.oxt)
-source=("https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_ANY.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_AR.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_BO.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_CL.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_CO.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_CR.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_CU.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_DO.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_EC.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_ES.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_GT.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_HN.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_MX.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_NI.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_PA.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_PE.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_PR.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_PY.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_SV.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_UY.oxt"
-        "https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_VE.oxt")
+license=(LGPL3)
+_countries=(
+  'AR "Argentina"'
+  'BO "Bolivia"'
+  'CL "Chile"'
+  'CO "Colombia"'
+  'CR "Costa Rica"'
+  'CU "Cuba"'
+  'DO "Dominican Republic"'
+  'EC "Ecuador"'
+  'ES "Spain"'
+  'GT "Guatemala"'
+  'HN "Honduras"'
+  'MX "Mexico"'
+  'NI "Nicaragua"'
+  'PA "Paraguay"'
+  'PE "Peru"'
+  'PR "Puerto Rico"'
+  'PY "Paraguay"'
+  'SV "El Salvador"'
+  'UY "Uruguay"'
+  'VE "Venezuela"'
+)
+
+source=(https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_ANY.oxt)
+noextract=(es_ANY.oxt)
+
+for _co in "${_countries[@]}"; do
+  _code=${_co%% *}
+  noextract+=(es_$_code.oxt)
+  source+=("https://github.com/sbosio/rla-es/releases/download/v$pkgver/es_$_code.oxt")
+  _pkgname=hunspell-es_${_code,,}
+  pkgname+=($_pkgname)
+  eval "package_$_pkgname() {
+    _package $_co
+  }"
+done
+
 sha256sums=('428148e473091229ab3918d9282ee0fbeeee39e4c842f592a7aa3924a31452fd'
             '8d0952c6eb3bf40bcbc60cd8ea8f876f8e0c4ff714b65e06556ee06bfeaa0a7e'
             '97e3b37efb3bb0149405bee38666b75a44d4c683a3f0b3b77ff442299a5987a2'
@@ -58,78 +69,88 @@ sha256sums=('428148e473091229ab3918d9282ee0fbeeee39e4c842f592a7aa3924a31452fd'
             'c516f12a801161497c765d58021a04f7596e9957c22d915527596c76b5bd7ec3'
             'b53bffc7b041831df47babefc667a5a00f01ba5bad77f264219b05eaf8670bc8')
 
-package_hunspell-es() {
-  optdepends=('hunspell:  the spell checking libraries and apps')
+_package() {
+  pkgdesc="Spanish ($2) hunspell dictionary"
+  depends=(hunspell)
+  conflicts=(hunspell-es)
 
-  for file in *.oxt; do
-    LANG=en_US.utf8 bsdtar -xf $file
-  done
+  LANG=en_US.utf8 bsdtar -xf es_$1.oxt
 
   install -dm755 "${pkgdir}/usr/share/hunspell"
-  install -m644 es_*.dic es_*.aff "$pkgdir/usr/share/hunspell"
+  install -Dm644 es_$1.dic es_$1.aff "$pkgdir/usr/share/hunspell"
 
-  # the symlinks
-  install -dm755 "${pkgdir}/usr/share/myspell/dicts"
+  install -d "${pkgdir}/usr/share/myspell/dicts"
+  pushd "$pkgdir/usr/share/myspell/dicts"
+    for file in "$pkgdir"/usr/share/hunspell/*; do
+      ln -sv /usr/share/hunspell/$(basename $file) .
+    done
+  popd
+
+  install -Dm644 README.txt -t "$pkgdir/usr/share/doc/$pkgname"
+}
+
+package_hunspell-es_any() {
+  pkgdesc="Spanish (generic) hunspell dictionary"
+  depends=(hunspell)
+  conflicts=(hunspell-es)
+  replaces=(hunspell-es)
+
+  LANG=en_US.utf8 bsdtar -xf es_ANY.oxt
+
+  install -Dm644 es_ANY.dic es_ANY.aff -t "$pkgdir"/usr/share/hunspell
+
+  install -d "${pkgdir}/usr/share/myspell/dicts"
   pushd "$pkgdir/usr/share/myspell/dicts"
     for file in "$pkgdir"/usr/share/hunspell/*; do
       ln -sv /usr/share/hunspell/$(basename $file) .
     done
   popd
   
-  # docs
-  install -dm755 "${pkgdir}/usr/share/doc/$pkgname"
-  install -m644 README.txt "$pkgdir/usr/share/doc/$pkgname"
+  install -Dm644 README.txt -t "$pkgdir/usr/share/doc/$pkgname"
 }
 
 package_hyphen-es() {
   pkgdesc="Spanish hyphenation rules"
-  optdepends=('hyphen: offers hyphenation library functions')
+  depends=(hyphen)
 
-  install -Dm644 hyph_es_ANY.dic "$pkgdir/usr/share/hyphen/hyph_es_ANY.dic"
+  install -Dm644 hyph_es_ANY.dic -t "$pkgdir"/usr/share/hyphen/
 
-  pushd "$pkgdir/usr/share/hyphen/"
-  es_ES_aliases="es_AR es_BO es_CL es_CO es_CR es_CU es_DO es_EC es_ES es_GT es_HN es_MX es_NI es_PA es_PE es_PR es_SV es_UY es_VE"
-  for lang in $es_ES_aliases; do
-        ln -s hyph_es_ANY.dic hyph_$lang.dic
+  pushd "$pkgdir"/usr/share/hyphen/
+  for _co in "${_countries[@]}"; do
+    ln -s hyph_es_ANY.dic hyph_es_${_co%% *}.dic
   done
   popd
 
-  # the symlinks
-  install -dm755 "${pkgdir}/usr/share/myspell/dicts"
-  pushd "$pkgdir/usr/share/myspell/dicts"
+  install -d "$pkgdir"/usr/share/myspell/dicts
+  pushd "$pkgdir"/usr/share/myspell/dicts
     for file in "$pkgdir"/usr/share/hyphen/*; do
       ln -sv /usr/share/hyphen/$(basename $file) .
     done
   popd
   
-  # docs
-  install -Dm644 README_hyph_es_ANY.txt "${pkgdir}/usr/share/doc/$pkgname/README_hyph_es_ANY.txt"
+  install -Dm644 README_hyph_es_ANY.txt -t "$pkgdir"/usr/share/doc/$pkgname/
 }
 
 package_mythes-es() {
   pkgdesc="Spanish thesaurus"
-  optdepends=('libmythes: offers thesaurus library functions')
+  depends=(libmythes)
 
   LANG=en_US.utf8 bsdtar -xf es_ANY.oxt
-  install -dm755 "${pkgdir}/usr/share/mythes"
-  install -m644 th_es_ES_v2.* "$pkgdir/usr/share/mythes"
+  install -Dm644 th_es_ES_v2.* -t "$pkgdir"/usr/share/mythes
 
-  pushd "$pkgdir/usr/share/mythes/"
-  es_ES_aliases="es_AR es_BO es_CL es_CO es_CR es_CU es_DO es_EC es_GT es_HN es_MX es_NI es_PA es_PE es_PR es_SV es_UY es_VE"
-  for lang in $es_ES_aliases; do
-        ln -s th_es_ES_v2.idx "th_"$lang"_v2.idx"
-        ln -s th_es_ES_v2.dat "th_"$lang"_v2.dat"
+  pushd "$pkgdir"/usr/share/mythes/
+  for _co in "${_countries[@]}"; do
+    ln -s th_es_ES_v2.idx "th_es_"${_co%% *}"_v2.idx" || true
+    ln -s th_es_ES_v2.dat "th_es_"${_co%% *}"_v2.dat" || true
   done
   popd
 
-  # the symlinks
-  install -dm755 "${pkgdir}/usr/share/myspell/dicts"
-  pushd "$pkgdir/usr/share/myspell/dicts"
+  install -d "$pkgdir"/usr/share/myspell/dicts
+  pushd "$pkgdir"/usr/share/myspell/dicts
   for file in "$pkgdir"/usr/share/mythes/*; do
     ln -sv /usr/share/mythes/$(basename $file) .
   done
   popd
   
-  # docs
-  install -Dm644 README_th_es_ES.txt "${pkgdir}/usr/share/doc/$pkgname/README_th_es_ES.txt"
+  install -Dm644 README_th_es_ES.txt -t "$pkgdir"/usr/share/doc/$pkgname/
 }
