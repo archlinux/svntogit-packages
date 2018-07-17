@@ -5,14 +5,13 @@
 
 pkgbase=linux-hardened
 _srcname=linux-4.17
-_pkgver=4.17.6
+_pkgver=4.17.7
 pkgver=${_pkgver}.a
 pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
 makedepends=('xmlto' 'kmod' 'inetutils' 'bc' 'libelf')
-optdepends=('usbctl: deny_new_usb control')
 options=('!strip')
 source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
         https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.sign
@@ -34,11 +33,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
 replaces=('linux-grsec')
 sha256sums=('9faa1dd896eaea961dc6e886697c0b3301277102e5bc976b2758f9a62d3ccd13'
             'SKIP'
-            '7699b2246e4ed1e284f2947d5e0b66653c27574995caf6a02a3280bd055cfedf'
+            '7f96003274d45fabda457951919c68a5856c7b40e4ee230baa0492dd8caf2e97'
             'SKIP'
-            '682684b99a2cea2937d3365b4dc43df313c7b87338a2612a2976172d3891a762'
+            '7f6e368673532f05aa947bdd70c8e4f1428335f4571a81c6c72362c7859d3ae0'
             'SKIP'
-            '37bb7dce427e4e7a07263746c141e30488e1a785cdb931f479ea57707dc3e479'
+            '5bed6de379944f4cf308242867f9cac0df85810f9cde6a27cc3100999cb88186'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
@@ -117,7 +116,8 @@ _package() {
   pkgdesc="The ${pkgbase/linux/Linux} kernel and modules"
   [ "${pkgbase}" = "linux" ] && groups=('base')
   depends=('coreutils' 'linux-firmware' 'kmod' 'mkinitcpio>=0.7')
-  optdepends=('crda: to set the correct wireless channels of your country')
+  optdepends=('crda: to set the correct wireless channels of your country'
+              'usbctl: deny_new_usb control')
   backup=("etc/mkinitcpio.d/${pkgbase}.preset")
   install=linux.install
 
