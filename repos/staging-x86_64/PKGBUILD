@@ -1,0 +1,97 @@
+# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+
+pkgname=avahi
+pkgver=0.7+16+g1cc2b8e
+pkgrel=2
+pkgdesc='Service Discovery for Linux using mDNS/DNS-SD -- compatible with Bonjour'
+url='https://github.com/lathiat/avahi'
+license=(LGPL)
+arch=(x86_64)
+depends=(expat libdaemon glib2 libcap gdbm dbus)
+makedepends=(git qt4 pygtk mono intltool gtk-sharp-2 gobject-introspection gtk3 qt5-base
+             xmltoman python-dbus python-gobject doxygen graphviz)
+optdepends=('gtk3: avahi-discover, avahi-discover-standalone, bshell, bssh, bvnc'
+            'gtk2: gtk2 bindings'
+            'qt4: qt4 bindings'
+            'qt5-base: qt5 bindings'
+            'pygtk: avahi-bookmarks'
+            'python2-twisted: avahi-bookmarks'
+            'mono: mono bindings'
+            'nss-mdns: NSS support for mDNS'
+            'python-gobject: avahi-discover'
+            'python-dbus: avahi-discover')
+backup=(etc/avahi/{hosts,avahi-daemon.conf,avahi-{autoip,dnsconf}d.action}
+        usr/lib/avahi/service-types.db)
+_commit=1cc2b8e8d62e939b8bd683f795794878863931af  # master
+source=("git+https://github.com/lathiat/avahi#commit=$_commit"
+        0001-build-Attempt-GDBM-1.15-compatibility.patch)
+sha512sums=('SKIP'
+            '1547211c7253999fd07a0a16bb17c85c2a111caf4763390d6e54b39ee1b2530f022d29d42bb0ed750a5c5b630c86bffbc0d4429c64bf2b59097a00e36cf98cb2')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  # This patch seems to cause the build to fail:
+  #     GEN      service-types.db
+  #     GEN      service-types.db.pag
+  #     GEN      service-types.db.dir
+  #   mv: cannot stat 'service-types.db.coming.pag': No such file or directory
+  #   mv: cannot stat 'service-types.db.coming.dir': No such file or directory
+  #   make[2]: *** [Makefile:668: service-types.db.pag] Error 1
+  #patch -Np1 -i ../0001-build-Attempt-GDBM-1.15-compatibility.patch
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  export MOC_QT4=/usr/bin/moc-qt4 PYTHON=/usr/bin/python3
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sbindir=/usr/bin \
+    --disable-monodoc \
+    --enable-compat-libdns_sd \
+    --with-distro=archlinux \
+    --with-avahi-priv-access-group=network \
+    --with-autoipd-user=avahi \
+    --with-autoipd-group=avahi \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  cp -a avahi-python/avahi avahi-python/avahi2
+
+  make
+  make -C avahi-python/avahi2 PYTHON=/usr/bin/python2
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+  make DESTDIR="$pkgdir" -C avahi-python/avahi2 install \
+    PYTHON=/usr/bin/python2 pythondir=/usr/lib/python2.7/site-packages
+
+  rmdir "$pkgdir/run"
+
+  # this isn't ported
+  sed -i '1s|python3|python2|' "$pkgdir/usr/bin/avahi-bookmarks"
+
+  # mdnsresponder compat
+  ln -s avahi-compat-libdns_sd/dns_sd.h "$pkgdir/usr/include/dns_sd.h"
+
+  # move example services https://bugs.archlinux.org/task/47822
+  install -d "$pkgdir/usr/share/doc/$pkgname"
+  mv "$pkgdir"/etc/avahi/services/{,sftp-}ssh.service \
+    "$pkgdir/usr/share/doc/$pkgname/"
+
+  echo 'u avahi - "Avahi mDNS/DNS-SD daemon"' |
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
+}
