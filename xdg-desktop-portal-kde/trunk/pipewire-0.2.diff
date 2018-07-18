@@ -1,0 +1,160 @@
+diff -u -r xdg-desktop-portal-kde-5.13.3/src/screencaststream.cpp xdg-desktop-portal-kde-5.13.3-pw02/src/screencaststream.cpp
+--- xdg-desktop-portal-kde-5.13.3/src/screencaststream.cpp	2018-07-10 12:18:37.000000000 +0200
++++ xdg-desktop-portal-kde-5.13.3-pw02/src/screencaststream.cpp	2018-07-18 21:48:57.801596393 +0200
+@@ -43,8 +43,6 @@
+ #define MIN_DIVISOR     1.0e-10
+ #define MAX_ERROR       1.0e-20
+ 
+-#define PROP_RANGE(min, max) 2, (min), (max)
+-
+ #define BITS_PER_PIXEL  4
+ 
+ static int greatestCommonDivisor(int a, int b)
+@@ -193,7 +191,7 @@
+     }
+ }
+ 
+-static void onStreamFormatChanged(void *data, struct spa_pod *format)
++static void onStreamFormatChanged(void *data, const struct spa_pod *format)
+ {
+     qCDebug(XdgDesktopPortalKdeScreenCastStream) << "Stream format changed";
+ 
+@@ -202,7 +200,7 @@
+     uint8_t paramsBuffer[1024];
+     int32_t width, height, stride, size;
+     struct spa_pod_builder pod_builder;
+-    struct spa_pod *params[1];
++    const struct spa_pod *params[1];
+     const int bpp = 4;
+ 
+     if (!format) {
+@@ -223,7 +221,7 @@
+                                                    pw->pwCoreType->param.idBuffers, pw->pwCoreType->param_buffers.Buffers,
+                                                    ":", pw->pwCoreType->param_buffers.size, "i", size,
+                                                    ":", pw->pwCoreType->param_buffers.stride, "i", stride,
+-                                                   ":", pw->pwCoreType->param_buffers.buffers, "iru", 16, PROP_RANGE (2, 16),
++                                                   ":", pw->pwCoreType->param_buffers.buffers, "iru", 16, SPA_POD_PROP_MIN_MAX (2, 16),
+                                                    ":", pw->pwCoreType->param_buffers.align, "i", 16);
+ 
+     pw_stream_finish_format (pw->pwStream, 0,
+@@ -245,8 +243,7 @@
+     .format_changed = onStreamFormatChanged,
+     .add_buffer = nullptr,
+     .remove_buffer = nullptr,
+-    .new_buffer = nullptr,
+-    .need_buffer = nullptr,
++    .process = nullptr,
+ };
+ 
+ ScreenCastStream::ScreenCastStream(const QSize &resolution, QObject *parent)
+@@ -321,36 +318,32 @@
+ 
+     const float frameRate = 25;
+ 
+-    spa_fraction maxFramerate;
+-    spa_fraction minFramerate;
+     const spa_pod *params[1];
+ 
+     pwStream = pw_stream_new(pwRemote, "kwin-screen-cast", nullptr);
+ 
+-    PwFraction fraction = pipewireFractionFromDouble(frameRate);
+-
+-    minFramerate = SPA_FRACTION(1, 1);
+-    maxFramerate = SPA_FRACTION((uint32_t)fraction.num, (uint32_t)fraction.denom);
+-
+-    spa_rectangle minResolution = SPA_RECTANGLE(1, 1);
+     int width = resolution.width();
+     int height = resolution.height();
++    spa_rectangle minResolution = SPA_RECTANGLE(1, 1);
++    spa_rectangle maxResolution = SPA_RECTANGLE((uint32_t)width, (uint32_t)height);
+ 
+-    spa_fraction paramFraction = SPA_FRACTION(0, 1);
+-    spa_rectangle paramRectangle = SPA_RECTANGLE((uint32_t)width, (uint32_t)height);
++    const spa_fraction variableFramerate = SPA_FRACTION(0, 1);
++    PwFraction fraction = pipewireFractionFromDouble(frameRate);
++    spa_fraction minFramerate = SPA_FRACTION(1, 1);
++    spa_fraction maxFramerate = SPA_FRACTION((uint32_t)fraction.num, (uint32_t)fraction.denom);
+ 
+     params[0] = (spa_pod*)spa_pod_builder_object(&podBuilder,
+                                        pwCoreType->param.idEnumFormat, pwCoreType->spa_format,
+                                        "I", pwType->media_type.video,
+                                        "I", pwType->media_subtype.raw,
+                                        ":", pwType->format_video.format, "I", pwType->video_format.RGBx,
+-                                       ":", pwType->format_video.size, "Rru", &minResolution, SPA_POD_PROP_MIN_MAX(&width, &height),
+-                                       ":", pwType->format_video.framerate, "F", &paramFraction,
+-                                       ":", pwType->format_video.max_framerate, "Fru", &maxFramerate, PROP_RANGE (&minFramerate, &maxFramerate));
++                                       ":", pwType->format_video.size, "Rru", &minResolution, SPA_POD_PROP_MIN_MAX(&minResolution, &maxResolution),
++                                       ":", pwType->format_video.framerate, "F", &variableFramerate,
++                                       ":", pwType->format_video.max_framerate, "Fru", &maxFramerate, SPA_POD_PROP_MIN_MAX(&minFramerate, &maxFramerate));
+ 
+     pw_stream_add_listener(pwStream, &streamListener, &pwStreamEvents, this);
+ 
+-    if (pw_stream_connect(pwStream, PW_DIRECTION_OUTPUT, nullptr, PW_STREAM_FLAG_NONE, params, G_N_ELEMENTS(&params)) != 0) {
++    if (pw_stream_connect(pwStream, PW_DIRECTION_OUTPUT, nullptr, (pw_stream_flags) (PW_STREAM_FLAG_DRIVER | PW_STREAM_FLAG_MAP_BUFFERS), params, G_N_ELEMENTS(params)) != 0) {
+         qCWarning(XdgDesktopPortalKdeScreenCastStream) << "Could not connect to stream";
+         return false;
+     }
+@@ -360,8 +353,8 @@
+ 
+ bool ScreenCastStream::recordFrame(uint8_t *screenData)
+ {
+-    uint32_t bufferId;
+-    struct spa_buffer *buffer;
++    struct pw_buffer *buffer;
++    struct spa_buffer *spa_buffer;
+     uint8_t *map = nullptr;
+     uint8_t *data = nullptr;
+ 
+@@ -371,39 +364,39 @@
+         return false;
+     }
+ 
+-    bufferId = pw_stream_get_empty_buffer(pwStream);
+-
+-    if (bufferId == SPA_ID_INVALID) {
+-        qCWarning(XdgDesktopPortalKdeScreenCastStream) << "Failed to get empty stream buffer: " << strerror(errno);
++    buffer = pw_stream_dequeue_buffer(pwStream);
++    if (!buffer) {
++        qCWarning(XdgDesktopPortalKdeScreenCastStream) << "Failed to dequeue PipeWire buffer";
+         return false;
+     }
+ 
+-    buffer = pw_stream_peek_buffer(pwStream, bufferId);
++    spa_buffer = buffer->buffer;
+ 
+-    if (buffer->datas[0].type == pwCoreType->data.MemFd) {
+-        map = (uint8_t *)mmap(nullptr, buffer->datas[0].maxsize + buffer->datas[0].mapoffset, PROT_READ | PROT_WRITE, MAP_SHARED, buffer->datas[0].fd, 0);
++    if (spa_buffer->datas[0].data) {
++        data = (uint8_t *)spa_buffer->datas[0].data;
++    } else if (spa_buffer->datas[0].type == pwCoreType->data.MemFd) {
++        map = (uint8_t *)mmap(nullptr, spa_buffer->datas[0].maxsize + spa_buffer->datas[0].mapoffset, PROT_READ | PROT_WRITE, MAP_SHARED, spa_buffer->datas[0].fd, 0);
+ 
+         if (map == MAP_FAILED) {
+             qCWarning(XdgDesktopPortalKdeScreenCastStream) << "Failed to mmap pipewire stream buffer: " << strerror(errno);
+             return false;
+         }
+ 
+-        data = SPA_MEMBER(map, buffer->datas[0].mapoffset, uint8_t);
+-    } else if (buffer->datas[0].type == pwCoreType->data.MemPtr) {
+-        data = (uint8_t *) buffer->datas[0].data;
++        data = SPA_MEMBER(map, spa_buffer->datas[0].mapoffset, uint8_t);
+     } else {
++        qCWarning(XdgDesktopPortalKdeScreenCastStream) << "Unhandled spa buffer type: " << spa_buffer->datas[0].type;
+         return false;
+     }
+ 
+     memcpy(data, screenData, BITS_PER_PIXEL * videoFormat.size.height * videoFormat.size.width * sizeof(uint8_t));
+ 
+     if (map) {
+-        munmap(map, buffer->datas[0].maxsize + buffer->datas[0].mapoffset);
++        munmap(map, spa_buffer->datas[0].maxsize + spa_buffer->datas[0].mapoffset);
+     }
+ 
+-    buffer->datas[0].chunk->size = buffer->datas[0].maxsize;
++    spa_buffer->datas[0].chunk->size = spa_buffer->datas[0].maxsize;
+ 
+-    pw_stream_send_buffer(pwStream, bufferId);
++    pw_stream_queue_buffer(pwStream, buffer);
+ 
+     return true;
+ }
