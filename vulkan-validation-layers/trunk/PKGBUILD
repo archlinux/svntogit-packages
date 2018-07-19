@@ -1,0 +1,45 @@
+# $Id: PKGBUILD 323171 2018-04-30 09:47:06Z lcarlier $
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+
+pkgbase=vulkan-validation-layers)
+pkgver=1.1.73.0
+pkgrel=1
+arch=(x86_64)
+url="https://www.khronos.org/vulkan/"
+license=('custom')
+depends=(gcc-libs vulkan-icd-loader vulkan-headers libx11)
+makedepends=(cmake python-lxml libx11 libxrandr wayland git)
+source=("git+https://github.com/KhronosGroup/${_pkgname}#tag=sdk-${pkgver}")
+sha256sums=('SKIP')
+
+build() {
+  cd "${srcdir}/${_pkgname}-sdk-${pkgver}"
+
+  ./update_external_sources.sh
+
+  rm -rf build ; mkdir build ; cd build
+  cmake -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_INSTALL_DATADIR=/share \
+    -DCMAKE_SKIP_RPATH=True \
+    -DBUILD_TESTS=Off \
+    -DBUILD_WSI_XCB_SUPPORT=On \
+    -DBUILD_WSI_XLIB_SUPPORT=On \
+    -DBUILD_WSI_WAYLAND_SUPPORT=On \
+    -DBUILD_WSI_MIR_SUPPORT=Off \
+    -DCMAKE_BUILD_TYPE=Release \
+    ..
+  make
+}
+
+package() {
+  pkgdesc="Vulkan Software Development Kit"
+  groups=('vulkan-devel')
+  cd "${srcdir}/${_pkgname}-sdk-${pkgver}/build"
+  
+  make DESTDIR="${pkgdir}" install
+
+  install -m644 ../loader/LoaderAndLayerInterface.md "${pkgdir}"/usr/share/doc/${pkgname}/
+  install -m644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
