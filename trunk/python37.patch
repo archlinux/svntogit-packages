@@ -1,0 +1,613 @@
+From b4303babecee4047e67bd43960c751c35f261553 Mon Sep 17 00:00:00 2001
+From: ichizok <gclient.gaap@gmail.com>
+Date: Fri, 6 Jul 2018 15:22:16 +0900
+Subject: [PATCH 1/6] Fix importing-error handling
+
+---
+ src/if_py_both.h | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/src/if_py_both.h b/src/if_py_both.h
+index 417f86cbb..46383c423 100644
+--- a/src/if_py_both.h
++++ b/src/if_py_both.h
+@@ -1215,7 +1215,11 @@ find_module(char *fullname, char *tail, PyObject *new_path)
+ 
+ 	if (!(find_module_result = PyObject_CallFunction(py_find_module,
+ 			"s#O", tail, partlen, new_path)))
++	{
++	    if (PyErr_Occurred() && PyErr_ExceptionMatches(PyExc_ImportError))
++		PyErr_Clear();
+ 	    return NULL;
++	}
+ 
+ 	if (!(module = call_load_module(
+ 			fullname,
+@@ -1246,7 +1250,11 @@ find_module(char *fullname, char *tail, PyObject *new_path)
+     {
+ 	if (!(find_module_result = PyObject_CallFunction(py_find_module,
+ 			"sO", tail, new_path)))
++	{
++	    if (PyErr_Occurred() && PyErr_ExceptionMatches(PyExc_ImportError))
++		PyErr_Clear();
+ 	    return NULL;
++	}
+ 
+ 	if (!(module = call_load_module(
+ 			fullname,
+@@ -1284,12 +1292,7 @@ FinderFindModule(PyObject *self, PyObject *args)
+     if (!module)
+     {
+ 	if (PyErr_Occurred())
+-	{
+-	    if (PyErr_ExceptionMatches(PyExc_ImportError))
+-		PyErr_Clear();
+-	    else
+-		return NULL;
+-	}
++	    return NULL;
+ 
+ 	Py_INCREF(Py_None);
+ 	return Py_None;
+-- 
+2.18.0
+
+
+From 143363e949cec4c90ec43f2d33867afd569b64fa Mon Sep 17 00:00:00 2001
+From: ichizok <gclient.gaap@gmail.com>
+Date: Fri, 6 Jul 2018 15:44:34 +0900
+Subject: [PATCH 2/6] Fix test86,test87
+
+---
+ src/testdir/test86.ok | 2 +-
+ src/testdir/test87.ok | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/testdir/test86.ok b/src/testdir/test86.ok
+index f8d4ceb57..24d3fd4bd 100644
+--- a/src/testdir/test86.ok
++++ b/src/testdir/test86.ok
+@@ -701,7 +701,7 @@ vim.foreach_rtp(FailingCall()):NotImplementedError:('call',)
+ vim.foreach_rtp(int, 2):TypeError:('foreach_rtp() takes exactly one argument (2 given)',)
+ > import
+ import xxx_no_such_module_xxx:ImportError:('No module named xxx_no_such_module_xxx',)
+-import failing_import:ImportError:('No module named failing_import',)
++import failing_import:ImportError:()
+ import failing:NotImplementedError:()
+ > Options
+ >> OptionsItem
+diff --git a/src/testdir/test87.ok b/src/testdir/test87.ok
+index 9ca4b624c..a7d4f6426 100644
+--- a/src/testdir/test87.ok
++++ b/src/testdir/test87.ok
+@@ -701,7 +701,7 @@ vim.foreach_rtp(FailingCall()):(<class 'NotImplementedError'>, NotImplementedErr
+ vim.foreach_rtp(int, 2):(<class 'TypeError'>, TypeError('foreach_rtp() takes exactly one argument (2 given)',))
+ > import
+ import xxx_no_such_module_xxx:(<class 'ImportError'>, ImportError('No module named xxx_no_such_module_xxx',))
+-import failing_import:(<class 'ImportError'>, ImportError('No module named failing_import',))
++import failing_import:(<class 'ImportError'>, ImportError())
+ import failing:(<class 'NotImplementedError'>, NotImplementedError())
+ > Options
+ >> OptionsItem
+-- 
+2.18.0
+
+
+From 95a0f7e94e1f9e0bd1513e165eba4f2ea0631e6b Mon Sep 17 00:00:00 2001
+From: ichizok <gclient.gaap@gmail.com>
+Date: Fri, 6 Jul 2018 23:20:43 +0900
+Subject: [PATCH 3/6] Change 'LoaderObject' constructure
+
+do 'load_module' in 'LoaderLoadModule'
+---
+ src/if_py_both.h | 42 ++++++++++++++++++------------------------
+ 1 file changed, 18 insertions(+), 24 deletions(-)
+
+diff --git a/src/if_py_both.h b/src/if_py_both.h
+index 46383c423..6020c788d 100644
+--- a/src/if_py_both.h
++++ b/src/if_py_both.h
+@@ -539,27 +539,31 @@ PythonIO_Init_io(void)
+     return 0;
+ }
+ 
++static PyObject *call_load_module(char *name, int len, PyObject *find_module_result);
++
+ typedef struct
+ {
+     PyObject_HEAD
+-    PyObject	*module;
++    char	*fullname;
++    PyObject	*target;
+ } LoaderObject;
+ static PyTypeObject LoaderType;
+ 
+     static void
+ LoaderDestructor(LoaderObject *self)
+ {
+-    Py_DECREF(self->module);
++    vim_free(self->fullname);
++    Py_DECREF(self->target);
+     DESTRUCTOR_FINISH(self);
+ }
+ 
+     static PyObject *
+ LoaderLoadModule(LoaderObject *self, PyObject *args UNUSED)
+ {
+-    PyObject	*ret = self->module;
++    char	*fullname = self->fullname;
++    PyObject	*target = self->target;
+ 
+-    Py_INCREF(ret);
+-    return ret;
++    return call_load_module(fullname, (int)STRLEN(fullname), target);
+ }
+ 
+ static struct PyMethodDef LoaderMethods[] = {
+@@ -1240,11 +1244,11 @@ find_module(char *fullname, char *tail, PyObject *new_path)
+ 
+ 	Py_DECREF(module);
+ 
+-	module = find_module(fullname, dot + 1, newest_path);
++	find_module_result = find_module(fullname, dot + 1, newest_path);
+ 
+ 	Py_DECREF(newest_path);
+ 
+-	return module;
++	return find_module_result;
+     }
+     else
+     {
+@@ -1256,18 +1260,7 @@ find_module(char *fullname, char *tail, PyObject *new_path)
+ 	    return NULL;
+ 	}
+ 
+-	if (!(module = call_load_module(
+-			fullname,
+-			(int)STRLEN(fullname),
+-			find_module_result)))
+-	{
+-	    Py_DECREF(find_module_result);
+-	    return NULL;
+-	}
+-
+-	Py_DECREF(find_module_result);
+-
+-	return module;
++	return find_module_result;
+     }
+ }
+ 
+@@ -1275,7 +1268,7 @@ find_module(char *fullname, char *tail, PyObject *new_path)
+ FinderFindModule(PyObject *self, PyObject *args)
+ {
+     char	*fullname;
+-    PyObject	*module;
++    PyObject	*target;
+     PyObject	*new_path;
+     LoaderObject	*loader;
+ 
+@@ -1285,11 +1278,11 @@ FinderFindModule(PyObject *self, PyObject *args)
+     if (!(new_path = Vim_GetPaths(self)))
+ 	return NULL;
+ 
+-    module = find_module(fullname, fullname, new_path);
++    target = find_module(fullname, fullname, new_path);
+ 
+     Py_DECREF(new_path);
+ 
+-    if (!module)
++    if (!target)
+     {
+ 	if (PyErr_Occurred())
+ 	    return NULL;
+@@ -1300,11 +1293,12 @@ FinderFindModule(PyObject *self, PyObject *args)
+ 
+     if (!(loader = PyObject_NEW(LoaderObject, &LoaderType)))
+     {
+-	Py_DECREF(module);
++	Py_DECREF(target);
+ 	return NULL;
+     }
+ 
+-    loader->module = module;
++    loader->fullname = (char *)vim_strsave((char_u *)fullname);
++    loader->target = target;
+ 
+     return (PyObject *) loader;
+ }
+-- 
+2.18.0
+
+
+From 92a204120b9f508aae966d03c447ad615e3128b5 Mon Sep 17 00:00:00 2001
+From: ichizok <gclient.gaap@gmail.com>
+Date: Sat, 7 Jul 2018 01:47:42 +0900
+Subject: [PATCH 4/6] Fix resource leak
+
+---
+ src/if_py_both.h | 54 +++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 44 insertions(+), 10 deletions(-)
+
+diff --git a/src/if_py_both.h b/src/if_py_both.h
+index 6020c788d..98134cce2 100644
+--- a/src/if_py_both.h
++++ b/src/if_py_both.h
+@@ -545,7 +545,7 @@ typedef struct
+ {
+     PyObject_HEAD
+     char	*fullname;
+-    PyObject	*target;
++    PyObject	*result;
+ } LoaderObject;
+ static PyTypeObject LoaderType;
+ 
+@@ -553,7 +553,7 @@ static PyTypeObject LoaderType;
+ LoaderDestructor(LoaderObject *self)
+ {
+     vim_free(self->fullname);
+-    Py_DECREF(self->target);
++    Py_XDECREF(self->result);
+     DESTRUCTOR_FINISH(self);
+ }
+ 
+@@ -561,9 +561,35 @@ LoaderDestructor(LoaderObject *self)
+ LoaderLoadModule(LoaderObject *self, PyObject *args UNUSED)
+ {
+     char	*fullname = self->fullname;
+-    PyObject	*target = self->target;
++    PyObject	*result = self->result;
++    PyObject	*module;
++
++    if (!fullname)
++    {
++	module = result ? result : Py_None;
++	Py_INCREF(module);
++	return module;
++    }
++
++    module = call_load_module(fullname, (int)STRLEN(fullname), result);
++
++    self->fullname = NULL;
++    self->result = module;
++
++    vim_free(fullname);
++    Py_DECREF(result);
++
++    if (!module)
++    {
++	if (PyErr_Occurred())
++	    return NULL;
++
++	Py_INCREF(Py_None);
++	return Py_None;
++    }
+ 
+-    return call_load_module(fullname, (int)STRLEN(fullname), target);
++    Py_INCREF(module);
++    return module;
+ }
+ 
+ static struct PyMethodDef LoaderMethods[] = {
+@@ -1268,7 +1294,7 @@ find_module(char *fullname, char *tail, PyObject *new_path)
+ FinderFindModule(PyObject *self, PyObject *args)
+ {
+     char	*fullname;
+-    PyObject	*target;
++    PyObject	*result;
+     PyObject	*new_path;
+     LoaderObject	*loader;
+ 
+@@ -1278,11 +1304,11 @@ FinderFindModule(PyObject *self, PyObject *args)
+     if (!(new_path = Vim_GetPaths(self)))
+ 	return NULL;
+ 
+-    target = find_module(fullname, fullname, new_path);
++    result = find_module(fullname, fullname, new_path);
+ 
+     Py_DECREF(new_path);
+ 
+-    if (!target)
++    if (!result)
+     {
+ 	if (PyErr_Occurred())
+ 	    return NULL;
+@@ -1291,14 +1317,22 @@ FinderFindModule(PyObject *self, PyObject *args)
+ 	return Py_None;
+     }
+ 
++    if (!(fullname = (char *)vim_strsave((char_u *)fullname)))
++    {
++	Py_DECREF(result);
++	PyErr_NoMemory();
++	return NULL;
++    }
++
+     if (!(loader = PyObject_NEW(LoaderObject, &LoaderType)))
+     {
+-	Py_DECREF(target);
++	vim_free(fullname);
++	Py_DECREF(result);
+ 	return NULL;
+     }
+ 
+-    loader->fullname = (char *)vim_strsave((char_u *)fullname);
+-    loader->target = target;
++    loader->fullname = fullname;
++    loader->result = result;
+ 
+     return (PyObject *) loader;
+ }
+-- 
+2.18.0
+
+
+From 2025230f432e4ff07f2dd58b2e56afb58c2a7f7f Mon Sep 17 00:00:00 2001
+From: ichizok <gclient.gaap@gmail.com>
+Date: Fri, 6 Jul 2018 02:35:32 +0900
+Subject: [PATCH 5/6] Replace imp module by importlib for Python 3.7
+
+---
+ src/if_py_both.h | 76 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 75 insertions(+), 1 deletion(-)
+
+diff --git a/src/if_py_both.h b/src/if_py_both.h
+index 98134cce2..8478a3c2b 100644
+--- a/src/if_py_both.h
++++ b/src/if_py_both.h
+@@ -88,8 +88,12 @@ static PyObject *py_getcwd;
+ static PyObject *vim_module;
+ static PyObject *vim_special_path_object;
+ 
++#if PY_VERSION_HEX >= 0x030700f0
++static PyObject *py_find_spec;
++#else
+ static PyObject *py_find_module;
+ static PyObject *py_load_module;
++#endif
+ 
+ static PyObject *VimError;
+ 
+@@ -539,8 +543,8 @@ PythonIO_Init_io(void)
+     return 0;
+ }
+ 
++#if PY_VERSION_HEX < 0x030700f0
+ static PyObject *call_load_module(char *name, int len, PyObject *find_module_result);
+-
+ typedef struct
+ {
+     PyObject_HEAD
+@@ -597,6 +601,7 @@ static struct PyMethodDef LoaderMethods[] = {
+     {"load_module", (PyCFunction)LoaderLoadModule,	METH_VARARGS,	""},
+     { NULL,	    NULL,				0,		NULL}
+ };
++#endif
+ 
+ /* Check to see whether a Vim error has been reported, or a keyboard
+  * interrupt has been detected.
+@@ -1193,6 +1198,37 @@ Vim_GetPaths(PyObject *self UNUSED)
+     return ret;
+ }
+ 
++#if PY_VERSION_HEX >= 0x030700f0
++    static PyObject *
++FinderFindSpec(PyObject *self, PyObject *args)
++{
++    char	*fullname;
++    PyObject	*paths;
++    PyObject	*target = Py_None;
++    PyObject	*spec;
++
++    if (!PyArg_ParseTuple(args, "s|O", &fullname, &target))
++	return NULL;
++
++    if (!(paths = Vim_GetPaths(self)))
++	return NULL;
++
++    spec = PyObject_CallFunction(py_find_spec, "sNN", fullname, paths, target);
++
++    Py_DECREF(paths);
++
++    if (!spec)
++    {
++	if (PyErr_Occurred())
++	    return NULL;
++
++	Py_INCREF(Py_None);
++	return Py_None;
++    }
++
++    return spec;
++}
++#else
+     static PyObject *
+ call_load_module(char *name, int len, PyObject *find_module_result)
+ {
+@@ -1336,6 +1372,7 @@ FinderFindModule(PyObject *self, PyObject *args)
+ 
+     return (PyObject *) loader;
+ }
++#endif
+ 
+     static PyObject *
+ VimPathHook(PyObject *self UNUSED, PyObject *args)
+@@ -1367,7 +1404,11 @@ static struct PyMethodDef VimMethods[] = {
+     {"chdir",	    (PyCFunction)VimChdir,	METH_VARARGS|METH_KEYWORDS,	"Change directory"},
+     {"fchdir",	    (PyCFunction)VimFchdir,	METH_VARARGS|METH_KEYWORDS,	"Change directory"},
+     {"foreach_rtp", VimForeachRTP,		METH_O,				"Call given callable for each path in &rtp"},
++#if PY_VERSION_HEX >= 0x030700f0
++    {"find_spec",   FinderFindSpec,		METH_VARARGS,			"Internal use only, returns spec object for any input it receives"},
++#else
+     {"find_module", FinderFindModule,		METH_VARARGS,			"Internal use only, returns loader object for any input it receives"},
++#endif
+     {"path_hook",   VimPathHook,		METH_VARARGS,			"Hook function to install in sys.path_hooks"},
+     {"_get_paths",  (PyCFunction)Vim_GetPaths,	METH_NOARGS,			"Get &rtp-based additions to sys.path"},
+     { NULL,	    NULL,			0,				NULL}
+@@ -6576,6 +6617,7 @@ init_structs(void)
+     OptionsType.tp_traverse = (traverseproc)OptionsTraverse;
+     OptionsType.tp_clear = (inquiry)OptionsClear;
+ 
++#if PY_VERSION_HEX < 0x030700f0
+     vim_memset(&LoaderType, 0, sizeof(LoaderType));
+     LoaderType.tp_name = "vim.Loader";
+     LoaderType.tp_basicsize = sizeof(LoaderObject);
+@@ -6583,6 +6625,7 @@ init_structs(void)
+     LoaderType.tp_doc = "vim message object";
+     LoaderType.tp_methods = LoaderMethods;
+     LoaderType.tp_dealloc = (destructor)LoaderDestructor;
++#endif
+ 
+ #if PY_MAJOR_VERSION >= 3
+     vim_memset(&vimmodule, 0, sizeof(vimmodule));
+@@ -6614,7 +6657,9 @@ init_types(void)
+     PYTYPE_READY(FunctionType);
+     PYTYPE_READY(OptionsType);
+     PYTYPE_READY(OutputType);
++#if PY_VERSION_HEX < 0x030700f0
+     PYTYPE_READY(LoaderType);
++#endif
+     return 0;
+ }
+ 
+@@ -6738,7 +6783,9 @@ static struct object_constant {
+     {"List",       (PyObject *)&ListType},
+     {"Function",   (PyObject *)&FunctionType},
+     {"Options",    (PyObject *)&OptionsType},
++#if PY_VERSION_HEX < 0x030700f0
+     {"_Loader",    (PyObject *)&LoaderType},
++#endif
+ };
+ 
+ #define ADD_OBJECT(m, name, obj) \
+@@ -6760,6 +6807,10 @@ populate_module(PyObject *m)
+     PyObject	*other_module;
+     PyObject	*attr;
+     PyObject	*imp;
++#if PY_VERSION_HEX >= 0x030700f0
++    PyObject	*dict;
++    PyObject	*cls;
++#endif
+ 
+     for (i = 0; i < (int)(sizeof(numeric_constants)
+ 					   / sizeof(struct numeric_constant));
+@@ -6832,6 +6883,28 @@ populate_module(PyObject *m)
+ 
+     ADD_OBJECT(m, "VIM_SPECIAL_PATH", vim_special_path_object);
+ 
++#if PY_VERSION_HEX >= 0x030700f0
++    if (!(imp = PyImport_ImportModule("importlib.machinery")))
++	return -1;
++
++    dict = PyModule_GetDict(imp);
++
++    if (!(cls = PyDict_GetItemString(dict, "PathFinder")))
++    {
++	Py_DECREF(imp);
++	return -1;
++    }
++
++    if (!(py_find_spec = PyObject_GetAttrString(cls, "find_spec")))
++    {
++	Py_DECREF(imp);
++	return -1;
++    }
++
++    Py_DECREF(imp);
++
++    ADD_OBJECT(m, "_find_spec", py_find_spec);
++#else
+     if (!(imp = PyImport_ImportModule("imp")))
+ 	return -1;
+ 
+@@ -6852,6 +6925,7 @@ populate_module(PyObject *m)
+ 
+     ADD_OBJECT(m, "_find_module", py_find_module);
+     ADD_OBJECT(m, "_load_module", py_load_module);
++#endif
+ 
+     return 0;
+ }
+-- 
+2.18.0
+
+
+From af6a110ab17849a41cebfe041b31d55844ef844b Mon Sep 17 00:00:00 2001
+From: ichizok <gclient.gaap@gmail.com>
+Date: Fri, 6 Jul 2018 16:01:43 +0900
+Subject: [PATCH 6/6] Fix test87
+
+https://docs.python.org/3/whatsnew/3.7.html#changes-in-the-python-api
+
+> repr for BaseException has changed to not include the trailing comma.
+---
+ src/testdir/test87.in | 21 +++++++++++++--------
+ 1 file changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/src/testdir/test87.in b/src/testdir/test87.in
+index ac0410901..31de37b99 100644
+--- a/src/testdir/test87.in
++++ b/src/testdir/test87.in
+@@ -219,6 +219,7 @@ import sys
+ import re
+ 
+ py33_type_error_pattern = re.compile('^__call__\(\) takes (\d+) positional argument but (\d+) were given$')
++py37_exception_repr = re.compile(r'([^\(\),])(\)+)$')
+ 
+ def ee(expr, g=globals(), l=locals()):
+     cb = vim.current.buffer
+@@ -227,17 +228,17 @@ def ee(expr, g=globals(), l=locals()):
+             exec(expr, g, l)
+         except Exception as e:
+             if sys.version_info >= (3, 3) and e.__class__ is AttributeError and str(e).find('has no attribute')>=0 and not str(e).startswith("'vim."):
+-                cb.append(expr + ':' + repr((e.__class__, AttributeError(str(e)[str(e).rfind(" '") + 2:-1]))))
++                msg = repr((e.__class__, AttributeError(str(e)[str(e).rfind(" '") + 2:-1])))
+             elif sys.version_info >= (3, 3) and e.__class__ is ImportError and str(e).find('No module named \'') >= 0:
+-                cb.append(expr + ':' + repr((e.__class__, ImportError(str(e).replace("'", '')))))
++                msg = repr((e.__class__, ImportError(str(e).replace("'", ''))))
+             elif sys.version_info >= (3, 6) and e.__class__ is ModuleNotFoundError:
+                 # Python 3.6 gives ModuleNotFoundError, change it to an ImportError
+-                cb.append(expr + ':' + repr((ImportError, ImportError(str(e).replace("'", '')))))
++                msg = repr((ImportError, ImportError(str(e).replace("'", ''))))
+             elif sys.version_info >= (3, 3) and e.__class__ is TypeError:
+                 m = py33_type_error_pattern.search(str(e))
+                 if m:
+                     msg = '__call__() takes exactly {0} positional argument ({1} given)'.format(m.group(1), m.group(2))
+-                    cb.append(expr + ':' + repr((e.__class__, TypeError(msg))))
++                    msg = repr((e.__class__, TypeError(msg)))
+                 else:
+                     msg = repr((e.__class__, e))
+                     # Messages changed with Python 3.6, change new to old.
+@@ -249,9 +250,8 @@ def ee(expr, g=globals(), l=locals()):
+                     oldmsg2 = '''"Can't convert 'int' object to str implicitly"'''
+                     if msg.find(newmsg2) > -1:
+                         msg = msg.replace(newmsg2, oldmsg2)
+-                    cb.append(expr + ':' + msg)
+             elif sys.version_info >= (3, 5) and e.__class__ is ValueError and str(e) == 'embedded null byte':
+-                cb.append(expr + ':' + repr((TypeError, TypeError('expected bytes with no null'))))
++                msg = repr((TypeError, TypeError('expected bytes with no null')))
+             else:
+                 msg = repr((e.__class__, e))
+                 # Some Python versions say can't, others cannot.
+@@ -262,11 +262,16 @@ def ee(expr, g=globals(), l=locals()):
+                     msg = msg.replace('"cannot ', '\'cannot ')
+                 if msg.find(' attributes"') > -1:
+                     msg = msg.replace(' attributes"', ' attributes\'')
+-                cb.append(expr + ':' + msg)
++            if sys.version_info >= (3, 7):
++                msg = py37_exception_repr.sub(r'\1,\2', msg)
++            cb.append(expr + ':' + msg)
+         else:
+             cb.append(expr + ':NOT FAILED')
+     except Exception as e:
+-        cb.append(expr + '::' + repr((e.__class__, e)))
++        msg = repr((e.__class__, e))
++        if sys.version_info >= (3, 7):
++            msg = py37_exception_repr.sub(r'\1,\2', msg)
++        cb.append(expr + '::' + msg)
+ EOF
+ :fun New(...)
+ :   return ['NewStart']+a:000+['NewEnd']
+-- 
+2.18.0
+
