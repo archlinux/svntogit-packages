@@ -1,0 +1,53 @@
+# $Id$
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+
+pkgname=vulkan-validation-layers
+pkgver=1.1.79+7729+3bd8e348
+pkgrel=1
+pkgdesc="Vulkan Validation Layers"
+arch=(x86_64)
+url="https://www.khronos.org/vulkan/"
+license=('custom')
+depends=(gcc-libs vulkan-icd-loader vulkan-headers libx11)
+makedepends=(cmake python-lxml libx11 libxrandr wayland git)
+#source=(https://github.com/KhronosGroup/Vulkan-ValidationLayers/releases/tag/sdk-${pkgver})
+source=("git+https://github.com/KhronosGroup/Vulkan-ValidationLayers.git#commit=3bd8e3489213612ff6129fc6e668d6d355d3c73c")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "${srcdir}/Vulkan-ValidationLayers"
+
+  echo 1.1.79+$(git rev-list --count HEAD)+$(git rev-parse --short HEAD)
+}
+
+build() {
+  cd "${srcdir}/Vulkan-ValidationLayers"
+
+  rm -rf build ; mkdir build ; cd build
+  ../scripts/update_deps.py
+  cmake -C helper.cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_INSTALL_DATADIR=/share \
+    -DCMAKE_SKIP_RPATH=True \
+    -DBUILD_TESTS=Off \
+    -DBUILD_WSI_XCB_SUPPORT=On \
+    -DBUILD_WSI_XLIB_SUPPORT=On \
+    -DBUILD_WSI_WAYLAND_SUPPORT=On \
+    -DBUILD_WSI_MIR_SUPPORT=Off \
+    -DCMAKE_BUILD_TYPE=Release \
+    ..
+  make
+}
+
+package() {
+  groups=('vulkan-devel')
+  cd "${srcdir}/Vulkan-ValidationLayers/build"
+  
+  make DESTDIR="${pkgdir}" install
+
+  install -dm755 "${pkgdir}"/usr/share/{licenses/,doc/}${pkgname}/
+  install -m644 ../docs/* "${pkgdir}"/usr/share/doc/${pkgname}/
+  install -m644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
