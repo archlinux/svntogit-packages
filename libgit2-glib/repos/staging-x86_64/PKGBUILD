@@ -1,0 +1,47 @@
+# $Id$
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+
+pkgname=libgit2-glib
+pkgver=0.26.4
+pkgrel=3
+pkgdesc="GLib wrapper for libgit2"
+url="https://wiki.gnome.org/Projects/Libgit2-glib"
+license=(LGPL2.1)
+arch=(x86_64)
+depends=(glib2 libgit2)
+makedepends=(gobject-introspection python-gobject python2 vala gtk-doc git meson)
+_commit=fed5187a24bbee3aa72049df3f55af4a4166c0bb  # tags/v0.26.4^0
+source=("git+https://git.gnome.org/browse/libgit2-glib#commit=$_commit"
+        libgit2-0.27.0.diff)
+sha256sums=('SKIP'
+            'df86d15a80e6031af51274e25266c5cf7800a803958384132c3c4a7835e15b1e')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  patch -Np1 -i ../libgit2-0.27.0.diff
+}
+
+build() {
+  arch-meson $pkgname build -D gtk_doc=true
+  ninja -C build
+}
+
+check() {
+  cd build
+  meson test
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
+  cp -a "$pkgdir"/usr/lib/python{3.7,2.7}
+  python3 -m compileall "$pkgdir/usr/lib/python3.7"
+  python3 -O -m compileall "$pkgdir/usr/lib/python3.7"
+  python2 -m compileall "$pkgdir/usr/lib/python2.7"
+  python2 -O -m compileall "$pkgdir/usr/lib/python2.7"
+}
