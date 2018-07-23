@@ -2,7 +2,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=tracker-miners
-pkgver=2.0.5
+pkgver=2.1.0
 pkgrel=1
 pkgdesc="Collection of data extractors for Tracker/Nepomuk"
 url="https://wiki.gnome.org/Projects/Tracker"
@@ -10,9 +10,9 @@ arch=(x86_64)
 license=(GPL)
 depends=(tracker gst-plugins-base-libs exempi flac libexif libcue libgrss libgsf libgxps
          libiptcdata libosinfo libvorbis poppler-glib taglib totem-plparser giflib)
-makedepends=(intltool git python)
+makedepends=(intltool git python meson)
 groups=(gnome)
-_commit=d3ee83ad9bde8ee16b8a3dec4d8f459811921db1  # tags/2.0.5^0
+_commit=24d32b563e6bfba4558c8bcb4724b19a14e1513b  # tags/2.1.0^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker-miners.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -23,35 +23,20 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib \
-    --enable-unit-tests \
-    --enable-functional-tests \
-    --enable-libflac \
-    --enable-libvorbis \
-    --enable-guarantee-metadata
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build
+  ninja -C build
 }
 
 check() {
-  cd $pkgname
   # Many tests are broken:
   # - Assume schemas are installed
   # - Assume services are autolaunched
-  dbus-run-session make -k check || :
+  dbus-run-session meson test -C build || :
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
-  rm -r "$pkgdir/usr/share/tracker-tests"
+  DESTDIR="$pkgdir" meson install -C build
 }
