@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 _srcname=linux-4.17
-_pkgver=4.17.8
+_pkgver=4.17.9
 pkgver=${_pkgver}.a
 pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
@@ -33,9 +33,9 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
 replaces=('linux-grsec')
 sha256sums=('9faa1dd896eaea961dc6e886697c0b3301277102e5bc976b2758f9a62d3ccd13'
             'SKIP'
-            '146f68fa5ded4c33f3bafba23224ed8fae2a27f701257c899c6a4a7fa61eb6d0'
+            '52131a497efaed724afaa7f7022249f8f8e6e555cbe407a6619908ed2ebcee89'
             'SKIP'
-            '7c89b113e7b97c9acd9bbb512105023b548ba9dd5fd4939e07efef120a6ff52a'
+            '00106f5f60d3a0716cd44f13a7834b3d26ecde2fdbd51357e03157c9f97d78c7'
             'SKIP'
             'acde405367c9b2dd11c4b6e68799a8f51fa8cf499b3b8c9a570a276c17a29a1c'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
