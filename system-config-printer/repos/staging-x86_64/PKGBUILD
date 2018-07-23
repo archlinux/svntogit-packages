@@ -1,0 +1,48 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=system-config-printer
+pkgver=1.5.11
+pkgrel=3
+pkgdesc="A CUPS printer configuration tool and status applet"
+url="https://github.com/zdohnal/system-config-printer"
+arch=('x86_64')
+license=('GPL')
+depends=('python-pycups' 'python-dbus' 'python-pycurl' 'libnotify'
+         'python-requests' 'python-gobject' 'gtk3' 'python-cairo')
+makedepends=('intltool' 'xmlto' 'docbook-xsl' 'desktop-file-utils' 'libsecret')
+optdepends=('libsecret: password management'
+            'python-pysmbc: SMB browser support'
+            'cups-pk-helper: PolicyKit helper to configure cups with fine-grained privileges')
+source=(https://github.com/zdohnal/system-config-printer/releases/download/$pkgver/system-config-printer-${pkgver}.tar.xz
+        0001-Fix-constructing-the-auth-dialog.patch)
+sha256sums=('38ad78d117c30ddb8c6c008a91d1bc0fa2e854ec04ee2de5cdd12ab842c100d3'
+            '2fd4daa433da0659b6a86962144545015d617c39c0e42ea04d7ede5fa6f9ceff')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -Np1 -i ../0001-Fix-constructing-the-auth-dialog.patch
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --with-udevdir=/usr/lib/udev --with-udev-rules 
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # Compile *.pyc
+  find "${pkgdir}" -name '*.py' -exec python -mpy_compile {} +
+  # Compile *.pyo
+  find "${pkgdir}" -name '*.py' -exec python -O -mpy_compile {} +
+  
+  # new cups 2.0.0 service naming
+  sed -i "s|cups.socket|org.cups.cupsd.socket|g" ${pkgdir}/usr/lib/systemd/system/configure-printer@.service
+}
