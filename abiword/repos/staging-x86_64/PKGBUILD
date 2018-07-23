@@ -1,0 +1,96 @@
+# $Id$
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Maël Lavault <moimael@neuf.fr>
+
+pkgname=abiword
+pkgver=3.0.2
+pkgrel=8
+pkgdesc='Fully-featured word processor'
+arch=('x86_64')
+license=('GPL')
+url='https://www.abisource.com'
+depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant' 'desktop-file-utils'
+         'redland' 'libical' 'gtk-update-icon-cache' 'loudmouth' 'libwpg' 'libwps' 'libwmf' 'link-grammar' 
+         'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
+makedepends=('pkgconfig' 'asio' 'boost' 'gobject-introspection' 'libwpd' 'libwps' 'python2-gobject' 'python-gobject')
+conflicts=('abiword-plugins')
+replaces=('abiword-plugins')
+options=('!makeflags')
+source=(https://www.abisource.com/downloads/$pkgname/$pkgver/source/$pkgname-$pkgver.tar.gz
+        abiword-3.0.0-librevenge.patch
+	abiword-3.0.1-libwps-0.4.patch
+        aiksaurus-plugin.m4
+        command-plugin.m4
+        python-override.patch
+        bug13815.patch
+        enchant-2.1.patch
+        libical-deprecated.patch)
+sha256sums=('afbfd458fd02989d8b0c6362ba8a4c14686d89666f54cfdb5501bd2090cf3522'
+            '77b52a3722096cec3bfbe4fff3802f51b6c9e0ff7aaa30028c29825fd4e6a65f'
+            'f1375b2ab7af2959717cba0259ba546c8e75ef849e84263bdc253019e849cb2a'
+            '5f80a2f94f9929cdba9809c5e1a87cd5d537a2518bb879bfb9eab51a71c8dac1'
+            '2f26826e9d59d80dacd0dae4aceb815804eaa75954e47507a0897794f33e45be'
+            'dba1e3265cd42589f17b41fea1a39c8aa4b83c7203b9d5944b578d0ff9c858be'
+            '05f2544a177d6f58424af9045c26e82aca64938d0daf00f43f6b99a2abf64496'
+            '444dc2aadea3c80310a509b690097541573f6d2652c573d04da66a0f385fcfb2'
+            'fe6eec4129777117bbfd5fa12d02208e430c8a3b96a54dcf8574ce800f240489')
+
+prepare() {
+  cd $pkgname-$pkgver
+
+  # fix build with librevenge based import filters
+  patch -Np0 -i ../abiword-3.0.0-librevenge.patch
+
+  # Fix libwpd 0.4 detection
+  patch -Np1 -i ../abiword-3.0.1-libwps-0.4.patch
+
+  # Fix python override code to work with Python 3.x
+  patch -Np1 -i ../python-override.patch
+
+  # Fix black on black (FS#51667)
+  # http://bugzilla.abisource.com/show_bug.cgi?id=13815
+  patch -Np1 -i ../bug13815.patch
+
+  # Replace deprecated enchant functions
+  patch -Np1 -i ../enchant-2.1.patch
+
+  # Replace deprecated libical functions
+  patch -Np1 -i ../libical-deprecated.patch
+
+  # Install missing m4 file
+  install -m644 ../aiksaurus-plugin.m4 plugins/aiksaurus/plugin.m4
+  install -m644 ../command-plugin.m4 plugins/command/plugin.m4
+
+  # Generate m4 file for configure
+  find plugins -name plugin.m4 | xargs cat > plugin-configure.m4
+
+  # enchant-2 naming change
+  sed -i 's/enchant >=/enchant-2 >=/' configure.ac
+
+  libtoolize --force
+  autoreconf -fi
+}
+
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure --prefix=/usr \
+    --enable-shared \
+    --disable-static \
+    --enable-clipart \
+    --enable-templates \
+    --enable-plugins \
+    --enable-introspection
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  cd src/gi-overrides
+  sed -i 's/python -c/python2 -c/' Makefile
+  make DESTDIR="$pkgdir" PYTHON=python2 install
+}
