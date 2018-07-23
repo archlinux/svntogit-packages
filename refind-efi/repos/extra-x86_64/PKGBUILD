@@ -2,7 +2,7 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 # Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
 
-_USE_GNU_EFI="1"
+_USE_GNU_EFI="0"
 _PXE='0'
 
 #######
@@ -14,7 +14,7 @@ _PXE='0'
 #######
 
 pkgname="refind-efi"
-pkgver="0.11.2"
+pkgver="0.11.3"
 pkgrel="1"
 pkgdesc="Rod Smith's fork of rEFIt UEFI Boot Manager"
 url="http://www.rodsbooks.com/refind/index.html"
@@ -22,43 +22,41 @@ arch=('x86_64')
 license=('GPL3' 'custom')
 
 depends=('bash' 'dosfstools' 'efibootmgr')
-optdepends=('mactel-boot: For bless command in Apple Mac systems'
+optdepends=('sudo: privilege elevation'
+            'parted: For finding ESP'
             'imagemagick: For refind-mkfont script'
-            'python: For refind-mkdefault script')
+            'python: For refind-mkdefault script'
+            'sbsigntools: For EFI binary signing')
 
-options=('!strip' 'docs' '!makeflags')
+options=('!strip' 'docs' '!makeflags' '!buildflags')
 
 install="${pkgname}.install"
 
-#source=("http://downloads.sourceforge.net/refind/refind-src-${pkgver}.zip"
 source=("http://downloads.sourceforge.net/refind/refind-src-${pkgver}.tar.gz"
         'refind_linux.conf')
-md5sums=('030d623ebaf6236eb1e9aedbfa4d91af'
+md5sums=('8562e11e40de17d353cff02a1deae5dd'
          '12ce3e22a216e7b25c253478a34713b4')
 
 if [[ "${_USE_GNU_EFI}" == "1" ]]; then
 	
 	pkgdesc="${pkgdesc} - Built with GNU-EFI libs"
-	makedepends=('gnu-efi-libs' 'git')
+	makedepends+=('gnu-efi-libs')
 	
 else
 	
-	pkgdesc="${pkgdesc} - Built with Tianocore UDK libs"
-	makedepends+=('subversion' 'python2' 'git')
+	pkgdesc="${pkgdesc} - Built with Tianocore EDK2 libs"
+	makedepends+=('git' 'python2' 'nasm')
 	
-	_TIANOCORE_SVN_URL="https://svn.code.sf.net/p/edk2/code/branches/UDK2014"
-	_TIANO_DIR_="tianocore-udk-2014-svn"
-	_TIANO_SVN_REV_="15322"
+	_UDK_VERSION='UDK2018'
+	_TIANO_DIR_="edk2-${_UDK_VERSION}"
 	
 	_TIANOCORE_PKG="Mde"
 	_TIANOCORE_TARGET="RELEASE"
 	_UDK_TARGET="${_TIANOCORE_PKG}Pkg/${_TIANOCORE_PKG}Pkg.dsc"
-	_COMPILER="GCC48"
+	_COMPILER="GCC5"
 	
-	## BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg
-	for _DIR_ in BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg ; do
-		source+=("${_TIANO_DIR_}_${_DIR_}::svn+${_TIANOCORE_SVN_URL}/${_DIR_}#revision=${_TIANO_SVN_REV_}")
-	done
+	source+=("${_TIANO_DIR_}::git+https://github.com/tianocore/edk2.git#branch=${_UDK_VERSION}")
+	md5sums+=('SKIP')
 	
 fi
 
@@ -77,11 +75,7 @@ _prepare_tianocore_sources() {
 	rm -rf "${_UDK_DIR}/" || true
 	
 	msg "Create UDK BUILD dir"
-	mkdir -p "${_UDK_DIR}/"
-	
-	for _DIR_ in BaseTools MdePkg MdeModulePkg IntelFrameworkPkg IntelFrameworkModulePkg ; do
-		mv "${srcdir}/${_TIANO_DIR_}_${_DIR_}" "${_UDK_DIR}/${_DIR_}"
-	done
+	cp -r "${srcdir}/${_TIANO_DIR_}" "${_UDK_DIR}"
 	
 	cd "${_UDK_DIR}/"
 	
@@ -90,6 +84,9 @@ _prepare_tianocore_sources() {
 	rm -rf "${_UDK_DIR}/Conf/" || true
 	mkdir -p "${_UDK_DIR}/Conf/"
 	mkdir -p "${_UDK_DIR}/Build/"
+	
+	msg "Disable build ID generation"
+	sed 's|,--gc-sections|,--gc-sections,--build-id=none|g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template"
 	
 	msg "Use python2 for UDK BaseTools"
 	sed 's|python |python2 |g' -i "${EDK_TOOLS_PATH}/BinWrappers/PosixLike"/* || true
@@ -103,26 +100,15 @@ _prepare_tianocore_sources() {
 	## http://www.mail-archive.com/edk2-devel@lists.sourceforge.net/msg03625.html
 	sed -e 's|_OBJCOPY_FLAGS      =|_OBJCOPY_FLAGS      = -R .eh_frame|g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
 	
-	msg "Fix GCC >=4.7 error - gcc: error: unrecognized command line option '-melf_x86_64'"
-	sed 's| -m64 --64 -melf_x86_64| -m64|g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
-	sed 's|--64 | |g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
-	sed 's| -m64 -melf_x86_64| -m64|g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
-	
 	msg "Remove GCC -g debug option and add -O0 -mabi=ms -maccumulate-outgoing-args"
 	sed 's|DEFINE GCC_ALL_CC_FLAGS            = -g |DEFINE GCC_ALL_CC_FLAGS            = -O0 -mabi=ms -maccumulate-outgoing-args |g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
 	sed 's|DEFINE GCC44_ALL_CC_FLAGS            = -g |DEFINE GCC44_ALL_CC_FLAGS            = -O0 -mabi=ms -maccumulate-outgoing-args |g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template" || true
 	
-	# msg "Fix GenFw: ERROR 3000: Invalid, Unsupported section alignment"
-	sed 's|--gc-sections|--gc-sections --build-id=none|g' -i "${EDK_TOOLS_PATH}/Conf/tools_def.template"
-	
 	msg "Fix UDK Target Platform"
 	sed "s|ACTIVE_PLATFORM       = Nt32Pkg/Nt32Pkg.dsc|ACTIVE_PLATFORM       = ${_UDK_TARGET}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
 	sed "s|TARGET                = DEBUG|TARGET                = ${_TIANOCORE_TARGET}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
+	sed "s|TARGET_ARCH           = IA32|TARGET_ARCH           = ${_TIANO_ARCH}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
 	sed "s|TOOL_CHAIN_TAG        = MYTOOLS|TOOL_CHAIN_TAG        = ${_COMPILER}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
-	
-	msg "Fix UDK Target ARCH for rEFInd"
-	sed "s|X64|${_TIANO_ARCH}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
-	sed "s|IA32|${_TIANO_ARCH}|g" -i "${EDK_TOOLS_PATH}/Conf/target.template" || true
 	
 	chmod 0755 "${_UDK_DIR}/BaseTools/BuildEnv"
 	
@@ -139,34 +125,11 @@ _prepare_refind_sources() {
 		sed "s|-m64|-maccumulate-outgoing-args -m64|g" -i "${srcdir}/refind-${pkgver}/filesystems/Make.gnuefi" || true
 	else
 		msg "Fix UDK Path in rEFInd Makefiles"
-		sed "s|EDK2BASE = /usr/local/UDK2014/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2014/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2014/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2014/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano" || true
-		sed "s|EDK2BASE = /usr/local/UDK2010/MyWorkSpace|EDK2BASE = ${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
+		sed "s|^export EDK2BASE=.*$|export EDK2BASE=${_UDK_DIR}|g" -i "${srcdir}/refind-${pkgver}/Makefile" || truee
 		
-		msg "Fix GenFw: ERROR 3000: Invalid, refind_x64.dll bad symbol definition"
-		sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
-		sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
-		sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano"
-		sed -e 's|--strip-unneeded|--strip-unneeded -R .eh_frame|g' -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
+		msg "Disable build ID generation"
+		sed 's|--gc-sections|--gc-sections --build-id=none|g' -i "${srcdir}/refind-${pkgver}/Make.common" || true
 	
-		# msg "Fix GenFw: ERROR 3000: Invalid section alignment"
-		sed 's|--gc-sections|--gc-sections --build-id=none|g' -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
-		sed 's|--gc-sections|--gc-sections --build-id=none|g' -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
-		sed 's|--gc-sections|--gc-sections --build-id=none|g' -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano" || true
-		sed 's|--gc-sections|--gc-sections --build-id=none|g' -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
-		# sed -e 's|--gc-sections|--gc-sections -z max-page-size=0x20|g' -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
-		# sed -e 's|--gc-sections|--gc-sections -z max-page-size=0x20|g' -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
-		# sed -e 's|--gc-sections|--gc-sections -z max-page-size=0x20|g' -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano"
-		# sed -e 's|--gc-sections|--gc-sections -z max-page-size=0x20|g' -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
-		# sed -e 's|--strip-unneeded|--section-alignment=0x20 --strip-unneeded|g' -i "${srcdir}/refind-${pkgver}/Make.tiano" || true
-		# sed -e 's|--strip-unneeded|--section-alignment=0x20 --strip-unneeded|g' -i "${srcdir}/refind-${pkgver}/refind/Make.tiano" || true
-		# sed -e 's|--strip-unneeded|--section-alignment=0x20 --strip-unneeded|g' -i "${srcdir}/refind-${pkgver}/filesystems/Make.tiano"
-		# sed -e 's|--strip-unneeded|--section-alignment=0x20 --strip-unneeded|g' -i "${srcdir}/refind-${pkgver}/gptsync/Make.tiano" || true
 	fi
 	
 }
@@ -239,7 +202,7 @@ build() {
 		make gnuefi
 		echo
 	else
-		make tiano
+		make edk2
 		echo
 	fi
 	
@@ -257,7 +220,7 @@ build() {
 		make fs_gnuefi
 		echo
 	else
-		make fs
+		make fs_edk2
 		echo
 		
 	fi
@@ -340,9 +303,6 @@ package() {
 	msg "Install the rEFIt license file, since rEFInd is a fork of rEFIt"
 	install -d "${pkgdir}/usr/share/licenses/refind/"
 	install -D -m0644 "${srcdir}/refind-${pkgver}/LICENSE.txt" "${pkgdir}/usr/share/licenses/refind/LICENSE"
-	
-	msg "Use '#!/usr/bin/env bash' in all scripts"
-	sed 's|#!/bin/bash|#!/usr/bin/env bash|g' -i "${pkgdir}/usr/bin"/* || true
 	
 	msg "Point refind dir paths to /usr/share/refind/ in refind-install script"
 	sed 's|RefindDir=\"\$ThisDir/refind\"|RefindDir="/usr/share/refind/"|g' -i "${pkgdir}/usr/bin/refind-install"
