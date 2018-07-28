@@ -1,0 +1,65 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Tom Killian <tom.archlinux.org>
+# Contributor: Judd Vinet <jvinet.zeroflux.org>
+
+pkgname=dhcpcd
+pkgver=7.0.7
+pkgrel=1
+pkgdesc="RFC2131 compliant DHCP client daemon"
+url="http://roy.marples.name/projects/dhcpcd/"
+arch=('x86_64')
+license=('BSD')
+groups=('base')
+depends=('glibc' 'sh' 'udev' 'libsystemd')
+optdepends=('openresolv: resolvconf support')
+provides=('dhcp-client')
+backup=('etc/dhcpcd.conf')
+options=('emptydirs')  # We Need the Empty /var/lib/dhcpcd Directory
+source=("https://roy.marples.name/downloads/$pkgname/$pkgname-$pkgver.tar.xz"
+        'dhcpcd_.service'
+        'dhcpcd.service')
+validpgpkeys=('A785ED2755955D9E93EA59F6597F97EA9AD45549')  # Roy Marples (NetBSD) <roy@NetBSD.org>
+sha512sums=('04c316f7b180bbbf48aa58273d3a28d659824e474d1ce48325f610ed2c5d2a01117f5b65b4a9697f3e8e1b85d4bdcc0b8ab75a928a8cd5723a865d8c0a065269'
+            '837b4921ebadfed664eb9ad575116c3be89377be32b8bd194cfac7a31430a6d8efadaacdcb2a87364a22cb7a2c36fdbef246becda094317311b1730618e804e8'
+            '00313d1c33cf9c77bf2743e6ae11dd4acf78453b63529bb3a1264a50a91363990a2d781afb9af9456badcba0165f58e083cec4fd4c09b25aa65124d8b275c4ad')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # configure variables
+  ./configure \
+      --prefix=/usr \
+      --sysconfdir=/etc \
+      --sbindir=/usr/bin \
+      --libexecdir=/usr/lib/dhcpcd \
+      --dbdir=/var/lib/dhcpcd \
+      --rundir=/run
+
+  # Build
+  make
+}
+
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make test
+}
+
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  # Install License
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/LICENSE" \
+	  "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Set Options in /etc/dhcpcd.conf
+  echo noipv4ll >> "${pkgdir}/etc/dhcpcd.conf" # Disable ip4vall
+
+  # install systemd files
+  install -Dm644 "${srcdir}/dhcpcd_.service" "${pkgdir}/usr/lib/systemd/system/dhcpcd@.service"
+  install -Dm644 "${srcdir}/dhcpcd.service" "${pkgdir}/usr/lib/systemd/system/dhcpcd.service" # FS#31543
+}
