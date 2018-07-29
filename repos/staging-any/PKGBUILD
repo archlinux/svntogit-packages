@@ -1,0 +1,71 @@
+# $Id$
+# Maintainer:
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Leif Warner <abimelech@gmail.com>
+
+pkgbase=python-rdflib
+pkgname=('python2-rdflib' 'python-rdflib')
+pkgver=4.2.2
+pkgrel=2
+pkgdesc="A Python library for working with RDF, a simple yet powerful language for representing information"
+arch=('any')
+url="http://rdflib.net/"
+license=('BSD')
+makedepends=('python2-isodate' 'python-isodate' 'python2-setuptools' 'python-setuptools')
+checkdepends=('python2-nose' 'python-nose' 'python2-pyparsing' 'python-pyparsing' 'python2-six'
+              'python-six' 'python-html5lib' 'python2-html5lib' 'python-sparqlwrapper'
+              'python2-sparqlwrapper' 'python-networkx' 'python2-networkx' 'python-decorator'
+              'python2-decorator')
+source=(rdflib-$pkgver.tar.gz::https://github.com/RDFLib/rdflib/tarball/$pkgver
+        py3.7.diff)
+sha1sums=('08fe9d3480af78ca70380eeae082524ce70bb9d3'
+          '71e6b688c981a3f1387f68944580c1e5d5363915')
+
+prepare() {
+  patch -d RDFLib-rdflib-* -p1 < py3.7.diff
+  cp -r RDFLib-rdflib-* python2-rdflib
+  cd python2-rdflib
+  sed -i 's|/usr/bin/env python|/usr/bin/env python2|' rdflib/extras/{describer.py,infixowl.py} \
+    rdflib/plugins/parsers/{ntriples.py,notation3.py,structureddata.py,pyRdfa/extras/httpheader.py} \
+    rdflib/tools/rdfpipe.py
+}
+
+build() {
+  cd RDFLib-rdflib-*
+  python setup.py build
+  cd ../python2-rdflib
+  python2 setup.py build
+}
+
+check() {
+  cd RDFLib-rdflib-*
+  #python setup.py test # Will download and install rdflib again
+  nosetests3 --where=./build/src \
+    --with-doctest \
+    --doctest-extension=.doctest \
+    --doctest-tests
+  cd ../python2-rdflib
+  #python2 setup.py test # Same
+  python2 run_tests.py --with-xunit
+}
+
+package_python2-rdflib() {
+  depends=('python2-isodate')
+
+  cd python2-rdflib
+  python2 setup.py install --root="$pkgdir" --optimize=1
+  install -Dm644  LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  cd "$pkgdir/usr/bin"
+  for i in * ; do 
+    mv $i $i-py2
+  done
+}
+
+package_python-rdflib() {
+  depends=('python-isodate')
+
+  cd RDFLib-rdflib-*
+  python setup.py install --root="$pkgdir" --optimize=1
+  install -Dm644  LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
