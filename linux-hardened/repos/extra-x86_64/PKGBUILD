@@ -4,19 +4,18 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_srcname=linux-4.17
-_pkgver=4.17.10
-pkgver=${_pkgver}.a
+_pkgver=4.17.11
+_hardenedver=a
+_srcname=linux-${_pkgver}
+pkgver=${_pkgver}.${_hardenedver}
 pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
 makedepends=('xmlto' 'kmod' 'inetutils' 'bc' 'libelf')
 options=('!strip')
-source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
-        https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.sign
-        https://www.kernel.org/pub/linux/kernel/v4.x/patch-${_pkgver}.xz
-        https://www.kernel.org/pub/linux/kernel/v4.x/patch-${_pkgver}.sign
+source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
+        https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.sign
         https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
         config.x86_64  # the main kernel config files
         60-linux.hook  # pacman hook for depmod
@@ -29,21 +28,21 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.xz
         Revert-drm-i915-edp-Allow-alternate-fixed-mode-for-e.patch
         # Fix iwd provoking a BUG
         mac80211-disable-BHs-preemption-in-ieee80211_tx_cont.patch
+        ACPICA-AML-Parser-ignore-control-method-status-in-module-level-code.patch
 )
 replaces=('linux-grsec')
-sha256sums=('9faa1dd896eaea961dc6e886697c0b3301277102e5bc976b2758f9a62d3ccd13'
+sha256sums=('db1e84ed4f213b43d50f3373627b2ffcdb3b65f3430f746a38f801554ef3728c'
             'SKIP'
-            '41ad005296c7a1b5245a87881f666b3f4d7aa05a6b9409454b2e473d473c4cee'
+            '586f3a84cf79cee5a7839941b6b434be519515c317abc8e6d491174652ac93cb'
             'SKIP'
-            '2da7c447a0d4b1969c220488e5eef2c85fa93861ad5909c632c26cbabbb256b3'
-            'SKIP'
-            '49dccac05226a1c1cf84c73dd8d3ff3a77edeb39b7cee2a4705468cdb391224c'
+            'c48ac112b4f1bfb25486a6417103d3564a5b4ca55d62fce0ff5975bb9e6c0763'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
             'd744e7f4552896670bc8b99361534eec7ba095bebc2462ef0e5ee433e6341a0a'
             '8114295b8c07795a15b9f8eafb0f515c34661a1e05512da818a34581dd30f87e'
-            'ef7c149d9af24efea551cec86e26f52c9c1cc02714335e948f929985ff414676')
+            'ef7c149d9af24efea551cec86e26f52c9c1cc02714335e948f929985ff414676'
+            '25a0c0de5bae21f30557ed32815759be147a6a33020dc289e913d3147d3244f3')
 validpgpkeys=(
               'ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman
@@ -51,14 +50,10 @@ validpgpkeys=(
               'E240B57E2C4630BA768E2F26FC1B547C8D8172C8' # Levente Polyak
              )
 _kernelname=${pkgbase#linux}
-: ${_kernelname:=-ARCH}
+: ${_kernelname:=-hardened}
 
 prepare() {
   cd ${_srcname}
-
-  # add upstream patch
-  msg2 "Applying upstream patch"
-  patch -Np1 < ../patch-${_pkgver}
 
   # apply all patches
   for _patch in "${source[@]}"; do
@@ -75,40 +70,21 @@ prepare() {
   msg2 "Applying hardened patch"
   patch -Np1 < ../${pkgbase}-${pkgver}.patch
 
-  # add latest fixes from stable queue, if needed
-  # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
-
   cat ../config.x86_64 - >.config <<END
 CONFIG_LOCALVERSION="${_kernelname}"
 CONFIG_LOCALVERSION_AUTO=n
 END
 
   # set extraversion to pkgrel and empty localversion
-  sed -e "/^EXTRAVERSION =/s/=.*/= -${pkgrel}/" \
+  sed -e "/^EXTRAVERSION =/s/=.*/= .${_hardenedver}-${pkgrel}/" \
       -e "/^EXTRAVERSION =/aLOCALVERSION =" \
       -i Makefile
 
-  # don't run depmod on 'make install'. We'll do this ourselves in packaging
-  sed -i '2iexit 0' scripts/depmod.sh
-
-  # get kernel version
-  make prepare
-
-  # load configuration
-  # Configure the kernel. Replace the line below with one of your choice.
-  #make menuconfig # CLI menu for configuration
-  #make nconfig # new CLI menu for configuration
-  #make xconfig # X-based configuration
-  #make oldconfig # using old config from previous kernel version
-  # ... or manually edit .config
-
-  # rewrite configuration
-  yes "" | make config >/dev/null
+  make olddefconfig
 }
 
 build() {
   cd ${_srcname}
-
   make bzImage modules
 }
 
@@ -129,7 +105,7 @@ _package() {
   _basekernel=${_basekernel%.*}
 
   mkdir -p "${pkgdir}"/{boot,usr/lib/modules}
-  make INSTALL_MOD_PATH="${pkgdir}/usr" modules_install
+  make INSTALL_MOD_PATH="${pkgdir}/usr" DEPMOD=/doesnt/exist modules_install
   cp arch/x86/boot/bzImage "${pkgdir}/boot/vmlinuz-${pkgbase}"
 
   # make room for external modules
