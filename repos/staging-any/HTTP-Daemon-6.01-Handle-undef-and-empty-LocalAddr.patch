@@ -1,0 +1,48 @@
+From b54702ab21edbf1ea0dbc00d978aecc89e5764d6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20P=C3=ADsa=C5=99?= <ppisar@redhat.com>
+Date: Mon, 18 Sep 2017 15:21:16 +0200
+Subject: [PATCH] Handle undef and empty LocalAddr
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+IO::Socket::INET interprets undefined and empty string LocalAddr
+arguments as an unspecified address while IO::Socket::IP returns an
+error. This seems to be one of the differences between the two
+Socket implementations. Recent IO::Socket::IP (0.39) accepts undefined
+value, but still bail outs on an empty string.
+
+To improve compatibility, this patch adds a special handling for these
+two values to be accepted as an unspecified value. Though this should
+be corrected on IO::Socket:IP side probably.
+
+CPAN RT#91699
+CPAN RT#123069
+
+Signed-off-by: Petr Písař <ppisar@redhat.com>
+---
+ lib/HTTP/Daemon.pm | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/lib/HTTP/Daemon.pm b/lib/HTTP/Daemon.pm
+index 0e22b77..1e9d48e 100644
+--- a/lib/HTTP/Daemon.pm
++++ b/lib/HTTP/Daemon.pm
+@@ -18,6 +18,14 @@ sub new
+     my($class, %args) = @_;
+     $args{Listen} ||= 5;
+     $args{Proto}  ||= 'tcp';
++    # Handle undefined or empty local address the same way as
++    # IO::Socket::INET -- use unspecified address
++    for my $key (qw(LocalAddr LocalHost)) {
++        if (exists $args{$key} &&
++            (!defined($args{$key}) || $args{$key} eq '')) {
++            delete $args{$key};
++        }
++    }
+     return $class->SUPER::new(%args);
+ }
+ 
+-- 
+2.13.5
+
