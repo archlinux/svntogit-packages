@@ -1,0 +1,465 @@
+#!/usr/bin/bash
+#
+# Syslinux Installer / Updater Script (for BIOS only)
+# Copyright (C) 2011-2013  Matthew Gyurgyik <pyther@pyther.net>
+# Copyright (C) 2013  Keshav Padram Amburay <(the) (ddoott) (ridikulus) (ddoott) (rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+#-----------------
+# ChangeLog:
+# 2013-10-23 : Keshav Padram Amburay : Updated script to work with Syslinux 6.02 Arch Linux pkg
+#-----------------
+# Exit Codes:
+#   1 - get_boot_device or other function failed
+#   2 - install/update failed
+#   3 - set_active failed
+#   4 - install_mbr failed
+#-----------------
+
+shopt -s nullglob
+
+bios_libpath="/usr/lib/syslinux/bios"
+bios_bootpath="/boot/syslinux"
+EXTLINUX="/usr/bin/extlinux"
+
+bios_autoupdate_file="/boot/syslinux/SYSLINUX_AUTOUPDATE"
+pciids_file="/usr/share/hwdata/pci.ids"
+
+## Helper functions ##
+# Taken from libui-sh
+# $1 needle
+# $2 set (array) haystack
+check_is_in() {
+    local needle="$1" element
+    shift
+    for element; do
+        [[ $element = $needle ]] && return 0
+    done
+    return 1
+}
+
+get_disk() {
+    local part=$1
+    if [[ ! -b "${part}" ]]; then
+        echo >&2 "error: '$part' is not a valid block device!"
+        exit 1
+    fi
+
+    case "$part" in
+        # catch cases like mmcblk0p1 and loop0p3
+        *[[:digit:]]p[[:digit:]]*)
+            local disk="${part%p[[:digit:]]}" # get everything before p1
+            ;;
+        *)
+            local disk="${part%%[[:digit:]]*}"
+            ;;
+    esac
+    if [[ ! -b "${disk}" ]]; then
+        echo >&2 "error: '$disk' is not a valid block device!"
+        exit 1
+    fi
+    echo $disk
+}
+
+# return true when blockdevice is an md raid, otherwise return a unset value
+# get all devices that are part of raid device $1
+device_is_raid() {
+    [[ $1 && -f /proc/mdstat ]] || return 1
+    local devmajor=$(stat -c %t "$1")
+    (( devmajor == 9 ))
+}
+
+mdraid_all_slaves() {
+    local slave slaves
+    for slave in /sys/class/block/${1##*/}/slaves/*; do
+        source "$slave/uevent"
+        slaves="$slaves/dev/$DEVNAME "
+        unset DEVNAME
+    done
+    echo $slaves
+}
+
+# Check /sys/block to see if device is partitioned
+# If we have a partitioned block device (sda1) /sys/block/sda1/dev will not exist
+# However, if we have an unpartitioned block device (sda) /sys/block/sda/dev will exist
+dev_is_part() {
+    # $1 - blockdevice
+    local dev=$1
+
+    # If block device uevent file should be found
+    # If a partition is passed in path shouldn't exist
+    if [[ $dev = *cciss* ]]; then
+        [[ -f /sys/block/cciss\!${dev##*/}/dev ]] && return 1
+    elif [[ $dev = *ida* ]]; then
+        [[ -f /sys/block/ida\!${dev##*/}/dev ]] && return 1
+    else
+        [[ -f /sys/block/${dev##*/}/dev ]] && return 1
+    fi
+
+    return 0
+}
+
+# If EFI PART is present in the first 8 bytes then it must be a GPT disk
+device_is_gpt() {
+    local partsig=$(dd if="$1" skip=64 bs=8 count=1 2>/dev/null)
+    [[ $partsig = "EFI PART" ]]
+}
+
+clear_gpt_attr2() {
+    # $1 - Block Device, no partitions
+    local disk=$1
+
+    # Special Exception for cciss controllers
+    if [[ $disk = *cciss* ]]; then
+        for part in /dev/cciss/${disk##*/}*p*; do
+            local partnum="${part##*[[:alpha:]]}"
+            sgdisk "$disk" --attributes="$partnum":clear:2 &>/dev/null
+        done
+    # Smart 2 Controllers
+    elif [[ $disk = *ida* ]]; then
+        for part in /dev/ida/${disk##*/}*p*; do
+            local partnum="${part##*[[:alpha:]]}"
+            sgdisk "$disk" --attributes="$partnum":clear:2 &>/dev/null
+        done
+    else
+        for part in  /sys/block/${disk##*/}/${disk##*/}*; do
+            local partnum="${part##*[[:alpha:]]}"
+            sgdisk "$disk" --attributes="$partnum":clear:2 &>/dev/null
+        done
+    fi
+    return 0
+}
+
+usage() {
+cat << EOF
+usage: $0 options
+
+This script will install or upgrade Syslinux (for BIOS only)
+
+OPTIONS:
+  -h    Show this message
+  -i    Install Syslinux
+  -u    Update Syslinux
+  -a    Set Boot flag on boot partiton
+  -m    Install Syslinux MBR
+  -s    Updates Syslinux if /boot/syslinux/SYSLINUX_AUTOUPDATE exists
+
+ Arguments Required:
+  -c    Chroot install (ex: -c /mnt)
+
+Example Usage: $0 -i -a -m     # (install, set boot flag, install mbr)
+               $0 -u           # (update)
+EOF
+}
+
+# Trys to find the partition that /boot resides on
+# This will either be on /boot or / (root)
+getBoot() {
+    if [[ ! -d "$bios_bootpath" ]]; then
+        echo "Could not find $bios_bootpath"
+        echo "Is boot mounted? Is Syslinux installed?"
+        exit 1
+    fi
+
+    syslinux_fs=(ext2 ext3 ext4 btrfs vfat xfs)
+
+    # Use DATA from findmnt see rc.sysint for more info
+    if [[ -f /proc/self/mountinfo ]]; then
+        read rootdev rootfs < <(findmnt -run -t noautofs -o SOURCE,FSTYPE "$CHROOT/")
+        read bootdev bootfs < <(findmnt -run -t noautofs -o SOURCE,FSTYPE "$CHROOT/boot")
+    else
+        echo "Could not find /proc/self/mountinfo"
+        echo "Are you running a kernel greater than 2.6.24?"
+        exit 1
+    fi
+
+    if [[ $bootfs ]]; then
+        if ! check_is_in "$bootfs" "${syslinux_fs[@]}"; then
+            echo "/boot file system is not supported by Syslinux"
+            exit 1
+        fi
+        boot="boot"
+        bootpart="$(readlink -f "$bootdev")"
+    elif [[ $rootfs ]]; then
+        if ! check_is_in "$rootfs" "${syslinux_fs[@]}"; then
+            echo "/ (root) file system is not supported by Syslinux"
+            exit 1
+        fi
+        boot="root"
+        bootpart="$(readlink -f "$rootdev")"
+    else
+        echo "Could not find filesystem on / (root) or /boot."
+        exit 1
+    fi
+}
+
+# We store the partition table type either gpt or mbr in var ptb
+# In rare cases a user could have one raid disk using mbr and another using gpt
+# In such cases we accept that the output may be incomplete
+
+# Calls get_ptb() for $bootpart or for all device in RAID
+declare -A bootdevs
+get_boot_devices() {
+    if device_is_raid "$bootpart"; then
+        slaves=$(mdraid_all_slaves "$bootpart")
+
+        for slave in ${slaves[@]}; do
+            local disk=$(get_disk "$slave")
+            device_is_gpt "$disk" && local ptb="GPT" || local ptb="MBR"
+            bootdevs[$slave]="$ptb"
+        done
+    else
+        local disk=$(get_disk "$bootpart")
+        device_is_gpt "$disk" && local ptb="GPT" || local ptb="MBR"
+        bootdevs[$bootpart]="$ptb"
+    fi
+}
+
+# Function Assumes the boot partition should be marked as active
+# All other partitions should not have the boot flag set
+set_active() {
+    # If any bootdev is a block device without partitions bail
+    # we want to set the boot flag on partitioned disk
+    for dev in "${!bootdevs[@]}"; do
+        dev_is_part $dev || { echo "$dev does not contain partition table. Aborting set_active!"; return 1; }
+    done
+
+    # Clear BIOS Bootable Legacy Attribute for GPT drives
+    # In rare cases where a RAID device has slaves on the same block device
+    # Attribute 2 will be cleared for each partition multiple times
+    for dev in "${!bootdevs[@]}"; do
+        local ptb="${bootdevs[$dev]}"
+        if [[ "$ptb" = GPT ]]; then
+            local disk=$(get_disk "$dev")
+            clear_gpt_attr2 "$disk"
+        fi
+    done
+
+    # Set the boot flag on bootdevs (generated from get_boot_devices)
+    for part in "${!bootdevs[@]}"; do
+        local ptb="${bootdevs[$part]}"
+        local partnum="${part##*[[:alpha:]]}"
+        local disk=$(get_disk "$part")
+
+        if [[ "$ptb" = MBR ]]; then
+            if sfdisk "$disk" --activate "$partnum" &>/dev/null; then
+                echo "Boot Flag Set - $part"
+            else
+                echo "FAILED to Set the boot flag on $part"
+                exit 3
+            fi
+        elif [[ "$ptb" = GPT ]]; then
+            if [[ ! -e /usr/bin/sgdisk ]]; then
+                echo "FAILED to set attribute Legacy BIOS Bootable. sgdisk is not found - please install 'gptfdisk' package."
+                exit 3
+            fi
+
+            if sgdisk "$disk" --attributes="$partnum":set:2 &>/dev/null; then
+                echo "Attribute Legacy Bios Bootable Set - $part"
+            else
+                echo "FAILED to set attribute Legacy BIOS Bootable on $part"
+                exit 3
+            fi
+        fi
+    done
+    return 0
+}
+
+install_mbr() {
+    # If any bootdev is a block device without partitions bail
+    # we want to install the mbr to a partitioned disk
+    for dev in "${!bootdevs[@]}"; do
+        dev_is_part "$dev" || { echo "$dev does not contain partition table. Aborting MBR install."; return 1; }
+    done
+
+    for part in "${!bootdevs[@]}"; do
+        local partnum="${part##*[[:alpha:]]}"
+        local disk=$(get_disk "$part")
+        local ptb="${bootdevs[$part]}"
+
+        # We want to install to the root of the block device
+        # If the device is a partition - ABORT!
+        dev_is_part "$disk" && \
+        { echo "ABORT! MBR installation to partition ($disk)!"; exit 4;}
+
+        if [[ "$ptb" = MBR ]]; then
+            mbrfile="$bios_libpath/mbr.bin"
+        elif [[ "$ptb" = GPT ]]; then
+            mbrfile="$bios_libpath/gptmbr.bin"
+        fi
+
+        if dd bs=440 count=1 conv=notrunc if="$mbrfile" of="$disk" &> /dev/null; then
+            echo "Installed MBR ($mbrfile) to $disk"
+        else
+            echo "Error Installing MBR ($mbrfile) to $disk"
+            exit 4
+        fi
+    done
+    return 0
+}
+
+install_modules() {
+    # Copy all syslinux *.c32 modules to /boot
+    rm "$bios_bootpath"/*.c32 &> /dev/null
+    cp "$bios_libpath"/*.c32 "$bios_bootpath"/ &> /dev/null
+
+    # Copy / Symlink pci.ids if pci.ids exists on the FS
+    if [[ -f "$pciids_file" ]]; then
+        rm "$bios_bootpath/pci.ids" &> /dev/null
+        cp "$pciids_file" "$bios_bootpath/pci.ids" &> /dev/null
+    fi
+}
+
+_install() {
+    install_modules
+
+    if device_is_raid "$bootpart" ; then
+        echo "Detected RAID on /boot - installing Syslinux with --raid"
+        "$EXTLINUX" --install "$bios_bootpath" --raid &> /dev/null
+    else
+        "$EXTLINUX" --install "$bios_bootpath" &> /dev/null
+    fi
+
+    if (( $? )); then
+        echo "Syslinux BIOS install failed"
+        exit 2
+    else
+        echo "Syslinux BIOS install successful"
+    fi
+
+    touch "$CHROOT/$bios_autoupdate_file"
+}
+
+update() {
+    install_modules
+
+    if device_is_raid "$bootpart" ; then
+        echo "Detected RAID on /boot - updating Syslinux with --raid"
+        "$EXTLINUX" --update "$bios_bootpath" --raid &> /dev/null
+    else
+        "$EXTLINUX" --update "$bios_bootpath" &> /dev/null
+    fi
+
+    if (($?)); then
+        echo "Syslinux BIOS update failed"
+        exit 2
+    else
+        echo "Syslinux BIOS update successful"
+    fi
+}
+
+if (( $# == 0 )); then
+    usage
+    exit 1
+fi
+
+while getopts "c:uihmas" opt; do
+    case $opt in
+        c)
+            CHROOT=$(readlink -e "$OPTARG")
+            if [[ -z $CHROOT ]]; then
+                echo "error: chroot path ``$OPTARG does not exist";
+                exit 1
+            fi
+            ;;
+        h)
+            USAGE="True"
+            ;;
+        i)
+            INSTALL="True"
+            ;;
+        u)
+            UPDATE="True"
+            ;;
+        m)
+            MBR="True"
+            ;;
+        a)
+            SET_ACTIVE="True"
+            ;;
+        s)
+            # If AUTOUPDATE_FILE does not exist exit the script
+            if [[ -f $bios_autoupdate_file ]]; then
+                UPDATE="True"
+            else
+                exit 0
+            fi
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [[ $USAGE ]]; then
+    usage
+    exit 0
+fi
+
+# Display Usage Information if both Install and Update are passed
+if [[ $INSTALL && $UPDATE ]]; then
+    usage
+    exit 1
+fi
+
+# Make sure only root can run our script
+if (( $(id -u) != 0 )); then
+    echo "This script must be run as root" 1>&2
+    exit 1
+fi
+
+# If a chroot dir is path set variables to reflect chroot
+if [[ "$CHROOT" ]]; then
+    bios_libpath="$CHROOT$bios_libpath"
+    bios_bootpath="$CHROOT$bios_bootpath"
+    EXTLINUX="$CHROOT$EXTLINUX"
+fi
+
+# Exit if no /boot path exists
+if ( f=("$bios_bootpath"/*); (( ! ${#f[@]} )) ); then
+    echo "Error: $bios_bootpath is empty!"
+    echo "Is /boot mounted?"
+    exit 1
+fi
+
+# Get the boot device if any of these options are passed
+if [[ $INSTALL || $UPDATE || $SET_ACTIVE || $MBR ]]; then
+    getBoot
+fi
+
+# Install or Update
+if [[ $INSTALL ]]; then
+    _install || exit
+elif [[ $UPDATE ]]; then
+    update || exit
+fi
+
+
+# SET_ACTIVE and MBR
+if [[ $SET_ACTIVE ]] || [[ $MBR ]]; then
+    get_boot_devices
+
+    if [[ $SET_ACTIVE ]]; then
+        set_active || exit
+    fi
+
+    if [[ $MBR ]]; then
+        install_mbr || exit
+    fi
+fi
+
+exit 0
