@@ -7,8 +7,8 @@
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
-pkgver=2.27
-pkgrel=3
+pkgver=2.28
+pkgrel=1
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -22,7 +22,7 @@ source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
         lib32-glibc.conf
         bz20338.patch)
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8) # Carlos O'Donell
-md5sums=('898cd5656519ffbc3a03fe811dd89e82'
+md5sums=('c81d2388896379997bc359d4f2084239'
          'SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
@@ -74,6 +74,7 @@ build() {
   "$srcdir/glibc/configure" \
       --libdir=/usr/lib \
       --libexecdir=/usr/lib \
+      --enable-cet \
       ${_configure_flags[@]}
 
   # build libraries with fortify disabled
