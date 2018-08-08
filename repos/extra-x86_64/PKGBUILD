@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.17.12
+_pkgver=4.17.13
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -30,9 +30,9 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         mac80211-disable-BHs-preemption-in-ieee80211_tx_cont.patch
 )
 replaces=('linux-grsec')
-sha256sums=('c098e2e4dcb64f8e3fb5cec35e872ff383edefa18532744ddf35bbba829cb5a3'
+sha256sums=('820b3ebb09a165aeceb39822782aca8f3ef044bb9c01015d9c126e2e87563f74'
             'SKIP'
-            'e7878739a4a95c2d9c19dc27747c92313c6a603989e3c5686b351ffc18c95590'
+            'e240e110e8438c32b3250eb596e89cb03654aaf16c50834786e6e8e673987b93'
             'SKIP'
             '03d7a0cbf5433fa8cca72a2d57cc78f5f9bbde76d2c39113f02609c20d287f99'
             '36e326d8a88b4087a3a0ee0d47643fc03baeda487659980d0e9d08791e4c729c'
