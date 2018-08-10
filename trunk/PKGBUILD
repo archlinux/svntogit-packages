@@ -8,7 +8,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.28
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -148,6 +148,9 @@ package_glibc() {
 
   make -C glibc-build install_root="$pkgdir" install
   rm -f "$pkgdir"/etc/ld.so.{cache,conf}
+
+  # Shipped in tzdata
+  rm -f "$pkgdir"/usr/bin/{tzselect,zdump,zic}
 
   cd glibc
 
