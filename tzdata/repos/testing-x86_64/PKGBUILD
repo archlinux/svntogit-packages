@@ -1,0 +1,51 @@
+# $Id$
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=tzdata
+pkgver=2018e
+_tzcode=2018e
+_tzdata=2018e
+pkgrel=2
+pkgdesc="Sources for time zone and daylight saving time data"
+arch=('x86_64')
+url="http://www.iana.org/time-zones"
+license=('GPL')
+options=('!emptydirs')
+source=(https://www.iana.org/time-zones/repository/releases/tzcode${_tzcode}.tar.gz{,.asc}
+        https://www.iana.org/time-zones/repository/releases/${pkgname}${_tzdata}.tar.gz{,.asc})
+# new signing key is not available via public keyservers
+sha512sums=('4a245cae2d0922b24539a94cf4a8ccc2bba1ee696e0aaefecb41c7c8d78724a7fcea6039909336177b8b26fec8fc47719e3e56ca9839dbaf52f9a4fec84d4717'
+            'SKIP'
+            'd059fcd381b2f6ecdafcd68fdd2a00451d1bf9b1affeb164ae7cabca2e022d499e77f0706ec3f3091b8e84c2211aa66da6c90937108771f1bf070cfebc105cae'
+            'SKIP')
+validpgpkeys=('7E3792A9D8ACF7D633BC1588ED97E90E62AA7E34') # Paul Eggert <eggert@cs.ucla.edu>
+
+timezones=('africa' 'antarctica' 'asia' 'australasia'
+           'europe' 'northamerica' 'southamerica'
+           'pacificnew' 'etcetera' 'backward'
+           'systemv' 'factory')
+
+prepare() {
+  sed -i "s:sbin:bin:g" Makefile
+}
+
+build() {
+  make
+}
+
+package() {
+  cd ${srcdir}
+  # install tzcode stuff
+  make DESTDIR="${pkgdir}" install
+
+  # install tzdata stuff
+  zic -y ./yearistype -d ${pkgdir}/usr/share/zoneinfo ${timezones[@]}
+  zic -y ./yearistype -d ${pkgdir}/usr/share/zoneinfo/posix ${timezones[@]}
+  zic -y ./yearistype -d ${pkgdir}/usr/share/zoneinfo/right -L leapseconds ${timezones[@]}
+  
+  zic -y ./yearistype -d ${pkgdir}/usr/share/zoneinfo -p America/New_York
+  install -m444 -t ${pkgdir}/usr/share/zoneinfo iso3166.tab zone1970.tab zone.tab # zone.tab is depricated and will go soon
+  
+  # cleanup
+  rm "${pkgdir}/etc/localtime"
+}
