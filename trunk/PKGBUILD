@@ -8,7 +8,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.28
-pkgrel=3
+pkgrel=4
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -20,6 +20,7 @@ source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
+        bz20338.patch
         bz23497.patch
         0001-Revert-elf-Correct-absolute-SHN_ABS-symbol-run-time-.patch)
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8) # Carlos O'Donell
@@ -28,6 +29,7 @@ md5sums=('c81d2388896379997bc359d4f2084239'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
+         'dc0d3ad59aeaaf591b085a77de6e03e9'
          '11bca140697b1bdb656742e2a12c2982'
          '58ffe75a9c5a1b22c535a5c2e725db22')
 
