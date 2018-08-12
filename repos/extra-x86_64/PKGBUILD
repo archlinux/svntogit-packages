@@ -3,9 +3,9 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=10.4
+pkgver=10.5
 _majorver=${pkgver%.*}
-pkgrel=6
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -17,13 +17,13 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql.logrotate
         postgresql.service
         postgresql-check-db-dir)
-sha256sums=('1b60812310bd5756c62d93a9f93de8c28ea63b0df254f428cd1cf1a4d9020048'
+sha256sums=('6c8e616c91a45142b85c0aeb1f29ebba4a361309e86469e0fb4617b6a73c4011'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             'ad025a5fb623b1a1e9dff0cc62cc63f66244bb27d81370a6251aa29e8574be94'
             '888a1d44f03fccfa4bf344ee45824fefb846ae3c1c0c40113ad6020b4be3b0cf')
-sha512sums=('b7c0d2fdc724e2eb1cda9fc1eb01b47352bbe6ba6357b3e898b7f5990fd78499c8c68dcb3aa9bde7821d71b5882d8856131384e899f8055d89d51cdfdbc9e663'
+sha512sums=('1bad30ae88beca66f7e8b99b82e7f02aac1e9230b328e6e5a762a704cdd9dc767d924f5a66c68c93586badfef91b7ff336120a567ce970eaa58bb44c662ad48c'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
             '9ab4da01337ffbab8faec0e220aaa2a642dbfeccf7232ef2645bdc2177a953f17ee3cc14a4d8f8ebd064e1dae8b3dba6029adbffb8afaabea383963213941ba8'
@@ -56,6 +56,7 @@ build() {
     --with-ldap
     --enable-nls
     --enable-thread-safety
+    --disable-rpath
   )
 
   # only build plpython3 for now
