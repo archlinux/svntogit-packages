@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.18.1
+_pkgver=4.18.2
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -25,11 +25,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         increase-timeout-in-lspcon_wait_mode.patch
 )
 replaces=('linux-grsec')
-sha256sums=('725fadc6e9d5a1ad6d7269bb75b256bccac5372927995ad0408c059d110cfa42'
+sha256sums=('d56082dd9d895c32ab5d898096abb3e7f5525bb0a603e5c3be9f83921484eda5'
             'SKIP'
-            'a7ddc264fe79d7b862c13986091ee243d9f1c2181d219ca8f83e54fffacca57d'
+            'fc50a9b4c735229161bca195e4a3d9c6815e2884a7dcfcf6b7738bfe08bef6ce'
             'SKIP'
-            '467202a946c06e54ab86c01238fbbe689921eff274edafd7c431f32460bb91ab'
+            '7d91d3e22235724e4d1b3eafaf3e592ceb3f8344a7761f8b3ce0909e3ed17747'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
@@ -94,7 +94,7 @@ _package() {
   msg2 "Installing modules..."
   local modulesdir="$pkgdir/usr/lib/modules/$kernver"
   mkdir -p "$modulesdir"
-  make INSTALL_MOD_PATH="$pkgdir/usr" DEPMOD=/doesnt/exist modules_install
+  make INSTALL_MOD_PATH="$pkgdir/usr" modules_install
 
   # a place for external modules,
   # with version file for building modules and running depmod from hook
@@ -106,11 +106,7 @@ _package() {
   # remove build and source links
   rm "$modulesdir"/{source,build}
 
-  msg2 "Running depmod..."
-  depmod -b "$pkgdir/usr" -E Module.symvers -e "$kernver"
-
   msg2 "Installing hooks..."
-
   # sed expression for following substitutions
   local subst="
     s|%PKGBASE%|$pkgbase|g
