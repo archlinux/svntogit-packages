@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.17.15
+_pkgver=4.18.1
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -22,25 +22,18 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         90-linux.hook  # pacman hook for initramfs regeneration
         linux.preset   # standard config files for mkinitcpio ramdisk
 
-        # https://bugs.archlinux.org/task/56780
-        ACPI-watchdog-Prefer-iTCO_wdt-always-when-WDAT-table.patch
-        # https://bugs.archlinux.org/task/56711
-        Revert-drm-i915-edp-Allow-alternate-fixed-mode-for-e.patch
-        # Fix iwd provoking a BUG
-        mac80211-disable-BHs-preemption-in-ieee80211_tx_cont.patch
+        increase-timeout-in-lspcon_wait_mode.patch
 )
 replaces=('linux-grsec')
-sha256sums=('e5b85dd46cf12bedb4b5d5a1ab8212aaf164ce45c41d4a4963a58d460384e079'
+sha256sums=('725fadc6e9d5a1ad6d7269bb75b256bccac5372927995ad0408c059d110cfa42'
             'SKIP'
-            '9942ac22490800fada20d8a4d674ad3cd81146f122159fd6e89b921076118b0c'
+            'a7ddc264fe79d7b862c13986091ee243d9f1c2181d219ca8f83e54fffacca57d'
             'SKIP'
-            '410db0db9a1e41848627546af1bfded03afd29521a715eee3ffbb5a5eb25829c'
+            '467202a946c06e54ab86c01238fbbe689921eff274edafd7c431f32460bb91ab'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
-            'd744e7f4552896670bc8b99361534eec7ba095bebc2462ef0e5ee433e6341a0a'
-            '8114295b8c07795a15b9f8eafb0f515c34661a1e05512da818a34581dd30f87e'
-            'ef7c149d9af24efea551cec86e26f52c9c1cc02714335e948f929985ff414676')
+            '0fa6899b57d32988b70050f1a67f435936273ce1aa98575271d564ccfaf45f77')
 validpgpkeys=(
               'ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman
