@@ -7,32 +7,26 @@
 
 pkgbase=libssh
 pkgname=(libssh libssh-docs)
-pkgver=0.7.5
-pkgrel=2
+pkgver=0.8.1
+pkgrel=1
 pkgdesc="Library for accessing ssh client services through C libraries"
 url="http://www.libssh.org/"
 license=(LGPL)
 arch=(x86_64)
-depends=(libgcrypt zlib) # use openssl again for 0.8
-makedepends=(cmake cmocka doxygen)
-source=(https://www.libssh.org/files/${pkgver%.*}/$pkgname-$pkgver.tar.{xz,asc}
-        libssh-fix-read-config.patch)
-sha256sums=('54e86dd5dc20e5367e58f3caab337ce37675f863f80df85b6b1614966a337095'
-            'SKIP'
-            'fe877d6be0b6e97361d8d841b3cbf9dc36b34d3ba92d5ba50af0f23487ac786a')
+depends=(openssl zlib)
+makedepends=(cmake cmocka doxygen python)
+source=(https://www.libssh.org/files/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.asc})
+sha256sums=('d17f1267b4a5e46c0fbe66d39a3e702b8cefe788928f2eb6e339a18bb00b1924'
+            'SKIP')
 validpgpkeys=('8DFF53E18F2ABC8D8F3C92237EE0FC4DCC014E3D') # Andreas Schneider <asn@cryptomilk.org>
 
 prepare() {
   # disable the test. It is confused by our clean container setup.
   # 'extra-x86-build' uses user 'nobody' that has a record in /etc/passwd file
   # but $HOME envvar is set to '/build'. The test expects that $HOME corresponds to passwd file.
-  sed 's/unit_test(torture_path_expand_tilde_unix),//' -i libssh-${pkgver}/tests/unittests/torture_misc.c
+  sed 's/cmocka_unit_test(torture_path_expand_tilde_unix),//' -i libssh-${pkgver}/tests/unittests/torture_misc.c
 
   mkdir -p build
-
-  cd $pkgname-$pkgver
-  # Fix reading SSH configuration files
-  patch -p1 -i ../libssh-fix-read-config.patch
 }
 
 build() {
@@ -40,8 +34,7 @@ build() {
   cmake ../$pkgname-$pkgver \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DWITH_GSSAPI=OFF \
-    -DWITH_GCRYPT=ON \
-    -DWITH_TESTING=ON
+    -DUNIT_TESTING=ON
   make
   make doc
 }
