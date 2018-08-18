@@ -1,0 +1,68 @@
+# $Id$
+# Maintainer: Ronald van Haren <ronald@archlinux.org>
+# Contributor: Enlightenment Developers <enlightenment-devel@enlightenment.org>
+
+pkgbase=efl
+pkgname=('efl' 'efl-docs')
+pkgver=1.20.7
+pkgrel=2
+pkgdesc="Enlightenment Foundation Libraries"
+arch=('x86_64')
+url="https://www.enlightenment.org"
+license=('BSD' 'LGPL2.1' 'GPL2' 'custom')
+depends=('bullet' 'libjpeg-turbo' 'gst-plugins-base'
+         'luajit' 'curl' 'fribidi' 'libpulse' 'libxcomposite'
+         'libxinerama' 'libxrandr' 'libxss' 'libinput'
+         'libxcursor' 'libxp' 'libwebp' 'shared-mime-info'
+         'libxkbcommon' 'wayland' 'lz4' 'openjpeg' 'avahi'
+         'libspectre' 'libraw' 'librsvg' 'wayland-protocols'
+	 'mesa')
+optdepends=('python2: einabench-cmp' 'libreoffice: thumbnailing for DOC/PPT/XLS files')
+makedepends=('doxygen' 'python' 'texlive-core' 'ghostscript' 'imagemagick')
+options=('!emptydirs')
+source=(https://download.enlightenment.org/rel/libs/${pkgname}/$pkgname-$pkgver.tar.xz)
+sha512sums=('c1bf18b74316cf9bd0bc16635c216ca0d8005b2ded1c014b22590388e37368343e5e5318f526dcb042cfce8ab2c7a82655e4718cbcac5dd1ed0d2522a7a2d7de')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  sed -i 's/env python$/&2/' src/scripts/eina/eina-bench-cmp
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  export CFLAGS="$CFLAGS -fvisibility=hidden"
+
+  ./configure --prefix=/usr \
+  --disable-static --disable-tslib --enable-fb \
+  --enable-xinput22 --enable-multisense --enable-systemd \
+  --enable-image-loader-webp --enable-harfbuzz --enable-wayland \
+  --enable-liblz4 --enable-drm --enable-elput --enable-egl --with-opengl=es
+
+  make
+  make -j1 doc || return 0  # don't fail on the docs
+}
+
+package_efl(){
+  replaces=('elementary' 'evas_generic_loaders' 'emotion_generic_players')
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -j1 DESTDIR=${pkgdir} install
+
+  # install non-standard license files
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/licenses/COPYING.BSD" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.BSD"
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/licenses/COPYING.SMALL" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.SMALL"
+}
+
+package_efl-docs() {
+  pkgdesc="Documentation for the Enlightenment Foundation Libraries"
+  depends=()
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  install -d "${pkgdir}/usr/share/doc/${pkgbase}"
+  cp -a doc/html "${pkgdir}/usr/share/doc/${pkgbase}/html"
+  cp -a doc/latex "${pkgdir}/usr/share/doc/${pkgbase}/latex"
+}
+
