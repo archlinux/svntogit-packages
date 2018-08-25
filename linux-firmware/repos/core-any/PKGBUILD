@@ -1,40 +1,16 @@
 # $Id$
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
-pkgname=linux-firmware
-_commit=f1b95fe5a51830bb8c1712082de4279a042376b6 # master
-pkgver=20180815.f1b95fe
-pkgrel=1
+pkgbase=linux-firmware
+pkgname=(linux-firmware amd-ucode)
+_commit=1d17c18226c2ddf5bc127b3f934cfa88e0c0c29f # master
+pkgver=20180821.1d17c18
+pkgrel=3
 pkgdesc="Firmware files for Linux"
 makedepends=('git')
 arch=('any')
 url="http://git.kernel.org/?p=linux/kernel/git/firmware/linux-firmware.git;a=summary"
 license=('GPL2' 'GPL3' 'custom')
-conflicts=('linux-firmware-git'
-           'kernel26-firmware'
-           'ar9170-fw'
-           'iwlwifi-1000-ucode'
-           'iwlwifi-3945-ucode'
-           'iwlwifi-4965-ucode'
-           'iwlwifi-5000-ucode'
-           'iwlwifi-5150-ucode'
-           'iwlwifi-6000-ucode'
-           'rt2870usb-fw'
-           'rt2x00-rt61-fw'
-           'rt2x00-rt71w-fw'
-           'amd-ucode')
-replaces=('kernel26-firmware'
-          'ar9170-fw'
-          'iwlwifi-1000-ucode'
-          'iwlwifi-3945-ucode'
-          'iwlwifi-4965-ucode'
-          'iwlwifi-5000-ucode'
-          'iwlwifi-5150-ucode'
-          'iwlwifi-6000-ucode'
-          'rt2870usb-fw'
-          'rt2x00-rt61-fw'
-          'rt2x00-rt71w-fw'
-          'amd-ucode')
 options=(!strip)
 source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git#commit=${_commit}")
 md5sums=('SKIP')
@@ -50,7 +26,37 @@ pkgver() {
   echo $(TZ=UTC git show -s --pretty=%cd --date=format-local:%Y%m%d HEAD).$(git rev-parse --short HEAD)
 }
 
-package() {
+build() {
+  mkdir -p kernel/x86/microcode
+  cat ${pkgbase}/amd-ucode/microcode_amd*.bin > kernel/x86/microcode/AuthenticAMD.bin
+  echo kernel/x86/microcode/AuthenticAMD.bin | bsdcpio -o -H newc -R 0:0 > amd-ucode.img
+}
+
+package_linux-firmware() {
+  conflicts=('linux-firmware-git'
+             'kernel26-firmware'
+             'ar9170-fw'
+             'iwlwifi-1000-ucode'
+             'iwlwifi-3945-ucode'
+             'iwlwifi-4965-ucode'
+             'iwlwifi-5000-ucode'
+             'iwlwifi-5150-ucode'
+             'iwlwifi-6000-ucode'
+             'rt2870usb-fw'
+             'rt2x00-rt61-fw'
+             'rt2x00-rt71w-fw')
+  replaces=('kernel26-firmware'
+            'ar9170-fw'
+            'iwlwifi-1000-ucode'
+            'iwlwifi-3945-ucode'
+            'iwlwifi-4965-ucode'
+            'iwlwifi-5000-ucode'
+            'iwlwifi-5150-ucode'
+            'iwlwifi-6000-ucode'
+            'rt2870usb-fw'
+            'rt2x00-rt61-fw'
+            'rt2x00-rt71w-fw')
+
   cd "${srcdir}/${pkgname}"
 
   make DESTDIR="${pkgdir}" FIRMWAREDIR=/usr/lib/firmware install
@@ -64,4 +70,12 @@ package() {
   echo 'w /sys/devices/system/cpu/microcode/reload - - - - 1' \
     >"${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
 }
+
+package_amd-ucode() {
+  pkgdesc='Microcode update files for AMD CPUs'
+
+  install -D -m0644 amd-ucode.img "${pkgdir}"/boot/amd-ucode.img  
+  install -D -m0644 "${srcdir}/${pkgbase}/LICENSE.amd-ucode" "${pkgdir}/usr/share/licenses/amd-ucode/LICENSE"
+}
+
 # vim:set ts=2 sw=2 et:
