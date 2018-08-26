@@ -1,0 +1,722 @@
+From b326a71659b7837d3acde954b18bda1a6f5e9498 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Tue, 21 Aug 2018 16:24:05 +0100
+Subject: [PATCH] Bug 699655: Properly check the return value....
+
+...when getting a value from a dictionary
+---
+ psi/zcolor.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/psi/zcolor.c b/psi/zcolor.c
+index 4c0f258..e27baf9 100644
+--- a/psi/zcolor.c
++++ b/psi/zcolor.c
+@@ -283,8 +283,9 @@ zsetcolor(i_ctx_t * i_ctx_p)
+         if (r_has_type(op, t_dictionary)) {
+             ref     *pImpl, pPatInst;
+ 
+-            code = dict_find_string(op, "Implementation", &pImpl);
+-            if (code != 0) {
++            if ((code = dict_find_string(op, "Implementation", &pImpl)) < 0)
++                return code;
++            if (code > 0) {
+                 code = array_get(imemory, pImpl, 0, &pPatInst);
+                 if (code < 0)
+                     return code;
+-- 
+2.9.1
+
+From c3476dde7743761a4e1d39a631716199b696b880 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Tue, 21 Aug 2018 16:42:45 +0100
+Subject: [PATCH] Bug 699656: Handle LockDistillerParams not being a boolean
+
+This caused a function call commented as "Can't fail" to fail, and resulted
+in memory correuption and a segfault.
+---
+ devices/vector/gdevpdfp.c | 2 +-
+ psi/iparam.c              | 7 ++++---
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/devices/vector/gdevpdfp.c b/devices/vector/gdevpdfp.c
+index e942682..7c58af7 100644
+--- a/devices/vector/gdevpdfp.c
++++ b/devices/vector/gdevpdfp.c
+@@ -364,7 +364,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
+      * LockDistillerParams is read again, and reset if necessary, in
+      * psdf_put_params.
+      */
+-    ecode = param_read_bool(plist, "LockDistillerParams", &locked);
++    ecode = param_read_bool(plist, (param_name = "LockDistillerParams"), &locked);
+     if (ecode < 0)
+         param_signal_error(plist, param_name, ecode);
+ 
+diff --git a/psi/iparam.c b/psi/iparam.c
+index 68c20d4..0279455 100644
+--- a/psi/iparam.c
++++ b/psi/iparam.c
+@@ -822,10 +822,11 @@ static int
+ ref_param_read_signal_error(gs_param_list * plist, gs_param_name pkey, int code)
+ {
+     iparam_list *const iplist = (iparam_list *) plist;
+-    iparam_loc loc;
++    iparam_loc loc = {0};
+ 
+-    ref_param_read(iplist, pkey, &loc, -1);	/* can't fail */
+-    *loc.presult = code;
++    ref_param_read(iplist, pkey, &loc, -1);
++    if (loc.presult)
++        *loc.presult = code;
+     switch (ref_param_read_get_policy(plist, pkey)) {
+         case gs_param_policy_ignore:
+             return 0;
+-- 
+2.9.1
+
+From 0d3901189f245232f0161addf215d7268c4d05a3 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Tue, 21 Aug 2018 20:17:05 +0100
+Subject: [PATCH] Bug 699657: properly apply file permissions to .tempfile
+
+---
+ psi/zfile.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/psi/zfile.c b/psi/zfile.c
+index a0acd5a..19996b0 100644
+--- a/psi/zfile.c
++++ b/psi/zfile.c
+@@ -134,7 +134,7 @@ check_file_permissions_reduced(i_ctx_t *i_ctx_p, const char *fname, int len,
+     /* we're protecting arbitrary file system accesses, not Postscript device accesses.
+      * Although, note that %pipe% is explicitly checked for and disallowed elsewhere
+      */
+-    if (iodev != iodev_default(imemory)) {
++    if (iodev && iodev != iodev_default(imemory)) {
+         return 0;
+     }
+ 
+@@ -734,7 +734,23 @@ ztempfile(i_ctx_t *i_ctx_p)
+     }
+ 
+     if (gp_file_name_is_absolute(pstr, strlen(pstr))) {
+-        if (check_file_permissions(i_ctx_p, pstr, strlen(pstr),
++        int plen = strlen(pstr);
++        const char *sep = gp_file_name_separator();
++#ifdef DEBUG
++        int seplen = strlen(sep);
++        if (seplen != 1)
++            return_error(gs_error_Fatal);
++#endif
++        /* strip off the file name prefix, leave just the directory name
++         * so we can check if we are allowed to write to it
++         */
++        for ( ; plen >=0; plen--) {
++            if (pstr[plen] == sep[0])
++                break;
++        }
++        memcpy(fname, pstr, plen);
++        fname[plen] = '\0';
++        if (check_file_permissions(i_ctx_p, fname, strlen(fname),
+                                    NULL, "PermitFileWriting") < 0) {
+             code = gs_note_error(gs_error_invalidfileaccess);
+             goto done;
+-- 
+2.9.1
+
+From a054156d425b4dbdaaa9fda4b5f1182b27598c2b Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Tue, 21 Aug 2018 20:17:51 +0100
+Subject: [PATCH] Bug 699658: Fix handling of pre-SAFER opened files.
+
+Temp files opened for writing before SAFER is engaged are not subject to the
+SAFER restrictions - that is handled by recording in a dictionary, and
+checking that as part of the permissions checks.
+
+By adding a custom error handler for invalidaccess, that allowed the filename
+to be added to the dictionary (despite the attempted open throwing the error)
+thus meaning subsequent accesses were erroneously permitted.
+---
+ Resource/Init/gs_init.ps | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/Resource/Init/gs_init.ps b/Resource/Init/gs_init.ps
+index a6e49f0..5a5a428 100644
+--- a/Resource/Init/gs_init.ps
++++ b/Resource/Init/gs_init.ps
+@@ -2036,6 +2036,19 @@ readonly def
+             concatstrings concatstrings .generate_dir_list_templates
+         } if
+       ]
++      /PermitFileWriting [
++          currentuserparams /PermitFileWriting get aload pop
++          (TMPDIR) getenv not
++          {
++            (TEMP) getenv not
++            {
++              (TMP) getenv not
++              {
++                (/temp) (/tmp)
++              } if
++            } if
++          } if
++      ]
+       /LockFilePermissions //true
+     >> setuserparams
+   }
+@@ -2122,7 +2135,9 @@ readonly def
+ % the file can be deleted later, even if SAFER is set.
+ /.tempfile {
+   .tempfile	% filename file
+-  //SAFETY /tempfiles get 2 .argindex //true .forceput
++    //SAFETY /safe get not { % only add the filename if we're not yet safe
++    //SAFETY /tempfiles get 2 .argindex //true .forceput
++  } if
+ } .bind executeonly odef
+ 
+ % If we are running in SAFER mode, lock things down
+-- 
+2.9.1
+
+From 0edd3d6c634a577db261615a9dc2719bca7f6e01 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Tue, 21 Aug 2018 20:36:52 +0100
+Subject: [PATCH] Bug 699659: Don't just assume an object is a t_(a)struct
+
+---
+ psi/ztype.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/psi/ztype.c b/psi/ztype.c
+index ad248d9..8307956 100644
+--- a/psi/ztype.c
++++ b/psi/ztype.c
+@@ -76,7 +76,7 @@ ztype(i_ctx_t *i_ctx_p)
+         /* Must be either a stack underflow or a t_[a]struct. */
+         check_op(2);
+         {                       /* Get the type name from the structure. */
+-            if (op[-1].value.pstruct != 0x00) {
++            if ((r_has_type(&op[-1], t_struct) || r_has_type(&op[-1], t_astruct)) && op[-1].value.pstruct != 0x00) {
+             const char *sname =
+                 gs_struct_type_name_string(gs_object_type(imemory,
+                                                           op[-1].value.pstruct));
+-- 
+2.9.1
+
+From 78911a01b67d590b4a91afac2e8417360b934156 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Thu, 23 Aug 2018 09:54:59 +0100
+Subject: [PATCH] Bug 699654: Check the restore operand type
+
+The primary function that implements restore correctly checked its parameter,
+but a function that does some preliminary work for the restore (gstate and
+device handling) did not check.
+
+So, even though the restore correctly errored out, it left things partially done
+and, in particular, the device in partially restored state. Meaning the
+LockSafetyParams was not correctly set.
+---
+ psi/zdevice2.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/psi/zdevice2.c b/psi/zdevice2.c
+index de16dd2..9fbb4e3 100644
+--- a/psi/zdevice2.c
++++ b/psi/zdevice2.c
+@@ -312,6 +312,9 @@ z2grestoreall(i_ctx_t *i_ctx_p)
+ static int
+ z2restore(i_ctx_t *i_ctx_p)
+ {
++    os_ptr op = osp;
++    check_type(*op, t_save);
++
+     while (gs_gstate_saved(gs_gstate_saved(igs))) {
+         if (restore_page_device(igs, gs_gstate_saved(igs)))
+             return push_callout(i_ctx_p, "%restore1pagedevice");
+-- 
+2.9.1
+
+From b575e1ec42cc86f6a58c603f2a88fcc2af699cc8 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Thu, 23 Aug 2018 12:20:56 +0100
+Subject: [PATCH] Bug 699668: handle stack overflow during error handling
+
+When handling a Postscript error, we push the object throwing the error onto
+the operand stack for the error handling procedure to access - we were not
+checking the available stack before doing so, thus causing a crash.
+
+Basically, if we get a stack overflow when already handling an error, we're out
+of options, return to the caller with a fatal error.
+---
+ psi/interp.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/psi/interp.c b/psi/interp.c
+index 8b49556..6150838 100644
+--- a/psi/interp.c
++++ b/psi/interp.c
+@@ -676,7 +676,12 @@ again:
+     /* Push the error object on the operand stack if appropriate. */
+     if (!GS_ERROR_IS_INTERRUPT(code)) {
+         /* Replace the error object if within an oparray or .errorexec. */
+-        *++osp = *perror_object;
++        osp++;
++        if (osp >= ostop) {
++            *pexit_code = gs_error_Fatal;
++            return_error(gs_error_Fatal);
++        }
++        *osp = *perror_object;
+         errorexec_find(i_ctx_p, osp);
+     }
+     goto again;
+-- 
+2.9.1
+
+From c432131c3fdb2143e148e8ba88555f7f7a63b25e Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Thu, 23 Aug 2018 14:13:25 +0100
+Subject: [PATCH] Bug 699661: Avoid sharing pointers between pdf14 compositors
+
+If a copdevice is triggered when the pdf14 compositor is the device, we make
+a copy of the device, then throw an error because, by default we're only allowed
+to copy the device prototype - then freeing it calls the finalize, which frees
+several pointers shared with the parent.
+
+Make a pdf14 specific finish_copydevice() which NULLs the relevant pointers,
+before, possibly, throwing the same error as the default method.
+
+This also highlighted a problem with reopening the X11 devices, where a custom
+error handler could be replaced with itself, meaning it also called itself,
+and infifite recursion resulted.
+
+Keep a note of if the handler replacement has been done, and don't do it a
+second time.
+---
+ base/gdevp14.c     | 17 ++++++++++++++++-
+ devices/gdevxini.c | 12 ++++++++----
+ 2 files changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/base/gdevp14.c b/base/gdevp14.c
+index d9f8e79..eb9cc23 100644
+--- a/base/gdevp14.c
++++ b/base/gdevp14.c
+@@ -178,6 +178,7 @@ static	dev_proc_fill_mask(pdf14_fill_mask);
+ static	dev_proc_stroke_path(pdf14_stroke_path);
+ static	dev_proc_begin_typed_image(pdf14_begin_typed_image);
+ static	dev_proc_text_begin(pdf14_text_begin);
++static  dev_proc_finish_copydevice(pdf14_finish_copydevice);
+ static	dev_proc_create_compositor(pdf14_create_compositor);
+ static	dev_proc_create_compositor(pdf14_forward_create_compositor);
+ static	dev_proc_begin_transparency_group(pdf14_begin_transparency_group);
+@@ -245,7 +246,7 @@ static	const gx_color_map_procs *
+         pdf14_create_compositor,	/* create_compositor */\
+         NULL,				/* get_hardware_params */\
+         pdf14_text_begin,		/* text_begin */\
+-        NULL,				/* finish_copydevice */\
++        pdf14_finish_copydevice,        /* finish_copydevice */\
+         pdf14_begin_transparency_group,\
+         pdf14_end_transparency_group,\
+         pdf14_begin_transparency_mask,\
+@@ -3935,6 +3936,19 @@ pdf14_text_begin(gx_device * dev, gs_gstate * pgs,
+     return code;
+ }
+ 
++static	int
++pdf14_finish_copydevice(gx_device *new_dev, const gx_device *from_dev)
++{
++    pdf14_device *pdev = (pdf14_device*)new_dev;
++
++    pdev->ctx = NULL;
++    pdev->trans_group_parent_cmap_procs = NULL;
++    pdev->smaskcolor = NULL;
++
++    /* Only allow copying the prototype. */
++    return (from_dev->memory ? gs_note_error(gs_error_rangecheck) : 0);
++}
++
+ /*
+  * Implement copy_mono by filling lots of small rectangles.
+  */
+@@ -8093,6 +8107,7 @@ c_pdf14trans_clist_read_update(gs_composite_t *	pcte, gx_device	* cdev,
+                        before reopening the device */
+                     if (p14dev->ctx != NULL) {
+                         pdf14_ctx_free(p14dev->ctx);
++                        p14dev->ctx = NULL;
+                     }
+                     dev_proc(tdev, open_device) (tdev);
+                 }
+diff --git a/devices/gdevxini.c b/devices/gdevxini.c
+index 8511eac..23b8c35 100644
+--- a/devices/gdevxini.c
++++ b/devices/gdevxini.c
+@@ -59,7 +59,8 @@ static struct xv_ {
+     Boolean alloc_error;
+     XErrorHandler orighandler;
+     XErrorHandler oldhandler;
+-} x_error_handler;
++    Boolean set;
++} x_error_handler = {0};
+ 
+ static int
+ x_catch_alloc(Display * dpy, XErrorEvent * err)
+@@ -74,7 +75,8 @@ x_catch_alloc(Display * dpy, XErrorEvent * err)
+ int
+ x_catch_free_colors(Display * dpy, XErrorEvent * err)
+ {
+-    if (err->request_code == X_FreeColors)
++    if (err->request_code == X_FreeColors ||
++        x_error_handler.orighandler == x_catch_free_colors)
+         return 0;
+     return x_error_handler.orighandler(dpy, err);
+ }
+@@ -274,8 +276,10 @@ gdev_x_open(gx_device_X * xdev)
+         return_error(gs_error_ioerror);
+     }
+     /* Buggy X servers may cause a Bad Access on XFreeColors. */
+-    x_error_handler.orighandler = XSetErrorHandler(x_catch_free_colors);
+-
++    if (!x_error_handler.set) {
++        x_error_handler.orighandler = XSetErrorHandler(x_catch_free_colors);
++        x_error_handler.set = True;
++    }
+     /* Get X Resources.  Use the toolkit for this. */
+     XtToolkitInitialize();
+     app_con = XtCreateApplicationContext();
+-- 
+2.9.1
+
+From 241d91112771a6104de10b3948c3f350d6690c1d Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Thu, 23 Aug 2018 15:41:18 +0100
+Subject: [PATCH] Bug 699664: Ensure the correct is in place before cleanup
+
+If the PS job replaces the device and leaves that graphics state in place, we
+wouldn't cleanup the default device in the normal way, but rely on the garbage
+collector.
+
+This works (but isn't ideal), *except* when the job replaces the device with
+the null device (using the nulldevice operator) - this means that
+.uninstallpagedevice doesn't replace the existing device with the nulldevice
+(since it is already installed), the device from the graphics ends up being
+freed - and as it is the nulldevice, which we rely on, memory corruption
+and a segfault can happen.
+
+We avoid this by checking if the current device is the nulldevice, and if so,
+restoring it away, before continuing with the device cleanup.
+---
+ psi/imain.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/psi/imain.c b/psi/imain.c
+index 2fe1546..138bfc8 100644
+--- a/psi/imain.c
++++ b/psi/imain.c
+@@ -936,6 +936,16 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
+             i_ctx_p = minst->i_ctx_p; /* interp_reclaim could change it. */
+         }
+ 
++        if (i_ctx_p->pgs != NULL && i_ctx_p->pgs->device != NULL &&
++            gx_device_is_null(i_ctx_p->pgs->device)) {
++            /* if the job replaced the device with the nulldevice, we we need to grestore
++               away that device, so the block below can properly dispense
++               with the default device.
++             */
++            int code = gs_grestoreall(i_ctx_p->pgs);
++            if (code < 0) return_error(gs_error_Fatal);
++        }
++
+         if (i_ctx_p->pgs != NULL && i_ctx_p->pgs->device != NULL) {
+             gx_device *pdev = i_ctx_p->pgs->device;
+             const char * dname = pdev->dname;
+-- 
+2.9.1
+
+From 8e9ce5016db968b40e4ec255a3005f2786cce45f Mon Sep 17 00:00:00 2001
+From: Ken Sharp <ken.sharp@artifex.com>
+Date: Thu, 23 Aug 2018 15:42:02 +0100
+Subject: [PATCH] Bug 699665 "memory corruption in aesdecode"
+
+The specimen file calls aesdecode without specifying the key to be
+used, though it does manage to do enough work with the PDF interpreter
+routines to get access to aesdecode (which isn't normally available).
+
+This causes us to read uninitialised memory, which can (and often does)
+lead to a segmentation fault.
+
+In this commit we set the key to NULL explicitly during intialisation
+and then check it before we read it. If its NULL we just return.
+
+It seems bizarre that we don't return error codes, we should probably
+look into that at some point, but this prevents the code trying to
+read uninitialised memory.
+---
+ base/aes.c  | 3 +++
+ base/saes.c | 1 +
+ 2 files changed, 4 insertions(+)
+
+diff --git a/base/aes.c b/base/aes.c
+index a6bce93..e86f000 100644
+--- a/base/aes.c
++++ b/base/aes.c
+@@ -662,6 +662,9 @@ void aes_crypt_ecb( aes_context *ctx,
+     }
+ #endif
+ 
++    if (ctx == NULL || ctx->rk == NULL)
++        return;
++
+     RK = ctx->rk;
+ 
+     GET_ULONG_LE( X0, input,  0 ); X0 ^= *RK++;
+diff --git a/base/saes.c b/base/saes.c
+index 6db0e8b..307ed74 100644
+--- a/base/saes.c
++++ b/base/saes.c
+@@ -120,6 +120,7 @@ s_aes_process(stream_state * ss, stream_cursor_read * pr,
+         gs_throw(gs_error_VMerror, "could not allocate aes context");
+         return ERRC;
+       }
++      memset(state->ctx, 0x00, sizeof(aes_context));
+       if (state->keylength < 1 || state->keylength > SAES_MAX_KEYLENGTH) {
+         gs_throw1(gs_error_rangecheck, "invalid aes key length (%d bytes)",
+                 state->keylength);
+-- 
+2.9.1
+
+From 5516c614dc33662a2afdc377159f70218e67bde5 Mon Sep 17 00:00:00 2001
+From: Chris Liddell <chris.liddell@artifex.com>
+Date: Fri, 24 Aug 2018 09:26:04 +0100
+Subject: [PATCH] Improve restore robustness
+
+Prompted by looking at Bug 699654:
+
+There are two variants of the restore operator in Ghostscript: one is Level 1
+(restoring VM), the other is Level 2+ (adding page device restoring to the
+Level operator).
+
+This was implemented by the Level 2+ version restoring the device in the
+graphics state, then calling the Level 1 implementation to handle actually
+restoring the VM state.
+
+The problem was that the operand checking, and sanity of the save object was
+only done by the Level 1 variant, thus meaning an invalid save object could
+leave a (Level 2+) restore partially complete - with the page device part
+restored, but not VM, and the page device not configured.
+
+To solve that, this commit splits the operand and sanity checking, and the
+core of the restore operation into separate functions, so the relevant
+operators can validate the operand *before* taking any further action. That
+reduces the chances of an invalid restore leaving the interpreter in an
+unknown state.
+
+If an error occurs during the actual VM restore it is essentially fatal, and the
+interpreter cannot continue, but as an extra surety for security, in the event
+of such an error, we'll explicitly preserve the LockSafetyParams of the device,
+rather than rely on the post-restore device configuration (which won't happen
+in the event of an error).
+---
+ psi/int.mak    |  4 ++--
+ psi/isave.h    |  6 ++++++
+ psi/zdevice2.c | 33 +++++++++++++++++++++++++++++----
+ psi/zvmem.c    | 56 +++++++++++++++++++++++++++++++++++++++++++++++---------
+ 4 files changed, 84 insertions(+), 15 deletions(-)
+
+diff --git a/psi/int.mak b/psi/int.mak
+index 1968820..16db0cf 100644
+--- a/psi/int.mak
++++ b/psi/int.mak
+@@ -1086,8 +1086,8 @@ $(PSD)pagedev.dev : $(ECHOGS_XE) $(pagedev_)\
+ 
+ $(PSOBJ)zdevice2.$(OBJ) : $(PSSRC)zdevice2.c $(OP) $(math__h) $(memory__h)\
+  $(dstack_h) $(estack_h)\
+- $(idict_h) $(idparam_h) $(igstate_h) $(iname_h) $(iutil_h) $(store_h)\
+- $(gxdevice_h) $(gsstate_h) $(INT_MAK) $(MAKEDIRS)
++ $(idict_h) $(idparam_h) $(igstate_h) $(iname_h) $(isave) $(iutil_h) \
++ $(store_h) $(gxdevice_h) $(gsstate_h) $(INT_MAK) $(MAKEDIRS)
+ 	$(PSCC) $(PSO_)zdevice2.$(OBJ) $(C_) $(PSSRC)zdevice2.c
+ 
+ $(PSOBJ)zmedia2.$(OBJ) : $(PSSRC)zmedia2.c $(OP) $(math__h) $(memory__h)\
+diff --git a/psi/isave.h b/psi/isave.h
+index 3021639..7eaaced 100644
+--- a/psi/isave.h
++++ b/psi/isave.h
+@@ -128,4 +128,10 @@ int  font_restore(const alloc_save_t * save);
+    express purpose of getting the library context. */
+ gs_memory_t *gs_save_any_memory(const alloc_save_t *save);
+ 
++int
++restore_check_save(i_ctx_t *i_ctx_p, alloc_save_t **asave);
++
++int
++dorestore(i_ctx_t *i_ctx_p, alloc_save_t *asave);
++
+ #endif /* isave_INCLUDED */
+diff --git a/psi/zdevice2.c b/psi/zdevice2.c
+index 9fbb4e3..0c7080d 100644
+--- a/psi/zdevice2.c
++++ b/psi/zdevice2.c
+@@ -26,6 +26,7 @@
+ #include "igstate.h"
+ #include "iname.h"
+ #include "iutil.h"
++#include "isave.h"
+ #include "store.h"
+ #include "gxdevice.h"
+ #include "gsstate.h"
+@@ -307,13 +308,24 @@ z2grestoreall(i_ctx_t *i_ctx_p)
+     }
+     return 0;
+ }
+-
++/* This is the Level 2+ variant of restore - which adds restoring
++   of the page device to the Level 1 variant in zvmem.c.
++   Previous this restored the device state before calling zrestore.c
++   which validated operands etc, meaning a restore could error out
++   partially complete.
++   The operand checking, and actual VM restore are now in two functions
++   so they can called separately thus, here, we can do as much
++   checking as possible, before embarking on actual changes
++ */
+ /* <save> restore - */
+ static int
+ z2restore(i_ctx_t *i_ctx_p)
+ {
+-    os_ptr op = osp;
+-    check_type(*op, t_save);
++    alloc_save_t *asave;
++    bool saveLockSafety = gs_currentdevice_inline(igs)->LockSafetyParams;
++    int code = restore_check_save(i_ctx_p, &asave);
++
++    if (code < 0) return code;
+ 
+     while (gs_gstate_saved(gs_gstate_saved(igs))) {
+         if (restore_page_device(igs, gs_gstate_saved(igs)))
+@@ -322,7 +334,20 @@ z2restore(i_ctx_t *i_ctx_p)
+     }
+     if (restore_page_device(igs, gs_gstate_saved(igs)))
+         return push_callout(i_ctx_p, "%restorepagedevice");
+-    return zrestore(i_ctx_p);
++
++    code = dorestore(i_ctx_p, asave);
++
++    if (code < 0) {
++        /* An error here is basically fatal, but....
++           restore_page_device() has to set LockSafetyParams false so it can
++           configure the restored device correctly - in normal operation, that
++           gets reset by that configuration. If we hit an error, though, that
++           may not happen -  at least ensure we keep the setting through the
++           error.
++         */
++        gs_currentdevice_inline(igs)->LockSafetyParams = saveLockSafety;
++    }
++    return code;
+ }
+ 
+ /* <gstate> setgstate - */
+diff --git a/psi/zvmem.c b/psi/zvmem.c
+index 44cd7a8..87a0a4f 100644
+--- a/psi/zvmem.c
++++ b/psi/zvmem.c
+@@ -99,19 +99,18 @@ zsave(i_ctx_t *i_ctx_p)
+ static int restore_check_operand(os_ptr, alloc_save_t **, gs_dual_memory_t *);
+ static int restore_check_stack(const i_ctx_t *i_ctx_p, const ref_stack_t *, const alloc_save_t *, bool);
+ static void restore_fix_stack(i_ctx_t *i_ctx_p, ref_stack_t *, const alloc_save_t *, bool);
++
++/* Do as many up front checks of the save object as we reasonably can */
+ int
+-zrestore(i_ctx_t *i_ctx_p)
++restore_check_save(i_ctx_t *i_ctx_p, alloc_save_t **asave)
+ {
+     os_ptr op = osp;
+-    alloc_save_t *asave;
+-    bool last;
+-    vm_save_t *vmsave;
+-    int code = restore_check_operand(op, &asave, idmemory);
++    int code = restore_check_operand(op, asave, idmemory);
+ 
+     if (code < 0)
+         return code;
+     if_debug2m('u', imemory, "[u]vmrestore 0x%lx, id = %lu\n",
+-               (ulong) alloc_save_client_data(asave),
++               (ulong) alloc_save_client_data(*asave),
+                (ulong) op->value.saveid);
+     if (I_VALIDATE_BEFORE_RESTORE)
+         ivalidate_clean_spaces(i_ctx_p);
+@@ -120,14 +119,37 @@ zrestore(i_ctx_t *i_ctx_p)
+     {
+         int code;
+ 
+-        if ((code = restore_check_stack(i_ctx_p, &o_stack, asave, false)) < 0 ||
+-            (code = restore_check_stack(i_ctx_p, &e_stack, asave, true)) < 0 ||
+-            (code = restore_check_stack(i_ctx_p, &d_stack, asave, false)) < 0
++        if ((code = restore_check_stack(i_ctx_p, &o_stack, *asave, false)) < 0 ||
++            (code = restore_check_stack(i_ctx_p, &e_stack, *asave, true)) < 0 ||
++            (code = restore_check_stack(i_ctx_p, &d_stack, *asave, false)) < 0
+             ) {
+             osp++;
+             return code;
+         }
+     }
++    osp++;
++    return 0;
++}
++
++/* the semantics of restore differ slightly between Level 1 and
++   Level 2 and later - the latter includes restoring the device
++   state (whilst Level 1 didn't have "page devices" as such).
++   Hence we have two restore operators - one here (Level 1)
++   and one in zdevice2.c (Level 2+). For that reason, the
++   operand checking and guts of the restore operation are
++   separated so both implementations can use them to best
++   effect.
++ */
++int
++dorestore(i_ctx_t *i_ctx_p, alloc_save_t *asave)
++{
++    os_ptr op = osp;
++    bool last;
++    vm_save_t *vmsave;
++    int code;
++
++    osp--;
++
+     /* Reset l_new in all stack entries if the new save level is zero. */
+     /* Also do some special fixing on the e-stack. */
+     restore_fix_stack(i_ctx_p, &o_stack, asave, false);
+@@ -170,9 +192,24 @@ zrestore(i_ctx_t *i_ctx_p)
+     /* cause an 'invalidaccess' in setuserparams. Temporarily set     */
+     /* LockFilePermissions false until the gs_lev2.ps can do a        */
+     /* setuserparams from the restored userparam dictionary.          */
++    /* NOTE: This is safe to do here, since the restore has           */
++    /* successfully completed - this should never come before any     */
++    /* operation that can trigger an error                            */
+     i_ctx_p->LockFilePermissions = false;
+     return 0;
+ }
++
++int
++zrestore(i_ctx_t *i_ctx_p)
++{
++    alloc_save_t *asave;
++    int code = restore_check_save(i_ctx_p, &asave);
++    if (code < 0)
++        return code;
++
++    return dorestore(i_ctx_p, asave);
++}
++
+ /* Check the operand of a restore. */
+ static int
+ restore_check_operand(os_ptr op, alloc_save_t ** pasave,
+@@ -193,6 +230,7 @@ restore_check_operand(os_ptr op, alloc_save_t ** pasave,
+     *pasave = asave;
+     return 0;
+ }
++
+ /* Check a stack to make sure all its elements are older than a save. */
+ static int
+ restore_check_stack(const i_ctx_t *i_ctx_p, const ref_stack_t * pstack,
+-- 
+2.9.1
+
+
