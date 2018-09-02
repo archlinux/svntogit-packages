@@ -4,16 +4,17 @@
 pkgbase=python-pyelftools
 pkgname=('python2-pyelftools' 'python-pyelftools')
 _pkgname=pyelftools
-pkgver=0.24
-pkgrel=3
+pkgver=0.25
+pkgrel=1
 pkgdesc='Python library for analyzing ELF files and DWARF debugging information'
 url='https://github.com/eliben/pyelftools'
 arch=('any')
 license=('custom:Public Domain')
-makedepends=('python' 'python2')
+makedepends=('python' 'python-setuptools'
+             'python2' 'python2-setuptools')
 options=('!strip')
 source=(${_pkgname}-${pkgver}.tar.gz::https://github.com/eliben/${_pkgname}/archive/v${pkgver}.tar.gz)
-sha512sums=('5f02018b3c1c6da55c762e4e7a0eb9d5c9d2af542779dbcda231f563eb93565a0b5bd520ab5a4e07b26958122abeea1e76ee8609e4941ac38289adacea50910f')
+sha512sums=('84fbff3a8abc1d0d47e2113d14f509a6a0e8fb97d09c6abf91cefb416b7237d31f53945627e3958901b2a5229f57d5d2ffc9e0b7b4cd271f61689781dc6871bc')
 
 prepare() {
   cp -ra ${_pkgname}-${pkgver}{,-py2}
@@ -33,6 +34,7 @@ build() {
 }
 
 check() {
+  msg2 "Running tests under Python 3"
   (cd ${_pkgname}-${pkgver}
     python test/run_all_unittests.py
     python test/run_examples_test.py
@@ -42,6 +44,7 @@ check() {
       warning "Skipping readelf tests (require x86_64)"
     fi
   )
+  msg2 "Running tests under Python 2"
   (cd ${_pkgname}-${pkgver}-py2
     python2 test/run_all_unittests.py
     python2 test/run_examples_test.py
