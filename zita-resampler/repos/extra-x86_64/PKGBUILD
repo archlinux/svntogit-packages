@@ -4,46 +4,51 @@
 # Contributor: Philipp Überbacher <murks at lavabit dot com>
 
 pkgname=zita-resampler
-pkgver=1.6.0
-pkgrel=2
+pkgver=1.6.2
+pkgrel=1
 pkgdesc="A C++ library for resampling audio signals"
 url="https://kokkinizita.linuxaudio.org/linuxaudio/"
 arch=('x86_64')
 license=('GPL3')
 depends=('gcc-libs' 'libsndfile')
 source=("https://kokkinizita.linuxaudio.org/linuxaudio/downloads/${pkgname}-${pkgver}.tar.bz2")
-sha512sums=('fefe01dfc459a7ee0a98965b6e354cfe23b8e18838eeedabe2a6d965e9e413c8bafb9ebb11f8328852f18be20c14443785214b000065887e4482aa8d5e6b34f5')
+sha512sums=('d547419dd222c8a399d8f196efa1ec88a3f781275b696ae2fe1bb6e2fc329285affb8aace85972c304ad256becc4a155534dd5ef4ce3c57cbc9dcca0122b670c')
 
 prepare() {
   cd "${pkgname}-${pkgver}"
   # FS#36248 - strip march=native
-  sed -e '/native/d' -i {libs,apps}/Makefile
+  sed -e '/native/d' \
+      -i {source,apps}/Makefile
   # removing local call to ldconfig
-  sed -e '/ldconfig/d' -i libs/Makefile
+  sed -e 's/ldconfig/& -N $(DESTDIR)\/$(LIBDIR)/' \
+      -i source/Makefile
+  # fix use of BINDIR without preceeding DESTDIR
+  # fix use of MANDIR without preceeding DESTDIR
+  sed -e 's/\ $(BINDIR)/\ $(DESTDIR)$(BINDIR)/' \
+      -e 's/\ $(MANDIR)/\ $(DESTDIR)$(MANDIR)/' \
+      -i apps/Makefile
 }
 
 build() {
-  cd "${pkgname}-${pkgver}/libs"
+  cd "${pkgname}-${pkgver}/source"
   # libs
-  make PREFIX=/usr
+  make
   # create lib link for building apps
   ln -sv "lib${pkgname}.so.${pkgver}" "lib${pkgname}.so"
   # apps
   cd ../apps
-  make PREFIX=/usr LDFLAGS+=" -L../libs" CXXFLAGS+=" -I../libs"
+  make LDFLAGS+=" -L../source" CXXFLAGS+=" -I../source"
+  # cleanup link
+  rm -rv ../source/"lib${pkgname}.so"
 }
 
 package() {
   cd "${pkgname}-${pkgver}"
-  make -C libs DESTDIR="$pkgdir/" PREFIX=/usr LIBDIR=lib install
-  # apps
-  install -t "${pkgdir}/usr/bin" -vDm755 apps/zre{sample,tune}
-  # man
-  install -t "${pkgdir}/usr/share/man/man1" -vDm644 apps/zre{sample,tune}.1
+  make -C source DESTDIR="$pkgdir/" PREFIX=/usr SUFFIX="" install
+  make -C apps DESTDIR="$pkgdir/" PREFIX=/usr install
   # docs
   install -t "${pkgdir}/usr/share/doc/${pkgname}" \
-    -vDm644 {AUTHORS,README} \
-    -vDm644 docs/*
-  # create library symlinks
-  ldconfig -n "$pkgdir"/usr/lib
+    -vDm 644 {AUTHORS,README} \
+    -vDm 644 docs/*
 }
+
