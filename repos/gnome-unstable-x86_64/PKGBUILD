@@ -1,0 +1,73 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgbase=pygobject
+pkgname=(python-gobject python2-gobject pygobject-devel)
+pkgver=3.30.0
+pkgrel=1
+pkgdesc="Python Bindings for GLib/GObject/GIO/GTK+"
+url="https://wiki.gnome.org/Projects/PyGObject"
+arch=(x86_64)
+license=(LGPL)
+depends=(gobject-introspection-runtime)
+makedepends=(python{,2}-cairo gobject-introspection git meson)
+optdepends=('cairo: Cairo bindings')
+_commit=0e438464890c069c83eea19b0a5b9bc1906a1eab  # tags/3.30.0^0
+source=("git+https://gitlab.gnome.org/GNOME/pygobject.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+}
+
+_build() (
+  arch-meson $pkgbase build-$1 -D python=/usr/bin/$1
+  ninja -C build-$1
+)
+
+_package() {
+  DESTDIR="$pkgdir" meson install -C build-$1
+  $1 -m compileall "$pkgdir/usr/lib"
+  $1 -O -m compileall "$pkgdir/usr/lib"
+}
+
+build() {
+  _build python
+  _build python2
+}
+
+package_python-gobject() {
+  depends=("pygobject-devel=$pkgver" python)
+
+  _package python
+
+### Split -devel
+  mkdir -p "$srcdir/devel"
+  mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
+}
+
+package_python2-gobject() {
+  pkgdesc="${pkgdesc/Python/Python2}"
+  depends=("pygobject-devel=$pkgver" python2)
+
+  _package python2
+
+### Remove -devel
+  rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
+}
+
+package_pygobject-devel() {
+  pkgdesc="Common development files for pygobject"
+  optdepends=()
+
+  mkdir -p "$pkgdir/usr/lib"
+  mv devel/include "$pkgdir/usr"
+  mv devel/pkgconfig "$pkgdir/usr/lib"
+}
+
+# vim:set sw=2 et:
