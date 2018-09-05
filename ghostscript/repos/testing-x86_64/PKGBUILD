@@ -1,0 +1,103 @@
+# $Id$
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+pkgbase=ghostscript
+pkgname=(ghostscript ghostxps ghostpcl)
+pkgver=9.24
+pkgrel=2
+pkgdesc="An interpreter for the PostScript language"
+url="https://www.ghostscript.com/"
+arch=('x86_64')
+license=('AGPL3' 'custom')
+depends=('libxt' 'libcups' 'fontconfig' 'zlib' 'libpng' 'libjpeg' 'jbig2dec'
+         'libtiff' 'lcms2' 'dbus' 'libpaper' 'ijs' 'openjpeg2')
+makedepends=('gtk3' 'gnutls' 'glu' 'freeglut')
+# https://github.com/ArtifexSoftware/ghostpdl-downloads/releases
+source=(https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${pkgver/./}/ghostpdl-${pkgver}.tar.gz
+       0001_ICC_profile_validation.patch)
+sha512sums=('d3aae0d6f9d4f56392078d5034e278afa4f436f4b0977aeab0b9fbba8282e6598bf4532494f7df28f752d4cd1ea4c985e8f3e47db9be40cdf885b17f16731d75'
+            '6cfdd351e8e84968c20cf8f15e01a09a215b6132af89ca0e392716638d925a0f750dab3dbcbdf44f200fb9cc419be5dadccffc226c9a405e888f3580f98cf4ea')
+
+prepare() {
+  cd ghostpdl-${pkgver}
+
+  # force it to use system-libs
+  rm -r cups/libs expat ijs jbig2dec jpeg lcms2mt libpng openjpeg tiff zlib
+  # using tree freetype because of https://bugs.archlinux.org/task/56849
+  # lcms2mt is the new lcms2 fork aimed to replace lcms2 in a thread safe way
+
+  # https://bugs.ghostscript.com/show_bug.cgi?id=699713
+  patch -Np1 -i ../0001_ICC_profile_validation.patch
+}
+
+build() {
+  cd ghostpdl-${pkgver}
+
+  ./configure --prefix=/usr \
+              --enable-dynamic \
+              --with-ijs \
+              --with-jbig2dec \
+              --with-x \
+              --with-drivers=ALL \
+              --with-fontpath=/usr/share/fonts/gsfonts \
+              --enable-fontconfig \
+              --enable-freetype \
+              --enable-openjpeg \
+              --without-luratech \
+              --with-system-libtiff \
+              --with-libpaper \
+              --disable-compile-inits #--help # needed for linking with system-zlib
+
+  make so-only
+}
+
+package_ghostscript() {
+  optdepends=('texlive-core:      needed for dvipdf'
+              'gtk3:              needed for gsx')
+
+  cd ghostpdl-${pkgver}
+
+  make DESTDIR="${pkgdir}" \
+       CUPSSERVERROOT="${pkgdir}$(cups-config --serverroot)" \
+       CUPSSERVERBIN="${pkgdir}$(cups-config --serverbin)" \
+       soinstall
+  ln -s gsc "${pkgdir}"/usr/bin/gs
+
+  # remove useless broken doc/ symlink - FS#59507
+  rm -f "${pkgdir}"/usr/share/ghostscript/${pkgver}/doc
+
+  # remove unwanted localized manpages
+  rm -r "${pkgdir}"/usr/share/man/de
+
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
+}
+
+package_ghostxps() {
+  pkgdesc="${pkgdesc/PostScript/XPS document}"
+  depends=("ghostscript=${pkgver}-${pkgrel}")
+
+  cd ghostpdl-${pkgver}
+
+  install -Dt "${pkgdir}"/usr/bin sobin/gxpsc
+  ln -s gxpsc "${pkgdir}"/usr/bin/gxps
+
+  install -Dt "${pkgdir}"/usr/lib sobin/libgxps.so.${pkgver%.*}
+  ln -s libgxps.so.${pkgver%.*} "${pkgdir}"/usr/lib/libgxps.so.${pkgver%rc*}
+
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
+}
+
+package_ghostpcl() {
+  pkgdesc="${pkgdesc/PostScript/PCL 6}"
+  depends=("ghostscript=${pkgver}-${pkgrel}")
+
+  cd ghostpdl-${pkgver}
+
+  install -Dt "${pkgdir}"/usr/bin sobin/gpcl6c
+  ln -sf gpcl6c "${pkgdir}"/usr/bin/gpcl6
+
+  install -Dt "${pkgdir}"/usr/lib sobin/libgpcl6.so.${pkgver%.*}
+  ln -s libgpcl6.so.${pkgver%.*} "${pkgdir}"/usr/lib/libgpcl6.so.${pkgver%rc*}
+
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
+}
