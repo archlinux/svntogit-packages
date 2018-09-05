@@ -1,0 +1,49 @@
+From 3c7d5e749ccafa75718ef00f1d5f6cdc0defacb3 Mon Sep 17 00:00:00 2001
+Message-Id: <3c7d5e749ccafa75718ef00f1d5f6cdc0defacb3.1536176847.git.jan.steffens@gmail.com>
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Wed, 5 Sep 2018 21:46:28 +0200
+Subject: [PATCH] GtkApplication: Fix CRITICAL on shutdown when
+ register_session=FALSE
+
+---
+ gtk/gtkapplication-dbus.c | 23 +++++++++++++++--------
+ 1 file changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/gtk/gtkapplication-dbus.c b/gtk/gtkapplication-dbus.c
+index 25015eb68c..0946edf35c 100644
+--- a/gtk/gtkapplication-dbus.c
++++ b/gtk/gtkapplication-dbus.c
+@@ -826,15 +826,22 @@ gtk_application_impl_dbus_finalize (GObject *object)
+ {
+   GtkApplicationImplDBus *dbus = (GtkApplicationImplDBus *) object;
+ 
+-  g_dbus_connection_call (dbus->session,
+-                          "org.freedesktop.portal.Desktop",
+-                          dbus->session_id,
+-                          "org.freedesktop.portal.Session",
+-                          "Close",
+-                          NULL, NULL, 0, -1, NULL, NULL, NULL);
++  if (dbus->session_id)
++    {
++      g_dbus_connection_call (dbus->session,
++                              "org.freedesktop.portal.Desktop",
++                              dbus->session_id,
++                              "org.freedesktop.portal.Session",
++                              "Close",
++                              NULL, NULL, 0, -1, NULL, NULL, NULL);
++
++      g_free (dbus->session_id);
++    }
++
++  if (dbus->state_changed_handler)
++    g_dbus_connection_signal_unsubscribe (dbus->session,
++                                          dbus->state_changed_handler);
+ 
+-  g_free (dbus->session_id);
+-  g_dbus_connection_signal_unsubscribe (dbus->session, dbus->state_changed_handler);
+   g_clear_object (&dbus->inhibit_proxy);
+   g_slist_free_full (dbus->inhibit_handles, inhibit_handle_free);
+   g_free (dbus->app_menu_path);
+-- 
+2.18.0
+
