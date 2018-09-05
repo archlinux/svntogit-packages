@@ -1,22 +1,20 @@
-# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=gnome-online-accounts
-pkgver=3.28.0
+pkgver=3.30.0
 pkgrel=1
 pkgdesc="Single sign-on framework for GNOME"
 url="https://wiki.gnome.org/Projects/GnomeOnlineAccounts"
 arch=(x86_64)
 license=(LGPL)
-depends=(webkit2gtk json-glib libnotify rest libsecret telepathy-glib krb5 gcr)
-makedepends=(gobject-introspection gtk-doc vala autoconf-archive gnome-common git)
-optdepends=('gvfs-goa: Virtual file systems (e.g. OwnCloud)'
+depends=(webkit2gtk json-glib libnotify rest libsecret krb5 gcr)
+makedepends=(gobject-introspection gtk-doc vala git meson)
+optdepends=('gvfs-goa: Virtual file systems, e.g. OwnCloud'
             'gvfs-google: Google Drive')
-_commit=3236929b648162c8a8b8c0020377f6d9af1ef6bb  # tags/3.28.0^0
-source=("git+https://git.gnome.org/browse/gnome-online-accounts#commit=$_commit"
-        "git+https://git.gnome.org/browse/telepathy-account-widgets")
-sha256sums=('SKIP'
-            'SKIP')
+_commit=4542c85743159826e94acb8edb26e235d9732f86  # tags/3.30.0^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-online-accounts.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
@@ -25,37 +23,24 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  git submodule init
-  git config --local submodule.telepathy-account-widgets.url "$srcdir/telepathy-account-widgets"
-  git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
+  arch-meson $pkgname build \
+    -D lastfm=true \
+    -D media_server=true \
+    -D todoist=true \
+    -D gtk_doc=true \
+    -D man=true
+  ninja -C build
+}
 
-  ./configure \
-    --prefix=/usr \
-    --libexecdir=/usr/lib \
-    --disable-static \
-    --enable-compile-warnings=minimum \
-    --enable-inspector \
-    --enable-media-server \
-    --enable-kerberos \
-    --enable-lastfm \
-    --enable-todoist \
-    --enable-gtk-doc
-
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+check() {
+  meson test -C build
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
 
 # vim:set ts=2 sw=2 et:
