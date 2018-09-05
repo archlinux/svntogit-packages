@@ -3,16 +3,19 @@
 
 pkgname=at-spi2-core
 pkgver=2.30.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Protocol definitions and daemon for D-Bus at-spi"
 url="https://gitlab.gnome.org/GNOME/at-spi2-core"
 arch=(x86_64)
 license=(GPL2)
 depends=(dbus glib2 libxtst)
-makedepends=(intltool gobject-introspection git gtk-doc meson)
+makedepends=(intltool gobject-introspection git gtk-doc meson dbus-broker)
+optdepends=('dbus-broker: Alternative bus implementation')
 _commit=2f3b23bb626e91aa321f06374ff66a709c323430  # tags/AT_SPI2_CORE_2_30_0^0
-source=("git+https://gitlab.gnome.org/GNOME/at-spi2-core.git#commit=$_commit")
-sha256sums=('SKIP')
+source=("git+https://gitlab.gnome.org/GNOME/at-spi2-core.git#commit=$_commit"
+        fallback.diff)
+sha256sums=('SKIP'
+            'e2254af6fe94a42402544dc9fd0f322318d2809be01ef1e9e944388f2aa3cad7')
 
 pkgver() {
   cd $pkgname
@@ -21,11 +24,13 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # Try to unbreak fallback
+  patch -Np1 -i ../fallback.diff
 }
 
 build() {
   arch-meson $pkgname build \
-    -D dbus_broker=/usr/bin/dbus-broker-launch \
     -D default_bus=dbus-broker \
     -D enable_docs=true
   ninja -C build
@@ -33,6 +38,7 @@ build() {
 
 check() {
   # memory test fails without desktop
+  # broker fails to launch without journald
   dbus-run-session meson test -C build || :
 }
 
