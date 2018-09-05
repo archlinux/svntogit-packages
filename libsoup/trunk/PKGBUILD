@@ -1,21 +1,19 @@
-# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libsoup
-pkgver=2.62.3
+pkgver=2.64.0+7+g1dd3333a
 pkgrel=1
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
 arch=(x86_64)
 license=(LGPL)
 depends=(glib2 libxml2 glib-networking sqlite krb5)
-makedepends=(intltool gobject-introspection python vala git gtk-doc)
+makedepends=(gobject-introspection python vala git gtk-doc meson)
 checkdepends=(apache php-apache)
-_commit=578f7d804529761d68b0cc3e4a77089682ded63c  # tags/2.62.3^0
-source=("git+https://gitlab.gnome.org/GNOME/libsoup.git#commit=$_commit"
-        0001-Configure-PHP-to-load-the-XMLRPC-extension-if-presen.patch)
-sha256sums=('SKIP'
-            '7bf5257afb2c248c8ef8709e4aeaaafe9252835887b6944fe143eddc7ce98a8c')
+_commit=1dd3333a793089768506ad07fbf328ac13fd2897  # master
+source=("git+https://gitlab.gnome.org/GNOME/libsoup.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
@@ -24,27 +22,17 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=782410
-  patch -Np1 -i ../0001-Configure-PHP-to-load-the-XMLRPC-extension-if-presen.patch
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --disable-static --enable-gtk-doc
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build -D doc=true -D vapi=true
+  ninja -C build
 }
 
 check() {
-  cd $pkgname
-  make check
+  meson test -C build
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
