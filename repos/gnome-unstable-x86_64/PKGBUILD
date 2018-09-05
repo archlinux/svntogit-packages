@@ -5,7 +5,7 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
 pkgver=3.24.0
-pkgrel=1
+pkgrel=2
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
 url="https://www.gtk.org/"
@@ -17,11 +17,13 @@ makedepends=(gobject-introspection gtk-doc git glib2-docs sassc)
 license=(LGPL)
 _commit=ef1a1b5cb1010977d631dc1131b0db45a1e1e15f  # tags/3.24.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
+        0001-GtkApplication-Fix-CRITICAL-on-shutdown-when-registe.patch
         settings.ini
         gtk-query-immodules-3.0.hook
         gtk-update-icon-cache.hook
         gtk-update-icon-cache.script)
 sha256sums=('SKIP'
+            '54ea494642c2498dc9f14c310744a4a9d43b6d1fd217bc8ca50f4a86ec56973f'
             '01fc1d81dc82c4a052ac6e25bf9a04e7647267cc3017bc91f9ce3e63e5eb9202'
             'de46e5514ff39a7a65e01e485e874775ab1c0ad20b8e94ada43f4a6af1370845'
             '496064a9dd6214bd58f689dd817dbdc4d7f17d42a8c9940a87018c3f829ce308'
@@ -34,6 +36,10 @@ pkgver() {
 
 prepare() {
   cd gtk
+
+  # Attempt to unbreak libdazzle test-application
+  patch -Np1 -i ../0001-GtkApplication-Fix-CRITICAL-on-shutdown-when-registe.patch
+
   NOCONFIGURE=1 ./autogen.sh
 }
 
@@ -62,24 +68,22 @@ package_gtk3() {
   replaces=("gtk3-print-backends<=3.22.26-1")
   install=gtk3.install
 
-  cd gtk
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" make -C gtk install
 
-  install -Dm644 ../settings.ini "$pkgdir/usr/share/gtk-3.0/settings.ini"
-  install -Dm644 ../gtk-query-immodules-3.0.hook "$pkgdir/usr/share/libalpm/hooks/gtk-query-immodules-3.0.hook"
+  install -Dt "$pkgdir/usr/share/gtk-3.0" -m644 settings.ini
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 gtk-query-immodules-3.0.hook
 
   # split this out to use with gtk2 too
-  rm "$pkgdir/usr/bin/gtk-update-icon-cache"
+  mv "$pkgdir/usr/bin/gtk-update-icon-cache" "$srcdir"
 }
 
 package_gtk-update-icon-cache() {
   pkgdesc="GTK+ icon cache updater"
   depends=(gdk-pixbuf2 librsvg hicolor-icon-theme)
 
-  cd gtk
-  install -D gtk/gtk-update-icon-cache "$pkgdir/usr/bin/gtk-update-icon-cache"
-  install -Dm644 ../gtk-update-icon-cache.hook "$pkgdir/usr/share/libalpm/hooks/gtk-update-icon-cache.hook"
-  install -D ../gtk-update-icon-cache.script "$pkgdir/usr/share/libalpm/scripts/gtk-update-icon-cache"
+  install -Dt "$pkgdir/usr/bin" gtk-update-icon-cache
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 gtk-update-icon-cache.hook
+  install -D gtk-update-icon-cache.script "$pkgdir/usr/share/libalpm/scripts/gtk-update-icon-cache"
 }
 
 # vim:set ts=2 sw=2 et:
