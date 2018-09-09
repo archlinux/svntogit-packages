@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.18.6
+_pkgver=4.18.7
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -26,11 +26,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         HID-core-fix-grouping-by-application.patch
 )
 replaces=('linux-grsec')
-sha256sums=('05db97fd6891217af6d4203bdc442ef2af78d7902b6a8e9bd348682704c22894'
+sha256sums=('f03b425e262a71e5079736706233a4e9afaf77c8462b552b4d6db2d33f5af731'
             'SKIP'
-            'd3a244e228a566d536a26fcfe57252bb6e9b61c0f070ef4bb9eaad868196bef3'
+            '7d716cdb26f3437660b807d68acc0406a2ba9dba59c62388d65373a19477f7ac'
             'SKIP'
-            '397aa929fbc57aeedfbf95b6313509ebb56cb8f246dfe2b3f967af8738860f62'
+            '48ac32d2fa684add651b3172e9499a39081191d9bda31e9ff9cc7a959b88b13f'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
