@@ -1,4 +1,3 @@
-# $Id$
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Contributor: Sébastien Luttringer
 # Contributor: Lawrence Lee <valheru@facticius.net>
