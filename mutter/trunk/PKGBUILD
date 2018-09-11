@@ -1,4 +1,3 @@
-# $Id: PKGBUILD 330962 2018-08-06 10:26:11Z heftig $
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Maintainer: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
