@@ -1,4 +1,3 @@
-# $Id$
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=libsndfile
