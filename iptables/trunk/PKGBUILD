@@ -3,7 +3,7 @@
 
 pkgname=iptables
 pkgver=1.8.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
 license=(GPL2)
@@ -79,4 +79,11 @@ package() {
     install -Dm755 $helper \
       "$pkgdir/usr/lib/systemd/scripts/$helper"
   done
+
+  # install iptables-apply
+  cd $srcdir/$pkgname-$pkgver
+  install -Dm755 $pkgname/iptables-apply \
+      "$pkgdir/usr/bin/iptables-apply"
+  gzip --to-stdout --best $pkgname/iptables-apply.8 > \
+      "$pkgdir/usr/share/man/man8/iptables-apply.8.gz"
 }
