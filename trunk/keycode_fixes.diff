@@ -1,0 +1,83 @@
+From 09ab2e3d0eeb33bc4d0702623404ba01b1f8fa9a Mon Sep 17 00:00:00 2001
+From: Benno Schulenberg <bensberg@telfort.nl>
+Date: Wed, 12 Sep 2018 13:18:17 +0200
+Subject: bindings: when Ctrl+Shift+Delete has no keycode, don't use KEY_BSP
+
+When curses gives no code for Ctrl+Shift+Delete, do not fall back
+to KEY_BACKSPACE, because then ^H and/or <Backspace> get bound to
+'cutwordleft'.
+
+This fixes https://savannah.gnu.org/bugs/?54642.
+
+Bug was introduced with version 3.0, commit e6429e78.
+---
+ src/nano.c | 2 +-
+ src/nano.h | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/nano.c b/src/nano.c
+index c7e0ca2..74e1243 100644
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -2580,7 +2580,7 @@ int main(int argc, char **argv)
+ 	controlhome = get_keycode("kHOM5", CONTROL_HOME);
+ 	controlend = get_keycode("kEND5", CONTROL_END);
+ 	controldelete = get_keycode("kDC5", CONTROL_DELETE);
+-	controlshiftdelete = get_keycode("kDC6", KEY_BACKSPACE);
++	controlshiftdelete = get_keycode("kDC6", CONTROL_SHIFT_DELETE);
+ #ifndef NANO_TINY
+ 	/* Ask for the codes for Shift+Control+Left/Right/Up/Down. */
+ 	shiftcontrolleft = get_keycode("kLFT6", SHIFT_CONTROL_LEFT);
+diff --git a/src/nano.h b/src/nano.h
+index e104275..7de34bf 100644
+--- a/src/nano.h
++++ b/src/nano.h
+@@ -588,6 +588,7 @@ enum
+ #define SHIFT_CONTROL_DOWN 0x414
+ #define SHIFT_CONTROL_HOME 0x415
+ #define SHIFT_CONTROL_END 0x416
++#define CONTROL_SHIFT_DELETE 0x417
+ #define ALT_LEFT 0x421
+ #define ALT_RIGHT 0x422
+ #define ALT_UP 0x423
+-- 
+cgit v1.0-41-gc330
+
+From 3c5e5d4b6f7fd388578622e3ed9c78aad88055c1 Mon Sep 17 00:00:00 2001
+From: Benno Schulenberg <bensberg@telfort.nl>
+Date: Wed, 12 Sep 2018 15:00:06 +0200
+Subject: input: recognize the sequences for Ctrl+Shift+Delete on xterm and
+ urxvt
+
+This fixes https://savannah.gnu.org/bugs/?54648.
+---
+ src/winio.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/winio.c b/src/winio.c
+index 953826b..d6a5630 100644
+--- a/src/winio.c
++++ b/src/winio.c
+@@ -1101,12 +1101,18 @@ int convert_sequence(const int *seq, size_t length, int *consumed)
+ 							if (seq[3] == '5')
+ 								/* Esc [ 3 ; 5 ~ == Ctrl-Delete on xterm. */
+ 								return CONTROL_DELETE;
++							if (seq[3] == '6')
++								/* Esc [ 3 ; 6 ~ == Ctrl-Shift-Delete on xterm. */
++								return controlshiftdelete;
+ 						}
+ 						if (length > 2 && seq[2] == '^') {
+ 							/* Esc [ 3 ^ == Ctrl-Delete on urxvt. */
+ 							*consumed = 3;
+ 							return CONTROL_DELETE;
+ 						}
++						if (length > 2 && seq[2] == '@')
++							/* Esc [ 3 @ == Ctrl-Shift-Delete on urxvt. */
++							return controlshiftdelete;
+ 						break;
+ 					case '4': /* Esc [ 4 ~ == End on VT220/VT320/
+ 							   * Linux console/xterm. */
+-- 
+cgit v1.0-41-gc330
+
+
