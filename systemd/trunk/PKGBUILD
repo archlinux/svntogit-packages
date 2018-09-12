@@ -117,7 +117,7 @@ build() {
   )
 
   local _meson_options=(
-    -Dgnuefi=true
+    -Dgnu-efi=true
     -Dima=false
     -Dlibidn2=true
     -Dlz4=true
