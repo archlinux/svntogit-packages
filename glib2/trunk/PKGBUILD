@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.58.0+19+gc3c059e6d
+pkgver=2.58.0+25+gd89e862f3
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -15,7 +15,7 @@ checkdepends=(desktop-file-utils)
 optdepends=('python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
             'libelf: gresource inspection tool')
 options=(!emptydirs)
-_commit=c3c059e6d75ac5ad5d371e42501cab2a4fa93c53  # glib-2-58
+_commit=d89e862f3cfb0b6b7708c0425547c2a38add9342  # glib-2-58
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         noisy-glib-compile-schemas.diff
         glib-compile-schemas.hook gio-querymodules.hook)
