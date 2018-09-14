@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.14rc1+19+g22e6314dd
+pkgver=1.14.0
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,7 +19,7 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit)
 checkdepends=(libx11 python-dbus)
-_commit=22e6314dd933616a782c490a1b8381e5687e7f02  # nm-1-14
+_commit=2979c891c4af7584780924e92b6d448b7d6cd328  # tags/1.14.0^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
