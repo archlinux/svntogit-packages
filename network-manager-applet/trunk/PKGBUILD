@@ -6,16 +6,15 @@
 # Contributor: Will Rea <sillywilly@gmail.com>
 
 pkgbase=network-manager-applet
-pkgname=(network-manager-applet nm-connection-editor)
+pkgname=(network-manager-applet nm-connection-editor libnma libnm-gtk)
 pkgdesc="Applet for managing network connections"
 url="https://wiki.gnome.org/Projects/NetworkManager/"
 pkgver=1.8.18
 pkgrel=1
 arch=(x86_64)
 license=(GPL LGPL)
-depends=(libnm-glib libgudev gtk3 mobile-broadband-provider-info iso-codes gcr)
-makedepends=(libsecret libnotify libmm-glib intltool gobject-introspection git gtk-doc meson)
-options=(!emptydirs)
+makedepends=(libsecret libnotify libmm-glib intltool gobject-introspection git gtk-doc meson
+             libnm-glib libgudev gtk3 mobile-broadband-provider-info iso-codes gcr)
 _commit=f0193b49a55482498200202a256c2f396abc2f72  # tags/1.8.18^0
 source=("git+https://gitlab.gnome.org/GNOME/network-manager-applet.git#commit=$_commit")
 sha256sums=('SKIP')
@@ -39,10 +38,12 @@ check() {
 }
 
 _pick() {
-  local f; for f; do
-    local s="$pkgdir/$f" d="$srcdir/nce/$f"
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
     mkdir -p "$(dirname "$d")"
-    mv "$s" "$d"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
   done
 }
 
@@ -51,20 +52,47 @@ package_network-manager-applet() {
 
   DESTDIR="$pkgdir" meson install -C build
 
+### Split libnma
+  _pick libnma "$pkgdir"/usr/include/libnma
+  _pick libnma "$pkgdir"/usr/lib/girepository-1.0/NMA-*
+  _pick libnma "$pkgdir"/usr/lib/libnma.*
+  _pick libnma "$pkgdir"/usr/lib/pkgconfig/libnma.pc
+  _pick libnma "$pkgdir"/usr/share/gir-1.0/NMA-*
+  _pick libnma "$pkgdir"/usr/share/glib-2.0/schemas
+  _pick libnma "$pkgdir"/usr/share/gtk-doc/html/libnma
+
+### Split libnm-gtk
+  _pick libnm-gtk "$pkgdir"/usr/include/libnm-gtk
+  _pick libnm-gtk "$pkgdir"/usr/lib/girepository-1.0/NMGtk-*
+  _pick libnm-gtk "$pkgdir"/usr/lib/libnm-gtk.*
+  _pick libnm-gtk "$pkgdir"/usr/lib/pkgconfig/libnm-gtk.pc
+  _pick libnm-gtk "$pkgdir"/usr/share/gir-1.0/NMGtk-*
+
 ### Split nm-connection-editor
-  _pick usr/bin/nm-connection-editor
-  _pick usr/{include,lib}
-  _pick usr/share/{gir-1.0,glib-2.0,gtk-doc,locale,metainfo}
-  _pick usr/share/applications/nm-connection-editor.desktop
-  _pick usr/share/icons/hicolor/22x22/apps/nm-device-wwan.png
-  _pick usr/share/man/man1/nm-connection-editor.1
+  _pick nm-connection-editor "$pkgdir"/usr/bin/nm-connection-editor
+  _pick nm-connection-editor "$pkgdir"/usr/share/applications/nm-connection-editor.desktop
+  _pick nm-connection-editor "$pkgdir"/usr/share/icons/hicolor/22x22/apps/nm-device-wwan.png
+  _pick nm-connection-editor "$pkgdir"/usr/share/locale
+  _pick nm-connection-editor "$pkgdir"/usr/share/man/man1/nm-connection-editor.1
+  _pick nm-connection-editor "$pkgdir"/usr/share/metainfo
 }
 
 package_nm-connection-editor() {
   pkgdesc="NetworkManager GUI connection editor and widgets"
-  provides=("libnm-gtk=$pkgver-$pkgrel" "libnma=$pkgver-$pkgrel")
-  conflicts=(libnm-gtk)
-  replaces=(libnm-gtk)
+  depends=(libnma libnm-gtk)
+  conflicts=('libnm-gtk<1.8.18-1')
+  replaces=('libnm-gtk<1.8.18-1')
+  mv nm-connection-editor/* "$pkgdir"
+}
 
-  mv nce/* "$pkgdir"
+package_libnma() {
+  pkgdesc="NetworkManager GUI client library"
+  depends=(libnm gcr gtk3 iso-codes mobile-broadband-provider-info)
+  mv libnma/* "$pkgdir"
+}
+
+package_libnm-gtk() {
+  pkgdesc="NetworkManager GUI client library (legacy)"
+  depends=(libnm-glib gtk3 iso-codes libgudev)
+  mv libnm-gtk/* "$pkgdir"
 }
