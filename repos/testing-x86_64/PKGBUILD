@@ -4,7 +4,7 @@
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
 pkgver=1.58.0+2+g1f1dd7f4
-pkgrel=1
+pkgrel=2
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
@@ -39,10 +39,8 @@ package_gobject-introspection() {
 
   DESTDIR="$pkgdir" meson install -C build
 
-  pushd "$pkgdir"
-  python -m compileall -d / usr/lib/gobject-introspection
-  python -O -m compileall -d / usr/lib/gobject-introspection
-  popd
+  python -m compileall -d /usr/lib/gobject-introspection "$pkgdir/usr/lib/gobject-introspection"
+  python -O -m compileall -d /usr/lib/gobject-introspection "$pkgdir/usr/lib/gobject-introspection"
 
 ### Split runtime
   mkdir -p "$srcdir/runtime/lib"
