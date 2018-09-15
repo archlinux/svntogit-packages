@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.18.7
+_pkgver=4.18.8
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -22,19 +22,17 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         90-linux.hook  # pacman hook for initramfs regeneration
         linux.preset   # standard config files for mkinitcpio ramdisk
 
-        drm-i915-Increase-LSPCON-timeout.patch
         HID-core-fix-grouping-by-application.patch
 )
 replaces=('linux-grsec')
-sha256sums=('f03b425e262a71e5079736706233a4e9afaf77c8462b552b4d6db2d33f5af731'
+sha256sums=('f1551bad69ab617708fa8cf3f94545ae03dd350bdeb3065fbcf39c1a7df85494'
             'SKIP'
-            '7d716cdb26f3437660b807d68acc0406a2ba9dba59c62388d65373a19477f7ac'
+            'f36fcb8d263b7361fe84d2673426d37c4ba5bfbad4e9ebe914579e672586e845'
             'SKIP'
-            '48ac32d2fa684add651b3172e9499a39081191d9bda31e9ff9cc7a959b88b13f'
+            'c7f9d1a2f6dfdbf9d625560681da8dadff50da1ea6b13362e7fb8a1abbd4c286'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
-            '2f26b6273ded6d4031fd7115fac843b7bb90df9a28da8dc1b7f49294d3d39ee7'
             '472f606f043b16336f5335021285efe3a7658fb8467917409cb58c9a57a7b0a5')
 validpgpkeys=(
               'ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds
