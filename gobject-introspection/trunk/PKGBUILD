@@ -3,8 +3,8 @@
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.58.0
-pkgrel=2
+pkgver=1.58.0+2+g1f1dd7f4
+pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
@@ -12,11 +12,9 @@ license=(LGPL GPL)
 depends=(python python-mako)
 makedepends=(cairo git gtk-doc python-sphinx meson)
 options=(!emptydirs)
-_commit=01bf21f398d5ece9ac2d78c00b4b362091f8e05c  # tags/1.58.0^0
-source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
-        warnlib.diff)
-sha512sums=('SKIP'
-            'f9cf08b83a6f220923f7b5666638877a152ab90bebb6703e5026badc9852a69131b9c17e1d4dda89f9f5b6d8fb58a17780bd87d9c3bf66f5b8a9260f4f6debf4')
+_commit=1f1dd7f4857c13db507ad663664a5e4b8d620ffc  # gnome-3-30
+source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit")
+sha512sums=('SKIP')
 
 pkgver() {
   cd $pkgbase
@@ -25,8 +23,6 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
-  # GJS needs warnlib to build
-  patch -Np1 -i ../warnlib.diff
 }
   
 build() {
@@ -42,8 +38,11 @@ package_gobject-introspection() {
   depends+=("gobject-introspection-runtime=$pkgver-$pkgrel")
 
   DESTDIR="$pkgdir" meson install -C build
-  python -m compileall "$pkgdir/usr/lib/gobject-introspection"
-  python -O -m compileall "$pkgdir/usr/lib/gobject-introspection"
+
+  pushd "$pkgdir"
+  python -m compileall -d / usr/lib/gobject-introspection
+  python -O -m compileall -d / usr/lib/gobject-introspection
+  popd
 
 ### Split runtime
   mkdir -p "$srcdir/runtime/lib"
