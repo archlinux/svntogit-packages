@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.58.0+25+gd89e862f3
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL2.1)
@@ -50,10 +50,15 @@ check() {
 
 package_glib2() {
   DESTDIR="$pkgdir" meson install -C build
-  mv "$pkgdir/usr/share/gtk-doc" "$srcdir"
-  python -m compileall "$pkgdir/usr/share/glib-2.0/codegen"
-  python -O -m compileall "$pkgdir/usr/share/glib-2.0/codegen"
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+
+  pushd "$pkgdir"
+  python -m compileall -d / usr/share/glib-2.0/codegen
+  python -O -m compileall -d / usr/share/glib-2.0/codegen
+  popd
+
+  # Split docs
+  mv "$pkgdir/usr/share/gtk-doc" "$srcdir"
 }
 
 package_glib2-docs() {
