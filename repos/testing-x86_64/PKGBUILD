@@ -1,0 +1,67 @@
+# Maintainer: Florian Pritz <bluewind@xinu.at>
+# Contributor: Dale Blount <dale@archlinux.org>
+# Contributor: Manolis Tzanidakis
+pkgname=spamassassin
+pkgver=3.4.2
+pkgrel=1
+pkgdesc="A mail filter to identify spam."
+arch=('x86_64')
+license=('APACHE')
+url="http://spamassassin.apache.org"
+depends=('openssl' 'zlib' 're2c' 'perl-net-dns' 'perl-io-socket-ssl'
+         'perl-libwww' 'perl-mail-spf' 'perl-http-message' 'perl-net-http'
+         'perl-io-socket-inet6' 'perl-mail-dkim' 'perl-crypt-ssleay')
+makedepends=('razor' 'perl-dbi')
+optdepends=('razor: to identify collaborately-flagged spam'
+            'make: to use sa-compile'
+            'gcc: to use sa-compile')
+backup=('etc/mail/spamassassin/local.cf'
+        'etc/mail/spamassassin/init.pre'
+        'etc/mail/spamassassin/v310.pre'
+        'etc/mail/spamassassin/v312.pre'
+        'etc/mail/spamassassin/v320.pre'
+        'etc/mail/spamassassin/v330.pre')
+install="${pkgname}.install"
+source=("http://www.us.apache.org/dist/${pkgname}/source/Mail-SpamAssassin-${pkgver}.tar.gz"{,.asc}
+        'spamassassin.service')
+validpgpkeys=(D8099BC79E17D7E49BC21E31FDE52F40F7D39814)
+md5sums=('3fa07acc17bc4d024108265dadefdb3a'
+         'SKIP'
+         '8adce028f25387ac3bc4dba697d209ed')
+
+prepare() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+
+  sed -i t/sa_compile.t \
+	  -e 's#^my $temp_binpath = $Config{sitebinexp};#my $temp_binpath = "/bin/site_perl/";#'
+}
+
+build() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+
+  # install module in vendor directories.
+  export PERL_USE_UNSAFE_INC=1
+  PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor \
+      CONTACT_ADDRESS=root@localhost ENABLE_SSL=yes PERL_TAINT=no
+  make
+}
+
+check() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+
+  # parallel tests cause lots of failures; disable for now
+  #export HARNESS_OPTIONS="j$(echo $MAKEFLAGS | sed 's/.*-j\([0-9][0-9]*\).*/\1/')"
+
+  make test
+}
+
+package() {
+  cd "${srcdir}/Mail-SpamAssassin-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  install -D -m644 "${srcdir}/spamassassin.service" "${pkgdir}/usr/lib/systemd/system/spamassassin.service"
+  install -d -o 182 -g 182 -m 755 "$pkgdir/var/lib/spamassassin"
+
+  echo 'u spamd 182 - /var/lib/spamassassin' |
+	  install -Dm644 /dev/stdin "$pkgdir"/usr/lib/sysusers.d/$pkgname.conf
+}
