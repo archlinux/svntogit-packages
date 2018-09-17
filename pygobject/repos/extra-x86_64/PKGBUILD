@@ -1,18 +1,18 @@
-# $Id$
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgbase=pygobject
 pkgname=(python-gobject python2-gobject pygobject-devel)
-pkgver=3.28.3
-pkgrel=2
+pkgver=3.30.1
+pkgrel=3
 pkgdesc="Python Bindings for GLib/GObject/GIO/GTK+"
 url="https://wiki.gnome.org/Projects/PyGObject"
 arch=(x86_64)
 license=(LGPL)
 depends=(gobject-introspection-runtime)
-makedepends=(python{,2}-cairo gobject-introspection git autoconf-archive)
+makedepends=(python{,2}-cairo gobject-introspection git meson)
 optdepends=('cairo: Cairo bindings')
-_commit=8c84ef95c9a76de9189feedfebc8963db29d6bf0  # tags/3.28.3^0
+_commit=85baa83ca780b4aae89ce5f25b1186ee3790b828  # tags/3.30.1^0
 source=("git+https://gitlab.gnome.org/GNOME/pygobject.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -22,28 +22,32 @@ pkgver() {
 }
 
 prepare() {
-  mkdir build-py{2,3} devel
   cd $pkgbase
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 _build() (
-  cd build-py$1
-  ../$pkgbase/configure --prefix=/usr --with-python=/usr/bin/python$1
-  sed -i 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgbase build-$1 -D python=/usr/bin/$1
+  ninja -C build-$1
 )
 
+_package() {
+  DESTDIR="$pkgdir" meson install -C build-$1
+  $1 -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  $1 -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
+}
+
 build() {
-  _build 2
-  _build 3
+  _build python
+  _build python2
 }
 
 package_python-gobject() {
   depends=("pygobject-devel=$pkgver" python)
 
-  cd build-py3
-  make DESTDIR="$pkgdir" install
+  _package python
+
+### Split -devel
+  mkdir -p "$srcdir/devel"
   mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
 }
 
@@ -51,9 +55,9 @@ package_python2-gobject() {
   pkgdesc="${pkgdesc/Python/Python2}"
   depends=("pygobject-devel=$pkgver" python2)
 
-  cd build-py2
-  make DESTDIR="$pkgdir" install
-  python2 -m compileall "$pkgdir"/usr/lib/python2.7/site-packages/gi
+  _package python2
+
+### Remove -devel
   rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
 }
 
@@ -61,8 +65,9 @@ package_pygobject-devel() {
   pkgdesc="Common development files for pygobject"
   optdepends=()
 
-  cd devel
   mkdir -p "$pkgdir/usr/lib"
-  mv include "$pkgdir/usr/"
-  mv pkgconfig "$pkgdir/usr/lib/"
+  mv devel/include "$pkgdir/usr"
+  mv devel/pkgconfig "$pkgdir/usr/lib"
 }
+
+# vim:set sw=2 et:
