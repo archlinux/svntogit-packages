@@ -4,7 +4,7 @@
 
 pkgbase=python-setuptools
 pkgname=('python-setuptools' 'python2-setuptools')
-pkgver=40.2.0
+pkgver=40.3.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -17,7 +17,7 @@ _checkdeps=('mock' 'pip' 'pytest-fixture-config' 'pytest-flake8'
             'pytest-runner' 'pytest-virtualenv' 'wheel')
 checkdepends=("${_checkdeps[@]/#/python-}" "${_checkdeps[@]/#/python2-}" 'python-paver' 'git')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('a5006d6c746116c859d478e1621dc59cf63279e104111c7506100b2a143e0df7bf6177b3606803e6579bbf7d084a41e9f7041143ad67be29f07bce0951bd4b6c')
+sha512sums=('e7ca645cca10d5ee14c594584bbbb6b4100d224780b792d743a7debdb56a35605df9f8847732cf81f257b3b0fa9e8f895cc7d3e1d20387665ed64c098999d06c')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
