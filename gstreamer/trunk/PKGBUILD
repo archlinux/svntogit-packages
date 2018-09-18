@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer
-pkgver=1.14.2
+pkgver=1.14.3
 pkgrel=1
 pkgdesc="GStreamer open-source multimedia framework core library"
 url="https://gstreamer.freedesktop.org/"
@@ -11,7 +11,7 @@ license=(LGPL)
 depends=(libxml2 glib2 libunwind libcap libelf)
 makedepends=(gtk-doc gobject-introspection autoconf-archive git valgrind bash-completion)
 checkdepends=(gmp gsl gtk3)
-_commit=afb3d1b3e0d02da8b0eb5bb501356650b38e5644  # tags/1.14.2^0
+_commit=86a48030a2fbf3839792079baf0049cdb62518f0  # tags/1.14.3^0
 install=gstreamer.install
 source=("git+https://anongit.freedesktop.org/git/gstreamer/gstreamer#commit=$_commit"
         "gst-common::git+https://anongit.freedesktop.org/git/gstreamer/common")
