@@ -2,9 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.11.1
+_qtver=5.11.2
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=1
 arch=('x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -15,14 +15,9 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qtwebengine-harmony.patch qtwebengine-ffmpeg4.patch
-         qtwebengine-wayland.patch::"http://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=a66d4cd8"
-         qtbug-68699.patch::"http://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=6e019f2a")
-sha256sums=('389d9f42ca393ac11ec8932ce9771766dec91a4c761ffb685cc429c2a760d48c'
-            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3'
-            '4a831d89fb0d6a6ced23115ced71e60513ce279fba4bd493178842647948f510'
-            '3c02da6ae5ab5642331d7285fbc4b8a04422c8a570111f4c7a30d48f716f9110'
-            'ae44b99210676ccb7484bd64e369025bd48f62932841f24169952e9835911378')
+         qtwebengine-harmony.patch)
+sha256sums=('3ff9bba5f631cfdd454ce298489360b3e2d9a2de4eb82bb121d838ef65f9b772'
+            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3')
 
 prepare() {
   mkdir -p build
@@ -35,14 +30,6 @@ prepare() {
 
   # FreeType 2.8.1
   patch -Np1 -i ../qtwebengine-harmony.patch
-  # Fix openGL detection on Wayland
-  patch -p1 -i ../qtwebengine-wayland.patch
-  # Fix crash when scrolling on touchscreen https://bugreports.qt.io/browse/QTBUG-68699
-  patch -p1 -i ../qtbug-68699.patch
-
-  cd src/3rdparty/chromium
-  # Fix build with ffmpeg 4
-  patch -p2 -i "$srcdir"/qtwebengine-ffmpeg4.patch
 }
 
 build() {
