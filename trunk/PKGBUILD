@@ -5,15 +5,15 @@
 
 pkgbase=python-pycparser
 pkgname=(python-pycparser python2-pycparser)
-pkgver=2.18
-pkgrel=2
+pkgver=2.19
+pkgrel=1
 pkgdesc='C parser and AST generator written in Python'
 url='https://github.com/eliben/pycparser'
 makedepends=('python-ply' 'python2-ply' 'python-setuptools' 'python2-setuptools')
 arch=('any')
 license=('BSD')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/eliben/pycparser/archive/release_v$pkgver.tar.gz")
-sha512sums=('76426b000ed601a8e90a1eda34374b62acdf51dcf2048881ca0d4ebc3310e25728905c2f6843dd363d497b7cf0fd8311dab6c0de74f4a5c2f25d3b1d488f082a')
+sha512sums=('88fe63c1a7a344c564dfd3b4f99735a4159c8a3f5738bab839943ea7fcbf1f5340f67326550b7e66508ea5862897e5bcdf363c2a8d47eccb50890573a2640a98')
 
 prepare() {
   cp -a pycparser-release_v$pkgver{,-py2}
