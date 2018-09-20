@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=6.0.1
-pkgrel=4
+pkgver=7.0.0
+pkgrel=1
 _ocaml_ver=4.07.0
 arch=('x86_64')
 url="https://llvm.org/"
@@ -12,15 +12,9 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2' 'python-sphi
              "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib')
 options=('staticlibs')
 source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
-        D44391-export-LLVM_DYLIB_COMPONENTS-in-LLVMConfig.cmake.patch
-        D44420-cmake-fix-a-typo-in-llvm_config-macro.patch
-        D50416-cmake-Prevent-LLVMgold.so-from-being-unloaded-on-Lin.patch
         llvm-config.h)
-sha256sums=('b6d6c324f9c71494c0ccaf3dac1f16236d970002b42bb24a6c9e1634f7d0f4e2'
+sha256sums=('8bc1f844e6cbde1b652c19c1edebc1864456fd9c78b8c1bea038e51b363fe222'
             'SKIP'
-            '96e2f3ca8b7d1bdbe2606a1eebb12c57b39838d1bcc15e40388e8d59649a9f4a'
-            '5cc114fd711e6ea836a6270b2f713e2e751c49e8b5ffa6c6812127ca801acef3'
-            '4be3c981e1eac0e3d9cbfd98f2763ff8f72f7636d1cb8dca599c8c5d824d1fbb'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -28,16 +22,6 @@ validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstel
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
-
-  # https://reviews.llvm.org/D44391
-  patch -Np1 -i ../D44391-export-LLVM_DYLIB_COMPONENTS-in-LLVMConfig.cmake.patch
-
-  # https://reviews.llvm.org/D44420
-  patch -Np0 -i ../D44420-cmake-fix-a-typo-in-llvm_config-macro.patch
-
-  # https://reviews.llvm.org/D50416
-  # https://sourceware.org/bugzilla/show_bug.cgi?id=23460#c10
-  patch -Np1 -i ../D50416-cmake-Prevent-LLVMgold.so-from-being-unloaded-on-Lin.patch
 }
 
 build() {
