@@ -3,7 +3,7 @@
 
 pkgname=compiler-rt
 pkgver=7.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Compiler runtime libraries for clang"
 arch=('x86_64')
 url="https://compiler-rt.llvm.org/"
@@ -39,9 +39,9 @@ package() {
   DESTDIR="$pkgdir" ninja install
   install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 
-  mkdir -p "$pkgdir/usr/lib/clang/$pkgver/lib"
+  mkdir -p "$pkgdir"/usr/lib/clang/$pkgver/{lib,share}
   mv "$pkgdir"/usr/lib/{linux,clang/$pkgver/lib/}
-  mv "$pkgdir"/usr/{share/*.txt,lib/clang/$pkgver/}
+  mv "$pkgdir"/usr/{share/*.txt,lib/clang/$pkgver/share/}
 }
 
 # vim:set ts=2 sw=2 et:
