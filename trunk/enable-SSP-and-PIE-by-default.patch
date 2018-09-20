@@ -1,6 +1,6 @@
-From b0307536e769c8ce11dbfa1956d617e8fc9366a7 Mon Sep 17 00:00:00 2001
+From ece245fe717765630790da501a3d64f5c09a1e09 Mon Sep 17 00:00:00 2001
 From: Evangelos Foutras <evangelos@foutrelis.com>
-Date: Thu, 8 Mar 2018 18:38:53 +0200
+Date: Thu, 20 Sep 2018 06:20:28 +0300
 Subject: [PATCH] Enable SSP and PIE by default
 
 This is a minimal set of changes needed to make clang use SSP and PIE by
@@ -19,27 +19,29 @@ of a compile-time option (https://bugs.llvm.org/show_bug.cgi?id=13410)
 ---
  lib/Driver/ToolChains/Linux.cpp     | 14 ++++++++++++--
  lib/Driver/ToolChains/Linux.h       |  1 +
+ test/Driver/clang-offload-bundler.c |  2 +-
  test/Driver/cross-linux.c           | 16 ++++++++--------
  test/Driver/env.c                   |  2 +-
- test/Driver/fsanitize.c             | 18 ++++++++++--------
+ test/Driver/fsanitize.c             | 14 +++++++-------
  test/Driver/gcc-toolchain.cpp       |  2 +-
  test/Driver/hexagon-toolchain-elf.c |  2 +-
  test/Driver/linux-as.c              |  4 ++--
  test/Driver/linux-ld.c              |  2 ++
+ test/Driver/riscv32-toolchain.c     |  4 ++--
  test/Driver/stack-protector.c       |  4 ++--
- 10 files changed, 40 insertions(+), 25 deletions(-)
+ 12 files changed, 40 insertions(+), 27 deletions(-)
 
 diff --git a/lib/Driver/ToolChains/Linux.cpp b/lib/Driver/ToolChains/Linux.cpp
-index 1301cdf114..a15a722d76 100644
+index f8f3623918..7f75021542 100644
 --- a/lib/Driver/ToolChains/Linux.cpp
 +++ b/lib/Driver/ToolChains/Linux.cpp
-@@ -816,8 +816,18 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
+@@ -903,8 +903,18 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
  }
  
  bool Linux::isPIEDefault() const {
 -  return (getTriple().isAndroid() && !getTriple().isAndroidVersionLT(16)) ||
 -          getTriple().isMusl() || getSanitizerArgs().requiresPIE();
-+  const bool IsMips = tools::isMipsArch(getTriple().getArch());
++  const bool IsMips = getTriple().isMIPS();
 +  const bool IsAndroid = getTriple().isAndroid();
 +
 +  if (IsMips || IsAndroid)
@@ -55,10 +57,10 @@ index 1301cdf114..a15a722d76 100644
  
  SanitizerMask Linux::getSupportedSanitizers() const {
 diff --git a/lib/Driver/ToolChains/Linux.h b/lib/Driver/ToolChains/Linux.h
-index 9778c1832c..ddd46a1d58 100644
+index 22dbbecf6b..ba0d5587e0 100644
 --- a/lib/Driver/ToolChains/Linux.h
 +++ b/lib/Driver/ToolChains/Linux.h
-@@ -36,6 +36,7 @@ public:
+@@ -38,6 +38,7 @@ public:
    void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
    bool isPIEDefault() const override;
@@ -66,6 +68,19 @@ index 9778c1832c..ddd46a1d58 100644
    SanitizerMask getSupportedSanitizers() const override;
    void addProfileRTLibs(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const override;
+diff --git a/test/Driver/clang-offload-bundler.c b/test/Driver/clang-offload-bundler.c
+index adf13f59d4..fd2f6e5d8c 100644
+--- a/test/Driver/clang-offload-bundler.c
++++ b/test/Driver/clang-offload-bundler.c
+@@ -115,7 +115,7 @@
+ // CK-TEXTI: // __CLANG_OFFLOAD_BUNDLE____END__ openmp-x86_64-pc-linux-gnu
+ 
+ // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____START__ host-powerpc64le-ibm-linux-gnu
+-// CK-TEXTLL: @A = global i32 0
++// CK-TEXTLL: @A = {{(dso_local )?}}global i32 0
+ // CK-TEXTLL: define {{.*}}@test_func()
+ // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____END__ host-powerpc64le-ibm-linux-gnu
+ // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____START__ openmp-powerpc64le-ibm-linux-gnu
 diff --git a/test/Driver/cross-linux.c b/test/Driver/cross-linux.c
 index a5ea832e77..1949c05a60 100644
 --- a/test/Driver/cross-linux.c
@@ -128,10 +143,10 @@ index 0371bc91c4..ea89f52512 100644
  // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib"
  // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../.."
 diff --git a/test/Driver/fsanitize.c b/test/Driver/fsanitize.c
-index 7870f724b6..c66dd98956 100644
+index 304e759302..c157f9fc48 100644
 --- a/test/Driver/fsanitize.c
 +++ b/test/Driver/fsanitize.c
-@@ -208,15 +208,15 @@
+@@ -238,15 +238,15 @@
  // RUN: %clang -target x86_64-linux-gnu -fsanitize=vptr -fno-sanitize=vptr -fsanitize=undefined,address %s -### 2>&1
  // OK
  
@@ -151,14 +166,13 @@ index 7870f724b6..c66dd98956 100644
  
  // CHECK-NO-PIE-NOT: "-pie"
  // CHECK-NO-PIE: "-mrelocation-model" "static"
-@@ -525,12 +525,12 @@
+@@ -585,12 +585,12 @@
  // RUN: %clang -fno-sanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NOSP
  // NOSP-NOT: "-fsanitize=safe-stack"
  
 -// RUN: %clang -target x86_64-linux-gnu -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
--// RUN: %clang -target x86_64-linux-gnu -fsanitize=address,safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP-ASAN
 +// RUN: %clang -target x86_64-linux-gnu -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP
-+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address,safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP-ASAN
+ // RUN: %clang -target x86_64-linux-gnu -fsanitize=address,safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP-ASAN
  // RUN: %clang -target x86_64-linux-gnu -fstack-protector -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=SP
  // RUN: %clang -target x86_64-linux-gnu -fsanitize=safe-stack -fstack-protector-all -### %s 2>&1 | FileCheck %s -check-prefix=SP
 -// RUN: %clang -target arm-linux-androideabi -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
@@ -168,15 +182,6 @@ index 7870f724b6..c66dd98956 100644
  // RUN: %clang -target i386-contiki-unknown -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
  // NO-SP-NOT: stack-protector
  // NO-SP: "-fsanitize=safe-stack"
-@@ -540,6 +540,8 @@
- 
- // NO-SP-ASAN-NOT: stack-protector
- // NO-SP-ASAN: "-fsanitize=address,safe-stack"
-+// SP-ASAN: "-fsanitize=address,safe-stack"
-+// SP-ASAN: -stack-protector
- // NO-SP-ASAN-NOT: stack-protector
- 
- // RUN: %clang -target powerpc64-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
 diff --git a/test/Driver/gcc-toolchain.cpp b/test/Driver/gcc-toolchain.cpp
 index ca96757a2b..ae1c25e989 100644
 --- a/test/Driver/gcc-toolchain.cpp
@@ -190,7 +195,7 @@ index ca96757a2b..ae1c25e989 100644
  // CHECK: "-L[[TOOLCHAIN]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5"
  // CHECK: "-L[[TOOLCHAIN]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../.."
 diff --git a/test/Driver/hexagon-toolchain-elf.c b/test/Driver/hexagon-toolchain-elf.c
-index 7dc82f3519..140baa987a 100644
+index 8f4c320ce4..a4d9ae502b 100644
 --- a/test/Driver/hexagon-toolchain-elf.c
 +++ b/test/Driver/hexagon-toolchain-elf.c
 @@ -457,7 +457,7 @@
@@ -225,7 +230,7 @@ index 68cf403d97..92b556db73 100644
  // CHECK-SPARCV9PIC: as
  // CHECK-SPARCV9PIC: -64
 diff --git a/test/Driver/linux-ld.c b/test/Driver/linux-ld.c
-index 662aabb867..9fa4f0569a 100644
+index 787013931a..cba173b354 100644
 --- a/test/Driver/linux-ld.c
 +++ b/test/Driver/linux-ld.c
 @@ -1,3 +1,5 @@
@@ -234,6 +239,28 @@ index 662aabb867..9fa4f0569a 100644
  // General tests that ld invocations on Linux targets sane. Note that we use
  // sysroot to make these tests independent of the host system.
  //
+diff --git a/test/Driver/riscv32-toolchain.c b/test/Driver/riscv32-toolchain.c
+index 1e0c750a3f..563493a33b 100644
+--- a/test/Driver/riscv32-toolchain.c
++++ b/test/Driver/riscv32-toolchain.c
+@@ -44,7 +44,7 @@
+ // C-RV32-LINUX-MULTI-ILP32: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
+ // C-RV32-LINUX-MULTI-ILP32: "-m" "elf32lriscv"
+ // C-RV32-LINUX-MULTI-ILP32: "-dynamic-linker" "/lib/ld-linux-riscv32-ilp32.so.1"
+-// C-RV32-LINUX-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32{{/|\\\\}}crtbegin.o"
++// C-RV32-LINUX-MULTI-ILP32: "crtbeginS.o"
+ // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32"
+ // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib32/ilp32"
+ // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib32/ilp32"
+@@ -59,7 +59,7 @@
+ // C-RV32-LINUX-MULTI-ILP32D: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
+ // C-RV32-LINUX-MULTI-ILP32D: "-m" "elf32lriscv"
+ // C-RV32-LINUX-MULTI-ILP32D: "-dynamic-linker" "/lib/ld-linux-riscv32-ilp32d.so.1"
+-// C-RV32-LINUX-MULTI-ILP32D: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32d{{/|\\\\}}crtbegin.o"
++// C-RV32-LINUX-MULTI-ILP32D: "crtbeginS.o"
+ // C-RV32-LINUX-MULTI-ILP32D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32d"
+ // C-RV32-LINUX-MULTI-ILP32D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib32/ilp32d"
+ // C-RV32-LINUX-MULTI-ILP32D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib32/ilp32d"
 diff --git a/test/Driver/stack-protector.c b/test/Driver/stack-protector.c
 index a3e40b50ee..dfffe0d6cf 100644
 --- a/test/Driver/stack-protector.c
@@ -253,5 +280,5 @@ index a3e40b50ee..dfffe0d6cf 100644
  
  // RUN: %clang -target i386-pc-openbsd -### %s 2>&1 | FileCheck %s -check-prefix=OPENBSD
 -- 
-2.16.2
+2.19.0
 
