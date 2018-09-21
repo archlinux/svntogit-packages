@@ -3,7 +3,7 @@
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=apache
-pkgver=2.4.34
+pkgver=2.4.35
 pkgrel=1
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('x86_64')
@@ -40,7 +40,7 @@ source=(
     httpd.service
     arch.layout
 )
-sha256sums=('fa53c95631febb08a9de41fd2864cfff815cf62d9306723ab0d4b8d7aa1638f0'
+sha256sums=('2607c6fdd4d12ac3f583127629291e9432b247b782396a563bec5678aae69b56'
             'SKIP'
             'd305f8b52ac2a9bbda7bb0776496471e69e9d30642740f594d00086a8c7e344c'
             '63da1a420f4714a3e7af2672d28384419cc7eedbe7bf35baebd02938fabc15bf'
