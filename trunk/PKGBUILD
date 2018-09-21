@@ -2,7 +2,7 @@
 # Contributor: Brice Carpentier <brice@daknet.org>
 
 pkgname=cairo
-pkgver=1.15.12
+pkgver=1.15.14
 pkgrel=1
 pkgdesc="2D graphics library with support for multiple output devices"
 url="https://cairographics.org/"
@@ -10,11 +10,9 @@ arch=(x86_64)
 license=(LGPL MPL)
 depends=(libpng libxrender libxext fontconfig pixman glib2 lzo)
 makedepends=(librsvg gtk2 poppler-glib libspectre gtk-doc valgrind git)
-_commit=7149686456ec3c481fa1d3dbe76a0dab1e42b519  # tags/1.15.12^0
-source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit"
-        utf-8.diff)
-sha1sums=('SKIP'
-          '3f680dea8533bcce4ca2af5d25c546235ef7b339')
+_commit=d9aaea0c1e1484c632e1a6735c6ecc961c4b032b  # tags/1.15.14^0
+source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit")
+sha1sums=('SKIP')
 
 pkgver() {
   cd $pkgname
@@ -23,12 +21,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # Fixup tag for pkgver()
-  git tag -f 1.15.10 5e6b9aeb5e3402ff17ae8ee8548ae2341c2f7d59
-
-  # Fix non-UTF-8 sources giving gtk-doc trouble
-  patch -Np1 -i ../utf-8.diff
 
   # Update gtk-doc
   cp /usr/share/aclocal/gtk-doc.m4 build/aclocal.gtk-doc.m4
@@ -50,14 +42,16 @@ build() {
         --enable-pdf \
         --enable-gobject \
         --enable-gtk-doc
+        #--enable-full-testing \
+        #--enable-test-surfaces
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 check() {
   cd $pkgname
-  # https://people.gnome.org/~federico/blog/helping-cairo.html
-  #make check
+  # many tests in cairo-test-suite hang forever
+  # xvfb-run make check
 }
 
 package() {
