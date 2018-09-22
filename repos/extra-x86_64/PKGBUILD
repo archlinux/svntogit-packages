@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=62.0
+pkgver=62.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -11,7 +11,7 @@ license=(MPL GPL LGPL)
 url="https://www.mozilla.org/firefox/"
 depends=(gtk3 mozilla-common libxt startup-notification mime-types dbus-glib ffmpeg
          nss hunspell-en_US sqlite ttf-font libpulse libvpx icu)
-makedepends=(unzip zip diffutils python2 yasm mesa imake gconf inetutils xorg-server-xvfb
+makedepends=(unzip zip diffutils python2 yasm mesa imake inetutils xorg-server-xvfb
              autoconf2.13 rust mercurial clang llvm jack gtk2 python)
 optdepends=('networkmanager: Location detection via available WiFi networks'
             'libnotify: Notification integration'
@@ -81,6 +81,7 @@ ac_add_options --enable-alsa
 ac_add_options --enable-jack
 ac_add_options --enable-startup-notification
 ac_add_options --enable-crashreporter
+ac_add_options --disable-gconf
 ac_add_options --disable-updater
 END
 }
