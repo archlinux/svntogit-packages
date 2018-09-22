@@ -29,7 +29,7 @@ source=(apache-2.0.txt::https://www.apache.org/licenses/LICENSE-2.0.txt
         https://www.gnu.org/licenses/fdl-1.3.txt
         https://www.latex-project.org/lppl.txt
         perlartistic.txt
-        http://www.perlfoundation.org/attachment/legal/artistic-2_0.txt
+        artistic-2_0.txt
         php-3.0.txt::http://www.php.net/license/3_0.txt
         ruby-license.txt
         cpl-1.0.txt
