@@ -5,7 +5,7 @@ pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
 pkgver=10.5
 _majorver=${pkgver%.*}
-pkgrel=1
+pkgrel=2
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -13,18 +13,21 @@ license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0' 'pam' 'zlib' 'icu' 'systemd' 'libldap')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
+        postgresql-perl-rpath.patch
         postgresql.pam
         postgresql.logrotate
         postgresql.service
         postgresql-check-db-dir)
 sha256sums=('6c8e616c91a45142b85c0aeb1f29ebba4a361309e86469e0fb4617b6a73c4011'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
+            '5f73b54ca6206bd2c469c507830261ebd167baca074698d8889d769c33f98a31'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             'ad025a5fb623b1a1e9dff0cc62cc63f66244bb27d81370a6251aa29e8574be94'
             '888a1d44f03fccfa4bf344ee45824fefb846ae3c1c0c40113ad6020b4be3b0cf')
 sha512sums=('1bad30ae88beca66f7e8b99b82e7f02aac1e9230b328e6e5a762a704cdd9dc767d924f5a66c68c93586badfef91b7ff336120a567ce970eaa58bb44c662ad48c'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
+            '38302242b30c01c7981574ed28d9cbd9dc73bf6b56ba3a032afb5d0885ae83e5aa72ce578bf2422214dfa6c46f09d0bdd7cccaeb3c25d58754eb1a34f8bf5615'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
             '9ab4da01337ffbab8faec0e220aaa2a642dbfeccf7232ef2645bdc2177a953f17ee3cc14a4d8f8ebd064e1dae8b3dba6029adbffb8afaabea383963213941ba8'
             'acd60166ff513b16778705e824944945cd0a98abc519fa5f0232252e0e9c85460c6f8b85459d9692d1f3df1caaaf8909c3e7f785be99c2d3fb98a10b2641a795'
@@ -33,6 +36,7 @@ sha512sums=('1bad30ae88beca66f7e8b99b82e7f02aac1e9230b328e6e5a762a704cdd9dc767d9
 prepare() {
   cd postgresql-${pkgver}
   patch -p1 < ../postgresql-run-socket.patch
+  patch -p1 < ../postgresql-perl-rpath.patch
 }
 
 build() {
@@ -77,6 +81,20 @@ build() {
   ./configure ${options[@]} \
     PYTHON=/usr/bin/python2
   make world
+}
+
+_postgres_check() {
+  make "${1}" || (find . -name regression.diffs | \
+    while read -r line; do
+      error "make ${1} failure: ${line}"
+      cat "${line}"
+    done; exit 1)
+}
+
+check() {
+  cd postgresql-${pkgver}
+  _postgres_check check
+  _postgres_check check-world
 }
 
 package_postgresql-libs() {
@@ -156,8 +174,8 @@ package_postgresql() {
 
   # install plpython3
   mv src/Makefile.global src/Makefile.global.save
-	cp src/Makefile.global.python3 src/Makefile.global
-	touch -r src/Makefile.global.save src/Makefile.global
+  cp src/Makefile.global.python3 src/Makefile.global
+  touch -r src/Makefile.global.save src/Makefile.global
   make -C src/pl/plpython3 DESTDIR="${pkgdir}" install
   make -C contrib/hstore_plpython3 DESTDIR="${pkgdir}" install
   make -C contrib/ltree_plpython3 DESTDIR="${pkgdir}" install
