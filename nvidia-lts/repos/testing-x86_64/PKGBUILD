@@ -1,0 +1,42 @@
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=nvidia-lts
+pkgver=410.57
+_extramodules=extramodules-4.14-lts
+pkgrel=1
+epoch=1
+arch=('x86_64')
+url="http://www.nvidia.com/"
+makedepends=("nvidia-utils=${pkgver}" 'linux-lts' 'linux-lts-headers>=4.14.71')
+provides=('nvidia')
+license=('custom')
+options=('!strip')
+_pkg="NVIDIA-Linux-x86_64-${pkgver}"
+source=("http://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
+sha512sums=('2ba6b4b7829410152e0fa57772969ca59f134995ef93d08c12cc6a7a97e081c1d718600a25f541444ce66603ed84b99e66b0ced6fb773ca40f98cd5dc1348d79')
+
+prepare() {
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+}
+
+build() {
+    _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+    cd "${_pkg}"/kernel
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+}
+
+package() {
+    pkgdesc="NVIDIA drivers for linux-lts"
+    depends=('linux-lts>=4.14.71' "nvidia-utils=${pkgver}" 'libgl')
+
+    install -Dt "${pkgdir}/usr/lib/modules/${_extramodules}" -m644 \
+      "${srcdir}/${_pkg}/kernel"/nvidia{,-modeset,-drm,-uvm}.ko
+
+    find "${pkgdir}" -name '*.ko' -exec gzip -n {} +
+
+    echo "blacklist nouveau" |
+      install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
+
+    install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 "${srcdir}/${_pkg}/LICENSE"
+}
