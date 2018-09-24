@@ -2,16 +2,16 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libsoup
-pkgver=2.64.0+10+g263fb57d
+pkgver=2.64.1
 pkgrel=1
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
 arch=(x86_64)
 license=(LGPL)
-depends=(glib2 libxml2 glib-networking sqlite krb5)
-makedepends=(gobject-introspection python vala git gtk-doc meson libpsl)
+depends=(glib2 libxml2 glib-networking sqlite krb5 libpsl)
+makedepends=(gobject-introspection python vala git gtk-doc meson)
 checkdepends=(apache php-apache)
-_commit=263fb57d3f168747a01788724929058d28b07211  # master
+_commit=d5b35ec84c80db74419fe369b893560ec3383235  # tags/2.64.1^0
 source=("git+https://gitlab.gnome.org/GNOME/libsoup.git#commit=$_commit")
 sha256sums=('SKIP')
 
