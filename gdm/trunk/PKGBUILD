@@ -3,7 +3,7 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=3.30.0+6+g5db19c5b
+pkgver=3.30.1
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -12,7 +12,7 @@ license=(GPL)
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-server-xwayland xorg-xhost)
 makedepends=(yelp-tools intltool gobject-introspection git docbook-xsl)
 checkdepends=(check)
-_commit=5db19c5bd59c53663dc43d418b8ef9795b576c57  # master
+_commit=9e532ea4b400914704e063d81d21c73c9b84c048  # tags/3.30.1^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0002-Xsession-Don-t-start-ssh-agent-by-default.patch
         gdm.sysusers)
