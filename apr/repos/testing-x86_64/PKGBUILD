@@ -1,0 +1,60 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=apr
+pkgver=1.6.5
+pkgrel=1
+pkgdesc='The Apache Portable Runtime'
+arch=('x86_64')
+url='http://apr.apache.org/'
+depends=('util-linux')
+makedepends=('python2')
+license=('APACHE')
+source=(http://www-us.apache.org/dist/apr/apr-$pkgver.tar.bz2{,.asc}
+        fix_apr-config.patch
+        ship_find_apr.m4.patch
+        fix-apr.pc.patch
+        omit_extra_libs.patch
+        dont_override_external_buildflags)
+sha256sums=('a67ca9fcf9c4ff59bce7f428a323c8b5e18667fdea7b0ebad47d194371b0a105'
+            'SKIP'
+            '91490ffee726f851edad9fc733ac6632aaf434a87920e706eeb132a97ee5f402'
+            '315932ef6536fc0644c1efe770ceb3bb675c3c7103a7cbb2f02efd8be03eb752'
+            '12595d331b48be9e44bd843635eb4f0f500bd213e197a551a9d383a28a24641f'
+            '3d491d3af8fb5a75db4e085a17e5d8dcbe058bd256ef893ee779dc97fc9f8ad6'
+            '5ac0bdc532479f6082d29115ac9d3ca24524fd8b97a556568755b88e5a68e3df')
+validpgpkeys=('5B5181C2C0AB13E59DA3F7A3EC582EB639FF092C'  # Jeff Trawick
+              'B1B96F45DFBDCCF974019235193F180AB55D9977') # Nick Kew <niq@apache.org>
+
+prepare() {
+  cd apr-$pkgver
+  patch -Np1 -i ../fix_apr-config.patch
+  patch -Np1 -i ../ship_find_apr.m4.patch
+  patch -Np1 -i ../fix-apr.pc.patch
+  patch -Np1 -i ../omit_extra_libs.patch
+  patch -Np1 -i ../dont_override_external_buildflags
+  sed -e 's/env python/env python2/' -i build/gen-build.py
+  sed -e 's/python/python2/g' -i build/buildcheck.sh
+  ./buildconf
+}
+
+build() {
+  cd apr-$pkgver
+  ./configure --prefix=/usr --includedir=/usr/include/apr-1 \
+    --with-installbuilddir=/usr/share/apr-1/build \
+    --enable-nonportable-atomics \
+    --with-devrandom=/dev/urandom --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd apr-$pkgver
+  make -j1 check
+}
+
+package() {
+  cd apr-$pkgver
+  make DESTDIR="$pkgdir" install
+}
