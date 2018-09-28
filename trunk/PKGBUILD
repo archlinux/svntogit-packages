@@ -70,7 +70,7 @@ package_audit() {
 
 package_python2-audit() {
   depends=('python' 'audit')
-  pkgdesc+=' (python bindings)'
+  pkgdesc+=' (python2 bindings)'
   cd ${pkgbase}-${pkgver}
   make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
   rm -rf "${pkgdir}"/usr/lib/python3*
@@ -78,7 +78,7 @@ package_python2-audit() {
 
 package_python-audit() {
   depends=('python2' 'audit')
-  pkgdesc+=' (python2 bindings)'
+  pkgdesc+=' (python bindings)'
   cd ${pkgbase}-${pkgver}
   make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
   rm -rf "${pkgdir}"/usr/lib/python2*
