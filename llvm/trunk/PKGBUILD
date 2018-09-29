@@ -60,7 +60,7 @@ package_llvm() {
 
   DESTDIR="$pkgdir" ninja install
 
-  # Include lit for running tests with clang and friends
+  # Include lit for running lit-based tests in other projects
   pushd ../utils/lit
   python3 setup.py install --root="$pkgdir" -O1
   popd
