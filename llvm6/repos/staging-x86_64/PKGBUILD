@@ -9,12 +9,12 @@
 
 pkgname=('llvm6' 'llvm6-libs')
 pkgver=6.0.1
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
 makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
-             'python')
+             'python-setuptools')
 options=('staticlibs')
 source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         D44391-export-LLVM_DYLIB_COMPONENTS-in-LLVMConfig.cmake.patch
@@ -63,14 +63,20 @@ check() {
 package_llvm6() {
   pkgdesc="Collection of modular and reusable compiler and toolchain technologies"
   depends=('llvm6-libs' 'perl')
+  optdepends=('python-setuptools: for using lit (LLVM Integrated Tester)')
   conflicts=('llvm')
 
   cd "$srcdir/llvm-$pkgver.src/build"
 
   DESTDIR="$pkgdir" ninja install
 
-  # The runtime library go into llvm6-libs
-  mv -f "$pkgdir"/usr/lib/libLLVM-*.so "$srcdir"
+  # Include lit for running lit-based tests in other projects
+  pushd ../utils/lit
+  python3 setup.py install --root="$pkgdir" -O1
+  popd
+
+  # The runtime libraries go into llvm6-libs
+  mv -f "$pkgdir"/usr/lib/lib{LLVM-*.so,LTO.so.*} "$srcdir"
 
   # Remove files which conflict with llvm-libs
   rm "$pkgdir"/usr/lib/{LLVMgold,lib{LLVM,LTO}}.so
@@ -83,7 +89,7 @@ package_llvm6-libs() {
   depends=('gcc-libs' 'zlib' 'libffi' 'libedit' 'ncurses' 'libxml2')
 
   install -d "$pkgdir/usr/lib"
-  cp -P "$srcdir"/libLLVM-*.so "$pkgdir/usr/lib/"
+  cp -P "$srcdir"/lib{LLVM-*.so,LTO.so.*} "$pkgdir/usr/lib/"
 
   install -Dm644 "$srcdir/llvm-$pkgver.src/LICENSE.TXT" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
