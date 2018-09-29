@@ -8,32 +8,24 @@ arch=('x86_64')
 url="http://www.mega-nerd.com/libsndfile"
 license=('LGPL')
 depends=('alsa-lib' 'flac' 'libvorbis')
-checkdepends=('python2')
-source=(http://www.mega-nerd.com/libsndfile/files/${pkgname}-${pkgver}.tar.gz{,.asc})
-sha1sums=('85aa967e19f6b9bf975601d79669025e5f8bc77d'
-          'SKIP')
+source=(http://www.mega-nerd.com/libsndfile/files/$pkgname-$pkgver.tar.gz{,.asc})
+sha256sums=('1ff33929f042fa333aed1e8923aa628c3ee9e1eb85512686c55092d1e5a9dfa9'
+            'SKIP')
 validpgpkeys=('73571E85C19F4281D8C97AA86CA41A7743B8D6C8'
               '6A91A5CF22C24C99A35E013FCFDCF91FB242ACED')
 
-prepare() {
-  cd ${pkgname}-${pkgver}
-  sed -i 's|#!/usr/bin/python|#!/usr/bin/python2|' src/binheader_writef_check.py \
-    src/create_symbols_file.py programs/test-sndfile-metadata-set.py
-  sed -i 's|python|&2|' src/Makefile.am
-}
-
 build() {
-  cd ${pkgname}-${pkgver}
+  cd $pkgname-$pkgver
   ./configure --prefix=/usr --disable-sqlite
   make
 }
 
 check() {
-  cd ${pkgname}-${pkgver}
+  cd $pkgname-$pkgver
   make check
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
-  make DESTDIR="${pkgdir}" install
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
 }
