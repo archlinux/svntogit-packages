@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=4.7.1
 _clangver=7.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='http://qt-project.org'
@@ -28,10 +28,14 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'bzr: bazaar support'
             'valgrind: analyze support')
 source=("http://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-        qtcreator-clang-plugins.patch qtcreator-clang7.patch)
+        qtcreator-clang-plugins.patch qtcreator-clang7.patch
+        qtcreatorbug-19367a.patch::"http://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=807b0f78"
+        qtcreatorbug-19367b.patch::"http://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=813c1685")
 sha256sums=('c98254336953f637015f14b8b4ddb5e274454a5416fd20dd09747a6e50762565'
             '6f19fc9d83964a5460d224b3d44ce580553847960181fe0364e2ce26e1efd2e6'
-            '88b78c8ebd72cdad8f59bba8172cc5d1f3f9577e2bb31d841d5cabdd76eba36c')
+            '88b78c8ebd72cdad8f59bba8172cc5d1f3f9577e2bb31d841d5cabdd76eba36c'
+            'a7a00a390fb46f13d53055b1862dcd916deb595dbba20c2340662cab51e5a8c1'
+            '89a3fff5e398f11367ab060d910098c295968e909fcca3f35d30073cd80cbf03')
 
 prepare() {
   mkdir -p build
@@ -47,6 +51,9 @@ prepare() {
   patch -p1 -i ../qtcreator-clang-plugins.patch
   # Don't use unreleased API when building against clang 7
   patch -p1 -i ../qtcreator-clang7.patch
+  # https://bugreports.qt.io/browse/QTCREATORBUG-19367
+  patch -p1 -i ../qtcreatorbug-19367a.patch
+  patch -p1 -i ../qtcreatorbug-19367b.patch
 }
 
 build() {
