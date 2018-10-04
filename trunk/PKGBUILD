@@ -49,7 +49,7 @@ package() {
   python setup.py install --root="${pkgdir}" --optimize=1 --skip-build
 
   install -d "${pkgdir}/usr/share/vim/vimfiles"
-  cp -rt "${pkgdir}/usr/share/vim/vimfiles" data/syntax-highlighting/vim/*
+  cp -rt "${pkgdir}/usr/share/vim/vimfiles" data/syntax-highlighting/vim/*/
 
   install -Dt "${pkgdir}/usr/share/emacs/site-lisp" -m644 data/syntax-highlighting/emacs/*
   install -Dt "${pkgdir}/usr/share/zsh/site-functions" -m644 data/shell-completions/zsh/*
