@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=2.19.0
+pkgver=2.19.1
 pkgrel=1
 pkgdesc='the fast distributed version control system'
 arch=(x86_64)
@@ -13,7 +13,7 @@ depends=('curl' 'expat>=2.0' 'perl>=5.14.0' 'perl-error' 'perl-mailtools'
 makedepends=('python2' 'libgnome-keyring' 'xmlto' 'asciidoc')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
-            'perl-term-readkey: git svn'
+            'perl-term-readkey: git svn and interactive.singlekey setting'
             'perl-mime-tools: git send-email'
             'perl-net-smtp-ssl: git send-email TLS support'
             'perl-authen-sasl: git send-email TLS support'
@@ -23,14 +23,15 @@ optdepends=('tk: gitk and git gui'
             'perl-cgi: gitweb (web interface) support'
             'python2: various helper scripts'
             'subversion: git svn'
-            'gnome-keyring: GNOME keyring credential helper')
+            'gnome-keyring: GNOME keyring credential helper'
+            'libsecret: libsecret credential helper')
 install=git.install
 validpgpkeys=('96E07AF25771955980DAD10020D04E5A713660A7') # Junio C Hamano
 source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar."{xz,sign}
         'git-daemon@.service'
         'git-daemon.socket'
         'git-sysusers.conf')
-sha256sums=('180feff58fc0d965d23ea010aa2c69ead92ec318eb9b09cf737529aec62f3ef4'
+sha256sums=('345056aa9b8084280b1b9fe1374d232dec05a34e8849028a20bfdb56e920dbb5'
             'SKIP'
             '14c0b67cfe116b430645c19d8c4759419657e6809dfa28f438c33a005245ad91'
             'ac4c90d62c44926e6d30d18d97767efc901076d4e0283ed812a349aece72f203'
@@ -58,7 +59,7 @@ build() {
   make \
     "${_make_paths[@]}" \
     "${_make_options[@]}" \
-    all doc
+    all man
 
   make -C contrib/credential/gnome-keyring
   make -C contrib/credential/libsecret
@@ -96,7 +97,7 @@ package() {
     "${_make_paths[@]}" \
     "${_make_options[@]}" \
     DESTDIR="$pkgdir" \
-    install install-doc
+    install install-man
 
   # bash completion
   mkdir -p "$pkgdir"/usr/share/bash-completion/completions/
@@ -104,7 +105,8 @@ package() {
   # fancy git prompt
   mkdir -p "$pkgdir"/usr/share/git/
   install -m 0644 ./contrib/completion/git-prompt.sh "$pkgdir"/usr/share/git/git-prompt.sh
-  # gnome credentials helper
+  # gnome credentials helper (deprecated, but we will keep it as long there is no extra cost)
+  # https://gitlab.gnome.org/GNOME/libgnome-keyring/commit/6a5adea4aec93
   install -m 0755 contrib/credential/gnome-keyring/git-credential-gnome-keyring \
       "$pkgdir"/usr/lib/git-core/git-credential-gnome-keyring
   make -C contrib/credential/gnome-keyring clean
