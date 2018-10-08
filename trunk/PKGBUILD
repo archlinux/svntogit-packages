@@ -3,7 +3,7 @@
 
 pkgname=libheif
 pkgver=1.3.2
-pkgrel=1
+pkgrel=2
 pkgdesc="HEIF file format decoder and encoder"
 arch=(x86_64)
 url="https://github.com/strukturag/libheif"
