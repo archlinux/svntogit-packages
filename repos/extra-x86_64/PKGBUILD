@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.0.2
-pkgrel=4
+pkgrel=6
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=('x86_64')
