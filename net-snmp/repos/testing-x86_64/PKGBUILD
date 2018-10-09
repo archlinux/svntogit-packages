@@ -1,0 +1,56 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Dale Blount <dale@archlinux.org>
+
+pkgname=net-snmp
+pkgver=5.8
+pkgrel=1
+pkgdesc="A suite of applications used to implement SNMP v1, SNMP v2c and SNMP v3 using both IPv4 and IPv6"
+arch=('x86_64')
+url="http://www.net-snmp.org/"
+license=('BSD')
+depends=('libnl' 'libnsl' 'openssl' 'pciutils')
+makedepends=('python2-setuptools')
+optdepends=('perl-term-readkey: for snmpcheck application'
+            'perl-tk: for snmpcheck and tkmib applications'
+            'python2: for the python modules')
+options=('!emptydirs' '!makeflags')
+source=(http://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.asc}
+        snmpd.service snmptrapd.service)
+sha512sums=('27895a583b23f3e14c48562bc32f3ba83513d81aa848e878be9a3650f0458d45950635c937ef627135f80b757b663e71fab9a3bde4fd91889153998ae3468fe7'
+            'SKIP'
+            '802057d08f4fe69fa9fafed349d37c0f8a6092002b933292563568db274890ae8932a000ecb60c5db0db792ecca30723fc803c0af6da147d148bf059b7f137eb'
+            '82b05b805db5f6870242ea4dfaa58de2865c367208cacfa4fc543c9f2a310d7229dee94ea6054d35c4bab69393f33fd367551727279da4411052589ed37bb4a4')
+validpgpkeys=('8AAA779B597B405BBC329B6376CF47B8A77C5329'
+              '27CAA4A32E371383A33ED0587D5F9576E0F81533'
+              'D0F8F495DA6160C44EFFBF10F07B9D2DACB19FD6')  # Net-SNMP Administrators
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  autoreconf -i
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  PYTHONPROG=/usr/bin/python2 ./configure --prefix=/usr \
+    --sysconfdir=/etc --sbindir=/usr/bin \
+    --mandir=/usr/share/man \
+    --enable-ucd-snmp-compatibility \
+    --enable-ipv6 \
+    --with-python-modules \
+    --with-default-snmp-version="3" \
+    --with-sys-contact="root@localhost" \
+    --with-sys-location="Unknown" \
+    --with-logfile="/var/log/snmpd.log" \
+    --with-mib-modules="host misc/ipfwacc ucd-snmp/diskio tunnel ucd-snmp/dlmod" \
+    --with-persistent-directory="/var/net-snmp"
+  make NETSNMP_DONT_CHECK_VERSION=1
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  sed -i -e "s:install --basedir=\$\$dir:install --basedir=\$\$dir --root=${pkgdir}:" Makefile
+  make DESTDIR="${pkgdir}" INSTALL_PREFIX="${pkgdir}" INSTALLDIRS=vendor install
+  install -D -m644 "${srcdir}/snmpd.service" "${pkgdir}/usr/lib/systemd/system/snmpd.service"
+  install -D -m644 "${srcdir}/snmptrapd.service" "${pkgdir}/usr/lib/systemd/system/snmptrapd.service"
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
