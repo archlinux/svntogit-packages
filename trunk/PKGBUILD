@@ -3,7 +3,7 @@
 pkgbase=linux-lts
 #pkgbase=linux-lts-custom
 _srcname=linux-4.14
-pkgver=4.14.74
+pkgver=4.14.75
 pkgrel=1
 arch=('x86_64')
 url="https://www.kernel.org/"
@@ -24,7 +24,7 @@ validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torva
 # https://www.kernel.org/pub/linux/kernel/v4.x/sha256sums.asc
 sha256sums=('f81d59477e90a130857ce18dc02f4fbe5725854911db1e7ba770c7cd350f96a7'
             'SKIP'
-            '062b1a4a6b09906145abe47db7b37b9bb2c3be6b936240a374f72a4073f3c556'
+            'cd37142f478e1696106d86dbaa17caa5dd4e682faf7fd8affc24f607a87bedfd'
             'c645053c4525a1a70d5c10b52257ac136da7e9059b6a4a566a857a3d42046426'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
