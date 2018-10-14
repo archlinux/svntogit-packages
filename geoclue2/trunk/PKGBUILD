@@ -2,17 +2,17 @@
 # Contributor: György Balló <ballogy@freestart.hu>
 
 pkgname=geoclue2
-pkgver=2.4.12
+pkgver=2.5.0
 pkgrel=1
 pkgdesc="Modular geoinformation service built on the D-Bus messaging system"
 arch=(x86_64)
 url="https://www.freedesktop.org/wiki/Software/GeoClue/"
 license=(LGPL)
 depends=(libsoup json-glib libmm-glib avahi libnotify)
-makedepends=(intltool python2 systemd gobject-introspection gnome-common git vala)
+makedepends=(systemd gobject-introspection git vala meson gtk-doc)
 backup=(etc/geoclue/geoclue.conf)
 conflicts=(geoclue)
-_commit=db0ebbed54d91530309c6a4f7270f29654e836dd  # tags/2.4.12^0
+_commit=4138a5e337b02a659152295de7bc00b5cbd99277  # tags/2.5.0^0
 source=("git+https://gitlab.freedesktop.org/geoclue/geoclue.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -38,20 +38,19 @@ prepare() {
   sed -e "s/key=geoclue/key=$_mozilla_api_key/" \
       -e "s/key=YOUR_KEY/key=$_google_api_key/" \
       -i data/geoclue.conf.in
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd geoclue
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --libexecdir=/usr/lib --disable-static --enable-gtk-doc --enable-vala
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson geoclue build
+  ninja -C build
+}
+
+check() {
+  meson test -C build
 }
 
 package() {
-  cd geoclue
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
 
 # vim:set sw=2 et:
