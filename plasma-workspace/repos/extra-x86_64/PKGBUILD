@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.14.0
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -16,10 +16,12 @@ depends=(kjsembed knotifyconfig libksysguard ktexteditor libqalculate qt5-tools 
          plasma-integration kdelibs4support)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo appstream-qt krunner networkmanager-qt kdesignerplugin)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
+        pw-gpsd-3.18.patch)
 sha256sums=('ce778af339ccc40763dbc9a6c737fa4d8d249910f60f8567c1397f6d9b01ffb9'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
+            '815261e4635c180464939a120078b8a1f5a832a85a01e227681ecaee841c9587')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -27,6 +29,9 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 
 prepare() {
   mkdir -p build
+
+  cd $pkgbase-$pkgver
+  patch -p1 -i ../pw-gpsd-3.18.patch # Fix build with gpsd 3.18
 }
 
 build() {
