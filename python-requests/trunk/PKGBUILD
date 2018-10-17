@@ -4,7 +4,7 @@
 pkgbase=python-requests
 pkgname=('python-requests' 'python2-requests')
 pkgver=2.19.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Python HTTP for Humans"
 arch=('any')
 url="http://python-requests.org"
@@ -24,6 +24,8 @@ prepare() {
       -e "s/,<.*'/'/" \
       -i setup.py
   patch -p1 -i "$srcdir"/certs.patch
+
+  sed -i 's/from urllib3.packages.ordered_dict import OrderedDict/from collections import OrderedDict/' requests/compat.py
 
   cd "$srcdir"
   cp -a requests-$pkgver{,-py2}
