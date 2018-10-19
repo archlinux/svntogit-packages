@@ -1,0 +1,137 @@
+From a407e10a2646771cd649976aae03f2cc6111ff92 Mon Sep 17 00:00:00 2001
+Message-Id: <a407e10a2646771cd649976aae03f2cc6111ff92.1539968035.git.jan.steffens@gmail.com>
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 19 Oct 2018 18:48:43 +0200
+Subject: [PATCH] meson: Fix platform tests
+
+All platform tests were run twice with the `linux` platform, instead of
+`fake` and `linux`, as expected.
+---
+ src/meson.build                | 13 ++++++++++---
+ src/ndisc/tests/meson.build    |  6 ++----
+ src/platform/tests/meson.build | 26 ++++++++++++--------------
+ 3 files changed, 24 insertions(+), 21 deletions(-)
+
+diff --git a/src/meson.build b/src/meson.build
+index f293f299b..d58fb4d1f 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -216,23 +216,30 @@ if enable_tests
+     test_cflags += ['-DREQUIRE_ROOT_TESTS=1']
+   endif
+ 
+-  platform = (host_machine.system().contains('linux') ? 'linux' : 'fake')
+-  test_cflags_platform = '-DSETUP=nm_' + platform + '_platform_setup'
+-
+   libnetwork_manager_test = static_library(
+     nm_name + 'Test',
+     sources: sources,
+     dependencies: deps,
+     c_args: cflags + test_cflags,
+     link_with: libnetwork_manager
+   )
+ 
+   test_nm_dep = declare_dependency(
+     dependencies: nm_dep,
+     compile_args: test_cflags,
+     link_with: libnetwork_manager_test
+   )
+ 
++  test_nm_dep_fake = declare_dependency(
++    dependencies: test_nm_dep,
++    compile_args: ['-DSETUP=nm_fake_platform_setup']
++  )
++
++  test_nm_dep_linux = declare_dependency(
++    dependencies: test_nm_dep,
++    compile_args: ['-DSETUP=nm_linux_platform_setup']
++  )
++
+   subdir('dnsmasq/tests')
+   subdir('ndisc/tests')
+   subdir('platform/tests')
+diff --git a/src/ndisc/tests/meson.build b/src/ndisc/tests/meson.build
+index 2f479c2d9..e0dc9aa6c 100644
+--- a/src/ndisc/tests/meson.build
++++ b/src/ndisc/tests/meson.build
+@@ -3,21 +3,19 @@ test_unit = 'test-ndisc-fake'
+ exe = executable(
+   test_unit,
+   test_unit + '.c',
+-  dependencies: test_nm_dep,
+-  c_args: test_cflags_platform
++  dependencies: test_nm_dep_fake,
+ )
+ 
+ test(
+   'ndisc/' + test_unit,
+   test_script,
+   args: test_args + [exe.full_path()]
+ )
+ 
+ test = 'test-ndisc-linux'
+ 
+ exe = executable(
+   test,
+   test + '.c',
+-  dependencies: test_nm_dep,
+-  c_args: test_cflags_platform
++  dependencies: test_nm_dep_linux,
+ )
+diff --git a/src/platform/tests/meson.build b/src/platform/tests/meson.build
+index 0571efacf..67582d776 100644
+--- a/src/platform/tests/meson.build
++++ b/src/platform/tests/meson.build
+@@ -1,37 +1,35 @@
+ test_units = [
+-  ['test-link-fake', 'test-link.c', 60],
+-  ['test-link-linux', 'test-link.c', 60],
+-  ['test-address-fake', 'test-address.c'],
+-  ['test-address-linux', 'test-address.c'],
+-  ['test-general', 'test-general.c'],
+-  ['test-nmp-object', 'test-nmp-object.c'],
+-  ['test-route-fake', 'test-route.c'],
+-  ['test-route-linux', 'test-route.c'],
+-  ['test-cleanup-fake', 'test-cleanup.c'],
+-  ['test-cleanup-linux', 'test-cleanup.c'],
++  ['test-link-fake',     'test-link.c',       test_nm_dep_fake,  30],
++  ['test-link-linux',    'test-link.c',       test_nm_dep_linux, 90],
++  ['test-address-fake',  'test-address.c',    test_nm_dep_fake,  30],
++  ['test-address-linux', 'test-address.c',    test_nm_dep_linux, 30],
++  ['test-general',       'test-general.c',    test_nm_dep,       30],
++  ['test-nmp-object',    'test-nmp-object.c', test_nm_dep,       30],
++  ['test-route-fake',    'test-route.c',      test_nm_dep_fake,  30],
++  ['test-route-linux',   'test-route.c',      test_nm_dep_linux, 30],
++  ['test-cleanup-fake',  'test-cleanup.c',    test_nm_dep_fake,  30],
++  ['test-cleanup-linux', 'test-cleanup.c',    test_nm_dep_linux, 30],
+ ]
+ 
+ foreach test_unit: test_units
+   exe = executable(
+     'platform-' + test_unit[0],
+     test_unit[1],
+-    dependencies: test_nm_dep,
+-    c_args: test_cflags_platform
++    dependencies: test_unit[2],
+   )
+ 
+   test(
+     'platform/' + test_unit[0],
+     test_script,
+-    timeout: test_unit.length() > 2 ? test_unit[2] : 30,
++    timeout: test_unit[3],
+     args: test_args + [exe.full_path()]
+   )
+ endforeach
+ 
+ test = 'monitor'
+ 
+ executable(
+   test,
+   test + '.c',
+   dependencies: test_nm_dep,
+-  c_args: test_cflags_platform
+ )
+-- 
+2.19.1
+
