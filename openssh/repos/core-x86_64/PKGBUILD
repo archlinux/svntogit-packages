@@ -1,10 +1,9 @@
-# $Id$
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 # Contributor: Aaron Griffin <aaron@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=7.8p1
+pkgver=7.9p1
 pkgrel=1
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
@@ -16,16 +15,14 @@ optdepends=('xorg-xauth: X11 forwarding'
             'x11-ssh-askpass: input passphrase in X')
 validpgpkeys=('59C2118ED206D927E667EBE3D3E5F56B6D920D30')
 source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
-        'openssl-1.1.0.patch'
         'sshdgenkeys.service'
         'sshd@.service'
         'sshd.service'
         'sshd.socket'
         'sshd.conf'
         'sshd.pam')
-sha256sums=('1a484bb15152c183bb2514e112aa30dd34138c3cfb032eee5490a66c507144ca'
+sha256sums=('6b4b3ba2253d84ed3771c8050728d597c91cfce898713beb7b64a305b6f11aad'
             'SKIP'
-            'd92e3d759b4b5c536aaddf95891bf3baa3a589b4897c56b90103088e1d8f8ebd'
             '4031577db6416fcbaacf8a26a024ecd3939e5c10fe6a86ee3f0eea5093d533b7'
             '3a0845737207f4eda221c9c9fb64e766ade9684562d8ba4f705f7ae6826886e5'
             'c5ed9fa629f8f8dbf3bae4edbad4441c36df535088553fe82695c52d7bde30aa'
@@ -34,13 +31,6 @@ sha256sums=('1a484bb15152c183bb2514e112aa30dd34138c3cfb032eee5490a66c507144ca'
             '64576021515c0a98b0aaf0a0ae02e0f5ebe8ee525b1e647ab68f369f81ecd846')
 
 backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
-
-prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-
-	# OpenSSL 1.1.0 patch from http://vega.pgw.jp/~kabe/vsd/patch/openssh-7.4p1-openssl-1.1.0c.patch.html
-	patch -p1 -i ../openssl-1.1.0.patch
-}
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
