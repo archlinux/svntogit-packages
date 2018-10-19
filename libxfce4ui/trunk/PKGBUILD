@@ -10,7 +10,7 @@ url="http://www.xfce.org/"
 license=('GPL2')
 depends=('libxfce4util' 'gtk2' 'gtk3' 'xfconf' 'libsm' 'startup-notification'
          'hicolor-icon-theme')
-makedepends=('intltool' 'gtk-doc')
+makedepends=('intltool')
 source=(https://archive.xfce.org/src/xfce/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.bz2)
 sha256sums=('3d619811bfbe7478bb984c16543d980cadd08586365a7bc25e59e3ca6384ff43')
 
@@ -23,7 +23,6 @@ build() {
     --libexecdir=/usr/lib \
     --localstatedir=/var \
     --disable-static \
-    --enable-gtk-doc \
     --disable-debug \
     --with-vendor-info='Arch Linux'
   make
