@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.14.1dev+13+g0d3234478
+pkgver=1.14.2
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -17,11 +17,13 @@ _pppver=2.4.7
 makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver" modemmanager
              dbus-glib iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
-             glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit)
+             glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=0d323447812ce1f07e1af4e6f38d6c0a135a85da  # nm-1-14
-source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
-sha256sums=('SKIP')
+_commit=ef5ada1d1d53b04a468dc44838afb459f85e95e7  # tags/1.14.2^0
+source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit"
+        0001-meson-Fix-platform-tests.patch)
+sha256sums=('SKIP'
+            'e993a727bb06494419071baea3c20fcc00aa2f9cf110d14f09f043be23952a1b')
 
 pkgver() {
   cd NetworkManager
@@ -29,84 +31,45 @@ pkgver() {
 }
 
 prepare() {
-  mkdir build
   cd NetworkManager
-  NOCONFIGURE=1 ./autogen.sh
+
+  # Meson fixes
+  git cherry-pick -n 1ff00d51e750610ec5a1a1736ccb5b75c8457f20
+  patch -Np1 -i ../0001-meson-Fix-platform-tests.patch
 }
 
 build() {
-  cd build
-  ../NetworkManager/configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    runstatedir=/run \
-    --sbindir=/usr/bin \
-    --libexecdir=/usr/lib \
-    --disable-ifcfg-rh \
-    --disable-ifupdown \
-    --disable-lto \
-    --disable-more-logging \
-    --disable-more-warnings \
-    --disable-qt \
-    --disable-static \
-    --enable-bluez5-dun \
-    --enable-concheck \
-    --enable-config-plugin-ibft \
-    --enable-gtk-doc \
-    --enable-introspection \
-    --enable-json-validation \
-    --enable-ld-gc \
-    --enable-modify-system \
-    --enable-polkit \
-    --enable-polkit-agent \
-    --enable-teamdctl \
-    --enable-wifi \
-    --with-config-dhcp-default=internal \
-    --with-config-dns-rc-manager-default=symlink \
-    --with-config-logging-backend-default=journal \
-    --with-config-plugins-default=keyfile,ibft \
-    --with-crypto=nss \
-    --with-dbus-sys-dir=/usr/share/dbus-1/system.d \
-    --with-dhclient=/usr/bin/dhclient \
-    --with-dhcpcd-supports-ipv6 \
-    --with-dhcpcd=/usr/bin/dhcpcd \
-    --with-dist-version="$pkgver-$pkgrel" \
-    --with-dnsmasq=/usr/bin/dnsmasq \
-    --with-dnssec-trigger=/usr/lib/dnssec-trigger/dnssec-trigger-script \
-    --with-hostname-persist=default \
-    --with-iptables=/usr/bin/iptables \
-    --with-iwd \
-    --with-kernel-firmware-dir=/usr/lib/firmware \
-    --with-libaudit=yes \
-    --with-libnm-glib \
-    --with-libpsl \
-    --with-modem-manager-1 \
-    --with-nmcli \
-    --with-nmtui \
-    --with-pppd-plugin-dir=/usr/lib/pppd/$_pppver \
-    --with-pppd=/usr/bin/pppd \
-    --with-resolvconf=/usr/bin/resolvconf \
-    --with-session-tracking=systemd \
-    --with-suspend-resume=systemd \
-    --with-system-ca-path=/etc/ssl/certs \
-    --with-systemd-journal \
-    --with-systemd-logind \
-    --with-systemdsystemunitdir=/usr/lib/systemd/system \
-    --with-udev-dir=/usr/lib/udev \
-    --with-wext \
-    --without-consolekit \
-    --without-dhcpcanon \
-    --without-more-asserts \
-    --without-netconfig \
-    --without-ofono \
-    --without-selinux
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  local meson_args=(
+    # LTO breaks NM_BACKPORT_SYMBOL
+    # https://gitlab.freedesktop.org/NetworkManager/NetworkManager/issues/63
+    -D b_lto=false
+
+    -D dbus_conf_dir=/usr/share/dbus-1/system.d
+    -D dist_version="$pkgver-$pkgrel"
+    -D session_tracking_consolekit=false
+    -D suspend_resume=systemd
+    -D modify_system=true
+    -D polkit_agent=true
+    -D selinux=false
+    -D iwd=true
+    -D pppd_plugin_dir=/usr/lib/pppd/$_pppver
+    -D teamdctl=true
+    -D libnm_glib=true
+    -D bluez5_dun=true
+    -D config_plugins_default=keyfile,ibft
+    -D ibft=true
+    -D docs=true
+    -D more_asserts=no
+    -D more_logging=false
+    -D qt=false
+  )
+
+  arch-meson NetworkManager build "${meson_args[@]}"
+  ninja -C build
 }
 
 check() {
-  make check -C build
+  meson test -C build
 }
 
 _pick() {
@@ -130,13 +93,7 @@ package_networkmanager() {
   backup=(etc/NetworkManager/NetworkManager.conf)
   groups=(gnome)
 
-  DESTDIR="$pkgdir" make install -C build
-
-  # packaged configuration
-  install -Dm644 /dev/stdin "$pkgdir/usr/lib/NetworkManager/conf.d/20-connectivity.conf" <<END
-[connectivity]
-uri=http://www.archlinux.org/check_network_status.txt
-END
+  DESTDIR="$pkgdir" meson install -C build
 
   # /etc/NetworkManager
   install -d "$pkgdir"/etc/NetworkManager/{conf,dnsmasq}.d
@@ -144,6 +101,12 @@ END
   install -m644 /dev/stdin "$pkgdir/etc/NetworkManager/NetworkManager.conf" <<END
 # Configuration file for NetworkManager.
 # See "man 5 NetworkManager.conf" for details.
+END
+
+  # packaged configuration
+  install -Dm644 /dev/stdin "$pkgdir/usr/lib/NetworkManager/conf.d/20-connectivity.conf" <<END
+[connectivity]
+uri=http://www.archlinux.org/check_network_status.txt
 END
 
 ### Split libnm
