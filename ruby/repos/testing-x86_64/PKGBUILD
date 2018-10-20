@@ -1,0 +1,83 @@
+# Contributor: Thomas Dziedzic <gostrc@gmail.com>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: John Proctor <jproctor@prium.net>
+# Contributor: Jeramy Rutley <jrutley@gmail.com>
+
+pkgname=(ruby ruby-docs)
+pkgver=2.5.3
+pkgrel=1
+arch=(x86_64)
+url='http://www.ruby-lang.org/en/'
+license=(BSD custom)
+makedepends=(gdbm openssl libffi doxygen graphviz libyaml ttf-dejavu tk)
+options=(!emptydirs)
+source=(https://cache.ruby-lang.org/pub/ruby/${pkgver:0:3}/ruby-${pkgver}.tar.xz)
+sha512sums=('6dcae0e8d0bacdb2cbde636e2030596308b5af53f2eb85d3adccb67b02e6f8f9751e8117d12f8484829fdd9d995f6e327f701d9b433bcf94f1f59d13a1fd7518')
+
+prepare() {
+  cd ruby-${pkgver}
+  # remove bundled gems, we are going to ship them as separate packages
+  rm -rf gems/
+}
+
+build() {
+  cd ruby-${pkgver}
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sharedstatedir=/var/lib \
+    --libexecdir=/usr/lib/ruby \
+    --enable-shared \
+    --disable-rpath \
+    --with-dbm-type=gdbm_compat
+
+  make
+}
+
+check() {
+  cd ruby-${pkgver}
+
+  make test
+}
+
+package_ruby() {
+  pkgdesc='An object-oriented language for quick and easy programming'
+  depends=(gdbm openssl libffi libyaml gmp zlib rubygems)
+  optdepends=(
+      'ruby-docs: Ruby documentation'
+      'tk: for Ruby/TK'
+  )
+
+  cd ruby-${pkgver}
+
+  make DESTDIR="${pkgdir}" install-nodoc
+
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/ruby/LICENSE"
+  install -D -m644 BSDL "${pkgdir}/usr/share/licenses/ruby/BSDL"
+
+  rubyver=${pkgver:0:3}.0
+
+  # remove rubygems as it shipped in a separate package
+  rm -r "${pkgdir}"/usr/lib/ruby/${rubyver}/{rubygems,rubygems.rb}
+  rm "${pkgdir}"/usr/bin/gem
+
+  # remove bundled rdoc gem
+  # we are doing it here instead of prepare() because rdoc used doring Ruby build process
+  rm -r "${pkgdir}"/usr/lib/ruby/${rubyver}/rdoc/
+  rm "${pkgdir}"/usr/bin/{rdoc,ri}
+  rm -r "${pkgdir}"/usr/lib/ruby/gems/${rubyver}/gems/*
+  rm "${pkgdir}"/usr/lib/ruby/gems/${rubyver}/specifications/default/rdoc-*.gemspec
+}
+
+package_ruby-docs() {
+  pkgdesc='Documentation files for ruby'
+
+  cd ruby-${pkgver}
+
+  make DESTDIR="${pkgdir}" install-doc install-capi
+
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/ruby-docs/LICENSE"
+  install -D -m644 BSDL "${pkgdir}/usr/share/licenses/ruby-docs/BSDL"
+}
