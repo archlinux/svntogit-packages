@@ -2,8 +2,8 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=iptables
-pkgver=1.6.2
-pkgrel=3
+pkgver=1.8.0
+pkgrel=1
 epoch=1
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
@@ -22,7 +22,7 @@ source=(http://www.netfilter.org/projects/iptables/files/${pkgname}-${pkgver}.ta
         iptables.service
         ip6tables.service
         iptables-flush)
-sha1sums=('6279effbf8f2c7ff53d19ae13308f8a6e6a60dd9'
+sha1sums=('04924fd00dbaf8189f0777af90f7bdb73ac7e47c'
           'SKIP'
           '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
           'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
@@ -69,6 +69,11 @@ package() {
   install -d "$pkgdir"/var/lib/{iptables,ip6tables}
   install -m644 empty-{filter,mangle,nat,raw,security}.rules "${pkgdir}"/var/lib/iptables
   install -m644 empty-{filter,mangle,nat,raw,security}.rules "${pkgdir}"/var/lib/ip6tables
+
+  # iptables 1.8.0 claims compatibility with ebtables and arptables but it's not
+  # really true according to users: https://bugs.archlinux.org/task/60062
+  mv "$pkgdir/usr/bin/"ebtables{,-compat}
+  mv "$pkgdir/usr/bin/"arptables{,-compat}
 
   # install systemd files
   install -Dm644 iptables.service \
