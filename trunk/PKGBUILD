@@ -2,7 +2,7 @@
 # Contributor: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=libmspack
-pkgver=0.7.1alpha
+pkgver=0.8alpha
 pkgrel=1
 epoch=1
 pkgdesc="A library for Microsoft compression formats"
@@ -11,7 +11,7 @@ arch=(x86_64)
 license=(GPL)
 depends=(glibc)
 makedepends=(git)
-_commit=846db1c3419eca65f8d09b5452063870a65ed9f0  # tags/v0.7.1alpha^0
+_commit=fcb1f1873ba2ca004a4e29e1e8d92768d2422028  # tags/v0.8alpha^0
 source=("git+https://github.com/kyz/libmspack#commit=$_commit")
 sha256sums=('SKIP')
 
