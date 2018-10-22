@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.14.2
+pkgver=1.14.3dev+15+g3fc592219
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,7 +19,7 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=ef5ada1d1d53b04a468dc44838afb459f85e95e7  # tags/1.14.2^0
+_commit=3fc592219e106fdbf98e9e994a4531d9d045d0da  # nm-1-14
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit"
         0001-meson-Fix-platform-tests.patch)
 sha256sums=('SKIP'
@@ -32,10 +32,6 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
-
-  # Meson fixes
-  git cherry-pick -n 1ff00d51e750610ec5a1a1736ccb5b75c8457f20
-  patch -Np1 -i ../0001-meson-Fix-platform-tests.patch
 }
 
 build() {
