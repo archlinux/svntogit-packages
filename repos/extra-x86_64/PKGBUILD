@@ -5,13 +5,14 @@
 
 pkgname=clamav
 pkgver=0.100.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Anti-virus toolkit for Unix'
 url='https://www.clamav.net/'
 license=('GPL')
 arch=('x86_64')
-depends=('bzip2' 'libltdl' 'libxml2' 'curl' 'libsystemd' 'pcre2' 'json-c')
+depends=('bzip2' 'libltdl' 'libxml2' 'curl' 'libsystemd' 'pcre2' 'json-c' 'libmspack')
 makedepends=('libmilter' 'systemd')
+checkdepends=('check')
 backup=('etc/clamav/clamd.conf'
         'etc/clamav/freshclam.conf'
         'etc/clamav/clamav-milter.conf'
@@ -43,6 +44,7 @@ prepare() {
   sed -E 's|#(PidFile) .+|\1 /run/clamav/freshclam.pid|' -i etc/freshclam.conf.sample
   sed -E 's|#(LogFile) .+|\1 /var/log/clamav/clamav-milter.log|' -i etc/clamav-milter.conf.sample
   sed -E 's|#(PidFile) .+|\1 /run/clamav/clamav-milter.pid|' -i etc/clamav-milter.conf.sample
+  sed -E "s|(\\[Unit\\])|\\1\\nWants=network-online.target\\nAfter=network-online.target|" -i freshclam/clamav-freshclam.service.in
   autoreconf -fiv
 }
 
@@ -57,6 +59,7 @@ build() {
     --with-dbdir=/var/lib/clamav \
     --with-user=clamav \
     --with-group=clamav \
+    --with-system-libmspack \
     --disable-rpath \
     --disable-clamav \
     --disable-llvm \
@@ -66,6 +69,11 @@ build() {
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make quick-check
 }
 
 package() {
