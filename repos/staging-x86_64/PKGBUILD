@@ -1,0 +1,53 @@
+# Maintainer: Carlier Laurent <lordheavym@gmail.com>
+# Contributor: Douglas Soares de Andrade <dsa@aur.archlinux.org>
+
+pkgname=libfbclient
+pkgver=2.5.8.27089
+pkgrel=3
+pkgdesc="Client library for Firebird"
+arch=('x86_64')
+url="http://www.firebirdsql.org/"
+license=('custom')
+depends=('gcc-libs' 'icu')
+options=('!makeflags')
+source=(https://github.com/FirebirdSQL/firebird/releases/download/R2_5_8/Firebird-$pkgver-0.tar.bz2
+        LICENSE)
+md5sums=('38862a3da39cf91f4f2366fb510f18a6'
+         '0d61798861e159c85dbdf0f30fe2f2ce')
+
+prepare() {
+  cd $srcdir/Firebird-$pkgver-0
+
+  # libio.h is not installed by glibc >= 2.28
+  sed -i '/libio\.h/d' src/jrd/perf.h
+}
+
+build() {
+  cd $srcdir/Firebird-$pkgver-0
+
+  ./configure --prefix=/usr --with-system-icu --without-fbudf \
+    --without-fbsbin --without-fbconf --without-fbdoc --without-fbsample \
+    --without-fbsample-db --without-fbintl --without-fbmisc --without-fbhelp \
+    --without-fbsecure-db --with-fbmsg=/usr/share/firebird --without-fblog \
+    --without-fbglock --without-fbplugins
+
+  CXXFLAGS+=' -fno-lifetime-dse' make
+}
+
+package() {
+  cd $srcdir/Firebird-$pkgver-0
+
+  mkdir -p $pkgdir/usr/{bin,share/{firebird,licenses/$pkgname}}
+
+  cp -R gen/firebird/{lib,include} $pkgdir/usr
+  rm -f $pkgdir/usr/lib/libedit.a
+
+  install -m644 gen/firebird/*.msg $pkgdir/usr/share/firebird
+  install -m755 gen/firebird/bin/fb_config $pkgdir/usr/bin
+  install -m644 ${srcdir}/LICENSE $pkgdir/usr/share/licenses/$pkgname/LICENSE
+
+  # Add libgds support FS#30062 FS#30282
+  cd $pkgdir/usr/lib
+  ln -s libfbclient.so libgds.so.0
+  ln -s libfbclient.so libgds.so
+}
