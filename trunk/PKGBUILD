@@ -4,7 +4,7 @@
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
 pkgname=c-ares
-pkgver=1.14.0
+pkgver=1.15.0
 pkgrel=1
 pkgdesc='C library that performs DNS requests and name resolves asynchronously'
 arch=('x86_64')
@@ -13,7 +13,7 @@ license=('custom')
 depends=('glibc')
 source=("https://c-ares.haxx.se/download/$pkgname-$pkgver.tar.gz"{,.asc}
         'LICENSE')
-sha512sums=('30cd3f8c4eea15f994b2ceb44d84e506858f69f624e651e39bb4db523fea9ad5e8906b75abf07131ae364be19172274ed4053059669091f21ce4463cdbb857bf'
+sha512sums=('a1de6c5e7e1a6a13c926aae690e83d5caa51e7313d63da1cf2af6bc757c41d585aad5466bc3ba7b7f7793cb1748fa589f40972b196728851c8b059cfc8c3be50'
             'SKIP'
             '55e8607392c5f82ed85e3580fa632dfdc2dcd0b1a5e918dc61d00532c15c11ecb709f6007b65805c1fbe8fcd21ee794c9e4a9638c97ac1f4960b2654010a4d0a')
 validpgpkeys=('27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2'   # Daniel Stenberg
