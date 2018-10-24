@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.14.3dev+15+g3fc592219
+pkgver=1.14.3dev+21+g0ffb390bf
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,11 +19,11 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=3fc592219e106fdbf98e9e994a4531d9d045d0da  # nm-1-14
+_commit=0ffb390bf3390aafd08ba5df5d0b4eb96e93327e  # nm-1-14
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit"
-        0001-meson-Fix-platform-tests.patch)
+        26.patch)
 sha256sums=('SKIP'
-            'e993a727bb06494419071baea3c20fcc00aa2f9cf110d14f09f043be23952a1b')
+            '0051e1021494d0b56050e7d6c0d44668ae12465ea1429f88a38f26ac90416e9e')
 
 pkgver() {
   cd NetworkManager
@@ -32,6 +32,9 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
+
+  # https://gitlab.freedesktop.org/NetworkManager/NetworkManager/merge_requests/26
+  git apply -3 ../26.patch
 }
 
 build() {
