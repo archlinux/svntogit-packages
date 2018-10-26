@@ -101,7 +101,7 @@ dkms_install() {
 			elif [[ ! -d "$install_tree/$kver/kernel" ]]; then
 				DKMS_MODULES[$nvk]="Missing kernel modules tree"
 				continue
-			# postone modules with missing dependencies
+			# postpone modules with missing dependencies
 			elif ! check_dependency "$mod" "$kver"; then
 				DKMS_MODULES[$nvk]="Missing dependency"
 				continue
@@ -143,7 +143,7 @@ show_errors() {
 main() {
 	[[ -n "$DKMS_ALPM_HOOK_DEBUG" ]] && set -x
 
-	# prevent to have all each dkms call to fail
+	# prevent each dkms call from failing with authorization errors
 	if (( EUID )); then
 		echo 'You must be root to use this hook' >&2
 		exit 1
