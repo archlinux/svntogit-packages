@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright © 2017 Sébastien Luttringer
+# Copyright © 2018 Sébastien Luttringer
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -26,25 +26,21 @@ run() {
 # check whether the dependencies of a module are installed
 # $1: module name/module version
 # $2: kernel version
-check_dependency() {
-	local -a BUILD_DEPENDS
-	readarray -t BUILD_DEPENDS <<<$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "${BUILD_DEPENDS[@]}")
-	[[ -z ${BUILD_DEPENDS[@]} ]] && unset BUILD_DEPENDS
-	local mod
-	for mod in "${BUILD_DEPENDS[@]}"; do
-		if ! [[ "$(dkms status -m "$mod" -k "$2")" =~ :[[:space:]]installed$ ]]; then
-			return 1
+check_dependency() { (
+	source "$source_tree/${1/\//-}/dkms.conf"
+	for dep in "${BUILD_DEPENDS[@]}"; do
+		if ! [[ "$(dkms status -m "$dep" -k "$2")" =~ :[[:space:]]installed$ ]]; then
+			exit 1
 		fi
 	done
-	return 0
-}
+	exit 0
+) }
 
 # check whether the modules should be built with this kernel version
 # $1: module name/module version
 # $2: kernel version
 check_buildexclusive() {
-	local BUILD_EXCLUSIVE_KERNEL
-	readarray -t BUILD_EXCLUSIVE_KERNEL <<<$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "$BUILD_EXCLUSIVE_KERNEL")
+	local BUILD_EXCLUSIVE_KERNEL=$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "$BUILD_EXCLUSIVE_KERNEL")
 	[[ "$2" =~ $BUILD_EXCLUSIVE_KERNEL ]]
 }
 
@@ -101,7 +97,7 @@ dkms_install() {
 			elif [[ ! -d "$install_tree/$kver/kernel" ]]; then
 				DKMS_MODULES[$nvk]="Missing kernel modules tree"
 				continue
-			# postone modules with missing dependencies
+			# postpone modules with missing dependencies
 			elif ! check_dependency "$mod" "$kver"; then
 				DKMS_MODULES[$nvk]="Missing dependency"
 				continue
@@ -143,7 +139,7 @@ show_errors() {
 main() {
 	[[ -n "$DKMS_ALPM_HOOK_DEBUG" ]] && set -x
 
-	# prevent to have all each dkms call to fail
+	# prevent each dkms call from failing with authorization errors
 	if (( EUID )); then
 		echo 'You must be root to use this hook' >&2
 		exit 1
