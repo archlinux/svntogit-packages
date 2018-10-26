@@ -1,0 +1,35 @@
+From ba9057a93a47d1107836a920ed158422e9fdf9d0 Mon Sep 17 00:00:00 2001
+From: Michael Niewoehner <foss@mniewoehner.de>
+Date: Mon, 1 Oct 2018 16:51:27 +0200
+Subject: [PATCH 2/3] Revert "Fix to run under BusyBox shell"
+To: dkms-devel@dell.com
+
+This reverts commit 5da213828e2a208216f51d9ae82867bae5c040f7.
+
+Looks like m-emelchenkov wanted to fix the missing rmdir option
+ignore-fail-on-non-empty (issue #43) but that commit made it even worse:
+1. errors about deleting non-empty directories (issue #57)
+2. the directories contents get deleted by "rm -rf" in any case
+
+This option is now implemented so revert the commit to fix the newly
+introduced problems.
+---
+ dkms | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dkms b/dkms
+index be00118..f1c1498 100644
+--- a/dkms
++++ b/dkms
+@@ -1756,7 +1756,7 @@ do_uninstall()
+         while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
+             dir_to_remove="${dir_to_remove#/}"
+         done
+-        (cd "$install_tree/$1" && rm -rf "${dir_to_remove}/*" && rmdir -p "${dir_to_remove}" || true)
++        (cd "$install_tree/$1" && rmdir --parents --ignore-fail-on-non-empty "${dir_to_remove}" || true)
+         echo $" - Original module"
+         local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
+         if [[ -n "$origmod" ]]; then
+-- 
+Sébastien "Seblu" Luttringer
+
