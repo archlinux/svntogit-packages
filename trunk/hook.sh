@@ -26,25 +26,21 @@ run() {
 # check whether the dependencies of a module are installed
 # $1: module name/module version
 # $2: kernel version
-check_dependency() {
-	local -a BUILD_DEPENDS
-	readarray -t BUILD_DEPENDS <<<$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "${BUILD_DEPENDS[@]}")
-	[[ -z ${BUILD_DEPENDS[@]} ]] && unset BUILD_DEPENDS
-	local mod
-	for mod in "${BUILD_DEPENDS[@]}"; do
-		if ! [[ "$(dkms status -m "$mod" -k "$2")" =~ :[[:space:]]installed$ ]]; then
-			return 1
+check_dependency() { (
+	source "$source_tree/${1/\//-}/dkms.conf"
+	for dep in "${BUILD_DEPENDS[@]}"; do
+		if ! [[ "$(dkms status -m "$dep" -k "$2")" =~ :[[:space:]]installed$ ]]; then
+			exit 1
 		fi
 	done
-	return 0
-}
+	exit 0
+) }
 
 # check whether the modules should be built with this kernel version
 # $1: module name/module version
 # $2: kernel version
 check_buildexclusive() {
-	local BUILD_EXCLUSIVE_KERNEL
-	readarray -t BUILD_EXCLUSIVE_KERNEL <<<$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "$BUILD_EXCLUSIVE_KERNEL")
+	local BUILD_EXCLUSIVE_KERNEL=$(source "$source_tree/${1/\//-}/dkms.conf"; printf '%s\n' "$BUILD_EXCLUSIVE_KERNEL")
 	[[ "$2" =~ $BUILD_EXCLUSIVE_KERNEL ]]
 }
 
