@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright © 2017 Sébastien Luttringer
+# Copyright © 2018 Sébastien Luttringer
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
