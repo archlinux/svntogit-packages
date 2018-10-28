@@ -2,8 +2,8 @@
 
 pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
-pkgver=20180322
-_commit=b207fc31b093948dfc6d77b47042ce2f335bc631  # master
+pkgver=20181024
+_commit=d7af81e614086435102cca95961b141b3530a027  # master
 pkgrel=1
 pkgdesc="Google Noto TTF fonts"
 arch=(any)
@@ -11,7 +11,7 @@ url="https://www.google.com/get/noto/"
 license=(custom:SIL)
 source=("$pkgbase-$_commit.tar.gz::https://github.com/googlei18n/noto-fonts/archive/$_commit.tar.gz"
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf)
-sha256sums=('67e8ba8c18ab1523bba9bf11c6c26a1d1083bddce04b1ff523183dbab64db7e9'
+sha256sums=('4a06bf89b826f55613e8e9d1902d17fc401e019355ea4e63b80ae6d74d97adcd'
             '65ff237a579d438eb1b1c90bf25b5818e15ab019dbbfed2fc283b9cd12e5177f'
             '27419c0557d05e13edbb244cd06a62d921c271c6c2f07126856519869035776e'
             'a253b752fa0a0c3ff311e8cc0410788bfc61292dc3517c5a5a315c7a54fb9beb')
