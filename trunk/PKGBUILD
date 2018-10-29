@@ -5,8 +5,8 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
-_commit='1e6d6c7c628d77b20810f07653843651b4f0209b'
-pkgver=239.6
+_commit='25d1ba1173e4cce9dab8a2c2164ce60f63fc68a5'
+pkgver=239.300
 pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
@@ -62,9 +62,6 @@ sha512sums=('SKIP'
             '209b01b044877cc986757fa4009a92ea98f480306c2530075d153203c3cd2b3afccab6aacc1453dee8857991e04270572f1700310705d7a0f4d5bed27fab8c67')
 
 _backports=(
-  '8f6b442a78d0b485f044742ad90b2e8271b4e68e'
-  # CVE-2018-15688
-  '4dac5eaba4e419b29c97da38a8b1f82336c2c892'
 )
 
 _reverts=(
