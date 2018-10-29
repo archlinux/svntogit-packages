@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.30.1
+pkgver=3.30.1+8+g1abab3fe2
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -14,11 +14,13 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanber
          gnome-settings-daemon libgudev libinput pipewire)
 makedepends=(intltool gobject-introspection git egl-wayland)
 groups=(gnome)
-_commit=3faaa9ce147ba4c3bd9d90a20ac86ce9c9680c9b  # tags/3.30.1^0
+_commit=1abab3fe2ed2d07bafc9f3aabe188c4d1c05ee43  # gnome-3-30
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+        https://gitlab.gnome.org/vanvugt/mutter/commit/fc02b040f3b750b0513f812813351c09795950f6.patch
         startup-notification.patch)
 sha256sums=('SKIP'
-            '5a35ca4794fc361219658d9fae24a3ca21a365f2cb1901702961ac869c759366')
+            'dffa2ca19281b9fa5a81bf80bd46a8eae78325c7e1f8b2a25c33945aa7cc0903'
+            '00d5e77c94e83e1987cc443ed7c47303aa33367ce912b2f665bcd34f88890a17')
 
 pkgver() {
   cd $pkgname
@@ -28,9 +30,12 @@ pkgver() {
 prepare() {
   cd $pkgname
 
+  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/216
+  git apply -3 ../fc02b040f3b750b0513f812813351c09795950f6.patch
+
   # https://bugs.archlinux.org/task/51940
   # As of 2018-05-08: Still needed, according to fmuellner
-  patch -Np1 -i ../startup-notification.patch
+  git apply -3 ../startup-notification.patch
 
   NOCONFIGURE=1 ./autogen.sh
 }
