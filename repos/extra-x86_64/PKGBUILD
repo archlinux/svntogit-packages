@@ -5,24 +5,26 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.20.23
+pkgver=0.21
 pkgrel=1
 pkgdesc='Flexible, powerful, server-side application for playing music'
 url='https://www.musicpd.org/'
 license=('GPL')
 arch=('x86_64')
-depends=('libao' 'ffmpeg' 'libmodplug' 'audiofile' 'libshout' 'libmad' 'curl'
-	 'faad2' 'sqlite' 'jack' 'libmms' 'wavpack' 'avahi' 'libid3tag' 'yajl'
-	 'libmpdclient' 'icu' 'libupnp' 'libnfs' 'libsamplerate' 'libsoxr'
-	 'smbclient' 'libgme' 'zziplib' 'libsystemd')
-makedepends=('boost' 'doxygen')
+depends=('audiofile' 'avahi' 'curl' 'faad2' 'ffmpeg' 'fluidsynth' 'icu' 'jack'
+         'libao' 'libcdio-paranoia' 'libgme' 'libid3tag' 'libmad' 'libmikmod'
+         'libmms' 'libmodplug' 'libmpcdec' 'libmpdclient' 'libnfs'
+         'libsamplerate' 'libshout' 'libsoxr' 'libsystemd' 'libupnp' 'mpg123'
+         'openal' 'smbclient' 'sqlite' 'twolame' 'wavpack' 'wildmidi' 'yajl'
+         'zziplib')
+makedepends=('boost' 'meson' 'python-sphinx')
 validpgpkeys=('0392335A78083894A4301C43236E8A58C6DB4512')
-#source=("https://www.musicpd.org/download/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.xz"{,.sig}
-source=("https://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+#source=("https://www.musicpd.org/download/${pkgname}/${pkgver%.*}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+source=("https://www.musicpd.org/download/${pkgname}/${pkgver}/${pkgname}-${pkgver}.tar.xz"{,.sig}
         'tmpfiles.d'
         'sysusers.d'
         'conf')
-sha256sums=('503e5f9f237290f568ff7956ab2f9aed563594bf749f19b8fe994fb21434afea'
+sha256sums=('8b0ee75fb62ba69a4a127d51fb7011c60067de3f92d050184c52420d70b1528c'
             'SKIP'
             '2faa85c12449a5b3ca422ff1c1fa06d057c7e262a74bfa6298c914a92d6f2e7a'
             '0b74c6e5db08daab3091dc15a6b0c75210ba2f9e98fa074f6cfd605a461056b6'
@@ -30,32 +32,39 @@ sha256sums=('503e5f9f237290f568ff7956ab2f9aed563594bf749f19b8fe994fb21434afea'
 
 backup=('etc/mpd.conf')
 
-build() {
+prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-	./configure \
-		--prefix=/usr \
-		--sysconfdir=/etc \
-		--enable-jack \
-		--enable-libmpdclient \
-		--enable-pipe-output \
-		--enable-pulse \
-		--enable-soundcloud \
-		--enable-zzip \
-		--disable-sidplay \
-		--enable-systemd-daemon \
-		--with-systemduserunitdir=/usr/lib/systemd/user \
-		--with-systemdsystemunitdir=/usr/lib/systemd/system \
+	rm -fr build
+	install -d build
+}
 
-	make
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}/build"
+	_opts=('-Ddocumentation=true'
+	       '-Dchromaprint=disabled' # appears not to be used for anything
+	       '-Dsidplay=disabled' # unclear why but disabled in the past
+	       '-Dlibwrap=disabled' # twentieth century's over
+	       '-Dadplug=disabled' # not in an official repo
+	       '-Dsndio=disabled' # interferes with detection of alsa devices
+	       '-Dshine=disabled' # not in an official repo
+	)
+	arch-meson .. ${_opts[@]}
+	ninja
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make DESTDIR="${pkgdir}" install
-	install -Dm644 ../conf "${pkgdir}"/etc/mpd.conf
-	install -Dm644 ../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
-	install -Dm644 ../sysusers.d "${pkgdir}"/usr/lib/sysusers.d/mpd.conf
+	cd "${srcdir}/${pkgname}-${pkgver}/build"
+	DESTDIR="${pkgdir}" ninja install
+	install -Dm644 ../doc/mpdconf.example "${pkgdir}"/usr/share/doc/mpd/mpdconf.example
+	install -Dm644 ../doc/mpd.conf.5 "${pkgdir}"/usr/share/man/man5/mpd.conf.5
+	install -Dm644 ../doc/mpd.1 "${pkgdir}"/usr/share/man/man1/mpd.1
 
-	sed '/\[Service\]/a User=mpd' -i "${pkgdir}"/usr/lib/systemd/system/mpd.service
-	sed '/WantedBy=/c WantedBy=default.target' -i "${pkgdir}"/usr/lib/systemd/system/mpd.service
+	install -Dm644 ../../tmpfiles.d "${pkgdir}"/usr/lib/tmpfiles.d/mpd.conf
+	install -Dm644 ../../sysusers.d "${pkgdir}"/usr/lib/sysusers.d/mpd.conf
+	install -Dm644 ../../conf "${pkgdir}"/etc/mpd.conf
+
+	sed \
+		-e '/\[Service\]/a User=mpd' \
+		-e '/WantedBy=/c WantedBy=default.target' \
+		-i "${pkgdir}"/usr/lib/systemd/system/mpd.service
 }
