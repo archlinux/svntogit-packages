@@ -54,7 +54,8 @@ package_util-linux() {
   provides=('eject' 'zramctl' 'rfkill')
   replaces=('zramctl' 'rfkill')
   depends=('pam' 'shadow' 'coreutils' 'libsystemd' 'libcap-ng' 'libutil-linux')
-  optdepends=('python: python bindings to libmount')
+  optdepends=('python: python bindings to libmount'
+              'words: default dictionary for look')
   groups=('base' 'base-devel')
   backup=(etc/pam.d/chfn
           etc/pam.d/chsh
