@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=licenses
-pkgver=20171006
+pkgver=20181104
 pkgrel=1
 pkgdesc='Standard licenses distribution package'
 arch=('any')
@@ -59,7 +59,7 @@ md5sums=('3b83ef96387f14655fc854ddc3c6bd57'
          '9f4337828d782bdea41f03dd2ad1b808'
          'd09c120ca7db95ef2aeecec0cb08293b'
          'b4a94da2a1f918b217ef5156634fc9e0'
-         'a45bb1bbeed9e26b26c5763df1d3913d'
+         '00b4bd92b48eaed71b4e4e7b7314c3b6'
          '8a960b08d972f43f91ae84a6f00dcbfb'
          'f083e41c43db25e18f36c91e57750b64'
          'a055911c32fb4ed6e96c453ceaeba857'
