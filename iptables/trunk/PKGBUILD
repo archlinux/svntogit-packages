@@ -2,7 +2,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=iptables
-pkgver=1.8.0
+pkgver=1.8.1
 pkgrel=1
 epoch=1
 pkgdesc='Linux kernel packet control tool'
@@ -22,7 +22,7 @@ source=(http://www.netfilter.org/projects/iptables/files/${pkgname}-${pkgver}.ta
         iptables.service
         ip6tables.service
         iptables-flush)
-sha1sums=('04924fd00dbaf8189f0777af90f7bdb73ac7e47c'
+sha1sums=('3ce489b6945c52ef35fe8c0da38144dd38694e36'
           'SKIP'
           '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
           'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
