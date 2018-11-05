@@ -1,0 +1,46 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Étienne Deparis <etienne@depar.is>
+
+pkgname=libnitrokey
+pkgver=3.4.1
+pkgrel=2
+pkgdesc='Communicate with Nitrokey stick devices in a clean and easy manner'
+url='https://www.nitrokey.com'
+arch=('x86_64')
+license=('LGPL3')
+depends=('hidapi' 'libusb')
+makedepends=('cmake' 'qt5-tools' 'catch2')
+provides=('libnitrokey.so')
+source=(https://github.com/Nitrokey/libnitrokey/releases/download/v${pkgver}/libnitrokey-v${pkgver}.tar.gz{,.sig})
+sha512sums=('697c73b5248f3dd077d02fc2cfb3ce573df3d48c344291717f889061ee703b9d231fe0c7f8c1962af5dbfb1bb206c0345a56fc049ecfcfc5d933a00c5d7a05d0'
+            'SKIP')
+validpgpkeys=('868184069239FF65DE0BCD7DD9BAE35991DE5B22') # Szczepan Zalega <szczepan.zalega@gmail.com>
+
+prepare() {
+  cd ${pkgname}-v${pkgver}
+  mkdir -p build
+  sed 's|catch.hpp|catch2/catch.hpp|g' -i unittest/{*.cc,*.cpp}
+  sed '/REQUIRE(std::regex_match(s, pattern));/d' -i unittest/test_offline.cc
+}
+
+build() {
+  cd ${pkgname}-v${pkgver}/build
+  cmake .. \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCOMPILE_OFFLINE_TESTS=ON \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib
+  make
+}
+
+check() {
+  cd ${pkgname}-v${pkgver}/build
+  ctest -VV
+}
+
+package() {
+  cd ${pkgname}-v${pkgver}
+  make -C build DESTDIR="${pkgdir}" install
+}
+
+# vim: ts=2 sw=2 et:
