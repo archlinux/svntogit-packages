@@ -4,7 +4,7 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=feh
-pkgver=2.28
+pkgver=2.28.1
 pkgrel=1
 pkgdesc='Fast and light imlib2-based image viewer'
 url='https://feh.finalrewind.org/'
@@ -16,7 +16,7 @@ optdepends=('imagemagick: support more file formats'
 makedepends=('libxt')
 validpgpkeys=('781BB7071C6BF648EAEB08A1100D5BFB5166E005')
 source=("${url}${pkgname}-${pkgver}.tar.bz2"{,.asc})
-sha256sums=('13d22d7c5fe5057612ce3df88857aee89fcab9c8cd6fd4f95a42fe6bf851d3d9'
+sha256sums=('97066765c61d7413ed40b20f3f62b5d934e94ec91cadd491ebce836e1fb02a72'
             'SKIP')
 
 build() {
