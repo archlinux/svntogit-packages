@@ -4,7 +4,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.10
+pkgver=2.2.11
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
@@ -20,9 +20,9 @@ optdepends=('libldap: gpg2keys_ldap'
 validpgpkeys=('D8692123C4065DEA5E0F3AB5249B39D24F25E3B6'
               '46CC730865BB5C78EBABADCF04376F3EE0856959'
               '031EC2536E580D8EA286A9F22071B08A33BD3F06'
-              'D238EA65D64C67ED4C3073F28A861B1C7EFD60D9')
+              '5B80C5754298F0CB55D8ED6ABCEF7E294B092E28')
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig})
-sha256sums=('799dd37a86a1448732e339bd20440f4f5ee6e69755f6fd7a73ee8af30840c915'
+sha256sums=('496c3e123ef53f35436ddccca58e82acaa901ca4e21174e77386c0cea0c49cd9'
             'SKIP')
 
 install=install
