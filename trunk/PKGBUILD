@@ -3,7 +3,7 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=3.30.1
+pkgver=3.30.2
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -12,28 +12,29 @@ license=(GPL)
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-server-xwayland xorg-xhost)
 makedepends=(yelp-tools intltool gobject-introspection git docbook-xsl)
 checkdepends=(check)
-_commit=9e532ea4b400914704e063d81d21c73c9b84c048  # tags/3.30.1^0
+_commit=9b3f09c782cc0628cc20c96c4cf53a2c1f778a39  # tags/3.30.2^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
-        0002-Xsession-Don-t-start-ssh-agent-by-default.patch
+        0001-Xsession-Don-t-start-ssh-agent-by-default.patch
         gdm.sysusers)
 sha256sums=('SKIP'
-            '9449da0b6ee58aa3fde65e6d8d1f30513e4176a7dc6d176f17f320ce82cb1d82'
+            '3412f7da0205409f08a126a1d166b644fe0f1d0444f7cdebdce8e59cea2d672c'
             '6d9c8e38c7de85b6ec75e488585b8c451f5d9b4fabd2a42921dc3bfcc4aa3e13')
 
 pkgver() {
-  cd $pkgbase
+  cd gdm
   git describe --tags | sed 's/-/+/g'
 }
 
 prepare() {
-  cd $pkgbase
-  patch -Np1 -i ../0002-Xsession-Don-t-start-ssh-agent-by-default.patch
+  mkdir build
+  cd gdm
+  patch -Np1 -i ../0001-Xsession-Don-t-start-ssh-agent-by-default.patch
   NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgbase
-  ./configure \
+  cd build
+  ../gdm/configure \
     --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
@@ -52,8 +53,7 @@ build() {
 }
 
 check() {
-  cd $pkgbase
-  make check
+  make -C build check
 }
 
 package_gdm() {
@@ -64,27 +64,24 @@ package_gdm() {
           etc/gdm/Xsession etc/gdm/PostSession/Default etc/gdm/PreSession/Default)
   groups=(gnome)
 
-  cd $pkgbase
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" make -C build install
 
   chown -Rc 120:120 "$pkgdir/var/lib/gdm"
 
   # Unused or created at start
   rm -r "$pkgdir"/var/{cache,log,run}
 
-  install -Dm644 ../gdm.sysusers "$pkgdir/usr/lib/sysusers.d/gdm.conf"
+  install -Dm644 gdm.sysusers "$pkgdir/usr/lib/sysusers.d/gdm.conf"
 
 ### Split libgdm
-  make -C libgdm DESTDIR="$pkgdir" uninstall
-  mv "$pkgdir/usr/share/glib-2.0/schemas/org.gnome.login-screen.gschema.xml" "$srcdir"
+  mkdir -p libgdm/{lib,share}
+  mv -t libgdm       "$pkgdir"/usr/include
+  mv -t libgdm/lib   "$pkgdir"/usr/lib/{girepository-1.0,libgdm*,pkgconfig}
+  mv -t libgdm/share "$pkgdir"/usr/share/{gir-1.0,glib-2.0}
 }
 
 package_libgdm() {
   pkgdesc="GDM support library"
   depends=(systemd glib2 dconf)
-
-  cd $pkgbase
-  make -C libgdm DESTDIR="$pkgdir" install
-  install -Dt "$pkgdir/usr/share/glib-2.0/schemas" -m644 \
-    "$srcdir/org.gnome.login-screen.gschema.xml"
+  mv libgdm "$pkgdir/usr"
 }
