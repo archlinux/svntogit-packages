@@ -3,7 +3,7 @@
 
 pkgname=iptables
 pkgver=1.8.1
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
@@ -74,6 +74,10 @@ package() {
   # really true according to users: https://bugs.archlinux.org/task/60062
   mv "$pkgdir/usr/bin/"ebtables{,-compat}
   mv "$pkgdir/usr/bin/"arptables{,-compat}
+  for x in restore save; do
+    mv "$pkgdir/usr/bin/ebtables-$x" "$pkgdir/usr/bin/ebtables-compat-$x"
+    mv "$pkgdir/usr/bin/arptables-$x" "$pkgdir/usr/bin/arptables-compat-$x"
+  done
 
   # install systemd files
   install -Dm644 iptables.service \
