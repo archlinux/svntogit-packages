@@ -6,7 +6,7 @@ pkgname=(qemu qemu-headless qemu-arch-extra qemu-headless-arch-extra
          qemu-block-{iscsi,rbd,gluster} qemu-guest-agent)
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=3.0.0
-pkgrel=3
+pkgrel=4
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="http://wiki.qemu.org/"
@@ -156,7 +156,7 @@ _package() {
     case $_blob in
       # provided by seabios package
       bios.bin|acpi-dsdt.aml|bios-256k.bin|vgabios-cirrus.bin|vgabios-qxl.bin|\
-      vgabios-stdvga.bin|vgabios-vmware.bin) rm "$_blob"; continue ;;
+      vgabios-stdvga.bin|vgabios-vmware.bin|vgabios-virtio.bin) rm "$_blob"; continue ;;
 
       # iPXE ROMs
       efi-*|pxe-*) continue ;;
