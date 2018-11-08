@@ -1,34 +1,50 @@
-# $Id$
 # Maintainer:
 
 pkgname=gettext
 pkgver=0.19.8.1
-pkgrel=2
+pkgrel=3
 pkgdesc="GNU internationalization library"
-arch=('i686' 'x86_64')
-url="http://www.gnu.org/software/gettext/"
-license=('GPL')
-groups=('base' 'base-devel')
-depends=('gcc-libs' 'acl' 'sh' 'glib2' 'libunistring')
+url="https://www.gnu.org/software/gettext/"
+arch=(x86_64)
+license=(GPL)
+groups=(base base-devel)
+depends=(gcc-libs acl sh glib2 libunistring libcroco)
+makedepends=(gettext emacs git)
 optdepends=('git: for autopoint infrastructure updates')
 options=(!docs)
-source=(ftp://ftp.gnu.org/pub/gnu/gettext/${pkgname}-${pkgver}.tar.gz{,.sig})
-validpgpkeys=('462225C3B46F34879FC8496CD605848ED7E69871') # Daiki Ueno
+source=(https://ftp.gnu.org/pub/gnu/gettext/$pkgname-$pkgver.tar.gz{,.sig}
+        gettext-0.19.8-its-segfault.patch)
+sha256sums=('ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43'
+            'SKIP'
+            '0e3b19ea94e956a6a484ca4c4ecea32a01a83f10a413e586183de464c51f158d')
+validpgpkeys=('462225C3B46F34879FC8496CD605848ED7E69871')  # Daiki Ueno
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../gettext-0.19.8-its-segfault.patch
+}
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure --prefix=/usr
+  cd $pkgname-$pkgver
+  ./configure \
+    --prefix=/usr \
+    --enable-csharp \
+    --enable-nls \
+    --with-xz \
+    --without-included-gettext
+
+  sed -e 's/ -shared / -Wl,-O1,--as-needed\0/g' \
+      -i gettext-{tools,runtime,runtime/libasprintf}/libtool
+
   make
 }
 
 check() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make -j1 -k check
+  cd $pkgname-$pkgver
+  make check
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make DESTDIR="${pkgdir}" install
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
 }
-md5sums=('97e034cf8ce5ba73a28ff6c3c0638092'
-         'SKIP')
