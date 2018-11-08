@@ -3,7 +3,7 @@
 
 pkgbase=python-requests
 pkgname=('python-requests' 'python2-requests')
-pkgver=2.20.0
+pkgver=2.20.1
 pkgrel=1
 pkgdesc="Python HTTP for Humans"
 arch=('any')
@@ -15,7 +15,7 @@ checkdepends=('python-pytest-httpbin' 'python2-pytest-httpbin' 'python-pytest-mo
               'python2-pytest-mock' 'python-pysocks' 'python2-pysocks')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/kennethreitz/requests/archive/v$pkgver.tar.gz"
         certs.patch)
-sha512sums=('766c69d1778e7286232fcd750842e89cd9bb6637076e80fe95fb67f3ccb14049bf74a533de91ef9451ac6f397ad0a6d148eb444009f501178138cdeffc5ee7c4'
+sha512sums=('939361477f2354a926d419e4cda5f68da2c3c456089982f1f07ac5e6af54f338f78e5d7f716827324b1a8c484947e3e07484b4677c38d79c34ea071bb18d0dc6'
             '424a3bb01b23409284f6c9cd2bc22d92df31b85cfd96e1d1b16b5d68adeca670dfed4fff7977d8b10980102b0f780eacc465431021fcd661f3a17168a02a39a3')
 
 prepare() {
