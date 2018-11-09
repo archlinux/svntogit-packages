@@ -3,7 +3,7 @@
 pkgbase=flac
 pkgname=('flac' 'flac-doc')
 pkgver=1.3.2
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://flac.sourceforge.net/"
 license=('BSD' 'GPL')
