@@ -1,0 +1,81 @@
+# Maintainer: Tom Gundersen <teg@jklm.no>
+# Contributor: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Francois Charette <francois.archlinux.org>
+
+pkgbase=redland
+epoch=1
+# maybe rename redland-storage-mysql to redland-storage-mariadb or add a provide tag
+pkgname=('redland' 'redland-storage-mysql' 'redland-storage-postgresql' 'redland-storage-virtuoso' 'redland-storage-sqlite')
+pkgver=1.0.17
+pkgrel=6
+url="http://librdf.org/"
+license=("GPL")
+arch=('x86_64')
+makedepends=('rasqal' 'raptor' 'postgresql-libs' 'libmariadbclient' 'unixodbc' 'sqlite')
+source=(http://download.librdf.org/source/$pkgname-$pkgver.tar.gz{,.asc}
+        rpath.diff)
+sha256sums=('de1847f7b59021c16bdc72abb4d8e2d9187cd6124d69156f3326dd34ee043681'
+            'SKIP'
+            '9ddf9f7581f5194d73ad908f3b26354c70d3079a7a87c8add8a0d0e4c6974fec')
+validpgpkeys=('F879F0DEDA780198DD08DC6443EC92504F71955A') # Dave Beckett
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./configure --prefix=/usr \
+	--enable-release \
+	--disable-static \
+	--with-raptor=system \
+	--with-rasqal=system \
+	--with-sqlite=3 \
+	--with-bdb=no
+
+  # nuke rpath
+  patch -Np0 -i "${srcdir}/rpath.diff"
+
+  make
+}
+
+package_redland() {
+ pkgdesc="Library that provides a high-level interface to RDF data"
+ depends=('rasqal>=0.9.26' 'raptor>=2.0.6' 'libltdl')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  rm -rf "${pkgdir}/usr/lib/redland"
+}
+
+package_redland-storage-mysql() {
+ pkgdesc="MySQL storage support for Redland"
+ depends=('redland' 'libmariadbclient')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  install -dm755 "${pkgdir}/usr/lib/redland"
+  install -m755 src/.libs/librdf_storage_mysql.so "${pkgdir}/usr/lib/redland/librdf_storage_mysql.so"
+}
+
+package_redland-storage-postgresql() {
+ pkgdesc="PostgreSQL storage support for Redland"
+ depends=('redland' 'postgresql-libs')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  install -dm755 "${pkgdir}/usr/lib/redland"
+  install -m755 src/.libs/librdf_storage_postgresql.so "${pkgdir}/usr/lib/redland/"
+}
+
+package_redland-storage-virtuoso() {
+ pkgdesc="Virtuoso storage support for Redland"
+ depends=('redland' 'unixodbc')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  install -dm755 "${pkgdir}/usr/lib/redland"
+  install -m755 src/.libs/librdf_storage_virtuoso.so "${pkgdir}/usr/lib/redland/"
+}
+
+package_redland-storage-sqlite() {
+ pkgdesc="SQLite storage support for Redland"
+ depends=('redland' 'sqlite3')
+
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  install -dm755 "${pkgdir}/usr/lib/redland"
+  install -m755 src/.libs/librdf_storage_sqlite.so "${pkgdir}/usr/lib/redland/"
+}
