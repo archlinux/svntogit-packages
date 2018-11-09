@@ -6,7 +6,7 @@
 
 pkgname=libunwind
 pkgver=1.2.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Portable and efficient C programming interface (API) to determine the call-chain of a program'
 arch=('x86_64')
 url='http://www.nongnu.org/libunwind/'
