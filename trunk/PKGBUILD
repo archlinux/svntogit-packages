@@ -3,36 +3,31 @@
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
 pkgver=3.40
-pkgrel=1
+pkgrel=2
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
 arch=(x86_64)
 license=(MPL GPL)
 _nsprver=4.20
 depends=("nspr>=${_nsprver}" sqlite zlib sh p11-kit)
-makedepends=(perl python2 gyp)
+makedepends=(perl python python2 gyp)
 source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
         certdata2pem.py bundle.sh)
 sha256sums=('0562087b8bda072bf5964f8acf851f9c0997a59c384f4887cb517b3b628b32dd'
-            '512b12a2f13129be62c008b4df0153f527dd7d71c2c5183de99dfa2a1c49dd8a'
+            '0be02cecc27a6e55e1cad1783033b147f502b26f9fb1bb5a53e7a43bbcb68fa0'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
 prepare() {
   mkdir certs path
-
   ln -s /usr/bin/python2 path/python
 
   cd nss-$pkgver
-
   ln -sr nss/lib/ckfw/builtins/certdata.txt ../certs/
   ln -sr nss/lib/ckfw/builtins/nssckbi.h ../certs/
 }
 
 build() {
-  cd certs
-  python2 ../certdata2pem.py
-
-  cd ..
+  ( cd certs; python ../certdata2pem.py; )
   sh bundle.sh
 
   cd nss-$pkgver/nss
