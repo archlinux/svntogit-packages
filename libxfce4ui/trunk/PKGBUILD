@@ -3,7 +3,7 @@
 
 pkgname=libxfce4ui
 pkgver=4.12.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Commonly used Xfce widgets among Xfce applications"
 arch=('x86_64')
 url="http://www.xfce.org/"
