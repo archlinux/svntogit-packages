@@ -1,0 +1,82 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=libcanberra
+pkgname=(libcanberra libcanberra-pulse libcanberra-gstreamer)
+pkgver=0.30+2+gc0620e4
+pkgrel=2
+pkgdesc="A small and lightweight implementation of the XDG Sound Theme Specification"
+arch=(x86_64)
+license=(LGPL)
+depends=(libvorbis libltdl alsa-lib tdb sound-theme-freedesktop)
+makedepends=(gtk-doc libpulse gstreamer gtk2 gtk3 git)
+options=(!emptydirs libtool)
+url="http://0pointer.de/lennart/projects/libcanberra"
+_commit=c0620e432650e81062c1967cc669829dbd29b310  # master
+source=("git+http://git.0pointer.net/clone/libcanberra.git#commit=$_commit" libcanberra.xinit)
+sha256sums=('SKIP'
+            'a0d0b135d3fea5c703a5f84208b79d66f671b082ae85f67b629ee2568a7ddc30')
+
+_plugindir=usr/lib/$pkgbase-0.30
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+  ./autogen.sh
+}
+
+build() {
+  cd $pkgbase
+  ./configure --sysconfdir=/etc --prefix=/usr --localstatedir=/var \
+      --disable-static --with-builtin=dso --enable-null --disable-oss \
+      --enable-alsa --enable-gstreamer --enable-pulse \
+      --with-systemdsystemunitdir=/usr/lib/systemd/system --enable-gtk-doc
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package_libcanberra() {
+  optdepends=("$pkgbase-pulse: PulseAudio driver"
+              "$pkgbase-gstreamer: GStreamer driver")
+
+  cd $pkgbase
+
+  make -j1 DESTDIR="$pkgdir" install
+  rm "$pkgdir"/usr/lib/libcanberra-gtk*.la
+  rm "$pkgdir"/usr/lib/gtk-{2,3}.0/modules/*.la
+
+  install -D "$srcdir/libcanberra.xinit" \
+    "$pkgdir/etc/X11/xinit/xinitrc.d/40-libcanberra-gtk-module.sh"
+
+  # Split plugins
+  for _p in pulse gstreamer; do
+    mkdir ../$_p-plugin
+    mv "$pkgdir/$_plugindir"/libcanberra-$_p.* ../$_p-plugin
+  done
+
+  # FS#52370: Remove login, logout and system-ready sounds.
+  # We have no sound themes that include these so do not play them.
+  rm -f "$pkgdir/usr/share/gnome/autostart/libcanberra-login-sound.desktop"
+  rm -f "$pkgdir/usr/share/gnome/shutdown/libcanberra-logout-sound.sh"
+  rm -f "$pkgdir/usr/share/gdm/autostart/LoginWindow/libcanberra-ready-sound.desktop"
+}
+
+package_libcanberra-pulse() {
+  pkgdesc="PulseAudio plugin for libcanberra"
+  depends=("$pkgbase=$pkgver-$pkgrel" libpulse)
+
+  install -d "$pkgdir/$_plugindir"
+  mv pulse-plugin/* "$pkgdir/$_plugindir"
+}
+
+package_libcanberra-gstreamer() {
+  pkgdesc="GStreamer plugin for libcanberra"
+  depends=("$pkgbase=$pkgver-$pkgrel" gstreamer)
+
+  install -d "$pkgdir/$_plugindir"
+  mv gstreamer-plugin/* "$pkgdir/$_plugindir"
+}
