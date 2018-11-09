@@ -2,7 +2,7 @@
 
 pkgname=gnome-common
 pkgver=3.18.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Common development macros for GNOME"
 arch=(any)
 depends=(sh autoconf-archive intltool yelp-tools gtk-doc)
