@@ -3,7 +3,7 @@
 
 pkgbase=ca-certificates
 pkgname=(ca-certificates-utils ca-certificates)
-pkgver=20180821
+pkgver=20181109
 pkgrel=1
 pkgdesc="Common CA certificates"
 url="https://src.fedoraproject.org/rpms/ca-certificates"
@@ -11,8 +11,8 @@ arch=(any)
 license=(GPL2)
 makedepends=(asciidoc p11-kit)
 source=(update-ca-trust update-ca-trust.8.txt update-ca-trust.hook)
-sha256sums=('9edb930441a7c886dcf545799164e2982dfec56330ec4aaba8ee3c5b40fd7dba'
-            '38c10446738c1e99bc95e42fe844a9e95ea106795059fa769f3b4ba82b395929'
+sha256sums=('ba98e00f80f94e2648b66252119d1b0da2339b8c83860cd69738e5c4e2d0fcc3'
+            'acf571f7d7a9df2149a373017280e8f22d07a2d36600256fa48159d22ab74751'
             '15eb04e757b7c61c8ee1540fd697771b8ae8e31f92cfb39c260b423101e21af8')
 
 build() {
@@ -35,7 +35,7 @@ package_ca-certificates-utils() {
   install -d "$pkgdir"/{etc,usr/share}/$pkgbase/trust-source/{anchors,blacklist}
 
   # Directories used by update-ca-trust (aka "trust extract-compat")
-  install -d "$pkgdir"/etc/{ssl/certs/java,$pkgbase/extracted}
+  install -d "$pkgdir"/etc/{ssl/certs/{edk2,java},$pkgbase/extracted}
 
   # Compatibility link for OpenSSL using /etc/ssl as CAdir
   # Used in preference to the individual links in /etc/ssl/certs
