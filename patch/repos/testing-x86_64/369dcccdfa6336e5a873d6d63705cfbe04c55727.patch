@@ -1,0 +1,102 @@
+diff --git a/src/patch.c b/src/patch.c
+index 30fa019..026e992 100644
+--- a/src/patch.c
++++ b/src/patch.c
+@@ -236,6 +236,7 @@ main (int argc, char **argv)
+ 	    }
+ 	  remove_if_needed (TMPOUTNAME, &TMPOUTNAME_needs_removal);
+ 	}
++      remove_if_needed (TMPEDNAME, &TMPEDNAME_needs_removal);
+ 
+       if (! skip_rest_of_patch && ! file_type)
+ 	{
+diff --git a/src/pch.c b/src/pch.c
+index 3223a55..f5434b3 100644
+--- a/src/pch.c
++++ b/src/pch.c
+@@ -2449,7 +2449,7 @@ do_ed_script (char const *inname, char const *outname,
+       write_fatal ();
+ 
+     if (lseek (tmpfd, 0, SEEK_SET) == -1)
+-      pfatal ("Can't rewind to the beginning of file %s", quotearg (tmpname));
++      pfatal ("Can't rewind to the beginning of file %s", quotearg (TMPEDNAME));
+ 
+     if (! dry_run && ! skip_rest_of_patch) {
+ 	int exclusive = *outname_needs_removal ? 0 : O_EXCL;
+diff --git a/tests/ed-style b/tests/ed-style
+new file mode 100644
+index 0000000..504e6e5
+--- /dev/null
++++ b/tests/ed-style
+@@ -0,0 +1,71 @@
++# Copyright (C) 2018 Free Software Foundation, Inc.
++#
++# Copying and distribution of this file, with or without modification,
++# in any medium, are permitted without royalty provided the copyright
++# notice and this notice are preserved.
++
++. $srcdir/test-lib.sh
++
++require cat
++use_local_patch
++use_tmpdir
++
++# ==============================================================
++
++cat > ed1.diff <<EOF
++0a
++foo
++.
++EOF
++
++check 'patch -e foo -i ed1.diff' <<EOF
++EOF
++
++check 'cat foo' <<EOF
++foo
++EOF
++
++cat > ed2.diff <<EOF
++1337a
++r !echo bar
++,p
++EOF
++
++check 'patch -e foo -i ed2.diff > /dev/null 2> /dev/null || echo "Status: $?"' <<EOF
++Status: 2
++EOF
++
++check 'cat foo' <<EOF
++foo
++EOF
++
++# Test the case where one ed-style patch modifies several files
++
++cat > ed3.diff <<EOF
++--- foo
+++++ foo
++1c
++bar
++.
++--- baz
+++++ baz
++0a
++baz
++.
++EOF
++
++# Apparently we can't create a file with such a patch, while it works fine
++# when the file name is provided on the command line
++cat > baz <<EOF
++EOF
++
++check 'patch -e -i ed3.diff' <<EOF
++EOF
++
++check 'cat foo' <<EOF
++bar
++EOF
++
++check 'cat baz' <<EOF
++baz
++EOF

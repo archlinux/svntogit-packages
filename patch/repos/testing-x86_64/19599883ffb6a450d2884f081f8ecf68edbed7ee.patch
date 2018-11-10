@@ -1,0 +1,66 @@
+diff --git a/src/common.h b/src/common.h
+index ec50b40..22238b5 100644
+--- a/src/common.h
++++ b/src/common.h
+@@ -94,10 +94,12 @@ XTERN char const *origsuff;
+ XTERN char const * TMPINNAME;
+ XTERN char const * TMPOUTNAME;
+ XTERN char const * TMPPATNAME;
++XTERN char const * TMPEDNAME;
+ 
+ XTERN bool TMPINNAME_needs_removal;
+ XTERN bool TMPOUTNAME_needs_removal;
+ XTERN bool TMPPATNAME_needs_removal;
++XTERN bool TMPEDNAME_needs_removal;
+ 
+ #ifdef DEBUGGING
+ XTERN int debug;
+diff --git a/src/patch.c b/src/patch.c
+index 0fe6d72..30fa019 100644
+--- a/src/patch.c
++++ b/src/patch.c
+@@ -1999,6 +1999,7 @@ cleanup (void)
+   remove_if_needed (TMPINNAME, &TMPINNAME_needs_removal);
+   remove_if_needed (TMPOUTNAME, &TMPOUTNAME_needs_removal);
+   remove_if_needed (TMPPATNAME, &TMPPATNAME_needs_removal);
++  remove_if_needed (TMPEDNAME, &TMPEDNAME_needs_removal);
+   remove_if_needed (TMPREJNAME, &TMPREJNAME_needs_removal);
+   output_files (NULL);
+ }
+diff --git a/src/pch.c b/src/pch.c
+index 4fd5a05..3223a55 100644
+--- a/src/pch.c
++++ b/src/pch.c
+@@ -2392,7 +2392,6 @@ do_ed_script (char const *inname, char const *outname,
+     file_offset beginning_of_this_line;
+     size_t chars_read;
+     FILE *tmpfp = 0;
+-    char const *tmpname;
+     int tmpfd;
+     pid_t pid;
+ 
+@@ -2404,12 +2403,13 @@ do_ed_script (char const *inname, char const *outname,
+ 	   invalid commands and treats the next line as a new command, which
+ 	   can lead to arbitrary command execution.  */
+ 
+-	tmpfd = make_tempfile (&tmpname, 'e', NULL, O_RDWR | O_BINARY, 0);
++	tmpfd = make_tempfile (&TMPEDNAME, 'e', NULL, O_RDWR | O_BINARY, 0);
+ 	if (tmpfd == -1)
+-	  pfatal ("Can't create temporary file %s", quotearg (tmpname));
++	  pfatal ("Can't create temporary file %s", quotearg (TMPEDNAME));
++	TMPEDNAME_needs_removal = true;
+ 	tmpfp = fdopen (tmpfd, "w+b");
+ 	if (! tmpfp)
+-	  pfatal ("Can't open stream for file %s", quotearg (tmpname));
++	  pfatal ("Can't open stream for file %s", quotearg (TMPEDNAME));
+       }
+ 
+     for (;;) {
+@@ -2484,7 +2484,6 @@ do_ed_script (char const *inname, char const *outname,
+     }
+ 
+     fclose (tmpfp);
+-    safe_unlink (tmpname);
+ 
+     if (ofp)
+       {
