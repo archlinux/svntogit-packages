@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=extra-cmake-modules
-pkgver=5.51.0
+pkgver=5.52.0
 pkgrel=1
 pkgdesc='Extra modules and scripts for CMake'
 arch=(any)
@@ -14,7 +14,7 @@ makedepends=(python-sphinx python-requests qt5-tools)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
         ECM-no-init.py.patch)
-sha256sums=('96e4dde2f75a7b55f30eef35d0db40e1f87a67cc391ed36956bceb93f8253594'
+sha256sums=('68c08aac2611e3faded476a5bba5ba56f8ed964374810bfcee93c6a7fa419b49'
             'SKIP'
             '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
