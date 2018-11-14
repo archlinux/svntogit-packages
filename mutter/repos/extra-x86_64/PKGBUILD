@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.30.1+8+g1abab3fe2
+pkgver=3.30.2
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -14,7 +14,7 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanber
          gnome-settings-daemon libgudev libinput pipewire)
 makedepends=(intltool gobject-introspection git egl-wayland)
 groups=(gnome)
-_commit=1abab3fe2ed2d07bafc9f3aabe188c4d1c05ee43  # gnome-3-30
+_commit=bcd6103c44ff74ebffd1737b8e0f3a952b83bd54  # tags/3.30.2^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
         https://gitlab.gnome.org/vanvugt/mutter/commit/fc02b040f3b750b0513f812813351c09795950f6.patch
         startup-notification.patch)
