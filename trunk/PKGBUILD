@@ -1,25 +1,45 @@
 # Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
+
 pkgname=glslang
 pkgver=7.9.2888
-pkgrel=1
-pkgdesc='An OpenGL and OpenGL ES shader front end and validator'
+pkgrel=2
+pkgdesc='OpenGL and OpenGL ES shader front end and validator'
 arch=('x86_64')
 url='https://github.com/KhronosGroup/glslang'
 license=('BSD')
-depends=('gcc-libs')
+depends=('gcc-libs' 'spirv-tools')
 makedepends=('cmake')
-source=("https://github.com/KhronosGroup/glslang/archive/${pkgver}.tar.gz")
+options=('staticlibs')
+source=(${pkgname}-${pkgver}.tar.gz::https://github.com/KhronosGroup/glslang/archive/${pkgver}.tar.gz)
 sha256sums=('cb66779d0e6b5f07f0445bd58289a24e56e12693e71d75c8fae3db31ffacaf8c')
 
 build() {
-    cd "${srcdir}/${pkgname}-${pkgver}"
-
-    mkdir build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+  cd ${pkgname}-${pkgver}
+  mkdir -p build-{shared,static}
+  (cd build-shared
+    cmake .. \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=ON
     make
+  )
+  (cd build-static
+    cmake .. \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=OFF
+    make
+  )
 }
 
 package() {
-    cd "${srcdir}/${pkgname}-${pkgver}/build"
-    make DESTDIR="${pkgdir}" install
+  cd ${pkgname}-${pkgver}
+  make -C build-shared DESTDIR="${pkgdir}" install
+  make -C build-static DESTDIR="${pkgdir}" install
+  cd "${pkgdir}"/usr/lib
+  for lib in *.so; do
+    ln -sf "${lib}" "${lib}.0"
+  done
 }
+
+# vim: ts=2 sw=2 et:
