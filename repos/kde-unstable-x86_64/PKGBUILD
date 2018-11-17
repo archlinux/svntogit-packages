@@ -1,0 +1,65 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgbase=kcachegrind
+pkgname=(kcachegrind kcachegrind-common qcachegrind)
+pkgver=18.11.80
+pkgrel=1
+pkgdesc='Visualization of Performance Profiling Data'
+url='https://kde.org/applications/development/kcachegrind/'
+arch=(x86_64)
+license=(GPL LGPL FDL)
+makedepends=(extra-cmake-modules kdoctools qt5-tools kio)
+source=("https://download.kde.org/unstable/applications/$pkgver/src/$pkgname-$pkgver.tar.xz"{,.sig})
+sha256sums=('14f40edd7f7b474cfa9b8ca35440dbfeac5a5aefe4f86a78408256ff92b329a7'
+            'SKIP')
+validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
+              F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87) # Christoph Feck <cfeck@kde.org>
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+  cmake ../$pkgname-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF
+  make
+}
+
+package_kcachegrind() {
+  groups=(kde-applications kdesdk)
+  depends=(kio kcachegrind-common)
+  conflicts=(kdesdk-kcachegrind)
+  replaces=(kdesdk-kcachegrind)
+  optdepends=('graphviz: for plotting support')
+
+  cd build
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/{bin/*tree,share/{doc,icons,locale}}
+}
+
+package_kcachegrind-common() {
+  pkgdesc+=' (common files)'
+  depends=(hicolor-icon-theme)
+  optdepends=('php: for pprof2calltree' 'python2: for hotshot2calltree')
+
+  cd build
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/{bin/kcachegrind,share/{kxmlgui5,kcachegrind,applications}} # provided by kcachegrind
+
+  # Fix python 2 path
+  sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python2|' \
+    "$pkgdir"/usr/bin/hotshot2calltree
+}
+
+package_qcachegrind() {
+  pkgdesc+=' (pure Qt version)'
+  depends=(qt5-base kcachegrind-common)
+  optdepends=('graphviz: for plotting support')
+
+  install -Dm755 build/qcachegrind/qcachegrind -t "$pkgdir"/usr/bin/
+  install -Dm644 $pkgbase-$pkgver/qcachegrind/qcachegrind.desktop -t "$pkgdir"/usr/share/applications/
+}
