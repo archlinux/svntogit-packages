@@ -1,0 +1,81 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Gustavo Alvarez <sl1pkn07@gmail.com>
+# Contributor: Balló György <ballogyor+arch at gmail dot com>
+
+pkgbase=marble
+pkgname=(marble-common marble-qt marble)
+pkgver=18.11.80
+pkgrel=1
+pkgdesc="Desktop Globe"
+arch=(x86_64)
+url="https://www.kde.org/applications/system/marble"
+license=(GPL)
+makedepends=(extra-cmake-modules gpsd kdoctools knewstuff kparts krunner libwlocate phonon-qt5
+             plasma-workspace qt5-serialport qt5-tools qt5-webengine shapelib)
+source=("https://download.kde.org/unstable/applications/$pkgver/src/$pkgbase-$pkgver.tar.xz"{,.sig})
+sha256sums=('4a8b3ab1c654bc8cc22bca5686b3772a45de95215264c03710e602dbeebd5106'
+            'SKIP')
+validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
+              F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87) # Christoph Feck <cfeck@kde.org>
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+  cmake ../$pkgbase-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DQT_PLUGINS_DIR=lib/qt/plugins \
+    -DBUILD_TESTING=OFF \
+    -DBUILD_MARBLE_EXAMPLES=OFF \
+    -DBUILD_MARBLE_TESTS=OFF \
+    -DMOBILE=OFF
+  make
+}
+
+package_marble-common() {
+  pkgdesc='Common libraries and plugins for Marble'
+  depends=(qt5-svg qt5-webengine phonon-qt5 desktop-file-utils)
+  optdepends=('gpsd: GPS based geolocation'
+              'libwlocate: WLAN based geolocation'
+              'qt5-serialport: APRS plugin'
+              'shapelib: SHP plugin')
+  conflicts=(marble-data)
+  replaces=(marble-data libastro)
+
+  cd build
+  make DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/share/{config.kcfg,kxmlgui5,metainfo,plasma} \
+        "$pkgdir"/usr/bin \
+        "$pkgdir"/etc \
+        "$pkgdir"/usr/lib/qt/{qml,plugins/*.so} \
+        "$pkgdir"/usr/share/applications/{marble_geo.desktop,marble_worldwind.desktop,org.kde.marble*.desktop} \
+        "$pkgdir"/usr/share/kservices5/{marble_part.desktop,plasma*} \
+        "$pkgdir"/usr/share/locale/*/LC_MESSAGES/*.mo
+}
+
+package_marble-qt() {
+  pkgdesc+=' (Qt version)'
+  depends=(marble-common)
+
+  cd build
+  make -C src/apps/marble-qt DESTDIR="$pkgdir" install
+}
+
+package_marble() {
+  depends=(marble-common knewstuff kparts)
+  optdepends=('krunner: Krunner plugin')
+  groups=(kde-applications kdeedu)
+
+  cd build
+  make -C src/apps/marble-kde DESTDIR="$pkgdir" install
+  make -C src/plasma DESTDIR="$pkgdir" install
+  make -C src/plasmarunner DESTDIR="$pkgdir" install
+  make -C src/thumbnailer DESTDIR="$pkgdir" install
+  rm -r "$pkgdir"/usr/share/{icons,doc/HTML}
+}
