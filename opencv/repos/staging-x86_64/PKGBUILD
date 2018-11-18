@@ -4,7 +4,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
 pkgver=4.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -18,12 +18,17 @@ optdepends=('opencv-samples: samples'
             'opencl-icd-loader: For coding with OpenCL'
             'python-numpy: Python interface')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
-        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
+        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz"
+        opencv-legacy-headers.patch)
 sha256sums=('86fd08fc02893e05e2944fa7b0daa7d02643232450f020b475e1b2f24587b99a'
-            '4fb0681414df4baedce6e3f4a01318d6f4fcde6ee14854d761fd4e397a397763')
+            '4fb0681414df4baedce6e3f4a01318d6f4fcde6ee14854d761fd4e397a397763'
+            '7c31ab3855b047d35b1d953431dea4145fa2a408451d8a23e19d020a9afda4ad')
 
 prepare() {
   mkdir -p build
+
+  cd $pkgname-$pkgver
+  patch -p1 -i ../opencv-legacy-headers.patch # Install legacy headers
 }
 
 build() {
