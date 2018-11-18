@@ -4,7 +4,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
 pkgver=4.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -47,7 +47,9 @@ build() {
     -DOPENCV_EXTRA_MODULES_PATH="$srcdir/opencv_contrib-$pkgver/modules" \
     -DLAPACK_LIBRARIES="/usr/lib/liblapack.so;/usr/lib/libblas.so;/usr/lib/libcblas.so" \
     -DLAPACK_CBLAS_H="/usr/include/cblas.h" \
-    -DLAPACK_LAPACKE_H="/usr/include/lapacke.h"
+    -DLAPACK_LAPACKE_H="/usr/include/lapacke.h" \
+    -DOPENCV_GENERATE_PKGCONFIG=ON \
+    -DPYTHON2_EXECUTABLE=/usr/bin/python2
   make
 }
 
