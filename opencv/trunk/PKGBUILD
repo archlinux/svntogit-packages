@@ -3,7 +3,7 @@
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
-pkgver=3.4.4
+pkgver=4.0.0
 pkgrel=1
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
@@ -19,8 +19,8 @@ optdepends=('opencv-samples: samples'
             'python-numpy: Python interface')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
         "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
-sha256sums=('b5755384cbadf67f55838c6cfd9ae1aad0ebad2c7cfe4c1174417c80d2ed15a9'
-            '765446d994713363554978d1da447fef77a2cdf9e38742f0a98b13b92652626d')
+sha256sums=('86fd08fc02893e05e2944fa7b0daa7d02643232450f020b475e1b2f24587b99a'
+            '4fb0681414df4baedce6e3f4a01318d6f4fcde6ee14854d761fd4e397a397763')
 
 prepare() {
   mkdir -p build
@@ -68,8 +68,7 @@ package_opencv() {
   cd "$pkgdir"/usr/share
 
   # separate samples package
-  mv OpenCV/samples "$srcdir/$pkgname-samples"
-  mv OpenCV $pkgname # otherwise folder naming is inconsistent
+  mv opencv4/samples "$srcdir/$pkgname-samples"
 }
 
 package_opencv-samples() {
