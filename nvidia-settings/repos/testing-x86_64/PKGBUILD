@@ -1,0 +1,62 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@gmail.com>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+
+pkgbase=nvidia-settings
+pkgname=('nvidia-settings' 'libxnvctrl')
+pkgver=410.78
+pkgrel=1
+pkgdesc='Tool for configuring the NVIDIA graphics driver'
+url='https://github.com/NVIDIA/nvidia-settings'
+arch=('x86_64')
+license=('GPL2')
+makedepends=('git' 'inetutils' 'gtk2' 'jansson' 'gtk3' 'libxv' 'libvdpau' 'nvidia-utils' 'libxext')
+options=('staticlibs')
+source=(${pkgbase}-${pkgver}.tar.gz::https://github.com/NVIDIA/nvidia-settings/archive/${pkgver}.tar.gz
+        libxnvctrl_so.patch)
+sha512sums=('02480a14890f03b573a907d0f12fca8a48892f18880d640507ae12014259d88e219d9516e4bd00c62332eb8dae80ddb4150699be899538c771ce937f37b2a56a'
+            'f69f5dc84fe624579a3c9ce877f4ae4e34c2184877576afbea07b8abdd7ff01e470517f2b77cd11a904518cbcb83fb388ca1d08888006f0ef2854723920c9cf8')
+
+prepare() {
+  export PREFIX=/usr
+  export NV_USE_BUNDLED_LIBJANSSON=0
+  cd ${pkgbase}-${pkgver}
+  patch -p1 < "${srcdir}/libxnvctrl_so.patch"
+}
+
+build() {
+  cd ${pkgbase}-${pkgver}
+  make
+  make -C src/libXNVCtrl
+}
+
+package_nvidia-settings() {
+  depends=('jansson' 'gtk3' 'libxv' 'libvdpau' 'nvidia-utils' 'libxnvctrl')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  install -D -m644 doc/nvidia-settings.desktop "${pkgdir}/usr/share/applications/nvidia-settings.desktop"
+  install -D -m644 doc/nvidia-settings.png "${pkgdir}/usr/share/pixmaps/nvidia-settings.png"
+  sed -e 's:__UTILS_PATH__:/usr/bin:' -e 's:__PIXMAP_PATH__:/usr/share/pixmaps:' -i "${pkgdir}/usr/share/applications/nvidia-settings.desktop"
+
+  rm "$pkgdir/usr/lib/libnvidia-gtk2.so.$pkgver"
+}
+
+package_libxnvctrl() {
+  depends=('libxext')
+  pkgdesc='NVIDIA NV-CONTROL X extension'
+
+  cd ${pkgbase}-${pkgver}
+  install -Dm 644 doc/{NV-CONTROL-API.txt,FRAMELOCK.txt} -t "${pkgdir}/usr/share/doc/${pkgname}"
+  install -Dm 644 samples/{Makefile,README,*.c,*.h,*.mk} -t "${pkgdir}/usr/share/doc/${pkgname}/samples"
+
+  cd src/libXNVCtrl
+  install -Dm 644 *.h -t "${pkgdir}/usr/include/NVCtrl"
+  install -Dm 644 libXNVCtrl.a -t "${pkgdir}/usr/lib"
+  install -Dm 755 libXNVCtrl.so.0.0.0 -t "${pkgdir}/usr/lib"
+  ln -s libXNVCtrl.so.0.0.0 "${pkgdir}/usr/lib/libXNVCtrl.so.0"
+  ln -s libXNVCtrl.so.0 "${pkgdir}/usr/lib/libXNVCtrl.so"
+}
+
+# vim: ts=2 sw=2 et:
