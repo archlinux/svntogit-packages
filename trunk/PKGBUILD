@@ -4,7 +4,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
 pkgver=4.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -18,22 +18,18 @@ optdepends=('opencv-samples: samples'
             'opencl-icd-loader: For coding with OpenCL'
             'python-numpy: Python interface')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
-        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz"
-        opencv-legacy-headers.patch)
+        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
 sha256sums=('86fd08fc02893e05e2944fa7b0daa7d02643232450f020b475e1b2f24587b99a'
-            '4fb0681414df4baedce6e3f4a01318d6f4fcde6ee14854d761fd4e397a397763'
-            '7c31ab3855b047d35b1d953431dea4145fa2a408451d8a23e19d020a9afda4ad')
+            '4fb0681414df4baedce6e3f4a01318d6f4fcde6ee14854d761fd4e397a397763')
 
 prepare() {
   mkdir -p build
-
-  cd $pkgname-$pkgver
-  patch -p1 -i ../opencv-legacy-headers.patch # Install legacy headers
 }
 
 build() {
   cd build
   # cmake's FindLAPACK doesn't add cblas to LAPACK_LIBRARIES, so we need to specify them manually
+  _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
   cmake ../$pkgname-$pkgver \
     -DWITH_OPENCL=ON \
     -DWITH_OPENGL=ON \
@@ -50,32 +46,31 @@ build() {
     -DCPU_BASELINE_DISABLE=SSE3 \
     -DCPU_BASELINE_REQUIRE=SSE2 \
     -DOPENCV_EXTRA_MODULES_PATH="$srcdir/opencv_contrib-$pkgver/modules" \
+    -DOPENCV_SKIP_PYTHON_LOADER=ON \
+    -DOPENCV_PYTHON3_INSTALL_PATH=$_pythonpath \
     -DLAPACK_LIBRARIES="/usr/lib/liblapack.so;/usr/lib/libblas.so;/usr/lib/libcblas.so" \
     -DLAPACK_CBLAS_H="/usr/include/cblas.h" \
     -DLAPACK_LAPACKE_H="/usr/include/lapacke.h" \
-    -DOPENCV_GENERATE_PKGCONFIG=ON \
-    -DPYTHON2_EXECUTABLE=/usr/bin/python2
+    -DOPENCV_GENERATE_PKGCONFIG=ON
   make
 }
 
 package_opencv() {
-  options=(staticlibs)
-
   cd build
   make DESTDIR="$pkgdir" install
 
   # install license file
   install -Dm644 "$srcdir"/$pkgname-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
 
-  # install python bindings
-  cd python_loader
-  python setup.py install --root="$pkgdir"
-  rm -r "$pkgdir"/usr/python
-
-  cd "$pkgdir"/usr/share
-
   # separate samples package
-  mv opencv4/samples "$srcdir/$pkgname-samples"
+  cd "$pkgdir"/usr/share
+  mv opencv4/samples "$srcdir"/$pkgname-samples
+
+  # install missing headers https://github.com/opencv/opencv/issues/13201
+  for _module in imgcodecs videoio photo; do
+    cp -r "$srcdir"/$pkgname-$pkgver/modules/$_module/include/opencv2/$_module/legacy \
+      "$pkgdir"/usr/include/opencv4/opencv2/$_module
+  done
 }
 
 package_opencv-samples() {
