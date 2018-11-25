@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.18.20
+_pkgver=4.19.4
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -23,11 +23,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         linux.preset   # standard config files for mkinitcpio ramdisk
 )
 replaces=('linux-grsec')
-sha256sums=('68ac319e0fb7edd6b6051541d9cf112cd4f77a29e16a69ae1e133ff51117f653'
+sha256sums=('a38f5606bba1f5611c798541f6c3d43267b8599d9e3167471d4b662e33ff47aa'
             'SKIP'
-            '225e672f2c00a6b4e9b5e03900baa276392454ca1ed7c800180e1c4eabb9330c'
+            '2779c1dc568958f54b012c5bef9e1e6e0bc714e02910e831a916c5f4d2ad43ce'
             'SKIP'
-            'b9b80b747ddd2fcf1712985f914e061998a9edf38325162744dcbfc25130f95f'
+            '3fcaa87fd4da7f155c9c7b3284b5b4a9cf9b5a459e4b278cc1ebc4e9943579ff'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
@@ -86,12 +86,17 @@ _package() {
   cd $_srcname
 
   msg2 "Installing boot image..."
-  install -Dm644 "$(make -s image_name)" "$pkgdir/boot/vmlinuz-$pkgbase"
+  local image="$pkgdir/boot/vmlinuz-$pkgbase"
+  install -Dm644 "$(make -s image_name)" "$image"
 
   msg2 "Installing modules..."
   local modulesdir="$pkgdir/usr/lib/modules/$kernver"
   mkdir -p "$modulesdir"
   make INSTALL_MOD_PATH="$pkgdir/usr" modules_install
+
+  # systemd expects to find the kernel here to allow hibernation
+  # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
+  ln -sr "$image" "$modulesdir/vmlinuz"
 
   # a place for external modules,
   # with version file for building modules and running depmod from hook
