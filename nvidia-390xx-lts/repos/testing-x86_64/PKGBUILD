@@ -1,0 +1,44 @@
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=nvidia-390xx-lts
+pkgver=390.87
+_extramodules=extramodules-4.14-lts
+pkgrel=5
+epoch=1
+arch=('x86_64')
+url="http://www.nvidia.com/"
+makedepends=("nvidia-390xx-utils=${pkgver}" 'linux-lts' 'linux-lts-headers>=4.14.81')
+provides=('nvidia-390xx')
+conflicts=('nvidia-lts')
+license=('custom')
+options=('!strip')
+source=("http://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run")
+sha512sums=('91f8639718b8511f56e8c01caafc5a061a3ae1e84202ad261fae94bf83b2c9db8eb5910a9a2b35f668bb3c82dfb3978ca037930a71e396d105c4b4b25c269ed8')
+
+_pkg="NVIDIA-Linux-x86_64-${pkgver}-no-compat32"
+
+prepare() {
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+}
+
+build() {
+    _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+    cd "${_pkg}"/kernel
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+}
+
+package() {
+    pkgdesc="NVIDIA drivers for linux-lts, 390xx legacy branch"
+    depends=('linux-lts>=4.14.81' "nvidia-390xx-utils=${pkgver}" 'libgl')
+
+    install -Dt "${pkgdir}/usr/lib/modules/${_extramodules}" -m644 \
+      "${srcdir}/${_pkg}/kernel"/nvidia{,-modeset,-drm,-uvm}.ko
+
+    find "${pkgdir}" -name '*.ko' -exec gzip -n {} +
+
+    echo "blacklist nouveau" |
+      install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
+
+    install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 "${srcdir}/${_pkg}/LICENSE"
+}
