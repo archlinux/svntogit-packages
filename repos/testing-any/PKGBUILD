@@ -1,0 +1,75 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=seabios
+pkgver=1.12.0
+pkgrel=1
+pkgdesc="A 16-bit x86 bios"
+arch=('any')
+url="http://www.coreboot.org/SeaBIOS"
+license=('GPL3' 'LGPL3')
+makedepends=('iasl' 'python2' 'inetutils')
+options=('!makeflags' '!strip')
+source=(https://www.seabios.org/downloads/seabios-$pkgver.tar.gz
+        config.coreboot
+        config.seabios-128k
+        config.seabios-256k
+        config.vga.isavga
+        config.vga.stdvga
+        config.csm
+        config.vga.cirrus
+        config.vga.qxl
+        config.vga.vmware
+        config.vga.bochs-display
+        config.vga.ramfb
+        config.vga.virtio)
+sha1sums=('3f8ee5c7cb449483e0e5bde50889bc7e54c4b0d1'
+          '5f2adb09c9006def1719b8cbd4792f14a7c7f7c9'
+          '7a4ec70237476c7cdd78589b069d0d39dfeaa8eb'
+          '05b912a291994226049103cbe6754976cc03532d'
+          'd56482f6ee0bf9633c551b10e99e24c74d9ece1e'
+          '54d4edf6eccf30883aedca348b9d2f125502fcdb'
+          '590739c1d5dc6cb63bdf311ee1cfbcde6c0ccc0f'
+          '84a44c04e74a09affae0d1a6e50800d10997108f'
+          '5a1316a0081f91acc300f57372de18fa9c67415e'
+          '5b017b16aec445df873618aaebd154aa97107148'
+          'c7c730ade7a63e1efc7de81c7536632e0617e808'
+          'c2f4a7708befd6a0763dd4a5a4f8b5168db30340'
+          'a2b3d09f944e3d6857ceee272b733075a7edc52e')
+
+# build routine from fedora
+build_bios() {
+  make clean distclean
+  cp $1 .config
+  make oldnoconfig V=1
+
+  make V=1 $4
+
+  cp out/$2 binaries/$3
+}
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  rm -rf binaries
+  sed -i 's/python/python2/g' Makefile
+  mkdir binaries
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  # seabios
+  build_bios ${srcdir}/config.csm Csm16.bin bios-csm.bin
+  build_bios ${srcdir}/config.coreboot bios.bin.elf bios-coreboot.bin
+  build_bios ${srcdir}/config.seabios-128k bios.bin bios.bin
+  build_bios ${srcdir}/config.seabios-256k bios.bin bios-256k.bin
+  # seavgabios
+  for config in ${srcdir}/{config.vga.isavga,config.vga.stdvga,config.vga.cirrus,config.vga.qxl,config.vga.vmware,config.vga.ramfb,config.vga.virtio,config.vga.bochs-display}; do
+    name=${config#*config.vga.}
+    build_bios ${config} vgabios.bin vgabios-${name}.bin out/vgabios.bin
+  done
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  install -Dm644 -t "${pkgdir}/usr/share/qemu" binaries/*.bin
+}
+
