@@ -5,8 +5,8 @@
 pkgbase=systemd
 pkgname=('systemd' 'libsystemd' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
-_commit='6b4878d667737b523ea251f2d8abde9748bb295e'
-pkgver=239.301
+_commit='63f95c0297aea62ce47d1389e5221c54992f580e'
+pkgver=239.303
 pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
@@ -62,15 +62,9 @@ sha512sums=('SKIP'
             '209b01b044877cc986757fa4009a92ea98f480306c2530075d153203c3cd2b3afccab6aacc1453dee8857991e04270572f1700310705d7a0f4d5bed27fab8c67')
 
 _backports=(
-  # journal: adapt for new improved LZ4_decompress_safe_partial()
-  'e41ef6fd0027d3619dc1cf062100b2d224d0ee7e'
 )
 
 _reverts=(
-  # shared/sleep-config: add switches to kill specific sleep modes
-  '6ebddf92527b5de840f021b8672b2977c2a58af5'
-  # shared/sleep-config: forbid hibernation if resume= is not configured
-  '6789dca0a26df0c44ff8020f0a4206bf21e52a7a'
 )
 
 prepare() {
