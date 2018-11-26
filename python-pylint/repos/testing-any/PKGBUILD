@@ -1,0 +1,46 @@
+# Maintainer: Angel Velasquez <angvp@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+
+pkgname=python-pylint
+pkgver=2.2.0
+pkgrel=1
+pkgdesc="Analyzes Python code looking for bugs and signs of poor quality"
+arch=('any')
+url="http://pylint.org"
+license=('GPL')
+depends=('python-astroid' 'python-setuptools' 'python-mccabe' 'python-isort')
+checkdepends=('python-pytest-runner' 'mpdecimal')
+optdepends=('tk: Pylint GUI'
+            'graphviz: To have other output formats than dot or vcg')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/PyCQA/pylint/archive/pylint-$pkgver.tar.gz")
+sha512sums=('20a7abc08c73981618f1d2162daae780291b39a186f64ad871a761d59f164efd9ef8cedd6c3f904cae71b7d72040a7efe7d529d693294f4d886046160f06073d')
+
+prepare() {
+  sed -i 's/pytest<3.3/pytest/' pylint-pylint-$pkgver/setup.py
+
+  cd "$srcdir"/pylint-pylint-$pkgver/pylint
+  sed -e "s|/usr/bin/env python|/usr/bin/env python3|" -e "s|/usr/bin/python$|/usr/bin/python3|" -i epylint.py __main__.py test/input/noext test/data/ascript
+}
+
+build() {
+  cd "$srcdir"/pylint-pylint-$pkgver
+  python setup.py build
+}
+
+check() {
+  cd "$srcdir"/pylint-pylint-$pkgver
+  # https://github.com/PyCQA/pylint/issues/2288
+  python setup.py pytest || warning "Tests failed"
+}
+
+package() {
+  depends=('python-astroid' 'python-setuptools' 'python-mccabe' 'python-isort')
+
+  cd pylint-pylint-$pkgver
+  python setup.py install --prefix=/usr --root="$pkgdir" --skip-build --optimize=1
+
+  install -d "$pkgdir"/usr/share/man/man1
+  install -m644 man/* "$pkgdir"/usr/share/man/man1
+}
