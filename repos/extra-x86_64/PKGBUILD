@@ -1,0 +1,81 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Ian Beringer <ian@ianberinger.com>
+
+pkgbase=usbguard
+pkgname=('usbguard' 'usbguard-qt')
+pkgver=0.7.4
+pkgrel=4
+pkgdesc='Software framework for implementing USB device authorization policies'
+url='https://github.com/dkopecek/usbguard'
+arch=('x86_64')
+license=('GPL2')
+makedepends=('git' 'libxslt' 'asciidoc' 'catch2' 'pegtl' 'qt5-base' 'qt5-svg' 'qt5-tools' 'hicolor-icon-theme'
+             'glibc' 'libqb' 'libqb.so' 'libsodium' 'libcap-ng' 'protobuf' 'polkit' 'dbus-glib')
+source=(https://github.com/dkopecek/usbguard/releases/download/${pkgbase}-${pkgver}/${pkgbase}-${pkgver}.tar.gz{,.sig})
+sha512sums=('9799d4e89282f4adb57310e3a8ae0c3f0921ebba57393256beb1b9b8e8a8f2290c30716f100cd41c6dd1b6d44714880043d6fbd89a12e654c2a183c628dbd366'
+            'SKIP')
+validpgpkeys=('430C1928960157CC45FA1BEBAA06120530AE0466') # Daniel Kopeček <dnk1618@gmail.com>
+
+prepare() {
+  cd ${pkgbase}-${pkgver}
+  sed 's|/usr/include/catch|/usr/include/catch2|g' -i configure.ac
+  autoreconf -fiv
+}
+
+build() {
+  cd ${pkgbase}-${pkgver}
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sys=/etc \
+    --sbindir=/usr/bin \
+    --libdir=/usr/lib \
+    --enable-systemd \
+    --without-bundled-catch \
+    --without-bundled-pegtl \
+    --with-dbus \
+    --with-polkit \
+    --with-crypto-library=sodium \
+    --with-gui-qt=qt5
+  make
+  touch rules.conf
+}
+
+check() {
+  cd ${pkgbase}-${pkgver}
+  make check
+}
+
+package_usbguard() {
+  depends=('glibc' 'libqb' 'libqb.so' 'libsodium' 'libcap-ng' 'protobuf' 'polkit' 'dbus-glib')
+  provides=('libusbguard.so')
+  backup=(etc/usbguard/usbguard-daemon.conf
+          etc/usbguard/rules.conf)
+  cd ${pkgbase}-${pkgver}
+  make INSTALL='install -p' SYSTEMD_UNIT_DIR="/usr/lib/systemd/system" DESTDIR="${pkgdir}" install
+  chmod 750 "${pkgdir}/etc/usbguard"
+  install -Dpm 600 usbguard-daemon.conf rules.conf -t "${pkgdir}/etc/usbguard"
+
+  # completion
+  install -Dpm 644 scripts/bash_completion/usbguard -t "${pkgdir}/usr/share/bash-completion/completions"
+  install -Dpm 644 scripts/usbguard-zsh-completion "${pkgdir}/usr/share/zsh/site-functions/_usbguard"
+
+  # cleanup
+  cd "${pkgdir}"
+  rm -rf usr/{bin/usbguard-applet-qt,share/{applications,icons,man/man1/usbguard-applet-qt.1}}
+}
+
+package_usbguard-qt() {
+  pkgdesc+=' - Qt frontend'
+  depends=('usbguard' 'libusbguard.so' 'qt5-base' 'qt5-svg' 'qt5-tools' 'hicolor-icon-theme')
+  cd ${pkgbase}-${pkgver}
+  make INSTALL='install -p' SYSTEMD_UNIT_DIR="/usr/lib/systemd/system" DESTDIR="${pkgdir}" install
+
+  # cleanup
+  cd "${pkgdir}"
+  rm -rf {etc,var,usr/{include,lib,share/{dbus-1,polkit-1,man/{man1/usbguard.1,man5,man8}}}} \
+    usr/bin/usbguard{,-daemon,-dbus,-rule-parser}
+}
+
+# vim: ts=2 sw=2 et:
