@@ -3,25 +3,29 @@
 # Contributor: Sebastien Binet <binet@lblbox>
 
 pkgname=('python-pip' 'python2-pip')
-pkgver=18.0
+pkgver=18.1
 pkgrel=1
 pkgdesc="The PyPA recommended tool for installing Python packages"
 url="https://pip.pypa.io/"
 arch=('any')
 license=('MIT')
-_deps=('setuptools' 'appdirs' 'cachecontrol' 'colorama' 'distlib' 'distro'
-       'html5lib' 'lockfile' 'msgpack' 'packaging' 'progress' 'pyparsing' 'pytoml'
-       'requests' 'retrying' 'six' 'webencodings')
+_deps=('setuptools' 'appdirs' 'cachecontrol' 'colorama' 'distlib' 'distro' 'html5lib' 'lockfile'
+       'msgpack' 'six' 'packaging' 'pep517' 'progress' 'pytoml' 'retrying' 'requests' 'urllib3'
+       'webencodings')
 makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'python2-ipaddress' 'python-sphinx')
+checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'python-pretend'
+              'python-yaml' 'python-mock' 'python-freezegun')
 source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz")
-sha512sums=('c8cedd6def77e9f96b79a1493d30ae8d95df7d06547980de0d105db0c8a5eff7710a1e55438834e97392b6a78702a8b3169cca8127572981129c30534646f975')
+sha512sums=('ddb67ad52c2b4f0cae89e11bd90dbd20275fce0ee34a8e0929210a8907cd61c2298221a4ddf1e7b196b0274241eb88097decbbb84196ab30dd4e979e7378d91f')
 
 shopt -s extglob
 prepare() {
   cd "$srcdir/pip-$pkgver"
 
   rm -rf src/pip/_vendor/!(__init__.py)
-  sed -i 's/DEBUNDLED = False/DEBUNDLED = True/' src/pip/_vendor/__init__.py
+  sed -i -e 's/DEBUNDLED = False/DEBUNDLED = True/' \
+         -e '/cachecontrol/a\    vendored("pep517")' \
+            src/pip/_vendor/__init__.py
 }
 
 build() {
@@ -31,12 +35,17 @@ build() {
   python2 setup.py build
 
   cd docs/
-  PYTHONPATH="$srcdir/pip-$pkgver/src/" make man
+  PYTHONPATH="$srcdir/pip-$pkgver/src/" sphinx-build -W -b man -d build/doctrees/man man build/man -c html
   mkdir -p build/man-pip2
   cd build/man
   for manfile in *; do
     sed 's/pip/pip2/g;s/PIP/PIP2/g' $manfile > ../man-pip2/${manfile/pip/pip2}
   done
+}
+
+check() {
+  cd "$srcdir/pip-$pkgver"
+  python setup.py pytest || warning "Tests failed"
 }
 
 package_python-pip() {
@@ -50,7 +59,7 @@ package_python-pip() {
 
   install -Dm644 -t "$pkgdir"/usr/share/man/man1 docs/build/man/*
 
-  PYTHONPATH="$pkgdir"/usr/lib/python3.6/site-packages "$pkgdir"/usr/bin/pip completion --bash \
+  PYTHONPATH="$pkgdir"/usr/lib/python3.7/site-packages "$pkgdir"/usr/bin/pip completion --bash \
     | install -Dm644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip
 }
 
