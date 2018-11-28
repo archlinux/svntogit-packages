@@ -1,28 +1,22 @@
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
-pkgname=iptables
-pkgver=1.8.0
+pkgbase=iptables
+pkgname=(iptables iptables-nft)
+pkgver=1.8.2
 pkgrel=1
 epoch=1
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
 license=(GPL2)
-url='http://www.netfilter.org/projects/iptables/index.html'
-depends=(glibc bash libnftnl libpcap)
+url='https://www.netfilter.org/projects/iptables/index.html'
+depends=(libnftnl libpcap libnfnetlink libnetfilter_conntrack bash)
 makedepends=(linux-api-headers)
-source=(http://www.netfilter.org/projects/iptables/files/${pkgname}-${pkgver}.tar.bz2{,.sig}
-        empty.rules
-        simple_firewall.rules
-        empty-filter.rules
-        empty-mangle.rules
-        empty-nat.rules
-        empty-raw.rules
-        empty-security.rules
-        iptables.service
-        ip6tables.service
-        iptables-flush)
-sha1sums=('04924fd00dbaf8189f0777af90f7bdb73ac7e47c'
+backup=(etc/ethertypes etc/iptables/{ip,ip6}tables.rules)
+source=(https://www.netfilter.org/projects/iptables/files/$pkgbase-$pkgver.tar.bz2{,.sig}
+        empty.rules simple_firewall.rules empty-{filter,mangle,nat,raw,security}.rules
+        {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush)
+sha1sums=('215c4ef4c6cd29ef0dd265b4fa5ec51a4f930c92'
           'SKIP'
           '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
           'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
@@ -31,56 +25,73 @@ sha1sums=('04924fd00dbaf8189f0777af90f7bdb73ac7e47c'
           '1694d79b3e6e9d9d543f6a6e75fed06066c9a6c6'
           '7db53bb882f62f6c677cc8559cff83d8bae2ef73'
           'ebbd1424a1564fd45f455a81c61ce348f0a14c2e'
-          '49be9443fc302dd0fda78b63d64e884cadb61603'
+          '95b0ee26f03132a948fea9f2136b2e2e6a4b40fe'
+          'b668ba50d55030c68431a95756bc1f291d74b2b2'
+          '8d66d21fa4cbfe2a80478301af94ba54f65e4ea0'
           '9cec592787e32451f58fa608ea057870e07aa704'
-          'e7abda09c61142121b6695928d3b71ccd8fdf73a')
+          'd10af7780d1634778d898c709e2d950aa1561856'
+          '15c1684f3e671f4d0ede639a7c9c08e1a841511c')
 validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4') # Netfilter Core Team
 
 prepare() {
-  cd $pkgname-$pkgver
+  mkdir build
+  cd $pkgbase-$pkgver
 
   # use system one
   rm include/linux/types.h
 }
 
 build() {
-  cd $pkgname-$pkgver
-
-  ./configure --prefix=/usr \
+  cd build
+  ../$pkgbase-$pkgver/configure \
+    --prefix=/usr \
     --sysconfdir=/etc \
     --sbindir=/usr/bin \
-    --libexecdir=/usr/lib/iptables \
-    --with-xtlibdir=/usr/lib/iptables \
+    --libexecdir=/usr/lib \
     --enable-bpf-compiler \
     --enable-devel \
+    --enable-libipq \
     --enable-shared
-
+  sed -e 's/ -shared / -Wl,-O1,--as-needed\0/g' -i libtool
   make
 }
 
-package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="$pkgdir" install
-
-  cd "$srcdir"
-  install -Dm644 empty.rules "${pkgdir}"/etc/iptables/empty.rules
-  install -Dm644 simple_firewall.rules "${pkgdir}"/etc/iptables/simple_firewall.rules
-
-  install -d "$pkgdir"/var/lib/{iptables,ip6tables}
-  install -m644 empty-{filter,mangle,nat,raw,security}.rules "${pkgdir}"/var/lib/iptables
-  install -m644 empty-{filter,mangle,nat,raw,security}.rules "${pkgdir}"/var/lib/ip6tables
-
-  # iptables 1.8.0 claims compatibility with ebtables and arptables but it's not
-  # really true according to users: https://bugs.archlinux.org/task/60062
-  mv "$pkgdir/usr/bin/"ebtables{,-compat}
-  mv "$pkgdir/usr/bin/"arptables{,-compat}
-
-  # install systemd files
-  install -Dm644 iptables.service \
-    "$pkgdir/usr/lib/systemd/system/iptables.service"
-  install -Dm644 ip6tables.service \
-    "$pkgdir/usr/lib/systemd/system/ip6tables.service"
-  install -Dm755 iptables-flush \
-    "$pkgdir/usr/lib/systemd/scripts/iptables-flush"
+package_iptables() {
+  pkgdesc+=' (using legacy interface)'
+  _package legacy
 }
 
+package_iptables-nft() {
+  pkgdesc+=' (using nft interface)'
+  depends+=(nftables)
+  provides=(iptables arptables ebtables)
+  conflicts=(iptables arptables ebtables)
+  backup+=(etc/{arp,eb}tables.conf)
+
+  _package nft
+
+  install -Dt "$pkgdir/usr/lib/systemd/system" -m644 {arp,eb}tables.service
+  touch "$pkgdir"/etc/{arp,eb}tables.conf
+}
+
+_package() {
+  DESTDIR="$pkgdir" make -C build install
+
+  for _x in {arp,eb,ip,ip6}tables{,-restore,-save} iptables-xml; do
+    if [[ $1 = nft || $_x = ip* ]]; then
+      ln -sf xtables-$1-multi "$pkgdir/usr/bin/$_x"
+    else
+      rm "$pkgdir/usr/bin/$_x"
+    fi
+  done
+
+  install -Dt "$pkgdir/usr/lib/systemd/system" -m644 {ip,ip6}tables.service
+  install -D iptables-$1-flush "$pkgdir/usr/lib/systemd/scripts/iptables-flush"
+
+  install -Dm644 empty.rules "$pkgdir/etc/iptables/iptables.rules"
+  install -Dm644 empty.rules "$pkgdir/etc/iptables/ip6tables.rules"
+  install -Dt "$pkgdir/usr/share/iptables" -m644 *.rules
+  ln -srt "$pkgdir/etc/iptables" "$pkgdir"/usr/share/iptables/{empty,simple_firewall}.rules
+}
+
+# vim:set sw=2 et:
