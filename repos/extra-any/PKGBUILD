@@ -1,46 +1,56 @@
-# $Id$
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 
 pkgname=eclipse-ecj
-pkgver=4.6.1
+pkgver=4.6.3
 pkgrel=1
-_date=201609071200
+_date=201703010400
 pkgdesc='Eclipse java bytecode compiler'
 arch=('any')
 license=('EPL')
-url='http://www.eclipse.org/'
-depends=('java-runtime')
-makedepends=('apache-ant' 'java-environment')
-_base_url=http://download.eclipse.org/eclipse/downloads/drops4
-_sum_file_url=${_base_url}/R-${pkgver}-${_date}/checksum/eclipse-${pkgver}-SUMSSHA512
+url='https://www.eclipse.org/'
+makedepends=('ant' 'java-environment=8')
+_base_url=https://archive.eclipse.org/eclipse/downloads/drops4/R-${pkgver}-${_date}
 _source_file_name=ecjsrc-${pkgver}.jar
-source=(${_base_url}/R-${pkgver}-${_date}/${_source_file_name}
-        ${_sum_file_url}{,.asc}
+_sha_file_name=eclipse-${pkgver}-SUMSSHA512
+source=(${_base_url}/${_source_file_name}
+        ${_base_url}/checksum/${_sha_file_name}{,.asc}
         01-ecj-include-props.patch
         02-buildxml-fix-manifest.patch
         ecj)
 validpgpkeys=('869FF7E31C98FBCFCF167CDE01D81CA560A48EFD') # Eclipse Project
 
-_source_file_sum=$(curl ${_sum_file_url} | grep -m 1 ${_source_file_name} | cut -d ' ' -f 1)
-sha512sums=(${_source_file_sum}
-            'ae98861af1ab9d2a90a3d1660700de2c5654a272f1c3d0af0698dc6d1827d3a2e2ccda4690eff706836f87bf0d5e1fbe283121ab41da7087c8618fc3fecb4d27'
+sha512sums=('a509b6d1fd7e5218ca6d9748b6c899c8c57a9d016d01e3f1d2116876f3aab796f792e1b1733189a436b6251caf8c208ec3928e3978cd0803c1449b29eae1891d'
+            '2965df1005362bb4e6e17b5048ca17c0b583c746f8ac05c46451ff603707816d7eb7b9e4ffc398fadaa18229ef0d41993f3126802c22fa2c6d488dc03797557a'
             'SKIP'
             '72c8a2437333e8068e60e1a035bf4e5e9b66881fc06936600a6867dc7e4eb4670f94c4b2392634ebb28f85f8fdf88248ccb9cc315717e257ce336b495c2f2d68'
             '11ca94869d71842401e48acca72fd89e339ba65c81909cf8501bb243457caa21dc659d268b98c42ac77a1834fb7de46138787e8ea0966d96324c8de829fe563c'
             '1895c12c63262a08a2c889bb1db61308b5cb8846e5f20e584cde6878afd4da5ee051045a61a0a5a4498146a7315c8a14bf120e5d369365f4efc573d371381846')
 
-build() {
+prepare() {
   cd "${srcdir}"
+  local _source_file_sum=$(grep -m 1 ${_source_file_name} ${_sha_file_name} | cut -d ' ' -f 1)
+  if [[ "${sha512sums[0]}" != "${_source_file_sum}" ]]; then
+    echo "Source file ${_source_file_name} does not match the SHA sum"
+    echo "provided by upstream in their PGP signed file"
+    return 1
+  fi
+
   for p in 01-ecj-include-props 02-buildxml-fix-manifest; do
     patch -p0 < ${p}.patch
   done
+}
+
+build() {
+  cd "${srcdir}"
   export LANG=en_US.UTF-8
   ant build
 }
 
 package() {
+  depends=('java-runtime')
+
   install -Dm644 "${srcdir}/ecj.jar" "${pkgdir}/usr/share/java/eclipse-ecj-${pkgver}.jar"
   ln -s eclipse-ecj-${pkgver}.jar "${pkgdir}/usr/share/java/ecj.jar"
   ln -s eclipse-ecj-${pkgver}.jar "${pkgdir}/usr/share/java/eclipse-ecj.jar"
