@@ -5,9 +5,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=8.2.1+20180831
+pkgver=8.2.1+20181127
 _majorver=${pkgver:0:1}
-_islver=0.19
+_islver=0.20
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -24,9 +24,9 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('725ec907fd7463568ec0c097802824b978a679523a2e3374bdc2e3d265cd2b6c'
+sha256sums=('6f64ffda2839e96a8551b767bf4f92be4e7a09377ea40058355b4eeb13bc3800'
             'SKIP'
-            'd59726f34f7852a081fbd3defd1ab2136f174110fc2e0c8d10bb122173fa9ed8'
+            'b587e083eb65a8b394e833dea1744f21af3f0e413a448c17536b5549ae42a4c2'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
