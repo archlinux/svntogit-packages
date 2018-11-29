@@ -3,8 +3,8 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=7.0.0
-pkgrel=1
-_ocaml_ver=4.07.0
+pkgrel=2
+_ocaml_ver=4.07.1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
