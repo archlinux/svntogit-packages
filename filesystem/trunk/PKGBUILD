@@ -2,7 +2,7 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2018.8
+pkgver=2018.12
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
@@ -30,7 +30,7 @@ md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          '580cf8b59eebfaac4fad373ffadc9912'
          'd41d8cd98f00b204e9800998ecf8427e'
          '981ee4d7e506a9d6d9ed2d872e16004b'
-         '0a0fbb8e64faabb40023bd180d7190a1'
+         '7a757558b8040f25eff32ec3b01e7b1f'
          '5182ac38a0de85da8ade93ef71975ca4'
          '2c79e1762978235e7b4a9ef595f6c029'
          '0ee015fad07732676d9488ae498eed41'
@@ -69,7 +69,7 @@ package() {
     install -m600 "$srcdir"/$f usr/share/factory/etc/
   done
   touch etc/arch-release
-  install -m755 "$srcdir"/locale.sh etc/profile.d/locale.sh
+  install -m644 "$srcdir"/locale.sh etc/profile.d/locale.sh
   install -Dm644 "$srcdir"/os-release usr/lib/os-release
 
   # setup /var
