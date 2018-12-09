@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=2.19.2
+pkgver=2.20.0
 pkgrel=1
 pkgdesc='the fast distributed version control system'
 arch=(x86_64)
@@ -31,7 +31,7 @@ source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar."{xz,sign}
         'git-daemon@.service'
         'git-daemon.socket'
         'git-sysusers.conf')
-sha256sums=('fce9a3a3297db5f3756c4553a2fc1fec209ee08178f8491e76ff4ff8fe7b8be9'
+sha256sums=('bc94735073e14b138a1290cc99af3c379d544f514c43f8ebde988fc50d0ad81f'
             'SKIP'
             '14c0b67cfe116b430645c19d8c4759419657e6809dfa28f438c33a005245ad91'
             'ac4c90d62c44926e6d30d18d97767efc901076d4e0283ed812a349aece72f203'
@@ -63,7 +63,7 @@ build() {
 
   make -C contrib/credential/gnome-keyring
   make -C contrib/credential/libsecret
-  make -C contrib/subtree "${_make_paths[@]}" all doc
+  make -C contrib/subtree "${_make_paths[@]}" all man
   make -C contrib/mw-to-git "${_make_paths[@]}" all
   make -C contrib/diff-highlight "${_make_paths[@]}"
 }
@@ -115,7 +115,7 @@ package() {
       "$pkgdir"/usr/lib/git-core/git-credential-libsecret
   make -C contrib/credential/libsecret clean
   # subtree installation
-  make -C contrib/subtree "${_make_paths[@]}" DESTDIR="$pkgdir" install install-doc
+  make -C contrib/subtree "${_make_paths[@]}" DESTDIR="$pkgdir" install install-man
   # mediawiki installation
   make -C contrib/mw-to-git "${_make_paths[@]}" DESTDIR="$pkgdir" install
   # the rest of the contrib stuff
