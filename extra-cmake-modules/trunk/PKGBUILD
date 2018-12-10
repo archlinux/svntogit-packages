@@ -13,7 +13,7 @@ depends=(cmake)
 makedepends=(python-sphinx python-requests qt5-tools)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
-        https://phabricator.kde.org/file/data/6a7o5gfbafuol2ppjggt/PHID-FILE-qlufn3sygdtffurzlgou/D17015.diff
+        ECM-Qt5.12.patch::https://phabricator.kde.org/D17015?download=true
         ECM-no-init.py.patch)
 sha256sums=('2da177fb849d8b4da2442d19a99c53040c1be5fee65b7e863d550290cfa7b41d'
             'SKIP'
@@ -29,7 +29,7 @@ prepare() {
 # Don't create __init__.py
   patch -p1 -i ../ECM-no-init.py.patch
 # Fix Qt doc build with Qt 5.12
-  patch -p1 -i ../D17015.diff
+  patch -p1 -i ../ECM-Qt5.12.patch
 }
 
 build() {
