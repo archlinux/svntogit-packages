@@ -8,7 +8,7 @@ pkgdesc='the fast distributed version control system'
 arch=(x86_64)
 url='https://git-scm.com/'
 license=('GPL2')
-depends=('curl' 'expat>=2.0' 'perl>=5.14.0' 'perl-error' 'perl-mailtools'
+depends=('curl' 'expat' 'perl' 'perl-error' 'perl-mailtools'
          'openssl' 'pcre2' 'grep' 'shadow')
 makedepends=('python2' 'libgnome-keyring' 'xmlto' 'asciidoc')
 optdepends=('tk: gitk and git gui'
