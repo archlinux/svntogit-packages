@@ -2,22 +2,26 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.11.2
+_qtver=5.12.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='http://qt-project.org/'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 
          'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx')
-makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools')
+makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("http://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qtwebengine-harmony.patch)
-sha256sums=('3ff9bba5f631cfdd454ce298489360b3e2d9a2de4eb82bb121d838ef65f9b772'
-            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3')
+         qtwebengine-harmony.patch
+         qtbug-71370.patch::"http://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=20238f2c"
+         qtbug-69605.patch::"http://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=721cd2d2")
+sha256sums=('bd581e390a30e0f74d41b0e3334b3cf612dd4af23de36a3bf5931d5b4453687c'
+            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3'
+            '58aaec357311fcf72b1d94c40f5159b84c835bbf41fcf9a0977368c99bea70f4'
+            '8f44545a6acd1bc58c7ddd8ff369a818102b6a1fecd132eb2508b18fd1433d8b')
 
 prepare() {
   mkdir -p build
@@ -30,6 +34,10 @@ prepare() {
 
   # FreeType 2.8.1
   patch -Np1 -i ../qtwebengine-harmony.patch
+  # https://bugreports.qt.io/browse/QTBUG-71370
+  patch -p1 -i ../qtbug-71370.patch
+  # https://bugreports.qt.io/browse/QTBUG-69605
+  patch -p1 -i ../qtbug-69605.patch
 }
 
 build() {
