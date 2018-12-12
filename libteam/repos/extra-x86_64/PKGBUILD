@@ -1,16 +1,15 @@
-# $Id$
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=libteam
-pkgver=1.27
-pkgrel=2
+pkgver=1.28
+pkgrel=1
 pkgdesc="Library for controlling team network device"
 arch=(x86_64)
 url="http://libteam.org/"
-license=(LGPL2.1)
+license=(LGPL)
 depends=(libnl libdaemon jansson libdbus bash zeromq)
-makedepends=(python python2 swig git doxygen)
-_commit=91a928a56a501daac5ce8b3c16bd9943661f1d16  # tags/v1.27
+makedepends=(python python2 swig git doxygen graphviz)
+_commit=903950c7fcf28c32f4b62d9d1c07c0234e8378a2  # tags/v1.28
 source=("git+https://github.com/jpirko/libteam#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -21,6 +20,11 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # Reduce docs size
+  printf '%s\n' >>doc/Doxyfile.in \
+    HAVE_DOT=yes DOT_IMAGE_FORMAT=svg INTERACTIVE_SVG=yes
+
   NOCONFIGURE=1 ./autogen.sh
 }
 
@@ -32,10 +36,8 @@ build() {
   make all html
 
   cp -aT binding/python binding/python2
-  cd binding/python
-  python  ./setup.py build
-  cd ../python2
-  python2 ./setup.py build
+  (cd binding/python;  python  ./setup.py build;)
+  (cd binding/python2; python2 ./setup.py build;)
 }
 
 check() {
@@ -52,12 +54,9 @@ package() {
   install -Dm644 teamd/dbus/teamd.conf \
     "$pkgdir/etc/dbus-1/system.d/teamd.conf"
 
-  cd binding/python
-  python  ./setup.py install --root "$pkgdir" -O1
-  cd ../python2
-  python2 ./setup.py install --root "$pkgdir" -O1
+  (cd binding/python;  python  ./setup.py install --root "$pkgdir" -O1;)
+  (cd binding/python2; python2 ./setup.py install --root "$pkgdir" -O1;)
 
-  cd ../../doc
-  install -d "$pkgdir/usr/share/doc/$pkgname"
-  cp -a api "$pkgdir/usr/share/doc/$pkgname"
+  mkdir -p "$pkgdir/usr/share/doc/$pkgname"
+  cp -a doc/api "$pkgdir/usr/share/doc/$pkgname"
 }
