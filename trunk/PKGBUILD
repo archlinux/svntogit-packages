@@ -3,7 +3,7 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.1+155+g4c8fcd6a6f
+pkgver=3.24.2+1+g2905fc861a
 pkgrel=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -14,7 +14,7 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc)
 license=(LGPL)
-_commit=4c8fcd6a6f2adf9686296f8447895c0e2910075c  # gtk-3-24
+_commit=2905fc861acda3d134a198e56ef2f6c962ad3061  # gtk-3-24
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
@@ -34,6 +34,10 @@ pkgver() {
 prepare() {
   cd gtk
   NOCONFIGURE=1 ./autogen.sh
+
+  # Revert change that causes X to throw BadMatch in several applications
+  # (Need to follow up on https://gitlab.gnome.org/GNOME/gtk/issues/1280)
+  git revert -n 4c8fcd6a6f2adf9686296f8447895c0e2910075c
 }
 
 build() {
