@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=7.0.0
-pkgrel=2
+pkgver=7.0.1
+pkgrel=1
 _ocaml_ver=4.07.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -13,7 +13,7 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2' 'python-sphi
 options=('staticlibs')
 source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('8bc1f844e6cbde1b652c19c1edebc1864456fd9c78b8c1bea038e51b363fe222'
+sha256sums=('a38dfc4db47102ec79dcc2aa61e93722c5f6f06f0a961073bd84b78fb949419b'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
