@@ -2,18 +2,34 @@
 
 pkgname=perl-dbd-sqlite
 pkgver=1.60
-pkgrel=1
+pkgrel=2
 pkgdesc="Self-contained RDBMS in a DBI driver"
 arch=('x86_64')
 url="http://search.cpan.org/dist/DBD-SQLite"
 license=('GPL' 'PerlArtistic')
 depends=('perl-dbi' 'sqlite')
-source=("https://www.cpan.org/authors/id/I/IS/ISHIGAKI/DBD-SQLite-$pkgver.tar.gz")
-sha512sums=('b5fd203898815ada13ec04477fa0ad90ec2f53761d9b1ed7cce7d06a674e31d3810e745658aea150a3a58fc18adb889e5e50e795e8575318ab4cc757c1ff1c9e')
+source=("https://www.cpan.org/authors/id/I/IS/ISHIGAKI/DBD-SQLite-$pkgver.tar.gz"
+        libsqlite.patch)
+sha512sums=('b5fd203898815ada13ec04477fa0ad90ec2f53761d9b1ed7cce7d06a674e31d3810e745658aea150a3a58fc18adb889e5e50e795e8575318ab4cc757c1ff1c9e'
+            'cf492402f9127c40130c052a6b3f78e86abc0342385130be386aa12e23b1166f20deac50eee1dcc1e43598ba5785d0a218f2cb0a6bb7f5dd7f7c0fc3220bd2bb')
+
+prepare() {
+  cd DBD-SQLite-$pkgver
+
+  # Ensure that we can never ever build this. If the perl module links against
+  # the system lib this won't matter, if it does not, it will fail during
+  # make test.
+  rm sqlite3.c
+
+  # Makefile asks us to patch this to allow to link with system sqlite...
+  patch -i "$srcdir/libsqlite.patch"
+}
 
 build() {
   cd DBD-SQLite-$pkgver
-  perl Makefile.PL INSTALLDIRS=vendor
+
+  # USE_LOCAL_SQLITE=0 disables use of the bundled sqlite
+  perl Makefile.PL INSTALLDIRS=vendor USE_LOCAL_SQLITE=0
   make
 }
 
