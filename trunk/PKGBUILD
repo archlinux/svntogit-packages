@@ -1,0 +1,61 @@
+# Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+
+pkgname=prometheus-node-exporter
+pkgver=0.17.0
+pkgrel=1
+
+pkgdesc='Exporter for machine metrics'
+url='https://github.com/prometheus/node_exporter'
+arch=('x86_64')
+license=('Apache')
+
+depends=('glibc')
+makedepends=('go-pie' 'git')
+
+backup=('etc/conf.d/prometheus-node-exporter')
+
+source=("https://github.com/prometheus/node_exporter/archive/v$pkgver.tar.gz"
+        prometheus-node-exporter.conf
+        prometheus-node-exporter.service
+        prometheus-node-exporter.sysusers
+        fix-go.sum.patch::https://github.com/prometheus/node_exporter/commit/97dab59e18c575d1384a9afd54e9f30473f34322.patch)
+
+sha256sums=('763b588b9282a8aa497286f8ab1aab61d085bdd2d258cf3457f23c60752c9a27'
+            'ce93e2b95bfc86a8a046e2f9175408e1cbffa784fd3b65dd141fde70b5bb2585'
+            '727ed5df3395fd77d8e2ae8c3ab7a6352213655e38c9b37badfea1aa90556394'
+            'c7fd0b1793dfe7a354a28e978d3c79e7195eaf43376b9eece37e996fe0772c5c'
+            '6e93306990e0ccdc03a4d776b18eb96881950e025f74c9f7a1bac3b8a43374e9')
+
+prepare() {
+  cd node_exporter-$pkgver
+
+  patch -p1 <"$srcdir"/fix-go.sum.patch
+}
+
+build() {
+  cd node_exporter-$pkgver
+
+  go build \
+    -gcflags "all=-trimpath=${PWD}" \
+    -asmflags "all=-trimpath=${PWD}" \
+    -ldflags "-extldflags ${LDFLAGS}" \
+    .
+}
+
+check() {
+  cd node_exporter-$pkgver
+
+  make collector/fixtures/sys/.unpacked
+  go test ./...
+  ./end-to-end-test.sh
+}
+
+package () {
+  install -Dm644 prometheus-node-exporter.conf "$pkgdir"/etc/conf.d/prometheus-node-exporter
+  install -Dm644 prometheus-node-exporter.service "$pkgdir"/usr/lib/systemd/system/prometheus-node-exporter.service
+  install -Dm644 prometheus-node-exporter.sysusers "$pkgdir"/usr/lib/sysusers.d/prometheus-node-exporter.conf
+
+  cd node_exporter-$pkgver
+
+  install -Dm755 node_exporter "$pkgdir"/usr/bin/prometheus-node-exporter
+}
