@@ -1,0 +1,35 @@
+# Maintainer: Jelle van der Waa <jelle@dwaa.nl>
+
+pkgname=prometheus-blackbox-exporter
+pkgver=0.13.0
+pkgrel=1
+pkgdesc="Allows blackbox probing of endpoints over HTTP, HTTPS, DNS, TCP and ICMP"
+arch=('x86_64')
+url="https://github.com/prometheus/blackbox_exporter"
+license=('Apache')
+depends=(glibc)
+makedepends=(go-pie git)
+source=(https://github.com/prometheus/blackbox_exporter/archive/v${pkgver}.tar.gz prometheus-blackbox-exporter.service go.sum.patch)
+sha512sums=('49290860e5e1713cc0e1edd93fd193d6e23aebe55a6f62778da89450f5ba79787d4ac3fd6ca3aae37f4941c16976db4570f2d4888534f2ce2c86e25e250b12f1'
+            '2a663446105459eaa55d73b5777cfff0adad12e704f354a5283d00e6052af10758c3fc0979bf0cd4edcc1a4b1d59449e4c439d339e50001b78438d6650dad2c1'
+            '7768e79944b6d8294a4c1f541c11825385d38620ce7465bd7b719c28a1f2b63e5de86ff374d026e8a2fdde39cd1597455adba27915492ae99026d3a05997d2ef')
+
+prepare() {
+  cd blackbox_exporter-$pkgver
+  patch -Np1 -i $srcdir/go.sum.patch
+}
+
+build() {
+  cd blackbox_exporter-$pkgver
+  go build \
+    -gcflags "all=-trimpath=${PWD}" \
+    -asmflags "all=-trimpath=${PWD}" \
+    -ldflags "-extldflags ${LDFLAGS}" \
+    .
+}
+
+package() {
+  install -Dm644 prometheus-blackbox-exporter.service "$pkgdir"/usr/lib/systemd/system/prometheus-blackbox-exporter.service
+  cd blackbox_exporter-$pkgver
+  install -Dm755 blackbox_exporter "$pkgdir"/usr/bin/prometheus-blackbox-exporter
+}
