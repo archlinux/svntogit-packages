@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=3.30.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -16,10 +16,11 @@ makedepends=(intltool gobject-introspection git egl-wayland)
 groups=(gnome)
 _commit=bcd6103c44ff74ebffd1737b8e0f3a952b83bd54  # tags/3.30.2^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
-        https://gitlab.gnome.org/vanvugt/mutter/commit/fc02b040f3b750b0513f812813351c09795950f6.patch
+        216.patch 318.patch
         startup-notification.patch)
 sha256sums=('SKIP'
-            'dffa2ca19281b9fa5a81bf80bd46a8eae78325c7e1f8b2a25c33945aa7cc0903'
+            '1ae59343f3f5838babdfe1400962bb315d8b49189deb05bb516966b922cd26a5'
+            'd4dcffa9c407e60e321670caaa44dcd6e2bfda7221d73ec4145a985c825a43b3'
             '00d5e77c94e83e1987cc443ed7c47303aa33367ce912b2f665bcd34f88890a17')
 
 pkgver() {
@@ -31,8 +32,12 @@ prepare() {
   cd $pkgname
 
   # https://gitlab.gnome.org/GNOME/mutter/merge_requests/216
-  git apply -3 ../fc02b040f3b750b0513f812813351c09795950f6.patch
+  git apply -3 ../216.patch
 
+  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/318
+  git apply -3 ../318.patch
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=768531
   # https://bugs.archlinux.org/task/51940
   # As of 2018-05-08: Still needed, according to fmuellner
   git apply -3 ../startup-notification.patch
