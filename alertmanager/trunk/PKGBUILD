@@ -1,0 +1,48 @@
+# Maintainer: Jelle van der Waa <jelle@archlinux.org>
+
+pkgname=alertmanager
+pkgver=0.15.3
+pkgrel=1
+pkgdesc="Service which handles alerts sent by client applications such as the Prometheus server"
+url="https://github.com/prometheus/alertmanager"
+arch=(x86_64)
+depends=(glibc)
+license=('Apache')
+makedepends=(go-pie git)
+backup=('etc/alertmanager/alertmanager.yml')
+source=(https://github.com/prometheus/alertmanager/archive/v${pkgver}.tar.gz alertmanager.service alertmanager.sysusers)
+sha512sums=('95822f786b488fe747dbd780267f91830dbf0629878942a0ad131dcd3c8b18c34e672cb1e59151fb2ac9bcbf25095d0b134dabe4ff87d6a3625b4f443784f716'
+            '14c369ed0ec71c6f1d68686b49b31e73129ff19e9f0fc0737f7c5899ec3cf34d2b366dc9e06ea20f7cf5f6254a5c1809f1a428a110ea52ee216494300115fb25'
+            '469f321f40b0dd6e1cc6d0791032c476449bb2ab2364d57b06d0e0309d09710be8751ded64d84e29dd6e28e96b71ef69e2bee6c71282500a9074a9d7ada8bdf0')
+
+prepare() {
+  # Switch to go build in new release.
+  mkdir -p gopath/src/github.com/prometheus
+  ln -rTsf $pkgname-$pkgver gopath/src/github.com/prometheus/alertmanager
+  export GOPATH="$srcdir"/gopath
+}
+
+build() {
+  export GOPATH="$srcdir/gopath"
+  cd gopath/src/github.com/prometheus/alertmanager
+  go install \
+    -gcflags "all=-trimpath=$GOPATH" \
+    -asmflags "all=-trimpath=$GOPATH" \
+    -ldflags "-extldflags $LDFLAGS" \
+    -v ./...
+}
+
+package() {
+  export GOPATH="$srcdir/gopath"
+  install -Dm755 $GOPATH/bin/$pkgname "$pkgdir/usr/bin/$pkgname"
+  install -Dm755 $GOPATH/bin/amtool "$pkgdir/usr/bin/amtool"
+
+  cd ${pkgname}-${pkgver}
+  install -Dm644 examples/ha/${pkgname}.yml "${pkgdir}/etc/${pkgname}/${pkgname}.yml"
+  install -d -m755 "${pkgdir}/etc/${pkgname}/template/"
+
+  install -d -m755 -o 211 -g 211 "${pkgdir}/var/lib/${pkgname}"
+
+  install -Dm0644 "${srcdir}/${pkgname}.service" "${pkgdir}/usr/lib/systemd/system/${pkgname}.service"
+  install -Dm644 "$srcdir/alertmanager.sysusers" "$pkgdir/usr/lib/sysusers.d/alertmanager.conf"
+}
