@@ -1,0 +1,90 @@
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=wpa_supplicant
+pkgver=2.6
+pkgrel=1
+epoch=2
+pkgdesc='A utility providing key negotiation for WPA wireless networks'
+url='http://hostap.epitest.fi/wpa_supplicant'
+arch=(x86_64)
+license=(GPL)
+depends=(openssl-1.0 libdbus readline libnl)
+install=wpa_supplicant.install
+source=(https://w1.fi/releases/${pkgname}-${pkgver}.tar.gz{,.asc}
+        config
+        0001-hostapd-Avoid-key-reinstallation-in-FT-handshake.patch
+        0002-Prevent-reinstallation-of-an-already-in-use-group-ke.patch
+        0003-Extend-protection-of-GTK-IGTK-reinstallation-of-WNM-.patch
+        0004-Prevent-installation-of-an-all-zero-TK.patch
+        0005-Fix-PTK-rekeying-to-generate-a-new-ANonce.patch
+        0006-TDLS-Reject-TPK-TK-reconfiguration.patch
+        0007-WNM-Ignore-WNM-Sleep-Mode-Response-without-pending-r.patch
+        0008-FT-Do-not-allow-multiple-Reassociation-Response-fram.patch
+        0009-WPA-Ignore-unauthenticated-encrypted-EAPOL-Key-data.patch
+)
+validpgpkeys=('EC4AA0A991A5F2464582D52D2B6EF432EFC895FA') # Jouni Malinen
+sha256sums=('b4936d34c4e6cdd44954beba74296d964bc2c9668ecaa5255e499636fe2b1450'
+            'SKIP'
+            'aeba21c48416342092964dada271ca6dfe842fc862774c2d3b150785225f66e2'
+            '529113cc81256c6178f3c1cf25dd8d3f33e6d770e4a180bd31c6ab7e4917f40b'
+            'd86d47ab74170f3648b45b91bce780949ca92b09ab43df065178850ec0c335d7'
+            'd4535e36739a0cc7f3585e6bcba3c0bb8fc67cb3e729844e448c5dc751f47e81'
+            '793a54748161b5af430dd9de4a1988d19cb8e85ab29bc2340f886b0297cee20b'
+            '147c8abe07606905d16404fb2d2c8849796ca7c85ed8673c09bb50038bcdeb9e'
+            '596d4d3b63ea859ed7ea9791b3a21cb11b6173b04c0a14a2afa47edf1666afa6'
+            'c5a17af84aec2d88c56ce0da2d6945be398fe7cab5c0c340deb30973900c2736'
+            'c8840d857b9432f3b488113c85c1ff5d4a4b8d81078b7033388dae1e990843b1'
+            '960c3cf2a514479b0b4cf09665186a1a9f5d28e8b05dec23db75c6cc13eb1f7c')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  local i; for i in "${source[@]}"; do
+    case $i in
+      *.patch)
+        msg2 "Applying patch $i"
+        patch -p1 -i "$srcdir/$i"
+        ;;
+    esac
+  done
+
+  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  cp "$srcdir/config" ./.config
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+
+  export CFLAGS="$CPPFLAGS $CFLAGS -I/usr/include/openssl-1.0"
+  export LIBS="-L/usr/lib/openssl-1.0"
+  export LIBS_p="-L/usr/lib/openssl-1.0"
+
+  make LIBDIR=/usr/lib BINDIR=/usr/bin
+  make LIBDIR=/usr/lib BINDIR=/usr/bin eapol_test
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  make LIBDIR=/usr/lib BINDIR=/usr/bin DESTDIR="$pkgdir" install
+  install -Dm755 eapol_test "$pkgdir/usr/bin/eapol_test"
+
+  install -d -m755 "$pkgdir/etc/wpa_supplicant"
+  install -Dm644 wpa_supplicant.conf \
+    "$pkgdir/usr/share/doc/wpa_supplicant/wpa_supplicant.conf"
+
+  install -d -m755 "$pkgdir/usr/share/man/man"{5,8}
+  install -m644 doc/docbook/*.5 "$pkgdir/usr/share/man/man5/"
+  install -m644 doc/docbook/*.8 "$pkgdir/usr/share/man/man8/"
+  rm -f "$pkgdir/usr/share/man/man8/wpa_"{priv,gui}.8
+
+  install -d -m755 "$pkgdir/usr/share/dbus-1/system-services"
+  install -m644 \
+    dbus/fi.{epitest.hostap.WPASupplicant,w1.wpa_supplicant1}.service \
+    "$pkgdir/usr/share/dbus-1/system-services/"
+
+  install -Dm644 dbus/dbus-wpa_supplicant.conf \
+    "$pkgdir/etc/dbus-1/system.d/wpa_supplicant.conf"
+
+  install -d -m755 "$pkgdir/usr/lib/systemd/system"
+  install -m644 systemd/*.service "$pkgdir/usr/lib/systemd/system/"
+}
