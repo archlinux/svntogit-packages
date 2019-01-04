@@ -7,7 +7,7 @@ pkgname=('systemd' 'libsystemd' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
 _commit='1742aae2aa8cd33897250d6fcfbe10928e43eb2f'
 pkgver=240.0
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -62,9 +62,28 @@ sha512sums=('SKIP'
             '209b01b044877cc986757fa4009a92ea98f480306c2530075d153203c3cd2b3afccab6aacc1453dee8857991e04270572f1700310705d7a0f4d5bed27fab8c67')
 
 _backports=(
+  # https://github.com/systemd/systemd/issues/11277
+  'b261494128e60dd3168e0ea961606ec4f39c5739'
+  'ff86c92e3043f71fc801cf687600a480ee8f6778'
+
+  # https://github.com/systemd/systemd/issues/11264
+  '577ab71c58d36bc8577d15f172a306c9c05cd2f4'
+
+  # https://github.com/systemd/systemd/issues/11251
+  '7334ade4a7e103b1a01d1c8fe1ea7c7a854a1c31'
+
+  # https://github.com/systemd/systemd/issues/11255
+  'adeb26c1affd09138bb96a9e25b795d146e64c97'
+
+  # https://github.com/systemd/systemd/issues/11259
+  '8ca9e92c742602b8bcd431001e6f5b78c28c184f'
 )
 
 _reverts=(
+  # Lots of things still expect to find the session bus through environment.
+  # This will likely end up being reverted upstream in systemd.
+  # https://github.com/systemd/systemd/issues/11293
+  '2b2b7228bffef626fe8e9f131095995f3d50ee3b'
 )
 
 prepare() {
