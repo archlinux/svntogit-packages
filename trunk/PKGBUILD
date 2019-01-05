@@ -257,7 +257,7 @@ package_libsystemd() {
 }
 
 package_systemd-resolvconf() {
-  pkgdesc='systemd resolvconf replacement'
+  pkgdesc='systemd resolvconf replacement (for use with systemd-resolved)'
   license=('LGPL2.1')
   depends=('systemd')
   provides=('openresolv' 'resolvconf')
