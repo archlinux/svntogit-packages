@@ -249,7 +249,7 @@ package_systemd() {
 package_libsystemd() {
   pkgdesc='systemd client libraries'
   depends=('glibc' 'libcap' 'libgcrypt' 'lz4' 'xz')
-  license=('GPL2')
+  license=('LGPL2.1')
   provides=('libsystemd.so' 'libudev.so')
 
   install -d -m0755 "$pkgdir"/usr
@@ -258,7 +258,7 @@ package_libsystemd() {
 
 package_systemd-resolvconf() {
   pkgdesc='systemd resolvconf replacement'
-  license=('GPL2')
+  license=('LGPL2.1')
   depends=('systemd')
   provides=('openresolv' 'resolvconf')
   conflicts=('openresolv')
