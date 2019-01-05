@@ -4,7 +4,7 @@
 
 pkgname=pacman
 pkgver=5.1.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="http://www.archlinux.org/pacman/"
@@ -14,8 +14,10 @@ depends=('bash' 'glibc' 'libarchive' 'curl'
          'gpgme' 'pacman-mirrorlist' 'archlinux-keyring')
 makedepends=('asciidoc')
 checkdepends=('python2' 'fakechroot')
-optdepends=('perl-locale-gettext: translation support in makepkg-template')
-backup=(etc/pacman.conf etc/makepkg.conf)
+optdepends=('perl-locale-gettext: translation support in makepkg-template'
+            'xdelta3: delta support in repo-add')
+backup=(etc/pacman.conf
+        etc/makepkg.conf)
 options=('strip' 'debug')
 validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
               'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
@@ -25,7 +27,7 @@ source=(https://sources.archlinux.org/other/pacman/$pkgname-$pkgver.tar.gz{,.sig
 sha256sums=('ce4eef1585fe64fd1c65c269e263577261edd7535fe2278240103012d74b6ef6'
             'SKIP'
             'b82e9c1073292766c2f49b5c771dddf37383f1151117ef9cd5e0c11047b4f3eb'
-            '650ddad24cad6afc4aecb4829cb8f06b9acb70c10a44f756fe8bd279949b518e')
+            '8442bbb3d1d83f09610e9d687f9121037d97c6acaa06c4e907fc6e9eb0b127ec')
 
 build() {
   cd "$pkgname-$pkgver"
