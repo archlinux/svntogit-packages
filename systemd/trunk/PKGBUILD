@@ -7,7 +7,7 @@ pkgname=('systemd' 'libsystemd' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
 _commit='1742aae2aa8cd33897250d6fcfbe10928e43eb2f'
 pkgver=240.0
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -77,13 +77,13 @@ _backports=(
 
   # https://github.com/systemd/systemd/issues/11259
   '8ca9e92c742602b8bcd431001e6f5b78c28c184f'
+
+  # https://github.com/systemd/systemd/issues/11293
+  '00efd4988b8e4a147f96337de32e54925640f0b7'
+  '69bd76f2b90cd00c1596b2e2c05845a4d9596fd2'
 )
 
 _reverts=(
-  # Lots of things still expect to find the session bus through environment.
-  # This will likely end up being reverted upstream in systemd.
-  # https://github.com/systemd/systemd/issues/11293
-  '2b2b7228bffef626fe8e9f131095995f3d50ee3b'
 )
 
 prepare() {
@@ -139,8 +139,8 @@ build() {
     -Dlz4=true
 
     -Ddbuspolicydir=/usr/share/dbus-1/system.d
-    # TODO(dreisner): consider changing this to unified
     -Ddefault-hierarchy=hybrid
+    -Ddefault-locale=C
     -Ddefault-kill-user-processes=false
     -Dfallback-hostname='archlinux'
     -Dntp-servers="${_timeservers[*]}"
