@@ -5,7 +5,7 @@
 pkgname=lua
 pkgver=5.3.5
 _majorver=${pkgver%.*}
-pkgrel=1
+pkgrel=2
 pkgdesc='Powerful lightweight programming language designed for extending applications'
 arch=('x86_64')
 url='http://www.lua.org/'
