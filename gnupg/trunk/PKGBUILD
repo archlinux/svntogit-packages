@@ -5,7 +5,7 @@
 
 pkgname=gnupg
 pkgver=2.2.12
-pkgrel=1
+pkgrel=2
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
