@@ -2,20 +2,18 @@
 # Maintainer: Christian Hesse <mail@eworm.de>
 
 pkgbase=mariadb
-pkgname=('libmariadbclient' 'mariadb-clients' 'mytop' 'mariadb')
-pkgver=10.1.37
-pkgrel=1
+pkgname=('libmariadb' 'mariadb-clients' 'mytop' 'mariadb')
+pkgver=10.3.12
+pkgrel=0
 arch=('x86_64')
 license=('GPL')
 url='https://mariadb.org/'
 makedepends=('boost' 'bzip2' 'cmake' 'jemalloc' 'libaio' 'libxml2' 'lz4' 'lzo'
              'openssl' 'systemd' 'zlib')
 validpgpkeys=('199369E5404BD5FC7D2FE43BCBCB082A1BB943DB') # MariaDB Package Signing Key <package-signing-key@mariadb.org>
-source=("https://mirrors.n-ix.net/mariadb/mariadb-$pkgver/source/mariadb-$pkgver.tar.gz"{,.asc}
-        '0001-openssl-1-1-0.patch')
-sha256sums=('8cd516b0a7f7aa36a7c1d6e687dbbad8c0b08c92d5fd60c6e691b19a6cab4d46'
-            'SKIP'
-            'fe26d22f0150e7460daa83d71d35735b3031cfc97e99bfbb8d6d74c11a28ccea')
+source=("https://ftp.heanet.ie/mirrors/mariadb/mariadb-$pkgver/source/mariadb-$pkgver.tar.gz"{,.asc})
+sha256sums=('f7449a34c25e0455928d7983dae83fd2069fe1f16c4c5f4aeed9ed9d3f081ff6'
+            'SKIP')
 
 prepare() {
   cd $pkgbase-$pkgver/
@@ -27,11 +25,14 @@ prepare() {
     -e '/^PrivateTmp/c PrivateTmp=true' \
     support-files/mariadb{,@}.service.in
 
-  # openssl 1.1.0
-  patch -Np1 < "${srcdir}"/0001-openssl-1-1-0.patch
-
   # let's create the datadir from tmpfiles
   echo 'd @MYSQL_DATADIR@ 0700 @MYSQLD_USER@ @MYSQLD_USER@ -' >> support-files/tmpfiles.conf.in
+
+  # instantiated configs are not subject to be included from main config
+  sed -i 's|@sysconf2dir@|@sysconfdir@|' support-files/mariadb@.service.in
+
+  # fix path to our config
+  sed -i 's|my.cnf.d|mysql/my.cnf.d|' support-files/rpm/{my.cnf,enable_encryption.preset}
 }
 
 build() {
@@ -54,7 +55,7 @@ build() {
     -DINSTALL_PLUGINDIR=lib/mysql/plugin \
     -DINSTALL_SCRIPTDIR=bin \
     -DINSTALL_SYSCONFDIR=/etc/mysql \
-    -DINSTALL_SYSCONF2DIR=/etc/mysql \
+    -DINSTALL_SYSCONF2DIR=/etc/mysql/my.cnf.d \
     -DINSTALL_INCLUDEDIR=include/mysql \
     -DINSTALL_SUPPORTFILESDIR=share/mysql \
     -DINSTALL_MYSQLSHAREDIR=share/mysql \
@@ -87,22 +88,23 @@ build() {
   make
 }
 
-package_libmariadbclient() {
-  pkgdesc='MariaDB client libraries'
+package_libmariadb() {
+  pkgdesc='MariaDB libraries'
   depends=('bzip2' 'libaio' 'lz4' 'lzo' 'openssl' 'xz' 'zlib')
-  conflicts=('libmysqlclient')
+  conflicts=('libmysqlclient' 'libmariadbclient')
+  replaces=('libmariadbclient')
+  provides=('libmariadbclient')
 
   cd build
 
-  for dir in libmysql libmysqld libservices include; do
-    make -C $dir DESTDIR="$pkgdir" install
+  for dir in libmariadb libmysqld libservices include; do
+    make -C "$dir" DESTDIR="$pkgdir" install
   done
 
-  install -D -m0755 scripts/mysql_config "$pkgdir"/usr/bin/mysql_config
-  install -D -m0644 "$srcdir"/$pkgbase-$pkgver/man/mysql_config.1 "$pkgdir"/usr/share/man/man1/mysql_config.1
+  ln -s mariadb_config "$pkgdir"/usr/bin/mysql_config
 
   install -D -m0644 support-files/mariadb.pc "$pkgdir"/usr/share/pkgconfig/mariadb.pc
-  install -D -m0644 "$srcdir"/$pkgbase-$pkgver/support-files/mysql.m4 "$pkgdir"/usr/share/aclocal/mysql.m4
+  install -D -m0644 "$srcdir"/"$pkgbase-$pkgver"/support-files/mysql.m4 "$pkgdir"/usr/share/aclocal/mysql.m4
 
   # remove static libraries
   rm "$pkgdir"/usr/lib/*.a
@@ -110,7 +112,7 @@ package_libmariadbclient() {
 
 package_mariadb-clients() {
   pkgdesc='MariaDB client tools'
-  depends=("libmariadbclient=${pkgver}" 'jemalloc')
+  depends=("libmariadb=${pkgver}" 'jemalloc')
   conflicts=('mysql-clients')
   provides=("mysql-clients=$pkgver")
 
@@ -120,7 +122,7 @@ package_mariadb-clients() {
 
   # install man pages
   for man in mysql mysql_plugin mysql_upgrade mysqladmin mysqlbinlog mysqlcheck mysqldump mysqlimport mysqlshow mysqlslap mysqltest; do
-    install -D -m0644 "$srcdir"/$pkgbase-$pkgver/man/$man.1 "$pkgdir"/usr/share/man/man1/$man.1
+    install -D -m0644 "$srcdir"/"$pkgbase-$pkgver"/man/$man.1 "$pkgdir"/usr/share/man/man1/"$man.1"
   done
 }
 
@@ -130,13 +132,16 @@ package_mytop() {
 
   cd build
 
-  install -Dm0755 scripts/mytop "$pkgdir"/usr/bin/mytop
+  install -D -m0755 scripts/mytop "$pkgdir"/usr/bin/mytop
 }
 
 package_mariadb() {
   pkgdesc='Fast SQL database server, drop-in replacement for MySQL'
   backup=('etc/mysql/my.cnf'
-          'etc/mysql/wsrep.cnf')
+          'etc/mysql/my.cnf.d/client.cnf'
+          'etc/mysql/my.cnf.d/enable_encryption.preset'
+          'etc/mysql/my.cnf.d/mysql-clients.cnf'
+          'etc/mysql/my.cnf.d/server.cnf')
   install=mariadb.install
   depends=("mariadb-clients=${pkgver}" 'inetutils' 'libsystemd' 'libxml2')
   optdepends=('galera: for MariaDB cluster with Galera WSREP'
@@ -151,12 +156,8 @@ package_mariadb() {
 
   cd "$pkgdir"
 
-  # We specified INSTALL_SYSCONFDIR and INSTALL_SYSCONF2DIR to have proper paths
-  # in binaries and support file. But we want our own files...
-  # TOOD: Change to upstream file layout with version 10.2.x?
-  rm -r etc/
-  install -Dm0644 usr/share/mysql/my-medium.cnf etc/mysql/my.cnf
-  install -Dm0644 usr/share/mysql/wsrep.cnf etc/mysql/wsrep.cnf
+  # no SysV init, please!
+  rm -r etc/mysql/{init.d,logrotate.d}
 
   mv usr/lib/sysusers.d/{sysusers,mariadb}.conf
   mv usr/lib/tmpfiles.d/{tmpfiles,mariadb}.conf
@@ -174,12 +175,15 @@ package_mariadb() {
   # left over from sysvinit
   rm usr/bin/rcmysql
 
-  # provided by libmariadbclient
+  # provided by libmariadb
+  rm usr/bin/mariadb_config
   rm usr/bin/mysql_config
-  rm usr/lib/libmysql*
+  rm usr/lib/lib*
   rm usr/share/man/man1/mysql_config.1
   rm -r usr/include/
   rm -r usr/share/mysql/{aclocal,pkgconfig}
+  rm usr/lib/mysql/plugin/{auth_gssapi_client,caching_sha2_password,dialog,mysql_clear_password,sha256_password}.so
+  rm usr/lib/pkgconfig/libmariadb.pc
 
   # provided by mariadb-clients
   rm usr/bin/{mysql,mysql_plugin,mysql_upgrade,mysqladmin,mysqlbinlog,mysqlcheck,mysqldump,mysqlimport,mysqlshow,mysqlslap,mysqltest}
