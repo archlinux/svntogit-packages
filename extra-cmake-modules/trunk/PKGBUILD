@@ -13,8 +13,7 @@ depends=(cmake)
 makedepends=(python-sphinx python-requests qt5-tools)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
-        ECM-Qt5.12.patch::https://phabricator.kde.org/D17015?download=true
-        ECM-no-init.py.patch)
+        ECM-Qt5.12.patch ECM-no-init.py.patch)
 sha256sums=('91b7a9359f1bfe6f667a5a9c23f6b2178555df26ca2e4dd1bb5c38dc36c77144'
             'SKIP'
             'e1144c9f84fc1fc69d85d8b32dab56c0c49802094b94c5e999504a6977463f86'
