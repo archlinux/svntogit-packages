@@ -8,7 +8,7 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
 pkgver=1.14.5dev+17+gba83251bb
-pkgrel=1
+pkgrel=2
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
