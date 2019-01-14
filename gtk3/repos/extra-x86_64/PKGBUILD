@@ -3,7 +3,7 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.2+7+g43aeb52b73
+pkgver=3.24.3
 pkgrel=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -14,7 +14,7 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc)
 license=(LGPL)
-_commit=43aeb52b73428da919ef030a622a51ed21df4ae2  # gtk-3-24
+_commit=c9d09695f89c7470c2135ce581331179bd73a7df  # tags/3.24.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
@@ -39,7 +39,7 @@ prepare() {
 build() {
   cd gtk
 
-  CXX=/bin/false ./configure --prefix=/usr \
+  ./configure --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
     --disable-schemas-compile \
