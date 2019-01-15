@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.30.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -40,6 +40,7 @@ build() {
     --localstatedir=/var \
     --sbindir=/usr/bin \
     --libexecdir=/usr/lib \
+    with_dbus_sys=/usr/share/dbus-1/system.d \
     --disable-schemas-compile \
     --disable-static \
     --enable-gdm-xsession \
