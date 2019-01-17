@@ -4,7 +4,7 @@
 
 pkgname=meson
 pkgver=0.49.0
-pkgrel=1
+pkgrel=2
 pkgdesc='High productivity build system'
 url='http://mesonbuild.com/'
 arch=('any')
@@ -19,7 +19,7 @@ source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${
         arch-meson)
 sha512sums=('f36994d1a030c985a51aa335eaceea608dcb1692cea7d2d4caeeb2b3bf471837dffdc502aa940742eb8c605d15b8adb35ba36b7da5d10455b7fd0ef5a48663e3'
             'SKIP'
-            'f9e93c14913e7391b16f9dd011c63d6af9be897f2afed94015ae7959526d99f4bc774a608ce20571f0bdf32688287836859787d931fb0662777b5ce13c4af31a')
+            'f2a5e0f331a5ccf25fc8a440472548fedde9dbf4d562ec13baf502cf549d6ed35d61933dedeb8fafef261a28d4b568e897a004d435475e73dc0ed6d3427ba5b7')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
 prepare() {
