@@ -3,7 +3,7 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=btrfs-progs
-pkgver=4.19.1
+pkgver=4.20
 pkgrel=1
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
@@ -24,7 +24,7 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
 install=btrfs-progs.install
 options=(!staticlibs)
 md5sums=('SKIP'
-         '60f3df5c0a0647fd502f76d4937d2a17'
+         '1aaf4f4a306358a0d8c9afd238933589'
          '7241ba3a4286d08da0d50b7176941112'
          'b09688a915a0ec8f40e2f5aacbabc9ad'
          '917b31f4eb90448d6791e17ea0f386c7'
