@@ -3,7 +3,7 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.3
+pkgver=3.24.4
 pkgrel=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -14,7 +14,7 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc)
 license=(LGPL)
-_commit=c9d09695f89c7470c2135ce581331179bd73a7df  # tags/3.24.3^0
+_commit=a02de1c9d9ed99e51ae4470c28644d3222a0bf8f  # tags/3.24.4^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
