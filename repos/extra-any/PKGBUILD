@@ -3,8 +3,8 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.49.0
-pkgrel=2
+pkgver=0.49.1
+pkgrel=1
 pkgdesc='High productivity build system'
 url='http://mesonbuild.com/'
 arch=('any')
@@ -17,7 +17,7 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-b
               'libwmf' 'dmd' 'valgrind')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         arch-meson)
-sha512sums=('f36994d1a030c985a51aa335eaceea608dcb1692cea7d2d4caeeb2b3bf471837dffdc502aa940742eb8c605d15b8adb35ba36b7da5d10455b7fd0ef5a48663e3'
+sha512sums=('2a9a3d1e1eae3f9f21f47c0efb2ecd78861a71109fa5a660bf6403df2d5bd5c31fa2ef848080ca72d25257836b9e00e2fb89d5fc281647600ece0179c703cfe8'
             'SKIP'
             'f2a5e0f331a5ccf25fc8a440472548fedde9dbf4d562ec13baf502cf549d6ed35d61933dedeb8fafef261a28d4b568e897a004d435475e73dc0ed6d3427ba5b7')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
