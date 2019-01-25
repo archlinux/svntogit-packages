@@ -4,7 +4,7 @@
 
 pkgname=libva
 pkgver=2.3.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Video Acceleration (VA) API for Linux'
 arch=('x86_64')
 url='https://01.org/linuxmedia/vaapi'
@@ -14,17 +14,32 @@ makedepends=('git' 'libglvnd' 'mesa' 'meson')
 optdepends=('libva-vdpau-driver: backend for Nvidia and AMD cards'
             'libva-intel-driver: backend for Intel cards')
 provides=('libva-drm.so' 'libva-glx.so' 'libva-wayland.so' 'libva-x11.so' 'libva.so')
-source=("git+https://github.com/intel/libva.git#tag=${pkgver}")
-sha256sums=('SKIP')
+backup=('etc/libva.conf')
+source=("git+https://github.com/intel/libva.git#tag=${pkgver}"
+        257.patch)
+sha256sums=('SKIP'
+            '768a5e7a78fadda4f040097a83fb0dc1411b11fd14346e7041be0a704eca823e')
+
+prepare() {
+  cd libva
+  
+  # https://github.com/intel/intel-vaapi-driver/issues/419
+  patch -Np1 -i ../257.patch
+}
 
 build() {
+  CFLAGS+=" -DENABLE_VA_MESSAGING"  # Option missing
   arch-meson libva build
   ninja -C build
 }
 
 package() {
-  DESTDIR="${pkgdir}" ninja -C build install
+  DESTDIR="${pkgdir}" meson install -C build
   install -Dm 644 libva/COPYING -t "${pkgdir}"/usr/share/licenses/libva
+
+  install -Dm 644 /dev/stdin "${pkgdir}"/etc/libva.conf <<END
+LIBVA_MESSAGING_LEVEL=1
+END
 }
 
 # vim: ts=2 sw=2 et:
