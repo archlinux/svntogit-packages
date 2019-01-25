@@ -10,10 +10,10 @@ pkgver=10.32
 pkgrel=2
 pkgdesc='A library that implements Perl 5-style regular expressions. 2nd version'
 arch=('x86_64')
-url='http://www.pcre.org/'
+url='https://www.pcre.org/'
 license=('BSD')
 depends=('gcc-libs' 'readline' 'zlib' 'bzip2' 'bash')
-source=("ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/$pkgname-$pkgver.tar.bz2"{,.sig})
+source=("https://ftp.pcre.org/pub/pcre/$_pkgname-$pkgver.tar.bz2"{,.sig})
 sha512sums=('3d712e7d6afbaef227952680ded69fadbdec0b1abdfcac17cf071415c3c93edd152d6d268dec80570aedf24f82ba954f74f5f9e62c9b9991be75080a3d6ab5fe'
             'SKIP')
 validpgpkeys=('45F68D54BBE23FB3039B46E59766E084FB0F43D8')  # Philip Hazel
