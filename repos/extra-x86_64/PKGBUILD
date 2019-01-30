@@ -1,0 +1,52 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: György Balló <ballogy@freestart.hu>
+
+pkgname=geoclue
+pkgver=2.5.2
+pkgrel=3
+pkgdesc="Modular geoinformation service built on the D-Bus messaging system"
+arch=(x86_64)
+url="https://www.freedesktop.org/wiki/Software/GeoClue/"
+license=(LGPL)
+depends=(libsoup json-glib libmm-glib avahi geocode-glib)
+makedepends=(systemd gobject-introspection git vala meson gtk-doc libnotify)
+optdepends=('libnotify: Demo Agent')
+provides=("geoclue2=$pkgver-$pkgrel")
+conflicts=(geoclue2)
+replaces=(geoclue2)
+backup=(etc/geoclue/geoclue.conf)
+_commit=ed2d81fe558b657b52940dd52316bcc1a32d0cff  # tags/2.5.2^0
+source=("git+https://gitlab.freedesktop.org/geoclue/geoclue.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build \
+    -D dbus-srv-user=geoclue \
+    -D dbus-sys-dir=/usr/share/dbus-1/system.d
+  ninja -C build
+}
+
+check() {
+  meson test -C build
+}
+
+package() {
+  DESTDIR="$pkgdir" meson install -C build
+
+  echo 'u geoclue - "Geoinformation service" /var/lib/geoclue' |
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
+
+  echo 'd /var/lib/geoclue 0755 geoclue geoclue' |
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/tmpfiles.d/$pkgname.conf"
+}
+
+# vim:set sw=2 et:
