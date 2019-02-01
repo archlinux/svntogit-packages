@@ -30,7 +30,7 @@ optdepends=('qt5-doc: integrated Qt documentation'
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
         qtcreator-clang-plugins.patch)
 sha256sums=('8f691de9b30b99dd44e010525ba9bf3054142a1082dc5273c46c533b91c07bd9'
-            '6f19fc9d83964a5460d224b3d44ce580553847960181fe0364e2ce26e1efd2e6')
+            '34ea74698ddff9925e06bff6b4c995bf93488d1104e8cc517bcfdd621effb428')
 
 prepare() {
   mkdir -p build
