@@ -2,7 +2,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.12.0
+_qtver=5.12.1
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=('x86_64')
@@ -15,13 +15,9 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qtwebengine-harmony.patch
-         qtbug-71370.patch::"http://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=20238f2c"
-         qtbug-69605.patch::"http://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=721cd2d2")
-sha256sums=('bd581e390a30e0f74d41b0e3334b3cf612dd4af23de36a3bf5931d5b4453687c'
-            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3'
-            '58aaec357311fcf72b1d94c40f5159b84c835bbf41fcf9a0977368c99bea70f4'
-            '8f44545a6acd1bc58c7ddd8ff369a818102b6a1fecd132eb2508b18fd1433d8b')
+         qtwebengine-harmony.patch)
+sha256sums=('43e91e06bc4a60ef0f91d15ae06425cf9c6b4f7dafe960259a5b013c687c3bd0'
+            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3')
 
 prepare() {
   mkdir -p build
@@ -34,10 +30,6 @@ prepare() {
 
   # FreeType 2.8.1
   patch -Np1 -i ../qtwebengine-harmony.patch
-  # https://bugreports.qt.io/browse/QTBUG-71370
-  patch -p1 -i ../qtbug-71370.patch
-  # https://bugreports.qt.io/browse/QTBUG-69605
-  patch -p1 -i ../qtbug-69605.patch
 }
 
 build() {
