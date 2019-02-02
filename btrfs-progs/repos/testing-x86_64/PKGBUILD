@@ -4,7 +4,7 @@
 
 pkgname=btrfs-progs
 pkgver=4.20.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools')
@@ -17,6 +17,7 @@ provides=('btrfs-progs-unstable')
 license=('GPL2')
 validpgpkeys=('F2B41200C54EFB30380C1756C565D5F9D76D583B')
 source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v$pkgver.tar."{sign,xz}
+        'FS#61471.patch'
         'initcpio-install-btrfs'
         'initcpio-hook-btrfs'
         'btrfs-scrub@.service'
@@ -25,10 +26,19 @@ install=btrfs-progs.install
 options=(!staticlibs)
 md5sums=('SKIP'
          '9aa0a16236c7087ded08425c7256044f'
+         'b19d00df3b5d9d5b053d15f34ca7a2f9'
          '7241ba3a4286d08da0d50b7176941112'
          'b09688a915a0ec8f40e2f5aacbabc9ad'
          '917b31f4eb90448d6791e17ea0f386c7'
          '502221c1b47a3bb2c06703d4fb90a0c2')
+
+prepare() {
+  cd $pkgname-v$pkgver
+
+  # https://bugs.archlinux.org/task/61471
+  # https://github.com/kdave/btrfs-progs/issues/162#issuecomment-458320281
+  patch -Np1 -i '../FS#61471.patch'
+}
 
 build() {
   cd $pkgname-v$pkgver
