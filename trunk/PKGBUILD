@@ -9,7 +9,7 @@
 pkgbase=audit
 pkgname=('audit' 'python2-audit' 'python-audit')
 pkgver=2.8.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
 arch=('x86_64')
@@ -18,6 +18,11 @@ license=('GPL')
 options=('emptydirs')
 source=(${pkgbase}-${pkgver}.tar.gz::https://people.redhat.com/sgrubb/audit/${pkgbase}-${pkgver}.tar.gz)
 sha512sums=('5795c565effab995cee447a2dc457ef6a6f15201fb185d7104992ac373a3cb5cfc865dd661c0896a895c96f452eff392d455064d0eead55cd7364d96e0d15c4a')
+
+prepare() {
+  cd ${pkgbase}-${pkgver}
+  sed 's|/var/run/auditd.pid|/run/auditd.pid|' -i init.d/auditd.service
+}
 
 build() {
   cd ${pkgbase}-${pkgver}
@@ -69,7 +74,7 @@ package_audit() {
 }
 
 package_python2-audit() {
-  depends=('python' 'audit')
+  depends=('python2' 'audit')
   pkgdesc+=' (python2 bindings)'
   cd ${pkgbase}-${pkgver}
   make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
@@ -77,7 +82,7 @@ package_python2-audit() {
 }
 
 package_python-audit() {
-  depends=('python2' 'audit')
+  depends=('python' 'audit')
   pkgdesc+=' (python bindings)'
   cd ${pkgbase}-${pkgver}
   make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
