@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.49.1
+pkgver=0.49.2
 pkgrel=1
 pkgdesc='High productivity build system'
 url='http://mesonbuild.com/'
@@ -16,14 +16,19 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt4' 'qt5-b
               'doxygen' 'vulkan-validation-layers' 'openssh' 'mercurial' 'gtk-sharp-2' 'qt5-tools'
               'libwmf' 'dmd' 'valgrind')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
+        4878.patch
         arch-meson)
-sha512sums=('2a9a3d1e1eae3f9f21f47c0efb2ecd78861a71109fa5a660bf6403df2d5bd5c31fa2ef848080ca72d25257836b9e00e2fb89d5fc281647600ece0179c703cfe8'
+sha512sums=('d07a5dfd699f1e4b00af39c377ec186c91718d9595cb0ab506b4b40c0c63ddd14eccbe8afb446635272c431e2a78032888be0bc8f6064044da53e8c0b5f7be3f'
             'SKIP'
-            'f2a5e0f331a5ccf25fc8a440472548fedde9dbf4d562ec13baf502cf549d6ed35d61933dedeb8fafef261a28d4b568e897a004d435475e73dc0ed6d3427ba5b7')
+            'ff1326c7b56da98eab615b40e07cba86d6ceee18d29e8b5c57ccf73980a7a466c8e5695cc0b96a36330cd0d51e52b8fed08456ebea6763edb736ae7116be2f4b'
+            'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
 prepare() {
   cd ${pkgname}-${pkgver}
+
+  # https://github.com/mesonbuild/meson/issues/4884
+  patch -Np1 -i ../4878.patch
 
   # Succeeds for us?
   mv 'test cases/failing/85 gtest dependency with version' 'test cases/frameworks/'
