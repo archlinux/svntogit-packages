@@ -2,7 +2,7 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=libassuan
-pkgver=2.5.2
+pkgver=2.5.3
 pkgrel=1
 pkgdesc='IPC library used by some GnuPG related software'
 url='https://www.gnupg.org/related_software/libassuan/'
@@ -11,7 +11,7 @@ license=('GPL')
 depends=('libgpg-error')
 validpgpkeys=('D8692123C4065DEA5E0F3AB5249B39D24F25E3B6') # Werner Koch
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig})
-sha256sums=('986b1bf277e375f7a960450fbb8ffbd45294d06598916ad4ebf79aee0cb788e7'
+sha256sums=('91bcb0403866b4e7c4bc1cc52ed4c364a9b5414b3994f718c70303f7f765e702'
             'SKIP')
 
 build() {
