@@ -5,8 +5,8 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.14.5
-pkgrel=2
+pkgver=5.15.0
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -16,12 +16,10 @@ depends=(kjsembed knotifyconfig libksysguard ktexteditor libqalculate qt5-tools 
          plasma-integration kdelibs4support)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo appstream-qt krunner networkmanager-qt kdesignerplugin)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
-        kdebug-390890.patch::"https://cgit.kde.org/plasma-workspace.git/patch/?id=0885170d")
-sha256sums=('903ef4dd2ca3040b2be7435d8f170a9df78a6d05f3525cfa8f212e52b5e5a391'
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
+sha256sums=('c9e696b0cb6040c90256709f68ea153da86da97a743c8ca8f96412d744e77b65'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
-            '9700eefd38355ec12daa02600086151da41fe55009dbe06ec852b87c94c5df37')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -29,9 +27,6 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 
 prepare() {
   mkdir -p build
-
-  cd $pkgbase-$pkgver
-  patch -p1 -i ../kdebug-390890.patch # Fix system tray breakage after entering configuration
 }
 
 build() {
