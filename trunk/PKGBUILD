@@ -3,7 +3,7 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=mercurial
-pkgver=4.8.2
+pkgver=4.9
 pkgrel=1
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
@@ -16,13 +16,13 @@ validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
               3A8155163D0E20A530FCB78647A67FFAA346AACE)  
 source=(https://www.mercurial-scm.org/release/${pkgname}-${pkgver}.tar.gz{,.asc}
         mercurial.profile)
-sha256sums=('6c202cb9cf05e63b86477ebf84d6475eb10b4022ac2cd3a7481fb36d9c45fdb2'
+sha256sums=('0f600c5c7e44d4318bedc1754a70b920f7ecd278e4089b0f6ac96f460c012f06'
             'SKIP'
             '87427151713e689cd87dc50d50c048e0e58285815e4eb61962b50583532cbde5')
 
 prepare() {
   cd $pkgname-$pkgver
-  sed -i -e 's#env python#env python2#' mercurial/lsprof.py
+  sed -i -e 's#env python#env python2#' mercurial/lsprof.py contrib/hg-ssh
 }
 
 build() {
@@ -37,9 +37,13 @@ package() {
   install -d "$pkgdir/usr/share/man/"{man1,man5}
   install -m644 doc/hg.1 "$pkgdir/usr/share/man/man1"
   install -m644 doc/{hgrc.5,hgignore.5} "$pkgdir/usr/share/man/man5"
-  install -m755 contrib/hgk "$pkgdir/usr/bin"
   install -m644 -D contrib/zsh_completion "$pkgdir/usr/share/zsh/site-functions/_hg"
   install -m644 -D contrib/bash_completion "$pkgdir/usr/share/bash-completion/completions/hg"
+
+  make -C contrib/chg DESTDIR="$pkgdir" PREFIX=/usr install
+  install -m755 contrib/hg-ssh "$pkgdir/usr/bin"
+  install -m755 contrib/hgk "$pkgdir/usr/bin"
+
   install -d "$pkgdir/usr/share/emacs/site-lisp"
   install -m644 contrib/{mq.el,mercurial.el} "$pkgdir/usr/share/emacs/site-lisp"
 
@@ -56,7 +60,4 @@ package() {
 	[web]
 	cacerts = /etc/ssl/certs/ca-certificates.crt
 	EOF
-
-  cd contrib/chg
-  make DESTDIR="$pkgdir" PREFIX=/usr install
 }
