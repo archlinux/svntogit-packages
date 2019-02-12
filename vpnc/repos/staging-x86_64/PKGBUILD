@@ -1,0 +1,61 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=vpnc
+_vpnc_commit=1d6fcf79bfb41c0cd720249fb19b140682df2a13
+_vpncscripts_commit=07c3518dd6b8dc424e9c3650a62bed994a4dcbe1
+pkgver=0.5.3.r454.r67
+pkgrel=1
+epoch=1
+pkgdesc='VPN client for cisco3000 VPN Concentrators'
+url='https://github.com/streambinder/vpnc'
+arch=('x86_64')
+license=('GPL')
+depends=('libgcrypt' 'openssl' 'iproute2')
+makedepends=('git')
+optdepends=('openresolv: Let vpnc manage resolv.conf')
+backup=('etc/vpnc/default.conf')
+source=("vpnc::git+https://github.com/streambinder/vpnc#commit=${_vpnc_commit}"
+        "vpnc-scripts::git://git.infradead.org/users/dwmw2/vpnc-scripts.git#commit=${_vpncscripts_commit}"
+        vpnc.conf
+        vpnc@.service)
+sha512sums=('SKIP'
+            'SKIP'
+            'ac70712192c01ff638a9badc5cff7105bee5c4fed5d3a3b728e9597661952d156041c82fe1e544e2bab602d193d4105d3689c79c46d964623f6ce38dd89f0ea7'
+            '3acb21ed11c7658915d38d8b6a9df9716eadfd85d3c4895045bbaaabfa217bd40cb21d08086c4196bb06153ad0be80b1dde4ef6b516f3840e26ee19874a75058')
+
+pkgver() {
+  cd ${pkgname}
+  printf "%s.r%s.r%s" "$(cat VERSION)" \
+    "$(git -C ../vpnc rev-list --count HEAD)" \
+    "$(git -C ../vpnc-scripts rev-list --count HEAD)"
+}
+
+prepare() {
+  cd ${pkgname}
+  # Build hybrid support
+  sed 's|^#OPENSSL|OPENSSL|g' -i Makefile
+  # fix resolvconf location for community/openresolv
+  sed 's|/sbin/resolvconf|/usr/bin/resolvconf|g' -i ../vpnc-scripts/vpnc-script
+  ln -sf ../../vpnc-scripts/vpnc-script src
+  ln -sf ../../vpnc.conf src
+}
+
+build() {
+  make -C ${pkgname}
+}
+
+check() {
+  make -C ${pkgname} test
+}
+
+package() {
+  cd ${pkgname}
+  make DESTDIR="${pkgdir}" PREFIX=/usr SBINDIR=/usr/bin install
+  install -Dm 644 ../vpnc@.service -t "${pkgdir}/usr/lib/systemd/system"
+  install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
