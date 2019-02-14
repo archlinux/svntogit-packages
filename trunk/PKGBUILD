@@ -124,7 +124,7 @@ END
 
 package_libnm() {
   pkgdesc="NetworkManager client library"
-  depends=(glib2 nss libutil-linux jansson libsystemd)
+  depends=(glib2 nss libutil-linux jansson systemd-libs)
   mv libnm/* "$pkgdir"
 }
 
