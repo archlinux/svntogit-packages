@@ -55,7 +55,7 @@ package_util-linux() {
   conflicts=('rfkill')
   provides=('rfkill')
   replaces=('rfkill')
-  depends=('pam' 'shadow' 'coreutils' 'libsystemd' 'libcap-ng' 'libutil-linux')
+  depends=('pam' 'shadow' 'coreutils' 'systemd-libs' 'libcap-ng' 'libutil-linux')
   optdepends=('python: python bindings to libmount'
               'words: default dictionary for look')
   groups=('base' 'base-devel')

@@ -141,7 +141,7 @@ package_xorg-server() {
 
 package_xorg-server-xephyr() {
   pkgdesc="A nested X server that runs as an X application"
-  depends=(libxfont2 libgl libepoxy libunwind libsystemd libxv pixman xorg-server-common
+  depends=(libxfont2 libgl libepoxy libunwind systemd-libs libxv pixman xorg-server-common
            xcb-util-image xcb-util-renderutil xcb-util-wm xcb-util-keysyms
            nettle libtirpc)
 
@@ -191,7 +191,7 @@ package_xorg-server-xdmx() {
 
 package_xorg-server-xwayland() {
   pkgdesc="run X clients under wayland"
-  depends=(libxfont2 libepoxy libunwind libsystemd libgl pixman xorg-server-common
+  depends=(libxfont2 libepoxy libunwind systemd-libs libgl pixman xorg-server-common
            nettle libtirpc)
 
   _install fakeinstall/usr/bin/Xwayland
