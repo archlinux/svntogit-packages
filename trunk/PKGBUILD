@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.20.8
+_pkgver=4.20.10
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -23,9 +23,9 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         linux.preset   # standard config files for mkinitcpio ramdisk
 )
 replaces=('linux-grsec')
-sha256sums=('b60ca6c44aa3bc98384944d73ed94229e6359dc61a88fa589027dac30e04d062'
+sha256sums=('53de6be9adfb8899f0a15855f1aef62b8b5a3c5c575196ec8a640a5b8c1c3cf8'
             'SKIP'
-            '459e68716897f80d558afc8336b4f99a0f0070eda2b0ff83061f1ebcaca8e46f'
+            '12ae9028543b25f77317cb85e20554b8cc9ca0df84440d8edd7a3241703a4889'
             'SKIP'
             '768b0e588cbf83d3cc5a59f4b545022502a64414b20b32abacba5da3ba07f362'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
