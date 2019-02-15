@@ -1,0 +1,46 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Stefan Husmann <stefan-husmann@t-online.de>
+# Contributor:  <mathieu.clabaut@gmail.com>
+
+pkgname=xdg-user-dirs
+pkgver=0.17
+pkgrel=2
+pkgdesc="Manage user directories like ~/Desktop and ~/Music"
+arch=(x86_64)
+url="https://www.freedesktop.org/wiki/Software/xdg-user-dirs"
+license=(GPL)
+depends=(sh systemd)
+makedepends=(docbook-xsl git)
+backup=(etc/xdg/user-dirs.conf etc/xdg/user-dirs.defaults)
+install=xdg-user-dirs.install
+options=(!emptydirs)
+_commit=ec015cdd345dec8025948533e7a6f18680e7f70c  # tags/0.17^0
+source=("git+https://gitlab.freedesktop.org/xdg/xdg-user-dirs.git#commit=$_commit"
+        xdg-user-dirs-update.service)
+sha256sums=('SKIP'
+            '53c75f52d782e9492601400236bc8e5bfa76a26f0afd9bce3fe8df1740d341f0')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure --prefix=/usr --sysconfdir=/etc
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install 
+
+  # We use a service
+  rm "$pkgdir/etc/xdg/autostart/xdg-user-dirs.desktop"
+  install -Dt "$pkgdir/usr/lib/systemd/user" -m644 ../xdg-user-dirs-update.service
+}
