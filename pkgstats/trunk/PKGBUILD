@@ -2,23 +2,22 @@
 
 pkgname=pkgstats
 pkgver=2.3
-pkgrel=9
+pkgrel=10
 pkgdesc='Submit a list of installed packages to the Arch Linux project'
+url='https://bbs.archlinux.org/viewtopic.php?id=105431'
 arch=('any')
-url='https://pkgstats.archlinux.de'
 license=('GPL')
 depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'systemd' 'awk' 'grep')
-source=('pkgstats.sh'
-        pkgstats.{timer,service})
-install='pkgstats.install'
-md5sums=('0acfba6a941bdf9e6a7927f18433e091'
-         '4ec734d9b60c439d55db5fd779a007c8'
-         '5948fa6ef41d3804f7eb6980684611d6')
+source=(pkgstats.{sh,timer,service})
+sha256sums=('582b34ace6a37ac2330309820e8c70df65dd5c80489850789b92a50ad5120458'
+            '86207164a13640edb58657f16329f60f2d84d7d3e5b9336e48aa0d607906078e'
+            '986608f2fff417693b663474db3f36b8fb2ae4eb111ad177c616ce02bb431b23')
 
 package() {
-	install -D -m755 ${srcdir}/pkgstats.sh ${pkgdir}/usr/bin/pkgstats
-	install -D -m644 ${srcdir}/pkgstats.timer ${pkgdir}/usr/lib/systemd/system/pkgstats.timer
-	install -D -m644 ${srcdir}/pkgstats.service ${pkgdir}/usr/lib/systemd/system/pkgstats.service
-	install -d -m755 ${pkgdir}/usr/lib/systemd/system/timers.target.wants
-	ln -s ../pkgstats.timer ${pkgdir}//usr/lib/systemd/system/timers.target.wants/pkgstats.timer
+	install -D pkgstats.sh "$pkgdir/usr/bin/pkgstats"
+	install -Dt "$pkgdir/usr/lib/systemd/system" -m644 pkgstats.{timer,service}
+	install -d "$pkgdir/usr/lib/systemd/system/timers.target.wants"
+	ln -st "$pkgdir/usr/lib/systemd/system/timers.target.wants" ../pkgstats.timer
 }
+
+# vim:set noet:
