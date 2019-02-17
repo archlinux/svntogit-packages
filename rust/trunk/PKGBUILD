@@ -8,7 +8,7 @@
 pkgname=('rust' 'rust-docs')
 epoch=1
 pkgver=1.32.0
-pkgrel=1
+pkgrel=2
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
 url='https://www.rust-lang.org/'
