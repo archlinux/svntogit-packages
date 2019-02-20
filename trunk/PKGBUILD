@@ -7,7 +7,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
 _commit='a09c170122cf3b37c3e4431bf082f9dbdc07fc70'
 pkgver=241.7
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -163,9 +163,11 @@ package_systemd() {
           etc/systemd/journal-remote.conf
           etc/systemd/journal-upload.conf
           etc/systemd/logind.conf
+          etc/systemd/networkd.conf
+          etc/systemd/resolved.conf
+          etc/systemd/sleep.conf
           etc/systemd/system.conf
           etc/systemd/timesyncd.conf
-          etc/systemd/resolved.conf
           etc/systemd/user.conf
           etc/udev/udev.conf)
   install=systemd.install
