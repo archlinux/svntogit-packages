@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 _pkgver=4.20.11
-_hardenedver=a
+_hardenedver=b
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
 pkgrel=1
@@ -25,7 +25,7 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
 replaces=('linux-grsec')
 sha256sums=('dcd95c41f45c8ee90e249887f4aa8657b9a4c5d0fcef69ba17e75b5304d7411f'
             'SKIP'
-            'cb0c074323cbc2ac0bc0c52be56e2133a83c31d5be1ea2fbcd3783c296cd9558'
+            '690ec64e669933e1b02036ded2ef069733c426d18f998f1c9b908a9f0220903a'
             'SKIP'
             'ab6551cf1cc64057704e1a772414225b0733b1d4ebbd4bb28c012a83c6b299c8'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
