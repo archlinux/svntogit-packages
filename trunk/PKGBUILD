@@ -4,7 +4,7 @@
 
 pkgbase=python-markupsafe
 pkgname=('python-markupsafe' 'python2-markupsafe')
-pkgver=1.1.0
+pkgver=1.1.1
 pkgrel=1
 pkgdesc="Implements a XML/HTML/XHTML Markup safe string for Python"
 arch=('x86_64')
@@ -13,7 +13,7 @@ license=('BSD')
 makedepends=('python-setuptools' 'python2-setuptools')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pallets/markupsafe/archive/$pkgver.tar.gz")
-sha512sums=('898045cceb2d59c263d171a9662ee273fe80a16454d6e38aaef03db953a04b306a1076e9006d4bca05aa11dcc5c538f410d6b8c63cb5e16dcd0047be975a0bd8')
+sha512sums=('c2a1072c5dd0918e47f9cfbd30b79b0690a43635f7cfc3fdd27f3df52f8e20406d7e3cfadd29df8ab1d1110f50e23eb7c7272707e0739d862d4b1edb59bbc241')
 
 build() {
   cd markupsafe-$pkgver
