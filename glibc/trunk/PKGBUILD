@@ -11,7 +11,7 @@ pkgrel=1
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
-makedepends=(git gd lib32-gcc-libs)
+makedepends=(git gd lib32-gcc-libs python)
 options=(!strip staticlibs)
 #source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
 _commit=067fc32968b601493f4b247a3ac00caeea3f3d61
@@ -27,7 +27,7 @@ md5sums=('SKIP'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
          'dc0d3ad59aeaaf591b085a77de6e03e9'
-         '58ffe75a9c5a1b22c535a5c2e725db22')
+         'af5d3c5227ac639effe39667a43879a1')
 
 prepare() {
   mkdir -p glibc-build lib32-glibc-build
