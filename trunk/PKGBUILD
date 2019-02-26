@@ -8,10 +8,12 @@ pkgdesc="GTK+ Web content engine library"
 arch=(x86_64)
 url="https://webkitgtk.org/"
 license=(custom)
-depends=(libxt libxslt enchant geoclue2 gst-plugins-base-libs
-         libsecret libwebp harfbuzz-icu gtk3 libnotify hyphen woff2)
-makedepends=(gtk2 gperf gobject-introspection ruby gtk-doc cmake python python2 ninja)
+depends=(libxt libxslt enchant gst-plugins-base-libs libsecret libwebp
+         harfbuzz-icu gtk3 libnotify hyphen woff2)
+makedepends=(gtk2 gperf gobject-introspection ruby gtk-doc cmake python python2
+             ninja geoclue2)
 optdepends=('gtk2: Netscape plugin support'
+            'geoclue2: Geolocation support'
             'gst-plugins-base: free media decoding'
             'gst-plugins-good: media decoding'
             'gst-libav: nonfree media decoding')
