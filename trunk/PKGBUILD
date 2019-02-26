@@ -6,15 +6,15 @@
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
-pkgver=2.28
-pkgrel=5
+pkgver=2.29
+pkgrel=1
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs)
 options=(!strip staticlibs)
 #source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
-_commit=5a74abda201907cafbdabd1debf98890313ff71e
+_commit=067fc32968b601493f4b247a3ac00caeea3f3d61
 source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
         locale.gen.txt
         locale-gen
