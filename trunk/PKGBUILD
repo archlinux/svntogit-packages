@@ -3,7 +3,7 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=3.30.2+5+g57bf0dd7
+pkgver=3.30.3
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -12,13 +12,11 @@ license=(GPL)
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-server-xwayland xorg-xhost)
 makedepends=(yelp-tools intltool gobject-introspection git docbook-xsl)
 checkdepends=(check)
-_commit=57bf0dd774c6c904291c03e761316b18577b5c3d  # gnome-3-30
+_commit=1397118b6a7c2a32ff34a7efa1c7a345485cdc5d  # tags/3.30.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
-        0001-Xsession-Don-t-start-ssh-agent-by-default.patch
-        gdm.sysusers)
+        0001-Xsession-Don-t-start-ssh-agent-by-default.patch)
 sha256sums=('SKIP'
-            '3412f7da0205409f08a126a1d166b644fe0f1d0444f7cdebdce8e59cea2d672c'
-            '6d9c8e38c7de85b6ec75e488585b8c451f5d9b4fabd2a42921dc3bfcc4aa3e13')
+            '3412f7da0205409f08a126a1d166b644fe0f1d0444f7cdebdce8e59cea2d672c')
 
 pkgver() {
   cd gdm
@@ -72,7 +70,10 @@ package_gdm() {
   # Unused or created at start
   rm -r "$pkgdir"/var/{cache,log,run}
 
-  install -Dm644 gdm.sysusers "$pkgdir/usr/lib/sysusers.d/gdm.conf"
+  install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/gdm.conf" <<END
+g gdm 120 -
+u gdm 120 "Gnome Display Manager" /var/lib/gdm
+END
 
 ### Split libgdm
   mkdir -p libgdm/{lib,share}
