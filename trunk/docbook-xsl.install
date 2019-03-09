@@ -1,38 +1,24 @@
+_xmlcatalog() {
+  xmlcatalog --noout "$@" etc/xml/catalog
+}
+
 post_install() {
-  if [ ! -f etc/xml/catalog ]; then
-    xmlcatalog --noout --create etc/xml/catalog
-  fi
-  _NEW=`echo $1 | sed 's|\(.*\)\-.*|\1|'`
+  [[ -f etc/xml/catalog ]] || _xmlcatalog --create
 
-  xmlcatalog --noout --add "rewriteSystem" \
-    "http://cdn.docbook.org/release/xsl/${_NEW}" \
-    "/usr/share/xml/docbook/xsl-stylesheets-${_NEW}" \
-    etc/xml/catalog
+  local ver x new=${1%-*}
 
-  xmlcatalog --noout --add "rewriteURI" \
-    "http://cdn.docbook.org/release/xsl/${_NEW}" \
-    "/usr/share/xml/docbook/xsl-stylesheets-${_NEW}" \
-    etc/xml/catalog
+  for ver in $new current; do
+    for x in rewriteSystem rewriteURI; do
+      _xmlcatalog --add $x http://cdn.docbook.org/release/xsl/$ver \
+        /usr/share/xml/docbook/xsl-stylesheets-$new
 
-  xmlcatalog --noout --add "rewriteSystem" \
-    "http://cdn.docbook.org/release/xsl/current" \
-    "/usr/share/xml/docbook/xsl-stylesheets-${_NEW}" \
-    etc/xml/catalog
+      _xmlcatalog --add $x http://docbook.sourceforge.net/release/xsl-ns/$ver \
+        /usr/share/xml/docbook/xsl-stylesheets-$new
 
-  xmlcatalog --noout --add "rewriteURI" \
-    "http://cdn.docbook.org/release/xsl/current" \
-    "/usr/share/xml/docbook/xsl-stylesheets-${_NEW}" \
-    etc/xml/catalog
-
-  xmlcatalog --noout --add "rewriteSystem" \
-    "http://docbook.sourceforge.net/release/xsl/current" \
-    "/usr/share/xml/docbook/xsl-stylesheets-${_NEW}" \
-    etc/xml/catalog
-
-  xmlcatalog --noout --add "rewriteURI" \
-    "http://docbook.sourceforge.net/release/xsl/current" \
-    "/usr/share/xml/docbook/xsl-stylesheets-${_NEW}" \
-    etc/xml/catalog
+      _xmlcatalog --add $x http://docbook.sourceforge.net/release/xsl/$ver \
+        /usr/share/xml/docbook/xsl-stylesheets-$new-nons
+    done
+  done
 }
 
 post_upgrade() {
@@ -41,11 +27,11 @@ post_upgrade() {
 }
 
 post_remove() {
-  _OLD=`echo $1 | sed 's|\(.*\)\-.*|\1|'`
-  xmlcatalog --noout --del "/usr/share/xml/docbook/xsl-stylesheets-${_OLD}" etc/xml/catalog
-
-  if [ $(vercmp $1 1.72.0-3) -lt 0 ]; then
-    xmlcatalog --noout --del "/usr/share/xml/docbook" etc/xml/catalog
-    xmlcatalog --noout --del "file:///etc/xml/docbook" etc/xml/catalog
+  local old=${1%-*}
+  _xmlcatalog --del /usr/share/xml/docbook/xsl-stylesheets-$old
+  if (( $(vercmp $1 1.79.2-5) >= 0 )); then
+    _xmlcatalog --del /usr/share/xml/docbook/xsl-stylesheets-$old-nons
   fi
 }
+
+# vim:set ft=sh sw=2 et:
