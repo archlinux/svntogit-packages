@@ -2,17 +2,17 @@
 # Contributor: Xavier Devlamynck <magicrhesus@ouranos.be>
 
 pkgname=libxfce4ui
-pkgver=4.12.1
-pkgrel=3
+pkgver=4.13.4
+pkgrel=1
 pkgdesc="Commonly used Xfce widgets among Xfce applications"
 arch=('x86_64')
 url="http://www.xfce.org/"
 license=('GPL2')
 depends=('libxfce4util' 'gtk2' 'gtk3' 'xfconf' 'libsm' 'startup-notification'
          'hicolor-icon-theme')
-makedepends=('intltool')
+makedepends=('intltool' 'gobject-introspection' 'vala')
 source=(https://archive.xfce.org/src/xfce/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.bz2)
-sha256sums=('3d619811bfbe7478bb984c16543d980cadd08586365a7bc25e59e3ca6384ff43')
+sha256sums=('d63fcdb8e5acb6f0d26075ea17d320dbfbec2058567cd67cb99824c7402a1f79')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
