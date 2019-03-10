@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.58.3
+pkgver=2.60.0
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -15,7 +15,7 @@ checkdepends=(desktop-file-utils)
 optdepends=('python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
             'libelf: gresource inspection tool')
 options=(!emptydirs)
-_commit=f2d1128ffae0de87680e411fb62ccfccafed6b1c  # tags/2.58.3^0
+_commit=2edc5aa6dfffec0a48c8a1e9381b73d1096e0489  # tags/2.60.0^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         noisy-glib-compile-schemas.diff
         glib-compile-schemas.hook gio-querymodules.hook)
@@ -38,14 +38,14 @@ prepare() {
 
 build() {
   arch-meson glib build \
-    -D selinux=false \
+    -D selinux=disabled \
     -D man=true \
     -D gtk_doc=true
   ninja -C build
 }
 
 check() {
-  meson test -C build
+  meson test -C build --no-suite flaky
 }
 
 package_glib2() {
@@ -54,6 +54,9 @@ package_glib2() {
 
   python -m compileall -d /usr/share/glib-2.0/codegen "$pkgdir/usr/share/glib-2.0/codegen"
   python -O -m compileall -d /usr/share/glib-2.0/codegen "$pkgdir/usr/share/glib-2.0/codegen"
+
+  # Remove installed tests
+  rm -r "$pkgdir/usr/lib/installed-tests"
 
   # Split docs
   mv "$pkgdir/usr/share/gtk-doc" "$srcdir"
