@@ -4,7 +4,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=coreutils
-pkgver=8.30
+pkgver=8.31
 pkgrel=1
 pkgdesc='The basic file, shell and text manipulation utilities of the GNU operating system'
 arch=('x86_64')
@@ -14,7 +14,7 @@ groups=('base')
 depends=('glibc' 'acl' 'attr' 'gmp' 'libcap' 'openssl')
 source=("https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig})
 validpgpkeys=('6C37DC12121A5006BC1DB804DF6FD971306037D9') # Pádraig Brady
-md5sums=('ab06d68949758971fe744db66b572816'
+md5sums=('0009a224d8e288e8ec406ef0161f9293'
          'SKIP')
 
 prepare() {
