@@ -1,0 +1,59 @@
+# Maintainer : Tobias Powalowski <tpowa@archlinux.org>
+# Contributor : Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname="efivar"
+pkgdesc="Tools and library to manipulate EFI variables"
+pkgver=37
+pkgrel=1
+arch=('x86_64')
+url="https://github.com/rhinstaller/efivar"
+license=('LGPL2.1')
+makedepends=('git')
+depends=('popt')
+conflicts=('libefivar')
+provides=("libefivar=${pkgver}")
+options=('strip' 'zipman' 'docs')
+source=("efivar::git+https://github.com/rhinstaller/efivar.git#tag=${pkgver}")
+
+#source=("efivar::git+https://github.com/rhinstaller/efivar.git#commit=8740389dded9202167007508670daefd33a7985f")
+sha1sums=('SKIP')
+
+pkgver() {
+	cd "${srcdir}/efivar/"
+	echo "$(git describe --tags)" | sed -e 's|efivar-||g' -e 's|-|\.|g'
+}
+
+prepare() {
+	
+	cd "${srcdir}/efivar/"
+	
+	git clean -x -d -f
+	echo
+	
+	sed 's|-O0|-Os|g' -i "${srcdir}/efivar/Make.defaults" || true
+	sed 's|-rpath,$(TOPDIR)/src|-rpath,$(libdir)|g' -i "${srcdir}/efivar/src/test/Makefile" || true
+}
+
+build() {
+	
+	cd "${srcdir}/efivar/"
+	CFLAGS="${CFLAGS} -flto"
+	
+	make libdir="/usr/lib/" bindir="/usr/bin/" mandir="/usr/share/man/" includedir="/usr/include/" V=1 -j1
+        cd "${srcdir}/efivar/src/test"
+        make libdir="/usr/lib/" bindir="/usr/bin/" mandir="/usr/share/man/" includedir="/usr/include/" V=1 -j1
+	echo
+	
+}
+
+package() {
+	
+	cd "${srcdir}/efivar/"
+	
+	make -j1 V=1 DESTDIR="${pkgdir}/" libdir="/usr/lib/" bindir="/usr/bin/" mandir="/usr/share/man/" includedir="/usr/include/" install
+	echo
+	
+	install -d "${pkgdir}/usr/bin"
+	install -D -m0755 "${srcdir}/efivar/src/test/tester" "${pkgdir}/usr/bin/efivar-tester"
+	
+}
