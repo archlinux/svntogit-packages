@@ -2,15 +2,15 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=yelp-tools
-pkgver=3.28.0
+pkgver=3.32.0
 pkgrel=1
 pkgdesc="Collection of tools for building and converting documentation"
 url="https://gitlab.gnome.org/GNOME/yelp-tools"
 arch=(any)
-depends=(yelp-xsl libxslt libxml2 itstool docbook-xsl)
+depends=(yelp-xsl libxslt libxml2 itstool docbook-xsl mallard-ducktype)
 makedepends=(git)
 license=(GPL)
-_commit=54a1bd6142d367b18a36d1ba96705840042747be  # tags/3.28.0^0
+_commit=ff8c59f30f31cccf344c35b70962ac4e9bccb577  # tags/3.32.0^0
 source=("git+https://gitlab.gnome.org/GNOME/yelp-tools.git#commit=$_commit")
 sha256sums=('SKIP')
 
