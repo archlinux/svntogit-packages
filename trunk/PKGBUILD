@@ -1,5 +1,5 @@
-# Maintainer : Tom Gundersen <teg@jklm.no>
-# Maintainer : Ionut Biru <ibiru@archlinux.org>
+# Contributor: Tom Gundersen <teg@jklm.no>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Gabriel Martinez < reitaka at gmail dot com >
 
 pkgname=libimobiledevice
@@ -10,9 +10,10 @@ url="http://libimobiledevice.org/"
 arch=('x86_64')
 license=('GPL2' 'LGPL2.1')
 depends=('libusbmuxd' 'usbmuxd' 'gnutls')
-makedepends=('python2' 'cython2' 'python' 'cython' 'libplist' 'autoconf-archive' git python2-setuptools python-setuptools)
+makedepends=('python2' 'cython2' 'python' 'cython' 'libplist' 'autoconf-archive'
+             'git' 'python2-setuptools' 'python-setuptools')
 _commit=92c5462adef87b1e577b8557b6b9c64d5a089544  # master
-source=("git+https://github.com/libimobiledevice/libimobiledevice/#commit=$_commit")
+source=("git+https://github.com/libimobiledevice/libimobiledevice#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -20,36 +21,33 @@ pkgver() {
   git describe --tags | sed 's/-/+/g'
 }
 
-check() {
-  cd build-py2
-  make check
-}
-
 prepare() {
   cd $pkgname
   NOCONFIGURE=1 ./autogen.sh
 }
 
-build() {
-  mkdir build-py2
-  pushd build-py2
-  PYTHON=/usr/bin/python2 CYTHON=/usr/bin/cython2 ../$pkgname/configure --prefix=/usr --disable-openssl
+_build() (
+  mkdir build-py$1
+  cd build-py$1
+  PYTHON=/usr/bin/python$1 CYTHON=/usr/bin/cython$1 \
+    ../$pkgname/configure --prefix=/usr --disable-openssl
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
-  popd
+)
 
-  mkdir build-py3
-  pushd build-py3
-  PYTHON=/usr/bin/python CYTHON=/usr/bin/cython ../$pkgname/configure --prefix=/usr --disable-openssl
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+build() {
+  _build 2
+  _build 3
+}
+
+check() {
+  make check -C build-py2
+  make check -C build-py3
 }
 
 package() {
-  pushd build-py2
-  make DESTDIR="$pkgdir" install
-  popd
-  pushd build-py3/cython
-  make DESTDIR="$pkgdir" install
-  popd
+  DESTDIR="$pkgdir" make install -C build-py2
+  DESTDIR="$pkgdir" make install -C build-py3/cython
 }
+
+# vim:set sw=2 et:
