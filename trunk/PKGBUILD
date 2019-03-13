@@ -3,18 +3,20 @@
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.58.3
+pkgver=1.60.0
 pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
-depends=(python python-mako)
+depends=(python-mako python-markdown)
 makedepends=(cairo git gtk-doc python-sphinx meson)
 options=(!emptydirs)
-_commit=96e0b3f92624937093f0c683db6968bc53c694eb  # tags/1.58.3^0
-source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit")
-sha512sums=('SKIP')
+_commit=03b9f8ffba23c90aebbcacdbe4160709d2f68f28  # tags/1.60.0^0
+source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
+        "git+https://gitlab.gnome.org/GNOME/glib.git#tag=2.60.0")
+sha512sums=('SKIP'
+            'SKIP')
 
 pkgver() {
   cd $pkgbase
@@ -26,7 +28,11 @@ prepare() {
 }
   
 build() {
-  arch-meson $pkgbase build -D cairo=true -D gtk-doc=true
+  arch-meson $pkgbase build \
+    -D cairo=true \
+    -D gtk_doc=true \
+    -D doctool=true \
+    -D glib_src_dir="$srcdir/glib"
   ninja -C build
 }
 
@@ -39,8 +45,8 @@ package_gobject-introspection() {
 
   DESTDIR="$pkgdir" meson install -C build
 
-  python -m compileall -d /usr/lib/gobject-introspection "$pkgdir/usr/lib/gobject-introspection"
-  python -O -m compileall -d /usr/lib/gobject-introspection "$pkgdir/usr/lib/gobject-introspection"
+  python -m compileall -d /usr/lib/$pkgbase "$pkgdir/usr/lib/$pkgbase"
+  python -O -m compileall -d /usr/lib/$pkgbase "$pkgdir/usr/lib/$pkgbase"
 
 ### Split runtime
   mkdir -p "$srcdir/runtime/lib"
