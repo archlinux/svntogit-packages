@@ -3,7 +3,7 @@
 
 pkgbase=vte3
 pkgname=(vte3 vte-common)
-pkgver=0.54.3
+pkgver=0.56.0
 pkgrel=1
 pkgdesc="Virtual Terminal Emulator widget for use with GTK3"
 url="https://wiki.gnome.org/Apps/Terminal/VTE"
@@ -12,7 +12,7 @@ license=(LGPL)
 options=(!emptydirs)
 depends=(gtk3 pcre2 gnutls)
 makedepends=(intltool gobject-introspection vala glade git gtk-doc gperf)
-_commit=7487c22f231b38295fc0ea008a83e42f0c0c0244  # tags/0.54.3^0
+_commit=9328a04c3e57e80889a6252d3df2289e1d8c6ef0  # tags/0.56.0^0
 source=("git+https://gitlab.gnome.org/GNOME/vte.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -23,10 +23,6 @@ pkgver() {
 
 prepare() {
   cd vte
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=778926
-  git cherry-pick -n 809e79770b4dea34d64574710ce429a86855fdb2
-
   NOCONFIGURE=1 ./autogen.sh
 }
 
