@@ -1,0 +1,49 @@
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=nvidia-390xx-lts
+pkgver=390.116
+_extramodules=extramodules-4.19-lts
+pkgrel=3
+epoch=1
+arch=('x86_64')
+url="http://www.nvidia.com/"
+makedepends=("nvidia-390xx-utils=${pkgver}" 'linux-lts' 'linux-lts-headers>=4.19.29')
+provides=('nvidia-390xx')
+conflicts=('nvidia-lts')
+license=('custom')
+options=('!strip')
+source=("http://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/NVIDIA-Linux-x86_64-${pkgver}-no-compat32.run"
+        kernel-4.16.patch)
+sha512sums=('842e57b479d833a40fe1e8ecf72217c43d71a07e91cb4b6d14bd3b6326a0ef035e6423c15849ccc23ff82d2740ae8c21a9742502b958bd748736abac5e7d9f1e'
+            'ad1185d998adbf89abf7aea300e5b3bbabe2296016f42592fbc232a6c3983f233df1103d37f35a041f12cc1c722d3edce813a4a1b215784a49c7f0e3e652b5af')
+
+_pkg="NVIDIA-Linux-x86_64-${pkgver}-no-compat32"
+
+prepare() {
+    sh "${_pkg}.run" --extract-only
+    cd "${_pkg}"
+    # Restore phys_to_dma support (still needed for 396.18)
+    # https://bugs.archlinux.org/task/58074
+    patch -Np1 -i ../kernel-4.16.patch
+}
+
+build() {
+    _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
+    cd "${_pkg}"/kernel
+    make SYSSRC=/usr/lib/modules/"${_kernver}/build" module
+}
+
+package() {
+    pkgdesc="NVIDIA drivers for linux-lts, 390xx legacy branch"
+    depends=('linux-lts>=4.19.29' "nvidia-390xx-utils=${pkgver}" 'libgl')
+
+    install -Dt "${pkgdir}/usr/lib/modules/${_extramodules}" -m644 \
+      "${srcdir}/${_pkg}/kernel"/nvidia{,-modeset,-drm,-uvm}.ko
+
+    find "${pkgdir}" -name '*.ko' -exec gzip -n {} +
+
+    echo "blacklist nouveau" |
+      install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
+
+    install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 "${srcdir}/${_pkg}/LICENSE"
+}
