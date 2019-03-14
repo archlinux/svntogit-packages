@@ -6,7 +6,7 @@ pkgver=4.13.4
 pkgrel=1
 pkgdesc="Commonly used Xfce widgets among Xfce applications"
 arch=('x86_64')
-url="http://www.xfce.org/"
+url="https://www.xfce.org/"
 license=('GPL2')
 depends=('libxfce4util' 'gtk2' 'gtk3' 'xfconf' 'libsm' 'startup-notification'
          'hicolor-icon-theme')
