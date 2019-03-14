@@ -1,7 +1,7 @@
  configure.ac                |  4 ++--
- libdleyna/renderer/device.c | 55 +++++++++++++++++++++++++++++++++++++++++++--
+ libdleyna/renderer/device.c | 51 +++++++++++++++++++++++++++++++++++++++++++--
  libdleyna/renderer/upnp.c   |  4 ++--
- 3 files changed, 57 insertions(+), 6 deletions(-)
+ 3 files changed, 53 insertions(+), 6 deletions(-)
 
 diff --git c/configure.ac i/configure.ac
 index 271ee92..364659d 100644
@@ -19,17 +19,17 @@ index 271ee92..364659d 100644
  PKG_CHECK_MODULES([GUPNPDLNA], [gupnp-dlna-2.0 >= 0.9.4])
  PKG_CHECK_MODULES([SOUP], [libsoup-2.4 >= 2.28.2])
 diff --git c/libdleyna/renderer/device.c i/libdleyna/renderer/device.c
-index 7acef89..881f4ac 100644
+index 7acef89..f6d571e 100644
 --- c/libdleyna/renderer/device.c
 +++ i/libdleyna/renderer/device.c
-@@ -2121,33 +2121,84 @@ exit:
+@@ -2121,33 +2121,80 @@ exit:
  	return;
  }
  
 +typedef struct
 +{
 +  GMainLoop *loop;
-+  GUPnPServiceIntrospection **introspection;
++  GUPnPServiceIntrospection *introspection;
 +  GError **error;
 +} GetIntrospectionAsyncData;
 +
@@ -40,7 +40,7 @@ index 7acef89..881f4ac 100644
 +                            gpointer                    user_data)
 +{
 +  GetIntrospectionAsyncData *data = user_data;
-+  *data->introspection = introspection;
++  data->introspection = introspection;
 +  if (data->error)
 +    *data->error = g_error_copy (error);
 +  g_main_loop_quit (data->loop);
@@ -50,31 +50,27 @@ index 7acef89..881f4ac 100644
 +_gupnp_service_info_get_introspection (GUPnPServiceInfo *info,
 +                                       GError          **error)
 +{
-+  GUPnPServiceIntrospection *introspection;
-+  GetIntrospectionAsyncData *data;
++  GetIntrospectionAsyncData data;
 +  GMainContext *context;
 +
 +  context = g_main_context_new ();
-+  data = g_new0 (GetIntrospectionAsyncData, 1);
-+  data->loop = g_main_loop_new (context, FALSE);
-+  data->introspection = &introspection;
-+  data->error = error;
++  data.loop = g_main_loop_new (context, FALSE);
++  data.error = error;
 +
 +  g_main_context_push_thread_default (context);
 +
 +  gupnp_service_info_get_introspection_async (info,
 +                                              get_introspection_async_cb,
-+                                              data);
++                                              &data);
 +
-+  g_main_loop_run (data->loop);
++  g_main_loop_run (data.loop);
 +
 +  g_main_context_pop_thread_default (context);
 +
-+  g_main_loop_unref (data->loop);
-+  g_free (data);
++  g_main_loop_unref (data.loop);
 +  g_main_context_unref (context);
 +
-+  return introspection;
++  return data.introspection;
 +}
 +
  static gboolean prv_get_av_service_states_values(GUPnPServiceProxy *av_proxy,
@@ -108,7 +104,7 @@ index 7acef89..881f4ac 100644
  		GUPNP_SERVICE_INFO(av_proxy),
  		&error);
  
-@@ -2215,7 +2266,7 @@ static gboolean prv_get_rc_service_states_values(GUPnPServiceProxy *rc_proxy,
+@@ -2215,7 +2262,7 @@ static gboolean prv_get_rc_service_states_values(GUPnPServiceProxy *rc_proxy,
  	weak_ref = rc_proxy;
  	g_object_add_weak_pointer(G_OBJECT(rc_proxy), &weak_ref);
  
