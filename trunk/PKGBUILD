@@ -2,9 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.12.1
+_qtver=5.12.2
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=1
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -15,11 +15,9 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qtwebengine-harmony.patch
-         CVE-2019-5786.patch::"http://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=43316b15")
-sha256sums=('43e91e06bc4a60ef0f91d15ae06425cf9c6b4f7dafe960259a5b013c687c3bd0'
-            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3'
-            'd8434d27ac0dd8c4d49b0208fc2df91611440d3ee733bb8597212980f98d4b1b')
+         qtwebengine-harmony.patch)
+sha256sums=('082b1d6e60c1be61881bc8533acc67d9688620d6b3a538417f62b27b34ead493'
+            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3')
 
 prepare() {
   mkdir -p build
@@ -32,9 +30,6 @@ prepare() {
 
   # FreeType 2.8.1
   patch -Np1 -i ../qtwebengine-harmony.patch
-  
-  cd src/3rdparty
-  patch -p1 -i "$srcdir"/CVE-2019-5786.patch # https://bugreports.qt.io/browse/QTBUG-74254
 }
 
 build() {
