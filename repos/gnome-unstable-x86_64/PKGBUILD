@@ -1,0 +1,47 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=evolution-data-server
+pkgver=3.32.0
+pkgrel=1
+pkgdesc="Centralized access to appointments and contacts"
+url="https://wiki.gnome.org/Apps/Evolution"
+arch=(x86_64)
+depends=(gnome-online-accounts nss krb5 libgweather libical db libgdata libphonenumber)
+makedepends=(intltool gperf gobject-introspection vala gtk-doc boost git cmake)
+license=(GPL)
+_commit=872b93ebdfdc01083b5b7fccffb34edced7cce44  # tags/3.32.0^0
+source=("git+https://gitlab.gnome.org/GNOME/evolution-data-server.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^EVOLUTION_DATA_SERVER_//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  cmake -H$pkgname -Bbuild \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLIBEXEC_INSTALL_DIR=/usr/lib \
+    -DSYSCONF_INSTALL_DIR=/etc \
+    -DENABLE_INTROSPECTION=ON \
+    -DENABLE_VALA_BINDINGS=ON \
+    -DENABLE_UOA=OFF \
+    -DENABLE_GTK_DOC=ON \
+    -DWITH_PHONENUMBER=ON
+  cmake --build build
+}
+
+check() {
+  # libedata-book tests fail because they try to
+  # mkdir /usr/lib/evolution-data-server/camel-providers
+  cmake --build build --target test || :
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --build build --target install
+}
