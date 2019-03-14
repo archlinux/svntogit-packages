@@ -2,17 +2,17 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gedit
-pkgver=3.30.2
+pkgver=3.32.0
 pkgrel=1
 pkgdesc="GNOME Text Editor"
 url="https://wiki.gnome.org/Apps/Gedit"
 arch=(x86_64)
 license=(GPL)
-depends=(gtksourceview3 gsettings-desktop-schemas libpeas gspell python-gobject dconf)
-makedepends=(yelp-tools intltool vala gobject-introspection gnome-common git gtk-doc)
+depends=(gtksourceview4 gsettings-desktop-schemas libpeas gspell python-gobject dconf)
+makedepends=(yelp-tools intltool vala gobject-introspection gnome-common git gtk-doc meson)
 optdepends=('gedit-plugins: Additional features')
 groups=(gnome)
-_commit=4ffea6d7644ad7ac0f306266bd1fc50236462d44  # tags/3.30.2^0
+_commit=b2f8efd099584fbe767c6eccbd293a760a2bfea4  # tags/3.32.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gedit.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgd.git")
 sha256sums=('SKIP'
@@ -23,27 +23,15 @@ pkgver() {
   git describe --tags | sed 's/-/+/g'
 }
 
-prepare() {
-  cd $pkgname
-
-  git submodule init
-  git config --local submodule.libgd.url "$srcdir/libgd"
-  git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
-}
-
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr \
-      --sysconfdir=/etc --localstatedir=/var \
-      --libexecdir=/usr/lib --disable-updater --disable-schemas-compile \
-      --enable-python --enable-gtk-doc
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build
+  ninja -C build
 }
 
-package(){
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+check() {
+  meson test -C build
+}
+
+package() {
+  DESTDIR="$pkgdir" meson install -C build
 }
