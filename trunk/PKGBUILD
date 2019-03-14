@@ -4,7 +4,7 @@
 pkgbase=mesa
 pkgname=('opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=18.3.4
+pkgver=19.0.0
 pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
@@ -14,24 +14,15 @@ makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dr
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
-        get-program-name-based-on-path.patch
         LICENSE)
-sha512sums=('e4ead944ba053aa05425e9e199d633f576dfa424976253fc32438e8db6da5e8d381122e4c4b7fb18f94177421f208bab5567cfec8d2692d104e266483ca02a99'
+sha512sums=('5759b85275bcd145513cf14a9ef7505595766fb33b82c53738f74ede462e5850580d48ab4af326b41209e7f4b05aab75539f2bfebf67c3098a4680ea95c37591'
             'SKIP'
-            '3c851ec0f1d8c1d918756c5b5315901d2a9c1de22624378bb2ba49ae8d7abc0b6c015a91c455f1d40d50532939f60db81cab0d7c9f832d41162c684582783fa6'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
               'E3E8F480C52ADD73B278EE78E1ECBE07D7D70895'  # Juan Antonio Suárez Romero (Igalia, S.L.) <jasuarez@igalia.com>
               'A5CC9FEC93F2F837CB044912336909B6B25FADFA'  # Juan A. Suarez Romero <jasuarez@igalia.com>
               '71C4B75620BC75708B4BDB254C95FAAB3EB073EC') # Dylan Baker <dylan@pnwbakers.com>
-
-prepare() {
-  cd mesa-${pkgver}
-
-  # Needed in order to target Chromium in drirc (included upstream in Mesa 19)
-  patch -Np1 -i ../get-program-name-based-on-path.patch
-}
 
 build() {
   #  -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,swr ### swr doesn't build https://bugs.freedesktop.org/show_bug.cgi?id=107865
@@ -64,7 +55,6 @@ build() {
     -D lmsensors=true \
     -D osmesa=gallium \
     -D shared-glapi=true \
-    -D texture-float=true \
     -D valgrind=false
 
   # Print config
