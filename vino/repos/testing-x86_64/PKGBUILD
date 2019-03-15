@@ -1,0 +1,45 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=vino
+pkgver=3.22.0+60+gd29a4f2
+pkgrel=1
+pkgdesc="A VNC server for the GNOME desktop"
+url="https://wiki.gnome.org/Projects/Vino"
+arch=(x86_64)
+license=(GPL)
+depends=(libnotify libxtst libsm telepathy-glib gtk3 libsecret avahi gnutls)
+makedepends=(intltool networkmanager gnome-common git)
+groups=(gnome)
+_commit=d29a4f2e1cb65711921681a60451881d33aac6e7  # master
+source=("git+https://gitlab.gnome.org/GNOME/vino.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --libexecdir=/usr/lib/vino \
+      --localstatedir=/var \
+      --disable-http-server --with-secret
+
+  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
