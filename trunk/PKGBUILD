@@ -1,7 +1,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gnome-photos
-pkgver=3.30.1
+pkgver=3.31.91
 pkgrel=1
 pkgdesc="Access, organize, and share your photos on GNOME"
 arch=(x86_64)
@@ -12,7 +12,7 @@ depends=(exempi gtk3 libexif librsvg babl gegl gsettings-desktop-schemas grilo-p
          gnome-online-miners dleyna-server dleyna-renderer libdazzle)
 makedepends=(python yelp-tools git meson)
 groups=(gnome)
-_commit=c7f55291c49ad26d1f7f2511481901ad16f813a2  # tags/3.30.1^0
+_commit=b4c1075bffbf118d22d9b3fa92a90ae2c7615c0e  # tags/3.31.91^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-photos.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgd.git")
 sha256sums=('SKIP'
@@ -23,31 +23,13 @@ pkgver() {
   git describe --tags | sed 's/-/+/g'
 }
 
-prepare() {
-  cd $pkgname
-
-  git submodule init
-  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
-  git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
-}
-
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --libexecdir=/usr/lib --enable-compile-warnings=minimum
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
-}
-
-check() {
-  cd $pkgname
-  # disabled: needs dogtail and an installed gnome-photos
-  #xvfb-run dbus-run-session make check
+  arch-meson $pkgname build \
+    --buildtype=debugoptimized \
+    -D documentation=true
+  ninja -C build
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
