@@ -31,10 +31,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # Move the plugin to our custom epiphany-only dir
-  sed -i "s/'mozilla'/'epiphany'/g" meson.build
-
   git submodule init
   git config --local submodule.subprojects/gvc.url "$srcdir/libgnome-volume-control"
   git submodule update
