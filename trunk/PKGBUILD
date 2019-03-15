@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.14.7dev+3+g353743b99
+pkgver=1.16.0
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,7 +19,7 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=353743b99520ba481d08b52b31af16dcfc80d39f  # nm-1-14
+_commit=15a6b41239e9abc44f128d2721f63c2ce09a40ec  # tags/1.16.0^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -34,10 +34,6 @@ prepare() {
 
 build() {
   local meson_args=(
-    # LTO breaks NM_BACKPORT_SYMBOL
-    # https://gitlab.freedesktop.org/NetworkManager/NetworkManager/issues/63
-    -D b_lto=false
-
     -D dbus_conf_dir=/usr/share/dbus-1/system.d
     -D dist_version="$pkgver-$pkgrel"
     -D session_tracking_consolekit=false
@@ -50,8 +46,10 @@ build() {
     -D teamdctl=true
     -D libnm_glib=true
     -D bluez5_dun=true
+    -D ebpf=true
     -D config_plugins_default=keyfile,ibft
     -D ibft=true
+    -D vapi=true
     -D docs=true
     -D more_asserts=no
     -D more_logging=false
@@ -63,7 +61,7 @@ build() {
 }
 
 check() {
-  meson test -C build
+  meson test -C build --print-errorlogs
 }
 
 _pick() {
