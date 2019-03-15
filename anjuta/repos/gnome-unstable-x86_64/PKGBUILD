@@ -1,0 +1,69 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Harley Laue <losinggeneration@yahoo.com>
+
+pkgbase=anjuta
+pkgname=('libanjuta' 'anjuta')
+pkgver=3.28.0
+pkgrel=4
+pkgdesc="GNOME Integrated Development Environment (IDE)"
+arch=(x86_64)
+license=(GPL)
+makedepends=(gdl vte3 autogen devhelp glade libgda subversion neon vala dconf gtk-doc yelp-tools gnome-common intltool gobject-introspection itstool gjs git python)
+url="http://www.anjuta.org/"
+options=('!emptydirs')
+_commit=aaadfafe19450d8524400af9ae09d5187b2d627a  # master
+source=(https://download.gnome.org/sources/$pkgbase/3.28/$pkgbase-$pkgver.tar.xz
+        https://gitlab.gnome.org/GNOME/anjuta/commit/3d2cb92c857b1288aca7d96886cee03714a5f0ff.patch)
+sha256sums=('b087b0a5857952d0edd24dae458616eb166a3257bc647d5279a9e71495544779'
+            '4978194241a24b3a70009a48782a5e4651f22e07df588c03dc8ad9f5d427376c')
+
+prepare() {
+  cd $pkgbase-$pkgver
+
+  # vala 0.44
+  patch -Np1 -i ../3d2cb92c857b1288aca7d96886cee03714a5f0ff.patch
+  sed -i '/m4_foreach/s/0\.42/0.44/g' configure.ac
+
+  AUTOPOINT="intltoolize" autoreconf -fvi
+}
+
+
+build() {
+  cd $pkgbase-$pkgver
+
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var \
+      --disable-compile-warnings \
+      --disable-schemas-compile \
+      --disable-silent-rules \
+      --disable-static \
+      --enable-introspection \
+      --enable-plugin-devhelp \
+      --enable-plugin-glade \
+      --enable-plugin-subversion \
+      --enable-glade-catalog --enable-gtk-doc
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package_libanjuta(){
+  pkgdesc="Anjuta runtime library"
+  depends=(gdl)
+  conflicts=('anjuta<3.4.4')
+
+  cd $pkgbase-$pkgver/libanjuta
+
+  # j1: Race during linking
+  make -j1 DESTDIR="$pkgdir" install
+}
+
+package_anjuta(){
+  pkgdesc="GNOME Integrated Development Environment (IDE)"
+  depends=(libanjuta vte3 autogen devhelp glade libgda subversion neon vala dconf)
+
+  cd $pkgbase-$pkgver
+  make -j1 DESTDIR="$pkgdir" install
+
+  cd libanjuta
+  make -j1 DESTDIR="$pkgdir" uninstall
+}
