@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgstatsver='2.3'
+pkgstatsver='2.4'
 showonly=false
 quiet=false
 option='-q -s -S -L'
@@ -34,12 +34,8 @@ done
 
 ${quiet} || echo 'Collecting data...'
 pkglist="$(mktemp --tmpdir pkglist.XXXXXX)"
-moduleslist="$(mktemp --tmpdir modules.XXXXXX)"
-trap 'rm -f "${pkglist}" "${moduleslist}"' EXIT
+trap 'rm -f "${pkglist}"' EXIT
 pacman -Qq > "${pkglist}"
-if [[ -f /proc/modules ]]; then
-	awk '{ print $1 }' /proc/modules > "${moduleslist}"
-fi
 arch="$(uname -m)"
 if [[ -f /proc/cpuinfo ]]; then
 	if grep -qE '^flags\s*:.*\slm\s' /proc/cpuinfo; then
@@ -50,14 +46,11 @@ if [[ -f /proc/cpuinfo ]]; then
 else
 	cpuarch=''
 fi
-mirror="$(pacman -Sddp extra/pkgstats 2>/dev/null | sed -E 's#(.*/)extra/os/.*#\1#;s#(.*://).*@#\1#')"
+mirror="$(pacman-conf --repo extra Server 2> /dev/null | head -1 | sed -E 's#(.*/)extra/os/.*#\1#;s#(.*://).*@#\1#')"
 
 if ${showonly}; then
 	echo 'packages='
 	cat  "${pkglist}"
-	echo ''
-	echo 'modules='
-	cat "${moduleslist}"
 	echo ''
 	echo "arch=${arch}"
 	echo "cpuarch=${cpuarch}"
@@ -69,7 +62,6 @@ else
 	curl ${option} \
 		-A "pkgstats/${pkgstatsver}" \
 		--data-urlencode "packages@${pkglist}" \
-		--data-urlencode "modules@${moduleslist}" \
 		--data-urlencode "arch=${arch}" \
 		--data-urlencode "cpuarch=${cpuarch}" \
 		--data-urlencode "mirror=${mirror}" \
