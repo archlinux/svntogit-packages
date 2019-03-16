@@ -1,0 +1,63 @@
+# Contributor: Kaiting Chen <kaiting.chen@kiwilight.com>
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+
+pkgname='cronie'
+pkgver=1.5.3
+pkgrel=1
+pkgdesc='Daemon that runs specified programs at scheduled times and related tools'
+url='https://github.com/cronie-crond/cronie/'
+license=('custom:BSD')
+arch=('x86_64')
+depends=('pam' 'bash' 'run-parts')
+optdepends=('smtp-server: send job output via email'
+            'smtp-forwarder: forward job output to email server')
+source=("https://github.com/cronie-crond/cronie/releases/download/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz"
+        'service'
+        'pam.d'
+        'deny')
+sha256sums=('4f73b351273662f28bb392c34c1ca550d78eb97540ce3acc2d1d20548e1a2e7c'
+            'ac3ff3c8a5ce1b6367b06877b4b12ff74e7f18a3c510fb9f80d6ea6b6321e3b1'
+            '00864268b491bab8c66400a4a4b4bf85f168a6e44e85676105e084940924090c'
+            'ae6e533ecdfc1bd2dd80a9e25acb0260cbe9f00c4e4abee93d552b3660f263fc')
+
+backup=('etc/cron.deny'
+        'etc/pam.d/crond'
+        'etc/cron.d/0hourly'
+        'etc/anacrontab')
+
+conflicts=('cron')
+provides=('cron')
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--sbindir=/usr/bin \
+		--enable-anacron \
+		--with-inotify \
+		--with-pam \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	make DESTDIR="${pkgdir}" install
+
+	chmod u+s "${pkgdir}"/usr/bin/crontab
+	install -d "${pkgdir}"/var/spool/{ana,}cron
+	install -d "${pkgdir}"/etc/cron.{d,hourly,daily,weekly,monthly}
+
+	install -Dm644 ../deny "${pkgdir}"/etc/cron.deny
+	install -Dm644 ../pam.d "${pkgdir}"/etc/pam.d/crond
+	install -Dm644 ../service "${pkgdir}"/usr/lib/systemd/system/cronie.service
+
+	install -Dm644 contrib/anacrontab "${pkgdir}"/etc/anacrontab
+	install -Dm644 contrib/0hourly "${pkgdir}"/etc/cron.d/0hourly
+	install -Dm755 contrib/0anacron "${pkgdir}"/etc/cron.hourly/0anacron
+
+	install -Dm644 COPYING "${pkgdir}"/usr/share/licenses/cronie/COPYING
+}
