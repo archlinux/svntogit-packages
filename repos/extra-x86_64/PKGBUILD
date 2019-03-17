@@ -7,8 +7,8 @@
 
 pkgname=('rust' 'rust-docs')
 epoch=1
-pkgver=1.32.0
-pkgrel=2
+pkgver=1.33.0
+pkgrel=1
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
 url='https://www.rust-lang.org/'
@@ -21,17 +21,20 @@ checkdepends=('procps-ng' 'gdb')
 options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
-        config.toml)
+        config.toml
+        0001-Revert-1c95f5a34c14f08d65cdd198827e3a2fcb63cf39-9452.patch)
 
-sha256sums=('4c594c7712a0e7e8eae6526c464bf6ea1d82f77b4f61717c3fc28fb27ba2224a'
+sha256sums=('5a01a8d7e65126f6079042831385e77485fa5c014bf217e9f3e4aff36a485d94'
             'SKIP'
-            'ce1c2648e70a14362d33d0cbbd3e35846ea9d43a8d0abc36071563fc087b82d5')
+            'ce1c2648e70a14362d33d0cbbd3e35846ea9d43a8d0abc36071563fc087b82d5'
+            'cf04a3c8ac0b4f5d786532e6e07a2f52cea2216d899be8d7c0b087aab78a2b68')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE') # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
 
 prepare() {
   cd "rustc-$pkgver-src"
 
   cp "$srcdir"/config.toml config.toml
+  patch -p1 <"$srcdir"/0001-Revert-1c95f5a34c14f08d65cdd198827e3a2fcb63cf39-9452.patch
 }
 
 build() {
