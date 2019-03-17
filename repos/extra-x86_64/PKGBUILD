@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=3.32.0+15+gb7d79a5f0
+pkgver=3.32.0+16+g1341d5557
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -18,11 +18,13 @@ makedepends=(gtk-doc gnome-control-center evolution-data-server gobject-introspe
 optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
-_commit=b7d79a5f063341f1773a9a8a5550a188c04efbda  # master
+_commit=1341d5557fbf05691172459e14cde70a8d5e96c3  # master
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
-        "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
+        "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+        hack-detached.diff)
 sha256sums=('SKIP'
-            'SKIP')
+            'SKIP'
+            '939e81f682ebafd60e86d444e49dbab277fba0f00420466b5ff783568b7dc931')
 
 pkgver() {
   cd $pkgname
@@ -31,6 +33,13 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # Unbreak switcher
+  git cherry-pick -n 00a4891fb93a3846c48bc6fc1167205e2afab67b
+
+  # Hack around broken detached locations
+  patch -Np1 -i ../hack-detached.diff
+
   git submodule init
   git config --local submodule.subprojects/gvc.url "$srcdir/libgnome-volume-control"
   git submodule update
