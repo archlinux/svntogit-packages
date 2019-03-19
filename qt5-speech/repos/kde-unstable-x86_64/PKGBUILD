@@ -1,0 +1,41 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgname=qt5-speech
+_qtver=5.13.0-beta1
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=(x86_64)
+url='https://www.qt.io'
+license=(GPL3 LGPL3 FDL custom)
+pkgdesc='Qt module to make text to speech and speech recognition easy'
+depends=(qt5-multimedia)
+makedepends=(flite speech-dispatcher)
+optdepends=('flite: flite TTS backend' 'speech-dispatcher: speech-dispatcher TTS backend')
+groups=(qt qt5)
+_pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
+source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
+sha256sums=('2c2043cbd7f75f81fc4b09129d59a5a807b2b229cd333efd1dd565247106621a')
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+
+  qmake ../${_pkgfqn}
+  make
+}
+
+package() {
+  cd build
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Drop QMAKE_PRL_BUILD_DIR because reference the build dir
+  find "$pkgdir/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+}
