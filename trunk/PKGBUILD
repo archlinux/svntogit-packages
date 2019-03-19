@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=3.32.0+16+g1341d5557
+pkgver=3.32.0+20+g05e55cee2
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -18,7 +18,7 @@ makedepends=(gtk-doc gnome-control-center evolution-data-server gobject-introspe
 optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
-_commit=1341d5557fbf05691172459e14cde70a8d5e96c3  # master
+_commit=05e55cee23d65206f3c3f2d12f4a4d659061651f  # master
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
         hack-detached.diff)
@@ -33,9 +33,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # Unbreak switcher
-  git cherry-pick -n 00a4891fb93a3846c48bc6fc1167205e2afab67b
 
   # Hack around broken detached locations
   patch -Np1 -i ../hack-detached.diff
