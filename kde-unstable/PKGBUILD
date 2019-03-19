@@ -1,0 +1,57 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Michael Hansen <zrax0111 gmail com>
+
+pkgname=qt5-doc
+_qtver=5.13.0-beta1
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=('any')
+url='https://www.qt.io'
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
+pkgdesc='A cross-platform application and UI framework (Documentation)'
+depends=('qt5-base')
+makedepends=('qt5-tools' 'python2' 'pciutils' 'libxtst' 'libxcursor' 'libxrandr' 'libxss' 'libxcomposite'
+             'gperf' 'nss' 'clang')
+groups=('qt' 'qt5')
+_pkgfqn="qt-everywhere-src-${_qtver}"
+source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/single/${_pkgfqn}.tar.xz")
+sha256sums=('23756b4786cf66b0bddb27694a48f4ecb01ec40fed1e26949db0bc57a03557cc')
+
+prepare() {
+  cd ${_pkgfqn}
+
+  ln -s /usr/bin qttools/
+  ln -s /usr/bin/{rcc,uic,moc} qtbase/bin/
+
+  # Hack to force using python2
+  cd "$srcdir"
+  mkdir -p bin
+  ln -s /usr/bin/python2 bin/python
+}
+
+build() {
+  cd ${_pkgfqn}
+
+  export PATH="$srcdir/bin:$PATH"
+  PYTHON=/usr/bin/python2 ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -docdir /usr/share/doc/qt \
+    -headerdir /usr/include/qt \
+    -archdatadir /usr/lib/qt \
+    -datadir /usr/share/qt \
+    -sysconfdir /etc/xdg \
+    -examplesdir /usr/share/doc/qt/examples
+  make docs
+}
+
+package() {
+  cd ${_pkgfqn}
+  make INSTALL_ROOT="$pkgdir" install_docs
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+
+# Fix conflicts with qt5-examples
+  rm -r "$pkgdir"/usr/share/doc/qt/examples
+}
