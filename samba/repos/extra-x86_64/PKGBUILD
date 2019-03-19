@@ -11,11 +11,11 @@
 pkgbase=samba
 pkgname=('libwbclient' 'smbclient' 'samba')
 pkgver=4.10.0
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url="http://www.samba.org"
 license=('GPL3')
-makedepends=('python2' 'docbook-xsl' 'pkg-config' 'libbsd' 'db' 'popt' 'libcups' 
+makedepends=('python' 'docbook-xsl' 'pkg-config' 'libbsd' 'db' 'popt' 'libcups' 
              'readline' 'tevent' 'acl' 'libldap' 'libcap' 'ldb>=1.1.15' 'krb5' 'pam'
              'systemd' 'gamin' 'gnutls>=2.4.1' 'talloc' 'tdb' 'dbus' 'libaio'
              'perl-parse-yapp' 'libnsl' 'libtirpc' 'rpcsvc-proto' 'jansson')
@@ -34,22 +34,6 @@ build() {
   _pkgsrc=${srcdir}/samba-pkg
   rm -rf ${_pkgsrc}
   cd ${srcdir}/samba-${pkgver}
-  # change to use python2
-  SAVEIFS=${IFS}
-  IFS=$(echo -en "\n\b")
-  PYTHON_CALLERS="$(find ${srcdir}/samba-${pkgver} -name '*.py')
-$(find ${srcdir}/samba-${pkgver} -name 'wscript*')
-$(find ${srcdir}/samba-${pkgver} -name 'configure.ac')
-$(find ${srcdir}/samba-${pkgver} -name 'upgrade_from_s3')
-$(find ${srcdir}/samba-${pkgver}/buildtools -type f)
-$(find ${srcdir}/samba-${pkgver}/source4/scripting -type f)"
-  sed -i -e "s|/usr/bin/env python$|/usr/bin/env python2|" \
-         -e "s|python-config|python2-config|" \
-         -e "s|bin/python|bin/python2|" \
-      ${PYTHON_CALLERS}
-  IFS=${SAVEIFS}
-
-  export PYTHON=/usr/bin/python2
 _samba4_idmap_modules=idmap_ad,idmap_rid,idmap_adex,idmap_hash,idmap_tdb2
 _samba4_pdb_modules=pdb_tdbsam,pdb_ldap,pdb_ads,pdb_smbpasswd,pdb_wbc_sam,pdb_samba4
 _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,auth_samba4
@@ -63,8 +47,8 @@ _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,a
               --localstatedir=/var \
               --with-configdir=/etc/samba \
               --with-lockdir=/var/cache/samba \
-              --with-sockets-dir=/var/run/samba \
-              --with-piddir=/var/run \
+              --with-sockets-dir=/run/samba \
+              --with-piddir=/run \
               --with-ads \
               --with-ldap \
               --with-winbind \
@@ -113,7 +97,7 @@ depends=('glibc' 'libbsd')
 package_smbclient() {
 pkgdesc="Tools to access a server's filespace and printers via SMB"
 depends=('popt' 'cifs-utils' 'tdb' "libwbclient>=$pkgver" 'ldb'
-         'tevent' 'libgcrypt' 'python2' 'talloc' 'readline' 'gnutls' 
+         'tevent' 'libgcrypt' 'python' 'talloc' 'readline' 'gnutls' 
          'libbsd' 'libldap' 'libcups' 'gamin' 'libarchive' 'libnsl' 'jansson')
 
     _smbclient_bins=('smbclient' 'rpcclient' 'smbspool'
@@ -169,7 +153,7 @@ depends=('popt' 'cifs-utils' 'tdb' "libwbclient>=$pkgver" 'ldb'
 package_samba() {
 pkgdesc="SMB Fileserver and AD Domain server"
 depends=('db>=4.7' 'popt' 'libcups' 'libcap>=2.16' 'gamin' 'gnutls>=2.4.1'
-         'talloc' 'ldb' 'libbsd' 'python2' 'iniparser' 'tdb' 'libaio' 'perl-parse-yapp' "smbclient>=$pkgver" 'gpgme')
+         'talloc' 'ldb' 'libbsd' 'python' 'iniparser' 'tdb' 'libaio' 'perl-parse-yapp' "smbclient>=$pkgver" 'gpgme')
 backup=(etc/logrotate.d/samba
         etc/pam.d/samba
         etc/samba/smb.conf
@@ -184,13 +168,6 @@ install=samba.install
     # into the samba package...
     mv ${_pkgsrc}/* ${pkgdir}/
     rmdir ${_pkgsrc}
-
-    _pyver=`python2 -c 'import sys; print(sys.version[:3])'`
-
-    find ${pkgdir}/usr/lib/python${_pyver}/site-packages/ -name '*.py' | \
-         xargs sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|"
-    find ${pkgdir}/usr/bin ${pkgdir}/usr/bin -type f -executable | \
-         xargs sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|"
 
     # Make admin scripts look in the right place for the samba python module
     for script in bin/samba_dnsupdate bin/samba_kcc bin/samba_spnupdate \
