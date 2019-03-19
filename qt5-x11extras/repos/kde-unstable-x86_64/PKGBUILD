@@ -1,0 +1,40 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=qt5-x11extras
+_qtver=5.13.0-beta1
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=('x86_64')
+url='https://www.qt.io'
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
+pkgdesc='Provides platform-specific APIs for X11'
+depends=('qt5-base')
+makedepends=()
+groups=('qt' 'qt5')
+_pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
+source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
+sha256sums=('6c6d039b0cac8b58ff3a7c4af804823038933d40940c1a3e763a6d92db2b46ca')
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+
+  qmake ../${_pkgfqn}
+  make
+}
+
+package() {
+  cd build
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Drop QMAKE_PRL_BUILD_DIR because reference the build dir
+  find "$pkgdir/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+}
