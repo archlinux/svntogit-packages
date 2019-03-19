@@ -27,10 +27,6 @@ sha256sums=('1bf9ed46dc1ec5d8cfa13ba1ad47f94981f3b6a7ec16ad9123cc2549c4cbf87b'
 
 install=install
 
-conflicts=('dirmngr' 'gnupg2')
-provides=('dirmngr' "gnupg2=${pkgver}")
-replaces=('dirmngr' 'gnupg2')
-
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	sed '/noinst_SCRIPTS = gpg-zip/c sbin_SCRIPTS += gpg-zip' -i tools/Makefile.in
