@@ -1,0 +1,39 @@
+From 6897c999fdbc3b93c1bed422e10479346dbd7e7f Mon Sep 17 00:00:00 2001
+From: Allan Sandfeld Jensen <allan.jensen@qt.io>
+Date: Wed, 20 Mar 2019 14:30:54 +0100
+Subject: [PATCH] Handle when XVisuals lose the alpha channel of the FBConfig
+
+Sometimes the XVisual for an FBConfig have no alpha data, and thus
+won't work when an alpha channel is required.
+
+Fixes: QTBUG-74578
+Change-Id: Idf05cbfcaea5edf667035939e9bc5d5df2172eec
+---
+ src/platformsupport/glxconvenience/qglxconvenience.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/platformsupport/glxconvenience/qglxconvenience.cpp b/src/platformsupport/glxconvenience/qglxconvenience.cpp
+index 40521ef6da39..6458454336e9 100644
+--- a/src/platformsupport/glxconvenience/qglxconvenience.cpp
++++ b/src/platformsupport/glxconvenience/qglxconvenience.cpp
+@@ -223,6 +223,7 @@ GLXFBConfig qglx_findConfig(Display *display, int screen , QSurfaceFormat format
+                     continue;
+             }
+ 
++            QXlibPointer<XVisualInfo> visual(glXGetVisualFromFBConfig(display, candidate));
+             int actualRed;
+             int actualGreen;
+             int actualBlue;
+@@ -231,7 +232,8 @@ GLXFBConfig qglx_findConfig(Display *display, int screen , QSurfaceFormat format
+             glXGetFBConfigAttrib(display, candidate, GLX_GREEN_SIZE, &actualGreen);
+             glXGetFBConfigAttrib(display, candidate, GLX_BLUE_SIZE, &actualBlue);
+             glXGetFBConfigAttrib(display, candidate, GLX_ALPHA_SIZE, &actualAlpha);
+-
++            // Sometimes the visuals don't have a depth that includes the alpha channel.
++            actualAlpha = qMin(actualAlpha, visual->depth - actualRed - actualGreen - actualBlue);
+ 
+             if (requestedRed && actualRed < requestedRed)
+                 continue;
+-- 
+2.21.0
+
