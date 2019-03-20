@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=65.0.2
+pkgver=66.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -22,8 +22,10 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags)
 _repo=https://hg.mozilla.org/mozilla-unified
 source=("hg+$_repo#tag=FIREFOX_${pkgver//./_}_RELEASE"
+        0001-bz-1468911.patch
         $pkgname.desktop firefox-symbolic.svg)
 sha256sums=('SKIP'
+            '821f858bac2e13ce02b8c20d5387d4ecc8ab2d0e4ebe0a517cbf935da6aeb31b'
             '677e1bde4c6b3cff114345c211805c7c43085038ca0505718a11e96432e9811a'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 
@@ -42,6 +44,9 @@ _mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
 prepare() {
   mkdir mozbuild
   cd mozilla-unified
+
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1521249
+  patch -Np1 -i ../0001-bz-1468911.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
@@ -72,7 +77,8 @@ export MOZ_TELEMETRY_REPORTING=1
 export MOZ_REQUIRE_SIGNING=1
 
 # Keys
-ac_add_options --with-google-api-keyfile=${PWD@Q}/google-api-key
+ac_add_options --with-google-location-service-api-keyfile=${PWD@Q}/google-api-key
+ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
 ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
 
 # System libraries
