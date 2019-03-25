@@ -2,23 +2,20 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=7.0.1
-pkgrel=2
+pkgver=8.0.0
+pkgrel=1
 _ocaml_ver=4.07.1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:University of Illinois/NCSA Open Source License')
-makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2' 'python-sphinx'
-             "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib')
+makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
+             "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
+             'python-sphinx' 'python-recommonmark')
 options=('staticlibs')
 source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
-        rusty-discriminator-thingy.patch
-        add-discriminator-to-debuginfo-test.patch
         llvm-config.h)
-sha256sums=('a38dfc4db47102ec79dcc2aa61e93722c5f6f06f0a961073bd84b78fb949419b'
+sha256sums=('8872be1b12c61450cacc82b3d153eab02be2546ef34fa3580ed14137bb26224c'
             'SKIP'
-            '4abaef845abb899628deb62a3f184fb8433555620648150dc346a74ef134fd68'
-            '1d2ea3a07e94f4c826706a452e93ed8a2301b5eed5715d22eab19a5ea3f3d0a7'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -26,11 +23,6 @@ validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstel
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
-
-  # Fix rust 1.32 segfaults with LTO being enabled
-  # https://github.com/rust-lang/rust/issues/54614
-  patch -Np1 -i ../rusty-discriminator-thingy.patch
-  patch -Np1 -i ../add-discriminator-to-debuginfo-test.patch
 }
 
 build() {
