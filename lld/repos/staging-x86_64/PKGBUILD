@@ -1,0 +1,65 @@
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+
+pkgname=lld
+pkgver=8.0.0
+pkgrel=1
+pkgdesc="Linker from the LLVM project"
+arch=('x86_64')
+url="https://lld.llvm.org/"
+license=('custom:University of Illinois/NCSA Open Source License')
+depends=('llvm-libs')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx')
+source=(https://releases.llvm.org/$pkgver/$pkgname-$pkgver.src.tar.xz{,.sig}
+        https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig})
+sha256sums=('9caec8ec922e32ffa130f0fb08e4c5a242d7e68ce757631e425e9eba2e1a6e37'
+            'SKIP'
+            '8872be1b12c61450cacc82b3d153eab02be2546ef34fa3580ed14137bb26224c'
+            'SKIP')
+validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
+validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver.src"
+  mkdir build
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPYTHON_EXECUTABLE=/usr/bin/python \
+    -DBUILD_SHARED_LIBS=ON \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DLLVM_INCLUDE_TESTS=ON \
+    -DLLVM_BUILD_TESTS=ON \
+    -DLLVM_BUILD_DOCS=ON \
+    -DLLVM_ENABLE_SPHINX=ON \
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit \
+    -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+  ninja
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+  if [[ -e /usr/bin/lld ]]; then
+    # TODO(foutrelis): tests use system lld if it exists; check if it's fixable
+    error "Cannot run the tests while lld is installed to the system"
+    return 1
+  fi
+  ninja check-lld
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  DESTDIR="$pkgdir" ninja install
+  install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
+}
+
+# vim:set ts=2 sw=2 et:
