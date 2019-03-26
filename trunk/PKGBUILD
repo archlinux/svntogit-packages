@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.32.0+25+gf0b9654de
+pkgver=3.32.0+33+g58f7059ea
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -15,10 +15,12 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanber
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
-_commit=f0b9654deb947e49e42b76d6daa42b86e5b0ec17  # master
+_commit=58f7059ea42c04fbb28c7210a287437f0f55b2d8  # master
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+        0001-wayland-xdg-shell-Correct-window-menu-position-in-lo.patch
         216.patch)
 sha256sums=('SKIP'
+            '8628fe45738d631d7776204be76cc091c5a1359d2874945c7913c7705330f816'
             'ed4f3cf738a3cffdf8a6e1a352bf24d74078c3b26fb9262c5746e0d95b9df756')
 
 pkgver() {
@@ -28,6 +30,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # https://gitlab.gnome.org/GNOME/mutter/issues/527
+  patch -Np1 -i ../0001-wayland-xdg-shell-Correct-window-menu-position-in-lo.patch
 
   # https://gitlab.gnome.org/GNOME/mutter/merge_requests/216
   git apply -3 ../216.patch
