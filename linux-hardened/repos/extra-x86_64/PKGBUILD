@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=4.20.17
+_pkgver=5.0.4
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
@@ -14,8 +14,8 @@ arch=('x86_64')
 license=('GPL2')
 makedepends=('xmlto' 'kmod' 'inetutils' 'bc' 'libelf' 'python-sphinx' 'graphviz')
 options=('!strip')
-source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
-        https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.sign
+source=(https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgver}.tar.xz
+        https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgver}.tar.sign
         https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
         config.x86_64  # the main kernel config files
         60-linux.hook  # pacman hook for depmod
@@ -23,11 +23,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/linux-${_pkgver}.tar.xz
         linux.preset   # standard config files for mkinitcpio ramdisk
 )
 replaces=('linux-grsec')
-sha256sums=('d011245629b980d4c15febf080b54804aaf215167b514a3577feddb2495f8a3e'
+sha256sums=('8f853aa05c496e27452da5e0ca74c56fab447cb2c24f047c55fd1d13d8bdea68'
             'SKIP'
-            'ccc0845614ff8a17bf5367baac62d1695d636a639913d1c944d3627d1d9089e2'
+            'aecab4ee9dc65b5bf7261835f322ef9457b352375832510d25156183328bc0c9'
             'SKIP'
-            '75e4629b94f01ebe851c37a8e22ea11d8b7aee70224b86cf323573ff2ffb07f5'
+            'fbd1843fa1a710bef29027f290d2fe438548b50faf2b3e872f78b700926d09f3'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             'c043f3033bb781e2688794a59f6d1f7ed49ef9b13eb77ff9a425df33a244a636'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
