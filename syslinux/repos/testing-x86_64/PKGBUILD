@@ -1,0 +1,103 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+# Maintainer: Anatol Pomozov <anatol.pomozov@gmail.com>
+# Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname=syslinux
+pkgver=6.04.pre3.r3.g05ac953c
+#_tag=syslinux-$pkgver
+_commit=05ac953c23f90b2328d393f7eecde96e41aed067
+pkgrel=1
+pkgdesc='Collection of boot loaders that boot from FAT, ext2/3/4 and btrfs filesystems, from CDs and via PXE'
+url='http://www.syslinux.org/'
+arch=(x86_64)
+backup=(boot/syslinux/syslinux.cfg)
+install=syslinux.install
+license=(GPL2)
+# syslinux build system is a mess of submakes that does not work with -jN
+# efi32/com32 do not like Arch cflags/ldflags, though it would be nice to have the flags for userspace tools
+options=(!makeflags !buildflags)
+makedepends=(git python2 nasm upx asciidoc)
+makedepends_x86_64=(lib32-glibc) # efi32 needs it
+optdepends=('perl-crypt-passwdmd5: For md5pass'
+            'perl-digest-sha1:     For sha1pass'
+            'mtools:               For mkdiskimage and syslinux support'
+            'gptfdisk:             For GPT support'
+            'util-linux:           For isohybrid'
+            'efibootmgr:           For EFI support'
+            'dosfstools:           For EFI support')
+
+# The syslinux-install_update script is maintained at https://gist.github.com/pyther/772138
+# Script not yet updated for syslinux-efi
+source=(git+https://repo.or.cz/syslinux.git#commit=$_commit
+        syslinux.cfg
+        syslinux-install_update
+        strip_note_section.patch
+        single-load-segment.patch
+        prevent-pow-optimization.patch
+)
+sha1sums=('SKIP'
+          '1145f454bd297d373ad123425f93620c3e92f585'
+          'df5160a138ca8c6502d67fe1a64fec78b50e82c2'
+          '11d928087764ca286af0327d40230f219348568c'
+          '830c88005fb6c9e759f67b91ab33a10b002385de'
+          'c94622eaa14ad9512e4f43b13302ba35d1787cbc')
+
+_targets='bios efi32'
+case "$CARCH" in
+  x86_64) _targets+=' efi64' ;;
+esac
+
+pkgver() {
+  cd syslinux
+  git describe --long | sed 's/^syslinux-//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd syslinux
+
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=906414
+  patch -p1 < ../strip_note_section.patch
+
+  # https://bugs.archlinux.org/task/61059
+  patch -p1 < ../single-load-segment.patch
+
+  # https://bugs.archlinux.org/task/59987
+  patch -p1 < ../prevent-pow-optimization.patch
+
+  # do not swallow efi compilation output to make debugging easier
+  sed 's|> /dev/null 2>&1||' -i efi/check-gnu-efi.sh
+
+  # disable debug and development flags to reduce bootloader size
+  truncate --size 0 mk/devel.mk
+}
+
+build() {
+  cd syslinux
+  export LDFLAGS+=--no-dynamic-linker  # workaround for binutils 2.28 http://www.syslinux.org/wiki/index.php?title=Building
+  export EXTRA_CFLAGS=-fno-PIE   # to fix gpxe build
+  make PYTHON=python2 $_targets
+}
+
+check() {
+  cd syslinux
+  # tests fail to compile
+  # make unittest
+  true
+}
+
+package() {
+  cd syslinux
+  make $_targets install INSTALLROOT="$pkgdir" SBINDIR=/usr/bin MANDIR=/usr/share/man AUXDIR=/usr/lib/syslinux
+
+  rm -r "$pkgdir"/usr/lib/syslinux/{com32,dosutil,syslinux.com}
+  install -D -m644 COPYING "$pkgdir"/usr/share/licenses/syslinux/COPYING
+  install -d "$pkgdir"/usr/share/doc
+  cp -ar doc "$pkgdir"/usr/share/doc/syslinux
+
+  install -d "$pkgdir"/usr/lib/syslinux/bios
+  mv "$pkgdir"/usr/lib/syslinux/{*.bin,*.c32,*.0,memdisk} "$pkgdir"/usr/lib/syslinux/bios 
+
+  install -D -m0644 ../syslinux.cfg "$pkgdir"/boot/syslinux/syslinux.cfg
+  install -D -m0755 ../syslinux-install_update "$pkgdir"/usr/bin/syslinux-install_update
+}
