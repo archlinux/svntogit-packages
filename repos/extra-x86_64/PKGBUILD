@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=66.0.1
+pkgver=66.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -26,7 +26,7 @@ source=("hg+$_repo#tag=FIREFOX_${pkgver//./_}_RELEASE"
         $pkgname.desktop firefox-symbolic.svg)
 sha256sums=('SKIP'
             '821f858bac2e13ce02b8c20d5387d4ecc8ab2d0e4ebe0a517cbf935da6aeb31b'
-            '677e1bde4c6b3cff114345c211805c7c43085038ca0505718a11e96432e9811a'
+            '4a783dca1f88e003c72f32d22719a0915f3fa576adbc492240e7cc250246ce10'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
@@ -72,7 +72,7 @@ ac_add_options --enable-official-branding
 ac_add_options --enable-update-channel=release
 ac_add_options --with-distribution-id=org.archlinux
 export MOZILLA_OFFICIAL=1
-export MOZ_APP_REMOTINGNAME=$pkgname
+export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 export MOZ_TELEMETRY_REPORTING=1
 export MOZ_REQUIRE_SIGNING=1
 
