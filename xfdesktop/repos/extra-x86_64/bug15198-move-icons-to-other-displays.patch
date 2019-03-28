@@ -1,0 +1,311 @@
+From 2d9a081c0ff88cb2c2061beb345d1eb8ec3c070b Mon Sep 17 00:00:00 2001
+From: Simon Steinbeiss <simon.steinbeiss@elfenbeinturm.at>
+Date: Sat, 16 Mar 2019 22:39:02 +0100
+Subject: Re-introduce ability to move icons to other displays (Bug #15198)
+
+This feature was accidentally removed as part of
+8331081ac2191733b4093ee163812eb0706748d7.
+---
+ src/xfdesktop-file-icon-manager.c |  65 +++++++++++++------
+ src/xfdesktop-icon-view.c         | 133 +++++++++++++++++++++++++++++++++-----
+ src/xfdesktop-icon-view.h         |   8 +++
+ 3 files changed, 171 insertions(+), 35 deletions(-)
+
+diff --git a/src/xfdesktop-file-icon-manager.c b/src/xfdesktop-file-icon-manager.c
+index 7a73dba9..807c9bc6 100644
+--- a/src/xfdesktop-file-icon-manager.c
++++ b/src/xfdesktop-file-icon-manager.c
+@@ -1903,22 +1903,35 @@ xfdesktop_file_icon_manager_save_icons(gpointer user_data)
+     XfdesktopFileIconManager *fmanager = XFDESKTOP_FILE_ICON_MANAGER(user_data);
+     gchar relpath[PATH_MAX], *tmppath, *path;
+     XfceRc *rcfile;
+-    GdkScreen *screen;
+-    GdkDisplay *display;
+-    GdkMonitor *monitor;
+-    GdkRectangle rectangle;
++    gint x = 0, y = 0, width = 0, height = 0;
+ 
+     fmanager->priv->save_icons_id = 0;
+ 
+-    screen = gtk_widget_get_screen (GTK_WIDGET (fmanager->priv->icon_view));
+-    display = gdk_screen_get_display (screen);
+-    monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(fmanager->priv->icon_view)));
+-    gdk_monitor_get_workarea (monitor, &rectangle);
++    if (!xfdesktop_get_workarea_single(fmanager->priv->icon_view,
++                                       0,
++                                       &x,
++                                       &y,
++                                       &width,
++                                       &height))
++    {
++        GdkScreen *screen;
++        GdkDisplay *display;
++        GdkMonitor *monitor;
++        GdkRectangle rectangle;
++
++        screen = gtk_widget_get_screen (GTK_WIDGET (fmanager->priv->icon_view));
++        display = gdk_screen_get_display (screen);
++        monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(fmanager->priv->icon_view)));
++        gdk_monitor_get_workarea (monitor, &rectangle);
++        width = rectangle.width;
++        height = rectangle.height;
++    }
++
+ 
+     g_snprintf(relpath, PATH_MAX, "xfce4/desktop/icons.screen%d-%dx%d.rc",
+                0,
+-               rectangle.width,
+-               rectangle.height);
++               width,
++               height);
+ 
+     path = xfce_resource_save_location(XFCE_RESOURCE_CONFIG, relpath, TRUE);
+     if(!path)
+@@ -2004,23 +2017,35 @@ xfdesktop_file_icon_manager_get_cached_icon_position(XfdesktopFileIconManager *f
+     gchar relpath[PATH_MAX];
+     gchar *filename = NULL;
+     gboolean ret = FALSE;
+-    GdkScreen *screen;
+-    GdkDisplay *display;
+-    GdkMonitor *monitor;
+-    GdkRectangle rectangle;
++    gint x = 0, y = 0, width = 0, height = 0;
+ 
+     if(!fmanager || !fmanager->priv)
+         return FALSE;
+ 
+-    screen = gtk_widget_get_screen (GTK_WIDGET (fmanager->priv->icon_view));
+-    display = gdk_screen_get_display (screen);
+-    monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(fmanager->priv->icon_view)));
+-    gdk_monitor_get_workarea (monitor, &rectangle);
++    if (!xfdesktop_get_workarea_single(fmanager->priv->icon_view,
++                                       0,
++                                       &x,
++                                       &y,
++                                       &width,
++                                       &height))
++    {
++        GdkScreen *screen;
++        GdkDisplay *display;
++        GdkMonitor *monitor;
++        GdkRectangle rectangle;
++
++        screen = gtk_widget_get_screen (GTK_WIDGET (fmanager->priv->icon_view));
++        display = gdk_screen_get_display (screen);
++        monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(fmanager->priv->icon_view)));
++        gdk_monitor_get_workarea (monitor, &rectangle);
++        width = rectangle.width;
++        height = rectangle.height;
++    }
+ 
+     g_snprintf(relpath, PATH_MAX, "xfce4/desktop/icons.screen%d-%dx%d.rc",
+                0,
+-               rectangle.width,
+-               rectangle.height);
++               width,
++               height);
+ 
+     filename = xfce_resource_lookup(XFCE_RESOURCE_CONFIG, relpath);
+ 
+diff --git a/src/xfdesktop-icon-view.c b/src/xfdesktop-icon-view.c
+index 11c8dba5..a8335f9f 100644
+--- a/src/xfdesktop-icon-view.c
++++ b/src/xfdesktop-icon-view.c
+@@ -2617,7 +2617,7 @@ xfdesktop_icon_view_setup_grids_xinerama(XfdesktopIconView *icon_view)
+ static void
+ xfdesktop_setup_grids(XfdesktopIconView *icon_view)
+ {
+-    gint xrest = 0, yrest = 0;
++    gint xorigin = 0, yorigin = 0, xrest = 0, yrest = 0, width = 0, height = 0;
+     gsize old_size, new_size;
+     GdkScreen *screen;
+     GdkDisplay *display;
+@@ -2632,16 +2632,25 @@ xfdesktop_setup_grids(XfdesktopIconView *icon_view)
+     if (icon_view->priv->primary)
+     {
+         monitor = gdk_display_get_primary_monitor (display);
++        gdk_monitor_get_workarea (monitor, &rectangle);
++        width = rectangle.width;
++        height = rectangle.height;
++        xorigin = rectangle.x;
++        yorigin = rectangle.y;
+     }
+-    else {
++    else if (!xfdesktop_get_workarea_single(icon_view, 0,
++                                            &xorigin, &yorigin,
++                                            &width, &height)) {
+         monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(icon_view)));
++        width = gdk_screen_get_width(screen);
++        height = gdk_screen_get_height(screen);
++        xorigin = yorigin = 0;
+     }
+-    gdk_monitor_get_workarea (monitor, &rectangle);
+ 
+-    icon_view->priv->xorigin = rectangle.x;
+-    icon_view->priv->yorigin = rectangle.y;
+-    icon_view->priv->width = rectangle.width;
+-    icon_view->priv->height = rectangle.height;
++    icon_view->priv->xorigin = xorigin;
++    icon_view->priv->yorigin = yorigin;
++    icon_view->priv->width = width;
++    icon_view->priv->height = height;
+ 
+     icon_view->priv->nrows = MAX((icon_view->priv->height - MIN_MARGIN * 2) / CELL_SIZE, 0);
+     icon_view->priv->ncols = MAX((icon_view->priv->width - MIN_MARGIN * 2) / CELL_SIZE, 0);
+@@ -3284,12 +3293,10 @@ xfdesktop_move_all_pending_icons_to_desktop(XfdesktopIconView *icon_view)
+ static void
+ xfdesktop_grid_do_resize(XfdesktopIconView *icon_view)
+ {
++    gint xorigin = 0, yorigin = 0, width = 0, height = 0;
+     gint16 new_rows, new_cols;
+     gsize old_size, new_size;
+     GdkScreen *screen;
+-    GdkDisplay *display;
+-    GdkMonitor *monitor;
+-    GdkRectangle rectangle;
+ 
+     /* First check to see if the grid actually did change. This way
+      * we don't remove all the icons just to put them back again */
+@@ -3297,12 +3304,29 @@ xfdesktop_grid_do_resize(XfdesktopIconView *icon_view)
+                * sizeof(XfdesktopIcon *);
+ 
+     screen = gtk_widget_get_screen (GTK_WIDGET (icon_view));
+-    display = gdk_screen_get_display (screen);
+-    monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(icon_view)));
+-    gdk_monitor_get_workarea (monitor, &rectangle);
+ 
+-    new_rows = (rectangle.width - MIN_MARGIN * 2) / CELL_SIZE;
+-    new_cols = (rectangle.height - MIN_MARGIN * 2) / CELL_SIZE;
++    if (icon_view->priv->primary)
++    {
++        GdkDisplay *display;
++        GdkMonitor *monitor;
++        GdkRectangle rectangle;
++
++        display = gdk_screen_get_display (screen);
++        monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_parent_window(GTK_WIDGET(icon_view)));
++        gdk_monitor_get_workarea (monitor, &rectangle);
++        width = rectangle.width;
++        height = rectangle.height;
++    }
++    else if(!xfdesktop_get_workarea_single(icon_view, 0,
++                                           &xorigin, &yorigin,
++                                           &width, &height))
++    {
++        width = gdk_screen_get_width(screen);
++        height = gdk_screen_get_height(screen);
++    }
++
++    new_rows = (width - MIN_MARGIN * 2) / CELL_SIZE;
++    new_cols = (height - MIN_MARGIN * 2) / CELL_SIZE;
+ 
+     new_size = (guint)new_rows * new_cols * sizeof(XfdesktopIcon *);
+ 
+@@ -3342,6 +3366,85 @@ xfdesktop_grid_resize_timeout(gpointer user_data)
+     return FALSE;
+ }
+ 
++gboolean
++xfdesktop_get_workarea_single(XfdesktopIconView *icon_view,
++                              guint ws_num,
++                              gint *xorigin,
++                              gint *yorigin,
++                              gint *width,
++                              gint *height)
++{
++    gboolean ret = FALSE;
++    GdkScreen *gscreen;
++    Display *dpy;
++    Window root;
++    Atom property, actual_type = None;
++    gint actual_format = 0, first_id;
++    gulong nitems = 0, bytes_after = 0, offset = 0, tmp_size = 0;
++    unsigned char *data_p = NULL;
++
++    g_return_val_if_fail(xorigin && yorigin
++                         && width && height, FALSE);
++
++    gscreen = gtk_widget_get_screen(GTK_WIDGET(icon_view));
++    dpy = GDK_DISPLAY_XDISPLAY(gdk_screen_get_display(gscreen));
++    root = GDK_WINDOW_XID(gdk_screen_get_root_window(gscreen));
++    property = XInternAtom(dpy, "_NET_WORKAREA", False);
++
++    first_id = ws_num * 4;
++
++    gdk_error_trap_push();
++
++    do {
++        if(Success == XGetWindowProperty(dpy, root, property, offset,
++                                         G_MAXULONG, False, XA_CARDINAL,
++                                         &actual_type, &actual_format, &nitems,
++                                         &bytes_after, &data_p))
++        {
++            gint i;
++            gulong *data;
++
++            if(actual_format != 32 || actual_type != XA_CARDINAL) {
++                XFree(data_p);
++                break;
++            }
++
++            tmp_size = (actual_format / 8) * nitems;
++            if(actual_format == 32) {
++                tmp_size *= sizeof(long)/4;
++            }
++
++            data = g_malloc(tmp_size);
++            memcpy(data, data_p, tmp_size);
++
++            i = offset / 32;  /* first element id in this batch */
++
++            /* there's probably a better way to do this. */
++            if(i + (glong)nitems >= first_id && first_id - (glong)offset >= 0)
++                *xorigin = data[first_id - offset] + MIN_MARGIN;
++            if(i + (glong)nitems >= first_id + 1 && first_id - (glong)offset + 1 >= 0)
++                *yorigin = data[first_id - offset + 1] + MIN_MARGIN;
++            if(i + (glong)nitems >= first_id + 2 && first_id - (glong)offset + 2 >= 0)
++                *width = data[first_id - offset + 2] - 2 * MIN_MARGIN;
++            if(i + (glong)nitems >= first_id + 3 && first_id - (glong)offset + 3 >= 0) {
++                *height = data[first_id - offset + 3] - 2 * MIN_MARGIN;
++                ret = TRUE;
++                XFree(data_p);
++                g_free(data);
++                break;
++            }
++
++            offset += actual_format * nitems;
++            XFree(data_p);
++            g_free(data);
++        } else
++            break;
++    } while(bytes_after > 0);
++
++    gdk_error_trap_pop_ignored();
++
++    return ret;
++}
+ 
+ static inline gboolean
+ xfdesktop_grid_is_free_position(XfdesktopIconView *icon_view,
+diff --git a/src/xfdesktop-icon-view.h b/src/xfdesktop-icon-view.h
+index 3e7d17eb..95f398b8 100644
+--- a/src/xfdesktop-icon-view.h
++++ b/src/xfdesktop-icon-view.h
+@@ -125,6 +125,14 @@ void xfdesktop_icon_view_set_center_text (XfdesktopIconView *icon_view,
+ 
+ GtkWidget *xfdesktop_icon_view_get_window_widget(XfdesktopIconView *icon_view);
+ 
++gboolean
++xfdesktop_get_workarea_single(XfdesktopIconView *icon_view,
++                              guint ws_num,
++                              gint *xorigin,
++                              gint *yorigin,
++                              gint *width,
++                              gint *height);
++
+ void xfdesktop_icon_view_sort_icons(XfdesktopIconView *icon_view);
+ 
+ #if defined(DEBUG) && DEBUG > 0
+-- 
+cgit v1.2.1
+
