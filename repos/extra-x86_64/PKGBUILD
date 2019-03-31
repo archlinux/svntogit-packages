@@ -8,25 +8,27 @@
 pkgname=('rust' 'rust-docs')
 epoch=1
 pkgver=1.33.0
-pkgrel=1
+pkgrel=2
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
 url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' 'llvm' 'libffi' 'perl' 'python2' 'curl' 'cmake')
+makedepends=('rust' 'llvm7' 'libffi' 'perl' 'python2' 'curl' 'cmake')
 checkdepends=('procps-ng' 'gdb')
 
 options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         config.toml
+        0001-Backport-deprecation-fixes-from-commit-b7f030e.patch
         0001-Revert-1c95f5a34c14f08d65cdd198827e3a2fcb63cf39-9452.patch)
 
 sha256sums=('5a01a8d7e65126f6079042831385e77485fa5c014bf217e9f3e4aff36a485d94'
             'SKIP'
             'ce1c2648e70a14362d33d0cbbd3e35846ea9d43a8d0abc36071563fc087b82d5'
+            'd2fdd8ec0196e87b930f49a9ffa9fe7fe4995af54cfa8ee5638c7dc2170f5f8c'
             'cf04a3c8ac0b4f5d786532e6e07a2f52cea2216d899be8d7c0b087aab78a2b68')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE') # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
 
@@ -34,6 +36,7 @@ prepare() {
   cd "rustc-$pkgver-src"
 
   cp "$srcdir"/config.toml config.toml
+  patch -p1 <"$srcdir"/0001-Backport-deprecation-fixes-from-commit-b7f030e.patch
   patch -p1 <"$srcdir"/0001-Revert-1c95f5a34c14f08d65cdd198827e3a2fcb63cf39-9452.patch
 }
 
@@ -44,7 +47,7 @@ build() {
 }
 
 package_rust() {
-  depends=('gcc-libs' 'llvm-libs' 'curl' 'libssh2')
+  depends=('gcc-libs' 'llvm7-libs' 'curl' 'libssh2')
   provides=('cargo' 'rustfmt')
   conflicts=('cargo' 'rustfmt')
   replaces=('cargo' 'rustfmt')
