@@ -1,6 +1,6 @@
-From ece245fe717765630790da501a3d64f5c09a1e09 Mon Sep 17 00:00:00 2001
+From a076711d030ca5777465dab9f11c0639478a5cc8 Mon Sep 17 00:00:00 2001
 From: Evangelos Foutras <evangelos@foutrelis.com>
-Date: Thu, 20 Sep 2018 06:20:28 +0300
+Date: Tue, 26 Mar 2019 01:35:50 +0200
 Subject: [PATCH] Enable SSP and PIE by default
 
 This is a minimal set of changes needed to make clang use SSP and PIE by
@@ -19,7 +19,6 @@ of a compile-time option (https://bugs.llvm.org/show_bug.cgi?id=13410)
 ---
  lib/Driver/ToolChains/Linux.cpp     | 14 ++++++++++++--
  lib/Driver/ToolChains/Linux.h       |  1 +
- test/Driver/clang-offload-bundler.c |  2 +-
  test/Driver/cross-linux.c           | 16 ++++++++--------
  test/Driver/env.c                   |  2 +-
  test/Driver/fsanitize.c             | 14 +++++++-------
@@ -27,15 +26,16 @@ of a compile-time option (https://bugs.llvm.org/show_bug.cgi?id=13410)
  test/Driver/hexagon-toolchain-elf.c |  2 +-
  test/Driver/linux-as.c              |  4 ++--
  test/Driver/linux-ld.c              |  2 ++
+ test/Driver/ppc-abi.c               |  4 ++--
  test/Driver/riscv32-toolchain.c     |  4 ++--
  test/Driver/stack-protector.c       |  4 ++--
- 12 files changed, 40 insertions(+), 27 deletions(-)
+ 12 files changed, 41 insertions(+), 28 deletions(-)
 
 diff --git a/lib/Driver/ToolChains/Linux.cpp b/lib/Driver/ToolChains/Linux.cpp
-index f8f3623918..7f75021542 100644
+index 65ab9b2daf..5b757b8028 100644
 --- a/lib/Driver/ToolChains/Linux.cpp
 +++ b/lib/Driver/ToolChains/Linux.cpp
-@@ -903,8 +903,18 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
+@@ -968,8 +968,18 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
  }
  
  bool Linux::isPIEDefault() const {
@@ -55,32 +55,19 @@ index f8f3623918..7f75021542 100644
 +  return 2;
  }
  
- SanitizerMask Linux::getSupportedSanitizers() const {
+ bool Linux::IsMathErrnoDefault() const {
 diff --git a/lib/Driver/ToolChains/Linux.h b/lib/Driver/ToolChains/Linux.h
-index 22dbbecf6b..ba0d5587e0 100644
+index 4a662cb4b4..4f369c6090 100644
 --- a/lib/Driver/ToolChains/Linux.h
 +++ b/lib/Driver/ToolChains/Linux.h
-@@ -38,6 +38,7 @@ public:
-   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                            llvm::opt::ArgStringList &CC1Args) const override;
+@@ -40,6 +40,7 @@ public:
+   CXXStdlibType GetDefaultCXXStdlibType() const override;
    bool isPIEDefault() const override;
+   bool IsMathErrnoDefault() const override;
 +  unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override;
    SanitizerMask getSupportedSanitizers() const override;
    void addProfileRTLibs(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const override;
-diff --git a/test/Driver/clang-offload-bundler.c b/test/Driver/clang-offload-bundler.c
-index adf13f59d4..fd2f6e5d8c 100644
---- a/test/Driver/clang-offload-bundler.c
-+++ b/test/Driver/clang-offload-bundler.c
-@@ -115,7 +115,7 @@
- // CK-TEXTI: // __CLANG_OFFLOAD_BUNDLE____END__ openmp-x86_64-pc-linux-gnu
- 
- // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____START__ host-powerpc64le-ibm-linux-gnu
--// CK-TEXTLL: @A = global i32 0
-+// CK-TEXTLL: @A = {{(dso_local )?}}global i32 0
- // CK-TEXTLL: define {{.*}}@test_func()
- // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____END__ host-powerpc64le-ibm-linux-gnu
- // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____START__ openmp-powerpc64le-ibm-linux-gnu
 diff --git a/test/Driver/cross-linux.c b/test/Driver/cross-linux.c
 index a5ea832e77..1949c05a60 100644
 --- a/test/Driver/cross-linux.c
@@ -143,10 +130,10 @@ index 0371bc91c4..ea89f52512 100644
  // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib"
  // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../.."
 diff --git a/test/Driver/fsanitize.c b/test/Driver/fsanitize.c
-index 304e759302..c157f9fc48 100644
+index db88872399..76af9bd8fe 100644
 --- a/test/Driver/fsanitize.c
 +++ b/test/Driver/fsanitize.c
-@@ -238,15 +238,15 @@
+@@ -331,15 +331,15 @@
  // RUN: %clang -target x86_64-linux-gnu -fsanitize=vptr -fno-sanitize=vptr -fsanitize=undefined,address %s -### 2>&1
  // OK
  
@@ -166,7 +153,7 @@ index 304e759302..c157f9fc48 100644
  
  // CHECK-NO-PIE-NOT: "-pie"
  // CHECK-NO-PIE: "-mrelocation-model" "static"
-@@ -585,12 +585,12 @@
+@@ -687,12 +687,12 @@
  // RUN: %clang -fno-sanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NOSP
  // NOSP-NOT: "-fsanitize=safe-stack"
  
@@ -195,7 +182,7 @@ index ca96757a2b..ae1c25e989 100644
  // CHECK: "-L[[TOOLCHAIN]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5"
  // CHECK: "-L[[TOOLCHAIN]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../.."
 diff --git a/test/Driver/hexagon-toolchain-elf.c b/test/Driver/hexagon-toolchain-elf.c
-index 8f4c320ce4..a4d9ae502b 100644
+index a7eeca0fdb..32f648372e 100644
 --- a/test/Driver/hexagon-toolchain-elf.c
 +++ b/test/Driver/hexagon-toolchain-elf.c
 @@ -457,7 +457,7 @@
@@ -208,10 +195,10 @@ index 8f4c320ce4..a4d9ae502b 100644
  // CHECK042-NEXT: llvm-mc
  // CHECK042:      "-gpsize=8"
 diff --git a/test/Driver/linux-as.c b/test/Driver/linux-as.c
-index 68cf403d97..92b556db73 100644
+index a9335ebf71..a72041865b 100644
 --- a/test/Driver/linux-as.c
 +++ b/test/Driver/linux-as.c
-@@ -133,7 +133,7 @@
+@@ -164,7 +164,7 @@
  // CHECK-PPC-NO-MCPU-NOT: as{{.*}} "-mcpu=invalid-cpu"
  //
  // RUN: %clang -target sparc64-linux -mcpu=invalid-cpu -### \
@@ -220,7 +207,7 @@ index 68cf403d97..92b556db73 100644
  // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9 %s
  // CHECK-SPARCV9: as
  // CHECK-SPARCV9: -64
-@@ -142,7 +142,7 @@
+@@ -173,7 +173,7 @@
  // CHECK-SPARCV9: -o
  //
  // RUN: %clang -target sparc64-linux -mcpu=invalid-cpu -### \
@@ -230,7 +217,7 @@ index 68cf403d97..92b556db73 100644
  // CHECK-SPARCV9PIC: as
  // CHECK-SPARCV9PIC: -64
 diff --git a/test/Driver/linux-ld.c b/test/Driver/linux-ld.c
-index 787013931a..cba173b354 100644
+index 3ab81be490..fd6b67dd9a 100644
 --- a/test/Driver/linux-ld.c
 +++ b/test/Driver/linux-ld.c
 @@ -1,3 +1,5 @@
@@ -239,11 +226,29 @@ index 787013931a..cba173b354 100644
  // General tests that ld invocations on Linux targets sane. Note that we use
  // sysroot to make these tests independent of the host system.
  //
+diff --git a/test/Driver/ppc-abi.c b/test/Driver/ppc-abi.c
+index a82a01de27..35de94a4ad 100644
+--- a/test/Driver/ppc-abi.c
++++ b/test/Driver/ppc-abi.c
+@@ -26,11 +26,11 @@
+ 
+ // CHECK-ELFv1: "-mrelocation-model" "pic" "-pic-level" "2"
+ // CHECK-ELFv1: "-target-abi" "elfv1"
+-// CHECK-ELFv1-LE: "-mrelocation-model" "static"
++// CHECK-ELFv1-LE: "-mrelocation-model" "pic" "-pic-level" "2"
+ // CHECK-ELFv1-LE: "-target-abi" "elfv1"
+ // CHECK-ELFv1-QPX: "-mrelocation-model" "pic" "-pic-level" "2"
+ // CHECK-ELFv1-QPX: "-target-abi" "elfv1-qpx"
+-// CHECK-ELFv2: "-mrelocation-model" "static"
++// CHECK-ELFv2: "-mrelocation-model" "pic" "-pic-level" "2"
+ // CHECK-ELFv2: "-target-abi" "elfv2"
+ // CHECK-ELFv2-BE: "-mrelocation-model" "pic" "-pic-level" "2"
+ // CHECK-ELFv2-BE: "-target-abi" "elfv2"
 diff --git a/test/Driver/riscv32-toolchain.c b/test/Driver/riscv32-toolchain.c
-index 1e0c750a3f..563493a33b 100644
+index 9e8af3a8ff..171392d172 100644
 --- a/test/Driver/riscv32-toolchain.c
 +++ b/test/Driver/riscv32-toolchain.c
-@@ -44,7 +44,7 @@
+@@ -78,7 +78,7 @@
  // C-RV32-LINUX-MULTI-ILP32: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
  // C-RV32-LINUX-MULTI-ILP32: "-m" "elf32lriscv"
  // C-RV32-LINUX-MULTI-ILP32: "-dynamic-linker" "/lib/ld-linux-riscv32-ilp32.so.1"
@@ -252,7 +257,7 @@ index 1e0c750a3f..563493a33b 100644
  // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32"
  // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib32/ilp32"
  // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib32/ilp32"
-@@ -59,7 +59,7 @@
+@@ -94,7 +94,7 @@
  // C-RV32-LINUX-MULTI-ILP32D: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
  // C-RV32-LINUX-MULTI-ILP32D: "-m" "elf32lriscv"
  // C-RV32-LINUX-MULTI-ILP32D: "-dynamic-linker" "/lib/ld-linux-riscv32-ilp32d.so.1"
@@ -280,5 +285,5 @@ index a3e40b50ee..dfffe0d6cf 100644
  
  // RUN: %clang -target i386-pc-openbsd -### %s 2>&1 | FileCheck %s -check-prefix=OPENBSD
 -- 
-2.19.0
+2.21.0
 
