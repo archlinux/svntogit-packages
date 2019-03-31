@@ -7,15 +7,15 @@
 # Contributor: Gustavo Alvarez <sl1pkn07@gmail.com>
 
 pkgbase=mlt
-pkgname=(mlt mlt-python-bindings)
+pkgname=(mlt python-mlt)
 pkgver=6.14.0
-pkgrel=1
+pkgrel=2
 pkgdesc="An open source multimedia framework"
 arch=(x86_64)
 url="https://www.mltframework.org"
 license=(GPL)
 makedepends=(ladspa frei0r-plugins libdv sdl_image libsamplerate sox ffmpeg vid.stab qt5-svg
-             jack libexif python2 swig movit eigen opencv libebur128 gtk2)
+             jack libexif python swig movit eigen opencv libebur128 gtk2)
 source=($pkgname-$pkgver.tar.gz::"https://github.com/mltframework/mlt/archive/v$pkgver.tar.gz"
         mlt-opencv4.patch)
 sha256sums=('d387350f7bb7dd01efce3933c5ab7987b596e98bef7cc9c2349524d55a808b5e'
@@ -24,6 +24,7 @@ sha256sums=('d387350f7bb7dd01efce3933c5ab7987b596e98bef7cc9c2349524d55a808b5e'
 prepare() {
   cd $pkgname-$pkgver
   patch -p1 -i ../mlt-opencv4.patch # Fix build with openCV 4
+  sed -e 's|python{}.{}|python{}.{}m|' -i src/swig/python/build # Fix Python 3 include dir
 }
 
 build() {
@@ -33,15 +34,11 @@ build() {
 	--avformat-swscale \
 	--enable-gpl \
         --enable-gpl3 \
-        --enable-opencv \
-	--qt-libdir=/usr/lib --qt-includedir=/usr/include/qt
+        --enable-opencv
   make
 
 # python bindings
   cd src/swig/python
-  sed -i 's_path=`which python_path=`which python2_' build
-  sed -i 's_`python -c_`python2 -c_' build
-  sed -i 's#python-config#python2-config#' build
   ./build
 }
 
@@ -66,12 +63,16 @@ package_mlt() {
   make DESTDIR="$pkgdir" install
 }
 
-package_mlt-python-bindings() {
-  depends=(python2 mlt)
+package_python-mlt() {
+  depends=(python mlt)
+  conflicts=(mlt-python-bindings)
+  provides=(mlt-python-bindings)
+  replaces=(mlt-python-bindigs)
 
+  _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
   cd "$srcdir/mlt-$pkgver/src/swig/python"
-  mkdir -p "$pkgdir/usr/lib/python2.7/"
-  install -m755 mlt.py "$pkgdir/usr/lib/python2.7/"
-  install -m755 _mlt.so "$pkgdir/usr/lib/python2.7/"
-  install -m755 mlt_wrap.o "$pkgdir/usr/lib/python2.7/"
+  mkdir -p "$pkgdir/$_pythonpath"
+  install -m755 mlt.py "$pkgdir/$_pythonpath"
+  install -m755 _mlt.so "$pkgdir/$_pythonpath"
+  install -m755 mlt_wrap.o "$pkgdir/$_pythonpath"
 }
