@@ -5,7 +5,7 @@
 # Contributor: Bartlomiej Piotrowski <nospam@bpiotrowski.pl>
 
 pkgname=pkgconf
-pkgver=1.6.0
+pkgver=1.6.1
 pkgrel=1
 pkgdesc="Package compiler and linker metadata toolkit"
 url="https://github.com/pkgconf/pkgconf"
@@ -17,8 +17,8 @@ provides=(pkg-config pkgconfig)
 conflicts=(pkg-config)
 replaces=(pkg-config)
 groups=(base-devel)
-_commit=e2fdd6f47020bdfa670225d6f0763b082a419f91  # tags/pkgconf-1.6.0
-source=("git+https://github.com/pkgconf/pkgconf#commit=$_commit" platform-pkg-config.in)
+_commit=be6011222b52db362d2a4fdf602b4e4928b5317b  # tags/pkgconf-1.6.1
+source=("git+https://git.dereferenced.org/pkgconf/pkgconf#commit=$_commit" platform-pkg-config.in)
 sha256sums=('SKIP'
             '7c61338fbd83f9783d805c2f2f97b426977895a2f4b79e0ae5bc8e9d7996edaa')
 
