@@ -2,41 +2,50 @@
 # Contributor: feydaykyn <feydaykyn@yahoo.fr>
 
 pkgname=leveldb
-pkgver=1.20
-pkgrel=2
+pkgver=1.21
+pkgrel=1
 pkgdesc="A fast and lightweight key/value database library"
 arch=('x86_64')
 url="https://github.com/google/leveldb"
 license=('BSD')
 depends=('gperftools' 'snappy')
-makedepends=('git')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/google/leveldb/archive/v$pkgver.tar.gz")
-sha1sums=('df11440c30deed5987263730180225db98de9f57')
+makedepends=('cmake')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/google/leveldb/archive/$pkgver.tar.gz"
+        0001-Restore-soname-versioning-with-CMake-build.patch)
+sha1sums=('56c28f289c965f9ecccfc381b2830ef7fe84f853'
+          '59a4b71a362598c19d01350a79494dd3d59a5133')
+
+prepare() {
+  # upstream commit 37300aa54b8256dd2edfd504942eb2bd20823647
+  patch -Np1 -d $pkgname-$pkgver <0001-Restore-soname-versioning-with-CMake-build.patch
+}
 
 build() {
-  make -C "$pkgname-$pkgver"
+  mkdir "$pkgname-$pkgver/build"
+  cd "$pkgname-$pkgver/build"
+
+  cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=1 \
+    ..
+
+  make
 }
 
 check() {
-  make -C "$pkgname-$pkgver" check
+  make -C "$pkgname-$pkgver/build" test
 }
 
 package() {
   cd "$pkgname-$pkgver"
 
-  install -dm755 \
-      "$pkgdir"/usr/{include/leveldb,lib} \
-      "$pkgdir"/usr/share/doc/"$pkgname"
-
-  # libraries
-  install -m644 -t "$pkgdir/usr/lib" "out-static/libleveldb.a"
-  cp -P out-shared/libleveldb.so* "$pkgdir/usr/lib"
-
-  # headers
-  install -m644 -t "$pkgdir/usr/include/leveldb" include/leveldb/*
+  make -C build DESTDIR=$pkgdir install
 
   # documentation
-  cp -r doc/* "$pkgdir/usr/share/doc/$pkgname"
+  install -dm755 "$pkgdir"/usr/share/doc/"$pkgname"
+  cp -dr --no-preserve=ownership doc/* "$pkgdir/usr/share/doc/$pkgname"
 
   # license
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
