@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.32.0+38+g9d49e8abd
+pkgver=3.32.0+49+gb2d0184c6
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -15,7 +15,7 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanber
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
-_commit=9d49e8abd077941b126685dde3b64753cc4fc916  # master
+_commit=b2d0184c6efa164ad5dd7a2ca8b10cf13acf5b4c  # master
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
         0001-wayland-output-Report-unscaled-size-even-in-logical-.patch
         216.patch)
