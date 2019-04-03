@@ -3,13 +3,13 @@
 
 pkgname=shadow
 pkgver=4.6
-pkgrel=2
+pkgrel=3
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
 license=('BSD')
 groups=('base')
-depends=('bash' 'pam' 'acl')
+depends=('bash' 'pam' 'acl' 'audit' 'libaudit.so')
 makedepends=('git' 'libxslt' 'docbook-xsl' 'gnome-doc-utils')
 backup=(etc/login.defs
         etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
@@ -83,6 +83,7 @@ build() {
     --sysconfdir=/etc \
     --with-libpam \
     --with-group-name-max-length=32 \
+    --with-audit \
     --without-selinux
 
   make
