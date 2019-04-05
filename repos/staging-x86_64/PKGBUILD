@@ -1,0 +1,51 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+
+pkgname=tracker
+pkgver=2.2.1
+pkgrel=2
+pkgdesc="Desktop-neutral user information store, search tool and indexer"
+url="https://wiki.gnome.org/Projects/Tracker"
+arch=(x86_64)
+license=(GPL)
+depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp libsoup json-glib upower libnm)
+makedepends=(gobject-introspection intltool vala git gtk-doc bash-completion meson)
+checkdepends=(python-gobject python-dbus)
+groups=(gnome)
+_commit=c09ac0beda85498b365a89863a2cfb25b490202a  # tags/2.2.1^0
+source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/_/./g;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Could not insert metadata for item "file:///…/foo.pdf": Parser error at byte XXX: Expected ObjectList
+  git cherry-pick -n 639d9b614afb9cb5eb6f7cc8d52d98ba04ad43a9
+
+  # Looks like a bugfix
+  git cherry-pick -n de70127517b7e86ca13fcc5554cb6dde270a27fa
+}
+
+build() {
+  # LTO breaks due to duplicate types:
+  # https://gitlab.gnome.org/GNOME/tracker/issues/44
+  arch-meson $pkgname build -D b_lto=false -D docs=true
+  ninja -C build
+}
+
+check() {
+  # Many tests are broken:
+  # - Assume schemas are installed
+  # - Assume services are autolaunched
+  dbus-run-session meson test -C build || :
+}
+
+package() {
+  DESTDIR="$pkgdir" meson install -C build
+}
