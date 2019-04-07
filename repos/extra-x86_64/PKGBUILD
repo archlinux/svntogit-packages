@@ -3,7 +3,7 @@
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.60.0
+pkgver=1.60.1
 pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
@@ -12,7 +12,7 @@ license=(LGPL GPL)
 depends=(python-mako python-markdown)
 makedepends=(cairo git gtk-doc python-sphinx meson)
 options=(!emptydirs)
-_commit=03b9f8ffba23c90aebbcacdbe4160709d2f68f28  # tags/1.60.0^0
+_commit=d379a1a0f3d2af479ea74507a70fcb200b0333cc  # tags/1.60.1^0
 source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/glib.git#tag=2.60.0")
 sha512sums=('SKIP'
