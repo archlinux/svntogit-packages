@@ -56,34 +56,41 @@ fi
 validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' Serbinenko <phcoder@gmail.com>
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
-source=("https://ftp.gnu.org/gnu/${pkgname}/${pkgname}-${pkgver}.tar.xz"{,.sig}
-        "https://git.savannah.nongnu.org/cgit/grub-extras.git/snapshot/grub-extras-${_GRUB_EXTRAS_COMMIT}.tar.gz"
+source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${pkgver}?signed"
+        "git+https://git.savannah.gnu.org/git/grub-extras.git#commit=${_GRUB_EXTRAS_COMMIT}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
         '0003-10_linux-detect-archlinux-initramfs.patch'
         '0004-add-GRUB_COLOR_variables.patch'
-        '0005-Allow_GRUB_to_mount_ext234_filesystems_that_have_the_encryption_feature.patch'
-        '0006-tsc-Change-default-tsc-calibration-method-to-pmtimer-on-EFI-systems.patch'
-        '0007-grub-mkconfig_10_linux_Support_multiple_early_initrd_images.patch'
-        '0008-Fix-packed-not-aligned-error-on-GCC-8.patch'
-        '0009-xfs-Accept-filesystem-with-sparse-inodes.patch'
-        '0010-relocation.patch'
         'grub.default')
 
-sha256sums=('810b3798d316394f94096ec2797909dbf23c858e48f7b3830826b8daa06b7b0f'
+sha256sums=('SKIP'
             'SKIP'
-            '2844601914cea6b1231eca0104853a93c4d67a5209933a0766f1475953300646'
             'f48450d3ca0ae0ca9f1c6e81cf1af60e5b0dfa87cc3a72520ce2ef15d54de6dd'
             'SKIP'
             'b41e4438319136b5e74e0abdfcb64ae115393e4e15207490272c425f54026dd3'
             'a5198267ceb04dceb6d2ea7800281a42b3f91fd02da55d2cc9ea20d47273ca29'
-            '535422c510a050d41efe7720dbe54de29e04bdb8f86fd5aea5feb0b24f7abe46'
-            'c38f2b2caae33008b35a37d8293d8bf13bf6fd779a4504925da1837fd007aeb5'
-            'e43566c4fe3b1b87e677167323d4716b82ac0810410a9d8dc7fbf415c8db2b8a'
-            'e84b8de569c7e6b73263758c35cf95c6516fde85d4ed451991427864f6a4e5a8'
-            'fcd5a626d4af33665d041ce42df813f1f198d8230ea186481b155a5b676f3b87'
-            '51562fa1016c54567dbf42a86c0cfc902372ab579bbee17879a81aff09b76b99'
             '9ca2414266fadd0b1aafc850c1c26a48760fbc95f1913ab8b36f1e54483b31fd')
-		
+
+_backports=(
+	# Allow GRUB to mount ext2/3/4 filesystems that have the encryption feature.
+	'734668238fcc0ef691a080839e04f33854fa133a'
+
+	# tsc: Change default tsc calibration method to pmtimer on EFI systems
+	'446794de8da4329ea532cbee4ca877bcafd0e534'
+
+	# grub-mkconfig/10_linux: Support multiple early initrd images
+	'a698240df0c43278b2d1d7259c8e7a6926c63112'
+
+	# Fix packed-not-aligned error on GCC 8
+	'563b1da6e6ae7af46cc8354cadb5dab416989f0a'
+
+	# xfs: Accept filesystem with sparse inodes
+	'cda0a857dd7a27cd5d621747464bfe71e8727fff'
+
+	# x86-64: Treat R_X86_64_PLT32 as R_X86_64_PC32
+	'842c390469e2c2e10b5aa36700324cd3bde25875'
+)
+
 _configure_options=(
 	FREETYPE="pkg-config freetype2"
 	BUILD_FREETYPE="pkg-config freetype2"
@@ -108,7 +115,13 @@ _configure_options=(
 )
 
 prepare() {
-	cd "${srcdir}/grub-${pkgver}/"
+	cd "${srcdir}/grub/"
+
+	echo "Apply backports..."
+	local _c
+	for _c in "${_backports[@]}"; do
+		git cherry-pick -n "${_c}"
+	done
 
 	echo "Patch to detect of Arch Linux initramfs images by grub-mkconfig..."
 	patch -Np1 -i "${srcdir}/0003-10_linux-detect-archlinux-initramfs.patch"
@@ -116,24 +129,6 @@ prepare() {
 	echo "Patch to enable GRUB_COLOR_* variables in grub-mkconfig..."
 	## Based on http://lists.gnu.org/archive/html/grub-devel/2012-02/msg00021.html
 	patch -Np1 -i "${srcdir}/0004-add-GRUB_COLOR_variables.patch"
-
-	echo "Patch to allow GRUB to mount ext2/3/4 filesystems that have the encryption feature..."
-	patch -Np1 -i "${srcdir}/0005-Allow_GRUB_to_mount_ext234_filesystems_that_have_the_encryption_feature.patch"
-
-	echo "Patch to change default tsc calibration method to pmtimer on EFI systems..."
-	patch -Np1 -i "${srcdir}/0006-tsc-Change-default-tsc-calibration-method-to-pmtimer-on-EFI-systems.patch"
-
-	echo "Patch to Support multiple early initrd images..."
-	patch -Np1 -i "${srcdir}/0007-grub-mkconfig_10_linux_Support_multiple_early_initrd_images.patch"
-
-	echo "Patch to fix packed-not-aligned error on GCC 8..."
-	patch -Np1 -i "${srcdir}/0008-Fix-packed-not-aligned-error-on-GCC-8.patch"
-
-	echo "Patch xfs: Accept filesystem with sparse inodes..."
-	patch -Np1 -i "${srcdir}/0009-xfs-Accept-filesystem-with-sparse-inodes.patch"
-
-	echo "Patch x86-64: Treat R_X86_64_PLT32 as R_X86_64_PC32..."
-	patch -Np1 -i "${srcdir}/0010-relocation.patch"
 
 	echo "Fix DejaVuSans.ttf location so that grub-mkfont can create *.pf2 files for starfield theme..."
 	sed 's|/usr/share/fonts/dejavu|/usr/share/fonts/dejavu /usr/share/fonts/TTF|g' -i "configure.ac"
@@ -153,7 +148,7 @@ prepare() {
 	echo "Avoid problem with unifont during compile of grub..."
 	# http://savannah.gnu.org/bugs/?40330 and https://bugs.archlinux.org/task/37847
 	cp "${srcdir}/unifont-${_UNIFONT_VER}.bdf" "unifont.bdf"
-	
+
 	echo "Run autogen.sh..."
 	./autogen.sh
 }
@@ -167,14 +162,14 @@ _build_grub-common_and_bios() {
 	fi
 
 	echo "Copy the source for building the bios part..."
-	cp -r "${srcdir}/grub-${pkgver}" "${srcdir}/grub-${pkgver}-bios"
-	cd "${srcdir}/grub-${pkgver}-bios/"
+	cp -r "${srcdir}/grub/" "${srcdir}/grub-bios/"
+	cd "${srcdir}/grub-bios/"
 
 	echo "Add the grub-extra sources for bios build..."
-	install -d "${srcdir}/grub-${pkgver}-bios/grub-extras"
-	cp -r "${srcdir}/grub-extras-${_GRUB_EXTRAS_COMMIT}/915resolution" \
-		"${srcdir}/grub-${pkgver}-bios/grub-extras/915resolution"
-	export GRUB_CONTRIB="${srcdir}/grub-${pkgver}-bios/grub-extras/"
+	install -d "${srcdir}/grub-bios/grub-extras"
+	cp -r "${srcdir}/grub-extras/915resolution" \
+		"${srcdir}/grub-bios/grub-extras/915resolution"
+	export GRUB_CONTRIB="${srcdir}/grub-bios/grub-extras/"
 
 	echo "Unset all compiler FLAGS for bios build..."
 	unset CFLAGS
@@ -197,8 +192,8 @@ _build_grub-common_and_bios() {
 
 _build_grub-efi() {
 	echo "Copy the source for building the ${_EFI_ARCH} efi part..."
-	cp -r "${srcdir}/grub-${pkgver}" "${srcdir}/grub-${pkgver}-efi-${_EFI_ARCH}"
-	cd "${srcdir}/grub-${pkgver}-efi-${_EFI_ARCH}/"
+	cp -r "${srcdir}/grub/" "${srcdir}/grub-efi-${_EFI_ARCH}/"
+	cd "${srcdir}/grub-efi-${_EFI_ARCH}/"
 
 	echo "Unset all compiler FLAGS for ${_EFI_ARCH} efi build..."
 	unset CFLAGS
@@ -221,8 +216,8 @@ _build_grub-efi() {
 
 _build_grub-emu() {
 	echo "Copy the source for building the emu part..."
-	cp -r "${srcdir}/grub-${pkgver}/" "${srcdir}/grub-${pkgver}-emu/"
-	cd "${srcdir}/grub-${pkgver}-emu/"
+	cp -r "${srcdir}/grub/" "${srcdir}/grub-emu/"
+	cd "${srcdir}/grub-emu/"
 
 	echo "Unset all compiler FLAGS for emu build..."
 	unset CFLAGS
@@ -245,7 +240,7 @@ _build_grub-emu() {
 }
 
 build() {
-	cd "${srcdir}/grub-${pkgver}/"
+	cd "${srcdir}/grub/"
 
 	echo "Build grub bios stuff..."
 	_build_grub-common_and_bios
@@ -265,7 +260,7 @@ build() {
 }
 
 _package_grub-common_and_bios() {
-	cd "${srcdir}/grub-${pkgver}-bios/"
+	cd "${srcdir}/grub-bios/"
 
 	echo "Run make install for bios build..."
 	make DESTDIR="${pkgdir}/" bashcompletiondir="/usr/share/bash-completion/completions" install
@@ -280,7 +275,7 @@ _package_grub-common_and_bios() {
 }
 
 _package_grub-efi() {
-	cd "${srcdir}/grub-${pkgver}-efi-${_EFI_ARCH}/"
+	cd "${srcdir}/grub-efi-${_EFI_ARCH}/"
 
 	echo "Run make install for ${_EFI_ARCH} efi build..."
 	make DESTDIR="${pkgdir}/" bashcompletiondir="/usr/share/bash-completion/completions" install
@@ -292,7 +287,7 @@ _package_grub-efi() {
 }
 
 _package_grub-emu() {
-	cd "${srcdir}/grub-${pkgver}-emu/"
+	cd "${srcdir}/grub-emu/"
 
 	echo "Run make install for emu build..."
 	make DESTDIR="${pkgdir}/" bashcompletiondir="/usr/share/bash-completion/completions" install
@@ -304,7 +299,7 @@ _package_grub-emu() {
 }
 
 package() {
-	cd "${srcdir}/grub-${pkgver}/"
+	cd "${srcdir}/grub/"
 
 	echo "Package grub ${_EFI_ARCH} efi stuff..."
 	_package_grub-efi
