@@ -1,0 +1,54 @@
+# Maintainer: David Runge <dave@sleepmap.de>
+# Contributor: Ray Rashif <schiv@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=fluidsynth
+pkgver=2.0.4
+pkgrel=1
+pkgdesc="A real-time software synthesizer based on the SoundFont 2 specifications"
+arch=('x86_64')
+url="http://www.fluidsynth.org/"
+license=('LGPL')
+groups=('pro-audio')
+depends=('glib2' 'libpulse' 'portaudio')
+makedepends=('cmake' 'ladspa' 'doxygen')
+optdepends=('pulseaudio: PulseAudio sound support')
+provides=('soundfont-synthesizer')
+backup=("etc/conf.d/$pkgname")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/v$pkgver.tar.gz")
+sha512sums=('d58ddc5f4da9bb5954a82749617548ef32edd25f6ca5c6d5c2b06d23090784ec175d2422553a66776f543c6b253f037a6cf1e717a853344ffb899fa53752eec0')
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  # out-of-tree build
+  mkdir build
+}
+
+build() {
+  cd "${pkgname}-${pkgver}/build"
+  cmake .. -DCMAKE_INSTALL_PREFIX=/usr \
+           -DFLUID_DAEMON_ENV_FILE=/etc/conf.d/fluidsynth \
+           -Denable-ladspa=ON \
+           -Denable-portaudio=ON \
+           -DLIB_SUFFIX=""
+  make
+}
+
+check() {
+  cd "${pkgname}-${pkgver}/build"
+  make -k check
+}
+
+package() {
+  cd "${pkgname}-${pkgver}/build"
+  make DESTDIR="$pkgdir" install
+  # systemd user unit
+  install -vDm 644 "${pkgname}.service" \
+    -t "$pkgdir/usr/lib/systemd/user/"
+  # system-wide configuration file
+  install -vDm 644 "${pkgname}.conf" "${pkgdir}/etc/conf.d/${pkgname}"
+  # docs
+  install -t "${pkgdir}/usr/share/doc/${pkgname}" \
+    -vDm 644 ../{AUTHORS,ChangeLog,NEWS,README.md,THANKS,TODO}
+}
+
