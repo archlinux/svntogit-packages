@@ -2,8 +2,8 @@
 
 pkgbase=python-hyperlink
 pkgname=('python-hyperlink' 'python2-hyperlink')
-pkgver=18.0.0
-pkgrel=2
+pkgver=19.0.0
+pkgrel=1
 pkgdesc='A featureful, correct URL for Python'
 arch=('any')
 license=('BSD')
@@ -11,7 +11,7 @@ url='https://github.com/python-hyper/hyperlink'
 makedepends=('python-idna' 'python2-idna' 'python-setuptools' 'python2-setuptools')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/python-hyper/hyperlink/archive/v$pkgver.tar.gz")
-sha512sums=('b50bdd7a635804da449a6f2902e833f39d408e72a2b8e46a8b2bb773e2c310e0d4dced3f683951f8777e6104fe8d4faa4390f1a677bfb257c0e88dff860f1523')
+sha512sums=('5a2848d55de1cd1373c140cf3063b4a32c944f4f762f27196a402095afcb65143551af55eab28926c794dc55b8337527266de4db377a635c18a477cd398cc3ee')
 
 prepare() {
   cp -a hyperlink-$pkgver{,-py2}
