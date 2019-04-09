@@ -5,8 +5,8 @@
 pkgbase=util-linux
 pkgname=(util-linux libutil-linux)
 _pkgmajor=2.33
-pkgver=${_pkgmajor}.1
-pkgrel=2
+pkgver=${_pkgmajor}.2
+pkgrel=1
 pkgdesc="Miscellaneous system utilities for Linux"
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -20,7 +20,7 @@ source=("https://www.kernel.org/pub/linux/utils/util-linux/v$_pkgmajor/$pkgbase-
         '60-rfkill.rules'
         'rfkill-unblock_.service'
         'rfkill-block_.service')
-sha256sums=('c14bd9f3b6e1792b90db87696e87ec643f9d63efa0a424f092a5a6b2f2dbef21'
+sha256sums=('631be8eac6cf6230ba478de211941d526808dba3cd436380793334496013ce97'
             'SKIP'
             '993a3096c2b113e6800f2abbd5d4233ebf1a97eef423990d3187d665d3490b92'
             'fc6807842f92e9d3f792d6b64a0d5aad87995a279153ab228b1b2a64d9f32f20'
