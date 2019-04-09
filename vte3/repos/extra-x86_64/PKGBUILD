@@ -3,7 +3,7 @@
 
 pkgbase=vte3
 pkgname=(vte3 vte-common)
-pkgver=0.56.0
+pkgver=0.56.1
 pkgrel=1
 pkgdesc="Virtual Terminal Emulator widget for use with GTK3"
 url="https://wiki.gnome.org/Apps/Terminal/VTE"
@@ -12,7 +12,7 @@ license=(LGPL)
 options=(!emptydirs)
 depends=(gtk3 pcre2 gnutls)
 makedepends=(intltool gobject-introspection vala glade git gtk-doc gperf)
-_commit=9328a04c3e57e80889a6252d3df2289e1d8c6ef0  # tags/0.56.0^0
+_commit=52e546badeedf12dbbd7706042f1d0f3a9e4f0b3  # tags/0.56.1^0
 source=("git+https://gitlab.gnome.org/GNOME/vte.git#commit=$_commit")
 sha256sums=('SKIP')
 
