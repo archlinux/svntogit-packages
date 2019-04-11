@@ -2,37 +2,39 @@
 # Contributor: Allan McRae <allan@archlinux.org>
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
-# NOTE: valgrind requires rebuilt with each major glibc version
+# NOTE: valgrind requires rebuild with each major glibc version
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
-pkgver=2.29
-pkgrel=1
+pkgver=2.28
+pkgrel=6
 arch=(x86_64)
 url='http://www.gnu.org/software/libc'
 license=(GPL LGPL)
-makedepends=(git gd lib32-gcc-libs python)
+makedepends=(git gd lib32-gcc-libs)
 options=(!strip staticlibs)
 #source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
-_commit=067fc32968b601493f4b247a3ac00caeea3f3d61
+_commit=5a74abda201907cafbdabd1debf98890313ff71e
 source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
         bz20338.patch
-        0001-Revert-elf-Correct-absolute-SHN_ABS-symbol-run-time-.patch)
+        0001-Revert-elf-Correct-absolute-SHN_ABS-symbol-run-time-.patch
+        file-truncated-while-reading-soname-after-patchelf.patch)
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8) # Carlos O'Donell
 md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
          'dc0d3ad59aeaaf591b085a77de6e03e9'
-         'af5d3c5227ac639effe39667a43879a1')
+         '58ffe75a9c5a1b22c535a5c2e725db22'
+         '0820504d2e83ee15f74a656771361872')
 
 prepare() {
   mkdir -p glibc-build lib32-glibc-build
 
-  [[ -d glibc-$pkgver ]] && ln -s glibc-$pkgver glibc 
+  [[ -d glibc-$pkgver ]] && ln -s glibc-$pkgver glibc
   cd glibc
 
   local i; for i in ${source[@]}; do
