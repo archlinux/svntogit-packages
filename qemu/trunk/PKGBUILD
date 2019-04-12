@@ -9,7 +9,7 @@ pkgver=3.1.0
 pkgrel=2
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
-url="http://wiki.qemu.org/"
+url="https://wiki.qemu.org/"
 _headlessdeps=(seabios gnutls libpng libaio numactl jemalloc xfsprogs libnfs
                lzo snappy curl vde2 libcap-ng spice libcacard usbredir)
 depends=(virglrenderer sdl2 vte3 libpulse "${_headlessdeps[@]}")
