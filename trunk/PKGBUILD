@@ -13,8 +13,10 @@ depends=('libusb' 'hwids')
 optdepends=('python: for lsusb.py usage'
             'coreutils: for lsusb.py usage')
 url="http://linux-usb.sourceforge.net/"
-source=("http://www.kernel.org/pub/linux/utils/usb/usbutils/${pkgname}-${pkgver}.tar.xz")
-md5sums=('938e3707593974be99a0dd6d1de76671')
+source=("https://www.kernel.org/pub/linux/utils/usb/usbutils/${pkgname}-${pkgver}.tar"{.xz,.sign})
+md5sums=('938e3707593974be99a0dd6d1de76671'
+         'SKIP')
+validpgpkeys=('647F28654894E3BD457199BE38DBBDC86092693E') # Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 build() {
   cd $srcdir/$pkgname-$pkgver
