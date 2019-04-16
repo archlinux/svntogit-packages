@@ -1,0 +1,281 @@
+From 03b8362dd9946fa4593497672ef4f341330170ed Mon Sep 17 00:00:00 2001
+From: Andre Miranda <andreldm@xfce.org>
+Date: Sun, 14 Apr 2019 15:06:35 -0300
+Subject: [PATCH 1/2] Job is now optional for thunar_io_scan_directory
+
+---
+ thunar/thunar-io-scan-directory.c | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/thunar/thunar-io-scan-directory.c b/thunar/thunar-io-scan-directory.c
+index 8f81724c6..33aa7af45 100644
+--- a/thunar/thunar-io-scan-directory.c
++++ b/thunar/thunar-io-scan-directory.c
+@@ -52,13 +52,13 @@ thunar_io_scan_directory (ThunarJob          *job,
+   const gchar     *namespace;
+   ThunarFile      *thunar_file;
+   gboolean         is_mounted;
++  GCancellable    *cancellable = NULL;
+ 
+-  _thunar_return_val_if_fail (THUNAR_IS_JOB (job), NULL);
+   _thunar_return_val_if_fail (G_IS_FILE (file), NULL);
+   _thunar_return_val_if_fail (error == NULL || *error == NULL, NULL);
+ 
+   /* abort if the job was cancelled */
+-  if (exo_job_set_error_if_cancelled (EXO_JOB (job), error))
++  if (job != NULL && exo_job_set_error_if_cancelled (EXO_JOB (job), error))
+     return NULL;
+ 
+   /* don't recurse when we are scanning prior to unlinking and the current
+@@ -73,11 +73,14 @@ thunar_io_scan_directory (ThunarJob          *job,
+       return NULL;
+     }
+ 
++  if (job != NULL)
++    cancellable = exo_job_get_cancellable (EXO_JOB (job));
++
+   /* query the file type */
+-  type = g_file_query_file_type (file, flags, exo_job_get_cancellable (EXO_JOB (job)));
++  type = g_file_query_file_type (file, flags, cancellable);
+ 
+   /* abort if the job was cancelled */
+-  if (exo_job_set_error_if_cancelled (EXO_JOB (job), error))
++  if (job != NULL && exo_job_set_error_if_cancelled (EXO_JOB (job), error))
+     return NULL;
+ 
+   /* ignore non-directory nodes */
+@@ -93,8 +96,7 @@ thunar_io_scan_directory (ThunarJob          *job,
+ 
+   /* try to read from the direectory */
+   enumerator = g_file_enumerate_children (file, namespace,
+-                                          flags, exo_job_get_cancellable (EXO_JOB (job)),
+-                                          &err);
++                                          flags, cancellable, &err);
+ 
+   /* abort if there was an error or the job was cancelled */
+   if (err != NULL)
+@@ -104,12 +106,10 @@ thunar_io_scan_directory (ThunarJob          *job,
+     }
+ 
+   /* iterate over children one by one */
+-  while (!exo_job_is_cancelled (EXO_JOB (job)))
++  while (job == NULL || !exo_job_is_cancelled (EXO_JOB (job)))
+     {
+       /* query info of the child */
+-      info = g_file_enumerator_next_file (enumerator,
+-                                          exo_job_get_cancellable (EXO_JOB (job)),
+-                                          &err);
++      info = g_file_enumerator_next_file (enumerator, cancellable, &err);
+ 
+       if (G_UNLIKELY (info == NULL))
+         break;
+@@ -171,7 +171,7 @@ thunar_io_scan_directory (ThunarJob          *job,
+       thunar_g_file_list_free (files);
+       return NULL;
+     }
+-  else if (exo_job_set_error_if_cancelled (EXO_JOB (job), &err))
++  else if (job != NULL && exo_job_set_error_if_cancelled (EXO_JOB (job), &err))
+     {
+       g_propagate_error (error, err);
+       thunar_g_file_list_free (files);
+
+From 6f980dbd6fed2b471d9fb9c7e1dd11d95b502150 Mon Sep 17 00:00:00 2001
+From: Andre Miranda <andreldm@xfce.org>
+Date: Sun, 14 Apr 2019 15:08:40 -0300
+Subject: [PATCH 2/2] Load templates synchronously (Bug #15200)
+
+---
+ thunar/thunar-templates-action.c | 95 ++++++++++++++++----------------
+ 1 file changed, 46 insertions(+), 49 deletions(-)
+
+diff --git a/thunar/thunar-templates-action.c b/thunar/thunar-templates-action.c
+index 42118ae32..35df13d18 100644
+--- a/thunar/thunar-templates-action.c
++++ b/thunar/thunar-templates-action.c
+@@ -25,8 +25,7 @@
+ #include <gio/gio.h>
+ 
+ #include <thunar/thunar-icon-factory.h>
+-#include <thunar/thunar-job.h>
+-#include <thunar/thunar-misc-jobs.h>
++#include <thunar/thunar-io-scan-directory.h>
+ #include <thunar/thunar-private.h>
+ #include <thunar/thunar-templates-action.h>
+ #include <thunar/thunar-util.h>
+@@ -44,7 +43,7 @@ enum
+ 
+ static void       thunar_templates_action_finalize          (GObject                    *object);
+ static GtkWidget *thunar_templates_action_create_menu_item  (GtkAction                  *action);
+-static void       thunar_templates_action_menu_shown        (GtkWidget                  *menu,
++static void       thunar_templates_action_load              (GtkWidget                  *menu,
+                                                              ThunarTemplatesAction      *templates_action);
+ 
+ 
+@@ -167,9 +166,10 @@ G_GNUC_END_IGNORE_DEPRECATIONS
+ 
+   /* associate an empty submenu with the item (will be filled when shown) */
+   menu = gtk_menu_new ();
+-  g_signal_connect (G_OBJECT (menu), "show", G_CALLBACK (thunar_templates_action_menu_shown), action);
+   gtk_menu_item_set_submenu (GTK_MENU_ITEM (item), menu);
+ 
++  thunar_templates_action_load (menu, THUNAR_TEMPLATES_ACTION (action));
++
+   return item;
+ }
+ 
+@@ -310,14 +310,13 @@ compare_files (ThunarFile *a,
+ 
+ 
+ static gboolean
+-thunar_templates_action_files_ready (ThunarJob             *job,
+-                                     GList                 *files,
+-                                     ThunarTemplatesAction *templates_action)
++thunar_templates_action_set_files (GtkWidget             *menu,
++                                   GList                 *files,
++                                   ThunarTemplatesAction *templates_action)
+ {
+   ThunarIconFactory *icon_factory;
+   ThunarFile        *file;
+   GdkPixbuf         *icon;
+-  GtkWidget         *menu;
+   GtkWidget         *parent_menu;
+   GtkWidget         *submenu;
+   GtkWidget         *image;
+@@ -331,9 +330,6 @@ thunar_templates_action_files_ready (ThunarJob             *job,
+   gchar             *label;
+   gchar             *dot;
+ 
+-  /* determine the menu to add the items and submenus to */
+-  menu = g_object_get_data (G_OBJECT (job), "menu");
+-
+   /* do nothing if there is no menu */
+   if (menu == NULL)
+     return FALSE;
+@@ -447,26 +443,21 @@ G_GNUC_END_IGNORE_DEPRECATIONS
+ 
+ 
+ static void
+-thunar_templates_action_load_error (ThunarJob             *job,
+-                                    GError                *error,
+-                                    ThunarTemplatesAction *templates_action)
++thunar_templates_action_set_error (GtkWidget             *menu,
++                                   const gchar           *error_message,
++                                   ThunarTemplatesAction *templates_action)
+ {
+   GtkWidget *item;
+-  GtkWidget *menu;
+   GList     *menu_children = NULL;
+ 
+-  _thunar_return_if_fail (THUNAR_IS_JOB (job));
+-  _thunar_return_if_fail (error != NULL);
++  _thunar_return_if_fail (error_message != NULL);
+   _thunar_return_if_fail (THUNAR_IS_TEMPLATES_ACTION (templates_action));
+-  _thunar_return_if_fail (templates_action->job == job);
+-
+-  menu = g_object_get_data (G_OBJECT (job), "menu");
+ 
+   /* check if any items were added to the menu */
+   if (G_LIKELY (menu != NULL && (menu_children = gtk_container_get_children( GTK_CONTAINER (menu))) == NULL))
+     {
+       /* tell the user that no templates were found */
+-      item = gtk_menu_item_new_with_label (error->message);
++      item = gtk_menu_item_new_with_label (error_message);
+       gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+       gtk_widget_set_sensitive (item, FALSE);
+       gtk_widget_show (item);
+@@ -478,17 +469,13 @@ thunar_templates_action_load_error (ThunarJob             *job,
+ 
+ 
+ static void
+-thunar_templates_action_load_finished (ThunarJob             *job,
++thunar_templates_action_load_finished (GtkWidget             *menu,
+                                        ThunarTemplatesAction *templates_action)
+ {
+   GtkWidget *item;
+-  GtkWidget *menu;
+ 
+-  _thunar_return_if_fail (THUNAR_IS_JOB (job));
+   _thunar_return_if_fail (THUNAR_IS_TEMPLATES_ACTION (templates_action));
+-  _thunar_return_if_fail (templates_action->job == job);
+ 
+-  menu = g_object_get_data (G_OBJECT (job), "menu");
+   if (G_LIKELY (menu != NULL))
+     {
+       /* append a menu separator */
+@@ -503,43 +490,53 @@ thunar_templates_action_load_finished (ThunarJob             *job,
+       gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+       gtk_widget_show (item);
+     }
+-
+-  g_signal_handlers_disconnect_matched (job, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL,
+-                                        templates_action);
+-  g_object_unref (job);
+ }
+ 
+ 
+ 
+ static void
+-thunar_templates_action_menu_shown (GtkWidget             *menu,
+-                                    ThunarTemplatesAction *templates_action)
++thunar_templates_action_load (GtkWidget             *menu,
++                              ThunarTemplatesAction *templates_action)
+ {
+-  GList *children;
++  GList           *files = NULL;
++  GFile           *home_dir;
++  GFile           *templates_dir;
++  const gchar     *path;
+ 
+   _thunar_return_if_fail (THUNAR_IS_TEMPLATES_ACTION (templates_action));
+   _thunar_return_if_fail (GTK_IS_MENU_SHELL (menu));
+ 
+-  /* drop all existing children of the menu first */
+-  children = gtk_container_get_children (GTK_CONTAINER (menu));
+-  g_list_free_full (children, (GDestroyNotify) gtk_widget_destroy);
++  home_dir = thunar_g_file_new_for_home ();
++  path = g_get_user_special_dir (G_USER_DIRECTORY_TEMPLATES);
++
++  if (G_LIKELY (path != NULL))
++    templates_dir = g_file_new_for_path (path);
++  else
++    templates_dir = g_file_resolve_relative_path (home_dir, "Templates");
+ 
+-  if (G_LIKELY (templates_action->job == NULL))
++  if (G_LIKELY (!g_file_equal (templates_dir, home_dir)))
+     {
+-      templates_action->job = thunar_misc_jobs_load_template_files (menu);
+-      g_object_add_weak_pointer (G_OBJECT (templates_action->job),
+-                                 (gpointer) &templates_action->job);
++      /* load the ThunarFiles */
++      files = thunar_io_scan_directory (NULL, templates_dir,
++                                        G_FILE_QUERY_INFO_NONE,
++                                        TRUE, FALSE, TRUE, NULL);
++    }
+ 
+-      g_signal_connect (templates_action->job, "files-ready",
+-                        G_CALLBACK (thunar_templates_action_files_ready),
+-                        templates_action);
+-      g_signal_connect (templates_action->job, "error",
+-                        G_CALLBACK (thunar_templates_action_load_error),
+-                        templates_action);
+-      g_signal_connect (templates_action->job, "finished",
+-                        G_CALLBACK (thunar_templates_action_load_finished),
+-                        templates_action);
++  g_object_unref (templates_dir);
++  g_object_unref (home_dir);
++
++  if (files == NULL)
++    {
++      thunar_templates_action_set_error (menu, _("No templates installed"),
++                                         templates_action);
+     }
++  else
++    {
++      thunar_templates_action_set_files (menu, files, templates_action);
++      thunar_g_file_list_free (files);
++    }
++
++  thunar_templates_action_load_finished (menu, templates_action);
+ }
+ 
+ 
