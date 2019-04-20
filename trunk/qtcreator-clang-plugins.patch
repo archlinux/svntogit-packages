@@ -1,62 +1,64 @@
 diff --git a/src/plugins/clangcodemodel/clangeditordocumentprocessor.cpp b/src/plugins/clangcodemodel/clangeditordocumentprocessor.cpp
-index 0738aa8e70..0ef27d9397 100644
+index 706c5101a3..dbfaeb8457 100644
 --- a/src/plugins/clangcodemodel/clangeditordocumentprocessor.cpp
 +++ b/src/plugins/clangcodemodel/clangeditordocumentprocessor.cpp
-@@ -525,6 +525,7 @@ private:
+@@ -511,6 +511,7 @@ private:
          if (tidyMode == Mode::Disabled)
              return;
  
-+        addXclangArg("-load", "libclangTidyPlugin.so");
-         addXclangArg("-add-plugin", "clang-tidy");
++        m_options.append(CppTools::XclangArgs({"-load", "libclangTidyPlugin.so"}));
+         m_options.append(CppTools::XclangArgs({"-add-plugin", "clang-tidy"}));
  
          if (tidyMode == Mode::File)
-@@ -540,15 +541,16 @@ private:
+@@ -526,15 +527,15 @@ private:
          if (checks.isEmpty())
              return;
  
--        addXclangArg("-add-plugin", "clang-lazy");
--        addXclangArg("-plugin-arg-clang-lazy", "enable-all-fixits");
--        addXclangArg("-plugin-arg-clang-lazy", "no-autowrite-fixits");
--        addXclangArg("-plugin-arg-clang-lazy", checks);
-+        addXclangArg("-load", "ClazyPlugin.so");
-+        addXclangArg("-add-plugin", "clazy");
-+        addXclangArg("-plugin-arg-clazy", "enable-all-fixits");
-+        addXclangArg("-plugin-arg-clazy", "no-autowrite-fixits");
-+        addXclangArg("-plugin-arg-clazy", checks);
- 
-         // NOTE: we already use -isystem for all include paths to make libclang skip diagnostics for
-         // all of them. That means that ignore-included-files will not change anything unless we decide
-         // to return the original -I prefix for some include paths.
--        addXclangArg("-plugin-arg-clang-lazy", "ignore-included-files");
-+        addXclangArg("-plugin-arg-clazy", "ignore-included-files");
+-        m_options.append(CppTools::XclangArgs({"-add-plugin",
+-                                               "clang-lazy",
+-                                               "-plugin-arg-clang-lazy",
++        m_options.append(CppTools::XclangArgs({"-load", "ClazyPlugin.so", "-add-plugin",
++                                               "clazy",
++                                               "-plugin-arg-clazy",
+                                                "enable-all-fixits",
+-                                               "-plugin-arg-clang-lazy",
++                                               "-plugin-arg-clazy",
+                                                "no-autowrite-fixits",
+-                                               "-plugin-arg-clang-lazy",
++                                               "-plugin-arg-clazy",
+                                                checks,
+-                                               "-plugin-arg-clang-lazy",
++                                               "-plugin-arg-clazy",
+                                                "ignore-included-files"}));
      }
  
-     void addGlobalDiagnosticOptions()
 diff --git a/src/plugins/clangtools/clangtidyclazyrunner.cpp b/src/plugins/clangtools/clangtidyclazyrunner.cpp
-index 00a945c124..dcb0ad7280 100644
+index a580704243..7a8740a5cc 100644
 --- a/src/plugins/clangtools/clangtidyclazyrunner.cpp
 +++ b/src/plugins/clangtools/clangtidyclazyrunner.cpp
-@@ -84,6 +84,7 @@ QStringList ClangTidyClazyRunner::constructCommandLineArguments(const QStringLis
+@@ -76,6 +76,7 @@ QStringList ClangTidyClazyRunner::constructCommandLineArguments(const QStringLis
  
      const ClangDiagnosticConfig::TidyMode tidyMode = m_diagnosticConfig.clangTidyMode();
      if (tidyMode != ClangDiagnosticConfig::TidyMode::Disabled) {
-+        addXclangArg(arguments, QString("-load"), QString("libclangTidyPlugin.so"));
-         addXclangArg(arguments, QString("-add-plugin"), QString("clang-tidy"));
++        arguments << XclangArgs({"-load", "libclangTidyPlugin.so"});
+         arguments << XclangArgs({"-add-plugin", "clang-tidy"});
          if (tidyMode != ClangDiagnosticConfig::TidyMode::File) {
              const QString tidyChecks = m_diagnosticConfig.clangTidyChecks();
-@@ -93,10 +94,11 @@ QStringList ClangTidyClazyRunner::constructCommandLineArguments(const QStringLis
+@@ -85,13 +86,13 @@ QStringList ClangTidyClazyRunner::constructCommandLineArguments(const QStringLis
  
      const QString clazyChecks = m_diagnosticConfig.clazyChecks();
      if (!clazyChecks.isEmpty()) {
--        addXclangArg(arguments, QString("-add-plugin"), QString("clang-lazy"));
--        addXclangArg(arguments, QString("-plugin-arg-clang-lazy"), QString("enable-all-fixits"));
--        addXclangArg(arguments, QString("-plugin-arg-clang-lazy"), QString("no-autowrite-fixits"));
--        addXclangArg(arguments, QString("-plugin-arg-clang-lazy"), m_diagnosticConfig.clazyChecks());
-+        addXclangArg(arguments, QString("-load"), QString("ClazyPlugin.so"));
-+        addXclangArg(arguments, QString("-add-plugin"), QString("clazy"));
-+        addXclangArg(arguments, QString("-plugin-arg-clazy"), QString("enable-all-fixits"));
-+        addXclangArg(arguments, QString("-plugin-arg-clazy"), QString("no-autowrite-fixits"));
-+        addXclangArg(arguments, QString("-plugin-arg-clazy"), m_diagnosticConfig.clazyChecks());
+-        arguments << XclangArgs({"-add-plugin",
++        arguments << XclangArgs({"-load", "ClazyPlugin.so", "-add-plugin",
+                                  "clang-lazy",
+-                                 "-plugin-arg-clang-lazy",
++                                 "-plugin-arg-clazy",
+                                  "enable-all-fixits",
+-                                 "-plugin-arg-clang-lazy",
++                                 "-plugin-arg-clazy",
+                                  "no-autowrite-fixits",
+-                                 "-plugin-arg-clang-lazy",
++                                 "-plugin-arg-clazy",
+                                  m_diagnosticConfig.clazyChecks()});
      }
  
-     arguments += options;
