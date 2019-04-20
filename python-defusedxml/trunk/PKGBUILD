@@ -2,15 +2,15 @@
 
 pkgbase=python-defusedxml
 pkgname=("python-defusedxml" "python2-defusedxml")
-pkgver=0.5.0
-pkgrel=2
+pkgver=0.6.0
+pkgrel=1
 pkgdesc="XML bomb protection for Python stdlib modules"
 arch=('any')
 url='https://bitbucket.org/tiran/defusedxml'
 license=('Python')
 makedepends=('python-setuptools' 'python2-setuptools')
 source=("https://pypi.io/packages/source/d/defusedxml/defusedxml-$pkgver.tar.gz")
-md5sums=('7ff1501366c6d1dcd2de8514dc2b755e')
+md5sums=('a59741f675c4cba649de40a99f732897')
 
 prepare() {
   cp -a "defusedxml-$pkgver"{,-py2}
