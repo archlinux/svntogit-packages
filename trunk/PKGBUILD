@@ -1,15 +1,15 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gstreamer-vaapi
-pkgver=1.14.4+1+gb219f609
+pkgver=1.16.0
 pkgrel=1
 pkgdesc="GStreamer Multimedia Framework VAAPI Plugin"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
 license=(LGPL)
 depends=(gst-plugins-bad libva libxrandr)
-makedepends=(python gtk-doc autoconf-archive git gtk3)
-_commit=b219f6095f3014041896714dd88e7d90ee3d72dd  # 1.14
+makedepends=(python gtk-doc git gtk3 meson)
+_commit=2c3480796a6673c638f5b12c7bdf5c0f191120fd  # tags/1.16.0^0
 source=("git+https://gitlab.freedesktop.org/gstreamer/gstreamer-vaapi.git#commit=$_commit"
         "gst-common::git+https://gitlab.freedesktop.org/gstreamer/common.git")
 sha256sums=('SKIP'
@@ -26,29 +26,17 @@ prepare() {
   git submodule init
   git config --local submodule.common.url "$srcdir/gst-common"
   git submodule update
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib \
-    --enable-gtk-doc \
-    --disable-static
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build
+  ninja -C build
 }
 
 check() {
-  cd $pkgname
-  make check
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
