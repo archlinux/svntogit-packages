@@ -5,8 +5,8 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
-pkgver=1.24.1
-pkgrel=2
+pkgver=1.24.2
+pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
 url="https://github.com/shazow/urllib3"
@@ -19,7 +19,7 @@ checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-tornado' 'p
               'python-nose' 'python2-nose' 'python-psutil' 'python2-psutil'
               'python-gcp-devrel-py-tools' 'python2-gcp-devrel-py-tools')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/shazow/urllib3/archive/$pkgver.tar.gz")
-sha512sums=('2f5453cf0ec1b65de9a9fca0fdb45664f7481507c875b7115c063cb177628b4b611377e588508ab8433e0797fc78b60fd3ea5cc5ac0a3f105d36bfff9a56f1f4')
+sha512sums=('08e8d896f57eb9af5511d07002859f87f2a7bddbd5e66468908188dfe13d2e3985a8cdd2da12d06d0b337945ca8314c1f026d4e82badf23a09bf686fa121e863')
 
 prepare() {
   cp -a urllib3-$pkgver{,-py2}
