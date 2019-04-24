@@ -16,13 +16,11 @@ depends=(virglrenderer sdl2 vte3 libpulse "${_headlessdeps[@]}")
 makedepends=(spice-protocol python2 ceph libiscsi glusterfs python-sphinx)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
         qemu-ga.service
-        65-kvm.rules
-        allow_elf64.patch)
+        65-kvm.rules)
 sha512sums=('952e94194ce9e64c15388c59035cb31fb9f761d30095c2fb9441012b609c18c9976285727b93bf37b95e15675802d73f8e1c4619ebecd23606675bb503646b13'
             'SKIP'
             '269c0f0bacbd06a3d817fde02dce26c99d9f55c9e3b74bb710bd7e5cdde7a66b904d2eb794c8a605bf9305e4e3dee261a6e7d4ec9d9134144754914039f176e4'
-            'bdf05f99407491e27a03aaf845b7cc8acfa2e0e59968236f10ffc905e5e3d5e8569df496fd71c887da2b5b8d1902494520c7da2d3a8258f7fd93a881dd610c99'
-            'b450625ff1e705f8c7eed9e2c0c4fe2179ca061df88a1a777c861c11d543c151cd0160f7f7227babdfe8b36000de084cbcb6fd7bf0f93d2f936c2e65082c82bf')
+            'bdf05f99407491e27a03aaf845b7cc8acfa2e0e59968236f10ffc905e5e3d5e8569df496fd71c887da2b5b8d1902494520c7da2d3a8258f7fd93a881dd610c99')
 validpgpkeys=('CEACC9E15534EBABB82D3FA03353C9CEF108B584')
 
 case $CARCH in
@@ -36,8 +34,6 @@ prepare() {
 
   cd ${pkgname}-${pkgver}
   sed -i 's/vte-2\.90/vte-2.91/g' configure
-
-  # patch -p1 < ../allow_elf64.patch
 }
 
 build() {
