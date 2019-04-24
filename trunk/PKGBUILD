@@ -5,8 +5,8 @@ pkgbase=qemu
 pkgname=(qemu qemu-headless qemu-arch-extra qemu-headless-arch-extra
          qemu-block-{iscsi,rbd,gluster} qemu-guest-agent)
 pkgdesc="A generic and open source machine emulator and virtualizer"
-pkgver=3.1.0
-pkgrel=2
+pkgver=4.0.0
+pkgrel=1
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
@@ -18,7 +18,7 @@ source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
         qemu-ga.service
         65-kvm.rules
         allow_elf64.patch)
-sha512sums=('7e8dae823937cfac2f0c60406bd3bdcb89df40313dab2a4bed327d5198f7fcc68ac8b31e44692caa09299cc71256ee0b8c17e4f49f78ada8043d424f5daf82fe'
+sha512sums=('952e94194ce9e64c15388c59035cb31fb9f761d30095c2fb9441012b609c18c9976285727b93bf37b95e15675802d73f8e1c4619ebecd23606675bb503646b13'
             'SKIP'
             '269c0f0bacbd06a3d817fde02dce26c99d9f55c9e3b74bb710bd7e5cdde7a66b904d2eb794c8a605bf9305e4e3dee261a6e7d4ec9d9134144754914039f176e4'
             'bdf05f99407491e27a03aaf845b7cc8acfa2e0e59968236f10ffc905e5e3d5e8569df496fd71c887da2b5b8d1902494520c7da2d3a8258f7fd93a881dd610c99'
@@ -37,7 +37,7 @@ prepare() {
   cd ${pkgname}-${pkgver}
   sed -i 's/vte-2\.90/vte-2.91/g' configure
 
-  patch -p1 < ../allow_elf64.patch
+  # patch -p1 < ../allow_elf64.patch
 }
 
 build() {
@@ -70,8 +70,8 @@ _build() (
     --libexecdir=/usr/lib/qemu \
     --python=/usr/bin/python2 \
     --smbd=/usr/bin/smbd \
-    --with-sdlabi=2.0 \
     --enable-modules \
+    --enable-sdl \
     --enable-jemalloc \
     "${@:2}"
 
