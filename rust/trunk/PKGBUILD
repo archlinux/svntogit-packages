@@ -69,7 +69,6 @@ package_rust-docs() {
   install -d "$pkgdir/usr/share/doc/"
   mv "$srcdir"/doc/* "$pkgdir"/usr/share/doc/rust/
 
-  msg2 "Packaging license files for the documentation"
   for license in APACHE MIT; do install -Dm644 "rustc-$pkgver-src/LICENSE-$license" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"; done
 }
