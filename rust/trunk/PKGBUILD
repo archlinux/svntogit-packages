@@ -7,7 +7,7 @@
 
 pkgname=('rust' 'rust-docs')
 epoch=1
-pkgver=1.34.0
+pkgver=1.34.1
 pkgrel=1
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
@@ -15,7 +15,7 @@ url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' 'llvm' 'libffi' 'perl' 'python2' 'curl' 'cmake')
+makedepends=('rust' 'llvm' 'libffi' 'perl' 'python' 'curl' 'cmake')
 checkdepends=('procps-ng' 'gdb')
 
 options=('!emptydirs')
@@ -23,9 +23,9 @@ options=('!emptydirs')
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         config.toml)
 
-sha256sums=('7ac85acffd79dd3a7c44305d9eaabd1f1e7116e2e6e11e770e4bf5f92c0f1f59'
+sha256sums=('b0c785264d17e1dac4598627c248a2d5e07dd39b6666d1881fcfc8e2cf4c40a7'
             'SKIP'
-            'ce1c2648e70a14362d33d0cbbd3e35846ea9d43a8d0abc36071563fc087b82d5')
+            'fa531e162f2bb06f85171df1a91e339b4c2e276dd4b8cd7448c0675d343ae80b')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE') # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
 
 prepare() {
@@ -37,7 +37,7 @@ prepare() {
 build() {
   cd "rustc-$pkgver-src"
 
-  python2 ./x.py build -j"$(nproc)"
+  python ./x.py build -j"$(nproc)"
 }
 
 package_rust() {
@@ -48,7 +48,7 @@ package_rust() {
 
   cd "rustc-$pkgver-src"
 
-  DESTDIR="$pkgdir" python2 ./x.py install
+  DESTDIR="$pkgdir" python ./x.py install
 
   for license in APACHE MIT; do install -Dm644 "LICENSE-$license" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"; done
