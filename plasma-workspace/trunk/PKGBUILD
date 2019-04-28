@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.15.4
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -43,7 +43,6 @@ package_plasma-workspace() {
   optdepends=('plasma-workspace-wallpapers: additional wallpapers'
               'gpsd: GPS based geolocation' 'networkmanager-qt: IP based geolocation'
               'kdepim-addons: displaying PIM events in the calendar'
-              'appmenu-qt4: global menu support for Qt4 applications'
               'appmenu-gtk-module: global menu support for GTK2 and some GTK3 applications'
               'qt5-virtualkeyboard: virtual keyboard support in lock screen'
               'baloo: Baloo search runner'
