@@ -2,8 +2,8 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2018.12
-pkgrel=2
+pkgver=2019.05
+pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
 license=('GPL')
@@ -17,7 +17,7 @@ backup=('etc/crypttab' 'etc/fstab' 'etc/group' 'etc/gshadow' 'etc/host.conf'
 source=('crypttab' 'env-generator' 'fstab' 'group' 'gshadow' 'host.conf' 'hosts'
         'issue' 'ld.so.conf' 'locale.sh' 'motd' 'nsswitch.conf' 'os-release'
         'passwd' 'profile' 'resolv.conf' 'securetty' 'shadow' 'shells' 'sysctl'
-        'sysusers' 'tmpfiles')
+        'sysusers' 'tmpfiles' 'archlinux.svg' 'archlinux.png')
 md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          '2b0344e9639f35f3c0d5637a23556089'
          'e33f6dfdd61978fcb3ddf1431286e05a'
@@ -30,7 +30,7 @@ md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          '580cf8b59eebfaac4fad373ffadc9912'
          'd41d8cd98f00b204e9800998ecf8427e'
          '981ee4d7e506a9d6d9ed2d872e16004b'
-         '95a9c748ff146dfc41356748f8f3d24f'
+         'e0d8ea1d1a11992dbe9f6550cc14eaa5'
          '5182ac38a0de85da8ade93ef71975ca4'
          '2c79e1762978235e7b4a9ef595f6c029'
          '0ee015fad07732676d9488ae498eed41'
@@ -39,7 +39,9 @@ md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          'a78cd8d7f8240a8448edee82f503c34e'
          'a51847c012555c843dbdf8df0da171d3'
          'af7832eabaac9804c22f1f2b53816a49'
-         '0267a3a463f35eec8a31f40a720dfd86')
+         '0267a3a463f35eec8a31f40a720dfd86'
+         'c621ce49c7ef1082405564b713dc54ae'
+         '5112ea0b951f84eb056f06d2410ea7d0')
 
 package() {
   cd "$pkgdir"
@@ -85,7 +87,7 @@ package() {
   ln -s ../run/lock var/lock
 
   # setup /usr hierarchy
-  for d in bin include lib share/misc src; do
+  for d in bin include lib share/{misc,pixmaps} src; do
     install -d -m755 usr/$d
   done
   for d in {1..8}; do
@@ -121,6 +123,9 @@ package() {
 
   # setup systemd.environment-generator
   install -D -m755 "$srcdir"/env-generator usr/lib/systemd/system-environment-generators/10-arch
+
+  # add logo
+  install -D -m644 "$srcdir"/archlinux.{svg,png} usr/share/pixmaps
 }
 
 # vim:set ts=2 sw=2 et:
