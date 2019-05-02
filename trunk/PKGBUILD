@@ -7,7 +7,7 @@ pkgver=2.4.39
 pkgrel=1
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('x86_64')
-url='http://www.apache.org/dist/httpd'
+url='https://www.apache.org/dist/httpd'
 license=('APACHE')
 backup=(
     etc/httpd/conf/httpd.conf
