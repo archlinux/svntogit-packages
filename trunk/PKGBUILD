@@ -3,7 +3,7 @@
 
 pkgname=parted
 pkgver=3.2
-pkgrel=8
+pkgrel=9
 pkgdesc="A program for creating, destroying, resizing, checking and copying partitions"
 arch=('x86_64')
 license=('GPL3')
@@ -16,7 +16,7 @@ source=("https://ftp.gnu.org/gnu/${pkgname}/${pkgname}-${pkgver}.tar.xz"{,.sig}
         '0002-include.patch')
 sha256sums=('858b589c22297cacdf437f3baff6f04b333087521ab274f7ab677cb8c6bb78e4'
             'SKIP'
-            '3cbf31765b1653609a4c95687b91e34dd57ad3498d5d02019c966bd46d25d100'
+            '20f54040e58bbbef6ed043c8be98dda5696035349c3efad850972c938f08f84a'
             '789d6ef8fcff389f9f74bd9e377aff9949ab5b317a80bd38cec39510bd40cef6')
 
 prepare() {
@@ -29,10 +29,12 @@ prepare() {
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  ./configure --prefix=/usr \
-              --sbindir=/usr/bin \
-              --disable-debug \
-              --disable-rpath
+  # Do *not* add --disable-debug, it prevents building fatresize
+  # https://github.com/ya-mouse/fatresize/issues/9
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --disable-rpath
   make
 }
 
