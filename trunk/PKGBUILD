@@ -10,7 +10,7 @@ _IA32_EFI_IN_ARCH_X64="1"
 _GRUB_EMU_BUILD="0"
 
 _GRUB_EXTRAS_COMMIT="f2a079441939eee7251bf141986cdd78946e1d20"
-
+_GNULIB_COMMIT="3f14b27dec6f4a590d8ae0ffcbb7cf7714815a05"
 _UNIFONT_VER="12.0.01"
 
 [[ "${CARCH}" == "x86_64" ]] && _EFI_ARCH="x86_64"
@@ -21,8 +21,9 @@ _UNIFONT_VER="12.0.01"
 
 pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
-pkgver=2.02
-pkgrel=8
+_pkgver=2.04-rc1
+pkgver=${_pkgver/-/}
+pkgrel=1
 epoch=2
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
@@ -56,8 +57,9 @@ fi
 validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' Serbinenko <phcoder@gmail.com>
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
-source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${pkgver}?signed"
+source=("git+https://git.savannah.gnu.org/git/grub.git#tag=grub-${_pkgver}?signed"
         "git+https://git.savannah.gnu.org/git/grub-extras.git#commit=${_GRUB_EXTRAS_COMMIT}"
+        "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_GNULIB_COMMIT}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
         '0003-10_linux-detect-archlinux-initramfs.patch'
         '0004-add-GRUB_COLOR_variables.patch'
@@ -65,30 +67,14 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${pkgver}?signed"
 
 sha256sums=('SKIP'
             'SKIP'
+            'SKIP'
             'f48450d3ca0ae0ca9f1c6e81cf1af60e5b0dfa87cc3a72520ce2ef15d54de6dd'
             'SKIP'
-            'b41e4438319136b5e74e0abdfcb64ae115393e4e15207490272c425f54026dd3'
+            '171415ab075d1ac806f36c454feeb060f870416f24279b70104bba94bd6076d4'
             'a5198267ceb04dceb6d2ea7800281a42b3f91fd02da55d2cc9ea20d47273ca29'
-            '9ca2414266fadd0b1aafc850c1c26a48760fbc95f1913ab8b36f1e54483b31fd')
+            'fd2e5f5453f3e44a2cb640c796b85cd70da8359c703f94cd531d457ede8c77fa')
 
 _backports=(
-	# Allow GRUB to mount ext2/3/4 filesystems that have the encryption feature.
-	'734668238fcc0ef691a080839e04f33854fa133a'
-
-	# tsc: Change default tsc calibration method to pmtimer on EFI systems
-	'446794de8da4329ea532cbee4ca877bcafd0e534'
-
-	# grub-mkconfig/10_linux: Support multiple early initrd images
-	'a698240df0c43278b2d1d7259c8e7a6926c63112'
-
-	# Fix packed-not-aligned error on GCC 8
-	'563b1da6e6ae7af46cc8354cadb5dab416989f0a'
-
-	# xfs: Accept filesystem with sparse inodes
-	'cda0a857dd7a27cd5d621747464bfe71e8727fff'
-
-	# x86-64: Treat R_X86_64_PLT32 as R_X86_64_PC32
-	'842c390469e2c2e10b5aa36700324cd3bde25875'
 )
 
 _configure_options=(
@@ -120,6 +106,7 @@ prepare() {
 	echo "Apply backports..."
 	local _c
 	for _c in "${_backports[@]}"; do
+		git log --oneline -1 "${_c}"
 		git cherry-pick -n "${_c}"
 	done
 
@@ -149,8 +136,10 @@ prepare() {
 	# http://savannah.gnu.org/bugs/?40330 and https://bugs.archlinux.org/task/37847
 	cp "${srcdir}/unifont-${_UNIFONT_VER}.bdf" "unifont.bdf"
 
-	echo "Run autogen.sh..."
-	./autogen.sh
+	echo "Run bootstrap..."
+	./bootstrap \
+		--gnulib-srcdir="${srcdir}/gnulib/" \
+		--no-git
 }
 
 _build_grub-common_and_bios() {
