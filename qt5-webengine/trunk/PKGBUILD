@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.12.3
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -15,9 +15,10 @@ makedepends=('python2' 'git' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qtwebengine-harmony.patch)
+         qtwebengine-harmony.patch qtwebengine-glibc-2.29.patch)
 sha256sums=('3ff3bac12d75aa0f3fd993bb7077fe411f7b0e6a3993af6f8b039d48e3dc4317'
-            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3')
+            'feca54ab09ac0fc9d0626770a6b899a6ac5a12173c7d0c1005bc3964ec83e7b3'
+            'dd791f154b48e69cd47fd94753c45448655b529590995fd71ac1591c53a3d60c')
 
 prepare() {
   mkdir -p build
@@ -30,6 +31,9 @@ prepare() {
 
   # FreeType 2.8.1
   patch -Np1 -i ../qtwebengine-harmony.patch
+
+  cd src/3rdparty/chromium
+  patch -p1 -i "$srcdir"/qtwebengine-glibc-2.29.patch # Fix PPAPI plugins with glibc 2.29
 }
 
 build() {
