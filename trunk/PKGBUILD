@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=4.9.0
 _clangver=8.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -28,9 +28,11 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'bzr: bazaar support'
             'valgrind: analyze support')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-        qtcreator-clang-plugins.patch)
+        qtcreator-clazy-1.5.patch
+        qtcreator-preload-plugins.patch)
 sha256sums=('46ee1992531b769450f8be96cf63520b609d7dd305df345d7cd8216ac396e6a8'
-            'ba4ebfa0cb2a9977b9ec9f12eaa92dac152ed2d67976829f2a596bc27888f0ab')
+            '1f6998fea92b9a157f42cca783839ce95f70ccc667027078b7881cbb253838f0'
+            '0e59c98c02d46f93275dda2b22216a0ba467104f0151f35c88ae2172c3858b03')
 
 prepare() {
   mkdir -p build
@@ -40,15 +42,18 @@ prepare() {
   sed -e 's|libexec\/qtcreator|lib\/qtcreator|g' -i qtcreator.pri
   # use system qbs
   rm -r src/shared/qbs
-  # Load analyzer plugins on demand, since upstream clang doesn't link to all plugins
+  # Preload analyzer plugins, since upstream clang doesn't link to all plugins
   # see http://code.qt.io/cgit/clang/clang.git/commit/?id=7f349701d3ea0c47be3a43e265699dddd3fd55cf
   # and https://bugs.archlinux.org/task/59492
-  patch -p1 -i ../qtcreator-clang-plugins.patch
+  patch -p1 -i ../qtcreator-preload-plugins.patch
+  # Adapt to clazy 1.5 plugin rename
+  patch -p1 -i ../qtcreator-clazy-1.5.patch
 }
 
 build() {
   cd build
 
+  export LDFLAGS=${LDFLAGS/--as-needed,/}
   qmake LLVM_INSTALL_DIR=/usr QBS_INSTALL_DIR=/usr \
     KSYNTAXHIGHLIGHTING_LIB_DIR=/usr/lib KSYNTAXHIGHLIGHTING_INCLUDE_DIR=/usr/include/KF5/KSyntaxHighlighting \
     CONFIG+=journald QMAKE_CFLAGS_ISYSTEM=-I \
