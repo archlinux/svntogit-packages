@@ -9,11 +9,11 @@ pkgver=1.3.1
 pkgrel=1
 pkgdesc='Portable and efficient C programming interface (API) to determine the call-chain of a program'
 arch=('x86_64')
-url='http://www.nongnu.org/libunwind/'
+url='https://www.nongnu.org/libunwind/'
 license=('GPL')
 depends=('glibc' 'xz')
 makedepends=('texlive-core')
-source=("http://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
+source=("https://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 sha512sums=('3110d0aed4f5c781ef1ff72c9337e59793c02c42066209a4ac44f50eff1c0b0e02a5ff9f66891e62016de14af065a47975763970b839b700c0ff2e9f415c8def'
             'SKIP')
 validpgpkeys=('5C96BDEAF5F47FB02BD4F6B965D98560914F3F48'  # Arun Sharma
