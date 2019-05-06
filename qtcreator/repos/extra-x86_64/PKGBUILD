@@ -53,7 +53,6 @@ prepare() {
 build() {
   cd build
 
-  export LDFLAGS=${LDFLAGS/--as-needed,/}
   qmake LLVM_INSTALL_DIR=/usr QBS_INSTALL_DIR=/usr \
     KSYNTAXHIGHLIGHTING_LIB_DIR=/usr/lib KSYNTAXHIGHLIGHTING_INCLUDE_DIR=/usr/include/KF5/KSyntaxHighlighting \
     CONFIG+=journald QMAKE_CFLAGS_ISYSTEM=-I \
