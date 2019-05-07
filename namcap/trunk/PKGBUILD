@@ -6,7 +6,7 @@ pkgver=3.2.8
 pkgrel=3
 pkgdesc="A Pacman package analyzer"
 arch=('any')
-url="http://projects.archlinux.org/namcap.git/"
+url="https://projects.archlinux.org/namcap.git/"
 license=('GPL')
 depends=('python' 'pyalpm>=0.5' 'licenses'
          'binutils' 'elfutils' 'python-pyelftools')
