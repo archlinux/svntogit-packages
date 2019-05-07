@@ -7,11 +7,11 @@ pkgrel=1
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
-url="http://caml.inria.fr/"
+url="https://caml.inria.fr/"
 depends=('gdbm')
 makedepends=('tk>=8.6.0' 'ncurses>=5.6-7' 'libx11')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
-source=(http://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
+source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
 sha1sums=('4f6457627a034e3b58c88a5ee6cc69aebd306746')
 options=('!makeflags' '!emptydirs' 'staticlibs')
 
