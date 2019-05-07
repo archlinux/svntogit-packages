@@ -2,7 +2,7 @@
 
 pkgname=krb5
 _pkgvermajor=1.16
-pkgver=${_pkgvermajor}.1
+pkgver=1.16.2
 pkgrel=1
 pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
@@ -19,7 +19,7 @@ source=(https://web.mit.edu/kerberos/dist/krb5/${_pkgvermajor}/${pkgname}-${pkgv
         krb5-kpropd.service
         krb5-kpropd@.service
         krb5-kpropd.socket)
-sha512sums=('fa4ec14a4ffe690861e2dd7ea39d7698af2058ce181bb733ea891f80279f4dde4bb891adec5ccb0eaddf737306e6ceb1fe3744a2946e6189a7d7d2dd3bc5ba84'
+sha512sums=('738c071a90e0f38680bb17bdcf950310bc4549f3cb851e1d34de11239ae88178e6ee1a5e5d48c6d3efef544339b07d22dba5347dd763a4266d8d4df7cf47afc9'
             'SKIP'
             '5a3782ff17b383f8cd0415fd13538ab56afd788130d6ad640e9f2682b7deaae7f25713ce358058ed771091040dccf62a3bc87e6fd473d505ec189a95debcc801'
             'ae1fa980e8e30a83dfef7fe233be70a9ec530ebaffc344a0e7eba61e7de4c800421b45cf203f1e526cc8351754038d6539184b30aa049a567e2a9e80f0d39841'
