@@ -6,7 +6,7 @@ pkgdesc="PCI bus configuration space access library and tools"
 arch=(x86_64)
 license=('GPL2')
 groups=('base')
-url="http://mj.ucw.cz/sw/pciutils/"
+url="https://mj.ucw.cz/sw/pciutils/"
 depends=('glibc' 'hwids' 'kmod')
 source=(#ftp://ftp.kernel.org/pub/software/utils/${pkgname}/${pkgname}-${pkgver}.tar.bz2
        ftp://atrey.karlin.mff.cuni.cz/pub/linux/pci/${pkgname}-${pkgver}.tar.gz
