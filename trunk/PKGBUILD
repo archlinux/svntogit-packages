@@ -1,7 +1,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=mallard-ducktype
-pkgver=0.4
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="Parser for the lightweight Ducktype syntax for Mallard"
 url="http://projectmallard.org"
@@ -9,7 +9,7 @@ arch=(any)
 license=(MIT)
 depends=(python)
 makedepends=(python-setuptools git)
-_commit=5a9f8c9cc2239ac08fe3e690ff9ecabb4fe9917e  # tags/0.4^0
+_commit=df2dd643ac8bbdbd4bf35515be0630efdb2bc29c  # tags/1.0.1^0
 source=("git+https://github.com/projectmallard/mallard-ducktype#commit=$_commit")
 sha256sums=('SKIP')
 
