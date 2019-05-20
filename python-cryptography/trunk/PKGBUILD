@@ -7,7 +7,7 @@ pkgrel=1
 pkgdesc="A package designed to expose cryptographic recipes and primitives to Python developers"
 arch=('x86_64')
 license=('Apache')
-url="http://pypi.python.org/pypi/cryptography"
+url="https://pypi.python.org/pypi/cryptography"
 makedepends=('python-setuptools' 'python2-setuptools' 'python-six' 'python2-six' 'python-cffi'
              'python2-cffi' 'python2-enum34' 'python-pyasn1' 'python2-pyasn1' 'python-idna'
              'python2-idna' 'python2-ipaddress' 'python-asn1crypto' 'python2-asn1crypto')
