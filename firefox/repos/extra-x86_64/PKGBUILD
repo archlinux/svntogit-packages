@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=66.0.5
+pkgver=67.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -22,10 +22,10 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags)
 _repo=https://hg.mozilla.org/mozilla-unified
 source=("hg+$_repo#tag=FIREFOX_${pkgver//./_}_RELEASE"
-        0001-bz-1468911.patch
+        0001-bz-1521249.patch
         $pkgname.desktop firefox-symbolic.svg)
 sha256sums=('SKIP'
-            '821f858bac2e13ce02b8c20d5387d4ecc8ab2d0e4ebe0a517cbf935da6aeb31b'
+            'd0673786a6a1f1b9f6f66a3a1356afa33f1f18f59dabd92bd193c88c52a1d04c'
             '4a783dca1f88e003c72f32d22719a0915f3fa576adbc492240e7cc250246ce10'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 
@@ -46,7 +46,7 @@ prepare() {
   cd mozilla-unified
 
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1521249
-  patch -Np1 -i ../0001-bz-1468911.patch
+  patch -Np1 -i ../0001-bz-1521249.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
