@@ -8,13 +8,9 @@ pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
 license=('GPL')
-groups=()
 depends=('bash' 'coreutils' 'cpio' 'filesystem' 'findutils' 'grep' 'gzip'
          'kmod' 'procps-ng' 'sed' 'systemd' 'util-linux' 'xz')
-makedepends=('asciidoc' 'bash-completion' 'gcc' 'git' 'pkgconf')
-provides=("${pkgname}")
-# do not conflict on mkinitcpio
-conflicts=("${pkgname}")
+makedepends=('asciidoc' 'bash-completion' 'git')
 backup=('etc/dracut.conf')
 source=("git+https://github.com/dracutdevs/dracut#tag=${_tag_blob}?signed"
         "0001-90crypt-Change-the-module-setup.sh-to-use-uname-r-in.patch")
