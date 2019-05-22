@@ -1,0 +1,58 @@
+# Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+
+pkgname=prometheus-node-exporter
+pkgver=0.18.0
+pkgrel=1
+
+pkgdesc='Exporter for machine metrics'
+url='https://github.com/prometheus/node_exporter'
+arch=('x86_64')
+license=('Apache')
+
+depends=('glibc')
+makedepends=('go-pie' 'git')
+
+backup=('etc/conf.d/prometheus-node-exporter')
+
+source=("https://github.com/prometheus/node_exporter/archive/v$pkgver.tar.gz"
+        prometheus-node-exporter.conf
+        prometheus-node-exporter.service
+        prometheus-node-exporter.sysusers)
+
+sha256sums=('2f71a4a11fa1388e4a459865520365396f8b6ebbad9d45df476fe60ee0de0415'
+            'ce93e2b95bfc86a8a046e2f9175408e1cbffa784fd3b65dd141fde70b5bb2585'
+            '727ed5df3395fd77d8e2ae8c3ab7a6352213655e38c9b37badfea1aa90556394'
+            'c7fd0b1793dfe7a354a28e978d3c79e7195eaf43376b9eece37e996fe0772c5c')
+
+build() {
+  cd node_exporter-$pkgver
+
+  go build \
+    -gcflags "all=-trimpath=${PWD}" \
+    -asmflags "all=-trimpath=${PWD}" \
+    -ldflags "-extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    .
+}
+
+check() {
+  cd node_exporter-$pkgver
+
+  make collector/fixtures/sys/.unpacked
+  go test ./...
+  ./end-to-end-test.sh
+}
+
+package () {
+  install -Dm644 prometheus-node-exporter.conf "$pkgdir"/etc/conf.d/prometheus-node-exporter
+  install -Dm644 prometheus-node-exporter.service "$pkgdir"/usr/lib/systemd/system/prometheus-node-exporter.service
+  install -Dm644 prometheus-node-exporter.sysusers "$pkgdir"/usr/lib/sysusers.d/prometheus-node-exporter.conf
+
+  cd node_exporter-$pkgver
+
+  install -Dm755 node_exporter "$pkgdir"/usr/bin/prometheus-node-exporter
+}
