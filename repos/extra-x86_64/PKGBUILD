@@ -3,9 +3,9 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=11.2
+pkgver=11.3
 _majorver=${pkgver%.*}
-pkgrel=3
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -21,7 +21,7 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql-check-db-dir
         postgresql.sysusers
         postgresql.tmpfiles)
-sha256sums=('2676b9ce09c21978032070b6794696e0aa5a476e3d21d60afc036dc0a9c09405'
+sha256sums=('2a85e082fc225944821dfd23990e32dfcd2284c19060864b0ad4ca537d30522d'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
             '5f73b54ca6206bd2c469c507830261ebd167baca074698d8889d769c33f98a31'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
@@ -30,7 +30,7 @@ sha256sums=('2676b9ce09c21978032070b6794696e0aa5a476e3d21d60afc036dc0a9c09405'
             '2bbd8c4e51b70223d274fef3a167af096f44af3d3c41ae505ad11c606674e7c5'
             '7fa8f0ef3f9d40abd4749cc327c2f52478cb6dfb6e2405bd0279c95e9ff99f12'
             'ff7c84f78f73b87ade8e2d91d2958808be5a9af79c8b13430238ae953c7fe853')
-sha512sums=('dae00a543fdeed36bc338abd4ccfd9fe9a8b6b2b7eaa00b1078e4f27802de75a461c27da2800bc9dd64e658681e5787bd03764bde79940656cae1e8c8716f011'
+sha512sums=('03269bb88f44f3a81d5e3a8ca2fe59f63f784436840f08870b2e539755629cbde8ac288e0bb4472ee93294a88b37b814ddff48444254c1a3f7a10b4bb64f7133'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
             '38302242b30c01c7981574ed28d9cbd9dc73bf6b56ba3a032afb5d0885ae83e5aa72ce578bf2422214dfa6c46f09d0bdd7cccaeb3c25d58754eb1a34f8bf5615'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
