@@ -7,7 +7,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.29
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -74,6 +74,11 @@ build() {
 
   # remove fortify for building libraries
   CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
+
+  #
+  CFLAGS=${CFLAGS/-fno-plt/}
+  CXXFLAGS=${CXXFLAGS/-fno-plt/}
+  LDFLAGS=${LDFLAGS/,-z,now/}
 
   "$srcdir/glibc/configure" \
       --libdir=/usr/lib \
