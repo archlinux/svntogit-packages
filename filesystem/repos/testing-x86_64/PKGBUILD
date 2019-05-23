@@ -3,7 +3,7 @@
 
 pkgname=filesystem
 pkgver=2019.05
-pkgrel=1
+pkgrel=2
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
 license=('GPL')
@@ -40,8 +40,8 @@ md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          'a51847c012555c843dbdf8df0da171d3'
          'af7832eabaac9804c22f1f2b53816a49'
          '0267a3a463f35eec8a31f40a720dfd86'
-         'c621ce49c7ef1082405564b713dc54ae'
-         '5112ea0b951f84eb056f06d2410ea7d0')
+         'd6404c81a82a0031764adbb288582eda'
+         'a0725970794112ac6fc1e29d702afd62')
 
 package() {
   cd "$pkgdir"
