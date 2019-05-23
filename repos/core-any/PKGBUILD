@@ -3,7 +3,7 @@
 
 pkgname=mkinitcpio
 pkgver=25
-pkgrel=1
+pkgrel=2
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url="https://projects.archlinux.org/mkinitcpio.git/"
@@ -15,6 +15,7 @@ optdepends=('xz: Use lzma or xz compression for the initramfs image'
             'lzop: Use lzo compression for the initramfs image'
             'lz4: Use lz4 compression for the initramfs image'
             'mkinitcpio-nfs-utils: Support for root filesystem on NFS')
+provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
