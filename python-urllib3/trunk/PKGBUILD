@@ -5,7 +5,7 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
-pkgver=1.25.2
+pkgver=1.25.3
 pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
@@ -19,7 +19,7 @@ checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-tornado' 'p
               'python-nose' 'python2-nose' 'python-psutil' 'python2-psutil'
               'python-gcp-devrel-py-tools' 'python2-gcp-devrel-py-tools')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/shazow/urllib3/archive/$pkgver.tar.gz")
-sha512sums=('c90ceb16e00757721084885463aea68cf75674bf334303b8ac05d2ecbda074e4990b5f23c5eaf685077341ae6f6f8be09e4c9e56d4f884075c278db9f9114a5b')
+sha512sums=('86556d486c5aac9c3c7875d1440317c3be3924f67f4377a99e15892a39f532330d07f9dec5c5a1ed8b20957d2c611e78a97bd9d1684acff3069cd7debbbaa001')
 
 prepare() {
   sed -i 's/pytest/tool:pytest/' urllib3-$pkgver/setup.cfg
