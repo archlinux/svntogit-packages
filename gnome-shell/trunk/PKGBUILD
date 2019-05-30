@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=3.32.2
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
