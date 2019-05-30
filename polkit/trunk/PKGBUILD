@@ -2,7 +2,7 @@
 
 pkgname=polkit
 pkgver=0.116
-pkgrel=1
+pkgrel=2
 pkgdesc="Application development toolkit for controlling system-wide privileges"
 arch=(x86_64)
 license=(LGPL)
