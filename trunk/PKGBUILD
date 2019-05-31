@@ -3,7 +3,7 @@
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
 pkgver=4.07.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
@@ -17,13 +17,13 @@ options=('!makeflags' '!emptydirs' 'staticlibs')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure -prefix /usr -x11include /usr/include
+  ./configure -prefix /usr -x11include /usr/include -mandir '$(PREFIX)/share/man'
   make world.opt
 }
 
 package_ocaml() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
-  make PREFIX="${pkgdir}/usr" MANDIR="${pkgdir}/usr/share/man" install
+  make PREFIX="${pkgdir}/usr" install
 
   # Save >10MB with this one, makepkg only strips debug symbols.
   #find "${pkgdir}/usr/lib" -type f -name '*.so.*' -exec strip --strip-unneeded {} \;
