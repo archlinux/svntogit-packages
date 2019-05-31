@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.32.2
+pkgver=3.32.2+5+g13a1624c1
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -15,13 +15,9 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanber
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
-_commit=189f71f5d1e70dd16796418d568d3e3e4cad49e0  # tags/3.32.2^0
-source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
-        0001-wayland-output-Report-unscaled-size-even-in-logical-.patch
-        216.patch)
-sha256sums=('SKIP'
-            '842162bf8cec5d69fdb80c85fd152ddd3db6a9179d11d6f81d486f79814838c0'
-            'ed4f3cf738a3cffdf8a6e1a352bf24d74078c3b26fb9262c5746e0d95b9df756')
+_commit=13a1624c1050c91cd4d8a298f7a10fafe56fe9e5  # gnome-3-32
+source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
@@ -30,12 +26,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1534089
-  patch -Np1 -i ../0001-wayland-output-Report-unscaled-size-even-in-logical-.patch
-
-  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/216
-  git apply -3 ../216.patch
 }
 
 build() {
