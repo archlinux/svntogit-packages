@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=3.32.2+5+g13a1624c1
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -15,6 +15,7 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanber
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
+install=mutter.install
 _commit=13a1624c1050c91cd4d8a298f7a10fafe56fe9e5  # gnome-3-32
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
@@ -26,6 +27,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # rt-scheduler experimental feature
+  git cherry-pick -n dae2c1d420ed272710ac55b7a00f6787e5c0e762
 }
 
 build() {
