@@ -3,7 +3,7 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.8+167+gdd25499f1e
+pkgver=3.24.8+177+gae2ef1472c
 pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
@@ -15,15 +15,13 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra fribidi iso-codes)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
-_commit=dd25499f1e565a2b3a8e81737155c107841d0282  # gtk-3-24
+_commit=ae2ef1472c69ad61ed8d19d932da4ca04c2a13ef  # gtk-3-24
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
-        0001-libgail-util-Fix-symbol-visibility-with-meson.patch
         settings.ini
         gtk-query-immodules-3.0.hook
         gtk-update-icon-cache.hook
         gtk-update-icon-cache.script)
 sha256sums=('SKIP'
-            'd528f5d27b7fb4333ca607ee1afe894fabd1d5d97e0f9e755365e44c60dc8ada'
             '01fc1d81dc82c4a052ac6e25bf9a04e7647267cc3017bc91f9ce3e63e5eb9202'
             'de46e5514ff39a7a65e01e485e874775ab1c0ad20b8e94ada43f4a6af1370845'
             '496064a9dd6214bd58f689dd817dbdc4d7f17d42a8c9940a87018c3f829ce308'
@@ -36,12 +34,11 @@ pkgver() {
 
 prepare() {
   cd gtk
-  patch -Np1 -i ../0001-libgail-util-Fix-symbol-visibility-with-meson.patch
 }
 
 build() {
+  CFLAGS+=" -DG_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS"
   arch-meson gtk build \
-    --buildtype release \
     -D broadway_backend=true \
     -D colord=yes \
     -D gtk_doc=true \
