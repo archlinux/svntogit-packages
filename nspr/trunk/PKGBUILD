@@ -27,7 +27,10 @@ build() {
       --enable-optimize \
       --disable-debug \
       $([[ $CARCH == x86_64 ]] && echo --enable-64bit)
-  make
+  make ${SOURCE_DATE_EPOCH:+
+    SH_NOW="${SOURCE_DATE_EPOCH}000000"
+    SH_DATE="$(date --utc --date="@$SOURCE_DATE_EPOCH" '+%Y-%m-%d %T')"
+}
 }
 
 package() {
