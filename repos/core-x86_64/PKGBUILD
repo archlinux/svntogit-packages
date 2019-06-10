@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.60.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL2.1)
@@ -37,6 +37,7 @@ prepare() {
 }
 
 build() {
+  CFLAGS+=" -DG_DISABLE_CAST_CHECKS"
   arch-meson glib build \
     -D selinux=disabled \
     -D man=true \
