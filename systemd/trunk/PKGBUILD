@@ -7,7 +7,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
 _commit='298d13df7ef1097fa4801de573f668cef23a22b3'
 pkgver=242.29
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -80,8 +80,6 @@ _backports=(
   '933c70a0a4e4fac47d18e0348ae97ee3d48dc139'
   # network: bump MTU bytes only when MTUByte= is not set
   'f6fcc1c2a41eae749467de58453174296b635a69'
-  # test-network: adjust mtu
-  '7d7be1b9d8c17b5c4a41d72b6169a1f0270dc7b8'
 )
 
 _reverts=(
