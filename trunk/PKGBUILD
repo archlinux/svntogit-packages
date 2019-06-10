@@ -72,6 +72,16 @@ _backports=(
   '51aba17b88617515e037e8985d3a4ea871ac47fe'
   # network: fix assertion when link get carrier
   'b9ea3d2e47b3741f3f46ba9c5e19640136933b71'
+
+  # network: do not use ordered_set_printf() for DOMAINS= or ROUTE_DOMAINS=
+  'fe0e16db093a7da09fcb52a2bc7017197047443d'
+
+  # network: honor MTUBytes= setting
+  '933c70a0a4e4fac47d18e0348ae97ee3d48dc139'
+  # network: bump MTU bytes only when MTUByte= is not set
+  'f6fcc1c2a41eae749467de58453174296b635a69'
+  # test-network: adjust mtu
+  '7d7be1b9d8c17b5c4a41d72b6169a1f0270dc7b8'
 )
 
 _reverts=(
