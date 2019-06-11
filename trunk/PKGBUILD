@@ -12,11 +12,11 @@ url="https://opencv.org/"
 depends=(intel-tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 jasper ffmpeg)
 makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke gtk3 vtk glew ant java-environment)
 optdepends=('opencv-samples: samples'
-            'gtk3: for the HighGUI module'
+            'gtk3: for the HighGUI module and the Python bindings'
             'vtk: for the viz module'
-            'hdf5: support for HDF5 format'
+            'hdf5: for the HDF5 module and the Python bindings'
             'opencl-icd-loader: For coding with OpenCL'
-            'python-numpy: Python interface'
+            'python-numpy: Python bindings'
             'java-runtime: Java interface')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
         "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz"
