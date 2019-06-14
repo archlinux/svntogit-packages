@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.32.2+10+g8b79c83ad
+pkgver=3.32.2+11+ga3a97621b
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=8b79c83ad52c58c3dc044ad87040faf09034035f  # gnome-3-32
+_commit=a3a97621bea451878b8997bc1befc282584521fa  # gnome-3-32
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -45,8 +45,7 @@ check() (
   glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/build/data}"
   export XDG_RUNTIME_DIR GSETTINGS_SCHEMA_DIR
 
-  # Mesa swrast eglMakeCurrent is crashy
-  dbus-run-session xvfb-run -s '+iglx -noreset' meson test -C build --print-errorlogs || :
+  dbus-run-session xvfb-run -s '+iglx -noreset' meson test -C build --print-errorlogs
 )
 
 package() {
