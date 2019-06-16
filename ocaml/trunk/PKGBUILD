@@ -1,23 +1,23 @@
-# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer: Jürgen Hötzel <juergen@archlinux.org>
 
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
-pkgver=4.07.1
-pkgrel=2
+pkgver=4.08.0
+pkgrel=1
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
 url="https://caml.inria.fr/"
 depends=('gdbm')
-makedepends=('tk>=8.6.0' 'ncurses>=5.6-7' 'libx11')
+makedepends=('tk>=8.6.0' 'ncurses>=5.6-7')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
 source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
-sha1sums=('4f6457627a034e3b58c88a5ee6cc69aebd306746')
+sha1sums=('7af535a715f13f666134a57c492984febd9327ba')
 options=('!makeflags' '!emptydirs' 'staticlibs')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure -prefix /usr -x11include /usr/include -mandir '$(PREFIX)/share/man'
+  ./configure -prefix /usr -mandir '$(PREFIX)/share/man'
   make world.opt
 }
 
