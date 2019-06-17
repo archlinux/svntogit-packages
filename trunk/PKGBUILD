@@ -6,7 +6,7 @@ pkgbase=util-linux
 pkgname=(util-linux libutil-linux)
 _pkgmajor=2.34
 pkgver=${_pkgmajor}
-pkgrel=1
+pkgrel=2
 pkgdesc="Miscellaneous system utilities for Linux"
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -34,6 +34,12 @@ sha256sums=('743f9d0c7252b6db246b659c1e1ce0bd45d8d4508b4dfa427bbb4a3e9b9f62b5'
 build() {
   cd "$pkgbase-$pkgver"
 
+  # We ship Debian's hardlink in package 'hardlink', Fedora's hardlink was
+  # merged in util-linux. For now we disable the latter, but let's dicuss
+  # the details:
+  # https://bugs.archlinux.org/task/62896
+  # https://github.com/karelzak/util-linux/issues/808
+
   ./configure \
     --prefix=/usr \
     --libdir=/usr/lib \
@@ -46,6 +52,7 @@ build() {
     --enable-chfn-chsh \
     --enable-write \
     --enable-mesg \
+    --disable-hardlink \
     --with-python=3
 
   make
