@@ -4,11 +4,11 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-_pkgver=5.1.10
+_pkgver=5.1.11
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
-pkgrel=2
+pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
@@ -23,11 +23,11 @@ source=(https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgve
         linux.preset   # standard config files for mkinitcpio ramdisk
 )
 replaces=('linux-grsec')
-sha256sums=('39063041532579cb7e9fab5837313a8e6639c1c583cd39c72b313b3abfa9fbcf'
+sha256sums=('11fd93207290272389ad284b8b042041d088fbee0ed5798e933bf8e91697d219'
             'SKIP'
-            'd8d33bebab3e9a0c30823f1e17427ff1a6a70dea8dce5f5ccc6a4c92b8e936c9'
+            '2becca7172da15cd3ebf6295851ba45faa2371f6b6b8fe279ba88c7f0ec1eea1'
             'SKIP'
-            '025580d1499596b4448eb33ac95223aac2a352dec16bdfdde9f61646c9d7f05d'
+            '60f4dabb92ebfc6130252c406542e4b9e953e4d1764508da64ba131f4d3a579f'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             'c043f3033bb781e2688794a59f6d1f7ed49ef9b13eb77ff9a425df33a244a636'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
