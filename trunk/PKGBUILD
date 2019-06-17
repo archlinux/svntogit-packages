@@ -23,7 +23,7 @@ build() {
 
 package_ocaml() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
-  make PREFIX="${pkgdir}/usr" install
+  make DESTDIR="${pkgdir}/usr" install
 
   # Save >10MB with this one, makepkg only strips debug symbols.
   #find "${pkgdir}/usr/lib" -type f -name '*.so.*' -exec strip --strip-unneeded {} \;
