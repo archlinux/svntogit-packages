@@ -11,9 +11,15 @@ url="https://caml.inria.fr/"
 depends=('gdbm')
 makedepends=('tk>=8.6.0' 'ncurses>=5.6-7')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
-source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
-sha1sums=('7af535a715f13f666134a57c492984febd9327ba')
+source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz ocaml-${pkgver}.patch)
+sha1sums=('7af535a715f13f666134a57c492984febd9327ba'
+          'edac6453b1aef6e97367af447f08dd3e8a3e2909')
 options=('!makeflags' '!emptydirs' 'staticlibs')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  patch -i "${srcdir}/ocaml-${pkgver}.patch"
+}
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
@@ -23,7 +29,7 @@ build() {
 
 package_ocaml() {
   cd "${srcdir}/${pkgbase}-${pkgver}"
-  make DESTDIR="${pkgdir}/usr" install
+  make DESTDIR="${pkgdir}" install
 
   # Save >10MB with this one, makepkg only strips debug symbols.
   #find "${pkgdir}/usr/lib" -type f -name '*.so.*' -exec strip --strip-unneeded {} \;
