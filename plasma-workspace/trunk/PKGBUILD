@@ -5,7 +5,7 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.16.0
+pkgver=5.16.1
 pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
@@ -17,7 +17,7 @@ depends=(kjsembed knotifyconfig libksysguard ktexteditor libqalculate qt5-tools 
 makedepends=(extra-cmake-modules kdoctools gpsd baloo appstream-qt krunner networkmanager-qt kdesignerplugin)
 groups=(plasma)
 source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
-sha256sums=('52da11a30708b375136ec5c280d75948e2651ecdb03f745e596d10168ab0ffae'
+sha256sums=('9407c127fd410c77adf346b09da329968aec3b84aace51fa00391266ab35198d'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
