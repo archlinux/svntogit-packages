@@ -5,12 +5,12 @@ pkgbase=mesa
 pkgname=('opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=19.1.0
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
              'libxshmfence' 'libxxf86vm' 'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
              'elfutils' 'llvm' 'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors'
-             'libxrandr' 'meson')
+             'libxrandr' 'valgrind' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
@@ -57,7 +57,7 @@ build() {
     -D lmsensors=true \
     -D osmesa=gallium \
     -D shared-glapi=true \
-    -D valgrind=false
+    -D valgrind=true
 
   # Print config
   meson configure build
