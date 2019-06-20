@@ -2,15 +2,15 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
-pkgname=('opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
+pkgname=('vulkan-mesa-layer' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=19.1.0
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
              'libxshmfence' 'libxxf86vm' 'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
              'elfutils' 'llvm' 'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors'
-             'libxrandr' 'valgrind' 'meson')
+             'libxrandr' 'valgrind' 'glslang' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
@@ -36,6 +36,7 @@ build() {
     -D dri-drivers=i915,i965,r100,r200,nouveau \
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,swr,iris \
     -D vulkan-drivers=amd,intel \
+    -D vulkan-overlay-layer=true \
     -D swr-arches=avx,avx2 \
     -D dri3=true \
     -D egl=true \
@@ -79,6 +80,15 @@ _install() {
   done
 }
 
+package_vulkan-mesa-layer() {
+  pkgdesc="Vulkan overlay layer to display information about the application"
+  
+  _install fakeinstall/usr/share/vulkan/explicit_layer.d
+  _install fakeinstall/usr/lib/libVkLayer_MESA_overlay.so
+
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
+}
+
 package_opencl-mesa() {
   pkgdesc="OpenCL support for AMD/ATI Radeon mesa drivers"
   depends=('expat' 'libdrm' 'libelf' 'libclc' 'clang')
@@ -95,6 +105,7 @@ package_opencl-mesa() {
 package_vulkan-intel() {
   pkgdesc="Intel's Vulkan mesa driver"
   depends=('wayland' 'libx11' 'libxshmfence' 'libdrm')
+  optdepends=('vulkan-mesa-layer: a vulkan layer to display information using an overlay')
   provides=('vulkan-driver')
 
   _install fakeinstall/usr/share/vulkan/icd.d/intel_icd*.json
@@ -107,6 +118,7 @@ package_vulkan-intel() {
 package_vulkan-radeon() {
   pkgdesc="Radeon's Vulkan mesa driver"
   depends=('wayland' 'libx11' 'libxshmfence' 'libelf' 'libdrm' 'llvm-libs')
+  optdepends=('vulkan-mesa-layer: a vulkan layer to display information using an overlay')
   provides=('vulkan-driver')
  
   _install fakeinstall/usr/share/vulkan/icd.d/radeon_icd*.json
