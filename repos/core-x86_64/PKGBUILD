@@ -3,7 +3,7 @@
 pkgbase=linux-lts
 #pkgbase=linux-lts-custom
 _srcname=linux-4.19
-pkgver=4.19.52
+pkgver=4.19.53
 pkgrel=1
 arch=('x86_64')
 url="https://www.kernel.org/"
@@ -16,21 +16,19 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.{xz,sign}
         '60-linux.hook'  # pacman hook for depmod
         '90-linux.hook'  # pacman hook for initramfs regeneration
         'linux-lts.preset'   # standard config files for mkinitcpio ramdisk
-        0001-add-sysctl-to-disallow-unprivileged-CLONE_NEWUSER-by.patch
-        bcache_fix.diff)
+        0001-add-sysctl-to-disallow-unprivileged-CLONE_NEWUSER-by.patch)
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torvalds@linux-foundation.org>
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman (Linux kernel stable release signing key) <greg@kroah.com>
              )
 # https://www.kernel.org/pub/linux/kernel/v4.x/sha256sums.asc
 sha256sums=('0c68f5655528aed4f99dae71a5b259edc93239fa899e2df79c055275c21749a1'
             'SKIP'
-            '3595944127d4c9fccbb23e609c9218d3139396ea97e7e6bf5b2a4686074c655c'
+            'b53b5da09d4b1aebe0095c15367d4a39760fce61e61d7cd86f638b22a243d5db'
             'bec3d57b04bcc04be141e60e07fceae830c204de453ad18d054bbb5bc911f7e7'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
-            '36b1118c8dedadc4851150ddd4eb07b1c58ac5bbf3022cc2501a27c2b476da98'
-            'fe00e6f26f167b2041f4e60588cc60ab8169f26efb4a7c47ee7d60320e4ca27d')
+            '36b1118c8dedadc4851150ddd4eb07b1c58ac5bbf3022cc2501a27c2b476da98')
 
 _kernelname=${pkgbase#linux}
 
@@ -48,9 +46,6 @@ prepare() {
 
   # disable USER_NS for non-root users by default
   patch -Np1 -i ../0001-add-sysctl-to-disallow-unprivileged-CLONE_NEWUSER-by.patch
-
-  # fix bcache corruption with gcc9
-  patch -Np1 -i ../bcache_fix.diff
 
   cp -Tf ../config .config
 
