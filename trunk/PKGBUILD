@@ -8,8 +8,7 @@ pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
 url="https://caml.inria.fr/"
-depends=('gdbm')
-makedepends=('tk>=8.6.0' 'ncurses>=5.6-7')
+makedepends=('ncurses>=5.6-7')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
 source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz ocaml-${pkgver}.patch)
 sha1sums=('7af535a715f13f666134a57c492984febd9327ba'
@@ -23,8 +22,8 @@ prepare() {
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure -prefix /usr -mandir '$(PREFIX)/share/man'
-  make world.opt
+  ./configure --prefix /usr --mandir /usr/share/man
+  make --debug=v world.opt
 }
 
 package_ocaml() {
