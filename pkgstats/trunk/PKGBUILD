@@ -9,7 +9,7 @@ arch=('any')
 license=('GPL')
 depends=('bash' 'curl' 'pacman' 'sed' 'coreutils' 'systemd' 'grep')
 source=(pkgstats.{sh,timer,service})
-sha256sums=('582b34ace6a37ac2330309820e8c70df65dd5c80489850789b92a50ad5120458'
+sha256sums=('4c96e0946c44435a3853fffd4fe99ae25aea3efa9a567b918eb9ca27c6cf9b52'
             '86207164a13640edb58657f16329f60f2d84d7d3e5b9336e48aa0d607906078e'
             '986608f2fff417693b663474db3f36b8fb2ae4eb111ad177c616ce02bb431b23')
 
