@@ -2,7 +2,7 @@
 
 pkgname=bubblewrap
 pkgver=0.3.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Unprivileged sandboxing tool'
 url='https://github.com/projectatomic/bubblewrap'
 arch=(x86_64)
@@ -26,7 +26,7 @@ prepare() {
 build() {
   cd $pkgname
   ./configure --prefix=/usr \
-    --with-priv-mode=setuid
+    --with-priv-mode=none
   make
 }
 
