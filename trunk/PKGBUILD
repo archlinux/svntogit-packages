@@ -7,15 +7,15 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.29
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs python)
 options=(!strip staticlibs)
-#_commit=067fc32968b601493f4b247a3ac00caeea3f3d61
-#source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
-source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
+#source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
+_commit=34fb5f61d3c3f4b8fc616ea259fa19168b58ecd4
+source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
@@ -24,8 +24,7 @@ source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
         file-truncated-while-reading-soname-after-patchelf.patch)
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
-md5sums=('e6c279d5b2f0736f740216f152acf974'
-         'SKIP'
+md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
