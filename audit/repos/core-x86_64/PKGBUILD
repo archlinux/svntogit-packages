@@ -9,7 +9,7 @@
 pkgbase=audit
 pkgname=('audit' 'python2-audit' 'python-audit')
 pkgver=2.8.5
-pkgrel=2
+pkgrel=3
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
 arch=('x86_64')
@@ -59,7 +59,7 @@ package_audit() {
   make DESTDIR="${pkgdir}" INSTALL='install -p' install
 
   cd "${pkgdir}"
-  install -d var/log/audit
+  install -d -m 0700 var/log/audit
   rm -rf etc/rc.d \
     etc/sysconfig \
     usr/lib/audit \
