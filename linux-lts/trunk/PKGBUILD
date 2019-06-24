@@ -4,7 +4,7 @@ pkgbase=linux-lts
 #pkgbase=linux-lts-custom
 _srcname=linux-4.19
 pkgver=4.19.55
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="https://www.kernel.org/"
 license=('GPL2')
@@ -16,7 +16,8 @@ source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.{xz,sign}
         '60-linux.hook'  # pacman hook for depmod
         '90-linux.hook'  # pacman hook for initramfs regeneration
         'linux-lts.preset'   # standard config files for mkinitcpio ramdisk
-        0001-add-sysctl-to-disallow-unprivileged-CLONE_NEWUSER-by.patch)
+        0001-add-sysctl-to-disallow-unprivileged-CLONE_NEWUSER-by.patch
+        0002-ZEN-Add-CONFIG-for-unprivileged_userns_clone.patch)
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torvalds@linux-foundation.org>
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman (Linux kernel stable release signing key) <greg@kroah.com>
              )
@@ -24,11 +25,12 @@ validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torva
 sha256sums=('0c68f5655528aed4f99dae71a5b259edc93239fa899e2df79c055275c21749a1'
             'SKIP'
             '6b572393d79379cc7d7e9bd55170b2d4fc76745ad9f15c0b893a6749167f63f5'
-            'bec3d57b04bcc04be141e60e07fceae830c204de453ad18d054bbb5bc911f7e7'
+            'af7e7687a91b210e803697ef9509faaf3b7955a6094350212944a598b29f2c58'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
             '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
-            '36b1118c8dedadc4851150ddd4eb07b1c58ac5bbf3022cc2501a27c2b476da98')
+            'bc3dab5594735fb56bdb39c1630a470fd2e65fcf0d81a5db31bab3b91944225d'
+            '67aed9742e4281df6f0bd18dc936ae79319fee3763737f158c0e87a6948d100d')
 
 _kernelname=${pkgbase#linux}
 
@@ -44,8 +46,9 @@ prepare() {
   # add latest fixes from stable queue, if needed
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
 
-  # disable USER_NS for non-root users by default
+  # allow disabling USER_NS via sysctl
   patch -Np1 -i ../0001-add-sysctl-to-disallow-unprivileged-CLONE_NEWUSER-by.patch
+  patch -Np1 -i ../0002-ZEN-Add-CONFIG-for-unprivileged_userns_clone.patch
 
   cp -Tf ../config .config
 
