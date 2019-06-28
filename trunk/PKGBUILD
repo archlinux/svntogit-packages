@@ -7,9 +7,9 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.9.1
+pkgver=4.9.2
 _clangver=8.0.0
-pkgrel=2
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -26,11 +26,12 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'git: git support'
             'mercurial: mercurial support'
             'bzr: bazaar support'
-            'valgrind: analyze support')
+            'valgrind: analyze support'
+            'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
         qtcreator-clazy-1.5.patch
         qtcreator-preload-plugins.patch)
-sha256sums=('79b8228d0871927837681e6af9ab91e3ea28154cecfba317f9c0e56246b8ad81'
+sha256sums=('b7e0c797e7704c6c22eb35351946c0a758502fd082f6beaee043166e1739d3d7'
             '1f6998fea92b9a157f42cca783839ce95f70ccc667027078b7881cbb253838f0'
             '150c444e76ec969fc8765774b648984037829623300d0ce9d41a915b2afa792d')
 
