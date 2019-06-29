@@ -1,0 +1,60 @@
+From 67708919154038c9f161389009167d04a7ee0be4 Mon Sep 17 00:00:00 2001
+From: Evangelos Foutras <evangelos@foutrelis.com>
+Date: Sat, 29 Jun 2019 17:10:36 +0300
+Subject: [PATCH] Revert "Deactivate "Move to Trash" menu entry on volumes
+ without trash (Bug #15352)"
+
+This reverts commit efcbf4d59a8bdd4d8197c92b857eead676ce2100.
+
+That commit makes it impossible to remove files using WebDAV.
+---
+ thunar/thunar-standard-view.c | 10 ++--------
+ 1 file changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/thunar/thunar-standard-view.c b/thunar/thunar-standard-view.c
+index 111d9999..6fd92d72 100644
+--- a/thunar/thunar-standard-view.c
++++ b/thunar/thunar-standard-view.c
+@@ -4438,7 +4438,6 @@ thunar_standard_view_selection_changed (ThunarStandardView *standard_view)
+   ThunarFile *current_directory;
+   gboolean    can_paste_into_folder;
+   gboolean    restorable;
+-  gboolean    trashable;
+   gboolean    pastable;
+   gboolean    writable;
+   gboolean    trashed;
+@@ -4462,7 +4461,6 @@ thunar_standard_view_selection_changed (ThunarStandardView *standard_view)
+   /* determine the new list of selected files (replacing GtkTreePath's with ThunarFile's) */
+   selected_files = (*THUNAR_STANDARD_VIEW_GET_CLASS (standard_view)->get_selected_items) (standard_view);
+   restorable = (selected_files != NULL);
+-  trashable = (selected_files != NULL);
+   for (lp = selected_files; lp != NULL; lp = lp->next, ++n_selected_files)
+     {
+       /* determine the iterator for the path */
+@@ -4477,16 +4475,12 @@ thunar_standard_view_selection_changed (ThunarStandardView *standard_view)
+       /* enable "Restore" if we have only trashed files (atleast one file) */
+       if (!thunar_file_is_trashed (lp->data))
+         restorable = FALSE;
+-
+-      /* enable "Move to Trash" if files can be trashed */
+-      if (!thunar_file_can_be_trashed (lp->data))
+-        trashable = FALSE;
+     }
+ 
+   /* and setup the new selected files list */
+   standard_view->priv->selected_files = selected_files;
+ 
+-  /* check whether the folder displayed by the view is writable/in the trash/can be trashed */
++  /* check whether the folder displayed by the view is writable/in the trash */
+   current_directory = thunar_navigator_get_current_directory (THUNAR_NAVIGATOR (standard_view));
+   writable = (current_directory != NULL && thunar_file_is_writable (current_directory));
+   trashed = (current_directory != NULL && thunar_file_is_trashed (current_directory));
+@@ -4535,7 +4529,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
+ 
+   /* update the "Move to Trash" action */
+   g_object_set (G_OBJECT (standard_view->priv->action_move_to_trash),
+-                "sensitive", (n_selected_files > 0) && trashable,
++                "sensitive", (n_selected_files > 0) && writable,
+                 "visible", !trashed && thunar_g_vfs_is_uri_scheme_supported ("trash"),
+                 "tooltip", ngettext ("Move the selected file to the Trash",
+                                      "Move the selected files to the Trash",
