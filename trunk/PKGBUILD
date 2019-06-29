@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=4.9.2
 _clangver=8.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -30,10 +30,12 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
         qtcreator-clazy-1.5.patch
-        qtcreator-preload-plugins.patch)
+        qtcreator-preload-plugins.patch
+        qtcreator-mime-database.patch)
 sha256sums=('b7e0c797e7704c6c22eb35351946c0a758502fd082f6beaee043166e1739d3d7'
             '1f6998fea92b9a157f42cca783839ce95f70ccc667027078b7881cbb253838f0'
-            '150c444e76ec969fc8765774b648984037829623300d0ce9d41a915b2afa792d')
+            '150c444e76ec969fc8765774b648984037829623300d0ce9d41a915b2afa792d'
+            '8d64b5c28535dcaab910f32e82b04b425253015ca70f379cbe5e9693526a852a')
 
 prepare() {
   mkdir -p build
@@ -50,6 +52,7 @@ prepare() {
   # see http://code.qt.io/cgit/clang/clang.git/commit/?id=7f349701d3ea0c47be3a43e265699dddd3fd55cf
   # and https://bugs.archlinux.org/task/59492
   patch -p1 -i ../qtcreator-preload-plugins.patch
+  patch -p1 -i ../qtcreator-mime-database.patch # Use system shared-mime-info
 }
 
 build() {
