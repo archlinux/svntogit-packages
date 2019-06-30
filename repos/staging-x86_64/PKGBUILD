@@ -1,0 +1,64 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=claws-mail
+pkgver=3.17.3
+pkgrel=5
+pkgdesc="A GTK+ based e-mail client."
+arch=('x86_64')
+license=('GPL3')
+url="https://www.claws-mail.org"
+depends=('gtk2' 'gnutls' 'startup-notification' 'enchant' 'gpgme' 'libetpan' 'compface'
+         'libsm' 'dbus-glib' 'hicolor-icon-theme' 'desktop-file-utils')
+makedepends=('spamassassin' 'bogofilter' 'valgrind'
+             # dependencies for plugins
+             'libgdata' 'libnotify' 'libcanberra' 'poppler-glib' 'libytnef' 'libical' 'dillo' 'python'
+             # deps to build the docs
+             'docbook-utils' 'texlive-formatsextra')
+optdepends=('python:            needed for some tools'
+            #'pygtk:             needed for python plugin'
+            'perl:              needed for some tools and perl plugin'
+            'spamassassin:      adds support for spamfiltering'
+            'bogofilter:        adds support for spamfiltering'
+            'libnotify:         for notification plugin'
+            'libcanberra:       for notification plugin'
+            'dbus:              for notification plugin'
+            'libxml2:           for gtkhtml2_viewer and rssyl plugins'
+            'curl:              for gtkhtml2_viewer, vcalendar, rssyl and spamreport plugins'
+            'libarchive:        for archive plugin and various other plugins'
+            'libytnef:          for tnef_parse plugin'
+            'libgdata:          for gdata plugin'
+            'poppler-glib:      for pdf viewer plugin'
+            'ghostscript:       for pdf viewer plugin'
+            'libical:           for vcalendar plugin'
+            'dillo:             for html viewer plugin')
+provides=('claws')
+source=(http://www.claws-mail.org/download.php?file=releases/claws-mail-$pkgver.tar.xz{,.asc})
+sha256sums=('504e1f5a6f0880192662826ac07bcd083c3167b3db7143858617d6c51233d2f2'
+            'SKIP')
+validpgpkeys=('8B3B297A03468356692F8D592CD716D654D6BBD4') # Paul <paul@claws-mail.org>
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr --disable-static \
+    --enable-enchant \
+    --enable-gnutls \
+    --enable-ldap \
+    --enable-crash-dialog \
+    --enable-pgpmime-plugin \
+    --enable-spamassassin-plugin \
+    --enable-bogofilter-plugin
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install
+
+  # install extra tools
+  cd tools
+  install -m755 -d ${pkgdir}/usr/lib/claws-mail/tools
+  for files in *.pl *.py *.sh kdeservicemenu multiwebsearch.conf tb2claws-mail update-po uudec uuooffice README; do
+    cp -arv $files ${pkgdir}/usr/lib/claws-mail/tools/${i}
+  done
+}
