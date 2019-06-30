@@ -1,68 +1,63 @@
-# $Id$
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
 # Contributor: Judd <jvinet@zeroflux.org> 
 
 pkgname=bzip2
-pkgver=1.0.6
-pkgrel=8
+pkgver=1.0.7
+pkgrel=1
 pkgdesc="A high-quality data compression program"
 arch=('x86_64')
 license=('custom')
-url="http://sources.redhat.com/bzip2"
+url="https://sourceware.org/bzip2/"
 groups=('base')
 depends=('glibc' 'sh')
-source=(https://sources.archlinux.org/other/packages/bzip2/bzip2-$pkgver.tar.gz
-        bzip2-1.0.4-bzip2recover.patch
-        fix-heap-use-after-free-bzip2recover.patch::https://gitweb.gentoo.org/repo/gentoo.git/plain/app-arch/bzip2/files/bzip2-1.0.6-CVE-2016-3189.patch)
-sha256sums=('a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd'
-            '0585fb92a4b409404147a3f940ed2ca03b3eaed1ec4fb68ae6ad74db668bea83'
-            'e8792b2c7943486ab35893ffd9e638bbf2edbcab4f9f7b87544519bb3564af41')
+source=(https://sourceware.org/pub/bzip2/$pkgname-$pkgver.tar.gz{,.sig}
+        bzip2-ldflags.patch)
+sha256sums=('e768a87c5b1a79511499beb41500bcc4caf203726fff46a6f5f9ad27fe08ab2b'
+            'SKIP'
+            'fd7b402b94d42a642bd13430bf489077017de3dbbef9fb4656ccb6fb3c751504')
+validpgpkeys=('EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A') # Mark Wielaard <mark@klomp.org>
         
-build() {
-  cd "$srcdir/$pkgname-$pkgver"
-
-  # add large-file support
-  sed -e 's/^CFLAGS=\(.*\)$/CFLAGS=\1 \$(BIGFILES)/' -i ./Makefile-libbz2_so
+prepare() {
+  cd $pkgname-$pkgver
 
   # use our optimization
-  sed -i "s|-O2|${CFLAGS}|g" Makefile
-  sed -i "s|-O2|${CFLAGS}|g" Makefile-libbz2_so
+  sed -e "s|-O2|${CFLAGS}|g" -i Makefile*
+  # use our LDFLAGS
+  sed -e "s|LDFLAGS=|LDFLAGS=${LDFLAGS}|g" -i Makefile*
+  patch -p1 -i ../bzip2-ldflags.patch
+}
 
-  patch -Np1 < ../bzip2-1.0.4-bzip2recover.patch
-  # CVE-2016-3189
-  patch -Np1 -i "${srcdir}/fix-heap-use-after-free-bzip2recover.patch"
+build() {
+  cd $pkgname-$pkgver
 
   make -f Makefile-libbz2_so
   make bzip2 bzip2recover
 }
 
 check() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd $pkgname-$pkgver
   make test
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd $pkgname-$pkgver
 
-  install -dm755 $pkgdir/usr/{bin,lib,include,share/man/man1}
+  install -dm755 "$pkgdir"/usr/{bin,lib,include,share/man/man1}
 
-  install -m755 bzip2-shared $pkgdir/usr/bin/bzip2
-  install -m755 bzip2recover bzdiff bzgrep bzmore $pkgdir/usr/bin
-  ln -sf bzip2 $pkgdir/usr/bin/bunzip2
-  ln -sf bzip2 $pkgdir/usr/bin/bzcat
+  install -m755 bzip2-shared "$pkgdir"/usr/bin/bzip2
+  install -m755 bzip2recover bzdiff bzgrep bzmore "$pkgdir"/usr/bin
+  ln -sf bzip2 "$pkgdir"/usr/bin/bunzip2
+  ln -sf bzip2 "$pkgdir"/usr/bin/bzcat
 
-  install -m755 libbz2.so.1.0.6 $pkgdir/usr/lib
-  ln -s libbz2.so.1.0.6 $pkgdir/usr/lib/libbz2.so
-  ln -s libbz2.so.1.0.6 $pkgdir/usr/lib/libbz2.so.1
-  ln -s libbz2.so.1.0.6 $pkgdir/usr/lib/libbz2.so.1.0
+  cp -a libbz2.so* "$pkgdir"/usr/lib
+  ln -s libbz2.so.$pkgver "$pkgdir"/usr/lib/libbz2.so
 
-  install -m644 bzlib.h $pkgdir/usr/include/
+  install -m644 bzlib.h "$pkgdir"/usr/include/
 
-  install -m644 bzip2.1 $pkgdir/usr/share/man/man1/
-  ln -sf bzip2.1 $pkgdir/usr/share/man/man1/bunzip2.1
-  ln -sf bzip2.1 $pkgdir/usr/share/man/man1/bzcat.1
-  ln -sf bzip2.1 $pkgdir/usr/share/man/man1/bzip2recover.1
+  install -m644 bzip2.1 "$pkgdir"/usr/share/man/man1/
+  ln -sf bzip2.1 "$pkgdir"/usr/share/man/man1/bunzip2.1
+  ln -sf bzip2.1 "$pkgdir"/usr/share/man/man1/bzcat.1
+  ln -sf bzip2.1 "$pkgdir"/usr/share/man/man1/bzip2recover.1
 
-  install -Dm644 $srcdir/${pkgname}-${pkgver}/LICENSE \
-                 $pkgdir/usr/share/licenses/${pkgname}/LICENSE
+  install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
 }
