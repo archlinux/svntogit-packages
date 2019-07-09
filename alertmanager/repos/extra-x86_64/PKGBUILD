@@ -1,7 +1,7 @@
 # Maintainer: Jelle van der Waa <jelle@archlinux.org>
 
 pkgname=alertmanager
-pkgver=0.17.0
+pkgver=0.18.0
 pkgrel=1
 pkgdesc="Service which handles alerts sent by client applications such as the Prometheus server"
 url="https://github.com/prometheus/alertmanager"
@@ -10,22 +10,14 @@ depends=(glibc)
 license=('Apache')
 makedepends=(go-pie git)
 backup=('etc/alertmanager/alertmanager.yml')
-source=(https://github.com/prometheus/alertmanager/archive/v${pkgver}.tar.gz alertmanager.service alertmanager.sysusers)
-sha512sums=('7cca7400640030caa44f713bda163dd142ad95e5b6b26d1976564fbc0b0888f26646b75c6bb4b6cc7405fa41bed9c727fca475245a170989c61b3b61cb797299'
+source=($pkgname-$pkgver.tar.gz::https://github.com/prometheus/alertmanager/archive/v${pkgver}.tar.gz alertmanager.service alertmanager.sysusers)
+sha512sums=('59faec308abaac3d2b59198fef25109b208de1a807b38803dc10722ff0caf1bac9d9795005fefb3b4e2acda62be136bfcafe7b9702ae52565021a424f99fa730'
             '414b09fc64fbafcfe3f204100a512e7ede00eb94352b37063427712b96a4e12bf0c386008c43ccb110f4572e412ee581d25151663dd5e36dfd68dbf5e1182f3b'
             '469f321f40b0dd6e1cc6d0791032c476449bb2ab2364d57b06d0e0309d09710be8751ded64d84e29dd6e28e96b71ef69e2bee6c71282500a9074a9d7ada8bdf0')
 
-prepare() {
-  # Switch to go build in new release.
-  mkdir -p gopath/src/github.com/prometheus
-  ln -rTsf $pkgname-$pkgver gopath/src/github.com/prometheus/alertmanager
-  export GOPATH="$srcdir"/gopath
-}
-
 build() {
-  export GOPATH="$srcdir/gopath"
-  cd gopath/src/github.com/prometheus/alertmanager
-  go install \
+  cd $pkgname-$pkgver
+  go build \
     -gcflags "all=-trimpath=$GOPATH" \
     -asmflags "all=-trimpath=$GOPATH" \
     -ldflags "-extldflags ${LDFLAGS} \
@@ -34,15 +26,25 @@ build() {
       -X github.com/prometheus/common/version.Branch=tarball \
       -X github.com/prometheus/common/version.BuildUser=someone@builder \
       -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
-    -v ./...
+    ./cmd/alertmanager
+
+  go build \
+    -gcflags "all=-trimpath=$GOPATH" \
+    -asmflags "all=-trimpath=$GOPATH" \
+    -ldflags "-extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    ./cmd/amtool
 }
 
 package() {
-  export GOPATH="$srcdir/gopath"
-  install -Dm755 $GOPATH/bin/$pkgname "$pkgdir/usr/bin/$pkgname"
-  install -Dm755 $GOPATH/bin/amtool "$pkgdir/usr/bin/amtool"
+  cd $pkgname-$pkgver
+  install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
+  install -Dm755 amtool "$pkgdir/usr/bin/amtool"
 
-  cd ${pkgname}-${pkgver}
   install -Dm644 examples/ha/${pkgname}.yml "${pkgdir}/etc/${pkgname}/${pkgname}.yml"
   install -d -m755 "${pkgdir}/etc/${pkgname}/template/"
 
