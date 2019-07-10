@@ -4,7 +4,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.16
+pkgver=2.2.17
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
@@ -22,7 +22,7 @@ validpgpkeys=('D8692123C4065DEA5E0F3AB5249B39D24F25E3B6'
               '031EC2536E580D8EA286A9F22071B08A33BD3F06'
               '5B80C5754298F0CB55D8ED6ABCEF7E294B092E28')
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig})
-sha256sums=('6cbe8d454bf5dc204621eed3016d721b66298fa95363395bb8eeceb1d2fd14cb'
+sha256sums=('afa262868e39b651a2db4c071fba90415154243e83a830ca00516f9a807fd514'
             'SKIP')
 
 install=install
