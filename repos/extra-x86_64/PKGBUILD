@@ -3,8 +3,8 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=67.0.4
-pkgrel=2
+pkgver=68.0
+pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -21,11 +21,9 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'hunspell-en_US: Spell checking, American English')
 options=(!emptydirs !makeflags)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
-        0001-bz-1521249.patch
         $pkgname.desktop firefox-symbolic.svg)
-sha256sums=('b2fb2d3e64a6947ef4f8212b72649acf2aa2cd4c8f70548abb636dd581fd6dc5'
+sha256sums=('f7d61a08820088f1280d27f0808e355152c1dd0c94625fd077ced7319e522565'
             'SKIP'
-            'd0673786a6a1f1b9f6f66a3a1356afa33f1f18f59dabd92bd193c88c52a1d04c'
             '4a783dca1f88e003c72f32d22719a0915f3fa576adbc492240e7cc250246ce10'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
@@ -49,8 +47,8 @@ _mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
 _repo=https://hg.mozilla.org/releases/mozilla-release
 _tag=FIREFOX_${pkgver//./_}_RELEASE
 
-_changeset=ea5154beddff08b919697e3bed6f38cfe3a3d82f
-_changeset_tag=FIREFOX_67_0_4_RELEASE
+_changeset=353628fec415324ca6aa333ab6c47d447ecc128e
+_changeset_tag=FIREFOX_68_0_RELEASE
 
 if [[ $1 == update_hgrev ]]; then
   _changeset=$(hg id -r $_tag --id $_repo --template '{node}')
@@ -65,9 +63,6 @@ fi
 prepare() {
   mkdir mozbuild
   cd firefox-$pkgver
-
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1521249
-  patch -Np1 -i ../0001-bz-1521249.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
