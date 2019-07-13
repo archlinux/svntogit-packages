@@ -4,7 +4,7 @@ pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
 pkgver=20190111
 _commit=c30307083469f0c05e216ac75216fd454a517858  # master
-pkgrel=1
+pkgrel=2
 pkgdesc="Google Noto TTF fonts"
 arch=(any)
 url="https://www.google.com/get/noto/"
@@ -31,6 +31,8 @@ package_noto-fonts() {
 
   # Install fontconfig files
   install -Dm644 "$srcdir"/*.conf -t "$pkgdir"/etc/fonts/conf.avail/
+  install -d "$pkgdir"/etc/fonts/conf.d
+  ln -rs "$pkgdir"/etc/fonts/conf.avail/* "$pkgdir"/etc/fonts/conf.d
 }
 
 package_noto-fonts-extra() {
