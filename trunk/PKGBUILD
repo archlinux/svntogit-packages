@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.51.0
+pkgver=0.51.1
 pkgrel=1
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
@@ -17,21 +17,16 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
               'libwmf' 'dmd' 'valgrind' 'cmake' 'netcdf-fortran' 'openmpi' 'cuda' 'ldc' 'nasm'
               'gnustep-base' 'libelf')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
-        5500.patch
         skip-test.diff
         arch-meson)
-sha512sums=('90cb564bb008631f1276b78b0ed725870f0d1baef34c385d1d9df076935f402c516906141fe0f11540739d4174dafcc252ee71e2ad902057544ddda1142153b1'
+sha512sums=('b0b220de2a20c355cbd2f63aff195374ad8b2dae64f0dc4efb7abf84d7a9e70b6d4239d3d94b2b8ba2de5dd6e871589848b057c842c8f256016c666e9aa882f1'
             'SKIP'
-            'da674c88a69f744d3fe4692e1091943f83b1d02e132ff9c84e87700e588313d50d609669c097b2c4dcfeefc8ad13095e698a7c9d5f4d1f54fc6bb6a3aea0cebf'
             'fd1694e74cfa628bda81b1056061d75fa288e04d72bda733f3667be43cfb21c60f2e89455e4a101a7f6bef5754fe112dc84e18ec7a0807bc791015c34deea347'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
 prepare() {
   cd ${pkgname}-${pkgver}
-
-  # https://github.com/mesonbuild/meson/issues/5497
-  patch -Np1 -i ../5500.patch
 
   # Our containers do not allow sanitizers to run
   patch -Np1 -i ../skip-test.diff
