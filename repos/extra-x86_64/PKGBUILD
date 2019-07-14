@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.32.2+11+ga3a97621b
+pkgver=3.32.2+40+gccab0f470
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=a3a97621bea451878b8997bc1befc282584521fa  # gnome-3-32
+_commit=ccab0f470dcc556073754c8adf9413819d22cc14  # gnome-3-32
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -30,6 +30,9 @@ prepare() {
 
   # rt-scheduler experimental feature
   git cherry-pick -n dae2c1d420ed272710ac55b7a00f6787e5c0e762
+
+  # required to build gala
+  git cherry-pick -n bd7704f9e17e9554ad663386ef4fce1e16a56f08
 }
 
 build() {
