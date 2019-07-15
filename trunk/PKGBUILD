@@ -24,7 +24,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop firefox-symbolic.svg)
 sha256sums=('f7d61a08820088f1280d27f0808e355152c1dd0c94625fd077ced7319e522565'
             'SKIP'
-            '4a783dca1f88e003c72f32d22719a0915f3fa576adbc492240e7cc250246ce10'
+            'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
