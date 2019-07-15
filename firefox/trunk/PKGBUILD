@@ -19,7 +19,7 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'pulseaudio: Audio support'
             'speech-dispatcher: Text-to-Speech'
             'hunspell-en_US: Spell checking, American English')
-options=(!emptydirs !makeflags)
+options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop firefox-symbolic.svg)
 sha256sums=('f7d61a08820088f1280d27f0808e355152c1dd0c94625fd077ced7319e522565'
