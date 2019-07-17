@@ -5,8 +5,8 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=4.1.3
-pkgrel=2
+pkgver=4.1.4
+pkgrel=1
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
