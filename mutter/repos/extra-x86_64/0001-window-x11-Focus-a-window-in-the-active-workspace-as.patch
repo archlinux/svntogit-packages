@@ -1,0 +1,67 @@
+From 128aef6aca88ea945c3e161b82d3cffb37a8bce7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marco=20Trevisan=20=28Trevi=C3=B1o=29?= <mail@3v1n0.net>
+Date: Wed, 17 Jul 2019 01:13:48 +0200
+Subject: [PATCH] window-x11: Focus a window in the active workspace as
+ take-focus fallback
+
+Starting with commit 2db94e2e we try to focus a fallback default focus window
+if no take-focus window candidate gets the input focus when we request it and
+we limit the focus candidates to the current window's workspace.
+
+However, if the window is unmanaging, the workspace might be unset, and we could
+end up in deferencing a NULL pointer causing a crash.
+
+So, in case the window's workspace is unset, just use the currently active
+workspace for the display.
+
+Closes #687
+
+https://gitlab.gnome.org/GNOME/mutter/merge_requests/688
+
+(cherry picked from commit 8cbad75c411282855f506855fc7a2953b7bdae0d)
+---
+ src/x11/window-x11.c | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/src/x11/window-x11.c b/src/x11/window-x11.c
+index 0ca651ba2..79a9dbe38 100644
+--- a/src/x11/window-x11.c
++++ b/src/x11/window-x11.c
+@@ -886,15 +886,21 @@ meta_window_x11_maybe_focus_delayed (MetaWindow *window,
+ }
+ 
+ static void
+-maybe_focus_default_window (MetaWorkspace *workspace,
+-                            MetaWindow    *not_this_one,
+-                            guint32        timestamp)
++maybe_focus_default_window (MetaDisplay *display,
++                            MetaWindow  *not_this_one,
++                            guint32      timestamp)
+ {
+-  MetaStack *stack = workspace->display->stack;
++  MetaWorkspace *workspace;
++  MetaStack *stack = display->stack;
+   g_autoptr (GList) focusable_windows = NULL;
+   g_autoptr (GQueue) focus_candidates = NULL;
+   GList *l;
+ 
++  if (not_this_one && not_this_one->workspace)
++    workspace = not_this_one->workspace;
++  else
++    workspace = display->workspace_manager->active_workspace;
++
+    /* Go through all the focusable windows and try to focus them
+     * in order, waiting for a delay. The first one that replies to
+     * the request (in case of take focus windows) changing the display
+@@ -991,7 +997,7 @@ meta_window_x11_focus (MetaWindow *window,
+ 
+                   meta_x11_display_focus_the_no_focus_window (x11_display,
+                                                               timestamp);
+-                  maybe_focus_default_window (window->workspace, window,
++                  maybe_focus_default_window (window->display, window,
+                                               timestamp);
+                 }
+             }
+-- 
+2.22.0
+
