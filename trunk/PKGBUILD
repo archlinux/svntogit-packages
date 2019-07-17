@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=3.32.2+40+gccab0f470
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -17,8 +17,10 @@ checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
 _commit=ccab0f470dcc556073754c8adf9413819d22cc14  # gnome-3-32
-source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
-sha256sums=('SKIP')
+source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+        0001-window-x11-Focus-a-window-in-the-active-workspace-as.patch)
+sha256sums=('SKIP'
+            'a639f8fd35c82216b2b15ca49fe592a0618bfec681f88347ce75724a4402fcc7')
 
 pkgver() {
   cd $pkgname
@@ -33,6 +35,9 @@ prepare() {
 
   # required to build gala
   git cherry-pick -n bd7704f9e17e9554ad663386ef4fce1e16a56f08
+
+  # https://gitlab.gnome.org/GNOME/mutter/issues/687
+  patch -Np1 -i ../0001-window-x11-Focus-a-window-in-the-active-workspace-as.patch
 }
 
 build() {
