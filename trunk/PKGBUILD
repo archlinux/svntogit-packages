@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.13.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -16,16 +16,19 @@ groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
         qtwebengine-glibc-2.29.patch
-        qtbug-76913.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=4746bb90")
+        qtbug-76913.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=4746bb90"
+        qtbug-76958.patch) # "https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=662de14c"
 sha256sums=('e0af82ecee1ab41b6732697f667b98b7b0c53164bebcfaad8070e88b2e064efe'
             'dd791f154b48e69cd47fd94753c45448655b529590995fd71ac1591c53a3d60c'
-            '5771af2442d7743ef7c59f0d3716a23985383e2b69ecb4fa9d4ea8e8f7c551fa')
+            '5771af2442d7743ef7c59f0d3716a23985383e2b69ecb4fa9d4ea8e8f7c551fa'
+            'eef55340b3ec5f8d1020b7327eda67f86729aaf70107c688deb15083f5ca8fbc')
 
 prepare() {
   mkdir -p build
 
   cd ${_pkgfqn}
   patch -p1 -i ../qtbug-76913.patch # Fix crashes on media-heavy sites
+  patch -p1 -i ../qtbug-76958.patch # Fix crash when loading tabs on the background
 
   cd src/3rdparty/chromium
   patch -p1 -i "$srcdir"/qtwebengine-glibc-2.29.patch # Fix PPAPI plugins with glibc 2.29
