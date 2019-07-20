@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=68.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -21,9 +21,11 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'hunspell-en_US: Spell checking, American English')
 options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
+        0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop firefox-symbolic.svg)
 sha256sums=('6037f77bdab29d79ca5e3fbd1d32f6c209e09d2066189a13dc7f7491227f5568'
             'SKIP'
+            'ab07ab26617ff76fce68e07c66b8aa9b96c2d3e5b5517e51a3c3eac2edd88894'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
@@ -63,6 +65,9 @@ fi
 prepare() {
   mkdir mozbuild
   cd firefox-$pkgver
+
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
+  patch -Np1 -i ../0001-Use-remoting-name-for-GDK-application-names.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
