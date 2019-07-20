@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=8.0.0
-pkgrel=2
+pkgver=8.0.1
+pkgrel=1
 _ocaml_ver=4.07.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -12,12 +12,10 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
              'python-sphinx' 'python-recommonmark')
 options=('staticlibs')
-source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
-        0001-Fix-the-buildbot-issue-introduced-by-r351421.patch
+source=(https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver/$pkgname-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('8872be1b12c61450cacc82b3d153eab02be2546ef34fa3580ed14137bb26224c'
+sha256sums=('44787a6d02f7140f145e2250d56c9f849334e11f9ae379827510ed72f12b75e7'
             'SKIP'
-            '9b519940a1f8e18df54128c00eeb22528b3c449a9cd1320c0959cdb74ea72d16'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -25,9 +23,6 @@ validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstel
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
-
-  # Fix a test failure in CodeGen/AArch64/wineh4.mir
-  patch -Np1 -i ../0001-Fix-the-buildbot-issue-introduced-by-r351421.patch
 }
 
 build() {
