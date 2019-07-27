@@ -7,6 +7,7 @@ pkgdesc='Administration tool for IP sets'
 arch=('x86_64')
 url='http://ipset.netfilter.org/'
 license=('GPL2')
+makedepends=('git')
 depends=('glibc' 'libmnl')
 backup=("etc/$pkgname.conf")
 source=("git://git.netfilter.org/ipset.git#tag=v$pkgver"
