@@ -1,7 +1,7 @@
 # Maintainer: Sébastien Luttringer
 
 pkgname=ipset
-pkgver=7.2
+pkgver=7.3
 pkgrel=1
 pkgdesc='Administration tool for IP sets'
 arch=('x86_64')
@@ -9,13 +9,13 @@ url='http://ipset.netfilter.org/'
 license=('GPL2')
 depends=('glibc' 'libmnl')
 backup=("etc/$pkgname.conf")
-source=("http://ipset.netfilter.org/$pkgname-$pkgver.tar.bz2"
+source=("git://git.netfilter.org/ipset.git#tag=v$pkgver"
         "$pkgname.service")
-md5sums=('9eef4a237f9ccec48744836ee1497dba'
+md5sums=('SKIP'
          'e20fe62881993078591f1bb8b2fa22bb')
 
 prepare() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   # apply patch from the source array (should be a pacman feature)
   local filename
   for filename in "${source[@]}"; do
@@ -25,18 +25,17 @@ prepare() {
     fi
   done
   :
-  # needed because we patch configure.ac (TO BE REMOVED)
-  ./autogen.sh
 }
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgname
+  ./autogen.sh
   ./configure --prefix=/usr --sbindir=/usr/bin --with-kmod=no
   make
 }
 
 package() {
-  pushd $pkgname-$pkgver
+  pushd $pkgname
   make DESTDIR="$pkgdir" install
   # install doc
   install -dm755 "$pkgdir/usr/share/doc/$pkgname"
