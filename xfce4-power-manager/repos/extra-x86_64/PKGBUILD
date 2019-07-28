@@ -2,7 +2,7 @@
 # Contributor: Tobias Kieslich <tobias funnychar archlinux.org>
 
 pkgname=xfce4-power-manager
-pkgver=1.6.3
+pkgver=1.6.4
 pkgrel=1
 pkgdesc="Power manager for Xfce desktop"
 arch=('x86_64')
@@ -13,7 +13,7 @@ depends=('libxfce4ui' 'upower' 'libnotify' 'hicolor-icon-theme')
 optdepends=('xfce4-panel: for the Xfce panel plugin')
 makedepends=('intltool' 'xfce4-panel')
 source=(https://archive.xfce.org/src/xfce/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.bz2)
-sha256sums=('debd8ac2409b5ac230593894b8bb668298f78bd12891623edbfc32ac87c64011')
+sha256sums=('078df808e68f745769b4c34a4719cfe289d4bf89ca2cd4ed4680f2551a00039e')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
