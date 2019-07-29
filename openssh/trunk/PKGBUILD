@@ -4,7 +4,7 @@
 
 pkgname=openssh
 pkgver=8.0p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
