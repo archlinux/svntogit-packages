@@ -6,8 +6,8 @@
 # Contributor: Valentine Sinitsyn <e_val@inbox.ru>
 
 pkgbase=networkmanager
-pkgname=(networkmanager libnm libnm-glib)
-pkgver=1.18.2
+pkgname=(networkmanager libnm)
+pkgver=1.20rc1
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -15,11 +15,11 @@ arch=(x86_64)
 license=(GPL2 LGPL2.1)
 _pppver=2.4.7
 makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver" modemmanager
-             dbus-glib iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
+             iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=b77764a9cd9f62ee1aba060e2664d220ebe49d7b  # tags/1.18.2^0
+_commit=e5912389c66d5545cd35e5497dee75933b1dcfb5  # tags/1.20-rc1^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -44,11 +44,9 @@ build() {
     -D iwd=true
     -D pppd_plugin_dir=/usr/lib/pppd/$_pppver
     -D teamdctl=true
-    -D libnm_glib=true
     -D bluez5_dun=true
     -D ebpf=true
-    -D config_plugins_default=keyfile,ibft
-    -D ibft=true
+    -D config_plugins_default=keyfile
     -D vapi=true
     -D docs=true
     -D more_asserts=no
@@ -77,7 +75,7 @@ _pick() {
 }
 
 package_networkmanager() {
-  depends=(libnm libnm-glib iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
+  depends=(libnm iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
            bluez-libs libpsl audit)
   optdepends=('dnsmasq: connection sharing'
               'bluez: Bluetooth support'
@@ -111,27 +109,12 @@ END
   _pick libnm "$pkgdir"/usr/share/gir-1.0/NM-*
   _pick libnm "$pkgdir"/usr/share/gtk-doc/html/libnm
   _pick libnm "$pkgdir"/usr/share/vala/vapi/libnm.*
-
-### Split libnm-glib
-  _pick libnm-glib "$pkgdir"/usr/include/*
-  _pick libnm-glib "$pkgdir"/usr/lib/girepository-1.0/*
-  _pick libnm-glib "$pkgdir"/usr/lib/libnm-*
-  _pick libnm-glib "$pkgdir"/usr/lib/pkgconfig/*
-  _pick libnm-glib "$pkgdir"/usr/share/gir-1.0/*
-  _pick libnm-glib "$pkgdir"/usr/share/gtk-doc/html/libnm-*
-  _pick libnm-glib "$pkgdir"/usr/share/vala/vapi/*
 }
 
 package_libnm() {
   pkgdesc="NetworkManager client library"
   depends=(glib2 nss libutil-linux jansson systemd-libs)
   mv libnm/* "$pkgdir"
-}
-
-package_libnm-glib() {
-  pkgdesc="NetworkManager client library (legacy)"
-  depends=(libnm dbus-glib)
-  mv libnm-glib/* "$pkgdir"
 }
 
 # vim:set sw=2 et:
