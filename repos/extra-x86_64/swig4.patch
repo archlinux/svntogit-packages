@@ -1,0 +1,1533 @@
+From 95d56b9876627ea8bc7c70e8844f72535dccc140 Mon Sep 17 00:00:00 2001
+From: Evangelos Foutras <evangelos@foutrelis.com>
+Date: Tue, 30 Jul 2019 11:19:05 +0300
+Subject: [PATCH] [swig] Don't mess with swig internals.
+
+As of SWIG 4.0, __swig_getmethods__ and __swig_setmethods__ are no
+longer defined. It appears that there's no need to mess with these
+internals, we can simplify define the corresponding properties inline.
+
+Originally I wanted to use the swig extension %attribute and
+%attributeref to define properties. However, I couldn't find a way to
+add documentation to these attributes. Since we already had the
+properties defined inline, we might as well keep them.
+
+Differential revision: https://reviews.llvm.org/D63530
+
+git-svn-id: https://llvm.org/svn/llvm-project/lldb/trunk@364974 91177308-0d34-0410-b5e6-96231b3b80d8
+
+[foutrelis: cherry-pick to release_80]
+---
+ scripts/interface/SBAddress.i           |  41 +++------
+ scripts/interface/SBBlock.i             |  35 ++------
+ scripts/interface/SBBreakpoint.i        |  26 ++----
+ scripts/interface/SBCompileUnit.i       |   7 +-
+ scripts/interface/SBData.i              |  92 +++++--------------
+ scripts/interface/SBDeclaration.i       |  14 +--
+ scripts/interface/SBError.i             |  20 ++---
+ scripts/interface/SBExecutionContext.i  |  15 +---
+ scripts/interface/SBFileSpec.i          |  15 +---
+ scripts/interface/SBFrame.i             | 105 ++++++----------------
+ scripts/interface/SBFunction.i          |  31 ++-----
+ scripts/interface/SBInstruction.i       |  23 ++---
+ scripts/interface/SBLineEntry.i         |  21 ++---
+ scripts/interface/SBModule.i            |  54 +++---------
+ scripts/interface/SBProcess.i           |  52 +++--------
+ scripts/interface/SBSection.i           |  36 ++------
+ scripts/interface/SBSymbol.i            |  37 ++------
+ scripts/interface/SBSymbolContext.i     |  29 ++----
+ scripts/interface/SBSymbolContextList.i |  22 ++---
+ scripts/interface/SBTarget.i            |  57 +++---------
+ scripts/interface/SBThread.i            |  51 +++--------
+ scripts/interface/SBType.i              |  91 +++++--------------
+ scripts/interface/SBTypeCategory.i      |  53 +++--------
+ scripts/interface/SBTypeEnumMember.i    |  15 +---
+ scripts/interface/SBTypeFilter.i        |   8 +-
+ scripts/interface/SBTypeFormat.i        |   9 +-
+ scripts/interface/SBTypeNameSpecifier.i |   7 +-
+ scripts/interface/SBTypeSummary.i       |  20 ++---
+ scripts/interface/SBTypeSynthetic.i     |  12 +--
+ scripts/interface/SBUnixSignals.i       |   3 +-
+ scripts/interface/SBValue.i             | 112 ++++++------------------
+ 31 files changed, 279 insertions(+), 834 deletions(-)
+
+diff --git a/scripts/interface/SBAddress.i b/scripts/interface/SBAddress.i
+index d996aa5b7..788c78c20 100644
+--- a/scripts/interface/SBAddress.i
++++ b/scripts/interface/SBAddress.i
+@@ -159,37 +159,16 @@ public:
+             '''Convert the address to an hex string'''
+             return '0x%x' % int(self)
+ 
+-        __swig_getmethods__["module"] = GetModule
+-        if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
+-
+-        __swig_getmethods__["compile_unit"] = GetCompileUnit
+-        if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
+-
+-        __swig_getmethods__["line_entry"] = GetLineEntry
+-        if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
+-
+-        __swig_getmethods__["function"] = GetFunction
+-        if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
+-
+-        __swig_getmethods__["block"] = GetBlock
+-        if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
+-
+-        __swig_getmethods__["symbol"] = GetSymbol
+-        if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
+-
+-        __swig_getmethods__["offset"] = GetOffset
+-        if _newclass: offset = property(GetOffset, None, doc='''A read only property that returns the section offset in bytes as an integer.''')
+-
+-        __swig_getmethods__["section"] = GetSection
+-        if _newclass: section = property(GetSection, None, doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
+-
+-        __swig_getmethods__["file_addr"] = GetFileAddress
+-        if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
+-
+-        __swig_getmethods__["load_addr"] = __get_load_addr_property__
+-        __swig_setmethods__["load_addr"] = __set_load_addr_property__
+-        if _newclass: load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
+-
++        module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
++        compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
++        line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
++        function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
++        block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
++        symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
++        offset = property(GetOffset, None, doc='''A read only property that returns the section offset in bytes as an integer.''')
++        section = property(GetSection, None, doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
++        file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
++        load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBBlock.i b/scripts/interface/SBBlock.i
+index 9180ef581..0c6394110 100644
+--- a/scripts/interface/SBBlock.i
++++ b/scripts/interface/SBBlock.i
+@@ -146,32 +146,15 @@ public:
+         def get_call_site(self):
+             return declaration(self.GetInlinedCallSiteFile(), self.GetInlinedCallSiteLine(), self.GetInlinedCallSiteColumn())
+ 
+-        __swig_getmethods__["parent"] = GetParent
+-        if _newclass: parent = property(GetParent, None, doc='''A read only property that returns the same result as GetParent().''')
+-
+-        __swig_getmethods__["first_child"] = GetFirstChild
+-        if _newclass: first_child = property(GetFirstChild, None, doc='''A read only property that returns the same result as GetFirstChild().''')
+-        
+-        __swig_getmethods__["call_site"] = get_call_site
+-        if _newclass: call_site = property(get_call_site, None, doc='''A read only property that returns a lldb.declaration object that contains the inlined call site file, line and column.''')
+-        
+-        __swig_getmethods__["sibling"] = GetSibling
+-        if _newclass: sibling = property(GetSibling, None, doc='''A read only property that returns the same result as GetSibling().''')
+-
+-        __swig_getmethods__["name"] = GetInlinedName
+-        if _newclass: name = property(GetInlinedName, None, doc='''A read only property that returns the same result as GetInlinedName().''')
+-
+-        __swig_getmethods__["inlined_block"] = GetContainingInlinedBlock
+-        if _newclass: inlined_block = property(GetContainingInlinedBlock, None, doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
+-
+-        __swig_getmethods__["range"] = get_ranges_access_object
+-        if _newclass: range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
+-
+-        __swig_getmethods__["ranges"] = get_ranges_array
+-        if _newclass: ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
+-
+-        __swig_getmethods__["num_ranges"] = GetNumRanges
+-        if _newclass: num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
++        parent = property(GetParent, None, doc='''A read only property that returns the same result as GetParent().''')
++        first_child = property(GetFirstChild, None, doc='''A read only property that returns the same result as GetFirstChild().''')
++        call_site = property(get_call_site, None, doc='''A read only property that returns a lldb.declaration object that contains the inlined call site file, line and column.''')
++        sibling = property(GetSibling, None, doc='''A read only property that returns the same result as GetSibling().''')
++        name = property(GetInlinedName, None, doc='''A read only property that returns the same result as GetInlinedName().''')
++        inlined_block = property(GetContainingInlinedBlock, None, doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
++        range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
++        ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
++        num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBBreakpoint.i b/scripts/interface/SBBreakpoint.i
+index 1383f3848..2cb460602 100644
+--- a/scripts/interface/SBBreakpoint.i
++++ b/scripts/interface/SBBreakpoint.i
+@@ -283,26 +283,12 @@ public:
+                 locations.append(accessor[idx])
+             return locations
+         
+-        __swig_getmethods__["locations"] = get_breakpoint_location_list
+-        if _newclass: locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
+-        
+-        __swig_getmethods__["location"] = get_locations_access_object
+-        if _newclass: location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
+-
+-        __swig_getmethods__["id"] = GetID
+-        if _newclass: id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
+-            
+-        __swig_getmethods__["enabled"] = IsEnabled
+-        __swig_setmethods__["enabled"] = SetEnabled
+-        if _newclass: enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
+-
+-        __swig_getmethods__["one_shot"] = IsOneShot
+-        __swig_setmethods__["one_shot"] = SetOneShot
+-        if _newclass: one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
+-            
+-        __swig_getmethods__["num_locations"] = GetNumLocations
+-        if _newclass: num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
+-
++        locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
++        location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
++        id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
++        enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
++        one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
++        num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
+     %}
+ 
+     
+diff --git a/scripts/interface/SBCompileUnit.i b/scripts/interface/SBCompileUnit.i
+index 430e7447d..6a0836932 100644
+--- a/scripts/interface/SBCompileUnit.i
++++ b/scripts/interface/SBCompileUnit.i
+@@ -119,11 +119,8 @@ public:
+     operator != (const lldb::SBCompileUnit &rhs) const;
+     
+     %pythoncode %{
+-        __swig_getmethods__["file"] = GetFileSpec
+-        if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
+-        
+-        __swig_getmethods__["num_line_entries"] = GetNumLineEntries
+-        if _newclass: num_line_entries = property(GetNumLineEntries, None, doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
++        file = property(GetFileSpec, None, doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
++        num_line_entries = property(GetNumLineEntries, None, doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
+     %}
+ };
+ 
+diff --git a/scripts/interface/SBData.i b/scripts/interface/SBData.i
+index 41aaf8dbd..ac89febf2 100644
+--- a/scripts/interface/SBData.i
++++ b/scripts/interface/SBData.i
+@@ -263,76 +263,28 @@ public:
+         def _read_all_double(self):
+             return self._make_helper_double().all()
+ 
+-        __swig_getmethods__["uint8"] = _make_helper_uint8
+-        if _newclass: uint8 = property(_make_helper_uint8, None, doc='''A read only property that returns an array-like object out of which you can read uint8 values.''')
+-        
+-        __swig_getmethods__["uint16"] = _make_helper_uint16
+-        if _newclass: uint16 = property(_make_helper_uint16, None, doc='''A read only property that returns an array-like object out of which you can read uint16 values.''')
+-        
+-        __swig_getmethods__["uint32"] = _make_helper_uint32
+-        if _newclass: uint32 = property(_make_helper_uint32, None, doc='''A read only property that returns an array-like object out of which you can read uint32 values.''')
+-        
+-        __swig_getmethods__["uint64"] = _make_helper_uint64
+-        if _newclass: uint64 = property(_make_helper_uint64, None, doc='''A read only property that returns an array-like object out of which you can read uint64 values.''')
+-
+-        __swig_getmethods__["sint8"] = _make_helper_sint8
+-        if _newclass: sint8 = property(_make_helper_sint8, None, doc='''A read only property that returns an array-like object out of which you can read sint8 values.''')
+-        
+-        __swig_getmethods__["sint16"] = _make_helper_sint16
+-        if _newclass: sint16 = property(_make_helper_sint16, None, doc='''A read only property that returns an array-like object out of which you can read sint16 values.''')
+-        
+-        __swig_getmethods__["sint32"] = _make_helper_sint32
+-        if _newclass: sint32 = property(_make_helper_sint32, None, doc='''A read only property that returns an array-like object out of which you can read sint32 values.''')
+-        
+-        __swig_getmethods__["sint64"] = _make_helper_sint64
+-        if _newclass: sint64 = property(_make_helper_sint64, None, doc='''A read only property that returns an array-like object out of which you can read sint64 values.''')
+-        
+-        __swig_getmethods__["float"] = _make_helper_float
+-        if _newclass: float = property(_make_helper_float, None, doc='''A read only property that returns an array-like object out of which you can read float values.''')
+-
+-        __swig_getmethods__["double"] = _make_helper_double
+-        if _newclass: double = property(_make_helper_double, None, doc='''A read only property that returns an array-like object out of which you can read double values.''')
+-                  
+-        __swig_getmethods__["uint8s"] = _read_all_uint8
+-        if _newclass: uint8s = property(_read_all_uint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint8 values.''')
+-        
+-        __swig_getmethods__["uint16s"] = _read_all_uint16
+-        if _newclass: uint16s = property(_read_all_uint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint16 values.''')
+-        
+-        __swig_getmethods__["uint32s"] = _read_all_uint32
+-        if _newclass: uint32s = property(_read_all_uint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint32 values.''')
+-        
+-        __swig_getmethods__["uint64s"] = _read_all_uint64
+-        if _newclass: uint64s = property(_read_all_uint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint64 values.''')
+-
+-        __swig_getmethods__["sint8s"] = _read_all_sint8
+-        if _newclass: sint8s = property(_read_all_sint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint8 values.''')
+-        
+-        __swig_getmethods__["sint16s"] = _read_all_sint16
+-        if _newclass: sint16s = property(_read_all_sint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint16 values.''')
+-        
+-        __swig_getmethods__["sint32s"] = _read_all_sint32
+-        if _newclass: sint32s = property(_read_all_sint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint32 values.''')
+-        
+-        __swig_getmethods__["sint64s"] = _read_all_sint64
+-        if _newclass: sint64s = property(_read_all_sint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint64 values.''')
+-        
+-        __swig_getmethods__["floats"] = _read_all_float
+-        if _newclass: floats = property(_read_all_float, None, doc='''A read only property that returns an array with all the contents of this SBData represented as float values.''')
+-
+-        __swig_getmethods__["doubles"] = _read_all_double
+-        if _newclass: doubles = property(_read_all_double, None, doc='''A read only property that returns an array with all the contents of this SBData represented as double values.''')
+-                  
+-    %}
+-    
+-    %pythoncode %{
+-        __swig_getmethods__["byte_order"] = GetByteOrder
+-        __swig_setmethods__["byte_order"] = SetByteOrder
+-        if _newclass: byte_order = property(GetByteOrder, SetByteOrder, doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
+-        
+-        __swig_getmethods__["size"] = GetByteSize
+-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size the same result as GetByteSize().''')
+-        
++        uint8 = property(_make_helper_uint8, None, doc='''A read only property that returns an array-like object out of which you can read uint8 values.''')
++        uint16 = property(_make_helper_uint16, None, doc='''A read only property that returns an array-like object out of which you can read uint16 values.''')
++        uint32 = property(_make_helper_uint32, None, doc='''A read only property that returns an array-like object out of which you can read uint32 values.''')
++        uint64 = property(_make_helper_uint64, None, doc='''A read only property that returns an array-like object out of which you can read uint64 values.''')
++        sint8 = property(_make_helper_sint8, None, doc='''A read only property that returns an array-like object out of which you can read sint8 values.''')
++        sint16 = property(_make_helper_sint16, None, doc='''A read only property that returns an array-like object out of which you can read sint16 values.''')
++        sint32 = property(_make_helper_sint32, None, doc='''A read only property that returns an array-like object out of which you can read sint32 values.''')
++        sint64 = property(_make_helper_sint64, None, doc='''A read only property that returns an array-like object out of which you can read sint64 values.''')
++        float = property(_make_helper_float, None, doc='''A read only property that returns an array-like object out of which you can read float values.''')
++        double = property(_make_helper_double, None, doc='''A read only property that returns an array-like object out of which you can read double values.''')
++        uint8s = property(_read_all_uint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint8 values.''')
++        uint16s = property(_read_all_uint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint16 values.''')
++        uint32s = property(_read_all_uint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint32 values.''')
++        uint64s = property(_read_all_uint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint64 values.''')
++        sint8s = property(_read_all_sint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint8 values.''')
++        sint16s = property(_read_all_sint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint16 values.''')
++        sint32s = property(_read_all_sint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint32 values.''')
++        sint64s = property(_read_all_sint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint64 values.''')
++        floats = property(_read_all_float, None, doc='''A read only property that returns an array with all the contents of this SBData represented as float values.''')
++        doubles = property(_read_all_double, None, doc='''A read only property that returns an array with all the contents of this SBData represented as double values.''')
++        byte_order = property(GetByteOrder, SetByteOrder, doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
++        size = property(GetByteSize, None, doc='''A read only property that returns the size the same result as GetByteSize().''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBDeclaration.i b/scripts/interface/SBDeclaration.i
+index e7a6b6d44..645ab4e3b 100644
+--- a/scripts/interface/SBDeclaration.i
++++ b/scripts/interface/SBDeclaration.i
+@@ -53,16 +53,10 @@ namespace lldb {
+         operator != (const lldb::SBDeclaration &rhs) const;
+         
+         %pythoncode %{
+-            __swig_getmethods__["file"] = GetFileSpec
+-            if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
+-            
+-            __swig_getmethods__["line"] = GetLine
+-            if _newclass: line = property(GetLine, None, doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
+-            
+-            __swig_getmethods__["column"] = GetColumn
+-            if _newclass: column = property(GetColumn, None, doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
+-            %}
+-        
++            file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
++            line = property(GetLine, None, doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
++            column = property(GetColumn, None, doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
++        %}
+     };
+     
+ } // namespace lldb
+diff --git a/scripts/interface/SBError.i b/scripts/interface/SBError.i
+index bebf2d7d7..a6f6b78b3 100644
+--- a/scripts/interface/SBError.i
++++ b/scripts/interface/SBError.i
+@@ -106,21 +106,11 @@ public:
+     GetDescription (lldb::SBStream &description);
+     
+     %pythoncode %{
+-        __swig_getmethods__["value"] = GetError
+-        if _newclass: value = property(GetError, None, doc='''A read only property that returns the same result as GetError().''')
+-        
+-        __swig_getmethods__["fail"] = Fail
+-        if _newclass: fail = property(Fail, None, doc='''A read only property that returns the same result as Fail().''')
+-        
+-        __swig_getmethods__["success"] = Success
+-        if _newclass: success = property(Success, None, doc='''A read only property that returns the same result as Success().''')
+-        
+-        __swig_getmethods__["description"] = GetCString
+-        if _newclass: description = property(GetCString, None, doc='''A read only property that returns the same result as GetCString().''')
+-        
+-        __swig_getmethods__["type"] = GetType
+-        if _newclass: type = property(GetType, None, doc='''A read only property that returns the same result as GetType().''')
+-        
++        value = property(GetError, None, doc='''A read only property that returns the same result as GetError().''')
++        fail = property(Fail, None, doc='''A read only property that returns the same result as Fail().''')
++        success = property(Success, None, doc='''A read only property that returns the same result as Success().''')
++        description = property(GetCString, None, doc='''A read only property that returns the same result as GetCString().''')
++        type = property(GetType, None, doc='''A read only property that returns the same result as GetType().''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBExecutionContext.i b/scripts/interface/SBExecutionContext.i
+index cd9d9287b..2e8b805f4 100644
+--- a/scripts/interface/SBExecutionContext.i
++++ b/scripts/interface/SBExecutionContext.i
+@@ -39,17 +39,10 @@ public:
+     GetFrame () const;
+     
+     %pythoncode %{
+-        __swig_getmethods__["target"] = GetTarget
+-        if _newclass: target = property(GetTarget, None, doc='''A read only property that returns the same result as GetTarget().''')
+-
+-        __swig_getmethods__["process"] = GetProcess
+-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns the same result as GetProcess().''')
+-
+-        __swig_getmethods__["thread"] = GetThread
+-        if _newclass: thread = property(GetThread, None, doc='''A read only property that returns the same result as GetThread().''')
+-            
+-        __swig_getmethods__["frame"] = GetFrame
+-        if _newclass: frame = property(GetFrame, None, doc='''A read only property that returns the same result as GetFrame().''')
++        target = property(GetTarget, None, doc='''A read only property that returns the same result as GetTarget().''')
++        process = property(GetProcess, None, doc='''A read only property that returns the same result as GetProcess().''')
++        thread = property(GetThread, None, doc='''A read only property that returns the same result as GetThread().''')
++        frame = property(GetFrame, None, doc='''A read only property that returns the same result as GetFrame().''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBFileSpec.i b/scripts/interface/SBFileSpec.i
+index a0e5da211..a5a995a30 100644
+--- a/scripts/interface/SBFileSpec.i
++++ b/scripts/interface/SBFileSpec.i
+@@ -88,17 +88,10 @@ public:
+                 return spec_file
+             return None
+ 
+-        __swig_getmethods__["fullpath"] = __get_fullpath__
+-        if _newclass: fullpath = property(__get_fullpath__, None, doc='''A read only property that returns the fullpath as a python string.''')
+-
+-        __swig_getmethods__["basename"] = GetFilename
+-        if _newclass: basename = property(GetFilename, None, doc='''A read only property that returns the path basename as a python string.''')
+-        
+-        __swig_getmethods__["dirname"] = GetDirectory
+-        if _newclass: dirname = property(GetDirectory, None, doc='''A read only property that returns the path directory name as a python string.''')
+-        
+-        __swig_getmethods__["exists"] = Exists
+-        if _newclass: exists = property(Exists, None, doc='''A read only property that returns a boolean value that indicates if the file exists.''')
++        fullpath = property(__get_fullpath__, None, doc='''A read only property that returns the fullpath as a python string.''')
++        basename = property(GetFilename, None, doc='''A read only property that returns the path basename as a python string.''')
++        dirname = property(GetDirectory, None, doc='''A read only property that returns the path directory name as a python string.''')
++        exists = property(Exists, None, doc='''A read only property that returns a boolean value that indicates if the file exists.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBFrame.i b/scripts/interface/SBFrame.i
+index 1ba2c2ebc..58fff63cb 100644
+--- a/scripts/interface/SBFrame.i
++++ b/scripts/interface/SBFrame.i
+@@ -341,85 +341,32 @@ public:
+ 
+             return registers_access(self.registers)
+ 
+-        __swig_getmethods__["pc"] = GetPC
+-        __swig_setmethods__["pc"] = SetPC
+-        if _newclass: pc = property(GetPC, SetPC)
+-
+-        __swig_getmethods__["addr"] = GetPCAddress
+-        if _newclass: addr = property(GetPCAddress, None, doc='''A read only property that returns the program counter (PC) as a section offset address (lldb.SBAddress).''')
+-
+-        __swig_getmethods__["fp"] = GetFP
+-        if _newclass: fp = property(GetFP, None, doc='''A read only property that returns the frame pointer (FP) as an unsigned integer.''')
+-
+-        __swig_getmethods__["sp"] = GetSP
+-        if _newclass: sp = property(GetSP, None, doc='''A read only property that returns the stack pointer (SP) as an unsigned integer.''')
+-
+-        __swig_getmethods__["module"] = GetModule
+-        if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) for this stack frame.''')
+-
+-        __swig_getmethods__["compile_unit"] = GetCompileUnit
+-        if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) for this stack frame.''')
+-
+-        __swig_getmethods__["function"] = GetFunction
+-        if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) for this stack frame.''')
+-
+-        __swig_getmethods__["symbol"] = GetSymbol
+-        if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) for this stack frame.''')
+-
+-        __swig_getmethods__["block"] = GetBlock
+-        if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) for this stack frame.''')
+-
+-        __swig_getmethods__["is_inlined"] = IsInlined
+-        if _newclass: is_inlined = property(IsInlined, None, doc='''A read only property that returns an boolean that indicates if the block frame is an inlined function.''')
+-
+-        __swig_getmethods__["name"] = GetFunctionName
+-        if _newclass: name = property(GetFunctionName, None, doc='''A read only property that retuns the name for the function that this frame represents. Inlined stack frame might have a concrete function that differs from the name of the inlined function (a named lldb.SBBlock).''')
+-
+-        __swig_getmethods__["line_entry"] = GetLineEntry
+-        if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line table entry (lldb.SBLineEntry) for this stack frame.''')
+-
+-        __swig_getmethods__["thread"] = GetThread
+-        if _newclass: thread = property(GetThread, None, doc='''A read only property that returns an lldb object that represents the thread (lldb.SBThread) for this stack frame.''')
+-
+-        __swig_getmethods__["disassembly"] = Disassemble
+-        if _newclass: disassembly = property(Disassemble, None, doc='''A read only property that returns the disassembly for this stack frame as a python string.''')
+-
+-        __swig_getmethods__["idx"] = GetFrameID
+-        if _newclass: idx = property(GetFrameID, None, doc='''A read only property that returns the zero based stack frame index.''')
+-
+-        __swig_getmethods__["variables"] = get_all_variables
+-        if _newclass: variables = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
+-
+-        __swig_getmethods__["vars"] = get_all_variables
+-        if _newclass: vars = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
+-
+-        __swig_getmethods__["locals"] = get_locals
+-        if _newclass: locals = property(get_locals, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the local variables in this stack frame.''')
+-
+-        __swig_getmethods__["args"] = get_arguments
+-        if _newclass: args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
+-
+-        __swig_getmethods__["arguments"] = get_arguments
+-        if _newclass: arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
+-
+-        __swig_getmethods__["statics"] = get_statics
+-        if _newclass: statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
+-
+-        __swig_getmethods__["registers"] = GetRegisters
+-        if _newclass: registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+-
+-        __swig_getmethods__["regs"] = GetRegisters
+-        if _newclass: regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+-
+-        __swig_getmethods__["register"] = get_registers_access
+-        if _newclass: register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
+-
+-        __swig_getmethods__["reg"] = get_registers_access
+-        if _newclass: reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
+-
+-        __swig_getmethods__["parent"] = get_parent_frame
+-        if _newclass: parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
+-
++        pc = property(GetPC, SetPC)
++        addr = property(GetPCAddress, None, doc='''A read only property that returns the program counter (PC) as a section offset address (lldb.SBAddress).''')
++        fp = property(GetFP, None, doc='''A read only property that returns the frame pointer (FP) as an unsigned integer.''')
++        sp = property(GetSP, None, doc='''A read only property that returns the stack pointer (SP) as an unsigned integer.''')
++        module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) for this stack frame.''')
++        compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) for this stack frame.''')
++        function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) for this stack frame.''')
++        symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) for this stack frame.''')
++        block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) for this stack frame.''')
++        is_inlined = property(IsInlined, None, doc='''A read only property that returns an boolean that indicates if the block frame is an inlined function.''')
++        name = property(GetFunctionName, None, doc='''A read only property that retuns the name for the function that this frame represents. Inlined stack frame might have a concrete function that differs from the name of the inlined function (a named lldb.SBBlock).''')
++        line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line table entry (lldb.SBLineEntry) for this stack frame.''')
++        thread = property(GetThread, None, doc='''A read only property that returns an lldb object that represents the thread (lldb.SBThread) for this stack frame.''')
++        disassembly = property(Disassemble, None, doc='''A read only property that returns the disassembly for this stack frame as a python string.''')
++        idx = property(GetFrameID, None, doc='''A read only property that returns the zero based stack frame index.''')
++        variables = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
++        vars = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
++        locals = property(get_locals, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the local variables in this stack frame.''')
++        args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
++        arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
++        statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
++        registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
++        regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
++        register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
++        reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
++        parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
+     %}
+ };
+ 
+diff --git a/scripts/interface/SBFunction.i b/scripts/interface/SBFunction.i
+index 435e3e4bf..6db52e58b 100644
+--- a/scripts/interface/SBFunction.i
++++ b/scripts/interface/SBFunction.i
+@@ -115,29 +115,14 @@ public:
+         def get_instructions_from_current_target (self):
+             return self.GetInstructions (target)
+ 
+-        __swig_getmethods__["addr"] = GetStartAddress
+-        if _newclass: addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this function.''')
+-
+-        __swig_getmethods__["end_addr"] = GetEndAddress
+-        if _newclass: end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this function.''')
+-                
+-        __swig_getmethods__["block"] = GetBlock
+-        if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the top level lexical block (lldb.SBBlock) for this function.''')
+-
+-        __swig_getmethods__["instructions"] = get_instructions_from_current_target
+-        if _newclass: instructions = property(get_instructions_from_current_target, None, doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this function.''')
+-
+-        __swig_getmethods__["mangled"] = GetMangledName
+-        if _newclass: mangled = property(GetMangledName, None, doc='''A read only property that returns the mangled (linkage) name for this function as a string.''')
+-
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this function as a string.''')
+-
+-        __swig_getmethods__["prologue_size"] = GetPrologueByteSize
+-        if _newclass: prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
+-
+-        __swig_getmethods__["type"] = GetType
+-        if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the return type (lldb.SBType) for this function.''')
++        addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this function.''')
++        end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this function.''')
++        block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the top level lexical block (lldb.SBBlock) for this function.''')
++        instructions = property(get_instructions_from_current_target, None, doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this function.''')
++        mangled = property(GetMangledName, None, doc='''A read only property that returns the mangled (linkage) name for this function as a string.''')
++        name = property(GetName, None, doc='''A read only property that returns the name for this function as a string.''')
++        prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
++        type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the return type (lldb.SBType) for this function.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBInstruction.i b/scripts/interface/SBInstruction.i
+index e235002cf..f677c0111 100644
+--- a/scripts/interface/SBInstruction.i
++++ b/scripts/interface/SBInstruction.i
+@@ -82,23 +82,12 @@ public:
+         def __load_adrr_property__ (self):
+             return self.GetComment (target)
+ 
+-        __swig_getmethods__["mnemonic"] = __mnemonic_property__
+-        if _newclass: mnemonic = property(__mnemonic_property__, None, doc='''A read only property that returns the mnemonic for this instruction as a string.''')
+-
+-        __swig_getmethods__["operands"] = __operands_property__
+-        if _newclass: operands = property(__operands_property__, None, doc='''A read only property that returns the operands for this instruction as a string.''')
+-
+-        __swig_getmethods__["comment"] = __comment_property__
+-        if _newclass: comment = property(__comment_property__, None, doc='''A read only property that returns the comment for this instruction as a string.''')
+-
+-        __swig_getmethods__["addr"] = GetAddress
+-        if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
+-        
+-        __swig_getmethods__["size"] = GetByteSize
+-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
+-
+-        __swig_getmethods__["is_branch"] = DoesBranch
+-        if _newclass: is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
++        mnemonic = property(__mnemonic_property__, None, doc='''A read only property that returns the mnemonic for this instruction as a string.''')
++        operands = property(__operands_property__, None, doc='''A read only property that returns the operands for this instruction as a string.''')
++        comment = property(__comment_property__, None, doc='''A read only property that returns the comment for this instruction as a string.''')
++        addr = property(GetAddress, None, doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
++        size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
++        is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
+     %}
+     
+ 
+diff --git a/scripts/interface/SBLineEntry.i b/scripts/interface/SBLineEntry.i
+index fbe210008..1f9a0d666 100644
+--- a/scripts/interface/SBLineEntry.i
++++ b/scripts/interface/SBLineEntry.i
+@@ -84,23 +84,12 @@ public:
+     operator != (const lldb::SBLineEntry &rhs) const;
+     
+     %pythoncode %{
+-        __swig_getmethods__["file"] = GetFileSpec
+-        if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
+-        
+-        __swig_getmethods__["line"] = GetLine
+-        if _newclass: line = property(GetLine, None, doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
+-        
+-        __swig_getmethods__["column"] = GetColumn
+-        if _newclass: column = property(GetColumn, None, doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
+-        
+-        __swig_getmethods__["addr"] = GetStartAddress
+-        if _newclass: addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this line entry.''')
+-        
+-        __swig_getmethods__["end_addr"] = GetEndAddress
+-        if _newclass: end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this line entry.''')
+-        
++        file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
++        line = property(GetLine, None, doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
++        column = property(GetColumn, None, doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
++        addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this line entry.''')
++        end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this line entry.''')
+     %}
+-
+ };
+ 
+ } // namespace lldb
+diff --git a/scripts/interface/SBModule.i b/scripts/interface/SBModule.i
+index 32b771c4d..2d07a8126 100644
+--- a/scripts/interface/SBModule.i
++++ b/scripts/interface/SBModule.i
+@@ -498,50 +498,24 @@ public:
+                     self.compile_units_array.append(self.GetCompileUnitAtIndex(idx))
+             return self.compile_units_array
+ 
+-        __swig_getmethods__["symbols"] = get_symbols_array
+-        if _newclass: symbols = property(get_symbols_array, None, doc='''A read only property that returns a list() of lldb.SBSymbol objects contained in this module.''')
+-
+-        __swig_getmethods__["symbol"] = get_symbols_access_object
+-        if _newclass: symbol = property(get_symbols_access_object, None, doc='''A read only property that can be used to access symbols by index ("symbol = module.symbol[0]"), name ("symbols = module.symbol['main']"), or using a regular expression ("symbols = module.symbol[re.compile(...)]"). The return value is a single lldb.SBSymbol object for array access, and a list() of lldb.SBSymbol objects for name and regular expression access''')
+-
+-        __swig_getmethods__["sections"] = get_sections_array
+-        if _newclass: sections = property(get_sections_array, None, doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
+-
+-        __swig_getmethods__["compile_units"] = get_compile_units_array
+-        if _newclass: compile_units = property(get_compile_units_array, None, doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
+-
+-        __swig_getmethods__["section"] = get_sections_access_object
+-        if _newclass: section = property(get_sections_access_object, None, doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
+-
+-        __swig_getmethods__["compile_unit"] = get_compile_units_access_object
+-        if _newclass: section = property(get_sections_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
++        symbols = property(get_symbols_array, None, doc='''A read only property that returns a list() of lldb.SBSymbol objects contained in this module.''')
++        symbol = property(get_symbols_access_object, None, doc='''A read only property that can be used to access symbols by index ("symbol = module.symbol[0]"), name ("symbols = module.symbol['main']"), or using a regular expression ("symbols = module.symbol[re.compile(...)]"). The return value is a single lldb.SBSymbol object for array access, and a list() of lldb.SBSymbol objects for name and regular expression access''')
++        sections = property(get_sections_array, None, doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
++        compile_units = property(get_compile_units_array, None, doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
++        section = property(get_sections_access_object, None, doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
++        section = property(get_sections_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
+ 
+         def get_uuid(self):
+             return uuid.UUID (self.GetUUIDString())
+         
+-        __swig_getmethods__["uuid"] = get_uuid
+-        if _newclass: uuid = property(get_uuid, None, doc='''A read only property that returns a standard python uuid.UUID object that represents the UUID of this module.''')
+-        
+-        __swig_getmethods__["file"] = GetFileSpec
+-        if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged.''')
+-        
+-        __swig_getmethods__["platform_file"] = GetPlatformFileSpec
+-        if _newclass: platform_file = property(GetPlatformFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented on the current host system.''')
+-        
+-        __swig_getmethods__["byte_order"] = GetByteOrder
+-        if _newclass: byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this module.''')
+-        
+-        __swig_getmethods__["addr_size"] = GetAddressByteSize
+-        if _newclass: addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
+-        
+-        __swig_getmethods__["triple"] = GetTriple
+-        if _newclass: triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
+-
+-        __swig_getmethods__["num_symbols"] = GetNumSymbols
+-        if _newclass: num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
+-        
+-        __swig_getmethods__["num_sections"] = GetNumSections
+-        if _newclass: num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
++        uuid = property(get_uuid, None, doc='''A read only property that returns a standard python uuid.UUID object that represents the UUID of this module.''')
++        file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged.''')
++        platform_file = property(GetPlatformFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented on the current host system.''')
++        byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this module.''')
++        addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
++        triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
++        num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
++        num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
+         
+     %}
+ 
+diff --git a/scripts/interface/SBProcess.i b/scripts/interface/SBProcess.i
+index 24b675654..b85051059 100644
+--- a/scripts/interface/SBProcess.i
++++ b/scripts/interface/SBProcess.i
+@@ -497,45 +497,19 @@ public:
+                 threads.append(accessor[idx])
+             return threads
+         
+-        __swig_getmethods__["threads"] = get_process_thread_list
+-        if _newclass: threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
+-        
+-        __swig_getmethods__["thread"] = get_threads_access_object
+-        if _newclass: thread = property(get_threads_access_object, None, doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')
+-
+-        __swig_getmethods__["is_alive"] = __get_is_alive__
+-        if _newclass: is_alive = property(__get_is_alive__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently alive.''')
+-
+-        __swig_getmethods__["is_running"] = __get_is_running__
+-        if _newclass: is_running = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently running.''')
+-
+-        __swig_getmethods__["is_stopped"] = __get_is_stopped__
+-        if _newclass: is_stopped = property(__get_is_stopped__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
+-
+-        __swig_getmethods__["id"] = GetProcessID
+-        if _newclass: id = property(GetProcessID, None, doc='''A read only property that returns the process ID as an integer.''')
+-        
+-        __swig_getmethods__["target"] = GetTarget
+-        if _newclass: target = property(GetTarget, None, doc='''A read only property that an lldb object that represents the target (lldb.SBTarget) that owns this process.''')
+-        
+-        __swig_getmethods__["num_threads"] = GetNumThreads
+-        if _newclass: num_threads = property(GetNumThreads, None, doc='''A read only property that returns the number of threads in this process as an integer.''')
+-        
+-        __swig_getmethods__["selected_thread"] = GetSelectedThread
+-        __swig_setmethods__["selected_thread"] = SetSelectedThread
+-        if _newclass: selected_thread = property(GetSelectedThread, SetSelectedThread, doc='''A read/write property that gets/sets the currently selected thread in this process. The getter returns a lldb.SBThread object and the setter takes an lldb.SBThread object.''')
+-        
+-        __swig_getmethods__["state"] = GetState
+-        if _newclass: state = property(GetState, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eState") that represents the current state of this process (running, stopped, exited, etc.).''')
+-        
+-        __swig_getmethods__["exit_state"] = GetExitStatus
+-        if _newclass: exit_state = property(GetExitStatus, None, doc='''A read only property that returns an exit status as an integer of this process when the process state is lldb.eStateExited.''')
+-        
+-        __swig_getmethods__["exit_description"] = GetExitDescription
+-        if _newclass: exit_description = property(GetExitDescription, None, doc='''A read only property that returns an exit description as a string of this process when the process state is lldb.eStateExited.''')
+-        
+-        __swig_getmethods__["broadcaster"] = GetBroadcaster
+-        if _newclass: broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this process.''')
++        threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
++        thread = property(get_threads_access_object, None, doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')
++        is_alive = property(__get_is_alive__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently alive.''')
++        is_running = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently running.''')
++        is_stopped = property(__get_is_stopped__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
++        id = property(GetProcessID, None, doc='''A read only property that returns the process ID as an integer.''')
++        target = property(GetTarget, None, doc='''A read only property that an lldb object that represents the target (lldb.SBTarget) that owns this process.''')
++        num_threads = property(GetNumThreads, None, doc='''A read only property that returns the number of threads in this process as an integer.''')
++        selected_thread = property(GetSelectedThread, SetSelectedThread, doc='''A read/write property that gets/sets the currently selected thread in this process. The getter returns a lldb.SBThread object and the setter takes an lldb.SBThread object.''')
++        state = property(GetState, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eState") that represents the current state of this process (running, stopped, exited, etc.).''')
++        exit_state = property(GetExitStatus, None, doc='''A read only property that returns an exit status as an integer of this process when the process state is lldb.eStateExited.''')
++        exit_description = property(GetExitDescription, None, doc='''A read only property that returns an exit description as a string of this process when the process state is lldb.eStateExited.''')
++        broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this process.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBSection.i b/scripts/interface/SBSection.i
+index 5f8b30156..bbed88b5e 100644
+--- a/scripts/interface/SBSection.i
++++ b/scripts/interface/SBSection.i
+@@ -120,33 +120,15 @@ public:
+         def get_addr(self):
+             return SBAddress(self, 0)
+ 
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this section as a string.''')
+-
+-        __swig_getmethods__["addr"] = get_addr
+-        if _newclass: addr = property(get_addr, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this section.''')
+-
+-        __swig_getmethods__["file_addr"] = GetFileAddress
+-        if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns an integer that represents the starting "file" address for this section, or the address of the section in the object file in which it is defined.''')
+-
+-        __swig_getmethods__["size"] = GetByteSize
+-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this section as an integer.''')
+-
+-        __swig_getmethods__["file_offset"] = GetFileOffset
+-        if _newclass: file_offset = property(GetFileOffset, None, doc='''A read only property that returns the file offset in bytes of this section as an integer.''')
+-
+-        __swig_getmethods__["file_size"] = GetFileByteSize
+-        if _newclass: file_size = property(GetFileByteSize, None, doc='''A read only property that returns the file size in bytes of this section as an integer.''')
+-
+-        __swig_getmethods__["data"] = GetSectionData
+-        if _newclass: data = property(GetSectionData, None, doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
+-
+-        __swig_getmethods__["type"] = GetSectionType
+-        if _newclass: type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
+-
+-        __swig_getmethods__["target_byte_size"] = GetTargetByteSize
+-        if _newclass: target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
+-
++        name = property(GetName, None, doc='''A read only property that returns the name of this section as a string.''')
++        addr = property(get_addr, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this section.''')
++        file_addr = property(GetFileAddress, None, doc='''A read only property that returns an integer that represents the starting "file" address for this section, or the address of the section in the object file in which it is defined.''')
++        size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this section as an integer.''')
++        file_offset = property(GetFileOffset, None, doc='''A read only property that returns the file offset in bytes of this section as an integer.''')
++        file_size = property(GetFileByteSize, None, doc='''A read only property that returns the file size in bytes of this section as an integer.''')
++        data = property(GetSectionData, None, doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
++        type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
++        target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
+     %}
+ 
+ private:
+diff --git a/scripts/interface/SBSymbol.i b/scripts/interface/SBSymbol.i
+index a61fda492..bdce51029 100644
+--- a/scripts/interface/SBSymbol.i
++++ b/scripts/interface/SBSymbol.i
+@@ -75,34 +75,15 @@ public:
+         def get_instructions_from_current_target (self):
+             return self.GetInstructions (target)
+         
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this symbol as a string.''')
+-        
+-        __swig_getmethods__["mangled"] = GetMangledName
+-        if _newclass: mangled = property(GetMangledName, None, doc='''A read only property that returns the mangled (linkage) name for this symbol as a string.''')
+-        
+-        __swig_getmethods__["type"] = GetType
+-        if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSymbolType") that represents the type of this symbol.''')
+-        
+-        __swig_getmethods__["addr"] = GetStartAddress
+-        if _newclass: addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this symbol.''')
+-        
+-        __swig_getmethods__["end_addr"] = GetEndAddress
+-        if _newclass: end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this symbol.''')
+-        
+-        __swig_getmethods__["prologue_size"] = GetPrologueByteSize
+-        if _newclass: prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
+-        
+-        __swig_getmethods__["instructions"] = get_instructions_from_current_target
+-        if _newclass: instructions = property(get_instructions_from_current_target, None, doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this symbol.''')
+-
+-        __swig_getmethods__["external"] = IsExternal
+-        if _newclass: external = property(IsExternal, None, doc='''A read only property that returns a boolean value that indicates if this symbol is externally visiable (exported) from the module that contains it.''')
+-
+-        __swig_getmethods__["synthetic"] = IsSynthetic
+-        if _newclass: synthetic = property(IsSynthetic, None, doc='''A read only property that returns a boolean value that indicates if this symbol was synthetically created from information in module that contains it.''')
+-
+-        
++        name = property(GetName, None, doc='''A read only property that returns the name for this symbol as a string.''')
++        mangled = property(GetMangledName, None, doc='''A read only property that returns the mangled (linkage) name for this symbol as a string.''')
++        type = property(GetType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSymbolType") that represents the type of this symbol.''')
++        addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this symbol.''')
++        end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this symbol.''')
++        prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
++        instructions = property(get_instructions_from_current_target, None, doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this symbol.''')
++        external = property(IsExternal, None, doc='''A read only property that returns a boolean value that indicates if this symbol is externally visiable (exported) from the module that contains it.''')
++        synthetic = property(IsSynthetic, None, doc='''A read only property that returns a boolean value that indicates if this symbol was synthetically created from information in module that contains it.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBSymbolContext.i b/scripts/interface/SBSymbolContext.i
+index 5bfee9c8b..d4a2d0f6f 100644
+--- a/scripts/interface/SBSymbolContext.i
++++ b/scripts/interface/SBSymbolContext.i
+@@ -82,29 +82,12 @@ public:
+     
+     
+     %pythoncode %{
+-        __swig_getmethods__["module"] = GetModule
+-        __swig_setmethods__["module"] = SetModule
+-        if _newclass: module = property(GetModule, SetModule, doc='''A read/write property that allows the getting/setting of the module (lldb.SBModule) in this symbol context.''')
+-
+-        __swig_getmethods__["compile_unit"] = GetCompileUnit
+-        __swig_setmethods__["compile_unit"] = SetCompileUnit
+-        if _newclass: compile_unit = property(GetCompileUnit, SetCompileUnit, doc='''A read/write property that allows the getting/setting of the compile unit (lldb.SBCompileUnit) in this symbol context.''')
+-
+-        __swig_getmethods__["function"] = GetFunction
+-        __swig_setmethods__["function"] = SetFunction
+-        if _newclass: function = property(GetFunction, SetFunction, doc='''A read/write property that allows the getting/setting of the function (lldb.SBFunction) in this symbol context.''')
+-
+-        __swig_getmethods__["block"] = GetBlock
+-        __swig_setmethods__["block"] = SetBlock
+-        if _newclass: block = property(GetBlock, SetBlock, doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
+-            
+-        __swig_getmethods__["symbol"] = GetSymbol
+-        __swig_setmethods__["symbol"] = SetSymbol
+-        if _newclass: symbol = property(GetSymbol, SetSymbol, doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
+-
+-        __swig_getmethods__["line_entry"] = GetLineEntry
+-        __swig_setmethods__["line_entry"] = SetLineEntry
+-        if _newclass: line_entry = property(GetLineEntry, SetLineEntry, doc='''A read/write property that allows the getting/setting of the line entry (lldb.SBLineEntry) in this symbol context.''')
++        module = property(GetModule, SetModule, doc='''A read/write property that allows the getting/setting of the module (lldb.SBModule) in this symbol context.''')
++        compile_unit = property(GetCompileUnit, SetCompileUnit, doc='''A read/write property that allows the getting/setting of the compile unit (lldb.SBCompileUnit) in this symbol context.''')
++        function = property(GetFunction, SetFunction, doc='''A read/write property that allows the getting/setting of the function (lldb.SBFunction) in this symbol context.''')
++        block = property(GetBlock, SetBlock, doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
++        symbol = property(GetSymbol, SetSymbol, doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
++        line_entry = property(GetLineEntry, SetLineEntry, doc='''A read/write property that allows the getting/setting of the line entry (lldb.SBLineEntry) in this symbol context.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBSymbolContextList.i b/scripts/interface/SBSymbolContextList.i
+index 25e889499..769bc72e5 100644
+--- a/scripts/interface/SBSymbolContextList.i
++++ b/scripts/interface/SBSymbolContextList.i
+@@ -116,23 +116,13 @@ public:
+                 if obj:
+                     a.append(obj)
+             return a
+-        __swig_getmethods__["modules"] = get_module_array
+-        if _newclass: modules = property(get_module_array, None, doc='''Returns a list() of lldb.SBModule objects, one for each module in each SBSymbolContext object in this list.''')
+         
+-        __swig_getmethods__["compile_units"] = get_compile_unit_array
+-        if _newclass: compile_units = property(get_compile_unit_array, None, doc='''Returns a list() of lldb.SBCompileUnit objects, one for each compile unit in each SBSymbolContext object in this list.''')
+-        
+-        __swig_getmethods__["functions"] = get_function_array
+-        if _newclass: functions = property(get_function_array, None, doc='''Returns a list() of lldb.SBFunction objects, one for each function in each SBSymbolContext object in this list.''')
+-        
+-        __swig_getmethods__["blocks"] = get_block_array
+-        if _newclass: blocks = property(get_block_array, None, doc='''Returns a list() of lldb.SBBlock objects, one for each block in each SBSymbolContext object in this list.''')
+-        
+-        __swig_getmethods__["line_entries"] = get_line_entry_array
+-        if _newclass: line_entries = property(get_line_entry_array, None, doc='''Returns a list() of lldb.SBLineEntry objects, one for each line entry in each SBSymbolContext object in this list.''')
+-        
+-        __swig_getmethods__["symbols"] = get_symbol_array
+-        if _newclass: symbols = property(get_symbol_array, None, doc='''Returns a list() of lldb.SBSymbol objects, one for each symbol in each SBSymbolContext object in this list.''')
++        modules = property(get_module_array, None, doc='''Returns a list() of lldb.SBModule objects, one for each module in each SBSymbolContext object in this list.''')
++        compile_units = property(get_compile_unit_array, None, doc='''Returns a list() of lldb.SBCompileUnit objects, one for each compile unit in each SBSymbolContext object in this list.''')
++        functions = property(get_function_array, None, doc='''Returns a list() of lldb.SBFunction objects, one for each function in each SBSymbolContext object in this list.''')
++        blocks = property(get_block_array, None, doc='''Returns a list() of lldb.SBBlock objects, one for each block in each SBSymbolContext object in this list.''')
++        line_entries = property(get_line_entry_array, None, doc='''Returns a list() of lldb.SBLineEntry objects, one for each line entry in each SBSymbolContext object in this list.''')
++        symbols = property(get_symbol_array, None, doc='''Returns a list() of lldb.SBSymbol objects, one for each symbol in each SBSymbolContext object in this list.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBTarget.i b/scripts/interface/SBTarget.i
+index 1cc806db8..dc5974d85 100644
+--- a/scripts/interface/SBTarget.i
++++ b/scripts/interface/SBTarget.i
+@@ -1102,49 +1102,20 @@ public:
+                 modules.append(self.GetModuleAtIndex(idx))
+             return modules
+ 
+-        __swig_getmethods__["modules"] = get_modules_array
+-        if _newclass: modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
+-
+-        __swig_getmethods__["module"] = get_modules_access_object
+-        if _newclass: module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
+-
+-        __swig_getmethods__["process"] = GetProcess
+-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that this target owns.''')
+-
+-        __swig_getmethods__["executable"] = GetExecutable
+-        if _newclass: executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
+-
+-        __swig_getmethods__["debugger"] = GetDebugger
+-        if _newclass: debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
+-
+-        __swig_getmethods__["num_breakpoints"] = GetNumBreakpoints
+-        if _newclass: num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
+-
+-        __swig_getmethods__["num_watchpoints"] = GetNumWatchpoints
+-        if _newclass: num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
+-
+-        __swig_getmethods__["broadcaster"] = GetBroadcaster
+-        if _newclass: broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
+-
+-        __swig_getmethods__["byte_order"] = GetByteOrder
+-        if _newclass: byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
+-
+-        __swig_getmethods__["addr_size"] = GetAddressByteSize
+-        if _newclass: addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
+-
+-        __swig_getmethods__["triple"] = GetTriple
+-        if _newclass: triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
+-
+-        __swig_getmethods__["data_byte_size"] = GetDataByteSize
+-        if _newclass: data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
+-
+-        __swig_getmethods__["code_byte_size"] = GetCodeByteSize
+-        if _newclass: code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
+-
+-        __swig_getmethods__["platform"] = GetPlatform
+-        if _newclass: platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
++        modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
++        module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
++        process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that this target owns.''')
++        executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
++        debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
++        num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
++        num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
++        broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
++        byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
++        addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
++        triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
++        data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
++        code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
++        platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
+     %}
+-
+ };
+-
+ } // namespace lldb
+diff --git a/scripts/interface/SBThread.i b/scripts/interface/SBThread.i
+index c12f176e4..d5bd0fa01 100644
+--- a/scripts/interface/SBThread.i
++++ b/scripts/interface/SBThread.i
+@@ -453,44 +453,19 @@ public:
+                 frames.append(frame)
+             return frames
+         
+-        __swig_getmethods__["id"] = GetThreadID
+-        if _newclass: id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
+-
+-        __swig_getmethods__["idx"] = GetIndexID
+-        if _newclass: idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
+-
+-        __swig_getmethods__["return_value"] = GetStopReturnValue
+-        if _newclass: return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
+-
+-        __swig_getmethods__["process"] = GetProcess
+-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that owns this thread.''')
+-
+-        __swig_getmethods__["num_frames"] = GetNumFrames
+-        if _newclass: num_frames = property(GetNumFrames, None, doc='''A read only property that returns the number of stack frames in this thread as an integer.''')
+-
+-        __swig_getmethods__["frames"] = get_thread_frames
+-        if _newclass: frames = property(get_thread_frames, None, doc='''A read only property that returns a list() of lldb.SBFrame objects for all frames in this thread.''')
+-
+-        __swig_getmethods__["frame"] = get_frames_access_object
+-        if _newclass: frame = property(get_frames_access_object, None, doc='''A read only property that returns an object that can be used to access frames as an array ("frame_12 = lldb.thread.frame[12]").''')
+-
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this thread as a string.''')
+-
+-        __swig_getmethods__["queue"] = GetQueueName
+-        if _newclass: queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
+-
+-        __swig_getmethods__["queue_id"] = GetQueueID
+-        if _newclass: queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
+-
+-        __swig_getmethods__["stop_reason"] = GetStopReason
+-        if _newclass: stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
+-
+-        __swig_getmethods__["is_suspended"] = IsSuspended
+-        if _newclass: is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
+-
+-        __swig_getmethods__["is_stopped"] = IsStopped
+-        if _newclass: is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
++        id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
++        idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
++        return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
++        process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that owns this thread.''')
++        num_frames = property(GetNumFrames, None, doc='''A read only property that returns the number of stack frames in this thread as an integer.''')
++        frames = property(get_thread_frames, None, doc='''A read only property that returns a list() of lldb.SBFrame objects for all frames in this thread.''')
++        frame = property(get_frames_access_object, None, doc='''A read only property that returns an object that can be used to access frames as an array ("frame_12 = lldb.thread.frame[12]").''')
++        name = property(GetName, None, doc='''A read only property that returns the name of this thread as a string.''')
++        queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
++        queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
++        stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
++        is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
++        is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
+     %}
+ 
+ };
+diff --git a/scripts/interface/SBType.i b/scripts/interface/SBType.i
+index 999941a4b..0c4c47293 100644
+--- a/scripts/interface/SBType.i
++++ b/scripts/interface/SBType.i
+@@ -44,24 +44,12 @@ public:
+     GetBitfieldSizeInBits();
+ 
+     %pythoncode %{
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
+-        
+-        __swig_getmethods__["type"] = GetType
+-        if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
+-        
+-        __swig_getmethods__["byte_offset"] = GetOffsetInBytes
+-        if _newclass: byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
+-        
+-        __swig_getmethods__["bit_offset"] = GetOffsetInBits
+-        if _newclass: bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
+-
+-        __swig_getmethods__["is_bitfield"] = IsBitfield
+-        if _newclass: is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
+-
+-        __swig_getmethods__["bitfield_bit_size"] = GetBitfieldSizeInBits
+-        if _newclass: bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
+-
++        name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
++        type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
++        byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
++        bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
++        is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
++        bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
+     %}
+ 
+ protected:
+@@ -327,41 +315,18 @@ public:
+                 return template_args
+             return None
+             
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
+-        
+-        __swig_getmethods__["size"] = GetByteSize
+-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
+-        
+-        __swig_getmethods__["is_pointer"] = IsPointerType
+-        if _newclass: is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
+-        
+-        __swig_getmethods__["is_reference"] = IsReferenceType
+-        if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
+-        
+-        __swig_getmethods__["is_function"] = IsFunctionType
+-        if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
+-        
+-        __swig_getmethods__["num_fields"] = GetNumberOfFields
+-        if _newclass: num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
+-        
+-        __swig_getmethods__["num_bases"] = GetNumberOfDirectBaseClasses
+-        if _newclass: num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
+-        
+-        __swig_getmethods__["num_vbases"] = GetNumberOfVirtualBaseClasses
+-        if _newclass: num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
+-        
+-        __swig_getmethods__["num_template_args"] = GetNumberOfTemplateArguments
+-        if _newclass: num_template_args = property(GetNumberOfTemplateArguments, None, doc='''A read only property that returns number of template arguments in this type as an integer.''')
+-
+-        __swig_getmethods__["template_args"] = template_arg_array
+-        if _newclass: template_args = property(template_arg_array, None, doc='''A read only property that returns a list() of lldb.SBType objects that represent all template arguments in this type.''')
+-
+-        __swig_getmethods__["type"] = GetTypeClass
+-        if _newclass: type = property(GetTypeClass, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
+-        
+-        __swig_getmethods__["is_complete"] = IsTypeComplete
+-        if _newclass: is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
++        name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
++        size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
++        is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
++        is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
++        is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
++        num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
++        num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
++        num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
++        num_template_args = property(GetNumberOfTemplateArguments, None, doc='''A read only property that returns number of template arguments in this type as an integer.''')
++        template_args = property(template_arg_array, None, doc='''A read only property that returns a list() of lldb.SBType objects that represent all template arguments in this type.''')
++        type = property(GetTypeClass, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
++        is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
+ 
+         def get_bases_array(self):
+             '''An accessor function that returns a list() that contains all direct base classes in a lldb.SBType object.'''
+@@ -430,21 +395,11 @@ public:
+                 enum_members_list.append(sb_enum_members.GetTypeEnumMemberAtIndex(idx))
+             return enum_members_list
+ 
+-        __swig_getmethods__["bases"] = get_bases_array
+-        if _newclass: bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
+-        
+-        __swig_getmethods__["vbases"] = get_vbases_array
+-        if _newclass: vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
+-        
+-        __swig_getmethods__["fields"] = get_fields_array
+-        if _newclass: fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
+-
+-        __swig_getmethods__["members"] = get_members_array
+-        if _newclass: members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
+-
+-        __swig_getmethods__["enum_members"] = get_enum_members_array
+-        if _newclass: enum_members = property(get_enum_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
+-
++        bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
++        vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
++        fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
++        members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
++        enum_members = property(get_enum_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
+         %}
+ 
+ };
+diff --git a/scripts/interface/SBTypeCategory.i b/scripts/interface/SBTypeCategory.i
+index 924c7f697..47dbeba15 100644
+--- a/scripts/interface/SBTypeCategory.i
++++ b/scripts/interface/SBTypeCategory.i
+@@ -198,45 +198,20 @@ namespace lldb {
+                     filters.append(self.GetFilterAtIndex(idx))
+                 return filters
+ 
+-            __swig_getmethods__["formats"] = get_formats_array
+-            if _newclass: formats = property(get_formats_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFormat objects contained in this category''')
+-
+-            __swig_getmethods__["format"] = get_formats_access_object
+-            if _newclass: format = property(get_formats_access_object, None, doc=r'''A read only property that returns an object that you can use to look for formats by index or type name.''')
+-
+-            __swig_getmethods__["summaries"] = get_summaries_array
+-            if _newclass: summaries = property(get_summaries_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSummary objects contained in this category''')
+-
+-            __swig_getmethods__["summary"] = get_summaries_access_object
+-            if _newclass: summary = property(get_summaries_access_object, None, doc=r'''A read only property that returns an object that you can use to look for summaries by index or type name or regular expression.''')
+-
+-            __swig_getmethods__["filters"] = get_filters_array
+-            if _newclass: filters = property(get_filters_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFilter objects contained in this category''')
+-
+-            __swig_getmethods__["filter"] = get_filters_access_object
+-            if _newclass: filter = property(get_filters_access_object, None, doc=r'''A read only property that returns an object that you can use to look for filters by index or type name or regular expression.''')
+-
+-            __swig_getmethods__["synthetics"] = get_synthetics_array
+-            if _newclass: synthetics = property(get_synthetics_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSynthetic objects contained in this category''')
+-
+-            __swig_getmethods__["synthetic"] = get_synthetics_access_object
+-            if _newclass: synthetic = property(get_synthetics_access_object, None, doc=r'''A read only property that returns an object that you can use to look for synthetic children provider by index or type name or regular expression.''')
+-            
+-            __swig_getmethods__["num_formats"] = GetNumFormats
+-            if _newclass: num_formats = property(GetNumFormats, None)
+-            __swig_getmethods__["num_summaries"] = GetNumSummaries
+-            if _newclass: num_summaries = property(GetNumSummaries, None)
+-            __swig_getmethods__["num_filters"] = GetNumFilters
+-            if _newclass: num_filters = property(GetNumFilters, None)
+-            __swig_getmethods__["num_synthetics"] = GetNumSynthetics
+-            if _newclass: num_synthetics = property(GetNumSynthetics, None)
+-            
+-            __swig_getmethods__["name"] = GetName
+-            if _newclass: name = property(GetName, None)
+-            
+-            __swig_getmethods__["enabled"] = GetEnabled
+-            __swig_setmethods__["enabled"] = SetEnabled
+-            if _newclass: enabled = property(GetEnabled, SetEnabled)
++            formats = property(get_formats_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFormat objects contained in this category''')
++            format = property(get_formats_access_object, None, doc=r'''A read only property that returns an object that you can use to look for formats by index or type name.''')
++            summaries = property(get_summaries_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSummary objects contained in this category''')
++            summary = property(get_summaries_access_object, None, doc=r'''A read only property that returns an object that you can use to look for summaries by index or type name or regular expression.''')
++            filters = property(get_filters_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFilter objects contained in this category''')
++            filter = property(get_filters_access_object, None, doc=r'''A read only property that returns an object that you can use to look for filters by index or type name or regular expression.''')
++            synthetics = property(get_synthetics_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSynthetic objects contained in this category''')
++            synthetic = property(get_synthetics_access_object, None, doc=r'''A read only property that returns an object that you can use to look for synthetic children provider by index or type name or regular expression.''')
++            num_formats = property(GetNumFormats, None)
++            num_summaries = property(GetNumSummaries, None)
++            num_filters = property(GetNumFilters, None)
++            num_synthetics = property(GetNumSynthetics, None)
++            name = property(GetName, None)
++            enabled = property(GetEnabled, SetEnabled)
+         %}
+ 
+     };
+diff --git a/scripts/interface/SBTypeEnumMember.i b/scripts/interface/SBTypeEnumMember.i
+index 02d89f17a..bf8103cb3 100644
+--- a/scripts/interface/SBTypeEnumMember.i
++++ b/scripts/interface/SBTypeEnumMember.i
+@@ -43,17 +43,10 @@ public:
+                     lldb::DescriptionLevel description_level);
+ 
+     %pythoncode %{
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
+-
+-        __swig_getmethods__["type"] = GetType
+-        if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
+-
+-        __swig_getmethods__["signed"] = GetValueAsSigned
+-        if _newclass: signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
+-
+-        __swig_getmethods__["unsigned"] = GetValueAsUnsigned
+-        if _newclass: unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
++        name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
++        type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
++        signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
++        unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
+     %}
+ 
+ protected:
+diff --git a/scripts/interface/SBTypeFilter.i b/scripts/interface/SBTypeFilter.i
+index 083dfa843..622005a64 100644
+--- a/scripts/interface/SBTypeFilter.i
++++ b/scripts/interface/SBTypeFilter.i
+@@ -62,12 +62,8 @@ namespace lldb {
+         operator != (lldb::SBTypeFilter &rhs);
+         
+         %pythoncode %{
+-            __swig_getmethods__["options"] = GetOptions
+-            __swig_setmethods__["options"] = SetOptions
+-            if _newclass: options = property(GetOptions, SetOptions)
+-            
+-            __swig_getmethods__["count"] = GetNumberOfExpressionPaths
+-            if _newclass: count = property(GetNumberOfExpressionPaths, None)
++            options = property(GetOptions, SetOptions)
++            count = property(GetNumberOfExpressionPaths)
+         %}
+                 
+     };
+diff --git a/scripts/interface/SBTypeFormat.i b/scripts/interface/SBTypeFormat.i
+index 4e4b69c3f..3185399ec 100644
+--- a/scripts/interface/SBTypeFormat.i
++++ b/scripts/interface/SBTypeFormat.i
+@@ -62,13 +62,8 @@ namespace lldb {
+         operator != (lldb::SBTypeFormat &rhs);
+         
+         %pythoncode %{
+-            __swig_getmethods__["format"] = GetFormat
+-            __swig_setmethods__["format"] = SetFormat
+-            if _newclass: format = property(GetFormat, SetFormat)
+-            
+-            __swig_getmethods__["options"] = GetOptions
+-            __swig_setmethods__["options"] = SetOptions
+-            if _newclass: options = property(GetOptions, SetOptions)            
++            format = property(GetFormat, SetFormat)
++            options = property(GetOptions, SetOptions)
+         %}
+ 
+     };
+diff --git a/scripts/interface/SBTypeNameSpecifier.i b/scripts/interface/SBTypeNameSpecifier.i
+index 97d23ca17..df244e600 100644
+--- a/scripts/interface/SBTypeNameSpecifier.i
++++ b/scripts/interface/SBTypeNameSpecifier.i
+@@ -54,11 +54,8 @@ namespace lldb {
+         operator != (lldb::SBTypeNameSpecifier &rhs);
+         
+         %pythoncode %{
+-            __swig_getmethods__["name"] = GetName
+-            if _newclass: name = property(GetName, None)
+-            
+-            __swig_getmethods__["is_regex"] = IsRegex
+-            if _newclass: is_regex = property(IsRegex, None)
++            name = property(GetName)
++            is_regex = property(IsRegex)
+         %}
+ 
+         
+diff --git a/scripts/interface/SBTypeSummary.i b/scripts/interface/SBTypeSummary.i
+index 924256111..4d41030f2 100644
+--- a/scripts/interface/SBTypeSummary.i
++++ b/scripts/interface/SBTypeSummary.i
+@@ -100,21 +100,11 @@ namespace lldb {
+         operator != (lldb::SBTypeSummary &rhs);
+         
+         %pythoncode %{
+-            __swig_getmethods__["options"] = GetOptions
+-            __swig_setmethods__["options"] = SetOptions
+-            if _newclass: options = property(GetOptions, SetOptions)
+-            
+-            __swig_getmethods__["is_summary_string"] = IsSummaryString
+-            if _newclass: is_summary_string = property(IsSummaryString, None)
+-
+-            __swig_getmethods__["is_function_name"] = IsFunctionName
+-            if _newclass: is_function_name = property(IsFunctionName, None)
+-
+-            __swig_getmethods__["is_function_name"] = IsFunctionCode
+-            if _newclass: is_function_name = property(IsFunctionCode, None)
+-
+-            __swig_getmethods__["summary_data"] = GetData
+-            if _newclass: summary_data = property(GetData, None)
++            options = property(GetOptions, SetOptions)
++            is_summary_string = property(IsSummaryString)
++            is_function_name = property(IsFunctionName)
++            is_function_name = property(IsFunctionCode)
++            summary_data = property(GetData)
+         %}
+         
+     };
+diff --git a/scripts/interface/SBTypeSynthetic.i b/scripts/interface/SBTypeSynthetic.i
+index e040cd55c..68b524841 100644
+--- a/scripts/interface/SBTypeSynthetic.i
++++ b/scripts/interface/SBTypeSynthetic.i
+@@ -64,15 +64,9 @@ namespace lldb {
+         operator != (lldb::SBTypeSynthetic &rhs);
+         
+         %pythoncode %{
+-            __swig_getmethods__["options"] = GetOptions
+-            __swig_setmethods__["options"] = SetOptions
+-            if _newclass: options = property(GetOptions, SetOptions)
+-            
+-            __swig_getmethods__["contains_code"] = IsClassCode
+-            if _newclass: contains_code = property(IsClassCode, None)
+-            
+-            __swig_getmethods__["synthetic_data"] = GetData
+-            if _newclass: synthetic_data = property(GetData, None)
++            options = property(GetOptions, SetOptions)
++            contains_code = property(IsClassCode, None)
++            synthetic_data = property(GetData, None)
+         %}
+         
+     };
+diff --git a/scripts/interface/SBUnixSignals.i b/scripts/interface/SBUnixSignals.i
+index 2cb453710..1fcf46c8e 100644
+--- a/scripts/interface/SBUnixSignals.i
++++ b/scripts/interface/SBUnixSignals.i
+@@ -66,8 +66,7 @@ public:
+                 signals.append(self.GetSignalAtIndex(sig))
+             return signals
+ 
+-        __swig_getmethods__["signals"] = get_unix_signals_list
+-        if _newclass: threads = property(get_unix_signals_list, None, doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
++        threads = property(get_unix_signals_list, None, doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
+     %}
+ };
+ 
+diff --git a/scripts/interface/SBValue.i b/scripts/interface/SBValue.i
+index 6d06c6ab6..66a8d8776 100644
+--- a/scripts/interface/SBValue.i
++++ b/scripts/interface/SBValue.i
+@@ -483,96 +483,40 @@ public:
+                 children.append(accessor[idx])
+             return children
+         
+-        __swig_getmethods__["children"] = get_value_child_list
+-        if _newclass: children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
+-        
+-        __swig_getmethods__["child"] = get_child_access_object
+-        if _newclass: child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
+-
+-        __swig_getmethods__["name"] = GetName
+-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
+-
+-        __swig_getmethods__["type"] = GetType
+-        if _newclass: type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
+-
+-        __swig_getmethods__["size"] = GetByteSize
+-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
+-
+-        __swig_getmethods__["is_in_scope"] = IsInScope
+-        if _newclass: is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
+-
+-        __swig_getmethods__["format"] = GetFormat
+-        __swig_setmethods__["format"] = SetFormat
+-        if _newclass: format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
+-
+-        __swig_getmethods__["value"] = GetValue
+-        __swig_setmethods__["value"] = SetValueFromCString
+-        if _newclass: value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
+-
+-        __swig_getmethods__["value_type"] = GetValueType
+-        if _newclass: value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
+-
+-        __swig_getmethods__["changed"] = GetValueDidChange
+-        if _newclass: changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
+-
+-        __swig_getmethods__["data"] = GetData
+-        if _newclass: data = property(GetData, None, doc='''A read only property that returns an lldb object (lldb.SBData) that represents the bytes that make up the value for this object.''')
+-
+-        __swig_getmethods__["load_addr"] = GetLoadAddress
+-        if _newclass: load_addr = property(GetLoadAddress, None, doc='''A read only property that returns the load address of this value as an integer.''')
+-
+-        __swig_getmethods__["addr"] = GetAddress
+-        if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb.SBAddress that represents the address of this value if it is in memory.''')
+-
+-        __swig_getmethods__["deref"] = Dereference
+-        if _newclass: deref = property(Dereference, None, doc='''A read only property that returns an lldb.SBValue that is created by dereferencing this value.''')
+-
+-        __swig_getmethods__["address_of"] = AddressOf
+-        if _newclass: address_of = property(AddressOf, None, doc='''A read only property that returns an lldb.SBValue that represents the address-of this value.''')
+-
+-        __swig_getmethods__["error"] = GetError
+-        if _newclass: error = property(GetError, None, doc='''A read only property that returns the lldb.SBError that represents the error from the last time the variable value was calculated.''')
+-    
+-        __swig_getmethods__["summary"] = GetSummary
+-        if _newclass: summary = property(GetSummary, None, doc='''A read only property that returns the summary for this value as a string''')
+-
+-        __swig_getmethods__["description"] = GetObjectDescription
+-        if _newclass: description = property(GetObjectDescription, None, doc='''A read only property that returns the language-specific description of this value as a string''')
+-        
+-        __swig_getmethods__["dynamic"] = __get_dynamic__
+-        if _newclass: dynamic = property(__get_dynamic__, None, doc='''A read only property that returns an lldb.SBValue that is created by finding the dynamic type of this value.''')
+-        
+-        __swig_getmethods__["location"] = GetLocation
+-        if _newclass: location = property(GetLocation, None, doc='''A read only property that returns the location of this value as a string.''')
+-
+-        __swig_getmethods__["target"] = GetTarget
+-        if _newclass: target = property(GetTarget, None, doc='''A read only property that returns the lldb.SBTarget that this value is associated with.''')
+-
+-        __swig_getmethods__["process"] = GetProcess
+-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
+-
+-        __swig_getmethods__["thread"] = GetThread
+-        if _newclass: thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
+-
+-        __swig_getmethods__["frame"] = GetFrame
+-        if _newclass: frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
+-
+-        __swig_getmethods__["num_children"] = GetNumChildren
+-        if _newclass: num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
+-
+-        __swig_getmethods__["unsigned"] = GetValueAsUnsigned
+-        if _newclass: unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
+-
+-        __swig_getmethods__["signed"] = GetValueAsSigned
+-        if _newclass: signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')
++        children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
++        child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
++        name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
++        type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
++        size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
++        is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
++        format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
++        value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
++        value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
++        changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
++        data = property(GetData, None, doc='''A read only property that returns an lldb object (lldb.SBData) that represents the bytes that make up the value for this object.''')
++        load_addr = property(GetLoadAddress, None, doc='''A read only property that returns the load address of this value as an integer.''')
++        addr = property(GetAddress, None, doc='''A read only property that returns an lldb.SBAddress that represents the address of this value if it is in memory.''')
++        deref = property(Dereference, None, doc='''A read only property that returns an lldb.SBValue that is created by dereferencing this value.''')
++        address_of = property(AddressOf, None, doc='''A read only property that returns an lldb.SBValue that represents the address-of this value.''')
++        error = property(GetError, None, doc='''A read only property that returns the lldb.SBError that represents the error from the last time the variable value was calculated.''')
++        summary = property(GetSummary, None, doc='''A read only property that returns the summary for this value as a string''')
++        description = property(GetObjectDescription, None, doc='''A read only property that returns the language-specific description of this value as a string''')
++        dynamic = property(__get_dynamic__, None, doc='''A read only property that returns an lldb.SBValue that is created by finding the dynamic type of this value.''')
++        location = property(GetLocation, None, doc='''A read only property that returns the location of this value as a string.''')
++        target = property(GetTarget, None, doc='''A read only property that returns the lldb.SBTarget that this value is associated with.''')
++        process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
++        thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
++        frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
++        num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
++        unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
++        signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')
+ 
+         def get_expr_path(self):
+             s = SBStream()
+             self.GetExpressionPath (s)
+             return s.GetData()
+         
+-        __swig_getmethods__["path"] = get_expr_path
+-        if _newclass: path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
++        path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
+         
+         def synthetic_child_from_expression(self, name, expr, options=None):
+             if options is None: options = lldb.SBExpressionOptions()
