@@ -2,14 +2,14 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=shadow
-pkgver=4.6
-pkgrel=3
+pkgver=4.7
+pkgrel=1
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
 license=('BSD')
 groups=('base')
-depends=('bash' 'pam' 'acl' 'audit' 'libaudit.so')
+depends=('pam' 'acl' 'audit' 'libaudit.so')
 makedepends=('git' 'libxslt' 'docbook-xsl' 'gnome-doc-utils')
 backup=(etc/login.defs
         etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
@@ -17,7 +17,6 @@ backup=(etc/login.defs
         etc/pam.d/{chgpasswd,groupmems}
         etc/default/useradd)
 options=(strip debug)
-install='shadow.install'
 validpgpkeys=('D5C2F9BFCA128BBA22A77218872F702C4D6E25A8')  # Christian Perrier
 source=("git+https://github.com/shadow-maint/shadow.git#tag=$pkgver"
         LICENSE
@@ -51,12 +50,6 @@ prepare() {
   cd "$pkgname"
 
   local backports=(
-    # Fix usermod crash
-    73a876a05612c278da747faeaeea40c3b8d34a53
-    # usermod: prevent a segv
-    48dcf7852e51b9d8e7926737cc7f7823978b7d7d
-    # https://github.com/shadow-maint/shadow/issues/125
-    10e388efc2c786d1ec4ed007891bfefa8826b6fd
   )
 
   for commit in "${backports[@]}"; do
