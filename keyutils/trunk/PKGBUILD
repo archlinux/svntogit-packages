@@ -2,7 +2,7 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=keyutils
-pkgver=1.6
+pkgver=1.6.1
 pkgrel=1
 pkgdesc='Linux Key Management Utilities'
 arch=('x86_64')
