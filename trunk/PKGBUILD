@@ -2,8 +2,8 @@
 # Contributor: Brice Carpentier <brice@daknet.org>
 
 pkgname=cairo
-pkgver=1.16.0
-pkgrel=2
+pkgver=1.17.2+17+g52a7c79fd
+pkgrel=1
 pkgdesc="2D graphics library with support for multiple output devices"
 url="https://cairographics.org/"
 arch=(x86_64)
@@ -11,11 +11,9 @@ license=(LGPL MPL)
 depends=(libpng libxrender libxext fontconfig pixman glib2 lzo)
 makedepends=(librsvg gtk2 poppler-glib libspectre gtk-doc valgrind git)
 checkdepends=(ttf-dejavu gsfonts)
-_commit=3ad43122b21a3299dd729dc8462d6b8f7f01142d  # tags/1.16.0^0
-source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit"
-        0001-ft-Use-FT_Done_MM_Var-instead-of-free-when-available.patch)
-sha1sums=('SKIP'
-          '9850a5b06e300055676ad1f5dfa90ecba0fe623c')
+_commit=52a7c79fd4ff96bb5fac175f0199819b0f8c18fc  # master
+source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd cairo
@@ -25,12 +23,12 @@ pkgver() {
 prepare() {
   cd cairo
 
-  # CVE-2018-19876
-  patch -Np1 -i ../0001-ft-Use-FT_Done_MM_Var-instead-of-free-when-available.patch
-
   # Update gtk-doc
   cp /usr/share/aclocal/gtk-doc.m4 build/aclocal.gtk-doc.m4
   cp /usr/share/gtk-doc/data/gtk-doc.make build/Makefile.am.gtk-doc
+
+  # Fix typo
+  sed -i 's/have_png/use_png/g' configure.ac
 
   NOCONFIGURE=1 ./autogen.sh
 }
@@ -50,7 +48,7 @@ build() {
         --enable-gtk-doc \
         --enable-full-testing \
         --enable-test-surfaces
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  sed -i 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
