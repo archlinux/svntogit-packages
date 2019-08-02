@@ -1,0 +1,101 @@
+From 5cd8acebe8461850667215b4c6b19e9ebf4c82f2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marco=20Trevisan=20=28Trevi=C3=B1o=29?= <mail@3v1n0.net>
+Date: Tue, 5 Dec 2017 02:41:50 +0100
+Subject: [PATCH] tweener: Save handlers on target and remove them on destroy
+
+Cherry picked from commit 28ac564b568e4546d32728b426e9d0414e95d30d.
+
+A tweener onComplete handler could be called when the target actor has already
+been destroyed, and this could lead accessing to invalid properties of it.
+
+So, wrap the handlers with lambda functions that we delete them when the object
+state so that they are not called anymore after this point.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=791233
+https://gitlab.gnome.org/GNOME/gnome-shell/merge_requests/4
+---
+ js/ui/tweener.js | 56 +++++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 44 insertions(+), 12 deletions(-)
+
+diff --git a/js/ui/tweener.js b/js/ui/tweener.js
+index bb9ea557c..25338367d 100644
+--- a/js/ui/tweener.js
++++ b/js/ui/tweener.js
+@@ -63,30 +63,62 @@ function _getTweenState(target) {
+     return target.__ShellTweenerState;
+ }
+ 
++function _ensureHandlers(target) {
++    if (!target.__ShellTweenerHandlers)
++        target.__ShellTweenerHandlers = new Map();
++    return target.__ShellTweenerHandlers;
++}
++
+ function _resetTweenState(target) {
+     let state = target.__ShellTweenerState;
+ 
+     if (state) {
+-        if (state.destroyedId)
++        if (state.destroyedId) {
+             state.actor.disconnect(state.destroyedId);
++            delete state.destroyedId;
++        }
+     }
+ 
++    _removeHandler(target, 'onComplete', _tweenCompleted);
+     target.__ShellTweenerState = {};
+ }
+ 
+ function _addHandler(target, params, name, handler) {
+-    if (params[name]) {
+-        let oldHandler = params[name];
+-        let oldScope = params[name + 'Scope'];
+-        let oldParams = params[name + 'Params'];
+-        let eventScope = oldScope ? oldScope : target;
++    let wrapperNeeded = false;
++    let tweenerHandlers = _ensureHandlers(target);
+ 
+-        params[name] = () => {
+-            oldHandler.apply(eventScope, oldParams);
+-            handler(target);
+-        };
+-    } else
+-        params[name] = () => { handler(target); };
++    if (!tweenerHandlers.has(name)) {
++        tweenerHandlers.set(name, []);
++        wrapperNeeded = true;
++    }
++
++    let handlers = tweenerHandlers.get(name);
++    handlers.push(handler);
++
++    if (wrapperNeeded) {
++        if (params[name]) {
++            let oldHandler = params[name];
++            let oldScope = params[`${name}Scope`];
++            let oldParams = params[`${name}Params`];
++            let eventScope = oldScope ? oldScope : target;
++
++            params[name] = () => {
++                oldHandler.apply(eventScope, oldParams);
++                handlers.forEach(h => h(target));
++            };
++        } else {
++            params[name] = () => handlers.forEach(h => h(target));
++        }
++    }
++}
++
++function _removeHandler(target, name, handler) {
++    let tweenerHandlers = _ensureHandlers(target);
++
++    if (tweenerHandlers.has(name)) {
++        let handlers = tweenerHandlers.get(name).filter(h => h != handler);
++        tweenerHandlers.set(name, handlers);
++    }
+ }
+ 
+ function _actorDestroyed(target) {
+-- 
+2.22.0
+
