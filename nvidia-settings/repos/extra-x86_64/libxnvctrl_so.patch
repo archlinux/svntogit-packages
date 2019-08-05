@@ -1,67 +1,36 @@
---- a/src/Makefile
-+++ b/src/Makefile
-@@ -106,6 +106,8 @@
- XNVCTRL_DIR             ?= libXNVCtrl
- XNVCTRL_MAKEFILE        ?= Makefile
- XNVCTRL_ARCHIVE         ?= $(XNVCTRL_DIR)/libXNVCtrl.a
-+XNVCTRL_SHARED          ?= $(XNVCTRL_DIR)/libXNVCtrl.so.0
-+XNVCTRL_LIB             ?= $(XNVCTRL_SHARED)
- XCONFIG_PARSER_DIR      ?= XF86Config-parser
- COMMON_UTILS_DIR        ?= common-utils
- COMMON_UNIX_DIR         ?= common-unix
-@@ -280,15 +282,18 @@
- 	$(MKDIR) $(BINDIR)
- 	$(INSTALL) $(INSTALL_BIN_ARGS) $< $(BINDIR)/$(notdir $<)
+--- src/libXNVCtrl/Makefile	2019-07-30 00:26:56.000000000 +0200
++++ src/libXNVCtrl/Makefile	2019-08-02 14:08:56.963744238 +0200
+@@ -50,8 +50,8 @@
  
-+$(XNVCTRL_ARCHIVE) $(XNVCTRL_SHARED):
-+	$(MAKE) -C $(XNVCTRL_DIR)
-+
- $(eval $(call DEBUG_INFO_RULES, $(NVIDIA_SETTINGS)))
--$(NVIDIA_SETTINGS).unstripped: $(OBJS) $(XNVCTRL_ARCHIVE)
-+$(NVIDIA_SETTINGS).unstripped: $(OBJS) $(XNVCTRL_LIB)
- 	$(call quiet_cmd,LINK) $(CFLAGS) $(LDFLAGS) $(BIN_LDFLAGS) \
--	    -rdynamic -o $@ $(OBJS) $(XNVCTRL_ARCHIVE) $(LIBS)
-+	    -rdynamic -o $@ $(OBJS) $(XNVCTRL_LIB) $(LIBS)
- 
- $(eval $(call DEBUG_INFO_RULES, $(GTK2LIB)))
- $(GTK2LIB).unstripped: $(GTK2_OBJS) $(XCP_OBJS) $(IMAGE_OBJS) $(VERSION_MK)
- 	$(call quiet_cmd,LINK) -shared $(CFLAGS) $(LDFLAGS) $(BIN_LDFLAGS) \
--	    $(XNVCTRL_ARCHIVE) $(LIBS) $(GTK2_LIBS) \
-+	    $(XNVCTRL_LIB) $(LIBS) $(GTK2_LIBS) \
- 	    -Wl,--unresolved-symbols=ignore-all -o $@ \
- 	    -Wl,-soname -Wl,$(GTK2LIB_SONAME) \
- 	    $(GTK2_OBJS) $(XCP_OBJS)
-@@ -297,7 +302,7 @@
- $(eval $(call DEBUG_INFO_RULES, $(GTK3LIB)))
- $(GTK3LIB).unstripped: $(GTK3_OBJS) $(XCP_OBJS) $(VERSION_MK)
- 	$(call quiet_cmd,LINK) -shared $(CFLAGS) $(LDFLAGS)  $(BIN_LDFLAGS) \
--	    $(XNVCTRL_ARCHIVE) $(LIBS) $(GTK3_LIBS) \
-+	    $(XNVCTRL_LIB) $(LIBS) $(GTK3_LIBS) \
- 	    -Wl,--unresolved-symbols=ignore-all -o $@ \
- 	    -Wl,-soname -Wl,$(GTK3LIB_SONAME) \
- 	    $(GTK3_OBJS) $(XCP_OBJS)
---- a/src/libXNVCtrl/Makefile
-+++ b/src/libXNVCtrl/Makefile
-@@ -55,10 +55,17 @@
  .PHONY: clean
  
- all: $(LIBXNVCTRL)
-+all: libXNVCtrl.so
+-all: $(LIBXNVCTRL)
++all: $(LIBXNVCTRL) $(LIBXNVCTRL_SHARED)
  
- $(LIBXNVCTRL) : $(OBJS)
- 	$(AR) ru $@ $(OBJS)
- 
-+libXNVCtrl.so: $(OBJS)
-+	$(RM) $@ $@.*
-+	$(CC) -shared -Wl,-soname=$@.0 -o $@.0.0.0 $(LDFLAGS) $^ -lXext -lX11
-+	ln -s $@.0.0.0 $@.0
-+	ln -s $@.0 $@
-+
- # define the rule to build each object file
- $(foreach src,$(SRC),$(eval $(call DEFINE_OBJECT_RULE,TARGET,$(src))))
- 
-@@ -68,3 +75,4 @@
  clean:
- 	rm -rf $(LIBXNVCTRL) *~ $(STAMP_C) \
+-	rm -rf $(LIBXNVCTRL) *~ \
++	rm -rf $(LIBXNVCTRL) $(LIBXNVCTRL_SHARED)* *~ \
  		$(OUTPUTDIR)/*.o $(OUTPUTDIR)/*.d
-+	rm -f libXNVCtrl.so libXNVCtrl.so.*
+--- src/libXNVCtrl/xnvctrl.mk	2019-08-02 17:04:08.216230565 +0200
++++ src/libXNVCtrl/xnvctrl.mk	2019-08-02 17:08:02.563660632 +0200
+@@ -39,6 +39,11 @@
+ 
+ LIBXNVCTRL = $(OUTPUTDIR)/libXNVCtrl.a
+ 
++LIBXNVCTRL_SHARED = $(OUTPUTDIR)/libXNVCtrl.so
++LIBXNVCTRL_ABI_VERSION_MAJOR = 0
++LIBXNVCTRL_ABI_VERSION_MINOR = 0
++LIBXNVCTRL_LIBS += -lXext -lX11
++
+ LIBXNVCTRL_SRC = $(XNVCTRL_DIR)/NVCtrl.c
+ 
+ LIBXNVCTRL_OBJ = $(call BUILD_OBJECT_LIST,$(LIBXNVCTRL_SRC))
+@@ -47,3 +52,8 @@
+ 
+ $(LIBXNVCTRL) : $(LIBXNVCTRL_OBJ)
+ 	$(call quiet_cmd,AR) ru $@ $(LIBXNVCTRL_OBJ)
++
++$(LIBXNVCTRL_SHARED) : $(LIBXNVCTRL_OBJ)
++	$(CC) -shared $(CFLAGS) $(LDFALGS) -Wl,-soname=$(notdir $@).${LIBXNVCTRL_ABI_VERSION_MAJOR} -o $@.$(LIBXNVCTRL_ABI_VERSION_MAJOR).$(LIBXNVCTRL_ABI_VERSION_MINOR).0 $^ $(LIBXNVCTRL_LIBS)
++	ln -s $(notdir $@).$(LIBXNVCTRL_ABI_VERSION_MAJOR).$(LIBXNVCTRL_ABI_VERSION_MINOR).0 $@
++	ln -s $(notdir $@).$(LIBXNVCTRL_ABI_VERSION_MAJOR).$(LIBXNVCTRL_ABI_VERSION_MINOR).0 $@.$(LIBXNVCTRL_ABI_VERSION_MAJOR)
