@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.2
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -26,6 +26,7 @@ depends=(
   libass.so
   libavc1394
   libbluray.so
+  libdav1d.so
   libdrm
   libfreetype.so
   libiec61883
@@ -98,6 +99,7 @@ build() {
     --enable-libaom \
     --enable-libass \
     --enable-libbluray \
+    --enable-libdav1d \
     --enable-libdrm \
     --enable-libfreetype \
     --enable-libfribidi \
