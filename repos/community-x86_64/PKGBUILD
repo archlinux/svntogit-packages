@@ -2,9 +2,9 @@
 # Contributor: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=libmspack
-pkgver=0.10.1alpha
-pkgrel=1
 epoch=1
+pkgver=0.10.1alpha
+pkgrel=2
 pkgdesc='A library for Microsoft compression formats'
 url='https://www.cabextract.org.uk/libmspack/'
 arch=('x86_64')
