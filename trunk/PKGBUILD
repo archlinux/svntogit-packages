@@ -4,51 +4,53 @@
 
 pkgname=fluidsynth
 pkgver=2.0.5
-pkgrel=1
+pkgrel=2
 pkgdesc="A real-time software synthesizer based on the SoundFont 2 specifications"
 arch=('x86_64')
 url="http://www.fluidsynth.org/"
-license=('LGPL')
+license=('LGPL2.1')
 groups=('pro-audio')
 depends=('glib2' 'libpulse' 'portaudio')
 makedepends=('cmake' 'ladspa' 'doxygen')
 optdepends=('pulseaudio: PulseAudio sound support')
-provides=('soundfont-synthesizer')
+provides=('libfluidsynth.so' 'soundfont-synthesizer')
 backup=("etc/conf.d/$pkgname")
 source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/v$pkgver.tar.gz")
 sha512sums=('5344ac889d2927dc2465bae40096d756a9bf9b1100e287ba0621c55ffc76f9cb8fa763f6bc832d701cd0ad2997965cf344f58ae4b3dd445eb3491e3659c093d9')
 
 prepare() {
   cd "${pkgname}-${pkgver}"
-  # out-of-tree build
   mkdir build
 }
 
 build() {
-  cd "${pkgname}-${pkgver}/build"
-  cmake .. -DCMAKE_INSTALL_PREFIX=/usr \
-           -DFLUID_DAEMON_ENV_FILE=/etc/conf.d/fluidsynth \
-           -Denable-ladspa=ON \
-           -Denable-portaudio=ON \
-           -DLIB_SUFFIX=""
-  make
+  cd "${pkgname}-${pkgver}"
+  (
+    cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr \
+             -DFLUID_DAEMON_ENV_FILE=/etc/conf.d/fluidsynth \
+             -Denable-ladspa=ON \
+             -Denable-portaudio=ON \
+             -DLIB_SUFFIX=""
+  )
+  make -C build VERBOSE=1
 }
 
 check() {
-  cd "${pkgname}-${pkgver}/build"
-  make -k check
+  cd "${pkgname}-${pkgver}"
+  make -C build -k check
 }
 
 package() {
-  cd "${pkgname}-${pkgver}/build"
-  make DESTDIR="$pkgdir" install
+  cd "${pkgname}-${pkgver}"
+  make -C build DESTDIR="$pkgdir" install
   # systemd user unit
-  install -vDm 644 "${pkgname}.service" \
+  install -vDm 644 "build/${pkgname}.service" \
     -t "$pkgdir/usr/lib/systemd/user/"
   # system-wide configuration file
-  install -vDm 644 "${pkgname}.conf" "${pkgdir}/etc/conf.d/${pkgname}"
+  install -vDm 644 "build/${pkgname}.conf" "${pkgdir}/etc/conf.d/${pkgname}"
   # docs
-  install -t "${pkgdir}/usr/share/doc/${pkgname}" \
-    -vDm 644 ../{AUTHORS,ChangeLog,NEWS,README.md,THANKS,TODO}
+  install -vDm 644 {AUTHORS,ChangeLog,NEWS,README.md,THANKS,TODO} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
 
