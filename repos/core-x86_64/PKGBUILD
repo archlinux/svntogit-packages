@@ -3,7 +3,7 @@
 
 pkgname=shadow
 pkgver=4.7
-pkgrel=1
+pkgrel=2
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
@@ -28,6 +28,7 @@ source=("git+https://github.com/shadow-maint/shadow.git#tag=$pkgver"
         passwd
         shadow.{timer,service}
         useradd.defaults)
+install=shadow.install
 sha1sums=('SKIP'
           '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
           '4ad0e059406a305c8640ed30d93c2a1f62c2f4ad'
