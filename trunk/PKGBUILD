@@ -5,7 +5,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia')
 pkgver=430.40
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -164,6 +164,13 @@ package_nvidia-utils() {
     install -D -m644 NVIDIA_Changelog "${pkgdir}/usr/share/doc/nvidia/NVIDIA_Changelog"
     cp -r html "${pkgdir}/usr/share/doc/nvidia/"
     ln -s nvidia "${pkgdir}/usr/share/doc/nvidia-utils"
+
+    # new power management support
+    install -D -m644 nvidia-suspend.service "${pkgdir}/usr/lib/systemd/system/nvidia-suspend.service"
+    install -D -m644 nvidia-hibernate.service "${pkgdir}/usr/lib/systemd/system/nvidia-hibernate.service"
+    install -D -m644 nvidia-resume.service "${pkgdir}/usr/lib/systemd/system/nvidia-resume.service"
+    install -D -m755 nvidia "${pkgdir}/usr/lib/systemd/system-sleep/nvidia"
+    install -D -m755 nvidia-sleep.sh "${pkgdir}/usr/bin/nvidia-sleep.sh"
 
     # distro specific files must be installed in /usr/share/X11/xorg.conf.d
     install -D -m644 "${srcdir}/nvidia-drm-outputclass.conf" "${pkgdir}/usr/share/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf"
