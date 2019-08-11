@@ -1,0 +1,84 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@gmail.com>
+# Contributor: Javier Torres <javitonino [at] gmail [dot] com>
+# Contributor: Jameson Pugh <imntreal@gmail.com>
+# Contributor: Xiao-Long Chen <chenxiaolong@cxl.epac.to>
+
+pkgbase=389-ds-base
+pkgname=(389-ds-base python-lib389)
+pkgver=1.4.1.6
+pkgrel=1
+pkgdesc="389 Directory Server (base)"
+arch=(x86_64)
+url="http://port389.org/"
+license=(GPL)
+depends=(libevent nspr nss net-snmp pam openldap)
+checkdepends=(python-pytest)
+makedepends=(cargo rsync doxygen cmocka python python-setuptools
+						 python-argparse-manpage python-argcomplete python-ldap)
+options=(!libtool)
+source=("https://releases.pagure.org/389-ds-base/${pkgname}-${pkgver}.tar.bz2")
+sha512sums=('0a943453cbcd8b43b4fdc58563c8802d9270d9a3cf4dcd76e3f77168d45e84b8e07d8df8ddadb09ba9294e7ba7e9304ce329bc37edeb16a9161797c902fadc1c')
+
+prepare() {
+  cd "${pkgbase}-${pkgver}"
+
+	autoreconf -fiv
+}
+
+build() {
+  cd "${pkgbase}-${pkgver}"
+
+	# Build 389-ds-base
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin \
+    --localstatedir=/var \
+		--libexecdir=/usr/lib/${pkgbase} \
+    --with-tmpfiles-d=/usr/lib/tmpfiles.d \
+    --with-systemd \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-systemdsystemconfdir=/etc/systemd/system \
+		--with-journald \
+    --enable-autobind \
+		--enable-cmocka \
+    --with-openldap \
+    --enable-rust
+  make
+
+	# Build python-lib389
+  cd src/lib389
+	python setup.py build
+}
+
+check() {
+  cd "${pkgbase}-${pkgver}"
+  make check
+}
+
+package_389-ds-base() {
+  provides=(libsvrcore.so)
+  optdepends=('python-lib389: Python management scripts')
+  backup=(etc/dirsrv/config/certmap.conf
+          etc/dirsrv/config/ldap-agent.conf
+          etc/dirsrv/config/slapd-collations.conf
+          etc/dirsrv/config/template-initconfig)
+
+  cd "${pkgbase}-${pkgver}"
+  make -j1 DESTDIR="${pkgdir}/" install
+
+  install -dm755 "${pkgdir}"/var/log/${pkgbase}/ "${pkgdir}"/var/lib/${pkgbase}/
+	install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
+
+package_python-lib389() {
+	depends=(python python-argcomplete python-ldap)
+
+  cd "${pkgbase}-${pkgver}"/src/lib389
+	python setup.py install --skip-build -O1 --root=${pkgdir}
+	mv ${pkgdir}/usr/sbin ${pkgdir}/usr/bin
+
+	install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
+
+# vim: set ts=2 sw=2 ft=sh noet:
