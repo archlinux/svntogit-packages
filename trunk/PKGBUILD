@@ -3,7 +3,7 @@
 
 pkgname=xfce4-power-manager
 pkgver=1.6.5
-pkgrel=1
+pkgrel=2
 pkgdesc="Power manager for Xfce desktop"
 arch=('x86_64')
 url="https://www.xfce.org/"
