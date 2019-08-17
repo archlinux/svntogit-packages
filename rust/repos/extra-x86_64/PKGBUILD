@@ -7,7 +7,7 @@
 
 pkgname=('rust' 'rust-docs')
 epoch=1
-pkgver=1.36.0
+pkgver=1.37.0
 pkgrel=1
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
@@ -23,9 +23,9 @@ options=('!emptydirs')
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         config.toml)
 
-sha256sums=('04c4e4d7213d036d6aaed392841496d272146312c0290f728b7400fccd15bb1b'
+sha256sums=('120e7020d065499cc6b28759ff04153bfdc2ac9b5adeb252331a4eb87cbe38c3'
             'SKIP'
-            'fa531e162f2bb06f85171df1a91e339b4c2e276dd4b8cd7448c0675d343ae80b')
+            '24a5fbf558c7ffb39b3e712f26e0261a2e1f35d2caff17981e828c36bb5c746a')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE') # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
 
 prepare() {
