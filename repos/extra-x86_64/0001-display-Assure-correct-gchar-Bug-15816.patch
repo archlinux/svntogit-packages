@@ -1,0 +1,103 @@
+From ae8221b23f72f62276bd0a0ffe129329b217a612 Mon Sep 17 00:00:00 2001
+From: Simon Steinbeiss <simon.steinbeiss@elfenbeinturm.at>
+Date: Mon, 19 Aug 2019 18:09:48 +0200
+Subject: [PATCH 1/2] display: Assure correct gchar** (Bug #15816)
+
+---
+ common/display-profiles.c       | 7 +------
+ dialogs/display-settings/main.c | 5 ++++-
+ xfsettingsd/displays.c          | 6 +++++-
+ 3 files changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/common/display-profiles.c b/common/display-profiles.c
+index 2265a223..1aab530e 100644
+--- a/common/display-profiles.c
++++ b/common/display-profiles.c
+@@ -108,7 +108,7 @@ display_settings_get_profiles (gchar **display_infos, XfconfChannel *channel)
+             continue;
+         }
+ 
+-        profile_name = g_strdup_printf ("%s", *(current_elements+1));
++        profile_name = g_strdup_printf ("%s", *(current_elements + 1));
+         g_strfreev (current_elements);
+ 
+         /* Walk through the profile and check if every EDID referenced there is also currently available */
+@@ -162,11 +162,6 @@ display_settings_get_profiles (gchar **display_infos, XfconfChannel *channel)
+         g_free (profile_name);
+     }
+ 
+-    for (m = 0; m < noutput; ++m)
+-    {
+-        g_free (display_infos[m]);
+-    }
+-    g_free (display_infos);
+     g_list_free (channel_contents);
+     g_hash_table_destroy (properties);
+ 
+diff --git a/dialogs/display-settings/main.c b/dialogs/display-settings/main.c
+index bbabfaaa..dc528483 100644
+--- a/dialogs/display-settings/main.c
++++ b/dialogs/display-settings/main.c
+@@ -1264,12 +1264,13 @@ display_settings_get_display_infos (void)
+     gchar   **display_infos;
+     guint     m;
+ 
+-    display_infos = g_new0 (gchar *, xfce_randr->noutput);
++    display_infos = g_new0 (gchar *, xfce_randr->noutput + 1);
+     /* get all display edids, to only query randr once */
+     for (m = 0; m < xfce_randr->noutput; ++m)
+     {
+         display_infos[m] = g_strdup_printf ("%s", xfce_randr_get_edid (xfce_randr, m));
+     }
++
+     return display_infos;
+ }
+ 
+@@ -1286,6 +1287,7 @@ display_settings_minimal_profile_populate (GtkBuilder *builder)
+ 
+     display_infos = display_settings_get_display_infos ();
+     profiles = display_settings_get_profiles (display_infos, display_channel);
++    g_strfreev (display_infos);
+ 
+     current = g_list_first (profiles);
+     while (current)
+@@ -1386,6 +1388,7 @@ display_settings_profile_list_populate (GtkBuilder *builder)
+ 
+     display_infos = display_settings_get_display_infos ();
+     profiles = display_settings_get_profiles (display_infos, display_channel);
++    g_strfreev (display_infos);
+ 
+     /* Populate treeview */
+     current = g_list_first (profiles);
+diff --git a/xfsettingsd/displays.c b/xfsettingsd/displays.c
+index 4933ca40..289ff206 100644
+--- a/xfsettingsd/displays.c
++++ b/xfsettingsd/displays.c
+@@ -444,7 +444,7 @@ xfce_displays_helper_get_display_infos (gint      noutput,
+     gint       m;
+     guint8    *edid_data;
+ 
+-    display_infos = g_new0 (gchar *, noutput);
++    display_infos = g_new0 (gchar *, noutput + 1);
+     /* get all display edids, to only query randr once */
+     for (m = 0; m < noutput; ++m)
+     {
+@@ -452,7 +452,10 @@ xfce_displays_helper_get_display_infos (gint      noutput,
+ 
+         if (edid_data)
+             display_infos[m] = g_compute_checksum_for_data (G_CHECKSUM_SHA1 , edid_data, 128);
++        else
++            display_infos[m] = g_strdup ("");
+     }
++
+     return display_infos;
+ }
+ 
+@@ -473,6 +476,7 @@ xfce_displays_helper_get_matching_profile (XfceDisplaysHelper *helper)
+     if (display_infos)
+     {
+         profiles = display_settings_get_profiles (display_infos, helper->channel);
++        g_strfreev (display_infos);
+     }
+ 
+     if (profiles == NULL)
