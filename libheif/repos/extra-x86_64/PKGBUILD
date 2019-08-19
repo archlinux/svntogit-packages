@@ -2,8 +2,8 @@
 # Contributor: Adam Fontenot <fontenot@ucla.edu>
 
 pkgname=libheif
-pkgver=1.4.0
-pkgrel=3
+pkgver=1.5.0
+pkgrel=1
 pkgdesc="HEIF file format decoder and encoder"
 arch=(x86_64)
 url="https://github.com/strukturag/libheif"
@@ -12,7 +12,7 @@ makedepends=(libjpeg libpng gdk-pixbuf2)
 depends=(libde265 x265 shared-mime-info)
 optdepends=('libjpeg: for heif-convert and heif-enc' 'libpng: for heif-convert and heif-enc')
 source=(https://github.com/strukturag/libheif/releases/download/v$pkgver/libheif-$pkgver.tar.gz)
-sha256sums=('977a9831f1d61b5005566945c7e16e31de35a57a8dd6eb715ae0f40a3595cb60')
+sha256sums=('0d03f59cb5a71fbe08f4ac72d2dc4d7888b91fa4ef8e1c80189df3ca08facdb9')
 
 build() {
   cd $pkgname-$pkgver
