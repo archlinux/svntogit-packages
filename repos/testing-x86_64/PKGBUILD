@@ -5,7 +5,7 @@
 
 pkgname=dolphin
 pkgver=19.08.0
-pkgrel=1
+pkgrel=2
 pkgdesc="KDE File Manager"
 arch=(x86_64)
 url="https://kde.org/applications/system/dolphin/"
