@@ -8,25 +8,31 @@
 pkgname=('rust' 'rust-docs')
 epoch=1
 pkgver=1.37.0
-pkgrel=1
+pkgrel=2
+
+_llvm_ver=8.0.1
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
 url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' 'llvm' 'libffi' 'perl' 'python' 'curl' 'cmake')
+makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'perl' 'python' 'curl' 'cmake')
 checkdepends=('procps-ng' 'gdb')
 
 options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
+        "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
         config.toml)
 
 sha256sums=('120e7020d065499cc6b28759ff04153bfdc2ac9b5adeb252331a4eb87cbe38c3'
             'SKIP'
-            '24a5fbf558c7ffb39b3e712f26e0261a2e1f35d2caff17981e828c36bb5c746a')
-validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE') # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
+            '11828fb4823387d820c6715b25f6b2405e60837d12a7469e7a8882911c721837'
+            'SKIP'
+            '07affeba0bf6a50ebfcc471111b436cccfa01990802ad8fe567d1f3c9922a8fe')
+validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
+              '474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 prepare() {
   cd "rustc-$pkgver-src"
@@ -36,6 +42,9 @@ prepare() {
 
 build() {
   cd "rustc-$pkgver-src"
+
+  export RUST_BACKTRACE=1
+  export RUST_COMPILER_RT_ROOT="$srcdir/compiler-rt-$_llvm_ver.src"
 
   python ./x.py build -j"$(nproc)"
 }
