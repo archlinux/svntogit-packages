@@ -4,7 +4,7 @@
 
 pkgbase=python-setuptools
 pkgname=('python-setuptools' 'python2-setuptools')
-pkgver=41.0.1
+pkgver=41.1.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -18,7 +18,7 @@ _checkdeps=('mock' 'pip' 'pytest-fixture-config' 'pytest-flake8'
 checkdepends=("${_checkdeps[@]/#/python-}" "${_checkdeps[@]/#/python2-}" 'python-paver'
               'python2-futures' 'git')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('f3d6b81de7eb947fa8f7a3ad46d59e560940bc2f86672e072793d7cfa24267fb374a3b5b93ded6e10fd8889805ca26dfb7821a5d83992520c8b47628ca4174bf')
+sha512sums=('1dd7e6ef05e837c3645b0e9cef182a5e1e9488061c0fb5e9c750e8ec8aab963dd1c0972642556774c3d217587310b073750cbf6d4b9053bda13e044741e69a99')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -32,7 +32,7 @@ prepare() {
   # The simplest fix is to simply rewrite import paths to use the canonical
   # location in the first place
   for _module in setuptools pkg_resources '' ; do
-      find setuptools-$pkgver/$_module -name \*.py -exec sed -i \
+      find setuptools-$pkgver -name \*.py -exec sed -i \
           -e 's/from '$_module.extern' import/import/' \
           -e 's/from '$_module.extern'./from /' \
           -e 's/import '$_module.extern'./import /' \
