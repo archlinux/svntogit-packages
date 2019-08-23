@@ -30,6 +30,7 @@ pkgver() {
 
 prepare() {
   cd gtk
+  git cherry-pick -n 2dbf31c0ea4f17a817b931c731f8de14c278300d
   patch -Np1 -i ../xid-collision-debug.patch
   sed -i '1s/python$/&2/' gtk/gtk-builder-convert
   NOCONFIGURE=1 ./autogen.sh
