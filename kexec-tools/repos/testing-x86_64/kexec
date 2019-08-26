@@ -1,0 +1,45 @@
+#!/bin/bash
+
+[ -f /etc/conf.d/kexec ] && . /etc/conf.d/kexec
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+case "$1" in
+  start)
+      stat_busy "Enabling kexec on reboot"
+      add_daemon kexec
+      stat_done
+  ;;
+  
+  stop|load)
+    if [ "$RUNLEVEL" = "6" -o "$1" = "load" ]; then
+      stat_busy "Loading kexec kernel"
+      [ -f "$KPATH" ] || stat_fail
+      [ -f "$INITRD" ] && _INITRD="--initrd=$INITRD"
+      /sbin/kexec -l $KPATH --append="root=$ROOTPART $KPARAM" $_INITRD > /dev/null 2>&1
+    else
+      stat_busy "Disabling kexec on reboot"
+    fi
+    if [ $? -eq 0 ] ; then
+      rm_daemon kexec
+      stat_done
+    else
+      stat_fail
+    fi  
+  ;;
+
+  unload)
+    stat_busy "Unloading kexec kernel"
+    /sbin/kexec -u
+    if [ $? -eq 0 ] ; then
+      stat_done
+    else
+      stat_fail
+    fi
+  ;;
+
+  *)
+    echo "usage: $0 {start|stop|load|unload}"  
+esac
+exit 0
