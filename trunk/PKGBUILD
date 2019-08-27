@@ -3,7 +3,7 @@
 # Contributor: Sebastien Binet <binet@lblbox>
 
 pkgname=('python-pip' 'python2-pip')
-pkgver=19.2.2
+pkgver=19.2.3
 pkgrel=1
 pkgdesc="The PyPA recommended tool for installing Python packages"
 url="https://pip.pypa.io/"
@@ -17,7 +17,7 @@ checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'py
               'python-yaml' 'python-mock' 'python-freezegun' 'python-pip' 'python-wheel'
               'git' 'subversion')
 source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz")
-sha512sums=('ca634925e21aba338aa65f80d258833c6622b4c1d85eaf827fa5439aed62d7c6d64fde91cfebc05bd83eb215b019b690379cf5c4ac85a2f32d6357e6bd95fd88')
+sha512sums=('59fcb79173529097662fcb9662f78fee7b00f441d49ea41f280da4b27875a425cccaa3daeda647ac7cddf936111923dc1546a3474fcdd7003777178e7143f6eb')
 
 shopt -s extglob
 prepare() {
@@ -26,9 +26,6 @@ prepare() {
   rm -rf src/pip/_vendor/!(__init__.py)
   sed -i -e 's/DEBUNDLED = False/DEBUNDLED = True/' \
             src/pip/_vendor/__init__.py
-
-  # pytest 4
-  sed -i 's/get_marker/get_closest_marker/' tests/conftest.py
 }
 
 build() {
@@ -47,14 +44,11 @@ build() {
 }
 
 check() {
-  (
-    cd "$srcdir"/pip-$pkgver
-    pip wheel -w tests/data/common_wheels -r tools/tests-common_wheels-requirements.txt
-    python -m venv "$srcdir/pyvenv" --system-site-packages
-    . "$srcdir/pyvenv/bin/activate"
-    python setup.py install
-    python setup.py pytest
-  ) || warning "Tests failed"
+  cd "$srcdir"/pip-$pkgver
+  pip wheel -w tests/data/common_wheels -r tools/tests-common_wheels-requirements.txt
+  python setup.py install --root="$PWD/tmp_install" --optimize=1
+  PYTHONPATH="$PWD/tmp_install/usr/lib/python3.7/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" \
+    python setup.py pytest --addopts "-m unit --junit-xml=junit/unit-test.xml" || warning "Tests failed"
 }
 
 package_python-pip() {
