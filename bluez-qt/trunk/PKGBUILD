@@ -8,7 +8,7 @@ arch=(x86_64)
 url='https://community.kde.org/Frameworks'
 license=(GPL2)
 depends=(qt5-base bluez)
-makedepends=(extra-cmake-modules doxygen qt5-tools qt5-declarative)
+makedepends=(extra-cmake-modules doxygen qt5-tools qt5-doc qt5-declarative)
 optdepends=('qt5-declarative: QML bindings')
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig})
@@ -23,7 +23,6 @@ prepare() {
 build() {
   cd build
   cmake ../$pkgname-$pkgver \
-    -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DUDEV_RULES_INSTALL_DIR=/usr/lib/udev/rules.d \
     -DBUILD_TESTING=OFF \
