@@ -2,7 +2,7 @@
 # Contributor: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=wpa_supplicant
-pkgver=2.8
+pkgver=2.9
 pkgrel=1
 epoch=2
 pkgdesc='A utility providing key negotiation for WPA wireless networks'
@@ -15,7 +15,7 @@ source=(https://w1.fi/releases/${pkgname}-${pkgver}.tar.gz{,.asc}
         config
 )
 validpgpkeys=('EC4AA0A991A5F2464582D52D2B6EF432EFC895FA') # Jouni Malinen
-sha256sums=('a689336a12a99151b9de5e25bfccadb88438f4f4438eb8db331cd94346fd3d96'
+sha256sums=('fcbdee7b4a64bea8177973299c8c824419c413ec2e3a95db63dd6a5dc3541f17'
             'SKIP'
             '23aee0597750ec21b37654b5163e2f577c1204fc33bdfbf7bc2fb470e8a467db')
 
