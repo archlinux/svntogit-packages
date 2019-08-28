@@ -14,11 +14,11 @@ makedepends=(python-sphinx python-requests qt5-tools)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
         ECM-no-init.py.patch
-        libdir.patch)
+        libdir.patch::"https://cgit.kde.org/extra-cmake-modules.git/patch/?id=c806bd48")
 sha256sums=('a86a3b12c8a540af822131a8d65586d985267b1d642c29b4815b6c7870bc126c'
             'SKIP'
             '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52'
-            '2b8c0532497c906ef64886d6751c4a52d06713962736bc455460b6974d5659d9')
+            'c675d7e2d6919eec7a907a54021b5c43bfae831874232c9d194ce85bdb7e6496')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
 prepare() {
