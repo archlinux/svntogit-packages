@@ -2,7 +2,7 @@
 
 pkgname=kbd
 pkgver=2.2.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Keytable files and keyboard utilities"
 arch=('x86_64')
 url="http://www.kbd-project.org"
@@ -13,17 +13,13 @@ makedepends=('check' 'git')
 #        https://www.kernel.org/pub/linux/utils/kbd/${pkgname}-${pkgver}.tar.sign
 source=(git+https://git.kernel.org/pub/scm/linux/kernel/git/legion/kbd.git#tag=v$pkgver
         'fix-euro2.patch'
-        kbd-dont-override-cflags.patch::"https://github.com/legionus/kbd/commit/15a74479.patch"
-        kbd-31.patch::"https://github.com/legionus/kbd/commit/acf93e44.patch"
-        kbd-32.patch::"https://github.com/legionus/kbd/commit/7e27102b.patch")
+        'kbd-fix-loadkmap-compat.patch')
 provides=('vlock')
 conflicts=('vlock')
 replaces=('vlock')
 md5sums=('SKIP'
          'd869200acbc0aab6a9cafa43cb140d4e'
-         'f33bf61aa3e57befa0408c7578c81c7d'
-         '9e515a98f7ee1a2c1562c0e93467fa6d'
-         '9fc8d774887a55a7e4bc79240a2986c5')
+         '730b1054fbd88b87c27c5565bd7d4fc6')
 validpgpkeys=(
               '7F2A3D07298149A0793C9A4EA45ABA544CFFD434' #Alexey Gladkov 
              )
@@ -44,6 +40,7 @@ prepare() {
   git cherry-pick -n 15a74479 # Don't override CFLAGS
   git cherry-pick -n acf93e44 # https://github.com/legionus/kbd/issues/31
   git cherry-pick -n 7e27102b # https://github.com/legionus/kbd/issues/32
+  patch -p1 -i ../kbd-fix-loadkmap-compat.patch # Restore compatibility with busybox loadkmap
   autoreconf -if
 }
 
@@ -53,7 +50,16 @@ build() {
   make KEYCODES_PROGS=yes RESIZECONS_PROGS=yes
 }
 
+check() {
+  cd ${pkgname}
+
+# This test is expected to fail since kbd-fix-loadkmap-compat.patch modifies the binary format
+  sed -e 's|dumpkeys-bkeymap ||' -i tests/Makefile
+
+  make check
+}
+
 package() {
   cd ${pkgname}
-  make KEYCODES_PROGS=yes RESIZECONS_PROGS=yes DESTDIR=${pkgdir} install
+  make KEYCODES_PROGS=yes RESIZECONS_PROGS=yes DESTDIR="${pkgdir}" install
 }
