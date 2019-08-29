@@ -49,7 +49,6 @@ prepare() {
   git cherry-pick -n 01e20a6ba9e0cfa22e864c01b3395ba9568b061a  # !568
   git cherry-pick -n a20a0d7a4563366d2cd29c32a1b95a59121e7bf5  # !283
   git apply -3 ../0001-Remove-GLX-threaded-swap-wait.patch     # !602
-  git cherry-pick -n a2507cd51a248e2ee50eb64479f47e5da2564535  # !189
   git apply -3 ../0001-Add-point-polygon-testing-API.patch     # !189
   git apply -3 ../0002-Geometric-OpenGL-less-picking.patch     # !189
 
