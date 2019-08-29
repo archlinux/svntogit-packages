@@ -1,0 +1,282 @@
+From 37be90384d807c811785f51b5566e8b3b4db3ed3 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Thu, 18 Jul 2019 16:56:41 +0800
+Subject: [PATCH 1/2] clutter-types: Add ClutterPoint polygon testing API
+
+https://gitlab.gnome.org/GNOME/mutter/merge_requests/189
+---
+ clutter/clutter/clutter-base-types.c | 113 +++++++++++++++++++++++++++
+ clutter/clutter/clutter-types.h      |   8 ++
+ clutter/tests/conform/meson.build    |   1 +
+ clutter/tests/conform/point.c        | 104 ++++++++++++++++++++++++
+ 4 files changed, 226 insertions(+)
+ create mode 100644 clutter/tests/conform/point.c
+
+diff --git a/clutter/clutter/clutter-base-types.c b/clutter/clutter/clutter-base-types.c
+index aeb25c90e..0d98c4814 100644
+--- a/clutter/clutter/clutter-base-types.c
++++ b/clutter/clutter/clutter-base-types.c
+@@ -570,6 +570,119 @@ G_DEFINE_BOXED_TYPE_WITH_CODE (ClutterPoint, clutter_point,
+                                clutter_point_free,
+                                CLUTTER_REGISTER_INTERVAL_PROGRESS (clutter_point_progress))
+ 
++static int
++clutter_point_compare_line (const ClutterPoint *p,
++                            const ClutterPoint *a,
++                            const ClutterPoint *b)
++{
++  /*
++   * Given two vectors ab and ap:
++   *   ab = (x1, y1, 0)
++   *   ap = (x2, y2, 0)
++   * their cross product is a vector:
++   *   ab x ap = (0, 0, x1 * y2 - y1 * x2)
++   */
++  float x1 = b->x - a->x;
++  float y1 = b->y - a->y;
++  float x2 = p->x - a->x;
++  float y2 = p->y - a->y;
++  float cross_z = x1 * y2 - y1 * x2;
++
++  /*
++   * The cross product is also proportional to the sine of the angle between
++   * the vectors, so its sign tells us the sign of the angle between the two
++   * vectors. That is whether p is left of or right of line ab.
++   */
++  if (cross_z > 0.f)
++    return +1;
++  else if (cross_z < 0.f)
++    return -1;
++  else
++    return 0;
++}
++
++static int
++clutter_point_compare_polygon (const ClutterPoint *point,
++                               const ClutterPoint *vertices,
++                               unsigned int        nvertices)
++{
++  unsigned int i;
++  int first_side = 0;
++  gboolean on_an_edge = FALSE;
++
++  g_return_val_if_fail (nvertices >= 3, +1);
++
++  for (i = 0; i < nvertices; i++)
++    {
++      int side = clutter_point_compare_line (point,
++                                             &vertices[i],
++                                             &vertices[(i + 1) % nvertices]);
++
++      if (side)
++        {
++          if (!first_side)
++            first_side = side;
++          else if (side != first_side)
++            return +1;  /* outside */
++        }
++      else
++        {
++          on_an_edge = TRUE;
++        }
++    }
++
++  if (first_side)
++    {
++      return on_an_edge ? 0 : -1;  /* on an edge or completely inside */
++    }
++  else
++    {
++      /* The point was neither inside nor outside any edges so we have an empty
++       * polygon. Therefore if the vertices match the point we'll at least call
++       * that touching. Otherwise the point is outside.
++       */
++      return point->x == vertices[0].x && point->y == vertices[0].y ? 0 : +1;
++    }
++}
++
++/**
++ * clutter_point_inside_polygon:
++ * @point: a #ClutterPoint to test
++ * @vertices: array of vertices of the polygon
++ * @nvertices: number of vertices in array @vertices
++ *
++ * Determines whether a point is inside the convex polygon provided, and not
++ * on any of its edges or vertices.
++ *
++ * Return value: true if @point is inside the polygon
++ */
++gboolean
++clutter_point_inside_polygon (const ClutterPoint *point,
++                              const ClutterPoint *vertices,
++                              unsigned int        nvertices)
++{
++  return clutter_point_compare_polygon (point, vertices, nvertices) < 0;
++}
++
++/**
++ * clutter_point_touches_polygon:
++ * @point: a #ClutterPoint to test
++ * @vertices: array of vertices of the polygon
++ * @nvertices: number of vertices in array @vertices
++ *
++ * Determines whether a point is on the convex polygon provided, including
++ * on any of its edges or vertices.
++ *
++ * Return value: true if @point is on the polygon
++ */
++gboolean
++clutter_point_touches_polygon (const ClutterPoint *point,
++                               const ClutterPoint *vertices,
++                               unsigned int        nvertices)
++{
++  return clutter_point_compare_polygon (point, vertices, nvertices) <= 0;
++}
++
+ 
+ 
+ /*
+diff --git a/clutter/clutter/clutter-types.h b/clutter/clutter/clutter-types.h
+index 0f0fb1c2a..e3683184b 100644
+--- a/clutter/clutter/clutter-types.h
++++ b/clutter/clutter/clutter-types.h
+@@ -200,6 +200,14 @@ float                   clutter_point_distance  (const ClutterPoint *a,
+                                                  const ClutterPoint *b,
+                                                  float              *x_distance,
+                                                  float              *y_distance);
++CLUTTER_EXPORT
++gboolean clutter_point_inside_polygon           (const ClutterPoint *point,
++                                                 const ClutterPoint *vertices,
++                                                 unsigned int        nvertices);
++CLUTTER_EXPORT
++gboolean clutter_point_touches_polygon          (const ClutterPoint *point,
++                                                 const ClutterPoint *vertices,
++                                                 unsigned int        nvertices);
+ 
+ /**
+  * ClutterSize:
+diff --git a/clutter/tests/conform/meson.build b/clutter/tests/conform/meson.build
+index a9f2d7e20..916f5c342 100644
+--- a/clutter/tests/conform/meson.build
++++ b/clutter/tests/conform/meson.build
+@@ -36,6 +36,7 @@ clutter_conform_tests_general_tests = [
+   'interval',
+   'script-parser',
+   'units',
++  'point',
+ ]
+ 
+ clutter_conform_tests_deprecated_tests = [
+diff --git a/clutter/tests/conform/point.c b/clutter/tests/conform/point.c
+new file mode 100644
+index 000000000..a95a3e440
+--- /dev/null
++++ b/clutter/tests/conform/point.c
+@@ -0,0 +1,104 @@
++#include <clutter/clutter.h>
++
++static void
++point_on_nonempty_polygon (void)
++{
++  int p;
++  static const ClutterPoint vertices[4] =
++    {
++      {1.f, 2.f},
++      {6.f, 3.f},
++      {7.f, 6.f},
++      {0.f, 5.f}
++    };
++  static const ClutterPoint points_inside[] =
++    {
++      {2.f, 3.f},
++      {1.f, 4.f},
++      {5.f, 5.f},
++      {4.f, 3.f},
++    };
++  static const ClutterPoint points_outside[] =
++    {
++      {3.f, 1.f},
++      {7.f, 4.f},
++      {4.f, 6.f},
++      {99.f, -77.f},
++      {-1.f, 3.f},
++      {-8.f, -8.f},
++      {11.f, 4.f},
++      {-7.f, 4.f},
++    };
++  static const ClutterPoint points_touching[] =
++    {
++      {1.f, 2.f},
++      {3.5f, 2.5f},
++      {6.f, 3.f},
++      {6.5f, 4.5f},
++      {7.f, 6.f},
++      {3.5f, 5.5f},
++      {0.f, 5.f}
++    };
++
++  for (p = 0; p < G_N_ELEMENTS (points_inside); p++)
++    {
++      const ClutterPoint *point = points_inside + p;
++
++      g_assert_true (clutter_point_inside_polygon (point, vertices, 4));
++      g_assert_true (clutter_point_touches_polygon (point, vertices, 4));
++    }
++
++  for (p = 0; p < G_N_ELEMENTS (points_outside); p++)
++    {
++      const ClutterPoint *point = points_outside + p;
++
++      g_assert_false (clutter_point_inside_polygon (point, vertices, 4));
++      g_assert_false (clutter_point_touches_polygon (point, vertices, 4));
++    }
++
++  for (p = 0; p < G_N_ELEMENTS (points_touching); p++)
++    {
++      const ClutterPoint *point = points_touching + p;
++
++      g_assert_false (clutter_point_inside_polygon (point, vertices, 4));
++      g_assert_true (clutter_point_touches_polygon (point, vertices, 4));
++    }
++}
++
++static void
++point_on_empty_polygon (void)
++{
++  int p;
++  static const ClutterPoint vertices[4] =
++    {
++      {5.f, 6.f},
++      {5.f, 6.f},
++      {5.f, 6.f},
++      {5.f, 6.f},
++    };
++  static const ClutterPoint points_outside[] =
++    {
++      {3.f, 1.f},
++      {7.f, 4.f},
++      {4.f, 6.f},
++      {99.f, -77.f},
++      {-1.f, 3.f},
++      {-8.f, -8.f},
++    };
++
++  for (p = 0; p < G_N_ELEMENTS (points_outside); p++)
++    {
++      const ClutterPoint *point = points_outside + p;
++
++      g_assert_false (clutter_point_inside_polygon (point, vertices, 4));
++      g_assert_false (clutter_point_touches_polygon (point, vertices, 4));
++    }
++
++  g_assert_false (clutter_point_inside_polygon (&vertices[0], vertices, 4));
++  g_assert_true (clutter_point_touches_polygon (&vertices[0], vertices, 4));
++}
++
++CLUTTER_TEST_SUITE (
++  CLUTTER_TEST_UNIT ("/point/on_nonempty_polygon", point_on_nonempty_polygon)
++  CLUTTER_TEST_UNIT ("/point/on_empty_polygon", point_on_empty_polygon)
++)
+-- 
+2.23.0
+
