@@ -19,10 +19,12 @@ install=mutter.install
 _commit=b7f158811934d8e4d9dd0be28ad8e1746ceac46c  # gnome-3-32
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
         0001-Remove-GLX-threaded-swap-wait.patch
-        0001-Geometric-OpenGL-less-picking.patch)
+        0001-Add-point-polygon-testing-API.patch
+        0002-Geometric-OpenGL-less-picking.patch)
 sha256sums=('SKIP'
             '92c0dd3a1df455722c7bfb205eab7c72ee21055d64f397bea5a8332431f3fee7'
-            '997cbf2e5cc0252914ea59f1c5388d176b8583e6785ba12fdc729d13971b4e3e')
+            '12c69bdc0836b47d5d6eba0f5b0118035aa08330388a05fcee367025adb31f21'
+            'a6643593071ab171866dd6fdb30e65826a753a134832a8e1ec05b2b515d599e5')
 
 pkgver() {
   cd $pkgname
@@ -48,7 +50,8 @@ prepare() {
   git cherry-pick -n a20a0d7a4563366d2cd29c32a1b95a59121e7bf5  # !283
   git apply -3 ../0001-Remove-GLX-threaded-swap-wait.patch     # !602
   git cherry-pick -n a2507cd51a248e2ee50eb64479f47e5da2564535  # !189
-  git apply -3 ../0001-Geometric-OpenGL-less-picking.patch     # !189
+  git apply -3 ../0001-Add-point-polygon-testing-API.patch     # !189
+  git apply -3 ../0002-Geometric-OpenGL-less-picking.patch     # !189
 
   # fix background corruption on nvidia
   git cherry-pick -n a5265365dd268e15a461a58000a10b122d0bccba  # !600
