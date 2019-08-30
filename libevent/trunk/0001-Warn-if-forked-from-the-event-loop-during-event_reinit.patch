@@ -1,0 +1,31 @@
+From 497ef904d544ac51de43934549dbeccce8e6e8f8 Mon Sep 17 00:00:00 2001
+From: Azat Khuzhin <azat@libevent.org>
+Date: Mon, 1 Jul 2019 23:54:02 +0300
+Subject: [PATCH] Warn if forked from the event loop during event_reinit()
+
+Calling fork() from the event loop is not a great idea, since at least
+it shares some internal pipes (for handling signals) before
+event_reinit() call
+
+Closes: #833
+---
+ event.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/event.c b/event.c
+index fa4f2802e..aa6c6fba3 100644
+--- a/event.c
++++ b/event.c
+@@ -1003,6 +1003,12 @@ event_reinit(struct event_base *base)
+ 
+ 	EVBASE_ACQUIRE_LOCK(base, th_base_lock);
+ 
++	if (base->running_loop) {
++		event_warnx("%s: forked from the event_loop.", __func__);
++		res = -1;
++		goto done;
++	}
++
+ 	evsel = base->evsel;
+ 
+ 	/* check if this event mechanism requires reinit on the backend */
