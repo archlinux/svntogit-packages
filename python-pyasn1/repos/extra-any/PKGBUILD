@@ -2,7 +2,7 @@
 
 pkgbase=python-pyasn1
 pkgname=('python-pyasn1' 'python2-pyasn1')
-pkgver=0.4.6
+pkgver=0.4.7
 pkgrel=1
 arch=('any')
 url="https://github.com/etingof/pyasn1"
@@ -11,7 +11,7 @@ makedepends=('python-setuptools' 'python2-setuptools')
 replaces=('pyasn1')
 provides=('pyasn1')
 source=(https://pypi.io/packages/source/p/pyasn1/pyasn1-$pkgver.tar.gz)
-sha512sums=('0d7dba175f292a136a34df0dadb90392bff1dac93ab2d04697fcd3e03f5bb8367a8e68dbfcc536ea9effd6292a459f24766f29f512161724fa405accb86617c5')
+sha512sums=('b187bb500ad0af3d0c8f8ef249fd40d9a1d152a8755e9454f441febb3522245f5447f83a70294f33c0b3a537a214a4fec660b9baf80ebef5f6256bcaedeb8abd')
 
 check() {
   cd pyasn1-${pkgver}
