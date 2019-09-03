@@ -194,8 +194,9 @@ package_systemd() {
   rm "$pkgdir"/usr/{bin/resolvconf,share/man/man1/resolvconf.1}
 
   # avoid a potential conflict with [core]/filesystem
-  rm "$pkgdir"/usr/share/factory/etc/nsswitch.conf
-  sed -i '/^C \/etc\/nsswitch\.conf/d' "$pkgdir"/usr/lib/tmpfiles.d/etc.conf
+  rm "$pkgdir"/usr/share/factory/etc/{issue,nsswitch.conf}
+  sed -i -e '/^C \/etc\/nsswitch\.conf/d' \
+    -e '/^C \/etc\/issue/d' "$pkgdir"/usr/lib/tmpfiles.d/etc.conf
 
   # add back tmpfiles.d/legacy.conf, normally omitted without sysv-compat
   install -m0644 $pkgbase-stable/tmpfiles.d/legacy.conf "$pkgdir"/usr/lib/tmpfiles.d
