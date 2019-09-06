@@ -6,7 +6,7 @@
 
 pkgname=pkgconf
 pkgver=1.6.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Package compiler and linker metadata toolkit"
 url="https://github.com/pkgconf/pkgconf"
 license=(custom:ISC)
@@ -18,9 +18,12 @@ conflicts=(pkg-config)
 replaces=(pkg-config)
 groups=(base-devel)
 _commit=c862e030cf83447f679e4f49876f5298f0fc9691  # tags/pkgconf-1.6.3
-source=("git+https://git.dereferenced.org/pkgconf/pkgconf#commit=$_commit" platform-pkg-config.in)
+source=("git+https://git.dereferenced.org/pkgconf/pkgconf#commit=$_commit"
+        i686-pc-linux-gnu.personality
+        x86_64-pc-linux-gnu.personality)
 sha256sums=('SKIP'
-            '7c61338fbd83f9783d805c2f2f97b426977895a2f4b79e0ae5bc8e9d7996edaa')
+            '6697c6db7deaae269ea75624a70e80949241f2cf59a537f31ecfcac726d90bc1'
+            'c8297817ba0b57d003878db247ff34b4c47a7594c9f67dcfe8ff8d6567956cd5')
 
 _pcdirs=/usr/lib/pkgconfig:/usr/share/pkgconfig
 _libdir=/usr/lib
@@ -52,26 +55,12 @@ build() {
 package() {
   DESTDIR="$pkgdir" make -C build install
 
-  # From https://src.fedoraproject.org/rpms/pkgconf/
-  sed -e "s|@TARGET_PLATFORM@|$CHOST|g" \
-      -e "s|@PKGCONF_LIBDIRS@|$_pcdirs|g" \
-      -e "s|@PKGCONF_SYSLIBDIR@|$_libdir|g" \
-      -e "s|@PKGCONF_SYSINCDIR@|$_includedir|g" \
-      platform-pkg-config.in |
-    install -D /dev/stdin "$pkgdir/usr/bin/$CHOST-pkg-config"
-  ln -s $CHOST-pkg-config "$pkgdir/usr/bin/pkg-config"
-
-  # Multilib
-  if [[ $CARCH = x86_64 ]]; then
-    _host32=${CHOST/x86_64/i686}
-    sed -e "s|@TARGET_PLATFORM@|$_host32|g" \
-        -e "s|@PKGCONF_LIBDIRS@|${_pcdirs/lib/lib32}|g" \
-        -e "s|@PKGCONF_SYSLIBDIR@|${_libdir/lib/lib32}|g" \
-        -e "s|@PKGCONF_SYSINCDIR@|$_includedir|g" \
-        platform-pkg-config.in |
-      install -D /dev/stdin "$pkgdir/usr/bin/$_host32-pkg-config"
-    ln -s $_host32-pkg-config "$pkgdir/usr/bin/pkg-config-32"
-  fi
+  install -Dt "$pkgdir/usr/share/pkgconfig/personality.d" -m644 \
+    i686-pc-linux-gnu.personality \
+    x86_64-pc-linux-gnu.personality
+  ln -s pkgconf "$pkgdir/usr/bin/i686-pc-linux-gnu-pkg-config"
+  ln -s pkgconf "$pkgdir/usr/bin/x86_64-pc-linux-gnu-pkg-config"
+  ln -s pkgconf "$pkgdir/usr/bin/pkg-config"
 
   ln -s pkgconf.1 "$pkgdir/usr/share/man/man1/pkg-config.1"
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname/COPYING
