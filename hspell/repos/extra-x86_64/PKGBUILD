@@ -1,14 +1,13 @@
-# $Id$
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgbase=hspell
 pkgname=('hspell' 'hunspell-he')
 pkgver=1.4
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 license=('GPL')
 url="http://www.ivrix.org.il/projects/spell-checker/"
-makedepends=('glibc' 'zlib' 'perl' 'hunspell' 'gawk')
+makedepends=('glibc' 'zlib' 'perl' 'hunspell' 'gawk' 'qt5-webengine')
 options=('!makeflags')
 source=(http://hspell.ivrix.org.il/${pkgname}-${pkgver}.tar.gz{,.sig})
 sha256sums=('7310f5d58740d21d6d215c1179658602ef7da97a816bc1497c8764be97aabea3'
@@ -16,7 +15,7 @@ sha256sums=('7310f5d58740d21d6d215c1179658602ef7da97a816bc1497c8764be97aabea3'
 validpgpkeys=('996512CD85DC510BD45EAD46415E26D84D4E37DB')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}-${pkgver}
   export PERLLIB="$PWD"
   ./configure --prefix=/usr --mandir=/usr/share/man \
       --enable-linginfo --enable-fatverb --enable-shared
@@ -29,7 +28,7 @@ package_hspell() {
   pkgdesc="Hebrew spell-checker"
   depends=('glibc' 'zlib' 'perl')
 
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}-${pkgver}
   make DESTDIR="${pkgdir}" install
 
   rm -f ${pkgdir}/usr/lib/libhspell.a
@@ -39,17 +38,24 @@ package_hunspell-he() {
 
   pkgdesc="Hebrew hunspell dictionary"
   
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd ${pkgbase}-${pkgver}
 
-  install -dm755 ${pkgdir}/usr/share/hunspell
-  install -m644 he.dic ${pkgdir}/usr/share/hunspell/he_IL.dic
-  install -m644 he.aff ${pkgdir}/usr/share/hunspell/he_IL.aff
+  install -dm755 "$pkgdir"/usr/share/hunspell
+  install -m644 he.dic "$pkgdir"/usr/share/hunspell/he_IL.dic
+  install -m644 he.aff "$pkgdir"/usr/share/hunspell/he_IL.aff
 
   # the symlinks
-  install -dm755 ${pkgdir}/usr/share/myspell/dicts
+  install -dm755 "$pkgdir"/usr/share/myspell/dicts
   pushd $pkgdir/usr/share/myspell/dicts
     for file in $pkgdir/usr/share/hunspell/*; do
       ln -sv /usr/share/hunspell/$(basename $file) .
     done
   popd
+
+# Install webengine dictionaries
+  install -d "$pkgdir"/usr/share/qt/qtwebengine_dictionaries/
+  for _file in "$pkgdir"/usr/share/hunspell/*.dic; do
+  _filename=$(basename $_file)
+    qwebengine_convert_dict $_file "$pkgdir"/usr/share/qt/qtwebengine_dictionaries/${_filename/\.dic/\.bdic}
+  done
 }
