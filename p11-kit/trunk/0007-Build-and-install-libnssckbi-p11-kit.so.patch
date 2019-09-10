@@ -1,8 +1,7 @@
-From 8a1c9bb1170213498d3386d2a5c2882868e4f535 Mon Sep 17 00:00:00 2001
-Message-Id: <8a1c9bb1170213498d3386d2a5c2882868e4f535.1548110948.git.jan.steffens@gmail.com>
+From 0c5ffab2467a4989c4428c5b284838e32dfe0002 Mon Sep 17 00:00:00 2001
 From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
-Date: Thu, 1 Mar 2018 16:20:59 +0100
-Subject: [PATCH] Build and install libnssckbi-p11-kit.so
+Date: Tue, 10 Sep 2019 18:08:25 +0000
+Subject: [PATCH 7/7] Build and install libnssckbi-p11-kit.so
 
 Create an additional library which is a copy of p11-kit-trust.so but
 uses the same label for root certs as libnssckbi.so:
@@ -11,8 +10,9 @@ uses the same label for root certs as libnssckbi.so:
 https://bugs.freedesktop.org/show_bug.cgi?id=66161
 ---
  trust/Makefile.am | 14 ++++++++++++++
+ trust/meson.build | 13 +++++++++++++
  trust/module.c    | 12 +++++++++++-
- 2 files changed, 25 insertions(+), 1 deletion(-)
+ 3 files changed, 38 insertions(+), 1 deletion(-)
 
 diff --git a/trust/Makefile.am b/trust/Makefile.am
 index c4a65a3..303e1d0 100644
@@ -39,8 +39,32 @@ index c4a65a3..303e1d0 100644
  libtrust_testable_la_LDFLAGS = \
  	-no-undefined
  
+diff --git a/trust/meson.build b/trust/meson.build
+index c5b978b..14993e5 100644
+--- a/trust/meson.build
++++ b/trust/meson.build
+@@ -58,6 +58,19 @@ shared_module('p11-kit-trust',
+               install: true,
+               install_dir: prefix / p11_module_path)
+ 
++shared_module('libnssckbi-p11-kit',
++              libtrust_sources,
++              'module-init.c',
++              name_prefix: '',
++              c_args: p11_kit_trust_c_args + ['-DLIBNSSCKBI_COMPAT'],
++              dependencies: [libp11_library_dep] + libtasn1_deps,
++              link_args: p11_module_ldflags,
++              link_depends: [p11_module_symbol_map,
++                             p11_module_symbol_def],
++              link_with: libtrust_data,
++              vs_module_defs: p11_module_symbol_def,
++              install: true)
++
+ libtrust_testable_c_args = [
+   '-DP11_DEFAULT_TRUST_PREFIX="@0@"'.format(meson.current_build_dir() / 'default'),
+   '-DP11_SYSTEM_TRUST_PREFIX="@0@"'.format(meson.current_build_dir() / 'system')
 diff --git a/trust/module.c b/trust/module.c
-index 1722340..e776270 100644
+index ec3333d..9204673 100644
 --- a/trust/module.c
 +++ b/trust/module.c
 @@ -201,7 +201,11 @@ create_tokens_inlock (p11_array *tokens,
@@ -72,5 +96,5 @@ index 1722340..e776270 100644
  		if (length > sizeof (info->slotDescription))
  			length = sizeof (info->slotDescription);
 -- 
-2.20.1
+2.23.0
 
