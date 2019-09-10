@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.32.0+2+g820f90f5
-pkgrel=1
+pkgrel=2
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -12,11 +12,15 @@ license=(GPL)
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl)
 checkdepends=(check)
-_commit=820f90f5a78b81b2e4610da14627266c2135c8b0  # master
+_commit=820f90f5a78b81b2e4610da14627266c2135c8b0  # gnome-3-32
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
-        0001-Xsession-Don-t-start-ssh-agent-by-default.patch)
+        0001-Xsession-Don-t-start-ssh-agent-by-default.patch
+        0002-pam-arch-Don-t-check-greeter-account-for-expiry.patch
+        0003-pam-arch-Restrict-greeter-service-to-the-gdm-user.patch)
 sha256sums=('SKIP'
-            '3412f7da0205409f08a126a1d166b644fe0f1d0444f7cdebdce8e59cea2d672c')
+            '098ffb1cdc0232f014e5fe5fb8d268b752afc54d6ee661664036879acd075b22'
+            '38c92ea27881112c601356e615b926fbef6e92737048406eead56a47e961ea56'
+            '6c20bf8929fdd996d89ad6aeeb53166252670961746e187f27598fd32921a6ce')
 
 pkgver() {
   cd gdm
@@ -27,6 +31,11 @@ prepare() {
   mkdir build
   cd gdm
   patch -Np1 -i ../0001-Xsession-Don-t-start-ssh-agent-by-default.patch
+
+  # https://bugs.archlinux.org/task/63706
+  patch -Np1 -i ../0002-pam-arch-Don-t-check-greeter-account-for-expiry.patch
+  patch -Np1 -i ../0003-pam-arch-Restrict-greeter-service-to-the-gdm-user.patch
+
   NOCONFIGURE=1 ./autogen.sh
 }
 
