@@ -71,6 +71,7 @@ package_gdm() {
           etc/pam.d/gdm-password etc/pam.d/gdm-smartcard etc/gdm/custom.conf
           etc/gdm/Xsession etc/gdm/PostSession/Default etc/gdm/PreSession/Default)
   groups=(gnome)
+  install=gdm.install
 
   DESTDIR="$pkgdir" make -C build install
 
@@ -78,11 +79,6 @@ package_gdm() {
 
   # Unused or created at start
   rm -r "$pkgdir"/var/{cache,log,run}
-
-  install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/gdm.conf" <<END
-g gdm 120 -
-u gdm 120 "Gnome Display Manager" /var/lib/gdm
-END
 
 ### Split libgdm
   mkdir -p libgdm/{lib,share}
