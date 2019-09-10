@@ -2,56 +2,66 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=p11-kit
-pkgver=0.23.16.1
+pkgver=0.23.17
 pkgrel=1
 pkgdesc="Provides a way to load and enumerate PKCS#11 modules"
 arch=(x86_64)
 url="https://p11-glue.freedesktop.org"
 license=(BSD)
 depends=(glibc libtasn1 libffi systemd)
-makedepends=(gtk-doc git)
+makedepends=(gtk-doc git meson)
 install=p11-kit.install
 source=("git+https://github.com/p11-glue/p11-kit?signed#tag=$pkgver"
-        0001-Build-and-install-libnssckbi-p11-kit.so.patch)
+        0001-meson-Fix-dictionary-syntax.patch
+        0002-meson-Install-p11-kit-client-module.patch
+        0003-meson-PKCS-11-modules-should-only-export-C_GetFuncti.patch
+        0004-meson-Don-t-prefix-p11_user_config.patch
+        0005-meson-Build-and-install-man-pages.patch
+        0006-meson-Install-p11-kit-server-units.patch
+        0007-Build-and-install-libnssckbi-p11-kit.so.patch)
 sha256sums=('SKIP'
-            'a2222e092b2c9ae2d2c344b3268f8f86e7b424973433d49653f72e6c51fa54cf')
+            '866c22c2e8aac80d7defe4a73299094b036c3dca547b79a38e1b55251b21d0b0'
+            '8a956ed3e8656d8cdf25f10b6efe50731bcc9b3b58cf66565624129d904e9e1c'
+            'f7476b2861d2cd8c26a0b1521df784369b40519e1f9308ca6814d654c7d0709f'
+            'dee618d30971f619c4f4cf286d688ae127a5d58482a95a2bc49d2a1de6c6f9f9'
+            '00c1cab9f1b40ce4c0c07b98a889f377a5e2e6f2d5b21b923f38df6ac9a5f073'
+            '80044d4d485c52d2a51f1b61660d4312d191d743cdfa4008128c81cda2b4dc30'
+            '74f1c3ca6875e3c716eeadc910f8a55a31c5f96275501c17797fb4a8c7683152')
 validpgpkeys=('C0F67099B808FB063E2C81117BFB1108D92765AF'  # Stef Walter
               '462225C3B46F34879FC8496CD605848ED7E69871') # Daiki Ueno
 
 prepare() {
   cd p11-kit
 
+  patch -Np1 -i ../0001-meson-Fix-dictionary-syntax.patch
+  patch -Np1 -i ../0002-meson-Install-p11-kit-client-module.patch
+  patch -Np1 -i ../0003-meson-PKCS-11-modules-should-only-export-C_GetFuncti.patch
+  patch -Np1 -i ../0004-meson-Don-t-prefix-p11_user_config.patch
+  patch -Np1 -i ../0005-meson-Build-and-install-man-pages.patch
+  patch -Np1 -i ../0006-meson-Install-p11-kit-server-units.patch
+
   # Build and install an additional library (libnssckbi-p11-kit.so) which
   # is a copy of p11-kit-trust.so but uses the same label for root certs as
   # libnssckbi.so ("Builtin Object Token" instead of "Default Trust")
   # https://bugs.freedesktop.org/show_bug.cgi?id=66161
-  patch -Np1 -i ../0001-Build-and-install-libnssckbi-p11-kit.so.patch
-
-  NOCONFIGURE=1 ./autogen.sh
+  patch -Np1 -i ../0007-Build-and-install-libnssckbi-p11-kit.so.patch
 }
 
 build() {
-  cd p11-kit
-  ./configure --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib \
-    --enable-doc \
-    --with-module-path=/usr/lib/pkcs11 \
-    --with-trust-paths=/etc/ca-certificates/trust-source:/usr/share/ca-certificates/trust-source
-  make
+  arch-meson p11-kit build \
+    -D gtk_doc=true \
+    -D man=true \
+    -D trust_paths=/etc/ca-certificates/trust-source:/usr/share/ca-certificates/trust-source
+  ninja -C build
 }
 
 check() {
-  cd p11-kit
-  make check
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd p11-kit
-  make DESTDIR="$pkgdir" install
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
-
+  DESTDIR="$pkgdir" meson install -C build
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 p11-kit/COPYING
   ln -srf "$pkgdir/usr/bin/update-ca-trust" "$pkgdir/usr/lib/p11-kit/trust-extract-compat"
 }
 
