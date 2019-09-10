@@ -19,8 +19,8 @@ source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0003-pam-arch-Restrict-greeter-service-to-the-gdm-user.patch)
 sha256sums=('SKIP'
             '098ffb1cdc0232f014e5fe5fb8d268b752afc54d6ee661664036879acd075b22'
-            '38c92ea27881112c601356e615b926fbef6e92737048406eead56a47e961ea56'
-            '6c20bf8929fdd996d89ad6aeeb53166252670961746e187f27598fd32921a6ce')
+            '2e2b12d4609004a010245de51a8c017b164e84f249cd19706d020cb599d2d7e7'
+            '3fa02eb7bbbe1586eae4ae98221a284251ca2869dc731c80b753e7effc443379')
 
 pkgver() {
   cd gdm
