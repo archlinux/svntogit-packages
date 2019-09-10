@@ -3,16 +3,16 @@
 
 pkgbase=vte3
 pkgname=(vte3 vte-common)
-pkgver=0.56.3
+pkgver=0.58.0
 pkgrel=1
 pkgdesc="Virtual Terminal Emulator widget for use with GTK3"
 url="https://wiki.gnome.org/Apps/Terminal/VTE"
 arch=(x86_64)
 license=(LGPL)
 options=(!emptydirs)
-depends=(gtk3 pcre2 gnutls)
-makedepends=(intltool gobject-introspection vala glade git gtk-doc gperf)
-_commit=14fac9f56d923cbb23b0c114ddf630fe36c5163c  # tags/0.56.3^0
+depends=(gtk3 pcre2 gnutls fribidi)
+makedepends=(gobject-introspection vala git gtk-doc gperf meson)
+_commit=0a0abd8ff68b521fabd7dfeca3ce00a382722fcf  # tags/0.58.0^0
 source=("git+https://gitlab.gnome.org/GNOME/vte.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -23,33 +23,30 @@ pkgver() {
 
 prepare() {
   cd vte
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd vte
+  arch-meson vte build -D docs=true
+  ninja -C build
+}
 
-  ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/vte \
-    --localstatedir=/var --disable-static --enable-introspection --enable-glade-catalogue --enable-gtk-doc
-
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package_vte3(){
   depends+=(vte-common)
 
-  cd vte
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 
-  rm "$pkgdir"/etc/profile.d/vte.sh
+  mv "$pkgdir/etc/profile.d/vte.sh" "$srcdir"
 }
 
 package_vte-common() {
   pkgdesc="Common files used by vte and vte3"
   depends=(sh)
 
-  cd vte
-  install -Dm644 src/vte.sh "$pkgdir"/etc/profile.d/vte.sh
+  install -Dt "$pkgdir/etc/profile.d" -m644 vte.sh
 }
+
+# vim:set sw=2 et:
