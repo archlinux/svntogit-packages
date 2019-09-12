@@ -1,0 +1,66 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=nautilus
+pkgname=(nautilus libnautilus-extension)
+pkgver=3.34.0
+pkgrel=1
+pkgdesc="Default file manager for GNOME"
+url="https://wiki.gnome.org/Apps/Nautilus"
+arch=(x86_64)
+license=(GPL)
+depends=(libgexiv2 gnome-desktop gvfs dconf tracker nautilus-sendto gnome-autoar
+         gst-plugins-base-libs tracker-miners)
+makedepends=(gobject-introspection git gtk-doc meson appstream-glib)
+options=(!emptydirs)
+_commit=6a55af66aff937e6e654759f1d6f84b0e07aaa2f  # tags/3.34.0^0
+source=("git+https://gitlab.gnome.org/GNOME/nautilus.git#commit=$_commit"
+        "git+https://gitlab.gnome.org/GNOME/libgd.git")
+sha256sums=('SKIP'
+            'SKIP')
+
+prepare() {
+  cd $pkgbase
+
+  git submodule init
+  git config --local submodule.subprojects/libgd.url "$srcdir/libgd"
+  git submodule update
+}
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+build() {
+  arch-meson $pkgbase build \
+    -D docs=true \
+    -D packagekit=false
+  ninja -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package_nautilus() {
+  depends+=(libnautilus-extension)
+  groups=(gnome)
+
+  DESTDIR="$pkgdir" meson install -C build
+
+### Split libnautilus-extension
+
+  mkdir -p libne/{lib,share}
+  mv "$pkgdir"/usr/include libne
+  mv "$pkgdir"/usr/lib/{girepository-1.0,libnautilus-extension*,pkgconfig} libne/lib
+  mv "$pkgdir"/usr/share/{gir-1.0,gtk-doc} libne/share
+}
+
+package_libnautilus-extension() {
+  pkgdesc="Library for extending the $pkgdesc"
+  depends=(gtk3)
+  mv libne "$pkgdir/usr"
+}
+
+# vim:set sw=2 et:
