@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.0
+pkgver=3.34.0+6+gab7af2d0c
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=8cdcf529e9acd95e903f699acfbde7f75213ebec  # tags/3.34.0^0
+_commit=ab7af2d0c57da04924b7c478e1970bdec514ce88  # master
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -27,9 +27,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # reduce overhead moving cursor or windows
-  #git cherry-pick -n a20a0d7a4563366d2cd29c32a1b95a59121e7bf5  # !283
 }
 
 build() {
