@@ -7,13 +7,13 @@
 # Contributor: henning mueller <henning@orgizm.net>
 
 pkgbase=audit
-pkgname=('audit' 'python2-audit' 'python-audit')
+pkgname=('audit' 'python-audit')
 pkgver=2.8.5
 pkgrel=3
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
 arch=('x86_64')
-makedepends=('krb5' 'libcap-ng' 'libldap' 'swig' 'linux-headers' 'python' 'python2')
+makedepends=('krb5' 'libcap-ng' 'libldap' 'swig' 'linux-headers' 'python')
 license=('GPL')
 options=('emptydirs')
 source=(${pkgbase}-${pkgver}.tar.gz::https://people.redhat.com/sgrubb/audit/${pkgbase}-${pkgver}.tar.gz)
@@ -26,7 +26,6 @@ prepare() {
 
 build() {
   cd ${pkgbase}-${pkgver}
-  export PYTHON=/usr/bin/python2
   ./configure \
     --prefix=/usr \
     --sbindir=/usr/bin \
@@ -73,20 +72,11 @@ package_audit() {
   chmod 644 usr/lib/systemd/system/auditd.service
 }
 
-package_python2-audit() {
-  depends=('python2' 'audit')
-  pkgdesc+=' (python2 bindings)'
-  cd ${pkgbase}-${pkgver}
-  make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
-  rm -rf "${pkgdir}"/usr/lib/python3*
-}
-
 package_python-audit() {
   depends=('python' 'audit')
   pkgdesc+=' (python bindings)'
   cd ${pkgbase}-${pkgver}
   make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
-  rm -rf "${pkgdir}"/usr/lib/python2*
 }
 
 # vim: ts=2 sw=2 et:
