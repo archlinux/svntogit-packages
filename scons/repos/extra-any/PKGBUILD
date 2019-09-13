@@ -6,7 +6,7 @@
 
 pkgname=scons
 pkgver=3.1.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Extensible Python-based build utility"
 arch=('any')
 url="https://scons.org"
@@ -26,9 +26,8 @@ prepare() {
   local _copyright='Copyright (c) 2001 - 2019 The SCons Foundation'
   local _date_of_release="$(grep "RELEASE ${pkgver}" src/CHANGES.txt | cut -d ',' -f2)"
   local _date="$(date -d "${_date_of_release}" +'%Y-%m-%d %H:%M:%S')"
-  # copy scripts to correct locations and change their globals
-  for _script in scons{,ign,-time,-configure-cache}; do
-    cp -v "src/script/${_script}.py" "src/script/${_script}"
+  # change globals in all scripts
+  for _script in $(find src/ -type f -iname "*.py"); do
     sed -e "s|__COPYRIGHT__|${_copyright}|g" \
         -e "s|__FILE__|/src/script/${_script}|g" \
         -e 's/__REVISION__/none/g' \
@@ -36,16 +35,12 @@ prepare() {
         -e 's/__BUILDSYS__/none/g' \
         -e 's/__DEVELOPER__/none/g' \
         -e "s/__VERSION__/${pkgver}/g" \
-        -i "src/script/${_script}"
+        -i "${_script}"
   done
-  sed -e "s|__COPYRIGHT__|${_copyright}|g" \
-      -e 's|__FILE__|/src/setup.py|g' \
-      -e 's/__REVISION__/none/g' \
-      -e "s|__DATE__|${_date}|g" \
-      -e 's/__BUILDSYS__/none/g' \
-      -e 's/__DEVELOPER__/none/g' \
-      -e "s/__VERSION__/${pkgver}/g" \
-      -i "src/setup.py"
+  # copy scripts to correct locations
+  for _script in scons{,ign,-time,-configure-cache}; do
+    cp -v "src/script/${_script}.py" "src/script/${_script}"
+  done
   # disabling postscript creation, because it's broken
   sed -e '614,619d' \
       -e '/api_ps =/d' \
@@ -80,6 +75,7 @@ check() {
 }
 
 package() {
+  local py_ver=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
   cd "${pkgname}-${pkgver}/src"
   python setup.py install --prefix=/usr \
                           --skip-build \
@@ -87,6 +83,11 @@ package() {
                           --standard-lib \
                           --install-data=/usr/share \
                           --root="$pkgdir"
+  # strip $pkgdir from embedded paths:
+  python -m compileall -d "/usr/lib/python${py_ver}" \
+    "${pkgdir}/usr/lib/python${py_ver}"
+  python -O -m compileall -d "/usr/lib/python${py_ver}" \
+    "${pkgdir}/usr/lib/python${py_ver}"
   install -vDm 644 LICENSE.txt -t "${pkgdir}/usr/share/licenses/${pkgname}/"
   install -vDm 644 {CHANGES,README,RELEASE}.txt \
     -t "${pkgdir}/usr/share/doc/${pkgname}/"
