@@ -1,18 +1,21 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gpaste
-pkgver=3.32.0
+pkgver=3.34.0
 pkgrel=1
 pkgdesc="Clipboard management system"
 url="https://www.imagination-land.org/tags/GPaste.html"
 license=(BSD)
 arch=(x86_64)
 depends=(gtk3)
-makedepends=(intltool vala appstream-glib gobject-introspection gnome-shell gnome-control-center git)
+makedepends=(vala appstream-glib gobject-introspection gnome-shell
+             gnome-control-center git meson)
 optdepends=("wgetpaste: Upload clipboard contents")
-_commit=74805fe91a1ff8884109a6d7887460a2c823e54d  # tags/v3.32.0^0
-source=("git+https://github.com/keruspe/gpaste#commit=$_commit")
-sha256sums=('SKIP')
+_commit=82c2be95052b51f67ebecffbca325b983d2ee6e1  # tags/v3.34.0^0
+source=("git+https://github.com/keruspe/gpaste#commit=$_commit"
+        build.diff)
+sha256sums=('SKIP'
+            '236d50bac1a3e86f19b39a74b6b7c14c1545d0396200d7dad993beed663484ef')
 
 pkgver() {
   cd $pkgname
@@ -21,24 +24,19 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+  patch -Np1 -i ../build.diff
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --libexecdir=/usr/lib --sysconfdir=/etc \
-    --enable-vala
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build
+  ninja -C build
 }
 
 check() {
-  cd $pkgname
-  make check
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" COPYING
+  DESTDIR="$pkgdir" meson install -C build
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname/COPYING
 }
