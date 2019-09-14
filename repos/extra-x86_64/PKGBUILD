@@ -5,31 +5,26 @@
 
 pkgbase=jsoncpp
 pkgname=('jsoncpp' 'jsoncpp-doc')
-pkgver=1.8.4
-pkgrel=2
+pkgver=1.9.1
+pkgrel=1
 pkgdesc='C++ library for interacting with JSON'
 url='https://github.com/open-source-parsers/jsoncpp'
 arch=('x86_64')
 license=('MIT' 'custom:Public_Domain')
 makedepends=('gcc-libs' 'doxygen' 'graphviz' 'python' 'meson')
-checkdepends=('python2')
 options=('staticlibs')
-source=(${pkgbase}-${pkgver}.tar.gz::https://github.com/open-source-parsers/${pkgbase}/archive/${pkgver}.tar.gz)
-sha256sums=('c49deac9e0933bcb7044f08516861a2d560988540b23de2ac1ad443b219afdb6')
-sha512sums=('f70361a3263dd8b9441374a9a409462be1426c0d6587c865171a80448ab73b3f69de2b4d70d2f0c541764e1e6cccc727dd53178347901f625ec6fb54fb94f4f1')
+source=(https://github.com/open-source-parsers/${pkgbase}/archive/${pkgver}/${pkgbase}-${pkgver}.tar.gz)
+sha256sums=('c7b40f5605dd972108f503f031b20186f5e5bca2b65cd4b8bd6c3e4ba8126697')
+sha512sums=('4a8352e1d32c0ba8a0aea4df1663279cb2256b334643c5b62be37dfb5951e06900ba38c010d1201511fcf7de09137d6a4b886edbb2b99160d2f62b5f4679f766')
 
 prepare() {
   cd ${pkgbase}-${pkgver}
-  mkdir -p build
+  echo "${pkgver}" > version
+  sed -E "s|(version : )'1.9.0'|\1'${pkgver}'|" -i meson.build
 }
 
 build() {
   cd ${pkgbase}-${pkgver}
-  msg2 "Building docs..."
-  python doxybuild.py \
-    --doxygen="$(which doxygen)" \
-    --with-dot
-
   msg2 "Building shared library..."
   arch-meson --default-library shared build
   ninja -C build
@@ -37,19 +32,25 @@ build() {
   msg2 "Building static library..."
   arch-meson --default-library static build-static
   ninja -C build-static
+
+  msg2 "Building docs..."
+  python doxybuild.py \
+    --doxygen="$(command -v doxygen)" \
+    --with-dot
 }
 
 check() {
   cd ${pkgbase}-${pkgver}
   ninja -C build test
   cd test
-  python2 runjsontests.py ../build/jsontestrunner
-  python2 rununittests.py ../build/jsoncpp_test
+  python runjsontests.py ../build/jsontestrunner
+  python rununittests.py ../build/jsoncpp_test
 }
 
 package_jsoncpp() {
   depends=('gcc-libs')
   optdepends=('jsoncpp-doc: documentation')
+  provides=('libjsoncpp.so')
 
   cd ${pkgbase}-${pkgver}
   DESTDIR="${pkgdir}" ninja -C build install
