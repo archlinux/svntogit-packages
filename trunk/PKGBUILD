@@ -3,7 +3,7 @@
 # Contributor: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=openconnect
-pkgver=8.04
+pkgver=8.05
 pkgrel=1
 epoch=1
 pkgdesc='Open client for Cisco AnyConnect VPN'
@@ -17,7 +17,7 @@ optdepends=('python2: tncc-wrapper')
 provides=('libopenconnect.so')
 options=('!emptydirs')
 source=(ftp://ftp.infradead.org/pub/openconnect/openconnect-${pkgver}.tar.gz{,.asc})
-sha256sums=('98979c6e3f78b294dc663e3fd75d5c9e9d779f247be9d4e3ab84b5e90565f81f'
+sha256sums=('335c2952d0cb36822acb112eaaf5e3b4acffc6874985fb614fec0b76c4c12992'
             'SKIP')
 validpgpkeys=('BE07D9FD54809AB2C4B0FF5F63762CDA67E2F359') # David Woodhouse <dwmw2@infradead.org>
 
