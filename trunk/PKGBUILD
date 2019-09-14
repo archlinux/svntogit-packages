@@ -1,7 +1,7 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=bluez-qt
-pkgver=5.61.0
+pkgver=5.62.0
 pkgrel=1
 pkgdesc='Qt wrapper for Bluez 5 DBus API'
 arch=(x86_64)
@@ -12,7 +12,7 @@ makedepends=(extra-cmake-modules doxygen qt5-tools qt5-doc qt5-declarative)
 optdepends=('qt5-declarative: QML bindings')
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig})
-sha256sums=('0ea647de61fcc18a85c660fa8e05fe93072a713a8d00a018ba8e99ea790e5d27'
+sha256sums=('545a6c76042a077f04b0a6c2b8dfbe3b5b1a582edaae4454d7a57c06ab033715'
             'SKIP')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
@@ -23,7 +23,6 @@ prepare() {
 build() {
   cd build
   cmake ../$pkgname-$pkgver \
-    -DCMAKE_INSTALL_LIBDIR=lib \
     -DUDEV_RULES_INSTALL_DIR=/usr/lib/udev/rules.d \
     -DBUILD_TESTING=OFF \
     -DBUILD_QCH=ON
