@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.34.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
