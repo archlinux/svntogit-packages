@@ -5,7 +5,7 @@ pkgver=20190105.1
 pkgrel=1
 pkgdesc="Base PAM configuration for services"
 arch=('any')
-url="http://www.archlinux.org"
+url="https://www.archlinux.org"
 license=('GPL')
 source=('system-auth'
         'system-local-login'
