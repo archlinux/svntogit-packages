@@ -2,21 +2,20 @@
 # Contributor: Michael Pusterhofer <pusterhofer(at)student(dot)tugraz(dot)at>
 
 pkgname=itstool
-pkgver=2.0.2+5+g676f3f7
+pkgver=2.0.6
 pkgrel=1
 epoch=1
 pkgdesc="XML to PO and back again"
 arch=(any)
 url="http://itstool.org/"
 license=(GPL3)
-depends=(python2 libxml2 docbook-xml)
+depends=(python libxml2 docbook-xml)
 makedepends=(git)
-_commit=676f3f738b21ec4d77f300f83d31d2d0eceaddcc  # tags/2.0.3~4
-source=("git+https://github.com/itstool/itstool#commit=$_commit")
-sha256sums=('SKIP')
-
-# itstool on python3 segfaults building gnome-getting-started-docs;
-# can probably blame that one on the libxml2 bindings
+_commit=60f3a955ca047b1d62a1d952beec74afaff7cbbf  # tags/2.0.6^0
+source=("git+https://github.com/itstool/itstool#commit=$_commit"
+        itstool-2.0.5-fix-crash-wrong-encoding.patch)
+sha256sums=('SKIP'
+            'cb57e3694ab3d7c62b063629b2e9edc6327260c0797d0f33c8dc97fe37c40ebb')
 
 pkgver() {
   cd $pkgname
@@ -25,13 +24,16 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  sed -i 's/| python/&2/' configure.ac
+
+  # From https://src.fedoraproject.org/rpms/libxml2/tree/master
+  patch -Np1 -i ../itstool-2.0.5-fix-crash-wrong-encoding.patch
+
   autoreconf -fvi
 }
 
 build() {
   cd $pkgname
-  ./configure --prefix=/usr PYTHON=/usr/bin/python2
+  ./configure --prefix=/usr
   make
 }
 
