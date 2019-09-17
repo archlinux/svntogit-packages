@@ -1,19 +1,20 @@
-post_upgrade() {
-	# Migrate away from socket activation, Sept 2019.
-	# See: https://bugs.archlinux.org/task/62248
+pre_upgrade() {
+	# Remove socket activation. See: https://bugs.archlinux.org/task/62248
 	if (( $(vercmp $2 8.0p1-3) < 0 )); then
-		if stat -c %N /etc/systemd/system/sockets.target.wants/sshd.socket | grep -q '/usr/lib/systemd/system/sshd.socket'; then
-			if [[ ! -e /etc/systemd/system/sshd\@.service ]]; then
-				echo '==> SSHD: Migrating from socket activation to daemon.'
-				systemctl stop sshd.socket
-				systemctl disable sshd.socket
-				systemctl daemon-reload
-				systemctl start sshd.service
-				systemctl enable sshd.service
-			else
-				echo '==> The files sshd.socket and sshd@.service are no longer provided.'
-				echo '==> Please maintain them yourself or migrate to sshd.service.'
+	if systemctl is-enabled -q sshd.socket; then
+		cat <<EOF
+==> This package no longer provides sshd.socket and sshd@.service;
+==> copies of those files will be placed under /etc/systemd/system
+==> but please migrate to sshd.service whenever possible.
+EOF
+		src=/usr/lib/systemd/system
+		dst=/etc/systemd/system
+		for i in sshd.socket sshd\@.service; do
+			if [[ ! -e "$dst/$i" ]]; then
+				cp -v "$src/$i" "$dst/$i"
 			fi
-		fi
+		done
+		systemctl reenable sshd.socket
+	fi
 	fi
 }
