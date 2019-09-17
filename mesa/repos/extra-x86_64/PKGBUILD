@@ -4,8 +4,8 @@
 pkgbase=mesa
 pkgname=('vulkan-mesa-layer' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=19.1.6
-pkgrel=2
+pkgver=19.1.7
+pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
              'libxshmfence' 'libxxf86vm' 'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
@@ -16,7 +16,7 @@ license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
         LICENSE
         glesv2.pc)
-sha512sums=('399ce97a293769893ef9a4a6af1f77c7d835f5405bdbc03bbf9b73e052e4ff3b43dec5dafd6b9fedaaf2c59531aeccaa0f685a8bfdc5719a26c3815fc7f68024'
+sha512sums=('0865b5f91e5daa00e1da2b3d8b65fe5d2ff6332372bf8fec7d671d05d8d64ec5a7abea1858cdfc506c76b7226d2bea0af3426565f156b796d8e0f949ea33dc15'
             'SKIP'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7'
             'd3adb2081c945df701d2e0ad0ecd19f96ebffaba9878da31bf670b1b591a7d9d5895f4b10cda1f9dbf51e551baa8dda5d061e61256225b464eeec34f29141dff')
