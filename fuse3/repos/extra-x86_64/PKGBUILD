@@ -5,24 +5,22 @@
 pkgbase=fuse3
 pkgname=(fuse-common fuse3)
 pkgver=3.6.2
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://github.com/libfuse/libfuse'
 license=('GPL2')
 makedepends=('pkg-config' 'meson' 'udev')
 options=(!emptydirs)
-source=(https://github.com/libfuse/libfuse/releases/download/fuse-$pkgver/fuse-$pkgver.tar.xz{,.asc}
-	'fuse.conf')
+source=(https://github.com/libfuse/libfuse/releases/download/fuse-$pkgver/fuse-$pkgver.tar.xz{,.asc})
 sha1sums=('2bdef7a3f1f9e63fed87559c6e77d27e5f2c2e0c'
-          'SKIP'
-          '3b42e37a741d4651099225987dc40e7f02a716ad')
+          'SKIP')
 validpgpkeys=(ED31791B2C5C1613AF388B8AD113FCAC3C4E599F) # Nikolaus Rath <Nikolaus@rath.org>
 
 build() {
   cd fuse-$pkgver
 
   rm -rf build
-  meson --prefix=/usr --sbindir=bin . build
+  meson --prefix=/usr --sbindir=bin -D examples=false . build
   cd build
   ninja
 }
@@ -30,44 +28,21 @@ build() {
 package_fuse-common() {
   pkgdesc="Common files for fuse2/3 packages"
   backup=(etc/fuse.conf)
-  depends=(glibc)
 
-  cd fuse-$pkgver/build
-  DESTDIR=${pkgdir} ninja install
-
-  install -Dm644 ${srcdir}/fuse.conf ${pkgdir}/etc/fuse.conf
-
-  # static device nodes are handled by udev
-  rm -r ${pkgdir}/dev
-
-  # Remove init script in wrong path
-  # Don't add our own for now, as fusectl fs oopses on 2.6.18
-  rm -r ${pkgdir}/etc/init.d
-
-  # part of fuse3 package
-  rm -r ${pkgdir}/usr/{bin/fusermount3,include,lib/{pkgconfig,libfuse3.so*},share/man/man1/fusermount3.1}
-
-  mv ${pkgdir}/usr/bin/mount.fuse3 ${pkgdir}/usr/bin/mount.fuse
+  install -Dm644 fuse-${pkgver}/util/fuse.conf ${pkgdir}/etc/fuse.conf
 }
 
 package_fuse3() {
   pkgdesc="A library that makes it possible to implement a filesystem in a userspace program."
-  depends=('fuse-common')
+  depends=('fuse-common' 'glibc')
 
   cd fuse-$pkgver/build
 
   DESTDIR=${pkgdir} ninja install
 
-  # Remove init script in wrong path
-  # Don't add our own for now, as fusectl fs oopses on 2.6.18
   rm -r ${pkgdir}/etc/init.d
-
-  rm ${pkgdir}/etc/fuse.conf
+  rm -r ${pkgdir}/etc/fuse.conf
 
   # static device nodes are handled by udev
   rm -r ${pkgdir}/dev
-
-  # part of fuse-common package
-  rm -r ${pkgdir}/usr/lib/udev/rules.d
-  rm ${pkgdir}/usr/share/man/man8/mount.fuse3.8 ${pkgdir}/usr/bin/mount.fuse3
 }
