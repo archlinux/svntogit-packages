@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=69.0
+pkgver=69.0.1
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -23,7 +23,7 @@ options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop firefox-symbolic.svg)
-sha256sums=('413c3febdfeb69eade818824eecbdb11eaeda71de229573810afd641ba741ec5'
+sha256sums=('f5f2f592b8296812d43244d6a50c0c57ad11a5324db8e4e79749545482b79033'
             'SKIP'
             'ab07ab26617ff76fce68e07c66b8aa9b96c2d3e5b5517e51a3c3eac2edd88894'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
@@ -40,7 +40,7 @@ _google_api_key=AIzaSyDwr302FpOSkGRpLlUpPThNTDPbXcIn_FM
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
 # get your own set of keys. Feel free to contact heftig@archlinux.org for
 # more information.
-_mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
+_mozilla_api_key=e05d56db0a694edc8b5aaebda3f2db6a
 
 prepare() {
   mkdir mozbuild
