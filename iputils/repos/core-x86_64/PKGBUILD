@@ -4,9 +4,9 @@
 
 pkgname=iputils
 # Commit date + git rev-parse --short origin/master
-_rev=f6aac8d
-pkgver=20180629.${_rev}
-pkgrel=4
+_rev=13e0084
+pkgver=20190709
+pkgrel=1
 pkgdesc="Network monitoring tools, including ping"
 arch=('x86_64')
 license=('GPL')
@@ -14,7 +14,7 @@ url="http://www.skbuff.net/iputils/"
 groups=('base')
 depends=('openssl' 'libcap' 'libidn2')
 optdepends=('xinetd: for tftpd')
-makedepends=('perl-sgmls' 'git' 'docbook-xsl')
+makedepends=('perl-sgmls' 'git' 'docbook-xsl' 'meson')
 conflicts=('netkit-base' 'arping' 'netkit-tftpd')
 replaces=('netkit-base')
 backup=(etc/xinetd.d/tftp)
@@ -25,24 +25,17 @@ sha1sums=('SKIP'
           'fc2ae26f5609725e3f4aeaf4ab82dfa6d2e378fd')
 
 build() {
-  cd "${srcdir}/${pkgname}"
+  mkdir -p build
+  cd build
 
-  make USE_NETTLE=no USE_GNUTLS=no CCOPTOPT="$CFLAGS"
-  # fix perl-sgmls
-  sed -i -e 's#sgmlspl#sgmlspl.pl#g' "${srcdir}/${pkgname}/doc/Makefile"
-  make -C doc man
+  arch-meson ../$pkgname -DBUILD_RARPD=true
+  ninja
 }
 
 package() {
-  cd "${srcdir}/${pkgname}"
+  cd build
 
-  install -dm755 "${pkgdir}"/usr/bin
-
-  install -m755 arping clockdiff ping rarpd rdisc tftpd tracepath "${pkgdir}"/usr/bin/
-
-  install -dm755 "${pkgdir}"/usr/share/man/man8
-  install -m644 doc/{arping,clockdiff,ping,rarpd,rdisc,tftpd,tracepath}.8 \
-     "${pkgdir}"/usr/share/man/man8/
+  DESTDIR="$pkgdir" ninja install
 
   # FS#24768
   install -dm755 "${pkgdir}"/etc/xinetd.d/
