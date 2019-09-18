@@ -1,13 +1,12 @@
-# $Id$
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Eric Belanger <eric@archlinux.org>
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=freeglut
-pkgver=3.0.0
-pkgrel=2
+pkgver=3.2.0
+pkgrel=1
 pkgdesc="Provides functionality for small OpenGL programs"
-arch=(i686 x86_64)
+arch=(x86_64)
 url="http://freeglut.sourceforge.net/"
 license=(MIT)
 depends=(libxi libxrandr libgl)
@@ -15,22 +14,29 @@ makedepends=(mesa glu libxxf86vm cmake)
 replaces=(glut)
 provides=(glut)
 conflicts=(glut)
-source=(https://downloads.sourceforge.net/freeglut/${pkgname}-${pkgver}.tar.gz)
-md5sums=('90c3ca4dd9d51cf32276bc5344ec9754')
-sha1sums=('fca52242f9344627a30f11487ee42002e6b0dacd')
+source=(https://downloads.sourceforge.net/freeglut/${pkgname}-${pkgver}.tar.gz
+        glut.diff)
+sha512sums=('78da1eaa845607ddd97a6744f3a97ff26cdb562fdf990695c8ac97a60d9d692496e4bf3672acfc522add60823c2f3bc7435e19e8041fbbb5d95851c0b641a818'
+            '6778538722707460a7c71eceee430f3945fcfcff351d0a05623417a183af4e8f85a497e24208b73756b2713bb5c11d39dbd4e6de7f06b8865fd81a1faa23b9a4')
 
 prepare() {
-  mkdir build
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../glut.diff
 }
 
 build() {
-  cd build
-  cmake ../$pkgname-$pkgver -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release
-  make
+  cmake -H$pkgname-$pkgver -Bbuild \
+    -DFREEGLUT_BUILD_STATIC_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_BUILD_TYPE=None
+  cmake --build build
 }
 
 package() {
-  cd build
-  make DESTDIR="$pkgdir" install
-  install -Dm644 ../$pkgname-$pkgver/COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  DESTDIR="$pkgdir" cmake --build build --target install
+  ln -sr "$pkgdir"/usr/lib/pkgconfig/{glut,freeglut}.pc
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname-$pkgver/COPYING
 }
+
+# vim: ts=2 sw=2 et:
