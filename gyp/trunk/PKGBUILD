@@ -1,25 +1,32 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gyp
-pkgver=20170609
-pkgrel=3
+pkgver=20190716.fcd686f1
+pkgrel=1
 pkgdesc='"Generate Your Projects" Meta-Build system'
 arch=(any)
 url="https://gyp.gsrc.io/"
 license=(custom:BSD)
-depends=(python2-setuptools ninja)
+depends=(python-setuptools ninja)
 makedepends=(git)
-_commit=a478c1ab51ea3e04e79791ac3d1dad01b3f57434  # changes/21/487521/4
+_commit=fcd686f1880fa52a1ee78d3e98af1b88cb334528  # changes/82/1701782/5
 source=("git+https://chromium.googlesource.com/external/gyp#commit=$_commit")
 sha256sums=('SKIP')
 
+pkgver() {
+  cd $pkgname
+
+  # Commit date + short rev
+  echo $(TZ=UTC git show -s --pretty=%cd --date=format-local:%Y%m%d HEAD).$(git rev-parse --short HEAD)
+}
+
 build() {
   cd $pkgname
-  python2 setup.py build
+  python setup.py build
 }
 
 package() {
   cd $pkgname
-  python2 setup.py install --root="$pkgdir" --optimize=1 --skip-build
-  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  python setup.py install --root="$pkgdir" --optimize=1 --skip-build
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 LICENSE
 }
