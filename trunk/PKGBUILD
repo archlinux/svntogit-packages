@@ -10,7 +10,7 @@ arch=(x86_64)
 license=(MPL GPL)
 _nsprver=4.20
 depends=("nspr>=${_nsprver}" sqlite zlib sh p11-kit)
-makedepends=(perl python python2 gyp)
+makedepends=(perl python gyp)
 source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
         certdata2pem.py bundle.sh)
 sha256sums=('6b699649d285602ba258a4b0957cb841eafc94eff5735a9da8da0adbb9a10cef'
@@ -18,8 +18,7 @@ sha256sums=('6b699649d285602ba258a4b0957cb841eafc94eff5735a9da8da0adbb9a10cef'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
 prepare() {
-  mkdir certs path
-  ln -s /usr/bin/python2 path/python
+  mkdir certs
 
   cd nss-$pkgver
   ln -sr nss/lib/ckfw/builtins/certdata.txt ../certs/
@@ -27,12 +26,14 @@ prepare() {
 }
 
 build() {
-  ( cd certs; python ../certdata2pem.py; )
-  sh bundle.sh
+  cd certs
+  ../certdata2pem.py
+
+  cd ..
+  ./bundle.sh
 
   cd nss-$pkgver/nss
-  PATH="$srcdir/path:$PATH" bash -x ./build.sh -v \
-    --opt --system-sqlite --system-nspr --enable-libpkix --disable-tests
+  ./build.sh -v --opt --system-sqlite --system-nspr --enable-libpkix --disable-tests
 }
 
 package_nss() {
