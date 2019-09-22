@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=8.0.1
-pkgrel=3
+pkgver=9.0.0
+pkgrel=1
 _ocaml_ver=4.08.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -12,9 +12,9 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
              'python-sphinx' 'python-recommonmark')
 options=('staticlibs')
-source=(https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver/$pkgname-$pkgver.src.tar.xz{,.sig}
+source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('44787a6d02f7140f145e2250d56c9f849334e11f9ae379827510ed72f12b75e7'
+sha256sums=('d6a0565cf21f22e9b4353b2eb92622e8365000a9e90a16b09b56f8157eabfe84'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
@@ -37,6 +37,7 @@ build() {
     -DLLVM_INSTALL_UTILS=ON \
     -DLLVM_ENABLE_RTTI=ON \
     -DLLVM_ENABLE_FFI=ON \
+    -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AVR \
     -DLLVM_BUILD_TESTS=ON \
     -DLLVM_BUILD_DOCS=ON \
     -DLLVM_ENABLE_SPHINX=ON \
