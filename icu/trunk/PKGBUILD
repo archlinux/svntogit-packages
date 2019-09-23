@@ -38,8 +38,8 @@ check() {
 
 package() {
   cd icu/source
-  make -j1 DESTDIR=${pkgdir} install
+  make -j1 DESTDIR="${pkgdir}" install
 
   # Install license
-  install -Dm644 ${srcdir}/icu/LICENSE ${pkgdir}/usr/share/licenses/icu/LICENSE
+  install -Dm644 "${srcdir}"/icu/LICENSE "${pkgdir}"/usr/share/licenses/icu/LICENSE
 }
