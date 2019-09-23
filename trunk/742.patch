@@ -1,0 +1,41 @@
+From 10a9798f79adc379fd8e425254a6b7fe7fa759ff Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Florian=20M=C3=BCllner?= <fmuellner@gnome.org>
+Date: Mon, 23 Sep 2019 13:46:05 +0200
+Subject: [PATCH] shell-util: Handle NULL from meta_window_get_image()
+
+Until commit 506b75fc7f3 we got away with not handling a NULL return
+value, as cairo_surface_destroy() deals with a NULL surface; the same
+isn't true for get_width/get_height, so guard to code in question to
+prevent a crash.
+
+https://gitlab.gnome.org/GNOME/gnome-shell/issues/1678
+---
+ src/shell-util.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/shell-util.c b/src/shell-util.c
+index e94f3c364d..c22dd1c6e5 100644
+--- a/src/shell-util.c
++++ b/src/shell-util.c
+@@ -419,7 +419,7 @@ canvas_draw_cb (ClutterContent *content,
+  * @window_actor: a #MetaWindowActor
+  * @window_rect: a #MetaRectangle
+  *
+- * Returns: (transfer full): a new #ClutterContent
++ * Returns: (transfer full) (nullable): a new #ClutterContent
+  */
+ ClutterContent *
+ shell_util_get_content_for_window_actor (MetaWindowActor *window_actor,
+@@ -439,6 +439,9 @@ shell_util_get_content_for_window_actor (MetaWindowActor *window_actor,
+ 
+   surface = meta_window_actor_get_image (window_actor, &clip);
+ 
++  if (!surface)
++    return NULL;
++
+   content = clutter_canvas_new ();
+   clutter_canvas_set_size (CLUTTER_CANVAS (content),
+                            cairo_image_surface_get_width (surface),
+-- 
+2.22.0
+
