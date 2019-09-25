@@ -183,7 +183,7 @@ package_mesa() {
   find fakeinstall -depth -print0 | xargs -0 rmdir
 
   # bring back missing glesv2.pc
-  install -m644 -Dt ${pkgdir}/usr/lib/pkgconfig ${srcdir}/glesv2.pc
+  install -m644 -Dt "${pkgdir}"/usr/lib/pkgconfig "${srcdir}"/glesv2.pc
 
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
 }
