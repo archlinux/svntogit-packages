@@ -2,7 +2,7 @@
 
 pkgname=xorgproto
 pkgver=2019.1
-pkgrel=1
+pkgrel=2
 pkgdesc="combined X.Org X11 Protocol headers"
 arch=('any')
 url="https://xorg.freedesktop.org/"
@@ -24,7 +24,7 @@ prepare() {
 }
 
 build() {
-  arch-meson $pkgname-$pkgver build \
+  arch-meson "$pkgname"-$pkgver build \
     -Dlegacy=true
 
   ninja -C build
@@ -39,16 +39,18 @@ package() {
 
   # missing docs
   install -m755 -d "${pkgdir}/usr/share/doc/${pkgname}"
-  install -m644 $pkgname-$pkgver/*.txt "${pkgdir}/usr/share/doc/${pkgname}/"
-  install -m644 $pkgname-$pkgver/PM_spec "${pkgdir}/usr/share/doc/${pkgname}/"
-  rm ${pkgdir}/usr/share/doc/${pkgname}/meson_options.txt
+  install -m644 "$pkgname"-$pkgver/*.txt "${pkgdir}/usr/share/doc/${pkgname}/"
+  install -m644 "$pkgname"-$pkgver/PM_spec "${pkgdir}/usr/share/doc/${pkgname}/"
+  rm "${pkgdir}"/usr/share/doc/${pkgname}/meson_options.txt
 
   # licenses
   install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -m644 $pkgname-$pkgver/COPYING* "${pkgdir}/usr/share/licenses/${pkgname}/"
+  install -m644 "$pkgname"-$pkgver/COPYING* "${pkgdir}/usr/share/licenses/${pkgname}/"
 
   # cleanup
-  rm -f ${pkgdir}/usr/include/X11/extensions/{apple,windows}*
-  rm -f ${pkgdir}/usr/share/licenses/${pkgname}/COPYING-{apple,windows}wmproto
-  rm -f ${pkgdir}/usr/share/pkgconfig/{apple,windows}wmproto.pc
+  rm -f "${pkgdir}"/usr/include/X11/extensions/{apple,windows}*
+  rm -f "${pkgdir}"/usr/share/licenses/${pkgname}/COPYING-{apple,windows}wmproto
+  rm -f "${pkgdir}"/usr/share/pkgconfig/{apple,windows}wmproto.pc
+  # now part of libxvmc
+  rm -f "${pkgdir}"/usr/include/X11/extensions/vldXvMC.h
 }
