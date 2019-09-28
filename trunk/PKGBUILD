@@ -63,7 +63,10 @@ package_rust() {
   cd "$pkgdir/usr/lib"
 
   rm rustlib/{components,manifest-rustc,rust-installer-version}
-  ln -sf rustlib/$CARCH-unknown-linux-gnu/lib/*.so .
+
+  # rustbuild always installs copies of the shared libraries to /usr/lib,
+  # overwrite them with symlinks to the per-architecture versions
+  ln -sf rustlib/$CARCH-unknown-linux-gnu/lib/*.so "$pkgdir"/usr/lib/
 
   # move docs and lib32 libs out of the way for splitting
   mv "$pkgdir"/usr/share/doc "$srcdir"
