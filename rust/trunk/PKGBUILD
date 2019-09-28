@@ -3,9 +3,7 @@
 # Contributor: Daniel Micay <danielmicay@gmail.com>
 # Contributor: userwithuid <userwithuid@gmail.com>
 
-# Remember to bump lib32-rust as well!
-
-pkgname=('rust' 'rust-docs')
+pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
 pkgver=1.37.0
 pkgrel=2
@@ -17,7 +15,7 @@ url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'perl' 'python' 'curl' 'cmake')
+makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python' 'curl' 'cmake')
 checkdepends=('procps-ng' 'gdb')
 
 options=('!emptydirs')
@@ -30,7 +28,7 @@ sha256sums=('120e7020d065499cc6b28759ff04153bfdc2ac9b5adeb252331a4eb87cbe38c3'
             'SKIP'
             '11828fb4823387d820c6715b25f6b2405e60837d12a7469e7a8882911c721837'
             'SKIP'
-            '07affeba0bf6a50ebfcc471111b436cccfa01990802ad8fe567d1f3c9922a8fe')
+            'f3872bf7ae28eeee18a14daa9abaf4ea728820a6c673ad86c809de894f3ff2b9')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
@@ -72,6 +70,22 @@ package_rust() {
 
   install -d "$pkgdir"/usr/share/bash-completion
   mv "$pkgdir"/etc/bash_completion.d/ "$pkgdir"/usr/share/bash-completion/completions/
+}
+
+package_lib32-rust-libs() {
+  descriptino=('32-bit libraries for Rust')
+  depends=('lib32-gcc-libs')
+  provides=('lib32-rust')
+  conflicts=('lib32-rust')
+  replaces=('lib32-rust')
+
+  install -d "$pkgdir"/usr/lib/rustlib/
+  mv "$srcdir"/i686-unknown-linux-gnu "$pkgdir"/usr/lib/rustlib
+
+  cd "rustc-$pkgver-src"
+  for license in APACHE MIT; do
+    install -Dm644 "LICENSE-$license" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"
+  done
 }
 
 package_rust-docs() {
