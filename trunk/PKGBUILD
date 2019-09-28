@@ -65,8 +65,9 @@ package_rust() {
   rm rustlib/{components,manifest-rustc,rust-installer-version}
   ln -sf rustlib/$CARCH-unknown-linux-gnu/lib/*.so .
 
-  # move docs out of the way for splitting
+  # move docs and lib32 libs out of the way for splitting
   mv "$pkgdir"/usr/share/doc "$srcdir"
+  mv "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu "$srcdir"
 
   install -d "$pkgdir"/usr/share/bash-completion
   mv "$pkgdir"/etc/bash_completion.d/ "$pkgdir"/usr/share/bash-completion/completions/
