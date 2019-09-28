@@ -120,7 +120,7 @@ package() {
   make -C contrib/mw-to-git "${_make_paths[@]}" DESTDIR="$pkgdir" install
   # the rest of the contrib stuff
   find contrib/ -name '.gitignore' -delete
-  cp -a ./contrib/* $pkgdir/usr/share/git/
+  cp -a ./contrib/* "$pkgdir"/usr/share/git/
 
   # scripts are for python 2.x
   sed -i 's|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|' \
