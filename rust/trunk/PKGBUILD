@@ -60,9 +60,9 @@ package_rust() {
   for license in APACHE MIT; do install -Dm644 "LICENSE-$license" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"; done
 
-  cd "$pkgdir/usr/lib"
-
-  rm rustlib/{components,manifest-rustc,rust-installer-version}
+  # delete unnecesary files, e.g. components and manifest files only used for the uninstall script
+  cd "$pkgdir"/usr/lib/rustlib
+  rm components install.log manifest-* rust-installer-version uninstall.sh
 
   # rustbuild always installs copies of the shared libraries to /usr/lib,
   # overwrite them with symlinks to the per-architecture versions
