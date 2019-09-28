@@ -93,11 +93,15 @@ package_lib32-rust-libs() {
 }
 
 package_rust-docs() {
-  install -d "$pkgdir/usr/share/doc/"
+  description=('Documentation for the Rust programming language')
+
+  install -d "$pkgdir"/usr/share/doc/
   mv "$srcdir"/doc/* "$pkgdir"/usr/share/doc/rust/
 
-  for license in APACHE MIT; do install -Dm644 "rustc-$pkgver-src/LICENSE-$license" \
-    "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"; done
+  cd "rustc-$pkgver-src"
+  for license in APACHE MIT; do
+    install -Dm644 "LICENSE-$license" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"
+  done
 }
 
 # vim:set ts=2 sw=2 et:
