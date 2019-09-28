@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=3.34.0+41+g437f6b3d5
-pkgrel=2
+pkgrel=3
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -30,6 +30,7 @@ prepare() {
 
   # shadow framebuffer rendering is buggy
   git revert -n 437f6b3d59f2102f5974bfc430176725f2ed67c2
+  git revert -n 05e1a6c2ca3cd6222590033e5978a9d9f6d22526
 }
 
 build() {
