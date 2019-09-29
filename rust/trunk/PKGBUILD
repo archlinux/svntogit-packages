@@ -5,8 +5,8 @@
 
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
-pkgver=1.37.0
-pkgrel=2
+pkgver=1.38.0
+pkgrel=1
 
 _llvm_ver=8.0.1
 
@@ -24,11 +24,11 @@ source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
         config.toml)
 
-sha256sums=('120e7020d065499cc6b28759ff04153bfdc2ac9b5adeb252331a4eb87cbe38c3'
+sha256sums=('644263ca7c7106f8ee8fcde6bb16910d246b30668a74be20b8c7e0e9f4a52d80'
             'SKIP'
             '11828fb4823387d820c6715b25f6b2405e60837d12a7469e7a8882911c721837'
             'SKIP'
-            'f3872bf7ae28eeee18a14daa9abaf4ea728820a6c673ad86c809de894f3ff2b9')
+            'b1bd845081ece690685b5bf2a7e9e931a44a603ab836dd5a9b3c2b062fc5559b')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
@@ -66,7 +66,8 @@ package_rust() {
 
   # rustbuild always installs copies of the shared libraries to /usr/lib,
   # overwrite them with symlinks to the per-architecture versions
-  ln -sf rustlib/$CARCH-unknown-linux-gnu/lib/*.so "$pkgdir"/usr/lib/
+  cd "$pkgdir"/usr/lib
+  ln -sf rustlib/$CARCH-unknown-linux-gnu/lib/*.so .
 
   # move docs and lib32 libs out of the way for splitting
   mv "$pkgdir"/usr/share/doc "$srcdir"
