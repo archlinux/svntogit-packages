@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 _pkgver=5.2.17
-_hardenedver=a
+_hardenedver=b
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
 pkgrel=1
@@ -28,7 +28,7 @@ source=(https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgve
 replaces=('linux-grsec')
 sha256sums=('7b3b8ad09ea936b4216dd02c5fc2ef39c8f58935d0a81ab9690f0fc451102df9'
             'SKIP'
-            '6462440c046f26bc0bbaeafaa116dac5abb57825a5058471054f507d60323b78'
+            '5e3161b5f2b4d5fce5bfada39da7c4b9b81d7b274a637a5b2a254b9ff7951696'
             'SKIP'
             '8817ef1014c2799c72805bb3598927af9cf5efb8363cdcd3a27c00217d9a4884'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
