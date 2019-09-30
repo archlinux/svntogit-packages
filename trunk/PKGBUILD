@@ -3,8 +3,8 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.0+41+g437f6b3d5
-pkgrel=3
+pkgver=3.34.0+43+g7049b2f27
+pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=437f6b3d59f2102f5974bfc430176725f2ed67c2  # master
+_commit=7049b2f27418f1b484afe14612a750755b5b85b2  # master
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -27,10 +27,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # shadow framebuffer rendering is buggy
-  git revert -n 437f6b3d59f2102f5974bfc430176725f2ed67c2
-  git revert -n 05e1a6c2ca3cd6222590033e5978a9d9f6d22526
 }
 
 build() {
