@@ -93,11 +93,10 @@ package_lib32-rust-libs() {
 package_rust-docs() {
   description=('Documentation for the Rust programming language')
 
-  install -d "$pkgdir"/usr/share/doc/
-  mv "$srcdir"/doc/* "$pkgdir"/usr/share/doc/rust/
-
   cd "rustc-$pkgver-src"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  mv "$srcdir"/doc "$pkgdir"/usr/share/doc
 }
 
 # vim:set ts=2 sw=2 et:
