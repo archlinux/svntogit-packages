@@ -57,8 +57,7 @@ package_rust() {
 
   DESTDIR="$pkgdir" python ./x.py install
 
-  for license in APACHE MIT; do install -Dm644 "LICENSE-$license" \
-    "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"; done
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
   # delete unnecesary files, e.g. components and manifest files only used for the uninstall script
   cd "$pkgdir"/usr/lib/rustlib
@@ -88,9 +87,7 @@ package_lib32-rust-libs() {
   mv "$srcdir"/i686-unknown-linux-gnu "$pkgdir"/usr/lib/rustlib
 
   cd "rustc-$pkgver-src"
-  for license in APACHE MIT; do
-    install -Dm644 "LICENSE-$license" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"
-  done
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 }
 
 package_rust-docs() {
@@ -100,9 +97,7 @@ package_rust-docs() {
   mv "$srcdir"/doc/* "$pkgdir"/usr/share/doc/rust/
 
   cd "rustc-$pkgver-src"
-  for license in APACHE MIT; do
-    install -Dm644 "LICENSE-$license" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-$license"
-  done
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 }
 
 # vim:set ts=2 sw=2 et:
