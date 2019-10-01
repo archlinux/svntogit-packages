@@ -22,18 +22,24 @@ options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
+        0001-WIP-minimize-the-rust-std-component.patch
         config.toml)
 
 sha256sums=('644263ca7c7106f8ee8fcde6bb16910d246b30668a74be20b8c7e0e9f4a52d80'
             'SKIP'
             '11828fb4823387d820c6715b25f6b2405e60837d12a7469e7a8882911c721837'
             'SKIP'
+            '1d6b69444ef6ff033fe1612e56ecdaad5c52aa44395e704f78b1a047c65b9321'
             'b1bd845081ece690685b5bf2a7e9e931a44a603ab836dd5a9b3c2b062fc5559b')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 prepare() {
   cd "rustc-$pkgver-src"
+
+  # For https://bugzilla.redhat.com/show_bug.cgi?id=1756487
+  # From https://src.fedoraproject.org/rpms/rust/tree/master
+  patch -Np1 -i ../0001-WIP-minimize-the-rust-std-component.patch
 
   cp "$srcdir"/config.toml config.toml
 }
