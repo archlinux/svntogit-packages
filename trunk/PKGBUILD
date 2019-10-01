@@ -82,11 +82,12 @@ package_lib32-rust-libs() {
   conflicts=('lib32-rust')
   replaces=('lib32-rust')
 
-  install -d "$pkgdir"/usr/lib/rustlib/
-  mv "$srcdir"/i686-unknown-linux-gnu "$pkgdir"/usr/lib/rustlib
-
   cd "rustc-$pkgver-src"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  install -d "$pkgdir"/usr/lib/rustlib/ "$pkgdir"/usr/lib32/
+  mv "$srcdir"/i686-unknown-linux-gnu "$pkgdir"/usr/lib/rustlib
+  ln -srft "$pkgdir"/usr/lib32 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu/lib/*.so
 }
 
 package_rust-docs() {
