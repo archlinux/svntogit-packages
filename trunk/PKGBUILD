@@ -60,48 +60,46 @@ check() {
   # Make sure a basic binary runs. There should be no errors.
   ./vg-in-place --error-exitcode=1 /bin/true
 
-  # Make sure no extra CFLAGS, CXXFLAGS or LDFLAGS leak through,
-  # the testsuite sets all flags necessary. See also configure above.
-  make check CFLAGS="" CXXFLAGS="" LDFLAGS=""
+  # Make sure no extra FLAGS leak through, the testsuite
+  # sets all flags necessary. See also configure above.
+  make check CPPFLAGS= CFLAGS= CXXFLAGS= LDFLAGS=
 
   # XXX: run full regtest but only report issues some tests fail duo
   # current toolchain and expectations, take a manual look if its fine
-  echo ===============TESTING===================
+  echo "===============TESTING==================="
   make regtest || :
 
   # Make sure test failures show up in build.log
   # Gather up the diffs (at most the first 20 lines for each one)
-  MAX_LINES=20
-  diff_files=$(find . -name '*.diff' | sort)
-  if [ z"${diff_files}" = z ] ; then
+  local f max_lines=20 diff_files=()
+  mapfile -d '' diff_files < <(find . -name '*.diff' -print0 | sort -z)
+  if (( ${#diff_files[@]} == 0 )); then
     echo "Congratulations, all tests passed!"
   else
     warning "Some tests failed!"
-    for f in ${diff_files} ; do
-        echo "=================================================" >> diffs
-        echo "${f}"                                              >> diffs
-        echo "=================================================" >> diffs
-        if [ "$(wc -l < "${f}")" -le ${MAX_LINES} ] ; then
-          cat "${f}"                                             >> diffs
+    for f in "${diff_files[@]}"; do
+        echo "================================================="
+        echo "${f}"
+        echo "================================================="
+        if (( $(wc -l < "${f}") < ${max_lines} )); then
+          cat "${f}"
         else
-          head -n ${MAX_LINES} "${f}"                            >> diffs
-          echo "<truncated beyond ${MAX_LINES} lines>"           >> diffs
+          head -n ${max_lines} "${f}"
+          echo "<truncated beyond ${max_lines} lines>"
         fi
-    done
+    done | tee diffs
   fi
-  cat diffs
-  echo ===============END TESTING===============
+  echo "===============END TESTING==============="
 }
 
 package() {
   cd valgrind
   make DESTDIR="${pkgdir}" install
 
-  install -d "$pkgdir/usr/share/man/man1"
-  install -m644 docs/*.1 -t "$pkgdir/usr/share/man/man1"
+  install -Dm644 docs/*.1 -t "$pkgdir/usr/share/man/man1"
 
   if check_option 'debug' n; then
-    find "${pkgdir}/usr/bin" -type f -executable -exec strip $STRIP_BINARIES {} + || true
+    find "${pkgdir}/usr/bin" -type f -executable -exec strip $STRIP_BINARIES {} + || :
   fi
 }
 
