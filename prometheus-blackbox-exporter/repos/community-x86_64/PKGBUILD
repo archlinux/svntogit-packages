@@ -1,0 +1,39 @@
+# Maintainer: Jelle van der Waa <jelle@dwaa.nl>
+
+pkgname=prometheus-blackbox-exporter
+pkgver=0.15.1
+pkgrel=2
+pkgdesc="Allows blackbox probing of endpoints over HTTP, HTTPS, DNS, TCP and ICMP"
+arch=('x86_64')
+url="https://github.com/prometheus/blackbox_exporter"
+license=('Apache')
+depends=(glibc)
+makedepends=(go-pie git)
+source=(https://github.com/prometheus/blackbox_exporter/archive/v${pkgver}.tar.gz prometheus-blackbox-exporter.service)
+sha512sums=('2c7d0989bc70982a0fd528c7c6ed5ec6686f5e93db0a90db2b06e4e578503443da0750aaa2d6a01ae4fcd4c722eef522c0e06b019aa59a2eb837f233e317d4e2'
+            'd50d40d3b8de03967a467db5d0ead3f8a9c770464c6028580022b60651384075d9437a3efb98b6f8d5e6df967ade09f839552e8d67c254d590016fc51b11def9')
+
+check() {
+  cd blackbox_exporter-$pkgver
+  go test ./...
+}
+
+build() {
+  cd blackbox_exporter-$pkgver
+  go build \
+    -gcflags "all=-trimpath=${PWD}" \
+    -asmflags "all=-trimpath=${PWD}" \
+    -ldflags "-extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    .
+}
+
+package() {
+  install -Dm644 prometheus-blackbox-exporter.service "$pkgdir"/usr/lib/systemd/system/prometheus-blackbox-exporter.service
+  cd blackbox_exporter-$pkgver
+  install -Dm755 blackbox_exporter "$pkgdir"/usr/bin/prometheus-blackbox-exporter
+}
