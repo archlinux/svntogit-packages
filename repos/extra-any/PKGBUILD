@@ -3,7 +3,7 @@
 # Contributor: Sebastien Binet <binet@lblbox>
 
 pkgname=('python-pip' 'python2-pip')
-pkgver=19.0.3
+pkgver=19.2.3
 pkgrel=1
 pkgdesc="The PyPA recommended tool for installing Python packages"
 url="https://pip.pypa.io/"
@@ -16,30 +16,16 @@ makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'python2-ipaddress
 checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'python-pretend'
               'python-yaml' 'python-mock' 'python-freezegun' 'python-pip' 'python-wheel'
               'git' 'subversion')
-source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz"
-        progress.patch
-        https://github.com/pypa/pip/commit/8ef3283fcf7c7c5537f305a374355edc96f40d3d.patch)
-sha512sums=('f56df1e2fe18eccc4dcba66b0a93a933eb94d12ed0f31d3923662fb85075192674c98bbc00dd48185b1d87cf28a64a6dc321de524e4ccb39a8877b3d5cf578e1'
-            '77f48f1ae3c977087630a2009e55d38dc6daa53b08767e3aa2fa51405f76de0291c48cebd5e9dc42346f14bb43189f1f49a325faffde9ce63a4377b63541a296'
-            'b6cac141a701fde6726d48e51414c6003061c435a6af9cc8ff681365db5a3e24c446ea3227a662f10264332a59582a788576934ff0613fcc46d21ef665c0428e')
+source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz")
+sha512sums=('59fcb79173529097662fcb9662f78fee7b00f441d49ea41f280da4b27875a425cccaa3daeda647ac7cddf936111923dc1546a3474fcdd7003777178e7143f6eb')
 
 shopt -s extglob
 prepare() {
   cd "$srcdir/pip-$pkgver"
 
-  # Fix compat with python-progress 1.5
-  # https://github.com/pypa/pip/pull/6319
-  patch -Np1 -i ../progress.patch
-
-  # fix vendor import
-  patch -Np1 -i ../8ef3283fcf7c7c5537f305a374355edc96f40d3d.patch
-
   rm -rf src/pip/_vendor/!(__init__.py)
   sed -i -e 's/DEBUNDLED = False/DEBUNDLED = True/' \
             src/pip/_vendor/__init__.py
-
-  # pytest 4
-  sed -i 's/get_marker/get_closest_marker/' tests/conftest.py
 }
 
 build() {
@@ -58,14 +44,11 @@ build() {
 }
 
 check() {
-  (
-    cd "$srcdir"/pip-$pkgver
-    pip wheel -w tests/data/common_wheels -r tools/tests-common_wheels-requirements.txt
-    python -m venv "$srcdir/pyvenv" --system-site-packages
-    . "$srcdir/pyvenv/bin/activate"
-    python setup.py install
-    python setup.py pytest
-  ) || warning "Tests failed"
+  cd "$srcdir"/pip-$pkgver
+  pip wheel -w tests/data/common_wheels -r tools/tests-common_wheels-requirements.txt
+  python setup.py install --root="$PWD/tmp_install" --optimize=1
+  PYTHONPATH="$PWD/tmp_install/usr/lib/python3.7/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" \
+    python setup.py pytest --addopts "-m unit --junit-xml=junit/unit-test.xml" || warning "Tests failed"
 }
 
 package_python-pip() {
