@@ -2,7 +2,7 @@
 
 pkgbase=python-attrs
 pkgname=('python-attrs' 'python2-attrs')
-pkgver=19.1.0
+pkgver=19.2.0
 pkgrel=1
 pkgdesc="Attributes without boilerplate."
 arch=('any')
@@ -12,7 +12,7 @@ makedepends=('python-setuptools' 'python2-setuptools')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-zope-interface'
               'python2-zope-interface' 'python-hypothesis' 'python2-hypothesis')
 source=("https://pypi.io/packages/source/a/attrs/attrs-$pkgver.tar.gz")
-sha512sums=('22ee45e8b10a7abe10e720788c5cfab424d0bfe70e595dfb116928b8ebea497a747e8234d96549da00f0967de750fb943db0cd3669354253a27be2ca30fe413a')
+sha512sums=('c6239f5553d99f324a36193d9f6e684fdce26efcf4da866d1b995cd644909ec4b58ac6ef6c20a0fda4b8a16d00ec0aacfd3970a52b68997fd10804d5286b41c6')
 
 prepare() {
   cp -a attrs-$pkgver{,-py2}
