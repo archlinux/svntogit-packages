@@ -5,7 +5,7 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
-pkgver=9.1.0
+pkgver=9.2.0
 _majorver=${pkgver:0:1}
 _islver=0.21
 pkgrel=2
@@ -20,20 +20,16 @@ options=(!emptydirs)
 source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
 #source=(gcc::svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
         http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
-        c89 c99
-        bz90397.patch
-        bz90949.patch)
+        c89 c99)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('79a66834e96a6050d8fe78db2c3b32fb285b230b855d0a66288235bc04b327a0'
+sha256sums=('ea6ef08f121239da5695f76c9b33637a118dcf63e24164422231917fa61fb206'
             'SKIP'
             '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
-            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
-            'cc20d05bcc6cb35bf0944b391f0b0380af375f2a8a03ce1cd67835884bc41fac'
-            'c860819e730faf1621e1286ebe3a0179df6e25182b81a9ca0a3db02633982a14')
+            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
 _svnrev=264010
 _svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
@@ -60,12 +56,6 @@ snapshot() {
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
   cd gcc
-
-  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90397
-  patch -p0 -i "$srcdir/bz90397.patch"
-
-  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90949 
-  patch -p0 -i "$srcdir/bz90949.patch"
 
   # link isl for in-tree build
   ln -s ../isl-${_islver} isl
