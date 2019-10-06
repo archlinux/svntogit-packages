@@ -148,7 +148,6 @@ check() {
 package_systemd() {
   pkgdesc='system and service manager'
   license=('GPL2' 'LGPL2.1')
-  groups=('base-devel')
   depends=('acl' 'bash' 'cryptsetup' 'dbus' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
            'libgcrypt' 'systemd-libs' 'libidn2' 'libidn2.so' 'lz4' 'pam' 'libelf'
            'libseccomp' 'util-linux' 'xz' 'pcre2' 'audit')
@@ -260,7 +259,6 @@ package_systemd-resolvconf() {
 package_systemd-sysvcompat() {
   pkgdesc='sysvinit compat for systemd'
   license=('GPL2')
-  groups=('base')
   conflicts=('sysvinit')
   depends=('systemd')
 
