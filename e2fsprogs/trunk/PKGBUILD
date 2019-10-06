@@ -8,7 +8,6 @@ pkgdesc="Ext2/3/4 filesystem utilities"
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
 url="http://e2fsprogs.sourceforge.net"
-groups=('base')
 depends=('sh' 'libutil-linux')
 makedepends=('util-linux')
 backup=('etc/mke2fs.conf')
