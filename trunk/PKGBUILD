@@ -73,7 +73,6 @@ package_util-linux() {
   depends=('pam' 'shadow' 'coreutils' 'systemd-libs' 'libcap-ng' 'libutil-linux')
   optdepends=('python: python bindings to libmount'
               'words: default dictionary for look')
-  groups=('base' 'base-devel')
   backup=(etc/pam.d/chfn
           etc/pam.d/chsh
           etc/pam.d/login
