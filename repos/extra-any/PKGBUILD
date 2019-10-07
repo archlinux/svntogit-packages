@@ -4,7 +4,7 @@ pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
 pkgver=20190926
 _commit=0fa1dfabd6e3746bb7463399e2813f60d3f1b256
-pkgrel=1
+pkgrel=2
 pkgdesc="Google Noto TTF fonts"
 arch=(any)
 url="https://www.google.com/get/noto/"
@@ -33,6 +33,9 @@ package_noto-fonts() {
   install -Dm644 "$srcdir"/*.conf -t "$pkgdir"/etc/fonts/conf.avail/
   install -d "$pkgdir"/etc/fonts/conf.d
   ln -rs "$pkgdir"/etc/fonts/conf.avail/* "$pkgdir"/etc/fonts/conf.d
+
+  # Remove font that breaks emoji in Qt
+  rm "$pkgdir"/usr/share/fonts/noto/NotoKufiArabic*
 }
 
 package_noto-fonts-extra() {
