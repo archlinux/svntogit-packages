@@ -2,7 +2,7 @@
 
 pkgname=polkit
 pkgver=0.116
-pkgrel=2
+pkgrel=3
 pkgdesc="Application development toolkit for controlling system-wide privileges"
 arch=(x86_64)
 license=(LGPL)
@@ -43,7 +43,9 @@ check() {
 
 package() {
   cd $pkgname
-  make DESTDIR="$pkgdir" install
+  make DESTDIR="$pkgdir" install \
+      dbusconfdir=/usr/share/dbus-1/system.d \
+      rulesdir=/usr/share/polkit-1/rules.d
 
   install -d -o root -g 102 -m 750 "$pkgdir"/{etc,usr/share}/polkit-1/rules.d
 
