@@ -2,8 +2,8 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=mkinitcpio
-pkgver=25
-pkgrel=2
+pkgver=26
+pkgrel=1
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url="https://projects.archlinux.org/mkinitcpio.git/"
@@ -19,10 +19,11 @@ provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
-sha256sums=('e14056a9c460d15652e99620bce4308d4dd9309f82c152c4b52287e697fab599'
+sha256sums=('d1c3038f538f8e2e57333050463b79884de6f29f4b4ec4f26d1bdeaa620215c1'
             'SKIP')
 validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'   # Dave Reisner
-              '86CFFCA918CF3AF47147588051E8B148A9999C34')  # Evangelos Foutras
+              '86CFFCA918CF3AF47147588051E8B148A9999C34'   # Evangelos Foutras
+              'ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB')  # Giancarlo Razzolini
 
 check() {
   make -C "$pkgname-$pkgver" check
