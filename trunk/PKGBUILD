@@ -17,21 +17,21 @@ md5sums=('c5441c73cc451764055ee65e9a4292bb'
 validpgpkeys=('D1967C63788713177D861ED7DF597815937EC0D2') # Arnold Robbins
 
 build() {
-  cd ${srcdir}/${pkgname}-${pkgver}
+  cd ${pkgname}-${pkgver}
   ./configure --prefix=/usr --libexecdir=/usr/lib --sysconfdir=/etc --without-libsigsegv
   make
 }
 
 check() {
-  cd ${srcdir}/${pkgname}-${pkgver}
+  cd ${pkgname}-${pkgver}
   make check
 }
 
 package() {
-  cd ${srcdir}/${pkgname}-${pkgver}
-  make DESTDIR=${pkgdir} install
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
 
-  #install -dm755 ${pkgdir}/bin
-  #ln -sf /usr/bin/gawk ${pkgdir}/bin/
-  #ln -sf gawk ${pkgdir}/bin/awk
+  #install -dm755 "${pkgdir}"/bin
+  #ln -sf /usr/bin/gawk "${pkgdir}"/bin/
+  #ln -sf gawk "${pkgdir}"/bin/awk
 }
