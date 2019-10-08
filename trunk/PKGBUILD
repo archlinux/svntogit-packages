@@ -20,16 +20,17 @@ md5sums=('51bf3651bd73a06c413a2f964f299598'
          'SKIP'
          '5a37c112aa07dccdde62f9fa5b888607'
          'b6b0bfd6487c99264578630616dfe5eb')
+
 build() {
-  cd $srcdir/$pkgname-$pkgver
+  cd $pkgname-$pkgver
   make CXFLAGS="$CFLAGS" BINDIR=/usr/bin UDEVDIR=/usr/lib/udev
 }
 
 package() {
-  cd $srcdir/$pkgname-$pkgver
-  make INSTALL=/usr/bin/install BINDIR=/usr/bin DESTDIR=$pkgdir UDEVDIR=/usr/lib/udev install
-  make SYSTEMD_DIR=$pkgdir/usr/lib/systemd/system install-systemd
-  install -D -m644 ../mdadm.conf $pkgdir/etc/mdadm.conf
-  install -D -m644 ../mdadm_udev_install $pkgdir/usr/lib/initcpio/install/mdadm_udev
-  ln -s /usr/lib/initcpio/install/mdadm_udev $pkgdir/usr/lib/initcpio/install/mdadm
+  cd $pkgname-$pkgver
+  make INSTALL=/usr/bin/install BINDIR=/usr/bin DESTDIR="$pkgdir" UDEVDIR=/usr/lib/udev install
+  make SYSTEMD_DIR="$pkgdir"/usr/lib/systemd/system install-systemd
+  install -D -m644 ../mdadm.conf "$pkgdir"/etc/mdadm.conf
+  install -D -m644 ../mdadm_udev_install "$pkgdir"/usr/lib/initcpio/install/mdadm_udev
+  ln -s /usr/lib/initcpio/install/mdadm_udev "$pkgdir"/usr/lib/initcpio/install/mdadm
 }
