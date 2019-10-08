@@ -23,19 +23,19 @@ md5sums=('558ff53b0fc0563ca97f79e911822165'
 options=('!emptydirs')
 
 build() {
-  cd $srcdir/Linux-PAM-$pkgver
+  cd Linux-PAM-$pkgver
   ./configure --libdir=/usr/lib --sbindir=/usr/bin --disable-db
   make
 }
 
 package() {
-  cd $srcdir/Linux-PAM-$pkgver
-  make DESTDIR=$pkgdir SCONFIGDIR=/etc/security install
+  cd Linux-PAM-$pkgver
+  make DESTDIR="$pkgdir" SCONFIGDIR=/etc/security install
 
   # set unix_chkpwd uid
-  chmod +s $pkgdir/usr/bin/unix_chkpwd
+  chmod +s "$pkgdir"/usr/bin/unix_chkpwd
 
   # remove doc which is not used anymore
   # FS #40749
-  rm $pkgdir/usr/share/doc/Linux-PAM/sag-pam_userdb.html
+  rm "$pkgdir"/usr/share/doc/Linux-PAM/sag-pam_userdb.html
 }
