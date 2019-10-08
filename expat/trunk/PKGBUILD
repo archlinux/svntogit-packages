@@ -3,7 +3,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=expat
-pkgver=2.2.7
+pkgver=2.2.9
 pkgrel=1
 pkgdesc='An XML parser library'
 arch=(x86_64)
@@ -11,8 +11,8 @@ url='https://libexpat.github.io/'
 license=(custom)
 depends=(glibc)
 source=(https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/expat-${pkgver}.tar.bz2{,.asc})
-validpgpkeys=(3D7E959D89FACFEE38371921B00BC66A401A1600) # Sebastian Pipping
-sha256sums=('cbc9102f4a31a8dafd42d642e9a3aa31e79a0aedaa1f6efd2795ebc83174ec18'
+validpgpkeys=(3176EF7DB2367F1FCA4F306B1F9B0E909AF37285) # Sebastian Pipping
+sha256sums=('f1063084dc4302a427dabcca499c8312b3a32a29b7d2506653ecc8f950a9a237'
             'SKIP')
 
 build() {
