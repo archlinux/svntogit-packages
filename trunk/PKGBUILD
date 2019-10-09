@@ -2,7 +2,7 @@
 
 pkgname=xorgproto
 pkgver=2019.1
-pkgrel=2
+pkgrel=3
 pkgdesc="combined X.Org X11 Protocol headers"
 arch=('any')
 url="https://xorg.freedesktop.org/"
@@ -53,4 +53,6 @@ package() {
   rm -f "${pkgdir}"/usr/share/pkgconfig/{apple,windows}wmproto.pc
   # now part of libxvmc
   rm -f "${pkgdir}"/usr/include/X11/extensions/vldXvMC.h
+  # now part of libx11
+  rm "${pkgdir}"/usr/include/X11/extensions/XKBgeom.h
 }
