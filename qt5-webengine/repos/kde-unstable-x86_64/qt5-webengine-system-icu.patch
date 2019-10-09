@@ -1,20 +1,32 @@
-diff --git a/build/linux/unbundle/icu.gn b/build/linux/unbundle/icu.gn
-index 4450e40..9ca36dd 100644
---- a/build/linux/unbundle/icu.gn
-+++ b/build/linux/unbundle/icu.gn
-@@ -96,6 +96,7 @@ shim_headers("icui18n_shim") {
-     "unicode/fpositer.h",
-     "unicode/gender.h",
-     "unicode/gregocal.h",
-+    "unicode/listformatter.h",
-     "unicode/measfmt.h",
-     "unicode/measunit.h",
-     "unicode/measure.h",
-@@ -178,7 +179,6 @@ shim_headers("icuuc_shim") {
-     "unicode/icudataver.h",
-     "unicode/icuplug.h",
-     "unicode/idna.h",
--    "unicode/listformatter.h",
-     "unicode/localpointer.h",
-     "unicode/locdspnm.h",
-     "unicode/locid.h",
+From 7bc2392c19118a80380c7661fb86c69022eb2b47 Mon Sep 17 00:00:00 2001
+From: Kirill Burtsev <kirill.burtsev@qt.io>
+Date: Fri, 23 Aug 2019 15:09:25 +0200
+Subject: [PATCH] Fix compilation with system ICU
+
+system_icu_config is missing default type for UCHAR_TYPE, that causes
+a mismatch of types all over Chromium. uint16_t is defined as a base type
+under linux in chromium/build/linux/unbundle/icu.gn.
+Necessary constructions were lost during recent refactorings,
+and seems to be restored in later chromium > 76.
+
+Change-Id: Ie05c005ebcded9a228386db5d9abe9863787ec2b
+---
+
+diff --git a/chromium/third_party/icu/BUILD.gn b/chromium/third_party/icu/BUILD.gn
+index be3c919..639f8fd 100644
+--- a/chromium/third_party/icu/BUILD.gn
++++ b/chromium/third_party/icu/BUILD.gn
+@@ -1175,6 +1175,12 @@
+     "USING_SYSTEM_ICU=1",
+     "ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC",
+   ]
++
++  if (is_win) {
++    defines += [ "UCHAR_TYPE=wchar_t" ]
++  } else {
++    defines += [ "UCHAR_TYPE=uint16_t" ]
++  }
+ }
+ 
+ if (use_system_icu) {
+
