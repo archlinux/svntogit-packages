@@ -5,7 +5,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layer' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=19.2.0
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
              'libxshmfence' 'libxxf86vm' 'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
@@ -14,28 +14,15 @@ makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dr
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
-        LICENSE
-        glvnd.patch
-	intel-topology-query-fix-old-gens.patch)
+        LICENSE)
 sha512sums=('7278bbfba9c29fe91d1959ff1a48422e917db85287460523d12ae8c6d7f49f76e9636bf4c0d8d7d89e5569b3c67135f1b23b8f6c9d52d39413d8ec22e3bb40f0'
             'SKIP'
-            'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7'
-            '3e5746dcd493bff3f04b26de6168b15d0f161de62c1c6657106b61cbb1ad4925cbf3a691d5055491e759f88dbe0362dc909e7d726f87528980662f26ceb6dcbc'
-            'a5e2ccef20edc81859255c66cb838c5244774d9d6c56dcfce2e462b6ddaa66ef7847242b050402305621c9c9e706629af30dd27c8466b6bd32d1be40cb3e53a0')
+            'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
               'E3E8F480C52ADD73B278EE78E1ECBE07D7D70895'  # Juan Antonio Suárez Romero (Igalia, S.L.) <jasuarez@igalia.com>
               'A5CC9FEC93F2F837CB044912336909B6B25FADFA'  # Juan A. Suarez Romero <jasuarez@igalia.com>
               '71C4B75620BC75708B4BDB254C95FAAB3EB073EC') # Dylan Baker <dylan@pnwbakers.com>
-
-prepare() {
-  cd mesa-$pkgver
-
-  # libglvnd-1.2.0 support
-  patch -Np1 -i ${srcdir}/glvnd.patch
-  # Fix FS#63945
-  patch -Np1 -i ${srcdir}/intel-topology-query-fix-old-gens.patch
-}
 
 build() {
   arch-meson mesa-$pkgver build \
