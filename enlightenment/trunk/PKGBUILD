@@ -2,7 +2,7 @@
 # Contributor: Enlightenment Developers <enlightenment-devel@enlightenment.org>>
 
 pkgname=enlightenment
-pkgver=0.22.4
+pkgver=0.23.1
 pkgrel=1
 pkgdesc="Enlightenment window manager"
 arch=('x86_64')
@@ -12,14 +12,15 @@ depends=('efl' 'xcb-util-keysyms' 'hicolor-icon-theme' 'pixman' 'mesa'
          'desktop-file-utils' 'udisks2' 'ttf-font' 'bluez-libs' 'pam')
 optdepends=('connman: network module'
             'acpid: power events on laptop lid close'
-	        'geoip-database: geolocation module'
-            'xorg-server-xwayland: xwayland support')
-makedepends=('xorg-server-xwayland')
+            'geoip-database: geolocation module'
+            'xorg-server-xwayland: xwayland support'
+            'packagekit: needed for packagekit module')
+makedepends=('xorg-server-xwayland' 'meson' 'ninja')
 provides=('notification-daemon')
 backup=('etc/enlightenment/sysactions.conf'
         'etc/xdg/menus/e-applications.menu')
 source=("https://download.enlightenment.org/rel/apps/${pkgname}/$pkgname-$pkgver.tar.xz")
-sha256sums=('59f4997c8b59457142870e40f137bc08c9735c84368d32213dacf09c4342fe79')
+sha256sums=('e530590c09b560679621f4531d55c242cfafe8523309e0ae88fb267e00f52c34')
 
 
 build() {
@@ -27,18 +28,22 @@ build() {
 
   export CFLAGS="$CFLAGS -fvisibility=hidden"
 
-  ./configure --prefix=/usr --sysconfdir=/etc \
-    --enable-xwayland --enable-wayland \
-    --disable-wl-weekeyboard
+  if [ -d build ]; then
+    rm -f build
+  fi
+  mkdir build
+  meson --prefix=/usr \
+    -Dwl=true \
+    . build
 
-  make
-}
+  ninja -C build
+  }
 
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  make -j1 DESTDIR="$pkgdir" install
-
+  DESTDIR="$pkgdir" ninja -C build install
+  
   # install LICENSE
   install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
 }
