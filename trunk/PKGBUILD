@@ -2,14 +2,12 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=licenses
-pkgver=20181104
+pkgver=20191011
 pkgrel=1
 pkgdesc='Standard licenses distribution package'
 arch=('any')
 license=('custom:none')
 url='https://www.archlinux.org/'
-groups=('base')
-makedepends=('links')
 source=(apache-2.0.txt::https://www.apache.org/licenses/LICENSE-2.0.txt
         cc-by-3.0.txt
         cc-by-nc-3.0.txt
@@ -38,7 +36,8 @@ source=(apache-2.0.txt::https://www.apache.org/licenses/LICENSE-2.0.txt
         ZopePublicLicense.txt
         mpl-1.1.txt::https://www.mozilla.org/media/MPL/1.1/index.txt
         mpl-2.0.txt::https://www.mozilla.org/media/MPL/2.0/index.txt
-        boost-1.0.txt::http://www.boost.org/LICENSE_1_0.txt)
+        boost-1.0.txt::http://www.boost.org/LICENSE_1_0.txt
+        unlicense.txt::https://unlicense.org/UNLICENSE)
 md5sums=('3b83ef96387f14655fc854ddc3c6bd57'
          'ffb24d1bbf8b83d373f0b8edc3feb0c6'
          '682a5e3b03510ba46c4f566478c871bc'
@@ -67,7 +66,8 @@ md5sums=('3b83ef96387f14655fc854ddc3c6bd57'
          'dc8502850eab9e1ff330a12d7ca18a19'
          '0c5913925d40b124fb52ce84c5deb3f3'
          '815ca599c9df247a0c7f619bab123dad'
-         'e4224ccaecb14d942c71d31bef20d78c')
+         'e4224ccaecb14d942c71d31bef20d78c'
+         '7246f848faa4e9c9fc0ea91122d6e680')
 
 package() {
   cd "$pkgdir"
@@ -147,6 +147,9 @@ package() {
 
   mkdir Boost
   cp "$srcdir"/boost-1.0.txt Boost/license.txt
+
+  mkdir Unlicense
+  cp "$srcdir"/unlicense.txt Unlicense/license.txt
 }
 
 # vim: ts=2 sw=2 et:
