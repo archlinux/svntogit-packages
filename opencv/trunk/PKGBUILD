@@ -3,17 +3,17 @@
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
-pkgver=4.1.1
+pkgver=4.1.2
 pkgrel=1
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
 url="https://opencv.org/"
 depends=(intel-tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 jasper ffmpeg)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke gtk3 vtk glew ant java-environment)
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment)
 optdepends=('opencv-samples: samples'
-            'gtk3: for the HighGUI module and the Python bindings'
             'vtk: for the viz module'
+            'qt5-base: for the HighGUI module and the Python bindings'
             'hdf5: for the HDF5 module and the Python bindings'
             'opencl-icd-loader: For coding with OpenCL'
             'python-numpy: Python bindings'
@@ -21,8 +21,8 @@ optdepends=('opencv-samples: samples'
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
         "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz"
         opencv-includedir.patch)
-sha256sums=('d34985c7b4283519c032e3585b30846644f56c81acba35693295ff8930f080aa'
-            '9f85d380758498d800fec26307e389620cde8b1a2e86ab51cddc5200fbe37102'
+sha256sums=('546d7d19388f2eea709a1951c7bfd56943241e41649473278950f4cbef656661'
+            '0f6c3d30baa39e3e7611afb481ee86dea45dafb182cac87d570c95dccd83eb8b'
             'a96e35c9592e655b21a62cfe04e864a10e21535ad900e5de67356b9e9f40ca10')
 
 prepare() {
@@ -41,7 +41,7 @@ build() {
     -DWITH_OPENCL=ON \
     -DWITH_OPENGL=ON \
     -DWITH_TBB=ON \
-    -DOpenGL_GL_PREFERENCE=GLVND \
+    -DWITH_QT=ON \
     -DBUILD_WITH_DEBUG_INFO=OFF \
     -DBUILD_TESTS=OFF \
     -DBUILD_PERF_TESTS=OFF \
@@ -49,7 +49,6 @@ build() {
     -DINSTALL_C_EXAMPLES=ON \
     -DINSTALL_PYTHON_EXAMPLES=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INSTALL_LIBDIR=lib \
     -DCPU_BASELINE_DISABLE=SSE3 \
     -DCPU_BASELINE_REQUIRE=SSE2 \
     -DOPENCV_EXTRA_MODULES_PATH="$srcdir/opencv_contrib-$pkgver/modules" \
