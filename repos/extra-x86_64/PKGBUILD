@@ -4,26 +4,43 @@
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=kismet
-pkgver=2019_08_R1
+pkgver=2019_09_R1
 _realver="${pkgver//_/-}"
 pkgrel=1
 pkgdesc="802.11 layer2 wireless network detector, sniffer, and intrusion detection system"
-arch=('x86_64')
 url="https://www.kismetwireless.net/"
+arch=('x86_64')
 license=('GPL')
 depends=('libpcap' 'pcre' 'bluez-libs' 'libcap' 'libmicrohttpd' 'protobuf-c' 'sqlite')
-optdepends=('gpsd: log coordinates of detected networks'
-            'wireshark-cli: provide OUI files used to determine device manufacturer'
-            'wireshark-cli: mergecap, to merge multiple capture files'
-            'sox: provide the default kismet sound playback binary'
-            'festival: text-to-speech support'
-            'flite:  alternative/lightweight text-to-speech support'
-            'ruby: ruby interface')
-backup=('etc/kismet.conf')
+optdepends=(
+  'gpsd: log coordinates of detected networks'
+  'wireshark-cli: provide OUI files used to determine device manufacturer'
+  'wireshark-cli: mergecap, to merge multiple capture files'
+  'sox: provide the default kismet sound playback binary'
+  'festival: text-to-speech support'
+  'flite:  alternative/lightweight text-to-speech support'
+  'ruby: ruby interface')
+backup=(
+  etc/kismet/kismet.conf
+  etc/kismet/kismet_80211.conf
+  etc/kismet/kismet_alerts.conf
+  etc/kismet/kismet_filter.conf
+  etc/kismet/kismet_httpd.conf
+  etc/kismet/kismet_logging.conf
+  etc/kismet/kismet_memory.conf
+  etc/kismet/kismet_storage.conf
+  etc/kismet/kismet_uav.conf)
 install=kismet.install
-source=("https://www.kismetwireless.net/code/${pkgname}-${_realver}.tar.xz")
-sha256sums=('3a0bde964f34c5eceaa085b9f1dc4eb008a4ce3a38b68bec6d962d3404a0d96b')
+source=(https://www.kismetwireless.net/code/${pkgname}-${_realver}.tar.xz
+        kismet.sysusers)
+sha512sums=('eeaf069718206f2b6d292c41792217afc9c72c10ffa014c8c670de64195bd28d44f33364dba7d338610f17a5af2be3c125ccd1297cce362159a4968c9ddabb88'
+            '452b728c30c9932bdb91741af425267da87a66962ea9b736751948881f5477dee0bff8e2eeca2befdea2920da6d7d9e198bde69cef8c48bb49a0093a7f0ef897')
 validpgpkeys=('354689DF3C9DED803381A661D7B28822738BBDB1') # Michael Kershaw
+
+build() {
+  cd ${pkgname}-${_realver}
+  autoreconf -fiv
+}
 
 build() {
   cd ${pkgname}-${_realver}
@@ -31,15 +48,21 @@ build() {
     --prefix=/usr \
     --sysconfdir=/etc \
     --localstatedir=/var \
-    --disable-python-tools
+    --disable-python-tools \
+    --sysconfdir=/etc/kismet
   make all plugins
 }
 
 package() {
   cd ${pkgname}-${_realver}
-  make DESTDIR="$pkgdir" install
+  make DESTDIR="${pkgdir}" install
+
   # Makepkg strip bug #43600
   chmod u+w "${pkgdir}"/usr/bin/kismet*
+  chmod o-x "${pkgdir}"/usr/bin/kismet_cap*
+  chown 0:315 "${pkgdir}"/usr/bin/kismet_cap*
+
+  install -Dm 644 ../kismet.sysusers "${pkgdir}/usr/lib/sysusers.d/kismet.conf"
 }
 
 # vim: ts=2 sw=2 et:
