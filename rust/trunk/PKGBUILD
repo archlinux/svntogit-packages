@@ -80,7 +80,19 @@ llvm-config = "/usr/bin/llvm-config"
 END
 }
 
-# Don't call build — install will duplicate a lot of work and --keep-stage is not enough
+build() {
+  cd "rustc-$pkgver-src"
+
+  export RUST_BACKTRACE=1
+  export RUST_COMPILER_RT_ROOT="$srcdir/compiler-rt-$_llvm_ver.src"
+
+  python ./x.py dist -j "$(nproc)"
+  DESTDIR="$PWD"/dest-rust python ./x.py install -j "$(nproc)"
+
+  # move docs and lib32 libs out of the way for splitting
+  mv dest-rust/usr/lib/rustlib/i686-unknown-linux-gnu dest-i686
+  mv dest-rust/usr/share/doc dest-doc
+}
 
 package_rust() {
   depends=('gcc-libs' 'llvm-libs' 'curl' 'libssh2')
@@ -90,11 +102,7 @@ package_rust() {
 
   cd "rustc-$pkgver-src"
 
-  export RUST_BACKTRACE=1
-  export RUST_COMPILER_RT_ROOT="$srcdir/compiler-rt-$_llvm_ver.src"
-
-  DESTDIR="$pkgdir" python ./x.py install -j"$(nproc)"
-
+  mv dest-rust/* "$pkgdir"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
   # delete unnecesary files, e.g. components and manifest files only used for the uninstall script
@@ -104,10 +112,6 @@ package_rust() {
   # rustbuild always installs copies of the shared libraries to /usr/lib,
   # overwrite them with symlinks to the per-architecture versions
   ln -srft "$pkgdir"/usr/lib x86_64-unknown-linux-gnu/lib/*.so
-
-  # move docs and lib32 libs out of the way for splitting
-  mv "$pkgdir"/usr/share/doc "$srcdir"
-  mv "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu "$srcdir"
 
   install -d "$pkgdir"/usr/share/bash-completion
   mv "$pkgdir"/etc/bash_completion.d/ "$pkgdir"/usr/share/bash-completion/completions/
@@ -124,7 +128,7 @@ package_lib32-rust-libs() {
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
   install -d "$pkgdir"/usr/lib/rustlib/ "$pkgdir"/usr/lib32/
-  mv "$srcdir"/i686-unknown-linux-gnu "$pkgdir"/usr/lib/rustlib
+  mv dest-i686 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu
   ln -srft "$pkgdir"/usr/lib32 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu/lib/*.so
 }
 
@@ -134,7 +138,8 @@ package_rust-docs() {
   cd "rustc-$pkgver-src"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
-  mv "$srcdir"/doc "$pkgdir"/usr/share/doc
+  install -d "$pkgdir"/usr/share/doc
+  mv dest-doc/* "$pkgdir"/usr/share/doc
 }
 
 # vim:set ts=2 sw=2 et:
