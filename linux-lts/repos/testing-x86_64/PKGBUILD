@@ -2,18 +2,20 @@
 
 pkgbase=linux-lts
 pkgver=4.19.79
-_srcname=linux-${pkgver}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="https://www.kernel.org/"
 license=('GPL2')
-makedepends=(xmlto kmod inetutils bc libelf python-sphinx python-sphinx_rtd_theme graphviz imagemagick)
+makedepends=(xmlto kmod inetutils bc libelf python-sphinx python-sphinx_rtd_theme
+             graphviz imagemagick)
 options=('!strip')
+_srcname=linux-${pkgver}
 source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.{xz,sign}
         'config'         # the main kernel config file
         '60-linux.hook'  # pacman hook for depmod
         '90-linux.hook'  # pacman hook for initramfs regeneration
         'linux-lts.preset'   # standard config files for mkinitcpio ramdisk
+        '0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch'
 )
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torvalds@linux-foundation.org>
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman (Linux kernel stable release signing key) <greg@kroah.com>
@@ -22,9 +24,10 @@ validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torva
 sha256sums=('f1143564364f278ba0893a7813afc02da6ecef6d5de147bd5011aa3cc1634b34'
             'SKIP'
             '328db52e866c57634cd79b59080900e39a42995408823fb04805fcaf3e0565ee'
-            'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
-            '75f99f5239e03238f88d1a834c50043ec32b1dc568f2cc291b07d04718483919'
-            'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
+            '452b8d4d71e1565ca91b1bebb280693549222ef51c47ba8964e411b2d461699c'
+            'c043f3033bb781e2688794a59f6d1f7ed49ef9b13eb77ff9a425df33a244a636'
+            'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65'
+            'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2')
 
 _kernelname=${pkgbase#linux}
 : ${_kernelname:=-lts}
@@ -50,8 +53,8 @@ prepare() {
   cp ../config .config
   make olddefconfig
 
-  make -s kernelrelease > ../version
-  msg2 "Prepared %s version %s" "$pkgbase" "$(<../version)"
+  make -s kernelrelease > version
+  msg2 "Prepared %s version %s" "$pkgbase" "$(<version)"
 }
 
 build() {
@@ -67,10 +70,9 @@ _package() {
   backup=("etc/mkinitcpio.d/$pkgbase.preset")
   install=linux-lts.install
 
+  cd $_srcname
   local kernver="$(<version)"
   local modulesdir="$pkgdir/usr/lib/modules/$kernver"
-
-  cd $_srcname
 
   msg2 "Installing boot image..."
   # systemd expects to find the kernel here to allow hibernation
@@ -84,13 +86,6 @@ _package() {
   msg2 "Installing modules..."
   make INSTALL_MOD_PATH="$pkgdir/usr" modules_install
 
-  # a place for external modules,
-  # with version file for building modules and running depmod from hook
-  local extramodules="extramodules$_kernelname"
-  local extradir="$pkgdir/usr/lib/modules/$extramodules"
-  install -Dt "$extradir" -m644 ../version
-  ln -sr "$extradir" "$modulesdir/extramodules"
-
   # remove build and source links
   rm "$modulesdir"/{source,build}
 
@@ -99,7 +94,6 @@ _package() {
   local subst="
     s|%PKGBASE%|$pkgbase|g
     s|%KERNVER%|$kernver|g
-    s|%EXTRAMODULES%|$extramodules|g
   "
 
   # hack to allow specifying an initially nonexisting install file
@@ -121,12 +115,12 @@ _package() {
 _package-headers() {
   pkgdesc="Header files and scripts for building modules for ${pkgbase/linux/Linux} kernel"
 
+  cd $_srcname
   local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
-  cd $_srcname
-
   msg2 "Installing build files..."
-  install -Dt "$builddir" -m644 Makefile .config Module.symvers System.map vmlinux
+  install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+    localversion.* version vmlinux
   install -Dt "$builddir/kernel" -m644 kernel/Makefile
   install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
   cp -t "$builddir" -a scripts
@@ -193,7 +187,7 @@ _package-headers() {
 
   msg2 "Adding symlink..."
   mkdir -p "$pkgdir/usr/src"
-  ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase-$pkgver"
+  ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
 
   msg2 "Fixing permissions..."
   chmod -Rc u=rwX,go=rX "$pkgdir"
@@ -202,9 +196,8 @@ _package-headers() {
 _package-docs() {
   pkgdesc="Kernel hackers manual - HTML documentation that comes with the ${pkgbase/linux/Linux} kernel"
 
-  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
-
   cd $_srcname
+  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
   msg2 "Installing documentation..."
   mkdir -p "$builddir"
