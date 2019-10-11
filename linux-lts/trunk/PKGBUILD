@@ -1,9 +1,9 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=4.19.78
+pkgver=4.19.79
 _srcname=linux-${pkgver}
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url="https://www.kernel.org/"
 license=('GPL2')
@@ -19,7 +19,7 @@ validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torva
               '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman (Linux kernel stable release signing key) <greg@kroah.com>
              )
 # https://www.kernel.org/pub/linux/kernel/v4.x/sha256sums.asc
-sha256sums=('df63ea77c6e28566102a33f503513bc6280f79b48c90921b39661d3ce6295049'
+sha256sums=('f1143564364f278ba0893a7813afc02da6ecef6d5de147bd5011aa3cc1634b34'
             'SKIP'
             '328db52e866c57634cd79b59080900e39a42995408823fb04805fcaf3e0565ee'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
