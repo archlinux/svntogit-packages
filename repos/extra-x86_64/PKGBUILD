@@ -5,19 +5,19 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.16.5
+pkgver=5.17.0
 pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
 license=(LGPL)
-depends=(kjsembed knotifyconfig libksysguard ktexteditor libqalculate qt5-tools kde-cli-tools bc
+depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appstream-qt
          xorg-xrdb xorg-xsetroot kactivitymanagerd kholidays xorg-xmessage xorg-xprop milou prison kwin
-         plasma-integration kdelibs4support)
-makedepends=(extra-cmake-modules kdoctools gpsd baloo appstream-qt krunner networkmanager-qt kdesignerplugin)
+         plasma-integration kdelibs4support kpeople kactivities-stats libkscreen)
+makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin)
 groups=(plasma)
 source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
-sha256sums=('43364fe4e7ea10ad7b5b1d7af4f1baa1d8796b60692f2dfc0d58693f63e458ff'
+sha256sums=('4480ccf0b9168bdd10d4a5fa3ee40e5e77f10c12713f9de55c5d19e23fe993f0'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
@@ -43,8 +43,7 @@ package_plasma-workspace() {
               'kdepim-addons: displaying PIM events in the calendar'
               'appmenu-gtk-module: global menu support for GTK2 and some GTK3 applications'
               'qt5-virtualkeyboard: virtual keyboard support in lock screen'
-              'baloo: Baloo search runner'
-              'appstream-qt: package search runner')
+              'baloo: Baloo search runner' 'discover: manage applications installation from the launcher')
   provides=(notification-daemon)
   backup=('etc/pam.d/kde')
 
@@ -62,5 +61,5 @@ package_plasma-wayland-session() {
   depends=(plasma-workspace qt5-wayland kwayland-integration xorg-server-xwayland)
   groups=()
 
-  install -Dm644 build/plasmawayland.desktop "$pkgdir"/usr/share/wayland-sessions/plasmawayland.desktop
+  install -Dm644 build/login-sessions/plasmawayland.desktop "$pkgdir"/usr/share/wayland-sessions/plasmawayland.desktop
 }
