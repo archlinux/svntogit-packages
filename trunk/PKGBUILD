@@ -1,7 +1,7 @@
 # Maintainer: Sébastien Luttringer
 
 pkgname=bird
-pkgver=2.0.6
+pkgver=2.0.7
 pkgrel=1
 pkgdesc='RIP, OSPF, BGP, MPLS, BFD, Babbel routing daemon'
 arch=('x86_64')
@@ -12,7 +12,7 @@ depends=('glibc' 'readline' 'ncurses' 'libssh')
 replaces=('bird6')
 source=("ftp://bird.network.cz/pub/bird/$pkgname-$pkgver.tar.gz"
         'bird.service')
-md5sums=('bc05f225f4fcb365da1dbb308a7e23cc'
+md5sums=('dc884bbe5905578e452f28158700527c'
          '69221e063a3f07dcad519d5eeacaae75')
 
 prepare() {
