@@ -30,6 +30,8 @@ prepare() {
 
   cd $pkgname-$pkgver
   patch -p1 -i ../opencv-includedir.patch # Fix wrong include patch in pkgconfig file
+
+  sed -e '/ocv_tbb_cmake_guess(HAVE_TBB)/d' -i cmake/OpenCVDetectTBB.cmake # Don't use TBB's cmake config, it breaks build
 }
 
 build() {
