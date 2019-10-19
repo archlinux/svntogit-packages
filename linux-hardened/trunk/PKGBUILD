@@ -8,7 +8,7 @@ _pkgver=5.3.7
 _hardenedver=a
 _srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
-pkgrel=1
+pkgrel=2
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
@@ -20,7 +20,7 @@ options=('!strip')
 source=(https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgver}.tar.xz
         https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgver}.tar.sign
         https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
-        config.x86_64  # the main kernel config files
+        config         # the main kernel config files
         60-linux.hook  # pacman hook for depmod
         90-linux.hook  # pacman hook for initramfs regeneration
         linux.preset   # standard config files for mkinitcpio ramdisk
@@ -31,7 +31,7 @@ sha256sums=('c6c9714e21531c825c306b107bc6f6c7bfa2d5270a14bad170f8de5a73d34802'
             '40f9fccc1fb9d9db2a216caf33362c861d701d3ea186488638b4ce95f8865d3f'
             'SKIP'
             '63feccba3f160c368c694f6a8fed4d8caa2c2a62cf73c7de28ab5fe276fe9923'
-            'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21'
+            '452b8d4d71e1565ca91b1bebb280693549222ef51c47ba8964e411b2d461699c'
             'c043f3033bb781e2688794a59f6d1f7ed49ef9b13eb77ff9a425df33a244a636'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
 validpgpkeys=(
@@ -63,7 +63,7 @@ prepare() {
   done
 
   msg2 "Setting config..."
-  cp ../config.x86_64 .config
+  cp ../config .config
   make olddefconfig
 
   make -s kernelrelease > version
