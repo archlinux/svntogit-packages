@@ -17,8 +17,10 @@ checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
 _commit=c0037305ebd9b742f8d133d810192022878efe8e  # gnome-3-34
-source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
-sha256sums=('SKIP')
+source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+        fix-build.diff)
+sha256sums=('SKIP'
+            '28aa24daed161f2566ca2b159beb43285184c533956b851a7eb318de741da935')
 
 pkgver() {
   cd $pkgname
@@ -27,6 +29,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # fix build with libglvnd's EGL headers
+  git apply -3 ../fix-build.diff
 }
 
 build() {
