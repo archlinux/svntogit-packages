@@ -2,13 +2,13 @@
 
 pkgname=openexr
 pkgver=2.4.0
-pkgrel=3
+pkgrel=4
 pkgdesc="An high dynamic-range image file format library"
 url="https://www.openexr.com/"
 arch=('x86_64')
 license=('BSD')
 depends=('zlib')
-makedepends=('cmake' 'fltk' 'python' 'boost' 'freeglut')
+makedepends=('cmake' 'fltk' 'python' 'boost' 'freeglut' 'python-numpy' 'chrpath')
 optdepends=('fltk: for exrdisplay' 'boost-libs: python support' 'python: python support') 
 conflicts=('ilmbase')
 replaces=('ilmbase')
@@ -21,6 +21,9 @@ prepare() {
 # Take DESTDIR into account when creating symlinks
   sed -e 's|chdir ${CMAKE_INSTALL_FULL_LIBDIR}|chdir \\$ENV\\{DESTDIR\\}${CMAKE_INSTALL_FULL_LIBDIR}|' \
     -i OpenEXR/config/LibraryDefine.cmake -i IlmBase/config/LibraryDefine.cmake
+
+# Fix linking python modules to boost_python
+  sed -e 's|${libname} ${extraDeps}|${libname} ${extraDeps} Boost::${PYILMBASE_BOOST_PY3_COMPONENT}|' -i PyIlmBase/config/ModuleDefine.cmake
 }
 
 build() {
@@ -40,4 +43,9 @@ package() {
 # Fix pc include path
   sed -e 's|=include|=${prefix}/include|g' -e 's|=lib|=${prefix}/lib|g' \
     -i "$pkgdir"/usr/lib/pkgconfig/OpenEXR.pc -i "$pkgdir"/usr/lib/pkgconfig/IlmBase.pc
+
+# Install python modules
+  _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
+  install -Dm755 python3*/*.so -t "$pkgdir"/$_pythonpath 
+  chrpath -d "$pkgdir"/$_pythonpath/*.so # Remove insecure RPATH
 }
