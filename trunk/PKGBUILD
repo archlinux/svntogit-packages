@@ -38,6 +38,7 @@ build() {
 		--sbindir=/usr/bin \
 		--libexecdir=/usr/lib/ssh \
 		--sysconfdir=/etc/ssh \
+		--disable-strip \
 		--with-ldns \
 		--with-libedit \
 		--with-ssl-engine \
