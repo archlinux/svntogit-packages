@@ -2,7 +2,7 @@
 # Contributor: Alexander Baldeck <alexander@archlinux.org>
 
 pkgname=nspr
-pkgver=4.22
+pkgver=4.23
 pkgrel=1
 pkgdesc="Netscape Portable Runtime"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR"
@@ -11,8 +11,8 @@ license=(MPL GPL)
 depends=(glibc sh)
 makedepends=(zip)
 source=(https://ftp.mozilla.org/pub/mozilla.org/nspr/releases/v${pkgver}/src/nspr-${pkgver}.tar.gz)
-sha1sums=('69bd044d4a258a9c1cb1062a182fb8a30f0ad641')
-sha256sums=('c9e4b6cc24856ec93202fe13704b38b38ba219f0f2aeac93090ce2b6c696d430')
+sha1sums=('f3fb61231901cdbb9e1b74e3930ff081ed764358')
+sha256sums=('4b9d821037faf5723da901515ed9cac8b23ef1ea3729022259777393453477a4')
 
 prepare() {
   cd nspr-$pkgver/nspr
@@ -30,7 +30,7 @@ build() {
   make ${SOURCE_DATE_EPOCH:+
     SH_NOW="${SOURCE_DATE_EPOCH}000000"
     SH_DATE="$(date --utc --date="@$SOURCE_DATE_EPOCH" '+%Y-%m-%d %T')"
-}
+  }
 }
 
 package() {
