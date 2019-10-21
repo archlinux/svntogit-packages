@@ -3,7 +3,7 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=btrfs-progs
-pkgver=5.2.2
+pkgver=5.3
 pkgrel=1
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
@@ -23,12 +23,12 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
         'btrfs-scrub@.timer')
 install=btrfs-progs.install
 options=(!staticlibs)
-md5sums=('SKIP'
-         '70c55c5c403251f5260285675cf35c1a'
-         '7241ba3a4286d08da0d50b7176941112'
-         'b09688a915a0ec8f40e2f5aacbabc9ad'
-         '917b31f4eb90448d6791e17ea0f386c7'
-         '42475169de355a33d551b2f368eb0a50')
+sha224sums=('SKIP'
+            '66d14e47b545efef1c91db6efc788827c2a409abe2331983029ef59b'
+            '9a20f841f572d97eaecaa25f5641eee143bc4c5ded79198b15d6691d'
+            '650621f98192cc9c8cc4ecfdcf560db88011dbc07c5df1d7bdae0ae2'
+            'c1477fc473324a7f3057f3e5e258b6462d596d1447fad8651ccb872c'
+            '1425cb4ded552dc69048f46147ecf5d3b8879e65ec0893d0dca149a2')
 
 prepare() {
   cd $pkgname-v$pkgver
