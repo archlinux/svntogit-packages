@@ -4,7 +4,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
 pkgver=4.1.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -30,6 +30,9 @@ prepare() {
 
   cd $pkgname-$pkgver
   patch -p1 -i ../opencv-includedir.patch # Fix wrong include patch in pkgconfig file
+# Fix build with openexr 2.4
+  sed -e 's|Half|Half-2_4|' -e 's|Iex|Iex-2_4|' -e 's|Imath|Imath-2_4|' -e 's|IlmImf|IlmImf-2_4|' -e 's|IlmThread|IlmThread-2_4|' \
+    -i cmake/OpenCVFindOpenEXR.cmake
 }
 
 build() {
