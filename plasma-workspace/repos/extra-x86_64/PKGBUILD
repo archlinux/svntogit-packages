@@ -5,8 +5,8 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.17.0
-pkgrel=2
+pkgver=5.17.1
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -16,12 +16,10 @@ depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appst
          plasma-integration kdelibs4support kpeople kactivities-stats libkscreen)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
-        kdebug-413130.patch::"https://cgit.kde.org/plasma-workspace.git/patch/?id=595ab88b")
-sha256sums=('4480ccf0b9168bdd10d4a5fa3ee40e5e77f10c12713f9de55c5d19e23fe993f0'
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
+sha256sums=('21c69bca0b358073fb0b945e79727d65f104dda54c6cfd643719fdd603831616'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
-            '755bd3ee20a896e094b6a8658c822a60c67d101be06aa9df5b0fcfaa3edbbb76')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -29,9 +27,6 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 
 prepare() {
   mkdir -p build
-
-  cd $pkgname-$pkgver
-  patch -p1 -i ../kdebug-413130.patch # Fix reading environment variables with newline
 }
 
 build() {
