@@ -4,7 +4,7 @@
 
 pkgname=pacman
 pkgver=5.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -15,6 +15,7 @@ depends=('bash' 'glibc' 'libarchive' 'curl'
 makedepends=('asciidoc')
 checkdepends=('python' 'fakechroot')
 optdepends=('perl-locale-gettext: translation support in makepkg-template')
+provides=('libalpm.so')
 backup=(etc/pacman.conf
         etc/makepkg.conf)
 options=('strip' 'debug')
