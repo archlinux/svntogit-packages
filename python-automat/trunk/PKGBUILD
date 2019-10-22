@@ -2,8 +2,8 @@
 
 pkgbase=python-automat
 pkgname=('python-automat' 'python2-automat')
-pkgver=0.7.0
-pkgrel=2
+pkgver=0.8.0
+pkgrel=1
 arch=('any')
 license=('MIT')
 pkgdesc="Self-service finite-state machines for the programmer on the go."
@@ -13,7 +13,7 @@ makedepends=('python-setuptools-scm' 'python2-setuptools-scm' 'm2r' 'python2-m2r
 checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-pytest-benchmark'
               'python2-pytest-benchmark')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/glyph/automat/archive/v$pkgver.tar.gz")
-sha512sums=('6ce26ff0e084ff0f98c3744f7c4c9b794f335b0fea09b02f9c18b7d0743f85a956bc5f8a7acea7dae08930f0860c94b12d98edbcd59e895fb9129a5c42a921ca')
+sha512sums=('44ebd21a1f058e147f87e726fd62d74b399db6e1e22bd5572508a771ea26141b4ded5719ee35fc05c9c0af134a20ad33e303a82447da768e4839c71b96117806')
 
 prepare() {
   cp -a automat-$pkgver{,-py2}
