@@ -1,50 +1,59 @@
-# $Id$
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
 # Contributor: Jeremy Cowgar <jeremy@cowgar.com>
 
-pkgname=check
-pkgver=0.12.0
+pkgbase=check
+pkgname=(check check-docs)
+pkgver=0.13.0
 pkgrel=1
 pkgdesc="A unit testing framework for C"
 url="https://libcheck.github.io/check/"
-arch=(i686 x86_64)
+arch=(x86_64)
 license=(LGPL)
 depends=(awk)
-makedepends=(git)
-_commit=673dce1d61781c32b449bef0ee8711dc7e689170  # tags/0.12.0
+makedepends=(git texlive-bin texi2html doxygen)
+_commit=90d03f3fe002c33224432753ebfa21ebb5c32238  # tags/0.13.0
 source=("git+https://github.com/libcheck/check#commit=$_commit")
 md5sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
+  cd check
   git describe --tags | sed 's/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd check
   autoreconf -fvi
 }
 
 build() {
-  cd $pkgname
+  cd check
   ./configure --prefix=/usr --disable-static
-  make
+  make all doc/doxygen doc/check_html
 }
 
 check() {
-  cd $pkgname
+  cd check
   # Extremely long
   #make -k check
 }
 
-package() {
-  cd $pkgname
+package_check() {
+  optdepends+=('check-docs: Documentation')
+
+  cd check
   make DESTDIR="$pkgdir" install
 
-  # get rid of the package's info directory
-  rm "$pkgdir/usr/share/info/dir"
+  mv "$pkgdir/usr/share/doc" "$srcdir"
+}
 
-  # svn log file is too big
-  rm "$pkgdir"/usr/share/doc/check/*ChangeLog*
+package_check-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  cp -a check/doc/doxygen/html doc/check/doxygen
+  cp -a check/doc/check_html   doc/check/manual
+
+  mkdir -p "$pkgdir/usr/share"
+  mv doc "$pkgdir/usr/share"
 }
