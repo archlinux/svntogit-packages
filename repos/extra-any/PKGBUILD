@@ -2,14 +2,14 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=devtools
-pkgver=20190912
+pkgver=20191016
 pkgrel=1
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
 license=('GPL')
 url='https://git.archlinux.org/devtools.git/'
 depends=('bash' 'openssh' 'subversion' 'rsync' 'arch-install-scripts'
-         'git' 'bzr' 'mercurial' 'diffutils' 'util-linux')
+         'git' 'bzr' 'mercurial' 'diffutils' 'util-linux' 'awk')
 makedepends=('asciidoc')
 optdepends=('btrfs-progs: btrfs support')
 source=(https://sources.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig})
@@ -22,7 +22,7 @@ validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'
               'F3691687D867B81B51CE07D9BBE43771487328A9'
               '6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'
               'E240B57E2C4630BA768E2F26FC1B547C8D8172C8')
-sha256sums=('0f6c83cdfb13b27292b034a5f4bfa46293830f879d4af5226079af30795992fb'
+sha256sums=('adc61b7761fb831f929a182e5e353c9f42c8666b6941c4ad7ce631fffd869994'
             'SKIP')
 
 build() {
