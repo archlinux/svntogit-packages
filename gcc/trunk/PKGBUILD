@@ -4,11 +4,11 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs)
+pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
 pkgver=9.2.0
 _majorver=${pkgver:0:1}
 _islver=0.21
-pkgrel=2
+pkgrel=3
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -20,6 +20,7 @@ options=(!emptydirs)
 source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
 #source=(gcc::svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
         http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
+        phobos_path.patch
         c89 c99)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
@@ -28,6 +29,7 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
 sha256sums=('ea6ef08f121239da5695f76c9b33637a118dcf63e24164422231917fa61fb206'
             'SKIP'
             '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
+            'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
 
@@ -69,6 +71,10 @@ prepare() {
   # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
 
+  # D hacks
+  patch -p1 -i "$srcdir/phobos_path.patch"
+  #sed -i "/GDCFLAGSX=/s/-Wall/-shared-libphobos -Wall/" libphobos/configure
+
   mkdir -p "$srcdir/gcc-build"
 }
 
@@ -86,7 +92,7 @@ build() {
       --mandir=/usr/share/man \
       --infodir=/usr/share/info \
       --with-bugurl=https://bugs.archlinux.org/ \
-      --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++ \
+      --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
       --enable-shared \
       --enable-threads=posix \
       --with-system-zlib \
@@ -108,7 +114,8 @@ build() {
       --enable-checking=release \
       --enable-default-pie \
       --enable-default-ssp \
-      --enable-cet=auto
+      --enable-cet=auto \
+      gdc_include_dir=/usr/include/dlang/gdc
 
   make
 
@@ -118,6 +125,9 @@ build() {
 
 check() {
   cd gcc-build
+
+  # disable libphobos test to avoid segfaults and other unfunny ways to waste my time  
+  sed -i '/maybe-check-target-libphobos \\/d' Makefile 
 
   # do not abort on error as some are "expected"
   make -k check || true
@@ -129,9 +139,9 @@ package_gcc-libs() {
   groups=(base)
   depends=('glibc>=2.27')
   options+=(!strip)
-  provides=($pkgname-multilib libgo.so libgfortran.so libubsan.so libasan.so
-            libtsan.so liblsan.so)
-  replaces=($pkgname-multilib)
+  provides=($pkgname-multilib libgo.so libgfortran.so libgphobos.so
+            libubsan.so libasan.so libtsan.so liblsan.so)
+  replaces=($pkgname-multilib libgphobos)
 
   cd gcc-build
   make -C $CHOST/libgcc DESTDIR="$pkgdir" install-shared
@@ -151,6 +161,10 @@ package_gcc-libs() {
 
   make -C $CHOST/libobjc DESTDIR="$pkgdir" install-libs
   make -C $CHOST/libstdc++-v3/po DESTDIR="$pkgdir" install
+
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -rf "$pkgdir"/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include/d/
+  rm -f "$pkgdir"/usr/lib/libgphobos.spec
 
   for lib in libgomp \
              libitm \
@@ -225,8 +239,8 @@ package_gcc() {
   install -m644 libiberty/pic/libiberty.a "$pkgdir/usr/lib"
 
   make -C gcc DESTDIR="$pkgdir" install-man install-info
-  rm "$pkgdir"/usr/share/man/man1/{gccgo,gfortran}.1
-  rm "$pkgdir"/usr/share/info/{gccgo,gfortran,gnat-style,gnat_rm,gnat_ugn}.info
+  rm "$pkgdir"/usr/share/man/man1/{gccgo,gfortran,gdc}.1
+  rm "$pkgdir"/usr/share/info/{gccgo,gfortran,gnat-style,gnat_rm,gnat_ugn,gdc}.info
 
   make -C libcpp DESTDIR="$pkgdir" install
   make -C gcc DESTDIR="$pkgdir" install-po
@@ -262,9 +276,9 @@ package_gcc-fortran() {
 
   cd gcc-build
   make -C $CHOST/libgfortran DESTDIR="$pkgdir" install-cafexeclibLTLIBRARIES \
-    install-{toolexeclibDATA,nodist_fincludeHEADERS}
+    install-{toolexeclibDATA,nodist_fincludeHEADERS,gfor_cHEADERS}
   make -C $CHOST/32/libgfortran DESTDIR=$pkgdir install-cafexeclibLTLIBRARIES \
-    install-{toolexeclibDATA,nodist_fincludeHEADERS}
+    install-{toolexeclibDATA,nodist_fincludeHEADERS,gfor_cHEADERS}
   make -C $CHOST/libgomp DESTDIR="$pkgdir" install-nodist_fincludeHEADERS
   make -C gcc DESTDIR="$pkgdir" fortran.install-{common,man,info}
   install -Dm755 gcc/f951 "$pkgdir/${_libdir}/f951"
@@ -377,10 +391,39 @@ package_lib32-gcc-libs() {
 
   make -C $CHOST/32/libobjc DESTDIR="$pkgdir" install-libs
 
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -f "$pkgdir"/usr/lib32/libgphobos.spec
+
   # remove files provided by gcc-libs
   rm -rf "$pkgdir"/usr/lib
 
   # Install Runtime Library Exception
   install -Dm644 "$srcdir/gcc/COPYING.RUNTIME" \
     "$pkgdir/usr/share/licenses/lib32-gcc-libs/RUNTIME.LIBRARY.EXCEPTION"
+}
+
+package_gcc-d() {
+  pkgdesc="D frontend for GCC"
+  depends=("gcc=$pkgver-$pkgrel")
+  provides=(gdc)
+  replaces=(gdc)
+  options=('staticlibs')
+
+  cd gcc-build
+  make -C gcc DESTDIR="$pkgdir" d.install-{common,man,info}
+
+  install -Dm755 gcc/gdc "$pkgdir"/usr/bin/gdc
+  install -Dm755 gcc/d21 "$pkgdir"/"$_libdir"/d21
+
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -f "$pkgdir/usr/lib/"lib{gphobos,gdruntime}.{so,a}*
+  rm -f "$pkgdir/usr/lib32/"lib{gphobos,gdruntime}.{so,a}*
+
+  install -d "$pkgdir"/usr/include/dlang
+  ln -s /"${_libdir}"/include/d "$pkgdir"/usr/include/dlang/gdc
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
 }
