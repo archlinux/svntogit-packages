@@ -3,7 +3,7 @@
 pkgbase=python-incremental
 pkgname=('python-incremental' 'python2-incremental')
 pkgver=17.5.0
-pkgrel=2
+pkgrel=3
 pkgdesc='A small library that versions your Python projects'
 arch=('any')
 license=('MIT')
