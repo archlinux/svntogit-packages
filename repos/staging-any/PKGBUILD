@@ -3,7 +3,7 @@
 pkgbase=python-packaging
 pkgname=(python-packaging python2-packaging)
 pkgver=19.2
-pkgrel=3
+pkgrel=4
 pkgdesc="Core utilities for Python packages"
 arch=('any')
 url="https://github.com/pypa/packaging"
