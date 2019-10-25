@@ -5,7 +5,7 @@
 pkgbase=python-setuptools
 pkgname=('python-setuptools' 'python2-setuptools')
 pkgver=41.2.0
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
