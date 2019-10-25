@@ -5,7 +5,7 @@
 pkgbase=python-setuptools
 pkgname=('python-setuptools' 'python2-setuptools')
 pkgver=41.2.0
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
@@ -15,15 +15,14 @@ _deps=('appdirs' 'packaging')
 makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'git')
 _checkdeps=('mock' 'pip' 'pytest-fixture-config' 'pytest-flake8'
             'pytest-runner' 'pytest-virtualenv' 'wheel')
-checkdepends=("${_checkdeps[@]/#/python-}" "${_checkdeps[@]/#/python2-}" 'python-paver'
-              'python2-futures' 'git')
+checkdepends=("${_checkdeps[@]/#/python-}" 'python-paver' 'git')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
 sha512sums=('9ddaae9d530cb5580566abba4b9aec19d5bbbc9bd571eb121ce597d311e99c8f766fd905d856419355fa9a676040c41703c0d7fbe7e6d068e701dd89df4280e1')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+  #rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
 
   # Upstream devendoring logic is badly broken, see:
   # https://bugs.archlinux.org/task/58670
@@ -82,11 +81,8 @@ check() { (
   # https://github.com/pypa/setuptools/pull/810
   export PYTHONDONTWRITEBYTECODE=1
 
-  cd "$srcdir"/setuptools-$pkgver
+  cd setuptools-$pkgver
   python setup.py pytest
-
-  cd "$srcdir"/setuptools-$pkgver-py2
-  python2 setup.py pytest
 )}
 
 package_python-setuptools() {
