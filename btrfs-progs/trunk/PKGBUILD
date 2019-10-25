@@ -4,7 +4,7 @@
 
 pkgname=btrfs-progs
 pkgver=5.3
-pkgrel=2
+pkgrel=3
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools')
