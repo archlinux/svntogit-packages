@@ -3,7 +3,7 @@
 pkgbase=python-attrs
 pkgname=('python-attrs' 'python2-attrs')
 pkgver=19.3.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Attributes without boilerplate."
 arch=('any')
 license=('MIT')
