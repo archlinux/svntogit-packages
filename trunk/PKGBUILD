@@ -30,14 +30,14 @@ prepare() {
   # https://github.com/pypa/setuptools/issues/1383
   # The simplest fix is to simply rewrite import paths to use the canonical
   # location in the first place
-  for _module in setuptools pkg_resources '' ; do
-      find setuptools-$pkgver -name \*.py -exec sed -i \
-          -e 's/from '$_module.extern' import/import/' \
-          -e 's/from '$_module.extern'./from /' \
-          -e 's/import '$_module.extern'./import /' \
-          -e "s/__import__('$_module.extern./__import__('/" \
-          {} +
-    done
+  #for _module in setuptools pkg_resources '' ; do
+  #    find setuptools-$pkgver -name \*.py -exec sed -i \
+  #        -e 's/from '$_module.extern' import/import/' \
+  #        -e 's/from '$_module.extern'./from /' \
+  #        -e 's/import '$_module.extern'./import /' \
+  #        -e "s/__import__('$_module.extern./__import__('/" \
+  #        {} +
+  #  done
 
   # Remove post-release tag since we are using stable tags
   sed -e '/tag_build = .post/d' \
