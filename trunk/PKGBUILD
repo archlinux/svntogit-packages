@@ -12,7 +12,7 @@ url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
 makedepends=('systemd' 'python' 'libcap-ng')
 license=('GPL2')
-options=('strip' 'debug')
+options=('strip')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
 source=("https://www.kernel.org/pub/linux/utils/util-linux/v$_pkgmajor/$pkgbase-$pkgver.tar."{xz,sign}
         '0001-lsblk-force-to-print-PKNAME-for-partition.patch'
