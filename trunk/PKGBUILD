@@ -22,7 +22,7 @@ sha512sums=('9ddaae9d530cb5580566abba4b9aec19d5bbbc9bd571eb121ce597d311e99c8f766
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+  #rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
 
   # Upstream devendoring logic is badly broken, see:
   # https://bugs.archlinux.org/task/58670
