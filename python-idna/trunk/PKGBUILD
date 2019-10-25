@@ -3,7 +3,7 @@
 pkgbase=python-idna
 pkgname=('python-idna' 'python2-idna')
 pkgver=2.8
-pkgrel=1
+pkgrel=2
 pkgdesc="Internationalized Domain Names in Applications (IDNA)"
 arch=('any')
 license=('BSD')
