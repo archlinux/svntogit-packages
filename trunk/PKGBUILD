@@ -1,25 +1,30 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
-pkgbase=linux-lts
+pkgbase=linux-lts           # Build stock -lts kernel
+#pkgbase=linux-custom       # Build kernel with a different name
 pkgver=4.19.80
-pkgrel=1
-arch=('x86_64')
+pkgrel=2
+arch=(x86_64)
 url="https://www.kernel.org/"
-license=('GPL2')
-makedepends=(xmlto kmod inetutils bc libelf python-sphinx python-sphinx_rtd_theme
-             graphviz imagemagick)
-options=('!strip')
-_srcname=linux-${pkgver}
-source=(https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.{xz,sign}
-        'config'         # the main kernel config file
-        '60-linux.hook'  # pacman hook for depmod
-        '90-linux.hook'  # pacman hook for initramfs regeneration
-        'linux-lts.preset'   # standard config files for mkinitcpio ramdisk
-        '0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch'
+license=(GPL2)
+makedepends=(
+  xmlto kmod inetutils bc libelf python-sphinx python-sphinx_rtd_theme
+  graphviz imagemagick
 )
-validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds <torvalds@linux-foundation.org>
-              '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman (Linux kernel stable release signing key) <greg@kroah.com>
-             )
+options=('!strip')
+_srcname=linux-$pkgver
+source=(
+  https://www.kernel.org/pub/linux/kernel/v4.x/${_srcname}.tar.{xz,sign}
+  config         # the main kernel config file
+  60-linux.hook  # pacman hook for depmod
+  90-linux.hook  # pacman hook for initramfs regeneration
+  linux.preset   # standard config files for mkinitcpio ramdisk
+  0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
+)
+validpgpkeys=(
+  'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
+  '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
+)
 # https://www.kernel.org/pub/linux/kernel/v4.x/sha256sums.asc
 sha256sums=('80a9ba764e088aa7fddfef5a97c0236905e291468a37832243b6f3828d36e7ec'
             'SKIP'
@@ -30,7 +35,11 @@ sha256sums=('80a9ba764e088aa7fddfef5a97c0236905e291468a37832243b6f3828d36e7ec'
             'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2')
 
 _kernelname=${pkgbase#linux}
-: ${_kernelname:=-lts}
+: ${_kernelname:=-ARCH}
+
+export KBUILD_BUILD_HOST=archlinux
+export KBUILD_BUILD_USER=$pkgbase
+export KBUILD_BUILD_TIMESTAMP="@${SOURCE_DATE_EPOCH:-$(date +%s)}"
 
 prepare() {
   cd $_srcname
@@ -68,7 +77,7 @@ _package() {
   optdepends=('crda: to set the correct wireless channels of your country'
               'linux-firmware: firmware images needed for some devices')
   backup=("etc/mkinitcpio.d/$pkgbase.preset")
-  install=linux-lts.install
+  install=linux.install
 
   cd $_srcname
   local kernver="$(<version)"
@@ -101,7 +110,7 @@ _package() {
   true && install=$install.pkg
 
   # fill in mkinitcpio preset and pacman hooks
-  sed "$subst" ../linux-lts.preset | install -Dm644 /dev/stdin \
+  sed "$subst" ../linux.preset | install -Dm644 /dev/stdin \
     "$pkgdir/etc/mkinitcpio.d/$pkgbase.preset"
   sed "$subst" ../60-linux.hook | install -Dm644 /dev/stdin \
     "$pkgdir/usr/share/libalpm/hooks/60-$pkgbase.hook"
@@ -230,3 +239,5 @@ for _p in "${pkgname[@]}"; do
     _package${_p#$pkgbase}
   }"
 done
+
+# vim:set ts=8 sts=2 sw=2 et:
