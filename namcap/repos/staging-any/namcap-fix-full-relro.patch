@@ -1,0 +1,38 @@
+From 4bf61fa3c5ecb928b2aaa526f8f56f3b5284d25f Mon Sep 17 00:00:00 2001
+From: Chih-Hsuan Yen <yan12125@gmail.com>
+Date: Tue, 11 Sep 2018 22:28:37 +0800
+Subject: elffiles: also check DF_BIND_NOW when checking FULL RELRO
+
+Looks like DF_BIND_NOW has the same function as DT_BIND_NOW.
+
+Signed-off-by: Kyle Keen <keenerd@gmail.com>
+---
+ Namcap/rules/elffiles.py | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/Namcap/rules/elffiles.py b/Namcap/rules/elffiles.py
+index d707a58..6cef680 100644
+--- a/Namcap/rules/elffiles.py
++++ b/Namcap/rules/elffiles.py
+@@ -140,11 +140,16 @@ class ELFGnuRelroRule(TarballRule):
+ 	description = "Check for FULL RELRO in ELF files."
+ 
+ 	def has_bind_now(self, elffile):
++		DF_BIND_NOW = 0x08
++
+ 		for section in elffile.iter_sections():
+ 			if not isinstance(section, DynamicSection):
+ 				continue
+-			if any(tag.entry.d_tag == 'DT_BIND_NOW' for tag in section.iter_tags()):
+-				return True
++			for tag in section.iter_tags():
++				if tag.entry.d_tag == 'DT_BIND_NOW':
++					return True
++				if tag.entry.d_tag == 'DT_FLAGS' and tag.entry.d_val & DF_BIND_NOW:
++					return True
+ 		return False
+ 
+ 	def analyze(self, pkginfo, tar):
+-- 
+cgit v1.2.1-1-g437b
+
