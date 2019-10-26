@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=9.0.0
-pkgrel=3
+pkgrel=4
 _ocaml_ver=4.09.0
 arch=('x86_64')
 url="https://llvm.org/"
