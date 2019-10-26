@@ -4,13 +4,13 @@
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
 pkgver=1.62.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
 depends=(python-mako python-markdown)
-_glibver=2.62.0
+_glibver=2.62.2
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
 options=(!emptydirs)
 _commit=f330f517d8cd0bfbe67c62ba00be85dee2b338ed  # tags/1.62.0^0
