@@ -2,7 +2,7 @@
 
 pkgname=pyalpm
 pkgver=0.9.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Libalpm bindings for Python 3"
 arch=('x86_64')
 url="https://git.archlinux.org/pyalpm.git/"
