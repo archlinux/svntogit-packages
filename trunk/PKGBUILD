@@ -76,6 +76,8 @@ sha256sums=('SKIP'
             'b8fe532668cb12c34d2a26221298f2459fac7c5578a14476a2af8c20aed5c101')
 
 _backports=(
+	# grub-mkconfig: Use portable "command -v" to detect installed programs
+	'28a7e597de0d5584f65e36f9588ff9041936e617'
 )
 
 _configure_options=(
