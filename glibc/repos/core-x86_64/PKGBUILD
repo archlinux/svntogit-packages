@@ -7,7 +7,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.30
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -19,6 +19,7 @@ source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
+        sdt.h sdt-config.h
         bz20338.patch
         file-truncated-while-reading-soname-after-patchelf.patch)
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
@@ -27,6 +28,8 @@ md5sums=('SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
+         '91fec3b7e75510ae2ac42533aa2e695e'
+         '680df504c683640b02ed4a805797c0b2'
          '430673eccc78e52c249aa4b0f1786450'
          '0820504d2e83ee15f74a656771361872')
 
@@ -185,6 +188,11 @@ package_glibc() {
       -not -name 'libthread_db-*.so' \
       -name '*-*.so' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
+
+  # Provide tracing probes to libstdc++ for exceptions, possibly for other
+  # libraries too. Useful for gdb's catch command.
+  install -Dm644 "$srcdir/sdt.h" "$pkgdir/usr/include/sys/sdt.h"
+  install -Dm644 "$srcdir/sdt-config.h" "$pkgdir/usr/include/sys/sdt-config.h"
 }
 
 package_lib32-glibc() {
