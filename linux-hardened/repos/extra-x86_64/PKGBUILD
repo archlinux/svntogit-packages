@@ -6,9 +6,8 @@
 pkgbase=linux-hardened
 _pkgver=5.3.7
 _hardenedver=b
-_srcname=linux-${_pkgver}
 pkgver=${_pkgver}.${_hardenedver}
-pkgrel=1
+pkgrel=2
 url='https://github.com/anthraxx/linux-hardened'
 arch=('x86_64')
 license=('GPL2')
@@ -16,16 +15,23 @@ makedepends=(
   xmlto kmod inetutils bc libelf python-sphinx python-sphinx_rtd_theme
   graphviz imagemagick
 )
-options=('!strip')
-source=(https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgver}.tar.xz
-        https://www.kernel.org/pub/linux/kernel/v${_pkgver//.*}.x/linux-${_pkgver}.tar.sign
-        https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
-        config         # the main kernel config files
-        60-linux.hook  # pacman hook for depmod
-        90-linux.hook  # pacman hook for initramfs regeneration
-        linux.preset   # standard config files for mkinitcpio ramdisk
-)
 replaces=('linux-grsec')
+options=('!strip')
+_srcname=linux-${_pkgver}
+source=(
+  https://www.kernel.org/pub/linux/kernel/v${_pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
+  https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
+  config         # the main kernel config file
+  60-linux.hook  # pacman hook for depmod
+  90-linux.hook  # pacman hook for initramfs regeneration
+  linux.preset   # standard config files for mkinitcpio ramdisk
+)
+validpgpkeys=(
+  'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
+  '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
+  '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A'  # Daniel Micay
+  'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
+)
 sha256sums=('c6c9714e21531c825c306b107bc6f6c7bfa2d5270a14bad170f8de5a73d34802'
             'SKIP'
             '0dd90897d1857bf7b3f373c86174056a447774930c419fbc27db599da30dd51e'
@@ -34,15 +40,13 @@ sha256sums=('c6c9714e21531c825c306b107bc6f6c7bfa2d5270a14bad170f8de5a73d34802'
             '452b8d4d71e1565ca91b1bebb280693549222ef51c47ba8964e411b2d461699c'
             'c043f3033bb781e2688794a59f6d1f7ed49ef9b13eb77ff9a425df33a244a636'
             'ad6344badc91ad0630caacde83f7f9b97276f80d26a20619a87952be65492c65')
-validpgpkeys=(
-              'ABAF11C65A2970B130ABE3C479BE3E4300411886' # Linus Torvalds
-              '647F28654894E3BD457199BE38DBBDC86092693E' # Greg Kroah-Hartman
-              '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A' # Daniel Micay
-              'E240B57E2C4630BA768E2F26FC1B547C8D8172C8' # Levente Polyak
-             )
 
 _kernelname=${pkgbase#linux}
-: ${_kernelname:=-hardened}
+: ${_kernelname:=-ARCH}
+
+export KBUILD_BUILD_HOST=archlinux
+export KBUILD_BUILD_USER=$pkgbase
+export KBUILD_BUILD_TIMESTAMP="@${SOURCE_DATE_EPOCH:-$(date +%s)}"
 
 prepare() {
   cd $_srcname
