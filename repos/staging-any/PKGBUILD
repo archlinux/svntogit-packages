@@ -2,7 +2,7 @@
 
 pkgname=mallard-ducktype
 pkgver=1.0.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Parser for the lightweight Ducktype syntax for Mallard"
 url="http://projectmallard.org"
 arch=(any)
