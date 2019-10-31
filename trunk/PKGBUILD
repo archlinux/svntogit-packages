@@ -6,7 +6,7 @@
 pkgbase=python-urwid
 pkgname=('python-urwid' 'python2-urwid')
 pkgver=2.0.1
-pkgrel=3
+pkgrel=4
 pkgdesc='Curses-based user interface library'
 url='http://excess.org/urwid/'
 arch=('x86_64')
