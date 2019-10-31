@@ -2,9 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.13.1
+_qtver=5.13.2
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=1
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -14,23 +14,11 @@ depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 
 makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-        qtbug-77209.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=1c33a4a6"
-        qtwebengine-pulseaudio-13.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=0b57f159"
-        qt5-webengine-linux-5.2.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch?id=74e69da9")
-sha256sums=('7f12e710b76ff2be4497bf368fc01ecd2419e2e962fb90599b0ece00ae2eb7d0'
-            '9773e1fed9b8998dd800ea89315b4ea70ed81b568b0a740945ac76577c62e6f1'
-            '7ed06cc2d0e3cc86df33bb80468a5f0422ed2cc5985db86444949ef3b9a12f02'
-            '8deb3df43a379976bbdb1fa814e68b2ce0433043695efc694c11e47f67c51b6a')
+source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
+sha256sums=('adcf56b5de6f34744bba2307b696fc75611884f4270e87dfa760d6e99dd711bb')
 
 prepare() {
   mkdir -p build
-
-  cd $_pkgfqn
-  patch -p1 -i ../qtbug-77209.patch # Fix QWebEnginePage visibility state
-  cd src/3rdparty
-  patch -p1 -i "$srcdir"/qtwebengine-pulseaudio-13.patch # Fix build with pulseaudio 13
-  patch -p1 -i "$srcdir"/qt5-webengine-linux-5.2.patch # Fix build with recent kernel
 }
 
 build() {
