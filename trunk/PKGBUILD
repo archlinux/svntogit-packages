@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.13.2
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -14,11 +14,16 @@ depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 
 makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
-sha256sums=('adcf56b5de6f34744bba2307b696fc75611884f4270e87dfa760d6e99dd711bb')
+source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
+         CVE-2019-13720.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=d6e5fc10")
+sha256sums=('adcf56b5de6f34744bba2307b696fc75611884f4270e87dfa760d6e99dd711bb'
+            '3b2ce75214e757f5d0d268fbb1009c2e0c660d19620ae27e8d92a0e492e5d9da')
 
 prepare() {
   mkdir -p build
+
+  cd $_pkgfqn/src/3rdparty
+  patch -p1 -i "$srcdir"/CVE-2019-13720.patch
 }
 
 build() {
