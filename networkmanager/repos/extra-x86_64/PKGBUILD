@@ -8,7 +8,7 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm)
 pkgver=1.20.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
@@ -30,6 +30,10 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
+
+  # https://bugs.archlinux.org/task/64335
+  git cherry-pick -n 59923ad85d1a1cf2216a4f14649702d24d3f2360
+  git cherry-pick -n 186d22a9634e2bf94658ed6f1cf2b332ecb3a32c
 }
 
 build() {
