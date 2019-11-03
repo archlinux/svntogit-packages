@@ -28,7 +28,7 @@ sha256sums=('c6c9714e21531c825c306b107bc6f6c7bfa2d5270a14bad170f8de5a73d34802'
             'SKIP'
             '0dd90897d1857bf7b3f373c86174056a447774930c419fbc27db599da30dd51e'
             'SKIP'
-            'd3c4bda682e654adfeeecfe0e18a86480fa0ffa435dd940087d114ad8890141f')
+            '59ee05b38cf6bdc811e90b4c3d70d4dee641e83de85cc5916032792fd349a8bc')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
