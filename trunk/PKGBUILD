@@ -1,8 +1,8 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
 
 pkgbase=linux-hardened
-pkgver=5.3.7.b
-pkgrel=3
+pkgver=5.3.8.a
+pkgrel=1
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
 license=(GPL2)
@@ -23,12 +23,11 @@ validpgpkeys=(
   '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A'  # Daniel Micay
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-# https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
-sha256sums=('c6c9714e21531c825c306b107bc6f6c7bfa2d5270a14bad170f8de5a73d34802'
+sha256sums=('78f3cfc6c20b10ff21c0bb22d7d257cab03781c44d8c5aae289f749f94f76649'
             'SKIP'
-            '0dd90897d1857bf7b3f373c86174056a447774930c419fbc27db599da30dd51e'
+            '28fc2b18f1095131253bc82044c011048a30a4ec91d1ebdd0a9c5fc337fd523c'
             'SKIP'
-            '59ee05b38cf6bdc811e90b4c3d70d4dee641e83de85cc5916032792fd349a8bc')
+            '037cd07b6f1586f6c567cb9c4f78b1017bed4e73f69631f41ca417ab86e467dc')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -71,7 +70,6 @@ _package() {
   optdepends=('crda: to set the correct wireless channels of your country'
               'linux-firmware: firmware images needed for some devices'
               'usbctl: deny_new_usb control')
-  replaces=('linux-grsec')
 
   cd $_srcname
   local kernver="$(<version)"
