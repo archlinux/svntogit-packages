@@ -20,8 +20,7 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/severity.db')
 source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc})
 sha512sums=('137b2bf026ec655b662e9c264d7d48d878db474a3f1cc5a38bfd7df2f85b682bddb77b091ab5595178231a0a262c9ae9cdd61409461cd889bdee156906ef1141'
-            'SKIP'
-            '3bd52b900b360278523aad36945aa84dd5ab1a486b8288979e4e781901c742f50ab3926cb92ceacb0964ee0a17a58808fea2afb308b17889a109976592215f82')
+            'SKIP')
 # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB')
 _core_perl="/usr/bin/core_perl"
