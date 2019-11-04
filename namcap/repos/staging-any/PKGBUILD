@@ -3,7 +3,7 @@
 
 pkgname=namcap
 pkgver=3.2.8
-pkgrel=4
+pkgrel=5
 pkgdesc="A Pacman package analyzer"
 arch=('any')
 url="https://projects.archlinux.org/namcap.git/"
