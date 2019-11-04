@@ -4,7 +4,7 @@
 
 pkgname=meson
 pkgver=0.52.0
-pkgrel=3
+pkgrel=4
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
 arch=('any')
@@ -19,11 +19,13 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         skip-test.diff
         meson-python-3.8.patch
+        remove-duplicate-objects.patch::"https://github.com/mesonbuild/meson/commit/212a05b8.patch"
         arch-meson)
 sha512sums=('9efe962c60e21bf4159ce0b113caba0119751a5f6217cd116f6e43b0b4150af0eb7ab484a74d8e9438d78a5d0458dda4215e9b6b9c96bfc0d07e23d709d2929f'
             'SKIP'
             'fd1694e74cfa628bda81b1056061d75fa288e04d72bda733f3667be43cfb21c60f2e89455e4a101a7f6bef5754fe112dc84e18ec7a0807bc791015c34deea347'
             '343d49889942d1cd3f5dc0c573dba226ca9a6c6c5845ff4e74d3c672532ba6fb7cbfeaadb6e053e8793cd7cbfbc936fb753c2dcd95dd236476f07129ac07f67c'
+            '78587f8d7ec758e433c81c2a656c7e337320dc199f97ee0fb2134e6a677bdd1c2d556e2912933d50211833d0efcc786965ee1f8c2e58f66c58d9911e9c103777'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
@@ -33,6 +35,7 @@ prepare() {
   # Our containers do not allow sanitizers to run
   patch -Np1 -i ../skip-test.diff
   patch -p1 -i ../meson-python-3.8.patch # Fix boost test with python 3.8
+  patch -p1 -i ../remove-duplicate-objects.patch # Fix build of gnome-builder
 }
 
 build() {
