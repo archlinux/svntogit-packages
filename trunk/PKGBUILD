@@ -1,7 +1,7 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 pkgname=apparmor
 pkgver=2.13.3
-pkgrel=2
+pkgrel=3
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
@@ -91,9 +91,9 @@ package() {
   make -C changehat/pam_apparmor DESTDIR="${pkgdir}/usr" install
   make -C changehat/mod_apparmor DESTDIR="${pkgdir}" install
   make -C binutils DESTDIR="${pkgdir}" install
-  make -C parser DESTDIR="${pkgdir}" \
-                 APPARMOR_BIN_PREFIX="${pkgdir}/usr/lib/apparmor" \
-                 install install-systemd
+  make -C parser -j1 DESTDIR="${pkgdir}" \
+                     APPARMOR_BIN_PREFIX="${pkgdir}/usr/lib/apparmor" \
+                     install install-systemd
   make -C profiles DESTDIR="${pkgdir}" install
   make -C utils DESTDIR="${pkgdir}" \
                 BINDIR="${pkgdir}/usr/bin" \
