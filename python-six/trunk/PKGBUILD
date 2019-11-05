@@ -5,7 +5,7 @@
 pkgbase=python-six
 pkgname=('python2-six' 'python-six')
 pkgver=1.13.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Python 2 and 3 compatibility utilities"
 arch=('any')
 url="https://pypi.python.org/pypi/six/"
