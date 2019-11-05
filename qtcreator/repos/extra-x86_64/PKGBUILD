@@ -7,9 +7,9 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.10.1
+pkgver=4.10.2
 _clangver=9.0.0
-pkgrel=2
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -29,11 +29,9 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-        qtcreator-preload-plugins.patch
-        qtcreator-clang-9.patch)
-sha256sums=('5098d87027bec3296bd93a7e112588759ccb0511fbfdc5558c1a1e83dff8d2a9'
-            '150c444e76ec969fc8765774b648984037829623300d0ce9d41a915b2afa792d'
-            '1d66eb008e84459f6570e6e72acedcf80d2f0bb82650df3b733f7ca0a3f08a3d')
+        qtcreator-preload-plugins.patch)
+sha256sums=('9add6bdddfe5726bb02535409c2ed788b1afeee082121f54f887281d0e3c449a'
+            '150c444e76ec969fc8765774b648984037829623300d0ce9d41a915b2afa792d')
 
 prepare() {
   mkdir -p build
@@ -48,8 +46,6 @@ prepare() {
   # see http://code.qt.io/cgit/clang/clang.git/commit/?id=7f349701d3ea0c47be3a43e265699dddd3fd55cf
   # and https://bugs.archlinux.org/task/59492
   patch -p1 -i ../qtcreator-preload-plugins.patch
-  # Fix build with clang 9 (Fedora)
-  patch -p1 -i ../qtcreator-clang-9.patch
 }
 
 build() {
