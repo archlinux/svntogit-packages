@@ -1,5 +1,6 @@
 # Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Daniel Kozak <kozzi11@gmail.com>
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: libtool requires rebuilt with each new gcc version
@@ -8,7 +9,7 @@ pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
 pkgver=9.2.0
 _majorver=${pkgver:0:1}
 _islver=0.21
-pkgrel=3
+pkgrel=4
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -20,8 +21,10 @@ options=(!emptydirs)
 source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
 #source=(gcc::svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
         http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
-        phobos_path.patch
-        c89 c99)
+        c89 c99
+        gdc_phobos_path.patch
+        gdc_artificial_decl.patch
+        gdc_thunk_weak_ref.patch)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
@@ -29,9 +32,11 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
 sha256sums=('ea6ef08f121239da5695f76c9b33637a118dcf63e24164422231917fa61fb206'
             'SKIP'
             '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
-            'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
-            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a')
+            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
+            'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
+            '3862757491160700ac2fb723096f6f636f30320cccc6efd9537149ed348b57d1'
+            '9699d7105375754f0dcf6abff87d09b270565bfc6578a13641770f3fc62d678a')
 
 _svnrev=264010
 _svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
@@ -72,7 +77,9 @@ prepare() {
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
 
   # D hacks
-  patch -p1 -i "$srcdir/phobos_path.patch"
+  patch -p1 -i "$srcdir/gdc_phobos_path.patch"
+  patch -p1 -i "$srcdir/gdc_artificial_decl.patch"
+  patch -p1 -i "$srcdir/gdc_thunk_weak_ref.patch"
   #sed -i "/GDCFLAGSX=/s/-Wall/-shared-libphobos -Wall/" libphobos/configure
 
   mkdir -p "$srcdir/gcc-build"
@@ -416,8 +423,8 @@ package_gcc-d() {
   install -Dm755 gcc/d21 "$pkgdir"/"$_libdir"/d21
 
   make -C $CHOST/libphobos DESTDIR="$pkgdir" install
-  rm -f "$pkgdir/usr/lib/"lib{gphobos,gdruntime}.{so,a}*
-  rm -f "$pkgdir/usr/lib32/"lib{gphobos,gdruntime}.{so,a}*
+  rm -f "$pkgdir/usr/lib/"lib{gphobos,gdruntime}.so*
+  rm -f "$pkgdir/usr/lib32/"lib{gphobos,gdruntime}.so*
 
   install -d "$pkgdir"/usr/include/dlang
   ln -s /"${_libdir}"/include/d "$pkgdir"/usr/include/dlang/gdc
