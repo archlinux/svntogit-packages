@@ -7,8 +7,8 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm)
-pkgver=1.20.4
-pkgrel=2
+pkgver=1.20.6
+pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
@@ -19,7 +19,7 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=27dee3b113bb45ffb53367f30a7c750eb146d980  # tags/1.20.4^0
+_commit=7910cdfe5a9ffe02cd0780d56fcc66500e292d09  # tags/1.20.6^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -30,10 +30,6 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
-
-  # https://bugs.archlinux.org/task/64335
-  git cherry-pick -n 59923ad85d1a1cf2216a4f14649702d24d3f2360
-  git cherry-pick -n 186d22a9634e2bf94658ed6f1cf2b332ecb3a32c
 }
 
 build() {
