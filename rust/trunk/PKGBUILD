@@ -5,8 +5,8 @@
 
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
-pkgver=1.38.0
-pkgrel=2
+pkgver=1.39.0
+pkgrel=1
 
 _llvm_ver=9.0.0
 
@@ -22,24 +22,19 @@ options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         "http://releases.llvm.org/$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
-        bootstrap-1.38.patch
         0001-WIP-minimize-the-rust-std-component.patch)
 
-sha256sums=('644263ca7c7106f8ee8fcde6bb16910d246b30668a74be20b8c7e0e9f4a52d80'
+sha256sums=('b4a1f6b6a93931f270691aba4fc85eee032fecda973e6b9c774cd06857609357'
             'SKIP'
             '56e4cd96dd1d8c346b07b4d6b255f976570c6f2389697347a6c3dcb9e820d10e'
             'SKIP'
-            '71935e8994d1045680cde22f72a12c4959e1877e5a42fc21fd034d677100dab3'
-            '1d6b69444ef6ff033fe1612e56ecdaad5c52aa44395e704f78b1a047c65b9321')
+            '9e64e6abe9b118ee496c317ef37f4b500b54ecd69e9c02cad2a6a0b7235e9afd')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 
 prepare() {
   cd "rustc-$pkgver-src"
-
-  # Fix bootstrap to compile with 1.38
-  patch -Np1 -i ../bootstrap-1.38.patch
 
   # For https://bugzilla.redhat.com/show_bug.cgi?id=1756487
   # From https://src.fedoraproject.org/rpms/rust/tree/master
