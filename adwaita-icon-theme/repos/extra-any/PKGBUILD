@@ -3,7 +3,7 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=adwaita-icon-theme
-pkgver=3.34.2
+pkgver=3.34.3
 pkgrel=1
 pkgdesc="GNOME standard icons"
 url="https://gitlab.gnome.org/GNOME/adwaita-icon-theme"
@@ -11,7 +11,7 @@ arch=(any)
 license=(LGPL3 CCPL:by-sa)
 depends=(hicolor-icon-theme gtk-update-icon-cache librsvg)
 makedepends=(git gtk3)
-_commit=5f415a930d6f830565d187242e6641b2c343b362  # master
+_commit=f3582481bc7e00c855bc8b169457e01b6ca91a4a  # tags/3.34.3^0
 source=("git+https://gitlab.gnome.org/GNOME/adwaita-icon-theme.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -22,7 +22,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  git tag -f 3.34.2 5f415a930d6f830565d187242e6641b2c343b362  # Fixup tag
   autoreconf -fvi
 }
   
