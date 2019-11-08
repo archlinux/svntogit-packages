@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.1+31+g51f7e8c4d
+pkgver=3.34.1+52+g403d8fcc6
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,10 +16,12 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=51f7e8c4ddd8772853c3df73dd7cf4f87065dc7a  # gnome-3-34
+_commit=403d8fcc6624f5d027dd599c934411e71d248754  # gnome-3-34
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+        918.patch
         fix-build.diff)
 sha256sums=('SKIP'
+            '775fbcd209a170b6ca13326367ef62b8d35acff16019553c40eb24f0684c3495'
             '28aa24daed161f2566ca2b159beb43285184c533956b851a7eb318de741da935')
 
 pkgver() {
@@ -29,6 +31,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/918
+  git apply -3 ../918.patch
 
   # fix build with libglvnd's EGL headers
   git apply -3 ../fix-build.diff
