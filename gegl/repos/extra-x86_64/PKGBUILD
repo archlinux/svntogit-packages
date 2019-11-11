@@ -1,16 +1,16 @@
 # Maintainer: Daniel Isenmann <daniel@archlinux.org>
 
 pkgname=gegl
-pkgver=0.4.16
-pkgrel=3
+pkgver=0.4.18
+pkgrel=1
 pkgdesc="Graph based image processing framework"
 arch=('x86_64')
 url="https://www.gegl.org/"
 license=('GPL3' 'LGPL3')
 depends=('babl' 'libspiro' 'json-glib' 'libgexiv2' 'libraw' 'openexr' 'librsvg' 'libtiff' 'luajit' 'jasper' 'lensfun' 'suitesparse')
-makedepends=('intltool' 'ruby' 'mesa' 'glu' 'ffmpeg' 'exiv2' 'vala' 'python2' 'gobject-introspection' 'git')
+makedepends=('intltool' 'ruby' 'mesa' 'glu' 'ffmpeg' 'exiv2' 'vala' 'gobject-introspection' 'git' 'meson' 'python-gobject')
 optdepends=('ffmpeg: ffmpeg plugin')
-_commit=8fae1d8b35aa9b0d094f08411f6c68af7ffbb465  # tags/GEGL_0_4_16^0
+_commit=2556eb7807dd9b3cb97f2769d8993f7a0c38e2a9  # tags/GEGL_0_4_18^0
 source=("git+https://gitlab.gnome.org/GNOME/gegl.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -20,35 +20,25 @@ pkgver() {
 }
 
 prepare() {
-  mkdir path
-  ln -s /usr/bin/python2 path/python
-
   cd ${pkgname}
   git cherry-pick -n c1c3541caab485384087bbbcf1c83ef2d5bd4d43
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  export PATH="$srcdir/path:$PATH" PYTHON=/usr/bin/python2
-  cd ${pkgname}
-  ./configure  --prefix=/usr  --with-sdl --with-librsvg \
-    --with-libavformat --with-jasper --disable-docs \
-    --enable-workshop
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  mkdir -p build
+  cd build
+  arch-meson ../$pkgname \
+    -Dworkshop=true \
+    -Dmrg=disabled
+  ninja
 }
 
 check() {
-  export PATH="$srcdir/path:$PATH" PYTHON=/usr/bin/python2
-  cd ${pkgname}
-  make -k check || :
+  cd build
+  ninja test || :
 }
 
 package() {
-  export PATH="$srcdir/path:$PATH" PYTHON=/usr/bin/python2
-  cd ${pkgname}
-  make DESTDIR="${pkgdir}" install
+  cd build
+  DESTDIR="${pkgdir}" ninja install
 }
