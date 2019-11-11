@@ -5,8 +5,9 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
+_gitcommit=cbb3c9497549f8856d8cd37ac63af1406a784e58
 pkgver=4.2.1
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -80,7 +81,7 @@ provides=(
   libswresample.so
   libswscale.so
 )
-source=(git+https://git.ffmpeg.org/ffmpeg.git#tag=cbb3c9497549f8856d8cd37ac63af1406a784e58)
+source=("git+https://git.ffmpeg.org/ffmpeg.git#commit=${_gitcommit}")
 sha256sums=(SKIP)
 
 pkgver() {
