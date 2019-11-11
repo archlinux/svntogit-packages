@@ -2,20 +2,19 @@
 # Contributor: Art Gramlich <art@gramlich-net.com>
 
 pkgname=icu
-pkgver=64.2
+pkgver=65.1
 pkgrel=1
 pkgdesc="International Components for Unicode library"
 arch=(x86_64)
-url="http://www.icu-project.org/"
+url="http://site.icu-project.org/home"
 license=('custom:icu')
 depends=('gcc-libs' 'sh')
 makedepends=('python')
 #makedepends=('clang')
 # no https available
-source=(#http://download.icu-project.org/files/${pkgname}4c/${pkgver}/${pkgname}4c-${pkgver/./_}-src.tgz
-        https://ssl.icu-project.org/files/${pkgname}4c/${pkgver}/${pkgname}4c-${pkgver//./_}-src.tgz{,.asc})
-# https://ssl.icu-project.org/files/icu4c/62.1/SHASUM512.txt
-sha512sums=('5ecb4c230ba45918747a1cf9aef86f555aa07d5b29b1d07ab674e8013f46dfb907a0e9d6945db41155f9dc3012fd94e1152ffc19f61a68b6dfcbabdcb8ae9d78'
+source=(https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/${pkgname}4c-${pkgver//./_}-src.tgz{,.asc})
+# https://github.com/unicode-org/icu/releases/download/release-65-1/SHASUM512.txt
+sha512sums=('8f1ef33e1f4abc9a8ee870331c59f01b473d6da1251a19ce403f822f3e3871096f0791855d39c8f20c612fc49cda2c62c06864aa32ddab2dbd186d2b21ce9139'
             'SKIP')
 validpgpkeys=('BA90283A60D67BA0DD910A893932080F4FB419E3') #  "Steven R. Loomis (filfla-signing) <srloomis@us.ibm.com>" 
 validpgpkeys+=('9731166CD8E23A83BEE7C6D3ACA5DBE1FD8FABF1') #  "Steven R. Loomis (ICU Project) <srl@icu-project.org>" 
