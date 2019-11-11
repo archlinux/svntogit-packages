@@ -1,0 +1,43 @@
+From 13182b33f727cf5a56a5a13419904369f7f3baad Mon Sep 17 00:00:00 2001
+From: Daniel Stenberg <daniel@haxx.se>
+Date: Sun, 10 Nov 2019 16:23:53 +0100
+Subject: remove_handle: clear expire timers after multi_done()
+
+Since 59041f0, a new timer might be set in multi_done() so the clearing
+of the timers need to happen afterwards!
+
+Reported-by: Max Kellermann
+Fixes #4575
+Closes #4583
+---
+ lib/multi.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/lib/multi.c b/lib/multi.c
+index 6dfe8842e..7e8e38dc9 100755
+--- a/lib/multi.c
++++ b/lib/multi.c
+@@ -695,11 +695,6 @@ CURLMcode curl_multi_remove_handle(struct Curl_multi *multi,
+     easy_owns_conn = TRUE;
+   }
+ 
+-  /* The timer must be shut down before data->multi is set to NULL,
+-     else the timenode will remain in the splay tree after
+-     curl_easy_cleanup is called. */
+-  Curl_expire_clear(data);
+-
+   if(data->conn) {
+ 
+     /* we must call multi_done() here (if we still own the connection) so that
+@@ -715,6 +710,11 @@ CURLMcode curl_multi_remove_handle(struct Curl_multi *multi,
+     }
+   }
+ 
++  /* The timer must be shut down before data->multi is set to NULL, else the
++     timenode will remain in the splay tree after curl_easy_cleanup is
++     called. Do it after multi_done() in case that sets another time! */
++  Curl_expire_clear(data);
++
+   if(data->connect_queue.ptr)
+     /* the handle was in the pending list waiting for an available connection,
+        so go ahead and remove it */
