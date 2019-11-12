@@ -3,12 +3,12 @@
 
 pkgname=gawk
 pkgver=5.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU version of awk"
 arch=('x86_64')
 url="https://www.gnu.org/software/gawk/"
 license=('GPL')
-groups=('base' 'base-devel')
+groups=('base-devel')
 depends=('sh' 'glibc' 'mpfr')
 provides=('awk')
 source=(https://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig})
@@ -30,8 +30,4 @@ check() {
 package() {
   cd ${pkgname}-${pkgver}
   make DESTDIR="${pkgdir}" install
-
-  #install -dm755 "${pkgdir}"/bin
-  #ln -sf /usr/bin/gawk "${pkgdir}"/bin/
-  #ln -sf gawk "${pkgdir}"/bin/awk
 }
