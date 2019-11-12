@@ -1,10 +1,10 @@
-# Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
+# Maintainer: Sven-Hendrik Haase <svenstaro@gmail.com>
 # Maintainer: Thomas Baechler <thomas@archlinux.org>
 # Contributor: James Rayner <iphitus@gmail.com>
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia')
-pkgver=435.21
+pkgver=440.31
 pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -16,7 +16,7 @@ source=('nvidia-drm-outputclass.conf'
         "https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('c49d246a519731bfab9d22afa5c2dd2d366db06d80182738b84881e93cd697c783f16ee04819275c05597bb063451a5d6102fbc562cd078d2a374533a23cea48'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            'e83b6dff80434971c0b254815945d485a45c978b8a19994244f50a463658863948b2eac8bc62d667bb10c23f41cf1c3521c409d23ac2ab6a0c0cd094a6e20270')
+            '5598d362f21fb4e75a07d77167e24411b5a550e3f1329b39fe004987e2bcb191c9bbf1b3d1a43a8754a9ba00faef57a943c7778999a4e3121c13c30f912fae38')
 
 
 create_links() {
