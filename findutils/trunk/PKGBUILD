@@ -2,11 +2,11 @@
 
 pkgname=findutils
 pkgver=4.7.0
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU utilities to locate files"
 arch=('x86_64')
 license=('GPL3')
-groups=('base' 'base-devel')
+groups=('base-devel')
 depends=('glibc' 'sh')
 url='https://www.gnu.org/software/findutils/'
 source=("https://ftp.gnu.org/pub/gnu/findutils/${pkgname}-${pkgver}.tar.xz"{,.sig})
