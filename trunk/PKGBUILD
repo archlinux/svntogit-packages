@@ -4,7 +4,7 @@
 # Contributor: Curtis Campbell <curtisjamescampbell@hotmail.com>
 pkgname=usbutils
 pkgver=012
-pkgrel=1
+pkgrel=2
 pkgdesc="USB Device Utilities"
 arch=(x86_64)
 license=('GPL')
