@@ -7,7 +7,7 @@
 
 pkgname=pcre2
 pkgver=10.33
-pkgrel=1
+pkgrel=2
 pkgdesc='A library that implements Perl 5-style regular expressions. 2nd version'
 arch=('x86_64')
 url='https://www.pcre.org/'
