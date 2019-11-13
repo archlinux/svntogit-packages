@@ -7,7 +7,6 @@ pkgdesc="A tool for managing/monitoring Linux md device arrays, also known as So
 arch=(x86_64)
 license=('GPL')
 url="https://git.kernel.org/cgit/utils/mdadm"
-groups=('base')
 conflicts=('mkinitcpio<0.7')
 depends=('glibc')
 backup=('etc/mdadm.conf')
