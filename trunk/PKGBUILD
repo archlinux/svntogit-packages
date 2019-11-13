@@ -148,7 +148,6 @@ package_glibc() {
   backup=(etc/gai.conf
           etc/locale.gen
           etc/nscd.conf)
-  groups=(base)
 
   install -dm755 "$pkgdir/etc"
   touch "$pkgdir/etc/ld.so.conf"
