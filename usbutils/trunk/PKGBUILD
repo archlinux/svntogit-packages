@@ -8,7 +8,6 @@ pkgrel=1
 pkgdesc="USB Device Utilities"
 arch=(x86_64)
 license=('GPL')
-groups=('base')
 depends=('libusb' 'hwids')
 optdepends=('python: for lsusb.py usage'
             'coreutils: for lsusb.py usage')
