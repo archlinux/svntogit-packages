@@ -3,7 +3,7 @@
 
 pkgname=shadow
 pkgver=4.7
-pkgrel=2
+pkgrel=3
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
