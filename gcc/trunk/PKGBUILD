@@ -143,7 +143,6 @@ check() {
 
 package_gcc-libs() {
   pkgdesc='Runtime libraries shipped by GCC'
-  groups=(base)
   depends=('glibc>=2.27')
   options+=(!strip)
   provides=($pkgname-multilib libgo.so libgfortran.so libgphobos.so
