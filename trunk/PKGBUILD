@@ -1,7 +1,7 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=pciutils
 pkgver=3.6.2
-pkgrel=1
+pkgrel=2
 pkgdesc="PCI bus configuration space access library and tools"
 arch=(x86_64)
 license=('GPL2')
