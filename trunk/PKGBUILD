@@ -8,7 +8,6 @@ pkgdesc="Password and account management tool suite with support for shadow file
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
 license=('BSD')
-groups=('base')
 depends=('pam' 'acl' 'audit' 'libaudit.so')
 makedepends=('git' 'libxslt' 'docbook-xsl' 'gnome-doc-utils')
 backup=(etc/login.defs
