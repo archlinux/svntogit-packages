@@ -3,7 +3,7 @@
 
 pkgname=mdadm
 pkgver=4.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A tool for managing/monitoring Linux md device arrays, also known as Software RAID"
 arch=(x86_64)
 license=('GPL')
