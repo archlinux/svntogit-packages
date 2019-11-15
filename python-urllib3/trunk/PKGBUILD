@@ -5,8 +5,8 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
-pkgver=1.25.6
-pkgrel=4
+pkgver=1.25.7
+pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
 url="https://github.com/shazow/urllib3"
@@ -15,14 +15,19 @@ makedepends=('python-setuptools' 'python2-setuptools' 'python2-sphinx' 'python-n
              'python2-ndg-httpsclient' 'python-pyasn1' 'python2-pyasn1' 'python-pyopenssl'
              'python2-pyopenssl' 'python-pysocks' 'python2-pysocks' 'python-mock' 'python2-mock'
              'python-brotlipy' 'python2-brotlipy')
-checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-tornado' 'python2-tornado'
-              'python-nose' 'python2-nose' 'python-psutil' 'python2-psutil'
-              'python-gcp-devrel-py-tools' 'python2-gcp-devrel-py-tools')
-source=("$pkgbase-$pkgver.tar.gz::https://github.com/shazow/urllib3/archive/$pkgver.tar.gz")
-sha512sums=('02457492406fff3a61143d695df8304fc66a31f2646ca05ccacd9f2e5f86560e4c68a1f7f4702d6402b9d4d899145b15b125e56b3bc273012b0306ca4d0d7927')
+checkdepends=('python-pytest-runner' 'python-tornado' 'python-nose' 'python-psutil' 'python-trustme'
+              'python-gcp-devrel-py-tools')
+source=("$pkgbase-$pkgver.tar.gz::https://github.com/shazow/urllib3/archive/$pkgver.tar.gz"
+        https-test-fix.patch
+        tornado-6.patch::https://github.com/urllib3/urllib3/pull/1747.patch)
+sha512sums=('bbf55a1d46fe799b98c311bdb47628c14719d5b3ae00fb27515da774d8f7c043ff79a9684f12b133101574527531d4a79134fe67e28dad518d429e55f82e0c59'
+            'e2b6f1910680c4da9fb8afb1a5f15d2aea001b832c6b904feaca635643d61cd2afb97dc535c91d242e3d3aad75c7a44c65573a286df1cbcf361379fd32c4574c'
+            '65cde58ac3a2ce7eea94ec44693ef131e136e4f98b33b7fc78425aad14b5c89009db67d273de25d4789ddef5001d6ef7f7e8dd447436dee5377c4735dcb59cfd')
 
 prepare() {
-  sed -i 's/pytest/tool:pytest/' urllib3-$pkgver/setup.cfg
+  #sed -i 's/pytest/tool:pytest/' urllib3-$pkgver/setup.cfg
+  patch -d urllib3-$pkgver -p1 -i ../tornado-6.patch
+  patch -d urllib3-$pkgver -p1 -i ../https-test-fix.patch
   cp -a urllib3-$pkgver{,-py2}
 }
 
@@ -39,13 +44,8 @@ build() {
 }
 
 check() {
-  # Tests do not support Tornado 5
-
-  cd "$srcdir"/urllib3-$pkgver
-  python setup.py pytest || warning "Tests failed"
-
-  cd "$srcdir"/urllib3-$pkgver-py2
-  python2 setup.py pytest || warning "Tests failed"
+  cd urllib3-$pkgver
+  python setup.py pytest
 }
 
 package_python-urllib3() {
