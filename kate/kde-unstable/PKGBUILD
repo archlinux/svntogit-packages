@@ -1,0 +1,63 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgbase=kate
+pkgname=(kwrite kate)
+pkgver=19.11.80
+pkgrel=1
+arch=(x86_64)
+license=(GPL LGPL FDL)
+makedepends=(extra-cmake-modules kdoctools plasma-framework knewstuff kitemmodels ktexteditor threadweaver kactivities)
+source=("https://download.kde.org/unstable/applications/$pkgver/src/$pkgbase-$pkgver.tar.xz"{,.sig}
+         kate-fix-po-build.patch)
+sha256sums=('9fda7e964bb44a8d27a7f31f174439af88b93db82418219fc5a2c84e9db399f2'
+            'SKIP'
+            '0f7812029a773251b408e369f2915ae72d4c2a72aaf73b8d0da5a5af8c65b0f1')
+validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
+              F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87) # Christoph Feck <cfeck@kde.org>
+
+prepare() {
+  mkdir -p build
+
+  cd $pkgbase-$pkgver
+  patch -p1 -i ../kate-fix-po-build.patch # Fix build
+}
+
+build() {
+  cd build
+  cmake ../$pkgbase-$pkgver \
+    -DBUILD_TESTING=OFF
+  make
+}
+
+package_kwrite() {
+  pkgdesc="Text Editor"
+  groups=(kde-applications kdebase)
+  url="https://www.kde.org/applications/utilities/kwrite/"
+  depends=(ktexteditor hicolor-icon-theme)
+
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  find "$pkgdir" -type f -name '*kate*' -exec rm {} \;
+  rm -r "$pkgdir"/usr/lib/qt/plugins/ktexteditor \
+        "$pkgdir"/usr/share/doc/HTML/*/{kate,katepart} \
+        "$pkgdir"/usr/share/katexmltools \
+        "$pkgdir"/usr/share/locale/*/LC_MESSAGES/{ktexteditorpreviewplugin,lspclient}.mo \
+        "$pkgdir"/usr/share/plasma/plasmoids
+}
+
+package_kate() {
+  pkgdesc="Advanced Text Editor"
+  groups=(kde-applications kdebase)
+  url="https://www.kde.org/applications/utilities/kate/"
+  depends=(knewstuff ktexteditor threadweaver kactivities kitemmodels hicolor-icon-theme)
+  optdepends=('konsole: open a terminal in Kate')
+
+  cd build
+  make DESTDIR="$pkgdir" install
+
+  find "$pkgdir" -type f -name '*kwrite*' -exec rm {} \;
+  rm -r "$pkgdir"/usr/share/doc/HTML/*/kwrite
+}
