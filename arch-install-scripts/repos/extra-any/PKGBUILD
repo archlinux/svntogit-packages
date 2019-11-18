@@ -1,7 +1,7 @@
 # Maintainer: Dave Reisner <dreisner@archlinux.org>
 
 pkgname=arch-install-scripts
-pkgver=22
+pkgver=23
 pkgrel=1
 pkgdesc="Scripts to aid in installing Arch Linux"
 arch=('any')
