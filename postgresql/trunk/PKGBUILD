@@ -3,9 +3,9 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=11.5
+pkgver=12.1
 _majorver=${pkgver%.*}
-pkgrel=7
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -21,22 +21,22 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql-check-db-dir
         postgresql.sysusers
         postgresql.tmpfiles)
-sha256sums=('7fdf23060bfc715144cbf2696cf05b0fa284ad3eb21f0c378591c6bca99ad180'
+sha256sums=('a09bf3abbaf6763980d0f8acbb943b7629a8b20073de18d867aecdb7988483ed'
             '8538619cb8bea51078b605ad64fe22abd6050373c7ae3ad6595178da52f6a7d9'
             '5f73b54ca6206bd2c469c507830261ebd167baca074698d8889d769c33f98a31'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             '25fb140b90345828dc01a4f286345757e700a47178bab03d217a7a5a79105b57'
-            '2bbd8c4e51b70223d274fef3a167af096f44af3d3c41ae505ad11c606674e7c5'
+            'bb24b8ce8c69935b7527ed54e10a8823068e31c8aa5b8ffea81ce6993264e8db'
             '7fa8f0ef3f9d40abd4749cc327c2f52478cb6dfb6e2405bd0279c95e9ff99f12'
             '4a4c0bb9ceb156cc47e9446d8393d1f72b4fe9ea1d39ba17213359df9211da57')
-sha512sums=('537148079dc6c33cfb9bf9722171e524707b42ef01369deb968d0d6e8fa9b7f16f6ce67139d9dc45fb7385defbf56aa2c0affe5ee9d76e996f31e47486192141'
+sha512sums=('f45b1762fd60b6f7419305d108b7fc521e3a7afa833d3aacccba814465baf40d19f57ff9bf2909d726c4c94a1cd99a39f1aa8e45fd0364cdedbcbed36ff48caf'
             '031efe12d18ce386989062327cdbbe611c5ef1f94e4e1bead502304cb3e2d410af533d3c7f1109d24f9da9708214fe32f9a10ba373a3ca8d507bdb521fbb75f7'
             '38302242b30c01c7981574ed28d9cbd9dc73bf6b56ba3a032afb5d0885ae83e5aa72ce578bf2422214dfa6c46f09d0bdd7cccaeb3c25d58754eb1a34f8bf5615'
             '1e6183ab0eb812b3ef687ac2c26ce78f7cb30540f606d20023669ac00ba04075487fb72e4dc89cc05dab0269ff6aca98fc1167cc75669c225b88b592482fbf67'
             '9ab4da01337ffbab8faec0e220aaa2a642dbfeccf7232ef2645bdc2177a953f17ee3cc14a4d8f8ebd064e1dae8b3dba6029adbffb8afaabea383963213941ba8'
             'ee0c010be07e8b5396cfd89c1d077b7c5573753d0210ea4e330e314c2759e25fbee9071e663f871855d65cc8ac75162af9e793dd10892f50f515e7a89cc8d6a0'
-            '73af1cd31638791f81aa2623d51188364107a57b55e4deba6691cd99e96ae5ea0dd94b25a0e95d9e21ac64f36f71919a05cd31233c754bde025215a5a02e055c'
+            'eaaccae8dabad67d2bc54f74ec8d3ddb46257369b90080a2860b65d500053db6ace608be4c1b6baaeab4a03245dcbb5215eb41e468acc2304c037f094c2e7819'
             '36f7a5d38370fdc4d4267fd5a8a8330f152a1077bf0f065b89d4a7b8112ccd42be2c46c863791b77de02013f28275a42219f4236e7cb837c3f8cfd5fcc7d3373'
             '5fe81d716d56d515ee4ae1aac56652b7bf20346ea8413482fd9fdb79f0485d8c5ed099f4d2cc460cbe37686488f1354dec433905ce005da8fec772e783addc70')
 
