@@ -3,7 +3,7 @@
 
 pkgname=licenses
 pkgver=20191011
-pkgrel=1
+pkgrel=2
 pkgdesc='Standard licenses distribution package'
 arch=('any')
 license=('custom:none')
