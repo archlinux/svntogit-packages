@@ -4,7 +4,7 @@
 
 pkgname=openssh
 pkgver=8.1p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
@@ -38,6 +38,7 @@ build() {
 		--sbindir=/usr/bin \
 		--libexecdir=/usr/lib/ssh \
 		--sysconfdir=/etc/ssh \
+		--disable-strip \
 		--with-ldns \
 		--with-libedit \
 		--with-ssl-engine \
