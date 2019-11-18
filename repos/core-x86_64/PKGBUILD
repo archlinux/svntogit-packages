@@ -5,7 +5,7 @@
 
 pkgname=gnupg
 pkgver=2.2.17
-pkgrel=2
+pkgrel=3
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
