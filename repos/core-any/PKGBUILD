@@ -4,7 +4,7 @@
 pkgbase=ca-certificates
 pkgname=(ca-certificates-utils ca-certificates)
 pkgver=20181109
-pkgrel=1
+pkgrel=2
 pkgdesc="Common CA certificates"
 url="https://src.fedoraproject.org/rpms/ca-certificates"
 arch=(any)
