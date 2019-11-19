@@ -7,7 +7,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 # Can be from either systemd or systemd-stable
 _commit='e51d9bf9e5ac5a6618c175cd9b5cfdc6733cd5d1'
 pkgver=243.162
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -93,8 +93,10 @@ prepare() {
 pkgver() {
   cd "$pkgbase-stable"
 
+  # TODO: Switch to upstream versioning post v243!
+
   local _version _count
-  _version="$(git describe --abbrev=0 --tags)"
+  _version='v243'
   _count="$(git rev-list --count ${_version}..)"
   printf '%s.%s' "${_version#v}" "${_count}"
 }
