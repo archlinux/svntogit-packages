@@ -18,7 +18,7 @@ conflicts=(pkg-config)
 replaces=(pkg-config)
 groups=(base-devel)
 _commit=c862e030cf83447f679e4f49876f5298f0fc9691  # tags/pkgconf-1.6.3
-source=("git+https://git.dereferenced.org/pkgconf/pkgconf#commit=$_commit"
+source=("git+https://git.sr.ht/~kaniini/pkgconf#commit=$_commit"
         i686-pc-linux-gnu.personality
         x86_64-pc-linux-gnu.personality)
 sha256sums=('SKIP'
