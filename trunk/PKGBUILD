@@ -22,13 +22,15 @@ options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         "http://releases.llvm.org/$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
-        0001-WIP-minimize-the-rust-std-component.patch)
+        0001-WIP-minimize-the-rust-std-component.patch
+        0002-Hopefully-fix-rustdoc-build.patch)
 
 sha256sums=('b4a1f6b6a93931f270691aba4fc85eee032fecda973e6b9c774cd06857609357'
             'SKIP'
             '56e4cd96dd1d8c346b07b4d6b255f976570c6f2389697347a6c3dcb9e820d10e'
             'SKIP'
-            '9e64e6abe9b118ee496c317ef37f4b500b54ecd69e9c02cad2a6a0b7235e9afd')
+            'a7e525eb4d937f569ff126db0c08ca8098d0d8fe6c26132992d2ac108885dbf3'
+            'c376f987d55c65254522ce267956f68999d62bb86e3401e19ae0a092c943a7c3')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
@@ -39,6 +41,10 @@ prepare() {
   # For https://bugzilla.redhat.com/show_bug.cgi?id=1756487
   # From https://src.fedoraproject.org/rpms/rust/tree/master
   patch -Np1 -i ../0001-WIP-minimize-the-rust-std-component.patch
+
+  # For https://bugs.archlinux.org/task/64550
+  # From https://github.com/rust-lang/rust/issues/65795#issuecomment-551766737
+  patch -Np1 -i ../0002-Hopefully-fix-rustdoc-build.patch
 
   cat >config.toml <<END
 [llvm]
