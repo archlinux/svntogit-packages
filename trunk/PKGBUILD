@@ -13,7 +13,7 @@ url="https://wiki.qemu.org/"
 _headlessdeps=(seabios gnutls libpng libaio numactl jemalloc xfsprogs libnfs
                lzo snappy curl vde2 libcap-ng spice libcacard usbredir)
 depends=(virglrenderer sdl2 vte3 libpulse "${_headlessdeps[@]}")
-makedepends=(spice-protocol python2 ceph libiscsi glusterfs python-sphinx)
+makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
         qemu-ga.service
         65-kvm.rules)
@@ -63,7 +63,6 @@ _build() (
     --sysconfdir=/etc \
     --localstatedir=/var \
     --libexecdir=/usr/lib/qemu \
-    --python=/usr/bin/python2 \
     --smbd=/usr/bin/smbd \
     --enable-modules \
     --enable-sdl \
