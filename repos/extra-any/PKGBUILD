@@ -4,20 +4,20 @@
 
 pkgbase=python-setuptools
 pkgname=('python-setuptools' 'python2-setuptools')
-pkgver=41.2.0
-pkgrel=5
+pkgver=41.4.0
+pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
 license=('PSF')
 url="https://pypi.org/project/setuptools/"
-_deps=('appdirs' 'packaging')
+_deps=('appdirs' 'packaging' 'ordered-set')
 makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'git')
 _checkdeps=('mock' 'pip' 'pytest-fixture-config' 'pytest-flake8'
             'pytest-runner' 'pytest-virtualenv' 'wheel')
 checkdepends=("${_checkdeps[@]/#/python-}" 'python-paver' 'git')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('9ddaae9d530cb5580566abba4b9aec19d5bbbc9bd571eb121ce597d311e99c8f766fd905d856419355fa9a676040c41703c0d7fbe7e6d068e701dd89df4280e1')
+sha512sums=('399512d01788a669248a68b1f1eccf940b9255a7ccdbfc0575abcbe9866477c2850260fd8fe8fc946cdb2687bbbcc493d963aa48e38b22e4264a1f2b68ed648c')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
