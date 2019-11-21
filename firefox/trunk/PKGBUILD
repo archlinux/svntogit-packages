@@ -23,12 +23,13 @@ options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         no-relinking.patch
         0001-Update-bindgen.patch
+        D54135.diff
         0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop)
 sha256sums=('f2e9bb26af7682b31e82fdfc3a4b3e04fd1caa8b004469ea608185d33e35691b'
             'SKIP'
             '2dc9d1aa5eb7798c89f46478f254ae61e4122b4d1956d6044426288627d8a014'
-            '97cf9112c0e2fa1373220b7396265360f86efd4d96587a85eb2e269f7412ebe3'
+            '748e4a727939230e9cfb32511c953924a7f163efba2bd6f9959c2b9277673d9a'
             'ab07ab26617ff76fce68e07c66b8aa9b96c2d3e5b5517e51a3c3eac2edd88894'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
