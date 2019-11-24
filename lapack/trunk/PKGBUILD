@@ -4,22 +4,29 @@
 # Contributor: Jason Taylor <jftaylor21@gmail.com>
 
 pkgbase=lapack
-pkgname=('lapack' 'blas' 'cblas' 'lapacke' 'lapack-doc')
+pkgname=(lapack blas cblas lapacke lapack-doc)
 pkgver=3.9.0
-pkgrel=1
+pkgrel=2
 url="https://www.netlib.org/lapack"
 pkgdesc="Linear Algebra PACKage"
-makedepends=('gcc-fortran' 'cmake' 'python' 'doxygen')
-arch=('x86_64')
-license=("custom")
-source=($pkgbase-$pkgver.tar.gz::"https://github.com/Reference-LAPACK/lapack/archive/v$pkgver.tar.gz" LICENSE.blas)
-sha1sums=('0451d180eed2b12b94aaae77e772d7573e87bec4'
-          '2491a151a37f0162b25fc4e4e9a8ac444b574a76')
+makedepends=(gcc-fortran cmake python doxygen)
+arch=(x86_64)
+license=(custom)
+source=($pkgbase-$pkgver.tar.gz::"https://github.com/Reference-LAPACK/lapack/archive/v$pkgver.tar.gz" LICENSE.blas
+        lapacke-missing-symbols.patch::"https://github.com/Reference-LAPACK/lapack/commit/87536aa3.patch")
+sha256sums=('106087f1bb5f46afdfba7f569d0cbe23dacb9a07cd24733765a0e89dbe1ad573'
+            '2420cd1331c5754071966389b26e6196c5cb086a2ade0080953af62e0c6d4107'
+            '327d62ee39eeb967ce48b4ed0b95e78c6210f688b5c3f944810aafe68d2dadfa')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -p1 -i ../lapacke-missing-symbols.patch # https://github.com/Reference-LAPACK/lapack/issues/365
+}
 
 build() {
   install -d build
   cd build
-  cmake ../${pkgname}-${pkgver} \
+  cmake ../$pkgname-$pkgver \
     -DCMAKE_SKIP_RPATH=ON \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_TESTING=OFF \
@@ -36,7 +43,7 @@ build() {
 }
 
 package_lapack() {
-  depends=("blas")
+  depends=(blas)
   
   cd build
   make DESTDIR="$pkgdir" install
@@ -49,19 +56,19 @@ package_lapack() {
 
 package_blas() {
   pkgdesc="Basic Linear Algebra Subprograms"
-  depends=('gcc-libs')
+  depends=(gcc-libs)
 
   cd build/BLAS
   make DESTDIR="$pkgdir" install
   
-  install -m755 -d "${pkgdir}/usr/share/licenses/blas"
-  install -m644 "${srcdir}/LICENSE.blas" \
-    "${pkgdir}/usr/share/licenses/blas/"
+  install -m755 -d "$pkgdir/usr/share/licenses/blas"
+  install -m644 "$srcdir/LICENSE.blas" \
+    "$pkgdir/usr/share/licenses/blas/"
 }
 
 package_cblas() {
   pkgdesc="C interface to BLAS"
-  depends=("blas")
+  depends=(blas)
 
   cd build/CBLAS
   make DESTDIR="$pkgdir" install
@@ -69,7 +76,7 @@ package_cblas() {
 
 package_lapacke() {
   pkgdesc="C interface to LAPACK"
-  depends=("lapack")
+  depends=(lapack)
 
   cd build/LAPACKE
   make DESTDIR="$pkgdir" install
