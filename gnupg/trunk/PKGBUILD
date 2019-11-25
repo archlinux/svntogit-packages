@@ -4,8 +4,8 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.17
-pkgrel=3
+pkgver=2.2.18
+pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
@@ -23,7 +23,7 @@ validpgpkeys=('D8692123C4065DEA5E0F3AB5249B39D24F25E3B6'
               '5B80C5754298F0CB55D8ED6ABCEF7E294B092E28')
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
         'self-sigs-only.patch')
-sha256sums=('afa262868e39b651a2db4c071fba90415154243e83a830ca00516f9a807fd514'
+sha256sums=('30d37ce2ca55b2b9b61480b2a175a3b22066ab41cd3f84688448919b566dec0a'
             'SKIP'
             '0130c43321c16f53ab2290833007212f8a26b1b73bd4edc2b2b1c9db2b2d0218')
 
