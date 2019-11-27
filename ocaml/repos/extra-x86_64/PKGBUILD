@@ -3,7 +3,7 @@
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
 pkgver=4.09.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
@@ -44,21 +44,13 @@ depends=('ocaml')
 optdepends=()
 
   cd "${srcdir}/${pkgbase}-${pkgver}"
-  # from Makefile
-  BYTESTART=driver/main.cmo
-  TOPLEVELSTART=toplevel/topstart.cmo
-  mkdir -p "${pkgdir}/usr/lib/ocaml/compiler-libs"
-  cp utils/*.cmi utils/*.cmt utils/*.cmti utils/*.mli \
-     parsing/*.cmi parsing/*.cmt parsing/*.cmti parsing/*.mli \
-     typing/*.cmi typing/*.cmt typing/*.cmti typing/*.mli \
-     bytecomp/*.cmi bytecomp/*.cmt bytecomp/*.cmti bytecomp/*.mli \
-     driver/*.cmi driver/*.cmt driver/*.cmti driver/*.mli \
-     toplevel/*.cmi toplevel/*.cmt toplevel/*.cmti toplevel/*.mli \
-     "${pkgdir}/usr/lib/ocaml/compiler-libs"
-  cp compilerlibs/* ${BYTESTART} ${TOPLEVELSTART} \
-  "${pkgdir}/usr/lib/ocaml/compiler-libs"
+  make DESTDIR="${pkgdir}" install
+  # Remove non-compiler-libs
+  rm -rf   "${pkgdir}/usr/bin"  "${pkgdir}/usr/lib/ocaml/caml" \
+     "${pkgdir}/usr/lib/ocaml/ocamldoc" "${pkgdir}/usr/lib/ocaml/stublibs" \
+     "${pkgdir}/usr/lib/ocaml/threads" "${pkgdir}/usr/share"
+  find "${pkgdir}/usr/lib/ocaml/" -maxdepth 1 -type f -delete
 
-  # install license
   install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
   install -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/"
 }
