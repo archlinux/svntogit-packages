@@ -5,7 +5,7 @@ pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
 pkgver=12.1
 _majorver=${pkgver%.*}
-pkgrel=1
+pkgrel=2
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -164,12 +164,11 @@ package_postgresql-docs() {
 package_postgresql() {
   pkgdesc='Sophisticated object-relational DBMS'
   backup=('etc/pam.d/postgresql' 'etc/logrotate.d/postgresql')
-  depends=("postgresql-libs>=${pkgver}" 'krb5' 'libxml2' 'readline>=6.0' 'openssl>=1.0.0' 'pam' 'icu' 'systemd-libs' 'libldap')
+  depends=("postgresql-libs>=${pkgver}" 'krb5' 'libxml2' 'readline>=6.0' 'openssl>=1.0.0' 'pam' 'icu' 'systemd-libs' 'libldap' 'llvm-libs')
   optdepends=('python2: for PL/Python 2 support'
               'python: for PL/Python 3 support'
               'perl: for PL/Perl support'
               'tcl: for PL/Tcl support'
-              'llvm: for JIT compilation support'
               'postgresql-old-upgrade: upgrade from previous major version using pg_upgrade')
   options=('staticlibs')
 
