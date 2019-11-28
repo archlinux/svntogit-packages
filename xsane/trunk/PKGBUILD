@@ -59,7 +59,7 @@ package_xsane-gimp() {
 
   ## For making Gimp Plugin available 
   mkdir -p "$pkgdir/usr/lib/gimp/2.0/plug-ins"
-  ln -sf /usr/bin/xsane-gimp $pkgdir/usr/lib/gimp/2.0/plug-ins/xsane
+  ln -sf /usr/bin/xsane-gimp "$pkgdir"/usr/lib/gimp/2.0/plug-ins/xsane
   #cd "$pkgdir/usr/lib/gimp/2.0/plug-ins/"
   #/bin/ln -s ../../../../bin/xsane-gimp xsane
 
