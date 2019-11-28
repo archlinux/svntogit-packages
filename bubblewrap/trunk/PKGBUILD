@@ -1,15 +1,15 @@
 # Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 
 pkgname=(bubblewrap bubblewrap-suid)
-pkgver=0.3.3
-pkgrel=3
+pkgver=0.4.0
+pkgrel=1
 pkgdesc='Unprivileged sandboxing tool'
 url='https://github.com/projectatomic/bubblewrap'
 arch=(x86_64)
 license=(GPL)
 depends=(glibc libcap)
 makedepends=(libxslt docbook-xsl git)
-_commit=bc13e228d172cc2385aa445b512c6bf8ca2f3376  # tags/v0.3.3^0
+_commit=320c0a442cddeee26cec78619992c641c7029a56  # tags/v0.4.0^0
 source=(git+$url#commit=$_commit)
 sha256sums=('SKIP')
 
