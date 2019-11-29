@@ -6,8 +6,8 @@
 # Contributor: Valentine Sinitsyn <e_val@inbox.ru>
 
 pkgbase=networkmanager
-pkgname=(networkmanager libnm)
-pkgver=1.20.8
+pkgname=(networkmanager libnm nm-cloud-setup)
+pkgver=1.22rc1
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,9 +19,11 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=4ef92efc07a929f13699a7d99b5af192b01948b1  # tags/1.20.8^0
-source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
-sha256sums=('SKIP')
+_commit=9b8c4c1cfd93b56602e5a9a481e94c80f2e49897  # tags/1.22-rc1^0
+source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit"
+        build.diff)
+sha256sums=('SKIP'
+            'e69f7da243a87fab9128032f0243e36162d53a1b18228593ed577845a5cb8d45')
 
 pkgver() {
   cd NetworkManager
@@ -30,6 +32,9 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
+
+  # Fix building nm-bt-test
+  git apply -3 ../build.diff
 }
 
 build() {
@@ -44,6 +49,7 @@ build() {
     -D iwd=true
     -D pppd_plugin_dir=/usr/lib/pppd/$_pppver
     -D teamdctl=true
+    -D nm_cloud_setup=true
     -D bluez5_dun=true
     -D ebpf=true
     -D config_plugins_default=keyfile
@@ -76,7 +82,7 @@ _pick() {
 
 package_networkmanager() {
   depends=(libnm iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
-           bluez-libs libpsl audit)
+           bluez-libs libpsl audit mobile-broadband-provider-info)
   optdepends=('dnsmasq: connection sharing'
               'bluez: Bluetooth support'
               'ppp: dialup connection support'
@@ -101,7 +107,8 @@ END
 uri=http://www.archlinux.org/check_network_status.txt
 END
 
-### Split libnm
+  shopt -s globstar
+
   _pick libnm "$pkgdir"/usr/include/libnm
   _pick libnm "$pkgdir"/usr/lib/girepository-1.0/NM-*
   _pick libnm "$pkgdir"/usr/lib/libnm.*
@@ -109,12 +116,23 @@ END
   _pick libnm "$pkgdir"/usr/share/gir-1.0/NM-*
   _pick libnm "$pkgdir"/usr/share/gtk-doc/html/libnm
   _pick libnm "$pkgdir"/usr/share/vala/vapi/libnm.*
+
+  _pick nm-cloud-setup "$pkgdir"/usr/lib/**/*nm-cloud-setup*
+
+  # Restore empty dir
+  mkdir "$pkgdir/usr/lib/NetworkManager/dispatcher.d/no-wait.d"
 }
 
 package_libnm() {
   pkgdesc="NetworkManager client library"
   depends=(glib2 nss libutil-linux jansson systemd-libs)
   mv libnm/* "$pkgdir"
+}
+
+package_nm-cloud-setup() {
+  pkgdesc="Automatically configure NetworkManager in cloud"
+  depends=(networkmanager)
+  mv nm-cloud-setup/* "$pkgdir"
 }
 
 # vim:set sw=2 et:
