@@ -3,7 +3,7 @@
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
 pkgver=3.47.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
 arch=(x86_64)
@@ -12,8 +12,10 @@ _nsprver=4.20
 depends=("nspr>=${_nsprver}" sqlite zlib sh p11-kit)
 makedepends=(perl python gyp)
 source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
+        nss-3.47-certdb-temp-cert.patch
         certdata2pem.py bundle.sh)
 sha256sums=('1ae3d1cb1de345b258788f2ef6b10a460068034c3fd64f42427a183d8342a6fb'
+            'dd9d9ba4091a5f24e5bb9d6e97658d9cb62b7926ff888373435e08e3bec9147b'
             '0be02cecc27a6e55e1cad1783033b147f502b26f9fb1bb5a53e7a43bbcb68fa0'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
@@ -23,6 +25,9 @@ prepare() {
   cd nss-$pkgver
   ln -sr nss/lib/ckfw/builtins/certdata.txt ../certs/
   ln -sr nss/lib/ckfw/builtins/nssckbi.h ../certs/
+
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1593167
+  patch -d nss -Np1 < ../nss-3.47-certdb-temp-cert.patch
 }
 
 build() {
