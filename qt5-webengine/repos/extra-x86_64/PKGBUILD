@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.13.2
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -16,15 +16,20 @@ groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
          icu65.patch
-         CVE-2019-13720.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=d6e5fc10")
+         CVE-2019-13720.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=d6e5fc10"
+         qtwebengine-flash.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=e72fd513")
 sha256sums=('adcf56b5de6f34744bba2307b696fc75611884f4270e87dfa760d6e99dd711bb'
             '1de9bdbfed482295dda45c7d4e323cee55a34e42f66b892da1c1a778682b7a41'
-            '3b2ce75214e757f5d0d268fbb1009c2e0c660d19620ae27e8d92a0e492e5d9da')
+            '3b2ce75214e757f5d0d268fbb1009c2e0c660d19620ae27e8d92a0e492e5d9da'
+            '1a64c4418950b4f9da78fe88c602f7dc274c85197927a3335d35220378ade2df')
 
 prepare() {
   mkdir -p build
 
-  cd $_pkgfqn/src/3rdparty
+  cd $_pkgfqn
+  patch -p1 -i ../qtwebengine-flash.patch # Fix Flash plugin
+
+  cd src/3rdparty
   patch -p1 -i "$srcdir"/CVE-2019-13720.patch
   patch -p1 -d chromium -i "$srcdir"/icu65.patch
 }
