@@ -11,11 +11,11 @@ pkgver=${_java_ver}.u${_jdk_update}
 _repo_ver=jdk${_java_ver}u${_jdk_update}-b${_jdk_build}
 pkgrel=1
 arch=('x86_64')
-url='http://openjdk.java.net/'
+url='https://openjdk.java.net/'
 license=('custom')
 makedepends=('java-environment=8' 'ccache' 'cpio' 'unzip' 'zip'
              'libxrender' 'libxtst' 'fontconfig' 'libcups' 'alsa-lib')
-_url_src=http://hg.openjdk.java.net/jdk8u/jdk8u
+_url_src=https://hg.openjdk.java.net/jdk8u/jdk8u
 source=(jdk8u-${_repo_ver}.tar.gz::${_url_src}/archive/${_repo_ver}.tar.gz
         corba-${_repo_ver}.tar.gz::${_url_src}/corba/archive/${_repo_ver}.tar.gz
         hotspot-${_repo_ver}.tar.gz::${_url_src}/hotspot/archive/${_repo_ver}.tar.gz
