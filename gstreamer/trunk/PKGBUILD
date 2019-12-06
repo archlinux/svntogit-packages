@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer
-pkgver=1.16.1
+pkgver=1.16.2
 pkgrel=1
 pkgdesc="GStreamer open-source multimedia framework core library"
 url="https://gstreamer.freedesktop.org/"
@@ -11,12 +11,10 @@ license=(LGPL)
 depends=(libxml2 glib2 libunwind libcap libelf)
 makedepends=(gtk-doc gobject-introspection git valgrind bash-completion meson)
 checkdepends=(gmp gsl gtk3)
-_commit=de0a7c4bc89a3df7424b808c893ca243629bebef  # tags/1.16.1^0
+_commit=129493687793cbc109d6211bb0e465218e383e9d  # tags/1.16.2^0
 install=gstreamer.install
-source=("git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git#commit=$_commit"
-        "gst-common::git+https://gitlab.freedesktop.org/gstreamer/common.git")
-sha256sums=('SKIP'
-            'SKIP')
+source=("git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
@@ -25,10 +23,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  git submodule init
-  git config --local submodule.common.url "$srcdir/gst-common"
-  git submodule update
 }
 
 build() {
