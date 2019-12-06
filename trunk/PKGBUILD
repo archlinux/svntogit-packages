@@ -7,7 +7,7 @@
 
 pkgname=pcre2
 pkgver=10.34
-pkgrel=1
+pkgrel=2
 pkgdesc='A library that implements Perl 5-style regular expressions. 2nd version'
 arch=('x86_64')
 url='https://www.pcre.org/'
@@ -27,7 +27,8 @@ build() {
     --enable-jit \
     --enable-pcre2grep-libz \
     --enable-pcre2grep-libbz2 \
-    --enable-pcre2test-libreadline
+    --enable-pcre2test-libreadline \
+    --enable-jit-sealloc
   make
 }
 
