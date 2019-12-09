@@ -3,7 +3,7 @@
 
 pkgname=gssproxy
 pkgver=0.8.2
-pkgrel=2
+pkgrel=3
 pkgdesc="GSSAPI Proxy"
 arch=(x86_64)
 url="https://pagure.io/gssproxy"
@@ -28,14 +28,19 @@ prepare() {
   # rpc.svcgssd is nfs-secure-server.service
   sed -i "s/nfs-secure-server.service/rpc-svcgssd.service/" systemd/gssproxy.service.in
 
+  # Replace /var/run -> /run in gssproxy.service - FS#64754
+  sed -i "s/PIDFile=@localstatedir@\/run\/gssproxy.pid/PIDFile=\/run\/gssproxy.pid/" systemd/gssproxy.service.in
+
 #  autoreconf -vfi
 }
 
 build() {
   cd gssproxy-$pkgver
+
   # make it find bundled verto from krb5 without its own pkg-config file
   export VERTO_CFLAGS="-I/usr/include"
   export VERTO_LIBS="-L/usr/lib -lverto"
+
   ./configure --prefix=/usr \
     --sysconfdir=/etc  \
     --with-pubconf-path=/etc/gssproxy \
@@ -45,10 +50,6 @@ build() {
     --with-initscript=systemd \
     --with-gpp-default-behavior=REMOTE_FIRST
 
-#LOCAL_FIRST|LOCAL_ONLY|REMOTE_FIRST|REMOTE_ONLY
-#                          Which default behavior the gssproxy interposer
-#                          plugin should use [LOCAL_FIRST]
-#--help
   make
 }
 
