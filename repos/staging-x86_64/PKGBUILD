@@ -1,4 +1,5 @@
 # Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
 # Contributor: Aleksey Filippov <sarum9in@gmail.com>
 # Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Sven-Hendrik Haase <sh@lutzhaase.com>
@@ -9,55 +10,97 @@
 pkgbase='protobuf'
 pkgname=('protobuf' 'python2-protobuf' 'python-protobuf')
 pkgver=3.11.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Protocol Buffers - Google's data interchange format"
 arch=('x86_64')
 url='https://developers.google.com/protocol-buffers/'
 license=('BSD')
-depends=('gcc-libs' 'zlib')
+depends=('gcc-libs' 'glibc' 'zlib')
 makedepends=('unzip' 'python-setuptools' 'python2-setuptools')
 source=("https://github.com/protocolbuffers/$pkgname/releases/download/v$pkgver/$pkgname-all-$pkgver.tar.gz")
-md5sums=('488f02ae18e57866fb8898bc73d83113')
+sha512sums=('7922f7d082cba1f39db618e4167890f0cf1257269d43912ea474379cb1cf85dd876e546b26eb46af0f0bdc0f95c2234313ce5aa2d8756cad9fa1b98f7c1d61e5')
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+  autoreconf -vfi
+  # copying sources for python2
+  cp -av python python2
+  # fixing python2 shebangs
+  sed -e 's/env python/env python2/g' \
+      -i python2/google/protobuf/internal/*.py
+}
 
 build() {
-  cd "$srcdir/$pkgbase-$pkgver"
-  ./autogen.sh
+  cd "$pkgbase-$pkgver"
   ./configure --prefix=/usr
   make
+  (
+    cd python2
+    python2 setup.py build --cpp_implementation
+  )
+  (
+    cd python
+    python setup.py build --cpp_implementation
+  )
 }
 
 check() {
-  make -C "$srcdir/$pkgbase-$pkgver" check
+  cd "$pkgbase-$pkgver"
+  make check
+  (
+    cd python2
+    python2 setup.py test
+  )
+  (
+    cd python
+    python setup.py test
+  )
 }
 
 package_protobuf() {
   replaces=('protobuf-cpp')
+  provides=('libprotoc.so' 'libprotobuf.so' 'libprotobuf-lite.so')
 
-  cd "$srcdir/$pkgbase-$pkgver"
+  cd "$pkgbase-$pkgver"
   make DESTDIR="$pkgdir" install
 
-  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-  install -Dm644 editors/protobuf-mode.el "$pkgdir"/usr/share/emacs/site-lisp/protobuf-mode.el
+  install -vDm 644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -vDm 644 editors/protobuf-mode.el \
+    -t "$pkgdir/usr/share/emacs/site-lisp/"
+  install -vDm 644 editors/proto.vim \
+    -t "${pkgdir}/usr/share/vim/vimfiles/syntax"
 }
 
 package_python2-protobuf() {
   pkgdesc='Python 2 bindings for Google Protocol Buffers'
   depends=('python2' 'python2-six' "protobuf=$pkgver")
 
-  cd "$srcdir/$pkgbase-$pkgver/python"
-  python2 setup.py install --root="$pkgdir" --cpp_implementation
-
-  install -d "$pkgdir/usr/share/licenses/$pkgname"
-  ln -s "/usr/share/licenses/$pkgbase/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/"
+  local python_version=$(python2 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+  cd "$pkgbase-$pkgver"
+  (
+    cd python2
+    PYTHONPATH="$PWD/build/lib.linux-$CARCH-${python_version}:PYTHONPATH" \
+    python2 setup.py install --skip-build \
+                             --cpp_implementation \
+                             --optimize=1 \
+                             --root="$pkgdir"
+  )
+  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 package_python-protobuf() {
   pkgdesc='Python 3 bindings for Google Protocol Buffers'
   depends=('python' 'python-six' "protobuf=$pkgver")
 
-  cd "$srcdir/$pkgbase-$pkgver/python"
-  python3 setup.py install --root="$pkgdir" --cpp_implementation
-
-  install -d "$pkgdir/usr/share/licenses/$pkgname"
-  ln -s "/usr/share/licenses/$pkgbase/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/"
+  local python_version=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+  cd "$pkgbase-$pkgver"
+  (
+    cd python
+    PYTHONPATH="$PWD/build/lib.linux-$CARCH-${python_version}:PYTHONPATH" \
+    python setup.py install --skip-build \
+                            --cpp_implementation \
+                            --optimize=1 \
+                            --root="$pkgdir"
+  )
+  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
