@@ -4,17 +4,21 @@ pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
 pkgver=20190926
 _commit=0fa1dfabd6e3746bb7463399e2813f60d3f1b256
-pkgrel=2
+pkgrel=3
 pkgdesc="Google Noto TTF fonts"
 arch=(any)
 url="https://www.google.com/get/noto/"
 license=(custom:SIL)
 source=("$pkgbase-$_commit.tar.gz::https://github.com/googlei18n/noto-fonts/archive/$_commit.tar.gz"
-        66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf)
+        66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
+        46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
 sha256sums=('6ca2938b99e4316c6eabdab498f577efb979c4f2aeaf5a3a357ab4e3dcc2c2a5'
-            '65ff237a579d438eb1b1c90bf25b5818e15ab019dbbfed2fc283b9cd12e5177f'
-            '27419c0557d05e13edbb244cd06a62d921c271c6c2f07126856519869035776e'
-            'a253b752fa0a0c3ff311e8cc0410788bfc61292dc3517c5a5a315c7a54fb9beb')
+            '52684bebf6447be22618d2a04ff37623ec92f9d8ccf6b6f972e5bcbcfee90d69'
+            '4459944b63dc083107280f5d7375c69746bf80a09416a4a4909a100e58e5a33a'
+            '4526289f59654e2a81dc734669a1ae4e416f9a56d0896ec3741c6bf065baf8a8'
+            '83a8faf6a47954075f97a2d555048e2a6689c38603b2ca00150157bf645f4593'
+            'c94368b24506770767d003e5bcba589a8e402e489c240ee52453bf3ac7e9b5fa'
+            'f5c09b37280d7569b6c99a78511639be4ae25b8c5406464422fe0421fe13a884')
 
 package_noto-fonts() {
   optdepends=('noto-fonts-cjk: CJK characters' 'noto-fonts-emoji: Emoji characters'
