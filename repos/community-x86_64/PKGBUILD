@@ -1,0 +1,55 @@
+# Maintainer: Jelle van der Waa <jelle@archlinux.org>
+
+pkgname=alertmanager
+pkgver=0.20.0
+pkgrel=1
+pkgdesc="Service which handles alerts sent by client applications such as the Prometheus server"
+url="https://github.com/prometheus/alertmanager"
+arch=(x86_64)
+depends=(glibc)
+license=('Apache')
+makedepends=(go-pie git)
+backup=('etc/alertmanager/alertmanager.yml')
+source=($pkgname-$pkgver.tar.gz::https://github.com/prometheus/alertmanager/archive/v${pkgver}.tar.gz alertmanager.service alertmanager.sysusers)
+sha512sums=('4bb9353e6ce9b149c5f22a2c305829112dfdf87f9b74e6075a45be0e07fe0f17e869ef9be4bb5e9c53d215dd1f534b1b5a707dd981efce8c5bcae4c1d6ce18bb'
+            'e814d4aca46c2e243a2fe137b2ca102d5adfc18a5d4ab1d316ae593e60a256f8f7f699eb2d8c28b74e6f26fd17b682df927517db4819b167ab0269aa3f76894e'
+            '469f321f40b0dd6e1cc6d0791032c476449bb2ab2364d57b06d0e0309d09710be8751ded64d84e29dd6e28e96b71ef69e2bee6c71282500a9074a9d7ada8bdf0')
+
+build() {
+  cd $pkgname-$pkgver
+  go build \
+    -gcflags "all=-trimpath=$GOPATH" \
+    -asmflags "all=-trimpath=$GOPATH" \
+    -ldflags "-extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    ./cmd/alertmanager
+
+  go build \
+    -gcflags "all=-trimpath=$GOPATH" \
+    -asmflags "all=-trimpath=$GOPATH" \
+    -ldflags "-extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    ./cmd/amtool
+}
+
+package() {
+  cd $pkgname-$pkgver
+  install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
+  install -Dm755 amtool "$pkgdir/usr/bin/amtool"
+
+  install -Dm644 examples/ha/${pkgname}.yml "${pkgdir}/etc/${pkgname}/${pkgname}.yml"
+  install -d -m755 "${pkgdir}/etc/${pkgname}/template/"
+
+  install -d -m755 -o 211 -g 211 "${pkgdir}/var/lib/${pkgname}"
+
+  install -Dm0644 "${srcdir}/${pkgname}.service" "${pkgdir}/usr/lib/systemd/system/${pkgname}.service"
+  install -Dm644 "$srcdir/alertmanager.sysusers" "$pkgdir/usr/lib/sysusers.d/alertmanager.conf"
+}
