@@ -3,7 +3,7 @@
 
 pkgname=git
 pkgver=2.24.1
-pkgrel=1
+pkgrel=2
 pkgdesc='the fast distributed version control system'
 arch=(x86_64)
 url='https://git-scm.com/'
@@ -23,7 +23,7 @@ optdepends=('tk: gitk and git gui'
             'perl-cgi: gitweb (web interface) support'
             'python2: various helper scripts'
             'subversion: git svn'
-            'gnome-keyring: GNOME keyring credential helper'
+            'org.freedesktop.secrets: keyring credential helper'
             'libsecret: libsecret credential helper')
 install=git.install
 validpgpkeys=('96E07AF25771955980DAD10020D04E5A713660A7') # Junio C Hamano
