@@ -8,7 +8,7 @@
 # Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
 
 pkgbase='protobuf'
-pkgname=('protobuf' 'python2-protobuf' 'python-protobuf')
+pkgname=('protobuf' 'python-protobuf')
 pkgver=3.11.1
 pkgrel=2
 pkgdesc="Protocol Buffers - Google's data interchange format"
@@ -16,45 +16,29 @@ arch=('x86_64')
 url='https://developers.google.com/protocol-buffers/'
 license=('BSD')
 depends=('gcc-libs' 'glibc' 'zlib')
-makedepends=('unzip' 'python-setuptools' 'python2-setuptools')
+makedepends=('unzip' 'python-setuptools')
 source=("https://github.com/protocolbuffers/$pkgname/releases/download/v$pkgver/$pkgname-all-$pkgver.tar.gz")
 sha512sums=('7922f7d082cba1f39db618e4167890f0cf1257269d43912ea474379cb1cf85dd876e546b26eb46af0f0bdc0f95c2234313ce5aa2d8756cad9fa1b98f7c1d61e5')
 
 prepare() {
   cd "$pkgbase-$pkgver"
   autoreconf -vfi
-  # copying sources for python2
-  cp -av python python2
-  # fixing python2 shebangs
-  sed -e 's/env python/env python2/g' \
-      -i python2/google/protobuf/internal/*.py
 }
 
 build() {
   cd "$pkgbase-$pkgver"
   ./configure --prefix=/usr
   make
-  (
-    cd python2
-    python2 setup.py build --cpp_implementation
-  )
-  (
-    cd python
-    python setup.py build --cpp_implementation
-  )
+  cd python
+  python setup.py build --cpp_implementation
 }
 
 check() {
   cd "$pkgbase-$pkgver"
   make check
-  (
-    cd python2
-    python2 setup.py test
-  )
-  (
-    cd python
-    python setup.py test
-  )
+
+  cd python
+  python setup.py test
 }
 
 package_protobuf() {
@@ -69,23 +53,6 @@ package_protobuf() {
     -t "$pkgdir/usr/share/emacs/site-lisp/"
   install -vDm 644 editors/proto.vim \
     -t "${pkgdir}/usr/share/vim/vimfiles/syntax"
-}
-
-package_python2-protobuf() {
-  pkgdesc='Python 2 bindings for Google Protocol Buffers'
-  depends=('python2' 'python2-six' "protobuf=$pkgver")
-
-  local python_version=$(python2 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-  cd "$pkgbase-$pkgver"
-  (
-    cd python2
-    PYTHONPATH="$PWD/build/lib.linux-$CARCH-${python_version}:PYTHONPATH" \
-    python2 setup.py install --skip-build \
-                             --cpp_implementation \
-                             --optimize=1 \
-                             --root="$pkgdir"
-  )
-  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 package_python-protobuf() {
