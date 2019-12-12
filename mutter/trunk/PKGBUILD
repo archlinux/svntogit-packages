@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.1+65+g1b75d78c7
+pkgver=3.34.2
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,13 +16,15 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=1b75d78c72bc188b3332b3d23b13c17f673e385f  # gnome-3-34
+_commit=8b087cfe5692f9d508b26790cce0b930a8b02c16  # tags/3.34.2^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
-        918.patch
-        fix-build.diff)
+        0001-EGL-Include-EGL-eglmesaext.h.patch
+        0002-surface-actor-wayland-Do-not-send-frame-callbacks-if.patch
+        0003-xwayland-Do-not-queue-frame-callbacks-unconditionall.patch)
 sha256sums=('SKIP'
-            '775fbcd209a170b6ca13326367ef62b8d35acff16019553c40eb24f0684c3495'
-            '28aa24daed161f2566ca2b159beb43285184c533956b851a7eb318de741da935')
+            '8440403c1862187b648e3ddd20056666f1a9fea38d0511d7bdf4422ce70b4139'
+            '9f6881cd9fe2031b7119288972d3b921358f387b8cbfbd4c624a0dc33abce8e2'
+            '0ad4084834b6314873d2dc0a9c8bb3b30f0a6106fa44aac98a54129ec0fc0b2c')
 
 pkgver() {
   cd $pkgname
@@ -32,11 +34,14 @@ pkgver() {
 prepare() {
   cd $pkgname
 
-  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/918
-  git apply -3 ../918.patch
-
   # fix build with libglvnd's EGL headers
-  git apply -3 ../fix-build.diff
+  git apply -3 ../0001-EGL-Include-EGL-eglmesaext.h.patch
+
+  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/918
+  git apply -3 ../0002-surface-actor-wayland-Do-not-send-frame-callbacks-if.patch
+
+  # https://gitlab.gnome.org/GNOME/mutter/merge_requests/956
+  git apply -3 ../0003-xwayland-Do-not-queue-frame-callbacks-unconditionall.patch
 }
 
 build() {
