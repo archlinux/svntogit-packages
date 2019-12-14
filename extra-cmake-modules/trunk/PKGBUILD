@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=extra-cmake-modules
-pkgver=5.64.0
+pkgver=5.65.0
 pkgrel=1
 pkgdesc='Extra modules and scripts for CMake'
 arch=(any)
@@ -13,10 +13,11 @@ depends=(cmake)
 makedepends=(python-sphinx python-requests qt5-tools)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
-        ECM-no-init.py.patch)
-sha256sums=('1865efc6254bed44e0a6918c5af3da62be4008ba7a197a47f35251f298041a69'
+        ECM-no-init.py.patch ECM-sip5.patch)
+sha256sums=('41634536ca1165a758acd85aa11112177616019e2d3974693a92d1d9bc91c105'
             'SKIP'
-            '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52')
+            '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52'
+            '0eff96db80a96716010356d88b869be643fde9204ec2334869c11112b934afaf')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
 prepare() {
@@ -26,6 +27,8 @@ prepare() {
   sed -e 's|/usr/bin/env python|/usr/bin/env python2|' -i find-modules/*.py
 # Don't create __init__.py
   patch -p1 -i ../ECM-no-init.py.patch
+# Compatibility with sip 5
+  patch -p1 -i ../ECM-sip5.patch
 }
 
 build() {
