@@ -5,7 +5,7 @@
 
 pkgname=feh
 pkgver=3.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Fast and light imlib2-based image viewer'
 url='https://feh.finalrewind.org/'
 license=('custom:MIT')
@@ -21,7 +21,7 @@ sha256sums=('f3959958258111d5f7c9fbe2e165c52b9d5987f07fd1f37540a4abf9f9638811'
 
 build() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
-	make PREFIX=/usr exif=1 help=1 stat64=1
+	make PREFIX=/usr help=1 exif=1 stat64=1 inotify=1
 }
 
 package() {
