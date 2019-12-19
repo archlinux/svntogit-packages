@@ -4,7 +4,7 @@
 
 pkgname=extra-cmake-modules
 pkgver=5.65.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Extra modules and scripts for CMake'
 arch=(any)
 url='https://community.kde.org/Frameworks'
@@ -17,7 +17,7 @@ source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgve
 sha256sums=('41634536ca1165a758acd85aa11112177616019e2d3974693a92d1d9bc91c105'
             'SKIP'
             '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52'
-            '0eff96db80a96716010356d88b869be643fde9204ec2334869c11112b934afaf')
+            '3be2f6c9413c9155aa1be19f75fc847af4fd1bd9d82b3fd7b1c040ce108bc7cf')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
 prepare() {
