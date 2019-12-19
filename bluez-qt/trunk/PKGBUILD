@@ -2,7 +2,7 @@
 
 pkgname=bluez-qt
 pkgver=5.65.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Qt wrapper for Bluez 5 DBus API'
 arch=(x86_64)
 url='https://community.kde.org/Frameworks'
