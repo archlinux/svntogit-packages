@@ -10,7 +10,7 @@ arch=(x86_64)
 license=(BSD)
 url="https://opencv.org/"
 depends=(intel-tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 jasper ffmpeg)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment xorgproto)
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
             'qt5-base: for the HighGUI module and the Python bindings'
