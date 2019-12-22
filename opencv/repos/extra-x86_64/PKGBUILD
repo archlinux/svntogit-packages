@@ -3,14 +3,14 @@
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
-pkgver=4.1.2
-pkgrel=4
+pkgver=4.2.0
+pkgrel=1
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
 url="https://opencv.org/"
 depends=(intel-tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 jasper ffmpeg)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment)
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment xorgproto)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
             'qt5-base: for the HighGUI module and the Python bindings'
@@ -21,8 +21,8 @@ optdepends=('opencv-samples: samples'
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
         "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz"
         opencv-includedir.patch)
-sha256sums=('546d7d19388f2eea709a1951c7bfd56943241e41649473278950f4cbef656661'
-            '0f6c3d30baa39e3e7611afb481ee86dea45dafb182cac87d570c95dccd83eb8b'
+sha256sums=('55bd939079d141a50fca74bde5b61b339dd0f0ece6320ec76859aaff03c90d9f'
+            '8a6b5661611d89baa59a26eb7ccf4abb3e55d73f99bb52d8f7c32265c8a43020'
             'a96e35c9592e655b21a62cfe04e864a10e21535ad900e5de67356b9e9f40ca10')
 
 prepare() {
