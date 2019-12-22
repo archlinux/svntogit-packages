@@ -34,20 +34,29 @@ prepare() {
 
 build() {
   local meson_args=(
+    # system paths
     -D dbus_conf_dir=/usr/share/dbus-1/system.d
+
+    # platform
     -D dist_version="$pkgver-$pkgrel"
     -D session_tracking_consolekit=false
     -D suspend_resume=systemd
     -D modify_system=true
     -D polkit_agent=true
     -D selinux=false
+
+    # features
     -D iwd=true
     -D pppd_plugin_dir=/usr/lib/pppd/$_pppver
     -D teamdctl=true
     -D nm_cloud_setup=true
     -D bluez5_dun=true
     -D ebpf=true
+
+    # configuration plugins
     -D config_plugins_default=keyfile
+
+    # miscellaneous
     -D vapi=true
     -D docs=true
     -D more_asserts=no
