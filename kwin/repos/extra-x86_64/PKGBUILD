@@ -4,7 +4,7 @@
 
 pkgname=kwin
 pkgver=5.17.4
-pkgrel=3
+pkgrel=4
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -13,10 +13,12 @@ depends=(kscreenlocker xcb-util-cursor plasma-framework kcmutils breeze kinit qt
 makedepends=(extra-cmake-modules qt5-tools kdoctools)
 optdepends=('qt5-virtualkeyboard: virtual keyboard support for kwin-wayland')
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz"{,.sig})
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz"{,.sig}
+         kdebug-411166.patch::"https://cgit.kde.org/kwin.git/patch/?id=1a13015d")
 install=$pkgname.install
 sha256sums=('ffbafbbc34fc791abe3be255615402545519df02cae06973aa54f669f793ae06'
-            'SKIP')
+            'SKIP'
+            '18aac55920046c7b26ba7787750a333c46355236cfeed7ca8ab6535f33857884')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -24,6 +26,9 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 
 prepare() {
   mkdir -p build
+
+  cd $pkgname-$pkgver
+  patch -p1 -i ../kdebug-411166.patch # Fix crash in window decoration KCM
 }
 
 build() {
