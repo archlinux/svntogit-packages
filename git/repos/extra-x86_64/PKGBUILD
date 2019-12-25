@@ -3,14 +3,14 @@
 
 pkgname=git
 pkgver=2.24.1
-pkgrel=2
+pkgrel=3
 pkgdesc='the fast distributed version control system'
 arch=(x86_64)
 url='https://git-scm.com/'
 license=('GPL2')
 depends=('curl' 'expat' 'perl' 'perl-error' 'perl-mailtools'
          'openssl' 'pcre2' 'grep' 'shadow')
-makedepends=('python2' 'libgnome-keyring' 'xmlto' 'asciidoc')
+makedepends=('python' 'libgnome-keyring' 'xmlto' 'asciidoc')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
             'perl-term-readkey: git svn and interactive.singlekey setting'
@@ -21,7 +21,7 @@ optdepends=('tk: gitk and git gui'
             'perl-datetime-format-iso8601: git mediawiki support'
             'perl-lwp-protocol-https: git mediawiki https support'
             'perl-cgi: gitweb (web interface) support'
-            'python2: various helper scripts'
+            'python: git svn'
             'subversion: git svn'
             'org.freedesktop.secrets: keyring credential helper'
             'libsecret: libsecret credential helper')
@@ -53,7 +53,6 @@ _make_options=(
 )
 
 build() {
-  export PYTHON_PATH='/usr/bin/python2'
   cd "$srcdir/$pkgname-$pkgver"
 
   make \
@@ -69,7 +68,6 @@ build() {
 }
 
 check() {
-  export PYTHON_PATH='/usr/bin/python2'
   cd "$srcdir/$pkgname-$pkgver"
 
   local jobs
@@ -90,7 +88,6 @@ check() {
 }
 
 package() {
-  export PYTHON_PATH='/usr/bin/python2'
   cd "$srcdir/$pkgname-$pkgver"
   
   make \
@@ -121,14 +118,6 @@ package() {
   # the rest of the contrib stuff
   find contrib/ -name '.gitignore' -delete
   cp -a ./contrib/* "$pkgdir"/usr/share/git/
-
-  # scripts are for python 2.x
-  sed -i 's|#![ ]*/usr/bin/env python$|#!/usr/bin/env python2|' \
-    $(find "$pkgdir" -name '*.py') \
-    "$pkgdir"/usr/share/git/remote-helpers/git-remote-bzr \
-    "$pkgdir"/usr/share/git/remote-helpers/git-remote-hg
-  sed -i 's|#![ ]*/usr/bin/python$|#!/usr/bin/python2|' \
-    "$pkgdir"/usr/share/git/svn-fe/svnrdump_sim.py
 
   # git-daemon via systemd socket activation
   install -D -m 0644 "$srcdir"/git-daemon@.service "$pkgdir"/usr/lib/systemd/system/git-daemon@.service
