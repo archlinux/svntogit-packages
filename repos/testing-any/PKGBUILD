@@ -3,7 +3,7 @@
 
 pkgname=devtools
 pkgver=20191227
-pkgrel=1
+pkgrel=2
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
 license=('GPL')
@@ -24,6 +24,11 @@ validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'
               'E240B57E2C4630BA768E2F26FC1B547C8D8172C8')
 sha256sums=('f217571e33d7e336336ad02df3e7e6318c175bf16ed44ad732cfee73cd9ca42b'
             'SKIP')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  sed 's|makepkg --packagelist|makepkg --config /usr/share/devtools/makepkg-x86_64.conf --packagelist|' -i offload-build
+}
 
 build() {
   cd ${pkgname}-${pkgver}
