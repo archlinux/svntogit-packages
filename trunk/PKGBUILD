@@ -2,7 +2,7 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=devtools
-pkgver=20191212
+pkgver=20191227
 pkgrel=1
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
@@ -22,7 +22,7 @@ validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'
               'F3691687D867B81B51CE07D9BBE43771487328A9'
               '6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'
               'E240B57E2C4630BA768E2F26FC1B547C8D8172C8')
-sha256sums=('749b6167775d8128bc1407b99c2dceebbb1dd2b1276738b805e7ee5e5a8a7fc6'
+sha256sums=('f217571e33d7e336336ad02df3e7e6318c175bf16ed44ad732cfee73cd9ca42b'
             'SKIP')
 
 build() {
