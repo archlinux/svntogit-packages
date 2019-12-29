@@ -3,7 +3,7 @@
 
 pkgname=git
 pkgver=2.24.1
-pkgrel=3
+pkgrel=4
 pkgdesc='the fast distributed version control system'
 arch=(x86_64)
 url='https://git-scm.com/'
@@ -28,11 +28,13 @@ optdepends=('tk: gitk and git gui'
 install=git.install
 validpgpkeys=('96E07AF25771955980DAD10020D04E5A713660A7') # Junio C Hamano
 source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar."{xz,sign}
+        '0001-git-p4-python.patch'
         'git-daemon@.service'
         'git-daemon.socket'
         'git-sysusers.conf')
 sha256sums=('723f24dce8fdd621a308b6187553fce7d5244205c065fe0a3aebd0b7c3f88562'
             'SKIP'
+            '256f9c674e3617ae4373cb89b6ab972bb0279331c39425b94becadccb3b1a63a'
             '14c0b67cfe116b430645c19d8c4759419657e6809dfa28f438c33a005245ad91'
             'ac4c90d62c44926e6d30d18d97767efc901076d4e0283ed812a349aece72f203'
             '7630e8245526ad80f703fac9900a1328588c503ce32b37b9f8811674fcda4a45')
@@ -51,6 +53,12 @@ _make_options=(
   NO_PERL_CPAN_FALLBACKS=1
   USE_LIBPCRE2=1
 )
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  patch -Np1 < ../0001-git-p4-python.patch
+}
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
