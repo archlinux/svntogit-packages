@@ -1,0 +1,120 @@
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+
+pkgname=clang
+pkgver=9.0.1
+pkgrel=1
+pkgdesc="C language family frontend for LLVM"
+arch=('x86_64')
+url="https://clang.llvm.org/"
+license=('custom:Apache 2.0 with LLVM Exception')
+depends=('llvm-libs' 'gcc' 'compiler-rt')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'python2')
+optdepends=('openmp: OpenMP support in clang with -fopenmp'
+            'python: for scan-view and git-clang-format'
+            'llvm: referenced by some clang headers')
+provides=("clang-analyzer=$pkgver" "clang-tools-extra=$pkgver")
+conflicts=('clang-analyzer' 'clang-tools-extra')
+replaces=('clang-analyzer' 'clang-tools-extra')
+
+_source_base=https://releases.llvm.org/$pkgver
+if [[ ${pkgver##*.} != 0 ]]; then
+  _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+fi
+
+source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
+        $_source_base/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
+        $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
+        enable-SSP-and-PIE-by-default.patch)
+sha256sums=('5778512b2e065c204010f88777d44b95250671103e434f9dc7363ab2e3804253'
+            'SKIP'
+            'b26fd72a78bd7db998a26270ec9ec6a01346651d88fa87b4b323e13049fb6f07'
+            'SKIP'
+            '00a1ee1f389f81e9979f3a640a01c431b3021de0d42278f6508391a2f0b81c9a'
+            'SKIP'
+            'fde58a4902bec3715bc3d0c9250fa4c5f241af90bfd1e46f7128fa1435c03026')
+validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
+validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver.src"
+  mkdir build
+  mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
+  patch -Np1 -i ../enable-SSP-and-PIE-by-default.patch
+
+  # Avoid shipping libclang-cpp before removing BUILD_SHARED_LIBS=ON
+  sed -i '/add_clang_subdirectory(clang-shlib)/d' tools/CMakeLists.txt
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  # Upstream strongly recommends against BUILD_SHARED_LIBS=ON for distro
+  # builds but CLANG_LINK_CLANG_DYLIB=ON is not yet supported by clang's
+  # extra tools. Keep building all libraries as shared and revisit this.
+
+  cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DPYTHON_EXECUTABLE=/usr/bin/python \
+    -DBUILD_SHARED_LIBS=ON \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DCLANG_LINK_CLANG_DYLIB=OFF \
+    -DLLVM_ENABLE_RTTI=ON \
+    -DLLVM_BUILD_TESTS=ON \
+    -DLLVM_INCLUDE_DOCS=ON \
+    -DLLVM_BUILD_DOCS=ON \
+    -DLLVM_ENABLE_SPHINX=ON \
+    -DSPHINX_WARNINGS_AS_ERRORS=OFF \
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit \
+    -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+  ninja
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+  ninja check-clang{,-tools}
+}
+
+_python2_optimize() {
+  python2 -m compileall "$@"
+  python2 -O -m compileall "$@"
+}
+
+_python3_optimize() {
+  python3 -m compileall "$@"
+  python3 -O -m compileall "$@"
+  python3 -OO -m compileall "$@"
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  DESTDIR="$pkgdir" ninja install
+  install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/clang{,-tools}/html/{_sources,.buildinfo}
+
+  # Move analyzer scripts out of /usr/libexec
+  mv "$pkgdir"/usr/libexec/{ccc,c++}-analyzer "$pkgdir/usr/lib/clang/"
+  rmdir "$pkgdir/usr/libexec"
+  sed -i 's|libexec|lib/clang|' "$pkgdir/usr/bin/scan-build"
+
+  # Install Python bindings
+  for _py in 2.7 3.8; do
+    install -d "$pkgdir/usr/lib/python$_py/site-packages"
+    cp -a ../bindings/python/clang "$pkgdir/usr/lib/python$_py/site-packages/"
+    _python${_py%%.*}_optimize "$pkgdir/usr/lib/python$_py"
+  done
+
+  # Fix shebang in Python 2 script
+  sed -i '1s|/usr/bin/env python$|&2|' \
+    "$pkgdir"/usr/share/$pkgname/run-find-all-symbols.py
+
+  # Compile Python scripts
+  _python2_optimize "$pkgdir/usr/share/clang"
+  _python3_optimize "$pkgdir/usr/share" -x 'clang-include-fixer|run-find-all-symbols'
+}
+
+# vim:set ts=2 sw=2 et:
