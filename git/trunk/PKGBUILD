@@ -21,7 +21,7 @@ optdepends=('tk: gitk and git gui'
             'perl-datetime-format-iso8601: git mediawiki support'
             'perl-lwp-protocol-https: git mediawiki https support'
             'perl-cgi: gitweb (web interface) support'
-            'python: git svn'
+            'python: git svn & git p4'
             'subversion: git svn'
             'org.freedesktop.secrets: keyring credential helper'
             'libsecret: libsecret credential helper')
