@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=9.0.0
-pkgrel=4
+pkgver=9.0.1
+pkgrel=1
 _ocaml_ver=4.09.0
 arch=('x86_64')
 url="https://llvm.org/"
@@ -12,9 +12,15 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
              'python-sphinx' 'python-recommonmark')
 options=('staticlibs')
-source=(https://releases.llvm.org/$pkgver/llvm-$pkgver.src.tar.xz{,.sig}
+
+_source_base=https://releases.llvm.org/$pkgver
+if [[ ${pkgver##*.} != 0 ]]; then
+  _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+fi
+
+source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('d6a0565cf21f22e9b4353b2eb92622e8365000a9e90a16b09b56f8157eabfe84'
+sha256sums=('00a1ee1f389f81e9979f3a640a01c431b3021de0d42278f6508391a2f0b81c9a'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
