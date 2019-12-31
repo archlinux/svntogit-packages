@@ -1,0 +1,44 @@
+commit 7aa586a6e7235bdbc7ad551e6853fe24a0dcf991
+Author: Anatol Pomozov <anatol.pomozov@gmail.com>
+Date:   Tue Dec 31 08:48:46 2019 -0800
+
+    Fix issue #4841: do not include internal ruby include paths
+    
+    Building subversion with ruby2.7 produces a compilation warning:
+    
+    subversion/bindings/swig/ruby/svn_client.c:1666:13: warning: implicit declaration of function ‘assert’ [-Wimplicit-function-declaration]
+     1666 | assert(own); /* badly formed typemap which will lead to a memory leak - it must set and use own to delete *ptr */
+     | ^~~~~~
+    
+    And later tests fail with:
+    
+    /usr/lib/ruby/2.7.0/rubygems/core_ext/kernel_require.rb:92:in `require': /build/subversion/src/subversion-1.13.0/subversion/bindings/swig/ruby/libsvn_swig_ruby/.libs/libsvn_swig_ruby-1.so.0: undefined symbol: assert - /build/subversion/src/subversion-1.13.0/subversion/bindings/swig/ruby/.ext/svn/ext/core.so (LoadError)
+            from /usr/lib/ruby/2.7.0/rubygems/core_ext/kernel_require.rb:92:in `require'
+            from /build/subversion/src/subversion-1.13.0/subversion/bindings/swig/ruby/svn/error.rb:21:in `<top (required)>'
+            from /usr/lib/ruby/2.7.0/rubygems/core_ext/kernel_require.rb:92:in `require'
+            from /usr/lib/ruby/2.7.0/rubygems/core_ext/kernel_require.rb:92:in `require'
+            from /build/subversion/src/subversion-1.13.0/subversion/bindings/swig/ruby/svn/core.rb:25:in `<top (required)>'
+            from /usr/lib/ruby/2.7.0/rubygems/core_ext/kernel_require.rb:92:in `require'
+            from /usr/lib/ruby/2.7.0/rubygems/core_ext/kernel_require.rb:92:in `require'
+            from /build/subversion/src/subversion-1.13.0/subversion/bindings/swig/ruby/test/run-test.rb:47:in `<main>'
+    make: *** [Makefile:962: check-swig-rb] Error 1
+    
+    It turns out that ruby 2.7 added a new header file '$RUBY_TOP/ruby/assert.h'.
+    Subversion includes both $RUBY_TOP and $RUBY_TOP/ruby and it makes "assert.h" to
+    be resolved to ruby's version instead of libc one.
+    
+    To fix this problem subversion should use only $RUBY_TOP and avoid using internal ruby paths.
+
+diff --git a/build/ac-macros/swig.m4 b/build/ac-macros/swig.m4
+index bc2599038f..c707a8c282 100644
+--- a/build/ac-macros/swig.m4
++++ b/build/ac-macros/swig.m4
+@@ -230,7 +230,7 @@ AC_DEFUN(SVN_FIND_SWIG,
+     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
+     if test -d "$rbconfig_rubyhdrdir"; then
+       dnl Ruby >=1.9
+-      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward"
++      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir"
+       if test -d "$rbconfig_rubyarchhdrdir"; then
+         dnl Ruby >=2.0
+         svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyarchhdrdir"
