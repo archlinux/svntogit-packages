@@ -1,7 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=4.19.91
+pkgver=4.19.92
 pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
@@ -23,9 +23,9 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 # https://www.kernel.org/pub/linux/kernel/v4.x/sha256sums.asc
-sha256sums=('f403c3dee12ded0af1889c78871abf7a531a978ba423f1ca772de702a92c3447'
+sha256sums=('29c37cf8bbfa717ce98bc931371c35fcee3482734ad5faba32d02aff209883a2'
             'SKIP'
-            '0e3bb71f619c7b4d39d287b81a18873975de11df9ab43bdb6fa5557aab6d9670'
+            '4e68572e7cc4c5368f0236e0792660ae8498373988625dca46e509399a7eaea6'
             'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2')
 
 export KBUILD_BUILD_HOST=archlinux
