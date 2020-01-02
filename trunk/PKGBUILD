@@ -132,9 +132,6 @@ prepare() {
 	echo "Pull in latest language files..."
 	./linguas.sh
 
-	echo "Remove not working langs which need LC_ALL=C.UTF-8..."
-	sed -e 's#en@cyrillic en@greek##g' -i "po/LINGUAS"
-
 	echo "Avoid problem with unifont during compile of grub..."
 	# http://savannah.gnu.org/bugs/?40330 and https://bugs.archlinux.org/task/37847
 	gzip -cd "${srcdir}/unifont-${_UNIFONT_VER}.bdf.gz" > "unifont.bdf"
