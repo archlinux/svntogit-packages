@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.2
+pkgver=3.34.3
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=8b087cfe5692f9d508b26790cce0b930a8b02c16  # tags/3.34.2^0
+_commit=4947e8ae5becc6ff3b2e21c16279b243d8abdd31  # tags/3.34.3^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
         0001-EGL-Include-EGL-eglmesaext.h.patch
         0002-surface-actor-wayland-Do-not-send-frame-callbacks-if.patch
