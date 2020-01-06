@@ -7,8 +7,8 @@ pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=19.3.1
 pkgrel=1
 arch=('x86_64')
-makedepends=('python-mako' 'libxml2' 'libx11' 'glproto' 'libdrm' 'dri2proto' 'dri3proto' 'presentproto' 
-             'libxshmfence' 'libxxf86vm' 'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
+makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
+             'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols'
              'elfutils' 'llvm' 'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors'
              'libxrandr' 'valgrind' 'glslang' 'meson')
 url="https://www.mesa3d.org/"
