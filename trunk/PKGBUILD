@@ -1,15 +1,15 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=libteam
-pkgver=1.29
-pkgrel=4
+pkgver=1.30
+pkgrel=1
 pkgdesc="Library for controlling team network device"
 arch=(x86_64)
 url="http://libteam.org/"
 license=(LGPL)
 depends=(libnl libdaemon jansson libdbus bash zeromq)
-makedepends=(python python2 swig git doxygen graphviz)
-_commit=e897f02bf2403d4859a99e090e34ea768b4c0540  # tags/v1.29
+makedepends=(python swig git doxygen graphviz)
+_commit=471fb50d206e5a3f2eef9e4247329b51edc5c493  # tags/v1.30
 source=("git+https://github.com/jpirko/libteam#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -20,11 +20,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # Reduce docs size
-  printf '%s\n' >>doc/Doxyfile.in \
-    HAVE_DOT=yes DOT_IMAGE_FORMAT=svg INTERACTIVE_SVG=yes
-
   NOCONFIGURE=1 ./autogen.sh
 }
 
@@ -35,9 +30,8 @@ build() {
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make all html
 
-  cp -aT binding/python binding/python2
-  (cd binding/python;  python  ./setup.py build;)
-  (cd binding/python2; python2 ./setup.py build;)
+  cd binding/python
+  python setup.py build
 }
 
 check() {
@@ -49,14 +43,12 @@ package() {
   cd $pkgname
   make DESTDIR="$pkgdir" install
 
-  install -Dm644 teamd/redhat/systemd/teamd@.service \
-    "$pkgdir/usr/lib/systemd/system/teamd@.service"
-  install -Dm644 teamd/dbus/teamd.conf \
-    "$pkgdir/usr/share/dbus-1/system.d/teamd.conf"
-
-  (cd binding/python;  python  ./setup.py install --root "$pkgdir" -O1;)
-  (cd binding/python2; python2 ./setup.py install --root "$pkgdir" -O1;)
+  install -Dt "$pkgdir/usr/lib/systemd/system" -m644 teamd/redhat/systemd/teamd@.service
+  install -Dt "$pkgdir/usr/share/dbus-1/system.d" -m644 teamd/dbus/teamd.conf
 
   mkdir -p "$pkgdir/usr/share/doc/$pkgname"
   cp -a doc/api "$pkgdir/usr/share/doc/$pkgname"
+
+  cd binding/python
+  python setup.py install --root="$pkgdir" --optimize=1 --skip-build
 }
