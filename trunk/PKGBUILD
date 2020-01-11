@@ -5,27 +5,44 @@
 
 pkgname=libmikmod
 pkgver=3.3.11.1
-pkgrel=3
-pkgdesc="A module player and library supporting many formats, including mod, s3m, it, and xm"
-license=('GPL2' 'LGPL2.1')
-url="http://mikmod.sourceforge.net"
-arch=('x86_64')
-depends=('alsa-lib' 'glibc' 'libpulse' 'sh')
-makedepends=('cmake')
-provides=('libmikmod.so')
-source=("https://downloads.sourceforge.net/mikmod/$pkgname-$pkgver.tar.gz")
-sha512sums=('f2439e2b691613847cd0787dd4e050116683ce7b05c215b8afecde5c6add819ea6c18e678e258c0a80786bef463f406072de15127f64368f694287a5e8e1a9de')
+pkgrel=4
+pkgdesc="Module player library supporting many formats, including MOD, S3M, IT and XM"
+url=http://mikmod.sourceforge.net
+license=(GPL2 LGPL2.1)
+arch=(x86_64)
+depends=(glibc libpulse sh)
+makedepends=(alsa-lib cmake)
+provides=(libmikmod.so)
+source=(https://downloads.sourceforge.net/mikmod/$pkgname-$pkgver.tar.gz
+        cmake-man.diff)
+md5sums=('f69d7dd06d307e888f466fc27f4f680b'
+         'e8a338d92027072971f49b495e87c442')
+sha256sums=('ad9d64dfc8f83684876419ea7cd4ff4a41d8bcd8c23ef37ecb3a200a16b46d19'
+            '3331b6ff7f6f3dfd33f543d64affc10a127f61bed1160f75b07344c03f21b840')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../cmake-man.diff
+}
 
 build() {
-  cd "$pkgname-$pkgver"
-  cmake -DCMAKE_INSTALL_PREFIX=/usr \
-        -B build \
-        -S .
-  make -C build VERBOSE=1
+  # cmake ignores CPPFLAGS
+  CFLAGS+=" $CPPFLAGS"
+
+  cmake -H$pkgname-$pkgver -Bbuild \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DENABLE_DL=1
+  cmake --build build
 }
 
 package() {
-  cd "$pkgname-$pkgver"
-  make -C build DESTDIR="$pkgdir" install
-  install -vDm 644 {NEWS,README,TODO} -t "${pkgdir}/usr/share/doc/${pkgname}"
+  DESTDIR="$pkgdir" cmake --build build --target install
+
+  install -Dt "$pkgdir/usr/share/aclocal" -m644 $pkgname-$pkgver/libmikmod.m4
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 \
+    $pkgname-$pkgver/{NEWS,README,TODO} build/docs/mikmod.html
+  install -Dt "$pkgdir/usr/share/info" build/docs/mikmod.info
+  install -Dt "$pkgdir/usr/share/man/man1" build/docs/libmikmod-config.1
 }
+
+# vim: ts=2 sw=2 et:
