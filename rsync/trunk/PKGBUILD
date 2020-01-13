@@ -38,16 +38,24 @@ build() {
 
 check() {
 	cd "$srcdir/$pkgname-$pkgver"
+
+	# rsync fails with xattr on btrfs...
+	if [ "$(stat --file-system --printf=%T .)" = "btrfs" ]; then
+		echo "Test is known to fail on btrfs..." >&2
+		exit 1
+	fi
+
 	make test
 }
 
 package() {
 	cd "$srcdir/$pkgname-$pkgver"
+
 	make DESTDIR="$pkgdir" install
-	install -Dm644 ../rsyncd.conf "$pkgdir/etc/rsyncd.conf"
-	install -Dm644 ../rsync.xinetd "$pkgdir/etc/xinetd.d/rsync"
-	install -Dm644 ../rsyncd.service "$pkgdir/usr/lib/systemd/system/rsyncd.service"
-	install -m644 ../rsyncd.socket "$pkgdir/usr/lib/systemd/system/rsyncd.socket"
-	install -m644 ../rsyncd@.service "$pkgdir/usr/lib/systemd/system/rsyncd@.service"
-	install -Dm755 support/rrsync "$pkgdir/usr/lib/rsync/rrsync"
+	install -Dm0644 ../rsyncd.conf "$pkgdir/etc/rsyncd.conf"
+	install -Dm0644 ../rsync.xinetd "$pkgdir/etc/xinetd.d/rsync"
+	install -Dm0644 ../rsyncd.service "$pkgdir/usr/lib/systemd/system/rsyncd.service"
+	install -m0644 ../rsyncd.socket "$pkgdir/usr/lib/systemd/system/rsyncd.socket"
+	install -m0644 ../rsyncd@.service "$pkgdir/usr/lib/systemd/system/rsyncd@.service"
+	install -Dm0755 support/rrsync "$pkgdir/usr/lib/rsync/rrsync"
 }
