@@ -5,9 +5,8 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-_gitcommit=cbb3c9497549f8856d8cd37ac63af1406a784e58
-pkgver=4.2.1
-pkgrel=4
+pkgver=4.2.2
+pkgrel=1
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -22,6 +21,7 @@ depends=(
   gmp
   gnutls
   gsm
+  intel-media-sdk
   jack
   lame
   libass.so
@@ -81,7 +81,7 @@ provides=(
   libswresample.so
   libswscale.so
 )
-source=("git+https://git.ffmpeg.org/ffmpeg.git#commit=${_gitcommit}")
+source=(git+https://git.ffmpeg.org/ffmpeg.git#tag=192d1d34eb3668fa27f433e96036340e1e5077a0)
 sha256sums=(SKIP)
 
 pkgver() {
@@ -98,6 +98,8 @@ prepare() {
 
 build() {
   cd ffmpeg
+
+  export PKG_CONFIG_PATH=/opt/intel/mediasdk/lib/pkgconfig
 
   ./configure \
     --prefix=/usr \
@@ -119,6 +121,7 @@ build() {
     --enable-libgsm \
     --enable-libiec61883 \
     --enable-libjack \
+    --enable-libmfx \
     --enable-libmodplug \
     --enable-libmp3lame \
     --enable-libopencore_amrnb \
