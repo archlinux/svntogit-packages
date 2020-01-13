@@ -2,8 +2,8 @@
 
 pkgbase=python-packaging
 pkgname=(python-packaging python2-packaging)
-pkgver=19.2
-pkgrel=5
+pkgver=20.0
+pkgrel=1
 pkgdesc="Core utilities for Python packages"
 arch=('any')
 url="https://github.com/pypa/packaging"
@@ -12,7 +12,7 @@ makedepends=('python-setuptools' 'python2-setuptools' 'python-pyparsing' 'python
 checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-pretend' 'python2-pretend'
               'python-coverage' 'python2-coverage')
 source=("https://pypi.io/packages/source/p/packaging/packaging-$pkgver.tar.gz")
-sha512sums=('af7312a85292f577d3e6e57154f10fb380bbdee749344ba4b226a09f22bf5ca664ed63c62cd5b4dea0be5eb5cff5c17ad04415aab8c925fa90dcae2e1c6dee5a')
+sha512sums=('f7d99700d27d5aebbb3343f1de6ee9ce1372750b805c55a40d1a1fbeb6cfcfe2184875db56de175c6cd46e17f1567c30a39d5527870902c3c69168d025447587')
 
 build() {
   cd packaging-$pkgver
