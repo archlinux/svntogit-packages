@@ -1,5 +1,5 @@
 diff --git a/git-p4.py b/git-p4.py
-index 60c73b6a37..d9df7747cb 100755
+index 40d9e7c594..ca0a874501 100755
 --- a/git-p4.py
 +++ b/git-p4.py
 @@ -8,12 +8,12 @@
@@ -71,25 +71,18 @@ index 60c73b6a37..d9df7747cb 100755
          real_cmd = ' '.join(real_cmd) + ' ' + cmd
      else:
          real_cmd += cmd
-@@ -167,11 +146,56 @@ def die(msg):
-         sys.stderr.write(msg + "\n")
-         sys.exit(1)
- 
-+def prompt(prompt_text):
-+    """ Prompt the user to choose one of the choices
-+
-+    Choices are identified in the prompt_text by square brackets around
-+    a single letter option.
-+    """
-+    choices = set(m.group(1) for m in re.finditer(r"\[(.)\]", prompt_text))
-+    while True:
+@@ -175,18 +154,48 @@ def prompt(prompt_text):
+     """
+     choices = set(m.group(1) for m in re.finditer(r"\[(.)\]", prompt_text))
+     while True:
+-        response = raw_input(prompt_text).strip().lower()
 +        response = input(prompt_text).strip().lower()
-+        if not response:
-+            continue
-+        response = response[0]
-+        if response in choices:
-+            return response
-+
+         if not response:
+             continue
+         response = response[0]
+         if response in choices:
+             return response
+ 
 +# We need different encoding/decoding strategies for text data being passed
 +# around in pipes depending on python version
 +if bytes is not str:
@@ -129,7 +122,7 @@ index 60c73b6a37..d9df7747cb 100755
      p = subprocess.Popen(c, stdin=subprocess.PIPE, shell=expand)
      pipe = p.stdin
      val = pipe.write(stdin)
-@@ -183,6 +207,8 @@ def write_pipe(c, stdin):
+@@ -198,6 +207,8 @@ def write_pipe(c, stdin):
  
  def p4_write_pipe(c, stdin):
      real_cmd = p4_build_cmd(c)
@@ -138,7 +131,7 @@ index 60c73b6a37..d9df7747cb 100755
      return write_pipe(real_cmd, stdin)
  
  def read_pipe_full(c):
-@@ -193,15 +219,17 @@ def read_pipe_full(c):
+@@ -208,15 +219,17 @@ def read_pipe_full(c):
      if verbose:
          sys.stderr.write('Reading pipe: %s\n' % str(c))
  
@@ -159,7 +152,7 @@ index 60c73b6a37..d9df7747cb 100755
      """
      (retcode, out, err) = read_pipe_full(c)
      if retcode != 0:
-@@ -209,6 +237,8 @@ def read_pipe(c, ignore_error=False):
+@@ -224,6 +237,8 @@ def read_pipe(c, ignore_error=False):
              out = ""
          else:
              die('Command failed: %s\nError: %s' % (str(c), err))
@@ -168,7 +161,7 @@ index 60c73b6a37..d9df7747cb 100755
      return out
  
  def read_pipe_text(c):
-@@ -219,23 +249,22 @@ def read_pipe_text(c):
+@@ -234,23 +249,22 @@ def read_pipe_text(c):
      if retcode != 0:
          return None
      else:
@@ -197,7 +190,7 @@ index 60c73b6a37..d9df7747cb 100755
      return val
  
  def p4_read_pipe_lines(c):
-@@ -263,6 +292,7 @@ def p4_has_move_command():
+@@ -278,6 +292,7 @@ def p4_has_move_command():
      cmd = p4_build_cmd(["move", "-k", "@from", "@to"])
      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
      (out, err) = p.communicate()
@@ -205,7 +198,7 @@ index 60c73b6a37..d9df7747cb 100755
      # return code will be 1 in either case
      if err.find("Invalid option") >= 0:
          return False
-@@ -272,7 +302,7 @@ def p4_has_move_command():
+@@ -287,7 +302,7 @@ def p4_has_move_command():
      return True
  
  def system(cmd, ignore_error=False):
@@ -214,7 +207,7 @@ index 60c73b6a37..d9df7747cb 100755
      if verbose:
          sys.stderr.write("executing %s\n" % str(cmd))
      retcode = subprocess.call(cmd, shell=expand)
-@@ -284,7 +314,7 @@ def system(cmd, ignore_error=False):
+@@ -299,7 +314,7 @@ def system(cmd, ignore_error=False):
  def p4_system(cmd):
      """Specifically invoke p4 as the system command. """
      real_cmd = p4_build_cmd(cmd)
@@ -223,7 +216,7 @@ index 60c73b6a37..d9df7747cb 100755
      retcode = subprocess.call(real_cmd, shell=expand)
      if retcode:
          raise CalledProcessError(retcode, real_cmd)
-@@ -522,7 +552,7 @@ def getP4OpenedType(file):
+@@ -537,7 +552,7 @@ def getP4OpenedType(file):
  # Return the set of all p4 labels
  def getP4Labels(depotPaths):
      labels = set()
@@ -232,7 +225,7 @@ index 60c73b6a37..d9df7747cb 100755
          depotPaths = [depotPaths]
  
      for l in p4CmdList(["labels"] + ["%s..." % p for p in depotPaths]):
-@@ -539,12 +569,7 @@ def getGitTags():
+@@ -554,12 +569,7 @@ def getGitTags():
          gitTags.add(tag)
      return gitTags
  
@@ -246,7 +239,7 @@ index 60c73b6a37..d9df7747cb 100755
  
  def parseDiffTreeEntry(entry):
      """Parses a single diff tree entry into its component elements.
-@@ -565,7 +590,11 @@ def parseDiffTreeEntry(entry):
+@@ -580,7 +590,11 @@ def parseDiffTreeEntry(entry):
  
      If the pattern is not matched, None is returned."""
  
@@ -259,7 +252,7 @@ index 60c73b6a37..d9df7747cb 100755
      if match:
          return {
              'src_mode': match.group(1),
-@@ -609,7 +638,7 @@ def isModeExecChanged(src_mode, dst_mode):
+@@ -624,7 +638,7 @@ def isModeExecChanged(src_mode, dst_mode):
  def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
          errors_as_exceptions=False):
  
@@ -268,7 +261,7 @@ index 60c73b6a37..d9df7747cb 100755
          cmd = "-G " + cmd
          expand = True
      else:
-@@ -626,11 +655,12 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
+@@ -641,11 +655,12 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
      stdin_file = None
      if stdin is not None:
          stdin_file = tempfile.TemporaryFile(prefix='p4-stdin', mode=stdin_mode)
@@ -283,7 +276,7 @@ index 60c73b6a37..d9df7747cb 100755
          stdin_file.flush()
          stdin_file.seek(0)
  
-@@ -643,6 +673,20 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
+@@ -658,6 +673,20 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
      try:
          while True:
              entry = marshal.load(p4.stdout)
@@ -304,7 +297,7 @@ index 60c73b6a37..d9df7747cb 100755
              if skip_info:
                  if 'code' in entry and entry['code'] == 'info':
                      continue
-@@ -693,7 +737,8 @@ def p4Where(depotPath):
+@@ -708,7 +737,8 @@ def p4Where(depotPath):
          if "depotFile" in entry:
              # Search for the base client side depot path, as long as it starts with the branch's P4 path.
              # The base path always ends with "/...".
@@ -314,7 +307,7 @@ index 60c73b6a37..d9df7747cb 100755
                  output = entry
                  break
          elif "data" in entry:
-@@ -708,11 +753,11 @@ def p4Where(depotPath):
+@@ -723,11 +753,11 @@ def p4Where(depotPath):
          return ""
      clientPath = ""
      if "path" in output:
@@ -329,7 +322,7 @@ index 60c73b6a37..d9df7747cb 100755
  
      if clientPath.endswith("..."):
          clientPath = clientPath[:-3]
-@@ -860,6 +905,7 @@ def branch_exists(branch):
+@@ -875,6 +905,7 @@ def branch_exists(branch):
      cmd = [ "git", "rev-parse", "--symbolic", "--verify", branch ]
      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
      out, _ = p.communicate()
@@ -337,7 +330,7 @@ index 60c73b6a37..d9df7747cb 100755
      if p.returncode:
          return False
      # expect exactly one line of output: the branch name
-@@ -1137,7 +1183,7 @@ def pushFile(self, localLargeFile):
+@@ -1152,7 +1183,7 @@ def pushFile(self, localLargeFile):
          assert False, "Method 'pushFile' required in " + self.__class__.__name__
  
      def hasLargeFileExtension(self, relPath):
@@ -346,7 +339,7 @@ index 60c73b6a37..d9df7747cb 100755
              lambda a, b: a or b,
              [relPath.endswith('.' + e) for e in gitConfigList('git-p4.largeFileExtensions')],
              False
-@@ -1244,7 +1290,7 @@ def generatePointer(self, contentFile):
+@@ -1259,7 +1290,7 @@ def generatePointer(self, contentFile):
              ['git', 'lfs', 'pointer', '--file=' + contentFile],
              stdout=subprocess.PIPE
          )
@@ -355,25 +348,7 @@ index 60c73b6a37..d9df7747cb 100755
          if pointerProcess.wait():
              os.remove(contentFile)
              die('git-lfs pointer command failed. Did you install the extension?')
-@@ -1257,9 +1303,15 @@ def generatePointer(self, contentFile):
-             pointerFile = re.sub(r'Git LFS pointer for.*\n\n', '', pointerFile)
- 
-         oid = re.search(r'^oid \w+:(\w+)', pointerFile, re.MULTILINE).group(1)
-+        # if someone use external lfs.storage ( not in local repo git )
-+        lfs_path = gitConfig('lfs.storage')
-+        if not lfs_path:
-+            lfs_path = 'lfs'
-+        if not os.path.isabs(lfs_path):
-+            lfs_path = os.path.join(os.getcwd(), '.git', lfs_path)
-         localLargeFile = os.path.join(
--            os.getcwd(),
--            '.git', 'lfs', 'objects', oid[:2], oid[2:4],
-+            lfs_path,
-+            'objects', oid[:2], oid[2:4],
-             oid,
-         )
-         # LFS Spec states that pointer files should not have the executable bit set.
-@@ -1374,14 +1426,14 @@ def getUserMapFromPerforceServer(self):
+@@ -1395,14 +1426,14 @@ def getUserMapFromPerforceServer(self):
          for (key, val) in self.users.items():
              s += "%s\t%s\n" % (key.expandtabs(1), val.expandtabs(1))
  
@@ -390,7 +365,7 @@ index 60c73b6a37..d9df7747cb 100755
              lines = cache.readlines()
              cache.close()
              for line in lines:
-@@ -1658,7 +1710,8 @@ def modifyChangelistUser(self, changelist, newUser):
+@@ -1679,7 +1710,8 @@ def modifyChangelistUser(self, changelist, newUser):
          c = changes[0]
          if c['User'] == newUser: return   # nothing to do
          c['User'] = newUser
@@ -400,7 +375,7 @@ index 60c73b6a37..d9df7747cb 100755
  
          result = p4CmdList("change -f -i", stdin=input)
          for r in result:
-@@ -1722,7 +1775,7 @@ def prepareSubmitTemplate(self, changelist=None):
+@@ -1743,7 +1775,7 @@ def prepareSubmitTemplate(self, changelist=None):
                  break
          if not change_entry:
              die('Failed to decode output of p4 change -o')
@@ -409,51 +384,7 @@ index 60c73b6a37..d9df7747cb 100755
              if key.startswith('File'):
                  if 'depot-paths' in settings:
                      if not [p for p in settings['depot-paths']
-@@ -1778,12 +1831,11 @@ def edit_template(self, template_file):
-         if os.stat(template_file).st_mtime > mtime:
-             return True
- 
--        while True:
--            response = raw_input("Submit template unchanged. Submit anyway? [y]es, [n]o (skip this patch) ")
--            if response == 'y':
--                return True
--            if response == 'n':
--                return False
-+        response = prompt("Submit template unchanged. Submit anyway? [y]es, [n]o (skip this patch) ")
-+        if response == 'y':
-+            return True
-+        if response == 'n':
-+            return False
- 
-     def get_diff_description(self, editedFiles, filesToAdd, symlinks):
-         # diff
-@@ -1939,8 +1991,23 @@ def applyCommit(self, id):
-                     # disable the read-only bit on windows.
-                     if self.isWindows and file not in editedFiles:
-                         os.chmod(file, stat.S_IWRITE)
--                    self.patchRCSKeywords(file, kwfiles[file])
--                    fixed_rcs_keywords = True
-+
-+                    try:
-+                        self.patchRCSKeywords(file, kwfiles[file])
-+                        fixed_rcs_keywords = True
-+                    except:
-+                        # We are throwing an exception, undo all open edits
-+                        for f in editedFiles:
-+                            p4_revert(f)
-+                        raise
-+            else:
-+                # They do not have attemptRCSCleanup set, this might be the fail point
-+                # Check to see if the file has RCS keywords and suggest setting the property.
-+                for file in editedFiles | filesToDelete:
-+                    if p4_keywords_regexp_for_file(file) is not None:
-+                        print("At least one file in this commit has RCS Keywords that may be causing problems. ")
-+                        print("Consider:\ngit config git-p4.attemptRCSCleanup true")
-+                        break
- 
-             if fixed_rcs_keywords:
-                 print("Retrying the patch with RCS keywords cleaned up")
-@@ -2003,7 +2070,7 @@ def applyCommit(self, id):
+@@ -2023,7 +2055,7 @@ def applyCommit(self, id):
          tmpFile = os.fdopen(handle, "w+b")
          if self.isWindows:
              submitTemplate = submitTemplate.replace("\n", "\r\n")
@@ -462,7 +393,7 @@ index 60c73b6a37..d9df7747cb 100755
          tmpFile.close()
  
          if self.prepare_p4_only:
-@@ -2050,7 +2117,7 @@ def applyCommit(self, id):
+@@ -2070,7 +2102,7 @@ def applyCommit(self, id):
              if self.edit_template(fileName):
                  # read the edited message and submit
                  tmpFile = open(fileName, "rb")
@@ -471,55 +402,7 @@ index 60c73b6a37..d9df7747cb 100755
                  tmpFile.close()
                  if self.isWindows:
                      message = message.replace("\r\n", "\n")
-@@ -2345,31 +2412,22 @@ def run(self, args):
-                           " --prepare-p4-only")
-                     break
-                 if i < last:
--                    quit = False
--                    while True:
--                        # prompt for what to do, or use the option/variable
--                        if self.conflict_behavior == "ask":
--                            print("What do you want to do?")
--                            response = raw_input("[s]kip this commit but apply"
--                                                 " the rest, or [q]uit? ")
--                            if not response:
--                                continue
--                        elif self.conflict_behavior == "skip":
--                            response = "s"
--                        elif self.conflict_behavior == "quit":
--                            response = "q"
--                        else:
--                            die("Unknown conflict_behavior '%s'" %
--                                self.conflict_behavior)
--
--                        if response[0] == "s":
--                            print("Skipping this commit, but applying the rest")
--                            break
--                        if response[0] == "q":
--                            print("Quitting")
--                            quit = True
--                            break
--                    if quit:
-+                    # prompt for what to do, or use the option/variable
-+                    if self.conflict_behavior == "ask":
-+                        print("What do you want to do?")
-+                        response = prompt("[s]kip this commit but apply the rest, or [q]uit? ")
-+                    elif self.conflict_behavior == "skip":
-+                        response = "s"
-+                    elif self.conflict_behavior == "quit":
-+                        response = "q"
-+                    else:
-+                        die("Unknown conflict_behavior '%s'" %
-+                            self.conflict_behavior)
-+
-+                    if response == "s":
-+                        print("Skipping this commit, but applying the rest")
-+                    if response == "q":
-+                        print("Quitting")
-                         break
- 
-         chdir(self.oldWorkingDirectory)
-@@ -2479,7 +2537,7 @@ def append(self, view_line):
+@@ -2490,7 +2522,7 @@ def append(self, view_line):
  
      def convert_client_path(self, clientFile):
          # chop off //client/ part to make it relative
@@ -528,7 +411,7 @@ index 60c73b6a37..d9df7747cb 100755
              die("No prefix '%s' on clientFile '%s'" %
                  (self.client_prefix, clientFile))
          return clientFile[len(self.client_prefix):]
-@@ -2488,7 +2546,7 @@ def update_client_spec_path_cache(self, files):
+@@ -2499,7 +2531,7 @@ def update_client_spec_path_cache(self, files):
          """ Caching file paths by "p4 where" batch query """
  
          # List depot file paths exclude that already cached
@@ -537,7 +420,7 @@ index 60c73b6a37..d9df7747cb 100755
  
          if len(fileArgs) == 0:
              return  # All files in cache
-@@ -2503,16 +2561,18 @@ def update_client_spec_path_cache(self, files):
+@@ -2514,16 +2546,18 @@ def update_client_spec_path_cache(self, files):
              if "unmap" in res:
                  # it will list all of them, but only one not unmap-ped
                  continue
@@ -559,7 +442,7 @@ index 60c73b6a37..d9df7747cb 100755
  
      def map_in_client(self, depot_path):
          """Return the relative location in the client where this
-@@ -2617,6 +2677,7 @@ def __init__(self):
+@@ -2628,6 +2662,7 @@ def __init__(self):
      def checkpoint(self):
          self.gitStream.write("checkpoint\n\n")
          self.gitStream.write("progress checkpoint\n\n")
@@ -567,7 +450,7 @@ index 60c73b6a37..d9df7747cb 100755
          out = self.gitOutput.readline()
          if self.verbose:
              print("checkpoint finished: " + out)
-@@ -2630,7 +2691,7 @@ def isPathWanted(self, path):
+@@ -2641,7 +2676,7 @@ def isPathWanted(self, path):
              elif path.lower() == p.lower():
                  return False
          for p in self.depotPaths:
@@ -576,7 +459,7 @@ index 60c73b6a37..d9df7747cb 100755
                  return True
          return False
  
-@@ -2639,7 +2700,7 @@ def extractFilesFromCommit(self, commit, shelved=False, shelved_cl = 0):
+@@ -2650,7 +2685,7 @@ def extractFilesFromCommit(self, commit, shelved=False, shelved_cl = 0):
          fnum = 0
          while "depotFile%s" % fnum in commit:
              path =  commit["depotFile%s" % fnum]
@@ -585,7 +468,7 @@ index 60c73b6a37..d9df7747cb 100755
              if not found:
                  fnum = fnum + 1
                  continue
-@@ -2673,7 +2734,7 @@ def stripRepoPath(self, path, prefixes):
+@@ -2684,7 +2719,7 @@ def stripRepoPath(self, path, prefixes):
          if self.useClientSpec:
              # branch detection moves files up a level (the branch name)
              # from what client spec interpretation gives
@@ -594,7 +477,7 @@ index 60c73b6a37..d9df7747cb 100755
              if self.detectBranches:
                  for b in self.knownBranches:
                      if p4PathStartsWith(path, b + "/"):
-@@ -2707,14 +2768,15 @@ def splitFilesIntoBranches(self, commit):
+@@ -2718,14 +2753,15 @@ def splitFilesIntoBranches(self, commit):
          branches = {}
          fnum = 0
          while "depotFile%s" % fnum in commit:
@@ -612,7 +495,7 @@ index 60c73b6a37..d9df7747cb 100755
              file["rev"] = commit["rev%s" % fnum]
              file["action"] = commit["action%s" % fnum]
              file["type"] = commit["type%s" % fnum]
-@@ -2723,7 +2785,7 @@ def splitFilesIntoBranches(self, commit):
+@@ -2734,7 +2770,7 @@ def splitFilesIntoBranches(self, commit):
              # start with the full relative path where this file would
              # go in a p4 client
              if self.useClientSpec:
@@ -621,7 +504,7 @@ index 60c73b6a37..d9df7747cb 100755
              else:
                  relPath = self.stripRepoPath(path, self.depotPaths)
  
-@@ -2739,7 +2801,7 @@ def splitFilesIntoBranches(self, commit):
+@@ -2750,7 +2786,7 @@ def splitFilesIntoBranches(self, commit):
          return branches
  
      def writeToGitStream(self, gitMode, relPath, contents):
@@ -630,7 +513,7 @@ index 60c73b6a37..d9df7747cb 100755
          self.gitStream.write('data %d\n' % sum(len(d) for d in contents))
          for d in contents:
              self.gitStream.write(d)
-@@ -2761,14 +2823,15 @@ def encodeWithUTF8(self, path):
+@@ -2772,14 +2808,15 @@ def encodeWithUTF8(self, path):
      # - helper for streamP4Files
  
      def streamOneP4File(self, file, contents):
@@ -649,7 +532,7 @@ index 60c73b6a37..d9df7747cb 100755
              sys.stdout.flush()
  
          (type_base, type_mods) = split_p4_type(file["type"])
-@@ -2780,13 +2843,13 @@ def streamOneP4File(self, file, contents):
+@@ -2791,13 +2828,13 @@ def streamOneP4File(self, file, contents):
              git_mode = "120000"
              # p4 print on a symlink sometimes contains "target\n";
              # if it does, remove the newline
@@ -665,7 +548,7 @@ index 60c73b6a37..d9df7747cb 100755
                  return
              elif data[-1] == '\n':
                  contents = [data[:-1]]
-@@ -2805,7 +2868,7 @@ def streamOneP4File(self, file, contents):
+@@ -2816,7 +2853,7 @@ def streamOneP4File(self, file, contents):
              # just the native "NT" type.
              #
              try:
@@ -674,7 +557,7 @@ index 60c73b6a37..d9df7747cb 100755
              except Exception as e:
                  if 'Translation of file content failed' in str(e):
                      type_base = 'binary'
-@@ -2813,7 +2876,7 @@ def streamOneP4File(self, file, contents):
+@@ -2824,7 +2861,7 @@ def streamOneP4File(self, file, contents):
                      raise e
              else:
                  if p4_version_string().find('/NT') >= 0:
@@ -683,7 +566,7 @@ index 60c73b6a37..d9df7747cb 100755
                  contents = [ text ]
  
          if type_base == "apple":
-@@ -2834,7 +2897,7 @@ def streamOneP4File(self, file, contents):
+@@ -2845,7 +2882,7 @@ def streamOneP4File(self, file, contents):
          pattern = p4_keywords_regexp_for_type(type_base, type_mods)
          if pattern:
              regexp = re.compile(pattern, re.VERBOSE)
@@ -692,7 +575,7 @@ index 60c73b6a37..d9df7747cb 100755
              text = regexp.sub(r'$\1$', text)
              contents = [ text ]
  
-@@ -2844,12 +2907,11 @@ def streamOneP4File(self, file, contents):
+@@ -2855,12 +2892,11 @@ def streamOneP4File(self, file, contents):
          self.writeToGitStream(git_mode, relPath, contents)
  
      def streamOneP4Deletion(self, file):
@@ -707,7 +590,7 @@ index 60c73b6a37..d9df7747cb 100755
  
          if self.largeFileSystem and self.largeFileSystem.isLargeFile(relPath):
              self.largeFileSystem.removeLargeFile(relPath)
-@@ -2949,9 +3011,9 @@ def streamP4FilesCbSelf(entry):
+@@ -2960,9 +2996,9 @@ def streamP4FilesCbSelf(entry):
                  if 'shelved_cl' in f:
                      # Handle shelved CLs using the "p4 print file@=N" syntax to print
                      # the contents
@@ -719,7 +602,7 @@ index 60c73b6a37..d9df7747cb 100755
  
                  fileArgs.append(fileArg)
  
-@@ -3032,8 +3094,8 @@ def commit(self, details, files, branch, parent = "", allow_empty=False):
+@@ -3043,8 +3079,8 @@ def commit(self, details, files, branch, parent = "", allow_empty=False):
          if self.clientSpecDirs:
              self.clientSpecDirs.update_client_spec_path_cache(files)
  
@@ -730,7 +613,7 @@ index 60c73b6a37..d9df7747cb 100755
  
          if gitConfigBool('git-p4.keepEmptyCommits'):
              allow_empty = True
-@@ -3537,6 +3599,15 @@ def openStreams(self):
+@@ -3548,6 +3584,15 @@ def openStreams(self):
          self.gitStream = self.importProcess.stdin
          self.gitError = self.importProcess.stderr
  
@@ -746,17 +629,3 @@ index 60c73b6a37..d9df7747cb 100755
      def closeStreams(self):
          self.gitStream.close()
          if self.importProcess.wait() != 0:
-@@ -4140,7 +4211,12 @@ def main():
-                                    description = cmd.description,
-                                    formatter = HelpFormatter())
- 
--    (cmd, args) = parser.parse_args(sys.argv[2:], cmd);
-+    try:
-+        (cmd, args) = parser.parse_args(sys.argv[2:], cmd);
-+    except:
-+        parser.print_help()
-+        raise
-+
-     global verbose
-     verbose = cmd.verbose
-     if cmd.needsGit:
