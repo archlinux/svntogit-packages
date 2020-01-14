@@ -1,12 +1,12 @@
 
 pkgname=rsync
 pkgver=3.1.3
-pkgrel=2
+pkgrel=3
 pkgdesc="A file transfer program to keep remote files in sync"
 arch=('x86_64')
 url="https://rsync.samba.org/"
 license=('GPL3')
-depends=('perl' 'popt' 'acl')
+depends=('acl' 'perl' 'popt' 'zlib')
 backup=('etc/rsyncd.conf' 'etc/xinetd.d/rsync')
 install=rsync.install
 validpgpkeys=('0048C8B026D4C96F0E589C2F6C859FB14B96A8C5') # Wayne Davison <wayned@users.sourceforge.net>
@@ -27,11 +27,10 @@ sha256sums=('55cc554efec5fdaad70de921cd5a5eeb6c29a95524c715f3bbf849235b0800c0'
 build() {
 	cd "$srcdir/$pkgname-$pkgver"
 
-	# rsync requires the bundled zlib to support old-style --compress
-	# This is to be reevaluated once rsync 3.1.1 is more available in the wild...
-	./configure --prefix=/usr \
+	./configure \
+		--prefix=/usr \
 		--with-included-popt=no \
-		--with-included-zlib=yes \
+		--with-included-zlib=no \
 		--disable-debug
 	make
 }
