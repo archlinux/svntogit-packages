@@ -1,0 +1,46 @@
+# Maintainer: Jelle van der Waa <jelle@dwaa.nl>
+
+pkgname=prometheus-memcached-exporter
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="Exports metrics from memcached servers for consumption by Prometheus"
+arch=('x86_64')
+url="https://github.com/prometheus/memcached_exporter"
+license=('Apache')
+depends=(glibc)
+makedepends=(go-pie memcached)
+source=($pkgname-$pkgver.tar.gz::https://github.com/prometheus/memcached_exporter/archive/v${pkgver}.tar.gz prometheus-memcached-exporter.service)
+sha512sums=('02238da4e901c3e3b57144501d64fa19502bdcf1aa65e775188ef18f9e524c4e2a44d87e8dcc926261b589715a8347628b87c2e418bcbcc63b5a18058ef771be'
+            'cf40ca9f2ea11e3d877314e54af963308fa256a981dd4bf03850367d44537b8d0f42f6934c61e6f38de35c88dcb9cec4433dc188cddb7f4d32964bf0cc837ede')
+
+check() {
+  cd memcached_exporter-$pkgver
+  memcached_pids=()
+  memcached -p 11211 -U 11211 >/dev/null        & memcached_pids+=($!)
+
+  local ret=0
+  go test ./... || ret=1
+
+  kill ${memcached_pids[@]}
+
+  return $ret
+}
+
+build() {
+  cd memcached_exporter-$pkgver
+  go build \
+    -trimpath \
+    -ldflags "-extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date -d@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    .
+}
+
+package() {
+  install -Dm644 prometheus-memcached-exporter.service "$pkgdir"/usr/lib/systemd/system/prometheus-memcached-exporter.service
+  cd memcached_exporter-$pkgver
+  install -Dm755 memcached_exporter "$pkgdir"/usr/bin/prometheus-memcached-exporter
+}
