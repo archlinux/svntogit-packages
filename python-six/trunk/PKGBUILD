@@ -4,8 +4,8 @@
 
 pkgbase=python-six
 pkgname=('python2-six' 'python-six')
-pkgver=1.13.0
-pkgrel=2
+pkgver=1.14.0
+pkgrel=1
 pkgdesc="Python 2 and 3 compatibility utilities"
 arch=('any')
 url="https://pypi.python.org/pypi/six/"
@@ -13,7 +13,7 @@ license=('MIT')
 makedepends=('python-setuptools' 'python2-setuptools')
 checkdepends=('python-pytest' 'python2-pytest' 'tk')
 source=("https://pypi.io/packages/source/s/six/six-$pkgver.tar.gz")
-sha512sums=('55eb8e23e529cb0d2ab9e7c85868e695f36c8235e914b1548eb4b9fd561e4237266bf1839457f15a9513d57a343cbf8ab809d6187499300791fd9356854fcb00')
+sha512sums=('4dea0f4e7961e8b582d665501c65852dc3b73516a0b6f78b0888c8670f1450df58bd3eea418777f41080b842ab6c3d8633be1034bcf920192e5590d5316e2c9e')
 
 build() {
   cp -a six-$pkgver{,-py2}
