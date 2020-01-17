@@ -124,12 +124,12 @@ END
     ./mach python build/pgo/profileserver.py
 
   if [[ ! -s merged.profdata ]]; then
-    error "No profile data produced."
+    echo "No profile data produced."
     return 1
   fi
 
   if [[ ! -s jarlog ]]; then
-    error "No jar log produced."
+    echo "No jar log produced."
     return 1
   fi
 
