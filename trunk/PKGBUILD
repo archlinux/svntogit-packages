@@ -110,13 +110,13 @@ build() {
   CXXFLAGS="${CXXFLAGS/-fno-plt/}"
 
   # Do 3-tier PGO
-  msg2 "Building instrumented browser..."
+  echo "Building instrumented browser..."
   cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-generate=cross
 END
   ./mach build
 
-  msg2 "Profiling instrumented browser..."
+  echo "Profiling instrumented browser..."
   ./mach package
   LLVM_PROFDATA=llvm-profdata \
     JARLOG_FILE="$PWD/jarlog" \
@@ -133,10 +133,10 @@ END
     return 1
   fi
 
-  msg2 "Removing instrumented browser..."
+  echo "Removing instrumented browser..."
   ./mach clobber
 
-  msg2 "Building optimized browser..."
+  echo "Building optimized browser..."
   cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-lto=cross
 ac_add_options --enable-profile-use=cross
@@ -145,7 +145,7 @@ ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
 END
   ./mach build
 
-  msg2 "Building symbol archive..."
+  echo "Building symbol archive..."
   ./mach buildsymbols
 }
 
