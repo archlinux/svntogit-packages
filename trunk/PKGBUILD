@@ -9,8 +9,8 @@ url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
 license=(LGPL)
 depends=(libxml2 glib2 libunwind libcap libelf)
-makedepends=(gtk-doc gobject-introspection git valgrind bash-completion meson)
-checkdepends=(gmp gsl gtk3)
+makedepends=(gtk-doc gobject-introspection git valgrind bash-completion meson
+             gmp gsl gtk3)
 _commit=129493687793cbc109d6211bb0e465218e383e9d  # tags/1.16.2^0
 install=gstreamer.install
 source=("git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git#commit=$_commit")
