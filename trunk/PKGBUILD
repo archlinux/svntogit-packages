@@ -85,6 +85,8 @@ build() {
 
 package_rust() {
   depends=('gcc-libs' 'llvm-libs' 'curl' 'libssh2')
+  optdepends=('lldb: rust-lldb script'
+              'gdb: rust-gdb script')
   provides=('cargo' 'rustfmt')
   conflicts=('cargo' 'rustfmt')
   replaces=('cargo' 'rustfmt')
