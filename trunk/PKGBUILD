@@ -63,7 +63,7 @@ package_transmission-cli() {
 package_transmission-gtk() {
   pkgdesc='Fast, easy, and free BitTorrent client (GTK+ GUI)'
   depends=(curl libevent gtk3 desktop-file-utils hicolor-icon-theme)
-  optdepends=('notification-daemon: Desktop notification support'
+  optdepends=('libnotify: Desktop notification support'
               'transmission-cli: daemon and web support')
 
   cd $pkgbase-$pkgver
