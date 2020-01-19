@@ -9,75 +9,65 @@ pkgdesc="A library for computing the discrete Fourier transform (DFT)"
 arch=('x86_64')
 license=('GPL2')
 url="http://www.fftw.org/"
-depends=('bash' 'gcc-libs')
-makedepends=('gcc-fortran' 'ocaml' 'ocaml-num' 'ocamlbuild')
-source=("https://github.com/${pkgname}/fftw3/archive/${pkgname}-${pkgver}.tar.gz")
-sha512sums=('d426bd34a353829d2a6d3585230f5f9f7be6bab121a79717ce5a08479c9df6e2a30ba0ffc74d28c7e2acc1d20768df864538fa80ad7ec53241425fc048c6f6c4')
-
-# notes:
-# http://www.fftw.org/fftw2_doc/fftw_6.html#SEC69
-# http://www.fftw.org/faq/section2.html#singleprec
-# http://www.fftw.org/fftw3_doc/Precision.html#Precision
+depends=('bash' 'gcc-libs' 'glibc' 'openmpi')
+makedepends=('gcc-fortran')
+provides=('libfftw3q_threads.so' 'libfftw3q_omp.so' 'libfftw3q.so'
+'libfftw3l_threads.so' 'libfftw3l_omp.so' 'libfftw3l_mpi.so' 'libfftw3l.so'
+'libfftw3f_threads.so' 'libfftw3f_omp.so' 'libfftw3f_mpi.so' 'libfftw3f.so'
+'libfftw3_threads.so' 'libfftw3_omp.so' 'libfftw3_mpi.so' 'libfftw3.so')
+# makedepends=('gcc-fortran' 'ocaml' 'ocaml-num' 'ocamlbuild')
+source=("http://www.fftw.org/${pkgname}-${pkgver}.tar.gz")
+# source=("https://github.com/${pkgname}/fftw3/archive/${pkgname}-${pkgver}.tar.gz")
+sha512sums=('ab918b742a7c7dcb56390a0a0014f517a6dff9a2e4b4591060deeb2c652bf3c6868aa74559a422a276b853289b4b701bdcbd3d4d8c08943acf29167a7be81a38')
 
 prepare() {
-  mv -v "fftw3-${pkgname}-${pkgver}" "${pkgname}-${pkgver}"
-  (
-    cd "$pkgname-$pkgver"
-    cp -v NEWS ChangeLog
-    autoreconf -vfi
-  )
+# issue with ocaml-num
+#  mv -v "fftw3-${pkgname}-${pkgver}" "${pkgname}-${pkgver}"
+#  (
+#    cd "$pkgname-$pkgver"
+#    cp -v NEWS ChangeLog
+#    autoreconf -vfi
+#  )
   cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-double"
   cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-long-double"
   cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-quad"
-  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-mpi"
 }
 
 build() {
+  export F77='gfortran'
   # use upstream default CFLAGS while keeping our -march/-mtune
   CFLAGS+=" -O3 -fomit-frame-pointer -malign-double -fstrict-aliasing -ffast-math"
+  # default configure call
+  _default_configure="./configure --prefix=/usr --enable-shared --enable-threads --enable-mpi --enable-openmp"
 
-  CONFIGURE="F77='gfortran' ./configure --prefix=/usr \
-                 --enable-shared \
-                 --enable-threads \
-                 --enable-maintainer-mode \
-                 --enable-sse2 \
-                 --enable-avx \
-                 --enable-openmp"
-
-  # build & install single precision
+  # configure single precision
   (
     cd "${pkgname}-${pkgver}"
-    "$CONFIGURE --enable-single"
-    make
+    ${_default_configure} --enable-sse --enable-avx --enable-single
   )
 
-  # build double precision
+  # configure double precision
   (
     cd "${pkgname}-${pkgver}-double"
-    "$CONFIGURE"
-    make
+    ${_default_configure} --enable-sse2 --enable-avx
   )
 
-  # build long double precission
+  # configure long-double precission
   (
     cd "${pkgname}-${pkgver}-long-double"
-    "$CONFIGURE --enable-long-double"
-    make
+    ${_default_configure} --enable-long-double
   )
 
-  # build & install single precision
+  # configure quad precision
   (
     cd "${pkgname}-${pkgver}-quad"
-    "$CONFIGURE --enable-quad-precision"
-    make
+    ${_default_configure} --disable-mpi --enable-quad-precision
   )
 
-  # build & install single precision
-  (
-    cd "${pkgname}-${pkgver}-mpi"
-    "$CONFIGURE --enable-mpi"
-    make
-  )
+  make -C "${pkgname}-${pkgver}"
+  make -C "${pkgname}-${pkgver}-double"
+  make -C "${pkgname}-${pkgver}-long-double"
+  make -C "${pkgname}-${pkgver}-quad"
 }
 
 package() {
@@ -85,5 +75,7 @@ package() {
   make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-double"
   make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-long-double"
   make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-quad"
-  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-mpi"
+  cd "${pkgname}-${pkgver}"
+  install -vDm 644 {AUTHORS,ChangeLog,NEWS,README,TODO} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
