@@ -1,60 +1,89 @@
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
 # Contributor: damir <damir@archlinux.org>
 
 pkgname=fftw
 pkgver=3.3.8
-pkgrel=1
+pkgrel=2
 pkgdesc="A library for computing the discrete Fourier transform (DFT)"
 arch=('x86_64')
 license=('GPL2')
 url="http://www.fftw.org/"
 depends=('bash' 'gcc-libs')
-makedepends=('gcc-fortran')
-source=("http://www.fftw.org/${pkgname}-${pkgver}.tar.gz")
-sha1sums=('59831bd4b2705381ee395e54aa6e0069b10c3626')
+makedepends=('gcc-fortran' 'ocaml' 'ocaml-num' 'ocamlbuild')
+source=("https://github.com/${pkgname}/fftw3/archive/${pkgname}-${pkgver}.tar.gz")
+sha512sums=('d426bd34a353829d2a6d3585230f5f9f7be6bab121a79717ce5a08479c9df6e2a30ba0ffc74d28c7e2acc1d20768df864538fa80ad7ec53241425fc048c6f6c4')
 
 # notes:
 # http://www.fftw.org/fftw2_doc/fftw_6.html#SEC69
 # http://www.fftw.org/faq/section2.html#singleprec
 # http://www.fftw.org/fftw3_doc/Precision.html#Precision
 
+prepare() {
+  mv -v "fftw3-${pkgname}-${pkgver}" "${pkgname}-${pkgver}"
+  (
+    cd "$pkgname-$pkgver"
+    cp -v NEWS ChangeLog
+    autoreconf -vfi
+  )
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-double"
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-long-double"
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-quad"
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-mpi"
+}
 
 build() {
-  cp -a ${pkgname}-${pkgver} ${pkgname}-${pkgver}-double
-  cp -a ${pkgname}-${pkgver} ${pkgname}-${pkgver}-long-double
-  mv ${pkgname}-${pkgver} ${pkgname}-${pkgver}-single
-  
-
   # use upstream default CFLAGS while keeping our -march/-mtune
   CFLAGS+=" -O3 -fomit-frame-pointer -malign-double -fstrict-aliasing -ffast-math"
 
-  CONFIGURE="./configure F77=gfortran --prefix=/usr \
-                 --enable-shared --enable-threads \
-		 --enable-openmp"
-
-  # build double precision
-  cd ${srcdir}/${pkgname}-${pkgver}-double
-  $CONFIGURE --enable-sse2 --enable-avx
-  make
-
-  # build & install long double precission
-  cd ${srcdir}/${pkgname}-${pkgver}-long-double
-  $CONFIGURE --enable-long-double
-  make
+  CONFIGURE="F77='gfortran' ./configure --prefix=/usr \
+                 --enable-shared \
+                 --enable-threads \
+                 --enable-maintainer-mode \
+                 --enable-sse2 \
+                 --enable-avx \
+                 --enable-openmp"
 
   # build & install single precision
-  cd ${srcdir}/${pkgname}-${pkgver}-single
-  $CONFIGURE --enable-float --enable-sse --enable-avx
-  make
+  (
+    cd "${pkgname}-${pkgver}"
+    "$CONFIGURE --enable-single"
+    make
+  )
+
+  # build double precision
+  (
+    cd "${pkgname}-${pkgver}-double"
+    "$CONFIGURE"
+    make
+  )
+
+  # build long double precission
+  (
+    cd "${pkgname}-${pkgver}-long-double"
+    "$CONFIGURE --enable-long-double"
+    make
+  )
+
+  # build & install single precision
+  (
+    cd "${pkgname}-${pkgver}-quad"
+    "$CONFIGURE --enable-quad-precision"
+    make
+  )
+
+  # build & install single precision
+  (
+    cd "${pkgname}-${pkgver}-mpi"
+    "$CONFIGURE --enable-mpi"
+    make
+  )
 }
 
 package() {
-  cd ${srcdir}/${pkgname}-${pkgver}-double
-  make DESTDIR=${pkgdir} install
-
-  cd ${srcdir}/${pkgname}-${pkgver}-long-double
-  make DESTDIR=${pkgdir} install
-
-  cd ${srcdir}/${pkgname}-${pkgver}-single
-  make DESTDIR=${pkgdir} install  
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-double"
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-long-double"
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-quad"
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-mpi"
 }
