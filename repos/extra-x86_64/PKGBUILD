@@ -2,15 +2,16 @@
 # Maintainer: Florian Pritz <bluewind@xinu.at>
 
 pkgbase=zabbix
-pkgname=(zabbix-server zabbix-agent zabbix-proxy zabbix-frontend-php)
+pkgname=(zabbix-server zabbix-agent{,2} zabbix-proxy zabbix-frontend-php)
 pkgver=4.4.4
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.zabbix.com/'
 license=(GPL)
-makedepends=(postgresql-libs libxml2 unixodbc net-snmp mariadb-libs libldap libevent)
+makedepends=(postgresql-libs libxml2 unixodbc net-snmp mariadb-libs libldap libevent go)
 source=(https://downloads.sourceforge.net/sourceforge/zabbix/zabbix-${pkgver}.tar.gz
         zabbix-agent.{service,sysusers,tmpfiles}
+        zabbix-agent2.service
         zabbix-server{-mysql,-pgsql}.service zabbix-server.{sysusers,tmpfiles}
         zabbix-proxy{-sqlite,-mysql,-pgsql}.service zabbix-proxy.{sysusers,tmpfiles})
 
@@ -18,6 +19,7 @@ sha512sums=('deed67b6074f140c189e1e046d6200c1a9d7e7832664b70a6314baf1458a79c8d1f
             '8c1fa2676bc0ef91bc39ec5f97b4d3ba5c365d063420455a3785121a54e120bc5afeacde42a48f4509c115f940dcc3b6c2f43044a7fbfb421182fc93b22a2444'
             '3ab3ac1acc7e35c8896157aef601ebc30815237ac5252cbd0c1ecb26eeaf9eccf5c49938ae8c85bb79a6f95f607f082f6b80ed660829599ec03aa626cca6d3dc'
             'ca6b4779de23829dfdd80ee21e924fbe4e2754f4e693bed4b1a2aa846cd87d150e399b1169d7fe58d30c50ed837c1b8254e580de420267d0a1834d6dc409c43d'
+            'c57dfcc13b290f4120d1185339bd2d6b1ea7a2ca0c98dca8632d4fd8fe462a42cb35e8a88895eb8ee390c55cf0ffb90b544f23fefbf059b49c06e5373d0b8af2'
             'b35155a5d151eb7258bca62d53e7099a05605e58adac9d1510e12c2219abc22f931e92ea5d36bf86900e30982e893e429235d983a7823610d76c15082c373d1f'
             'ac968d9954e5d9523eb7a9b8dcbcef40d4b47c1db3b2ff86d5fbc3f1871fcd03aff14f5b0cfeeeb494fdeb2d95e2e32b8622297c714a90d22c68ab3b3b914475'
             '4254d3b13ff0d19a8e207f709c10ea59dbb6d4f333d862b1611a0fa4ced199e9a32313e88d8abadc129c1e4001b182c0545bcc84117d218116a8c524de88850e'
@@ -39,6 +41,9 @@ prepare() {
 }
 
 build() {
+  export GOPATH="$srcdir"/go
+  export AGENT_LDFLAGS="${LDFLAGS}"
+
   _configure_flags=(
     --disable-static
     --prefix=/usr
@@ -46,6 +51,7 @@ build() {
     --mandir=/usr/share/man
     --sysconfdir=/etc/zabbix
     --enable-agent
+    --enable-agent2
     --enable-ipv6
     --with-ldap
     --with-libcurl
@@ -137,6 +143,23 @@ package_zabbix-agent() {
 	"$pkgdir/usr/lib/sysusers.d/zabbix-agent.conf"
   install -Dm644 "$srcdir/zabbix-agent.tmpfiles" \
 	"$pkgdir/usr/lib/tmpfiles.d/zabbix-agent.conf"
+}
+
+package_zabbix-agent2() {
+  pkgdesc='Experimental monitoring agent for Zabbix (Agent 2)'
+  depends=(zabbix-agent)
+  backup=(etc/zabbix/zabbix_agent2.conf)
+
+  cd $pkgbase-$pkgver
+  install -Dm755 src/go/bin/zabbix_agent2 "$pkgdir/usr/bin/zabbix_agent2"
+  install -Dm644 src/go/conf/zabbix_agent2.conf "$pkgdir/etc/zabbix/zabbix_agent2.conf"
+  chown 172:172 "$pkgdir/etc/zabbix/zabbix_agent2.conf"
+
+  install -Dm644 man/zabbix_agent2.man \
+	"$pkgdir/usr/share/man/man8/zabbix_agent2.8"
+
+  install -Dm644 "$srcdir/zabbix-agent2.service" \
+	"$pkgdir/usr/lib/systemd/system/zabbix-agent2.service"
 }
 
 package_zabbix-proxy() {
