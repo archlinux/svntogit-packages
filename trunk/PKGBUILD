@@ -1,52 +1,53 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
-# Contributor: David Runge <dvzrv@archlinux.org>
 # Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
 # Contributor: Daniel Ehlers <danielehlers@mindeye.net>
 
 pkgname=alsa-plugins
 pkgver=1.2.1
-pkgrel=2
-pkgdesc="Additional library plugins"
-arch=('x86_64')
-url="http://www.alsa-project.org"
-license=('LGPL2.1')
-depends=('glibc' 'libasound.so')
-# a52, lavrate plugins not compatible with ffmpeg >= 4.0
-# https://mailman.alsa-project.org/pipermail/alsa-devel/2019-December/159425.html
-# https://bugs.archlinux.org/task/60586
-makedepends=('dbus' 'libavcodec.so' 'libavutil.so' 'libjack.so' 'libpulse.so'
-'libsamplerate.so' 'libswresample.so' 'speexdsp')
+pkgrel=3
+pkgdesc="Additional ALSA plugins"
+arch=(x86_64)
+url="https://www.alsa-project.org"
+license=(LGPL2.1)
+depends=(glibc alsa-lib)
+makedepends=(dbus ffmpeg jack libpulse libsamplerate speexdsp)
 optdepends=('dbus: for maemo plugin'
-            'libavcodec.so: for pcm_a52 and rate_lavrate plugins'
-            'libavutil.so: for pcm_a52 and rate_lavrate plugins'
-            'libjack.so: for pcm_jack plugin'
-            'libsamplerate.so: for rate_samplerate plugin'
-            'libpulse.so: for conf_pulse, ctl_pulse and pcm_pulse plugins'
-            'libswresample.so: for pcm_a52 and rate_lavrate plugins'
+            'ffmpeg: for pcm_a52 and rate_lavrate plugins'
+            'jack: for pcm_jack plugin'
+            'libsamplerate: for rate_samplerate plugin'
+            'libpulse: for conf_pulse, ctl_pulse and pcm_pulse plugins'
             'speexdsp: for pcm_speex and rate_speexrate plugins')
 source=("https://www.alsa-project.org/files/pub/plugins/$pkgname-$pkgver.tar.bz2"
-        "${pkgname}-1.2.1-ffmpeg4.patch::https://git.harting.dev/IdleGandalf/alsa-plugins/commit/9cdbbb9874757b6f8fda7fb4ac2e3fc59da65946.patch"
-)
-sha512sums=('a49ef9290b66855112e301a5fd5a0932f13a50254e164f3340f2b342a36469532ee783beabfe5e95870dbf4cd81ca1e8d0415d94c8c7ee963133fb3c343721de'
-            '06ff2aa30a55e0d04ac9d1f5a6fa11a6a3c04c3f6722c07ecd7cac57584e142ad6949fd6c856c66435ac5ff5cf910c362e9c72605ca190074764cf3d40a9d64f')
+        "alsa-plugins-1.2.1-ffmpeg4.patch::https://git.harting.dev/IdleGandalf/alsa-plugins/commit/9cdbbb9874757b6f8fda7fb4ac2e3fc59da65946.patch")
+sha256sums=('4d94de7ad41734b8604a652521200bb6554fcf0c2c00fdbd302b1710d76548da'
+            'f1fc4fe7d3b4c34b244b276d109af9bfb0b501554e882749b22d4e9a6f3d7596')
 
 prepare() {
   cd $pkgname-$pkgver
-  patch -Np1 -i "../${pkgname}-1.2.1-ffmpeg4.patch"
-  autoreconf -vfi
+
+  # a52, lavrate plugins not compatible with ffmpeg >= 4.0
+  # https://mailman.alsa-project.org/pipermail/alsa-devel/2019-December/159425.html
+  # https://bugs.archlinux.org/task/60586
+  patch -Np1 -i ../alsa-plugins-1.2.1-ffmpeg4.patch
+
+  autoreconf -fvi
 }
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr \
-              --enable-maemo-plugin \
-              --sysconfdir=/etc
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --enable-maemo-plugin
   make
 }
 
 package() {
+  depends+=(libasound.so)
+
   cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
-  install -vDm 644 doc/README* doc/*.txt \
-    -t "$pkgdir/usr/share/doc/$pkgname/"
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 doc/README* doc/*.txt
 }
+
+# vim:set sw=2 et:
