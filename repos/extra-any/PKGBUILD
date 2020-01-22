@@ -5,7 +5,7 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
-pkgver=1.25.7
+pkgver=1.25.8
 pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
@@ -17,17 +17,10 @@ makedepends=('python-setuptools' 'python2-setuptools' 'python2-sphinx' 'python-n
              'python-brotlipy' 'python2-brotlipy')
 checkdepends=('python-pytest-runner' 'python-tornado' 'python-nose' 'python-psutil' 'python-trustme'
               'python-gcp-devrel-py-tools')
-source=("$pkgbase-$pkgver.tar.gz::https://github.com/shazow/urllib3/archive/$pkgver.tar.gz"
-        https-test-fix.patch
-        tornado-6.patch::https://github.com/urllib3/urllib3/pull/1747.patch)
-sha512sums=('bbf55a1d46fe799b98c311bdb47628c14719d5b3ae00fb27515da774d8f7c043ff79a9684f12b133101574527531d4a79134fe67e28dad518d429e55f82e0c59'
-            'e2b6f1910680c4da9fb8afb1a5f15d2aea001b832c6b904feaca635643d61cd2afb97dc535c91d242e3d3aad75c7a44c65573a286df1cbcf361379fd32c4574c'
-            '65cde58ac3a2ce7eea94ec44693ef131e136e4f98b33b7fc78425aad14b5c89009db67d273de25d4789ddef5001d6ef7f7e8dd447436dee5377c4735dcb59cfd')
+source=("$pkgbase-$pkgver.tar.gz::https://github.com/shazow/urllib3/archive/$pkgver.tar.gz")
+sha512sums=('813f8a6d0f848444a7807d9ea46a93b576220ca50d364af2107ca46ff572f828e35c1a076bc477a269f33bf95e430a89d22d8e4de1dc8d8628ae687fa3551d6b')
 
 prepare() {
-  #sed -i 's/pytest/tool:pytest/' urllib3-$pkgver/setup.cfg
-  patch -d urllib3-$pkgver -p1 -i ../tornado-6.patch
-  patch -d urllib3-$pkgver -p1 -i ../https-test-fix.patch
   cp -a urllib3-$pkgver{,-py2}
 }
 
