@@ -1,8 +1,8 @@
 # Maintainer : Rémy Oudompheng <remy@archlinux.org>
 
 pkgname=pyalpm
-pkgver=0.9.0
-pkgrel=3
+pkgver=0.9.1
+pkgrel=1
 pkgdesc="Libalpm bindings for Python 3"
 arch=('x86_64')
 url="https://git.archlinux.org/pyalpm.git/"
