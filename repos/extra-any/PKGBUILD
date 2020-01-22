@@ -1,30 +1,43 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
 # Contributor: Jochen Immendörfer <jochen dot immendoerfer at gmail dot com>
+
+# NOTE: mixartloader/miXart8.elf is a blob lacking full RELRO and PIE
+# https://mailman.alsa-project.org/pipermail/alsa-devel/2020-January/161887.html
 
 pkgname=alsa-firmware
 pkgver=1.2.1
-pkgrel=1
-pkgdesc="ALSA firmware package"
+pkgrel=2
+pkgdesc="Firmware binaries for laoder programs in alsa-tools and hotplug firmware loader"
 arch=('any')
 url="https://alsa-project.org/"
-license=('GPL')
-source=(ftp://ftp.alsa-project.org/pub/firmware/$pkgname-$pkgver.tar.bz2)
+license=('BSD' 'GPL2' 'LGPL2.1' 'custom')
+source=("https://www.alsa-project.org/files/pub/firmware/$pkgname-$pkgver.tar.bz2")
 options=(!strip)
+sha512sums=('573bb13d47309253afa7d4d04ef13a7a5e4d18d8f89b1339630266f0ef6638cbb9381b3efce2604ea63fc9cf90a55ecaecf8eb2cccd58da04d0d283a245618b1')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  autoreconf -vfi
+}
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr --with-hotplug-dir=/usr/lib/firmware
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr \
+              --enable-buildfw \
+              --with-hotplug-dir=/usr/lib/firmware
   make
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd "$pkgname-$pkgver"
   make DESTDIR="$pkgdir" install
   # remove files which conflicts with linux-firmware
   rm -rf "${pkgdir}"/usr/lib/firmware/{ct{efx,speq}.bin,ess,korg,sb16,yamaha}
   # remove broken symlinks (broken upstream)
   rm -rf "${pkgdir}"/usr/lib/firmware/turtlebeach
-  # remove empty dir
-  rm -rf "${pkgdir}"/usr/bin
+  install -vDm 644 aica/license.txt \
+    -t "${pkgdir}/usr/share/licenses/${pkgname}/aica/"
+  install -vDm 644 ca0132/creative.txt \
+    -t "${pkgdir}/usr/share/licenses/${pkgname}/ca0132/"
 }
-md5sums=('f8458efd25e6d6600dbc7aedf98f83a3')
