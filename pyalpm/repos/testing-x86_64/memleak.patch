@@ -1,0 +1,44 @@
+From c02555c5d83e63b1a308e7c165d5615198e6d813 Mon Sep 17 00:00:00 2001
+From: Jelle van der Waa <jelle@vdwaa.nl>
+Date: Wed, 16 Jan 2019 09:30:28 +0100
+Subject: src: dealloc alpm_handle when object goes out of scope
+
+By default alpm_handle is leaked when Handle is out of scope since
+alpm_release is never called. Call alpm_release in tp_dealloc to
+actually free the alloc'd memory.
+---
+ src/handle.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/handle.c b/src/handle.c
+index 08853f0..5e196df 100644
+--- a/src/handle.c
++++ b/src/handle.c
+@@ -377,6 +377,16 @@ static PyMethodDef pyalpm_handle_methods[] = {
+   {NULL, NULL, 0, NULL},
+ };
+ 
++static void pyalpm_dealloc(PyObject* self) {
++  alpm_handle_t *handle = ALPM_HANDLE(self);
++  int ret = alpm_release(handle);
++  if (ret == -1) {
++    PyErr_Format(alpm_error, "unable to release alpm handle");
++  }
++  handle = NULL;
++  Py_TYPE(self)->tp_free((PyObject *)self);
++}
++
+ PyTypeObject AlpmHandleType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   "alpm.Handle",       /*tp_name*/
+@@ -387,6 +397,7 @@ PyTypeObject AlpmHandleType = {
+   .tp_methods = pyalpm_handle_methods,
+   .tp_getset = pyalpm_handle_getset,
+   .tp_new = pyalpm_initialize,
++  .tp_dealloc = (destructor) pyalpm_dealloc,
+ };
+ 
+ /** Initializes Handle class in module */
+-- 
+cgit v1.2.1-1-g437b
+
