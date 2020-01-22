@@ -1,0 +1,100 @@
+From 5bc704e6a0de57d451cf551d74fa8543fc7ec9a0 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Tue, 10 Sep 2019 18:08:25 +0000
+Subject: [PATCH] Build and install libnssckbi-p11-kit.so
+
+Create an additional library which is a copy of p11-kit-trust.so but
+uses the same label for root certs as libnssckbi.so:
+  "Builtin Object Token" instead of "Default Trust".
+
+https://bugs.freedesktop.org/show_bug.cgi?id=66161
+---
+ trust/Makefile.am | 14 ++++++++++++++
+ trust/meson.build | 13 +++++++++++++
+ trust/module.c    | 12 +++++++++++-
+ 3 files changed, 38 insertions(+), 1 deletion(-)
+
+diff --git a/trust/Makefile.am b/trust/Makefile.am
+index b050a8f..4943aba 100644
+--- a/trust/Makefile.am
++++ b/trust/Makefile.am
+@@ -66,6 +66,20 @@ p11_kit_trust_la_LDFLAGS = \
+ 
+ p11_kit_trust_la_SOURCES = $(TRUST_SRCS) trust/module-init.c
+ 
++libnssckbi_compatdir = $(libdir)
++libnssckbi_compat_LTLIBRARIES = \
++	libnssckbi-p11-kit.la
++
++libnssckbi_p11_kit_la_CFLAGS = \
++	-DLIBNSSCKBI_COMPAT \
++	$(p11_kit_trust_la_CFLAGS)
++
++libnssckbi_p11_kit_la_LIBADD = $(p11_kit_trust_la_LIBADD)
++
++libnssckbi_p11_kit_la_LDFLAGS = $(p11_kit_trust_la_LDFLAGS)
++
++libnssckbi_p11_kit_la_SOURCES = $(p11_kit_trust_la_SOURCES)
++
+ libtrust_testable_la_LDFLAGS = \
+ 	-no-undefined
+ 
+diff --git a/trust/meson.build b/trust/meson.build
+index c5b978b..14993e5 100644
+--- a/trust/meson.build
++++ b/trust/meson.build
+@@ -58,6 +58,19 @@ shared_module('p11-kit-trust',
+               install: true,
+               install_dir: prefix / p11_module_path)
+ 
++shared_module('libnssckbi-p11-kit',
++              libtrust_sources,
++              'module-init.c',
++              name_prefix: '',
++              c_args: p11_kit_trust_c_args + ['-DLIBNSSCKBI_COMPAT'],
++              dependencies: [libp11_library_dep] + libtasn1_deps,
++              link_args: p11_module_ldflags,
++              link_depends: [p11_module_symbol_map,
++                             p11_module_symbol_def],
++              link_with: libtrust_data,
++              vs_module_defs: p11_module_symbol_def,
++              install: true)
++
+ libtrust_testable_c_args = [
+   '-DP11_DEFAULT_TRUST_PREFIX="@0@"'.format(meson.current_build_dir() / 'default'),
+   '-DP11_SYSTEM_TRUST_PREFIX="@0@"'.format(meson.current_build_dir() / 'system')
+diff --git a/trust/module.c b/trust/module.c
+index ec3333d..9204673 100644
+--- a/trust/module.c
++++ b/trust/module.c
+@@ -201,7 +201,11 @@ create_tokens_inlock (p11_array *tokens,
+ 		int flags;
+ 	} labels[] = {
+ 		{ "~/", "User Trust", P11_TOKEN_FLAG_NONE },
++#ifdef LIBNSSCKBI_COMPAT
++		{ P11_DEFAULT_TRUST_PREFIX, "Builtin Object Token", P11_TOKEN_FLAG_WRITE_PROTECTED },
++#else
+ 		{ P11_DEFAULT_TRUST_PREFIX, "Default Trust", P11_TOKEN_FLAG_WRITE_PROTECTED },
++#endif
+ 		{ P11_SYSTEM_TRUST_PREFIX, "System Trust", P11_TOKEN_FLAG_NONE },
+ 		{ NULL },
+ 	};
+@@ -534,8 +538,14 @@ sys_C_GetSlotInfo (CK_SLOT_ID id,
+ 		info->flags = CKF_TOKEN_PRESENT;
+ 		memcpy ((char*)info->manufacturerID, MANUFACTURER_ID, 32);
+ 
++#ifdef LIBNSSCKBI_COMPAT
++		/* Change description to match libnssckbi so HPKP works in Chromium */
++		if (strcmp (p11_token_get_label (token), "Builtin Object Token") == 0)
++			path = "NSS Builtin Objects";
++		else
++#endif
++			path = p11_token_get_path (token);
+ 		/* If too long, copy the first 64 characters into buffer */
+-		path = p11_token_get_path (token);
+ 		length = strlen (path);
+ 		if (length > sizeof (info->slotDescription))
+ 			length = sizeof (info->slotDescription);
+-- 
+2.23.0
+
