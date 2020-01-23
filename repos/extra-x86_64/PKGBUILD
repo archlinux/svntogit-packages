@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.2.2
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -21,7 +21,6 @@ depends=(
   gmp
   gnutls
   gsm
-  intel-media-sdk
   jack
   lame
   libass.so
@@ -31,6 +30,7 @@ depends=(
   libdrm
   libfreetype.so
   libiec61883
+  libmfx
   libmodplug
   libomxil-bellagio
   libpulse
@@ -70,7 +70,10 @@ makedepends=(
   ladspa
   nasm
 )
-optdepends=('ladspa: LADSPA filters')
+optdepends=(
+  'intel-media-sdk: Intel QuickSync support'
+  'ladspa: LADSPA filters'
+)
 provides=(
   libavcodec.so
   libavdevice.so
@@ -98,8 +101,6 @@ prepare() {
 
 build() {
   cd ffmpeg
-
-  export PKG_CONFIG_PATH=/opt/intel/mediasdk/lib/pkgconfig
 
   ./configure \
     --prefix=/usr \
