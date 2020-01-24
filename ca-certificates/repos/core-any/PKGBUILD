@@ -4,7 +4,7 @@
 pkgbase=ca-certificates
 pkgname=(ca-certificates-utils ca-certificates)
 pkgver=20181109
-pkgrel=2
+pkgrel=3
 pkgdesc="Common CA certificates"
 url="https://src.fedoraproject.org/rpms/ca-certificates"
 arch=(any)
@@ -22,7 +22,7 @@ build() {
 
 package_ca-certificates-utils() {
   pkgdesc+=" (utilities)"
-  depends=('bash' 'coreutils' 'findutils' 'p11-kit>=0.23.1')
+  depends=('bash' 'coreutils' 'findutils' 'p11-kit>=0.23.19')
   provides=(ca-certificates ca-certificates-java)
   conflicts=(ca-certificates-java)
   replaces=(ca-certificates-java)
