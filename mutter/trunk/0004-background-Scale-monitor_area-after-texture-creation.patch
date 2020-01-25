@@ -1,0 +1,80 @@
+From d662630a16b28e623ef3769c7ba9c02347f4775e Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Mon, 13 Jan 2020 21:02:39 +0800
+Subject: [PATCH 4/4] background: Scale monitor_area after texture creation
+
+Scaling the `monitor_area` before texture creation was just wasting
+megabytes of memory on resolution that the monitor can't display. This
+was also hurting runtime performance.
+
+Example:
+
+  Monitor is natively 1920x1080 and scale set to 3.
+
+  Before: The monitor texture allocated was 5760x3250x4 = 74.6 MB
+  After:  The monitor texture allocated is  1920x1080x4 =  8.3 MB
+
+Closes: https://gitlab.gnome.org/GNOME/gnome-shell/issues/2118
+
+https://gitlab.gnome.org/GNOME/mutter/merge_requests/1004
+---
+ src/compositor/meta-background.c | 22 ++++++++++++++++------
+ 1 file changed, 16 insertions(+), 6 deletions(-)
+
+diff --git a/src/compositor/meta-background.c b/src/compositor/meta-background.c
+index 4a1ce0396..886ae3f67 100644
+--- a/src/compositor/meta-background.c
++++ b/src/compositor/meta-background.c
+@@ -20,6 +20,7 @@
+ #include "config.h"
+ 
+ #include "compositor/meta-background-private.h"
++#include "backends/meta-backend-private.h"
+ 
+ #include <string.h>
+ 
+@@ -799,26 +800,35 @@ meta_background_get_texture (MetaBackground         *self,
+     {
+       GError *catch_error = NULL;
+       gboolean bare_region_visible = FALSE;
++      int native_width = monitor_area.width;
++      int native_height = monitor_area.height;
+ 
+-      if (self->style != G_DESKTOP_BACKGROUND_STYLE_WALLPAPER)
++      if (meta_is_stage_views_scaled ())
+         {
+-          monitor_area.x *= monitor_scale;
+-          monitor_area.y *= monitor_scale;
+-          monitor_area.width *= monitor_scale;
+-          monitor_area.height *= monitor_scale;
++          native_width *= monitor_scale;
++          native_height *= monitor_scale;
+         }
+ 
+       if (monitor->texture == NULL)
+         {
+           CoglOffscreen *offscreen;
+ 
+-          monitor->texture = meta_create_texture (monitor_area.width, monitor_area.height,
++          monitor->texture = meta_create_texture (native_width,
++                                                  native_height,
+                                                   COGL_TEXTURE_COMPONENTS_RGBA,
+                                                   META_TEXTURE_FLAGS_NONE);
+           offscreen = cogl_offscreen_new_with_texture (monitor->texture);
+           monitor->fbo = COGL_FRAMEBUFFER (offscreen);
+         }
+ 
++      if (self->style != G_DESKTOP_BACKGROUND_STYLE_WALLPAPER)
++        {
++          monitor_area.x *= monitor_scale;
++          monitor_area.y *= monitor_scale;
++          monitor_area.width *= monitor_scale;
++          monitor_area.height *= monitor_scale;
++        }
++
+       if (!cogl_framebuffer_allocate (monitor->fbo, &catch_error))
+         {
+           /* Texture or framebuffer allocation failed; it's unclear why this happened;
+-- 
+2.24.1
+
