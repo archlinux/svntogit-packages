@@ -1,0 +1,77 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Michael Hansen <zrax0111 gmail com>
+
+pkgbase=qt5-doc
+pkgname=(qt5-doc qt5-examples)
+_qtver=5.14.1
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=('any')
+url='https://www.qt.io'
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
+makedepends=('qt5-tools' 'python2' 'python' 'pciutils' 'libxtst' 'libxcursor' 'libxrandr' 'libxss' 'libxcomposite'
+             'gperf' 'nss' 'clang')
+groups=('qt' 'qt5')
+_pkgfqn="qt-everywhere-src-${_qtver}"
+source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/single/${_pkgfqn}.tar.xz")
+sha256sums=('6f17f488f512b39c2feb57d83a5e0a13dcef32999bea2e2a8f832f54a29badb8')
+
+prepare() {
+  cd ${_pkgfqn}
+
+  ln -s /usr/bin qttools/
+  ln -s /usr/bin/{rcc,uic,moc} qtbase/bin/
+
+  sed -e 's|QMAKE_PYTHON2 = python|QMAKE_PYTHON2 = python2|' -i qtwebengine/mkspecs/features/functions.prf # Use python2
+}
+
+build() {
+  cd ${_pkgfqn}
+
+  QMAKE_PYTHON2=python2 ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -docdir /usr/share/doc/qt \
+    -headerdir /usr/include/qt \
+    -archdatadir /usr/lib/qt \
+    -datadir /usr/share/qt \
+    -sysconfdir /etc/xdg \
+    -nomake examples
+  make docs
+}
+
+package_qt5-doc() {
+  pkgdesc='A cross-platform application and UI framework (Documentation)'
+  depends=('qt5-base')
+
+  cd ${_pkgfqn}
+  make INSTALL_ROOT="$pkgdir" install_docs
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+}
+
+package_qt5-examples() {
+  pkgdesc='Examples and demos from qt5 documentation'
+  depends=('qt5-doc')
+
+  _base="$pkgdir"/usr/share/doc/qt/examples
+
+  # The various example dirs have conflicting .pro files, but
+  # QtCreator requires them to be in the same top-level directory.
+  # Matching the Qt5 installer, only the qtbase project is kept.
+  mkdir -p $_base
+  cp ${_pkgfqn}/qtbase/examples/examples.pro $_base
+
+  _fdirs=$(find "${_pkgfqn}" -maxdepth 2 -type d -name examples)
+  for _dir in $_fdirs; do
+      _mod=$(basename ${_dir%/examples})
+
+      if [ -e "$_dir/README" ]; then
+        cp $_dir/README $_dir/README.$_mod
+      fi
+
+#     mkdir $_base/$_mod
+      cp -rn $_dir/* $_base
+  done
+}
