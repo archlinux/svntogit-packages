@@ -5,7 +5,7 @@
 
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
-pkgver=1.40.0
+pkgver=1.41.0
 pkgrel=1
 
 _llvm_ver=9.0.1
@@ -23,7 +23,7 @@ options=('!emptydirs')
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         "http://releases.llvm.org/$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig})
 
-sha256sums=('dd97005578defc10a482bff3e4e728350d2099c60ffcf1f5e189540c39a549ad'
+sha256sums=('5546822c09944c4d847968e9b7b3d0e299f143f307c00fa40e84a99fabf8d74b'
             'SKIP'
             'c2bfab95c9986318318363d7f371a85a95e333bc0b34fbfa52edbd3f5e3a9077'
             'SKIP')
