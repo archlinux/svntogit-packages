@@ -4,12 +4,12 @@
 
 pkgname=mercurial
 pkgver=5.2.2
-pkgrel=1
+pkgrel=2
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
 license=(GPL)
-depends=(python)
+depends=(python2)
 optdepends=('tk: for the hgk GUI')
 backup=(etc/mercurial/hgrc)
 validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
@@ -20,6 +20,11 @@ sha256sums=('ffc5ff47488c7b5dae6ead3d99f08ef469500d6567592a25311838320106c03b'
             'SKIP'
             '87427151713e689cd87dc50d50c048e0e58285815e4eb61962b50583532cbde5')
 
+prepare() {
+  cd $pkgname-$pkgver
+  sed -i -e 's#env python#env python2#' mercurial/lsprof.py contrib/hg-ssh
+}
+
 build() {
   cd $pkgname-$pkgver/contrib/chg
   make
@@ -27,7 +32,7 @@ build() {
 
 package() {
   cd $pkgname-$pkgver
-  python setup.py install --root="$pkgdir" --optimize=1
+  python2 setup.py install --root="$pkgdir" --optimize=1
 
   install -d "$pkgdir/usr/share/man/"{man1,man5}
   install -m644 doc/hg.1 "$pkgdir/usr/share/man/man1"
