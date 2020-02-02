@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.3+14+g59e9b073a
+pkgver=3.34.3+30+g4959ae8bc
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,17 +16,17 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=59e9b073a5bf7bb7eb332b680c573a27bd019249  # gnome-3-34
+_commit=4959ae8bc4670cbd09c683d20fd07ded735e4dab  # gnome-3-34
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
         0001-EGL-Include-EGL-eglmesaext.h.patch
         0002-surface-actor-wayland-Do-not-send-frame-callbacks-if.patch
         0003-xwayland-Do-not-queue-frame-callbacks-unconditionall.patch
         0004-background-Scale-monitor_area-after-texture-creation.patch)
 sha256sums=('SKIP'
-            '6e23ce636916f7d33d05916910cbc97dbe20ca1e8f110cf3f65c95dd5c14962b'
-            'efdd77f91e087f85e6926127a4cc3a7132d4bc75ceb57e239869cbe06a1c67f6'
-            '791090835994c992cfdb0e65f70d2e8983191eda8c4c8f096819f23d916ca1a6'
-            '737dc54c7103a1830a4c4e3cfec44864dc6bce04517511ed796bc9aaaf3958b9')
+            'fb91e659093f14fa08a0ccb61c913d4a929ab2a175179137bc118c17425a2208'
+            '010d19f500e95dd45bc2420cb88b00f48f23c5496320d9ca3d4ddb5ff5b42938'
+            'd797497380f1d7cc8bc691935ada3c6d48dc772daaa035d8271c5f5c097eeaf1'
+            '7a8db66713c2a448c131f558ec741ebfda3c85d14b857ea0bb55a5fc7d5be480')
 
 pkgver() {
   cd $pkgname
@@ -50,6 +50,8 @@ prepare() {
 }
 
 build() {
+  CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
+  LDFLAGS+=" -Wl,-Bsymbolic"
   arch-meson $pkgname build \
     -D egl_device=true \
     -D wayland_eglstream=true \
