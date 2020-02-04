@@ -2,7 +2,7 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=shadow
-pkgver=4.8
+pkgver=4.8.1
 pkgrel=1
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
@@ -112,10 +112,12 @@ package() {
   done
 
   # Remove evil/broken tools
-  rm "$pkgdir"/usr/bin/logoutd
+  rm "$pkgdir"/usr/sbin/logoutd
 
   # Remove utilities provided by util-linux
-  rm "$pkgdir"/usr/bin/{login,su,chsh,chfn,sg,nologin,vipw,vigr}
+  rm \
+      "$pkgdir"/usr/bin/{login,su,chsh,chfn,sg,nologin} \
+      "$pkgdir"/usr/sbin/{vipw,vigr}
 
   # but we keep newgrp, as sg is really an alias to it
   mv "$pkgdir"/usr/bin/{newgrp,sg}
@@ -135,4 +137,8 @@ package() {
   rmdir \
       "$pkgdir"/usr/share/man/{fi,id,zh_TW}/man1 \
       "$pkgdir"/usr/share/man/{fi,ko/man8}
+
+  # move everything else to /usr/bin, because this isn't handled by ./configure
+  mv "$pkgdir"/usr/sbin/* "$pkgdir"/usr/bin
+  rmdir "$pkgdir/usr/sbin"
 }
