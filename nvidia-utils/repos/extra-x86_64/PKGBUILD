@@ -4,7 +4,7 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia')
-pkgver=440.48.02
+pkgver=440.59
 pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -13,11 +13,10 @@ options=('!strip')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-utils.sysusers'
-        #"https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
-        $_pkg.run::https://developer.nvidia.com/vulkan-beta-4404802-linux)
+        "https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            '735c6a7b7df5f280286ca4622922ca427f4c99c5f121450364cdeae83133c0b4335c4290f5ad202f2f34263462308d4c43142cd9fb9bdfa58c45bf7562667b88')
+            '2e9029bc7c93a99eac7d3a5ca1f21da799da442a70b1708d2db734956f77dd1a1eb300f947b8ab46ff9113048cd63ca57924caa912a3ea6c3d678425182b9711')
 
 
 create_links() {
