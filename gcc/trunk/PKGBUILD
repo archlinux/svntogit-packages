@@ -42,8 +42,6 @@ prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
   cd gcc
 
-  echo "Arch Linux $pkgver-$pkgrel" > DEV-PHASE
-
   # link isl for in-tree build
   ln -s ../isl-${_islver} isl
 
