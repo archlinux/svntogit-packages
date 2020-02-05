@@ -6,20 +6,21 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
-pkgver=9.2.0
+pkgver=9.2.1+20200130
 _majorver=${pkgver:0:1}
 _islver=0.21
-pkgrel=4
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
 url='https://gcc.gnu.org'
-makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python subversion)
+makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python git)
 checkdepends=(dejagnu inetutils)
 options=(!emptydirs)
-#source=(https://sources.archlinux.org/other/gcc/gcc-${pkgver/+/-}.tar.xz{,.sig}
-source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
-#source=(gcc::svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
+_libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
+#source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
+_commit=6957d3e4eef1f4243eb23ff62aea06139ef4415a
+source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
         http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
         c89 c99
         gdc_phobos_path.patch
@@ -29,8 +30,7 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('ea6ef08f121239da5695f76c9b33637a118dcf63e24164422231917fa61fb206'
-            'SKIP'
+sha256sums=('SKIP'
             '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
@@ -38,31 +38,11 @@ sha256sums=('ea6ef08f121239da5695f76c9b33637a118dcf63e24164422231917fa61fb206'
             '3862757491160700ac2fb723096f6f636f30320cccc6efd9537149ed348b57d1'
             '9699d7105375754f0dcf6abff87d09b270565bfc6578a13641770f3fc62d678a')
 
-_svnrev=264010
-_svnurl=svn://gcc.gnu.org/svn/gcc/branches/gcc-${_majorver}-branch
-_libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-
-snapshot() {
-  svn export -r${_svnrev} ${_svnurl} gcc-r${_svnrev}
-
-  local datestamp basever _pkgver
-  basever=$(< gcc-r${_svnrev}/gcc/BASE-VER)
-  datestamp=$(< gcc-r${_svnrev}/gcc/DATESTAMP)
-  _pkgver=${basever}-${datestamp}
-
-  mv gcc-r${_svnrev} gcc-${_pkgver}
-  tar cf - gcc-${_pkgver} | xz > gcc-${_pkgver}.tar.xz
-  rm -rf gcc-${_pkgver}
-  gpg -b gcc-${_pkgver}.tar.xz
-  scp gcc-${_pkgver}.tar.xz{,.sig} sources.archlinux.org:/srv/ftp/other/gcc/
-
-  echo
-  echo "pkgver=${_pkgver/-/+}"
-}
-
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
   cd gcc
+
+  echo "Arch Linux $pkgver-$pkgrel" > DEV-PHASE
 
   # link isl for in-tree build
   ln -s ../isl-${_islver} isl
@@ -98,6 +78,7 @@ build() {
       --libexecdir=/usr/lib \
       --mandir=/usr/share/man \
       --infodir=/usr/share/info \
+      --with-pkgversion="Arch Linux $pkgver-$pkgrel" \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
       --enable-shared \
