@@ -1,8 +1,8 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=4.19.101
-pkgrel=2
+pkgver=5.4.17
+pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -16,17 +16,16 @@ _srcname=linux-$pkgver
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
-  0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
-# https://www.kernel.org/pub/linux/kernel/v4.x/sha256sums.asc
-sha256sums=('be26156abdb38ac0576a34a235ef456bb8ca67fbbe56fc6649b8d069159f8bc4'
+# https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
+sha256sums=('945f2bf6af69eed0ac81ef75b571f37ae1e16a9bb8a2ae698a365ee3ec2c74b9'
             'SKIP'
-            '4e68572e7cc4c5368f0236e0792660ae8498373988625dca46e509399a7eaea6'
-            'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2')
+            'ef6b809d350857820344ddde5d3d171e7a724c0ccf20fcd247b9bb330de8a78a'
+)
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -108,9 +107,6 @@ _package-headers() {
 
   # add xfs and shmem for aufs building
   mkdir -p "$builddir"/{fs/xfs,mm}
-
-  # this is gone in v5.3
-  mkdir "$builddir/.tmp_versions"
 
   echo "Installing headers..."
   cp -t "$builddir" -a include
