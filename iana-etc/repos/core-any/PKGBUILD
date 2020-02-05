@@ -2,9 +2,9 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=iana-etc
-pkgver=20191231
+pkgver=20200117
 _ports=service-names-port-numbers-${pkgver}
-_protocols=protocol-numbers-20171013
+_protocols=protocol-numbers-20200131
 pkgrel=1
 pkgdesc='/etc/protocols and /etc/services provided by IANA'
 url='https://www.iana.org/protocols'
@@ -14,8 +14,8 @@ backup=('etc/'{protocols,services})
 source=("https://sources.archlinux.org/other/packages/iana-etc/${_ports}.xml"
         "https://sources.archlinux.org/other/packages/iana-etc/${_protocols}.xml"
         'LICENSE')
-sha256sums=('d856477401fde77e5e06cc6f2a6d76f7eaa7afba713e42e27d51c498a0a4ea40'
-            '4992fbc5453d0feb48492e6abda96bf9285ff4d2516f6924a0f92f773dc4cea2'
+sha256sums=('6642b9a926822be3253fb4e3561200e7bb4db9d4ca39386122446c1d35b874a7'
+            '4703c1157774e7b2673bfbf0a7c0ba8bb409df92c92ac906ac66a54cad51497f'
             'dd37e92942d5a4024f1c77df49d61ca77fc6284691814903a741785df61f78cb')
 
 # Original but unversioned IANA files:
