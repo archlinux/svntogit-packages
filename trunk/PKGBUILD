@@ -7,9 +7,9 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.11.0
+pkgver=4.11.1
 _clangver=9.0.1
-pkgrel=4
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -30,7 +30,7 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
         qtcreator-preload-plugins.patch)
-sha256sums=('efebaa1c52526bf9c07b35c43071735c5d0b83b6cd08daab35a21e7ed53a7645'
+sha256sums=('c511f5beacadad4a37cbf7ec23c17cf28630c79998f1dc8bc7edefa9b9337924'
             'd6f979c820e2294653f4f1853af96942bf25ff9fe9450657d45ff1c7f02bbca7')
 
 prepare() {
