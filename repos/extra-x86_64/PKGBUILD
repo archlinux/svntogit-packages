@@ -4,36 +4,45 @@
 
 pkgname=alsa-plugins
 pkgver=1.2.1
-pkgrel=1
-pkgdesc="Extra alsa plugins"
+pkgrel=4
+pkgdesc="Additional ALSA plugins"
 arch=(x86_64)
-url="http://www.alsa-project.org"
-license=(GPL)
-depends=(alsa-lib)
-makedepends=(libpulse jack ffmpeg)
-optdepends=('libpulse: PulseAudio plugin'
-            'jack: Jack plugin'
-            #'ffmpeg: libavcodec resampling plugin, a52 plugin'
-            'libsamplerate: libsamplerate resampling plugin'
-            'speex: libspeexdsp resampling plugin')
-source=("ftp://ftp.alsa-project.org/pub/plugins/$pkgname-$pkgver.tar.bz2")
+url="https://www.alsa-project.org"
+license=(LGPL2.1)
+depends=(glibc alsa-lib)
+makedepends=(dbus jack libpulse libsamplerate speexdsp)
+optdepends=('dbus: for maemo plugin'
+            'jack: for pcm_jack plugin'
+            'libsamplerate: for rate_samplerate plugin'
+            'libpulse: for conf_pulse, ctl_pulse and pcm_pulse plugins'
+            'speexdsp: for pcm_speex and rate_speexrate plugins')
+source=("https://www.alsa-project.org/files/pub/plugins/$pkgname-$pkgver.tar.bz2")
 sha256sums=('4d94de7ad41734b8604a652521200bb6554fcf0c2c00fdbd302b1710d76548da')
 
 prepare() {
   cd $pkgname-$pkgver
+
+  # a52, lavrate plugins not compatible with ffmpeg >= 4.0
+  # https://mailman.alsa-project.org/pipermail/alsa-devel/2019-December/159425.html
+  # https://bugs.archlinux.org/task/60586
   autoreconf -fvi
 }
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr --sysconfdir=/etc
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --enable-maemo-plugin
   make
 }
 
 package() {
+  depends+=(libasound.so)
+
   cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
-
-  install -d "$pkgdir/usr/share/doc/$pkgname"
-  install -m644 doc/README* doc/*.txt "$pkgdir/usr/share/doc/$pkgname/"
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 doc/README* doc/*.txt
 }
+
+# vim:set sw=2 et:
