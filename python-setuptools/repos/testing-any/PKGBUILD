@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=45.1.0
+pkgver=45.2.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -17,7 +17,7 @@ checkdepends=('python-mock' 'python-pip' 'python-pytest-fixture-config' 'python-
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('231c142aaa59ef0a63b9f3a42d4f8343d1aae07b4b9e8f0e48df7e6b2be3708a2d2205fff47d4f32bd36de80243fac9781d09db18f85dc0270afa9621735ed6e')
+sha512sums=('68a2b600e67dfd1ba25efadd852ed99fff3073ee73959b183ffd8b5c44935628a9eff2f56ac921f4d8d903a389f167ddc2295f031b9b0f7fa9f91970516e4658')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -39,13 +39,16 @@ prepare() {
           {} +
     done
 
+  # Fix for flake8
+  sed -i 's/import six, ordered_set/import six\nimport ordered_set/' setuptools-$pkgver/setuptools/command/sdist.py
+
   # Remove post-release tag since we are using stable tags
   sed -e '/tag_build = .post/d' \
       -e '/tag_date = 1/d' \
       -i setuptools-$pkgver/setup.cfg
 
   # 'Clean' installation is expected to fail since we removed bundled packages
-  sed -i '/^def test_clean_env_install/i import pytest\n\n@pytest.mark.xfail' setuptools-$pkgver/setuptools/tests/test_virtualenv.py
+  sed -i '/^def test_clean_env_install/i @pytest.mark.xfail' setuptools-$pkgver/setuptools/tests/test_virtualenv.py
 
   # Tests failed. Importing an unbundled new setuptools in a virtualenv does not work, but this won't
   # affect normal virtualenv usage (which don't have to import the unbundled setuptools in *current*
