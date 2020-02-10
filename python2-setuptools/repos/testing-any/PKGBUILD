@@ -1,0 +1,59 @@
+# Maintainer: Angel Velasquez <angvp@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Eli Schwartz <eschwartz@archlinux.org>
+
+pkgname=python2-setuptools
+pkgver=44.0.0
+pkgrel=1
+epoch=2
+pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
+arch=('any')
+license=('PSF')
+url="https://pypi.org/project/setuptools/"
+depends=('python2-appdirs' 'python2-packaging' 'python2-ordered-set')
+makedepends=('git')
+provides=('python2-distribute')
+replaces=('python2-distribute')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
+sha512sums=('48febee840612a56c7f4cb0bc3983bf61a6a08c53dfcb95403f6631061481ba391fc0472d608ea6c0078fda8bcc7bb9f6dd8b73d473f5e4349d6eaeb2ab0050b')
+
+export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
+
+prepare() {
+  rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+
+  # Upstream devendoring logic is badly broken, see:
+  # https://bugs.archlinux.org/task/58670
+  # https://github.com/pypa/pip/issues/5429
+  # https://github.com/pypa/setuptools/issues/1383
+  # The simplest fix is to simply rewrite import paths to use the canonical
+  # location in the first place
+  for _module in setuptools pkg_resources '' ; do
+      find setuptools-$pkgver -name \*.py -exec sed -i \
+          -e 's/from '$_module.extern' import/import/' \
+          -e 's/from '$_module.extern'./from /' \
+          -e 's/import '$_module.extern'./import /' \
+          -e "s/__import__('$_module.extern./__import__('/" \
+          {} +
+    done
+
+  # Remove post-release tag since we are using stable tags
+  sed -e '/tag_build = .post/d' \
+      -e '/tag_date = 1/d' \
+      -i setuptools-$pkgver/setup.cfg
+
+  cd "$srcdir"/setuptools-$pkgver
+  sed -i -e "s|^#\!.*/usr/bin/env python|#!/usr/bin/env python2|" setuptools/command/easy_install.py
+}
+
+build() {
+  cd setuptools-$pkgver
+  python2 bootstrap.py
+  python2 setup.py build
+}
+
+package() {
+  cd setuptools-$pkgver
+  python2 setup.py install --prefix=/usr --root="$pkgdir" --optimize=1 --skip-build
+  rm "$pkgdir"/usr/bin/easy_install
+}
