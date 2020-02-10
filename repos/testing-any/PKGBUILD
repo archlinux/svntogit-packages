@@ -2,22 +2,22 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
-pkgbase=python-setuptools
-pkgname=('python-setuptools' 'python2-setuptools')
-pkgver=45.0.0
+pkgname=python-setuptools
+pkgver=45.1.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
 license=('PSF')
 url="https://pypi.org/project/setuptools/"
-_deps=('appdirs' 'packaging' 'ordered-set')
-makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'git')
-_checkdeps=('mock' 'pip' 'pytest-fixture-config' 'pytest-flake8'
-            'pytest-runner' 'pytest-virtualenv' 'wheel')
-checkdepends=("${_checkdeps[@]/#/python-}" 'python-paver' 'git')
-source=("$pkgbase-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('710cb0be5e3ec49ac1e0e7669612861c9c3a133ae7c3aaba9b4adc2559f595dbfa77f75bff1556f3526a41746605c72d9c7f51e1453db3b7fe06052f2faefba2')
+depends=('python-appdirs' 'python-packaging' 'python-ordered-set')
+makedepends=('git')
+checkdepends=('python-mock' 'python-pip' 'python-pytest-fixture-config' 'python-pytest-flake8'
+              'python-pytest-virtualenv' 'python-wheel' 'python-paver')
+provides=('python-distribute')
+replaces=('python-distribute')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
+sha512sums=('231c142aaa59ef0a63b9f3a42d4f8343d1aae07b4b9e8f0e48df7e6b2be3708a2d2205fff47d4f32bd36de80243fac9781d09db18f85dc0270afa9621735ed6e')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -55,23 +55,14 @@ prepare() {
       -e '/^def test_no_missing_dependencies/i @pytest.mark.xfail' \
       -i setuptools-$pkgver/setuptools/tests/test_virtualenv.py
 
-  cp -a setuptools-$pkgver{,-py2}
-
   cd "$srcdir"/setuptools-$pkgver
   sed -i -e "s|^#\!.*/usr/bin/env python|#!/usr/bin/env python3|" setuptools/command/easy_install.py
-
-  cd "$srcdir"/setuptools-$pkgver-py2
-  sed -i -e "s|^#\!.*/usr/bin/env python|#!/usr/bin/env python2|" setuptools/command/easy_install.py
 }
 
 build() {
-  cd "$srcdir"/setuptools-$pkgver
+  cd setuptools-$pkgver
   python bootstrap.py
   python setup.py build
-
-  cd "$srcdir"/setuptools-$pkgver-py2
-  python2 bootstrap.py
-  python2 setup.py build
 }
 
 check() { (
@@ -82,24 +73,10 @@ check() { (
   export PYTHONDONTWRITEBYTECODE=1
 
   cd setuptools-$pkgver
-  python setup.py pytest
+  python -m pytest
 )}
 
-package_python-setuptools() {
-  depends=("${_deps[@]/#/python-}")
-  provides=('python-distribute')
-  replaces=('python-distribute')
-
-  cd "$srcdir"/setuptools-$pkgver
+package() {
+  cd setuptools-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir" --optimize=1 --skip-build
-}
-
-package_python2-setuptools() {
-  depends=("${_deps[@]/#/python2-}")
-  provides=('python2-distribute')
-  replaces=('python2-distribute')
-
-  cd "$srcdir"/setuptools-$pkgver-py2
-  python2 setup.py install --prefix=/usr --root="$pkgdir" --optimize=1 --skip-build
-  rm "$pkgdir"/usr/bin/easy_install
 }
