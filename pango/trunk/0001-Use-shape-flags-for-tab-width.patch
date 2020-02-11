@@ -1,0 +1,41 @@
+From 8a0d057212a307fdb4612b52a0becf678d726d33 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Tue, 11 Feb 2020 03:51:19 +0100
+Subject: [PATCH] Use shape flags for tab width
+
+We need to apply the right shape flags to the tab width calculation,
+otherwise (when glyph positions get rounded, which is the default) our
+tab width will be slightly off from what 8 spaces normally produce.
+
+https://gitlab.gnome.org/GNOME/pango/issues/425
+---
+ pango/pango-layout.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/pango/pango-layout.c b/pango/pango-layout.c
+index 44d59367..643f5623 100644
+--- a/pango/pango-layout.c
++++ b/pango/pango-layout.c
+@@ -3061,6 +3061,10 @@ ensure_tab_width (PangoLayout *layout)
+       PangoAttrIterator *iter;
+       PangoFontDescription *font_desc = pango_font_description_copy_static (pango_context_get_font_description (layout->context));
+       PangoLanguage *language;
++      PangoShapeFlags shape_flags = PANGO_SHAPE_NONE;
++
++      if (pango_context_get_round_glyph_positions (layout->context))
++        shape_flags |= PANGO_SHAPE_ROUND_POSITIONS;
+ 
+       layout_attrs = pango_layout_get_effective_attributes (layout);
+       iter = pango_attr_list_get_iterator (layout_attrs);
+@@ -3089,7 +3093,7 @@ ensure_tab_width (PangoLayout *layout)
+       pango_attr_list_unref (tmp_attrs);
+ 
+       item = items->data;
+-      pango_shape ("        ", 8, &item->analysis, glyphs);
++      pango_shape_with_flags ("        ", 8, "        ", 8, &item->analysis, glyphs, shape_flags);
+ 
+       pango_item_free (item);
+       g_list_free (items);
+-- 
+2.25.0
+
