@@ -5,24 +5,20 @@ pkgbase=gdb
 # gdb-common is a package that contains files common for all cross compiled versions
 # of gdb (for arm/avr/...)
 pkgname=(gdb gdb-common)
-pkgver=8.3.1
-pkgrel=4
+pkgver=9.1
+pkgrel=1
 pkgdesc='The GNU Debugger'
 arch=(x86_64)
 url='https://www.gnu.org/software/gdb/'
 license=(GPL3)
 makedepends=(texinfo python guile2.0 ncurses expat xz)
-source=(https://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig}
-        python-3.8.patch)
-sha1sums=('d403ba208945bbf04f8130ea4853730cdf0c8fc7'
-          'SKIP'
-          '14e76d9f9806168cd8a7f5052ce6421a980371a3')
+source=(https://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig})
+sha1sums=('a50e13e1eecea468ea28c4a23d8c5a84f4db25be'
+          'SKIP')
 validpgpkeys=('F40ADB902B24264AA42E50BF92EDB04BFF325CF3') # Joel Brobecker
 
 prepare() {
   cd gdb-$pkgver
-
-  patch -Np1 -i ../python-3.8.patch
 
   # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
@@ -30,10 +26,11 @@ prepare() {
 
 build() {
   cd gdb-$pkgver
-  
-  ./configure --prefix=/usr --disable-nls \
+
+  mkdir -p build && cd build
+  ../configure --prefix=/usr --disable-nls \
     --with-system-readline \
-    --with-python=/usr/bin/python3 \
+    --with-python=/usr/bin/python \
     --with-guile=guile-2.0 \
     --with-system-gdbinit=/etc/gdb/gdbinit
   make
@@ -42,7 +39,7 @@ build() {
 package_gdb-common() {
   depends=(python guile2.0)
 
-  cd gdb-$pkgver
+  cd gdb-$pkgver/build
   make -C gdb/data-directory DESTDIR=$pkgdir install
 }
 
@@ -50,7 +47,7 @@ package_gdb() {
   depends=(ncurses expat xz mpfr gdb-common=$pkgver)
   backup=(etc/gdb/gdbinit)
 
-  cd gdb-$pkgver
+  cd gdb-$pkgver/build
   make -C gdb DESTDIR=$pkgdir install
 
   # install "custom" system gdbinit
