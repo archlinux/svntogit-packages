@@ -3,20 +3,21 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=mercurial
-pkgver=5.2.2
-pkgrel=2
+pkgver=5.3
+pkgrel=1
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
 license=(GPL)
 depends=(python2)
 optdepends=('tk: for the hgk GUI')
+checkdepends=('breezy' 'cvs' 'git' 'git-lfs' 'python2-docutils' 'subversion' 'unzip')
 backup=(etc/mercurial/hgrc)
 validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
-              3A8155163D0E20A530FCB78647A67FFAA346AACE)  
+              3A8155163D0E20A530FCB78647A67FFAA346AACE)
 source=(https://www.mercurial-scm.org/release/${pkgname}-${pkgver}.tar.gz{,.asc}
         mercurial.profile)
-sha256sums=('ffc5ff47488c7b5dae6ead3d99f08ef469500d6567592a25311838320106c03b'
+sha256sums=('e57ff61d6b67695149dd451922b40aa455ab02e01711806a131a1e95c544f9b9'
             'SKIP'
             '87427151713e689cd87dc50d50c048e0e58285815e4eb61962b50583532cbde5')
 
@@ -28,6 +29,12 @@ prepare() {
 build() {
   cd $pkgname-$pkgver/contrib/chg
   make
+}
+
+check() {
+  cd $pkgname-$pkgver/tests
+  # TODO
+  python2 run-tests.py -j16 || :
 }
 
 package() {
