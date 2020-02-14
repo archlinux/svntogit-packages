@@ -3,7 +3,7 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.34.3
+pkgver=3.34.4
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -14,7 +14,7 @@ depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake)
 options=(!emptydirs)
-_commit=c8c162e26233868997e8bfffab254b5fa7f8fc2d  # tags/3.34.3^0
+_commit=a9f91811f986a34e21e308dfc3652ef4df9a3b6e  # tags/3.34.4^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -38,6 +38,8 @@ build() {
 }
 
 package_evolution() {
+  depends+=(libcamel-1.2.so libebook-1.2.so libebook-contacts-1.2.so
+            libecal-2.0.so libedataserver-1.2.so libedataserverui-1.2.so)
   optdepends=('highlight: text highlight plugin'
               'evolution-spamassassin: Spamassassin spam check plugin'
               'evolution-bogofilter: Bogofilter spam check plugin')
