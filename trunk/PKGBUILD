@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.34.3+30+g4959ae8bc
+pkgver=3.34.4
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 groups=(gnome)
 install=mutter.install
-_commit=4959ae8bc4670cbd09c683d20fd07ded735e4dab  # gnome-3-34
+_commit=0bce4323c7054794a0c7ec8442335f19bba4e239  # tags/3.34.4^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
         0001-EGL-Include-EGL-eglmesaext.h.patch
         0002-surface-actor-wayland-Do-not-send-frame-callbacks-if.patch
@@ -51,7 +51,7 @@ prepare() {
 
 build() {
   CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
-  LDFLAGS+=" -Wl,-Bsymbolic"
+  LDFLAGS+=" -Wl,-Bsymbolic-functions"
   arch-meson $pkgname build \
     -D egl_device=true \
     -D wayland_eglstream=true \
@@ -66,7 +66,9 @@ check() (
 
   # Unexpected passes in conform test
   # Stacking test flaky
-  dbus-run-session xvfb-run -s '+iglx -noreset' meson test -C build --print-errorlogs || :
+  dbus-run-session xvfb-run \
+    -s '-screen 0 1920x1080x24 -nolisten local +iglx -noreset' \
+    meson test -C build --print-errorlogs || :
 )
 
 package() {
