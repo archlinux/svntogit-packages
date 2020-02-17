@@ -1,81 +1,95 @@
-# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Guillaume Alaux <guillaume@archlinux.org>
+
 pkgname=tomcat7
-pkgver=7.0.85
+pkgver=7.0.100
 pkgrel=1
 pkgdesc='Open source implementation of the Java Servlet 3.0 and JavaServer Pages 2.2 technologies'
-arch=('any')
-url='https://tomcat.apache.org/'
-license=('APACHE')
-depends=('java-runtime>=6' 'java-jsvc' 'java-commons-daemon' 'eclipse-ecj')
+arch=(any)
+url=https://tomcat.apache.org/
+license=(APACHE)
+depends=(
+  'java-runtime>=6'
+  java-jsvc
+  java-commons-daemon
+  eclipse-ecj
+)
 optdepends=('tomcat-native: to allow optimal performance in production environments')
-backup=(etc/${pkgname}/catalina.policy
-        etc/${pkgname}/catalina.properties
-        etc/${pkgname}/context.xml
-        etc/${pkgname}/logging.properties
-        etc/${pkgname}/server.xml
-        etc/${pkgname}/tomcat-users.xml
-        etc/${pkgname}/web.xml)
-install=${pkgname}.install
-source=(https://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/bin/apache-tomcat-${pkgver}.tar.gz{,.asc}
-        systemd_${pkgname}.service
-        systemd_sysusers.d_${pkgname}.conf
-        systemd_tmpfiles.d_${pkgname}.conf)
-validpgpkeys=('DCFD35E0BF8CA7344752DE8B6FB21E8933C60243'  # Mark E D Thomas
-              '713DA88BE50911535FE716F5208B0AB1D63011C7') # Violeta Georgieva Georgieva
+backup=(
+  etc/tomcat7/catalina.policy
+  etc/tomcat7/catalina.properties
+  etc/tomcat7/context.xml
+  etc/tomcat7/logging.properties
+  etc/tomcat7/server.xml
+  etc/tomcat7/tomcat-users.xml
+  etc/tomcat7/web.xml
+)
+install=tomcat7.install
+source=(
+  https://archive.apache.org/dist/tomcat/tomcat-7/v${pkgver}/bin/apache-tomcat-${pkgver}.tar.gz{,.asc}
+  tomcat7.service
+  tomcat7.sysusers
+  tomcat7.tmpfiles
+)
+validpgpkeys=(
+  DCFD35E0BF8CA7344752DE8B6FB21E8933C60243 # Mark E D Thomas
+  713DA88BE50911535FE716F5208B0AB1D63011C7 # Violeta Georgieva Georgieva
+)
 
-sha512sums=('ed4f9d85fafe21570af7e01e712ebfb878066f9fab99d344935e20cf1f18c3389e103d33feb6937b5382408f3d356dbd8e7668bc82d2998412222bc099a1f8f7'
-            'SKIP'
-            '99b27236151847c59f5f50d5a0e5d0bf829c7311d921d456b69188aee610453640162740acc0889f0ca0025181f48a963cd9eeca974fa18694f86fd2a328547f'
-            '3e64dd5904df35cf7d3c32a6ccab1669eff95d738127fafd60c7c75bf5e7dfd6123f696dbe706efaf1ac18e6d8a311ce3c1a50f3c7fdc33d82da44d20c20109e'
-            'bf8a105c9aef6d52bd0a20909fcb21ccf953048eb5c72037ebe69ca47bea364f67eff9dc8d701313c0293fc81d74644726cd214bb8604c005e8fec162efcbb01')
+sha256sums=(
+  3b8057cb9fd50ace772a0f92b247029fc848ed611d5cff9cb6ab832ffbb65272
+  SKIP
+  51f599e519095ec146f5eba1a0d471117070f5b3089715bc9e392d537deb38ce
+  4c0e12c45b406d2e8f0081de3d60dbf34c31f4da36296cedce6af5d6e03c8708
+  bc8ce84b3b2c938f55980cbe9bc1c2a5f371e23b34cf11c1b56d2c49836761d6
+)
 
 _gid_log=19
 _gid_tomcat=71
 _uid_tomcat=71
 
 package() {
-  cd "${srcdir}/apache-tomcat-${pkgver}"
+  cd apache-tomcat-${pkgver}
 
   # Tomcat general files
-  install -dm755 "${pkgdir}"/usr/share/{,java/}${pkgname}
-  cp -r bin "${pkgdir}"/usr/share/${pkgname}
+  install -dm 755 "${pkgdir}"/usr/share/{,java/}tomcat7
+  cp -r bin "${pkgdir}"/usr/share/tomcat7
   # commons-daemon and tomcat-natives are packaged on their own
-  rm "${pkgdir}"/usr/share/${pkgname}/bin/{*.bat,commons-daemon*,tomcat-native.tar.gz}
-  ln -s /usr/share/java/commons-daemon.jar "${pkgdir}"/usr/share/${pkgname}/bin/commons-daemon.jar
+  rm "${pkgdir}"/usr/share/tomcat7/bin/{*.bat,commons-daemon*,tomcat-native.tar.gz}
+  ln -s /usr/share/java/commons-daemon.jar "${pkgdir}"/usr/share/tomcat7/bin/commons-daemon.jar
 
-  install -m644 lib/* "${pkgdir}"/usr/share/java/${pkgname}
+  install -m 644 lib/* "${pkgdir}"/usr/share/java/tomcat7
   # eclipse-ecj is packaged on its own
-  rm "${pkgdir}"/usr/share/java/${pkgname}/ecj-*.jar
-  ln -s ../eclipse-ecj.jar "${pkgdir}"/usr/share/java/${pkgname}/ecj.jar
+  rm "${pkgdir}"/usr/share/java/tomcat7/ecj-*.jar
+  ln -s ../eclipse-ecj.jar "${pkgdir}"/usr/share/java/tomcat7/ecj.jar
 
-  ln -s /usr/share/java/${pkgname} "${pkgdir}"/usr/share/${pkgname}/lib
+  ln -s /usr/share/java/tomcat7 "${pkgdir}"/usr/share/tomcat7/lib
 
   # We log through systemd but this would still be required for stock Tomcat logging
-  install -dm775 -o ${_uid_tomcat} -g ${_gid_log} "${pkgdir}"/var/log/${pkgname}
-  ln -s /var/log/${pkgname} "${pkgdir}"/usr/share/${pkgname}/logs
-  touch "${pkgdir}"/var/log/${pkgname}/catalina.{out,err}
-  chgrp ${_gid_log} "${pkgdir}"/var/log/${pkgname}/catalina.{out,err}
+  install -dm 775 -o ${_uid_tomcat} -g ${_gid_log} "${pkgdir}"/var/log/tomcat7
+  ln -s /var/log/tomcat7 "${pkgdir}"/usr/share/tomcat7/logs
+  touch "${pkgdir}"/var/log/tomcat7/catalina.{out,err}
+  chgrp ${_gid_log} "${pkgdir}"/var/log/tomcat7/catalina.{out,err}
 
-  install -dm775 "${pkgdir}"/etc/${pkgname}
-  install -g ${_gid_tomcat} -m640 conf/* "${pkgdir}"/etc/${pkgname}
-  install -d -g ${_gid_tomcat} -m775 "${pkgdir}"/etc/${pkgname}/Catalina
-  ln -s /etc/${pkgname} "${pkgdir}"/usr/share/${pkgname}/conf
+  install -dm775 "${pkgdir}"/etc/tomcat7
+  install -g ${_gid_tomcat} -m 640 conf/* "${pkgdir}"/etc/tomcat7
+  install -d -g ${_gid_tomcat} -m 775 "${pkgdir}"/etc/tomcat7/Catalina
+  ln -s /etc/tomcat7 "${pkgdir}"/usr/share/tomcat7/conf
 
-  install -dm775 "${pkgdir}"/var/lib/${pkgname}
-  cp -r webapps "${pkgdir}"/var/lib/${pkgname}
-  chown -R ${_uid_tomcat}:${_gid_tomcat} "${pkgdir}"/var/lib/${pkgname}
-  chmod 775 "${pkgdir}"/var/lib/${pkgname}/webapps
-  ln -s /var/lib/${pkgname}/webapps "${pkgdir}"/usr/share/${pkgname}/webapps
+  install -dm 775 "${pkgdir}"/var/lib/tomcat7
+  cp -r webapps "${pkgdir}"/var/lib/tomcat7
+  chown -R ${_uid_tomcat}:${_gid_tomcat} "${pkgdir}"/var/lib/tomcat7
+  chmod 775 "${pkgdir}"/var/lib/tomcat7/webapps
+  ln -s /var/lib/tomcat7/webapps "${pkgdir}"/usr/share/tomcat7/webapps
 
-  install -dm1777 "${pkgdir}"/var/tmp
-  install -dm775 -o ${_uid_tomcat} -g ${_gid_tomcat} "${pkgdir}"/var/tmp/${pkgname}/{temp,work}
-  ln -s /var/tmp/${pkgname}/temp "${pkgdir}"/usr/share/${pkgname}/temp
-  ln -s /var/tmp/${pkgname}/work "${pkgdir}"/usr/share/${pkgname}/work
+  install -dm 1777 "${pkgdir}"/var/tmp
+  install -dm 775 -o ${_uid_tomcat} -g ${_gid_tomcat} "${pkgdir}"/var/tmp/tomcat7/{temp,work}
+  ln -s /var/tmp/tomcat7/temp "${pkgdir}"/usr/share/tomcat7/temp
+  ln -s /var/tmp/tomcat7/work "${pkgdir}"/usr/share/tomcat7/work
 
-  install -Dm644 "${srcdir}"/systemd_${pkgname}.service \
-                 "${pkgdir}"/usr/lib/systemd/system/${pkgname}.service
-  install -Dm644 "${srcdir}"/systemd_sysusers.d_${pkgname}.conf \
-                 "${pkgdir}"/usr/lib/sysusers.d/${pkgname}.conf
-  install -Dm644 "${srcdir}"/systemd_tmpfiles.d_${pkgname}.conf \
-                 "${pkgdir}"/usr/lib/tmpfiles.d/${pkgname}.conf
+  install -Dm 644 ../tomcat7.service "${pkgdir}"/usr/lib/systemd/system/tomcat7.service
+  install -Dm 644 ../tomcat7.sysusers "${pkgdir}"/usr/lib/sysusers.d/tomcat7.conf
+  install -Dm 644 ../tomcat7.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/tomcat7.conf
 }
+
+# vim: ts=2 sw=2 et:
