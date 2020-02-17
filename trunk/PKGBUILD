@@ -2,15 +2,15 @@
 
 pkgbase=python-idna
 pkgname=('python-idna' 'python2-idna')
-pkgver=2.8
-pkgrel=3
+pkgver=2.9
+pkgrel=1
 pkgdesc="Internationalized Domain Names in Applications (IDNA)"
 arch=('any')
 license=('BSD')
 url="https://github.com/kjd/idna"
 makedepends=('python-setuptools' 'python2-setuptools')
 source=("https://pypi.io/packages/source/i/idna/idna-$pkgver.tar.gz")
-sha512sums=('8ca5cfe6350c51250bafdac7c6e4ddd54c4a5d6bf7acbcef896760a759868c8e9df1fdf550121d8512fa3eb316dcf031ec6058e03b4f66eadee21b63e2187d33')
+sha512sums=('2bd3fdae46fe7045640912872b0a3955de3abce62fd222b16ea2c997a04755acc834eeb645e5610d621c176d4b963e1d4a71228fba14efad54999cdf3c02eaf4')
 
 prepare() {
    rm -r idna-$pkgver/*.egg-info
