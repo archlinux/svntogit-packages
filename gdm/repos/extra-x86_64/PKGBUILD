@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.34.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -79,6 +79,11 @@ package_gdm() {
 
   # Unused or created at start
   rm -r "$pkgdir"/var/{cache,log,run}
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/gdm.conf" <<END
+g gdm 120 -
+u gdm 120 "Gnome Display Manager" /var/lib/gdm
+END
 
 ### Split libgdm
   mkdir -p libgdm/{lib,share}
