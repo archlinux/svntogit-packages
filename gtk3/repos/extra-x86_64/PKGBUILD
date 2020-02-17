@@ -3,7 +3,7 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.13
+pkgver=3.24.14
 pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
@@ -15,7 +15,7 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra fribidi iso-codes)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
-_commit=f737908d2f7dc121e0d85507c16fd7a399d4b36a  # tags/3.24.13^0
+_commit=fab213a5f93c5624ed62a949ea6f93c8f2a3a591  # tags/3.24.14^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
@@ -48,7 +48,7 @@ build() {
 
 package_gtk3() {
   depends+=(gtk-update-icon-cache)
-  provides=(gtk3-print-backends)
+  provides=(gtk3-print-backends libgtk-3.so libgdk-3.so libgailutil-3.so)
   conflicts=(gtk3-print-backends)
   replaces=("gtk3-print-backends<=3.22.26-1")
   install=gtk3.install
