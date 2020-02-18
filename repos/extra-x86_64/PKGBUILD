@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.22.6
+pkgver=1.22.8
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,7 +19,7 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=5966766b65104ded6a16138d1a98762243dcbe3f  # tags/1.22.6^0
+_commit=fa6c656473ecae51e9d199e50a2960a802f8827e  # tags/1.22.8^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -130,12 +130,15 @@ END
 package_libnm() {
   pkgdesc="NetworkManager client library"
   depends=(glib2 nss libutil-linux jansson systemd-libs)
+  provides=(libnm.so)
+
   mv libnm/* "$pkgdir"
 }
 
 package_nm-cloud-setup() {
   pkgdesc="Automatically configure NetworkManager in cloud"
   depends=(networkmanager)
+
   mv nm-cloud-setup/* "$pkgdir"
 }
 
