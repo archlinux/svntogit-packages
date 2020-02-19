@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=73.0
+pkgver=73.0.1
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -23,7 +23,7 @@ options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop)
-sha256sums=('b57af802aae32d7f4624ce8b373701236b76904abcb893ded9e0cb5805ba6e17'
+sha256sums=('53415180e74da60fc91700ce1ff33bf5b6f51e65353017a98270899a08e0c3d2'
             'SKIP'
             '5f7ac724a5c5afd9322b1e59006f4170ea5354ca1e0e60dab08b7784c2d8463c'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33')
@@ -120,7 +120,7 @@ END
   ./mach package
   LLVM_PROFDATA=llvm-profdata \
     JARLOG_FILE="$PWD/jarlog" \
-    xvfb-run -a -n 92 -s "-screen 0 1600x1200x24" \
+    xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
     ./mach python build/pgo/profileserver.py
 
   if [[ ! -s merged.profdata ]]; then
@@ -164,9 +164,8 @@ pref("spellchecker.dictionary_path", "/usr/share/hunspell");
 // Disable default browser checking.
 pref("browser.shell.checkDefaultBrowser", false);
 
-// Don't disable our bundled extensions in the application directory
+// Don't disable extensions in the application directory
 pref("extensions.autoDisableScopes", 11);
-pref("extensions.shownSelectionUI", true);
 END
 
   local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
