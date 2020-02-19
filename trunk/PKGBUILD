@@ -13,7 +13,7 @@ makedepends=(asciidoc p11-kit)
 source=(update-ca-trust update-ca-trust.8.txt update-ca-trust.hook)
 sha256sums=('ba98e00f80f94e2648b66252119d1b0da2339b8c83860cd69738e5c4e2d0fcc3'
             'acf571f7d7a9df2149a373017280e8f22d07a2d36600256fa48159d22ab74751'
-            '15eb04e757b7c61c8ee1540fd697771b8ae8e31f92cfb39c260b423101e21af8')
+            '3a3833ebd6f9cdef2e534a273653f973a4354d4f9368577d0d73236b014b7748')
 
 build() {
   asciidoc.py -v -d manpage -b docbook update-ca-trust.8.txt
