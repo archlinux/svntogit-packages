@@ -5,7 +5,7 @@
 pkgname=lua
 pkgver=5.3.5
 _majorver=${pkgver%.*}
-pkgrel=2
+pkgrel=3
 pkgdesc='Powerful lightweight programming language designed for extending applications'
 arch=('x86_64')
 url='https://www.lua.org/'
@@ -52,7 +52,9 @@ package() {
   ln -sf /usr/lib/liblua.so.$pkgver "$pkgdir"/usr/lib/liblua$_majorver.so
 
   install -Dm644 lua.pc "$pkgdir"/usr/lib/pkgconfig/${pkgname}53.pc
-  ln -sf /usr/lib/pkgconfig/${pkgname}53.pc "$pkgdir"/usr/lib/pkgconfig/$pkgname.pc
+  ln -sf ${pkgname}53.pc "$pkgdir"/usr/lib/pkgconfig/${pkgname}.pc
+  ln -sf ${pkgname}53.pc "$pkgdir"/usr/lib/pkgconfig/${pkgname}5.3.pc
+  ln -sf ${pkgname}53.pc "$pkgdir"/usr/lib/pkgconfig/${pkgname}-5.3.pc
 
   install -d "$pkgdir"/usr/share/doc/$pkgname
   install -m644 doc/*.{gif,png,css,html} "$pkgdir"/usr/share/doc/$pkgname
