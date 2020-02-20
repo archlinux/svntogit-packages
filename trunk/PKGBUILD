@@ -3,8 +3,8 @@
 
 pkgbase=python-requests
 pkgname=('python-requests' 'python2-requests')
-pkgver=2.22.0
-pkgrel=4
+pkgver=2.23.0
+pkgrel=1
 pkgdesc="Python HTTP for Humans"
 arch=('any')
 url="http://python-requests.org"
@@ -13,18 +13,14 @@ makedepends=('python-setuptools' 'python2-setuptools' 'python-chardet' 'python2-
              'python-urllib3' 'python2-urllib3' 'python-idna' 'python2-idna')
 checkdepends=('python-pytest-httpbin' 'python-pytest-mock' 'python-pysocks' 'python-pyopenssl')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/psf/requests/archive/v$pkgver.tar.gz"
-        "0001-Support-pytest-4.patch"
         certs.patch
         "requests-pytest-5.patch::https://github.com/psf/requests/pull/5305.patch")
-sha512sums=('1259c270e343fc860322b105904232226f26b3b363e9d102d599020fcc7b6e1d524dc6c650181ce3152caebe11d2c60045ddd9c9fc04560294caa284e209c386'
-            '36ac0f06bbeb893e4cc4108e7421de5b9c5e5bff82d5f0e227a1ebde0a5df4ca57236762b45e5025aea4724f1fc320f9f32665a57c77b958e9c05efbe317ccc1'
+sha512sums=('a8e670d928fce3531629a6d73ee6b47882f3eba47684841bfce44376781b2b9c5c97186e1750ee582b0c11fa67c983f340f95eb2a4f19042f4cbc77ae090a69c'
             '424a3bb01b23409284f6c9cd2bc22d92df31b85cfd96e1d1b16b5d68adeca670dfed4fff7977d8b10980102b0f780eacc465431021fcd661f3a17168a02a39a3'
             '560aa7d31b51ca2b59cf93cf41c2dcaa648950119653f09ebcd9be2475f5719bf6116c7043d6eb5b317da37bc9893774d46fbc22a14623314f3fd30bc8f62092')
 
 prepare() {
   cd "$srcdir"/requests-$pkgver
-  # pytest 4 support
-  patch -p1 -i ../0001-Support-pytest-4.patch
   patch -p1 -i ../requests-pytest-5.patch
   sed -e '/certifi/d' \
       -e "s/,<.*'/'/" \
