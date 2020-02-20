@@ -3,7 +3,7 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.14
+pkgver=3.24.14+9+g429a6287e0
 pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
@@ -15,7 +15,7 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra fribidi iso-codes)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
-_commit=fab213a5f93c5624ed62a949ea6f93c8f2a3a591  # tags/3.24.14^0
+_commit=429a6287e0ceae7b67e82d882652e86fa12f0ad4  # gtk-3-24
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
@@ -23,8 +23,8 @@ source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         gtk-update-icon-cache.script)
 sha256sums=('SKIP'
             '01fc1d81dc82c4a052ac6e25bf9a04e7647267cc3017bc91f9ce3e63e5eb9202'
-            'de46e5514ff39a7a65e01e485e874775ab1c0ad20b8e94ada43f4a6af1370845'
-            '496064a9dd6214bd58f689dd817dbdc4d7f17d42a8c9940a87018c3f829ce308'
+            'a0319b6795410f06d38de1e8695a9bf9636ff2169f40701671580e60a108e229'
+            '2d435e3bec8b79b533f00f6d04decb1d7c299c6e89b5b175f20be0459f003fe8'
             'f1d3a0dbfd82f7339301abecdbe5f024337919b48bd0e09296bb0e79863b2541')
 
 pkgver() {
