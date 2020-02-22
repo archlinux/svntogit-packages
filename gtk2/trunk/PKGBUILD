@@ -2,15 +2,17 @@
 
 pkgname=gtk2
 pkgver=2.24.32
-pkgrel=1
+pkgrel=2
 pkgdesc="GObject-based multi-platform GUI toolkit (legacy)"
 arch=(x86_64)
 url="https://www.gtk.org/"
 depends=(atk pango libxcursor libxinerama libxrandr libxi libxcomposite libxdamage
          shared-mime-info cairo libcups gtk-update-icon-cache librsvg desktop-file-utils)
-makedepends=(gobject-introspection python2 git gtk-doc)
+makedepends=(gobject-introspection git gtk-doc)
 optdepends=('gnome-themes-standard: Default widget theme'
-            'adwaita-icon-theme: Default icon theme')
+            'adwaita-icon-theme: Default icon theme'
+            'python2: gtk-builder-convert')
+provides=(libgailutil.so libg{d,t}k-x11-2.0.so)
 license=(LGPL)
 install=gtk2.install
 _commit=ed7d3e25f8b6debae6ccc8b50d1329155338cab8  # tags/2.24.32^0
@@ -20,7 +22,7 @@ source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         xid-collision-debug.patch)
 sha256sums=('SKIP'
             'bc968e3e4f57e818430130338e5f85a5025e21d7e31a3293b8f5a0e58362b805'
-            '9656a1efc798da1ac2dae94e921ed0f72719bd52d4d0138f305b993f778f7758'
+            '427e7ed2626465ea7a8986189b6c8340a0520b9f7b8e2a56cd1169d375da7425'
             'd758bb93e59df15a4ea7732cf984d1c3c19dff67c94b957575efea132b8fe558')
 
 pkgver() {
