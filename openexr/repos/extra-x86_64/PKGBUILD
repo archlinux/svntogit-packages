@@ -1,8 +1,8 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=openexr
-pkgver=2.4.0
-pkgrel=7
+pkgver=2.4.1
+pkgrel=1
 pkgdesc="An high dynamic-range image file format library"
 url="https://www.openexr.com/"
 arch=('x86_64')
@@ -13,18 +13,7 @@ optdepends=('fltk: for exrdisplay' 'boost-libs: python support' 'python: python 
 conflicts=('ilmbase')
 replaces=('ilmbase')
 source=($pkgname-$pkgver.tar.gz::"https://github.com/openexr/openexr/archive/v$pkgver.tar.gz")
-md5sums=('9e4d69cf2a12c6fb19b98af7c5e0eaee')
-
-prepare() {
-  cd $pkgname-$pkgver
-
-# Take DESTDIR into account when creating symlinks
-  sed -e 's|chdir ${CMAKE_INSTALL_FULL_LIBDIR}|chdir \\$ENV\\{DESTDIR\\}${CMAKE_INSTALL_FULL_LIBDIR}|' \
-    -i OpenEXR/config/LibraryDefine.cmake -i IlmBase/config/LibraryDefine.cmake
-
-# Fix linking python modules to boost_python
-  sed -e 's|${libname} ${extraDeps}|${libname} ${extraDeps} Boost::${PYILMBASE_BOOST_PY3_COMPONENT}|' -i PyIlmBase/config/ModuleDefine.cmake
-}
+md5sums=('f7f7f893cf38786f88c306dec127113f')
 
 build() {
   mkdir -p build
@@ -40,12 +29,7 @@ package() {
   make DESTDIR="${pkgdir}" install
   install -D -m644 "$srcdir"/$pkgname-$pkgver/LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
 
-# Fix pc include path
-  sed -e 's|=include|=${prefix}/include|g' -e 's|=lib|=${prefix}/lib|g' \
-    -i "$pkgdir"/usr/lib/pkgconfig/OpenEXR.pc -i "$pkgdir"/usr/lib/pkgconfig/IlmBase.pc
-
-# Install python modules
+# Install missing python module
   _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
-  install -Dm755 python3*/*.so -t "$pkgdir"/$_pythonpath 
-  chrpath -d "$pkgdir"/$_pythonpath/*.so # Remove insecure RPATH
+  install -Dm755 python3*/imathnumpy.so -t "$pkgdir"/$_pythonpath 
 }
