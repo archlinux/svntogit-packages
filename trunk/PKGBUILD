@@ -19,8 +19,8 @@ source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         glib-compile-schemas.hook gio-querymodules.hook)
 sha256sums=('SKIP'
             '81a4df0b638730cffb7fa263c04841f7ca6b9c9578ee5045db6f30ff0c3fc531'
-            'e1123a5d85d2445faac33f6dae1085fdd620d83279a4e130a83fe38db52b62b3'
-            '5ba204a2686304b1454d401a39a9d27d09dd25e4529664e3fd565be3d439f8b6')
+            '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
+            '557c88177f011ced17bdeac1af3f882b2ca33b386a866fdf900b35f927a2bbe8')
 
 pkgver() {
   cd glib
