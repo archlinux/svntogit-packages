@@ -1,0 +1,69 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@gmail.com>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
+# Contributor: Douglas Soares de Andrade
+# Contributor: Roberto Alsina <ralsina@kde.org>
+
+pkgname=varnish
+pkgver=6.3.1
+pkgrel=2
+pkgdesc="High-performance HTTP accelerator"
+arch=('x86_64')
+url="https://www.varnish-cache.org/"
+license=('BSD')
+depends=('gcc' 'libedit' 'pcre' 'libnsl')
+makedepends=('python-docutils' 'python-sphinx' 'git')
+optdepends=('python: needed for vmod development')
+backup=('etc/varnish/default.vcl')
+install=$pkgname.install
+source=("https://varnish-cache.org/_downloads/varnish-$pkgver.tgz"
+        "git+https://github.com/varnishcache/pkg-varnish-cache.git#commit=711b56b"
+        varnish.sysusers)
+sha256sums=('d1a26c7dad43b842c97e48f1c6422bb0b24c02cd6a74c53a2cf17e64da254175'
+            'SKIP'
+            'b58dd6b00eb81c75e4bb30421b85b2be88c049d5b72a8ee553ba690a5414972b')
+
+prepare() {
+  cd "varnish-$pkgver"
+
+  ./autogen.sh
+}
+
+build() {
+  cd "varnish-$pkgver"
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var/lib \
+    --sbindir=/usr/bin
+
+  make
+}
+
+check() {
+  cd "varnish-$pkgver"
+
+  make check
+}
+
+package() {
+  cd "varnish-$pkgver"
+
+  make DESTDIR="$pkgdir" install
+
+  install -Dm644 "$srcdir/pkg-varnish-cache/systemd/varnish.service" "$pkgdir/usr/lib/systemd/system/varnish.service"
+  install -Dm644 "$srcdir/pkg-varnish-cache/systemd/varnishncsa.service" "$pkgdir/usr/lib/systemd/system/varnishncsa.service"
+  install -Dm755 "$srcdir/pkg-varnish-cache/systemd/varnishreload" "$pkgdir/usr/bin/varnishreload"
+  install -Dm755 "$srcdir/pkg-varnish-cache/systemd/varnish.logrotate" "$pkgdir/etc/logrotate.d/varnish"
+
+  # create varnish:varnish user/group
+  install -Dm644 "$srcdir/varnish.sysusers" "$pkgdir/usr/lib/sysusers.d/varnish.conf"
+
+  # config
+  install -Dm644 "etc/example.vcl" "$pkgdir/etc/varnish/default.vcl"
+  install -Dm644 "etc/builtin.vcl" "$pkgdir/usr/share/doc/varnish/builtin.vcl"
+
+  # license
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
