@@ -41,7 +41,7 @@ build() {
 
 check() {
   cd $pkgname-$pkgver
-  #make check
+  make check
 }
 
 package() {
