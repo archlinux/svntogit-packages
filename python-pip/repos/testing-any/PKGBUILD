@@ -1,0 +1,105 @@
+# Maintainer: Dan McGee <dan@archlinux.org>
+# Contributor: Eli Schwartz <eschwartz@archlinux.org>
+# Contributor: Sebastien Binet <binet@lblbox>
+
+pkgname=('python-pip' 'python2-pip')
+pkgver=20.0
+pkgrel=1
+pkgdesc="The PyPA recommended tool for installing Python packages"
+url="https://pip.pypa.io/"
+arch=('any')
+license=('MIT')
+_deps=('appdirs' 'cachecontrol' 'colorama' 'contextlib2' 'distlib' 'distro' 'html5lib'
+       'msgpack' 'packaging' 'pep517' 'progress' 'pyparsing' 'pytoml' 'requests' 'retrying'
+       'setuptools' 'six' 'webencodings')
+makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'python2-ipaddress' 'python-sphinx')
+checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'python-pretend'
+              'python-yaml' 'python-mock' 'python-freezegun' 'python-cryptography' 'python-pip'
+              'python-wheel' 'python-werkzeug' 'git' 'subversion')
+source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz"
+        pip-vendor-appdirs.patch::https://github.com/pypa/pip/commit/9be7454fd69081d06a3f8234a08a6d791e13173f.patch)
+sha512sums=('3159efffba5eb3cc4c4302e3b4c842456f81a5fbbe72ea22eac035749da38320056ad417175feceee635710c8e1b8d38260e10c15185bfb42afbb7405eb3dc11'
+            '61732786303ca7ec7828d04099a884534034d50cdd9a7a0de2ace34c28381a992943880f03797a64d5d4f3a76d317d356f76ffff5e3ffd97ed611b234cc05528')
+
+shopt -s extglob
+prepare() {
+  cd "$srcdir/pip-$pkgver"
+  patch -p1 -i ../pip-vendor-appdirs.patch
+
+  # Remove certifi usage
+  sed -i 's|from pip._vendor.certifi import where|where = lambda: "/etc/ssl/certs/ca-certificates.crt"|' src/pip/_internal/commands/debug.py
+
+  rm -rf src/pip/_vendor/!(__init__.py)
+  sed -i -e 's/DEBUNDLED = False/DEBUNDLED = True/' \
+            src/pip/_vendor/__init__.py
+}
+
+build() {
+  cd "$srcdir/pip-$pkgver"
+
+  python setup.py build
+  python2 setup.py build
+
+  cd docs/
+  PYTHONPATH="$srcdir/pip-$pkgver/src/" sphinx-build -W -b man -d build/doctrees/man man build/man -c html
+  mkdir -p build/man-pip2
+  cd build/man
+  for manfile in *; do
+    sed 's/pip/pip2/g;s/PIP/PIP2/g' $manfile > ../man-pip2/${manfile/pip/pip2}
+  done
+}
+
+check() {
+  cd "$srcdir"/pip-$pkgver
+  pip wheel -w tests/data/common_wheels -r tools/requirements/tests-common_wheels.txt
+  python setup.py install --root="$PWD/tmp_install" --optimize=1
+  # appdirs: https://github.com/pypa/pip/issues/7784
+  # build_env: TODO weird looking errors
+  PYTHONPATH="$PWD/tmp_install/usr/lib/python3.8/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" \
+    python -m pytest -m unit --junit-xml=junit/unit-test.xml --deselect tests/unit/test_appdirs.py::TestSiteConfigDirs::test_site_config_dirs_linux \
+                                                             --deselect tests/unit/test_appdirs.py::TestSiteConfigDirs::test_site_config_dirs_linux_override \
+                                                             --deselect tests/unit/test_appdirs.py::TestSiteConfigDirs::test_site_config_dirs_linux_empty \
+                                                             --deselect tests/unit/test_appdirs.py::TestUserDataDir::test_user_data_dir_osx \
+                                                             --deselect tests/unit/test_appdirs.py::TestUserConfigDir::test_user_config_dir_osx \
+                                                             --deselect tests/unit/test_build_env.py::test_build_env_requirements_check \
+                                                             --deselect tests/unit/test_build_env.py::test_build_env_overlay_prefix_has_priority \
+                                                             --deselect tests/unit/test_build_env.py::test_build_env_isolation
+
+}
+
+package_python-pip() {
+  depends=("${_deps[@]/#/python-}")
+
+  cd "$srcdir/pip-$pkgver"
+  python setup.py install --prefix=/usr --root="$pkgdir"
+
+  install -D -m644 LICENSE.txt \
+	  "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  install -Dm644 -t "$pkgdir"/usr/share/man/man1 docs/build/man/*
+
+  PYTHONPATH="$pkgdir"/usr/lib/python3.8/site-packages "$pkgdir"/usr/bin/pip completion --bash \
+    | install -Dm644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip
+}
+
+package_python2-pip() {
+  depends=("${_deps[@]/#/python2-}" 'python2-ipaddress')
+  conflicts=('python-pyinstall')
+  replaces=('python-pyinstall')
+
+  cd "$srcdir/pip-$pkgver"
+  python2 setup.py install --prefix=/usr --root="$pkgdir"
+
+  mv "$pkgdir/usr/bin/pip" "$pkgdir/usr/bin/pip2"
+  sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" \
+    ${pkgdir}/usr/lib/python2.7/site-packages/pip/__init__.py
+  python2 -m compileall ${pkgdir}/usr/lib/python2.7/site-packages/pip/__init__.py
+
+  install -D -m644 LICENSE.txt \
+	  "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  install -Dm644 -t "$pkgdir"/usr/share/man/man1 docs/build/man-pip2/*
+
+  PYTHONPATH="$pkgdir"/usr/lib/python2.7/site-packages "$pkgdir"/usr/bin/pip2 completion --bash \
+    | install -Dm644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip2
+}
