@@ -1,7 +1,7 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=pciutils
-pkgver=3.6.2
-pkgrel=2
+pkgver=3.6.4
+pkgrel=1
 pkgdesc="PCI bus configuration space access library and tools"
 arch=(x86_64)
 license=('GPL2')
@@ -11,7 +11,7 @@ makedepends=('git')
 source=(#ftp://ftp.kernel.org/pub/software/utils/${pkgname}/${pkgname}-${pkgver}.tar.bz2
         #ftp://atrey.karlin.mff.cuni.cz/pub/linux/pci/${pkgname}-${pkgver}.tar.gz
         #ftp://atrey.karlin.mff.cuni.cz/pub/linux/pci/${pkgname}-${pkgver}.tar.gz.sign
-        git+https://github.com/pciutils/pciutils.git#tag=v3.6.2?signed)
+        git+https://github.com/pciutils/pciutils.git#tag=v$pkgver?signed)
 validpgpkeys=(
               '5558F9399CD7836850553C6EC28E7847ED70F82D' # Martin Mares <mj@ucw.cz>
              )
