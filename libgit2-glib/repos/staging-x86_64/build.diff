@@ -1,0 +1,92 @@
+diff --git i/libgit2-glib/ggit-cred-plaintext.c w/libgit2-glib/ggit-cred-plaintext.c
+index 6ae3218..a8bc643 100644
+--- i/libgit2-glib/ggit-cred-plaintext.c
++++ w/libgit2-glib/ggit-cred-plaintext.c
+@@ -179,7 +179,7 @@ ggit_cred_plaintext_initable_init (GInitable    *initable,
+ 
+ 	_ggit_native_set (initable,
+ 	                  cred,
+-	                  (GDestroyNotify)cred->free);
++	                  (GDestroyNotify)git_cred_free);
+ 
+ 	return TRUE;
+ }
+diff --git i/libgit2-glib/ggit-cred-ssh-interactive.c w/libgit2-glib/ggit-cred-ssh-interactive.c
+index 97f51cf..d0489bd 100644
+--- i/libgit2-glib/ggit-cred-ssh-interactive.c
++++ w/libgit2-glib/ggit-cred-ssh-interactive.c
+@@ -246,7 +246,7 @@ ggit_cred_ssh_interactive_initable_init (GInitable     *initable,
+ 
+ 	_ggit_native_set (initable,
+ 	                  cred,
+-	                  (GDestroyNotify)cred->free);
++	                  (GDestroyNotify)git_cred_free);
+ 
+ 	return TRUE;
+ }
+diff --git i/libgit2-glib/ggit-cred-ssh-key-from-agent.c w/libgit2-glib/ggit-cred-ssh-key-from-agent.c
+index 2931b43..62ba7a3 100644
+--- i/libgit2-glib/ggit-cred-ssh-key-from-agent.c
++++ w/libgit2-glib/ggit-cred-ssh-key-from-agent.c
+@@ -155,7 +155,7 @@ ggit_cred_ssh_key_from_agent_initable_init (GInitable     *initable,
+ 
+ 	_ggit_native_set (initable,
+ 	                  cred,
+-	                  (GDestroyNotify)cred->free);
++	                  (GDestroyNotify)git_cred_free);
+ 
+ 	return TRUE;
+ }
+diff --git i/meson.build w/meson.build
+index 6d314b5..32c08d4 100644
+--- i/meson.build
++++ w/meson.build
+@@ -135,7 +135,8 @@ if enable_vapi
+   assert(enable_gir, 'vapi support was requested, but introspection support is mandatory.')
+   assert(add_languages('vala', required: false), 'vapi support was requested, but vala not found.')
+ 
+-  meson.add_install_script('meson_vapi_link.py', libgit2_glib_datadir)
++  # Requires the prefix-relative datadir
++  meson.add_install_script('meson_vapi_link.py', get_option('datadir'))
+ endif
+ 
+ # Check for libgit2 ssh support
+diff --git i/meson_python_compile.py w/meson_python_compile.py
+index 1ffe0c0..24a74d8 100755
+--- i/meson_python_compile.py
++++ w/meson_python_compile.py
+@@ -8,7 +8,7 @@ if not os.environ.get('DESTDIR'):
+   libdir = sys.argv[1]
+ 
+   print('Byte-compiling python modules...')
+-  subprocess.call(['python3', '-m', 'compileall', '-f', '-q', libdir])
++  subprocess.check_call(['python3', '-m', 'compileall', '-f', '-q', libdir])
+ 
+   print('Byte-compiling python modules (optimized versions) ...')
+-  subprocess.call(['python3', '-O', '-m', 'compileall', '-f', '-q', libdir])
++  subprocess.check_call(['python3', '-O', '-m', 'compileall', '-f', '-q', libdir])
+diff --git i/meson_vapi_link.py w/meson_vapi_link.py
+index eb64fd6..3b4155e 100644
+--- i/meson_vapi_link.py
++++ w/meson_vapi_link.py
+@@ -5,18 +5,14 @@ import subprocess
+ import sys
+ 
+ vapidir = os.path.join(os.environ['MESON_INSTALL_DESTDIR_PREFIX'], sys.argv[1], 'vala', 'vapi')
++os.chdir(vapidir)
+ 
+ # FIXME: meson will not track the creation of these files
+ #        https://github.com/mesonbuild/meson/blob/master/mesonbuild/scripts/uninstall.py#L39
+ old = 'ggit-1.0'
+ new = 'libgit2-glib-1.0'
+ 
+-wd = os.getcwd()
+-os.chdir(vapidir)
+-
+ for ext in ['vapi', 'deps']:
+   src = os.path.join('{}.{}'.format(new, ext))
+   dest = os.path.join('{}.{}'.format(old, ext))
+-  subprocess.call(['ln', '-s', '-f', src, dest])
+-
+-os.chdir(wd)
++  subprocess.check_call(['ln', '-s', '-f', src, dest])
