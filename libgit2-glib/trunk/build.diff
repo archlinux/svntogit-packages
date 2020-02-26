@@ -39,56 +39,8 @@ index 8f6fc87..89622f9 100644
  
  	g_printf ("\rnet %3d%% (%4d kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)",
  	          network_percent, kbytes,
-diff --git i/libgit2-glib/ggit-cred-plaintext.c w/libgit2-glib/ggit-cred-plaintext.c
-index 1f2390f..b55d9c9 100644
---- i/libgit2-glib/ggit-cred-plaintext.c
-+++ w/libgit2-glib/ggit-cred-plaintext.c
-@@ -180,9 +180,9 @@ ggit_cred_plaintext_initable_init (GInitable    *initable,
- 	_ggit_native_set (initable,
- 	                  cred,
- #if LIBGIT2_VER_MAJOR > 0 || (LIBGIT2_VER_MAJOR == 0 && LIBGIT2_VER_MINOR >= 99)
--	                  (GDestroyNotify)git_credential_free (cred));
-+	                  (GDestroyNotify)git_credential_free);
- #else
--	                  (GDestroyNotify)git_cred_free (cred));
-+	                  (GDestroyNotify)git_cred_free);
- #endif
- 
- 	return TRUE;
-diff --git i/libgit2-glib/ggit-cred-ssh-interactive.c w/libgit2-glib/ggit-cred-ssh-interactive.c
-index 79e5a4e..4f60f8b 100644
---- i/libgit2-glib/ggit-cred-ssh-interactive.c
-+++ w/libgit2-glib/ggit-cred-ssh-interactive.c
-@@ -247,9 +247,9 @@ ggit_cred_ssh_interactive_initable_init (GInitable     *initable,
- 	_ggit_native_set (initable,
- 	                  cred,
- #if LIBGIT2_VER_MAJOR > 0 || (LIBGIT2_VER_MAJOR == 0 && LIBGIT2_VER_MINOR >= 99)
--	                  (GDestroyNotify)git_credential_free (cred));
-+	                  (GDestroyNotify)git_credential_free);
- #else
--	                  (GDestroyNotify)git_cred_free (cred));
-+	                  (GDestroyNotify)git_cred_free);
- #endif
- 
- 	return TRUE;
-diff --git i/libgit2-glib/ggit-cred-ssh-key-from-agent.c w/libgit2-glib/ggit-cred-ssh-key-from-agent.c
-index 0de589f..b8a6bcf 100644
---- i/libgit2-glib/ggit-cred-ssh-key-from-agent.c
-+++ w/libgit2-glib/ggit-cred-ssh-key-from-agent.c
-@@ -156,9 +156,9 @@ ggit_cred_ssh_key_from_agent_initable_init (GInitable     *initable,
- 	_ggit_native_set (initable,
- 	                  cred,
- #if LIBGIT2_VER_MAJOR > 0 || (LIBGIT2_VER_MAJOR == 0 && LIBGIT2_VER_MINOR >= 99)
--	                  (GDestroyNotify)git_credential_free (cred));
-+	                  (GDestroyNotify)git_credential_free);
- #else
--	                  (GDestroyNotify)git_cred_free (cred));
-+	                  (GDestroyNotify)git_cred_free);
- #endif
- 
- 	return TRUE;
 diff --git i/libgit2-glib/ggit-object-factory.c w/libgit2-glib/ggit-object-factory.c
-index 59db627..c508c09 100644
+index 59db627..5b032cf 100644
 --- i/libgit2-glib/ggit-object-factory.c
 +++ w/libgit2-glib/ggit-object-factory.c
 @@ -81,7 +81,7 @@ ggit_object_factory_constructor (GType                  type,
@@ -127,7 +79,7 @@ index 59db627..c508c09 100644
  /**
   * ggit_object_factory_construct:
   * @factory: a #GgitObjectFactory.
-@@ -235,21 +215,33 @@ ggit_object_factory_construct (GgitObjectFactory     *factory,
+@@ -235,21 +215,36 @@ ggit_object_factory_construct (GgitObjectFactory     *factory,
  
  	if (val)
  	{
@@ -142,19 +94,19 @@ index 59db627..c508c09 100644
 -		                                n_construct_properties);
 -
 -		ret = g_object_newv (val->type, n_construct_properties, params);
-+		names = g_newa (const char *, n_construct_properties);
-+		values = g_newa (GValue, n_construct_properties);
++		names = g_new (const char *, n_construct_properties);
++		values = g_new0 (GValue, n_construct_properties);
  
  		for (i = 0; i < n_construct_properties; ++i)
  		{
 -			g_value_unset (&params[i].value);
-+			GType type;
++			const GValue *value;
 +
 +			names[i] = construct_properties[i].pspec->name;
-+			type = G_VALUE_TYPE (construct_properties[i].value);
++			value = construct_properties[i].value;
 +
-+			g_value_init (&values[i], type);
-+			g_value_copy (construct_properties[i].value, &values[i]);
++			g_value_init (&values[i], G_VALUE_TYPE (value));
++			g_value_copy (value, &values[i]);
  		}
  
 -		g_free (params);
@@ -166,20 +118,17 @@ index 59db627..c508c09 100644
 +		{
 +			g_value_unset (&values[i]);
 +		}
++
++		g_free (names);
++		g_free (values);
  	}
  	else
  	{
 diff --git i/libgit2-glib/ggit-repository.c w/libgit2-glib/ggit-repository.c
-index 4273bd0..a2a4301 100644
+index 68fdb31..a2a4301 100644
 --- i/libgit2-glib/ggit-repository.c
 +++ w/libgit2-glib/ggit-repository.c
-@@ -4025,21 +4025,22 @@ ggit_repository_note_foreach (GgitRepository    *repository,
- void
- ggit_repository_merge (GgitRepository       *repository,
-                        GgitAnnotatedCommit **their_heads,
--                       gsize                *their_heads_length,
-+                       gsize                 their_heads_length,
-                        GgitMergeOptions     *merge_opts,
+@@ -4030,16 +4030,17 @@ ggit_repository_merge (GgitRepository       *repository,
                         GgitCheckoutOptions  *checkout_opts,
                         GError              **error)
  {
@@ -200,19 +149,6 @@ index 4273bd0..a2a4301 100644
  
  	for (i = 0; i < their_heads_length; ++i)
  	{
-diff --git i/libgit2-glib/ggit-repository.h w/libgit2-glib/ggit-repository.h
-index 0b3c7ca..e522e0d 100644
---- i/libgit2-glib/ggit-repository.h
-+++ w/libgit2-glib/ggit-repository.h
-@@ -507,7 +507,7 @@ gboolean            ggit_repository_path_is_ignored    (GgitRepository
- 
- void                ggit_repository_merge              (GgitRepository          *repository,
-                                                         GgitAnnotatedCommit    **their_heads,
--                                                        gsize                   *their_heads_length,
-+                                                        gsize                    their_heads_length,
-                                                         GgitMergeOptions        *merge_opts,
-                                                         GgitCheckoutOptions     *checkout_opts,
-                                                         GError                 **error);
 diff --git i/libgit2-glib/ggit-submodule-update-options.c w/libgit2-glib/ggit-submodule-update-options.c
 index 3a1cd3e..47b9d90 100644
 --- i/libgit2-glib/ggit-submodule-update-options.c
@@ -239,39 +175,11 @@ index d26290b..8310e90 100644
                        _ggit_submodule_update_options_get_submodule_update_options (GgitSubmoduleUpdateOptions  *options);
  
  GgitSubmoduleUpdateOptions  *ggit_submodule_update_options_new             (void);
-diff --git i/meson.build w/meson.build
-index 6d314b5..32c08d4 100644
---- i/meson.build
-+++ w/meson.build
-@@ -135,7 +135,8 @@ if enable_vapi
-   assert(enable_gir, 'vapi support was requested, but introspection support is mandatory.')
-   assert(add_languages('vala', required: false), 'vapi support was requested, but vala not found.')
- 
--  meson.add_install_script('meson_vapi_link.py', libgit2_glib_datadir)
-+  # Requires the prefix-relative datadir
-+  meson.add_install_script('meson_vapi_link.py', get_option('datadir'))
- endif
- 
- # Check for libgit2 ssh support
-diff --git i/meson_python_compile.py w/meson_python_compile.py
-index 1ffe0c0..24a74d8 100755
---- i/meson_python_compile.py
-+++ w/meson_python_compile.py
-@@ -8,7 +8,7 @@ if not os.environ.get('DESTDIR'):
-   libdir = sys.argv[1]
- 
-   print('Byte-compiling python modules...')
--  subprocess.call(['python3', '-m', 'compileall', '-f', '-q', libdir])
-+  subprocess.check_call(['python3', '-m', 'compileall', '-f', '-q', libdir])
- 
-   print('Byte-compiling python modules (optimized versions) ...')
--  subprocess.call(['python3', '-O', '-m', 'compileall', '-f', '-q', libdir])
-+  subprocess.check_call(['python3', '-O', '-m', 'compileall', '-f', '-q', libdir])
 diff --git i/meson_vapi_link.py w/meson_vapi_link.py
-index eb64fd6..dc30903 100644
+index eb64fd6..cb43f34 100644
 --- i/meson_vapi_link.py
 +++ w/meson_vapi_link.py
-@@ -1,22 +1,21 @@
+@@ -1,22 +1,23 @@
  #!/usr/bin/env python3
  
  import os
@@ -279,7 +187,10 @@ index eb64fd6..dc30903 100644
 +import shutil
  import sys
  
- vapidir = os.path.join(os.environ['MESON_INSTALL_DESTDIR_PREFIX'], sys.argv[1], 'vala', 'vapi')
+-vapidir = os.path.join(os.environ['MESON_INSTALL_DESTDIR_PREFIX'], sys.argv[1], 'vala', 'vapi')
++destdir = os.environ.get('DESTDIR', os.path.sep)
++libdir = sys.argv[1].lstrip(os.path.sep)
++vapidir = os.path.join(destdir, libdir, 'vala', 'vapi')
 +os.chdir(vapidir)
  
  # FIXME: meson will not track the creation of these files
