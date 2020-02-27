@@ -4,35 +4,54 @@
 # Contributor: Patryk Kowalczyk < patryk at kowalczyk dot ws>
 
 pkgname=libseccomp
-pkgver=2.4.1
-pkgrel=3
+pkgver=2.4.2
+pkgrel=1
 pkgdesc='Enhanced seccomp library'
 arch=('x86_64')
 license=('LGPL2.1')
 url="https://github.com/seccomp/libseccomp"
 depends=('glibc')
 checkdepends=('valgrind')
+makedepends=('git')
 provides=('libseccomp.so')
-source=(https://github.com/seccomp/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz{,.asc})
-sha256sums=('1ca3735249af66a1b2f762fe6e710fcc294ad7185f1cc961e5bd83f9988006e8'
-            'SKIP')
+#source=(https://github.com/seccomp/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz{,.asc})
+source=("git+https://github.com/seccomp/${pkgname}?signed#tag=v${pkgver}")
+sha256sums=('SKIP')
+# XXX: do NOT trust this key as its not yet in the strong set, see linked issue
+# XXX: https://github.com/seccomp/libseccomp/issues/187
+# XXX: 47A68FCE37C7D7024FD65E11356CE62C2B524099  Tom Hromatka <tom.hromatka@oracle.com>
+# XXX: do NOT trust ^^ this key as its not yet in the strong set ^^ see linked issue
 validpgpkeys=('7100AADFAE6E6E940D2E0AD655E45A5AE8CA7C8A') # Paul Moore <paul@paul-moore.com>
 
+pkgver() {
+  cd ${pkgname}
+  git describe --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd ${pkgname}
+  # assert annotated tag doesn't change
+  test "$(git rev-parse HEAD)" = "1b6cfd1fc0b7499a28c24299a93a80bd18619563"
+  # backport: api: define __SNR_ppoll again
+  git cherry-pick --no-commit e3647f5b6b52996bf30d0c2c1d1248e4182e1c1c
+}
+
 build() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgname}
+  autoreconf -fiv
   ./configure --prefix=/usr
   make
 }
 
 check() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgname}
   make check
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgname}
   make DESTDIR="${pkgdir}" install
-  install -Dm 644 CHANGELOG README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+  install -Dm 644 CHANGELOG README.md SECURITY.md -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
 
 # vim: ts=2 sw=2 et:
