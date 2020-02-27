@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.53.1
+pkgver=0.53.2
 pkgrel=1
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
@@ -18,12 +18,12 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
               'libelf' 'python-pytest-xdist')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         skip-test.diff
-        0001-Fix-CUDA-test-without-devices.patch
+        0001-environment-Fix-construction-of-CudaLinker.patch
         arch-meson)
-sha512sums=('0c96c354bcd7e6945473c7df0ddff929ef2bae9c2dfc7b48c6c6174c7f2be4f798398929f9c4d5986aa5fc882305ff76371ad0d65a499f058b33b05ff7025859'
+sha512sums=('005340f0faaa8fc5065b916355af6c2e3311da59fae67c781eb9ca47c5430dca85e9aa1052c5e92b3da8546b4b197fe623a6d48b073a24e05535141ba59ecac7'
             'SKIP'
             'fd1694e74cfa628bda81b1056061d75fa288e04d72bda733f3667be43cfb21c60f2e89455e4a101a7f6bef5754fe112dc84e18ec7a0807bc791015c34deea347'
-            '459559575ac6556cf7f9b340099886442ca222b9cfb584aaad3a2a43c2fe6ce850e7125fb8b7a01782c5f5a57b353adc5683f24aec6717ba78076ad75140fc4e'
+            'c214888ef7b095e1baa68743a065438cd4270032c457580d5e6e2f728b694abfe07b609c17b11d6b9f66b0f5ba2702552084508f69003072dc45ae01b09d8eb2'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('95181F4EED14FDF4E41B518D3BF4693BFEEB9428') # Jussi Pakkanen <jpakkane@gmail.com>
 
@@ -33,8 +33,8 @@ prepare() {
   # Our containers do not allow sanitizers to run
   patch -Np1 -i ../skip-test.diff
 
-  # Fix CUDA test without devices
-  patch -Np1 -i ../0001-Fix-CUDA-test-without-devices.patch
+  # Fix CUDA
+  patch -Np1 -i ../0001-environment-Fix-construction-of-CudaLinker.patch
 }
 
 build() {
