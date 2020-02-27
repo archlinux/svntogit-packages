@@ -3,22 +3,23 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=libfprint
-pkgver=1.0
+pkgver=1.90.1
 pkgrel=1
 pkgdesc="Library for fingerprint readers"
 arch=(x86_64)
 url="https://www.freedesktop.org/wiki/Software/fprint/libfprint"
 license=(LGPL)
-depends=(libusb nss pixman glib2)
-makedepends=(git meson gtk-doc)
+depends=(libgusb cairo pixman nss systemd-libs)
+makedepends=(git meson gtk-doc gobject-introspection)
+provides=(libfprint-2.so)
 groups=(fprint)
-_commit=823f2c1067a27deae4153dd9ece6ce24bedc0680  # tags/V_1_0^0
+_commit=66c9e4a829a06a25d8b6160cdfbad1d47ef5b81a  # tags/v1.90.1^0
 source=("git+https://gitlab.freedesktop.org/libfprint/libfprint.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/^V_//;s/_/./g;s/-/+/g'
+  git describe --tags | sed 's/^v//;s/^V_//;s/_/./g;s/-/+/g'
 }
 
 prepare() {
@@ -26,12 +27,12 @@ prepare() {
 }
 
 build() {
-  arch-meson $pkgname build -D x11-examples=false -D gtk-examples=false
+  arch-meson $pkgname build
   ninja -C build
 }
 
 check() {
-  meson test -C build
+  meson test -C build --print-errorlogs
 }
 
 package() {
