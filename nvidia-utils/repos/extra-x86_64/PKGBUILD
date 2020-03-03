@@ -5,7 +5,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia')
 pkgver=440.64
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -50,7 +50,7 @@ package_opencl-nvidia() {
     create_links
 
     mkdir -p "${pkgdir}/usr/share/licenses"
-    ln -s nvidia "${pkgdir}/usr/share/licenses/opencl-nvidia"
+    ln -s nvidia-utils "${pkgdir}/usr/share/licenses/opencl-nvidia"
 }
 
 package_nvidia-utils() {
