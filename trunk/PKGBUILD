@@ -19,6 +19,8 @@ sha256sums=('4ec77040a876a83aa2a833ebfe7b3e88dcc167ceb317095eb226a0b8d455e887')
 
 prepare() {
   mkdir -p build
+
+  sed -e 's|7-9|7-9\|10|' -i $_pkgfqn/configure.pri # Support ninja 1.10
 }
 
 build() {
