@@ -3,17 +3,17 @@
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.62.0
-pkgrel=3
+pkgver=1.64.0
+pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
 depends=(python-mako python-markdown)
-_glibver=2.62.2
+_glibver=2.64.0
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
 options=(!emptydirs)
-_commit=f330f517d8cd0bfbe67c62ba00be85dee2b338ed  # tags/1.62.0^0
+_commit=3a70f1c7a15464176a48ce93ecb13a93e6f3d855  # tags/1.64.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver")
 sha512sums=('SKIP'
@@ -31,9 +31,7 @@ prepare() {
   
 build() {
   arch-meson $pkgbase build \
-    -D cairo=true \
     -D gtk_doc=true \
-    -D doctool=true \
     -D glib_src_dir="$srcdir/glib"
   ninja -C build
 }
@@ -58,6 +56,7 @@ package_gobject-introspection() {
 package_gobject-introspection-runtime() {
   pkgdesc+=" (runtime library)"
   depends=(glib2)
+  provides+=(libgirepository-1.0.so)
 
   mv "$srcdir/runtime" "$pkgdir/usr"
 }
