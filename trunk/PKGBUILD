@@ -10,7 +10,7 @@ url="https://github.com/pycontribs/wstools"
 license=('custom')
 makedepends=('python-pbr' 'python2-pbr' 'python-setuptools' 'python2-setuptools')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'autopep8' 'python2-autopep8'
-              'python-hacking' 'python2-hacking' 'python-pytest-cov' 'python2-pytest-cov')
+              'python-pytest-cov' 'python2-pytest-cov')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pycontribs/wstools/archive/$pkgver.tar.gz")
 sha512sums=('0dc25d28ffbaf2051d8cdabd6b7e0b91d3946a4717a3acf6d36e68b8007d002d01129fb892c2f8ad0eb4c39411b8ff77ab043e1788ad1542d017997ce1826352')
 
