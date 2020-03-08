@@ -2,16 +2,17 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=pipewire
-pkgname=(pipewire pipewire-docs)
-pkgver=0.2.7
-pkgrel=2
+pkgname=(pipewire pipewire-docs pipewire-jack pipewire-pulse)
+pkgver=0.3.1
+pkgrel=1
 pkgdesc="Server and user space API to deal with multimedia pipelines"
 url="https://pipewire.org"
 license=(LGPL2.1)
 arch=(x86_64)
-makedepends=(git meson doxygen graphviz xmltoman valgrind alsa-lib gstreamer
-             gst-plugins-base sbc rtkit dbus)
-_commit=14c11c0fe4d366bad4cfecdee97b6652ff9ed63d  # tags/0.2.7
+makedepends=(git meson doxygen graphviz xmltoman valgrind jack2 libpulse
+             alsa-lib gstreamer gst-plugins-base sbc rtkit vulkan-icd-loader
+             dbus libsndfile)
+_commit=74a1632f0720886d5b3b6c23ee8fcd6c03ca7aac  # tags/0.3.1
 source=("git+https://github.com/PipeWire/pipewire#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -26,9 +27,11 @@ prepare() {
 }
 
 build() {
+  # warning: ‘-Wformat-security’ ignored without ‘-Wformat’ [-Wformat-security]
+  CFLAGS+=" -Wformat"
+
   arch-meson $pkgbase build \
     -D docs=true \
-    -D ffmpeg=false \
     -D man=true
 
   ninja -C build
@@ -49,8 +52,9 @@ _pick() {
 }
 
 package_pipewire() {
-  depends=(gstreamer gst-plugins-base sbc rtkit libdbus-1.so)
-  provides=(libpipewire-0.2.so)
+  depends=(gstreamer gst-plugins-base sbc rtkit vulkan-icd-loader libdbus-1.so
+           libsndfile.so)
+  provides=(libpipewire-0.3.so)
   backup=(etc/pipewire/pipewire.conf)
   install=pipewire.install
 
@@ -59,10 +63,31 @@ package_pipewire() {
   cd "$pkgdir"
 
   _pick docs usr/share/doc
+
+  _pick pulse usr/lib/libpulse*
+
+  _pick jack usr/lib/spa-0.2/jack
+  _pick jack usr/lib/libjack*
 }
 
 package_pipewire-docs() {
   pkgdesc+=" (documentation)"
 
   mv docs/* "$pkgdir"
+}
+
+package_pipewire-jack() {
+  pkgdesc+=" (JACK support)"
+  depends=(libpipewire-0.3.so libjack.so)
+  provides=(libjack-pw.so)
+
+  mv jack/* "$pkgdir"
+}
+
+package_pipewire-pulse() {
+  pkgdesc+=" (PulseAudio support)"
+  depends=(libpipewire-0.3.so libpulse.so libglib-2.0.so)
+  provides=(libpulse{,-simple,-mainloop-glib}-pw.so)
+
+  mv pulse/* "$pkgdir"
 }
