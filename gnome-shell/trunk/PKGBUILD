@@ -34,7 +34,7 @@ prepare() {
   cd $pkgname
 
   git submodule init
-  git config --local submodule.subprojects/gvc.url "$srcdir/libgnome-volume-control"
+  git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
   git submodule update
 }
   
