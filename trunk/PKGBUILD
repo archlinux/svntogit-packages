@@ -11,6 +11,7 @@ license=('custom:icu')
 depends=('gcc-libs' 'sh')
 makedepends=('python')
 #makedepends=('clang')
+provides=(libicu{data,i18n,io,test,tu,uc}.so)
 # no https available
 source=(https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/${pkgname}4c-${pkgver//./_}-src.tgz{,.asc}
         icu-65.1-initialized-buffer-uloc_getKeywordValue.patch::https://github.com/unicode-org/icu/commit/fab4c3c719.patch
