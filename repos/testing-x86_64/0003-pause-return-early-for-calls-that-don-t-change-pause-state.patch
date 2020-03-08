@@ -1,0 +1,37 @@
+From 64258bd0aa6ad23195f6be32e6febf7439ab7984 Mon Sep 17 00:00:00 2001
+From: Daniel Stenberg <daniel@haxx.se>
+Date: Tue, 3 Mar 2020 08:10:09 +0100
+Subject: [PATCH] pause: return early for calls that don't change pause state
+
+Reviewed-by: Patrick Monnerat
+Ref: #4833
+Closes #5026
+---
+ lib/easy.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/lib/easy.c b/lib/easy.c
+index 454621076ab..2446557f4d2 100644
+--- a/lib/easy.c
++++ b/lib/easy.c
+@@ -975,6 +975,7 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
+ {
+   struct SingleRequest *k = &data->req;
+   CURLcode result = CURLE_OK;
++  int oldstate = k->keepon & (KEEP_RECV_PAUSE| KEEP_SEND_PAUSE);
+ 
+   /* first switch off both pause bits */
+   int newstate = k->keepon &~ (KEEP_RECV_PAUSE| KEEP_SEND_PAUSE);
+@@ -983,6 +984,12 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
+   newstate |= ((action & CURLPAUSE_RECV)?KEEP_RECV_PAUSE:0) |
+     ((action & CURLPAUSE_SEND)?KEEP_SEND_PAUSE:0);
+ 
++  if((newstate & (KEEP_RECV_PAUSE| KEEP_SEND_PAUSE)) == oldstate) {
++    /* Not changing any pause state, return */
++    DEBUGF(infof(data, "pause: no change, early return\n"));
++    return CURLE_OK;
++  }
++
+   /* put it back in the keepon */
+   k->keepon = newstate;
+ 
