@@ -46,7 +46,6 @@ check() (
   glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/build/data}"
   export XDG_RUNTIME_DIR GSETTINGS_SCHEMA_DIR
 
-  # Unexpected passes in conform test
   # Stacking test flaky
   dbus-run-session xvfb-run \
     -s '-screen 0 1920x1080x24 -nolisten local +iglx -noreset' \
