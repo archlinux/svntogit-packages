@@ -4,7 +4,7 @@
 
 pkgbase=python-zope-interface
 pkgname=('python-zope-interface' 'python2-zope-interface')
-pkgver=4.7.1
+pkgver=4.7.2
 pkgrel=1
 license=('ZPL')
 arch=('x86_64')
@@ -12,7 +12,7 @@ url="https://pypi.python.org/pypi/zope.interface"
 makedepends=('python-setuptools' 'python2-setuptools')
 checkdepends=('python-zope-event' 'python2-zope-event')
 source=("https://pypi.io/packages/source/z/zope.interface/zope.interface-$pkgver.tar.gz")
-sha512sums=('cb99cdf9733cdd2fb6637163167da0073145db1ed1788ae147098a23a9cafb4d661368a1780a44a231a2ea9f1adfa4fd6acac423a4a8d9cf026ee3a603ca7767')
+sha512sums=('6c310486084428d00d23e480c3c658c714661e6f6649b949bd674e6a2edb1cc579687646e0ce54f69db4f3a6a1c912f97c5b3ca6b9a04978d7f215c7e77c868a')
 
 prepare() {
   cp -a zope.interface-${pkgver}{,-py2}
